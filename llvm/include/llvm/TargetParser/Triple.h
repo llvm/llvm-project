@@ -260,7 +260,8 @@ public:
     ChipStar,
     Firmware,
     QURT,
-    LastOSType = QURT
+    H2,
+    LastOSType = H2
   };
   enum EnvironmentType {
     UnknownEnvironment,
@@ -386,21 +387,10 @@ public:
   LLVM_ABI Triple(ArchType A, SubArchType SA, VendorType V, OSType OS,
                   EnvironmentType E, ObjectFormatType OF);
 
-  bool operator==(const Triple &Other) const {
-    return Arch == Other.Arch && SubArch == Other.SubArch &&
-           Vendor == Other.Vendor && OS == Other.OS &&
-           Environment == Other.Environment &&
-           ObjectFormat == Other.ObjectFormat;
-  }
-
+  LLVM_ABI bool operator==(const Triple &Other) const;
   bool operator!=(const Triple &Other) const { return !(*this == Other); }
 
-  bool operator<(const Triple &Other) const {
-    return std::tie(Arch, SubArch, Vendor, OS, Environment, ObjectFormat,
-                    Data) < std::tie(Other.Arch, Other.SubArch, Other.Vendor,
-                                     Other.OS, Other.Environment,
-                                     Other.ObjectFormat, Other.Data);
-  }
+  LLVM_ABI bool operator<(const Triple &Other) const;
 
   /// @}
   /// @name Normalization
@@ -773,6 +763,9 @@ public:
 
   /// Tests whether the OS is QURT.
   bool isOSQurt() const { return getOS() == Triple::QURT; }
+
+  /// Tests whether the OS is H2.
+  bool isOSH2() const { return getOS() == Triple::H2; }
 
   /// Tests whether the OS uses the ELF binary format.
   bool isOSBinFormatELF() const { return getObjectFormat() == Triple::ELF; }
@@ -1195,7 +1188,7 @@ public:
   }
 
   /// Returns the default wchar_t size (in bytes) for this target triple.
-  unsigned getDefaultWCharSize() const;
+  LLVM_ABI unsigned getDefaultWCharSize() const;
 
   /// Tests if the environment supports dllimport/export annotations.
   bool hasDLLImportExport() const { return isOSWindows() || isPS(); }
@@ -1283,7 +1276,7 @@ public:
   LLVM_ABI bool isCompatibleWith(const Triple &Other) const;
 
   /// Test whether the target triple is for a GPU.
-  bool isGPU() const { return isSPIRV() || isNVPTX() || isAMDGPU(); }
+  bool isGPU() const { return isSPIROrSPIRV() || isNVPTX() || isAMDGPU(); }
 
   /// Merge target triples.
   LLVM_ABI std::string merge(const Triple &Other) const;

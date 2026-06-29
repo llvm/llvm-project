@@ -527,7 +527,8 @@ public:
   /// can be used to store the results of comparisons for use by selects
   /// and conditional branches. With multiple condition registers, the code
   /// generator will not aggressively sink comparisons into the blocks of their
-  /// users.
+  /// users. \p VT is the type of the condition value, e.g. the type of the
+  /// result of a comparison.
   virtual bool hasMultipleConditionRegisters(EVT VT) const { return false; }
 
   /// Return true if the target has BitExtract instructions.
@@ -2550,8 +2551,10 @@ public:
   /// select(N0|N1, X, Y) => select(N0, select(N1, X, Y, Y)) if it is likely
   /// that it saves us from materializing N0 and N1 in an integer register.
   /// Targets that are able to perform and/or on flags should return false here.
-  virtual bool shouldNormalizeToSelectSequence(LLVMContext &Context,
-                                               EVT VT) const {
+  /// \p VT is the type of the select (and X and Y). \p CCVT is the type of its
+  /// condition (N0 and N1).
+  virtual bool shouldNormalizeToSelectSequence(LLVMContext &Context, EVT VT,
+                                               EVT CCVT) const {
     // If a target has multiple condition registers, then it likely has logical
     // operations on those registers.
     if (hasMultipleConditionRegisters(VT))
@@ -3342,8 +3345,11 @@ public:
   /// \p Load is the accompanying load instruction.  Can be either a plain load
   /// instruction or a vp.load intrinsic.
   /// \p DI represents the deinterleaveN intrinsic.
+  /// \p GapMask is a mask with zeros for components / fields that may not be
+  /// accessed.
   virtual bool lowerDeinterleaveIntrinsicToLoad(Instruction *Load, Value *Mask,
-                                                IntrinsicInst *DI) const {
+                                                IntrinsicInst *DI,
+                                                const APInt &GapMask) const {
     return false;
   }
 
@@ -4467,19 +4473,18 @@ public:
       SelectionDAG &DAG, unsigned Depth) const;
 
   /// Return true if this function can prove that \p Op is never poison
-  /// and, if \p PoisonOnly is false, does not have undef bits. The DemandedElts
-  /// argument limits the check to the requested vector elements.
+  /// and, \p Kind can be used to track poison and/or undef bits. The
+  /// DemandedElts argument limits the check to the requested vector elements.
   virtual bool isGuaranteedNotToBeUndefOrPoisonForTargetNode(
       SDValue Op, const APInt &DemandedElts, const SelectionDAG &DAG,
-      bool PoisonOnly, unsigned Depth) const;
+      UndefPoisonKind Kind, unsigned Depth) const;
 
   /// Return true if Op can create undef or poison from non-undef & non-poison
   /// operands. The DemandedElts argument limits the check to the requested
   /// vector elements.
-  virtual bool
-  canCreateUndefOrPoisonForTargetNode(SDValue Op, const APInt &DemandedElts,
-                                      const SelectionDAG &DAG, bool PoisonOnly,
-                                      bool ConsiderFlags, unsigned Depth) const;
+  virtual bool canCreateUndefOrPoisonForTargetNode(
+      SDValue Op, const APInt &DemandedElts, const SelectionDAG &DAG,
+      UndefPoisonKind Kind, bool ConsiderFlags, unsigned Depth) const;
 
   /// Tries to build a legal vector shuffle using the provided parameters
   /// or equivalent variations. The Mask argument maybe be modified as the
@@ -5570,6 +5575,16 @@ public:
   /// \returns The expansion if successful, SDValue() otherwise
   SDValue expandCLMUL(SDNode *N, SelectionDAG &DAG) const;
 
+  /// Expand parallel bit extract (compress).
+  /// \param N Node to expand
+  /// \returns The expansion if successful, SDValue() otherwise
+  SDValue expandPEXT(SDNode *N, SelectionDAG &DAG) const;
+
+  /// Expand parallel bit deposit (expand).
+  /// \param N Node to expand
+  /// \returns The expansion if successful, SDValue() otherwise
+  SDValue expandPDEP(SDNode *N, SelectionDAG &DAG) const;
+
   /// Expand rotations.
   /// \param N Node to expand
   /// \param AllowVectorOps expand vector rotate, this should only be performed
@@ -5648,6 +5663,17 @@ public:
   /// \returns The expansion result
   SDValue expandFCANONICALIZE(SDNode *Node, SelectionDAG &DAG) const;
 
+  /// Expand CONVERT_TO_ARBITRARY_FP using bit manipulation.
+  /// \param Node Node to expand.
+  /// \returns The expansion result, or SDValue() if fails.
+  SDValue expandCONVERT_TO_ARBITRARY_FP(SDNode *Node, SelectionDAG &DAG) const;
+
+  /// Expand CONVERT_FROM_ARBITRARY_FP using bit manipulation.
+  /// \param Node Node to expand.
+  /// \returns The expansion result, or SDValue() if fails.
+  SDValue expandCONVERT_FROM_ARBITRARY_FP(SDNode *Node,
+                                          SelectionDAG &DAG) const;
+
   /// Expand CTPOP nodes. Expands vector/scalar CTPOP nodes,
   /// vector nodes can only succeed if all operations are legal/custom.
   /// \param N Node to expand
@@ -5658,13 +5684,13 @@ public:
   /// \returns The expansion result or SDValue() if it fails.
   SDValue expandVPCTPOP(SDNode *N, SelectionDAG &DAG) const;
 
-  /// Expand CTLZ/CTLZ_ZERO_UNDEF nodes. Expands vector/scalar CTLZ nodes,
+  /// Expand CTLZ/CTLZ_ZERO_POISON nodes. Expands vector/scalar CTLZ nodes,
   /// vector nodes can only succeed if all operations are legal/custom.
   /// \param N Node to expand
   /// \returns The expansion result or SDValue() if it fails.
   SDValue expandCTLZ(SDNode *N, SelectionDAG &DAG) const;
 
-  /// Expand VP_CTLZ/VP_CTLZ_ZERO_UNDEF nodes.
+  /// Expand VP_CTLZ/VP_CTLZ_ZERO_POISON nodes.
   /// \param N Node to expand
   /// \returns The expansion result or SDValue() if it fails.
   SDValue expandVPCTLZ(SDNode *N, SelectionDAG &DAG) const;
@@ -5681,18 +5707,18 @@ public:
   SDValue CTTZTableLookup(SDNode *N, SelectionDAG &DAG, const SDLoc &DL, EVT VT,
                           SDValue Op, unsigned NumBitsPerElt) const;
 
-  /// Expand CTTZ/CTTZ_ZERO_UNDEF nodes. Expands vector/scalar CTTZ nodes,
+  /// Expand CTTZ/CTTZ_ZERO_POISON nodes. Expands vector/scalar CTTZ nodes,
   /// vector nodes can only succeed if all operations are legal/custom.
   /// \param N Node to expand
   /// \returns The expansion result or SDValue() if it fails.
   SDValue expandCTTZ(SDNode *N, SelectionDAG &DAG) const;
 
-  /// Expand VP_CTTZ/VP_CTTZ_ZERO_UNDEF nodes.
+  /// Expand VP_CTTZ/VP_CTTZ_ZERO_POISON nodes.
   /// \param N Node to expand
   /// \returns The expansion result or SDValue() if it fails.
   SDValue expandVPCTTZ(SDNode *N, SelectionDAG &DAG) const;
 
-  /// Expand VP_CTTZ_ELTS/VP_CTTZ_ELTS_ZERO_UNDEF nodes.
+  /// Expand VP_CTTZ_ELTS/VP_CTTZ_ELTS_ZERO_POISON nodes.
   /// \param N Node to expand
   /// \returns The expansion result or SDValue() if it fails.
   SDValue expandVPCTTZElements(SDNode *N, SelectionDAG &DAG) const;

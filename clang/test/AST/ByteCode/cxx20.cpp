@@ -1,6 +1,11 @@
 // RUN: %clang_cc1 -fcxx-exceptions -std=c++20 -verify=both,expected -fcxx-exceptions %s -DNEW_INTERP -fexperimental-new-constant-interpreter
 // RUN: %clang_cc1 -fcxx-exceptions -std=c++20 -verify=both,ref      -fcxx-exceptions %s
 
+
+int x;
+static_assert(++x, "test"); // both-error {{not an integral constant expression}} \
+                            // both-note {{cannot modify an object that is visible outside that expression}}
+
 void test_alignas_operand() {
   alignas(8) char dummy;
   static_assert(__alignof(dummy) == 8);
@@ -775,7 +780,7 @@ namespace FailingDestructor {
     }
   };
   template<D d>
-  void f() {} // both-note {{invalid explicitly-specified argument}}
+  void f() {} // both-note {{non-type template argument is not a constant expression}}
 
   void g() {
     f<D{0, false}>(); // both-error {{no matching function}}
@@ -1262,6 +1267,23 @@ namespace ConditionalTemporaries {
   }
   static_assert(foo(false)== 13);
   static_assert(foo(true)== 12);
+
+  struct S {
+    int *p;
+    constexpr S() { p = new int(); }
+    constexpr ~S() { delete p; }
+  };
+
+  constexpr bool func(S &s1, S s2) {
+    return true;
+  }
+
+  constexpr bool test() {
+    S s1;
+    func(s1, {}) ? void() : void();
+    return true;
+  }
+  static_assert(test());
 }
 
 namespace PointerCmp {
@@ -1286,7 +1308,7 @@ namespace PointerCmp {
   };
   constexpr K2 k2{1,2, 3};
   static_assert((void*)(&k2.m.a + 1) != (void*)&k2.m.b);
- /// static_assert((void*)(&k2.m.a + 1) < (void*)&k2.m.b);  FIXME
+  static_assert((void*)(&k2.m.a + 1) < (void*)&k2.m.b);
   static_assert((void*)(&k2.m + 1) == (void*)&k2.c);
   static_assert((void*)(&k2 + 1) == (void*)(&k2.c + 1));
 
@@ -1365,5 +1387,78 @@ namespace IndirectFieldInitializer {
     constexpr A() {}
   };
   static_assert(A().x == 3, "");
+}
 
+namespace Covariant {
+  struct A {
+    int a;
+    constexpr virtual const A* getA() const = 0;
+  };
+  struct B { int b; };
+
+  struct C: A, B {
+    constexpr const C* getA() const override {
+      return this;
+    }
+  };
+  constexpr  C c{};
+  static_assert(c.getA() == &c);
+}
+
+namespace InvalidOMPRequiredSimdAlign {
+  typedef decltype(sizeof(int)) T;
+  constexpr T foo(T x) { return __builtin_omp_required_simd_align * 42; } // both-error {{indirection requires pointer operand}}
+}
+
+namespace StoreCannotDeref {
+  constexpr void foo() { // both-error {{never produces a constant expression}}
+    int l = 10;
+    int *n = &l;
+    int *m = (int *)&n; // both-note {{cast that performs the conversions of a reinterpret_cast}}
+    *m = 42;
+  }
+}
+
+namespace FuncPtrRef {
+  const int &foo(int &&);
+  constexpr bool bullet_five_tests() {
+    using FooType = const int &(int &&);
+    FooType &fn = foo;
+    return true;
+  }
+  static_assert(bullet_five_tests());
+}
+
+namespace ConstWrites {
+  struct basic_string {
+    unsigned char a;
+    constexpr basic_string() {
+      a = false;
+    }
+  };
+  struct array {
+    basic_string str;
+  };
+
+  constexpr bool tests() {
+    const array right{};
+    return true;
+  }
+  static_assert(tests());
+
+  struct A {
+    int n;
+    constexpr A() : n(1) { n = 2; }
+  };
+  struct B {
+    const A a;
+    constexpr B(bool mutate) {
+      if (mutate)
+        const_cast<A &>(a).n = 3; // both-note {{modification of object of const-qualified type 'const int'}}
+    }
+  };
+  constexpr B b(false);
+  static_assert(b.a.n == 2, "");
+  constexpr B bad(true); // both-error {{must be initialized by a constant expression}} \
+                         // both-note {{in call to 'B(true)'}}
 }

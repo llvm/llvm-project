@@ -7,168 +7,174 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/Rematerializer.h"
-#include "llvm/Analysis/CGSCCPassManager.h"
-#include "llvm/Analysis/LoopAnalysisManager.h"
-#include "llvm/CodeGen/MIRParser/MIRParser.h"
-#include "llvm/CodeGen/MachineDomTreeUpdater.h"
-#include "llvm/CodeGen/MachineFunctionAnalysis.h"
-#include "llvm/CodeGen/MachineModuleInfo.h"
-#include "llvm/CodeGen/MachinePassManager.h"
-#include "llvm/CodeGen/MachinePostDominators.h"
-#include "llvm/CodeGen/MachineScheduler.h"
-#include "llvm/CodeGen/SelectionDAG.h"
-#include "llvm/CodeGen/TargetLowering.h"
-#include "llvm/IR/Module.h"
-#include "llvm/MC/TargetRegistry.h"
-#include "llvm/Passes/PassBuilder.h"
-#include "llvm/Support/SourceMgr.h"
+#include "CodeGenTestBase.h"
+#include "llvm/CodeGen/LiveIntervals.h"
+#include "llvm/CodeGen/RegisterPressure.h"
 #include "llvm/Support/TargetSelect.h"
-#include "llvm/Target/TargetMachine.h"
-#include "gtest/gtest.h"
-#include <memory>
 
 using namespace llvm;
 using RegisterIdx = Rematerializer::RegisterIdx;
 
-class RematerializerTest : public testing::Test {
+namespace {
+/// Wraps a rematerializer (with pointer-like access semantics through ->) next
+/// to other members generally used by unit tests.
+struct RematerializerWrapper {
+  MachineFunction &MF;
+  LiveIntervals &LIS;
+  Rematerializer Remater;
+
+  /// Region sizes for regions passed to the rematerializer. Initialized at
+  /// construction to the correct value, can then be modified to track expected
+  /// changes.
+  SmallVector<unsigned> RegionSizes;
+  /// Number of rematerializable registers identified by the rematerializer.
+  /// Initialized at construction to the correct value, can then be modified to
+  /// track expected changes.
+  unsigned NumRematRegs;
+
+  using RegionBoundaries = Rematerializer::RegionBoundaries;
+
+  RematerializerWrapper(MachineFunction &MF,
+                        SmallVectorImpl<RegionBoundaries> &Regions,
+                        LiveIntervals &LIS)
+      : MF(MF), LIS(LIS), Remater(MF, Regions, LIS) {
+    for (const RegionBoundaries &Region : Regions)
+      RegionSizes.push_back(std::distance(Region.first, Region.second));
+    Remater.analyze();
+    NumRematRegs = Remater.getNumRegs();
+  }
+
+  Rematerializer *operator->() { return &Remater; }
+  const Rematerializer *operator->() const { return &Remater; }
+  Rematerializer &operator*() { return Remater; }
+  const Rematerializer &operator*() const { return Remater; }
+
+  /// Returns the number of users of rematerializable register \p RegIdx.
+  unsigned getNumUsers(RegisterIdx RegIdx) const {
+    unsigned NumUsers = 0;
+    for (const auto &[_, RegionUses] : Remater.getReg(RegIdx).Uses)
+      NumUsers += RegionUses.size();
+    return NumUsers;
+  }
+
+  /// Returns the number of MIs in region \p RegionIdx.
+  unsigned getRegionSize(unsigned RegionIdx) const {
+    const RegionBoundaries &Region = Remater.getRegion(RegionIdx);
+    return std::distance(Region.first, Region.second);
+  }
+
+  /// Expects that \p NumMIs were added to region \p RegionIdx.
+  RematerializerWrapper &addMIs(unsigned RegionIdx, unsigned NumMIs) {
+    RegionSizes[RegionIdx] += NumMIs;
+    return *this;
+  }
+
+  /// Expects that \p NumMIs were removed from region \p RegionIdx.
+  RematerializerWrapper &removeMIs(unsigned RegionIdx, unsigned NumMIs) {
+    RegionSizes[RegionIdx] -= NumMIs;
+    return *this;
+  }
+
+  /// Expects that \p NumMIs were move from region \p FromRegionIdx to region \p
+  /// ToRegionIdx.
+  RematerializerWrapper &moveMIs(unsigned FromRegionIdx, unsigned ToRegionIdx,
+                                 unsigned NumMIs) {
+    return removeMIs(FromRegionIdx, NumMIs).addMIs(ToRegionIdx, NumMIs);
+  }
+
+  /// Expects that \p NumRegs rematerializable registers were added to the
+  /// rematerializer.
+  RematerializerWrapper &addRematRegs(unsigned NumRegs) {
+    NumRematRegs += NumRegs;
+    return *this;
+  }
+};
+
+class RematerializerTest : public CodeGenTestBase {
 public:
-  LLVMContext Context;
-  std::unique_ptr<TargetMachine> TM;
-  std::unique_ptr<Module> M;
-  std::unique_ptr<MachineModuleInfo> MMI;
-
-  std::unique_ptr<MIRParser> MIR;
-  std::unique_ptr<SmallVector<Rematerializer::RegionBoundaries>> Regions;
-  std::unique_ptr<Rematerializer> Remater;
-  MachineFunction *MF;
-
-  LoopAnalysisManager LAM;
-  MachineFunctionAnalysisManager MFAM;
-  FunctionAnalysisManager FAM;
-  CGSCCAnalysisManager CGAM;
-
-  ModulePassManager MPM;
-  FunctionPassManager FPM;
-  MachineFunctionPassManager MFPM;
-  ModuleAnalysisManager MAM;
-
   static void SetUpTestCase() {
-    InitializeAllTargets();
-    InitializeAllTargetMCs();
+#if LLVM_HAS_AMDGPU_TARGET
+    LLVMInitializeAMDGPUTargetInfo();
+    LLVMInitializeAMDGPUTarget();
+    LLVMInitializeAMDGPUTargetMC();
+#else
+    GTEST_SKIP();
+#endif
   }
 
-  void SetUp() override {
-    Triple TargetTriple("amdgcn--");
-    std::string Error;
-    const Target *T = TargetRegistry::lookupTarget("", TargetTriple, Error);
-    if (!T)
-      GTEST_SKIP();
-    TargetOptions Options;
-    TM = std::unique_ptr<TargetMachine>(T->createTargetMachine(
-        TargetTriple, "gfx950", "", Options, std::nullopt));
-    if (!TM)
-      GTEST_SKIP();
-    MMI = std::make_unique<MachineModuleInfo>(TM.get());
+  void SetUp() override { setUpImpl("amdgcn--", "gfx950", ""); }
 
-    PassBuilder PB(TM.get());
-    PB.registerModuleAnalyses(MAM);
-    PB.registerCGSCCAnalyses(CGAM);
-    PB.registerFunctionAnalyses(FAM);
-    PB.registerLoopAnalyses(LAM);
-    PB.registerMachineFunctionAnalyses(MFAM);
-    PB.crossRegisterProxies(LAM, FAM, CGAM, MAM, &MFAM);
-    MAM.registerPass([&] { return MachineModuleAnalysis(*MMI); });
-  }
+  using RematerializerTestFn = std::function<void(RematerializerWrapper &RW)>;
 
-  bool parseMIRAndInit(StringRef MIRCode, StringRef FunName) {
-    SMDiagnostic Diagnostic;
-    std::unique_ptr<MemoryBuffer> MBuffer = MemoryBuffer::getMemBuffer(MIRCode);
-    MIR = createMIRParser(std::move(MBuffer), Context);
-    if (!MIR)
-      return false;
+  void rematerializerTest(StringRef MIRBody, RematerializerTestFn Test) {
+    SmallString<512> S;
+    StringRef MIRString = (Twine(R"MIR(
+---
+name: func
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+body:             |
+)MIR") + Twine(MIRBody) + Twine("...\n"))
+                              .toNullTerminatedStringRef(S);
+    ASSERT_TRUE(parseMIR(MIRString));
+    MachineFunction &MF = getMF("func");
+    LiveIntervals &LIS = MFAM.getResult<LiveIntervalsAnalysis>(MF);
 
-    M = MIR->parseIRModule();
-    M->setDataLayout(TM->createDataLayout());
-
-    if (MIR->parseMachineFunctions(*M, MAM)) {
-      M.reset();
-      return false;
-    }
-
-    MF = &FAM.getResult<MachineFunctionAnalysis>(*M->getFunction(FunName))
-              .getMF();
-    LiveIntervals &LIS = MFAM.getResult<LiveIntervalsAnalysis>(*MF);
-
-    // Create regions for the rematerializer. Both MBBs and terminator MIs
-    // delimitate regions.
-    Regions = std::make_unique<SmallVector<Rematerializer::RegionBoundaries>>();
+    SmallVector<Rematerializer::RegionBoundaries> Regions;
     MachineInstr *FirstMI = nullptr;
-    for (MachineBasicBlock &MBB : *MF) {
+    for (MachineBasicBlock &MBB : MF) {
       for (MachineInstr &MI : MBB) {
         if (!FirstMI)
           FirstMI = &MI;
         if (MI.isTerminator()) {
           if (FirstMI != &MI)
-            Regions->push_back({FirstMI, MI});
+            Regions.push_back({FirstMI, MI});
           FirstMI = nullptr;
         }
       }
-      // End the region at the end of the block.
       if (FirstMI) {
-        Regions->push_back({FirstMI, MBB.end()});
+        Regions.push_back({FirstMI, MBB.end()});
         FirstMI = nullptr;
       }
     }
 
-    Remater = std::make_unique<Rematerializer>(*MF, *Regions, LIS);
-    Remater->analyze();
-    return true;
-  }
+    RematerializerWrapper RW(MF, Regions, LIS);
+    Test(RW);
 
-  MachineFunction &getMF() { return *MF; }
-  Rematerializer &getRematerializer() { return *Remater; }
-
-  /// Returns the number of users of register \p RegIdx.
-  unsigned getNumUsers(RegisterIdx RegIdx) {
-    unsigned NumUsers = 0;
-    for (const auto &[_, RegionUses] : Remater->getReg(RegIdx).Uses)
-      NumUsers += RegionUses.size();
-    return NumUsers;
-  }
-
-  /// Returns the size of region \p RegionIdx.
-  unsigned getRegionSize(unsigned RegionIdx) {
-    const Rematerializer::RegionBoundaries &Region = (*Regions)[RegionIdx];
-    return std::distance(Region.first, Region.second);
+    RW->updateLiveIntervals();
+    EXPECT_TRUE(MF.verify());
   }
 };
+} // namespace
 
-/// Asserts that region RegionIdx contains RegionSize instructions.
-#define ASSERT_REGION_SIZE(RegionIdx, RegionSize)                              \
-  ASSERT_EQ(getRegionSize(RegionIdx), RegionSize)
+/// All custon asserts/expects assume that a RematerializerWrapper is in scope
+/// and named RW.
 
-/// Asserts that regions have sizes RegionSizes, which must be an iterable
-/// object with the same number of elements as the number of regions.
-#define ASSERT_REGION_SIZES(RegionSizes)                                       \
+/// Asserts that the number of expected rematerializable registers indeed tracks
+/// the actual number correctly.
+#define ASSERT_NUM_REMAT_REGS() ASSERT_EQ(RW->getNumRegs(), RW.NumRematRegs)
+
+/// Asserts that all regions match expected sizes from the test rematerializer.
+#define ASSERT_REGION_SIZES()                                                  \
   {                                                                            \
-    ASSERT_EQ(RegionSizes.size(), Regions->size());                            \
-    for (const auto [RegionIdx, ExpectedSize] : enumerate(RegionSizes))        \
-      ASSERT_REGION_SIZE(RegionIdx, ExpectedSize);                             \
+    for (const auto [RegionIdx, ExpectedSize] : enumerate(RW.RegionSizes))     \
+      ASSERT_EQ(RW.getRegionSize(RegionIdx), ExpectedSize);                    \
   }
 
 /// Expects that register RegIdx in the rematerializer has a total of N users.
 #define EXPECT_NUM_USERS(RegIdx, N)                                            \
-  EXPECT_EQ(getNumUsers(RegIdx), static_cast<unsigned>(N))
+  EXPECT_EQ(RW.getNumUsers(RegIdx), static_cast<unsigned>(N))
 
-/// Expects that register RegIdx in the remterializer hsa no users.
+/// Expects that register RegIdx in the rematerializer has no users.
 #define EXPECT_NO_USERS(RegIdx) EXPECT_NUM_USERS(RegIdx, 0)
 
 /// Expects that rematerialized register RegIdx has origin OriginIdx, is defined
 /// in region DefRegionIdx, and has a total of NumUsers users.
 #define EXPECT_REMAT(RegIdx, OriginIdx, DefRegionIdx, NumUsers)                \
   {                                                                            \
-    const Rematerializer::Reg &RematReg = Remater.getReg(RegIdx);              \
-    EXPECT_EQ(Remater.getOriginOf(RegIdx), OriginIdx);                         \
+    const Rematerializer::Reg &RematReg = RW->getReg(RegIdx);                  \
+    EXPECT_EQ(RW->getOriginOf(RegIdx), OriginIdx);                             \
     EXPECT_EQ(RematReg.DefRegion, DefRegionIdx);                               \
     EXPECT_NUM_USERS(RegIdx, NumUsers);                                        \
   }
@@ -178,106 +184,72 @@ public:
 /// API. Rollback rematerializations in-between each different wave of
 /// rematerializations.
 TEST_F(RematerializerTest, TreeRematRollback) {
-  StringRef MIR = R"(
-name:            TreeRematRollback
-tracksRegLiveness: true
-machineFunctionInfo:
-  isEntryFunction: true
-body:             |
+  StringRef MIRBody = R"MIR(
   bb.0:
     %0:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 0, implicit $exec, implicit $mode
     %1:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 1, implicit $exec, implicit $mode
     %2:vgpr_32 = V_ADD_U32_e32 %0, %1, implicit $exec
     %3:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 3, implicit $exec, implicit $mode
     %4:vgpr_32 = V_ADD_U32_e32 %2, %3, implicit $exec
-  
+
   bb.1:
     S_NOP 0, implicit %4
     S_ENDPGM 0
-...
-)";
-  ASSERT_TRUE(parseMIRAndInit(MIR, "TreeRematRollback"));
-  Rematerializer &Remater = getRematerializer();
-  Rematerializer::DependencyReuseInfo DRI;
-  Rollbacker Rollbacker;
-  Remater.addListener(&Rollbacker);
+)MIR";
+  rematerializerTest(MIRBody, [](RematerializerWrapper &RW) {
+    Rematerializer::DependencyReuseInfo DRI;
+    Rollbacker Rollbacker;
+    RW->addListener(&Rollbacker);
 
-  // MBB/Region indices.
-  const unsigned MBB0 = 0, MBB1 = 1;
-  SmallVector<unsigned, 2> RegionSizes{5, 1};
-  ASSERT_REGION_SIZES(RegionSizes);
+    const unsigned MBB0 = 0, MBB1 = 1;
+    const RegisterIdx Cst0 = 0, Cst1 = 1, Add01 = 2, Cst3 = 3, Add23 = 4;
 
-  // Indices of rematerializable registers.
-  unsigned NumRegs = 0;
-  const RegisterIdx Cst0 = NumRegs++, Cst1 = NumRegs++, Add01 = NumRegs++,
-                    Cst3 = NumRegs++, Add23 = NumRegs++;
-  ASSERT_EQ(Remater.getNumRegs(), NumRegs);
+    // Rematerialize Add23 with all transitive dependencies.
+    RW->rematerializeToRegion(Add23, MBB1, DRI);
+    RW->updateLiveIntervals();
 
-  // Rematerialize Add23 with all transitive dependencies.
-  {
-    Remater.rematerializeToRegion(/*RootIdx=*/Add23, /*UseRegion=*/MBB1, DRI);
-    Remater.updateLiveIntervals();
-
-    // None of the original registers have any users left.
     EXPECT_NO_USERS(Cst0);
     EXPECT_NO_USERS(Cst1);
     EXPECT_NO_USERS(Add01);
     EXPECT_NO_USERS(Cst3);
     EXPECT_NO_USERS(Add23);
 
-    // Copies of all MIs were inserted into the second MBB. Original registers
-    // were deleted.
-    RegionSizes[MBB0] -= 5;
-    RegionSizes[MBB1] += 5;
-    ASSERT_REGION_SIZES(RegionSizes);
-    NumRegs += 5;
-    ASSERT_EQ(Remater.getNumRegs(), NumRegs);
-  }
+    RW.moveMIs(MBB0, MBB1, 5).addRematRegs(5);
+    ASSERT_REGION_SIZES();
+    ASSERT_NUM_REMAT_REGS();
 
-  // After rollback all rematerializations are removed from the MIR.
-  Rollbacker.rollback(Remater);
-  RegionSizes[MBB0] += 5;
-  RegionSizes[MBB1] -= 5;
-  ASSERT_REGION_SIZES(RegionSizes);
+    // After rollback all rematerializations are removed from the MIR.
+    Rollbacker.rollback(*RW);
+    RW.moveMIs(MBB1, MBB0, 5);
+    ASSERT_REGION_SIZES();
 
-  // Rematerialize Add23 only with its direct dependencies, reuse the rest.
-  {
+    // Rematerialize Add23 only with its direct dependencies, reuse the rest.
     DRI.clear().reuse(Cst0).reuse(Cst1);
-    Remater.rematerializeToRegion(/*RootIdx=*/Add23, /*UseRegion=*/MBB1, DRI);
-    Remater.updateLiveIntervals();
+    RW->rematerializeToRegion(Add23, MBB1, DRI);
+    RW->updateLiveIntervals();
 
-    // Re-used registers have rematerializations as their single user (original
-    // users are dead). Rematerialized registers have no users.
     EXPECT_NUM_USERS(Cst0, 1);
     EXPECT_NUM_USERS(Cst1, 1);
     EXPECT_NO_USERS(Add01);
     EXPECT_NO_USERS(Cst3);
     EXPECT_NO_USERS(Add23);
 
-    // Only immediate dependencies are copied to the second MBB.
-    RegionSizes[MBB0] -= 3;
-    RegionSizes[MBB1] += 3;
-    ASSERT_REGION_SIZES(RegionSizes);
-    NumRegs += 3;
-    ASSERT_EQ(Remater.getNumRegs(), NumRegs);
-  }
+    RW.moveMIs(MBB0, MBB1, 3).addRematRegs(3);
+    ASSERT_REGION_SIZES();
+    ASSERT_NUM_REMAT_REGS();
 
-  // After rollback all rematerializations are removed from the MIR.
-  Rollbacker.rollback(Remater);
-  RegionSizes[MBB0] += 3;
-  RegionSizes[MBB1] -= 3;
-  ASSERT_REGION_SIZES(RegionSizes);
+    // After rollback all rematerializations are removed from the MIR.
+    Rollbacker.rollback(*RW);
+    RW.moveMIs(MBB1, MBB0, 3);
+    ASSERT_REGION_SIZES();
 
-  // Rematerialize Add23 only with its direct dependencies as before, but
-  // with as fine-grained operations as possible.
-  {
-    MachineInstr *NopMI = &*(*Regions)[MBB1].first;
+    // Rematerialize Add23 only with its direct dependencies as before, but
+    // with as fine-grained operations as possible.
+    MachineInstr *NopMI = &*RW->getRegion(MBB1).first;
 
     DRI.clear().reuse(Cst0).reuse(Cst1);
     const RegisterIdx RematAdd01 =
-        Remater.rematerializeToPos(Add01, MBB1, NopMI, DRI);
-    // This adds an additional user to the used constants, and does not change
-    // existing users for the original register.
+        RW->rematerializeToPos(Add01, MBB1, NopMI, DRI);
     EXPECT_NO_USERS(RematAdd01);
     EXPECT_NUM_USERS(Add01, 1);
     EXPECT_NUM_USERS(Cst0, 2);
@@ -285,37 +257,26 @@ body:             |
 
     DRI.clear();
     const RegisterIdx RematCst3 =
-        Remater.rematerializeToPos(Cst3, MBB1, NopMI, DRI);
-    // This does not change existing users for the original register.
+        RW->rematerializeToPos(Cst3, MBB1, NopMI, DRI);
     EXPECT_NO_USERS(RematCst3);
     EXPECT_NUM_USERS(Cst3, 1);
 
     DRI.clear().useRemat(Add01, RematAdd01).useRemat(Cst3, RematCst3);
     const RegisterIdx RematAdd23 =
-        Remater.rematerializeToPos(Add23, MBB1, NopMI, DRI);
-    // This adds a user to used rematerializations, and does not change existing
-    // users for the original register.
+        RW->rematerializeToPos(Add23, MBB1, NopMI, DRI);
     EXPECT_NO_USERS(RematAdd23);
     EXPECT_NUM_USERS(Add23, 1);
     EXPECT_NUM_USERS(RematAdd01, 1);
     EXPECT_NUM_USERS(RematCst3, 1);
 
-    // Finally transfer the NOP user from the original to the rematerialized
-    // register.
-    Remater.transferUser(Add23, RematAdd23, MBB1, *NopMI);
+    RW->transferUser(Add23, RematAdd23, MBB1, *NopMI);
     EXPECT_NO_USERS(Add23);
     EXPECT_NUM_USERS(RematAdd23, 1);
 
-    RegionSizes[MBB0] -= 3;
-    RegionSizes[MBB1] += 3;
-    ASSERT_REGION_SIZES(RegionSizes);
-    NumRegs += 3;
-    ASSERT_EQ(Remater.getNumRegs(), NumRegs);
-  }
-
-  // This time don't rollback.
-  Remater.updateLiveIntervals();
-  EXPECT_TRUE(getMF().verify());
+    RW.moveMIs(MBB0, MBB1, 3).addRematRegs(3);
+    ASSERT_REGION_SIZES();
+    ASSERT_NUM_REMAT_REGS();
+  });
 }
 
 /// To rematerialize %3 along with all its dependencies before its only use in
@@ -325,50 +286,33 @@ body:             |
 /// rematerialized after %2, breaking the invariant that dependencies of a
 /// register must always be rematerialized before the register itself.
 TEST_F(RematerializerTest, MultiplePathsRematOrder) {
-  StringRef MIR = R"(
-name:            MultiplePathsRematOrder
-tracksRegLiveness: true
-machineFunctionInfo:
-  isEntryFunction: true
-body:             |
+  StringRef MIRBody = R"MIR(
   bb.0:
     %0:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 0, implicit $exec, implicit $mode
     %1:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 1, implicit $exec, implicit $mode
     %2:vgpr_32 = V_ADD_U32_e32 %0, %1, implicit $exec
     %3:vgpr_32 = V_ADD_U32_e32 %0, %2, implicit $exec
-  
+
   bb.1:
     S_NOP 0, implicit %3
     S_ENDPGM 0
-...
-)";
-  ASSERT_TRUE(parseMIRAndInit(MIR, "MultiplePathsRematOrder"));
-  Rematerializer &Remater = getRematerializer();
-  Rematerializer::DependencyReuseInfo DRI;
-
-  const unsigned MBB1 = 1;
-  const RegisterIdx Add02 = 3;
-
-  // This call would previously fail.
-  Remater.rematerializeToRegion(Add02, MBB1, DRI);
-
-  Remater.updateLiveIntervals();
-  EXPECT_TRUE(getMF().verify());
+)MIR";
+  rematerializerTest(MIRBody, [](RematerializerWrapper &RW) {
+    Rematerializer::DependencyReuseInfo DRI;
+    const unsigned MBB1 = 1;
+    const RegisterIdx Add02 = 3;
+    RW->rematerializeToRegion(Add02, MBB1, DRI);
+  });
 }
 
 /// Rematerializes a single register to multiple regions, tracking that
 /// rematerializations are linked correctly and making sure that the original
 /// register is deleted automatically when it no longer has any uses.
 TEST_F(RematerializerTest, MultiRegionsRemat) {
-  StringRef MIR = R"(
-name:            MultiRegionsRemat
-tracksRegLiveness: true
-machineFunctionInfo:
-  isEntryFunction: true
-body:             |
+  StringRef MIRBody = R"MIR(
   bb.0:
     %0:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 0, implicit $exec, implicit $mode
-  
+
   bb.1:
     S_NOP 0, implicit %0, implicit %0
 
@@ -379,51 +323,34 @@ body:             |
   bb.3:
     S_NOP 0, implicit %0
     S_ENDPGM 0
-...
-)";
-  ASSERT_TRUE(parseMIRAndInit(MIR, "MultiRegionsRemat"));
-  Rematerializer &Remater = getRematerializer();
-  Rematerializer::DependencyReuseInfo DRI;
+)MIR";
+  rematerializerTest(MIRBody, [](RematerializerWrapper &RW) {
+    Rematerializer::DependencyReuseInfo DRI;
 
-  // MBB/Region indices.
-  const unsigned MBB0 = 0, MBB1 = 1, MBB2 = 2, MBB3 = 3;
-  SmallVector<unsigned, 2> RegionSizes{1, 1, 2, 1};
-  ASSERT_REGION_SIZES(RegionSizes);
+    const unsigned MBB0 = 0, MBB1 = 1, MBB2 = 2, MBB3 = 3;
+    const RegisterIdx Cst0 = 0;
 
-  // Indices of rematerializable registers.
-  const RegisterIdx Cst0 = 0;
-  ASSERT_EQ(Remater.getNumRegs(), 1U);
+    // Rematerialization to MBB1.
+    const RegisterIdx RematBB1 = RW->rematerializeToRegion(Cst0, MBB1, DRI);
+    RW.addMIs(MBB1, 1);
+    ASSERT_REGION_SIZES();
+    EXPECT_REMAT(RematBB1, Cst0, MBB1, 1);
 
-  // Rematerialization to MBB1.
-  const RegisterIdx RematBB1 =
-      Remater.rematerializeToRegion(/*RootIdx=*/Cst0, /*UseRegion=*/MBB1, DRI);
-  ++RegionSizes[MBB1];
-  ASSERT_REGION_SIZES(RegionSizes);
-  EXPECT_REMAT(/*RegIdx=*/RematBB1, /*OriginIdx=*/Cst0, /*DefRegionIdx=*/MBB1,
-               /*NumUsers=*/1);
+    // Rematerialization to MBB2.
+    DRI.clear();
+    const RegisterIdx RematBB2 = RW->rematerializeToRegion(Cst0, MBB2, DRI);
+    RW.addMIs(MBB2, 1);
+    ASSERT_REGION_SIZES();
+    EXPECT_REMAT(RematBB2, Cst0, MBB2, 2);
 
-  // Rematerialization to MBB2.
-  DRI.clear();
-  const RegisterIdx RematBB2 =
-      Remater.rematerializeToRegion(/*RootIdx=*/Cst0, /*UseRegion=*/MBB2, DRI);
-  ++RegionSizes[MBB2];
-  ASSERT_REGION_SIZES(RegionSizes);
-  EXPECT_REMAT(/*RegIdx=*/RematBB2, /*OriginIdx=*/Cst0, /*DefRegionIdx=*/MBB2,
-               /*NumUsers=*/2);
-
-  // Rematerialization to MBB3. Rematerializing to the last original user
-  // deletes the original register.
-  DRI.clear();
-  const RegisterIdx RematBB3 =
-      Remater.rematerializeToRegion(/*RootIdx=*/Cst0, /*UseRegion=*/MBB3, DRI);
-  --RegionSizes[MBB0];
-  ++RegionSizes[MBB3];
-  ASSERT_REGION_SIZES(RegionSizes);
-  EXPECT_REMAT(/*RegIdx=*/RematBB3, /*OriginIdx=*/Cst0, /*DefRegionIdx=*/MBB3,
-               /*NumUsers=*/1);
-
-  Remater.updateLiveIntervals();
-  EXPECT_TRUE(getMF().verify());
+    // Rematerialization to MBB3. Rematerializing to the last original user
+    // deletes the original register.
+    DRI.clear();
+    const RegisterIdx RematBB3 = RW->rematerializeToRegion(Cst0, MBB3, DRI);
+    RW.moveMIs(MBB0, MBB3, 1);
+    ASSERT_REGION_SIZES();
+    EXPECT_REMAT(RematBB3, Cst0, MBB3, 1);
+  });
 }
 
 /// Rematerializes a tree of register with some unrematerializable operands to a
@@ -431,97 +358,66 @@ body:             |
 /// rematerializations in the process. Make sure that origins of
 /// rematerializations are always original registers.
 TEST_F(RematerializerTest, MultiStep) {
-  StringRef MIR = R"(
-name:            MultiStep
-tracksRegLiveness: true
-machineFunctionInfo:
-  isEntryFunction: true
-body:             |
+  StringRef MIRBody = R"MIR(
   bb.0:
     %0:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 0, implicit $exec, implicit $mode
     %1:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 1, implicit $exec, implicit $mode, implicit-def $m0
     %2:vgpr_32 = V_ADD_U32_e32 %0, %1, implicit $exec
     S_NOP 0, implicit %0
-  
+
   bb.1:
     %3:vgpr_32 = V_ADD_U32_e32 %2, %2, implicit $exec
 
   bb.2:
     S_NOP 0, implicit %3
     S_ENDPGM 0
-...
-)";
-  ASSERT_TRUE(parseMIRAndInit(MIR, "MultiStep"));
-  Rematerializer &Remater = getRematerializer();
-  Rematerializer::DependencyReuseInfo DRI;
+)MIR";
+  rematerializerTest(MIRBody, [](RematerializerWrapper &RW) {
+    Rematerializer::DependencyReuseInfo DRI;
 
-  // MBB/Region indices.
-  const unsigned MBB0 = 0, MBB1 = 1, MBB2 = 2;
-  SmallVector<unsigned, 2> RegionSizes{4, 1, 1};
-  ASSERT_REGION_SIZES(RegionSizes);
+    const unsigned MBB0 = 0, MBB1 = 1, MBB2 = 2;
+    const RegisterIdx Cst0 = 0, Add01 = 1, Add22 = 2, RematCst0 = 3,
+                      RematAdd01 = 4, RematRematAdd01 = 5, RematAdd22 = 6;
 
-  // Indices of rematerializable registers.
-  unsigned NumRegs = 0;
-  const RegisterIdx Cst0 = NumRegs++, Add01 = NumRegs++, Add22 = NumRegs++;
-  ASSERT_EQ(Remater.getNumRegs(), NumRegs);
+    // Rematerialize Add01 from the first to the second block along with its
+    // single rematerializable dependency (constant 0). The constant 1 has an
+    // implicit def that is non-ignorable so it cannot be rematerialized. The
+    // constant 0 remains in the first block because it has a user there, but
+    // the add is deleted.
+    RW->rematerializeToRegion(Add01, MBB1, DRI);
+    RW.removeMIs(MBB0, 1).addMIs(MBB1, 2);
+    ASSERT_REGION_SIZES();
+    EXPECT_REMAT(RematCst0, Cst0, MBB1, 1);
+    EXPECT_REMAT(RematAdd01, Add01, MBB1, 1);
 
-  // Rematerialize Add01 from the first to the second block along with its
-  // single rematerializable dependency (constant 0). The constant 1 has an
-  // implicit def that is non-ignorable so it cannot be rematerialized. The
-  // constant 0 remains in the first block because it has a user there, but the
-  // add is deleted.
-  Remater.rematerializeToRegion(/*RootIdx=*/Add01, /*UseRegion=*/MBB1, DRI);
-  const RegisterIdx RematCst0 = NumRegs++, RematAdd01 = NumRegs++;
-  RegionSizes[MBB0] -= 1;
-  RegionSizes[MBB1] += 2;
-  ASSERT_REGION_SIZES(RegionSizes);
-  EXPECT_REMAT(/*RegIdx=*/RematCst0, /*OriginIdx=*/Cst0, /*DefRegionIdx=*/MBB1,
-               /*NumUsers=*/1);
-  EXPECT_REMAT(/*RegIdx=*/RematAdd01, /*OriginIdx=*/Add01,
-               /*DefRegionIdx=*/MBB1,
-               /*NumUsers=*/1);
+    // We are going to re-rematerialize a register so the LIS need to be
+    // up-to-date.
+    RW->updateLiveIntervals();
 
-  // We are going to re-rematerialize a register so the LIS need to be
-  // up-to-date.
-  Remater.updateLiveIntervals();
-
-  // Rematerialize Add22 from the second to the third block, which will
-  // also indirectly rematerialize RematAdd01; make sure the latter's
-  // rematerializations's origin is the original register, not RematAdd01.
-  DRI.clear().reuse(RematCst0);
-  Remater.rematerializeToRegion(/*RootIdx=*/Add22, /*UseRegion=*/MBB2, DRI);
-  const RegisterIdx RematRematAdd01 = NumRegs++, RematAdd22 = NumRegs++;
-  RegionSizes[MBB1] -= 2;
-  RegionSizes[MBB2] += 2;
-  ASSERT_REGION_SIZES(RegionSizes);
-  EXPECT_REMAT(/*RegIdx=*/RematRematAdd01, /*OriginIdx=*/Add01,
-               /*DefRegionIdx=*/MBB2,
-               /*NumUsers=*/1);
-  EXPECT_REMAT(/*RegIdx=*/RematAdd22, /*OriginIdx=*/Add22,
-               /*DefRegionIdx=*/MBB2,
-               /*NumUsers=*/1);
-
-  Remater.updateLiveIntervals();
-  EXPECT_TRUE(getMF().verify());
+    // Rematerialize Add22 from the second to the third block, which will also
+    // indirectly rematerialize RematAdd01; make sure the latter's
+    // rematerialization's origin is the original register, not RematAdd01.
+    DRI.clear().reuse(RematCst0);
+    RW->rematerializeToRegion(Add22, MBB2, DRI);
+    RW.moveMIs(MBB1, MBB2, 2);
+    ASSERT_REGION_SIZES();
+    EXPECT_REMAT(RematRematAdd01, Add01, MBB2, 1);
+    EXPECT_REMAT(RematAdd22, Add22, MBB2, 1);
+  });
 }
 
 /// Checks that it is possible to rematerialize inside a region that was
 /// rendered empty by previous rematerializations (as long as the region ends
 /// with a terminator).
 TEST_F(RematerializerTest, EmptyRegion) {
-  StringRef MIR = R"(
-name:            EmptyRegion
-tracksRegLiveness: true
-machineFunctionInfo:
-  isEntryFunction: true
-body:             |
+  StringRef MIRBody = R"MIR(
   bb.0:
     %0:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 0, implicit $exec, implicit $mode
     %1:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 1, implicit $exec, implicit $mode
 
   bb.1:
     %2:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 2, implicit $exec, implicit $mode
-    
+
   bb.2:
     %3:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 3, implicit $exec, implicit $mode
     S_BRANCH %bb.3
@@ -530,102 +426,65 @@ body:             |
     S_NOP 0, implicit %0, implicit %1
     S_NOP 0, implicit %2, implicit %3
     S_ENDPGM 0
-...
-)";
-  ASSERT_TRUE(parseMIRAndInit(MIR, "EmptyRegion"));
-  Rematerializer &Remater = getRematerializer();
-  Rematerializer::DependencyReuseInfo DRI;
+)MIR";
+  rematerializerTest(MIRBody, [](RematerializerWrapper &RW) {
+    Rematerializer::DependencyReuseInfo DRI;
 
-  // MBB/Region indices.
-  const unsigned MBB0 = 0, MBB1 = 1, MBB2 = 2, MBB3 = 3;
-  SmallVector<unsigned, 2> RegionSizes{2, 1, 1, 2};
-  ASSERT_REGION_SIZES(RegionSizes);
+    const unsigned MBB0 = 0, MBB1 = 1, MBB2 = 2, MBB3 = 3;
+    const RegisterIdx Cst0 = 0, Cst1 = 1, Cst2 = 2, Cst3 = 3;
 
-  // Indices of rematerializable registers.
-  unsigned NumRegs = 0;
-  const RegisterIdx Cst0 = NumRegs++, Cst1 = NumRegs++, Cst2 = NumRegs++,
-                    Cst3 = NumRegs++;
-  ASSERT_EQ(Remater.getNumRegs(), NumRegs);
+    // After rematerializing %2 and %3 to bb.3, their respective original
+    // defining regions are empty. %2's region ends at the end of its parent
+    // block, whereas %3's region ends at a terminator MI (S_BRANCH).
+    RW->rematerializeToRegion(Cst2, MBB3, DRI);
+    RW->rematerializeToRegion(Cst3, MBB3, DRI.clear());
+    RW.removeMIs(MBB1, 1).removeMIs(MBB2, 1).addMIs(MBB3, 2);
+    ASSERT_REGION_SIZES();
 
-  // After rematerializing %2 and %3 to bb.3, their respective original defining
-  // regions are empty. %2's region ends at the end of its parent block, whereas
-  // %3's region ends at a terminator MI (S_BRANCH).
-  Remater.rematerializeToRegion(/*RootIdx=*/Cst2, /*UseRegion=*/MBB3, DRI);
-  Remater.rematerializeToRegion(/*RootIdx=*/Cst3, /*UseRegion=*/MBB3,
-                                DRI.clear());
-  RegionSizes[MBB1] -= 1;
-  RegionSizes[MBB2] -= 1;
-  RegionSizes[MBB3] += 2;
-  ASSERT_REGION_SIZES(RegionSizes);
+    // Move %0 to the empty MBB1 block/region.
+    const RegisterIdx RematCst0 =
+        RW->rematerializeToRegion(Cst0, MBB1, DRI.clear());
+    RW->transferRegionUsers(Cst0, RematCst0, MBB3);
 
-  // Move %0 to the empty MBB1 block/region.
-  const RegisterIdx RematCst0 =
-      Remater.rematerializeToRegion(Cst0, MBB1, DRI.clear());
-  Remater.transferRegionUsers(Cst0, RematCst0, MBB3);
+    // Move %1 to the empty MBB2 region, right before the S_BRANCH terminator.
+    const RegisterIdx RematCst1 = RW->rematerializeToPos(
+        Cst1, MBB2, RW->getRegion(MBB2).first, DRI.clear());
+    RW->transferRegionUsers(Cst1, RematCst1, MBB3);
 
-  // Move %1 to the empty MBB2 region, right before the S_BRANCH terminator.
-  const RegisterIdx RematCst1 = Remater.rematerializeToPos(
-      Cst1, MBB2, (*Regions)[MBB2].first, DRI.clear());
-  Remater.transferRegionUsers(Cst1, RematCst1, MBB3);
-
-  RegionSizes[MBB0] -= 2;
-  RegionSizes[MBB1] += 1;
-  RegionSizes[MBB2] += 1;
-  ASSERT_REGION_SIZES(RegionSizes);
-
-  Remater.updateLiveIntervals();
-  EXPECT_TRUE(getMF().verify());
+    RW.removeMIs(MBB0, 2).addMIs(MBB1, 1).addMIs(MBB2, 1);
+    ASSERT_REGION_SIZES();
+  });
 }
 
 /// Checks that only registers with a single definition are rematerializable,
 /// even when registers are made up of multiple sub-registers each with their
 /// own definition.
 TEST_F(RematerializerTest, SubReg) {
-  StringRef MIR = R"(
-name:            SubReg
-tracksRegLiveness: true
-machineFunctionInfo:
-  isEntryFunction: true
-body:             |
+  StringRef MIRBody = R"MIR(
   bb.0:
     undef %01.sub0:vreg_64_align2 = nofpexcept V_CVT_I32_F64_e32 0, implicit $exec, implicit $mode
     %01.sub1:vreg_64_align2 = nofpexcept V_CVT_I32_F64_e32 1, implicit $exec, implicit $mode
-    
+
     undef %2.sub0:vreg_64_align2 = nofpexcept V_CVT_I32_F64_e32 2, implicit $exec, implicit $mode
-    
+
     undef %34.sub0:vreg_64_align2 = nofpexcept V_CVT_I32_F64_e32 3, implicit $exec, implicit $mode
 
   bb.1:
     %34.sub1:vreg_64_align2 = nofpexcept V_CVT_I32_F64_e32 4, implicit $exec, implicit $mode
     S_NOP 0, implicit %01, implicit %2, implicit %34
     S_ENDPGM 0
-...
-)";
-  ASSERT_TRUE(parseMIRAndInit(MIR, "SubReg"));
-  Rematerializer &Remater = getRematerializer();
-  Rematerializer::DependencyReuseInfo DRI;
+)MIR";
+  rematerializerTest(MIRBody, [](RematerializerWrapper &RW) {
+    Rematerializer::DependencyReuseInfo DRI;
 
-  // MBB/Region indices.
-  const unsigned MBB0 = 0, MBB1 = 1;
-  SmallVector<unsigned, 2> RegionSizes{4, 2};
-  ASSERT_REGION_SIZES(RegionSizes);
+    const unsigned MBB0 = 0, MBB1 = 1;
+    const RegisterIdx Cst2 = 0;
 
-  // Indices of rematerializable registers.
-  unsigned NumRegs = 0;
-  const RegisterIdx Cst2 = NumRegs++;
-  ASSERT_EQ(Remater.getNumRegs(), NumRegs);
-
-  RegisterIdx RematCst2 =
-      Remater.rematerializeToRegion(/*RootIdx=*/Cst2, /*UseRegion=*/MBB1, DRI);
-  RegionSizes[MBB0] -= 1;
-  RegionSizes[MBB1] += 1;
-  ASSERT_REGION_SIZES(RegionSizes);
-  EXPECT_REMAT(/*RegIdx=*/RematCst2, /*OriginIdx=*/Cst2,
-               /*DefRegionIdx=*/MBB1,
-               /*NumUsers=*/1);
-
-  Remater.updateLiveIntervals();
-  EXPECT_TRUE(getMF().verify());
+    RegisterIdx RematCst2 = RW->rematerializeToRegion(Cst2, MBB1, DRI);
+    RW.moveMIs(MBB0, MBB1, 1);
+    ASSERT_REGION_SIZES();
+    EXPECT_REMAT(RematCst2, Cst2, MBB1, 1);
+  });
 }
 
 /// The rematerializer had a bug where re-creating the interval of a
@@ -636,12 +495,7 @@ body:             |
 /// is illegal. The solution is to split separate components of the interval in
 /// such cases.
 TEST_F(RematerializerTest, SplitSubRegDeadDef) {
-  StringRef MIR = R"(
-name:            SplitSubRegDeadDef
-tracksRegLiveness: true
-machineFunctionInfo:
-  isEntryFunction: true
-body:             |
+  StringRef MIRBody = R"MIR(
   bb.0:
     undef %0.sub0:vreg_64 = IMPLICIT_DEF
     %0.sub1:vreg_64 = IMPLICIT_DEF
@@ -650,64 +504,55 @@ body:             |
   bb.1:
     S_NOP 0, implicit %1
     S_ENDPGM 0
-...
-)";
-  ASSERT_TRUE(parseMIRAndInit(MIR, "SplitSubRegDeadDef"));
-  LiveIntervals &LIS = MFAM.getResult<LiveIntervalsAnalysis>(*MF);
+)MIR";
+  rematerializerTest(MIRBody, [](RematerializerWrapper &RW) {
+    // Replicates the scheduler's effect on LIS on an intra-block move of MI.
+    auto MoveMIAndAdjustLiveness = [&](MachineInstr &MI) {
+      RW.LIS.handleMove(MI);
+      const MachineRegisterInfo &MRI = RW.MF.getRegInfo();
+      const TargetRegisterInfo &TRI = *RW.MF.getSubtarget().getRegisterInfo();
+      RegisterOperands RegOpers;
+      RegOpers.collect(MI, TRI, MRI, true, /*IgnoreDead=*/false);
+      SlotIndex Sub1Slot = RW.LIS.getInstructionIndex(MI).getRegSlot();
+      RegOpers.adjustLaneLiveness(RW.LIS, MRI, Sub1Slot, &MI);
+    };
 
-  // Replicates the scheduler's effect on LIS on an intra-block move of MI.
-  auto MoveMIAndAdjustLiveness = [&](MachineInstr &MI) {
-    LIS.handleMove(MI);
-    const MachineRegisterInfo &MRI = MF->getRegInfo();
-    const TargetRegisterInfo &TRI = *MF->getSubtarget().getRegisterInfo();
-    RegisterOperands RegOpers;
-    RegOpers.collect(MI, TRI, MRI, true, /*IgnoreDead=*/false);
-    SlotIndex Sub1Slot = LIS.getInstructionIndex(MI).getRegSlot();
-    RegOpers.adjustLaneLiveness(LIS, MRI, Sub1Slot, &MI);
-  };
+    MachineBasicBlock &MBB0 = *RW.MF.getBlockNumbered(0);
+    MachineInstr &Sub0Def = *MBB0.begin();
+    MachineInstr &Sub1Def = *MBB0.begin()->getNextNode();
 
-  MachineBasicBlock &MBB0 = *MF->getBlockNumbered(0);
-  MachineInstr &Sub0Def = *MBB0.begin();
-  MachineInstr &Sub1Def = *MBB0.begin()->getNextNode();
+    // Flip %0's subdefinition order. After the move, the definitions look like:
+    // undef %0.sub1:vreg_64 = IMPLICIT_DEF
+    // undef %0.sub0:vreg_64 = IMPLICIT_DEF
+    MBB0.splice(Sub0Def.getIterator(), &MBB0, Sub1Def.getIterator());
+    MoveMIAndAdjustLiveness(Sub1Def);
 
-  // Flip %0's subdefinition order. After the move, the definitions look like:
-  // undef %0.sub1:vreg_64 = IMPLICIT_DEF
-  // undef %0.sub0:vreg_64 = IMPLICIT_DEF
-  MBB0.splice(Sub0Def.getIterator(), &MBB0, Sub1Def.getIterator());
-  MoveMIAndAdjustLiveness(Sub1Def);
+    // Rematerialize %1 to bb.1. This triggers a live-interval update of %0 when
+    // calling Remater.updateLiveIntervals(), during which its interval is
+    // split.
+    Rematerializer::DependencyReuseInfo DRI;
+    const unsigned MBB1 = 1;
+    const RegisterIdx Add = 0;
+    RW->rematerializeToRegion(Add, MBB1, DRI);
+    RW->updateLiveIntervals();
 
-  // Rematerialize %1 to bb.1. This triggers a live-interval update of %0 when
-  // calling Remater.updateLiveIntervals(), during which its interval is split.
-  Rematerializer &Remater = getRematerializer();
-  Rematerializer::DependencyReuseInfo DRI;
-  const unsigned MBB1 = 1;
-  const RegisterIdx Add = 0;
-  Remater.rematerializeToRegion(Add, MBB1, DRI);
-  Remater.updateLiveIntervals();
-
-  // If we didn't split %0 before, its definitions would now look like:
-  // dead undef %0.sub1:vreg_64 = IMPLICIT_DEF
-  // undef %0.sub0:vreg_64 = IMPLICIT_DEF
-  //
-  // Trying to flip back %0's definition order then triggers an
-  // error in LIS.handleMove because its live interval is made up of multiple
-  // connected components.
-  ASSERT_NE(Sub0Def.getOperand(0).getReg(), Sub1Def.getOperand(0).getReg());
-  MBB0.splice(MBB0.end(), &MBB0, Sub1Def.getIterator());
-  MoveMIAndAdjustLiveness(Sub1Def);
-
-  EXPECT_TRUE(getMF().verify());
+    // If we didn't split %0 before, its definitions would now look like:
+    // dead undef %0.sub1:vreg_64 = IMPLICIT_DEF
+    // undef %0.sub0:vreg_64 = IMPLICIT_DEF
+    //
+    // Trying to flip back %0's definition order then triggers an
+    // error in LIS.handleMove because its live interval is made up of multiple
+    // connected components.
+    ASSERT_NE(Sub0Def.getOperand(0).getReg(), Sub1Def.getOperand(0).getReg());
+    MBB0.splice(MBB0.end(), &MBB0, Sub1Def.getIterator());
+    MoveMIAndAdjustLiveness(Sub1Def);
+  });
 }
 
 /// Checks that rollback works as expected when the rollback listener is added
 /// mid-rematerializations.
 TEST_F(RematerializerTest, Rollback) {
-  StringRef MIR = R"(
-name:            Rollback
-tracksRegLiveness: true
-machineFunctionInfo:
-  isEntryFunction: true
-body:             |
+  StringRef MIRBody = R"MIR(
   bb.0:
     %0:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 0, implicit $exec, implicit $mode
     %1:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 1, implicit $exec, implicit $mode
@@ -718,85 +563,65 @@ body:             |
   bb.2:
     S_NOP 0, implicit %0, implicit %1
     S_ENDPGM 0
-)";
-  ASSERT_TRUE(parseMIRAndInit(MIR, "Rollback"));
-  Rematerializer &Remater = getRematerializer();
-  Rematerializer::DependencyReuseInfo DRI;
+)MIR";
+  rematerializerTest(MIRBody, [](RematerializerWrapper &RW) {
+    Rematerializer::DependencyReuseInfo DRI;
 
-  // MBB/Region indices.
-  const unsigned MBB0 = 0, MBB1 = 1, MBB2 = 2;
-  SmallVector<unsigned, 4> RegionSizes{2, 1, 1};
-  ASSERT_REGION_SIZES(RegionSizes);
+    const unsigned MBB0 = 0, MBB1 = 1, MBB2 = 2;
+    const RegisterIdx Cst0 = 0, Cst1 = 1;
 
-  // Indices of rematerializable registers.
-  unsigned NumRegs = 0;
-  const RegisterIdx Cst0 = NumRegs++, Cst1 = NumRegs++;
-  ASSERT_EQ(Remater.getNumRegs(), NumRegs);
+    // Rematerialize %0 to MBB1, taking one user from the original register.
+    RegisterIdx RematCst0MBB1 = RW->rematerializeToRegion(Cst0, MBB1, DRI);
+    RW.addMIs(MBB1, 1).addRematRegs(1);
+    ASSERT_REGION_SIZES();
+    ASSERT_NUM_REMAT_REGS();
 
-  // Rematerialize %0 to MBB1, taking one user from the original register.
-  RegisterIdx RematCst0MBB1 = Remater.rematerializeToRegion(Cst0, MBB1, DRI);
-  RegionSizes[MBB1] += 1;
-  ASSERT_REGION_SIZES(RegionSizes);
-  NumRegs += 1;
-  ASSERT_EQ(Remater.getNumRegs(), NumRegs);
+    Rollbacker Rollback;
+    RW->addListener(&Rollback);
 
-  Rollbacker Rollback;
-  Remater.addListener(&Rollback);
+    // Rematerialize %0 to MBB2 and %1 to MBB1/MBB2; each rematerialization ends
+    // up with a single user and both original registers are deleted.
+    RegisterIdx RematCst0MBB2 =
+        RW->rematerializeToRegion(Cst0, MBB2, DRI.clear());
+    RegisterIdx RematCst1MBB1 =
+        RW->rematerializeToRegion(Cst1, MBB1, DRI.clear());
+    RegisterIdx RematCst1MBB2 =
+        RW->rematerializeToRegion(Cst1, MBB2, DRI.clear());
 
-  // Rematerialize %0 to MBB2 amd %1 to MBB1/MBB2; each rematerialization ends
-  // up with a single user and both original registers are deleted.
-  RegisterIdx RematCst0MBB2 =
-      Remater.rematerializeToRegion(Cst0, MBB2, DRI.clear());
-  RegisterIdx RematCst1MBB1 =
-      Remater.rematerializeToRegion(Cst1, MBB1, DRI.clear());
-  RegisterIdx RematCst1MBB2 =
-      Remater.rematerializeToRegion(Cst1, MBB2, DRI.clear());
+    RW.removeMIs(MBB0, 2).addMIs(MBB1, 1).addMIs(MBB2, 2).addRematRegs(3);
+    ASSERT_REGION_SIZES();
+    ASSERT_NUM_REMAT_REGS();
 
-  RegionSizes[MBB0] -= 2;
-  RegionSizes[MBB1] += 1;
-  RegionSizes[MBB2] += 2;
-  ASSERT_REGION_SIZES(RegionSizes);
-  NumRegs += 3;
-  ASSERT_EQ(Remater.getNumRegs(), NumRegs);
+    EXPECT_NO_USERS(Cst0);
+    EXPECT_NO_USERS(Cst1);
+    EXPECT_NUM_USERS(RematCst0MBB1, 1);
+    EXPECT_NUM_USERS(RematCst0MBB2, 1);
+    EXPECT_NUM_USERS(RematCst1MBB1, 1);
+    EXPECT_NUM_USERS(RematCst1MBB2, 1);
 
-  EXPECT_NO_USERS(Cst0);
-  EXPECT_NO_USERS(Cst1);
-  EXPECT_NUM_USERS(RematCst0MBB1, 1);
-  EXPECT_NUM_USERS(RematCst0MBB2, 1);
-  EXPECT_NUM_USERS(RematCst1MBB1, 1);
-  EXPECT_NUM_USERS(RematCst1MBB2, 1);
+    // Rollback all changes since the rollbacker was added. The first
+    // rematerialization of %0 to MBB1 happened before so it is not rolled back.
+    // However %0 is re-created because it was deleted after.
+    Rollback.rollback(*RW);
 
-  // Rollback all changes since the rollbacker was added. The first
-  // rematerialization of %0 to MBB1 happened before so it is not rolled back.
-  // However %0 is re-created because it was deleted after.
-  Rollback.rollback(Remater);
+    RW.addMIs(MBB0, 2).removeMIs(MBB1, 1).removeMIs(MBB2, 2);
+    ASSERT_REGION_SIZES();
+    ASSERT_NUM_REMAT_REGS();
 
-  RegionSizes[MBB0] += 2;
-  RegionSizes[MBB1] -= 1;
-  RegionSizes[MBB2] -= 2;
-  ASSERT_REGION_SIZES(RegionSizes);
-  ASSERT_EQ(Remater.getNumRegs(), NumRegs);
-
-  EXPECT_NUM_USERS(Cst0, 1);
-  EXPECT_NUM_USERS(Cst1, 2);
-  EXPECT_NUM_USERS(RematCst0MBB1, 1);
-  EXPECT_NO_USERS(RematCst0MBB2);
-  EXPECT_NO_USERS(RematCst1MBB1);
-  EXPECT_NO_USERS(RematCst1MBB2);
-
-  EXPECT_TRUE(getMF().verify());
+    EXPECT_NUM_USERS(Cst0, 1);
+    EXPECT_NUM_USERS(Cst1, 2);
+    EXPECT_NUM_USERS(RematCst0MBB1, 1);
+    EXPECT_NO_USERS(RematCst0MBB2);
+    EXPECT_NO_USERS(RematCst1MBB1);
+    EXPECT_NO_USERS(RematCst1MBB2);
+  });
 }
 
 /// Checks that rollback re-creates MIs at correct positions when the order of
 /// register deletions forces the re-creation logic to iterate through multiple
 /// deleted registers' respective insert position to find a valid one.
 TEST_F(RematerializerTest, RollbackInvalidInsertPos) {
-  StringRef MIR = R"(
-name:            RollbackInvalidInsertPos
-tracksRegLiveness: true
-machineFunctionInfo:
-  isEntryFunction: true
-body:             |
+  StringRef MIRBody = R"MIR(
   bb.0:
     %0:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 0, implicit $exec, implicit $mode
     %1:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 1, implicit $exec, implicit $mode
@@ -806,55 +631,42 @@ body:             |
   bb.1:
     S_NOP 0, implicit %0, implicit %1, implicit %2, implicit %3
     S_ENDPGM 0
-)";
-  ASSERT_TRUE(parseMIRAndInit(MIR, "RollbackInvalidInsertPos"));
-  Rematerializer &Remater = getRematerializer();
-  Rematerializer::DependencyReuseInfo DRI;
-  Rollbacker Rollback;
-  Remater.addListener(&Rollback);
+)MIR";
+  rematerializerTest(MIRBody, [](RematerializerWrapper &RW) {
+    Rematerializer::DependencyReuseInfo DRI;
+    Rollbacker Rollback;
+    RW->addListener(&Rollback);
 
-  // MBB/Region indices.
-  const unsigned MBB0 = 0, MBB1 = 1;
-  SmallVector<unsigned, 4> RegionSizes{4, 1};
-  ASSERT_REGION_SIZES(RegionSizes);
+    const unsigned MBB0 = 0, MBB1 = 1;
+    const RegisterIdx Cst0 = 0, Cst1 = 1, Cst2 = 2, Cst3 = 3;
 
-  // Indices of rematerializable registers.
-  const RegisterIdx Cst0 = 0, Cst1 = 1, Cst2 = 2, Cst3 = 3;
+    // Rematerialize %0 to MBB1, deleting the original register.
+    RW->rematerializeToRegion(Cst0, MBB1, DRI);
+    RW.moveMIs(MBB0, MBB1, 1);
+    ASSERT_REGION_SIZES();
 
-  // Rematerialize %0 to MBB1, deleting the original register
-  Remater.rematerializeToRegion(Cst0, MBB1, DRI);
-  RegionSizes[MBB0] -= 1;
-  RegionSizes[MBB1] += 1;
-  ASSERT_REGION_SIZES(RegionSizes);
+    // Rematerialize %1 to MBB1, deleting the original register.
+    RW->rematerializeToRegion(Cst1, MBB1, DRI.clear());
+    RW.moveMIs(MBB0, MBB1, 1);
+    ASSERT_REGION_SIZES();
 
-  // Rematerialize %1 to MBB1, deleting the original register
-  Remater.rematerializeToRegion(Cst1, MBB1, DRI.clear());
-  RegionSizes[MBB0] -= 1;
-  RegionSizes[MBB1] += 1;
-  ASSERT_REGION_SIZES(RegionSizes);
+    // Rematerialize %2 to MBB1, deleting the original register.
+    RW->rematerializeToRegion(Cst2, MBB1, DRI.clear());
+    RW.moveMIs(MBB0, MBB1, 1);
+    ASSERT_REGION_SIZES();
 
-  // Rematerialize %2 to MBB1, deleting the original register
-  Remater.rematerializeToRegion(Cst2, MBB1, DRI.clear());
-  RegionSizes[MBB0] -= 1;
-  RegionSizes[MBB1] += 1;
-  ASSERT_REGION_SIZES(RegionSizes);
+    // Now rollback and check for correct instruction order in the original
+    // defining region.
+    Rollback.rollback(*RW);
+    RW.moveMIs(MBB1, MBB0, 3);
+    ASSERT_REGION_SIZES();
 
-  // Now rollback and check for correct instruction order in the original
-  // defining region. The asserts on region sizes ensure that all original
-  // registers were indeed deleted and will be re-created in the original
-  // region.
-  Rollback.rollback(Remater);
-  RegionSizes[MBB0] += 3;
-  RegionSizes[MBB1] -= 3;
-  ASSERT_REGION_SIZES(RegionSizes);
-
-  MachineInstr &DefCst0 = *Remater.getReg(Cst0).DefMI;
-  MachineInstr &DefCst1 = *Remater.getReg(Cst1).DefMI;
-  MachineInstr &DefCst2 = *Remater.getReg(Cst2).DefMI;
-  MachineInstr &DefCst3 = *Remater.getReg(Cst3).DefMI;
-  EXPECT_EQ(std::next(DefCst0.getIterator()), DefCst1.getIterator());
-  EXPECT_EQ(std::next(DefCst1.getIterator()), DefCst2.getIterator());
-  EXPECT_EQ(std::next(DefCst2.getIterator()), DefCst3.getIterator());
-
-  EXPECT_TRUE(getMF().verify());
+    MachineInstr &DefCst0 = *RW->getReg(Cst0).DefMI;
+    MachineInstr &DefCst1 = *RW->getReg(Cst1).DefMI;
+    MachineInstr &DefCst2 = *RW->getReg(Cst2).DefMI;
+    MachineInstr &DefCst3 = *RW->getReg(Cst3).DefMI;
+    EXPECT_EQ(std::next(DefCst0.getIterator()), DefCst1.getIterator());
+    EXPECT_EQ(std::next(DefCst1.getIterator()), DefCst2.getIterator());
+    EXPECT_EQ(std::next(DefCst2.getIterator()), DefCst3.getIterator());
+  });
 }

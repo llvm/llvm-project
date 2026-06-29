@@ -16,6 +16,7 @@
 #include <vector>
 
 #include "lldb/Core/DebuggerEvents.h"
+#include "lldb/Core/Diagnostics.h"
 #include "lldb/Core/FormatEntity.h"
 #include "lldb/Core/IOHandler.h"
 #include "lldb/Core/SourceManager.h"
@@ -31,7 +32,6 @@
 #include "lldb/Target/TargetList.h"
 #include "lldb/Utility/Broadcaster.h"
 #include "lldb/Utility/ConstString.h"
-#include "lldb/Utility/Diagnostics.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StructuredData.h"
@@ -196,10 +196,6 @@ public:
   // GetSourceManager on the target instead.
   SourceManager &GetSourceManager();
 
-  lldb::TargetSP GetSelectedTarget() {
-    return m_target_list.GetSelectedTarget();
-  }
-
   /// Get the execution context representing the selected entities in the
   /// selected target. If no target is selected, the execution context will
   /// contain the dummy target if adopt_dummy_target is true.
@@ -270,6 +266,10 @@ public:
 
   void SetLoggingCallback(lldb::LogOutputCallback log_callback, void *baton);
 
+  /// Copy this debugger's file-backed log files into the given directory, for
+  /// inclusion in a diagnostics bundle. Best-effort; failures are skipped.
+  void CopyLogFilesToDirectory(const FileSpec &dir);
+
   Status SetPropertyValue(const ExecutionContext *exe_ctx,
                           VarSetOperationType op, llvm::StringRef property_path,
                           llvm::StringRef value) override;
@@ -303,6 +303,10 @@ public:
   uint64_t GetTerminalHeight() const;
 
   bool SetTerminalHeight(uint64_t term_height);
+
+  /// Set the terminal width and height together, so observers are notified
+  /// once with both dimensions current.
+  bool SetTerminalDimensions(uint64_t term_width, uint64_t term_height);
 
   llvm::StringRef GetPrompt() const;
 
@@ -805,7 +809,6 @@ protected:
   lldb::ListenerSP m_forward_listener_sp;
   llvm::once_flag m_clear_once;
   lldb::TargetSP m_dummy_target_sp;
-  Diagnostics::CallbackID m_diagnostics_callback_id;
 
   /// Bookkeeping for command line progress events.
   /// @{

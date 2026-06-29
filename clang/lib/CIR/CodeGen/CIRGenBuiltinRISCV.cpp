@@ -82,25 +82,75 @@ CIRGenFunction::emitRISCVBuiltinExpr(unsigned builtinID, const CallExpr *e) {
   }
   // Zbkb
   case RISCV::BI__builtin_riscv_brev8_32:
-  case RISCV::BI__builtin_riscv_brev8_64:
-  case RISCV::BI__builtin_riscv_zip_32:
-  case RISCV::BI__builtin_riscv_unzip_32:
+  case RISCV::BI__builtin_riscv_brev8_64: {
+    intrinsicName = "riscv.brev8";
+    break;
+  }
+  case RISCV::BI__builtin_riscv_zip_32: {
+    intrinsicName = "riscv.zip";
+    break;
+  }
+  case RISCV::BI__builtin_riscv_unzip_32: {
+    intrinsicName = "riscv.unzip";
+    break;
+  }
   // Zknh
-  case RISCV::BI__builtin_riscv_sha256sig0:
-  case RISCV::BI__builtin_riscv_sha256sig1:
-  case RISCV::BI__builtin_riscv_sha256sum0:
-  case RISCV::BI__builtin_riscv_sha256sum1:
+  case RISCV::BI__builtin_riscv_sha256sig0: {
+    intrinsicName = "riscv.sha256sig0";
+    break;
+  }
+  case RISCV::BI__builtin_riscv_sha256sig1: {
+    intrinsicName = "riscv.sha256sig1";
+    break;
+  }
+  case RISCV::BI__builtin_riscv_sha256sum0: {
+    intrinsicName = "riscv.sha256sum0";
+    break;
+  }
+  case RISCV::BI__builtin_riscv_sha256sum1: {
+    intrinsicName = "riscv.sha256sum1";
+    break;
+  }
   // Zksed
-  case RISCV::BI__builtin_riscv_sm4ks:
-  case RISCV::BI__builtin_riscv_sm4ed:
+  case RISCV::BI__builtin_riscv_sm4ks: {
+    intrinsicName = "riscv.sm4ks";
+    break;
+  }
+  case RISCV::BI__builtin_riscv_sm4ed: {
+    intrinsicName = "riscv.sm4ed";
+    break;
+  }
   // Zksh
-  case RISCV::BI__builtin_riscv_sm3p0:
-  case RISCV::BI__builtin_riscv_sm3p1:
+  case RISCV::BI__builtin_riscv_sm3p0: {
+    intrinsicName = "riscv.sm3p0";
+    break;
+  }
+  case RISCV::BI__builtin_riscv_sm3p1: {
+    intrinsicName = "riscv.sm3p1";
+    break;
+  }
   // Zbb
   case RISCV::BI__builtin_riscv_clz_32:
-  case RISCV::BI__builtin_riscv_clz_64:
+  case RISCV::BI__builtin_riscv_clz_64: {
+    mlir::Location loc = getLoc(e->getSourceRange());
+    auto op = cir::BitClzOp::create(builder, loc, ops[0],
+                                    /*poison_zero=*/false);
+    mlir::Value result = op.getResult();
+    if (result.getType() != returnType)
+      result = builder.createIntCast(result, returnType);
+    return result;
+  }
   case RISCV::BI__builtin_riscv_ctz_32:
-  case RISCV::BI__builtin_riscv_ctz_64:
+  case RISCV::BI__builtin_riscv_ctz_64: {
+    mlir::Location loc = getLoc(e->getSourceRange());
+    auto op = cir::BitCtzOp::create(builder, loc, ops[0],
+                                    /*poison_zero=*/false);
+    mlir::Value result = op.getResult();
+    if (result.getType() != returnType)
+      result = builder.createIntCast(result, returnType);
+    return result;
+  }
+
   // Zihintntl
   case RISCV::BI__builtin_riscv_ntl_load:
   case RISCV::BI__builtin_riscv_ntl_store: {
@@ -118,22 +168,74 @@ CIRGenFunction::emitRISCVBuiltinExpr(unsigned builtinID, const CallExpr *e) {
   }
 
   // XCValu
-  case RISCV::BI__builtin_riscv_cv_alu_addN:
-  case RISCV::BI__builtin_riscv_cv_alu_addRN:
-  case RISCV::BI__builtin_riscv_cv_alu_adduN:
-  case RISCV::BI__builtin_riscv_cv_alu_adduRN:
-  case RISCV::BI__builtin_riscv_cv_alu_clip:
-  case RISCV::BI__builtin_riscv_cv_alu_clipu:
-  case RISCV::BI__builtin_riscv_cv_alu_extbs:
-  case RISCV::BI__builtin_riscv_cv_alu_extbz:
-  case RISCV::BI__builtin_riscv_cv_alu_exths:
-  case RISCV::BI__builtin_riscv_cv_alu_exthz:
-  case RISCV::BI__builtin_riscv_cv_alu_sle:
-  case RISCV::BI__builtin_riscv_cv_alu_sleu:
-  case RISCV::BI__builtin_riscv_cv_alu_subN:
-  case RISCV::BI__builtin_riscv_cv_alu_subRN:
-  case RISCV::BI__builtin_riscv_cv_alu_subuN:
-  case RISCV::BI__builtin_riscv_cv_alu_subuRN:
+  case RISCV::BI__builtin_riscv_cv_alu_addN: {
+    intrinsicName = "riscv.cv.alu.addN";
+    break;
+  }
+  case RISCV::BI__builtin_riscv_cv_alu_addRN: {
+    intrinsicName = "riscv.cv.alu.addRN";
+    break;
+  }
+  case RISCV::BI__builtin_riscv_cv_alu_adduN: {
+    intrinsicName = "riscv.cv.alu.adduN";
+    break;
+  }
+  case RISCV::BI__builtin_riscv_cv_alu_adduRN: {
+    intrinsicName = "riscv.cv.alu.adduRN";
+    break;
+  }
+  case RISCV::BI__builtin_riscv_cv_alu_clip: {
+    intrinsicName = "riscv.cv.alu.clip";
+    break;
+  }
+  case RISCV::BI__builtin_riscv_cv_alu_clipu: {
+    intrinsicName = "riscv.cv.alu.clipu";
+    break;
+  }
+  case RISCV::BI__builtin_riscv_cv_alu_extbs: {
+    mlir::Value result = builder.createIntCast(ops[0], builder.getSInt8Ty());
+    return builder.createIntCast(result, returnType);
+  }
+  case RISCV::BI__builtin_riscv_cv_alu_extbz: {
+    mlir::Value result = builder.createIntCast(ops[0], builder.getUInt8Ty());
+    return builder.createIntCast(result, returnType);
+  }
+  case RISCV::BI__builtin_riscv_cv_alu_exths: {
+    mlir::Value result = builder.createIntCast(ops[0], builder.getSInt16Ty());
+    return builder.createIntCast(result, returnType);
+  }
+  case RISCV::BI__builtin_riscv_cv_alu_exthz: {
+    mlir::Value result = builder.createIntCast(ops[0], builder.getUInt16Ty());
+    return builder.createIntCast(result, returnType);
+  }
+  case RISCV::BI__builtin_riscv_cv_alu_sle: {
+    mlir::Location loc = getLoc(e->getSourceRange());
+    mlir::Value result =
+        builder.createCompare(loc, cir::CmpOpKind::le, ops[0], ops[1]);
+    return builder.createBoolToInt(result, returnType);
+  }
+  case RISCV::BI__builtin_riscv_cv_alu_sleu: {
+    mlir::Location loc = getLoc(e->getSourceRange());
+    mlir::Value result =
+        builder.createCompare(loc, cir::CmpOpKind::le, ops[0], ops[1]);
+    return builder.createBoolToInt(result, returnType);
+  }
+  case RISCV::BI__builtin_riscv_cv_alu_subN: {
+    intrinsicName = "riscv.cv.alu.subN";
+    break;
+  }
+  case RISCV::BI__builtin_riscv_cv_alu_subRN: {
+    intrinsicName = "riscv.cv.alu.subRN";
+    break;
+  }
+  case RISCV::BI__builtin_riscv_cv_alu_subuN: {
+    intrinsicName = "riscv.cv.alu.subuN";
+    break;
+  }
+  case RISCV::BI__builtin_riscv_cv_alu_subuRN: {
+    intrinsicName = "riscv.cv.alu.subuRN";
+    break;
+  }
   // XAndesPerf
   case RISCV::BI__builtin_riscv_nds_ffb_32:
   case RISCV::BI__builtin_riscv_nds_ffb_64:

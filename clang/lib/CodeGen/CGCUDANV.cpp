@@ -26,8 +26,10 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/ReplaceConstant.h"
+#include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/VirtualFileSystem.h"
+#include "llvm/Transforms/Utils/ModuleUtils.h"
 
 using namespace clang;
 using namespace CodeGen;
@@ -72,6 +74,16 @@ private:
   /// ModuleCtorFunction() and used to create corresponding cleanup calls in
   /// ModuleDtorFunction()
   llvm::GlobalVariable *GpuBinaryHandle = nullptr;
+  /// Host-side shadow for the per-TU __llvm_profile_sections_<CUID> global,
+  /// emitted only for HIP host compiles when PGO is on. Registered via
+  /// __hipRegisterVar (non-RDC) or an offloading entry (RDC) so the runtime
+  /// can locate the device-side table by name.
+  llvm::GlobalVariable *OffloadProfShadow = nullptr;
+  struct OffloadProfSectionShadowInfo {
+    llvm::GlobalVariable *Shadow;
+    std::string DeviceName;
+  };
+  llvm::SmallVector<OffloadProfSectionShadowInfo, 16> OffloadProfSectionShadows;
   /// Whether we generate relocatable device code.
   bool RelocatableDeviceCode;
   /// Mangle context for device.
@@ -176,6 +188,13 @@ private:
   void transformManagedVars();
   /// Create offloading entries to register globals in RDC mode.
   void createOffloadingEntries();
+  /// For HIP+PGO, emit the per-TU __llvm_profile_sections_<CUID> global.
+  /// On the device side it is the populated 7-pointer section-bounds table.
+  /// On the host side it is a placeholder void* shadow stored in
+  /// OffloadProfShadow, registered later by makeRegisterGlobalsFn (non-RDC)
+  /// or createOffloadingEntries (RDC) so the runtime can locate the
+  /// device-side table by name.
+  void emitOffloadProfilingSections();
 
 public:
   CGNVCUDARuntime(CodeGenModule &CGM);
@@ -323,44 +342,41 @@ void CGNVCUDARuntime::emitDeviceStub(CodeGenFunction &CGF,
     emitDeviceStubBodyLegacy(CGF, Args);
 }
 
-/// CUDA passes the arguments with a level of indirection. For example, a
-/// (void*, short, void*) is passed as {void **, short *, void **} to the launch
-/// function. For the LLVM/offload launch we flatten the arguments into the
-/// struct directly. In addition, we include the size of the arguments, thus
-/// pass {sizeof({void *, short, void *}), ptr to {void *, short, void *},
-/// nullptr}. The last nullptr needs to be initialized to an array of pointers
-/// pointing to the arguments if we want to offload to the host.
+/// Build the input as a sized array of pointers so that it can be launched by
+/// the offloading runtime.
 Address CGNVCUDARuntime::prepareKernelArgsLLVMOffload(CodeGenFunction &CGF,
                                                       FunctionArgList &Args) {
   SmallVector<llvm::Type *> ArgTypes, KernelLaunchParamsTypes;
   for (auto &Arg : Args)
     ArgTypes.push_back(CGF.ConvertTypeForMem(Arg->getType()));
   llvm::StructType *KernelArgsTy = llvm::StructType::create(ArgTypes);
+  llvm::Type *KernelArgsPtrsTy = llvm::ArrayType::get(PtrTy, Args.size());
 
-  auto *Int64Ty = CGF.Builder.getInt64Ty();
-  KernelLaunchParamsTypes.push_back(Int64Ty);
-  KernelLaunchParamsTypes.push_back(PtrTy);
+  auto *Int32Ty = CGF.Builder.getInt32Ty();
+  KernelLaunchParamsTypes.push_back(Int32Ty);
   KernelLaunchParamsTypes.push_back(PtrTy);
 
   llvm::StructType *KernelLaunchParamsTy =
       llvm::StructType::create(KernelLaunchParamsTypes);
   Address KernelArgs = CGF.CreateTempAllocaWithoutCast(
       KernelArgsTy, CharUnits::fromQuantity(16), "kernel_args");
+  Address KernelArgsPtrs = CGF.CreateTempAllocaWithoutCast(
+      KernelArgsPtrsTy, CharUnits::fromQuantity(16), "kernel_args_ptrs");
   Address KernelLaunchParams = CGF.CreateTempAllocaWithoutCast(
       KernelLaunchParamsTy, CharUnits::fromQuantity(16),
       "kernel_launch_params");
 
-  auto KernelArgsSize = CGM.getDataLayout().getTypeAllocSize(KernelArgsTy);
-  CGF.Builder.CreateStore(llvm::ConstantInt::get(Int64Ty, KernelArgsSize),
+  CGF.Builder.CreateStore(llvm::ConstantInt::get(Int32Ty, Args.size()),
                           CGF.Builder.CreateStructGEP(KernelLaunchParams, 0));
-  CGF.Builder.CreateStore(KernelArgs.emitRawPointer(CGF),
+  CGF.Builder.CreateStore(KernelArgsPtrs.emitRawPointer(CGF),
                           CGF.Builder.CreateStructGEP(KernelLaunchParams, 1));
-  CGF.Builder.CreateStore(llvm::Constant::getNullValue(PtrTy),
-                          CGF.Builder.CreateStructGEP(KernelLaunchParams, 2));
 
   for (unsigned i = 0; i < Args.size(); ++i) {
     auto *ArgVal = CGF.Builder.CreateLoad(CGF.GetAddrOfLocalVar(Args[i]));
-    CGF.Builder.CreateStore(ArgVal, CGF.Builder.CreateStructGEP(KernelArgs, i));
+    Address ArgAddr = CGF.Builder.CreateStructGEP(KernelArgs, i);
+    CGF.Builder.CreateStore(ArgVal, ArgAddr);
+    CGF.Builder.CreateStore(ArgAddr.emitRawPointer(CGF),
+                            CGF.Builder.CreateConstArrayGEP(KernelArgsPtrs, i));
   }
 
   return KernelLaunchParams;
@@ -372,7 +388,7 @@ Address CGNVCUDARuntime::prepareKernelArgs(CodeGenFunction &CGF,
   // args, allocate a single pointer so we still have a valid pointer to the
   // argument array that we can pass to runtime, even if it will be unused.
   Address KernelArgs = CGF.CreateTempAlloca(
-      PtrTy, CharUnits::fromQuantity(16), "kernel_args",
+      PtrTy, LangAS::Default, CharUnits::fromQuantity(16), "kernel_args",
       llvm::ConstantInt::get(SizeTy, std::max<size_t>(1, Args.size())));
   // Store pointers to the arguments in a locally allocated launch_args.
   for (unsigned i = 0; i < Args.size(); ++i) {
@@ -433,13 +449,14 @@ void CGNVCUDARuntime::emitDeviceStubBodyNew(CodeGenFunction &CGF,
   // Create temporary dim3 grid_dim, block_dim.
   ParmVarDecl *GridDimParam = cudaLaunchKernelFD->getParamDecl(1);
   QualType Dim3Ty = GridDimParam->getType();
-  Address GridDim =
-      CGF.CreateMemTemp(Dim3Ty, CharUnits::fromQuantity(8), "grid_dim");
-  Address BlockDim =
-      CGF.CreateMemTemp(Dim3Ty, CharUnits::fromQuantity(8), "block_dim");
-  Address ShmemSize =
-      CGF.CreateTempAlloca(SizeTy, CGM.getSizeAlign(), "shmem_size");
-  Address Stream = CGF.CreateTempAlloca(PtrTy, CGM.getPointerAlign(), "stream");
+  Address GridDim = CGF.CreateMemTempWithoutCast(
+      Dim3Ty, CharUnits::fromQuantity(8), "grid_dim");
+  Address BlockDim = CGF.CreateMemTempWithoutCast(
+      Dim3Ty, CharUnits::fromQuantity(8), "block_dim");
+  Address ShmemSize = CGF.CreateTempAlloca(SizeTy, LangAS::Default,
+                                           CGM.getSizeAlign(), "shmem_size");
+  Address Stream = CGF.CreateTempAlloca(PtrTy, LangAS::Default,
+                                        CGM.getPointerAlign(), "stream");
   llvm::FunctionCallee cudaPopConfigFn = CGM.CreateRuntimeFunction(
       llvm::FunctionType::get(IntTy,
                               {/*gridDim=*/GridDim.getType(),
@@ -731,6 +748,56 @@ llvm::Function *CGNVCUDARuntime::makeRegisterGlobalsFn() {
            llvm::ConstantInt::get(IntTy, Info.Flags.isNormalized()),
            llvm::ConstantInt::get(IntTy, Info.Flags.isExtern())});
       break;
+    }
+  }
+
+  // Register the per-TU offload-profiling shadow so the host runtime can
+  // locate the matching device-side __llvm_profile_sections_<CUID>. We
+  // emit both __hipRegisterVar (so the HIP runtime can map the host
+  // shadow to the device symbol) and
+  // __llvm_profile_offload_register_shadow_variable (so the profile
+  // runtime adds the shadow to its drain list).
+  if (OffloadProfShadow) {
+    llvm::Constant *Name =
+        makeConstantString(std::string(OffloadProfShadow->getName()));
+    llvm::Constant *IntZero = llvm::ConstantInt::get(IntTy, 0);
+    llvm::Value *RegisterVarArgs[] = {
+        &GpuBinaryHandlePtr,
+        OffloadProfShadow,
+        Name,
+        Name,
+        IntZero,
+        llvm::ConstantInt::get(VarSizeTy,
+                               CGM.getDataLayout().getPointerSize(/*AS=*/0)),
+        IntZero,
+        IntZero};
+    Builder.CreateCall(RegisterVar, RegisterVarArgs);
+
+    llvm::FunctionCallee RegisterShadow = CGM.CreateRuntimeFunction(
+        llvm::FunctionType::get(VoidTy, {PtrTy}, false),
+        "__llvm_profile_offload_register_shadow_variable");
+    Builder.CreateCall(RegisterShadow, {OffloadProfShadow});
+  }
+
+  if (!OffloadProfSectionShadows.empty()) {
+    llvm::FunctionCallee RegisterSectionShadow = CGM.CreateRuntimeFunction(
+        llvm::FunctionType::get(VoidTy, {PtrTy}, false),
+        "__llvm_profile_offload_register_section_shadow_variable");
+    llvm::Constant *IntZero = llvm::ConstantInt::get(IntTy, 0);
+    for (const auto &Info : OffloadProfSectionShadows) {
+      llvm::Constant *Name = makeConstantString(Info.DeviceName);
+      llvm::Value *RegisterVarArgs[] = {
+          &GpuBinaryHandlePtr,
+          Info.Shadow,
+          Name,
+          Name,
+          IntZero,
+          llvm::ConstantInt::get(VarSizeTy,
+                                 CGM.getDataLayout().getPointerSize(/*AS=*/0)),
+          IntZero,
+          IntZero};
+      Builder.CreateCall(RegisterVar, RegisterVarArgs);
+      Builder.CreateCall(RegisterSectionShadow, {Info.Shadow});
     }
   }
 
@@ -1255,11 +1322,128 @@ void CGNVCUDARuntime::createOffloadingEntries() {
           I.Flags.getSurfTexType());
     }
   }
+
+  // Register the per-TU offload-profiling shadow. The offloading entry
+  // makes the linker-wrapper emit the host __hipRegisterVar call in the
+  // combined ctor. Separately emit a per-TU ctor that registers the
+  // shadow with the profile runtime's drain list.
+  if (OffloadProfShadow) {
+    llvm::offloading::emitOffloadingEntry(
+        M, Kind, OffloadProfShadow, OffloadProfShadow->getName(),
+        CGM.getDataLayout().getPointerSize(/*AS=*/0),
+        llvm::offloading::OffloadGlobalEntry, /*Data=*/0);
+
+    llvm::LLVMContext &Ctx = M.getContext();
+    auto *PtrTy = llvm::PointerType::getUnqual(Ctx);
+    llvm::FunctionCallee RegisterShadow = CGM.CreateRuntimeFunction(
+        llvm::FunctionType::get(VoidTy, {PtrTy}, false),
+        "__llvm_profile_offload_register_shadow_variable");
+    llvm::FunctionCallee RegisterSectionShadow = CGM.CreateRuntimeFunction(
+        llvm::FunctionType::get(VoidTy, {PtrTy}, false),
+        "__llvm_profile_offload_register_section_shadow_variable");
+    auto *CtorFn = llvm::Function::Create(
+        llvm::FunctionType::get(VoidTy, false),
+        llvm::GlobalValue::InternalLinkage,
+        "__llvm_profile_register_shadow." + CGM.getContext().getCUIDHash(), &M);
+    auto *Entry = llvm::BasicBlock::Create(Ctx, "entry", CtorFn);
+    llvm::IRBuilder<> B(Entry);
+    B.CreateCall(RegisterShadow, {OffloadProfShadow});
+    for (const auto &Info : OffloadProfSectionShadows) {
+      llvm::offloading::emitOffloadingEntry(
+          M, Kind, Info.Shadow, Info.DeviceName,
+          CGM.getDataLayout().getPointerSize(/*AS=*/0),
+          llvm::offloading::OffloadGlobalEntry, /*Data=*/0);
+      B.CreateCall(RegisterSectionShadow, {Info.Shadow});
+    }
+    B.CreateRetVoid();
+    llvm::appendToGlobalCtors(M, CtorFn, /*Priority=*/65535);
+  }
+}
+
+// For HIP host+device compiles with PGO enabled, emit the per-TU global
+// __llvm_profile_sections_<CUID>. Device side: a 7-pointer struct holding
+// section start/stop bounds for the names/counters/data sections plus the
+// raw-version variable. Host side: an opaque void* shadow whose only
+// purpose is to give the host-runtime a registered symbol name to look up
+// via hipGetSymbolAddress; the actual device-side data lives in the
+// matching device-side global.
+void CGNVCUDARuntime::emitOffloadProfilingSections() {
+  if (!CGM.getLangOpts().HIP)
+    return;
+  if (!CGM.getCodeGenOpts().hasProfileInstr())
+    return;
+
+  StringRef CUIDHash = CGM.getContext().getCUIDHash();
+  if (CUIDHash.empty())
+    return;
+
+  llvm::Module &M = CGM.getModule();
+  llvm::LLVMContext &Ctx = M.getContext();
+  std::string Name = ("__llvm_profile_sections_" + CUIDHash).str();
+
+  // If the global already exists (e.g. another TU was merged in), don't
+  // duplicate it.
+  if (M.getNamedValue(Name))
+    return;
+
+  if (CGM.getLangOpts().CUDAIsDevice) {
+    // Device side: emit only the per-TU names postfix marker. The sections
+    // struct is emitted later by the InstrProfiling pass, which emits it only
+    // when the TU has profile data, avoiding dangling section references.
+    unsigned GlobalAS = M.getDataLayout().getDefaultGlobalsAddressSpace();
+    std::string NamesVarPostfixVarName =
+        std::string(llvm::getInstrProfNamesVarPostfixVarName());
+    if (!M.getNamedValue(NamesVarPostfixVarName)) {
+      auto *NamesVarPostfix = llvm::ConstantDataArray::getString(
+          Ctx, (llvm::Twine("_") + CUIDHash).str(), true);
+      auto *NamesGV = new llvm::GlobalVariable(
+          M, NamesVarPostfix->getType(), /*isConstant=*/true,
+          llvm::GlobalValue::PrivateLinkage, NamesVarPostfix,
+          NamesVarPostfixVarName,
+          /*InsertBefore=*/nullptr, llvm::GlobalValue::NotThreadLocal,
+          GlobalAS);
+      CGM.addCompilerUsedGlobal(NamesGV);
+    }
+    return;
+  }
+
+  // Host side: emit an opaque void* shadow. Layout doesn't matter — the
+  // runtime locates it by name via hipGetSymbolAddress and treats it as
+  // the address of the device-side struct. Registration with the HIP
+  // runtime is added by makeRegisterGlobalsFn (non-RDC) or
+  // createOffloadingEntries (RDC).
+  auto *PtrTy = llvm::PointerType::getUnqual(Ctx);
+  OffloadProfShadow = new llvm::GlobalVariable(
+      M, PtrTy, /*isConstant=*/false, llvm::GlobalValue::ExternalLinkage,
+      llvm::ConstantPointerNull::get(PtrTy), Name);
+  CGM.addCompilerUsedGlobal(OffloadProfShadow);
+
+  auto AddSectionShadow = [&](StringRef Kind, const Twine &DeviceName) {
+    std::string ShadowName =
+        (Twine("__llvm_profile_shadow_") + Kind + "_" + CUIDHash + "_" +
+         Twine(OffloadProfSectionShadows.size()))
+            .str();
+    auto *Shadow = new llvm::GlobalVariable(
+        M, PtrTy, /*isConstant=*/false, llvm::GlobalValue::ExternalLinkage,
+        llvm::ConstantPointerNull::get(PtrTy), ShadowName);
+    CGM.addCompilerUsedGlobal(Shadow);
+    OffloadProfSectionShadows.push_back({Shadow, DeviceName.str()});
+  };
+
+  // Keep this order in sync with the runtime: data, counters, then names.
+  for (auto &&I : EmittedKernels) {
+    std::string KernelName = getDeviceSideName(cast<NamedDecl>(I.D));
+    AddSectionShadow("data", Twine("__profd_") + KernelName);
+    AddSectionShadow("cnts", Twine("__profc_") + KernelName);
+    AddSectionShadow("names",
+                     Twine(llvm::getInstrProfNamesVarName()) + "_" + CUIDHash);
+  }
 }
 
 // Returns module constructor to be added.
 llvm::Function *CGNVCUDARuntime::finalizeModule() {
   transformManagedVars();
+  emitOffloadProfilingSections();
   if (CGM.getLangOpts().CUDAIsDevice) {
     // Mark ODR-used device variables as compiler used to prevent it from being
     // eliminated by optimization. This is necessary for device variables

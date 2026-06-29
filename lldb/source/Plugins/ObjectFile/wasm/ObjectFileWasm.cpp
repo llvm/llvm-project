@@ -281,7 +281,7 @@ ObjectFileWasm::GetModuleSpecifications(const FileSpec &file,
     return {};
 
   ModuleSpecList specs;
-  specs.Append(ModuleSpec(file, ArchSpec("wasm32-unknown-unknown-wasm")));
+  specs.Append(ModuleSpec(file, ArchSpec("wasm32")));
   return specs;
 }
 
@@ -290,7 +290,7 @@ ObjectFileWasm::ObjectFileWasm(const ModuleSP &module_sp,
                                offset_t data_offset, const FileSpec *file,
                                offset_t offset, offset_t length)
     : ObjectFile(module_sp, file, offset, length, extractor_sp, data_offset),
-      m_arch("wasm32-unknown-unknown-wasm") {
+      m_arch("wasm32") {
   m_data_nsp->SetAddressByteSize(4);
 }
 
@@ -300,7 +300,7 @@ ObjectFileWasm::ObjectFileWasm(const lldb::ModuleSP &module_sp,
                                lldb::addr_t header_addr)
     : ObjectFile(module_sp, process_sp, header_addr,
                  std::make_shared<DataExtractor>(header_data_sp)),
-      m_arch("wasm32-unknown-unknown-wasm") {}
+      m_arch("wasm32") {}
 
 bool ObjectFileWasm::ParseHeader() {
   // We already parsed the header during initialization.
@@ -732,13 +732,16 @@ void ObjectFileWasm::CreateSections(SectionList &unified_section_list) {
     if (segment.type == WasmSegment::Active) {
       // FIXME: Support segments with a memory index.
       if (segment.memory_index != 0) {
-        LLDB_LOG(log, "Skipping segment {0}: non-zero memory index is "
-                      "currently unsupported");
+        LLDB_LOG(log,
+                 "Skipping segment {}: non-zero memory index is "
+                 "currently unsupported",
+                 segment.name);
         continue;
       }
 
       if (segment.init_expr_offset == LLDB_INVALID_OFFSET) {
-        LLDB_LOG(log, "Skipping segment {0}: unsupported init expression");
+        LLDB_LOG(log, "Skipping segment {}: unsupported init expression",
+                 segment.name);
         continue;
       }
     }
@@ -800,10 +803,22 @@ bool ObjectFileWasm::SetLoadAddress(Target &target, lldb::addr_t load_address,
   const size_t num_sections = section_list->GetSize();
   for (size_t sect_idx = 0; sect_idx < num_sections; ++sect_idx) {
     SectionSP section_sp(section_list->GetSectionAtIndex(sect_idx));
-    if (target.SetSectionLoadAddress(
-            section_sp, load_address | section_sp->GetFileOffset())) {
-      ++num_loaded_sections;
+    lldb::addr_t section_load_addr;
+    if (section_sp->GetType() == eSectionTypeData) {
+      // Active data segments are mapped into the module's linear memory at
+      // their virtual address. Linear memory is a separate address space from
+      // code (the top two bits of the 64-bit address encode the space: 0 for
+      // Memory, 1 for Object/code), so place the segment at its linear VM
+      // address in the Memory space while preserving the module id.
+      section_load_addr = (load_address & ~(uint64_t(0b11) << 62)) |
+                          section_sp->GetFileAddress();
+    } else {
+      // Code (and other) sections are addressed by their offset within the
+      // module in the Object address space.
+      section_load_addr = load_address | section_sp->GetFileOffset();
     }
+    if (target.SetSectionLoadAddress(section_sp, section_load_addr))
+      ++num_loaded_sections;
   }
 
   return num_loaded_sections > 0;

@@ -934,9 +934,14 @@ public:
     case CK_ToUnion:
     case CK_AddressSpaceConversion:
     case CK_ReinterpretMemberPointer:
+      cgm.errorNYI(e->getBeginLoc(), "ConstExprEmitter::VisitCastExpr");
+      return {};
+
     case CK_DerivedToBaseMemberPointer:
     case CK_BaseToDerivedMemberPointer:
-      cgm.errorNYI(e->getBeginLoc(), "ConstExprEmitter::VisitCastExpr");
+      // Return {} to let the APValue evaluator handle member pointer type
+      // conversions.  The APValue::MemberPointer case in tryEmitPrivate
+      // already builds the correct GEP path for cross-class member pointers.
       return {};
 
     case CK_LValueToRValue:
@@ -1234,6 +1239,8 @@ struct ConstantLValue {
       : value(nullptr), hasOffsetApplied(false) {}
   /*implicit*/ ConstantLValue(cir::GlobalViewAttr address)
       : value(address), hasOffsetApplied(false) {}
+  /*implicit*/ ConstantLValue(cir::BlockAddrInfoAttr address)
+      : value(address), hasOffsetApplied(true) {}
 
   ConstantLValue() : value(nullptr), hasOffsetApplied(false) {}
 };
@@ -1439,10 +1446,48 @@ ConstantLValue ConstantLValueEmitter::VisitConstantExpr(const ConstantExpr *e) {
   return {};
 }
 
+static cir::GlobalViewAttr
+tryEmitGlobalCompoundLiteral(ConstantEmitter &emitter,
+                             const CompoundLiteralExpr *e) {
+  CIRGenModule &cgm = emitter.cgm;
+  CIRGenBuilderTy &builder = cgm.getBuilder();
+  CharUnits align = cgm.getASTContext().getTypeAlignInChars(e->getType());
+
+  if (cir::GlobalOp addr = cgm.getAddrOfConstantCompoundLiteralIfEmitted(e))
+    return builder.getGlobalViewAttr(addr);
+
+  assert(!cir::MissingFeatures::addressSpace());
+  mlir::Attribute c =
+      emitter.tryEmitForInitializer(e->getInitializer(), e->getType());
+  if (!c) {
+    assert(!e->isFileScope() &&
+           "file-scope compound literal did not have constant initializer!");
+    return {};
+  }
+
+  auto typedInit = mlir::cast<mlir::TypedAttr>(c);
+  bool isConstant = e->getType().isConstantStorage(cgm.getASTContext(),
+                                                   /*ExcludeCtor=*/true,
+                                                   /*ExcludeDtor=*/false);
+
+  std::string name = cgm.getUniqueGlobalName(".compoundliteral");
+  mlir::Location loc = cgm.getLoc(e->getSourceRange());
+  cir::GlobalOp gv =
+      cgm.createGlobalOp(loc, name, typedInit.getType(), isConstant);
+  gv.setLinkage(cir::GlobalLinkageKind::InternalLinkage);
+  gv.setAlignment(align.getAsAlign().value());
+  CIRGenModule::setInitializer(gv, c);
+
+  emitter.finalize(gv);
+  cgm.setAddrOfConstantCompoundLiteral(e, gv);
+  return builder.getGlobalViewAttr(gv);
+}
+
 ConstantLValue
 ConstantLValueEmitter::VisitCompoundLiteralExpr(const CompoundLiteralExpr *e) {
-  cgm.errorNYI(e->getSourceRange(), "ConstantLValueEmitter: compound literal");
-  return {};
+  ConstantEmitter compoundLiteralEmitter(cgm, emitter.cgf);
+  compoundLiteralEmitter.setInConstantContext(emitter.isInConstantContext());
+  return tryEmitGlobalCompoundLiteral(compoundLiteralEmitter, e);
 }
 
 ConstantLValue
@@ -1476,8 +1521,18 @@ ConstantLValueEmitter::VisitPredefinedExpr(const PredefinedExpr *e) {
 
 ConstantLValue
 ConstantLValueEmitter::VisitAddrLabelExpr(const AddrLabelExpr *e) {
-  cgm.errorNYI(e->getSourceRange(), "ConstantLValueEmitter: addr label expr");
-  return {};
+  // A label address taken in a constant context, e.g. a static computed-goto
+  // dispatch table `static const void *tbl[] = {&&L1, &&L2}`.  Besides emitting
+  // the constant, register the label as address-taken so a following
+  // `goto *tbl[i]` lists it among the indirect branch's successors.  A label is
+  // always function-local, so cgf is set here.
+  assert(emitter.cgf && "label address in a constant requires a function");
+  CIRGenFunction &cgf = *const_cast<CIRGenFunction *>(emitter.cgf);
+  auto func = cast<cir::FuncOp>(cgf.curFn);
+  cir::BlockAddrInfoAttr info = cir::BlockAddrInfoAttr::get(
+      &cgf.getMLIRContext(), func.getSymName(), e->getLabel()->getName());
+  cgf.indirectGotoTargets.push_back(info);
+  return info;
 }
 
 ConstantLValue ConstantLValueEmitter::VisitCallExpr(const CallExpr *e) {
@@ -1516,6 +1571,12 @@ ConstantLValue ConstantLValueEmitter::VisitMaterializeTemporaryExpr(
 mlir::Attribute ConstantEmitter::tryEmitForInitializer(const VarDecl &d) {
   initializeNonAbstract();
   return markIfFailed(tryEmitPrivateForVarInit(d));
+}
+
+mlir::Attribute ConstantEmitter::tryEmitForInitializer(const Expr *e,
+                                                       QualType destType) {
+  initializeNonAbstract();
+  return markIfFailed(tryEmitPrivateForMemory(e, destType));
 }
 
 mlir::Attribute ConstantEmitter::emitForInitializer(const APValue &value,
@@ -1672,7 +1733,7 @@ mlir::Attribute ConstantEmitter::tryEmitPrivateForVarInit(const VarDecl &d) {
 
   // Try to emit the initializer.  Note that this can allow some things that
   // are not allowed by tryEmitPrivateForMemory alone.
-  if (APValue *value = d.evaluateValue())
+  if (const APValue *value = d.evaluateValue())
     return tryEmitPrivateForMemory(*value, destType);
 
   return {};
@@ -1907,12 +1968,6 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &value,
     if (!memberDecl)
       return builder.getZeroInitAttr(cgm.convertType(destType));
 
-    if (value.isMemberPointerToDerivedMember()) {
-      cgm.errorNYI(
-          "ConstExprEmitter::tryEmitPrivate member pointer to derived member");
-      return {};
-    }
-
     if (auto const *cxxDecl = dyn_cast<CXXMethodDecl>(memberDecl)) {
       auto ty = mlir::cast<cir::MethodType>(cgm.convertType(destType));
       if (cxxDecl->isVirtual())
@@ -1924,9 +1979,14 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &value,
     }
 
     auto cirTy = mlir::cast<cir::DataMemberType>(cgm.convertType(destType));
-
     const auto *fieldDecl = cast<FieldDecl>(memberDecl);
-    return builder.getDataMemberAttr(cirTy, fieldDecl->getFieldIndex());
+    const auto *mpt = destType->castAs<MemberPointerType>();
+    const auto *destClass = mpt->getMostRecentCXXRecordDecl();
+    std::optional<llvm::SmallVector<int32_t>> path =
+        cgm.buildMemberPath(destClass, fieldDecl);
+    if (!path)
+      return {};
+    return builder.getDataMemberAttr(cirTy, *path);
   }
   case APValue::LValue:
     return ConstantLValueEmitter(*this, value, destType).tryEmit();

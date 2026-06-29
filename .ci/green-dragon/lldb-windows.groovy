@@ -49,7 +49,9 @@ pipeline {
                 timeout(240) {
                     catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
                         writeFile file: 'build.bat', text: '''@echo off
-call "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat" || exit /b 1
+call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\\Auxiliary\\Build\\vcvars64.bat" || exit /b 1
+
+set "PATH=%PATH%;C:\\Program Files\\Git\\usr\\bin"
 
 cmake -G Ninja ^
     -S llvm ^
@@ -57,7 +59,7 @@ cmake -G Ninja ^
     -DCMAKE_BUILD_TYPE=%BUILD_TYPE% ^
     -DCMAKE_INSTALL_PREFIX=..\\llvm-install\\base ^
     -DCMAKE_TOOLCHAIN_FILE=C:\\vcpkg\\scripts\\buildsystems\\vcpkg.cmake ^
-    -DLLVM_ENABLE_PROJECTS="clang;lldb" ^
+    -DLLVM_ENABLE_PROJECTS="clang;lld;lldb" ^
     -DLLVM_ENABLE_ASSERTIONS=ON ^
     -DLLVM_ENABLE_LIBEDIT=OFF ^
     -DLLVM_OPTIMIZED_TABLEGEN=ON ^

@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -std=c++20 -ferror-limit 0 -verify=expected,cxx20 %s
-// RUN: %clang_cc1 -std=c++2c -ferror-limit 0 -verify=expected %s
+// RUN: %clang_cc1 -std=c++20 -ferror-limit 0 -fexceptions -fcxx-exceptions -verify=expected,cxx20 %s
+// RUN: %clang_cc1 -std=c++2c -ferror-limit 0 -fexceptions -fcxx-exceptions -verify=expected %s
 
 namespace PR47043 {
   template<typename T> concept True = true;
@@ -1241,12 +1241,28 @@ struct SVGPropertyOwnerRegistry {
   }
 };
 
-class SVGCircleElement {
+struct SVGCircleElement {
   friend SVGPropertyOwnerRegistry<SVGCircleElement>;
   void propertyForAttribute(int);
 };
 
 int i = SVGPropertyOwnerRegistry<SVGCircleElement>::fastAnimatedPropertyLookup();
+
+}
+
+namespace GH173086 {
+
+template <typename, unsigned, typename> struct GeneralTensor {};
+template <typename T, unsigned Rank> using Tensor = GeneralTensor<T, Rank, int>;
+template <typename T, unsigned OtherRank, typename Alloc, typename... Dims>
+GeneralTensor(GeneralTensor<T, OtherRank, Alloc>, Dims... dims)
+    -> GeneralTensor<T, sizeof...(dims), Alloc>;
+template <typename... MultiIndex>
+Tensor<double, sizeof...(MultiIndex)> create_incremented_tensor() {
+  return Tensor<double, sizeof...(MultiIndex)>();
+}
+
+auto x = Tensor{create_incremented_tensor<>()};
 
 }
 
@@ -1554,7 +1570,6 @@ void x() {}
 void foo() {
   x<vector<int>>();
 }
-
 }
 
 namespace GH162770 {
@@ -1836,7 +1851,6 @@ namespace GH191016 {
   void test(){ S<int> s; }
 }
 
-
 namespace GH188640 {
 
 namespace Ex1 {
@@ -1880,3 +1894,173 @@ void g() { static_assert(f<1>() == 42); }
 } // namespace VAR
 
 } // namespace GH188640
+
+namespace GH194803 {
+
+struct B {
+    void f();
+};
+template <typename Base>
+concept C = requires() { Base::f(); }; // expected-note {{because 'Base::f()' would be invalid: call to non-static member function without an object argument}}
+
+template <typename> struct S : B {
+    void g()
+        requires C<B>; // expected-note {{because 'B' does not satisfy 'C'}}
+    void h()
+        requires requires() { B::f(); }; // #2
+};
+void f() {
+    S<int>{}.g(); // expected-error {{invalid reference to function 'g': constraints not satisfied}}
+    S<int>{}.h();
+}
+
+}
+
+namespace GH115838 {
+
+template <typename T>
+concept has_x = requires(T t) {
+    { t.x };
+};
+
+class Publ {
+  public:
+    int x = 0;
+};
+class Priv {
+  private:
+    int x = 0;
+};
+class Prot {
+  protected:
+    int x = 0;
+};
+class Same {
+  protected:
+    int x = 0;
+};
+
+template <typename T> class D;
+template <typename T>
+requires(has_x<T>)
+class D<T> : public T {
+  public:
+    static constexpr bool has = 1;
+};
+template <typename T>
+requires(!has_x<T>)
+class D<T> : public T {
+  public:
+    static constexpr bool has = 0;
+};
+
+static_assert(!has_x<Same>, "Protected should be invisible.");
+static_assert(!D<Same>::has, "Protected should be invisible.");
+
+static_assert(D<Publ>::has, "Public should be visible.");
+static_assert(!D<Priv>::has, "Private should be invisible.");
+static_assert(!D<Prot>::has, "Protected should be invisible.");
+}
+
+
+namespace GH197067 {
+typedef int uint32_t;
+class basic_string;
+using string = basic_string;
+using __self_view = int;
+struct basic_string {
+  basic_string(const char *);
+  operator __self_view();
+};
+int GetVmo(int);
+template <typename> struct StorageTraits;
+template <class Traits, typename Storage>
+concept StorageTraitsBufferedReadApi =
+    requires(Storage storage_ref, uint32_t length) {
+      Traits::Read(storage_ref, length, length, [] {});
+    };
+template <class Traits, typename Storage>
+concept StorageTraitsApi = StorageTraitsBufferedReadApi<Traits, Storage>;
+template <typename T>
+concept StorageApi = StorageTraitsApi<StorageTraits<T>, T>;
+template <StorageApi Storage> struct View {
+  using storage_type = Storage;
+  storage_type storage_;
+};
+template <> struct StorageTraits<int> {
+  template <typename Callback>
+  static auto Read(int, long, uint32_t, Callback) {}
+};
+View zbi(GetVmo(string("")));
+}
+
+namespace GH196375 {
+  template <class T, T V> concept Small = V <= 2; // expected-note {{because '4 <= 2' (4 <= 2) evaluated to false}}
+  template <int V> consteval bool f() // expected-note {{candidate template ignored: constraints not satisfied}}
+    requires(Small<int, V>) { return true; } // expected-note {{because 'Small<int, 4>' evaluated to false}}
+  static_assert(f<4>());
+  // expected-error@-1 {{no matching function for call to 'f'}}
+} // namespace GHGH196375
+
+namespace GH175831 {
+
+namespace ShouldResolve {
+
+template<class>
+struct reference {};
+template<class Q>
+consteval Q get_spec(reference<Q>) { return {}; }
+
+template<class T>
+concept repr_impl = sizeof(T) > 0;
+template<class, auto V>
+concept representation_of = repr_impl<decltype(V)>;
+template<auto V, representation_of<get_spec(V)>>
+struct quantity {};
+
+auto x = quantity<reference<int>{}, int>{};
+
+} // namespace ShouldResolve
+
+namespace CannotResolve0 {
+
+template<class>
+struct reference {};
+template<class Q>
+consteval auto get_spec(reference<Q>) { return Q{}; }
+
+template<class T>
+concept repr_impl = sizeof(T) > sizeof(char);
+template<class, auto V>
+concept representation_of = repr_impl<decltype(V)>;
+template<auto V, representation_of<get_spec(V)>>
+struct quantity {};
+
+auto x = quantity<reference<char>{}, char>{};
+// expected-error@-1 {{constraints not satisfied for class template 'quantity' [with V = reference<char>{}, $1 = char]}}
+// expected-note@-5  {{because 'representation_of<char, get_spec(reference<char>{})>' evaluated to false}}
+// expected-note-re@-7  {{because 'decltype({{.*}})' (aka 'char') does not satisfy 'repr_impl'}}
+// expected-note@-10  {{because 'sizeof(char) > sizeof(char)' (1 > 1) evaluated to false}}
+
+} // namespace CannotResolve0
+
+namespace CannotResolve1 {
+
+template<class>
+struct reference {};
+template<class Q>
+consteval Q get_spec(reference<Q>) { throw; }
+
+template<class T>
+concept repr_impl = sizeof(T) > 0;
+template<class, auto V>
+concept representation_of = repr_impl<decltype(V)>;
+template<auto V, representation_of<get_spec(V)>>
+struct quantity {};
+
+auto x = quantity<reference<int>{}, int>{};
+// expected-error@-1 {{constraints not satisfied for class template 'quantity' [with V = reference<int>{}, $1 = int]}}
+
+} // namespace CannotResolve1
+
+} // namespace GH175831

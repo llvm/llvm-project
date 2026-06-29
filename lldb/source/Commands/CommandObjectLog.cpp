@@ -129,6 +129,9 @@ public:
       case 'F':
         log_options |= LLDB_LOG_OPTION_PREPEND_FILE_FUNCTION;
         break;
+      case 'j':
+        log_options |= LLDB_LOG_OPTION_JSON;
+        break;
       default:
         llvm_unreachable("Unimplemented option");
       }
@@ -273,7 +276,8 @@ protected:
       if (Log::DisableLogChannel(channel, args.GetArgumentArrayRef(),
                                  error_stream))
         result.SetStatus(eReturnStatusSuccessFinishNoResult);
-      result.GetErrorStream() << error;
+      else
+        result.AppendError(error);
     }
   }
 };

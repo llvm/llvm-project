@@ -26,13 +26,6 @@ public:
   /// handle fields default to INVALID_HANDLE_VALUE.
   WindowsFileAction(const FileAction &fa) : FileAction(fa) {}
 
-  /// Reset this WindowsFileAction to its default state.
-  void Clear() {
-    FileAction::Clear();
-    m_handle = LLDB_INVALID_PIPE;
-    m_arg_handle = LLDB_INVALID_PIPE;
-  }
-
   /// Configure this action to duplicate a Windows file handle.
   ///
   /// \param[in] fh

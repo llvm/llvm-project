@@ -337,7 +337,7 @@ feature_test_macros = [
         {
             "name": "__cpp_lib_constant_wrapper",
             "values": {
-                "c++26": 202603,
+                "c++26": 202606,
             },
             "headers": ["utility"],
         },
@@ -404,6 +404,11 @@ feature_test_macros = [
             "name": "__cpp_lib_constexpr_list",
             "values": {"c++26": 202502},
             "headers": ["list"],
+        },
+        {
+            "name": "__cpp_lib_constexpr_map",
+            "values": {"c++26": 202502},
+            "headers": ["map"],
         },
         {
             "name": "__cpp_lib_constexpr_memory",
@@ -957,7 +962,7 @@ feature_test_macros = [
             "name": "__cpp_lib_mdspan",
             "values": {
                 "c++23": 202207,
-                "c++26": 202406,  # P2389R2 dextents Index Type Parameter
+                "c++26": 202406,
             },
             "headers": ["mdspan"],
         },
@@ -1125,7 +1130,6 @@ feature_test_macros = [
             "name": "__cpp_lib_ranges_concat",
             "values": {"c++26": 202403}, # P2542R8: views::concat
             "headers": ["ranges"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_ranges_contains",
@@ -1139,6 +1143,11 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_ranges_find_last",
+            "values": {"c++23": 202207},
+            "headers": ["algorithm"],
+        },
+        {
+            "name": "__cpp_lib_ranges_fold",
             "values": {"c++23": 202207},
             "headers": ["algorithm"],
         },
@@ -1195,7 +1204,7 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_raw_memory_algorithms",
-            "values": {"c++17": 201606},
+            "values": {"c++17": 201606, "c++26": 202411},
             "headers": ["memory"],
         },
         {
@@ -1408,7 +1417,6 @@ feature_test_macros = [
                 "c++26": 202306  # P1885R12 Naming Text Encodings to Demystify Them
             },
             "headers": ["text_encoding"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_three_way_comparison",

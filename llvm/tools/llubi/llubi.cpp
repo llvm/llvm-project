@@ -17,6 +17,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
+#include "llvm/IR/Verifier.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Format.h"
@@ -84,6 +85,14 @@ static cl::opt<bool>
                   cl::desc("Disable interpreter-introduced non-determinism."),
                   cl::init(false), cl::cat(InterpreterCategory));
 
+static cl::opt<bool> FuseFMulAdd("fuse-fmuladd",
+                                 cl::desc("Fuse llvm.fmuladd.* intrinsic"),
+                                 cl::init(true), cl::cat(InterpreterCategory));
+
+static cl::opt<bool> NoVerify("disable-verify",
+                              cl::desc("Do not run the IR verifier"),
+                              cl::init(false), cl::cat(InterpreterCategory));
+
 cl::opt<ubi::UndefValueBehavior> UndefBehavior(
     "", cl::desc("Choose undef value behavior:"),
     cl::values(clEnumVal(ubi::UndefValueBehavior::NonDeterministic,
@@ -114,7 +123,19 @@ cl::opt<ubi::NaNPropagationBehavior> NaNPropagationBehavior(
                    "payloads.")),
     cl::init(ubi::NaNPropagationBehavior::NonDeterministic));
 
-class VerboseEventHandler : public ubi::EventHandler {
+class NoopEventHandler : public ubi::EventHandler {
+  void onImmediateUB(StringRef Msg) override {
+    errs() << "Immediate UB detected: " << Msg << '\n';
+  }
+
+  void onError(StringRef Msg) override { errs() << "Error: " << Msg << '\n'; }
+
+  void onUnrecognizedInstruction(Instruction &I) override {
+    errs() << "Unrecognized instruction: " << I << '\n';
+  }
+};
+
+class VerboseEventHandler : public NoopEventHandler {
 public:
   bool onInstructionExecuted(Instruction &I,
                              const ubi::AnyValue &Result) override {
@@ -126,12 +147,6 @@ public:
 
     return true;
   }
-
-  void onImmediateUB(StringRef Msg) override {
-    errs() << "Immediate UB detected: " << Msg << '\n';
-  }
-
-  void onError(StringRef Msg) override { errs() << "Error: " << Msg << '\n'; }
 
   bool onBBJump(Instruction &I, BasicBlock &To) override {
     errs() << I << " jump to ";
@@ -177,10 +192,6 @@ public:
 
     llvm_unreachable("Unknown ProgramExitKind");
   }
-
-  void onUnrecognizedInstruction(Instruction &I) override {
-    errs() << "Unrecognized instruction: " << I << '\n';
-  }
 };
 
 int main(int argc, char **argv) {
@@ -207,10 +218,17 @@ int main(int argc, char **argv) {
 
   // Load the bitcode...
   SMDiagnostic Err;
-  std::unique_ptr<Module> Owner = parseIRFile(InputFile, Err, Context);
+  AsmParserContext ParserContext;
+  std::unique_ptr<Module> Owner =
+      parseIRFile(InputFile, Err, Context, /*Callbacks=*/{}, &ParserContext);
   Module *Mod = Owner.get();
   if (!Mod) {
     Err.print(argv[0], errs());
+    return 1;
+  }
+
+  if (!NoVerify && verifyModule(*Mod, &errs())) {
+    WithColor::error() << InputFile << ": input module is broken!\n";
     return 1;
   }
 
@@ -229,11 +247,12 @@ int main(int argc, char **argv) {
   InputArgv.insert(InputArgv.begin(), InputFile);
 
   // Initialize the execution context and set parameters.
-  ubi::Context Ctx(*Mod);
+  ubi::Context Ctx(*Mod, &ParserContext);
   Ctx.setMemoryLimit(MaxMem);
   Ctx.setVScale(VScale);
   Ctx.setMaxSteps(MaxSteps);
   Ctx.setMaxStackDepth(MaxStackDepth);
+  Ctx.setFusedMultiplyAdd(FuseFMulAdd);
   Ctx.setDeterministic(Deterministic);
   Ctx.setUndefValueBehavior(UndefBehavior);
   Ctx.setNaNPropagationBehavior(NaNPropagationBehavior);
@@ -260,8 +279,10 @@ int main(int argc, char **argv) {
   auto *MainFuncTy = FunctionType::get(IntTy, {IntTy, PtrTy}, false);
   SmallVector<ubi::AnyValue> Args;
   if (EntryFn->getFunctionType() == MainFuncTy) {
-    Args.push_back(
-        Ctx.getConstantValue(ConstantInt::get(IntTy, InputArgv.size())));
+    const ubi::AnyValue *Argc =
+        Ctx.getConstantValue(ConstantInt::get(IntTy, InputArgv.size()));
+    assert(Argc && "failed to initialize argc");
+    Args.push_back(*Argc);
 
     uint32_t PtrSize = Ctx.getDataLayout().getPointerSize();
     uint64_t PtrsSize = PtrSize * (InputArgv.size() + 1);
@@ -298,7 +319,7 @@ int main(int argc, char **argv) {
       Args.push_back(ubi::AnyValue::getNullValue(Ctx, Arg.getType()));
   }
 
-  ubi::EventHandler NoopHandler;
+  NoopEventHandler NoopHandler;
   VerboseEventHandler VerboseHandler;
   ubi::AnyValue RetVal;
   ubi::ProgramExitInfo ExitInfo = Ctx.runFunction(

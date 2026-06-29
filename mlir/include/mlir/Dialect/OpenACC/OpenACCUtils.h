@@ -30,6 +30,10 @@ namespace acc {
 mlir::Operation *getEnclosingComputeOp(mlir::Region &region);
 
 /// If `v` is not a block argument of an `acc.compute_region` body, returns
+/// nullptr. Otherwise maps the block argument to its operand and returns it.
+mlir::Value getACCOperandForBlockArg(mlir::Value v);
+
+/// If `v` is not a block argument of an `acc.compute_region` body, returns
 /// nullptr. Otherwise maps the block argument to its operand and returns the
 /// defining operation if it is one of `ACC_DATA_ENTRY_OPS`.
 mlir::Operation *getACCDataClauseOpForBlockArg(mlir::Value v);
@@ -57,6 +61,16 @@ mlir::acc::VariableTypeCategory getTypeCategory(mlir::Value var);
 /// empty string if no name is found.
 std::string getVariableName(mlir::Value v);
 
+/// Returns a placeholder string for use as an acc.var_name attribute value when
+/// the actual variable name is not yet known at the point of IR construction.
+/// The placeholder is meant to be replaced with the real name at a later
+/// lowering stage.
+/// For example, recipe init regions may attach this to ops at recipe-generation
+/// time, and ACCRecipeMaterialization will subsequently replace the placeholder
+/// with the actual variable name on all marked ops after inlining the recipe
+/// into the compute construct.
+llvm::StringLiteral getVarNamePlaceholder();
+
 /// Get the recipe name for a given recipe kind and type.
 /// Returns an empty string if not possible to generate a recipe name.
 std::string getRecipeName(mlir::acc::RecipeKind kind, mlir::Type type);
@@ -78,7 +92,9 @@ bool isValidSymbolUse(mlir::Operation *user, mlir::SymbolRefAttr symbol,
 
 /// Check if a value represents device data.
 /// This checks if the value represents device data via the
-/// MappableType, PointerLikeType, and GlobalVariableOpInterface interfaces.
+/// MappableType, PointerLikeType, and GlobalVariableOpInterface interfaces,
+/// and whether the defining operation carries `acc.declare` with the deviceptr
+/// clause.
 /// \param val The value to check
 /// \return true if the value is device data, false otherwise
 bool isDeviceValue(mlir::Value val);

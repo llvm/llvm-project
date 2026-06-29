@@ -28,6 +28,18 @@ using namespace llvm::object;
 static TimerGroup OffloadBundlerTimerGroup("Offload Bundler Timer Group",
                                            "Timer group for offload bundler");
 
+// Returns the on-disk size recorded in the compressed offload bundle header at
+// the start of \p Blob, or std::nullopt if the header carries no size field.
+static std::optional<size_t> getCompressedBundleSize(StringRef Blob) {
+  Expected<CompressedOffloadBundle::CompressedBundleHeader> HeaderOrErr =
+      CompressedOffloadBundle::CompressedBundleHeader::tryParse(Blob);
+  if (!HeaderOrErr) {
+    consumeError(HeaderOrErr.takeError());
+    return std::nullopt;
+  }
+  return HeaderOrErr->FileSize;
+}
+
 // Extract an Offload bundle (usually a Offload Bundle) from a fat_bin
 // section.
 Error extractOffloadBundle(MemoryBufferRef Contents, uint64_t SectionOffset,
@@ -49,15 +61,26 @@ Error extractOffloadBundle(MemoryBufferRef Contents, uint64_t SectionOffset,
     if (identify_magic((*Buffer).getBuffer()) ==
         file_magic::offload_bundle_compressed) {
       Magic = "CCOB";
-      // Decompress this bundle first.
-      NextbundleStart = (*Buffer).getBuffer().find(Magic, Magic.size());
-      if (NextbundleStart == StringRef::npos)
+      // Locate this bundle's end and the next bundle from the header size.
+      size_t CurBundleEnd;
+      if (std::optional<size_t> Size =
+              getCompressedBundleSize((*Buffer).getBuffer())) {
+        CurBundleEnd = *Size;
+        NextbundleStart = (*Buffer).getBuffer().find(Magic, *Size);
+      } else {
+        // Legacy bundle without a recorded size: fall back to magic scanning.
+        NextbundleStart = (*Buffer).getBuffer().find(Magic, Magic.size());
+        CurBundleEnd = NextbundleStart;
+      }
+      if (NextbundleStart == StringRef::npos) {
         NextbundleStart = (*Buffer).getBuffer().size();
+        if (CurBundleEnd == StringRef::npos)
+          CurBundleEnd = (*Buffer).getBuffer().size();
+      }
 
       ErrorOr<std::unique_ptr<MemoryBuffer>> CodeOrErr =
           MemoryBuffer::getMemBuffer(
-              (*Buffer).getBuffer().take_front(NextbundleStart), FileName,
-              false);
+              (*Buffer).getBuffer().take_front(CurBundleEnd), FileName, false);
       if (std::error_code EC = CodeOrErr.getError())
         return createFileError(FileName, EC);
 
@@ -206,9 +229,14 @@ Error object::extractOffloadBundleFatBinary(
       uint64_t SectionOffset = 0;
       if (Obj.isELF()) {
         SectionOffset = ELFSectionRef(Sec).getOffset();
-      } else if (Obj.isCOFF()) // TODO: add COFF Support.
-        return createStringError(object_error::parse_failed,
-                                 "COFF object files not supported");
+      } else if (Obj.isCOFF()) {
+        const COFFObjectFile &COFF = cast<COFFObjectFile>(Obj);
+        Expected<const coff_section *> SecOrErr =
+            COFF.getSection(COFF.getSectionID(Sec));
+        if (!SecOrErr)
+          return SecOrErr.takeError();
+        SectionOffset = (*SecOrErr)->PointerToRawData;
+      }
 
       MemoryBufferRef Contents(*Buffer, Obj.getFileName());
       if (Error Err = extractOffloadBundle(Contents, SectionOffset,
@@ -219,8 +247,8 @@ Error object::extractOffloadBundleFatBinary(
   return Error::success();
 }
 
-Error object::extractCodeObject(const ObjectFile &Source, int64_t Offset,
-                                int64_t Size, StringRef OutputFileName) {
+Error object::extractCodeObject(const ObjectFile &Source, size_t Offset,
+                                size_t Size, StringRef OutputFileName) {
   Expected<std::unique_ptr<FileOutputBuffer>> BufferOrErr =
       FileOutputBuffer::create(OutputFileName, Size);
 
@@ -229,14 +257,28 @@ Error object::extractCodeObject(const ObjectFile &Source, int64_t Offset,
 
   Expected<MemoryBufferRef> InputBuffOrErr = Source.getMemoryBufferRef();
   if (Error Err = InputBuffOrErr.takeError())
-    return Err;
+    return createFileError(Source.getFileName(), std::move(Err));
+
+  if (Size > InputBuffOrErr->getBufferSize())
+    return createStringError("size in URI (%zu) is larger than source (%zu)",
+                             Size, InputBuffOrErr->getBufferSize());
+
+  if (Offset > InputBuffOrErr->getBufferSize())
+    return createStringError(
+        "offset in URI (%zu) is beyond the end of the source (%zu)", Offset,
+        InputBuffOrErr->getBufferSize());
+
+  if (Offset + Size > InputBuffOrErr->getBufferSize())
+    return createStringError(
+        "offset + size (%zu) in URI is beyond the end of the source (%zu)",
+        Offset + Size, InputBuffOrErr->getBufferSize());
 
   std::unique_ptr<FileOutputBuffer> Buf = std::move(*BufferOrErr);
   std::copy(InputBuffOrErr->getBufferStart() + Offset,
             InputBuffOrErr->getBufferStart() + Offset + Size,
             Buf->getBufferStart());
   if (Error E = Buf->commit())
-    return E;
+    return createFileError(OutputFileName, std::move(E));
 
   return Error::success();
 }
@@ -261,6 +303,7 @@ Error object::extractOffloadBundleByURI(StringRef URIstr) {
   // create a URI object
   Expected<std::unique_ptr<OffloadBundleURI>> UriOrErr(
       OffloadBundleURI::createOffloadBundleURI(URIstr, FILE_URI));
+
   if (!UriOrErr)
     return UriOrErr.takeError();
 
@@ -277,7 +320,7 @@ Error object::extractOffloadBundleByURI(StringRef URIstr) {
   auto Obj = ObjOrErr->getBinary();
   if (Error Err =
           object::extractCodeObject(*Obj, Uri.Offset, Uri.Size, OutputFile))
-    return Err;
+    return createFileError(Uri.FileName, std::move(Err));
 
   return Error::success();
 }

@@ -296,6 +296,10 @@ def FPTRUNC_ROUND_F32_F64_PSEUDO : VPseudoInstSI <(outs VGPR_32:$vdst),
   (ins VReg_64:$src0, i32imm:$round)>;
 } // End Uses = [MODE, EXEC]
 
+let SubtargetPredicate = HasSALUFloatInsts, Uses = [MODE] in
+def FPTRUNC_ROUND_F16_F32_SALU_PSEUDO : SPseudoInstSI <(outs SReg_32:$sdst),
+  (ins SReg_32:$src0, i32imm:$round)>;
+
 let True16Predicate = NotHasTrue16BitInsts in
 def : GCNPat <(f16 (fptrunc_round f32:$src0, (i32 SupportedRoundMode:$round))),
      (FPTRUNC_ROUND_F16_F32_PSEUDO $src0, (as_hw_round_mode $round))>;
@@ -308,25 +312,33 @@ let True16Predicate = UseRealTrue16Insts in
 def : GCNPat <(f16 (fptrunc_round (f32 (VOP3OpSelMods f32:$src0, i32:$src0_modifiers)), (i32 SupportedRoundMode:$round))),
      (FPTRUNC_ROUND_F16_F32_PSEUDO_t16_e64 $src0_modifiers, $src0, (as_hw_round_mode $round))>;
 
+let SubtargetPredicate = HasSALUFloatInsts, AddedComplexity = 9 in
+def : GCNPat <(f16 (UniformBinFrag<fptrunc_round> f32:$src0, (i32 SupportedRoundMode:$round))),
+     (FPTRUNC_ROUND_F16_F32_SALU_PSEUDO $src0, (as_hw_round_mode $round))>;
+
 let True16Predicate = NotUseRealTrue16Insts in
-def : GCNPat <(f16 (fptrunc_round f32:$src0, (i32 0))),
+def : GCNPat <(f16 (fptrunc_round f32:$src0, (i32 RtzRoundMode))),
      (V_CVT_PKRTZ_F16_F32_e32 $src0, (IMPLICIT_DEF))>;
 
 let True16Predicate = UseRealTrue16Insts in
-def : GCNPat <(f16 (fptrunc_round (f32 (VOP3OpSelMods f32:$src0, i32:$src0_modifiers)), (i32 0))),
+def : GCNPat <(f16 (fptrunc_round (f32 (VOP3OpSelMods f32:$src0, i32:$src0_modifiers)), (i32 RtzRoundMode))),
      (EXTRACT_SUBREG (V_CVT_PKRTZ_F16_F32_e64 $src0_modifiers, $src0, 0, (IMPLICIT_DEF)), lo16)>;
 
-def : GCNPat <(v2f16 (build_vector (f16 (fptrunc_round f32:$src0, (i32 0))),
-                                 (f16 (fptrunc_round f32:$src1, (i32 0))))),
+def : GCNPat <(v2f16 (build_vector (f16 (fptrunc_round f32:$src0, (i32 RtzRoundMode))),
+                                 (f16 (fptrunc_round f32:$src1, (i32 RtzRoundMode))))),
      (V_CVT_PKRTZ_F16_F32_e32 $src0, $src1)>;
 
 let True16Predicate = NotUseRealTrue16Insts in
-def : GCNPat <(f16 (fptrunc_round f32:$src0, (i32 0))),
+def : GCNPat <(f16 (fptrunc_round f32:$src0, (i32 RtzRoundMode))),
      (V_CVT_PKRTZ_F16_F32_e32 $src0, (IMPLICIT_DEF))>;
 
 let True16Predicate = UseRealTrue16Insts in
-def : GCNPat <(f16 (fptrunc_round f32:$src0, (i32 0))),
+def : GCNPat <(f16 (fptrunc_round f32:$src0, (i32 RtzRoundMode))),
      (EXTRACT_SUBREG (V_CVT_PKRTZ_F16_F32_e32 $src0, (IMPLICIT_DEF)), lo16)>;
+
+let SubtargetPredicate = HasSALUFloatInsts, AddedComplexity = 9 in
+def : GCNPat <(f16 (UniformBinFrag<fptrunc_round> f32:$src0, (i32 RtzRoundMode))),
+     (f16 (COPY_TO_REGCLASS (S_CVT_PK_RTZ_F16_F32 $src0, $src0), SReg_32))>;
 
 def : GCNPat <(f32 (fptrunc_round f64:$src0, (i32 SupportedRoundMode:$round))),
      (FPTRUNC_ROUND_F32_F64_PSEUDO $src0, (as_hw_round_mode $round))>;
@@ -496,6 +508,24 @@ def S_AND_B32_term : WrapTerminatorInst<S_AND_B32>;
 def S_AND_SAVEEXEC_B32_term : WrapTerminatorInst<S_AND_SAVEEXEC_B32>;
 }
 
+class WrapTerminatorVOPC<VOPC_Pseudo base_inst> : VPseudoInstSI<
+      base_inst.OutOperandList,
+      base_inst.InOperandList> {
+  let Uses = base_inst.Uses;
+  let Defs = base_inst.Defs;
+  let SchedRW = base_inst.SchedRW;
+  let isTerminator = 1;
+  let isConvergent = 1;
+  let isCompare = 1;
+  let VOPC = 1;
+}
+
+let SubtargetPredicate = HasNoSdstCMPX in {
+def V_CMPX_EQ_U32_nosdst_e32_term
+  : WrapTerminatorVOPC<V_CMPX_EQ_U32_nosdst_e32>;
+def V_CMPX_EQ_U64_nosdst_e32_term
+  : WrapTerminatorVOPC<V_CMPX_EQ_U64_nosdst_e32>;
+}
 
 def WAVE_BARRIER : SPseudoInstSI<(outs), (ins),
   [(int_amdgcn_wave_barrier)]> {
@@ -1156,6 +1186,11 @@ multiclass SI_SPILL_SGPR <RegisterClass sgpr_class> {
       let mayLoad = 0;
     }
 
+    def _CFI_SAVE : PseudoInstSI<(outs), (ins sgpr_class:$data, i32imm:$addr)> {
+      let mayStore = 1;
+      let mayLoad = 0;
+    }
+
     def _RESTORE : PseudoInstSI <
       (outs sgpr_class:$data),
       (ins i32imm:$addr)> {
@@ -1221,6 +1256,19 @@ multiclass SI_SPILL_VGPR <SIRegisterClassLike vgpr_class,
         (ins vgpr_class:$vdata, i32imm:$vaddr,
              SReg_32:$soffset, i32imm:$offset),
         !if(HasMask, (ins SReg_32:$mask), (ins)))> {
+      let mayStore = 1;
+      let mayLoad = 0;
+      // (2 * 4) + (8 * num_subregs) bytes maximum
+      int MaxSize = !add(!shl(!srl(vgpr_class.Size, 5), !add(UsesTmp, 3)), 8);
+      // Size field is unsigned char and cannot fit more.
+      let Size = !if(!le(MaxSize, 256), MaxSize, 252);
+    }
+
+    def _CFI_SAVE
+        : VPseudoInstSI<(outs),
+                        !con((ins vgpr_class:$vdata, i32imm:$vaddr,
+                                 SReg_32:$soffset, i32imm:$offset),
+                             !if(HasMask, (ins SReg_32:$mask), (ins)))> {
       let mayStore = 1;
       let mayLoad = 0;
       // (2 * 4) + (8 * num_subregs) bytes maximum
@@ -1328,6 +1376,24 @@ def SI_PC_ADD_REL_OFFSET64 : SPseudoInstSI <
       (i64 (SIpc_add_rel_offset64 tglobaladdr:$ptr)))]> {
   let SubtargetPredicate = Has64BitLiterals;
 }
+
+def : GCNPat<
+  (p0 blockaddress:$ba),
+  (SI_PC_ADD_REL_OFFSET64 $ba)
+>;
+
+let SubtargetPredicate = HasSmemPrefetchInsts in {
+  def : GCNPat <
+    (int_amdgcn_s_prefetch_inst (i64 tblockaddress:$ptr), imm:$len),
+    (S_PREFETCH_INST (SI_PC_ADD_REL_OFFSET64 tblockaddress:$ptr), 0,
+                     (i32 SGPR_NULL), (as_i8timm $len))
+  >;
+
+  def : GCNPat <
+    (int_amdgcn_s_prefetch_inst (i64 tblockaddress:$ptr), (i32 SReg_32:$len)),
+    (S_PREFETCH_INST (SI_PC_ADD_REL_OFFSET64 tblockaddress:$ptr), 0, $len, 0)
+  >;
+} // End let SubtargetPredicate = HasSmemPrefetchInsts
 
 def : GCNPat<
   (AMDGPUtrap timm:$trapid),
@@ -2180,6 +2246,19 @@ def : GCNPat <
                                  SReg_32)), sub1))
 >;
 
+def : GCNPat <
+  (UniformUnaryFrag<fneg> (v2f64 SGPR_128:$src)),
+  (v2f64 (REG_SEQUENCE SGPR_128,
+         (i32 (EXTRACT_SUBREG $src, sub0)), sub0,
+         (i32 (COPY_TO_REGCLASS (S_XOR_B32 (i32 (EXTRACT_SUBREG $src, sub1)),
+                                           (i32 (S_MOV_B32 (i32 0x80000000)))),
+                                 SReg_32)), sub1,
+         (i32 (EXTRACT_SUBREG $src, sub2)), sub2,
+         (i32 (COPY_TO_REGCLASS (S_XOR_B32 (i32 (EXTRACT_SUBREG $src, sub3)),
+                                           (i32 (S_MOV_B32 (i32 0x80000000)))),
+                                 SReg_32)), sub3))
+>;
+
 // FIXME: Use S_BITSET0_B32/B64?
 def : GCNPat <
   (UniformUnaryFrag<fabs> (f64 SReg_64:$src)),
@@ -2319,6 +2398,14 @@ def : GCNPat <
                      (i32 (S_MOV_B32 (i32 0x80000000)))), sub1)
 > {
   let SubtargetPredicate = HasPackedFP32Ops;
+}
+
+def : GCNPat <
+  (DivergentUnaryFrag<fneg> (v2f64 VReg_128:$src)),
+  (V_PK_ADD_F64 !or(SRCMODS.NEG, SRCMODS.NEG_HI), VReg_128:$src,
+                !or(SRCMODS.NEG, SRCMODS.NEG_HI), (v2i64 (as_i64imm (i32 0))))
+> {
+  let SubtargetPredicate = HasPackedFP64Ops;
 }
 
 foreach fp16vt = [f16, bf16] in {
@@ -2707,9 +2794,8 @@ def BFIImm32 : PatFrag<
   }]
 >;
 
-
 // Definition from ISA doc:
-// (y & x) | (z & ~x)
+// 32-bit: (y & x) | (z & ~x)
 def : AMDGPUPatIgnoreCopies <
   (DivergentBinFrag<or> (and i32:$y, i32:$x), (and i32:$z, (not i32:$x))),
   (V_BFI_B32_e64 (COPY_TO_REGCLASS VSrc_b32:$x, VGPR_32),
@@ -2717,58 +2803,26 @@ def : AMDGPUPatIgnoreCopies <
                 (COPY_TO_REGCLASS VSrc_b32:$z, VGPR_32))
 >;
 
-// (y & C) | (z & ~C)
+// 32-bit: (y & C) | (z & ~C)
 def : AMDGPUPatIgnoreCopies <
   (BFIImm32 i32:$x, i32:$y, i32:$z),
   (V_BFI_B32_e64 VSrc_b32:$x, VSrc_b32:$y, VSrc_b32:$z)
 >;
 
-// 64-bit version
-def : AMDGPUPatIgnoreCopies <
-  (DivergentBinFrag<or> (and i64:$y, i64:$x), (and i64:$z, (not i64:$x))),
-  (REG_SEQUENCE VReg_64,
-    (V_BFI_B32_e64 (i32 (EXTRACT_SUBREG VReg_64:$x, sub0)),
-              (i32 (EXTRACT_SUBREG VReg_64:$y, sub0)),
-              (i32 (EXTRACT_SUBREG VReg_64:$z, sub0))), sub0,
-    (V_BFI_B32_e64 (i32 (EXTRACT_SUBREG VReg_64:$x, sub1)),
-              (i32 (EXTRACT_SUBREG VReg_64:$y, sub1)),
-              (i32 (EXTRACT_SUBREG VReg_64:$z, sub1))), sub1)
->;
-
-// (z & ~x)
+// 32-bit: (z & ~x)
 def : AMDGPUPatIgnoreCopies <
   (DivergentBinFrag<and> i32:$z, (not_oneuse i32:$x)),
   (V_BFI_B32_e64 VSrc_b32:$x, (i32 0), VSrc_b32:$z)
 >;
 
-// 64-bit version
-def : AMDGPUPatIgnoreCopies <
-  (DivergentBinFrag<and> i64:$z, (not_oneuse i64:$x)),
-  (REG_SEQUENCE VReg_64,
-    (V_BFI_B32_e64 (i32 (EXTRACT_SUBREG VReg_64:$x, sub0)), (i32 0),
-                   (i32 (EXTRACT_SUBREG VReg_64:$z, sub0))), sub0,
-    (V_BFI_B32_e64 (i32 (EXTRACT_SUBREG VReg_64:$x, sub1)), (i32 0),
-                   (i32 (EXTRACT_SUBREG VReg_64:$z, sub1))), sub1)
->;
-
-// (y | ~x)
+// 32-bit: (y | ~x)
 def : AMDGPUPatIgnoreCopies <
   (DivergentBinFrag<or> i32:$y, (not_oneuse i32:$x)),
   (V_BFI_B32_e64 VSrc_b32:$x, VSrc_b32:$y, (i32 -1))
 >;
 
-// 64-bit version
-def : AMDGPUPatIgnoreCopies <
-  (DivergentBinFrag<or> i64:$y, (not_oneuse i64:$x)),
-  (REG_SEQUENCE VReg_64,
-    (V_BFI_B32_e64 (i32 (EXTRACT_SUBREG VReg_64:$x, sub0)),
-                   (i32 (EXTRACT_SUBREG VReg_64:$y, sub0)), (i32 -1)), sub0,
-    (V_BFI_B32_e64 (i32 (EXTRACT_SUBREG VReg_64:$x, sub1)),
-                   (i32 (EXTRACT_SUBREG VReg_64:$y, sub1)), (i32 -1)), sub1)
->;
-
 // SHA-256 Ch function
-// z ^ (x & (y ^ z))
+// 32-bit: z ^ (x & (y ^ z))
 def : AMDGPUPatIgnoreCopies <
   (DivergentBinFrag<xor> i32:$z, (and i32:$x, (xor i32:$y, i32:$z))),
   (V_BFI_B32_e64 (COPY_TO_REGCLASS VSrc_b32:$x, VGPR_32),
@@ -2776,17 +2830,55 @@ def : AMDGPUPatIgnoreCopies <
                 (COPY_TO_REGCLASS VSrc_b32:$z, VGPR_32))
 >;
 
+// 64-bit versions (i64 and v2i32)
 foreach vt = [i64, v2i32] in {
-def : AMDGPUPatIgnoreCopies <
-  (DivergentBinFrag<xor> vt:$z, (and vt:$x, (xor vt:$y, vt:$z))),
-  (REG_SEQUENCE VReg_64,
-    (V_BFI_B32_e64 (i32 (EXTRACT_SUBREG VReg_64:$x, sub0)),
-              (i32 (EXTRACT_SUBREG VReg_64:$y, sub0)),
-              (i32 (EXTRACT_SUBREG VReg_64:$z, sub0))), sub0,
-    (V_BFI_B32_e64 (i32 (EXTRACT_SUBREG VReg_64:$x, sub1)),
-              (i32 (EXTRACT_SUBREG VReg_64:$y, sub1)),
-              (i32 (EXTRACT_SUBREG VReg_64:$z, sub1))), sub1)
->;
+  defvar not_frag = !if(!eq(vt, i64), not, vnot);
+  defvar not_oneuse_frag = !if(!eq(vt, i64), not_oneuse, vnot_oneuse);
+
+  // (y & x) | (z & ~x)
+  def : AMDGPUPatIgnoreCopies <
+    (DivergentBinFrag<or> (and vt:$y, vt:$x), (and vt:$z, (not_frag vt:$x))),
+    (REG_SEQUENCE VReg_64,
+      (V_BFI_B32_e64 (i32 (EXTRACT_SUBREG VReg_64:$x, sub0)),
+                (i32 (EXTRACT_SUBREG VReg_64:$y, sub0)),
+                (i32 (EXTRACT_SUBREG VReg_64:$z, sub0))), sub0,
+      (V_BFI_B32_e64 (i32 (EXTRACT_SUBREG VReg_64:$x, sub1)),
+                (i32 (EXTRACT_SUBREG VReg_64:$y, sub1)),
+                (i32 (EXTRACT_SUBREG VReg_64:$z, sub1))), sub1)
+  >;
+
+  // (z & ~x)
+  def : AMDGPUPatIgnoreCopies <
+    (DivergentBinFrag<and> vt:$z, (not_oneuse_frag vt:$x)),
+    (REG_SEQUENCE VReg_64,
+      (V_BFI_B32_e64 (i32 (EXTRACT_SUBREG VReg_64:$x, sub0)), (i32 0),
+                     (i32 (EXTRACT_SUBREG VReg_64:$z, sub0))), sub0,
+      (V_BFI_B32_e64 (i32 (EXTRACT_SUBREG VReg_64:$x, sub1)), (i32 0),
+                     (i32 (EXTRACT_SUBREG VReg_64:$z, sub1))), sub1)
+  >;
+
+  // (y | ~x)
+  def : AMDGPUPatIgnoreCopies <
+    (DivergentBinFrag<or> vt:$y, (not_oneuse_frag vt:$x)),
+    (REG_SEQUENCE VReg_64,
+      (V_BFI_B32_e64 (i32 (EXTRACT_SUBREG VReg_64:$x, sub0)),
+                     (i32 (EXTRACT_SUBREG VReg_64:$y, sub0)), (i32 -1)), sub0,
+      (V_BFI_B32_e64 (i32 (EXTRACT_SUBREG VReg_64:$x, sub1)),
+                     (i32 (EXTRACT_SUBREG VReg_64:$y, sub1)), (i32 -1)), sub1)
+  >;
+
+  // SHA-256 Ch function
+  // z ^ (x & (y ^ z))
+  def : AMDGPUPatIgnoreCopies <
+    (DivergentBinFrag<xor> vt:$z, (and vt:$x, (xor vt:$y, vt:$z))),
+    (REG_SEQUENCE VReg_64,
+      (V_BFI_B32_e64 (i32 (EXTRACT_SUBREG VReg_64:$x, sub0)),
+                (i32 (EXTRACT_SUBREG VReg_64:$y, sub0)),
+                (i32 (EXTRACT_SUBREG VReg_64:$z, sub0))), sub0,
+      (V_BFI_B32_e64 (i32 (EXTRACT_SUBREG VReg_64:$x, sub1)),
+                (i32 (EXTRACT_SUBREG VReg_64:$y, sub1)),
+                (i32 (EXTRACT_SUBREG VReg_64:$z, sub1))), sub1)
+  >;
 }
 
 def : AMDGPUPat <
@@ -3653,6 +3745,12 @@ def : GCNPat<
   (V_PK_MUL_F16 0, (i32 CONST.FP16_ONE), $src_mods, $src, DSTCLAMP.NONE)
 >;
 
+let SubtargetPredicate = HasBF16PackedInsts in
+def : GCNPat<
+  (fcanonicalize (v2bf16 (VOP3PMods v2bf16:$src, i32:$src_mods))),
+  (V_PK_MUL_BF16 0, (i32 CONST.BF16_ONE), $src_mods, $src, DSTCLAMP.NONE)
+>;
+
 def : GCNPat<
   (fcanonicalize (f32 (VOP3Mods f32:$src, i32:$src_mods))),
   (V_MUL_F32_e64 0, (i32 CONST.FP32_ONE), $src_mods, $src)
@@ -3668,7 +3766,12 @@ def : GCNPat<
   (fcanonicalize (v2f32 (VOP3PMods v2f32:$src, i32:$src_mods))),
   (V_PK_MUL_F32 0, (i64 CONST.FP32_ONE), $src_mods, $src)
 >;
-}
+
+def : GCNPat<
+  (fcanonicalize (v2f32 (fneg (VOP3PMods v2f32:$src, i32:$src_mods)))),
+  (V_PK_MUL_F32 0, (i64 CONST.FP32_NEG_ONE), $src_mods, $src)
+>;
+} // End SubtargetPredicate = HasPackedFP32Ops
 
 // TODO: Handle fneg like other types.
 let SubtargetPredicate = isNotGFX12Plus in {
@@ -3727,6 +3830,12 @@ multiclass SelectCanonicalizeAsMax<
     (V_PK_MAX_F16 $src_mods, $src, $src_mods, $src, DSTCLAMP.NONE)> {
     // FIXME: Should have VOP3P subtarget predicate
     let OtherPredicates = f16_preds;
+  }
+
+  def : GCNPat<
+    (fcanonicalize (v2f64 (VOP3PMods v2f64:$src, i32:$src_mods))),
+    (V_PK_MAX_NUM_F64 $src_mods, $src, $src_mods, $src)> {
+    let OtherPredicates = !listconcat(f64_preds, [HasPackedFP64Ops]);
   }
 }
 
@@ -4663,6 +4772,54 @@ def G_AMDGPU_UMED3 : AMDGPUGenericInstruction {
 }
 
 def G_AMDGPU_FMED3 : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src0, type0:$src1, type0:$src2);
+  let hasSideEffects = 0;
+}
+
+def G_AMDGPU_SMIN3 : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src0, type0:$src1, type0:$src2);
+  let hasSideEffects = 0;
+}
+
+def G_AMDGPU_UMIN3 : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src0, type0:$src1, type0:$src2);
+  let hasSideEffects = 0;
+}
+
+def G_AMDGPU_FMIN3 : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src0, type0:$src1, type0:$src2);
+  let hasSideEffects = 0;
+}
+
+def G_AMDGPU_SMAX3 : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src0, type0:$src1, type0:$src2);
+  let hasSideEffects = 0;
+}
+
+def G_AMDGPU_UMAX3 : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src0, type0:$src1, type0:$src2);
+  let hasSideEffects = 0;
+}
+
+def G_AMDGPU_FMAX3 : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src0, type0:$src1, type0:$src2);
+  let hasSideEffects = 0;
+}
+
+def G_AMDGPU_FMAXIMUM3 : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src0, type0:$src1, type0:$src2);
+  let hasSideEffects = 0;
+}
+
+def G_AMDGPU_FMINIMUM3 : AMDGPUGenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src0, type0:$src1, type0:$src2);
   let hasSideEffects = 0;

@@ -17,9 +17,9 @@
 #  pragma GCC system_header
 #endif
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_NEGATORS)
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Predicate>
 class _LIBCPP_DEPRECATED_IN_CXX17 binary_negate
@@ -44,8 +44,8 @@ not2(const _Predicate& __pred) {
   return binary_negate<_Predicate>(__pred);
 }
 
-#endif // _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_NEGATORS)
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_NEGATORS)
 
 #endif // _LIBCPP___FUNCTIONAL_BINARY_NEGATE_H

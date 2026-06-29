@@ -71,6 +71,9 @@ let Command = "settings clear" in {
 let Command = "settings show" in {
   def setshow_defaults : Option<"defaults", "d">,
                          Desc<"Include ${d}efault values if defined.">;
+  def setshow_changed : Option<"changed", "c">,
+                        Desc<"Only show settings whose value differs from the "
+                             "default.">;
 }
 
 let Command = "breakpoint list" in {
@@ -482,6 +485,10 @@ let Command = "breakpoint add scripted" in {
     "repeat this option multiple times to specify multiple shared libraries.">;
 }
 
+let Command = "breakpoint override add" in {
+  def breakpoint_override_add_description : Option<"description", "d">,
+    Desc<"Description string for this override resolver">, Arg<"HelpText">;
+}
 
 let Command = "breakpoint clear" in {
   def breakpoint_clear_file : Option<"file", "f">,
@@ -867,7 +874,8 @@ let Command = "log enable" in {
   def log_file : Option<"file", "f">,
                  Group<1>,
                  Arg<"Filename">,
-                 Desc<"Set the destination file to log to.">;
+                 Desc<"Set the destination file that all the enabled "
+                      "categories in the specified log channel will log to.">;
   def log_handler : Option<"log-handler", "h">,
                     Group<1>,
                     EnumArg<"LogHandler">,
@@ -907,6 +915,9 @@ let Command = "log enable" in {
       : Option<"file-function", "F">,
         Group<1>,
         Desc<"Prepend the names of files and function that generate the logs.">;
+  def log_json : Option<"json", "j">,
+                 Group<1>,
+                 Desc<"Emit each log message as its own JSON object.">;
 }
 
 let Command = "log dump" in {

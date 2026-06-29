@@ -52,14 +52,6 @@ struct FileEntry {
 } // namespace gsym
 
 template <> struct DenseMapInfo<gsym::FileEntry> {
-  static inline gsym::FileEntry getEmptyKey() {
-    gsym::gsym_strp_t key = DenseMapInfo<gsym::gsym_strp_t>::getEmptyKey();
-    return gsym::FileEntry(key, key);
-  }
-  static inline gsym::FileEntry getTombstoneKey() {
-    gsym::gsym_strp_t key = DenseMapInfo<gsym::gsym_strp_t>::getTombstoneKey();
-    return gsym::FileEntry(key, key);
-  }
   static unsigned getHashValue(const gsym::FileEntry &Val) {
     return llvm::hash_combine(
         DenseMapInfo<gsym::gsym_strp_t>::getHashValue(Val.Dir),

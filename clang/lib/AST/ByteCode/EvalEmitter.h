@@ -33,15 +33,18 @@ public:
   using LabelTy = uint32_t;
   using AddrTy = uintptr_t;
   using Local = Scope::Local;
-  using PtrCallback = llvm::function_ref<bool(const Pointer &)>;
+  using PtrCallback =
+      llvm::function_ref<bool(InterpState &S, CodePtr OpPC, const Pointer &)>;
 
   EvaluationResult interpretExpr(const Expr *E,
                                  bool ConvertResultToRValue = false,
                                  bool DestroyToplevelScope = false);
   EvaluationResult interpretDecl(const VarDecl *VD, const Expr *Init,
                                  bool CheckFullyInitialized);
+  EvaluationResult interpretDestructor(const VarDecl *VD, const APValue &Value);
   /// Interpret the given Expr to a Pointer.
   EvaluationResult interpretAsPointer(const Expr *E, PtrCallback PtrCB);
+  EvaluationResult interpretAsLValuePointer(const Expr *E, PtrCallback PtrCB);
   /// Interpret the given expression as if it was in the body of the given
   /// function, i.e. the parameters of the function are available for use.
   bool interpretCall(const FunctionDecl *FD, const Expr *E);
@@ -61,8 +64,10 @@ protected:
 
   /// Methods implemented by the compiler.
   virtual bool visitExpr(const Expr *E, bool DestroyToplevelScope) = 0;
+  virtual bool visitLValueExpr(const Expr *E, bool DestroyToplevelScope) = 0;
   virtual bool visitDeclAndReturn(const VarDecl *VD, const Expr *Init,
                                   bool ConstantContext) = 0;
+  virtual bool visitDtorCall(const VarDecl *VD, const APValue &Value) = 0;
   virtual bool visitFunc(const FunctionDecl *F) = 0;
   virtual bool visit(const Expr *E) = 0;
   virtual bool emitBool(bool V, const Expr *E) = 0;

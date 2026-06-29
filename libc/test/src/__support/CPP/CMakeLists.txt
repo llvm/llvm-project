@@ -61,6 +61,8 @@ add_libc_test(
     stringview_test.cpp
   DEPENDS
     libc.src.__support.CPP.string_view
+    libc.src.__support.CPP.type_traits
+    libc.src.string.memory_utils.inline_memcpy
 )
 
 add_libc_test(
@@ -138,6 +140,16 @@ add_libc_test(
     tuple_test.cpp
   DEPENDS
     libc.src.__support.CPP.tuple
+)
+
+add_libc_test(
+  scope_test
+  SUITE
+    libc-cpp-utils-tests
+  SRCS
+    scope_test.cpp
+  DEPENDS
+    libc.src.__support.CPP.scope
 )
 
 add_libc_test(

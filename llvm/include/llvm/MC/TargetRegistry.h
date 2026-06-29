@@ -662,7 +662,7 @@ public:
   /// For example feature string "+a,+m,c" is accepted, and results in feature
   /// list {"+a", "+m", "c"}. Later in ApplyFeatureFlag, it asserts
   /// that all features must start with '+' or '-' and assert is failed.
-  static bool isValidFeatureListFormat(StringRef FeaturesString);
+  LLVM_ABI static bool isValidFeatureListFormat(StringRef FeaturesString);
 
   /// @}
 };
@@ -722,17 +722,6 @@ struct TargetRegistry {
   /// @{
 
   LLVM_ABI static iterator_range<iterator> targets();
-
-  /// lookupTarget - Lookup a target based on a target triple.
-  ///
-  /// \param TripleStr - The triple to use for finding a target.
-  /// \param Error - On failure, an error string describing why no target was
-  /// found.
-  // TODO(boomanaiden154): Remove this function after LLVM 22 branches.
-  [[deprecated("Use overload accepting Triple instead")]]
-  static const Target *lookupTarget(StringRef TripleStr, std::string &Error) {
-    return lookupTarget(Triple(TripleStr), Error);
-  }
 
   /// lookupTarget - Lookup a target based on a target triple.
   ///

@@ -31,17 +31,6 @@ namespace clangd {
 class SymbolDocCommentVisitor
     : public comments::ConstCommentVisitor<SymbolDocCommentVisitor> {
 public:
-  SymbolDocCommentVisitor(comments::FullComment *FC,
-                          const CommentOptions &CommentOpts)
-      : Traits(Allocator, CommentOpts), Allocator() {
-    if (!FC)
-      return;
-
-    for (auto *Block : FC->getBlocks()) {
-      visit(Block);
-    }
-  }
-
   SymbolDocCommentVisitor(llvm::StringRef Documentation,
                           const CommentOptions &CommentOpts)
       : Traits(Allocator, CommentOpts), Allocator() {

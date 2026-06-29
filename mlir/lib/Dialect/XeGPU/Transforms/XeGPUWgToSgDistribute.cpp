@@ -22,6 +22,7 @@
 #include "mlir/Dialect/XeGPU/Transforms/XeGPULayoutImpl.h"
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "llvm/ADT/SetVector.h"
 #include <optional>
 
 namespace mlir {
@@ -304,7 +305,7 @@ struct WgToSgDpasOp : public OpConversionPattern<xegpu::DpasOp> {
                   ConversionPatternRewriter &rewriter) const override {
     Location loc = op.getLoc();
     VectorType resultTy = op.getResult().getType();
-    if (resultTy.getRank() != 2)
+    if (resultTy.getRank() < 2)
       return failure();
 
     auto layoutCd = op.getLayoutCdAttr();
@@ -325,11 +326,15 @@ struct WgToSgDpasOp : public OpConversionPattern<xegpu::DpasOp> {
         }
 
         ArrayRef<int64_t> aVecShape =
-            llvm::cast<VectorType>(aVec.getType()).getShape();
+            cast<VectorType>(aVec.getType()).getShape();
         ArrayRef<int64_t> bVecShape =
-            llvm::cast<VectorType>(bVec.getType()).getShape();
-        VectorType resTy = VectorType::get({aVecShape[0], bVecShape[1]},
-                                           resultTy.getElementType());
+            cast<VectorType>(bVec.getType()).getShape();
+        // Build result shape: batch dims from A + [M, N] from last dims of
+        // A and B.
+        SmallVector<int64_t> resShape(aVecShape.drop_back(2));
+        resShape.push_back(aVecShape[aVecShape.size() - 2]);
+        resShape.push_back(bVecShape[bVecShape.size() - 1]);
+        VectorType resTy = VectorType::get(resShape, resultTy.getElementType());
         auto newDpasOp = xegpu::DpasOp::create(rewriter, loc, resTy, operands);
         newDpasOp.setLayoutCdAttr(layoutCd.dropSgLayoutAndData());
         newDpasOp.setLayoutAAttr(layoutA.dropSgLayoutAndData());
@@ -339,6 +344,61 @@ struct WgToSgDpasOp : public OpConversionPattern<xegpu::DpasOp> {
       }
     }
     rewriter.replaceOpWithMultiple(op, {newDpasOps});
+    return success();
+  }
+};
+
+/// This pattern transforms the DpasMxOp to work at subgroup level.
+struct WgToSgDpasMxOp : public OpConversionPattern<xegpu::DpasMxOp> {
+  using OpConversionPattern<xegpu::DpasMxOp>::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(xegpu::DpasMxOp op, OneToNOpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+
+    Location loc = op.getLoc();
+    VectorType resultTy = op.getResult().getType();
+
+    if (resultTy.getRank() < 2)
+      return failure();
+
+    auto layoutCd = op.getLayoutCdAttr();
+    auto layoutA = op.getLayoutAAttr();
+    auto layoutB = op.getLayoutBAttr();
+    auto layoutAScale = op.getLayoutAScaleAttr();
+    auto layoutBScale = op.getLayoutBScaleAttr();
+
+    if (!layoutCd || !layoutA || !layoutB || !layoutAScale || !layoutBScale)
+      return failure();
+
+    size_t index_c = 0;
+    SmallVector<Value> newDpasMxOps;
+    for (auto [index_a, aVec] : llvm::enumerate(adaptor.getA())) {
+      for (auto [index_b, bVec] : llvm::enumerate(adaptor.getB())) {
+        Value accVal = (op.getAcc()) ? adaptor.getAcc()[index_c++] : Value();
+        Value scaleAVal =
+            (op.getScaleA()) ? adaptor.getScaleA()[index_a] : Value();
+        Value scaleBVal =
+            (op.getScaleB()) ? adaptor.getScaleB()[index_b] : Value();
+
+        ArrayRef<int64_t> aVecShape =
+            cast<VectorType>(aVec.getType()).getShape();
+        ArrayRef<int64_t> bVecShape =
+            cast<VectorType>(bVec.getType()).getShape();
+        // Build result shape: batch dims from A + [M, N]
+        SmallVector<int64_t> resShape(aVecShape.drop_back(2));
+        resShape.push_back(aVecShape[aVecShape.size() - 2]);
+        resShape.push_back(bVecShape[bVecShape.size() - 1]);
+        VectorType resTy = VectorType::get(resShape, resultTy.getElementType());
+        auto newDpasMxOp = xegpu::DpasMxOp::create(
+            rewriter, loc, resTy, aVec, bVec, accVal, scaleAVal, scaleBVal,
+            layoutA.dropSgLayoutAndData(), layoutB.dropSgLayoutAndData(),
+            layoutCd.dropSgLayoutAndData(), layoutAScale.dropSgLayoutAndData(),
+            layoutBScale.dropSgLayoutAndData());
+
+        newDpasMxOps.push_back(newDpasMxOp);
+      }
+    }
+    rewriter.replaceOpWithMultiple(op, {newDpasMxOps});
     return success();
   }
 };
@@ -581,82 +641,6 @@ struct WgToSgConvertLayoutOp
   }
 };
 
-// Handles UnrealizedConversionCastOp generated during
-// SCFStructuralTypeConversions (step 1). This op may appear as either a
-// target or source materialization for Vector values, e.g.:
-// 1. unrealized_cast %1 : vector<256xf32> to vector<16xf32>, ...
-// 2. unrealized_cast %1 : vector<16xf32>, ... to vector<256xf32>
-// it could be either 1:N or N:1 cast. In both cases, the pattern
-// simply forwards the inputs to the outputs using 1:1 or 1:N interface.
-// for example, the following scf::forOp
-// ```
-// %for = scf.for ... iter_args(%arg1 = %0)->(vector<128x128xf16>) {
-//     %n = use(%arg1): vector<128x128xf16>
-//     scf.yield %n : vector<128x128xf16>
-// }
-// ```
-// Could be converted to:
-// ```
-// %1 = unrealized_conversion_cast %0
-//          : vector<128x128xf16> to vector<16x16xf16>, vector<16x16xf16>
-// %for:2 = scf.for ... iter_args(%arg1 = %1#1, %arg2 = %1#2)
-//                    -> (vector<16x16xf16>, vector<16x16xf16) {
-//     %m = unrealized_conversion_cast %arg1, %arg2
-//            : vector<16x16xf16>, vector<16x16xf16> to vector<128x128xf16>
-//     %n = use(%m): vector<128x128xf16>
-//     %b = unrealized_conversion_cast %n
-//            : vector<128x128xf16> to vector<16x16xf16>, vector<16x16xf16>
-//     scf.yield %b#1, %b#2 : vector<16x16xf16>, vector<16x16xf16>
-// }
-// %cast = unrealized_conversion_cast %for:2
-//          : vector<16x16xf16>, vector<16x16xf16> to vector<128x128xf16>
-// ```
-// TODO: remove it when context-aware type converter is ready.
-struct UnrealizedConversionCastOpPattern
-    : public OpConversionPattern<mlir::UnrealizedConversionCastOp> {
-  using OpConversionPattern<
-      mlir::UnrealizedConversionCastOp>::OpConversionPattern;
-
-  mlir::LogicalResult
-  matchAndRewrite(mlir::UnrealizedConversionCastOp op, OneToNOpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    SmallVector<Value> inputs = xegpu::flattenValues(adaptor.getInputs());
-
-    auto inputTy = dyn_cast<VectorType>(inputs[0].getType());
-    auto outputTy = dyn_cast<VectorType>(op->getOpResult(0).getType());
-
-    if (!inputTy || !outputTy || !llvm::all_equal(op->getResultTypes()) ||
-        !llvm::all_equal(ValueRange(inputs).getTypes()))
-      return failure();
-
-    // Handles the case "cast %1 : vector<256xf32> to vector<16xf32>, ...".
-    // It is generated by source materialization (e.g., inits to scf forOp).
-    // The input values provided by the adaptor should already be distributed,
-    // and their types should correspond exactly to the result types of the
-    // operation.
-    if (op.getNumOperands() == 1 &&
-        llvm::equal(ValueRange(inputs).getTypes(), op->getResultTypes())) {
-      rewriter.replaceOp(op, inputs);
-      return success();
-    }
-
-    // Handles the case "cast %1 : vector<16xf32>, ... to vector<256xf32>".
-    // It is generated by target materialization (e.g., arguments/results
-    // of scf forOp). All input values must have the same vector type, and
-    // their shape must be evenly divisible by the output vector's shape
-    // (determined by the nature of the workgroup to subgroup distribution).
-    // TODO: it is not safe to do such forward, since such N:1 cast could be
-    // from others.
-    if (op.getNumResults() == 1 &&
-        computeShapeRatio(outputTy.getShape(), inputTy.getShape())) {
-      rewriter.replaceOpWithMultiple(op, {inputs});
-      return success();
-    }
-
-    return mlir::failure();
-  }
-};
-
 // This pattern distributes arith.constant op into subgroup-level constants
 struct WgToSgArithConstantOp : public OpConversionPattern<arith::ConstantOp> {
   using OpConversionPattern<arith::ConstantOp>::OpConversionPattern;
@@ -848,8 +832,8 @@ struct WgToSgLoadGatherOp : public OpConversionPattern<xegpu::LoadGatherOp> {
       auto newLayout = layout.dropSgLayoutAndData();
       auto newLoadOp = xegpu::LoadGatherOp::create(
           rewriter, loc, newTy, op.getSource(), offsets, mask, chunkSizeAttr,
-          op.getL1HintAttr(), op.getL2HintAttr(), op.getL3HintAttr(),
-          newLayout);
+          op.getL1HintAttr(), op.getL2HintAttr(), op.getL3HintAttr(), newLayout,
+          /*contiguity=*/nullptr);
       newLoadOps.push_back(newLoadOp);
     }
     rewriter.replaceOpWithMultiple(op, {newLoadOps});
@@ -895,7 +879,8 @@ struct WgToSgStoreScatterOp
       xegpu::StoreScatterOp::create(rewriter, loc, val, op.getDest(), offs,
                                     mask, chunkSizeAttr, op.getL1HintAttr(),
                                     op.getL2HintAttr(), op.getL3HintAttr(),
-                                    layout.dropSgLayoutAndData());
+                                    layout.dropSgLayoutAndData(),
+                                    /*contiguity=*/nullptr);
     }
     rewriter.eraseOp(op);
     return success();
@@ -1292,9 +1277,8 @@ struct WgToSgVectorTransposeOp
         xegpu::getTemporaryLayout(dyn_cast<OpResult>(op.getResult()));
     if (!layout || !layout.isForWorkgroup())
       return failure();
-    // TODO-LayoutRefactor: handle the case using getTemporaryLayout
     xegpu::DistributeLayoutAttr sourceLayout =
-        xegpu::getDistributeLayoutAttr(op.getVector());
+        xegpu::getTemporaryLayout(op->getOpOperand(0));
     if (!sourceLayout || !sourceLayout.isForWorkgroup())
       return failure();
 
@@ -1403,19 +1387,153 @@ struct WgToSgVectorMaskOp : public OpConversionPattern<MaskOpType> {
 
 using WgToSgVectorConstantMaskOp = WgToSgVectorMaskOp<vector::ConstantMaskOp>;
 using WgToSgVectorCreateMaskOp = WgToSgVectorMaskOp<vector::CreateMaskOp>;
+
+// This pattern transforms vector.bitcast ops to work at subgroup level.
+struct WgToSgVectorBitCastOp : public OpConversionPattern<vector::BitCastOp> {
+  using OpConversionPattern<vector::BitCastOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(vector::BitCastOp op, OneToNOpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    VectorType resultType = op.getResultVectorType();
+
+    ArrayRef<int64_t> wgShape = resultType.getShape();
+    xegpu::DistributeLayoutAttr layout =
+        xegpu::getTemporaryLayout(dyn_cast<OpResult>(op.getResult()));
+    if (!layout || !layout.isForWorkgroup())
+      return failure();
+
+    SmallVector<int64_t> sgShape = getSgShapeAndCount(wgShape, layout).first;
+    VectorType newResultType =
+        VectorType::get(sgShape, resultType.getElementType());
+
+    SmallVector<Value> newBitCastOps;
+    for (auto src : adaptor.getSource()) {
+      auto newBitCast =
+          vector::BitCastOp::create(rewriter, op.getLoc(), newResultType, src);
+      newBitCastOps.push_back(newBitCast.getResult());
+    }
+
+    rewriter.replaceOpWithMultiple(op, {newBitCastOps});
+    return success();
+  }
+};
+
+// This pattern transforms vector.interleave ops to work at subgroup level.
+struct WgToSgVectorInterleaveOp
+    : public OpConversionPattern<vector::InterleaveOp> {
+  using OpConversionPattern<vector::InterleaveOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(vector::InterleaveOp op, OneToNOpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    VectorType resultType = op.getResultVectorType();
+
+    ArrayRef<int64_t> wgShape = resultType.getShape();
+    xegpu::DistributeLayoutAttr layout =
+        xegpu::getTemporaryLayout(dyn_cast<OpResult>(op.getResult()));
+    if (!layout || !layout.isForWorkgroup())
+      return failure();
+
+    SmallVector<int64_t> sgShape = getSgShapeAndCount(wgShape, layout).first;
+    VectorType newResultType =
+        VectorType::get(sgShape, resultType.getElementType());
+
+    SmallVector<Value> newInterleaveOps;
+    // Interleave operates pairwise: each lhs value is interleaved with
+    // corresponding rhs value
+    for (auto [lhs, rhs] : llvm::zip(adaptor.getLhs(), adaptor.getRhs())) {
+      auto newInterleave = vector::InterleaveOp::create(
+          rewriter, op.getLoc(), newResultType, lhs, rhs);
+      newInterleaveOps.push_back(newInterleave.getResult());
+    }
+
+    rewriter.replaceOpWithMultiple(op, {newInterleaveOps});
+    return success();
+  }
+};
+
+// This pattern transforms vector.deinterleave ops to work at subgroup level.
+struct WgToSgVectorDeinterleaveOp
+    : public OpConversionPattern<vector::DeinterleaveOp> {
+  using OpConversionPattern<vector::DeinterleaveOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(vector::DeinterleaveOp op, OneToNOpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    SmallVector<Value> newRes1Ops;
+    SmallVector<Value> newRes2Ops;
+
+    for (auto src : adaptor.getSource()) {
+      auto newDeinterleave =
+          vector::DeinterleaveOp::create(rewriter, op.getLoc(), src);
+      newRes1Ops.push_back(newDeinterleave.getRes1());
+      newRes2Ops.push_back(newDeinterleave.getRes2());
+    }
+
+    SmallVector<SmallVector<Value>> results = {newRes1Ops, newRes2Ops};
+    rewriter.replaceOpWithMultiple(op, results);
+    return success();
+  }
+};
+
 } // namespace
 
 namespace mlir {
 namespace xegpu {
+void populateXeGPUWgToSgDistributeTypeConversions(TypeConverter &converter,
+                                                  Operation *topLevelOp) {
+  // Pass through all types by default.
+  converter.addConversion([](Type type) -> Type { return type; });
+
+  // For TensorDescType, convert WG-level tensor descs to N SG-level descs.
+  converter.addConversion(
+      [](xegpu::TensorDescType type,
+         SmallVectorImpl<Type> &result) -> std::optional<LogicalResult> {
+        xegpu::DistributeLayoutAttr layout = type.getLayoutAttr();
+        if (!layout || !layout.isForWorkgroup())
+          return std::nullopt;
+
+        Type elemTy = type.getElementType();
+        ArrayRef<int64_t> shape = type.getShape();
+
+        int count;
+        SmallVector<int64_t> subShape;
+        std::tie(subShape, count) = getSgShapeAndCount(shape, layout);
+
+        layout = layout.dropSgLayoutAndData();
+
+        auto newTy = xegpu::TensorDescType::get(
+            type.getContext(), subShape, elemTy, type.getEncoding(), layout);
+        result.append(count, newTy);
+        return success();
+      });
+
+  // Context-aware VectorType conversion based on sg_layout/sg_data
+  // (1:1 shape-changing or 1:N).
+  auto getSubShapeAndCount = [](VectorType vecTy,
+                                xegpu::DistributeLayoutAttr layout)
+      -> std::pair<SmallVector<int64_t>, int> {
+    if (!layout.isForWorkgroup())
+      return {{}, 0};
+    return getSgShapeAndCount(vecTy.getShape(), layout);
+  };
+  auto loopArgTypes =
+      xegpu::precomputeLoopBlockArgTypes(topLevelOp, getSubShapeAndCount);
+  xegpu::addVectorTypeConversion(converter, getSubShapeAndCount,
+                                 std::move(loopArgTypes));
+}
+
 void populateXeGPUWgToSgDistributePatterns(RewritePatternSet &patterns) {
   patterns.add<WgToSgCreateNdOp, WgToSgLoadNdOp, WgToSgStoreNdOp, WgToSgDpasOp,
-               WgToSgPrefetchNdOp, UnrealizedConversionCastOpPattern,
-               WgToSgElementwiseOp, WgToSgVectorBroadcastOp,
-               WgToSgConvertLayoutOp, WgToSgArithConstantOp, WgToSgLoadGatherOp,
-               WgToSgStoreScatterOp, WgToSgLoadMatrixOp, WgToSgStoreMatrixOp,
-               WgToSgVectorStepOp, WgToSgVectorShapeCastOp,
-               WgToSgMultiDimReductionOp, WgToSgVectorTransposeOp,
-               WgToSgVectorConstantMaskOp, WgToSgVectorCreateMaskOp>(
+               WgToSgDpasMxOp, WgToSgPrefetchNdOp, WgToSgElementwiseOp,
+               WgToSgVectorBroadcastOp, WgToSgConvertLayoutOp,
+               WgToSgArithConstantOp, WgToSgLoadGatherOp, WgToSgStoreScatterOp,
+               WgToSgLoadMatrixOp, WgToSgStoreMatrixOp, WgToSgVectorStepOp,
+               WgToSgVectorShapeCastOp, WgToSgMultiDimReductionOp,
+               WgToSgVectorTransposeOp, WgToSgVectorConstantMaskOp,
+               WgToSgVectorCreateMaskOp, WgToSgVectorBitCastOp,
+               WgToSgVectorInterleaveOp, WgToSgVectorDeinterleaveOp>(
       patterns.getContext());
 }
 } // namespace xegpu
@@ -1436,78 +1554,30 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
     return;
   }
 
-  // Track existing UnrealizedConversionCastOps
-  SmallVector<Operation *> existingCastOps;
-  getOperation()->walk([&](UnrealizedConversionCastOp castOp) {
-    existingCastOps.push_back(castOp.getOperation());
-  });
+  // Collect existing UnrealizedConversionCastOps. These must be preserved.
+  llvm::SmallSetVector<UnrealizedConversionCastOp, 8> existingCasts;
+  getOperation()->walk(
+      [&](UnrealizedConversionCastOp castOp) { existingCasts.insert(castOp); });
 
-  {
-    // Step 1: Apply SCFStructuralTypeConversions to SCF operations with
-    // VectorType operands. This first converts such operands to
-    // RankedTensorType, propagates the layout attribute into the encoding
-    // attribute, and finally converts the RankedTensorType to VectorType based
-    // on the encoding.
-
-    TypeConverter converter;
-    converter.addConversion([&](Type type) -> Type { return type; });
-    converter.addConversion(
-        [&](RankedTensorType type,
-            SmallVectorImpl<Type> &result) -> std::optional<LogicalResult> {
-          // Only convert RankedTensorTypes that carry an XeGPU layout encoding.
-          // Plain tensors (e.g. tensor<?xi32>) have no XeGPU encoding and must
-          // not be converted: VectorType does not support dynamic dimensions.
-          auto encoding = dyn_cast_if_present<xegpu::DistributeLayoutAttr>(
-              type.getEncoding());
-          if (!encoding)
-            return std::nullopt;
-
-          Type elemTy = type.getElementType();
-          ArrayRef<int64_t> shape = type.getShape();
-
-          int count;
-          SmallVector<int64_t> subShape;
-          std::tie(subShape, count) = getSgShapeAndCount(shape, encoding);
-
-          auto newTy = VectorType::get(subShape, elemTy);
-          result.append(count, newTy);
-          return success();
-        });
-
-    xegpu::doSCFStructuralTypeConversionWithTensorType(getOperation(),
-                                                       converter);
-  }
-
-  // Step 2: Perform workgroup to subgroup distribution for TensorDesc values,
-  // as well as XeGPU, Arith, and Vector operations.
+  // Perform workgroup to subgroup distribution for TensorDesc and Vector
+  // values, as well as XeGPU, Arith, and Vector operations. Uses a
+  // context-aware type converter that inspects Values to retrieve the
+  // distribute layout attribute for 1:N type conversion.
   MLIRContext *ctx = &getContext();
   RewritePatternSet patterns(ctx);
   ConversionTarget target(*ctx);
   TypeConverter converter;
-  converter.addConversion([&](Type type) -> Type { return type; });
-  converter.addConversion(
-      [&](xegpu::TensorDescType type,
-          SmallVectorImpl<Type> &result) -> std::optional<LogicalResult> {
-        xegpu::DistributeLayoutAttr layout = type.getLayoutAttr();
-        // Only convert WG-level tensor descs. SG-level or layout-less types
-        // are already legal and should pass through unchanged.
-        if (!layout || !layout.isForWorkgroup())
-          return std::nullopt;
-
-        Type elemTy = type.getElementType();
-        ArrayRef<int64_t> shape = type.getShape();
-
-        int count;
-        SmallVector<int64_t> subShape;
-        std::tie(subShape, count) = getSgShapeAndCount(shape, layout);
-
-        layout = layout.dropSgLayoutAndData();
-
-        auto newTy = xegpu::TensorDescType::get(
-            type.getContext(), subShape, elemTy, type.getEncoding(), layout);
-        result.append(count, newTy);
-        return success();
-      });
+  // Source (N:1) and target (1:1) materializations using
+  // UnrealizedConversionCastOp.
+  auto materializeCast = [](OpBuilder &builder, Type type, ValueRange inputs,
+                            Location loc) -> Value {
+    return UnrealizedConversionCastOp::create(builder, loc, type, inputs)
+        .getResult(0);
+  };
+  converter.addSourceMaterialization(materializeCast);
+  converter.addTargetMaterialization(materializeCast);
+  xegpu::populateXeGPUWgToSgDistributeTypeConversions(converter,
+                                                      getOperation());
 
   auto getTensorDescType = [](Operation *op) -> xegpu::TensorDescType {
     if (auto createOp = dyn_cast<xegpu::CreateNdDescOp>(op))
@@ -1539,6 +1609,12 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
     return isLegal(layout);
   });
 
+  target.addDynamicallyLegalOp<xegpu::DpasMxOp>(
+      [=](xegpu::DpasMxOp op) -> bool {
+        auto layout = op.getLayoutCdAttr();
+        return isLegal(layout);
+      });
+
   target.addDynamicallyLegalOp<xegpu::LoadMatrixOp>(
       [=](xegpu::LoadMatrixOp op) -> bool {
         return isLegal(op.getLayoutAttr());
@@ -1560,16 +1636,16 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
         return isLegal(layout);
       });
 
-  target.addDynamicallyLegalOp<vector::ShapeCastOp, vector::StepOp,
-                               vector::TransposeOp, vector::BroadcastOp,
-                               vector::MultiDimReductionOp,
-                               vector::ConstantMaskOp, vector::CreateMaskOp>(
-      [=](Operation *op) -> bool {
-        // Check for either a SliceAttr or LayoutAttr on the result.
-        auto layout =
-            xegpu::getTemporaryLayout(dyn_cast<OpResult>(op->getResult(0)));
-        return isLegal(layout);
-      });
+  target.addDynamicallyLegalOp<
+      vector::ShapeCastOp, vector::StepOp, vector::TransposeOp,
+      vector::BroadcastOp, vector::MultiDimReductionOp, vector::ConstantMaskOp,
+      vector::CreateMaskOp, vector::BitCastOp, vector::InterleaveOp,
+      vector::DeinterleaveOp>([=](Operation *op) -> bool {
+    // Check for either a SliceAttr or LayoutAttr on the result.
+    auto layout =
+        xegpu::getTemporaryLayout(dyn_cast<OpResult>(op->getResult(0)));
+    return isLegal(layout);
+  });
 
   target.addDynamicallyLegalOp<xegpu::LoadGatherOp>(
       [=](xegpu::LoadGatherOp op) -> bool {
@@ -1613,10 +1689,7 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
         return isLegal(layout);
       });
 
-  target.addDynamicallyLegalOp<UnrealizedConversionCastOp>(
-      [=](UnrealizedConversionCastOp op) {
-        return llvm::is_contained(existingCastOps, op.getOperation());
-      });
+  target.addLegalOp<UnrealizedConversionCastOp>();
 
   target.markUnknownOpDynamicallyLegal([](Operation *) { return true; });
 
@@ -1627,5 +1700,7 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
           applyPartialConversion(getOperation(), target, std::move(patterns))))
     return signalPassFailure();
 
+  // Fold cancelling cast chains and erase dead casts.
+  xegpu::cleanupUnrealizedConversionCasts(getOperation(), existingCasts);
   xegpu::removeTemporaryLayoutAttrs(getOperation());
 }

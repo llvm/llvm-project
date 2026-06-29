@@ -154,7 +154,6 @@ X86MCAsmInfoMicrosoft::X86MCAsmInfoMicrosoft(const Triple &Triple,
     : MCAsmInfoMicrosoft(Options) {
   if (Triple.isX86_64()) {
     InternalSymbolPrefix = ".L";
-    PrivateLabelPrefix = ".L";
     CodePointerSize = 8;
     WinEHEncodingType = WinEH::EncodingType::Itanium;
   } else {
@@ -187,32 +186,32 @@ X86MCAsmInfoMicrosoftMASM::X86MCAsmInfoMicrosoftMASM(
   AllowAtAtStartOfIdentifier = true;
 }
 
-static bool isValidX86UnquotedName(const MCAsmInfo &MAI,
-                                   const StringSet<> &ReservedIdentifiers,
-                                   StringRef Name) {
+static bool isValidX86UnquotedName(const MCAsmInfo &MAI, StringRef Name) {
   if (!MAI.MCAsmInfo::isValidUnquotedName(Name))
     return false;
   // Only Intel-syntax output needs to avoid register/keyword collisions; AT&T
   // disambiguates registers with '%' and doesn't treat `byte`, `ptr`, etc. as
   // keywords.
-  return MAI.getOutputAssemblerDialect() == 0 ||
-         !ReservedIdentifiers.contains(Name.lower());
+  if (MAI.getOutputAssemblerDialect() == 0)
+    return true;
+  return !MAI.getReservedIdentifiers().contains(
+      CachedHashStringRef(Name.lower()));
 }
 
 bool X86MCAsmInfoDarwin::isValidUnquotedName(StringRef Name) const {
-  return isValidX86UnquotedName(*this, ReservedIdentifiers, Name);
+  return isValidX86UnquotedName(*this, Name);
 }
 
 bool X86ELFMCAsmInfo::isValidUnquotedName(StringRef Name) const {
-  return isValidX86UnquotedName(*this, ReservedIdentifiers, Name);
+  return isValidX86UnquotedName(*this, Name);
 }
 
 bool X86MCAsmInfoMicrosoft::isValidUnquotedName(StringRef Name) const {
-  return isValidX86UnquotedName(*this, ReservedIdentifiers, Name);
+  return isValidX86UnquotedName(*this, Name);
 }
 
 bool X86MCAsmInfoGNUCOFF::isValidUnquotedName(StringRef Name) const {
-  return isValidX86UnquotedName(*this, ReservedIdentifiers, Name);
+  return isValidX86UnquotedName(*this, Name);
 }
 
 void X86MCAsmInfoGNUCOFF::anchor() { }
@@ -224,7 +223,6 @@ X86MCAsmInfoGNUCOFF::X86MCAsmInfoGNUCOFF(const Triple &Triple,
          "Windows and UEFI are the only supported COFF targets");
   if (Triple.isX86_64()) {
     InternalSymbolPrefix = ".L";
-    PrivateLabelPrefix = ".L";
     CodePointerSize = 8;
     WinEHEncodingType = WinEH::EncodingType::Itanium;
     ExceptionsType = ExceptionHandling::WinEH;
