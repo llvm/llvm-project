@@ -279,6 +279,21 @@ void mlirIRRewriterDestroy(MlirRewriterBase rewriter) {
 }
 
 //===----------------------------------------------------------------------===//
+/// Folding API
+//===----------------------------------------------------------------------===//
+
+intptr_t mlirOperationTryFold(MlirRewriterBase rewriter, MlirOperation op,
+                              intptr_t maxResults, MlirValue *results) {
+  SmallVector<Value> foldResults;
+  if (failed(unwrap(rewriter)->tryFold(unwrap(op), foldResults)))
+    return -1;
+  intptr_t n = static_cast<intptr_t>(foldResults.size());
+  for (intptr_t i = 0; i < n && i < maxResults; ++i)
+    results[i] = wrap(foldResults[i]);
+  return n;
+}
+
+//===----------------------------------------------------------------------===//
 /// RewritePatternSet and FrozenRewritePatternSet API
 //===----------------------------------------------------------------------===//
 
