@@ -5354,108 +5354,87 @@ std::string CompilerInvocation::computeContextHash() const {
   return toString(llvm::APInt(64, Hash), 36, /*Signed=*/false);
 }
 
-void CompilerInvocationBase::visitPathsImpl(
-    llvm::function_ref<bool(std::string &)> Predicate) {
-#define RETURN_IF(PATH)                                                        \
+void CowCompilerInvocation::visitMutPaths(
+    llvm::function_ref<VisitMutResult(StringRef, std::string &)> Cb) {
+  std::string NewValue;
+
+#define RETURN_IF(OPTS, PATH)                                                  \
   do {                                                                         \
-    if (Predicate(PATH))                                                       \
+    VisitMutResult Res = Cb(PATH, NewValue);                                   \
+    if (Res.Replace) {                                                         \
+      (void)ensureOwned(OPTS);                                                 \
+      PATH.clear();                                                            \
+      std::swap(PATH, NewValue);                                               \
+    }                                                                          \
+    if (Res.Terminate)                                                         \
       return;                                                                  \
   } while (0)
 
-#define RETURN_IF_MANY(PATHS)                                                  \
+#define RETURN_IF_MANY(OPTS, PATHS)                                            \
   do {                                                                         \
-    if (llvm::any_of(PATHS, Predicate))                                        \
-      return;                                                                  \
+    for (unsigned I = 0, E = PATHS.size(); I != E; ++I)                        \
+      RETURN_IF(OPTS, PATHS[I]);                                               \
   } while (0)
 
-  auto &HeaderSearchOpts = *this->HSOpts;
   // Header search paths.
-  RETURN_IF(HeaderSearchOpts.Sysroot);
-  for (auto &Entry : HeaderSearchOpts.UserEntries)
+  RETURN_IF(HSOpts, HSOpts->Sysroot);
+  for (auto &Entry : HSOpts->UserEntries)
     if (Entry.IgnoreSysRoot)
-      RETURN_IF(Entry.Path);
-  RETURN_IF(HeaderSearchOpts.ResourceDir);
-  RETURN_IF(HeaderSearchOpts.ModuleCachePath);
-  RETURN_IF(HeaderSearchOpts.ModuleUserBuildPath);
-  for (auto &[Name, File] : HeaderSearchOpts.PrebuiltModuleFiles)
-    RETURN_IF(File);
-  RETURN_IF_MANY(HeaderSearchOpts.PrebuiltModulePaths);
-  RETURN_IF_MANY(HeaderSearchOpts.VFSOverlayFiles);
+      RETURN_IF(HSOpts, Entry.Path);
+  RETURN_IF(HSOpts, HSOpts->ResourceDir);
+  RETURN_IF(HSOpts, HSOpts->ModuleCachePath);
+  RETURN_IF(HSOpts, HSOpts->ModuleUserBuildPath);
+  for (auto &[Name, File] : HSOpts->PrebuiltModuleFiles)
+    RETURN_IF(HSOpts, File);
+  RETURN_IF_MANY(HSOpts, HSOpts->PrebuiltModulePaths);
+  RETURN_IF_MANY(HSOpts, HSOpts->VFSOverlayFiles);
 
   // Preprocessor options.
-  auto &PPOpts = *this->PPOpts;
-  RETURN_IF_MANY(PPOpts.MacroIncludes);
-  RETURN_IF_MANY(PPOpts.Includes);
-  RETURN_IF(PPOpts.ImplicitPCHInclude);
+  RETURN_IF_MANY(PPOpts, PPOpts->MacroIncludes);
+  RETURN_IF_MANY(PPOpts, PPOpts->Includes);
+  RETURN_IF(PPOpts, PPOpts->ImplicitPCHInclude);
 
   // Frontend options.
-  auto &FrontendOpts = *this->FrontendOpts;
-  for (auto &Input : FrontendOpts.Inputs) {
+  for (auto &Input : FrontendOpts->Inputs) {
     if (Input.isBuffer())
       continue;
 
-    RETURN_IF(Input.File);
+    RETURN_IF(FrontendOpts, Input.File);
   }
-  // TODO: Also report output files such as FrontendOpts.OutputFile;
-  RETURN_IF(FrontendOpts.CodeCompletionAt.FileName);
-  RETURN_IF_MANY(FrontendOpts.ModuleMapFiles);
-  RETURN_IF_MANY(FrontendOpts.ModuleFiles);
-  RETURN_IF_MANY(FrontendOpts.ModulesEmbedFiles);
-  RETURN_IF_MANY(FrontendOpts.ASTMergeFiles);
-  RETURN_IF(FrontendOpts.OverrideRecordLayoutsFile);
-  RETURN_IF(FrontendOpts.StatsFile);
+  // TODO: Also report output files such as FrontendOpts->OutputFile;
+  RETURN_IF(FrontendOpts, FrontendOpts->CodeCompletionAt.FileName);
+  RETURN_IF_MANY(FrontendOpts, FrontendOpts->ModuleMapFiles);
+  RETURN_IF_MANY(FrontendOpts, FrontendOpts->ModuleFiles);
+  RETURN_IF_MANY(FrontendOpts, FrontendOpts->ModulesEmbedFiles);
+  RETURN_IF_MANY(FrontendOpts, FrontendOpts->ASTMergeFiles);
+  RETURN_IF(FrontendOpts, FrontendOpts->OverrideRecordLayoutsFile);
+  RETURN_IF(FrontendOpts, FrontendOpts->StatsFile);
 
   // Filesystem options.
-  auto &FileSystemOpts = *this->FSOpts;
-  RETURN_IF(FileSystemOpts.WorkingDir);
+  RETURN_IF(FSOpts, FSOpts->WorkingDir);
 
   // Codegen options.
-  auto &CodeGenOpts = *this->CodeGenOpts;
-  RETURN_IF(CodeGenOpts.DebugCompilationDir);
-  RETURN_IF(CodeGenOpts.CoverageCompilationDir);
+  RETURN_IF(CodeGenOpts, CodeGenOpts->DebugCompilationDir);
+  RETURN_IF(CodeGenOpts, CodeGenOpts->CoverageCompilationDir);
 
   // Sanitizer options.
-  RETURN_IF_MANY(LangOpts->NoSanitizeFiles);
+  RETURN_IF_MANY(LangOpts, LangOpts->NoSanitizeFiles);
 
   // Coverage mappings.
-  RETURN_IF(CodeGenOpts.ProfileInstrumentUsePath);
-  RETURN_IF(CodeGenOpts.SampleProfileFile);
-  RETURN_IF(CodeGenOpts.ProfileRemappingFile);
+  RETURN_IF(CodeGenOpts, CodeGenOpts->ProfileInstrumentUsePath);
+  RETURN_IF(CodeGenOpts, CodeGenOpts->SampleProfileFile);
+  RETURN_IF(CodeGenOpts, CodeGenOpts->ProfileRemappingFile);
 
   // Dependency output options.
   for (auto &ExtraDep : DependencyOutputOpts->ExtraDeps)
-    RETURN_IF(ExtraDep.first);
+    RETURN_IF(DependencyOutputOpts, ExtraDep.first);
 }
 
-void CompilerInvocationBase::visitPaths(
-    llvm::function_ref<bool(StringRef)> Callback) const {
-  // The const_cast here is OK, because visitPathsImpl() itself doesn't modify
-  // the invocation, and our callback takes immutable StringRefs.
-  return const_cast<CompilerInvocationBase *>(this)->visitPathsImpl(
-      [&Callback](std::string &Path) { return Callback(StringRef(Path)); });
-}
-
-void CowCompilerInvocation::visitMutPaths(
-    llvm::function_ref<bool(std::string &)> Callback) {
-  // Ensure exclusive ownership of every option group, so that visitPathsImpl()
-  // doesn't affect any other invocations.
-  // FIXME: Do this only if \c Callback does decide to modify any strings in an
-  // option group.
-  (void)ensureOwned(LangOpts);
-  (void)ensureOwned(TargetOpts);
-  (void)ensureOwned(DiagnosticOpts);
-  (void)ensureOwned(HSOpts);
-  (void)ensureOwned(PPOpts);
-  (void)ensureOwned(AnalyzerOpts);
-  (void)ensureOwned(MigratorOpts);
-  (void)ensureOwned(APINotesOpts);
-  (void)ensureOwned(CodeGenOpts);
-  (void)ensureOwned(FSOpts);
-  (void)ensureOwned(FrontendOpts);
-  (void)ensureOwned(DependencyOutputOpts);
-  (void)ensureOwned(PreprocessorOutputOpts);
-  (void)ensureOwned(SSAFOpts);
-  visitPathsImpl(Callback);
+void CowCompilerInvocation::visitPaths(
+    llvm::function_ref<VisitConstResult(StringRef)> Cb) const {
+  // The const_cast here is OK, because our callback never tries to modify.
+  return const_cast<CowCompilerInvocation *>(this)->visitMutPaths(
+      [&Cb](StringRef Path, std::string &) { return Cb(Path); });
 }
 
 void CompilerInvocationBase::generateCC1CommandLine(
