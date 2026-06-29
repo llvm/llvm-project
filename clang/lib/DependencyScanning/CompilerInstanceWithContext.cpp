@@ -52,6 +52,15 @@ bool CompilerInstanceWithContext::initialize(
     return false;
   }
 
+  return initializeScanInstance(
+      Controller, DiagEngineWithDiagOpts->DiagEngine->getClient());
+}
+
+bool CompilerInstanceWithContext::initializeScanInstance(
+    DependencyActionController &Controller, DiagnosticConsumer *DiagConsumer) {
+  assert(OriginalInvocation && ScanFS &&
+         "OriginalInvocation and ScanFS must be set before this call");
+
   if (any(Worker.Service.getOpts().OptimizeArgs &
           ScanningOptimizations::Macros))
     canonicalizeDefines(OriginalInvocation->getPreprocessorOpts());
@@ -65,9 +74,8 @@ bool CompilerInstanceWithContext::initialize(
       Worker.PCHContainerOps, std::move(ModCache));
   auto &CI = *CIPtr;
 
-  initializeScanCompilerInstance(
-      CI, ScanFS, DiagEngineWithDiagOpts->DiagEngine->getClient(),
-      Worker.Service, Worker.DepFS);
+  initializeScanCompilerInstance(CI, ScanFS, DiagConsumer, Worker.Service,
+                                 Worker.DepFS);
 
   StableDirs = getInitialStableDirs(CI);
   auto MaybePrebuiltModulesASTMap =
