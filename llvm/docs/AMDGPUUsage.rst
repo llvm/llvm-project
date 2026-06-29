@@ -17447,8 +17447,7 @@ For GFX125x:
 
   This section is currently incomplete as work on the compiler is still ongoing.
   The following is a non-exhaustive list of unimplemented/undocumented features:
-  non-volatile bit code sequences, multicast loads, barriers (including split barriers)
-  and cooperative atomics.
+  multicast loads, barriers (including split barriers) and cooperative atomics.
   Scalar operations memory model needs more elaboration as well.
 
 * Vector memory operations are performed as wavefront wide operations, with the
@@ -17526,6 +17525,10 @@ For GFX125x:
   * When ``nv=0`` reads hit dirty ``$nv=1`` data in cache, the hardware will
     writeback the data to the next level in the hierarchy and then subsequently read
     it again, updating the cache line with a clean ``$nv=0`` copy of the data.
+  * ``nv=1`` is set on operations that are known to access read-only memory, or memory
+    that can only be modified by the current thread. For example, all scratch/private memory
+    (unless globally addressable scratch is supported by the target **and** enabled),
+    scratch memory used for spill/reloads, loads marked as invariant, etc.
 
 * ``global_inv``, ``global_wb`` and ``global_wbinv`` are cache control instructions.
   The affected cache(s) are controlled by the ``SCOPE`` of the instruction.
@@ -17568,14 +17571,6 @@ ensure it is coherent with the vector caches. The scalar and vector caches are
 invalidated between kernel dispatches by CP since constant address space data
 may change between kernel dispatch executions. See
 :ref:`amdgpu-amdhsa-memory-spaces`.
-
-Atomics in the scratch address space are handled as follows:
-
-* Data types <= 32 bits: The instruction is converted into an atomic in the
-  generic (``flat``) address space. All properties of the atomic
-  (atomic ordering, volatility, alignment, etc.) are preserved.
-  Refer to the generic address space code sequences for further information.
-* Data types >32 bits: unsupported and an error is emitted.
 
 The code sequences used to implement the memory model for GFX125x are defined in
 table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-table`.

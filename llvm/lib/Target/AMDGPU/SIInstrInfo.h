@@ -59,7 +59,9 @@ struct V2PhysSCopyInfo {
   SmallVector<Register> SGPRs;
 };
 /// Mark the MMO of accesses to memory locations that are
-/// never written to by other threads.
+/// known to never written to by other threads, no matter the
+/// target and target features enabled
+/// (e.g. even with globally-addressable scratch enabled).
 static const MachineMemOperand::Flags MOThreadPrivate =
     MachineMemOperand::MOTargetFlag4;
 
