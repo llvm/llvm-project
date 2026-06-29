@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Lanai.h"
 #include "LanaiTargetMachine.h"
 #include "llvm/CodeGen/AtomicExpand.h"
 #include "llvm/IR/PassInstrumentation.h"
@@ -50,7 +51,7 @@ void LanaiCodeGenPassBuilder::addPreSched2(PassManagerWrapper &PMW) const {
 }
 
 void LanaiCodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) const {
-  // TODO(boomanaiden154): Add LanaiDelaySlotFiller when it has been ported.
+  addMachineFunctionPass(LanaiDelaySlotFillerPass(), PMW);
 }
 
 } // namespace
