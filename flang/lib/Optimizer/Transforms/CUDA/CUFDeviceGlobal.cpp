@@ -16,7 +16,7 @@
 #include "flang/Runtime/CUDA/common.h"
 #include "flang/Runtime/allocatable.h"
 #include "flang/Support/Fortran.h"
-#include "mlir/Dialect/LLVMIR/NVVMDialect.h"
+#include "mlir/Dialect/NVVM/IR/NVVMDialect.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"

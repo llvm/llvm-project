@@ -41,36 +41,6 @@ add_mlir_dialect_library(MLIRLLVMDialect
   MLIRSupport
   )
 
-add_mlir_dialect_library(MLIRNVVMDialect
-  IR/NVVMDialect.cpp
-  IR/BasicPtxBuilderInterface.cpp
-  IR/NVVMRequiresSMTraits.cpp
-
-  ADDITIONAL_HEADER_DIRS
-  ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/LLVMIR
-
-  DEPENDS
-  MLIRGPUCompilationAttrInterfacesIncGen
-  MLIRNVVMOpsIncGen
-  MLIRNVVMConversionsIncGen
-  MLIRBasicPtxBuilderInterfaceIncGen
-  MLIRNVVMRequiresSMTraitsIncGen
-  intrinsics_gen
-
-  LINK_COMPONENTS
-  AsmParser
-  Core
-  TargetParser
-
-  LINK_LIBS PUBLIC
-  MLIRIR
-  MLIRLLVMDialect
-  MLIRGPUDialect
-  MLIROpenMPDialect
-  MLIRSideEffectInterfaces
-  MLIRInferIntRangeInterface
-  )
-
 add_mlir_dialect_library(MLIRROCDLDialect
   IR/ROCDLDialect.cpp
 

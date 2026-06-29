@@ -14,7 +14,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/LLVMIR/NVVMDialect.h"
+#include "mlir/Dialect/NVVM/IR/NVVMDialect.h"
 
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Dialect/GPU/IR/CompilationInterfaces.h"
@@ -44,8 +44,8 @@
 using namespace mlir;
 using namespace NVVM;
 
-#include "mlir/Dialect/LLVMIR/NVVMOpsDialect.cpp.inc"
-#include "mlir/Dialect/LLVMIR/NVVMOpsEnums.cpp.inc"
+#include "mlir/Dialect/NVVM/IR/NVVMOpsDialect.cpp.inc"
+#include "mlir/Dialect/NVVM/IR/NVVMOpsEnums.cpp.inc"
 
 static constexpr unsigned notIntrinsic = llvm::Intrinsic::not_intrinsic;
 
@@ -6344,11 +6344,11 @@ struct NVVMInlinerInterface final : DialectInlinerInterface {
 void NVVMDialect::initialize() {
   addOperations<
 #define GET_OP_LIST
-#include "mlir/Dialect/LLVMIR/NVVMOps.cpp.inc"
+#include "mlir/Dialect/NVVM/IR/NVVMOps.cpp.inc"
       >();
   addAttributes<
 #define GET_ATTRDEF_LIST
-#include "mlir/Dialect/LLVMIR/NVVMOpsAttributes.cpp.inc"
+#include "mlir/Dialect/NVVM/IR/NVVMOpsAttributes.cpp.inc"
       >();
 
   // Support unknown operations because not all NVVM operations are
@@ -6559,7 +6559,7 @@ LogicalResult NVVMTargetAttr::verifyTarget(Operation *gpuModule) {
 }
 
 #define GET_OP_CLASSES
-#include "mlir/Dialect/LLVMIR/NVVMOps.cpp.inc"
+#include "mlir/Dialect/NVVM/IR/NVVMOps.cpp.inc"
 
 #define GET_ATTRDEF_CLASSES
-#include "mlir/Dialect/LLVMIR/NVVMOpsAttributes.cpp.inc"
+#include "mlir/Dialect/NVVM/IR/NVVMOpsAttributes.cpp.inc"

@@ -10,6 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/LLVMIR/NVVMRequiresSMTraits.h"
+#include "mlir/Dialect/NVVM/IR/NVVMRequiresSMTraits.h"
 
-#include "mlir/Dialect/LLVMIR/NVVMRequiresSMTraits.cpp.inc"
+#include "mlir/Dialect/NVVM/IR/NVVMRequiresSMTraits.cpp.inc"

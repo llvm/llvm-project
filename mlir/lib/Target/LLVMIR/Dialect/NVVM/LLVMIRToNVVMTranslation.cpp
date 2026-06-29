@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Target/LLVMIR/Dialect/NVVM/LLVMIRToNVVMTranslation.h"
-#include "mlir/Dialect/LLVMIR/NVVMDialect.h"
+#include "mlir/Dialect/NVVM/IR/NVVMDialect.h"
 #include "mlir/Target/LLVMIR/ModuleImport.h"
 #include "llvm/IR/ConstantRange.h"
 
@@ -22,7 +22,7 @@ using namespace mlir::NVVM;
 /// intrinsic. Returns false otherwise.
 static bool isConvertibleIntrinsic(llvm::Intrinsic::ID id) {
   static const DenseSet<unsigned> convertibleIntrinsics = {
-#include "mlir/Dialect/LLVMIR/NVVMConvertibleLLVMIRIntrinsics.inc"
+#include "mlir/Dialect/NVVM/IR/NVVMConvertibleLLVMIRIntrinsics.inc"
   };
   return convertibleIntrinsics.contains(id);
 }
@@ -31,7 +31,7 @@ static bool isConvertibleIntrinsic(llvm::Intrinsic::ID id) {
 /// MLIR NVVM dialect intrinsics.
 static ArrayRef<unsigned> getSupportedIntrinsicsImpl() {
   static const SmallVector<unsigned> convertibleIntrinsics = {
-#include "mlir/Dialect/LLVMIR/NVVMConvertibleLLVMIRIntrinsics.inc"
+#include "mlir/Dialect/NVVM/IR/NVVMConvertibleLLVMIRIntrinsics.inc"
   };
   return convertibleIntrinsics;
 }
@@ -54,7 +54,7 @@ static LogicalResult convertIntrinsicImpl(OpBuilder &odsBuilder,
     for (unsigned i = 0; i < inst->getNumOperandBundles(); ++i)
       llvmOpBundles.push_back(inst->getOperandBundleAt(i));
 
-#include "mlir/Dialect/LLVMIR/NVVMFromLLVMIRConversions.inc"
+#include "mlir/Dialect/NVVM/IR/NVVMFromLLVMIRConversions.inc"
   }
 
   return failure();

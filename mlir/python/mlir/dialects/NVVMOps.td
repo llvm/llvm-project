@@ -9,6 +9,6 @@
 #ifndef PYTHON_BINDINGS_NVVM_OPS
 #define PYTHON_BINDINGS_NVVM_OPS
 
-include "mlir/Dialect/LLVMIR/NVVMOps.td"
+include "mlir/Dialect/NVVM/IR/NVVMOps.td"
 
 #endif

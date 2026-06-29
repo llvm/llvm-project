@@ -51,7 +51,7 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
 } // namespace mlir
 
 /// Include the generated interface declarations.
-#include "mlir/Dialect/LLVMIR/BasicPtxBuilderInterface.h.inc"
+#include "mlir/Dialect/NVVM/IR/BasicPtxBuilderInterface.h.inc"
 
 namespace mlir {
 

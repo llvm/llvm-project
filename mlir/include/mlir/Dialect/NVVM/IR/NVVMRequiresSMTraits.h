@@ -99,7 +99,7 @@ private:
 } // namespace NVVM
 } // namespace mlir
 
-#include "mlir/Dialect/LLVMIR/NVVMRequiresSMTraits.h.inc"
+#include "mlir/Dialect/NVVM/IR/NVVMRequiresSMTraits.h.inc"
 
 namespace mlir {
 

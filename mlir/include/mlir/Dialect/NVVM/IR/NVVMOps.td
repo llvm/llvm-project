@@ -14,12 +14,12 @@
 #define NVVMIR_OPS
 
 include "mlir/Dialect/GPU/IR/CompilationAttrInterfaces.td"
-include "mlir/Dialect/LLVMIR/BasicPtxBuilderInterface.td"
+include "mlir/Dialect/NVVM/IR/BasicPtxBuilderInterface.td"
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 include "mlir/Dialect/LLVMIR/LLVMTypes.td"
-include "mlir/Dialect/LLVMIR/NVVMDialect.td"
-include "mlir/Dialect/LLVMIR/NVVMEnums.td"
-include "mlir/Dialect/LLVMIR/NVVMRequiresSMTraits.td"
+include "mlir/Dialect/NVVM/IR/NVVMDialect.td"
+include "mlir/Dialect/NVVM/IR/NVVMEnums.td"
+include "mlir/Dialect/NVVM/IR/NVVMRequiresSMTraits.td"
 include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.td"
 include "mlir/IR/CommonAttrConstraints.td"
 include "mlir/IR/EnumAttr.td"

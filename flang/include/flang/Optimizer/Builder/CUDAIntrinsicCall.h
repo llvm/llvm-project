@@ -10,7 +10,7 @@
 #define FORTRAN_LOWER_CUDAINTRINSICCALL_H
 
 #include "flang/Optimizer/Builder/IntrinsicCall.h"
-#include "mlir/Dialect/LLVMIR/NVVMDialect.h"
+#include "mlir/Dialect/NVVM/IR/NVVMDialect.h"
 
 namespace fir {
 

@@ -9,7 +9,7 @@
 #ifndef MLIR_DIALECT_NVGPU_IR_NVGPU_TD
 #define MLIR_DIALECT_NVGPU_IR_NVGPU_TD
 
-include "mlir/Dialect/LLVMIR/NVVMDialect.td"
+include "mlir/Dialect/NVVM/IR/NVVMDialect.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/AttrTypeBase.td"
