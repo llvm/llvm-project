@@ -106,7 +106,7 @@ bool LanaiPassConfig::addInstSelector() {
 // Implemented by targets that want to run passes immediately before
 // machine code is emitted.
 void LanaiPassConfig::addPreEmitPass() {
-  addPass(createLanaiDelaySlotFillerPass(getLanaiTargetMachine()));
+  addPass(createLanaiDelaySlotFillerLegacyPass(getLanaiTargetMachine()));
 }
 
 // Run passes after prolog-epilog insertion and before the second instruction
