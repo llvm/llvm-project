@@ -14,7 +14,7 @@
 #ifndef LLVM_CLANG_AST_SUBOBJECTVISITOR_H
 #define LLVM_CLANG_AST_SUBOBJECTVISITOR_H
 
-#include "clang/AST/Type.h"
+#include "clang/AST/ASTContext.h"
 
 namespace clang {
 
