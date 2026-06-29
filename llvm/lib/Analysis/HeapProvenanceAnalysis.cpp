@@ -73,16 +73,33 @@ static bool mergeLattice(const Value *Target, HeapProvenanceLattice &Dest,
     return true;
   }
 
-  if (Dest.State == Src.State && Dest.HeadPayload == Src.HeadPayload)
+  if (Dest.HeadPayload == Src.HeadPayload) {
+    if (Dest.State != Src.State) {
+      Dest.State = Lattice::StateKind::HeapChunkInterior;
+      return true;
+    }
     return false;
-
-  if (Dest.HeadPayload != Src.HeadPayload) {
-    Dest.State = Lattice::StateKind::Unknown;
-    Dest.HeadPayload = {Lattice::Payload::Kind::None, nullptr};
-    return true;
   }
 
-  return false;
+  if ((isa_and_nonnull<PHINode>(Target) ||
+       isa_and_nonnull<SelectInst>(Target)) &&
+      Dest.State == Lattice::StateKind::HeapChunkHead &&
+      Src.State == Lattice::StateKind::HeapChunkHead) {
+    Lattice::Payload::Kind K = isa<PHINode>(Target)
+                                   ? Lattice::Payload::Kind::Phi
+                                   : Lattice::Payload::Kind::Select;
+    Lattice::Payload NewPayload = {K, Target};
+    if (Dest.HeadPayload != NewPayload) {
+      Dest.State = Lattice::StateKind::HeapChunkHead;
+      Dest.HeadPayload = NewPayload;
+      return true;
+    }
+    return false;
+  }
+
+  Dest.State = Lattice::StateKind::Unknown;
+  Dest.HeadPayload = {Lattice::Payload::Kind::None, nullptr};
+  return true;
 }
 
 static bool mergeIntoMap(DenseMap<const Value *, HeapProvenanceLattice> &Map,
@@ -90,6 +107,13 @@ static bool mergeIntoMap(DenseMap<const Value *, HeapProvenanceLattice> &Map,
                          const HeapProvenanceLattice &Src) {
   if (!Target || !Target->hasUseList())
     return false;
+  if (!isa<PHINode>(Target) && !isa<SelectInst>(Target)) {
+    if (Map[Target] != Src) {
+      Map[Target] = Src;
+      return true;
+    }
+    return false;
+  }
   return mergeLattice(Target, Map[Target], Src);
 }
 
@@ -124,11 +148,13 @@ ForwardHeapProvenanceAnalysis::run(Module &M, ModuleAnalysisManager &MAM) {
     if (!Info.isValid())
       continue;
 
-    HeapProvenanceLattice Derived = Info;
-    if (Derived.State == HeapProvenanceLattice::StateKind::HeapChunkHead)
-      Derived.State = HeapProvenanceLattice::StateKind::HeapChunkInterior;
-
     for (const User *U : V->users()) {
+      HeapProvenanceLattice Derived = Info;
+      if (isa<GEPOperator>(U) || isa<IntToPtrInst>(U) || isa<PtrToIntInst>(U) ||
+          isa<BinaryOperator>(U))
+        if (Derived.State == HeapProvenanceLattice::StateKind::HeapChunkHead)
+          Derived.State = HeapProvenanceLattice::StateKind::HeapChunkInterior;
+
       if (auto *GEP = dyn_cast<GEPOperator>(U)) {
         if (GEP->getPointerOperand() == V) {
           if (mergeIntoMap(Res.getMap(), U, Derived))
