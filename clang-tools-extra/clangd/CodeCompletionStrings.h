@@ -35,6 +35,9 @@ std::string getDocComment(const ASTContext &Ctx,
 /// Similar to getDocComment, but returns the comment for a NamedDecl.
 std::string getDeclComment(const ASTContext &Ctx, const NamedDecl &D);
 
+/// Heuristic to see if the signature only has types and no parameter names.
+bool isLikelyMissingParameterName(llvm::StringRef Signature);
+
 /// Formats the signature for an item, as a display string and snippet.
 /// e.g. for const_reference std::vector<T>::at(size_type) const, this returns:
 ///   *Signature = "(size_type) const"
