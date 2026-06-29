@@ -102,6 +102,11 @@ Makes programs 10x faster by doing Special New Thing.
   outlining. Add the `noinline` and `nooutline` attributes as well in cases
   where inlining and outlining should additionally be disabled.
 
+* Added `nofreeobj` attribute for attributes and returns, which forbids
+  freeing the underlying object (as opposed to only frees through that specific
+  pointer). Renamed `!nofree` metadata to `!nofreeobj`, as it has the same
+  semantics.
+
 ### Changes to LLVM infrastructure
 
 * Removed ``Constant::isZeroValue``. It was functionally identical to
