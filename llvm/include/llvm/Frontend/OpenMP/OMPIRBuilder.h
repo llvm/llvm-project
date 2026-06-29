@@ -3716,10 +3716,6 @@ public:
                                                       bool IVSigned,
                                                       bool IsGPUDistribute);
 
-  /// Return the __kmpc_distribute_static_init_multi_device* function.
-  FunctionCallee createMDDistributeForStaticInitFunction(unsigned IVSize,
-                                                         bool IVSigned);
-
   /// Returns __kmpc_dispatch_init_* runtime function for the specified
   /// size \a IVSize and sign \a IVSigned.
   LLVM_ABI FunctionCallee createDispatchInitFunction(unsigned IVSize,

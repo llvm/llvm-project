@@ -7216,12 +7216,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       else
         CmdArgs.push_back("-fno-openmp-target-fast-reduction");
 
-      if (Args.hasFlag(options::OPT_fopenmp_target_multi_device,
-                       options::OPT_fno_openmp_target_multi_device, false))
-        CmdArgs.push_back("-fopenmp-target-multi-device");
-      else
-        CmdArgs.push_back("-fno-openmp-target-multi-device");
-
       for (Arg *A : Args.filtered(options::OPT_fopenmp_target_xteam_scan,
                                   options::OPT_fno_openmp_target_xteam_scan,
                                   options::OPT_fopenmp_target_xteam_no_loop_scan,

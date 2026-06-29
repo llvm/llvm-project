@@ -134,19 +134,6 @@ Error GenericKernelTy::init(GenericDeviceTy &GenericDevice,
     ExecutionMode = ExecModeGlobal.getValue();
   }
 
-  // Create a metadata object for the multi-device global (auto-generated).
-  StaticGlobalTy<int8_t> MultiDeviceGlobal(getName(), "_multi_device");
-  if (auto Err = GHandler.readGlobalFromImage(GenericDevice, Image,
-                                              MultiDeviceGlobal)) {
-    ODBG(ODT_Init) << "Missing symbol "
-                   << MultiDeviceGlobal.getName().data()
-                   << " continue execution anyway.";
-    consumeError(std::move(Err));
-    IsMultiDeviceKernel = false;
-  } else {
-    IsMultiDeviceKernel = MultiDeviceGlobal.getValue();
-  }
-
   // Max = Config.Max > 0 ? min(Config.Max, Device.Max) : Device.Max;
   MaxNumThreads = KernelEnvironment.Configuration.MaxThreads > 0
                       ? std::min(KernelEnvironment.Configuration.MaxThreads,
@@ -262,25 +249,20 @@ GenericKernelTy::getKernelLaunchEnvironment(
 Error GenericKernelTy::printLaunchInfo(GenericDeviceTy &GenericDevice,
                                        KernelArgsTy &KernelArgs,
                                        uint32_t NumThreads[3],
-                                       uint32_t NumBlocks[3],
-                                       int64_t MultiDeviceLB,
-                                       int64_t MultiDeviceUB) const {
+                                       uint32_t NumBlocks[3]) const {
   INFO(OMP_INFOTYPE_PLUGIN_KERNEL, GenericDevice.getDeviceId(),
        "Launching kernel %s with [%u,%u,%u] blocks and [%u,%u,%u] threads in "
        "%s mode\n",
        getName(), NumBlocks[0], NumBlocks[1], NumBlocks[2], NumThreads[0],
-       NumThreads[1], NumThreads[2], getExecutionModeName(),
-       isMultiDeviceKernel() ? " in multi-device mode" : "");
+       NumThreads[1], NumThreads[2], getExecutionModeName());
   return printLaunchInfoDetails(GenericDevice, KernelArgs, NumThreads,
-                                NumBlocks, MultiDeviceLB, MultiDeviceUB);
+                                NumBlocks);
 }
 
 Error GenericKernelTy::printLaunchInfoDetails(GenericDeviceTy &GenericDevice,
                                               KernelArgsTy &KernelArgs,
                                               uint32_t NumThreads[3],
-                                              uint32_t NumBlocks[3],
-                                              int64_t MultiDeviceLB,
-                                              int64_t MultiDeviceUB) const {
+                                              uint32_t NumBlocks[3]) const {
   return Plugin::success();
 }
 
@@ -414,45 +396,10 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
   if (!KernelLaunchEnvOrErr)
     return KernelLaunchEnvOrErr.takeError();
 
-  // If the multi-device mode is not enabled for this kernel then there is no
-  // need to overwrite any arguments.
-  int32_t NumMultiDevices = GenericDevice.getNumMultiDevices();
-  int64_t MultiDeviceLB = -1;
-  int64_t MultiDeviceUB = -1;
-  if (isMultiDeviceKernel() && NumMultiDevices > 0) {
-    // Compute the chunk size based on how many devices we are targeting and
-    // the length of the loop trip count.
-    int32_t DeviceId = GenericDevice.getDeviceId();
-    if (KernelArgs.Tripcount < NumMultiDevices) {
-      ArgPtrs[0] = (void *)0;
-      ArgPtrs[1] = (void *)(KernelArgs.Tripcount - 1);
-    } else {
-      int64_t Chunk = (int64_t)KernelArgs.Tripcount / NumMultiDevices;
-
-      // Set the lower bound. Consider the case where the LB of the loop is not
-      // zero.
-      ArgPtrs[0] = (void *)(DeviceId * Chunk);
-
-      // Set the upper bound. If this is the last device then leave the upper
-      // limit unchanged because it is already set to the loop UB.
-      // TODO: support case where the first device is not device 0.
-      if (DeviceId < NumMultiDevices - 1)
-        ArgPtrs[1] = (void *)(((DeviceId + 1) * Chunk) - 1);
-      else if (DeviceId == NumMultiDevices - 1)
-        ArgPtrs[1] = (void *)(KernelArgs.Tripcount - 1);
-      else
-        assert(false && "Upper bound could not be set");
-    }
-
-    MultiDeviceLB = (int64_t)ArgPtrs[0];
-    MultiDeviceUB = (int64_t)ArgPtrs[1];
-  }
-
   KernelLaunchParamsTy LaunchParams;
 
   // Kernel languages do not use the OpenMP indirection and argument parsing.
   if (KernelArgs.Flags.IsCUDA) {
-    assert(!isMultiDeviceKernel() && "Multi-device not supported");
     LaunchParams =
         *reinterpret_cast<KernelLaunchParamsTy *>(KernelArgs.ArgPtrs);
   } else if (KernelArgs.Flags.IsPtrArgs) {
@@ -468,8 +415,7 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
                            EffectiveNumBlocks[0]);
 
   if (auto Err =
-          printLaunchInfo(GenericDevice, KernelArgs, EffectiveNumThreads,
-                          EffectiveNumBlocks, MultiDeviceLB, MultiDeviceUB))
+          printLaunchInfo(GenericDevice, KernelArgs, EffectiveNumThreads, EffectiveNumBlocks))
     return Err;
 
   RecordReplayTy::HandleTy RRHandle;
@@ -666,7 +612,6 @@ GenericDeviceTy::GenericDeviceTy(GenericPluginTy &Plugin, int32_t DeviceId,
       // By default, the initial number of streams and events is 1.
       OMPX_InitialNumStreams("LIBOMPTARGET_NUM_INITIAL_STREAMS", 1),
       OMPX_InitialNumEvents("LIBOMPTARGET_NUM_INITIAL_EVENTS", 1),
-      OMPX_NumMultiDevices("LIBOMPTARGET_NUM_MULTI_DEVICES", 0),
       OMPX_EnableRuntimeAutotuning("OMPX_ENABLE_RUNTIME_AUTOTUNING", false),
       OMPX_KernelDurationTracing("LIBOMPTARGET_KERNEL_EXE_TIME", false),
       DeviceId(DeviceId), GridValues(OMPGridValues),
@@ -1491,13 +1436,6 @@ Error GenericDeviceTy::zeroCopySanityChecksAndDiag(bool isUnifiedSharedMemory,
                                                    bool isEagerMaps) {
   return zeroCopySanityChecksAndDiagImpl(isUnifiedSharedMemory, isAutoZeroCopy,
                                          isEagerMaps);
-}
-
-bool GenericDeviceTy::getMultiDeviceKernelValue(void *EntryPtr) {
-  GenericKernelTy &GenericKernel =
-      *reinterpret_cast<GenericKernelTy *>(EntryPtr);
-
-  return GenericKernel.isMultiDeviceKernel();
 }
 
 bool GenericDeviceTy::useSharedMemForDescriptor(int64_t Size) { return false; }
@@ -2482,23 +2420,6 @@ int32_t GenericPluginTy::zero_copy_sanity_checks_and_diag(
     }
 
     return OFFLOAD_SUCCESS;
-  }();
-  T.res(R);
-  return R;
-}
-
-int32_t GenericPluginTy::get_num_multi_devices(int32_t DeviceId) {
-  auto T = logger::log<int32_t>(__func__);
-  auto R = [&]() { return getDevice(DeviceId).getNumMultiDevices(); }();
-  T.res(R);
-  return R;
-}
-
-bool GenericPluginTy::kernel_is_multi_device(int32_t DeviceId,
-                                             void *TgtEntryPtr) {
-  auto T = logger::log<bool>(__func__, DeviceId, TgtEntryPtr);
-  auto R = [&]() {
-    return getDevice(DeviceId).getMultiDeviceKernelValue(TgtEntryPtr);
   }();
   T.res(R);
   return R;

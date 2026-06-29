@@ -80,7 +80,7 @@ CodeGenFunction::EmitBigJumpLoopStartingIndex(const ForStmt &FStmt,
   assert(Directives.size() > 0 && isa<OMPLoopDirective>(Directives.back()) &&
          "Appropriate directive not found");
   const OMPLoopDirective &LD = *(cast<OMPLoopDirective>(Directives.back()));
-  std::pair<const VarDecl *, Address> IVPair = EmitNoLoopIV(LD, Args);
+  std::pair<const VarDecl *, Address> IVPair = EmitNoLoopIV(LD);
   const VarDecl *LoopVD = IVPair.first;
   Address IvAddr = IVPair.second;
 
@@ -110,15 +110,7 @@ CodeGenFunction::EmitBigJumpLoopStartingIndex(const ForStmt &FStmt,
   llvm::Value *Gtid =
       Builder.CreateIntCast(GlobalGpuThreadId, IvAddr.getElementType(), false);
 
-  llvm::Value *Iv = nullptr;
-  if (CGM.isMultiDeviceKernel(&FStmt)) {
-    Iv = Builder.CreateAdd(
-        Gtid,
-        Builder.CreateIntCast(Builder.CreateLoad(GetAddrOfLocalVar((*Args)[0])),
-                              IvAddr.getElementType(), false));
-  } else {
-    Iv = Builder.CreateAdd(Gtid, Builder.CreateLoad(IvAddr));
-  }
+  llvm::Value *Iv = Builder.CreateAdd(Gtid, Builder.CreateLoad(IvAddr));
 
   if (CGM.isXteamRedKernel(&FStmt)) {
     // Cache the thread specific initial loop iteration value and the number of
@@ -179,8 +171,7 @@ void CodeGenFunction::EmitBigJumpLoopInc(const ForStmt &FStmt,
 }
 
 std::pair<const VarDecl *, Address>
-CodeGenFunction::EmitNoLoopIV(const OMPLoopDirective &LD,
-                              const FunctionArgList *Args) {
+CodeGenFunction::EmitNoLoopIV(const OMPLoopDirective &LD) {
   // Emit the original loop indices
   for (const Expr *CE : LD.counters()) {
     const auto *CEDecl = cast<VarDecl>(cast<DeclRefExpr>(CE)->getDecl());
@@ -227,21 +218,6 @@ CodeGenFunction::EmitNoLoopIV(const OMPLoopDirective &LD,
 
   // Emit init of the iteration variable
   EmitIgnoredExpr(LD.getInit());
-
-  // If multi-device targets are enabled, overwrite the LB and UB
-  // initialization with the values passed in as arguments in positions 0 and 1
-  // respectively:
-  if (CGM.isMultiDeviceKernel(LD)) {
-    llvm::Value *LBMultiTarget = Builder.CreateIntCast(
-        Builder.CreateLoad(GetAddrOfLocalVar((*Args)[0])),
-        GetAddrOfLocalVar(IVDecl).getElementType(), false);
-    Builder.CreateStore(LBMultiTarget, GetAddrOfLocalVar(LBDecl));
-    Builder.CreateStore(LBMultiTarget, GetAddrOfLocalVar(IVDecl));
-    llvm::Value *UBMultiTarget = Builder.CreateIntCast(
-        Builder.CreateLoad(GetAddrOfLocalVar((*Args)[1])),
-        GetAddrOfLocalVar(IVDecl).getElementType(), false);
-    Builder.CreateStore(UBMultiTarget, GetAddrOfLocalVar(UBDecl));
-  }
 
   return std::make_pair(IVDecl, GetAddrOfLocalVar(IVDecl));
 }
@@ -332,18 +308,17 @@ void CodeGenFunction::EmitOptKernelCode(
              llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_XTEAM_RED);
   if (OptKernelMode ==
       llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD_NO_LOOP)
-    EmitNoLoopCode(D, CapturedForStmt, Loc, Args);
+    EmitNoLoopCode(D, CapturedForStmt, Loc);
   else if (OptKernelMode ==
            llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD_BIG_JUMP_LOOP)
-    EmitBigJumpLoopCode(D, CapturedForStmt, Loc, Args);
+    EmitBigJumpLoopCode(D, CapturedForStmt, Loc);
   else
     EmitXteamRedCode(D, CapturedForStmt, Loc, Args);
 }
 
 void CodeGenFunction::EmitNoLoopCode(const OMPExecutableDirective &D,
                                      const ForStmt *CapturedForStmt,
-                                     SourceLocation Loc,
-                                     const FunctionArgList *Args) {
+                                     SourceLocation Loc) {
   assert(isa<OMPLoopDirective>(D) && "Unexpected directive");
 
   const OMPLoopDirective &LD = cast<OMPLoopDirective>(D);
@@ -352,7 +327,7 @@ void CodeGenFunction::EmitNoLoopCode(const OMPExecutableDirective &D,
   // Initialize a specialized kernel.
   RT.initSpecializedKernel(*this);
 
-  auto IVPair = EmitNoLoopIV(LD, Args);
+  auto IVPair = EmitNoLoopIV(LD);
   const VarDecl *IVDecl = IVPair.first;
   Address IvAddr = IVPair.second;
 
@@ -380,16 +355,9 @@ void CodeGenFunction::EmitNoLoopCode(const OMPExecutableDirective &D,
   // initialized
   llvm::Value *Gtid =
       Builder.CreateIntCast(GlobalGpuThreadId, IvAddr.getElementType(), false);
-  if (CGM.isMultiDeviceKernel(D)) {
-    llvm::Value *Iv = Builder.CreateAdd(
-        Gtid,
-        Builder.CreateIntCast(Builder.CreateLoad(GetAddrOfLocalVar((*Args)[0])),
-                              IvAddr.getElementType(), false));
-    Builder.CreateStore(Iv, IvAddr);
-  } else {
-    llvm::Value *Iv = Builder.CreateAdd(Gtid, Builder.CreateLoad(IvAddr));
-    Builder.CreateStore(Iv, IvAddr);
-  }
+
+  llvm::Value *Iv = Builder.CreateAdd(Gtid, Builder.CreateLoad(IvAddr));
+  Builder.CreateStore(Iv, IvAddr);
 
   // Emit updates of the original loop indices
   for (const Expr *UE : LD.updates())
@@ -440,7 +408,7 @@ void CodeGenFunction::EmitNoLoopXteamScanInit(const OMPLoopDirective &LD,
                                               llvm::Value *&GlobalGpuThreadId,
                                               llvm::Value *&WorkGroupId,
                                               llvm::Value *&TotalNumThreads) {
-  auto IVPair = EmitNoLoopIV(LD, Args);
+  auto IVPair = EmitNoLoopIV(LD);
   Address OMPIterationVarAddr = IVPair.second;
 
   // Generate:
@@ -590,44 +558,11 @@ void CodeGenFunction::EmitNoLoopXteamScanPhaseTwoCode(
 
 void CodeGenFunction::EmitBigJumpLoopCode(const OMPExecutableDirective &D,
                                           const ForStmt *CapturedForStmt,
-                                          SourceLocation Loc,
-                                          const FunctionArgList *Args) {
+                                          SourceLocation Loc) {
   auto &RT = static_cast<CGOpenMPRuntimeGPU &>(CGM.getOpenMPRuntime());
   // Initialize a specialized kernel.
   RT.initSpecializedKernel(*this);
-
-  // Add pre-processing code from start of EmitStmt function so that the
-  // code path is identical.
-  assert(CapturedForStmt && "Null statement?");
-  PGO->setCurrentStmt(CapturedForStmt);
-
-  // These statements have their own debug info handling.
-  if (EmitSimpleStmt(CapturedForStmt, nullptr))
-    return;
-
-  // Check if we are generating unreachable code.
-  if (!HaveInsertPoint()) {
-    if (!ContainsLabel(CapturedForStmt))
-      return;
-
-    // Otherwise, make a new block to hold the code.
-    EnsureInsertPoint();
-  }
-
-  // Generate a stoppoint if we are emitting debug info.
-  EmitStopPoint(CapturedForStmt);
-
-  // Ignore all OpenMP directives except for simd if OpenMP with Simd is
-  // enabled.
-  if (getLangOpts().OpenMP && getLangOpts().OpenMPSimd) {
-    if (const auto *D = dyn_cast<OMPExecutableDirective>(CapturedForStmt)) {
-      EmitSimpleOMPExecutableDirective(*D);
-      return;
-    }
-  }
-
-  // Call variant with Args:
-  EmitForStmtWithArgs(cast<ForStmt>(*CapturedForStmt), Args);
+  EmitStmt(CapturedForStmt);
 }
 
 void CodeGenFunction::EmitXteamRedCode(const OMPExecutableDirective &D,

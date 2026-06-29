@@ -2273,8 +2273,7 @@ static int processDataAfter(ident_t *Loc, int64_t DeviceId, void *HostPtr,
 /// returns 0 if it was able to transfer the execution to a target and an
 /// integer different from zero otherwise.
 int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
-           KernelArgsTy &KernelArgs, AsyncInfoTy &AsyncInfo,
-           bool InMultiDeviceMode, bool &IsMultiDeviceKernel) {
+           KernelArgsTy &KernelArgs, AsyncInfoTy &AsyncInfo) {
   int32_t DeviceId = Device.DeviceID;
   TableMap *TM = getTableMap(HostPtr);
   // No map for this host pointer found!
@@ -2367,15 +2366,7 @@ int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
 #endif
     Ret = Device.launchKernel(TgtEntryPtr, TgtArgs.data(), TgtOffsets.data(),
                               KernelArgs, nullptr, AsyncInfo);
-
-    // If we are in multidevice mode the check the value of the global variable
-    // for this kernel to see if the kernel is indeed a multi device kernel.
-    if (InMultiDeviceMode)
-      IsMultiDeviceKernel = Device.isMultiDeviceKernel(TgtEntryPtr);
   }
-
-  // Reset number of arguments just in case the kernel launch changed it.
-  KernelArgs.NumArgs = NumClangLaunchArgs;
 
   if (Ret != OFFLOAD_SUCCESS) {
     REPORT() << "Executing target region abort target.";

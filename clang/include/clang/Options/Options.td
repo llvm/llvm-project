@@ -4206,14 +4206,6 @@ def fno_openmp_target_xteam_no_loop_scan : Flag<["-"], "fno-openmp-target-xteam-
   Flags<[NoArgumentUnused, HelpHidden]>, Visibility<[ClangOption, CC1Option]>,
   HelpText<"Do not use the no-loop variant of the cross-team specialized kernel code generation for 'scan' directive.">,
   MarshallingInfoFlag<LangOpts<"OpenMPTargetXteamNoLoopScan">>;
-def fopenmp_target_multi_device : Flag<["-"], "fopenmp-target-multi-device">, Group<f_Group>,
-  Flags<[NoArgumentUnused, HelpHidden]>, Visibility<[ClangOption, CC1Option, FlangOption]>,
-  HelpText<"Enable code generation to emit support for multi device target region execution">,
-  MarshallingInfoFlag<LangOpts<"OpenMPTargetMultiDevice">>;
-def fno_openmp_target_multi_device : Flag<["-"], "fno-openmp-target-multi-device">, Group<f_Group>,
-  Flags<[NoArgumentUnused, HelpHidden]>, Visibility<[ClangOption, CC1Option,FlangOption]>,
-  HelpText<"Do not use code generation to emit support for multi target offloading">,
-  MarshallingInfoFlag<LangOpts<"OpenMPTargetMultiDevice">>;
 
 //===----------------------------------------------------------------------===//
 // Shared cc1 + fc1 OpenMP Target Options

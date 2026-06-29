@@ -240,7 +240,6 @@ LANGOPT(OpenMPTargetBigJumpLoop , 1, 1, NotCompatible, "Use big jump loop code g
 LANGOPT(OpenMPTargetNoLoop , 1, 1, NotCompatible, "Use no-loop code generation technique.")
 LANGOPT(OpenMPTargetXteamReduction , 1, 1, NotCompatible, "Use cross-team code generation technique.")
 LANGOPT(OpenMPTargetFastReduction , 1, 0, NotCompatible, "Use fast reduction code generation technique.")
-LANGOPT(OpenMPTargetMultiDevice , 1, 0, NotCompatible, "Offload the iteration space of a single target region across multiple GPU devices.")
 
 // The flag '-fopenmp-target-xteam-scan' triggers the 'Segmented Cross Team Scan' variant by default. To use the no-loop variant, please use the flag '-fopenmp-target-no-loop-scan' instead. 
 LANGOPT(OpenMPTargetXteamScan , 1, 0, NotCompatible, "Use the cross-team specialized kernel code generation for 'scan' directive.")

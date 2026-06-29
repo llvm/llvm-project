@@ -502,9 +502,6 @@ struct GenericKernelTy {
     return false;
   }
 
-  /// Check if kernel is a multi-device kernel.
-  bool isMultiDeviceKernel() const { return IsMultiDeviceKernel; }
-
   /// Compute kernel occupancy
   /// This function computes the max(upperbound) occupancy for a lanuched kernel
   /// based on the given hardware resources e.g. the number of registers, size
@@ -577,17 +574,14 @@ protected:
   /// Prints generic kernel launch information.
   Error printLaunchInfo(GenericDeviceTy &GenericDevice,
                         KernelArgsTy &KernelArgs, uint32_t NumThreads[3],
-                        uint32_t NumBlocks[3], int64_t MultiDeviceLB,
-                        int64_t MultiDeviceUB) const;
+                        uint32_t NumBlocks[3]) const;
 
   /// Prints plugin-specific kernel launch information after generic kernel
   /// launch information
   virtual Error printLaunchInfoDetails(GenericDeviceTy &GenericDevice,
                                        KernelArgsTy &KernelArgs,
                                        uint32_t NumThreads[3],
-                                       uint32_t NumBlocks[3],
-                                       int64_t MultiDeviceLB,
-                                       int64_t MultiDeviceUB) const;
+                                       uint32_t NumBlocks[3]) const;
 
 private:
   /// Prepare the block memory buffer requested for the kernel and execute the
@@ -634,9 +628,6 @@ private:
 
   /// The execution flags of the kernel.
   OMPTgtExecModeFlags ExecutionMode;
-
-  /// The multi-device kernel flag.
-  bool IsMultiDeviceKernel;
 
   /// The image that contains this kernel.
   DeviceImageTy *ImagePtr = nullptr;
@@ -1368,11 +1359,7 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
     return Error::success();
   }
 
-  uint32_t getNumMultiDevices() const { return OMPX_NumMultiDevices; }
-
   bool enableRuntimeAutotuning() const { return OMPX_EnableRuntimeAutotuning; }
-
-  bool getMultiDeviceKernelValue(void *EntryPtr);
 
   KernelRunRecordTy *getKernelRunRecords() const { return KernelRunRecords; }
 
@@ -1561,9 +1548,6 @@ protected:
   /// regarding the initial number of streams and events.
   UInt32Envar OMPX_InitialNumStreams;
   UInt32Envar OMPX_InitialNumEvents;
-
-  /// Specify the number of devices used by multi-device kernels.
-  UInt32Envar OMPX_NumMultiDevices;
 
   /// Envar to enable runtime tuning.
   BoolEnvar OMPX_EnableRuntimeAutotuning;
@@ -2107,12 +2091,6 @@ public:
                                            bool isUnifiedSharedMemory,
                                            bool isAutoZeroCopy,
                                            bool isEagerMaps);
-
-  /// Return number of devices used by multi-device kernels.
-  int32_t get_num_multi_devices(int32_t DeviceId);
-
-  /// Check if kernel is multi-device.
-  bool kernel_is_multi_device(int32_t DeviceId, void *TgtEntryPtr);
 
   /// Return true if a descriptor of size 'Size' should be allocated using
   /// shared memory.

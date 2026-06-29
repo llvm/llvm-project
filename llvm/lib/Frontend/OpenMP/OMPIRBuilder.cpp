@@ -8806,24 +8806,6 @@ OpenMPIRBuilder::createForStaticInitFunction(unsigned IVSize, bool IVSigned,
   return getOrCreateRuntimeFunction(M, Name);
 }
 
-FunctionCallee
-OpenMPIRBuilder::createMDDistributeForStaticInitFunction(unsigned IVSize,
-                                                         bool IVSigned) {
-  assert((IVSize == 32 || IVSize == 64) &&
-         "IV size is not compatible with the omp runtime");
-  RuntimeFunction Name;
-  Name =
-      IVSize == 32
-          ? (IVSigned
-                 ? omp::OMPRTL___kmpc_distribute_static_init_multi_device_4
-                 : omp::OMPRTL___kmpc_distribute_static_init_multi_device_4u)
-          : (IVSigned
-                 ? omp::OMPRTL___kmpc_distribute_static_init_multi_device_8
-                 : omp::OMPRTL___kmpc_distribute_static_init_multi_device_8u);
-
-  return getOrCreateRuntimeFunction(M, Name);
-}
-
 FunctionCallee OpenMPIRBuilder::createDispatchInitFunction(unsigned IVSize,
                                                            bool IVSigned) {
   assert((IVSize == 32 || IVSize == 64) &&
