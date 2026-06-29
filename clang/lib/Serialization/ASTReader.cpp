@@ -1815,6 +1815,44 @@ llvm::Error ASTReader::ReadSourceManagerBlock(ModuleFile &F) {
   }
 }
 
+bool ASTReader::scanLoadedSLocEntries(
+    ModuleFile &F, SmallVectorImpl<uint32_t> &Offsets,
+    SmallVectorImpl<const FileEntry *> &Files) {
+  unsigned N = F.LocalNumSLocEntries;
+  Offsets.assign(N, 0);
+  Files.assign(N, nullptr);
+
+  BitstreamCursor &Cursor = F.SLocEntryCursor;
+  SavedStreamPosition SavedPosition(Cursor);
+  for (unsigned I = 0; I != N; ++I) {
+    if (llvm::Error Err = Cursor.JumpToBit(F.SLocEntryOffsetsBase +
+                                           F.SLocEntryOffsets[I])) {
+      consumeError(std::move(Err));
+      return false;
+    }
+    Expected<llvm::BitstreamEntry> Entry = Cursor.advance();
+    if (!Entry) {
+      consumeError(Entry.takeError());
+      return false;
+    }
+    if (Entry->Kind != llvm::BitstreamEntry::Record)
+      return false;
+
+    RecordData Record;
+    StringRef Blob;
+    Expected<unsigned> Code = Cursor.readRecord(Entry->ID, Record, &Blob);
+    if (!Code) {
+      consumeError(Code.takeError());
+      return false;
+    }
+    Offsets[I] = (uint32_t)Record[0];
+    if (Code.get() == SM_SLOC_FILE_ENTRY)
+      if (OptionalFileEntryRef File = getInputFile(F, Record[4]).getFile())
+        Files[I] = &File->getFileEntry();
+  }
+  return true;
+}
+
 llvm::Expected<SourceLocation::UIntTy>
 ASTReader::readSLocOffset(ModuleFile *F, unsigned Index) {
   BitstreamCursor &Cursor = F->SLocEntryCursor;
@@ -4259,6 +4297,26 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
                            - SLocSpaceSize,&F));
 
       TotalNumSLocEntries += F.LocalNumSLocEntries;
+
+      // De-duplication detection (prototype, Stage 1). Walk this module's SLoc
+      // file entries and recognize when the same file was already loaded by an
+      // earlier module, measuring the address space a future reuse (Stage 2)
+      // could reclaim. Detection only: no allocation/translation change here.
+      {
+        SmallVector<uint32_t, 64> Offsets;
+        SmallVector<const FileEntry *, 64> Files;
+        if (scanLoadedSLocEntries(F, Offsets, Files)) {
+          unsigned N = Offsets.size();
+          for (unsigned I = 0; I != N; ++I) {
+            if (!Files[I])
+              continue;
+            uint64_t Size =
+                (I + 1 < N ? Offsets[I + 1] : SLocSpaceSize) - Offsets[I];
+            SourceMgr.noteLoadedFileSLocEntry(
+                Files[I], F.SLocEntryBaseOffset + Offsets[I], Size);
+          }
+        }
+      }
       break;
     }
 

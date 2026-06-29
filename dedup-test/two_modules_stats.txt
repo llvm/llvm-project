@@ -1,0 +1,535 @@
+
+STATISTICS:
+
+*** Semantic Analysis Stats:
+
+Number of memory regions: 0
+Bytes used: 0
+Bytes allocated: 0
+Bytes wasted: 0 (includes alignment, etc)
+
+*** Analysis Based Warnings Stats:
+401 functions analyzed (0 w/o CFGs).
+  1203 CFG blocks built.
+  3 average CFG blocks per function.
+  3 max CFG blocks per function.
+0 functions analyzed for uninitialiazed variables
+  0 variables analyzed.
+  0 average variables per function.
+  0 max variables per function.
+  0 block visits.
+  0 average block visits per function.
+  0 max block visits per function.
+
+*** LifetimeSafety Missing Origin per QualType: (QualType : count) :
+
+
+
+*** LifetimeSafety Missing Origin per StmtClassName: (StmtClassName : count) :
+
+
+Total missing origins: 0
+
+****************************************
+
+*** AST Context Stats:
+  156 types total.
+    120 Builtin types, 32 each (3840 bytes)
+    1 FunctionProto types, 48 each (48 bytes)
+    5 Pointer types, 48 each (240 bytes)
+    1 Record types, 32 each (32 bytes)
+    1 Typedef types, 32 each (32 bytes)
+    28 Vector types, 48 each (1344 bytes)
+Total bytes = 5536
+0/0 implicit default constructors created
+0/0 implicit copy constructors created
+0/0 implicit move constructors created
+0/0 implicit copy assignment operators created
+0/0 implicit move assignment operators created
+0/0 implicit destructors created
+
+*** AST File Statistics:
+
+*** PCH/ModuleFile Remappings:
+
+*** PCH/Modules Loaded:
+
+Number of memory regions: 62
+Bytes used: 248400
+Bytes allocated: 253952
+Bytes wasted: 5552 (includes alignment, etc)
+
+*** Decl Stats:
+  995 decls total.
+    1 TranslationUnit decls, 104 each (104 bytes)
+    1 ExternCContext decls, 72 each (72 bytes)
+    401 Function decls, 168 each (67368 bytes)
+    401 ParmVar decls, 104 each (41704 bytes)
+    8 Field decls, 80 each (640 bytes)
+    2 CXXRecord decls, 144 each (288 bytes)
+    180 Typedef decls, 88 each (15840 bytes)
+    1 Import decls, 56 each (56 bytes)
+Total bytes = 126072
+
+*** Stmt/Expr Stats:
+  2408 stmts/exprs total.
+    1 UnresolvedLookupExpr, 64 each (64 bytes)
+    400 IntegerLiteral, 32 each (12800 bytes)
+    402 DeclRefExpr, 32 each (12864 bytes)
+    402 ImplicitCastExpr, 24 each (9648 bytes)
+    1 CallExpr, 24 each (24 bytes)
+    400 BinaryOperator, 32 each (12800 bytes)
+    401 ReturnStmt, 16 each (6416 bytes)
+    401 CompoundStmt, 16 each (6416 bytes)
+Total bytes = 61032
+
+STATISTICS FOR './module.modulemap':
+
+*** Preprocessor Stats:
+564 directives found:
+  553 #define.
+  0 #undef.
+  #include/#include_next/#import:
+    4 source files entered.
+    1 max include stack depth
+  2 #if/#ifndef/#ifdef.
+  0 #else/#elif/#elifdef/#elifndef.
+  2 #endif.
+  2 #pragma.
+0 #if/#ifndef#ifdef regions skipped
+0/0/0 obj/fn/builtin macros expanded, 0 on the fast path.
+0 token paste (##) operations performed, 0 on the fast path.
+
+Preprocessor Memory: 110103B total
+  BumpPtr: 57344
+  Macro Expanded Tokens: 384
+  Predefines Buffer: 32767
+  Macros: 16512
+  #pragma push_macro Info: 2056
+  Poison Reasons: 1032
+  Comment Handlers: 8
+
+*** Identifier Table Stats:
+# Identifiers:   13432
+# Empty Buckets: 19336
+Hash density (#identifiers per bucket): 0.409912
+Ave identifier length: 26.735631
+Max identifier length: 49
+
+Number of memory regions: 182
+Bytes used: 909825
+Bytes allocated: 966656
+Bytes wasted: 56831 (includes alignment, etc)
+
+*** HeaderSearch Stats:
+3 files tracked.
+  0 #import/#pragma once files.
+  2 #include/#include_next/#import.
+    0 #includes skipped due to the multi-include optimization.
+0 framework lookups.
+0 subframework lookups.
+
+*** Source Manager Stats:
+3 files mapped, 3 mem buffers mapped.
+7 local SLocEntries allocated (168 bytes of capacity), 43765B of SLoc address space used.
+0 loaded SLocEntries allocated (0 bytes of capacity), 0B of SLoc address space used.
+20795 bytes of files mapped, 2 files with line #'s computed, 0 files with macro args computed.
+FileID scans: 32 linear, 0 binary.
+
+
+*** File Manager Stats:
+5 real files found, 7 real dirs found.
+0 virtual files found, 0 virtual dirs found.
+28 dir lookups, 9 dir cache misses.
+19 file lookups, 8 file cache misses.
+
+*** Virtual File System Stats:
+14 status() calls
+5 openFileForRead() calls
+0 dir_begin() calls
+1 getRealPath() calls
+0 exists() calls
+0 isLocal() calls
+
+===-------------------------------------------------------------------------===
+                          ... Statistics Collected ...
+===-------------------------------------------------------------------------===
+
+    2 file-search    - Number of attempted #includes.
+43765 source-manager - Maximum number of bytes used by source locations (both loaded and local).
+
+
+STATISTICS:
+
+*** Semantic Analysis Stats:
+
+Number of memory regions: 0
+Bytes used: 0
+Bytes allocated: 0
+Bytes wasted: 0 (includes alignment, etc)
+
+*** Analysis Based Warnings Stats:
+401 functions analyzed (0 w/o CFGs).
+  1203 CFG blocks built.
+  3 average CFG blocks per function.
+  3 max CFG blocks per function.
+0 functions analyzed for uninitialiazed variables
+  0 variables analyzed.
+  0 average variables per function.
+  0 max variables per function.
+  0 block visits.
+  0 average block visits per function.
+  0 max block visits per function.
+
+*** LifetimeSafety Missing Origin per QualType: (QualType : count) :
+
+
+
+*** LifetimeSafety Missing Origin per StmtClassName: (StmtClassName : count) :
+
+
+Total missing origins: 0
+
+****************************************
+
+*** AST Context Stats:
+  156 types total.
+    120 Builtin types, 32 each (3840 bytes)
+    1 FunctionProto types, 48 each (48 bytes)
+    5 Pointer types, 48 each (240 bytes)
+    1 Record types, 32 each (32 bytes)
+    1 Typedef types, 32 each (32 bytes)
+    28 Vector types, 48 each (1344 bytes)
+Total bytes = 5536
+0/0 implicit default constructors created
+0/0 implicit copy constructors created
+0/0 implicit move constructors created
+0/0 implicit copy assignment operators created
+0/0 implicit move assignment operators created
+0/0 implicit destructors created
+
+*** AST File Statistics:
+
+*** PCH/ModuleFile Remappings:
+
+*** PCH/Modules Loaded:
+
+Number of memory regions: 62
+Bytes used: 248400
+Bytes allocated: 253952
+Bytes wasted: 5552 (includes alignment, etc)
+
+*** Decl Stats:
+  1896 decls total.
+    2 TranslationUnit decls, 104 each (208 bytes)
+    2 ExternCContext decls, 72 each (144 bytes)
+    802 Function decls, 168 each (134736 bytes)
+    802 ParmVar decls, 104 each (83408 bytes)
+    12 Field decls, 80 each (960 bytes)
+    3 CXXRecord decls, 144 each (432 bytes)
+    270 Typedef decls, 88 each (23760 bytes)
+    3 Import decls, 56 each (168 bytes)
+Total bytes = 243816
+
+*** Stmt/Expr Stats:
+  4816 stmts/exprs total.
+    2 UnresolvedLookupExpr, 64 each (128 bytes)
+    800 IntegerLiteral, 32 each (25600 bytes)
+    804 DeclRefExpr, 32 each (25728 bytes)
+    804 ImplicitCastExpr, 24 each (19296 bytes)
+    2 CallExpr, 24 each (48 bytes)
+    800 BinaryOperator, 32 each (25600 bytes)
+    802 ReturnStmt, 16 each (12832 bytes)
+    802 CompoundStmt, 16 each (12832 bytes)
+Total bytes = 122064
+
+STATISTICS FOR './module.modulemap':
+
+*** Preprocessor Stats:
+564 directives found:
+  553 #define.
+  0 #undef.
+  #include/#include_next/#import:
+    4 source files entered.
+    1 max include stack depth
+  2 #if/#ifndef/#ifdef.
+  0 #else/#elif/#elifdef/#elifndef.
+  2 #endif.
+  2 #pragma.
+0 #if/#ifndef#ifdef regions skipped
+0/0/0 obj/fn/builtin macros expanded, 0 on the fast path.
+0 token paste (##) operations performed, 0 on the fast path.
+
+Preprocessor Memory: 110103B total
+  BumpPtr: 57344
+  Macro Expanded Tokens: 384
+  Predefines Buffer: 32767
+  Macros: 16512
+  #pragma push_macro Info: 2056
+  Poison Reasons: 1032
+  Comment Handlers: 8
+
+*** Identifier Table Stats:
+# Identifiers:   13432
+# Empty Buckets: 19336
+Hash density (#identifiers per bucket): 0.409912
+Ave identifier length: 26.735631
+Max identifier length: 49
+
+Number of memory regions: 182
+Bytes used: 909825
+Bytes allocated: 966656
+Bytes wasted: 56831 (includes alignment, etc)
+
+*** HeaderSearch Stats:
+3 files tracked.
+  0 #import/#pragma once files.
+  4 #include/#include_next/#import.
+    0 #includes skipped due to the multi-include optimization.
+0 framework lookups.
+0 subframework lookups.
+
+*** Source Manager Stats:
+3 files mapped, 3 mem buffers mapped.
+7 local SLocEntries allocated (168 bytes of capacity), 43765B of SLoc address space used.
+0 loaded SLocEntries allocated (0 bytes of capacity), 0B of SLoc address space used.
+20795 bytes of files mapped, 2 files with line #'s computed, 0 files with macro args computed.
+FileID scans: 32 linear, 0 binary.
+
+
+*** File Manager Stats:
+5 real files found, 7 real dirs found.
+0 virtual files found, 0 virtual dirs found.
+42 dir lookups, 10 dir cache misses.
+38 file lookups, 8 file cache misses.
+
+*** Virtual File System Stats:
+15 status() calls
+8 openFileForRead() calls
+0 dir_begin() calls
+1 getRealPath() calls
+0 exists() calls
+0 isLocal() calls
+
+===-------------------------------------------------------------------------===
+                          ... Statistics Collected ...
+===-------------------------------------------------------------------------===
+
+    4 file-search    - Number of attempted #includes.
+66900 source-manager - Maximum number of bytes used by source locations (both loaded and local).
+
+
+STATISTICS:
+
+*** Semantic Analysis Stats:
+
+Number of memory regions: 0
+Bytes used: 0
+Bytes allocated: 0
+Bytes wasted: 0 (includes alignment, etc)
+
+*** Analysis Based Warnings Stats:
+0 functions analyzed (0 w/o CFGs).
+  0 CFG blocks built.
+  0 average CFG blocks per function.
+  0 max CFG blocks per function.
+0 functions analyzed for uninitialiazed variables
+  0 variables analyzed.
+  0 average variables per function.
+  0 max variables per function.
+  0 block visits.
+  0 average block visits per function.
+  0 max block visits per function.
+
+*** LifetimeSafety Missing Origin per QualType: (QualType : count) :
+
+
+
+*** LifetimeSafety Missing Origin per StmtClassName: (StmtClassName : count) :
+
+
+Total missing origins: 0
+
+****************************************
+
+*** AST Context Stats:
+  157 types total.
+    120 Builtin types, 32 each (3840 bytes)
+    2 FunctionProto types, 48 each (96 bytes)
+    6 Pointer types, 48 each (288 bytes)
+    1 Record types, 32 each (32 bytes)
+    28 Vector types, 48 each (1344 bytes)
+Total bytes = 5600
+0/0 implicit default constructors created
+0/0 implicit copy constructors created
+0/0 implicit move constructors created
+0/0 implicit copy assignment operators created
+0/0 implicit move assignment operators created
+0/0 implicit destructors created
+
+*** AST File Statistics:
+  0/12 source location entries read (0.000000%)
+  4/64 types read (6.250000%)
+  1032/1776 declarations read (58.108109%)
+  14/992 identifiers read (1.411290%)
+  0/4 macros read (0.000000%)
+  14/4814 statements read (0.290818%)
+  0/4 macros read (0.000000%)
+  0/802 lexical declcontexts read (0.000000%)
+
+*** PCH/ModuleFile Remappings:
+Global bit offset map:
+  0 -> /Users/ayokunleamodu/Repos/llvm-project/dedup-test/cache/71GTEYCXW85I/A-CAAI8SHN1D31.pcm
+  1144160 -> /Users/ayokunleamodu/Repos/llvm-project/dedup-test/cache/71GTEYCXW85I/B-CAAI8SHN1D31.pcm
+Global source location entry map:
+  2 -> /Users/ayokunleamodu/Repos/llvm-project/dedup-test/cache/71GTEYCXW85I/A-CAAI8SHN1D31.pcm
+  8 -> /Users/ayokunleamodu/Repos/llvm-project/dedup-test/cache/71GTEYCXW85I/B-CAAI8SHN1D31.pcm
+Global submodule map:
+  1 -> /Users/ayokunleamodu/Repos/llvm-project/dedup-test/cache/71GTEYCXW85I/A-CAAI8SHN1D31.pcm
+  2 -> /Users/ayokunleamodu/Repos/llvm-project/dedup-test/cache/71GTEYCXW85I/B-CAAI8SHN1D31.pcm
+
+*** PCH/Modules Loaded:
+Module: /Users/ayokunleamodu/Repos/llvm-project/dedup-test/cache/71GTEYCXW85I/A-CAAI8SHN1D31.pcm
+  Base source location offset: 2147439884
+  Base identifier ID: 0
+  Number of identifiers: 496
+  Base macro ID: 0
+  Number of macros: 2
+  Base submodule ID: 0
+  Number of submodules: 1
+  Submodule ID local -> global map:
+    0 -> 0
+  Base selector ID: 0
+  Number of selectors: 0
+  Base preprocessed entity ID: 0
+  Number of preprocessed entities: 0
+  Base type index: 0
+  Number of types: 32
+  Base decl index: 0
+  Number of decls: 888
+
+Module: /Users/ayokunleamodu/Repos/llvm-project/dedup-test/cache/71GTEYCXW85I/B-CAAI8SHN1D31.pcm
+  Base source location offset: 2147396120
+  Base identifier ID: 496
+  Number of identifiers: 496
+  Base macro ID: 2
+  Number of macros: 2
+  Base submodule ID: 1
+  Number of submodules: 1
+  Submodule ID local -> global map:
+    0 -> 1
+  Base selector ID: 0
+  Number of selectors: 0
+  Base preprocessed entity ID: 0
+  Number of preprocessed entities: 0
+  Base type index: 32
+  Number of types: 32
+  Base decl index: 888
+  Number of decls: 888
+
+
+Number of memory regions: 5
+Bytes used: 19784
+Bytes allocated: 20480
+Bytes wasted: 696 (includes alignment, etc)
+
+*** Decl Stats:
+  1907 decls total.
+    2 TranslationUnit decls, 104 each (208 bytes)
+    3 ExternCContext decls, 72 each (216 bytes)
+    807 Function decls, 168 each (135576 bytes)
+    806 ParmVar decls, 104 each (83824 bytes)
+    12 Field decls, 80 each (960 bytes)
+    3 CXXRecord decls, 144 each (432 bytes)
+    270 Typedef decls, 88 each (23760 bytes)
+    4 Import decls, 56 each (224 bytes)
+Total bytes = 245200
+
+*** Stmt/Expr Stats:
+  4843 stmts/exprs total.
+    4 UnresolvedLookupExpr, 64 each (256 bytes)
+    802 IntegerLiteral, 32 each (25664 bytes)
+    810 DeclRefExpr, 32 each (25920 bytes)
+    810 ImplicitCastExpr, 24 each (19440 bytes)
+    6 CallExpr, 24 each (144 bytes)
+    801 BinaryOperator, 32 each (25632 bytes)
+    805 ReturnStmt, 16 each (12880 bytes)
+    805 CompoundStmt, 16 each (12880 bytes)
+Total bytes = 122816
+
+STATISTICS FOR 'use.cpp':
+
+*** Preprocessor Stats:
+559 directives found:
+  552 #define.
+  0 #undef.
+  #include/#include_next/#import:
+    2 source files entered.
+    0 max include stack depth
+  0 #if/#ifndef/#ifdef.
+  0 #else/#elif/#elifdef/#elifndef.
+  0 #endif.
+  2 #pragma.
+0 #if/#ifndef#ifdef regions skipped
+0/0/0 obj/fn/builtin macros expanded, 0 on the fast path.
+0 token paste (##) operations performed, 0 on the fast path.
+
+Preprocessor Memory: 106007B total
+  BumpPtr: 53248
+  Macro Expanded Tokens: 384
+  Predefines Buffer: 32767
+  Macros: 16512
+  #pragma push_macro Info: 2056
+  Poison Reasons: 1032
+  Comment Handlers: 8
+
+*** Identifier Table Stats:
+# Identifiers:   13037
+# Empty Buckets: 19731
+Hash density (#identifiers per bucket): 0.397858
+Ave identifier length: 27.158472
+Max identifier length: 49
+
+Number of memory regions: 180
+Bytes used: 888582
+Bytes allocated: 950272
+Bytes wasted: 61690 (includes alignment, etc)
+
+*** HeaderSearch Stats:
+3 files tracked.
+  0 #import/#pragma once files.
+  4 #include/#include_next/#import.
+    0 #includes skipped due to the multi-include optimization.
+0 framework lookups.
+0 subframework lookups.
+
+*** Source Manager Stats:
+2 files mapped, 2 mem buffers mapped.
+5 local SLocEntries allocated (168 bytes of capacity), 23136B of SLoc address space used.
+12 loaded SLocEntries allocated (768 bytes of capacity), 87528B of SLoc address space used.
+2 duplicate loaded file SLocEntries detected (20694B of SLoc address space reusable).
+147 bytes of files mapped, 0 files with line #'s computed, 0 files with macro args computed.
+FileID scans: 15 linear, 0 binary.
+
+
+*** File Manager Stats:
+7 real files found, 8 real dirs found.
+0 virtual files found, 0 virtual dirs found.
+46 dir lookups, 11 dir cache misses.
+47 file lookups, 10 file cache misses.
+
+*** Virtual File System Stats:
+18 status() calls
+10 openFileForRead() calls
+0 dir_begin() calls
+1 getRealPath() calls
+0 exists() calls
+0 isLocal() calls
+
+===-------------------------------------------------------------------------===
+                          ... Statistics Collected ...
+===-------------------------------------------------------------------------===
+
+     4 file-search    - Number of attempted #includes.
+110664 source-manager - Maximum number of bytes used by source locations (both loaded and local).
+
