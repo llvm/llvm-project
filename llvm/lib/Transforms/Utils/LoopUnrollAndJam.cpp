@@ -256,6 +256,11 @@ llvm::UnrollAndJamLoop(Loop *L, unsigned Count, unsigned TripCount,
     SE->forgetBlockAndLoopDispositions();
   }
 
+  // Remove problematic lifetime intrinsics outside the loop.
+  // Avoids the need to merge allocas with a phi.
+  if (cleanupDanglingLifetimeUsers(L, *DT))
+    LLVM_DEBUG(dbgs() << "U&J: removed dangling lifetime users.\n");
+
   using namespace ore;
   // Report the unrolling decision.
   if (CompletelyUnroll) {

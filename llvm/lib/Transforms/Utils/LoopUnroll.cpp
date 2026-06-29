@@ -969,7 +969,6 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
   bool EpilogProfitability =
       UnrollRuntimeEpilog.getNumOccurrences() ? UnrollRuntimeEpilog
                                               : isEpilogProfitable(L);
-
   if (ULO.Runtime &&
       !UnrollRuntimeLoopRemainder(
           L, ULO.Count, ULO.AllowExpensiveTripCount, EpilogProfitability,
@@ -984,6 +983,13 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
       return LoopUnrollResult::Unmodified;
     }
   }
+
+  // LCSSA allows lifetime intrinsics and tokens to directly use loop
+  // instructions, as they cannot use a phi.
+  // Cloning loop blocks requires a phi join; just remove the problematic
+  // instructions.
+  if (cleanupDanglingLifetimeUsers(L, *DT))
+    LLVM_DEBUG(dbgs() << "Unroll: removed dangling lifetime users.\n");
 
   using namespace ore;
 
