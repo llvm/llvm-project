@@ -3558,7 +3558,8 @@ public:
 
   /// Re-emit trivial-auto-var-init stores for variables bypassed by the jump
   /// Source (C++ only). No-op in C, where bypassed variables are initialized
-  /// once in the entry block.
+  /// once in the entry block, and in any function with a computed goto, where
+  /// jump sources are unknown and a single function-scope init is used instead.
   void emitBypassedVarInitsForSource(const Stmt *Source);
 
   void MaybeEmitDeferredVarDeclInit(const VarDecl *var);

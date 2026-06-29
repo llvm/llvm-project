@@ -1885,6 +1885,12 @@ CodeGenFunction::getAutoVarInitKind(QualType type, const VarDecl &D) {
 }
 
 void CodeGenFunction::emitBypassedVarInitsForSource(const Stmt *Source) {
+  // C++ scope-reentry reinit is only sound when jump sources are known. With a
+  // computed goto we can't tell whether a jump leaves a variable's scope, so
+  // EmitAutoVarAlloca falls back to a single function-scope init and we must
+  // not reinitialize here -- doing so could clobber a still-live variable.
+  if (Bypasses.isAlwaysBypassed())
+    return;
   const auto *Vars = Bypasses.getBypassedVarsForSource(Source);
   if (!Vars)
     return;

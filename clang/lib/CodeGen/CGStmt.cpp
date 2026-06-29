@@ -839,8 +839,10 @@ void CodeGenFunction::EmitGotoStmt(const GotoStmt &S) {
 
   // For C++ scope re-entry we need to reinitialize variables this goto
   // bypasses. Backward gotos reinit here while forward gotos are recorded for
-  // EmitAutoVarAlloca to patch once the alloca exists.
-  if (HaveInsertPoint() && getLangOpts().CPlusPlus) {
+  // EmitAutoVarAlloca to patch once the alloca exists. Skip when jump sources
+  // are unknown (computed goto); EmitAutoVarAlloca then uses function-scope init.
+  if (HaveInsertPoint() && getLangOpts().CPlusPlus &&
+      !Bypasses.isAlwaysBypassed()) {
     emitBypassedVarInitsForSource(&S);
     BypassingForwardGotos.push_back({Builder.GetInsertBlock(), &S});
   }
