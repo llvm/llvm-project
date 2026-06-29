@@ -93,23 +93,25 @@ func.func @memref_expand(%m: memref<?xf32>, %sz: index) -> (index, index) {
 
 // -----
 
-// CHECK-LABEL: func @memref_extract_strided_metadata(
-//  CHECK-SAME:     %[[sz:.*]]: index
-//       CHECK:   %[[c0:.*]] = arith.constant 0 : index
-//       CHECK:   %[[c10:.*]] = arith.constant 10 : index
+// CHECK-LABEL: func @memref_extract_strided_metadata_static_metadata(
+//  CHECK-SAME:     %[[m:.*]]: memref<4x?xf32, strided<[11, 7], offset: 5>>
+//       CHECK:   %[[c5:.*]] = arith.constant 5 : index
+//       CHECK:   %[[c4:.*]] = arith.constant 4 : index
 //       CHECK:   %[[c1:.*]] = arith.constant 1 : index
-//       CHECK:   %[[dim:.*]] = memref.dim %{{.*}}, %[[c1]] : memref<10x?xf32>
-//       CHECK:   %[[c1_0:.*]] = arith.constant 1 : index
-//       CHECK:   return %[[c0]], %[[c10]], %[[dim]], %[[c1_0]]
-func.func @memref_extract_strided_metadata(%sz: index) -> (index, index, index, index) {
-  %0 = memref.alloc(%sz) : memref<10x?xf32>
-  %base, %offset, %sizes:2, %strides:2 = memref.extract_strided_metadata %0
-    : memref<10x?xf32> -> memref<f32>, index, index, index, index, index
-  %1 = "test.reify_bound"(%offset) : (index) -> (index)
-  %2 = "test.reify_bound"(%sizes#0) : (index) -> (index)
-  %3 = "test.reify_bound"(%sizes#1) : (index) -> (index)
+//       CHECK:   %[[dim:.*]] = memref.dim %[[m]], %[[c1]]
+//       CHECK:   %[[c11:.*]] = arith.constant 11 : index
+//       CHECK:   %[[c7:.*]] = arith.constant 7 : index
+//       CHECK:   return %[[c5]], %[[c4]], %[[dim]], %[[c11]], %[[c7]]
+func.func @memref_extract_strided_metadata_static_metadata(
+    %m: memref<4x?xf32, strided<[11, 7], offset: 5>>) -> (index, index, index, index, index) {
+  %base, %offset, %sizes:2, %strides:2 = memref.extract_strided_metadata %m
+    : memref<4x?xf32, strided<[11, 7], offset: 5>> -> memref<f32>, index, index, index, index, index
+  %0 = "test.reify_bound"(%offset) : (index) -> (index)
+  %1 = "test.reify_bound"(%sizes#0) : (index) -> (index)
+  %2 = "test.reify_bound"(%sizes#1) : (index) -> (index)
+  %3 = "test.reify_bound"(%strides#0) : (index) -> (index)
   %4 = "test.reify_bound"(%strides#1) : (index) -> (index)
-  return %1, %2, %3, %4 : index, index, index, index
+  return %0, %1, %2, %3, %4 : index, index, index, index, index
 }
 
 // -----

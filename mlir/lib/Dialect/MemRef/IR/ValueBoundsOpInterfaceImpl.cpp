@@ -89,24 +89,29 @@ struct ExtractStridedMetadataOpInterface
   void populateBoundsForIndexValue(Operation *op, Value value,
                                    ValueBoundsConstraintSet &cstr) const {
     auto metadataOp = cast<memref::ExtractStridedMetadataOp>(op);
+    auto result = llvm::cast<OpResult>(value);
+    assert(result.getOwner() == op && "invalid value");
+    int64_t resultNumber = result.getResultNumber();
 
-    if (value == metadataOp.getOffset()) {
+    if (resultNumber == 1) {
       cstr.bound(value) == metadataOp.getConstifiedMixedOffset();
       return;
     }
 
-    for (auto [idx, size] : llvm::enumerate(metadataOp.getSizes())) {
-      if (value != size)
-        continue;
+    int64_t sourceRank = metadataOp.getSource().getType().getRank();
+    int64_t sizeStart = 2;
+    int64_t strideStart = sizeStart + sourceRank;
+    if (resultNumber >= sizeStart && resultNumber < strideStart) {
+      int64_t idx = resultNumber - sizeStart;
       cstr.bound(value) >= 0;
       cstr.bound(value) == cstr.getExpr(metadataOp.getSource(), idx);
       return;
     }
 
-    SmallVector<OpFoldResult> strides = metadataOp.getConstifiedMixedStrides();
-    for (auto [idx, stride] : llvm::enumerate(metadataOp.getStrides())) {
-      if (value != stride)
-        continue;
+    int64_t strideEnd = strideStart + sourceRank;
+    if (resultNumber >= strideStart && resultNumber < strideEnd) {
+      int64_t idx = resultNumber - strideStart;
+      SmallVector<OpFoldResult> strides = metadataOp.getConstifiedMixedStrides();
       cstr.bound(value) == strides[idx];
       return;
     }
