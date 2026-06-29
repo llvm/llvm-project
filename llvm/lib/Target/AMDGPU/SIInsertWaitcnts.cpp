@@ -337,7 +337,7 @@ struct PreheaderFlushFlags {
 };
 
 class SIInsertWaitcnts {
-  DenseMap<const Value *, MachineBasicBlock *> SLoadAddresses;
+  SmallPtrSet<MachineInstr *, 8> PendingSMRDLoads;
   DenseMap<MachineBasicBlock *, PreheaderFlushFlags> PreheadersToFlush;
   MachineLoopInfo &MLI;
   MachinePostDominatorTree &PDT;
@@ -2418,18 +2418,33 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
       // instruction to guarantee the right WAW order.
       // 2) If a destination operand that was used by a recent export/store ins,
       // add s_waitcnt on exp_cnt to guarantee the WAR order.
-
       for (const MachineMemOperand *Memop : MI.memoperands()) {
         const Value *Ptr = Memop->getValue();
-        if (Memop->isStore()) {
-          if (auto It = SLoadAddresses.find(Ptr); It != SLoadAddresses.end()) {
-            Wait.add(SmemAccessCounter, 0);
-            if (PDT.dominates(MI.getParent(), It->second))
-              SLoadAddresses.erase(It);
-          }
-        }
         unsigned AS = Memop->getAddrSpace();
-        if (AS != AMDGPUAS::LOCAL_ADDRESS && AS != AMDGPUAS::FLAT_ADDRESS)
+
+        bool IsLDSDMARelevantAS =
+            AS == AMDGPUAS::FLAT_ADDRESS || AS == AMDGPUAS::LOCAL_ADDRESS;
+        // TODO: Rely on SIInstrInfo::areMemAccessesTriviallyDisjoint for this
+        // once it uses MMO address spaces to distinguish lowered memory forms.
+        bool IsSMRDWARRelevantAS = AS == AMDGPUAS::FLAT_ADDRESS ||
+                                   AMDGPU::isExtendedGlobalAddrSpace(AS);
+
+        if (Memop->isStore() && IsSMRDWARRelevantAS) {
+          SmallVector<MachineInstr *, 4> SMRDLoadsToRemove;
+          for (MachineInstr *SLoad : PendingSMRDLoads) {
+            if (!MI.mayAlias(AA, *SLoad, true))
+              continue;
+
+            Wait.add(SmemAccessCounter, 0);
+            if (PDT.dominates(MI.getParent(), SLoad->getParent()))
+              SMRDLoadsToRemove.push_back(SLoad);
+          }
+
+          for (MachineInstr *SLoad : SMRDLoadsToRemove)
+            PendingSMRDLoads.erase(SLoad);
+        }
+
+        if (!IsLDSDMARelevantAS)
           continue;
         // No need to wait before load from VMEM to LDS.
         if (TII.mayWriteLDSThroughDMA(MI))
@@ -3090,13 +3105,13 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
       continue;
     }
 
-    if (TII.isSMRD(Inst)) {
+    if (TII.isSMRD(Inst) && TII.usesLGKM_CNT(Inst)) {
       for (const MachineMemOperand *Memop : Inst.memoperands()) {
         // No need to handle invariant loads when avoiding WAR conflicts, as
         // there cannot be a vector store to the same memory location.
         if (!Memop->isInvariant()) {
-          const Value *Ptr = Memop->getValue();
-          SLoadAddresses.insert(std::pair(Ptr, Inst.getParent()));
+          PendingSMRDLoads.insert(&Inst);
+          break;
         }
       }
     }
