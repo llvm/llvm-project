@@ -1,11 +1,11 @@
-// RUN: %clang_cc1 -verify=ref,both -std=c++2a -fsyntax-only %s
+// RUN: %clang_cc1 -verify=ref,both,le -std=c++2a -fsyntax-only %s
 // RUN: %clang_cc1 -verify=ref,both -std=c++2a -fsyntax-only -triple aarch64_be-linux-gnu %s
-// RUN: %clang_cc1 -verify=ref,both -std=c++2a -fsyntax-only -triple powerpc64le-unknown-unknown -mabi=ieeelongdouble %s
+// RUN: %clang_cc1 -verify=ref,both,le -std=c++2a -fsyntax-only -triple powerpc64le-unknown-unknown -mabi=ieeelongdouble %s
 // RUN: %clang_cc1 -verify=ref,both -std=c++2a -fsyntax-only -triple powerpc64-unknown-unknown -mabi=ieeelongdouble %s
 
-// RUN: %clang_cc1 -verify=expected,both -std=c++2a -fsyntax-only -fexperimental-new-constant-interpreter %s
+// RUN: %clang_cc1 -verify=expected,both,le -std=c++2a -fsyntax-only -fexperimental-new-constant-interpreter %s
 // RUN: %clang_cc1 -verify=expected,both -std=c++2a -fsyntax-only -triple aarch64_be-linux-gnu -fexperimental-new-constant-interpreter %s
-// RUN: %clang_cc1 -verify=expected,both -std=c++2a -fsyntax-only -fexperimental-new-constant-interpreter -triple powerpc64le-unknown-unknown -mabi=ieeelongdouble %s
+// RUN: %clang_cc1 -verify=expected,both,le -std=c++2a -fsyntax-only -fexperimental-new-constant-interpreter -triple powerpc64le-unknown-unknown -mabi=ieeelongdouble %s
 // RUN: %clang_cc1 -verify=expected,both -std=c++2a -fsyntax-only -fexperimental-new-constant-interpreter -triple powerpc64-unknown-unknown -mabi=ieeelongdouble %s
 
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
@@ -514,7 +514,8 @@ namespace Discarded {
     int b;
   };
   constexpr int bad_my_byte = (__builtin_bit_cast(my_byte[8], pad{1, 2}), 0); // both-error {{must be initialized by a constant expression}} \
-                                                                              // both-note {{indeterminate value can only initialize an object of type 'unsigned char' or 'std::byte';}}
+                                                                              // both-note {{indeterminate value can only initialize an object of type 'unsigned char' or 'std::byte';}} \
+                                                                              // le-warning {{is always undefined because it unconditionally maps a padding bit onto a non-padding bit}}
 }
 
 typedef bool bool9 __attribute__((ext_vector_type(9)));
