@@ -627,7 +627,8 @@ def formatOutput(title, data, limit=None):
         return ""
     if not limit is None and len(data) > limit:
         data = data[:limit] + "\n...\n"
-        msg = "data was truncated"
+        msg = (f"data was truncated ({limit}/{len(data)})" +
+               "(change limit with -D output_limit=N)")
     else:
         msg = ""
     ndashes = 30
@@ -769,13 +770,14 @@ def executeScriptInternal(
         # Otherwise, something failed or was printed, show it.
 
         # Add the command output, if redirected.
+        outputLimit = int(litConfig.params.get("output_limit", 10240))
         for (name, path, data) in result.outputFiles:
             data = data.decode("utf-8", errors="replace")
-            out += formatOutput(f"redirected output from '{name}'", data, limit=1024)
+            out += formatOutput(f"redirected output from '{name}'", data, limit=outputLimit)
         if result.stdout.strip():
-            out += formatOutput("command stdout", result.stdout, limit=10240)
+            out += formatOutput("command stdout", result.stdout, limit=outputLimit)
         if result.stderr.strip():
-            out += formatOutput("command stderr", result.stderr, limit=10240)
+            out += formatOutput("command stderr", result.stderr, limit=outputLimit)
         if not result.stdout.strip() and not result.stderr.strip():
             out += "# note: command had no output on stdout or stderr\n"
 
