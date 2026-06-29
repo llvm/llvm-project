@@ -4810,6 +4810,20 @@ def MulOverflow : Builtin {
   let Prototype = "bool(...)";
 }
 
+// POC: constexpr-capable charconv primitives for integers of any width,
+// including _BitInt(N > 128). Return type (char* / const char*) is set in Sema.
+def ToChars : Builtin {
+  let Spellings = ["__builtin_to_chars"];
+  let Attributes = [NoThrow, CustomTypeChecking, Constexpr];
+  let Prototype = "int(...)";
+}
+
+def FromChars : Builtin {
+  let Spellings = ["__builtin_from_chars"];
+  let Attributes = [NoThrow, CustomTypeChecking, Constexpr];
+  let Prototype = "int(...)";
+}
+
 class UOverflowTemplate :
     Template<["unsigned int", "unsigned long int", "unsigned long long int"],
              ["_overflow",    "l_overflow",        "ll_overflow"]>;

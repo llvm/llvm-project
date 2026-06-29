@@ -10715,6 +10715,212 @@ bool PointerExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     }
   }
 
+  case Builtin::BI__builtin_to_chars: {
+    // (char *first, char *last, T value, int base) -> char *.
+    LValue First, Last;
+    if (!EvaluatePointer(E->getArg(0), First, Info) ||
+        !EvaluatePointer(E->getArg(1), Last, Info))
+      return false;
+    APSInt Value, Base;
+    if (!EvaluateInteger(E->getArg(2), Value, Info) ||
+        !EvaluateInteger(E->getArg(3), Base, Info))
+      return false;
+
+    uint64_t B = Base.getZExtValue();
+    if (B < 2 || B > 36) {
+      Info.FFDiag(E->getArg(3));
+      return false;
+    }
+
+    // Sign and magnitude. Widen by one bit so negating the most-negative value
+    // cannot overflow. APInt::toString is not usable here: it only supports
+    // radix 2/8/10/16/36, whereas charconv covers every base in [2, 36].
+    bool Neg = Value.isSigned() && Value.isNegative();
+    APInt Mag = Value.isSigned() ? Value.sext(Value.getBitWidth() + 1)
+                                 : Value.zext(Value.getBitWidth() + 1);
+    if (Neg)
+      Mag.negate();
+
+    static const char Table[] = "0123456789abcdefghijklmnopqrstuvwxyz";
+    SmallVector<char, 64> Rev; // least-significant digit first
+    if (Mag.isZero()) {
+      Rev.push_back('0');
+    } else {
+      APInt BaseAP(Mag.getBitWidth(), B);
+      while (!Mag.isZero()) {
+        APInt Q, R;
+        APInt::udivrem(Mag, BaseAP, Q, R);
+        Rev.push_back(Table[R.getZExtValue()]);
+        Mag = std::move(Q);
+      }
+    }
+    uint64_t Len = Rev.size() + (Neg ? 1 : 0);
+
+    // Capacity check against [first, last). char is one byte.
+    if (!HasSameBase(First, Last) || First.Designator.Invalid) {
+      Info.FFDiag(E);
+      return false;
+    }
+    int64_t Cap =
+        (Last.getLValueOffset() - First.getLValueOffset()).getQuantity();
+    if (Cap < 0 || (uint64_t)Cap < Len)
+      return ZeroInitialization(E); // buffer too small -> nullptr
+
+    QualType CharTy = E->getArg(0)->getType()->getPointeeType();
+    unsigned CW = Info.Ctx.getCharWidth();
+    bool CharUnsigned = !CharTy->isSignedIntegerType();
+    auto WriteChar = [&](LValue &Dest, char C) -> bool {
+      APValue V{APSInt(APInt(CW, (uint64_t)(unsigned char)C), CharUnsigned)};
+      return handleAssignment(Info, E, Dest, CharTy, V) &&
+             HandleLValueArrayAdjustment(Info, E, Dest, CharTy, 1);
+    };
+
+    LValue Dest = First;
+    if (Neg && !WriteChar(Dest, '-'))
+      return false;
+    for (char C : llvm::reverse(Rev))
+      if (!WriteChar(Dest, C))
+        return false;
+
+    // Return the past-the-end write pointer.
+    Result = First;
+    return HandleLValueArrayAdjustment(Info, E, Result, CharTy, Len);
+  }
+
+  case Builtin::BI__builtin_from_chars: {
+    // (const char *first, const char *last, T *value, int base, int *ec)
+    //   -> const char *.
+    LValue First, Last, ValPtr, EcPtr;
+    if (!EvaluatePointer(E->getArg(0), First, Info) ||
+        !EvaluatePointer(E->getArg(1), Last, Info) ||
+        !EvaluatePointer(E->getArg(2), ValPtr, Info) ||
+        !EvaluatePointer(E->getArg(4), EcPtr, Info))
+      return false;
+    APSInt Base;
+    if (!EvaluateInteger(E->getArg(3), Base, Info))
+      return false;
+    uint64_t B = Base.getZExtValue();
+    if (B < 2 || B > 36) {
+      Info.FFDiag(E->getArg(3));
+      return false;
+    }
+
+    if (!HasSameBase(First, Last) || First.Designator.Invalid) {
+      Info.FFDiag(E);
+      return false;
+    }
+    int64_t Len =
+        (Last.getLValueOffset() - First.getLValueOffset()).getQuantity();
+    if (Len < 0)
+      Len = 0;
+
+    QualType CharTy = E->getArg(0)->getType()->getPointeeType();
+    QualType ValTy = E->getArg(2)->getType()->getPointeeType();
+    QualType EcTy = E->getArg(4)->getType()->getPointeeType();
+    unsigned VW = Info.Ctx.getIntWidth(ValTy);
+    bool VSigned = ValTy->isSignedIntegerType();
+
+    auto DigitVal = [&](char C) -> int {
+      int D;
+      if (C >= '0' && C <= '9')
+        D = C - '0';
+      else if (C >= 'a' && C <= 'z')
+        D = C - 'a' + 10;
+      else if (C >= 'A' && C <= 'Z')
+        D = C - 'A' + 10;
+      else
+        return -1;
+      return (uint64_t)D < B ? D : -1;
+    };
+
+    LValue Cur = First;
+    int64_t Pos = 0;
+    auto ReadChar = [&](char &C) -> bool {
+      APValue V;
+      if (!handleLValueToRValueConversion(Info, E, CharTy, Cur, V) ||
+          !V.isInt())
+        return false;
+      C = (char)V.getInt().getZExtValue();
+      return true;
+    };
+    auto Advance = [&]() -> bool {
+      ++Pos;
+      return HandleLValueArrayAdjustment(Info, E, Cur, CharTy, 1);
+    };
+
+    bool Neg = false;
+    if (Pos < Len) {
+      char C;
+      if (!ReadChar(C))
+        return false;
+      if (C == '-' && VSigned) {
+        Neg = true;
+        if (!Advance())
+          return false;
+      }
+    }
+
+    // Accumulate magnitude in VW+1 bits with overflow detection.
+    unsigned AW = VW + 1;
+    APInt Acc(AW, 0), BaseAP(AW, B);
+    bool AnyDigit = false, Ovf = false;
+    while (Pos < Len) {
+      char C;
+      if (!ReadChar(C))
+        return false;
+      int D = DigitVal(C);
+      if (D < 0)
+        break;
+      AnyDigit = true;
+      bool O1 = false, O2 = false;
+      APInt T = Acc.umul_ov(BaseAP, O1);
+      T = T.uadd_ov(APInt(AW, (uint64_t)D), O2);
+      if (O1 || O2)
+        Ovf = true;
+      else
+        Acc = std::move(T);
+      if (!Advance())
+        return false;
+    }
+
+    auto WriteInt = [&](LValue &Dest, QualType Ty, const APInt &Val,
+                        bool Unsigned) -> bool {
+      APValue V{APSInt(Val, Unsigned)};
+      return handleAssignment(Info, E, Dest, Ty, V);
+    };
+    unsigned EW = Info.Ctx.getIntWidth(EcTy);
+    bool EUnsigned = !EcTy->isSignedIntegerType();
+    auto WriteEc = [&](unsigned Code) -> bool {
+      return WriteInt(EcPtr, EcTy, APInt(EW, Code), EUnsigned);
+    };
+
+    if (!AnyDigit) {
+      // invalid_argument: ptr == first, value untouched.
+      if (!WriteEc(1))
+        return false;
+      Result = First;
+      return true;
+    }
+
+    // Range check against the target's representable bounds.
+    APInt MaxMag = VSigned ? (Neg ? APInt::getOneBitSet(AW, VW - 1)
+                                  : APInt::getOneBitSet(AW, VW - 1) - 1)
+                           : APInt::getLowBitsSet(AW, VW);
+    if (Ovf || Acc.ugt(MaxMag)) {
+      // result_out_of_range: ptr past consumed digits, value untouched.
+      if (!WriteEc(2))
+        return false;
+      Result = Cur;
+      return true;
+    }
+
+    APInt Stored = (Neg ? (-Acc) : Acc).trunc(VW);
+    if (!WriteInt(ValPtr, ValTy, Stored, !VSigned) || !WriteEc(0))
+      return false;
+    Result = Cur;
+    return true;
+  }
+
   default:
     return false;
   }

@@ -487,6 +487,136 @@ static bool BuiltinOverflow(Sema &S, CallExpr *TheCall, unsigned BuiltinID) {
   return false;
 }
 
+// Shared checking for __builtin_to_chars / __builtin_from_chars buffer
+// arguments: a pointer to 'char', optionally required to be non-const.
+static bool checkCharconvCharPtr(Sema &S, CallExpr *TheCall, unsigned ArgIdx,
+                                 unsigned BuiltinID, bool RequireNonConst) {
+  ExprResult Arg =
+      S.DefaultFunctionArrayLvalueConversion(TheCall->getArg(ArgIdx));
+  if (Arg.isInvalid())
+    return true;
+  TheCall->setArg(ArgIdx, Arg.get());
+
+  QualType Ty = Arg.get()->getType();
+  const auto *PtrTy = Ty->getAs<PointerType>();
+  if (!PtrTy || !PtrTy->getPointeeType()->isCharType() ||
+      (RequireNonConst && PtrTy->getPointeeType().isConstQualified())) {
+    S.Diag(Arg.get()->getBeginLoc(),
+           diag::err_charconv_builtin_must_be_char_ptr)
+        << (ArgIdx + 1) << S.Context.BuiltinInfo.getQuotedName(BuiltinID)
+        << RequireNonConst << Ty << Arg.get()->getSourceRange();
+    return true;
+  }
+  return false;
+}
+
+// Shared base-argument checking: an integer, in [2, 36] when constant.
+static bool checkCharconvBase(Sema &S, CallExpr *TheCall, unsigned ArgIdx,
+                              unsigned BuiltinID) {
+  ExprResult Arg =
+      S.DefaultFunctionArrayLvalueConversion(TheCall->getArg(ArgIdx));
+  if (Arg.isInvalid())
+    return true;
+  TheCall->setArg(ArgIdx, Arg.get());
+
+  if (!Arg.get()->getType()->isIntegerType()) {
+    S.Diag(Arg.get()->getBeginLoc(), diag::err_charconv_builtin_invalid_base)
+        << S.Context.BuiltinInfo.getQuotedName(BuiltinID)
+        << Arg.get()->getType() << Arg.get()->getSourceRange();
+    return true;
+  }
+  if (std::optional<llvm::APSInt> Base =
+          Arg.get()->getIntegerConstantExpr(S.Context)) {
+    bool Bad = Base->isNegative() || Base->getActiveBits() > 6;
+    if (!Bad) {
+      uint64_t B = Base->getZExtValue();
+      Bad = B < 2 || B > 36;
+    }
+    if (Bad) {
+      S.Diag(Arg.get()->getBeginLoc(), diag::err_charconv_builtin_invalid_base)
+          << S.Context.BuiltinInfo.getQuotedName(BuiltinID)
+          << toString(*Base, 10, Base->isSigned())
+          << Arg.get()->getSourceRange();
+      return true;
+    }
+  }
+  return false;
+}
+
+// __builtin_to_chars(char *first, char *last, T value, int base) -> char *.
+static bool BuiltinToChars(Sema &S, CallExpr *TheCall, unsigned BuiltinID) {
+  if (S.checkArgCount(TheCall, 4))
+    return true;
+  if (checkCharconvCharPtr(S, TheCall, 0, BuiltinID,
+                           /*RequireNonConst=*/true) ||
+      checkCharconvCharPtr(S, TheCall, 1, BuiltinID, /*RequireNonConst=*/true))
+    return true;
+
+  ExprResult Value = S.DefaultFunctionArrayLvalueConversion(TheCall->getArg(2));
+  if (Value.isInvalid())
+    return true;
+  TheCall->setArg(2, Value.get());
+  if (!Value.get()->getType()->isIntegerType()) {
+    S.Diag(Value.get()->getBeginLoc(), diag::err_charconv_builtin_must_be_int)
+        << S.Context.BuiltinInfo.getQuotedName(BuiltinID)
+        << Value.get()->getType() << Value.get()->getSourceRange();
+    return true;
+  }
+
+  if (checkCharconvBase(S, TheCall, 3, BuiltinID))
+    return true;
+
+  // Result is the past-the-end write pointer, of the buffer's type.
+  TheCall->setType(TheCall->getArg(0)->getType());
+  return false;
+}
+
+// __builtin_from_chars(const char *first, const char *last, T *value,
+//                      int base, int *ec) -> const char *.
+static bool BuiltinFromChars(Sema &S, CallExpr *TheCall, unsigned BuiltinID) {
+  if (S.checkArgCount(TheCall, 5))
+    return true;
+  if (checkCharconvCharPtr(S, TheCall, 0, BuiltinID,
+                           /*RequireNonConst=*/false) ||
+      checkCharconvCharPtr(S, TheCall, 1, BuiltinID, /*RequireNonConst=*/false))
+    return true;
+
+  ExprResult Value = S.DefaultFunctionArrayLvalueConversion(TheCall->getArg(2));
+  if (Value.isInvalid())
+    return true;
+  TheCall->setArg(2, Value.get());
+  QualType ValTy = Value.get()->getType();
+  const auto *ValPtr = ValTy->getAs<PointerType>();
+  if (!ValPtr || !ValPtr->getPointeeType()->isIntegerType() ||
+      ValPtr->getPointeeType().isConstQualified()) {
+    S.Diag(Value.get()->getBeginLoc(),
+           diag::err_charconv_builtin_must_be_int_ptr)
+        << S.Context.BuiltinInfo.getQuotedName(BuiltinID) << ValTy
+        << Value.get()->getSourceRange();
+    return true;
+  }
+
+  if (checkCharconvBase(S, TheCall, 3, BuiltinID))
+    return true;
+
+  ExprResult Ec = S.DefaultFunctionArrayLvalueConversion(TheCall->getArg(4));
+  if (Ec.isInvalid())
+    return true;
+  TheCall->setArg(4, Ec.get());
+  const auto *EcPtr = Ec.get()->getType()->getAs<PointerType>();
+  if (!EcPtr || !EcPtr->getPointeeType()->isIntegerType() ||
+      EcPtr->getPointeeType().isConstQualified()) {
+    S.Diag(Ec.get()->getBeginLoc(), diag::err_charconv_builtin_must_be_int_ptr)
+        << S.Context.BuiltinInfo.getQuotedName(BuiltinID) << Ec.get()->getType()
+        << Ec.get()->getSourceRange();
+    return true;
+  }
+
+  // Result is the past-the-consumed-input pointer, of the input's type.
+  TheCall->setType(TheCall->getArg(0)->getType());
+  return false;
+}
+
 namespace {
 struct BuiltinDumpStructGenerator {
   Sema &S;
@@ -3463,6 +3593,14 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   case Builtin::BI__builtin_sub_overflow:
   case Builtin::BI__builtin_mul_overflow:
     if (BuiltinOverflow(*this, TheCall, BuiltinID))
+      return ExprError();
+    break;
+  case Builtin::BI__builtin_to_chars:
+    if (BuiltinToChars(*this, TheCall, BuiltinID))
+      return ExprError();
+    break;
+  case Builtin::BI__builtin_from_chars:
+    if (BuiltinFromChars(*this, TheCall, BuiltinID))
       return ExprError();
     break;
   case Builtin::BI__builtin_operator_new:

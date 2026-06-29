@@ -9711,6 +9711,16 @@ def err_overflow_builtin_must_be_ptr_int : Error<
 def err_overflow_builtin_bit_int_max_size : Error<
   "__builtin_mul_overflow does not support 'signed _BitInt' operands of more "
   "than %0 bits">;
+def err_charconv_builtin_must_be_char_ptr : Error<
+  "argument %0 to %1 must be a pointer to "
+  "%select{|non-const }2'char' (%3 invalid)">;
+def err_charconv_builtin_must_be_int_ptr : Error<
+  "value argument to %0 must be a pointer to a non-const integer type "
+  "(%1 invalid)">;
+def err_charconv_builtin_must_be_int : Error<
+  "value argument to %0 must be an integer type (%1 invalid)">;
+def err_charconv_builtin_invalid_base : Error<
+  "base argument to %0 must be between 2 and 36 (%1 invalid)">;
 def err_expected_struct_pointer_argument : Error<
   "expected pointer to struct as %ordinal0 argument to %1, found %2">;
 def err_expected_callable_argument : Error<

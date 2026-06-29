@@ -5190,6 +5190,272 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     addInstToNewSourceAtom(I, nullptr);
     return RValue::get(Dest, *this);
   }
+  case Builtin::BI__builtin_to_chars: {
+    // (char *first, char *last, T value, int base) -> char *. Inline loop; no
+    // runtime symbol. Precondition base in [2,36] (UB otherwise, like the std).
+    Value *First = EmitScalarExpr(E->getArg(0));
+    Value *Last = EmitScalarExpr(E->getArg(1));
+    Value *Val = EmitScalarExpr(E->getArg(2));
+    Value *Base = EmitScalarExpr(E->getArg(3));
+    bool VSigned = E->getArg(2)->getType()->isSignedIntegerType();
+    unsigned N = cast<llvm::IntegerType>(Val->getType())->getBitWidth();
+    // Calc width must hold the magnitude and the base.
+    auto *CalcTy = llvm::IntegerType::get(getLLVMContext(), std::max(N, 8u));
+
+    Value *Neg = VSigned ? Builder.CreateICmpSLT(
+                               Val, llvm::ConstantInt::get(Val->getType(), 0))
+                         : Builder.getFalse();
+    // Unsigned negate yields the correct magnitude for the most-negative value.
+    Value *Mag =
+        VSigned ? Builder.CreateSelect(Neg, Builder.CreateNeg(Val), Val) : Val;
+    Mag = Builder.CreateZExtOrTrunc(Mag, CalcTy);
+    Value *BaseW = Builder.CreateIntCast(Base, CalcTy, /*isSigned=*/false);
+
+    Address QAddr = CreateDefaultAlignTempAlloca(CalcTy, "tc.q");
+    Address CntAddr = CreateDefaultAlignTempAlloca(Int64Ty, "tc.cnt");
+    Builder.CreateStore(Mag, QAddr);
+    Builder.CreateStore(llvm::ConstantInt::get(Int64Ty, 0), CntAddr);
+
+    BasicBlock *CountBB = createBasicBlock("tc.count");
+    BasicBlock *CountDone = createBasicBlock("tc.count.done");
+    Builder.CreateBr(CountBB);
+    EmitBlock(CountBB);
+    {
+      Value *Q = Builder.CreateLoad(QAddr);
+      Value *QN = Builder.CreateUDiv(Q, BaseW);
+      Builder.CreateStore(QN, QAddr);
+      Value *Cnt = Builder.CreateLoad(CntAddr);
+      Builder.CreateStore(
+          Builder.CreateAdd(Cnt, llvm::ConstantInt::get(Int64Ty, 1)), CntAddr);
+      Builder.CreateCondBr(
+          Builder.CreateICmpEQ(QN, llvm::ConstantInt::get(CalcTy, 0)),
+          CountDone, CountBB);
+    }
+    EmitBlock(CountDone);
+    Value *Nd = Builder.CreateLoad(CntAddr);
+    Value *NegZ = Builder.CreateZExt(Neg, Int64Ty);
+    Value *Len = Builder.CreateAdd(Nd, NegZ);
+    Value *Cap = Builder.CreatePtrDiff(Int8Ty, Last, First);
+    Cap = Builder.CreateSExtOrTrunc(Cap, Int64Ty);
+    Value *Fits = Builder.CreateICmpULE(Len, Cap);
+
+    BasicBlock *WriteBB = createBasicBlock("tc.write");
+    BasicBlock *WriteLoop = createBasicBlock("tc.write.loop");
+    BasicBlock *WriteDone = createBasicBlock("tc.write.done");
+    BasicBlock *TooSmall = createBasicBlock("tc.toosmall");
+    BasicBlock *Exit = createBasicBlock("tc.exit");
+    Builder.CreateCondBr(Fits, WriteBB, TooSmall);
+
+    EmitBlock(WriteBB);
+    if (VSigned) {
+      BasicBlock *SignBB = createBasicBlock("tc.sign");
+      BasicBlock *NoSign = createBasicBlock("tc.nosign");
+      Builder.CreateCondBr(Neg, SignBB, NoSign);
+      EmitBlock(SignBB);
+      Builder.CreateAlignedStore(Builder.getInt8('-'), First, llvm::Align(1));
+      Builder.CreateBr(NoSign);
+      EmitBlock(NoSign);
+    }
+    Value *WriteBase = Builder.CreateGEP(Int8Ty, First, NegZ);
+    Builder.CreateStore(Mag, QAddr); // reset for the write pass
+    Address PosAddr = CreateDefaultAlignTempAlloca(Int64Ty, "tc.pos");
+    Builder.CreateStore(
+        Builder.CreateSub(Nd, llvm::ConstantInt::get(Int64Ty, 1)), PosAddr);
+    Builder.CreateBr(WriteLoop);
+    EmitBlock(WriteLoop);
+    {
+      Value *Q = Builder.CreateLoad(QAddr);
+      Value *D = Builder.CreateURem(Q, BaseW);
+      Value *QN = Builder.CreateUDiv(Q, BaseW);
+      Builder.CreateStore(QN, QAddr);
+      Value *DT = Builder.CreateZExtOrTrunc(D, Int8Ty);
+      Value *IsDig = Builder.CreateICmpULT(DT, Builder.getInt8(10));
+      Value *Ch = Builder.CreateSelect(
+          IsDig, Builder.CreateAdd(DT, Builder.getInt8('0')),
+          Builder.CreateAdd(DT, Builder.getInt8('a' - 10)));
+      Value *Pos = Builder.CreateLoad(PosAddr);
+      Builder.CreateAlignedStore(Ch, Builder.CreateGEP(Int8Ty, WriteBase, Pos),
+                                 llvm::Align(1));
+      Builder.CreateStore(
+          Builder.CreateSub(Pos, llvm::ConstantInt::get(Int64Ty, 1)), PosAddr);
+      Builder.CreateCondBr(
+          Builder.CreateICmpEQ(QN, llvm::ConstantInt::get(CalcTy, 0)),
+          WriteDone, WriteLoop);
+    }
+    EmitBlock(WriteDone);
+    Value *RetOk = Builder.CreateGEP(Int8Ty, First, Len);
+    Builder.CreateBr(Exit);
+    EmitBlock(TooSmall);
+    Builder.CreateBr(Exit);
+    EmitBlock(Exit);
+    PHINode *Ret = Builder.CreatePHI(First->getType(), 2);
+    Ret->addIncoming(RetOk, WriteDone);
+    Ret->addIncoming(llvm::Constant::getNullValue(First->getType()), TooSmall);
+    return RValue::get(Ret);
+  }
+  case Builtin::BI__builtin_from_chars: {
+    // (const char *first, const char *last, T *value, int base, int *ec)
+    //   -> const char *.
+    Value *First = EmitScalarExpr(E->getArg(0));
+    Value *Last = EmitScalarExpr(E->getArg(1));
+    Value *ValPtr = EmitScalarExpr(E->getArg(2));
+    Value *Base = EmitScalarExpr(E->getArg(3));
+    Value *EcPtr = EmitScalarExpr(E->getArg(4));
+
+    QualType ValPointee = E->getArg(2)->getType()->getPointeeType();
+    QualType EcPointee = E->getArg(4)->getType()->getPointeeType();
+    bool VSigned = ValPointee->isSignedIntegerType();
+    auto *ValTy = cast<llvm::IntegerType>(ConvertType(ValPointee));
+    llvm::Type *EcTy = ConvertType(EcPointee);
+    unsigned N = ValTy->getBitWidth();
+    auto *AccTy = llvm::IntegerType::get(getLLVMContext(), std::max(N + 1, 8u));
+    llvm::Align ValAlign =
+        getContext().getTypeAlignInChars(ValPointee).getAsAlign();
+    llvm::Align EcAlign =
+        getContext().getTypeAlignInChars(EcPointee).getAsAlign();
+    Value *BaseA = Builder.CreateIntCast(Base, AccTy, /*isSigned=*/false);
+
+    Address CurAddr = CreateDefaultAlignTempAlloca(First->getType(), "fc.cur");
+    Address AccAddr = CreateDefaultAlignTempAlloca(AccTy, "fc.acc");
+    Address OvfAddr = CreateDefaultAlignTempAlloca(Int8Ty, "fc.ovf");
+    Address AnyAddr = CreateDefaultAlignTempAlloca(Int8Ty, "fc.any");
+    Address NegAddr = CreateDefaultAlignTempAlloca(Int8Ty, "fc.neg");
+    Builder.CreateStore(First, CurAddr);
+    Builder.CreateStore(llvm::ConstantInt::get(AccTy, 0), AccAddr);
+    Builder.CreateStore(Builder.getInt8(0), OvfAddr);
+    Builder.CreateStore(Builder.getInt8(0), AnyAddr);
+    Builder.CreateStore(Builder.getInt8(0), NegAddr);
+
+    if (VSigned) {
+      // Optional leading '-' (no '+', per [charconv.from.chars]).
+      BasicBlock *SignChk = createBasicBlock("fc.signchk");
+      BasicBlock *SignRead = createBasicBlock("fc.signread");
+      BasicBlock *DoNeg = createBasicBlock("fc.doneg");
+      BasicBlock *AfterSign = createBasicBlock("fc.aftersign");
+      Builder.CreateBr(SignChk);
+      EmitBlock(SignChk);
+      Value *Cur0 = Builder.CreateLoad(CurAddr);
+      Builder.CreateCondBr(Builder.CreateICmpNE(Cur0, Last), SignRead,
+                           AfterSign);
+      EmitBlock(SignRead);
+      Value *C0 = Builder.CreateAlignedLoad(Int8Ty, Cur0, llvm::Align(1));
+      Builder.CreateCondBr(Builder.CreateICmpEQ(C0, Builder.getInt8('-')),
+                           DoNeg, AfterSign);
+      EmitBlock(DoNeg);
+      Builder.CreateStore(Builder.getInt8(1), NegAddr);
+      Builder.CreateStore(Builder.CreateGEP(Int8Ty, Cur0, Builder.getInt64(1)),
+                          CurAddr);
+      Builder.CreateBr(AfterSign);
+      EmitBlock(AfterSign);
+    }
+
+    BasicBlock *Loop = createBasicBlock("fc.loop");
+    BasicBlock *Body = createBasicBlock("fc.body");
+    BasicBlock *Acc = createBasicBlock("fc.acc");
+    BasicBlock *AfterLoop = createBasicBlock("fc.after");
+    Builder.CreateBr(Loop);
+    EmitBlock(Loop);
+    Value *Cur = Builder.CreateLoad(CurAddr);
+    Builder.CreateCondBr(Builder.CreateICmpNE(Cur, Last), Body, AfterLoop);
+
+    EmitBlock(Body);
+    Value *Ch = Builder.CreateAlignedLoad(Int8Ty, Cur, llvm::Align(1));
+    auto InRange = [&](char Lo, char Hi) {
+      return Builder.CreateAnd(Builder.CreateICmpUGE(Ch, Builder.getInt8(Lo)),
+                               Builder.CreateICmpULE(Ch, Builder.getInt8(Hi)));
+    };
+    Value *IsDig = InRange('0', '9');
+    Value *IsLow = InRange('a', 'z');
+    Value *IsUp = InRange('A', 'Z');
+    Value *DVal = Builder.CreateSelect(
+        IsDig, Builder.CreateSub(Ch, Builder.getInt8('0')),
+        Builder.CreateSelect(
+            IsLow, Builder.CreateSub(Ch, Builder.getInt8('a' - 10)),
+            Builder.CreateSelect(
+                IsUp, Builder.CreateSub(Ch, Builder.getInt8('A' - 10)),
+                Builder.getInt8(0))));
+    Value *DW = Builder.CreateZExtOrTrunc(DVal, AccTy);
+    Value *IsChar = Builder.CreateOr(Builder.CreateOr(IsDig, IsLow), IsUp);
+    Value *Valid = Builder.CreateAnd(IsChar, Builder.CreateICmpULT(DW, BaseA));
+    Builder.CreateCondBr(Valid, Acc, AfterLoop);
+
+    EmitBlock(Acc);
+    Builder.CreateStore(Builder.getInt8(1), AnyAddr);
+    Value *AccV = Builder.CreateLoad(AccAddr);
+    Value *O1, *O2;
+    Value *Mul = EmitOverflowIntrinsic(
+        *this, llvm::Intrinsic::umul_with_overflow, AccV, BaseA, O1);
+    Value *Sum = EmitOverflowIntrinsic(
+        *this, llvm::Intrinsic::uadd_with_overflow, Mul, DW, O2);
+    Builder.CreateStore(Sum, AccAddr);
+    Value *OvfNow = Builder.CreateOr(O1, O2);
+    Value *OldOvf =
+        Builder.CreateICmpNE(Builder.CreateLoad(OvfAddr), Builder.getInt8(0));
+    Builder.CreateStore(
+        Builder.CreateZExt(Builder.CreateOr(OvfNow, OldOvf), Int8Ty), OvfAddr);
+    Builder.CreateStore(Builder.CreateGEP(Int8Ty, Cur, Builder.getInt64(1)),
+                        CurAddr);
+    Builder.CreateBr(Loop);
+
+    EmitBlock(AfterLoop);
+    Value *CurEnd = Builder.CreateLoad(CurAddr);
+    Value *AnyB =
+        Builder.CreateICmpNE(Builder.CreateLoad(AnyAddr), Builder.getInt8(0));
+    Value *NegB =
+        Builder.CreateICmpNE(Builder.CreateLoad(NegAddr), Builder.getInt8(0));
+    Value *OvfB =
+        Builder.CreateICmpNE(Builder.CreateLoad(OvfAddr), Builder.getInt8(0));
+    Value *AccFin = Builder.CreateLoad(AccAddr);
+    // Range bound: signed uses 2^(N-1)-1 (pos) / 2^(N-1) (neg); unsigned 2^N-1.
+    Value *MaxMag;
+    if (VSigned) {
+      Value *MaxPos = llvm::ConstantInt::get(
+          AccTy, llvm::APInt::getOneBitSet(AccTy->getBitWidth(), N - 1) - 1);
+      Value *MaxNeg = llvm::ConstantInt::get(
+          AccTy, llvm::APInt::getOneBitSet(AccTy->getBitWidth(), N - 1));
+      MaxMag = Builder.CreateSelect(NegB, MaxNeg, MaxPos);
+    } else {
+      MaxMag = llvm::ConstantInt::get(
+          AccTy, llvm::APInt::getLowBitsSet(AccTy->getBitWidth(), N));
+    }
+    Value *TooBig =
+        Builder.CreateOr(OvfB, Builder.CreateICmpUGT(AccFin, MaxMag));
+    Value *AccTrunc = Builder.CreateTrunc(AccFin, ValTy);
+    Value *Final =
+        VSigned
+            ? Builder.CreateSelect(NegB, Builder.CreateNeg(AccTrunc), AccTrunc)
+            : AccTrunc;
+
+    BasicBlock *Invalid = createBasicBlock("fc.invalid");
+    BasicBlock *Check = createBasicBlock("fc.check");
+    BasicBlock *Oor = createBasicBlock("fc.oor");
+    BasicBlock *Ok = createBasicBlock("fc.ok");
+    BasicBlock *Done = createBasicBlock("fc.done");
+    Builder.CreateCondBr(AnyB, Check, Invalid);
+
+    EmitBlock(Invalid);
+    Builder.CreateAlignedStore(llvm::ConstantInt::get(EcTy, 1), EcPtr, EcAlign);
+    Builder.CreateBr(Done);
+
+    EmitBlock(Check);
+    Builder.CreateCondBr(TooBig, Oor, Ok);
+
+    EmitBlock(Oor);
+    Builder.CreateAlignedStore(llvm::ConstantInt::get(EcTy, 2), EcPtr, EcAlign);
+    Builder.CreateBr(Done);
+
+    EmitBlock(Ok);
+    Builder.CreateAlignedStore(Final, ValPtr, ValAlign);
+    Builder.CreateAlignedStore(llvm::ConstantInt::get(EcTy, 0), EcPtr, EcAlign);
+    Builder.CreateBr(Done);
+
+    EmitBlock(Done);
+    PHINode *Ret = Builder.CreatePHI(First->getType(), 3);
+    Ret->addIncoming(First, Invalid);
+    Ret->addIncoming(CurEnd, Oor);
+    Ret->addIncoming(CurEnd, Ok);
+    return RValue::get(Ret);
+  }
   case Builtin::BI__builtin_wmemchr: {
     // The MSVC runtime library does not provide a definition of wmemchr, so we
     // need an inline implementation.
