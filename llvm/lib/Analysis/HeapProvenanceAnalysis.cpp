@@ -17,23 +17,25 @@ using namespace llvm;
 AnalysisKey ForwardHeapProvenanceAnalysis::Key;
 AnalysisKey BackwardHeapProvenanceAnalysis::Key;
 AnalysisKey HeapProvenanceAnalysis::Key;
-
 bool ForwardHeapProvenanceAnalysisResult::invalidate(
     Module &, const PreservedAnalyses &PA,
     ModuleAnalysisManager::Invalidator &) {
-  return false;
+  auto PAC = PA.getChecker<ForwardHeapProvenanceAnalysis>();
+  return !PAC.preservedWhenStateless();
 }
 
 bool BackwardHeapProvenanceAnalysisResult::invalidate(
     Module &, const PreservedAnalyses &PA,
     ModuleAnalysisManager::Invalidator &) {
-  return false;
+  auto PAC = PA.getChecker<BackwardHeapProvenanceAnalysis>();
+  return !PAC.preservedWhenStateless();
 }
 
 bool HeapProvenanceAnalysisResult::invalidate(
     Module &, const PreservedAnalyses &PA,
     ModuleAnalysisManager::Invalidator &) {
-  return false;
+  auto PAC = PA.getChecker<HeapProvenanceAnalysis>();
+  return !PAC.preservedWhenStateless();
 }
 
 static bool isAllocLibCall(const Value *V, const TargetLibraryInfo *TLI) {
@@ -57,48 +59,22 @@ static bool mergeLattice(const Value *Target, HeapProvenanceLattice &Dest,
   if (Src.State == Lattice::StateKind::Uninit)
     return false;
 
-  auto MergedDir = static_cast<Lattice::Direction>(Dest.Dir | Src.Dir);
-
   if (Dest.State == Lattice::StateKind::Uninit) {
     Dest = Src;
-    Dest.Dir = MergedDir;
     return true;
   }
 
-  if (Dest.State == Lattice::StateKind::Unknown) {
-    if (Dest.Dir != MergedDir) {
-      Dest.Dir = MergedDir;
-      return true;
-    }
+  if (Dest.State == Lattice::StateKind::Unknown)
     return false;
-  }
 
-  if (Src.State == Lattice::StateKind::Unknown ||
-      Dest.State == Lattice::StateKind::Unknown) {
-    bool Changed =
-        (Dest.State != Lattice::StateKind::Unknown) || (Dest.Dir != MergedDir);
+  if (Src.State == Lattice::StateKind::Unknown) {
     Dest.State = Lattice::StateKind::Unknown;
-    Dest.Dir = MergedDir;
     Dest.HeadPayload = {Lattice::Payload::Kind::None, nullptr};
-    return Changed;
-  }
-
-  bool Changed = false;
-  if (Dest.Dir != MergedDir) {
-    Dest.Dir = MergedDir;
-    Changed = true;
+    return true;
   }
 
   if (Dest.State == Src.State && Dest.HeadPayload == Src.HeadPayload)
-    return Changed;
-
-  if (Dest.isUninit()) {
-    Dest.State = Src.State;
-    if (isa_and_nonnull<PHINode>(Target) || isa_and_nonnull<SelectInst>(Target))
-      Dest.State = Lattice::StateKind::HeapChunkInterior;
-    Dest.HeadPayload = Src.HeadPayload;
-    return true;
-  }
+    return false;
 
   if (Dest.HeadPayload != Src.HeadPayload) {
     Dest.State = Lattice::StateKind::Unknown;
@@ -106,7 +82,7 @@ static bool mergeLattice(const Value *Target, HeapProvenanceLattice &Dest,
     return true;
   }
 
-  return Changed;
+  return false;
 }
 
 static bool mergeIntoMap(DenseMap<const Value *, HeapProvenanceLattice> &Map,
@@ -132,7 +108,6 @@ ForwardHeapProvenanceAnalysis::run(Module &M, ModuleAnalysisManager &MAM) {
       if (isAllocLibCall(&I, &TLI)) {
         HeapProvenanceLattice Info;
         Info.State = HeapProvenanceLattice::StateKind::HeapChunkHead;
-        Info.Dir = HeapProvenanceLattice::Forward;
         Info.HeadPayload = {HeapProvenanceLattice::Payload::Kind::Ref, &I};
         Res.setInfo(&I, Info);
         Worklist.push_back(&I);
@@ -146,7 +121,7 @@ ForwardHeapProvenanceAnalysis::run(Module &M, ModuleAnalysisManager &MAM) {
   while (!Worklist.empty()) {
     const Value *V = Worklist.pop_back_val();
     HeapProvenanceLattice Info = Res.getInfo(V);
-    if (!Info.isValid() || !(Info.Dir & HeapProvenanceLattice::Forward))
+    if (!Info.isValid())
       continue;
 
     HeapProvenanceLattice Derived = Info;
@@ -280,7 +255,6 @@ BackwardHeapProvenanceAnalysis::run(Module &M, ModuleAnalysisManager &MAM) {
           for (const Value *C : Candidates) {
             HeapProvenanceLattice Info;
             Info.State = HeapProvenanceLattice::StateKind::Unknown;
-            Info.Dir = HeapProvenanceLattice::Backward;
             BlockEntryState[&BB][C] = Info;
           }
           BBWorklist.push_back(&BB);
@@ -341,7 +315,6 @@ BackwardHeapProvenanceAnalysis::run(Module &M, ModuleAnalysisManager &MAM) {
               if (Candidates.count(ArgVal)) {
                 HeapProvenanceLattice Info;
                 Info.State = HeapProvenanceLattice::StateKind::HeapChunkHead;
-                Info.Dir = HeapProvenanceLattice::Backward;
                 Info.HeadPayload = {HeapProvenanceLattice::Payload::Kind::Ref,
                                     ArgVal};
                 CurState[ArgVal] = Info;
@@ -358,7 +331,6 @@ BackwardHeapProvenanceAnalysis::run(Module &M, ModuleAnalysisManager &MAM) {
                         HeapProvenanceLattice Info;
                         Info.State =
                             HeapProvenanceLattice::StateKind::HeapChunkHead;
-                        Info.Dir = HeapProvenanceLattice::Backward;
                         Info.HeadPayload = {
                             HeapProvenanceLattice::Payload::Kind::Ref, CallOp};
                         CurState[CallOp] = Info;
@@ -465,7 +437,7 @@ PreservedAnalyses HeapProvenancePrinterPass::run(Module &M,
            << (Info.State == HeapProvenanceLattice::StateKind::HeapChunkHead
                    ? "HeapChunkHead"
                    : "HeapChunkInterior")
-           << " (" << Info.getExpr() << ")" << Info.getDirectionStr() << "\n";
+           << " (" << Info.getExpr() << ")\n";
       }
     }
     for (BasicBlock &BB : F) {
@@ -478,7 +450,7 @@ PreservedAnalyses HeapProvenancePrinterPass::run(Module &M,
              << (Info.State == HeapProvenanceLattice::StateKind::HeapChunkHead
                      ? "HeapChunkHead"
                      : "HeapChunkInterior")
-             << " (" << Info.getExpr() << ")" << Info.getDirectionStr() << "\n";
+             << " (" << Info.getExpr() << ")\n";
         }
       }
     }
