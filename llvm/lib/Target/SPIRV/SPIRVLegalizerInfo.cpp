@@ -458,6 +458,10 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
 
   getActionDefinitionsBuilder({G_SADDO, G_SSUBO}).lower();
 
+  getActionDefinitionsBuilder({G_SMULFIX, G_UMULFIX})
+      .unsupportedFor({s64})
+      .lower();
+
   getActionDefinitionsBuilder({G_LROUND, G_LLROUND})
       .legalForCartesianProduct(allFloatScalarsAndVectors,
                                 allIntScalarsAndVectors);
