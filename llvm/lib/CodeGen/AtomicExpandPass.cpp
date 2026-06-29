@@ -1251,6 +1251,7 @@ bool AtomicExpandImpl::expandPartwordCmpXchg(AtomicCmpXchgInst *CI) {
   // addIncoming is done first so that any replaceAllUsesWith calls during
   // normalization correctly update the PHI incoming value.
   InitLoaded->setVolatile(CI->isVolatile());
+  copyMetadataForAtomic(*InitLoaded, *CI);
   if (TLI->shouldIssueAtomicLoadForAtomicEmulationLoop()) {
     InitLoaded->setAtomic(AtomicOrdering::Monotonic, CI->getSyncScopeID());
     // The newly created load might need to be lowered further. Because it is
@@ -1272,6 +1273,7 @@ bool AtomicExpandImpl::expandPartwordCmpXchg(AtomicCmpXchgInst *CI) {
   // expecting the underlying cmpxchg to be a machine instruction,
   // which is strong anyways.
   NewCI->setWeak(CI->isWeak());
+  copyMetadataForAtomic(*NewCI, *CI);
 
   Value *OldVal = Builder.CreateExtractValue(NewCI, 0);
   Value *Success = Builder.CreateExtractValue(NewCI, 1);
