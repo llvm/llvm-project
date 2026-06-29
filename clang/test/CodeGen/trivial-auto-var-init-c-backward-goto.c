@@ -232,5 +232,34 @@ void nested_loops_switch(int n, int c) {
   }
 }
 
+// Computed goto with multiple scopes: sources unknown, so every bypassed
+// variable gets a single function-scope init in entry. The switch case targets
+// must not add a second init store for %x.
+// ZERO-LABEL: define {{.*}}@computed_goto_multi_scope(
+// ZERO: entry:
+// ZERO: store i32 0, ptr %x, {{.*}}!annotation [[AUTO_INIT]]
+// ZERO: indirectbr
+// ZERO-NOT: store i32 0, ptr %x, {{.*}}!annotation
+// PATTERN-LABEL: define {{.*}}@computed_goto_multi_scope(
+// PATTERN: entry:
+// PATTERN: store i32 -1431655766, ptr %x, {{.*}}!annotation [[AUTO_INIT]]
+// PATTERN: indirectbr
+// PATTERN-NOT: store i32 -1431655766, ptr %x, {{.*}}!annotation
+void computed_goto_multi_scope(int n, int c) {
+  void *t[] = {&&L1, &&L2};
+  goto *t[n];
+  int x;
+  switch (c) {
+  case 0:
+  L1:
+    use_int(&x);
+    break;
+  default:
+  L2:
+    use_int(&x);
+    break;
+  }
+}
+
 // ZERO: [[AUTO_INIT]] = !{!"auto-init"}
 // PATTERN: [[AUTO_INIT]] = !{!"auto-init"}
