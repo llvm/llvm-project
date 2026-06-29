@@ -3,6 +3,11 @@ standards:
   - posix
 merge_yaml_files:
   - ../htons-family.yaml
+public_includes:
+  # This is permitted (but not required) by POSIX and many applications depend
+  # on it. If we have a "pedantic" mode in the future, we might want to exclude
+  # it there.
+  - sys/socket.h
 macros:
   - macro_name: IPPROTO_IP
     macro_header: netinet-in-macros.h
@@ -103,7 +108,6 @@ macros:
 types:
   - type_name: in_port_t
   - type_name: in_addr_t
-  - type_name: sa_family_t
   - type_name: struct_sockaddr_in
   - type_name: struct_sockaddr_in6
   - type_name: struct_in_addr
@@ -113,6 +117,9 @@ types:
   - type_name: struct_ip_mreqn
   - type_name: struct_ip_msfilter
   - type_name: struct_ip_opts
+  # Type also defined by sys/socket.h, but listing it explicitly as it is
+  # required by POSIX.
+  - type_name: sa_family_t
 enums: []
 objects:
   - object_name: in6addr_any
