@@ -840,6 +840,7 @@ def SI_CALL_ISEL : SPseudoInstSI <
   [(AMDGPUcall i64:$src0, tglobaladdr:$callee)]> {
   let Size = 4;
   let isCall = 1;
+  let UseNamedOperandTable = 1;
   let SchedRW = [WriteBranch];
   let usesCustomInserter = 1;
   // TODO: Should really base this on the call target
