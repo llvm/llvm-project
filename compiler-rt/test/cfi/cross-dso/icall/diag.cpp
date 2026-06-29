@@ -113,8 +113,8 @@ int main(int argc, char *argv[]) {
   void *p;
   if (argv[1][0] == 'i') {
     // ICALL-DIAG: runtime error: control flow integrity check for type 'void *(int)' failed during indirect function call
-    // ICALL-DIAG: SUMMARY: UndefinedBehaviorSanitizer: cfi-icall
     // ICALL-DIAG-NEXT: dynamic.so+0x{{[[:xdigit:]]+}}): note: create_B() {{(\(.cfi_jt\) )?}}defined here
+    // ICALL-DIAG: SUMMARY: UndefinedBehaviorSanitizer: cfi-icall
     // ICALL-NODIAG-NOT: runtime error: control flow integrity check {{.*}} during indirect function call
     p = ((void *(*)(int))create_B)(42);
   } else {

@@ -196,6 +196,18 @@ void CallGraph::addNodeForDecl(Decl* D, bool IsGlobal) {
   }
 }
 
+void CallGraph::addNodesForVarInit(VarDecl *VD) {
+  // Only variables with static or thread storage duration need this: their
+  // initializers run with no function caller and are not reached by any body
+  // walk, so a lambda or block defined in one would be missed. Local variables
+  // are covered by the enclosing body walk, and parameter default arguments by
+  // CGBuilder at call sites. Attach discovered calls to the root.
+  if (!VD->hasGlobalStorage())
+    return;
+  if (Expr *Init = VD->getInit())
+    CGBuilder{this, Root}.Visit(Init);
+}
+
 CallGraphNode *CallGraph::getNode(const Decl *F) const {
   FunctionMapTy::const_iterator I = FunctionMap.find(F);
   if (I == FunctionMap.end()) return nullptr;
