@@ -64,20 +64,22 @@
 //     b = bitcast A <-- cross-bank copy
 //     C = copy A    <-- same-bank copy
 //
-// - Fold REG_SEQUENCE subregister uses:
+// - Optimize REG_SEQUENCE subregister uses:
 //
-//     Replace uses of subregisters of registers defined by
-//     REG_SEQUENCE instructions with direct uses of the source
-//     registers.
+//     Create COPYs for uses that extract subregisters from a REG_SEQUENCE
+//     output, exposing the original sources to target-specific folding
+//     passes.
 //
 //     Example:
 //       A = REG_SEQUENCE B, sub0, C, sub1
 //       D = ADD A.sub0, E
 //     =>
 //       A = REG_SEQUENCE B, sub0, C, sub1
-//       D = ADD B, E
+//       X = COPY B
+//       D = ADD X, E
 //
-//     Eliminate the REG_SEQUENCE if all uses are folded.
+//     The COPY can then be folded by target-specific passes. The
+//     REG_SEQUENCE is eliminated if it becomes dead.
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/PeepholeOptimizer.h"
@@ -136,10 +138,6 @@ static cl::opt<bool> DisableNAPhysCopyOpt(
     "disable-non-allocatable-phys-copy-opt", cl::Hidden, cl::init(false),
     cl::desc("Disable non-allocatable physical register copy optimization"));
 
-static cl::opt<bool> DisablePeepholeRegSeqFold(
-    "disable-peephole-regseq-fold", cl::Hidden, cl::init(false),
-    cl::desc("Disable REG_SEQUENCE subregister use folding"));
-
 // Limit the number of PHI instructions to process
 // in PeepholeOptimizer::getNextSource.
 static cl::opt<unsigned>
@@ -161,10 +159,8 @@ STATISTIC(NumSelects, "Number of selects optimized");
 STATISTIC(NumUncoalescableCopies, "Number of uncoalescable copies optimized");
 STATISTIC(NumRewrittenCopies, "Number of copies rewritten");
 STATISTIC(NumNAPhysCopies, "Number of non-allocatable physical copies removed");
-STATISTIC(NumRegSeqUsesRewritten,
-          "Number of REG_SEQUENCE subregister uses rewritten");
-STATISTIC(NumRegSeqEliminated,
-          "Number of REG_SEQUENCE instructions eliminated");
+STATISTIC(NumRegSequenceCopies,
+          "Number of copies created for REG_SEQUENCE uses");
 
 namespace {
 
@@ -479,9 +475,9 @@ private:
   bool optimizeCoalescableCopy(MachineInstr &MI);
   bool optimizeUncoalescableCopy(MachineInstr &MI,
                                  SmallPtrSetImpl<MachineInstr *> &LocalMIs);
+  bool optimizeRegSequenceUses(MachineInstr &MI,
+                               SmallPtrSetImpl<MachineInstr *> &LocalMIs);
   bool optimizeRecurrence(MachineInstr &PHI);
-  bool foldRegSequenceUses(MachineInstr &MI, bool &ShouldEraseMI);
-  bool canRewriteRegSequenceSubRegUse(MachineOperand &UseMO, RegSubRegPair Src);
   bool findNextSource(const TargetRegisterClass *DefRC, unsigned DefSubReg,
                       RegSubRegPair RegSubReg, RewriteMapTy &RewriteMap);
   bool isMoveImmediate(MachineInstr &MI, SmallSet<Register, 4> &ImmDefRegs,
@@ -1363,20 +1359,126 @@ MachineInstr &PeepholeOptimizer::rewriteSource(MachineInstr &CopyLike,
   return *NewCopy;
 }
 
-/// Optimize copy-like instructions to create
-/// register coalescer friendly instruction.
-/// The optimization tries to kill-off the \p MI by looking
-/// through a chain of copies to find a source that has a compatible
-/// register class.
-/// If such a source is found, it replace \p MI by a generic COPY
-/// operation.
-/// \pre isUncoalescableCopy(*MI) is true.
-/// \return True, when \p MI has been optimized. In that case, \p MI has
-/// been removed from its parent.
-/// All COPY instructions created, are inserted in \p LocalMIs.
+/// Create COPYs for subregister uses of a REG_SEQUENCE instruction.
+/// See description at the top of this file.
+///
+/// Note: This optimization assumes that optimizeCoalescableCopy has
+/// simplified the REG_SEQUENCES inputs using ValueTracker. In
+/// particular, it does not attempt to handle subregister composition
+/// or tracking inputs to their sources.
+bool PeepholeOptimizer::optimizeRegSequenceUses(
+    MachineInstr &MI, SmallPtrSetImpl<MachineInstr *> &LocalMIs) {
+  assert((MI.isRegSequence() || MI.isRegSequenceLike()) &&
+         "Expected REG_SEQUENCE or REG_SEQUENCE-like instruction");
+
+  Register DstReg = MI.getOperand(0).getReg();
+  if (DstReg.isPhysical())
+    return false;
+
+  SmallVector<TargetInstrInfo::RegSubRegPairAndIdx, 4> InputRegs;
+  if (!TII->getRegSequenceInputs(MI, 0, InputRegs))
+    return false;
+
+  bool Changed = false;
+  for (MachineOperand &UseMO :
+       make_early_inc_range(MRI->use_nodbg_operands(DstReg))) {
+    unsigned UseSubReg = UseMO.getSubReg();
+    if (!UseSubReg || UseMO.isUndef())
+      continue;
+
+    MachineInstr *UseMI = UseMO.getParent();
+    if (UseMI->isCopy() || UseMI->isInlineAsm())
+      continue;
+
+    // FIMXE This is a workaround for some restrictions on AMDGPU
+    // instructions. For instance, S_MOVRELS_B32 expects src0 to be a
+    // subreg of its implicit vector register use.
+    if (UseMI->hasRegisterImplicitUseOperand(DstReg))
+      continue;
+
+    auto *It = llvm::find_if(
+        InputRegs, [UseSubReg](const TargetInstrInfo::RegSubRegPairAndIdx &P) {
+          return P.SubIdx == UseSubReg;
+        });
+    if (It == InputRegs.end() || !It->Reg.isVirtual())
+      continue;
+
+    Register SrcReg = It->Reg;
+    unsigned SrcSubReg = It->SubReg;
+
+    // Determine the register class for the COPY destination.
+    // We want to use the REG_SEQUENCE's subregister class, but constrain it
+    // to what the use instruction requires if needed.
+    const TargetRegisterClass *DefRC = MRI->getRegClass(DstReg);
+    const TargetRegisterClass *DefSubRC =
+        TRI->getSubRegisterClass(DefRC, UseSubReg);
+
+    if (!DefSubRC || !DefSubRC->isAllocatable())
+      continue;
+
+    const TargetRegisterClass *CopyRC = DefSubRC;
+
+    // Constrain to the use instruction's requirements.
+    unsigned UseOpIdx = UseMI->getOperandNo(&UseMO);
+    if (const TargetRegisterClass *UseRC =
+            UseMI->getRegClassConstraint(UseOpIdx, TII, TRI)) {
+      const TargetRegisterClass *CommonRC =
+          TRI->getCommonSubClass(DefSubRC, UseRC);
+      if (!CommonRC)
+        continue; // Incompatible
+      CopyRC = CommonRC;
+    }
+
+    // Ensure the source can provide this register class.
+    const TargetRegisterClass *SrcRC = MRI->getRegClass(SrcReg);
+    const TargetRegisterClass *SrcProvides = SrcRC;
+    if (SrcSubReg) {
+      SrcProvides = TRI->getSubRegisterClass(SrcRC, SrcSubReg);
+      if (!SrcProvides)
+        continue;
+    }
+
+    // Check if what the source provides is compatible with what we need.
+    if (!TRI->getCommonSubClass(SrcProvides, CopyRC))
+      continue;
+
+    // Create a COPY after the REG_SEQUENCE.
+    // This placement ensures the COPY dominates all uses (including PHIs)
+    // since the REG_SEQUENCE must dominate its uses.
+    Register NewReg = MRI->createVirtualRegister(CopyRC);
+    MachineInstr *NewCopy =
+        BuildMI(*MI.getParent(), std::next(MachineBasicBlock::iterator(MI)),
+                MI.getDebugLoc(), TII->get(TargetOpcode::COPY), NewReg)
+            .addReg(SrcReg, {}, SrcSubReg);
+    LocalMIs.insert(NewCopy);
+
+    // Clear kill flags on the source register since we're extending its
+    // lifetime.
+    MRI->clearKillFlags(SrcReg);
+
+    UseMO.setReg(NewReg);
+    UseMO.setSubReg(0);
+
+    LLVM_DEBUG(dbgs() << "Created COPY for REG_SEQUENCE use: "
+                      << *MRI->getVRegDef(NewReg));
+    Changed = true;
+    ++NumRegSequenceCopies;
+  }
+
+  // If REG_SEQUENCE has no remaining uses, delete it.
+  if (Changed && MRI->use_nodbg_empty(DstReg)) {
+    MRI->markUsesInDebugValueAsUndef(DstReg);
+    LLVM_DEBUG(dbgs() << "Deleting dead REG_SEQUENCE: " << MI);
+    MI.eraseFromParent();
+  }
+
+  return Changed;
+}
+
 bool PeepholeOptimizer::optimizeUncoalescableCopy(
     MachineInstr &MI, SmallPtrSetImpl<MachineInstr *> &LocalMIs) {
   assert(isUncoalescableCopy(MI) && "Invalid argument");
+
   UncoalescableRewriter CpyRewriter(MI);
 
   // Rewrite each rewritable source by generating new COPYs. This works
@@ -1764,119 +1866,6 @@ bool PeepholeOptimizerLegacy::runOnMachineFunction(MachineFunction &MF) {
   return Impl.run(MF);
 }
 
-/// Check if a REG_SEQUENCE subregister use can be safely rewritten to use
-/// the source register directly.
-bool PeepholeOptimizer::canRewriteRegSequenceSubRegUse(MachineOperand &UseMO,
-                                                       RegSubRegPair Src) {
-  if (!Src.Reg.isValid() || !Src.Reg.isVirtual())
-    return false;
-
-  MachineInstr *UseMI = UseMO.getParent();
-  Register DstReg = UseMO.getReg();
-
-  // Instructions, e.g. AMDGPU S_MOVRELS_B32, may require specific
-  // subregister relationships with implicit operands. Replacing the
-  // REG_SEQUENCE use with one of the source of its subregisters can
-  // violate these constraints.
-  if (UseMI->hasRegisterImplicitUseOperand(DstReg) || UseMI->isInlineAsm())
-    return false;
-
-  const MCInstrDesc &UseDesc = UseMI->getDesc();
-  unsigned OpNo = UseMI->getOperandNo(&UseMO);
-  if (OpNo >= UseDesc.getNumOperands()) {
-    assert(UseDesc.isVariadic() &&
-           "Explicit op beyond getNumOperands() implies UseMI variadic");
-    // No target specific legality check possible/necessary.
-    return true;
-  }
-
-  const TargetRegisterClass *SrcRC = MRI->getRegClass(Src.Reg);
-  const TargetRegisterClass *OpRC = TII->getRegClass(UseDesc, OpNo);
-
-  if (OpRC) {
-    const TargetRegisterClass *ConstrainRC =
-        Src.SubReg ? TRI->getMatchingSuperRegClass(SrcRC, OpRC, Src.SubReg)
-                   : OpRC;
-    if (!ConstrainRC || !MRI->constrainRegClass(Src.Reg, ConstrainRC))
-      return false;
-  }
-
-  // Check target-specific operand legality on a temporary MO.
-  // Kill/undef flags do not reflect the actual MO, but this should
-  // not matter for legality.
-  MachineOperand MO = MachineOperand::CreateReg(Src.Reg, /*isDef=*/false);
-  MO.setSubReg(Src.SubReg);
-  if (TII->isOperandLegal(*UseMI, OpNo, &MO))
-    return true;
-
-  MRI->setRegClass(Src.Reg, SrcRC); // Undo constrainRegClass.
-  return false;
-}
-
-/// Fold uses of REG_SEQUENCE subregisters to directly use the source registers.
-///
-/// Example: %8 = V_ADD_CO_U32_e32 %4, %7.sub0
-///    where %7 = REG_SEQUENCE %5, sub0, %6, sub1
-/// becomes: %8 = V_ADD_CO_U32_e32 %4, %5
-bool PeepholeOptimizer::foldRegSequenceUses(MachineInstr &MI,
-                                            bool &ShouldEraseMI) {
-  assert(MI.isRegSequence() && "Expected REG_SEQUENCE instruction");
-  ShouldEraseMI = false;
-
-  if (DisablePeepholeRegSeqFold)
-    return false;
-
-  Register DstReg = MI.getOperand(0).getReg();
-
-  bool Changed = false;
-  for (auto UI = MRI->use_nodbg_begin(DstReg), UE = MRI->use_nodbg_end();
-       UI != UE;) {
-    MachineOperand &UseMO = *UI;
-    ++UI; // advance before modifying ops to avoid invalidation
-
-    unsigned UseSubReg = UseMO.getSubReg();
-    if (UseSubReg == 0 || UseMO.isUndef())
-      continue;
-
-    // Find the matching source in the REG_SEQUENCE operands.
-    // REG_SEQUENCE format: dst, src0, subidx0, src1, subidx1, ...
-    MachineOperand *SrcOp = nullptr;
-    for (unsigned i = 1; i < MI.getNumOperands(); i += 2) {
-      if (MI.getOperand(i + 1).getImm() == UseSubReg) {
-        SrcOp = &MI.getOperand(i);
-        break;
-      }
-    }
-
-    if (!SrcOp)
-      continue;
-
-    Register SrcReg = SrcOp->getReg();
-    unsigned SrcSubReg = SrcOp->getSubReg();
-    if (!canRewriteRegSequenceSubRegUse(UseMO, {SrcReg, SrcSubReg}))
-      continue;
-
-    SrcOp->setIsKill(false);
-    MRI->clearKillFlags(SrcReg);
-
-    UseMO.setReg(SrcReg);
-    UseMO.setSubReg(SrcSubReg);
-    UseMO.setIsUndef(SrcOp->isUndef());
-    UseMO.setIsKill(false);
-
-    Changed = true;
-    ++NumRegSeqUsesRewritten;
-  }
-
-  if (Changed && MRI->use_nodbg_empty(DstReg)) {
-    MRI->markUsesInDebugValueAsUndef(DstReg);
-    ShouldEraseMI = true;
-    ++NumRegSeqEliminated;
-  }
-
-  return Changed;
-}
-
 bool PeepholeOptimizer::run(MachineFunction &MF) {
 
   LLVM_DEBUG(dbgs() << "********** PEEPHOLE OPTIMIZER **********\n");
@@ -1995,6 +1984,15 @@ bool PeepholeOptimizer::run(MachineFunction &MF) {
         continue;
       }
 
+      if ((MI->isRegSequence() || MI->isRegSequenceLike()) &&
+          optimizeRegSequenceUses(*MI, LocalMIs)) {
+        // MI was only deleted if all subreg uses were rewritten.
+        if (MI->getParent() == nullptr)
+          LocalMIs.erase(MI);
+        Changed = true;
+        continue;
+      }
+
       if (MI->isConditionalBranch() && optimizeCondBranch(*MI)) {
         Changed = true;
         continue;
@@ -2003,22 +2001,6 @@ bool PeepholeOptimizer::run(MachineFunction &MF) {
       if (isCoalescableCopy(*MI) && optimizeCoalescableCopy(*MI)) {
         // MI is just rewritten.
         Changed = true;
-
-        if (!MI->isRegSequence())
-          continue;
-        // Allow REG_SEQUENCE use folding to run.
-      }
-
-      if (MI->isRegSequence()) {
-        bool ShouldEraseMI;
-        if (foldRegSequenceUses(*MI, ShouldEraseMI)) {
-          if (ShouldEraseMI) {
-            LocalMIs.erase(MI);
-            MI->eraseFromParent();
-          }
-          Changed = true;
-        }
-        // Always continue. No further REG_SEQUENCE opts.
         continue;
       }
 

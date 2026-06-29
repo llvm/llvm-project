@@ -6281,8 +6281,7 @@ void SIInstrInfo::swapOperands(MachineInstr &Inst) const {
 
 bool SIInstrInfo::isLegalRegOperand(const MachineRegisterInfo &MRI,
                                     const MCOperandInfo &OpInfo,
-                                    const MachineOperand &MO,
-                                    const MachineFunction *MF) const {
+                                    const MachineOperand &MO) const {
   if (!MO.isReg())
     return false;
 
@@ -6295,13 +6294,7 @@ bool SIInstrInfo::isLegalRegOperand(const MachineRegisterInfo &MRI,
   const TargetRegisterClass *RC = MRI.getRegClass(Reg);
 
   if (MO.getSubReg()) {
-    if (!MF) {
-      const MachineInstr *Parent = MO.getParent();
-      if (!Parent)
-        return false;
-      MF = Parent->getMF();
-    }
-
+    const MachineFunction *MF = MO.getParent()->getMF();
     const TargetRegisterClass *SuperRC = RI.getLargestLegalSuperClass(RC, *MF);
     if (!SuperRC)
       return false;
@@ -6332,7 +6325,7 @@ bool SIInstrInfo::isLegalRegOperand(const MachineInstr &MI, unsigned OpIdx,
     }
   }
 
-  if (!isLegalRegOperand(MRI, OpInfo, MO, MI.getMF()))
+  if (!isLegalRegOperand(MRI, OpInfo, MO))
     return false;
 
   // check Accumulate GPR operand
