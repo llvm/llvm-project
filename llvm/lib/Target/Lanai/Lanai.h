@@ -50,10 +50,6 @@ createLanaiDelaySlotFillerLegacyPass(const LanaiTargetMachine &TM);
 // arithmetic operations.
 FunctionPass *createLanaiMemAluCombinerPass();
 
-// createLanaiSetflagAluCombinerPass - This pass combines SET_FLAG and ALU
-// operations.
-FunctionPass *createLanaiSetflagAluCombinerPass();
-
 void initializeLanaiAsmPrinterPass(PassRegistry &);
 void initializeLanaiDAGToDAGISelLegacyPass(PassRegistry &);
 void initializeLanaiMemAluCombinerPass(PassRegistry &);
