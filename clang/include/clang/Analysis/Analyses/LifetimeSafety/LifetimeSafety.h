@@ -31,6 +31,7 @@
 #include "llvm/ADT/PointerUnion.h"
 #include <cstddef>
 #include <memory>
+#include <optional>
 
 namespace clang::lifetimes {
 
@@ -51,8 +52,7 @@ enum class WarningScope {
 
 struct LifetimeSafetyAliasChainEntry {
   const Expr *E = nullptr;
-  const ParmVarDecl *LifetimeBoundParam = nullptr;
-  bool LifetimeBoundImplicitObject = false;
+  std::optional<internal::LifetimeBoundInfo> LifetimeBound;
 };
 
 /// Abstract interface for operations requiring Sema access.

@@ -669,20 +669,17 @@ private:
          reverse(OriginExprChain.drop_back())) {
       const Expr *CurrExpr = Curr.E;
       if (!shouldShowInAliasChain(CurrExpr, LastExpr)) {
-        if (!Last.LifetimeBoundImplicitObject && !Last.LifetimeBoundParam &&
-            (Curr.LifetimeBoundImplicitObject || Curr.LifetimeBoundParam)) {
-          Last.LifetimeBoundImplicitObject = Curr.LifetimeBoundImplicitObject;
-          Last.LifetimeBoundParam = Curr.LifetimeBoundParam;
-        }
+        if (!Last.LifetimeBound && Curr.LifetimeBound)
+          Last.LifetimeBound = Curr.LifetimeBound;
         continue;
       }
-      if (Last.LifetimeBoundImplicitObject || Last.LifetimeBoundParam) {
+      if (Last.LifetimeBound) {
         std::string LifetimeBoundSubject = "the implicit object parameter";
-        if (Last.LifetimeBoundParam) {
+        if (Last.LifetimeBound->Param) {
           LifetimeBoundSubject = "parameter ";
-          if (Last.LifetimeBoundParam->getIdentifier())
+          if (Last.LifetimeBound->Param->getIdentifier())
             LifetimeBoundSubject +=
-                "'" + Last.LifetimeBoundParam->getNameAsString() + "'";
+                "'" + Last.LifetimeBound->Param->getNameAsString() + "'";
           else
             LifetimeBoundSubject += "'<unnamed>'";
         }

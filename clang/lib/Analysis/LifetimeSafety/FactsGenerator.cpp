@@ -1086,18 +1086,16 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
     return;
   }
   auto GetLifetimeBoundInfo =
-      [FD,
-       Call](unsigned I) -> std::optional<OriginFlowFact::LifetimeBoundInfo> {
+      [FD](unsigned I) -> std::optional<LifetimeBoundInfo> {
     const ParmVarDecl *PVD = nullptr;
     if (const auto *Method = dyn_cast<CXXMethodDecl>(FD);
         Method && Method->isInstance() && !isa<CXXConstructorDecl>(FD)) {
       if (I == 0)
         // For the 'this' argument, the attribute is on the method itself.
         return implicitObjectParamIsLifetimeBound(Method)
-                   ? std::optional<OriginFlowFact::LifetimeBoundInfo>(
-                         OriginFlowFact::LifetimeBoundInfo{
-                             Call, /*Param=*/nullptr,
-                             /*isImplicitObject=*/true})
+                   ? std::optional<LifetimeBoundInfo>(
+                         LifetimeBoundInfo{/*Param=*/nullptr,
+                                           /*IsImplicitObject=*/true})
                    : std::nullopt;
       if ((I - 1) < Method->getNumParams())
         // For explicit arguments, find the corresponding parameter
@@ -1108,8 +1106,7 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
       PVD = FD->getParamDecl(I);
     }
     if (PVD && PVD->hasAttr<clang::LifetimeBoundAttr>())
-      return OriginFlowFact::LifetimeBoundInfo{Call, PVD,
-                                               /*isImplicitObject=*/false};
+      return LifetimeBoundInfo{PVD, /*IsImplicitObject=*/false};
     return std::nullopt;
   };
   auto IsArgLifetimeBound = [FD, &Args, &GetLifetimeBoundInfo](unsigned I) {
@@ -1165,9 +1162,11 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
         // destination origin lists may have different lengths.
         // FIXME: Handle origin-shape mismatches gracefully so we can also flow
         // inner origins.
-        CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
-            CallList->getOuterOriginID(), ArgList->getOuterOriginID(), KillSrc,
-            GetLifetimeBoundInfo(I)));
+        auto *F = FactMgr.createFact<OriginFlowFact>(
+            CallList->getOuterOriginID(), ArgList->getOuterOriginID(), KillSrc);
+        if (std::optional<LifetimeBoundInfo> Info = GetLifetimeBoundInfo(I))
+          FactMgr.setLifetimeBoundInfo(F, *Info);
+        CurrentBlockFacts.push_back(F);
         KillSrc = false;
       }
     } else if (shouldTrackPointerImplicitObjectArg(I)) {
@@ -1182,9 +1181,11 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
       // Lifetimebound on a non-GSL-ctor function means the returned
       // pointer/reference itself must not outlive the arguments. This
       // only constrains the top-level origin.
-      CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
-          CallList->getOuterOriginID(), ArgList->getOuterOriginID(), KillSrc,
-          GetLifetimeBoundInfo(I)));
+      auto *F = FactMgr.createFact<OriginFlowFact>(
+          CallList->getOuterOriginID(), ArgList->getOuterOriginID(), KillSrc);
+      if (std::optional<LifetimeBoundInfo> Info = GetLifetimeBoundInfo(I))
+        FactMgr.setLifetimeBoundInfo(F, *Info);
+      CurrentBlockFacts.push_back(F);
       KillSrc = false;
     }
   }

@@ -202,7 +202,7 @@ public:
     return getLoans(getState(P), OID);
   }
 
-  llvm::SmallVector<OriginFlowChainStep>
+  llvm::SmallVector<const OriginFlowFact *>
   buildOriginFlowChainWithFacts(ProgramPoint StartPoint,
                                 const OriginID StartOID,
                                 const LoanID TargetLoan) const {
@@ -210,7 +210,7 @@ public:
            "TargetLoan must be present in the StartOID at the StartPoint");
 
     OriginID CurrOID = StartOID;
-    llvm::SmallVector<OriginFlowChainStep> OriginFlowChain;
+    llvm::SmallVector<const OriginFlowFact *> OriginFlowChain;
     llvm::ArrayRef<const Fact *> Facts = FactMgr.getBlockContaining(StartPoint);
     const auto *StartIt = llvm::find(Facts, StartPoint);
     assert(StartIt != Facts.end());
@@ -232,7 +232,7 @@ public:
       const OriginID SrcOriginID = OFF->getSrcOriginID();
       if (!getLoans(SrcOriginID, OFF).contains(TargetLoan))
         continue;
-      OriginFlowChain.push_back({SrcOriginID, OFF});
+      OriginFlowChain.push_back(OFF);
       CurrOID = SrcOriginID;
     }
 
@@ -248,13 +248,13 @@ public:
   buildOriginFlowChain(ProgramPoint StartPoint, const OriginID StartOID,
                        const LoanID TargetLoan) const {
     llvm::SmallVector<OriginID> OriginFlowChain;
-    for (const OriginFlowChainStep &Step :
+    for (const OriginFlowFact *Flow :
          buildOriginFlowChainWithFacts(StartPoint, StartOID, TargetLoan))
-      OriginFlowChain.push_back(Step.OID);
+      OriginFlowChain.push_back(Flow->getSrcOriginID());
     return OriginFlowChain;
   }
 
-  llvm::SmallVector<OriginFlowChainStep>
+  llvm::SmallVector<const OriginFlowFact *>
   buildOriginFlowChainWithFacts(const UseFact *UF,
                                 const LoanID TargetLoan) const {
     for (const OriginList *Cur = UF->getUsedOrigins(); Cur;
@@ -339,14 +339,14 @@ LoanPropagationAnalysis::buildOriginFlowChain(const UseFact *UF,
   return PImpl->buildOriginFlowChain(UF, TargetLoan);
 }
 
-llvm::SmallVector<OriginFlowChainStep>
+llvm::SmallVector<const OriginFlowFact *>
 LoanPropagationAnalysis::buildOriginFlowChainWithFacts(
     ProgramPoint StartPoint, const OriginID StartOID,
     const LoanID TargetLoan) const {
   return PImpl->buildOriginFlowChainWithFacts(StartPoint, StartOID, TargetLoan);
 }
 
-llvm::SmallVector<OriginFlowChainStep>
+llvm::SmallVector<const OriginFlowFact *>
 LoanPropagationAnalysis::buildOriginFlowChainWithFacts(
     const UseFact *UF, const LoanID TargetLoan) const {
   return PImpl->buildOriginFlowChainWithFacts(UF, TargetLoan);

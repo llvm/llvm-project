@@ -526,20 +526,17 @@ public:
   /// extracts the corresponding expressions for each origin. Origins that refer
   /// to declarations (rather than expressions) are skipped.
   llvm::SmallVector<LifetimeSafetyAliasChainEntry>
-  getAliasChain(llvm::ArrayRef<OriginFlowChainStep> OriginFlowChain) {
+  getAliasChain(llvm::ArrayRef<const OriginFlowFact *> OriginFlowChain) {
     llvm::SmallVector<LifetimeSafetyAliasChainEntry> rs;
-    for (const OriginFlowChainStep &Step : OriginFlowChain) {
+    for (const OriginFlowFact *Flow : OriginFlowChain) {
       const Expr *CurrExpr =
-          FactMgr.getOriginMgr().getOrigin(Step.OID).getExpr();
+          FactMgr.getOriginMgr().getOrigin(Flow->getSrcOriginID()).getExpr();
       if (!CurrExpr)
         continue;
 
       LifetimeSafetyAliasChainEntry Entry;
       Entry.E = CurrExpr;
-      if (auto Info = Step.FlowFact->getLifetimeBoundInfo()) {
-        Entry.LifetimeBoundParam = Info->Param;
-        Entry.LifetimeBoundImplicitObject = Info->isImplicitObject;
-      }
+      Entry.LifetimeBound = FactMgr.getLifetimeBoundInfo(Flow);
       rs.push_back(Entry);
     }
     return rs;
