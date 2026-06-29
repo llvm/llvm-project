@@ -602,7 +602,7 @@ def TuneNeoverseV3 : SubtargetFeature<"neoversev3", "ARMProcFamily", "NeoverseV3
                                       FeaturePredictableSelectIsExpensive,
                                       FeatureMaxInterleaveFactor4]>;
 
-def TuneNeoverseV3AE : SubtargetFeature<"neoversev3AE", "ARMProcFamily", "NeoverseV3",
+def TuneNeoverseV3AE : SubtargetFeature<"neoversev3AE", "ARMProcFamily", "NeoverseV3AE",
                                       "Neoverse V3AE ARM processors", [
                                       FeatureFuseAES,
                                       FeatureALULSLFast,
@@ -613,8 +613,7 @@ def TuneNeoverseV3AE : SubtargetFeature<"neoversev3AE", "ARMProcFamily", "Neover
                                       FeatureEnableSelectOptimize,
                                       FeatureUseFixedOverScalableIfEqualCost,
                                       FeatureAvoidLDAPUR,
-                                      FeaturePredictableSelectIsExpensive,
-                                      FeatureMaxInterleaveFactor4]>;
+                                      FeaturePredictableSelectIsExpensive]>;
 
 def TuneSaphira  : SubtargetFeature<"saphira", "ARMProcFamily", "Saphira",
                                    "Qualcomm Saphira processors", [
