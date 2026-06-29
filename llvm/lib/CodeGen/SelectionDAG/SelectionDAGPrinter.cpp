@@ -154,6 +154,23 @@ void SelectionDAG::viewGraph(const std::string &Title) {
 #endif  // NDEBUG
 }
 
+/// viewGraph - Pop up a ghostview window with the reachable parts of the DAG
+/// rendered using 'dot' if not writing to file. Otherwise, just write it out.
+///
+void SelectionDAG::viewGraph(const std::string &Title, const bool WriteFile) {
+// This code is only for debugging!
+#ifndef NDEBUG
+  std::string GraphName = "dag." + getMachineFunction().getName().str();
+  if (WriteFile)
+    WriteGraph(this, Twine(GraphName), false, Title);
+  else
+    ViewGraph(this, Twine(GraphName), false, Title);
+#else
+  errs() << "SelectionDAG::viewGraph is only available in debug builds on "
+         << "systems with Graphviz or gv!\n";
+#endif // NDEBUG
+}
+
 // This overload is defined out-of-line here instead of just using a
 // default parameter because this is easiest for gdb to call.
 void SelectionDAG::viewGraph() {
