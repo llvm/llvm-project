@@ -45,8 +45,8 @@ void test(Func assoc_laguerre) {
 }
 
 int main(int, char**) {
-  test<float>([](unsigned __n, unsigned __m, float __x) { return std::assoc_laguerref(__n, __m, __x); });
-  test<long double>([](unsigned __n, unsigned __m, long double __x) { return std::assoc_laguerrel(__n, __m, __x); });
+  test<float>([](unsigned n, unsigned m, float x) { return std::assoc_laguerref(n, m, x); });
+  test<long double>([](unsigned n, unsigned m, long double x) { return std::assoc_laguerrel(n, m, x); });
 
   return 0;
 }
