@@ -4610,6 +4610,40 @@ SDValue ARMTargetLowering::getARMCmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
     return Shift.getValue(1);
   }
 
+  if (isIntEqualitySetCC(CC) && isa<ConstantSDNode>(RHS)) {
+    const ConstantSDNode *RHSC = cast<ConstantSDNode>(RHS);
+    // The imm operand of ADDS is an unsigned immediate, in the range 0 to 4095.
+    // For the i8 operand, the largest immediate is 255, so this can be easily
+    // encoded in the compare instruction. For the i16 operand, however, the
+    // largest immediate cannot be encoded in the compare.
+    // Therefore, use a sign extending load and cmn to avoid materializing the
+    // -1 constant. For example (ARMv6T2+; lower cores may load 0xffff differently),
+    // movw r1, #65535
+    // ldrh r0, [r0]
+    // cmp r0, r1
+    // >
+    // ldrsh r0, [r0]
+    // cmn r0, #1
+    // Fundamentally, we're relying on the property that (zext LHS) == (zext RHS)
+    // if and only if (sext LHS) == (sext RHS). The checks are in place to
+    // ensure both the LHS and RHS are truly zero extended and to make sure the
+    // transformation is profitable.
+    if ((RHSC->getZExtValue() >> 16 == 0) && isa<LoadSDNode>(LHS) &&
+        cast<LoadSDNode>(LHS)->getExtensionType() == ISD::ZEXTLOAD &&
+        cast<LoadSDNode>(LHS)->getMemoryVT() == MVT::i16 &&
+        LHS.getNode()->hasNUsesOfValue(1, 0)) {
+      int16_t ValueofRHS = RHS->getAsZExtVal();
+      if (ValueofRHS < 0 && isLegalICmpImmediate(-ValueofRHS)) {
+        SDValue SExt =
+            DAG.getNode(ISD::SIGN_EXTEND_INREG, dl, MVT::i32, LHS,
+                        DAG.getValueType(MVT::i16));
+
+        LHS = SExt;
+        RHS = DAG.getSignedConstant(ValueofRHS, dl, MVT::i32);
+      }
+    }
+  }
+
   ARMCC::CondCodes CondCode = IntCCToARMCC(CC);
 
   // If the RHS is a constant zero then the V (overflow) flag will never be
