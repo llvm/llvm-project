@@ -1063,8 +1063,13 @@ static mlir::Attribute getNewInitValue(CIRGenModule &cgm, cir::GlobalOp newGlob,
   };
 
   if (auto oldArray = mlir::dyn_cast<cir::ConstArrayAttr>(oldInit)) {
-    mlir::Attribute newElements =
-        getNewInitElements(mlir::cast<mlir::ArrayAttr>(oldArray.getElts()));
+    // A ConstArrayAttr backed by a StringAttr (a string-literal initializer)
+    // stores raw bytes and holds no global references to rewrite, so it is
+    // returned unchanged.
+    auto oldElts = mlir::dyn_cast<mlir::ArrayAttr>(oldArray.getElts());
+    if (!oldElts)
+      return oldInit;
+    mlir::Attribute newElements = getNewInitElements(oldElts);
     return cgm.getBuilder().getConstArray(
         newElements, mlir::cast<cir::ArrayType>(oldArray.getType()));
   }
