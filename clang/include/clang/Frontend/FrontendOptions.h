@@ -241,7 +241,7 @@ class FrontendInputFile {
   /// Whether we're dealing with a 'system' input (vs. a 'user' input).
   bool IsSystem = false;
 
-  friend class CompilerInvocationBase;
+  friend class CowCompilerInvocation;
 
 public:
   FrontendInputFile() = default;
@@ -543,27 +543,6 @@ public:
   /// minimization hints.
   std::string DumpMinimizationHintsPath;
 
-  /// List of SSAF extractors to enable.
-  std::vector<std::string> SSAFExtractSummaries;
-
-  /// The TU summary output file with the file extension representing the file
-  /// format.
-  std::string SSAFTUSummaryFile;
-
-  /// Stable identifier for this translation unit, used as the name of the
-  /// `CompilationUnit` `BuildNamespace` of every produced TU summary. The
-  /// caller (typically the build system) supplies a value that is constant
-  /// across stages of the SSAF pipeline.
-  std::string SSAFCompilationUnitId;
-
-  /// Show available SSAF summary extractors.
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned SSAFShowExtractors : 1;
-
-  /// Show available SSAF serialization formats.
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned SSAFShowFormats : 1;
-
 public:
   FrontendOptions()
       : DisableFree(false), RelocatablePCH(false), ShowHelp(false),
@@ -581,8 +560,7 @@ public:
         EmitPrettySymbolGraphs(false), GenReducedBMI(false),
         UseClangIRPipeline(false), ClangIRDisablePasses(false),
         ClangIRDisableCIRVerifier(false), ClangIREnableIdiomRecognizer(false),
-        TimeTraceGranularity(500), TimeTraceVerbose(false),
-        SSAFShowExtractors(false), SSAFShowFormats(false) {}
+        TimeTraceGranularity(500), TimeTraceVerbose(false) {}
 
   /// getInputKindForExtension - Return the appropriate input kind for a file
   /// extension. For example, "c" would return Language::C.

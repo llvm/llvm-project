@@ -12,8 +12,8 @@
 // the ABI-lowered shape.
 //
 // This file handles Direct (pass-through and coerce-in-registers), Extend,
-// Ignore, and an Indirect (sret) return.  Indirect arguments (byval) and
-// Expand still emit an errorNYI.
+// Ignore, Indirect (sret return, byval and byref arguments), and Expand
+// (struct flattening into scalar fields).
 //
 //===----------------------------------------------------------------------===//
 

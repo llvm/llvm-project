@@ -77,11 +77,14 @@ EvaluationResult EvalEmitter::interpretDestructor(const VarDecl *VD,
                                                   const APValue &Value) {
   assert(VD);
   S.setEvalLocation(VD->getLocation());
+  S.EvaluatingDecl = VD;
+  S.EvalKind = EvaluationKind::Dtor;
   EvalResult.setSource(VD);
 
   if (!this->visitDtorCall(VD, Value))
     EvalResult.setInvalid();
 
+  S.EvaluatingDecl = nullptr;
   return std::move(this->EvalResult);
 }
 
@@ -230,7 +233,7 @@ template <> bool EvalEmitter::emitRet<PT_Ptr>(SourceInfo Info) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   // If we're returning a raw pointer, call our callback.
   if (this->PtrCB)
-    return (*this->PtrCB)(Ptr);
+    return (*this->PtrCB)(S, OpPC, Ptr);
 
   if (!EvalResult.checkDynamicAllocations(S, Ctx, Ptr, Info))
     return false;
@@ -278,7 +281,17 @@ template <> bool EvalEmitter::emitRet<PT_Ptr>(SourceInfo Info) {
     if (!Ptr.isLive() && !Ptr.isTemporary())
       return false;
 
-    EvalResult.takeValue(Ptr.toAPValue(Ctx.getASTContext()));
+    // If the variable of this pointer is being evaluated when returning
+    // its value, mark it as constexpr-unknown.
+    APValue V = Ptr.toAPValue(Ctx.getASTContext());
+    if (const Descriptor *DeclDesc = Ptr.getDeclDesc();
+        DeclDesc && S.EvaluatingDecl &&
+        DeclDesc->asVarDecl() == S.EvaluatingDecl &&
+        S.getLangOpts().CPlusPlus23 &&
+        S.EvaluatingDecl->getType()->isReferenceType()) {
+      V.setConstexprUnknown(true);
+    }
+    EvalResult.takeValue(std::move(V));
   }
 
   return true;

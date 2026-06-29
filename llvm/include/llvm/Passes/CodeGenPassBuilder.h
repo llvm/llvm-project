@@ -381,9 +381,7 @@ protected:
 
   /// addPreISel - This method should add any "last minute" LLVM->LLVM
   /// passes (which are run just before instruction selector).
-  void addPreISel(PassManagerWrapper &PMW) const {
-    llvm_unreachable("addPreISel is not overridden");
-  }
+  void addPreISel(PassManagerWrapper &PMW) const {}
 
   /// This method should install an IR translator pass, which converts from
   /// LLVM code to machine instructions with possibly generic opcodes.

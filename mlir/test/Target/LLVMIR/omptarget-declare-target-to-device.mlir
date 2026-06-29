@@ -19,7 +19,7 @@ module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_gpu = true, 
   llvm.func @_QQmain() {
     %0 = llvm.mlir.addressof @_QMtest_0Ezii : !llvm.ptr
     %1 = omp.map.info var_ptr(%0 : !llvm.ptr, !llvm.array<11 x f32>) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr
-    omp.target map_entries(%1 -> %arg0 : !llvm.ptr) {
+    omp.target kernel_type(generic) map_entries(%1 -> %arg0 : !llvm.ptr) {
       %2 = llvm.mlir.constant(1.0 : f32) : f32
       %3 = llvm.mlir.constant(0 : i64) : i64
       %4 = llvm.getelementptr %arg0[%3] : (!llvm.ptr, i64) -> !llvm.ptr, f32

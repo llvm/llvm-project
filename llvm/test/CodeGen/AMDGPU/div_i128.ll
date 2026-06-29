@@ -2,8 +2,8 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -o - %s | FileCheck -check-prefixes=GFX9 %s
 ; RUN: llc -O0 -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -o - %s | FileCheck -check-prefixes=GFX9-O0 %s
 
-; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -o - %s | FileCheck -check-prefixes=GFX9-G %s
-; RUN: llc -O0 -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -o - %s | FileCheck -check-prefixes=GFX9-G-O0 %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -o - %s | FileCheck -check-prefixes=GFX9-G %s
+; RUN: llc -O0 -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -o - %s | FileCheck -check-prefixes=GFX9-G-O0 %s
 
 define i128 @v_sdiv_i128_vv(i128 %lhs, i128 %rhs) {
 ; GFX9-LABEL: v_sdiv_i128_vv:
