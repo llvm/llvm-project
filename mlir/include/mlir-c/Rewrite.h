@@ -133,6 +133,25 @@ mlirRewriterBaseGetBlock(MlirRewriterBase rewriter);
 MLIR_CAPI_EXPORTED MlirOperation
 mlirRewriterBaseGetOperationAfterInsertion(MlirRewriterBase rewriter);
 
+/// A saved insertion point: a (block, operationAfter) pair. `operationAfter` is
+/// the operation that subsequent insertions go before. If `operationAfter` is
+/// null, the insertion point is at the end of `block`. If `block` is null, the
+/// insertion point is not set (cleared).
+typedef struct MlirRewriterBaseInsertPoint {
+  MlirBlock block;
+  MlirOperation operationAfter;
+} MlirRewriterBaseInsertPoint;
+
+/// Returns the current insertion point of the rewriter so that it can be
+/// restored later with mlirRewriterBaseRestoreInsertionPoint.
+MLIR_CAPI_EXPORTED MlirRewriterBaseInsertPoint
+mlirRewriterBaseSaveInsertionPoint(MlirRewriterBase rewriter);
+
+/// Restores a previously saved insertion point.
+MLIR_CAPI_EXPORTED void
+mlirRewriterBaseRestoreInsertionPoint(MlirRewriterBase rewriter,
+                                      MlirRewriterBaseInsertPoint insertPoint);
+
 //===----------------------------------------------------------------------===//
 /// Block and operation creation/insertion/cloning
 //===----------------------------------------------------------------------===//
