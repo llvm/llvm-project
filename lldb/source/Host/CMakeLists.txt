@@ -74,7 +74,6 @@ endif()
 
 add_host_subdirectory(posix
   posix/ConnectionFileDescriptorPosix.cpp
-  posix/DomainSocket.cpp
   )
 
 if (CMAKE_SYSTEM_NAME MATCHES "Windows")
