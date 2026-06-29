@@ -204,9 +204,8 @@ void CallGraph::addNodesForVarInit(VarDecl *VD) {
   // CGBuilder at call sites. Attach discovered calls to the root.
   if (!VD->hasGlobalStorage())
     return;
-  if (Expr *Init = VD->getInit()) {
+  if (Expr *Init = VD->getInit())
     CGBuilder{this, Root}.Visit(Init);
-  }
 }
 
 CallGraphNode *CallGraph::getNode(const Decl *F) const {
