@@ -17,3 +17,23 @@ entry:
   %mul = mul nsw i32 %a, 6
   ret i32 %mul
 }
+
+define i32 @regression2(i32 inreg %a) #0 {
+; CHECK-LABEL: regression2:
+; CHECK:       ! %bb.0: ! %entry
+; CHECK-NEXT:    st %fp, [--%sp]
+; CHECK-NEXT:    add %sp, 0x8, %fp
+; CHECK-NEXT:    sub %sp, 0x8, %sp
+; CHECK-NEXT:    mov 0xaaaa0000, %r3
+; CHECK-NEXT:    or %r3, 0xaaab, %r7
+; CHECK-NEXT:    add %pc, 0x10, %rca
+; CHECK-NEXT:    st %rca, [--%sp]
+; CHECK-NEXT:    bt __mulsi3
+; CHECK-NEXT:    nop
+; CHECK-NEXT:    ld -4[%fp], %pc ! return
+; CHECK-NEXT:    add %fp, 0x0, %sp
+; CHECK-NEXT:    ld -8[%fp], %fp
+entry:
+  %mul = mul i32 %a, -1431655765
+  ret i32 %mul
+}
