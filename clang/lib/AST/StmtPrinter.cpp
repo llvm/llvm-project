@@ -1843,6 +1843,22 @@ void StmtPrinter::VisitMatrixElementExpr(MatrixElementExpr *Node) {
 }
 
 void StmtPrinter::VisitCStyleCastExpr(CStyleCastExpr *Node) {
+  if (QualType T = Node->getType(); T->isEnumeralType()) {
+    // special case enums to avoid producing cast expressions when naming
+    // an enumerator would suffice
+
+    const auto *IL = dyn_cast<IntegerLiteral>(Node->getSubExpr());
+    const auto *ED = T->getAsEnumDecl();
+    if (IL && ED) {
+      llvm::APInt Val = IL->getValue();
+      for (const EnumConstantDecl *ECD : ED->enumerators()) {
+        if (llvm::APInt::isSameValue(ECD->getInitVal(), Val)) {
+          ECD->printQualifiedName(OS, Policy);
+          return;
+        }
+      }
+    }
+  }
   OS << '(';
   Node->getTypeAsWritten().print(OS, Policy);
   OS << ')';
