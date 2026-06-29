@@ -15494,20 +15494,21 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
       DiagnoseSelfMove(LHS.get(), RHS.get(), OpLoc);
 
       // std::init / ref_to_uninit (paper §5): assigning a pointer must respect
-      // the [[ref_to_uninit]] marking of the assigned-to pointer named on the
-      // LHS. References cannot be reseated, so only pointer assignment applies;
-      // the check is limited to an LHS that directly names a pointer entity (so
-      // its marker can be read locally).
+      // the [[ref_to_uninit]] marking of the assigned-to pointer. References
+      // cannot be reseated, so only pointer assignment applies. The marker is
+      // read when the LHS directly names a pointer entity; any other lvalue
+      // (e.g. *pp, arr[i]) cannot carry a local marker, so it is the default
+      // unmarked pointer (paper §4.3) and must not be bound to uninitialized
+      // memory.
       if (getLangOpts().Profiles && LHS.get()->getType()->isPointerType()) {
         const Expr *L = LHS.get()->IgnoreParenImpCasts();
-        const ValueDecl *VD = nullptr;
+        bool TargetIsRefToUninit = false;
         if (const auto *DRE = dyn_cast<DeclRefExpr>(L))
-          VD = DRE->getDecl();
+          TargetIsRefToUninit = DRE->getDecl()->hasAttr<RefToUninitAttr>();
         else if (const auto *ME = dyn_cast<MemberExpr>(L))
-          VD = ME->getMemberDecl();
-        if (VD)
-          checkRefToUninitInit(OpLoc, VD->hasAttr<RefToUninitAttr>(),
-                               /*IsReference=*/false, RHS.get());
+          TargetIsRefToUninit = ME->getMemberDecl()->hasAttr<RefToUninitAttr>();
+        checkRefToUninitInit(OpLoc, TargetIsRefToUninit,
+                             /*IsReference=*/false, RHS.get());
       }
 
       // Avoid copying a block to the heap if the block is assigned to a local
