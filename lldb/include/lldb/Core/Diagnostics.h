@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_UTILITY_DIAGNOSTICS_H
-#define LLDB_UTILITY_DIAGNOSTICS_H
+#ifndef LLDB_CORE_DIAGNOSTICS_H
+#define LLDB_CORE_DIAGNOSTICS_H
 
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Log.h"
