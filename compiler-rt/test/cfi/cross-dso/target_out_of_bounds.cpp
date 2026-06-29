@@ -35,9 +35,11 @@ int main(int argc, char *argv[]) {
     // Create an object with a vtable in an unaddressable memory region.
     *(uintptr_t *)p = (uintptr_t)vtable + 64;
     // CHECK-UNADDR: runtime error: control flow integrity check for type 'A' failed during cast
+    // CHECK-UNADDR: SUMMARY: UndefinedBehaviorSanitizer: cfi-unrelated-cast
     // CHECK-UNADDR: note: invalid vtable
     // CHECK-UNADDR: <memory cannot be printed>
     // CHECK-UNADDR: runtime error: control flow integrity check for type 'A' failed during cast
+    // CHECK-UNADDR: SUMMARY: UndefinedBehaviorSanitizer: cfi-unrelated-cast
     // CHECK-UNADDR: note: invalid vtable
     // CHECK-UNADDR: <memory cannot be printed>
   } else if (argc > 1 && strcmp(argv[1], "zero") == 0) {
@@ -46,9 +48,11 @@ int main(int argc, char *argv[]) {
     void *vtable = calloc(1, 128);
     *(uintptr_t *)p = (uintptr_t)vtable + 64;
     // CHECK-ZERO: runtime error: control flow integrity check for type 'A' failed during cast
+    // CHECK-ZERO: SUMMARY: UndefinedBehaviorSanitizer: cfi-unrelated-cast
     // CHECK-ZERO: note: invalid vtable
     // CHECK-ZERO: 00 00 00 00 00 00 00 00
     // CHECK-ZERO: runtime error: control flow integrity check for type 'A' failed during cast
+    // CHECK-ZERO: SUMMARY: UndefinedBehaviorSanitizer: cfi-unrelated-cast
     // CHECK-ZERO: note: invalid vtable
     // CHECK-ZERO: 00 00 00 00 00 00 00 00
   } else {
@@ -58,9 +62,11 @@ int main(int argc, char *argv[]) {
     memset(vtable, 0xFE, 128);
     *(uintptr_t *)p = (uintptr_t)vtable + 64;
     // CHECK-TYPEINFO: runtime error: control flow integrity check for type 'A' failed during cast
+    // CHECK-TYPEINFO: SUMMARY: UndefinedBehaviorSanitizer: cfi-unrelated-cast
     // CHECK-TYPEINFO: note: invalid vtable
     // CHECK-TYPEINFO: fe fe fe fe fe fe fe fe
     // CHECK-TYPEINFO: runtime error: control flow integrity check for type 'A' failed during cast
+    // CHECK-TYPEINFO: SUMMARY: UndefinedBehaviorSanitizer: cfi-unrelated-cast
     // CHECK-TYPEINFO: note: invalid vtable
     // CHECK-TYPEINFO: fe fe fe fe fe fe fe fe
   }

@@ -1359,13 +1359,21 @@ WRAPPER_CLASS(ImpliedShapeSpec, std::list<AssumedImpliedSpec>);
 EMPTY_CLASS(AssumedRankSpec);
 
 // R815 array-spec ->
-//        explicit-shape-spec-list | assumed-shape-spec-list |
-//        deferred-shape-spec-list | assumed-size-spec | implied-shape-spec |
+//        explicit-shape-spec-list | explicit-shape-bounds-spec |
+//        assumed-shape-spec-list | deferred-shape-spec-list |
+//        assumed-size-spec | implied-shape-spec |
 //        implied-shape-or-assumed-size-spec | assumed-rank-spec
+
+struct ExplicitShapeBoundsSpec {
+  TUPLE_CLASS_BOILERPLATE(ExplicitShapeBoundsSpec);
+  std::tuple<std::optional<IntExpr>, IntExpr> t;
+};
+
 struct ArraySpec {
   UNION_CLASS_BOILERPLATE(ArraySpec);
-  std::variant<std::list<ExplicitShapeSpec>, std::list<AssumedShapeSpec>,
-      DeferredShapeSpecList, AssumedSizeSpec, ImpliedShapeSpec, AssumedRankSpec>
+  std::variant<std::list<ExplicitShapeSpec>, ExplicitShapeBoundsSpec,
+      std::list<AssumedShapeSpec>, DeferredShapeSpecList, AssumedSizeSpec,
+      ImpliedShapeSpec, AssumedRankSpec>
       u;
 };
 
@@ -2978,6 +2986,7 @@ struct ModuleSubprogram {
   std::variant<common::Indirection<FunctionSubprogram>,
       common::Indirection<SubroutineSubprogram>,
       common::Indirection<SeparateModuleSubprogram>,
+      common::Indirection<OpenACCRoutineConstruct>,
       common::Indirection<CompilerDirective>>
       u;
 };
@@ -3591,6 +3600,16 @@ struct OmpTypeNameList {
   WRAPPER_CLASS_BOILERPLATE(OmpTypeNameList, std::list<OmpTypeName>);
 };
 
+struct OmpReservedIdentifier {
+  WRAPPER_CLASS_BOILERPLATE(OmpReservedIdentifier, Name);
+};
+
+// "Proper" locator, i.e. a function reference or a reserved locator.
+struct OmpLocator {
+  UNION_CLASS_BOILERPLATE(OmpLocator);
+  std::variant<FunctionReference, OmpReservedIdentifier> u;
+};
+
 // 2.1 Directives or clauses may accept a list or extended-list.
 //     A list item is a variable, array section or common block name (enclosed
 //     in slashes). An extended list item is a list item or a procedure Name.
@@ -3604,7 +3623,7 @@ struct OmpObject {
     CharBlock source;
   };
   UNION_CLASS_BOILERPLATE(OmpObject);
-  std::variant<Designator, /*common block*/ Name, Invalid> u;
+  std::variant<Designator, OmpLocator, Name, Invalid> u;
 };
 
 struct OmpObjectList {
@@ -3680,15 +3699,6 @@ struct OmpInitializerExpression : public OmpStylizedExpression {
 };
 
 inline namespace arguments {
-struct OmpLocator {
-  UNION_CLASS_BOILERPLATE(OmpLocator);
-  std::variant<OmpObject, FunctionReference> u;
-};
-
-struct OmpLocatorList {
-  WRAPPER_CLASS_BOILERPLATE(OmpLocatorList, std::list<OmpLocator>);
-};
-
 // Ref: [4.5:58-60], [5.0:58-60], [5.1:63-68], [5.2:197-198], [6.0:334-336]
 //
 // Argument to DECLARE VARIANT with the base-name present. (When only
@@ -3729,7 +3739,7 @@ struct OmpReductionSpecifier {
 struct OmpArgument {
   CharBlock source;
   UNION_CLASS_BOILERPLATE(OmpArgument);
-  std::variant<OmpLocator, // {variable, extended, locator}-list-item
+  std::variant<OmpObject,
       OmpBaseVariantNames, // base-name:variant-name
       OmpMapperSpecifier, OmpReductionSpecifier>
       u;

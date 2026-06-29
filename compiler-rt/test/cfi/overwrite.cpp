@@ -52,6 +52,7 @@ int main() {
   // CFI-NOT: foo
   // NCFI: foo
   // CFI-DIAG: runtime error: control flow integrity check for type 'A' failed during virtual call
+  // CFI-DIAG: SUMMARY: UndefinedBehaviorSanitizer: cfi-vcall
   // CFI-DIAG-NEXT: note: invalid vtable
   a->f();
 

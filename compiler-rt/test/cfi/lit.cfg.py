@@ -63,16 +63,10 @@ elif config.lto_supported:
 else:
     config.unsupported = True
 
-default_ubsan_opts = (
-    list(config.default_sanitizer_opts) if config.default_sanitizer_opts else []
-)
-default_ubsan_opts_str = ":".join(default_ubsan_opts)
-if default_ubsan_opts_str:
-    config.environment["UBSAN_OPTIONS"] = default_ubsan_opts_str
-    default_ubsan_opts_str += ":"
-config.substitutions.append(
-    ("%env_ubsan_opts=", "env UBSAN_OPTIONS=" + default_ubsan_opts_str)
-)
+default_ubsan_opts = list(config.default_sanitizer_opts) if config.default_sanitizer_opts else []
+default_ubsan_opts.append("print_summary=1")
+default_ubsan_opts.append("report_error_type=1")
+config.environment["UBSAN_OPTIONS"] = ":".join(default_ubsan_opts)
 
 if lit_config.params.get("check_supported", None) and config.unsupported:
     raise BaseException("Tests unsupported")

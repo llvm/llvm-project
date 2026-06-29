@@ -60,10 +60,12 @@ int main(int argc, char **argv) {
     A *a = c;
     // CFI-DIAG1: runtime error: control flow integrity check for type 'B' failed during cast to unrelated type
     // CFI-DIAG1-NEXT: note: vtable is of type '{{(struct )?}}C'
+    // CFI-DIAG1: SUMMARY: UndefinedBehaviorSanitizer: cfi-unrelated-cast
     ((B *)a)->g(); // UB here
   } else {
     // CFI-DIAG2: runtime error: control flow integrity check for type 'A' failed during cast to unrelated type
     // CFI-DIAG2-NEXT: note: vtable is of type '{{(struct )?}}C'
+    // CFI-DIAG2: SUMMARY: UndefinedBehaviorSanitizer: cfi-unrelated-cast
     B *b = c;
     ((A *)b)->f(); // UB here
   }

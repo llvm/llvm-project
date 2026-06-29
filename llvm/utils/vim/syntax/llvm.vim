@@ -132,6 +132,7 @@ syn keyword llvmKeyword
       \ nofree
       \ noimplicitfloat
       \ noinline
+      \ noipa
       \ nomerge
       \ nooutline
       \ nonlazybind

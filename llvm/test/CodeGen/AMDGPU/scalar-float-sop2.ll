@@ -44,7 +44,6 @@ define amdgpu_vs float @fmin_f32(float inreg %a, float inreg %b) {
 ; GFX1150-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
 ; GFX1150-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX1150-NEXT:    ; return to shader part epilog
-;
 ; GFX12-LABEL: fmin_f32:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_min_num_f32 s0, s0, s1
@@ -62,7 +61,6 @@ define amdgpu_vs float @fmax_f32(float inreg %a, float inreg %b) {
 ; GFX1150-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
 ; GFX1150-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX1150-NEXT:    ; return to shader part epilog
-;
 ; GFX12-LABEL: fmax_f32:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_max_num_f32 s0, s0, s1
@@ -113,7 +111,6 @@ define amdgpu_vs half @fmin_f16(half inreg %a, half inreg %b) {
 ; GFX1150-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
 ; GFX1150-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX1150-NEXT:    ; return to shader part epilog
-;
 ; GFX12-LABEL: fmin_f16:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_min_num_f16 s0, s0, s1
@@ -131,7 +128,6 @@ define amdgpu_vs half @fmax_f16(half inreg %a, half inreg %b) {
 ; GFX1150-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
 ; GFX1150-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX1150-NEXT:    ; return to shader part epilog
-;
 ; GFX12-LABEL: fmax_f16:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_max_num_f16 s0, s0, s1
@@ -142,6 +138,7 @@ define amdgpu_vs half @fmax_f16(half inreg %a, half inreg %b) {
    ret half %max
 }
 
+; TODO: Fix GISEL RB legalize rule for amdgcn_cvt_pkrtz to select s_cvt_pk_rtz_f16_f32
 define amdgpu_vs <2 x half> @s_cvt_pkrtz_v2f16_f32(float inreg %x, float inreg %y) {
 ; CHECK-LABEL: s_cvt_pkrtz_v2f16_f32:
 ; CHECK:       ; %bb.0:
@@ -222,7 +219,6 @@ define amdgpu_ps float @_amdgpu_ps_main() {
 ; GFX1150-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
 ; GFX1150-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX1150-NEXT:    ; return to shader part epilog
-;
 ; GFX12-LABEL: _amdgpu_ps_main:
 ; GFX12:       ; %bb.0: ; %bb
 ; GFX12-NEXT:    s_mov_b32 s0, 0

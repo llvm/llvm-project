@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn -amdgpu-scalar-ir-passes=false < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx600 -amdgpu-scalar-ir-passes=false < %s | FileCheck -check-prefix=GCN %s
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -amdgpu-scalar-ir-passes=false < %s | FileCheck -check-prefix=GCN %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -mattr=-flat-for-global -amdgpu-scalar-ir-passes=false < %s | FileCheck -check-prefix=GCN %s
 
