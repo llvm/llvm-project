@@ -1,0 +1,90 @@
+## Test --synthetic flag.
+
+# RUN: yaml2obj %s -o %t
+
+# RUN: llvm-nm %t | count 0
+# RUN: llvm-nm %t --synthetic | FileCheck %s
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_DYN
+  Machine:         EM_AARCH64
+Sections:
+  - Name:            .rela.plt
+    Type:            SHT_RELA
+    Flags:           [ SHF_ALLOC, SHF_INFO_LINK ]
+    Address:         0x540
+    Link:            .dynsym
+    AddressAlign:    0x8
+    Info:            .got
+    Relocations:
+      - Offset:          0x10FA8
+        Symbol:          __libc_start_main
+        Type:            R_AARCH64_JUMP_SLOT
+      - Offset:          0x10FB0
+        Symbol:          __cxa_finalize
+        Type:            R_AARCH64_JUMP_SLOT
+      - Offset:          0x10FB8
+        Symbol:          __gmon_start__
+        Type:            R_AARCH64_JUMP_SLOT
+      - Offset:          0x10FC0
+        Symbol:          abort
+        Type:            R_AARCH64_JUMP_SLOT
+      - Offset:          0x10FC8
+        Symbol:          puts
+        Type:            R_AARCH64_JUMP_SLOT
+  - Name:            .plt
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x5D0
+    AddressAlign:    0x10
+    Content:         F07BBFA99000009011D247F910823E9120021FD61F2003D51F2003D51F2003D59000009011D647F910A23E9120021FD69000009011DA47F910C23E9120021FD69000009011DE47F910E23E9120021FD69000009011E247F910023F9120021FD69000009011E647F910223F9120021FD6
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x640
+  - Name:            .dynamic
+    Type:            SHT_DYNAMIC
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x10DA0
+    Link:            .dynstr
+    AddressAlign:    0x8
+    Entries:
+      - Tag:             DT_JMPREL
+        Value:           0x540
+      - Tag:             DT_PLTRELSZ
+        Value:           0x78
+      - Tag:             DT_PLTGOT
+        Value:           0x10F90
+      - Tag:             DT_NULL
+        Value:           0x0
+  - Name:            .got
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x10F90
+    AddressAlign:    0x8
+    EntSize:         0x8
+    Content:         000000000000000000000000000000000000000000000000D005000000000000D005000000000000D005000000000000D005000000000000D005000000000000A00D01000000000000000000000000000000000000000000000000000000000054070000000000000000000000000000
+DynamicSymbols:
+  - Name:            __libc_start_main
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+  - Name:            __cxa_finalize
+    Type:            STT_FUNC
+    Binding:         STB_WEAK
+  - Name:            __gmon_start__
+    Binding:         STB_WEAK
+  - Name:            abort
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+  - Name:            puts
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+
+# CHECK:      0000000000000600 T __cxa_finalize@plt
+# CHECK-NEXT: 0000000000000610 T __gmon_start__@plt
+# CHECK-NEXT: 00000000000005f0 T __libc_start_main@plt
+# CHECK-NEXT: 0000000000000620 T abort@plt
+# CHECK-NEXT: 0000000000000630 T puts@plt
