@@ -1813,23 +1813,10 @@ void SystemZInstrInfo::expandStackGuardPseudo(MachineInstr &MI,
   // Emit an appropriate pseudo for the guard type, which loads the address of
   // said guard into the scratch register AddrReg.
   if (GuardType.empty() || (GuardType == "tls")) {
-    if (STI.isTargetzOS()) {
-      enum { OFFSET_PSALAA = 0x4B8 };
-      enum { OFFSET_CEELAA_STACK_GUARD = 0x98 };
-      // Load LAA
-      // LLGT <reg>,1208
-      BuildMI(MBB, MI, MI.getDebugLoc(), get(SystemZ::LLGT))
-          .addReg(MI.getOperand(0).getReg())
-          .addReg(0)
-          .addImm(OFFSET_PSALAA)
-          .addReg(0);
-      Offset = OFFSET_CEELAA_STACK_GUARD;
-    } else {
-      // Emit a load of the TLS block's address
-      BuildMI(MBB, MI, DL, get(SystemZ::LOAD_TLS_BLOCK_ADDR), AddrReg);
-      // Record the appropriate stack guard offset (40 in the tls case).
-      Offset = 40;
-    }
+    // Emit a load of the TLS block's address
+    BuildMI(MBB, MI, DL, get(SystemZ::LOAD_TLS_BLOCK_ADDR), AddrReg);
+    // Record the appropriate stack guard offset (40 in the tls case).
+    Offset = 40;
   } else if (GuardType == "global") {
     // Emit a load of the global stack guard's address
     BuildMI(MBB, MI, DL, get(SystemZ::LOAD_GLOBAL_STACKGUARD_ADDR), AddrReg);
