@@ -18,9 +18,9 @@
 #  pragma GCC system_header
 #endif
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 14
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp, size_t _Np>
 [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI
@@ -79,8 +79,8 @@ template <class _Cp>
   return std::rend(__c);
 }
 
-#endif // _LIBCPP_STD_VER >= 14
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 14
 
 #endif // _LIBCPP___ITERATOR_REVERSE_ACCESS_H
