@@ -111,7 +111,8 @@ struct ExtractStridedMetadataOpInterface
     int64_t strideEnd = strideStart + sourceRank;
     if (resultNumber >= strideStart && resultNumber < strideEnd) {
       int64_t idx = resultNumber - strideStart;
-      SmallVector<OpFoldResult> strides = metadataOp.getConstifiedMixedStrides();
+      SmallVector<OpFoldResult> strides =
+          metadataOp.getConstifiedMixedStrides();
       cstr.bound(value) == strides[idx];
       return;
     }
