@@ -368,8 +368,12 @@ void MCObjectFileInfo::initELFMCObjectFileInfo(const Triple &T, bool Large) {
   case Triple::aarch64:
   case Triple::aarch64_be:
   case Triple::x86_64:
+    // TODO: refactor after #180464 to avoid nullable MCTargetOptions
     FDECFIEncoding = dwarf::DW_EH_PE_pcrel |
-                     (Large ? dwarf::DW_EH_PE_sdata8 : dwarf::DW_EH_PE_sdata4);
+                     ((Large || (Ctx->getTargetOptions() &&
+                                Ctx->getTargetOptions()->LargeEHEncoding))
+                          ? dwarf::DW_EH_PE_sdata8
+                          : dwarf::DW_EH_PE_sdata4);
     break;
   case Triple::bpfel:
   case Triple::bpfeb:
