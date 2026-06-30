@@ -1051,7 +1051,7 @@ ExprResult ConstraintSatisfactionChecker::Evaluate(
     const MultiLevelTemplateArgumentList &MLTAL) {
 
   const ConceptReference *ConceptId = Constraint.getConceptId();
-  const NamedDecl *ConceptDecl = 
+  const NamedDecl *ConceptDecl =
       cast<clang::NamedDecl>(ConceptId->getNamedConcept()->getCanonicalDecl());
 
   if (S.ActiveConcepts.contains(ConceptDecl)) {
