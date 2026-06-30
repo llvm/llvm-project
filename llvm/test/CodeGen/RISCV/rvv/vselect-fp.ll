@@ -542,13 +542,13 @@ define void @vselect_legalize_regression(<vscale x 16 x double> %a, <vscale x 16
 define <vscale x 2 x double> @vselect_true_hasmultipleuse(<vscale x 2 x i32> %vc, <vscale x 2 x double> %va) {
 ; RV32-LABEL: vselect_true_hasmultipleuse:
 ; RV32:       # %bb.0:
+; RV32-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
+; RV32-NEXT:    vmsne.vi v0, v8, 1
 ; RV32-NEXT:    lui a0, %hi(.LCPI40_0)
 ; RV32-NEXT:    fld fa5, %lo(.LCPI40_0)(a0)
-; RV32-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
-; RV32-NEXT:    vmseq.vi v0, v8, 1
-; RV32-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
-; RV32-NEXT:    vfmin.vf v8, v10, fa5
-; RV32-NEXT:    vmerge.vvm v8, v8, v10, v0
+; RV32-NEXT:    vsetvli zero, zero, e64, m2, ta, mu
+; RV32-NEXT:    vfmin.vf v10, v10, fa5, v0.t
+; RV32-NEXT:    vmv.v.v v8, v10
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vselect_true_hasmultipleuse:

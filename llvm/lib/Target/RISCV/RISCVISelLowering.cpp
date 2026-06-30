@@ -20366,25 +20366,22 @@ canonicalizeVSelectTrueToOneUse(SDNode *N, SelectionDAG &DAG,
       !FalseVal.hasOneUse())
     return SDValue();
 
+  // Only handles ISD::SETEQ and ISD::SETNE; no extra RVV introduced.
   ISD::CondCode CCVal = cast<CondCodeSDNode>(CC.getOperand(2))->get();
-  if (CCVal != ISD::SETEQ && CCVal != ISD::SETNE)
+  if (!isIntEqualitySetCC(CCVal))
     return SDValue();
 
-  EVT VT = TrueVal.getValueType();
-  if (!VT.isSimple())
-    return SDValue();
-
-  if (VT.getVectorElementType().getSizeInBits() > Subtarget.getXLen())
-    return SDValue();
-
-  if (DAG.isSplatValue(TrueVal) || DAG.isSplatValue(FalseVal))
+  if (DAG.isSplatValue(TrueVal) || DAG.isSplatValue(FalseVal) ||
+      TrueVal.getOpcode() == ISD::SPLAT_VECTOR_PARTS ||
+      FalseVal.getOpcode() == ISD::SPLAT_VECTOR_PARTS ||
+      TrueVal.getOpcode() == RISCVISD::VMV_V_X_VL ||
+      FalseVal.getOpcode() == RISCVISD::VMV_V_X_VL)
     return SDValue();
 
   SDLoc DL(N);
-  // Only handles ISD::SETEQ and ISD::SETNE; no extra RVV introduced.
-  ISD::CondCode InvCC = CCVal == ISD::SETEQ ? ISD::SETNE : ISD::SETEQ;
-  SDValue InvertedCC = DAG.getSetCC(DL, CC.getValueType(), CC.getOperand(0),
-                                    CC.getOperand(1), InvCC);
+  EVT CVT = CC.getValueType();
+  SDValue InvertedCC = DAG.getSetCC(DL, CVT, CC.getOperand(0), CC.getOperand(1),
+                                    ISD::getSetCCInverse(CCVal, CVT));
   return DAG.getNode(ISD::VSELECT, DL, N->getValueType(0), InvertedCC, FalseVal,
                      TrueVal);
 }
