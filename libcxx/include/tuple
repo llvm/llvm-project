@@ -640,13 +640,25 @@ public:
       index_sequence<_Idx...>,
       enable_if_t<__has_danglings<decltype(std::get<_Idx>(std::declval<_Tuple>()))...>()>> = true;
 
+  template <bool __dangles, class _CtorEnabled>
+  static inline constexpr bool __check_danglings_from_constructor = false;
+
+  template <class _CtorEnabled>
+  static inline constexpr bool __check_danglings_from_constructor<true, _CtorEnabled> = _CtorEnabled::value;
+
+  template <bool __dangles, class _CtorEnabled>
+  static inline constexpr bool __check_no_danglings_from_constructor = _CtorEnabled::value;
+
+  template <class _CtorEnabled>
+  static inline constexpr bool __check_no_danglings_from_constructor<true, _CtorEnabled> = false;
+
   template <class... _Up>
   static inline constexpr bool __has_danglings_from_utypes =
-      _EnableUTypesCtorBase<_Up...>::value && __has_danglings<_Up...>();
+      __check_danglings_from_constructor<__has_danglings<_Up...>(), _EnableUTypesCtorBase<_Up...> >;
 
   template <class... _Up>
   static inline constexpr bool __has_no_danglings_from_utypes =
-      _EnableUTypesCtorBase<_Up...>::value && !__has_danglings<_Up...>();
+      __check_no_danglings_from_constructor<__has_danglings<_Up...>(), _EnableUTypesCtorBase<_Up...> >;
 #    endif // _LIBCPP_STD_VER >= 23
 
   template <class... _Up>
@@ -726,11 +738,13 @@ public:
 #    if _LIBCPP_STD_VER >= 23
   template <class _OtherTuple>
   static inline constexpr bool __has_danglings_from_utypes_tuple =
-      _EnableCtorFromUTypesTuple<_OtherTuple>::value && __has_danglings_from_tuple_like<_OtherTuple>;
+      __check_danglings_from_constructor<__has_danglings_from_tuple_like<_OtherTuple>,
+                                         _EnableCtorFromUTypesTuple<_OtherTuple> >;
 
   template <class _OtherTuple>
   static inline constexpr bool __has_no_danglings_from_utypes_tuple =
-      _EnableCtorFromUTypesTuple<_OtherTuple>::value && !__has_danglings_from_tuple_like<_OtherTuple>;
+      __check_no_danglings_from_constructor<__has_danglings_from_tuple_like<_OtherTuple>,
+                                            _EnableCtorFromUTypesTuple<_OtherTuple> >;
 #    endif // _LIBCPP_STD_VER >= 23
 
   template <class _OtherTuple>
@@ -853,11 +867,11 @@ public:
 #    if _LIBCPP_STD_VER >= 23
   template <class _Pair>
   static inline constexpr bool __has_danglings_from_utypes_pair =
-      _EnableCtorFromPair<_Pair>::value && __has_danglings_from_tuple_like<_Pair>;
+      __check_danglings_from_constructor<__has_danglings_from_tuple_like<_Pair>, _EnableCtorFromPair<_Pair> >;
 
   template <class _Pair>
   static inline constexpr bool __has_no_danglings_from_utypes_pair =
-      _EnableCtorFromPair<_Pair>::value && !__has_danglings_from_tuple_like<_Pair>;
+      __check_no_danglings_from_constructor<__has_danglings_from_tuple_like<_Pair>, _EnableCtorFromPair<_Pair> >;
 #    endif // _LIBCPP_STD_VER >= 23
 
   template <class _Pair>
