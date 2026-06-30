@@ -7,7 +7,7 @@ define i32 @trunc_shl_zext_32(i32 %a) {
 ; CHECK-LABEL: define i32 @trunc_shl_zext_32
 ; CHECK-SAME: (i32 [[A:%.*]]) {
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[A]], 4
-; CHECK-NEXT:    [[EXT:%.*]] = and i32 [[SHL]], 65520
+; CHECK-NEXT:    [[EXT:%.*]] = and i32 [[SHL]], 65535
 ; CHECK-NEXT:    ret i32 [[EXT]]
 ;
   %trunc = trunc i32 %a to i16
@@ -20,7 +20,7 @@ define i64 @trunc_shl_zext_64(i64 %a) {
 ; CHECK-LABEL: define i64 @trunc_shl_zext_64
 ; CHECK-SAME: (i64 [[A:%.*]]) {
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i64 [[A]], 7
-; CHECK-NEXT:    [[EXT:%.*]] = and i64 [[SHL]], 128
+; CHECK-NEXT:    [[EXT:%.*]] = and i64 [[SHL]], 255
 ; CHECK-NEXT:    ret i64 [[EXT]]
 ;
   %trunc = trunc i64 %a to i8
