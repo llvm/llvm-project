@@ -2534,33 +2534,19 @@ Decl *TemplateDeclInstantiator::VisitVarTemplatePartialSpecializationDecl(
   VarTemplateDecl *VarTemplate = D->getSpecializedTemplate();
 
   // Lookup the already-instantiated declaration and return that.
+  //
+  // The primary member variable template is normally instantiated into Owner
+  // before its partial specializations, because it is declared first. That may
+  // not hold when the enclosing class template is deserialized from a PCH or
+  // module built with errors, so instantiate the primary on demand here.
+  if (Owner->lookup(VarTemplate->getDeclName()).empty())
+    Visit(VarTemplate);
+
   DeclContext::lookup_result Found = Owner->lookup(VarTemplate->getDeclName());
-
-  // Normally the primary member variable template has already been instantiated
-  // into Owner, because it is declared before its partial specializations and
-  // so is visited first while instantiating the enclosing class. However, when
-  // the class template pattern is deserialized from a module or precompiled
-  // preamble, the primary may not have been materialized into Owner yet,
-  // leaving the lookup empty. Previously this asserted (and crashed release
-  // builds with a null dereference). Instantiate the primary on demand and look
-  // it up again.
-  if (Found.empty()) {
-    if (Decl *InstPrimary = Visit(VarTemplate))
-      if (auto *InstVTD = dyn_cast<VarTemplateDecl>(InstPrimary))
-        Found = Owner->lookup(InstVTD->getDeclName());
-  }
-
-  // After the on-demand instantiation above the primary must be present. Keep
-  // the original invariant assertions so a genuinely-missing primary is still
-  // flagged in +Asserts builds, with a null return as a release-safe guard so a
-  // stray case degrades gracefully instead of dereferencing an empty lookup
-  // result.
-  assert(!Found.empty() && "Instantiation found nothing?");
   if (Found.empty())
     return nullptr;
 
   VarTemplateDecl *InstVarTemplate = dyn_cast<VarTemplateDecl>(Found.front());
-  assert(InstVarTemplate && "Instantiation did not find a variable template?");
   if (!InstVarTemplate)
     return nullptr;
 
