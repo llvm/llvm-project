@@ -81,6 +81,8 @@ GetBlockName(unsigned BlockID, const BitstreamBlockInfo &BlockInfo,
     return "STRTAB_BLOCK";
   case bitc::SYMTAB_BLOCK_ID:
     return "SYMTAB_BLOCK";
+  case bitc::AMDGPU_SUMMARY_BLOCK_ID:
+    return "AMDGPU_SUMMARY_BLOCK";
   }
 }
 
@@ -419,6 +421,15 @@ GetCodeName(unsigned CodeID, unsigned BlockID,
       return std::nullopt;
     case bitc::SYMTAB_BLOB:
       return "BLOB";
+    }
+  case bitc::AMDGPU_SUMMARY_BLOCK_ID:
+    switch (CodeID) {
+    default:
+      return std::nullopt;
+    case bitc::AMDGPU_SUMMARY_VERSION:
+      return "AMDGPU_SUMMARY_VERSION";
+    case bitc::AMDGPU_SUMMARY_ENTRY:
+      return "AMDGPU_SUMMARY_ENTRY";
     }
   }
 #undef STRINGIFY_CODE

@@ -8751,6 +8751,88 @@ Error BitcodeModule::readSummary(
   return R.parseModule();
 }
 
+Expected<bool> BitcodeModule::readAMDGPUSummary(AMDGPU::SummaryMap &Summaries) {
+  BitstreamCursor Stream(Buffer);
+  if (Error JumpFailed = Stream.JumpToBit(ModuleBit))
+    return std::move(JumpFailed);
+
+  if (Error Err = Stream.EnterSubBlock(bitc::MODULE_BLOCK_ID))
+    return std::move(Err);
+
+  // Scan sub-blocks to find AMDGPU_SUMMARY_BLOCK_ID.
+  while (true) {
+    Expected<llvm::BitstreamEntry> MaybeEntry = Stream.advance();
+    if (!MaybeEntry)
+      return MaybeEntry.takeError();
+    BitstreamEntry Entry = MaybeEntry.get();
+
+    switch (Entry.Kind) {
+    case BitstreamEntry::Error:
+      return error("Malformed block");
+    case BitstreamEntry::EndBlock:
+      return false;
+    case BitstreamEntry::Record:
+      if (Expected<unsigned> Skipped = Stream.skipRecord(Entry.ID); !Skipped)
+        return Skipped.takeError();
+      continue;
+    case BitstreamEntry::SubBlock:
+      if (Entry.ID == bitc::AMDGPU_SUMMARY_BLOCK_ID)
+        break;
+      if (Error Err = Stream.SkipBlock())
+        return std::move(Err);
+      continue;
+    }
+
+    // Found AMDGPU_SUMMARY_BLOCK_ID — parse it.
+    if (Error Err = Stream.EnterSubBlock(bitc::AMDGPU_SUMMARY_BLOCK_ID))
+      return std::move(Err);
+
+    SmallVector<uint64_t, 16> Record;
+    while (true) {
+      Expected<BitstreamEntry> MaybeRec = Stream.advanceSkippingSubblocks();
+      if (!MaybeRec)
+        return MaybeRec.takeError();
+      BitstreamEntry Rec = MaybeRec.get();
+
+      if (Rec.Kind == BitstreamEntry::EndBlock)
+        return true;
+      if (Rec.Kind != BitstreamEntry::Record)
+        return error("Expected record in AMDGPU_SUMMARY block");
+
+      Record.clear();
+      Expected<unsigned> MaybeCode = Stream.readRecord(Rec.ID, Record);
+      if (!MaybeCode)
+        return MaybeCode.takeError();
+
+      switch (MaybeCode.get()) {
+      case bitc::AMDGPU_SUMMARY_VERSION:
+        if (Record.size() < 1 || Record[0] != 1)
+          return error("Unsupported AMDGPU summary version");
+        break;
+      case bitc::AMDGPU_SUMMARY_ENTRY: {
+        if (Record.size() < 9)
+          return error("Invalid AMDGPU summary entry");
+
+        GlobalValue::GUID GUID = Record[0];
+        AMDGPU::FunctionSummary FS;
+        FS.IsEntry = Record[1] != 0;
+        FS.FlatWGSizeMin = Record[2];
+        FS.FlatWGSizeMax = Record[3];
+        FS.WavesPerEUMin = Record[4];
+        FS.WavesPerEUMax = Record[5];
+        FS.MaxNumWGX = Record[6];
+        FS.MaxNumWGY = Record[7];
+        FS.MaxNumWGZ = Record[8];
+        Summaries[GUID] = FS;
+        break;
+      }
+      default:
+        break;
+      }
+    }
+  }
+}
+
 // Parse the specified bitcode buffer, returning the function info index.
 Expected<std::unique_ptr<ModuleSummaryIndex>> BitcodeModule::getSummary() {
   BitstreamCursor Stream(Buffer);
@@ -8781,7 +8863,7 @@ getEnableSplitLTOUnitAndUnifiedFlag(BitstreamCursor &Stream, unsigned ID) {
     switch (Entry.Kind) {
     case BitstreamEntry::SubBlock: // Handled for us already.
     case BitstreamEntry::Error:
-      return error("Malformed block");
+      return error("malformed block");
     case BitstreamEntry::EndBlock: {
       // If no flags record found, return both flags as false.
       return std::make_pair(false, false);
