@@ -510,6 +510,7 @@ class LLDBDAP(DAP):
                 "couldn't read from memory",
                 "Cannot access memory at address",
                 "invalid address (fault address:",
+                "error: parent is NULL",
             ]
         )
 

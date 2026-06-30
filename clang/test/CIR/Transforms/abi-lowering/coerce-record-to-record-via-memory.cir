@@ -8,7 +8,7 @@
 
 #coerce_vec4_to_twoi64 = {
   return = { kind = "direct" },
-  args   = [ { kind = "direct", coerced_type = !rec_TwoI64 } ]
+  args   = [ { kind = "direct", coerced_type = !rec_TwoI64, can_flatten = false } ]
 }
 
 #caller_no_args = {

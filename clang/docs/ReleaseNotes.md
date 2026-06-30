@@ -661,6 +661,11 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   `__builtin_dynamic_object_size` and falls back to the object's static layout, silently discarding
   the annotation. A fix-it removes the `&` when the object's allocation is not statically known,
   where the count-derived bound is the useful answer.
+  
+- `-Wfortify-source` now warns when the constant-evaluated argument to
+  `umask` has bits set outside `0777`. Those bits are silently discarded
+  by the kernel, so setting them is almost always a typo (matching the
+  bionic libc `diagnose_if` check).
 
 ### Improvements to Clang's time-trace
 
@@ -735,6 +740,9 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   crash when using it with `-fms-extensions` on other platforms. (#GH184318)
 - Fixed a compiler crash due to an unresolved overloaded function type when
   calling `__builtin_bit_cast`. (#GH200112)
+- Clang now SFINAE friendly when the ``__reference_meows_from_temporary`` builtins
+  should SFINAE friendly when the 1st type is not a reference type. (#GH206524)
+
 
 #### Bug Fixes to Attribute Support
 
