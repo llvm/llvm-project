@@ -13,7 +13,7 @@ from typing import Dict, List, Optional, Tuple
 
 from dex.dextIR import FrameIR, StepIR
 from dex.test_script import DexterScript, Scope
-from dex.test_script.Nodes import Expect, FileLabels, Value, Where, Then
+from dex.test_script.Nodes import Expect, FileLabels, Where, Then
 
 
 def is_subpath(subpath: str, superpath: str) -> bool:
@@ -64,7 +64,7 @@ class WhereMatchResult:
     """
 
     frame_idx: int
-    active_expects: List[Value] = field(default_factory=list)
+    active_expects: List[Expect] = field(default_factory=list)
     active_thens: List[Then] = field(default_factory=list)
     pending_wheres: List[Where] = field(default_factory=list)
 
@@ -114,9 +114,6 @@ def get_active_where_matches(
     # As we visit the script nodes in pre-order traversal, we can always assume that an expect's parent !where
     # has already been visited, and thus should have an entry in active_where_expects if it is active.
     def get_active_expects(expect: Expect, expected_value, scope: Scope):
-        assert isinstance(
-            expect, Value
-        ), "Values should be the only type of expect possible!"
         if (
             scope.where in active_where_expects
             and active_where_expects[scope.where].frame_idx == 0

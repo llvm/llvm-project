@@ -171,7 +171,9 @@ class DbgEng(DebuggerBase):
     def get_stack_frames(self, step_index: int) -> StepIR:
         raise NotImplementedError("--use-script debugging not supported in dbgeng yet.")
 
-    def collect_watches(self, step: StepIR, watches: List[str]):
+    def collect_watches(
+        self, step: StepIR, watches: List[str], scope_watches: List[str]
+    ):
         raise NotImplementedError("--use-script debugging not supported in dbgeng yet.")
 
     @property
