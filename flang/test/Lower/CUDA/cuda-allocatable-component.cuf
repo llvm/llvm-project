@@ -8,8 +8,8 @@ module m
   type :: chunk_type
     real(8), dimension(:,:), allocatable :: arr
   end type
-  type :: outer_type
-    type(chunk_type), allocatable :: inner(:)
+  type :: outer_device_type
+    type(chunk_type), device, allocatable :: inner(:)
   end type
 end module
 
@@ -24,7 +24,6 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPmanaged_component()
 ! CHECK: cuf.allocate %{{.*}} : {{.*}} {data_attr = #cuf.cuda<managed>} -> i32
-! The component descriptor must be re-established with the managed allocator.
 ! CHECK: hlfir.designate %{{.*}}{"arr"} {{.*}} : {{.*}} -> !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf64>>>>
 ! CHECK: fir.embox %{{.*}} {allocator_idx = 3 : i32}
 ! CHECK: cuf.allocate %{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf64>>>> {data_attr = #cuf.cuda<managed>} -> i32
@@ -61,18 +60,17 @@ end subroutine
 ! CHECK: fir.embox %{{.*}} {allocator_idx = 3 : i32}
 ! CHECK: cuf.allocate %{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf64>>>> source({{.*}}) {data_attr = #cuf.cuda<managed>} -> i32
 
-! Nested structure component: outer(1)%inner(1)%arr walks the full chain.
-subroutine nested_managed_component()
+! Intermediate component has device attribute, outermost variable does not.
+subroutine intermediate_device_component()
   use m
-  type(outer_type), managed, allocatable :: outer(:)
+  type(outer_device_type), allocatable :: outer(:)
   allocate(outer(1))
   allocate(outer(1)%inner(1))
   allocate(outer(1)%inner(1)%arr(10,10))
   deallocate(outer)
 end subroutine
 
-! CHECK-LABEL: func.func @_QPnested_managed_component()
-! CHECK: cuf.allocate %{{.*}} : {{.*}} {data_attr = #cuf.cuda<managed>} -> i32
+! CHECK-LABEL: func.func @_QPintermediate_device_component()
 ! CHECK: hlfir.designate %{{.*}}{"arr"} {{.*}} : {{.*}} -> !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf64>>>>
-! CHECK: fir.embox %{{.*}} {allocator_idx = 3 : i32}
-! CHECK: cuf.allocate %{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf64>>>> {data_attr = #cuf.cuda<managed>} -> i32
+! CHECK: fir.embox %{{.*}} {allocator_idx = 2 : i32}
+! CHECK: cuf.allocate %{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf64>>>> {data_attr = #cuf.cuda<device>} -> i32
