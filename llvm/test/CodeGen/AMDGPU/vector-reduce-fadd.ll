@@ -2135,8 +2135,8 @@ define double @test_vector_reduce_fadd_v16double(double %sp, <16 x double> %v) {
 ; GFX9-SDAG-LABEL: test_vector_reduce_fadd_v16double:
 ; GFX9-SDAG:       ; %bb.0: ; %entry
 ; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-SDAG-NEXT:    scratch_load_dword v33, off, s32 offset:8
 ; GFX9-SDAG-NEXT:    scratch_load_dword v31, off, s32
+; GFX9-SDAG-NEXT:    scratch_load_dword v33, off, s32 offset:8
 ; GFX9-SDAG-NEXT:    scratch_load_dword v32, off, s32 offset:4
 ; GFX9-SDAG-NEXT:    v_add_f64 v[0:1], v[0:1], v[2:3]
 ; GFX9-SDAG-NEXT:    v_add_f64 v[0:1], v[0:1], v[4:5]
@@ -2152,7 +2152,7 @@ define double @test_vector_reduce_fadd_v16double(double %sp, <16 x double> %v) {
 ; GFX9-SDAG-NEXT:    v_add_f64 v[0:1], v[0:1], v[24:25]
 ; GFX9-SDAG-NEXT:    v_add_f64 v[0:1], v[0:1], v[26:27]
 ; GFX9-SDAG-NEXT:    v_add_f64 v[0:1], v[0:1], v[28:29]
-; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(1)
+; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(2)
 ; GFX9-SDAG-NEXT:    v_add_f64 v[0:1], v[0:1], v[30:31]
 ; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-SDAG-NEXT:    v_add_f64 v[0:1], v[0:1], v[32:33]

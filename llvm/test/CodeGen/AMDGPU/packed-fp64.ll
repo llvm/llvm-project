@@ -2133,14 +2133,14 @@ define amdgpu_kernel void @fneg_v32f64_vec(ptr addrspace(1) %a) {
 ; GFX1251-SDAG-NEXT:    s_clause 0xd
 ; GFX1251-SDAG-NEXT:    global_load_b128 v[0:3], v56, s[0:1] offset:96
 ; GFX1251-SDAG-NEXT:    global_load_b128 v[4:7], v56, s[0:1] offset:112
-; GFX1251-SDAG-NEXT:    global_load_b128 v[8:11], v56, s[0:1] offset:224
-; GFX1251-SDAG-NEXT:    global_load_b128 v[12:15], v56, s[0:1] offset:240
-; GFX1251-SDAG-NEXT:    global_load_b128 v[16:19], v56, s[0:1] offset:128
 ; GFX1251-SDAG-NEXT:    global_load_b128 v[20:23], v56, s[0:1] offset:144
-; GFX1251-SDAG-NEXT:    global_load_b128 v[24:27], v56, s[0:1] offset:160
+; GFX1251-SDAG-NEXT:    global_load_b128 v[16:19], v56, s[0:1] offset:128
 ; GFX1251-SDAG-NEXT:    global_load_b128 v[28:31], v56, s[0:1] offset:176
-; GFX1251-SDAG-NEXT:    global_load_b128 v[32:35], v56, s[0:1] offset:192
+; GFX1251-SDAG-NEXT:    global_load_b128 v[24:27], v56, s[0:1] offset:160
 ; GFX1251-SDAG-NEXT:    global_load_b128 v[36:39], v56, s[0:1] offset:208
+; GFX1251-SDAG-NEXT:    global_load_b128 v[32:35], v56, s[0:1] offset:192
+; GFX1251-SDAG-NEXT:    global_load_b128 v[12:15], v56, s[0:1] offset:240
+; GFX1251-SDAG-NEXT:    global_load_b128 v[8:11], v56, s[0:1] offset:224
 ; GFX1251-SDAG-NEXT:    global_load_b128 v[40:43], v56, s[0:1] offset:64
 ; GFX1251-SDAG-NEXT:    global_load_b128 v[44:47], v56, s[0:1] offset:80
 ; GFX1251-SDAG-NEXT:    global_load_b128 v[48:51], v56, s[0:1] offset:32
@@ -2150,13 +2150,13 @@ define amdgpu_kernel void @fneg_v32f64_vec(ptr addrspace(1) %a) {
 ; GFX1251-SDAG-NEXT:    s_wait_loadcnt 0xc
 ; GFX1251-SDAG-NEXT:    v_pk_add_f64 v[4:7], v[4:7], 0 neg_lo:[1,1] neg_hi:[1,1]
 ; GFX1251-SDAG-NEXT:    s_wait_loadcnt 0xb
-; GFX1251-SDAG-NEXT:    v_pk_add_f64 v[8:11], v[8:11], 0 neg_lo:[1,1] neg_hi:[1,1]
-; GFX1251-SDAG-NEXT:    s_wait_loadcnt 0xa
-; GFX1251-SDAG-NEXT:    v_pk_add_f64 v[12:15], v[12:15], 0 neg_lo:[1,1] neg_hi:[1,1]
-; GFX1251-SDAG-NEXT:    s_wait_loadcnt 0x9
-; GFX1251-SDAG-NEXT:    v_pk_add_f64 v[16:19], v[16:19], 0 neg_lo:[1,1] neg_hi:[1,1]
-; GFX1251-SDAG-NEXT:    s_wait_loadcnt 0x8
 ; GFX1251-SDAG-NEXT:    v_pk_add_f64 v[20:23], v[20:23], 0 neg_lo:[1,1] neg_hi:[1,1]
+; GFX1251-SDAG-NEXT:    s_wait_loadcnt 0xa
+; GFX1251-SDAG-NEXT:    v_pk_add_f64 v[16:19], v[16:19], 0 neg_lo:[1,1] neg_hi:[1,1]
+; GFX1251-SDAG-NEXT:    s_wait_loadcnt 0x9
+; GFX1251-SDAG-NEXT:    v_pk_add_f64 v[28:31], v[28:31], 0 neg_lo:[1,1] neg_hi:[1,1]
+; GFX1251-SDAG-NEXT:    s_wait_loadcnt 0x8
+; GFX1251-SDAG-NEXT:    v_pk_add_f64 v[24:27], v[24:27], 0 neg_lo:[1,1] neg_hi:[1,1]
 ; GFX1251-SDAG-NEXT:    s_clause 0x3
 ; GFX1251-SDAG-NEXT:    global_store_b128 v56, v[0:3], s[0:1] offset:96
 ; GFX1251-SDAG-NEXT:    global_store_b128 v56, v[4:7], s[0:1] offset:112
@@ -2170,10 +2170,10 @@ define amdgpu_kernel void @fneg_v32f64_vec(ptr addrspace(1) %a) {
 ; GFX1251-SDAG-NEXT:    v_pk_add_f64 v[48:51], v[48:51], 0 neg_lo:[1,1] neg_hi:[1,1]
 ; GFX1251-SDAG-NEXT:    s_wait_loadcnt 0x2
 ; GFX1251-SDAG-NEXT:    v_pk_add_f64 v[52:55], v[52:55], 0 neg_lo:[1,1] neg_hi:[1,1]
-; GFX1251-SDAG-NEXT:    v_pk_add_f64 v[28:31], v[28:31], 0 neg_lo:[1,1] neg_hi:[1,1]
-; GFX1251-SDAG-NEXT:    v_pk_add_f64 v[24:27], v[24:27], 0 neg_lo:[1,1] neg_hi:[1,1]
 ; GFX1251-SDAG-NEXT:    v_pk_add_f64 v[36:39], v[36:39], 0 neg_lo:[1,1] neg_hi:[1,1]
 ; GFX1251-SDAG-NEXT:    v_pk_add_f64 v[32:35], v[32:35], 0 neg_lo:[1,1] neg_hi:[1,1]
+; GFX1251-SDAG-NEXT:    v_pk_add_f64 v[12:15], v[12:15], 0 neg_lo:[1,1] neg_hi:[1,1]
+; GFX1251-SDAG-NEXT:    v_pk_add_f64 v[8:11], v[8:11], 0 neg_lo:[1,1] neg_hi:[1,1]
 ; GFX1251-SDAG-NEXT:    s_wait_loadcnt 0x1
 ; GFX1251-SDAG-NEXT:    v_pk_add_f64 v[0:3], v[0:3], 0 neg_lo:[1,1] neg_hi:[1,1]
 ; GFX1251-SDAG-NEXT:    s_wait_loadcnt 0x0

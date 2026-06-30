@@ -3630,11 +3630,11 @@ define hidden void @extract_v6i16(ptr addrspace(1) %in0, ptr addrspace(1) %in1, 
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_clause 0x3
-; GFX10-NEXT:    global_load_ushort v2, v[0:1], off offset:6
 ; GFX10-NEXT:    global_load_ushort v3, v[0:1], off
 ; GFX10-NEXT:    global_load_ushort v8, v[0:1], off offset:2
+; GFX10-NEXT:    global_load_ushort v2, v[0:1], off offset:6
 ; GFX10-NEXT:    global_load_ushort v9, v[0:1], off offset:4
-; GFX10-NEXT:    s_waitcnt vmcnt(1)
+; GFX10-NEXT:    s_waitcnt vmcnt(2)
 ; GFX10-NEXT:    v_lshl_or_b32 v0, v8, 16, v3
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    v_lshl_or_b32 v1, v2, 16, v9
