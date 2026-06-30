@@ -133,6 +133,244 @@ if (postsub) {
         pipelineTriggers([cron('TZ=Asia/Kolkata\nH 0 * * *')])
     )
 }
+
+// ===========================================================================
+// Parallel SPEC Build CI parameters
+// Mirrors gcc/.amd-ci/upstream/Jenkinsfile parameter set, adapted for LLVM/AOCC.
+// ===========================================================================
+String specSepStyle = 'background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);' +
+    'color:white;padding:15px;border-radius:8px;font-size:18px;font-weight:bold;' +
+    'margin:20px 0 10px 0;box-shadow:0 4px 6px rgba(0,0,0,0.1);'
+
+String defaultJemallocUrl = 'https://atlartifactory.amd.com:8443/artifactory/SW-AOCC-REL-LOCAL/jemalloc/5.3.0/jemalloc-5.3.0-build-1.tar.xz'
+String defaultLibmUrl = 'https://atlartifactory.amd.com:8443/artifactory/SW-AOCC-REL-LOCAL/libm/5.2.rc3/libm-5.2.rc3.tar'
+String defaultAmdallocUrl = 'https://atlartifactory.amd.com:8443/artifactory/SW-AOCC-REL-LOCAL/amdalloc/1.0.4/amdalloc-1.0.4.tar'
+String defaultSsmallocUrl = 'https://atlartifactory.amd.com:8443/artifactory/SW-AOCC-REL-LOCAL/ssmalloc/1.0.16/ssmalloc-1.0.16.tar'
+// SPEC cfgs git repo (mirrors gcc/.amd-ci/upstream/Jenkinsfile). Cloned into
+// the workspace, staged as SPEC_perf_cfgs/, and archived as a directory
+// tree; the Jenkins on-the-fly '*zip*/SPEC_perf_cfgs.zip' URL is forwarded
+// downstream as SPECCPU_CFGDIR when USE_SPEC_CONFIGS_REPO=true.
+String defaultSpecConfigsRepoUrl = 'https://github.amd.com/cpu-compilers/spec-configs.git'
+String defaultSpecConfigsBranch = 'main'
+
+propsList.add(
+    parameters([
+        // ---------- Using Prebuilt CUT ----------
+        separator(name: 'sep_prebuilt_cut', sectionHeader: 'Using Prebuilt CUT',
+                  sectionHeaderStyle: specSepStyle),
+        booleanParam(
+            name: 'USE_PREBUILT_CUT',
+            defaultValue: false,
+            description: '''Skip build stages and use prebuilt artifacts.<br><br>
+<b>Required:</b> at least one of PREBUILT_BASE_CUT_URL_PATH or PREBUILT_LATEST_CUT_URL_PATH must be provided.<br>
+<b>Behavior:</b> SPEC tests will run once if only one parameter is provided, or twice if both are provided.'''
+        ),
+        string(
+            name: 'PREBUILT_BASE_CUT_URL_PATH',
+            defaultValue: '',
+            description: 'Prebuilt BASE artifact (URL or filesystem path) of an AOCC compiler tar.xz.'
+        ),
+        string(
+            name: 'PREBUILT_LATEST_CUT_URL_PATH',
+            defaultValue: '',
+            description: 'Prebuilt LATEST artifact (URL or filesystem path). Optional. If both BASE and LATEST are set, SPEC tests run twice.'
+        ),
+        string(
+            name: 'SPECCPU_CFGDIR',
+            defaultValue: '/proj/perfcompilerdevops/AOCC/aocc_p/aocc_llvm21/lin/973/SPEC_perf_cfgs',
+            description: '''<b>Required for SPEC stages</b> when <code>USE_SPEC_CONFIGS_REPO=false</code>.<br>
+URL or filesystem path of the SPEC cfgs (zip or directory) forwarded downstream as
+<code>SPECCPU_CFGDIR</code>.<br>
+Default is the shared aocc-devops cfgs directory; override with an artifact URL such as
+<code>http://&lt;host&gt;:8080/job/&lt;job&gt;/&lt;build&gt;/artifact/SPEC_perf_cfgs/*zip*/SPEC_perf_cfgs.zip</code>
+or a custom filesystem path.<br>
+<b>Note:</b> when <code>USE_SPEC_CONFIGS_REPO=true</code> (default), this value is
+<i>ignored</i> and the freshly cloned <code>spec-configs</code> repo is staged as
+<code>SPEC_perf_cfgs/</code>, archived as a directory tree, and Jenkins'
+on-the-fly <code>*zip*/SPEC_perf_cfgs.zip</code> URL for that artifact is
+forwarded instead. Set <code>USE_SPEC_CONFIGS_REPO=false</code> to fall back to this value.<br>
+Downstream <code>AOCC-Workloads/SPEC/*</code> errors with "No cfgs location supplied" if empty.'''
+        ),
+
+        // ---------- SPEC CPU2017 ----------
+        separator(name: 'sep_cpu2017', sectionHeader: 'SPEC CPU2017',
+                  sectionHeaderStyle: specSepStyle),
+        booleanParam(
+            name: 'ENABLE_CPU2017',
+            defaultValue: true,
+            description: 'Enable CPU2017 SPEC testing stages.'
+        ),
+        string(
+            name: 'CPU2017_BENCHMARK_LIST',
+            defaultValue: '500.perlbench_r, 502.gcc_r, 503.bwaves_r, 505.mcf_r, 507.cactuBSSN_r, 508.namd_r, 510.parest_r, 511.povray_r, 519.lbm_r, 520.omnetpp_r, 521.wrf_r, 523.xalancbmk_r, 525.x264_r, 526.blender_r, 527.cam4_r, 531.deepsjeng_r, 538.imagick_r, 541.leela_r, 544.nab_r, 548.exchange2_r, 549.fotonik3d_r, 554.roms_r, 557.xz_r',
+            description: 'Comma-separated list of CPU2017 benchmarks. For dev iterations consider a subset such as 505.mcf_r.'
+        ),
+        string(
+            name: 'CPU2017_EXTRA_RUNCPU_ARGS',
+            defaultValue: '--define march=native --define flto',
+            description: '''Extra args appended to runcpu via <code>--extra_runcpu_args</code>.<br>
+Default matches the AOCC-LLVM21 baseline (<code>--define march=native --define flto</code>).'''
+        ),
+
+        // ---------- SPEC CPU2026 ----------
+        separator(name: 'sep_cpu2026', sectionHeader: 'SPEC CPU2026',
+                  sectionHeaderStyle: specSepStyle),
+        booleanParam(
+            name: 'ENABLE_CPU2026',
+            defaultValue: true,
+            description: 'Enable CPU2026 SPEC testing stages.'
+        ),
+        string(
+            name: 'CPU2026_BENCHMARK_LIST',
+            defaultValue: '706.stockfish_r, 707.ntest_r, 708.sqlite_r, 709.cactus_r, 710.omnetpp_r, 714.cpython_r, 721.gcc_r, 722.palm_r, 723.llvm_r, 727.cppcheck_r, 729.abc_r, 731.astcenc_r, 734.vpr_r, 735.gem5_r, 736.ocio_r, 737.gmsh_r, 748.flightdm_r, 749.fotonik3d_r, 750.sealcrypto_r, 753.ns3_r, 765.roms_r, 766.femflow_r, 767.nest_r, 772.marian_r, 777.zstd_r, 782.lbm_r',
+            description: 'Comma-separated list of CPU2026 benchmarks.'
+        ),
+        string(
+            name: 'CPU2026_EXTRA_RUNCPU_ARGS',
+            defaultValue: '--define march=native --define flto',
+            description: '''Extra args appended to CPU2026 runcpu via <code>--extra_runcpu_args</code>.<br>
+Default matches the AOCC-LLVM21 baseline (<code>--define march=native --define flto</code>).'''
+        ),
+
+        // ---------- Configuration files (shared CPU2017 & CPU2026) ----------
+        separator(name: 'sep_cfg_files', sectionHeader: 'Configuration Files',
+                  sectionHeaderStyle: specSepStyle),
+        text(
+            name: 'CFG_FILES',
+            defaultValue: 'cpu2017_amd_linux_znver5_llvm_rate_bestmined.cfg, cpu2017_amd_linux_znver5_llvm_speed_bestmined.cfg, cpu2026_amd_linux_znver5_llvm_rate_bestmined.cfg, cpu2026_amd_linux_znver5_llvm_speed_bestmined.cfg',
+            description: 'Comma-separated list of cfg file names (cpu2017_*.cfg and/or cpu2026_*.cfg).'
+        ),
+        booleanParam(
+            name: 'USE_SPEC_CONFIGS_REPO',
+            defaultValue: true,
+            description: '''Clone the <code>spec-configs</code> git repo into this build, stage it as
+<code>SPEC_perf_cfgs/</code>, archive that directory tree, and forward Jenkins'
+on-the-fly directory-zip URL
+(<code>artifact/SPEC_perf_cfgs/*zip*/SPEC_perf_cfgs.zip</code>) as
+<code>SPECCPU_CFGDIR</code> to downstream SPEC jobs. When <b>true</b> (default),
+<code>SPECCPU_CFGDIR</code> above is ignored. When <b>false</b>, the clone is
+skipped and <code>SPECCPU_CFGDIR</code> is forwarded verbatim.'''
+        ),
+        string(
+            name: 'SPEC_CONFIGS_REPO_URL',
+            defaultValue: defaultSpecConfigsRepoUrl,
+            description: 'Git URL of the <code>spec-configs</code> repo (used when <code>USE_SPEC_CONFIGS_REPO=true</code>).'
+        ),
+        string(
+            name: 'SPEC_CONFIGS_BRANCH',
+            defaultValue: defaultSpecConfigsBranch,
+            description: 'Branch / ref of <code>spec-configs</code> to check out.'
+        ),
+        booleanParam(
+            name: 'SANITIZE_SPEC_CFGS_FOR_LLVM21',
+            defaultValue: true,
+            description: '''Strip pre-LLVM21 clang flags from every <code>*.cfg</code> in the cloned
+<code>spec-configs/</code> tree before it is archived as <code>SPEC_perf_cfgs.zip</code>.
+A <code>.cfg.orig</code> backup is kept beside each modified file and the diffs are
+logged. Disable only when targeting a pre-LLVM21 compiler.'''
+        ),
+
+        // ---------- Build / run time limits ----------
+        separator(name: 'sep_build_runtime_limit', sectionHeader: 'Build and Run Time Limit',
+                  sectionHeaderStyle: specSepStyle),
+        string(name: 'build_time', defaultValue: '4:00:00',
+               description: 'Maximum build time forwarded as --build_time.'),
+        string(name: 'run_time', defaultValue: '4:00:00',
+               description: 'Maximum run time forwarded as --run_time.'),
+
+        // ---------- Two-Stage SPEC Validation ----------
+        separator(name: 'sep_two_stage_spec', sectionHeader: 'Two-Stage SPEC Validation (copies)',
+                  sectionHeaderStyle: specSepStyle),
+        booleanParam(
+            name: 'ENABLE_STAGE_BUILD',
+            defaultValue: true,
+            description: '''When true (default): SPEC CPU2017 + CPU2026 are built once via downstream jobs in
+SPEC_BUILD_OR_RUN=build mode (csg_specslurm --build_only); the produced
+spec_&lt;SUITE&gt;_&lt;BUILD_TYPE&gt;_exes.tar.xz is reused by Stage 1 and Stage 2 in
+SPEC_BUILD_OR_RUN=run mode. When false: legacy build+run per stage.'''
+        ),
+        string(name: 'STAGE1_SPEC_COPIES', defaultValue: '1',
+               description: 'Stage 1 SPEC --copies (basic / functional validation).'),
+        string(name: 'STAGE2_SPEC_COPIES', defaultValue: '512',
+               description: 'Stage 2 SPEC --copies (full validation, gated on Stage 1 passing).'),
+        booleanParam(name: 'ENABLE_STAGE2', defaultValue: false,
+                     description: 'Run Stage 2 (full performance validation, e.g. 512 copies). Disabled by default; Stage 1 single-copy functional is the default for both CPU2017 and CPU2026.'),
+        choice(name: 'STAGE1_SPEC_VALIDATION', choices: ['functional', 'performance'],
+               description: 'Stage 1 SPEC_VALIDATION (csg_specslurm forces copies=1 under functional).'),
+        choice(name: 'STAGE2_SPEC_VALIDATION', choices: ['performance', 'functional'],
+               description: 'Stage 2 SPEC_VALIDATION (use performance so STAGE2_SPEC_COPIES is honored).'),
+
+        // ---------- Libraries ----------
+        separator(name: 'sep_libraries', sectionHeader: 'Libraries',
+                  sectionHeaderStyle: specSepStyle),
+        string(name: 'jemalloc_url', defaultValue: defaultJemallocUrl,
+               description: 'jemalloc package URL passed downstream.'),
+        string(name: 'libm_url', defaultValue: defaultLibmUrl,
+               description: 'libm package URL passed downstream.'),
+        string(name: 'amdalloc_url', defaultValue: defaultAmdallocUrl,
+               description: 'amdalloc package URL passed downstream.'),
+        string(name: 'ssmalloc_url', defaultValue: defaultSsmallocUrl,
+               description: 'ssmalloc package URL passed downstream.'),
+
+        // ---------- mlce / runcpu tuning (forwarded to downstream csg_specslurm) ----------
+        separator(name: 'sep_mlce', sectionHeader: 'mlce / runcpu Tuning',
+                  sectionHeaderStyle: specSepStyle),
+        string(name: 'SPEC_TUNE', defaultValue: 'base',
+               description: 'mlce <code>--tune</code> (e.g. <code>base</code>, <code>peak</code>).'),
+        booleanParam(name: 'SPEC_QUIET', defaultValue: true,
+                     description: 'mlce <code>--quiet</code>: suppress runcpu progress chatter.'),
+        booleanParam(name: 'SPEC_SKIP_SUDO', defaultValue: true,
+                     description: 'mlce <code>--skip_sudo</code>: skip system-tuning sudo steps on runners.'),
+        booleanParam(name: 'SPEC_ADD_TO_DATABASE', defaultValue: true,
+                     description: 'mlce <code>--add_to_database</code>: publish results to the perf database.'),
+        booleanParam(name: 'SPEC_OOB', defaultValue: true,
+                     description: 'mlce <code>--oob</code>: out-of-box (generic-cfg) run mode.'),
+        booleanParam(name: 'SPEC_REBUILD', defaultValue: true,
+                     description: 'mlce <code>--rebuild</code>: force a  rebuild of SPEC binaries.'),
+        booleanParam(name: 'SPEC_USE_JEMALLOC', defaultValue: true,
+                     description: 'mlce <code>--jemalloc</code>: enable jemalloc allocator preload.'),
+        string(name: 'SPEC_JEMALLOC_VERSION', defaultValue: '5.3.0',
+               description: 'mlce <code>--adr.jemalloc.version</code>.'),
+        string(name: 'SPEC_JEMALLOC_TAGS', defaultValue: '_-lg-quantum.3',
+               description: 'mlce <code>--adr.jemalloc.tags</code>.'),
+        string(name: 'SPEC_EMAIL', defaultValue: '',
+               description: 'mlce <code>--email</code>: comma-separated recipients for SPEC run notifications. Leave empty to disable.'),
+        string(name: 'SPEC_SLURM_RUN_PARTITION', defaultValue: 'zen5_512c',
+               description: 'mlce <code>--slurm_run_partition</code>: SLURM partition for run jobs.'),
+        string(name: 'SPEC_FPRATE_COPIES', defaultValue: '256',
+               description: 'mlce <code>--fprate_copies</code>: copies for the fprate sub-suite (typically half of <code>--copies</code>).'),
+        string(name: 'SPEC_OUTDIR', defaultValue: '.',
+               description: 'mlce <code>--outdir</code>: results output directory.'),
+        string(name: 'SPEC_AOCC_STAGING_BRANCH', defaultValue: '',
+               description: 'mlce <code>--aocc_staging_branch</code>. Leave empty to default to the upstream <code>JOB_NAME</code> at runtime.'),
+        string(name: 'SPEC_AOCC_STAGING_BUILD', defaultValue: '',
+               description: 'mlce <code>--aocc_staging_build</code>. Leave empty to default to the upstream <code>BUILD_NUMBER</code> at runtime.'),
+
+        // ---------- Other settings ----------
+        separator(name: 'sep_others', sectionHeader: 'Other Settings',
+                  sectionHeaderStyle: specSepStyle),
+        booleanParam(
+            name: 'FORCE_SPEC',
+            defaultValue: false,
+            description: 'Force SPEC stages to run even when no compiler tar was produced (requires USE_PREBUILT_CUT).'
+        ),
+        string(name: 'COMPILER_VERSION', defaultValue: 'llvm',
+               description: 'Compiler version label forwarded downstream (e.g. llvm, aocc, aocc5).'),
+        choice(
+            name: 'SPEC_COMPILER_ID',
+            choices: ['llvm', 'aocc', 'aocc-llvm', 'amdclang', 'gcc', 'oneapi'],
+            description: '''Compiler family forwarded downstream to AOCC-Workloads/SPEC/* as
+<code>SPEC_COMPILER_ID</code>. Choose <code>llvm</code> to pick the
+<code>.../znver5/llvm/...</code> cfgs, or <code>aocc</code> for the
+<code>.../znver5/aocc/...</code> cfgs.'''
+        ),
+        string(name: 'ZNVER', defaultValue: '5_512c',
+               description: 'Zen architecture version (e.g. 5, 5_512c, 5_384c, 4_dvt).'),
+        string(name: 'GIT_COMMIT_OVERRIDE', defaultValue: '',
+               description: 'Optional override for GIT_COMMIT forwarded downstream.')
+    ])
+)
+
 properties(propsList)
 
 String linuxBasePath = '/usr/sbin:/usr/bin:/bin'
@@ -358,26 +596,79 @@ try {
                 cleanWs()
                 return // From node
             }
+            // ----------------------------------------------------------------
+            // Clone the spec-configs git repo into the workspace (mirrors
+            // gcc/.amd-ci/upstream/Jenkinsfile). The clone lives at workspace
+            // root (NOT inside ${llvmProj}/) so aocc_build.py's "Checkout is
+            // dirty" guard on the llvm-project working tree stays clean.
+            // The cfg tree is archived as SPEC_perf_cfgs.zip below in the run
+            // stage's finally block; that artifact URL is then forwarded
+            // downstream as SPECCPU_CFGDIR.
+            // ----------------------------------------------------------------
+            Boolean shouldCloneSpecConfigs = (
+                params.USE_SPEC_CONFIGS_REPO &&
+                    !postsub &&
+                    (params.ENABLE_CPU2017 || params.ENABLE_CPU2026)
+            )
+            if (shouldCloneSpecConfigs) {
+                stage('clone-spec-configs') {
+                    cloneSpecConfigs(
+                        params.SPEC_CONFIGS_REPO_URL?.trim() ?: 'https://github.amd.com/cpu-compilers/spec-configs.git',
+                        params.SPEC_CONFIGS_BRANCH?.trim() ?: 'main',
+                        gitHubAppCredsId, gitTool
+                    )
+                }
+            }
+            // Download the SPEC dependency libraries (jemalloc, libm, amdalloc,
+            // ssmalloc) on the agent using the orequest pw_file method (mirrors
+            // gcc/.amd-ci/upstream/Jenkinsfile 'Download Dependencies'). The
+            // tars land in spec_libs/, which is bind-mounted into the build
+            // container so run.sh can bundle them into the compiler package.
+            // Done on the agent because the apptainer build container may lack
+            // artifactory access. Skipped for prebuilt-CUT runs (no fresh tar
+            // to inject into).
+            Boolean shouldDownloadSpecLibs = (
+                !params.USE_PREBUILT_CUT &&
+                    !postsub &&
+                    (params.ENABLE_CPU2017 || params.ENABLE_CPU2026)
+            )
+            if (shouldDownloadSpecLibs) {
+                stage('download-spec-libs') {
+                    downloadSpecLibraries(
+                        params.jemalloc_url, params.libm_url,
+                        params.amdalloc_url, params.ssmalloc_url
+                    )
+                }
+            }
             stage('run') {
                 try {
-                    List<String> runEnv = [
-                        'PATH=' + linuxBasePath,
-                        'JOB_NAME=' + jobName,
-                        'AOCC_DUAL_FLANG_BUILD=' + dualFlangBuild,
-                        'STAGE_BUILD_NUM=' + stageBuildNum,
-                        'VERSION_VAL=' + versionVal,
-                        'REL_MODE=' + relMode,
-                        'BUILD_TYPE=' + buildType
-                    ]
-                    if (isPrBranch) {
-                        runEnv.add('IS_PR_BUILD=true')
-                        runEnv.add('PR_BASE_COMMIT=' + prBaseCommit)
-                        runEnv.add('PR_LATEST_COMMIT=' + prLatestCommit)
+                    if (params.USE_PREBUILT_CUT) {
+                        echo 'Skipping compiler build script (apptainer_run.sh): ' +
+                            'USE_PREBUILT_CUT=true; using prebuilt CUT artifacts ' +
+                            '(PREBUILT_BASE_CUT_URL_PATH / PREBUILT_LATEST_CUT_URL_PATH).'
+                        currentBuild.result = successResultStr
+                    } else {
+                        List<String> runEnv = [
+                            'PATH=' + linuxBasePath,
+                            'JOB_NAME=' + jobName,
+                            'AOCC_DUAL_FLANG_BUILD=' + dualFlangBuild,
+                            'STAGE_BUILD_NUM=' + stageBuildNum,
+                            'VERSION_VAL=' + versionVal,
+                            'REL_MODE=' + relMode,
+                            'BUILD_TYPE=' + buildType,
+                            'SPEC_LIBS_DIR=spec_libs',
+                            'AMDALLOC_URL=' + (params.amdalloc_url ?: '')
+                        ]
+                        if (isPrBranch) {
+                            runEnv.add('IS_PR_BUILD=true')
+                            runEnv.add('PR_BASE_COMMIT=' + prBaseCommit)
+                            runEnv.add('PR_LATEST_COMMIT=' + prLatestCommit)
+                        }
+                        withEnv(runEnv) {
+                            sh 'llvm-project/.amd-ci/upstream/apptainer_run.sh'
+                        }
+                        currentBuild.result = successResultStr
                     }
-                    withEnv(runEnv) {
-                        sh 'llvm-project/.amd-ci/upstream/apptainer_run.sh'
-                    }
-                    currentBuild.result = successResultStr
                 } finally {
                     String cmakeBuildDir = findBuildDir()
                     def compilerZips // groovylint-disable-line NoDef,VariableTypeRequired
@@ -409,6 +700,11 @@ try {
                     } else {
                         echo('No built compiler tar was found.')
                     }
+                    // Archive the cloned spec-configs (if present) as a zip
+                    // artifact and stash the artifact URL for downstream
+                    // SPEC jobs. Done before cleanWs() so the workspace tree
+                    // is still intact.
+                    archiveSpecConfigsIfPresent()
                     cleanWs()
                 }
             }
@@ -416,17 +712,27 @@ try {
         if (isSkippableMerge || !hasSourceChanges) {
             return // From timeout
         }
-        if (runDownstream && compilerTar) {
+        if (runDownstream && (compilerTar || params.USE_PREBUILT_CUT || params.FORCE_SPEC)) {
+            // The test-suite tasks (GFortran/NAGLLVM/...) consume the freshly
+            // built compilerTar via their CUT URL, so they only run when a tar
+            // was produced. SPEC stages below can run off prebuilt CUT artifacts.
+            //
+            // The test-suite group and the SPEC group are each collected as a
+            // closure in downstreamParallel and launched together below, so the
+            // suites (Fujitsu / GFortran / NAGLLVM / ...) and the SPEC builds
+            // run concurrently instead of the suites blocking the SPEC stages.
+            Map downstreamParallel = [:]
+            if (compilerTar) {
+            downstreamParallel['TestSuites'] = {
             stage('downstream-tasks') {
                 Map allTasks = [
                     failFast: false,
                 ]
                 String fujitsuSuiteName = 'Fujitsu'
                 String gfortranSuiteName = 'GFortran'
-                List<String> downstreamSuites = [gfortranSuiteName, 'NAGLLVM']
-                if (timerTrigger) {
-                    downstreamSuites.addAll([fujitsuSuiteName, 'Polyhedron'])
-                }
+                List<String> downstreamSuites = [
+                    gfortranSuiteName, 'NAGLLVM', fujitsuSuiteName, 'Polyhedron'
+                ]
                 for (suite in downstreamSuites) {
                     String suiteName = suite
                     List suiteParams = [
@@ -466,6 +772,102 @@ try {
                     }
                 }
                 parallel(allTasks)
+            }
+            } // end downstreamParallel['TestSuites'] closure
+            } // end if (compilerTar) for non-SPEC downstream test suites
+
+            // ================================================================
+            // Two-Stage Parallel SPEC Testing
+            // Stage Build (build-only) -> Stage 1 (basic) -> Stage 2 (full).
+            // Skipped on postsub branches; gated on compilerTar / USE_PREBUILT_CUT.
+            // ================================================================
+            Boolean canRunSpec = (compilerTar != null) || params.USE_PREBUILT_CUT || params.FORCE_SPEC
+            if (!postsub && canRunSpec) {
+                downstreamParallel['SPEC'] = {
+                Boolean stage1Passed = true
+                Boolean stageBuildPassed = false
+                String prebuiltExesEnvPrefix = 'STAGE_BUILD_'
+                String stage1Copies = (params.STAGE1_SPEC_COPIES?.trim() ?: '1')
+                String stage2Copies = (params.STAGE2_SPEC_COPIES?.trim() ?: '512')
+                String stage1Validation = (params.STAGE1_SPEC_VALIDATION?.trim() ?: 'functional')
+                String stage2Validation = (params.STAGE2_SPEC_VALIDATION?.trim() ?: 'performance')
+                String resolvedGitCommit = (gitVars?.GIT_COMMIT ?: '')
+                String effectiveZnver = (params.ZNVER?.trim() ?: '5_512c')
+
+                stage('Stage Build: Parallel SPEC Build') {
+                    if (!params.ENABLE_STAGE_BUILD) {
+                        echo 'Skipping Stage Build: ENABLE_STAGE_BUILD=false (Stage 1/2 will build+run)'
+                        return
+                    }
+                    if (!params.ENABLE_CPU2017 && !params.ENABLE_CPU2026) {
+                        echo 'Skipping Stage Build: both ENABLE_CPU2017 and ENABLE_CPU2026 are false'
+                        return
+                    }
+                    echo 'Running Stage Build (CPU2017 + CPU2026 build-only pass; csg_specslurm --build_only)'
+                    stageBuildPassed = runParallelSpecTesting(
+                        'Stage Build', prebuiltExesEnvPrefix, '1', 'functional',
+                        resolvedGitCommit, effectiveZnver, compilerTar,
+                        'build', prebuiltExesEnvPrefix
+                    )
+                    echo "Stage Build result: ${stageBuildPassed ? 'PASSED' : 'FAILED'}"
+                    ['CPU2017_BASE', 'CPU2017_LATEST', 'CPU2017_SINGLE',
+                     'CPU2026_BASE', 'CPU2026_LATEST', 'CPU2026_SINGLE'].each { suffix ->
+                        String key = "${prebuiltExesEnvPrefix}${suffix}_EXES_URL"
+                        if (env."${key}") {
+                            echo "  ${key}=${env."${key}"}"
+                        }
+                    }
+                }
+
+                Boolean useStageBuildExes = params.ENABLE_STAGE_BUILD && stageBuildPassed
+                String runStagesMode = useStageBuildExes ? 'run' : 'both'
+                String runStagesPrefix = useStageBuildExes ? prebuiltExesEnvPrefix : ''
+                if (params.ENABLE_STAGE_BUILD && !stageBuildPassed) {
+                    echo 'WARNING: Stage Build did not pass; Stage 1 / Stage 2 will fall back to legacy build+run.'
+                }
+
+                stage('Stage 1: Parallel SPEC Testing (Basic Validation)') {
+                    echo "Running Stage 1 with SPEC_COPIES=${stage1Copies}, SPEC_VALIDATION=${stage1Validation}, SPEC_BUILD_OR_RUN=${runStagesMode}"
+                    stage1Passed = runParallelSpecTesting(
+                        'Stage 1', '', stage1Copies, stage1Validation,
+                        resolvedGitCommit, effectiveZnver, compilerTar,
+                        runStagesMode, runStagesPrefix
+                    )
+                    echo "Stage 1 result: ${stage1Passed ? 'PASSED' : 'FAILED'}"
+                }
+
+                stage('Stage 2: Parallel SPEC Testing (Full Validation)') {
+                    if (!params.ENABLE_STAGE2) {
+                        echo 'Skipping Stage 2: ENABLE_STAGE2=false'
+                        return
+                    }
+                    if (!stage1Passed) {
+                        echo 'Skipping Stage 2: Stage 1 had failures (gated on Stage 1 passing)'
+                        return
+                    }
+                    echo "Running Stage 2 with SPEC_COPIES=${stage2Copies}, SPEC_VALIDATION=${stage2Validation}, SPEC_BUILD_OR_RUN=${runStagesMode}"
+                    Boolean stage2Passed = runParallelSpecTesting(
+                        'Stage 2', 'STAGE2_', stage2Copies, stage2Validation,
+                        resolvedGitCommit, effectiveZnver, compilerTar,
+                        runStagesMode, runStagesPrefix
+                    )
+                    echo "Stage 2 result: ${stage2Passed ? 'PASSED' : 'FAILED'}"
+                }
+                } // end downstreamParallel['SPEC'] closure
+            } else if (postsub) {
+                echo 'Skipping Parallel SPEC Testing on postsub branch.'
+            } else {
+                echo 'Skipping Parallel SPEC Testing: no compiler tar and USE_PREBUILT_CUT/FORCE_SPEC not set.'
+            }
+
+            // Launch the test-suite group and the SPEC group together so they
+            // run in parallel (Fujitsu / GFortran / NAGLLVM / ... alongside the
+            // SPEC builds). failFast=false keeps a failure in one group from
+            // aborting the other, preserving the previous sequential semantics
+            // where SPEC ran regardless of the test-suite outcome.
+            if (downstreamParallel) {
+                downstreamParallel.failFast = false
+                parallel(downstreamParallel)
             }
         }
     }
@@ -549,4 +951,580 @@ String findBuildDir() {
         return buildDirs[zero]
     }
     return null
+}
+
+/* ==========================================================================
+ * Parallel SPEC Build CI helpers (mirrors gcc/.amd-ci/upstream/Jenkinsfile).
+ *
+ * Top-level def methods so each compiles to its own WorkflowScript method,
+ * keeping the Jenkins CPS compiler from packing everything into one
+ * 64KB+ ___cps___NNNNN method ("Method too large: ...CpsFunction").
+ *
+ * Flow:
+ *   runParallelSpecTesting(...)
+ *     parallel { runCpu2017Stage(...) ; runCpu2026Stage(...) }
+ *
+ * SPEC_BUILD_OR_RUN: 'both' (build+run, default) | 'build' (csg_specslurm
+ *   --build_only; archives spec_<SUITE>_<TYPE>_exes.tar.xz) | 'run'
+ *   (csg_specslurm --nobuild; consumes PREBUILT_EXES_TAR_URL).
+ * ========================================================================== */
+
+/**
+ * Build types available for SPEC testing.
+ *  - USE_PREBUILT_CUT: derived from PREBUILT_BASE/LATEST URL params.
+ *  - Fresh-build mode: a single compiler tar is produced upstream, so a
+ *    single empty-suffix entry is returned.
+ */
+List<String> getAvailableBuildTypes(String compilerTar) {
+    if (params.USE_PREBUILT_CUT) {
+        boolean hasBase = params.PREBUILT_BASE_CUT_URL_PATH?.trim()
+        boolean hasLatest = params.PREBUILT_LATEST_CUT_URL_PATH?.trim()
+        if (hasBase && hasLatest) { echo 'Detected two build types: base and latest'; return ['base', 'latest'] }
+        if (hasBase)               { echo 'Detected single build type: base';        return ['base'] }
+        if (hasLatest)             { echo 'Detected single build type: latest';      return ['latest'] }
+        error('USE_PREBUILT_CUT is true but no PREBUILT_*_CUT_URL_PATH was provided')
+    }
+    if (!compilerTar) {
+        error('No compiler tar available for SPEC testing (upstream build did not produce a tar.xz)')
+    }
+    echo "Detected single build mode (fresh build): ${compilerTar}"
+    return ['']
+}
+
+/**
+ * Download the SPEC dependency libraries (jemalloc, libm, amdalloc, ssmalloc)
+ * into <workspace>/spec_libs using the orequest artifactory pw_file method
+ * (mirrors the parallel 'Download Dependencies' stage in
+ * gcc/.amd-ci/upstream/Jenkinsfile). Each URL may also be a local filesystem
+ * path. Runs on the Jenkins agent (which has /proj and artifactory access);
+ * run.sh later bundles these tars into the freshly built compiler package.
+ */
+void downloadSpecLibraries(String jemallocUrl, String libmUrl,
+                           String amdallocUrl, String ssmallocUrl) {
+    withEnv([
+        'JEMALLOC_URL=' + (jemallocUrl ?: ''),
+        'LIBM_URL=' + (libmUrl ?: ''),
+        'AMDALLOC_URL=' + (amdallocUrl ?: ''),
+        'SSMALLOC_URL=' + (ssmallocUrl ?: '')
+    ]) {
+        sh(label: 'download-spec-libs', script: '''set -e
+pw_file="${ARTIFACTORY_PW_FILE:-/proj/csse_jenkins2/swtools/.safe-secrets/orequest-AMD-Artifactory}"
+mkdir -p spec_libs
+
+download_one() {
+    url="$1"
+    if [ -z "${url}" ]; then
+        return 0
+    fi
+    if [ -f "${url}" ]; then
+        echo "[+] Using local library tar ${url}"
+        cp -v "${url}" spec_libs/
+        return 0
+    fi
+    out="spec_libs/${url##*/}"
+    echo "[+] Downloading ${url}"
+    if [ -f "${pw_file}" ]; then
+        pw=$(head -1 "${pw_file}" | tr -d '\\n\\r')
+        wget --user=orequest --password="${pw}" --auth-no-challenge -q "${url}" -O "${out}"
+    else
+        echo "WARNING: pw_file ${pw_file} not found; attempting anonymous download."
+        wget -q "${url}" -O "${out}" || curl -fSL --connect-timeout 30 --retry 3 -o "${out}" "${url}"
+    fi
+    echo "[+] Downloaded ${out}"
+}
+
+download_one "${JEMALLOC_URL}"
+download_one "${LIBM_URL}"
+download_one "${AMDALLOC_URL}"
+download_one "${SSMALLOC_URL}"
+
+echo "[+] SPEC dependency libraries staged in spec_libs/:"
+ls -l spec_libs/ || true
+''')
+    }
+}
+
+/**
+ * Clone the spec-configs git repo into <workspace>/spec-configs (mirrors the
+ * 'spec-configs' branch of the parallel Download Dependencies stage in
+ * gcc/.amd-ci/upstream/Jenkinsfile).
+ *
+ * IMPORTANT: clones at workspace root, NOT inside the llvm-project checkout,
+ * because aocc_build.py validates the llvm-project working tree with
+ * 'git status' and aborts with "Checkout is dirty." on any untracked files.
+ */
+void cloneSpecConfigs(String repoUrl, String branch, String credentialsId, String gitTool) {
+    echo "[+] Cloning spec-configs (${repoUrl}, branch ${branch}) into spec-configs/"
+    dir('spec-configs') {
+        checkout(
+            changelog: false,
+            scm: scmGit(
+                gitTool: gitTool,
+                branches: [[name: branch]],
+                extensions: [
+                    [$class: 'CloneOption', shallow: true, depth: 1, noTags: true]
+                ],
+                userRemoteConfigs: [
+                    [
+                        credentialsId: credentialsId,
+                        url: repoUrl
+                    ]
+                ]
+            )
+        )
+    }
+    echo '[+] Clone of spec-configs completed'
+    sh(label: 'spec-configs-summary',
+       script: '''set -e
+ls -1 spec-configs | head -n 50
+echo "[+] cfg files matching cpu2017_*/cpu2026_*:"
+find spec-configs -maxdepth 3 -type f \\( -name 'cpu2017_*.cfg' -o -name 'cpu2026_*.cfg' \\) | head -n 50
+''')
+    if (params.SANITIZE_SPEC_CFGS_FOR_LLVM21) {
+        sanitizeSpecCfgsForLlvm21()
+    }
+}
+
+// Strip pre-LLVM21 clang flags (-fstruct-layout=<n>, -fremap-arrays,
+// -fstrip-mining, -zopt) from every *.cfg under spec-configs/. These flags
+// are hardcoded in legacy AOCC cfg files (e.g. perlbench tune block in
+// cpu2017_amd_linux_x86-64_aocc_oob_generic.cfg) and cause the LLVM21
+// clang to abort with "unknown argument". A .cfg.orig backup is kept
+// alongside each modified file so the originals are still recoverable.
+void sanitizeSpecCfgsForLlvm21() {
+    sh(label: 'sanitize-spec-cfgs-for-llvm21',
+       script: '''set -e
+root=spec-configs
+if [ ! -d "$root" ]; then
+    echo "[sanitize] $root not present; nothing to do"
+    exit 0
+fi
+list=$(mktemp)
+trap 'rm -f "$list"' EXIT
+find "$root" -type f -name '*.cfg' > "$list"
+scanned=$(wc -l < "$list" | tr -d ' ')
+modified=0
+while IFS= read -r f; do
+    cp "$f" "$f.orig"
+    sed -i -E \
+        -e 's/[[:space:]]+-fstruct-layout=[^[:space:]]+//g' \
+        -e 's/[[:space:]]+-fremap-arrays\\b//g' \
+        -e 's/[[:space:]]+-fstrip-mining\\b//g' \
+        -e 's/[[:space:]]+-zopt\\b//g' \
+        -e 's/[[:space:]]+$//' \
+        "$f"
+    if ! cmp -s "$f" "$f.orig"; then
+        modified=$((modified+1))
+        echo "[sanitize] modified: $f"
+        diff -u "$f.orig" "$f" | sed -n '1,40p' || true
+    else
+        rm -f "$f.orig"
+    fi
+done < "$list"
+echo "[sanitize] scanned=$scanned modified=$modified (pre-LLVM21 flags stripped)"
+''')
+}
+
+// Stage <workspace>/spec-configs/ into <workspace>/SPEC_perf_cfgs/ so the
+// archived directory tree has the name the downstream csg_specclone expects
+// (mirrors gcc/.amd-ci/upstream/Jenkinsfile, which rsyncs spec-configs/ into
+// lin/main_build/SPEC_perf_cfgs/). Archive the directory rather than a
+// pre-zipped file: downstream consumers fetch via Jenkins' on-the-fly
+// *zip*/SPEC_perf_cfgs.zip URL, whose top-level entry inside the resulting
+// zip is SPEC_perf_cfgs/ -- if we archived spec-configs/ instead, the
+// downstream extraction would land in the wrong directory and csg_specclone
+// would print "Please populate SPEC_perf_cfgs".
+//
+// Stash the resulting URL in env.SPEC_CONFIGS_ARTIFACT_URL for
+// getSpecCfgDirValue() to forward downstream as SPECCPU_CFGDIR. No-op if
+// the spec-configs clone never happened (USE_SPEC_CONFIGS_REPO=false or
+// postsub run).
+void archiveSpecConfigsIfPresent() {
+    if (!fileExists('spec-configs')) {
+        return
+    }
+    sh(label: 'stage-spec-configs',
+       script: '''set -e
+rm -rf SPEC_perf_cfgs
+mkdir -p SPEC_perf_cfgs
+rsync -a spec-configs/ SPEC_perf_cfgs/
+echo "[+] Staged spec-configs/ into SPEC_perf_cfgs/ (top-level entries:)"
+ls -1 SPEC_perf_cfgs | head -n 50
+''')
+    archiveArtifacts(allowEmptyArchive: true, artifacts: 'SPEC_perf_cfgs/**')
+    // Use Jenkins' built-in on-the-fly directory-zip URL so the downloaded
+    // zip's top-level dir is 'SPEC_perf_cfgs/' (matches gcc Jenkinsfile).
+    // Force the FQDN: env.BUILD_URL on the controller is
+    // 'http://atlvjksapp01:8080/...', but downstream slaves can't resolve
+    // the short hostname and silently 0-byte the download.
+    String url = env.BUILD_URL
+        .replace('http://atlvjksapp01:8080', 'http://atlvjksapp01.amd.com:8080') +
+        'artifact/SPEC_perf_cfgs/*zip*/SPEC_perf_cfgs.zip'
+    env.SPEC_CONFIGS_ARTIFACT_URL = url
+    echo "[+] Archived spec-configs as ${url}"
+}
+
+/**
+ * Resolve the prebuilt CUT URL for a given build type (USE_PREBUILT_CUT mode).
+ */
+String resolvePrebuiltArtifact(String buildType) {
+    if (buildType == 'base')   { return params.PREBUILT_BASE_CUT_URL_PATH?.trim() }
+    if (buildType == 'latest') { return params.PREBUILT_LATEST_CUT_URL_PATH?.trim() ?: params.PREBUILT_BASE_CUT_URL_PATH?.trim() }
+    return params.PREBUILT_BASE_CUT_URL_PATH?.trim() ?: params.PREBUILT_LATEST_CUT_URL_PATH?.trim()
+}
+
+/**
+ * Get CUT URL for one (buildType, specType) combo.
+ */
+String getCutValue(String buildType, String specType, String compilerTar) {
+    if (params.USE_PREBUILT_CUT) {
+        String cutValue = resolvePrebuiltArtifact(buildType)
+        if (!cutValue) {
+            error("USE_PREBUILT_CUT is true but no artifact specified for ${buildType ?: 'single'} build")
+        }
+        echo "Using prebuilt CUT for ${specType} ${buildType ?: 'single'}: ${cutValue}"
+        return cutValue
+    }
+    if (!compilerTar) {
+        error("No compiler tar available to build CUT URL for ${specType} ${buildType ?: 'single'}")
+    }
+    String cutValue = env.BUILD_URL + 'artifact/' + compilerTar
+    echo "Using fresh-build CUT for ${specType} ${buildType ?: 'single'}: ${cutValue}"
+    return cutValue
+}
+
+/**
+ * Get SPECCPU_CFGDIR forwarded downstream. Downstream errors out with
+ * "No cfgs location supplied" if this is empty (see SpecBase.groovy), so
+ * fail fast here with an actionable message rather than after a multi-minute
+ * CUT download/unpack on the slave.
+ *
+ * Resolution order:
+ *  1. If USE_SPEC_CONFIGS_REPO=true and the spec-configs zip was archived on
+ *     this build (env.SPEC_CONFIGS_ARTIFACT_URL set), use that artifact URL.
+ *  2. Otherwise fall back to params.SPECCPU_CFGDIR (NFS path / explicit URL).
+ */
+String getSpecCfgDirValue() {
+    if (params.USE_SPEC_CONFIGS_REPO) {
+        String autoUrl = env.SPEC_CONFIGS_ARTIFACT_URL ?: ''
+        if (autoUrl) {
+            echo "Using cloned spec-configs artifact for SPECCPU_CFGDIR: ${autoUrl}"
+            return autoUrl
+        }
+        echo 'WARNING: USE_SPEC_CONFIGS_REPO=true but SPEC_CONFIGS_ARTIFACT_URL is unset; ' +
+             'falling back to params.SPECCPU_CFGDIR.'
+    }
+    String cfgDir = params.SPECCPU_CFGDIR?.trim() ?: ''
+    if (!cfgDir) {
+        error('SPECCPU_CFGDIR is required: provide a URL or filesystem path to the SPEC cfgs ' +
+              '(zip or directory), or enable USE_SPEC_CONFIGS_REPO. Downstream AOCC-Workloads/SPEC/* ' +
+              'fails with "No cfgs location supplied" otherwise.')
+    }
+    return cfgDir
+}
+
+/**
+ * Parse and filter CFG_FILES.
+ */
+List<String> getCfgFilesList(String filterPrefix = null) {
+    if (!params.CFG_FILES?.trim()) {
+        error('CFG_FILES parameter is required.')
+    }
+    List<String> cfgFiles = params.CFG_FILES.split(',').collect { it.trim() }.findAll { it }
+    if (filterPrefix) {
+        cfgFiles = cfgFiles.findAll { it.startsWith(filterPrefix) }
+        if (cfgFiles.isEmpty()) {
+            echo "Warning: No cfg files match prefix '${filterPrefix}'"
+            return []
+        }
+    }
+    return cfgFiles
+}
+
+/**
+ * Parameters forwarded to AOCC-Workloads/SPEC/* that map onto mlce / csg_specslurm flags:
+ *   SPEC_TUNE                 -> --tune
+ *   SPEC_QUIET                -> --quiet
+ *   SPEC_SKIP_SUDO            -> --skip_sudo
+ *   SPEC_ADD_TO_DATABASE      -> --add_to_database
+ *   SPEC_OOB                  -> --oob
+ *   SPEC_REBUILD              -> --rebuild
+ *   SPEC_USE_JEMALLOC         -> --jemalloc
+ *   SPEC_JEMALLOC_VERSION     -> --adr.jemalloc.version
+ *   SPEC_JEMALLOC_TAGS        -> --adr.jemalloc.tags
+ *   SPEC_EMAIL                -> --email
+ *   SPEC_SLURM_RUN_PARTITION  -> --slurm_run_partition
+ *   SPEC_FPRATE_COPIES        -> --fprate_copies
+ *   SPEC_OUTDIR               -> --outdir
+ *   SPEC_AOCC_STAGING_BRANCH  -> --aocc_staging_branch  (empty -> upstream JOB_NAME)
+ *   SPEC_AOCC_STAGING_BUILD   -> --aocc_staging_build   (empty -> upstream BUILD_NUMBER)
+ */
+List getMlceTuningParams() {
+    String stagingBranch = (params.SPEC_AOCC_STAGING_BRANCH?.trim() ?: (env.JOB_NAME ?: ''))
+    String stagingBuild  = (params.SPEC_AOCC_STAGING_BUILD?.trim()  ?: (env.BUILD_NUMBER ?: ''))
+    return [
+        string(name: 'SPEC_TUNE',                value: params.SPEC_TUNE ?: 'base'),
+        booleanParam(name: 'SPEC_QUIET',             value: (params.SPEC_QUIET ?: false) as boolean),
+        booleanParam(name: 'SPEC_SKIP_SUDO',         value: (params.SPEC_SKIP_SUDO ?: false) as boolean),
+        booleanParam(name: 'SPEC_ADD_TO_DATABASE',   value: (params.SPEC_ADD_TO_DATABASE ?: false) as boolean),
+        booleanParam(name: 'SPEC_OOB',               value: (params.SPEC_OOB ?: false) as boolean),
+        booleanParam(name: 'SPEC_REBUILD',           value: (params.SPEC_REBUILD ?: false) as boolean),
+        booleanParam(name: 'SPEC_USE_JEMALLOC',      value: (params.SPEC_USE_JEMALLOC ?: false) as boolean),
+        string(name: 'SPEC_JEMALLOC_VERSION',    value: params.SPEC_JEMALLOC_VERSION ?: ''),
+        string(name: 'SPEC_JEMALLOC_TAGS',       value: params.SPEC_JEMALLOC_TAGS ?: ''),
+        string(name: 'SPEC_EMAIL',               value: params.SPEC_EMAIL ?: ''),
+        string(name: 'SPEC_SLURM_RUN_PARTITION', value: params.SPEC_SLURM_RUN_PARTITION ?: ''),
+        string(name: 'SPEC_FPRATE_COPIES',       value: params.SPEC_FPRATE_COPIES ?: ''),
+        string(name: 'SPEC_OUTDIR',              value: params.SPEC_OUTDIR ?: '.'),
+        string(name: 'SPEC_AOCC_STAGING_BRANCH', value: stagingBranch),
+        string(name: 'SPEC_AOCC_STAGING_BUILD',  value: stagingBuild)
+    ]
+}
+
+/**
+ * SPEC CPU2017 branch of one stage. Returns true if every triggered downstream build SUCCEEDED.
+ */
+Boolean runCpu2017Stage(String stageLabel, String envPrefix, String specCopies,
+                        String specValidation, String gitCommitValue, String znverValue,
+                        String compilerTar,
+                        String specBuildOrRun = 'both',
+                        String prebuiltExesEnvPrefix = '') {
+    if (!params.ENABLE_CPU2017) { return true }
+
+    List<String> cfgFilesList = getCfgFilesList('cpu2017')
+    if (cfgFilesList.isEmpty()) {
+        echo "[${stageLabel}] Skipping SPEC2017: No cpu2017 cfg files found"
+        return true
+    }
+    String combinedCfgFiles = cfgFilesList.join(', ')
+    echo "[${stageLabel}] Testing CPU2017 (SPEC_COPIES=${specCopies}, SPEC_BUILD_OR_RUN=${specBuildOrRun}) with configs: ${combinedCfgFiles}"
+
+    def buildResults = [:]
+    String specCfgDirValue = getSpecCfgDirValue()
+    List<String> availableBuildTypes = getAvailableBuildTypes(compilerTar)
+
+    availableBuildTypes.each { buildType ->
+        String buildTypeLabel = buildType ?: 'single'
+        String exesUrlEnvKey = prebuiltExesEnvPrefix ?
+            "${prebuiltExesEnvPrefix}CPU2017_${(buildType ?: 'single').toUpperCase()}_EXES_URL" : ''
+        echo "\n========== [${stageLabel}] CPU2017 ${buildTypeLabel} (copies=${specCopies}, mode=${specBuildOrRun}) =========="
+        String cutValue = getCutValue(buildType, 'CPU2017', compilerTar)
+
+        String prebuiltExesUrl = ''
+        if (specBuildOrRun == 'run' && exesUrlEnvKey) {
+            prebuiltExesUrl = env."${exesUrlEnvKey}" ?: ''
+            if (prebuiltExesUrl) {
+                echo "[${stageLabel}] CPU2017 ${buildTypeLabel}: reusing prebuilt exes via ${exesUrlEnvKey}=${prebuiltExesUrl}"
+            } else {
+                echo "[${stageLabel}] WARNING: env.${exesUrlEnvKey} is empty; downstream will fail or rebuild."
+            }
+        }
+
+        try {
+            def buildParams = [
+                string(name: 'CUT', value: cutValue),
+                string(name: 'SPECCPU_CFGDIR', value: specCfgDirValue),
+                string(name: 'CHANGE_ID', value: env.CHANGE_ID ?: ''),
+                string(name: 'GIT_COMMIT', value: (params.GIT_COMMIT_OVERRIDE ?: (gitCommitValue ?: ''))),
+                string(name: 'COMPILER_TYPE', value: 'aocc'),
+                string(name: 'COMPILER_VERSION', value: params.COMPILER_VERSION ?: 'aocc'),
+                string(name: 'SPEC_COMPILER_ID', value: params.SPEC_COMPILER_ID ?: 'llvm'),
+                string(name: 'CFG_FILENAME', value: combinedCfgFiles),
+                string(name: 'ZNVER', value: znverValue),
+                string(name: 'BENCHMARK_LIST', value: params.CPU2017_BENCHMARK_LIST ?: ''),
+                string(name: 'SPEC_VALIDATION', value: specValidation),
+                string(name: 'SPEC_COPIES', value: specCopies),
+                string(name: 'build_time', value: params.build_time ?: '4:00:00'),
+                string(name: 'run_time', value: params.run_time ?: '4:00:00'),
+                string(name: 'BUILD_TYPE_SUFFIX', value: buildType),
+                string(name: 'SPEC_BUILD_OR_RUN', value: specBuildOrRun),
+                string(name: 'PREBUILT_EXES_TAR_URL', value: prebuiltExesUrl),
+                string(name: 'jemalloc_url', value: params.jemalloc_url ?: ''),
+                string(name: 'libm_url', value: params.libm_url ?: ''),
+                string(name: 'amdalloc_url', value: params.amdalloc_url ?: ''),
+                string(name: 'ssmalloc_url', value: params.ssmalloc_url ?: '')
+            ]
+            buildParams.addAll(getMlceTuningParams())
+            if (params.CPU2017_EXTRA_RUNCPU_ARGS?.trim()) {
+                buildParams.add(string(name: 'EXTRA_RUNCPU_ARGS', value: params.CPU2017_EXTRA_RUNCPU_ARGS))
+            }
+
+            def buildResult = build(
+                propagate: false, wait: true,
+                job: 'AOCC-Workloads/SPEC/CPU2017',
+                parameters: buildParams
+            )
+            String resultKey = buildType ? "CPU2017-${buildType}" : 'CPU2017-single'
+            buildResults[resultKey] = buildResult.result
+
+            if (buildType == 'base' || buildType == '') {
+                env."${envPrefix}CPU2017_BASE_BUILD_NUMBER" = buildResult.number
+            } else {
+                env."${envPrefix}CPU2017_LATEST_BUILD_NUMBER" = buildResult.number
+            }
+
+            if (specBuildOrRun == 'build' && exesUrlEnvKey && buildResult.result == 'SUCCESS') {
+                String exesTarBasename = "spec_CPU2017${buildType ? '_' + buildType : ''}_exes.tar.xz"
+                String exesUrl = "${buildResult.absoluteUrl}artifact/lin/${exesTarBasename}"
+                env."${exesUrlEnvKey}" = exesUrl
+                echo "[${stageLabel}] Captured prebuilt exes URL: ${exesUrlEnvKey}=${exesUrl}"
+            }
+            echo "[${stageLabel}] CPU2017 ${buildTypeLabel}: ${buildResult.result} (Build #${buildResult.number})"
+        } catch (Exception e) {
+            String resultKey = buildType ? "CPU2017-${buildType}" : 'CPU2017-single'
+            buildResults[resultKey] = 'FAILED'
+            echo "[${stageLabel}] CPU2017 ${buildTypeLabel} failed with exception: ${e.message}"
+        }
+    }
+
+    echo "\n========== [${stageLabel}] CPU2017 SUMMARY (copies=${specCopies}) =========="
+    buildResults.each { k, v -> echo "  ${k}: ${v}" }
+    echo '========================================\n'
+
+    def failedBuilds = buildResults.findAll { k, v -> v != 'SUCCESS' }
+    if (failedBuilds) {
+        echo "ERROR: [${stageLabel}] CPU2017 build(s) had failures: ${failedBuilds.keySet().join(', ')}"
+        catchError(buildResult: 'FAILURE', stageResult: 'FAILURE',
+                   message: "[${stageLabel}] CPU2017 tests failed: ${failedBuilds.keySet().join(', ')}") {
+            error("[${stageLabel}] CPU2017 SPEC tests failed")
+        }
+        return false
+    }
+    return true
+}
+
+/**
+ * SPEC CPU2026 branch of one stage. Returns true if every triggered downstream build SUCCEEDED.
+ */
+Boolean runCpu2026Stage(String stageLabel, String envPrefix, String specCopies,
+                        String specValidation, String gitCommitValue, String znverValue,
+                        String compilerTar,
+                        String specBuildOrRun = 'both',
+                        String prebuiltExesEnvPrefix = '') {
+    if (!params.ENABLE_CPU2026) { return true }
+
+    List<String> cfgFilesList = getCfgFilesList('cpu2026')
+    if (cfgFilesList.isEmpty()) {
+        echo "[${stageLabel}] Skipping SPEC-CPU2026: No cpu2026 cfg files found"
+        return true
+    }
+    String combinedCfgFiles = cfgFilesList.join(', ')
+    echo "[${stageLabel}] Testing CPU2026 (SPEC_COPIES=${specCopies}, SPEC_BUILD_OR_RUN=${specBuildOrRun}) with configs: ${combinedCfgFiles}"
+
+    def buildResults = [:]
+    String specCfgDirValue = getSpecCfgDirValue()
+    List<String> availableBuildTypes = getAvailableBuildTypes(compilerTar)
+
+    availableBuildTypes.each { buildType ->
+        String buildTypeLabel = buildType ?: 'single'
+        String exesUrlEnvKey = prebuiltExesEnvPrefix ?
+            "${prebuiltExesEnvPrefix}CPU2026_${(buildType ?: 'single').toUpperCase()}_EXES_URL" : ''
+        echo "\n========== [${stageLabel}] CPU2026 ${buildTypeLabel} (copies=${specCopies}, mode=${specBuildOrRun}) =========="
+        String cutValue = getCutValue(buildType, 'CPU2026', compilerTar)
+
+        String prebuiltExesUrl = ''
+        if (specBuildOrRun == 'run' && exesUrlEnvKey) {
+            prebuiltExesUrl = env."${exesUrlEnvKey}" ?: ''
+            if (prebuiltExesUrl) {
+                echo "[${stageLabel}] CPU2026 ${buildTypeLabel}: reusing prebuilt exes via ${exesUrlEnvKey}=${prebuiltExesUrl}"
+            } else {
+                echo "[${stageLabel}] WARNING: env.${exesUrlEnvKey} is empty; downstream will fail or rebuild."
+            }
+        }
+
+        try {
+            def buildParams = [
+                string(name: 'CUT', value: cutValue),
+                string(name: 'SPECCPU_CFGDIR', value: specCfgDirValue),
+                string(name: 'CHANGE_ID', value: env.CHANGE_ID ?: ''),
+                string(name: 'GIT_COMMIT', value: (params.GIT_COMMIT_OVERRIDE ?: (gitCommitValue ?: ''))),
+                string(name: 'COMPILER_TYPE', value: 'aocc'),
+                string(name: 'COMPILER_VERSION', value: params.COMPILER_VERSION ?: 'aocc'),
+                string(name: 'SPEC_COMPILER_ID', value: params.SPEC_COMPILER_ID ?: 'llvm'),
+                string(name: 'CFG_FILENAME', value: combinedCfgFiles),
+                string(name: 'ZNVER', value: znverValue),
+                string(name: 'BENCHMARK_LIST', value: params.CPU2026_BENCHMARK_LIST ?: ''),
+                string(name: 'SPEC_VALIDATION', value: specValidation),
+                string(name: 'SPEC_COPIES', value: specCopies),
+                string(name: 'build_time', value: params.build_time ?: '4:00:00'),
+                string(name: 'run_time', value: params.run_time ?: '4:00:00'),
+                string(name: 'BUILD_TYPE_SUFFIX', value: buildType),
+                string(name: 'SPEC_BUILD_OR_RUN', value: specBuildOrRun),
+                string(name: 'PREBUILT_EXES_TAR_URL', value: prebuiltExesUrl),
+                string(name: 'jemalloc_url', value: params.jemalloc_url ?: ''),
+                string(name: 'libm_url', value: params.libm_url ?: ''),
+                string(name: 'amdalloc_url', value: params.amdalloc_url ?: ''),
+                string(name: 'ssmalloc_url', value: params.ssmalloc_url ?: '')
+            ]
+            buildParams.addAll(getMlceTuningParams())
+            if (params.CPU2026_EXTRA_RUNCPU_ARGS?.trim()) {
+                buildParams.add(string(name: 'EXTRA_RUNCPU_ARGS', value: params.CPU2026_EXTRA_RUNCPU_ARGS))
+            }
+
+            def buildResult = build(
+                propagate: false, wait: true,
+                job: 'AOCC-Workloads/SPEC/CPU2026',
+                parameters: buildParams
+            )
+            String resultKey = buildType ? "CPU2026-${buildType}" : 'CPU2026-single'
+            buildResults[resultKey] = buildResult.result
+
+            if (buildType == 'base' || buildType == '') {
+                env."${envPrefix}CPU2026_BASE_BUILD_NUMBER" = buildResult.number
+            } else {
+                env."${envPrefix}CPU2026_LATEST_BUILD_NUMBER" = buildResult.number
+            }
+
+            if (specBuildOrRun == 'build' && exesUrlEnvKey && buildResult.result == 'SUCCESS') {
+                String exesTarBasename = "spec_CPU2026${buildType ? '_' + buildType : ''}_exes.tar.xz"
+                String exesUrl = "${buildResult.absoluteUrl}artifact/lin/${exesTarBasename}"
+                env."${exesUrlEnvKey}" = exesUrl
+                echo "[${stageLabel}] Captured prebuilt exes URL: ${exesUrlEnvKey}=${exesUrl}"
+            }
+            echo "[${stageLabel}] CPU2026 ${buildTypeLabel}: ${buildResult.result} (Build #${buildResult.number})"
+        } catch (Exception e) {
+            String resultKey = buildType ? "CPU2026-${buildType}" : 'CPU2026-single'
+            buildResults[resultKey] = 'FAILED'
+            echo "[${stageLabel}] CPU2026 ${buildTypeLabel} failed with exception: ${e.message}"
+        }
+    }
+
+    echo "\n========== [${stageLabel}] CPU2026 SUMMARY (copies=${specCopies}) =========="
+    buildResults.each { k, v -> echo "  ${k}: ${v}" }
+    echo '========================================\n'
+
+    def failedBuilds = buildResults.findAll { k, v -> v != 'SUCCESS' }
+    if (failedBuilds) {
+        echo "ERROR: [${stageLabel}] CPU2026 build(s) had failures: ${failedBuilds.keySet().join(', ')}"
+        catchError(buildResult: 'FAILURE', stageResult: 'FAILURE',
+                   message: "[${stageLabel}] CPU2026 tests failed: ${failedBuilds.keySet().join(', ')}") {
+            error("[${stageLabel}] CPU2026 SPEC tests failed")
+        }
+        return false
+    }
+    return true
+}
+
+/**
+ * Run one parallel SPEC stage (CPU2017 + CPU2026). Returns true if all branches passed.
+ */
+Boolean runParallelSpecTesting(String stageLabel, String envPrefix, String specCopies,
+                               String specValidation, String gitCommitValue, String znverValue,
+                               String compilerTar,
+                               String specBuildOrRun = 'both',
+                               String prebuiltExesEnvPrefix = '') {
+    Map<String, Boolean> branchPassed = ['SPEC2017': true, 'SPEC-CPU2026': true]
+    parallel(
+        'SPEC2017': {
+            branchPassed['SPEC2017'] = runCpu2017Stage(stageLabel, envPrefix, specCopies,
+                                                      specValidation, gitCommitValue, znverValue,
+                                                      compilerTar, specBuildOrRun, prebuiltExesEnvPrefix)
+        },
+        'SPEC-CPU2026': {
+            branchPassed['SPEC-CPU2026'] = runCpu2026Stage(stageLabel, envPrefix, specCopies,
+                                                          specValidation, gitCommitValue, znverValue,
+                                                          compilerTar, specBuildOrRun, prebuiltExesEnvPrefix)
+        }
+    )
+    return branchPassed.values().every { it }
 }
