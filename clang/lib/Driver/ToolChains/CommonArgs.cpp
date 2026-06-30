@@ -1734,6 +1734,15 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
   if (SanArgs.needsSafeStackRt()) {
     NonWholeStaticRuntimes.push_back("safestack");
     RequiredSymbols.push_back("__safestack_init");
+    if (Args.hasArg(options::OPT_static) ||
+        Args.hasArg(options::OPT_static_pie)) {
+      if (TC.getTriple().isGNUEnvironment())
+        RequiredSymbols.push_back("__pthread_create_2_1");
+      else if (TC.getTriple().isOSLinux())
+        RequiredSymbols.push_back("__pthread_create");
+      else if (TC.getTriple().isOSFreeBSD())
+        RequiredSymbols.push_back("_pthread_create");
+    }
   }
   if (!(SanArgs.needsSharedRt() && SanArgs.needsUbsanRt())) {
     if (SanArgs.needsCfiCrossDsoRt())
