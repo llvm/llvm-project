@@ -571,7 +571,8 @@ void DebugLocWriter::init() {
 }
 
 void DebugLocWriter::addList(DIEBuilder &DIEBldr, DIE &Die, DIEValue &AttrInfo,
-                             DebugLocationsVector &LocList) {
+                             DebugLocationsVector &LocList,
+                             bool HasGNULocViews) {
   if (LocList.empty()) {
     replaceLocValbyForm(DIEBldr, Die, AttrInfo, AttrInfo.getForm(),
                         DebugLocWriter::EmptyListOffset);
@@ -673,64 +674,96 @@ static void writeLegacyLocList(DIEValue &AttrInfo,
   replaceLocValbyForm(DIEBldr, Die, AttrInfo, AttrInfo.getForm(), EntryOffset);
 }
 
-static void writeDWARF5LocList(uint32_t &NumberOfEntries, DIEValue &AttrInfo,
-                               DebugLocationsVector &LocList, DIE &Die,
-                               DIEBuilder &DIEBldr, DebugAddrWriter &AddrWriter,
-                               DebugBufferVector &LocBodyBuffer,
-                               std::vector<uint32_t> &RelativeLocListOffsets,
-                               DWARFUnit &CU,
-                               raw_svector_ostream &LocBodyStream) {
+void DebugLoclistWriter::writeDWARF5LocList(DIEBuilder &DIEBldr, DIE &Die,
+                                            DIEValue &AttrInfo,
+                                            DebugLocationsVector &LocList,
+                                            bool HasGNULocViews) {
 
   replaceLocValbyForm(DIEBldr, Die, AttrInfo, dwarf::DW_FORM_loclistx,
                       NumberOfEntries);
 
-  RelativeLocListOffsets.push_back(LocBodyBuffer.size());
+  if (HasGNULocViews && !LocList.empty()) {
+    const uint64_t ViewLocalOff = LocBodyBuffer->size();
+    // Emit exactly one view pair per emitted range so the view list stays in
+    // sync with the (possibly merged) loclist -> no orphaned/surplus pairs.
+    for (const DebugLocationEntry &E : LocList) {
+      encodeULEB128(E.View.ViewBegin, *LocBodyStream);
+      encodeULEB128(E.View.ViewEnd, *LocBodyStream);
+    }
+    LocViewPatches.push_back({&Die, ViewLocalOff});
+  } else if (HasGNULocViews) {
+    DIEBldr.deleteValue(&Die, dwarf::DW_AT_GNU_locviews);
+  }
+
+  RelativeLocListOffsets.push_back(LocBodyBuffer->size());
   ++NumberOfEntries;
   if (LocList.empty()) {
-    writeEmptyListDwarf5(LocBodyStream);
+    writeEmptyListDwarf5(*LocBodyStream);
     return;
   }
 
   auto writeExpression = [&](uint32_t Index) -> void {
     const DebugLocationEntry &Entry = LocList[Index];
-    encodeULEB128(Entry.Expr.size(), LocBodyStream);
-    LocBodyStream << StringRef(
+    encodeULEB128(Entry.Expr.size(), *LocBodyStream);
+    *LocBodyStream << StringRef(
         reinterpret_cast<const char *>(Entry.Expr.data()), Entry.Expr.size());
   };
   for (unsigned I = 0; I < LocList.size();) {
     if (emitWithBase<DebugLocationsVector, dwarf::LoclistEntries,
-                     DebugLocationEntry>(LocBodyStream, LocList, AddrWriter, CU,
-                                         I, dwarf::DW_LLE_base_addressx,
+                     DebugLocationEntry>(*LocBodyStream, LocList, AddrWriter,
+                                         CU, I, dwarf::DW_LLE_base_addressx,
                                          dwarf::DW_LLE_offset_pair,
                                          writeExpression))
       continue;
 
     const DebugLocationEntry &Entry = LocList[I];
-    support::endian::write(LocBodyStream,
+    support::endian::write(*LocBodyStream,
                            static_cast<uint8_t>(dwarf::DW_LLE_startx_length),
                            llvm::endianness::little);
     const uint32_t Index = AddrWriter.getIndexFromAddress(Entry.LowPC, CU);
-    encodeULEB128(Index, LocBodyStream);
-    encodeULEB128(Entry.HighPC - Entry.LowPC, LocBodyStream);
+    encodeULEB128(Index, *LocBodyStream);
+    encodeULEB128(Entry.HighPC - Entry.LowPC, *LocBodyStream);
     writeExpression(I);
     ++I;
   }
 
-  support::endian::write(LocBodyStream,
+  support::endian::write(*LocBodyStream,
                          static_cast<uint8_t>(dwarf::DW_LLE_end_of_list),
                          llvm::endianness::little);
 }
 
 void DebugLoclistWriter::addList(DIEBuilder &DIEBldr, DIE &Die,
                                  DIEValue &AttrInfo,
-                                 DebugLocationsVector &LocList) {
+                                 DebugLocationsVector &LocList,
+                                 bool HasGNULocViews) {
   if (DwarfVersion < 5)
     writeLegacyLocList(AttrInfo, LocList, DIEBldr, Die, AddrWriter, *LocBuffer,
                        CU, *LocStream);
   else
-    writeDWARF5LocList(NumberOfEntries, AttrInfo, LocList, Die, DIEBldr,
-                       AddrWriter, *LocBodyBuffer, RelativeLocListOffsets, CU,
-                       *LocBodyStream);
+    writeDWARF5LocList(DIEBldr, Die, AttrInfo, LocList, HasGNULocViews);
+}
+
+void DebugLoclistWriter::applyViewOffsets(DIEBuilder &Bldr,
+                                          uint64_t GlobalCUOffset) {
+  if (LocViewPatches.empty())
+    return;
+
+  const uint64_t BodySectionOffset =
+      GlobalCUOffset + getDWARF5RngListLocListHeaderSize() +
+      static_cast<uint64_t>(NumberOfEntries) * sizeof(uint32_t);
+  for (const LocViewPatch &P : LocViewPatches) {
+    if (!P.Die)
+      continue;
+    const uint64_t AbsOffset = BodySectionOffset + P.LocalViewOffset;
+    DIEValue Attr = P.Die->findAttribute(dwarf::DW_AT_GNU_locviews);
+    if (!Attr.getType())
+      Bldr.addValue(P.Die, dwarf::DW_AT_GNU_locviews, dwarf::DW_FORM_sec_offset,
+                    DIEInteger(AbsOffset));
+    else
+      Bldr.replaceValue(P.Die, dwarf::DW_AT_GNU_locviews, Attr.getForm(),
+                        DIEInteger(AbsOffset));
+  }
+  LocViewPatches.clear();
 }
 
 void DebugLoclistWriter::finalizeDWARF5(DIEBuilder &DIEBldr, DIE &Die) {
