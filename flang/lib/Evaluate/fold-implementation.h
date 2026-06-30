@@ -1311,8 +1311,11 @@ Expr<T> FoldOperation(FoldingContext &context, FunctionRef<T> &&funcRef) {
               if (const auto *derived{GetDerivedTypeSpec(*type)}) {
                 if (derived->IsEnumerationType()) {
                   if (const auto *scope{derived->GetScope()}) {
-                    auto ordIter{
-                        scope->find(semantics::SourceName{"__ordinal", 9})};
+                    auto ordIter{scope->find(semantics::SourceName{
+                        semantics::DerivedTypeDetails::ordinalComponentName,
+                        sizeof(semantics::DerivedTypeDetails::
+                            ordinalComponentName) -
+                            1})};
                     if (ordIter != scope->end()) {
                       const semantics::Symbol &ordSym{*ordIter->second};
                       int count{derived->typeSymbol()
@@ -1334,10 +1337,10 @@ Expr<T> FoldOperation(FoldingContext &context, FunctionRef<T> &&funcRef) {
                                 // emit warning.
                                 if (isNext) {
                                   context.messages().Say(
-                                      "NEXT() of last enumerator without STAT= causes error termination"_warn_en_US);
+                                      "NEXT() of last enumerator without STAT= causes error termination"_err_en_US);
                                 } else {
                                   context.messages().Say(
-                                      "PREVIOUS() of first enumerator without STAT= causes error termination"_warn_en_US);
+                                      "PREVIOUS() of first enumerator without STAT= causes error termination"_err_en_US);
                                 }
                                 return Expr<T>{std::move(funcRef)};
                               }
@@ -1347,8 +1350,7 @@ Expr<T> FoldOperation(FoldingContext &context, FunctionRef<T> &&funcRef) {
                               StructureConstructor ctor{*derived};
                               ctor.Add(ordSym,
                                   Expr<SomeType>{Expr<SomeInteger>{
-                                      Expr<Type<TypeCategory::Integer, 4>>{
-                                          newOrd}}});
+                                      Expr<CInteger>{newOrd}}});
                               return Expr<SomeDerived>{
                                   Constant<SomeDerived>{std::move(ctor)}};
                             }

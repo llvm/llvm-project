@@ -3728,6 +3728,20 @@ IntrinsicProcTable::Implementation::HandleEnumerationNext(
     context.messages().Say("NEXT() requires argument A"_err_en_US);
     return std::nullopt;
   }
+  // TEMPORARY: Reject STAT= until lowering handler lands in PR 4/5
+  if (arguments.size() > 1 && arguments[1]) {
+    context.messages().Say(arguments[1]->sourceLocation(),
+        "NEXT() with STAT= is not yet supported"_err_en_US);
+    return std::nullopt;
+  }
+  // TEMPORARY: Reject non-constant argument until lowering handler in PR 4/5
+  if (const auto *expr{arguments[0]->UnwrapExpr()}) {
+    if (!IsConstantExpr(*expr)) {
+      context.messages().Say(arguments[0]->sourceLocation(),
+          "NEXT() with a non-constant argument is not yet supported"_err_en_US);
+      return std::nullopt;
+    }
+  }
   DynamicType enumerationType{derived};
   characteristics::DummyDataObject ddoA{
       characteristics::TypeAndShape{enumerationType}};
@@ -3765,6 +3779,20 @@ IntrinsicProcTable::Implementation::HandleEnumerationPrevious(
     context.messages().Say("PREVIOUS() requires argument A"_err_en_US);
     return std::nullopt;
   }
+  // TEMPORARY: Reject STAT= until lowering handler lands in PR 4/5
+  if (arguments.size() > 1 && arguments[1]) {
+    context.messages().Say(arguments[1]->sourceLocation(),
+        "PREVIOUS() with STAT= is not yet supported"_err_en_US);
+    return std::nullopt;
+  }
+  // TEMPORARY: Reject non-constant argument until lowering handler in PR 4/5
+  if (const auto *expr{arguments[0]->UnwrapExpr()}) {
+    if (!IsConstantExpr(*expr)) {
+      context.messages().Say(arguments[0]->sourceLocation(),
+          "PREVIOUS() with a non-constant argument is not yet supported"_err_en_US);
+      return std::nullopt;
+    }
+  }
   DynamicType enumerationType{derived};
   characteristics::DummyDataObject ddoA{
       characteristics::TypeAndShape{enumerationType}};
@@ -3798,12 +3826,24 @@ IntrinsicProcTable::Implementation::HandleEnumerationInt(
   if (!CheckAndRearrangeArguments(arguments, context.messages(), keywords, 1)) {
     return std::nullopt;
   }
-  // Determine result kind
+  // Determine result kind using the same validation as the ordinary INT
+  // intrinsic (fold, check IsTypeEnabled, emit the same diagnostic on failure).
   int kind{defaults_.GetDefaultKind(TypeCategory::Integer)};
   if (arguments.size() > 1 && arguments[1]) {
     if (const auto *kindExpr{arguments[1]->UnwrapExpr()}) {
-      if (auto kindVal{ToInt64(*kindExpr)}) {
-        kind = static_cast<int>(*kindVal);
+      bool kindOk{false};
+      if (auto kindVal{ToInt64(Fold(context, common::Clone(*kindExpr)))}) {
+        if (context.targetCharacteristics().IsTypeEnabled(
+                TypeCategory::Integer, *kindVal)) {
+          kind = static_cast<int>(*kindVal);
+          kindOk = true;
+        }
+      }
+      if (!kindOk) {
+        context.messages().Say(arguments[1]->sourceLocation(),
+            "'kind=' argument must be a constant scalar integer whose value is "
+            "a supported kind for the intrinsic result type"_err_en_US);
+        // fall through with default kind for error recovery
       }
     }
   }
@@ -4040,38 +4080,7 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::Probe(
         }
       }
     }
-    // Enumeration type intrinsics: HUGE, NEXT, INT
-    if (arguments.size() >= 1 && arguments[0]) {
-      if (auto type{arguments[0]->GetType()}) {
-        if (const auto *derived{GetDerivedTypeSpec(*type)}) {
-          if (derived->IsEnumerationType()) {
-            if (call.name == "huge") {
-              return HandleEnumerationHuge(*derived, arguments, context);
-            } else if (call.name == "next") {
-              return HandleEnumerationNext(*derived, arguments, context);
-            } else if (call.name == "int") {
-              return HandleEnumerationInt(*derived, arguments, context);
-            }
-          }
-        }
-      }
-    }
-    // Enumeration type intrinsics: HUGE, NEXT, INT
-    if (arguments.size() >= 1 && arguments[0]) {
-      if (auto type{arguments[0]->GetType()}) {
-        if (const auto *derived{GetDerivedTypeSpec(*type)}) {
-          if (derived->IsEnumerationType()) {
-            if (call.name == "huge") {
-              return HandleEnumerationHuge(*derived, arguments, context);
-            } else if (call.name == "next") {
-              return HandleEnumerationNext(*derived, arguments, context);
-            } else if (call.name == "int") {
-              return HandleEnumerationInt(*derived, arguments, context);
-            }
-          }
-        }
-      }
-    }
+
     // Enumeration type intrinsics: HUGE, NEXT, PREVIOUS, INT
     if (arguments.size() >= 1 && arguments[0]) {
       if (auto type{arguments[0]->GetType()}) {

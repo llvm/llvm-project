@@ -1,7 +1,8 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1 -fenumeration-type
 ! Test I/O constraints for enumeration types (F2023 7.6.2)
 
 module enum_io_mod
+  !WARNING: ENUMERATION TYPE support is incomplete and should be enabled only for testing
   enumeration type :: color
     enumerator :: red, green, blue
   end enumeration type

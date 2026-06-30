@@ -1,5 +1,7 @@
-! RUN: %flang_fc1 -fsyntax-only -pedantic %s 2>&1 | FileCheck %s
+! RUN: not %flang_fc1 -fsyntax-only -fenumeration-type -pedantic %s 2>&1 | FileCheck %s
 ! Test intrinsics HUGE, NEXT, PREVIOUS, INT for enumeration types (F2023 7.6.2)
+! NOTE: This test will start failing when the whole PR stack is merged.  It will
+!       need to have expected results changed and the "not" above removed.
 
 module enum_intrinsics_mod
   enumeration type :: color
@@ -33,14 +35,17 @@ subroutine test_next()
 
   ! NEXT(a) returns the next enumerator
   c = red
+  !CHECK: error: NEXT() with a non-constant argument is not yet supported
   nc = next(c)
 
   ! NEXT with constants
   nc = next(red)
   nc = next(green)
 
-  ! NEXT with STAT= argument
+  ! NEXT with STAT= argument (temporarily unsupported)
+  !CHECK: error: NEXT() with STAT= is not yet supported
   nc = next(c, stat=istat)
+  !CHECK: error: NEXT() with STAT= is not yet supported
   nc = next(blue, stat=istat)
 end subroutine
 
@@ -51,14 +56,17 @@ subroutine test_previous()
 
   ! PREVIOUS(a) returns the previous enumerator
   c = blue
+  !CHECK: error: PREVIOUS() with a non-constant argument is not yet supported
   pc = previous(c)
 
   ! PREVIOUS with constants
   pc = previous(blue)
   pc = previous(green)
 
-  ! PREVIOUS with STAT= argument
+  ! PREVIOUS with STAT= argument (temporarily unsupported)
+  !CHECK: error: PREVIOUS() with STAT= is not yet supported
   pc = previous(c, stat=istat)
+  !CHECK: error: PREVIOUS() with STAT= is not yet supported
   pc = previous(red, stat=istat)
 end subroutine
 
@@ -108,8 +116,10 @@ subroutine test_next_boundary_with_stat()
   use enum_intrinsics_mod
   type(color) :: nc
   integer :: istat
-  ! NEXT at boundary with STAT — no error, STAT gets nonzero
+  ! NEXT at boundary with STAT — TEMPORARILY rejected until lowering lands in PR 4/5
+  !CHECK: error: NEXT() with STAT= is not yet supported
   nc = next(blue, stat=istat)
+  !CHECK: error: NEXT() with STAT= is not yet supported
   nc = next(huge(red), stat=istat)
 end subroutine
 
@@ -124,23 +134,24 @@ subroutine test_previous_boundary_with_stat()
   use enum_intrinsics_mod
   type(color) :: pc
   integer :: istat
-  ! PREVIOUS at boundary with STAT — no error, STAT gets nonzero
+  ! PREVIOUS at boundary with STAT — TEMPORARILY rejected until lowering lands in PR 4/5
+  !CHECK: error: PREVIOUS() with STAT= is not yet supported
   pc = previous(red, stat=istat)
 end subroutine
 
 subroutine test_next_boundary_warning()
   use enum_intrinsics_mod
   type(color) :: nc
-  ! NEXT at boundary without STAT — warning
-  !CHECK: warning: NEXT() of last enumerator without STAT= causes error termination
+  ! NEXT at boundary without STAT — error
+  !CHECK: error: NEXT() of last enumerator without STAT= causes error termination
   nc = next(blue)
 end subroutine
 
 subroutine test_previous_boundary_warning()
   use enum_intrinsics_mod
   type(color) :: pc
-  ! PREVIOUS at boundary without STAT — warning
-  !CHECK: warning: PREVIOUS() of first enumerator without STAT= causes error termination
+  ! PREVIOUS at boundary without STAT — error
+  !CHECK: error: PREVIOUS() of first enumerator without STAT= causes error termination
   pc = previous(red)
 end subroutine
 
