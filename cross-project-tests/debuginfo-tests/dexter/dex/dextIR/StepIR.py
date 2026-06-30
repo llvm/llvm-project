@@ -9,7 +9,7 @@
 import json
 
 from collections import OrderedDict
-from typing import List
+from typing import Dict, List, Optional
 from enum import Enum
 from dex.dextIR.FrameIR import FrameIR
 from dex.dextIR.LocIR import LocIR
@@ -50,6 +50,7 @@ class StepIR:
         frames: List[FrameIR],
         step_kind: StepKind = None,
         watches: OrderedDict = None,
+        scope_watches: Optional[Dict[str, List[str]]] = None,
         program_state: ProgramState = None,
     ):
         self.step_index = step_index
@@ -64,6 +65,7 @@ class StepIR:
         if watches is None:
             watches = {}
         self.watches = watches
+        self.scope_watches = scope_watches or OrderedDict()
         self.hit_fn_bps: List[str] = []
 
     def __str__(self):
@@ -124,6 +126,13 @@ class StepIR:
             lines.append(f"    {fn_text}")
             lines.append(f"    {frame.loc}")
             lines.append(f"    $pc = {frame.instruction_addr}")
+
+        if self.scope_watches:
+            lines.append(f"Variable Scopes:")
+            for scope_name in sorted(self.scope_watches):
+                lines.append(
+                    f"  {scope_name}: [{', '.join(self.scope_watches[scope_name])}]"
+                )
 
         if self.watches:
             lines.append(f"Variables:")
