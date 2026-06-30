@@ -48,6 +48,16 @@ template struct DependentField<int>; // OK: a non-pointer, non-union member
 template struct DependentField<int *>; // expected-note {{in instantiation of template class 'DependentField<int *>' requested here}}
 // expected-error@#dependent-field-member {{'[[uninit]]' cannot be applied to a pointer under profile 'std::init'; initialize the pointer (for example to 'nullptr')}}
 
+// The deferral is keyed on the member being templated, not on its type being
+// dependent: a literally non-dependent pointer member inside a template still
+// defers on the pattern and fires once, at instantiation.
+template <typename T>
+struct NonDependentPtrField {
+  int *m [[uninit]]; // #nondependent-ptr-field
+};
+template struct NonDependentPtrField<int>; // expected-note {{in instantiation of template class 'NonDependentPtrField<int>' requested here}}
+// expected-error@#nondependent-ptr-field {{'[[uninit]]' cannot be applied to a pointer under profile 'std::init'; initialize the pointer (for example to 'nullptr')}}
+
 // An uninstantiated pattern is not yet a phase-7 entity, so nothing fires.
 template <typename T>
 struct DependentFieldNeverInstantiated {
