@@ -156,8 +156,10 @@ const Symbol *GetObjectSymbol(const parser::OmpObject &object, bool ultimate) {
   } else if (auto *locator{GetLocatorFromObj(object)}) {
     const Symbol *sym = common::visit( //
         common::visitors{
-            [](const parser::OmpReservedIdentifier &x) { return x.v.symbol; },
-            [](const parser::FunctionReference &x) {
+            [](const parser::OmpReservedIdentifier &x) -> const Symbol * {
+              return x.v.symbol;
+            },
+            [](const parser::FunctionReference &x) -> const Symbol * {
               return GetFunctionReferenceSymbol(x);
             },
         },
