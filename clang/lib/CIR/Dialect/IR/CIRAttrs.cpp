@@ -308,9 +308,6 @@ static void printDataMemberPath(AsmPrinter &p,
 
 mlir::ParseResult parseIntLiteral(mlir::AsmParser &parser, llvm::APInt &value,
                                   cir::IntTypeInterface ty) {
-  // Parse into an APInt sized to hold the literal, then fit it to the type's
-  // width.  Using APInt rather than int64_t/uint64_t lets cir.int attributes
-  // wider than 64 bits round-trip.
   llvm::SMLoc loc = parser.getCurrentLocation();
   llvm::APInt parsed;
   mlir::OptionalParseResult result = parser.parseOptionalInteger(parsed);
@@ -330,8 +327,6 @@ mlir::ParseResult parseIntLiteral(mlir::AsmParser &parser, llvm::APInt &value,
 
 void printIntLiteral(mlir::AsmPrinter &p, llvm::APInt value,
                      cir::IntTypeInterface ty) {
-  // Print the full value through APInt so that attributes wider than 64 bits
-  // work; get[SZ]ExtValue() asserts once the value needs more than 64 bits.
   llvm::SmallString<40> str;
   value.toString(str, /*radix=*/10, /*isSigned=*/ty.isSigned());
   p << str;
