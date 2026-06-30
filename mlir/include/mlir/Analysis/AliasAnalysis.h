@@ -19,6 +19,8 @@
 
 namespace mlir {
 
+class RewriterBase;
+
 //===----------------------------------------------------------------------===//
 // AliasResult
 //===----------------------------------------------------------------------===//
@@ -191,7 +193,11 @@ struct AliasAnalysisTraits {
 
     /// Enable opt-in caching of alias query results on this implementation.
     /// Implementations that do not support caching ignore this request.
-    virtual void enableQueryCaching() = 0;
+    /// If `rewriter` is non-null, the implementation may install a listener on
+    /// it to invalidate cached results precisely as the IR is mutated; if null
+    /// the cache is a frozen snapshot valid only while the IR is not mutated in
+    /// a way that affects the cached queries.
+    virtual void enableQueryCaching(RewriterBase *rewriter) = 0;
 
     /// Disable and clear any query caching on this implementation.
     /// Implementations that do not support caching ignore this request.
@@ -202,7 +208,8 @@ struct AliasAnalysisTraits {
   /// `disableSourceCache()`. Mirrors the `has_is_invalidated` idiom used by
   /// the pass analysis manager.
   template <typename T>
-  using has_query_caching_t = decltype(std::declval<T &>().enableSourceCache());
+  using has_query_caching_t = decltype(std::declval<T &>().enableSourceCache(
+      std::declval<RewriterBase *>()));
 
   /// This class represents the `Model` of an alias analysis implementation
   /// `ImplT`. A model is instantiated for each alias analysis implementation
@@ -226,9 +233,9 @@ struct AliasAnalysisTraits {
 
     /// Forward query-caching control to the implementation when it provides
     /// the cache hooks; for implementations without them these are no-ops.
-    void enableQueryCaching() final {
+    void enableQueryCaching(RewriterBase *rewriter) final {
       if constexpr (llvm::is_detected<has_query_caching_t, ImplT>::value)
-        impl.enableSourceCache();
+        impl.enableSourceCache(rewriter);
     }
     void disableQueryCaching() final {
       if constexpr (llvm::is_detected<has_query_caching_t, ImplT>::value)
@@ -315,13 +322,21 @@ public:
   ///
   /// This is the only entry point to query caching: enabling and disabling
   /// are private so that caching is always paired with a guaranteed teardown.
-  /// A frozen (snapshot) cache is only valid while the IR is not mutated in a
-  /// way that affects the cached queries, so callers must keep the scope no
-  /// wider than such a no-mutation (or move-only) region.
+  ///
+  /// If `rewriter` is null (the default), the cache is a frozen snapshot that
+  /// is only valid while the IR is not mutated in a way that affects the
+  /// cached queries, so callers must keep the scope no wider than such a
+  /// no-mutation (or move-only) region. If `rewriter` is non-null,
+  /// implementations that support it install a listener on the rewriter and
+  /// invalidate cached results precisely as the IR is mutated through it; the
+  /// cache then stays valid as long as all mutations flow through that
+  /// rewriter.
   class QueryCacheScope {
   public:
-    explicit QueryCacheScope(AliasAnalysis &aa) : aa(aa) {
-      aa.enableQueryCaching();
+    explicit QueryCacheScope(AliasAnalysis &aa,
+                             RewriterBase *rewriter = nullptr)
+        : aa(aa) {
+      aa.enableQueryCaching(rewriter);
     }
     ~QueryCacheScope() { aa.disableQueryCaching(); }
 
@@ -337,7 +352,7 @@ public:
 private:
   /// Enable/disable query caching on every registered implementation that
   /// supports it. Private: use QueryCacheScope to guarantee teardown.
-  void enableQueryCaching();
+  void enableQueryCaching(RewriterBase *rewriter = nullptr);
   void disableQueryCaching();
 
   /// A set of internal alias analysis implementations.

@@ -100,9 +100,9 @@ ModRefResult AliasAnalysis::getModRef(Operation *op, Value location) {
   return result;
 }
 
-void AliasAnalysis::enableQueryCaching() {
+void AliasAnalysis::enableQueryCaching(RewriterBase *rewriter) {
   for (const std::unique_ptr<Concept> &aliasImpl : aliasImpls)
-    aliasImpl->enableQueryCaching();
+    aliasImpl->enableQueryCaching(rewriter);
 }
 
 void AliasAnalysis::disableQueryCaching() {
