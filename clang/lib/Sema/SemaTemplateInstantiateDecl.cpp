@@ -1833,6 +1833,12 @@ Decl *TemplateDeclInstantiator::VisitVarDecl(VarDecl *D,
   if (SemaRef.getLangOpts().OpenACC)
     SemaRef.OpenACC().ActOnVariableDeclarator(Var);
 
+  // std::init / pointer_marker + union_marker: like the field case, re-check
+  // the instantiated variable now that its type is known (the parse-time
+  // handler deferred on the template pattern).
+  if (!Var->isInvalidDecl())
+    SemaRef.diagnoseInitUninitMarkerPlacement(Var);
+
   return Var;
 }
 
@@ -1916,6 +1922,12 @@ Decl *TemplateDeclInstantiator::VisitFieldDecl(FieldDecl *D) {
   Field->setImplicit(D->isImplicit());
   Field->setAccess(D->getAccess());
   Owner->addDecl(Field);
+
+  // std::init / pointer_marker + union_marker: the parse-time handler deferred
+  // on the (dependent) template member; re-check now that the substituted type
+  // is known.
+  if (!Field->isInvalidDecl())
+    SemaRef.diagnoseInitUninitMarkerPlacement(Field);
 
   return Field;
 }

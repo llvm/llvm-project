@@ -3185,9 +3185,10 @@ bool Sema::shouldEmitProfileViolation(StringRef ProfileName, StringRef RuleName,
   // instantiation (the ref_to_uninit binding checks: call argument, pointer
   // assignment, return) instead defer in a dependent context from their own
   // wrapper, checkRefToUninitInit, since no Decl is available here. The
-  // [[uninit]] marker handlers and the reinterpret_cast check also pass
-  // D == nullptr but are not re-checked at instantiation, so they keep running
-  // once at parse time (their template false positives are a separate gap).
+  // [[uninit]] marker checks pass D (via diagnoseInitUninitMarkerPlacement) and
+  // are re-run on the instantiated field / variable, so they defer here too.
+  // The reinterpret_cast check still passes D == nullptr and is not re-checked
+  // at instantiation, so it keeps running once at parse time (a separate gap).
   if (D && D->isTemplated())
     return false;
   if (isUnevaluatedContext())

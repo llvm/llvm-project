@@ -136,3 +136,13 @@ void template_uninit_never_instantiated() {
   int x;
   (void)x;
 }
+
+// A dependent local that substitutes to a pointer is deferred on the pattern
+// and fires pointer_marker at instantiation, not on the template.
+template <typename T>
+void template_ptr_marker() {
+  T x [[uninit]]; // #template-ptr-marker
+  (void)x;
+}
+template void template_ptr_marker<int *>(); // expected-note {{in instantiation of function template specialization 'template_ptr_marker<int *>' requested here}}
+// expected-error@#template-ptr-marker {{'[[uninit]]' cannot be applied to a pointer under profile 'std::init'; initialize the pointer (for example to 'nullptr')}}

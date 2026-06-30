@@ -38,9 +38,39 @@ struct MultipleFields {
 
 template <typename T>
 struct DependentField {
+  T m [[uninit]]; // #dependent-field-member
+};
+template struct DependentField<int>; // OK: a non-pointer, non-union member
+
+// The marker is deferred on the dependent pattern and re-checked once the
+// substituted type is known, so a pointer member fires pointer_marker at
+// instantiation (paper section 4.1).
+template struct DependentField<int *>; // expected-note {{in instantiation of template class 'DependentField<int *>' requested here}}
+// expected-error@#dependent-field-member {{'[[uninit]]' cannot be applied to a pointer under profile 'std::init'; initialize the pointer (for example to 'nullptr')}}
+
+// An uninstantiated pattern is not yet a phase-7 entity, so nothing fires.
+template <typename T>
+struct DependentFieldNeverInstantiated {
   T m [[uninit]];
 };
-template struct DependentField<int>;
+
+// Suppression on the dependent member carries through instantiation.
+template <typename T>
+struct DependentFieldSuppressed {
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  [[profiles::suppress(std::init)]] T m [[uninit]];
+};
+template struct DependentFieldSuppressed<int *>;
+
+// A member of a union template fires union_marker at instantiation regardless
+// of the substituted type (paper section 5.6).
+template <typename T>
+union DependentUnion {
+  T m [[uninit]]; // #dependent-union-member
+  int tag;
+};
+int dependent_union_size = sizeof(DependentUnion<int>); // expected-note {{in instantiation of template class 'DependentUnion<int>' requested here}}
+// expected-error@#dependent-union-member {{'[[uninit]]' cannot be applied to a union member under profile 'std::init'}}
 
 // expected-error@+2 {{'uninit' attribute only applies to variables and non-static data members}}
 // no-profiles-error@+1 {{'uninit' attribute only applies to variables and non-static data members}}

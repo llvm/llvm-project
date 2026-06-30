@@ -14991,15 +14991,21 @@ void Sema::diagnoseInitUninitMarkerPlacement(const Decl *D) {
   // policy (not a meaningless subject), so they are gated on enforcement; the
   // marker is left in place so uninit_decl / ctor_uninit_member treat the
   // entity as acknowledged rather than re-diagnosing it.
+  //
+  // Passing \p D makes shouldEmitProfileViolation defer on a templated pattern
+  // (paper / P3589R2: a rule fires on the instantiation, not the template),
+  // so the parse-time handler skips template members and the rule is re-run on
+  // the instantiated entity (VisitFieldDecl / VisitVarDecl), once the
+  // substituted type is known to be a pointer or union.
   bool UnionVar = isa<VarDecl>(D) && cast<VarDecl>(D)->getType()->isUnionType();
   bool UnionMember =
       isa<FieldDecl>(D) && cast<FieldDecl>(D)->getParent()->isUnion();
   if ((UnionVar || UnionMember) &&
-      shouldEmitProfileViolation("std::init", "union_marker", Loc))
+      shouldEmitProfileViolation("std::init", "union_marker", Loc, D))
     Diag(Loc, diag::err_init_union_marker)
         << "std::init" << (UnionMember ? 1 : 0);
   else if (cast<ValueDecl>(D)->getType()->isPointerType() &&
-           shouldEmitProfileViolation("std::init", "pointer_marker", Loc))
+           shouldEmitProfileViolation("std::init", "pointer_marker", Loc, D))
     Diag(Loc, diag::err_init_uninit_pointer_marker) << "std::init";
 }
 

@@ -60,3 +60,20 @@ struct HasUnionMember {
   HasUnionMember() : z(0) {}          // expected-error {{constructor does not initialize member 'u' under profile 'std::init'}}
   HasUnionMember(int) : u{1}, z(0) {}
 };
+
+// A dependent local that substitutes to a union type is deferred on the pattern
+// and fires union_marker at instantiation, not on the template.
+template <typename T>
+void template_union_marker() {
+  T x [[uninit]]; // #template-union-marker
+  (void)x;
+}
+template void template_union_marker<U>(); // expected-note {{in instantiation of function template specialization 'template_union_marker<U>' requested here}}
+// expected-error@#template-union-marker {{'[[uninit]]' cannot be applied to a variable of union type under profile 'std::init'}}
+
+// An uninstantiated pattern never reaches phase 7, so the marker is silent.
+template <typename T>
+void template_union_never_instantiated() {
+  T x [[uninit]];
+  (void)x;
+}
