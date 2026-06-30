@@ -176,6 +176,10 @@ static bool forwardHandleAccesses(Function &F, DominatorTree &DT) {
 
 PreservedAnalyses DXILForwardHandleAccesses::run(Function &F,
                                                  FunctionAnalysisManager &AM) {
+  if (auto *DH = F.getContext().getDiagHandlerPtr())
+    if (DH->HasErrors)
+      return PreservedAnalyses::all();
+
   PreservedAnalyses PA;
 
   DominatorTree *DT = &AM.getResult<DominatorTreeAnalysis>(F);
@@ -190,6 +194,9 @@ namespace {
 class DXILForwardHandleAccessesLegacy : public FunctionPass {
 public:
   bool runOnFunction(Function &F) override {
+    if (auto *DH = F.getContext().getDiagHandlerPtr())
+      if (DH->HasErrors)
+        return false;
     DominatorTree *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
     return forwardHandleAccesses(F, *DT);
   }

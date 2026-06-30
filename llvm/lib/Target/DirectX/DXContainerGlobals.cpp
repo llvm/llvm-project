@@ -95,6 +95,9 @@ public:
 } // namespace
 
 bool DXContainerGlobals::runOnModule(Module &M) {
+  if (auto *DH = M.getContext().getDiagHandlerPtr())
+    if (DH->HasErrors)
+      return false;
   llvm::SmallVector<GlobalValue *> Globals;
   Globals.push_back(getFeatureFlags(M));
   computeShaderHashAndDebugName(M, Globals);

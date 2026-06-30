@@ -1101,6 +1101,10 @@ AnalysisKey DXILResourceBindingAnalysis::Key;
 
 DXILResourceMap DXILResourceAnalysis::run(Module &M,
                                           ModuleAnalysisManager &AM) {
+  if (auto *DH = M.getContext().getDiagHandlerPtr())
+    if (DH->HasErrors)
+      return DXILResourceMap();
+
   DXILResourceMap Data;
   DXILResourceTypeMap &DRTM = AM.getResult<DXILResourceTypeAnalysis>(M);
   Data.populate(M, DRTM);
@@ -1109,6 +1113,10 @@ DXILResourceMap DXILResourceAnalysis::run(Module &M,
 
 DXILResourceBindingInfo
 DXILResourceBindingAnalysis::run(Module &M, ModuleAnalysisManager &AM) {
+  if (auto *DH = M.getContext().getDiagHandlerPtr())
+    if (DH->HasErrors)
+      return DXILResourceBindingInfo();
+
   DXILResourceBindingInfo Data;
   DXILResourceTypeMap &DRTM = AM.getResult<DXILResourceTypeAnalysis>(M);
   Data.populate(M, DRTM);
@@ -1148,6 +1156,10 @@ void DXILResourceWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
 
 bool DXILResourceWrapperPass::runOnModule(Module &M) {
   Map.reset(new DXILResourceMap());
+
+  if (auto *DH = M.getContext().getDiagHandlerPtr())
+    if (DH->HasErrors)
+      return false;
 
   DRTM = &getAnalysis<DXILResourceTypeWrapperPass>().getResourceTypeMap();
   Map->populate(M, *DRTM);
@@ -1190,6 +1202,10 @@ void DXILResourceBindingWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
 
 bool DXILResourceBindingWrapperPass::runOnModule(Module &M) {
   BindingInfo.reset(new DXILResourceBindingInfo());
+
+  if (auto *DH = M.getContext().getDiagHandlerPtr())
+    if (DH->HasErrors)
+      return false;
 
   DXILResourceTypeMap &DRTM =
       getAnalysis<DXILResourceTypeWrapperPass>().getResourceTypeMap();
