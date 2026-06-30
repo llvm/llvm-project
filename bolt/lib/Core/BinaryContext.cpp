@@ -781,6 +781,9 @@ void BinaryContext::populateJumpTables() {
         analyzeJumpTable(JT->getAddress(), JT->Type, *(JT->Parents[0]),
                          NextJTAddress, &JT->EntriesAsAddress, &JT->IsSplit);
     if (!Success) {
+      // Re-analysis here is stricter than during disassembly (the referenced
+      // function is now disassembled), so it may fail on a table we accepted
+      // earlier. Skip the function(s) instead of aborting.
       LLVM_DEBUG({
         dbgs() << "failed to analyze ";
         JT->print(dbgs());
@@ -789,7 +792,12 @@ void BinaryContext::populateJumpTables() {
           NextJTI->second->print(dbgs());
         }
       });
-      llvm_unreachable("jump table heuristic failure");
+      JT->EntriesAsAddress.clear();
+      JT->IsSplit = false;
+      // Keep JT in the map so it is still freed by ~BinaryContext.
+      for (BinaryFunction *Frag : JT->Parents)
+        addFragmentsToSkip(Frag);
+      continue;
     }
     for (BinaryFunction *Frag : JT->Parents) {
       if (JT->IsSplit)
