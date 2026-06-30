@@ -48,6 +48,80 @@ struct CompoundAssignReads {
   CompoundAssignReads() { m += 1; } // expected-error {{member 'm' is read before initialization under profile 'std::init'}}
 };
 
+// A built-in increment or decrement reads the member's old (uninitialized)
+// value before writing, exactly like a compound assignment.
+struct PreIncReads {
+  int m [[uninit]]; // expected-note {{member 'm' declared here}}
+  PreIncReads() { ++m; } // expected-error {{member 'm' is read before initialization under profile 'std::init'}}
+};
+
+struct PostIncReads {
+  int m [[uninit]]; // expected-note {{member 'm' declared here}}
+  PostIncReads() { m++; } // expected-error {{member 'm' is read before initialization under profile 'std::init'}}
+};
+
+struct PreDecReads {
+  int m [[uninit]]; // expected-note {{member 'm' declared here}}
+  PreDecReads() { --m; } // expected-error {{member 'm' is read before initialization under profile 'std::init'}}
+};
+
+struct PostDecReads {
+  int m [[uninit]]; // expected-note {{member 'm' declared here}}
+  PostDecReads() { m--; } // expected-error {{member 'm' is read before initialization under profile 'std::init'}}
+};
+
+struct IncDecAfterAssign {
+  int m [[uninit]];
+  IncDecAfterAssign() { m = 0; ++m; m--; }
+};
+
+struct PostIncInInitBeforeAssign {
+  int m [[uninit]]; // expected-note {{member 'm' declared here}}
+  PostIncInInitBeforeAssign() { int y = m++; (void)y; } // expected-error {{member 'm' is read before initialization under profile 'std::init'}}
+};
+
+struct PostIncInInitAfterAssign {
+  int m [[uninit]];
+  PostIncInInitAfterAssign() { m = 0; int y = m++; (void)y; }
+};
+
+struct IncExplicitThis {
+  int m [[uninit]]; // expected-note {{member 'm' declared here}}
+  IncExplicitThis() { ++this->m; } // expected-error {{member 'm' is read before initialization under profile 'std::init'}}
+};
+
+struct IncDerefThis {
+  int m [[uninit]]; // expected-note {{member 'm' declared here}}
+  IncDerefThis() { ++(*this).m; } // expected-error {{member 'm' is read before initialization under profile 'std::init'}}
+};
+
+// Incrementing another object's member is not a read of the current object.
+struct IncOtherObject {
+  int m [[uninit]];
+  IncOtherObject(IncOtherObject &o) { m = 0; ++o.m; }
+};
+
+template <typename T>
+struct IncTmpl {
+  T m [[uninit]]; // expected-note {{member 'm' declared here}}
+  IncTmpl() { ++m; } // expected-error {{member 'm' is read before initialization under profile 'std::init'}}
+};
+template struct IncTmpl<int>; // expected-note {{in instantiation of member function 'IncTmpl<int>::IncTmpl' requested here}}
+
+struct IncSuppressedByRule {
+  int m [[uninit]];
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  [[profiles::suppress(std::init, rule: "uninit_read")]] IncSuppressedByRule() { ++m; }
+};
+
+struct IncSuppressedStmt {
+  int m [[uninit]];
+  IncSuppressedStmt() {
+    // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+    [[profiles::suppress(std::init)]] { ++m; }
+  }
+};
+
 struct OneBranchThenRead {
   int m [[uninit]]; // expected-note {{member 'm' declared here}}
   OneBranchThenRead(bool b) {
