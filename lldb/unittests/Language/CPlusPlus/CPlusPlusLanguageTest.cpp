@@ -37,7 +37,7 @@ TEST(CPlusPlusLanguage, MethodNameParsing) {
       {"foo(struct AStruct)", "", "", "foo", "(struct AStruct)", "", "foo"},
       {"struct AStruct struct_foo(class class_::_AClass)", "struct AStruct", "",
        "struct_foo", "(class class_::_AClass)", "", "struct_foo"},
-      {"class_(void)", "", "", "class_", "(void)", "", "class_"},
+      {"class_(enum_arg)", "", "", "class_", "(enum_arg)", "", "class_"},
       {"struct AStruct a::b::c(class AClass)", "struct AStruct", "a::b", "c",
        "(class AClass)", "", "a::b::c"},
       {"struct ns::AStruct const & A::f(void) const",
