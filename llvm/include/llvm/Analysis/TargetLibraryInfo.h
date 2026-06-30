@@ -89,6 +89,7 @@ class TargetLibraryInfoImpl {
 #include "llvm/Analysis/TargetLibraryInfo.inc"
   bool ShouldExtI32Param, ShouldExtI32Return, ShouldSignExtI32Param, ShouldSignExtI32Return;
   unsigned SizeOfInt;
+  bool IsErrnoFunctionCall;
 
   enum AvailabilityState {
     StandardName = 3, // (memset to all ones)
@@ -256,6 +257,8 @@ public:
   /// conventions.
   LLVM_ABI static bool isCallingConvCCompatible(CallBase *CI);
   LLVM_ABI static bool isCallingConvCCompatible(Function *Callee);
+
+  bool isErrnoFunctionCall() const { return IsErrnoFunctionCall; }
 };
 
 /// Provides information about what library functions are available for
@@ -593,6 +596,10 @@ public:
   bool isKnownVectorFunctionInLibrary(StringRef F) const {
     return this->isFunctionVectorizable(F);
   }
+
+  /// Returns whether `errno` is defined as a function call on known
+  /// environments.
+  bool isErrnoFunctionCall() const { return Impl->isErrnoFunctionCall(); }
 };
 
 /// Analysis pass providing the \c TargetLibraryInfo.
