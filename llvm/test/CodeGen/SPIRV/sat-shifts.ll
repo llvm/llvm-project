@@ -3,8 +3,30 @@
 
 ; CHECK-DAG: OpName %[[#Foo:]] "foo"
 ; CHECK-DAG: OpName %[[#Bar:]] "bar"
+
 ; CHECK: %[[#Foo]] = OpFunction
+; CHECK: %[[#]] = OpShiftLeftLogical %[[#]] %[[#]] %[[#]]
+; CHECK: %[[#]] = OpShiftRightArithmetic %[[#]] %[[#]] %[[#]]
+; CHECK: %[[#]] = OpSLessThan %[[#]] %[[#]] %[[#]]
+; CHECK: %[[#]] = OpSelect %[[#]] %[[#]] %[[#]] %[[#]]
+; CHECK: %[[#]] = OpINotEqual %[[#]] %[[#]] %[[#]]
+; CHECK: %[[#]] = OpSelect %[[#]] %[[#]] %[[#]] %[[#]]
+; CHECK: %[[#]] = OpShiftLeftLogical %[[#]] %[[#]] %[[#]]
+; CHECK: %[[#]] = OpShiftRightLogical %[[#]] %[[#]] %[[#]]
+; CHECK: %[[#]] = OpINotEqual %[[#]] %[[#]] %[[#]]
+; CHECK: %[[#]] = OpSelect %[[#]] %[[#]] %[[#]] %[[#]]
+
 ; CHECK: %[[#Bar]] = OpFunction
+; CHECK: %[[#]] = OpShiftLeftLogical %[[#]] %[[#]] %[[#]]
+; CHECK: %[[#]] = OpShiftRightArithmetic %[[#]] %[[#]] %[[#]]
+; CHECK: %[[#]] = OpSLessThan %[[#]] %[[#]] %[[#]]
+; CHECK: %[[#]] = OpSelect %[[#]] %[[#]] %[[#]] %[[#]]
+; CHECK: %[[#]] = OpINotEqual %[[#]] %[[#]] %[[#]]
+; CHECK: %[[#]] = OpSelect %[[#]] %[[#]] %[[#]] %[[#]]
+; CHECK: %[[#]] = OpShiftLeftLogical %[[#]] %[[#]] %[[#]]
+; CHECK: %[[#]] = OpShiftRightLogical %[[#]] %[[#]] %[[#]]
+; CHECK: %[[#]] = OpINotEqual %[[#]] %[[#]] %[[#]]
+; CHECK: %[[#]] = OpSelect %[[#]] %[[#]] %[[#]] %[[#]]
 
 define spir_func void @foo(i16 %x, i16 %y) {
 entry:
