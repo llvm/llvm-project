@@ -63,7 +63,7 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]].sub0:sreg_64 = S_MOV_B32 0
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sreg_64 = COPY [[S_MOV_B32_]]
+  ; CHECK-NEXT:   undef [[COPY:%[0-9]+]].sub1:sreg_64 = COPY [[S_MOV_B32_]].sub1
   ; CHECK-NEXT:   dead [[S_MOV_B32_:%[0-9]+]].sub1:sreg_64 = COPY [[S_MOV_B32_]].sub0
   ; CHECK-NEXT:   S_ENDPGM 0, implicit [[COPY]].sub1
   bb.0:

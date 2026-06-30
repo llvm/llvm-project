@@ -396,7 +396,7 @@ define void @shuffle_i128_ldst(ptr %p) vscale_range(2,2) {
 ; CHECK-NEXT:    vl4re64.v v8, (a0)
 ; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vmv4r.v v12, v8
+; CHECK-NEXT:    vmv2r.v v12, v8
 ; CHECK-NEXT:    vmv1r.v v14, v11
 ; CHECK-NEXT:    vmv1r.v v15, v10
 ; CHECK-NEXT:    vs4r.v v12, (a0)
@@ -414,7 +414,7 @@ define void @shuffle_i256_ldst(ptr %p) vscale_range(2,2) {
 ; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vmv1r.v v11, v9
-; CHECK-NEXT:    vmv8r.v v16, v8
+; CHECK-NEXT:    vmv4r.v v16, v8
 ; CHECK-NEXT:    vmv1r.v v20, v14
 ; CHECK-NEXT:    vmv1r.v v21, v15
 ; CHECK-NEXT:    vmv1r.v v22, v12
