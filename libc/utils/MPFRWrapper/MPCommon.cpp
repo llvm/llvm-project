@@ -13,6 +13,9 @@
 #include "src/__support/FPUtil/cast.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/types.h"
+#include "src/__support/FPUtil/float128.h"
+
+using LIBC_NAMESPACE::fputil::Float128;
 
 namespace LIBC_NAMESPACE_DECL {
 namespace testing {
@@ -648,6 +651,10 @@ template <> float128 MPFRNumber::as<float128>() const {
 
 template <> bfloat16 MPFRNumber::as<bfloat16>() const {
   return fputil::cast<bfloat16>(mpfr_get_flt(value, mpfr_rounding));
+}
+
+template <> Float128 MPFRNumber::as<Float128>() const {
+  return fputil::cast<Float128>(mpfr_get_flt(value, mpfr_rounding));
 }
 
 } // namespace mpfr
