@@ -9,6 +9,7 @@
 [[profiles::enforce(std::init)]];
 
 int g_init = 0;
+int g_init2 = 0;
 // Static fixtures supplying uninitialized memory for the pointer/reference
 // tests below. A static [[uninit]] is rejected by static_marker (paper section
 // 4.2), so suppress that rule here: the test deliberately creates uninitialized
@@ -18,9 +19,12 @@ int g_init = 0;
 [[profiles::suppress(std::init, rule: "static_marker")]] [[uninit]] int g_uninit;
 // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
 [[profiles::suppress(std::init, rule: "static_marker")]] [[uninit]] int g_uninit_arr[3];
+// no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+[[profiles::suppress(std::init, rule: "static_marker")]] [[uninit]] int g_uninit2;
 [[ref_to_uninit]] int *allocate(int n);
 [[ref_to_uninit]] void *alloc_void();
 [[ref_to_uninit]] int &get_uninit_ref();
+void h();
 
 void test_pointer_target() {
   int *p1 [[ref_to_uninit]] = &g_uninit; // OK
@@ -102,6 +106,61 @@ void test_reference_casts() {
   int *p [[ref_to_uninit]] = &(int &)g_uninit; // OK
 
   (void)cr1; (void)cr2; (void)cr3; (void)gr1; (void)gr2; (void)p;
+}
+
+// Pass-through sources are transparent to their operand: a single-element
+// braced initializer is looked through to its element, a conditional is
+// uninitialized if either arm is, and a comma yields its right operand.
+void test_braced_pointer() {
+  int *b1 [[ref_to_uninit]] = {&g_uninit}; // OK
+  int *b2 = {&g_uninit};                    // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  int *b3 [[ref_to_uninit]] = {&g_init};    // expected-error {{pointer marked '[[ref_to_uninit]]' must refer to uninitialized memory under profile 'std::init'}}
+  int *b4 = {&g_init};                       // OK
+  // Empty {} value-initializes to nullptr, like = nullptr: not uninitialized.
+  int *b5 [[ref_to_uninit]] = {};            // expected-error {{pointer marked '[[ref_to_uninit]]' must refer to uninitialized memory under profile 'std::init'}}
+  int *b6 = {};                              // OK
+  (void)b1; (void)b2; (void)b3; (void)b4; (void)b5; (void)b6;
+}
+
+void test_braced_reference() {
+  int &r1 [[ref_to_uninit]] = {g_uninit}; // OK
+  int &r2 = {g_uninit};                    // expected-error {{reference to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  int &r3 [[ref_to_uninit]] = {g_init};    // expected-error {{reference marked '[[ref_to_uninit]]' must refer to uninitialized memory under profile 'std::init'}}
+  int &r4 = {g_init};                       // OK
+  (void)r1; (void)r2; (void)r3; (void)r4;
+}
+
+void test_conditional_pointer(bool c) {
+  int *p1 = c ? &g_uninit : &g_init;                       // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  int *p2 [[ref_to_uninit]] = c ? &g_uninit : &g_uninit2;  // OK: both arms uninitialized
+  int *p3 [[ref_to_uninit]] = c ? &g_uninit : &g_init;     // OK: either arm may be uninitialized
+  int *p4 [[ref_to_uninit]] = c ? &g_init : &g_init2;      // expected-error {{pointer marked '[[ref_to_uninit]]' must refer to uninitialized memory under profile 'std::init'}}
+  int *p5 = c ? &g_init : &g_init2;                        // OK
+  (void)p1; (void)p2; (void)p3; (void)p4; (void)p5;
+}
+
+void test_conditional_reference(bool c) {
+  int &r1 [[ref_to_uninit]] = c ? g_uninit : g_uninit2; // OK
+  int &r2 = c ? g_uninit : g_init;                       // expected-error {{reference to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  int &r3 [[ref_to_uninit]] = c ? g_init : g_init2;      // expected-error {{reference marked '[[ref_to_uninit]]' must refer to uninitialized memory under profile 'std::init'}}
+  int &r4 = c ? g_init : g_init2;                        // OK
+  (void)r1; (void)r2; (void)r3; (void)r4;
+}
+
+void test_comma_pointer() {
+  int *p1 = (h(), &g_uninit);                    // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  int *p2 [[ref_to_uninit]] = (h(), &g_uninit);  // OK
+  int *p3 [[ref_to_uninit]] = (h(), &g_init);    // expected-error {{pointer marked '[[ref_to_uninit]]' must refer to uninitialized memory under profile 'std::init'}}
+  int *p4 = (h(), &g_init);                      // OK
+  (void)p1; (void)p2; (void)p3; (void)p4;
+}
+
+void test_comma_reference() {
+  int &r1 [[ref_to_uninit]] = (h(), g_uninit); // OK
+  int &r2 = (h(), g_uninit);                    // expected-error {{reference to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  int &r3 [[ref_to_uninit]] = (h(), g_init);    // expected-error {{reference marked '[[ref_to_uninit]]' must refer to uninitialized memory under profile 'std::init'}}
+  int &r4 = (h(), g_init);                       // OK
+  (void)r1; (void)r2; (void)r3; (void)r4;
 }
 
 void test_assignment() {
@@ -208,6 +267,27 @@ void test_default_arguments() {
   [[profiles::suppress(std::init)]] { def_ptr_bad(); } // OK: suppressed
 }
 
+// Pass-through sources reach the recognizer at the call-argument site too. A
+// braced scalar pointer argument additionally warns (braces around scalar
+// initializer), so the braced cases here use references; the pointer recognizer
+// is exercised at this site by the conditional and comma forms.
+void test_passthrough_call_arguments(bool c) {
+  take_uninit_ref({g_uninit}); // OK
+  take_uninit_ref({g_init});   // expected-error {{reference marked '[[ref_to_uninit]]' must refer to uninitialized memory under profile 'std::init'}}
+  take_ref({g_uninit});        // expected-error {{reference to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  take_ref({g_init});          // OK
+
+  take_uninit_ptr(c ? &g_uninit : &g_init); // OK: either arm may be uninitialized
+  take_ptr(c ? &g_uninit : &g_init);        // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  take_uninit_ref(c ? g_uninit : g_uninit2);// OK
+  take_ref(c ? g_uninit : g_init);          // expected-error {{reference to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+
+  take_uninit_ptr((h(), &g_uninit)); // OK
+  take_ptr((h(), &g_uninit));        // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  take_uninit_ref((h(), g_init));    // expected-error {{reference marked '[[ref_to_uninit]]' must refer to uninitialized memory under profile 'std::init'}}
+  take_ref((h(), g_uninit));         // expected-error {{reference to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+}
+
 struct Inner { int m; };
 
 // Member access through a [[ref_to_uninit]] pointer denotes uninitialized
@@ -259,6 +339,28 @@ int *ret_ptr_ok() { return &g_init; } // OK
 [[ref_to_uninit]] int &ret_uninit_ref_ok() { return g_uninit; } // OK
 int &ret_ref_bad() {
   return g_uninit; // expected-error {{reference to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+}
+
+// Pass-through sources at the return site mirror the variable-init behavior. A
+// braced scalar pointer return warns (braces around scalar initializer), so the
+// braced returns use references; the pointer recognizer is reached here by the
+// conditional and comma forms.
+[[ref_to_uninit]] int &ret_braced_ref_ok() { return {g_uninit}; } // OK
+int &ret_braced_ref_bad() {
+  return {g_uninit}; // expected-error {{reference to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+}
+[[ref_to_uninit]] int &ret_braced_ref_bad2() {
+  return {g_init}; // expected-error {{reference marked '[[ref_to_uninit]]' must refer to uninitialized memory under profile 'std::init'}}
+}
+
+[[ref_to_uninit]] int *ret_cond_ptr_ok(bool c) { return c ? &g_uninit : &g_init; } // OK
+int *ret_cond_ptr_bad(bool c) {
+  return c ? &g_uninit : &g_init; // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+}
+
+[[ref_to_uninit]] int *ret_comma_ptr_ok() { return (h(), &g_uninit); } // OK
+int *ret_comma_ptr_bad() {
+  return (h(), &g_uninit); // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
 }
 
 int *ret_suppressed() {
@@ -417,3 +519,88 @@ void template_discarded_branch() {
   }
 }
 template void template_discarded_branch<int>();
+
+// std::init / uninit_read (paper §4.5): a read *through* a [[ref_to_uninit]]
+// pointer or reference yields an uninitialized value, diagnosed at the
+// lvalue-to-rvalue conversion (Sema::DefaultLvalueConversion). These reads fire
+// only under -fprofiles; the no-profiles run stays clean. A direct read of a
+// named [[uninit]] object is left to the flow-based uninit_read pass and is not
+// retested here.
+void take_value(int v);
+
+int test_read_through_pointer(int *p [[ref_to_uninit]], int i) {
+  int y1 = *p;     // expected-error {{read through a '[[ref_to_uninit]]' pointer or reference accesses uninitialized memory under profile 'std::init'}}
+  int y2 = p[i];   // expected-error {{read through a '[[ref_to_uninit]]' pointer or reference accesses uninitialized memory under profile 'std::init'}}
+  int y3 = *p + 1; // expected-error {{read through a '[[ref_to_uninit]]' pointer or reference accesses uninitialized memory under profile 'std::init'}}
+  take_value(*p);  // expected-error {{read through a '[[ref_to_uninit]]' pointer or reference accesses uninitialized memory under profile 'std::init'}}
+  if (*p)          // expected-error {{read through a '[[ref_to_uninit]]' pointer or reference accesses uninitialized memory under profile 'std::init'}}
+    h();
+  (void)y1; (void)y2; (void)y3;
+  return *p;       // expected-error {{read through a '[[ref_to_uninit]]' pointer or reference accesses uninitialized memory under profile 'std::init'}}
+}
+
+void test_read_through_reference(int &r [[ref_to_uninit]], Inner *ptr [[ref_to_uninit]],
+                                 void *vp [[ref_to_uninit]]) {
+  int y1 = r;                // expected-error {{read through a '[[ref_to_uninit]]' pointer or reference accesses uninitialized memory under profile 'std::init'}}
+  int y2 = ptr->m;           // expected-error {{read through a '[[ref_to_uninit]]' pointer or reference accesses uninitialized memory under profile 'std::init'}}
+  int y3 = (*ptr).m;         // expected-error {{read through a '[[ref_to_uninit]]' pointer or reference accesses uninitialized memory under profile 'std::init'}}
+  int y4 = *(int *)vp;       // expected-error {{read through a '[[ref_to_uninit]]' pointer or reference accesses uninitialized memory under profile 'std::init'}}
+  int y5 = get_uninit_ref(); // expected-error {{read through a '[[ref_to_uninit]]' pointer or reference accesses uninitialized memory under profile 'std::init'}}
+  (void)y1; (void)y2; (void)y3; (void)y4; (void)y5;
+}
+
+// Paper §4.5: reading an uninitialized std::byte is permitted, so a read
+// through a [[ref_to_uninit]] std::byte pointer/reference is not diagnosed.
+void test_read_byte_exempt(std::byte *bp [[ref_to_uninit]], std::byte &br [[ref_to_uninit]]) {
+  std::byte b1 = *bp; // OK
+  std::byte b2 = br;  // OK
+  (void)b1; (void)b2;
+}
+
+void test_read_suppress(int *p [[ref_to_uninit]]) {
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  [[profiles::suppress(std::init)]] { take_value(*p); }                      // OK: whole-profile suppress
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  [[profiles::suppress(std::init, rule: "uninit_read")]] { take_value(*p); } // OK: rule-targeted suppress
+}
+
+// None of these is a read through the marker: a discarded-value expression and
+// an address-of apply no lvalue-to-rvalue conversion, a write targets the
+// glvalue without loading it, a reference binding is not a load, and copying
+// the pointer value reads the (initialized) pointer object rather than through
+// it.
+void test_read_negatives(int *p [[ref_to_uninit]], int &r [[ref_to_uninit]],
+                         Inner *ptr [[ref_to_uninit]], int *base [[ref_to_uninit]]) {
+  (void)r;                         // OK: discarded value
+  (void)*p;                        // OK: discarded value
+  int *ap [[ref_to_uninit]] = &*p; // OK: address-of is not a read
+  *p = 5;                          // OK: write, not a read
+  ptr->m = 5;                      // OK: write, not a read
+  int &r2 [[ref_to_uninit]] = *p;  // OK: reference binding, not a read
+  int *q [[ref_to_uninit]] = base; // OK: reads the pointer value, not through it
+  (void)ap; (void)q; (void)r2;
+}
+
+// A read through a [[ref_to_uninit]] parameter inside a template body defers on
+// the pattern (a dependent context) and fires once, at instantiation -- whether
+// the read's operand is non-dependent (template_read_nondependent_bad) or
+// dependent (template_read_dependent_bad). A never-instantiated template stays
+// silent. Mirrors the binding template_* cases above.
+template <typename T>
+void template_read_nondependent_bad(int *p [[ref_to_uninit]]) {
+  int y = *p; // expected-error {{read through a '[[ref_to_uninit]]' pointer or reference accesses uninitialized memory under profile 'std::init'}}
+  (void)y;
+}
+template void template_read_nondependent_bad<int>(int *); // expected-note {{in instantiation of function template specialization 'template_read_nondependent_bad<int>' requested here}}
+
+template <typename T>
+T template_read_dependent_bad(T *p [[ref_to_uninit]]) {
+  return *p; // expected-error {{read through a '[[ref_to_uninit]]' pointer or reference accesses uninitialized memory under profile 'std::init'}}
+}
+template int template_read_dependent_bad<int>(int *); // expected-note {{in instantiation of function template specialization 'template_read_dependent_bad<int>' requested here}}
+
+template <typename T>
+void template_read_never_instantiated(int *p [[ref_to_uninit]]) {
+  int y = *p;
+  (void)y;
+}
