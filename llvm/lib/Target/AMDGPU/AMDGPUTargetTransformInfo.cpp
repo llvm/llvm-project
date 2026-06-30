@@ -1859,22 +1859,18 @@ InstructionCost GCNTTIImpl::getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
 
 bool GCNTTIImpl::isLSRCostLess(const TTI::LSRCost &A,
                                const TTI::LSRCost &B) const {
-  // Favor lower per-iteration work over preheader/setup costs.
-  // AMDGPU lacks rich addressing modes, so ScaleCost is folded into the
-  // effective instruction count (base+scale*index requires a separate ADD).
+  // Occupancy is VGPR-bound, so register pressure must dominate the LSR cost:
+  // NumRegs/AddRecCost outrank EffInsns (Insns + ScaleCost), so LSR does not
+  // add registers to save a few per-iteration instructions.
   unsigned EffInsnsA = A.Insns + A.ScaleCost;
   unsigned EffInsnsB = B.Insns + B.ScaleCost;
-
-  return std::tie(EffInsnsA, A.NumIVMuls, A.AddRecCost, A.NumBaseAdds,
-                  A.SetupCost, A.ImmCost, A.NumRegs) <
-         std::tie(EffInsnsB, B.NumIVMuls, B.AddRecCost, B.NumBaseAdds,
-                  B.SetupCost, B.ImmCost, B.NumRegs);
+  return std::tie(A.NumRegs, A.AddRecCost, EffInsnsA, A.NumIVMuls,
+                  A.NumBaseAdds, A.ImmCost, A.SetupCost) <
+         std::tie(B.NumRegs, B.AddRecCost, EffInsnsB, B.NumIVMuls,
+                  B.NumBaseAdds, B.ImmCost, B.SetupCost);
 }
 
-bool GCNTTIImpl::isNumRegsMajorCostOfLSR() const {
-  // isLSRCostLess de-prioritizes register count; keep consistent.
-  return false;
-}
+bool GCNTTIImpl::isNumRegsMajorCostOfLSR() const { return true; }
 
 bool GCNTTIImpl::shouldDropLSRSolutionIfLessProfitable() const {
   // Prefer the baseline when LSR cannot clearly reduce per-iteration work.
