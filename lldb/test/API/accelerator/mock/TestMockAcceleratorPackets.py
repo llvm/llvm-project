@@ -1,9 +1,9 @@
 """
-Tests for the lldb-server mock accelerator plugin.
+Packet-level tests for the lldb-server mock accelerator plugin.
 
 Verifies the accelerator-plugins+ feature in qSupported,
 the jAcceleratorPluginInitialize packet response, and
-the jAcceleratorPluginBreakpointHit round-trip.
+the jAcceleratorPluginBreakpointHit round-trip (including connect_info).
 """
 
 import json
@@ -22,7 +22,7 @@ def get_accelerator_action(actions, plugin_name):
     return None
 
 
-class MockAcceleratorPluginTestCase(gdbremote_testcase.GdbRemoteTestCaseBase):
+class MockAcceleratorPacketsTestCase(gdbremote_testcase.GdbRemoteTestCaseBase):
     def setUp(self):
         super().setUp()
         if "mock-accelerator" not in configuration.enabled_plugins:
@@ -140,3 +140,49 @@ class MockAcceleratorPluginTestCase(gdbremote_testcase.GdbRemoteTestCaseBase):
         # "mock_gpu_accelerator_compute" symbol value.
         self.assertIn(2, new_bps)
         self.assertEqual(new_bps[2]["by_address"]["load_address"], 0x4000)
+
+        # The initialize hit also arms the connection-trigger breakpoint by name.
+        self.assertIn(4, new_bps)
+        self.assertEqual(
+            new_bps[4]["by_name"]["function_name"], "mock_gpu_accelerator_connect"
+        )
+
+    @add_test_categories(["llgs"])
+    def test_jAcceleratorPluginBreakpointHit_returns_connect_info(self):
+        self.build()
+        self.set_inferior_startup_launch()
+        self.prep_debug_monitor_and_inferior()
+
+        self.add_qSupported_packets()
+        self.expect_gdbremote_sequence()
+
+        # Simulate the connection-trigger breakpoint (identifier 4) being hit.
+        # The plugin responds with connect_info describing the connection the
+        # client should make to the mock accelerator GDB server.
+        hit_args = {
+            "plugin_name": "mock",
+            "breakpoint": {"identifier": 4, "symbol_names": []},
+            "symbol_values": [],
+        }
+        hit_json = json.dumps(hit_args, separators=(",", ":"))
+        escaped_json = escape_binary(hit_json)
+        response = self.send_and_decode_json(
+            "jAcceleratorPluginBreakpointHit:" + escaped_json
+        )
+
+        self.assertTrue(response["disable_bp"])
+        self.assertFalse(response["auto_resume_native"])
+
+        actions = response["actions"]
+        self.assertEqual(actions["plugin_name"], "mock")
+        self.assertEqual(actions["session_name"], "Mock Accelerator Session")
+
+        # The connect_info must carry a connect URL to a local port and request
+        # a synchronous connection.
+        self.assertIn("connect_info", actions)
+        connect_info = actions["connect_info"]
+        self.assertTrue(
+            connect_info["connect_url"].startswith("connect://localhost:"),
+            connect_info["connect_url"],
+        )
+        self.assertTrue(connect_info["synchronous"])

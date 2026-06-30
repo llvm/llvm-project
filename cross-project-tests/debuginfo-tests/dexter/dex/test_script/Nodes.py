@@ -63,7 +63,7 @@ class Where:
         self.lines: Union[Line, DexRange, None] = lines
         self.after_hit_count: Optional[int] = attributes.pop("after_hit_count", None)
         self.for_hit_count: Optional[int] = attributes.pop("for_hit_count", None)
-        self.conditions: dict = attributes.pop("conditions", None)
+        self.conditions: Optional[dict] = attributes.pop("conditions", None)
         self.is_and = is_and
         if attributes:
             raise DexterNodeError(

@@ -14,6 +14,7 @@ from enum import Enum
 from dex.dextIR.FrameIR import FrameIR
 from dex.dextIR.LocIR import LocIR
 from dex.dextIR.ProgramState import ProgramState
+from dex.test_script.Nodes import Where
 
 
 class StopReason(Enum):
@@ -66,7 +67,7 @@ class StepIR:
             watches = {}
         self.watches = watches
         self.scope_watches = scope_watches or OrderedDict()
-        self.hit_fn_bps: List[str] = []
+        self.hit_where_bps: List[Where] = []
 
     def __str__(self):
         try:
