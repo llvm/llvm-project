@@ -1164,6 +1164,33 @@ func.func @canonicalize_fill_to_transpose_input(%arg0 : tensor<?x?xf32>, %arg1 :
 
 // -----
 
+// CHECK-LABEL: func @canonicalize_fill_to_broadcast_dyn(
+//  CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: tensor<?xf32>
+//  CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: tensor<?x?xf32>)
+//       CHECK:   %[[ZERO:.+]] = arith.constant 0.0
+//       CHECK:   linalg.fill ins(%[[ZERO]] : f32) outs(%[[ARG1]] : tensor<?x?xf32>)
+func.func @canonicalize_fill_to_broadcast_dyn(%arg0 : tensor<?xf32>, %arg1 : tensor<?x?xf32>) -> tensor<?x?xf32> {
+  %c0 = arith.constant 0.0 : f32
+  %fill = linalg.fill ins(%c0 : f32) outs(%arg0 : tensor<?xf32>) -> tensor<?xf32>
+  %broadcast = linalg.broadcast ins(%fill : tensor<?xf32>) outs(%arg1 : tensor<?x?xf32>) dimensions = [1]
+  return %broadcast : tensor<?x?xf32>
+}
+// -----
+
+// CHECK-LABEL: func @canonicalize_fill_to_broadcast_input(
+//  CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: tensor<6x7xf32>
+//  CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: tensor<6x1x7xf32>)
+//       CHECK:   %[[ZERO:.+]] = arith.constant 0.0
+//       CHECK:   linalg.fill ins(%[[ZERO]] : f32) outs(%[[ARG1]] : tensor<6x1x7xf32>)
+func.func @canonicalize_fill_to_broadcast_input(%arg0 : tensor<6x7xf32>, %arg1 : tensor<6x1x7xf32>) -> tensor<6x1x7xf32> {
+  %c0 = arith.constant 0.0 : f32
+  %fill = linalg.fill ins(%c0 : f32) outs(%arg0 : tensor<6x7xf32>) -> tensor<6x7xf32>
+  %broadcast = linalg.broadcast ins(%fill : tensor<6x7xf32>) outs(%arg1 : tensor<6x1x7xf32>) dimensions = [1]
+  return %broadcast : tensor<6x1x7xf32>
+}
+
+// -----
+
 // CHECK-LABEL: func @broadcast_same_shape(
 //  CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: tensor<2x3xf32>
 //  CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: tensor<2x3xf32>)
