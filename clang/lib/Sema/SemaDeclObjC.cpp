@@ -367,7 +367,7 @@ HasExplicitOwnershipAttr(Sema &S, ParmVarDecl *Param) {
 /// and user declared, in the method definition's AST.
 void SemaObjC::ActOnStartOfObjCMethodDef(Scope *FnBodyScope, Decl *D) {
   ASTContext &Context = getASTContext();
-  SemaRef.ImplicitlyRetainedSelfLocs.clear();
+  SemaRef.DiagnosableBlockCaptures.clear();
   assert((SemaRef.getCurMethodDecl() == nullptr) && "Methodparsing confused");
   ObjCMethodDecl *MDecl = dyn_cast_or_null<ObjCMethodDecl>(D);
 
