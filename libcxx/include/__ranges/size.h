@@ -140,22 +140,22 @@ namespace __reserve_hint {
 void reserve_hint() = delete;
 
 template <typename _Tp>
-concept __std_size = requires(_Tp&& __t) { ranges::size(__t); };
+concept __sized = requires(_Tp&& __t) { ranges::size(__t); };
 
 template <typename _Tp>
-concept __member_reserve_hint = !__std_size<_Tp> && requires(_Tp&& __t) {
+concept __member_reserve_hint = !__sized<_Tp> && requires(_Tp&& __t) {
   { auto(__t.reserve_hint()) } -> __integer_like;
 };
 
 template <typename _Tp>
 concept __unqualified_reserve_hint =
-    !__std_size<_Tp> && !__member_reserve_hint<_Tp> && __class_or_enum<remove_cvref_t<_Tp>> && requires(_Tp&& __t) {
+    !__sized<_Tp> && !__member_reserve_hint<_Tp> && __class_or_enum<remove_cvref_t<_Tp>> && requires(_Tp&& __t) {
       { auto(reserve_hint(__t)) } -> __integer_like;
     };
 
 struct __fn {
-  // `[range.prim.size.hint]`: `std::size(t)` is a valid expression
-  template <__std_size _Tp>
+  // `[range.prim.size.hint]`: `ranges::size(t)` is a valid expression
+  template <__sized _Tp>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr __integer_like auto operator()(_Tp&& __t) const
       noexcept(noexcept(ranges::size(__t))) {
     return ranges::size(__t);
