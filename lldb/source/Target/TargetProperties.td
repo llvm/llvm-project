@@ -285,11 +285,11 @@ let Definition = "process", Path = "target.process" in {
   def StopOnFork: Property<"stop-on-fork", "Boolean">,
     Global,
     DefaultFalse,
-    Desc<"If true, stop when the inferior forks.">;
+    Desc<"If true, stop when the inferior forks. The stop location depends on target.process.follow-fork-mode: 'child' stops in the child process, while 'parent' stops in the original process.">;
   def StopOnVFork: Property<"stop-on-vfork", "Boolean">,
     Global,
     DefaultFalse,
-    Desc<"If true, stop when the inferior vforks.">;
+    Desc<"If true, stop when the inferior vforks. The stop location depends on target.process.follow-fork-mode: 'child' stops in the child process, while 'parent' stops in the original process.">;
   def UtilityExpressionTimeout: Property<"utility-expression-timeout", "UInt64">,
 #ifdef LLDB_SANITIZED
     DefaultUnsignedValue<60>,

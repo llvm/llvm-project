@@ -24,6 +24,8 @@ class TestStopOnForkAndVFork(TestBase):
         self.runCmd(f"settings set target.process.stop-on-{fork} true")
         self.runCmd(f"settings set target.process.follow-fork-mode {mode}")
 
+        pid = process.GetProcessID()
+
         process.Continue()
         self.assertState(
             process.GetState(),
@@ -35,10 +37,22 @@ class TestStopOnForkAndVFork(TestBase):
         )
         self.assertEqual(len(threads), 1, f"We got a thread stopped for {fork}.")
 
-        self.expect(
-            "continue",
-            substrs=[f"exited with status = {0 if mode == 'parent' else 47}"],
-        )
+        if mode == "parent":
+            self.assertEqual(
+                self.dbg.GetSelectedTarget().GetProcess().GetProcessID(), pid
+            )
+            self.expect(
+                "continue",
+                substrs=[f"exited with status = 0"],
+            )
+        else:  # child
+            self.assertNotEqual(
+                self.dbg.GetSelectedTarget().GetProcess().GetProcessID(), pid
+            )
+            self.expect(
+                "continue",
+                substrs=[f"exited with status = 47"],
+            )
 
     @skipIfWindows
     def test_stop_on_fork_and_follow_parent(self):
