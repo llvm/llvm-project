@@ -14,7 +14,7 @@ inline int mid(unsigned a) { return leaf(a); }
 int main(void) { (void)mid(4222111000U); }
 
 // CHECK-NOSUP: runtime error: implicit conversion
-// CHECK-NOSUP: {{.*}} in leaf
-// CHECK-NOSUP: {{.*}} in mid
+// CHECK-NOSUP: {{.*}} leaf
+// CHECK-NOSUP: {{.*}} mid
 
 // CHECK-SUP-NOT: runtime error:

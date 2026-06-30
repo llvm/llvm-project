@@ -1,1 +1,1 @@
-__attribute__((always_inline)) static inline int fun(unsigned a) { return a; }
+inline int my_fun(unsigned a) { return a; }

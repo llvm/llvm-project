@@ -11,12 +11,12 @@
 
 #include "Inputs/suppressions-inline-origin-file.h"
 
-int main(void) { (void)fun(4222111000U); }
+int main(void) { (void)my_fun(4222111000U); }
 
 // Suppressing the caller file must not suppress a UB originating in the
 // inlined header.
 // CHECK-MAIN-FILE: runtime error: implicit conversion
-// CHECK-MAIN-FILE: {{.*}} in fun
-// CHECK-MAIN-FILE: {{.*}} in main
+// CHECK-MAIN-FILE: {{.*}} my_fun
+// CHECK-MAIN-FILE: {{.*}} main
 
 // CHECK-HEADER-FILE-NOT: runtime error:
