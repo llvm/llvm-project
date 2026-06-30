@@ -59,7 +59,7 @@ void arith::ArithDialect::initialize() {
                             SubIOp, MulIOp, SelectOp, FloorDivSIOp, CeilDivSIOp,
                             MinSIOp, MaxSIOp, MinUIOp, MaxUIOp, RemSIOp,
                             RemUIOp, DivUIOp, DivSIOp>();
-  }
+}
 
 /// Materialize an integer or floating point constant.
 Operation *arith::ArithDialect::materializeConstant(OpBuilder &builder,
