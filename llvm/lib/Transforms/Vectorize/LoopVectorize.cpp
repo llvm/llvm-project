@@ -1033,6 +1033,18 @@ public:
   /// \p VF is the vectorization factor that will be used to vectorize \p I.
   bool isScalarWithPredication(Instruction *I, ElementCount VF);
 
+  /// OptimizeMaskedMemory: returns true if the predicated store \p I should be
+  /// lowered as an unconditional load + select (blend) + unconditional store
+  /// instead of being scalarized into a per-lane predicated ladder (or emitted
+  /// as @llvm.masked.store). This is the single source of truth consulted by
+  /// isScalarWithPredication (to keep the store widenable), getConsecutiveMemOpCost
+  /// (to cost the rewritten sequence), and VPRecipeBuilder::tryToWidenMemory
+  /// (to flag the recipe). It returns true only when the target opts in
+  /// (TTI hook), the access is a masked, consecutive, forward store, the loop
+  /// is not tail-folded by masking, and MemSafetyAnalysis proves the address
+  /// is read on every iteration anyway.
+  bool canRewriteStoreAsLoadBlendStore(Instruction *I, ElementCount VF);
+
   /// Wrapper function for LoopVectorizationLegality::isMaskRequired,
   /// that passes the Instruction \p I and if we fold tail.
   bool isMaskRequired(Instruction *I) const;
@@ -2415,6 +2427,41 @@ void LoopVectorizationCostModel::collectLoopScalars(ElementCount VF) {
   Scalars[VF].insert_range(Worklist);
 }
 
+bool LoopVectorizationCostModel::canRewriteStoreAsLoadBlendStore(
+    Instruction *I, ElementCount VF) {
+  // Only vector stores are candidates.
+  auto *Store = dyn_cast<StoreInst>(I);
+  if (!Store || VF.isScalar())
+    return false;
+
+  // The target must opt in (e.g. X86 znver1/2/3, AArch64 NEON without SVE).
+  if (!TTI.shouldRewriteMaskedStoreAsLoadBlendStore())
+    return false;
+
+  // The store must actually be predicated/masked; an unconditional store has
+  // nothing to blend.
+  if (!isMaskRequired(I) || !isPredicatedInst(I))
+    return false;
+
+  // Tail-folding gates past-end addresses on the trailing iterations, so an
+  // unconditional load/store would over-read/over-write.
+  if (foldTailByMasking())
+    return false;
+
+  // Only forward consecutive stores: scatters and reversed stores keep their
+  // existing lowering.
+  if (Legal->isConsecutivePtr(getLoadStoreType(I),
+                              getLoadStorePointerOperand(I)) != 1)
+    return false;
+
+  // MemSafetyAnalysis must prove the address is read on every iteration anyway,
+  // which makes the unconditional load + store safe.
+  if (!MSA || !MSA->isLegalAnalysis())
+    return false;
+  ScalarEvolution *SE = Legal->getScalarEvolution();
+  return MSA->isGuaranteedMemoryAccess(SE->getSCEV(Store->getPointerOperand()));
+}
+
 bool LoopVectorizationCostModel::isScalarWithPredication(Instruction *I,
                                                          ElementCount VF) {
   if (!isPredicatedInst(I))
@@ -2435,6 +2482,11 @@ bool LoopVectorizationCostModel::isScalarWithPredication(Instruction *I,
   }
   case Instruction::Load:
   case Instruction::Store: {
+    // OptimizeMaskedMemory: a guaranteed-safe predicated store is lowered as a
+    // widened load-blend-store sequence, so its predication strategy is not
+    // scalarization.
+    if (isa<StoreInst>(I) && canRewriteStoreAsLoadBlendStore(I, VF))
+      return false;
     bool IsConsecutive = Legal->isConsecutivePtr(getLoadStoreType(I),
                                                  getLoadStorePointerOperand(I));
     return !(IsConsecutive && Config.isLegalMaskedLoadOrStore(I, VF)) &&
@@ -4312,6 +4364,21 @@ LoopVectorizationCostModel::getConsecutiveMemOpCost(Instruction *I,
          "Stride should be 1 or -1 for consecutive memory access");
   const Align Alignment = getLoadStoreAlignment(I);
   InstructionCost Cost = 0;
+  if (canRewriteStoreAsLoadBlendStore(I, VF)) {
+    // OptimizeMaskedMemory: this masked store will be rewritten as an
+    // unconditional load + select (blend) + unconditional store (see
+    // VPWidenStoreRecipe::execute). Cost the sequence accordingly so the
+    // legacy widening cost matches VPWidenMemoryRecipe::computeCost and the
+    // planner sees the true (cheaper) cost when comparing VFs.
+    Cost += TTI.getMemoryOpCost(Instruction::Load, VectorTy, Alignment, AS,
+                                Config.CostKind);
+    Type *CondTy = VectorType::get(Type::getInt1Ty(VectorTy->getContext()), VF);
+    Cost += TTI.getCmpSelInstrCost(Instruction::Select, VectorTy, CondTy,
+                                   CmpInst::BAD_ICMP_PREDICATE, Config.CostKind);
+    Cost += TTI.getMemoryOpCost(Instruction::Store, VectorTy, Alignment, AS,
+                                Config.CostKind);
+    return Cost;
+  }
   if (isMaskRequired(I)) {
     unsigned IID = I->getOpcode() == Instruction::Load
                        ? Intrinsic::masked_load
@@ -6282,14 +6349,17 @@ VPRecipeBase *VPRecipeBuilder::tryToWidenMemory(VPInstruction *VPI,
   //      load-blend-store would over-read.
   //   5. MemSafetyAnalysis must prove the access is guaranteed to execute
   //      on every iteration of the loop body.
-  if (CM.TTI.shouldRewriteMaskedStoreAsLoadBlendStore() &&
-      Mask && Consecutive && !Reverse && CM.MSA &&
-      CM.MSA->isLegalAnalysis() && !CM.foldTailByMasking()) {
-    auto *SE = Legal->getScalarEvolution();
-    const SCEV *PtrSCEV = SE->getSCEV(Store->getPointerOperand());
-    if (CM.MSA->isGuaranteedMemoryAccess(PtrSCEV))
-      NewSR->setRewriteAsLoadBlendStore();
-  }
+  //
+  // All of these conditions are encapsulated in
+  // canRewriteStoreAsLoadBlendStore, which is the same predicate the cost
+  // model consults to keep the store widenable (isScalarWithPredication) and
+  // to cost it (getConsecutiveMemOpCost). Using the shared helper here keeps
+  // the widening decision and the recipe flag in sync; otherwise a store that
+  // was widened on the assumption of a rewrite could fall through to an
+  // illegal/expensive @llvm.masked.store on a target without one (e.g. NEON).
+  if (Mask && Consecutive && !Reverse &&
+      CM.canRewriteStoreAsLoadBlendStore(Store, Range.Start))
+    NewSR->setRewriteAsLoadBlendStore();
 
   return NewSR;
 }
