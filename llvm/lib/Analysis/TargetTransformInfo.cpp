@@ -720,6 +720,10 @@ bool TargetTransformInfo::enableMaskedInterleavedAccessVectorization() const {
   return TTIImpl->enableMaskedInterleavedAccessVectorization();
 }
 
+bool TargetTransformInfo::shouldRewriteMaskedStoreAsLoadBlendStore() const {
+  return TTIImpl->shouldRewriteMaskedStoreAsLoadBlendStore();
+}
+
 bool TargetTransformInfo::isFPVectorizationPotentiallyUnsafe() const {
   return TTIImpl->isFPVectorizationPotentiallyUnsafe();
 }

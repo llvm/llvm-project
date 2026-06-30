@@ -4124,6 +4124,22 @@ InstructionCost VPWidenMemoryRecipe::computeCost(ElementCount VF,
 
   InstructionCost Cost = 0;
   if (IsMasked) {
+    // OptimizeMaskedMemory: when the masked store will be rewritten as
+    // load-blend-store (see VPWidenStoreRecipe::execute), cost the sequence
+    // accordingly so the planner sees the true cost when comparing VFs.
+    if (auto *Store = dyn_cast<VPWidenStoreRecipe>(R)) {
+      if (Store->shouldRewriteAsLoadBlendStore()) {
+        Cost += Ctx.TTI.getMemoryOpCost(Instruction::Load, Ty, Alignment, AS,
+                                        Ctx.CostKind);
+        Type *CondTy = VectorType::get(Type::getInt1Ty(Ctx.LLVMCtx), VF);
+        Cost += Ctx.TTI.getCmpSelInstrCost(Instruction::Select, Ty, CondTy,
+                                           CmpInst::BAD_ICMP_PREDICATE,
+                                           Ctx.CostKind);
+        Cost += Ctx.TTI.getMemoryOpCost(Instruction::Store, Ty, Alignment, AS,
+                                        Ctx.CostKind);
+        return Cost;
+      }
+    }
     unsigned IID = isa<VPWidenLoadRecipe>(R) ? Intrinsic::masked_load
                                              : Intrinsic::masked_store;
     Cost += Ctx.TTI.getMemIntrinsicInstrCost(
@@ -4244,12 +4260,24 @@ void VPWidenStoreRecipe::execute(VPTransformState &State) {
   Value *StoredVal = State.get(StoredVPValue);
   Value *Addr = State.get(getAddr(), /*IsScalar*/ !CreateScatter);
   Instruction *NewSI = nullptr;
-  if (CreateScatter)
+  if (CreateScatter) {
     NewSI = Builder.CreateMaskedScatter(StoredVal, Addr, Alignment, Mask);
-  else if (Mask)
+  } else if (Mask && shouldRewriteAsLoadBlendStore()) {
+    // OptimizeMaskedMemory: emit a load-blend-store sequence instead of a
+    // single masked store. MemSafetyAnalysis already proved that the wide
+    // load and the unconditional store at this address are safe
+    // (guaranteed-execute on every iteration of the loop body).
+    auto *DataTy = cast<VectorType>(StoredVal->getType());
+    auto *Filler =
+        Builder.CreateAlignedLoad(DataTy, Addr, Alignment, "blend.load");
+    Value *Merged =
+        Builder.CreateSelect(Mask, StoredVal, Filler, "blend.sel");
+    NewSI = Builder.CreateAlignedStore(Merged, Addr, Alignment);
+  } else if (Mask) {
     NewSI = Builder.CreateMaskedStore(StoredVal, Addr, Alignment, Mask);
-  else
+  } else {
     NewSI = Builder.CreateAlignedStore(StoredVal, Addr, Alignment);
+  }
   applyMetadata(*NewSI);
 }
 

@@ -89,6 +89,7 @@
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopIterator.h"
+#include "llvm/Analysis/MemSafetyAnalysis.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
@@ -177,6 +178,17 @@ STATISTIC(LoopsPartialAliasVectorized,
 static cl::opt<bool> EnableEpilogueVectorization(
     "enable-epilogue-vectorization", cl::init(true), cl::Hidden,
     cl::desc("Enable vectorization of epilogue loops."));
+
+// OptimizeMaskedMemory: rewrite masked stores as a load-blend-store sequence
+// when MemSafetyAnalysis proves the access is safe. On by default, but
+// further gated by TTI: only fires on targets whose
+// shouldRewriteMaskedStoreAsLoadBlendStore() returns true (today: X86 with
+// the slow-masked-store tuning feature, i.e. znver1/2/3). All other targets
+// see no IR change regardless of this flag's value.
+static cl::opt<bool> EnableOptimizeMaskedMemory(
+    "enable-masked-memory-optimization", cl::init(true), cl::Hidden,
+    cl::desc("Rewrite masked stores as load-blend-store when safe "
+             "(MemSafetyAnalysis-driven)."));
 
 static cl::opt<unsigned> EpilogueVectorizationForceVF(
     "epilogue-vectorization-force-VF", cl::init(1), cl::Hidden,
@@ -789,6 +801,16 @@ public:
       : Config(Config), EpilogueLoweringStatus(SEL), TheLoop(L), PSE(PSE),
         LI(LI), Legal(Legal), TTI(TTI), TLI(TLI), AC(AC), ORE(ORE),
         GetBFI(GetBFI), TheFunction(F), Hints(Hints), InterleaveInfo(IAI) {}
+
+  /// OptimizeMaskedMemory: per-loop analysis used by the load-blend-store
+  /// rewrite. Set by LoopVectorizePass::processLoop after legality succeeds;
+  /// null when -enable-masked-memory-optimization is off or the analysis is
+  /// not legal on this loop.
+  MemSafetyAnalysis *MSA = nullptr;
+
+  /// Attach a MemSafetyAnalysis to this cost model. Lifetime is owned by
+  /// the caller.
+  void setMSA(MemSafetyAnalysis *NewMSA) { MSA = NewMSA; }
 
   /// \return An upper bound for the vectorization factors (both fixed and
   /// scalable). If the factors are 0, vectorization and interleaving should be
@@ -6238,8 +6260,38 @@ VPRecipeBase *VPRecipeBuilder::tryToWidenMemory(VPInstruction *VPI,
   if (Reverse)
     StoredVal = Builder.createNaryOp(VPInstruction::Reverse, StoredVal,
                                      Store->getDebugLoc());
-  return new VPWidenStoreRecipe(*Store, Ptr, StoredVal, Mask, Consecutive, *VPI,
-                                Store->getDebugLoc());
+  auto *NewSR = new VPWidenStoreRecipe(*Store, Ptr, StoredVal, Mask, Consecutive,
+                                       *VPI, Store->getDebugLoc());
+
+  // OptimizeMaskedMemory: decide once, at recipe-build time, whether this
+  // masked store will be lowered as a load-blend-store. The decision is
+  // recorded on the recipe so that both the cost model and the execute path
+  // can consult the same answer.
+  //
+  // Gating:
+  //   1. The target must say it benefits from the rewrite. The TTI hook
+  //      is target-specific (X86 turns it on only for znver1/2/3 via the
+  //      `slow-masked-store` tuning feature); other targets and AVX-512
+  //      class chips fall through to the masked-store path untouched.
+  //   2. -enable-masked-memory-optimization must be on (CM.MSA is otherwise
+  //      null).
+  //   3. The store must be masked, consecutive, non-reverse: scatters and
+  //      reversed stores stay on the masked-store path.
+  //   4. The loop must not be tail-folded by masking. With tail-folding the
+  //      mask gates past-end addresses on the trailing iterations and the
+  //      load-blend-store would over-read.
+  //   5. MemSafetyAnalysis must prove the access is guaranteed to execute
+  //      on every iteration of the loop body.
+  if (CM.TTI.shouldRewriteMaskedStoreAsLoadBlendStore() &&
+      Mask && Consecutive && !Reverse && CM.MSA &&
+      CM.MSA->isLegalAnalysis() && !CM.foldTailByMasking()) {
+    auto *SE = Legal->getScalarEvolution();
+    const SCEV *PtrSCEV = SE->getSCEV(Store->getPointerOperand());
+    if (CM.MSA->isGuaranteedMemoryAccess(PtrSCEV))
+      NewSR->setRewriteAsLoadBlendStore();
+  }
+
+  return NewSR;
 }
 
 VPWidenIntOrFpInductionRecipe *
@@ -8050,6 +8102,17 @@ bool LoopVectorizePass::processLoop(Loop *L) {
                             OptForSize);
   LoopVectorizationCostModel CM(SEL, L, PSE, LI, &LVL, *TTI, TLI, AC, ORE,
                                 GetBFI, F, &Hints, IAI, Config);
+
+  // OptimizeMaskedMemory: build the per-loop MemSafetyAnalysis once. Its
+  // lifetime extends until the end of processLoop, covering both planning
+  // and execute. The CM holds a non-owning pointer to it.
+  std::unique_ptr<MemSafetyAnalysis> MSA;
+  if (IsInnerLoop && EnableOptimizeMaskedMemory) {
+    MSA = std::make_unique<MemSafetyAnalysis>(L, LI, PSE.getSE(), DT, TLI, TTI);
+    if (MSA->isLegalAnalysis())
+      CM.setMSA(MSA.get());
+  }
+
   // Use the planner for vectorization.
   LoopVectorizationPlanner LVP(L, LI, DT, TLI, *TTI, &LVL, CM, Config, IAI, PSE,
                                Hints, ORE);
