@@ -214,7 +214,9 @@ public:
   /// of the  associated statement.
   StmtResult ActOnOpenMPMetaDirective(ArrayRef<OMPClause *> Clauses,
                                       Stmt *AStmt, SourceLocation StartLoc,
-                                      SourceLocation EndLoc);
+                                      SourceLocation EndLoc,
+                                      ArrayRef<Expr *> Conditions,
+                                      ArrayRef<Stmt *> Directives);
 
   // OpenMP directives and clauses.
   /// Called on correct id-expression from the '#pragma omp

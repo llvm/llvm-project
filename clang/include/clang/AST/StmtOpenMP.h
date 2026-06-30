@@ -6375,27 +6375,48 @@ public:
 class OMPMetaDirective final : public OMPExecutableDirective {
   friend class ASTStmtReader;
   friend class OMPExecutableDirective;
-  Stmt *IfStmt;
 
-  OMPMetaDirective(SourceLocation StartLoc, SourceLocation EndLoc)
+  // Children layout: [IfStmt, Cond0, Dir0, Cond1, Dir1, ...]
+  // IfStmt: compile-time resolved directive (may be null for runtime-only)
+  // CondI: Expr* condition for variant I (null = 'otherwise')
+  // DirI:  OMPExecutableDirective* for variant I
+  unsigned NumVariants = 0;
+
+  OMPMetaDirective(SourceLocation StartLoc, SourceLocation EndLoc,
+                   unsigned NumVariants)
       : OMPExecutableDirective(OMPMetaDirectiveClass,
-                               llvm::omp::OMPD_metadirective, StartLoc,
-                               EndLoc) {}
-  explicit OMPMetaDirective()
+                               llvm::omp::OMPD_metadirective, StartLoc, EndLoc),
+        NumVariants(NumVariants) {}
+
+  explicit OMPMetaDirective(unsigned NumVariants)
       : OMPExecutableDirective(OMPMetaDirectiveClass,
                                llvm::omp::OMPD_metadirective, SourceLocation(),
-                               SourceLocation()) {}
-
-  void setIfStmt(Stmt *S) { IfStmt = S; }
+                               SourceLocation()),
+        NumVariants(NumVariants) {}
 
 public:
-  static OMPMetaDirective *Create(const ASTContext &C, SourceLocation StartLoc,
-                                  SourceLocation EndLoc,
-                                  ArrayRef<OMPClause *> Clauses,
-                                  Stmt *AssociatedStmt, Stmt *IfStmt);
+  static OMPMetaDirective *
+  Create(const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
+         ArrayRef<OMPClause *> Clauses, Stmt *AssociatedStmt, Stmt *IfStmt,
+         ArrayRef<Expr *> Conditions, ArrayRef<Stmt *> Directives);
+
   static OMPMetaDirective *CreateEmpty(const ASTContext &C, unsigned NumClauses,
-                                       EmptyShell);
-  Stmt *getIfStmt() const { return IfStmt; }
+                                       unsigned NumVariants, EmptyShell);
+
+  Stmt *getIfStmt() const { return Data->getChildren()[0]; }
+  void setIfStmt(Stmt *S) { Data->getChildren()[0] = S; }
+
+  unsigned getNumVariants() const { return NumVariants; }
+
+  Expr *getVariantCondition(unsigned I) const {
+    assert(I < NumVariants);
+    return cast_or_null<Expr>(Data->getChildren()[1 + 2 * I]);
+  }
+
+  OMPExecutableDirective *getVariantDirective(unsigned I) const {
+    assert(I < NumVariants);
+    return cast_or_null<OMPExecutableDirective>(Data->getChildren()[2 + 2 * I]);
+  }
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == OMPMetaDirectiveClass;

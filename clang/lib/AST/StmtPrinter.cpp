@@ -761,8 +761,36 @@ void StmtPrinter::PrintOMPExecutableDirective(OMPExecutableDirective *S,
 }
 
 void StmtPrinter::VisitOMPMetaDirective(OMPMetaDirective *Node) {
+  if (Node->getNumVariants() == 0) {
+    Indent() << "#pragma omp metadirective" << NL;
+    if (Stmt *If = Node->getIfStmt())
+      PrintStmt(If);
+  }
+  // Runtime path. Print full metadirective with all variants.
   Indent() << "#pragma omp metadirective";
-  PrintOMPExecutableDirective(Node);
+  for (unsigned I = 0; I < Node->getNumVariants(); ++I) {
+    Expr *Cond = Node->getVariantCondition(I);
+    Stmt *Dir = Node->getVariantDirective(I);
+    if (Cond) {
+      OS << " when(";
+      Cond->printPretty(OS, nullptr, Policy);
+      OS << ":";
+    } else {
+      OS << " otherwise(";
+    }
+    if (Dir) {
+      if (auto *OED = dyn_cast<OMPExecutableDirective>(Dir)) {
+        unsigned OpenMPVersion = Context ? Context->getLangOpts().OpenMP
+                                         : llvm::omp::FallbackVersion;
+        OS << " #pragma omp "
+           << getOpenMPDirectiveName(OED->getDirectiveKind(), OpenMPVersion);
+      }
+    }
+    OS << ")";
+  }
+  OS << NL;
+  if (Node->hasAssociatedStmt() && Node->getAssociatedStmt())
+    PrintStmt(Node->getAssociatedStmt());
 }
 
 void StmtPrinter::VisitOMPParallelDirective(OMPParallelDirective *Node) {

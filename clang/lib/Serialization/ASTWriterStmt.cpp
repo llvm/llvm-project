@@ -2500,6 +2500,7 @@ void ASTStmtWriter::VisitOMPLoopDirective(OMPLoopDirective *D) {
 void ASTStmtWriter::VisitOMPMetaDirective(OMPMetaDirective *D) {
   VisitStmt(D);
   Record.push_back(D->getNumClauses());
+  Record.push_back(D->getNumVariants());
   VisitOMPExecutableDirective(D);
   Code = serialization::STMT_OMP_META_DIRECTIVE;
 }

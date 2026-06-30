@@ -260,23 +260,32 @@ void OMPLoopDirective::setFinalsConditions(ArrayRef<Expr *> A) {
   llvm::copy(A, getFinalsConditions().begin());
 }
 
-OMPMetaDirective *OMPMetaDirective::Create(const ASTContext &C,
-                                           SourceLocation StartLoc,
-                                           SourceLocation EndLoc,
-                                           ArrayRef<OMPClause *> Clauses,
-                                           Stmt *AssociatedStmt, Stmt *IfStmt) {
+OMPMetaDirective *OMPMetaDirective::Create(
+    const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
+    ArrayRef<OMPClause *> Clauses, Stmt *AssociatedStmt, Stmt *IfStmt,
+    ArrayRef<Expr *> Conditions, ArrayRef<Stmt *> Directives) {
+  assert(Conditions.size() == Directives.size() &&
+         "Mismatch: number of Conditions and Directives must be equal");
+  unsigned NumVariants = Conditions.size();
   auto *Dir = createDirective<OMPMetaDirective>(
-      C, Clauses, AssociatedStmt, /*NumChildren=*/1, StartLoc, EndLoc);
-  Dir->setIfStmt(IfStmt);
+      C, Clauses, AssociatedStmt,
+      /*NumChildren=*/1 + 2 * NumVariants, StartLoc, EndLoc, NumVariants);
+  Dir->Data->getChildren()[0] = IfStmt;
+  for (unsigned I = 0; I < NumVariants; ++I) {
+    Dir->Data->getChildren()[1 + 2 * I] = Conditions[I];
+    Dir->Data->getChildren()[1 + 2 * I + 1] = Directives[I];
+  }
   return Dir;
 }
 
 OMPMetaDirective *OMPMetaDirective::CreateEmpty(const ASTContext &C,
                                                 unsigned NumClauses,
+                                                unsigned NumVariants,
                                                 EmptyShell) {
-  return createEmptyDirective<OMPMetaDirective>(C, NumClauses,
-                                                /*HasAssociatedStmt=*/true,
-                                                /*NumChildren=*/1);
+  return createEmptyDirective<OMPMetaDirective>(
+      C, NumClauses,
+      /*HasAssociatedStmt=*/false,
+      /*NumChildren=*/1 + 2 * NumVariants, NumVariants);
 }
 
 OMPParallelDirective *OMPParallelDirective::Create(
