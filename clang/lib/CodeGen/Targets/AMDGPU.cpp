@@ -10,6 +10,7 @@
 #include "TargetInfo.h"
 #include "clang/AST/DeclCXX.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/IR/MemoryModelRelaxationAnnotations.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
 
 using namespace clang;
@@ -558,6 +559,11 @@ void AMDGPUTargetCodeGenInfo::setTargetAtomicMetadata(
         llvm::APInt(32, llvm::AMDGPUAS::PRIVATE_ADDRESS),
         llvm::APInt(32, llvm::AMDGPUAS::PRIVATE_ADDRESS + 1));
     AtomicInst.setMetadata(llvm::LLVMContext::MD_noalias_addrspace, ASRange);
+  }
+
+  if (!CGF.AMDGCNAVMode.empty()) {
+    llvm::MMRAMetadata::appendTags(AtomicInst,
+                                   {{"amdgcn-av", CGF.AMDGCNAVMode}});
   }
 
   if (!RMW)
