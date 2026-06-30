@@ -501,19 +501,12 @@ bool AMDGPURewriteAGPRCopyMFMAImpl::isLoadJointlyDominatedByStores(
 
   // Otherwise, there exists a path to this block that has not seen any store
   // yet. We must ensure that within this block there is a store to this slot
-  // before the load. Consult the slot's LiveStacks interval rather than
-  // scanning instructions: if a store to the slot precedes the load in this
-  // block, the slot's live range segment covering the load begins after the
-  // block start. If there is no such store, the segment begins at or before
-  // the block start. If a live-in segment has coalesced with an in-block
-  // segment, it would imply a reload before a store. That scenario would
-  // lead to a joint-dominance violation. If the load reads an undef value, the
-  // segment is null.
+  // before the load. Consult the slot's LiveStacks interval: a store to the
+  // slot before the load means the slot is not live into this block but is
+  // live at the load. If the load reads an undef value, the slot is not live
+  // at the load, failing the joint-dominance check.
   SlotIndex LoadIdx = LIS.getInstructionIndex(LoadMI);
-  SlotIndex BlockStart = LIS.getMBBStartIdx(LoadMBB);
-  const LiveRange::Segment *Seg =
-      SlotLI.getSegmentContaining(LoadIdx.getBaseIndex());
-  return Seg && Seg->start > BlockStart;
+  return SlotLI.liveAt(LoadIdx) && !LIS.isLiveInToMBB(SlotLI, LoadMBB);
 }
 
 void AMDGPURewriteAGPRCopyMFMAImpl::eliminateSpillsOfReassignedVGPRs() const {
