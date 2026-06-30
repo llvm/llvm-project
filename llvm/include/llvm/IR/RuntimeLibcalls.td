@@ -3370,10 +3370,10 @@ def isCygwinMinGW32 : RuntimeLibcallPredicate<
 
 def isWin32NotCygMing : RuntimeLibcallPredicate<
   [{TT.getArch() == Triple::x86 &&
-     (TT.isOSWindows() || TT.isUEFI()) && !TT.isOSCygMing()}]>;
+     TT.isOSWindowsOrUEFI() && !TT.isOSCygMing()}]>;
 def isWin64NotCygMing : RuntimeLibcallPredicate<
   [{TT.getArch() == Triple::x86_64 &&
-    (TT.isOSWindows() || TT.isUEFI()) && !TT.isOSCygMing()}]>;
+    TT.isOSWindowsOrUEFI() && !TT.isOSCygMing()}]>;
 
 
 // Some darwins have an optimized __bzero/bzero function.
