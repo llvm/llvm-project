@@ -71,8 +71,7 @@ TEST(SubobjectVisitorTest, Basic) {
   ASSERT_TRUE(RD);
 
   RecordingVisitor Visitor(AST->getASTContext());
-  Visitor.visit(AST->getASTContext().getTagType(ElaboratedTypeKeyword::None,
-                                                std::nullopt, RD, false));
+  Visitor.visit(AST->getASTContext().getCanonicalTagType(RD));
 
   EXPECT_EQ(Visitor.VisitedBases.size(), 1u);
   EXPECT_EQ(Visitor.VisitedBases[0], "Base");
@@ -99,8 +98,7 @@ TEST(SubobjectVisitorTest, Atomic) {
   ASSERT_TRUE(RD);
 
   RecordingVisitor Visitor(AST->getASTContext());
-  Visitor.visit(AST->getASTContext().getTagType(ElaboratedTypeKeyword::None,
-                                                std::nullopt, RD, false));
+  Visitor.visit(AST->getASTContext().getCanonicalTagType(RD));
 
   EXPECT_EQ(Visitor.VisitedBases.size(), 0u);
   EXPECT_EQ(Visitor.VisitedFields.size(), 2u);
@@ -123,8 +121,7 @@ TEST(SubobjectVisitorTest, FAM) {
   ASSERT_TRUE(RD);
 
   RecordingVisitor Visitor(AST->getASTContext());
-  Visitor.visit(AST->getASTContext().getTagType(ElaboratedTypeKeyword::None,
-                                                std::nullopt, RD, false));
+  Visitor.visit(AST->getASTContext().getCanonicalTagType(RD));
 
   EXPECT_EQ(Visitor.VisitedBases.size(), 0u);
   EXPECT_EQ(Visitor.VisitedFields.size(), 2u);
