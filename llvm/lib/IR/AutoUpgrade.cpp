@@ -1571,7 +1571,7 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
         // https://github.com/llvm/llvm-project/pull/204601. This is an invalid
         // intrinsic with no expected calls. To allow auto-upgrade process to
         // delete such invalid intrinsic declaration, set NewFn = nullptr
-        // and return true here. If there are actual calls to this intrinsics
+        // and return true here. If there are actual calls to this intrinsic
         // (which is not expected), they will be deleted in
         // UpgradeIntrinsicCall.
         NewFn = nullptr;
