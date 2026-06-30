@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Object/GOFFObjectFile.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
