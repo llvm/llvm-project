@@ -2504,6 +2504,17 @@ public:
     return AtomicExpansionKind::None;
   }
 
+  /// Returns how the IR-level AtomicExpand pass should expand the given
+  /// StoreRMW, if at all. Default is to expand to AtomicRMW (discard result).
+  /// Targets that can handle atomic reductions natively (e.g., NVPTX with
+  /// red.global/red.shared instructions) should return None for supported
+  /// cases.
+  virtual AtomicExpansionKind
+  shouldExpandStoreRMWInIR(const StoreRMWInst *ARI) const {
+    // Default: expand storermw to atomicrmw (discard the result)
+    return AtomicExpansionKind::Expand;
+  }
+
   /// On some platforms, an AtomicRMW that never actually modifies the value
   /// (such as fetch_add of 0) can be turned into a fence followed by an
   /// atomic load. This may sound useless, but it makes it possible for the

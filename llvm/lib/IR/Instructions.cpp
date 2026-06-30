@@ -1539,6 +1539,40 @@ StringRef AtomicRMWInst::getOperationName(BinOp Op) {
 }
 
 //===----------------------------------------------------------------------===//
+//                       StoreRMWInst Implementation
+//===----------------------------------------------------------------------===//
+
+void StoreRMWInst::Init(BinOp Operation, Value *Ptr, Value *Val,
+                        Align Alignment, AtomicOrdering Ordering,
+                        SyncScope::ID SSID, bool Elementwise) {
+  assert(Ordering != AtomicOrdering::NotAtomic &&
+         "storermw instructions must be atomic.");
+  assert(Ordering != AtomicOrdering::Acquire &&
+         Ordering != AtomicOrdering::AcquireRelease &&
+         "storermw instructions cannot have acquire semantics.");
+  Op<0>() = Ptr;
+  Op<1>() = Val;
+  setOperation(Operation);
+  setOrdering(Ordering);
+  setSyncScopeID(SSID);
+  setAlignment(Alignment);
+  setElementwise(Elementwise);
+
+  assert(getOperand(0) && getOperand(1) && "All operands must be non-null!");
+  assert(getOperand(0)->getType()->isPointerTy() &&
+         "Ptr must have pointer type!");
+}
+
+StoreRMWInst::StoreRMWInst(BinOp Operation, Value *Ptr, Value *Val,
+                           Align Alignment, AtomicOrdering Ordering,
+                           SyncScope::ID SSID, bool Elementwise,
+                           InsertPosition InsertBefore)
+    : Instruction(Type::getVoidTy(Val->getContext()), StoreRMW, AllocMarker,
+                  InsertBefore) {
+  Init(Operation, Ptr, Val, Alignment, Ordering, SSID, Elementwise);
+}
+
+//===----------------------------------------------------------------------===//
 //                       FenceInst Implementation
 //===----------------------------------------------------------------------===//
 
@@ -4463,6 +4497,14 @@ AtomicRMWInst *AtomicRMWInst::cloneImpl() const {
   AtomicRMWInst *Result = new AtomicRMWInst(
       getOperation(), getOperand(0), getOperand(1), getAlign(), getOrdering(),
       getSyncScopeID(), isElementwise());
+  Result->setVolatile(isVolatile());
+  return Result;
+}
+
+StoreRMWInst *StoreRMWInst::cloneImpl() const {
+  StoreRMWInst *Result =
+      new StoreRMWInst(getOperation(), getOperand(0), getOperand(1), getAlign(),
+                       getOrdering(), getSyncScopeID(), isElementwise());
   Result->setVolatile(isVolatile());
   return Result;
 }

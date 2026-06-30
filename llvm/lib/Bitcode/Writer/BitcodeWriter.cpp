@@ -690,9 +690,9 @@ static unsigned getEncodedBinaryOpcode(unsigned Opcode) {
   }
 }
 
-static unsigned getEncodedRMWOperation(const AtomicRMWInst &I) {
+static unsigned getEncodedRMWOperation(AtomicRMWInst::BinOp Op) {
   unsigned Encoding = 0;
-  switch (I.getOperation()) {
+  switch (Op) {
   default: llvm_unreachable("Unknown RMW operation!");
   case AtomicRMWInst::Xchg:
     Encoding = bitc::RMW_XCHG;
@@ -765,8 +765,6 @@ static unsigned getEncodedRMWOperation(const AtomicRMWInst &I) {
     break;
   }
 
-  if (I.isElementwise())
-    Encoding |= bitc::RMW_ELEMENTWISE_FLAG;
   return Encoding;
 }
 
@@ -3603,17 +3601,38 @@ void ModuleBitcodeWriter::writeInstruction(const Instruction &I,
     Vals.push_back(cast<AtomicCmpXchgInst>(I).isWeak());
     Vals.push_back(getEncodedAlign(cast<AtomicCmpXchgInst>(I).getAlign()));
     break;
-  case Instruction::AtomicRMW:
+  case Instruction::AtomicRMW: {
     Code = bitc::FUNC_CODE_INST_ATOMICRMW;
     pushValueAndType(I.getOperand(0), InstID, Vals); // ptrty + ptr
     pushValueAndType(I.getOperand(1), InstID, Vals); // valty + val
-    Vals.push_back(getEncodedRMWOperation(cast<AtomicRMWInst>(I)));
+    unsigned OpEnc =
+        getEncodedRMWOperation(cast<AtomicRMWInst>(I).getOperation());
+    if (cast<AtomicRMWInst>(I).isElementwise())
+      OpEnc |= bitc::RMW_ELEMENTWISE_FLAG;
+    Vals.push_back(OpEnc);
     Vals.push_back(cast<AtomicRMWInst>(I).isVolatile());
     Vals.push_back(getEncodedOrdering(cast<AtomicRMWInst>(I).getOrdering()));
     Vals.push_back(
         getEncodedSyncScopeID(cast<AtomicRMWInst>(I).getSyncScopeID()));
     Vals.push_back(getEncodedAlign(cast<AtomicRMWInst>(I).getAlign()));
     break;
+  }
+  case Instruction::StoreRMW: {
+    Code = bitc::FUNC_CODE_INST_STORERMW;
+    pushValueAndType(I.getOperand(0), InstID, Vals); // ptrty + ptr
+    pushValueAndType(I.getOperand(1), InstID, Vals); // valty + val
+    unsigned OpEnc =
+        getEncodedRMWOperation(cast<StoreRMWInst>(I).getOperation());
+    if (cast<StoreRMWInst>(I).isElementwise())
+      OpEnc |= bitc::RMW_ELEMENTWISE_FLAG;
+    Vals.push_back(OpEnc);
+    Vals.push_back(cast<StoreRMWInst>(I).isVolatile());
+    Vals.push_back(getEncodedOrdering(cast<StoreRMWInst>(I).getOrdering()));
+    Vals.push_back(
+        getEncodedSyncScopeID(cast<StoreRMWInst>(I).getSyncScopeID()));
+    Vals.push_back(getEncodedAlign(cast<StoreRMWInst>(I).getAlign()));
+    break;
+  }
   case Instruction::Fence:
     Code = bitc::FUNC_CODE_INST_FENCE;
     Vals.push_back(getEncodedOrdering(cast<FenceInst>(I).getOrdering()));

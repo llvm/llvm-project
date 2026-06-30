@@ -2276,6 +2276,8 @@ int TargetLoweringBase::InstructionOpcodeToISD(unsigned Opcode) const {
   case Fence:          return 0;
   case AtomicCmpXchg:  return 0;
   case AtomicRMW:      return 0;
+  case StoreRMW:
+    return 0;
   case Trunc:          return ISD::TRUNCATE;
   case ZExt:           return ISD::ZERO_EXTEND;
   case SExt:           return ISD::SIGN_EXTEND;
@@ -2842,6 +2844,15 @@ TargetLoweringBase::getAtomicMemOperandFlags(const Instruction &AI,
       Flags |= MachineMemOperand::MOVolatile;
   } else if (const AtomicCmpXchgInst *CmpX = dyn_cast<AtomicCmpXchgInst>(&AI)) {
     if (CmpX->isVolatile())
+      Flags |= MachineMemOperand::MOVolatile;
+  } else if (const StoreRMWInst *ARI = dyn_cast<StoreRMWInst>(&AI)) {
+    // For optimization purposes we model StoreRMW as a pure write (MOStore
+    // only, no MOLoad). The instruction does perform an atomic read-modify-
+    // write, but the loaded value is discarded and the operation does not
+    // participate in acquire synchronization, so alias analysis and passes
+    // that consume MMO flags can treat it as if it were a plain store.
+    Flags = MachineMemOperand::MOStore;
+    if (ARI->isVolatile())
       Flags |= MachineMemOperand::MOVolatile;
   } else
     llvm_unreachable("not an atomic instruction");

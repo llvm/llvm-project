@@ -1981,6 +1981,18 @@ public:
         new AtomicRMWInst(Op, Ptr, Val, *Align, Ordering, SSID, Elementwise));
   }
 
+  StoreRMWInst *CreateStoreRMW(AtomicRMWInst::BinOp Op, Value *Ptr, Value *Val,
+                               MaybeAlign Align, AtomicOrdering Ordering,
+                               SyncScope::ID SSID = SyncScope::System,
+                               bool Elementwise = false) {
+    if (!Align) {
+      const DataLayout &DL = BB->getDataLayout();
+      Align = llvm::Align(DL.getTypeStoreSize(Val->getType()));
+    }
+    return Insert(
+        new StoreRMWInst(Op, Ptr, Val, *Align, Ordering, SSID, Elementwise));
+  }
+
   Value *CreateStructuredGEP(Type *BaseType, Value *PtrBase,
                              ArrayRef<Value *> Indices,
                              const Twine &Name = "") {

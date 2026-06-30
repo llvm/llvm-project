@@ -368,6 +368,7 @@ enum Kind {
   kw_fence,
   kw_cmpxchg,
   kw_atomicrmw,
+  kw_storermw,
   kw_getelementptr,
 
   kw_extractelement,

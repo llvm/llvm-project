@@ -4447,10 +4447,11 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
     Out << " weak";
 
   // If this is a volatile operation, print out the volatile marker.
-  if ((isa<LoadInst>(I)  && cast<LoadInst>(I).isVolatile()) ||
+  if ((isa<LoadInst>(I) && cast<LoadInst>(I).isVolatile()) ||
       (isa<StoreInst>(I) && cast<StoreInst>(I).isVolatile()) ||
       (isa<AtomicCmpXchgInst>(I) && cast<AtomicCmpXchgInst>(I).isVolatile()) ||
-      (isa<AtomicRMWInst>(I) && cast<AtomicRMWInst>(I).isVolatile()))
+      (isa<AtomicRMWInst>(I) && cast<AtomicRMWInst>(I).isVolatile()) ||
+      (isa<StoreRMWInst>(I) && cast<StoreRMWInst>(I).isVolatile()))
     Out << " volatile";
 
   // Print out optimization information.
@@ -4465,6 +4466,13 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
     if (RMWI->isElementwise())
       Out << " elementwise";
     Out << ' ' << AtomicRMWInst::getOperationName(RMWI->getOperation());
+  }
+
+  // Print out the storermw operation
+  if (const auto *ARI = dyn_cast<StoreRMWInst>(&I)) {
+    if (ARI->isElementwise())
+      Out << " elementwise";
+    Out << ' ' << StoreRMWInst::getOperationName(ARI->getOperation());
   }
 
   // Print out the type of the operands...
@@ -4804,11 +4812,11 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
     bool PrintAllTypes = false;
     Type *TheType = Operand->getType();
 
-    // Select, Store, ShuffleVector, CmpXchg and AtomicRMW always print all
-    // types.
+    // Select, Store, ShuffleVector, CmpXchg, AtomicRMW and StoreRMW always
+    // print all types.
     if (isa<SelectInst>(I) || isa<StoreInst>(I) || isa<ShuffleVectorInst>(I) ||
         isa<ReturnInst>(I) || isa<AtomicCmpXchgInst>(I) ||
-        isa<AtomicRMWInst>(I)) {
+        isa<AtomicRMWInst>(I) || isa<StoreRMWInst>(I)) {
       PrintAllTypes = true;
     } else {
       for (unsigned i = 1, E = I.getNumOperands(); i != E; ++i) {
@@ -4854,6 +4862,9 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
     writeAtomic(RMWI->getContext(), RMWI->getOrdering(),
                 RMWI->getSyncScopeID());
     Out << ", align " << RMWI->getAlign().value();
+  } else if (const auto *ARI = dyn_cast<StoreRMWInst>(&I)) {
+    writeAtomic(ARI->getContext(), ARI->getOrdering(), ARI->getSyncScopeID());
+    Out << ", align " << ARI->getAlign().value();
   } else if (const auto *FI = dyn_cast<FenceInst>(&I)) {
     writeAtomic(FI->getContext(), FI->getOrdering(), FI->getSyncScopeID());
   } else if (const auto *SVI = dyn_cast<ShuffleVectorInst>(&I)) {

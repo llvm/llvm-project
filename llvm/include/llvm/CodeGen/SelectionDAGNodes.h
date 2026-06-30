@@ -1625,6 +1625,28 @@ public:
     case ISD::ATOMIC_LOAD_USUB_SAT:
     case ISD::ATOMIC_LOAD:
     case ISD::ATOMIC_STORE:
+    case ISD::ATOMIC_STORE_ADD:
+    case ISD::ATOMIC_STORE_SUB:
+    case ISD::ATOMIC_STORE_AND:
+    case ISD::ATOMIC_STORE_NAND:
+    case ISD::ATOMIC_STORE_OR:
+    case ISD::ATOMIC_STORE_XOR:
+    case ISD::ATOMIC_STORE_MIN:
+    case ISD::ATOMIC_STORE_MAX:
+    case ISD::ATOMIC_STORE_UMIN:
+    case ISD::ATOMIC_STORE_UMAX:
+    case ISD::ATOMIC_STORE_FADD:
+    case ISD::ATOMIC_STORE_FSUB:
+    case ISD::ATOMIC_STORE_FMIN:
+    case ISD::ATOMIC_STORE_FMAX:
+    case ISD::ATOMIC_STORE_FMINIMUM:
+    case ISD::ATOMIC_STORE_FMAXIMUM:
+    case ISD::ATOMIC_STORE_FMINIMUMNUM:
+    case ISD::ATOMIC_STORE_FMAXIMUMNUM:
+    case ISD::ATOMIC_STORE_UINC_WRAP:
+    case ISD::ATOMIC_STORE_UDEC_WRAP:
+    case ISD::ATOMIC_STORE_USUB_COND:
+    case ISD::ATOMIC_STORE_USUB_SAT:
     case ISD::MLOAD:
     case ISD::MSTORE:
     case ISD::MGATHER:
@@ -1712,7 +1734,29 @@ public:
            N->getOpcode() == ISD::ATOMIC_LOAD_USUB_COND ||
            N->getOpcode() == ISD::ATOMIC_LOAD_USUB_SAT ||
            N->getOpcode() == ISD::ATOMIC_LOAD ||
-           N->getOpcode() == ISD::ATOMIC_STORE;
+           N->getOpcode() == ISD::ATOMIC_STORE ||
+           N->getOpcode() == ISD::ATOMIC_STORE_ADD ||
+           N->getOpcode() == ISD::ATOMIC_STORE_SUB ||
+           N->getOpcode() == ISD::ATOMIC_STORE_AND ||
+           N->getOpcode() == ISD::ATOMIC_STORE_NAND ||
+           N->getOpcode() == ISD::ATOMIC_STORE_OR ||
+           N->getOpcode() == ISD::ATOMIC_STORE_XOR ||
+           N->getOpcode() == ISD::ATOMIC_STORE_MIN ||
+           N->getOpcode() == ISD::ATOMIC_STORE_MAX ||
+           N->getOpcode() == ISD::ATOMIC_STORE_UMIN ||
+           N->getOpcode() == ISD::ATOMIC_STORE_UMAX ||
+           N->getOpcode() == ISD::ATOMIC_STORE_FADD ||
+           N->getOpcode() == ISD::ATOMIC_STORE_FSUB ||
+           N->getOpcode() == ISD::ATOMIC_STORE_FMIN ||
+           N->getOpcode() == ISD::ATOMIC_STORE_FMAX ||
+           N->getOpcode() == ISD::ATOMIC_STORE_FMINIMUM ||
+           N->getOpcode() == ISD::ATOMIC_STORE_FMAXIMUM ||
+           N->getOpcode() == ISD::ATOMIC_STORE_FMINIMUMNUM ||
+           N->getOpcode() == ISD::ATOMIC_STORE_FMAXIMUMNUM ||
+           N->getOpcode() == ISD::ATOMIC_STORE_UINC_WRAP ||
+           N->getOpcode() == ISD::ATOMIC_STORE_UDEC_WRAP ||
+           N->getOpcode() == ISD::ATOMIC_STORE_USUB_COND ||
+           N->getOpcode() == ISD::ATOMIC_STORE_USUB_SAT;
   }
 };
 

@@ -6522,6 +6522,16 @@ struct AMDGPUUnsafeFPAtomicsUpgradeVisitor
     RMW.setMetadata("amdgpu.no.remote.memory.access", Empty);
     RMW.setMetadata("amdgpu.ignore.denormal.mode", Empty);
   }
+
+  void visitStoreRMWInst(StoreRMWInst &ARI) {
+    if (!ARI.isFloatingPointOperation())
+      return;
+
+    MDNode *Empty = MDNode::get(ARI.getContext(), {});
+    ARI.setMetadata("amdgpu.no.fine.grained.host.memory", Empty);
+    ARI.setMetadata("amdgpu.no.remote.memory.access", Empty);
+    ARI.setMetadata("amdgpu.ignore.denormal.mode", Empty);
+  }
 };
 } // namespace
 

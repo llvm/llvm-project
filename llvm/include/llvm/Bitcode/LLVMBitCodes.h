@@ -703,6 +703,9 @@ enum FunctionCodes {
   FUNC_CODE_DEBUG_RECORD_LABEL = 65, // [DILocation, DILabel]
   FUNC_CODE_DEBUG_RECORD_DECLARE_VALUE =
       66, // [DILocation, DILocalVariable, DIExpression, ValueAsMetadata]
+  FUNC_CODE_INST_STORERMW = 67, // STORERMW: [ptrty, ptr, valty, val,
+                                //             operation, align, vol,
+                                //             ordering, syncscope]
 };
 
 enum UseListCodes {
