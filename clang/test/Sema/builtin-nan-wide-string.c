@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -fsyntax-only -verify=c -x c %s
-// RUN: %clang_cc1 -fsyntax-only -verify=cxx -x c++ %s
-// RUN: %clang_cc1 -fsyntax-only -verify=c -x c -fexperimental-new-constant-interpreter %s
-// RUN: %clang_cc1 -fsyntax-only -verify=cxx -x c++ -fexperimental-new-constant-interpreter %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only -verify=c -x c %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only -verify=cxx -x c++ %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only -verify=c -x c -fexperimental-new-constant-interpreter %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only -verify=cxx -x c++ -fexperimental-new-constant-interpreter %s
 
 #ifdef __cplusplus
 #define CONSTEXPR constexpr
