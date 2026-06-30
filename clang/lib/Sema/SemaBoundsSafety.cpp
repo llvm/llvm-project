@@ -81,19 +81,6 @@ static std::optional<bool> checkBoundsAttrTypeConflictsAndMisc(
   //   really inconsistent.
 
   assert(AttrSpelling.size() > 0);
-  // Light sugar peel: AttributedType(PtrAutoAttr) marks an internally
-  // promoted pointer (e.g. __ptrauto); when present the upper-bound
-  // conflict is suppressed because the bound wasn't user-spelled.
-  // TODO(dliew): Remove me. This code was adapted from the AttributedType
-  // handling in `LateBoundsAttrDiagContext::diagnoseCountAttributedTypeShape`
-  // (SemaDeclAttr.cpp:6530) and
-  // `LateBoundsAttrDiagContext::diagnoseDynamicRangePointerTypeShape`
-  // (SemaDeclAttr.cpp:6692).
-  while (const auto *AT = dyn_cast<AttributedType>(Ty.getTypePtr())) {
-    if (AT->getAttrKind() == attr::PtrAutoAttr)
-      AutoPtrAttributed = true;
-    Ty = AT->getModifiedType();
-  }
   const Type *T = Ty.getTypePtr();
 
   // A __terminated_by pointer cannot also carry a count or range attribute
@@ -282,8 +269,16 @@ bool Sema::ValidateBoundsAttrTypeShape(QualType Ty, SourceLocation AttrLoc,
     return false;
   }
 
-  // Arrays with sized_by or _or_null variants are not allowed.
-  if (Ty->isArrayType() && (Flags.CountInBytes || Flags.OrNull)) {
+  // Arrays with sized_by or _or_null variants are not allowed under the
+  // non -fbounds-safety path (!FullBoundsSafetyDiagnostics). That emits a
+  // specific "did you mean to use 'counted_by'" hint, geared toward the
+  // FieldDecl path where the user got the spelling wrong. The -fbounds-safety
+  // path treats incomplete-array + counted_by_or_null as a
+  // tentative-definition/FAM-like case that other code (e.g.
+  // err_bounds_safety_nullable_fam in applyPtrCountedByEndedByAttr) handles.
+  // FIXME(dliew): We need to reconcile this divergence.
+  if (!FullBoundsSafetyDiagnostics && Ty->isArrayType() &&
+      (Flags.CountInBytes || Flags.OrNull)) {
     Diag(AttrLoc, diag::err_count_attr_not_on_ptr_or_flexible_array_member)
         << Kind << /*suggest counted_by*/ 1;
     return false;
