@@ -330,20 +330,20 @@ inline wide_printf get_swprintf() {
 
 } // unnamed namespace
 
-string to_string(int val) { return std::__integer_to_string<string>(val); }
-string to_string(long val) { return std::__integer_to_string<string>(val); }
-string to_string(long long val) { return std::__integer_to_string<string>(val); }
-string to_string(unsigned val) { return std::__integer_to_string<string>(val); }
-string to_string(unsigned long val) { return std::__integer_to_string<string>(val); }
-string to_string(unsigned long long val) { return std::__integer_to_string<string>(val); }
+[[gnu::used]] constexpr string to_string(int val) { return std::__integer_to_string<string>(val); }
+[[gnu::used]] constexpr string to_string(long val) { return std::__integer_to_string<string>(val); }
+[[gnu::used]] constexpr string to_string(long long val) { return std::__integer_to_string<string>(val); }
+[[gnu::used]] constexpr string to_string(unsigned val) { return std::__integer_to_string<string>(val); }
+[[gnu::used]] constexpr string to_string(unsigned long val) { return std::__integer_to_string<string>(val); }
+[[gnu::used]] constexpr string to_string(unsigned long long val) { return std::__integer_to_string<string>(val); }
 
 #if _LIBCPP_HAS_WIDE_CHARACTERS
-wstring to_wstring(int val) { return std::__integer_to_string<wstring>(val); }
-wstring to_wstring(long val) { return std::__integer_to_string<wstring>(val); }
-wstring to_wstring(long long val) { return std::__integer_to_string<wstring>(val); }
-wstring to_wstring(unsigned val) { return std::__integer_to_string<wstring>(val); }
-wstring to_wstring(unsigned long val) { return std::__integer_to_string<wstring>(val); }
-wstring to_wstring(unsigned long long val) { return std::__integer_to_string<wstring>(val); }
+[[gnu::used]] constexpr wstring to_wstring(int val) { return std::__integer_to_string<wstring>(val); }
+[[gnu::used]] constexpr wstring to_wstring(long val) { return std::__integer_to_string<wstring>(val); }
+[[gnu::used]] constexpr wstring to_wstring(long long val) { return std::__integer_to_string<wstring>(val); }
+[[gnu::used]] constexpr wstring to_wstring(unsigned val) { return std::__integer_to_string<wstring>(val); }
+[[gnu::used]] constexpr wstring to_wstring(unsigned long val) { return std::__integer_to_string<wstring>(val); }
+[[gnu::used]] constexpr wstring to_wstring(unsigned long long val) { return std::__integer_to_string<wstring>(val); }
 #endif
 
 string to_string(float val) { return as_string(snprintf, initial_string< string>()(), "%f", val); }

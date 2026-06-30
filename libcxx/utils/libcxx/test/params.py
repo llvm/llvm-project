@@ -55,6 +55,9 @@ _warningFlags = [
     "-Wunreachable-code",
     "-Wno-unused-local-typedef",
 
+    # We no longer care about Clang before 10.
+    "-Wno-gnu-inline-cpp-without-extern",
+
     # Disable warnings for extensions used in C++03
     "-Wno-local-type-template-args",
     "-Wno-c++11-extensions",
