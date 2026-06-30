@@ -40,17 +40,17 @@ define i1 @foo() nounwind "probe-stack"="inline-asm" "target-features"="+v" {
 ; CHECK-NEXT:    addi a0, a0, 32
 ; CHECK-NEXT:    add a0, sp, a0
 ; CHECK-NEXT:    vs1r.v v8, (a0) # vscale x 8-byte Folded Spill
-; CHECK-NEXT:    addi s0, sp, 48
-; CHECK-NEXT:    vse8.v v8, (s0)
+; CHECK-NEXT:    addi s2, sp, 48
+; CHECK-NEXT:    vse8.v v8, (s2)
 ; CHECK-NEXT:    addi s1, sp, 32
 ; CHECK-NEXT:    lui a0, 353637
 ; CHECK-NEXT:    addi a0, a0, 1622
 ; CHECK-NEXT:    vse8.v v8, (s1)
 ; CHECK-NEXT:    slli a1, a0, 32
-; CHECK-NEXT:    addi s2, sp, 16
+; CHECK-NEXT:    addi s0, sp, 16
 ; CHECK-NEXT:    add s3, a0, a1
 ; CHECK-NEXT:    sd s3, 64(sp)
-; CHECK-NEXT:    vse8.v v8, (s2)
+; CHECK-NEXT:    vse8.v v8, (s0)
 ; CHECK-NEXT:    call bar
 ; CHECK-NEXT:    li a0, 0
 ; CHECK-NEXT:    lui a1, 8
@@ -58,10 +58,10 @@ define i1 @foo() nounwind "probe-stack"="inline-asm" "target-features"="+v" {
 ; CHECK-NEXT:    add a1, sp, a1
 ; CHECK-NEXT:    vl1r.v v8, (a1) # vscale x 8-byte Folded Reload
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; CHECK-NEXT:    vse8.v v8, (s0)
+; CHECK-NEXT:    vse8.v v8, (s2)
 ; CHECK-NEXT:    vse8.v v8, (s1)
 ; CHECK-NEXT:    sd s3, 64(sp)
-; CHECK-NEXT:    vse8.v v8, (s2)
+; CHECK-NEXT:    vse8.v v8, (s0)
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    add sp, sp, a1
 ; CHECK-NEXT:    lui a1, 8

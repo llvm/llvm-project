@@ -13,38 +13,38 @@ declare void @def(ptr)
 define void @alloc_v4i8(ptr %st_ptr) nounwind {
 ; CHECK-IAENABLED-LABEL: alloc_v4i8:
 ; CHECK-IAENABLED:       // %bb.0:
-; CHECK-IAENABLED-NEXT:    str x30, [sp, #-32]! // 8-byte Folded Spill
-; CHECK-IAENABLED-NEXT:    stp x20, x19, [sp, #16] // 16-byte Folded Spill
+; CHECK-IAENABLED-NEXT:    sub sp, sp, #32
+; CHECK-IAENABLED-NEXT:    stp x30, x19, [sp, #16] // 16-byte Folded Spill
 ; CHECK-IAENABLED-NEXT:    mov x19, x0
 ; CHECK-IAENABLED-NEXT:    add x0, sp, #12
-; CHECK-IAENABLED-NEXT:    add x20, sp, #12
 ; CHECK-IAENABLED-NEXT:    bl def
 ; CHECK-IAENABLED-NEXT:    ptrue p0.b, vl2
-; CHECK-IAENABLED-NEXT:    ld2b { z0.b, z1.b }, p0/z, [x20]
+; CHECK-IAENABLED-NEXT:    add x8, sp, #12
+; CHECK-IAENABLED-NEXT:    ld2b { z0.b, z1.b }, p0/z, [x8]
 ; CHECK-IAENABLED-NEXT:    ptrue p0.s, vl2
 ; CHECK-IAENABLED-NEXT:    mov z1.b, z0.b[1]
 ; CHECK-IAENABLED-NEXT:    zip1 z0.s, z0.s, z1.s
 ; CHECK-IAENABLED-NEXT:    st1b { z0.s }, p0, [x19]
-; CHECK-IAENABLED-NEXT:    ldp x20, x19, [sp, #16] // 16-byte Folded Reload
-; CHECK-IAENABLED-NEXT:    ldr x30, [sp], #32 // 8-byte Folded Reload
+; CHECK-IAENABLED-NEXT:    ldp x30, x19, [sp, #16] // 16-byte Folded Reload
+; CHECK-IAENABLED-NEXT:    add sp, sp, #32
 ; CHECK-IAENABLED-NEXT:    ret
 ;
 ; CHECK-IADISABLED-LABEL: alloc_v4i8:
 ; CHECK-IADISABLED:       // %bb.0:
-; CHECK-IADISABLED-NEXT:    str x30, [sp, #-32]! // 8-byte Folded Spill
-; CHECK-IADISABLED-NEXT:    stp x20, x19, [sp, #16] // 16-byte Folded Spill
+; CHECK-IADISABLED-NEXT:    sub sp, sp, #32
+; CHECK-IADISABLED-NEXT:    stp x30, x19, [sp, #16] // 16-byte Folded Spill
 ; CHECK-IADISABLED-NEXT:    mov x19, x0
 ; CHECK-IADISABLED-NEXT:    add x0, sp, #12
-; CHECK-IADISABLED-NEXT:    add x20, sp, #12
 ; CHECK-IADISABLED-NEXT:    bl def
 ; CHECK-IADISABLED-NEXT:    ptrue p0.h, vl4
-; CHECK-IADISABLED-NEXT:    ld1b { z0.h }, p0/z, [x20]
+; CHECK-IADISABLED-NEXT:    add x8, sp, #12
+; CHECK-IADISABLED-NEXT:    ld1b { z0.h }, p0/z, [x8]
 ; CHECK-IADISABLED-NEXT:    ptrue p0.s, vl2
 ; CHECK-IADISABLED-NEXT:    mov z1.h, z0.h[2]
 ; CHECK-IADISABLED-NEXT:    zip1 z0.s, z0.s, z1.s
 ; CHECK-IADISABLED-NEXT:    st1b { z0.s }, p0, [x19]
-; CHECK-IADISABLED-NEXT:    ldp x20, x19, [sp, #16] // 16-byte Folded Reload
-; CHECK-IADISABLED-NEXT:    ldr x30, [sp], #32 // 8-byte Folded Reload
+; CHECK-IADISABLED-NEXT:    ldp x30, x19, [sp, #16] // 16-byte Folded Reload
+; CHECK-IADISABLED-NEXT:    add sp, sp, #32
 ; CHECK-IADISABLED-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: alloc_v4i8:
@@ -189,21 +189,19 @@ define void @alloc_v32i8(ptr %st_ptr) nounwind {
 define void @alloc_v8f64(ptr %st_ptr) nounwind {
 ; CHECK-IAENABLED-LABEL: alloc_v8f64:
 ; CHECK-IAENABLED:       // %bb.0:
-; CHECK-IAENABLED-NEXT:    sub sp, sp, #96
-; CHECK-IAENABLED-NEXT:    stp x20, x19, [sp, #80] // 16-byte Folded Spill
+; CHECK-IAENABLED-NEXT:    sub sp, sp, #80
+; CHECK-IAENABLED-NEXT:    stp x30, x19, [sp, #64] // 16-byte Folded Spill
 ; CHECK-IAENABLED-NEXT:    mov x19, x0
 ; CHECK-IAENABLED-NEXT:    mov x0, sp
-; CHECK-IAENABLED-NEXT:    str x30, [sp, #64] // 8-byte Spill
-; CHECK-IAENABLED-NEXT:    mov x20, sp
 ; CHECK-IAENABLED-NEXT:    bl def
 ; CHECK-IAENABLED-NEXT:    ptrue p0.d, vl2
+; CHECK-IAENABLED-NEXT:    mov x9, sp
 ; CHECK-IAENABLED-NEXT:    mov x8, #4 // =0x4
-; CHECK-IAENABLED-NEXT:    ld2d { z0.d, z1.d }, p0/z, [x20]
-; CHECK-IAENABLED-NEXT:    ld2d { z1.d, z2.d }, p0/z, [x20, x8, lsl #3]
-; CHECK-IAENABLED-NEXT:    ldr x30, [sp, #64] // 8-byte Reload
+; CHECK-IAENABLED-NEXT:    ld2d { z0.d, z1.d }, p0/z, [x9]
+; CHECK-IAENABLED-NEXT:    ld2d { z1.d, z2.d }, p0/z, [x9, x8, lsl #3]
 ; CHECK-IAENABLED-NEXT:    stp q0, q1, [x19]
-; CHECK-IAENABLED-NEXT:    ldp x20, x19, [sp, #80] // 16-byte Folded Reload
-; CHECK-IAENABLED-NEXT:    add sp, sp, #96
+; CHECK-IAENABLED-NEXT:    ldp x30, x19, [sp, #64] // 16-byte Folded Reload
+; CHECK-IAENABLED-NEXT:    add sp, sp, #80
 ; CHECK-IAENABLED-NEXT:    ret
 ;
 ; CHECK-IADISABLED-LABEL: alloc_v8f64:
@@ -257,14 +255,14 @@ define void @alloc_v8f64(ptr %st_ptr) nounwind {
 define void @alloc_v4i8_intrinsic(ptr %st_ptr) nounwind {
 ; CHECK-LABEL: alloc_v4i8_intrinsic:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-32]! // 8-byte Folded Spill
-; CHECK-NEXT:    stp x20, x19, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    sub sp, sp, #32
+; CHECK-NEXT:    stp x30, x19, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    mov x19, x0
 ; CHECK-NEXT:    add x0, sp, #12
-; CHECK-NEXT:    add x20, sp, #12
 ; CHECK-NEXT:    bl def
 ; CHECK-NEXT:    ptrue p0.h, vl4
-; CHECK-NEXT:    ld1b { z0.h }, p0/z, [x20]
+; CHECK-NEXT:    add x8, sp, #12
+; CHECK-NEXT:    ld1b { z0.h }, p0/z, [x8]
 ; CHECK-NEXT:    ptrue p0.s, vl2
 ; CHECK-NEXT:    mov z1.h, z0.h[2]
 ; CHECK-NEXT:    fmov w8, s0
@@ -273,8 +271,8 @@ define void @alloc_v4i8_intrinsic(ptr %st_ptr) nounwind {
 ; CHECK-NEXT:    mov z1.s, w9
 ; CHECK-NEXT:    zip1 z0.s, z0.s, z1.s
 ; CHECK-NEXT:    st1b { z0.s }, p0, [x19]
-; CHECK-NEXT:    ldp x20, x19, [sp, #16] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x30, [sp], #32 // 8-byte Folded Reload
+; CHECK-NEXT:    ldp x30, x19, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    add sp, sp, #32
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: alloc_v4i8_intrinsic:

@@ -22,110 +22,98 @@
 define i32 @test() nounwind {
 ; CHECK-LABEL: test:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi sp, sp, -112
-; CHECK-NEXT:    sd ra, 104(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s0, 96(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s1, 88(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s2, 80(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s3, 72(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s4, 64(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s5, 56(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s6, 48(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s7, 40(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s8, 32(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s9, 24(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s10, 16(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s11, 8(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    lui s0, %hi(a)
-; CHECK-NEXT:    lw a0, %lo(a)(s0)
-; CHECK-NEXT:    beqz a0, .LBB0_11
+; CHECK-NEXT:    lui a0, %hi(a)
+; CHECK-NEXT:    lw a0, %lo(a)(a0)
+; CHECK-NEXT:    beqz a0, .LBB0_12
 ; CHECK-NEXT:  # %bb.1: # %for.body.preheader
-; CHECK-NEXT:    lui s1, %hi(l)
-; CHECK-NEXT:    lui s2, %hi(k)
-; CHECK-NEXT:    lui s3, %hi(j)
-; CHECK-NEXT:    lui s4, %hi(i)
-; CHECK-NEXT:    lui s5, %hi(d)
-; CHECK-NEXT:    lui s6, %hi(e)
-; CHECK-NEXT:    lui s7, %hi(f)
-; CHECK-NEXT:    lui s8, %hi(g)
-; CHECK-NEXT:    lui s9, %hi(h)
-; CHECK-NEXT:    lui s10, %hi(c)
-; CHECK-NEXT:    lui s11, %hi(b)
+; CHECK-NEXT:    addi sp, sp, -32
+; CHECK-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    lui s0, %hi(d)
+; CHECK-NEXT:    lui s1, %hi(e)
 ; CHECK-NEXT:    j .LBB0_3
 ; CHECK-NEXT:  .LBB0_2: # %for.inc
 ; CHECK-NEXT:    # in Loop: Header=BB0_3 Depth=1
-; CHECK-NEXT:    lw a0, %lo(a)(s0)
+; CHECK-NEXT:    lui a1, %hi(a)
+; CHECK-NEXT:    lw a0, %lo(a)(a1)
 ; CHECK-NEXT:    addiw a0, a0, -1
-; CHECK-NEXT:    sw a0, %lo(a)(s0)
+; CHECK-NEXT:    sw a0, %lo(a)(a1)
 ; CHECK-NEXT:    beqz a0, .LBB0_11
 ; CHECK-NEXT:  .LBB0_3: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    lw a1, %lo(l)(s1)
+; CHECK-NEXT:    lui a1, %hi(l)
+; CHECK-NEXT:    lw a1, %lo(l)(a1)
 ; CHECK-NEXT:    beqz a1, .LBB0_5
 ; CHECK-NEXT:  # %bb.4: # %if.then
 ; CHECK-NEXT:    # in Loop: Header=BB0_3 Depth=1
-; CHECK-NEXT:    lw a4, %lo(e)(s6)
-; CHECK-NEXT:    lw a3, %lo(d)(s5)
-; CHECK-NEXT:    lw a2, %lo(c)(s10)
-; CHECK-NEXT:    lw a1, %lo(b)(s11)
+; CHECK-NEXT:    lw a4, %lo(e)(s1)
+; CHECK-NEXT:    lw a3, %lo(d)(s0)
+; CHECK-NEXT:    lui a1, %hi(c)
+; CHECK-NEXT:    lw a2, %lo(c)(a1)
+; CHECK-NEXT:    lui a1, %hi(b)
+; CHECK-NEXT:    lw a1, %lo(b)(a1)
 ; CHECK-NEXT:    li a5, 32
 ; CHECK-NEXT:    call foo
 ; CHECK-NEXT:  .LBB0_5: # %if.end
 ; CHECK-NEXT:    # in Loop: Header=BB0_3 Depth=1
-; CHECK-NEXT:    lw a0, %lo(k)(s2)
+; CHECK-NEXT:    lui a0, %hi(k)
+; CHECK-NEXT:    lw a0, %lo(k)(a0)
 ; CHECK-NEXT:    beqz a0, .LBB0_7
 ; CHECK-NEXT:  # %bb.6: # %if.then3
 ; CHECK-NEXT:    # in Loop: Header=BB0_3 Depth=1
-; CHECK-NEXT:    lw a4, %lo(f)(s7)
-; CHECK-NEXT:    lw a3, %lo(e)(s6)
-; CHECK-NEXT:    lw a2, %lo(d)(s5)
-; CHECK-NEXT:    lw a1, %lo(c)(s10)
-; CHECK-NEXT:    lw a0, %lo(b)(s11)
+; CHECK-NEXT:    lui a0, %hi(f)
+; CHECK-NEXT:    lw a4, %lo(f)(a0)
+; CHECK-NEXT:    lw a3, %lo(e)(s1)
+; CHECK-NEXT:    lw a2, %lo(d)(s0)
+; CHECK-NEXT:    lui a0, %hi(c)
+; CHECK-NEXT:    lw a1, %lo(c)(a0)
+; CHECK-NEXT:    lui a0, %hi(b)
+; CHECK-NEXT:    lw a0, %lo(b)(a0)
 ; CHECK-NEXT:    li a5, 64
 ; CHECK-NEXT:    call foo
 ; CHECK-NEXT:  .LBB0_7: # %if.end5
 ; CHECK-NEXT:    # in Loop: Header=BB0_3 Depth=1
-; CHECK-NEXT:    lw a0, %lo(j)(s3)
+; CHECK-NEXT:    lui a0, %hi(j)
+; CHECK-NEXT:    lw a0, %lo(j)(a0)
 ; CHECK-NEXT:    beqz a0, .LBB0_9
 ; CHECK-NEXT:  # %bb.8: # %if.then7
 ; CHECK-NEXT:    # in Loop: Header=BB0_3 Depth=1
-; CHECK-NEXT:    lw a4, %lo(g)(s8)
-; CHECK-NEXT:    lw a3, %lo(f)(s7)
-; CHECK-NEXT:    lw a2, %lo(e)(s6)
-; CHECK-NEXT:    lw a1, %lo(d)(s5)
-; CHECK-NEXT:    lw a0, %lo(c)(s10)
+; CHECK-NEXT:    lui a0, %hi(g)
+; CHECK-NEXT:    lw a4, %lo(g)(a0)
+; CHECK-NEXT:    lui a0, %hi(f)
+; CHECK-NEXT:    lw a3, %lo(f)(a0)
+; CHECK-NEXT:    lw a2, %lo(e)(s1)
+; CHECK-NEXT:    lw a1, %lo(d)(s0)
+; CHECK-NEXT:    lui a0, %hi(c)
+; CHECK-NEXT:    lw a0, %lo(c)(a0)
 ; CHECK-NEXT:    li a5, 32
 ; CHECK-NEXT:    call foo
 ; CHECK-NEXT:  .LBB0_9: # %if.end9
 ; CHECK-NEXT:    # in Loop: Header=BB0_3 Depth=1
-; CHECK-NEXT:    lw a0, %lo(i)(s4)
+; CHECK-NEXT:    lui a0, %hi(i)
+; CHECK-NEXT:    lw a0, %lo(i)(a0)
 ; CHECK-NEXT:    beqz a0, .LBB0_2
 ; CHECK-NEXT:  # %bb.10: # %if.then11
 ; CHECK-NEXT:    # in Loop: Header=BB0_3 Depth=1
-; CHECK-NEXT:    lw a4, %lo(h)(s9)
-; CHECK-NEXT:    lw a3, %lo(g)(s8)
-; CHECK-NEXT:    lw a2, %lo(f)(s7)
-; CHECK-NEXT:    lw a1, %lo(e)(s6)
-; CHECK-NEXT:    lw a0, %lo(d)(s5)
+; CHECK-NEXT:    lui a0, %hi(h)
+; CHECK-NEXT:    lw a4, %lo(h)(a0)
+; CHECK-NEXT:    lui a0, %hi(g)
+; CHECK-NEXT:    lw a3, %lo(g)(a0)
+; CHECK-NEXT:    lui a0, %hi(f)
+; CHECK-NEXT:    lw a2, %lo(f)(a0)
+; CHECK-NEXT:    lw a1, %lo(e)(s1)
+; CHECK-NEXT:    lw a0, %lo(d)(s0)
 ; CHECK-NEXT:    li a5, 32
 ; CHECK-NEXT:    call foo
 ; CHECK-NEXT:    j .LBB0_2
-; CHECK-NEXT:  .LBB0_11: # %for.end
+; CHECK-NEXT:  .LBB0_11:
+; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 32
+; CHECK-NEXT:  .LBB0_12: # %for.end
 ; CHECK-NEXT:    li a0, 1
-; CHECK-NEXT:    ld ra, 104(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s0, 96(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s1, 88(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s2, 80(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s3, 72(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s4, 64(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s5, 56(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s6, 48(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s7, 40(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s8, 32(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s9, 24(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s10, 16(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s11, 8(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    addi sp, sp, 112
 ; CHECK-NEXT:    ret
 entry:
   %.pr = load i32, ptr @a, align 4

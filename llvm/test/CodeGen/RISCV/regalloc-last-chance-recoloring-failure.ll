@@ -13,39 +13,38 @@
 define void @last_chance_recoloring_failure() {
 ; CHECK-LABEL: last_chance_recoloring_failure:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi sp, sp, -32
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    addi sp, sp, -48
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset ra, -8
-; CHECK-NEXT:    .cfi_offset s0, -16
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 4
 ; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x20, 0x22, 0x11, 0x10, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 32 + 16 * vlenb
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x30, 0x22, 0x11, 0x10, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 48 + 16 * vlenb
 ; CHECK-NEXT:    li a0, 55
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
 ; CHECK-NEXT:    vloxseg2ei32.v v16, (a1), v8
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    add a0, sp, a0
-; CHECK-NEXT:    addi a0, a0, 16
+; CHECK-NEXT:    addi a0, a0, 32
 ; CHECK-NEXT:    vs8r.v v16, (a0) # vscale x 64-byte Folded Spill
-; CHECK-NEXT:    li s0, 36
-; CHECK-NEXT:    vsetvli zero, s0, e16, m4, ta, ma
+; CHECK-NEXT:    li a0, 36
+; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
 ; CHECK-NEXT:    vmclr.m v0
 ; CHECK-NEXT:    vfwadd.vv v16, v8, v12, v0.t
-; CHECK-NEXT:    addi a0, sp, 16
+; CHECK-NEXT:    addi a0, sp, 32
 ; CHECK-NEXT:    vs8r.v v16, (a0) # vscale x 64-byte Folded Spill
 ; CHECK-NEXT:    call func
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    add a0, sp, a0
-; CHECK-NEXT:    addi a0, a0, 16
+; CHECK-NEXT:    addi a0, a0, 32
 ; CHECK-NEXT:    vl8r.v v16, (a0) # vscale x 64-byte Folded Reload
-; CHECK-NEXT:    addi a0, sp, 16
+; CHECK-NEXT:    addi a0, sp, 32
 ; CHECK-NEXT:    vl8r.v v24, (a0) # vscale x 64-byte Folded Reload
-; CHECK-NEXT:    vsetvli zero, s0, e16, m4, ta, ma
+; CHECK-NEXT:    li a0, 36
+; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
 ; CHECK-NEXT:    vfwsub.wv v8, v24, v16
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m8, tu, mu
 ; CHECK-NEXT:    vfdiv.vv v8, v24, v8, v0.t
@@ -53,50 +52,47 @@ define void @last_chance_recoloring_failure() {
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 4
 ; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 32
-; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    .cfi_def_cfa sp, 48
+; CHECK-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    .cfi_restore ra
-; CHECK-NEXT:    .cfi_restore s0
-; CHECK-NEXT:    addi sp, sp, 32
+; CHECK-NEXT:    addi sp, sp, 48
 ; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
 ;
 ; SUBREGLIVENESS-LABEL: last_chance_recoloring_failure:
 ; SUBREGLIVENESS:       # %bb.0: # %entry
-; SUBREGLIVENESS-NEXT:    addi sp, sp, -32
-; SUBREGLIVENESS-NEXT:    .cfi_def_cfa_offset 32
-; SUBREGLIVENESS-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; SUBREGLIVENESS-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; SUBREGLIVENESS-NEXT:    addi sp, sp, -48
+; SUBREGLIVENESS-NEXT:    .cfi_def_cfa_offset 48
+; SUBREGLIVENESS-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
 ; SUBREGLIVENESS-NEXT:    .cfi_offset ra, -8
-; SUBREGLIVENESS-NEXT:    .cfi_offset s0, -16
 ; SUBREGLIVENESS-NEXT:    csrr a0, vlenb
 ; SUBREGLIVENESS-NEXT:    slli a0, a0, 4
 ; SUBREGLIVENESS-NEXT:    sub sp, sp, a0
-; SUBREGLIVENESS-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x20, 0x22, 0x11, 0x10, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 32 + 16 * vlenb
+; SUBREGLIVENESS-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x30, 0x22, 0x11, 0x10, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 48 + 16 * vlenb
 ; SUBREGLIVENESS-NEXT:    li a0, 55
 ; SUBREGLIVENESS-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
 ; SUBREGLIVENESS-NEXT:    vloxseg2ei32.v v16, (a1), v8
 ; SUBREGLIVENESS-NEXT:    csrr a0, vlenb
 ; SUBREGLIVENESS-NEXT:    slli a0, a0, 3
 ; SUBREGLIVENESS-NEXT:    add a0, sp, a0
-; SUBREGLIVENESS-NEXT:    addi a0, a0, 16
+; SUBREGLIVENESS-NEXT:    addi a0, a0, 32
 ; SUBREGLIVENESS-NEXT:    vs8r.v v16, (a0) # vscale x 64-byte Folded Spill
-; SUBREGLIVENESS-NEXT:    li s0, 36
-; SUBREGLIVENESS-NEXT:    vsetvli zero, s0, e16, m4, ta, ma
+; SUBREGLIVENESS-NEXT:    li a0, 36
+; SUBREGLIVENESS-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
 ; SUBREGLIVENESS-NEXT:    vmclr.m v0
 ; SUBREGLIVENESS-NEXT:    vfwadd.vv v16, v8, v12, v0.t
-; SUBREGLIVENESS-NEXT:    addi a0, sp, 16
+; SUBREGLIVENESS-NEXT:    addi a0, sp, 32
 ; SUBREGLIVENESS-NEXT:    vs8r.v v16, (a0) # vscale x 64-byte Folded Spill
 ; SUBREGLIVENESS-NEXT:    call func
 ; SUBREGLIVENESS-NEXT:    csrr a0, vlenb
 ; SUBREGLIVENESS-NEXT:    slli a0, a0, 3
 ; SUBREGLIVENESS-NEXT:    add a0, sp, a0
-; SUBREGLIVENESS-NEXT:    addi a0, a0, 16
+; SUBREGLIVENESS-NEXT:    addi a0, a0, 32
 ; SUBREGLIVENESS-NEXT:    vl8r.v v16, (a0) # vscale x 64-byte Folded Reload
-; SUBREGLIVENESS-NEXT:    addi a0, sp, 16
+; SUBREGLIVENESS-NEXT:    addi a0, sp, 32
 ; SUBREGLIVENESS-NEXT:    vl8r.v v24, (a0) # vscale x 64-byte Folded Reload
-; SUBREGLIVENESS-NEXT:    vsetvli zero, s0, e16, m4, ta, ma
+; SUBREGLIVENESS-NEXT:    li a0, 36
+; SUBREGLIVENESS-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
 ; SUBREGLIVENESS-NEXT:    vfwsub.wv v8, v24, v16
 ; SUBREGLIVENESS-NEXT:    vsetvli zero, zero, e32, m8, tu, mu
 ; SUBREGLIVENESS-NEXT:    vfdiv.vv v8, v24, v8, v0.t
@@ -104,12 +100,10 @@ define void @last_chance_recoloring_failure() {
 ; SUBREGLIVENESS-NEXT:    csrr a0, vlenb
 ; SUBREGLIVENESS-NEXT:    slli a0, a0, 4
 ; SUBREGLIVENESS-NEXT:    add sp, sp, a0
-; SUBREGLIVENESS-NEXT:    .cfi_def_cfa sp, 32
-; SUBREGLIVENESS-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; SUBREGLIVENESS-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; SUBREGLIVENESS-NEXT:    .cfi_def_cfa sp, 48
+; SUBREGLIVENESS-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
 ; SUBREGLIVENESS-NEXT:    .cfi_restore ra
-; SUBREGLIVENESS-NEXT:    .cfi_restore s0
-; SUBREGLIVENESS-NEXT:    addi sp, sp, 32
+; SUBREGLIVENESS-NEXT:    addi sp, sp, 48
 ; SUBREGLIVENESS-NEXT:    .cfi_def_cfa_offset 0
 ; SUBREGLIVENESS-NEXT:    ret
 entry:

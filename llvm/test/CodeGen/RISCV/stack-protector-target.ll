@@ -12,18 +12,17 @@ define void @func() sspreq nounwind {
 ; LINUX-RISCV64:       # %bb.0:
 ; LINUX-RISCV64-NEXT:    addi sp, sp, -32
 ; LINUX-RISCV64-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; LINUX-RISCV64-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; LINUX-RISCV64-NEXT:    lui s0, %hi(__stack_chk_guard)
-; LINUX-RISCV64-NEXT:    ld a0, %lo(__stack_chk_guard)(s0)
-; LINUX-RISCV64-NEXT:    sd a0, 8(sp)
-; LINUX-RISCV64-NEXT:    addi a0, sp, 4
+; LINUX-RISCV64-NEXT:    lui a0, %hi(__stack_chk_guard)
+; LINUX-RISCV64-NEXT:    ld a0, %lo(__stack_chk_guard)(a0)
+; LINUX-RISCV64-NEXT:    sd a0, 16(sp)
+; LINUX-RISCV64-NEXT:    addi a0, sp, 12
 ; LINUX-RISCV64-NEXT:    call capture
-; LINUX-RISCV64-NEXT:    ld a0, %lo(__stack_chk_guard)(s0)
-; LINUX-RISCV64-NEXT:    ld a1, 8(sp)
+; LINUX-RISCV64-NEXT:    lui a0, %hi(__stack_chk_guard)
+; LINUX-RISCV64-NEXT:    ld a0, %lo(__stack_chk_guard)(a0)
+; LINUX-RISCV64-NEXT:    ld a1, 16(sp)
 ; LINUX-RISCV64-NEXT:    bne a0, a1, .LBB0_2
 ; LINUX-RISCV64-NEXT:  # %bb.1:
 ; LINUX-RISCV64-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; LINUX-RISCV64-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; LINUX-RISCV64-NEXT:    addi sp, sp, 32
 ; LINUX-RISCV64-NEXT:    ret
 ; LINUX-RISCV64-NEXT:  .LBB0_2:
@@ -69,18 +68,17 @@ define void @func() sspreq nounwind {
 ; OPENBSD-RISCV64:       # %bb.0:
 ; OPENBSD-RISCV64-NEXT:    addi sp, sp, -32
 ; OPENBSD-RISCV64-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; OPENBSD-RISCV64-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; OPENBSD-RISCV64-NEXT:    lui s0, %hi(__guard_local)
-; OPENBSD-RISCV64-NEXT:    ld a0, %lo(__guard_local)(s0)
-; OPENBSD-RISCV64-NEXT:    sd a0, 8(sp)
-; OPENBSD-RISCV64-NEXT:    addi a0, sp, 4
+; OPENBSD-RISCV64-NEXT:    lui a0, %hi(__guard_local)
+; OPENBSD-RISCV64-NEXT:    ld a0, %lo(__guard_local)(a0)
+; OPENBSD-RISCV64-NEXT:    sd a0, 16(sp)
+; OPENBSD-RISCV64-NEXT:    addi a0, sp, 12
 ; OPENBSD-RISCV64-NEXT:    call capture
-; OPENBSD-RISCV64-NEXT:    ld a0, %lo(__guard_local)(s0)
-; OPENBSD-RISCV64-NEXT:    ld a1, 8(sp)
+; OPENBSD-RISCV64-NEXT:    lui a0, %hi(__guard_local)
+; OPENBSD-RISCV64-NEXT:    ld a0, %lo(__guard_local)(a0)
+; OPENBSD-RISCV64-NEXT:    ld a1, 16(sp)
 ; OPENBSD-RISCV64-NEXT:    bne a0, a1, .LBB0_2
 ; OPENBSD-RISCV64-NEXT:  # %bb.1: # %SP_return
 ; OPENBSD-RISCV64-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; OPENBSD-RISCV64-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; OPENBSD-RISCV64-NEXT:    addi sp, sp, 32
 ; OPENBSD-RISCV64-NEXT:    ret
 ; OPENBSD-RISCV64-NEXT:  .LBB0_2: # %CallStackCheckFailBlk
