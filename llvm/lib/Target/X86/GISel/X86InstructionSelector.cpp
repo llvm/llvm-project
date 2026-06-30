@@ -2057,7 +2057,6 @@ bool X86InstructionSelector::selectInsertVectorElt(MachineInstr &I,
   LLT VecTy = MRI.getType(DstReg);
   unsigned EltSize = VecTy.getScalarSizeInBits();
   unsigned NumElts = VecTy.getNumElements();
-  unsigned VecSize = VecTy.getSizeInBits();
 
   auto IdxVal = getIConstantVRegValWithLookThrough(IdxReg, MRI);
   if (!IdxVal)
@@ -2066,6 +2065,33 @@ bool X86InstructionSelector::selectInsertVectorElt(MachineInstr &I,
   if (Idx >= NumElts)
     return false;
 
+  // For v2i64, use PUNPCKLQDQ instead of PINSRQ when inserting at index 1
+  // into a scalar_to_vector result. This breaks the dependency chain by using
+  // two independent MOVQs followed by an unpack, matching SDAG behavior.
+  if (EltSize == 64 && NumElts == 2 && Idx == 1) {
+    MachineInstr *VecDef = MRI.getVRegDef(VecReg);
+    if (VecDef && VecDef->getOpcode() == X86::G_SCALAR_TO_VECTOR) {
+      unsigned MovOpc = getScalarToVecOpcode(64);
+      unsigned UnpckOpc = STI.hasAVX512() && STI.hasVLX() ? X86::VPUNPCKLQDQZ128rr
+                          : STI.hasAVX()                  ? X86::VPUNPCKLQDQrr
+                                                          : X86::PUNPCKLQDQrr;
+
+      Register HiVecReg = MRI.createVirtualRegister(&X86::VR128RegClass);
+      auto &MovMIB = *BuildMI(*I.getParent(), I, I.getDebugLoc(),
+                              TII.get(MovOpc), HiVecReg)
+                          .addReg(EltReg);
+      constrainSelectedInstRegOperands(MovMIB, TII, TRI, RBI);
+
+      auto &UnpckMIB = *BuildMI(*I.getParent(), I, I.getDebugLoc(),
+                                TII.get(UnpckOpc), DstReg)
+                            .addReg(VecReg)
+                            .addReg(HiVecReg);
+      constrainSelectedInstRegOperands(UnpckMIB, TII, TRI, RBI);
+
+      I.eraseFromParent();
+      return true;
+    }
+  }
 
   unsigned Opc = getMachineOpcodeForInsert(EltSize);
   if (!Opc)

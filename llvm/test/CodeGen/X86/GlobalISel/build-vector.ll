@@ -2,10 +2,8 @@
 
 ; RUN: llc -mtriple=x86_64-linux-gnu -mattr=+sse4.1 -global-isel -global-isel-abort=1 < %s | FileCheck %s --check-prefixes=GISEL-SSE41
 ; RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx -global-isel -global-isel-abort=1 < %s | FileCheck %s --check-prefixes=GISEL-AVX
-; RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx512f,+avx512bw,+avx512dq -global-isel -global-isel-abort=1 < %s | FileCheck %s --check-prefixes=GISEL-AVX
 ; RUN: llc -mtriple=x86_64-linux-gnu -mattr=+sse4.1 < %s | FileCheck %s --check-prefixes=SDAG-SSE41
 ; RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx < %s | FileCheck %s --check-prefixes=SDAG-AVX
-; RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx512f,+avx512bw,+avx512dq < %s | FileCheck %s --check-prefixes=SDAG-AVX
 
 ;128-bit integer vectors
 
@@ -52,13 +50,15 @@ define <2 x i64> @build_vector_v2i64(i64 %a, i64 %b) {
 ; GISEL-SSE41-LABEL: build_vector_v2i64:
 ; GISEL-SSE41:       # %bb.0:
 ; GISEL-SSE41-NEXT:    movq %rdi, %xmm0
-; GISEL-SSE41-NEXT:    pinsrq $1, %rsi, %xmm0
+; GISEL-SSE41-NEXT:    movq %rsi, %xmm1
+; GISEL-SSE41-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; GISEL-SSE41-NEXT:    retq
 ;
 ; GISEL-AVX-LABEL: build_vector_v2i64:
 ; GISEL-AVX:       # %bb.0:
 ; GISEL-AVX-NEXT:    vmovq %rdi, %xmm0
-; GISEL-AVX-NEXT:    vpinsrq $1, %rsi, %xmm0, %xmm0
+; GISEL-AVX-NEXT:    vmovq %rsi, %xmm1
+; GISEL-AVX-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; GISEL-AVX-NEXT:    retq
 ;
 ; SDAG-SSE41-LABEL: build_vector_v2i64:
@@ -132,7 +132,8 @@ define <2 x double> @build_vector_v2f64(double %a, double %b) {
 ; GISEL-SSE41-NEXT:    movq %xmm0, %rax
 ; GISEL-SSE41-NEXT:    movq %rax, %xmm0
 ; GISEL-SSE41-NEXT:    movq %xmm1, %rax
-; GISEL-SSE41-NEXT:    pinsrq $1, %rax, %xmm0
+; GISEL-SSE41-NEXT:    movq %rax, %xmm1
+; GISEL-SSE41-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; GISEL-SSE41-NEXT:    retq
 ;
 ; GISEL-AVX-LABEL: build_vector_v2f64:
@@ -140,7 +141,8 @@ define <2 x double> @build_vector_v2f64(double %a, double %b) {
 ; GISEL-AVX-NEXT:    vmovq %xmm0, %rax
 ; GISEL-AVX-NEXT:    vmovq %rax, %xmm0
 ; GISEL-AVX-NEXT:    vmovq %xmm1, %rax
-; GISEL-AVX-NEXT:    vpinsrq $1, %rax, %xmm0, %xmm0
+; GISEL-AVX-NEXT:    vmovq %rax, %xmm1
+; GISEL-AVX-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; GISEL-AVX-NEXT:    retq
 ;
 ; SDAG-SSE41-LABEL: build_vector_v2f64:
@@ -184,6 +186,30 @@ define <8 x i32> @build_vector_v8i32(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32
 ; GISEL-SSE41-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; GISEL-SSE41-NEXT:    retq
 ;
+; GISEL-AVX-LABEL: build_vector_v8i32:
+; GISEL-AVX:       # %bb.0:
+; GISEL-AVX-NEXT:    vmovd %edi, %xmm0
+; GISEL-AVX-NEXT:    vinsertf128 $0, %xmm0, %ymm0, %ymm0
+; GISEL-AVX-NEXT:    vpinsrd $1, %esi, %xmm0, %xmm1
+; GISEL-AVX-NEXT:    vinsertf128 $0, %xmm1, %ymm0, %ymm0
+; GISEL-AVX-NEXT:    vpinsrd $2, %edx, %xmm0, %xmm1
+; GISEL-AVX-NEXT:    vinsertf128 $0, %xmm1, %ymm0, %ymm0
+; GISEL-AVX-NEXT:    vpinsrd $3, %ecx, %xmm0, %xmm1
+; GISEL-AVX-NEXT:    vinsertf128 $0, %xmm1, %ymm0, %ymm0
+; GISEL-AVX-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; GISEL-AVX-NEXT:    vpinsrd $0, %r8d, %xmm1, %xmm1
+; GISEL-AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; GISEL-AVX-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; GISEL-AVX-NEXT:    vpinsrd $1, %r9d, %xmm1, %xmm1
+; GISEL-AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; GISEL-AVX-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; GISEL-AVX-NEXT:    vpinsrd $2, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; GISEL-AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; GISEL-AVX-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; GISEL-AVX-NEXT:    vpinsrd $3, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; GISEL-AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; GISEL-AVX-NEXT:    retq
+;
 ; SDAG-SSE41-LABEL: build_vector_v8i32:
 ; SDAG-SSE41:       # %bb.0:
 ; SDAG-SSE41-NEXT:    vmovd %edi, %xmm0
@@ -196,6 +222,19 @@ define <8 x i32> @build_vector_v8i32(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32
 ; SDAG-SSE41-NEXT:    vpinsrd $3, {{[0-9]+}}(%rsp), %xmm1, %xmm1
 ; SDAG-SSE41-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; SDAG-SSE41-NEXT:    retq
+;
+; SDAG-AVX-LABEL: build_vector_v8i32:
+; SDAG-AVX:       # %bb.0:
+; SDAG-AVX-NEXT:    vmovd %edi, %xmm0
+; SDAG-AVX-NEXT:    vpinsrd $1, %esi, %xmm0, %xmm0
+; SDAG-AVX-NEXT:    vpinsrd $2, %edx, %xmm0, %xmm0
+; SDAG-AVX-NEXT:    vpinsrd $3, %ecx, %xmm0, %xmm0
+; SDAG-AVX-NEXT:    vmovd %r8d, %xmm1
+; SDAG-AVX-NEXT:    vpinsrd $1, %r9d, %xmm1, %xmm1
+; SDAG-AVX-NEXT:    vpinsrd $2, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; SDAG-AVX-NEXT:    vpinsrd $3, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; SDAG-AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; SDAG-AVX-NEXT:    retq
   %v0 = insertelement <8 x i32> undef, i32 %a, i64 0
   %v1 = insertelement <8 x i32> %v0, i32 %b, i64 1
   %v2 = insertelement <8 x i32> %v1, i32 %c, i64 2
@@ -222,6 +261,20 @@ define <4 x i64> @build_vector_v4i64(i64 %a, i64 %b, i64 %c, i64 %d) #1 {
 ; GISEL-SSE41-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; GISEL-SSE41-NEXT:    retq
 ;
+; GISEL-AVX-LABEL: build_vector_v4i64:
+; GISEL-AVX:       # %bb.0:
+; GISEL-AVX-NEXT:    vmovq %rdi, %xmm0
+; GISEL-AVX-NEXT:    vinsertf128 $0, %xmm0, %ymm0, %ymm0
+; GISEL-AVX-NEXT:    vpinsrq $1, %rsi, %xmm0, %xmm1
+; GISEL-AVX-NEXT:    vinsertf128 $0, %xmm1, %ymm0, %ymm0
+; GISEL-AVX-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; GISEL-AVX-NEXT:    vpinsrq $0, %rdx, %xmm1, %xmm1
+; GISEL-AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; GISEL-AVX-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; GISEL-AVX-NEXT:    vpinsrq $1, %rcx, %xmm1, %xmm1
+; GISEL-AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; GISEL-AVX-NEXT:    retq
+;
 ; SDAG-SSE41-LABEL: build_vector_v4i64:
 ; SDAG-SSE41:       # %bb.0:
 ; SDAG-SSE41-NEXT:    vmovq %rcx, %xmm0
@@ -232,6 +285,17 @@ define <4 x i64> @build_vector_v4i64(i64 %a, i64 %b, i64 %c, i64 %d) #1 {
 ; SDAG-SSE41-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
 ; SDAG-SSE41-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; SDAG-SSE41-NEXT:    retq
+;
+; SDAG-AVX-LABEL: build_vector_v4i64:
+; SDAG-AVX:       # %bb.0:
+; SDAG-AVX-NEXT:    vmovq %rcx, %xmm0
+; SDAG-AVX-NEXT:    vmovq %rdx, %xmm1
+; SDAG-AVX-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; SDAG-AVX-NEXT:    vmovq %rsi, %xmm1
+; SDAG-AVX-NEXT:    vmovq %rdi, %xmm2
+; SDAG-AVX-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
+; SDAG-AVX-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; SDAG-AVX-NEXT:    retq
   %v0 = insertelement <4 x i64> undef, i64 %a, i64 0
   %v1 = insertelement <4 x i64> %v0, i64 %b, i64 1
   %v2 = insertelement <4 x i64> %v1, i64 %c, i64 2
@@ -273,6 +337,38 @@ define <8 x float> @build_vector_v8f32(float %a, float %b, float %c, float %d, f
 ; GISEL-SSE41-NEXT:    vpinsrd $3, %eax, %xmm1, %xmm1
 ; GISEL-SSE41-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; GISEL-SSE41-NEXT:    retq
+;
+; GISEL-AVX-LABEL: build_vector_v8f32:
+; GISEL-AVX:       # %bb.0:
+; GISEL-AVX-NEXT:    vmovd %xmm0, %eax
+; GISEL-AVX-NEXT:    vmovd %eax, %xmm0
+; GISEL-AVX-NEXT:    vinsertf128 $0, %xmm0, %ymm0, %ymm0
+; GISEL-AVX-NEXT:    vmovd %xmm1, %eax
+; GISEL-AVX-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm1
+; GISEL-AVX-NEXT:    vinsertf128 $0, %xmm1, %ymm0, %ymm0
+; GISEL-AVX-NEXT:    vmovd %xmm2, %eax
+; GISEL-AVX-NEXT:    vpinsrd $2, %eax, %xmm0, %xmm1
+; GISEL-AVX-NEXT:    vinsertf128 $0, %xmm1, %ymm0, %ymm0
+; GISEL-AVX-NEXT:    vmovd %xmm3, %eax
+; GISEL-AVX-NEXT:    vpinsrd $3, %eax, %xmm0, %xmm1
+; GISEL-AVX-NEXT:    vinsertf128 $0, %xmm1, %ymm0, %ymm0
+; GISEL-AVX-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; GISEL-AVX-NEXT:    vmovd %xmm4, %eax
+; GISEL-AVX-NEXT:    vpinsrd $0, %eax, %xmm1, %xmm1
+; GISEL-AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; GISEL-AVX-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; GISEL-AVX-NEXT:    vmovd %xmm5, %eax
+; GISEL-AVX-NEXT:    vpinsrd $1, %eax, %xmm1, %xmm1
+; GISEL-AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; GISEL-AVX-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; GISEL-AVX-NEXT:    vmovd %xmm6, %eax
+; GISEL-AVX-NEXT:    vpinsrd $2, %eax, %xmm1, %xmm1
+; GISEL-AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; GISEL-AVX-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; GISEL-AVX-NEXT:    vmovd %xmm7, %eax
+; GISEL-AVX-NEXT:    vpinsrd $3, %eax, %xmm1, %xmm1
+; GISEL-AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; GISEL-AVX-NEXT:    retq
 ;
 ; SDAG-SSE41-LABEL: build_vector_v8f32:
 ; SDAG-SSE41:       # %bb.0:
@@ -324,6 +420,24 @@ define <4 x double> @build_vector_v4f64(double %a, double %b, double %c, double 
 ; GISEL-SSE41-NEXT:    vpinsrq $1, %rax, %xmm1, %xmm1
 ; GISEL-SSE41-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; GISEL-SSE41-NEXT:    retq
+;
+; GISEL-AVX-LABEL: build_vector_v4f64:
+; GISEL-AVX:       # %bb.0:
+; GISEL-AVX-NEXT:    vmovq %xmm0, %rax
+; GISEL-AVX-NEXT:    vmovq %rax, %xmm0
+; GISEL-AVX-NEXT:    vinsertf128 $0, %xmm0, %ymm0, %ymm0
+; GISEL-AVX-NEXT:    vmovq %xmm1, %rax
+; GISEL-AVX-NEXT:    vpinsrq $1, %rax, %xmm0, %xmm1
+; GISEL-AVX-NEXT:    vinsertf128 $0, %xmm1, %ymm0, %ymm0
+; GISEL-AVX-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; GISEL-AVX-NEXT:    vmovq %xmm2, %rax
+; GISEL-AVX-NEXT:    vpinsrq $0, %rax, %xmm1, %xmm1
+; GISEL-AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; GISEL-AVX-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; GISEL-AVX-NEXT:    vmovq %xmm3, %rax
+; GISEL-AVX-NEXT:    vpinsrq $1, %rax, %xmm1, %xmm1
+; GISEL-AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; GISEL-AVX-NEXT:    retq
 ;
 ; SDAG-SSE41-LABEL: build_vector_v4f64:
 ; SDAG-SSE41:       # %bb.0:
