@@ -147,7 +147,7 @@ int main(int argc, char **argv) {
 // CHECK-NEXT: (lldb) expression Local2
 // CHECK-NEXT: (char) $18 = 'c'
 // CHECK-NEXT: (lldb) continue
-// CHECK-DAG: Process {{.*}} resuming
+// CHECK: Process {{.*}} resuming
 // CHECK-NEXT: Process {{.*}} exited with status = 18 (0x00000012)
 
 // CHECK:      (lldb) target modules dump ast
