@@ -1692,3 +1692,317 @@ define i1 @neg_test_logical_and_trunc_nuw_no_noundef(i1 %c, i8 range(i8 0,2) %x)
   %and = select i1 %c, i1 %trunc, i1 false
   ret i1 %and
 }
+
+; =============================================================================
+; select/or implied condition fold
+; =============================================================================
+
+; =============================================================================
+; Positive tests
+; =============================================================================
+
+
+; Original motivating issue: #154025
+define i32 @pos_original_issue(i32 %arg0, i32 %arg1,
+; CHECK-LABEL: @pos_original_issue(
+; CHECK-SAME: i32 [[ARG0:%.*]], i32 [[ARG1:%.*]], i32 [[ARG2:%.*]], i32 [[ARG3:%.*]], i32 [[ARG4:%.*]], i32 [[ARG5:%.*]]) {
+; CHECK-NEXT:     ret i32 [[ARG0]]
+;
+  i32 %arg2, i32 %arg3,
+  i32 %arg4, i32 %arg5) {
+  %v0 = or i32 %arg5, %arg4
+  %v1 = or i32 %v0, %arg3
+  %v2 = or i32 %v1, %arg2
+  %v3 = or i32 %v2, %arg1
+  %v4 = or i32 %v3, %arg0
+
+  %v5 = icmp ne i32 %v4, 0
+  %v6 = icmp ne i32 %arg1, 0
+
+  %v7 = select i1 %v5, i1 true, i1 %v6
+  %v8 = select i1 %v7, i32 %arg0, i32 0
+  ret i32 %v8
+}
+
+
+
+; Deep-left OR tree
+define i8 @pos_or_left(i8 %x, i8 %a, i8 %b, i8 %c,
+; CHECK-LABEL: @pos_or_left(
+; CHECK-SAME: i8 [[X:%.*]], i8 [[A:%.*]], i8 [[B:%.*]], i8 [[C:%.*]], i8 [[D:%.*]], i8 [[E:%.*]], i8 [[F:%.*]]) {
+; CHECK-NEXT:       ret i8 [[X]]
+;
+  i8 %d, i8 %e, i8 %f) {
+  %or1 = or i8 %x, %a
+  %or2 = or i8 %or1, %b
+  %or3 = or i8 %or2, %c
+  %or4 = or i8 %or3, %d
+  %or5 = or i8 %or4, %e
+  %or6 = or i8 %or5, %f
+
+  %cmp1 = icmp ne i8 %or6, 0
+  %cmp2 = icmp ne i8 %a, 0
+
+  %lor = select i1 %cmp1, i1 true, i1 %cmp2
+  %sel = select i1 %lor, i8 %x, i8 0
+  ret i8 %sel
+}
+
+; Deep-right OR tree
+define i8 @pos_or_right(i8 %x, i8 %a, i8 %b, i8 %c,
+; CHECK-LABEL: @pos_or_right(
+; CHECK-SAME: i8 [[X:%.*]], i8 [[A:%.*]], i8 [[B:%.*]], i8 [[C:%.*]], i8 [[D:%.*]], i8 [[E:%.*]], i8 [[F:%.*]]) {
+; CHECK-NEXT:       ret i8 [[X]]
+;
+  i8 %d, i8 %e, i8 %f) {
+  %or1 = or i8 %e, %f
+  %or2 = or i8 %d, %or1
+  %or3 = or i8 %c, %or2
+  %or4 = or i8 %b, %or3
+  %or5 = or i8 %a, %or4
+  %or6 = or i8 %x, %or5
+
+  %cmp1 = icmp ne i8 %or6, 0
+  %cmp2 = icmp ne i8 %a, 0
+
+  %lor = select i1 %cmp1, i1 true, i1 %cmp2
+  %sel = select i1 %lor, i8 %x, i8 0
+  ret i8 %sel
+}
+
+; Commuted OR operands.
+define i8 @pos_or_commuted(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @pos_or_commuted(
+; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]], i8 [[Z:%.*]]) {
+; CHECK-NEXT:       ret i8 [[X]]
+;
+  %or = or i8 %y, %x
+
+  %cmp1 = icmp ne i8 %or, 0
+  %cmp2 = icmp ne i8 %z, 0
+
+  %lor = select i1 %cmp1, i1 true, i1 %cmp2
+  %sel = select i1 %lor, i8 %x, i8 0
+  ret i8 %sel
+}
+
+
+; =============================================================================
+; Positive tests: multi-use
+; =============================================================================
+
+; Multi-use OR value.
+define i8 @pos_multiuse_or(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @pos_multiuse_or(
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    call void @use(i8 [[OR]])
+; CHECK-NEXT:    ret i8 [[X]]
+;
+  %or = or i8 %x, %y
+  call void @use(i8 %or)
+
+  %cmp1 = icmp ne i8 %or, 0
+  %cmp2 = icmp ne i8 %z, 0
+
+  %lor = select i1 %cmp1, i1 true, i1 %cmp2
+  %sel = select i1 %lor, i8 %x, i8 0
+  ret i8 %sel
+}
+
+; Multi-use condition value.
+define i8 @pos_multiuse_cond(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @pos_multiuse_cond(
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i8 [[OR]], 0
+; CHECK-NEXT:    call void @use1(i1 [[CMP1]])
+; CHECK-NEXT:    ret i8 [[X]]
+;
+  %or = or i8 %x, %y
+
+  %cmp1 = icmp ne i8 %or, 0
+  call void @use1(i1 %cmp1)
+
+  %cmp2 = icmp ne i8 %z, 0
+
+  %lor = select i1 %cmp1, i1 true, i1 %cmp2
+  %sel = select i1 %lor, i8 %x, i8 0
+  ret i8 %sel
+}
+
+; =============================================================================
+; Positive tests: vector
+; =============================================================================
+
+; Vector deep-left OR tree
+define <4 x i8> @pos_vector_left(
+; CHECK-LABEL: @pos_vector_left(
+; CHECK-SAME: <4 x i8> [[X:%.*]], <4 x i8> [[A:%.*]], <4 x i8> [[B:%.*]], <4 x i8> [[C:%.*]], <4 x i8> [[D:%.*]], <4 x i8> [[E:%.*]], <4 x i8> [[F:%.*]]) {
+; CHECK-NEXT:    ret <4 x i8> [[X]]
+;
+  <4 x i8> %x,
+  <4 x i8> %a,
+  <4 x i8> %b,
+  <4 x i8> %c,
+  <4 x i8> %d,
+  <4 x i8> %e,
+  <4 x i8> %f) {
+
+  %or1 = or <4 x i8> %x, %a
+  %or2 = or <4 x i8> %or1, %b
+  %or3 = or <4 x i8> %or2, %c
+  %or4 = or <4 x i8> %or3, %d
+  %or5 = or <4 x i8> %or4, %e
+  %or6 = or <4 x i8> %or5, %f
+
+  %cmp1 = icmp ne <4 x i8> %or6, zeroinitializer
+  %cmp2 = icmp ne <4 x i8> %a, zeroinitializer
+
+  %lor = select <4 x i1> %cmp1,
+  <4 x i1> <i1 true, i1 true, i1 true, i1 true>,
+  <4 x i1> %cmp2
+
+  %sel = select <4 x i1> %lor,
+  <4 x i8> %x,
+  <4 x i8> zeroinitializer
+  ret <4 x i8> %sel
+}
+
+; Vector deep-right OR tree
+define <4 x i8> @pos_vector_right(
+; CHECK-LABEL: @pos_vector_right(
+; CHECK-SAME: <4 x i8> [[X:%.*]], <4 x i8> [[A:%.*]], <4 x i8> [[B:%.*]], <4 x i8> [[C:%.*]], <4 x i8> [[D:%.*]], <4 x i8> [[E:%.*]], <4 x i8> [[F:%.*]]) {
+; CHECK-NEXT:    ret <4 x i8> [[X]]
+;
+  <4 x i8> %x,
+  <4 x i8> %a,
+  <4 x i8> %b,
+  <4 x i8> %c,
+  <4 x i8> %d,
+  <4 x i8> %e,
+  <4 x i8> %f) {
+
+  %or1 = or <4 x i8> %e, %f
+  %or2 = or <4 x i8> %d, %or1
+  %or3 = or <4 x i8> %c, %or2
+  %or4 = or <4 x i8> %b, %or3
+  %or5 = or <4 x i8> %a, %or4
+  %or6 = or <4 x i8> %x, %or5
+
+  %cmp1 = icmp ne <4 x i8> %or6, zeroinitializer
+  %cmp2 = icmp ne <4 x i8> %a, zeroinitializer
+
+  %lor = select <4 x i1> %cmp1,
+  <4 x i1> <i1 true, i1 true, i1 true, i1 true>,
+  <4 x i1> %cmp2
+
+  %sel = select <4 x i1> %lor,
+  <4 x i8> %x,
+  <4 x i8> zeroinitializer
+  ret <4 x i8> %sel
+}
+
+; =============================================================================
+; Negative tests
+; =============================================================================
+
+; Wrong predicate.
+define i8 @neg_wrong_pred(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @neg_wrong_pred(
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[OR]], 0
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i8 [[Z:%.*]], 0
+; CHECK-NEXT:    [[LOR:%.*]] = select i1 [[CMP1]], i1 true, i1 [[CMP2]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[LOR]], i8 [[X]], i8 0
+; CHECK-NEXT:    ret i8 [[SEL]]
+;
+  %or = or i8 %x, %y
+
+  %cmp1 = icmp eq i8 %or, 0
+  %cmp2 = icmp ne i8 %z, 0
+
+  %lor = select i1 %cmp1, i1 true, i1 %cmp2
+  %sel = select i1 %lor, i8 %x, i8 0
+  ret i8 %sel
+}
+
+; False arm is not zero.
+define i8 @neg_false_not_zero(i8 %x, i8 %y,
+; CHECK-LABEL: @neg_false_not_zero(
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i8 [[OR]], 0
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i8 [[Z:%.*]], 0
+; CHECK-NEXT:    [[LOR:%.*]] = select i1 [[CMP1]], i1 true, i1 [[CMP2]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[LOR]], i8 [[X]], i8 [[W:%.*]]
+; CHECK-NEXT:    ret i8 [[SEL]]
+;
+  i8 %z, i8 %w) {
+  %or = or i8 %x, %y
+
+  %cmp1 = icmp ne i8 %or, 0
+  %cmp2 = icmp ne i8 %z, 0
+
+  %lor = select i1 %cmp1, i1 true, i1 %cmp2
+  %sel = select i1 %lor, i8 %x, i8 %w
+  ret i8 %sel
+}
+
+; AND is not handled.
+define i8 @neg_and_not_or(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @neg_and_not_or(
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i8 [[AND]], 0
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i8 [[Z:%.*]], 0
+; CHECK-NEXT:    [[LOR:%.*]] = select i1 [[CMP1]], i1 true, i1 [[CMP2]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[LOR]], i8 [[X]], i8 0
+; CHECK-NEXT:    ret i8 [[SEL]]
+;
+  %and = and i8 %x, %y
+
+  %cmp1 = icmp ne i8 %and, 0
+  %cmp2 = icmp ne i8 %z, 0
+
+  %lor = select i1 %cmp1, i1 true, i1 %cmp2
+  %sel = select i1 %lor, i8 %x, i8 0
+  ret i8 %sel
+}
+
+; TrueVal is not part of the OR tree.
+define i8 @neg_trueval_not_in_or(i8 %x, i8 %y,
+; CHECK-LABEL: @neg_trueval_not_in_or(
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i8 [[OR]], 0
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i8 [[Z:%.*]], 0
+; CHECK-NEXT:    [[LOR:%.*]] = select i1 [[CMP1]], i1 true, i1 [[CMP2]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[LOR]], i8 [[W:%.*]], i8 0
+; CHECK-NEXT:    ret i8 [[SEL]]
+;
+  i8 %z, i8 %w) {
+  %or = or i8 %x, %y
+
+  %cmp1 = icmp ne i8 %or, 0
+  %cmp2 = icmp ne i8 %z, 0
+
+  %lor = select i1 %cmp1, i1 true, i1 %cmp2
+  %sel = select i1 %lor, i8 %w, i8 0
+  ret i8 %sel
+}
+
+; Constant TrueVal is not handled.
+define i8 @neg_trueval_constant(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @neg_trueval_constant(
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i8 [[OR]], 0
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i8 [[Z:%.*]], 0
+; CHECK-NEXT:    [[LOR:%.*]] = select i1 [[CMP1]], i1 true, i1 [[CMP2]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[LOR]], i8 5, i8 0
+; CHECK-NEXT:    ret i8 [[SEL]]
+;
+  %or = or i8 %x, %y
+
+  %cmp1 = icmp ne i8 %or, 0
+  %cmp2 = icmp ne i8 %z, 0
+
+  %lor = select i1 %cmp1, i1 true, i1 %cmp2
+  %sel = select i1 %lor, i8 5, i8 0
+  ret i8 %sel
+}
