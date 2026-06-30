@@ -27338,10 +27338,9 @@ static SDValue narrowInsertExtractVectorBinOp(SDNode *N, SDValue BinOp,
     unsigned Idx = User->getConstantOperandVal(1);
     if (Idx % NumSubElts != 0 || Idx / NumSubElts >= NumParts)
       return SDValue();
-    auto &Slot = Slots[Idx / NumSubElts];
-    if (!std::get<1>(Slot) || !std::get<2>(Slot))
+    auto &[ExtSubVec, Sub0, Sub1] = Slots[Idx / NumSubElts];
+    if (!Sub0 || !Sub1)
       return SDValue();
-    SDNode *&ExtSubVec = std::get<0>(Slot);
     if (!ExtSubVec) {
       ExtSubVec = User;
       AllExtractsCheap &= TLI.isExtractSubvectorCheap(SubVT, VecVT, Idx);
@@ -27371,12 +27370,10 @@ static SDValue narrowInsertExtractVectorBinOp(SDNode *N, SDValue BinOp,
   if (HasNonExtUser) {
     if (HasNonZeroExt)
       return SDValue();
-    for (unsigned Part = 1; Part < NumParts; ++Part) {
-      auto &Slot = Slots[Part];
-      if (!std::get<1>(Slot) && !std::get<2>(Slot))
+    for (auto &[Ext, Sub0, Sub1] : drop_begin(Slots)) {
+      if (!Sub0 && !Sub1)
         continue;
-      if (!IsZeroOrUndef(std::get<1>(Slot)) ||
-          !IsZeroOrUndef(std::get<2>(Slot)))
+      if (!IsZeroOrUndef(Sub0) || !IsZeroOrUndef(Sub1))
         return SDValue();
     }
   }
