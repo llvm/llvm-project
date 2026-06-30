@@ -5696,9 +5696,6 @@ static bool isLRAvailable(const TargetRegisterInfo &TRI,
 
 /// Return true if \p MI is a call instruction that the outliner can rewrite as
 /// a tail call.
-///
-/// Register-indirect Thumb BLX instructions are only eligible when their target
-/// register is in the tail-call GPR register class.
 static bool CanTransformInstrIntoTailCall(const MachineInstr &MI) {
   auto Opcode = MI.getOpcode();
   return (Opcode == ARM::BL || Opcode == ARM::BLX || Opcode == ARM::BLX_noip ||
