@@ -908,11 +908,15 @@ assignment when compiled without the profile.
    [[profiles::suppress(std::init)]] U e [[uninit]];  // OK
 
 - Diagnostic: ``err_init_union_marker``.
-- Check site: the ``Uninit`` handler in
-  ``clang/lib/Sema/SemaDeclAttr.cpp``.  Unlike the reference / parameter /
-  structured-binding rejections, which are unconditional, this is gated on
-  enforcement -- a union may legitimately carry the marker without the
-  profile.
+- Check site: the shared helper ``Sema::diagnoseInitUninitMarkerPlacement``,
+  called from the ``Uninit`` handler in ``clang/lib/Sema/SemaDeclAttr.cpp`` and
+  re-run on the instantiated entity from ``VisitFieldDecl`` / ``VisitVarDecl``
+  in ``clang/lib/Sema/SemaTemplateInstantiateDecl.cpp``.  Unlike the reference /
+  parameter / structured-binding rejections, which are unconditional, this is
+  gated on enforcement -- a union may legitimately carry the marker without the
+  profile.  Being Decl-aware it defers on a templated pattern and fires once on
+  the instantiation (a dependent member or local that substitutes to a union),
+  consistent with the other ``std::init`` rules.
 - The banned marker is retained on the declaration after it is diagnosed, so
   the ``uninit_decl`` / ``ctor_uninit_member`` rules treat the entity as
   acknowledged and do not emit a second, contradictory diagnostic.
@@ -993,11 +997,12 @@ A pointer must instead be initialized (e.g. to ``nullptr``).
    [[profiles::suppress(std::init, rule: "pointer_marker")]] int *x [[uninit]];  // OK
 
 - Diagnostic: ``err_init_uninit_pointer_marker``.
-- Check site: the ``Uninit`` handler in
-  ``clang/lib/Sema/SemaDeclAttr.cpp``, alongside ``union_marker``.  Like that
-  rule it is gated on enforcement -- a pointer may legitimately carry the marker
-  without the profile -- and the marker is retained after the diagnostic so
-  ``uninit_decl`` does not also fire.
+- Check site: ``Sema::diagnoseInitUninitMarkerPlacement``, alongside
+  ``union_marker`` (see R6 for the shared parse-time handler and the
+  re-check on the instantiated field / variable).  Like that rule it is gated on
+  enforcement -- a pointer may legitimately carry the marker without the profile
+  -- and the marker is retained after the diagnostic so ``uninit_decl`` does not
+  also fire.
 - A pointer parameter is rejected earlier and unconditionally (the marker is
   meaningless on a parameter); a pointer-to-member is not a pointer type and is
   out of scope.
