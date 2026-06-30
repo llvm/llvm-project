@@ -113,5 +113,12 @@ ABI Affecting Changes
   map is never modified via an ``iterator``. This is necessary for reducing undefined behavior and for adding
   ``constexpr`` support for ``deque`` in C++26, so we do not provide any way to opt-out of that behavior.
 
+- The default block size of ``std::deque`` has been reduced for the unstable ABI
+  (and ABI revisions 2 or higher). Instead of targeting 4096 bytes (or 16 elements for larger types),
+  it now targets 512 bytes (or 4 elements for larger types). This reduces memory usage for
+  small deques but may increase allocation frequency for large deques. This change is
+  enabled by default when ``_LIBCPP_ABI_VERSION >= 2`` (via the
+  ``_LIBCPP_ABI_USE_SMALL_DEQUE_BLOCK_SIZE`` macro).
+
 Build System Changes
 --------------------
