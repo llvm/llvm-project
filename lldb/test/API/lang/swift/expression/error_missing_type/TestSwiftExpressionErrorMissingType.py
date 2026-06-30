@@ -8,7 +8,6 @@ class TestSwiftExpressionErrorMissingType(TestBase):
 
     @skipEmbeddedSwift
     @swiftTest
-    @expectedFailureWindows
     def test(self):
         """Test an extra hint inserted by LLDB for missing module imports"""
         self.build()
