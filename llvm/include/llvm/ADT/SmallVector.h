@@ -14,6 +14,11 @@
 #ifndef LLVM_ADT_SMALLVECTOR_H
 #define LLVM_ADT_SMALLVECTOR_H
 
+// Fix conflict with illumos CS macro in sys/regset.h.
+#ifdef __sun
+#undef CS
+#endif
+
 #include "llvm/ADT/ADL.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/Support/Compiler.h"
