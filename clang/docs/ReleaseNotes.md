@@ -981,6 +981,8 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 ### AST Matchers
 
+- Fixed `nullPointerConstant` matcher falsely matching integer literal `0`
+  in non-null-pointer contexts such as array subscripts and pointer arithmetic.
 - Add `functionTypeLoc` matcher for matching `FunctionTypeLoc`.
 - Add missing support for `TraversalKind` in some `addMatcher()` overloads.
 
