@@ -1,6 +1,6 @@
 ; Test the stack protector under XPLINK on z/OS
 ;
-; RUN: llc < %s -mtriple=s390x-ibm-zos -mcpu=z13 | FileCheck --check-prefixes=CHECK %s
+; RUN: llc < %s -mtriple=s390x-ibm-zos -mcpu=z13 --verify-machineinstrs | FileCheck --check-prefixes=CHECK %s
 
 ; Test stack protector for non-XPLEAF.
 
@@ -35,14 +35,14 @@ define void @func0() sspreq {
 ; CHECK-LABEL: func1
 ; CHECK:                    * DSA Size [[#%#x,DSA_SIZE:]]
 ; CHECK:                    stmg  6,{{[0-9]+}},2064(4)
+; CHECK:                    llgt  [[REG1:[0-9]+]],1208
 ; CHECK:                    llilh [[REG_CANARY_OFF_HIGH:[0-9]+]],[[#%u,CANARY_OFF_HIGH:div(DSA_SIZE,65536)]]
-; CHECK-DAG:                la    [[REG_CANARY_OFF_HIGH]],0([[REG_CANARY_OFF_HIGH]],4)
-; CHECK-DAG:                llgt  [[REG1:[0-9]+]],1208
+; CHECK:                    la    [[REG_CANARY_OFF_HIGH]],0([[REG_CANARY_OFF_HIGH]],4)
 ; CHECK:                    mvc   [[#%u,2040+mul(div(DSA_SIZE,32),32)-mul(CANARY_OFF_HIGH,65536)]](8,[[REG_CANARY_OFF_HIGH]]),152([[REG1]])
 ; ...
+; CHECK:                    llgt  [[REG3:[0-9]+]],1208
 ; CHECK:                    llilh [[REG_CANARY_OFF_HIGH_2:[0-9]+]],[[#%u,CANARY_OFF_HIGH_2:div(DSA_SIZE,65536)]]
 ; CHECK:                    la    [[REG_CANARY_OFF_HIGH_2]],0([[REG_CANARY_OFF_HIGH_2]],4)
-; CHECK:                    llgt  [[REG3:[0-9]+]],1208
 ; CHECK:                    clc   [[#%u,2040+mul(div(DSA_SIZE,32),32)-mul(CANARY_OFF_HIGH_2,65536)]](8,[[REG_CANARY_OFF_HIGH_2]]),152([[REG3]])
 ; CHECK:                    jlh   [[FAIL_LABEL:L#BB[0-9_]+]]
 ; success block
@@ -94,8 +94,8 @@ entry:
 ; CHECK-NEXT:               *   Bit 2: 1 = Uses alloca
 ; CHECK:                    stmg  4,[[SPILLHI:[0-9]+]],[[#%u,2048-mul(div(DSA_SIZE,32),32)]](4)
 ; CHECK:                    aghi  4,-[[#%u,mul(div(DSA_SIZE,32),32)]]
-; CHECK-DAG:                lgr   [[ALLOCAREG:[0-9]+]],4
-; CHECK-DAG:                llgt  [[REG1:[0-9]+]],1208
+; CHECK:                    llgt  [[REG1:[0-9]+]],1208
+; CHECK:                    lgr   [[ALLOCAREG:[0-9]+]],4
 ; CHECK:                    mvc   [[#%u,2040+mul(div(DSA_SIZE,32),32)]](8,[[ALLOCAREG]]),152([[REG1]])
 ; ...
 ; CHECK:                    llgt  [[REG3:[0-9]+]],1208

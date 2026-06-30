@@ -1818,8 +1818,7 @@ void SystemZInstrInfo::expandStackGuardPseudo(MachineInstr &MI,
       enum { OFFSET_CEELAA_STACK_GUARD = 0x98 };
       // Load LAA
       // LLGT <reg>,1208
-      BuildMI(MBB, MI, MI.getDebugLoc(), get(SystemZ::LLGT))
-          .addReg(MI.getOperand(0).getReg())
+      BuildMI(MBB, MI, MI.getDebugLoc(), get(SystemZ::LLGT), AddrReg)
           .addReg(0)
           .addImm(OFFSET_PSALAA)
           .addReg(0);
