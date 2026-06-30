@@ -5233,7 +5233,6 @@ InstructionCost AArch64TTIImpl::getInterleavedMemoryOpCost(
 
   if (!UseMaskForGaps && Factor <= TLI->getMaxSupportedInterleaveFactor()) {
     ElementCount EC = VecVTy->getElementCount();
-
     auto *SubVecTy = VectorType::get(VecVTy->getElementType(),
                                      EC.divideCoefficientBy(Factor));
 
