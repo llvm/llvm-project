@@ -1477,28 +1477,43 @@ static std::optional<bool> checkCondition(CmpInst::Predicate Pred, Value *A,
                                           ConstraintInfo &Info) {
   LLVM_DEBUG(dbgs() << "Checking " << *CheckInst << "\n");
 
-  auto R = Info.getConstraintForSolving(Pred, A, B);
-  if (R.empty() || !R.isValid(Info)) {
-    LLVM_DEBUG(dbgs() << "   failed to decompose condition\n");
-    return std::nullopt;
-  }
-
-  auto &CSToUse = Info.getCS(R.IsSigned);
-  if (auto ImpliedCondition = R.isImpliedBy(CSToUse)) {
-    if (!DebugCounter::shouldExecute(EliminatedCounter))
+  auto TryWithConstraint = [&](const ConstraintTy &R) -> std::optional<bool> {
+    if (R.empty() || !R.isValid(Info)) {
+      LLVM_DEBUG(dbgs() << "   failed to decompose condition\n");
       return std::nullopt;
+    }
 
-    LLVM_DEBUG({
-      dbgs() << "Condition ";
-      dumpUnpackedICmp(
-          dbgs(), *ImpliedCondition ? Pred : CmpInst::getInversePredicate(Pred),
-          A, B);
-      dbgs() << " implied by dominating constraints\n";
-      CSToUse.dump();
-    });
+    auto &CSToUse = Info.getCS(R.IsSigned);
+    if (auto ImpliedCondition = R.isImpliedBy(CSToUse)) {
+      if (!DebugCounter::shouldExecute(EliminatedCounter))
+        return std::nullopt;
+      LLVM_DEBUG({
+        dbgs() << "Condition ";
+        dumpUnpackedICmp(dbgs(),
+                         *ImpliedCondition ? Pred
+                                           : CmpInst::getInversePredicate(Pred),
+                         A, B);
+        dbgs() << " implied by dominating constraints\n";
+        CSToUse.dump();
+      });
+      return ImpliedCondition;
+    }
+    return std::nullopt;
+  };
+
+  auto R = Info.getConstraintForSolving(Pred, A, B);
+  if (auto ImpliedCondition = TryWithConstraint(R))
     return ImpliedCondition;
-  }
 
+  // Additionally, query the signed system for eq/ne predicates.
+  if (CmpInst::isEquality(Pred)) {
+    SmallVector<Value *> NewVariables;
+    auto SR = Info.getConstraint(Pred, A, B, NewVariables,
+                                 /*ForceSignedSystem=*/true);
+    if (NewVariables.empty())
+      if (auto ImpliedCondition = TryWithConstraint(SR))
+        return ImpliedCondition;
+  }
   return std::nullopt;
 }
 

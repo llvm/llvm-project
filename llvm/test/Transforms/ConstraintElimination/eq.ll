@@ -472,3 +472,36 @@ entry:
   %and3 = and i1 %cmp4, %and2
   ret i1 %and3
 }
+
+define i1 @assume_a_gt_b_and_b_ge_c_signed(i64 %a, i64 %b, i64 %c) {
+; CHECK-LABEL: @assume_a_gt_b_and_b_ge_c_signed(
+; CHECK-NEXT:    [[AB:%.*]] = icmp sgt i64 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[AB]])
+; CHECK-NEXT:    [[BC:%.*]] = icmp sge i64 [[B]], [[C:%.*]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[BC]])
+; CHECK-NEXT:    ret i1 false
+;
+  %ab = icmp sgt i64 %a, %b
+  call void @llvm.assume(i1 %ab)
+  %bc = icmp sge i64 %b, %c
+  call void @llvm.assume(i1 %bc)
+  %eq = icmp eq i64 %a, %c
+  ret i1 %eq
+}
+
+define i1 @assume_a_le_b_and_b_le_c_signed(i64 %a, i64 %b, i64 %c) {
+; CHECK-LABEL: @assume_a_le_b_and_b_le_c_signed(
+; CHECK-NEXT:    [[AB:%.*]] = icmp sle i64 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[AB]])
+; CHECK-NEXT:    [[BC:%.*]] = icmp sle i64 [[B]], [[C:%.*]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[BC]])
+; CHECK-NEXT:    [[EQ:%.*]] = icmp eq i64 [[A]], [[C]]
+; CHECK-NEXT:    ret i1 [[EQ]]
+;
+  %ab = icmp sle i64 %a, %b
+  call void @llvm.assume(i1 %ab)
+  %bc = icmp sle i64 %b, %c
+  call void @llvm.assume(i1 %bc)
+  %eq = icmp eq i64 %a, %c
+  ret i1 %eq
+}
