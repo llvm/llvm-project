@@ -349,7 +349,7 @@ public:
 
   llvm::StringRef GetDisabledAnsiSuffix() const;
 
-  bool GetUseAutosuggestion() const;
+  AutosuggestionMode GetAutosuggestionMode() const;
 
   llvm::StringRef GetAutosuggestionAnsiPrefix() const;
 
