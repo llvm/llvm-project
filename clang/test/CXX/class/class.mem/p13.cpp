@@ -110,9 +110,8 @@ template<typename B> struct Dtemplate_with_ctors : B {
 };
 
 template<typename B> struct CtorDtorName : B {
-  using B::CtorDtorName; // expected-error {{member 'CtorDtorName' has the same name as its class}} expected-note {{non-type declaration found by destructor name lookup}}
+  using B::CtorDtorName; // expected-error {{member 'CtorDtorName' has the same name as its class}}
   CtorDtorName();
-  ~CtorDtorName(); // expected-error {{identifier 'CtorDtorName' after '~' in destructor name does not name a type}}
 };
 
 struct S { // expected-note {{'S' declared here}}

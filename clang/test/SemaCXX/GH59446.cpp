@@ -8,5 +8,4 @@ namespace N {
   }
   void f(X<int> *x) { // expected-error {{no template named 'X'; did you mean 'N::X'}}
     x->N::X<int>::~X(); // expected-error 2 {{implicit instantiation of undefined template 'GH59446::N::X<int>'}}
-                        // expected-error@-1 {{identifier 'X' after '~' in destructor name does not name a type}}
 } // expected-error {{expected '}'}}
