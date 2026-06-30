@@ -6572,6 +6572,8 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan1() {
                       OptForSize, SCEVCheckThreshold, ORE, OrigLoop))
     return nullptr;
 
+  RUN_VPLAN_PASS(VPlanTransforms::addMiddleCheck, *VPlan0);
+
   // If we're vectorizing a loop with an uncountable exit, make sure that the
   // recipes are safe to handle.
   // TODO: Remove this once we can properly check the VPlan itself for both
@@ -6588,11 +6590,6 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan1() {
     return nullptr;
   }
 
-  // If we're handling uncountable exits in the scalar tail after a vector
-  // loop with an in-loop mask, then the middle check has already been
-  // created to compare against the actual number of lanes executed.
-  if (EEStyle != UncountableExitStyle::MaskedHandleExitInScalarLoop)
-    RUN_VPLAN_PASS(VPlanTransforms::addMiddleCheck, *VPlan0);
   RUN_VPLAN_PASS(VPlanTransforms::createLoopRegions, *VPlan0,
                  getDebugLocFromInstOrOperands(Legal->getPrimaryInduction()));
   if (CM.foldTailByMasking())
@@ -6749,7 +6746,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
                         OrigLoop);
 
   RUN_VPLAN_PASS(VPlanTransforms::makeMemOpWideningDecisions, *Plan, Range,
-                 RecipeBuilder, CM.PSE, OrigLoop);
+                 RecipeBuilder, CostCtx);
 
   RUN_VPLAN_PASS(VPlanTransforms::makeScalarizationDecisions, *Plan, Range);
 
