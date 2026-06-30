@@ -5,7 +5,9 @@ define i32 @or_nonzero(ptr %p) {
 ; CHECK-LABEL: define i32 @or_nonzero(
 ; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[INPUT:%.*]] = load <8 x i8>, ptr [[P]], align 1
-; CHECK-NEXT:    [[TMP3:%.*]] = call i8 @llvm.vector.reduce.or.v8i8(<8 x i8> [[INPUT]])
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <8 x i8> [[INPUT]], zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <8 x i1> [[TMP1]] to i8
+; CHECK-NEXT:    [[TMP3:%.*]] = call i8 @llvm.ctpop.i8(i8 [[TMP2]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[TMP3]], 0
 ; CHECK-NEXT:    [[RESULT:%.*]] = zext i1 [[CMP]] to i32
 ; CHECK-NEXT:    ret i32 [[RESULT]]
@@ -35,8 +37,10 @@ define i32 @or_nonzero_commuted(ptr %p) {
 ; CHECK-LABEL: define i32 @or_nonzero_commuted(
 ; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[INPUT:%.*]] = load <8 x i8>, ptr [[P]], align 1
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.vector.reduce.or.v8i8(<8 x i8> [[INPUT]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 0, [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <8 x i8> [[INPUT]], zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <8 x i1> [[TMP1]] to i8
+; CHECK-NEXT:    [[TMP3:%.*]] = call i8 @llvm.ctpop.i8(i8 [[TMP2]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[TMP3]], 0
 ; CHECK-NEXT:    [[RESULT:%.*]] = zext i1 [[CMP]] to i32
 ; CHECK-NEXT:    ret i32 [[RESULT]]
 ;
@@ -65,7 +69,9 @@ define i32 @or_zero(ptr %p) {
 ; CHECK-LABEL: define i32 @or_zero(
 ; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[INPUT:%.*]] = load <8 x i8>, ptr [[P]], align 1
-; CHECK-NEXT:    [[TMP3:%.*]] = call i8 @llvm.vector.reduce.or.v8i8(<8 x i8> [[INPUT]])
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <8 x i8> [[INPUT]], zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <8 x i1> [[TMP1]] to i8
+; CHECK-NEXT:    [[TMP3:%.*]] = call i8 @llvm.ctpop.i8(i8 [[TMP2]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[TMP3]], 0
 ; CHECK-NEXT:    [[RESULT:%.*]] = zext i1 [[CMP]] to i32
 ; CHECK-NEXT:    ret i32 [[RESULT]]
@@ -95,7 +101,9 @@ define i32 @umax_nonzero(ptr %p) {
 ; CHECK-LABEL: define i32 @umax_nonzero(
 ; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[INPUT:%.*]] = load <8 x i8>, ptr [[P]], align 1
-; CHECK-NEXT:    [[TMP3:%.*]] = call i8 @llvm.vector.reduce.umax.v8i8(<8 x i8> [[INPUT]])
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <8 x i8> [[INPUT]], zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <8 x i1> [[TMP1]] to i8
+; CHECK-NEXT:    [[TMP3:%.*]] = call i8 @llvm.ctpop.i8(i8 [[TMP2]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[TMP3]], 0
 ; CHECK-NEXT:    [[RESULT:%.*]] = zext i1 [[CMP]] to i32
 ; CHECK-NEXT:    ret i32 [[RESULT]]
@@ -132,8 +140,10 @@ define i32 @umax_zero_commuted(ptr %p) {
 ; CHECK-LABEL: define i32 @umax_zero_commuted(
 ; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[INPUT:%.*]] = load <8 x i8>, ptr [[P]], align 1
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.vector.reduce.umax.v8i8(<8 x i8> [[INPUT]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 0, [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <8 x i8> [[INPUT]], zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <8 x i1> [[TMP1]] to i8
+; CHECK-NEXT:    [[TMP3:%.*]] = call i8 @llvm.ctpop.i8(i8 [[TMP2]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[TMP3]], 0
 ; CHECK-NEXT:    [[RESULT:%.*]] = zext i1 [[CMP]] to i32
 ; CHECK-NEXT:    ret i32 [[RESULT]]
 ;
