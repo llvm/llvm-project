@@ -474,24 +474,16 @@ fatbinary(ArrayRef<std::tuple<StringRef, StringRef, StringRef>> InputFiles,
       Saver.save("-targets=host-" + HostTriple.normalize())};
   for (const auto &[File, TripleRef, Arch] : InputFiles) {
     llvm::Triple T(TripleRef);
-    // For SPIR-V targets, derive arch from triple if not provided
+    // SPIR-V HIP targets (e.g. chipStar) can arrive without an arch, but the
+    // offload bundler requires a non-empty arch field; default to the
+    // canonical SPIR-V CPU model "generic".
     StringRef EffectiveArch = Arch;
-    if (EffectiveArch.empty() && T.isSPIRV()) {
-      EffectiveArch = T.getArchName();
-    }
-    StringRef BundleID;
-    if (EffectiveArch == "amdgcnspirv") {
-      BundleID = Saver.save("hip-spirv64-amd-amdhsa--" + EffectiveArch);
-    } else if (T.isSPIRV()) {
-      // ChipStar and other SPIR-V HIP targets: use
-      // hip-spirv64-<vendor>-<os>--<arch>
-      BundleID = Saver.save("hip-spirv64-" + T.getVendorName() + "-" +
-                            T.getOSName() + "--" + EffectiveArch);
-    } else {
-      std::string NormalizedTriple = normalizeForBundler(T, !Arch.empty());
-      BundleID = Saver.save("hip-" + NormalizedTriple + "-" + Arch);
-    }
-    Targets.push_back(BundleID);
+    if (EffectiveArch.empty() && T.isSPIRV())
+      EffectiveArch = "generic";
+    std::string NormalizedTriple =
+        normalizeForBundler(T, !EffectiveArch.empty());
+    Targets.push_back(
+        Saver.save("hip-" + NormalizedTriple + "-" + EffectiveArch));
   }
   CmdArgs.push_back(Saver.save(llvm::join(Targets, ",")));
 
@@ -575,7 +567,6 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args,
   // the LTO link and defeat the non-LTO pipeline.
   if (NonLTOAMDGPU)
     CmdArgs.append({"-x", "ir"});
-
   for (StringRef InputFile : InputFiles)
     CmdArgs.push_back(InputFile);
 
