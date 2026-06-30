@@ -1005,6 +1005,32 @@ public:
         return true;
       }
 
+      // With extended LLT, same-sized scalar types like f32 and i32 are
+      // distinct (unlike the default where both are s32). When the merge
+      // reassembles all unmerge outputs back into a same-sized scalar of a
+      // different type flavor, emit a G_BITCAST instead of falling through
+      // to the next case which would create a degenerate single-result
+      // G_UNMERGE_VALUES.
+      //
+      // %0:_(i1), %1, ... = G_UNMERGE_VALUES %UnmergeSrc:_(i32)
+      // %Dst:_(f32) = G_MERGE_VALUES %0:_(i1), %1, ...
+      //
+      // %Dst:_(f32) = G_BITCAST %UnmergeSrc:_(i32)
+      if ((DstTy != UnmergeSrcTy) &&
+          (DstTy.getSizeInBits() == UnmergeSrcTy.getSizeInBits()) &&
+          !DstTy.isVector() && !UnmergeSrcTy.isVector() &&
+          (Elt0UnmergeIdx == 0)) {
+        if (!isSequenceFromUnmerge(MI, 0, Unmerge, 0, NumMIElts, EltSize,
+                                   /*AllowUndef=*/false))
+          return false;
+
+        MIB.setInstrAndDebugLoc(MI);
+        MIB.buildBitcast(Dst, UnmergeSrc);
+        UpdatedDefs.push_back(Dst);
+        DeadInsts.push_back(&MI);
+        return true;
+      }
+
       // Recognize UnmergeSrc that can be unmerged to DstTy directly.
       // Types have to be either both vector or both non-vector types.
       // In case of vector types, the scalar elements need to match.
