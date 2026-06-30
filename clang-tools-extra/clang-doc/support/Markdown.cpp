@@ -10,10 +10,6 @@
 
 namespace clang::doc::markdown {
 
-//===----------------------------------------------------------------------===//
-// Inline node print/dump
-//===----------------------------------------------------------------------===//
-
 LLVM_DUMP_METHOD void InlineNode::dump() const { print(llvm::errs()); }
 
 void TextNode::print(llvm::raw_ostream &OS) const {
@@ -26,31 +22,27 @@ void InlineCodeNode::print(llvm::raw_ostream &OS) const {
 
 void EmphasisNode::print(llvm::raw_ostream &OS) const {
   OS << "EmphasisNode\n";
-  for (const auto &Child : Children)
+  for (const auto &Child : children())
     Child.print(OS);
 }
 
 void StrongNode::print(llvm::raw_ostream &OS) const {
   OS << "StrongNode\n";
-  for (const auto &Child : Children)
+  for (const auto &Child : children())
     Child.print(OS);
 }
-
-//===----------------------------------------------------------------------===//
-// Block node print/dump
-//===----------------------------------------------------------------------===//
 
 LLVM_DUMP_METHOD void BlockNode::dump() const { print(llvm::errs()); }
 
 void ParagraphNode::print(llvm::raw_ostream &OS) const {
   OS << "ParagraphNode\n";
-  for (const auto &Child : Children)
+  for (const auto &Child : children())
     Child.print(OS);
 }
 
 void HeadingNode::print(llvm::raw_ostream &OS) const {
   OS << "HeadingNode: level=" << getLevel() << "\n";
-  for (const auto &Child : Children)
+  for (const auto &Child : children())
     Child.print(OS);
 }
 
@@ -60,7 +52,7 @@ void FencedCodeNode::print(llvm::raw_ostream &OS) const {
 
 void ListItemNode::print(llvm::raw_ostream &OS) const {
   OS << "ListItemNode\n";
-  for (const auto &Child : Children)
+  for (const auto &Child : children())
     Child.print(OS);
 }
 
@@ -68,19 +60,19 @@ LLVM_DUMP_METHOD void ListItemNode::dump() const { print(llvm::errs()); }
 
 void UnorderedListNode::print(llvm::raw_ostream &OS) const {
   OS << "UnorderedListNode\n";
-  for (const auto &Item : Items)
+  for (const auto &Item : items())
     Item.print(OS);
 }
 
 void OrderedListNode::print(llvm::raw_ostream &OS) const {
   OS << "OrderedListNode: start=" << getStart() << "\n";
-  for (const auto &Item : Items)
+  for (const auto &Item : items())
     Item.print(OS);
 }
 
 void BlockQuoteNode::print(llvm::raw_ostream &OS) const {
   OS << "BlockQuoteNode\n";
-  for (const auto &Child : Children)
+  for (const auto &Child : children())
     Child.print(OS);
 }
 
@@ -90,7 +82,7 @@ void ThematicBreakNode::print(llvm::raw_ostream &OS) const {
 
 void DocumentNode::print(llvm::raw_ostream &OS) const {
   OS << "DocumentNode\n";
-  for (const auto &Child : Children)
+  for (const auto &Child : children())
     Child.print(OS);
 }
 

@@ -13,8 +13,7 @@
 /// fenced code blocks, etc). Inline nodes represent span-level content (text,
 /// emphasis, inline code) that appears inside block nodes.
 ///
-/// All nodes are arena-allocated via ASTContext, which owns their lifetime.
-/// The parser builds the tree by calling push_back() on simple_ilist members.
+/// All nodes are arena-allocated via ASTContext, which manages their lifetime.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -47,125 +46,148 @@ enum class NodeKind {
   NK_Document,
 };
 
-struct InlineNode;
-struct BlockNode;
-
-//===----------------------------------------------------------------------===//
-// Inline nodes -- span-level content inside block nodes
-//===----------------------------------------------------------------------===//
+class InlineNode;
+class BlockNode;
 
 /// Base class for all inline nodes. Inline nodes represent span-level content
-/// such as text, emphasis, and inline code. They live in InlineList members
-/// of block nodes.
-struct InlineNode : llvm::ilist_node<InlineNode> {
-  NodeKind Kind;
+/// such as text, emphasis, and inline code.
+class InlineNode : public llvm::ilist_node<InlineNode> {
+public:
   explicit InlineNode(NodeKind K) : Kind(K) {}
   virtual ~InlineNode() = default;
+  NodeKind getKind() const { return Kind; }
+  /// Recursively prints the node and its children to OS.
   virtual void print(llvm::raw_ostream &OS) const = 0;
+  /// Prints to llvm::errs(). Only available in assert builds.
   LLVM_DUMP_METHOD void dump() const;
+
+private:
+  NodeKind Kind;
 };
 
 using InlineList = llvm::simple_ilist<InlineNode>;
 
 /// A plain text run.
-struct TextNode : InlineNode {
-private:
-  llvm::StringRef Text;
-
+class TextNode : public InlineNode {
 public:
   explicit TextNode(llvm::StringRef T)
       : InlineNode(NodeKind::NK_Text), Text(T) {}
   llvm::StringRef getText() const { return Text; }
   void print(llvm::raw_ostream &OS) const override;
   static bool classof(const InlineNode *N) {
-    return N->Kind == NodeKind::NK_Text;
+    return N->getKind() == NodeKind::NK_Text;
   }
+
+private:
+  llvm::StringRef Text;
 };
 
 /// A backtick-delimited inline code span.
-struct InlineCodeNode : InlineNode {
-private:
-  llvm::StringRef Code;
-
+class InlineCodeNode : public InlineNode {
 public:
   explicit InlineCodeNode(llvm::StringRef C)
       : InlineNode(NodeKind::NK_InlineCode), Code(C) {}
   llvm::StringRef getCode() const { return Code; }
   void print(llvm::raw_ostream &OS) const override;
   static bool classof(const InlineNode *N) {
-    return N->Kind == NodeKind::NK_InlineCode;
+    return N->getKind() == NodeKind::NK_InlineCode;
   }
+
+private:
+  llvm::StringRef Code;
 };
 
 /// An emphasis span (* or _).
-struct EmphasisNode : InlineNode {
-  InlineList Children;
+class EmphasisNode : public InlineNode {
+public:
   EmphasisNode() : InlineNode(NodeKind::NK_Emphasis) {}
+  void addChild(InlineNode &N) { Children.push_back(N); }
+  void removeChild(InlineNode &N) { Children.remove(N); }
+  InlineList &children() { return Children; }
+  const InlineList &children() const { return Children; }
   void print(llvm::raw_ostream &OS) const override;
   static bool classof(const InlineNode *N) {
-    return N->Kind == NodeKind::NK_Emphasis;
+    return N->getKind() == NodeKind::NK_Emphasis;
   }
+
+private:
+  InlineList Children;
 };
 
 /// A strong emphasis span (** or __).
-struct StrongNode : InlineNode {
-  InlineList Children;
+class StrongNode : public InlineNode {
+public:
   StrongNode() : InlineNode(NodeKind::NK_Strong) {}
+  void addChild(InlineNode &N) { Children.push_back(N); }
+  void removeChild(InlineNode &N) { Children.remove(N); }
+  InlineList &children() { return Children; }
+  const InlineList &children() const { return Children; }
   void print(llvm::raw_ostream &OS) const override;
   static bool classof(const InlineNode *N) {
-    return N->Kind == NodeKind::NK_Strong;
+    return N->getKind() == NodeKind::NK_Strong;
   }
+
+private:
+  InlineList Children;
 };
 
-//===----------------------------------------------------------------------===//
-// Block nodes -- structural constructs
-//===----------------------------------------------------------------------===//
-
 /// Base class for all block nodes. Block nodes represent structural constructs
-/// such as paragraphs, headings, and lists. They live in BlockList members of
-/// container block nodes.
-struct BlockNode : llvm::ilist_node<BlockNode> {
-  NodeKind Kind;
+/// such as paragraphs, headings, and lists.
+class BlockNode : public llvm::ilist_node<BlockNode> {
+public:
   explicit BlockNode(NodeKind K) : Kind(K) {}
   virtual ~BlockNode() = default;
+  NodeKind getKind() const { return Kind; }
+  /// Recursively prints the node and its children to OS.
   virtual void print(llvm::raw_ostream &OS) const = 0;
+  /// Prints to llvm::errs(). Only available in assert builds.
   LLVM_DUMP_METHOD void dump() const;
+
+private:
+  NodeKind Kind;
 };
 
 using BlockList = llvm::simple_ilist<BlockNode>;
 
 /// A paragraph of inline content.
-struct ParagraphNode : BlockNode {
-  InlineList Children;
+class ParagraphNode : public BlockNode {
+public:
   ParagraphNode() : BlockNode(NodeKind::NK_Paragraph) {}
+  void addChild(InlineNode &N) { Children.push_back(N); }
+  void removeChild(InlineNode &N) { Children.remove(N); }
+  InlineList &children() { return Children; }
+  const InlineList &children() const { return Children; }
   void print(llvm::raw_ostream &OS) const override;
   static bool classof(const BlockNode *N) {
-    return N->Kind == NodeKind::NK_Paragraph;
+    return N->getKind() == NodeKind::NK_Paragraph;
   }
+
+private:
+  InlineList Children;
 };
 
 /// An ATX heading (# through ######).
-struct HeadingNode : BlockNode {
-private:
-  unsigned Level;
-
+class HeadingNode : public BlockNode {
 public:
-  InlineList Children;
   explicit HeadingNode(unsigned L)
       : BlockNode(NodeKind::NK_Heading), Level(L) {}
   unsigned getLevel() const { return Level; }
+  void addChild(InlineNode &N) { Children.push_back(N); }
+  void removeChild(InlineNode &N) { Children.remove(N); }
+  InlineList &children() { return Children; }
+  const InlineList &children() const { return Children; }
   void print(llvm::raw_ostream &OS) const override;
   static bool classof(const BlockNode *N) {
-    return N->Kind == NodeKind::NK_Heading;
+    return N->getKind() == NodeKind::NK_Heading;
   }
+
+private:
+  unsigned Level;
+  InlineList Children;
 };
 
 /// A fenced code block (``` or ~~~). Lang holds the info string.
-struct FencedCodeNode : BlockNode {
-private:
-  llvm::StringRef Lang;
-  llvm::StringRef Code;
-
+class FencedCodeNode : public BlockNode {
 public:
   FencedCodeNode(llvm::StringRef L, llvm::StringRef C)
       : BlockNode(NodeKind::NK_FencedCode), Lang(L), Code(C) {}
@@ -173,73 +195,111 @@ public:
   llvm::StringRef getCode() const { return Code; }
   void print(llvm::raw_ostream &OS) const override;
   static bool classof(const BlockNode *N) {
-    return N->Kind == NodeKind::NK_FencedCode;
+    return N->getKind() == NodeKind::NK_FencedCode;
   }
+
+private:
+  llvm::StringRef Lang;
+  llvm::StringRef Code;
 };
 
 /// A single item in an unordered or ordered list.
 /// ListItemNode is not a BlockNode -- it only lives inside list nodes.
-struct ListItemNode : llvm::ilist_node<ListItemNode> {
-  InlineList Children;
+class ListItemNode : public llvm::ilist_node<ListItemNode> {
+public:
   ListItemNode() = default;
+  void addChild(InlineNode &N) { Children.push_back(N); }
+  void removeChild(InlineNode &N) { Children.remove(N); }
+  InlineList &children() { return Children; }
+  const InlineList &children() const { return Children; }
   void print(llvm::raw_ostream &OS) const;
+  /// Prints to llvm::errs(). Only available in assert builds.
+  /// ListItemNode provides its own dump() since it does not inherit BlockNode.
   LLVM_DUMP_METHOD void dump() const;
+
+private:
+  InlineList Children;
 };
 
 /// An unordered list (-, *, or + markers).
-struct UnorderedListNode : BlockNode {
-  llvm::simple_ilist<ListItemNode> Items;
+class UnorderedListNode : public BlockNode {
+public:
   UnorderedListNode() : BlockNode(NodeKind::NK_UnorderedList) {}
+  void addItem(ListItemNode &N) { Items.push_back(N); }
+  void removeItem(ListItemNode &N) { Items.remove(N); }
+  llvm::simple_ilist<ListItemNode> &items() { return Items; }
+  const llvm::simple_ilist<ListItemNode> &items() const { return Items; }
   void print(llvm::raw_ostream &OS) const override;
   static bool classof(const BlockNode *N) {
-    return N->Kind == NodeKind::NK_UnorderedList;
+    return N->getKind() == NodeKind::NK_UnorderedList;
   }
+
+private:
+  llvm::simple_ilist<ListItemNode> Items;
 };
 
 /// An ordered list (1. 2. 3. markers). Start holds the first item number.
-struct OrderedListNode : BlockNode {
-private:
-  unsigned Start;
-
+class OrderedListNode : public BlockNode {
 public:
-  llvm::simple_ilist<ListItemNode> Items;
   explicit OrderedListNode(unsigned S = 1)
       : BlockNode(NodeKind::NK_OrderedList), Start(S) {}
   unsigned getStart() const { return Start; }
+  void addItem(ListItemNode &N) { Items.push_back(N); }
+  void removeItem(ListItemNode &N) { Items.remove(N); }
+  llvm::simple_ilist<ListItemNode> &items() { return Items; }
+  const llvm::simple_ilist<ListItemNode> &items() const { return Items; }
   void print(llvm::raw_ostream &OS) const override;
   static bool classof(const BlockNode *N) {
-    return N->Kind == NodeKind::NK_OrderedList;
+    return N->getKind() == NodeKind::NK_OrderedList;
   }
+
+private:
+  unsigned Start;
+  llvm::simple_ilist<ListItemNode> Items;
 };
 
 /// A block quote (> marker).
-struct BlockQuoteNode : BlockNode {
-  BlockList Children;
+class BlockQuoteNode : public BlockNode {
+public:
   BlockQuoteNode() : BlockNode(NodeKind::NK_BlockQuote) {}
+  void addChild(BlockNode &N) { Children.push_back(N); }
+  void removeChild(BlockNode &N) { Children.remove(N); }
+  BlockList &children() { return Children; }
+  const BlockList &children() const { return Children; }
   void print(llvm::raw_ostream &OS) const override;
   static bool classof(const BlockNode *N) {
-    return N->Kind == NodeKind::NK_BlockQuote;
+    return N->getKind() == NodeKind::NK_BlockQuote;
   }
+
+private:
+  BlockList Children;
 };
 
 /// A thematic break (---, ***, or ___).
-struct ThematicBreakNode : BlockNode {
+class ThematicBreakNode : public BlockNode {
+public:
   ThematicBreakNode() : BlockNode(NodeKind::NK_ThematicBreak) {}
   void print(llvm::raw_ostream &OS) const override;
   static bool classof(const BlockNode *N) {
-    return N->Kind == NodeKind::NK_ThematicBreak;
+    return N->getKind() == NodeKind::NK_ThematicBreak;
   }
 };
 
 /// The root document node. Contains all top-level block nodes.
-/// Children are added by the parser via push_back on the Children ilist.
-struct DocumentNode : BlockNode {
-  BlockList Children;
+class DocumentNode : public BlockNode {
+public:
   DocumentNode() : BlockNode(NodeKind::NK_Document) {}
+  void addChild(BlockNode &N) { Children.push_back(N); }
+  void removeChild(BlockNode &N) { Children.remove(N); }
+  BlockList &children() { return Children; }
+  const BlockList &children() const { return Children; }
   void print(llvm::raw_ostream &OS) const override;
   static bool classof(const BlockNode *N) {
-    return N->Kind == NodeKind::NK_Document;
+    return N->getKind() == NodeKind::NK_Document;
   }
+
+private:
+  BlockList Children;
 };
 
 } // namespace clang::doc::markdown
