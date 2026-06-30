@@ -1718,6 +1718,12 @@ private:
   /// conditions dominating the backedge of a loop.
   bool WalkingBEDominatingConds = false;
 
+  /// Depth of the current chain of addrec range computations that recurse
+  /// through backedge-taken count computation. Used to bound the mutual
+  /// recursion between getRangeRef and getConstantMaxBackedgeTakenCount, which
+  /// can otherwise overflow the stack on pathological inputs.
+  unsigned AddRecRangeDepth = 0;
+
   /// Set to true by isKnownPredicateViaSplitting when we're trying to prove a
   /// predicate by splitting it into a set of independent predicates.
   bool ProvingSplitPredicate = false;

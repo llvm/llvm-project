@@ -227,6 +227,12 @@ static cl::opt<unsigned> MaxLoopGuardCollectionDepth(
     "scalar-evolution-max-loop-guard-collection-depth", cl::Hidden,
     cl::desc("Maximum depth for recursive loop guard collection"), cl::init(1));
 
+static cl::opt<unsigned> MaxAddRecRangeDepth(
+    "scalar-evolution-max-add-rec-range-depth", cl::Hidden,
+    cl::desc("Maximum depth of the mutual recursion between addrec range "
+             "computation and backedge-taken count computation"),
+    cl::init(32));
+
 static cl::opt<bool>
 ClassifyExpressions("scalar-evolution-classify-expressions",
     cl::Hidden, cl::init(true),
@@ -7004,44 +7010,60 @@ const ConstantRange &ScalarEvolution::getRangeRef(
 
     // TODO: non-affine addrec
     if (AddRec->isAffine()) {
-      const SCEV *MaxBEScev =
-          getConstantMaxBackedgeTakenCount(AddRec->getLoop());
-      if (!isa<SCEVCouldNotCompute>(MaxBEScev)) {
-        APInt MaxBECount = cast<SCEVConstant>(MaxBEScev)->getAPInt();
+      // Computing the range of an affine addrec requires the loop's
+      // backedge-taken count, the computation of which may recurse back into
+      // range computation (e.g. when reasoning about loop guards in
+      // isKnownPredicateViaConstantRanges). For deeply nested or heavily
+      // unrolled loops this mutual recursion can chain across many loops and
+      // overflow the stack, so bound its depth. Beyond the limit we skip this
+      // refinement and keep the conservative range computed above; this only
+      // affects pathologically deep recursion and never makes the range less
+      // conservative.
+      if (AddRecRangeDepth < MaxAddRecRangeDepth) {
+        ++AddRecRangeDepth;
+        llvm::scope_exit RestoreDepth([&]() { --AddRecRangeDepth; });
 
-        // Adjust MaxBECount to the same bitwidth as AddRec. We can truncate if
-        // MaxBECount's active bits are all <= AddRec's bit width.
-        if (MaxBECount.getBitWidth() > BitWidth &&
-            MaxBECount.getActiveBits() <= BitWidth)
-          MaxBECount = MaxBECount.trunc(BitWidth);
-        else if (MaxBECount.getBitWidth() < BitWidth)
-          MaxBECount = MaxBECount.zext(BitWidth);
+        const SCEV *MaxBEScev =
+            getConstantMaxBackedgeTakenCount(AddRec->getLoop());
+        if (!isa<SCEVCouldNotCompute>(MaxBEScev)) {
+          APInt MaxBECount = cast<SCEVConstant>(MaxBEScev)->getAPInt();
 
-        if (MaxBECount.getBitWidth() == BitWidth) {
-          auto [RangeFromAffine, Flags] = getRangeForAffineAR(
-              AddRec->getStart(), AddRec->getStepRecurrence(*this), MaxBECount);
-          ConservativeResult =
-              ConservativeResult.intersectWith(RangeFromAffine, RangeType);
-          const_cast<SCEVAddRecExpr *>(AddRec)->setNoWrapFlags(Flags);
+          // Adjust MaxBECount to the same bitwidth as AddRec. We can truncate
+          // if MaxBECount's active bits are all <= AddRec's bit width.
+          if (MaxBECount.getBitWidth() > BitWidth &&
+              MaxBECount.getActiveBits() <= BitWidth)
+            MaxBECount = MaxBECount.trunc(BitWidth);
+          else if (MaxBECount.getBitWidth() < BitWidth)
+            MaxBECount = MaxBECount.zext(BitWidth);
 
-          auto RangeFromFactoring = getRangeViaFactoring(
-              AddRec->getStart(), AddRec->getStepRecurrence(*this), MaxBECount);
-          ConservativeResult =
-              ConservativeResult.intersectWith(RangeFromFactoring, RangeType);
+          if (MaxBECount.getBitWidth() == BitWidth) {
+            auto [RangeFromAffine, Flags] = getRangeForAffineAR(
+                AddRec->getStart(), AddRec->getStepRecurrence(*this),
+                MaxBECount);
+            ConservativeResult =
+                ConservativeResult.intersectWith(RangeFromAffine, RangeType);
+            const_cast<SCEVAddRecExpr *>(AddRec)->setNoWrapFlags(Flags);
+
+            auto RangeFromFactoring = getRangeViaFactoring(
+                AddRec->getStart(), AddRec->getStepRecurrence(*this),
+                MaxBECount);
+            ConservativeResult =
+                ConservativeResult.intersectWith(RangeFromFactoring, RangeType);
+          }
         }
-      }
 
-      // Now try symbolic BE count and more powerful methods.
-      if (UseExpensiveRangeSharpening) {
-        const SCEV *SymbolicMaxBECount =
-            getSymbolicMaxBackedgeTakenCount(AddRec->getLoop());
-        if (!isa<SCEVCouldNotCompute>(SymbolicMaxBECount) &&
-            getTypeSizeInBits(MaxBEScev->getType()) <= BitWidth &&
-            AddRec->hasNoSelfWrap()) {
-          auto RangeFromAffineNew = getRangeForAffineNoSelfWrappingAR(
-              AddRec, SymbolicMaxBECount, BitWidth, SignHint);
-          ConservativeResult =
-              ConservativeResult.intersectWith(RangeFromAffineNew, RangeType);
+        // Now try symbolic BE count and more powerful methods.
+        if (UseExpensiveRangeSharpening) {
+          const SCEV *SymbolicMaxBECount =
+              getSymbolicMaxBackedgeTakenCount(AddRec->getLoop());
+          if (!isa<SCEVCouldNotCompute>(SymbolicMaxBECount) &&
+              getTypeSizeInBits(MaxBEScev->getType()) <= BitWidth &&
+              AddRec->hasNoSelfWrap()) {
+            auto RangeFromAffineNew = getRangeForAffineNoSelfWrappingAR(
+                AddRec, SymbolicMaxBECount, BitWidth, SignHint);
+            ConservativeResult =
+                ConservativeResult.intersectWith(RangeFromAffineNew, RangeType);
+          }
         }
       }
     }
