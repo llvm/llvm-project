@@ -63,45 +63,44 @@ std::unique_ptr<OperatorNewDeletePointersEntitySummary>
 OperatorNewDeletePointersExtractor::extractEntitySummary(
     const std::vector<const NamedDecl *> &ContributorDecls) {
   auto Summary = std::make_unique<OperatorNewDeletePointersEntitySummary>();
+  auto Matcher = [&Summary, this](const DynTypedNode &Node) {
+    const auto *FD = Node.get<FunctionDecl>();
 
-  for (const NamedDecl *Decl : ContributorDecls) {
-    auto Matcher = [&Summary, this](const DynTypedNode &Node) {
-      const auto *FD = Node.get<FunctionDecl>();
+    if (!FD)
+      return;
 
-      if (!FD)
+    OverloadedOperatorKind OO = FD->getOverloadedOperator();
+
+    switch (OO) {
+    case OO_New:
+    case OO_Array_New:
+      // Extract case 1:
+      if (auto Id = addEntityForReturn(FD))
+        Summary->Entities.insert(*Id);
+      break;
+    case OO_Delete:
+    case OO_Array_Delete:
+      // Extract case 3; ignore ill-formed ones (first param not a pointer).
+      if (!FD->getNumParams() || !hasPtrOrArrType(FD->getParamDecl(0)))
         return;
-
-      OverloadedOperatorKind OO = FD->getOverloadedOperator();
-
-      switch (OO) {
-      case OO_New:
-      case OO_Array_New:
-        // Extract case 1:
-        if (auto Id = addEntityForReturn(FD))
-          Summary->Entities.insert(*Id);
-        break;
-      case OO_Delete:
-      case OO_Array_Delete:
-        // Extract case 3; ignore ill-formed ones (first param not a pointer).
-        if (!FD->getNumParams() || !hasPtrOrArrType(FD->getParamDecl(0)))
-          return;
-        if (auto Id = addEntity(FD->getParamDecl(0)))
-          Summary->Entities.insert(*Id);
-        break;
-      default:
-        return;
-      };
-      // Extract case 2 & 4: only `operator new(size_t, void*)` and
-      // `operator delete(void*, void*)` are standard-defined with a void* 2nd
-      // param; for user-defined 3+ param overloads the 2nd param type is
-      // unconstrained, so we conservatively skip them.
-      if (FD->getNumParams() == 2 && hasPtrOrArrType(FD->getParamDecl(1))) {
-        if (auto Id = addEntity(FD->getParamDecl(1)))
-          Summary->Entities.insert(*Id);
-      }
+      if (auto Id = addEntity(FD->getParamDecl(0)))
+        Summary->Entities.insert(*Id);
+      break;
+    default:
+      return;
     };
+    // Extract case 2 & 4: only `operator new(size_t, void*)` and
+    // `operator delete(void*, void*)` are standard-defined with a void* 2nd
+    // param; for user-defined 3+ param overloads the 2nd param type is
+    // unconstrained, so we conservatively skip them.
+    if (FD->getNumParams() == 2 && hasPtrOrArrType(FD->getParamDecl(1))) {
+      if (auto Id = addEntity(FD->getParamDecl(1)))
+        Summary->Entities.insert(*Id);
+    }
+  };
+
+  for (const NamedDecl *Decl : ContributorDecls)
     findMatchesIn(Decl, Matcher);
-  }
   return Summary;
 }
 

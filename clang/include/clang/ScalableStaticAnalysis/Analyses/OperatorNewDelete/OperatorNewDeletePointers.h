@@ -21,16 +21,17 @@
 
 namespace clang::ssaf {
 
-/// OperatorNewDeletePointersEntitySummary collects the following entities in a
-/// contributor:
-///  - return entities of operator new overloads;
-///  - the parameter (optionally the 2nd)  of operator new overloads
-///    representing the pointer to a memory area to initialize the object at;
-///  - the first parameter of operator delete overloads representing the pointer
-///    to a memory block to deallocate or a null pointer;
-///  - the parameter (optionally the 2nd)  of operator delete overloads
-///    representing the pointer used as the placement parameter in the matching
-///    placement new.
+/// \brief Collects specific pointer entities related to operator new and delete overloads within a contributor.
+///
+/// OperatorNewDeletePointersEntitySummary collects the following entities:
+///  -# The returned entities of `operator new` overloads.
+///  -# The parameter (optionally the second) of `operator new` overloads 
+///     representing the pointer to a memory area at which to initialize the object.
+///  -# The first parameter of `operator delete` overloads representing the pointer
+///     to a memory block to deallocate (or a null pointer).
+///  -# The parameter (optionally the second) of `operator delete` overloads
+///     representing the pointer used as the placement parameter in the matching
+///     placement `new`.
 struct OperatorNewDeletePointersEntitySummary final : public EntitySummary {
   static constexpr llvm::StringLiteral Name = "OperatorNewDeletePointers";
 
@@ -38,10 +39,9 @@ struct OperatorNewDeletePointersEntitySummary final : public EntitySummary {
 
   SummaryName getSummaryName() const override { return summaryName(); }
 
-  std::set<EntityId> Entities;
-
-  bool operator==(const OperatorNewDeletePointersEntitySummary &Other) const {
-    return Entities == Other.Entities;
+  bool friend operator==(const OperatorNewDeletePointersEntitySummary &This,
+                         const OperatorNewDeletePointersEntitySummary &Other) {
+    return This.Entities == Other.Entities;
   }
 
   bool operator==(const std::set<EntityId> &OtherEntities) const {
@@ -49,6 +49,8 @@ struct OperatorNewDeletePointersEntitySummary final : public EntitySummary {
   }
 
   bool empty() const { return Entities.empty(); }
+
+  std::set<EntityId> Entities;
 };
 
 } // namespace clang::ssaf

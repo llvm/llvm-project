@@ -128,7 +128,7 @@ void extractAndAddSummaries(TUSummaryExtractor &Extractor,
       if (!Builder.addSummary(*Id, std::move(Summary)).second)
         logWarningFromError(makeErrAtNode(
             Ctx, Rep, "dropping duplicate %s summary for entity %s",
-            ExtractorName.data(), Rep->getNameAsString().c_str()));
+            ExtractorName.str().c_str(), Rep->getNameAsString().c_str()));
     } else
       logWarningFromError(makeEntityNameErr(Ctx, Rep));
   }
