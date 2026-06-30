@@ -96,4 +96,11 @@ TEST(MemoryRegionInfoTest, CacheErasing) {
   ASSERT_EQ(cache.GetSize(), 3U);
   ri = cache.GetMemoryRegion(0x0);
   ASSERT_TRUE(ri);
+
+  // Erase fourth entry, with a size just before the fifth entry.
+  // Fifth entry should not be erased.
+  cache.EraseRange(0x2200, 0x100);
+  ASSERT_EQ(cache.GetSize(), 2U);
+  ri = cache.GetMemoryRegion(0x2300);
+  ASSERT_TRUE(ri);
 }

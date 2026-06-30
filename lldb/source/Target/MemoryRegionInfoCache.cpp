@@ -31,7 +31,7 @@ void MemoryRegionInfoCache::EraseRange(addr_t load_addr, size_t size) {
     m_region_infos.Sort();
   uint32_t start_idx = m_region_infos.FindEntryIndexThatContains(load_addr);
   uint32_t end_idx =
-      m_region_infos.FindEntryIndexThatContains(load_addr + size);
+      m_region_infos.FindEntryIndexThatContains(load_addr + size - 1);
   if (start_idx == UINT32_MAX && end_idx == UINT32_MAX)
     return;
 
