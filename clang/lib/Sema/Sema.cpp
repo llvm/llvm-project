@@ -24,6 +24,7 @@
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/TypeOrdering.h"
 #include "clang/Basic/DarwinSDKInfo.h"
+#include "clang/Basic/DiagnosticComment.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/SourceManager.h"
@@ -31,6 +32,7 @@
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/HeaderSearchOptions.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Sema/CXXFieldCollector.h"
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/ExternalSemaSource.h"
@@ -2703,10 +2705,36 @@ LambdaScopeInfo *Sema::getCurGenericLambda() {
   return nullptr;
 }
 
+bool Sema::shouldRetainCommentsFromLexer(SourceLocation Loc) const {
+  if (LangOpts.CommentOpts.ParseAllComments)
+    return true;
+
+  if (LangOpts.CommentOpts.RetainComments)
+    return true;
+
+  // When building a PCH the comments are serialized into the AST file
+  // so downstream consumers like clangd) can retrieve documentation, and the
+  // incremental/REPL front end may query them interactively.
+  if (TUKind != TU_Complete)
+    return true;
+
+  if (PP.isCodeCompletionEnabled())
+    return true;
+
+  // Keep the comment if -Wdocumentation is enabled at its location (checking
+  // the location handles warnings turned on by `#pragma clang diagnostic`).
+  if (!Diags.isIgnored(diag::warn_doc_param_not_found, Loc) ||
+      !Diags.isIgnored(diag::warn_unknown_comment_command_name, Loc))
+    return true;
+
+  return false;
+}
 
 void Sema::ActOnComment(SourceRange Comment) {
-  if (!LangOpts.RetainCommentsFromSystemHeaders &&
+  if (!LangOpts.CommentOpts.RetainCommentsFromSystemHeaders &&
       SourceMgr.isInSystemHeader(Comment.getBegin()))
+    return;
+  if (!shouldRetainCommentsFromLexer(Comment.getBegin()))
     return;
   RawComment RC(SourceMgr, Comment, LangOpts.CommentOpts, false);
   if (RC.isAlmostTrailingComment() || RC.hasUnsupportedSplice(SourceMgr)) {

@@ -1131,6 +1131,11 @@ public:
 
   void ActOnComment(SourceRange Comment);
 
+  /// Returns true if a comment at \p Loc should be retained in the AST
+  /// (some consumer such as -Wdocumentation, -fparse-all-comments, code
+  /// completion, or AST-file serialization may read it back).
+  bool shouldRetainCommentsFromLexer(SourceLocation Loc) const;
+
   /// Retrieve the parser's current scope.
   ///
   /// This routine must only be used when it is certain that semantic analysis
