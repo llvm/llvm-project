@@ -422,17 +422,17 @@ public:
   LLVM_PREFERRED_TYPE(bool)
   unsigned ClangIRDisableCIRVerifier : 1;
 
-  // Enable Clang IR (CIR) idiom recognizer
+  /// Enable Clang IR (CIR) idiom recognizer
   LLVM_PREFERRED_TYPE(bool)
   unsigned ClangIREnableIdiomRecognizer : 1;
 
-  // Enable ClangIR library optimization.
-  // Set when -fclangir-lib-opt or -fclangir-lib-opt= was passed.
+  /// Enable ClangIR library optimization.
+  /// Set when -fclangir-lib-opt or -fclangir-lib-opt= was passed.
   LLVM_PREFERRED_TYPE(bool)
   unsigned ClangIRLibOptEnabled : 1;
 
-  // Options to control ClangIR library optimization
-  std::string clangIRLibOptOptions;
+  /// Options to control ClangIR library optimization
+  std::string ClangIRLibOptOptions;
 
   CodeCompleteOptions CodeCompleteOpts;
 
