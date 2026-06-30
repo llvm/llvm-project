@@ -26,6 +26,8 @@
 // compiler arg when using the new offloading driver.
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu \
 // RUN:   --hipstdpar --hipstdpar-path=%S/Inputs/hipstdpar \
+// RUN:   --hipstdpar-thrust-path=%S/Inputs/hipstdpar/thrust \
+// RUN:   --hipstdpar-prim-path=%S/Inputs/hipstdpar/rocprim \
 // RUN:   -nogpulib -nogpuinc -c %s 2>&1 | \
 // RUN:   FileCheck --check-prefix=HIPSTDPAR-NEW-DRV %s
 // HIPSTDPAR-NEW-DRV: {{".*clang-linker-wrapper"}}
@@ -35,8 +37,7 @@
 // flag. This is the path taken by the inner clang invocation from the linker
 // wrapper (clang --target=amdgcn-amd-amdhsa --hipstdpar ...).
 // RUN: %clang -### --target=amdgcn-amd-amdhsa \
-// RUN:   --hipstdpar %s 2>&1 | \
-// RUN:   FileCheck --check-prefix=HIPSTDPAR-AMDGPU-TC %s
+// RUN:   --hipstdpar %s 2>&1 | FileCheck --check-prefix=HIPSTDPAR-AMDGPU-TC %s
 // HIPSTDPAR-AMDGPU-TC: "-mllvm" "-amdgpu-enable-hipstdpar"
 
 // Check that the base AMDGPU toolchain linker forwards the hipstdpar flag as a
@@ -49,6 +50,5 @@
 
 // Check that without --hipstdpar none of the backend flags are added.
 // RUN: %clang -### --target=amdgcn-amd-amdhsa \
-// RUN:   -flto %s 2>&1 | \
-// RUN:   FileCheck --check-prefix=NO-HIPSTDPAR %s
+// RUN:   -flto %s 2>&1 | FileCheck --check-prefix=NO-HIPSTDPAR %s
 // NO-HIPSTDPAR-NOT: "-amdgpu-enable-hipstdpar"
