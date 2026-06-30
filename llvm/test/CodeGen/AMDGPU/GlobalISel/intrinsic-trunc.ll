@@ -83,6 +83,7 @@ define half @intrinsic_trunc_s16_v(half %val) {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_trunc_f16_e32 v0.l, v0.l
+; GFX12-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %result = call half @llvm.trunc.f16(half %val)
   ret half %result

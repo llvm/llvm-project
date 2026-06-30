@@ -623,6 +623,7 @@ define i64 @mad_i64_i32_extops_i32_i64(i32 %arg0, i32 %arg1, i64 %arg2) #0 {
 ; GFX9-NEXT:    v_ashrrev_i32_e32 v5, 31, v0
 ; GFX9-NEXT:    v_mad_u64_u32 v[0:1], s[4:5], v0, v4, v[2:3]
 ; GFX9-NEXT:    v_mov_b32_e32 v2, v1
+; GFX9-NEXT:    ; implicit-def: $vgpr3
 ; GFX9-NEXT:    v_mad_u64_u32 v[2:3], s[4:5], v5, v4, v[2:3]
 ; GFX9-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
@@ -767,6 +768,7 @@ define i64 @mad_u64_u32_bitops_lhs_mask_small(i64 %arg0, i64 %arg1, i64 %arg2) #
 ; GFX9-NEXT:    v_and_b32_e32 v3, 1, v1
 ; GFX9-NEXT:    v_mad_u64_u32 v[0:1], s[4:5], v0, v2, v[4:5]
 ; GFX9-NEXT:    v_mov_b32_e32 v4, v1
+; GFX9-NEXT:    ; implicit-def: $vgpr5
 ; GFX9-NEXT:    v_mad_u64_u32 v[2:3], s[4:5], v3, v2, v[4:5]
 ; GFX9-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
@@ -852,9 +854,10 @@ define i64 @mad_u64_u32_bitops_rhs_mask_small(i64 %arg0, i64 %arg1, i64 %arg2) #
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v6, v0
 ; GFX9-NEXT:    v_mad_u64_u32 v[0:1], s[4:5], v6, v2, v[4:5]
-; GFX9-NEXT:    v_and_b32_e32 v3, 1, v3
+; GFX9-NEXT:    v_and_b32_e32 v7, 1, v3
 ; GFX9-NEXT:    v_mov_b32_e32 v2, v1
-; GFX9-NEXT:    v_mad_u64_u32 v[2:3], s[4:5], v6, v3, v[2:3]
+; GFX9-NEXT:    ; implicit-def: $vgpr3
+; GFX9-NEXT:    v_mad_u64_u32 v[2:3], s[4:5], v6, v7, v[2:3]
 ; GFX9-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1798,6 +1801,7 @@ define i64 @lshr_mad_i64_4(i32 %arg0, i64 %arg1) #0 {
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_mad_u64_u32 v[4:5], s[4:5], v1, v0, 0
 ; GFX9-NEXT:    v_mov_b32_e32 v6, v5
+; GFX9-NEXT:    ; implicit-def: $vgpr7
 ; GFX9-NEXT:    v_mad_u64_u32 v[0:1], s[4:5], v2, v0, v[6:7]
 ; GFX9-NEXT:    v_mov_b32_e32 v5, 0
 ; GFX9-NEXT:    s_movk_i32 s4, 0xfc88
@@ -2115,9 +2119,10 @@ define i64 @lshr_mad_i64_negative_4(i64 %arg0) #0 {
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_mad_u64_u32 v[2:3], s[4:5], v1, v0, v[0:1]
-; GFX9-NEXT:    v_mov_b32_e32 v0, v3
-; GFX9-NEXT:    v_mad_u64_u32 v[4:5], s[4:5], v1, v1, v[0:1]
+; GFX9-NEXT:    v_mov_b32_e32 v4, v3
+; GFX9-NEXT:    ; implicit-def: $vgpr5
 ; GFX9-NEXT:    v_mov_b32_e32 v0, v2
+; GFX9-NEXT:    v_mad_u64_u32 v[4:5], s[4:5], v1, v1, v[4:5]
 ; GFX9-NEXT:    v_mov_b32_e32 v1, v4
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;

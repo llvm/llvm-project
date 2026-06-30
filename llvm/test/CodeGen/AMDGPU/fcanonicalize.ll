@@ -7165,6 +7165,7 @@ define <3 x float> @v_test_canonicalize_v3f32_flush(<3 x float> %arg) #1 {
 ;
 ; GFX1251-GISEL-TRUE16-LABEL: v_test_canonicalize_v3f32_flush:
 ; GFX1251-GISEL-TRUE16:       ; %bb.0:
+; GFX1251-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr3
 ; GFX1251-GISEL-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1251-GISEL-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX1251-GISEL-TRUE16-NEXT:    v_pk_mul_f32 v[0:1], 1.0, v[0:1] op_sel_hi:[0,1]
@@ -7181,6 +7182,7 @@ define <3 x float> @v_test_canonicalize_v3f32_flush(<3 x float> %arg) #1 {
 ;
 ; GFX1251-GISEL-FAKE16-LABEL: v_test_canonicalize_v3f32_flush:
 ; GFX1251-GISEL-FAKE16:       ; %bb.0:
+; GFX1251-GISEL-FAKE16-NEXT:    ; implicit-def: $vgpr3
 ; GFX1251-GISEL-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1251-GISEL-FAKE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX1251-GISEL-FAKE16-NEXT:    v_pk_mul_f32 v[0:1], 1.0, v[0:1] op_sel_hi:[0,1]
@@ -7541,6 +7543,7 @@ define <3 x double> @v_test_canonicalize_v3f64(<3 x double> %arg) #1 {
 ;
 ; GFX1251-GISEL-TRUE16-LABEL: v_test_canonicalize_v3f64:
 ; GFX1251-GISEL-TRUE16:       ; %bb.0:
+; GFX1251-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr6_vgpr7
 ; GFX1251-GISEL-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1251-GISEL-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX1251-GISEL-TRUE16-NEXT:    v_pk_max_num_f64 v[0:3], v[0:3], v[0:3]
@@ -7558,6 +7561,7 @@ define <3 x double> @v_test_canonicalize_v3f64(<3 x double> %arg) #1 {
 ;
 ; GFX1251-GISEL-FAKE16-LABEL: v_test_canonicalize_v3f64:
 ; GFX1251-GISEL-FAKE16:       ; %bb.0:
+; GFX1251-GISEL-FAKE16-NEXT:    ; implicit-def: $vgpr6_vgpr7
 ; GFX1251-GISEL-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1251-GISEL-FAKE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX1251-GISEL-FAKE16-NEXT:    v_pk_max_num_f64 v[0:3], v[0:3], v[0:3]

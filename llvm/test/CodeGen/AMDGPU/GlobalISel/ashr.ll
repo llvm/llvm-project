@@ -40,6 +40,7 @@ define i8 @v_ashr_i8(i8 %value, i8 %amount) {
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_and_b16 v1.l, 0xff, v1.l
 ; GFX11-TRUE16-NEXT:    v_bfe_i32 v0, v0, 0, 8
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX11-TRUE16-NEXT:    v_ashrrev_i16 v0.l, v1.l, v0.l
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -87,6 +88,7 @@ define i8 @v_ashr_i8_7(i8 %value) {
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_bfe_i32 v0, v0, 0, 8
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX11-TRUE16-NEXT:    v_ashrrev_i16 v0.l, 7, v0.l
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -644,6 +646,7 @@ define i16 @v_ashr_i16(i16 %value, i16 %amount) {
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_ashrrev_i16 v0.l, v1.l, v0.l
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-FAKE16-LABEL: v_ashr_i16:
@@ -685,6 +688,7 @@ define i16 @v_ashr_i16_15(i16 %value) {
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_ashrrev_i16 v0.l, 15, v0.l
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-FAKE16-LABEL: v_ashr_i16_15:
@@ -754,6 +758,7 @@ define amdgpu_ps half @ashr_i16_sv(i16 inreg %value, i16 %amount) {
 ; GFX11-TRUE16-LABEL: ashr_i16_sv:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    v_ashrrev_i16 v0.l, v0.l, s0
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX11-TRUE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-FAKE16-LABEL: ashr_i16_sv:
@@ -791,6 +796,7 @@ define amdgpu_ps half @ashr_i16_vs(i16 %value, i16 inreg %amount) {
 ; GFX11-TRUE16-LABEL: ashr_i16_vs:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    v_ashrrev_i16 v0.l, s0, v0.l
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX11-TRUE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-FAKE16-LABEL: ashr_i16_vs:
@@ -1914,21 +1920,23 @@ define i65 @v_ashr_i65_33(i65 %value) {
 define amdgpu_ps i65 @s_ashr_i65(i65 inreg %value, i65 inreg %amount) {
 ; GCN-LABEL: s_ashr_i65:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_bfe_i64 s[4:5], s[2:3], 0x10000
-; GCN-NEXT:    s_sub_i32 s10, s3, 64
-; GCN-NEXT:    s_sub_i32 s8, 64, s3
-; GCN-NEXT:    s_cmp_lt_u32 s3, 64
+; GCN-NEXT:    s_mov_b32 s4, s3
+; GCN-NEXT:    ; implicit-def: $sgpr3
+; GCN-NEXT:    s_sub_i32 s10, s4, 64
+; GCN-NEXT:    s_bfe_i64 s[2:3], s[2:3], 0x10000
+; GCN-NEXT:    s_sub_i32 s8, 64, s4
+; GCN-NEXT:    s_cmp_lt_u32 s4, 64
 ; GCN-NEXT:    s_cselect_b32 s11, 1, 0
-; GCN-NEXT:    s_cmp_eq_u32 s3, 0
+; GCN-NEXT:    s_cmp_eq_u32 s4, 0
 ; GCN-NEXT:    s_cselect_b32 s12, 1, 0
-; GCN-NEXT:    s_ashr_i64 s[6:7], s[4:5], s3
-; GCN-NEXT:    s_lshr_b64 s[2:3], s[0:1], s3
-; GCN-NEXT:    s_lshl_b64 s[8:9], s[4:5], s8
-; GCN-NEXT:    s_or_b64 s[2:3], s[2:3], s[8:9]
-; GCN-NEXT:    s_ashr_i32 s7, s5, 31
-; GCN-NEXT:    s_ashr_i64 s[4:5], s[4:5], s10
+; GCN-NEXT:    s_ashr_i64 s[6:7], s[2:3], s4
+; GCN-NEXT:    s_lshr_b64 s[4:5], s[0:1], s4
+; GCN-NEXT:    s_lshl_b64 s[8:9], s[2:3], s8
+; GCN-NEXT:    s_or_b64 s[4:5], s[4:5], s[8:9]
+; GCN-NEXT:    s_ashr_i32 s7, s3, 31
+; GCN-NEXT:    s_ashr_i64 s[2:3], s[2:3], s10
 ; GCN-NEXT:    s_cmp_lg_u32 s11, 0
-; GCN-NEXT:    s_cselect_b64 s[2:3], s[2:3], s[4:5]
+; GCN-NEXT:    s_cselect_b64 s[2:3], s[4:5], s[2:3]
 ; GCN-NEXT:    s_cmp_lg_u32 s12, 0
 ; GCN-NEXT:    s_cselect_b64 s[0:1], s[0:1], s[2:3]
 ; GCN-NEXT:    s_cmp_lg_u32 s11, 0
@@ -1937,25 +1945,27 @@ define amdgpu_ps i65 @s_ashr_i65(i65 inreg %value, i65 inreg %amount) {
 ;
 ; GFX10PLUS-LABEL: s_ashr_i65:
 ; GFX10PLUS:       ; %bb.0:
-; GFX10PLUS-NEXT:    s_bfe_i64 s[4:5], s[2:3], 0x10000
-; GFX10PLUS-NEXT:    s_sub_i32 s10, s3, 64
-; GFX10PLUS-NEXT:    s_sub_i32 s2, 64, s3
-; GFX10PLUS-NEXT:    s_cmp_lt_u32 s3, 64
+; GFX10PLUS-NEXT:    s_mov_b32 s4, s3
+; GFX10PLUS-NEXT:    ; implicit-def: $sgpr3
+; GFX10PLUS-NEXT:    s_bfe_i64 s[2:3], s[2:3], 0x10000
+; GFX10PLUS-NEXT:    s_sub_i32 s10, s4, 64
+; GFX10PLUS-NEXT:    s_sub_i32 s5, 64, s4
+; GFX10PLUS-NEXT:    s_cmp_lt_u32 s4, 64
 ; GFX10PLUS-NEXT:    s_cselect_b32 s11, 1, 0
-; GFX10PLUS-NEXT:    s_cmp_eq_u32 s3, 0
+; GFX10PLUS-NEXT:    s_cmp_eq_u32 s4, 0
 ; GFX10PLUS-NEXT:    s_cselect_b32 s12, 1, 0
-; GFX10PLUS-NEXT:    s_lshr_b64 s[6:7], s[0:1], s3
-; GFX10PLUS-NEXT:    s_lshl_b64 s[8:9], s[4:5], s2
-; GFX10PLUS-NEXT:    s_ashr_i64 s[2:3], s[4:5], s3
+; GFX10PLUS-NEXT:    s_lshr_b64 s[6:7], s[0:1], s4
+; GFX10PLUS-NEXT:    s_lshl_b64 s[8:9], s[2:3], s5
+; GFX10PLUS-NEXT:    s_ashr_i64 s[4:5], s[2:3], s4
 ; GFX10PLUS-NEXT:    s_or_b64 s[6:7], s[6:7], s[8:9]
-; GFX10PLUS-NEXT:    s_ashr_i32 s3, s5, 31
-; GFX10PLUS-NEXT:    s_ashr_i64 s[4:5], s[4:5], s10
+; GFX10PLUS-NEXT:    s_ashr_i32 s5, s3, 31
+; GFX10PLUS-NEXT:    s_ashr_i64 s[2:3], s[2:3], s10
 ; GFX10PLUS-NEXT:    s_cmp_lg_u32 s11, 0
-; GFX10PLUS-NEXT:    s_cselect_b64 s[4:5], s[6:7], s[4:5]
+; GFX10PLUS-NEXT:    s_cselect_b64 s[2:3], s[6:7], s[2:3]
 ; GFX10PLUS-NEXT:    s_cmp_lg_u32 s12, 0
-; GFX10PLUS-NEXT:    s_cselect_b64 s[0:1], s[0:1], s[4:5]
+; GFX10PLUS-NEXT:    s_cselect_b64 s[0:1], s[0:1], s[2:3]
 ; GFX10PLUS-NEXT:    s_cmp_lg_u32 s11, 0
-; GFX10PLUS-NEXT:    s_cselect_b32 s2, s2, s3
+; GFX10PLUS-NEXT:    s_cselect_b32 s2, s4, s5
 ; GFX10PLUS-NEXT:    ; return to shader part epilog
   %result = ashr i65 %value, %amount
   ret i65 %result
@@ -1964,8 +1974,9 @@ define amdgpu_ps i65 @s_ashr_i65(i65 inreg %value, i65 inreg %amount) {
 define amdgpu_ps i65 @s_ashr_i65_33(i65 inreg %value) {
 ; GCN-LABEL: s_ashr_i65_33:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_bfe_i64 s[2:3], s[2:3], 0x10000
+; GCN-NEXT:    ; implicit-def: $sgpr3
 ; GCN-NEXT:    s_lshr_b32 s4, s1, 1
+; GCN-NEXT:    s_bfe_i64 s[2:3], s[2:3], 0x10000
 ; GCN-NEXT:    s_lshl_b64 s[0:1], s[2:3], 31
 ; GCN-NEXT:    s_or_b32 s0, s0, s4
 ; GCN-NEXT:    s_ashr_i32 s2, s3, 1
@@ -1973,8 +1984,9 @@ define amdgpu_ps i65 @s_ashr_i65_33(i65 inreg %value) {
 ;
 ; GFX10PLUS-LABEL: s_ashr_i65_33:
 ; GFX10PLUS:       ; %bb.0:
-; GFX10PLUS-NEXT:    s_bfe_i64 s[2:3], s[2:3], 0x10000
+; GFX10PLUS-NEXT:    ; implicit-def: $sgpr3
 ; GFX10PLUS-NEXT:    s_lshr_b32 s4, s1, 1
+; GFX10PLUS-NEXT:    s_bfe_i64 s[2:3], s[2:3], 0x10000
 ; GFX10PLUS-NEXT:    s_lshl_b64 s[0:1], s[2:3], 31
 ; GFX10PLUS-NEXT:    s_ashr_i32 s2, s3, 1
 ; GFX10PLUS-NEXT:    s_or_b32 s0, s0, s4
@@ -2066,7 +2078,11 @@ define <4 x i2> @v_ashr_v4i2(<4 x i2> %value, <4 x i2> %amount) {
 ; GFX11-TRUE16-NEXT:    v_ashrrev_i16 v0.l, v4.l, v0.l
 ; GFX11-TRUE16-NEXT:    v_ashrrev_i16 v1.l, v0.h, v1.l
 ; GFX11-TRUE16-NEXT:    v_ashrrev_i16 v2.l, v1.h, v2.l
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr1_hi16
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr3_hi16
 ; GFX11-TRUE16-NEXT:    v_ashrrev_i16 v3.l, v2.h, v3.l
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr2_hi16
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-FAKE16-LABEL: v_ashr_v4i2:

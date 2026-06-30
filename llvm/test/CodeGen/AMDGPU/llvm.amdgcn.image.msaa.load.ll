@@ -307,6 +307,7 @@ define amdgpu_ps <4 x float> @load_2dmsaa_a16(<8 x i32> inreg %rsrc, i16 %s, i16
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v3.l, v2.l
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v2.l, v0.l
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v2.h, v1.l
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr3_hi16
 ; GFX11-TRUE16-NEXT:    image_msaa_load v[0:3], v[2:3], s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_2D_MSAA unorm a16
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:    ; return to shader part epilog
@@ -321,6 +322,7 @@ define amdgpu_ps <4 x float> @load_2dmsaa_a16(<8 x i32> inreg %rsrc, i16 %s, i16
 ; GFX12PLUS-TRUE16-LABEL: load_2dmsaa_a16:
 ; GFX12PLUS-TRUE16:       ; %bb.0: ; %main_body
 ; GFX12PLUS-TRUE16-NEXT:    v_mov_b16_e32 v0.h, v1.l
+; GFX12PLUS-TRUE16-NEXT:    ; implicit-def: $vgpr2_hi16
 ; GFX12PLUS-TRUE16-NEXT:    image_msaa_load v[0:3], [v0, v2], s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_2D_MSAA unorm a16
 ; GFX12PLUS-TRUE16-NEXT:    s_wait_samplecnt 0x0
 ; GFX12PLUS-TRUE16-NEXT:    ; return to shader part epilog

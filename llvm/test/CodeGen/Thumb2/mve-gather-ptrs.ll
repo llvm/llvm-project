@@ -113,6 +113,8 @@ define arm_aapcs_vfpcc <2 x float> @ptr_v2f32(ptr %offptr) {
 ; CHECK-LABEL: ptr_v2f32:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    ldrd r0, r1, [r0]
+; CHECK-NEXT:    @ implicit-def: $s2
+; CHECK-NEXT:    @ implicit-def: $s3
 ; CHECK-NEXT:    vldr s1, [r1]
 ; CHECK-NEXT:    vldr s0, [r0]
 ; CHECK-NEXT:    bx lr

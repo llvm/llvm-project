@@ -160,6 +160,7 @@ define half @test_half_add_mul(half %a, half %b, half %c, half %d, half %e) {
 ; GFX11-CONTRACT-TRUE16:       ; %bb.0: ; %.entry
 ; GFX11-CONTRACT-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-CONTRACT-TRUE16-NEXT:    v_fmac_f16_e32 v4.l, v2.l, v3.l
+; GFX11-CONTRACT-TRUE16-NEXT:    ; implicit-def: $vgpr4_hi16
 ; GFX11-CONTRACT-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-CONTRACT-TRUE16-NEXT:    v_fmac_f16_e32 v4.l, v0.l, v1.l
 ; GFX11-CONTRACT-TRUE16-NEXT:    v_mov_b32_e32 v0, v4
@@ -181,6 +182,7 @@ define half @test_half_add_mul(half %a, half %b, half %c, half %d, half %e) {
 ; GFX11-DENORM-TRUE16-NEXT:    v_mul_f16_e32 v0.l, v0.l, v1.l
 ; GFX11-DENORM-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-DENORM-TRUE16-NEXT:    v_add_f16_e32 v0.l, v0.l, v0.h
+; GFX11-DENORM-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX11-DENORM-TRUE16-NEXT:    v_add_f16_e32 v0.l, v0.l, v4.l
 ; GFX11-DENORM-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -237,6 +239,7 @@ define half @test_half_add_mul_rhs(half %a, half %b, half %c, half %d, half %e) 
 ; GFX11-CONTRACT-TRUE16:       ; %bb.0: ; %.entry
 ; GFX11-CONTRACT-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-CONTRACT-TRUE16-NEXT:    v_fmac_f16_e32 v4.l, v2.l, v3.l
+; GFX11-CONTRACT-TRUE16-NEXT:    ; implicit-def: $vgpr4_hi16
 ; GFX11-CONTRACT-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-CONTRACT-TRUE16-NEXT:    v_fmac_f16_e32 v4.l, v0.l, v1.l
 ; GFX11-CONTRACT-TRUE16-NEXT:    v_mov_b32_e32 v0, v4
@@ -258,6 +261,7 @@ define half @test_half_add_mul_rhs(half %a, half %b, half %c, half %d, half %e) 
 ; GFX11-DENORM-TRUE16-NEXT:    v_mul_f16_e32 v0.l, v0.l, v1.l
 ; GFX11-DENORM-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-DENORM-TRUE16-NEXT:    v_add_f16_e32 v0.l, v0.l, v0.h
+; GFX11-DENORM-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX11-DENORM-TRUE16-NEXT:    v_add_f16_e32 v0.l, v4.l, v0.l
 ; GFX11-DENORM-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;

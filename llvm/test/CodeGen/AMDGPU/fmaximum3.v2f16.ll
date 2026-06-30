@@ -76,6 +76,7 @@ define <3 x half> @fmaximum3_v3f16(<3 x half> %a, <3 x half> %b, <3 x half> %c) 
 ; GFX1250-GISEL-REAL16-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-GISEL-REAL16-NEXT:    v_pk_maximum3_f16 v0, v0, v2, v2
 ; GFX1250-GISEL-REAL16-NEXT:    v_maximum3_f16 v1.l, v1.l, v3.l, v5.l
+; GFX1250-GISEL-REAL16-NEXT:    ; implicit-def: $vgpr1_hi16
 ; GFX1250-GISEL-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX1250-GISEL-REAL16-NEXT:    v_pk_maximum3_f16 v0, v4, v0, v0
 ; GFX1250-GISEL-REAL16-NEXT:    s_set_pc_i64 s[30:31]

@@ -83,6 +83,7 @@ define half @fceil_s16_v(half %val) {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_ceil_f16_e32 v0.l, v0.l
+; GFX12-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %result = call half @llvm.ceil.f16(half %val)
   ret half %result

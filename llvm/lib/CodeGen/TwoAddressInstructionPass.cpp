@@ -2055,13 +2055,40 @@ void TwoAddressInstructionImpl::eliminateRegSequence(
     }
   }
 
+  MachineBasicBlock::iterator EndMBBI =
+      std::next(MachineBasicBlock::iterator(MI));
+
   // If there are no live intervals information, we scan the use list once
   // in order to find which subregisters are used.
+  bool HasFullRegUse = false;
+  bool IsFullyUndef = true;
+  for (unsigned i = 1, e = MI.getNumOperands(); i < e; i += 2)
+    if (!MI.getOperand(i).isUndef()) {
+      IsFullyUndef = false;
+      break;
+    }
+
+  if (IsFullyUndef) {
+    LLVM_DEBUG(dbgs() << "Turned: " << MI << " into an IMPLICIT_DEF");
+    MI.setDesc(TII->get(TargetOpcode::IMPLICIT_DEF));
+    for (int j = MI.getNumOperands() - 1, ee = 0; j > ee; --j)
+      MI.removeOperand(j);
+
+    return;
+  }
+
   LaneBitmask UsedLanes = LaneBitmask::getNone();
   if (!LIS) {
     for (MachineOperand &Use : MRI->use_nodbg_operands(DstReg)) {
       if (unsigned SubReg = Use.getSubReg())
         UsedLanes |= TRI->getSubRegIndexLaneMask(SubReg);
+      else {
+        for (unsigned i = 1, e = MI.getNumOperands(); i < e; i += 2) {
+          unsigned SubIdx = MI.getOperand(i + 1).getImm();
+          UsedLanes |= TRI->getSubRegIndexLaneMask(SubIdx);
+        }
+        break;
+      }
     }
   }
 
@@ -2074,8 +2101,8 @@ void TwoAddressInstructionImpl::eliminateRegSequence(
     // Nothing needs to be inserted for undef operands.
     // Unless there are no live intervals, and they are used at a later
     // instruction as operand.
+    LaneBitmask LaneMask = TRI->getSubRegIndexLaneMask(SubIdx);
     if (UseMO.isUndef()) {
-      LaneBitmask LaneMask = TRI->getSubRegIndexLaneMask(SubIdx);
       if (LIS || (UsedLanes & LaneMask).none()) {
         UndefLanes |= LaneMask;
         continue;
@@ -2094,11 +2121,18 @@ void TwoAddressInstructionImpl::eliminateRegSequence(
           break;
         }
 
-    // Insert the sub-register copy.
-    MachineInstr *CopyMI = BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
-                                   TII->get(TargetOpcode::COPY))
-                               .addReg(DstReg, RegState::Define, SubIdx)
-                               .add(UseMO);
+    MachineInstr *CopyMI = nullptr;
+    if (UseMO.isUndef() && !(UsedLanes & LaneMask).none()) {
+      CopyMI = BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
+                       TII->get(TargetOpcode::IMPLICIT_DEF))
+                   .addReg(DstReg, RegState::Define, SubIdx);
+    } else {
+      // Insert the sub-register copy.
+      CopyMI = BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
+                       TII->get(TargetOpcode::COPY))
+                   .addReg(DstReg, RegState::Define, SubIdx)
+                   .add(UseMO);
+    }
 
     // The first def needs an undef flag because there is no live register
     // before it.
@@ -2116,15 +2150,6 @@ void TwoAddressInstructionImpl::eliminateRegSequence(
     LLVM_DEBUG(dbgs() << "Inserted: " << *CopyMI);
   }
 
-  MachineBasicBlock::iterator EndMBBI =
-      std::next(MachineBasicBlock::iterator(MI));
-
-  if (!DefEmitted) {
-    LLVM_DEBUG(dbgs() << "Turned: " << MI << " into an IMPLICIT_DEF");
-    MI.setDesc(TII->get(TargetOpcode::IMPLICIT_DEF));
-    for (int j = MI.getNumOperands() - 1, ee = 0; j > ee; --j)
-      MI.removeOperand(j);
-  } else {
     if (LIS) {
       // Force live interval recomputation if we moved to a partial definition
       // of the register.  Undef flags must be propagate to uses of undefined
@@ -2150,9 +2175,8 @@ void TwoAddressInstructionImpl::eliminateRegSequence(
 
     LLVM_DEBUG(dbgs() << "Eliminated: " << MI);
     MI.eraseFromParent();
-  }
 
-  // Udpate LiveIntervals.
-  if (LIS)
-    LIS->repairIntervalsInRange(MBB, MBBI, EndMBBI, OrigRegs);
+    // Udpate LiveIntervals.
+    if (LIS)
+      LIS->repairIntervalsInRange(MBB, MBBI, EndMBBI, OrigRegs);
 }

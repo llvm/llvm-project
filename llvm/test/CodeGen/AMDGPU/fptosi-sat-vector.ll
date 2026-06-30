@@ -2621,10 +2621,14 @@ define <4 x i1> @test_signed_v4f16_v4i1(<4 x half> %f) {
 ; GFX12-GI-NEXT:    v_cvt_i16_f16_e32 v0.h, v0.h
 ; GFX12-GI-NEXT:    v_cvt_i16_f16_e32 v2.l, v1.l
 ; GFX12-GI-NEXT:    v_cvt_i16_f16_e32 v1.h, v1.h
+; GFX12-GI-NEXT:    ; implicit-def: $vgpr2_hi16
+; GFX12-GI-NEXT:    ; implicit-def: $vgpr3_hi16
 ; GFX12-GI-NEXT:    v_med3_i16 v0.l, v0.l, -1, 0
 ; GFX12-GI-NEXT:    v_med3_i16 v1.l, v0.h, -1, 0
 ; GFX12-GI-NEXT:    v_med3_i16 v2.l, v2.l, -1, 0
 ; GFX12-GI-NEXT:    v_med3_i16 v3.l, v1.h, -1, 0
+; GFX12-GI-NEXT:    ; implicit-def: $vgpr0_hi16
+; GFX12-GI-NEXT:    ; implicit-def: $vgpr1_hi16
 ; GFX12-GI-NEXT:    s_setpc_b64 s[30:31]
     %x = call <4 x i1> @llvm.fptosi.sat.v4f16.v4i1(<4 x half> %f)
     ret <4 x i1> %x
@@ -2833,10 +2837,14 @@ define <4 x i8> @test_signed_v4f16_v4i8(<4 x half> %f) {
 ; GFX12-GI-NEXT:    v_cvt_i16_f16_e32 v0.h, v0.h
 ; GFX12-GI-NEXT:    v_cvt_i16_f16_e32 v2.l, v1.l
 ; GFX12-GI-NEXT:    v_cvt_i16_f16_e32 v1.h, v1.h
+; GFX12-GI-NEXT:    ; implicit-def: $vgpr3_hi16
 ; GFX12-GI-NEXT:    v_med3_i16 v0.l, v0.l, v2.h, 0x7f
 ; GFX12-GI-NEXT:    v_med3_i16 v1.l, v0.h, v2.h, 0x7f
 ; GFX12-GI-NEXT:    v_med3_i16 v2.l, v2.l, v2.h, 0x7f
 ; GFX12-GI-NEXT:    v_med3_i16 v3.l, v1.h, v2.h, 0x7f
+; GFX12-GI-NEXT:    ; implicit-def: $vgpr0_hi16
+; GFX12-GI-NEXT:    ; implicit-def: $vgpr1_hi16
+; GFX12-GI-NEXT:    ; implicit-def: $vgpr2_hi16
 ; GFX12-GI-NEXT:    s_setpc_b64 s[30:31]
     %x = call <4 x i8> @llvm.fptosi.sat.v4f16.v4i8(<4 x half> %f)
     ret <4 x i8> %x
@@ -3365,12 +3373,16 @@ define <4 x i1> @test_s_signed_v4f16_v4i1(<4 x half> inreg %f) {
 ; GFX11-TRUE16-NEXT:    s_lshr_b32 s1, s1, 16
 ; GFX11-TRUE16-NEXT:    v_cvt_i16_f16_e32 v2.l, s0
 ; GFX11-TRUE16-NEXT:    v_cvt_i16_f16_e32 v3.l, s1
-; GFX11-TRUE16-NEXT:    v_bfe_i32 v1, v1, 0, 16
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr1_hi16
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr3_hi16
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX11-TRUE16-NEXT:    v_bfe_i32 v4, v0, 0, 16
+; GFX11-TRUE16-NEXT:    v_bfe_i32 v1, v1, 0, 16
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr2_hi16
 ; GFX11-TRUE16-NEXT:    v_bfe_i32 v5, v2, 0, 16
 ; GFX11-TRUE16-NEXT:    v_bfe_i32 v3, v3, 0, 16
-; GFX11-TRUE16-NEXT:    v_med3_i32 v0, v1, -1, 0
 ; GFX11-TRUE16-NEXT:    v_med3_i32 v2, v4, -1, 0
+; GFX11-TRUE16-NEXT:    v_med3_i32 v0, v1, -1, 0
 ; GFX11-TRUE16-NEXT:    v_med3_i32 v1, v5, -1, 0
 ; GFX11-TRUE16-NEXT:    v_med3_i32 v3, v3, -1, 0
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
@@ -3413,12 +3425,16 @@ define <4 x i1> @test_s_signed_v4f16_v4i1(<4 x half> inreg %f) {
 ; GFX12-TRUE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-TRUE16-NEXT:    v_cvt_i16_f16_e32 v2.l, s0
 ; GFX12-TRUE16-NEXT:    v_cvt_i16_f16_e32 v3.l, s1
-; GFX12-TRUE16-NEXT:    v_bfe_i32 v1, v1, 0, 16
+; GFX12-TRUE16-NEXT:    ; implicit-def: $vgpr1_hi16
+; GFX12-TRUE16-NEXT:    ; implicit-def: $vgpr3_hi16
+; GFX12-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX12-TRUE16-NEXT:    v_bfe_i32 v4, v0, 0, 16
+; GFX12-TRUE16-NEXT:    v_bfe_i32 v1, v1, 0, 16
+; GFX12-TRUE16-NEXT:    ; implicit-def: $vgpr2_hi16
 ; GFX12-TRUE16-NEXT:    v_bfe_i32 v5, v2, 0, 16
 ; GFX12-TRUE16-NEXT:    v_bfe_i32 v3, v3, 0, 16
-; GFX12-TRUE16-NEXT:    v_med3_i32 v0, v1, -1, 0
 ; GFX12-TRUE16-NEXT:    v_med3_i32 v2, v4, -1, 0
+; GFX12-TRUE16-NEXT:    v_med3_i32 v0, v1, -1, 0
 ; GFX12-TRUE16-NEXT:    v_med3_i32 v1, v5, -1, 0
 ; GFX12-TRUE16-NEXT:    v_med3_i32 v3, v3, -1, 0
 ; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
@@ -3437,6 +3453,10 @@ define <4 x i1> @test_s_signed_v4f16_v4i1(<4 x half> inreg %f) {
 ; GFX12-GI-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GI-NEXT:    v_cvt_i16_f16_e32 v2.l, s2
 ; GFX12-GI-NEXT:    v_cvt_i16_f16_e32 v3.l, s3
+; GFX12-GI-NEXT:    ; implicit-def: $vgpr0_hi16
+; GFX12-GI-NEXT:    ; implicit-def: $vgpr2_hi16
+; GFX12-GI-NEXT:    ; implicit-def: $vgpr1_hi16
+; GFX12-GI-NEXT:    ; implicit-def: $vgpr3_hi16
 ; GFX12-GI-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX12-GI-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX12-GI-NEXT:    v_readfirstlane_b32 s2, v2
@@ -3601,15 +3621,19 @@ define <4 x i8> @test_s_signed_v4f16_v4i8(<4 x half> inreg %f) {
 ; GFX11-TRUE16-NEXT:    v_cvt_i16_f16_e32 v0.l, s1
 ; GFX11-TRUE16-NEXT:    v_cvt_i16_f16_e32 v1.l, s2
 ; GFX11-TRUE16-NEXT:    s_lshr_b32 s1, s0, 16
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr1_hi16
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr2_hi16
 ; GFX11-TRUE16-NEXT:    v_cvt_i16_f16_e32 v3.l, s0
 ; GFX11-TRUE16-NEXT:    v_cvt_i16_f16_e32 v2.l, s1
 ; GFX11-TRUE16-NEXT:    v_bfe_i32 v0, v0, 0, 16
 ; GFX11-TRUE16-NEXT:    v_bfe_i32 v1, v1, 0, 16
 ; GFX11-TRUE16-NEXT:    s_movk_i32 s1, 0xff80
-; GFX11-TRUE16-NEXT:    v_bfe_i32 v3, v3, 0, 16
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr3_hi16
 ; GFX11-TRUE16-NEXT:    v_bfe_i32 v2, v2, 0, 16
 ; GFX11-TRUE16-NEXT:    v_med3_i32 v0, v0, s1, 0x7f
 ; GFX11-TRUE16-NEXT:    v_med3_i32 v1, v1, s1, 0x7f
+; GFX11-TRUE16-NEXT:    v_bfe_i32 v3, v3, 0, 16
 ; GFX11-TRUE16-NEXT:    v_med3_i32 v2, v2, s1, 0x7f
 ; GFX11-TRUE16-NEXT:    v_and_b32_e32 v0, 0xff, v0
 ; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, 8, v1
@@ -3675,17 +3699,21 @@ define <4 x i8> @test_s_signed_v4f16_v4i8(<4 x half> inreg %f) {
 ; GFX12-TRUE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-TRUE16-NEXT:    v_cvt_i16_f16_e32 v1.l, s2
 ; GFX12-TRUE16-NEXT:    s_lshr_b32 s1, s0, 16
+; GFX12-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
+; GFX12-TRUE16-NEXT:    ; implicit-def: $vgpr1_hi16
+; GFX12-TRUE16-NEXT:    ; implicit-def: $vgpr2_hi16
 ; GFX12-TRUE16-NEXT:    v_cvt_i16_f16_e32 v3.l, s0
 ; GFX12-TRUE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-TRUE16-NEXT:    v_cvt_i16_f16_e32 v2.l, s1
 ; GFX12-TRUE16-NEXT:    v_bfe_i32 v0, v0, 0, 16
 ; GFX12-TRUE16-NEXT:    v_bfe_i32 v1, v1, 0, 16
 ; GFX12-TRUE16-NEXT:    s_movk_i32 s1, 0xff80
-; GFX12-TRUE16-NEXT:    v_bfe_i32 v3, v3, 0, 16
+; GFX12-TRUE16-NEXT:    ; implicit-def: $vgpr3_hi16
 ; GFX12-TRUE16-NEXT:    v_bfe_i32 v2, v2, 0, 16
 ; GFX12-TRUE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-TRUE16-NEXT:    v_med3_i32 v0, v0, s1, 0x7f
 ; GFX12-TRUE16-NEXT:    v_med3_i32 v1, v1, s1, 0x7f
+; GFX12-TRUE16-NEXT:    v_bfe_i32 v3, v3, 0, 16
 ; GFX12-TRUE16-NEXT:    v_med3_i32 v2, v2, s1, 0x7f
 ; GFX12-TRUE16-NEXT:    v_and_b32_e32 v0, 0xff, v0
 ; GFX12-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, 8, v1
@@ -3715,6 +3743,10 @@ define <4 x i8> @test_s_signed_v4f16_v4i8(<4 x half> inreg %f) {
 ; GFX12-GI-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GI-NEXT:    v_cvt_i16_f16_e32 v2.l, s2
 ; GFX12-GI-NEXT:    v_cvt_i16_f16_e32 v3.l, s3
+; GFX12-GI-NEXT:    ; implicit-def: $vgpr0_hi16
+; GFX12-GI-NEXT:    ; implicit-def: $vgpr2_hi16
+; GFX12-GI-NEXT:    ; implicit-def: $vgpr1_hi16
+; GFX12-GI-NEXT:    ; implicit-def: $vgpr3_hi16
 ; GFX12-GI-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX12-GI-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX12-GI-NEXT:    v_readfirstlane_b32 s2, v2
@@ -3900,7 +3932,11 @@ define <4 x i16> @test_s_signed_v4f16_v4i16(<4 x half> inreg %f) {
 ; GFX12-GI-NEXT:    v_cvt_i16_f16_e32 v1.l, s2
 ; GFX12-GI-NEXT:    v_cvt_i16_f16_e32 v2.l, s1
 ; GFX12-GI-NEXT:    v_cvt_i16_f16_e32 v3.l, s0
+; GFX12-GI-NEXT:    ; implicit-def: $vgpr0_hi16
+; GFX12-GI-NEXT:    ; implicit-def: $vgpr1_hi16
+; GFX12-GI-NEXT:    ; implicit-def: $vgpr2_hi16
 ; GFX12-GI-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX12-GI-NEXT:    ; implicit-def: $vgpr3_hi16
 ; GFX12-GI-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX12-GI-NEXT:    v_readfirstlane_b32 s2, v2
 ; GFX12-GI-NEXT:    v_readfirstlane_b32 s3, v3
@@ -4272,7 +4308,15 @@ define <8 x i1> @test_signed_v8f16_v8i1(<8 x half> %f) {
 ; GFX12-GI-NEXT:    v_med3_i16 v5.l, v2.l, -1, 0
 ; GFX12-GI-NEXT:    v_med3_i16 v6.l, v2.h, -1, 0
 ; GFX12-GI-NEXT:    v_med3_i16 v7.l, v3.h, -1, 0
+; GFX12-GI-NEXT:    ; implicit-def: $vgpr8_hi16
 ; GFX12-GI-NEXT:    v_mov_b32_e32 v2, v8
+; GFX12-GI-NEXT:    ; implicit-def: $vgpr0_hi16
+; GFX12-GI-NEXT:    ; implicit-def: $vgpr1_hi16
+; GFX12-GI-NEXT:    ; implicit-def: $vgpr3_hi16
+; GFX12-GI-NEXT:    ; implicit-def: $vgpr4_hi16
+; GFX12-GI-NEXT:    ; implicit-def: $vgpr5_hi16
+; GFX12-GI-NEXT:    ; implicit-def: $vgpr6_hi16
+; GFX12-GI-NEXT:    ; implicit-def: $vgpr7_hi16
 ; GFX12-GI-NEXT:    s_setpc_b64 s[30:31]
     %x = call <8 x i1> @llvm.fptosi.sat.v8f16.v8i1(<8 x half> %f)
     ret <8 x i1> %x
@@ -4624,6 +4668,10 @@ define <8 x i8> @test_signed_v8f16_v8i8(<8 x half> %f) {
 ; GFX12-GI-NEXT:    v_cvt_i16_f16_e32 v4.l, v1.l
 ; GFX12-GI-NEXT:    v_cvt_i16_f16_e32 v0.l, v0.l
 ; GFX12-GI-NEXT:    v_cvt_i16_f16_e32 v3.h, v3.h
+; GFX12-GI-NEXT:    ; implicit-def: $vgpr8_hi16
+; GFX12-GI-NEXT:    ; implicit-def: $vgpr5_hi16
+; GFX12-GI-NEXT:    ; implicit-def: $vgpr6_hi16
+; GFX12-GI-NEXT:    ; implicit-def: $vgpr7_hi16
 ; GFX12-GI-NEXT:    v_med3_i16 v1.l, v0.h, v4.h, 0x7f
 ; GFX12-GI-NEXT:    v_med3_i16 v8.l, v4.l, v4.h, 0x7f
 ; GFX12-GI-NEXT:    v_cvt_i16_f16_e32 v0.h, v1.h
@@ -4637,6 +4685,10 @@ define <8 x i8> @test_signed_v8f16_v8i8(<8 x half> %f) {
 ; GFX12-GI-NEXT:    v_med3_i16 v6.l, v2.h, v4.h, 0x7f
 ; GFX12-GI-NEXT:    v_med3_i16 v7.l, v3.h, v4.h, 0x7f
 ; GFX12-GI-NEXT:    v_mov_b32_e32 v2, v8
+; GFX12-GI-NEXT:    ; implicit-def: $vgpr0_hi16
+; GFX12-GI-NEXT:    ; implicit-def: $vgpr1_hi16
+; GFX12-GI-NEXT:    ; implicit-def: $vgpr3_hi16
+; GFX12-GI-NEXT:    ; implicit-def: $vgpr4_hi16
 ; GFX12-GI-NEXT:    s_setpc_b64 s[30:31]
     %x = call <8 x i8> @llvm.fptosi.sat.v8f16.v8i8(<8 x half> %f)
     ret <8 x i8> %x
@@ -5505,12 +5557,18 @@ define <8 x i1> @test_s_signed_v8f16_v8i1(<8 x half> inreg %f) {
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_cvt_i16_f16_e32 v0.l, s3
 ; GFX11-TRUE16-NEXT:    v_cvt_i16_f16_e32 v1.l, s2
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr1_hi16
 ; GFX11-TRUE16-NEXT:    v_cvt_i16_f16_e32 v2.l, s1
 ; GFX11-TRUE16-NEXT:    s_lshr_b32 s3, s3, 16
 ; GFX11-TRUE16-NEXT:    s_lshr_b32 s1, s1, 16
 ; GFX11-TRUE16-NEXT:    v_bfe_i32 v0, v0, 0, 16
 ; GFX11-TRUE16-NEXT:    v_bfe_i32 v1, v1, 0, 16
 ; GFX11-TRUE16-NEXT:    v_cvt_i16_f16_e32 v5.l, s1
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr2_hi16
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr3_hi16
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr5_hi16
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr7_hi16
 ; GFX11-TRUE16-NEXT:    v_bfe_i32 v2, v2, 0, 16
 ; GFX11-TRUE16-NEXT:    v_med3_i32 v6, v0, -1, 0
 ; GFX11-TRUE16-NEXT:    v_cvt_i16_f16_e32 v0.l, s0
@@ -5520,9 +5578,11 @@ define <8 x i1> @test_s_signed_v8f16_v8i1(<8 x half> inreg %f) {
 ; GFX11-TRUE16-NEXT:    s_lshr_b32 s0, s2, 16
 ; GFX11-TRUE16-NEXT:    v_cvt_i16_f16_e32 v1.l, s3
 ; GFX11-TRUE16-NEXT:    v_cvt_i16_f16_e32 v7.l, s0
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr1_hi16
+; GFX11-TRUE16-NEXT:    v_bfe_i32 v5, v5, 0, 16
 ; GFX11-TRUE16-NEXT:    v_bfe_i32 v0, v0, 0, 16
 ; GFX11-TRUE16-NEXT:    v_bfe_i32 v3, v3, 0, 16
-; GFX11-TRUE16-NEXT:    v_bfe_i32 v5, v5, 0, 16
 ; GFX11-TRUE16-NEXT:    v_bfe_i32 v8, v1, 0, 16
 ; GFX11-TRUE16-NEXT:    v_bfe_i32 v9, v7, 0, 16
 ; GFX11-TRUE16-NEXT:    v_med3_i32 v2, v2, -1, 0
@@ -5582,6 +5642,8 @@ define <8 x i1> @test_s_signed_v8f16_v8i1(<8 x half> inreg %f) {
 ; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-TRUE16-NEXT:    v_cvt_i16_f16_e32 v0.l, s3
 ; GFX12-TRUE16-NEXT:    v_cvt_i16_f16_e32 v1.l, s2
+; GFX12-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
+; GFX12-TRUE16-NEXT:    ; implicit-def: $vgpr1_hi16
 ; GFX12-TRUE16-NEXT:    v_cvt_i16_f16_e32 v2.l, s1
 ; GFX12-TRUE16-NEXT:    s_lshr_b32 s3, s3, 16
 ; GFX12-TRUE16-NEXT:    s_lshr_b32 s1, s1, 16
@@ -5589,6 +5651,10 @@ define <8 x i1> @test_s_signed_v8f16_v8i1(<8 x half> inreg %f) {
 ; GFX12-TRUE16-NEXT:    v_bfe_i32 v1, v1, 0, 16
 ; GFX12-TRUE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-TRUE16-NEXT:    v_cvt_i16_f16_e32 v5.l, s1
+; GFX12-TRUE16-NEXT:    ; implicit-def: $vgpr2_hi16
+; GFX12-TRUE16-NEXT:    ; implicit-def: $vgpr3_hi16
+; GFX12-TRUE16-NEXT:    ; implicit-def: $vgpr5_hi16
+; GFX12-TRUE16-NEXT:    ; implicit-def: $vgpr7_hi16
 ; GFX12-TRUE16-NEXT:    v_bfe_i32 v2, v2, 0, 16
 ; GFX12-TRUE16-NEXT:    v_med3_i32 v6, v0, -1, 0
 ; GFX12-TRUE16-NEXT:    v_cvt_i16_f16_e32 v0.l, s0
@@ -5600,9 +5666,11 @@ define <8 x i1> @test_s_signed_v8f16_v8i1(<8 x half> inreg %f) {
 ; GFX12-TRUE16-NEXT:    v_cvt_i16_f16_e32 v1.l, s3
 ; GFX12-TRUE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-TRUE16-NEXT:    v_cvt_i16_f16_e32 v7.l, s0
+; GFX12-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
+; GFX12-TRUE16-NEXT:    ; implicit-def: $vgpr1_hi16
+; GFX12-TRUE16-NEXT:    v_bfe_i32 v5, v5, 0, 16
 ; GFX12-TRUE16-NEXT:    v_bfe_i32 v0, v0, 0, 16
 ; GFX12-TRUE16-NEXT:    v_bfe_i32 v3, v3, 0, 16
-; GFX12-TRUE16-NEXT:    v_bfe_i32 v5, v5, 0, 16
 ; GFX12-TRUE16-NEXT:    v_bfe_i32 v8, v1, 0, 16
 ; GFX12-TRUE16-NEXT:    v_bfe_i32 v9, v7, 0, 16
 ; GFX12-TRUE16-NEXT:    v_med3_i32 v2, v2, -1, 0
@@ -5622,28 +5690,35 @@ define <8 x i1> @test_s_signed_v8f16_v8i1(<8 x half> inreg %f) {
 ; GFX12-GI-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-GI-NEXT:    v_cvt_i16_f16_e32 v0.l, s0
 ; GFX12-GI-NEXT:    s_lshr_b32 s0, s0, 16
-; GFX12-GI-NEXT:    s_lshr_b32 s4, s1, 16
+; GFX12-GI-NEXT:    v_cvt_i16_f16_e32 v2.l, s1
 ; GFX12-GI-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GI-NEXT:    v_cvt_i16_f16_e32 v1.l, s0
-; GFX12-GI-NEXT:    s_lshr_b32 s5, s2, 16
+; GFX12-GI-NEXT:    ; implicit-def: $vgpr1_hi16
+; GFX12-GI-NEXT:    s_lshr_b32 s4, s1, 16
+; GFX12-GI-NEXT:    ; implicit-def: $vgpr0_hi16
+; GFX12-GI-NEXT:    ; implicit-def: $vgpr2_hi16
 ; GFX12-GI-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX12-GI-NEXT:    v_cvt_i16_f16_e32 v0.l, s1
-; GFX12-GI-NEXT:    s_lshr_b32 s1, s3, 16
+; GFX12-GI-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-GI-NEXT:    v_cvt_i16_f16_e32 v0.l, s4
+; GFX12-GI-NEXT:    v_readfirstlane_b32 s7, v2
 ; GFX12-GI-NEXT:    v_readfirstlane_b32 s6, v1
+; GFX12-GI-NEXT:    ; implicit-def: $vgpr0_hi16
+; GFX12-GI-NEXT:    s_lshr_b32 s5, s2, 16
+; GFX12-GI-NEXT:    s_lshr_b32 s1, s3, 16
+; GFX12-GI-NEXT:    ; implicit-def: $vgpr1_hi16
+; GFX12-GI-NEXT:    s_sext_i32_i16 s0, s0
 ; GFX12-GI-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GI-NEXT:    v_cvt_i16_f16_e32 v1.l, s1
-; GFX12-GI-NEXT:    s_sext_i32_i16 s0, s0
-; GFX12-GI-NEXT:    v_readfirstlane_b32 s7, v0
-; GFX12-GI-NEXT:    v_cvt_i16_f16_e32 v0.l, s4
 ; GFX12-GI-NEXT:    s_sext_i32_i16 s6, s6
-; GFX12-GI-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GI-NEXT:    s_min_i32 s0, s0, 0
+; GFX12-GI-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GI-NEXT:    s_min_i32 s4, s6, 0
 ; GFX12-GI-NEXT:    s_sext_i32_i16 s6, s7
 ; GFX12-GI-NEXT:    v_readfirstlane_b32 s7, v0
 ; GFX12-GI-NEXT:    v_cvt_i16_f16_e32 v0.l, s2
 ; GFX12-GI-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GI-NEXT:    s_min_i32 s2, s6, 0
+; GFX12-GI-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX12-GI-NEXT:    s_sext_i32_i16 s0, s0
 ; GFX12-GI-NEXT:    s_sext_i32_i16 s4, s4
 ; GFX12-GI-NEXT:    s_sext_i32_i16 s6, s7
@@ -5651,6 +5726,7 @@ define <8 x i1> @test_s_signed_v8f16_v8i1(<8 x half> inreg %f) {
 ; GFX12-GI-NEXT:    v_cvt_i16_f16_e32 v0.l, s5
 ; GFX12-GI-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GI-NEXT:    s_min_i32 s5, s6, 0
+; GFX12-GI-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX12-GI-NEXT:    s_sext_i32_i16 s2, s2
 ; GFX12-GI-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GI-NEXT:    s_sext_i32_i16 s5, s5
@@ -5659,6 +5735,7 @@ define <8 x i1> @test_s_signed_v8f16_v8i1(<8 x half> inreg %f) {
 ; GFX12-GI-NEXT:    v_cvt_i16_f16_e32 v0.l, s3
 ; GFX12-GI-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GI-NEXT:    s_min_i32 s6, s6, 0
+; GFX12-GI-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX12-GI-NEXT:    s_max_i32 s0, s0, -1
 ; GFX12-GI-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GI-NEXT:    s_sext_i32_i16 s3, s6
@@ -5932,6 +6009,7 @@ define <8 x i8> @test_s_signed_v8f16_v8i8(<8 x half> inreg %f) {
 ; GFX11-TRUE16-NEXT:    s_lshr_b32 s3, s3, 16
 ; GFX11-TRUE16-NEXT:    v_cvt_i16_f16_e32 v1.l, s4
 ; GFX11-TRUE16-NEXT:    s_lshr_b32 s4, s1, 16
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr2_hi16
 ; GFX11-TRUE16-NEXT:    v_cvt_i16_f16_e32 v0.l, s2
 ; GFX11-TRUE16-NEXT:    v_cvt_i16_f16_e32 v3.l, s1
 ; GFX11-TRUE16-NEXT:    v_cvt_i16_f16_e32 v4.l, s4
@@ -5939,6 +6017,12 @@ define <8 x i8> @test_s_signed_v8f16_v8i8(<8 x half> inreg %f) {
 ; GFX11-TRUE16-NEXT:    v_cvt_i16_f16_e32 v5.l, s3
 ; GFX11-TRUE16-NEXT:    s_movk_i32 s2, 0xff80
 ; GFX11-TRUE16-NEXT:    s_lshr_b32 s1, s0, 16
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr1_hi16
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr3_hi16
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr4_hi16
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr5_hi16
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr6_hi16
 ; GFX11-TRUE16-NEXT:    v_bfe_i32 v0, v0, 0, 16
 ; GFX11-TRUE16-NEXT:    v_bfe_i32 v1, v1, 0, 16
 ; GFX11-TRUE16-NEXT:    v_bfe_i32 v3, v3, 0, 16
@@ -5960,6 +6044,7 @@ define <8 x i8> @test_s_signed_v8f16_v8i8(<8 x half> inreg %f) {
 ; GFX11-TRUE16-NEXT:    v_cvt_i16_f16_e32 v6.l, s0
 ; GFX11-TRUE16-NEXT:    v_med3_i32 v9, v2, s2, 0x7f
 ; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v5, 8, v5
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr6_hi16
 ; GFX11-TRUE16-NEXT:    v_or_b32_e32 v8, v0, v1
 ; GFX11-TRUE16-NEXT:    v_or_b32_e32 v2, v3, v4
 ; GFX11-TRUE16-NEXT:    v_bfe_i32 v0, v6, 0, 16
@@ -6058,6 +6143,7 @@ define <8 x i8> @test_s_signed_v8f16_v8i8(<8 x half> inreg %f) {
 ; GFX12-TRUE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-TRUE16-NEXT:    v_cvt_i16_f16_e32 v1.l, s4
 ; GFX12-TRUE16-NEXT:    s_lshr_b32 s4, s1, 16
+; GFX12-TRUE16-NEXT:    ; implicit-def: $vgpr2_hi16
 ; GFX12-TRUE16-NEXT:    v_cvt_i16_f16_e32 v0.l, s2
 ; GFX12-TRUE16-NEXT:    v_cvt_i16_f16_e32 v3.l, s1
 ; GFX12-TRUE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
@@ -6066,6 +6152,12 @@ define <8 x i8> @test_s_signed_v8f16_v8i8(<8 x half> inreg %f) {
 ; GFX12-TRUE16-NEXT:    v_cvt_i16_f16_e32 v5.l, s3
 ; GFX12-TRUE16-NEXT:    s_movk_i32 s2, 0xff80
 ; GFX12-TRUE16-NEXT:    s_lshr_b32 s1, s0, 16
+; GFX12-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
+; GFX12-TRUE16-NEXT:    ; implicit-def: $vgpr1_hi16
+; GFX12-TRUE16-NEXT:    ; implicit-def: $vgpr3_hi16
+; GFX12-TRUE16-NEXT:    ; implicit-def: $vgpr4_hi16
+; GFX12-TRUE16-NEXT:    ; implicit-def: $vgpr5_hi16
+; GFX12-TRUE16-NEXT:    ; implicit-def: $vgpr6_hi16
 ; GFX12-TRUE16-NEXT:    v_bfe_i32 v0, v0, 0, 16
 ; GFX12-TRUE16-NEXT:    v_bfe_i32 v1, v1, 0, 16
 ; GFX12-TRUE16-NEXT:    v_bfe_i32 v3, v3, 0, 16
@@ -6088,6 +6180,7 @@ define <8 x i8> @test_s_signed_v8f16_v8i8(<8 x half> inreg %f) {
 ; GFX12-TRUE16-NEXT:    v_cvt_i16_f16_e32 v6.l, s0
 ; GFX12-TRUE16-NEXT:    v_med3_i32 v9, v2, s2, 0x7f
 ; GFX12-TRUE16-NEXT:    v_lshlrev_b32_e32 v5, 8, v5
+; GFX12-TRUE16-NEXT:    ; implicit-def: $vgpr6_hi16
 ; GFX12-TRUE16-NEXT:    v_or_b32_e32 v8, v0, v1
 ; GFX12-TRUE16-NEXT:    v_or_b32_e32 v2, v3, v4
 ; GFX12-TRUE16-NEXT:    v_bfe_i32 v0, v6, 0, 16
@@ -6118,28 +6211,35 @@ define <8 x i8> @test_s_signed_v8f16_v8i8(<8 x half> inreg %f) {
 ; GFX12-GI-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-GI-NEXT:    v_cvt_i16_f16_e32 v0.l, s0
 ; GFX12-GI-NEXT:    s_lshr_b32 s0, s0, 16
-; GFX12-GI-NEXT:    s_lshr_b32 s4, s1, 16
+; GFX12-GI-NEXT:    v_cvt_i16_f16_e32 v2.l, s1
 ; GFX12-GI-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GI-NEXT:    v_cvt_i16_f16_e32 v1.l, s0
-; GFX12-GI-NEXT:    s_lshr_b32 s5, s2, 16
+; GFX12-GI-NEXT:    ; implicit-def: $vgpr1_hi16
+; GFX12-GI-NEXT:    s_lshr_b32 s4, s1, 16
+; GFX12-GI-NEXT:    ; implicit-def: $vgpr0_hi16
+; GFX12-GI-NEXT:    ; implicit-def: $vgpr2_hi16
 ; GFX12-GI-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX12-GI-NEXT:    v_cvt_i16_f16_e32 v0.l, s1
-; GFX12-GI-NEXT:    s_lshr_b32 s1, s3, 16
+; GFX12-GI-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-GI-NEXT:    v_cvt_i16_f16_e32 v0.l, s4
+; GFX12-GI-NEXT:    v_readfirstlane_b32 s7, v2
 ; GFX12-GI-NEXT:    v_readfirstlane_b32 s6, v1
+; GFX12-GI-NEXT:    ; implicit-def: $vgpr0_hi16
+; GFX12-GI-NEXT:    s_lshr_b32 s5, s2, 16
+; GFX12-GI-NEXT:    s_lshr_b32 s1, s3, 16
+; GFX12-GI-NEXT:    ; implicit-def: $vgpr1_hi16
+; GFX12-GI-NEXT:    s_sext_i32_i16 s0, s0
 ; GFX12-GI-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GI-NEXT:    v_cvt_i16_f16_e32 v1.l, s1
-; GFX12-GI-NEXT:    s_sext_i32_i16 s0, s0
-; GFX12-GI-NEXT:    v_readfirstlane_b32 s7, v0
-; GFX12-GI-NEXT:    v_cvt_i16_f16_e32 v0.l, s4
 ; GFX12-GI-NEXT:    s_sext_i32_i16 s6, s6
-; GFX12-GI-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GI-NEXT:    s_min_i32 s0, s0, 0x7f
+; GFX12-GI-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GI-NEXT:    s_min_i32 s4, s6, 0x7f
 ; GFX12-GI-NEXT:    s_sext_i32_i16 s6, s7
 ; GFX12-GI-NEXT:    v_readfirstlane_b32 s7, v0
 ; GFX12-GI-NEXT:    v_cvt_i16_f16_e32 v0.l, s2
 ; GFX12-GI-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GI-NEXT:    s_min_i32 s2, s6, 0x7f
+; GFX12-GI-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX12-GI-NEXT:    s_sext_i32_i16 s0, s0
 ; GFX12-GI-NEXT:    s_sext_i32_i16 s4, s4
 ; GFX12-GI-NEXT:    s_sext_i32_i16 s6, s7
@@ -6147,6 +6247,7 @@ define <8 x i8> @test_s_signed_v8f16_v8i8(<8 x half> inreg %f) {
 ; GFX12-GI-NEXT:    v_cvt_i16_f16_e32 v0.l, s5
 ; GFX12-GI-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GI-NEXT:    s_min_i32 s5, s6, 0x7f
+; GFX12-GI-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX12-GI-NEXT:    s_sext_i32_i16 s2, s2
 ; GFX12-GI-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GI-NEXT:    s_sext_i32_i16 s5, s5
@@ -6155,6 +6256,7 @@ define <8 x i8> @test_s_signed_v8f16_v8i8(<8 x half> inreg %f) {
 ; GFX12-GI-NEXT:    v_cvt_i16_f16_e32 v0.l, s3
 ; GFX12-GI-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GI-NEXT:    s_min_i32 s6, s6, 0x7f
+; GFX12-GI-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX12-GI-NEXT:    s_max_i32 s0, s0, 0xffffff80
 ; GFX12-GI-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GI-NEXT:    s_sext_i32_i16 s3, s6
@@ -6437,22 +6539,30 @@ define <8 x i16> @test_s_signed_v8f16_v8i16(<8 x half> inreg %f) {
 ; GFX12-GI-NEXT:    s_lshr_b32 s1, s1, 16
 ; GFX12-GI-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GI-NEXT:    v_cvt_i16_f16_e32 v1.l, s4
+; GFX12-GI-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX12-GI-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX12-GI-NEXT:    v_cvt_i16_f16_e32 v0.l, s1
 ; GFX12-GI-NEXT:    s_lshr_b32 s1, s2, 16
+; GFX12-GI-NEXT:    ; implicit-def: $vgpr2_hi16
 ; GFX12-GI-NEXT:    v_readfirstlane_b32 s5, v2
 ; GFX12-GI-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GI-NEXT:    v_cvt_i16_f16_e32 v2.l, s1
 ; GFX12-GI-NEXT:    s_lshr_b32 s1, s3, 16
+; GFX12-GI-NEXT:    ; implicit-def: $vgpr1_hi16
 ; GFX12-GI-NEXT:    v_readfirstlane_b32 s4, v1
 ; GFX12-GI-NEXT:    v_cvt_i16_f16_e32 v1.l, s2
 ; GFX12-GI-NEXT:    v_cvt_i16_f16_e32 v3.l, s3
 ; GFX12-GI-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GI-NEXT:    v_cvt_i16_f16_e32 v4.l, s1
+; GFX12-GI-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX12-GI-NEXT:    v_readfirstlane_b32 s1, v0
+; GFX12-GI-NEXT:    ; implicit-def: $vgpr1_hi16
+; GFX12-GI-NEXT:    ; implicit-def: $vgpr2_hi16
 ; GFX12-GI-NEXT:    v_readfirstlane_b32 s3, v2
 ; GFX12-GI-NEXT:    v_readfirstlane_b32 s2, v1
+; GFX12-GI-NEXT:    ; implicit-def: $vgpr3_hi16
 ; GFX12-GI-NEXT:    v_readfirstlane_b32 s6, v3
+; GFX12-GI-NEXT:    ; implicit-def: $vgpr4_hi16
 ; GFX12-GI-NEXT:    v_readfirstlane_b32 s7, v4
 ; GFX12-GI-NEXT:    s_pack_ll_b32_b16 s0, s0, s4
 ; GFX12-GI-NEXT:    s_pack_ll_b32_b16 s1, s5, s1

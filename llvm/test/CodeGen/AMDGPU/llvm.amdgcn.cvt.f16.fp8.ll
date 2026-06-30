@@ -178,6 +178,7 @@ define amdgpu_ps float @test_cvt_f16_bf8_byte0_s(i32 inreg %a) {
 ; GFX1250-GISEL-REAL16:       ; %bb.0:
 ; GFX1250-GISEL-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-REAL16-NEXT:    v_cvt_f16_bf8_e32 v0.l, s0
+; GFX1250-GISEL-REAL16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX1250-GISEL-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_3)
 ; GFX1250-GISEL-REAL16-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX1250-GISEL-REAL16-NEXT:    s_cvt_f32_f16 s0, s0
@@ -441,6 +442,7 @@ define amdgpu_ps float @test_cvt_f16_fp8_byte0_s(i32 inreg %a) {
 ; GFX1250-GISEL-REAL16:       ; %bb.0:
 ; GFX1250-GISEL-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-REAL16-NEXT:    v_cvt_f16_fp8_e32 v0.l, s0
+; GFX1250-GISEL-REAL16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX1250-GISEL-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_3)
 ; GFX1250-GISEL-REAL16-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX1250-GISEL-REAL16-NEXT:    s_cvt_f32_f16 s0, s0

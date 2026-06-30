@@ -10,6 +10,9 @@ define amdgpu_gs <4 x float> @_amdgpu_gs_main() {
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 16
 ; CHECK-NEXT:    ds_read2_b32 v[3:4], v0 offset1:1
 ; CHECK-NEXT:    s_mov_b32 s0, 0
+; CHECK-NEXT:    ; implicit-def: $sgpr5
+; CHECK-NEXT:    ; implicit-def: $sgpr6
+; CHECK-NEXT:    ; implicit-def: $sgpr7
 ; CHECK-NEXT:    s_mov_b32 s1, s0
 ; CHECK-NEXT:    s_mov_b32 s2, s0
 ; CHECK-NEXT:    s_mov_b32 s3, s0

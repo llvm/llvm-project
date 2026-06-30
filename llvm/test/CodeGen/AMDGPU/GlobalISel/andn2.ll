@@ -470,6 +470,7 @@ define i16 @v_andn2_i16(i16 %src0, i16 %src1) {
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_xor_b16 v0.h, v1.l, -1
 ; GFX11-TRUE16-NEXT:    v_and_b16 v0.l, v0.l, v0.h
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-FAKE16-LABEL: v_andn2_i16:
@@ -979,14 +980,33 @@ define <3 x i16> @v_andn2_v3i16(<3 x i16> %src0, <3 x i16> %src1) {
 ; GFX9-NEXT:    v_and_b32_e32 v1, v1, v3
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX10PLUS-LABEL: v_andn2_v3i16:
-; GFX10PLUS:       ; %bb.0:
-; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-NEXT:    v_xor_b32_e32 v2, -1, v2
-; GFX10PLUS-NEXT:    v_xor_b32_e32 v3, -11, v3
-; GFX10PLUS-NEXT:    v_and_b32_e32 v0, v0, v2
-; GFX10PLUS-NEXT:    v_and_b32_e32 v1, v1, v3
-; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
+; GFX10-LABEL: v_andn2_v3i16:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_xor_b32_e32 v2, -1, v2
+; GFX10-NEXT:    v_xor_b32_e32 v3, -11, v3
+; GFX10-NEXT:    v_and_b32_e32 v0, v0, v2
+; GFX10-NEXT:    v_and_b32_e32 v1, v1, v3
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-TRUE16-LABEL: v_andn2_v3i16:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    v_xor_b32_e32 v2, -1, v2
+; GFX11-TRUE16-NEXT:    v_xor_b32_e32 v3, -11, v3
+; GFX11-TRUE16-NEXT:    v_and_b32_e32 v0, v0, v2
+; GFX11-TRUE16-NEXT:    v_and_b32_e32 v1, v1, v3
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr1_hi16
+; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-FAKE16-LABEL: v_andn2_v3i16:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    v_xor_b32_e32 v2, -1, v2
+; GFX11-FAKE16-NEXT:    v_xor_b32_e32 v3, -11, v3
+; GFX11-FAKE16-NEXT:    v_and_b32_e32 v0, v0, v2
+; GFX11-FAKE16-NEXT:    v_and_b32_e32 v1, v1, v3
+; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %not.src1 = xor <3 x i16> %src1, <i16 -1, i16 -1, i16 -11>
   %and = and <3 x i16> %src0, %not.src1
   ret <3 x i16> %and

@@ -8,6 +8,8 @@ define arm_aapcs_vfpcc <2 x float> @complex_mul_v2f32(<2 x float> %a, <2 x float
 ; CHECK-LABEL: complex_mul_v2f32:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmul.f32 s9, s5, s0
+; CHECK-NEXT:    @ implicit-def: $s10
+; CHECK-NEXT:    @ implicit-def: $s11
 ; CHECK-NEXT:    vmul.f32 s8, s1, s5
 ; CHECK-NEXT:    vfma.f32 s9, s4, s1
 ; CHECK-NEXT:    vfnms.f32 s8, s4, s0

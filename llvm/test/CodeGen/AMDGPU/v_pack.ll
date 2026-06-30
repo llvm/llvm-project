@@ -357,6 +357,8 @@ define amdgpu_kernel void @fptrunc(
 ; GFX11-GISEL-REAL16-LABEL: fptrunc:
 ; GFX11-GISEL-REAL16:       ; %bb.0:
 ; GFX11-GISEL-REAL16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX11-GISEL-REAL16-NEXT:    ; implicit-def: $vgpr0_hi16
+; GFX11-GISEL-REAL16-NEXT:    ; implicit-def: $vgpr1_hi16
 ; GFX11-GISEL-REAL16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-GISEL-REAL16-NEXT:    s_load_b64 s[2:3], s[2:3], 0x0
 ; GFX11-GISEL-REAL16-NEXT:    s_waitcnt lgkmcnt(0)

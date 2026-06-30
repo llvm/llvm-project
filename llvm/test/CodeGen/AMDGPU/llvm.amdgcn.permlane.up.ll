@@ -460,16 +460,28 @@ define double @v_permlane_up_f64_vvv(double %src0) {
 ;}
 
 define void @v_permlane_up_i16(ptr addrspace(1) %out, i16 %src, i32 %src1, i32 %src2) {
-; GFX1250-LABEL: v_permlane_up_i16:
-; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_readfirstlane_b32 s0, v3
-; GFX1250-NEXT:    v_readfirstlane_b32 s1, v4
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-NEXT:    v_permlane_up_b32 v2, v2, s0, s1
-; GFX1250-NEXT:    global_store_b16 v[0:1], v2, off
-; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+; GFX1250-SDAG-LABEL: v_permlane_up_i16:
+; GFX1250-SDAG:       ; %bb.0:
+; GFX1250-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-SDAG-NEXT:    v_readfirstlane_b32 s0, v3
+; GFX1250-SDAG-NEXT:    v_readfirstlane_b32 s1, v4
+; GFX1250-SDAG-NEXT:    ; implicit-def: $vgpr2_hi16
+; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-SDAG-NEXT:    v_permlane_up_b32 v2, v2, s0, s1
+; GFX1250-SDAG-NEXT:    global_store_b16 v[0:1], v2, off
+; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1250-GISEL-LABEL: v_permlane_up_i16:
+; GFX1250-GISEL:       ; %bb.0:
+; GFX1250-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s0, v3
+; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s1, v4
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-GISEL-NEXT:    v_permlane_up_b32 v2, v2, s0, s1
+; GFX1250-GISEL-NEXT:    global_store_b16 v[0:1], v2, off
+; GFX1250-GISEL-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX13-LABEL: v_permlane_up_i16:
 ; GFX13:       ; %bb.0:

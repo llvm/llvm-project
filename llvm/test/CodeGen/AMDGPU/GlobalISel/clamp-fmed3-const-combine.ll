@@ -52,6 +52,7 @@ define half @test_fmed3_f16_known_nnan_ieee_false(half %a) #1 {
 ; GFX12-TRUE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-TRUE16-NEXT:    v_mul_f16_e64 v0.l, v0.l, 2.0 clamp
+; GFX12-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-FAKE16-LABEL: test_fmed3_f16_known_nnan_ieee_false:

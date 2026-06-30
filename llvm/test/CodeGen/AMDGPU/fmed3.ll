@@ -8775,6 +8775,7 @@ define half @v_test_fmed3_r_i_i_f16_minimumnum_maximumnum(half %a) {
 ; GFX11-GISEL-TRUE16:       ; %bb.0:
 ; GFX11-GISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-TRUE16-NEXT:    v_max_f16_e32 v0.l, v0.l, v0.l
+; GFX11-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-GISEL-TRUE16-NEXT:    v_med3_f16 v0.l, v0.l, 2.0, 4.0
 ; GFX11-GISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
@@ -9185,6 +9186,7 @@ define half @v_test_nnan_input_fmed3_r_i_i_f16_maximum_minimum(half %a) {
 ; GFX11-GISEL-TRUE16:       ; %bb.0:
 ; GFX11-GISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-TRUE16-NEXT:    v_add_f16_e32 v0.l, 1.0, v0.l
+; GFX11-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-GISEL-TRUE16-NEXT:    v_med3_f16 v0.l, v0.l, 2.0, 4.0
 ; GFX11-GISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]

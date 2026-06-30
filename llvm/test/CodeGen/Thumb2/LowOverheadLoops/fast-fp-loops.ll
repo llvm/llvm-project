@@ -224,6 +224,8 @@ define arm_aapcs_vfpcc float @fast_float_mac(ptr nocapture readonly %b, ptr noca
 ; CHECK-NEXT:    le lr, .LBB1_2
 ; CHECK-NEXT:  @ %bb.3: @ %middle.block
 ; CHECK-NEXT:    vpsel q0, q0, q1
+; CHECK-NEXT:    @ implicit-def: $s6
+; CHECK-NEXT:    @ implicit-def: $s7
 ; CHECK-NEXT:    vmov.f32 s4, s2
 ; CHECK-NEXT:    vmov.f32 s5, s3
 ; CHECK-NEXT:    vadd.f32 q0, q0, q1
@@ -425,6 +427,8 @@ define arm_aapcs_vfpcc float @fast_float_half_mac(ptr nocapture readonly %b, ptr
 ; CHECK-NEXT:    b .LBB2_2
 ; CHECK-NEXT:  .LBB2_19: @ %middle.block
 ; CHECK-NEXT:    vdup.32 q0, r12
+; CHECK-NEXT:    @ implicit-def: $s6
+; CHECK-NEXT:    @ implicit-def: $s7
 ; CHECK-NEXT:    vcmp.u32 cs, q0, q4
 ; CHECK-NEXT:    vpsel q0, q5, q3
 ; CHECK-NEXT:    vmov.f32 s4, s2

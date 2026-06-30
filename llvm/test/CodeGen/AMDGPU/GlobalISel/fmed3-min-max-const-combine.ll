@@ -105,6 +105,7 @@ define half @test_min_K1max_ValK0_f16(half %a) #0 {
 ; GFX12-TRUE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-TRUE16-NEXT:    v_max_num_f16_e32 v0.l, v0.l, v0.l
+; GFX12-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-TRUE16-NEXT:    v_med3_num_f16 v0.l, v0.l, 2.0, 4.0
 ; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
@@ -153,6 +154,7 @@ define half @test_min_K1max_K0Val_f16(half %a) #1 {
 ; GFX12-TRUE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-TRUE16-NEXT:    v_med3_num_f16 v0.l, v0.l, 2.0, 4.0
+; GFX12-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-FAKE16-LABEL: test_min_K1max_K0Val_f16:
@@ -264,6 +266,7 @@ define half @test_max_K0min_ValK1_f16(half %a) #0 {
 ; GFX12-TRUE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-TRUE16-NEXT:    v_med3_num_f16 v0.l, v0.l, 2.0, 4.0
+; GFX12-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-FAKE16-LABEL: test_max_K0min_ValK1_f16:
@@ -308,6 +311,7 @@ define half @test_max_K0min_K1Val_f16(half %a) #1 {
 ; GFX12-TRUE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-TRUE16-NEXT:    v_med3_num_f16 v0.l, v0.l, 2.0, 4.0
+; GFX12-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-FAKE16-LABEL: test_max_K0min_K1Val_f16:
