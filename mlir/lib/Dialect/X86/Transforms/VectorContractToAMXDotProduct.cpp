@@ -68,6 +68,20 @@ static Value collapseInnerDims(OpBuilder &builder, mlir::Location loc,
   return memref::CollapseShapeOp::create(builder, loc, input, reassociation);
 }
 
+// Check if a vector.contract operand has a memref read source.
+static bool isReadSrcMemref(Value operand) {
+  Operation *defOp = operand.getDefiningOp();
+  if (!defOp)
+    return false;
+
+  Value srcBuff;
+  llvm::TypeSwitch<Operation *>(operand.getDefiningOp())
+      .Case<TransferReadOp, LoadOp>(
+          [&](auto readOp) { srcBuff = readOp.getOperand(0); });
+
+  return srcBuff && isa<MemRefType>(srcBuff.getType());
+}
+
 // Get the MemRef source and offset index for the operands of
 // vector.contract.
 static FailureOr<std::pair<Value, SmallVector<Value>>>
@@ -86,7 +100,7 @@ getSrcIndxValue(OpBuilder &rewriter, Location loc, Value operand,
         srcBuff = readOp.getOperand(0);
       });
 
-  if (!srcBuff)
+  if (!srcBuff || !isa<MemRefType>(srcBuff.getType()))
     return failure();
 
   if (isNotAcc)
@@ -816,6 +830,11 @@ struct VectorContractToAMXDotProduct
       return rewriter.notifyMatchFailure(
           contractOp, "The accumulator read is in different block.");
 
+    if (!(isReadSrcMemref(contractOp.getLhs()) &&
+          isReadSrcMemref(contractOp.getRhs())))
+      return rewriter.notifyMatchFailure(
+          contractOp, "The LHS or RHS src is not a MemRef type.");
+
     unsigned int dimValue = blockingFactor;
     if (!isVnni)
       dimValue = 16 * blockingFactor;
@@ -824,6 +843,10 @@ struct VectorContractToAMXDotProduct
     // within the same block.
     if (accReadOp->getBlock() == contractOp->getBlock() &&
         resultWriteOp->getBlock() == contractOp->getBlock()) {
+
+      if (!isReadSrcMemref(contractOp.getAcc()))
+        return rewriter.notifyMatchFailure(contractOp,
+                                           "The ACC src is not a MemRef type.");
 
       bool collapse = false;
       if (isVnni)
@@ -844,14 +867,14 @@ struct VectorContractToAMXDotProduct
                                         contractOp.getLhs(), collapse);
       if (failed(srcIndxLhs))
         return rewriter.notifyMatchFailure(contractOp,
-                                           "The LHS src is not a MemRef type.");
+                                           "Failed to get the LHS src.");
       auto [srcBuffLhs, indicesLhs] = *srcIndxLhs;
 
       auto srcIndxRhs = getSrcIndxValue(rewriter, contractOp.getLoc(),
                                         contractOp.getRhs(), collapse);
       if (failed(srcIndxRhs))
         return rewriter.notifyMatchFailure(contractOp,
-                                           "The RHS src is not a MemRef type.");
+                                           "Failed to get the RHS src.");
       auto rhsSrc = *srcIndxRhs;
       auto srcBuffRhs = rhsSrc.first;
       auto indicesRhs = rhsSrc.second;
@@ -860,7 +883,7 @@ struct VectorContractToAMXDotProduct
                                         contractOp.getAcc(), false);
       if (failed(srcIndxAcc))
         return rewriter.notifyMatchFailure(contractOp,
-                                           "The ACC src is not a MemRef type.");
+                                           "Failed to get the ACC src.");
       auto [srcBuffAcc, indicesAcc] = *srcIndxAcc;
 
       Value c0 = arith::ConstantIndexOp::create(rewriter, loc, 0);
@@ -1043,14 +1066,14 @@ struct VectorContractToAMXDotProduct
                                       contractOp.getLhs(), false);
     if (failed(srcIndxLhs))
       return rewriter.notifyMatchFailure(contractOp,
-                                         "The LHS src is not a MemRef type.");
+                                         "Failed to get the LHS src.");
     auto [srcBuffLhs, indicesLhs] = *srcIndxLhs;
 
     auto srcIndxRhs = getSrcIndxValue(rewriter, contractOp.getLoc(),
                                       contractOp.getRhs(), false);
     if (failed(srcIndxRhs))
       return rewriter.notifyMatchFailure(contractOp,
-                                         "The RHS src is not a MemRef type.");
+                                         "Failed to get the RHS src.");
     auto [srcBuffRhs, indicesRhs] = *srcIndxRhs;
     Operation *vectorOpLhs;
     llvm::TypeSwitch<Operation *>(contractOp.getLhs().getDefiningOp())
