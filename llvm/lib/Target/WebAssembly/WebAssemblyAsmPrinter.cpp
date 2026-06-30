@@ -179,12 +179,33 @@ MCSymbolWasm *WebAssemblyAsmPrinter::getMCSymbolForFunction(
   return WasmSym;
 }
 
+static StringRef getWasmMetadata(const GlobalVariable &GV, StringRef Key) {
+  MDNode *MD = GV.getMetadata(Key);
+  if (!MD || MD->getNumOperands() == 0)
+    return {};
+
+  auto *Name = dyn_cast<MDString>(MD->getOperand(0));
+  if (!Name)
+    return {};
+
+  return Name->getString();
+}
+
 void WebAssemblyAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
   if (GV->hasCommonLinkage()) {
     OutContext.reportError(SMLoc(),
                            "common symbols are not yet implemented for Wasm: " +
                                getSymbol(GV)->getName());
     return;
+  }
+
+  if (!GV->isDeclaration()) {
+    if (!getWasmMetadata(*GV, "wasm.import.module").empty() ||
+        !getWasmMetadata(*GV, "wasm.import.name").empty()) {
+      OutContext.reportError(SMLoc(), "definition of global '" + GV->getName() +
+                                          "' cannot have import metadata");
+      return;
+    }
   }
 
   if (!WebAssembly::isWasmVarAddressSpace(GV->getAddressSpace())) {
@@ -212,10 +233,27 @@ void WebAssemblyAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
 
   emitVisibility(Sym, GV->getVisibility(), !GV->isDeclaration());
   emitSymbolType(Sym);
+  if (GV->isDeclaration()) {
+    StringRef ImportModule = getWasmMetadata(*GV, "wasm.import.module");
+    if (!ImportModule.empty()) {
+      Sym->setImportModule(OutContext.allocateString(ImportModule));
+      getTargetStreamer()->emitImportModule(Sym, ImportModule);
+    }
+    StringRef ImportName = getWasmMetadata(*GV, "wasm.import.name");
+    if (!ImportName.empty()) {
+      Sym->setImportName(OutContext.allocateString(ImportName));
+      getTargetStreamer()->emitImportName(Sym, ImportName);
+    }
+  }
   if (GV->hasInitializer()) {
     assert(getSymbolPreferLocal(*GV) == Sym);
     emitLinkage(GV, Sym);
     OutStreamer->emitLabel(Sym);
+    StringRef ExportName = getWasmMetadata(*GV, "wasm.export.name");
+    if (!ExportName.empty()) {
+      Sym->setExportName(OutContext.allocateString(ExportName));
+      getTargetStreamer()->emitExportName(Sym, ExportName);
+    }
     // TODO: Actually emit the initializer value.  Otherwise the global has the
     // default value for its type (0, ref.null, etc).
     OutStreamer->addBlankLine();

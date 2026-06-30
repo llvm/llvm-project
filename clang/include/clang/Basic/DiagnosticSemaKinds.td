@@ -13449,11 +13449,11 @@ def err_builtin_matrix_invalid_member
     : Error<"invalid matrix member '%0' expected %1">;
 
 def warn_mismatched_import : Warning<
-  "import %select{module|name}0 (%1) does not match the import %select{module|name}0 (%2) of the "
+  "%select{import module|import name|export name}0 (%1) does not match the %select{import module|import name|export name}0 (%2) of the "
   "previous declaration">,
   InGroup<IgnoredAttributes>;
 def warn_import_on_definition : Warning<
-  "import %select{module|name}0 cannot be applied to a function with a definition">,
+  "import %select{module|name}0 cannot be applied to a %select{function|variable}1 with a definition">,
   InGroup<IgnoredAttributes>;
 
 def err_preserve_field_info_not_field : Error<

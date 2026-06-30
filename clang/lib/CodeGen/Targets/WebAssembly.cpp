@@ -8,6 +8,7 @@
 
 #include "ABIInfoImpl.h"
 #include "TargetInfo.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 
 using namespace clang;
 using namespace clang::CodeGen;
@@ -57,17 +58,64 @@ public:
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
                            CodeGen::CodeGenModule &CGM) const override {
     TargetCodeGenInfo::setTargetAttributes(D, GV, CGM);
-    if (const auto *FD = dyn_cast_or_null<FunctionDecl>(D)) {
-      if (const auto *Attr = FD->getAttr<WebAssemblyImportModuleAttr>()) {
-        llvm::Function *Fn = cast<llvm::Function>(GV);
-        llvm::AttrBuilder B(GV->getContext());
-        B.addAttribute("wasm-import-module", Attr->getImportModule());
-        Fn->addFnAttrs(B);
+    if (const auto *VD = dyn_cast_or_null<VarDecl>(D)) {
+      if (auto *Global = dyn_cast<llvm::GlobalVariable>(GV)) {
+        const auto *ModuleAttr = VD->getAttr<WebAssemblyImportModuleAttr>();
+        const auto *NameAttr = VD->getAttr<WebAssemblyImportNameAttr>();
+        if (ModuleAttr || NameAttr) {
+          if (VD->isThisDeclarationADefinition() != VarDecl::DeclarationOnly) {
+            auto AttrLoc = ModuleAttr ? ModuleAttr->getLocation()
+                                      : NameAttr->getLocation();
+            CGM.getDiags().Report(AttrLoc, diag::err_fe_backend_unsupported)
+                << "import attribute cannot be applied to a definition";
+            return;
+          }
+          llvm::LLVMContext &Ctx = CGM.getLLVMContext();
+          if (ModuleAttr) {
+            Global->setMetadata(
+                "wasm.import.module",
+                llvm::MDNode::get(
+                    Ctx,
+                    llvm::MDString::get(Ctx, ModuleAttr->getImportModule())));
+          }
+          if (NameAttr) {
+            Global->setMetadata(
+                "wasm.import.name",
+                llvm::MDNode::get(
+                    Ctx, llvm::MDString::get(Ctx, NameAttr->getImportName())));
+          }
+        }
+        if (const auto *Attr = VD->getAttr<WebAssemblyExportNameAttr>()) {
+          llvm::LLVMContext &Ctx = CGM.getLLVMContext();
+          Global->setMetadata(
+              "wasm.export.name",
+              llvm::MDNode::get(
+                  Ctx, llvm::MDString::get(Ctx, Attr->getExportName())));
+        }
       }
-      if (const auto *Attr = FD->getAttr<WebAssemblyImportNameAttr>()) {
+      return;
+    }
+
+    if (const auto *FD = dyn_cast_or_null<FunctionDecl>(D)) {
+      const auto *ModuleAttr = FD->getAttr<WebAssemblyImportModuleAttr>();
+      const auto *NameAttr = FD->getAttr<WebAssemblyImportNameAttr>();
+      if (ModuleAttr || NameAttr) {
+        if (FD->isThisDeclarationADefinition()) {
+          auto AttrLoc =
+              ModuleAttr ? ModuleAttr->getLocation() : NameAttr->getLocation();
+          CGM.getDiags().Report(AttrLoc, diag::err_fe_backend_unsupported)
+              << "import attribute cannot be applied to a definition";
+          auto *NonConstFD = const_cast<FunctionDecl *>(FD);
+          NonConstFD->dropAttr<WebAssemblyImportModuleAttr>();
+          NonConstFD->dropAttr<WebAssemblyImportNameAttr>();
+          return;
+        }
         llvm::Function *Fn = cast<llvm::Function>(GV);
         llvm::AttrBuilder B(GV->getContext());
-        B.addAttribute("wasm-import-name", Attr->getImportName());
+        if (ModuleAttr)
+          B.addAttribute("wasm-import-module", ModuleAttr->getImportModule());
+        if (NameAttr)
+          B.addAttribute("wasm-import-name", NameAttr->getImportName());
         Fn->addFnAttrs(B);
       }
       if (const auto *Attr = FD->getAttr<WebAssemblyExportNameAttr>()) {
