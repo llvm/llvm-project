@@ -1,4 +1,4 @@
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn < %s | FileCheck -check-prefix=SI -check-prefix=BOTH %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -mcpu=gfx600 < %s | FileCheck -check-prefix=SI -check-prefix=BOTH %s
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -mcpu=tonga < %s | FileCheck -check-prefix=VI -check-prefix=BOTH %s
 
 ; BOTH-LABEL: {{^}}s_rotl_i64:

@@ -2,7 +2,7 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=tonga -denormal-fp-math-f32=preserve-sign < %s | FileCheck -check-prefixes=GFX8 %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=tonga -denormal-fp-math-f32=ieee < %s | FileCheck -check-prefixes=GFX8 %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx900 -denormal-fp-math-f32=ieee < %s | FileCheck -check-prefixes=GFX9-SDAG %s
-; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx900 -denormal-fp-math-f32=ieee < %s | FileCheck -check-prefixes=GFX9-GISEL %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx900 -denormal-fp-math-f32=ieee < %s | FileCheck -check-prefixes=GFX9-GISEL %s
 
 declare half @llvm.amdgcn.fmad.ftz.f16(half %a, half %b, half %c)
 

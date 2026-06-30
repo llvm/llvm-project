@@ -39,7 +39,7 @@ enum class InstructionFlavor : uint8_t {
   NUM_FLAVORS
 };
 
-constexpr StringRef getFlavorName(InstructionFlavor F) {
+inline StringRef getFlavorName(InstructionFlavor F) {
   switch (F) {
   case InstructionFlavor::WMMA:
     return "WMMA";
@@ -67,7 +67,7 @@ constexpr StringRef getFlavorName(InstructionFlavor F) {
   llvm_unreachable("Unknown InstructionFlavor");
 }
 
-constexpr StringRef getFlavorShortName(InstructionFlavor F) {
+inline StringRef getFlavorShortName(InstructionFlavor F) {
   switch (F) {
   case InstructionFlavor::WMMA:
     return "W";
@@ -128,7 +128,7 @@ enum class AMDGPUSchedReason : uint8_t {
   NUM_REASONS
 };
 
-constexpr StringRef getReasonName(AMDGPUSchedReason R) {
+inline StringRef getReasonName(AMDGPUSchedReason R) {
   switch (R) {
   case AMDGPUSchedReason::None:
     return "None";

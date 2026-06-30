@@ -76,13 +76,11 @@ public:
   bool runOnModule(Module &M) override {
     if (skipModule(M))
       return false;
-    DeadArgumentEliminationPass DAEP(shouldHackArguments());
+    DeadArgumentEliminationPass DAEP;
     ModuleAnalysisManager DummyMAM;
     PreservedAnalyses PA = DAEP.run(M, DummyMAM);
     return !PA.areAllPreserved();
   }
-
-  virtual bool shouldHackArguments() const { return false; }
 };
 
 } // end anonymous namespace
@@ -91,31 +89,9 @@ char DAE::ID = 0;
 
 INITIALIZE_PASS(DAE, "deadargelim", "Dead Argument Elimination", false, false)
 
-namespace {
-
-/// The DeadArgumentHacking pass, same as dead argument elimination, but deletes
-/// arguments to functions which are external. This is only for use by bugpoint.
-struct DAH : public DAE {
-  static char ID;
-
-  DAH() : DAE(ID) {}
-
-  bool shouldHackArguments() const override { return true; }
-};
-
-} // end anonymous namespace
-
-char DAH::ID = 0;
-
-INITIALIZE_PASS(DAH, "deadarghaX0r",
-                "Dead Argument Hacking (BUGPOINT USE ONLY; DO NOT USE)", false,
-                false)
-
 /// This pass removes arguments from functions which are not used by the body of
 /// the function.
 ModulePass *llvm::createDeadArgEliminationPass() { return new DAE(); }
-
-ModulePass *llvm::createDeadArgHackingPass() { return new DAH(); }
 
 /// If this is an function that takes a ... list, and if llvm.vastart is never
 /// called, the varargs list is dead for the function.
@@ -484,6 +460,12 @@ DeadArgumentEliminationPass::surveyUses(const Value *V,
 /// We consider arguments of non-internal functions to be intrinsically alive as
 /// well as arguments to functions which have their "address taken".
 void DeadArgumentEliminationPass::surveyFunction(const Function &F) {
+  // Can only change function signature for functions with local linkage.
+  if (!F.hasLocalLinkage()) {
+    markFrozen(F);
+    return;
+  }
+
   // Functions with inalloca/preallocated parameters are expecting args in a
   // particular register and memory layout.
   if (F.getAttributes().hasAttrSomewhere(Attribute::InAlloca) ||
@@ -496,6 +478,12 @@ void DeadArgumentEliminationPass::surveyFunction(const Function &F) {
   // otherwise rely on the frame layout in a way that this analysis will not
   // see.
   if (F.hasFnAttribute(Attribute::Naked)) {
+    markFrozen(F);
+    return;
+  }
+
+  // Ensure function definition is available for interprocedural analysis.
+  if (!F.isDefinitionExact()) {
     markFrozen(F);
     return;
   }
@@ -521,11 +509,6 @@ void DeadArgumentEliminationPass::surveyFunction(const Function &F) {
       if (markFnOrRetTyFrozenOnMusttail(F))
         return;
     }
-  }
-
-  if (!F.hasLocalLinkage() && (!ShouldHackArguments || F.isIntrinsic())) {
-    markFrozen(F);
-    return;
   }
 
   LLVM_DEBUG(

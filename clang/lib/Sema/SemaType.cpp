@@ -9109,10 +9109,13 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
       // it it breaks large amounts of Linux software.
       attr.setUsedAsTypeAttr();
       break;
-    case ParsedAttr::AT_OpenCLPrivateAddressSpace:
-    case ParsedAttr::AT_OpenCLGlobalAddressSpace:
     case ParsedAttr::AT_OpenCLGlobalDeviceAddressSpace:
     case ParsedAttr::AT_OpenCLGlobalHostAddressSpace:
+      state.getSema().Diag(attr.getLoc(), diag::warn_deprecated_attribute)
+          << attr;
+      [[fallthrough]];
+    case ParsedAttr::AT_OpenCLPrivateAddressSpace:
+    case ParsedAttr::AT_OpenCLGlobalAddressSpace:
     case ParsedAttr::AT_OpenCLLocalAddressSpace:
     case ParsedAttr::AT_OpenCLConstantAddressSpace:
     case ParsedAttr::AT_OpenCLGenericAddressSpace:
@@ -9356,6 +9359,7 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
     case ParsedAttr::AT_HLSLResourceDimension:
     case ParsedAttr::AT_HLSLROV:
     case ParsedAttr::AT_HLSLRawBuffer:
+    case ParsedAttr::AT_HLSLIsArray:
     case ParsedAttr::AT_HLSLContainedType: {
       // Only collect HLSL resource type attributes that are in
       // decl-specifier-seq; do not collect attributes on declarations or those
@@ -10113,16 +10117,17 @@ QualType Sema::BuildPackIndexingType(QualType Pattern, Expr *IndexExpr,
                                      ArrayRef<QualType> Expansions) {
 
   UnsignedOrNone Index = std::nullopt;
-  if (FullySubstituted && !IndexExpr->isValueDependent() &&
-      !IndexExpr->isTypeDependent()) {
-    llvm::APSInt Value(Context.getIntWidth(Context.getSizeType()));
+  if (!IndexExpr->isInstantiationDependent()) {
+    llvm::APSInt Value;
     ExprResult Res = CheckConvertedConstantExpression(
-        IndexExpr, Context.getSizeType(), Value, CCEKind::ArrayBound);
-    if (!Res.isUsable())
+        IndexExpr, Context.getSizeType(), Value, CCEKind::PackIndex);
+
+    if (!Res.isUsable() || !Value.isRepresentableByInt64())
       return QualType();
+
     IndexExpr = Res.get();
-    int64_t V = Value.getExtValue();
-    if (FullySubstituted && (V < 0 || V >= int64_t(Expansions.size()))) {
+    uint64_t V = Value.getZExtValue();
+    if (FullySubstituted && (V < 0 || V >= Expansions.size())) {
       Diag(IndexExpr->getBeginLoc(), diag::err_pack_index_out_of_bound)
           << V << Pattern << Expansions.size();
       return QualType();

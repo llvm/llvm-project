@@ -11,6 +11,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfWasm  # attaching requires launching the inferior as a host process
 class ProcessListTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
