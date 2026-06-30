@@ -18,6 +18,11 @@ void MemoryRegionInfoCache::Clear() {
   m_is_sorted = true;
 }
 
+size_t MemoryRegionInfoCache::GetSize() {
+  std::lock_guard<std::recursive_mutex> guard(m_mutex);
+  return m_region_infos.GetSize();
+}
+
 void MemoryRegionInfoCache::EraseRange(addr_t load_addr, size_t size) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
@@ -27,8 +32,10 @@ void MemoryRegionInfoCache::EraseRange(addr_t load_addr, size_t size) {
   if (size > max_minus_addr)
     return;
 
-  if (!m_is_sorted)
+  if (!m_is_sorted) {
     m_region_infos.Sort();
+    m_is_sorted = true;
+  }
   uint32_t start_idx = m_region_infos.FindEntryIndexThatContains(load_addr);
   uint32_t end_idx =
       m_region_infos.FindEntryIndexThatContains(load_addr + size - 1);
@@ -41,7 +48,6 @@ void MemoryRegionInfoCache::EraseRange(addr_t load_addr, size_t size) {
     m_region_infos.Erase(start_idx, start_idx + 1);
   else
     m_region_infos.Erase(start_idx, end_idx + 1);
-  m_is_sorted = false;
 }
 
 void MemoryRegionInfoCache::EraseContaining(addr_t load_addr) {

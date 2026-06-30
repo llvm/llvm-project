@@ -38,14 +38,14 @@ public:
   /// Add a MemoryRegionInfo to the collection.
   void AddRegion(const MemoryRegionInfo &region_info);
 
-  size_t GetSize() { return m_region_infos.GetSize(); }
+  size_t GetSize();
 
 private:
   typedef RangeDataVector<lldb::addr_t, size_t, lldb_private::MemoryRegionInfo>
       InfoMap;
   InfoMap m_region_infos;
   bool m_is_sorted;
-  mutable std::recursive_mutex m_mutex;
+  std::recursive_mutex m_mutex;
 };
 } // namespace lldb_private
 
