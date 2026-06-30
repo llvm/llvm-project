@@ -10,9 +10,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Address.h"
 #include "CIRGenCleanup.h"
 #include "CIRGenConstantEmitter.h"
 #include "CIRGenFunction.h"
+#include "EHScopeStack.h"
 #include "mlir/IR/Location.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/Attrs.inc"
@@ -27,6 +29,20 @@
 
 using namespace clang;
 using namespace clang::CIRGen;
+
+/// Does the statement tree rooted at \p s contain a label, switch, or indirect
+/// goto that could bypass a local's initialization? A coarse stand-in for
+/// classic CodeGen's per-decl bypass analysis (PR28267).
+static bool functionMightHaveBypass(const Stmt *s) {
+  if (!s)
+    return false;
+  if (isa<LabelStmt, SwitchStmt, IndirectGotoStmt>(s))
+    return true;
+  for (const Stmt *child : s->children())
+    if (functionMightHaveBypass(child))
+      return true;
+  return false;
+}
 
 CIRGenFunction::AutoVarEmission
 CIRGenFunction::emitAutoVarAlloca(const VarDecl &d,
@@ -129,6 +145,21 @@ CIRGenFunction::emitAutoVarAlloca(const VarDecl &d,
                                  /*arraySize=*/nullptr, /*alloca=*/nullptr, ip);
       declare(address.getPointer(), &d, ty, getLoc(d.getSourceRange()),
               alignment);
+      // A goto/switch that bypasses the init splits the lifetime across IR
+      // regions and miscompiles under stack coloring (PR28267). Lacking
+      // classic's per-decl bypass analysis, drop markers for the whole
+      // function if any such statement is present.
+      assert(!cir::MissingFeatures::lifetimeMarkersBypass());
+      if (shouldEmitLifetimeOp && haveInsertPoint()) {
+        if (!fnHasBypassStmt.has_value())
+          fnHasBypassStmt = functionMightHaveBypass(
+              curFuncDecl ? curFuncDecl->getBody() : nullptr);
+        // Peel address-space casts to the alloca so the op verifier sees a
+        // value produced by cir.alloca.
+        if (!*fnHasBypassStmt)
+          emission.useLifetimeOp = emitLifetimeStartOp(
+              loc, address.getUnderlyingAllocaOp().getResult());
+      }
     }
   } else {
     // Non-constant size type
@@ -164,6 +195,9 @@ CIRGenFunction::emitAutoVarAlloca(const VarDecl &d,
     // dimensions.
     assert(!cir::MissingFeatures::generateDebugInfo());
   }
+
+  if (emission.useLifetimeOp)
+    pushLifetimeEnd(address);
 
   emission.addr = address;
   setAddrOfLocalVar(&d, address);
@@ -1005,6 +1039,15 @@ struct CallStackRestore final : EHScopeStack::Cleanup {
   }
 };
 
+struct CallLifetimeEnd final : EHScopeStack::Cleanup {
+  Address addr;
+  CallLifetimeEnd(Address addr) : addr(addr) {}
+  void emit(CIRGenFunction &cgf, Flags flags) override {
+    mlir::Value allocaPtr = addr.getUnderlyingAllocaOp().getResult();
+    cgf.emitLifetimeEndOp(allocaPtr.getLoc(), allocaPtr);
+  }
+};
+
 /// A cleanup which performs a partial array destroy where the end pointer is
 /// irregularly determined and must be loaded from a local.
 struct IrregularPartialArrayDestroy final : EHScopeStack::Cleanup {
@@ -1261,6 +1304,10 @@ void CIRGenFunction::pushStackRestore(CleanupKind kind, Address spMem) {
   ehStack.pushCleanup<CallStackRestore>(kind, spMem);
 }
 
+void CIRGenFunction::pushLifetimeEnd(Address addr) {
+  ehStack.pushCleanup<CallLifetimeEnd>(NormalEHLifetimeMarker, addr);
+}
+
 /// Enter a destroy cleanup for the given local variable.
 void CIRGenFunction::emitAutoVarTypeCleanup(
     const CIRGenFunction::AutoVarEmission &emission,
@@ -1316,4 +1363,19 @@ void CIRGenFunction::maybeEmitDeferredVarDeclInit(const VarDecl *vd) {
       if (auto *hd = b->getHoldingVar())
         emitVarDecl(*hd);
   }
+}
+
+bool CIRGenFunction::emitLifetimeStartOp(mlir::Location loc, mlir::Value addr) {
+  if (!shouldEmitLifetimeOp)
+    return false;
+
+  cir::LifetimeStartOp::create(builder, loc, addr);
+  return true;
+}
+
+void CIRGenFunction::emitLifetimeEndOp(mlir::Location loc, mlir::Value addr) {
+  if (!shouldEmitLifetimeOp)
+    return;
+
+  cir::LifetimeEndOp::create(builder, loc, addr);
 }

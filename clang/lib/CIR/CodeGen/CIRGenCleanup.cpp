@@ -392,7 +392,7 @@ void *EHScopeStack::pushCleanup(CleanupKind kind, size_t size) {
     innermostEHScope = stable_begin();
 
   if (isLifetimeMarker)
-    cgf->cgm.errorNYI("push lifetime marker cleanup");
+    scope->setLifetimeMarker();
 
   // With Windows -EHa, Invoke llvm.seh.scope.begin() for EHCleanup
   if (cgf->getLangOpts().EHAsynch && isEHCleanup && !isLifetimeMarker &&
@@ -436,8 +436,7 @@ bool EHScopeStack::requiresCatchOrCleanup() const {
   for (stable_iterator si = getInnermostEHScope(); si != stable_end();) {
     if (auto *cleanup = dyn_cast<EHCleanupScope>(&*find(si))) {
       if (cleanup->isLifetimeMarker()) {
-        // Skip lifetime markers and continue from the enclosing EH scope
-        assert(!cir::MissingFeatures::emitLifetimeMarkers());
+        si = cleanup->getEnclosingEHScope();
         continue;
       }
     }

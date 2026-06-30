@@ -28,10 +28,30 @@
 
 namespace clang::CIRGen {
 
+/// shouldEmitLifetimeMarkers - Decide whether we need emit the life-time
+/// markers. Mirror of CodeGenFunction::shouldEmitLifetimeMarkers.
+static bool shouldEmitLifetimeMarkers(const CodeGenOptions &cgOpts,
+                                      const LangOptions &langOpts) {
+
+  if (cgOpts.DisableLifetimeMarkers)
+    return false;
+
+  // Sanitizers may use markers.
+  if (cgOpts.SanitizeAddressUseAfterScope ||
+      langOpts.Sanitize.has(SanitizerKind::HWAddress) ||
+      langOpts.Sanitize.has(SanitizerKind::Memory) ||
+      langOpts.Sanitize.has(SanitizerKind::MemtagStack))
+    return true;
+
+  return cgOpts.OptimizationLevel != 0;
+}
+
 CIRGenFunction::CIRGenFunction(CIRGenModule &cgm, CIRGenBuilderTy &builder,
                                bool suppressNewContext)
     : CIRGenTypeCache(cgm), cgm{cgm}, builder(builder) {
   ehStack.setCGF(this);
+  shouldEmitLifetimeOp = shouldEmitLifetimeMarkers(cgm.getCodeGenOpts(),
+                                                   getContext().getLangOpts());
 }
 
 CIRGenFunction::~CIRGenFunction() {}
