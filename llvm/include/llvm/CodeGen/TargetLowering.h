@@ -4427,7 +4427,7 @@ public:
                                              KnownBits &Known,
                                              const MachineFunction &MF) const;
 
-  /// Determine which bits of a stack object pointer are known to be 0.
+  /// Determine known bits of a pointer to a known valid stack object.
   /// The default implementation computes low bits based on alignment.
   virtual void computeKnownBitsForStackObjectPointer(KnownBits &Known,
                                                      const MachineFunction &MF,
