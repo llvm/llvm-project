@@ -124,7 +124,7 @@ static void canonicalizeForCacheKey(FrontendOptions &FrontendOpts,
   DiagOpts.ShowOptionNames = false;
   DiagOpts.ShowNoteIncludeStack = false;
   DiagOpts.ShowCategories = false;
-  DiagOpts.ShowColors = false;
+  DiagOpts.setShowColors(ShowColorsKind::Off);
   DiagOpts.UseANSIEscapeCodes = false;
   DiagOpts.VerifyDiagnostics = false;
   DiagOpts.setVerifyIgnoreUnexpected(DiagnosticLevelMask::None);

@@ -6237,8 +6237,9 @@ SWIGINTERN int Swig_var_ValueTypeSyntheticMask_set(PyObject *) {
 
 SWIGINTERN PyObject *Swig_var_ValueTypeSyntheticMask_get(void) {
   PyObject *pyobj = 0;
-  
-  pyobj = SWIG_From_unsigned_SS_int(static_cast< unsigned int >(lldb::ValueTypeSyntheticMask));
+
+  pyobj = SWIG_From_unsigned_SS_int(
+      static_cast<unsigned int>(lldb::eValueTypeSyntheticFlag));
   return pyobj;
 }
 
