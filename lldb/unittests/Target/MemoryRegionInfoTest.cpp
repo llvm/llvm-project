@@ -49,27 +49,27 @@ TEST(MemoryRegionInfoTest, CacheErasing) {
 
   // Erase the last entry.
   ASSERT_EQ(cache.GetSize(), 7U);
-  cache.Erase(0x6000, 1);
+  cache.EraseContaining(0x6000);
   ASSERT_EQ(cache.GetSize(), 6U);
   std::optional<MemoryRegionInfo> erased_ri = cache.GetMemoryRegion(0x6000);
   ASSERT_FALSE(erased_ri);
-  cache.Erase(0x6000, 1); // no-op
+  cache.EraseContaining(0x6000); // no-op
   ASSERT_EQ(cache.GetSize(), 6U);
 
   // Erase the last entry & beyond.
-  cache.Erase(0x5000, 0x5000000);
+  cache.EraseRange(0x5000, 0x5000000);
   ASSERT_EQ(cache.GetSize(), 5U);
   erased_ri = cache.GetMemoryRegion(0x5000);
   ASSERT_FALSE(erased_ri);
 
   // Erase from before the first entry, through the first entry.
-  cache.Erase(0x500, 0xb01);
+  cache.EraseRange(0x500, 0xb01);
   ASSERT_EQ(cache.GetSize(), 4U);
   erased_ri = cache.GetMemoryRegion(0x1000);
   ASSERT_FALSE(erased_ri);
 
   // Erase the second and third entries.
-  cache.Erase(0x2000, 0x101);
+  cache.EraseRange(0x2000, 0x101);
   ASSERT_EQ(cache.GetSize(), 2U);
   erased_ri = cache.GetMemoryRegion(0x2000);
   ASSERT_FALSE(erased_ri);
@@ -82,9 +82,9 @@ TEST(MemoryRegionInfoTest, CacheErasing) {
   ASSERT_TRUE(ri);
 
   // Erase some entries that don't exist.
-  cache.Erase(0x2000, 0x101);
+  cache.EraseRange(0x2000, 0x101);
   ASSERT_EQ(cache.GetSize(), 2U);
-  cache.Erase(0x2400, 1);
+  cache.EraseContaining(0x2400);
   ASSERT_EQ(cache.GetSize(), 2U);
 
   cache.AddRegion(MemoryRegionInfo({0x0, 0x1000}, eLazyBoolYes, eLazyBoolYes,
@@ -92,7 +92,7 @@ TEST(MemoryRegionInfoTest, CacheErasing) {
                                    ConstString("Zeroth entry")));
 
   // Do an Erase that overflows, confirm entry at 0 is not erased.
-  cache.Erase(LLDB_INVALID_ADDRESS, 1);
+  cache.EraseContaining(LLDB_INVALID_ADDRESS);
   ASSERT_EQ(cache.GetSize(), 3U);
   ri = cache.GetMemoryRegion(0x0);
   ASSERT_TRUE(ri);

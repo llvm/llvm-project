@@ -17,7 +17,7 @@ using namespace lldb_private;
 
 void MemoryRegionInfoCache::Clear() { m_region_infos.Clear(); }
 
-void MemoryRegionInfoCache::Erase(addr_t load_addr, size_t size) {
+void MemoryRegionInfoCache::EraseRange(addr_t load_addr, size_t size) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
   // If load_addr+size would overflow, do nothing.
@@ -39,6 +39,10 @@ void MemoryRegionInfoCache::Erase(addr_t load_addr, size_t size) {
   else
     m_region_infos.Erase(start_idx, end_idx + 1);
   m_region_infos.Sort();
+}
+
+void MemoryRegionInfoCache::EraseContaining(addr_t load_addr) {
+  EraseRange(load_addr, 1);
 }
 
 std::optional<MemoryRegionInfo>
