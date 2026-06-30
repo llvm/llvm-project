@@ -1108,9 +1108,9 @@ define i32 @logic_tree_with_shifts_var_i32(i32 %a, i32 %b, i32 %c, i32 %d, i32 %
 ; CHECK-ALIGN:       @ %bb.0:
 ; CHECK-ALIGN-NEXT:    orrs r0, r2
 ; CHECK-ALIGN-NEXT:    ldr r2, [sp]
+; CHECK-ALIGN-NEXT:    orrs r1, r3
 ; CHECK-ALIGN-NEXT:    lsls r0, r2
 ; CHECK-ALIGN-NEXT:    orrs r0, r1
-; CHECK-ALIGN-NEXT:    orrs r0, r3
 ; CHECK-ALIGN-NEXT:    bx lr
 ;
 ; CHECK-V6M-LABEL: logic_tree_with_shifts_var_i32:

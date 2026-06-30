@@ -50,9 +50,9 @@ define i32 @brev_and_all_operand_multiuse(i32 %a, i32 %b) #0 {
 ; CHECK-NEXT:    rbit r1, r1
 ; CHECK-NEXT:    rbit r0, r0
 ; CHECK-NEXT:    and.w r2, r0, r1
+; CHECK-NEXT:    muls r0, r1, r0
 ; CHECK-NEXT:    rbit r2, r2
 ; CHECK-NEXT:    muls r0, r2, r0
-; CHECK-NEXT:    muls r0, r1, r0
 ; CHECK-NEXT:    bx lr
   %1 = tail call i32 @llvm.bitreverse.i32(i32 %a)
   %2 = tail call i32 @llvm.bitreverse.i32(i32 %b)
