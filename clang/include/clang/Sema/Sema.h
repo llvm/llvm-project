@@ -3577,7 +3577,7 @@ public:
   /// correctly named definition after the renamed definition.
   llvm::SmallPtrSet<const NamedDecl *, 4> TypoCorrectedFunctionDefinitions;
 
-  /// A cache of the flags available in enumerations with the flag_bits
+  /// A cache of the flags available in enumerations with the flag_enum
   /// attribute.
   mutable llvm::DenseMap<const EnumDecl *, llvm::APInt> FlagBitsCache;
 
