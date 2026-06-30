@@ -35,11 +35,13 @@
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/ScalarEvolutionPatternMatch.h"
 #include "llvm/Analysis/ScopedNoAliasAA.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TypeSize.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
@@ -47,6 +49,8 @@
 using namespace llvm;
 using namespace VPlanPatternMatch;
 using namespace SCEVPatternMatch;
+
+extern cl::opt<bool> EnableCheckFirstMaskedReplay;
 
 bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
     VPlan &Plan, const TargetLibraryInfo &TLI) {
@@ -78,14 +82,21 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
         assert(!isa<PHINode>(Inst) && "phis should be handled above");
         // Create VPWidenMemoryRecipe for loads and stores.
         if (LoadInst *Load = dyn_cast<LoadInst>(Inst)) {
+          VPValue *Mask = Ingredient.getNumOperands() > 1
+                              ? Ingredient.getOperand(1)
+                              : nullptr;
           NewRecipe = new VPWidenLoadRecipe(
-              *Load, Ingredient.getOperand(0), nullptr /*Mask*/,
+              *Load, Ingredient.getOperand(0), Mask,
               false /*Consecutive*/, *VPI, Ingredient.getDebugLoc());
         } else if (StoreInst *Store = dyn_cast<StoreInst>(Inst)) {
+          // Stores carry check-first guard predicate
+          // as the third operand. It becomes the store mask.
+          VPValue *Mask = Ingredient.getNumOperands() > 2
+                              ? Ingredient.getOperand(2)
+                              : nullptr;
           NewRecipe = new VPWidenStoreRecipe(
-              *Store, Ingredient.getOperand(1), Ingredient.getOperand(0),
-              nullptr /*Mask*/, false /*Consecutive*/, *VPI,
-              Ingredient.getDebugLoc());
+              *Store, Ingredient.getOperand(1), Ingredient.getOperand(0), Mask,
+              false /*Consecutive*/, *VPI, Ingredient.getDebugLoc());
         } else if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(Inst)) {
           NewRecipe = new VPWidenGEPRecipe(GEP->getSourceElementType(),
                                            Ingredient.operands(), *VPI,
@@ -2561,6 +2572,15 @@ static bool cannotHoistOrSinkRecipe(VPRecipeBase &R, VPBasicBlock *FirstBB,
       match(&R, m_Intrinsic<Intrinsic::assume>()))
     return vputils::cannotHoistOrSinkRecipe(R, Sinking);
 
+  bool InSingleSuccChain = false;
+  for (VPBlockBase *Succ = FirstBB; Succ; Succ = Succ->getSingleSuccessor())
+    if (Succ == LastBB) {
+      InSingleSuccChain = true;
+      break;
+    }
+  if (!InSingleSuccChain)
+    return true;
+
   // Check that the memory operation doesn't alias between FirstBB and LastBB.
   auto MemLoc = vputils::getMemoryLocation(R);
 
@@ -2863,6 +2883,8 @@ void VPlanTransforms::optimize(VPlan &Plan) {
   RUN_VPLAN_PASS(removeBranchOnConst, Plan, /*OnlyLatches=*/false);
   RUN_VPLAN_PASS(simplifyReverses, Plan);
   RUN_VPLAN_PASS(removeDeadRecipes, Plan);
+
+  RUN_VPLAN_PASS(maskCheckFirstReplayStores, Plan);
 
   RUN_VPLAN_PASS(createAndOptimizeReplicateRegions, Plan);
   RUN_VPLAN_PASS(mergeBlocksIntoPredecessors, Plan);
@@ -4596,6 +4618,29 @@ static bool handleUncountableExitsWithSideEffects(
   return true;
 }
 
+/// Walk backward from ExitCond to collect the recipes needed to evaluate the
+/// exit condition, stopping at PHIs. Returns false if the condition depends on
+/// a memory-writing recipe which cannot be placed in the check block.
+static bool computeConditionSlice(VPValue *ExitCond,
+                                  SmallPtrSetImpl<VPRecipeBase *> &Slice) {
+  SmallVector<VPValue *, 16> Worklist;
+  Worklist.push_back(ExitCond);
+  while (!Worklist.empty()) {
+    VPValue *V = Worklist.pop_back_val();
+    VPRecipeBase *DefR = V->getDefiningRecipe();
+    if (!DefR || DefR->isPhi())
+      continue;
+    if (Slice.contains(DefR))
+      continue;
+    if (DefR->mayWriteToMemory())
+      return false;
+    Slice.insert(DefR);
+    for (VPValue *Op : DefR->operands())
+      Worklist.push_back(Op);
+  }
+  return true;
+}
+
 bool VPlanTransforms::handleUncountableEarlyExits(
     VPlan &Plan, VPBasicBlock *HeaderVPBB, VPBasicBlock *LatchVPBB,
     VPBasicBlock *MiddleVPBB, Loop *TheLoop, PredicatedScalarEvolution &PSE,
@@ -4662,6 +4707,395 @@ bool VPlanTransforms::handleUncountableEarlyExits(
                                      Exits[I].EarlyExitingVPBB) &&
              "RPO sort must place dominating exits before dominated ones");
 #endif
+
+  if (Style == UncountableExitStyle::CheckFirst) {
+
+    if (range_size(TheLoop->getHeader()->phis()) > 1)
+      return false;
+
+    SmallPtrSet<const VPBlockBase *, 4> ExitBlockSet;
+    SmallPtrSet<const VPBlockBase *, 4> EarlyExitingSet;
+    for (const EarlyExitInfo &E : Exits) {
+      ExitBlockSet.insert(E.EarlyExitVPBB);
+      EarlyExitingSet.insert(E.EarlyExitingVPBB);
+    }
+    if (EarlyExitingSet.contains(LatchVPBB))
+      return false;
+    SmallVector<VPBasicBlock *, 4> LoopChain;
+    struct DiamondGuard {
+      VPValue *Cond;
+      bool ChainOnFalseEdge;
+      VPBasicBlock *Rejoin;
+      unsigned RejoinIdx;
+    };
+    DenseMap<VPBasicBlock *, DiamondGuard> ChainDiamond;
+    {
+      SmallPtrSet<VPBasicBlock *, 8> Seen;
+      VPBasicBlock *Cur = HeaderVPBB;
+      while (Cur) {
+        if (!Seen.insert(Cur).second)
+          return false;
+        LoopChain.push_back(Cur);
+        if (Cur != HeaderVPBB && Cur->begin() != Cur->end() &&
+            Cur->begin()->isPhi())
+          return false;
+        if (Cur == LatchVPBB)
+          break;
+        SmallVector<VPBasicBlock *, 2> InLoopSuccs;
+        for (VPBlockBase *S : Cur->getSuccessors()) {
+          if (S == MiddleVPBB || ExitBlockSet.contains(S))
+            continue;
+          auto *SBB = dyn_cast<VPBasicBlock>(S);
+          if (!SBB)
+            return false;
+          InLoopSuccs.push_back(SBB);
+        }
+        VPBasicBlock *NextInLoop = nullptr;
+        if (InLoopSuccs.size() == 1) {
+          NextInLoop = InLoopSuccs[0];
+        } else if (InLoopSuccs.size() == 2) {
+          VPBasicBlock *Cont = nullptr;
+          VPBasicBlock *Bypass = nullptr;
+          if (InLoopSuccs[0] == LatchVPBB) {
+            Bypass = InLoopSuccs[0];
+            Cont = InLoopSuccs[1];
+          } else if (InLoopSuccs[1] == LatchVPBB) {
+            Bypass = InLoopSuccs[1];
+            Cont = InLoopSuccs[0];
+          } else {
+            bool S0Merge = InLoopSuccs[0]->getNumPredecessors() > 1;
+            bool S1Merge = InLoopSuccs[1]->getNumPredecessors() > 1;
+            if (S0Merge && !S1Merge) {
+              Bypass = InLoopSuccs[0];
+              Cont = InLoopSuccs[1];
+            } else if (S1Merge && !S0Merge) {
+              Bypass = InLoopSuccs[1];
+              Cont = InLoopSuccs[0];
+            } else {
+              return false;
+            }
+          }
+          VPValue *GuardCond = nullptr;
+          if (!match(Cur->getTerminator(), m_BranchOnCond(m_VPValue(GuardCond))))
+            return false;
+          bool ChainOnFalseEdge = Cur->getSuccessors()[1] == Cont;
+          ChainDiamond[Cur] = {GuardCond, ChainOnFalseEdge, Bypass, 0};
+          NextInLoop = Cont;
+        } else {
+          return false;
+        }
+        Cur = NextInLoop;
+      }
+      if (LoopChain.empty() || LoopChain.back() != LatchVPBB)
+        return false;
+    }
+
+    DenseMap<const VPBasicBlock *, unsigned> ChainIdx;
+    for (unsigned I = 0, E = LoopChain.size(); I != E; ++I)
+      ChainIdx[LoopChain[I]] = I;
+    for (auto &[DBB, DG] : ChainDiamond) {
+      auto RIt = ChainIdx.find(DG.Rejoin);
+      if (RIt == ChainIdx.end() || RIt->second <= ChainIdx[DBB])
+        return false;
+      DG.RejoinIdx = RIt->second;
+    }
+
+    ArrayRef<VPBasicBlock *> Intermediates =
+        ArrayRef(LoopChain).drop_front().drop_back();
+
+    for (EarlyExitInfo &Exit : Exits) {
+      auto It = llvm::find(LoopChain, Exit.EarlyExitingVPBB);
+      if (It == LoopChain.end())
+        return false;
+      unsigned ExitIdx = std::distance(LoopChain.begin(), It);
+      auto *MC = cast<VPInstruction>(Exit.CondToExit);
+      VPBuilder GuardBuilder(MC);
+      VPValue *CombinedGuard = nullptr;
+      for (unsigned I = 0; I < ExitIdx; ++I) {
+        auto DiamondIt = ChainDiamond.find(LoopChain[I]);
+        if (DiamondIt == ChainDiamond.end() ||
+            ExitIdx >= DiamondIt->second.RejoinIdx)
+          continue;
+        VPValue *Guard = DiamondIt->second.Cond;
+        if (DiamondIt->second.ChainOnFalseEdge)
+          Guard = GuardBuilder.createNot(Guard);
+        CombinedGuard =
+            CombinedGuard ? GuardBuilder.createLogicalAnd(CombinedGuard, Guard)
+                          : Guard;
+      }
+      if (CombinedGuard)
+        MC->setOperand(
+            0, GuardBuilder.createLogicalAnd(CombinedGuard, MC->getOperand(0)));
+    }
+
+    DenseMap<VPRecipeBase *, SmallVector<std::pair<VPValue *, bool>, 2>>
+        StoreGuards;
+    DenseMap<VPRecipeBase *, SmallVector<std::pair<VPValue *, bool>, 2>>
+        BodyLoadGuards;
+    for (unsigned J = 0, E = LoopChain.size(); J != E; ++J) {
+      if (LoopChain[J] == LatchVPBB)
+        continue;
+      SmallVector<std::pair<VPValue *, bool>, 2> Guards;
+      for (unsigned I = 0; I < J; ++I) {
+        auto GIt = ChainDiamond.find(LoopChain[I]);
+        if (GIt != ChainDiamond.end() && J < GIt->second.RejoinIdx)
+          Guards.push_back({GIt->second.Cond, GIt->second.ChainOnFalseEdge});
+      }
+      if (Guards.empty())
+        continue;
+      for (VPRecipeBase &R : *LoopChain[J]) {
+        if (R.mayWriteToMemory()) {
+          StoreGuards[&R] = Guards;
+        } else {
+          auto *VPI = dyn_cast<VPInstruction>(&R);
+          if (VPI && VPI->getUnderlyingValue())
+            if (isa<LoadInst>(VPI->getUnderlyingValue()))
+              BodyLoadGuards[&R] = Guards;
+        }
+      }
+    }
+
+    // Compute each exit's condition slice.
+    SmallVector<SmallPtrSet<VPRecipeBase *, 16>, 4> Slices(Exits.size());
+    DenseMap<VPRecipeBase *, unsigned> EarliestCheck;
+    for (unsigned K = 0, E = Exits.size(); K != E; ++K) {
+      if (!computeConditionSlice(Exits[K].CondToExit, Slices[K]))
+        return false;
+      for (VPRecipeBase *R : Slices[K])
+        EarliestCheck.try_emplace(R, K);
+    }
+
+
+    VPIRBasicBlock *MaskedReplayExitBB = nullptr;
+    bool DoMaskedReplay = EnableCheckFirstMaskedReplay && Exits.size() == 1;
+
+    if (DoMaskedReplay) {
+      ScalarEvolution &SE = *PSE.getSE();
+      PHINode *IndVar = TheLoop->getInductionVariable(SE);
+      // Reconstructed as CanonIV + first_active_lane.
+      bool IsUnitFromZero = false;
+      if (IndVar) {
+        if (auto *AR = dyn_cast<SCEVAddRecExpr>(SE.getSCEV(IndVar))) {
+          if (AR->getLoop() == TheLoop && AR->getStart()->isZero()) {
+            const SCEV *Step = AR->getStepRecurrence(SE);
+            IsUnitFromZero = Step->isOne();
+          }
+        }
+      }
+      VPBasicBlock *EEing = Exits[0].EarlyExitingVPBB;
+      for (VPRecipeBase &R : Exits[0].EarlyExitVPBB->phis()) {
+        VPValue *Incoming =
+            cast<VPIRPhi>(&R)->getIncomingValueForBlock(EEing);
+        Value *UV = Incoming->getUnderlyingValue();
+        if (UV)
+          UV = UV->stripPointerCasts();
+        if (!IsUnitFromZero || !UV || UV != IndVar)
+          DoMaskedReplay = false;
+      }
+      if (DoMaskedReplay) {
+        MaskedReplayExitBB = Exits[0].EarlyExitVPBB;
+
+        BasicBlock *EarlyExitIR = MaskedReplayExitBB->getIRBasicBlock();
+        BasicBlock *Latch = TheLoop->getLoopLatch();
+        BasicBlock *ExitingIR = nullptr;
+        for (BasicBlock *Pred : predecessors(EarlyExitIR))
+          if (TheLoop->contains(Pred) && Pred != Latch) {
+            ExitingIR = Pred;
+            break;
+          }
+        if (ExitingIR)
+          for (BasicBlock *BB : TheLoop->blocks())
+            for (Instruction &I : *BB)
+              if (isa<StoreInst>(&I) && DT.dominates(BB, ExitingIR))
+                Plan.addCheckFirstInclusiveReplayStore(&I);
+      }
+    }
+
+    // From here, all modifications are destructive. We cannot bail out.
+
+    for (auto &Exit : Exits) {
+      auto &[EarlyExitingVPBB, EarlyExitVPBB, _] = Exit;
+      for (VPRecipeBase &R : EarlyExitVPBB->phis())
+        cast<VPIRPhi>(&R)->removeIncomingValueFor(EarlyExitingVPBB);
+      EarlyExitingVPBB->getTerminator()->eraseFromParent();
+      VPBlockUtils::disconnectBlocks(EarlyExitingVPBB, EarlyExitVPBB);
+    }
+
+    // Flatten intermediate blocks recipes into the header, then connect the
+    // header straight to the latch. Single-exit chains are left untouched.
+    if (!Intermediates.empty()) {
+      if (!EarlyExitingSet.contains(HeaderVPBB))
+        HeaderVPBB->getTerminator()->eraseFromParent();
+      for (VPBasicBlock *BB : Intermediates)
+        if (!EarlyExitingSet.contains(BB) && BB->getTerminator())
+          BB->getTerminator()->eraseFromParent();
+      for (VPBasicBlock *BB : Intermediates)
+        for (VPRecipeBase &R : make_early_inc_range(*BB))
+          R.moveBefore(*HeaderVPBB, HeaderVPBB->end());
+      for (VPBlockBase *S : to_vector(HeaderVPBB->getSuccessors()))
+        VPBlockUtils::disconnectBlocks(HeaderVPBB, S);
+      for (VPBasicBlock *BB : Intermediates)
+        for (VPBlockBase *S : to_vector(BB->getSuccessors()))
+          VPBlockUtils::disconnectBlocks(BB, S);
+      VPBlockUtils::connectBlocks(HeaderVPBB, LatchVPBB);
+    }
+
+    // Hoist guard producers to the header to avoid use-before-def.
+    if (DoMaskedReplay) {
+      SmallVector<VPRecipeBase *, 8> GuardHoist;
+      auto EnqueueProducers = [&](VPValue *V) {
+        if (VPRecipeBase *Def = V->getDefiningRecipe())
+          if (!EarliestCheck.contains(Def))
+            GuardHoist.push_back(Def);
+      };
+      for (auto &[R, Guards] : StoreGuards)
+        for (auto &[G, ChainOnFalseEdge] : Guards)
+          EnqueueProducers(G);
+      for (auto &[R, Guards] : BodyLoadGuards)
+        for (auto &[G, ChainOnFalseEdge] : Guards)
+          EnqueueProducers(G);
+      while (!GuardHoist.empty()) {
+        VPRecipeBase *R = GuardHoist.pop_back_val();
+        if (EarliestCheck.try_emplace(R, 0).second)
+          for (VPValue *Op : R->operands())
+            EnqueueProducers(Op);
+      }
+    }
+
+    // Create the check cascade. Checks[0] is the header.
+    // Checks[k] is a fresh block holding exit k's condition slice.
+    SmallVector<VPBasicBlock *, 4> Checks;
+    Checks.push_back(HeaderVPBB);
+    for (unsigned K = 1, E = Exits.size(); K != E; ++K)
+      Checks.push_back(Plan.createVPBasicBlock("vector.check"));
+
+    // Body block holds non-slice recipes. Runs when no exit fires.
+    VPBasicBlock *BodyVPBB = Plan.createVPBasicBlock("vector.body");
+
+    // Partition recipes. Slice recipes to their check block, everything else to
+    // the body.
+    auto PartitionBlock = [&](VPBasicBlock *BB) {
+      for (VPRecipeBase &R : make_early_inc_range(*BB)) {
+        if (R.isPhi() || &R == BB->getTerminator())
+          continue;
+        auto It = EarliestCheck.find(&R);
+        VPBasicBlock *Target =
+            It != EarliestCheck.end() ? Checks[It->second] : BodyVPBB;
+        if (Target != BB)
+          R.moveBefore(*Target, Target->end());
+      }
+    };
+    PartitionBlock(HeaderVPBB);
+    if (HeaderVPBB != LatchVPBB)
+      PartitionBlock(LatchVPBB);
+
+    // Attach combined guard mask as a trailing operand to each guarded store.
+    for (auto &[R, Guards] : StoreGuards) {
+      auto *OldStore = cast<VPInstruction>(R);
+      assert(OldStore->getOpcode() == Instruction::Store &&
+             "check-first guarded side effect is not a store");
+      VPBuilder GuardBuilder;
+      if (DoMaskedReplay) {
+        if (VPRecipeBase *Term = HeaderVPBB->getTerminator())
+          GuardBuilder.setInsertPoint(HeaderVPBB, Term->getIterator());
+        else
+          GuardBuilder.setInsertPoint(HeaderVPBB);
+      } else {
+        GuardBuilder.setInsertPoint(OldStore);
+      }
+      VPValue *StGuard = nullptr;
+      for (auto &[G, ChainOnFalseEdge] : Guards) {
+        VPValue *GG = ChainOnFalseEdge ? GuardBuilder.createNot(G) : G;
+        StGuard = StGuard ? GuardBuilder.createLogicalAnd(StGuard, GG) : GG;
+      }
+      assert(StGuard && "guarded store recorded without any guard");
+      SmallVector<VPValue *, 3> Ops(OldStore->operands());
+      Ops.push_back(StGuard);
+      auto *NewStore = new VPInstruction(Instruction::Store, Ops, *OldStore,
+                                         *OldStore, OldStore->getDebugLoc());
+      NewStore->setUnderlyingValue(OldStore->getUnderlyingValue());
+      NewStore->insertBefore(OldStore);
+      OldStore->eraseFromParent();
+    }
+
+    for (auto &[R, Guards] : BodyLoadGuards) {
+      auto *OldLoad = cast<VPInstructionWithType>(R);
+      VPBuilder GuardBuilder(OldLoad);
+      VPValue *LdGuard = nullptr;
+      for (auto &[G, ChainOnFalseEdge] : Guards) {
+        VPValue *GG = ChainOnFalseEdge ? GuardBuilder.createNot(G) : G;
+        LdGuard = LdGuard ? GuardBuilder.createLogicalAnd(LdGuard, GG) : GG;
+      }
+      assert(LdGuard && "masked body load recorded without any guard");
+      SmallVector<VPValue *, 2> Ops(OldLoad->operands());
+      Ops.push_back(LdGuard);
+      auto *NewLoad = new VPInstructionWithType(
+          Instruction::Load, Ops, OldLoad->getResultType(), *OldLoad, *OldLoad,
+          OldLoad->getDebugLoc(), OldLoad->getName(),
+          OldLoad->getUnderlyingValue());
+      NewLoad->insertBefore(OldLoad);
+      OldLoad->replaceAllUsesWith(NewLoad);
+      OldLoad->eraseFromParent();
+      if (auto *LI =
+              dyn_cast_or_null<Instruction>(NewLoad->getUnderlyingValue()))
+        Plan.addCheckFirstMaskedCondLoad(LI);
+    }
+
+    // Routes to the scalar preheader.
+    VPBasicBlock *EarlyExitToScalarVPBB =
+        Plan.createVPBasicBlock("vector.check.exit");
+    Plan.setCheckFirstExitBlock(EarlyExitToScalarVPBB);
+
+    // Masked replay fills this block later else it routes to the scalar PH.
+    if (DoMaskedReplay)
+      Plan.setCheckFirstMaskedReplayBlock(EarlyExitToScalarVPBB);
+
+    // Extract the latch condition before erasing the latch terminator.
+    auto *LatchBranch = cast<VPInstruction>(LatchVPBB->getTerminator());
+    assert(LatchBranch->getOpcode() == VPInstruction::BranchOnCond &&
+           "Unexpected terminator");
+    VPValue *IsLatchExitTaken = LatchBranch->getOperand(0);
+    DebugLoc LatchDL = LatchBranch->getDebugLoc();
+    LatchBranch->eraseFromParent();
+
+    if (HeaderVPBB != LatchVPBB) {
+      for (VPBlockBase *Succ : to_vector(LatchVPBB->getSuccessors()))
+        VPBlockUtils::disconnectBlocks(LatchVPBB, Succ);
+    }
+
+    for (VPBlockBase *Succ : to_vector(HeaderVPBB->getSuccessors()))
+      VPBlockUtils::disconnectBlocks(HeaderVPBB, Succ);
+
+    // Wire each check.k to exit if exit k fires, else fall through to the next
+    // check or body. BranchOnCond takes successor 0 when true: wire exit first.
+    for (unsigned K = 0, E = Exits.size(); K != E; ++K) {
+      VPBasicBlock *CheckBB = Checks[K];
+      VPBuilder CheckBuilder(CheckBB, CheckBB->end());
+      VPValue *IsExitTaken =
+          CheckBuilder.createNaryOp(VPInstruction::AnyOf, {Exits[K].CondToExit});
+      CheckBuilder.createNaryOp(VPInstruction::BranchOnCond, {IsExitTaken});
+      VPBasicBlock *NextBB = (K + 1 != E) ? Checks[K + 1] : BodyVPBB;
+      VPBlockUtils::connectBlocks(CheckBB, EarlyExitToScalarVPBB);
+      VPBlockUtils::connectBlocks(CheckBB, NextBB);
+    }
+
+
+    Plan.setCheckFirstCheckHeaderBlock(HeaderVPBB);
+
+    // Remember the real early-exit block for wireCheckFirstMaskedReplayToExit.
+    if (DoMaskedReplay)
+      Plan.setCheckFirstEarlyExitBlock(MaskedReplayExitBB->getIRBasicBlock());
+
+    VPBuilder BodyBuilder(BodyVPBB, BodyVPBB->end());
+    BodyBuilder.createNaryOp(VPInstruction::BranchOnCond, {IsLatchExitTaken},
+                             LatchDL);
+
+    // Wire: BodyVPBB → {MiddleVPBB , HeaderVPBB}
+    VPBlockUtils::connectBlocks(BodyVPBB, MiddleVPBB);
+    VPBlockUtils::connectBlocks(BodyVPBB, HeaderVPBB);
+
+    return true;
+  }
 
   // Build the AnyOf condition for the latch terminator using logical OR
   // to avoid poison propagation from later exit conditions when an earlier
@@ -4823,6 +5257,498 @@ bool VPlanTransforms::handleUncountableEarlyExits(
   }
 
   return true;
+}
+
+/// Returns true if Root transitively uses Target through its defining
+/// recipes operands.
+static bool vpValueDependsOn(VPValue *Root, VPValue *Target) {
+  SmallVector<VPValue *, 16> Worklist{Root};
+  SmallPtrSet<VPValue *, 16> Visited;
+  while (!Worklist.empty()) {
+    VPValue *V = Worklist.pop_back_val();
+    if (V == Target)
+      return true;
+    if (!Visited.insert(V).second)
+      continue;
+    if (VPRecipeBase *Def = V->getDefiningRecipe())
+      for (VPValue *Op : Def->operands())
+        Worklist.push_back(Op);
+  }
+  return false;
+}
+
+static VPValue *
+rebuildIVResumeExprImpl(VPBuilder &B, VPValue *V, VPValue *VectorTC,
+                        VPValue *NewIndex,
+                        SmallDenseMap<VPValue *, VPValue *> &Cache) {
+  using namespace VPlanPatternMatch;
+  if (V == VectorTC)
+    return NewIndex;
+  if (auto It = Cache.find(V); It != Cache.end())
+    return It->second;
+  auto Remap = [&](VPValue *Op) {
+    return rebuildIVResumeExprImpl(B, Op, VectorTC, NewIndex, Cache);
+  };
+  auto RemapBinOp = [&](unsigned Opcode, VPValue *LHS, VPValue *RHS,
+                        DebugLoc DL, const Twine &Name) -> VPValue * {
+    VPValue *NL = Remap(LHS), *NR = Remap(RHS);
+    if (NL == LHS && NR == RHS)
+      return V;
+    auto Flags =
+        cast<VPRecipeWithIRFlags>(V->getDefiningRecipe())->getNoWrapFlags();
+    return B.createOverflowingOp(Opcode, {NL, NR}, Flags, DL, Name);
+  };
+  auto RemapCast = [&](Instruction::CastOps Opcode, VPValue *Op) -> VPValue * {
+    VPValue *NO = Remap(Op);
+    if (NO == Op)
+      return V;
+    return B.createScalarCast(Opcode, NO, V->getScalarType(), DebugLoc());
+  };
+
+  VPValue *A, *Bv;
+  VPValue *Result = V;
+  if (match(V, m_VPInstruction<VPInstruction::PtrAdd>(m_VPValue(A),
+                                                      m_VPValue(Bv)))) {
+    VPValue *NB = Remap(Bv);
+    if (NB != Bv)
+      Result = B.createPtrAdd(A, NB, DebugLoc(), "check.exit.iv.resume");
+  } else if (match(V, m_Mul(m_VPValue(A), m_VPValue(Bv)))) {
+    Result = RemapBinOp(Instruction::Mul, A, Bv, DebugLoc::getUnknown(), "");
+  } else if (match(V, m_c_Add(m_VPValue(A), m_VPValue(Bv)))) {
+    Result =
+        RemapBinOp(Instruction::Add, A, Bv, DebugLoc(), "check.exit.iv.resume");
+  } else if (match(V, m_Sub(m_VPValue(A), m_VPValue(Bv)))) {
+    Result = RemapBinOp(Instruction::Sub, A, Bv, DebugLoc::getUnknown(), "");
+  } else if (match(V, m_Trunc(m_VPValue(A)))) {
+    Result = RemapCast(Instruction::Trunc, A);
+  } else if (match(V, m_ZExt(m_VPValue(A)))) {
+    Result = RemapCast(Instruction::ZExt, A);
+  } else if (match(V, m_SExt(m_VPValue(A)))) {
+    Result = RemapCast(Instruction::SExt, A);
+  } else if (vpValueDependsOn(V, VectorTC)) {
+    assert(false && "Unhandled VectorTC-dependent check-first resume "
+                    "value");
+  }
+  Cache[V] = Result;
+  return Result;
+}
+
+/// Returns the induction resume expression Expr rebuilt with VectorTC
+/// replaced by NewIndex.
+static VPValue *rebuildIVResumeExpr(VPBuilder &B, VPValue *Expr,
+                                    VPValue *VectorTC, VPValue *NewIndex) {
+  SmallDenseMap<VPValue *, VPValue *> Cache;
+  return rebuildIVResumeExprImpl(B, Expr, VectorTC, NewIndex, Cache);
+}
+
+void VPlanTransforms::wireCheckFirstExitToScalar(VPlan &Plan) {
+  VPBasicBlock *CheckExitVPBB = Plan.getCheckFirstExitBlock();
+  if (!CheckExitVPBB)
+    return;
+
+  // Masked replay handles check.exit during restructuring.
+  if (Plan.getCheckFirstMaskedReplayBlock())
+    return;
+
+  VPBasicBlock *HeaderVPBB = Plan.getCheckFirstCheckHeaderBlock();
+  assert(HeaderVPBB && "check-first cascade header block not recorded");
+
+  // Replace the temporary check.exit→body edge with check.exit→ScalarPH.
+  assert(CheckExitVPBB->getNumSuccessors() == 1 &&
+         "check.exit should have exactly one successor after dissolution");
+  VPBlockBase *OldSucc = CheckExitVPBB->getSuccessors()[0];
+  VPBlockUtils::disconnectBlocks(CheckExitVPBB, OldSucc);
+
+  VPBasicBlock *ScalarPH = Plan.getScalarPreheader();
+  assert(ScalarPH &&
+         "CheckFirst requires a scalar preheader for early-exit replay. "
+         "Ensure the scalar tail is not removed by earlier passes.");
+  VPBlockUtils::connectBlocks(CheckExitVPBB, ScalarPH);
+
+  assert(HeaderVPBB->getNumPredecessors() == 2 &&
+         "loop header must have exactly two predecessors (preheader, latch)");
+  VPBasicBlock *LatchVPBB = nullptr;
+  for (VPBlockBase *Pred : HeaderVPBB->getPredecessors()) {
+    auto *PredVPBB = cast<VPBasicBlock>(Pred);
+    if (any_of(PredVPBB->getSuccessors(),
+               [&](VPBlockBase *S) { return S != HeaderVPBB; })) {
+      LatchVPBB = PredVPBB;
+      break;
+    }
+  }
+  assert(LatchVPBB &&
+         "could not identify the loop latch (backedge source) among the "
+         "header's predecessors");
+  VPValue *CanonIV = cast<VPPhi>(&*HeaderVPBB->begin());
+
+  auto SPHPhis = ScalarPH->phis();
+  assert(range_size(SPHPhis) == 1 &&
+         "CheckFirst expects exactly one scalar-preheader PHI (the IV). "
+         "Extending to multiple inductions or live-outs requires computing "
+         "proper resume values for each PHI.");
+
+  VPBasicBlock *MiddleVPBB = nullptr;
+  for (VPBlockBase *Succ : LatchVPBB->getSuccessors()) {
+    if (Succ != HeaderVPBB) {
+      MiddleVPBB = cast<VPBasicBlock>(Succ);
+      break;
+    }
+  }
+
+  VPBuilder CheckExitBuilder(CheckExitVPBB, CheckExitVPBB->getFirstNonPhi());
+  VPValue *VectorTC = &Plan.getVectorTripCount();
+
+  using namespace VPlanPatternMatch;
+  for (VPRecipeBase &R : SPHPhis) {
+    auto *Phi = cast<VPPhi>(&R);
+
+    VPValue *MidVal = nullptr;
+    for (unsigned I = 0, E = Phi->getNumIncoming(); I != E; ++I) {
+      if (MiddleVPBB && Phi->getIncomingBlock(I) == MiddleVPBB) {
+        MidVal = Phi->getIncomingValue(I);
+        break;
+      }
+    }
+
+    VPValue *ResumeVal =
+        MidVal ? rebuildIVResumeExpr(CheckExitBuilder, MidVal, VectorTC, CanonIV)
+               : CanonIV;
+
+    assert(!(MidVal && ResumeVal == MidVal &&
+             vpValueDependsOn(MidVal, VectorTC)) &&
+           "check-first early-exit resume value could not be rebuilt from the "
+           "vector trip count");
+
+    Phi->addIncoming(ResumeVal);
+  }
+}
+
+void VPlanTransforms::maskCheckFirstReplayStores(VPlan &Plan) {
+  VPBasicBlock *ReplayBB = Plan.getCheckFirstMaskedReplayBlock();
+  if (!ReplayBB)
+    return;
+
+  // Replay surviving lanes body stores here, masked to [0, first_active_lane).
+  assert(ReplayBB->getNumPredecessors() == 1 &&
+         "masked-replay block must have a single (check) predecessor");
+  auto *CheckBB = cast<VPBasicBlock>(ReplayBB->getPredecessors()[0]);
+
+  // The combined per-lane exit condition is the AnyOf operand of BranchOnCond.
+  auto *CheckTerm = cast<VPInstruction>(CheckBB->getTerminator());
+  assert(CheckTerm->getOpcode() == VPInstruction::BranchOnCond &&
+         "check block terminator must be BranchOnCond");
+  auto *AnyOf = cast<VPInstruction>(CheckTerm->getOperand(0)->getDefiningRecipe());
+  assert(AnyOf->getOpcode() == VPInstruction::AnyOf &&
+         "BranchOnCond operand must be AnyOf");
+  VPValue *Combined = AnyOf->getOperand(0);
+
+  VPBasicBlock *BodyVPBB = nullptr;
+  for (VPBlockBase *Succ : CheckBB->getSuccessors()) {
+    if (Succ != ReplayBB) {
+      BodyVPBB = cast<VPBasicBlock>(Succ);
+      break;
+    }
+  }
+  assert(BodyVPBB && "could not find the body block to replay");
+
+#ifndef NDEBUG
+  // Masked replay requires full-width chunks; tail folding is unsupported.
+  for (VPBlockBase *VPB : vp_depth_first_deep(Plan.getEntry()))
+    if (auto *VPBB = dyn_cast<VPBasicBlock>(VPB))
+      for (VPRecipeBase &R : *VPBB)
+        assert(!isa<VPActiveLaneMaskPHIRecipe>(&R) &&
+               "check-first masked replay is unsound under tail folding");
+#endif
+
+  VPBuilder HeadBuilder(ReplayBB, ReplayBB->begin());
+  VPInstruction *FirstActiveLane = HeadBuilder.createFirstActiveLane(
+      {Combined}, DebugLoc::getUnknown(), "first.active.lane");
+
+  Type *IndexTy = FirstActiveLane->getScalarType();
+  assert(IndexTy->isIntegerTy() &&
+         "FirstActiveLane must produce an integer index for mask bounds");
+  VPValue *Zero = Plan.getZero(IndexTy);
+  VPValue *One = Plan.getConstantInt(IndexTy, 1);
+  VPInstruction *ExclMask = nullptr;
+  VPInstruction *InclMask = nullptr;
+  auto getMaskFor = [&](VPRecipeBase &R) -> VPValue * {
+    const Instruction *SI = nullptr;
+    if (auto *WS = dyn_cast<VPWidenStoreRecipe>(&R))
+      SI = &WS->getIngredient();
+    else if (auto *RR = dyn_cast<VPReplicateRecipe>(&R))
+      SI = RR->getUnderlyingInstr();
+    bool Inclusive = SI && Plan.isCheckFirstInclusiveReplayStore(SI);
+    if (Inclusive) {
+      if (!InclMask) {
+        VPInstruction *FALPlusOne =
+            VPBuilder::getToInsertAfter(FirstActiveLane)
+                .createAdd(FirstActiveLane, One, DebugLoc(),
+                           "first.active.lane.incl",
+                           {/*nuw=*/true, /*nsw=*/false});
+        InclMask = VPBuilder::getToInsertAfter(FALPlusOne)
+                       .createNaryOp(VPInstruction::ActiveLaneMask,
+                                     {Zero, FALPlusOne, One}, DebugLoc(),
+                                     "masked.replay.mask.incl");
+      }
+      return InclMask;
+    }
+    if (!ExclMask)
+      ExclMask = VPBuilder::getToInsertAfter(FirstActiveLane)
+                     .createNaryOp(VPInstruction::ActiveLaneMask,
+                                   {Zero, FirstActiveLane, One}, DebugLoc(),
+                                   "masked.replay.mask");
+    return ExclMask;
+  };
+
+  // Replay only the stores and their backward slice.
+  SmallPtrSet<VPRecipeBase *, 8> Needed;
+  SmallVector<VPRecipeBase *, 8> Work;
+  for (VPRecipeBase &R : *BodyVPBB)
+    if (R.mayWriteToMemory()) {
+      Needed.insert(&R);
+      Work.push_back(&R);
+    }
+  while (!Work.empty()) {
+    VPRecipeBase *R = Work.pop_back_val();
+    for (VPValue *Op : R->operands())
+      if (VPRecipeBase *Def = Op->getDefiningRecipe())
+        if (Def->getParent() == BodyVPBB && Needed.insert(Def).second)
+          Work.push_back(Def);
+  }
+
+  SmallPtrSet<VPRecipeBase *, 4> InclusiveFeeds;
+  {
+    SmallVector<VPRecipeBase *, 4> InclWork;
+    for (VPRecipeBase &R : *BodyVPBB) {
+      if (!Needed.contains(&R))
+        continue;
+      const Instruction *SI = nullptr;
+      if (auto *WS = dyn_cast<VPWidenStoreRecipe>(&R))
+        SI = &WS->getIngredient();
+      else if (auto *RR = dyn_cast<VPReplicateRecipe>(&R))
+        if (RR->getUnderlyingInstr()->mayWriteToMemory())
+          SI = RR->getUnderlyingInstr();
+      if (SI && Plan.isCheckFirstInclusiveReplayStore(SI))
+        InclWork.push_back(&R);
+    }
+    while (!InclWork.empty()) {
+      VPRecipeBase *R = InclWork.pop_back_val();
+      for (VPValue *Op : R->operands()) {
+        VPRecipeBase *Def = Op->getDefiningRecipe();
+        if (Def && Def->getParent() == BodyVPBB && Needed.contains(Def) &&
+            InclusiveFeeds.insert(Def).second)
+          InclWork.push_back(Def);
+      }
+    }
+  }
+
+  VPBuilder Builder(ReplayBB, std::next(FirstActiveLane->getIterator()));
+  DenseMap<VPValue *, VPValue *> OperandMap;
+  for (VPRecipeBase &R : *BodyVPBB) {
+    if (!Needed.contains(&R))
+      continue;
+
+    auto Remap = [&](VPValue *V) -> VPValue * {
+      VPValue *Mapped = OperandMap.lookup(V);
+      return Mapped ? Mapped : V;
+    };
+
+    SmallVector<VPValue *, 4> NewOps;
+    for (VPValue *Op : R.operands())
+      NewOps.push_back(Remap(Op));
+
+    // Reverse the mask for negative-stride memory ops.
+    auto ReverseIfNeeded = [&](VPValue *Mask, VPValue *Addr,
+                               DebugLoc DL) -> VPValue * {
+      if (isa_and_nonnull<VPVectorEndPointerRecipe>(Addr->getDefiningRecipe()))
+        return Builder.createNaryOp(VPInstruction::Reverse, {Mask}, DL,
+                                    "masked.replay.mask.rev");
+      return Mask;
+    };
+
+    VPRecipeBase *Clone = nullptr;
+    if (auto *WStore = dyn_cast<VPWidenStoreRecipe>(&R)) {
+      VPValue *G = WStore->isMasked() ? Remap(WStore->getMask()) : nullptr;
+      VPValue *L =
+          ReverseIfNeeded(getMaskFor(R), NewOps[0], WStore->getDebugLoc());
+      VPValue *M = G ? Builder.createLogicalAnd(G, L) : L;
+      Clone = new VPWidenStoreRecipe(
+          cast<StoreInst>(WStore->getIngredient()), NewOps[0], NewOps[1], M,
+          WStore->isConsecutive(), *WStore, WStore->getDebugLoc());
+      Builder.insert(Clone);
+    } else if (auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
+               RepR && RepR->getUnderlyingInstr()->mayWriteToMemory()) {
+      VPValue *G = RepR->isPredicated() ? Remap(RepR->getMask()) : nullptr;
+      VPValue *L = getMaskFor(R);
+      VPValue *M = G ? Builder.createLogicalAnd(G, L) : L;
+
+      auto *SI = cast<StoreInst>(RepR->getUnderlyingInstr());
+      VPValue *StoredVal = RepR->getOperand(0);
+      VPValue *PtrVal = RepR->getOperand(1);
+
+      // Widen to a masked vector store when the stored value is a vector.
+      VPValue *ReplayStoredVal = Remap(StoredVal);
+      VPValue *ReplayPtrVal = Remap(PtrVal);
+
+      bool CanWiden = ReplayStoredVal->getDefiningRecipe() &&
+                      !isa<VPReplicateRecipe, VPScalarIVStepsRecipe>(
+                          ReplayStoredVal->getDefiningRecipe());
+
+      if (CanWiden) {
+        Type *StoreTy = SI->getValueOperand()->getType();
+        const DataLayout &DL = SI->getDataLayout();
+        auto *StrideTy =
+            DL.getIndexType(SI->getPointerOperand()->getType());
+        VPValue *StrideOne = Plan.getConstantInt(StrideTy, 1);
+        auto *VecPtr = new VPVectorPointerRecipe(
+            ReplayPtrVal, StoreTy, StrideOne, GEPNoWrapFlags::none(),
+            SI->getDebugLoc());
+        Builder.insert(VecPtr);
+
+        auto *WS = new VPWidenStoreRecipe(*SI, VecPtr, ReplayStoredVal, M,
+                                         /*Consecutive=*/true, *RepR,
+                                         RepR->getDebugLoc());
+        Builder.insert(WS);
+        continue;
+      } else {
+        // Cannot widen: recreate as a predicated replicate.
+        SmallVector<VPValue *, 4> ValOps;
+        for (VPValue *Op : RepR->operandsWithoutMask())
+          ValOps.push_back(Remap(Op));
+        auto *PredStore = new VPReplicateRecipe(
+            RepR->getUnderlyingInstr(), ValOps, RepR->isSingleScalar(), M,
+            *RepR, *RepR, RepR->getDebugLoc());
+        Builder.insert(PredStore);
+        Clone = PredStore;
+      }
+    } else if (auto *WLoad = dyn_cast<VPWidenLoadRecipe>(&R)) {
+      // Mask replay load: inclusive/exclusive mask ANDed with remapped guard.
+      VPValue *G = WLoad->isMasked() ? Remap(WLoad->getMask()) : nullptr;
+      VPValue *ReplayMask;
+      if (InclusiveFeeds.contains(&R)) {
+        if (!InclMask) {
+          VPInstruction *FALPlusOne =
+              VPBuilder::getToInsertAfter(FirstActiveLane)
+                  .createAdd(FirstActiveLane, One, DebugLoc(),
+                             "first.active.lane.incl",
+                             {/*nuw=*/true, /*nsw=*/false});
+          InclMask = VPBuilder::getToInsertAfter(FALPlusOne)
+                         .createNaryOp(VPInstruction::ActiveLaneMask,
+                                       {Zero, FALPlusOne, One}, DebugLoc(),
+                                       "masked.replay.mask.incl");
+        }
+        ReplayMask = InclMask;
+      } else {
+        if (!ExclMask)
+          ExclMask = VPBuilder::getToInsertAfter(FirstActiveLane)
+                         .createNaryOp(VPInstruction::ActiveLaneMask,
+                                       {Zero, FirstActiveLane, One}, DebugLoc(),
+                                       "masked.replay.mask");
+        ReplayMask = ExclMask;
+      }
+      ReplayMask = ReverseIfNeeded(ReplayMask, NewOps[0], WLoad->getDebugLoc());
+      VPValue *Mask = G ? Builder.createLogicalAnd(G, ReplayMask) : ReplayMask;
+      Clone = new VPWidenLoadRecipe(
+          cast<LoadInst>(WLoad->getIngredient()), NewOps[0], Mask,
+          WLoad->isConsecutive(), *WLoad, WLoad->getDebugLoc());
+      Builder.insert(Clone);
+    } else if (auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
+               RepR && RepR->isPredicated()) {
+      SmallVector<VPValue *, 4> ValOps;
+      for (VPValue *Op : RepR->operandsWithoutMask())
+        ValOps.push_back(Remap(Op));
+      auto *NewRep = new VPReplicateRecipe(
+          RepR->getUnderlyingInstr(), ValOps, RepR->isSingleScalar(),
+          Remap(RepR->getMask()), *RepR, *RepR, RepR->getDebugLoc());
+      Builder.insert(NewRep);
+      Clone = NewRep;
+    } else {
+      assert(!R.mayWriteToMemory() && !R.mayHaveSideEffects() &&
+             "masked replay reached an unmaskable side-effecting recipe; "
+             "such loops must fall back to scalar replay");
+      Clone = R.clone();
+      for (unsigned I = 0, E = Clone->getNumOperands(); I != E; ++I)
+        Clone->setOperand(I, NewOps[I]);
+      Builder.insert(Clone);
+    }
+
+    for (unsigned I = 0, E = R.getNumDefinedValues(); I != E; ++I)
+      OperandMap[R.getVPValue(I)] = Clone->getVPValue(I);
+  }
+
+  assert(ReplayBB->getNumSuccessors() == 1 &&
+         "masked-replay block must have the single temporary latch edge");
+  Plan.setCheckFirstMaskedReplayTempTarget(ReplayBB->getSuccessors()[0]);
+}
+
+void VPlanTransforms::wireCheckFirstMaskedReplayToExit(VPlan &Plan) {
+  VPBasicBlock *ReplayBB = Plan.getCheckFirstMaskedReplayBlock();
+  if (!ReplayBB)
+    return;
+
+  BasicBlock *EarlyExitIRBB = Plan.getCheckFirstEarlyExitBlock();
+  assert(EarlyExitIRBB && "masked replay requires a captured early-exit block");
+  // Recreate only if it was removed during cloning.
+  VPIRBasicBlock *EarlyExitBB = nullptr;
+  for (VPIRBasicBlock *EB : Plan.getExitBlocks())
+    if (EB->getIRBasicBlock() == EarlyExitIRBB) {
+      EarlyExitBB = EB;
+      break;
+    }
+  if (!EarlyExitBB)
+    EarlyExitBB = Plan.createVPIRBasicBlock(EarlyExitIRBB);
+
+  VPInstruction *FirstActiveLane = nullptr;
+  for (VPRecipeBase &R : *ReplayBB) {
+    if (auto *VPI = dyn_cast<VPInstruction>(&R);
+        VPI && VPI->getOpcode() == VPInstruction::FirstActiveLane) {
+      FirstActiveLane = VPI;
+      break;
+    }
+  }
+  assert(FirstActiveLane && "masked-replay block missing FirstActiveLane");
+
+  assert(ReplayBB->getNumPredecessors() == 1 &&
+         "masked-replay head must have a single (check/header) predecessor");
+  auto *HeaderVPBB = cast<VPBasicBlock>(ReplayBB->getPredecessors()[0]);
+  VPValue *CanonIV = cast<VPPhi>(&*HeaderVPBB->begin());
+  Type *CanonTy = CanonIV->getScalarType();
+
+  // Recover the tail of the chain it is the recorded temp-target's predecessor
+  //  that is not the loop header.
+  VPBlockBase *TempTarget = Plan.getCheckFirstMaskedReplayTempTarget();
+  assert(TempTarget && "masked replay temporary-edge target not recorded");
+  VPBasicBlock *TailVPBB = nullptr;
+  for (VPBlockBase *Pred : TempTarget->getPredecessors()) {
+    if (Pred != HeaderVPBB) {
+      assert(!TailVPBB && "expected a single replay-chain predecessor of the "
+                          "temporary-edge target");
+      TailVPBB = cast<VPBasicBlock>(Pred);
+    }
+  }
+  assert(TailVPBB && "could not locate the masked-replay chain tail");
+
+  // Replace the temporary tail → latch edge with tail → early-exit.
+  VPBlockUtils::disconnectBlocks(TailVPBB, TempTarget);
+  VPBlockUtils::connectBlocks(TailVPBB, EarlyExitBB);
+
+  // Exiting index = chunk_start + first_active_lane.
+  // Build in the tail so it dominates its uses.
+  VPBuilder Builder(TailVPBB, TailVPBB->end());
+  VPValue *FALCast = Builder.createScalarZExtOrTrunc(
+      FirstActiveLane, CanonTy, FirstActiveLane->getScalarType(), DebugLoc());
+  VPValue *ExitIndex =
+      Builder.createAdd(CanonIV, FALCast, DebugLoc(), "masked.replay.exit.idx",
+                        {/*nuw=*/true, /*nsw=*/false});
+
+  // Each live-out is the exiting induction value, cast to the PHI's type.
+  for (VPRecipeBase &R : EarlyExitBB->phis()) {
+    auto *Phi = cast<VPIRPhi>(&R);
+    Type *PhiTy = Phi->getIRPhi().getType();
+    VPValue *LiveOut =
+        Builder.createScalarZExtOrTrunc(ExitIndex, PhiTy, CanonTy, DebugLoc());
+    Phi->addIncoming(LiveOut);
+  }
 }
 
 /// This function tries convert extended in-loop reductions to
@@ -5334,6 +6260,9 @@ void VPlanTransforms::materializeConstantVectorTripCount(
       Plan.getMiddleBlock()->getSingleSuccessor() ==
           Plan.getScalarPreheader() ||
       !isa<VPIRValue>(TC))
+    return;
+
+  if (Plan.getCheckFirstExitBlock())
     return;
 
   // Materialize vector trip counts for constants early if it can simply
@@ -7261,7 +8190,8 @@ void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
   VPlanTransforms::runPass(
       "widenConsecutiveMemOps", ProcessSubset, Plan, [&](VPInstruction *VPI) {
         Instruction *I = VPI->getUnderlyingInstr();
-        if (RecipeBuilder.isPredicatedInst(I))
+        if (RecipeBuilder.isPredicatedInst(I) ||
+            Plan.isCheckFirstMaskedCondLoad(I))
           return false;
 
         bool IsLoad = VPI->getOpcode() == Instruction::Load;

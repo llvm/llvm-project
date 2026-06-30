@@ -87,6 +87,11 @@ enum class UncountableExitStyle {
   /// uncountable exit is taken, then all lanes before the exiting lane will
   /// complete, leaving just the final lane to execute in the scalar tail.
   MaskedHandleExitInScalarLoop,
+  /// Check-first semantics: exit conditions are evaluated at the start of each
+  /// vector iteration before any stores execute. On early exit, the scalar loop
+  /// resumes from the start of the current vector chunk. Stores are placed in a
+  /// separate body block only reachable when no exit fires.
+  CheckFirst,
 };
 
 /// VPBlockBase is the building block of the Hierarchical Control-Flow Graph.
@@ -3746,6 +3751,14 @@ protected:
   /// Whether the memory access is masked.
   bool IsMasked = false;
 
+  VPWidenMemoryRecipe(Instruction &I, bool Consecutive,
+                      const VPIRMetadata &Metadata)
+      : VPIRMetadata(Metadata), Ingredient(I),
+        Alignment(getLoadStoreAlignment(&I)), Consecutive(Consecutive) {}
+
+public:
+  virtual ~VPWidenMemoryRecipe() = default;
+
   void setMask(VPValue *Mask) {
     assert(!IsMasked && "cannot re-set mask");
     if (!Mask)
@@ -3755,14 +3768,6 @@ protected:
     getAsRecipe()->addOperand(Mask);
     IsMasked = true;
   }
-
-  VPWidenMemoryRecipe(Instruction &I, bool Consecutive,
-                      const VPIRMetadata &Metadata)
-      : VPIRMetadata(Metadata), Ingredient(I),
-        Alignment(getLoadStoreAlignment(&I)), Consecutive(Consecutive) {}
-
-public:
-  virtual ~VPWidenMemoryRecipe() = default;
 
   /// Return a VPRecipeBase* to the current object.
   virtual VPRecipeBase *getAsRecipe() = 0;
@@ -4756,6 +4761,31 @@ class VPlan {
   /// VPIRBasicBlock wrapping the header of the original scalar loop.
   VPIRBasicBlock *ScalarHeader;
 
+  /// Used for recording the state for check-first early-exit vectorization.
+  struct CheckFirstEarlyExitState {
+    /// Block for routing check-first early exits to the scalar preheader.
+    VPBasicBlock *ExitBlock = nullptr;
+
+    /// The check.exit block used for masked replay wiring.
+    VPBasicBlock *MaskedReplayBlock = nullptr;
+
+    /// Early-exit IR block for masked replay.
+    BasicBlock *EarlyExitBlock = nullptr;
+
+    /// First block of the check-first cascade.
+    VPBasicBlock *CheckHeaderBlock = nullptr;
+
+    /// Block the masked-replay chain temporarily branches to.
+    VPBlockBase *MaskedReplayTempTarget = nullptr;
+
+    /// Stores that must replay the exiting lane.
+    SmallPtrSet<const Instruction *, 4> InclusiveReplayStores;
+    
+    /// Guarded loads that must be widened as masked loads.
+    SmallPtrSet<const Instruction *, 4> MaskedCondLoads;
+  };
+  CheckFirstEarlyExitState CheckFirst;
+
   /// Immutable list of VPIRBasicBlocks wrapping the exit blocks of the original
   /// scalar loop. Note that some exit blocks may be unreachable at the moment,
   /// e.g. if the scalar epilogue always executes.
@@ -4884,6 +4914,62 @@ public:
   VPBasicBlock *getScalarPreheader() const {
     return dyn_cast_or_null<VPBasicBlock>(
         getScalarHeader()->getSinglePredecessor());
+  }
+
+  VPBasicBlock *getCheckFirstExitBlock() const { return CheckFirst.ExitBlock; }
+
+  void setCheckFirstExitBlock(VPBasicBlock *VPBB) {
+    assert((!CheckFirst.ExitBlock || CheckFirst.ExitBlock == VPBB) &&
+           "CheckFirstExitBlock already set");
+    CheckFirst.ExitBlock = VPBB;
+  }
+
+  VPBasicBlock *getCheckFirstMaskedReplayBlock() const {
+    return CheckFirst.MaskedReplayBlock;
+  }
+
+  void setCheckFirstMaskedReplayBlock(VPBasicBlock *VPBB) {
+    CheckFirst.MaskedReplayBlock = VPBB;
+  }
+
+  BasicBlock *getCheckFirstEarlyExitBlock() const {
+    return CheckFirst.EarlyExitBlock;
+  }
+
+  void setCheckFirstEarlyExitBlock(BasicBlock *IRBB) {
+    CheckFirst.EarlyExitBlock = IRBB;
+  }
+
+  void addCheckFirstInclusiveReplayStore(const Instruction *I) {
+    CheckFirst.InclusiveReplayStores.insert(I);
+  }
+
+  bool isCheckFirstInclusiveReplayStore(const Instruction *I) const {
+    return CheckFirst.InclusiveReplayStores.contains(I);
+  }
+
+  void addCheckFirstMaskedCondLoad(const Instruction *I) {
+    CheckFirst.MaskedCondLoads.insert(I);
+  }
+
+  bool isCheckFirstMaskedCondLoad(const Instruction *I) const {
+    return CheckFirst.MaskedCondLoads.contains(I);
+  }
+
+  VPBasicBlock *getCheckFirstCheckHeaderBlock() const {
+    return CheckFirst.CheckHeaderBlock;
+  }
+
+  void setCheckFirstCheckHeaderBlock(VPBasicBlock *VPBB) {
+    CheckFirst.CheckHeaderBlock = VPBB;
+  }
+
+  VPBlockBase *getCheckFirstMaskedReplayTempTarget() const {
+    return CheckFirst.MaskedReplayTempTarget;
+  }
+
+  void setCheckFirstMaskedReplayTempTarget(VPBlockBase *B) {
+    CheckFirst.MaskedReplayTempTarget = B;
   }
 
   /// Return the VPIRBasicBlock wrapping the header of the scalar loop.

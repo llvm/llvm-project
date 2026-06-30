@@ -366,6 +366,16 @@ struct VPlanTransforms {
       VPBasicBlock *MiddleVPBB, Loop *TheLoop, PredicatedScalarEvolution &PSE,
       DominatorTree &DT, AssumptionCache *AC, UncountableExitStyle Style);
 
+  /// Connects check-first early-exit blocks to the scalar preheader.
+  static void wireCheckFirstExitToScalar(VPlan &Plan);
+
+  /// Clones the stores inside loop body into the masked-replay block.
+  static void maskCheckFirstReplayStores(VPlan &Plan);
+
+  /// Wires the masked replay block to the early-exit block and rebuilds its
+  /// live-out.
+  static void wireCheckFirstMaskedReplayToExit(VPlan &Plan);
+
   /// Replaces the exit condition from
   ///   (branch-on-cond eq CanonicalIVInc, VectorTripCount)
   /// to

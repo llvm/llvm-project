@@ -440,6 +440,20 @@ public:
     return getUncountableExitTrait() == UncountableExitTrait::ReadWrite;
   }
 
+  /// Returns true if every widened exit condition load is
+  /// dereferenceable for the complete trip count.
+  bool exitLoadsAreDereferenceable() const {
+    return AllExitLoadsDereferenceable;
+  }
+
+  /// Returns true if this early exit loop would use the check first strategy if
+  /// enabled.
+  bool wouldUseCheckFirstStyle() const {
+    if (hasUncountableExitWithSideEffects())
+      return true;
+    return hasUncountableEarlyExit() && !AllExitLoadsDereferenceable;
+  }
+
   /// Return true if there is store-load forwarding dependencies.
   bool isSafeForAnyStoreLoadForwardDistances() const {
     return LAI->getDepChecker().isSafeForAnyStoreLoadForwardDistances();
@@ -635,6 +649,10 @@ private:
   /// for it.
   bool canUncountableExitConditionLoadBeMoved(BasicBlock *ExitingBlock);
 
+  /// Returns true if the exit conditions can be safely speculated.
+  bool canCheckFirstSpeculateExitConditions(
+      ArrayRef<BasicBlock *> ExitingBlocks);
+
   /// Return true if all of the instructions in the block can be speculatively
   /// executed, and record the loads/stores that require masking.
   /// \p SafePtrs is a list of addresses that are known to be legal and we know
@@ -752,6 +770,10 @@ private:
   /// Records whether we have an uncountable early exit in a loop that's
   /// either read-only or read-write.
   UncountableExitTrait UncountableExitType = UncountableExitTrait::None;
+
+  /// Records whether every widened exit condition load is
+  /// dereferenceable for the complete trip count.
+  bool AllExitLoadsDereferenceable = true;
 };
 
 } // namespace llvm

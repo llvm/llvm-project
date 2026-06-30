@@ -55,6 +55,7 @@
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] removeBranchOnConst
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] simplifyReverses
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] removeDeadRecipes
+; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] maskCheckFirstReplayStores
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] createAndOptimizeReplicateRegions
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] mergeBlocksIntoPredecessors
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] licm
