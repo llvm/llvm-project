@@ -10466,7 +10466,7 @@ ConstantRange llvm::computeConstantRange(const Value *V, bool ForSigned,
 
         // The exponent of frexp(NaN) and frexp(Inf) is unspecified. Only
         // constrain its range when the source can be neither.
-        if (KnownSrc.isKnownNeverNaN() && KnownSrc.isKnownNeverInfinity()) {
+        if (KnownSrc.isKnownNeverInfOrNaN()) {
           int MinExp = APFloat::semanticsMinExponent(FltSem) + 1;
 
           // Offset to find the true minimum exponent value for a denormal.
