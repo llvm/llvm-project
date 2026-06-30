@@ -3162,7 +3162,7 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
     if (match(Expr->getOperand(Expr->getNumOperands() - 1),
               m_RemoveMask(HeaderMask, Mask))) {
       // Decompose first and construct with VPReductionEVLRecipe later.
-      SmallVector<VPSingleDefRecipe *> ExpressionRecipes(Expr->decompose());
+      SmallVector<VPSingleDefRecipe *> ExpressionRecipes = Expr->decompose();
       VPReductionRecipe *Red =
           cast<VPReductionRecipe>(ExpressionRecipes.pop_back_val());
 
