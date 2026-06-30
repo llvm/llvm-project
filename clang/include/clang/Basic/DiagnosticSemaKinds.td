@@ -978,6 +978,11 @@ def warn_fortify_strlen_overflow: Warning<
   " but the source string has length %2 (including NUL byte)">,
   InGroup<FortifySource>;
 
+def warn_fortify_umask_unused_bits : Warning<
+  "'umask' argument sets non-file-permission bits (0%0); those bits are "
+  "ignored">,
+  InGroup<FortifySource>;
+
 def subst_format_overflow : TextSubstitution<
   "'%0' will always overflow; destination buffer has size %1,"
   " but format string expands to at least %2">;

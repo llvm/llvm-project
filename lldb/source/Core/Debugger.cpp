@@ -195,6 +195,25 @@ static constexpr OptionEnumValueElement s_stop_show_column_values[] = {
     },
 };
 
+static constexpr OptionEnumValueElement g_show_autosuggestion_enum_values[] = {
+    {
+        eAutosuggestionOff,
+        "false",
+        "Do not show any autosuggestion.",
+    },
+    {
+        eAutosuggestionOn,
+        "true",
+        "Show a suggestion sourced from previously entered commands.",
+    },
+    {
+        eAutosuggestionTabMode,
+        "tab-mode",
+        "Show the prefix that tab completion would insert for the current "
+        "line.",
+    },
+};
+
 #define LLDB_PROPERTIES_debugger
 #include "CoreProperties.inc"
 
@@ -600,10 +619,11 @@ bool Debugger::SetSeparator(llvm::StringRef s) {
   return ret;
 }
 
-bool Debugger::GetUseAutosuggestion() const {
+AutosuggestionMode Debugger::GetAutosuggestionMode() const {
   const uint32_t idx = ePropertyShowAutosuggestion;
-  return GetPropertyAtIndexAs<bool>(
-      idx, g_debugger_properties[idx].default_uint_value != 0);
+  return GetPropertyAtIndexAs<AutosuggestionMode>(
+      idx, static_cast<AutosuggestionMode>(
+               g_debugger_properties[idx].default_uint_value));
 }
 
 llvm::StringRef Debugger::GetAutosuggestionAnsiPrefix() const {
