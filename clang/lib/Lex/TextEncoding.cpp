@@ -20,22 +20,22 @@ TextEncoding::getConverter(ConversionAction Action) const {
 }
 
 std::error_code
-TextEncoding::setConvertersFromOptions(TextEncoding &TEC,
+TextEncoding::setConvertersFromOptions(TextEncoding &TE,
                                        const clang::LangOptions &Opts) {
   using namespace llvm;
 
   const char *UTF8 = "UTF-8";
-  TEC.LiteralEncoding =
+  TE.LiteralEncoding =
       Opts.LiteralEncoding.empty() ? UTF8 : Opts.LiteralEncoding.c_str();
 
   // Create converter between internal and literal encoding specified
   // in fexec-charset option.
-  if (TEC.LiteralEncoding == UTF8)
+  if (TE.LiteralEncoding == UTF8)
     return std::error_code();
   ErrorOr<TextEncodingConverter> ErrorOrConverter =
-      llvm::TextEncodingConverter::create(UTF8, TEC.LiteralEncoding);
+      llvm::TextEncodingConverter::create(UTF8, TE.LiteralEncoding);
   if (ErrorOrConverter)
-    TEC.ToLiteralEncodingConverter =
+    TE.ToLiteralEncodingConverter =
         new TextEncodingConverter(std::move(*ErrorOrConverter));
   else
     return ErrorOrConverter.getError();
