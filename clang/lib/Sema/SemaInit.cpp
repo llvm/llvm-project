@@ -1592,6 +1592,24 @@ void InitListChecker::CheckSubElementType(const InitializedEntity &Entity,
           if (Result.isInvalid())
             hadError = true;
 
+          // std::init / ref_to_uninit (paper §5): in C++ a pointer field
+          // initialized by an enclosing aggregate's init list is copy-
+          // initialized here (a scalar member never reaches CheckScalarType).
+          // Scoped to an aggregate subobject (EK_Member) so the enclosing
+          // variable/argument/return is left to its own site, which already
+          // handles a braced source via the recognizer. No Decl is passed: the
+          // init list can appear in a template independently of whether the
+          // aggregate is one, so deferral comes from the dependent-context
+          // guard in checkRefToUninitInit and suppression from the parse-time
+          // stack. (A reference field is routed to CheckReferenceType above.)
+          if (SemaRef.getLangOpts().Profiles && !Result.isInvalid() &&
+              Entity.getKind() == InitializedEntity::EK_Member &&
+              ElemType->isPointerType())
+            SemaRef.checkRefToUninitInit(
+                expr->getExprLoc(),
+                Entity.getDecl()->hasAttr<RefToUninitAttr>(),
+                /*IsReference=*/false, expr, /*D=*/nullptr);
+
           UpdateStructuredListElement(StructuredList, StructuredIndex,
                                       Result.getAs<Expr>());
         } else if (!Seq) {
@@ -1864,6 +1882,11 @@ void InitListChecker::CheckReferenceType(const InitializedEntity &Entity,
     return;
   }
 
+  // Capture the source element before 'expr' is overwritten by the
+  // PerformCopyInitialization result below; the ref_to_uninit recognizer needs
+  // the written source, not the bound reference.
+  const Expr *Src = expr;
+
   ExprResult Result;
   if (VerifyOnly) {
     if (SemaRef.CanPerformCopyInitialization(Entity,expr))
@@ -1883,6 +1906,22 @@ void InitListChecker::CheckReferenceType(const InitializedEntity &Entity,
   // FIXME: Why are we updating the syntactic init list?
   if (!VerifyOnly && expr)
     IList->setInit(Index, expr);
+
+  // std::init / ref_to_uninit (paper §5): a reference field bound by an
+  // enclosing aggregate's init list must be bound consistently with its
+  // marking. getParent() restricts this to a genuine aggregate subobject: a
+  // top-level reference member braced-init (a constructor member-initializer or
+  // an NSDMI) has a null parent and is checked at its own Decl-aware site, so
+  // the parent guard prevents a double diagnostic there. No Decl is passed: the
+  // init list can appear in a template independently of whether the aggregate
+  // is one, so deferral comes from the dependent-context guard in
+  // checkRefToUninitInit and suppression from the parse-time stack.
+  if (SemaRef.getLangOpts().Profiles && !VerifyOnly && !Result.isInvalid() &&
+      Entity.getKind() == InitializedEntity::EK_Member && Entity.getParent() &&
+      DeclType->isReferenceType())
+    SemaRef.checkRefToUninitInit(Src->getExprLoc(),
+                                 Entity.getDecl()->hasAttr<RefToUninitAttr>(),
+                                 /*IsReference=*/true, Src, /*D=*/nullptr);
 
   UpdateStructuredListElement(StructuredList, StructuredIndex, expr);
   ++Index;
