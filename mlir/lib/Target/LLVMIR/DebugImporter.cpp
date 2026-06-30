@@ -263,8 +263,9 @@ DISubprogramAttr DebugImporter::translateImpl(llvm::DISubprogram *node) {
   auto add = [this, &retainedNodes](llvm::DINode *retainedNode) {
     retainedNodes.push_back(translate(retainedNode));
   };
-  auto addGVE = [this, &retainedNodes](llvm::DIGlobalVariableExpression *GVE) {
-    retainedNodes.push_back(translateGlobalVariableExpression(GVE));
+  auto addGVE = [](llvm::DIGlobalVariableExpression *GVE) {
+    // FIXME Import DIGlobalVariableExpressions from retainedNodes without
+    // duplicating them.
   };
   node->forEachRetainedNode(add, add, add, add, addGVE);
   if (llvm::is_contained(retainedNodes, nullptr))
