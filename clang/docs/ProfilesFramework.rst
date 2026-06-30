@@ -760,9 +760,12 @@ member is assigned by a plain ``m = e`` (for a built-in type a write is its
 initialization, paper §4.5) and is *definitely assigned* at a point only if
 assigned on every path reaching it (the meet is intersection, paper §1.3
 "consider all branches ... executed").  A value read (an lvalue-to-rvalue load,
-including the RHS of an assignment or a compound assignment) of a member that is
-not yet definitely assigned is reported via ``err_init_member_read_before_init``
-at the first such read, with a ``note_init_uninit_member_here`` note.  Details:
+including the RHS of an assignment) of a member that is not yet definitely
+assigned is reported via ``err_init_member_read_before_init`` at the first such
+read, with a ``note_init_uninit_member_here`` note.  A compound assignment
+``m op= e`` and a built-in increment or decrement (``++m``, ``m++``, ``--m``,
+``m--``) read the member's old value before writing it, so each is treated as a
+read-then-write of that member.  Details:
 
 - It runs from ``IssueWarnings`` for an enforced ``std::init`` constructor,
   reusing the CFG built for the uninitialized-variables analysis, and also from
