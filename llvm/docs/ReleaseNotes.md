@@ -375,6 +375,7 @@ Makes programs 10x faster by doing Special New Thing.
 * Add `-mtune` option to `opt`.
 * Fixed `llvm-ar` to correctly handle the `N` count modifier on Windows for archive members whose names differ only
   in case (e.g. `FOO.OBJ` and `foo.obj`). Previously, `-N 2` would fail with "not found" even when two matching members existed.
+* `llvm-readobj` and `llvm-readelf` now support the `--call-graph-section` option to dump the contents of the experimental [call graph section](CallGraphSection.md).
 
 ### Changes to LLDB
 
