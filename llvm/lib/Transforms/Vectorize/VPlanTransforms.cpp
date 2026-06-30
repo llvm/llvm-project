@@ -6545,8 +6545,8 @@ struct VPPartialReductionChain {
   /// is `1 - AccumulatorOpIdx`.
   unsigned AccumulatorOpIdx;
   unsigned ScaleFactor;
-
-  /// Optional blend guarding the reduction.
+  /// Optional blend to represent predication for the block that updates the
+  /// reduction.
   VPBlendRecipe *Blend = nullptr;
 };
 
@@ -6735,27 +6735,23 @@ static void transformToPartialReduction(const VPPartialReductionChain &Chain,
     ExtendedOp = NegRecipe;
   }
 
-  // Check if WidenRecipe is the final result of the reduction. If so look
-  // through the select recipes introduced by tail-folding. When a Blend
-  // guards the reduction, the tail-fold select wraps the Blend,
-  // otherwise it wraps the WidenRecipe directly.
+  // Check if WidenRecipe is the final result of the reduction. If so, look
+  // through the Select recipe introduced by tail-folding, otherwise look
+  // through any Blend recipe introduced by predication for the block.
   VPValue *ExitSearch =
       Chain.Blend ? cast<VPValue>(Chain.Blend) : cast<VPValue>(WidenRecipe);
 
-  VPValue *TailFoldCond = nullptr;
-  auto *ExitValue = cast_or_null<VPInstruction>(findUserOf(
-      ExitSearch, m_Select(m_VPValue(TailFoldCond), m_Specific(ExitSearch),
-                           m_Specific(RdxPhi))));
+  VPValue *Cond = nullptr;
+  VPValue *ExitValue = cast_or_null<VPInstruction>(
+      findUserOf(ExitSearch, m_Select(m_VPValue(Cond), m_Specific(ExitSearch),
+                                      m_Specific(RdxPhi))));
 
-  VPValue *BlendCond = Chain.Blend ? Chain.Blend->getMask(0) : nullptr;
-  VPValue *Cond = TailFoldCond;
-
-  if (TailFoldCond && BlendCond) {
-    VPBuilder Builder(WidenRecipe);
-    Cond = Builder.createLogicalAnd(TailFoldCond, BlendCond,
-                                    WidenRecipe->getDebugLoc());
-  } else if (BlendCond) {
-    Cond = BlendCond;
+  if (Chain.Blend) {
+    VPValue *BlendCond = Chain.Blend->getMask(0);
+    Cond = ExitValue ? VPBuilder(WidenRecipe)
+                           .createLogicalAnd(Cond, BlendCond,
+                                             WidenRecipe->getDebugLoc())
+                     : BlendCond;
   }
 
   bool IsLastInChain = RdxPhi->getBackedgeValue() == WidenRecipe ||
@@ -6998,16 +6994,11 @@ getScaledReductions(VPReductionPHIRecipe *RedPhiR) {
   // Work backwards from the ExitValue examining each reduction operation.
   VPValue *CurrentValue = ExitValue;
   while (CurrentValue != RedPhiR) {
-    VPBlendRecipe *Blend = nullptr;
-    if (auto *B = dyn_cast<VPBlendRecipe>(CurrentValue)) {
-      if (B->getNumIncomingValues() != 2)
-        return std::nullopt;
-      assert(!B->isNormalized() && "Expect Blend not to be normalized.");
-
-      Blend = B;
-      CurrentValue = B->getIncomingValue(0);
-
-      if (!CurrentValue->hasOneUse())
+    VPBlendRecipe *Blend = dyn_cast<VPBlendRecipe>(CurrentValue);
+    if (Blend) {
+      assert(!Blend->isNormalized() && "Expect Blend not to be normalized.");
+      CurrentValue = Blend->getIncomingValue(0);
+      if (Blend->getNumIncomingValues() != 2 || !CurrentValue->hasOneUse())
         return std::nullopt;
     }
 
@@ -7029,8 +7020,8 @@ getScaledReductions(VPReductionPHIRecipe *RedPhiR) {
       std::swap(Op, PrevValue);
     }
 
-    // Look for VPBlend(cond_reduce(PrevValue, Op), PrevValue), where
-    // cond_reduce is equal to CurrentValue. This can be lowered as
+    // Look for VPBlend(reduce(PrevValue, Op), PrevValue), where
+    // reduce is equal to CurrentValue. This can be lowered as
     // a conditional reduction by hoisting the select to the inputs.
     if (Blend && Blend->getIncomingValue(1) != PrevValue)
       return std::nullopt;
