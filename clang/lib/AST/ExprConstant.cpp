@@ -9299,7 +9299,7 @@ public:
     case CK_LValueBitCast:
       this->CCEDiag(E, diag::note_constexpr_invalid_cast)
           << diag::ConstexprInvalidCastKind::ThisConversionOrReinterpret
-          << Info.Ctx.getLangOpts().CPlusPlus;
+          << Info.Ctx.getLangOpts().CPlusPlus << E->getSourceRange();
       if (!Visit(E->getSubExpr()))
         return false;
       Result.Designator.setInvalid();
@@ -16410,6 +16410,7 @@ static bool determineEndOffset(EvalInfo &Info, SourceLocation ExprLoc,
 static std::optional<uint64_t>
 tryEvaluateBuiltinObjectSize(const Expr *E, unsigned Type, EvalInfo &Info,
                              bool IsDynamic = false) {
+
   // Determine the denoted object.
   LValue LVal;
   {
@@ -21714,6 +21715,19 @@ bool Expr::EvaluateAsInitializer(const ASTContext &Ctx, const VarDecl *VD,
 
 bool VarDecl::evaluateDestruction(
     SmallVectorImpl<PartialDiagnosticAt> &Notes) const {
+  // This function is only meaningful for records and arrays of records.
+  QualType VarTy = getType();
+  if (VarTy->isArrayType()) {
+    QualType ElemTy = getASTContext().getBaseElementType(VarTy);
+    if (!ElemTy->isRecordType()) {
+      ensureEvaluatedStmt()->HasConstantDestruction = true;
+      return true;
+    }
+  } else if (!VarTy->isRecordType()) {
+    ensureEvaluatedStmt()->HasConstantDestruction = true;
+    return true;
+  }
+
   Expr::EvalStatus EStatus;
   EStatus.Diag = &Notes;
 
@@ -21728,15 +21742,13 @@ bool VarDecl::evaluateDestruction(
   APValue DestroyedValue;
   if (getEvaluatedValue())
     DestroyedValue = *getEvaluatedValue();
-  else if (!handleDefaultInitValue(getType(), DestroyedValue))
+  else if (!handleDefaultInitValue(VarTy, DestroyedValue))
     return false;
 
   if (Ctx.getLangOpts().EnableNewConstInterp) {
     EvalInfo Info(Ctx, EStatus,
                   IsConstantDestruction ? EvaluationMode::ConstantExpression
                                         : EvaluationMode::ConstantFold);
-    Info.setEvaluatingDecl(this, DestroyedValue,
-                           EvalInfo::EvaluatingDeclKind::Dtor);
     Info.InConstantContext = IsConstantDestruction;
     if (!Ctx.getInterpContext().evaluateDestruction(Info, this,
                                                     std::move(DestroyedValue)))
@@ -21745,7 +21757,7 @@ bool VarDecl::evaluateDestruction(
     return true;
   }
 
-  if (!EvaluateDestruction(Ctx, this, std::move(DestroyedValue), getType(),
+  if (!EvaluateDestruction(Ctx, this, std::move(DestroyedValue), VarTy,
                            getLocation(), EStatus, IsConstantDestruction) ||
       EStatus.HasSideEffects)
     return false;
@@ -22431,6 +22443,16 @@ bool Expr::EvaluateWithSubstitution(APValue &Value, ASTContext &Ctx,
   Expr::EvalStatus Status;
   EvalInfo Info(Ctx, Status, EvaluationMode::ConstantExpressionUnevaluated);
   Info.InConstantContext = true;
+
+  if (Info.EnableNewConstInterp) {
+    if (std::optional<bool> BoolResult =
+            Info.Ctx.getInterpContext().evaluateWithSubstitution(
+                Info, Callee, Args, This, this)) {
+      Value = APValue(APSInt(APInt(1, static_cast<uint64_t>(*BoolResult))));
+      return true;
+    }
+    return false;
+  }
 
   LValue ThisVal;
   const LValue *ThisPtr = nullptr;

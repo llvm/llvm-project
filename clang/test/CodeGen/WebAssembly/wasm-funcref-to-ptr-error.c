@@ -1,3 +1,4 @@
+// REQUIRES: webassembly-registered-target
 // RUN: not %clang_cc1 -triple wasm32 -target-feature +reference-types -S -o /dev/null %s 2>&1 | FileCheck %s
 // RUN: not %clang_cc1 -triple wasm64 -target-feature +reference-types -S -o /dev/null %s 2>&1 | FileCheck %s
 

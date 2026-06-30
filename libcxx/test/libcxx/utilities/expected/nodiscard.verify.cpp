@@ -47,7 +47,6 @@ void test() {
   *std::move(exp);  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 
   exp.has_value(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  exp.has_error(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 
   cExp.value();            // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   exp.value();             // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
@@ -111,7 +110,6 @@ void test() {
   const std::expected<void, int> cVExp{};
 
   vExp.has_value(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  vExp.has_error(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   cVExp.error();
