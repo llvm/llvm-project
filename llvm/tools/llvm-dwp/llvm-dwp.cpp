@@ -116,6 +116,9 @@ int llvm_dwp_main(int argc, char **argv, const llvm::ToolContext &) {
   if (Args.hasArg(OPT_help)) {
     Tbl.printHelp(llvm::outs(), "llvm-dwp [options] <input files>",
                   "merge split dwarf (.dwo) files");
+    llvm::outs()
+        << "\nIf exactly one -e option is specified and -o is omitted, the "
+           "default output file name is <executable>.dwp.\n";
     std::exit(0);
   }
 
@@ -166,6 +169,20 @@ int llvm_dwp_main(int argc, char **argv, const llvm::ToolContext &) {
 
   for (const llvm::opt::Arg *A : Args.filtered(OPT_execFileNames))
     ExecFilenames.emplace_back(A->getValue());
+
+  if (OutputFilename.empty()) {
+    if (ExecFilenames.size() == 1) {
+      OutputFilename = ExecFilenames[0] + ".dwp";
+    } else if (ExecFilenames.empty()) {
+      WithColor::error() << "no output file specified (use -o or -e)\n";
+      return 1;
+    } else {
+      WithColor::error()
+          << "cannot derive a default output file name when multiple "
+             "executables are specified; use -o\n";
+      return 1;
+    }
+  }
 
   std::vector<std::string> DWOFilenames;
   for (const llvm::opt::Arg *A : Args.filtered(OPT_INPUT))
