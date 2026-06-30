@@ -28,15 +28,6 @@
 /* Default linker to use. */
 #define CLANG_DEFAULT_LINKER ""
 
-/* Default C++ stdlib to use. */
-#define CLANG_DEFAULT_CXX_STDLIB ""
-
-/* Default runtime library to use. */
-#define CLANG_DEFAULT_RTLIB ""
-
-/* Default unwind library to use. */
-#define CLANG_DEFAULT_UNWINDLIB ""
-
 /* Default objcopy to use */
 #define CLANG_DEFAULT_OBJCOPY "objcopy"
 
