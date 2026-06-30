@@ -2,10 +2,7 @@
 
 // CHECK: define dso_local void @"?foo@@YAXXZ
 // CHECK: invoke void @llvm.seh.try.begin()
-// CHECK-NOT: llvm.seh.scope.begin
-// CHECK-NOT: llvm.seh.scope.end
-
-// FIXME: Do we actually need llvm.seh.scope*?
+// CHECK: invoke void @llvm.seh.scope.end()
 void foo() {
   try {}
   catch (...) {
