@@ -39,6 +39,7 @@ namespace clang::ssaf {
 /// tool never decodes per-entity payloads, and the linker consumes them
 /// as-is during its selective inclusion pass.
 class StaticLibrary {
+  friend class MultiArchStaticLibrary;
   friend class SerializationFormat;
   friend class TestFixture;
 

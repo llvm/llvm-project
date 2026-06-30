@@ -30,7 +30,8 @@ namespace clang::ssaf {
 enum class BuildNamespaceKind : unsigned short {
   CompilationUnit,
   LinkUnit,
-  StaticLibrary
+  StaticLibrary,
+  MultiArchStaticLibrary
 };
 
 /// Represents a single namespace in the build process.
