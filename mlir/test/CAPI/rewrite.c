@@ -1062,7 +1062,7 @@ void testTypeConverterSourceMaterialization(MlirContext ctx) {
       converter, declineSourceMaterialization, &declinedCounter);
 
   MlirRewritePatternSet patterns = mlirRewritePatternSetCreate(ctx);
-  MlirConversionPatternCallbacks callbacks = {NULL, NULL, convertSource};
+  MlirConversionPatternCallbacks callbacks = {NULL, NULL, convertSource, NULL};
   MlirConversionPattern pattern = mlirOpConversionPatternCreate(
       mlirStringRefCreateFromCString("test.source"), 1, ctx, converter,
       callbacks, NULL, 0, NULL);
@@ -1186,7 +1186,8 @@ void testTypeConverterTargetMaterialization(MlirContext ctx) {
                                             &materializationCounter);
 
   MlirRewritePatternSet patterns = mlirRewritePatternSetCreate(ctx);
-  MlirConversionPatternCallbacks callbacks = {NULL, NULL, convertConsumer};
+  MlirConversionPatternCallbacks callbacks = {NULL, NULL, convertConsumer,
+                                              NULL};
   MlirConversionPattern pattern = mlirOpConversionPatternCreate(
       mlirStringRefCreateFromCString("test.consumer"), 1, ctx, converter,
       callbacks, NULL, 0, NULL);
@@ -1542,7 +1543,7 @@ void testTypeConverterMultiInputSourceMaterialization(MlirContext ctx) {
 
   MlirRewritePatternSet patterns = mlirRewritePatternSetCreate(ctx);
   MlirConversionPatternCallbacks callbacks = {NULL, NULL,
-                                              convertProducerToMultiple};
+                                              convertProducerToMultiple, NULL};
   MlirConversionPattern pattern = mlirOpConversionPatternCreate(
       mlirStringRefCreateFromCString("test.producer"), 1, ctx, converter,
       callbacks, NULL, 0, NULL);
