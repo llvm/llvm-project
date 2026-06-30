@@ -20,8 +20,8 @@ TEST_P(olMemPrefetchTest, SuccessHostToDevice) {
 
   std::memset(Alloc, 0x42, Size);
 
-  ASSERT_SUCCESS(olMemPrefetch(Queue, Alloc, Size,
-                               OL_USM_MIGRATION_FLAG_HOST_TO_DEVICE));
+  ASSERT_SUCCESS(
+      olMemPrefetch(Queue, Alloc, Size, OL_USM_MIGRATION_FLAG_HOST_TO_DEVICE));
   ASSERT_SUCCESS(olSyncQueue(Queue));
 
   for (size_t I = 0; I < Size; I++)
@@ -38,10 +38,10 @@ TEST_P(olMemPrefetchTest, SuccessDeviceToHost) {
   std::memset(Alloc, 0x21, Size);
 
   // Migrate to the device first, then bring it back.
-  ASSERT_SUCCESS(olMemPrefetch(Queue, Alloc, Size,
-                               OL_USM_MIGRATION_FLAG_HOST_TO_DEVICE));
-  ASSERT_SUCCESS(olMemPrefetch(Queue, Alloc, Size,
-                               OL_USM_MIGRATION_FLAG_DEVICE_TO_HOST));
+  ASSERT_SUCCESS(
+      olMemPrefetch(Queue, Alloc, Size, OL_USM_MIGRATION_FLAG_HOST_TO_DEVICE));
+  ASSERT_SUCCESS(
+      olMemPrefetch(Queue, Alloc, Size, OL_USM_MIGRATION_FLAG_DEVICE_TO_HOST));
   ASSERT_SUCCESS(olSyncQueue(Queue));
 
   for (size_t I = 0; I < Size; I++)
@@ -55,8 +55,8 @@ TEST_P(olMemPrefetchTest, SuccessZeroSize) {
   void *Alloc;
   ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_MANAGED, Size, &Alloc));
 
-  ASSERT_SUCCESS(olMemPrefetch(Queue, Alloc, 0,
-                               OL_USM_MIGRATION_FLAG_HOST_TO_DEVICE));
+  ASSERT_SUCCESS(
+      olMemPrefetch(Queue, Alloc, 0, OL_USM_MIGRATION_FLAG_HOST_TO_DEVICE));
   ASSERT_SUCCESS(olSyncQueue(Queue));
 
   ASSERT_SUCCESS(olMemFree(Alloc));
@@ -69,8 +69,8 @@ TEST_P(olMemPrefetchTest, SuccessUnsupportedAllocType) {
   void *Alloc;
   ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_DEVICE, Size, &Alloc));
 
-  ASSERT_SUCCESS(olMemPrefetch(Queue, Alloc, Size,
-                               OL_USM_MIGRATION_FLAG_HOST_TO_DEVICE));
+  ASSERT_SUCCESS(
+      olMemPrefetch(Queue, Alloc, Size, OL_USM_MIGRATION_FLAG_HOST_TO_DEVICE));
   ASSERT_SUCCESS(olSyncQueue(Queue));
 
   ASSERT_SUCCESS(olMemFree(Alloc));
