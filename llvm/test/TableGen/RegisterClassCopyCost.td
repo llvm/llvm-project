@@ -7,7 +7,7 @@
 
 include "llvm/Target/Target.td"
 
-// CHECK: static constexpr MCRegisterClassStorage<{{[0-9, ]+}}> MyTargetMCRegisterClassStorage = {
+// CHECK: extern const MCRegisterClassStorage<{{[0-9, ]+}}> MyTargetMCRegisterClassStorage = {
 // CHECK-NEXT: {
 // CHECK-NEXT:   { {{[^,]+}}, {{[^,]+}}, 0, 32, 2, {{[0-9]+}}, MyTarget::GPR32RegClassID, 1, true, false },
 // CHECK-NEXT:   { {{[^,]+}}, {{[^,]+}}, 6, 32, 1, {{[0-9]+}}, MyTarget::SPECIAL_CLASSRegClassID, 255, true, false },
