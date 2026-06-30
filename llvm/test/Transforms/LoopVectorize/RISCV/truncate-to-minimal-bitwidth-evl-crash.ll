@@ -8,20 +8,20 @@
 define void @truncate_to_minimal_bitwidths_widen_cast_recipe(ptr %src) vscale_range(2, 1024) {
 ; CHECK-LABEL: define void @truncate_to_minimal_bitwidths_widen_cast_recipe(
 ; CHECK-SAME: ptr [[SRC:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
-; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:  [[VECTOR_PH:.*]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[AVL:%.*]] = phi i64 [ 17, %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 4, i1 true)
-; CHECK-NEXT:    call void @llvm.vp.scatter.nxv4i8.nxv4p0(<vscale x 4 x i8> zeroinitializer, <vscale x 4 x ptr> align 1 splat (ptr null), <vscale x 4 x i1> splat (i1 true), i32 [[TMP0]])
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[TMP0]] to i64
-; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP1]]
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
-; CHECK-NEXT:    br i1 [[TMP2]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
-; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br label %[[EXIT1:.*]]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[IV_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[GEP_SRC:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[GEP_SRC]], align 1
+; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[TMP0]] to i32
+; CHECK-NEXT:    [[MUL16:%.*]] = mul i32 0, [[CONV]]
+; CHECK-NEXT:    [[SHR35:%.*]] = lshr i32 [[MUL16]], 1
+; CHECK-NEXT:    [[CONV36:%.*]] = trunc i32 [[SHR35]] to i8
+; CHECK-NEXT:    store i8 [[CONV36]], ptr null, align 1
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV]], 8
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT1:.*]], label %[[VECTOR_BODY]]
 ; CHECK:       [[EXIT1]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -69,10 +69,25 @@ define void @truncate_i16_to_i8_cse(ptr noalias %src, ptr noalias %dst) vscale_r
 ; CHECK-NEXT:    store i8 [[TMP10]], ptr [[DST]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], 4294967296
-; CHECK-NEXT:    br i1 [[TMP11]], label %[[SCALAR_PH:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[COUNT:%.*]] = phi i32 [ 0, %[[SCALAR_PH]] ], [ [[COUNT_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[VAL:%.*]] = load i16, ptr [[SRC]], align 2
+; CHECK-NEXT:    [[VAL_ZEXT:%.*]] = zext i16 [[VAL]] to i64
+; CHECK-NEXT:    [[VAL_TRUNC_ZEXT:%.*]] = trunc i64 [[VAL_ZEXT]] to i8
+; CHECK-NEXT:    store i8 [[VAL_TRUNC_ZEXT]], ptr null, align 1
+; CHECK-NEXT:    [[VAL_TRUNC:%.*]] = trunc i16 [[VAL]] to i8
+; CHECK-NEXT:    store i8 [[VAL_TRUNC]], ptr [[DST]], align 1
+; CHECK-NEXT:    [[COUNT_NEXT]] = add i32 [[COUNT]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[COUNT_NEXT]], 0
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
 entry:
