@@ -142,14 +142,6 @@ uint32_t VariableList::FindIndexForVariable(Variable *variable) {
   return UINT32_MAX;
 }
 
-size_t VariableList::MemorySize() const {
-  size_t mem_size = sizeof(VariableList);
-  const_iterator pos, end = m_variables.end();
-  for (pos = m_variables.begin(); pos != end; ++pos)
-    mem_size += (*pos)->MemorySize();
-  return mem_size;
-}
-
 size_t VariableList::GetSize() const { return m_variables.size(); }
 
 void VariableList::Dump(Stream *s, bool show_context) const {

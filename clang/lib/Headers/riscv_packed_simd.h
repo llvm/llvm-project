@@ -103,6 +103,12 @@ typedef uint32_t uint32x2_t __attribute__((__vector_size__(8)));
     return (rty)builtin(__rs1, __rs2);                                         \
   }
 
+#define __packed_reduction(name, rty, ty, builtin)                             \
+  static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1,            \
+                                                          rty __rs2) {         \
+    return builtin(__rs1, __rs2);                                              \
+  }
+
 // clang-format off: macro call sites have no trailing semicolons, which
 // confuses clang-format into a deeply nested expression.
 
@@ -205,6 +211,28 @@ __packed_sh1add(psh1add_i32x2, int32x2_t)
 __packed_sh1add(psh1add_u32x2, uint32x2_t)
 __packed_sh1sadd(pssh1sadd_i16x4, int16x4_t)
 __packed_sh1sadd(pssh1sadd_i32x2, int32x2_t)
+
+/* Packed Exchanged Addition and Subtraction (32-bit) */
+__packed_binary_builtin(pas_x_i16x2, int16x2_t, __builtin_riscv_pas_x_i16x2)
+__packed_binary_builtin(psa_x_i16x2, int16x2_t, __builtin_riscv_psa_x_i16x2)
+__packed_binary_builtin(psas_x_i16x2, int16x2_t, __builtin_riscv_psas_x_i16x2)
+__packed_binary_builtin(pssa_x_i16x2, int16x2_t, __builtin_riscv_pssa_x_i16x2)
+__packed_binary_builtin(paas_x_i16x2, int16x2_t, __builtin_riscv_paas_x_i16x2)
+__packed_binary_builtin(pasa_x_i16x2, int16x2_t, __builtin_riscv_pasa_x_i16x2)
+
+/* Packed Exchanged Addition and Subtraction (64-bit) */
+__packed_binary_builtin(pas_x_i16x4, int16x4_t, __builtin_riscv_pas_x_i16x4)
+__packed_binary_builtin(psa_x_i16x4, int16x4_t, __builtin_riscv_psa_x_i16x4)
+__packed_binary_builtin(psas_x_i16x4, int16x4_t, __builtin_riscv_psas_x_i16x4)
+__packed_binary_builtin(pssa_x_i16x4, int16x4_t, __builtin_riscv_pssa_x_i16x4)
+__packed_binary_builtin(paas_x_i16x4, int16x4_t, __builtin_riscv_paas_x_i16x4)
+__packed_binary_builtin(pasa_x_i16x4, int16x4_t, __builtin_riscv_pasa_x_i16x4)
+__packed_binary_builtin(pas_x_i32x2, int32x2_t, __builtin_riscv_pas_x_i32x2)
+__packed_binary_builtin(psa_x_i32x2, int32x2_t, __builtin_riscv_psa_x_i32x2)
+__packed_binary_builtin(psas_x_i32x2, int32x2_t, __builtin_riscv_psas_x_i32x2)
+__packed_binary_builtin(pssa_x_i32x2, int32x2_t, __builtin_riscv_pssa_x_i32x2)
+__packed_binary_builtin(paas_x_i32x2, int32x2_t, __builtin_riscv_paas_x_i32x2)
+__packed_binary_builtin(pasa_x_i32x2, int32x2_t, __builtin_riscv_pasa_x_i32x2)
 
 /* Packed Minimum and Maximum (32-bit) */
 __packed_binary_builtin(pmin_i8x4, int8x4_t, __builtin_elementwise_min)
@@ -402,6 +430,24 @@ __packed_binary_builtin_cast(pabd_i16x4, int16x4_t, uint16x4_t, __builtin_riscv_
 __packed_binary_builtin_cast(pabdu_u8x8, uint8x8_t, uint8x8_t, __builtin_riscv_pabdu_u8x8)
 __packed_binary_builtin_cast(pabdu_u16x4, uint16x4_t, uint16x4_t, __builtin_riscv_pabdu_u16x4)
 
+/* Packed Reduction Sum (32-bit) */
+__packed_reduction(predsum_i8x4_i32, int32_t, int8x4_t, __builtin_riscv_predsum_i8x4_i32)
+__packed_reduction(predsumu_u8x4_u32, uint32_t, uint8x4_t, __builtin_riscv_predsumu_u8x4_u32)
+__packed_reduction(predsum_i16x2_i32, int32_t, int16x2_t, __builtin_riscv_predsum_i16x2_i32)
+__packed_reduction(predsumu_u16x2_u32, uint32_t, uint16x2_t, __builtin_riscv_predsumu_u16x2_u32)
+
+/* Packed Reduction Sum (64-bit) */
+__packed_reduction(predsum_i8x8_i32, int32_t, int8x8_t, __builtin_riscv_predsum_i8x8_i32)
+__packed_reduction(predsumu_u8x8_u32, uint32_t, uint8x8_t, __builtin_riscv_predsumu_u8x8_u32)
+__packed_reduction(predsum_i16x4_i32, int32_t, int16x4_t, __builtin_riscv_predsum_i16x4_i32)
+__packed_reduction(predsumu_u16x4_u32, uint32_t, uint16x4_t, __builtin_riscv_predsumu_u16x4_u32)
+__packed_reduction(predsum_i8x8_i64, int64_t, int8x8_t, __builtin_riscv_predsum_i8x8_i64)
+__packed_reduction(predsumu_u8x8_u64, uint64_t, uint8x8_t, __builtin_riscv_predsumu_u8x8_u64)
+__packed_reduction(predsum_i16x4_i64, int64_t, int16x4_t, __builtin_riscv_predsum_i16x4_i64)
+__packed_reduction(predsumu_u16x4_u64, uint64_t, uint16x4_t, __builtin_riscv_predsumu_u16x4_u64)
+__packed_reduction(predsum_i32x2_i64, int64_t, int32x2_t, __builtin_riscv_predsum_i32x2_i64)
+__packed_reduction(predsumu_u32x2_u64, uint64_t, uint32x2_t, __builtin_riscv_predsumu_u32x2_u64)
+
 // clang-format on
 
 #undef __packed_splat2
@@ -421,6 +467,7 @@ __packed_binary_builtin_cast(pabdu_u16x4, uint16x4_t, uint16x4_t, __builtin_risc
 #undef __packed_cmp
 #undef __packed_pabs
 #undef __packed_binary_builtin_cast
+#undef __packed_reduction
 #undef __DEFAULT_FN_ATTRS
 
 #if defined(__cplusplus)

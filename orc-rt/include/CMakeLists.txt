@@ -11,20 +11,22 @@ set(ORC_RT_HEADERS
     orc-rt/SimpleSymbolTable.h
     orc-rt/Error.h
     orc-rt/ExecutorAddress.h
+    orc-rt/InProcessControllerAccess.h
     orc-rt/IntervalMap.h
     orc-rt/IntervalSet.h
     orc-rt/LockedAccess.h
+    orc-rt/MacroUtils.h
     orc-rt/Math.h
     orc-rt/MemoryFlags.h
     orc-rt/NativeDylibManager.h
-    orc-rt/QueueingTaskDispatcher.h
+    orc-rt/QueueingRunner.h
     orc-rt/RTTI.h
-    orc-rt/ScopeExit.h
     orc-rt/Service.h
     orc-rt/Session.h
     orc-rt/SimpleNativeMemoryMap.h
     orc-rt/SimplePackedSerialization.h
     orc-rt/SPSAllocAction.h
+    orc-rt/StandaloneMachOUnwindInfoRegistrar.h
     orc-rt/sps-ci/AllSPSCI.h
     orc-rt/sps-ci/CallSPSCI.h
     orc-rt/sps-ci/MemoryAccessSPSCI.h
@@ -34,12 +36,12 @@ set(ORC_RT_HEADERS
     orc-rt/SPSWrapperFunction.h
     orc-rt/SPSWrapperFunctionBuffer.h
     orc-rt/TaskGroup.h
-    orc-rt/TaskDispatcher.h
-    orc-rt/ThreadPoolTaskDispatcher.h
+    orc-rt/ThreadPoolRunner.h
     orc-rt/WrapperFunction.h
     orc-rt/bind.h
     orc-rt/bit.h
     orc-rt/move_only_function.h
+    orc-rt/scope_exit.h
     orc-rt/span.h
 )
 

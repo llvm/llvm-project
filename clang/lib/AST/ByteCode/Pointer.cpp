@@ -437,6 +437,104 @@ Pointer::computeOffsetForComparison(const ASTContext &ASTCtx) const {
   return Result;
 }
 
+std::optional<size_t>
+Pointer::computeLayoutOffset(const ASTContext &ASTCtx) const {
+  switch (StorageKind) {
+  case Storage::Int:
+    return Int.Value + Offset;
+  case Storage::Block:
+    // See below.
+    break;
+  case Storage::Fn:
+    return getIntegerRepresentation();
+  case Storage::Typeid:
+    return reinterpret_cast<uintptr_t>(asTypeidPointer().TypePtr) + Offset;
+  }
+
+  auto getTypeSize = [&](QualType T) -> std::optional<size_t> {
+    if (const RecordType *RT = T->getAs<RecordType>()) {
+      // We cannot get the type size of a forward declaration.
+      if (!RT->getDecl()->getDefinition())
+        return std::nullopt;
+    }
+    return ASTCtx.getTypeSizeInChars(T).getQuantity();
+  };
+
+  auto getRecordDecl = [&](PtrView P) -> const CXXRecordDecl * {
+    if (const Record *R = P.getRecord())
+      return cast<CXXRecordDecl>(R->getDecl());
+    return cast<CXXRecordDecl>(P.getFieldDesc()->asDecl());
+  };
+
+  auto getRecordSize = [&](const RecordDecl *RD) -> unsigned {
+    CanQualType RecordTy = ASTCtx.getCanonicalTagType(RD);
+    return ASTCtx.getTypeSizeInChars(RecordTy).getQuantity();
+  };
+
+  size_t Result = 0;
+  PtrView P = view();
+  while (true) {
+    if (P.isBaseClass()) {
+      const ASTRecordLayout &Layout =
+          ASTCtx.getASTRecordLayout(getRecordDecl(P.getBase()));
+      const CXXRecordDecl *RD = getRecordDecl(P);
+      if (P.isVirtualBaseClass())
+        Result += Layout.getVBaseClassOffset(RD).getQuantity();
+      else
+        Result += Layout.getBaseClassOffset(RD).getQuantity();
+
+      if (P.isOnePastEnd())
+        Result += getRecordSize(RD);
+
+      P = P.getBase();
+      continue;
+    }
+
+    if (P.isArrayElement()) {
+      P = P.expand();
+      assert(P.getFieldDesc()->isArray());
+      if (std::optional<size_t> ElemSize =
+              getTypeSize(P.getFieldDesc()->getElemQualType()))
+        Result += *ElemSize * P.getIndex();
+      else
+        return std::nullopt;
+
+      P = P.getArray();
+      continue;
+    }
+
+    if (P.isRoot()) {
+      if (P.isPastEnd() || P.isOnePastEnd()) {
+        if (std::optional<size_t> Size =
+                getTypeSize(P.getDeclDesc()->getType()))
+          Result += *Size * P.getIndex();
+        else
+          return std::nullopt;
+      }
+      break;
+    }
+
+    assert(P.getField());
+    const FieldDecl *F = P.getField();
+    const ASTRecordLayout &Layout = ASTCtx.getASTRecordLayout(F->getParent());
+    Result +=
+        ASTCtx.toCharUnitsFromBits(Layout.getFieldOffset(F->getFieldIndex()))
+            .getQuantity();
+
+    if (P.isPastEnd() || P.isOnePastEnd()) {
+      if (std::optional<size_t> Size = getTypeSize(F->getType()))
+        Result += *Size * P.getIndex();
+      else
+        return std::nullopt;
+    }
+
+    P = P.getBase();
+    if (P.isRoot())
+      break;
+  }
+  return Result;
+}
+
 std::string Pointer::toDiagnosticString(const ASTContext &Ctx) const {
   if (isZero())
     return "nullptr";

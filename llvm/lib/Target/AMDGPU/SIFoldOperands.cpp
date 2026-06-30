@@ -1096,6 +1096,9 @@ SIFoldOperandsImpl::isRegSeqSplat(MachineInstr &RegSeq) const {
         TRI->getChannelFromSubReg(SubReg1))
       return {};
 
+    if (TRI->getSubRegIdxSize(SubReg0) != 32)
+      return {};
+
     int64_t MergedVal = Make_64(Op1->getImm(), Op0->getImm());
     if (I == 0)
       SplatVal64 = MergedVal;
@@ -1143,7 +1146,9 @@ bool SIFoldOperandsImpl::tryFoldRegSeqSplat(
       break;
     case AMDGPU::OPERAND_REG_INLINE_AC_FP64:
     case AMDGPU::OPERAND_REG_INLINE_C_FP64:
+    case AMDGPU::OPERAND_REG_IMM_V2FP64:
     case AMDGPU::OPERAND_REG_INLINE_C_INT64:
+    case AMDGPU::OPERAND_REG_IMM_V2INT64:
       OpRC = TRI->getSubRegisterClass(OpRC, AMDGPU::sub0_sub1);
       break;
     default:

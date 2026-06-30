@@ -150,6 +150,7 @@ enum CPUKind {
   CK_C86_4G_M4,
   CK_C86_4G_M6,
   CK_C86_4G_M7,
+  CK_C86_4G_M8,
   CK_x86_64,
   CK_x86_64_v2,
   CK_x86_64_v3,

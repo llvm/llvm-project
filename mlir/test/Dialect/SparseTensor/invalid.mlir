@@ -307,6 +307,14 @@ func.func @sparse_push_back_n(%arg0: index, %arg1: memref<?xf32>, %arg2: f32) ->
 
 // -----
 
+func.func @sparse_push_back_non_strided(%arg0: index, %arg1: memref<?xf64, affine_map<(d0) -> (d0 mod 2)>>, %arg2: f64) {
+  // expected-error@+1 {{operand #1 must be 1D strided memref of any non-token type values, but got 'memref<?xf64, affine_map<(d0) -> (d0 mod 2)>>}}
+  %0:2 = sparse_tensor.push_back %arg0, %arg1, %arg2 : index, memref<?xf64, affine_map<(d0) -> (d0 mod 2)>>, f64
+  return
+}
+
+// -----
+
 func.func @sparse_unannotated_expansion(%arg0: tensor<128xf64>) {
   // expected-error@+1 {{'sparse_tensor.expand' op operand #0 must be sparse tensor of any non-token type values, but got 'tensor<128xf64>'}}
   %values, %filled, %added, %count = sparse_tensor.expand %arg0
@@ -843,7 +851,7 @@ func.func @sparse_tensor_foreach(%arg0: tensor<2x4xf64, #DCSR>, %arg1: f32) -> (
 #MAP = affine_map<(i,j) -> (i,j)>
 
 func.func @sparse_sort_coo_x_type( %arg0: index, %arg1: memref<?xf32>) {
-  // expected-error@+1 {{operand #1 must be 1D memref of integer or index values}}
+  // expected-error@+1 {{operand #1 must be 1D strided memref of integer or index values}}
   sparse_tensor.sort insertion_sort_stable %arg0, %arg1 {perm_map = #MAP} : memref<?xf32>
   return
 }

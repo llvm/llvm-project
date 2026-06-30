@@ -157,3 +157,19 @@ end subroutine
 ! CHECK: fir.address_of(@_QP__host_sub)
 ! CHECK: fir.address_of(@_QP__device_sub)
 ! CHECK: fir.address_of(@_QP__host_sub)
+
+! The device attribute must propagate through use_device for a USE-renamed
+! variable, so generic resolution selects the device-specific procedure.
+subroutine test_use_rename()
+  use m, only: doit, renamed => pinned_real
+  call doit(renamed)
+  !$acc host_data use_device(renamed)
+  call doit(renamed)
+  !$acc end host_data
+  call doit(renamed)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_use_rename
+! CHECK: fir.address_of(@_QP__host_sub)
+! CHECK: fir.address_of(@_QP__device_sub)
+! CHECK: fir.address_of(@_QP__host_sub)
