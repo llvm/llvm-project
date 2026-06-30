@@ -568,6 +568,8 @@ public:
 
   bool isCanonicalized(SelectionDAG &DAG, SDValue Op,
                        SDNodeFlags UserFlags = {}, unsigned MaxDepth = 5) const;
+  bool isCanonicalized(SelectionDAG &DAG, SDValue Op, EVT QueryVT,
+                       SDNodeFlags UserFlags, unsigned MaxDepth) const;
   bool isCanonicalized(Register Reg, const MachineFunction &MF,
                        unsigned MaxDepth = 5) const;
   bool denormalsEnabledForType(const SelectionDAG &DAG, EVT VT) const;

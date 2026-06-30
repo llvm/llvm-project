@@ -15645,6 +15645,21 @@ SDValue SITargetLowering::performRcpCombine(SDNode *N,
 bool SITargetLowering::isCanonicalized(SelectionDAG &DAG, SDValue Op,
                                        SDNodeFlags UserFlags,
                                        unsigned MaxDepth) const {
+  EVT VT = Op.getValueType();
+  assert(VT.isFloatingPoint() &&
+         "expected a floating-point value to query canonicality of");
+  return isCanonicalized(DAG, Op, VT.getScalarType(), UserFlags, MaxDepth);
+}
+
+bool SITargetLowering::isCanonicalized(SelectionDAG &DAG, SDValue Op,
+                                       EVT QueryVT, SDNodeFlags UserFlags,
+                                       unsigned MaxDepth) const {
+  assert(QueryVT.isFloatingPoint() && !QueryVT.isVector() &&
+         "QueryVT must be a floating-point scalar type");
+  EVT VT = Op.getValueType();
+  if (VT.isFloatingPoint() && VT.getScalarType() != QueryVT)
+    return false;
+
   unsigned Opcode = Op.getOpcode();
   if (Opcode == ISD::FCANONICALIZE)
     return true;
@@ -15713,7 +15728,8 @@ bool SITargetLowering::isCanonicalized(SelectionDAG &DAG, SDValue Op,
   case ISD::FNEG:
   case ISD::FABS:
   case ISD::FCOPYSIGN:
-    return isCanonicalized(DAG, Op.getOperand(0), MaxDepth - 1);
+    return isCanonicalized(DAG, Op.getOperand(0), QueryVT, UserFlags,
+                           MaxDepth - 1);
 
   case ISD::AND:
     if (Op.getValueType() == MVT::i32) {
@@ -15723,7 +15739,8 @@ bool SITargetLowering::isCanonicalized(SelectionDAG &DAG, SDValue Op,
       // is valid to optimize for all types.
       if (auto *RHS = dyn_cast<ConstantSDNode>(Op.getOperand(1))) {
         if (RHS->getZExtValue() == 0xffff0000) {
-          return isCanonicalized(DAG, Op.getOperand(0), MaxDepth - 1);
+          return isCanonicalized(DAG, Op.getOperand(0), QueryVT, UserFlags,
+                                 MaxDepth - 1);
         }
       }
     }
@@ -15764,20 +15781,23 @@ bool SITargetLowering::isCanonicalized(SelectionDAG &DAG, SDValue Op,
 
     // FIXME: Does this apply with clamp? It's implemented with max.
     for (unsigned I = 0, E = Op.getNumOperands(); I != E; ++I) {
-      if (!isCanonicalized(DAG, Op.getOperand(I), MaxDepth - 1))
+      if (!isCanonicalized(DAG, Op.getOperand(I), QueryVT, UserFlags,
+                           MaxDepth - 1))
         return false;
     }
 
     return true;
   }
   case ISD::SELECT: {
-    return isCanonicalized(DAG, Op.getOperand(1), MaxDepth - 1) &&
-           isCanonicalized(DAG, Op.getOperand(2), MaxDepth - 1);
+    return isCanonicalized(DAG, Op.getOperand(1), QueryVT, UserFlags,
+                           MaxDepth - 1) &&
+           isCanonicalized(DAG, Op.getOperand(2), QueryVT, UserFlags,
+                           MaxDepth - 1);
   }
   case ISD::BUILD_VECTOR: {
     for (unsigned i = 0, e = Op.getNumOperands(); i != e; ++i) {
       SDValue SrcOp = Op.getOperand(i);
-      if (!isCanonicalized(DAG, SrcOp, MaxDepth - 1))
+      if (!isCanonicalized(DAG, SrcOp, QueryVT, UserFlags, MaxDepth - 1))
         return false;
     }
 
@@ -15785,25 +15805,25 @@ bool SITargetLowering::isCanonicalized(SelectionDAG &DAG, SDValue Op,
   }
   case ISD::EXTRACT_VECTOR_ELT:
   case ISD::EXTRACT_SUBVECTOR: {
-    return isCanonicalized(DAG, Op.getOperand(0), MaxDepth - 1);
+    return isCanonicalized(DAG, Op.getOperand(0), QueryVT, UserFlags,
+                           MaxDepth - 1);
   }
   case ISD::INSERT_VECTOR_ELT: {
-    return isCanonicalized(DAG, Op.getOperand(0), MaxDepth - 1) &&
-           isCanonicalized(DAG, Op.getOperand(1), MaxDepth - 1);
+    return isCanonicalized(DAG, Op.getOperand(0), QueryVT, UserFlags,
+                           MaxDepth - 1) &&
+           isCanonicalized(DAG, Op.getOperand(1), QueryVT, UserFlags,
+                           MaxDepth - 1);
   }
   case ISD::UNDEF:
     // Could be anything.
     return false;
 
   case ISD::BITCAST: {
-    // Canonicality isn't preserved across a bitcast that changes the FP type.
+    // Carry QueryVT through the bitcast unchanged. The top-of-function guard
+    // rejects a source whose FP format differs from the consumed type, so a
+    // value canonical in one FP format is not assumed canonical in another.
     SDValue Src = peekThroughBitcasts(Op.getOperand(0));
-    EVT SrcVT = Src.getValueType();
-    EVT DstVT = Op.getValueType();
-    if (SrcVT.isFloatingPoint() && DstVT.isFloatingPoint() &&
-        SrcVT.getScalarType() != DstVT.getScalarType())
-      return false;
-    return isCanonicalized(DAG, Src, MaxDepth - 1);
+    return isCanonicalized(DAG, Src, QueryVT, UserFlags, MaxDepth - 1);
   }
   case ISD::TRUNCATE: {
     // Hack round the mess we make when legalizing extract_vector_elt
@@ -15812,7 +15832,8 @@ bool SITargetLowering::isCanonicalized(SelectionDAG &DAG, SDValue Op,
       if (TruncSrc.getValueType() == MVT::i32 &&
           TruncSrc.getOpcode() == ISD::BITCAST &&
           TruncSrc.getOperand(0).getValueType() == MVT::v2f16) {
-        return isCanonicalized(DAG, TruncSrc.getOperand(0), MaxDepth - 1);
+        return isCanonicalized(DAG, TruncSrc.getOperand(0), QueryVT, UserFlags,
+                               MaxDepth - 1);
       }
     }
     return false;
