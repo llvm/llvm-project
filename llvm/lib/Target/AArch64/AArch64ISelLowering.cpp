@@ -9466,7 +9466,7 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
     if (Size) {
       SDValue Buffer = DAG.getNode(
           ISD::DYNAMIC_STACKALLOC, DL, DAG.getVTList(MVT::i64, MVT::Other),
-          {Chain, Size, DAG.getConstant(1, DL, MVT::i64)});
+          {Chain, Size, DAG.getConstant(1, DL, MVT::i64), Size});
       Chain = Buffer.getValue(1);
 
       Register BufferPtr =

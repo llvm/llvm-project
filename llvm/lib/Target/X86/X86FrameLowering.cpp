@@ -54,6 +54,21 @@ getCalleeSavedSpillRC(MCRegister Reg, const X86Subtarget &STI,
   return TRI.getMinimalPhysRegClass(Reg);
 }
 
+static bool hasConstantSP(const MachineFunction &MF) {
+  const auto *X86FI = MF.getInfo<X86MachineFunctionInfo>();
+  return !MF.getFrameInfo().hasVarSizedObjects() &&
+         !X86FI->getHasPushSequences() && !X86FI->hasPreallocatedCall();
+}
+
+static bool hasWin64MSVCDynAllocaCallFrame(const MachineFunction &MF) {
+  const auto &STI = MF.getSubtarget<X86Subtarget>();
+  if (STI.getFrameLowering()->getWin64MSVCDynAllocaCallFrameSize(MF) == 0)
+    return false;
+  assert(!MF.getInfo<X86MachineFunctionInfo>()->getHasPushSequences());
+  assert(!MF.getInfo<X86MachineFunctionInfo>()->hasPreallocatedCall());
+  return true;
+}
+
 X86FrameLowering::X86FrameLowering(const X86Subtarget &STI,
                                    MaybeAlign StackAlignOverride)
     : TargetFrameLowering(StackGrowsDown, StackAlignOverride.valueOrOne(),
@@ -70,9 +85,7 @@ X86FrameLowering::X86FrameLowering(const X86Subtarget &STI,
 }
 
 bool X86FrameLowering::hasReservedCallFrame(const MachineFunction &MF) const {
-  return !MF.getFrameInfo().hasVarSizedObjects() &&
-         !MF.getInfo<X86MachineFunctionInfo>()->getHasPushSequences() &&
-         !MF.getInfo<X86MachineFunctionInfo>()->hasPreallocatedCall();
+  return hasConstantSP(MF) || hasWin64MSVCDynAllocaCallFrame(MF);
 }
 
 /// canSimplifyCallFramePseudos - If there is a reserved call frame, the
@@ -98,6 +111,16 @@ bool X86FrameLowering::needsFrameIndexResolution(
     const MachineFunction &MF) const {
   return MF.getFrameInfo().hasStackObjects() ||
          MF.getInfo<X86MachineFunctionInfo>()->getHasPushSequences();
+}
+
+unsigned X86FrameLowering::getWin64MSVCDynAllocaCallFrameSize(
+    const MachineFunction &MF) const {
+  if (!STI.isTargetWin64() || !STI.isTargetWindowsMSVC())
+    return 0;
+  if (!MF.getInfo<X86MachineFunctionInfo>()->hasDynAlloca())
+    return 0;
+  return static_cast<unsigned>(
+      alignTo(MF.getFrameInfo().getMaxCallFrameSize(), getStackAlign()));
 }
 
 /// hasFPImpl - Return true if the specified function should have a dedicated
@@ -2966,7 +2989,7 @@ X86FrameLowering::getFrameIndexReferencePreferSP(const MachineFunction &MF,
   // If !hasReservedCallFrame the function might have SP adjustement in the
   // body.  So, even though the offset is statically known, it depends on where
   // we are in the function.
-  if (!IgnoreSPUpdates && !hasReservedCallFrame(MF))
+  if (!IgnoreSPUpdates && !hasConstantSP(MF))
     return getFrameIndexReference(MF, FI, FrameReg);
 
   // We don't handle tail calls, and shouldn't be seeing them either.

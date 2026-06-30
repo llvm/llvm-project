@@ -4,13 +4,14 @@
 
 ;; Copy of instr-ref-dyn-alloca-win32.ll, targetting 64 bit Windows. Here,
 ;; _chkstk doesn't return with a modified stack pointer, instead we have to
-;; edit it with our own subtract operation. Check that it's labelled and the
-;; substitution is correct. This also covers the code paths for non-Windows on
-;; x86.
+;; edit it with our own subtract operation. Check that the lowered stack
+;; pointer copy is what the DBG_INSTR_REF points at. This also covers the code
+;; paths for non-Windows on x86.
 
-; DYN_LOWERED:      debugValueSubstitutions:
-; DYN_LOWERED-NEXT: - { srcinst: 1, srcop: 2, dstinst: 2, dstop: 0, subreg: 0 }
-; DYN_LOWERED:      SUB64rr $rsp, killed $rax, {{.*}} debug-instr-number 2,
+; DYN_LOWERED:      debugValueSubstitutions: []
+; DYN_LOWERED:      $rsp = SUB64rr $rsp, killed $rax, {{.*}}
+; DYN_LOWERED-NEXT: %{{[0-9]+}}:gr64 = COPY $rsp, debug-location !41
+; DYN_LOWERED-NEXT: DBG_INSTR_REF !42, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_deref, DW_OP_deref), dbg-instr-ref(1, 0), debug-location !46
 
 source_filename = "test/DebugInfo/COFF/types-array-advanced.ll"
 target datalayout = "e-m:w-i64:64-f80:128-n8:16:32:64-S128"

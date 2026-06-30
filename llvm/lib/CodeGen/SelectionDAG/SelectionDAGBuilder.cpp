@@ -4649,6 +4649,7 @@ void SelectionDAGBuilder::visitAlloca(const AllocaInst &I) {
   AllocSize = DAG.getNode(
       ISD::MUL, dl, IntPtr, AllocSize,
       DAG.getZExtOrTrunc(DAG.getTypeSize(dl, MVT::i64, TySize), dl, IntPtr));
+  SDValue RawAllocSize = AllocSize;
 
   // Handle alignment.  If the requested alignment is less than or equal to
   // the stack alignment, ignore it.  If the size is greater than or equal to
@@ -4671,7 +4672,8 @@ void SelectionDAGBuilder::visitAlloca(const AllocaInst &I) {
 
   SDValue Ops[] = {
       getRoot(), AllocSize,
-      DAG.getConstant(Alignment ? Alignment->value() : 0, dl, IntPtr)};
+      DAG.getConstant(Alignment ? Alignment->value() : 0, dl, IntPtr),
+      RawAllocSize};
   SDVTList VTs = DAG.getVTList(AllocSize.getValueType(), MVT::Other);
   SDValue DSA = DAG.getNode(ISD::DYNAMIC_STACKALLOC, dl, VTs, Ops);
   setValue(&I, DSA);

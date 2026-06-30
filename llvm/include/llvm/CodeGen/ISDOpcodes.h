@@ -1185,10 +1185,11 @@ enum NodeType {
   /// DYNAMIC_STACKALLOC - Allocate some number of bytes on the stack aligned
   /// to a specified boundary.  This node always has two return values: a new
   /// stack pointer value and a chain. The first operand is the token chain,
-  /// the second is the number of bytes to allocate, and the third is the
-  /// alignment boundary.  The size is guaranteed to be a multiple of the
-  /// stack alignment, and the alignment is guaranteed to be bigger than the
-  /// stack alignment (if required) or 0 to get standard stack alignment.
+  /// the second is the number of bytes to allocate, the third is the
+  /// alignment boundary, and the fourth is the unrounded allocation size.
+  /// The size is guaranteed to be a multiple of the stack alignment, and the
+  /// alignment is guaranteed to be bigger than the stack alignment (if
+  /// required) or 0 to get standard stack alignment.
   DYNAMIC_STACKALLOC,
 
   /// Control flow instructions.  These all have token chains.
