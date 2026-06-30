@@ -279,6 +279,18 @@ void mlirIRRewriterDestroy(MlirRewriterBase rewriter) {
 }
 
 //===----------------------------------------------------------------------===//
+/// Dialect constant materialization API
+//===----------------------------------------------------------------------===//
+
+MlirOperation mlirDialectMaterializeConstant(MlirDialect dialect,
+                                             MlirRewriterBase rewriter,
+                                             MlirAttribute value, MlirType type,
+                                             MlirLocation loc) {
+  return wrap(unwrap(dialect)->materializeConstant(
+      *unwrap(rewriter), unwrap(value), unwrap(type), unwrap(loc)));
+}
+
+//===----------------------------------------------------------------------===//
 /// RewritePatternSet and FrozenRewritePatternSet API
 //===----------------------------------------------------------------------===//
 
