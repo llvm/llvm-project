@@ -8734,9 +8734,9 @@ SDValue DAGTypeLegalizer::WidenVecOp_CttzElements(SDNode *N) {
       TLI.getTypeToTransformTo(*DAG.getContext(), Source.getValueType());
 
   SDValue WideSource;
-  if (N->getOpcode() == ISD::CTTZ_ELTS_ZERO_POISON)
+  if (N->getOpcode() == ISD::CTTZ_ELTS_ZERO_POISON) {
     WideSource = GetWidenedVector(Source);
-  else {
+  } else {
     // Pad the widened portion with all-ones so the extra lanes appear as
     // active (non-zero) elements and do not contribute trailing zeros.
     SDValue AllOnes = DAG.getAllOnesConstant(DL, WideVT);
