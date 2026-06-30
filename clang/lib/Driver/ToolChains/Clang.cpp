@@ -7973,10 +7973,23 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   // -finput_charset=UTF-8 is default. Reject others
   if (Arg *inputCharset = Args.getLastArg(options::OPT_finput_charset_EQ)) {
     StringRef value = inputCharset->getValue();
-    if (!value.equals_insensitive("utf-8"))
+#if CLANG_DEFAULT_INPUT_ENCODING_IBM1047
+    bool isValid = value.equals_insensitive("ibm-1047") ||
+                   value.equals_insensitive("ibm1047");
+#else
+    bool isValid = value.equals_insensitive("utf-8");
+#endif
+    if (!isValid)
       D.Diag(diag::err_drv_invalid_value) << inputCharset->getAsString(Args)
                                           << value;
   }
+#if CLANG_DEFAULT_INPUT_ENCODING_IBM1047
+  else {
+    // When IBM-1047 default is enabled and no explicit charset is specified,
+    // set IBM-1047 as the default
+    CmdArgs.push_back("-finput-charset=IBM-1047");
+  }
+#endif
 
   // -fexec_charset=UTF-8 is default. Reject others
   if (Arg *execCharset = Args.getLastArg(options::OPT_fexec_charset_EQ)) {

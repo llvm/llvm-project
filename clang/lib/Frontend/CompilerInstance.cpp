@@ -912,12 +912,15 @@ CompilerInstance::createOutputFileImpl(StringRef OutputPath, bool Binary,
 // Initialization Utilities
 
 bool CompilerInstance::InitializeSourceManager(const FrontendInputFile &Input){
-  return InitializeSourceManager(Input, getDiagnostics(), getFileManager(),
-                                 getSourceManager());
+  StringRef InputEncodingName =
+      hasPreprocessor() ? llvm::StringRef(getLangOpts().InputEncoding) : llvm::StringRef();
+  return InitializeSourceManager(Input, InputEncodingName, getDiagnostics(), 
+				 getFileManager(), getSourceManager());
 }
 
 // static
 bool CompilerInstance::InitializeSourceManager(const FrontendInputFile &Input,
+					       llvm::StringRef InputEncodingName,
                                                DiagnosticsEngine &Diags,
                                                FileManager &FileMgr,
                                                SourceManager &SourceMgr) {
@@ -950,7 +953,8 @@ bool CompilerInstance::InitializeSourceManager(const FrontendInputFile &Input,
   }
 
   SourceMgr.setMainFileID(
-      SourceMgr.createFileID(*FileOrErr, SourceLocation(), Kind));
+      SourceMgr.createFileID(*FileOrErr, SourceLocation(), Kind,
+			     InputEncodingName));
 
   assert(SourceMgr.getMainFileID().isValid() &&
          "Couldn't establish MainFileID!");
