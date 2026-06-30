@@ -3408,7 +3408,7 @@ def clangir_enable_idiom_recognizer : Flag<["-"], "clangir-enable-idiom-recogniz
 def clangir_lib_opt_EQ : Joined<["-"], "clangir-lib-opt=">,
   Visibility<[ClangOption, CC1Option]>, Group<f_Group>, Values<"all">,
   HelpText<"Enable C/C++ library based optimizations (with options)">,
-  MarshallingInfoString<FrontendOpts<"clangIRLibOptOptions">>;
+  MarshallingInfoString<FrontendOpts<"ClangIRLibOptOptions">>;
 
 def clangir_lib_opt : Flag<["-"], "clangir-lib-opt">,
   Visibility<[ClangOption, CC1Option]>, Group<f_Group>,
