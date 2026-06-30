@@ -23,8 +23,6 @@
 
 namespace llvm::sandboxir {
 
-enum class VecDirection { TopDown, BottomUp };
-
 /// This is a simple bottom-up vectorizer Region pass.
 /// It expects a "seed slice" as an input in the Region's Aux vector.
 /// The "seed slice" is a vector of instructions that can be used as a starting
@@ -37,7 +35,9 @@ enum class VecDirection { TopDown, BottomUp };
 /// transaction, depending on the cost.
 class LLVM_ABI BottomUpVec : public RegionPass {
 protected:
-  VecDirection Direction = VecDirection::BottomUp;
+  virtual SchedDirection getSchedDirection() const {
+    return SchedDirection::BottomUp;
+  }
   /// Set to true whenever the pass emits vector code in the current region.
   bool Change = false;
   /// The original instructions that are potentially dead after vectorization.
@@ -67,10 +67,6 @@ protected:
   /// for loads/stores) so that they can be cleaned up later.
   void collectPotentiallyDeadInstrs(ArrayRef<Value *> Bndl);
 
-  StringRef vecDirectionToStr() {
-    return Direction == VecDirection::TopDown ? "TopDownVec" : "BottomUpVec";
-  }
-
   /// Helper class describing how(if) to vectorize the code.
   class ActionsVector {
   private:
@@ -94,9 +90,6 @@ protected:
   /// vectorize in vectorizeRec().
   unsigned DebugBndlCnt = 0;
 
-  explicit BottomUpVec(StringRef Name, VecDirection Dir)
-      : RegionPass(Name), Direction(Dir) {}
-
   /// Recursively try to vectorize \p Bndl. For bottom-up vectorization \p
   /// UserBndl tracks the bundle of users that led to this recursion.
   Action *vectorizeRec(ArrayRef<Value *> Bndl, ArrayRef<Value *> UserBndl,
@@ -106,7 +99,7 @@ protected:
   void emitUnpacksForExternalUses(const ArrayRef<Value *> Bndl, Value *Vec);
   /// Generate vector instructions based on `Actions` and return the last vector
   /// created.
-  Value *emitVectors();
+  Value *emitVectors(LegalityAnalysis &Legality);
   /// Entry point for vectorization starting from \p Seeds.
   bool tryVectorize(ArrayRef<Value *> Seeds, LegalityAnalysis &Legality);
 
@@ -120,8 +113,13 @@ public:
 /// Top-down vectorizer Region pass. It expects a "seed slice" in the Region's
 /// Aux vector and walks down the def-use chain from the seed instructions.
 class LLVM_ABI TopDownVec final : public BottomUpVec {
+protected:
+  SchedDirection getSchedDirection() const override {
+    return SchedDirection::TopDown;
+  }
+
 public:
-  TopDownVec() : BottomUpVec("top-down-vec", VecDirection::TopDown) {}
+  TopDownVec() : BottomUpVec("top-down-vec") {}
 };
 
 } // namespace llvm::sandboxir

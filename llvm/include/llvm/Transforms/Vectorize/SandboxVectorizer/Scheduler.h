@@ -240,6 +240,7 @@ public:
     if (CreateInstrCB)
       Ctx.unregisterCreateInstrCallback(*CreateInstrCB);
   }
+  SchedDirection getDirection() const { return Dir; }
   void setDirection(SchedDirection NewDir) {
     assert(Bndls.empty() && DAG.empty() && ReadyList.empty() &&
            !ScheduleTopItOpt && ScheduledBB == nullptr &&

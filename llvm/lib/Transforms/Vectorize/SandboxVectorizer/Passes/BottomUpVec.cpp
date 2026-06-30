@@ -15,6 +15,7 @@
 #include "llvm/SandboxIR/Utils.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Debug.h"
+#include "llvm/Transforms/Vectorize/SandboxVectorizer/Scheduler.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/VecUtils.h"
 
 namespace llvm {
@@ -340,13 +341,14 @@ Action *BottomUpVec::vectorizeRec(ArrayRef<Value *> Bndl,
   LLVM_DEBUG(dbgs() << DEBUG_PREFIX << "canVectorize() Bundle:\n";
              VecUtils::dump(Bndl));
   const auto &LegalityRes =
-      StopForDebug ? Legality.getForcedPackForDebugging()
-                   : Legality.canVectorize(Bndl,
-                                           /*SkipScheduling=*/Direction ==
-                                               VecDirection::TopDown);
+      StopForDebug
+          ? Legality.getForcedPackForDebugging()
+          : Legality.canVectorize(Bndl,
+                                  /*SkipScheduling=*/Legality.getDirection() ==
+                                      SchedDirection::TopDown);
   LLVM_DEBUG(dbgs() << DEBUG_PREFIX << "Legality: " << LegalityRes << "\n");
 
-  if (Direction == VecDirection::TopDown) {
+  if (Legality.getDirection() == SchedDirection::TopDown) {
     auto ActionPtr = std::make_unique<Action>(&LegalityRes, Bndl,
                                               ArrayRef<Value *>(), Depth);
     Action *Action = ActionPtr.get();
@@ -486,7 +488,7 @@ void BottomUpVec::emitUnpacksForExternalUses(const ArrayRef<Value *> Bndl,
   }
 }
 
-Value *BottomUpVec::emitVectors() {
+Value *BottomUpVec::emitVectors(LegalityAnalysis &Legality) {
   Value *NewVec = nullptr;
   for (const auto &ActionPtr : Actions) {
     ArrayRef<Value *> Bndl = ActionPtr->Bndl;
@@ -501,7 +503,7 @@ Value *BottomUpVec::emitVectors() {
     case LegalityResultID::Widen: {
       auto *I = cast<Instruction>(Bndl[0]);
       SmallVector<Value *, 2> VecOperands;
-      if (Direction == VecDirection::BottomUp) {
+      if (Legality.getDirection() == SchedDirection::BottomUp) {
         switch (I->getOpcode()) {
         case Instruction::Opcode::Load:
           VecOperands.push_back(cast<LoadInst>(I)->getPointerOperand());
@@ -662,10 +664,11 @@ bool BottomUpVec::tryVectorize(ArrayRef<Value *> Bndl,
   Actions.clear();
   DebugBndlCnt = 0;
   vectorizeRec(Bndl, {}, /*Depth=*/0, Legality);
-  LLVM_DEBUG(dbgs() << DEBUG_PREFIX << vecDirectionToStr()
-                    << ": Vectorization Actions:\n";
+  LLVM_DEBUG(dbgs() << DEBUG_PREFIX
+                    << schedDirectionToStr(Legality.getDirection())
+                    << "Vec: Vectorization Actions:\n";
              Actions.dump());
-  emitVectors();
+  emitVectors(Legality);
   tryEraseDeadInstrs();
   return Change;
 }
@@ -678,6 +681,7 @@ bool BottomUpVec::runOnRegion(Region &Rgn, const Analyses &A) {
   LegalityAnalysis Legality(A.getAA(), A.getScalarEvolution(),
                             F.getParent()->getDataLayout(), F.getContext(),
                             *IMaps);
+  Legality.setDirection(getSchedDirection());
 
   // TODO: Refactor to remove the unnecessary copy to SeedSliceVals.
   SmallVector<Value *> SeedSliceVals(SeedSlice.begin(), SeedSlice.end());
