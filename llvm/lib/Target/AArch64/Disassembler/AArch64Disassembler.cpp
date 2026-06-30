@@ -1365,9 +1365,7 @@ static DecodeStatus
 DecodeGPRSeqPairsClassRegisterClass(MCInst &Inst, unsigned RegNo, uint64_t Addr,
                                     const MCDisassembler *Decoder) {
   if (AllowXZRPair && RegNo == 31) {
-    const MCRegisterClass &RegClass = AArch64MCRegisterClasses[RegClassID];
-    Inst.addOperand(
-        MCOperand::createReg(RegClass.getRegister(RegClass.getNumRegs() - 1)));
+    Inst.addOperand(MCOperand::createReg(AArch64::XZR_XZR));
     return Success;
   }
 
