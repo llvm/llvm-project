@@ -12,7 +12,7 @@
 #include "test/UnitTest/Test.h"
 #include "src/__support/FPUtil/float128.h"
 
-using LIBC_NAMESPACE::fputil::Float128;s
+using LIBC_NAMESPACE::fputil::Float128;
 
 #ifdef LIBC_USE_CONSTEXPR
 
