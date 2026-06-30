@@ -1752,15 +1752,15 @@ def LLVM_MDConstantAttr : LLVM_Attr<"MDConstant", "md_const"> {
   let assemblyFormat = "`<` $value `>`";
 }
 
-def LLVM_MDValueAttr : LLVM_Attr<"MDValue", "md_value"> {
-  let summary = "LLVM value-as-metadata";
+def LLVM_MDGlobalValueAttr : LLVM_Attr<"MDGlobalValue", "md_global_value"> {
+  let summary = "LLVM global value-as-metadata";
   let description = [{
-    References a symbol-backed value as LLVM metadata, corresponding to
+    References a symbol-backed global value as LLVM metadata, corresponding to
     `llvm::ValueAsMetadata::get(value)` in LLVM IR.
 
     Example:
     ```mlir
-    #llvm.md_value<@my_kernel>
+    #llvm.md_global_value<@my_kernel>
     ```
   }];
   let parameters = (ins "FlatSymbolRefAttr":$name);
@@ -1772,7 +1772,7 @@ def LLVM_MDNodeAttr : LLVM_Attr<"MDNode", "md_node"> {
   let description = [{
     Represents an LLVM metadata node. The operands
     can be any combination of metadata attributes: `#llvm.md_string`,
-    `#llvm.md_const`, `#llvm.md_value`, or nested `#llvm.md_node`.
+    `#llvm.md_const`, `#llvm.md_global_value`, or nested `#llvm.md_node`.
 
     Example:
     ```mlir
@@ -1789,7 +1789,8 @@ def LLVM_MDNodeArrayAttr
                          "array of #llvm.md_node attributes">;
 
 def LLVM_AnyMDAttr : AnyAttrOf<[
-    LLVM_MDStringAttr, LLVM_MDConstantAttr, LLVM_MDValueAttr, LLVM_MDNodeAttr],
-    "LLVM metadata attribute (md_string, md_const, md_value, or md_node)">;
+    LLVM_MDStringAttr, LLVM_MDConstantAttr, LLVM_MDGlobalValueAttr,
+    LLVM_MDNodeAttr],
+    "LLVM metadata attribute (md_string, md_const, md_global_value, or md_node)">;
 
 #endif // LLVMIR_ATTRDEFS

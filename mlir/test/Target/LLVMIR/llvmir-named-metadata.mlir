@@ -59,7 +59,7 @@ llvm.named_metadata "foo.language_version" [
 
 llvm.named_metadata "foo.kernel" [
   #llvm.md_node<
-    #llvm.md_value<@my_kernel>,
+    #llvm.md_global_value<@my_kernel>,
     #llvm.md_node<>,
     #llvm.md_node<#buf0>>
 ]
@@ -69,8 +69,8 @@ llvm.named_metadata "foo.kernel" [
 
 llvm.named_metadata "foo.global_refs" [
   #llvm.md_node<
-    #llvm.md_value<@metadata_global>,
-    #llvm.md_value<@metadata_alias>,
-    #llvm.md_value<@metadata_ifunc>>
+    #llvm.md_global_value<@metadata_global>,
+    #llvm.md_global_value<@metadata_alias>,
+    #llvm.md_global_value<@metadata_ifunc>>
 ]
 // CHECK-DAG: ![[GLOBAL_REFS]] = !{ptr @metadata_global, ptr @metadata_alias, ptr @metadata_ifunc}

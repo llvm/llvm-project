@@ -590,21 +590,21 @@ MlirAttribute mlirLLVMMDConstantAttrGetValue(MlirAttribute attr) {
   return wrap((Attribute)cast<MDConstantAttr>(unwrap(attr)).getValue());
 }
 
-MlirAttribute mlirLLVMMDValueAttrGet(MlirContext ctx, MlirAttribute name) {
+MlirAttribute mlirLLVMMDGlobalValueAttrGet(MlirContext ctx, MlirAttribute name) {
   return wrap(
-      MDValueAttr::get(unwrap(ctx), cast<FlatSymbolRefAttr>(unwrap(name))));
+      MDGlobalValueAttr::get(unwrap(ctx), cast<FlatSymbolRefAttr>(unwrap(name))));
 }
 
-bool mlirLLVMAttrIsAMDValueAttr(MlirAttribute attr) {
-  return isa<MDValueAttr>(unwrap(attr));
+bool mlirLLVMAttrIsAMDGlobalValueAttr(MlirAttribute attr) {
+  return isa<MDGlobalValueAttr>(unwrap(attr));
 }
 
-MlirTypeID mlirLLVMMDValueAttrGetTypeID(void) {
-  return wrap(MDValueAttr::getTypeID());
+MlirTypeID mlirLLVMMDGlobalValueAttrGetTypeID(void) {
+  return wrap(MDGlobalValueAttr::getTypeID());
 }
 
-MlirAttribute mlirLLVMMDValueAttrGetName(MlirAttribute attr) {
-  return wrap((Attribute)cast<MDValueAttr>(unwrap(attr)).getName());
+MlirAttribute mlirLLVMMDGlobalValueAttrGetName(MlirAttribute attr) {
+  return wrap((Attribute)cast<MDGlobalValueAttr>(unwrap(attr)).getName());
 }
 
 MlirAttribute mlirLLVMMDNodeAttrGet(MlirContext ctx, intptr_t nOperands,
