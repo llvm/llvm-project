@@ -8732,6 +8732,11 @@ static bool GEPSequentialConstIndexed(GetElementPtrInst *GEP) {
 static bool tryUnmergingGEPsAcrossIndirectBr(GetElementPtrInst *GEPI,
                                              const TargetTransformInfo *TTI) {
   BasicBlock *SrcBlock = GEPI->getParent();
+  // SrcBlock may not be well-formed yet (e.g., asm goto can create blocks
+  // without terminators during CodeGenPrepare). Bail out early to avoid
+  // crashing in getTerminator().
+  if (SrcBlock->empty() || !SrcBlock->hasTerminator())
+    return false;
   // Check that SrcBlock ends with an IndirectBr. If not, give up. The common
   // (non-IndirectBr) cases exit early here.
   if (!isa<IndirectBrInst>(SrcBlock->getTerminator()))
