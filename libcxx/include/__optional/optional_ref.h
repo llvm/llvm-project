@@ -143,12 +143,12 @@ struct __optional_storage_base<_Tp, true> {
 template <class _Tp>
 struct __optional_iterator_base;
 
-template<class _Tp>
+template <class _Tp>
 struct __optional_iterator_base<_Tp&> : __optional_storage_base<_Tp&> {
   using __optional_storage_base<_Tp&>::__optional_storage_base;
 };
 
-#if _LIBCPP_HAS_EXPERIMENTAL_OPTIONAL_ITERATOR
+#  if _LIBCPP_HAS_EXPERIMENTAL_OPTIONAL_ITERATOR
 
 template <class _Tp>
   requires(is_object_v<_Tp> && !__is_unbounded_array_v<_Tp>)
@@ -159,22 +159,22 @@ private:
 public:
   using __optional_storage_base<_Tp&>::__optional_storage_base;
 
-#        ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL
+#    ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL
   using iterator = __bounded_iter<__pointer>;
-#        else
+#    else
   using iterator = __capacity_aware_iterator<__pointer, optional<_Tp&>, 1>;
-#        endif
+#    endif
 
   // [optional.ref.iterators], iterator support
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto begin() const noexcept {
     auto* __ptr = this->has_value() ? std::addressof(this->__get()) : nullptr;
 
-#        ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL
+#    ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL
     return std::__make_bounded_iter(__ptr, __ptr, __ptr + (this->has_value() ? 1 : 0));
-#        else
+#    else
     return std::__make_capacity_aware_iterator<__pointer, optional<_Tp&>, 1>(__ptr);
-#        endif
+#    endif
   }
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto end() const noexcept {
@@ -182,7 +182,7 @@ public:
   }
 };
 
-#endif
+#  endif
 
 template <class _Tp>
 class optional<_Tp&> : public __optional_iterator_base<_Tp&> {

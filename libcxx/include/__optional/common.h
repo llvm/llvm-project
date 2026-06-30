@@ -64,18 +64,18 @@ struct __is_std_optional : false_type {};
 template <class _Tp>
 struct __is_std_optional<optional<_Tp>> : true_type {};
 
-template<class _Tp, bool = is_reference_v<_Tp>>
+template <class _Tp, bool = is_reference_v<_Tp>>
 struct __optional_storage_base;
 
-#    if _LIBCPP_STD_VER < 26
+#  if _LIBCPP_STD_VER < 26
 template <class _Tp>
 inline constexpr bool __is_valid_optional_contained_type = is_object_v<_Tp>;
-#    else
+#  else
 template <class _Tp>
 inline constexpr bool __is_valid_optional_contained_type = is_object_v<_Tp> || is_lvalue_reference_v<_Tp>;
-#    endif
+#  endif
 
-#    if _LIBCPP_STD_VER >= 26 && _LIBCPP_HAS_EXPERIMENTAL_OPTIONAL_ITERATOR
+#  if _LIBCPP_STD_VER >= 26 && _LIBCPP_HAS_EXPERIMENTAL_OPTIONAL_ITERATOR
 
 template <class _Tp>
 constexpr bool ranges::enable_view<optional<_Tp>> = true;
@@ -86,7 +86,7 @@ constexpr range_format format_kind<optional<_Tp>> = range_format::disabled;
 template <class _Tp>
 constexpr bool ranges::enable_borrowed_range<optional<_Tp&>> = true;
 
-#    endif // _LIBCPP_STD_VER >= 26 && _LIBCPP_HAS_EXPERIMENTAL_OPTIONAL_ITERATOR
+#  endif // _LIBCPP_STD_VER >= 26 && _LIBCPP_HAS_EXPERIMENTAL_OPTIONAL_ITERATOR
 
 _LIBCPP_END_NAMESPACE_STD
 
