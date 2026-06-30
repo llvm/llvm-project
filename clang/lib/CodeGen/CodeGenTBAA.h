@@ -145,10 +145,6 @@ class CodeGenTBAA {
   /// for this translation unit.
   llvm::MDNode *getRoot();
 
-  /// getChar - This is the mdnode for "char", which is special, and any types
-  /// considered to be equivalent to it.
-  llvm::MDNode *getChar();
-
   /// getAnyPtr - This is the mdnode for any pointer type of (at least) the
   /// given pointer depth.
   llvm::MDNode *getAnyPtr(unsigned PtrDepth = 1);
@@ -205,6 +201,10 @@ public:
 
   /// getAccessTagInfo - Get TBAA tag for a given memory access.
   llvm::MDNode *getAccessTagInfo(TBAAAccessInfo Info);
+
+  /// getChar - This is the mdnode for "char", which is special, and any types
+  /// considered to be equivalent to it.
+  llvm::MDNode *getChar();
 
   /// mergeTBAAInfoForCast - Get merged TBAA information for the purpose of
   /// type casts.

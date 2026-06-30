@@ -435,11 +435,11 @@ define <8 x float> @fun30(<8 x float> %val1, <8 x float> %val2, <8 x float> %val
 ; CHECK-NEXT:    vsel %v26, %v27, %v31, %v0
 ; CHECK-NEXT:    vldeb %v4, %v4
 ; CHECK-NEXT:    vldeb %v5, %v5
-; CHECK-NEXT:    vfchdb %v2, %v5, %v4
+; CHECK-NEXT:    vfchdb %v1, %v5, %v4
 ; CHECK-NEXT:    vldeb %v6, %v6
 ; CHECK-NEXT:    vldeb %v7, %v7
-; CHECK-NEXT:    vfchdb %v3, %v7, %v6
-; CHECK-NEXT:    vpkg %v1, %v3, %v2
+; CHECK-NEXT:    vfchdb %v2, %v7, %v6
+; CHECK-NEXT:    vpkg %v1, %v2, %v1
 ; CHECK-NEXT:    vsel %v24, %v25, %v29, %v1
 ; CHECK-NEXT:    br %r14
   %cmp = fcmp ogt <8 x float> %val1, %val2
