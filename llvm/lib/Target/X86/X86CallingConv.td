@@ -383,6 +383,7 @@ def RetCC_X86_Win64_C : CallingConv<[
   // GCC returns FP values in RAX on Win64.
   CCIfType<[f32], CCIfNotSubtarget<"hasSSE1()", CCBitConvertToType<i32>>>,
   CCIfType<[f64], CCIfNotSubtarget<"hasSSE1()", CCBitConvertToType<i64>>>,
+  // f128 has custom behavior in X86TargetLowering::CanLowerReturn.
 
   // Otherwise, everything is the same as 'normal' X86-64 C CC.
   CCDelegateTo<RetCC_X86_64_C>
