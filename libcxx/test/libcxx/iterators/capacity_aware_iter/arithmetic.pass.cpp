@@ -33,14 +33,14 @@
 #include "test_iterators.h"
 #include "test_macros.h"
 
-template <typename Iter>
+template <typename Iter, typename Ty = int>
 constexpr bool test() {
-  int arr[]           = {1, 2, 3, 4, 5, 6};
+  Ty arr[]            = {1, 2, 3, 4, 5, 6};
   constexpr size_t sz = std::size(arr);
 
   using CapIter = std::__capacity_aware_iterator<Iter, decltype(arr), sz>;
 
-  int* i = arr + 0;
+  Ty* i = arr + 0;
 
   // operator++()
   {
@@ -161,6 +161,10 @@ constexpr bool test() {
 int main(int, char**) {
   test<contiguous_iterator<int*>>();
   static_assert(test<contiguous_iterator<int*>>());
+
+  // bounded overload
+  test<long*, long>();
+  static_assert(test<long*, long>());
 
   return 0;
 }

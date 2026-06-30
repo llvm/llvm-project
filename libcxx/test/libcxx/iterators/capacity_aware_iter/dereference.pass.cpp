@@ -30,9 +30,14 @@ struct Foo {
   constexpr bool operator==(Foo const& other) const { return x == other.x; }
 };
 
-template <typename Iter>
+struct Foo2 {
+  long x;
+  constexpr bool operator==(Foo2 const& other) const { return x == other.x; }
+};
+
+template <typename Iter, typename Ty = Foo>
 constexpr bool test() {
-  Foo arr[]         = {Foo{1}, Foo{2}, Foo{3}, Foo{4}};
+  Ty arr[]          = {Ty{1}, Ty{2}, Ty{3}, Ty{4}};
   constexpr long sz = std::size(arr);
 
   using CapIter = std::__capacity_aware_iterator<Iter, decltype(arr), sz>;
@@ -41,7 +46,7 @@ constexpr bool test() {
 
   // operator[]
   {
-    std::same_as<Foo&> decltype(auto) res = it[0];
+    std::same_as<Ty&> decltype(auto) res = it[0];
     ASSERT_NOEXCEPT(it[0]);
     assert(res == arr[0]);
     assert(&res == &arr[0]);
@@ -56,7 +61,7 @@ constexpr bool test() {
 
   // operator*
   {
-    std::same_as<Foo&> decltype(auto) res = *it;
+    std::same_as<Ty&> decltype(auto) res = *it;
     ASSERT_NOEXCEPT(*it);
     assert(*it == arr[0]);
     assert(&res == &arr[0]);
@@ -65,7 +70,7 @@ constexpr bool test() {
 
   // operator->
   {
-    std::same_as<Foo*> decltype(auto) ptr = it.operator->();
+    std::same_as<Ty*> decltype(auto) ptr = it.operator->();
     ASSERT_NOEXCEPT(it->x);
     assert(ptr->x == 1);
     assert(ptr == &arr[0]);
@@ -77,6 +82,10 @@ constexpr bool test() {
 int main(int, char**) {
   test<three_way_contiguous_iterator<Foo*>>();
   static_assert(test<three_way_contiguous_iterator<Foo*>>());
+
+  // bounded overload
+  test<Foo2*, Foo2>();
+  static_assert(test<Foo2*, Foo2>());
 
   return 0;
 }

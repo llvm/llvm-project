@@ -30,9 +30,9 @@
 #include "test_iterators.h"
 #include "test_macros.h"
 
-template <typename Iter>
+template <typename Iter, typename Ty = int>
 constexpr bool test() {
-  int arr[]         = {1, 2, 3, 4};
+  Ty arr[]          = {1, 2, 3, 4};
   constexpr long sz = std::size(arr);
 
   using CapIter = std::__capacity_aware_iterator<Iter, decltype(arr), sz>;
@@ -112,6 +112,9 @@ constexpr bool test() {
 int main(int, char**) {
   test<contiguous_iterator<int*>>();
   static_assert(test<contiguous_iterator<int*>>());
+
+  test<long*, long>();
+  static_assert(test<long*, long>());
 
   return 0;
 }
