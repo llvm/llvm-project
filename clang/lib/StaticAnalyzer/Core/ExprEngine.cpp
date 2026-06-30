@@ -1632,7 +1632,9 @@ void ExprEngine::ProcessCleanupFunction(const CFGCleanupFunction CF,
   CallEventRef<> CallTemplate =
       CEMgr.getSimpleCall(CE, State, SF, getCFGElementRef());
   ExplodedNodeSet Dst;
-  evalCall(Dst, Pred, *CallTemplate);
+  // Create a new node to apply the new state before function call.
+  evalCall(Dst, Engine.makeNode(PreStmt(CE, SF, /*tag=*/nullptr), State, Pred),
+           *CallTemplate);
 
   Engine.enqueueStmtNodes(Dst, getCurrBlock(), currStmtIdx);
 }
