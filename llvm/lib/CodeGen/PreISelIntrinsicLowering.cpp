@@ -148,7 +148,7 @@ static CallInst::TailCallKind getOverridingTailCallKind(const Function &F) {
 }
 
 static bool lowerObjCCall(Function &F, RTLIB::LibcallImpl NewFn,
-                          bool setNonLazyBind = false) {
+                          const RTLIB::RuntimeLibcallsInfo *RTLCI = nullptr) {
   assert(IntrinsicInst::mayLowerToFunctionCall(F.getIntrinsicID()) &&
          "Pre-ISel intrinsics do lower into regular function calls");
   if (F.use_empty())
@@ -166,10 +166,10 @@ static bool lowerObjCCall(Function &F, RTLIB::LibcallImpl NewFn,
 
   if (Function *Fn = dyn_cast<Function>(FCache.getCallee())) {
     Fn->setLinkage(F.getLinkage());
-    if (setNonLazyBind && !Fn->isWeakForLinker()) {
-      // If we have Native ARC, set nonlazybind attribute for these APIs for
-      // performance.
-      Fn->addFnAttr(Attribute::NonLazyBind);
+    if (RTLCI && !Fn->isWeakForLinker()) {
+      auto [FuncTy, Attrs] = RTLCI->getFunctionTy(
+          M->getContext(), M->getTargetTriple(), M->getDataLayout(), NewFn);
+      Fn->addFnAttrs(AttrBuilder(M->getContext(), Attrs.getFnAttrs()));
     }
   }
 
@@ -658,6 +658,7 @@ static bool expandLoopTrap(Function &Intr) {
 bool PreISelIntrinsicLowering::lowerIntrinsics(Module &M) const {
   // Map unique constants to globals.
   DenseMap<Constant *, GlobalVariable *> CMap;
+  const auto *RTLCI = ModuleLibcalls.getRuntimeLibcallsInfo();
   bool Changed = false;
   for (Function &F : M) {
     switch (F.getIntrinsicID()) {
@@ -731,10 +732,10 @@ bool PreISelIntrinsicLowering::lowerIntrinsics(Module &M) const {
       Changed |= lowerObjCCall(F, RTLIB::impl_objc_moveWeak);
       break;
     case Intrinsic::objc_release:
-      Changed |= lowerObjCCall(F, RTLIB::impl_objc_release, true);
+      Changed |= lowerObjCCall(F, RTLIB::impl_objc_release, RTLCI);
       break;
     case Intrinsic::objc_retain:
-      Changed |= lowerObjCCall(F, RTLIB::impl_objc_retain, true);
+      Changed |= lowerObjCCall(F, RTLIB::impl_objc_retain, RTLCI);
       break;
     case Intrinsic::objc_retainAutorelease:
       Changed |= lowerObjCCall(F, RTLIB::impl_objc_retainAutorelease);

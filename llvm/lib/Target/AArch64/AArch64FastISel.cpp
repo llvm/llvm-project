@@ -46,6 +46,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/GlobalValue.h"
@@ -3225,6 +3226,13 @@ bool AArch64FastISel::fastLowerCall(CallLoweringInfo &CLI) {
   const AArch64RegisterInfo *RegInfo = Subtarget->getRegisterInfo();
   if (RegInfo->isAnyArgRegReserved(*MF))
     RegInfo->emitReservedArgRegCallError(*MF);
+
+  if (auto *F = dyn_cast_or_null<Function>(Callee))
+    if (F->hasFnAttribute(Attribute::NonLazyBind) &&
+        Subtarget->getTargetTriple().isArm64e())
+      MF->getFunction().getContext().diagnose(DiagnosticInfoUnsupported(
+          MF->getFunction(),
+          "nonlazybind attribute is not compatible with arm64e"));
 
   // Issue the call.
   MachineInstrBuilder MIB;

@@ -471,6 +471,18 @@ RuntimeLibcallsInfo::getFunctionTy(LLVMContext &Ctx, const Triple &TT,
 
     return {FunctionType::get(Type::getVoidTy(Ctx), ArgTys, false), Attrs};
   }
+  case RTLIB::impl_objc_retain:
+  case RTLIB::impl_objc_release: {
+    // NonLazyBind improves performance via direct GOT loads. Suppress on
+    // arm64e: inline GOT loads bypass authenticated stubs.
+    if (TT.isArm64e())
+      return {};
+    AttrBuilder FuncAttrBuilder(Ctx);
+    FuncAttrBuilder.addAttribute(Attribute::NonLazyBind);
+    AttributeList Attrs;
+    Attrs = Attrs.addFnAttributes(Ctx, FuncAttrBuilder);
+    return {nullptr, Attrs};
+  }
   default:
     return {};
   }

@@ -1406,7 +1406,10 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   else {
     // For an intrinsic call (e.g. memset), use GOT if "RtLibUseGOT" (-fno-plt)
     // is set.
-    if (Info.Callee.isSymbol() && F.getParent()->getRtLibUseGOT()) {
+    // Unauthenticated GOT loads are incompatible with arm64e: the
+    // resulting indirect branch (blr) bypasses pointer authentication.
+    if (Info.Callee.isSymbol() && F.getParent()->getRtLibUseGOT() &&
+        !Subtarget.getTargetTriple().isArm64e()) {
       auto MIB = MIRBuilder.buildInstr(TargetOpcode::G_GLOBAL_VALUE);
       DstOp(getLLTForType(*F.getType(), DL)).addDefToMIB(MRI, MIB);
       MIB.addExternalSymbol(Info.Callee.getSymbolName(), AArch64II::MO_GOT);
