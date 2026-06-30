@@ -71,7 +71,8 @@ inline bool IsLifetimeSafetyEnabled(Sema &S, const Decl *D) {
       diag::warn_lifetime_safety_intra_tu_ctor_param_suggestion,
       diag::warn_lifetime_safety_cross_tu_this_suggestion,
       diag::warn_lifetime_safety_intra_tu_this_suggestion,
-      diag::warn_lifetime_safety_inapplicable_lifetimebound};
+      diag::warn_lifetime_safety_inapplicable_lifetimebound,
+      diag::warn_lifetime_safety_inapplicable_lifetimebound_return};
   for (unsigned DiagID : DiagIDs)
     if (!Diags.isIgnored(DiagID, D->getBeginLoc()))
       return true;
@@ -384,13 +385,33 @@ public:
         << Attr->getRange();
   }
 
-  void reportInapplicableLifetimebound(const ParmVarDecl *PVD) override {
+  void reportInapplicableLifetimebound(const ParmVarDecl *PVD,
+                                       QualType Type) override {
     assert(PVD->hasAttr<LifetimeBoundAttr>() &&
            "Expected parameter to have lifetimebound attribute");
     const auto *Attr = PVD->getAttr<LifetimeBoundAttr>();
     S.Diag(Attr->getLocation(),
            diag::warn_lifetime_safety_inapplicable_lifetimebound)
-        << PVD->getType() << Attr->getRange();
+        << Type << Attr->getRange();
+  }
+
+  void reportInapplicableLifetimeboundReturnTy(const ParmVarDecl *PVD,
+                                               QualType Type) override {
+    assert(PVD->hasAttr<LifetimeBoundAttr>() &&
+           "Expected parameter to have lifetimebound attribute");
+    const auto *Attr = PVD->getAttr<LifetimeBoundAttr>();
+    S.Diag(Attr->getLocation(),
+           diag::warn_lifetime_safety_inapplicable_lifetimebound_return)
+        << Type << Attr->getRange();
+  }
+
+  void
+  reportInapplicableLifetimeboundReturnTy(const CXXMethodDecl *MD) override {
+    const auto *Attr = getImplicitObjectParamLifetimeBoundAttr(MD);
+    assert(Attr && "Expected lifetimebound attribute");
+    S.Diag(Attr->getLocation(),
+           diag::warn_lifetime_safety_inapplicable_lifetimebound_return)
+        << MD->getReturnType() << Attr->getRange();
   }
 
   void suggestLifetimeboundToImplicitThis(WarningScope Scope,

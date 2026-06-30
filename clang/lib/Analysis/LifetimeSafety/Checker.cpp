@@ -491,11 +491,23 @@ public:
         FDef->getTemplateSpecializationKind() == TSK_ImplicitInstantiation)
       return;
 
+    QualType ReturnType = FDef->getReturnType();
+    if (const auto *Ctor = dyn_cast<CXXConstructorDecl>(FDef))
+      ReturnType = AST.getTypeDeclType(cast<TypeDecl>(Ctor->getParent()));
+
+    bool ReturnTypeHasOrigins = FactMgr.getOriginMgr().hasOrigins(ReturnType);
+    if (getImplicitObjectParamLifetimeBoundAttr(FDef) && !ReturnTypeHasOrigins)
+      SemaHelper->reportInapplicableLifetimeboundReturnTy(
+          cast<CXXMethodDecl>(FDef));
+
     for (const auto &PVD : FDef->parameters())
-      if (PVD->hasAttr<LifetimeBoundAttr>() &&
-          !FactMgr.getOriginMgr().hasOrigins(PVD->getType(),
-                                             /*IntrinsicOnly=*/true))
-        SemaHelper->reportInapplicableLifetimebound(PVD);
+      if (PVD->hasAttr<LifetimeBoundAttr>()) {
+        if (!FactMgr.getOriginMgr().hasOrigins(PVD->getType(),
+                                               /*IntrinsicOnly=*/true))
+          SemaHelper->reportInapplicableLifetimebound(PVD, PVD->getType());
+        if (!ReturnTypeHasOrigins && !isa<CXXConstructorDecl>(FDef))
+          SemaHelper->reportInapplicableLifetimeboundReturnTy(PVD, ReturnType);
+      }
   }
 
   void inferAnnotations() {
