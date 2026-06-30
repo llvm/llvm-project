@@ -15,8 +15,6 @@ target triple = "x86_64-unknown-linux-gnu"
 define void @remainder_after_stride8(ptr %src, i64 %n, ptr %dst) {
 ; CHECK-LABEL: @remainder_after_stride8(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SRC2:%.*]] = ptrtoaddr ptr [[SRC:%.*]] to i64
-; CHECK-NEXT:    [[DST1:%.*]] = ptrtoaddr ptr [[DST:%.*]] to i64
 ; CHECK-NEXT:    [[CMP_NOT36:%.*]] = icmp ult i64 [[N:%.*]], 8
 ; CHECK-NEXT:    br i1 [[CMP_NOT36]], label [[FOR_COND12_PREHEADER:%.*]], label [[FOR_COND1_PREHEADER_PREHEADER:%.*]]
 ; CHECK:       for.cond1.preheader.preheader:
@@ -37,56 +35,21 @@ define void @remainder_after_stride8(ptr %src, i64 %n, ptr %dst) {
 ; CHECK-NEXT:    [[CMP1339:%.*]] = icmp ult i64 [[I_0_LCSSA]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP1339]], label [[FOR_BODY14_PREHEADER:%.*]], label [[FOR_END21:%.*]]
 ; CHECK:       for.body14.preheader:
-; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[N]], [[I_0_LCSSA]]
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 8
-; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
-; CHECK:       vector.memcheck:
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[DST1]], [[SRC2]]
-; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP1]], 32
-; CHECK-NEXT:    br i1 [[DIFF_CHECK]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
-; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 8
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[I_0_LCSSA]], [[N_VEC]]
-; CHECK-NEXT:    br label [[FOR_BODY14:%.*]]
-; CHECK:       vector.body:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[FOR_BODY14]] ]
-; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[I_0_LCSSA]], [[INDEX]]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[SRC]], i64 [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP4]], i64 4
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP4]], align 4
-; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <4 x i32>, ptr [[TMP5]], align 4
-; CHECK-NEXT:    [[TMP6:%.*]] = add <4 x i32> [[WIDE_LOAD]], splat (i32 32768)
-; CHECK-NEXT:    [[TMP7:%.*]] = add <4 x i32> [[WIDE_LOAD3]], splat (i32 32768)
-; CHECK-NEXT:    [[TMP8:%.*]] = and <4 x i32> [[TMP6]], splat (i32 -65536)
-; CHECK-NEXT:    [[TMP9:%.*]] = and <4 x i32> [[TMP7]], splat (i32 -65536)
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[DST]], i64 [[TMP3]]
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP10]], i64 4
-; CHECK-NEXT:    store <4 x i32> [[TMP8]], ptr [[TMP10]], align 4
-; CHECK-NEXT:    store <4 x i32> [[TMP9]], ptr [[TMP11]], align 4
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
-; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[FOR_BODY14]], !llvm.loop [[LOOP0:![0-9]+]]
-; CHECK:       middle.block:
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_END21_LOOPEXIT:%.*]], label [[SCALAR_PH]]
-; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[TMP2]], [[MIDDLE_BLOCK]] ], [ [[I_0_LCSSA]], [[FOR_BODY14_PREHEADER]] ], [ [[I_0_LCSSA]], [[VECTOR_MEMCHECK]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY15:%.*]]
 ; CHECK:       for.body3:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[FOR_COND1_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY3]] ]
 ; CHECK-NEXT:    [[ADD4:%.*]] = or disjoint i64 [[INDVARS_IV]], [[I_037]]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[SRC]], i64 [[ADD4]]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[SRC:%.*]], i64 [[ADD4]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[ADD5:%.*]] = add i32 [[TMP13]], 32768
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[ADD5]], -65536
-; CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[DST]], i64 [[ADD4]]
+; CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[DST:%.*]], i64 [[ADD4]]
 ; CHECK-NEXT:    store i32 [[AND]], ptr [[ARRAYIDX8]], align 4
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 8
 ; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_LOOPEXIT]], label [[FOR_BODY3]]
 ; CHECK:       for.body14:
-; CHECK-NEXT:    [[I_140:%.*]] = phi i64 [ [[INC20:%.*]], [[FOR_BODY15]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
+; CHECK-NEXT:    [[I_140:%.*]] = phi i64 [ [[INC20:%.*]], [[FOR_BODY15]] ], [ [[I_0_LCSSA]], [[FOR_BODY14_PREHEADER]] ]
 ; CHECK-NEXT:    [[ARRAYIDX15:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[SRC]], i64 [[I_140]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = load i32, ptr [[ARRAYIDX15]], align 4
 ; CHECK-NEXT:    [[ADD16:%.*]] = add i32 [[TMP14]], 32768
@@ -95,7 +58,7 @@ define void @remainder_after_stride8(ptr %src, i64 %n, ptr %dst) {
 ; CHECK-NEXT:    store i32 [[AND17]], ptr [[ARRAYIDX18]], align 4
 ; CHECK-NEXT:    [[INC20]] = add nuw i64 [[I_140]], 1
 ; CHECK-NEXT:    [[EXITCOND42_NOT:%.*]] = icmp eq i64 [[INC20]], [[N]]
-; CHECK-NEXT:    br i1 [[EXITCOND42_NOT]], label [[FOR_END21_LOOPEXIT]], label [[FOR_BODY15]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND42_NOT]], label [[FOR_END21_LOOPEXIT:%.*]], label [[FOR_BODY15]]
 ; CHECK:       for.end21.loopexit:
 ; CHECK-NEXT:    br label [[FOR_END21]]
 ; CHECK:       for.end21:
