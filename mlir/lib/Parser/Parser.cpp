@@ -73,19 +73,17 @@ LogicalResult mlir::parseSourceFile(llvm::StringRef filename, Block *block,
 
 static LogicalResult loadSourceFileBuffer(llvm::StringRef filename,
                                           llvm::SourceMgr &sourceMgr,
-                                          MLIRContext *ctx) {
-  if (sourceMgr.getNumBuffers() != 0) {
-    // TODO: Extend to support multiple buffers.
-    return emitError(mlir::UnknownLoc::get(ctx),
-                     "only main buffer parsed at the moment");
-  }
-  auto fileOrErr = llvm::MemoryBuffer::getFileOrSTDIN(filename);
-  if (fileOrErr.getError())
-    return emitError(mlir::UnknownLoc::get(ctx),
-                     "could not open input file " + filename);
+                                          MLIRContext *ctx,
+                                          SMLoc includeLoc = SMLoc()) {
 
-  // Load the MLIR source file.
-  sourceMgr.AddNewSourceBuffer(std::move(*fileOrErr), SMLoc());
+  auto fileOrErr = llvm::MemoryBuffer::getFileOrSTDIN(filename);
+  if (std::error_code ec = fileOrErr.getError()) {
+    return emitError(mlir::UnknownLoc::get(ctx),
+                     "could not open input file '" + filename + "': " + ec.message());
+  }
+
+  sourceMgr.AddNewSourceBuffer(std::move(*fileOrErr), includeLoc);
+  
   return success();
 }
 
