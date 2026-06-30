@@ -16,6 +16,7 @@
 
 #include <clang/Driver/OffloadBundler.h>
 #include <llvm/BinaryFormat/Magic.h>
+#include <llvm/Object/OffloadBundle.h>
 
 namespace COMGR {
 using namespace llvm;
@@ -143,7 +144,7 @@ Error UnbundleCommand::addInputIdentifier(HashAlgorithm &H) const {
 
   MemoryBuffer &InputBuffer = **MaybeInputBuffer;
 
-  using Header = CompressedOffloadBundle::CompressedBundleHeader;
+  using Header = object::CompressedOffloadBundle::CompressedBundleHeader;
   Expected<Header> MaybeHeader = Header::tryParse(InputBuffer.getBuffer());
   if (!MaybeHeader)
     return MaybeHeader.takeError();
