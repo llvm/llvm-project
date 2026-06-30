@@ -258,3 +258,43 @@ void test_conflicting_capture_kinds_map_private() {
     b++;
   }
 }
+
+void test_lastprivate_conditional() {
+  Point pt{1, 2};
+  auto [a, b] = pt;
+  // expected-note@-1{{'a' defined here}}
+  // expected-note@-2{{'b' defined here}}
+  // expected-error@+1{{conditional lastprivate on structured bindings is not yet supported}}
+#pragma omp parallel for lastprivate(conditional: a)
+  for (int i = 0; i < 10; ++i) {
+    if (i == 5)
+      a = i;
+  }
+  // expected-error@+1{{conditional lastprivate on structured bindings is not yet supported}}
+#pragma omp parallel for lastprivate(conditional: b)
+  for (int i = 0; i < 10; ++i) {
+    b = i;
+  }
+}
+
+void test_reduction_task() {
+  Point p{0, 0};
+  auto [a, b] = p;
+  // expected-error@+1{{task reductions on structured bindings are not yet supported}}
+#pragma omp parallel reduction(task, +:a)
+  {
+    a += 1;
+  }
+}
+
+void test_reduction_inscan() {
+  Point p{0, 0};
+  auto [a, b] = p;
+  // expected-error@+1{{inscan reductions on structured bindings are not yet supported}}
+#pragma omp for reduction(inscan, +:a)
+  for (int i = 0; i < 10; ++i) {
+    // expected-error@+1{{the list item must appear in 'reduction' clause with the 'inscan' modifier of the parent directive}}
+#pragma omp scan inclusive(a)
+    a += i;
+  }
+}
