@@ -868,3 +868,33 @@ module @func_with_non_call_users {
   }
   spirv.EntryPoint "GLCompute" @callee
 }
+
+
+// -----
+
+// Verify that RemoveDeadValues does not crash when a branch in a statically
+// dead block forwards a dead value to a block argument that is live (because
+// another, reachable predecessor also forwards a value to it).
+// The constant comparison %cmp is always true (2 < 5), so ^bb2 is unreachable.
+// The block argument %arg0 in ^bb3 must not be incorrectly marked dead.
+// CHECK-LABEL: func.func @branch_in_dead_block_live_successor_arg
+func.func @branch_in_dead_block_live_successor_arg() -> i64 {
+  %c0 = arith.constant 0 : i64
+  %c1 = arith.constant 1 : i64
+  %sum = arith.addi %c0, %c1 : i64
+  %c2 = arith.constant 2 : i64
+  %mul = arith.muli %sum, %c2 : i64
+  %c5 = arith.constant 5 : i64
+  %cmp = arith.cmpi slt, %mul, %c5 : i64
+  cf.cond_br %cmp, ^bb1, ^bb2
+^bb1:
+  %c10 = arith.constant 10 : i64
+  cf.br ^bb3(%c10 : i64)
+^bb2:
+  %c20 = arith.constant 20 : i64
+  cf.br ^bb3(%c20 : i64)
+^bb3(%arg0: i64):
+  // CHECK: arith.addi
+  %result = arith.addi %arg0, %sum : i64
+  func.return %result : i64
+}
