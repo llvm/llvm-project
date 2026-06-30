@@ -2376,7 +2376,7 @@ FastISel::createMachineMemOperandFor(const Instruction *I) const {
 
   return FuncInfo.MF->getMachineMemOperand(
       MachinePointerInfo(Ptr), Flags, Size, *Alignment,
-      MachineMemOperand::Metadata(/*AAInfo=*/AAInfo, /*Ranges=*/Ranges));
+      MachineMemOperand::Metadata(AAInfo, Ranges));
 }
 
 CmpInst::Predicate FastISel::optimizeCmpPredicate(const CmpInst *CI) const {

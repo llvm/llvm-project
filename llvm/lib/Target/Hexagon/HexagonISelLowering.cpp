@@ -3169,8 +3169,7 @@ HexagonTargetLowering::LowerUnalignedLoad(SDValue Op, SelectionDAG &DAG)
     MachineFunction &MF = DAG.getMachineFunction();
     WideMMO = MF.getMachineMemOperand(
         MMO->getPointerInfo(), MMO->getFlags(), 2 * LoadLen, Align(LoadLen),
-        MachineMemOperand::Metadata(/*AAInfo=*/MMO->getAAInfo(),
-                                    /*Ranges=*/MMO->getRanges()),
+        MachineMemOperand::Metadata(MMO->getAAInfo(), MMO->getRanges()),
         MMO->getSyncScopeID(), MMO->getSuccessOrdering(),
         MMO->getFailureOrdering());
   }

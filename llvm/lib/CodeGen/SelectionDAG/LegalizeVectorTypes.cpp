@@ -2515,8 +2515,7 @@ void DAGTypeLegalizer::SplitVecRes_VP_LOAD(VPLoadSDNode *LD, SDValue &Lo,
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       LD->getPointerInfo(), MachineMemOperand::MOLoad,
       LocationSize::beforeOrAfterPointer(), Alignment,
-      MachineMemOperand::Metadata(/*AAInfo=*/LD->getAAInfo(),
-                                  /*Ranges=*/LD->getRanges()));
+      MachineMemOperand::Metadata(LD->getAAInfo(), LD->getRanges()));
 
   Lo =
       DAG.getLoadVP(LD->getAddressingMode(), ExtType, LoVT, dl, Ch, Ptr, Offset,
@@ -2541,8 +2540,7 @@ void DAGTypeLegalizer::SplitVecRes_VP_LOAD(VPLoadSDNode *LD, SDValue &Lo,
     MMO = DAG.getMachineFunction().getMachineMemOperand(
         MPI, MachineMemOperand::MOLoad, LocationSize::beforeOrAfterPointer(),
         Alignment,
-        MachineMemOperand::Metadata(/*AAInfo=*/LD->getAAInfo(),
-                                    /*Ranges=*/LD->getRanges()));
+        MachineMemOperand::Metadata(LD->getAAInfo(), LD->getRanges()));
 
     Hi = DAG.getLoadVP(LD->getAddressingMode(), ExtType, HiVT, dl, Ch, Ptr,
                        Offset, MaskHi, EVLHi, HiMemVT, MMO,
@@ -2587,8 +2585,7 @@ void DAGTypeLegalizer::SplitVecRes_VP_LOAD_FF(VPLoadFFSDNode *LD, SDValue &Lo,
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       LD->getPointerInfo(), MachineMemOperand::MOLoad,
       LocationSize::beforeOrAfterPointer(), Alignment,
-      MachineMemOperand::Metadata(/*AAInfo=*/LD->getAAInfo(),
-                                  /*Ranges=*/LD->getRanges()));
+      MachineMemOperand::Metadata(LD->getAAInfo(), LD->getRanges()));
 
   Lo = DAG.getLoadFFVP(LoVT, dl, Ch, Ptr, MaskLo, EVLLo, MMO);
 
@@ -2663,8 +2660,7 @@ void DAGTypeLegalizer::SplitVecRes_VP_STRIDED_LOAD(VPStridedLoadSDNode *SLD,
         MachinePointerInfo(SLD->getPointerInfo().getAddrSpace()),
         MachineMemOperand::MOLoad, LocationSize::beforeOrAfterPointer(),
         Alignment,
-        MachineMemOperand::Metadata(/*AAInfo=*/SLD->getAAInfo(),
-                                    /*Ranges=*/SLD->getRanges()));
+        MachineMemOperand::Metadata(SLD->getAAInfo(), SLD->getRanges()));
 
     Hi = DAG.getStridedLoadVP(SLD->getAddressingMode(), SLD->getExtensionType(),
                               HiVT, DL, SLD->getChain(), Ptr, SLD->getOffset(),
@@ -2725,8 +2721,7 @@ void DAGTypeLegalizer::SplitVecRes_MLOAD(MaskedLoadSDNode *MLD,
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       MLD->getPointerInfo(), MMOFlags, LocationSize::beforeOrAfterPointer(),
       Alignment,
-      MachineMemOperand::Metadata(/*AAInfo=*/MLD->getAAInfo(),
-                                  /*Ranges=*/MLD->getRanges()));
+      MachineMemOperand::Metadata(MLD->getAAInfo(), MLD->getRanges()));
 
   Lo = DAG.getMaskedLoad(LoVT, dl, Ch, Ptr, Offset, MaskLo, PassThruLo, LoMemVT,
                          MMO, MLD->getAddressingMode(), ExtType,
@@ -2750,8 +2745,7 @@ void DAGTypeLegalizer::SplitVecRes_MLOAD(MaskedLoadSDNode *MLD,
 
     MMO = DAG.getMachineFunction().getMachineMemOperand(
         MPI, MMOFlags, LocationSize::beforeOrAfterPointer(), Alignment,
-        MachineMemOperand::Metadata(/*AAInfo=*/MLD->getAAInfo(),
-                                    /*Ranges=*/MLD->getRanges()));
+        MachineMemOperand::Metadata(MLD->getAAInfo(), MLD->getRanges()));
 
     Hi = DAG.getMaskedLoad(HiVT, dl, Ch, Ptr, Offset, MaskHi, PassThruHi,
                            HiMemVT, MMO, MLD->getAddressingMode(), ExtType,
@@ -2814,9 +2808,7 @@ void DAGTypeLegalizer::SplitVecRes_Gather(MemSDNode *N, SDValue &Lo,
   MachineMemOperand::Flags MMOFlags = N->getMemOperand()->getFlags();
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       N->getPointerInfo(), MMOFlags, LocationSize::beforeOrAfterPointer(),
-      Alignment,
-      MachineMemOperand::Metadata(/*AAInfo=*/N->getAAInfo(),
-                                  /*Ranges=*/N->getRanges()));
+      Alignment, MachineMemOperand::Metadata(N->getAAInfo(), N->getRanges()));
 
   if (auto *MGT = dyn_cast<MaskedGatherSDNode>(N)) {
     SDValue PassThru = MGT->getPassThru();
@@ -4486,8 +4478,7 @@ SDValue DAGTypeLegalizer::SplitVecOp_VP_STORE(VPStoreSDNode *N, unsigned OpNo) {
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       N->getPointerInfo(), MachineMemOperand::MOStore,
       LocationSize::beforeOrAfterPointer(), Alignment,
-      MachineMemOperand::Metadata(/*AAInfo=*/N->getAAInfo(),
-                                  /*Ranges=*/N->getRanges()));
+      MachineMemOperand::Metadata(N->getAAInfo(), N->getRanges()));
 
   Lo = DAG.getStoreVP(Ch, DL, DataLo, Ptr, Offset, MaskLo, EVLLo, LoMemVT, MMO,
                       N->getAddressingMode(), N->isTruncatingStore(),
@@ -4511,9 +4502,7 @@ SDValue DAGTypeLegalizer::SplitVecOp_VP_STORE(VPStoreSDNode *N, unsigned OpNo) {
 
   MMO = DAG.getMachineFunction().getMachineMemOperand(
       MPI, MachineMemOperand::MOStore, LocationSize::beforeOrAfterPointer(),
-      Alignment,
-      MachineMemOperand::Metadata(/*AAInfo=*/N->getAAInfo(),
-                                  /*Ranges=*/N->getRanges()));
+      Alignment, MachineMemOperand::Metadata(N->getAAInfo(), N->getRanges()));
 
   Hi = DAG.getStoreVP(Ch, DL, DataHi, Ptr, Offset, MaskHi, EVLHi, HiMemVT, MMO,
                       N->getAddressingMode(), N->isTruncatingStore(),
@@ -4586,9 +4575,7 @@ SDValue DAGTypeLegalizer::SplitVecOp_VP_STRIDED_STORE(VPStridedStoreSDNode *N,
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       MachinePointerInfo(N->getPointerInfo().getAddrSpace()),
       MachineMemOperand::MOStore, LocationSize::beforeOrAfterPointer(),
-      Alignment,
-      MachineMemOperand::Metadata(/*AAInfo=*/N->getAAInfo(),
-                                  /*Ranges=*/N->getRanges()));
+      Alignment, MachineMemOperand::Metadata(N->getAAInfo(), N->getRanges()));
 
   SDValue Hi = DAG.getStridedStoreVP(
       N->getChain(), DL, HiData, Ptr, N->getOffset(), N->getStride(), HiMask,
@@ -4640,8 +4627,7 @@ SDValue DAGTypeLegalizer::SplitVecOp_MSTORE(MaskedStoreSDNode *N,
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       N->getPointerInfo(), MachineMemOperand::MOStore,
       LocationSize::beforeOrAfterPointer(), Alignment,
-      MachineMemOperand::Metadata(/*AAInfo=*/N->getAAInfo(),
-                                  /*Ranges=*/N->getRanges()));
+      MachineMemOperand::Metadata(N->getAAInfo(), N->getRanges()));
 
   Lo = DAG.getMaskedStore(Ch, DL, DataLo, Ptr, Offset, MaskLo, LoMemVT, MMO,
                           N->getAddressingMode(), N->isTruncatingStore(),
@@ -4667,9 +4653,7 @@ SDValue DAGTypeLegalizer::SplitVecOp_MSTORE(MaskedStoreSDNode *N,
 
     MMO = DAG.getMachineFunction().getMachineMemOperand(
         MPI, MachineMemOperand::MOStore, LocationSize::beforeOrAfterPointer(),
-        Alignment,
-        MachineMemOperand::Metadata(/*AAInfo=*/N->getAAInfo(),
-                                    /*Ranges=*/N->getRanges()));
+        Alignment, MachineMemOperand::Metadata(N->getAAInfo(), N->getRanges()));
 
     Hi = DAG.getMaskedStore(Ch, DL, DataHi, Ptr, Offset, MaskHi, HiMemVT, MMO,
                             N->getAddressingMode(), N->isTruncatingStore(),
@@ -4734,9 +4718,7 @@ SDValue DAGTypeLegalizer::SplitVecOp_Scatter(MemSDNode *N, unsigned OpNo) {
   MachineMemOperand::Flags MMOFlags = N->getMemOperand()->getFlags();
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       N->getPointerInfo(), MMOFlags, LocationSize::beforeOrAfterPointer(),
-      Alignment,
-      MachineMemOperand::Metadata(/*AAInfo=*/N->getAAInfo(),
-                                  /*Ranges=*/N->getRanges()));
+      Alignment, MachineMemOperand::Metadata(N->getAAInfo(), N->getRanges()));
 
   if (auto *MSC = dyn_cast<MaskedScatterSDNode>(N)) {
     SDValue OpsLo[] = {Ch, DataLo, MaskLo, Ptr, IndexLo, Ops.Scale};

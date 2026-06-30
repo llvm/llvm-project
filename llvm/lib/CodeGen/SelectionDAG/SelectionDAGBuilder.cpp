@@ -5140,7 +5140,7 @@ void SelectionDAGBuilder::visitMaskedLoad(const CallInst &I, bool IsExpanding) {
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       MachinePointerInfo(PtrOperand), MMOFlags,
       LocationSize::upperBound(VT.getStoreSize()), Alignment,
-      MachineMemOperand::Metadata(/*AAInfo=*/AAInfo, /*Ranges=*/Ranges));
+      MachineMemOperand::Metadata(AAInfo, Ranges));
 
   const auto &TLI = DAG.getTargetLoweringInfo();
 
@@ -5185,8 +5185,7 @@ void SelectionDAGBuilder::visitMaskedGather(const CallInst &I) {
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       MachinePointerInfo(AS), MachineMemOperand::MOLoad,
       LocationSize::beforeOrAfterPointer(), Alignment,
-      MachineMemOperand::Metadata(/*AAInfo=*/I.getAAMetadata(),
-                                  /*Ranges=*/Ranges));
+      MachineMemOperand::Metadata(I.getAAMetadata(), Ranges));
 
   if (!UniformBase) {
     Base = DAG.getConstant(0, sdl, TLI.getPointerTy(DAG.getDataLayout()));
@@ -5347,9 +5346,8 @@ void SelectionDAGBuilder::visitAtomicLoad(const LoadInst &I) {
   const MDNode *Ranges = getRangeMetadata(I);
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       MachinePointerInfo(I.getPointerOperand()), Flags, MemVT.getStoreSize(),
-      I.getAlign(),
-      MachineMemOperand::Metadata(/*AAInfo=*/AAMDNodes(), /*Ranges=*/Ranges),
-      SSID, Order);
+      I.getAlign(), MachineMemOperand::Metadata(AAMDNodes(), Ranges), SSID,
+      Order);
 
   InChain = TLI.prepareVolatileOrAtomicLoad(InChain, dl, DAG);
 
@@ -6588,8 +6586,7 @@ void SelectionDAGBuilder::visitVectorHistogram(const CallInst &I,
       MachinePointerInfo(AS),
       MachineMemOperand::MOLoad | MachineMemOperand::MOStore,
       MemoryLocation::UnknownSize, Alignment,
-      MachineMemOperand::Metadata(/*AAInfo=*/I.getAAMetadata(),
-                                  /*Ranges=*/Ranges));
+      MachineMemOperand::Metadata(I.getAAMetadata(), Ranges));
 
   if (!UniformBase) {
     Base = DAG.getConstant(0, sdl, TLI.getPointerTy(DAG.getDataLayout()));
@@ -8774,7 +8771,7 @@ void SelectionDAGBuilder::visitVPLoad(
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       MachinePointerInfo(PtrOperand), MMOFlags,
       LocationSize::beforeOrAfterPointer(), *Alignment,
-      MachineMemOperand::Metadata(/*AAInfo=*/AAInfo, /*Ranges=*/Ranges));
+      MachineMemOperand::Metadata(AAInfo, Ranges));
   LD = DAG.getLoadVP(VT, DL, InChain, OpValues[0], OpValues[1], OpValues[2],
                      MMO, false /*IsExpanding */);
   if (AddToChain)
@@ -8802,7 +8799,7 @@ void SelectionDAGBuilder::visitVPLoadFF(
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       MachinePointerInfo(PtrOperand), MachineMemOperand::MOLoad,
       LocationSize::beforeOrAfterPointer(), *Alignment,
-      MachineMemOperand::Metadata(/*AAInfo=*/AAInfo, /*Ranges=*/Ranges));
+      MachineMemOperand::Metadata(AAInfo, Ranges));
   LD = DAG.getLoadFFVP(VT, DL, InChain, OpValues[0], OpValues[1], OpValues[2],
                        MMO);
   SDValue Trunc = DAG.getNode(ISD::TRUNCATE, DL, EVLVT, LD.getValue(1));
@@ -8829,8 +8826,7 @@ void SelectionDAGBuilder::visitVPGather(
       TLI.getVPIntrinsicMemOperandFlags(VPIntrin);
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       MachinePointerInfo(AS), MMOFlags, LocationSize::beforeOrAfterPointer(),
-      *Alignment,
-      MachineMemOperand::Metadata(/*AAInfo=*/AAInfo, /*Ranges=*/Ranges));
+      *Alignment, MachineMemOperand::Metadata(AAInfo, Ranges));
   SDValue Base, Index, Scale;
   bool UniformBase =
       getUniformBase(PtrOperand, Base, Index, Scale, this, VPIntrin.getParent(),
@@ -8939,8 +8935,7 @@ void SelectionDAGBuilder::visitVPStridedLoad(
       TLI.getVPIntrinsicMemOperandFlags(VPIntrin);
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       MachinePointerInfo(AS), MMOFlags, LocationSize::beforeOrAfterPointer(),
-      *Alignment,
-      MachineMemOperand::Metadata(/*AAInfo=*/AAInfo, /*Ranges=*/Ranges));
+      *Alignment, MachineMemOperand::Metadata(AAInfo, Ranges));
 
   SDValue LD = DAG.getStridedLoadVP(VT, DL, InChain, OpValues[0], OpValues[1],
                                     OpValues[2], OpValues[3], MMO,

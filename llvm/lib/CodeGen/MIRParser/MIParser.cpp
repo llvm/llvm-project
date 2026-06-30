@@ -3862,9 +3862,8 @@ bool MIParser::parseMachineMemoryOperand(MachineMemOperand *&Dest) {
     return true;
   Dest = MF.getMachineMemOperand(
       Ptr, Flags, MemoryType, Align(BaseAlignment),
-      MachineMemOperand::Metadata(/*AAInfo=*/AAInfo, /*Ranges=*/Range,
-                                  /*MemCacheHint=*/MemCacheHint),
-      SSID, Order, FailureOrder);
+      MachineMemOperand::Metadata(AAInfo, Range, MemCacheHint), SSID, Order,
+      FailureOrder);
   return false;
 }
 
