@@ -539,8 +539,9 @@ static bool ProcessNumericUCNEscape(const char *ThisTokBegin,
   return !HasError;
 }
 
-static bool AllowedInCharacterName(char C) {
-  return (C >= 'A' && C < 'Z') || (C >= '0' && C < '9') || C == '-' || C == ' ';
+static bool allowedInCharacterName(char C) {
+  return (C >= 'A' && C <= 'Z') || (C >= '0' && C <= '9') || C == '-' ||
+         C == ' ';
 }
 
 static void DiagnoseInvalidUnicodeCharacterName(
@@ -556,7 +557,7 @@ static void DiagnoseInvalidUnicodeCharacterName(
 
   bool HasIllegalCharacter = false;
   for (const char *P = Name.begin(), *E = Name.end(); P != E;) {
-    if (AllowedInCharacterName(*P)) {
+    if (allowedInCharacterName(*P)) {
       ++P;
       continue;
     }

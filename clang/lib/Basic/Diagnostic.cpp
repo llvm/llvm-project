@@ -1085,8 +1085,8 @@ void clang::EscapeStringForDiagnostic(StringRef Str,
   }
 }
 
-/// DisplayCodePointForDiagnostic - Display CodePoint in U+NNNN notation,
-/// optionally prepending the CodePoint itself if it is printable.
+/// Displays CodePoint in U+NNNN notation, optionally prepending the quoted
+/// CodePoint itself if printable.
 llvm::SmallString<16>
 clang::DisplayCodePointForDiagnostic(llvm::UTF32 CodePoint) {
   llvm::SmallString<16> Result;
