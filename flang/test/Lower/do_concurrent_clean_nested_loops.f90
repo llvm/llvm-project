@@ -49,6 +49,37 @@ end subroutine
 ! CLEAN:             %[[LAST:.*]] = arith.addi %[[LBI]], %[[MUL]] overflow<nsw> : i32
 ! CLEAN:             fir.store %[[LAST]] to %[[J_DECL]]#0 : !fir.ref<i32>
 
+! Non-unit lower bound and step: the post-loop value must still be lb +
+! tripCount*step (here 2 + 4*2 = 10), not a hard-coded lb=1/step=1 form.
+subroutine nested_stride(a, n)
+  implicit none
+  integer :: n, i, j
+  integer :: a(n)
+  do concurrent (i=1:n)
+    do j = 2, 8, 2
+    end do
+    a(i) = j
+  end do
+end subroutine
+
+! CHECK-LABEL:   func.func @_QPnested_stride
+! CHECK:           %[[SJ_DECL:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFnested_strideEj"}
+! CLEAN:             fir.do_loop %{{.*}} = %[[SLB:[^ ]+]] to %[[SUB:[^ ]+]] step %[[SST:[^ ]+]] {
+! CLEAN-NOT:           iter_args
+! CLEAN:             }
+! CLEAN:             %[[SLBI:.*]] = fir.convert %[[SLB]] : (index) -> i32
+! CLEAN:             %[[SUBI:.*]] = fir.convert %[[SUB]] : (index) -> i32
+! CLEAN:             %[[SSTI:.*]] = fir.convert %[[SST]] : (index) -> i32
+! CLEAN:             %[[SC0:.*]] = arith.constant 0 : i32
+! CLEAN:             %[[SDIFF:.*]] = arith.subi %[[SUBI]], %[[SLBI]] overflow<nsw> : i32
+! CLEAN:             %[[SADD:.*]] = arith.addi %[[SDIFF]], %[[SSTI]] overflow<nsw> : i32
+! CLEAN:             %[[STRIP:.*]] = arith.divsi %[[SADD]], %[[SSTI]] : i32
+! CLEAN:             %[[SCMP:.*]] = arith.cmpi slt, %[[STRIP]], %[[SC0]] : i32
+! CLEAN:             %[[SSEL:.*]] = arith.select %[[SCMP]], %[[SC0]], %[[STRIP]] : i32
+! CLEAN:             %[[SMUL:.*]] = arith.muli %[[SSEL]], %[[SSTI]] overflow<nsw> : i32
+! CLEAN:             %[[SLAST:.*]] = arith.addi %[[SLBI]], %[[SMUL]] overflow<nsw> : i32
+! CLEAN:             fir.store %[[SLAST]] to %[[SJ_DECL]]#0 : !fir.ref<i32>
+
 ! A plain DO loop not nested in a DO CONCURRENT body keeps its iter_arg even
 ! when the option is enabled.
 subroutine not_nested(x)
