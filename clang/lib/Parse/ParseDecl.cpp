@@ -4847,33 +4847,32 @@ void Parser::ParseStructDeclaration(
   }
 }
 
-ParsedAttributes Parser::ParseLexedCAttributeTokens(LateParsedAttribute &LA) {
+ParsedAttributes Parser::ParseLexedAttributeTokens(LateParsedAttribute &LPA) {
   // Create a fake EOF so that attribute parsing won't go off the end of the
   // attribute.
   Token AttrEnd;
   AttrEnd.startToken();
   AttrEnd.setKind(tok::eof);
   AttrEnd.setLocation(Tok.getLocation());
-  AttrEnd.setEofData(LA.Toks.data());
-  LA.Toks.push_back(AttrEnd);
+  AttrEnd.setEofData(LPA.Toks.data());
+  LPA.Toks.push_back(AttrEnd);
 
   // Append the current token at the end of the new token stream so that it
   // doesn't get lost.
-  LA.Toks.push_back(Tok);
-  PP.EnterTokenStream(LA.Toks, /*DisableMacroExpansion=*/true,
+  LPA.Toks.push_back(Tok);
+  PP.EnterTokenStream(LPA.Toks, /*DisableMacroExpansion=*/true,
                       /*IsReinject=*/true);
+
   // Drop the current token and bring the first cached one. It's the same token
   // as when we entered this function.
   ConsumeAnyToken(/*ConsumeCodeCompletionTok=*/true);
 
   ParsedAttributes Attrs(AttrFactory);
 
-  assert(LA.Decls.size() <= 1 &&
-         "late field attribute expects to have at most one declaration.");
-
-  // Dispatch based on the attribute and parse it
-  ParseGNUAttributeArgs(&LA.AttrName, LA.AttrNameLoc, Attrs, nullptr, nullptr,
-                        SourceLocation(), ParsedAttr::Form::GNU(), nullptr);
+  ParseGNUAttributeArgs(&LPA.AttrName, LPA.AttrNameLoc, Attrs,
+                        /*EndLoc=*/nullptr, /*ScopeName=*/nullptr,
+                        SourceLocation(), ParsedAttr::Form::GNU(),
+                        /*D=*/nullptr);
 
   // Due to a parsing error, we either went over the cached tokens or
   // there are still cached tokens left, so we skip the leftover tokens.
@@ -4889,7 +4888,10 @@ ParsedAttributes Parser::ParseLexedCAttributeTokens(LateParsedAttribute &LA) {
 
 void Parser::ParseLexedTypeAttribute(LateParsedTypeAttribute &LA,
                                      ParsedAttributes &OutAttrs) {
-  ParsedAttributes Attrs = ParseLexedCAttributeTokens(LA);
+  assert(LA.Decls.size() <= 1 &&
+         "late field attribute expects to have at most one declaration.");
+
+  ParsedAttributes Attrs = ParseLexedAttributeTokens(LA);
   OutAttrs.takeAllAppendingFrom(Attrs);
 }
 
