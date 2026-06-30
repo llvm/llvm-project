@@ -8735,8 +8735,7 @@ SDValue DAGTypeLegalizer::WidenVecOp_CttzElements(SDNode *N) {
   // Pad the widened portion with all-ones so the extra lanes appear as
   // active (non-zero) elements and do not contribute trailing zeros.
   SDValue AllOnes = DAG.getAllOnesConstant(DL, WideVT);
-  SDValue WideSource = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, WideVT, AllOnes,
-                                   Source, DAG.getVectorIdxConstant(0, DL));
+  SDValue WideSource = DAG.getInsertSubvector(DL, AllOnes, Source, 0);
 
   return DAG.getNode(N->getOpcode(), DL, N->getValueType(0), WideSource,
                      N->getFlags());
