@@ -179,6 +179,28 @@ findBBsToSinkInto(const Loop &L, const SmallPtrSetImpl<BasicBlock *> &UseBBs,
   return BBsToSinkInto;
 }
 
+/// Returns true when an \p I from the \p PreheaderBB has conflicting memory
+/// access over the later preheader instructions.
+static bool hasConflictingPreheaderMemoryAccess(Instruction &I,
+                                                BatchAAResults &BAA,
+                                                BasicBlock *PreheaderBB) {
+  if (!I.mayReadOrWriteMemory())
+    return false;
+
+  for (Instruction &OtherI : make_range(I.getIterator(), PreheaderBB->end())) {
+    if (!OtherI.mayReadOrWriteMemory())
+      continue;
+    if (!I.mayWriteToMemory() && !OtherI.mayWriteToMemory())
+      continue;
+
+    if (isModOrRefSet(
+            BAA.getModRefInfo(&OtherI, MemoryLocation::getOrNone(&I))))
+      return true;
+  }
+
+  return false;
+}
+
 // Sinks \p I from the loop \p L's preheader to its uses. Returns true if
 // sinking is successful.
 // \p LoopBlockNumber is used to sort the insertion blocks to ensure
@@ -342,6 +364,9 @@ static bool sinkLoopInvariantInstructions(Loop &L, AAResults &AA, LoopInfo &LI,
     assert(L.hasLoopInvariantOperands(&I) &&
            "Insts in a loop's preheader should have loop invariant operands!");
     if (!canSinkOrHoistInst(I, &AA, &DT, &L, MSSAU, false, LICMFlags))
+      continue;
+    BatchAAResults BAA(AA);
+    if (hasConflictingPreheaderMemoryAccess(I, BAA, Preheader))
       continue;
     if (sinkInstruction(L, I, ColdLoopBBs, LoopBlockNumber, LI, DT, BFI,
                         &MSSAU)) {
