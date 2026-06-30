@@ -125,6 +125,10 @@ public:
   /// function \p F.
   void checkSubtargetFeatures(const Function &F) const;
 
+  StringRef
+  getRequiredTargetFeaturesForIntrinsic(unsigned IntrinsicID,
+                                        const FunctionType *FTy) const override;
+
   const SIInstrInfo *getInstrInfo() const override { return &InstrInfo; }
 
   const SIFrameLowering *getFrameLowering() const override {
