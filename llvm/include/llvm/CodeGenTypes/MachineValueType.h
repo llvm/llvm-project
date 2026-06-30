@@ -288,8 +288,9 @@ namespace llvm {
       MVT WideEltTy = getVectorElementType().widenIntegerElementType();
       MVT VecTy = MVT::getVectorVT(WideEltTy, getVectorElementCount());
       assert(VecTy.SimpleTy != MVT::INVALID_SIMPLE_VALUE_TYPE &&
-             "Integer Vector widening not possible !");
+             "Simple vector VT not representable by simple integer vector VT!");
       return VecTy;
+
     }
 
     /// Returns true if the given vector is a power of 2.
