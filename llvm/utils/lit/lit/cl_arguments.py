@@ -364,6 +364,16 @@ def parse_args():
         help="Enable individual test case coverage",
     )
     execution_group.add_argument(
+        "--per-process-output-dir",
+        dest="per_process_output_dir",
+        action="store_true",
+        help="Isolate each lit process's writable output by appending a unique "
+        "per-process subdirectory (pid-<pid>) to each test suite's "
+        "test_exec_root. This lets multiple lit processes run the same tests "
+        "concurrently against a single build tree (e.g. test stress runs) "
+        "without clobbering each other's %%t/%%T/Output files. [Default: Off]",
+    )
+    execution_group.add_argument(
         "--ignore-fail",
         dest="ignoreFail",
         action="store_true",

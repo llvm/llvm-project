@@ -239,6 +239,19 @@ class TestingConfig:
             # FIXME: This should really only be suite in test suite config
             # files. Should we distinguish them?
             self.test_exec_root = str(self.test_exec_root)
+            # Optionally isolate this lit process's writable output tree so that
+            # multiple lit processes can run the same tests concurrently against
+            # one build tree without clobbering each other's %t/%T/Output files.
+            # The guard makes this idempotent: local configs are deep-copied from
+            # their parent (which is already isolated) and then finish()ed again,
+            # which must not append a second component.
+            if litConfig.per_process_output_dir and not getattr(
+                self, "_per_process_output_dir_applied", False
+            ):
+                self.test_exec_root = os.path.join(
+                    self.test_exec_root, "pid-%d" % os.getpid()
+                )
+                self._per_process_output_dir_applied = True
         if self.test_source_root is not None:
             # FIXME: This should really only be suite in test suite config
             # files. Should we distinguish them?
