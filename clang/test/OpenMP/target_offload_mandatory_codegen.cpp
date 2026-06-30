@@ -44,7 +44,7 @@ void host_dev(int device) {
 // MANDATORY-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
 // MANDATORY-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
 // MANDATORY-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// MANDATORY-NEXT:    store i32 4, ptr [[TMP5]], align 4
+// MANDATORY-NEXT:    store i32 5, ptr [[TMP5]], align 4
 // MANDATORY-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
 // MANDATORY-NEXT:    store i32 1, ptr [[TMP6]], align 4
 // MANDATORY-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
@@ -101,7 +101,7 @@ void host_dev(int device) {
 // MANDATORY-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
 // MANDATORY-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
 // MANDATORY-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// MANDATORY-NEXT:    store i32 4, ptr [[TMP6]], align 4
+// MANDATORY-NEXT:    store i32 5, ptr [[TMP6]], align 4
 // MANDATORY-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
 // MANDATORY-NEXT:    store i32 1, ptr [[TMP7]], align 4
 // MANDATORY-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
@@ -162,7 +162,7 @@ void host_dev(int device) {
 // MANDATORY-NEXT:    [[TMP6:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
 // MANDATORY-NEXT:    [[TMP7:%.*]] = sext i32 [[TMP6]] to i64
 // MANDATORY-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// MANDATORY-NEXT:    store i32 4, ptr [[TMP8]], align 4
+// MANDATORY-NEXT:    store i32 5, ptr [[TMP8]], align 4
 // MANDATORY-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
 // MANDATORY-NEXT:    store i32 1, ptr [[TMP9]], align 4
 // MANDATORY-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2

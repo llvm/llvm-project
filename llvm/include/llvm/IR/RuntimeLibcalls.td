@@ -502,6 +502,7 @@ def RETURN_ADDRESS : RuntimeLibcall;
 
 // GPU profiling
 def PROFILE_INSTRUMENT_GPU : RuntimeLibcall;
+def PROFILE_SAMPLING_GPU : RuntimeLibcall;
 
 // Clear cache
 def CLEAR_CACHE : RuntimeLibcall;
@@ -2245,9 +2246,11 @@ def WindowsARM64ECSystemLibrary
 def isAMDGPU : RuntimeLibcallPredicate<"TT.isAMDGPU()">;
 
 def __llvm_profile_instrument_gpu : RuntimeLibcallImpl<PROFILE_INSTRUMENT_GPU>;
+def __llvm_profile_sampling_gpu : RuntimeLibcallImpl<PROFILE_SAMPLING_GPU>;
 
 def AMDGPUSystemLibrary
-    : SystemRuntimeLibrary<isAMDGPU, (add __llvm_profile_instrument_gpu)>;
+    : SystemRuntimeLibrary<isAMDGPU, (add __llvm_profile_instrument_gpu,
+                                      __llvm_profile_sampling_gpu)>;
 
 //===----------------------------------------------------------------------===//
 // ARM Runtime Libcalls
@@ -3367,10 +3370,10 @@ def isCygwinMinGW32 : RuntimeLibcallPredicate<
 
 def isWin32NotCygMing : RuntimeLibcallPredicate<
   [{TT.getArch() == Triple::x86 &&
-     (TT.isOSWindows() || TT.isUEFI()) && !TT.isOSCygMing()}]>;
+     TT.isOSWindowsOrUEFI() && !TT.isOSCygMing()}]>;
 def isWin64NotCygMing : RuntimeLibcallPredicate<
   [{TT.getArch() == Triple::x86_64 &&
-    (TT.isOSWindows() || TT.isUEFI()) && !TT.isOSCygMing()}]>;
+    TT.isOSWindowsOrUEFI() && !TT.isOSCygMing()}]>;
 
 
 // Some darwins have an optimized __bzero/bzero function.
@@ -3541,7 +3544,8 @@ def isZOS : RuntimeLibcallPredicate<"TT.isOSzOS()">;
 def SystemZZOSSystemLibrary
     : SystemRuntimeLibrary<
           isSystemZZOS, (add DefaultLibcallImpls64,
-                            LibcallImpls<(add ZOSRuntimeLibcalls), isZOS>)>;
+                            LibcallImpls<(add ZOSRuntimeLibcalls), isZOS>,
+                            DefaultStackProtector)>;
 
 //===----------------------------------------------------------------------===//
 // WebAssembly Runtime Libcalls

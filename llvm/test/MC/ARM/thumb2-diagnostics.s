@@ -195,3 +195,8 @@ foo2:
         @ v8 allows rn = sp
 @ CHECK-ERRORS-V7: error: instruction variant requires ARMv8 or later
         @ rn=pc is allowed so not included here
+
+        @ "sub pc, lr, #imm" (without 's') is not a Thumb2 instruction
+        sub pc, lr, #4
+@ CHECK-ERRORS-V7: error: operand must be a register in range [r0, r12] or r14
+@ CHECK-ERRORS-V8: error: operand must be a register in range [r0, r14]

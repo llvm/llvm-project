@@ -178,3 +178,11 @@
 // RUN:  -mstack-protector-guard-record %s 2>&1 | \
 // RUN:  FileCheck -check-prefix=INVALID_TLS_RECORD_SYSTEMZ %s
 // INVALID_TLS_RECORD_SYSTEMZ: error: invalid argument '-mstack-protector-guard-record' only allowed with '-mstack-protector-guard=global'
+
+// RUN: %clang -### -target s390x-ibm-zos -mstack-protector-guard=tls %s 2>&1 | \
+// RUN:  FileCheck -check-prefix=CHECK_TLS_ZOS %s
+// CHECK_TLS_ZOS: "-cc1" {{.*}}"-mstack-protector-guard=tls"
+
+// RUN: not %clang -### -target s390x-ibm-zos -mstack-protector-guard=global %s 2>&1 | \
+// RUN:  FileCheck -check-prefix=INVALID_GLOBAL_ZOS %s
+// INVALID_GLOBAL_ZOS: invalid value 'global' in 'mstack-protector-guard=', expected one of: tls

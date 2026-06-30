@@ -66,7 +66,7 @@ func.func @_QPdo_concurrent_reduce() {
 // CHECK:               }
 // CHECK:             }
 // CHECK:             omp.terminator
-// CHECK:           }
+// CHECK:           } {omp.combined}
 
 // CHECK:           return
 // CHECK:         }

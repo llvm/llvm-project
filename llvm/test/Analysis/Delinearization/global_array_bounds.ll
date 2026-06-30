@@ -19,7 +19,7 @@ define void @test_2d_array(i64 %i, i64 %j, i64 %N, i64 %M) {
 ; CHECK-NEXT:  AccessFunction: {{\{\{}}0,+,80}<%for.i>,+,4}<%for.j>
 ; CHECK-NEXT:  Base offset: @test_array_10x20
 ; CHECK-NEXT:  ArrayDecl[UnknownSize][20] with elements of 4 bytes.
-; CHECK-NEXT:  ArrayRef[{0,+,1}<nuw><%for.i>][{0,+,1}<nuw><nsw><%for.j>]
+; CHECK-NEXT:  ArrayRef[{0,+,1}<nuw><nsw><%for.i>][{0,+,1}<nuw><nsw><%for.j>]
 ; CHECK-NEXT:  Delinearization validation: Failed
 ;
 entry:

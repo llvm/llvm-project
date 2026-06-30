@@ -28,6 +28,10 @@ void bzero(void *dst, size_t n);
 }
 #endif
 
+// umask is recognized as a builtin by name; this header just supplies a
+// realistic system-header declaration and the mode_t typedef used below.
+#include "Inputs/warn-fortify-source-umask.h"
+
 void call_memcpy(void) {
   char dst[10];
   char src[20];
@@ -96,7 +100,7 @@ void call_stpcpy(void) {
 
 void call_memmove(void) {
   char s1[10], s2[20];
-  __builtin_memmove(s2, s1, 20);
+  __builtin_memmove(s2, s1, 20); // expected-warning {{'memmove' reading 20 bytes from a region of size 10}}
   __builtin_memmove(s1, s2, 20); // expected-warning {{'memmove' will always overflow; destination buffer has size 10, but size argument is 20}}
 }
 
@@ -242,6 +246,18 @@ void call_sprintf(void) {
   sprintf(buf, "5%.1e", 9.f); // expected-warning {{'sprintf' will always overflow; destination buffer has size 6, but format string expands to at least 8}}
 }
 
+void call_umask(mode_t runtime_mode) {
+  umask(0);
+  umask(022);
+  umask(0644);
+  umask(0777);
+  umask(01000);   // expected-warning {{'umask' argument sets non-file-permission bits (01000); those bits are ignored}}
+  umask(0xFFFF);  // expected-warning {{'umask' argument sets non-file-permission bits (0177000); those bits are ignored}}
+  umask(7777);    // expected-warning {{'umask' argument sets non-file-permission bits (017000); those bits are ignored}}
+  umask(-1);      // expected-warning {{'umask' argument sets non-file-permission bits (}}
+  umask(runtime_mode); // no warning, not a constant
+}
+
 #ifdef __cplusplus
 template <class> struct S {
   void mf() const {
@@ -255,11 +271,13 @@ template <int A, int B>
 void call_memcpy_dep() {
   char bufferA[A];
   char bufferB[B];
-  memcpy(bufferA, bufferB, 10); // expected-warning{{'memcpy' will always overflow; destination buffer has size 9, but size argument is 10}}
+  memcpy(bufferA, bufferB, 10);
 }
 
 void call_call_memcpy() {
-  call_memcpy_dep<10, 9>();
+  call_memcpy_dep<10, 9>(); // expected-note {{in instantiation of function template specialization 'call_memcpy_dep<10, 9>' requested here}}
+                            // expected-warning@-5 {{'memcpy' reading 10 bytes from a region of size 9}}
   call_memcpy_dep<9, 10>(); // expected-note {{in instantiation of function template specialization 'call_memcpy_dep<9, 10>' requested here}}
+                            // expected-warning@-7 {{'memcpy' will always overflow; destination buffer has size 9, but size argument is 10}}
 }
 #endif
