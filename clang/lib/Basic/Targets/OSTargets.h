@@ -66,7 +66,7 @@ public:
   /// Apple Mach-O can autohide a vague-linkage vtable so that each image gets
   /// its own copy, so such a vtable may have more than one address in a
   /// program. A strong (key-function) vtable still has a unique address.
-  VTableUniquenessKind getDefaultVTableUniqueness() const override {
+  VTableUniquenessKind getVTableUniqueness() const override {
     return VTableUniquenessKind::UniqueIfStrongLinkage;
   }
 };

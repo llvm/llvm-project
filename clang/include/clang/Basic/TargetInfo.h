@@ -1799,9 +1799,9 @@ public:
   /// Clang backwards compatibility rather than GCC/Itanium ABI compatibility.
   virtual bool areDefaultedSMFStillPOD(const LangOptions&) const;
 
-  /// Returns the target's default policy for whether a class's vtable can be
-  /// assumed to have a unique address program-wide.
-  virtual VTableUniquenessKind getDefaultVTableUniqueness() const {
+  /// Returns whether the target's ABI guarantees that a class's vtable has a
+  /// unique address program-wide.
+  virtual VTableUniquenessKind getVTableUniqueness() const {
     return VTableUniquenessKind::AlwaysUnique;
   }
 

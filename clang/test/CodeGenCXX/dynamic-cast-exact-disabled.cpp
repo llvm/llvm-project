@@ -1,8 +1,10 @@
-// The exact dynamic_cast optimization is enabled for a weak vtable only on
-// targets with unique vtables; for a class with a key function (a unique,
-// externally defined vtable) it is also enabled where the optimization applies
-// at all. The ENABLED/DISABLED prefixes track the weak vtable (class B); the
-// KEY-ENABLED/KEY-DISABLED prefixes track the key-function class (WithKey).
+// The ENABLED/DISABLED prefixes track the weak vtable (class B);
+// KEY-ENABLED/KEY-DISABLED track the key-function class (WithKey), whose
+// vtable is external with a unique address. The weak vtable gets the exact
+// dynamic_cast optimization only on targets with unique vtables; the
+// key-function vtable keeps it even on targets that may duplicate weak
+// vtables, and loses it only when the optimization is turned off entirely
+// (-O0, -fapple-kext, -fno-assume-unique-vtables).
 //
 // Baseline, unique vtables:
 // RUN: %clang_cc1 -I%S %s -triple x86_64-unknown-linux-gnu -O1 -emit-llvm -std=c++11 -o - | FileCheck %s --check-prefixes=CHECK,ENABLED,KEY-ENABLED
@@ -18,9 +20,6 @@
 // Disabled for a weak vtable on a target that may duplicate vtables (Apple
 // Mach-O), but kept for the key-function class:
 // RUN: %clang_cc1 -I%S %s -triple x86_64-apple-darwin10 -O1 -emit-llvm -std=c++11 -o - | FileCheck %s --check-prefixes=CHECK,DISABLED,KEY-ENABLED
-// Forced back on by -fassume-unique-vtables, even on a target that may
-// duplicate vtables:
-// RUN: %clang_cc1 -I%S %s -triple x86_64-apple-darwin10 -O1 -fassume-unique-vtables -emit-llvm -std=c++11 -o - | FileCheck %s --check-prefixes=CHECK,ENABLED,KEY-ENABLED
 
 struct A { virtual ~A(); };
 struct B final : A { };

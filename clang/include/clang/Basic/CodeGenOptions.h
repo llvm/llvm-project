@@ -36,11 +36,10 @@ class PassBuilder;
 }
 namespace clang {
 
-/// The resolved policy for whether a class's vtable can be assumed to have a
-/// unique address program-wide. This controls the exact dynamic_cast
-/// optimization (and, where a vtable is not assumed unique, whether it may be
-/// marked unnamed_addr so the platform can duplicate it). It is computed from
-/// the target's default and the -f[no-]assume-unique-vtables request.
+/// A target's ABI policy for whether a class's vtable can be assumed to have
+/// a unique address program-wide. This is the basis for the exact dynamic_cast
+/// optimization (and, where a vtable is not assumed unique, for whether it may
+/// be marked unnamed_addr so the platform can duplicate it).
 enum class VTableUniquenessKind {
   /// Every vtable has a single address program-wide.
   AlwaysUnique,
@@ -48,19 +47,6 @@ enum class VTableUniquenessKind {
   /// unique, but a vague-linkage (weak) vtable may be duplicated by the
   /// platform and so has no unique address.
   UniqueIfStrongLinkage,
-  /// No vtable is assumed to have a unique address, but the platform is not
-  /// allowed to duplicate vtables.
-  NeverUnique,
-};
-
-/// The vtable-uniqueness policy requested on the command line.
-enum class VTableUniquenessRequest {
-  /// No -f[no-]assume-unique-vtables was given; use the target's default.
-  TargetDefault,
-  /// -fassume-unique-vtables: assume every vtable is unique.
-  AlwaysUnique,
-  /// -fno-assume-unique-vtables: assume no vtable is unique.
-  NeverUnique,
 };
 
 /// Bitfields of CodeGenOptions, split out from CodeGenOptions to ensure
@@ -102,7 +88,6 @@ public:
   using DebugInfoKind = llvm::codegenoptions::DebugInfoKind;
   using DebuggerKind = llvm::DebuggerKind;
   using RelocSectionSymType = llvm::RelocSectionSymType;
-  using VTableUniquenessRequest = ::clang::VTableUniquenessRequest;
 
 #define CODEGENOPT(Name, Bits, Default, Compatibility) unsigned Name : Bits;
 #define ENUM_CODEGENOPT(Name, Type, Bits, Default, Compatibility)

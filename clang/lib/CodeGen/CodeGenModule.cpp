@@ -6292,18 +6292,6 @@ bool CodeGenModule::supportsCOMDAT() const {
   return getTriple().supportsCOMDAT();
 }
 
-VTableUniquenessKind CodeGenModule::getVTableUniqueness() const {
-  switch (getCodeGenOpts().getRequestedVTableUniqueness()) {
-  case VTableUniquenessRequest::AlwaysUnique:
-    return VTableUniquenessKind::AlwaysUnique;
-  case VTableUniquenessRequest::NeverUnique:
-    return VTableUniquenessKind::NeverUnique;
-  case VTableUniquenessRequest::TargetDefault:
-    return getTarget().getDefaultVTableUniqueness();
-  }
-  llvm_unreachable("invalid VTableUniquenessRequest");
-}
-
 void CodeGenModule::maybeSetTrivialComdat(const Decl &D,
                                           llvm::GlobalObject &GO) {
   if (!shouldBeInCOMDAT(*this, D))

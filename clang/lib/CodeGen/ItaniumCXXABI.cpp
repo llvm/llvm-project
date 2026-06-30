@@ -201,12 +201,11 @@ public:
   /// practice in some cases due to language extensions.
   bool hasUniqueVTablePointer(QualType RecordTy) {
     const CXXRecordDecl *RD = RecordTy->getAsCXXRecordDecl();
-    VTableUniquenessKind Uniqueness = CGM.getVTableUniqueness();
 
-    // With NeverUnique (e.g., -fno-assume-unique-vtables) no vtable is assumed
-    // unique. Under -fapple-kext, multiple definitions of the same vtable may
-    // be emitted.
-    if (Uniqueness == VTableUniquenessKind::NeverUnique ||
+    // The exact dynamic_cast optimization relies on the vtable having a unique
+    // address. -fno-assume-unique-vtables disables it, and under -fapple-kext
+    // multiple definitions of the same vtable may be emitted.
+    if (CGM.getCodeGenOpts().DisableExactDynamicCast ||
         getContext().getLangOpts().AppleKext)
       return false;
 
@@ -229,10 +228,11 @@ public:
         llvm::GlobalValue::DefaultVisibility)
       return false;
 
-    // A vague-linkage (weak) vtable on a target that may duplicate it
-    // (UniqueIfStrongLinkage) can be emitted with a distinct address in more
-    // than one image, so its address cannot be assumed unique.
-    return Uniqueness != VTableUniquenessKind::UniqueIfStrongLinkage;
+    // A vague-linkage (weak) vtable on a target whose ABI may duplicate it can
+    // be emitted with a distinct address in more than one image, so its address
+    // cannot be assumed unique.
+    return CGM.getTarget().getVTableUniqueness() !=
+           VTableUniquenessKind::UniqueIfStrongLinkage;
   }
 
   bool shouldEmitExactDynamicCast(QualType DestRecordTy) override {
