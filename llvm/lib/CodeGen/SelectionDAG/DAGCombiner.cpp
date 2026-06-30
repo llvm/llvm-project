@@ -7035,7 +7035,8 @@ static SDValue combineSelectAsExtAnd(SDValue Cond, SDValue T, SDValue F,
 
 /// Try to convert
 /// `(vXiY SELECT \p Cond, (vXiY \p TrueVal), (vXiY \p FalseVal))` into
-/// `(vPiQ SELECT Cond, (vPiQ NewTrue), (vPiQ NewFalse))` with:
+/// `(vPiQ SELECT \p Cond,
+///  (vPiQ (BITCAST \p TrueVal )), (vPiQ (BITCAST \p FalseVal )))` when:
 /// 1. vXiY is not legal type
 /// 2. vPiQ is legal type
 /// 3. X * Y = P * Q
@@ -7068,17 +7069,14 @@ static SDValue castIntVectorSelect(SDNode *N, SelectionDAG &DAG,
   TypeSize NewEltBitSize = EltVT.getSizeInBits() * 2;
   EVT NewVT = ResultVT.getIntegerVectorWithElementWidth(*DAG.getContext(),
                                                         NewEltBitSize);
+  if (NewVT != EVT() && TLI.getOperationAction(N->getOpcode(), NewVT) !=
+                            TargetLoweringBase::Legal) {
+    EVT TransformVT = TLI.getLegalTypeToTransformTo(*DAG.getContext(), NewVT);
+    if (TransformVT.getSizeInBits() == ResultVT.getSizeInBits())
+      NewVT = TransformVT;
+  }
 
   while (NewVT != EVT() && !TLI.isTypeLegal(NewVT)) {
-    if (TLI.getOperationAction(N->getOpcode(), NewVT) !=
-        TargetLoweringBase::Legal) {
-      EVT TransformVT = TLI.getLegalTypeToTransformTo(*DAG.getContext(), NewVT);
-      if (TransformVT.getSizeInBits() == ResultVT.getSizeInBits()) {
-        NewVT = TransformVT;
-        break;
-      }
-    }
-
     NewEltBitSize *= 2;
     NewVT = ResultVT.getIntegerVectorWithElementWidth(*DAG.getContext(),
                                                       NewEltBitSize);
