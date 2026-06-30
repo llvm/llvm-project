@@ -56,6 +56,7 @@ class StateMatchContext:
     def update(self, new_match_result: "StateMatchResult"):
         self._last_match_result = new_match_result
 
+
 def is_subpath(subpath: str, superpath: str) -> bool:
     """Returns True if subpath is a trailing subpath of superpath, i.e. if `superpath` ends with `subpath` after
     normalizing both paths."""
@@ -112,6 +113,7 @@ def match_where_to_frame(
         if context.add_hit_if_where_hit_is_new(where, step):
             result = _match_where_to_frame(where, frame, labels, context, default_path)
     return result
+
 
 @dataclass
 class WhereMatchResult:
@@ -170,7 +172,9 @@ def get_active_where_matches(
         matching_frame_idx = None
         for frame_idx, frame in reversed(list(enumerate(step_info.frames))):
             labels = script.get_labels(expected_file or frame.loc.path)
-            if match_where_to_frame(where, frame, step_info, labels, match_context, script.root_scope.file):
+            if match_where_to_frame(
+                where, frame, step_info, labels, match_context, script.root_scope.file
+            ):
                 matching_frame_idx = frame_idx
                 break
 
