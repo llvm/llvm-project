@@ -6,6 +6,7 @@ add_flang_library(FlangOpenMPTransforms
   FunctionFiltering.cpp
   GenericLoopConversion.cpp
   GlobalFiltering.cpp
+  HostOpFiltering.cpp
   MapsForPrivatizedSymbols.cpp
   MapInfoFinalization.cpp
   DeleteUnreachableTargets.cpp
