@@ -85,11 +85,6 @@ static std::optional<bool> checkBoundsAttrTypeConflictsAndMisc(
 
   // A __terminated_by pointer cannot also carry a count or range attribute
   // unless the terminator was auto-inferred via __ptrauto.
-  // TODO(dliew): Remove me. This code was lifted from
-  // `LateBoundsAttrDiagContext::diagnoseCountAttributedTypeShape`
-  // (SemaDeclAttr.cpp:6542) and
-  // `LateBoundsAttrDiagContext::diagnoseDynamicRangePointerTypeShape`
-  // (SemaDeclAttr.cpp:6704).
   if (isa<ValueTerminatedType>(T) && !AutoPtrAttributed) {
     S.Diag(AttrLoc, diag::err_bounds_safety_terminated_by_wrong_pointer_type);
     return false;
@@ -98,9 +93,6 @@ static std::optional<bool> checkBoundsAttrTypeConflictsAndMisc(
   if (Flags.IsEndedBy) {
     // Handle ended_by conflicts with counted_by/sized_by or existing
     // ended_by.
-    // TODO(dliew): Remove me. This code was lifted from
-    // `LateBoundsAttrDiagContext::diagnoseDynamicRangePointerTypeShape`
-    // (SemaDeclAttr.cpp:6710).
     if (isa<CountAttributedType>(T)) {
       S.Diag(AttrLoc,
              diag::err_bounds_safety_conflicting_count_range_attributes);
@@ -138,9 +130,6 @@ static std::optional<bool> checkBoundsAttrTypeConflictsAndMisc(
   } else {
     // Handle counted_by/sized_by conflicts with ended_by or existing
     // counted_by/sized_by.
-    // TODO(dliew): Remove me. This code was lifted from
-    // `LateBoundsAttrDiagContext::diagnoseCountAttributedTypeShape`
-    // (SemaDeclAttr.cpp:6551).
     if (const auto *CAT = dyn_cast<CountAttributedType>(T)) {
       if (!AllowRedecl) {
         S.Diag(AttrLoc, diag::err_bounds_safety_conflicting_pointer_attributes)
@@ -176,11 +165,6 @@ static std::optional<bool> checkBoundsAttrTypeConflictsAndMisc(
 
   // An AtomicType wrapping a pointer: emit the diagnostic but return true so
   // the caller still constructs the AtomicType instead of bailing out.
-  // TODO(dliew): Remove me. This code was lifted from
-  // `LateBoundsAttrDiagContext::diagnoseCountAttributedTypeShape`
-  // (SemaDeclAttr.cpp:6616) and
-  // `LateBoundsAttrDiagContext::diagnoseDynamicRangePointerTypeShape`
-  // (SemaDeclAttr.cpp:6763).
   if (const auto *ATy = dyn_cast<AtomicType>(T)) {
     if (ATy->getValueType()->isPointerType()) {
       if (Flags.IsEndedBy) {
@@ -199,11 +183,6 @@ static std::optional<bool> checkBoundsAttrTypeConflictsAndMisc(
 
   // Pointer with explicit upper-bound (__bidi_indexable / __indexable):
   // conflict with count/end attributes.
-  // TODO(dliew): Remove me. This code was lifted from
-  // `LateBoundsAttrDiagContext::diagnoseCountAttributedTypeShape`
-  // (SemaDeclAttr.cpp:6654) and
-  // `LateBoundsAttrDiagContext::diagnoseDynamicRangePointerTypeShape`
-  // (SemaDeclAttr.cpp:6773).
   if (const auto *PT = dyn_cast<PointerType>(T)) {
     auto FAttr = PT->getPointerAttributes();
     if (FAttr.hasUpperBound() && !AutoPtrAttributed) {
@@ -216,9 +195,6 @@ static std::optional<bool> checkBoundsAttrTypeConflictsAndMisc(
 
   // Array specifics for the counted_by family: a complete-size array
   // with count is invalid; sized_by on an incomplete array is invalid.
-  // TODO(dliew): Remove me. This code was lifted from
-  // `LateBoundsAttrDiagContext::diagnoseCountAttributedTypeShape`
-  // (SemaDeclAttr.cpp:6623).
   if (!Flags.IsEndedBy && Ty->isArrayType()) {
     const ArrayType *AT = S.getASTContext().getAsArrayType(Ty);
     if (AT && !AT->hasAttr(attr::ArrayDecayDiscardsCountInParameters)) {
