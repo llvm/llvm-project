@@ -37,9 +37,9 @@ module attributes { } {
 }
 
 // CHECK:   emitc.class @modelClass {
-// CHECK:     emitc.field @fieldName0 : !emitc.array<1xf32> {emitc.name_hint = "another_feature"}
-// CHECK:     emitc.field @fieldName1 : !emitc.array<1xf32>  {emitc.name_hint = "some_feature"}
-// CHECK:     emitc.field @fieldName2 : !emitc.array<1xf32>  {emitc.name_hint = "output_0"}
+// CHECK:     emitc.field @fieldName0 : !emitc.array<1xf32> {emitc.name_hint = "another_feature", was_arg}
+// CHECK:     emitc.field @fieldName1 : !emitc.array<1xf32> {emitc.name_hint = "some_feature", was_arg}
+// CHECK:     emitc.field @fieldName2 : !emitc.array<1xf32> {emitc.name_hint = "output_0", was_arg}
 // CHECK:     emitc.func @"operator()"() {
 // CHECK:       get_field @fieldName0 : !emitc.array<1xf32>
 // CHECK:       get_field @fieldName1 : !emitc.array<1xf32>
@@ -71,7 +71,7 @@ module attributes { } {
 }
 
 // CHECK:   emitc.class @fooClass {
-// CHECK:     emitc.field @global_arr : !emitc.array<1xi8> = dense<0>
+// CHECK:     emitc.field @global_arr : !emitc.array<1xi8> = dense<0> {was_global}
 // CHECK:     emitc.func @"operator()"() {
 // CHECK:       %0 = get_field @global_arr : !emitc.array<1xi8>
 // CHECK:       return
@@ -97,7 +97,7 @@ module attributes { } {
 // CHECK:   module {
 // CHECK-NEXT:     emitc.global static const @global_arr2 : !emitc.array<1xi8> = dense<0>
 // CHECK-NEXT:     emitc.class @fooClass {
-// CHECK-NEXT:       emitc.field @global_arr : !emitc.array<1xi8> = dense<0>
+// CHECK-NEXT:       emitc.field @global_arr : !emitc.array<1xi8> = dense<0> {was_global}
 // CHECK-NEXT:       emitc.func @"operator()"() {
 // CHECK-NEXT:         %0 = get_field @global_arr : !emitc.array<1xi8>
 // CHECK-NEXT:         return
@@ -129,14 +129,14 @@ module attributes { } {
 // CHECK:   module {
 // CHECK-NEXT:     emitc.global static const @global_arr3 : !emitc.array<1xi8> = dense<0>
 // CHECK-NEXT:     emitc.class @fooClass {
-// CHECK-NEXT:       emitc.field @global_arr1 : !emitc.array<1xi8> = dense<0>
+// CHECK-NEXT:       emitc.field @global_arr1 : !emitc.array<1xi8> = dense<0> {was_global}
 // CHECK-NEXT:       emitc.func @"operator()"() {
 // CHECK-NEXT:         %0 = get_field @global_arr1 : !emitc.array<1xi8>
 // CHECK-NEXT:         return
 // CHECK-NEXT:       }
 // CHECK-NEXT:     }
 // CHECK-NEXT:     emitc.class @barClass {
-// CHECK-NEXT:       emitc.field @global_arr2 : !emitc.array<1xi8> = dense<0>
+// CHECK-NEXT:       emitc.field @global_arr2 : !emitc.array<1xi8> = dense<0> {was_global}
 // CHECK-NEXT:       emitc.func @"operator()"() {
 // CHECK-NEXT:         %0 = get_field @global_arr2 : !emitc.array<1xi8>
 // CHECK-NEXT:         return
@@ -165,14 +165,14 @@ module attributes { } {
 
 // CHECK:   module {
 // CHECK-NEXT:     emitc.class @fooClass {
-// CHECK-NEXT:       emitc.field @global_arr : !emitc.array<1xi8> = dense<0>
+// CHECK-NEXT:       emitc.field @global_arr : !emitc.array<1xi8> = dense<0> {was_global}
 // CHECK-NEXT:       emitc.func @"operator()"() {
 // CHECK-NEXT:         %0 = get_field @global_arr : !emitc.array<1xi8>
 // CHECK-NEXT:         return
 // CHECK-NEXT:       }
 // CHECK-NEXT:     }
 // CHECK-NEXT:     emitc.class @barClass {
-// CHECK-NEXT:       emitc.field @global_arr : !emitc.array<1xi8> = dense<0>
+// CHECK-NEXT:       emitc.field @global_arr : !emitc.array<1xi8> = dense<0> {was_global}
 // CHECK-NEXT:       emitc.func @"operator()"() {
 // CHECK-NEXT:         %0 = get_field @global_arr : !emitc.array<1xi8>
 // CHECK-NEXT:         return
@@ -197,7 +197,7 @@ module attributes { } {
 
 // CHECK:   module {
 // CHECK-NEXT:     emitc.class @fooClass {
-// CHECK-NEXT:       emitc.field @global_arr : !emitc.array<1xi8> = dense<0>
+// CHECK-NEXT:       emitc.field @global_arr : !emitc.array<1xi8> = dense<0> {was_global}
 // CHECK-NEXT:       emitc.func @"operator()"() {
 // CHECK-NEXT:         %0 = get_field @global_arr : !emitc.array<1xi8>
 // CHECK-NEXT:         %1 = get_field @global_arr : !emitc.array<1xi8>
