@@ -373,18 +373,18 @@ TEST_F(FormatTestComments, RemovesTrailingWhitespaceOfComments) {
 TEST_F(FormatTestComments, SpacesInBlockComments) {
   FormatStyle Style = getLLVMStyle();
 
-  Style.SpacesInComments = FormatStyle::SICS_Always;
+  Style.SpacesInBlockComments = FormatStyle::SIBCS_Always;
   verifyFormat("/* comment */", "/* comment*/", Style);
   verifyFormat("/* comment */", "/*comment */", Style);
   verifyFormat("/* comment */", "/*comment*/", Style);
 
-  Style.SpacesInComments = FormatStyle::SICS_Leave;
+  Style.SpacesInBlockComments = FormatStyle::SIBCS_Leave;
   verifyFormat("/*comment*/", Style);
   verifyFormat("/* comment*/", Style);
   verifyFormat("/*comment */", Style);
   verifyFormat("/* comment */", Style);
 
-  Style.SpacesInComments = FormatStyle::SICS_Never;
+  Style.SpacesInBlockComments = FormatStyle::SIBCS_Never;
   verifyFormat("/*comment*/", "/* comment */", Style);
   verifyFormat("/*comment*/", "/* comment*/", Style);
   verifyFormat("/*comment*/", "/*comment */", Style);
@@ -393,12 +393,12 @@ TEST_F(FormatTestComments, SpacesInBlockComments) {
 TEST_F(FormatTestComments, SpacesInBlockCommentsIgnoreParamAndDocComments) {
   FormatStyle Style = getLLVMStyle();
 
-  Style.SpacesInComments = FormatStyle::SICS_Always;
+  Style.SpacesInBlockComments = FormatStyle::SIBCS_Always;
   verifyFormat("foo(/*Arg=*/value);", Style);
   verifyFormat("/**doc*/", Style);
   verifyFormat("/*!doc*/", Style);
 
-  Style.SpacesInComments = FormatStyle::SICS_Never;
+  Style.SpacesInBlockComments = FormatStyle::SIBCS_Never;
   verifyFormat("foo(/*Arg=*/value);", Style);
   verifyFormat("/** doc */", Style);
   verifyFormat("/*! doc */", Style);

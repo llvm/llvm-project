@@ -5592,27 +5592,27 @@ struct FormatStyle {
 
   /// Styles for controlling spacing after ``/*`` and before ``*/`` in block
   /// comments.
-  enum SpacesInCommentsStyle : int8_t {
+  enum SpacesInBlockCommentsStyle : int8_t {
     /// Remove spaces after ``/*`` and before ``*/``.
     /// \code
     ///    /*comment*/
     /// \endcode
-    SICS_Never,
+    SIBCS_Never,
     /// Add spaces after ``/*`` and before ``*/``.
     /// \code
     ///    /* comment */
     /// \endcode
-    SICS_Always,
+    SIBCS_Always,
     /// Leave existing spaces unchanged.
-    SICS_Leave
+    SIBCS_Leave
   };
 
-  /// The SpacesInCommentsStyle to use for single-line ordinary block comments.
-  /// Documentation comments such as ``/** ... */`` and ``/*! ... */`` and
-  /// parameter comments ending with ``=`` before the closing ``*/`` are left
-  /// unchanged.
+  /// The SpacesInBlockCommentsStyle to use for single-line ordinary block
+  /// comments. Documentation comments such as ``/** ... */`` and ``/*! ... */``
+  /// and parameter comments ending with ``=`` before the closing ``*/`` are
+  /// left unchanged.
   /// \version 23
-  SpacesInCommentsStyle SpacesInComments;
+  SpacesInBlockCommentsStyle SpacesInBlockComments;
 
   /// If ``true``, spaces will be inserted around if/for/switch/while
   /// conditions.
@@ -6265,7 +6265,7 @@ struct FormatStyle {
            SpaceInEmptyBraces == R.SpaceInEmptyBraces &&
            SpacesBeforeTrailingComments == R.SpacesBeforeTrailingComments &&
            SpacesInAngles == R.SpacesInAngles &&
-           SpacesInComments == R.SpacesInComments &&
+           SpacesInBlockComments == R.SpacesInBlockComments &&
            SpacesInContainerLiterals == R.SpacesInContainerLiterals &&
            SpacesInLineCommentPrefix.Minimum ==
                R.SpacesInLineCommentPrefix.Minimum &&
