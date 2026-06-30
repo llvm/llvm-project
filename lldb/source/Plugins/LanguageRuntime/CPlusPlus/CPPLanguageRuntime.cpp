@@ -109,12 +109,85 @@ public:
   }
 };
 
+/// A frame recognizer that hides MSVC STL implementation details from the
+/// backtrace. MSVC STL reserves identifiers beginning with an underscore
+/// followed by an uppercase letter (e.g. `_Func_class`) for implementation
+/// details, so frames whose function name starts with `std::_` followed by an
+/// uppercase letter are hidden when called from within `std::`.
+class MSVCSTLFrameRecognizer : public StackFrameRecognizer {
+  RegularExpression m_hidden_regex;
+  RecognizedStackFrameSP m_hidden_frame;
+
+  struct MSVCSTLHiddenFrame : public RecognizedStackFrame {
+    bool ShouldHide() override { return true; }
+  };
+
+  // The MSVC demangler emits demangled names that include the return type
+  // (e.g. `void std::_Func_impl_no_alloc<...>::_Do_call`). Detect whether a
+  // function name belongs to the `std::` namespace, accounting for that
+  // optional return-type prefix.
+  static bool IsInStdNamespace(llvm::StringRef name) {
+    return name.starts_with("std::") || name.contains(" std::");
+  }
+
+public:
+  MSVCSTLFrameRecognizer()
+      // Examples of MSVC STL internals that should be hidden:
+      //   void std::_Func_impl_no_alloc<`lambda...',void>::_Do_call
+      //   void std::_Func_class<void>::operator()
+      //   std::_Invoker_ret<std::_Unforced,1>::_Call<...>
+      // The regex is intentionally not anchored: the MSVC demangler may
+      // prepend a return type before the qualified name.
+      : m_hidden_regex(R"(std::_[A-Z])"),
+        m_hidden_frame(new MSVCSTLHiddenFrame()) {}
+
+  std::string GetName() override { return "MSVC STL frame recognizer"; }
+
+  lldb::RecognizedStackFrameSP
+  RecognizeFrame(lldb::StackFrameSP frame_sp) override {
+    if (!frame_sp)
+      return {};
+    const auto &sc = frame_sp->GetSymbolContext(lldb::eSymbolContextFunction);
+    if (!sc.function)
+      return {};
+
+    if (!m_hidden_regex.Execute(sc.function->GetNameNoArguments()))
+      return {};
+
+    // Only hide this frame if the immediate caller is also within MSVC STL.
+    // This keeps the outermost std-facing frame (the one called by user code)
+    // visible in the backtrace.
+    lldb::ThreadSP thread_sp = frame_sp->GetThread();
+    if (!thread_sp)
+      return {};
+    lldb::StackFrameSP parent_frame_sp =
+        thread_sp->GetStackFrameAtIndex(frame_sp->GetFrameIndex() + 1);
+    if (!parent_frame_sp)
+      return {};
+    const auto &parent_sc =
+        parent_frame_sp->GetSymbolContext(lldb::eSymbolContextFunction);
+    if (!parent_sc.function)
+      return {};
+    if (IsInStdNamespace(
+            parent_sc.function->GetNameNoArguments().GetStringRef()))
+      return m_hidden_frame;
+
+    return {};
+  }
+};
+
 CPPLanguageRuntime::CPPLanguageRuntime(Process *process)
     : LanguageRuntime(process), m_itanium_runtime(process) {
   if (process) {
     process->GetTarget().GetFrameRecognizerManager().AddRecognizer(
         StackFrameRecognizerSP(new LibCXXFrameRecognizer()), {},
         std::make_shared<RegularExpression>("^std::__[^:]*::"),
+        /*mangling_preference=*/Mangled::ePreferDemangledWithoutArguments,
+        /*first_instruction_only=*/false);
+
+    process->GetTarget().GetFrameRecognizerManager().AddRecognizer(
+        StackFrameRecognizerSP(new MSVCSTLFrameRecognizer()), {},
+        std::make_shared<RegularExpression>("std::_[A-Z]"),
         /*mangling_preference=*/Mangled::ePreferDemangledWithoutArguments,
         /*first_instruction_only=*/false);
 
