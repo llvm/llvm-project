@@ -11,8 +11,8 @@ entry:
   br i1 %0, label %bb2, label %bb
 
 bb:
-; CHECK: LBB0_[[LABEL:[0-9]]]:
-; CHECK: bne LBB0_[[LABEL]]
+; CHECK: @ =>This Inner Loop Header: Depth=1
+; CHECK: bne LBB0_[[LABEL:[0-9]+]]
 ; CHECK-NOT: b LBB0_[[LABEL]]
 ; CHECK: bx lr
   %list_addr.05 = phi ptr [ %2, %bb ], [ %list, %entry ]

@@ -571,7 +571,6 @@ define dso_local arm_aapcs_vfpcc void @two_reductions_mul_add_v8i16(ptr nocaptur
 ; CHECK-NEXT:    vaddv.u16 r2, q0
 ; CHECK-NEXT:    b .LBB7_5
 ; CHECK-NEXT:  .LBB7_4:
-; CHECK-NEXT:    movs r2, #0
 ; CHECK-NEXT:    movs r4, #0
 ; CHECK-NEXT:  .LBB7_5: @ %for.cond.cleanup
 ; CHECK-NEXT:    strb r2, [r0]
