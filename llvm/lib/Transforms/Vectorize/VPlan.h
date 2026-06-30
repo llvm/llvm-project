@@ -3657,10 +3657,10 @@ public:
     return getOperand(getNumOperands() - OpIdx);
   }
 
-  /// Insert the recipes of the expression back into the VPlan, directly before
-  /// the current recipe. Leaves the expression recipe empty, which must be
-  /// removed before codegen.
-  void decompose();
+  /// Return and insert the recipes of the expression back into the VPlan,
+  /// directly before the current recipe. Leaves the expression recipe empty,
+  /// which must be removed before codegen.
+  ArrayRef<VPSingleDefRecipe *> decompose();
 
   /// Returns the expression type of this recipe.
   ExpressionTypes getExpressionType() const { return ExpressionType; }

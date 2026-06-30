@@ -3495,7 +3495,7 @@ VPExpressionRecipe::VPExpressionRecipe(
       R->replaceUsesOfWith(LiveIn, Tmp);
 }
 
-void VPExpressionRecipe::decompose() {
+ArrayRef<VPSingleDefRecipe *> VPExpressionRecipe::decompose() {
   for (auto *R : ExpressionRecipes)
     // Since the list could contain duplicates, make sure the recipe hasn't
     // already been inserted.
@@ -3506,7 +3506,9 @@ void VPExpressionRecipe::decompose() {
     LiveInPlaceholders[Idx]->replaceAllUsesWith(Op);
 
   replaceAllUsesWith(ExpressionRecipes.back());
+  ArrayRef<VPSingleDefRecipe *> Expressions(ExpressionRecipes);
   ExpressionRecipes.clear();
+  return Expressions;
 }
 
 InstructionCost VPExpressionRecipe::computeCost(ElementCount VF,

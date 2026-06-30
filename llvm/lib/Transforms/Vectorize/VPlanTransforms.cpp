@@ -3161,25 +3161,18 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
   if (auto *Expr = dyn_cast<VPExpressionRecipe>(&CurRecipe))
     if (match(Expr->getOperand(Expr->getNumOperands() - 1),
               m_RemoveMask(HeaderMask, Mask))) {
-      auto PrevR = std::prev(Expr->getIterator());
-      Expr->decompose();
+      // Decompose first and construct with VPReductionEVLRecipe later.
+      SmallVector<VPSingleDefRecipe *> ExpressionRecipes(Expr->decompose());
       VPReductionRecipe *Red =
-          cast<VPReductionRecipe>(&*std::prev(Expr->getIterator()));
-
-      // Collect the recipes contained by the ExpressionRecipe except the last
-      // VPReductionRecipe.
-      SmallVector<VPSingleDefRecipe *, 4> Expressions;
-      for (auto &R :
-           make_range(std::next(PrevR), std::prev(Expr->getIterator())))
-        Expressions.push_back(cast<VPSingleDefRecipe>(&R));
+          cast<VPReductionRecipe>(ExpressionRecipes.pop_back_val());
 
       // Convert to VPReductionEVLRecipe.
       auto *NewRed = new VPReductionEVLRecipe(
           *Red, EVL, Mask ? Mask : Plan->getTrue(), Red->getDebugLoc());
       NewRed->insertBefore(Expr);
-      Expressions.push_back(NewRed);
+      ExpressionRecipes.push_back(NewRed);
       auto *NewExpr =
-          new VPExpressionRecipe(Expr->getExpressionType(), Expressions);
+          new VPExpressionRecipe(Expr->getExpressionType(), ExpressionRecipes);
 
       // Replace uses and remove the old non-EVL reduction.
       Red->replaceAllUsesWith(NewExpr);
@@ -4221,7 +4214,7 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
       }
 
       if (auto *Expr = dyn_cast<VPExpressionRecipe>(&R)) {
-        Expr->decompose();
+        (void)Expr->decompose();
         Expr->eraseFromParent();
         continue;
       }
