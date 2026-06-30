@@ -16,7 +16,7 @@ define amdgpu_kernel void @signal_var_bar0() {
 ; SDAG-LABEL: signal_var_bar0:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; SDAG-NEXT:    s_mov_b32 m0, 0x400001
+; SDAG-NEXT:    s_mov_b32 m0, 0x100001
 ; SDAG-NEXT:    s_barrier_init m0
 ; SDAG-NEXT:    s_barrier_signal 1
 ; SDAG-NEXT:    s_barrier_wait 0
@@ -25,7 +25,7 @@ define amdgpu_kernel void @signal_var_bar0() {
 ; GISEL-LABEL: signal_var_bar0:
 ; GISEL:       ; %bb.0:
 ; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GISEL-NEXT:    s_mov_b32 m0, 1
+; GISEL-NEXT:    s_mov_b32 m0, 0x100001
 ; GISEL-NEXT:    s_barrier_init m0
 ; GISEL-NEXT:    s_barrier_signal 1
 ; GISEL-NEXT:    s_barrier_wait 0
@@ -37,7 +37,7 @@ define amdgpu_kernel void @signal_var_bar0() {
 ; OBJ-SDAG-NEXT:    s_lshr_b32 s0, __amdgpu_named_barrier.bars.5a19a560517f8a3a4347b4502da34a70@abs32@lo, 4
 ; OBJ-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; OBJ-SDAG-NEXT:    s_and_b32 s0, s0, 63
-; OBJ-SDAG-NEXT:    s_or_b32 m0, 0x400000, s0
+; OBJ-SDAG-NEXT:    s_or_b32 m0, 0x100000, s0
 ; OBJ-SDAG-NEXT:    s_barrier_init m0
 ; OBJ-SDAG-NEXT:    s_mov_b32 m0, s0
 ; OBJ-SDAG-NEXT:    s_barrier_signal m0
@@ -50,13 +50,13 @@ define amdgpu_kernel void @signal_var_bar0() {
 ; OBJ-GISEL-NEXT:    s_lshr_b32 s0, __amdgpu_named_barrier.bars.5a19a560517f8a3a4347b4502da34a70@abs32@lo, 4
 ; OBJ-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; OBJ-GISEL-NEXT:    s_and_b32 s0, s0, 63
-; OBJ-GISEL-NEXT:    s_mov_b32 m0, s0
+; OBJ-GISEL-NEXT:    s_or_b32 m0, s0, 0x100000
 ; OBJ-GISEL-NEXT:    s_barrier_init m0
 ; OBJ-GISEL-NEXT:    s_mov_b32 m0, s0
 ; OBJ-GISEL-NEXT:    s_barrier_signal m0
 ; OBJ-GISEL-NEXT:    s_barrier_wait 0
 ; OBJ-GISEL-NEXT:    s_endpgm
-  call void @llvm.amdgcn.s.barrier.init(ptr addrspace(3) @bars, i32 64)
+  call void @llvm.amdgcn.s.barrier.init(ptr addrspace(3) @bars, i32 16)
   call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) @bars, i32 0)
   call void @llvm.amdgcn.s.barrier.wait(i16 0)
   ret void
@@ -66,7 +66,7 @@ define amdgpu_kernel void @signal_var_bar1() {
 ; SDAG-LABEL: signal_var_bar1:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; SDAG-NEXT:    s_mov_b32 m0, 0x400002
+; SDAG-NEXT:    s_mov_b32 m0, 0x100002
 ; SDAG-NEXT:    s_barrier_init m0
 ; SDAG-NEXT:    s_mov_b32 m0, 2
 ; SDAG-NEXT:    s_barrier_signal m0
@@ -76,7 +76,7 @@ define amdgpu_kernel void @signal_var_bar1() {
 ; GISEL-LABEL: signal_var_bar1:
 ; GISEL:       ; %bb.0:
 ; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GISEL-NEXT:    s_mov_b32 m0, 2
+; GISEL-NEXT:    s_mov_b32 m0, 0x100002
 ; GISEL-NEXT:    s_barrier_init m0
 ; GISEL-NEXT:    s_barrier_signal 2
 ; GISEL-NEXT:    s_barrier_wait 1
@@ -90,7 +90,7 @@ define amdgpu_kernel void @signal_var_bar1() {
 ; OBJ-SDAG-NEXT:    s_lshr_b32 s0, s0, 4
 ; OBJ-SDAG-NEXT:    s_and_b32 s0, s0, 63
 ; OBJ-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; OBJ-SDAG-NEXT:    s_or_b32 m0, 0x400000, s0
+; OBJ-SDAG-NEXT:    s_or_b32 m0, 0x100000, s0
 ; OBJ-SDAG-NEXT:    s_barrier_init m0
 ; OBJ-SDAG-NEXT:    s_mov_b32 m0, s0
 ; OBJ-SDAG-NEXT:    s_barrier_signal m0
@@ -105,14 +105,14 @@ define amdgpu_kernel void @signal_var_bar1() {
 ; OBJ-GISEL-NEXT:    s_lshr_b32 s0, s0, 4
 ; OBJ-GISEL-NEXT:    s_and_b32 s0, s0, 63
 ; OBJ-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; OBJ-GISEL-NEXT:    s_mov_b32 m0, s0
+; OBJ-GISEL-NEXT:    s_or_b32 m0, s0, 0x100000
 ; OBJ-GISEL-NEXT:    s_barrier_init m0
 ; OBJ-GISEL-NEXT:    s_mov_b32 m0, s0
 ; OBJ-GISEL-NEXT:    s_barrier_signal m0
 ; OBJ-GISEL-NEXT:    s_barrier_wait 1
 ; OBJ-GISEL-NEXT:    s_endpgm
   %p1 = getelementptr inbounds [2 x target("amdgcn.named.barrier", 0)], ptr addrspace(3) @bars, i32 0, i32 1
-  call void @llvm.amdgcn.s.barrier.init(ptr addrspace(3) %p1, i32 64)
+  call void @llvm.amdgcn.s.barrier.init(ptr addrspace(3) %p1, i32 16)
   call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) %p1, i32 0)
   call void @llvm.amdgcn.s.barrier.wait(i16 1)
   ret void
@@ -126,7 +126,7 @@ define amdgpu_kernel void @signal_var_misaligned() {
 ; SDAG-LABEL: signal_var_misaligned:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; SDAG-NEXT:    s_mov_b32 m0, 0x400001
+; SDAG-NEXT:    s_mov_b32 m0, 0x100001
 ; SDAG-NEXT:    s_barrier_init m0
 ; SDAG-NEXT:    s_mov_b32 m0, 1
 ; SDAG-NEXT:    s_barrier_signal m0
@@ -136,7 +136,7 @@ define amdgpu_kernel void @signal_var_misaligned() {
 ; GISEL-LABEL: signal_var_misaligned:
 ; GISEL:       ; %bb.0:
 ; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GISEL-NEXT:    s_mov_b32 m0, 1
+; GISEL-NEXT:    s_mov_b32 m0, 0x100001
 ; GISEL-NEXT:    s_barrier_init m0
 ; GISEL-NEXT:    s_barrier_signal 1
 ; GISEL-NEXT:    s_barrier_wait 1
@@ -148,7 +148,7 @@ define amdgpu_kernel void @signal_var_misaligned() {
 ; OBJ-SDAG-NEXT:    s_lshr_b32 s0, __amdgpu_named_barrier.bars.5a19a560517f8a3a4347b4502da34a70@abs32@lo, 4
 ; OBJ-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; OBJ-SDAG-NEXT:    s_and_b32 s0, s0, 63
-; OBJ-SDAG-NEXT:    s_or_b32 m0, 0x400000, s0
+; OBJ-SDAG-NEXT:    s_or_b32 m0, 0x100000, s0
 ; OBJ-SDAG-NEXT:    s_barrier_init m0
 ; OBJ-SDAG-NEXT:    s_mov_b32 m0, s0
 ; OBJ-SDAG-NEXT:    s_barrier_signal m0
@@ -163,14 +163,14 @@ define amdgpu_kernel void @signal_var_misaligned() {
 ; OBJ-GISEL-NEXT:    s_lshr_b32 s0, s0, 4
 ; OBJ-GISEL-NEXT:    s_and_b32 s0, s0, 63
 ; OBJ-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; OBJ-GISEL-NEXT:    s_mov_b32 m0, s0
+; OBJ-GISEL-NEXT:    s_or_b32 m0, s0, 0x100000
 ; OBJ-GISEL-NEXT:    s_barrier_init m0
 ; OBJ-GISEL-NEXT:    s_mov_b32 m0, s0
 ; OBJ-GISEL-NEXT:    s_barrier_signal m0
 ; OBJ-GISEL-NEXT:    s_barrier_wait 1
 ; OBJ-GISEL-NEXT:    s_endpgm
   %p1 = getelementptr i8, ptr addrspace(3) @bars, i32 1
-  call void @llvm.amdgcn.s.barrier.init(ptr addrspace(3) %p1, i32 64)
+  call void @llvm.amdgcn.s.barrier.init(ptr addrspace(3) %p1, i32 16)
   call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) %p1, i32 0)
   call void @llvm.amdgcn.s.barrier.wait(i16 1)
   ret void
@@ -191,7 +191,7 @@ define amdgpu_kernel void @signal_var_dynamic(i32 %idx) {
 ; SDAG-NEXT:    s_lshr_b32 s0, s0, 4
 ; SDAG-NEXT:    s_and_b32 s0, s0, 63
 ; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; SDAG-NEXT:    s_or_b32 m0, 0x400000, s0
+; SDAG-NEXT:    s_or_b32 m0, 0x100000, s0
 ; SDAG-NEXT:    s_barrier_init m0
 ; SDAG-NEXT:    s_mov_b32 m0, s0
 ; SDAG-NEXT:    s_barrier_signal m0
@@ -209,7 +209,7 @@ define amdgpu_kernel void @signal_var_dynamic(i32 %idx) {
 ; GISEL-NEXT:    s_lshr_b32 s0, s0, 4
 ; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GISEL-NEXT:    s_and_b32 s0, s0, 63
-; GISEL-NEXT:    s_mov_b32 m0, s0
+; GISEL-NEXT:    s_or_b32 m0, s0, 0x100000
 ; GISEL-NEXT:    s_barrier_init m0
 ; GISEL-NEXT:    s_mov_b32 m0, s0
 ; GISEL-NEXT:    s_barrier_signal m0
@@ -226,7 +226,7 @@ define amdgpu_kernel void @signal_var_dynamic(i32 %idx) {
 ; OBJ-SDAG-NEXT:    s_lshr_b32 s0, s0, 4
 ; OBJ-SDAG-NEXT:    s_and_b32 s0, s0, 63
 ; OBJ-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; OBJ-SDAG-NEXT:    s_or_b32 m0, 0x400000, s0
+; OBJ-SDAG-NEXT:    s_or_b32 m0, 0x100000, s0
 ; OBJ-SDAG-NEXT:    s_barrier_init m0
 ; OBJ-SDAG-NEXT:    s_mov_b32 m0, s0
 ; OBJ-SDAG-NEXT:    s_barrier_signal m0
@@ -244,14 +244,14 @@ define amdgpu_kernel void @signal_var_dynamic(i32 %idx) {
 ; OBJ-GISEL-NEXT:    s_lshr_b32 s0, s0, 4
 ; OBJ-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; OBJ-GISEL-NEXT:    s_and_b32 s0, s0, 63
-; OBJ-GISEL-NEXT:    s_mov_b32 m0, s0
+; OBJ-GISEL-NEXT:    s_or_b32 m0, s0, 0x100000
 ; OBJ-GISEL-NEXT:    s_barrier_init m0
 ; OBJ-GISEL-NEXT:    s_mov_b32 m0, s0
 ; OBJ-GISEL-NEXT:    s_barrier_signal m0
 ; OBJ-GISEL-NEXT:    s_barrier_wait 1
 ; OBJ-GISEL-NEXT:    s_endpgm
   %p1 = getelementptr [2 x target("amdgcn.named.barrier", 0)], ptr addrspace(3) @bars, i32 0, i32 %idx
-  call void @llvm.amdgcn.s.barrier.init(ptr addrspace(3) %p1, i32 64)
+  call void @llvm.amdgcn.s.barrier.init(ptr addrspace(3) %p1, i32 16)
   call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) %p1, i32 0)
   call void @llvm.amdgcn.s.barrier.wait(i16 1)
   ret void
