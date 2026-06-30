@@ -444,7 +444,7 @@ struct MachineOutliner : public ModulePass {
   /// which will be dead-stripped not going to the final binary.
   /// A post-process using llvm-cgdata, lld, or ThinLTO can merge them into
   /// a global oulined hash tree for the subsequent codegen.
-  std::unique_ptr<OutlinedHashTree> LocalHashTree;
+  std::unique_ptr<MutableOutlinedHashTree> LocalHashTree;
 
   /// The mode of the outliner.
   /// When is's CGDataMode::None, candidates are populated with the suffix tree
@@ -663,7 +663,8 @@ static SmallVector<MatchedEntry> getMatchedEntries(InstructionMapper &Mapper) {
 
   // Get the global outlined hash tree built from the previous run.
   assert(cgdata::hasOutlinedHashTree());
-  const auto *RootNode = cgdata::getOutlinedHashTree()->getRoot();
+  auto *Tree = cgdata::getOutlinedHashTree();
+  auto RootCursor = Tree->getRootCursor();
 
   auto getValidInstr = [&](unsigned Index) -> const MachineInstr * {
     if (UnsignedVec[Index] >= Mapper.LegalInstrNumber)
@@ -672,19 +673,20 @@ static SmallVector<MatchedEntry> getMatchedEntries(InstructionMapper &Mapper) {
   };
 
   auto getStableHashAndFollow =
-      [](const MachineInstr &MI, const HashNode *CurrNode) -> const HashNode * {
+      [Tree](const MachineInstr &MI,
+             const OutlinedHashTree::HashNodeCursor &CurrNode)
+      -> std::optional<OutlinedHashTree::HashNodeCursor> {
     stable_hash StableHash = stableHashValue(MI);
     if (!StableHash)
-      return nullptr;
-    auto It = CurrNode->Successors.find(StableHash);
-    return (It == CurrNode->Successors.end()) ? nullptr : It->second.get();
+      return std::nullopt;
+    return CurrNode.getSuccessor(*Tree, StableHash);
   };
 
   for (unsigned I = 0; I < Size; ++I) {
     const MachineInstr *MI = getValidInstr(I);
     if (!MI || MI->isDebugInstr())
       continue;
-    const HashNode *CurrNode = getStableHashAndFollow(*MI, RootNode);
+    auto CurrNode = getStableHashAndFollow(*MI, RootCursor);
     if (!CurrNode)
       continue;
 
@@ -695,12 +697,12 @@ static SmallVector<MatchedEntry> getMatchedEntries(InstructionMapper &Mapper) {
       // Skip debug instructions as we did for the outlined function.
       if (MJ->isDebugInstr())
         continue;
-      CurrNode = getStableHashAndFollow(*MJ, CurrNode);
+      CurrNode = getStableHashAndFollow(*MJ, *CurrNode);
       if (!CurrNode)
         break;
       // Even with a match ending with a terminal, we continue finding
       // matches to populate all candidates.
-      if (auto Count = CurrNode->Terminals)
+      if (auto Count = CurrNode->getTerminals(*Tree))
         MatchedEntries.emplace_back(I, J, *Count);
     }
   }
@@ -1406,7 +1408,7 @@ void MachineOutliner::initializeOutlinerMode(const Module &M) {
   if (cgdata::emitCGData()) {
     OutlinerMode = CGDataMode::Write;
     // Create a local outlined hash tree to be published.
-    LocalHashTree = std::make_unique<OutlinedHashTree>();
+    LocalHashTree = std::make_unique<MutableOutlinedHashTree>();
     // We don't need to read the outlined hash tree from the previous codegen
   } else if (cgdata::hasOutlinedHashTree())
     OutlinerMode = CGDataMode::Read;

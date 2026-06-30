@@ -288,6 +288,9 @@ enum CGDataVersion {
   // Version 4 adjusts the structure of stable function merging map for
   // efficient lazy loading support.
   Version4 = 4,
+  // Version 5 serializes the outlined hash tree as a region of per-node blocks
+  // linked by byte offset, so it can be read in place without materializing it.
+  Version5 = 5,
   CurrentVersion = CG_DATA_INDEX_VERSION
 };
 const uint64_t Version = CGDataVersion::CurrentVersion;
