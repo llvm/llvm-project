@@ -95,6 +95,15 @@ LLVM_ABI bool isTriviallyScalarizable(ID id);
 /// Returns true if the intrinsic has pretty printed immediate arguments.
 LLVM_ABI bool hasPrettyPrintedArgs(ID id);
 
+/// Returns the first default argument index and an ArrayRef of all
+/// default values for the trailing parameters of intrinsic IID.
+/// Returns {0, empty} if the intrinsic has no default arguments.
+///
+/// The defaults are stored contiguously starting at FirstDefault and
+/// extending to the last parameter (mirrors C++ default-argument
+/// rules).
+LLVM_ABI std::pair<unsigned, ArrayRef<uint64_t>> getAllDefaultArgValues(ID IID);
+
 /// isTargetIntrinsic - Returns true if IID is an intrinsic specific to a
 /// certain target. If it is a generic intrinsic false is returned.
 LLVM_ABI bool isTargetIntrinsic(ID IID);
