@@ -400,6 +400,7 @@ add_proxy_header_library(
     regex_macros.h
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-macros.regex_macros
+    libc.include.regex
 )
 
 add_subdirectory(types)
