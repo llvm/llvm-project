@@ -27,7 +27,7 @@ static_assert(!std::same_as<std::ranges::sentinel_t<View>, std::ranges::sentinel
 
 void test() {
   int range[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
-  auto v      = View{} | std::views::adjacent_transform<2>(std::plus<>{});
+  auto v      = View{} | std::views::adjacent_transform<2>(std::multiplies());
 
   // [range.adjacent.transform.view]
 
