@@ -159,4 +159,40 @@ define { double, [2 x double] } @test_mismatched_insert() #0 {
   ret { double, [2 x double] } %res.012
 }
 
+define i64 @swap_incoming(ptr byval([32 x i8]) align 8 %p, ptr byval([32 x i8]) align 8 %q) {
+; SDAG-LABEL: swap_incoming:
+; SDAG:       // %bb.0:
+; SDAG-NEXT:    sub sp, sp, #64
+; SDAG-NEXT:    .cfi_def_cfa_offset 64
+; SDAG-NEXT:    ldp q1, q0, [sp, #96]
+; SDAG-NEXT:    stp q1, q0, [sp, #32]
+; SDAG-NEXT:    ldp q1, q0, [sp, #64]
+; SDAG-NEXT:    stp q1, q0, [sp]
+; SDAG-NEXT:    ldp q1, q0, [sp, #32]
+; SDAG-NEXT:    stp q1, q0, [sp, #64]
+; SDAG-NEXT:    ldp q1, q0, [sp]
+; SDAG-NEXT:    stp q1, q0, [sp, #96]
+; SDAG-NEXT:    add sp, sp, #64
+; SDAG-NEXT:    b swap_incoming_callee
+;
+; GISEL-LABEL: swap_incoming:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    sub sp, sp, #64
+; GISEL-NEXT:    .cfi_def_cfa_offset 64
+; GISEL-NEXT:    ldp q1, q0, [sp, #96]
+; GISEL-NEXT:    stp q1, q0, [sp, #32]
+; GISEL-NEXT:    ldp q1, q0, [sp, #32]
+; GISEL-NEXT:    stp q1, q0, [sp, #64]
+; GISEL-NEXT:    ldp q1, q0, [sp, #64]
+; GISEL-NEXT:    stp q1, q0, [sp]
+; GISEL-NEXT:    ldp q1, q0, [sp]
+; GISEL-NEXT:    stp q1, q0, [sp, #96]
+; GISEL-NEXT:    add sp, sp, #64
+; GISEL-NEXT:    b swap_incoming_callee
+  %r = musttail call i64 @swap_incoming_callee(ptr byval([32 x i8]) align 8 %q, ptr byval([32 x i8]) align 8 %p)
+  ret i64 %r
+}
+
+declare i64 @swap_incoming_callee(ptr byval([32 x i8]) align 8, ptr byval([32 x i8]) align 8)
+
 attributes #0 = { uwtable }
