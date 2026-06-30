@@ -1146,6 +1146,13 @@ public:
                             bool IsReference, const Expr *Src,
                             const Decl *D = nullptr);
 
+  /// std::init / pointer_marker + union_marker (paper §4.1, §5.6): diagnose
+  /// [[uninit]] placed on a pointer, a union variable, or a union member.
+  /// \p D must already carry the UninitAttr (the marker location is taken from
+  /// it). Decl-aware via shouldEmitProfileViolation, so it defers on a
+  /// templated pattern and is re-checked on the instantiated entity.
+  void diagnoseInitUninitMarkerPlacement(const Decl *D);
+
   class ProfileSuppressScope {
     Sema &S;
     unsigned Count = 0;

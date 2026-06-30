@@ -14976,6 +14976,33 @@ void Sema::checkInitProfileUninitWithInitializer(SourceLocation Loc,
   Diag(Loc, diag::err_init_uninit_with_initializer) << Profile << Name;
 }
 
+void Sema::diagnoseInitUninitMarkerPlacement(const Decl *D) {
+  const auto *UA = D->getAttr<UninitAttr>();
+  if (!UA)
+    return;
+  SourceLocation Loc = UA->getLocation();
+
+  // std::init / union_marker (paper §5.6): the marker is banned on a union
+  // object or a union member, because delayed initialization by assigning a
+  // member would be an erroneous assignment when compiled without the profile.
+  // std::init / pointer_marker (paper §4.1): "a reference cannot be
+  // uninitialized. The initialization profile requires the same for pointers."
+  // A pointer must instead be initialized (e.g. to nullptr). Both are profile
+  // policy (not a meaningless subject), so they are gated on enforcement; the
+  // marker is left in place so uninit_decl / ctor_uninit_member treat the
+  // entity as acknowledged rather than re-diagnosing it.
+  bool UnionVar = isa<VarDecl>(D) && cast<VarDecl>(D)->getType()->isUnionType();
+  bool UnionMember =
+      isa<FieldDecl>(D) && cast<FieldDecl>(D)->getParent()->isUnion();
+  if ((UnionVar || UnionMember) &&
+      shouldEmitProfileViolation("std::init", "union_marker", Loc))
+    Diag(Loc, diag::err_init_union_marker)
+        << "std::init" << (UnionMember ? 1 : 0);
+  else if (cast<ValueDecl>(D)->getType()->isPointerType() &&
+           shouldEmitProfileViolation("std::init", "pointer_marker", Loc))
+    Diag(Loc, diag::err_init_uninit_pointer_marker) << "std::init";
+}
+
 // std::init / ref_to_uninit (paper §5). Two mutually-recursive local
 // recognizers over the syntactic form of a source expression -- no flow
 // analysis and no type-system tracking. Uninitialized storage is only ever

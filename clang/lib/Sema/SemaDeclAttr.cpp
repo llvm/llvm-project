@@ -6964,35 +6964,12 @@ static void handleUninitAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     return;
   }
 
-  // std::init / union_marker (paper §6.5): the initialization profile bans the
-  // marker on a union object or a union member, because delayed initialization
-  // by assigning a member would be an erroneous assignment when compiled
-  // without the profile. Unlike the cases above this is profile policy rather
-  // than a meaningless subject, so it is gated on enforcement (and a union may
-  // still legitimately carry the marker when the profile is not enforced).
-  bool UnionVar = isa<VarDecl>(D) && cast<VarDecl>(D)->getType()->isUnionType();
-  bool UnionMember =
-      isa<FieldDecl>(D) && cast<FieldDecl>(D)->getParent()->isUnion();
-  if ((UnionVar || UnionMember) &&
-      S.shouldEmitProfileViolation("std::init", "union_marker", AL.getLoc()))
-    // Diagnose the banned placement but retain the marker (fall through to
-    // addAttr) so uninit_decl / ctor_uninit_member treat the entity as
-    // acknowledged and do not re-diagnose it with a second, contradictory
-    // error.
-    S.Diag(AL.getLoc(), diag::err_init_union_marker)
-        << "std::init" << (UnionMember ? 1 : 0);
-  else if (cast<ValueDecl>(D)->getType()->isPointerType() &&
-           S.shouldEmitProfileViolation("std::init", "pointer_marker",
-                                        AL.getLoc()))
-    // std::init / pointer_marker (paper §4.1): "a reference cannot be
-    // uninitialized. The initialization profile requires the same for
-    // pointers." A pointer must be initialized (e.g. to nullptr), so the marker
-    // is rejected -- but, like the union case, retained to avoid a redundant
-    // uninit_decl. Gated on enforcement: a pointer may carry the marker without
-    // the profile.
-    S.Diag(AL.getLoc(), diag::err_init_uninit_pointer_marker) << "std::init";
-
   D->addAttr(::new (S.Context) UninitAttr(S.Context, AL));
+
+  // std::init / union_marker + pointer_marker (paper §4.1, §5.6). Shared with
+  // the template-instantiation re-check sites (VisitFieldDecl / VisitVarDecl),
+  // since this handler only runs on the pattern.
+  S.diagnoseInitUninitMarkerPlacement(D);
 }
 
 static void handleRefToUninitAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
