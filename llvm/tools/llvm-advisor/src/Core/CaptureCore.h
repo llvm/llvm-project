@@ -30,6 +30,10 @@ public:
                                           StringRef BuildRoot,
                                           ArrayRef<std::string> Capabilities);
 
+  Expected<SnapshotRecord> importRemarks(ArrayRef<std::string> RemarkPaths,
+                                         StringRef SourceRoot,
+                                         ArrayRef<std::string> Capabilities);
+
 private:
   Expected<SnapshotRecord> initializeSnapshot(StringRef SourceRoot,
                                                StringRef BuildRoot);

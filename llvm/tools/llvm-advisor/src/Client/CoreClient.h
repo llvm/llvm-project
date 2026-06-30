@@ -38,6 +38,9 @@ public:
   Expected<SnapshotRecord> createSnapshot(StringRef SourceRoot,
                                           StringRef BuildRoot,
                                           ArrayRef<std::string> Capabilities);
+  Expected<SnapshotRecord> importRemarks(ArrayRef<std::string> RemarkPaths,
+                                         StringRef SourceRoot,
+                                         ArrayRef<std::string> Capabilities);
   SmallVector<SnapshotRecord, 16> listSnapshots() const;
   SmallVector<UnitRecord, 64> listUnits(StringRef SnapshotID) const;
   SmallVector<CapabilitySpec, 32> listCapabilities() const;
@@ -67,6 +70,7 @@ public:
   json::Value inspectStorage() const;
   Error compactStorage();
   StorageManager &storage() { return *Storage; }
+  CapabilityRegistry &registry() { return Registry; }
 
 private:
   explicit CoreClient(std::unique_ptr<StorageManager> Storage);

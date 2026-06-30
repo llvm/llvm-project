@@ -14,6 +14,7 @@
 #include "Analysis/IR/RemarksRelationalSchema.h"
 #include "Client/HTTP/HTTPServer.h"
 #include "Client/HTTP/Handlers/StaticHandler.h"
+#include "Utils/Hashing.h"
 #include "Utils/JSON.h"
 #include "Utils/Normalization.h"
 
@@ -1403,6 +1404,52 @@ static HTTPResult handleGetCompareFunctionDetail(CoreClient &Client,
   return makeJSONSuccess(200, std::move(Result));
 }
 
+static HTTPResult handlePostImport(CoreClient &Client, StringRef Body,
+                                   const StringMap<std::string> &Params) {
+  std::lock_guard<std::mutex> Lock(HeavyQueryMutex);
+
+  if (Body.empty())
+    return makeJSONErrorStr(400, "request body is empty");
+
+  auto FilenameIt = Params.find("filename");
+  std::string Filename =
+      FilenameIt != Params.end() ? FilenameIt->second : "remarks.opt.yaml";
+
+  auto SourceRootIt = Params.find("source_root");
+  std::string SourceRoot =
+      SourceRootIt != Params.end() ? SourceRootIt->second : "";
+
+  SmallString<256> ArtDir(Client.storage().root());
+  sys::path::append(ArtDir, "artifacts");
+  std::string ContentHash = hashString(Body);
+  sys::path::append(ArtDir, ContentHash);
+  sys::fs::create_directories(ArtDir);
+
+  SmallString<256> FilePath(ArtDir);
+  sys::path::append(FilePath, Filename);
+  {
+    std::error_code EC;
+    raw_fd_ostream Out(FilePath, EC);
+    if (EC)
+      return makeJSONErrorStr(500, "failed to write uploaded file");
+    Out << Body;
+  }
+
+  SmallVector<std::string, 1> Paths = {std::string(FilePath)};
+  SmallVector<std::string, 2> Caps = {"llvm.remarks.relational",
+                                      "llvm.remarks.summary"};
+  Expected<SnapshotRecord> Snap =
+      Client.importRemarks(Paths, SourceRoot, Caps);
+  if (!Snap)
+    return makeJSONError(500, Snap.takeError());
+
+  json::Object Result;
+  Result["snapshot_id"] = Snap->ID;
+  Result["units"] = 1;
+  Result["filename"] = Filename;
+  return makeJSONSuccess(201, std::move(Result));
+}
+
 static HTTPResult handleInspect(CoreClient &Client, StringRef Mode,
                                 StringRef Body) {
   Expected<json::Value> Parsed = json::parse(Body);
@@ -1722,6 +1769,8 @@ Error llvm::advisor::HTTPServer::run() {
       } else if (Method == "POST") {
         if (IsAPI && Segs.size() == 4 && Segs[2] == "inspect")
           Res = handleInspect(Client, Segs[3], Req.Body);
+        else if (IsAPI && Segs.size() == 3 && Segs[2] == "import")
+          Res = handlePostImport(Client, Req.Body, QueryParams);
         else
           Res = makeJSONErrorStr(405, "unsupported POST route");
       } else if (Method == "OPTIONS") {

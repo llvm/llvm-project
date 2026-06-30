@@ -269,3 +269,67 @@ CaptureCore::createSnapshot(StringRef SourceRoot, StringRef BuildRoot,
 
   return *Snapshot;
 }
+
+Expected<SnapshotRecord>
+CaptureCore::importRemarks(ArrayRef<std::string> RemarkPaths,
+                           StringRef SourceRoot,
+                           ArrayRef<std::string> Capabilities) {
+  uint64_t Now = std::chrono::duration_cast<std::chrono::seconds>(
+                     std::chrono::system_clock::now().time_since_epoch())
+                     .count();
+
+  SnapshotRecord Snapshot;
+  Snapshot.SourceRoot = SourceRoot.str();
+  Snapshot.CreatedUnix = Now;
+  Snapshot.ID = computeSnapshotID(SourceRoot, "imported", Now);
+  if (Error Err = Storage.metadata().putSnapshot(Snapshot))
+    return std::move(Err);
+
+  SmallVector<std::string, 8> DefaultCaps = {"llvm.remarks.relational",
+                                             "llvm.remarks.summary"};
+  ArrayRef<std::string> CapsToRun =
+      Capabilities.empty() ? ArrayRef<std::string>(DefaultCaps) : Capabilities;
+
+  CapabilityPlanner Planner(Registry);
+  Expected<SmallVector<CapabilityNode, 16>> Plan = Planner.plan(CapsToRun);
+  if (!Plan)
+    return Plan.takeError();
+  CapabilityScheduler Scheduler;
+  SmallVector<CapabilityNode, 16> Schedule = Scheduler.schedule(*Plan);
+  CapabilityExecutor Executor(Registry, Storage);
+
+  for (const std::string &Path : RemarkPaths) {
+    if (!sys::fs::exists(Path))
+      continue;
+
+    Expected<std::string> ContentHash = hashFile(Path);
+    if (!ContentHash) {
+      consumeError(ContentHash.takeError());
+      continue;
+    }
+
+    StringRef FileName = sys::path::filename(Path);
+    std::string Stem = sys::path::stem(FileName).str();
+
+    UnitRecord Unit;
+    Unit.SnapshotID = Snapshot.ID;
+    Unit.RemarksPath = Path;
+    Unit.SourcePath = Stem;
+    Unit.Language = "unknown";
+    Unit.SourceContentHash = *ContentHash;
+    Unit.CommandFingerprint = hashString("standalone-import");
+    Unit.ID = hashString(Path + "\0" + *ContentHash);
+
+    if (Error Err = Storage.metadata().putUnit(Unit))
+      return std::move(Err);
+
+    CapabilityContext Context = makeContext(Unit);
+    Expected<json::Array> Results = Executor.execute(Schedule, Context);
+    if (!Results) {
+      consumeError(Results.takeError());
+      continue;
+    }
+  }
+
+  return Snapshot;
+}
