@@ -64,6 +64,8 @@ end subroutine
 
 ! CHECK-LABEL:   func.func @_QPnested_stride
 ! CHECK:           %[[SJ_DECL:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFnested_strideEj"}
+! DEFAULT:           %[[SRES:.*]] = fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} iter_args(%{{.*}} = %{{.*}}) -> (i32) {
+! DEFAULT:           fir.store %[[SRES]] to %[[SJ_DECL]]#0 : !fir.ref<i32>
 ! CLEAN:             fir.do_loop %{{.*}} = %[[SLB:[^ ]+]] to %[[SUB:[^ ]+]] step %[[SST:[^ ]+]] {
 ! CLEAN-NOT:           iter_args
 ! CLEAN:             }
@@ -79,6 +81,39 @@ end subroutine
 ! CLEAN:             %[[SMUL:.*]] = arith.muli %[[SSEL]], %[[SSTI]] overflow<nsw> : i32
 ! CLEAN:             %[[SLAST:.*]] = arith.addi %[[SLBI]], %[[SMUL]] overflow<nsw> : i32
 ! CLEAN:             fir.store %[[SLAST]] to %[[SJ_DECL]]#0 : !fir.ref<i32>
+
+! Descending loop (step < 0): the same lb + tripCount*step formula must hold
+! (here 8 + 4*(-2) = 0).
+subroutine nested_stride_neg(a, n)
+  implicit none
+  integer :: n, i, j
+  integer :: a(n)
+  do concurrent (i=1:n)
+    do j = 8, 2, -2
+    end do
+    a(i) = j
+  end do
+end subroutine
+
+! CHECK-LABEL:   func.func @_QPnested_stride_neg
+! CHECK:           %[[NJ_DECL:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFnested_stride_negEj"}
+! DEFAULT:           %[[NRES:.*]] = fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} iter_args(%{{.*}} = %{{.*}}) -> (i32) {
+! DEFAULT:           fir.store %[[NRES]] to %[[NJ_DECL]]#0 : !fir.ref<i32>
+! CLEAN:             fir.do_loop %{{.*}} = %[[NLB:[^ ]+]] to %[[NUB:[^ ]+]] step %[[NST:[^ ]+]] {
+! CLEAN-NOT:           iter_args
+! CLEAN:             }
+! CLEAN:             %[[NLBI:.*]] = fir.convert %[[NLB]] : (index) -> i32
+! CLEAN:             %[[NUBI:.*]] = fir.convert %[[NUB]] : (index) -> i32
+! CLEAN:             %[[NSTI:.*]] = fir.convert %[[NST]] : (index) -> i32
+! CLEAN:             %[[NC0:.*]] = arith.constant 0 : i32
+! CLEAN:             %[[NDIFF:.*]] = arith.subi %[[NUBI]], %[[NLBI]] overflow<nsw> : i32
+! CLEAN:             %[[NADD:.*]] = arith.addi %[[NDIFF]], %[[NSTI]] overflow<nsw> : i32
+! CLEAN:             %[[NTRIP:.*]] = arith.divsi %[[NADD]], %[[NSTI]] : i32
+! CLEAN:             %[[NCMP:.*]] = arith.cmpi slt, %[[NTRIP]], %[[NC0]] : i32
+! CLEAN:             %[[NSEL:.*]] = arith.select %[[NCMP]], %[[NC0]], %[[NTRIP]] : i32
+! CLEAN:             %[[NMUL:.*]] = arith.muli %[[NSEL]], %[[NSTI]] overflow<nsw> : i32
+! CLEAN:             %[[NLAST:.*]] = arith.addi %[[NLBI]], %[[NMUL]] overflow<nsw> : i32
+! CLEAN:             fir.store %[[NLAST]] to %[[NJ_DECL]]#0 : !fir.ref<i32>
 
 ! A plain DO loop not nested in a DO CONCURRENT body keeps its iter_arg even
 ! when the option is enabled.
