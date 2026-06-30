@@ -67,11 +67,7 @@ class AMDGPUCustomBehaviour : public CustomBehaviour {
   bool hasModifiersSet(const std::unique_ptr<Instruction> &Inst,
                        AMDGPU::OpName OpName) const;
   /// Helper function used in generateWaitCntInfo()
-  bool isGWS(uint32_t Opcode) const;
-  /// Helper function used in generateWaitCntInfo()
   bool isAlwaysGDS(uint32_t Opcode) const;
-  /// Helper function used in generateWaitCntInfo()
-  bool isVMEM(const MCInstrDesc &MCID);
   /// This method gets called from checkCustomHazard when mca is attempting to
   /// dispatch an s_waitcnt instruction (or one of its variants). The method
   /// looks at each of the instructions that are still executing in the pipeline
