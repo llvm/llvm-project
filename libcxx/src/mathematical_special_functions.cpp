@@ -12,6 +12,22 @@
 #include <optional>
 #include <type_traits>
 
+// GCC defines __STDCPP_FLOATnn_T__ whenever the _Floatnn extended types exist at the
+// language level, independent of the standard library. libc++ currently ships no
+// <stdfloat>, so std::floatnn_t is never declared -- but Boost.Math keys its
+// std::floatnn_t overloads off these macros and would reference the missing types.
+// Suppress those overloads while <stdfloat> is unavailable. The __has_include guard is
+// the same condition Boost uses to include <stdfloat>, so this workaround disables itself
+// automatically once libc++ provides the header (the overloads then light up on their own
+// -- no manual re-enable needed here).
+#if !__has_include(<stdfloat>)
+#  undef __STDCPP_FLOAT16_T__
+#  undef __STDCPP_FLOAT32_T__
+#  undef __STDCPP_FLOAT64_T__
+#  undef __STDCPP_FLOAT128_T__
+#  undef __STDCPP_BFLOAT16_T__
+#endif
+
 #define BOOST_MATH_NO_EXCEPTIONS
 #include <boost/math/special_functions.hpp>
 
