@@ -5252,6 +5252,39 @@ SDValue ARMTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
   ConstantSDNode *RHSC = dyn_cast<ConstantSDNode>(RHS);
   if (Op.getValueType().isInteger()) {
 
+    // Match select_cc(b, c, shl(a, 1) | 1, shl(a, 1), ULT/UGT) -> rsb a,
+    // sbc(cmp(b,c)), a<<1
+    if (VT == MVT::i32 && !Subtarget->isThumb1Only()) {
+      if (CC == ISD::SETULT || CC == ISD::SETUGT) {
+        SDValue Shl;
+        bool Match = false;
+        if (TrueVal.getOpcode() == ISD::OR &&
+            TrueVal.getOperand(0) == FalseVal &&
+            isa<ConstantSDNode>(TrueVal.getOperand(1)) &&
+            TrueVal.getConstantOperandVal(1) == 1) {
+          Shl = FalseVal;
+          Match = true;
+        }
+
+        if (Match && Shl.getOpcode() == ISD::SHL &&
+            isa<ConstantSDNode>(Shl.getOperand(1)) &&
+            Shl.getConstantOperandVal(1) >= 1 &&
+            Shl.getConstantOperandVal(1) <= 31) {
+
+          SDValue CmpLHS = LHS;
+          SDValue CmpRHS = RHS;
+          if (CC == ISD::SETUGT)
+            std::swap(CmpLHS, CmpRHS);
+
+          SDValue Cmp = DAG.getNode(ARMISD::CMP, dl, MVT::i32, CmpLHS, CmpRHS);
+          SDVTList VTs = DAG.getVTList(MVT::i32, MVT::i32);
+          SDValue SubE =
+              DAG.getNode(ARMISD::SUBE, dl, VTs, CmpLHS, CmpLHS, Cmp);
+          return DAG.getNode(ISD::SUB, dl, MVT::i32, Shl, SubE);
+        }
+      }
+    }
+
     // Check for SMAX(lhs, 0) and SMIN(lhs, 0) patterns.
     // (SELECT_CC setgt, lhs, 0, lhs, 0) -> (BIC lhs, (SRA lhs, typesize-1))
     // (SELECT_CC setlt, lhs, 0, lhs, 0) -> (AND lhs, (SRA lhs, typesize-1))
