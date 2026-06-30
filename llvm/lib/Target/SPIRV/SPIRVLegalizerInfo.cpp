@@ -458,6 +458,8 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
 
   getActionDefinitionsBuilder({G_SADDO, G_SSUBO}).lower();
 
+  // s64 is unsupported because lowering widens to s128, which SPIR-V does not
+  // have.
   getActionDefinitionsBuilder({G_SMULFIX, G_UMULFIX})
       .unsupportedFor({s64})
       .lower();
