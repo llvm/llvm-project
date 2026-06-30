@@ -28,6 +28,14 @@
 #  undef __STDCPP_BFLOAT16_T__
 #endif
 
+// Boost.Math detects thread support via __has_include(<thread>/<mutex>/...), but libc++
+// ships those headers even when threads are disabled (_LIBCPP_HAS_THREADS == 0), so the
+// detection wrongly enables std::mutex use and breaks on no-thread targets (e.g. picolibc).
+// Tell Boost there are no threads; lazy-init tables don't need locking without threads.
+#if !_LIBCPP_HAS_THREADS
+#  define BOOST_MATH_DISABLE_THREADS
+#endif
+
 #define BOOST_MATH_NO_EXCEPTIONS
 #include <boost/math/special_functions.hpp>
 
