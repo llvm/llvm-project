@@ -280,3 +280,13 @@ func.func @non_string_test_ptr(%arg0: memref<100xf32>, %arg1: index) -> f32 attr
   %0 = memref.load %arg0[%arg1] {sibling = 0 : i64} : memref<100xf32>
   return %0 : f32
 }
+
+// -----
+
+// CHECK-LABEL: Testing : "non_string_op_result_test_ptr"
+// CHECK-DAG: string_result#0 <-> func.region0#0: NoAlias
+func.func @non_string_op_result_test_ptr(%arg0: memref<100xf32>) attributes {test.ptr = "func"} {
+  %0 = memref.alloc() {test.ptr = {llvm.ptr = "ptr_a", test.a = 123 : i64}} : memref<100xf32>
+  %1 = memref.alloc() {test.ptr = "string_result"} : memref<100xf32>
+  return
+}
