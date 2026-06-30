@@ -667,6 +667,16 @@ MLIR_CAPI_EXPORTED MlirBlock mlirOperationGetBlock(MlirOperation op);
 MLIR_CAPI_EXPORTED MlirOperation
 mlirOperationGetParentOperation(MlirOperation op);
 
+/// Returns true if `a` is an ancestor of `b`, i.e. `a` contains `b` or
+/// `a == b`.
+MLIR_CAPI_EXPORTED bool mlirOperationIsAncestor(MlirOperation a,
+                                                MlirOperation b);
+
+/// Returns true if `a` is a proper ancestor of `b`, i.e. `a` contains `b` but
+/// `a != b`.
+MLIR_CAPI_EXPORTED bool mlirOperationIsProperAncestor(MlirOperation a,
+                                                      MlirOperation b);
+
 /// Returns the number of regions attached to the given operation.
 MLIR_CAPI_EXPORTED intptr_t mlirOperationGetNumRegions(MlirOperation op);
 

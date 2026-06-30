@@ -692,6 +692,14 @@ MlirOperation mlirOperationGetParentOperation(MlirOperation op) {
   return wrap(unwrap(op)->getParentOp());
 }
 
+bool mlirOperationIsAncestor(MlirOperation a, MlirOperation b) {
+  return unwrap(a)->isAncestor(unwrap(b));
+}
+
+bool mlirOperationIsProperAncestor(MlirOperation a, MlirOperation b) {
+  return unwrap(a)->isProperAncestor(unwrap(b));
+}
+
 intptr_t mlirOperationGetNumRegions(MlirOperation op) {
   return static_cast<intptr_t>(unwrap(op)->getNumRegions());
 }
