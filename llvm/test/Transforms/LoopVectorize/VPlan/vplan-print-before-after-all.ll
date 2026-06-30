@@ -77,6 +77,17 @@
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::dissolveLoopRegions
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::expandBranchOnTwoConds
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::convertToVariableLengthStep
+; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::removeBranchOnConst
+; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::materializeBackedgeTakenCount
+; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::materializeVectorTripCount
+; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::materializeFactors
+; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::expandSCEVsToVPInstructions
+; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::cse
+; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::simplifyRecipes
+; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::removeBranchOnConst
+; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::simplifyKnownEVL
+; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::expandSCEVs
+; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::removeDeadRecipes
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] printFinalVPlan
 
 ; Also verify that VPlans are actually printed (we aren't interested in the

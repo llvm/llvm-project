@@ -2808,11 +2808,18 @@ bool VPlanTransforms::removeBranchOnConst(VPlan &Plan, bool OnlyLatches) {
     assert(count(RemovedSucc->getPredecessors(), VPBB) == 1 &&
            "There must be a single edge between VPBB and its successor");
     // Values coming from VPBB into phi recipes of RemovedSucc are removed from
-    // these recipes.
-    auto Phis = RemovedSucc->phis();
-    for (VPRecipeBase &R : Phis)
+    // these recipes and single-entry header phis are removed.
+    for (VPRecipeBase &R : make_early_inc_range(RemovedSucc->phis())) {
       cast<VPPhiAccessors>(&R)->removeIncomingValueFor(VPBB);
-    SimplifiedPhi |= !std::empty(Phis);
+      SimplifiedPhi = true;
+      // Remove now invalid header phis that are left single-entry after
+      // removing their backedges.
+      auto *PhiR = dyn_cast<VPHeaderPHIRecipe>(&R);
+      if (!PhiR || PhiR->getNumIncoming() != 1)
+        continue;
+      PhiR->replaceAllUsesWith(PhiR->getOperand(0));
+      PhiR->eraseFromParent();
+    }
 
     // Disconnect blocks and remove the terminator.
     VPBlockUtils::disconnectBlocks(VPBB, RemovedSucc);
