@@ -71,7 +71,7 @@ define i1 @scalarize_ptr_induction(ptr %start, ptr %end, ptr noalias %dst, i1 %c
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
 ; CHECK-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x ptr> poison, ptr [[DST]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x ptr> poison, ptr [[END]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x ptr> [[BROADCAST_SPLATINSERT]], <vscale x 2 x ptr> poison, <vscale x 2 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -89,7 +89,9 @@ define i1 @scalarize_ptr_induction(ptr %start, ptr %end, ptr noalias %dst, i1 %c
 ; CHECK-NEXT:    [[TMP19:%.*]] = zext <vscale x 2 x i32> [[TMP18]] to <vscale x 2 x i64>
 ; CHECK-NEXT:    [[TMP20:%.*]] = mul <vscale x 2 x i64> [[TMP19]], splat (i64 -7070675565921424023)
 ; CHECK-NEXT:    [[TMP21:%.*]] = add <vscale x 2 x i64> [[TMP20]], splat (i64 -4)
-; CHECK-NEXT:    call void @llvm.vp.scatter.nxv2i64.nxv2p0(<vscale x 2 x i64> [[TMP21]], <vscale x 2 x ptr> align 1 [[BROADCAST_SPLAT]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP11]])
+; CHECK-NEXT:    [[TMP29:%.*]] = sub i64 [[TMP26]], 1
+; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <vscale x 2 x i64> [[TMP21]], i64 [[TMP29]]
+; CHECK-NEXT:    store i64 [[TMP16]], ptr [[DST]], align 1
 ; CHECK-NEXT:    [[CURRENT_ITERATION_NEXT]] = add i64 [[TMP26]], [[INDEX]]
 ; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP26]]
 ; CHECK-NEXT:    [[TMP27:%.*]] = mul i64 12, [[TMP26]]
@@ -98,8 +100,7 @@ define i1 @scalarize_ptr_induction(ptr %start, ptr %end, ptr noalias %dst, i1 %c
 ; CHECK-NEXT:    br i1 [[TMP28]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP30:%.*]] = getelementptr nusw i8, <vscale x 2 x ptr> [[VECTOR_GEP]], i64 12
-; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq <vscale x 2 x ptr> [[TMP30]], [[BROADCAST_SPLAT7]]
-; CHECK-NEXT:    [[TMP29:%.*]] = sub i64 [[TMP26]], 1
+; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq <vscale x 2 x ptr> [[TMP30]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP25:%.*]] = extractelement <vscale x 2 x i1> [[TMP17]], i64 [[TMP29]]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
