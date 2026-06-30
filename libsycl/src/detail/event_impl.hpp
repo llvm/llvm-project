@@ -55,8 +55,7 @@ public:
   createEventWithHandle(ol_event_handle_t Event, PlatformImpl &Platform,
                         std::vector<std::shared_ptr<EventImpl>> &&WaitList) {
     auto E = std::make_shared<EventImpl>(Event, Platform, PrivateTag{});
-    E->MWaitList =
-        std::forward<std::vector<std::shared_ptr<EventImpl>>>(WaitList);
+    E->MWaitList = std::move(WaitList);
     return E;
   }
 

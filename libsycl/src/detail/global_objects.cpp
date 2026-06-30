@@ -60,7 +60,7 @@ InstanceWithLock<AsyncExceptionsContainer> &getAsyncExceptionList() {
   return AsyncExceptionList;
 }
 
-void reportAsyncException(const std::shared_ptr<QueueImpl> &QueuePtr,
+void recordAsyncException(const std::shared_ptr<QueueImpl> &QueuePtr,
                           const std::exception_ptr &ExceptionPtr) {
   auto &[AsyncExceptions, AsyncExceptionsMutex] = getAsyncExceptionList();
   std::lock_guard<SpinLock> Lock(AsyncExceptionsMutex);

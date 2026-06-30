@@ -74,7 +74,7 @@ void runAsyncExceptionFlushTest(mock::MockLiboffload &Mock,
   EventImplPtr EImpl = createEventImplWithHandle(*detail::getSyclObjImpl(P));
   event E = detail::createSyclObjFromImpl<event>(EImpl);
 
-  detail::reportAsyncException(
+  detail::recordAsyncException(
       QImpl, std::make_exception_ptr(
                  exception(make_error_code(errc::runtime), ErrorMsg)));
 
@@ -137,7 +137,7 @@ TEST(EventAsyncHandler, DeadQueueFallsBackToDefaultAsyncHandler) {
         {
           queue Q(device(default_selector_v), Handler);
           auto QImpl = detail::getSyclObjImpl(Q);
-          detail::reportAsyncException(
+          detail::recordAsyncException(
               QImpl,
               std::make_exception_ptr(exception(make_error_code(errc::runtime),
                                                 "fallback async error")));

@@ -71,7 +71,7 @@ using AsyncExceptionsContainer =
 InstanceWithLock<AsyncExceptionsContainer> &getAsyncExceptionList();
 
 /// Adds an exception to the list of unreported asynchronous exceptions.
-void reportAsyncException(const std::shared_ptr<QueueImpl> &QueuePtr,
+void recordAsyncException(const std::shared_ptr<QueueImpl> &QueuePtr,
                           const std::exception_ptr &ExceptionPtr);
 
 /// Reports all unreported asynchronous exceptions to available async_handler
