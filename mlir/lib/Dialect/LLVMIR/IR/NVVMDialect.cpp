@@ -1129,15 +1129,9 @@ LogicalResult MmaOp::verify() {
                        " attribute");
   }
 
-  // Ensure int4/int8 MMA variants specify the accum overflow behavior
-  // attribute.
-  if (isInt4PtxType(*getMultiplicandAPtxType()) ||
-      isInt8PtxType(*getMultiplicandAPtxType())) {
-    if (!getIntOverflowBehavior())
-      return emitOpError("op requires " +
-                         getIntOverflowBehaviorAttrName().strref() +
-                         " attribute");
-  }
+  // `intOverflowBehavior` is a default-valued attribute (`wrapped`), so it
+  // always carries a value; no presence check is required for int4/int8
+  // variants.
 
   // Validate layout combinations. According to the operation description, most
   // MMA operations require layoutA=row and layoutB=col. Only m8n8k4 with f16

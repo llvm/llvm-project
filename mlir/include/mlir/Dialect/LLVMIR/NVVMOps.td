@@ -3384,9 +3384,9 @@ def NVVM_MmaOp : NVVM_Op<"mma.sync", [AttrSizedOperandSegments]> {
     `intOverflowBehavior` is only relevant when the `multiplicandType` attribute
     is one of `u8, s8, u4, s4`, this attribute describes how overflow is handled
     in the accumulator. When the attribute is `satfinite`, the accumulator values
-    are clamped in the int32 range on overflow. This is the default behavior.
-    Alternatively, accumulator behavior `wrapped` can also be specified, in
-    which case overflow wraps from one end of the range to the other.
+    are clamped in the int32 range on overflow. Alternatively, accumulator
+    behavior `wrapped` can be specified (this is the default), in which case
+    overflow wraps from one end of the range to the other.
 
     `layoutA` and `layoutB` are required and should generally be set to
     `#nvvm.mma_layout<row>` and `#nvvm.mma_layout<col>` respectively, but other
@@ -3431,7 +3431,7 @@ def NVVM_MmaOp : NVVM_Op<"mma.sync", [AttrSizedOperandSegments]> {
   let results = (outs LLVM_AnyStruct:$res);
   let arguments = (ins NVVM_MMAShapeAttr:$shape,
              OptionalAttr<MMAB1OpAttr>:$b1Op,
-             OptionalAttr<MMAIntOverflowAttr>:$intOverflowBehavior,
+             DefaultValuedAttr<MMAIntOverflowAttr, "MMAIntOverflow::wrapped">:$intOverflowBehavior,
              MMALayoutAttr:$layoutA,
              MMALayoutAttr:$layoutB,
              OptionalAttr<MMATypesAttr>:$multiplicandAPtxType,
