@@ -346,6 +346,22 @@ public:
   /// AST file.
   const uint32_t *SLocEntryOffsets = nullptr;
 
+  // === Source-location de-duplication: offset remap (prototype, Stage 2) ===
+
+  /// One offset-remap segment in this module's raw SourceLocation space:
+  /// a raw local location L in [LocalBegin, LocalEnd) maps to global L + Delta.
+  struct SLocRemapSegment {
+    SourceLocation::UIntTy LocalBegin;
+    SourceLocation::UIntTy LocalEnd;
+    int64_t Delta;
+  };
+
+  /// Piecewise local->global offset map for this module, sorted by LocalBegin.
+  /// Empty => fall back to the flat shift by (SLocEntryBaseOffset - 2).
+  /// Stage 2a seeds a single identity segment equivalent to the flat shift;
+  /// Stage 2b adds redirect/shift segments for de-duplicated files.
+  llvm::SmallVector<SLocRemapSegment, 4> SLocRemap;
+
   // === Identifiers ===
 
   /// The number of identifiers in this AST file.

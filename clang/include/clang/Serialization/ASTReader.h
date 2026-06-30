@@ -2501,6 +2501,21 @@ public:
     // translated or refactor the code to make it clear that
     // TranslateSourceLocation won't be called with translated source location.
 
+    // De-duplication (Stage 2): a module's local->global offset map may be
+    // piecewise rather than a single flat shift, so look up the segment that
+    // covers this location. The seeded identity segment makes this identical to
+    // the flat shift below; redirect segments (Stage 2b) send a duplicated
+    // file's locations into the module that first loaded it.
+    if (!ModuleFile.SLocRemap.empty()) {
+      SourceLocation::UIntTy Raw = Loc.getRawEncoding();
+      for (const auto &Seg : ModuleFile.SLocRemap)
+        if (Raw >= Seg.LocalBegin && Raw < Seg.LocalEnd)
+          return SourceLocation::getFromRawEncoding(
+              static_cast<SourceLocation::UIntTy>(
+                  static_cast<int64_t>(Raw) + Seg.Delta));
+      // No segment matched (shouldn't happen): fall through to the flat shift.
+    }
+
     return Loc.getLocWithOffset(ModuleFile.SLocEntryBaseOffset - 2);
   }
 

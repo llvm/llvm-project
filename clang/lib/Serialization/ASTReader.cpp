@@ -4282,6 +4282,15 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
         return llvm::createStringError(std::errc::invalid_argument,
                                        "ran out of source locations");
       }
+
+      // De-duplication (Stage 2a): seed the piecewise offset map with a single
+      // identity segment spanning the whole value range, equivalent to the flat
+      // shift by (BaseOffset - 2). This routes translation through the segment
+      // list with no behavior change; Stage 2b adds redirect/shift segments for
+      // duplicated files.
+      F.SLocRemap.push_back(
+          {/*LocalBegin=*/0, /*LocalEnd=*/~SourceLocation::UIntTy(0),
+           /*Delta=*/static_cast<int64_t>(F.SLocEntryBaseOffset) - 2});
       // Make our entry in the range map. BaseID is negative and growing, so
       // we invert it. Because we invert it, though, we need the other end of
       // the range.
