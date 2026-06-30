@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx600 < %s | FileCheck %s
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga < %s | FileCheck %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck %s
 

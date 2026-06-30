@@ -24,3 +24,17 @@ program test_stmt_func_keyword
   !ERROR: Keyword 'y=' may not appear in a reference to a procedure with an implicit interface
   c = f2(x=10, y=20)
 end program
+
+! A parameterized derived type actual argument to a statement function does not
+! require an explicit interface, so the reference below is valid (no error).
+subroutine pdt_actual_to_stmt_func()
+  type t(k)
+    integer, kind :: k = 1
+  end type
+
+  type(t) :: x
+  integer :: f
+
+  f(x) = 0
+  print *, f(x)
+end subroutine

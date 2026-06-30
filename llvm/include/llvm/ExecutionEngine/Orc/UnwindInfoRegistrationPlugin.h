@@ -14,6 +14,7 @@
 #define LLVM_EXECUTIONENGINE_ORC_UNWINDINFOREGISTRATIONPLUGIN_H
 
 #include "llvm/ExecutionEngine/Orc/LinkGraphLinkingLayer.h"
+#include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/Support/Compiler.h"
 
 namespace llvm::orc {
@@ -21,17 +22,18 @@ namespace llvm::orc {
 class LLVM_ABI UnwindInfoRegistrationPlugin
     : public LinkGraphLinkingLayer::Plugin {
 public:
-  UnwindInfoRegistrationPlugin(ExecutionSession &ES, ExecutorAddr Register,
-                               ExecutorAddr Deregister)
-      : ES(ES), Register(Register), Deregister(Deregister) {
+  UnwindInfoRegistrationPlugin(ExecutionSession &ES,
+                               ExecutorAddr RegisterSections,
+                               ExecutorAddr DeregisterSections)
+      : RegisterSections(RegisterSections),
+        DeregisterSections(DeregisterSections) {
     DSOBaseName = ES.intern("__jitlink$libunwind_dso_base");
   }
 
   static Expected<std::shared_ptr<UnwindInfoRegistrationPlugin>>
-  Create(ExecutionSession &ES, ExecutorAddr Register, ExecutorAddr Deregister);
-
-  static Expected<std::shared_ptr<UnwindInfoRegistrationPlugin>>
-  Create(ExecutionSession &ES);
+  Create(ExecutionSession &ES,
+         rt::MachOUnwindInfoRegistrarSymbolNames SNs =
+             rt::orc_rt_MachOUnwindInfoRegistrarSPSSymbols);
 
   void modifyPassConfig(MaterializationResponsibility &MR,
                         jitlink::LinkGraph &G,
@@ -55,9 +57,8 @@ public:
 private:
   Error addUnwindInfoRegistrationActions(jitlink::LinkGraph &G);
 
-  ExecutionSession &ES;
   SymbolStringPtr DSOBaseName;
-  ExecutorAddr Register, Deregister;
+  ExecutorAddr RegisterSections, DeregisterSections;
 };
 
 } // namespace llvm::orc

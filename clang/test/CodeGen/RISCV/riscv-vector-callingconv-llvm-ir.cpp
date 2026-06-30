@@ -124,6 +124,15 @@ struct st_i32x4x9 {
     __attribute__((vector_size(16))) int i32_9;
 };
 
+struct st_bf16x8 {
+    __attribute__((vector_size(16))) __bf16 bf16;
+};
+
+struct st_bf16x8x2 {
+    __attribute__((vector_size(16))) __bf16 bf16_1;
+    __attribute__((vector_size(16))) __bf16 bf16_2;
+};
+
 typedef int __attribute__((vector_size(256))) int32x64_t;
 
 // CHECK-LLVM: define dso_local riscv_vls_cc(128) void @_Z14test_too_largeDv64_i(ptr noundef dead_on_return %0)
@@ -180,3 +189,17 @@ typedef int __attribute__((vector_size(256))) int32x64_t;
 [[riscv::vls_cc]] void test_st_i32x4x9(struct st_i32x4x9 arg) {}
 // CHECK-LLVM: define dso_local riscv_vls_cc(256) void @_Z19test_st_i32x4x9_25610st_i32x4x9(ptr noundef dead_on_return %arg)
 [[riscv::vls_cc(256)]] void test_st_i32x4x9_256(struct st_i32x4x9 arg) {}
+
+// CHECK-LLVM: define dso_local riscv_vls_cc(128) void @_Z14test_st_bf16x89st_bf16x8(<vscale x 8 x i8> %arg.target_coerce)
+// CHECK-LLVM-ZVFBFA: define dso_local riscv_vls_cc(128) void @_Z14test_st_bf16x89st_bf16x8(<vscale x 4 x bfloat> %arg.target_coerce)
+[[riscv::vls_cc]] void test_st_bf16x8(struct st_bf16x8 arg) {}
+// CHECK-LLVM: define dso_local riscv_vls_cc(256) void @_Z18test_st_bf16x8_2569st_bf16x8(<vscale x 4 x i8> %arg.target_coerce)
+// CHECK-LLVM-ZVFBFA: define dso_local riscv_vls_cc(256) void @_Z18test_st_bf16x8_2569st_bf16x8(<vscale x 2 x bfloat> %arg.target_coerce)
+[[riscv::vls_cc(256)]] void test_st_bf16x8_256(struct st_bf16x8 arg) {}
+
+// CHECK-LLVM: define dso_local riscv_vls_cc(128) void @_Z16test_st_bf16x8x211st_bf16x8x2(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) %arg.target_coerce)
+// CHECK-LLVM-ZVFBFA: define dso_local riscv_vls_cc(128) void @_Z16test_st_bf16x8x211st_bf16x8x2(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) %arg.target_coerce)
+[[riscv::vls_cc]] void test_st_bf16x8x2(struct st_bf16x8x2 arg) {}
+// CHECK-LLVM: define dso_local riscv_vls_cc(256) void @_Z20test_st_bf16x8x2_25611st_bf16x8x2(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) %arg.target_coerce)
+// CHECK-LLVM-ZVFBFA: define dso_local riscv_vls_cc(256) void @_Z20test_st_bf16x8x2_25611st_bf16x8x2(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) %arg.target_coerce)
+[[riscv::vls_cc(256)]] void test_st_bf16x8x2_256(struct st_bf16x8x2 arg) {}
