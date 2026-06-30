@@ -95,24 +95,24 @@ func.func @broadcast_stretch(%arg0: vector<1xf32>) -> vector<4xf32> {
   return %0 : vector<4xf32>
 }
 
-// CHECK-LABEL: func @broadcast_single_elem_vec1d_to_vec2d
+// CHECK-LABEL: func @broadcast_vec2d_from_vec1d_single_element
 // CHECK-SAME: %[[A:.*0]]: vector<1xf32>
 // CHECK:      %[[T0:.*]] = vector.extract %[[A]][0] : f32 from vector<1xf32>
 // CHECK:      %[[T1:.*]] = vector.broadcast %[[T0]] : f32 to vector<16x1xf32>
 // CHECK:      return %[[T1]] : vector<16x1xf32>
 
-func.func @broadcast_single_elem_vec1d_to_vec2d(%arg0: vector<1xf32>) -> vector<16x1xf32> {
+func.func @broadcast_vec2d_from_vec1d_single_element(%arg0: vector<1xf32>) -> vector<16x1xf32> {
   %0 = vector.broadcast %arg0 : vector<1xf32> to vector<16x1xf32>
   return %0 : vector<16x1xf32>
 }
 
-// CHECK-LABEL: func @broadcast_single_elem_vec2d_to_vec2d
+// CHECK-LABEL: func @broadcast_vec2d_from_vec2d_single_element
 // CHECK-SAME: %[[A:.*0]]: vector<1x1xf32>
 // CHECK:      %[[T0:.*]] = vector.extract %[[A]][0, 0] : f32 from vector<1x1xf32>
 // CHECK:      %[[T1:.*]] = vector.broadcast %[[T0]] : f32 to vector<4x3xf32>
 // CHECK:      return %[[T1]] : vector<4x3xf32>
 
-func.func @broadcast_single_elem_vec2d_to_vec2d(%arg0: vector<1x1xf32>) -> vector<4x3xf32> {
+func.func @broadcast_vec2d_from_vec2d_single_element(%arg0: vector<1x1xf32>) -> vector<4x3xf32> {
   %0 = vector.broadcast %arg0 : vector<1x1xf32> to vector<4x3xf32>
   return %0 : vector<4x3xf32>
 }
