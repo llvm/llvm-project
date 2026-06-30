@@ -11,6 +11,7 @@
 
 #include "flang/Common/api-attrs.h"
 #include "flang/Runtime/allocator-registry-consts.h"
+#include <cstddef>
 #include <cstdint>
 #include <cstdlib>
 #include <vector>
@@ -34,8 +35,9 @@ static RT_API_ATTRS void *MallocWrapper(std::size_t size,
   // alignment is requested, use std::aligned_alloc.
   if (alignment > alignof(std::max_align_t)) {
     // Round size up to a multiple of the alignment
-    if (size > SIZE_MAX - alignment)
+    if (size > SIZE_MAX - alignment) {
       return nullptr;
+    }
     std::size_t alignedSize{((size + alignment - 1) / alignment) * alignment};
     return std::aligned_alloc(alignment, alignedSize);
   }
