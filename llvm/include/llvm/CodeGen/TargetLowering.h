@@ -4392,7 +4392,8 @@ public:
   /// equal to the demanded part of the vector and less than the original
   /// vector size. Return 0 to disable shrinking.
   virtual unsigned
-  getPreferredShrunkVectorSize(SDValue Op, const APInt &DemandedElts) const {
+  getPreferredShrunkVectorSizeInBits(SDValue Op,
+                                     const APInt &DemandedElts) const {
     return 0;
   }
 

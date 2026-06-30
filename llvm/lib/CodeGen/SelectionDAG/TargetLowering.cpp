@@ -3826,7 +3826,8 @@ bool TargetLowering::SimplifyDemandedVectorElts(
       if (SimplifyDemandedVectorEltsBinOp(Op0, Op1))
         return true;
 
-    if (unsigned ShrunkSize = getPreferredShrunkVectorSize(Op, DemandedElts)) {
+    if (unsigned ShrunkSize =
+            getPreferredShrunkVectorSizeInBits(Op, DemandedElts)) {
       assert(ShrunkSize % EltSizeInBits == 0 &&
              "Shrunk size not a multiple of element size");
       assert(ShrunkSize < VT.getSizeInBits() &&

@@ -354,9 +354,8 @@ namespace llvm {
                                                     TargetLoweringOpt &TLO,
                                                     unsigned Depth) const;
 
-    unsigned
-    getPreferredShrunkVectorSize(SDValue Op,
-                                 const APInt &DemandedElts) const override;
+    unsigned getPreferredShrunkVectorSizeInBits(
+        SDValue Op, const APInt &DemandedElts) const override;
 
     bool SimplifyDemandedBitsForTargetNode(SDValue Op,
                                            const APInt &DemandedBits,

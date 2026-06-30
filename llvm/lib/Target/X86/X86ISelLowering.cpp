@@ -45479,7 +45479,7 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
   return false;
 }
 
-unsigned X86TargetLowering::getPreferredShrunkVectorSize(
+unsigned X86TargetLowering::getPreferredShrunkVectorSizeInBits(
     SDValue Op, const APInt &DemandedElts) const {
   EVT VT = Op.getValueType();
   unsigned SizeInBits = VT.getSizeInBits();
