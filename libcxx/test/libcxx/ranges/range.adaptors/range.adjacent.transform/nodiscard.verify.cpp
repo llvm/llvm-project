@@ -11,9 +11,9 @@
 
 // Test the libc++ extension that std::ranges::adjacent_transform_view and std::views::adjacent_transform are marked as [[nodiscard]].
 
+#include <functional>
 #include <ranges>
 #include <utility>
-#include <functional>
 
 struct View : std::ranges::view_interface<View> {
   int* begin();
@@ -26,8 +26,7 @@ static_assert(!std::same_as<std::ranges::iterator_t<View>, std::ranges::iterator
 static_assert(!std::same_as<std::ranges::sentinel_t<View>, std::ranges::sentinel_t<const View>>);
 
 void test() {
-  int range[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
-  auto v      = View{} | std::views::adjacent_transform<2>(std::multiplies());
+  auto v = View{} | std::views::adjacent_transform<2>(std::multiplies());
 
   // [range.adjacent.transform.view]
 
@@ -85,9 +84,11 @@ void test() {
 
   // [range.adjacent.overview]
 
+  int range[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::views::adjacent_transform<0>(range);
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::views::adjacent_transform<2>(range);
+  std::views::adjacent_transform<2>(range, std::multiplies());
 }
