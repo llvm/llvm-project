@@ -1,4 +1,5 @@
 ; RUN: llc < %s -asm-verbose=false | FileCheck %s
+; RUN: llc -enable-new-pm < %s -asm-verbose=false | FileCheck %s
 
 ; Test that basic 32-bit integer operations assemble as expected.
 

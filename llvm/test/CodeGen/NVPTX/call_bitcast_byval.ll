@@ -13,11 +13,11 @@ target triple = "nvptx64-nvidia-cuda"
 %"class.sycl::_V1::detail::half_impl::half" = type { half }
 %complex_half = type { half, half }
 
+; CHECK: prototype_0 : .callprototype (.param .align 2 .b8 _[4]) _ (.param .b32 _, .param .b32 _, .param .align 2 .b8 _[4]);
 ; CHECK: .param .align 2 .b8 param2[4];
 ; CHECK: .param .align 2 .b8 retval0[4];
 ; CHECK-DAG: st.param.b16   [param2], %rs{{[0-9]+}};
 ; CHECK-DAG: st.param.b16   [param2+2], %rs{{[0-9]+}};
-; CHECK: prototype_0 : .callprototype (.param .align 2 .b8 _[4]) _ (.param .b32 _, .param .b32 _, .param .align 2 .b8 _[4]);
 ; CHECK: call (retval0),
 define weak_odr void @foo() {
 entry:

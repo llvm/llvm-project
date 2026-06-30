@@ -495,7 +495,10 @@ void HexagonPassConfig::addPreRegAlloc() {
 }
 
 void HexagonPassConfig::addPostRegAlloc() {
-  if (EnablePostRAHandleQFP)
+  HexagonTargetMachine &HTM = getHexagonTargetMachine();
+  const HexagonSubtarget *HST = HTM.getHexagonSubtarget();
+  // Run PostRAQFP on v79 and above.
+  if (EnablePostRAHandleQFP && HST->useHVXV79Ops())
     addPass(createHexagonPostRAHandleQFP());
 
   if (getOptLevel() != CodeGenOptLevel::None) {
