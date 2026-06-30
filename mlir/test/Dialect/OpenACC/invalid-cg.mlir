@@ -159,3 +159,29 @@ func.func @gpu_shared_memory_zero_num_copies() {
       : () -> memref<8xf32, #gpu.address_space<workgroup>>
   return
 }
+
+// -----
+
+func.func @gpu_shared_memory_negative_scaling_bytes() {
+  // expected-error@+1 {{dynamic_shared_memory_scaling_bytes must be non-negative}}
+  %sm = acc.gpu_shared_memory()
+      {num_copies = 1 : i64,
+       static_upper_bound_bytes = 512 : i64,
+       dynamic_shared_memory_scaling_bytes = -1 : i64,
+       dynamic_shared_memory_fixed_bytes = 24 : i64}
+      : () -> memref<8xf32, #gpu.address_space<workgroup>>
+  return
+}
+
+// -----
+
+func.func @gpu_shared_memory_negative_fixed_bytes() {
+  // expected-error@+1 {{dynamic_shared_memory_fixed_bytes must be non-negative}}
+  %sm = acc.gpu_shared_memory()
+      {num_copies = 1 : i64,
+       static_upper_bound_bytes = 512 : i64,
+       dynamic_shared_memory_scaling_bytes = 12 : i64,
+       dynamic_shared_memory_fixed_bytes = -1 : i64}
+      : () -> memref<8xf32, #gpu.address_space<workgroup>>
+  return
+}
