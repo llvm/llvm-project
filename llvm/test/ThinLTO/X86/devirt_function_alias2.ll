@@ -24,8 +24,8 @@
 ; RUN:   2>&1 | FileCheck %s --check-prefix=REMARK --check-prefix=PRINT
 ; RUN: llvm-dis %t2.1.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-IR1
 
-; PRINT-DAG: Devirtualized call to {{.*}} (_ZN1D1mEiAlias)
-; REMARK-DAG: single-impl: devirtualized a call to _ZN1D1mEiAlias
+; PRINT-DAG: Devirtualized call to {{.*}} (_ZN1D1mEi)
+; REMARK-DAG: single-impl: devirtualized a call to _ZN1D1mEi
 
 ;; Test hybrid Thin/Regular LTO
 
@@ -63,13 +63,15 @@ target triple = "x86_64-grtev4-linux-gnu"
 
 @_ZTV1D = constant { [3 x ptr] } { [3 x ptr] [ptr null, ptr undef, ptr @_ZN1D1mEiAlias] }, !type !3
 
-define i32 @_ZN1D1mEi(ptr %this, i32 %a) {
+define i32 @_ZN1D1mEi(ptr %this, i32 %a) #0 {
    ret i32 0;
 }
 
 @_ZN1D1mEiAlias = unnamed_addr alias i32 (ptr, i32), ptr @_ZN1D1mEi
 
-; CHECK-IR1-LABEL: define i32 @test
+attributes #0 = { noinline optnone }
+
+; CHECK-IR1-LABEL: define {{.*}}i32 @test
 define i32 @test(ptr %obj2, i32 %a) {
 entry:
   %vtable2 = load ptr, ptr %obj2
