@@ -15,6 +15,7 @@ class ImportStdModule(TestBase):
     @add_test_categories(["libc++"])
     @skipIf(compiler=no_match("clang"))
     @skipIfRemote  # This test messes with the platform, can't be run remotely.
+    @skipIf(macos_sdk_version=["<", "16.0"])
     def test(self):
         self.build()
 

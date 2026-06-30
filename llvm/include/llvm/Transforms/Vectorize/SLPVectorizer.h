@@ -183,7 +183,8 @@ private:
   bool vectorizeStores(
       ArrayRef<StoreInst *> Stores, slpvectorizer::BoUpSLP &R,
       DenseSet<std::tuple<Value *, Value *, Value *, Value *, unsigned>>
-          &Visited);
+          &Visited,
+      bool AllowMaskedStores = true);
 
   /// Set by runImpl() when runtime alias check versioning changed the CFG, so
   /// run() can drop CFG-analysis preservation only when necessary.

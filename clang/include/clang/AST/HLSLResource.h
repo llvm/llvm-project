@@ -154,6 +154,8 @@ public:
     return &AST.Idents.get(Name);
   }
 
+  llvm::StringRef getName() const { return Name; }
+
 private:
   void pushName(llvm::StringRef N, llvm::StringRef Delim);
 };

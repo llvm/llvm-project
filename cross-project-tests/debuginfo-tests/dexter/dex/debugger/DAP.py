@@ -969,12 +969,17 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
         frames = []
 
         for stackframe in stackframes:
+            # Some frames are marked "deemphasize" to indicate that they are not interesting; these frames can be
+            # skipped by Dexter.
+            # NB: This is by no means guaranteed to be set by the debug adapter, so is not a perfectly reliable check;
+            #     however, if it *is* set, it's generally a safe bet that we are not looking at user code and so can
+            #     skip this frame. We may check for more presentationHint values in future if/as we add support for more
+            #     debug adapters.
+            if stackframe.get("source", {}).get("presentationHint") == "deemphasize":
+                continue
             # No source, skip the frame! Currently I've only observed this for frames below main, so we break here; if
             # it happens elsewhere, then this will break more stuff and we'll come up with a better solution.
-            if (
-                stackframe.get("source") is None
-                or stackframe["source"].get("path") is None
-            ):
+            if stackframe.get("source", {}).get("path") is None:
                 break
 
             loc_dict = {

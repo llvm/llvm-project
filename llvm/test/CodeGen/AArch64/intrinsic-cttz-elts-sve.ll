@@ -121,6 +121,35 @@ define i32 @add_i32_ctz_nxv2i1_poison(<vscale x 2 x i1> %a, i32 %b) {
   ret i32 %add
 }
 
+define i32 @ctz_nxv3i1(<vscale x 3 x i1> %a) {
+; CHECK-LABEL: ctz_nxv3i1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    mov w9, #3 // =0x3
+; CHECK-NEXT:    ptrue p2.s
+; CHECK-NEXT:    lsr x8, x8, #4
+; CHECK-NEXT:    mul x8, x8, x9
+; CHECK-NEXT:    whilelo p1.s, xzr, x8
+; CHECK-NEXT:    not p1.b, p2/z, p1.b
+; CHECK-NEXT:    mov p0.b, p1/m, p1.b
+; CHECK-NEXT:    brkb p0.b, p2/z, p0.b
+; CHECK-NEXT:    cntp x0, p0, p0.s
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.experimental.cttz.elts.i32.nxv3i1(<vscale x 3 x i1> %a, i1 0)
+  ret i32 %res
+}
+
+define i32 @ctz_nxv3i1_poison(<vscale x 3 x i1> %a) {
+; CHECK-LABEL: ctz_nxv3i1_poison:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p1.s
+; CHECK-NEXT:    brkb p0.b, p1/z, p0.b
+; CHECK-NEXT:    cntp x0, p0, p0.s
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.experimental.cttz.elts.i32.nxv3i1(<vscale x 3 x i1> %a, i1 1)
+  ret i32 %res
+}
+
 define i32 @ctz_nxv4i1(<vscale x 4 x i1> %a) {
 ; CHECK-LABEL: ctz_nxv4i1:
 ; CHECK:       // %bb.0:

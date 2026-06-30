@@ -50,7 +50,8 @@ template <typename T, unsigned NumStrs = 1> struct EnumStringDef {
 };
 
 template <typename T, unsigned NumStrs = 1> class EnumString {
-  template <typename, unsigned, size_t, size_t> friend class EnumStringsStorage;
+  template <typename, unsigned, size_t, size_t>
+  friend struct EnumStringsStorage;
 
   uint16_t NameOff[NumStrs] = {}; ///< Name offsets relative to this pointer.
   uint8_t NameSize[NumStrs] = {}; ///< Name string lengths.

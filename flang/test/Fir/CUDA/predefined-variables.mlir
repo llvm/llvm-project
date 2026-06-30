@@ -237,7 +237,7 @@ func.func @_QMbarPgfoo2(%arg0: !fir.ref<i32> {cuf.data_attr = #cuf.cuda<device>,
 
 // -----
 
-func.func @surviving_predefined_vars(%arg0: i32, %arg1: i32, %arg2: i32) attributes {cuf.proc_attr = #cuf.cuda_proc<global>} {
+func.func @surviving_predefined_vars(%arg0: i32, %arg1: i32, %arg2: i32) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %c4 = arith.constant 4 : index
@@ -279,7 +279,7 @@ func.func @surviving_predefined_vars(%arg0: i32, %arg1: i32, %arg2: i32) attribu
 
 // -----
 
-func.func @surviving_predefined_vars(%arg0: i32, %arg1: i32, %arg2: i32) attributes {cuf.proc_attr = #cuf.cuda_proc<global>} {
+func.func @surviving_predefined_vars(%arg0: i32, %arg1: i32, %arg2: i32) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %c4 = arith.constant 4 : index
@@ -313,6 +313,107 @@ func.func @surviving_predefined_vars(%arg0: i32, %arg1: i32, %arg2: i32) attribu
 }
 
 // CHECK-LABEL: surviving_predefined_vars
+// CHECK-NOT: _QM__fortran_builtinsE__builtin_blockdim
+// CHECK-NOT: _QM__fortran_builtinsE__builtin_blockidx
+// CHECK-NOT: _QM__fortran_builtinsE__builtin_griddim
+// CHECK-NOT: _QM__fortran_builtinsE__builtin_threadidx
+// CHECK: nvvm.read.ptx.sreg.tid.x
+
+// -----
+
+func.func @_QMoutermodPouter(%arg0: !fir.ref<!fir.array<?x?xf64>> {fir.bindc_name = "a"}, %arg1: !fir.ref<!fir.array<?x?xf64>> {fir.bindc_name = "b"}, %arg2: i32 {fir.bindc_name = "stride"}, %arg3: i32 {fir.bindc_name = "n"}) attributes {no_inline} {
+  %c1 = arith.constant 1 : index
+  %cst = arith.constant 2.000000e+00 : f64
+  %c1_i32 = arith.constant 1 : i32
+  %c0 = arith.constant 0 : index
+  %0 = fir.dummy_scope : !fir.dscope
+  %1 = fir.alloca i32
+  fir.store %arg2 to %1 : !fir.ref<i32>
+  %2 = fir.declare %1 dummy_scope %0 arg 3 {fortran_attrs = #fir.var_attrs<intent_in, value>, uniq_name = "_QMoutermodFouterEstride"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+  %3 = fir.alloca i32
+  fir.store %arg3 to %3 : !fir.ref<i32>
+  %4 = fir.declare %3 dummy_scope %0 arg 4 {fortran_attrs = #fir.var_attrs<intent_in, value>, uniq_name = "_QMoutermodFouterEn"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+  %5 = fir.alloca i32 {bindc_name = "j", uniq_name = "_QMoutermodFouterEj"}
+  %6 = fir.declare %5 {uniq_name = "_QMoutermodFouterEj"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %7 = fir.load %2 : !fir.ref<i32>
+  %8 = fir.convert %7 : (i32) -> index
+  %9 = arith.maxsi %8, %c0 : index
+  %10 = fir.load %4 : !fir.ref<i32>
+  %11 = fir.convert %10 : (i32) -> index
+  %12 = arith.maxsi %11, %c0 : index
+  %13 = fir.shape %9, %12 : (index, index) -> !fir.shape<2>
+  %14 = fir.declare %arg0(%13) dummy_scope %0 arg 1 {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QMoutermodFouterEa"} : (!fir.ref<!fir.array<?x?xf64>>, !fir.shape<2>, !fir.dscope) -> !fir.ref<!fir.array<?x?xf64>>
+  %15 = fir.embox %14(%13) : (!fir.ref<!fir.array<?x?xf64>>, !fir.shape<2>) -> !fir.box<!fir.array<?x?xf64>>
+  %16 = fir.declare %arg1(%13) dummy_scope %0 arg 2 {fortran_attrs = #fir.var_attrs<intent_out>, uniq_name = "_QMoutermodFouterEb"} : (!fir.ref<!fir.array<?x?xf64>>, !fir.shape<2>, !fir.dscope) -> !fir.ref<!fir.array<?x?xf64>>
+  %17 = fir.embox %16(%13) : (!fir.ref<!fir.array<?x?xf64>>, !fir.shape<2>) -> !fir.box<!fir.array<?x?xf64>>
+  %18 = acc.present var(%15 : !fir.box<!fir.array<?x?xf64>>) -> !fir.box<!fir.array<?x?xf64>> {name = "a"}
+  %19 = acc.present var(%17 : !fir.box<!fir.array<?x?xf64>>) -> !fir.box<!fir.array<?x?xf64>> {name = "b"}
+  acc.parallel combined(loop) dataOperands(%18, %19 : !fir.box<!fir.array<?x?xf64>>, !fir.box<!fir.array<?x?xf64>>) {
+    %20 = fir.box_addr %18 : (!fir.box<!fir.array<?x?xf64>>) -> !fir.ref<!fir.array<?x?xf64>>
+    %21 = fir.dummy_scope : !fir.dscope
+    %22 = fir.declare %20(%13) dummy_scope %21 arg 1 {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QMoutermodFouterEa"} : (!fir.ref<!fir.array<?x?xf64>>, !fir.shape<2>, !fir.dscope) -> !fir.ref<!fir.array<?x?xf64>>
+    %23 = fir.box_addr %19 : (!fir.box<!fir.array<?x?xf64>>) -> !fir.ref<!fir.array<?x?xf64>>
+    %24 = fir.declare %23(%13) dummy_scope %21 arg 2 {fortran_attrs = #fir.var_attrs<intent_out>, uniq_name = "_QMoutermodFouterEb"} : (!fir.ref<!fir.array<?x?xf64>>, !fir.shape<2>, !fir.dscope) -> !fir.ref<!fir.array<?x?xf64>>
+    %25 = fir.load %4 : !fir.ref<i32>
+    %26 = acc.private varPtr(%6 : !fir.ref<i32>) recipe(@privatization_ref_i32) -> !fir.ref<i32> {implicit = true, name = "j"}
+    %27 = fir.load %2 : !fir.ref<i32>
+    %28 = fir.address_of(@_QM__fortran_builtinsE__builtin_blockdim) : !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>
+    %29 = fir.address_of(@_QM__fortran_builtinsE__builtin_blockidx) : !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>
+    %30 = fir.address_of(@_QM__fortran_builtinsE__builtin_griddim) : !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>
+    %31 = fir.address_of(@_QM__fortran_builtinsE__builtin_threadidx) : !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>
+    %32 = fir.assumed_size_extent : index
+    %33 = fir.convert %c1 : (index) -> i32
+    acc.loop combined(parallel) gang vector private(%26 : !fir.ref<i32>) control(%arg4 : i32) = (%c1_i32 : i32) to (%25 : i32)  step (%c1_i32 : i32) {
+      %34 = fir.alloca i32
+      %35 = fir.alloca i32 {bindc_name = "i", uniq_name = "_QMoutermodFinner_loopEi"}
+      %36 = fir.alloca i32
+      %37 = fir.alloca i32 {bindc_name = "warpsize", uniq_name = "_QMcudadeviceECwarpsize"}
+      %38 = fir.declare %26 {uniq_name = "_QMoutermodFouterEj"} : (!fir.ref<i32>) -> !fir.ref<i32>
+      fir.store %arg4 to %38 : !fir.ref<i32>
+      %39 = fir.load %38 : !fir.ref<i32>
+      %40 = fir.dummy_scope : !fir.dscope
+      fir.store %27 to %34 : !fir.ref<i32>
+      %41 = fir.declare %34 dummy_scope %40 arg 3 {fortran_attrs = #fir.var_attrs<intent_in, value>, uniq_name = "_QMoutermodFinner_loopEstride"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+      %42 = fir.declare %28 {uniq_name = "_QM__fortran_builtinsE__builtin_blockdim"} : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>) -> !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>
+      %43 = fir.declare %29 {uniq_name = "_QM__fortran_builtinsE__builtin_blockidx"} : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>) -> !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>
+      %44 = fir.declare %30 {uniq_name = "_QM__fortran_builtinsE__builtin_griddim"} : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>) -> !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>
+      %45 = fir.declare %35 {uniq_name = "_QMoutermodFinner_loopEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
+      fir.store %39 to %36 : !fir.ref<i32>
+      %46 = fir.declare %36 dummy_scope %40 arg 4 {fortran_attrs = #fir.var_attrs<intent_in, value>, uniq_name = "_QMoutermodFinner_loopEj"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+      %47 = fir.declare %31 {uniq_name = "_QM__fortran_builtinsE__builtin_threadidx"} : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>) -> !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>
+      %48 = fir.declare %37 {uniq_name = "_QMcudadeviceECwarpsize"} : (!fir.ref<i32>) -> !fir.ref<i32>
+      %49 = fir.load %41 : !fir.ref<i32>
+      %50 = fir.convert %49 : (i32) -> index
+      %51 = arith.maxsi %50, %c0 : index
+      %52 = fir.shape %51, %32 : (index, index) -> !fir.shape<2>
+      %53 = fir.declare %22(%52) dummy_scope %40 arg 1 {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QMoutermodFinner_loopEa"} : (!fir.ref<!fir.array<?x?xf64>>, !fir.shape<2>, !fir.dscope) -> !fir.ref<!fir.array<?x?xf64>>
+      %54 = fir.declare %24(%52) dummy_scope %40 arg 2 {fortran_attrs = #fir.var_attrs<intent_out>, uniq_name = "_QMoutermodFinner_loopEb"} : (!fir.ref<!fir.array<?x?xf64>>, !fir.shape<2>, !fir.dscope) -> !fir.ref<!fir.array<?x?xf64>>
+      %55 = fir.load %46 : !fir.ref<i32>
+      %56 = fir.convert %55 : (i32) -> i64
+      %57 = fir.do_loop %arg5 = %c1 to %50 step %c1 iter_args(%arg6 = %33) -> (i32) {
+        fir.store %arg6 to %45 : !fir.ref<i32>
+        %58 = fir.load %45 : !fir.ref<i32>
+        %59 = fir.convert %58 : (i32) -> i64
+        %60 = fir.array_coor %53(%52) %59, %56 : (!fir.ref<!fir.array<?x?xf64>>, !fir.shape<2>, i64, i64) -> !fir.ref<f64>
+        %61 = fir.load %60 : !fir.ref<f64>
+        %62 = arith.mulf %61, %cst fastmath<reassoc,contract> : f64
+        %63 = fir.array_coor %54(%52) %59, %56 : (!fir.ref<!fir.array<?x?xf64>>, !fir.shape<2>, i64, i64) -> !fir.ref<f64>
+        fir.store %62 to %63 : !fir.ref<f64>
+        %64 = fir.load %45 : !fir.ref<i32>
+        %65 = arith.addi %64, %33 overflow<nsw> : i32
+        fir.result %65 : i32
+      }
+      fir.store %57 to %45 : !fir.ref<i32>
+      acc.yield
+    } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+    acc.yield
+  }
+  acc.delete accVar(%18 : !fir.box<!fir.array<?x?xf64>>) {dataClause = #acc<data_clause acc_present>, name = "a"}
+  acc.delete accVar(%19 : !fir.box<!fir.array<?x?xf64>>) {dataClause = #acc<data_clause acc_present>, name = "b"}
+  return
+}
+
+// CHECK-LABEL: _QMoutermodPouter
 // CHECK-NOT: _QM__fortran_builtinsE__builtin_blockdim
 // CHECK-NOT: _QM__fortran_builtinsE__builtin_blockidx
 // CHECK-NOT: _QM__fortran_builtinsE__builtin_griddim
