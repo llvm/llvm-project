@@ -141,16 +141,16 @@ Object makeObject(const parser::OmpObject &object,
                   semantics::SemanticsContext &semaCtx) {
   // If object is a common block, expression analyzer won't be able to
   // do anything.
-  if (const auto *name = std::get_if<parser::Name>(&object.u)) {
+  if (const auto *name = parser::omp::GetCommonBlockFromObj(object)) {
     assert(name->symbol && "Expecting Symbol");
     return Object{name->symbol, std::nullopt};
   }
   assert(!std::holds_alternative<parser::OmpObject::Invalid>(object.u) &&
          "Invalid object should have been caught in semantics");
   // OmpObject is std::variant<Designator, OmpLocator, Name, Invalid>;
-  if (auto *desg = std::get_if<parser::Designator>(&object.u))
+  if (auto *desg = parser::omp::GetDesignatorFromObj(object))
     return makeObject(*desg, semaCtx);
-  if (auto *locator = std::get_if<parser::OmpLocator>(&object.u)) {
+  if (auto *locator = parser::omp::GetLocatorFromObj(object)) {
     return common::visit( //
         common::visitors{
             [&](const parser::OmpReservedIdentifier &x) {

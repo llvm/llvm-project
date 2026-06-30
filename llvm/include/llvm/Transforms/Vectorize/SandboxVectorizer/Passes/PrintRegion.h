@@ -9,7 +9,9 @@ namespace llvm::sandboxir {
 /// A Region pass that does nothing, for use as a placeholder in tests.
 class PrintRegion final : public RegionPass {
 public:
-  PrintRegion() : RegionPass("print-region") {}
+  PrintRegion(StringRef AuxArg) : RegionPass("print-region") {
+    assert(AuxArg.empty() && "This pass ignores aux arg!");
+  }
   bool runOnRegion(Region &R, const Analyses &A) final {
     raw_ostream &OS = outs();
 #ifndef NDEBUG
