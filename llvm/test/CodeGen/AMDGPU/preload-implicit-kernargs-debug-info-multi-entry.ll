@@ -7,7 +7,7 @@ define amdgpu_kernel void @preload_block_count_x(ptr addrspace(1) inreg noundef 
 ; GFX942-NEXT:    .file 0 "/" "<stdin>"
 ; GFX942-NEXT:    .cfi_sections .debug_frame
 ; GFX942-NEXT:    .cfi_startproc
-; GFX942-NEXT:  ; %bb.5:
+; GFX942-NEXT:  ; %bb.6:
 ; GFX942-NEXT:    .loc 0 1 0 prologue_end ; <stdin>:1:0
 ; GFX942-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x0
 ; GFX942-NEXT:    s_load_dwordx8 s[4:11], s[0:1], 0x8
@@ -17,7 +17,7 @@ define amdgpu_kernel void @preload_block_count_x(ptr addrspace(1) inreg noundef 
 ; GFX942-NEXT:    .loc 0 0 0 is_stmt 0 ; :0:0
 ; GFX942-NEXT:  .Ltmp0:
 ; GFX942-NEXT:    .p2align 8
-; GFX942-NEXT:  ; %bb.6:
+; GFX942-NEXT:  ; %bb.7:
 ; GFX942-NEXT:  .LBB0_0: ; %entry
 ; GFX942-NEXT:    .cfi_escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02 ; CFA is 0 in private_wave aspace
 ; GFX942-NEXT:    .cfi_undefined 16
@@ -28,7 +28,7 @@ define amdgpu_kernel void @preload_block_count_x(ptr addrspace(1) inreg noundef 
 ; GFX942-NEXT:    s_ashr_i32 s13, s12, 31
 ; GFX942-NEXT:    s_or_b64 s[8:9], s[6:7], s[12:13]
 ; GFX942-NEXT:    s_cmp_lg_u32 s9, 0
-; GFX942-NEXT:    s_cbranch_scc0 .LBB0_4
+; GFX942-NEXT:    s_cbranch_scc0 .LBB0_2
 ; GFX942-NEXT:  .Ltmp2:
 ; GFX942-NEXT:  ; %bb.1:
 ; GFX942-NEXT:    ;DEBUG_VALUE: test:var <- [DW_OP_LLVM_poisoned] $sgpr2_sgpr3
@@ -37,6 +37,9 @@ define amdgpu_kernel void @preload_block_count_x(ptr addrspace(1) inreg noundef 
 ; GFX942-NEXT:    s_sub_u32 s1, 0, s12
 ; GFX942-NEXT:    s_subb_u32 s3, 0, s13
 ; GFX942-NEXT:  .Ltmp3:
+; GFX942-NEXT:    .loc 0 0 0 is_stmt 0 ; <stdin>:0:0
+; GFX942-NEXT:    s_mov_b64 s[8:9], 0
+; GFX942-NEXT:    .loc 0 1 0 ; <stdin>:1
 ; GFX942-NEXT:    v_fmamk_f32 v0, v1, 0x4f800000, v0
 ; GFX942-NEXT:    v_rcp_f32_e32 v0, v0
 ; GFX942-NEXT:    s_nop 0
@@ -142,8 +145,21 @@ define amdgpu_kernel void @preload_block_count_x(ptr addrspace(1) inreg noundef 
 ; GFX942-NEXT:    s_cmp_lg_u32 s5, 0
 ; GFX942-NEXT:    s_cselect_b32 s11, s16, s3
 ; GFX942-NEXT:    s_cselect_b32 s10, s14, s1
-; GFX942-NEXT:    s_cbranch_execnz .LBB0_3
+; GFX942-NEXT:    s_branch .LBB0_3
 ; GFX942-NEXT:  .LBB0_2:
+; GFX942-NEXT:  .Ltmp4:
+; GFX942-NEXT:    ;DEBUG_VALUE: test:var <- [DW_OP_LLVM_poisoned] $sgpr2_sgpr3
+; GFX942-NEXT:    .loc 0 0 0 ; <stdin>:0:0
+; GFX942-NEXT:    s_mov_b64 s[8:9], -1
+; GFX942-NEXT:    ; implicit-def: $sgpr10_sgpr11
+; GFX942-NEXT:  .Ltmp5:
+; GFX942-NEXT:  .LBB0_3: ; %Flow
+; GFX942-NEXT:    s_and_b64 s[8:9], s[8:9], exec
+; GFX942-NEXT:    s_cselect_b32 s1, 1, 0
+; GFX942-NEXT:    s_cmp_lg_u32 s1, 1
+; GFX942-NEXT:    s_cbranch_scc1 .LBB0_5
+; GFX942-NEXT:  ; %bb.4:
+; GFX942-NEXT:    .loc 0 1 0 is_stmt 1 ; <stdin>:1
 ; GFX942-NEXT:    v_cvt_f32_u32_e32 v0, s12
 ; GFX942-NEXT:    s_sub_i32 s1, 0, s12
 ; GFX942-NEXT:    s_mov_b32 s11, 0
@@ -167,7 +183,8 @@ define amdgpu_kernel void @preload_block_count_x(ptr addrspace(1) inreg noundef 
 ; GFX942-NEXT:    s_add_i32 s3, s1, 1
 ; GFX942-NEXT:    s_cmp_ge_u32 s5, s12
 ; GFX942-NEXT:    s_cselect_b32 s10, s3, s1
-; GFX942-NEXT:  .LBB0_3: ; %entry.split
+; GFX942-NEXT:  .LBB0_5: ; %entry.split
+; GFX942-NEXT:    .loc 0 1 0 ; <stdin>:1
 ; GFX942-NEXT:    s_ashr_i32 s1, s0, 31
 ; GFX942-NEXT:    s_add_u32 s3, s10, 15
 ; GFX942-NEXT:    s_addc_u32 s5, s11, 0
@@ -203,12 +220,7 @@ define amdgpu_kernel void @preload_block_count_x(ptr addrspace(1) inreg noundef 
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_endpgm
-; GFX942-NEXT:  .Ltmp4:
-; GFX942-NEXT:  .LBB0_4:
-; GFX942-NEXT:    ;DEBUG_VALUE: test:var <- [DW_OP_LLVM_poisoned] $sgpr2_sgpr3
-; GFX942-NEXT:    ; implicit-def: $sgpr10_sgpr11
-; GFX942-NEXT:    .loc 0 0 0 is_stmt 0 ; <stdin>:0:0
-; GFX942-NEXT:    s_branch .LBB0_2
+; GFX942-NEXT:  .Ltmp6:
 entry:
   %0 = ptrtoint ptr addrspace(1) %dst.coerce to i64
   %1 = inttoptr i64 %0 to ptr
