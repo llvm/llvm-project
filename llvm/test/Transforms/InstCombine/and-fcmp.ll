@@ -12,12 +12,10 @@ define i1 @PR1738(double %x, double %y) {
   ret i1 %and
 }
 
-; TODO: this can be supported by freezing %y
 define i1 @PR1738_logical(double %x, double %y) {
 ; CHECK-LABEL: @PR1738_logical(
-; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ord double [[X:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[CMP2:%.*]] = fcmp ord double [[Y:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[AND:%.*]] = select i1 [[CMP1]], i1 [[CMP2]], i1 false
+; CHECK-NEXT:    [[Y_FR:%.*]] = freeze double [[Y:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = fcmp ord double [[X:%.*]], [[Y_FR]]
 ; CHECK-NEXT:    ret i1 [[AND]]
 ;
   %cmp1 = fcmp ord double %x, 0.0
@@ -103,12 +101,10 @@ define i1 @PR41069_commute(i1 %z, float %c, float %d) {
   ret i1 %r
 }
 
-; TODO: this should be fixed using freeze
 define i1 @PR41069_commute_logical(i1 %z, float %c, float %d) {
 ; CHECK-LABEL: @PR41069_commute_logical(
-; CHECK-NEXT:    [[ORD1:%.*]] = fcmp ninf ord float [[C:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[ORD2:%.*]] = fcmp reassoc ninf ord float [[D:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[ORD2]], i1 [[ORD1]], i1 false
+; CHECK-NEXT:    [[C_FR:%.*]] = freeze float [[C:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ord float [[D:%.*]], [[C_FR]]
 ; CHECK-NEXT:    [[R:%.*]] = select i1 [[TMP1]], i1 [[Z:%.*]], i1 false
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
@@ -205,12 +201,10 @@ define i1 @fcmp_ord_nonzero(float %x, float %y) {
   ret i1 %and
 }
 
-; TODO: this can be supported by freezing %y
 define i1 @fcmp_ord_nonzero_logical(float %x, float %y) {
 ; CHECK-LABEL: @fcmp_ord_nonzero_logical(
-; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ord float [[X:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[CMP2:%.*]] = fcmp ord float [[Y:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[AND:%.*]] = select i1 [[CMP1]], i1 [[CMP2]], i1 false
+; CHECK-NEXT:    [[Y_FR:%.*]] = freeze float [[Y:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = fcmp ord float [[X:%.*]], [[Y_FR]]
 ; CHECK-NEXT:    ret i1 [[AND]]
 ;
   %cmp1 = fcmp ord float %x, 1.0

@@ -1103,22 +1103,6 @@ Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
   if (!GetOutputFileSP()->GetIsTerminalWithColors())
     disable_color();
 
-  if (Diagnostics::Enabled()) {
-    m_diagnostics_callback_id = Diagnostics::Instance().AddCallback(
-        [this](const FileSpec &dir) -> llvm::Error {
-          for (auto &entry : m_stream_handlers) {
-            llvm::StringRef log_path = entry.first();
-            llvm::StringRef file_name = llvm::sys::path::filename(log_path);
-            FileSpec destination = dir.CopyByAppendingPathComponent(file_name);
-            std::error_code ec =
-                llvm::sys::fs::copy_file(log_path, destination.GetPath());
-            if (ec)
-              return llvm::errorCodeToError(ec);
-          }
-          return llvm::Error::success();
-        });
-  }
-
 #if defined(_WIN32) && defined(ENABLE_VIRTUAL_TERMINAL_PROCESSING)
   // Enabling use of ANSI color codes because LLDB is using them to highlight
   // text.
@@ -1164,9 +1148,6 @@ void Debugger::Clear() {
     GetInputFile().Close();
 
     m_command_interpreter_up->Clear();
-
-    if (Diagnostics::Enabled())
-      Diagnostics::Instance().RemoveCallback(m_diagnostics_callback_id);
   });
 }
 
@@ -1692,6 +1673,20 @@ void Debugger::SetLoggingCallback(lldb::LogOutputCallback log_callback,
       std::make_shared<CallbackLogHandler>(log_callback, baton);
 }
 
+std::vector<std::string>
+Debugger::CopyLogFilesToDirectory(const FileSpec &dir) {
+  std::vector<std::string> copied;
+  for (auto &entry : m_stream_handlers) {
+    llvm::StringRef log_path = entry.first();
+    llvm::StringRef file_name = llvm::sys::path::filename(log_path);
+    FileSpec destination = dir.CopyByAppendingPathComponent(file_name);
+    // Best-effort: skip logs that can't be copied rather than aborting.
+    if (!llvm::sys::fs::copy_file(log_path, destination.GetPath()))
+      copied.push_back(file_name.str());
+  }
+  return copied;
+}
+
 void Debugger::SetDestroyCallback(
     lldb_private::DebuggerDestroyCallback destroy_callback, void *baton) {
   std::lock_guard<std::mutex> guard(m_destroy_callback_mutex);
@@ -1806,7 +1801,7 @@ void Debugger::ReportDiagnosticImpl(Severity severity, std::string message,
     // The diagnostic subsystem is optional but we still want to broadcast
     // events when it's disabled.
     if (Diagnostics::Enabled())
-      Diagnostics::Instance().Report(message);
+      Diagnostics::Instance().Record(message);
 
     // We don't broadcast info events.
     if (severity == lldb::eSeverityInfo)

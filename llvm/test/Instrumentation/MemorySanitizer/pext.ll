@@ -7,10 +7,13 @@ target triple = "x86_64-unknown-linux-gnu"
 define i8 @Test_pext_8(i8 %a, i8 %b) sanitize_memory {
 ; CHECK-LABEL: define i8 @Test_pext_8(
 ; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP6:%.*]] = or i8 [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp ne i8 [[TMP3]], 0
+; CHECK-NEXT:    [[TMP4:%.*]] = sext i1 [[TMP7]] to i8
+; CHECK-NEXT:    [[TMP5:%.*]] = call i8 @llvm.pext.i8(i8 [[TMP2]], i8 [[B]])
+; CHECK-NEXT:    [[TMP6:%.*]] = or i8 [[TMP4]], [[TMP5]]
 ; CHECK-NEXT:    [[C:%.*]] = tail call i8 @llvm.pext.i8(i8 [[A]], i8 [[B]])
 ; CHECK-NEXT:    store i8 [[TMP6]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret i8 [[C]]
@@ -23,10 +26,13 @@ define i8 @Test_pext_8(i8 %a, i8 %b) sanitize_memory {
 define i16 @Test_pext_16(i16 %a, i16 %b) sanitize_memory {
 ; CHECK-LABEL: define i16 @Test_pext_16(
 ; CHECK-SAME: i16 [[A:%.*]], i16 [[B:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP2:%.*]] = load i16, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i16, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load i16, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP6:%.*]] = or i16 [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp ne i16 [[TMP3]], 0
+; CHECK-NEXT:    [[TMP4:%.*]] = sext i1 [[TMP7]] to i16
+; CHECK-NEXT:    [[TMP5:%.*]] = call i16 @llvm.pext.i16(i16 [[TMP2]], i16 [[B]])
+; CHECK-NEXT:    [[TMP6:%.*]] = or i16 [[TMP4]], [[TMP5]]
 ; CHECK-NEXT:    [[C:%.*]] = tail call i16 @llvm.pext.i16(i16 [[A]], i16 [[B]])
 ; CHECK-NEXT:    store i16 [[TMP6]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret i16 [[C]]
@@ -39,10 +45,13 @@ define i16 @Test_pext_16(i16 %a, i16 %b) sanitize_memory {
 define i32 @Test_pext_32(i32 %a, i32 %b) sanitize_memory {
 ; CHECK-LABEL: define i32 @Test_pext_32(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP6:%.*]] = or i32 [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp ne i32 [[TMP3]], 0
+; CHECK-NEXT:    [[TMP4:%.*]] = sext i1 [[TMP7]] to i32
+; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @llvm.pext.i32(i32 [[TMP2]], i32 [[B]])
+; CHECK-NEXT:    [[TMP6:%.*]] = or i32 [[TMP4]], [[TMP5]]
 ; CHECK-NEXT:    [[C:%.*]] = tail call i32 @llvm.pext.i32(i32 [[A]], i32 [[B]])
 ; CHECK-NEXT:    store i32 [[TMP6]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret i32 [[C]]
@@ -55,10 +64,13 @@ define i32 @Test_pext_32(i32 %a, i32 %b) sanitize_memory {
 define i64 @Test_pext_64(i64 %a, i64 %b) sanitize_memory {
 ; CHECK-LABEL: define i64 @Test_pext_64(
 ; CHECK-SAME: i64 [[A:%.*]], i64 [[B:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP6:%.*]] = or i64 [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp ne i64 [[TMP3]], 0
+; CHECK-NEXT:    [[TMP4:%.*]] = sext i1 [[TMP7]] to i64
+; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.pext.i64(i64 [[TMP2]], i64 [[B]])
+; CHECK-NEXT:    [[TMP6:%.*]] = or i64 [[TMP4]], [[TMP5]]
 ; CHECK-NEXT:    [[C:%.*]] = tail call i64 @llvm.pext.i64(i64 [[A]], i64 [[B]])
 ; CHECK-NEXT:    store i64 [[TMP6]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret i64 [[C]]
@@ -70,10 +82,13 @@ define i64 @Test_pext_64(i64 %a, i64 %b) sanitize_memory {
 define i128 @Test_pext_128(i128 %a, i128 %b) sanitize_memory {
 ; CHECK-LABEL: define i128 @Test_pext_128(
 ; CHECK-SAME: i128 [[A:%.*]], i128 [[B:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP2:%.*]] = load i128, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i128, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load i128, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP6:%.*]] = or i128 [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp ne i128 [[TMP3]], 0
+; CHECK-NEXT:    [[TMP4:%.*]] = sext i1 [[TMP7]] to i128
+; CHECK-NEXT:    [[TMP5:%.*]] = call i128 @llvm.pext.i128(i128 [[TMP2]], i128 [[B]])
+; CHECK-NEXT:    [[TMP6:%.*]] = or i128 [[TMP4]], [[TMP5]]
 ; CHECK-NEXT:    [[C:%.*]] = tail call i128 @llvm.pext.i128(i128 [[A]], i128 [[B]])
 ; CHECK-NEXT:    store i128 [[TMP6]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret i128 [[C]]

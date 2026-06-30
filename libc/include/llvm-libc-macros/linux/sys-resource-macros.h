@@ -9,6 +9,8 @@
 #ifndef LLVM_LIBC_MACROS_LINUX_SYS_RESOURCE_MACROS_H
 #define LLVM_LIBC_MACROS_LINUX_SYS_RESOURCE_MACROS_H
 
+#include "../../llvm-libc-types/rlim_t.h"
+
 #define RLIMIT_CPU 0
 #define RLIMIT_FSIZE 1
 #define RLIMIT_DATA 2
@@ -26,6 +28,6 @@
 #define RLIMIT_RTPRIO 14
 #define RLIMIT_RTTIME 15
 
-#define RLIM_INFINITY (~0UL)
+#define RLIM_INFINITY ((rlim_t) - 1)
 
 #endif // LLVM_LIBC_MACROS_LINUX_SYS_RESOURCE_MACROS_H

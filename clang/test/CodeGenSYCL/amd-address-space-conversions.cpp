@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fsycl-is-device -disable-llvm-passes -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fsycl-is-device -disable-llvm-passes -emit-llvm %s -o - -Wno-deprecated-attributes | FileCheck %s
 void bar(int &Data) {}
 // CHECK-DAG: define {{.*}} void @[[RAW_REF:[a-zA-Z0-9_]+]](ptr noundef nonnull align 4 dereferenceable(4) %
 void bar2(int &Data) {}
