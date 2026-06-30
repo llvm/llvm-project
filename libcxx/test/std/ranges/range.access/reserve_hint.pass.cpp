@@ -24,6 +24,7 @@ static_assert(!std::is_invocable_v<RangeReserveHintT, Incomplete(&)[]>);
 static_assert(!std::is_invocable_v<RangeReserveHintT, Incomplete(&&)[]>);
 
 extern int bounded_array[42];
+extern int unbounded_array[];
 
 struct SizedSentinelRange {
   int data_[42] = {};
@@ -55,6 +56,8 @@ static_assert(!std::is_invocable_v<RangeReserveHintT, HasReserveHintMemberBool>)
 
 static_assert(std::ranges::reserve_hint(bounded_array) == 42);
 ASSERT_SAME_TYPE(decltype(std::ranges::reserve_hint(bounded_array)), std::size_t);
+
+static_assert(!std::is_invocable_v<RangeReserveHintT, decltype(unbounded_array)>);
 
 bool constexpr test_sized_sentinel_range() {
   SizedSentinelRange b;
