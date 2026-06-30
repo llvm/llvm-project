@@ -26,26 +26,25 @@ bool between(type_identity_t<T> lower, T value, type_identity_t<T> upper) {
   return lower < value && value < upper;
 }
 
+// Note: math_errhandling must be queried with a runtime `if`, not `#if`. On Apple
+// platforms it is defined as a function call (__math_errhandling()), so it is not a
+// preprocessor constant and would break `#if` under -Wundef.
 template <class Func>
 void check_no_domain_error(Func f) {
-#if math_errhandling & MATH_ERRNO
-  errno = EACCES;
-#endif
+  if (math_errhandling & MATH_ERRNO)
+    errno = EACCES;
   f();
-#if math_errhandling & MATH_ERRNO
-  assert(errno == EACCES);
-#endif
+  if (math_errhandling & MATH_ERRNO)
+    assert(errno == EACCES);
 }
 
 template <class Func>
 void check_domain_error(Func f) {
-#if math_errhandling & MATH_ERRNO
-  errno = EACCES;
-#endif
+  if (math_errhandling & MATH_ERRNO)
+    errno = EACCES;
   f();
-#if math_errhandling & MATH_ERRNO
-  assert(errno == EDOM);
-#endif
+  if (math_errhandling & MATH_ERRNO)
+    assert(errno == EDOM);
 }
 
 #endif // TEST_SF_CMATH_COMMON_H
