@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "RISCVMCAsmInfo.h"
+#include "MCTargetDesc/RISCVBaseInfo.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCExpr.h"
@@ -30,6 +31,10 @@ RISCVMCAsmInfo::RISCVMCAsmInfo(const Triple &TT, const MCTargetOptions &Options)
   ExceptionsType = ExceptionHandling::DwarfCFI;
   Data16bitsDirective = "\t.half\t";
   Data32bitsDirective = "\t.word\t";
+
+  RISCVABI::ABI ABI = RISCVABI::getTargetABI(Options.getABIName());
+  IsCheriPureCapabilityABI =
+      ABI != RISCVABI::ABI_Unknown && RISCVABI::isCHERIPureCapabilityABI(ABI);
 }
 
 const MCExpr *RISCVMCAsmInfo::getExprForFDESymbol(const MCSymbol *Sym,

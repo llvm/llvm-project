@@ -129,7 +129,8 @@ bool MCWasmStreamer::emitSymbolAttribute(MCSymbol *S, MCSymbolAttr Attribute) {
 }
 
 void MCWasmStreamer::emitCommonSymbol(MCSymbol *S, uint64_t Size,
-                                      Align ByteAlignment) {
+                                      Align ByteAlignment,
+                                      TailPaddingAmount TailPadding) {
   getContext().reportError(getStartTokLoc(),
                            "common symbols are not yet implemented for Wasm: " +
                                S->getName());
@@ -140,7 +141,8 @@ void MCWasmStreamer::emitELFSize(MCSymbol *Symbol, const MCExpr *Value) {
 }
 
 void MCWasmStreamer::emitLocalCommonSymbol(MCSymbol *S, uint64_t Size,
-                                           Align ByteAlignment) {
+                                           Align ByteAlignment,
+                                           TailPaddingAmount TailPadding) {
   getContext().reportError(getStartTokLoc(),
                            "local common symbols are not yet implemented "
                            "for Wasm: " +

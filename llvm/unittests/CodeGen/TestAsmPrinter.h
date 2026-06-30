@@ -30,8 +30,9 @@ public:
 
   MOCK_METHOD2(emitSymbolAttribute,
                bool(MCSymbol *Symbol, MCSymbolAttr Attribute));
-  MOCK_METHOD3(emitCommonSymbol,
-               void(MCSymbol *Symbol, uint64_t Size, Align ByteAlignment));
+  MOCK_METHOD4(emitCommonSymbol,
+               void(MCSymbol *Symbol, uint64_t Size, Align ByteAlignment,
+                    TailPaddingAmount TailPadding));
   MOCK_METHOD5(emitZerofill,
                void(MCSection *Section, MCSymbol *Symbol, uint64_t Size,
                     Align ByteAlignment, SMLoc Loc));

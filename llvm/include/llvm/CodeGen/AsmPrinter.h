@@ -27,6 +27,7 @@
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/IR/InlineAsm.h"
+#include "llvm/Support/CHERICapabilityFormat.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cstdint>
@@ -582,8 +583,10 @@ public:
   /// On AIX, when an alias refers to a sub-element of a global variable, the
   /// label of that alias needs to be emitted before the corresponding element.
   using AliasMapTy = DenseMap<uint64_t, SmallVector<const GlobalAlias *, 1>>;
-  void emitGlobalConstant(const DataLayout &DL, const Constant *CV,
-                          AliasMapTy *AliasList = nullptr);
+  void
+  emitGlobalConstant(const DataLayout &DL, const Constant *CV,
+                     TailPaddingAmount TailPadding = TailPaddingAmount::None,
+                     AliasMapTy *AliasList = nullptr);
 
   /// Unnamed constant global variables solely contaning a pointer to
   /// another globals variable act like a global variable "proxy", or GOT

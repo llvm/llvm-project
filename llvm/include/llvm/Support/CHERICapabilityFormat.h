@@ -14,6 +14,8 @@
 
 namespace llvm {
 
+enum class TailPaddingAmount : uint64_t { None = 0u };
+
 template <typename Derived, typename AddressType>
 struct CHERICapabilityFormatBase {
   CHERICapabilityFormatBase() = delete;
@@ -30,6 +32,13 @@ struct CHERICapabilityFormatBase {
   /// Returns the required alignment for an allocation of size \p Length.
   static Align getRequiredAlignment(AddressType Length) {
     return Align((~getAlignmentMask(Length) + 1) & AddressMask);
+  }
+
+  /// Returns the amount of padding bytes required to have precise bounds on an
+  /// allocation of size \p Length.
+  static TailPaddingAmount getRequiredTailPadding(AddressType Length) {
+    return static_cast<TailPaddingAmount>(
+        llvm::alignTo(Length, getRequiredAlignment(Length)) - Length);
   }
 
   /// Returns \p Length rounded up to the nearest representable allocation

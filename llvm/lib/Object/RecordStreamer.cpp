@@ -107,7 +107,8 @@ void RecordStreamer::emitZerofill(MCSection *Section, MCSymbol *Symbol,
 }
 
 void RecordStreamer::emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
-                                      Align ByteAlignment) {
+                                      Align ByteAlignment,
+                                      TailPaddingAmount TailPadding) {
   markDefined(*Symbol);
 }
 

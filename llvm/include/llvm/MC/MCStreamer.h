@@ -23,6 +23,7 @@
 #include "llvm/MC/MCPseudoProbe.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCWinEH.h"
+#include "llvm/Support/CHERICapabilityFormat.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MD5.h"
@@ -691,16 +692,21 @@ public:
   /// \param Symbol - The common symbol to emit.
   /// \param Size - The size of the common symbol.
   /// \param ByteAlignment - The alignment of the symbol.
-  virtual void emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
-                                Align ByteAlignment) = 0;
+  /// \param TailPadding - The number of tail padding bytes required to maintain
+  /// precise CHERI bounds.
+  virtual void
+  emitCommonSymbol(MCSymbol *Symbol, uint64_t Size, Align ByteAlignment,
+                   TailPaddingAmount TailPadding = TailPaddingAmount::None) = 0;
 
   /// Emit a local common (.lcomm) symbol.
   ///
   /// \param Symbol - The common symbol to emit.
   /// \param Size - The size of the common symbol.
   /// \param ByteAlignment - The alignment of the common symbol in bytes.
-  virtual void emitLocalCommonSymbol(MCSymbol *Symbol, uint64_t Size,
-                                     Align ByteAlignment);
+  /// \param TailPadding - The number of bytes to pad for precise bounds.
+  virtual void emitLocalCommonSymbol(
+      MCSymbol *Symbol, uint64_t Size, Align ByteAlignment,
+      TailPaddingAmount TailPadding = TailPaddingAmount::None);
 
   /// Emit the zerofill section and an optional symbol.
   ///
