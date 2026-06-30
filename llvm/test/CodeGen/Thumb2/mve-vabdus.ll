@@ -533,26 +533,26 @@ define void @vabd_loop_u32(ptr nocapture readonly %x, ptr nocapture readonly %y,
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrw.u32 q6, [r0], #16
 ; CHECK-NEXT:    vldrw.u32 q5, [r1], #16
+; CHECK-NEXT:    vmov r12, s22
+; CHECK-NEXT:    vmov r3, s26
+; CHECK-NEXT:    vmov r4, s24
 ; CHECK-NEXT:    vmov.f32 s12, s22
 ; CHECK-NEXT:    vmov.f32 s16, s26
-; CHECK-NEXT:    vmov r4, s24
-; CHECK-NEXT:    vmov.f32 s14, s23
-; CHECK-NEXT:    vmov.f32 s18, s27
 ; CHECK-NEXT:    vmov.f32 s22, s21
 ; CHECK-NEXT:    vmov.f32 s26, s25
-; CHECK-NEXT:    vmov r12, s12
-; CHECK-NEXT:    vmov r3, s16
+; CHECK-NEXT:    vmov.f32 s14, s23
+; CHECK-NEXT:    vmov.f32 s18, s27
+; CHECK-NEXT:    vand q3, q3, q0
+; CHECK-NEXT:    vand q4, q4, q0
 ; CHECK-NEXT:    sub.w r12, r3, r12
 ; CHECK-NEXT:    vmov r3, s20
 ; CHECK-NEXT:    subs r3, r4, r3
-; CHECK-NEXT:    vmov r4, s18
+; CHECK-NEXT:    vmov r4, s27
 ; CHECK-NEXT:    vmov q2[2], q2[0], r3, r12
-; CHECK-NEXT:    vmov r3, s14
-; CHECK-NEXT:    vand q3, q3, q0
-; CHECK-NEXT:    vand q4, q4, q0
+; CHECK-NEXT:    vmov r3, s23
 ; CHECK-NEXT:    sub.w r12, r4, r3
-; CHECK-NEXT:    vmov r4, s22
-; CHECK-NEXT:    vmov r3, s26
+; CHECK-NEXT:    vmov r4, s21
+; CHECK-NEXT:    vmov r3, s25
 ; CHECK-NEXT:    vand q5, q5, q0
 ; CHECK-NEXT:    vand q6, q6, q0
 ; CHECK-NEXT:    subs r3, r3, r4

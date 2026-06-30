@@ -1,0 +1,28 @@
+# RUN: llc -mtriple=x86_64-- -mcpu=skylake-avx512 -run-pass=peephole-opt -verify-machineinstrs %s -o - | FileCheck %s
+
+---
+name: regseq_source_class_differs_from_subreg_use
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: regseq_source_class_differs_from_subreg_use
+    ; CHECK: [[SRC:%[0-9]+]]:vr128 = AVX512_128_SET0
+    ; CHECK-NEXT: [[USE:%[0-9]+]]:vr128 = MOVAPSrr [[SRC]]
+    ; CHECK-NEXT: RET 0
+    %0:vr128x = AVX512_128_SET0
+    %1:vr256 = REG_SEQUENCE %0, %subreg.sub_xmm
+    ; Must constrain %0 from vr128x to vr128 for the fold.
+    %2:vr128 = MOVAPSrr %1.sub_xmm
+    RET 0
+
+...
+---
+name: regseq_fold_preserves_source_subreg
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: regseq_fold_preserves_source_subreg
+    %0:vr256 = AVX_SET0
+    %1:vr256 = REG_SEQUENCE %0.sub_xmm, %subreg.sub_xmm
+    %2:vr128 = MOVAPSrr %1.sub_xmm
+    RET 0
+
+...

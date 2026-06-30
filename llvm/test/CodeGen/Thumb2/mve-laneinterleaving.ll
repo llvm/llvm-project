@@ -64,21 +64,15 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @ext_add_trunc_i32(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: ext_add_trunc_i32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov.f32 s8, s6
-; CHECK-NEXT:    vmov.f32 s6, s7
-; CHECK-NEXT:    vmov r0, s8
-; CHECK-NEXT:    vmov.f32 s8, s2
-; CHECK-NEXT:    vmov.f32 s2, s3
-; CHECK-NEXT:    vmov r1, s8
-; CHECK-NEXT:    vmov r2, s2
-; CHECK-NEXT:    vmov.f32 s2, s5
+; CHECK-NEXT:    vmov r0, s6
+; CHECK-NEXT:    vmov r1, s2
+; CHECK-NEXT:    vmov r2, s3
+; CHECK-NEXT:    vmov r3, s1
 ; CHECK-NEXT:    add.w r12, r1, r0
-; CHECK-NEXT:    vmov r1, s6
+; CHECK-NEXT:    vmov r1, s7
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    add r1, r2
-; CHECK-NEXT:    vmov r2, s2
-; CHECK-NEXT:    vmov.f32 s2, s1
-; CHECK-NEXT:    vmov r3, s2
+; CHECK-NEXT:    vmov r2, s5
 ; CHECK-NEXT:    add r2, r3
 ; CHECK-NEXT:    vmov r3, s4
 ; CHECK-NEXT:    add r0, r3
@@ -184,19 +178,17 @@ define arm_aapcs_vfpcc <4 x i32> @ext_add_ashr_trunc_i32(<4 x i32> %a, <4 x i32>
 ; CHECK-NEXT:    push {r4, r5, r6, r7, lr}
 ; CHECK-NEXT:    vmov.f32 s12, s6
 ; CHECK-NEXT:    vmov.i64 q2, #0xffffffff
-; CHECK-NEXT:    vmov.f32 s6, s5
 ; CHECK-NEXT:    vmov.f32 s14, s7
+; CHECK-NEXT:    vand q3, q3, q2
+; CHECK-NEXT:    vmov r2, s2
+; CHECK-NEXT:    vmov r0, r1, d6
+; CHECK-NEXT:    vmov lr, r12, d7
+; CHECK-NEXT:    vmov.f32 s6, s5
 ; CHECK-NEXT:    vand q1, q1, q2
 ; CHECK-NEXT:    vmov r3, r7, d2
-; CHECK-NEXT:    vand q3, q3, q2
-; CHECK-NEXT:    vmov.f32 s4, s2
-; CHECK-NEXT:    vmov r0, r1, d6
-; CHECK-NEXT:    vmov.f32 s2, s3
-; CHECK-NEXT:    vmov lr, r12, d7
-; CHECK-NEXT:    vmov r2, s4
 ; CHECK-NEXT:    asrs r5, r2, #31
 ; CHECK-NEXT:    adds r2, r2, r0
-; CHECK-NEXT:    vmov r0, s2
+; CHECK-NEXT:    vmov r0, s3
 ; CHECK-NEXT:    adcs r1, r5
 ; CHECK-NEXT:    vmov r5, s0
 ; CHECK-NEXT:    asrl r2, r1, #1
@@ -204,19 +196,19 @@ define arm_aapcs_vfpcc <4 x i32> @ext_add_ashr_trunc_i32(<4 x i32> %a, <4 x i32>
 ; CHECK-NEXT:    adds.w r0, r0, lr
 ; CHECK-NEXT:    adc.w r1, r1, r12
 ; CHECK-NEXT:    asrs r4, r5, #31
+; CHECK-NEXT:    asrl r0, r1, #1
 ; CHECK-NEXT:    adds r6, r5, r3
 ; CHECK-NEXT:    vmov r3, r5, d3
-; CHECK-NEXT:    vmov.f32 s6, s1
-; CHECK-NEXT:    asrl r0, r1, #1
 ; CHECK-NEXT:    adcs r7, r4
+; CHECK-NEXT:    vmov r1, s1
 ; CHECK-NEXT:    asrl r6, r7, #1
-; CHECK-NEXT:    vmov q0[2], q0[0], r6, r2
-; CHECK-NEXT:    vmov r1, s6
+; CHECK-NEXT:    vmov q1[2], q1[0], r6, r2
 ; CHECK-NEXT:    adds r6, r1, r3
 ; CHECK-NEXT:    asr.w r2, r1, #31
 ; CHECK-NEXT:    adc.w r1, r2, r5
 ; CHECK-NEXT:    asrl r6, r1, #1
-; CHECK-NEXT:    vmov q0[3], q0[1], r6, r0
+; CHECK-NEXT:    vmov q1[3], q1[1], r6, r0
+; CHECK-NEXT:    vmov q0, q1
 ; CHECK-NEXT:    pop {r4, r5, r6, r7, pc}
 entry:
   %sa = sext <4 x i32> %a to <4 x i64>
@@ -302,26 +294,23 @@ define arm_aapcs_vfpcc <4 x i32> @ext_ops_trunc_i32(<4 x i32> %a, <4 x i32> %b) 
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r5, r6, r7, r8, r9, r10, lr}
 ; CHECK-NEXT:    push.w {r4, r5, r6, r7, r8, r9, r10, lr}
-; CHECK-NEXT:    vmov.f32 s12, s2
-; CHECK-NEXT:    vmov.f32 s2, s3
-; CHECK-NEXT:    vmov.f32 s10, s7
+; CHECK-NEXT:    vmov r10, s3
+; CHECK-NEXT:    vmov.i64 q3, #0xffffffff
+; CHECK-NEXT:    vmov r2, s7
 ; CHECK-NEXT:    vmov.f32 s8, s6
-; CHECK-NEXT:    vmov.f32 s6, s5
-; CHECK-NEXT:    vmov r10, s2
-; CHECK-NEXT:    vmov r2, s10
-; CHECK-NEXT:    vmov.f32 s2, s1
+; CHECK-NEXT:    vmov.f32 s10, s7
+; CHECK-NEXT:    vand q2, q2, q3
 ; CHECK-NEXT:    adds.w r6, r10, r2
 ; CHECK-NEXT:    asr.w r0, r10, #31
 ; CHECK-NEXT:    adc r3, r0, #0
 ; CHECK-NEXT:    eor.w r1, r10, r2
 ; CHECK-NEXT:    asrl r6, r3, r2
 ; CHECK-NEXT:    subs r0, r6, r2
-; CHECK-NEXT:    vmov r6, s12
+; CHECK-NEXT:    vmov r6, s2
 ; CHECK-NEXT:    sbc lr, r3, #0
-; CHECK-NEXT:    vmov r3, s8
+; CHECK-NEXT:    vmov r3, s6
 ; CHECK-NEXT:    umull r0, r8, r0, r2
-; CHECK-NEXT:    vmov.i64 q3, #0xffffffff
-; CHECK-NEXT:    vand q2, q2, q3
+; CHECK-NEXT:    vmov.f32 s6, s5
 ; CHECK-NEXT:    adds r4, r6, r3
 ; CHECK-NEXT:    asr.w r7, r6, #31
 ; CHECK-NEXT:    adc r5, r7, #0
@@ -345,11 +334,11 @@ define arm_aapcs_vfpcc <4 x i32> @ext_ops_trunc_i32(<4 x i32> %a, <4 x i32> %b) 
 ; CHECK-NEXT:    rsb.w r1, r10, #0
 ; CHECK-NEXT:    lsll r4, r5, r3
 ; CHECK-NEXT:    lsll r0, r7, r1
-; CHECK-NEXT:    vmov r1, s6
+; CHECK-NEXT:    vmov r1, s5
 ; CHECK-NEXT:    lsll r0, r7, r2
 ; CHECK-NEXT:    mov.w r12, #0
 ; CHECK-NEXT:    vmov q3[2], q3[0], r4, r0
-; CHECK-NEXT:    vmov r0, s2
+; CHECK-NEXT:    vmov r0, s1
 ; CHECK-NEXT:    vmov q3[3], q3[1], r5, r7
 ; CHECK-NEXT:    vpsel q2, q3, q2
 ; CHECK-NEXT:    adds r4, r0, r1

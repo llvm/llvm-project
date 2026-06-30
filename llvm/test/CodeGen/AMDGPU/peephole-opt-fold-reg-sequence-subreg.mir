@@ -14,7 +14,6 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY]].sub0, %subreg.sub0, [[V_MOV_B32_e32_]], %subreg.sub1
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[COPY]].sub0
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[COPY1]]
     %0:vreg_64_align2 = COPY $vgpr0_vgpr1
@@ -38,9 +37,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY]].sub0, %subreg.sub0, [[V_MOV_B32_e32_]], %subreg.sub1
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[V_MOV_B32_e32_]]
-    ; CHECK-NEXT: S_ENDPGM 0, implicit [[COPY1]]
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[V_MOV_B32_e32_]]
     %0:vreg_64_align2 = COPY $vgpr0_vgpr1
     %1:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     %2:vreg_64_align2 = REG_SEQUENCE %0.sub0, %subreg.sub0, %1, %subreg.sub1
@@ -62,7 +59,6 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[V_MOV_B32_e32_]], %subreg.sub1, [[COPY]].sub0, %subreg.sub0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[COPY]].sub0
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[COPY1]]
     %0:vreg_64_align2 = COPY $vgpr0_vgpr1
@@ -86,9 +82,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[V_MOV_B32_e32_]], %subreg.sub1, [[COPY]].sub0, %subreg.sub0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[V_MOV_B32_e32_]]
-    ; CHECK-NEXT: S_ENDPGM 0, implicit [[COPY1]]
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[V_MOV_B32_e32_]]
     %0:vreg_64_align2 = COPY $vgpr0_vgpr1
     %1:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     %2:vreg_64_align2 = REG_SEQUENCE %1, %subreg.sub1, %0.sub0, %subreg.sub0
@@ -110,7 +104,6 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr1_vgpr2
     ; CHECK-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_96 = REG_SEQUENCE [[COPY]].sub0, %subreg.sub0, [[V_MOV_B32_e32_]], %subreg.sub1, [[COPY]].sub1, %subreg.sub2
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[COPY]].sub0
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[COPY1]]
     %0:vreg_64 = COPY $vgpr1_vgpr2
@@ -134,7 +127,6 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr1_vgpr2
     ; CHECK-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_96 = REG_SEQUENCE [[COPY]].sub0, %subreg.sub0, [[V_MOV_B32_e32_]], %subreg.sub1, [[COPY]].sub1, %subreg.sub2
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[COPY]].sub0
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[COPY1]]
     %0:vreg_64 = COPY $vgpr1_vgpr2
@@ -394,7 +386,6 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_128 = COPY $vgpr1_vgpr2_vgpr3_vgpr4
     ; CHECK-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     ; CHECK-NEXT: [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
-    ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY]].sub2_sub3, %subreg.sub0_sub1, [[COPY]].sub0, %subreg.sub2, [[V_MOV_B32_e32_1]], %subreg.sub3
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[COPY]].sub0
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[COPY1]]
     %0:vreg_128 = COPY $vgpr1_vgpr2_vgpr3_vgpr4

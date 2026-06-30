@@ -169,8 +169,9 @@ define double @struct_ptr_buffer_atomic_fmax_f64_ret__vgpr_val__vgpr_rsrc__vgpr_
 ; GFX6-NEXT:    s_and_saveexec_b64 s[4:5], s[4:5]
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; GFX6-NEXT:    buffer_atomic_fmax_x2 v[0:1], v[6:7], s[8:11], s16 idxen offen offset:256 glc
-; GFX6-NEXT:    ; implicit-def: $vgpr2_vgpr3_vgpr4_vgpr5
+; GFX6-NEXT:    ; implicit-def: $vgpr2
 ; GFX6-NEXT:    ; implicit-def: $vgpr6_vgpr7
+; GFX6-NEXT:    ; implicit-def: $vgpr4_vgpr5
 ; GFX6-NEXT:    s_xor_b64 exec, exec, s[4:5]
 ; GFX6-NEXT:    s_cbranch_execnz .LBB8_1
 ; GFX6-NEXT:  ; %bb.2:
@@ -193,8 +194,9 @@ define double @struct_ptr_buffer_atomic_fmax_f64_ret__vgpr_val__vgpr_rsrc__vgpr_
 ; GFX7-NEXT:    s_and_saveexec_b64 s[4:5], s[4:5]
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    buffer_atomic_fmax_x2 v[0:1], v[6:7], s[8:11], s16 idxen offen offset:256 glc
-; GFX7-NEXT:    ; implicit-def: $vgpr2_vgpr3_vgpr4_vgpr5
+; GFX7-NEXT:    ; implicit-def: $vgpr2
 ; GFX7-NEXT:    ; implicit-def: $vgpr6_vgpr7
+; GFX7-NEXT:    ; implicit-def: $vgpr4_vgpr5
 ; GFX7-NEXT:    s_xor_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    s_cbranch_execnz .LBB8_1
 ; GFX7-NEXT:  ; %bb.2:
@@ -226,9 +228,10 @@ define double @struct_ptr_buffer_atomic_fmax_f64_ret__vgpr_val__sgpr_rsrc__vgpr_
 ; GFX6-NEXT:    s_and_saveexec_b64 s[4:5], s[4:5]
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; GFX6-NEXT:    buffer_atomic_fmax_x2 v[0:1], v[6:7], s[8:11], s12 idxen offen offset:256 glc
-; GFX6-NEXT:    ; implicit-def: $vgpr2_vgpr3_vgpr4_vgpr5
+; GFX6-NEXT:    ; implicit-def: $vgpr2
 ; GFX6-NEXT:    ; implicit-def: $vgpr8
 ; GFX6-NEXT:    ; implicit-def: $vgpr6_vgpr7
+; GFX6-NEXT:    ; implicit-def: $vgpr4_vgpr5
 ; GFX6-NEXT:    s_xor_b64 exec, exec, s[4:5]
 ; GFX6-NEXT:    s_cbranch_execnz .LBB9_1
 ; GFX6-NEXT:  ; %bb.2:
@@ -254,9 +257,10 @@ define double @struct_ptr_buffer_atomic_fmax_f64_ret__vgpr_val__sgpr_rsrc__vgpr_
 ; GFX7-NEXT:    s_and_saveexec_b64 s[4:5], s[4:5]
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    buffer_atomic_fmax_x2 v[0:1], v[6:7], s[8:11], s12 idxen offen offset:256 glc
-; GFX7-NEXT:    ; implicit-def: $vgpr2_vgpr3_vgpr4_vgpr5
+; GFX7-NEXT:    ; implicit-def: $vgpr2
 ; GFX7-NEXT:    ; implicit-def: $vgpr8
 ; GFX7-NEXT:    ; implicit-def: $vgpr6_vgpr7
+; GFX7-NEXT:    ; implicit-def: $vgpr4_vgpr5
 ; GFX7-NEXT:    s_xor_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    s_cbranch_execnz .LBB9_1
 ; GFX7-NEXT:  ; %bb.2:

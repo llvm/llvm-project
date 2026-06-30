@@ -1463,7 +1463,7 @@ public:
   /// Check if \p MO is a legal operand if it was the \p OpIdx Operand
   /// for \p MI.
   bool isOperandLegal(const MachineInstr &MI, unsigned OpIdx,
-                      const MachineOperand *MO = nullptr) const;
+                      const MachineOperand *MO = nullptr) const override;
 
   /// Check if \p MO would be a valid operand for the given operand
   /// definition \p OpInfo. Note this does not attempt to validate constant bus
@@ -1476,8 +1476,8 @@ public:
   /// given operand description or operand index.
   /// The operand index version provide more legality checks
   bool isLegalRegOperand(const MachineRegisterInfo &MRI,
-                         const MCOperandInfo &OpInfo,
-                         const MachineOperand &MO) const;
+                         const MCOperandInfo &OpInfo, const MachineOperand &MO,
+                         const MachineFunction *MF = nullptr) const;
   bool isLegalRegOperand(const MachineInstr &MI, unsigned OpIdx,
                          const MachineOperand &MO) const;
 

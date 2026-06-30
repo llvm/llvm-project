@@ -146,10 +146,10 @@ define amdgpu_ps <10 x float> @image_bvh8_intersect_ray_ssssss(i64 inreg %node_p
 define amdgpu_ps <10 x float> @image_bvh8_intersect_ray_vvvvvv(i64 %node_ptr, float %ray_extent, <3 x float> %ray_origin, <3 x float> %ray_dir, i32 %offset, <4 x i32> %tdescr, ptr addrspace(1) %origin, ptr addrspace(1) %dir) {
 ; GFX12-SDAG-LABEL: image_bvh8_intersect_ray_vvvvvv:
 ; GFX12-SDAG:       ; %bb.0:
-; GFX12-SDAG-NEXT:    v_dual_mov_b32 v28, v9 :: v_dual_mov_b32 v19, v7
-; GFX12-SDAG-NEXT:    v_dual_mov_b32 v20, v8 :: v_dual_mov_b32 v23, v5
-; GFX12-SDAG-NEXT:    v_dual_mov_b32 v18, v6 :: v_dual_mov_b32 v21, v3
-; GFX12-SDAG-NEXT:    v_dual_mov_b32 v22, v4 :: v_dual_mov_b32 v25, v1
+; GFX12-SDAG-NEXT:    v_dual_mov_b32 v28, v9 :: v_dual_mov_b32 v23, v8
+; GFX12-SDAG-NEXT:    v_dual_mov_b32 v22, v7 :: v_dual_mov_b32 v21, v6
+; GFX12-SDAG-NEXT:    v_dual_mov_b32 v20, v5 :: v_dual_mov_b32 v19, v4
+; GFX12-SDAG-NEXT:    v_dual_mov_b32 v18, v3 :: v_dual_mov_b32 v25, v1
 ; GFX12-SDAG-NEXT:    v_dual_mov_b32 v26, v2 :: v_dual_mov_b32 v27, 0
 ; GFX12-SDAG-NEXT:    v_mov_b32_e32 v24, v0
 ; GFX12-SDAG-NEXT:    s_mov_b32 s4, exec_lo
@@ -165,18 +165,19 @@ define amdgpu_ps <10 x float> @image_bvh8_intersect_ray_vvvvvv(i64 %node_ptr, fl
 ; GFX12-SDAG-NEXT:    v_cmpx_eq_u64_e32 s[0:1], v[10:11]
 ; GFX12-SDAG-NEXT:    v_cmpx_eq_u64_e32 s[2:3], v[12:13]
 ; GFX12-SDAG-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-SDAG-NEXT:    image_bvh8_intersect_ray v[0:9], [v[24:25], v[26:27], v[21:23], v[18:20], v28], s[0:3]
+; GFX12-SDAG-NEXT:    image_bvh8_intersect_ray v[0:9], [v[24:25], v[26:27], v[18:20], v[21:23], v28], s[0:3]
 ; GFX12-SDAG-NEXT:    s_and_not1_wrexec_b32 s5, s5
-; GFX12-SDAG-NEXT:    ; implicit-def: $vgpr10_vgpr11_vgpr12_vgpr13
+; GFX12-SDAG-NEXT:    ; implicit-def: $vgpr10
 ; GFX12-SDAG-NEXT:    ; implicit-def: $vgpr24_vgpr25
 ; GFX12-SDAG-NEXT:    ; implicit-def: $vgpr26_vgpr27
 ; GFX12-SDAG-NEXT:    ; implicit-def: $vgpr28
+; GFX12-SDAG-NEXT:    ; implicit-def: $vgpr12_vgpr13
 ; GFX12-SDAG-NEXT:    s_cbranch_execnz .LBB3_1
 ; GFX12-SDAG-NEXT:  ; %bb.2:
 ; GFX12-SDAG-NEXT:    s_mov_b32 exec_lo, s4
 ; GFX12-SDAG-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-SDAG-NEXT:    global_store_b96 v[14:15], v[21:23], off
-; GFX12-SDAG-NEXT:    global_store_b96 v[16:17], v[18:20], off
+; GFX12-SDAG-NEXT:    global_store_b96 v[14:15], v[18:20], off
+; GFX12-SDAG-NEXT:    global_store_b96 v[16:17], v[21:23], off
 ; GFX12-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-GISEL-LABEL: image_bvh8_intersect_ray_vvvvvv:

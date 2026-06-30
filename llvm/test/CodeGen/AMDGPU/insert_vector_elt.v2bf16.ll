@@ -1135,10 +1135,9 @@ define amdgpu_kernel void @v_insertelement_v4bf16_dynamic_sgpr(ptr addrspace(1) 
 ; SI-NEXT:    s_or_b32 s7, s5, s4
 ; SI-NEXT:    s_lshl_b64 s[4:5], 0xffff, s6
 ; SI-NEXT:    v_mov_b32_e32 v4, s7
-; SI-NEXT:    v_mov_b32_e32 v5, s7
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_bfi_b32 v3, s5, v4, v3
-; SI-NEXT:    v_bfi_b32 v2, s4, v5, v2
+; SI-NEXT:    v_bfi_b32 v2, s4, v4, v2
 ; SI-NEXT:    buffer_store_dwordx2 v[2:3], v[0:1], s[0:3], 0 addr64
 ; SI-NEXT:    s_endpgm
 ;
@@ -1163,11 +1162,10 @@ define amdgpu_kernel void @v_insertelement_v4bf16_dynamic_sgpr(ptr addrspace(1) 
 ; VI-NEXT:    v_add_u32_e32 v2, vcc, s0, v2
 ; VI-NEXT:    s_lshl_b64 s[0:1], 0xffff, s3
 ; VI-NEXT:    v_mov_b32_e32 v4, s2
-; VI-NEXT:    v_mov_b32_e32 v5, s2
 ; VI-NEXT:    v_addc_u32_e32 v3, vcc, 0, v3, vcc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_bfi_b32 v1, s1, v4, v1
-; VI-NEXT:    v_bfi_b32 v0, s0, v5, v0
+; VI-NEXT:    v_bfi_b32 v0, s0, v4, v0
 ; VI-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; VI-NEXT:    s_endpgm
 ;
@@ -1182,10 +1180,9 @@ define amdgpu_kernel void @v_insertelement_v4bf16_dynamic_sgpr(ptr addrspace(1) 
 ; GFX900-NEXT:    s_pack_ll_b32_b16 s4, s4, s4
 ; GFX900-NEXT:    s_lshl_b64 s[2:3], 0xffff, s2
 ; GFX900-NEXT:    v_mov_b32_e32 v3, s4
-; GFX900-NEXT:    v_mov_b32_e32 v4, s4
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
 ; GFX900-NEXT:    v_bfi_b32 v1, s3, v3, v1
-; GFX900-NEXT:    v_bfi_b32 v0, s2, v4, v0
+; GFX900-NEXT:    v_bfi_b32 v0, s2, v3, v0
 ; GFX900-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
 ; GFX900-NEXT:    s_endpgm
 ;
@@ -1201,10 +1198,9 @@ define amdgpu_kernel void @v_insertelement_v4bf16_dynamic_sgpr(ptr addrspace(1) 
 ; GFX942-NEXT:    s_pack_ll_b32_b16 s4, s6, s6
 ; GFX942-NEXT:    s_lshl_b64 s[2:3], 0xffff, s2
 ; GFX942-NEXT:    v_mov_b32_e32 v3, s4
-; GFX942-NEXT:    v_mov_b32_e32 v4, s4
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    v_bfi_b32 v1, s3, v3, v1
-; GFX942-NEXT:    v_bfi_b32 v0, s2, v4, v0
+; GFX942-NEXT:    v_bfi_b32 v0, s2, v3, v0
 ; GFX942-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
 ; GFX942-NEXT:    s_endpgm
 ;

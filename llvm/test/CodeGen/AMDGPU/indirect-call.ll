@@ -169,7 +169,7 @@ define void @test_indirect_call_vgpr_ptr(ptr %fptr) #0 {
 ; GCN-NEXT:    s_mov_b32 s14, s51
 ; GCN-NEXT:    s_mov_b32 s15, s50
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[16:17]
-; GCN-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN-NEXT:    ; implicit-def: $vgpr0
 ; GCN-NEXT:    ; implicit-def: $vgpr31
 ; GCN-NEXT:    s_xor_b64 exec, exec, s[64:65]
 ; GCN-NEXT:    s_cbranch_execnz .LBB2_1
@@ -343,7 +343,7 @@ define void @test_indirect_call_vgpr_ptr_arg(ptr %fptr) #0 {
 ; GCN-NEXT:    s_mov_b32 s15, s50
 ; GCN-NEXT:    v_mov_b32_e32 v0, v2
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[16:17]
-; GCN-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN-NEXT:    ; implicit-def: $vgpr0
 ; GCN-NEXT:    ; implicit-def: $vgpr31
 ; GCN-NEXT:    ; implicit-def: $vgpr2
 ; GCN-NEXT:    s_xor_b64 exec, exec, s[64:65]
@@ -517,15 +517,15 @@ define i32 @test_indirect_call_vgpr_ptr_ret(ptr %fptr) #0 {
 ; GCN-NEXT:    s_mov_b32 s14, s51
 ; GCN-NEXT:    s_mov_b32 s15, s50
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[16:17]
-; GCN-NEXT:    v_mov_b32_e32 v2, v0
-; GCN-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN-NEXT:    v_mov_b32_e32 v1, v0
+; GCN-NEXT:    ; implicit-def: $vgpr0
 ; GCN-NEXT:    ; implicit-def: $vgpr31
 ; GCN-NEXT:    s_xor_b64 exec, exec, s[64:65]
 ; GCN-NEXT:    s_cbranch_execnz .LBB4_1
 ; GCN-NEXT:  ; %bb.2:
 ; GCN-NEXT:    s_mov_b64 exec, s[54:55]
 ; GCN-NEXT:    v_readlane_b32 s30, v40, 16
-; GCN-NEXT:    v_add_i32_e32 v0, vcc, 1, v2
+; GCN-NEXT:    v_add_i32_e32 v0, vcc, 1, v1
 ; GCN-NEXT:    v_readlane_b32 s31, v40, 17
 ; GCN-NEXT:    v_readlane_b32 s65, v40, 15
 ; GCN-NEXT:    v_readlane_b32 s64, v40, 14
@@ -701,7 +701,7 @@ define void @test_indirect_call_vgpr_ptr_in_branch(ptr %fptr, i1 %cond) #0 {
 ; GCN-NEXT:    s_mov_b32 s14, s51
 ; GCN-NEXT:    s_mov_b32 s15, s50
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[16:17]
-; GCN-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN-NEXT:    ; implicit-def: $vgpr0
 ; GCN-NEXT:    ; implicit-def: $vgpr31
 ; GCN-NEXT:    s_xor_b64 exec, exec, s[66:67]
 ; GCN-NEXT:    s_cbranch_execnz .LBB5_2
@@ -877,7 +877,7 @@ define void @test_indirect_call_vgpr_ptr_inreg_arg(ptr %fptr) #0 {
 ; GCN-NEXT:    s_and_saveexec_b64 s[10:11], vcc
 ; GCN-NEXT:    s_movk_i32 s4, 0x7b
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[8:9]
-; GCN-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN-NEXT:    ; implicit-def: $vgpr0
 ; GCN-NEXT:    s_xor_b64 exec, exec, s[10:11]
 ; GCN-NEXT:    s_cbranch_execnz .LBB6_1
 ; GCN-NEXT:  ; %bb.2:
@@ -1009,7 +1009,7 @@ define i32 @test_indirect_call_vgpr_ptr_arg_and_reuse(i32 %i, ptr %fptr) #0 {
 ; GCN-NEXT:    s_and_saveexec_b64 s[8:9], vcc
 ; GCN-NEXT:    v_mov_b32_e32 v0, v40
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[6:7]
-; GCN-NEXT:    ; implicit-def: $vgpr1_vgpr2
+; GCN-NEXT:    ; implicit-def: $vgpr1
 ; GCN-NEXT:    s_xor_b64 exec, exec, s[8:9]
 ; GCN-NEXT:    s_cbranch_execnz .LBB7_1
 ; GCN-NEXT:  ; %bb.2:
@@ -1146,15 +1146,15 @@ define i32 @test_indirect_call_vgpr_ptr_arg_and_return(i32 %i, ptr %fptr) #0 {
 ; GCN-NEXT:    v_cmp_eq_u64_e32 vcc, s[8:9], v[1:2]
 ; GCN-NEXT:    s_and_saveexec_b64 s[6:7], vcc
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[8:9]
-; GCN-NEXT:    v_mov_b32_e32 v3, v0
-; GCN-NEXT:    ; implicit-def: $vgpr1_vgpr2
+; GCN-NEXT:    v_mov_b32_e32 v2, v0
+; GCN-NEXT:    ; implicit-def: $vgpr1
 ; GCN-NEXT:    ; implicit-def: $vgpr0
 ; GCN-NEXT:    s_xor_b64 exec, exec, s[6:7]
 ; GCN-NEXT:    s_cbranch_execnz .LBB8_1
 ; GCN-NEXT:  ; %bb.2:
 ; GCN-NEXT:    s_mov_b64 exec, s[4:5]
 ; GCN-NEXT:    v_readlane_b32 s30, v40, 14
-; GCN-NEXT:    v_mov_b32_e32 v0, v3
+; GCN-NEXT:    v_mov_b32_e32 v0, v2
 ; GCN-NEXT:    v_readlane_b32 s31, v40, 15
 ; GCN-NEXT:    v_readlane_b32 s55, v40, 13
 ; GCN-NEXT:    v_readlane_b32 s54, v40, 12
@@ -1279,7 +1279,7 @@ define void @test_indirect_tail_call_vgpr_ptr(ptr %fptr) #0 {
 ; GCN-NEXT:    v_cmp_eq_u64_e32 vcc, s[6:7], v[0:1]
 ; GCN-NEXT:    s_and_saveexec_b64 s[8:9], vcc
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[6:7]
-; GCN-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN-NEXT:    ; implicit-def: $vgpr0
 ; GCN-NEXT:    s_xor_b64 exec, exec, s[8:9]
 ; GCN-NEXT:    s_cbranch_execnz .LBB9_1
 ; GCN-NEXT:  ; %bb.2:
