@@ -212,9 +212,13 @@ mlir::LogicalResult CIRToLLVMCopyOpLowering::matchAndRewrite(
     cir::CopyOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
   mlir::DataLayout layout(op->getParentOfType<mlir::ModuleOp>());
+  // The llvm.memcpy length is size_t-wide (target-dependent), so take its
+  // width from the data layout rather than hardcoding i64.
+  auto llvmPtrTy = mlir::LLVM::LLVMPointerType::get(rewriter.getContext());
+  mlir::Type lenTy =
+      rewriter.getIntegerType(layout.getTypeSizeInBits(llvmPtrTy));
   const mlir::Value length = mlir::LLVM::ConstantOp::create(
-      rewriter, op.getLoc(), rewriter.getI64Type(),
-      op.getCopySizeInBytes(layout));
+      rewriter, op.getLoc(), lenTy, op.getCopySizeInBytes(layout));
   assert(!cir::MissingFeatures::aggValueSlotVolatile());
   rewriter.replaceOpWithNewOp<mlir::LLVM::MemcpyOp>(
       op, adaptor.getDst(), adaptor.getSrc(), length, op.getIsVolatile());
@@ -3971,15 +3975,20 @@ mlir::LogicalResult CIRToLLVMThrowOpLowering::matchAndRewrite(
 mlir::LogicalResult CIRToLLVMAllocExceptionOpLowering::matchAndRewrite(
     cir::AllocExceptionOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
-  // Get or create `declare ptr @__cxa_allocate_exception(i64)`
+  // Get or create `declare ptr @__cxa_allocate_exception(size_t)`. thrown_size
+  // is size_t, so take its width from the data layout rather than hardcoding
+  // i64; otherwise the call mismatches the runtime on 32-bit targets.
   StringRef fnName = "__cxa_allocate_exception";
   auto llvmPtrTy = mlir::LLVM::LLVMPointerType::get(rewriter.getContext());
-  auto int64Ty = mlir::IntegerType::get(rewriter.getContext(), 64);
-  auto fnTy = mlir::LLVM::LLVMFunctionType::get(llvmPtrTy, {int64Ty});
+  mlir::DataLayout layout(op->getParentOfType<mlir::ModuleOp>());
+  auto sizeTTy = mlir::IntegerType::get(rewriter.getContext(),
+                                        layout.getTypeSizeInBits(llvmPtrTy));
+  auto fnTy = mlir::LLVM::LLVMFunctionType::get(llvmPtrTy, {sizeTTy});
 
   createLLVMFuncOpIfNotExist(rewriter, op, fnName, fnTy);
-  auto exceptionSize = mlir::LLVM::ConstantOp::create(rewriter, op.getLoc(),
-                                                      adaptor.getSizeAttr());
+  auto exceptionSize = mlir::LLVM::ConstantOp::create(
+      rewriter, op.getLoc(), sizeTTy,
+      rewriter.getIntegerAttr(sizeTTy, op.getSize()));
 
   auto allocaExceptionCall = mlir::LLVM::CallOp::create(
       rewriter, op.getLoc(), mlir::TypeRange{llvmPtrTy}, fnName,

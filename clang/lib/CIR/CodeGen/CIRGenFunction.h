@@ -1542,6 +1542,10 @@ public:
   emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
                          ReturnValueSlot returnValue,
                          llvm::Triple::ArchType arch);
+  std::optional<mlir::Value> emitARMBuiltinExpr(unsigned builtinID,
+                                                const CallExpr *expr,
+                                                ReturnValueSlot returnValue,
+                                                llvm::Triple::ArchType arch);
   std::optional<mlir::Value> emitAArch64SMEBuiltinExpr(unsigned builtinID,
                                                        const CallExpr *expr);
   std::optional<mlir::Value> emitAArch64SVEBuiltinExpr(unsigned builtinID,
