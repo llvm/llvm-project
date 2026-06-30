@@ -5690,6 +5690,69 @@ void fir::IfOp::resultToSourceOps(llvm::SmallVectorImpl<mlir::Value> &results,
     results.push_back(term->getOperand(resultNum));
 }
 
+// Fold away a fir.if that only forwards an optional argument or returns
+// fir.absent when it is not present:
+//
+//   %present = fir.is_present %var : (T) -> i1
+//   %r = fir.if %present -> (T) {
+//     fir.result %var : T
+//   } else {
+//     %absent = fir.absent T
+//     fir.result %absent : T
+//   }
+//
+// The result is always %var: optional arguments already encode presence.
+struct FoldPresentAbsentIfOp : public mlir::OpRewritePattern<fir::IfOp> {
+  using mlir::OpRewritePattern<fir::IfOp>::OpRewritePattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(fir::IfOp ifOp,
+                  mlir::PatternRewriter &rewriter) const override {
+    if (ifOp.getNumResults() != 1)
+      return mlir::failure();
+
+    auto isPresentOp = ifOp.getCondition().getDefiningOp<fir::IsPresentOp>();
+    if (!isPresentOp)
+      return mlir::failure();
+
+    mlir::Value optionalVal = isPresentOp.getVal();
+    mlir::Type resultType = ifOp.getResult(0).getType();
+    if (optionalVal.getType() != resultType)
+      return mlir::failure();
+
+    mlir::Block &thenBlock = ifOp.getThenRegion().front();
+    if (thenBlock.getOperations().size() != 1)
+      return mlir::failure();
+    auto thenResult = mlir::dyn_cast<fir::ResultOp>(thenBlock.getTerminator());
+    if (!thenResult || thenResult.getNumOperands() != 1 ||
+        thenResult.getOperand(0) != optionalVal)
+      return mlir::failure();
+
+    if (ifOp.getElseRegion().empty())
+      return mlir::failure();
+    mlir::Block &elseBlock = ifOp.getElseRegion().front();
+    if (elseBlock.getOperations().size() > 2)
+      return mlir::failure();
+    auto elseResult = mlir::dyn_cast<fir::ResultOp>(elseBlock.getTerminator());
+    if (!elseResult || elseResult.getNumOperands() != 1)
+      return mlir::failure();
+    auto absentOp = elseResult.getOperand(0).getDefiningOp<fir::AbsentOp>();
+    if (!absentOp)
+      return mlir::failure();
+    if (elseBlock.getOperations().size() == 2 &&
+        absentOp.getOperation() != &elseBlock.front())
+      return mlir::failure();
+
+    rewriter.replaceOp(ifOp, optionalVal);
+    return mlir::success();
+  }
+};
+
+void fir::IfOp::getCanonicalizationPatterns(mlir::RewritePatternSet &patterns,
+                                            mlir::MLIRContext *context) {
+  patterns.add<FoldPresentAbsentIfOp>(context);
+}
+
 //===----------------------------------------------------------------------===//
 // BoxOffsetOp
 //===----------------------------------------------------------------------===//

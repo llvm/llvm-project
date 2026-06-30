@@ -38,7 +38,6 @@
 using namespace llvm;
 using namespace sampleprof;
 using namespace llvm::sampleprofutil;
-using ProfileCount = Function::ProfileCount;
 
 #define DEBUG_TYPE "fs-profile-loader"
 

@@ -329,6 +329,8 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
       .legalFor(allIntScalarsAndVectors)
       .legalIf(extendedScalarsAndVectors);
 
+  getActionDefinitionsBuilder({G_SSHLSAT, G_USHLSAT}).lower();
+
   getActionDefinitionsBuilder(G_STRICT_FLDEXP)
       .legalForCartesianProduct(allFloatScalarsAndVectors, allIntScalars);
 
@@ -355,7 +357,11 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
 
   getActionDefinitionsBuilder(G_PHI)
       .legalFor(allPtrsScalarsAndVectors)
-      .legalIf(extendedPtrsScalarsAndVectors);
+      .legalIf(extendedPtrsScalarsAndVectors)
+      .moreElementsToNextPow2(0)
+      .fewerElementsIf(vectorElementCountIsGreaterThan(0, MaxVectorSize),
+                       LegalizeMutations::changeElementCountTo(
+                           0, ElementCount::getFixed(MaxVectorSize)));
 
   getActionDefinitionsBuilder(G_BITCAST).legalIf(
       all(typeInSet(0, allPtrsScalarsAndVectors),
@@ -453,6 +459,12 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
       .alwaysLegal();
 
   getActionDefinitionsBuilder({G_SADDO, G_SSUBO}).lower();
+
+  // s64 is unsupported because lowering widens to s128, which SPIR-V does not
+  // have.
+  getActionDefinitionsBuilder({G_SMULFIX, G_UMULFIX})
+      .unsupportedFor({s64})
+      .lower();
 
   getActionDefinitionsBuilder({G_LROUND, G_LLROUND})
       .legalForCartesianProduct(allFloatScalarsAndVectors,

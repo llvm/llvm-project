@@ -657,7 +657,7 @@ public:
   }
 
   virtual const MCExpr *lowerConstantPtrAuth(const ConstantPtrAuth &CPA) {
-    report_fatal_error("ptrauth constant lowering not implemented");
+    reportFatalUsageError("ptrauth constant lowering not implemented");
   }
 
   /// Lower the specified BlockAddress to an MCExpr.

@@ -594,7 +594,7 @@ def SubOffset : Opcode {
 // [Pointer, Pointer] -> [Integral]
 def SubPtr : Opcode {
   let Types = [IntegerTypeClass];
-  let Args = [ArgBool];
+  let Args = [ArgUint32];
   let HasGroup = 1;
 }
 

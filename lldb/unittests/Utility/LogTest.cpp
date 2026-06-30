@@ -12,6 +12,7 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 #include "llvm/ADT/BitmaskEnum.h"
+#include "llvm/Support/JSON.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Threading.h"
 #include <thread>
@@ -227,8 +228,14 @@ TEST_F(LogChannelTest, Enable) {
   EXPECT_NE(nullptr, GetLog(TestChannel::FOO));
   EXPECT_NE(nullptr, GetLog(TestChannel::BAR));
 
-  EXPECT_TRUE(EnableChannel(log_handler_sp, 0, "chan", {"baz"}, error));
+  EXPECT_FALSE(EnableChannel(log_handler_sp, 0, "chan", {"baz"}, error));
   EXPECT_NE(std::string::npos, error.find("unrecognized log category 'baz'"))
+      << "error: " << error;
+
+  EXPECT_FALSE(
+      EnableChannel(log_handler_sp, 0, "chan", {"baz", "bar", "abc"}, error));
+  EXPECT_NE(std::string::npos,
+            error.find("unrecognized log categories 'baz', 'abc'"))
       << "error: " << error;
 }
 
@@ -256,7 +263,7 @@ TEST_F(LogChannelTest, Disable) {
   EXPECT_NE(nullptr, GetLog(TestChannel::FOO));
   EXPECT_EQ(nullptr, GetLog(TestChannel::BAR));
 
-  EXPECT_TRUE(DisableChannel("chan", {"baz"}, error));
+  EXPECT_FALSE(DisableChannel("chan", {"baz"}, error));
   EXPECT_NE(std::string::npos, error.find("unrecognized log category 'baz'"))
       << "error: " << error;
   EXPECT_NE(nullptr, GetLog(TestChannel::FOO));
@@ -333,6 +340,51 @@ TEST_F(LogChannelEnabledTest, log_options) {
                           llvm::get_threadid())
                 .str(),
             logAndTakeOutput("Hello World"));
+}
+
+TEST_F(LogChannelEnabledTest, JSONLOutput) {
+  std::string Err;
+
+  // With JSON, every line must parse as JSON and contain exactly the message we
+  // logged.
+  EXPECT_TRUE(EnableChannel(
+      getLogHandler(), /*log_options=*/LLDB_LOG_OPTION_JSON, "chan", {}, Err));
+  llvm::StringRef Msg = logAndTakeOutput("Hello \"World\"\nsecond line");
+  ASSERT_TRUE(Msg.ends_with("\n"));
+  ASSERT_EQ(Msg.count('\n'), 1u) << "expected one JSON object per line";
+  llvm::Expected<llvm::json::Value> Parsed = llvm::json::parse(Msg);
+  ASSERT_TRUE(static_cast<bool>(Parsed)) << llvm::toString(Parsed.takeError());
+  llvm::json::Object *Obj = Parsed->getAsObject();
+  ASSERT_NE(Obj, nullptr);
+  EXPECT_EQ(Obj->getString("message").value_or(""),
+            "Hello \"World\"\nsecond line");
+  EXPECT_EQ(Obj->size(), 1u);
+
+  // Combining JSON with metadata flags: each metadata flag becomes a JSON
+  // field instead of a prefix on the line.
+  uint32_t Opts = LLDB_LOG_OPTION_JSON | LLDB_LOG_OPTION_PREPEND_SEQUENCE |
+                  LLDB_LOG_OPTION_PREPEND_TIMESTAMP |
+                  LLDB_LOG_OPTION_PREPEND_PROC_AND_THREAD |
+                  LLDB_LOG_OPTION_PREPEND_THREAD_NAME |
+                  LLDB_LOG_OPTION_BACKTRACE |
+                  LLDB_LOG_OPTION_PREPEND_FILE_FUNCTION;
+  EXPECT_TRUE(EnableChannel(getLogHandler(), Opts, "chan", {}, Err));
+  Msg = logAndTakeOutput("payload");
+  Parsed = llvm::json::parse(Msg);
+  ASSERT_TRUE(static_cast<bool>(Parsed)) << llvm::toString(Parsed.takeError());
+  Obj = Parsed->getAsObject();
+  ASSERT_NE(Obj, nullptr);
+  EXPECT_EQ(Obj->getString("message").value_or(""), "payload");
+  EXPECT_TRUE(Obj->getInteger("sequence").has_value());
+  EXPECT_TRUE(Obj->getNumber("timestamp").has_value());
+  EXPECT_EQ(Obj->getInteger("pid").value_or(-1),
+            static_cast<int64_t>(::getpid()));
+  EXPECT_EQ(Obj->getInteger("tid").value_or(-1),
+            static_cast<int64_t>(llvm::get_threadid()));
+  EXPECT_TRUE(Obj->getString("thread_name").has_value());
+  EXPECT_TRUE(Obj->getString("backtrace").has_value());
+  EXPECT_EQ(Obj->getString("file").value_or(""), "LogTest.cpp");
+  EXPECT_EQ(Obj->getString("function").value_or(""), "logAndTakeOutput");
 }
 
 TEST_F(LogChannelEnabledTest, LLDB_LOG_ERROR) {

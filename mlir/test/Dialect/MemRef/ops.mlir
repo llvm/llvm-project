@@ -285,6 +285,14 @@ func.func @load_store_alignment(%memref: memref<4xi32>) {
   return
 }
 
+// CHECK-LABEL: func @load_invariant
+func.func @load_invariant(%memref: memref<4xi32>) {
+  %c0 = arith.constant 0 : index
+  // CHECK: memref.load {{.*}} {invariant = true}
+  %val = memref.load %memref[%c0] { invariant = true } : memref<4xi32>
+  return
+}
+
 // CHECK-LABEL: func @memref_view(%arg0
 func.func @memref_view(%arg0 : index, %arg1 : index, %arg2 : index) {
   %0 = memref.alloc() : memref<2048xi8>

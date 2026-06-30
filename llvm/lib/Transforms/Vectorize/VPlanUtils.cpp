@@ -155,8 +155,7 @@ GEPNoWrapFlags vputils::getGEPFlagsForPtr(VPValue *Ptr) {
   while (auto *PtrVPI = dyn_cast<VPInstruction>(Ptr)) {
     unsigned Opcode = PtrVPI->getOpcode();
     if (Opcode == Instruction::GetElementPtr) {
-      if (any_of(drop_begin(PtrVPI->operands()),
-                 [](VPValue *Op) { return !match(Op, m_ZeroInt()); }))
+      if (!all_of(drop_begin(PtrVPI->operands()), match_fn(m_ZeroInt())))
         return PtrVPI->getGEPNoWrapFlags();
       Ptr = PtrVPI->getOperand(0);
       continue;
@@ -221,9 +220,12 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
     return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<SCEVUse> Ops) {
       return SE.getMulExpr(Ops[0], Ops[1], SCEV::FlagAnyWrap, 0);
     });
-  // Handle shl by constant: x << c is equivalent to x * (1 << c).
+  // Handle shl by constant: x << c is equivalent to x * (1 << c). A shift
+  // amount >= the bit width produces poison; do not rewrite it, as
+  // getPowerOfTwo requires the power to be in range.
   uint64_t ShiftAmt;
-  if (match(V, m_Shl(m_VPValue(LHSVal), m_ConstantInt(ShiftAmt))))
+  if (match(V, m_Shl(m_VPValue(LHSVal), m_ConstantInt(ShiftAmt))) &&
+      ShiftAmt < LHSVal->getScalarType()->getScalarSizeInBits())
     return CreateSCEV(LHSVal, [&](ArrayRef<SCEVUse> Ops) {
       return SE.getMulExpr(Ops[0],
                            SE.getPowerOfTwo(Ops[0]->getType(), ShiftAmt));
@@ -243,6 +245,14 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
     return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<SCEVUse> Ops) {
       return SE.getURemExpr(Ops[0], Ops[1]);
     });
+  // A SRem with non-negative operands is equivalent to an URem.
+  if (match(V, m_SRem(m_VPValue(LHSVal), m_VPValue(RHSVal)))) {
+    return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<SCEVUse> Ops) {
+      if (!SE.isKnownNonNegative(Ops[0]) || !SE.isKnownNonNegative(Ops[1]))
+        return SE.getCouldNotCompute();
+      return SE.getURemExpr(Ops[0], Ops[1]);
+    });
+  }
   // Handle AND with constant mask: x & (2^n - 1) can be represented as x % 2^n.
   const APInt *Mask;
   if (match(V, m_c_BinaryAnd(m_VPValue(LHSVal), m_APInt(Mask))) &&
@@ -527,122 +537,11 @@ bool vputils::cannotHoistOrSinkRecipe(const VPRecipeBase &R, bool Sinking) {
   // would destroy information.
   if (match(&R, m_Intrinsic<Intrinsic::assume>()))
     return Sinking;
-  // TODO: Relax checks in the future, e.g. we could also hoist reads, if their
-  // memory location is not modified in the vector loop.
   if (R.mayHaveSideEffects() || R.mayReadFromMemory() || R.isPhi())
     return true;
   // Allocas cannot be hoisted.
   auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
   return RepR && RepR->getOpcode() == Instruction::Alloca;
-}
-
-std::optional<VPValue *>
-vputils::getRecipesForUncountableExit(SmallVectorImpl<VPInstruction *> &Recipes,
-                                      SmallVectorImpl<VPInstruction *> &GEPs,
-                                      VPBasicBlock *LatchVPBB) {
-  // Given a plain CFG VPlan loop with countable latch exiting block
-  // \p LatchVPBB, we're looking to match the recipes contributing to the
-  // uncountable exit condition comparison (here, vp<%4>) back to either
-  // live-ins or the address nodes for the load used as part of the uncountable
-  // exit comparison so that we can either move them within the loop, or copy
-  // them to the preheader depending on the chosen method for dealing with
-  // stores in uncountable exit loops.
-  //
-  // Currently, the address of the load is restricted to a GEP with 2 operands
-  // and a live-in base address. This constraint may be relaxed later.
-  //
-  // VPlan ' for UF>=1' {
-  // Live-in vp<%0> = VF * UF
-  // Live-in vp<%1> = vector-trip-count
-  // Live-in ir<20> = original trip-count
-  //
-  // ir-bb<entry>:
-  // Successor(s): scalar.ph, vector.ph
-  //
-  // vector.ph:
-  // Successor(s): for.body
-  //
-  // for.body:
-  //   EMIT vp<%2> = phi ir<0>, vp<%index.next>
-  //   EMIT-SCALAR ir<%iv> = phi [ ir<0>, vector.ph ], [ ir<%iv.next>, for.inc ]
-  //   EMIT ir<%uncountable.addr> = getelementptr inbounds nuw ir<%pred>,ir<%iv>
-  //   EMIT ir<%uncountable.val> = load ir<%uncountable.addr>
-  //   EMIT ir<%uncountable.cond> = icmp sgt ir<%uncountable.val>, ir<500>
-  //   EMIT vp<%3> = masked-cond ir<%uncountable.cond>
-  // Successor(s): for.inc
-  //
-  // for.inc:
-  //   EMIT ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
-  //   EMIT ir<%countable.cond> = icmp eq ir<%iv.next>, ir<20>
-  //   EMIT vp<%index.next> = add nuw vp<%2>, vp<%0>
-  //   EMIT vp<%4> = any-of ir<%3>
-  //   EMIT vp<%5> = icmp eq vp<%index.next>, vp<%1>
-  //   EMIT branch-on-two-conds vp<%4>, vp<%5>
-  // Successor(s): middle.block, middle.block, for.body
-  //
-  // middle.block:
-  // Successor(s): ir-bb<exit>, scalar.ph
-  //
-  // ir-bb<exit>:
-  // No successors
-  //
-  // scalar.ph:
-  // }
-
-  // Find the uncountable loop exit condition.
-  VPValue *UncountableCondition = nullptr;
-  if (!match(LatchVPBB->getTerminator(),
-             m_BranchOnTwoConds(m_AnyOf(m_VPValue(UncountableCondition)),
-                                m_VPValue())))
-    return std::nullopt;
-
-  SmallVector<VPValue *, 4> Worklist;
-  Worklist.push_back(UncountableCondition);
-  while (!Worklist.empty()) {
-    VPValue *V = Worklist.pop_back_val();
-
-    // Any value defined outside the loop does not need to be copied.
-    if (V->isDefinedOutsideLoopRegions())
-      continue;
-
-    // FIXME: Remove the single user restriction; it's here because we're
-    //        starting with the simplest set of loops we can, and multiple
-    //        users means needing to add PHI nodes in the transform.
-    if (V->getNumUsers() > 1)
-      return std::nullopt;
-
-    VPValue *Op1, *Op2;
-    // Walk back through recipes until we find at least one load from memory.
-    if (match(V, m_ICmp(m_VPValue(Op1), m_VPValue(Op2)))) {
-      Worklist.push_back(Op1);
-      Worklist.push_back(Op2);
-      Recipes.push_back(cast<VPInstruction>(V->getDefiningRecipe()));
-    } else if (match(V, m_VPInstruction<Instruction::Load>(m_VPValue(Op1)))) {
-      VPRecipeBase *GepR = Op1->getDefiningRecipe();
-      // Only matching base + single offset term for now.
-      if (GepR->getNumOperands() != 2)
-        return std::nullopt;
-      // Matching a GEP with a loop-invariant base ptr.
-      if (!match(GepR, m_VPInstruction<Instruction::GetElementPtr>(
-                           m_LiveIn(), m_VPValue())))
-        return std::nullopt;
-      Recipes.push_back(cast<VPInstruction>(V->getDefiningRecipe()));
-      Recipes.push_back(cast<VPInstruction>(GepR));
-      GEPs.push_back(cast<VPInstruction>(GepR));
-    } else if (match(V, m_VPInstruction<VPInstruction::MaskedCond>(
-                            m_VPValue(Op1)))) {
-      Worklist.push_back(Op1);
-      Recipes.push_back(cast<VPInstruction>(V->getDefiningRecipe()));
-    } else
-      return std::nullopt;
-  }
-
-  // If we couldn't match anything, don't return the condition. It may be
-  // defined outside the loop.
-  if (Recipes.empty() || GEPs.empty())
-    return std::nullopt;
-
-  return UncountableCondition;
 }
 
 VPSingleDefRecipe *vputils::findHeaderMask(VPlan &Plan) {
@@ -879,14 +778,12 @@ bool vputils::isUsedByLoadStoreAddress(const VPValue *V) {
       if (auto *InterleaveR = dyn_cast<VPInterleaveBase>(U))
         if (InterleaveR->getAddr() == Cur)
           return true;
-      if (auto *RepR = dyn_cast<VPReplicateRecipe>(U)) {
-        if (RepR->getOpcode() == Instruction::Load &&
-            RepR->getOperand(0) == Cur)
-          return true;
-        if (RepR->getOpcode() == Instruction::Store &&
-            RepR->getOperand(1) == Cur)
-          return true;
-      }
+      // Cur is used as the pointer of a (possibly masked) load (operand 0) or
+      // store (operand 1).
+      if (match(U, m_CombineOr(m_Unary<Instruction::Load>(m_Specific(Cur)),
+                               m_Binary<Instruction::Store>(m_VPValue(),
+                                                            m_Specific(Cur)))))
+        return true;
       if (auto *MemR = dyn_cast<VPWidenMemoryRecipe>(cast<VPRecipeBase>(U))) {
         if (MemR->getAddr() == Cur && MemR->isConsecutive())
           return true;
@@ -900,10 +797,19 @@ bool vputils::isUsedByLoadStoreAddress(const VPValue *V) {
       continue;
 
     // Only traverse further through users that also define a value (and can
-    // thus have their own users walked).
-    for (VPUser *U : Cur->users())
+    // thus have their own users walked). Skip when Cur is only used as mask ,
+    // as well as loads: a loaded value does not depend on the load's operand.
+    for (VPUser *U : Cur->users()) {
+      auto *VPI = dyn_cast<VPInstruction>(U);
+      if (VPI && VPI->getMask() == Cur &&
+          none_of(VPI->operandsWithoutMask(),
+                  [Cur](VPValue *Op) { return Op == Cur; }))
+        continue;
+      if (match(U, m_VPInstruction<Instruction::Load>()))
+        continue;
       if (auto *SDR = dyn_cast<VPSingleDefRecipe>(U))
         WorkList.push_back(SDR);
+    }
   }
   return false;
 }
@@ -967,6 +873,18 @@ VPValue *VPSCEVExpander::tryToExpand(const SCEV *S) {
     for (VPValue *Op : drop_begin(Ops))
       Result = Builder.createOverflowingOp(Opcode, {Result, Op}, WrapFlags, DL);
     return Result;
+  }
+  case scUDivExpr: {
+    auto *UDiv = cast<SCEVUDivExpr>(S);
+    VPValue *LHS = tryToExpand(UDiv->getLHS());
+    if (!LHS)
+      return nullptr;
+    VPValue *RHS = tryToExpand(UDiv->getRHS());
+    if (!RHS)
+      return nullptr;
+    return Builder.createNaryOp(Instruction::UDiv, {LHS, RHS},
+                                VPIRFlags::getDefaultFlags(Instruction::UDiv),
+                                DL);
   }
   default:
     return nullptr;
