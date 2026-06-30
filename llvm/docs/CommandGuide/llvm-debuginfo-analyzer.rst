@@ -391,6 +391,8 @@ to make the output easier to understand.
  .. code-block:: text
 
    =children: Elements and children are displayed in a tree format.
+   =debugger: Lines, and optionally variables and instructions are
+              displayed in a way to simulate stepping through a debugger.
    =list: Elements are displayed in a tabular format.
    =parents: Elements and parents are displayed in a tree format.
    =view: Elements, parents and children are displayed in a tree format.
@@ -409,6 +411,10 @@ child (level 1).
 
 The **children** layout includes the elements that match any given
 criteria (:option:`--select`) or (:option:`--compare`) and its children.
+
+The **debugger** layout prints each statement line in order and variables
+live at each line (if `--print=symbols` given), as well as instructions
+(if `--print=instructions` given).
 
 The **parents** layout includes the elements that match any given
 criteria (:option:`--select`) or (:option:`--compare`) and its parents.
@@ -854,6 +860,87 @@ layout and given the number of matches.
   Lines           17          6
   -----------------------------
   Total           26          8
+
+DEBUGGER VIEW
+"""""""""""""
+In debugger view, :program:`llvm-debuginfo-analyzer` prints out
+debug-info in a manner that emulates a debugger. For each function, each
+statement line is printed out in order, complete with the inlined
+callstack. This is useful to verify the specific orders of lines, as
+well as verifying inline callstacks.
+
+.. code-block:: none
+
+  llvm-debuginfo-analyzer --report=debugger
+                          test-dwarf-clang.o test-dwarf-gcc.o
+
+  Logical View:
+  {File} test-dwarf-clang.o
+  {CompileUnit} test.cpp
+  {Function} foo
+    {Line}  test.cpp:2 [foo]
+    {Line}  test.cpp:3 [foo]
+    {Line}  test.cpp:5 [foo]
+    {Line}  test.cpp:6 [foo]
+    {Line}  test.cpp:8 [foo]
+    {Line}  test.cpp:9 [foo]
+
+  Logical View:
+  {File} test-dwarf-gcc.o
+  {CompileUnit} test.cpp
+  {Function} foo
+    {Line}  test.cpp:2 [foo]
+    {Line}  test.cpp:3 [foo]
+    {Line}  test.cpp:5 [foo]
+    {Line}  test.cpp:6 [foo]
+    {Line}  test.cpp:8 [foo]
+    {Line}  test.cpp:9 [foo]
+
+Optionally, by adding `--print=symbols`, live variables for each line are
+printed out.
+
+.. code-block:: none
+
+  llvm-debuginfo-analyzer --report=debugger
+                          test-dwarf-clang.o
+
+  Logical View:
+  {File} test-dwarf-clang.o
+  {CompileUnit} test.cpp
+  {Function} foo
+    {Line}  test.cpp:2 [foo]
+      {Parameter} ParamBool: bool : fbreg -21 (line 2)
+      {Parameter} ParamPtr: INTPTR : fbreg -16 (line 2)
+      {Parameter} ParamUnsigned: unsigned int : fbreg -20 (line 2)
+    {Line}  test.cpp:3 [foo]
+      {Parameter} ParamBool: bool : fbreg -21 (line 2)
+      {Parameter} ParamPtr: INTPTR : fbreg -16 (line 2)
+      {Parameter} ParamUnsigned: unsigned int : fbreg -20 (line 2)
+    {Line}  test.cpp:5 [foo]
+      {Parameter} ParamBool: bool : fbreg -21 (line 2)
+      {Parameter} ParamPtr: INTPTR : fbreg -16 (line 2)
+      {Parameter} ParamUnsigned: unsigned int : fbreg -20 (line 2)
+      {Variable} CONSTANT: const INTEGER : fbreg -28 (line 5)
+    {Line}  test.cpp:6 [foo]
+      {Parameter} ParamBool: bool : fbreg -21 (line 2)
+      {Parameter} ParamPtr: INTPTR : fbreg -16 (line 2)
+      {Parameter} ParamUnsigned: unsigned int : fbreg -20 (line 2)
+      {Variable} CONSTANT: const INTEGER : fbreg -28 (line 5)
+    {Line}  test.cpp:8 [foo]
+      {Parameter} ParamBool: bool : fbreg -21 (line 2)
+      {Parameter} ParamPtr: INTPTR : fbreg -16 (line 2)
+      {Parameter} ParamUnsigned: unsigned int : fbreg -20 (line 2)
+    {Line}  test.cpp:9 [foo]
+      {Parameter} ParamBool: bool : fbreg -21 (line 2)
+      {Parameter} ParamPtr: INTPTR : fbreg -16 (line 2)
+      {Parameter} ParamUnsigned: unsigned int : fbreg -20 (line 2)
+
+Optionally, `--print=instructions`, the lines are interleaved with the
+instructions. Combined with the output of `--print=symbols`, tests can
+verify specific expressions for live variables.
+
+Additionally, `--attribute` can be used to include things such as
+offsets and scope levels for {Line} and {Instruction}.
 
 COMPARISON MODE
 ^^^^^^^^^^^^^^^
