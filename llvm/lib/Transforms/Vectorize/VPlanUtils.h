@@ -64,6 +64,9 @@ bool isHeaderMask(const VPValue *V, const VPlan &Plan);
 /// VPDerivedIV or the canonical IV).
 bool isUniformAcrossVFsAndUFs(const VPValue *V);
 
+/// Return true if \p V is elementwise, i.e. none of the lanes are permuted.
+bool isElementwise(const VPValue *V);
+
 /// Returns the header block of the first, top-level loop, or null if none
 /// exist.
 VPBasicBlock *getFirstLoopHeader(VPlan &Plan, VPDominatorTree &VPDT);

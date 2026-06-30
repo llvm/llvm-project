@@ -1866,8 +1866,51 @@ void VPlanTransforms::simplifyRecipes(VPlan &Plan) {
   }
 }
 
+/// Removes the permutation pattern \p Perm from any elementwise operations
+/// in R operands, e.g. binop(perm(x), perm(y)) -> binop(x,y)
+/// \returns true if permutations were removed.
+template <typename Match_t>
+static bool removeInnerPermutation(VPSingleDefRecipe *R, Match_t Perm) {
+  if (!vputils::isElementwise(R))
+    return false;
+
+  // At least one of the ops must be a permutation.
+  if (!any_of(R->operands(), match_fn(Perm(m_VPValue()))))
+    return false;
+
+  // All operands must be permuted or a live in (splat).
+  if (!all_of(R->operands(),
+              match_fn(m_CombineOr(m_OneUse(Perm(m_VPValue())), m_LiveIn()))))
+    return false;
+
+  VPValue *X;
+  // Remove the inner permutations.
+  for (unsigned I = 0; I < R->getNumOperands(); I++)
+    if (match(R->getOperand(I), Perm(m_VPValue(X))))
+      R->setOperand(I, X);
+  return true;
+}
+
 void VPlanTransforms::simplifyReverses(VPlan &Plan) {
   VPValue *X;
+
+  // Pull out reverses from any elementwise op.
+  // binop(reverse(x), reverse(y)) -> reverse(binop(x,y))
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_deep(Plan.getEntry()))) {
+    for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
+      auto *Def = dyn_cast<VPSingleDefRecipe>(&R);
+      if (!Def || !removeInnerPermutation(
+                      Def, [](const auto &X) { return m_Reverse(X); }))
+        continue;
+
+      VPInstruction *Res = VPBuilder::getToInsertAfter(Def).createNaryOp(
+          VPInstruction::Reverse, Def);
+      Def->replaceUsesWithIf(
+          Res, [&Res](VPUser &U, unsigned _) { return &U != Res; });
+    }
+  }
+
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_deep(Plan.getEntry())))
     for (VPRecipeBase &R : make_early_inc_range(*VPBB))
@@ -3200,6 +3243,31 @@ void VPlanTransforms::optimizeEVLMasks(VPlan &Plan) {
       Merge->insertBefore(LogicalAnd);
       LogicalAnd->replaceAllUsesWith(Merge);
       OldRecipes.push_back(LogicalAnd);
+    }
+  }
+
+  // Pull out left splices from any elementwise op.
+  // binop(splice.left(poison, x, evl), live-in)
+  // -> splice.left(poison, binop(x,live-in), evl)
+  auto m_SpliceLeft = [&EVL](const auto &X) {
+    return m_Intrinsic<Intrinsic::vector_splice_left>(m_Poison(), X,
+                                                      m_Specific(EVL));
+  };
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_deep(Plan.getEntry()))) {
+    for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
+      auto *Def = dyn_cast<VPSingleDefRecipe>(&R);
+      if (!Def || !removeInnerPermutation(Def, m_SpliceLeft))
+        continue;
+
+      VPValue *Poison =
+          Plan.getOrAddLiveIn(PoisonValue::get(Def->getScalarType()));
+      auto *Res = new VPWidenIntrinsicRecipe(
+          Intrinsic::vector_splice_left, {Poison, Def, EVL},
+          Def->getScalarType(), {}, {}, Def->getDebugLoc());
+      Res->insertAfter(Def);
+      Def->replaceUsesWithIf(
+          Res, [&Res](VPUser &U, unsigned _) { return &U != Res; });
     }
   }
 
