@@ -100,14 +100,14 @@ define dso_local signext i32 @test_ieqss_sext_z(i16 signext %a) {
 ; CHECK-NEXT:    blr
 ; CHECK-BE-LABEL: test_ieqss_sext_z:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    clrldi r3, r3, 48
+; CHECK-BE-NEXT:    clrldi r3, r3, 32
 ; CHECK-BE-NEXT:    addic r3, r3, -1
 ; CHECK-BE-NEXT:    subfe r3, r3, r3
 ; CHECK-BE-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test_ieqss_sext_z:
 ; CHECK-LE:       # %bb.0: # %entry
-; CHECK-LE-NEXT:    clrldi r3, r3, 48
+; CHECK-LE-NEXT:    clrldi r3, r3, 32
 ; CHECK-LE-NEXT:    addic r3, r3, -1
 ; CHECK-LE-NEXT:    subfe r3, r3, r3
 ; CHECK-LE-NEXT:    blr

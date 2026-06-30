@@ -16093,11 +16093,7 @@ static SDValue ConvertSETCCToXori(SDNode *N, SelectionDAG &DAG) {
 
 SDValue PPCTargetLowering::combineSignExtendSetCC(SDNode *N,
                                                   DAGCombinerInfo &DCI) const {
-  if (Subtarget.isISA3_1())
-    return SDValue();
-
-  EVT VT = N->getValueType(0);
-  if (VT != MVT::i32 && VT != MVT::i64)
+  if (Subtarget.isISA3_1() || DCI.isBeforeLegalize())
     return SDValue();
 
   SDValue N0 = N->getOperand(0);
@@ -16117,16 +16113,12 @@ SDValue PPCTargetLowering::combineSignExtendSetCC(SDNode *N,
   SDValue X = isNullConstant(LHS) ? RHS : LHS;
   EVT XVT = X.getValueType(); // The type of x in the setcc x, 0, eq.
 
-  if ((XVT == MVT::i64 || VT == MVT::i64) && !Subtarget.isPPC64())
-    return SDValue();
-
   // On PPC64, i32 carry operations use the full 64-bit XER register,
   // so we must use i64 operations to avoid incorrect results.
   // Use i64 operations and truncate the result if needed.
   if (XVT != MVT::i64 && Subtarget.isPPC64())
     // Zero-extend if input type is not 64bits.
     X = DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i64, X);
-
   EVT OpVT = Subtarget.isPPC64() ? MVT::i64 : MVT::i32;
 
   // Generate: SUBFE(ADDC(X, -1)).
@@ -16137,6 +16129,7 @@ SDValue PPCTargetLowering::combineSignExtendSetCC(SDNode *N,
   SDValue Sube = DAG.getNode(PPCISD::SUBE, dl, DAG.getVTList(OpVT, MVT::i32),
                              Addc, Addc, Carry);
 
+  EVT VT = N->getValueType(0);
   // Truncate back to i32 if we used i64 operations.
   if (OpVT == MVT::i64 && VT == MVT::i32)
     return DAG.getNode(ISD::TRUNCATE, dl, VT, Sube);
