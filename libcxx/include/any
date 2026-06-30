@@ -130,9 +130,9 @@ public:
 _LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_UNVERSIONED_NAMESPACE_STD
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #  if _LIBCPP_STD_VER >= 17
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 [[noreturn]] inline _LIBCPP_HIDE_FROM_ABI void __throw_bad_any_cast() {
 #    if _LIBCPP_HAS_EXCEPTIONS
@@ -552,17 +552,17 @@ template <class _ValueType>
   return nullptr;
 }
 
-#  endif // _LIBCPP_STD_VER >= 17
-
 _LIBCPP_END_NAMESPACE_STD
+
+#  endif // _LIBCPP_STD_VER >= 17
 
 _LIBCPP_POP_MACROS
 
-#  if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 17
+#  if defined(_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23) && _LIBCPP_STD_VER <= 17
 #    include <chrono>
 #  endif
 
-#  if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#  if defined(_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23) && _LIBCPP_STD_VER <= 20
 #    include <atomic>
 #    include <concepts>
 #    include <cstdlib>
@@ -574,7 +574,7 @@ _LIBCPP_POP_MACROS
 #    include <variant>
 #  endif
 
-#  if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 23
+#  if defined(_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23) && _LIBCPP_STD_VER <= 23
 #    include <cstring>
 #    include <limits>
 #  endif

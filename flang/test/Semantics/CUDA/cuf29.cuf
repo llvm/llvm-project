@@ -1,0 +1,72 @@
+! RUN: %python %S/../test_errors.py %s %flang_fc1
+
+! Host-side generic wrappers can share names with intrinsics. In device code,
+! intrinsic resolution must still win when the host wrapper is not
+! device-callable.
+module host_reduction_wrappers
+  interface sum
+    module procedure fake_sum
+  end interface
+  interface maxval
+    module procedure fake_maxval
+  end interface
+  interface minval
+    module procedure fake_minval
+  end interface
+  interface maxloc
+    module procedure fake_maxloc
+  end interface
+  interface minloc
+    module procedure fake_minloc
+  end interface
+  interface host_wrapper
+    module procedure fake_host_wrapper
+  end interface
+contains
+  function fake_sum(array) result(res)
+    real(8) :: array(:)
+    real(8) :: res
+  end function
+  function fake_maxval(array) result(res)
+    real(8) :: array(:)
+    real(8) :: res
+  end function
+  function fake_minval(array) result(res)
+    real(8) :: array(:)
+    real(8) :: res
+  end function
+  function fake_maxloc(array, dim) result(res)
+    real(8) :: array(:)
+    integer :: dim
+    integer :: res
+  end function
+  function fake_minloc(array, dim) result(res)
+    real(8) :: array(:)
+    integer :: dim
+    integer :: res
+  end function
+  function fake_host_wrapper(array) result(res)
+    real(8) :: array(:)
+    real(8) :: res
+  end function
+end module
+
+module test
+  use host_reduction_wrappers
+contains
+  attributes(global) subroutine reduction_intrinsics(a, locs, vals)
+    real(8), intent(in) :: a(3)
+    integer, intent(out) :: locs(2)
+    real(8), intent(out) :: vals(3)
+    real(8) :: local(3)
+
+    local = a
+    locs(1) = maxloc(local, 1)
+    locs(2) = minloc(local, 1)
+    vals(1) = sum(local)
+    vals(2) = maxval(local)
+    vals(3) = minval(local)
+    !ERROR: No specific function of generic 'host_wrapper' matches the actual arguments
+    vals(1) = host_wrapper(local)
+  end subroutine
+end module

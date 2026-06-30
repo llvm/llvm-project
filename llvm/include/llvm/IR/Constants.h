@@ -481,6 +481,12 @@ public:
   /// Return true if the value is a NaN.
   bool isNaN() const { return Val.isNaN(); }
 
+  /// Returns true if this value is exactly +1.0.
+  bool isOne() const { return Val.isOne(); }
+
+  /// Returns true if this value is exactly -1.0.
+  bool isMinusOne() const { return Val.isMinusOne(); }
+
   /// We don't rely on operator== working on double values, as it returns true
   /// for things that are clearly not equal, like -0.0 and 0.0.
   /// As such, this method can be used to do an exact bit-for-bit comparison of
@@ -1082,7 +1088,9 @@ public:
 class BlockAddress final : public Constant {
   friend class Constant;
 
-  constexpr static IntrusiveOperandsAllocMarker AllocMarker{1};
+  constexpr static IntrusiveOperandsAllocMarker AllocMarker{0};
+
+  BasicBlock *Block;
 
   BlockAddress(Type *Ty, BasicBlock *BB);
 
@@ -1114,7 +1122,7 @@ public:
   /// Transparently provide more efficient getOperand methods.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
 
-  BasicBlock *getBasicBlock() const { return cast<BasicBlock>(Op<0>().get()); }
+  BasicBlock *getBasicBlock() const { return Block; }
   Function *getFunction() const { return getBasicBlock()->getParent(); }
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
@@ -1125,7 +1133,7 @@ public:
 
 template <>
 struct OperandTraits<BlockAddress>
-    : public FixedNumOperandTraits<BlockAddress, 1> {};
+    : public FixedNumOperandTraits<BlockAddress, 0> {};
 
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(BlockAddress, Value)
 
