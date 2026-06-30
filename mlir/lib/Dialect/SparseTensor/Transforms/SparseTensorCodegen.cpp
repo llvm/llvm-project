@@ -912,7 +912,11 @@ public:
     Type boolType = rewriter.getIntegerType(1);
     Type idxType = rewriter.getIndexType();
     // All initialization should be done on entry of the loop nest.
-    rewriter.setInsertionPointAfter(op.getTensor().getDefiningOp());
+    if (isa<BlockArgument>(op.getTensor())) {
+      rewriter.setInsertionPointToStart(op->getBlock());
+    } else {
+      rewriter.setInsertionPointAfter(op.getTensor().getDefiningOp());
+    }
 
     // Determine the size for access expansion (always the innermost stored
     // level size).
