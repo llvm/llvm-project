@@ -38,7 +38,7 @@ test(typename C::size_type n, typename C::allocator_type const& a = typename C::
   }
 
   // Test with a custom allocator
-#if TEST_STD_VER >= 14
+#if TEST_STD_VER >= 11
   {
     C c(n, a);
     LIBCPP_ASSERT(c.__invariants());
