@@ -744,13 +744,16 @@ uint32_t GVNPass::ValueTable::lookup(Value *V, bool Verify) const {
 /// Returns the value number of an existing binary operator expression, or 0 if
 /// no such expression has been numbered yet.
 uint32_t GVNPass::ValueTable::lookupBinOp(unsigned Opcode, Type *Ty, Value *LHS,
-                                          Value *RHS) {
+                                          Value *RHS) const {
   assert(Instruction::isBinaryOp(Opcode) && "Not a binary operator!");
   Expression Exp;
   Exp.Ty = Ty;
   Exp.Opcode = Opcode;
-  Exp.VarArgs.push_back(lookupOrAdd(LHS));
-  Exp.VarArgs.push_back(lookupOrAdd(RHS));
+  uint32_t LHSVN = lookup(LHS, /*Verify=*/false);
+  uint32_t RHSVN = lookup(RHS, /*Verify=*/false);
+  if (!LHSVN || !RHSVN)
+    return 0;
+  Exp.VarArgs = {LHSVN, RHSVN};
   if (Instruction::isCommutative(Opcode)) {
     if (Exp.VarArgs[0] > Exp.VarArgs[1])
       std::swap(Exp.VarArgs[0], Exp.VarArgs[1]);
@@ -3311,47 +3314,6 @@ bool GVNPass::propagateEquality(
   return Changed;
 }
 
-static bool isFPMathMetadataCompatible(const Instruction *VecI,
-                                       const Instruction *ScalarI) {
-  float VecAcc = cast<FPMathOperator>(VecI)->getFPAccuracy();
-  if (VecAcc == 0.0)
-    return true;
-
-  float ScalarAcc = cast<FPMathOperator>(ScalarI)->getFPAccuracy();
-  return ScalarAcc != 0.0 && VecAcc <= ScalarAcc;
-}
-
-static bool isFastMathFlagsCompatible(const Instruction *VecI,
-                                      const Instruction *ScalarI) {
-  FastMathFlags VecFMF = VecI->getFastMathFlags();
-  FastMathFlags ScalarFMF = ScalarI->getFastMathFlags();
-
-  // nnan/ninf are poison-generating constraints for fmul.
-  if (VecFMF.noNaNs() != ScalarFMF.noNaNs())
-    return false;
-  if (VecFMF.noInfs() != ScalarFMF.noInfs())
-    return false;
-
-  // nsz changes FP value semantics, so a vector op with nsz cannot replace a
-  // scalar op that requires the exact sign of zero.
-  if (VecFMF.noSignedZeros() && !ScalarFMF.noSignedZeros())
-    return false;
-
-  // These flags do not create poison, but they do authorize later rewrites of
-  // the producing instruction. Reusing a vector fmul with any extra rewrite
-  // permissions could change the scalar result after subsequent transforms.
-  if (VecFMF.allowReassoc() && !ScalarFMF.allowReassoc())
-    return false;
-  if (VecFMF.allowReciprocal() && !ScalarFMF.allowReciprocal())
-    return false;
-  if (VecFMF.allowContract() && !ScalarFMF.allowContract())
-    return false;
-  if (VecFMF.approxFunc() && !ScalarFMF.approxFunc())
-    return false;
-
-  return isFPMathMetadataCompatible(VecI, ScalarI);
-}
-
 /// If I is a scalar mul/fmul whose operands are both extracted from the same
 /// index of two vectors, and a matching vector mul/fmul dominates I, replace
 /// I with an extractelement from that vector result.
@@ -3375,13 +3337,14 @@ bool GVNPass::foldScalarMulToVectorExtract(Instruction *I) {
     return false;
 
   // Reuse GVN's existing expression numbering to find an available vector
-  // multiply/fmultiply instead of matching specific users of Vec0/Vec1.
+  // mul/fmul instead of matching specific users of Vec0/Vec1.
   uint32_t VecNum = VN.lookupBinOp(Opc, Vec0->getType(), Vec0, Vec1);
   if (!VecNum)
     return false;
 
   for (const auto &Entry : LeaderTable.getLeaders(VecNum)) {
-    auto *VecBO = dyn_cast<BinaryOperator>(Entry.Val);
+    Value *Leader = Entry.Val;
+    auto *VecBO = dyn_cast<BinaryOperator>(Leader);
     if (!VecBO || VecBO->getOpcode() != Opc ||
         VecBO->getType() != Vec0->getType())
       continue;
@@ -3390,18 +3353,12 @@ bool GVNPass::foldScalarMulToVectorExtract(Instruction *I) {
     if (!DT->dominates(VecBO, I))
       continue;
 
-    // The replacement is only equivalent when relevant flags are compatible.
-    if (auto *OBO = dyn_cast<OverflowingBinaryOperator>(VecBO)) {
-      auto *ScalarOBO = cast<OverflowingBinaryOperator>(I);
-      if (OBO->hasNoSignedWrap() != ScalarOBO->hasNoSignedWrap())
-        continue;
-      if (OBO->hasNoUnsignedWrap() != ScalarOBO->hasNoUnsignedWrap())
-        continue;
-    }
-    if (isa<FPMathOperator>(VecBO) && !isFastMathFlagsCompatible(VecBO, I))
-      continue;
+    // Reuse the vector op by weakening its flags and metadata with the scalar
+    // op, matching the usual GVN CSE behavior.
+    VecBO->andIRFlags(I);
+    combineMetadataForCSE(VecBO, I, /*DoesKMove=*/false);
 
-    // Replace the scalar mul with extractelement from the vector result.
+    // Replace the scalar mul/fmul with extractelement from the vector result.
     auto *Extract =
         ExtractElementInst::Create(VecBO, Idx, "", I->getIterator());
     Extract->setDebugLoc(I->getDebugLoc());

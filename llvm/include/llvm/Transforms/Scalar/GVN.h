@@ -221,7 +221,7 @@ public:
     LLVM_ABI uint32_t lookupOrAdd(Value *V);
     LLVM_ABI uint32_t lookup(Value *V, bool Verify = true) const;
     LLVM_ABI uint32_t lookupBinOp(unsigned Opcode, Type *Ty, Value *LHS,
-                                  Value *RHS);
+                                  Value *RHS) const;
     LLVM_ABI uint32_t lookupOrAddCmp(unsigned Opcode, CmpInst::Predicate Pred,
                                      Value *LHS, Value *RHS);
     LLVM_ABI uint32_t phiTranslate(const BasicBlock *BB,
