@@ -677,16 +677,13 @@ private:
   /// size to be allocated is non-zero.
   ///
   /// \param [in] Call The expression that allocates memory.
-  /// \param [in] SizeArgI1 Index of the argument that specifies the allocation
-  /// size or count. -1 if not applicable.
-  /// \param [in] SizeArgI2 Index of another argument that specifies allocation
-  /// size (i. e. "element size"). -1 if not applicable.
   /// \param [in] State The \c ProgramState right before allocation.
+  /// \param [in] SizeArgIndexes Indexes of arguments that specify the
+  /// allocation size.
   /// \returns The ProgramState right after an unsuccessful allocation.
-  [[nodiscard]] ProgramStateRef FailedAlloc(CheckerContext &C,
-                                            const CallEvent &Call,
-                                            int SizeArgI1, int SizeArgI2,
-                                            ProgramStateRef State) const;
+  [[nodiscard]] ProgramStateRef
+  FailedAlloc(CheckerContext &C, const CallEvent &Call, ProgramStateRef State,
+              llvm::ArrayRef<unsigned> SizeArgIndexes = {}) const;
 
   // Check if this malloc() for special flags. At present that means M_ZERO or
   // __GFP_ZERO (in which case, treat it like calloc).
@@ -1382,7 +1379,7 @@ void MallocChecker::checkBasicAlloc(ProgramStateRef State,
 void MallocChecker::checkBasicAllocMayFail(ProgramStateRef State,
                                            const CallEvent &Call,
                                            CheckerContext &C) const {
-  C.addTransition(FailedAlloc(C, Call, 0, -1, State));
+  C.addTransition(FailedAlloc(C, Call, State, {0}));
 
   State = MallocMemAux(C, Call, Call.getArgExpr(0), UndefinedVal(), State,
                        AllocationFamily(AF_Malloc));
@@ -1435,7 +1432,7 @@ void MallocChecker::checkRealloc(ProgramStateRef State, const CallEvent &Call,
     return;
 
   if (StandardRealloc)
-    C.addTransition(FailedAlloc(C, Call, 1, -1, State));
+    C.addTransition(FailedAlloc(C, Call, State, {1}));
 
   State = ReallocMemAux(C, Call, ShouldFreeOnFail, State,
                         AllocationFamily(AF_Malloc));
@@ -1445,7 +1442,7 @@ void MallocChecker::checkRealloc(ProgramStateRef State, const CallEvent &Call,
 
 void MallocChecker::checkCalloc(ProgramStateRef State, const CallEvent &Call,
                                 CheckerContext &C) const {
-  C.addTransition(FailedAlloc(C, Call, 0, 1, State));
+  C.addTransition(FailedAlloc(C, Call, State, {0, 1}));
 
   State = CallocMem(C, Call, State);
   State = ProcessZeroAllocCheck(C, Call, 0, State);
@@ -1477,7 +1474,7 @@ void MallocChecker::checkStrdup(ProgramStateRef State, const CallEvent &Call,
   if (!CE)
     return;
 
-  C.addTransition(FailedAlloc(C, Call, -1, -1, State));
+  C.addTransition(FailedAlloc(C, Call, State));
 
   State = MallocMemAux(C, Call, UnknownVal(), UnknownVal(), State,
                        AllocationFamily(AF_Malloc));
@@ -1487,7 +1484,7 @@ void MallocChecker::checkStrdup(ProgramStateRef State, const CallEvent &Call,
 void MallocChecker::checkIfNameIndex(ProgramStateRef State,
                                      const CallEvent &Call,
                                      CheckerContext &C) const {
-  C.addTransition(FailedAlloc(C, Call, -1, -1, State));
+  C.addTransition(FailedAlloc(C, Call, State));
 
   // Should we model this differently? We can allocate a fixed number of
   // elements with zeros in the last one.
@@ -2094,27 +2091,21 @@ ProgramStateRef MallocChecker::MallocMemAux(CheckerContext &C,
   return MallocUpdateRefState(C, CE, State, Family);
 }
 
-ProgramStateRef MallocChecker::FailedAlloc(CheckerContext &C,
-                                           const CallEvent &Call, int SizeArgI1,
-                                           int SizeArgI2,
-                                           ProgramStateRef State) const {
+ProgramStateRef
+MallocChecker::FailedAlloc(CheckerContext &C, const CallEvent &Call,
+                           ProgramStateRef State,
+                           llvm::ArrayRef<unsigned> SizeArgIndexes) const {
   if (!State || !ModelAllocationFailure)
     return nullptr;
 
-  auto AssumeArgNonZero = [&Call](ProgramStateRef State,
-                                  int ArgI) -> ProgramStateRef {
-    if (!State || ArgI < 0)
-      return State;
-    auto DefArgVal = Call.getArgSVal(ArgI).getAs<DefinedOrUnknownSVal>();
+  for (unsigned SizeArgI : SizeArgIndexes) {
+    auto DefArgVal = Call.getArgSVal(SizeArgI).getAs<DefinedOrUnknownSVal>();
     if (!DefArgVal)
       return nullptr;
-    return State->assume(*DefArgVal, true);
-  };
-
-  State = AssumeArgNonZero(State, SizeArgI1);
-  State = AssumeArgNonZero(State, SizeArgI2);
-  if (!State)
-    return nullptr;
+    State = State->assume(*DefArgVal, true);
+    if (!State)
+      return nullptr;
+  }
 
   auto RetVal = State->getSVal(Call.getOriginExpr(), C.getStackFrame())
                     .castAs<DefinedOrUnknownSVal>();
