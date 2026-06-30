@@ -85,7 +85,7 @@ inline constexpr const char *MismatchedSummaryType =
 inline constexpr const char *UnknownArtifactType =
     "unknown value '{0}' for field '{1}': expected '{2}', '{3}', or '{4}'";
 inline constexpr const char *UnknownArtifactEncodingType =
-    "unknown value '{0}' for field '{1}': expected '{2}', or '{3}'";
+    "unknown value '{0}' for field '{1}': expected '{2}', '{3}', or '{4}'";
 
 inline constexpr const char *FailedToDeserializeEntitySummaryNoFormatInfo =
     "failed to deserialize EntitySummary: no FormatInfo registered for '{0}'";
@@ -148,6 +148,9 @@ inline constexpr const char *JSONTypeValueTUSummary = "TUSummary";
 
 /// Value written to \c JSONTypeKey for serialized \c LUSummary files.
 inline constexpr const char *JSONTypeValueLUSummary = "LUSummary";
+
+/// Value written to \c JSONTypeKey for serialized \c StaticLibrary files.
+inline constexpr const char *JSONTypeValueStaticLibrary = "StaticLibrary";
 
 /// Value written to \c JSONTypeKey for serialized \c WPASuite files.
 inline constexpr const char *JSONTypeValueWPASuite = "WPASuite";

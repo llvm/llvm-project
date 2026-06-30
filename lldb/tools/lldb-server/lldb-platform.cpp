@@ -491,7 +491,7 @@ int main_platform(int argc, char *argv[]) {
   }
 
   if (!LLDBServerUtilities::SetupLogging(log_file, log_channels, 0))
-    return -1;
+    return EXIT_FAILURE;
 
   // Print usage and exit if no listening port is specified.
   if (listen_host_port.empty() && fd == SharedSocket::kInvalidFD) {
