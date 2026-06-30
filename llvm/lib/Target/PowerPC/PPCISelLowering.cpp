@@ -13176,45 +13176,49 @@ MachineBasicBlock *PPCTargetLowering::EmitAtomicBinary(MachineInstr &MI,
   // CmpOpcode != 0: Handles atomic load with MIN/MAX etc.
   // BinOpcode == 0 && CmpOpcode == 0: Handles ATOMIC_SWAP.
   const PPCInstrInfo *TII = Subtarget.getInstrInfo();
-  unsigned AtomicSize = MI.getOperand(3).getImm();
+  // Log2 of the byte size.
+  unsigned AtomicSizeLog = MI.getOperand(3).getImm();
+  assert(AtomicSizeLog < 4 && "log2 of byte size too large");
 
-  auto LoadMnemonic = PPC::LDARX;
-  auto StoreMnemonic = PPC::STDCX;
-  switch (AtomicSize) {
-  default:
-    llvm_unreachable("Unexpected size of atomic entity");
-  case 1:
-    LoadMnemonic = PPC::LBARX;
-    StoreMnemonic = PPC::STBCX;
-    assert(Subtarget.hasPartwordAtomics() && "Call this only with size >=4");
-    break;
-  case 2:
-    LoadMnemonic = PPC::LHARX;
-    StoreMnemonic = PPC::STHCX;
-    assert(Subtarget.hasPartwordAtomics() && "Call this only with size >=4");
-    break;
-  case 4:
-    LoadMnemonic = PPC::LWARX;
-    StoreMnemonic = PPC::STWCX;
-    break;
-  case 8:
-    LoadMnemonic = PPC::LDARX;
-    StoreMnemonic = PPC::STDCX;
-    break;
-  }
+  static const unsigned LoadOpc[] = {PPC::LBARX, PPC::LHARX, PPC::LWARX,
+                                     PPC::LDARX};
+  static const unsigned StoreOpc[] = {PPC::STBCX, PPC::STHCX, PPC::STWCX,
+                                      PPC::STDCX};
+
+  auto LoadMnemonic = LoadOpc[AtomicSizeLog];
+  auto StoreMnemonic = StoreOpc[AtomicSizeLog];
 
   const BasicBlock *LLVM_BB = BB->getBasicBlock();
   MachineFunction *F = BB->getParent();
   MachineFunction::iterator It = ++BB->getIterator();
 
-  if (CmpOpcode == PPC::CMPW && (AtomicSize == 1 || AtomicSize == 2))
-    signExtendOperandIfUnknown(MI, BB, 4, /*IsByte=*/AtomicSize == 1, TII);
+  if (CmpOpcode == PPC::CMPW && AtomicSizeLog < 2)
+    signExtendOperandIfUnknown(MI, BB, 4, /*IsByte=*/AtomicSizeLog == 0, TII);
 
   Register dest = MI.getOperand(0).getReg();
   Register ptrA = MI.getOperand(1).getReg();
   Register ptrB = MI.getOperand(2).getReg();
-  Register incr = MI.getOperand(4).getReg();
+  Register incr =
+      MI.getOperand(4).isReg() ? MI.getOperand(4).getReg() : PPC::ZERO;
+  int64_t imm = MI.getOperand(4).isImm() ? MI.getOperand(4).getImm() : 0;
   DebugLoc dl = MI.getDebugLoc();
+
+  // Change opcode if there is an immediate.
+  if (imm) {
+    switch (BinOpcode) {
+    case PPC::AND:
+      BinOpcode = PPC::ANDI_rec;
+      break;
+    case PPC::OR:
+      BinOpcode = PPC::ORI;
+      break;
+    case PPC::XOR:
+      BinOpcode = PPC::XORI;
+      break;
+    default:
+      llvm_unreachable("Unexpected opcode with imm");
+    }
+  }
 
   MachineBasicBlock *loopMBB = F->CreateMachineBasicBlock(LLVM_BB);
   MachineBasicBlock *loop2MBB =
@@ -13229,9 +13233,10 @@ MachineBasicBlock *PPCTargetLowering::EmitAtomicBinary(MachineInstr &MI,
   exitMBB->transferSuccessorsAndUpdatePHIs(BB);
 
   MachineRegisterInfo &RegInfo = F->getRegInfo();
-  Register TmpReg = (!BinOpcode) ? incr :
-    RegInfo.createVirtualRegister( AtomicSize == 8 ? &PPC::G8RCRegClass
-                                           : &PPC::GPRCRegClass);
+  Register TmpReg = (!BinOpcode) ? incr
+                                 : RegInfo.createVirtualRegister(
+                                       AtomicSizeLog == 3 ? &PPC::G8RCRegClass
+                                                          : &PPC::GPRCRegClass);
 
   //  thisMBB:
   //   ...
@@ -13256,17 +13261,21 @@ MachineBasicBlock *PPCTargetLowering::EmitAtomicBinary(MachineInstr &MI,
   //   fallthrough --> exitMBB
 
   BB = loopMBB;
-  BuildMI(BB, dl, TII->get(LoadMnemonic), dest)
-    .addReg(ptrA).addReg(ptrB);
-  if (BinOpcode)
-    BuildMI(BB, dl, TII->get(BinOpcode), TmpReg).addReg(incr).addReg(dest);
+  BuildMI(BB, dl, TII->get(LoadMnemonic), dest).addReg(ptrA).addReg(ptrB);
+  if (BinOpcode) {
+    if (imm)
+      BuildMI(BB, dl, TII->get(BinOpcode), TmpReg).addReg(dest).addImm(imm);
+    else
+      BuildMI(BB, dl, TII->get(BinOpcode), TmpReg).addReg(incr).addReg(dest);
+  }
   if (CmpOpcode) {
     Register CrReg = RegInfo.createVirtualRegister(&PPC::CRRCRegClass);
     // Signed comparisons of byte or halfword values must be sign-extended.
-    if (CmpOpcode == PPC::CMPW && AtomicSize < 4) {
+    if (CmpOpcode == PPC::CMPW && AtomicSizeLog < 2) {
       Register ExtReg = RegInfo.createVirtualRegister(&PPC::GPRCRegClass);
-      BuildMI(BB, dl, TII->get(AtomicSize == 1 ? PPC::EXTSB : PPC::EXTSH),
-              ExtReg).addReg(dest);
+      BuildMI(BB, dl, TII->get(AtomicSizeLog == 0 ? PPC::EXTSB : PPC::EXTSH),
+              ExtReg)
+          .addReg(dest);
       BuildMI(BB, dl, TII->get(CmpOpcode), CrReg).addReg(ExtReg).addReg(incr);
     } else
       BuildMI(BB, dl, TII->get(CmpOpcode), CrReg).addReg(dest).addReg(incr);
@@ -13386,7 +13395,7 @@ MachineBasicBlock *PPCTargetLowering::EmitPartwordAtomicBinary(
   DebugLoc dl = MI.getDebugLoc();
   MachineFunction *F = BB->getParent();
   MachineRegisterInfo &RegInfo = F->getRegInfo();
-  const bool is8bit = MI.getOperand(3).getImm() == 1;
+  const bool is8bit = MI.getOperand(3).getImm() == 0;
   if (CmpOpcode == PPC::CMPW)
     signExtendOperandIfUnknown(MI, BB, 4, is8bit, TII);
   Register incr = MI.getOperand(4).getReg();
@@ -14557,6 +14566,7 @@ PPCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     BB = EmitPartwordAtomicBinary(MI, BB, PPC::AND);
     break;
   case PPC::ATOMIC_LOAD_AND:
+  case PPC::ATOMIC_LOAD_AND_IMM:
     BB = EmitAtomicBinary(MI, BB, PPC::AND);
     break;
   case PPC::ATOMIC_LOAD_AND_I64:
@@ -14566,6 +14576,7 @@ PPCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     BB = EmitPartwordAtomicBinary(MI, BB, PPC::OR);
     break;
   case PPC::ATOMIC_LOAD_OR:
+  case PPC::ATOMIC_LOAD_OR_IMM:
     BB = EmitAtomicBinary(MI, BB, PPC::OR);
     break;
   case PPC::ATOMIC_LOAD_OR_I64:
@@ -14575,6 +14586,7 @@ PPCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     BB = EmitPartwordAtomicBinary(MI, BB, PPC::XOR);
     break;
   case PPC::ATOMIC_LOAD_XOR:
+  case PPC::ATOMIC_LOAD_XOR_IMM:
     BB = EmitAtomicBinary(MI, BB, PPC::XOR);
     break;
   case PPC::ATOMIC_LOAD_XOR_I64:
