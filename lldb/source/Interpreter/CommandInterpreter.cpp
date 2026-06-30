@@ -436,6 +436,10 @@ void CommandInterpreter::Initialize() {
   if (cmd_obj_sp)
     AddAlias("image", cmd_obj_sp);
 
+  cmd_obj_sp = GetCommandSPExact("diagnostics report");
+  if (cmd_obj_sp)
+    AddAlias("bugreport", cmd_obj_sp);
+
   alias_arguments_vector_sp = std::make_shared<OptionArgVector>();
 
   cmd_obj_sp = GetCommandSPExact("dwim-print");
