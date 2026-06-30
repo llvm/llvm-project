@@ -50,9 +50,15 @@ void f() {
   // expected-error@tuple:* 0+ {{reference member '__value_' binds to a temporary object whose lifetime would be shorter than the lifetime of the constructed object}}
 #endif
 
-  { F<int, const std::string&>(std::make_tuple(1, "abc")); }
-  { std::tuple<int, const std::string&> t(1, "a"); }
-  { F<int, const std::string&>(std::tuple<int, const std::string&>(1, "abc")); }
+  {
+    F<int, const std::string&>(std::make_tuple(1, "abc"));
+  }
+  {
+    std::tuple<int, const std::string&> t(1, "a");
+  }
+  {
+    F<int, const std::string&>(std::tuple<int, const std::string&>(1, "abc"));
+  }
   {
     ConvertsTo<int&> ct;
     std::tuple<const long&, int> t(ct, 42);
