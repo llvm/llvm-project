@@ -12,6 +12,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include <OffloadAPI.h>
 #include <fstream>
+#include <optional>
 
 using namespace llvm;
 
@@ -167,17 +168,16 @@ const std::string DeviceBinsDirectory = DEVICE_CODE_PATH;
 bool TestEnvironment::loadDeviceBinary(
     const std::string &BinaryName, ol_device_handle_t Device,
     std::unique_ptr<MemoryBuffer> &BinaryOut,
-    ol_platform_backend_t OverrideBackend) {
+    std::optional<ol_platform_backend_t> OverrideBackend) {
+  ol_platform_backend_t DeviceBackend = OL_PLATFORM_BACKEND_UNKNOWN;
 
-  ol_platform_backend_t Backend = OverrideBackend;
-  // Without an explicit override, derive the binary's backend from the device.
-  if (Backend == OL_PLATFORM_BACKEND_UNKNOWN) {
-    ol_platform_handle_t Platform;
-    olGetDeviceInfo(Device, OL_DEVICE_INFO_PLATFORM, sizeof(Platform),
-                    &Platform);
-    olGetPlatformInfo(Platform, OL_PLATFORM_INFO_BACKEND, sizeof(Backend),
-                      &Backend);
-  }
+  ol_platform_handle_t Platform;
+  olGetDeviceInfo(Device, OL_DEVICE_INFO_PLATFORM, sizeof(Platform), &Platform);
+  olGetPlatformInfo(Platform, OL_PLATFORM_INFO_BACKEND, sizeof(DeviceBackend),
+                    &DeviceBackend);
+
+  ol_platform_backend_t Backend = OverrideBackend.value_or(DeviceBackend);
+
   std::string FileExtension;
   if (Backend == OL_PLATFORM_BACKEND_AMDGPU) {
     FileExtension = ".amdgpu.bin";

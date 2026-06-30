@@ -1020,10 +1020,13 @@ Error olMemFill_impl(ol_queue_handle_t Queue, void *Ptr, size_t PatternSize,
 Error olCreateProgram_impl(ol_device_handle_t Device, const void *ProgData,
                            size_t ProgDataSize, ol_program_handle_t *Program) {
 
-  // an empty image is not a valid binary
-  // plugins behave differently given empty binaries - e.g. CUDA will map to INVALID_BINARY,
-  // while L0 will map to INVALID_SIZE which is also associated with invalid kernel launch dims etc.
-  // so we guard here for consistent behavior
+  // An empty image is not a valid binary.
+  // Plugins behave differently given empty binaries - e.g. CUDA will map to
+  // INVALID_BINARY, while L0 will map to INVALID_SIZE (which is also associated
+  // with invalid kernel launch dims etc.), so we guard here for consistent
+  // behavior.
+  // TODO: This should be part of the plugin interface contract so this check
+  // can be removed from here.
   if (ProgDataSize == 0)
     return createOffloadError(ErrorCode::INVALID_BINARY,
                               "provided binary image is empty");
