@@ -2056,7 +2056,7 @@ func.func @invalid_from_elements_scalable(%a: f32, %b: i32) {
 // -----
 
 func.func @invalid_step_0d() {
-  // expected-error @+1 {{vector.step' op result #0 must be vector of index values of ranks 1, but got 'vector<f32>'}}
+  // expected-error @+1 {{vector.step' op result #0 must be vector of index or signless integer of at least 8 bits values of ranks 1, but got 'vector<f32>'}}
   vector.step : vector<f32>
   return
 }
@@ -2064,8 +2064,40 @@ func.func @invalid_step_0d() {
 // -----
 
 func.func @invalid_step_2d() {
-  // expected-error @+1 {{vector.step' op result #0 must be vector of index values of ranks 1, but got 'vector<2x4xf32>'}}
+  // expected-error @+1 {{vector.step' op result #0 must be vector of index or signless integer of at least 8 bits values of ranks 1, but got 'vector<2x4xf32>'}}
   vector.step : vector<2x4xf32>
+  return
+}
+
+// -----
+
+func.func @invalid_step_float_element() {
+  // expected-error @+1 {{vector.step' op result #0 must be vector of index or signless integer of at least 8 bits values of ranks 1, but got 'vector<4xf32>'}}
+  vector.step : vector<4xf32>
+  return
+}
+
+// -----
+
+func.func @invalid_step_narrow_integer() {
+  // expected-error @+1 {{vector.step' op result #0 must be vector of index or signless integer of at least 8 bits values of ranks 1, but got 'vector<4xi4>'}}
+  vector.step : vector<4xi4>
+  return
+}
+
+// -----
+
+func.func @invalid_step_i1_element() {
+  // expected-error @+1 {{vector.step' op result #0 must be vector of index or signless integer of at least 8 bits values of ranks 1, but got 'vector<4xi1>'}}
+  vector.step : vector<4xi1>
+  return
+}
+
+// -----
+
+func.func @invalid_step_unsigned_integer() {
+  // expected-error @+1 {{vector.step' op result #0 must be vector of index or signless integer of at least 8 bits values of ranks 1, but got 'vector<4xui8>'}}
+  vector.step : vector<4xui8>
   return
 }
 
