@@ -1136,7 +1136,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       // exactly: zero, infinity, NaN, or +/-1.
       const fltSemantics &Sem = Val.getSemantics();
       if (&Sem != &APFloat::IEEEhalf() && !Val.isZero() && !Val.isInfinity() &&
-          !Val.isNaN() && !Val.isExactlyValue(1.0) && !Val.isExactlyValue(-1.0))
+          !Val.isNaN() && !Val.isOne() && !Val.isMinusOne())
         break;
 
       return IC.replaceInstUsesWith(II, ConstantFP::get(II.getContext(), Val));
