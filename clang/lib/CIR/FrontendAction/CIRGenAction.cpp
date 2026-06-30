@@ -135,7 +135,7 @@ public:
     mlir::MLIRContext &MlirCtx = Gen->getMLIRContext();
 
     if (!FEOptions.ClangIRDisablePasses) {
-      std::string LibOptOptions = FEOptions.clangIRLibOptOptions;
+      std::string LibOptOptions = FEOptions.ClangIRLibOptOptions;
 
       // Setup and run CIR pipeline.
       const bool EnableLibOpt =
