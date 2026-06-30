@@ -298,7 +298,7 @@ public:
     if (FPBits<T>(input).is_subnormal())
       ++inputExponent;
 
-    if (thisAsT * input < 0 || thisExponent == inputExponent) {
+    if (thisAsT * input < T(0) || thisExponent == inputExponent) {
       MPFRNumber inputMPFR(input);
       mpfr_sub(inputMPFR.value, value, inputMPFR.value, MPFR_RNDN);
       mpfr_abs(inputMPFR.value, inputMPFR.value, MPFR_RNDN);
