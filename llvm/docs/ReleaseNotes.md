@@ -208,6 +208,7 @@ Makes programs 10x faster by doing Special New Thing.
 * The `r14` register can now be used as an alias for the link register `lr`
   in inline assembly. Clang always canonicalizes the name to `lr`, but other
   frontends may not.
+* `subs pc, lr, #imm` can now be predicated in Thumb2.
 
 ### Changes to the AVR Backend
 
