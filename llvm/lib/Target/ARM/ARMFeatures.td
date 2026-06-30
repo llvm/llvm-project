@@ -575,18 +575,14 @@ def FeatureLOB            : SubtargetFeature<"lob", "HasLOB", "true",
                                              "extensions">;
 
 // Mitigate against the cve-2021-35465 security vulnurability.
-// TODO: Does this need to be InlineMustMatch?
 def FeatureFixCMSE_CVE_2021_35465 : SubtargetFeature<"fix-cmse-cve-2021-35465",
                                         "FixCMSE_CVE_2021_35465", "true",
                                         "Mitigate against the cve-2021-35465 "
-                                        "security vulnurability",
-                                        [], InlineMustMatch>;
+                                        "security vulnurability">;
 
-// TODO: Does this need to be InlineMustMatch?
 def FeaturePACBTI         : SubtargetFeature<"pacbti", "HasPACBTI", "true",
                                              "Enable Pointer Authentication and Branch "
-                                             "Target Identification",
-                                             [], InlineMustMatch>;
+                                             "Target Identification">;
 
 /// Don't place a BTI instruction after return-twice constructs (setjmp).
 // TODO: Does this need to be InlineMustMatch?
@@ -604,8 +600,7 @@ def FeatureCLRBHB : SubtargetFeature<"clrbhb", "HasCLRBHB", "true",
 // TODO: Does this need to be InlineMustMatch?
 def FeatureFixCortexA57AES1742098 : SubtargetFeature<"fix-cortex-a57-aes-1742098",
   "FixCortexA57AES1742098", "true",
-  "Work around Cortex-A57 Erratum 1742098 / Cortex-A72 Erratum 1655431 (AES)",
-  [], InlineMustMatch>;
+  "Work around Cortex-A57 Erratum 1742098 / Cortex-A72 Erratum 1655431 (AES)">;
 
 // If frame pointers are in use, they must follow the AAPCS definition, which
 // always uses R11 as the frame pointer. If this is not set, we can use R7 as
