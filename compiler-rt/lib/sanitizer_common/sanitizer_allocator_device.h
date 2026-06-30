@@ -263,7 +263,7 @@ class DeviceAllocatorT {
     if (p < min_mmap_)
       return nullptr;
     if (p >= max_mmap_) {
-      // TODO (bingma): If dev_runtime_unloaded_ = true, map_size is limited
+      // TODO (bingma): When the device runtime is unloaded, map_size is limited
       // to one page and we might miss a valid 'ptr'. If we hit cases where
       // this kind of miss is unacceptable, we will need to implement a full
       // solution with higher cost
@@ -353,19 +353,15 @@ class DeviceAllocatorT {
   }
 
   Header* GetHeader(uptr chunk, Header* h) const {
-    // Device allocator has dependency on device runtime. If device runtime
-    // is unloaded, GetPointerInfo() will fail. For such case, we can still
-    // return a valid value for map_beg, map_size will be limited to one page
-    if (LIKELY(!dev_runtime_unloaded_)) {
+    // Device allocator depends on the device runtime. Query the authoritative
+    // shutdown state directly (a cheap atomic). It is reset by
+    // ClearRuntimeShutdownState() on hsa re-init, so header lookup self-heals
+    // after a shutdown/re-init cycle without a sticky per-allocator flag.
+    if (LIKELY(!DeviceBackend::IsRuntimeShutdown())) {
       if (DeviceBackend::GetPointerInfo(chunk, h))
         return h;
-      // If GetPointerInfo() fails, we don't assume the runtime is unloaded yet.
-      // We just return a conservative single-page header. Here mark/check the
-      // runtime shutdown state
-      dev_runtime_unloaded_ = DeviceBackend::IsRuntimeShutdown();
     }
-    // If we reach here, device runtime is unloaded.
-    // Fallback: conservative single-page header
+    // Runtime down (or GetPointerInfo failed): conservative single-page header.
     h->map_beg = chunk;
     h->map_size = page_size_;
     return h;
@@ -379,7 +375,6 @@ class DeviceAllocatorT {
 
   bool enabled_;
   bool mem_funcs_inited_;
-  mutable bool dev_runtime_unloaded_;
   // Maximum of mem_funcs_init_count_ is 2:
   //   1. The initial init called from Init(...), it could fail if
   //      the device runtime is dynamically loaded with dlopen()
