@@ -9,7 +9,7 @@
 # libc++ ships no functional <sstream>, so prec_format fails to compile.
 #
 # This patch guards the iostream-only message formatting under BOOST_MATH_NO_EXCEPTIONS.
-# Reported upstream: https://github.com/boostorg/math/issues (see PR description).
+# Reported upstream: https://github.com/boostorg/math/issues/1412
 # Re-applied by update_boost_math.sh after each snapshot refresh; drop once upstream.
 diff --git a/boost-math/include/boost/math/policies/error_handling.hpp b/boost-math/include/boost/math/policies/error_handling.hpp
 index d7ba694564ba..da167171f650 100644
