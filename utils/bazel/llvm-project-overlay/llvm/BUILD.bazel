@@ -2136,11 +2136,21 @@ genrule(
     cmd = "printf 'constexpr char InstrumentorRuntimeHelper[] = R\"(' > $@ && cat $(SRCS) >> $@ && echo ')\";' >> $@",
 )
 
+genrule(
+    name = "patch_merge_functions",
+    srcs = ["lib/Transforms/IPO/MergeFunctions.cpp"],
+    outs = ["MergeFunctions.patched.cpp"],
+    cmd = "sed -e 's/std::optional<Function::ProfileCount>/std::optional<uint64_t>/g' -e 's/FC ? FC->getCount() : uint64_t{0}/FC ? *FC : uint64_t{0}/g' -e 's/GC ? GC->getCount() : uint64_t{0}/GC ? *GC : uint64_t{0}/g' \"$<\" > \"$@\"",
+)
+
 cc_library(
     name = "IPO",
-    srcs = glob([
-        "lib/Transforms/IPO/*.cpp",
-    ]),
+    srcs = glob(
+        [
+            "lib/Transforms/IPO/*.cpp",
+        ],
+        exclude = ["lib/Transforms/IPO/MergeFunctions.cpp"],
+    ) + ["MergeFunctions.patched.cpp"],
     hdrs = glob([
         "include/llvm/Transforms/IPO/*.h",
     ]) + [
