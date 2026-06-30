@@ -1,0 +1,98 @@
+# GitHub Actions workflow to automatically delete amdPR/* branches after PR closure
+# This workflow helps maintain repository cleanliness by removing temporary branches
+name: AMD - Delete amdPR/* Branches After Merge and Notify
+
+# Trigger this workflow when a pull request is merged
+on:
+  pull_request:
+    types: [closed]
+
+# Define minimum required permissions for security
+permissions:
+  contents: read
+
+# Set default shell to bash for all steps
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  # Main job to handle branch deletion logic
+  delete-branch:
+    # Job runs only if the pull request was merged (merged == true)
+    # If the PR was just closed without merging, this job is skipped
+    if: github.event.pull_request.merged == true
+    runs-on: amd_linux
+    # Define outputs that can be consumed by dependent jobs
+    outputs:
+      delete_status: ${{ steps.delete_branch.outputs.delete_status }}
+      branch_name: ${{ steps.check_branch.outputs.branch_name }}
+    steps:
+      # Step 1: Check if the source branch follows the amdPR/* naming pattern
+      - name: Check if source branch matches amdPR/*
+        id: check_branch
+        run: |
+          # Get the branch name from the pull request event
+          BRANCH_NAME="${{ github.event.pull_request.head.ref }}"
+          echo "Processing branch: $BRANCH_NAME"
+
+          # Convert branch name to lowercase for case-insensitive comparison
+          BRANCH_NAME_LOWER=$(echo "$BRANCH_NAME" | tr '[:upper:]' '[:lower:]')
+
+          # Check if branch name starts with 'amdpr/'
+          if [[ "$BRANCH_NAME_LOWER" == amdpr/* ]]; then
+            echo "Branch matches AOCC PR branch convention - will proceed with deletion"
+            echo "delete_branch=true" >> $GITHUB_OUTPUT
+            echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+          else
+            echo "Branch does not match amdPR/* pattern - skipping deletion"
+            echo "delete_branch=false" >> $GITHUB_OUTPUT
+          fi
+
+      # Step 2: Delete the branch using GitHub Enterprise API (only if it matches pattern)
+      - name: Delete branch via GitHub Enterprise API
+        if: steps.check_branch.outputs.delete_branch == 'true'
+        id: delete_branch
+        run: |
+          # Get the branch name from the previous step
+          BRANCH_NAME="${{ steps.check_branch.outputs.branch_name }}"
+          echo "Attempting to delete branch: $BRANCH_NAME"
+
+          # Make API call to delete the branch and capture HTTP status code
+          STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X DELETE -H "Authorization: token ${{ secrets.OREQUEST_GH_TOKEN }}" -H "Accept: application/vnd.github.v3+json" https://github.amd.com/api/v3/repos/${{ github.repository }}/git/refs/heads/$BRANCH_NAME)
+
+          echo "API response status code: $STATUS_CODE"
+          echo "status_code=$STATUS_CODE" >> $GITHUB_OUTPUT
+
+          # Determine success/failure based on HTTP status code (204 = success)
+          if [[ "$STATUS_CODE" == "204" ]]; then
+            echo "Branch deletion successful"
+            echo "delete_status=success" >> $GITHUB_OUTPUT
+          else
+            echo "Branch deletion failed"
+            echo "delete_status=failure" >> $GITHUB_OUTPUT
+          fi
+
+  # Notification job to report the outcome of branch deletion
+  notify:
+    needs: delete-branch
+    runs-on: amd_linux
+    # Run this job regardless of whether the previous job succeeded or failed
+    if: always()
+    steps:
+      # Step 1: Send appropriate notification based on deletion outcome
+      - name: Send notification
+        run: |
+          # Get the deletion status from the previous job
+          DELETE_STATUS="${{ needs.delete-branch.outputs.delete_status }}"
+          BRANCH_NAME="${{ needs.delete-branch.outputs.branch_name }}"
+
+          # Send different notifications based on the outcome
+          if [[ "$DELETE_STATUS" == "success" ]]; then
+            echo "✅ Branch '$BRANCH_NAME' deletion successful for PR #${{ github.event.pull_request.number }}"
+          elif [[ "$DELETE_STATUS" == "failure" ]]; then
+            echo "Branch '$BRANCH_NAME' deletion failed for PR #${{ github.event.pull_request.number }}"
+          else
+            echo "No branch deletion attempted for PR #${{ github.event.pull_request.number }} (branch doesn't match amdPR/* pattern)"
+          fi
+
