@@ -4580,6 +4580,9 @@ Error BitcodeReader::parseModule(uint64_t ResumeBit,
   // Initialize to the current module's layout string in case none is specified.
   std::string TentativeDataLayoutStr = TheModule->getDataLayoutStr();
 
+  // Apply to the following module asm.
+  Module::GlobalAsmProperties Props;
+
   auto ResolveDataLayout = [&]() -> Error {
     if (ResolvedDataLayout)
       return Error::success();
@@ -4788,11 +4791,23 @@ Error BitcodeReader::parseModule(uint64_t ResumeBit,
         return error("Invalid data layout record");
       break;
     }
+    case bitc::MODULE_CODE_ASM_PROPERTY: {
+      std::string Str;
+      if (convertToString(Record, 0, Str))
+        return error("Invalid module asm record");
+      size_t SepPos = Str.find('\0');
+      if (SepPos == std::string::npos)
+        return error("Invalid module asm record");
+      if (!Props.set(StringRef(Str.data(), SepPos), Str.substr(SepPos + 1)))
+        return error("Unknown module asm property");
+      break;
+    }
     case bitc::MODULE_CODE_ASM: {  // ASM: [strchr x N]
       std::string S;
       if (convertToString(Record, 0, S))
         return error("Invalid asm record");
-      TheModule->setModuleInlineAsm(S);
+      TheModule->appendModuleInlineAsm(Module::GlobalAsmFragment(S, Props));
+      Props = {};
       break;
     }
     case bitc::MODULE_CODE_DEPLIB: {  // DEPLIB: [strchr x N]
