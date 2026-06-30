@@ -229,4 +229,48 @@ define tailcc void @fromtail_toC() #0 {
   ret void
 }
 
+declare tailcc i32 @all_registers_callee(i32 %p1, i32 %p2, i32 %p3, i32 %p4, i32 %p5, i32 %p6, i32 %p7, i32 %p8, i32 %a, i32 %b)
+
+define tailcc i32 @all_registers_caller(i32 %p1, i32 %p2, i32 %p3, i32 %p4, i32 %p5, i32 %p6, i32 %p7, i32 %p8, i32 %in1, i32 %in2) {
+; COMMON-LABEL: all_registers_caller:
+; COMMON:       // %bb.0: // %entry
+; COMMON-NEXT:    ldr w8, [sp]
+; COMMON-NEXT:    ldr w9, [sp, #8]
+; COMMON-NEXT:    add w8, w8, w0
+; COMMON-NEXT:    str w9, [sp]
+; COMMON-NEXT:    str w8, [sp, #8]
+; COMMON-NEXT:    b all_registers_callee
+entry:
+  %tmp = add i32 %in1, %p1
+  %retval = tail call tailcc i32 @all_registers_callee(i32 %p1, i32 %p2, i32 %p3, i32 %p4, i32 %p5, i32 %p6, i32 %p7, i32 %p8, i32 %in2, i32 %tmp)
+  ret i32 %retval
+}
+
+define tailcc noundef i64 @call_with_byval_caller(i64 noundef %a, i64 noundef %d) {
+; COMMON-LABEL: call_with_byval_caller:
+; COMMON:       // %bb.0: // %start
+; COMMON-NEXT:    mov x8, #-4919131752989213765 // =0xbbbbbbbbbbbbbbbb
+; COMMON-NEXT:    stp x0, x8, [sp, #-64]!
+; COMMON-NEXT:    .cfi_def_cfa_offset 64
+; COMMON-NEXT:    mov x9, #-3689348814741910324 // =0xcccccccccccccccc
+; COMMON-NEXT:    stp x9, x1, [sp, #16]
+; COMMON-NEXT:    ldp q1, q0, [sp]
+; COMMON-NEXT:    stp q1, q0, [sp, #32]!
+; COMMON-NEXT:    b call_with_byval_callee
+start:
+  %large = alloca [4 x i64], align 8
+  call void @llvm.lifetime.start.p0(ptr nonnull %large)
+  store i64 %a, ptr %large, align 8
+  %0 = getelementptr inbounds nuw i8, ptr %large, i64 8
+  store i64 -4919131752989213765, ptr %0, align 8
+  %1 = getelementptr inbounds nuw i8, ptr %large, i64 16
+  store i64 -3689348814741910324, ptr %1, align 8
+  %2 = getelementptr inbounds nuw i8, ptr %large, i64 24
+  store i64 %d, ptr %2, align 8
+  %3 = musttail call tailcc i64 @call_with_byval_callee(ptr byval([4 x i64]) %large)
+  ret i64 %3
+}
+
+declare tailcc noundef i64 @call_with_byval_callee(ptr byval([4 x i64]) %large)
+
 attributes #0 = { uwtable }
