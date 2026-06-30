@@ -40,6 +40,7 @@ public:
 
 private:
   StringRef RawFunctionsThatShouldNotThrow;
+  StringRef RawAssumedNonThrowingFunctions;
   StringRef RawIgnoredExceptions;
   StringRef RawCheckedSwapFunctions;
 
@@ -52,6 +53,7 @@ private:
       TreatFunctionsWithoutSpecificationAsThrowing;
 
   llvm::StringSet<> FunctionsThatShouldNotThrow;
+  llvm::StringSet<> AssumedNonThrowingFunctions;
   llvm::StringSet<> CheckedSwapFunctions;
   utils::ExceptionAnalyzer Tracer;
 };

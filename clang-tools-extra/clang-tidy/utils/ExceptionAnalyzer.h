@@ -154,6 +154,9 @@ public:
   void ignoreExceptions(llvm::StringSet<> ExceptionNames) {
     IgnoredExceptions = std::move(ExceptionNames);
   }
+  void assumeNonThrowingFunctions(llvm::StringSet<> FunctionNames) {
+    AssumedNonThrowingFunctions = std::move(FunctionNames);
+  }
 
   ExceptionInfo analyze(const FunctionDecl *Func);
   ExceptionInfo analyze(const Stmt *Stmt);
@@ -172,6 +175,7 @@ private:
 
   bool IgnoreBadAlloc = true;
   llvm::StringSet<> IgnoredExceptions;
+  llvm::StringSet<> AssumedNonThrowingFunctions;
   llvm::DenseMap<const FunctionDecl *, ExceptionInfo> FunctionCache{32U};
   bool AssumeUnannotatedFunctionsAsThrowing = false;
   bool AssumeMissingDefinitionsFunctionsAsThrowing = false;

@@ -475,7 +475,9 @@ ExceptionAnalyzer::ExceptionInfo ExceptionAnalyzer::throwsException(
     const FunctionDecl *Func, const ExceptionInfo::Throwables &Caught,
     CallStack &CallStack, SourceLocation CallLoc) {
   if (!Func || CallStack.contains(Func) ||
-      (!CallStack.empty() && !canThrow(Func)))
+      (!CallStack.empty() &&
+       (AssumedNonThrowingFunctions.contains(Func->getNameAsString()) ||
+        !canThrow(Func))))
     return ExceptionInfo::createNonThrowing();
 
   if (const Stmt *Body = Func->getBody()) {
