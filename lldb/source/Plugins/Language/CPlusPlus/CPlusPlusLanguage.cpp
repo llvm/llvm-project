@@ -40,6 +40,7 @@
 
 #include "BlockPointer.h"
 #include "CPlusPlusNameParser.h"
+#include "Chrono.h"
 #include "Coroutines.h"
 #include "CxxStringTypes.h"
 #include "Generic.h"
@@ -1095,197 +1096,6 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                   "std::unordered_map iterator synthetic children",
                   "^std::__[[:alnum:]]+::__hash_map_(const_)?iterator<.+>$",
                   stl_synth_flags, true);
-  // Chrono duration typedefs
-  cpp_category_sp->AddTypeSummary(
-      "^std::__[[:alnum:]]+::chrono::nanoseconds", eFormatterMatchRegex,
-      TypeSummaryImplSP(new StringSummaryFormat(
-          eTypeOptionHideChildren | eTypeOptionHideValue, "${var.__rep_} ns")));
-  cpp_category_sp->AddTypeSummary(
-      "^std::__[[:alnum:]]+::chrono::microseconds", eFormatterMatchRegex,
-      TypeSummaryImplSP(new StringSummaryFormat(
-          eTypeOptionHideChildren | eTypeOptionHideValue, "${var.__rep_} µs")));
-  cpp_category_sp->AddTypeSummary(
-      "^std::__[[:alnum:]]+::chrono::milliseconds", eFormatterMatchRegex,
-      TypeSummaryImplSP(new StringSummaryFormat(
-          eTypeOptionHideChildren | eTypeOptionHideValue, "${var.__rep_} ms")));
-  cpp_category_sp->AddTypeSummary(
-      "^std::__[[:alnum:]]+::chrono::seconds", eFormatterMatchRegex,
-      TypeSummaryImplSP(new StringSummaryFormat(
-          eTypeOptionHideChildren | eTypeOptionHideValue, "${var.__rep_} s")));
-  cpp_category_sp->AddTypeSummary(
-      "^std::__[[:alnum:]]+::chrono::minutes", eFormatterMatchRegex,
-      TypeSummaryImplSP(new StringSummaryFormat(eTypeOptionHideChildren |
-                                                    eTypeOptionHideValue,
-                                                "${var.__rep_} min")));
-  cpp_category_sp->AddTypeSummary(
-      "^std::__[[:alnum:]]+::chrono::hours", eFormatterMatchRegex,
-      TypeSummaryImplSP(new StringSummaryFormat(
-          eTypeOptionHideChildren | eTypeOptionHideValue, "${var.__rep_} h")));
-
-  cpp_category_sp->AddTypeSummary(
-      "^std::__[[:alnum:]]+::chrono::days", eFormatterMatchRegex,
-      TypeSummaryImplSP(new StringSummaryFormat(eTypeOptionHideChildren |
-                                                    eTypeOptionHideValue,
-                                                "${var.__rep_} days")));
-  cpp_category_sp->AddTypeSummary(
-      "^std::__[[:alnum:]]+::chrono::weeks", eFormatterMatchRegex,
-      TypeSummaryImplSP(new StringSummaryFormat(eTypeOptionHideChildren |
-                                                    eTypeOptionHideValue,
-                                                "${var.__rep_} weeks")));
-  cpp_category_sp->AddTypeSummary(
-      "^std::__[[:alnum:]]+::chrono::months", eFormatterMatchRegex,
-      TypeSummaryImplSP(new StringSummaryFormat(eTypeOptionHideChildren |
-                                                    eTypeOptionHideValue,
-                                                "${var.__rep_} months")));
-  cpp_category_sp->AddTypeSummary(
-      "^std::__[[:alnum:]]+::chrono::years", eFormatterMatchRegex,
-      TypeSummaryImplSP(new StringSummaryFormat(eTypeOptionHideChildren |
-                                                    eTypeOptionHideValue,
-                                                "${var.__rep_} years")));
-  cpp_category_sp->AddTypeSummary(
-      "^std::__[[:alnum:]]+::chrono::seconds", eFormatterMatchRegex,
-      TypeSummaryImplSP(new StringSummaryFormat(
-          eTypeOptionHideChildren | eTypeOptionHideValue, "${var.__rep_} s")));
-
-  // Chrono time point types
-
-  AddCXXSummary(cpp_category_sp,
-                lldb_private::formatters::LibcxxChronoSysSecondsSummaryProvider,
-                "libc++ std::chrono::sys_seconds summary provider",
-                "^std::__[[:alnum:]]+::chrono::time_point<"
-                "std::__[[:alnum:]]+::chrono::system_clock, "
-                "std::__[[:alnum:]]+::chrono::duration<.*, "
-                "std::__[[:alnum:]]+::ratio<1, 1> "
-                "> >$",
-                eTypeOptionHideChildren | eTypeOptionHideValue |
-                    eTypeOptionCascade,
-                true);
-  AddCXXSummary(cpp_category_sp,
-                lldb_private::formatters::LibcxxChronoSysDaysSummaryProvider,
-                "libc++ std::chrono::sys_seconds summary provider",
-                "^std::__[[:alnum:]]+::chrono::time_point<"
-                "std::__[[:alnum:]]+::chrono::system_clock, "
-                "std::__[[:alnum:]]+::chrono::duration<int, "
-                "std::__[[:alnum:]]+::ratio<86400, 1> "
-                "> >$",
-                eTypeOptionHideChildren | eTypeOptionHideValue |
-                    eTypeOptionCascade,
-                true);
-
-  AddCXXSummary(
-      cpp_category_sp,
-      lldb_private::formatters::LibcxxChronoLocalSecondsSummaryProvider,
-      "libc++ std::chrono::local_seconds summary provider",
-      "^std::__[[:alnum:]]+::chrono::time_point<"
-      "std::__[[:alnum:]]+::chrono::local_t, "
-      "std::__[[:alnum:]]+::chrono::duration<.*, "
-      "std::__[[:alnum:]]+::ratio<1, 1> "
-      "> >$",
-      eTypeOptionHideChildren | eTypeOptionHideValue | eTypeOptionCascade,
-      true);
-  AddCXXSummary(cpp_category_sp,
-                lldb_private::formatters::LibcxxChronoLocalDaysSummaryProvider,
-                "libc++ std::chrono::local_seconds summary provider",
-                "^std::__[[:alnum:]]+::chrono::time_point<"
-                "std::__[[:alnum:]]+::chrono::local_t, "
-                "std::__[[:alnum:]]+::chrono::duration<int, "
-                "std::__[[:alnum:]]+::ratio<86400, 1> "
-                "> >$",
-                eTypeOptionHideChildren | eTypeOptionHideValue |
-                    eTypeOptionCascade,
-                true);
-
-  // Chrono calendar types
-
-  cpp_category_sp->AddTypeSummary(
-      "^std::__[[:alnum:]]+::chrono::day$", eFormatterMatchRegex,
-      TypeSummaryImplSP(new StringSummaryFormat(eTypeOptionHideChildren |
-                                                    eTypeOptionHideValue,
-                                                "day=${var.__d_%u}")));
-
-  AddCXXSummary(cpp_category_sp,
-                lldb_private::formatters::LibcxxChronoMonthSummaryProvider,
-                "libc++ std::chrono::month summary provider",
-                "^std::__[[:alnum:]]+::chrono::month$",
-                eTypeOptionHideChildren | eTypeOptionHideValue, true);
-
-  cpp_category_sp->AddTypeSummary(
-      "^std::__[[:alnum:]]+::chrono::year$", eFormatterMatchRegex,
-      TypeSummaryImplSP(new StringSummaryFormat(
-          eTypeOptionHideChildren | eTypeOptionHideValue, "year=${var.__y_}")));
-
-  AddCXXSummary(cpp_category_sp,
-                lldb_private::formatters::LibcxxChronoWeekdaySummaryProvider,
-                "libc++ std::chrono::weekday summary provider",
-                "^std::__[[:alnum:]]+::chrono::weekday$",
-                eTypeOptionHideChildren | eTypeOptionHideValue, true);
-
-  cpp_category_sp->AddTypeSummary(
-      "^std::__[[:alnum:]]+::chrono::weekday_indexed$", eFormatterMatchRegex,
-      TypeSummaryImplSP(new StringSummaryFormat(
-          eTypeOptionHideChildren | eTypeOptionHideValue,
-          "${var.__wd_} index=${var.__idx_%u}")));
-
-  cpp_category_sp->AddTypeSummary(
-      "^std::__[[:alnum:]]+::chrono::weekday_last$", eFormatterMatchRegex,
-      TypeSummaryImplSP(new StringSummaryFormat(eTypeOptionHideChildren |
-                                                    eTypeOptionHideValue,
-                                                "${var.__wd_} index=last")));
-  cpp_category_sp->AddTypeSummary(
-      "^std::__[[:alnum:]]+::chrono::month_day$", eFormatterMatchRegex,
-      TypeSummaryImplSP(new StringSummaryFormat(eTypeOptionHideChildren |
-                                                    eTypeOptionHideValue,
-                                                "${var.__m_} ${var.__d_}")));
-  cpp_category_sp->AddTypeSummary(
-      "^std::__[[:alnum:]]+::chrono::month_day_last$", eFormatterMatchRegex,
-      TypeSummaryImplSP(new StringSummaryFormat(eTypeOptionHideChildren |
-                                                    eTypeOptionHideValue,
-                                                "${var.__m_} day=last")));
-
-  cpp_category_sp->AddTypeSummary(
-      "^std::__[[:alnum:]]+::chrono::month_weekday$", eFormatterMatchRegex,
-      TypeSummaryImplSP(new StringSummaryFormat(eTypeOptionHideChildren |
-                                                    eTypeOptionHideValue,
-                                                "${var.__m_} ${var.__wdi_}")));
-
-  cpp_category_sp->AddTypeSummary(
-      "^std::__[[:alnum:]]+::chrono::month_weekday_last$", eFormatterMatchRegex,
-      TypeSummaryImplSP(new StringSummaryFormat(eTypeOptionHideChildren |
-                                                    eTypeOptionHideValue,
-                                                "${var.__m_} ${var.__wdl_}")));
-
-  cpp_category_sp->AddTypeSummary(
-      "^std::__[[:alnum:]]+::chrono::year_month$", eFormatterMatchRegex,
-      TypeSummaryImplSP(new StringSummaryFormat(eTypeOptionHideChildren |
-                                                    eTypeOptionHideValue,
-                                                "${var.__y_} ${var.__m_}")));
-
-  AddCXXSummary(
-      cpp_category_sp,
-      lldb_private::formatters::LibcxxChronoYearMonthDaySummaryProvider,
-      "libc++ std::chrono::year_month_day summary provider",
-      "^std::__[[:alnum:]]+::chrono::year_month_day$",
-      eTypeOptionHideChildren | eTypeOptionHideValue, true);
-
-  cpp_category_sp->AddTypeSummary(
-      "^std::__[[:alnum:]]+::chrono::year_month_day_last$",
-      eFormatterMatchRegex,
-      TypeSummaryImplSP(new StringSummaryFormat(eTypeOptionHideChildren |
-                                                    eTypeOptionHideValue,
-                                                "${var.__y_} ${var.__mdl_}")));
-
-  cpp_category_sp->AddTypeSummary(
-      "^std::__[[:alnum:]]+::chrono::year_month_weekday$", eFormatterMatchRegex,
-      TypeSummaryImplSP(new StringSummaryFormat(
-          eTypeOptionHideChildren | eTypeOptionHideValue,
-          "${var.__y_} ${var.__m_} ${var.__wdi_}")));
-
-  cpp_category_sp->AddTypeSummary(
-      "^std::__[[:alnum:]]+::chrono::year_month_weekday_last$",
-      eFormatterMatchRegex,
-      TypeSummaryImplSP(new StringSummaryFormat(
-          eTypeOptionHideChildren | eTypeOptionHideValue,
-          "${var.__y_} ${var.__m_} ${var.__wdl_}")));
 
   AddCXXSummary(cpp_category_sp,
                 lldb_private::formatters::LibcxxPartialOrderingSummaryProvider,
@@ -1302,6 +1112,179 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                 "libc++ std::strong_ordering summary provider",
                 "^std::__[[:alnum:]]+::strong_ordering$",
                 eTypeOptionHideChildren | eTypeOptionHideValue, true);
+}
+
+static void LoadStdChronoFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
+  TypeSummaryImpl::Flags chrono_flags;
+  chrono_flags.SetDontShowChildren(true).SetDontShowValue(true);
+
+  // Durations.
+  // These are typedefs. With PDB we don't have the typedef name, so match both
+  // the typedef'd name and the std::chrono::duration<> name.
+  AddCXXSummary(
+      cpp_category_sp, chrono::NanosecondsSummaryProvider,
+      "std::chrono::nanoseconds Summary",
+      "^std(::__[[:alnum:]]+)?::chrono::(nanoseconds|duration<__int64, ?std::"
+      "ratio<1, ?1000000000> ?>)",
+      chrono_flags, true);
+
+  AddCXXSummary(
+      cpp_category_sp, chrono::MicrosecondsSummaryProvider,
+      "std::chrono::microseconds Summary",
+      "^std(::__[[:alnum:]]+)?::chrono::(microseconds|duration<__int64, ?std::"
+      "ratio<1, ?1000000> ?>)",
+      chrono_flags, true);
+
+  AddCXXSummary(
+      cpp_category_sp, chrono::MillisecondsSummaryProvider,
+      "std::chrono::milliseconds Summary",
+      "^std(::__[[:alnum:]]+)?::chrono::(milliseconds|duration<__int64, ?std::"
+      "ratio<1, ?1000> ?>)",
+      chrono_flags, true);
+
+  AddCXXSummary(cpp_category_sp, chrono::SecondsSummaryProvider,
+                "std::chrono::seconds Summary",
+                "^std(::__[[:alnum:]]+)?::chrono::(seconds|duration<__int64, "
+                "?std::ratio<"
+                "1, ?1> ?>)",
+                chrono_flags, true);
+
+  AddCXXSummary(
+      cpp_category_sp, chrono::MinutesSummaryProvider,
+      "std::chrono::minutes Summary",
+      "^std(::__[[:alnum:]]+)?::chrono::(minutes|duration<int, ?std::ratio<"
+      "60, ?1> ?>)",
+      chrono_flags, true);
+
+  AddCXXSummary(
+      cpp_category_sp, chrono::HoursSummaryProvider,
+      "std::chrono::hours Summary",
+      "^std(::__[[:alnum:]]+)?::chrono::(hours|duration<int, ?std::ratio<"
+      "3600, ?1> ?>)",
+      chrono_flags, true);
+
+  AddCXXSummary(
+      cpp_category_sp, chrono::DaysSummaryProvider, "std::chrono::days Summary",
+      "^std(::__[[:alnum:]]+)?::chrono::(days|duration<int, ?std::ratio<"
+      "86400, ?1> ?>)",
+      chrono_flags, true);
+
+  AddCXXSummary(
+      cpp_category_sp, chrono::WeeksSummaryProvider,
+      "std::chrono::weeks Summary",
+      "^std(::__[[:alnum:]]+)?::chrono::(weeks|duration<int, ?std::ratio<"
+      "604800, ?1> ?>)",
+      chrono_flags, true);
+
+  AddCXXSummary(
+      cpp_category_sp, chrono::MonthsSummaryProvider,
+      "std::chrono::months Summary",
+      "^std(::__[[:alnum:]]+)?::chrono::(months|duration<int, ?std::ratio<"
+      "2629746, ?1> ?>)",
+      chrono_flags, true);
+
+  AddCXXSummary(
+      cpp_category_sp, chrono::YearsSummaryProvider,
+      "std::chrono::years Summary",
+      "^std(::__[[:alnum:]]+)?::chrono::(years|duration<int, ?std::ratio<"
+      "31556952, ?1> ?>)",
+      chrono_flags, true);
+
+  // Calendar types.
+  AddCXXSummary(cpp_category_sp, chrono::DaySummaryProvider,
+                "std::chrono::day Summary",
+                "^std(::__[[:alnum:]]+)?::chrono::day$", chrono_flags, true);
+  AddCXXSummary(cpp_category_sp, chrono::MonthSummaryProvider,
+                "std::chrono::month Summary",
+                "^std(::__[[:alnum:]]+)?::chrono::month$", chrono_flags, true);
+  AddCXXSummary(cpp_category_sp, chrono::YearSummaryProvider,
+                "std::chrono::year Summary",
+                "^std(::__[[:alnum:]]+)?::chrono::year$", chrono_flags, true);
+  AddCXXSummary(cpp_category_sp, chrono::WeekdaySummaryProvider,
+                "std::chrono::weekday Summary",
+                "^std(::__[[:alnum:]]+)?::chrono::weekday$", chrono_flags,
+                true);
+  AddCXXSummary(cpp_category_sp, chrono::WeekdayIndexedSummaryProvider,
+                "std::chrono::weekday_indexed Summary",
+                "^std(::__[[:alnum:]]+)?::chrono::weekday_indexed$",
+                chrono_flags, true);
+  AddCXXSummary(cpp_category_sp, chrono::WeekdayLastSummaryProvider,
+                "std::chrono::weekday_last Summary",
+                "^std(::__[[:alnum:]]+)?::chrono::weekday_last$", chrono_flags,
+                true);
+  AddCXXSummary(cpp_category_sp, chrono::MonthDaySummaryProvider,
+                "std::chrono::month_day Summary",
+                "^std(::__[[:alnum:]]+)?::chrono::month_day$", chrono_flags,
+                true);
+  AddCXXSummary(cpp_category_sp, chrono::MonthDayLastSummaryProvider,
+                "std::chrono::month_day_last Summary",
+                "^std(::__[[:alnum:]]+)?::chrono::month_day_last$",
+                chrono_flags, true);
+  AddCXXSummary(cpp_category_sp, chrono::MonthWeekdaySummaryProvider,
+                "std::chrono::month_weekday Summary",
+                "^std(::__[[:alnum:]]+)?::chrono::month_weekday$", chrono_flags,
+                true);
+  AddCXXSummary(cpp_category_sp, chrono::MonthWeekdayLastSummaryProvider,
+                "std::chrono::month_weekday_last Summary",
+                "^std(::__[[:alnum:]]+)?::chrono::month_weekday_last$",
+                chrono_flags, true);
+  AddCXXSummary(cpp_category_sp, chrono::YearMonthSummaryProvider,
+                "std::chrono::year_month Summary",
+                "^std(::__[[:alnum:]]+)?::chrono::year_month$", chrono_flags,
+                true);
+  AddCXXSummary(cpp_category_sp, chrono::YearMonthDaySummaryProvider,
+                "std::chrono::year_month_day Summary",
+                "^std(::__[[:alnum:]]+)?::chrono::year_month_day$",
+                chrono_flags, true);
+  AddCXXSummary(cpp_category_sp, chrono::YearMonthDayLastSummaryProvider,
+                "std::chrono::year_month_day_last Summary",
+                "^std(::__[[:alnum:]]+)?::chrono::year_month_day_last$",
+                chrono_flags, true);
+  AddCXXSummary(cpp_category_sp, chrono::YearMonthWeekdaySummaryProvider,
+                "std::chrono::year_month_weekday Summary",
+                "^std(::__[[:alnum:]]+)?::chrono::year_month_weekday$",
+                chrono_flags, true);
+  AddCXXSummary(cpp_category_sp, chrono::YearMonthWeekdayLastSummaryProvider,
+                "std::chrono::year_month_weekday_last Summary",
+                "^std(::__[[:alnum:]]+)?::chrono::year_month_weekday_last$",
+                chrono_flags, true);
+
+  // Timepoints.
+  chrono_flags.SetCascades(true);
+
+  AddCXXSummary(cpp_category_sp, chrono::SysSecondsSummaryProvider,
+                "std::chrono::sys_seconds summary provider",
+                "^std::(__[[:alnum:]]+::)?chrono::time_point<"
+                "std::(__[[:alnum:]]+::)?chrono::(_V[0-9]+::)?system_clock, ?"
+                "std::(__[[:alnum:]]+::)?chrono::duration<.*, ?"
+                "std::(__[[:alnum:]]+::)?ratio<1, 1> ?"
+                "> ?>$",
+                chrono_flags, true);
+  AddCXXSummary(cpp_category_sp, chrono::SysDaysSummaryProvider,
+                "std::chrono::sys_seconds summary provider",
+                "^std::(__[[:alnum:]]+::)?chrono::time_point<"
+                "std::(__[[:alnum:]]+::)?chrono::(_V[0-9]+::)?system_clock, ?"
+                "std::(__[[:alnum:]]+::)?chrono::duration<.*, ?"
+                "std::(__[[:alnum:]]+::)?ratio<86400, 1> ?"
+                "> ?>$",
+                chrono_flags, true);
+
+  AddCXXSummary(cpp_category_sp, chrono::LocalSecondsSummaryProvider,
+                "std::chrono::local_seconds summary provider",
+                "^std::(__[[:alnum:]]+::)?chrono::time_point<"
+                "std::(__[[:alnum:]]+::)?chrono::local_t, ?"
+                "std::(__[[:alnum:]]+::)?chrono::duration<.*, ?"
+                "std::(__[[:alnum:]]+::)?ratio<1, 1> ?"
+                "> ?>$",
+                chrono_flags, true);
+  AddCXXSummary(cpp_category_sp, chrono::LocalDaysSummaryProvider,
+                "std::chrono::local_seconds summary provider",
+                "^std::(__[[:alnum:]]+::)?chrono::time_point<"
+                "std::(__[[:alnum:]]+::)?chrono::local_t, ?"
+                "std::(__[[:alnum:]]+::)?chrono::duration<.*, ?"
+                "std::(__[[:alnum:]]+::)?ratio<86400, 1> ?"
+                "> ?>$",
+                chrono_flags, true);
 }
 
 static void RegisterStdStringSummaryProvider(
@@ -1935,6 +1918,8 @@ static void LoadCommonStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                 "MSVC STL/libstdc++ std::strong_ordering summary provider",
                 "std::strong_ordering",
                 eTypeOptionHideChildren | eTypeOptionHideValue, false);
+
+  LoadStdChronoFormatters(cpp_category_sp);
 }
 
 static void LoadMsvcStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
