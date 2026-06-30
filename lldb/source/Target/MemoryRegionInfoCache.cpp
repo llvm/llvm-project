@@ -23,40 +23,6 @@ size_t MemoryRegionInfoCache::GetSize() {
   return m_region_infos.GetSize();
 }
 
-void MemoryRegionInfoCache::EraseRange(addr_t load_addr, size_t size) {
-  std::lock_guard<std::mutex> guard(m_mutex);
-
-  // If load_addr+size would overflow, do nothing.
-  // Likely this is an LLDB_INVALID_ADDRESS plus something.
-  uint64_t max_minus_addr = std::numeric_limits<addr_t>::max() - load_addr;
-  if (size > max_minus_addr)
-    return;
-  // We expect a VM range of at least one byte.
-  if (size == 0)
-    return;
-
-  if (!m_is_sorted) {
-    m_region_infos.Sort();
-    m_is_sorted = true;
-  }
-  uint32_t start_idx = m_region_infos.FindEntryIndexThatContains(load_addr);
-  uint32_t end_idx =
-      m_region_infos.FindEntryIndexThatContains(load_addr + size - 1);
-  if (start_idx == UINT32_MAX && end_idx == UINT32_MAX)
-    return;
-
-  if (start_idx == UINT32_MAX)
-    m_region_infos.Erase(end_idx, end_idx + 1);
-  else if (end_idx == UINT32_MAX)
-    m_region_infos.Erase(start_idx, start_idx + 1);
-  else
-    m_region_infos.Erase(start_idx, end_idx + 1);
-}
-
-void MemoryRegionInfoCache::EraseContaining(addr_t load_addr) {
-  EraseRange(load_addr, 1);
-}
-
 std::optional<MemoryRegionInfo>
 MemoryRegionInfoCache::GetMemoryRegion(addr_t load_addr) {
   std::lock_guard<std::mutex> guard(m_mutex);

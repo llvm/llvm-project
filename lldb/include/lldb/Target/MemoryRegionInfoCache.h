@@ -24,13 +24,6 @@ public:
   /// Process resumes execution of the inferior.
   void Clear();
 
-  /// Remove cached information about region(s) containing \p addr
-  /// through \p addr + \p size, if any.
-  void EraseRange(lldb::addr_t addr, size_t size);
-
-  /// Remove cached information about region containing \p addr, if any.
-  void EraseContaining(lldb::addr_t addr);
-
   /// Return a MemoryRegionInfo that covers \p load_addr,
   /// returns empty optional if there is no entry.
   std::optional<MemoryRegionInfo> GetMemoryRegion(lldb::addr_t load_addr);

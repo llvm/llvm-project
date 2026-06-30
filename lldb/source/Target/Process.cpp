@@ -2703,7 +2703,7 @@ addr_t Process::AllocateMemory(size_t size, uint32_t permissions,
 
   addr_t alloced_addr =
       m_allocated_memory_cache.AllocateMemory(size, permissions, error);
-  m_memory_region_infos_cache.EraseRange(alloced_addr, size);
+  m_memory_region_infos_cache.Clear();
 
   return alloced_addr;
 }
@@ -2758,7 +2758,7 @@ void Process::SetCanRunCode(bool can_run_code) {
 
 Status Process::DeallocateMemory(addr_t ptr) {
   Status error;
-  m_memory_region_infos_cache.EraseContaining(ptr);
+  m_memory_region_infos_cache.Clear();
   if (!m_allocated_memory_cache.DeallocateMemory(ptr)) {
     error = Status::FromErrorStringWithFormat(
         "deallocation of memory at 0x%" PRIx64 " failed.", (uint64_t)ptr);
