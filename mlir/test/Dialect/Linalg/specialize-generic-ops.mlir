@@ -1084,14 +1084,11 @@ func.func @negative_op_matmul_output_cast(%A: tensor<16x8xi32>, %B: tensor<8x32x
 // CATEGORY: linalg.generic
 // CATEGORY-NOT: linalg.contract
 
-// Bitcasts are not modeled by the cast attribute, but should not block
-// specialization.
-// NOTE: Bitcasts are not preserved by the matmul named op during
-// roundtrip, so this is potentially loosing information here.
-// See #177593 for more details.
-func.func @op_matmul_bitcast_int_to_float(%A: tensor<16x8xi32>,
-                                          %B: tensor<8x32xi32>,
-                                          %Out: tensor<16x32xf32>) -> tensor<16x32xf32> {
+// Bitcasts are not modeled by the cast attribute, so specializing this would
+// not round-trip through the matmul named op without losing information.
+func.func @negative_op_matmul_bitcast_int_to_float(%A: tensor<16x8xi32>,
+                                                   %B: tensor<8x32xi32>,
+                                                   %Out: tensor<16x32xf32>) -> tensor<16x32xf32> {
   %0 = linalg.generic
     {indexing_maps = [#map, #map1, #map2],
     iterator_types = ["parallel", "parallel", "reduction"]}
@@ -1107,13 +1104,13 @@ func.func @op_matmul_bitcast_int_to_float(%A: tensor<16x8xi32>,
   return %0 : tensor<16x32xf32>
 }
 
-// ALL-LABEL: op_matmul_bitcast_int_to_float
+// ALL-LABEL: negative_op_matmul_bitcast_int_to_float
 
-// NAMED-NOT: linalg.generic
-// NAMED: linalg.matmul
+// NAMED: linalg.generic
+// NAMED-NOT: linalg.matmul
 
-// CATEGORY-NOT: linalg.generic
-// CATEGORY: linalg.contract
+// CATEGORY: linalg.generic
+// CATEGORY-NOT: linalg.contract
 
 // Signed float casts only use sitofp, which defaults to signed semantics.
 func.func @op_matmul_signed_cast_float(%A: tensor<16x8xi16>, %B: tensor<8x32xi16>,
@@ -1163,6 +1160,58 @@ func.func @op_matmul_unsigned_cast_float(%A: tensor<16x8xi16>, %B: tensor<8x32xi
 }
 
 // ALL-LABEL: op_matmul_unsigned_cast_float
+
+// NAMED-NOT: linalg.generic
+// NAMED: linalg.matmul {cast = #linalg.type_fn<cast_unsigned>}
+
+// CATEGORY-NOT: linalg.generic
+// CATEGORY: linalg.contract{{.*}}{cast = #linalg.type_fn<cast_unsigned>}
+
+// Float-to-int casts (fptosi) should be recognized and specialized.
+func.func @op_matmul_fptosi_cast(%A: tensor<16x8xf32>, %B: tensor<8x32xf32>,
+                                 %Out: tensor<16x32xi32>) -> tensor<16x32xi32> {
+  %0 = linalg.generic
+    {indexing_maps = [#map, #map1, #map2],
+    iterator_types = ["parallel", "parallel", "reduction"]}
+    ins(%A, %B : tensor<16x8xf32>, tensor<8x32xf32>)
+    outs(%Out : tensor<16x32xi32>) {
+  ^bb0(%in: f32, %in_0: f32, %out: i32):
+    %1 = arith.fptosi %in : f32 to i32
+    %2 = arith.fptosi %in_0 : f32 to i32
+    %3 = arith.muli %1, %2 : i32
+    %4 = arith.addi %out, %3 : i32
+    linalg.yield %4 : i32
+  } -> tensor<16x32xi32>
+  return %0 : tensor<16x32xi32>
+}
+
+// ALL-LABEL: op_matmul_fptosi_cast
+
+// NAMED-NOT: linalg.generic
+// NAMED: linalg.matmul
+
+// CATEGORY-NOT: linalg.generic
+// CATEGORY: linalg.contract
+
+// Float-to-unsigned-int casts (fptoui) should be recognized with unsigned cast attr.
+func.func @op_matmul_fptoui_cast(%A: tensor<16x8xf32>, %B: tensor<8x32xf32>,
+                                 %Out: tensor<16x32xi32>) -> tensor<16x32xi32> {
+  %0 = linalg.generic
+    {indexing_maps = [#map, #map1, #map2],
+    iterator_types = ["parallel", "parallel", "reduction"]}
+    ins(%A, %B : tensor<16x8xf32>, tensor<8x32xf32>)
+    outs(%Out : tensor<16x32xi32>) {
+  ^bb0(%in: f32, %in_0: f32, %out: i32):
+    %1 = arith.fptoui %in : f32 to i32
+    %2 = arith.fptoui %in_0 : f32 to i32
+    %3 = arith.muli %1, %2 : i32
+    %4 = arith.addi %out, %3 : i32
+    linalg.yield %4 : i32
+  } -> tensor<16x32xi32>
+  return %0 : tensor<16x32xi32>
+}
+
+// ALL-LABEL: op_matmul_fptoui_cast
 
 // NAMED-NOT: linalg.generic
 // NAMED: linalg.matmul {cast = #linalg.type_fn<cast_unsigned>}
