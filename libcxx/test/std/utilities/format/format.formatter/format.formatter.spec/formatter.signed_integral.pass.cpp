@@ -126,7 +126,7 @@ void test_wide_signed_bitint() {
     using A = signed _BitInt(256);
     test_termination_condition(STR("0"), STR("}"), A(0));
     test_termination_condition(STR("-42"), STR("}"), A(-42));
-    test_termination_condition(STR("FF"), STR("X}"), A(255)); // libc++ __transform path
+    test_termination_condition(STR("FF"), STR("X}"), A(255));
     test_termination_condition(
         STR("-57896044618658097711785492504343953926634992332820282019728792003956564819968"),
         STR("}"),
