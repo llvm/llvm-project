@@ -97,6 +97,9 @@ public:
 
   /// \returns the target features required by the target intrinsic
   /// \p IntrinsicID with signature \p FTy.
+  ///
+  /// The intrinsic TargetFeatures table is keyed by intrinsic ID. Targets can
+  /// override this when support also depends on the resolved overload type.
   virtual StringRef
   getRequiredTargetFeaturesForIntrinsic(unsigned IntrinsicID,
                                         const FunctionType *FTy) const;

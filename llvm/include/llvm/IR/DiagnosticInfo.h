@@ -1136,10 +1136,10 @@ private:
   StringRef RequiredFeatures;
 
 public:
-  DiagnosticInfoUnsupportedTargetIntrinsic(
-      const Function &Fn, unsigned IntrinsicID,
-      const DiagnosticLocation &Loc = DiagnosticLocation(),
-      StringRef RequiredFeatures = {});
+  DiagnosticInfoUnsupportedTargetIntrinsic(const Function &Fn,
+                                           unsigned IntrinsicID,
+                                           const DiagnosticLocation &Loc,
+                                           StringRef RequiredFeatures);
 
   static bool classof(const DiagnosticInfo *DI) {
     return DI->getKind() == DK_UnsupportedTargetIntrinsic;
