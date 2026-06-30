@@ -7155,8 +7155,7 @@ static std::optional<int64_t> getConstantStride(VPValue *Addr, Type *AccessTy,
 
 void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
                                                  VPRecipeBuilder &RecipeBuilder,
-                                                 PredicatedScalarEvolution &PSE,
-                                                 const Loop *L) {
+                                                 VPCostContext &CostCtx) {
   // Collect all loads/stores first. We will start with ones having simpler
   // decisions followed by more complex ones that are potentially
   // guided/dependent on the simpler ones.
@@ -7252,9 +7251,11 @@ void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
           // replicated per-lane. No mask is needed as the load is not
           // predicated.
           VPValue *Ptr = VPI->getOperand(0);
-          const SCEV *PtrSCEV = vputils::getSCEVExprForVPValue(Ptr, PSE, L);
-          bool IsSingleScalarLoad = !isa<SCEVCouldNotCompute>(PtrSCEV) &&
-                                    PSE.getSE()->isLoopInvariant(PtrSCEV, L);
+          const SCEV *PtrSCEV =
+              vputils::getSCEVExprForVPValue(Ptr, CostCtx.PSE, CostCtx.L);
+          bool IsSingleScalarLoad =
+              !isa<SCEVCouldNotCompute>(PtrSCEV) &&
+              CostCtx.PSE.getSE()->isLoopInvariant(PtrSCEV, CostCtx.L);
 
           ReplaceWith(VPI,
                       new VPReplicateRecipe(
@@ -7275,7 +7276,7 @@ void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
         VPValue *Ptr = VPI->getOperand(!IsLoad);
         Type *ScalarTy =
             IsLoad ? VPI->getScalarType() : VPI->getOperand(0)->getScalarType();
-        if (getConstantStride(Ptr, ScalarTy, PSE, L) != 1)
+        if (getConstantStride(Ptr, ScalarTy, CostCtx.PSE, CostCtx.L) != 1)
           return false;
 
         Type *StrideTy =
