@@ -220,6 +220,7 @@ LanguageFeatureControl::LanguageFeatureControl() {
   warnLanguage_.set(LanguageFeature::OpenMPThreadprivateEquivalence);
   warnLanguage_.set(LanguageFeature::OpenAccDefaultNoneScalarsStrict);
   warnLanguage_.set(LanguageFeature::OpenACCMultipleNamesInRoutine);
+  warnLanguage_.set(LanguageFeature::SystemClockStrict);
 }
 
 std::optional<LanguageControlFlag> LanguageFeatureControl::FindWarning(
@@ -328,10 +329,11 @@ std::vector<const char *> LanguageFeatureControl::GetNames(
 }
 
 void LanguageFeatureControl::WarnOnAllNonstandard(bool yes) {
-  warnAllLanguage_ = yes;
+  // This feature is set independently and is on by default:
+  bool clockStrict = warnLanguage_.test(LanguageFeature::SystemClockStrict);
+
   warnLanguage_.reset();
   if (yes) {
-    disableAllWarnings_ = false;
     warnLanguage_.flip();
     // These three features do not need to be warned about,
     // but we do want their feature flags.
@@ -339,13 +341,14 @@ void LanguageFeatureControl::WarnOnAllNonstandard(bool yes) {
     warnLanguage_.set(LanguageFeature::OpenACC, false);
     warnLanguage_.set(LanguageFeature::CUDA, false);
   }
+
+  // This feature is set independently and is on by default:
+  warnLanguage_.set(LanguageFeature::SystemClockStrict, clockStrict);
 }
 
 void LanguageFeatureControl::WarnOnAllUsage(bool yes) {
-  warnAllUsage_ = yes;
   warnUsage_.reset();
   if (yes) {
-    disableAllWarnings_ = false;
     warnUsage_.flip();
   }
 }
