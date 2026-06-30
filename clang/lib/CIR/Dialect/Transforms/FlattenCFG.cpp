@@ -472,18 +472,17 @@ public:
       constexpr uint64_t kSmallRangeThreshold = 64;
       APInt rangeSize = upperBound - lowerBound;
       if (rangeSize.ult(kSmallRangeThreshold)) {
-        // Expand into individual cases.  Break on equality before incrementing
-        // so the cursor never steps past the top of the domain: when
-        // upperBound is the type's maximum, ++caseValue would wrap and a
-        // value-based loop condition would never terminate.
+        // Expand into individual cases.  rangeSize < kSmallRangeThreshold, so
+        // the inclusive case count (rangeSize + 1) fits in a uint64_t.  Drive
+        // termination by the count rather than by comparing caseValue to
+        // upperBound: when upperBound is the type's maximum the final
+        // caseValue++ wraps past the top, which is harmless because the
+        // wrapped value is never used.
         APInt caseValue = lowerBound;
-        while (true) {
-          caseValues.push_back(caseValue);
+        for (uint64_t n = rangeSize.getZExtValue() + 1; n != 0; --n) {
+          caseValues.push_back(caseValue++);
           caseOperands.push_back(operand);
           caseDestinations.push_back(destination);
-          if (caseValue == upperBound)
-            break;
-          ++caseValue;
         }
         continue;
       }
