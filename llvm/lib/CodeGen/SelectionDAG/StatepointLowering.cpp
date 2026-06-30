@@ -394,7 +394,7 @@ spillIncomingStatepointValue(SDValue Incoming, SDValue Chain,
     MachineFrameInfo &MFI = Builder.DAG.getMachineFunction().getFrameInfo();
     assert((MFI.getObjectSize(Index) * 8) ==
                (-8 & (7 + // Round up modulo 8.
-                      (int64_t)Incoming.getValueSizeInBits())) &&
+                      Incoming.getValueSizeInBits())) &&
            "Bad spill:  stack slot does not match!");
 
     // Note: Using the alignment of the spill slot (rather than the abi or
