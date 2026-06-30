@@ -73,7 +73,7 @@ template <> struct ExtraPrecision<bfloat16> {
 };
 
 template <> struct ExtraPrecision<Float128> {
-  static constexpr unsigned int VALUE =  VALUE = 512;
+  static constexpr unsigned int VALUE = 512;
 }
 
 // If the ulp tolerance is less than or equal to 0.5, we would check that the
