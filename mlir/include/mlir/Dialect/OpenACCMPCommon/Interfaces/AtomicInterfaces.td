@@ -488,6 +488,19 @@ def AtomicCompareOpInterface : OpInterface<"AtomicCompareOpInterface"> {
               }
             }
             break;
+          } else if (llvm::is_contained(
+                         {"arith.maxsi", "arith.minsi", "arith.maxui",
+                          "arith.minui", "arith.maximumf", "arith.minimumf",
+                          "llvm.intr.smax", "llvm.intr.smin",
+                          "llvm.intr.umax", "llvm.intr.umin",
+                          "llvm.intr.maxnum", "llvm.intr.minnum"},
+                         opName)) {
+            // The canonicalizer may fold select(cmpi slt, e, x) into
+            // maxsi/minsi (or the float equivalents). After fir-to-llvm-ir
+            // these become llvm.intr.smax/smin etc. All are valid
+            // representations of atomic compare min/max operations.
+            foundComparison = true;
+            break;
           }
         }
 

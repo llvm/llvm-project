@@ -336,3 +336,61 @@ subroutine atomic_compare_capture_fail_only(x, e, d, v)
   !$omp end atomic
 end
 
+! Real equality compare+capture (postfix): if(x==e) x=d; v=x
+! v captures new value of x (d if success, old if fail)
+!CHECK-LABEL: define void @atomic_compare_capture_real_(
+!CHECK-SAME: ptr noalias %[[X:.*]], ptr noalias %[[E:.*]], ptr noalias %[[D:.*]], ptr noalias %[[V:.*]])
+!CHECK: %[[EVAL:.*]] = load float, ptr %[[E]]{{.*}}
+!CHECK: %[[DVAL:.*]] = load float, ptr %[[D]]{{.*}}
+!CHECK: %[[EBITS:.*]] = bitcast float %[[EVAL]] to i32
+!CHECK: %[[DBITS:.*]] = bitcast float %[[DVAL]] to i32
+!CHECK: %[[XLOAD:.*]] = load atomic i32, ptr %[[X]] monotonic{{.*}}
+!CHECK: %[[XFP:.*]] = bitcast i32 %[[XLOAD]] to float
+! Part 1: NaN check - if either x or e is NaN, comparison fails
+!CHECK: %[[E_ISNAN:.*]] = fcmp uno float %[[EVAL]], %[[EVAL]]
+!CHECK: %[[X_ISNAN:.*]] = fcmp uno float %[[XFP]], %[[XFP]]
+!CHECK: %[[EITHER_NAN:.*]] = or i1 %[[E_ISNAN]], %[[X_ISNAN]]
+!CHECK: br i1 %[[EITHER_NAN]], label %[[NAN_BB:.*]], label %[[NOTNAN_BB:.*]]
+!CHECK: [[NAN_BB]]:
+!CHECK: br label %[[EXIT_BB:.*]]
+! Part 2: Both-zero check - handles +0.0 vs -0.0 (same value, different bits)
+!CHECK: [[NOTNAN_BB]]:
+!CHECK: %[[XISZERO:.*]] = fcmp oeq float %[[XFP]], 0.000000e+00
+!CHECK: %[[EISZERO:.*]] = fcmp oeq float %[[EVAL]], 0.000000e+00
+!CHECK: %[[BOTHZERO:.*]] = and i1 %[[XISZERO]], %[[EISZERO]]
+!CHECK: br i1 %[[BOTHZERO]], label %[[ZERO_BB:.*]], label %[[NORMAL_BB:.*]]
+!CHECK: [[ZERO_BB]]:
+!CHECK: %[[ZERORES:.*]] = cmpxchg ptr %[[X]], i32 %[[XLOAD]], i32 %[[DBITS]] monotonic monotonic{{.*}}
+!CHECK: br label %[[EXIT_BB]]
+! Part 3: Normal compare - standard cmpxchg with bitcasted expected value
+!CHECK: [[NORMAL_BB]]:
+!CHECK: %[[NORMRES:.*]] = cmpxchg ptr %[[X]], i32 %[[EBITS]], i32 %[[DBITS]] monotonic monotonic{{.*}}
+!CHECK: br label %[[EXIT_BB]]
+! Exit: select v = (success ? d : old_x)
+!CHECK: [[EXIT_BB]]:
+!CHECK: %[[OLD:.*]] = phi i32 {{.*}}
+!CHECK: %[[OK:.*]] = phi i1 {{.*}}
+!CHECK: %[[OLDFP:.*]] = bitcast i32 %[[OLD]] to float
+!CHECK: %[[VVAL:.*]] = select i1 %[[OK]], float %[[DVAL]], float %[[OLDFP]]
+!CHECK: store float %[[VVAL]], ptr %[[V]]{{.*}}
+subroutine atomic_compare_capture_real(x, e, d, v)
+  real :: x, e, d, v
+  !$omp atomic compare capture
+    if (x == e) x = d
+    v = x
+  !$omp end atomic
+end
+
+! Logical .eqv. compare+capture (postfix): if(x.eqv.e) x=d; v=x
+! Logicals are compared as integers after truthiness normalization
+!CHECK-LABEL: define void @atomic_compare_capture_logical_(
+!CHECK-SAME: ptr noalias %[[X:.*]], ptr noalias %[[E:.*]], ptr noalias %[[D:.*]], ptr noalias %[[V:.*]])
+!CHECK: cmpxchg ptr %[[X]], i32 %{{.*}}, i32 %{{.*}} monotonic monotonic{{.*}}
+subroutine atomic_compare_capture_logical(x, e, d, v)
+  logical :: x, e, d, v
+  !$omp atomic compare capture
+    if (x .eqv. e) x = d
+    v = x
+  !$omp end atomic
+end
+

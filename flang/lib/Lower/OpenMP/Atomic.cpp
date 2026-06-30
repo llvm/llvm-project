@@ -375,6 +375,8 @@ genAtomicRead(lower::AbstractConverter &converter,
         fir::getBase(converter.genExprValue(assign.rhs, stmtCtx, &loc));
     converter.resetExprOverrides();
 
+    if (value.getType() != storeType)
+      value = builder.createConvert(loc, storeType, value);
     fir::StoreOp::create(builder, loc, value, storeAddr);
   }
   return op;
@@ -634,6 +636,45 @@ void Fortran::lower::omp::lowerAtomic(
           },
           rel->u);
     }
+
+    // Fortran uses .eqv./.neqv. for logical equality/inequality, which are
+    // LogicalOperation expressions rather than Relational expressions.
+    if (!expectedExprStorage) {
+      if (const auto *someLogical =
+              evaluate::UnwrapExpr<evaluate::Expr<evaluate::SomeLogical>>(
+                  *cond)) {
+        common::visit(
+            [&](const auto &kindLogical) {
+              using LogicalExpr = std::decay_t<decltype(kindLogical)>;
+              constexpr int K = LogicalExpr::Result::kind;
+              if (const auto *logOp =
+                      std::get_if<evaluate::LogicalOperation<K>>(
+                          &kindLogical.u)) {
+                if (logOp->logicalOperator == common::LogicalOperator::Eqv ||
+                    logOp->logicalOperator == common::LogicalOperator::Neqv) {
+                  relOpr =
+                      (logOp->logicalOperator == common::LogicalOperator::Eqv)
+                          ? common::RelationalOperator::EQ
+                          : common::RelationalOperator::NE;
+                  using Operand =
+                      typename evaluate::LogicalOperation<K>::Operand;
+                  auto leftExpr = evaluate::AsGenericExpr(
+                      evaluate::Expr<Operand>{logOp->left()});
+                  auto rightExpr = evaluate::AsGenericExpr(
+                      evaluate::Expr<Operand>{logOp->right()});
+                  if (evaluate::IsSameOrConvertOf(rightExpr, atom)) {
+                    expectedExprStorage = std::move(leftExpr);
+                    relOpr = reverseRelOp(relOpr);
+                  } else {
+                    expectedExprStorage = std::move(rightExpr);
+                  }
+                }
+              }
+            },
+            someLogical->u);
+      }
+    }
+
     if (!expectedExprStorage) {
       mlir::emitError(loc, "internal error: atomic compare condition is not a "
                            "recognized relational expression");
@@ -645,6 +686,20 @@ void Fortran::lower::omp::lowerAtomic(
         converter.genExprValue(*expectedExprStorage, stmtCtx, &loc));
     if (expectedVal.getType() != elemTypeOfX) {
       expectedVal = builder.createConvert(loc, elemTypeOfX, expectedVal);
+    }
+
+    // For logical types, convert address and expected value to integer
+    // type here (above the atomic compare region) so that the region
+    // only contains arith.cmpi eq on integers. If done inside the region,
+    // fir.convert logical<4> -> i32 would lower to `icmp ne %val, 0`
+    // which violates the atomic compare verifier's expectations.
+    if (mlir::isa<fir::LogicalType>(elemTypeOfX)) {
+      unsigned kind = mlir::cast<fir::LogicalType>(elemTypeOfX).getFKind();
+      mlir::Type intTy = builder.getIntegerType(kind * 8);
+      mlir::Type intRefTy = builder.getRefType(intTy);
+      atomAddr = builder.createConvert(loc, intRefTy, atomAddr);
+      expectedVal = builder.createConvert(loc, intTy, expectedVal);
+      elemTypeOfX = intTy;
     }
 
     // If this is a compare+capture, determine the ordering of ops.
@@ -694,6 +749,39 @@ void Fortran::lower::omp::lowerAtomic(
         })) {
       weakAttr = builder.getUnitAttr();
     }
+
+    // Extract write assignment (x = d) and generate desired value (d)
+    // before creating the compare region, so that d is defined outside
+    // the region and any intermediate conversions (e.g., logical-to-integer
+    // truthiness normalization) don't appear inside the atomic compare block.
+    [[maybe_unused]] int writeActionCond = 0;
+    const evaluate::Assignment *writeAssign = nullptr;
+    if (analysis.op0.what & analysis.Write) {
+      writeAssign = get(analysis.op0.assign);
+      writeActionCond = analysis.op0.what;
+    }
+    if (!writeAssign && (analysis.op1.what & analysis.Write)) {
+      writeAssign = get(analysis.op1.assign);
+      writeActionCond = analysis.op1.what;
+    }
+    if (!writeAssign) {
+      mlir::emitError(loc,
+                      "internal error: atomic compare has no write assignment");
+      return;
+    }
+    assert((writeActionCond & analysis.IfTrue) &&
+           "atomic compare write should be conditioned on IfTrue");
+
+    // Generate desiredVal before the capture/compare region so any
+    // intermediate ops (loads, conversions) don't pollute the atomic blocks.
+    fir::FirOpBuilder::InsertPoint savedIP = builder.saveInsertionPoint();
+    builder.restoreInsertionPoint(preAt);
+    mlir::Value desiredVal =
+        fir::getBase(converter.genExprValue(writeAssign->rhs, stmtCtx, &loc));
+    if (desiredVal.getType() != elemTypeOfX)
+      desiredVal = builder.createConvert(loc, elemTypeOfX, desiredVal);
+    builder.restoreInsertionPoint(savedIP);
+
     mlir::Operation *atomicOp = mlir::omp::AtomicCompareOp::create(
         builder, loc, atomAddr, weakAttr, hint,
         makeMemOrderAttr(converter, memOrder));
@@ -721,35 +809,6 @@ void Fortran::lower::omp::lowerAtomic(
       return;
     }
 
-    // Check for presence of Assignment (x = d) and wether it is being invoked
-    // only for IfTrue condition.
-
-    // writeActionCond is a bitmask combining the following flags:
-    //  1) the action type (Read/Write/Update)
-    //  2) condition (IfTrue/IfFalse)
-    [[maybe_unused]] int writeActionCond = 0;
-    const evaluate::Assignment *writeAssign = nullptr;
-    if (analysis.op0.what & analysis.Write) {
-      writeAssign = get(analysis.op0.assign);
-      writeActionCond = analysis.op0.what;
-    }
-    if (!writeAssign && (analysis.op1.what & analysis.Write)) {
-      writeAssign = get(analysis.op1.assign);
-      writeActionCond = analysis.op1.what;
-    }
-    if (!writeAssign) {
-      mlir::emitError(loc,
-                      "internal error: atomic compare has no write assignment");
-      return;
-    }
-    assert((writeActionCond & analysis.IfTrue) &&
-           "atomic compare write should be conditioned on IfTrue");
-
-    // Generate new/desired value of x e.g. x = d
-    mlir::Value desiredVal =
-        fir::getBase(converter.genExprValue(writeAssign->rhs, stmtCtx, &loc));
-    if (desiredVal.getType() != elemTypeOfX)
-      desiredVal = builder.createConvert(loc, elemTypeOfX, desiredVal);
     mlir::Value newVal = mlir::arith::SelectOp::create(builder, loc, cmpResult,
                                                        desiredVal, blockArg);
 
