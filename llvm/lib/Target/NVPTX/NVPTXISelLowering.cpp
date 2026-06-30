@@ -7340,10 +7340,10 @@ void NVPTXTargetLowering::ReplaceNodeResults(
   }
 }
 
-/// Returns how NVPTX should expand a scalar atomicrmw with the given op and
-/// value type.
+/// Returns how NVPTX should expand a scalar atomicrmw with the given
+/// instruction and value type.
 static TargetLoweringBase::AtomicExpansionKind
-getScalarAtomicRMWExpansion(AtomicRMWInst::BinOp Op, Type *Ty,
+getScalarAtomicRMWExpansion(const AtomicRMWInst *AI, Type *Ty,
                             const NVPTXSubtarget &STI) {
   using AtomicExpansionKind = TargetLoweringBase::AtomicExpansionKind;
 
@@ -7401,7 +7401,7 @@ getScalarAtomicRMWExpansion(AtomicRMWInst::BinOp Op, Type *Ty,
          "integer.");
   const unsigned BitWidth = cast<IntegerType>(Ty)->getBitWidth();
 
-  switch (Op) {
+  switch (AI->getOperation()) {
   default:
     return AtomicExpansionKind::CmpXChg;
   case AtomicRMWInst::Xchg:
@@ -7481,7 +7481,7 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
     // eventually bottoms out at the scalar base case, where this hook returns
     // None for each scalar lane and the scalar `atom.*` instruction is
     // preserved.
-    if (getScalarAtomicRMWExpansion(AI->getOperation(), LaneTy, STI) ==
+    if (getScalarAtomicRMWExpansion(AI, LaneTy, STI) ==
         AtomicExpansionKind::None)
       return AtomicExpansionKind::Expand;
 
@@ -7497,8 +7497,7 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
     return AtomicExpansionKind::Expand;
   }
 
-  return getScalarAtomicRMWExpansion(AI->getOperation(),
-                                     AI->getValOperand()->getType(), STI);
+  return getScalarAtomicRMWExpansion(AI, AI->getValOperand()->getType(), STI);
 }
 
 bool NVPTXTargetLowering::shouldInsertFencesForAtomic(
