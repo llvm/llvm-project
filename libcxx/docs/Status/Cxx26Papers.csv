@@ -175,7 +175,7 @@
 "`P3887R1 <https://wg21.link/P3887R1>`__","Make ``when_all`` a Ronseal Algorithm","2025-11 (Kona)","","","`#171289 <https://github.com/llvm/llvm-project/issues/171289>`__",""
 "`P3923R0 <https://wg21.link/P3923R0>`__","Additional NB comment resolutions for Kona 2025","2025-11 (Kona)","","","`#171290 <https://github.com/llvm/llvm-project/issues/171290>`__",""
 "`P3371R5 <https://wg21.link/P3371R5>`__","Fix C++26 by making the rank-1, rank-2, rank-k, and rank-2k updates consistent with the BLAS","2025-11 (Kona)","","","`#171291 <https://github.com/llvm/llvm-project/issues/171291>`__",""
-"`P3391R2 <https://wg21.link/P3391R2>`__","``constexpr`` ``std::format``","2025-11 (Kona)","","","`#171292 <https://github.com/llvm/llvm-project/issues/171292>`__",""
+"`P3391R2 <https://wg21.link/P3391R2>`__","``constexpr`` ``std::format``","2025-11 (Kona)","|Partial|","","`#171292 <https://github.com/llvm/llvm-project/issues/171292>`__","``std::to_(w)string`` parts are implemented in LLVM 23."
 "`P3913R1 <https://wg21.link/P3913R1>`__","Optimize ``for std::optional`` in range adaptors","2025-11 (Kona)","","","`#171294 <https://github.com/llvm/llvm-project/issues/171294>`__",""
 "","","","","","",""
 "`P3726R2 <https://wg21.link/P3726R2>`__","Adjustments to Union Lifetime Rules","2026-03 (Croydon)","","","`#189560 <https://github.com/llvm/llvm-project/issues/189560>`__",""

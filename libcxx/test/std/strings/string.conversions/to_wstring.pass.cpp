@@ -10,12 +10,12 @@
 
 // <string>
 
-// wstring to_wstring(int val);
-// wstring to_wstring(unsigned val);
-// wstring to_wstring(long val);
-// wstring to_wstring(unsigned long val);
-// wstring to_wstring(long long val);
-// wstring to_wstring(unsigned long long val);
+// wstring to_wstring(int val);                 // constexpr since C++26
+// wstring to_wstring(unsigned val);            // constexpr since C++26
+// wstring to_wstring(long val);                // constexpr since C++26
+// wstring to_wstring(unsigned long val);       // constexpr since C++26
+// wstring to_wstring(long long val);           // constexpr since C++26
+// wstring to_wstring(unsigned long long val);  // constexpr since C++26
 // wstring to_wstring(float val);
 // wstring to_wstring(double val);
 // wstring to_wstring(long double val);
@@ -28,7 +28,7 @@
 #include "test_macros.h"
 
 template <class T>
-void test_signed() {
+TEST_CONSTEXPR_CXX26 void test_signed() {
   {
     std::wstring s = std::to_wstring(T(0));
     assert(s.size() == 1);
@@ -61,7 +61,7 @@ void test_signed() {
 }
 
 template <class T>
-void test_unsigned() {
+TEST_CONSTEXPR_CXX26 void test_unsigned() {
   {
     std::wstring s = std::to_wstring(T(0));
     assert(s.size() == 1);
@@ -104,16 +104,25 @@ void test_float() {
   }
 }
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test_integers() {
   test_signed<int>();
   test_signed<long>();
   test_signed<long long>();
   test_unsigned<unsigned>();
   test_unsigned<unsigned long>();
   test_unsigned<unsigned long long>();
+
+  return true;
+}
+
+int main(int, char**) {
+  test_integers();
   test_float<float>();
   test_float<double>();
   test_float<long double>();
+#if TEST_STD_VER >= 26
+  static_assert(test_integers());
+#endif
 
   return 0;
 }

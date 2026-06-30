@@ -434,7 +434,7 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_constexpr_string",
-            "values": {"c++20": 201907},
+            "values": {"c++20": 201907, "c++26": 202511},
             "headers": ["string"],
         },
         {
