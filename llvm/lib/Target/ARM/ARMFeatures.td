@@ -158,7 +158,8 @@ def FeatureAcquireRelease : SubtargetFeature<"acquire-release",
 
 // True if floating point compare + branch is slow.
 def FeatureSlowFPBrcc     : SubtargetFeature<"slow-fp-brcc", "IsFPBrccSlow", "true",
-                                             "FP compare + branch is slow">;
+                                             "FP compare + branch is slow",
+                                             [], InlineIgnore>;
 
 // True if the processor supports the Performance Monitor Extensions. These
 // include a generic cycle-counter as well as more fine-grained (often
@@ -585,7 +586,6 @@ def FeaturePACBTI         : SubtargetFeature<"pacbti", "HasPACBTI", "true",
                                              "Target Identification">;
 
 /// Don't place a BTI instruction after return-twice constructs (setjmp).
-// TODO: Does this need to be InlineMustMatch?
 def FeatureNoBTIAtReturnTwice : SubtargetFeature<"no-bti-at-return-twice",
                                                  "NoBTIAtReturnTwice", "true",
                                                  "Don't place a BTI instruction "
@@ -597,7 +597,6 @@ def FeatureCLRBHB : SubtargetFeature<"clrbhb", "HasCLRBHB", "true",
                                      "Enable Clear BHB instruction">;
 
 
-// TODO: Does this need to be InlineMustMatch?
 def FeatureFixCortexA57AES1742098 : SubtargetFeature<"fix-cortex-a57-aes-1742098",
   "FixCortexA57AES1742098", "true",
   "Work around Cortex-A57 Erratum 1742098 / Cortex-A72 Erratum 1655431 (AES)">;
