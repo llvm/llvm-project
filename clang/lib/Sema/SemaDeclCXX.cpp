@@ -4684,6 +4684,20 @@ Sema::BuildMemberInitializer(ValueDecl *Member, Expr *Init,
     } else {
       Init = MemberInit.get();
     }
+
+    // std::init / ref_to_uninit (paper §5): a pointer/reference member given a
+    // written member-initializer must be bound consistently with its marking.
+    // Pass the enclosing constructor as the Decl so a class-template pattern
+    // defers (via D->isTemplated()) and fires once at instantiation, where
+    // BuildMemberInitializer re-runs with the instantiated constructor as
+    // CurContext, matching ctor_uninit_member.
+    if (getLangOpts().Profiles)
+      if (QualType MT = Member->getType();
+          !MT->isDependentType() &&
+          (MT->isPointerType() || MT->isReferenceType()))
+        if (auto *Ctor = dyn_cast<CXXConstructorDecl>(CurContext))
+          checkRefToUninitInit(IdLoc, Member->hasAttr<RefToUninitAttr>(),
+                               MT->isReferenceType(), Init, Ctor);
   }
 
   if (DirectMember) {
