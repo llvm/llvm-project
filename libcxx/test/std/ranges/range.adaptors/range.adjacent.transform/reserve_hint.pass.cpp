@@ -17,9 +17,9 @@
 #include <ranges>
 #include <utility>
 
-#include "test_macros.h"
-#include "test_iterators.h"
 #include "helpers.h"
+#include "test_iterators.h"
+#include "test_macros.h"
 
 int buffer[] = {1, 2, 3, 4, 5, 6, 7, 8, 9};
 

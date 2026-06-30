@@ -13,11 +13,11 @@
 // constexpr auto reserve_hint() const
 //     requires approximately_sized_range<const V>
 
-#include <ranges>
 #include <cassert>
+#include <ranges>
 
-#include "test_macros.h"
 #include "test_iterators.h"
+#include "test_macros.h"
 #include "test_range.h"
 #include "types.h"
 
