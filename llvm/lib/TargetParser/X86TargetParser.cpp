@@ -269,6 +269,9 @@ static constexpr FeatureBitset FeaturesC86_4G_M7 =
     FeatureCMOV | FeatureGFNI | FeatureVAES | FeatureVPCLMULQDQ |
     FeatureWBNOINVD;
 
+static constexpr FeatureBitset FeaturesC86_4G_M8 =
+    FeaturesC86_4G_M7 | FeatureSHSTK;
+
 // D151696 tranplanted Mangling and OnlyForCPUDispatchSpecific from
 // X86TargetParser.def to here. They are assigned by following ways:
 // 1. Copy the mangling from the original CPU_SPEICIFC MACROs. If no, assign
@@ -459,6 +462,7 @@ constexpr EnumStringDef<ProcInfo> ProcessorDefs[] = {
   { {"c86-4g-m4"}, {CK_C86_4G_M4, FEATURE_AVX2, FeaturesC86_4G_M4 , '\0', false} },
   { {"c86-4g-m6"}, {CK_C86_4G_M6, FEATURE_AVX2, FeaturesC86_4G_M6 , '\0', false} },
   { {"c86-4g-m7"}, {CK_C86_4G_M7, FEATURE_AVX512VBMI2, FeaturesC86_4G_M7 , '\0', false} },
+  { {"c86-4g-m8"}, {CK_C86_4G_M8, FEATURE_AVX512VBMI2, FeaturesC86_4G_M8 , '\0', false} },
   // Generic 64-bit processor.
   { {"x86-64"}, {CK_x86_64, FEATURE_SSE2 , FeaturesX86_64, '\0', false} },
   { {"x86-64-v2"}, {CK_x86_64_v2, FEATURE_SSE4_2 , FeaturesX86_64_V2, '\0', false} },
