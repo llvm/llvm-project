@@ -1,0 +1,11 @@
+; REQUIRES: systemz-registered-target
+; RUN: llc -mtriple=s390x-ibm-zos -filetype=obj %s -o %t
+; RUN: obj2yaml %t | FileCheck %s
+
+; CHECK:      --- !GOFF
+; CHECK-NEXT: FileHeader: {}
+
+define i32 @f() {
+entry:
+  ret i32 42
+}
