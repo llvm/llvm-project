@@ -10875,7 +10875,7 @@ SIInstrInfo::getGenericValueUniformity(const MachineInstr &MI) const {
     unsigned SrcAS = SrcTy.getAddressSpace();
     return SrcAS == AMDGPUAS::PRIVATE_ADDRESS &&
                    DstAS == AMDGPUAS::FLAT_ADDRESS &&
-                   ST.hasGloballyAddressableScratch()
+                   ST.hasGloballyAddressableScratchSupport()
                ? ValueUniformity::NeverUniform
                : ValueUniformity::Default;
   };

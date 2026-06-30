@@ -1372,9 +1372,10 @@ defm XF32Insts : AMDGPUSubtargetFeature<"xf32-insts",
   "v_mfma_f32_16x16x8_xf32 and v_mfma_f32_32x32x4_xf32"
 >;
 
-defm GloballyAddressableScratch : AMDGPUSubtargetFeature<"globally-addressable-scratch",
-  "FLAT instructions can access scratch memory for any thread in any wave",
-  /*GenPredicate=*/0
+def FeatureGloballyAddressableScratchSupport : SubtargetFeature<"globally-addressable-scratch-support",
+  "HasGloballyAddressableScratchSupport",
+  "true",
+  "Hardware supports Globally Addressable Scratch"
 >;
 
 // Enable the use of SCRATCH_STORE/LOAD_BLOCK instructions for saving and
@@ -2210,7 +2211,7 @@ def FeatureISAVersion12_50_Common : FeatureSet<
    FeatureFlatBufferGlobalAtomicFaddF64Inst,
    FeatureMemoryAtomicFAddF32DenormalSupport,
    FeatureEmulatedSystemScopeAtomics,
-   FeatureGloballyAddressableScratch,
+   FeatureGloballyAddressableScratchSupport,
    FeatureKernargPreload,
    FeatureVmemPrefInsts,
    FeatureLshlAddU64Inst,
@@ -2341,7 +2342,7 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureAtomicFMinFMaxF64GlobalInsts,
    FeatureAtomicFMinFMaxF64FlatInsts,
    FeatureFmaMixBF16Insts,
-   FeatureGloballyAddressableScratch,
+   FeatureGloballyAddressableScratchSupport,
    FeatureCvtPkF16F32Inst,
    FeatureF16BF16ToFP6BF6ConversionScaleInsts,
    FeatureIEEEMinimumMaximumInsts,

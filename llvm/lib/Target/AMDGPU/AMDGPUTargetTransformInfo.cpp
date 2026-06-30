@@ -1148,7 +1148,7 @@ bool GCNTTIImpl::isSourceOfDivergence(const Value *V) const {
       unsigned DstAS = Intrinsic->getType()->getPointerAddressSpace();
       return SrcAS == AMDGPUAS::PRIVATE_ADDRESS &&
              DstAS == AMDGPUAS::FLAT_ADDRESS &&
-             ST->hasGloballyAddressableScratch();
+             ST->hasGloballyAddressableScratchSupport();
     }
     case Intrinsic::amdgcn_workitem_id_y:
     case Intrinsic::amdgcn_workitem_id_z: {
@@ -1181,7 +1181,7 @@ bool GCNTTIImpl::isSourceOfDivergence(const Value *V) const {
   if (auto *CastI = dyn_cast<AddrSpaceCastInst>(V)) {
     return CastI->getSrcAddressSpace() == AMDGPUAS::PRIVATE_ADDRESS &&
            CastI->getDestAddressSpace() == AMDGPUAS::FLAT_ADDRESS &&
-           ST->hasGloballyAddressableScratch();
+           ST->hasGloballyAddressableScratchSupport();
   }
 
   return false;

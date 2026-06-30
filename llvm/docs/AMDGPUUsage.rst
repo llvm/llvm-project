@@ -573,8 +573,9 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                                         work-item                       Add product
                                                                         IDs                             names.
                                                                       - Globally
-                                                                        Accessible
+                                                                        Addressable
                                                                         Scratch
+                                                                        :sup:`1`
                                                                       - Workgroup
                                                                         Clusters
 
@@ -585,8 +586,9 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                                         work-item                       Add product
                                                                         IDs                             names.
                                                                       - Globally
-                                                                        Accessible
+                                                                        Addressable
                                                                         Scratch
+                                                                        :sup:`1`
                                                                       - Workgroup
                                                                         Clusters
 
@@ -600,6 +602,9 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                                         IDs                             names.
 
      =========== =============== ============ ===== ================= =============== =============== ======================
+
+:sup:`1`: Globally addressable scratch (GAS) is not enabled by default, but can be enabled using ``-amdgpu-globally-addressable-scratch``.
+There is currently no front-end support for GAS, and thus back-end support is limited.
 
 Generic processors allow execution of a single code object on any of the processors that
 it supports. Such code objects may not perform as well as those for the non-generic processors.
@@ -1094,8 +1099,8 @@ supported for the ``amdgcn`` target.
   access is not supported except by flat and scratch instructions in
   GFX9-GFX11.
 
-  On targets without "Globally Accessible Scratch" (introduced in GFX125x), code that
-  manipulates the stack values in other lanes of a wavefront, such as by
+  If globally addressable scratch is not supported by the target, or is not enabled,
+  code that manipulates the stack values in other lanes of a wavefront, such as by
   ``addrspacecast``-ing stack pointers to generic ones and taking offsets that reach other
   lanes or by explicitly constructing the scratch buffer descriptor, triggers undefined
   behavior when it modifies the scratch values of other lanes. The compiler may assume
@@ -7219,9 +7224,14 @@ explicitly track the completion of these instructions before using their
 side-effects.
 
 Private address space uses ``buffer_load/store`` using the scratch V#
-(GFX6-GFX8), or ``scratch_load/store`` (GFX9-GFX11). Since only a single thread
-is accessing the memory, atomic memory orderings are not meaningful, and all
-accesses are treated as non-atomic.
+(GFX6-GFX8), or ``scratch_load/store`` (GFX9-GFX11).
+
+* On targets where globally addressable scratch is not supported, or not enabled,
+  Only a single thread can access private memory. Thus, atomic memory orderings
+  are not meaningful, and all private accesses are treated as non-atomic.
+* On targets where globally addressable scratch is supported **and** enabled, private
+  atomic accesses are converted into atomics in the generic (``flat``) address space.
+  All properties of the atomic (atomic ordering, volatility, alignment, etc.) are preserved.
 
 Constant address space uses ``buffer/global_load`` instructions (or equivalent
 scalar memory instructions). Since the constant address space contents do not
@@ -17452,8 +17462,8 @@ For GFX125x:
 
   This section is currently incomplete as work on the compiler is still ongoing.
   The following is a non-exhaustive list of unimplemented/undocumented features:
-  non-volatile bit code sequences, globally accessing scratch atomics,
-  multicast loads, barriers (including split barriers) and cooperative atomics.
+  non-volatile bit code sequences, multicast loads, barriers (including split barriers)
+  and cooperative atomics.
   Scalar operations memory model needs more elaboration as well.
 
 * Vector memory operations are performed as wavefront wide operations, with the

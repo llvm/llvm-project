@@ -2435,7 +2435,7 @@ Register AMDGPULegalizerInfo::getSegmentAperture(
                                        ? AMDGPU::SRC_SHARED_BASE
                                        : AMDGPU::SRC_PRIVATE_BASE;
     assert((ApertureRegNo != AMDGPU::SRC_PRIVATE_BASE ||
-            !ST.hasGloballyAddressableScratch()) &&
+            !ST.hasGloballyAddressableScratchSupport()) &&
            "Cannot use src_private_base with globally addressable scratch!");
     Register Dst = MRI.createGenericVirtualRegister(S64);
     MRI.setRegClass(Dst, &AMDGPU::SReg_64RegClass);
@@ -2560,7 +2560,7 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
        DestAS == AMDGPUAS::PRIVATE_ADDRESS)) {
     auto castFlatToLocalOrPrivate = [&](const DstOp &Dst) -> Register {
       if (DestAS == AMDGPUAS::PRIVATE_ADDRESS &&
-          ST.hasGloballyAddressableScratch()) {
+          ST.hasGloballyAddressableScratchSupport()) {
         // flat -> private with globally addressable scratch: subtract
         // src_flat_scratch_base_lo.
         const LLT S32 = LLT::scalar(32);
@@ -2611,7 +2611,7 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
       Register SrcAsInt = B.buildPtrToInt(S32, Src).getReg(0);
 
       if (SrcAS == AMDGPUAS::PRIVATE_ADDRESS &&
-          ST.hasGloballyAddressableScratch()) {
+          ST.hasGloballyAddressableScratchSupport()) {
         // For wave32: Addr = (TID[4:0] << 52) + FLAT_SCRATCH_BASE + privateAddr
         // For wave64: Addr = (TID[5:0] << 51) + FLAT_SCRATCH_BASE + privateAddr
         Register AllOnes = B.buildConstant(S32, -1).getReg(0);
@@ -6476,7 +6476,7 @@ bool AMDGPULegalizerInfo::legalizeIsAddrSpace(MachineInstr &MI,
   Register Hi32 = Unmerge.getReg(1);
 
   if (AddrSpace == AMDGPUAS::PRIVATE_ADDRESS &&
-      ST.hasGloballyAddressableScratch()) {
+      ST.hasGloballyAddressableScratchSupport()) {
     Register FlatScratchBaseHi =
         B.buildInstr(AMDGPU::S_MOV_B32, {S32},
                      {Register(AMDGPU::SRC_FLAT_SCRATCH_BASE_HI)})

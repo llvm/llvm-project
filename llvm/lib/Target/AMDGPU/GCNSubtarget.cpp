@@ -52,6 +52,10 @@ static cl::opt<unsigned>
                  cl::desc("Number of addresses from which to enable MIMG NSA."),
                  cl::init(2), cl::Hidden);
 
+static cl::opt<bool> EnableGloballyAddressableScratch(
+    "amdgpu-globally-addressable-scratch",
+    cl::desc("Enable Globally Addressable Scratch"), cl::init(false));
+
 GCNSubtarget::~GCNSubtarget() = default;
 
 GCNSubtarget &GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
@@ -841,6 +845,11 @@ unsigned GCNSubtarget::getNSAThreshold(const MachineFunction &MF) const {
     return std::max(Value, 2);
 
   return NSAThreshold;
+}
+
+bool GCNSubtarget::isGloballyAddressableScratchEnabled() const {
+  return HasGloballyAddressableScratchSupport &&
+         EnableGloballyAddressableScratch;
 }
 
 GCNUserSGPRUsageInfo::GCNUserSGPRUsageInfo(const Function &F,
