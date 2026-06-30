@@ -107,12 +107,14 @@ struct DivSIOpInterface
     AffineExpr lhs = cstr.getExpr(lhsValue);
     AffineExpr rhs = cstr.getExpr(rhsValue);
 
+    // divsi rounds toward zero, unlike floorDiv/ceilDiv which round toward
+    // negative/positive infinity respectively. When the result is non-negative,
+    // divsi equals floorDiv(lhs, rhs); when negative, it equals ceilDiv(lhs, rhs).
+    // Without knowing the sign, bound the result between those two expressions.
     cstr.bound(value) >= lhs.floorDiv(rhs);
     cstr.bound(value) <= lhs.ceilDiv(rhs);
 
-    if ((!lhsNonNegative && !lhsNonPositive) || (!rhsPositive && !rhsNegative))
-      return;
-
+    // If the sign of the result is known, we can use the exact expression.
     if ((lhsNonNegative && rhsPositive) || (lhsNonPositive && rhsNegative)) {
       cstr.bound(value) == lhs.floorDiv(rhs);
       cstr.bound(value) >= 0;
