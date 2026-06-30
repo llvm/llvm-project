@@ -47,7 +47,6 @@ struct MissingFeatures {
 
   // Load/store attributes
   static bool opLoadEmitScalarRangeCheck() { return false; }
-  static bool opLoadStoreNontemporal() { return false; }
   static bool opLoadStoreTbaa() { return false; }
   static bool opLoadStoreAtomic() { return false; }
   static bool opLoadStoreObjC() { return false; }
@@ -279,7 +278,6 @@ struct MissingFeatures {
   static bool pgoUse() { return false; }
   static bool pointerAuthentication() { return false; }
   static bool preservedAccessIndexRegion() { return false; }
-  static bool loopSpecificCleanupHandling() { return false; }
   static bool returnValueSlotFeatures() { return false; }
   static bool runCleanupsScope() { return false; }
   static bool sanitizers() { return false; }
@@ -321,7 +319,6 @@ struct MissingFeatures {
   static bool unsizedTypes() { return false; }
   static bool vectorType() { return false; }
   static bool fixedPointType() { return false; }
-  static bool stringTypeWithDifferentArraySize() { return false; }
 
   // Future CIR operations
   static bool callOp() { return false; }

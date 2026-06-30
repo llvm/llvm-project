@@ -628,7 +628,7 @@ struct AsyncModuleCompile : PPCallbacks {
     // We should build the PCM.
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS =
         llvm::makeIntrusiveRefCnt<DependencyScanningWorkerFilesystem>(
-            Service.getSharedCache(), Service.getOpts().MakeVFS());
+            Service, Service.getOpts().MakeVFS());
     VFS = createVFSFromCompilerInvocation(CI.getInvocation(),
                                           CI.getDiagnostics(), std::move(VFS));
     auto DC = std::make_unique<DiagnosticConsumer>();
@@ -713,7 +713,11 @@ bool DependencyScanningAction::runInvocation(
     if (MDC)
       MDC->applyDiscoveredDependencies(*OriginalInvocation);
 
-    if (!Controller.finalize(ScanInstance, *OriginalInvocation))
+    bool Success = OriginalInvocation->withCowRef<bool>(
+        [&](CowCompilerInvocation &CowOriginalInvocation) {
+          return Controller.finalize(ScanInstance, CowOriginalInvocation);
+        });
+    if (!Success)
       return false;
 
     Consumer.handleBuildCommand(
@@ -791,7 +795,11 @@ bool DependencyScanningAction::runInvocation(
       MDC->applyDiscoveredDependencies(*OriginalInvocation);
     }
 
-    if (!Controller.finalize(ScanInstance, *OriginalInvocation))
+    bool Success = OriginalInvocation->withCowRef<bool>(
+        [&](CowCompilerInvocation &CowOriginalInvocation) {
+          return Controller.finalize(ScanInstance, CowOriginalInvocation);
+        });
+    if (!Success)
       return false;
 
     Consumer.handleBuildCommand(

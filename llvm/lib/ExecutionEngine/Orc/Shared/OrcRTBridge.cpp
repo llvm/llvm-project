@@ -92,6 +92,18 @@ const SimpleExecutorMemoryManagerSymbolNames
         "orc_rt_ci_sps_SimpleNativeMemoryMap_releaseMultiple",
 };
 
+const SimpleExecutorDylibManagerSymbolNames
+    orc_rt_NativeDylibManagerSPSSymbols = {
+        "orc_rt_ci_NativeDylibManager_Instance",
+        "orc_rt_ci_sps_NativeDylibManager_load",
+        "orc_rt_ci_sps_NativeDylibManager_lookup",
+};
+
+const MachOUnwindInfoRegistrarSymbolNames
+    orc_rt_MachOUnwindInfoRegistrarSPSSymbols = {
+        "orc_rt_ci_aa_sps_MachOUnwindInfoRegistrar_registerSections",
+        "orc_rt_ci_aa_sps_MachOUnwindInfoRegistrar_deregisterSections"};
+
 } // end namespace rt
 namespace rt_alt {
 const char *UnwindInfoManagerRegisterActionName =

@@ -1,6 +1,9 @@
-#include <processthreadsapi.h>
 #include <stdio.h>
+
+// clang-format off
 #include <windows.h>
+#include <processthreadsapi.h>
+// clang-format on
 
 int main() {
   // break here

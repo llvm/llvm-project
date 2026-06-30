@@ -211,7 +211,7 @@ void *targetAllocExplicit(size_t Size, int DeviceNum, int Kind,
 
   void *Rc = NULL;
 
-  if (DeviceNum == omp_get_initial_device()) {
+  if (isInitialDevice(DeviceNum)) {
     Rc = malloc(Size);
     ODBG(ODT_Interface) << Name << " returns host ptr " << Rc;
     return Rc;
@@ -236,7 +236,7 @@ void targetFreeExplicit(void *DevicePtr, int DeviceNum, int Kind,
     return;
   }
 
-  if (DeviceNum == omp_get_initial_device()) {
+  if (isInitialDevice(DeviceNum)) {
     free(DevicePtr);
     ODBG(ODT_Interface) << Name << " deallocated host ptr";
     return;
@@ -2383,7 +2383,8 @@ int target_activate_rr(DeviceTy &Device, uint64_t MemorySize, void *VAddr,
                        const char *OutputDirPath) {
   return Device.RTL->initialize_record_replay(
       Device.DeviceID, MemorySize, VAddr, IsRecord,
-      /*IsNative=*/true, SaveOutput, EmitReport, OutputDirPath);
+      /*IsNative=*/true, SaveOutput, EmitReport, /*ReportFilename=*/"",
+      OutputDirPath);
 }
 
 /// Executes a kernel using pre-recorded information for loading to
@@ -2439,6 +2440,7 @@ int target_replay(ident_t *Loc, DeviceTy &Device, void *HostPtr,
   // Initialize the device memory of each global.
   for (int32_t I = 0; I < NumGlobals; ++I) {
     assert(Globals[I].AuxAddr && "Global has no AuxAddr.");
+    assert(Globals[I].Size && "Global has Size zero.");
 
     // Initialize the value of the global in the device.
     int Ret = Device.submitData(Symbols[I + 1].DevPtr, Globals[I].AuxAddr,
@@ -2449,25 +2451,30 @@ int target_replay(ident_t *Loc, DeviceTy &Device, void *HostPtr,
     }
   }
 
-  // Reuse a previous device allocation or allocate a new device buffer.
+  // Reuse a previous device allocation or allocate a new device buffer. Do not
+  // allocate anything if the size is zero.
   void *&TgtPtr = ReuseDeviceAlloc;
-  if (!TgtPtr)
+  if (!TgtPtr && DeviceMemorySize) {
     TgtPtr = Device.allocData(DeviceMemorySize, /*HstPtr=*/nullptr,
                               TARGET_ALLOC_DEFAULT);
-  if (!TgtPtr) {
-    REPORT() << "Failed to allocate device memory.";
-    return OFFLOAD_FAIL;
+    if (!TgtPtr) {
+      REPORT() << "Failed to allocate device memory.";
+      return OFFLOAD_FAIL;
+    }
   }
 
   // Save the device allocation for future replays of the same kernel.
   if (ReplayOutcome)
     ReplayOutcome->ReplayDeviceAlloc = TgtPtr;
 
-  int Ret =
-      Device.submitData(TgtPtr, DeviceMemory, DeviceMemorySize, AsyncInfo);
-  if (Ret != OFFLOAD_SUCCESS) {
-    REPORT() << "Failed to submit data to a global.";
-    return OFFLOAD_FAIL;
+  // Initialize the device memory.
+  if (DeviceMemorySize) {
+    int Ret =
+        Device.submitData(TgtPtr, DeviceMemory, DeviceMemorySize, AsyncInfo);
+    if (Ret != OFFLOAD_SUCCESS) {
+      REPORT() << "Failed to submit data to the device memory.";
+      return OFFLOAD_FAIL;
+    }
   }
 
   KernelArgsTy KernelArgs{};
@@ -2481,12 +2488,13 @@ int target_replay(ident_t *Loc, DeviceTy &Device, void *HostPtr,
   KernelArgs.UserThreadLimit[1] = 1;
   KernelArgs.UserThreadLimit[2] = 1;
   KernelArgs.DynCGroupMem = SharedMemorySize;
+  KernelArgs.Flags.StrictBlocksAndThreads = true;
 
   KernelExtraArgsTy KernelExtraArgs{};
   KernelExtraArgs.ReplayOutcome = ReplayOutcome;
 
-  Ret = Device.launchKernel(Symbols[0].DevPtr, TgtArgs, TgtOffsets, KernelArgs,
-                            &KernelExtraArgs, AsyncInfo);
+  int Ret = Device.launchKernel(Symbols[0].DevPtr, TgtArgs, TgtOffsets,
+                                KernelArgs, &KernelExtraArgs, AsyncInfo);
   if (Ret != OFFLOAD_SUCCESS) {
     REPORT() << "Failed to launch kernel replay.";
     return OFFLOAD_FAIL;

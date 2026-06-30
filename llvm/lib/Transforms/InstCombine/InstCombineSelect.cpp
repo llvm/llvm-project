@@ -42,6 +42,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
 #include <cassert>
 #include <optional>
@@ -272,16 +273,6 @@ static unsigned getSelectFoldableOperands(BinaryOperator *I) {
 /// We have (select c, TI, FI), and we know that TI and FI have the same opcode.
 Instruction *InstCombinerImpl::foldSelectOpOp(SelectInst &SI, Instruction *TI,
                                               Instruction *FI) {
-  // Don't break up min/max patterns. The hasOneUse checks below prevent that
-  // for most cases, but vector min/max with bitcasts can be transformed. If the
-  // one-use restrictions are eased for other patterns, we still don't want to
-  // obfuscate min/max.
-  if ((match(&SI, m_SMin(m_Value(), m_Value())) ||
-       match(&SI, m_SMax(m_Value(), m_Value())) ||
-       match(&SI, m_UMin(m_Value(), m_Value())) ||
-       match(&SI, m_UMax(m_Value(), m_Value()))))
-    return nullptr;
-
   // If this is a cast from the same type, merge.
   Value *Cond = SI.getCondition();
   Type *CondTy = Cond->getType();
@@ -416,9 +407,8 @@ Instruction *InstCombinerImpl::foldSelectOpOp(SelectInst &SI, Instruction *TI,
           Value *SelectVal = Builder.CreateSelect(Cond, LdexpVal0, LdexpVal1);
           Value *SelectExp = Builder.CreateSelect(Cond, LdexpExp0, LdexpExp1);
 
-          CallInst *NewLdexp = Builder.CreateIntrinsic(
-              TII->getType(), Intrinsic::ldexp, {SelectVal, SelectExp});
-          NewLdexp->setFastMathFlags(FMF);
+          Value *NewLdexp = Builder.CreateIntrinsic(
+              TII->getType(), Intrinsic::ldexp, {SelectVal, SelectExp}, FMF);
           return replaceInstUsesWith(SI, NewLdexp);
         }
       }
@@ -1495,8 +1485,6 @@ static Value *foldAbsDiff(ICmpInst *Cmp, Value *TVal, Value *FVal,
 /// Fold the following code sequence:
 /// \code
 ///   int a = ctlz(x & -x);
-//    x ? 31 - a : a;
-//    // or
 //    x ? 31 - a : 32;
 /// \code
 ///
@@ -1513,14 +1501,19 @@ static Instruction *foldSelectCtlzToCttz(ICmpInst *ICI, Value *TrueVal,
     std::swap(TrueVal, FalseVal);
 
   Value *Ctlz;
-  if (!match(FalseVal,
-             m_Xor(m_Value(Ctlz), m_SpecificInt(BitWidth - 1))))
+  if (match(FalseVal,
+            m_Xor(m_Value(Ctlz), m_SpecificIntAllowPoison(BitWidth - 1)))) {
+    if (!isPowerOf2_32(BitWidth))
+      return nullptr;
+  } else if (!match(FalseVal, m_Sub(m_SpecificIntAllowPoison(BitWidth - 1),
+                                    m_Value(Ctlz)))) {
     return nullptr;
+  }
 
   if (!match(Ctlz, m_Ctlz(m_Value(), m_Value())))
     return nullptr;
 
-  if (TrueVal != Ctlz && !match(TrueVal, m_SpecificInt(BitWidth)))
+  if (!match(TrueVal, m_SpecificInt(BitWidth)))
     return nullptr;
 
   Value *X = ICI->getOperand(0);
@@ -1528,9 +1521,11 @@ static Instruction *foldSelectCtlzToCttz(ICmpInst *ICI, Value *TrueVal,
   if (!match(II->getOperand(0), m_c_And(m_Specific(X), m_Neg(m_Specific(X)))))
     return nullptr;
 
+  // The original select returns the constant bitwidth when x == 0, so the
+  // result is defined there; the cttz must use is_zero_poison = false.
   Function *F = Intrinsic::getOrInsertDeclaration(
       II->getModule(), Intrinsic::cttz, II->getType());
-  return CallInst::Create(F, {X, II->getArgOperand(1)});
+  return CallInst::Create(F, {X, Builder.getFalse()});
 }
 
 /// Attempt to fold a cttz/ctlz followed by a icmp plus select into a single
@@ -1787,6 +1782,17 @@ Instruction *InstCombinerImpl::foldSelectValueEquivalence(SelectInst &Sel,
     }
 
     return replaceInstUsesWith(Sel, FalseVal);
+  }
+
+  Constant *CmpC;
+  if (FalseVal->getType()->isIntOrIntVectorTy(1) &&
+      match(FalseVal, m_NUWTrunc(m_Specific(CmpLHS))) &&
+      match(CmpRHS, m_ImmConstant(CmpC)) &&
+      ConstantFoldCompareInstOperands(
+          ICmpInst::Predicate::ICMP_NE, CmpC,
+          ConstantInt::getNullValue(CmpLHS->getType()), DL) == TrueVal) {
+    return new ICmpInst(CmpInst::Predicate::ICMP_NE, CmpLHS,
+                        ConstantInt::getNullValue(CmpLHS->getType()));
   }
 
   return nullptr;
@@ -2295,7 +2301,7 @@ Value *InstCombinerImpl::foldSelectWithConstOpToBinOp(ICmpInst *Cmp,
 
   auto FoldBinaryOpOrIntrinsic = [&](Constant *LHS, Constant *RHS) {
     return IsIntrinsic
-               ? ConstantFoldBinaryIntrinsic(Opcode, LHS, RHS, LHS->getType())
+               ? ConstantFoldIntrinsic(Opcode, {LHS, RHS}, LHS->getType())
                : ConstantFoldBinaryOpOperands(Opcode, LHS, RHS, DL);
   };
 
@@ -5282,6 +5288,20 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
                             Constant::getAllOnesValue(TrueVal->getType()));
     if (FalseVal == Trunc)
       return replaceOperand(SI, 2, ConstantInt::get(FalseVal->getType(), 0));
+  }
+
+  if (match(CondVal, m_Trunc(m_Value(Trunc))) && Trunc->getType() == SelType) {
+    if (match(FalseVal, m_Zero()) && impliesPoison(TrueVal, CondVal) &&
+        llvm::computeKnownBits(TrueVal, SQ.getWithInstruction(&SI))
+                .countMaxActiveBits() == 1)
+      return BinaryOperator::CreateAnd(Trunc, TrueVal);
+
+    if (cast<TruncInst>(CondVal)->hasNoUnsignedWrap() &&
+        match(TrueVal, m_One()) && impliesPoison(FalseVal, CondVal) &&
+        llvm::computeKnownBits(FalseVal, SQ.getWithInstruction(&SI))
+                .countMaxActiveBits() == 1) {
+      return BinaryOperator::CreateOr(Trunc, FalseVal);
+    }
   }
 
   Value *MaskedLoadPtr;

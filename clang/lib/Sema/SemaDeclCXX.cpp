@@ -7417,7 +7417,7 @@ void Sema::CheckCompletedCXXClass(Scope *S, CXXRecordDecl *Record) {
   checkClassLevelCodeSegAttribute(Record);
 
   bool ClangABICompat4 =
-      Context.getLangOpts().getClangABICompat() <= LangOptions::ClangABI::Ver4;
+      Context.getLangOpts().isCompatibleWith(LangOptions::ClangABI::Ver4);
   TargetInfo::CallingConvKind CCK =
       Context.getTargetInfo().getCallingConvKind(ClangABICompat4);
   bool CanPass = canPassInRegisters(*this, Record, CCK);
@@ -10444,8 +10444,8 @@ bool Sema::SpecialMemberIsTrivial(CXXMethodDecl *MD, CXXSpecialMemberKind CSM,
     // Otherwise, if ClangABICompat14 is false, All copy constructors can be
     // trivial, if they are not user-provided, regardless of the qualifiers on
     // the reference type.
-    const bool ClangABICompat14 = Context.getLangOpts().getClangABICompat() <=
-                                  LangOptions::ClangABI::Ver14;
+    const bool ClangABICompat14 =
+        Context.getLangOpts().isCompatibleWith(LangOptions::ClangABI::Ver14);
     if (!RT ||
         ((RT->getPointeeType().getCVRQualifiers() != Qualifiers::Const) &&
          ClangABICompat14)) {
@@ -14407,6 +14407,10 @@ void Sema::DefineImplicitDefaultConstructor(SourceLocation CurrentLocation,
   }
 
   DiagnoseUninitializedFields(*this, Constructor);
+
+  // The synthesized body applies the class's NSDMIs and never reaches the
+  // normal IssueWarnings path, so run lifetime safety on it here.
+  AnalysisWarnings.IssueWarningsForImplicitFunction(Constructor);
 }
 
 void Sema::ActOnFinishDelayedMemberInitializers(Decl *D) {
@@ -14588,6 +14592,10 @@ void Sema::DefineInheritingConstructor(SourceLocation CurrentLocation,
   }
 
   DiagnoseUninitializedFields(*this, Constructor);
+
+  // The synthesized body applies the class's NSDMIs and never reaches the
+  // normal IssueWarnings path, so run lifetime safety on it here.
+  AnalysisWarnings.IssueWarningsForImplicitFunction(Constructor);
 }
 
 CXXDestructorDecl *Sema::DeclareImplicitDestructor(CXXRecordDecl *ClassDecl) {
@@ -19293,7 +19301,12 @@ bool Sema::DefineUsedVTables() {
     DefinedAnything = true;
     MarkVirtualMembersReferenced(Loc, Class);
     CXXRecordDecl *Canonical = Class->getCanonicalDecl();
-    if (VTablesUsed[Canonical] && !Class->shouldEmitInExternalSource())
+    // The vtable is assumed to be emitted in an external source only for
+    // classes attached to a named module, which is guaranteed to have an object
+    // file. This isn't true for -fmodules-debuginfo, which still has
+    // shouldEmitInExternalSource as true so that debug info gets supressed.
+    if (VTablesUsed[Canonical] &&
+        !(Class->isInNamedModule() && Class->shouldEmitInExternalSource()))
       Consumer.HandleVTable(Class);
 
     // Warn if we're emitting a weak vtable. The vtable will be weak if there is

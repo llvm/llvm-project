@@ -118,7 +118,7 @@ int notdead() {
 // CHECK: _ZZ7notdeadvEN3$_0clEv
 // CHECK: ret i32 %cond
 
-/// The conmparison of those two parameters should NOT work.
+/// The comparison of those two parameters should NOT work.
 bool paramcmp(const int& lhs, const int& rhs) {
   if (&lhs == &rhs)
     return true;
@@ -148,3 +148,15 @@ X test24() {
 // CHECK: _Z6test24v
 // CHECK-NOT: eh.resume
 // CHECK-NOT: unreachable
+
+/// Used to crash in codegen because the cast worked.
+auto MemcpySemantics = *(_Complex double *)&(float[2]){};
+
+namespace InvalidReinterpretCast {
+  struct X {};
+  const X &_S_ti() {
+    constexpr char __tag{};
+    // CHECK: ret ptr %__tag
+    return reinterpret_cast<const X &>(__tag);
+  }
+}

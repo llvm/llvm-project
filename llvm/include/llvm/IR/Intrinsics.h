@@ -16,6 +16,7 @@
 #define LLVM_IR_INTRINSICS_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/TypeSize.h"
 #include <optional>
@@ -61,6 +62,9 @@ LLVM_ABI StringRef getName(ID id);
 /// Return the LLVM name for an intrinsic, without encoded types for
 /// overloading, such as "llvm.ssa.copy".
 LLVM_ABI StringRef getBaseName(ID id);
+
+/// \returns the target feature expression required by an intrinsic.
+LLVM_ABI StringRef getRequiredTargetFeatures(ID id);
 
 /// Return the LLVM name for an intrinsic, such as "llvm.ppc.altivec.lvx" or
 /// "llvm.ssa.copy.p0s_s.1". Note, this version of getName supports overloads.
@@ -177,11 +181,14 @@ struct IITDescriptor {
     AMX,
     PPCQuad,
     AArch64Svcount,
+    WasmExternref,
+    WasmFuncref,
 
     // Overloaded type.
     Overloaded, // AnyKind and overload index in OverloadInfo.
 
     // Fully dependent types. Overload index in OverloadInfo.
+    Match,
     Extend,
     Trunc,
     OneNthEltsVec,
@@ -205,25 +212,30 @@ struct IITDescriptor {
     ElementCount VectorWidth;
   };
 
-  // AK_% : Defined in Intrinsics.td
-  enum AnyKind {
-#define GET_INTRINSIC_ANYKIND
+  // AnyKindVectorConstraint and AnyKindElementConstraint defined in
+  // Intrinsics.td
+#define GET_INTRINSIC_ANYKIND_ENUMS
 #include "llvm/IR/IntrinsicEnums.inc"
-  };
 
   unsigned getOverloadIndex() const {
-    assert(Kind == Overloaded || Kind == Extend || Kind == Trunc ||
-           Kind == SameVecWidth || Kind == VecElement || Kind == Subdivide2 ||
-           Kind == Subdivide4 || Kind == VecOfBitcastsToInt ||
-           Kind == VecOfAnyPtrsToElt || Kind == OneNthEltsVec);
-    // Overload index is packed into lower 5 bits.
-    return OverloadInfo & 0x1f;
+    assert(Kind == Overloaded || Kind == Match || Kind == Extend ||
+           Kind == Trunc || Kind == SameVecWidth || Kind == VecElement ||
+           Kind == Subdivide2 || Kind == Subdivide4 ||
+           Kind == VecOfBitcastsToInt || Kind == VecOfAnyPtrsToElt ||
+           Kind == OneNthEltsVec);
+    // Overload index is packed into byte[0] of OverloadInfo.
+    return OverloadInfo & 0xf;
   }
 
-  AnyKind getOverloadKind() const {
-    // Overload kind is packed into upper 3 bits.
+  std::pair<AnyKindVectorConstraint, AnyKindElementConstraint>
+  getOverloadConstraints() const {
+    // Overload constraints are packed into byte[1] of OverloadInfo.
     assert(Kind == Overloaded);
-    return (AnyKind)((OverloadInfo >> 5) & 0x7);
+    uint8_t AKEnumsPacked = OverloadInfo >> 8;
+    AnyKindVectorConstraint VC = (AnyKindVectorConstraint)(AKEnumsPacked >> 4);
+    AnyKindElementConstraint EC =
+        (AnyKindElementConstraint)(AKEnumsPacked & 0xf);
+    return {VC, EC};
   }
 
   // OneNthEltsVecArguments uses both a divisor N and a reference argument for

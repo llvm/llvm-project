@@ -127,7 +127,6 @@ class Variadic<Type type> : TypeConstraint<type.predicate,
                                            "variadic of " # type.summary,
                                            type.cppType> {
   Type baseType = type;
-  int minSize = 0;
 }
 
 // A nested variadic type constraint. It expands to zero or more variadic ranges
@@ -165,8 +164,17 @@ class SameBuildabilityAs<Type type, code builder> {
   code builderCall = !if(!empty(type.builderCall), "", builder);
 }
 
-// Any type at all.
-def AnyType : Type<CPred<"true">, "any type">;
+// Whether a type is the builtin `TokenType`.
+def IsTokenTypePred : CPred<"::llvm::isa<::mlir::TokenType>($_self)">;
+
+// Any non-token type. Tokens are excluded by default to prevent ops that
+// accept arbitrary types from accidentally accepting tokens as operands /
+// results, since a token must not be value-forwarded.
+def AnyType : Type<Neg<IsTokenTypePred>, "any non-token type">;
+
+// The builtin token type.
+def Token : Type<IsTokenTypePred, "token", "::mlir::TokenType">,
+            BuildableType<"$_builder.getType<::mlir::TokenType>()">;
 
 // None type
 def NoneType : Type<CPred<"::llvm::isa<::mlir::NoneType>($_self)">, "none type",
@@ -921,8 +929,8 @@ class AnyStridedMemRefOfRank<int rank> :
        AnyStridedMemRef.summary # " of rank " # rank>;
 
 class StridedMemRefRankOf<list<Type> allowedTypes, list<int> ranks> :
-    ConfinedType<MemRefOf<allowedTypes>, [HasAnyRankOfPred<ranks>],
-         !interleave(!foreach(rank, ranks, rank # "D"), "/") # " " #
+    ConfinedType<MemRefOf<allowedTypes>, [HasAnyRankOfPred<ranks>, HasStridesPred],
+         !interleave(!foreach(rank, ranks, rank # "D"), "/") # " strided " #
          MemRefOf<allowedTypes>.summary>;
 
 // This represents a generic tuple without any constraints on element type.

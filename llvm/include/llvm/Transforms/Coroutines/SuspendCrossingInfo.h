@@ -23,6 +23,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Transforms/Coroutines/CoroInstr.h"
+#include "llvm/Transforms/Coroutines/CoroShape.h"
 
 namespace llvm {
 
@@ -71,10 +72,24 @@ class SuspendCrossingInfo {
   struct BlockData {
     BitVector Consumes;
     BitVector Kills;
-    bool AlwaysKill = false;
-    bool NeverKill = false;
     bool KillLoop = false;
     bool Changed = false;
+
+  private:
+    bool AlwaysKill = false;
+    bool NeverKill = false;
+
+  public:
+    bool isAlwaysKill() const { return AlwaysKill; }
+    bool isNeverKill() const { return NeverKill; }
+    void setAlwaysKill() {
+      AlwaysKill = true;
+      NeverKill = false;
+    }
+    void setNeverKill() {
+      AlwaysKill = false;
+      NeverKill = true;
+    }
   };
   SmallVector<BlockData, 32> Block;
 
@@ -104,9 +119,7 @@ public:
 #endif
 
   LLVM_ABI
-  SuspendCrossingInfo(Function &F,
-                      const SmallVectorImpl<AnyCoroSuspendInst *> &CoroSuspends,
-                      const SmallVectorImpl<AnyCoroEndInst *> &CoroEnds);
+  SuspendCrossingInfo(Function &F, const coro::Shape &Shape);
 
   /// Returns true if there is a path from \p From to \p To crossing a suspend
   /// point without crossing \p From a 2nd time.

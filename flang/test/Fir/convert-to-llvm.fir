@@ -963,6 +963,23 @@ func.func @test_load_index(%addr : !fir.ref<index>) {
 // CHECK-NEXT:    llvm.return
 // CHECK-NEXT:  }
 
+// -----
+
+// Test `fir.load` with the `invariant` attribute forwards to `llvm.load invariant`
+
+func.func @test_load_invariant(%addr : !fir.ref<i32>) {
+  %0 = fir.load %addr {invariant} : !fir.ref<i32>
+  return
+}
+
+// CHECK-LABEL: llvm.func @test_load_invariant(
+// CHECK-SAME:  %[[arg1:.*]]: !llvm.ptr) {
+// CHECK-NEXT:    %0 = llvm.load %[[arg1]] invariant : !llvm.ptr -> i32
+// CHECK-NEXT:    llvm.return
+// CHECK-NEXT:  }
+
+// -----
+
 func.func private @takes_box(!fir.box<!fir.array<10xf32>>) -> ()
 
 func.func @test_load_box(%addr : !fir.ref<!fir.box<!fir.array<10xf32>>>) {
