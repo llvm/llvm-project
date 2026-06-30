@@ -2372,6 +2372,87 @@ BlockFrequency RAGreedy::calcSpillCost(const LiveInterval &LI) {
   return BlockFrequency(SpillCost);
 }
 
+bool RAGreedy::shouldAvoidCSRForRemat(const LiveInterval &VirtReg,
+                                      AllocationOrder &Order) const {
+  if (!VirtReg.isSpillable())
+    return false;
+
+  // This logic is intentionally narrow: handle a single concrete value
+  // whose def can be cheaply rematerialized at every use.
+  const VNInfo *OnlyVNI = nullptr;
+  for (const VNInfo *VNI : VirtReg.vnis()) {
+    if (!VNI || VNI->isUnused())
+      continue;
+    if (VNI->isPHIDef())
+      return false;
+    if (OnlyVNI)
+      return false;
+    OnlyVNI = VNI;
+  }
+  if (!OnlyVNI)
+    return false;
+
+  MachineInstr *DefMI = LIS->getInstructionFromIndex(OnlyVNI->def);
+  if (!DefMI || DefMI->isImplicitDef() || !TII->isReMaterializable(*DefMI) ||
+      !TII->isAsCheapAsAMove(*DefMI))
+    return false;
+
+  // This logic aims to address a specific problem: The first use of CSR for
+  // cheap-to-rematerialize live ranges because they cross calls, not because
+  // pressure requires it. With this check and the check for an available for a
+  // register that is not a first-use CSR below, we can scope this.
+  if (!Matrix->checkRegMaskInterference(VirtReg))
+    return false;
+
+  SmallPtrSet<MachineInstr *, 8> VisitedUses;
+  unsigned NumUses = 0;
+  for (MachineOperand &MO : MRI->use_nodbg_operands(VirtReg.reg())) {
+    if (MO.isUndef())
+      continue;
+
+    MachineInstr *UseMI = MO.getParent();
+    if (!VisitedUses.insert(UseMI).second)
+      continue;
+
+    SlotIndex UseIdx = LIS->getInstructionIndex(*UseMI).getRegSlot(true);
+    if (!VirtRegAuxInfo::allUsesAvailableAt(DefMI, UseIdx, *LIS, *MRI, *TII))
+      return false;
+
+    // Check if any register that is not a first-use CSR is available as
+    // destination for the rematerialization.
+    SlotIndex PrevIdx = UseIdx.getPrevSlot();
+    bool HasNoFirstCSRReg = false;
+    for (MCRegister RematPhysReg : Order) {
+      if (EvictAdvisor->isUnusedCalleeSavedReg(RematPhysReg))
+        continue;
+      if (!Matrix->checkInterference(PrevIdx, UseIdx, RematPhysReg)) {
+        HasNoFirstCSRReg = true;
+        break;
+      }
+    }
+    if (!HasNoFirstCSRReg)
+      return false;
+
+    ++NumUses;
+  }
+
+  if (!NumUses)
+    return false;
+
+  // Ideally, this would be handled with the CSR cost model, but the scales
+  // differ. The rationale for allowing a fan-out of 3 is simple: Saving and
+  // restoring the CSR will require at least two moves, so we can allow three
+  // uses, as the first is free and the two materializations will at most have
+  // the same cost as CSR save/restore.
+  // FIXME: Properly integrate into CSR cost model.
+  if (NumUses > 3)
+    return false;
+
+  LLVM_DEBUG(dbgs() << "  rejecting CSR: cheap remat available for " << NumUses
+                    << " use(s) with no-first-CSR registers\n");
+  return true;
+}
+
 /// Using a CSR for the first time has a cost because it causes push|pop
 /// to be added to prologue|epilogue. Splitting a cold section of the live
 /// range can have lower cost than using the CSR for the first time;
@@ -2381,19 +2462,23 @@ BlockFrequency RAGreedy::calcSpillCost(const LiveInterval &LI) {
 MCRegister RAGreedy::tryAssignCSRFirstTime(
     const LiveInterval &VirtReg, AllocationOrder &Order, MCRegister PhysReg,
     uint8_t &CostPerUseLimit, SmallVectorImpl<Register> &NewVRegs) {
-  if (ExtraInfo->getStage(VirtReg) == RS_Spill && VirtReg.isSpillable()) {
-    // We choose spill over using the CSR for the first time if the spill cost
-    // is lower than CSRCost.
-    SA->analyze(&VirtReg);
-    if (calcSpillCost(VirtReg) >= CSRCost)
-      return PhysReg;
+  LiveRangeStage Stage = ExtraInfo->getStage(VirtReg);
 
-    // We are going to spill, set CostPerUseLimit to 1 to make sure that
-    // we will not use a callee-saved register in tryEvict.
+  if (Stage == RS_Spill && VirtReg.isSpillable()) {
+    // We choose spill or rematerialize over using the CSR for the first time if
+    // the spill cost is lower than CSRCost.
+    SA->analyze(&VirtReg);
+    if (calcSpillCost(VirtReg) >= CSRCost &&
+        !shouldAvoidCSRForRemat(VirtReg, Order)) {
+      return PhysReg;
+    }
+
+    // We are going to spill or rematerialize, set CostPerUseLimit to 1 to make
+    // sure that we will not use a callee-saved register in tryEvict.
     CostPerUseLimit = 1;
     return MCRegister();
   }
-  if (ExtraInfo->getStage(VirtReg) < RS_Split) {
+  if (Stage < RS_Split) {
     // We choose pre-splitting over using the CSR for the first time if
     // the cost of splitting is lower than CSRCost.
     SA->analyze(&VirtReg);
@@ -2401,12 +2486,21 @@ MCRegister RAGreedy::tryAssignCSRFirstTime(
     BlockFrequency BestCost = CSRCost; // Don't modify CSRCost.
     unsigned BestCand = calculateRegionSplitCost(VirtReg, Order, BestCost,
                                                  NumCands, true /*IgnoreCSR*/);
-    if (BestCand == NoCand)
+    if (BestCand == NoCand) {
+      if (shouldAvoidCSRForRemat(VirtReg, Order)) {
+        CostPerUseLimit = 1;
+        return MCRegister();
+      }
       // Use the CSR if we can't find a region split below CSRCost.
       return PhysReg;
+    }
 
     // Perform the actual pre-splitting.
     doRegionSplit(VirtReg, BestCand, false/*HasCompact*/, NewVRegs);
+    return MCRegister();
+  }
+  if (shouldAvoidCSRForRemat(VirtReg, Order)) {
+    CostPerUseLimit = 1;
     return MCRegister();
   }
   return PhysReg;
