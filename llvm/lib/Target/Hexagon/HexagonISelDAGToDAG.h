@@ -149,6 +149,7 @@ private:
   void SelectHvxShuffle(SDNode *N);
   void SelectHvxRor(SDNode *N);
   void SelectHvxVAlign(SDNode *N);
+  void SelectHvxUIntToFp(SDNode *N);
 
   // Function postprocessing.
   void updateAligna();
