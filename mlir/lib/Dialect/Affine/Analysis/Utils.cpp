@@ -243,17 +243,22 @@ addNodeToMDG(Operation *nodeOp, MemRefDependenceGraph &mdg,
   return &node;
 }
 
-/// Returns the memref being read/written by a memref/affine load/store op.
-static Value getMemRef(Operation *memOp) {
-  if (auto memrefLoad = dyn_cast<memref::LoadOp>(memOp))
-    return memrefLoad.getMemRef();
-  if (auto affineLoad = dyn_cast<AffineReadOpInterface>(memOp))
-    return affineLoad.getMemRef();
-  if (auto memrefStore = dyn_cast<memref::StoreOp>(memOp))
-    return memrefStore.getMemRef();
-  if (auto affineStore = dyn_cast<AffineWriteOpInterface>(memOp))
-    return affineStore.getMemRef();
-  llvm_unreachable("unexpected op");
+/// Returns whether `op` may read from or write to `memref`.
+/// Memory effects are used when available; recursively-effectful ops are
+/// handled through their nested operations. Otherwise, conservatively treat a
+/// memref operand as a possible access, which may add dependence edges.
+static bool mayAccessMemRef(Operation *op, Value memref) {
+  if (auto affineRead = dyn_cast<AffineReadOpInterface>(op))
+    return affineRead.getMemRef() == memref;
+  if (auto affineWrite = dyn_cast<AffineWriteOpInterface>(op))
+    return affineWrite.getMemRef() == memref;
+  if (hasEffect<MemoryEffects::Read>(op, memref) ||
+      hasEffect<MemoryEffects::Write>(op, memref))
+    return true;
+  if (isa<MemoryEffectOpInterface>(op) ||
+      op->hasTrait<OpTrait::HasRecursiveMemoryEffects>())
+    return false;
+  return llvm::is_contained(op->getOperands(), memref);
 }
 
 /// Returns true if there may be a dependence on `memref` from srcNode's
@@ -276,11 +281,10 @@ static bool mayDependence(const Node &srcNode, const Node &dstNode,
   auto hasNonAffineDep = [&](ArrayRef<Operation *> srcMemOps,
                              ArrayRef<Operation *> dstMemOps) {
     return llvm::any_of(srcMemOps, [&](Operation *srcOp) {
-      Value srcMemref = getMemRef(srcOp);
-      if (srcMemref != memref)
+      if (!mayAccessMemRef(srcOp, memref))
         return false;
       return llvm::find_if(dstMemOps, [&](Operation *dstOp) {
-               return srcMemref == getMemRef(dstOp);
+               return mayAccessMemRef(dstOp, memref);
              }) != dstMemOps.end();
     });
   };
