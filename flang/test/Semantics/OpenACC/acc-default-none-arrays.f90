@@ -2,8 +2,9 @@
 
 ! Verify that array sections explicitly listed in OpenACC data clauses are
 ! correctly registered as having a DSA, so DEFAULT(NONE) does not produce
-! spurious errors (lorado#3307).  Also covers duplicate detection for array
-! sections and the substring-in-clause error.
+! spurious errors.  This does not implement section-level overlap
+! detection or deduplication; duplicate/conflict diagnostics only apply to bare
+! names.  This also covers the substring-in-clause error.
 
 ! 1. Data-mapping clauses with array sections: no DEFAULT(NONE) errors.
 subroutine test_data_mapping_sections(n)
@@ -64,8 +65,9 @@ subroutine test_unlisted_array(n)
 end subroutine
 
 ! 5. Duplicate bare-name under the same data-sharing clause: warn and dedup.
-!    (Array sections like private(a(1:5), a(6:10)) are not deduplicated because
-!    base-name comparison cannot distinguish different sections of the same array.)
+!    (Array sections like private(a(1:5), a(6:10)) are not deduplicated or
+!    checked for overlap because base-name comparison cannot distinguish
+!    different sections of the same array.)
 subroutine test_duplicate_private_bare(n)
   implicit none
   integer, intent(in) :: n

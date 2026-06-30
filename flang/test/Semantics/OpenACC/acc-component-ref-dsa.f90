@@ -1,7 +1,10 @@
 ! RUN: %python %S/../test_errors.py %s %flang -fopenacc -fno-openacc-default-none-scalars-strict
 
-! Derived-type component references in OpenACC clauses do not participate in
-! DSA duplicate checking until subcomponent data-sharing tracking is precise.
+! Derived-type component references in OpenACC clauses are accepted for now, but
+! the current DSA handling is deliberately imprecise:
+! - duplicate and conflicting component references are not diagnosed;
+! - component clauses do not satisfy DEFAULT(NONE) for the base object;
+! - whole-object/component conflicts are not diagnosed.
 
 module component_ref_types
   implicit none
@@ -35,6 +38,7 @@ end subroutine
 subroutine test_default_none_component_does_not_cover_object()
   use component_ref_types, only: point_t
   type(point_t) :: p
+  ! TODO: should be an error, needs precise tracking of component references.
   !$acc parallel default(none) copy(p%x)
   !ERROR: The DEFAULT(NONE) clause requires that 'p' must be listed in a data-mapping clause
   p%x = 1.0
