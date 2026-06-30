@@ -104,7 +104,7 @@ template <typename ExtractorFnT>
 void extractAndAddSummaries(TUSummaryExtractor &Extractor,
                             TUSummaryBuilder &Builder, ASTContext &Ctx,
                             ExtractorFnT ExtractFn,
-                            const char *ExtractorName = "") {
+                            llvm::StringRef ExtractorName = {}) {
   llvm::DenseMap<const NamedDecl *, std::vector<const NamedDecl *>>
       Contributors;
   findContributors(Ctx, Contributors);
@@ -128,7 +128,7 @@ void extractAndAddSummaries(TUSummaryExtractor &Extractor,
       if (!Builder.addSummary(*Id, std::move(Summary)).second)
         logWarningFromError(makeErrAtNode(
             Ctx, Rep, "dropping duplicate %s summary for entity %s",
-            ExtractorName, Rep->getNameAsString().c_str()));
+            ExtractorName.data(), Rep->getNameAsString().c_str()));
     } else
       logWarningFromError(makeEntityNameErr(Ctx, Rep));
   }
