@@ -1170,10 +1170,13 @@ Instruction *InstCombinerImpl::visitLoadInst(LoadInst &LI) {
         V1->setAtomic(LI.getOrdering(), LI.getSyncScopeID());
         V2->setAlignment(Alignment);
         V2->setAtomic(LI.getOrdering(), LI.getSyncScopeID());
-        // It is safe to copy any metadata that does not trigger UB. Copy any
-        // poison-generating metadata.
-        V1->copyMetadata(LI, Metadata::PoisonGeneratingIDs);
-        V2->copyMetadata(LI, Metadata::PoisonGeneratingIDs);
+        // Each new load performs the same access as the original load in one
+        // arm of the select, and executes only when that arm is selected, so
+        // every fact the original load carried still holds. Clone all load
+        // metadata (not just the poison-generating kinds) to preserve !tbaa,
+        // !invariant.group, !nontemporal, !dereferenceable, etc.
+        copyMetadataForLoad(*V1, LI);
+        copyMetadataForLoad(*V2, LI);
         return SelectInst::Create(SI->getCondition(), V1, V2, "", nullptr,
                                   ProfcheckDisableMetadataFixes ? nullptr : SI);
       }
