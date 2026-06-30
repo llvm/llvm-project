@@ -22,6 +22,9 @@
 #include "common.h"
 #include "test_macros.h"
 
+struct NoConv {};
+struct Bad { template<class T> Bad(T v) noexcept(noexcept(member_ = v)) {} int member_; };
+
 template <typename T, typename U, bool Expected>
 constexpr void test_reference_constructs_from_temporary() {
   assert((std::reference_constructs_from_temporary<T, U>::value == Expected));
@@ -75,6 +78,10 @@ constexpr bool test() {
   test_reference_constructs_from_temporary<int&, ExplicitConversionRef, false>();
   test_reference_constructs_from_temporary<const int&, ExplicitConversionRef, false>();
   test_reference_constructs_from_temporary<int&&, ExplicitConversionRvalueRef, false>();
+
+  // Make sure we don't emit "assigning to 'int' from incompatible type 'NoConv'" in SFINAE context.
+  // https://godbolt.org/z/er6e4Ejs1
+  test_reference_constructs_from_temporary<Bad, NoConv&&, false>();
 
   return true;
 }

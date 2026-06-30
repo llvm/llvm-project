@@ -69,6 +69,8 @@ Improvements and New Features
   ``"std::visit: variant is valueless"``, ``"std::get: variant is valueless"``, or
   ``"std::get: wrong alternative for variant"``. The standard only requires ``what()`` to return an
   unspecified non-null string, so user code that does not match on the exact message remains correct.
+- The ``std::reference_constructs_from_temporary<_Tp, _Up>`` don't cause hard error when the ``_Tp`` template
+  argument is not a reference type.
 
 Deprecations and Removals
 -------------------------
