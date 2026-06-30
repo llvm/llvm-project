@@ -26,6 +26,7 @@ set(ORC_RT_HEADERS
     orc-rt/SimpleNativeMemoryMap.h
     orc-rt/SimplePackedSerialization.h
     orc-rt/SPSAllocAction.h
+    orc-rt/StandaloneMachOUnwindInfoRegistrar.h
     orc-rt/sps-ci/AllSPSCI.h
     orc-rt/sps-ci/CallSPSCI.h
     orc-rt/sps-ci/MemoryAccessSPSCI.h
