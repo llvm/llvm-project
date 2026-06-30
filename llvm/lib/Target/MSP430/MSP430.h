@@ -15,6 +15,10 @@
 #define LLVM_LIB_TARGET_MSP430_MSP430_H
 
 #include "MCTargetDesc/MSP430MCTargetDesc.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
+#include "llvm/CodeGen/SelectionDAGISel.h"
+#include "llvm/IR/Analysis.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/Target/TargetMachine.h"
 
 namespace MSP430CC {
@@ -38,10 +42,21 @@ class FunctionPass;
 class MSP430TargetMachine;
 class PassRegistry;
 
+class MSP430ISelDAGToDAGPass : public SelectionDAGISelPass {
+public:
+  MSP430ISelDAGToDAGPass(MSP430TargetMachine &TM, CodeGenOptLevel OptLevel);
+};
+
 FunctionPass *createMSP430ISelDag(MSP430TargetMachine &TM,
                                   CodeGenOptLevel OptLevel);
 
-FunctionPass *createMSP430BranchSelectionPass();
+class MSP430BranchSelectPass : public PassInfoMixin<MSP430BranchSelectPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createMSP430BranchSelectLegacyPass();
 
 void initializeMSP430AsmPrinterPass(PassRegistry &);
 void initializeMSP430DAGToDAGISelLegacyPass(PassRegistry &);
