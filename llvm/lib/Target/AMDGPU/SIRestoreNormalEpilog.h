@@ -6,26 +6,21 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_AMDGPU_SILOWERCONTROLFLOW_H
-#define LLVM_LIB_TARGET_AMDGPU_SILOWERCONTROLFLOW_H
+#ifndef LLVM_LIB_TARGET_AMDGPU_SIRESTORENORMALEPILOG_H
+#define LLVM_LIB_TARGET_AMDGPU_SIRESTORENORMALEPILOG_H
 
 #include "llvm/CodeGen/MachinePassManager.h"
 
 namespace llvm {
-class SILowerControlFlowPass
-    : public OptionalPassInfoMixin<SILowerControlFlowPass> {
+class SIRestoreNormalEpilogPass : public PassInfoMixin<SIRestoreNormalEpilogPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
 
   MachineFunctionProperties getRequiredProperties() const {
-    return MachineFunctionProperties().setIsSSA();
-  }
-
-  MachineFunctionProperties getClearedProperties() const {
     return MachineFunctionProperties().setNoPHIs();
   }
 };
 } // namespace llvm
 
-#endif // LLVM_LIB_TARGET_AMDGPU_SILOWERCONTROLFLOW_H
+#endif // LLVM_LIB_TARGET_AMDGPU_SIRESTORENORMALEPILOG_H

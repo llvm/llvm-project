@@ -48,6 +48,7 @@
 /// %exec = S_OR_B64 %exec, %sgpr0     // Re-enable saved exec mask bits
 //===----------------------------------------------------------------------===//
 
+#include "SICustomBranchBundles.h"
 #include "SILowerControlFlow.h"
 #include "AMDGPU.h"
 #include "AMDGPULaneMaskUtils.h"
@@ -153,14 +154,22 @@ public:
     return "SI Lower control flow pseudo instructions";
   }
 
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties().setIsSSA();
+  }
+
+  MachineFunctionProperties getClearedProperties() const override {
+    return MachineFunctionProperties().setNoPHIs();
+  }
+  
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addUsedIfAvailable<LiveIntervalsWrapperPass>();
     // Should preserve the same set that TwoAddressInstructions does.
     AU.addPreserved<MachineDominatorTreeWrapperPass>();
     AU.addPreserved<MachinePostDominatorTreeWrapperPass>();
-    AU.addPreserved<SlotIndexesWrapperPass>();
-    AU.addPreserved<LiveIntervalsWrapperPass>();
-    AU.addPreserved<LiveVariablesWrapperPass>();
+    //AU.addPreserved<SlotIndexesWrapperPass>();
+    //AU.addPreserved<LiveIntervalsWrapperPass>();
+    //AU.addPreserved<LiveVariablesWrapperPass>();
     AU.addPreserved<MachineBlockFrequencyInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
@@ -323,6 +332,8 @@ void SILowerControlFlow::emitElse(MachineInstr &MI) {
           .add(MI.getOperand(1)); // Saved EXEC
   if (LV)
     LV->replaceKillInstruction(SrcReg, MI, *OrSaveExec);
+
+  moveInsBeforePhis(*OrSaveExec);
 
   MachineBasicBlock *DestBB = MI.getOperand(2).getMBB();
 
@@ -518,6 +529,7 @@ MachineBasicBlock *SILowerControlFlow::emitEndCf(MachineInstr &MI) {
   MachineInstr *NewMI = BuildMI(MBB, InsPt, DL, TII->get(Opcode), LMC.ExecReg)
                             .addReg(LMC.ExecReg)
                             .add(MI.getOperand(0));
+
   if (LV) {
     LV->replaceKillInstruction(DataReg, MI, *NewMI);
 
@@ -796,7 +808,7 @@ bool SILowerControlFlow::run(MachineFunction &MF) {
     }
   }
 
-  bool Changed = false;
+  bool Changed = makeEverySuccessorBeBranchTarget(MF);
   MachineFunction::iterator NextBB;
   for (MachineFunction::iterator BI = MF.begin();
        BI != MF.end(); BI = NextBB) {
@@ -841,10 +853,22 @@ bool SILowerControlFlow::run(MachineFunction &MF) {
     }
   }
 
+  for (MachineInstr *MI : LoweredEndCf)
+    moveInsBeforePhis(*MI);
+
   RecomputeRegs.clear();
   LoweredEndCf.clear();
   LoweredIf.clear();
   KillBlocks.clear();
+
+#if 1
+  if (Changed)
+    for (MachineBasicBlock &MBB : MF)
+      for (MachineInstr &MI : MBB)
+        if (MI.isBundled())
+          MI.unbundleFromSucc();
+#endif
+  //llvm::finalizeBundles(MF);
 
   return Changed;
 }
@@ -884,9 +908,9 @@ SILowerControlFlowPass::run(MachineFunction &MF,
   auto PA = getMachineFunctionPassPreservedAnalyses();
   PA.preserve<MachineDominatorTreeAnalysis>();
   PA.preserve<MachinePostDominatorTreeAnalysis>();
-  PA.preserve<SlotIndexesAnalysis>();
-  PA.preserve<LiveIntervalsAnalysis>();
-  PA.preserve<LiveVariablesAnalysis>();
+  //PA.preserve<SlotIndexesAnalysis>();
+  //PA.preserve<LiveIntervalsAnalysis>();
+  //PA.preserve<LiveVariablesAnalysis>();
   PA.preserve<MachineBlockFrequencyAnalysis>();
   return PA;
 }
