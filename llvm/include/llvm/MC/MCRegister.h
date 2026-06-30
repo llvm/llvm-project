@@ -37,21 +37,32 @@ struct MCRegUnitToIndex {
   }
 };
 
-/// Wrapper class representing physical registers. Should be passed by value.
+/// Wrapper class representing physical registers and target specific virtual
+/// registers. Should be passed by value.
 class MCRegister {
   friend hash_code hash_value(const MCRegister &);
   unsigned Reg;
 
 public:
-  constexpr MCRegister(unsigned Val = 0) : Reg(Val) {}
+  constexpr MCRegister(unsigned Val = 0) : Reg(Val) {
+    // N.B. this does not assert `Val == NoRegister || isPhysicalRegister(Val)`
+    // to avoid paying the compilation/runtime cost for developers of the
+    // compiler and to allow target specific virtual registers.
+    //
+    // Where the producer wishes to `assert` they can use `Register::asMCReg`
+    // and/or `MCRegister::from`.
+    //
+    // Within CodeGen, consumers can assume a valid MCRegister contains a
+    // physical register.
+  }
 
-  // Register numbers can represent physical registers, virtual registers, and
-  // sometimes stack slots. The unsigned values are divided into these ranges:
+  // Register numbers can represent physical registers and virtual registers
+  // used after codegen by some targets (NVPTX, SPIRV, and WebAssembly).
+  // The unsigned values are divided into these ranges:
   //
   //   0           Not a register, can be used as a sentinel.
-  //   [1;2^30)    Physical registers assigned by TableGen.
-  //   [2^30;2^31) Stack slots. (Rarely used.)
-  //   [2^31;2^32) Virtual registers assigned by MachineRegisterInfo.
+  //   [1;2^28)    Physical registers assigned by TableGen.
+  //   [2^28;2^32) Target specific virtual registers after codegen.
   //
   // Further sentinels can be allocated from the small negative integers.
   // DenseMapInfo<unsigned> uses -1u and -2u.
@@ -59,7 +70,7 @@ public:
                 "Reg isn't large enough to hold full range.");
   static constexpr unsigned NoRegister = 0u;
   static constexpr unsigned FirstPhysicalReg = 1u;
-  static constexpr unsigned LastPhysicalReg = (1u << 30) - 1;
+  static constexpr unsigned LastPhysicalReg = (1u << 28) - 1;
 
   /// Return true if the specified register number is in
   /// the physical register namespace.
@@ -73,8 +84,8 @@ public:
 
   constexpr operator unsigned() const { return Reg; }
 
-  /// Check the provided unsigned value is a valid MCRegister.
-  static MCRegister from(unsigned Val) {
+  /// Check-convert the provided unsigned value to an MCRegister.
+  static constexpr MCRegister from(unsigned Val) {
     assert(Val == NoRegister || isPhysicalRegister(Val));
     return MCRegister(Val);
   }
