@@ -21149,7 +21149,7 @@ Decl *Sema::ActOnFileScopeAsmDecl(Expr *expr, SourceLocation StartLoc,
 }
 
 TopLevelStmtDecl *Sema::ActOnStartTopLevelStmtDecl(Scope *S) {
-  auto *New = TopLevelStmtDecl::Create(Context, /*Statement=*/nullptr);
+  auto *New = TopLevelStmtDecl::Create(Context, CurContext, /*Statement=*/nullptr);
   CurContext->addDecl(New);
   PushDeclContext(S, New);
   PushFunctionScope();
