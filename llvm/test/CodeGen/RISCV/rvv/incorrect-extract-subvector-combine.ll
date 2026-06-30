@@ -7,13 +7,12 @@
 define <8 x i16> @gsm_encode(ptr %p) {
 ; CHECK-LABEL: gsm_encode:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetivli zero, 19, e16, m1, ta, ma
-; CHECK-NEXT:    vle16.v v9, (a0)
-; CHECK-NEXT:    vslidedown.vi v8, v9, 12
-; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    vsetivli zero, 8, e16, mf4, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
-; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 19, e16, m1, ta, ma
+; CHECK-NEXT:    vle16.v v9, (a0)
+; CHECK-NEXT:    vslidedown.vi v10, v9, 12
+; CHECK-NEXT:    vmv.x.s a0, v10
 ; CHECK-NEXT:    vslidedown.vi v9, v9, 9
 ; CHECK-NEXT:    vmv.x.s a1, v9
 ; CHECK-NEXT:    vmv.s.x v9, a1

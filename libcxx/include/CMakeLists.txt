@@ -343,6 +343,7 @@ set(files
   __configuration/language.h
   __configuration/namespace.h
   __configuration/platform.h
+  __configuration/pstl.h
   __configuration/utility.h
   __coroutine/coroutine_handle.h
   __coroutine/coroutine_traits.h
@@ -897,7 +898,6 @@ set(files
   __type_traits/is_void.h
   __type_traits/is_volatile.h
   __type_traits/is_within_lifetime.h
-  __type_traits/lazy.h
   __type_traits/make_32_64_or_128_bit.h
   __type_traits/make_const_lvalue_ref.h
   __type_traits/make_signed.h
@@ -1091,6 +1091,7 @@ set(files
   strstream
   syncstream
   system_error
+  text_encoding
   tgmath.h
   thread
   tuple

@@ -17,55 +17,21 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/VectorUtils.h"
-#include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/InstVisitor.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/TargetParser/Triple.h"
 
+#include <cassert>
+#include <cstring>
 #include <limits>
 
 namespace llvm::ubi {
 
 using namespace PatternMatch;
-
-static AnyValue addNoWrap(const APInt &LHS, const APInt &RHS, bool HasNSW,
-                          bool HasNUW) {
-  APInt Res = LHS + RHS;
-  if (HasNUW && Res.ult(RHS))
-    return AnyValue::poison();
-  if (HasNSW && LHS.isNonNegative() == RHS.isNonNegative() &&
-      LHS.isNonNegative() != Res.isNonNegative())
-    return AnyValue::poison();
-  return Res;
-}
-
-static AnyValue subNoWrap(const APInt &LHS, const APInt &RHS, bool HasNSW,
-                          bool HasNUW) {
-  APInt Res = LHS - RHS;
-  if (HasNUW && Res.ugt(LHS))
-    return AnyValue::poison();
-  if (HasNSW && LHS.isNonNegative() != RHS.isNonNegative() &&
-      LHS.isNonNegative() != Res.isNonNegative())
-    return AnyValue::poison();
-  return Res;
-}
-
-static AnyValue mulNoWrap(const APInt &LHS, const APInt &RHS, bool HasNSW,
-                          bool HasNUW) {
-  bool Overflow = false;
-  APInt Res = LHS.smul_ov(RHS, Overflow);
-  if (HasNSW && Overflow)
-    return AnyValue::poison();
-  if (HasNUW) {
-    (void)LHS.umul_ov(RHS, Overflow);
-    if (Overflow)
-      return AnyValue::poison();
-  }
-  return Res;
-}
 
 /// Visit the scalar values recursively. The callback function may modify the
 /// value in-place.
@@ -120,22 +86,24 @@ static bool violatesNoUndefAttr(AnyValue &V) {
 /// Assumes V is either a poison or a pointer.
 static bool violatesDereferenceableBytesAttr(const AnyValue &V, uint64_t Bytes,
                                              bool OrNull, unsigned AS,
-                                             const DataLayout &DL) {
+                                             Context &Ctx) {
   if (V.isPoison())
     return true;
 
   auto &Ptr = V.asPointer();
-  if (Ptr.isNullPtr(AS, DL)) {
+  if (Ptr.isNullPtr(AS, Ctx.getDataLayout())) {
     if (OrNull)
       return false;
     return true;
   }
-  auto *MO = Ptr.getMemoryObject();
+
+  auto *MO = Ctx.checkProvenance(Ptr, [&](const Provenance &) {
+    // TODO: check read_provenance
+    // TODO: check nofree for attributes/metadata.
+    return true;
+  });
   if (!MO)
     return true;
-
-  // TODO: check read_provenance
-  // TODO: check nofree for attributes/metadata.
 
   const APInt &PtrAddr = Ptr.address();
   return Bytes > MO->getSize() || PtrAddr.ult(MO->getAddress()) ||
@@ -162,6 +130,8 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
           AnyValue::getPoisonValue(Ctx, C->getType()));
       return UnsupportedConstantValues.back();
     }
+    if (isa<MetadataAsValue>(V))
+      return None;
     return CurrentFrame->ValueMap.at(V);
   }
 
@@ -711,88 +681,6 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
     return false;
   }
 
-  AnyValue computePtrAdd(const Pointer &Ptr, const APInt &Offset,
-                         GEPNoWrapFlags Flags, AnyValue &AccumulatedOffset) {
-    if (Offset.isZero())
-      return Ptr;
-    APInt IndexBits = Ptr.address().trunc(Offset.getBitWidth());
-    auto NewIndex = addNoWrap(IndexBits, Offset, /*HasNSW=*/false,
-                              Flags.hasNoUnsignedWrap());
-    if (NewIndex.isPoison())
-      return AnyValue::poison();
-    if (Flags.hasNoUnsignedSignedWrap()) {
-      // The successive addition of the current address, truncated to the
-      // pointer index type and interpreted as an unsigned number, and each
-      // offset, interpreted as a signed number, does not wrap the pointer index
-      // type.
-      if (Offset.isNonNegative() ? NewIndex.asInteger().ult(IndexBits)
-                                 : NewIndex.asInteger().ugt(IndexBits))
-        return AnyValue::poison();
-    }
-    APInt NewAddr = Ptr.address();
-    NewAddr.insertBits(NewIndex.asInteger(), 0);
-
-    auto *MO = Ptr.getMemoryObject();
-    if (Flags.isInBounds() && (!MO || !MO->inBounds(NewAddr)))
-      return AnyValue::poison();
-
-    if (!AccumulatedOffset.isPoison()) {
-      AccumulatedOffset =
-          addNoWrap(AccumulatedOffset.asInteger(), Offset,
-                    Flags.hasNoUnsignedSignedWrap(), Flags.hasNoUnsignedWrap());
-      if (AccumulatedOffset.isPoison())
-        return AnyValue::poison();
-    }
-
-    // Should not expose provenance here even if the new address doesn't point
-    // to the original object.
-    return Ptr.getWithNewAddr(NewAddr);
-  }
-
-  AnyValue computePtrAdd(const AnyValue &Ptr, const APInt &Offset,
-                         GEPNoWrapFlags Flags, AnyValue &AccumulatedOffset) {
-    if (Ptr.isPoison())
-      return AnyValue::poison();
-    return computePtrAdd(Ptr.asPointer(), Offset, Flags, AccumulatedOffset);
-  }
-
-  AnyValue computeScaledPtrAdd(const AnyValue &Ptr, const AnyValue &Index,
-                               const APInt &Scale, GEPNoWrapFlags Flags,
-                               AnyValue &AccumulatedOffset) {
-    if (Ptr.isPoison() || Index.isPoison())
-      return AnyValue::poison();
-    assert(Ptr.isPointer() && Index.isInteger() && "Unexpected type.");
-    if (Scale.isOne())
-      return computePtrAdd(Ptr, Index.asInteger(), Flags, AccumulatedOffset);
-    auto ScaledOffset =
-        mulNoWrap(Index.asInteger(), Scale, Flags.hasNoUnsignedSignedWrap(),
-                  Flags.hasNoUnsignedWrap());
-    if (ScaledOffset.isPoison())
-      return AnyValue::poison();
-    return computePtrAdd(Ptr, ScaledOffset.asInteger(), Flags,
-                         AccumulatedOffset);
-  }
-
-  AnyValue canonicalizeIndex(const AnyValue &Idx, unsigned IndexBitWidth,
-                             GEPNoWrapFlags Flags) {
-    if (Idx.isPoison())
-      return AnyValue::poison();
-    auto &IdxInt = Idx.asInteger();
-    if (IdxInt.getBitWidth() == IndexBitWidth)
-      return Idx;
-    if (IdxInt.getBitWidth() > IndexBitWidth) {
-      if (Flags.hasNoUnsignedSignedWrap() &&
-          !IdxInt.isSignedIntN(IndexBitWidth))
-        return AnyValue::poison();
-
-      if (Flags.hasNoUnsignedWrap() && !IdxInt.isIntN(IndexBitWidth))
-        return AnyValue::poison();
-
-      return IdxInt.trunc(IndexBitWidth);
-    }
-    return IdxInt.sext(IndexBitWidth);
-  }
-
   DenormalMode getCurrentDenormalMode(Type *Ty) {
     return CurrentFrame->Func.getDenormalMode(
         Ty->getScalarType()->getFltSemantics());
@@ -814,6 +702,114 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
     return V.asInteger();
   }
 
+  AnyValue callMemTransferIntrinsic(CallBase &CB, ArrayRef<AnyValue> Args,
+                                    Intrinsic::ID IID) {
+    const AnyValue &Dest = Args[0];
+    const AnyValue &Src = Args[1];
+    const AnyValue &Length = Args[2];
+    // TODO: Handle isvolatile argument.
+    if (Length.isPoison()) {
+      reportImmediateUB() << "Memory transfer intrinsic with poison length.";
+      return AnyValue();
+    }
+
+    const APInt &LengthInt = Args[2].asInteger();
+    if (LengthInt.getActiveBits() > 64) {
+      reportImmediateUB()
+          << "Memory transfer intrinsic length overflows uint64_t.";
+      return AnyValue();
+    }
+
+    const uint64_t Len = LengthInt.getZExtValue();
+    if (Len == 0)
+      return AnyValue();
+
+    if (Dest.isPoison()) {
+      reportImmediateUB()
+          << "Memory transfer intrinsic with poison destination pointer.";
+      return AnyValue();
+    }
+
+    if (Src.isPoison()) {
+      reportImmediateUB()
+          << "Memory transfer intrinsic with poison source pointer.";
+      return AnyValue();
+    }
+
+    const Pointer &DstPtr = Dest.asPointer();
+    const Pointer &SrcPtr = Src.asPointer();
+
+    Align DstAlign = CB.getParamAlign(0).valueOrOne();
+    Align SrcAlign = CB.getParamAlign(1).valueOrOne();
+
+    auto [SrcMO, SrcOffset] =
+        verifyMemAccess(SrcPtr, Len, SrcAlign, /*IsStore=*/false);
+    if (!SrcMO)
+      return AnyValue();
+
+    auto [DstMO, DstOffset] =
+        verifyMemAccess(DstPtr, Len, DstAlign, /*IsStore=*/true);
+    if (!DstMO)
+      return AnyValue();
+
+    if (IID == Intrinsic::memcpy || IID == Intrinsic::memcpy_inline) {
+      if (SrcMO == DstMO && SrcOffset != DstOffset) {
+        const uint64_t SrcEnd = SrcOffset + Len;
+        const uint64_t DstEnd = DstOffset + Len;
+        if (SrcOffset < DstEnd && DstOffset < SrcEnd) {
+          reportImmediateUB()
+              << "memcpy with overlapping source and destination.";
+          return AnyValue();
+        }
+      }
+    }
+
+    MutableArrayRef<Byte> DstBytes = DstMO->getBytes().slice(DstOffset, Len);
+    ArrayRef<Byte> SrcBytes = SrcMO->getBytes().slice(SrcOffset, Len);
+    std::memmove(DstBytes.data(), SrcBytes.data(), Len * sizeof(Byte));
+    return AnyValue();
+  }
+
+  AnyValue callMemSetIntrinsic(CallBase &CB, ArrayRef<AnyValue> Args) {
+    const AnyValue &Dest = Args[0];
+    const AnyValue &Val = Args[1];
+    const AnyValue &Length = Args[2];
+
+    if (Length.isPoison()) {
+      reportImmediateUB() << "memset called with poison length.";
+      return AnyValue();
+    }
+
+    const APInt &LengthInt = Length.asInteger();
+    if (LengthInt.getActiveBits() > 64) {
+      reportImmediateUB() << "memset called with length overflows uint64_t.";
+      return AnyValue();
+    }
+
+    const uint64_t Len = LengthInt.getZExtValue();
+    if (Len == 0)
+      return AnyValue();
+
+    if (Dest.isPoison()) {
+      reportImmediateUB() << "memset called with poison destination pointer.";
+      return AnyValue();
+    }
+
+    const Pointer &DstPtr = Dest.asPointer();
+
+    Align DstAlign = CB.getParamAlign(0).valueOrOne();
+    auto [DstMO, DstOffset] =
+        verifyMemAccess(DstPtr, Len, DstAlign, /*IsStore=*/true);
+    if (!DstMO)
+      return AnyValue();
+
+    Byte FillByte = Val.isPoison()
+                        ? Byte::poison()
+                        : Byte::concrete(Val.asInteger().getZExtValue());
+    fill(DstMO->getBytes().slice(DstOffset, Len), FillByte);
+    return AnyValue();
+  }
+
 public:
   InstExecutor(Context &C, EventHandler &H, Function &F,
                ArrayRef<AnyValue> Args, AnyValue &RetVal)
@@ -826,6 +822,8 @@ public:
   void visitReturnInst(ReturnInst &RI) {
     if (auto *RV = RI.getReturnValue())
       CurrentFrame->RetVal = getValue(RV);
+    else
+      CurrentFrame->RetVal = AnyValue();
     CurrentFrame->State = FrameState::Exit;
     if (!Handler.onInstructionExecuted(RI, None))
       setFailed();
@@ -909,6 +907,10 @@ public:
     }
     setResult(CB, std::move(RetVal));
 
+    for (auto &ByValArg : CurrentFrame->CalleeByValArgs)
+      Ctx.free(*ByValArg);
+    CurrentFrame->CalleeByValArgs.clear();
+
     if (auto *II = dyn_cast<InvokeInst>(&CB))
       jumpTo(*II, II->getNormalDest());
     else if (CurrentFrame->State == FrameState::Pending)
@@ -947,25 +949,21 @@ public:
           switch (Kind) {
           case Attribute::Alignment: {
             // Alignment assumptions should have 2 or 3 arguments.
-            // If there are two integer arguments, use the largest power of 2
-            // that divides them as the alignment.
             APInt Alignment = getIntNonPoison(getValue(GetBundleArg(1)));
+            APInt CheckedAddr = WasOnPtr.address();
             if (OBU.Inputs.size() == 3) {
               APInt Offset = getIntNonPoison(getValue(GetBundleArg(2)));
-              if (!Alignment.isZero() || !Offset.isZero())
-                Alignment = APInt::getOneBitSet(
-                    std::max(Alignment.getBitWidth(), Offset.getBitWidth()),
-                    std::min(Alignment.countr_zero(), Offset.countr_zero()));
+              CheckedAddr -= Offset.sextOrTrunc(CheckedAddr.getBitWidth());
             }
             if (!Alignment.isPowerOf2()) {
-              if (!WasOnPtr.address().isZero())
-                reportImmediateUB() << "Assume on nonzero pointer " << WasOn
-                                    << " with a "
+              if (!CheckedAddr.isZero())
+                reportImmediateUB() << "Assume on pointer " << WasOn
+                                    << " with a nonzero adjusted address and a "
                                        "non-power-of-two alignment "
                                     << Alignment << '.';
               break;
             }
-            if (WasOnPtr.address().countr_zero() < Alignment.logBase2())
+            if (CheckedAddr.countr_zero() < Alignment.logBase2())
               reportImmediateUB()
                   << "The pointer " << WasOn << " violates align(" << Alignment
                   << ") assumption.";
@@ -985,7 +983,7 @@ public:
               break;
             if (violatesDereferenceableBytesAttr(
                     WasOn, DereferenceableBytes.getLimitedValue(),
-                    Kind == Attribute::DereferenceableOrNull, AS, DL))
+                    Kind == Attribute::DereferenceableOrNull, AS, Ctx))
               reportImmediateUB() << "The pointer " << WasOn << " violates "
                                   << (Kind == Attribute::DereferenceableOrNull
                                           ? "dereferenceable_or_null("
@@ -1010,13 +1008,15 @@ public:
       auto Ptr = Args[0];
       if (Ptr.isPoison())
         return AnyValue();
-      auto *MO = Ptr.asPointer().getMemoryObject();
+      auto *MO = Ctx.checkProvenance(Ptr.asPointer(),
+                                     [](const Provenance &) { return true; });
       assert(MO && "Memory object accessed by lifetime intrinsic should be "
                    "always valid.");
       if (IID == Intrinsic::lifetime_start) {
         MO->setState(MemoryObjectState::Alive);
         fill(MO->getBytes(), Byte::undef());
       } else {
+        fill(MO->getBytes(), Byte::poison());
         MO->setState(MemoryObjectState::Dead);
       }
       return AnyValue();
@@ -1264,8 +1264,8 @@ public:
       return Res ? *Res : AnyValue::poison();
     }
     case Intrinsic::vector_insert: {
-      if (Args[2].isPoison())
-        return AnyValue::getPoisonValue(Ctx, RetTy);
+      assert(!Args[2].isPoison() &&
+             "Verifier should reject poison vector_insert immarg.");
       const auto &Vec = Args[0].asAggregate();
       const auto &SubVec = Args[1].asAggregate();
       const auto &Idx = Args[2].asInteger();
@@ -1273,8 +1273,8 @@ public:
           cast<VectorType>(CB.getArgOperand(1)->getType())->getElementCount();
       const uint64_t RawOffset = Idx.getZExtValue();
       const uint32_t MinSize = EC.getKnownMinValue();
-      if (RawOffset % MinSize != 0)
-        return AnyValue::getPoisonValue(Ctx, RetTy);
+      assert(RawOffset % MinSize == 0 &&
+             "Verifier should reject misaligned vector_insert index.");
       const uint64_t Chunk = RawOffset / MinSize;
       const uint64_t EVL = Ctx.getEVL(EC);
       if (Chunk > std::numeric_limits<uint64_t>::max() / EVL)
@@ -1293,15 +1293,15 @@ public:
       return std::move(Res);
     }
     case Intrinsic::vector_extract: {
-      if (Args[1].isPoison())
-        return AnyValue::getPoisonValue(Ctx, RetTy);
+      assert(!Args[1].isPoison() &&
+             "Verifier should reject poison vector_extract immarg.");
       const auto &Vec = Args[0].asAggregate();
       const auto &Idx = Args[1].asInteger();
       auto EC = cast<VectorType>(RetTy)->getElementCount();
       const uint64_t RawOffset = Idx.getZExtValue();
       const uint32_t MinSize = EC.getKnownMinValue();
-      if (RawOffset % MinSize != 0)
-        return AnyValue::getPoisonValue(Ctx, RetTy);
+      assert(RawOffset % MinSize == 0 &&
+             "Verifier should reject misaligned vector_extract index.");
       const uint64_t Chunk = RawOffset / MinSize;
       const uint64_t EVL = Ctx.getEVL(EC);
       if (Chunk > std::numeric_limits<uint64_t>::max() / EVL)
@@ -1619,6 +1619,16 @@ public:
         return V;
       });
     }
+    case Intrinsic::memcpy:
+    case Intrinsic::memcpy_inline:
+    case Intrinsic::memmove:
+      return callMemTransferIntrinsic(CB, Args, IID);
+    case Intrinsic::memset:
+    case Intrinsic::memset_inline:
+      return callMemSetIntrinsic(CB, Args);
+    case Intrinsic::experimental_noalias_scope_decl:
+      // FIXME: Not implemented yet. Currently it acts as a noop.
+      return AnyValue();
     default:
       Handler.onUnrecognizedInstruction(CB);
       setFailed();
@@ -1693,7 +1703,7 @@ public:
               std::max(AttrsAtCallSite.getDereferenceableBytes(),
                        AttrsAtCallee.getDereferenceableBytes())) {
         if (violatesDereferenceableBytesAttr(V, DereferenceableBytes,
-                                             /*OrNull=*/false, AS, DL))
+                                             /*OrNull=*/false, AS, Ctx))
           reportImmediateUB()
               << "The value " << V << " violates dereferenceable("
               << DereferenceableBytes << ") attribute.";
@@ -1701,7 +1711,7 @@ public:
                      std::max(AttrsAtCallSite.getDereferenceableOrNullBytes(),
                               AttrsAtCallee.getDereferenceableOrNullBytes())) {
         if (violatesDereferenceableBytesAttr(V, DereferenceableOrNullBytes,
-                                             /*OrNull=*/true, AS, DL))
+                                             /*OrNull=*/true, AS, Ctx))
           reportImmediateUB() << "The value " << V
                               << " violates "
                                  "dereferenceable_or_null("
@@ -1759,7 +1769,7 @@ public:
               I.getMetadata(LLVMContext::MD_dereferenceable)) {
         uint64_t Bytes = ExtractFirstIntOperand(DereferenceableBytes);
         if (violatesDereferenceableBytesAttr(V, Bytes,
-                                             /*OrNull=*/false, AS, DL))
+                                             /*OrNull=*/false, AS, Ctx))
           reportImmediateUB()
               << "The value " << V << " violates !dereferenceable !{i64 "
               << Bytes << "} metadata.";
@@ -1767,7 +1777,7 @@ public:
                      I.getMetadata(LLVMContext::MD_dereferenceable_or_null)) {
         uint64_t Bytes = ExtractFirstIntOperand(DereferenceableOrNullBytes);
         if (violatesDereferenceableBytesAttr(V, Bytes,
-                                             /*OrNull=*/true, AS, DL))
+                                             /*OrNull=*/true, AS, Ctx))
           reportImmediateUB()
               << "The value " << V << " violates !dereferenceable_or_null!{i64 "
               << Bytes << "} metadata.";
@@ -1777,7 +1787,7 @@ public:
 
   void enterCall(CallBase &CB) {
     Function *Callee = CB.getCalledFunction();
-    // TODO: handle byval/initializes
+    // TODO: handle initializes
     auto &CalleeArgs = CurrentFrame->CalleeArgs;
     assert(CalleeArgs.empty() &&
            "Forgot to call returnFromCallee before entering a new call.");
@@ -1828,10 +1838,61 @@ public:
     for (auto [I, Arg] : enumerate(CB.args())) {
       Type *ArgTy = Arg->getType();
       AnyValue &ArgVal = CalleeArgs[I];
+
       // CallBase::paramHasAttr also checks parameter attributes at known
       // callee. We do it explicitly to avoid duplication.
       AttributeSet AttrsAtCallSite = CB.getParamAttributes(I);
       AttributeSet AttrsAtCallee = Callee->getAttributes().getParamAttrs(I);
+
+      if (ArgTy->isPointerTy()) {
+        auto *ByValTy = AttrsAtCallSite.getByValType();
+        auto *ByValTyFromCallee = AttrsAtCallee.getByValType();
+        if (ByValTy != ByValTyFromCallee) {
+          reportImmediateUB()
+              << "Mismatched byval attribute between callee and callsite.";
+          return;
+        }
+        if (ByValTy) {
+          if (ArgVal.isPoison()) {
+            reportImmediateUB() << "Invalid poison byval pointer argument.";
+            return;
+          }
+
+          uint64_t Size = Ctx.getEffectiveTypeAllocSize(ByValTy);
+          MaybeAlign AllocAlign = AttrsAtCallSite.getAlignment();
+          // Ignore the alignment at the callsite when it is set on the callee.
+          if (MaybeAlign CalleeAlign = AttrsAtCallee.getAlignment())
+            AllocAlign = CalleeAlign;
+          if (!AllocAlign.has_value()) {
+            // If the alignment is not specified, we use the default ABI
+            // alignment. This is the default behavior of
+            // TargetLoweringBase::getByValTypeAlignment.
+            AllocAlign = DL.getABITypeAlign(ByValTy);
+          }
+          assert(I < Callee->arg_size() &&
+                 "Byval pointers cannot be passed via variadic arguments.");
+          auto Obj = Ctx.allocate(
+              Size, AllocAlign->value(), Callee->getArg(I)->getName(),
+              ArgTy->getPointerAddressSpace(), MemInitKind::Uninitialized,
+              MemAllocKind::Stack);
+          if (!Obj) {
+            reportError()
+                << "Insufficient stack space for byval pointer argument.";
+            return;
+          }
+          if (auto [MO, Offset] = verifyMemAccess(
+                  ArgVal.asPointer(), Size,
+                  std::max(AllocAlign.value(),
+                           AttrsAtCallSite.getAlignment().valueOrOne()),
+                  /*IsStore=*/false);
+              MO)
+            copy(MO->getBytes().slice(Offset, Size), Obj->getBytes().begin());
+          else
+            return;
+          CurrentFrame->CalleeByValArgs.push_back(Obj);
+          ArgVal = Ctx.deriveFromMemoryObject(std::move(Obj));
+        }
+      }
       handleAttributes(ArgTy, ArgVal, AttrsAtCallSite, AttrsAtCallee);
     }
 
@@ -2223,9 +2284,10 @@ public:
     visitBinOp(I, [&](const AnyValue &LHS, const AnyValue &RHS) -> AnyValue {
       if (LHS.isPoison() || RHS.isPoison())
         return AnyValue::poison();
-      // TODO: handle pointer comparison.
-      const APInt &LHSVal = LHS.asInteger();
-      const APInt &RHSVal = RHS.asInteger();
+      const APInt &LHSVal =
+          LHS.isPointer() ? LHS.asPointer().address() : LHS.asInteger();
+      const APInt &RHSVal =
+          RHS.isPointer() ? RHS.asPointer().address() : RHS.asInteger();
       if (I.hasSameSign() && LHSVal.isNonNegative() != RHSVal.isNonNegative())
         return AnyValue::poison();
       return AnyValue::boolean(
@@ -2347,86 +2409,39 @@ public:
   }
 
   void visitGetElementPtrInst(GetElementPtrInst &GEP) {
-    uint32_t IndexBitWidth =
-        DL.getIndexSizeInBits(GEP.getType()->getPointerAddressSpace());
-    GEPNoWrapFlags Flags = GEP.getNoWrapFlags();
-    AnyValue Res = getValue(GEP.getPointerOperand());
-    AnyValue AccumulatedOffset = APInt(IndexBitWidth, 0);
-    if (Res.isAggregate())
-      AccumulatedOffset =
-          AnyValue::getVectorSplat(AccumulatedOffset, Res.asAggregate().size());
-    auto ApplyScaledOffset = [&](const AnyValue &Index, const APInt &Scale) {
-      if (Index.isAggregate() && !Res.isAggregate()) {
-        Res = AnyValue::getVectorSplat(Res, Index.asAggregate().size());
-        AccumulatedOffset = AnyValue::getVectorSplat(
-            AccumulatedOffset, Index.asAggregate().size());
-      }
-      if (Index.isAggregate() && Res.isAggregate()) {
-        for (auto &&[ResElem, IndexElem, OffsetElem] :
-             zip(Res.asAggregate(), Index.asAggregate(),
-                 AccumulatedOffset.asAggregate()))
-          ResElem = computeScaledPtrAdd(
-              ResElem, canonicalizeIndex(IndexElem, IndexBitWidth, Flags),
-              Scale, Flags, OffsetElem);
-      } else {
-        AnyValue CanonicalIndex =
-            canonicalizeIndex(Index, IndexBitWidth, Flags);
-        if (Res.isAggregate()) {
-          for (auto &&[ResElem, OffsetElem] :
-               zip(Res.asAggregate(), AccumulatedOffset.asAggregate()))
-            ResElem = computeScaledPtrAdd(ResElem, CanonicalIndex, Scale, Flags,
-                                          OffsetElem);
-        } else {
-          Res = computeScaledPtrAdd(Res, CanonicalIndex, Scale, Flags,
-                                    AccumulatedOffset);
-        }
-      }
-    };
+    setResult(GEP, Ctx.computeGEP(cast<GEPOperator>(GEP),
+                                  [this](Value *V) -> const AnyValue & {
+                                    return getValue(V);
+                                  }));
+  }
 
-    for (gep_type_iterator GTI = gep_type_begin(GEP), GTE = gep_type_end(GEP);
-         GTI != GTE; ++GTI) {
-      Value *V = GTI.getOperand();
-
-      // Fast path for zero offsets.
-      if (auto *CI = dyn_cast<ConstantInt>(V)) {
-        if (CI->isZero())
-          continue;
-      }
-      if (isa<ConstantAggregateZero>(V))
-        continue;
-
-      // Handle a struct index, which adds its field offset to the pointer.
-      if (StructType *STy = GTI.getStructTypeOrNull()) {
-        unsigned ElementIdx = cast<ConstantInt>(V)->getZExtValue();
-        const StructLayout *SL = DL.getStructLayout(STy);
-        // Element offset is in bytes.
-        ApplyScaledOffset(
-            APInt(IndexBitWidth, SL->getElementOffset(ElementIdx)),
-            APInt(IndexBitWidth, 1));
-        continue;
-      }
-
-      // Truncate if type size exceeds index space.
-      // TODO: Should be documented in LangRef: GEPs with nowrap flags should
-      // return poison when the type size exceeds index space.
-      TypeSize Offset = GTI.getSequentialElementStride(DL);
-      APInt Scale(IndexBitWidth, Ctx.getEffectiveTypeSize(Offset),
-                  /*isSigned=*/false, /*implicitTrunc=*/true);
-      if (!Scale.isZero())
-        ApplyScaledOffset(getValue(V), Scale);
-    }
-
-    setResult(GEP, std::move(Res));
+  void visitPtrToInt(PtrToIntInst &I) {
+    return visitUnOp(I, [&](const AnyValue &V) -> AnyValue {
+      if (V.isPoison())
+        return AnyValue::poison();
+      Ctx.exposeProvenance(V.asPointer().provenance());
+      return V.asPointer().address();
+    });
   }
 
   void visitIntToPtr(IntToPtrInst &I) {
     return visitUnOp(I, [&](const AnyValue &V) -> AnyValue {
       if (V.isPoison())
         return AnyValue::poison();
-      // TODO: expose provenance
+      auto Prov = Ctx.getWildcardProvenance();
       // TODO: check metadata
-      return Pointer(V.asInteger().zextOrTrunc(
-          DL.getPointerSizeInBits(I.getType()->getPointerAddressSpace())));
+      return Pointer(std::move(Prov),
+                     V.asInteger().zextOrTrunc(DL.getPointerSizeInBits(
+                         I.getType()->getPointerAddressSpace())));
+    });
+  }
+
+  void visitPtrToAddr(PtrToAddrInst &I) {
+    unsigned BitWidth = I.getType()->getScalarSizeInBits();
+    return visitUnOp(I, [&](const AnyValue &V) -> AnyValue {
+      if (V.isPoison())
+        return AnyValue::poison();
+      return V.asPointer().address().trunc(BitWidth);
     });
   }
 
@@ -2564,6 +2579,7 @@ public:
 
         Instruction &I = *Top.PC;
         visit(&I);
+        Ctx.resetNoncacheableConstantBuffer();
         if (hasProgramExited())
           break;
 

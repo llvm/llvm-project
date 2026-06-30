@@ -2476,6 +2476,7 @@ def int_amdgcn_inverse_ballot :
 // Lowers to S_BITREPLICATE_B64_B32.
 // The argument must be uniform; otherwise, the result is undefined.
 def int_amdgcn_s_bitreplicate :
+  ClangBuiltin<"__builtin_amdgcn_s_bitreplicate">,
   DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_i32_ty], [IntrNoMem, IntrConvergent]>;
 
 // Lowers to S_QUADMASK_B{32,64}
@@ -3724,6 +3725,7 @@ def int_amdgcn_smfmac_f32_32x32x64_fp8_fp8 : AMDGPUMSmfmacIntrinsic<llvm_v16f32_
 }
 
 // { vdst_new, vsrc_new } llvm.amdgcn.permlane16.swap <vdst_old> <vsrc_old> <fi> <bound_control>
+let TargetFeatures = "permlane16-swap" in
 def int_amdgcn_permlane16_swap :
   Intrinsic<[llvm_i32_ty, llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty,
                                          llvm_i1_ty, llvm_i1_ty],
@@ -4054,8 +4056,11 @@ class AMDGPUWmmaIntrinsicModsAll<LLVMType AB, LLVMType CD> :
       LLVMMatchType<1>, // %B
       llvm_i16_ty,      // %C_mod: 0 -- none, 1 -- neg, 2 -- abs, 3 -- neg(abs)
       LLVMMatchType<0>,               // %C
+      llvm_i1_ty,        // matrix_a_reuse
+      llvm_i1_ty,        // matrix_b_reuse
     ],
-    [IntrNoMem, IntrConvergent, ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<4>>, IntrWillReturn, IntrNoCallback, IntrNoFree]
+    [IntrNoMem, IntrConvergent, ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<6>>,
+     ImmArg<ArgIndex<7>>, ImmArg<ArgIndex<4>>, IntrWillReturn, IntrNoCallback, IntrNoFree]
 >;
 
 // D and C are of different types.
@@ -4135,6 +4140,7 @@ class AMDGPUWmmaScaleF4IntrinsicModsC<LLVMType scale_ty> :
 >;
 
 defset list<Intrinsic> AMDGPUWMMAIntrinsicsGFX1250 = {
+def int_amdgcn_wmma_f64_16x16x4_f64       : AMDGPUWmmaIntrinsicModsAll<llvm_anyfloat_ty, llvm_anyfloat_ty>;
 def int_amdgcn_wmma_f32_16x16x4_f32       : AMDGPUWmmaIntrinsicModsC<llvm_anyfloat_ty, llvm_anyfloat_ty>;
 def int_amdgcn_wmma_f32_16x16x32_bf16     : AMDGPUWmmaIntrinsicModsC<llvm_anyfloat_ty, llvm_anyfloat_ty>;
 def int_amdgcn_wmma_f32_16x16x32_f16      : AMDGPUWmmaIntrinsicModsC<llvm_anyfloat_ty, llvm_anyfloat_ty>;

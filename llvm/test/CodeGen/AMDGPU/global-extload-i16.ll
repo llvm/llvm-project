@@ -1,4 +1,4 @@
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -mcpu=gfx600 < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
 ; XUN: llc -mtriple=r600 -mcpu=cypress < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
 ; FIXME: cypress is broken because the bigger testcases spill and it's not implemented

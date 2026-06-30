@@ -1185,7 +1185,8 @@ Value *EarlyCSE::getMatchingValue(LoadValue &InVal, ParseMemoryInst &MemInst,
   if (InVal.DefInst == nullptr)
     return nullptr;
   if (auto *MSI = dyn_cast<MemSetInst>(InVal.DefInst)) {
-    if (!MemInst.isLoad() || MemInst.isVolatile() || !MemInst.isUnordered())
+    if (!MemInst.isLoad() || MemInst.isVolatile() || !MemInst.isUnordered() ||
+        MemInst.getMatchingId() != -1)
       return nullptr;
     if (MSI->isVolatile())
       return nullptr;
