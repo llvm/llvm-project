@@ -235,14 +235,14 @@ class Step(Expect):
     """Sets an expectation for stepping behaviour, with the expected value being a list of integer lines:
     - !step exactly: while this !expect is active, we expect see exactly the expected lines in-order as many times as
       they appear in the expected lines list.
-    - !step order: while this !expect is active, we expect to see each of the expected lines in-order at least as many
+    - !step at_least: while this !expect is active, we expect to see each of the expected lines in-order at least as many
       times as they appear in the expected list, ignoring excess lines and lines not in the expected lines list.
     - !step never: while this !expect is active, we expect to not see any of the lines in the expected lines list.
     """
 
     def __init__(self, kind: str):
         self.kind = kind
-        if kind not in ["exactly", "order", "never"]:
+        if kind not in ["exactly", "at_least", "never"]:
             raise DexterNodeError(self, f'invalid !step kind "{self.kind}"')
 
     def __repr__(self):

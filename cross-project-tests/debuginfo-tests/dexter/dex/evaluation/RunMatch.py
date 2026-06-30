@@ -129,7 +129,7 @@ class DebuggerRunMatch(object):
         # For !steps, once we know the file that they are in, we apply any labels.
         for step_expect, step_results in self.per_step_expect_results.items():
             if not step_results:
-                # We may not be able to resolve any !labels in the expected value list if the expect was never active;
+                # We may not be able to resolve any !labels in the expected value list if the Expect was never active;
                 # as a workaround, just set any integers here - the result will be the same.
                 self.expected_values[step_expect] = [
                     0 for l in self.expected_values[step_expect]
@@ -213,7 +213,6 @@ class DebuggerRunMatch(object):
                 )
                 step_line_in_expected_list = step_line in expected_lines
                 if expect.kind == "never":
-                    print(f"never line hit: {step_line_in_expected_list}")
                     return not step_line_in_expected_list
                 return step_line_in_expected_list
 

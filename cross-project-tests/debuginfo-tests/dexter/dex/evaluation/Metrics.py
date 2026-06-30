@@ -184,7 +184,7 @@ def get_step_metrics(
     actual_line_set = set(step_lines)
 
     total_line_steps = len(step_lines)
-    if expect.kind == "exactly" or expect.kind == "order":
+    if expect.kind == "exactly" or expect.kind == "at_least":
         num_matching_steps = lcs_len(expected_lines, step_lines)
         # Inefficient, but not to the point that we care!
         num_matching_steps_ignoring_order = lcs_len(
@@ -194,14 +194,12 @@ def get_step_metrics(
         max_possible_correct_line_steps = len(expected_lines)
         correct_line_steps = num_matching_steps
         misordered_line_steps = num_matching_steps_ignoring_order - num_matching_steps
-        missing_lines = sum(1 for e in expected_line_set if e not in actual_line_set)
+        missing_lines = len(expected_line_set - actual_line_set)
         if expect.kind == "exactly":
             incorrect_line_steps = total_line_steps - correct_line_steps
-            unexpected_lines = sum(
-                1 for a in actual_line_set if a not in expected_line_set
-            )
+            unexpected_lines = len(actual_line_set - expected_line_set)
         else:
-            # For `!step order` there are no "incorrect" or "unexpected" lines, since we explicitly ignore seen lines
+            # For `!step at_least` there are no "incorrect" or "unexpected" lines, since we explicitly ignore seen lines
             # outside of the expected lines.
             incorrect_line_steps = 0
             unexpected_lines = 0
@@ -212,7 +210,7 @@ def get_step_metrics(
             1 for line in step_lines if line not in expected_line_set
         )
         incorrect_line_steps = total_line_steps - correct_line_steps
-        unexpected_lines = sum(1 for a in actual_line_set if a in expected_line_set)
+        unexpected_lines = len(actual_line_set.intersection(expected_line_set))
         # For `!step never` there are no "missing" or "misordered" lines, since we only declare lines we *don't* want to
         # see.
         missing_lines = 0

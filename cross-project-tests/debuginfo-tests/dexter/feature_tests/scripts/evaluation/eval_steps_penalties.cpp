@@ -52,7 +52,7 @@ int main() {
 !where {lines: !range [!label rbegin, !label rend]}:
   # Actual stepping order is reversed.
   # 3 steps, 1/3 correct, 2 misordered.
-  !step order: [!label rbegin, !label rbegin + 1, !label rbegin + 2]
+  !step at_least: [!label rbegin, !label rbegin + 1, !label rbegin + 2]
 !where {lines: !range [!label error_check, !label error_check + 1]}:
   # "Never" line is stepped on.
   # 2 steps, 1/2 correct, 1 incorrect, 1 unexpected
