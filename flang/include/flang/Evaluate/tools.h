@@ -1571,6 +1571,11 @@ std::optional<Expr<SomeType>> GetConvertInput(const Expr<SomeType> &x);
 // How many ancestors does have a derived type have?
 std::optional<int> CountDerivedTypeAncestors(const semantics::Scope &);
 
+// For an expression of enumeration type, extract the value of the hidden
+// __ordinal component.  Returns std::nullopt if the expression is not a
+// constant or structure constructor of an enumeration-type value.
+std::optional<Expr<SomeType>> GetEnumerationOrdinal(Expr<SomeDerived> &);
+
 } // namespace Fortran::evaluate
 
 namespace Fortran::semantics {

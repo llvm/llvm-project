@@ -7741,6 +7741,10 @@ bool DAGTypeLegalizer::WidenVectorOperand(SDNode *N, unsigned OpNo) {
   case ISD::VP_REDUCE_FMINIMUM:
     Res = WidenVecOp_VP_REDUCE(N);
     break;
+  case ISD::CTTZ_ELTS:
+  case ISD::CTTZ_ELTS_ZERO_POISON:
+    Res = WidenVecOp_CttzElements(N);
+    break;
   case ISD::VP_CTTZ_ELTS:
   case ISD::VP_CTTZ_ELTS_ZERO_POISON:
     Res = WidenVecOp_VP_CttzElements(N);
@@ -8721,6 +8725,26 @@ SDValue DAGTypeLegalizer::WidenVecOp_VSELECT(SDNode *N) {
   SDValue Select = DAG.getNode(N->getOpcode(), DL, LeftIn.getValueType(), Cond,
                                LeftIn, RightIn);
   return DAG.getExtractSubvector(DL, VT, Select, 0);
+}
+
+SDValue DAGTypeLegalizer::WidenVecOp_CttzElements(SDNode *N) {
+  SDLoc DL(N);
+  SDValue Source = N->getOperand(0);
+  EVT WideVT =
+      TLI.getTypeToTransformTo(*DAG.getContext(), Source.getValueType());
+
+  SDValue WideSource;
+  if (N->getOpcode() == ISD::CTTZ_ELTS_ZERO_POISON) {
+    WideSource = GetWidenedVector(Source);
+  } else {
+    // Pad the widened portion with all-ones so the extra lanes appear as
+    // active (non-zero) elements and do not contribute trailing zeros.
+    SDValue AllOnes = DAG.getAllOnesConstant(DL, WideVT);
+    WideSource = DAG.getInsertSubvector(DL, AllOnes, Source, 0);
+  }
+
+  return DAG.getNode(N->getOpcode(), DL, N->getValueType(0), WideSource,
+                     N->getFlags());
 }
 
 SDValue DAGTypeLegalizer::WidenVecOp_VP_CttzElements(SDNode *N) {
