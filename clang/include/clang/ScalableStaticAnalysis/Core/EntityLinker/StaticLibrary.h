@@ -27,8 +27,8 @@ namespace clang::ssaf {
 ///
 /// A StaticLibrary bundles member translation units without performing
 /// entity resolution, mirroring the role of ar / libtool -static / lib.exe
-/// in native build pipelines. The final linker is responsible for
-/// selective inclusion when a StaticLibrary appears on its command line.
+/// in native build pipelines. It is consumed by the EntityLinker for
+/// selective inclusion when passed as a command line argument.
 ///
 /// Static libraries are single-architecture: every member's target triple
 /// must equal the library's. Multi-architecture static libraries are
