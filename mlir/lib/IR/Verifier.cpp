@@ -30,6 +30,7 @@
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/Dominance.h"
 #include "mlir/IR/Operation.h"
+#include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/RegionKindInterface.h"
 #include "mlir/IR/Threading.h"
 #include "llvm/ADT/PointerIntPair.h"

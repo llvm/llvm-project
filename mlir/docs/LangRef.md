@@ -509,7 +509,18 @@ operation produces results and the operation returns, those results also have
 well-defined values. Execution then proceeds to the next operation in the block
 until the terminator operation at the end of the block is reached; the
 terminator determines the next continuation, if any. The determination of the
-next instruction to execute is the 'passing of control flow'.
+next instruction to execute is the 'passing of control flow'. A nested
+[region-exit terminator](#region-exit-terminators) can also terminate the
+current region with a request for a breaking-control-flow event addressed to a
+specific ancestor operation that implements
+`HasBreakingControlFlowOpInterface`. The terminator itself does not jump
+directly to that ancestor; it transfers control back to the containing
+operation with that request. If the containing operation is not the addressed
+receiver, it must define `PropagateControlFlowBreak` and propagate the same
+request to its own parent. This repeats until the addressed receiver handles
+the request, so every intermediate operation on the path from the terminator to
+the receiving `HasBreakingControlFlowOpInterface` operation must define
+`PropagateControlFlowBreak`.
 
 In general, when control flow is passed to an operation, MLIR does not restrict
 when control flow enters or exits the regions contained in that operation.
@@ -519,25 +530,26 @@ represent possible continuations. Successors explicitly specify destination
 blocks, so control flow within the region can only pass to one of the specified
 successor blocks, as in a `branch` operation. When a terminator has no
 successors, it may pass 1) control back to the containing operation, as in a
-`return` operation, or 2) define that control flow does not continue, as in
-`ub.unreachable`. Terminators without successors therefore do not necessarily
-imply a return to the containing operation, the specific dialect operation
-determines the terminator's semantics. Blocks (other than the entry block) that
-are not listed as a successor of any terminator operation are defined to be
-unreachable and can be removed without affecting the semantics of the
-containing operation.
+`return` operation, 2) define that control flow does not continue, as in
+`ub.unreachable`, or 3) request that the containing operation propagate breaking
+control flow outward toward a specific ancestor. This target designator is
+dialect-defined. Terminators without successors therefore do not
+necessarily imply a return to the containing operation. Blocks (other than the
+entry block) that are not listed as a successor of any terminator operation are
+defined to be unreachable and can be removed without affecting the semantics of
+the containing operation.
 
 Although control flow always enters a region through the entry block, control
 flow may exit a region through any block with an appropriate terminator. The
-standard dialect leverages this capability to define operations with
+SCF dialect for example leverages this capability to define operations with
 Single-Entry-Multiple-Exit (SEME) regions, possibly flowing through different
 blocks in the region and exiting through any block with a `return` operation.
-This behavior is similar to that of a function body in most programming
-languages. In addition, control flow may also not reach the end of a block or
-region, for example if a function call does not return. Such an operation
-prevents control flow from reaching later operations, but does not remove the
-structural requirement that the block must end with a terminator unless the
-enclosing operation opts out with `NoTerminator`.
+This behavior can model that of a function body in most programming languages.
+In addition, control flow may also not reach the end of a block or region, for
+example if a function call does not return. Such an operation prevents control
+flow from reaching later operations, but does not remove the structural
+requirement that the block must end with a terminator unless the enclosing
+operation opts out with `NoTerminator`.
 
 Example:
 
@@ -562,6 +574,86 @@ func.func @accelerator_compute(i64, i1) -> i64 { // An SSACFG region
 
 ^bb3:
   ...
+}
+```
+
+#### Region-Exit Terminators
+
+A terminator that implements `RegionExitTerminatorOpInterface` terminates the
+current region and identifies the operation that may receive the region exit. A
+normal region exit can target the immediately containing operation. For
+example, `scf.yield` exits only its own immediately enclosing region and
+returns control to the parent operation.
+
+Some terminators instead request a breaking-control-flow event addressed to a
+specific ancestor. The terminator transfers control back only to its immediate
+parent operation; reaching the addressed ancestor requires each intermediate
+parent operation to collaborate by propagating the request outward. The way a
+terminator designates the ancestor is dialect-defined: it may be a builtin
+`token` operand, an integer count of region levels to exit, a named symbolic
+relationship to a parent operation, or another dialect-specific mechanism.
+
+Every intermediate operation between a breaking terminator and the addressed
+receiver must define `PropagateControlFlowBreak`. The receiver must implement
+`HasBreakingControlFlowOpInterface`. For example, a loop operation nested
+inside another loop operation body carries both traits simultaneously: it
+handles breaks whose token identifies itself, and propagates breaks whose token
+identifies an outer loop.
+
+Region-exit terminators may carry values, which are propagated to the
+target operation. For example, when breaking out of a loop that produces
+results, the terminator supplies those result values. The exact mapping between
+terminator operands and the receiving op's results is dialect-defined (the
+receiving op may also ignore operands entirely).
+
+Examples:
+
+```mlir
+// scf.yield is the standard immediate region-exit terminator.
+// It exits only its own immediately enclosing region.
+scf.if %cond {
+  scf.yield  // returns control to the immediate parent of scf.if
+}
+```
+
+```mlir
+// Trait legend:
+//   [H]    = HasBreakingControlFlowOpInterface (receives/catches the break)
+//   [P]    = PropagateControlFlowBreak (passes the break request upward)
+//   [H][P] = both: handles breaks whose token identifies it, and propagates
+//            breaks whose token identifies an outer loop
+scf.loop token(%outer) {                    // [H][P]
+  scf.loop token(%inner) {                  // [H][P]
+    scf.if %cond1 {                         // [P]
+      // Requests a break of the inner loop.
+      scf.break [%inner]
+    }
+    scf.if %cond2 {                         // [P]
+      // Requests a break of the outer loop. The scf.if and inner scf.loop
+      // both propagate the request upward.
+      scf.break [%outer]
+    }
+    scf.if %cond3 {                         // [P]
+      // Requests re-entry into the inner loop.
+      scf.continue [%inner]
+    }
+  }
+}
+return
+```
+
+```mlir
+// A loop that yields a result value on early exit.
+// scf.break carries operands that become the loop's results. (scf.continue
+// would instead carry operands that become the next iteration's iter_args,
+// but this loop has none.)
+%result = scf.loop token(%loop) -> f32 {    // [H]
+  scf.if %found {                           // [P]
+    // %value becomes the loop result.
+    scf.break [%loop] %value : f32
+  }
+  // Re-enter the loop for the next iteration (no iter_args here).
+  scf.continue [%loop]
 }
 ```
 

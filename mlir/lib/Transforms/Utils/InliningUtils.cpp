@@ -286,6 +286,12 @@ static LogicalResult inlineRegionImpl(
                    [&](BlockArgument arg) { return !mapper.contains(arg); }))
     return failure();
 
+  // Block inlining only if breaks escape the region (propagate through the
+  // parent op toward an ancestor). Self-contained breaks that target ops
+  // within the region are fine.
+  if (hasBreakingControlFlowOps(src->getParentOp()))
+    return failure();
+
   // Check that the operations within the source region are valid to inline.
   Region *insertRegion = inlineBlock->getParent();
   if (!interface.isLegalToInline(insertRegion, src, shouldCloneInlinedRegion,

@@ -10,6 +10,7 @@
 #include "TestOps.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/IR/Matchers.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/Interfaces/FunctionImplementation.h"
 #include "mlir/Interfaces/MemorySlotInterfaces.h"
@@ -825,6 +826,347 @@ void AnyCondOp::getRegionInvocationBounds(
     ArrayRef<Attribute> operands,
     SmallVectorImpl<InvocationBounds> &invocationBounds) {
   invocationBounds.emplace_back(1, 1);
+}
+
+//===----------------------------------------------------------------------===//
+// TestBreakableLoopOp / TestDynamicBreakOp / TestDynamicContinueOp
+//===----------------------------------------------------------------------===//
+
+static std::optional<int64_t> getStaticDepth(Value depth) {
+  APInt value;
+  if (!matchPattern(depth, m_ConstantInt(&value)))
+    return std::nullopt;
+  return value.getSExtValue();
+}
+
+static SmallVector<TestBreakableLoopOp>
+getReachableBreakableLoops(Operation *terminator) {
+  SmallVector<TestBreakableLoopOp> loops;
+  for (Operation *currentOp = terminator->getParentOp(); currentOp;
+       currentOp = currentOp->getParentOp()) {
+    if (auto loopOp = dyn_cast<TestBreakableLoopOp>(currentOp))
+      loops.push_back(loopOp);
+    if (!currentOp->mightHaveTrait<OpTrait::PropagateControlFlowBreak>())
+      break;
+  }
+  return loops;
+}
+
+static Operation *getPropagationBlockingParent(Operation *terminator) {
+  for (Operation *currentOp = terminator->getParentOp(); currentOp;
+       currentOp = currentOp->getParentOp()) {
+    if (currentOp->mightHaveTrait<OpTrait::PropagateControlFlowBreak>())
+      continue;
+    for (Operation *parentOp = currentOp->getParentOp(); parentOp;
+         parentOp = parentOp->getParentOp())
+      if (isa<TestBreakableLoopOp>(parentOp))
+        return currentOp;
+    return nullptr;
+  }
+  return nullptr;
+}
+
+static SmallVector<TestBreakableLoopOp>
+getResolvedBreakableLoops(Operation *terminator, Value depth) {
+  SmallVector<TestBreakableLoopOp> loops =
+      getReachableBreakableLoops(terminator);
+  std::optional<int64_t> staticDepth = getStaticDepth(depth);
+  if (!staticDepth)
+    return loops;
+  if (*staticDepth <= 0 || static_cast<uint64_t>(*staticDepth) > loops.size())
+    return {};
+  return {loops[*staticDepth - 1]};
+}
+
+static OperandRange getTerminatorPayload(Operation *terminator) {
+  if (auto breakOp = dyn_cast<TestDynamicBreakOp>(terminator))
+    return breakOp.getArgs();
+  return cast<TestDynamicContinueOp>(terminator).getArgs();
+}
+
+static bool isContinueTerminator(Operation *terminator) {
+  if (isa<TestDynamicContinueOp>(terminator))
+    return true;
+  assert(isa<TestDynamicBreakOp>(terminator) &&
+         "expected test.dynamic_break or test.dynamic_continue");
+  return false;
+}
+
+static ValueRange getTargetExpectedValues(TestBreakableLoopOp target,
+                                          bool isContinue) {
+  return isContinue ? ValueRange(target.getRegionIterArgs())
+                    : ValueRange(target.getResults());
+}
+
+static bool isTerminatorPayloadCompatible(OperandRange args,
+                                          ValueRange expectedValues) {
+  if (args.size() != expectedValues.size())
+    return false;
+  return llvm::all_of(llvm::zip(args, expectedValues), [](auto values) {
+    return std::get<0>(values).getType() == std::get<1>(values).getType();
+  });
+}
+
+static bool isPotentialTerminatorTarget(Operation *terminator,
+                                        OperandRange args,
+                                        TestBreakableLoopOp target,
+                                        bool isContinue) {
+  return target.acceptsTerminator(terminator) &&
+         isTerminatorPayloadCompatible(
+             args, getTargetExpectedValues(target, isContinue));
+}
+
+static SmallVector<Operation *>
+getPotentialBreakableLoopTargets(Operation *terminator, Value depth) {
+  SmallVector<Operation *> targets;
+  OperandRange args = getTerminatorPayload(terminator);
+  bool isContinue = isContinueTerminator(terminator);
+  for (TestBreakableLoopOp loopOp :
+       getResolvedBreakableLoops(terminator, depth)) {
+    if (!isPotentialTerminatorTarget(terminator, args, loopOp, isContinue))
+      continue;
+    targets.push_back(loopOp.getOperation());
+  }
+  return targets;
+}
+
+static bool terminatorMayTarget(Operation *terminator, Value depth,
+                                Operation *op) {
+  for (Operation *target : getPotentialBreakableLoopTargets(terminator, depth))
+    if (target == op)
+      return true;
+  return false;
+}
+
+static bool terminatorMayPropagateThrough(Operation *terminator, Value depth,
+                                          Operation *op) {
+  for (Operation *target : getPotentialBreakableLoopTargets(terminator, depth))
+    if (target != op && target->isProperAncestor(op))
+      return true;
+  return false;
+}
+
+static LogicalResult verifyTerminatorPayload(Operation *terminator,
+                                             OperandRange args,
+                                             ValueRange expectedValues,
+                                             TestBreakableLoopOp target,
+                                             StringRef targetKind) {
+  if (args.size() != expectedValues.size())
+    return terminator->emitOpError()
+           << "has " << args.size() << " payload operands, but target "
+           << targetKind << " expects " << expectedValues.size();
+
+  for (auto [index, argAndExpected] :
+       llvm::enumerate(llvm::zip(args, expectedValues))) {
+    Value arg = std::get<0>(argAndExpected);
+    Value expected = std::get<1>(argAndExpected);
+    if (arg.getType() == expected.getType())
+      continue;
+    return terminator->emitOpError()
+           << "payload operand #" << index << " has type " << arg.getType()
+           << ", but target " << targetKind << " of "
+           << OpWithFlags(target, OpPrintingFlags().skipRegions())
+           << " expects " << expected.getType();
+  }
+  return success();
+}
+
+static LogicalResult verifyDynamicTerminator(Operation *terminator, Value depth,
+                                             OperandRange args,
+                                             bool isContinue) {
+  SmallVector<TestBreakableLoopOp> reachableLoops =
+      getReachableBreakableLoops(terminator);
+  Operation *blockingOp = getPropagationBlockingParent(terminator);
+  if (reachableLoops.empty()) {
+    if (blockingOp)
+      return terminator->emitOpError()
+             << "depth target crosses an op that does not have the "
+                "PropagateControlFlowBreak trait: "
+             << OpWithFlags(blockingOp, OpPrintingFlags().skipRegions());
+    return terminator->emitOpError()
+           << "must be nested inside a reachable test.breakable_loop";
+  }
+
+  SmallVector<TestBreakableLoopOp> targets = reachableLoops;
+  if (std::optional<int64_t> staticDepth = getStaticDepth(depth)) {
+    if (*staticDepth <= 0)
+      return terminator->emitOpError() << "depth must be positive";
+    if (static_cast<uint64_t>(*staticDepth) > reachableLoops.size()) {
+      if (blockingOp)
+        return terminator->emitOpError()
+               << "depth target crosses an op that does not have the "
+                  "PropagateControlFlowBreak trait: "
+               << OpWithFlags(blockingOp, OpPrintingFlags().skipRegions());
+      return terminator->emitOpError()
+             << "constant depth exceeds the number of reachable "
+                "test.breakable_loop operations";
+    }
+    targets.clear();
+    targets.push_back(reachableLoops[*staticDepth - 1]);
+  } else if (blockingOp) {
+    return terminator->emitOpError()
+           << "dynamic depth may target across an op that does not have the "
+              "PropagateControlFlowBreak trait: "
+           << OpWithFlags(blockingOp, OpPrintingFlags().skipRegions());
+  }
+
+  if (!getStaticDepth(depth)) {
+    for (TestBreakableLoopOp target : targets)
+      if (isPotentialTerminatorTarget(terminator, args, target, isContinue))
+        return success();
+    return terminator->emitOpError()
+           << "dynamic depth has no compatible test.breakable_loop target";
+  }
+
+  for (TestBreakableLoopOp target : targets) {
+    if (!target.acceptsTerminator(terminator))
+      return target.emitOpError("does not accept terminator: ")
+             << OpWithFlags(terminator, OpPrintingFlags().skipRegions());
+    ValueRange expectedValues = getTargetExpectedValues(target, isContinue);
+    if (failed(verifyTerminatorPayload(terminator, args, expectedValues, target,
+                                       isContinue ? "loop-carried values"
+                                                  : "results")))
+      return failure();
+  }
+  return success();
+}
+
+void TestBreakableLoopOp::print(OpAsmPrinter &p) {
+  p << " ";
+  if (!getInitArgs().empty()) {
+    p << "iter_args(";
+    llvm::interleaveComma(
+        llvm::zip(getRegionIterArgs(), getInitArgs()), p,
+        [&](auto it) { p << std::get<0>(it) << " = " << std::get<1>(it); });
+    p << ") : " << getInitArgs().getTypes() << " ";
+  }
+  if (!getResultTypes().empty())
+    p << "-> " << getResultTypes() << " ";
+  p.printRegion(getBody(), /*printEntryBlockArgs=*/false,
+                /*printBlockTerminators=*/true);
+  p.printOptionalAttrDict((*this)->getAttrs());
+}
+
+ParseResult TestBreakableLoopOp::parse(OpAsmParser &parser,
+                                       OperationState &result) {
+  SmallVector<OpAsmParser::Argument, 4> regionArgs;
+  SmallVector<OpAsmParser::Argument, 4> iterRegionArgs;
+  SmallVector<OpAsmParser::UnresolvedOperand, 4> iterOperands;
+  SmallVector<Type, 4> iterTypes;
+
+  if (failed(parser.parseOptionalKeyword("iter_args"))) {
+    if (succeeded(parser.parseOptionalArrow()))
+      if (parser.parseTypeList(result.types))
+        return failure();
+  } else {
+    if (parser.parseAssignmentList(iterRegionArgs, iterOperands) ||
+        parser.parseColon() || parser.parseTypeList(iterTypes))
+      return failure();
+    if (iterRegionArgs.size() != iterTypes.size())
+      return parser.emitError(parser.getCurrentLocation(),
+                              "found different number of iter_args and types");
+    if (succeeded(parser.parseOptionalArrow()))
+      if (parser.parseTypeList(result.types))
+        return failure();
+    for (auto [regionArg, type] : llvm::zip_equal(iterRegionArgs, iterTypes))
+      regionArg.type = type;
+    llvm::append_range(regionArgs, iterRegionArgs);
+  }
+
+  Region *body = result.addRegion();
+  if (parser.parseRegion(*body, regionArgs) ||
+      parser.parseOptionalAttrDict(result.attributes))
+    return failure();
+
+  return parser.resolveOperands(iterOperands, iterTypes, parser.getNameLoc(),
+                                result.operands);
+}
+
+LogicalResult TestBreakableLoopOp::verifyRegions() {
+  if (getBody().empty())
+    return emitOpError("region cannot be empty");
+  if (getBody().front().getNumArguments() != getNumOperands())
+    return emitOpError("expected the region to have one argument per "
+                       "loop-carried value (")
+           << getNumOperands() << " expected, but got "
+           << getBody().front().getNumArguments() << ")";
+  for (auto [index, argAndOperand] :
+       llvm::enumerate(llvm::zip(getRegionIterArgs(), getOperands()))) {
+    Type argType = std::get<0>(argAndOperand).getType();
+    Type operandType = std::get<1>(argAndOperand).getType();
+    if (argType != operandType)
+      return emitOpError() << "types mismatch between " << index
+                           << "th iter operand (" << operandType
+                           << ") and defined region argument (" << argType
+                           << ")";
+  }
+  return success();
+}
+
+void TestBreakableLoopOp::getSuccessorRegions(
+    RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
+  if (point.isParent()) {
+    regions.push_back(RegionSuccessor(&getBody()));
+    return;
+  }
+
+  Operation *terminator = point.getTerminatorPredecessorOrNull();
+  Value depth;
+  bool isContinue = false;
+  if (auto continueOp = dyn_cast<TestDynamicContinueOp>(terminator)) {
+    depth = continueOp.getDepth();
+    isContinue = true;
+  } else if (auto breakOp = dyn_cast<TestDynamicBreakOp>(terminator)) {
+    depth = breakOp.getDepth();
+  } else {
+    llvm_unreachable("expected test.dynamic_break or test.dynamic_continue");
+  }
+
+  if (terminatorMayPropagateThrough(terminator, depth, getOperation()))
+    regions.push_back(RegionSuccessor::propagating());
+  if (terminatorMayTarget(terminator, depth, getOperation()))
+    regions.push_back(isContinue ? RegionSuccessor(&getBody())
+                                 : RegionSuccessor(getOperation()));
+}
+
+OperandRange
+TestBreakableLoopOp::getEntrySuccessorOperands(RegionSuccessor successor) {
+  return getInitArgs();
+}
+
+ValueRange TestBreakableLoopOp::getSuccessorInputs(RegionSuccessor successor) {
+  return successor.isOperation() ? ValueRange(getResults())
+                                 : ValueRange(getRegionIterArgs());
+}
+
+LogicalResult TestDynamicBreakOp::verify() {
+  return verifyDynamicTerminator(getOperation(), getDepth(), getArgs(),
+                                 /*isContinue=*/false);
+}
+
+SmallVector<Operation *> TestDynamicBreakOp::getPotentialTargets() {
+  return getPotentialBreakableLoopTargets(getOperation(), getDepth());
+}
+
+MutableOperandRange
+TestDynamicBreakOp::getMutableSuccessorOperands(RegionSuccessor point) {
+  return MutableOperandRange(getOperation(), /*start=*/1,
+                             /*length=*/getOperation()->getNumOperands() - 1);
+}
+
+LogicalResult TestDynamicContinueOp::verify() {
+  return verifyDynamicTerminator(getOperation(), getDepth(), getArgs(),
+                                 /*isContinue=*/true);
+}
+
+SmallVector<Operation *> TestDynamicContinueOp::getPotentialTargets() {
+  return getPotentialBreakableLoopTargets(getOperation(), getDepth());
+}
+
+MutableOperandRange
+TestDynamicContinueOp::getMutableSuccessorOperands(RegionSuccessor point) {
+  return MutableOperandRange(getOperation(), /*start=*/1,
+                             /*length=*/getOperation()->getNumOperands() - 1);
 }
 
 //===----------------------------------------------------------------------===//
