@@ -631,14 +631,16 @@ public:
       return false;
   }
 
-  template <class _Tuple, class _Seq = make_index_sequence<tuple_size_v<remove_reference_t<_Tuple>>>, class = void>
+  template <class _Source, class _DecayedSource = __remove_cvref_t<_Source> >
   static inline constexpr bool __has_danglings_from_tuple_like = false;
 
-  template <class _Tuple, size_t... _Idx>
-  static inline constexpr bool __has_danglings_from_tuple_like<
-      _Tuple,
-      index_sequence<_Idx...>,
-      enable_if_t<__has_danglings<decltype(std::get<_Idx>(std::declval<_Tuple>()))...>()>> = true;
+  template <class _Source, class... _Up>
+  static inline constexpr bool __has_danglings_from_tuple_like<_Source, tuple<_Up...> > =
+      __has_danglings<__copy_cvref_t<_Source, _Up>...>();
+
+  template <class _Source, class _U1, class _U2>
+  static inline constexpr bool __has_danglings_from_tuple_like<_Source, pair<_U1, _U2> > =
+      __has_danglings<__copy_cvref_t<_Source, _U1>, __copy_cvref_t<_Source, _U2> >();
 
   template <bool __dangles, class _CtorEnabled>
   static inline constexpr bool __check_danglings_from_constructor = false;
