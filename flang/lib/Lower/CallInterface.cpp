@@ -11,6 +11,7 @@
 #include "flang/Lower/Bridge.h"
 #include "flang/Lower/Mangler.h"
 #include "flang/Lower/OpenACC.h"
+#include "flang/Lower/OpenMP.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/StatementContext.h"
 #include "flang/Lower/Support/Utils.h"
@@ -61,13 +62,39 @@ bool Fortran::lower::CallerInterface::hasAlternateReturns() const {
   return procRef.hasAlternateReturns();
 }
 
+/// If \p proc refers to a base procedure that carries OpenMP DECLARE VARIANT
+/// entries, return the variant selected for the enclosing OpenMP context: a
+/// direct call to the base is then lowered as a call to that variant. Returns
+/// nullptr when \p proc is not such a base call, or when no variant matches the
+/// context, so the base procedure is used as usual.
+static const Fortran::semantics::Symbol *
+getOmpDeclareVariantCallee(const Fortran::evaluate::ProcedureDesignator &proc,
+                           Fortran::lower::AbstractConverter &converter) {
+  const Fortran::semantics::Symbol *symbol = proc.GetSymbol();
+  if (!symbol)
+    return nullptr;
+  const Fortran::semantics::Symbol &ultimate{symbol->GetUltimate()};
+  // Only pay the cost of declare-variant resolution when the callee actually
+  // carries variant entries; this avoids overhead on every other call.
+  const auto *details =
+      ultimate.detailsIf<Fortran::semantics::SubprogramDetails>();
+  if (!details || details->ompDeclareVariants().empty())
+    return nullptr;
+  return Fortran::lower::omp::resolveDeclareVariantCallee(ultimate, converter);
+}
+
 /// Return the binding label (from BIND(C...)) or the mangled name of the
 /// symbol.
 static std::string
 getProcMangledName(const Fortran::evaluate::ProcedureDesignator &proc,
                    Fortran::lower::AbstractConverter &converter) {
-  if (const Fortran::semantics::Symbol *symbol = proc.GetSymbol())
+  if (const Fortran::semantics::Symbol *symbol = proc.GetSymbol()) {
+    // A matching OpenMP DECLARE VARIANT call targets the variant procedure.
+    if (const Fortran::semantics::Symbol *variant =
+            getOmpDeclareVariantCallee(proc, converter))
+      return converter.mangleName(*variant);
     return converter.mangleName(symbol->GetUltimate());
+  }
   assert(proc.GetSpecificIntrinsic() &&
          "expected intrinsic procedure in designator");
   return proc.GetName();
@@ -79,6 +106,10 @@ std::string Fortran::lower::CallerInterface::getMangledName() const {
 
 const Fortran::semantics::Symbol *
 Fortran::lower::CallerInterface::getProcedureSymbol() const {
+  // A matching OpenMP DECLARE VARIANT call targets the variant procedure.
+  if (const Fortran::semantics::Symbol *variant =
+          getOmpDeclareVariantCallee(procRef.proc(), converter))
+    return variant;
   return procRef.proc().GetSymbol();
 }
 
