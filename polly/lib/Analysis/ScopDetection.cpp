@@ -872,7 +872,13 @@ ScopDetection::getDelinearizationTerms(DetectionContext &Context,
     std::vector<const SCEV *> MaxTerms;
     SCEVRemoveMax::rewrite(Pair.second, SE, &MaxTerms);
     if (!MaxTerms.empty()) {
-      Terms.insert(Terms.begin(), MaxTerms.begin(), MaxTerms.end());
+      // Elements in Terms are used for delinearization. So divisions between
+      // the original access function and the elements in Terms can be
+      // performed. Therefore, we only add elements in MaxTerms that have the
+      // same type as the original access function.
+      for (const SCEV *Max : MaxTerms)
+        if (Max->getType() == Pair.second->getType())
+          Terms.push_back(Max);
       continue;
     }
     // In case the outermost expression is a plain add, we check if any of its
