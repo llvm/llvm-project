@@ -37,13 +37,13 @@
 // flag. This is the path taken by the inner clang invocation from the linker
 // wrapper (clang --target=amdgcn-amd-amdhsa --hipstdpar ...).
 // RUN: %clang -### --target=amdgcn-amd-amdhsa \
-// RUN:   --hipstdpar %s 2>&1 | FileCheck --check-prefix=HIPSTDPAR-AMDGPU-TC %s
+// RUN:   --hipstdpar -x c %s 2>&1 | FileCheck --check-prefix=HIPSTDPAR-AMDGPU-TC %s
 // HIPSTDPAR-AMDGPU-TC: "-mllvm" "-amdgpu-enable-hipstdpar"
 
 // Check that the base AMDGPU toolchain linker forwards the hipstdpar flag as a
 // plugin-opt for the LTO path.
 // RUN: %clang -### --target=amdgcn-amd-amdhsa \
-// RUN:   --hipstdpar -flto %s 2>&1 | \
+// RUN:   --hipstdpar -flto -x c %s 2>&1 | \
 // RUN:   FileCheck --check-prefix=HIPSTDPAR-AMDGPU-LTO %s
 // HIPSTDPAR-AMDGPU-LTO: ld.lld
 // HIPSTDPAR-AMDGPU-LTO-SAME: "-plugin-opt=-amdgpu-enable-hipstdpar"
