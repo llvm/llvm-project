@@ -557,4 +557,120 @@ exit:
   ret void
 }
 
+; An interleaved vectorized loop where one pointer is at a loop-invariant offset
+; from another.
+define void @interleaved_loop_invariant_offset(ptr %p, ptr %q, i64 %n) #0 {
+; COMMON-LABEL: interleaved_loop_invariant_offset:
+; COMMON:       // %bb.0: // %entry
+; COMMON-NEXT:    lsl x8, x2, #2
+; COMMON-NEXT:    ptrue p0.s
+; COMMON-NEXT:    mov x9, x2
+; COMMON-NEXT:  .LBB9_1: // %vector.body
+; COMMON-NEXT:    // =>This Inner Loop Header: Depth=1
+; COMMON-NEXT:    add x10, x1, x8
+; COMMON-NEXT:    ldr z0, [x1]
+; COMMON-NEXT:    ld1w { z1.s }, p0/z, [x1, x2, lsl #2]
+; COMMON-NEXT:    ldr z2, [x1, #1, mul vl]
+; COMMON-NEXT:    ldr z3, [x10, #1, mul vl]
+; COMMON-NEXT:    dech x9
+; COMMON-NEXT:    incb x1, all, mul #2
+; COMMON-NEXT:    add z0.s, z1.s, z0.s
+; COMMON-NEXT:    add z1.s, z3.s, z2.s
+; COMMON-NEXT:    str z0, [x0]
+; COMMON-NEXT:    str z1, [x0, #1, mul vl]
+; COMMON-NEXT:    incb x0, all, mul #2
+; COMMON-NEXT:    cbnz x9, .LBB9_1
+; COMMON-NEXT:  // %bb.2: // %exit
+; COMMON-NEXT:    ret
+entry:
+  %vscale = tail call i64 @llvm.vscale.i64()
+  %vscalex4 = shl nuw nsw i64 %vscale, 2
+  %vscalex8 = shl nuw nsw i64 %vscale, 3
+  %qn = getelementptr inbounds nuw [4 x i8], ptr %q, i64 %n
+  br label %vector.body
+
+vector.body:
+  %index = phi i64 [ 0, %entry ], [ %index.next, %vector.body ]
+  %q.off1 = getelementptr inbounds nuw [4 x i8], ptr %q, i64 %index
+  %q.off2 = getelementptr inbounds nuw [4 x i8], ptr %q.off1, i64 %vscalex4
+  %q.load1 = load <vscale x 4 x i32>, ptr %q.off1, align 4
+  %q.load2 = load <vscale x 4 x i32>, ptr %q.off2, align 4
+  %qn.off1 = getelementptr inbounds nuw [4 x i8], ptr %qn, i64 %index
+  %qn.off2 = getelementptr inbounds nuw [4 x i8], ptr %qn.off1, i64 %vscalex4
+  %qn.load1 = load <vscale x 4 x i32>, ptr %qn.off1, align 4
+  %qn.load2 = load <vscale x 4 x i32>, ptr %qn.off2, align 4
+  %add1 = add nsw <vscale x 4 x i32> %qn.load1, %q.load1
+  %add2 = add nsw <vscale x 4 x i32> %qn.load2, %q.load2
+  %p.off1 = getelementptr inbounds nuw [4 x i8], ptr %p, i64 %index
+  %p.off2 = getelementptr inbounds nuw [4 x i8], ptr %p.off1, i64 %vscalex4
+  store <vscale x 4 x i32> %add1, ptr %p.off1, align 4
+  store <vscale x 4 x i32> %add2, ptr %p.off2, align 4
+  %index.next = add nuw i64 %index, %vscalex8
+  %cmp = icmp eq i64 %index.next, %n
+  br i1 %cmp, label %exit, label %vector.body
+
+exit:
+  ret void
+}
+
+; This is the same as the previous, but vscalex128 is too large to be used as an
+; offset in an inc instruction so it occupies an extra register.
+define void @interleaved_loop_invariant_offset_invalid_vscale(ptr %p, ptr %q, i64 %n) #0 {
+; COMMON-LABEL: interleaved_loop_invariant_offset_invalid_vscale:
+; COMMON:       // %bb.0: // %entry
+; COMMON-NEXT:    rdvl x8, #1
+; COMMON-NEXT:    mov w9, #512 // =0x200
+; COMMON-NEXT:    ptrue p0.s
+; COMMON-NEXT:    lsr x8, x8, #4
+; COMMON-NEXT:    mov x10, x2
+; COMMON-NEXT:    mul x8, x8, x9
+; COMMON-NEXT:    lsl x9, x2, #2
+; COMMON-NEXT:  .LBB10_1: // %vector.body
+; COMMON-NEXT:    // =>This Inner Loop Header: Depth=1
+; COMMON-NEXT:    add x11, x1, x9
+; COMMON-NEXT:    ldr z0, [x1]
+; COMMON-NEXT:    ld1w { z1.s }, p0/z, [x1, x2, lsl #2]
+; COMMON-NEXT:    ldr z2, [x1, #1, mul vl]
+; COMMON-NEXT:    ldr z3, [x11, #1, mul vl]
+; COMMON-NEXT:    addvl x10, x10, #-8
+; COMMON-NEXT:    add x1, x1, x8
+; COMMON-NEXT:    add z0.s, z1.s, z0.s
+; COMMON-NEXT:    add z1.s, z3.s, z2.s
+; COMMON-NEXT:    str z0, [x0]
+; COMMON-NEXT:    str z1, [x0, #1, mul vl]
+; COMMON-NEXT:    add x0, x0, x8
+; COMMON-NEXT:    cbnz x10, .LBB10_1
+; COMMON-NEXT:  // %bb.2: // %exit
+; COMMON-NEXT:    ret
+entry:
+  %vscale = tail call i64 @llvm.vscale.i64()
+  %vscalex4 = shl nuw nsw i64 %vscale, 2
+  %vscalex128 = shl nuw nsw i64 %vscale, 7
+  %qn = getelementptr inbounds nuw [4 x i8], ptr %q, i64 %n
+  br label %vector.body
+
+vector.body:
+  %index = phi i64 [ 0, %entry ], [ %index.next, %vector.body ]
+  %q.off1 = getelementptr inbounds nuw [4 x i8], ptr %q, i64 %index
+  %q.off2 = getelementptr inbounds nuw [4 x i8], ptr %q.off1, i64 %vscalex4
+  %q.load1 = load <vscale x 4 x i32>, ptr %q.off1, align 4
+  %q.load2 = load <vscale x 4 x i32>, ptr %q.off2, align 4
+  %qn.off1 = getelementptr inbounds nuw [4 x i8], ptr %qn, i64 %index
+  %qn.off2 = getelementptr inbounds nuw [4 x i8], ptr %qn.off1, i64 %vscalex4
+  %qn.load1 = load <vscale x 4 x i32>, ptr %qn.off1, align 4
+  %qn.load2 = load <vscale x 4 x i32>, ptr %qn.off2, align 4
+  %add1 = add nsw <vscale x 4 x i32> %qn.load1, %q.load1
+  %add2 = add nsw <vscale x 4 x i32> %qn.load2, %q.load2
+  %p.off1 = getelementptr inbounds nuw [4 x i8], ptr %p, i64 %index
+  %p.off2 = getelementptr inbounds nuw [4 x i8], ptr %p.off1, i64 %vscalex4
+  store <vscale x 4 x i32> %add1, ptr %p.off1, align 4
+  store <vscale x 4 x i32> %add2, ptr %p.off2, align 4
+  %index.next = add nuw i64 %index, %vscalex128
+  %cmp = icmp eq i64 %index.next, %n
+  br i1 %cmp, label %exit, label %vector.body
+
+exit:
+  ret void
+}
+
 attributes #0 = { "target-features"="+sve2" vscale_range(1,16) }
