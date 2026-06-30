@@ -257,7 +257,7 @@ private:
     vector& __vec_;
   };
 
-  using __emplace_back_result_t = _If<(_LIBCPP_STD_VER < 17), void, reference>;
+  using __emplace_back_result_t _LIBCPP_NODEBUG = _If<(_LIBCPP_STD_VER < 17), void, reference>;
 
 public:
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI ~vector() { __destroy_vector (*this)(); }
