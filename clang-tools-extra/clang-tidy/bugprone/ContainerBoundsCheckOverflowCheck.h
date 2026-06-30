@@ -13,9 +13,9 @@
 
 namespace clang::tidy::bugprone {
 
-/// Check for potential overflow in unsigned integer addition before comparison
-/// with a container's size() method. For example a + b > v.size() can overflow
-/// if a and b are large enough, leading to incorrect behavior
+/// Finds potential overflow in unsigned integer addition before comparison with
+/// a container's size() method. For example a + b > v.size() can overflow if a
+/// and b are large enough, leading to incorrect behavior.
 ///
 /// For the user-facing documentation see:
 /// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/container-bounds-check-overflow.html
