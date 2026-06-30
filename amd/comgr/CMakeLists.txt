@@ -103,6 +103,7 @@ set(SOURCES
   src/comgr-env.cpp
   src/comgr-hotswap.cpp
   src/comgr-hotswap-b0a0.cpp
+  src/comgr-hotswap-entry-trampoline.cpp
   src/comgr-hotswap-patch-trampoline.cpp
   src/comgr-hotswap-elf.cpp
   src/comgr-hotswap-llvm.cpp

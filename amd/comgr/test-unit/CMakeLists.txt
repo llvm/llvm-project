@@ -103,6 +103,7 @@ comgr_configure_test_target(HotswapElfTests)
 add_executable(HotswapMCTests
   HotswapMCTest.cpp
   ../src/comgr-hotswap-b0a0.cpp
+  ../src/comgr-hotswap-entry-trampoline.cpp
   ../src/comgr-hotswap-elf.cpp
   ../src/comgr-hotswap-llvm.cpp
   ../src/comgr-hotswap-patch-f32-to-e5m3.cpp

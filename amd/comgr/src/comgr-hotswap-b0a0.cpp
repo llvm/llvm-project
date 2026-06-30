@@ -7,7 +7,7 @@
 ///
 /// \file
 /// Dispatcher for B0-to-A0 silicon stepping patches and the
-/// retargetCodeObjectB0A0 orchestrator that drives the full pipeline:
+/// retargetCodeObject orchestrator that drives the full pipeline:
 /// decode -> patch -> trampoline growth -> DWARF update.
 ///
 /// Patch passes are dispatched through HotswapPatchVTable. The membership
@@ -31,6 +31,8 @@
 
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Compiler.h"
+
+#include <limits>
 
 using namespace llvm;
 
@@ -118,7 +120,7 @@ void patchDebugFrame(uint8_t *Elf, size_t ElfSize, uint64_t TextAddr,
 // invokes it eagerly on the singleton's private storage, which the C++11
 // magic-static rule guarantees runs exactly once even under concurrent
 // first access. That removes both the explicit std::call_once at the
-// retargetCodeObjectB0A0 entry point and any inter-TU static-init order
+// retargetCodeObject entry point and any inter-TU static-init order
 // dependency on the patch modules.
 
 void installHotswapPatches(HotswapPatchVTable &VT) {
@@ -426,7 +428,7 @@ applyGfx1250B0toA0Rules(std::vector<InternalDecodedInst> &Decoded,
   return Patched;
 }
 
-// -- retargetCodeObjectB0A0 helpers -------------------------------------------
+// -- retargetCodeObject helpers -------------------------------------------
 
 /// Finalize the deferred trampolines produced by emitToTrampoline: resolves
 /// the branch-back at the tail of each trampoline to land on the next
@@ -434,7 +436,7 @@ applyGfx1250B0toA0Rules(std::vector<InternalDecodedInst> &Decoded,
 /// padding at the original .text slot, and reports per-trampoline encoding
 /// failures through log(). Runs after all patch passes finish so the
 /// post-.text layout of trampolines is known. Returns false if any
-/// trampoline could not be fixed up, but still patches the ones that can.
+/// trampoline could not be fixed up.
 [[nodiscard]] static bool
 fixupTrampolineBranches(std::vector<Trampoline> &Trampolines, uint8_t *Text,
                         uint64_t TextSize, const LLVMState &LS) {
@@ -480,15 +482,15 @@ fixupTrampolineBranches(std::vector<Trampoline> &Trampolines, uint8_t *Text,
 /// implementations land in separate PRs.
 static void patchDebugSections(WritableMemoryBuffer &ElfBuf,
                                ArrayRef<Trampoline> Trampolines,
-                               const ElfView &Elf, size_t TrampTotal) {
+                               const ElfView &Elf, size_t GrowthTotal) {
   uint8_t *Data = reinterpret_cast<uint8_t *>(ElfBuf.getBufferStart());
   size_t Size = ElfBuf.getBufferSize();
   if (!addTrampolineSymbols(ElfBuf, Trampolines, Elf.textSize(),
                             Elf.textSectionIndex()))
     log() << "hotswap: error: addTrampolineSymbols failed\n";
-  patchDebugRanges(Data, Size, Elf.textAddr(), Elf.textSize(), TrampTotal);
-  patchDebugInfo(Data, Size, Elf.textAddr(), Elf.textSize(), TrampTotal);
-  patchDebugFrame(Data, Size, Elf.textAddr(), Elf.textSize(), TrampTotal);
+  patchDebugRanges(Data, Size, Elf.textAddr(), Elf.textSize(), GrowthTotal);
+  patchDebugInfo(Data, Size, Elf.textAddr(), Elf.textSize(), GrowthTotal);
+  patchDebugFrame(Data, Size, Elf.textAddr(), Elf.textSize(), GrowthTotal);
   if (!patchDebugLine(ElfBuf, Trampolines, Elf.textSize(), Elf.textAddr()))
     log() << "hotswap: error: patchDebugLine failed\n";
 }
@@ -520,15 +522,30 @@ static void runScratchVerification(WritableMemoryBuffer &OutBuf,
           << "scratch conflicts\n";
 }
 
-// -- retargetCodeObjectB0A0 ---------------------------------------------------
+// -- retargetCodeObject -------------------------------------------------------
 
-amd_comgr_status_t retargetCodeObjectB0A0(const void *ElfData, size_t ElfSize,
-                                          const TargetIdentifier &TargetIdent,
-                                          std::unique_ptr<MemoryBuffer> &Out) {
+amd_comgr_status_t retargetCodeObject(const void *ElfData, size_t ElfSize,
+                                      const TargetIdentifier &TargetIdent,
+                                      const Gfx1250RewriteOptions &Options,
+                                      std::unique_ptr<MemoryBuffer> &Out) {
   // The dispatcher fetches the patch vtable lazily via
   // getHotswapPatchVTable() inside applyGfx1250B0toA0Rules; the singleton's
   // initializer binds every register*Patch slot on first access, so no
   // explicit install step is needed here.
+
+  if (!Options.RunB0A0Patches && !Options.RunEntryTrampolines) {
+    std::unique_ptr<WritableMemoryBuffer> Result =
+        WritableMemoryBuffer::getNewUninitMemBuffer(ElfSize);
+    if (!Result) {
+      log() << "hotswap: error: retargetCodeObject: "
+            << "getNewUninitMemBuffer(" << ElfSize
+            << ") failed (out of memory) for the no-op output copy.\n";
+      return AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES;
+    }
+    std::memcpy(Result->getBufferStart(), ElfData, ElfSize);
+    Out = std::move(Result);
+    return AMD_COMGR_STATUS_SUCCESS;
+  }
 
   // Take a working copy so the input is preserved and we have a mutable
   // buffer to parse / patch.
@@ -537,12 +554,12 @@ amd_comgr_status_t retargetCodeObjectB0A0(const void *ElfData, size_t ElfSize,
 
   Expected<ElfView> ViewOrErr = ElfView::create(Buf.data(), Buf.size());
   if (!ViewOrErr) {
-    log() << "hotswap: error: retargetCodeObjectB0A0: input is not a "
+    log() << "hotswap: error: retargetCodeObject: input is not a "
           << "parseable ELF64 (" << toString(ViewOrErr.takeError()) << ").\n";
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
   }
   if (ViewOrErr->textSize() == 0) {
-    log() << "hotswap: error: retargetCodeObjectB0A0: input ELF has empty "
+    log() << "hotswap: error: retargetCodeObject: input ELF has empty "
           << ".text section; nothing to rewrite.\n";
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
   }
@@ -550,7 +567,7 @@ amd_comgr_status_t retargetCodeObjectB0A0(const void *ElfData, size_t ElfSize,
 
   LLVMState LS = initLLVM(TargetIdent);
   if (!LS.Valid) {
-    log() << "hotswap: error: retargetCodeObjectB0A0: initLLVM failed "
+    log() << "hotswap: error: retargetCodeObject: initLLVM failed "
           << "for CPU '" << TargetIdent.Processor << "'; aborting rewrite.\n";
     return AMD_COMGR_STATUS_ERROR;
   }
@@ -558,41 +575,72 @@ amd_comgr_status_t retargetCodeObjectB0A0(const void *ElfData, size_t ElfSize,
   RewriteConfig Config = makeGfx1250B0A0Config();
 
   uint8_t *Text = Elf.textData();
-  std::vector<InternalDecodedInst> Decoded;
-  if (!decodeTextSection(Text, Elf.textSize(), LS, Decoded)) {
-    log() << "hotswap: error: retargetCodeObjectB0A0: decodeTextSection "
-          << "failed on .text (" << Elf.textSize() << " bytes).\n";
-    return AMD_COMGR_STATUS_ERROR;
-  }
-
+  uint64_t Count = 0;
   std::vector<Trampoline> Deferred;
   std::vector<ScratchPatchInfo> ScratchPatches;
-  uint32_t Count = applyGfx1250B0toA0Rules(
-      Decoded, Text, Elf.textSize(), LS, Deferred, Elf, ScratchPatches, Config);
-
-  log() << "hotswap: applied " << Count << " patches\n";
-
-  std::unique_ptr<WritableMemoryBuffer> Result;
-  if (!Deferred.empty()) {
-    if (!fixupTrampolineBranches(Deferred, Text, Elf.textSize(), LS))
-      log() << "hotswap: error: some trampolines could not be fixed up\n";
-
-    Result = Elf.growWithTrampolines(Deferred, LS.SNopBytes);
-    if (!Result) {
-      log() << "hotswap: error: retargetCodeObjectB0A0: "
-            << "ElfView::growWithTrampolines returned null with "
-            << Deferred.size() << " trampolines queued.\n";
+  if (Options.RunB0A0Patches) {
+    std::vector<InternalDecodedInst> Decoded;
+    if (!decodeTextSection(Text, Elf.textSize(), LS, Decoded)) {
+      log() << "hotswap: error: retargetCodeObject: decodeTextSection "
+            << "failed on .text (" << Elf.textSize() << " bytes).\n";
       return AMD_COMGR_STATUS_ERROR;
     }
 
-    size_t TrampTotal = 0;
-    for (const Trampoline &T : Deferred)
-      TrampTotal += T.Bytes.size();
-    patchDebugSections(*Result, Deferred, Elf, TrampTotal);
+    Count = applyGfx1250B0toA0Rules(Decoded, Text, Elf.textSize(), LS, Deferred,
+                                    Elf, ScratchPatches, Config);
+    log() << "hotswap: applied " << Count << " B0-to-A0 patches\n";
+  } else {
+    log() << "hotswap: B0-to-A0 patches disabled for this rewrite\n";
+  }
+
+  std::unique_ptr<WritableMemoryBuffer> Result;
+  std::vector<Trampoline> Growth = Deferred;
+  if (!Deferred.empty()) {
+    if (!fixupTrampolineBranches(Deferred, Text, Elf.textSize(), LS)) {
+      log() << "hotswap: error: trampoline branch fixup failed; aborting "
+               "rewrite\n";
+      return AMD_COMGR_STATUS_ERROR;
+    }
+    Growth = Deferred;
+  }
+
+  std::vector<KernelEntryTrampolineFixup> EntryFixups;
+  if (Options.RunEntryTrampolines) {
+    std::optional<uint32_t> EntryCount = appendKernelEntryTrampolines(
+        Elf, LS, Config.MaxSgprs, Growth, EntryFixups);
+    if (!EntryCount)
+      return AMD_COMGR_STATUS_ERROR;
+    Count += *EntryCount;
+  } else {
+    log() << "hotswap: kernel-entry trampolines disabled for this rewrite\n";
+  }
+
+  if (!Growth.empty()) {
+    Result = Elf.growWithTrampolines(Growth, LS.SNopBytes);
+    if (!Result) {
+      log() << "hotswap: error: retargetCodeObject: "
+            << "ElfView::growWithTrampolines returned null with "
+            << Growth.size() << " trampolines queued.\n";
+      return AMD_COMGR_STATUS_ERROR;
+    }
+
+    size_t GrowthTotal = 0;
+    for (const Trampoline &T : Growth) {
+      if (T.Bytes.size() > std::numeric_limits<size_t>::max() - GrowthTotal) {
+        log() << "hotswap: error: retargetCodeObject: growth byte count "
+              << "overflows size_t.\n";
+        return AMD_COMGR_STATUS_ERROR;
+      }
+      GrowthTotal += T.Bytes.size();
+    }
+    patchDebugSections(*Result, Deferred, Elf, GrowthTotal);
+    if (!rewriteKernelEntryDescriptorOffsets(*Result, Elf.textSize(),
+                                             EntryFixups))
+      return AMD_COMGR_STATUS_ERROR;
   } else {
     Result = WritableMemoryBuffer::getNewUninitMemBuffer(ElfSize);
     if (!Result) {
-      log() << "hotswap: error: retargetCodeObjectB0A0: "
+      log() << "hotswap: error: retargetCodeObject: "
             << "getNewUninitMemBuffer(" << ElfSize
             << ") failed (out of memory) for the patched output copy.\n";
       return AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES;

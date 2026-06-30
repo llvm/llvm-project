@@ -26,6 +26,7 @@
 #include "llvm/MC/MCParser/MCAsmParser.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
 #include "llvm/MC/MCStreamer.h"
+#include "llvm/MC/MCTargetOptions.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
 
@@ -136,10 +137,8 @@ static SmallVector<uint8_t> encodeMCInst(const MCInst &Inst,
 
 /// Run the AMDGPU asm parser over \p AsmStr and return the captured MCInsts.
 /// Used by assembleSingleInst() for the full parse-and-encode path, and by
-/// initLLVM() / resolveOpcodeViaParse() to pick subtarget-specific opcodes
-/// (e.g. s_branch, s_nop) without hardcoding opcode numbers or doing fragile
-/// case-insensitive name matching over `MCInstrInfo::getName` (which returns
-/// enum-style names such as `S_BRANCH_gfx12`, not the assembly mnemonic).
+/// initLLVM() / resolveOpcodeViaParse() for instructions where parsing the
+/// assembly mnemonic is the least fragile way to pick the target opcode.
 static SmallVector<MCInst, 2> parseAsmToMCInsts(StringRef AsmStr,
                                                 const LLVMState &S) {
   S.Ctx->reset();
@@ -194,6 +193,20 @@ static unsigned resolveOpcodeViaParse(StringRef AsmSnippet,
   if (Parsed.size() != 1)
     return S.MCII->getNumOpcodes();
   return Parsed[0].getOpcode();
+}
+
+static bool resolveRequiredOpcodeViaParse(StringRef AsmSnippet,
+                                          StringRef AssemblyName,
+                                          const LLVMState &S,
+                                          unsigned &OutOpcode) {
+  OutOpcode = resolveOpcodeViaParse(AsmSnippet, S);
+  if (OutOpcode < S.MCII->getNumOpcodes())
+    return true;
+
+  log() << "hotswap: error: initLLVM: failed to resolve '" << AssemblyName
+        << "' opcode via asm parser for CPU '" << S.Cpu << "' using asm:\n"
+        << "    " << AsmSnippet << "\n";
+  return false;
 }
 
 // -- LLVM MC target init ------------------------------------------------------
@@ -312,6 +325,22 @@ LLVMState initLLVM(const TargetIdentifier &TI) {
   }
   S.VNopInst = VNopInsts[0];
 
+  if (!resolveRequiredOpcodeViaParse("global_wb", "global_wb", S,
+                                     S.GlobalWbOpcode))
+    return S;
+  if (!resolveRequiredOpcodeViaParse("s_get_pc_i64 s[0:1]", "s_get_pc_i64", S,
+                                     S.SGetPcI64Opcode))
+    return S;
+  if (!resolveRequiredOpcodeViaParse("s_add_u32 s0, s0, 0", "s_add_u32", S,
+                                     S.SAddU32Opcode))
+    return S;
+  if (!resolveRequiredOpcodeViaParse("s_addc_u32 s1, s1, 0", "s_addc_u32", S,
+                                     S.SAddcU32Opcode))
+    return S;
+  if (!resolveRequiredOpcodeViaParse("s_set_pc_i64 s[0:1]", "s_set_pc_i64", S,
+                                     S.SSetPcI64Opcode))
+    return S;
+
   S.Valid = true;
   return S;
 }
@@ -379,16 +408,17 @@ bool decodeTextSection(const uint8_t *Text, uint64_t TextSize,
       DI.Mnemonic = UnknownMnemonic.str();
     } else {
       DI.Size = static_cast<uint32_t>(InstSize);
-      // MCInstPrinter::getMnemonic returns a pointer into the tblgen-generated
-      // AsmStrs table (see AMDGPUGenAsmWriter.inc). Storage is process-
-      // lifetime static; the trailing whitespace baked into AsmStrs must be
-      // trimmed. Falls back to MCII->getName for targets that leave it null.
+      // MCInstPrinter::getMnemonic returns a pointer into the generated AsmStrs
+      // table. Storage is process-lifetime static; the trailing whitespace
+      // baked into AsmStrs must be trimmed. If the printer cannot provide an
+      // assembly mnemonic, leave the instruction unmatchable instead of falling
+      // back to TableGen opcode names.
       if (S.MCIP) {
         std::pair<const char *, uint64_t> Mnem = S.MCIP->getMnemonic(DI.Inst);
         DI.Mnemonic = Mnem.first ? StringRef(Mnem.first).rtrim().str()
-                                 : S.MCII->getName(DI.Inst.getOpcode()).str();
+                                 : UnknownMnemonic.str();
       } else {
-        DI.Mnemonic = S.MCII->getName(DI.Inst.getOpcode()).str();
+        DI.Mnemonic = UnknownMnemonic.str();
       }
     }
     Pos += DI.Size;

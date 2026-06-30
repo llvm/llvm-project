@@ -15,8 +15,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "comgr-hotswap-internal.h"
+#include "comgr-test-elf-utils.h"
 #include "comgr.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Support/TargetSelect.h"
 #include "gtest/gtest.h"
 
@@ -229,6 +232,60 @@ static llvm::MCInst assembleOne(llvm::StringRef Asm, const LLVMState &S) {
   return Decoded.empty() ? llvm::MCInst() : Decoded[0].Inst;
 }
 
+static void expectSameOperands(const llvm::MCInst &Actual,
+                               const llvm::MCInst &Expected,
+                               llvm::StringRef Context) {
+  EXPECT_EQ(Actual.getOpcode(), Expected.getOpcode()) << Context.str();
+  ASSERT_EQ(Actual.getNumOperands(), Expected.getNumOperands())
+      << Context.str();
+  for (unsigned I = 0, E = Actual.getNumOperands(); I != E; ++I) {
+    const llvm::MCOperand &ActualOp = Actual.getOperand(I);
+    const llvm::MCOperand &ExpectedOp = Expected.getOperand(I);
+    EXPECT_EQ(ActualOp.isReg(), ExpectedOp.isReg())
+        << Context.str() << " operand " << I;
+    EXPECT_EQ(ActualOp.isImm(), ExpectedOp.isImm())
+        << Context.str() << " operand " << I;
+    EXPECT_EQ(ActualOp.isSFPImm(), ExpectedOp.isSFPImm())
+        << Context.str() << " operand " << I;
+    EXPECT_EQ(ActualOp.isDFPImm(), ExpectedOp.isDFPImm())
+        << Context.str() << " operand " << I;
+    EXPECT_EQ(ActualOp.isExpr(), ExpectedOp.isExpr())
+        << Context.str() << " operand " << I;
+    if (ExpectedOp.isReg()) {
+      EXPECT_EQ(ActualOp.getReg(), ExpectedOp.getReg())
+          << Context.str() << " operand " << I;
+    } else if (ExpectedOp.isImm()) {
+      EXPECT_EQ(ActualOp.getImm(), ExpectedOp.getImm())
+          << Context.str() << " operand " << I;
+    } else if (ExpectedOp.isSFPImm()) {
+      EXPECT_EQ(ActualOp.getSFPImm(), ExpectedOp.getSFPImm())
+          << Context.str() << " operand " << I;
+    } else if (ExpectedOp.isDFPImm()) {
+      EXPECT_EQ(ActualOp.getDFPImm(), ExpectedOp.getDFPImm())
+          << Context.str() << " operand " << I;
+    }
+  }
+}
+
+static void expectInstMatchesAsm(const llvm::MCInst &Actual,
+                                 llvm::StringRef Asm,
+                                 const LLVMState &S) {
+  llvm::MCInst Expected = assembleOne(Asm, S);
+  expectSameOperands(Actual, Expected, Asm);
+}
+
+static bool appendSingleInstBytes(llvm::SmallVectorImpl<uint8_t> &Bytes,
+                                  llvm::StringRef Asm,
+                                  const LLVMState &S) {
+  llvm::SmallVector<uint8_t> Inst = assembleSingleInst(Asm, S);
+  if (Inst.empty()) {
+    ADD_FAILURE() << "failed to assemble: " << Asm.str();
+    return false;
+  }
+  Bytes.append(Inst.begin(), Inst.end());
+  return true;
+}
+
 TEST(CheckVgprOverlap, DetectsDirectOverlap) {
   LLVMState S = initLLVM(makeGfx1250Ident());
   ASSERT_TRUE(S.Valid);
@@ -295,72 +352,288 @@ TEST(BuildTrampoline, EmptyOnBadAsm) {
   EXPECT_TRUE(T.Bytes.empty());
 }
 
+// -- buildKernelEntryTrampoline -----------------------------------------------
+
+TEST(BuildKernelEntryTrampoline, BuildsRecognizedPcRelativeStub) {
+  LLVMState S = initLLVM(makeGfx1250Ident());
+  ASSERT_TRUE(S.Valid);
+
+  constexpr uint64_t StubVAddr = 0x200000;
+  constexpr uint64_t EntryVAddr = 0x10100;
+  llvm::SmallVector<uint8_t> GlobalWb = assembleSingleInst("global_wb", S);
+  ASSERT_EQ(GlobalWb.size(), 3 * MinInstSize);
+
+  llvm::SmallVector<uint8_t> Bytes =
+      buildKernelEntryTrampoline(StubVAddr, EntryVAddr, /*ScratchSgpr=*/8, S);
+
+  ASSERT_EQ(Bytes.size(), KernelEntryStubStride);
+  EXPECT_TRUE(isKernelEntryTrampoline(Bytes, S));
+
+  std::vector<InternalDecodedInst> Decoded;
+  ASSERT_TRUE(decodeTextSection(Bytes.data(), Bytes.size(), S, Decoded));
+  ASSERT_GE(Decoded.size(), 6u);
+  EXPECT_EQ(Decoded[0].Inst.getOpcode(), S.GlobalWbOpcode);
+  EXPECT_EQ(Decoded[1].Inst.getOpcode(), S.VNopInst.getOpcode());
+  EXPECT_EQ(Decoded[2].Inst.getOpcode(), S.SGetPcI64Opcode);
+  EXPECT_EQ(Decoded[3].Inst.getOpcode(), S.SAddU32Opcode);
+  EXPECT_EQ(Decoded[4].Inst.getOpcode(), S.SAddcU32Opcode);
+  EXPECT_EQ(Decoded[5].Inst.getOpcode(), S.SSetPcI64Opcode);
+
+  const uint64_t PcBase = StubVAddr + Decoded[2].Offset + Decoded[2].Size;
+  const uint64_t Delta = EntryVAddr - PcBase;
+  const uint32_t Lo = static_cast<uint32_t>(Delta);
+  const uint32_t Hi = static_cast<uint32_t>(Delta >> 32);
+  expectInstMatchesAsm(Decoded[0].Inst, "global_wb", S);
+  expectInstMatchesAsm(Decoded[1].Inst, "v_nop", S);
+  expectInstMatchesAsm(Decoded[2].Inst, "s_get_pc_i64 s[8:9]", S);
+  expectInstMatchesAsm(
+      Decoded[3].Inst,
+      (llvm::Twine("s_add_u32 s8, s8, 0x") + llvm::utohexstr(Lo)).str(), S);
+  expectInstMatchesAsm(
+      Decoded[4].Inst,
+      (llvm::Twine("s_addc_u32 s9, s9, 0x") + llvm::utohexstr(Hi)).str(), S);
+  expectInstMatchesAsm(Decoded[5].Inst, "s_set_pc_i64 s[8:9]", S);
+}
+
+TEST(BuildKernelEntryTrampoline, MatcherRejectsNonStubBytes) {
+  LLVMState S = initLLVM(makeGfx1250Ident());
+  ASSERT_TRUE(S.Valid);
+
+  std::vector<uint8_t> Bytes(KernelEntryStubStride, 0);
+  for (size_t I = 0; I < Bytes.size(); I += MinInstSize)
+    std::memcpy(Bytes.data() + I, S.SNopBytes.data(), MinInstSize);
+
+  EXPECT_FALSE(isKernelEntryTrampoline(Bytes, S));
+}
+
+TEST(BuildKernelEntryTrampoline, MatcherRejectsWrongOperandShape) {
+  LLVMState S = initLLVM(makeGfx1250Ident());
+  ASSERT_TRUE(S.Valid);
+
+  llvm::SmallVector<uint8_t> Bytes;
+  ASSERT_TRUE(appendSingleInstBytes(Bytes, "global_wb", S));
+  ASSERT_TRUE(appendSingleInstBytes(Bytes, "v_nop", S));
+  ASSERT_TRUE(appendSingleInstBytes(Bytes, "s_get_pc_i64 s[8:9]", S));
+  ASSERT_TRUE(appendSingleInstBytes(Bytes, "s_add_u32 s8, s8, 0", S));
+  ASSERT_TRUE(appendSingleInstBytes(Bytes, "s_addc_u32 s10, s10, 0", S));
+  ASSERT_TRUE(appendSingleInstBytes(Bytes, "s_set_pc_i64 s[8:9]", S));
+
+  llvm::SmallVector<uint8_t> CodeEnd = assembleSingleInst("s_code_end", S);
+  ASSERT_EQ(CodeEnd.size(), MinInstSize);
+  while (Bytes.size() < KernelEntryStubStride)
+    Bytes.append(CodeEnd.begin(), CodeEnd.end());
+  ASSERT_EQ(Bytes.size(), KernelEntryStubStride);
+
+  EXPECT_FALSE(isKernelEntryTrampoline(Bytes, S));
+}
+
+TEST(KernelEntryTrampoline, PreservesInstPrefSizeAndAddsPrefetchGuard) {
+  namespace hsa = llvm::amdhsa;
+
+  LLVMState S = initLLVM(makeGfx1250Ident());
+  ASSERT_TRUE(S.Valid);
+
+  llvm::SmallVector<uint8_t> Text = assembleSingleInst("s_endpgm", S);
+  ASSERT_EQ(Text.size(), MinInstSize);
+
+  uint32_t Rsrc3 = 0;
+  AMDHSA_BITS_SET(Rsrc3, hsa::COMPUTE_PGM_RSRC3_GFX12_PLUS_INST_PREF_SIZE, 7);
+  Rsrc3 |= hsa::COMPUTE_PGM_RSRC3_GFX12_PLUS_GLG_EN;
+  comgr_test::KernelDescriptorElfOptions Opts;
+  Opts.ComputePgmRsrc3 = Rsrc3;
+  comgr_test::KernelDescriptorElf Obj =
+      comgr_test::makeKernelDescriptorElf(Text, Opts);
+  llvm::Expected<ElfView> ViewOrErr =
+      ElfView::create(Obj.Bytes.data(), Obj.Bytes.size());
+  ASSERT_TRUE((bool)ViewOrErr) << llvm::toString(ViewOrErr.takeError());
+
+  uint8_t *Kd = ViewOrErr->findKernelDescriptor("kernel");
+  ASSERT_NE(Kd, nullptr);
+
+  std::vector<Trampoline> Growth;
+  std::vector<KernelEntryTrampolineFixup> Fixups;
+  std::optional<uint32_t> Count = appendKernelEntryTrampolines(
+      *ViewOrErr, S, /*MaxSgprs=*/106, Growth, Fixups);
+  ASSERT_TRUE(Count.has_value());
+  EXPECT_EQ(*Count, 1u);
+  ASSERT_EQ(Fixups.size(), 1u);
+
+  const uint64_t ExpectedGuard = computeKernelEntryPrefetchGuardBytes(7);
+  EXPECT_EQ(ExpectedGuard,
+            7u * KernelEntryInstPrefUnitBytes - KernelEntryStubStride);
+  ASSERT_FALSE(Growth.empty());
+  EXPECT_EQ(Growth.back().Bytes.size(), ExpectedGuard);
+
+  const uint64_t OldTextSize = ViewOrErr->textSize();
+  const uint64_t TextEndVAddr = ViewOrErr->textAddr() + OldTextSize;
+  const uint64_t ExpectedStubOffset =
+      ((TextEndVAddr + KernelEntryStubStride - 1) &
+       ~(KernelEntryStubStride - 1)) -
+      TextEndVAddr;
+  EXPECT_EQ(Fixups[0].StubTextOffset, ExpectedStubOffset);
+
+  uint64_t GrowthTotal = 0;
+  for (const Trampoline &T : Growth)
+    GrowthTotal += T.Bytes.size();
+  EXPECT_EQ(GrowthTotal,
+            ExpectedStubOffset + KernelEntryStubStride + ExpectedGuard);
+
+  std::unique_ptr<llvm::WritableMemoryBuffer> Out =
+      ViewOrErr->growWithTrampolines(Growth, S.SNopBytes);
+  ASSERT_NE(Out, nullptr);
+
+  ASSERT_TRUE(rewriteKernelEntryDescriptorOffsets(*Out, OldTextSize, Fixups));
+
+  uint8_t *OutData = reinterpret_cast<uint8_t *>(Out->getBufferStart());
+  llvm::Expected<ElfView> OutView =
+      ElfView::create(OutData, Out->getBufferSize());
+  ASSERT_TRUE((bool)OutView) << llvm::toString(OutView.takeError());
+
+  uint8_t *OutKd = OutView->findKernelDescriptor("kernel");
+  ASSERT_NE(OutKd, nullptr);
+  uint32_t OutRsrc3 = 0;
+  std::memcpy(&OutRsrc3,
+              OutKd + offsetof(hsa::kernel_descriptor_t, compute_pgm_rsrc3),
+              sizeof(OutRsrc3));
+  EXPECT_EQ(AMDHSA_BITS_GET(OutRsrc3,
+                            hsa::COMPUTE_PGM_RSRC3_GFX12_PLUS_INST_PREF_SIZE),
+            7u);
+  EXPECT_NE(OutRsrc3 & hsa::COMPUTE_PGM_RSRC3_GFX12_PLUS_GLG_EN, 0u);
+  EXPECT_EQ(Fixups[0].RequiredSgprs, 10u);
+  uint32_t OutRsrc1 = 0;
+  std::memcpy(&OutRsrc1,
+              OutKd + offsetof(hsa::kernel_descriptor_t, compute_pgm_rsrc1),
+              sizeof(OutRsrc1));
+  unsigned ReservedSgprs =
+      (AMDHSA_BITS_GET(OutRsrc1,
+                       hsa::COMPUTE_PGM_RSRC1_GRANULATED_WAVEFRONT_SGPR_COUNT) +
+       1) *
+      8;
+  EXPECT_GE(ReservedSgprs, Fixups[0].RequiredSgprs);
+
+  std::vector<KernelDescriptorInfo> KDs = OutView->kernelDescriptors();
+  ASSERT_EQ(KDs.size(), 1u);
+  std::optional<uint64_t> KdVAddr = OutView->getKernelDescriptorVAddr("kernel");
+  ASSERT_TRUE(KdVAddr.has_value());
+  const uint64_t StubVAddr =
+      ViewOrErr->textAddr() + OldTextSize + Fixups[0].StubTextOffset;
+  EXPECT_EQ(KDs[0].EntryOffset, static_cast<int64_t>(StubVAddr - *KdVAddr));
+}
+
+TEST(KernelEntryTrampoline, AlignsStubByVirtualAddress) {
+  LLVMState S = initLLVM(makeGfx1250Ident());
+  ASSERT_TRUE(S.Valid);
+
+  llvm::SmallVector<uint8_t> Text = assembleSingleInst("s_endpgm", S);
+  ASSERT_EQ(Text.size(), MinInstSize);
+
+  comgr_test::KernelDescriptorElfOptions Opts;
+  Opts.TextAddr = 0x1080;
+  comgr_test::KernelDescriptorElf Obj =
+      comgr_test::makeKernelDescriptorElf(Text, Opts);
+  llvm::Expected<ElfView> ViewOrErr =
+      ElfView::create(Obj.Bytes.data(), Obj.Bytes.size());
+  ASSERT_TRUE((bool)ViewOrErr) << llvm::toString(ViewOrErr.takeError());
+
+  std::vector<Trampoline> Growth;
+  std::vector<KernelEntryTrampolineFixup> Fixups;
+  std::optional<uint32_t> Count = appendKernelEntryTrampolines(
+      *ViewOrErr, S, /*MaxSgprs=*/106, Growth, Fixups);
+
+  ASSERT_TRUE(Count.has_value());
+  EXPECT_EQ(*Count, 1u);
+  ASSERT_EQ(Fixups.size(), 1u);
+  const uint64_t StubVAddr =
+      ViewOrErr->textAddr() + ViewOrErr->textSize() + Fixups[0].StubTextOffset;
+  EXPECT_EQ(StubVAddr % KernelEntryStubStride, 0u);
+  EXPECT_NE((ViewOrErr->textSize() + Fixups[0].StubTextOffset) %
+                KernelEntryStubStride,
+            0u);
+}
+
+TEST(KernelEntryTrampoline, AppendReturnsZeroWhenNoDescriptorsExist) {
+  LLVMState S = initLLVM(makeGfx1250Ident());
+  ASSERT_TRUE(S.Valid);
+
+  llvm::SmallVector<uint8_t> Text = assembleSingleInst("s_endpgm", S);
+  ASSERT_EQ(Text.size(), MinInstSize);
+
+  comgr_test::KernelDescriptorElfOptions Opts;
+  Opts.EmitKernelDescriptorSymbol = false;
+  comgr_test::KernelDescriptorElf Obj =
+      comgr_test::makeKernelDescriptorElf(Text, Opts);
+  llvm::Expected<ElfView> ViewOrErr =
+      ElfView::create(Obj.Bytes.data(), Obj.Bytes.size());
+  ASSERT_TRUE((bool)ViewOrErr) << llvm::toString(ViewOrErr.takeError());
+
+  std::vector<Trampoline> Growth;
+  std::vector<KernelEntryTrampolineFixup> Fixups;
+  std::optional<uint32_t> Count = appendKernelEntryTrampolines(
+      *ViewOrErr, S, /*MaxSgprs=*/106, Growth, Fixups);
+
+  ASSERT_TRUE(Count.has_value());
+  EXPECT_EQ(*Count, 0u);
+  EXPECT_TRUE(Growth.empty());
+  EXPECT_TRUE(Fixups.empty());
+}
+
+TEST(KernelEntryTrampoline, AppendFailsWithoutSgprScratchPair) {
+  LLVMState S = initLLVM(makeGfx1250Ident());
+  ASSERT_TRUE(S.Valid);
+
+  llvm::SmallVector<uint8_t> Text = assembleSingleInst("s_endpgm", S);
+  ASSERT_EQ(Text.size(), MinInstSize);
+
+  comgr_test::KernelDescriptorElfOptions Opts;
+  Opts.MetadataSgprCount = 105;
+  comgr_test::KernelDescriptorElf Obj =
+      comgr_test::makeKernelDescriptorElf(Text, Opts);
+  llvm::Expected<ElfView> ViewOrErr =
+      ElfView::create(Obj.Bytes.data(), Obj.Bytes.size());
+  ASSERT_TRUE((bool)ViewOrErr) << llvm::toString(ViewOrErr.takeError());
+
+  Trampoline Existing;
+  Existing.Bytes.assign(S.SNopBytes.begin(), S.SNopBytes.end());
+  std::vector<Trampoline> Growth;
+  Growth.push_back(Existing);
+  std::vector<KernelEntryTrampolineFixup> Fixups;
+  std::optional<uint32_t> Count = appendKernelEntryTrampolines(
+      *ViewOrErr, S, /*MaxSgprs=*/106, Growth, Fixups);
+
+  EXPECT_FALSE(Count.has_value());
+  ASSERT_EQ(Growth.size(), 1u);
+  EXPECT_EQ(llvm::ArrayRef<uint8_t>(Growth[0].Bytes),
+            llvm::ArrayRef<uint8_t>(Existing.Bytes));
+  EXPECT_TRUE(Fixups.empty());
+}
+
 // -- classifyWmmaNops ---------------------------------------------------------
 
-TEST(ClassifyWmmaNops, NonWmmaReturnsDefault) {
-  WmmaNopReq Req = classifyWmmaNops("v_add_f32");
-  EXPECT_EQ(Req.A0Nops, 4);
-  EXPECT_EQ(Req.B0Nops, 4);
-}
+TEST(ClassifyWmmaNops, CoversKnownMnemonics) {
+  struct Case {
+    llvm::StringLiteral Mnemonic;
+    int A0Nops;
+    int B0Nops;
+  };
+  const Case Cases[] = {
+      {"v_add_f32", 4, 4},
+      {"v_wmma_i32_16x16x32_iu8", 8, 4},
+      {"v_wmma_i32_16x16x64_iu4", 8, 4},
+      {"v_wmma_f32_16x16x128_f8f6f4", 1, 4},
+      {"v_wmma_f32_16x16x128_fp8_fp8", 3, 4},
+      {"v_wmma_f32_16x16x32_fp8_fp8", 1, 4},
+      {"v_wmma_f32_16x16x16_f16", 4, 4},
+      {"v_wmma_f32_16x16x16_bf16", 4, 4},
+      {"v_swmmac_i32_16x16x64_iu8", 8, 4},
+      {"v_wmma_f32_16x16x4_f32", 4, 4},
+      {"v_wmma_f16_something_iu8", 8, 4},
+  };
 
-TEST(ClassifyWmmaNops, IntegerWmmaReturns8) {
-  WmmaNopReq Req = classifyWmmaNops("v_wmma_i32_16x16x32_iu8");
-  EXPECT_EQ(Req.A0Nops, 8);
-  EXPECT_EQ(Req.B0Nops, 4);
-}
-
-TEST(ClassifyWmmaNops, Iu4Returns8) {
-  WmmaNopReq Req = classifyWmmaNops("v_wmma_i32_16x16x64_iu4");
-  EXPECT_EQ(Req.A0Nops, 8);
-  EXPECT_EQ(Req.B0Nops, 4);
-}
-
-TEST(ClassifyWmmaNops, F8f6f4Returns1) {
-  WmmaNopReq Req = classifyWmmaNops("v_wmma_f32_16x16x128_f8f6f4");
-  EXPECT_EQ(Req.A0Nops, 1);
-  EXPECT_EQ(Req.B0Nops, 4);
-}
-
-TEST(ClassifyWmmaNops, Fp8_16x16x128Returns3) {
-  WmmaNopReq Req = classifyWmmaNops("v_wmma_f32_16x16x128_fp8_fp8");
-  EXPECT_EQ(Req.A0Nops, 3);
-  EXPECT_EQ(Req.B0Nops, 4);
-}
-
-TEST(ClassifyWmmaNops, Fp8SmallReturns1) {
-  WmmaNopReq Req = classifyWmmaNops("v_wmma_f32_16x16x32_fp8_fp8");
-  EXPECT_EQ(Req.A0Nops, 1);
-  EXPECT_EQ(Req.B0Nops, 4);
-}
-
-TEST(ClassifyWmmaNops, F16Returns4) {
-  WmmaNopReq Req = classifyWmmaNops("v_wmma_f32_16x16x16_f16");
-  EXPECT_EQ(Req.A0Nops, 4);
-  EXPECT_EQ(Req.B0Nops, 4);
-}
-
-TEST(ClassifyWmmaNops, Bf16Returns4) {
-  WmmaNopReq Req = classifyWmmaNops("v_wmma_f32_16x16x16_bf16");
-  EXPECT_EQ(Req.A0Nops, 4);
-  EXPECT_EQ(Req.B0Nops, 4);
-}
-
-TEST(ClassifyWmmaNops, SwmmacIu8Returns8) {
-  WmmaNopReq Req = classifyWmmaNops("v_swmmac_i32_16x16x64_iu8");
-  EXPECT_EQ(Req.A0Nops, 8);
-  EXPECT_EQ(Req.B0Nops, 4);
-}
-
-TEST(ClassifyWmmaNops, F32WmmaFallsToDefault) {
-  WmmaNopReq Req = classifyWmmaNops("v_wmma_f32_16x16x4_f32");
-  EXPECT_EQ(Req.A0Nops, 4);
-  EXPECT_EQ(Req.B0Nops, 4);
-}
-
-TEST(ClassifyWmmaNops, OrderingMostRestrictiveWins) {
-  // A mnemonic containing both _iu8 and _f16 should return 8 (iu8 first)
-  WmmaNopReq Req = classifyWmmaNops("v_wmma_f16_something_iu8");
-  EXPECT_EQ(Req.A0Nops, 8);
+  for (const Case &C : Cases) {
+    WmmaNopReq Req = classifyWmmaNops(C.Mnemonic);
+    EXPECT_EQ(Req.A0Nops, C.A0Nops) << C.Mnemonic.str();
+    EXPECT_EQ(Req.B0Nops, C.B0Nops) << C.Mnemonic.str();
+  }
 }
 
 // -- patchScaleSrc2 -----------------------------------------------------------
@@ -505,8 +778,8 @@ TEST(HotswapPatchVTable, ProcessSingletonIdentityAndEagerInstall) {
 // Tests for the ds_load_addtid_b32 / ds_store_addtid_b32 trampoline patch
 // (DEGFXMI400-12025). Coverage is bottom-up: first that the encode/decode
 // of ADDTID instructions exposes the expected MCInst operand layout, then
-// that the trampoline replacement asm round-trips through the MC layer,
-// then that buildTrampoline integrates a full ADDTID body.
+// that buildTrampoline assembles and decodes a full ADDTID replacement body
+// plus its branch-back tail.
 
 namespace {
 
@@ -527,107 +800,53 @@ llvm::MCInst decodeOne(llvm::StringRef Asm, const LLVMState &S) {
   return Decoded.empty() ? llvm::MCInst() : Decoded[0].Inst;
 }
 
+void expectAddTidLayout(llvm::StringRef Asm, int64_t Offset,
+                        llvm::StringRef RegName, const LLVMState &S) {
+  llvm::MCInst Inst = decodeOne(Asm, S);
+  ASSERT_GE(Inst.getNumOperands(), 3u);
+
+  EXPECT_TRUE(Inst.getOperand(AddtidOpReg).isReg());
+  EXPECT_NE(Inst.getOperand(AddtidOpReg).getReg(), 0u);
+  EXPECT_TRUE(Inst.getOperand(AddtidOpOffset).isImm());
+  EXPECT_EQ(Inst.getOperand(AddtidOpOffset).getImm(), Offset);
+  EXPECT_TRUE(Inst.getOperand(AddtidOpGds).isImm());
+  EXPECT_EQ(Inst.getOperand(AddtidOpGds).getImm(), 0);
+
+  const char *N = S.MRI->getName(Inst.getOperand(AddtidOpReg).getReg());
+  ASSERT_NE(N, nullptr);
+  EXPECT_EQ(llvm::StringRef(N).str(), RegName.str());
+}
+
+void expectDecodedMnemonics(llvm::ArrayRef<InternalDecodedInst> Decoded,
+                            llvm::ArrayRef<llvm::StringRef> Expected) {
+  ASSERT_EQ(Decoded.size(), Expected.size());
+  for (size_t I = 0; I < Expected.size(); ++I)
+    EXPECT_EQ(Decoded[I].Mnemonic, Expected[I].str()) << "index " << I;
+}
+
+void expectDecodedBodyMatchesAsm(llvm::ArrayRef<InternalDecodedInst> Decoded,
+                                 llvm::ArrayRef<std::string> AsmLines,
+                                 const LLVMState &S) {
+  ASSERT_GE(Decoded.size(), AsmLines.size());
+  for (size_t I = 0; I < AsmLines.size(); ++I) {
+    llvm::MCInst Expected = decodeOne(AsmLines[I], S);
+    expectSameOperands(Decoded[I].Inst, Expected, AsmLines[I]);
+  }
+}
+
 } // namespace
 
-TEST(AddTid, LoadAddTidDecodesWithExpectedLayout) {
+TEST(AddTid, AddTidDecodesWithExpectedLayout) {
   LLVMState S = initLLVM(makeGfx1250Ident());
   ASSERT_TRUE(S.Valid);
-
-  llvm::MCInst Inst = decodeOne("ds_load_addtid_b32 v5 offset:128", S);
-  ASSERT_GE(Inst.getNumOperands(), 3u);
 
   // Direct operand access: register, then offset, then gds bit. No
   // print-and-parse round-trip -- production code uses the same operand
   // indices to reach the destination VGPR.
-  EXPECT_TRUE(Inst.getOperand(AddtidOpReg).isReg());
-  EXPECT_NE(Inst.getOperand(AddtidOpReg).getReg(), 0u);
-  EXPECT_TRUE(Inst.getOperand(AddtidOpOffset).isImm());
-  EXPECT_EQ(Inst.getOperand(AddtidOpOffset).getImm(), 128);
-  EXPECT_TRUE(Inst.getOperand(AddtidOpGds).isImm());
-  EXPECT_EQ(Inst.getOperand(AddtidOpGds).getImm(), 0);
-
   // Production code uses MRI.getName() to resolve the VGPR identifier
-  // ("VGPR5" for v5); pin that so a tablegen rename in upstream catches
-  // here rather than silently breaking the trampoline.
-  const char *N = S.MRI->getName(Inst.getOperand(AddtidOpReg).getReg());
-  ASSERT_NE(N, nullptr);
-  EXPECT_STREQ(N, "VGPR5");
-}
-
-TEST(AddTid, StoreAddTidDecodesWithExpectedLayout) {
-  LLVMState S = initLLVM(makeGfx1250Ident());
-  ASSERT_TRUE(S.Valid);
-
-  llvm::MCInst Inst = decodeOne("ds_store_addtid_b32 v10 offset:256", S);
-  ASSERT_GE(Inst.getNumOperands(), 3u);
-  EXPECT_TRUE(Inst.getOperand(AddtidOpReg).isReg());
-  EXPECT_NE(Inst.getOperand(AddtidOpReg).getReg(), 0u);
-  EXPECT_TRUE(Inst.getOperand(AddtidOpOffset).isImm());
-  EXPECT_EQ(Inst.getOperand(AddtidOpOffset).getImm(), 256);
-  EXPECT_TRUE(Inst.getOperand(AddtidOpGds).isImm());
-  EXPECT_EQ(Inst.getOperand(AddtidOpGds).getImm(), 0);
-
-  const char *N = S.MRI->getName(Inst.getOperand(AddtidOpReg).getReg());
-  ASSERT_NE(N, nullptr);
-  EXPECT_STREQ(N, "VGPR10");
-}
-
-TEST(AddTid, LoadTrampolineAsmAssemblesAndDecodes) {
-  LLVMState S = initLLVM(makeGfx1250Ident());
-  ASSERT_TRUE(S.Valid);
-
-  // Replacement asm for ds_load_addtid_b32 v7 offset:64.
-  // The v_and_b32 with 0xfffff masks M0 to the 20 bits that B0's DS unit
-  // would have read, keeping the rewrite bit-exact with B0 hardware
-  // regardless of stale bits in M0[31:20] on entry.
-  std::string Asm = "v_mbcnt_lo_u32_b32 v7, -1, 0\n"
-                    "v_mbcnt_hi_u32_b32 v7, -1, v7\n"
-                    "v_lshlrev_b32 v7, 2, v7\n"
-                    "v_add_nc_u32 v7, m0, v7\n"
-                    "v_and_b32 v7, 0xfffff, v7\n"
-                    "ds_load_b32 v7, v7 offset:64\n";
-
-  llvm::SmallVector<uint8_t> Bytes = assembleSingleInst(Asm, S);
-  ASSERT_FALSE(Bytes.empty());
-
-  std::vector<InternalDecodedInst> Decoded;
-  ASSERT_TRUE(decodeTextSection(Bytes.data(), Bytes.size(), S, Decoded));
-  ASSERT_EQ(Decoded.size(), 6u);
-  EXPECT_EQ(Decoded[0].Mnemonic, "v_mbcnt_lo_u32_b32");
-  EXPECT_EQ(Decoded[1].Mnemonic, "v_mbcnt_hi_u32_b32");
-  EXPECT_EQ(Decoded[2].Mnemonic, "v_lshlrev_b32");
-  EXPECT_EQ(Decoded[3].Mnemonic, "v_add_nc_u32");
-  EXPECT_EQ(Decoded[4].Mnemonic, "v_and_b32");
-  EXPECT_EQ(Decoded[5].Mnemonic, "ds_load_b32");
-}
-
-TEST(AddTid, StoreTrampolineAsmAssemblesAndDecodes) {
-  LLVMState S = initLLVM(makeGfx1250Ident());
-  ASSERT_TRUE(S.Valid);
-
-  // Replacement asm for ds_store_addtid_b32 v10 offset:0 with v42 as the
-  // address-compute scratch (the data VGPR v10 is not clobbered). The
-  // v_and_b32 with 0xfffff masks M0 to the 20-bit DS-unit width; see
-  // LoadTrampolineAsmAssemblesAndDecodes for the rationale.
-  std::string Asm = "v_mbcnt_lo_u32_b32 v42, -1, 0\n"
-                    "v_mbcnt_hi_u32_b32 v42, -1, v42\n"
-                    "v_lshlrev_b32 v42, 2, v42\n"
-                    "v_add_nc_u32 v42, m0, v42\n"
-                    "v_and_b32 v42, 0xfffff, v42\n"
-                    "ds_store_b32 v42, v10\n";
-
-  llvm::SmallVector<uint8_t> Bytes = assembleSingleInst(Asm, S);
-  ASSERT_FALSE(Bytes.empty());
-
-  std::vector<InternalDecodedInst> Decoded;
-  ASSERT_TRUE(decodeTextSection(Bytes.data(), Bytes.size(), S, Decoded));
-  ASSERT_EQ(Decoded.size(), 6u);
-  EXPECT_EQ(Decoded[0].Mnemonic, "v_mbcnt_lo_u32_b32");
-  EXPECT_EQ(Decoded[1].Mnemonic, "v_mbcnt_hi_u32_b32");
-  EXPECT_EQ(Decoded[2].Mnemonic, "v_lshlrev_b32");
-  EXPECT_EQ(Decoded[3].Mnemonic, "v_add_nc_u32");
-  EXPECT_EQ(Decoded[4].Mnemonic, "v_and_b32");
-  EXPECT_EQ(Decoded[5].Mnemonic, "ds_store_b32");
+  // ("VGPR5" for v5, etc.); pin that so a tablegen rename catches here.
+  expectAddTidLayout("ds_load_addtid_b32 v5 offset:128", 128, "VGPR5", S);
+  expectAddTidLayout("ds_store_addtid_b32 v10 offset:256", 256, "VGPR10", S);
 }
 
 TEST(AddTid, LoadTrampolineThroughBuildTrampoline) {
@@ -651,8 +870,15 @@ TEST(AddTid, LoadTrampolineThroughBuildTrampoline) {
   // 6 body instructions + 1 branch-back tail.
   std::vector<InternalDecodedInst> Decoded;
   ASSERT_TRUE(decodeTextSection(T.Bytes.data(), T.Bytes.size(), S, Decoded));
-  ASSERT_EQ(Decoded.size(), 7u);
-  EXPECT_EQ(Decoded[6].Mnemonic, "s_branch");
+  const llvm::StringRef Expected[] = {"v_mbcnt_lo_u32_b32",
+                                      "v_mbcnt_hi_u32_b32",
+                                      "v_lshlrev_b32",
+                                      "v_add_nc_u32",
+                                      "v_and_b32",
+                                      "ds_load_b32",
+                                      "s_branch"};
+  expectDecodedMnemonics(Decoded, Expected);
+  expectDecodedBodyMatchesAsm(Decoded, AsmLines, S);
 }
 
 TEST(AddTid, StoreTrampolineThroughBuildTrampoline) {
@@ -681,8 +907,13 @@ TEST(AddTid, StoreTrampolineThroughBuildTrampoline) {
   // 6 body instructions + 1 branch-back tail, matching the load variant.
   std::vector<InternalDecodedInst> Decoded;
   ASSERT_TRUE(decodeTextSection(T.Bytes.data(), T.Bytes.size(), S, Decoded));
-  ASSERT_EQ(Decoded.size(), 7u);
-  EXPECT_EQ(Decoded[0].Mnemonic, "v_mbcnt_lo_u32_b32");
-  EXPECT_EQ(Decoded[5].Mnemonic, "ds_store_b32");
-  EXPECT_EQ(Decoded[6].Mnemonic, "s_branch");
+  const llvm::StringRef Expected[] = {"v_mbcnt_lo_u32_b32",
+                                      "v_mbcnt_hi_u32_b32",
+                                      "v_lshlrev_b32",
+                                      "v_add_nc_u32",
+                                      "v_and_b32",
+                                      "ds_store_b32",
+                                      "s_branch"};
+  expectDecodedMnemonics(Decoded, Expected);
+  expectDecodedBodyMatchesAsm(Decoded, AsmLines, S);
 }
