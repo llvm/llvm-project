@@ -878,8 +878,12 @@ Error write(DWPWriter &Out, ArrayRef<std::string> Inputs,
               return createFileError(Input, EID.takeError());
             const auto &ID = *EID;
             auto P = IndexEntries.insert(std::make_pair(ID.Signature, Entry));
-            if (!P.second)
-              return buildDuplicateError(*P.first, ID, "");
+            if (!P.second) {
+              WithColor::defaultWarningHandler(
+                  buildDuplicateError(*P.first, ID, ""));
+              FoundCUUnit = true;
+              continue;
+            }
             P.first->second.Name = ID.Name;
             P.first->second.DWOName = ID.DWOName;
 
@@ -950,8 +954,11 @@ Error write(DWPWriter &Out, ArrayRef<std::string> Inputs,
       if (!EID)
         return createFileError(Input, EID.takeError());
       const auto &ID = *EID;
-      if (!P.second)
-        return buildDuplicateError(*P.first, ID, Input);
+      if (!P.second) {
+        WithColor::defaultWarningHandler(
+            buildDuplicateError(*P.first, ID, Input));
+        continue;
+      }
       auto &NewEntry = P.first->second;
       NewEntry.Name = ID.Name;
       NewEntry.DWOName = ID.DWOName;
