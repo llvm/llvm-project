@@ -1180,7 +1180,10 @@ void InputSection::relocateNonAlloc(Ctx &ctx, uint8_t *buf,
     // against _GLOBAL_OFFSET_TABLE_ for .debug_info. The bug has been fixed in
     // 2017 (https://gcc.gnu.org/bugzilla/show_bug.cgi?id=82630), but we need to
     // keep this bug-compatible code for a while.
-    bool isErr = expr != R_PC && !(emachine == EM_386 && type == R_386_GOTPC);
+    // R_PC and R_PLT_PC are both PC-relative, so allow them with warnings.
+    // R_PLT_PC can occur when we promote R_X86_64_PC32 for call/jmp instructions.
+    bool isErr = expr != R_PC && expr != R_PLT_PC &&
+                 !(emachine == EM_386 && type == R_386_GOTPC);
     {
       ELFSyncStream diag(ctx, isErr && !ctx.arg.noinhibitExec
                                   ? DiagLevel::Err
