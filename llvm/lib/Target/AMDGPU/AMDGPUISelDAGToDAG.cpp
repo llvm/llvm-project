@@ -4761,6 +4761,18 @@ void AMDGPUDAGToDAGISel::PostprocessISelDAG() {
   } while (IsModified);
 }
 
+bool AMDGPUDAGToDAGISel::SelectInlineAsmMemoryOperand(
+    const SDValue &Op, InlineAsm::ConstraintCode ConstraintID,
+    std::vector<SDValue> &OutOps) {
+  switch (ConstraintID) {
+  case InlineAsm::ConstraintCode::m:
+    OutOps.push_back(Op);
+    return false;
+  default:
+    return true;
+  }
+}
+
 AMDGPUDAGToDAGISelLegacy::AMDGPUDAGToDAGISelLegacy(TargetMachine &TM,
                                                    CodeGenOptLevel OptLevel)
     : SelectionDAGISelLegacy(

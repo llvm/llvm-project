@@ -19454,15 +19454,27 @@ SITargetLowering::getConstraintType(StringRef Constraint) const {
     case 'v':
     case 'a':
       return C_RegisterClass;
+    case 'm':
+      return C_Memory;
     }
   } else if (Constraint.size() == 2) {
     if (Constraint == "VA")
       return C_RegisterClass;
+    if (Constraint == "RF")
+      return C_Memory;
   }
   if (isImmConstraint(Constraint)) {
     return C_Other;
   }
   return TargetLowering::getConstraintType(Constraint);
+}
+
+InlineAsm::ConstraintCode
+SITargetLowering::getInlineAsmMemConstraint(StringRef ConstraintCode) const {
+  if (ConstraintCode == "RF")
+    return InlineAsm::ConstraintCode::m;
+
+  return TargetLowering::getInlineAsmMemConstraint(ConstraintCode);
 }
 
 static uint64_t clearUnusedBits(uint64_t Val, unsigned Size) {
