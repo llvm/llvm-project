@@ -1,5 +1,6 @@
-! RUN: %flang_fc1 -emit-llvm -fopenmp -o - -x f95 %s | FileCheck %s
-! XFAIL: *
+! REQUIRES: amdgpu-registered-target
+! RUN: %flang_fc1 -triple amdgcn-amd-amdhsa -emit-hlfir -fopenmp -fopenmp-is-target-device -o - %s | FileCheck %s
+
 subroutine foo(state,ilast,jlast,vals)
   real, intent(in) :: state(:,:)
   integer, intent(in) :: ilast, jlast
@@ -20,8 +21,13 @@ subroutine foo(state,ilast,jlast,vals)
   !$omp end target teams distribute parallel do
 end subroutine foo
 
-! Ensure that we do not generate a call to malloc
-!CHECK-LABEL: omp.private.init:
-!CHECK-NOT:   call {{.*}} @malloc
-!CHECK:       br label
+! Ensure that won't use heap allocations as part of the privatizer or anywhere
+! inside of the function.
 
+! CHECK: omp.private {type = private} @[[PRIVATIZER:.*]] : !fir.box<!fir.array<4xf32>> init {
+! CHECK-NOT: fir.allocmem
+! CHECK: omp.yield
+
+! CHECK: func.func @{{.*}}foo
+! CHECK-NOT: fir.allocmem
+! CHECK: return
