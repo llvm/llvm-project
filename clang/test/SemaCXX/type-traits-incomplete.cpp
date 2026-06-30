@@ -12,3 +12,9 @@ void f() {
   __is_trivially_relocatable(S); // expected-error{{incomplete type 'S' used in type trait expression}}
   __is_trivially_relocatable(S[]); // expected-error{{incomplete type 'S' used in type trait expression}}
 }
+
+struct NoConv;
+struct Bad;
+
+constexpr bool a = __reference_constructs_from_temporary(S, NoConv&&); // expected-error{{incomplete type 'Bad' used in type trait expression}}
+
