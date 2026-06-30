@@ -25,18 +25,8 @@ def Bufferization_TensorLikeTypeInterface
 
   let methods = [
     InterfaceMethod<[{
-        Returns a BufferLike type for this TensorLike type.
-      }],
-      /*retTy=*/"::mlir::FailureOr<::mlir::bufferization::BufferLikeType>",
-      /*methodName=*/"getBufferType",
-      /*args=*/(ins
-        "const ::mlir::bufferization::BufferizationOptions &":$options,
-        "::llvm::function_ref<::mlir::InFlightDiagnostic()>":$emitError
-      )
-    >,
-    InterfaceMethod<[{
         Returns whether a BufferLike type is compatible to this TensorLike type.
-        The BufferLike type is assumed to be created by getBufferType().
+        The BufferLike type is assumed to be created by unknown type converter.
       }],
       /*retTy=*/"::mlir::LogicalResult",
       /*methodName=*/"verifyCompatibleBufferType",

@@ -16,7 +16,7 @@ body:             |
 
 # CHECK-LABEL: MachineUniformityInfo for function:  @inlineasm_v
 # CHECK-LABEL: BLOCK bb.0
-# CHECK-NOT: DIVERGENT: %0: INLINEASM
+# CHECK: DIVERGENT: %0: INLINEASM
 ---
 name:            inlineasm_v
 tracksRegLiveness: true
@@ -30,7 +30,7 @@ body:             |
 # CHECK-LABEL: MachineUniformityInfo for function:  @inlineasm_sv
 # CHECK-LABEL: BLOCK bb.0
 # CHECK-NOT: DIVERGENT: %0: INLINEASM
-# CHECK-NOT: DIVERGENT: %1: INLINEASM
+# CHECK: DIVERGENT: %1: INLINEASM
 ---
 name:            inlineasm_sv
 tracksRegLiveness: true
@@ -45,7 +45,7 @@ body:             |
 # CHECK-LABEL: MachineUniformityInfo for function:  @inlineasm_svs
 # CHECK-LABEL: BLOCK bb.0
 # CHECK-NOT: DIVERGENT: %0: INLINEASM
-# CHECK-NOT: DIVERGENT: %1: INLINEASM
+# CHECK: DIVERGENT: %1: INLINEASM
 # CHECK-NOT: DIVERGENT: %2: INLINEASM
 ---
 name:            inlineasm_svs

@@ -52,6 +52,17 @@ add_dependencies(lldb
   ${tablegen_deps}
 )
 
+# lldbHost and lldbUtility are also statically linked into liblldb.so, so any
+# state they carry exists in two independent copies. On ELF platforms this
+# creates an interposition hazard: when liblldb.so exports a symbol from those
+# archives (e.g. for dynamic plugin loading), the dynamic linker can resolve
+# it to lldb's copy instead of liblldb.so's, breaking shared-state assumptions.
+# --exclude-libs,ALL keeps archive symbols out of lldb's .dynsym, eliminating
+# the hazard without affecting the executable's own use of those symbols.
+if(UNIX AND NOT APPLE)
+  target_link_options(lldb PRIVATE "LINKER:--exclude-libs,ALL")
+endif()
+
 if(LLDB_BUILD_FRAMEWORK)
   # In the build-tree, we know the exact path to the framework directory.
   # The installed framework can be in different locations.

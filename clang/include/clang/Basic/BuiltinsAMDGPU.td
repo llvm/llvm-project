@@ -281,12 +281,27 @@ def __builtin_amdgcn_struct_ptr_buffer_load_lds : AMDGPUBuiltin<"void(__amdgpu_b
 def __builtin_amdgcn_struct_ptr_buffer_load_async_lds : AMDGPUBuiltin<"void(__amdgpu_buffer_rsrc_t, void address_space<3> *, _Constant unsigned int, int, int, int, _Constant int, _Constant int)", [], "vmem-to-lds-load-insts">;
 
 //===----------------------------------------------------------------------===//
+// Global Available/Visible memory accesses.
+//===----------------------------------------------------------------------===//
+
+def __builtin_amdgcn_av_load_b128
+    : AMDGPUBuiltin<"_ExtVector<4, unsigned int>(_ExtVector<4, unsigned int> *, int)", [], "flat-global-insts"> {
+  let Documentation = [DocAVLoadB128];
+  let ArgNames = ["ptr", "scope"];
+}
+def __builtin_amdgcn_av_store_b128
+    : AMDGPUBuiltin<"void(_ExtVector<4, unsigned int> *, _ExtVector<4, unsigned int>, int)", [], "flat-global-insts"> {
+  let Documentation = [DocAVStoreB128];
+  let ArgNames = ["ptr", "data", "scope"];
+}
+
+//===----------------------------------------------------------------------===//
 // Async mark builtins.
 //===----------------------------------------------------------------------===//
 
-// FIXME: Not supported on GFX12 yet. Will need a new feature when we do.
-def __builtin_amdgcn_asyncmark : AMDGPUBuiltin<"void()", [], "vmem-to-lds-load-insts">;
-def __builtin_amdgcn_wait_asyncmark : AMDGPUBuiltin<"void(_Constant unsigned short)", [], "vmem-to-lds-load-insts">;
+// Mirrors GCNSubtarget::hasAsyncMark()
+def __builtin_amdgcn_asyncmark : AMDGPUBuiltin<"void()", [], "vmem-to-lds-load-insts|asynccnt">;
+def __builtin_amdgcn_wait_asyncmark : AMDGPUBuiltin<"void(_Constant unsigned short)", [], "vmem-to-lds-load-insts|asynccnt">;
 
 //===----------------------------------------------------------------------===//
 // Ballot builtins.
@@ -363,6 +378,10 @@ def __builtin_amdgcn_perm : AMDGPUBuiltin<"unsigned int(unsigned int, unsigned i
 //===----------------------------------------------------------------------===//
 
 def __builtin_amdgcn_fmed3h : AMDGPUBuiltin<"__fp16(__fp16, __fp16, __fp16)", [Const], "gfx9-insts">;
+def __builtin_amdgcn_s_bitreplicate : AMDGPUBuiltin<"uint64_t(unsigned int)", [Const], "gfx9-insts"> {
+  let Documentation = [DocSBitReplicate];
+  let ArgNames = ["src"];
+}
 
 def __builtin_amdgcn_global_atomic_fadd_f64 : AMDGPUBuiltin<"double(double address_space<1> *, double)", [], "gfx90a-insts">;
 def __builtin_amdgcn_global_atomic_fadd_f32 : AMDGPUBuiltin<"float(float address_space<1> *, float)", [], "atomic-fadd-rtn-insts">;
@@ -1208,6 +1227,12 @@ def __builtin_amdgcn_swmmac_f16_16x16x128_bf8_bf8 : AMDGPUBuiltin<"_ExtVector<8,
 def __builtin_amdgcn_swmmac_i32_16x16x128_iu8 : AMDGPUBuiltin<"_ExtVector<8, int>(_Constant bool, _ExtVector<8, int>, _Constant bool, _ExtVector<16, int>, _ExtVector<8, int>, _ExtVector<2, int>, _Constant bool, _Constant bool, ...)", [Const], "swmmac-gfx1250-insts,wavefrontsize32">;
 def __builtin_amdgcn_swmmac_f32_16x16x64_f16 : AMDGPUBuiltin<"_ExtVector<8, float>(_Constant bool, _ExtVector<16, _Float16>, _Constant bool, _ExtVector<32, _Float16>, _ExtVector<8, float>, int, _Constant bool, _Constant bool)", [Const], "swmmac-gfx1250-insts,wavefrontsize32">;
 def __builtin_amdgcn_swmmac_f16_16x16x64_f16 : AMDGPUBuiltin<"_ExtVector<8, _Float16>(_Constant bool, _ExtVector<16, _Float16>, _Constant bool, _ExtVector<32, _Float16>, _ExtVector<8, _Float16>, int, _Constant bool, _Constant bool)", [Const], "swmmac-gfx1250-insts,wavefrontsize32">;
+
+// GFX1251 WMMA builtins
+def __builtin_amdgcn_wmma_f64_16x16x4_f64 : AMDGPUBuiltin<"_ExtVector<8, double>(_Constant bool, _ExtVector<2, double>, _Constant bool, _ExtVector<2, double>, _Constant short, _ExtVector<8, double>, _Constant bool, _Constant bool)", [Const], "gfx1251-gemm-insts,wavefrontsize32"> {
+  let Documentation = [DocWMMA_f64_16x16x4_f64_GFX1251];
+  let ArgNames = ["a_neg", "a", "b_neg", "b", "c_mod", "c", "matrix_a_reuse", "matrix_b_reuse"];
+}
 
 // GFX12.5 128B cooperative atomics
 def __builtin_amdgcn_cooperative_atomic_load_32x4B : AMDGPUBuiltin<"int(int *, _Constant int, char const *)", [Const], "gfx1250-insts,wavefrontsize32">;

@@ -23,15 +23,18 @@ using namespace clang;
 using namespace clang::interp;
 
 template <typename T> static constexpr bool needsCtor() {
-  if constexpr (std::is_same_v<T, Integral<8, true>> ||
-                std::is_same_v<T, Integral<8, false>> ||
+  if constexpr (std::is_same_v<T, Char<true>> ||
+                std::is_same_v<T, Char<false>> ||
                 std::is_same_v<T, Integral<16, true>> ||
                 std::is_same_v<T, Integral<16, false>> ||
                 std::is_same_v<T, Integral<32, true>> ||
                 std::is_same_v<T, Integral<32, false>> ||
                 std::is_same_v<T, Integral<64, true>> ||
                 std::is_same_v<T, Integral<64, false>> ||
-                std::is_same_v<T, Boolean>)
+                std::is_same_v<T, Integral<64, false>> ||
+                std::is_same_v<T, IntegralAP<false>> ||
+                std::is_same_v<T, IntegralAP<true>> ||
+                std::is_same_v<T, Floating> || std::is_same_v<T, Boolean>)
     return false;
 
   return true;
@@ -243,12 +246,6 @@ static bool needsRecordDtor(const Record *R) {
 
 static BlockCtorFn getCtorPrim(PrimType T) {
   switch (T) {
-  case PT_Float:
-    return ctorTy<PrimConv<PT_Float>::T>;
-  case PT_IntAP:
-    return ctorTy<PrimConv<PT_IntAP>::T>;
-  case PT_IntAPS:
-    return ctorTy<PrimConv<PT_IntAPS>::T>;
   case PT_Ptr:
     return ctorTy<PrimConv<PT_Ptr>::T>;
   case PT_MemberPtr:
@@ -261,12 +258,6 @@ static BlockCtorFn getCtorPrim(PrimType T) {
 
 static BlockDtorFn getDtorPrim(PrimType T) {
   switch (T) {
-  case PT_Float:
-    return dtorTy<PrimConv<PT_Float>::T>;
-  case PT_IntAP:
-    return dtorTy<PrimConv<PT_IntAP>::T>;
-  case PT_IntAPS:
-    return dtorTy<PrimConv<PT_IntAPS>::T>;
   case PT_Ptr:
     return dtorTy<PrimConv<PT_Ptr>::T>;
   case PT_MemberPtr:
@@ -278,7 +269,8 @@ static BlockDtorFn getDtorPrim(PrimType T) {
 }
 
 static BlockCtorFn getCtorArrayPrim(PrimType Type) {
-  TYPE_SWITCH(Type, return ctorArrayTy<T>);
+  TYPE_SWITCH(Type, if constexpr (!needsCtor<T>()) return nullptr;
+              return ctorArrayTy<T>);
   llvm_unreachable("unknown Expr");
 }
 
@@ -410,7 +402,26 @@ QualType Descriptor::getType() const {
 
 QualType Descriptor::getElemQualType() const {
   assert(isArray());
-  QualType T = getType();
+  QualType T;
+
+  if (SourceType) {
+    T = QualType(SourceType, 0);
+  } else if (const auto *TDecl = dyn_cast_if_present<TypeDecl>(asDecl())) {
+    T = TDecl->getASTContext().getTypeDeclType(TDecl);
+  } else if (isRecord()) {
+    const RecordDecl *RD = ElemRecord->getDecl();
+    T = RD->getASTContext().getTagType(ElaboratedTypeKeyword::None,
+                                       std::nullopt, RD, false);
+    if (IsConst)
+      T.addConst();
+  } else if (const auto *E = asExpr()) {
+    T = E->getType();
+  } else if (const auto *D = asValueDecl()) {
+    T = D->getType();
+  }
+
+  assert(!T.isNull());
+
   if (const auto *AT = T->getAs<AtomicType>())
     T = AT->getValueType();
   if (T->isPointerOrReferenceType())

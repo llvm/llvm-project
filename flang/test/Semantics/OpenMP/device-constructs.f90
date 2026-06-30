@@ -24,14 +24,14 @@ program main
   enddo
   !$omp end target
 
-  !ERROR: At most one DEVICE clause can appear on the TARGET directive
+  !ERROR: At most one DEVICE clause can appear on TARGET directive
   !$omp target device(0) device(1)
   do i = 1, N
      a = 3.14d0
   enddo
   !$omp end target
 
-  !ERROR: SCHEDULE clause is not allowed on the TARGET directive
+  !ERROR: SCHEDULE clause is not allowed on TARGET directive
   !$omp target schedule(static)
   do i = 1, N
      a = 3.14d0
@@ -50,7 +50,7 @@ program main
   enddo
   !$omp end target
 
-  !ERROR: At most one DEFAULTMAP clause can appear on the TARGET directive
+  !ERROR: At most one DEFAULTMAP clause can appear on TARGET directive
   !$omp target defaultmap(tofrom:scalar) defaultmap(tofrom:scalar)
   do i = 1, N
      a = 3.14d0
@@ -63,7 +63,7 @@ program main
   enddo
   !$omp end target
 
-  !ERROR: At most one THREAD_LIMIT clause can appear on the TARGET directive
+  !ERROR: At most one THREAD_LIMIT clause can appear on TARGET directive
   !$omp target thread_limit(4) thread_limit(8)
   do i = 1, N
      a = 3.14d0
@@ -76,7 +76,7 @@ program main
   enddo
   !$omp end teams
 
-  !ERROR: At most one NUM_TEAMS clause can appear on the TEAMS directive
+  !ERROR: At most one NUM_TEAMS clause can appear on TEAMS directive
   !$omp teams num_teams(2) num_teams(3)
   do i = 1, N
      a = 3.14d0
@@ -90,7 +90,7 @@ program main
   enddo
   !$omp end teams
 
-  !ERROR: At most one THREAD_LIMIT clause can appear on the TEAMS directive
+  !ERROR: At most one THREAD_LIMIT clause can appear on TEAMS directive
   !$omp teams thread_limit(2) thread_limit(3)
   do i = 1, N
      a = 3.14d0
@@ -104,7 +104,7 @@ program main
   enddo
   !$omp end teams
 
-  !ERROR: At most one DEFAULT clause can appear on the TEAMS directive
+  !ERROR: At most one DEFAULT clause can appear on TEAMS directive
   !$omp teams default(shared) default(private)
   do i = 1, N
      a = 3.14d0
@@ -144,7 +144,7 @@ program main
    cptr = c_null_ptr
   !$omp end target data
 
-  !ERROR: At least one of MAP, USE_DEVICE_ADDR, USE_DEVICE_PTR clause must appear on the TARGET DATA directive
+  !ERROR: At least one of MAP, USE_DEVICE_ADDR, USE_DEVICE_PTR clauses must appear on TARGET DATA directive
   !$omp target data device(0)
   do i = 1, N
      a = 3.14d0
@@ -169,7 +169,7 @@ program main
   !ERROR: The device expression of the DEVICE clause must be a non-negative integer expression, 'omp_initial_device' (-1), or 'omp_invalid_device' (-2)
   !$omp target exit data map(delete:A) device(-3)
 
-  !ERROR: At most one IF clause can appear on the TARGET ENTER DATA directive
+  !ERROR: At most one IF clause can apply to each directive constituent
   !$omp target enter data map(to:a) if(.true.) if(.false.)
 
   !ERROR: Only the ALLOC, TO, TOFROM map types are permitted for MAP clauses on the TARGET ENTER DATA directive
@@ -177,7 +177,7 @@ program main
 
   !$omp target exit data map(delete:a)
 
-  !ERROR: At most one DEVICE clause can appear on the TARGET EXIT DATA directive
+  !ERROR: At most one DEVICE clause can appear on TARGET EXIT DATA directive
   !$omp target exit data map(from:a) device(0) device(1)
 
   !ERROR: Only the DELETE, FROM, RELEASE, TOFROM map types are permitted for MAP clauses on the TARGET EXIT DATA directive
@@ -185,10 +185,10 @@ program main
 
   !$omp target update if(.true.) device(1) to(a) from(b) depend(inout:c) nowait
 
-  !ERROR: At most one IF clause can appear on the TARGET UPDATE directive
+  !ERROR: At most one IF clause can apply to each directive constituent
   !$omp target update to(a) if(.true.) if(.false.)
 
-  !ERROR: At most one DEVICE clause can appear on the TARGET UPDATE directive
+  !ERROR: At most one DEVICE clause can appear on TARGET UPDATE directive
   !$omp target update device(0) device(1) from(b)
 
   !$omp target
@@ -212,7 +212,7 @@ program main
 
   !$omp target
   !ERROR: `DISTRIBUTE` region has to be strictly nested inside `TEAMS` region.
-  !ERROR: At most one COLLAPSE clause can appear on the DISTRIBUTE directive
+  !ERROR: At most one COLLAPSE clause can appear on DISTRIBUTE directive
   !$omp distribute collapse(2) collapse(3)
   do i = 1, N
      do j = 1, N
@@ -226,7 +226,7 @@ program main
 
   !$omp target
   !$omp teams
-  !ERROR: At most one COLLAPSE clause can appear on the DISTRIBUTE directive
+  !ERROR: At most one COLLAPSE clause can appear on DISTRIBUTE directive
   !$omp distribute collapse(2) collapse(3)
   do i = 1, N
      do j = 1, N
@@ -260,7 +260,7 @@ program main
 
   !$omp target
   !ERROR: `DISTRIBUTE` region has to be strictly nested inside `TEAMS` region.
-  !ERROR: At most one DIST_SCHEDULE clause can appear on the DISTRIBUTE directive
+  !ERROR: At most one DIST_SCHEDULE clause can appear on DISTRIBUTE directive
   !$omp distribute dist_schedule(static, 2) dist_schedule(static, 3)
   do i = 1, N
      a = 3.14d0
@@ -270,7 +270,7 @@ program main
 
   !$omp target
   !$omp teams
-  !ERROR: At most one DIST_SCHEDULE clause can appear on the DISTRIBUTE directive
+  !ERROR: At most one DIST_SCHEDULE clause can appear on DISTRIBUTE directive
   !$omp distribute dist_schedule(static, 2) dist_schedule(static, 3)
   do i = 1, N
      a = 3.14d0

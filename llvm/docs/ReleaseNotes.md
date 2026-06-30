@@ -87,7 +87,20 @@ Makes programs 10x faster by doing Special New Thing.
   and `ccc` agree for `void(ptr)` (x86_64, AArch64, RISC-V, ...) but is an ABI
   break on i686, MIPS O32, PowerPC64 ELFv1, and Lanai.
 
+* Assume bundles now only accept attributes that are actually handled.
+  Specifically, they are ``align``, ``cold``, ``dereferenceable``,
+  ``dereferenceable_or_null``, ``nonnull``, ``noundef`` and
+  ``separate_storage``.
+
 * Fast math flags are now permitted on `uitofp` and `sitofp`.
+
+* The ``modular-format`` attribute now supports the ``fixed`` aspect for C
+  ISO 18037 fixed-point ``printf`` specifiers.
+
+* Added `noipa` attribute which disables interprocedural analyses that inspect
+  the definition of the function. This attribute does *not* control inlining or
+  outlining. Add the `noinline` and `nooutline` attributes as well in cases
+  where inlining and outlining should additionally be disabled.
 
 ### Changes to LLVM infrastructure
 
@@ -137,14 +150,17 @@ Makes programs 10x faster by doing Special New Thing.
 * ``ConstantFP`` now supports vector types and is the canonical form returned by
   ``ConstantVector::getSplat(C)`` when ``C`` is a scalar ``ConstantFP``.
 
-* ``DenseMap`` and ``DenseSet`` ``erase`` now invalidates all iterators and
-  references into the container, not just the iterator for the erased element.
-  Use the new ``remove_if`` member to erase matching elements in a single pass
-  instead of erasing while iterating.
+* ``DenseMap``, ``DenseSet``, ``StringMap``, and ``StringSet`` ``erase`` now
+  invalidates all iterators and references into the container, not just the
+  iterator for the erased element. Use the new ``remove_if`` member to erase
+  matching elements in a single pass instead of erasing while iterating.
 
 * ``TargetRegisterInfo::getMinimalPhysRegClass`` and related APIs have been
   refactored and no longer take a type. This API is also now precomputed in
   TableGen to improve compile-time.
+
+* ``APInt::sqrt`` (square root rounded to nearest integer) has been replaced
+  with ``APInt::sqrtFloor`` (floor of square root).
 
 ### Changes to building LLVM
 
@@ -194,6 +210,7 @@ Makes programs 10x faster by doing Special New Thing.
   frontends may not.
 * The backend now stores the frame pointer and stack pointer into the jump buffer
   when lowering `@llvm.eh.sjlj.setjmp`. This was previously handled by the frontend.
+* `subs pc, lr, #imm` can now be predicated in Thumb2.
 
 ### Changes to the AVR Backend
 
@@ -248,6 +265,8 @@ Makes programs 10x faster by doing Special New Thing.
 * `-mcpu=sifive-870` has been renamed `-mcpu=sifive-p870-d`.
 * Adds experimental assembler support for batched dot-product extensions(Zvqwbdota8i, Zvqwbdota16i, Zvfwbdota16bf, Zvfqwbdota8f and Zvfbdota32f).
 * Adds experimental assembler support for dot-product extensions(Zvqwdota8i, Zvqwdota16i, Zvfwdota16bf and Zvfqwdota8f).
+* `-mtune=generic` now uses the scheduling model from SpacemiT X60 instead of an empty scheduling model.
+* The Xqcilo pseudos now emit sequences that can be relaxed.
 
 ### Changes to the SystemZ Backend
 
@@ -257,6 +276,15 @@ Makes programs 10x faster by doing Special New Thing.
   when lowering `@llvm.eh.sjlj.setjmp`. This was previously handled by the frontend.
 
 ### Changes to the WebAssembly Backend
+
+* WebAssembly reference types are now represented in LLVM IR as the target
+  extension types `target("wasm.externref")` and `target("wasm.funcref")`,
+  rather than as pointers in address spaces 10 and 20 (`ptr addrspace(10)` /
+  `ptr addrspace(20)`).
+* As a consequence of the representation change, reference types are no longer
+  treated as vectorizable pointers. This fixes a crash in the SLP vectorizer,
+  which previously would attempt to gather `externref`/`funcref` values into a
+  vector and then crash.
 
 ### Changes to the Windows Target
 
@@ -271,6 +299,8 @@ Makes programs 10x faster by doing Special New Thing.
 * The backend now stores the frame pointer and stack pointer into the jump buffer
   when lowering `@llvm.eh.sjlj.setjmp`. This was previously handled by the frontend.
 
+* EGPR (R16-R31) now requires V3 unwind info on Windows x64. Using EGPR
+  without V3 unwind produces a fatal error.
 * Implemented Win64 APX ABI callee-saved registers: R30 and R31 are now
   treated as non-volatile in the Win64 calling convention when APX is
   available, per the Microsoft x64 calling convention specification.
@@ -279,6 +309,10 @@ Makes programs 10x faster by doing Special New Thing.
   register allocation, as the unwinder cannot restore APX extended
   registers across longjmp. A warning is emitted for large functions
   where this reservation may impact performance.
+
+* Added ``.seh_push2regs`` assembly directive for explicitly encoding a
+  two-register push in Windows x64 V3 unwind info. The directive takes two
+  register operands: ``.seh_push2regs %r12, %r13``.
 
 ### Changes to the OCaml bindings
 
@@ -300,6 +334,11 @@ Makes programs 10x faster by doing Special New Thing.
 * Renamed ISD::CTTZ_ZERO_UNDEF to ISD::CTTZ_ZERO_POISON opcode to make it clear that
   a zero input results in poison.
 
+* LLVM intrinsics can now declare required target features using the
+  ``TargetFeatures`` TableGen field. SelectionDAG and GlobalISel use this
+  metadata to reject unsupported target intrinsics generically, so targets do
+  not need custom lowering checks for each annotated intrinsic.
+
 ### Changes to the GlobalISel infrastructure
 
 * Renamed G_CTLZ_ZERO_UNDEF to G_CTLZ_ZERO_POISON opcode to make it clear that
@@ -320,9 +359,30 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the LLVM tools
 
+* llvm-ml now supports the `/unwindv3` flag to enable V3 unwind information
+  format for x64 exception handling.
+* llvm-ml now supports the `@UnwindVersion` built-in symbol, which returns the
+  current unwind version (1 by default, 3 when `/unwindv3` is specified).
+* llvm-ml now supports the `.push2reg`, `.pop2reg`, `.beginepilog`, and
+  `.endepilog` MASM directives for V3 unwind information.
+* llvm-ml now supports the `.popreg`, `.freestack`, `.restorereg`,
+  `.restorexmm128`, and `.unsetframe` MASM epilog directives. These are the
+  epilog counterparts of `.pushreg`, `.allocstack`, `.savereg`,
+  `.savexmm128`, and `.setframe` respectively, and are valid only inside
+  `.beginepilog`/`.endepilog` blocks and only for V3 unwind information.
+* llvm-ml now supports `.pushframe code` syntax (without the `@` prefix)
+  for interrupt handlers with error codes.
+* llvm-ml now diagnoses:
+  - Prolog directives (including `.allocstack`) used outside of prologs (after `.endprolog`).
+  - Epilog directives used outside of epilogs (outside of `.beginepilog` + `.endepilog` blocks).
+  - Beginning an epilog (`.beginepilog`) inside another epilog.
+
 * `llvm-profgen` now supports ETM trace decoding using the OpenCSD library for Cortex-M targets. OpenCSD version 1.5.4 or higher is required.
 
 * `llvm-objcopy` no longer corrupts the symbol table when `--update-section` is called for ELF files.
+* `llvm-objcopy` now reports an error when `--compress-sections` requests unavailable zlib or zstd support.
+  The diagnostic is emitted while parsing the option, matching `--compress-debug-sections`.
+  Such commands may now fail even if the input file contains no sections that would be compressed.
 * `FileCheck` option `-check-prefix` now accepts a comma-separated list of
   prefixes, making it an alias of the existing `-check-prefixes` option.
 * Add `-mtune` option to `llc`.
@@ -344,6 +404,8 @@ Makes programs 10x faster by doing Special New Thing.
   * Highlights matching keywords in its output when color is enabled.
   * Searches the components of settings paths. For example `apropos qemu-user` will now
     show `platform.plugin.qemu-user` as one of the results.
+* Reading global and static variables on WebAssembly targets now works correctly. Previously their
+  values could not be read because data sections were mapped to the wrong address space.
 
 #### Deprecated APIs
 

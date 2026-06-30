@@ -562,7 +562,7 @@ LLVM_ABI FunctionPass *createBreakFalseDepsLegacyPass();
 LLVM_ABI FunctionPass *createIndirectBrExpandPass();
 
 /// Creates CFI Fixup pass. \see CFIFixup.cpp
-LLVM_ABI FunctionPass *createCFIFixup();
+LLVM_ABI FunctionPass *createCFIFixupLegacy();
 
 /// Creates CFI Instruction Inserter pass. \see CFIInstrInserter.cpp
 LLVM_ABI FunctionPass *createCFIInstrInserter();
@@ -606,7 +606,7 @@ LLVM_ABI ModulePass *
 createStripDebugMachineModuleLegacyPass(bool OnlyDebugified);
 
 /// Creates MIR Check Debug pass. \see MachineCheckDebugify.cpp
-LLVM_ABI ModulePass *createCheckDebugMachineModulePass();
+LLVM_ABI ModulePass *createCheckDebugMachineModuleLegacyPass();
 
 /// The pass fixups statepoint machine instruction to replace usage of
 /// caller saved registers with stack slots.

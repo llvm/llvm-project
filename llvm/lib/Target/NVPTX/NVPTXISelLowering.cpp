@@ -15,6 +15,7 @@
 #include "MCTargetDesc/NVPTXBaseInfo.h"
 #include "NVPTX.h"
 #include "NVPTXISelDAGToDAG.h"
+#include "NVPTXMachineFunctionInfo.h"
 #include "NVPTXSelectionDAGInfo.h"
 #include "NVPTXSubtarget.h"
 #include "NVPTXTargetMachine.h"
@@ -1013,6 +1014,8 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setOperationAction(ISD::FROUND, MVT::bf16, Promote);
   AddPromotedToType(ISD::FROUND, MVT::bf16, MVT::f32);
 
+  setOperationAction({ISD::LROUND, ISD::LLROUND}, {MVT::f32, MVT::f64}, Expand);
+
   // 'Expand' implements FCOPYSIGN without calling an external library.
   setOperationAction(ISD::FCOPYSIGN, MVT::f16, Expand);
   setOperationAction(ISD::FCOPYSIGN, MVT::v2f16, Expand);
@@ -1203,144 +1206,6 @@ SDValue NVPTXTargetLowering::getSqrtEstimate(SDValue Operand, SelectionDAG &DAG,
   }
 }
 
-static Align getArgumentAlignment(const CallBase *CB, Type *Ty, unsigned Idx,
-                                  const DataLayout &DL);
-
-std::string NVPTXTargetLowering::getPrototype(
-    const DataLayout &DL, Type *RetTy, const ArgListTy &Args,
-    const SmallVectorImpl<ISD::OutputArg> &Outs,
-    std::optional<unsigned> FirstVAArg, const CallBase &CB,
-    unsigned UniqueCallSite) const {
-  auto PtrVT = getPointerTy(DL);
-
-  std::string Prototype;
-  raw_string_ostream O(Prototype);
-  O << "prototype_" << UniqueCallSite << " : .callprototype ";
-
-  if (RetTy->isVoidTy()) {
-    O << "()";
-  } else {
-    O << "(";
-    if (shouldPassAsArray(RetTy)) {
-      const Align RetAlign = getArgumentAlignment(&CB, RetTy, 0, DL);
-      O << ".param .align " << RetAlign.value() << " .b8 _["
-        << DL.getTypeAllocSize(RetTy) << "]";
-    } else if (RetTy->isFloatingPointTy() || RetTy->isIntegerTy()) {
-      unsigned size = 0;
-      if (auto *ITy = dyn_cast<IntegerType>(RetTy)) {
-        size = ITy->getBitWidth();
-      } else {
-        assert(RetTy->isFloatingPointTy() &&
-               "Floating point type expected here");
-        size = RetTy->getPrimitiveSizeInBits();
-      }
-      // PTX ABI requires all scalar return values to be at least 32
-      // bits in size.  fp16 normally uses .b16 as its storage type in
-      // PTX, so its size must be adjusted here, too.
-      size = promoteScalarArgumentSize(size);
-
-      O << ".param .b" << size << " _";
-    } else if (isa<PointerType>(RetTy)) {
-      O << ".param .b" << PtrVT.getSizeInBits() << " _";
-    } else {
-      llvm_unreachable("Unknown return type");
-    }
-    O << ") ";
-  }
-  O << "_ (";
-
-  bool first = true;
-
-  const unsigned NumArgs = FirstVAArg.value_or(Args.size());
-  auto AllOuts = ArrayRef(Outs);
-  for (const unsigned I : llvm::seq(NumArgs)) {
-    const auto ArgOuts =
-        AllOuts.take_while([I](auto O) { return O.OrigArgIndex == I; });
-    AllOuts = AllOuts.drop_front(ArgOuts.size());
-
-    Type *Ty = Args[I].Ty;
-    if (!first) {
-      O << ", ";
-    }
-    first = false;
-
-    if (ArgOuts[0].Flags.isByVal()) {
-      // Indirect calls need strict ABI alignment so we disable optimizations by
-      // not providing a function to optimize.
-      Type *ETy = Args[I].IndirectType;
-      Align InitialAlign = ArgOuts[0].Flags.getNonZeroByValAlign();
-      Align ParamByValAlign =
-          getFunctionByValParamAlign(/*F=*/nullptr, ETy, InitialAlign, DL);
-
-      O << ".param .align " << ParamByValAlign.value() << " .b8 _["
-        << ArgOuts[0].Flags.getByValSize() << "]";
-    } else {
-      if (shouldPassAsArray(Ty)) {
-        Align ParamAlign =
-            getArgumentAlignment(&CB, Ty, I + AttributeList::FirstArgIndex, DL);
-        O << ".param .align " << ParamAlign.value() << " .b8 _["
-          << DL.getTypeAllocSize(Ty) << "]";
-        continue;
-      }
-      // i8 types in IR will be i16 types in SDAG
-      assert((getValueType(DL, Ty) == ArgOuts[0].VT ||
-              (getValueType(DL, Ty) == MVT::i8 && ArgOuts[0].VT == MVT::i16)) &&
-             "type mismatch between callee prototype and arguments");
-      // scalar type
-      unsigned sz = 0;
-      if (auto *ITy = dyn_cast<IntegerType>(Ty)) {
-        sz = promoteScalarArgumentSize(ITy->getBitWidth());
-      } else if (isa<PointerType>(Ty)) {
-        sz = PtrVT.getSizeInBits();
-      } else {
-        sz = Ty->getPrimitiveSizeInBits();
-      }
-      O << ".param .b" << sz << " _";
-    }
-  }
-
-  if (FirstVAArg)
-    O << (first ? "" : ",") << " .param .align "
-      << STI.getMaxRequiredAlignment() << " .b8 _[]";
-  O << ")";
-  if (shouldEmitPTXNoReturn(&CB, *nvTM))
-    O << " .noreturn";
-  O << ";";
-
-  return Prototype;
-}
-
-static Align getArgumentAlignment(const CallBase *CB, Type *Ty, unsigned Idx,
-                                  const DataLayout &DL) {
-  if (!CB) {
-    // CallSite is zero, fallback to ABI type alignment
-    return DL.getABITypeAlign(Ty);
-  }
-
-  const Function *DirectCallee = CB->getCalledFunction();
-
-  if (!DirectCallee) {
-    // We don't have a direct function symbol, but that may be because of
-    // constant cast instructions in the call.
-
-    // With bitcast'd call targets, the instruction will be the call
-    if (const auto *CI = dyn_cast<CallInst>(CB)) {
-      // Check if we have call alignment metadata
-      if (MaybeAlign StackAlign = getAlign(*CI, Idx))
-        return StackAlign.value();
-    }
-    DirectCallee = getMaybeBitcastedCallee(CB);
-  }
-
-  // Check for function alignment information if we found that the
-  // ultimate target is a Function
-  if (DirectCallee)
-    return getFunctionArgumentAlignment(DirectCallee, Ty, Idx, DL);
-
-  // Call is indirect, fall back to the ABI type alignment
-  return DL.getABITypeAlign(Ty);
-}
-
 static MachinePointerInfo refinePtrAS(SDValue &Ptr, SelectionDAG &DAG,
                                       const DataLayout &DL,
                                       const TargetLowering &TL) {
@@ -1507,10 +1372,11 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
         // so we don't need to worry whether it's naturally aligned or not.
         // See TargetLowering::LowerCallTo().
         const Align InitialAlign = ArgOuts[0].Flags.getNonZeroByValAlign();
-        return getFunctionByValParamAlign(CB->getCalledFunction(), ETy,
-                                          InitialAlign, DL);
+        return getDeviceByValParamAlign(CB->getCalledFunction(), ETy,
+                                        InitialAlign, DL);
       }
-      return getArgumentAlignment(CB, Arg.Ty, ArgI + 1, DL);
+      return getPTXParamAlign(CB, Arg.Ty, ArgI + AttributeList::FirstArgIndex,
+                              DL);
     }();
 
     const unsigned TySize = DL.getTypeAllocSize(ETy);
@@ -1644,7 +1510,8 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     const SDValue RetSymbol = DAG.getExternalSymbol("retval0", MVT::i32);
     const unsigned ResultSize = DL.getTypeAllocSize(RetTy);
     if (shouldPassAsArray(RetTy)) {
-      const Align RetAlign = getArgumentAlignment(CB, RetTy, 0, DL);
+      const Align RetAlign =
+          getPTXParamAlign(CB, RetTy, AttributeList::ReturnIndex, DL);
       MakeDeclareArrayParam(RetSymbol, RetAlign, ResultSize);
     } else {
       MakeDeclareScalarParam(RetSymbol, ResultSize);
@@ -1687,25 +1554,15 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     CalleeFunc->addFnAttr("nvptx-libcall-callee", "true");
   }
 
-  if (IsIndirectCall) {
-    // This is indirect function call case : PTX requires a prototype of the
-    // form
-    // proto_0 : .callprototype(.param .b32 _) _ (.param .b32 _);
-    // to be emitted, and the label has to used as the last arg of call
-    // instruction.
-    // The prototype is embedded in a string and put as the operand for a
-    // CallPrototype SDNode which will print out to the value of the string.
-    const bool HasVAArgs = CLI.IsVarArg && (CLI.Args.size() > CLI.NumFixedArgs);
-    std::string Proto =
-        getPrototype(DL, RetTy, Args, CLI.Outs,
-                     HasVAArgs ? std::optional(FirstVAArg) : std::nullopt, *CB,
-                     UniqueCallSite);
-    const char *ProtoStr = nvTM->getStrPool().save(Proto).data();
-    const SDValue PrototypeDeclare = DAG.getNode(
-        NVPTXISD::CallPrototype, dl, MVT::Other,
-        {StartChain, DAG.getTargetExternalSymbol(ProtoStr, MVT::i32)});
-    CallPrereqs.push_back(PrototypeDeclare);
-  }
+  // In the indirect function call case, PTX requires a prototype of the form:
+  //     proto_0 : .callprototype(.param .b32 _) _ (.param .b32 _);
+  // Where the label is to be used as the last arg of the call instruction.
+  // We record the call site here and emit all prototypes at the
+  // start of the function in the AsmPrinter.
+  if (IsIndirectCall)
+    DAG.getMachineFunction()
+        .getInfo<NVPTXMachineFunctionInfo>()
+        ->addCallPrototype(UniqueCallSite, CB);
 
   const bool IsUnknownIntrinsic =
       CalleeF && CalleeF->isIntrinsic() &&
@@ -1737,7 +1594,8 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     ComputePTXValueVTs(*this, DL, Ctx, CLI.CallConv, RetTy, VTs, Offsets);
     assert(VTs.size() == Ins.size() && "Bad value decomposition");
 
-    const Align RetAlign = getArgumentAlignment(CB, RetTy, 0, DL);
+    const Align RetAlign =
+        getPTXParamAlign(CB, RetTy, AttributeList::ReturnIndex, DL);
     const SDValue RetSymbol = DAG.getExternalSymbol("retval0", MVT::i32);
 
     // PTX Interoperability Guide 3.3(A): [Integer] Values shorter than
@@ -3199,8 +3057,6 @@ static SDValue lowerIntrinsicWOChain(SDValue Op, SelectionDAG &DAG) {
   case Intrinsic::nvvm_prmt_rc16:
   case Intrinsic::nvvm_prmt_rc8:
     return lowerPrmtIntrinsic(Op, DAG);
-  case Intrinsic::nvvm_internal_addrspace_wrap:
-    return Op.getOperand(1);
   case Intrinsic::nvvm_clusterlaunchcontrol_query_cancel_is_canceled:
   case Intrinsic::nvvm_clusterlaunchcontrol_query_cancel_get_first_ctaid_x:
   case Intrinsic::nvvm_clusterlaunchcontrol_query_cancel_get_first_ctaid_y:
@@ -4150,8 +4006,10 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
 
       SDValue P;
       if (IsKernel) {
-        assert(isParamGridConstant(Arg) && "ByVal argument must be lowered to "
-                                           "grid_constant by NVPTXLowerArgs");
+        assert(Arg.getType()->getPointerAddressSpace() ==
+                   ADDRESS_SPACE_ENTRY_PARAM &&
+               "Kernel ByVal argument must be lowered to the param address "
+               "space by NVPTXLowerArgs");
         P = ArgSymbol;
         P.getNode()->setIROrder(Arg.getArgNo() + 1);
       } else {
@@ -4168,7 +4026,7 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
       assert(VTs.size() == ArgIns.size() && "Size mismatch");
       assert(VTs.size() == Offsets.size() && "Size mismatch");
 
-      const Align ArgAlign = getFunctionArgumentAlignment(
+      const Align ArgAlign = getPTXParamAlign(
           &F, Ty, Arg.getArgNo() + AttributeList::FirstArgIndex, DL);
 
       unsigned I = 0;
@@ -4225,7 +4083,8 @@ NVPTXTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   LLVMContext &Ctx = *DAG.getContext();
 
   const SDValue RetSymbol = DAG.getExternalSymbol("func_retval0", MVT::i32);
-  const auto RetAlign = getFunctionParamOptimizedAlign(&F, RetTy, DL);
+  const auto RetAlign =
+      getPTXParamAlign(&F, RetTy, AttributeList::ReturnIndex, DL);
 
   // PTX Interoperability Guide 3.3(A): [Integer] Values shorter than
   // 32-bits are sign extended or zero extended, depending on whether

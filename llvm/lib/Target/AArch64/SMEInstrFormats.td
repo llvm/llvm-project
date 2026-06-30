@@ -870,7 +870,7 @@ multiclass sme_mem_ld_ss_patterns<Instruction Inst, SDPatternOperator Load,
 class sme_load_pseudo
     : Pseudo<(outs), (ins i32imm:$tile, MatrixIndexGPR32Op12_15:$idx,
                           i32imm:$imm, PPR3bAny:$pg, GPR64sp:$base, GPR64:$offset), []>,
-      Sched<[]> {
+      Sched<[WriteLD]> {
   // Translated to the actual instructions in AArch64ISelLowering.cpp
   let usesCustomInserter = 1;
   let mayLoad = 1;
@@ -1148,7 +1148,7 @@ multiclass sme_fill<string opcodestr> {
       : Pseudo<(outs),
                (ins MatrixIndexGPR32Op12_15:$idx, sme_elm_idx0_15:$imm4,
                     GPR64sp:$base), []>,
-        Sched<[]> {
+        Sched<[WriteLD]> {
     // Translated to actual instruction in AArch64ISelLowering.cpp
     let usesCustomInserter = 1;
     let mayLoad = 1;
@@ -3691,7 +3691,8 @@ class sme2_spill_fill_vector<string mnemonic, bits<8> opc>
 multiclass sme2_spill_fill_vector<string mnemonic, bits<8> opc, SDPatternOperator op> {
   def NAME : sme2_spill_fill_vector<mnemonic, opc>;
   def NAME # _PSEUDO
-      : Pseudo<(outs), (ins ZTR:$ZTt, GPR64sp:$base), []>, Sched<[]> {
+      : Pseudo<(outs), (ins ZTR:$ZTt, GPR64sp:$base), []>,
+        Sched<[!if(opc{7}, WriteST, WriteLD)]> {
     // Translated to actual instruction in AArch64ISelLowering.cpp
     let usesCustomInserter = 1;
   }
@@ -3922,14 +3923,21 @@ multiclass sme2_luti4_vector_vg4_index<string mnemonic> {
 
 // 8-bit Look up table
 class sme2_lut_single<string asm>
-  : I<(outs ZPR8:$Zd), (ins ZTR:$ZTt, ZPRAny:$Zn),
-    asm, "\t$Zd, $ZTt, $Zn", "", []>, Sched<[]> {
+    : I<(outs ZPR8:$Zd), (ins ZTR:$ZTt, ZPRAny:$Zn),
+        asm, "\t$Zd, $ZTt, $Zn", "", []>, Sched<[]> {
   bits<0> ZTt;
   bits<5> Zd;
   bits<5> Zn;
   let Inst{31-10} = 0b1100000011001000010000;
   let Inst{9-5}   = Zn;
   let Inst{4-0}   = Zd;
+}
+
+multiclass sme2_lut_single<string asm, SDPatternOperator intrinsic> {
+  def NAME : sme2_lut_single<asm>;
+
+  def : Pat<(nxv16i8 (intrinsic (imm_to_zt untyped:$zt), nxv16i8:$zn)),
+            (!cast<Instruction>(NAME) $zt, nxv16i8:$zn)>;
 }
 
 //===----------------------------------------------------------------------===//

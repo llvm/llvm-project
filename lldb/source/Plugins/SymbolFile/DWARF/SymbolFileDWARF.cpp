@@ -926,8 +926,11 @@ Function *SymbolFileDWARF::ParseFunction(CompileUnit &comp_unit,
     for (const auto &range : *die_ranges) {
       if (range.valid() && range.LowPC < m_first_code_address)
         continue;
+      // Require the low PC to resolve to a section. This rejects addresses that
+      // don't correspond to any real code, such as the "(dead code)" tombstone
+      // a linker leaves on the DW_AT_low_pc of an eliminated function.
       if (Address base_addr(range.LowPC, module_sp->GetSectionList());
-          base_addr.IsValid() && FixupAddress(base_addr))
+          base_addr.IsSectionOffset() && FixupAddress(base_addr))
         ranges.emplace_back(std::move(base_addr), range.HighPC - range.LowPC);
     }
   } else {
@@ -4374,6 +4377,45 @@ void SymbolFileDWARF::DumpClangAST(Stream &s, llvm::StringRef filter,
   clang->Dump(s.AsRawOstream(), filter, show_color);
 }
 
+lldb_private::ModuleSpecList SymbolFileDWARF::GetSeparateDebugInfoFiles() {
+  DWARFDebugInfo &info = DebugInfo();
+  const size_t num_cus = info.GetNumUnits();
+  lldb_private::ModuleSpecList spec_list;
+  // Check if a .dwp file exists, returning it if it does.
+  if (const auto &dwp_sp = GetDwpSymbolFile()) {
+    if (ObjectFile *dwp_obj = dwp_sp->GetObjectFile()) {
+      spec_list.Append(ModuleSpec(dwp_obj->GetFileSpec()));
+      // Only one .dwp file is expected, so return early.
+      return spec_list;
+    }
+  }
+
+  for (uint32_t cu_idx = 0; cu_idx < num_cus; ++cu_idx) {
+    DWARFUnit *unit = info.GetUnitAtIndex(cu_idx);
+    DWARFCompileUnit *dwarf_cu = llvm::dyn_cast<DWARFCompileUnit>(unit);
+    if (dwarf_cu == nullptr || !dwarf_cu->GetDWOId().has_value())
+      continue;
+
+    const DWARFBaseDIE die = dwarf_cu->GetUnitDIEOnly();
+    if (!die)
+      continue;
+
+    const char *dwo_name = GetDWOName(*dwarf_cu, *die.GetDIE());
+    if (!dwo_name)
+      continue;
+
+    lldb_private::FileSpec dwo_file(dwo_name);
+    if (!dwo_file.IsAbsolute()) {
+      const char *comp_dir = die.GetDIE()->GetAttributeValueAsString(
+          dwarf_cu, DW_AT_comp_dir, nullptr);
+      if (comp_dir)
+        dwo_file.PrependPathComponent(comp_dir);
+    }
+    spec_list.Append(ModuleSpec(dwo_file));
+  }
+  return spec_list;
+}
+
 bool SymbolFileDWARF::GetSeparateDebugInfo(StructuredData::Dictionary &d,
                                            bool errors_only,
                                            bool load_all_debug_info) {
@@ -4473,7 +4515,7 @@ const std::shared_ptr<SymbolFileDWARFDwo> &SymbolFileDWARF::GetDwpSymbolFile() {
       // If we don't have a separate debug info file, then try stripping the
       // extension. The main module could be "a.debug" and the .dwp file could
       // be "a.dwp" instead of "a.debug.dwp".
-      ConstString filename_no_ext =
+      llvm::StringRef filename_no_ext =
           module_fspec.GetFileNameStrippingExtension();
       if (filename_no_ext != module_fspec.GetFilename()) {
         FileSpec module_spec_no_ext(module_fspec);

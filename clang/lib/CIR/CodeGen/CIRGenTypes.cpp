@@ -226,6 +226,15 @@ static bool isSafeToConvert(const RecordDecl *rd, CIRGenTypes &cgt) {
   return isSafeToConvert(rd, cgt, alreadyChecked);
 }
 
+bool CIRGenModule::isPaddedAtomicType(QualType type) {
+  return isPaddedAtomicType(type->castAs<AtomicType>());
+}
+
+bool CIRGenModule::isPaddedAtomicType(const AtomicType *type) {
+  return astContext.getTypeSize(type) !=
+         astContext.getTypeSize(type->getValueType());
+}
+
 /// Lay out a tagged decl type like struct or union.
 mlir::Type CIRGenTypes::convertRecordDeclType(const clang::RecordDecl *rd) {
   // TagDecl's are not necessarily unique, instead use the (clang) type

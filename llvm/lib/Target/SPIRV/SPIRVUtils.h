@@ -14,6 +14,9 @@
 #define LLVM_LIB_TARGET_SPIRV_SPIRVUTILS_H
 
 #include "MCTargetDesc/SPIRVBaseInfo.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/IR/Dominators.h"
@@ -23,8 +26,6 @@
 #include <queue>
 #include <set>
 #include <string>
-#include <unordered_map>
-#include <unordered_set>
 
 #include "SPIRVTypeInst.h"
 
@@ -72,20 +73,20 @@ class PartialOrderingVisitor {
   DomTreeBuilder::BBDomTree DT;
   LoopInfo LI;
 
-  std::unordered_set<BasicBlock *> Queued = {};
-  std::queue<BasicBlock *> ToVisit = {};
+  SmallPtrSet<BasicBlock *, 0> Queued;
+  std::queue<BasicBlock *> ToVisit;
 
   struct OrderInfo {
     size_t Rank;
     size_t TraversalIndex;
   };
 
-  using BlockToOrderInfoMap = std::unordered_map<BasicBlock *, OrderInfo>;
+  using BlockToOrderInfoMap = DenseMap<BasicBlock *, OrderInfo>;
   BlockToOrderInfoMap BlockToOrder;
-  std::vector<BasicBlock *> Order = {};
+  std::vector<BasicBlock *> Order;
 
   // Get all basic-blocks reachable from Start.
-  std::unordered_set<BasicBlock *> getReachableFrom(BasicBlock *Start);
+  SmallPtrSet<BasicBlock *, 0> getReachableFrom(BasicBlock *Start);
 
   // Internal function used to determine the partial ordering.
   // Visits |BB| with the current rank being |Rank|.
@@ -199,23 +200,19 @@ void buildOpName(Register Target, const StringRef &Name, MachineInstr &I,
 // Add an OpDecorate instruction for the given Reg.
 void buildOpDecorate(Register Reg, MachineIRBuilder &MIRBuilder,
                      SPIRV::Decoration::Decoration Dec,
-                     const std::vector<uint32_t> &DecArgs,
-                     StringRef StrImm = "");
+                     ArrayRef<uint32_t> DecArgs, StringRef StrImm = "");
 void buildOpDecorate(Register Reg, MachineInstr &I, const SPIRVInstrInfo &TII,
                      SPIRV::Decoration::Decoration Dec,
-                     const std::vector<uint32_t> &DecArgs,
-                     StringRef StrImm = "");
+                     ArrayRef<uint32_t> DecArgs, StringRef StrImm = "");
 
 // Add an OpDecorate instruction for the given Reg.
 void buildOpMemberDecorate(Register Reg, MachineIRBuilder &MIRBuilder,
                            SPIRV::Decoration::Decoration Dec, uint32_t Member,
-                           const std::vector<uint32_t> &DecArgs,
-                           StringRef StrImm = "");
+                           ArrayRef<uint32_t> DecArgs, StringRef StrImm = "");
 void buildOpMemberDecorate(Register Reg, MachineInstr &I,
                            const SPIRVInstrInfo &TII,
                            SPIRV::Decoration::Decoration Dec, uint32_t Member,
-                           const std::vector<uint32_t> &DecArgs,
-                           StringRef StrImm = "");
+                           ArrayRef<uint32_t> DecArgs, StringRef StrImm = "");
 
 // Add an OpDecorate instruction by "spirv.Decorations" metadata node.
 void buildOpSpirvDecorations(Register Reg, MachineIRBuilder &MIRBuilder,
@@ -333,6 +330,15 @@ Type *parseBasicTypeName(StringRef &TypeName, LLVMContext &Ctx);
 // dominators. This should match both the SPIR-V and the MIR requirements.
 // Returns true if the function was changed.
 bool sortBlocks(Function &F);
+
+// Create a stack slot in the entry block of F for a value of the given type.
+AllocaInst *createVariable(Function &F, Type *Type);
+
+// Create a value in BB set to the value associated with the branch the block
+// terminator will take.
+Value *
+createExitVariable(BasicBlock *BB,
+                   const DenseMap<BasicBlock *, ConstantInt *> &TargetToValue);
 
 // Check for peeled array structs and recursively reconstitute them. In HLSL
 // CBuffers, arrays may have padding between the elements, but not after the
@@ -532,6 +538,8 @@ CallInst *buildIntrWithMD(Intrinsic::ID IntrID, ArrayRef<Type *> Types,
 MachineInstr *getVRegDef(MachineRegisterInfo &MRI, Register Reg);
 
 #define SPIRV_BACKEND_SERVICE_FUN_NAME "__spirv_backend_service_fun"
+#define SPIRV_WAS_AVAILABLE_EXTERNALLY_ATTR "spv.was-available-externally"
+
 bool getVacantFunctionName(Module &M, std::string &Name);
 
 void setRegClassType(Register Reg, const Type *Ty, SPIRVGlobalRegistry *GR,
@@ -556,7 +564,7 @@ bool isNestedPointer(const Type *Ty);
 enum FPDecorationId { NONE, RTE, RTZ, RTP, RTN, SAT };
 
 inline FPDecorationId demangledPostfixToDecorationId(const std::string &S) {
-  static std::unordered_map<std::string, FPDecorationId> Mapping = {
+  static const StringMap<FPDecorationId> Mapping = {
       {"rte", FPDecorationId::RTE},
       {"rtz", FPDecorationId::RTZ},
       {"rtp", FPDecorationId::RTP},
