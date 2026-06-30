@@ -1675,7 +1675,6 @@ define amdgpu_ps float @global_load_saddr_uniform_ptr_in_vgprs(i32 %voffset) {
 ; GFX12-GISEL-NEXT:    ds_load_b64 v[1:2], v1
 ; GFX12-GISEL-NEXT:    s_wait_dscnt 0x0
 ; GFX12-GISEL-NEXT:    v_add_co_u32 v0, vcc, v1, v0
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v2, vcc
 ; GFX12-GISEL-NEXT:    global_load_u8 v0, v[0:1], off
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
@@ -1742,7 +1741,6 @@ define amdgpu_ps float @global_load_saddr_uniform_ptr_in_vgprs_immoffset(i32 %vo
 ; GFX12-GISEL-NEXT:    ds_load_b64 v[1:2], v1
 ; GFX12-GISEL-NEXT:    s_wait_dscnt 0x0
 ; GFX12-GISEL-NEXT:    v_add_co_u32 v0, vcc, v1, v0
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v2, vcc
 ; GFX12-GISEL-NEXT:    global_load_u8 v0, v[0:1], off offset:42
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
@@ -1921,7 +1919,6 @@ define amdgpu_ps float @global_load_i8_vgpr64_sgpr32(ptr addrspace(1) %vbase, i3
 ; GFX11-LABEL: global_load_i8_vgpr64_sgpr32:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    v_add_co_u32 v0, vcc, v0, s2
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc
 ; GFX11-NEXT:    global_load_u8 v0, v[0:1], off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
@@ -1930,7 +1927,6 @@ define amdgpu_ps float @global_load_i8_vgpr64_sgpr32(ptr addrspace(1) %vbase, i3
 ; GFX12-SDAG-LABEL: global_load_i8_vgpr64_sgpr32:
 ; GFX12-SDAG:       ; %bb.0:
 ; GFX12-SDAG-NEXT:    v_add_co_u32 v0, vcc, v0, s2
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-SDAG-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc
 ; GFX12-SDAG-NEXT:    global_load_u8 v0, v[0:1], off
 ; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
@@ -1941,7 +1937,7 @@ define amdgpu_ps float @global_load_i8_vgpr64_sgpr32(ptr addrspace(1) %vbase, i3
 ; GFX12-GISEL-NEXT:    s_mov_b32 s3, 0
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v3, s3
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-GISEL-NEXT:    v_add_co_u32 v0, vcc, v0, v2
 ; GFX12-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, v1, v3, vcc
 ; GFX12-GISEL-NEXT:    global_load_u8 v0, v[0:1], off
@@ -1978,7 +1974,6 @@ define amdgpu_ps float @global_load_i8_vgpr64_sgpr32_offset_4095(ptr addrspace(1
 ; GFX11-LABEL: global_load_i8_vgpr64_sgpr32_offset_4095:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    v_add_co_u32 v0, vcc, v0, s2
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc
 ; GFX11-NEXT:    global_load_u8 v0, v[0:1], off offset:4095
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
@@ -1987,7 +1982,6 @@ define amdgpu_ps float @global_load_i8_vgpr64_sgpr32_offset_4095(ptr addrspace(1
 ; GFX12-SDAG-LABEL: global_load_i8_vgpr64_sgpr32_offset_4095:
 ; GFX12-SDAG:       ; %bb.0:
 ; GFX12-SDAG-NEXT:    v_add_co_u32 v0, vcc, v0, s2
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-SDAG-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc
 ; GFX12-SDAG-NEXT:    global_load_u8 v0, v[0:1], off offset:4095
 ; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
@@ -1998,7 +1992,7 @@ define amdgpu_ps float @global_load_i8_vgpr64_sgpr32_offset_4095(ptr addrspace(1
 ; GFX12-GISEL-NEXT:    s_mov_b32 s3, 0
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v3, s3
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-GISEL-NEXT:    v_add_co_u32 v0, vcc, v0, v2
 ; GFX12-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, v1, v3, vcc
 ; GFX12-GISEL-NEXT:    global_load_u8 v0, v[0:1], off offset:4095
@@ -2052,7 +2046,7 @@ define amdgpu_ps float @global_load_saddr_f32_natural_addressing(ptr addrspace(1
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_lshlrev_b64 v[0:1], 2, v[0:1]
 ; GFX11-NEXT:    v_add_co_u32 v0, vcc, s2, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, null, s3, v1, vcc
 ; GFX11-NEXT:    global_load_b32 v0, v[0:1], off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
@@ -2066,7 +2060,7 @@ define amdgpu_ps float @global_load_saddr_f32_natural_addressing(ptr addrspace(1
 ; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-SDAG-NEXT:    v_lshlrev_b64_e32 v[0:1], 2, v[0:1]
 ; GFX12-SDAG-NEXT:    v_add_co_u32 v0, vcc, s2, v0
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12-SDAG-NEXT:    v_add_co_ci_u32_e64 v1, null, s3, v1, vcc
 ; GFX12-SDAG-NEXT:    global_load_b32 v0, v[0:1], off
 ; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
@@ -2082,7 +2076,7 @@ define amdgpu_ps float @global_load_saddr_f32_natural_addressing(ptr addrspace(1
 ; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-GISEL-NEXT:    v_lshlrev_b64_e32 v[0:1], 2, v[0:1]
 ; GFX12-GISEL-NEXT:    v_add_co_u32 v0, vcc, v2, v0
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, v3, v1, vcc
 ; GFX12-GISEL-NEXT:    global_load_b32 v0, v[0:1], off
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
@@ -2233,7 +2227,7 @@ define amdgpu_ps float @global_load_f32_saddr_zext_vgpr_range_too_large(ptr addr
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_lshlrev_b64 v[0:1], 2, v[0:1]
 ; GFX11-NEXT:    v_add_co_u32 v0, vcc, s2, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, null, s3, v1, vcc
 ; GFX11-NEXT:    global_load_b32 v0, v[0:1], off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
@@ -2247,7 +2241,7 @@ define amdgpu_ps float @global_load_f32_saddr_zext_vgpr_range_too_large(ptr addr
 ; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-SDAG-NEXT:    v_lshlrev_b64_e32 v[0:1], 2, v[0:1]
 ; GFX12-SDAG-NEXT:    v_add_co_u32 v0, vcc, s2, v0
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12-SDAG-NEXT:    v_add_co_ci_u32_e64 v1, null, s3, v1, vcc
 ; GFX12-SDAG-NEXT:    global_load_b32 v0, v[0:1], off
 ; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
@@ -2263,7 +2257,7 @@ define amdgpu_ps float @global_load_f32_saddr_zext_vgpr_range_too_large(ptr addr
 ; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-GISEL-NEXT:    v_lshlrev_b64_e32 v[0:1], 2, v[0:1]
 ; GFX12-GISEL-NEXT:    v_add_co_u32 v0, vcc, v2, v0
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, v3, v1, vcc
 ; GFX12-GISEL-NEXT:    global_load_b32 v0, v[0:1], off
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0

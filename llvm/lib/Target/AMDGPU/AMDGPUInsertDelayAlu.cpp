@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
+#include "AMDGPULaneMaskUtils.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIInstrInfo.h"
@@ -121,6 +122,9 @@ public:
     // until it completes.
     uint8_t SALUCycles = 0;
 
+    // Set when this entry was produced by a data fast-forward producer
+    bool IsVCCFFProducer = false;
+
     DelayInfo() = default;
 
     DelayInfo(DelayType Type, unsigned Cycles) {
@@ -147,7 +151,8 @@ public:
     bool operator==(const DelayInfo &RHS) const {
       return VALUCycles == RHS.VALUCycles && VALUNum == RHS.VALUNum &&
              TRANSCycles == RHS.TRANSCycles && TRANSNum == RHS.TRANSNum &&
-             TRANSNumVALU == RHS.TRANSNumVALU && SALUCycles == RHS.SALUCycles;
+             TRANSNumVALU == RHS.TRANSNumVALU && SALUCycles == RHS.SALUCycles &&
+             IsVCCFFProducer == RHS.IsVCCFFProducer;
     }
 
     bool operator!=(const DelayInfo &RHS) const { return !(*this == RHS); }
@@ -161,6 +166,7 @@ public:
       TRANSNum = std::min(TRANSNum, RHS.TRANSNum);
       TRANSNumVALU = std::min(TRANSNumVALU, RHS.TRANSNumVALU);
       SALUCycles = std::max(SALUCycles, RHS.SALUCycles);
+      IsVCCFFProducer = IsVCCFFProducer && RHS.IsVCCFFProducer;
     }
 
     // Update this DelayInfo after issuing an instruction of the specified type.
@@ -348,6 +354,51 @@ public:
     return (Imm & 0x780) ? nullptr : DelayAlu;
   }
 
+  // Fast-forward producers: instructions that write VCC/carry as an
+  // explicit output and are covered by the hardware fast-forward path.
+  // TODO: V_CMPX writes EXEC implicitly
+  static bool isFastForwardProducer(const MachineInstr &MI) {
+    switch (MI.getOpcode()) {
+    case AMDGPU::V_ADD_CO_U32_e64:
+    case AMDGPU::V_SUB_CO_U32_e64:
+    case AMDGPU::V_SUBREV_CO_U32_e64:
+    case AMDGPU::V_ADDC_U32_e64:
+    case AMDGPU::V_SUBB_U32_e64:
+    case AMDGPU::V_SUBBREV_U32_e64:
+      return true;
+    default:
+      // All V_CMP* instructions excluding V_CMPX.
+      return SIInstrInfo::isVALU(MI, /*AllowLDSDMA=*/false) && MI.isCompare() &&
+             !AMDGPU::isVCMPX(MI.getOpcode());
+    }
+  }
+
+  // Fast-forward consumers: instructions that read VCC/carry and
+  // are covered by the hardware fast-forward path.
+  // Note: V_DIV_FMAS reads VCC as *data* (not carry) and is explicitly
+  // excluded: hardware cannot fast-forward that path (4-cycle stall).
+  static bool isFastForwardConsumer(const MachineInstr &MI) {
+    switch (MI.getOpcode()) {
+    // Explicit VCC carry-in
+    case AMDGPU::V_ADDC_U32_e64:
+    case AMDGPU::V_SUBB_U32_e64:
+    case AMDGPU::V_SUBBREV_U32_e64:
+    case AMDGPU::V_CNDMASK_B32_e64:
+    // Implicit VCC carry-in
+    // Included here so the fast-forward suppression is correct once
+    // the pass is extended to track implicit uses.
+    // TODO: include VALU that use implicit EXEC (produced by V_CMPX*)
+    // as a condition, once we track implicit uses.
+    case AMDGPU::V_ADDC_U32_e32:
+    case AMDGPU::V_SUBB_U32_e32:
+    case AMDGPU::V_SUBBREV_U32_e32:
+    case AMDGPU::V_CNDMASK_B32_e32:
+      return true;
+    default:
+      return false;
+    }
+  }
+
   bool runOnMachineBasicBlock(MachineBasicBlock &MBB, bool Emit) {
     DelayState State;
     for (auto *Pred : MBB.predecessors())
@@ -392,6 +443,7 @@ public:
         State = DelayState();
       } else if (Type != OTHER) {
         DelayInfo Delay;
+        Register VccReg = AMDGPU::LaneMaskConstants::get(*ST).VccReg;
         // TODO: Scan implicit uses too?
         for (const auto &Op : MI.explicit_uses()) {
           if (Op.isReg()) {
@@ -400,6 +452,16 @@ public:
             // ignore this operand.
             if (MI.getOpcode() == AMDGPU::V_WRITELANE_B32 && Op.isTied())
               continue;
+            // Suppress the delay for VCC operands when both the
+            // producer and consumer are in the hardware fast-forward set.
+            Register Reg = Op.getReg();
+            if (Reg == VccReg && isFastForwardConsumer(MI) &&
+                llvm::all_of(TRI->regunits(Reg), [&](MCRegUnit Unit) {
+                  auto It = State.find(Unit);
+                  return It != State.end() && It->second.IsVCCFFProducer;
+                })) {
+              continue;
+            }
             for (MCRegUnit Unit : TRI->regunits(Op.getReg())) {
               auto It = State.find(Unit);
               if (It != State.end()) {
@@ -429,11 +491,17 @@ public:
 
       if (Type != OTHER) {
         // TODO: Scan implicit defs too?
+        bool IsFFProd = isFastForwardProducer(MI);
+        Register VccReg = AMDGPU::LaneMaskConstants::get(*ST).VccReg;
         for (const auto &Op : MI.defs()) {
           unsigned Latency = SchedModel->computeOperandLatency(
               &MI, Op.getOperandNo(), nullptr, 0);
-          for (MCRegUnit Unit : TRI->regunits(Op.getReg()))
-            State[Unit] = DelayInfo(Type, Latency);
+          DelayInfo Info(Type, Latency);
+          Register Reg = Op.getReg();
+          if (IsFFProd && Reg == VccReg)
+            Info.IsVCCFFProducer = true;
+          for (MCRegUnit Unit : TRI->regunits(Reg))
+            State[Unit] = Info;
         }
       }
 

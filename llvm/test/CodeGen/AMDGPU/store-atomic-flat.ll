@@ -146,7 +146,6 @@ define amdgpu_cs void @atomic_store_i16x4_monotonic_agent_offset_min(<4 x i16> %
 ; GFX11-LABEL: atomic_store_i16x4_monotonic_agent_offset_min:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    v_add_co_u32 v2, vcc_lo, 0xfffff000, v2
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v3, null, -1, v3, vcc_lo
 ; GFX11-NEXT:    flat_store_b64 v[2:3], v[0:1]
 ; GFX11-NEXT:    s_endpgm

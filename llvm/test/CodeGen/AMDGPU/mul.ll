@@ -3891,7 +3891,7 @@ define amdgpu_kernel void @v_mul_i128(ptr addrspace(1) %out, ptr addrspace(1) %a
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_add3_u32 v0, v11, v10, v17
 ; GFX11-NEXT:    v_add_co_u32 v10, vcc_lo, v6, v9
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v11, null, v7, v0, vcc_lo
 ; GFX11-NEXT:    v_mov_b32_e32 v9, v2
 ; GFX11-NEXT:    global_store_b128 v15, v[8:11], s[2:3]
@@ -3929,7 +3929,7 @@ define amdgpu_kernel void @v_mul_i128(ptr addrspace(1) %out, ptr addrspace(1) %a
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_add3_u32 v3, v7, v3, v4
 ; GFX12-NEXT:    v_add_co_u32 v10, vcc_lo, v0, v2
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12-NEXT:    v_add_co_ci_u32_e64 v11, null, v1, v3, vcc_lo
 ; GFX12-NEXT:    global_store_b128 v13, v[8:11], s[2:3]
 ; GFX12-NEXT:    s_endpgm
@@ -4002,7 +4002,7 @@ define amdgpu_kernel void @v_mul_i128(ptr addrspace(1) %out, ptr addrspace(1) %a
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX13-NEXT:    v_add3_u32 v3, v7, v3, v4
 ; GFX13-NEXT:    v_add_co_u32 v10, vcc_lo, v0, v2
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX13-NEXT:    v_add_co_ci_u32_e64 v11, null, v1, v3, vcc_lo
 ; GFX13-NEXT:    global_store_b128 v13, v[8:11], s[2:3] scale_offset
 ; GFX13-NEXT:    s_endpgm

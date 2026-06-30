@@ -226,6 +226,8 @@ class VOPC_Pseudo <string opName, VOPC_Profile P, list<dag> pattern=[],
   string Mnemonic = opName;
   string AsmOperands = P.Asm32;
 
+  Instruction Opcode = !cast<Instruction>(NAME);
+
   let Size = 4;
   let mayLoad = 0;
   let mayStore = 0;
@@ -360,6 +362,14 @@ class VCMPXNoSDstTable <bit has_sdst, string Name> {
 class VCMPVCMPXTable <string Name> {
   bit IsVCMPX = 0;
   string VCMPOp = Name;
+}
+
+def VCMPXInfoTable : GenericTable {
+  let FilterClass = "VCMPVCMPXTable";
+  let CppTypeName = "VCMPXInfo";
+  let Fields = ["Opcode", "IsVCMPX"];
+  let PrimaryKey = ["Opcode"];
+  let PrimaryKeyName = "getVCMPXInfoHelper";
 }
 
 multiclass VOPC_Pseudos <string opName,

@@ -65,7 +65,7 @@ define amdgpu_ps float @global_load_b32_idxprom_wrong_stride(ptr addrspace(1) al
 ; GFX13-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-SDAG-NEXT:    v_lshlrev_b64_e32 v[0:1], 3, v[0:1]
 ; GFX13-SDAG-NEXT:    v_add_co_u32 v0, vcc_lo, s0, v0
-; GFX13-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX13-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX13-SDAG-NEXT:    v_add_co_ci_u32_e64 v1, null, s1, v1, vcc_lo
 ; GFX13-SDAG-NEXT:    global_load_b32 v0, v[0:1], off
 ; GFX13-SDAG-NEXT:    s_wait_loadcnt 0x0
@@ -78,7 +78,7 @@ define amdgpu_ps float @global_load_b32_idxprom_wrong_stride(ptr addrspace(1) al
 ; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-GISEL-NEXT:    v_lshlrev_b64_e32 v[0:1], 3, v[0:1]
 ; GFX13-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v2, v0
-; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX13-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, v3, v1, vcc_lo
 ; GFX13-GISEL-NEXT:    global_load_b32 v0, v[0:1], off
 ; GFX13-GISEL-NEXT:    s_wait_loadcnt 0x0

@@ -268,7 +268,6 @@ define i8 @global_inst_valu_offset_13bit_max(ptr addrspace(1) %p) {
 ; GFX11-GISEL:       ; %bb.0:
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, 0x1fff, v0
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX11-GISEL-NEXT:    global_load_u8 v0, v[0:1], off
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
@@ -307,7 +306,6 @@ define i8 @global_inst_valu_offset_13bit_max(ptr addrspace(1) %p) {
 ; GFX11-SDAG-TRUE16:       ; %bb.0:
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0x1000, v0
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX11-SDAG-TRUE16-NEXT:    global_load_d16_u8 v0, v[0:1], off offset:4095
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0)
@@ -317,7 +315,6 @@ define i8 @global_inst_valu_offset_13bit_max(ptr addrspace(1) %p) {
 ; GFX11-SDAG-FAKE16:       ; %bb.0:
 ; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0x1000, v0
-; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX11-SDAG-FAKE16-NEXT:    global_load_u8 v0, v[0:1], off offset:4095
 ; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0)
@@ -372,7 +369,6 @@ define i8 @global_inst_valu_offset_24bit_max(ptr addrspace(1) %p) {
 ; GFX11-GISEL:       ; %bb.0:
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, 0x7fffff, v0
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX11-GISEL-NEXT:    global_load_u8 v0, v[0:1], off
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
@@ -411,7 +407,6 @@ define i8 @global_inst_valu_offset_24bit_max(ptr addrspace(1) %p) {
 ; GFX11-SDAG-TRUE16:       ; %bb.0:
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0x7ff000, v0
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX11-SDAG-TRUE16-NEXT:    global_load_d16_u8 v0, v[0:1], off offset:4095
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0)
@@ -421,7 +416,6 @@ define i8 @global_inst_valu_offset_24bit_max(ptr addrspace(1) %p) {
 ; GFX11-SDAG-FAKE16:       ; %bb.0:
 ; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0x7ff000, v0
-; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX11-SDAG-FAKE16-NEXT:    global_load_u8 v0, v[0:1], off offset:4095
 ; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0)
@@ -624,7 +618,6 @@ define i8 @global_inst_valu_offset_neg_13bit_max(ptr addrspace(1) %p) {
 ; GFX11-GISEL:       ; %bb.0:
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, 0xffffe000, v0
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, v1, vcc_lo
 ; GFX11-GISEL-NEXT:    global_load_u8 v0, v[0:1], off
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
@@ -645,7 +638,6 @@ define i8 @global_inst_valu_offset_neg_13bit_max(ptr addrspace(1) %p) {
 ; GFX11-SDAG-TRUE16:       ; %bb.0:
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0xffffe000, v0
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, v1, vcc_lo
 ; GFX11-SDAG-TRUE16-NEXT:    global_load_d16_u8 v0, v[0:1], off
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0)
@@ -655,7 +647,6 @@ define i8 @global_inst_valu_offset_neg_13bit_max(ptr addrspace(1) %p) {
 ; GFX11-SDAG-FAKE16:       ; %bb.0:
 ; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0xffffe000, v0
-; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, v1, vcc_lo
 ; GFX11-SDAG-FAKE16-NEXT:    global_load_u8 v0, v[0:1], off
 ; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0)
@@ -710,7 +701,6 @@ define i8 @global_inst_valu_offset_neg_24bit_max(ptr addrspace(1) %p) {
 ; GFX11-GISEL:       ; %bb.0:
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, 0xff800000, v0
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, v1, vcc_lo
 ; GFX11-GISEL-NEXT:    global_load_u8 v0, v[0:1], off
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
@@ -731,7 +721,6 @@ define i8 @global_inst_valu_offset_neg_24bit_max(ptr addrspace(1) %p) {
 ; GFX11-SDAG-TRUE16:       ; %bb.0:
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0xff800000, v0
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, v1, vcc_lo
 ; GFX11-SDAG-TRUE16-NEXT:    global_load_d16_u8 v0, v[0:1], off
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0)
@@ -741,7 +730,6 @@ define i8 @global_inst_valu_offset_neg_24bit_max(ptr addrspace(1) %p) {
 ; GFX11-SDAG-FAKE16:       ; %bb.0:
 ; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0xff800000, v0
-; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, v1, vcc_lo
 ; GFX11-SDAG-FAKE16-NEXT:    global_load_u8 v0, v[0:1], off
 ; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0)
@@ -880,7 +868,6 @@ define i8 @global_inst_valu_offset_2x_12bit_max(ptr addrspace(1) %p) {
 ; GFX11-GISEL:       ; %bb.0:
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, 0x1fff, v0
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX11-GISEL-NEXT:    global_load_u8 v0, v[0:1], off
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
@@ -919,7 +906,6 @@ define i8 @global_inst_valu_offset_2x_12bit_max(ptr addrspace(1) %p) {
 ; GFX11-SDAG-TRUE16:       ; %bb.0:
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0x1000, v0
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX11-SDAG-TRUE16-NEXT:    global_load_d16_u8 v0, v[0:1], off offset:4095
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0)
@@ -929,7 +915,6 @@ define i8 @global_inst_valu_offset_2x_12bit_max(ptr addrspace(1) %p) {
 ; GFX11-SDAG-FAKE16:       ; %bb.0:
 ; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0x1000, v0
-; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX11-SDAG-FAKE16-NEXT:    global_load_u8 v0, v[0:1], off offset:4095
 ; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0)
@@ -984,7 +969,6 @@ define i8 @global_inst_valu_offset_2x_13bit_max(ptr addrspace(1) %p) {
 ; GFX11-GISEL:       ; %bb.0:
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, 0x3fff, v0
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX11-GISEL-NEXT:    global_load_u8 v0, v[0:1], off
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
@@ -1023,7 +1007,6 @@ define i8 @global_inst_valu_offset_2x_13bit_max(ptr addrspace(1) %p) {
 ; GFX11-SDAG-TRUE16:       ; %bb.0:
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0x3000, v0
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX11-SDAG-TRUE16-NEXT:    global_load_d16_u8 v0, v[0:1], off offset:4095
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0)
@@ -1033,7 +1016,6 @@ define i8 @global_inst_valu_offset_2x_13bit_max(ptr addrspace(1) %p) {
 ; GFX11-SDAG-FAKE16:       ; %bb.0:
 ; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0x3000, v0
-; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX11-SDAG-FAKE16-NEXT:    global_load_u8 v0, v[0:1], off offset:4095
 ; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0)
@@ -1088,7 +1070,6 @@ define i8 @global_inst_valu_offset_2x_24bit_max(ptr addrspace(1) %p) {
 ; GFX11-GISEL:       ; %bb.0:
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, 0xfffffe, v0
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX11-GISEL-NEXT:    global_load_u8 v0, v[0:1], off
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
@@ -1130,7 +1111,6 @@ define i8 @global_inst_valu_offset_2x_24bit_max(ptr addrspace(1) %p) {
 ; GFX11-SDAG-TRUE16:       ; %bb.0:
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0xfff000, v0
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX11-SDAG-TRUE16-NEXT:    global_load_d16_u8 v0, v[0:1], off offset:4094
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0)
@@ -1140,7 +1120,6 @@ define i8 @global_inst_valu_offset_2x_24bit_max(ptr addrspace(1) %p) {
 ; GFX11-SDAG-FAKE16:       ; %bb.0:
 ; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0xfff000, v0
-; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX11-SDAG-FAKE16-NEXT:    global_load_u8 v0, v[0:1], off offset:4094
 ; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0)
@@ -1276,7 +1255,6 @@ define i8 @global_inst_valu_offset_2x_neg_12bit_max(ptr addrspace(1) %p) {
 ; GFX11-GISEL:       ; %bb.0:
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, 0xffffe000, v0
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, v1, vcc_lo
 ; GFX11-GISEL-NEXT:    global_load_u8 v0, v[0:1], off
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
@@ -1297,7 +1275,6 @@ define i8 @global_inst_valu_offset_2x_neg_12bit_max(ptr addrspace(1) %p) {
 ; GFX11-SDAG-TRUE16:       ; %bb.0:
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0xffffe000, v0
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, v1, vcc_lo
 ; GFX11-SDAG-TRUE16-NEXT:    global_load_d16_u8 v0, v[0:1], off
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0)
@@ -1307,7 +1284,6 @@ define i8 @global_inst_valu_offset_2x_neg_12bit_max(ptr addrspace(1) %p) {
 ; GFX11-SDAG-FAKE16:       ; %bb.0:
 ; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0xffffe000, v0
-; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, v1, vcc_lo
 ; GFX11-SDAG-FAKE16-NEXT:    global_load_u8 v0, v[0:1], off
 ; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0)
@@ -1362,7 +1338,6 @@ define i8 @global_inst_valu_offset_2x_neg_13bit_max(ptr addrspace(1) %p) {
 ; GFX11-GISEL:       ; %bb.0:
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, 0xffffc000, v0
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, v1, vcc_lo
 ; GFX11-GISEL-NEXT:    global_load_u8 v0, v[0:1], off
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
@@ -1383,7 +1358,6 @@ define i8 @global_inst_valu_offset_2x_neg_13bit_max(ptr addrspace(1) %p) {
 ; GFX11-SDAG-TRUE16:       ; %bb.0:
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0xffffc000, v0
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, v1, vcc_lo
 ; GFX11-SDAG-TRUE16-NEXT:    global_load_d16_u8 v0, v[0:1], off
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0)
@@ -1393,7 +1367,6 @@ define i8 @global_inst_valu_offset_2x_neg_13bit_max(ptr addrspace(1) %p) {
 ; GFX11-SDAG-FAKE16:       ; %bb.0:
 ; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0xffffc000, v0
-; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, v1, vcc_lo
 ; GFX11-SDAG-FAKE16-NEXT:    global_load_u8 v0, v[0:1], off
 ; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0)
@@ -1448,7 +1421,6 @@ define i8 @global_inst_valu_offset_2x_neg_24bit_max(ptr addrspace(1) %p) {
 ; GFX11-GISEL:       ; %bb.0:
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, 0xff000001, v0
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, v1, vcc_lo
 ; GFX11-GISEL-NEXT:    global_load_u8 v0, v[0:1], off
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
@@ -1490,7 +1462,6 @@ define i8 @global_inst_valu_offset_2x_neg_24bit_max(ptr addrspace(1) %p) {
 ; GFX11-SDAG-TRUE16:       ; %bb.0:
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0xff001000, v0
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, v1, vcc_lo
 ; GFX11-SDAG-TRUE16-NEXT:    global_load_d16_u8 v0, v[0:1], off offset:-4095
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0)
@@ -1500,7 +1471,6 @@ define i8 @global_inst_valu_offset_2x_neg_24bit_max(ptr addrspace(1) %p) {
 ; GFX11-SDAG-FAKE16:       ; %bb.0:
 ; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0xff001000, v0
-; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, v1, vcc_lo
 ; GFX11-SDAG-FAKE16-NEXT:    global_load_u8 v0, v[0:1], off offset:-4095
 ; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0)
@@ -1563,7 +1533,6 @@ define i8 @global_inst_valu_offset_64bit_11bit_split0(ptr addrspace(1) %p) {
 ; GFX11-GISEL:       ; %bb.0:
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, 0x7ff, v0
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 2, v1, vcc_lo
 ; GFX11-GISEL-NEXT:    global_load_u8 v0, v[0:1], off
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
@@ -1605,7 +1574,6 @@ define i8 @global_inst_valu_offset_64bit_11bit_split0(ptr addrspace(1) %p) {
 ; GFX11-SDAG-TRUE16:       ; %bb.0:
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0, v0
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 2, v1, vcc_lo
 ; GFX11-SDAG-TRUE16-NEXT:    global_load_d16_u8 v0, v[0:1], off offset:2047
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0)
@@ -1615,7 +1583,6 @@ define i8 @global_inst_valu_offset_64bit_11bit_split0(ptr addrspace(1) %p) {
 ; GFX11-SDAG-FAKE16:       ; %bb.0:
 ; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0, v0
-; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 2, v1, vcc_lo
 ; GFX11-SDAG-FAKE16-NEXT:    global_load_u8 v0, v[0:1], off offset:2047
 ; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0)
@@ -1677,7 +1644,6 @@ define i8 @global_inst_valu_offset_64bit_11bit_split1(ptr addrspace(1) %p) {
 ; GFX11-GISEL:       ; %bb.0:
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, 0x800, v0
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 2, v1, vcc_lo
 ; GFX11-GISEL-NEXT:    global_load_u8 v0, v[0:1], off
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
@@ -1710,7 +1676,6 @@ define i8 @global_inst_valu_offset_64bit_11bit_split1(ptr addrspace(1) %p) {
 ; GFX11-SDAG-TRUE16:       ; %bb.0:
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0, v0
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 2, v1, vcc_lo
 ; GFX11-SDAG-TRUE16-NEXT:    global_load_d16_u8 v0, v[0:1], off offset:2048
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0)
@@ -1720,7 +1685,6 @@ define i8 @global_inst_valu_offset_64bit_11bit_split1(ptr addrspace(1) %p) {
 ; GFX11-SDAG-FAKE16:       ; %bb.0:
 ; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0, v0
-; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 2, v1, vcc_lo
 ; GFX11-SDAG-FAKE16-NEXT:    global_load_u8 v0, v[0:1], off offset:2048
 ; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0)
@@ -1782,7 +1746,6 @@ define i8 @global_inst_valu_offset_64bit_12bit_split0(ptr addrspace(1) %p) {
 ; GFX11-GISEL:       ; %bb.0:
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, 0xfff, v0
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 2, v1, vcc_lo
 ; GFX11-GISEL-NEXT:    global_load_u8 v0, v[0:1], off
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
@@ -1824,7 +1787,6 @@ define i8 @global_inst_valu_offset_64bit_12bit_split0(ptr addrspace(1) %p) {
 ; GFX11-SDAG-TRUE16:       ; %bb.0:
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0, v0
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 2, v1, vcc_lo
 ; GFX11-SDAG-TRUE16-NEXT:    global_load_d16_u8 v0, v[0:1], off offset:4095
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0)
@@ -1834,7 +1796,6 @@ define i8 @global_inst_valu_offset_64bit_12bit_split0(ptr addrspace(1) %p) {
 ; GFX11-SDAG-FAKE16:       ; %bb.0:
 ; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0, v0
-; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 2, v1, vcc_lo
 ; GFX11-SDAG-FAKE16-NEXT:    global_load_u8 v0, v[0:1], off offset:4095
 ; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0)
@@ -1896,7 +1857,6 @@ define i8 @global_inst_valu_offset_64bit_12bit_split1(ptr addrspace(1) %p) {
 ; GFX11-GISEL:       ; %bb.0:
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, 0x1000, v0
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 2, v1, vcc_lo
 ; GFX11-GISEL-NEXT:    global_load_u8 v0, v[0:1], off
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
@@ -1920,7 +1880,6 @@ define i8 @global_inst_valu_offset_64bit_12bit_split1(ptr addrspace(1) %p) {
 ; GFX11-SDAG-TRUE16:       ; %bb.0:
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0x1000, v0
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 2, v1, vcc_lo
 ; GFX11-SDAG-TRUE16-NEXT:    global_load_d16_u8 v0, v[0:1], off
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0)
@@ -1930,7 +1889,6 @@ define i8 @global_inst_valu_offset_64bit_12bit_split1(ptr addrspace(1) %p) {
 ; GFX11-SDAG-FAKE16:       ; %bb.0:
 ; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0x1000, v0
-; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 2, v1, vcc_lo
 ; GFX11-SDAG-FAKE16-NEXT:    global_load_u8 v0, v[0:1], off
 ; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0)
@@ -1992,7 +1950,6 @@ define i8 @global_inst_valu_offset_64bit_13bit_split0(ptr addrspace(1) %p) {
 ; GFX11-GISEL:       ; %bb.0:
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, 0x1fff, v0
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 2, v1, vcc_lo
 ; GFX11-GISEL-NEXT:    global_load_u8 v0, v[0:1], off
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
@@ -2034,7 +1991,6 @@ define i8 @global_inst_valu_offset_64bit_13bit_split0(ptr addrspace(1) %p) {
 ; GFX11-SDAG-TRUE16:       ; %bb.0:
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0x1000, v0
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 2, v1, vcc_lo
 ; GFX11-SDAG-TRUE16-NEXT:    global_load_d16_u8 v0, v[0:1], off offset:4095
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0)
@@ -2044,7 +2000,6 @@ define i8 @global_inst_valu_offset_64bit_13bit_split0(ptr addrspace(1) %p) {
 ; GFX11-SDAG-FAKE16:       ; %bb.0:
 ; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0x1000, v0
-; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 2, v1, vcc_lo
 ; GFX11-SDAG-FAKE16-NEXT:    global_load_u8 v0, v[0:1], off offset:4095
 ; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0)
@@ -2106,7 +2061,6 @@ define i8 @global_inst_valu_offset_64bit_13bit_split1(ptr addrspace(1) %p) {
 ; GFX11-GISEL:       ; %bb.0:
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, 0x2000, v0
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 2, v1, vcc_lo
 ; GFX11-GISEL-NEXT:    global_load_u8 v0, v[0:1], off
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
@@ -2130,7 +2084,6 @@ define i8 @global_inst_valu_offset_64bit_13bit_split1(ptr addrspace(1) %p) {
 ; GFX11-SDAG-TRUE16:       ; %bb.0:
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0x2000, v0
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 2, v1, vcc_lo
 ; GFX11-SDAG-TRUE16-NEXT:    global_load_d16_u8 v0, v[0:1], off
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0)
@@ -2140,7 +2093,6 @@ define i8 @global_inst_valu_offset_64bit_13bit_split1(ptr addrspace(1) %p) {
 ; GFX11-SDAG-FAKE16:       ; %bb.0:
 ; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0x2000, v0
-; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 2, v1, vcc_lo
 ; GFX11-SDAG-FAKE16-NEXT:    global_load_u8 v0, v[0:1], off
 ; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0)
@@ -2203,7 +2155,6 @@ define i8 @global_inst_valu_offset_64bit_11bit_neg_high_split0(ptr addrspace(1) 
 ; GFX11-GISEL:       ; %bb.0:
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, 0x7ff, v0
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0x80000000, v1, vcc_lo
 ; GFX11-GISEL-NEXT:    global_load_u8 v0, v[0:1], off
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
@@ -2246,7 +2197,6 @@ define i8 @global_inst_valu_offset_64bit_11bit_neg_high_split0(ptr addrspace(1) 
 ; GFX11-SDAG-TRUE16:       ; %bb.0:
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0x1000, v0
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 0x80000000, v1, vcc_lo
 ; GFX11-SDAG-TRUE16-NEXT:    global_load_d16_u8 v0, v[0:1], off offset:-2049
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0)
@@ -2256,7 +2206,6 @@ define i8 @global_inst_valu_offset_64bit_11bit_neg_high_split0(ptr addrspace(1) 
 ; GFX11-SDAG-FAKE16:       ; %bb.0:
 ; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0x1000, v0
-; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 0x80000000, v1, vcc_lo
 ; GFX11-SDAG-FAKE16-NEXT:    global_load_u8 v0, v[0:1], off offset:-2049
 ; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0)
@@ -2319,7 +2268,6 @@ define i8 @global_inst_valu_offset_64bit_11bit_neg_high_split1(ptr addrspace(1) 
 ; GFX11-GISEL:       ; %bb.0:
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, 0x800, v0
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0x80000000, v1, vcc_lo
 ; GFX11-GISEL-NEXT:    global_load_u8 v0, v[0:1], off
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
@@ -2353,7 +2301,6 @@ define i8 @global_inst_valu_offset_64bit_11bit_neg_high_split1(ptr addrspace(1) 
 ; GFX11-SDAG-TRUE16:       ; %bb.0:
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0x1000, v0
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 0x80000000, v1, vcc_lo
 ; GFX11-SDAG-TRUE16-NEXT:    global_load_d16_u8 v0, v[0:1], off offset:-2048
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0)
@@ -2363,7 +2310,6 @@ define i8 @global_inst_valu_offset_64bit_11bit_neg_high_split1(ptr addrspace(1) 
 ; GFX11-SDAG-FAKE16:       ; %bb.0:
 ; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0x1000, v0
-; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 0x80000000, v1, vcc_lo
 ; GFX11-SDAG-FAKE16-NEXT:    global_load_u8 v0, v[0:1], off offset:-2048
 ; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0)
@@ -2426,7 +2372,6 @@ define i8 @global_inst_valu_offset_64bit_12bit_neg_high_split0(ptr addrspace(1) 
 ; GFX11-GISEL:       ; %bb.0:
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, 0xfff, v0
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0x80000000, v1, vcc_lo
 ; GFX11-GISEL-NEXT:    global_load_u8 v0, v[0:1], off
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
@@ -2469,7 +2414,6 @@ define i8 @global_inst_valu_offset_64bit_12bit_neg_high_split0(ptr addrspace(1) 
 ; GFX11-SDAG-TRUE16:       ; %bb.0:
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0x1000, v0
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 0x80000000, v1, vcc_lo
 ; GFX11-SDAG-TRUE16-NEXT:    global_load_d16_u8 v0, v[0:1], off offset:-1
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0)
@@ -2479,7 +2423,6 @@ define i8 @global_inst_valu_offset_64bit_12bit_neg_high_split0(ptr addrspace(1) 
 ; GFX11-SDAG-FAKE16:       ; %bb.0:
 ; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0x1000, v0
-; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 0x80000000, v1, vcc_lo
 ; GFX11-SDAG-FAKE16-NEXT:    global_load_u8 v0, v[0:1], off offset:-1
 ; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0)
@@ -2542,7 +2485,6 @@ define i8 @global_inst_valu_offset_64bit_12bit_neg_high_split1(ptr addrspace(1) 
 ; GFX11-GISEL:       ; %bb.0:
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, 0x1000, v0
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0x80000000, v1, vcc_lo
 ; GFX11-GISEL-NEXT:    global_load_u8 v0, v[0:1], off
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
@@ -2576,7 +2518,6 @@ define i8 @global_inst_valu_offset_64bit_12bit_neg_high_split1(ptr addrspace(1) 
 ; GFX11-SDAG-TRUE16:       ; %bb.0:
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0x1000, v0
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 0x80000000, v1, vcc_lo
 ; GFX11-SDAG-TRUE16-NEXT:    global_load_d16_u8 v0, v[0:1], off
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0)
@@ -2586,7 +2527,6 @@ define i8 @global_inst_valu_offset_64bit_12bit_neg_high_split1(ptr addrspace(1) 
 ; GFX11-SDAG-FAKE16:       ; %bb.0:
 ; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0x1000, v0
-; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 0x80000000, v1, vcc_lo
 ; GFX11-SDAG-FAKE16-NEXT:    global_load_u8 v0, v[0:1], off
 ; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0)
@@ -2649,7 +2589,6 @@ define i8 @global_inst_valu_offset_64bit_13bit_neg_high_split0(ptr addrspace(1) 
 ; GFX11-GISEL:       ; %bb.0:
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, 0x1fff, v0
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0x80000000, v1, vcc_lo
 ; GFX11-GISEL-NEXT:    global_load_u8 v0, v[0:1], off
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
@@ -2692,7 +2631,6 @@ define i8 @global_inst_valu_offset_64bit_13bit_neg_high_split0(ptr addrspace(1) 
 ; GFX11-SDAG-TRUE16:       ; %bb.0:
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0x2000, v0
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 0x80000000, v1, vcc_lo
 ; GFX11-SDAG-TRUE16-NEXT:    global_load_d16_u8 v0, v[0:1], off offset:-1
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0)
@@ -2702,7 +2640,6 @@ define i8 @global_inst_valu_offset_64bit_13bit_neg_high_split0(ptr addrspace(1) 
 ; GFX11-SDAG-FAKE16:       ; %bb.0:
 ; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0x2000, v0
-; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 0x80000000, v1, vcc_lo
 ; GFX11-SDAG-FAKE16-NEXT:    global_load_u8 v0, v[0:1], off offset:-1
 ; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0)
@@ -2765,7 +2702,6 @@ define i8 @global_inst_valu_offset_64bit_13bit_neg_high_split1(ptr addrspace(1) 
 ; GFX11-GISEL:       ; %bb.0:
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, 0x2000, v0
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0x80000000, v1, vcc_lo
 ; GFX11-GISEL-NEXT:    global_load_u8 v0, v[0:1], off
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
@@ -2799,7 +2735,6 @@ define i8 @global_inst_valu_offset_64bit_13bit_neg_high_split1(ptr addrspace(1) 
 ; GFX11-SDAG-TRUE16:       ; %bb.0:
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-TRUE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0x2000, v0
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SDAG-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 0x80000000, v1, vcc_lo
 ; GFX11-SDAG-TRUE16-NEXT:    global_load_d16_u8 v0, v[0:1], off
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0)
@@ -2809,7 +2744,6 @@ define i8 @global_inst_valu_offset_64bit_13bit_neg_high_split1(ptr addrspace(1) 
 ; GFX11-SDAG-FAKE16:       ; %bb.0:
 ; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-FAKE16-NEXT:    v_add_co_u32 v0, vcc_lo, 0x2000, v0
-; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SDAG-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 0x80000000, v1, vcc_lo
 ; GFX11-SDAG-FAKE16-NEXT:    global_load_u8 v0, v[0:1], off
 ; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0)

@@ -4489,8 +4489,8 @@ define float @safe_math_fract_f32_swapped_edge_case_multi_use_inner_select_fcmp(
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_fract_f32_e32 v3, v0
 ; GFX11-NEXT:    v_cmp_neq_f32_e64 vcc_lo, 0x7f800000, |v0|
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX11-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc_lo
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GFX11-NEXT:    v_cndmask_b32_e32 v0, 0, v3, vcc_lo
 ; GFX11-NEXT:    global_store_b8 v[1:2], v4, off
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -4505,8 +4505,8 @@ define float @safe_math_fract_f32_swapped_edge_case_multi_use_inner_select_fcmp(
 ; GFX12-NEXT:    v_fract_f32_e32 v3, v0
 ; GFX12-NEXT:    v_cmp_neq_f32_e64 vcc_lo, 0x7f800000, |v0|
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX12-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc_lo
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GFX12-NEXT:    v_cndmask_b32_e32 v0, 0, v3, vcc_lo
 ; GFX12-NEXT:    global_store_b8 v[1:2], v4, off
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
