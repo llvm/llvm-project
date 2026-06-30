@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "InstCombineInternal.h"
-#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
@@ -1466,9 +1465,8 @@ Value *InstCombinerImpl::simplifyShrShlDemandedBits(
 /// bounded one-use chain with distinct in-range constant indices, where SDVE
 /// cannot remove a dead insert before hitting its depth limit.
 static bool canSkipDemandedEltsInInsertChain(InsertElementInst &IE,
-                                             unsigned VWidth) {
-  unsigned DepthLimit = SimplifyDemandedVectorEltsDepthLimit;
-
+                                             unsigned VWidth,
+                                             unsigned DepthLimit) {
   // Only skip chain nodes that feed another insertelement; the final chain root
   // still runs the full query.
   if (!IE.hasOneUse())
@@ -1494,7 +1492,7 @@ static bool canSkipDemandedEltsInInsertChain(InsertElementInst &IE,
   };
 
   auto *Cur = &IE;
-  for ([[maybe_unused]] auto _ : llvm::seq(DepthLimit)) {
+  for (unsigned I = 0; I != DepthLimit; ++I) {
     // This loop scans the same base-chain window that the SDVE query would
     // inspect before hitting its depth limit. With distinct insert indices in
     // that window, the all-lanes query cannot remove a dead insert; with
@@ -1662,10 +1660,12 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
     break;
   }
   case Instruction::InsertElement: {
+    unsigned DepthLimit = SimplifyDemandedVectorEltsDepthLimit;
     auto *IE = cast<InsertElementInst>(I);
+    // Skip only when SDVE cannot simplify this insert chain before the limit.
     if (Depth == 0 && DemandedElts.isAllOnes() &&
-        VWidth > SimplifyDemandedVectorEltsDepthLimit &&
-        canSkipDemandedEltsInInsertChain(*IE, VWidth))
+        VWidth > DepthLimit &&
+        canSkipDemandedEltsInInsertChain(*IE, VWidth, DepthLimit))
       return nullptr;
 
     // If this is a variable index, we don't know which element it overwrites.
