@@ -969,12 +969,13 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
         frames = []
 
         for stackframe in stackframes:
+            # Some frames are marked "deemphasize" to indicate that they are not interesting; these frames can be
+            # skipped by Dexter.
+            if stackframe.get("source", {}).get("presentationHint") == "deemphasize":
+                continue
             # No source, skip the frame! Currently I've only observed this for frames below main, so we break here; if
             # it happens elsewhere, then this will break more stuff and we'll come up with a better solution.
-            if (
-                stackframe.get("source") is None
-                or stackframe["source"].get("path") is None
-            ):
+            if stackframe.get("source", {}).get("path") is None:
                 break
 
             loc_dict = {
