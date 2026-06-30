@@ -52,17 +52,20 @@ public:
     QualType RetTy;
     bool hasComparison;
 
-    llvm::SMTExprRef Exp =
+    std::optional<llvm::SMTExprRef> Exp =
         SMTConv::getExpr(Solver, Ctx, Sym, RetTy, &hasComparison);
-
+    if (!Exp) {
+      return assumeSymUnsupported(State, Sym, Assumption);
+    }
     // Create zero comparison for implicit boolean cast, with reversed
     // assumption
     if (!hasComparison && !RetTy->isBooleanType())
       return assumeExpr(
           State, Sym,
-          SMTConv::getZeroExpr(Solver, Ctx, Exp, RetTy, !Assumption));
+          SMTConv::getZeroExpr(Solver, Ctx, Exp.value(), RetTy, !Assumption));
 
-    return assumeExpr(State, Sym, Assumption ? Exp : Solver->mkNot(Exp));
+    return assumeExpr(State, Sym,
+                      Assumption ? Exp.value() : Solver->mkNot(Exp.value()));
   }
 
   ProgramStateRef assumeSymInclusiveRange(ProgramStateRef State, SymbolRef Sym,
@@ -70,8 +73,12 @@ public:
                                           const llvm::APSInt &To,
                                           bool InRange) override {
     ASTContext &Ctx = getBasicVals().getContext();
-    return assumeExpr(
-        State, Sym, SMTConv::getRangeExpr(Solver, Ctx, Sym, From, To, InRange));
+    std::optional<llvm::SMTExprRef> Expr =
+        SMTConv::getRangeExpr(Solver, Ctx, Sym, From, To, InRange);
+    if (!Expr) {
+      return assumeSymUnsupported(State, Sym, false);
+    }
+    return assumeExpr(State, Sym, Expr.value());
   }
 
   ProgramStateRef assumeSymUnsupported(ProgramStateRef State, SymbolRef Sym,
@@ -89,13 +96,17 @@ public:
 
     QualType RetTy;
     // The expression may be casted, so we cannot call getZ3DataExpr() directly
-    llvm::SMTExprRef VarExp = SMTConv::getExpr(Solver, Ctx, Sym, RetTy);
-    llvm::SMTExprRef Exp =
-        SMTConv::getZeroExpr(Solver, Ctx, VarExp, RetTy, /*Assumption=*/true);
+    std::optional<llvm::SMTExprRef> VarExp =
+        SMTConv::getExpr(Solver, Ctx, Sym, RetTy);
+    if (!VarExp) {
+      return ConditionTruthVal();
+    }
+    llvm::SMTExprRef Exp = SMTConv::getZeroExpr(Solver, Ctx, VarExp.value(),
+                                                RetTy, /*Assumption=*/true);
 
     // Negate the constraint
-    llvm::SMTExprRef NotExp =
-        SMTConv::getZeroExpr(Solver, Ctx, VarExp, RetTy, /*Assumption=*/false);
+    llvm::SMTExprRef NotExp = SMTConv::getZeroExpr(Solver, Ctx, VarExp.value(),
+                                                   RetTy, /*Assumption=*/false);
 
     ConditionTruthVal isSat = checkModel(State, Sym, Exp);
     ConditionTruthVal isNotSat = checkModel(State, Sym, NotExp);
