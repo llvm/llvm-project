@@ -19,7 +19,7 @@ define void @test_drop_undef_when_hoisting(<4 x i8> %v0, i1 %c) {
 ; CHECK-NEXT:    jne .LBB0_5
 ; CHECK-NEXT:  .LBB0_1: # %loop
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
+; CHECK-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3],xmm1[4],xmm0[4],xmm1[5],xmm0[5],xmm1[6],xmm0[6],xmm1[7],xmm0[7]
 ; CHECK-NEXT:    testb $1, %dil
 ; CHECK-NEXT:    jne .LBB0_3
 ; CHECK-NEXT:  # %bb.2: # in Loop: Header=BB0_1 Depth=1
