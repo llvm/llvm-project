@@ -300,7 +300,7 @@ define hidden void @blam() #0 {
 ; GCN-NEXT:    v_writelane_b32 v45, s31, 25
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0
-; GCN-NEXT:    flat_load_dword v43, v[0:1]
+; GCN-NEXT:    flat_load_dword v44, v[0:1]
 ; GCN-NEXT:    v_mov_b32_e32 v40, v31
 ; GCN-NEXT:    v_and_b32_e32 v0, 0x3ff, v40
 ; GCN-NEXT:    s_mov_b32 s54, s15
@@ -314,10 +314,10 @@ define hidden void @blam() #0 {
 ; GCN-NEXT:    v_mov_b32_e32 v42, 0
 ; GCN-NEXT:    s_mov_b64 s[66:67], 0
 ; GCN-NEXT:    v_lshlrev_b32_e32 v41, 2, v0
-; GCN-NEXT:    v_mov_b32_e32 v44, 0x7fc00000
+; GCN-NEXT:    v_mov_b32_e32 v43, 0x7fc00000
 ; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_cmp_eq_f32_e64 s[68:69], 0, v43
-; GCN-NEXT:    v_cmp_neq_f32_e64 s[50:51], 0, v43
+; GCN-NEXT:    v_cmp_eq_f32_e64 s[68:69], 0, v44
+; GCN-NEXT:    v_cmp_neq_f32_e64 s[50:51], 0, v44
 ; GCN-NEXT:    s_branch .LBB1_2
 ; GCN-NEXT:  .LBB1_1: ; %Flow7
 ; GCN-NEXT:    ; in Loop: Header=BB1_2 Depth=1
@@ -369,7 +369,7 @@ define hidden void @blam() #0 {
 ; GCN-NEXT:  ; %bb.6: ; %bb16
 ; GCN-NEXT:    ; in Loop: Header=BB1_2 Depth=1
 ; GCN-NEXT:    s_or_b64 s[8:9], s[68:69], exec
-; GCN-NEXT:    buffer_store_dword v44, off, s[0:3], 0
+; GCN-NEXT:    buffer_store_dword v43, off, s[0:3], 0
 ; GCN-NEXT:  .LBB1_7: ; %Flow3
 ; GCN-NEXT:    ; in Loop: Header=BB1_2 Depth=1
 ; GCN-NEXT:    s_or_b64 exec, exec, s[6:7]
@@ -380,7 +380,7 @@ define hidden void @blam() #0 {
 ; GCN-NEXT:  ; %bb.8: ; %bb17
 ; GCN-NEXT:    ; in Loop: Header=BB1_2 Depth=1
 ; GCN-NEXT:    s_mov_b64 s[6:7], exec
-; GCN-NEXT:    buffer_store_dword v43, off, s[0:3], 0
+; GCN-NEXT:    buffer_store_dword v44, off, s[0:3], 0
 ; GCN-NEXT:  .LBB1_9: ; %Flow4
 ; GCN-NEXT:    ; in Loop: Header=BB1_2 Depth=1
 ; GCN-NEXT:    s_or_b64 exec, exec, s[8:9]
@@ -411,7 +411,7 @@ define hidden void @blam() #0 {
 ; GCN-NEXT:  ; %bb.14: ; %bb10
 ; GCN-NEXT:    ; in Loop: Header=BB1_2 Depth=1
 ; GCN-NEXT:    s_or_b64 s[10:11], s[6:7], exec
-; GCN-NEXT:    buffer_store_dword v44, off, s[0:3], 0
+; GCN-NEXT:    buffer_store_dword v43, off, s[0:3], 0
 ; GCN-NEXT:  .LBB1_15: ; %Flow6
 ; GCN-NEXT:    ; in Loop: Header=BB1_2 Depth=1
 ; GCN-NEXT:    s_or_b64 exec, exec, s[12:13]
@@ -429,7 +429,7 @@ define hidden void @blam() #0 {
 ; GCN-NEXT:  ; %bb.17: ; %bb18
 ; GCN-NEXT:    ; in Loop: Header=BB1_2 Depth=1
 ; GCN-NEXT:    s_andn2_b64 s[4:5], s[4:5], exec
-; GCN-NEXT:    buffer_store_dword v44, off, s[0:3], 0
+; GCN-NEXT:    buffer_store_dword v43, off, s[0:3], 0
 ; GCN-NEXT:    s_branch .LBB1_1
 ; GCN-NEXT:  .LBB1_18: ; %DummyReturnBlock
 ; GCN-NEXT:    s_or_b64 exec, exec, s[66:67]
