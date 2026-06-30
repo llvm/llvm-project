@@ -52,8 +52,7 @@ public:
     int64_t srcRank = srcType.getRank();
     int64_t dstRank = dstType.getRank();
 
-    // A broadcast from a single-element source vector is equivalent to scalar
-    // broadcasting to an nD shape.
+    // Single-element fixed-size source: extract the scalar and broadcast it.
     if (srcType.getNumElements() == 1 && !srcType.isScalable()) {
       SmallVector<int64_t> fullRankPosition(srcRank, 0);
       Value ext = vector::ExtractOp::create(rewriter, loc, op.getSource(),
