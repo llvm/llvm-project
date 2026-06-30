@@ -888,7 +888,7 @@ BreakpointName *Target::FindBreakpointName(ConstString name, bool can_create,
   if (!error.Success())
     return nullptr;
 
-  BreakpointNameList::iterator iter = m_breakpoint_names.find(name);
+  BreakpointNameMap::iterator iter = m_breakpoint_names.find(name);
   if (iter != m_breakpoint_names.end()) {
     return iter->second.get();
   }
@@ -906,7 +906,7 @@ BreakpointName *Target::FindBreakpointName(ConstString name, bool can_create,
 }
 
 void Target::DeleteBreakpointName(ConstString name) {
-  BreakpointNameList::iterator iter = m_breakpoint_names.find(name);
+  BreakpointNameMap::iterator iter = m_breakpoint_names.find(name);
 
   if (iter != m_breakpoint_names.end()) {
     const char *name_cstr = name.AsCString(nullptr);
@@ -945,8 +945,8 @@ void Target::ApplyNameToBreakpoints(BreakpointName &bp_name) {
 
 void Target::GetBreakpointNames(std::vector<std::string> &names) {
   names.clear();
-  for (const auto& bp_name_entry : m_breakpoint_names) {
-    names.push_back(bp_name_entry.first.GetString());
+  for (const auto &bp_name_entry : m_breakpoint_names) {
+    names.push_back(bp_name_entry.first().str());
   }
   llvm::sort(names);
 }

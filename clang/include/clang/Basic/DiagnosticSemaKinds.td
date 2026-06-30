@@ -139,14 +139,15 @@ def err_typecheck_converted_constant_expression_disallowed : Error<
 def err_typecheck_converted_constant_expression_indirect : Error<
   "conversion from %0 to %1 in converted constant expression would "
   "bind reference to a temporary">;
+
+def select_cce_kind : TextSubstitution<
+  "%select{case value|enumerator value|non-type template argument|non-type parameter of template template parameter|"
+  "array size|explicit specifier argument|noexcept specifier argument|"
+  "call to 'size()'|call to 'data()'|pack index}0">;
 def err_expr_not_cce : Error<
-  "%select{case value|enumerator value|non-type template argument|non-type parameter of template template parameter|"
-  "array size|explicit specifier argument|noexcept specifier argument|"
-  "call to 'size()'|call to 'data()'}0 is not a constant expression">;
+  "%sub{select_cce_kind}0 is not a constant expression">;
 def ext_cce_narrowing : ExtWarn<
-  "%select{case value|enumerator value|non-type template argument|non-type parameter of template template parameter|"
-  "array size|explicit specifier argument|noexcept specifier argument|"
-  "call to 'size()'|call to 'data()'}0 %select{cannot be narrowed from "
+  "%sub{select_cce_kind}0 %select{cannot be narrowed from "
   "type %2 to %3|evaluates to %2, which cannot be narrowed to type %3}1">,
   InGroup<CXX11Narrowing>, DefaultError, SFINAEFailure;
 def err_ice_not_integral : Error<
@@ -796,13 +797,6 @@ def warn_const_attr_with_pure_attr : Warning<
 def warn_pure_function_returns_void : Warning<
   "'%select{pure|const}0' attribute on function returning 'void'; attribute ignored">,
   InGroup<IgnoredAttributes>;
-def warn_const_pure_noreturn_call : Warning<
-  "calling a 'noreturn' function from a function with the "
-  "'%select{pure|const}0' attribute is undefined behavior">,
-  InGroup<DiagGroup<"noreturn-const-pure">>;
-def note_const_pure_noreturn_call : Note<
-  "function declared '%select{pure|const}0' here">;
-
 
 def warn_suggest_noreturn_function : Warning<
   "%select{function|method}0 %1 could be declared with attribute 'noreturn'">,

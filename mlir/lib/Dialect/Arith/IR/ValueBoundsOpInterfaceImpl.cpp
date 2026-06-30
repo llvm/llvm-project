@@ -17,6 +17,32 @@ namespace mlir {
 namespace arith {
 namespace {
 
+struct ConstantOpInterface
+    : public ValueBoundsOpInterface::ExternalModel<ConstantOpInterface,
+                                                   ConstantOp> {
+  void populateBoundsForIndexValue(Operation *op, Value value,
+                                   ValueBoundsConstraintSet &cstr) const {
+    auto constantOp = cast<ConstantOp>(op);
+    assert(value == constantOp.getResult() && "invalid value");
+
+    if (auto attr = llvm::dyn_cast<IntegerAttr>(constantOp.getValue()))
+      cstr.bound(value) == attr.getInt();
+  }
+};
+
+struct ExtSIOpInterface
+    : public ValueBoundsOpInterface::ExternalModel<ExtSIOpInterface, ExtSIOp> {
+  void populateBoundsForIndexValue(Operation *op, Value value,
+                                   ValueBoundsConstraintSet &cstr) const {
+    auto extSIOp = cast<ExtSIOp>(op);
+    assert(value == extSIOp.getOut() && "invalid value");
+
+    // Sign extension preserves the signed value (unlike zero extension where
+    // the result may be negative), so the bound is an exact equality.
+    cstr.bound(value) == cstr.getExpr(extSIOp.getIn());
+  }
+};
+
 struct AddIOpInterface
     : public ValueBoundsOpInterface::ExternalModel<AddIOpInterface, AddIOp> {
   void populateBoundsForIndexValue(Operation *op, Value value,
@@ -36,16 +62,68 @@ struct AddIOpInterface
   }
 };
 
-struct ConstantOpInterface
-    : public ValueBoundsOpInterface::ExternalModel<ConstantOpInterface,
-                                                   ConstantOp> {
+struct DivUIOpInterface
+    : public ValueBoundsOpInterface::ExternalModel<DivUIOpInterface,
+                                                   arith::DivUIOp> {
   void populateBoundsForIndexValue(Operation *op, Value value,
                                    ValueBoundsConstraintSet &cstr) const {
-    auto constantOp = cast<ConstantOp>(op);
-    assert(value == constantOp.getResult() && "invalid value");
+    auto divOp = cast<arith::DivUIOp>(op);
+    assert(value == divOp.getResult() && "invalid value");
 
-    if (auto attr = llvm::dyn_cast<IntegerAttr>(constantOp.getValue()))
-      cstr.bound(value) == attr.getInt();
+    bool lhsNonNegative =
+        ValueBoundsConstraintSet::isProvablyNonNegative(divOp.getLhs(), cstr);
+    bool rhsPositive =
+        ValueBoundsConstraintSet::isProvablyPositive(divOp.getRhs(), cstr);
+    if (!lhsNonNegative || !rhsPositive)
+      return;
+
+    AffineExpr lhs = cstr.getExpr(divOp.getLhs());
+    AffineExpr rhs = cstr.getExpr(divOp.getRhs());
+    cstr.bound(value) >= 0;
+    cstr.bound(value) == lhs.floorDiv(rhs);
+  }
+};
+
+struct DivSIOpInterface
+    : public ValueBoundsOpInterface::ExternalModel<DivSIOpInterface,
+                                                   arith::DivSIOp> {
+  void populateBoundsForIndexValue(Operation *op, Value value,
+                                   ValueBoundsConstraintSet &cstr) const {
+    auto divOp = cast<arith::DivSIOp>(op);
+    assert(value == divOp.getResult() && "invalid value");
+
+    Value lhsValue = divOp.getLhs();
+    Value rhsValue = divOp.getRhs();
+
+    bool lhsNonNegative =
+        ValueBoundsConstraintSet::isProvablyNonNegative(lhsValue, cstr);
+    bool lhsNonPositive =
+        ValueBoundsConstraintSet::isProvablyNonPositive(lhsValue, cstr);
+    bool rhsPositive =
+        ValueBoundsConstraintSet::isProvablyPositive(rhsValue, cstr);
+    bool rhsNegative =
+        ValueBoundsConstraintSet::isProvablyNegative(rhsValue, cstr);
+
+    AffineExpr lhs = cstr.getExpr(lhsValue);
+    AffineExpr rhs = cstr.getExpr(rhsValue);
+
+    // divsi rounds toward zero, unlike floorDiv/ceilDiv which round toward
+    // negative/positive infinity respectively. When the result is non-negative,
+    // divsi equals floorDiv(lhs, rhs); when negative, it equals ceilDiv(lhs,
+    // rhs). Without knowing the sign, bound the result between those two
+    // expressions, which is always correct.
+    cstr.bound(value) >= lhs.floorDiv(rhs);
+    cstr.bound(value) <= lhs.ceilDiv(rhs);
+
+    // If the sign of the result is known, we can use the exact expression.
+    if ((lhsNonNegative && rhsPositive) || (lhsNonPositive && rhsNegative)) {
+      cstr.bound(value) == lhs.floorDiv(rhs);
+      cstr.bound(value) >= 0;
+    } else if ((lhsNonPositive && rhsPositive) ||
+               (lhsNonNegative && rhsNegative)) {
+      cstr.bound(value) == lhs.ceilDiv(rhs);
+      cstr.bound(value) <= 0;
+    }
   }
 };
 
@@ -71,7 +149,7 @@ struct MulIOpInterface
 
     AffineExpr lhs = cstr.getExpr(mulIOp.getLhs());
     AffineExpr rhs = cstr.getExpr(mulIOp.getRhs());
-    cstr.bound(value) == lhs *rhs;
+    cstr.bound(value) == (lhs * rhs);
   }
 };
 
@@ -240,11 +318,10 @@ struct SelectOpInterface
 };
 
 struct MinSIOpInterface
-    : public ValueBoundsOpInterface::ExternalModel<MinSIOpInterface,
-                                                   arith::MinSIOp> {
+    : public ValueBoundsOpInterface::ExternalModel<MinSIOpInterface, MinSIOp> {
   void populateBoundsForIndexValue(Operation *op, Value value,
                                    ValueBoundsConstraintSet &cstr) const {
-    auto minOp = cast<arith::MinSIOp>(op);
+    auto minOp = cast<MinSIOp>(op);
     assert(value == minOp.getResult() && "invalid value");
 
     AffineExpr lhs = cstr.getExpr(minOp.getLhs());
@@ -255,13 +332,12 @@ struct MinSIOpInterface
 };
 
 struct MaxSIOpInterface
-    : public ValueBoundsOpInterface::ExternalModel<MaxSIOpInterface,
-                                                   arith::MaxSIOp> {
+    : public ValueBoundsOpInterface::ExternalModel<MaxSIOpInterface, MaxSIOp> {
   void populateBoundsForIndexValue(Operation *op, Value value,
                                    ValueBoundsConstraintSet &cstr) const {
-    auto maxOp = cast<arith::MaxSIOp>(op);
+    auto maxOp = cast<MaxSIOp>(op);
     assert(value == maxOp.getResult() && "invalid value");
-    
+
     AffineExpr lhs = cstr.getExpr(maxOp.getLhs());
     AffineExpr rhs = cstr.getExpr(maxOp.getRhs());
     cstr.bound(value) >= lhs;
@@ -324,8 +400,11 @@ struct MaxUIOpInterface
 void mlir::arith::registerValueBoundsOpInterfaceExternalModels(
     DialectRegistry &registry) {
   registry.addExtension(+[](MLIRContext *ctx, arith::ArithDialect *dialect) {
-    arith::AddIOp::attachInterface<arith::AddIOpInterface>(*ctx);
     arith::ConstantOp::attachInterface<arith::ConstantOpInterface>(*ctx);
+    arith::ExtSIOp::attachInterface<arith::ExtSIOpInterface>(*ctx);
+    arith::AddIOp::attachInterface<arith::AddIOpInterface>(*ctx);
+    arith::DivUIOp::attachInterface<arith::DivUIOpInterface>(*ctx);
+    arith::DivSIOp::attachInterface<arith::DivSIOpInterface>(*ctx);
     arith::SubIOp::attachInterface<arith::SubIOpInterface>(*ctx);
     arith::MulIOp::attachInterface<arith::MulIOpInterface>(*ctx);
     arith::FloorDivSIOp::attachInterface<arith::FloorDivSIOpInterface>(*ctx);
