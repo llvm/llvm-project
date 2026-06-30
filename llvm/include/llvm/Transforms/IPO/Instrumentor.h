@@ -473,6 +473,9 @@ struct InstrumentationOpportunity {
   /// may be disabled and will not be passed to the function call.
   SmallVector<IRTArg> IRTArgs;
 
+  /// Instruction flag names and their integer bitmask values.
+  DenseMap<StringRef, int32_t> FlagNames;
+
   /// Whether the opportunity is enabled.
   bool Enabled = true;
 
@@ -1215,6 +1218,7 @@ struct NumericIO final
   LLVM_ABI void init(InstrumentationConfig &IConf,
                      InstrumentorIRBuilderTy &IIRB,
                      ConfigTy *UserConfig = nullptr);
+  LLVM_ABI void addFlagNames();
 
   LLVM_ABI static Value *getFlags(Value &V, Type &Ty,
                                   InstrumentationConfig &IConf,
@@ -1259,6 +1263,7 @@ struct CompareIO final
   LLVM_ABI void init(InstrumentationConfig &IConf,
                      InstrumentorIRBuilderTy &IIRB,
                      ConfigTy *UserConfig = nullptr);
+  LLVM_ABI void addFlagNames();
 
   LLVM_ABI static Value *getOperandTypeId(Value &V, Type &Ty,
                                           InstrumentationConfig &IConf,
