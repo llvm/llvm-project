@@ -655,7 +655,8 @@ createWidenInductionRecipe(PHINode *Phi, VPPhi *PhiR, VPIRValue *Start,
   // For an IV that requires SCEV predicate, keep extracting the exit values
   // from the loop directly, as the pre-computed exit value as-is would  be
   // incorrect outside the loop.
-  auto ReplaceExtractsWithExitingIVValue = [&](VPWidenInductionRecipe *WideIV) {
+  auto ReplaceExtractsWithExitingIVValueIfPossible = [&](VPWidenInductionRecipe
+                                                             *WideIV) {
     bool IsPredicated = !WideIV->getNoWrapPredicates().empty();
     for (VPUser *U : to_vector(BackedgeVal->users())) {
       if (!match(U, m_ExtractLastPart(m_VPValue())))
@@ -688,7 +689,7 @@ createWidenInductionRecipe(PHINode *Phi, VPPhi *PhiR, VPIRValue *Start,
   if (IndDesc.getKind() == InductionDescriptor::IK_PtrInduction) {
     auto *WideIV = new VPWidenPointerInductionRecipe(
         Phi, Start, Step, &Plan.getVFxUF(), IndDesc, DL);
-    ReplaceExtractsWithExitingIVValue(WideIV);
+    ReplaceExtractsWithExitingIVValueIfPossible(WideIV);
     return WideIV;
   }
 
@@ -710,7 +711,7 @@ createWidenInductionRecipe(PHINode *Phi, VPPhi *PhiR, VPIRValue *Start,
   auto *WideIV = new VPWidenIntOrFpInductionRecipe(
       Phi, Start, Step, &Plan.getVF(), IndDesc, Flags, DL);
 
-  ReplaceExtractsWithExitingIVValue(WideIV);
+  ReplaceExtractsWithExitingIVValueIfPossible(WideIV);
   return WideIV;
 }
 
