@@ -64,7 +64,7 @@ define i32 @test_forward_param_drops_l2_cache_hint(ptr byval(i32) %a) {
 ; Test with custom hint key order - should still work
 define i32 @test_load_reordered_metadata(ptr addrspace(1) %p) {
 ; CHECK-LABEL: test_load_reordered_metadata(
-; CHECK:    ld.global.L1::evict_last.L2::evict_first.b32 %r1, [%rd1];
+; CHECK:    ld.global.L1::evict_last.b32 %r1, [%rd1];
   %v = load i32, ptr addrspace(1) %p, !mem.cache_hint !6
   ret i32 %v
 }

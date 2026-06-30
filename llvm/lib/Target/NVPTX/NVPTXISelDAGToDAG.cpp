@@ -1163,23 +1163,44 @@ static void parseMemCacheHintStringValue(LLVMContext &Ctx, StringRef Key,
                                      Key + "'");
 }
 
+static bool isGlobalOrGeneric(NVPTX::AddressSpace AddrSpace) {
+  return AddrSpace == NVPTX::AddressSpace::Global ||
+         AddrSpace == NVPTX::AddressSpace::Generic;
+}
+
 static bool isL2PrefetchSupported(const NVPTXSubtarget &Subtarget,
-                                  NVPTX::L2Prefetch Prefetch) {
+                                  NVPTX::L2Prefetch Prefetch,
+                                  NVPTXMemCacheHintAccess Access) {
   switch (Prefetch) {
   case NVPTX::L2Prefetch::None:
     return true;
   case NVPTX::L2Prefetch::Bytes64:
-    return Subtarget.hasL2Prefetch64B();
+    return Access.IsLoad && isGlobalOrGeneric(Access.AddrSpace) &&
+           Subtarget.hasL2Prefetch64B();
   case NVPTX::L2Prefetch::Bytes128:
-    return Subtarget.hasL2Prefetch128B();
+    return Access.IsLoad && isGlobalOrGeneric(Access.AddrSpace) &&
+           Subtarget.hasL2Prefetch128B();
   case NVPTX::L2Prefetch::Bytes256:
-    return Subtarget.hasL2Prefetch256B();
+    return Access.IsLoad && isGlobalOrGeneric(Access.AddrSpace) &&
+           Subtarget.hasL2Prefetch256B();
   }
   llvm_unreachable("Unexpected L2 prefetch hint");
 }
 
+static bool isL2EvictionSupported(const NVPTXSubtarget &Subtarget,
+                                  NVPTXMemCacheHintAccess Access,
+                                  NVPTX::L2Eviction Eviction) {
+  if (Eviction == NVPTX::L2Eviction::Normal)
+    return true;
+
+  return Subtarget.hasL2EvictionHint() &&
+         isGlobalOrGeneric(Access.AddrSpace) &&
+         ((Access.NumElts == 8 && Access.EltWidth == 32) ||
+          (Access.NumElts == 4 && Access.EltWidth == 64));
+}
+
 std::pair<unsigned, SDValue> NVPTXDAGToDAGISel::getMemCacheHintOperands(
-    const MemSDNode *N, unsigned CodeAddrSpace, const SDLoc &DL) {
+    const MemSDNode *N, NVPTXMemCacheHintAccess Access, const SDLoc &DL) {
   LLVMContext &Ctx = *CurDAG->getContext();
   const MDNode *Node = N->getMemCacheHint();
   SDValue PolicyReg = CurDAG->getRegister(NVPTX::NoRegister, MVT::i64);
@@ -1207,8 +1228,11 @@ std::pair<unsigned, SDValue> NVPTXDAGToDAGISel::getMemCacheHintOperands(
     }
 
     if (KeyStr == "nvvm.l2_eviction") {
-      if (Subtarget->hasL2EvictionHint())
-        parseMemCacheHintStringValue(Ctx, KeyStr, Value, L2, parseL2Eviction);
+      NVPTX::L2Eviction ParsedL2 = NVPTX::L2Eviction::Normal;
+      parseMemCacheHintStringValue(Ctx, KeyStr, Value, ParsedL2,
+                                   parseL2Eviction);
+      if (isL2EvictionSupported(*Subtarget, Access, ParsedL2))
+        L2 = ParsedL2;
       continue;
     }
 
@@ -1216,13 +1240,13 @@ std::pair<unsigned, SDValue> NVPTXDAGToDAGISel::getMemCacheHintOperands(
       NVPTX::L2Prefetch ParsedPrefetch = NVPTX::L2Prefetch::None;
       parseMemCacheHintStringValue(Ctx, KeyStr, Value, ParsedPrefetch,
                                    parseL2Prefetch);
-      if (isL2PrefetchSupported(*Subtarget, ParsedPrefetch))
+      if (isL2PrefetchSupported(*Subtarget, ParsedPrefetch, Access))
         Prefetch = ParsedPrefetch;
       continue;
     }
 
     if (KeyStr == "nvvm.l2_cache_hint") {
-      if (CodeAddrSpace == NVPTX::AddressSpace::Global &&
+      if (isGlobalOrGeneric(Access.AddrSpace) &&
           Subtarget->hasL2CacheHint()) {
         if (auto *ValCI = mdconst::dyn_extract<ConstantInt>(Value))
           CachePolicy = ValCI->getZExtValue();
@@ -1292,7 +1316,10 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
 
   const auto [Base, Offset] = selectADDR(N->getOperand(1), CurDAG);
   const auto [EvictionAndPrefetchHint, PolicyReg] =
-      getMemCacheHintOperands(LD, CodeAddrSpace, DL);
+      getMemCacheHintOperands(LD,
+                              {CodeAddrSpace, /*IsLoad=*/true,
+                               /*NumElts=*/1, /*EltWidth=*/FromTypeWidth},
+                              DL);
 
   // Create the machine instruction DAG
   SDValue Ops[] = {getI32Imm(Ordering, DL),
@@ -1368,8 +1395,11 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
 
   assert(!(EltVT.isVector() && ExtensionType != ISD::NON_EXTLOAD));
 
-  const auto [EvictionAndPrefetchHint, PolicyReg] =
-      getMemCacheHintOperands(LD, CodeAddrSpace, DL);
+  const auto [EvictionAndPrefetchHint, PolicyReg] = getMemCacheHintOperands(
+      LD,
+      {CodeAddrSpace, /*IsLoad=*/true,
+       /*NumElts=*/LD->getNumValues() - 1, /*EltWidth=*/FromTypeWidth},
+      DL);
   const auto [Base, Offset] = selectADDR(N->getOperand(1), CurDAG);
   SDValue Ops[] = {getI32Imm(Ordering, DL),
                    getI32Imm(Scope, DL),
@@ -1434,8 +1464,11 @@ bool NVPTXDAGToDAGISel::tryLDG(MemSDNode *LD) {
            ExtensionType != ISD::NON_EXTLOAD));
 
   const auto [Base, Offset] = selectADDR(LD->getOperand(1), CurDAG);
-  const auto [EvictionAndPrefetchHint, PolicyReg] =
-      getMemCacheHintOperands(LD, NVPTX::AddressSpace::Global, DL);
+  const auto [EvictionAndPrefetchHint, PolicyReg] = getMemCacheHintOperands(
+      LD,
+      {NVPTX::AddressSpace::Global,
+       /*IsLoad=*/true, LD->getNumValues() - 1, FromTypeWidth},
+      DL);
   SDValue Ops[] = {getI32Imm(FromType, DL),
                    getI32Imm(FromTypeWidth, DL),
                    getI32Imm(UsedBytesMask, DL),
@@ -1564,7 +1597,10 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
 
   // Extract eviction/prefetch hint and cache policy register.
   const auto [EvictionAndPrefetchHint, PolicyReg] =
-      getMemCacheHintOperands(ST, CodeAddrSpace, DL);
+      getMemCacheHintOperands(ST,
+                              {CodeAddrSpace, /*IsLoad=*/false,
+                               /*NumElts=*/1, /*EltWidth=*/ToTypeWidth},
+                              DL);
 
   SDValue Ops[] = {selectPossiblyImm(Value),
                    getI32Imm(Ordering, DL),
@@ -1621,8 +1657,10 @@ bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
          TotalWidth <= 256 && "Invalid width for store");
 
   // Extract eviction/prefetch hint and cache policy register.
-  const auto [EvictionAndPrefetchHint, PolicyReg] =
-      getMemCacheHintOperands(ST, CodeAddrSpace, DL);
+  const auto [EvictionAndPrefetchHint, PolicyReg] = getMemCacheHintOperands(
+      ST, {CodeAddrSpace, /*IsLoad=*/false, /*NumElts=*/NumElts,
+           /*EltWidth=*/ToTypeWidth},
+      DL);
 
   const auto [Base, Offset] = selectADDR(Addr, CurDAG);
   Ops.append({getI32Imm(Ordering, DL), getI32Imm(Scope, DL),

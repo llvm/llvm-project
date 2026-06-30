@@ -7,6 +7,11 @@
 ; For memcpy:
 ;   operand_no = 0 applies to destination (store side)
 ;   operand_no = 1 applies to source (load side)
+;
+; TODO: Teach memcpy lowering to preserve L2::evict_* on SM100/PTX 8.8 when
+; an aligned, 32-byte-multiple copy can use a PTX-legal 256-bit vector memory
+; operation. Current memcpy expansion uses scalar or short accesses, so the
+; L2 eviction metadata in the cases below is intentionally dropped.
 
 declare void @llvm.memcpy.p1.p1.i64(ptr addrspace(1), ptr addrspace(1), i64, i1)
 declare <2 x i16> @llvm.masked.load.v2i16.p1(ptr addrspace(1), <2 x i1>, <2 x i16>)
@@ -20,14 +25,14 @@ declare <4 x i32> @llvm.masked.load.v4i32.p1(ptr addrspace(1), <4 x i1>, <4 x i3
 
 define void @test_memcpy_both_hints(ptr addrspace(1) %dest, ptr addrspace(1) %src) {
 ; CHECK-LABEL: test_memcpy_both_hints(
-; CHECK:    ld.global.L1::evict_first.L2::evict_first.L2::128B.b8 %rs1, [%rd2+3];
-; CHECK:    st.global.L1::evict_last.L2::evict_last.b8 [%rd1+3], %rs1;
-; CHECK:    ld.global.L1::evict_first.L2::evict_first.L2::128B.b8 %rs2, [%rd2+2];
-; CHECK:    st.global.L1::evict_last.L2::evict_last.b8 [%rd1+2], %rs2;
-; CHECK:    ld.global.L1::evict_first.L2::evict_first.L2::128B.b8 %rs3, [%rd2+1];
-; CHECK:    st.global.L1::evict_last.L2::evict_last.b8 [%rd1+1], %rs3;
-; CHECK:    ld.global.L1::evict_first.L2::evict_first.L2::128B.b8 %rs4, [%rd2];
-; CHECK:    st.global.L1::evict_last.L2::evict_last.b8 [%rd1], %rs4;
+; CHECK:    ld.global.L1::evict_first.L2::128B.b8 %rs1, [%rd2+3];
+; CHECK:    st.global.L1::evict_last.b8 [%rd1+3], %rs1;
+; CHECK:    ld.global.L1::evict_first.L2::128B.b8 %rs2, [%rd2+2];
+; CHECK:    st.global.L1::evict_last.b8 [%rd1+2], %rs2;
+; CHECK:    ld.global.L1::evict_first.L2::128B.b8 %rs3, [%rd2+1];
+; CHECK:    st.global.L1::evict_last.b8 [%rd1+1], %rs3;
+; CHECK:    ld.global.L1::evict_first.L2::128B.b8 %rs4, [%rd2];
+; CHECK:    st.global.L1::evict_last.b8 [%rd1], %rs4;
   call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) %dest, ptr addrspace(1) %src, i64 4, i1 false), !mem.cache_hint !80
   ret void
 }
@@ -53,21 +58,21 @@ define void @test_memcpy_src_hint_only(ptr addrspace(1) %dest, ptr addrspace(1) 
 }
 
 ;-----------------------------------------------------------------------------
-; Test memcpy with cache hint only on destination (store side)
-; Source (operand 1): no hint
-; Dest (operand 0): L2::evict_last
+; Test memcpy with L2 prefetch only on source (load side)
+; Source (operand 1): L2::128B
+; Dest (operand 0): no hint
 ;-----------------------------------------------------------------------------
 
-define void @test_memcpy_dest_hint_only(ptr addrspace(1) %dest, ptr addrspace(1) %src) {
-; CHECK-LABEL: test_memcpy_dest_hint_only(
-; CHECK:    ld.global.b8 %rs1, [%rd2+3];
-; CHECK:    st.global.L2::evict_last.b8 [%rd1+3], %rs1;
-; CHECK:    ld.global.b8 %rs2, [%rd2+2];
-; CHECK:    st.global.L2::evict_last.b8 [%rd1+2], %rs2;
-; CHECK:    ld.global.b8 %rs3, [%rd2+1];
-; CHECK:    st.global.L2::evict_last.b8 [%rd1+1], %rs3;
-; CHECK:    ld.global.b8 %rs4, [%rd2];
-; CHECK:    st.global.L2::evict_last.b8 [%rd1], %rs4;
+define void @test_memcpy_src_prefetch_only(ptr addrspace(1) %dest, ptr addrspace(1) %src) {
+; CHECK-LABEL: test_memcpy_src_prefetch_only(
+; CHECK:    ld.global.L2::128B.b8 %rs1, [%rd2+3];
+; CHECK:    st.global.b8 [%rd1+3], %rs1;
+; CHECK:    ld.global.L2::128B.b8 %rs2, [%rd2+2];
+; CHECK:    st.global.b8 [%rd1+2], %rs2;
+; CHECK:    ld.global.L2::128B.b8 %rs3, [%rd2+1];
+; CHECK:    st.global.b8 [%rd1+1], %rs3;
+; CHECK:    ld.global.L2::128B.b8 %rs4, [%rd2];
+; CHECK:    st.global.b8 [%rd1], %rs4;
   call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) %dest, ptr addrspace(1) %src, i64 4, i1 false), !mem.cache_hint !82
   ret void
 }
@@ -117,13 +122,13 @@ define void @test_memcpy_no_hint(ptr addrspace(1) %dest, ptr addrspace(1) %src) 
 ; Dest: no hint
 define void @test_memcpy_src_l1_l2_combined(ptr addrspace(1) %dest, ptr addrspace(1) %src) {
 ; CHECK-LABEL: test_memcpy_src_l1_l2_combined(
-; CHECK:    ld.global.L1::evict_first.L2::evict_last.b8 %rs1, [%rd2+3];
+; CHECK:    ld.global.L1::evict_first.b8 %rs1, [%rd2+3];
 ; CHECK:    st.global.b8 [%rd1+3], %rs1;
-; CHECK:    ld.global.L1::evict_first.L2::evict_last.b8 %rs2, [%rd2+2];
+; CHECK:    ld.global.L1::evict_first.b8 %rs2, [%rd2+2];
 ; CHECK:    st.global.b8 [%rd1+2], %rs2;
-; CHECK:    ld.global.L1::evict_first.L2::evict_last.b8 %rs3, [%rd2+1];
+; CHECK:    ld.global.L1::evict_first.b8 %rs3, [%rd2+1];
 ; CHECK:    st.global.b8 [%rd1+1], %rs3;
-; CHECK:    ld.global.L1::evict_first.L2::evict_last.b8 %rs4, [%rd2];
+; CHECK:    ld.global.L1::evict_first.b8 %rs4, [%rd2];
 ; CHECK:    st.global.b8 [%rd1], %rs4;
   call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) %dest, ptr addrspace(1) %src, i64 4, i1 false), !mem.cache_hint !84
   ret void
@@ -134,13 +139,13 @@ define void @test_memcpy_src_l1_l2_combined(ptr addrspace(1) %dest, ptr addrspac
 define void @test_memcpy_dest_l1_l2_combined(ptr addrspace(1) %dest, ptr addrspace(1) %src) {
 ; CHECK-LABEL: test_memcpy_dest_l1_l2_combined(
 ; CHECK:    ld.global.b8 %rs1, [%rd2+3];
-; CHECK:    st.global.L1::evict_unchanged.L2::evict_first.b8 [%rd1+3], %rs1;
+; CHECK:    st.global.L1::evict_unchanged.b8 [%rd1+3], %rs1;
 ; CHECK:    ld.global.b8 %rs2, [%rd2+2];
-; CHECK:    st.global.L1::evict_unchanged.L2::evict_first.b8 [%rd1+2], %rs2;
+; CHECK:    st.global.L1::evict_unchanged.b8 [%rd1+2], %rs2;
 ; CHECK:    ld.global.b8 %rs3, [%rd2+1];
-; CHECK:    st.global.L1::evict_unchanged.L2::evict_first.b8 [%rd1+1], %rs3;
+; CHECK:    st.global.L1::evict_unchanged.b8 [%rd1+1], %rs3;
 ; CHECK:    ld.global.b8 %rs4, [%rd2];
-; CHECK:    st.global.L1::evict_unchanged.L2::evict_first.b8 [%rd1], %rs4;
+; CHECK:    st.global.L1::evict_unchanged.b8 [%rd1], %rs4;
   call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) %dest, ptr addrspace(1) %src, i64 4, i1 false), !mem.cache_hint !85
   ret void
 }
@@ -170,13 +175,13 @@ define void @test_memcpy_l1_prefetch(ptr addrspace(1) %dest, ptr addrspace(1) %s
 define void @test_memcpy_prefetch_vs_eviction(ptr addrspace(1) %dest, ptr addrspace(1) %src) {
 ; CHECK-LABEL: test_memcpy_prefetch_vs_eviction(
 ; CHECK:    ld.global.L2::64B.b8 %rs1, [%rd2+3];
-; CHECK:    st.global.L2::evict_last.b8 [%rd1+3], %rs1;
+; CHECK:    st.global.b8 [%rd1+3], %rs1;
 ; CHECK:    ld.global.L2::64B.b8 %rs2, [%rd2+2];
-; CHECK:    st.global.L2::evict_last.b8 [%rd1+2], %rs2;
+; CHECK:    st.global.b8 [%rd1+2], %rs2;
 ; CHECK:    ld.global.L2::64B.b8 %rs3, [%rd2+1];
-; CHECK:    st.global.L2::evict_last.b8 [%rd1+1], %rs3;
+; CHECK:    st.global.b8 [%rd1+1], %rs3;
 ; CHECK:    ld.global.L2::64B.b8 %rs4, [%rd2];
-; CHECK:    st.global.L2::evict_last.b8 [%rd1], %rs4;
+; CHECK:    st.global.b8 [%rd1], %rs4;
   call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) %dest, ptr addrspace(1) %src, i64 4, i1 false), !mem.cache_hint !87
   ret void
 }
@@ -208,13 +213,13 @@ define void @test_memcpy_dest_cache_hint_combined(ptr addrspace(1) %dest, ptr ad
 ; CHECK-LABEL: test_memcpy_dest_cache_hint_combined(
 ; CHECK:    ld.global.b8 %rs1, [%rd2+3];
 ; CHECK:    mov.b64 %rd3, 12345;
-; CHECK:    st.global.L1::evict_last.L2::evict_first.L2::cache_hint.b8 [%rd1+3], %rs1, %rd3;
+; CHECK:    st.global.L1::evict_last.L2::cache_hint.b8 [%rd1+3], %rs1, %rd3;
 ; CHECK:    ld.global.b8 %rs2, [%rd2+2];
-; CHECK:    st.global.L1::evict_last.L2::evict_first.L2::cache_hint.b8 [%rd1+2], %rs2, %rd3;
+; CHECK:    st.global.L1::evict_last.L2::cache_hint.b8 [%rd1+2], %rs2, %rd3;
 ; CHECK:    ld.global.b8 %rs3, [%rd2+1];
-; CHECK:    st.global.L1::evict_last.L2::evict_first.L2::cache_hint.b8 [%rd1+1], %rs3, %rd3;
+; CHECK:    st.global.L1::evict_last.L2::cache_hint.b8 [%rd1+1], %rs3, %rd3;
 ; CHECK:    ld.global.b8 %rs4, [%rd2];
-; CHECK:    st.global.L1::evict_last.L2::evict_first.L2::cache_hint.b8 [%rd1], %rs4, %rd3;
+; CHECK:    st.global.L1::evict_last.L2::cache_hint.b8 [%rd1], %rs4, %rd3;
   call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) %dest, ptr addrspace(1) %src, i64 4, i1 false), !mem.cache_hint !89
   ret void
 }
@@ -225,14 +230,14 @@ define void @test_memcpy_dest_cache_hint_combined(ptr addrspace(1) %dest, ptr ad
 define void @test_memcpy_both_cache_hint_combined(ptr addrspace(1) %dest, ptr addrspace(1) %src) {
 ; CHECK-LABEL: test_memcpy_both_cache_hint_combined(
 ; CHECK:    mov.b64 %rd2, 12345;
-; CHECK:    ld.global.L1::evict_unchanged.L2::evict_last.L2::cache_hint.b8 %rs1, [%rd3+3], %rd2;
-; CHECK:    st.global.L1::evict_first.L2::evict_first.L2::cache_hint.b8 [%rd1+3], %rs1, %rd2;
-; CHECK:    ld.global.L1::evict_unchanged.L2::evict_last.L2::cache_hint.b8 %rs2, [%rd3+2], %rd2;
-; CHECK:    st.global.L1::evict_first.L2::evict_first.L2::cache_hint.b8 [%rd1+2], %rs2, %rd2;
-; CHECK:    ld.global.L1::evict_unchanged.L2::evict_last.L2::cache_hint.b8 %rs3, [%rd3+1], %rd2;
-; CHECK:    st.global.L1::evict_first.L2::evict_first.L2::cache_hint.b8 [%rd1+1], %rs3, %rd2;
-; CHECK:    ld.global.L1::evict_unchanged.L2::evict_last.L2::cache_hint.b8 %rs4, [%rd3], %rd2;
-; CHECK:    st.global.L1::evict_first.L2::evict_first.L2::cache_hint.b8 [%rd1], %rs4, %rd2;
+; CHECK:    ld.global.L1::evict_unchanged.L2::cache_hint.b8 %rs1, [%rd3+3], %rd2;
+; CHECK:    st.global.L1::evict_first.L2::cache_hint.b8 [%rd1+3], %rs1, %rd2;
+; CHECK:    ld.global.L1::evict_unchanged.L2::cache_hint.b8 %rs2, [%rd3+2], %rd2;
+; CHECK:    st.global.L1::evict_first.L2::cache_hint.b8 [%rd1+2], %rs2, %rd2;
+; CHECK:    ld.global.L1::evict_unchanged.L2::cache_hint.b8 %rs3, [%rd3+1], %rd2;
+; CHECK:    st.global.L1::evict_first.L2::cache_hint.b8 [%rd1+1], %rs3, %rd2;
+; CHECK:    ld.global.L1::evict_unchanged.L2::cache_hint.b8 %rs4, [%rd3], %rd2;
+; CHECK:    st.global.L1::evict_first.L2::cache_hint.b8 [%rd1], %rs4, %rd2;
   call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) %dest, ptr addrspace(1) %src, i64 4, i1 false), !mem.cache_hint !90
   ret void
 }
@@ -266,13 +271,13 @@ define void @test_memcpy_cache_hint_prefetch(ptr addrspace(1) %dest, ptr addrspa
 ; Dest: simple L1 hint only
 define void @test_memcpy_complex_src_simple_dest(ptr addrspace(1) %dest, ptr addrspace(1) %src) {
 ; CHECK-LABEL: test_memcpy_complex_src_simple_dest(
-; CHECK:    ld.global.L1::evict_first.L2::evict_last.L2::64B.b8 %rs1, [%rd2+3];
+; CHECK:    ld.global.L1::evict_first.L2::64B.b8 %rs1, [%rd2+3];
 ; CHECK:    st.global.L1::evict_last.b8 [%rd1+3], %rs1;
-; CHECK:    ld.global.L1::evict_first.L2::evict_last.L2::64B.b8 %rs2, [%rd2+2];
+; CHECK:    ld.global.L1::evict_first.L2::64B.b8 %rs2, [%rd2+2];
 ; CHECK:    st.global.L1::evict_last.b8 [%rd1+2], %rs2;
-; CHECK:    ld.global.L1::evict_first.L2::evict_last.L2::64B.b8 %rs3, [%rd2+1];
+; CHECK:    ld.global.L1::evict_first.L2::64B.b8 %rs3, [%rd2+1];
 ; CHECK:    st.global.L1::evict_last.b8 [%rd1+1], %rs3;
-; CHECK:    ld.global.L1::evict_first.L2::evict_last.L2::64B.b8 %rs4, [%rd2];
+; CHECK:    ld.global.L1::evict_first.L2::64B.b8 %rs4, [%rd2];
 ; CHECK:    st.global.L1::evict_last.b8 [%rd1], %rs4;
   call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) %dest, ptr addrspace(1) %src, i64 4, i1 false), !mem.cache_hint !92
   ret void
@@ -284,13 +289,13 @@ define void @test_memcpy_simple_src_complex_dest(ptr addrspace(1) %dest, ptr add
 ; CHECK-LABEL: test_memcpy_simple_src_complex_dest(
 ; CHECK:    ld.global.L2::256B.b8 %rs1, [%rd2+3];
 ; CHECK:    mov.b64 %rd3, 12345;
-; CHECK:    st.global.L1::no_allocate.L2::evict_last.L2::cache_hint.b8 [%rd1+3], %rs1, %rd3;
+; CHECK:    st.global.L1::no_allocate.L2::cache_hint.b8 [%rd1+3], %rs1, %rd3;
 ; CHECK:    ld.global.L2::256B.b8 %rs2, [%rd2+2];
-; CHECK:    st.global.L1::no_allocate.L2::evict_last.L2::cache_hint.b8 [%rd1+2], %rs2, %rd3;
+; CHECK:    st.global.L1::no_allocate.L2::cache_hint.b8 [%rd1+2], %rs2, %rd3;
 ; CHECK:    ld.global.L2::256B.b8 %rs3, [%rd2+1];
-; CHECK:    st.global.L1::no_allocate.L2::evict_last.L2::cache_hint.b8 [%rd1+1], %rs3, %rd3;
+; CHECK:    st.global.L1::no_allocate.L2::cache_hint.b8 [%rd1+1], %rs3, %rd3;
 ; CHECK:    ld.global.L2::256B.b8 %rs4, [%rd2];
-; CHECK:    st.global.L1::no_allocate.L2::evict_last.L2::cache_hint.b8 [%rd1], %rs4, %rd3;
+; CHECK:    st.global.L1::no_allocate.L2::cache_hint.b8 [%rd1], %rs4, %rd3;
   call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) %dest, ptr addrspace(1) %src, i64 4, i1 false), !mem.cache_hint !93
   ret void
 }
@@ -340,14 +345,14 @@ define void @test_memcpy_no_allocate_vs_unchanged(ptr addrspace(1) %dest, ptr ad
 define void @test_memcpy_all_hints_both(ptr addrspace(1) %dest, ptr addrspace(1) %src) {
 ; CHECK-LABEL: test_memcpy_all_hints_both(
 ; CHECK:    mov.b64 %rd2, 12345;
-; CHECK:    ld.global.L1::evict_first.L2::evict_first.L2::cache_hint.L2::256B.b8 %rs1, [%rd3+3], %rd2;
-; CHECK:    st.global.L1::evict_last.L2::evict_last.L2::cache_hint.L2::128B.b8 [%rd1+3], %rs1, %rd2;
-; CHECK:    ld.global.L1::evict_first.L2::evict_first.L2::cache_hint.L2::256B.b8 %rs2, [%rd3+2], %rd2;
-; CHECK:    st.global.L1::evict_last.L2::evict_last.L2::cache_hint.L2::128B.b8 [%rd1+2], %rs2, %rd2;
-; CHECK:    ld.global.L1::evict_first.L2::evict_first.L2::cache_hint.L2::256B.b8 %rs3, [%rd3+1], %rd2;
-; CHECK:    st.global.L1::evict_last.L2::evict_last.L2::cache_hint.L2::128B.b8 [%rd1+1], %rs3, %rd2;
-; CHECK:    ld.global.L1::evict_first.L2::evict_first.L2::cache_hint.L2::256B.b8 %rs4, [%rd3], %rd2;
-; CHECK:    st.global.L1::evict_last.L2::evict_last.L2::cache_hint.L2::128B.b8 [%rd1], %rs4, %rd2;
+; CHECK:    ld.global.L1::evict_first.L2::cache_hint.L2::256B.b8 %rs1, [%rd3+3], %rd2;
+; CHECK:    st.global.L1::evict_last.L2::cache_hint.b8 [%rd1+3], %rs1, %rd2;
+; CHECK:    ld.global.L1::evict_first.L2::cache_hint.L2::256B.b8 %rs2, [%rd3+2], %rd2;
+; CHECK:    st.global.L1::evict_last.L2::cache_hint.b8 [%rd1+2], %rs2, %rd2;
+; CHECK:    ld.global.L1::evict_first.L2::cache_hint.L2::256B.b8 %rs3, [%rd3+1], %rd2;
+; CHECK:    st.global.L1::evict_last.L2::cache_hint.b8 [%rd1+1], %rs3, %rd2;
+; CHECK:    ld.global.L1::evict_first.L2::cache_hint.L2::256B.b8 %rs4, [%rd3], %rd2;
+; CHECK:    st.global.L1::evict_last.L2::cache_hint.b8 [%rd1], %rs4, %rd2;
   call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) %dest, ptr addrspace(1) %src, i64 4, i1 false), !mem.cache_hint !96
   ret void
 }
@@ -421,73 +426,75 @@ define void @test_memcpy_16bytes(ptr addrspace(1) %dest, ptr addrspace(1) %src) 
   ret void
 }
 
-; 32-byte memcpy: all loads should have L1::evict_unchanged, all stores L2::evict_first
+; 32-byte memcpy: all loads should have L1::evict_unchanged.
+; TODO: Preserve the destination L2::evict_first metadata when memcpy lowering
+; can select a PTX-legal 256-bit vector store for aligned 32-byte copies.
 define void @test_memcpy_32bytes(ptr addrspace(1) %dest, ptr addrspace(1) %src) {
 ; CHECK-LABEL: test_memcpy_32bytes(
 ; CHECK:    ld.global.L1::evict_unchanged.b8 %rs1, [%rd2+31];
-; CHECK:    st.global.L2::evict_first.b8 [%rd1+31], %rs1;
+; CHECK:    st.global.b8 [%rd1+31], %rs1;
 ; CHECK:    ld.global.L1::evict_unchanged.b8 %rs2, [%rd2+30];
-; CHECK:    st.global.L2::evict_first.b8 [%rd1+30], %rs2;
+; CHECK:    st.global.b8 [%rd1+30], %rs2;
 ; CHECK:    ld.global.L1::evict_unchanged.b8 %rs3, [%rd2+29];
-; CHECK:    st.global.L2::evict_first.b8 [%rd1+29], %rs3;
+; CHECK:    st.global.b8 [%rd1+29], %rs3;
 ; CHECK:    ld.global.L1::evict_unchanged.b8 %rs4, [%rd2+28];
-; CHECK:    st.global.L2::evict_first.b8 [%rd1+28], %rs4;
+; CHECK:    st.global.b8 [%rd1+28], %rs4;
 ; CHECK:    ld.global.L1::evict_unchanged.b8 %rs5, [%rd2+27];
-; CHECK:    st.global.L2::evict_first.b8 [%rd1+27], %rs5;
+; CHECK:    st.global.b8 [%rd1+27], %rs5;
 ; CHECK:    ld.global.L1::evict_unchanged.b8 %rs6, [%rd2+26];
-; CHECK:    st.global.L2::evict_first.b8 [%rd1+26], %rs6;
+; CHECK:    st.global.b8 [%rd1+26], %rs6;
 ; CHECK:    ld.global.L1::evict_unchanged.b8 %rs7, [%rd2+25];
-; CHECK:    st.global.L2::evict_first.b8 [%rd1+25], %rs7;
+; CHECK:    st.global.b8 [%rd1+25], %rs7;
 ; CHECK:    ld.global.L1::evict_unchanged.b8 %rs8, [%rd2+24];
-; CHECK:    st.global.L2::evict_first.b8 [%rd1+24], %rs8;
+; CHECK:    st.global.b8 [%rd1+24], %rs8;
 ; CHECK:    ld.global.L1::evict_unchanged.b8 %rs9, [%rd2+23];
-; CHECK:    st.global.L2::evict_first.b8 [%rd1+23], %rs9;
+; CHECK:    st.global.b8 [%rd1+23], %rs9;
 ; CHECK:    ld.global.L1::evict_unchanged.b8 %rs10, [%rd2+22];
-; CHECK:    st.global.L2::evict_first.b8 [%rd1+22], %rs10;
+; CHECK:    st.global.b8 [%rd1+22], %rs10;
 ; CHECK:    ld.global.L1::evict_unchanged.b8 %rs11, [%rd2+21];
-; CHECK:    st.global.L2::evict_first.b8 [%rd1+21], %rs11;
+; CHECK:    st.global.b8 [%rd1+21], %rs11;
 ; CHECK:    ld.global.L1::evict_unchanged.b8 %rs12, [%rd2+20];
-; CHECK:    st.global.L2::evict_first.b8 [%rd1+20], %rs12;
+; CHECK:    st.global.b8 [%rd1+20], %rs12;
 ; CHECK:    ld.global.L1::evict_unchanged.b8 %rs13, [%rd2+19];
-; CHECK:    st.global.L2::evict_first.b8 [%rd1+19], %rs13;
+; CHECK:    st.global.b8 [%rd1+19], %rs13;
 ; CHECK:    ld.global.L1::evict_unchanged.b8 %rs14, [%rd2+18];
-; CHECK:    st.global.L2::evict_first.b8 [%rd1+18], %rs14;
+; CHECK:    st.global.b8 [%rd1+18], %rs14;
 ; CHECK:    ld.global.L1::evict_unchanged.b8 %rs15, [%rd2+17];
-; CHECK:    st.global.L2::evict_first.b8 [%rd1+17], %rs15;
+; CHECK:    st.global.b8 [%rd1+17], %rs15;
 ; CHECK:    ld.global.L1::evict_unchanged.b8 %rs16, [%rd2+16];
-; CHECK:    st.global.L2::evict_first.b8 [%rd1+16], %rs16;
+; CHECK:    st.global.b8 [%rd1+16], %rs16;
 ; CHECK:    ld.global.L1::evict_unchanged.b8 %rs17, [%rd2+15];
-; CHECK:    st.global.L2::evict_first.b8 [%rd1+15], %rs17;
+; CHECK:    st.global.b8 [%rd1+15], %rs17;
 ; CHECK:    ld.global.L1::evict_unchanged.b8 %rs18, [%rd2+14];
-; CHECK:    st.global.L2::evict_first.b8 [%rd1+14], %rs18;
+; CHECK:    st.global.b8 [%rd1+14], %rs18;
 ; CHECK:    ld.global.L1::evict_unchanged.b8 %rs19, [%rd2+13];
-; CHECK:    st.global.L2::evict_first.b8 [%rd1+13], %rs19;
+; CHECK:    st.global.b8 [%rd1+13], %rs19;
 ; CHECK:    ld.global.L1::evict_unchanged.b8 %rs20, [%rd2+12];
-; CHECK:    st.global.L2::evict_first.b8 [%rd1+12], %rs20;
+; CHECK:    st.global.b8 [%rd1+12], %rs20;
 ; CHECK:    ld.global.L1::evict_unchanged.b8 %rs21, [%rd2+11];
-; CHECK:    st.global.L2::evict_first.b8 [%rd1+11], %rs21;
+; CHECK:    st.global.b8 [%rd1+11], %rs21;
 ; CHECK:    ld.global.L1::evict_unchanged.b8 %rs22, [%rd2+10];
-; CHECK:    st.global.L2::evict_first.b8 [%rd1+10], %rs22;
+; CHECK:    st.global.b8 [%rd1+10], %rs22;
 ; CHECK:    ld.global.L1::evict_unchanged.b8 %rs23, [%rd2+9];
-; CHECK:    st.global.L2::evict_first.b8 [%rd1+9], %rs23;
+; CHECK:    st.global.b8 [%rd1+9], %rs23;
 ; CHECK:    ld.global.L1::evict_unchanged.b8 %rs24, [%rd2+8];
-; CHECK:    st.global.L2::evict_first.b8 [%rd1+8], %rs24;
+; CHECK:    st.global.b8 [%rd1+8], %rs24;
 ; CHECK:    ld.global.L1::evict_unchanged.b8 %rs25, [%rd2+7];
-; CHECK:    st.global.L2::evict_first.b8 [%rd1+7], %rs25;
+; CHECK:    st.global.b8 [%rd1+7], %rs25;
 ; CHECK:    ld.global.L1::evict_unchanged.b8 %rs26, [%rd2+6];
-; CHECK:    st.global.L2::evict_first.b8 [%rd1+6], %rs26;
+; CHECK:    st.global.b8 [%rd1+6], %rs26;
 ; CHECK:    ld.global.L1::evict_unchanged.b8 %rs27, [%rd2+5];
-; CHECK:    st.global.L2::evict_first.b8 [%rd1+5], %rs27;
+; CHECK:    st.global.b8 [%rd1+5], %rs27;
 ; CHECK:    ld.global.L1::evict_unchanged.b8 %rs28, [%rd2+4];
-; CHECK:    st.global.L2::evict_first.b8 [%rd1+4], %rs28;
+; CHECK:    st.global.b8 [%rd1+4], %rs28;
 ; CHECK:    ld.global.L1::evict_unchanged.b8 %rs29, [%rd2+3];
-; CHECK:    st.global.L2::evict_first.b8 [%rd1+3], %rs29;
+; CHECK:    st.global.b8 [%rd1+3], %rs29;
 ; CHECK:    ld.global.L1::evict_unchanged.b8 %rs30, [%rd2+2];
-; CHECK:    st.global.L2::evict_first.b8 [%rd1+2], %rs30;
+; CHECK:    st.global.b8 [%rd1+2], %rs30;
 ; CHECK:    ld.global.L1::evict_unchanged.b8 %rs31, [%rd2+1];
-; CHECK:    st.global.L2::evict_first.b8 [%rd1+1], %rs31;
+; CHECK:    st.global.b8 [%rd1+1], %rs31;
 ; CHECK:    ld.global.L1::evict_unchanged.b8 %rs32, [%rd2];
-; CHECK:    st.global.L2::evict_first.b8 [%rd1], %rs32;
+; CHECK:    st.global.b8 [%rd1], %rs32;
   call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) %dest, ptr addrspace(1) %src, i64 32, i1 false), !mem.cache_hint !98
   ret void
 }
@@ -520,9 +527,9 @@ define void @test_memcpy_128bytes_combined(ptr addrspace(1) %dest, ptr addrspace
 !81 = !{i32 1, !182}
 !182 = !{!"nvvm.l1_eviction", !"first"}
 
-; memcpy with only dest hint (store side)
-!82 = !{i32 0, !183}
-!183 = !{!"nvvm.l2_eviction", !"last"}
+; memcpy with source L2 prefetch (load side)
+!82 = !{i32 1, !183}
+!183 = !{!"nvvm.l2_prefetch_size", !"128B"}
 
 ; memcpy with L2::cache_hint on both operands
 !83 = !{i32 0, !184, i32 1, !185}
