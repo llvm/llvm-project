@@ -123,6 +123,7 @@ private:
                     MachineFunction &MF) const;
   bool selectInsertVectorElt(MachineInstr &I, MachineRegisterInfo &MRI,
                              MachineFunction &MF);
+  bool selectScalarToVector(MachineInstr &I, MachineRegisterInfo &MRI);
 
   unsigned getMachineOpcodeForInsert(unsigned EltSizeInBits) const;
   unsigned getScalarToVecOpcode(unsigned EltSizeInBits) const;
@@ -498,6 +499,8 @@ bool X86InstructionSelector::select(MachineInstr &I) {
     return selectSelect(I, MRI, MF);
   case TargetOpcode::G_INSERT_VECTOR_ELT:
     return selectInsertVectorElt(I, MRI, MF);
+  case X86::G_SCALAR_TO_VECTOR:
+    return selectScalarToVector(I, MRI);
   }
 
   return false;
@@ -1995,7 +1998,7 @@ unsigned X86InstructionSelector::getMachineOpcodeForInsert(
       {X86::PINSRQrri, X86::VPINSRQrri, X86::VPINSRQZrri}, // 64-bit
   };
   assert(EltSizeInBits % 8 == 0 && EltSizeInBits <= 64);
-  unsigned Row = EltSizeInBits / 8 - 1;
+  unsigned Row = Log2_32(EltSizeInBits / 8);
   if (EltSizeInBits == 8) {
     if (HasBWI)
       return PinsrOpcodes[Row][2];
@@ -2063,7 +2066,6 @@ bool X86InstructionSelector::selectInsertVectorElt(MachineInstr &I,
   if (Idx >= NumElts)
     return false;
 
-  // TODO: use movd/vmovd/movq at idx 0 to avoid false dependency.
 
   unsigned Opc = getMachineOpcodeForInsert(EltSize);
   if (!Opc)
@@ -2073,6 +2075,27 @@ bool X86InstructionSelector::selectInsertVectorElt(MachineInstr &I,
                    .addReg(VecReg)
                    .addReg(EltReg)
                    .addImm(Idx);
+
+  constrainSelectedInstRegOperands(MIB, TII, TRI, RBI);
+  I.eraseFromParent();
+  return true;
+}
+
+bool X86InstructionSelector::selectScalarToVector(MachineInstr &I,
+                                                  MachineRegisterInfo &MRI) {
+  assert(I.getOpcode() == X86::G_SCALAR_TO_VECTOR);
+
+  Register DstReg = I.getOperand(0).getReg();
+  Register SrcReg = I.getOperand(1).getReg();
+  LLT DstTy = MRI.getType(DstReg);
+  unsigned EltSize = DstTy.getScalarSizeInBits();
+
+  unsigned Opc = getScalarToVecOpcode(EltSize);
+  if (!Opc)
+    return false;
+
+  auto &MIB = *BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(Opc), DstReg)
+                   .addReg(SrcReg);
 
   constrainSelectedInstRegOperands(MIB, TII, TRI, RBI);
   I.eraseFromParent();

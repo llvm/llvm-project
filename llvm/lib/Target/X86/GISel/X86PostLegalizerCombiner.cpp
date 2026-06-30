@@ -51,6 +51,39 @@ using namespace MIPatternMatch;
 
 namespace {
 
+// Match G_INSERT_VECTOR_ELT(G_IMPLICIT_DEF, elt, 0) where element size is
+// 32 or 64 bits. This pattern can be replaced with G_SCALAR_TO_VECTOR which
+// selects to movd/movq, avoiding the false dependency that pinsrd/pinsrq
+// would introduce on the (undefined) destination register.
+static bool matchInsertVecEltToScalarToVec(MachineInstr &MI,
+                                           MachineRegisterInfo &MRI) {
+  assert(MI.getOpcode() == TargetOpcode::G_INSERT_VECTOR_ELT);
+
+  Register VecReg = MI.getOperand(1).getReg();
+  Register IdxReg = MI.getOperand(3).getReg();
+
+  if (!getOpcodeDef<GImplicitDef>(VecReg, MRI))
+    return false;
+
+  auto IdxVal = getIConstantVRegValWithLookThrough(IdxReg, MRI);
+  if (!IdxVal || IdxVal->Value.getZExtValue() != 0)
+    return false;
+
+  LLT VecTy = MRI.getType(MI.getOperand(0).getReg());
+  unsigned EltSize = VecTy.getScalarSizeInBits();
+  return EltSize == 32 || EltSize == 64;
+}
+
+static void applyInsertVecEltToScalarToVec(MachineInstr &MI,
+                                           MachineRegisterInfo &MRI,
+                                           MachineIRBuilder &B) {
+  B.setInstrAndDebugLoc(MI);
+  Register Dst = MI.getOperand(0).getReg();
+  Register Elt = MI.getOperand(2).getReg();
+  B.buildInstr(X86::G_SCALAR_TO_VECTOR, {Dst}, {Elt});
+  MI.eraseFromParent();
+}
+
 CombinerInfo createCombinerInfo(bool OptEnabled, const Function &F) {
   CombinerInfo CInfo(/*AllowIllegalOps=*/true,
                      /*ShouldLegalizeIllegal=*/false,

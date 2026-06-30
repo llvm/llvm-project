@@ -12,7 +12,7 @@
 define <4 x i32> @build_vector_v4i32(i32 %a, i32 %b, i32 %c, i32 %d) {
 ; GISEL-SSE41-LABEL: build_vector_v4i32:
 ; GISEL-SSE41:       # %bb.0:
-; GISEL-SSE41-NEXT:    pinsrd $0, %edi, %xmm0
+; GISEL-SSE41-NEXT:    movd %edi, %xmm0
 ; GISEL-SSE41-NEXT:    pinsrd $1, %esi, %xmm0
 ; GISEL-SSE41-NEXT:    pinsrd $2, %edx, %xmm0
 ; GISEL-SSE41-NEXT:    pinsrd $3, %ecx, %xmm0
@@ -20,7 +20,7 @@ define <4 x i32> @build_vector_v4i32(i32 %a, i32 %b, i32 %c, i32 %d) {
 ;
 ; GISEL-AVX-LABEL: build_vector_v4i32:
 ; GISEL-AVX:       # %bb.0:
-; GISEL-AVX-NEXT:    vpinsrd $0, %edi, %xmm0, %xmm0
+; GISEL-AVX-NEXT:    vmovd %edi, %xmm0
 ; GISEL-AVX-NEXT:    vpinsrd $1, %esi, %xmm0, %xmm0
 ; GISEL-AVX-NEXT:    vpinsrd $2, %edx, %xmm0, %xmm0
 ; GISEL-AVX-NEXT:    vpinsrd $3, %ecx, %xmm0, %xmm0
@@ -51,13 +51,13 @@ define <4 x i32> @build_vector_v4i32(i32 %a, i32 %b, i32 %c, i32 %d) {
 define <2 x i64> @build_vector_v2i64(i64 %a, i64 %b) {
 ; GISEL-SSE41-LABEL: build_vector_v2i64:
 ; GISEL-SSE41:       # %bb.0:
-; GISEL-SSE41-NEXT:    pinsrq $0, %rdi, %xmm0
+; GISEL-SSE41-NEXT:    movq %rdi, %xmm0
 ; GISEL-SSE41-NEXT:    pinsrq $1, %rsi, %xmm0
 ; GISEL-SSE41-NEXT:    retq
 ;
 ; GISEL-AVX-LABEL: build_vector_v2i64:
 ; GISEL-AVX:       # %bb.0:
-; GISEL-AVX-NEXT:    vpinsrq $0, %rdi, %xmm0, %xmm0
+; GISEL-AVX-NEXT:    vmovq %rdi, %xmm0
 ; GISEL-AVX-NEXT:    vpinsrq $1, %rsi, %xmm0, %xmm0
 ; GISEL-AVX-NEXT:    retq
 ;
@@ -85,7 +85,7 @@ define <4 x float> @build_vector_v4f32(float %a, float %b, float %c, float %d) {
 ; GISEL-SSE41-LABEL: build_vector_v4f32:
 ; GISEL-SSE41:       # %bb.0:
 ; GISEL-SSE41-NEXT:    movd %xmm0, %eax
-; GISEL-SSE41-NEXT:    pinsrd $0, %eax, %xmm0
+; GISEL-SSE41-NEXT:    movd %eax, %xmm0
 ; GISEL-SSE41-NEXT:    movd %xmm1, %eax
 ; GISEL-SSE41-NEXT:    pinsrd $1, %eax, %xmm0
 ; GISEL-SSE41-NEXT:    movd %xmm2, %eax
@@ -97,7 +97,7 @@ define <4 x float> @build_vector_v4f32(float %a, float %b, float %c, float %d) {
 ; GISEL-AVX-LABEL: build_vector_v4f32:
 ; GISEL-AVX:       # %bb.0:
 ; GISEL-AVX-NEXT:    vmovd %xmm0, %eax
-; GISEL-AVX-NEXT:    vpinsrd $0, %eax, %xmm0, %xmm0
+; GISEL-AVX-NEXT:    vmovd %eax, %xmm0
 ; GISEL-AVX-NEXT:    vmovd %xmm1, %eax
 ; GISEL-AVX-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
 ; GISEL-AVX-NEXT:    vmovd %xmm2, %eax
@@ -130,7 +130,7 @@ define <2 x double> @build_vector_v2f64(double %a, double %b) {
 ; GISEL-SSE41-LABEL: build_vector_v2f64:
 ; GISEL-SSE41:       # %bb.0:
 ; GISEL-SSE41-NEXT:    movq %xmm0, %rax
-; GISEL-SSE41-NEXT:    pinsrq $0, %rax, %xmm0
+; GISEL-SSE41-NEXT:    movq %rax, %xmm0
 ; GISEL-SSE41-NEXT:    movq %xmm1, %rax
 ; GISEL-SSE41-NEXT:    pinsrq $1, %rax, %xmm0
 ; GISEL-SSE41-NEXT:    retq
@@ -138,7 +138,7 @@ define <2 x double> @build_vector_v2f64(double %a, double %b) {
 ; GISEL-AVX-LABEL: build_vector_v2f64:
 ; GISEL-AVX:       # %bb.0:
 ; GISEL-AVX-NEXT:    vmovq %xmm0, %rax
-; GISEL-AVX-NEXT:    vpinsrq $0, %rax, %xmm0, %xmm0
+; GISEL-AVX-NEXT:    vmovq %rax, %xmm0
 ; GISEL-AVX-NEXT:    vmovq %xmm1, %rax
 ; GISEL-AVX-NEXT:    vpinsrq $1, %rax, %xmm0, %xmm0
 ; GISEL-AVX-NEXT:    retq
@@ -162,7 +162,7 @@ define <2 x double> @build_vector_v2f64(double %a, double %b) {
 define <8 x i32> @build_vector_v8i32(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %h) #1 {
 ; GISEL-SSE41-LABEL: build_vector_v8i32:
 ; GISEL-SSE41:       # %bb.0:
-; GISEL-SSE41-NEXT:    vpinsrd $0, %edi, %xmm0, %xmm0
+; GISEL-SSE41-NEXT:    vmovd %edi, %xmm0
 ; GISEL-SSE41-NEXT:    vinsertf128 $0, %xmm0, %ymm0, %ymm0
 ; GISEL-SSE41-NEXT:    vpinsrd $1, %esi, %xmm0, %xmm1
 ; GISEL-SSE41-NEXT:    vinsertf128 $0, %xmm1, %ymm0, %ymm0
@@ -210,7 +210,7 @@ define <8 x i32> @build_vector_v8i32(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32
 define <4 x i64> @build_vector_v4i64(i64 %a, i64 %b, i64 %c, i64 %d) #1 {
 ; GISEL-SSE41-LABEL: build_vector_v4i64:
 ; GISEL-SSE41:       # %bb.0:
-; GISEL-SSE41-NEXT:    vpinsrq $0, %rdi, %xmm0, %xmm0
+; GISEL-SSE41-NEXT:    vmovq %rdi, %xmm0
 ; GISEL-SSE41-NEXT:    vinsertf128 $0, %xmm0, %ymm0, %ymm0
 ; GISEL-SSE41-NEXT:    vpinsrq $1, %rsi, %xmm0, %xmm1
 ; GISEL-SSE41-NEXT:    vinsertf128 $0, %xmm1, %ymm0, %ymm0
@@ -245,7 +245,7 @@ define <8 x float> @build_vector_v8f32(float %a, float %b, float %c, float %d, f
 ; GISEL-SSE41-LABEL: build_vector_v8f32:
 ; GISEL-SSE41:       # %bb.0:
 ; GISEL-SSE41-NEXT:    vmovd %xmm0, %eax
-; GISEL-SSE41-NEXT:    vpinsrd $0, %eax, %xmm0, %xmm0
+; GISEL-SSE41-NEXT:    vmovd %eax, %xmm0
 ; GISEL-SSE41-NEXT:    vinsertf128 $0, %xmm0, %ymm0, %ymm0
 ; GISEL-SSE41-NEXT:    vmovd %xmm1, %eax
 ; GISEL-SSE41-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm1
@@ -310,7 +310,7 @@ define <4 x double> @build_vector_v4f64(double %a, double %b, double %c, double 
 ; GISEL-SSE41-LABEL: build_vector_v4f64:
 ; GISEL-SSE41:       # %bb.0:
 ; GISEL-SSE41-NEXT:    vmovq %xmm0, %rax
-; GISEL-SSE41-NEXT:    vpinsrq $0, %rax, %xmm0, %xmm0
+; GISEL-SSE41-NEXT:    vmovq %rax, %xmm0
 ; GISEL-SSE41-NEXT:    vinsertf128 $0, %xmm0, %ymm0, %ymm0
 ; GISEL-SSE41-NEXT:    vmovq %xmm1, %rax
 ; GISEL-SSE41-NEXT:    vpinsrq $1, %rax, %xmm0, %xmm1
@@ -350,7 +350,7 @@ define <4 x double> @build_vector_v4f64(double %a, double %b, double %c, double 
 define <16 x i32> @build_vector_v16i32(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %h,
 ; GISEL-SSE41-LABEL: build_vector_v16i32:
 ; GISEL-SSE41:       # %bb.0:
-; GISEL-SSE41-NEXT:    vpinsrd $0, %edi, %xmm0, %xmm0
+; GISEL-SSE41-NEXT:    vmovd %edi, %xmm0
 ; GISEL-SSE41-NEXT:    vinserti32x4 $0, %xmm0, %zmm0, %zmm0
 ; GISEL-SSE41-NEXT:    vpinsrd $1, %esi, %xmm0, %xmm1
 ; GISEL-SSE41-NEXT:    vinserti32x4 $0, %xmm1, %zmm0, %zmm0
@@ -398,7 +398,7 @@ define <16 x i32> @build_vector_v16i32(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i
 ;
 ; GISEL-AVX-LABEL: build_vector_v16i32:
 ; GISEL-AVX:       # %bb.0:
-; GISEL-AVX-NEXT:    vpinsrd $0, %edi, %xmm0, %xmm0
+; GISEL-AVX-NEXT:    vmovd %edi, %xmm0
 ; GISEL-AVX-NEXT:    vinserti32x4 $0, %xmm0, %zmm0, %zmm0
 ; GISEL-AVX-NEXT:    vpinsrd $1, %esi, %xmm0, %xmm1
 ; GISEL-AVX-NEXT:    vinserti32x4 $0, %xmm1, %zmm0, %zmm0
@@ -512,7 +512,7 @@ define <16 x i32> @build_vector_v16i32(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i
 define <8 x i64> @build_vector_v8i64(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e, i64 %f, i64 %g, i64 %h) #2 {
 ; GISEL-SSE41-LABEL: build_vector_v8i64:
 ; GISEL-SSE41:       # %bb.0:
-; GISEL-SSE41-NEXT:    vpinsrq $0, %rdi, %xmm0, %xmm0
+; GISEL-SSE41-NEXT:    vmovq %rdi, %xmm0
 ; GISEL-SSE41-NEXT:    vinserti32x4 $0, %xmm0, %zmm0, %zmm0
 ; GISEL-SSE41-NEXT:    vpinsrq $1, %rsi, %xmm0, %xmm1
 ; GISEL-SSE41-NEXT:    vinserti32x4 $0, %xmm1, %zmm0, %zmm0
@@ -538,7 +538,7 @@ define <8 x i64> @build_vector_v8i64(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e, i64
 ;
 ; GISEL-AVX-LABEL: build_vector_v8i64:
 ; GISEL-AVX:       # %bb.0:
-; GISEL-AVX-NEXT:    vpinsrq $0, %rdi, %xmm0, %xmm0
+; GISEL-AVX-NEXT:    vmovq %rdi, %xmm0
 ; GISEL-AVX-NEXT:    vinserti32x4 $0, %xmm0, %zmm0, %zmm0
 ; GISEL-AVX-NEXT:    vpinsrq $1, %rsi, %xmm0, %xmm1
 ; GISEL-AVX-NEXT:    vinserti32x4 $0, %xmm1, %zmm0, %zmm0
@@ -610,7 +610,7 @@ define <16 x float> @build_vector_v16f32(float %a, float %b, float %c, float %d,
 ; GISEL-SSE41-LABEL: build_vector_v16f32:
 ; GISEL-SSE41:       # %bb.0:
 ; GISEL-SSE41-NEXT:    vmovd %xmm0, %eax
-; GISEL-SSE41-NEXT:    vpinsrd $0, %eax, %xmm0, %xmm0
+; GISEL-SSE41-NEXT:    vmovd %eax, %xmm0
 ; GISEL-SSE41-NEXT:    vinserti32x4 $0, %xmm0, %zmm0, %zmm0
 ; GISEL-SSE41-NEXT:    vmovd %xmm1, %eax
 ; GISEL-SSE41-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm1
@@ -666,7 +666,7 @@ define <16 x float> @build_vector_v16f32(float %a, float %b, float %c, float %d,
 ; GISEL-AVX-LABEL: build_vector_v16f32:
 ; GISEL-AVX:       # %bb.0:
 ; GISEL-AVX-NEXT:    vmovd %xmm0, %eax
-; GISEL-AVX-NEXT:    vpinsrd $0, %eax, %xmm0, %xmm0
+; GISEL-AVX-NEXT:    vmovd %eax, %xmm0
 ; GISEL-AVX-NEXT:    vinserti32x4 $0, %xmm0, %zmm0, %zmm0
 ; GISEL-AVX-NEXT:    vmovd %xmm1, %eax
 ; GISEL-AVX-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm1
@@ -784,7 +784,7 @@ define <8 x double> @build_vector_v8f64(double %a, double %b, double %c, double 
 ; GISEL-SSE41-LABEL: build_vector_v8f64:
 ; GISEL-SSE41:       # %bb.0:
 ; GISEL-SSE41-NEXT:    vmovq %xmm0, %rax
-; GISEL-SSE41-NEXT:    vpinsrq $0, %rax, %xmm0, %xmm0
+; GISEL-SSE41-NEXT:    vmovq %rax, %xmm0
 ; GISEL-SSE41-NEXT:    vinserti32x4 $0, %xmm0, %zmm0, %zmm0
 ; GISEL-SSE41-NEXT:    vmovq %xmm1, %rax
 ; GISEL-SSE41-NEXT:    vpinsrq $1, %rax, %xmm0, %xmm1
@@ -818,7 +818,7 @@ define <8 x double> @build_vector_v8f64(double %a, double %b, double %c, double 
 ; GISEL-AVX-LABEL: build_vector_v8f64:
 ; GISEL-AVX:       # %bb.0:
 ; GISEL-AVX-NEXT:    vmovq %xmm0, %rax
-; GISEL-AVX-NEXT:    vpinsrq $0, %rax, %xmm0, %xmm0
+; GISEL-AVX-NEXT:    vmovq %rax, %xmm0
 ; GISEL-AVX-NEXT:    vinserti32x4 $0, %xmm0, %zmm0, %zmm0
 ; GISEL-AVX-NEXT:    vmovq %xmm1, %rax
 ; GISEL-AVX-NEXT:    vpinsrq $1, %rax, %xmm0, %xmm1

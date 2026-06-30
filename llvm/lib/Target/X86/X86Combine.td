@@ -18,6 +18,16 @@ def all_x86combines : GICombineGroup<[identity_combines, reassocs,
 def X86PreLegalizerCombiner : GICombiner<"X86PreLegalizerCombinerImpl", [all_x86combines]> {
     let CombineAllMethodName = "tryCombineAllImpl";
 }
-def X86PostLegalizerCombiner : GICombiner<"X86PostLegalizerCombinerImpl", [redundant_or, constant_fold_fp_ops, identity_combines, copy_prop]> {
+
+def insert_vec_elt_to_scalar_to_vec : GICombineRule<
+  (defs root:$root),
+  (match (wip_match_opcode G_INSERT_VECTOR_ELT):$root,
+         [{ return matchInsertVecEltToScalarToVec(*${root}, MRI); }]),
+  (apply [{ applyInsertVecEltToScalarToVec(*${root}, MRI, B); }])>;
+
+def X86PostLegalizerCombiner : GICombiner<
+    "X86PostLegalizerCombinerImpl",
+    [redundant_or, constant_fold_fp_ops, identity_combines, copy_prop,
+     insert_vec_elt_to_scalar_to_vec]> {
     let CombineAllMethodName = "tryCombineAllImpl";
 }
