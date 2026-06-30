@@ -2272,13 +2272,10 @@ scan to every eligible LDS atomic.
 
   ; Few expected active lanes (<= 5): DPP is skipped and each lane issues its
   ; own ds_add_rtn_u32.
-  %old0 = atomicrmw add ptr addrspace(3) @lds, i32 %val acq_rel, !amdgpu.expected.active.lanes !0
+  %old0 = atomicrmw add ptr addrspace(3) @lds, i32 %val acq_rel, !amdgpu.expected.active.lanes !{i32 4}
 
   ; Many expected active lanes (> 5): the DPP scan is applied.
-  %old1 = atomicrmw add ptr addrspace(3) @lds, i32 %val acq_rel, !amdgpu.expected.active.lanes !1
-
-  !0 = !{i32 4}
-  !1 = !{i32 32}
+  %old1 = atomicrmw add ptr addrspace(3) @lds, i32 %val acq_rel, !amdgpu.expected.active.lanes !{i32 32}
 
 
 LLVM IR Attributes
