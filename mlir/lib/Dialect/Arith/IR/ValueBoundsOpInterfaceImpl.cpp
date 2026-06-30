@@ -109,8 +109,9 @@ struct DivSIOpInterface
 
     // divsi rounds toward zero, unlike floorDiv/ceilDiv which round toward
     // negative/positive infinity respectively. When the result is non-negative,
-    // divsi equals floorDiv(lhs, rhs); when negative, it equals ceilDiv(lhs, rhs).
-    // Without knowing the sign, bound the result between those two expressions.
+    // divsi equals floorDiv(lhs, rhs); when negative, it equals ceilDiv(lhs,
+    // rhs). Without knowing the sign, bound the result between those two
+    // expressions.
     cstr.bound(value) >= lhs.floorDiv(rhs);
     cstr.bound(value) <= lhs.ceilDiv(rhs);
 
