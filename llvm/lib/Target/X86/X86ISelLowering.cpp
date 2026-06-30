@@ -32405,10 +32405,9 @@ static SDValue LowerRotate(SDValue Op, const X86Subtarget &Subtarget,
     return DAG.getNode(ISD::AVGCEILU, DL, VT, R, Neg);
   }
 
-  // rotl(x,1) -> psubb(x+x, x<0)
-  if (EltSizeInBits == 8 && IsCstSplat &&
-      CstSplatValue.urem(EltSizeInBits) == 1 && IsROTL &&
-      !Subtarget.hasAVX512()) {
+  // rotl(x,1) -> sub(add(x, x), icmp_slt(x, 0))
+  if (IsROTL && EltSizeInBits == 8 && IsCstSplat &&
+      CstSplatValue.urem(EltSizeInBits) == 1 && !Subtarget.hasAVX512()) {
     SDValue Double = DAG.getNode(ISD::ADD, DL, VT, R, R);
     SDValue Zero = DAG.getConstant(0, DL, VT);
     SDValue CmpNeg = DAG.getSetCC(DL, VT, R, Zero, ISD::SETLT);
