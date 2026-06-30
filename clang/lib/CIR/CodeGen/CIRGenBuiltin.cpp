@@ -26,6 +26,7 @@
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/Support/ErrorHandling.h"
 
@@ -2263,11 +2264,11 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     mlir::Location loc = getLoc(e->getSourceRange());
     mlir::Type resultTy = convertType(e->getType());
 
-    bool isAdd = builtinID == Builtin::BI__builtin_addcb ||
-                 builtinID == Builtin::BI__builtin_addcs ||
-                 builtinID == Builtin::BI__builtin_addc ||
-                 builtinID == Builtin::BI__builtin_addcl ||
-                 builtinID == Builtin::BI__builtin_addcll;
+    static constexpr unsigned addcBuiltins[] = {
+        Builtin::BI__builtin_addcb, Builtin::BI__builtin_addcs,
+        Builtin::BI__builtin_addc, Builtin::BI__builtin_addcl,
+        Builtin::BI__builtin_addcll};
+    bool isAdd = llvm::is_contained(addcBuiltins, builtinID);
 
     mlir::Value sum1, carry1, sum2, carry2;
     if (isAdd) {
