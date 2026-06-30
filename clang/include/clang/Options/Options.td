@@ -3405,6 +3405,16 @@ def clangir_enable_idiom_recognizer : Flag<["-"], "clangir-enable-idiom-recogniz
   HelpText<"ClangIR: Enable Idiom Recognizer pass">,
   MarshallingInfoFlag<FrontendOpts<"ClangIREnableIdiomRecognizer">>;
 
+def clangir_lib_opt_EQ : Joined<["-"], "clangir-lib-opt=">,
+  Visibility<[ClangOption, CC1Option]>, Group<f_Group>, Values<"all">,
+  HelpText<"Enable C/C++ library based optimizations (with options)">,
+  MarshallingInfoString<FrontendOpts<"ClangIRLibOptOptions">>;
+
+def clangir_lib_opt : Flag<["-"], "clangir-lib-opt">,
+  Visibility<[ClangOption, CC1Option]>, Group<f_Group>,
+  Alias<clangir_lib_opt_EQ>, AliasArgs<["all"]>,
+  HelpText<"Enable C/C++ library based optimizations">;
+
 defm clangir : BoolFOption<"clangir",
   FrontendOpts<"UseClangIRPipeline">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option], "Use the ClangIR pipeline to compile">,

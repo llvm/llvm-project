@@ -68,6 +68,12 @@ public:
   llvm::Error writeLUSummaryEncoding(const LUSummaryEncoding &SummaryEncoding,
                                      llvm::StringRef Path) override;
 
+  llvm::Expected<StaticLibrary>
+  readStaticLibrary(llvm::StringRef Path) override;
+
+  llvm::Error writeStaticLibrary(const StaticLibrary &S,
+                                 llvm::StringRef Path) override;
+
   llvm::Expected<WPASuite> readWPASuite(llvm::StringRef Path) override;
 
   llvm::Error writeWPASuite(const WPASuite &Suite,
@@ -121,6 +127,15 @@ private:
   /// object. See \c readTUSummaryFromObject for caller responsibilities.
   llvm::Expected<LUSummaryEncoding>
   readLUSummaryEncodingFromObject(const Object &Root);
+
+  /// Parses a StaticLibrary from an already-validated root JSON object.
+  /// See \c readTUSummaryFromObject for caller responsibilities.
+  llvm::Expected<StaticLibrary> readStaticLibraryFromObject(const Object &Root);
+
+  /// Serializes a TUSummaryEncoding to a JSON object including its
+  /// self-describing \c type field. Used both by \c writeTUSummaryEncoding
+  /// and by the StaticLibrary writer to emit member entries.
+  Object tuSummaryEncodingToJSON(const TUSummaryEncoding &SE) const;
 
   /// Parses a WPASuite from an already-validated root JSON object. See
   /// \c readTUSummaryFromObject for caller responsibilities.

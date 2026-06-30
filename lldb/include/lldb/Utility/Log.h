@@ -317,9 +317,14 @@ private:
 
   static void ListCategories(llvm::raw_ostream &stream,
                              const ChannelMap::value_type &entry);
-  static Log::MaskType GetFlags(llvm::raw_ostream &stream,
-                                const ChannelMap::value_type &entry,
-                                llvm::ArrayRef<const char *> categories);
+
+  /// Convert an array of category names into a set of category flags.
+  /// Returns a bitmask of categories, or an empty optional in the case that
+  /// at least one category name was not recognised. All unknown category names
+  /// are reported as errors in the provided stream.
+  static std::optional<Log::MaskType>
+  GetFlags(llvm::raw_ostream &stream, const ChannelMap::value_type &entry,
+           llvm::ArrayRef<const char *> categories);
 
   Log(const Log &) = delete;
   void operator=(const Log &) = delete;
