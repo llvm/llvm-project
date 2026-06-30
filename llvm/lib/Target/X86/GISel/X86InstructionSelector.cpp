@@ -2068,6 +2068,8 @@ bool X86InstructionSelector::selectInsertVectorElt(MachineInstr &I,
   // For v2i64, use PUNPCKLQDQ instead of PINSRQ when inserting at index 1
   // into a scalar_to_vector result. This breaks the dependency chain by using
   // two independent MOVQs followed by an unpack, matching SDAG behavior.
+  // When the scalar sources originate from vector registers (FP case), we skip
+  // the GPR→XMM MOVQ entirely and use the XMM source directly.
   if (EltSize == 64 && NumElts == 2 && Idx == 1) {
     MachineInstr *VecDef = MRI.getVRegDef(VecReg);
     if (VecDef && VecDef->getOpcode() == X86::G_SCALAR_TO_VECTOR) {
@@ -2076,17 +2078,51 @@ bool X86InstructionSelector::selectInsertVectorElt(MachineInstr &I,
                           : STI.hasAVX()                  ? X86::VPUNPCKLQDQrr
                                                           : X86::PUNPCKLQDQrr;
 
-      Register HiVecReg = MRI.createVirtualRegister(&X86::VR128RegClass);
-      auto &MovMIB = *BuildMI(*I.getParent(), I, I.getDebugLoc(),
-                              TII.get(MovOpc), HiVecReg)
-                          .addReg(EltReg);
-      constrainSelectedInstRegOperands(MovMIB, TII, TRI, RBI);
+      // For hi element: check if source is a COPY from vecr (FP register).
+      // If so, use it directly; otherwise emit MOVQ from GPR.
+      Register HiVecReg;
+      MachineInstr *EltDef = MRI.getVRegDef(EltReg);
+      if (EltDef && EltDef->isCopy()) {
+        Register CopySrc = EltDef->getOperand(1).getReg();
+        if (CopySrc.isVirtual() &&
+            RBI.getRegBank(CopySrc, MRI, TRI)->getID() == X86::VECRRegBankID) {
+          HiVecReg = CopySrc;
+          MRI.setRegClass(HiVecReg, &X86::VR128RegClass);
+        }
+      }
+      if (!HiVecReg) {
+        HiVecReg = MRI.createVirtualRegister(&X86::VR128RegClass);
+        BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(MovOpc), HiVecReg)
+            .addReg(EltReg);
+      }
+
+      // For lo element: check if G_SCALAR_TO_VECTOR source is a COPY from
+      // vecr. If so, use it directly; otherwise emit MOVQ from GPR.
+      Register LoVecReg;
+      Register StvSrcReg = VecDef->getOperand(1).getReg();
+      MachineInstr *StvSrcDef = MRI.getVRegDef(StvSrcReg);
+      if (StvSrcDef && StvSrcDef->isCopy()) {
+        Register CopySrc = StvSrcDef->getOperand(1).getReg();
+        if (CopySrc.isVirtual() &&
+            RBI.getRegBank(CopySrc, MRI, TRI)->getID() == X86::VECRRegBankID) {
+          LoVecReg = CopySrc;
+          MRI.setRegClass(LoVecReg, &X86::VR128RegClass);
+        }
+      }
+      if (!LoVecReg) {
+        LoVecReg = MRI.createVirtualRegister(&X86::VR128RegClass);
+        BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(MovOpc), LoVecReg)
+            .addReg(StvSrcReg);
+      }
 
       auto &UnpckMIB = *BuildMI(*I.getParent(), I, I.getDebugLoc(),
                                 TII.get(UnpckOpc), DstReg)
-                            .addReg(VecReg)
+                            .addReg(LoVecReg)
                             .addReg(HiVecReg);
       constrainSelectedInstRegOperands(UnpckMIB, TII, TRI, RBI);
+
+      if (MRI.use_nodbg_empty(VecDef->getOperand(0).getReg()))
+        VecDef->eraseFromParent();
 
       I.eraseFromParent();
       return true;

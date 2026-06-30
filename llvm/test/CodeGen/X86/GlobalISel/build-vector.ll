@@ -49,16 +49,16 @@ define <4 x i32> @build_vector_v4i32(i32 %a, i32 %b, i32 %c, i32 %d) {
 define <2 x i64> @build_vector_v2i64(i64 %a, i64 %b) {
 ; GISEL-SSE41-LABEL: build_vector_v2i64:
 ; GISEL-SSE41:       # %bb.0:
-; GISEL-SSE41-NEXT:    movq %rdi, %xmm0
 ; GISEL-SSE41-NEXT:    movq %rsi, %xmm1
+; GISEL-SSE41-NEXT:    movq %rdi, %xmm0
 ; GISEL-SSE41-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; GISEL-SSE41-NEXT:    retq
 ;
 ; GISEL-AVX-LABEL: build_vector_v2i64:
 ; GISEL-AVX:       # %bb.0:
-; GISEL-AVX-NEXT:    vmovq %rdi, %xmm0
-; GISEL-AVX-NEXT:    vmovq %rsi, %xmm1
-; GISEL-AVX-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; GISEL-AVX-NEXT:    vmovq %rsi, %xmm0
+; GISEL-AVX-NEXT:    vmovq %rdi, %xmm1
+; GISEL-AVX-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
 ; GISEL-AVX-NEXT:    retq
 ;
 ; SDAG-SSE41-LABEL: build_vector_v2i64:
@@ -129,20 +129,12 @@ define <4 x float> @build_vector_v4f32(float %a, float %b, float %c, float %d) {
 define <2 x double> @build_vector_v2f64(double %a, double %b) {
 ; GISEL-SSE41-LABEL: build_vector_v2f64:
 ; GISEL-SSE41:       # %bb.0:
-; GISEL-SSE41-NEXT:    movq %xmm0, %rax
-; GISEL-SSE41-NEXT:    movq %rax, %xmm0
-; GISEL-SSE41-NEXT:    movq %xmm1, %rax
-; GISEL-SSE41-NEXT:    movq %rax, %xmm1
-; GISEL-SSE41-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; GISEL-SSE41-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; GISEL-SSE41-NEXT:    retq
 ;
 ; GISEL-AVX-LABEL: build_vector_v2f64:
 ; GISEL-AVX:       # %bb.0:
-; GISEL-AVX-NEXT:    vmovq %xmm0, %rax
-; GISEL-AVX-NEXT:    vmovq %rax, %xmm0
-; GISEL-AVX-NEXT:    vmovq %xmm1, %rax
-; GISEL-AVX-NEXT:    vmovq %rax, %xmm1
-; GISEL-AVX-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; GISEL-AVX-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; GISEL-AVX-NEXT:    retq
 ;
 ; SDAG-SSE41-LABEL: build_vector_v2f64:
