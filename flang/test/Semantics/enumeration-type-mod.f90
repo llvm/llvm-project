@@ -1,4 +1,4 @@
-! RUN: %python %S/test_modfile.py %s %flang_fc1
+! RUN: %python %S/test_modfile.py %s %flang_fc1 -fenumeration-type
 ! Check correct modfile generation for enumeration types.
 
 ! Basic enumeration type
