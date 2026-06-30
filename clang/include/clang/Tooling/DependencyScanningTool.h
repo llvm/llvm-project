@@ -112,6 +112,16 @@ public:
       const llvm::DenseSet<dependencies::ModuleID> &AlreadySeen,
       dependencies::DependencyActionController &Controller);
 
+  bool computeDependenciesByNameWithDrain(
+      StringRef CWD, ArrayRef<std::string> CommandLine,
+      DiagnosticConsumer &DiagConsumer,
+      dependencies::DependencyActionController &Controller,
+      const llvm::DenseSet<dependencies::ModuleID> &AlreadySeen,
+      llvm::function_ref<std::optional<std::string>()> getNextInput,
+      llvm::function_ref<void(StringRef,
+                              std::optional<dependencies::TranslationUnitDeps>)>
+          deliverResult);
+
   /// Returns the worker tracing VFS, if it was requested via the service.
   llvm::vfs::TracingFileSystem *getWorkerTracingVFS() const {
     return Worker.getTracingVFS();
@@ -119,20 +129,7 @@ public:
 
   dependencies::DependencyScanningWorker &getWorker() { return Worker; }
 
-  llvm::Error initializeForByNameLookup(
-      StringRef CWD, ArrayRef<std::string> CommandLine,
-      dependencies::DependencyActionController &Controller);
-
-  llvm::Expected<dependencies::TranslationUnitDeps>
-  computeDependenciesByNameOrError(
-      StringRef ModuleName,
-      const llvm::DenseSet<dependencies::ModuleID> &AlreadySeen,
-      dependencies::DependencyActionController &Controller);
-
 private:
-  // Dependency scanning worker has components that depends on the DiagPrinter.
-  // Hence the DiagPrinter is declared first. Do not change the ordering.
-  std::unique_ptr<dependencies::TextDiagnosticsPrinterWithOutput> DiagPrinter;
   dependencies::DependencyScanningWorker Worker;
 };
 

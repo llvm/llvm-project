@@ -12,6 +12,7 @@
 #include "clang/DependencyScanning/CompilerInstanceWithContext.h"
 #include "clang/DependencyScanning/DependencyConsumer.h"
 #include "clang/DependencyScanning/DependencyScannerImpl.h"
+#include "clang/DependencyScanning/DependencyScanningUtils.h"
 #include "clang/Serialization/ObjectFilePCHContainerReader.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -73,13 +74,33 @@ bool DependencyScanningWorker::initializeCIWC(
   return true;
 }
 
-void DependencyScanningWorker::resetCIWC() { CIWC.reset(); }
+bool DependencyScanningWorker::computeDependenciesByNameWithDrain(
+    StringRef CWD, ArrayRef<std::string> CC1CommandLine,
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> OverlayFS,
+    DiagnosticConsumer &DiagConsumer, DependencyActionController &Controller,
+    const llvm::DenseSet<ModuleID> &AlreadySeen,
+    llvm::function_ref<std::optional<std::string>()> getNextInput,
+    llvm::function_ref<void(StringRef, std::optional<TranslationUnitDeps>)>
+        deliverResult) {
+  auto FS = makeEffectiveVFS(CWD, OverlayFS);
+  auto DiagEngine = std::make_unique<DiagnosticsEngineWithDiagOpts>(
+      CC1CommandLine, FS, DiagConsumer);
 
-bool DependencyScanningWorker::computeDependenciesByName(
-    StringRef ModuleName, DependencyConsumer &Consumer,
-    DependencyActionController &Controller) {
-  assert(CIWC && "initializeCIWC must succeed before calling this method");
-  return CIWC->computeDependencies(ModuleName, Consumer, Controller);
+  std::optional<CompilerInstanceWithContext> CIWC =
+      CompilerInstanceWithContext::initializeFromCC1Commandline(
+          *this, CWD, CC1CommandLine, std::move(DiagEngine),
+          std::move(OverlayFS), Controller);
+  if (!CIWC)
+    return false;
+
+  while (std::optional<std::string> NextInput = getNextInput()) {
+    FullDependencyConsumer Consumer(AlreadySeen);
+    if (CIWC->computeDependencies(*NextInput, Consumer, Controller))
+      deliverResult(*NextInput, Consumer.takeTranslationUnitDeps());
+    else
+      deliverResult(*NextInput, std::nullopt);
+  }
+  return true;
 }
 
 bool DependencyScanningWorker::computeDependencies(
