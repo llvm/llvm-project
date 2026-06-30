@@ -42,9 +42,7 @@ void ExprEngine::CreateCXXTemporaryObject(const MaterializeTemporaryExpr *ME,
   Bldr.generateNode(ME, Pred, state);
 }
 
-// FIXME: This is the sort of code that should eventually live in a Core
-// checker rather than as a special case in ExprEngine.
-void ExprEngine::performTrivialCopy(NodeBuilder &Bldr, ExplodedNode *Pred,
+void ExprEngine::performTrivialCopy(ExplodedNodeSet &Dst, ExplodedNode *Pred,
                                     const CallEvent &Call) {
   SVal ThisVal;
   bool AlwaysReturnsLValue;
@@ -67,8 +65,7 @@ void ExprEngine::performTrivialCopy(NodeBuilder &Bldr, ExplodedNode *Pred,
   const StackFrame *SF = Pred->getStackFrame();
   const Expr *CallExpr = Call.getOriginExpr();
 
-  ExplodedNodeSet Dst;
-  Bldr.takeNodes(Pred);
+  ExplodedNodeSet DstEval;
 
   assert(ThisRD);
 
@@ -87,23 +84,22 @@ void ExprEngine::performTrivialCopy(NodeBuilder &Bldr, ExplodedNode *Pred,
     evalLocation(Tmp, CallExpr, VExpr, Pred, Pred->getState(), V,
                  /*isLoad=*/true);
     for (ExplodedNode *N : Tmp)
-      evalBind(Dst, CallExpr, N, ThisVal, V, !AlwaysReturnsLValue);
+      evalBind(DstEval, CallExpr, N, ThisVal, V, !AlwaysReturnsLValue);
   } else {
     // We can't copy empty classes because of empty base class optimization.
     // In that case, copying the empty base class subobject would overwrite the
     // object that it overlaps with - so let's not do that.
     // See issue-157467.cpp for an example.
-    Dst.insert(Pred);
+    DstEval.insert(Pred);
   }
 
-  PostStmt PS(CallExpr, SF);
-  for (ExplodedNode *N : Dst) {
+  for (ExplodedNode *N : DstEval) {
     ProgramStateRef State = N->getState();
     if (AlwaysReturnsLValue)
       State = State->BindExpr(CallExpr, SF, ThisVal);
     else
       State = bindReturnValue(Call, SF, State);
-    Bldr.generateNode(PS, State, N);
+    Dst.insert(Engine.makePostStmtNode(CallExpr, State, N));
   }
 }
 
@@ -729,10 +725,9 @@ void ExprEngine::handleConstructor(const Expr *E,
   if (CE && CE->getConstructor()->isTrivial() &&
       CE->getConstructor()->isCopyOrMoveConstructor() &&
       !CallOpts.IsArrayCtorOrDtor) {
-    NodeBuilder Bldr(DstPreCall, DstEvaluated, *currBldrCtx);
     // FIXME: Handle other kinds of trivial constructors as well.
     for (ExplodedNode *N : DstPreCall)
-      performTrivialCopy(Bldr, N, *Call);
+      performTrivialCopy(DstEvaluated, N, *Call);
 
   } else {
     for (ExplodedNode *N : DstPreCall)
@@ -862,9 +857,8 @@ void ExprEngine::VisitCXXDestructor(QualType ObjectType,
                                             *Call, *this);
 
   ExplodedNodeSet DstInvalidated;
-  NodeBuilder Bldr(DstPreCall, DstInvalidated, *currBldrCtx);
   for (ExplodedNode *N : DstPreCall)
-    defaultEvalCall(Bldr, N, *Call, CallOpts);
+    defaultEvalCall(DstInvalidated, N, *Call, CallOpts);
 
   getCheckerManager().runCheckersForPostCall(Dst, DstInvalidated,
                                              *Call, *this);
@@ -887,7 +881,6 @@ void ExprEngine::VisitCXXNewAllocatorCall(const CXXNewExpr *CNE,
                                             *Call, *this);
 
   ExplodedNodeSet DstPostCall;
-  NodeBuilder CallBldr(DstPreCall, DstPostCall, *currBldrCtx);
   for (ExplodedNode *I : DstPreCall) {
     // Operator new calls (CXXNewExpr) are intentionally not eval-called,
     // because it does not make sense to eval-call user-provided functions.
@@ -897,7 +890,7 @@ void ExprEngine::VisitCXXNewAllocatorCall(const CXXNewExpr *CNE,
     //    is what we want anyway.
     // So the best is to not allow eval-calling CXXNewExprs from checkers.
     // Checkers can provide their pre/post-call callbacks if needed.
-    defaultEvalCall(CallBldr, I, *Call);
+    defaultEvalCall(DstPostCall, I, *Call);
   }
   // If the call is inlined, DstPostCall will be empty and we bail out now.
 
@@ -1095,13 +1088,12 @@ void ExprEngine::VisitCXXDeleteExpr(const CXXDeleteExpr *CDE,
   ExplodedNodeSet DstPostCall;
 
   if (AMgr.getAnalyzerOptions().MayInlineCXXAllocator) {
-    NodeBuilder Bldr(DstPreCall, DstPostCall, *currBldrCtx);
     for (ExplodedNode *I : DstPreCall) {
       // Intentionally either inline or conservative eval-call the operator
       // delete, but avoid triggering an eval-call event for checkers.
       // As detailed at handling CXXNewExprs, in short, because it does not
       // really make sense to eval-call user-provided functions.
-      defaultEvalCall(Bldr, I, *Call);
+      defaultEvalCall(DstPostCall, I, *Call);
     }
   } else {
     DstPostCall = std::move(DstPreCall);

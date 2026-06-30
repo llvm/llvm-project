@@ -3881,29 +3881,6 @@ void CIRGenModule::mapBlockAddress(cir::BlockAddrInfoAttr blockInfo,
          "attempting to map a blockaddress info that is already mapped");
 }
 
-void CIRGenModule::mapUnresolvedBlockAddress(cir::BlockAddressOp op) {
-  [[maybe_unused]] auto result = unresolvedBlockAddressToLabel.insert(op);
-  assert(result.second &&
-         "attempting to map a blockaddress operation that is already mapped");
-}
-
-void CIRGenModule::mapResolvedBlockAddress(cir::BlockAddressOp op,
-                                           cir::LabelOp label) {
-  [[maybe_unused]] auto result = blockAddressToLabel.try_emplace(op, label);
-  assert(result.second &&
-         "attempting to map a blockaddress operation that is already mapped");
-}
-
-void CIRGenModule::updateResolvedBlockAddress(cir::BlockAddressOp op,
-                                              cir::LabelOp newLabel) {
-  auto *it = blockAddressToLabel.find(op);
-  assert(it != blockAddressToLabel.end() &&
-         "trying to update a blockaddress not previously mapped");
-  assert(!it->second && "blockaddress already has a resolved label");
-
-  it->second = newLabel;
-}
-
 cir::LabelOp
 CIRGenModule::lookupBlockAddressInfo(cir::BlockAddrInfoAttr blockInfo) {
   return blockAddressInfoToLabel.lookup(blockInfo);
@@ -4020,8 +3997,7 @@ CIRGenModule::getAddrOfGlobalTemporary(const MaterializeTemporaryExpr *mte,
 
   gv.setAlignment(align.getAsAlign().value());
   if (supportsCOMDAT() && gv.isWeakForLinker())
-    errorNYI(mte->getSourceRange(),
-             "Global temporary with comdat/weak linkage");
+    gv.setComdat(true);
   if (varDecl->getTLSKind())
     setTLSMode(gv, *varDecl, /*isExtendingDecl=*/true);
   mlir::Operation *cv = gv;

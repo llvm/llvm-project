@@ -22,8 +22,7 @@ SandboxVectorizerPassBuilder::createRegionPass(StringRef Name, StringRef Args,
 #define REGION_PASS(NAME, CLASS_NAME)                                          \
   if (Name == NAME) {                                                          \
     assert(Args.empty() && "Unexpected arguments for pass '" NAME "'.");       \
-    assert(AuxArg.empty() && "TODO: Add RegionPass support for AuxArge);");    \
-    return std::make_unique<CLASS_NAME>();                                     \
+    return std::make_unique<CLASS_NAME>(AuxArg);                               \
   }
 // TODO: Support region passes with params.
 #include "Passes/PassRegistry.def"

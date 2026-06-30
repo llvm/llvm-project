@@ -15,6 +15,7 @@
 #define LLVM_LIB_TARGET_MSP430_MSP430_H
 
 #include "MCTargetDesc/MSP430MCTargetDesc.h"
+#include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/Target/TargetMachine.h"
 
 namespace MSP430CC {
@@ -37,6 +38,11 @@ namespace llvm {
 class FunctionPass;
 class MSP430TargetMachine;
 class PassRegistry;
+
+class MSP430ISelDAGToDAGPass : public SelectionDAGISelPass {
+public:
+  MSP430ISelDAGToDAGPass(MSP430TargetMachine &TM, CodeGenOptLevel OptLevel);
+};
 
 FunctionPass *createMSP430ISelDag(MSP430TargetMachine &TM,
                                   CodeGenOptLevel OptLevel);

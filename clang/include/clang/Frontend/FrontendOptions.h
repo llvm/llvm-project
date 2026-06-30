@@ -241,7 +241,7 @@ class FrontendInputFile {
   /// Whether we're dealing with a 'system' input (vs. a 'user' input).
   bool IsSystem = false;
 
-  friend class CompilerInvocationBase;
+  friend class CowCompilerInvocation;
 
 public:
   FrontendInputFile() = default;
@@ -426,6 +426,14 @@ public:
   LLVM_PREFERRED_TYPE(bool)
   unsigned ClangIREnableIdiomRecognizer : 1;
 
+  /// Enable ClangIR library optimization.
+  /// Set when -fclangir-lib-opt or -fclangir-lib-opt= was passed.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned ClangIRLibOptEnabled : 1;
+
+  /// Options to control ClangIR library optimization
+  std::string ClangIRLibOptOptions;
+
   CodeCompleteOptions CodeCompleteOpts;
 
   /// Specifies the output format of the AST.
@@ -560,7 +568,8 @@ public:
         EmitPrettySymbolGraphs(false), GenReducedBMI(false),
         UseClangIRPipeline(false), ClangIRDisablePasses(false),
         ClangIRDisableCIRVerifier(false), ClangIREnableIdiomRecognizer(false),
-        TimeTraceGranularity(500), TimeTraceVerbose(false) {}
+        ClangIRLibOptEnabled(false), TimeTraceGranularity(500),
+        TimeTraceVerbose(false) {}
 
   /// getInputKindForExtension - Return the appropriate input kind for a file
   /// extension. For example, "c" would return Language::C.

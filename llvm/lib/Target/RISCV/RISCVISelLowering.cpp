@@ -637,6 +637,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
           {ISD::UADDSAT, ISD::SADDSAT, ISD::USUBSAT, ISD::SSUBSAT}, P64VecVTs,
           Legal);
       setOperationAction(ISD::INTRINSIC_WO_CHAIN, P64VecVTs, Legal);
+      setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::i64, Custom);
       setOperationAction({ISD::AVGFLOORS, ISD::AVGFLOORU}, P64VecVTs, Legal);
       setOperationAction({ISD::SMIN, ISD::UMIN, ISD::SMAX, ISD::UMAX},
                          P64VecVTs, Legal);
@@ -2463,9 +2464,15 @@ bool RISCVTargetLowering::isLegalAddressingMode(const DataLayout &DL,
   if (Subtarget.hasVInstructions() && isa<VectorType>(Ty))
     return AM.HasBaseReg && AM.Scale == 0 && !AM.BaseOffs;
 
-  // Require a 12-bit signed offset.
-  if (!isInt<12>(AM.BaseOffs))
+  // The Xqcilo extension provides load/store instructions with a 26-bit signed
+  // offset.
+  if (Subtarget.hasVendorXqcilo()) {
+    if (!isInt<26>(AM.BaseOffs))
+      return false;
+  } else if (!isInt<12>(AM.BaseOffs)) {
+    // Otherwise require a 12-bit signed offset.
     return false;
+  }
 
   switch (AM.Scale) {
   case 0: // "r+i" or just "i", depending on HasBaseReg.
@@ -2486,6 +2493,10 @@ bool RISCVTargetLowering::isLegalICmpImmediate(int64_t Imm) const {
 }
 
 bool RISCVTargetLowering::isLegalAddImmediate(int64_t Imm) const {
+  // The Xqcilia extension provides add-immediate instructions with a 26-bit
+  // signed immediate.
+  if (Subtarget.hasVendorXqcilia())
+    return isInt<26>(Imm);
   return isInt<12>(Imm);
 }
 
@@ -15804,6 +15815,60 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
                                     DAG.getVectorIdxConstant(0, DL)));
       return;
     }
+    case Intrinsic::riscv_predsum:
+    case Intrinsic::riscv_predsumu: {
+      bool IsSigned = IntNo == Intrinsic::riscv_predsum;
+      SDValue Vec = N->getOperand(1);
+      MVT VecVT = Vec.getSimpleValueType();
+      auto Ext = [&](SDValue V) {
+        return DAG.getNode(IsSigned ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND, DL,
+                           MVT::i64, V);
+      };
+      auto RedSum = [&](MVT VT, SDValue V, SDValue Acc) {
+        return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, VT, N->getOperand(0), V,
+                           Acc);
+      };
+
+      // RV32: i64 accumulator. Reduce to a 32-bit partial sum, then
+      // widening-accumulate into i64 via wadda/waddau (v2i32 uses wadda alone).
+      if (!Subtarget.is64Bit() && N->getValueType(0) == MVT::i64) {
+        SDValue Acc = N->getOperand(2);
+        SDValue Res;
+        if (VecVT == MVT::v2i32) {
+          Res = DAG.getNode(ISD::ADD, DL, MVT::i64, Acc,
+                            Ext(DAG.getExtractVectorElt(DL, MVT::i32, Vec, 0)));
+          Res = DAG.getNode(ISD::ADD, DL, MVT::i64, Res,
+                            Ext(DAG.getExtractVectorElt(DL, MVT::i32, Vec, 1)));
+        } else {
+          // The paired predsum.dbs/dhs computes the 32-bit element sum.
+          SDValue Partial =
+              RedSum(MVT::i32, Vec, DAG.getConstant(0, DL, MVT::i32));
+          Res = DAG.getNode(ISD::ADD, DL, MVT::i64, Acc, Ext(Partial));
+        }
+        Results.push_back(Res);
+        return;
+      }
+
+      // RV64: i32 accumulator. Reduce at i64 (XLEN), then truncate.
+      if (!Subtarget.is64Bit() || N->getValueType(0) != MVT::i32)
+        return;
+
+      // Zero the upper lanes (zext.w) so they don't contribute to the sum.
+      if (VecVT == MVT::v4i8 || VecVT == MVT::v2i16) {
+        MVT WideVT = VecVT == MVT::v4i8 ? MVT::v8i8 : MVT::v4i16;
+        SDValue Wide = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64,
+                                   DAG.getBitcast(MVT::i32, Vec));
+        Vec = DAG.getBitcast(WideVT, Wide);
+      }
+
+      // The result is truncated to i32, so the accumulator's upper bits are
+      // unused and need no sign/zero extension.
+      SDValue Acc =
+          DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(2));
+      SDValue Res = RedSum(MVT::i64, Vec, Acc);
+      Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res));
+      return;
+    }
     case Intrinsic::riscv_orc_b:
     case Intrinsic::riscv_brev8:
     case Intrinsic::riscv_sha256sig0:
@@ -16450,7 +16515,13 @@ static SDValue transformAddImmMulImm(SDNode *N, SelectionDAG &DAG,
   int64_t C0 = N0C->getSExtValue();
   int64_t C1 = N1C->getSExtValue();
   int64_t CA, CB;
-  if (C0 == -1 || C0 == 0 || C0 == 1 || isInt<12>(C1))
+  // If C1 already fits in an add immediate, there is nothing to split out: the
+  // (add (mul x, c0), c1) form is already canonical/cheap. Splitting it would
+  // fight the generic DAGCombiner fold add(mul(add(A, CA), CM), CB) ->
+  // add(mul(A, CM), CM*CA+CB) (which is gated on isLegalAddImmediate) and cause
+  // an infinite loop.
+  if (C0 == -1 || C0 == 0 || C0 == 1 ||
+      Subtarget.getTargetLowering()->isLegalAddImmediate(C1))
     return SDValue();
   // Search for proper CA (non-zero) and CB that both are simm12.
   if ((C1 / C0) != 0 && isInt<12>(C1 / C0) && isInt<12>(C1 % C0) &&
@@ -24985,7 +25056,7 @@ SDValue RISCVTargetLowering::LowerFormalArguments(
     MF.getInfo<RISCVMachineFunctionInfo>()->setIsVectorCall();
 
   if (IsVarArg) {
-    ArrayRef<MCPhysReg> ArgRegs = RISCV::getArgGPRs(Subtarget.getTargetABI());
+    ArrayRef<MCPhysReg> ArgRegs = RISCV::getArgGPRs(Subtarget);
     unsigned Idx = CCInfo.getFirstUnallocated(ArgRegs);
     const TargetRegisterClass *RC = &RISCV::GPRRegClass;
     MachineFrameInfo &MFI = MF.getFrameInfo();

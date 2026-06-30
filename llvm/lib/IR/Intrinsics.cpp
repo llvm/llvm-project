@@ -50,9 +50,18 @@ static bool isSignatureValid(FunctionType *FTy,
 #define GET_INTRINSIC_NAME_TABLE
 #include "llvm/IR/IntrinsicImpl.inc"
 
+/// Table of required target features indexed by enum value.
+#define GET_INTRINSIC_TARGET_FEATURES_TABLE
+#include "llvm/IR/IntrinsicImpl.inc"
+
 StringRef Intrinsic::getBaseName(ID id) {
   assert(id < num_intrinsics && "Invalid intrinsic ID!");
   return IntrinsicNameTable[IntrinsicNameOffsetTable[id]];
+}
+
+StringRef Intrinsic::getRequiredTargetFeatures(ID id) {
+  assert(id < num_intrinsics && "invalid intrinsic ID!");
+  return IntrinsicTargetFeaturesTable[IntrinsicTargetFeaturesOffsetTable[id]];
 }
 
 StringRef Intrinsic::getName(ID id) {

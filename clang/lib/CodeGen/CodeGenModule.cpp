@@ -1809,10 +1809,23 @@ void CodeGenModule::Release() {
   // for an int access. This allows LLVM to reason about what memory can be
   // accessed by certain library calls that only touch errno.
   if (TBAA) {
-    TBAAAccessInfo TBAAInfo = getTBAAAccessInfo(Context.IntTy);
-    if (llvm::MDNode *IntegerNode = getTBAAAccessTagInfo(TBAAInfo)) {
+    if (llvm::MDNode *IntegerNode = getTBAATypeInfo(Context.IntTy)) {
+      // Pretend that errno is part of a __libc_errno struct, to indicate that
+      // it should alias with plain integer accesses, but not int member
+      // accesses in structs.
+      llvm::MDBuilder MDB(TheModule.getContext());
+      uint64_t Size = Context.getTypeSizeInChars(Context.IntTy).getQuantity();
+      llvm::MDNode *StructNode =
+          CodeGenOpts.NewStructPathTBAA
+              ? MDB.createTBAATypeNode(TBAA->getChar(), Size,
+                                       MDB.createString("__libc_errno"),
+                                       {{0, Size, IntegerNode}})
+              : MDB.createTBAAStructTypeNode("__libc_errno",
+                                             {{IntegerNode, 0}});
+      TBAAAccessInfo Info(StructNode, IntegerNode, 0, Size);
+      llvm::MDNode *StructTagNode = getTBAAAccessTagInfo(Info);
       auto *ErrnoTBAAMD = TheModule.getOrInsertNamedMetadata(ErrnoTBAAMDName);
-      ErrnoTBAAMD->addOperand(IntegerNode);
+      ErrnoTBAAMD->addOperand(StructTagNode);
     }
   }
 }
