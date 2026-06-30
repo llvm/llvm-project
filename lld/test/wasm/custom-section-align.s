@@ -1,5 +1,5 @@
 # RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown -o %t.o %s
-# RUN: wasm-ld --no-entry %t.o -o %t.wasm
+# RUN: wasm-ld --no-entry --no-gc-sections %t.o -o %t.wasm
 # RUN: obj2yaml %t.wasm | FileCheck %s
 
 # Check that "__llvm_covfun" custom section is aligned to 8 bytes.
