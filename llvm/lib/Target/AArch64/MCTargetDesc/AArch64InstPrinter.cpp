@@ -1157,7 +1157,7 @@ bool AArch64InstPrinter::printSyspAlias(const MCInst *MI,
   //   sysp #op1, cN, cM, #op2
   // instead of:
   //   sysp #op1, cN, cM, #op2, xzr, xzr
-  if (MI->getOperand(4).getReg() != AArch64::XZR)
+  if (MI->getOperand(4).getReg() != AArch64::XZR_XZR)
     return false;
 
   O << "\tsysp\t";
