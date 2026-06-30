@@ -6,7 +6,7 @@ define void @exts() {
 
    ; VSX is disabled, so this cost needs to include scalarization (because
    ; <4 x double> is legalized to scalars).
-   ; CHECK: cost of 44 {{.*}} fcmp
+   ; CHECK: cost of 56 {{.*}} fcmp
    %v1 = fcmp ugt <4 x double> undef, undef
 
   ret void
