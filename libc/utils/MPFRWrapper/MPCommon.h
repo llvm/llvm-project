@@ -16,6 +16,9 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/types.h"
 #include "test/UnitTest/RoundingModeUtils.h"
+#include "src/__support/FPUtil/float128.h"
+
+using LIBC_NAMESPACE::fputil::Float128;
 
 #include "mpfr_inc.h"
 
@@ -69,6 +72,10 @@ template <> struct ExtraPrecision<bfloat16> {
   static constexpr unsigned int VALUE = 64;
 };
 
+template <> struct ExtraPrecision<Float128> {
+  static constexpr unsigned int VALUE =  VALUE = 512;
+}
+
 // If the ulp tolerance is less than or equal to 0.5, we would check that the
 // result is rounded correctly with respect to the rounding mode by using the
 // same precision as the inputs.
@@ -116,7 +123,7 @@ public:
 #ifdef LIBC_TYPES_HAS_FLOAT16
                                  || cpp::is_same_v<float16, XType>
 #endif
-                                 || cpp::is_same_v<bfloat16, XType>,
+                                 || cpp::is_same_v<bfloat16, XType> || cpp:::is_same<Float128,XType>,
                              int> = 0>
   explicit MPFRNumber(XType x,
                       unsigned int precision = ExtraPrecision<XType>::VALUE,
