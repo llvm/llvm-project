@@ -246,6 +246,7 @@ std::optional<APSIntPtr> BasicValueFactory::evalAPSInt(UnaryOperator::Opcode Op,
                                                        const llvm::APSInt &V1) {
   switch (Op) {
   default:
+    assert(false && "Invalid Opcode.");
     return std::nullopt;
 
   case UO_Minus:
@@ -261,6 +262,7 @@ BasicValueFactory::evalAPSInt(BinaryOperator::Opcode Op, const llvm::APSInt &V1,
                               const llvm::APSInt &V2) {
   switch (Op) {
     default:
+      assert(false && "Invalid Opcode.");
       return std::nullopt;
 
     case BO_Mul:
