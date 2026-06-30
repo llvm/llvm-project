@@ -232,6 +232,16 @@ public:
 
   unsigned getMaxSupportedInterleaveFactor() const override { return 4; }
 
+  /// AArch64 supports composite interleave factors that decompose into
+  /// multiple ldN/stN groups. The largest useful composite factor is
+  /// 2 * getMaxSupportedInterleaveFactor() — two groups of the largest
+  /// native instruction (e.g. factor-6 = 2 x ld3, factor-8 = 2 x ld4).
+  /// This matches the ceiling used by MaxInterleaveGroupFactor (default 8)
+  /// in the Loop Vectorizer's interleaved access analysis.
+  unsigned getMaxSupportedCompositeInterleaveFactor() const override {
+    return 2 * getMaxSupportedInterleaveFactor();
+  }
+
   bool lowerInterleavedLoad(Instruction *Load, Value *Mask,
                             ArrayRef<ShuffleVectorInst *> Shuffles,
                             ArrayRef<unsigned> Indices, unsigned Factor,

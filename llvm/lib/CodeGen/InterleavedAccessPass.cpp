@@ -90,7 +90,8 @@ class InterleavedAccessImpl {
 public:
   InterleavedAccessImpl() = default;
   InterleavedAccessImpl(DominatorTree *DT, const TargetLowering *TLI)
-      : DT(DT), TLI(TLI), MaxFactor(TLI->getMaxSupportedInterleaveFactor()) {}
+      : DT(DT), TLI(TLI),
+        MaxFactor(TLI->getMaxSupportedCompositeInterleaveFactor()) {}
   bool runOnFunction(Function &F);
 
 private:
@@ -185,7 +186,7 @@ bool InterleavedAccess::runOnFunction(Function &F) {
   Impl.DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   auto &TM = TPC->getTM<TargetMachine>();
   Impl.TLI = TM.getSubtargetImpl(F)->getTargetLowering();
-  Impl.MaxFactor = Impl.TLI->getMaxSupportedInterleaveFactor();
+  Impl.MaxFactor = Impl.TLI->getMaxSupportedCompositeInterleaveFactor();
 
   return Impl.runOnFunction(F);
 }
