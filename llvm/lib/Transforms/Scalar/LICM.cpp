@@ -928,7 +928,11 @@ bool llvm::hoistRegion(DomTreeNode *N, AAResults *AA, LoopInfo *LI,
           canSinkOrHoistInst(I, AA, DT, CurLoop, MSSAU, true, Flags, ORE) &&
           isSafeToExecuteUnconditionally(I, DT, TLI, CurLoop, SafetyInfo, ORE,
                                          Preheader->getTerminator(), AC,
-                                         AllowSpeculation)) {
+                                         AllowSpeculation) &&
+          // May-throw calls can only be hoisted if there are no memory
+          // writes before them in the loop. Otherwise hoisting would skip
+          // side effects that must happen before the potential throw.
+          (!I.mayThrow() || SafetyInfo->doesNotWriteMemoryBefore(I, CurLoop))) {
         hoist(I, DT, CurLoop, CFH.getOrCreateHoistedBlock(BB), SafetyInfo,
               MSSAU, SE, ORE);
         HoistedInstructions.push_back(&I);
@@ -1218,7 +1222,9 @@ bool llvm::canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
                         Flags, ORE);
   } else if (CallInst *CI = dyn_cast<CallInst>(&I)) {
     // Don't sink calls which can throw.
-    if (CI->mayThrow())
+    // Hoisting if there aren't side effect between the call and the preheader
+    // This must be checked by the caller
+    if (Flags.getIsSink() && CI->mayThrow())
       return false;
 
     // Convergent attribute has been used on operations that involve
