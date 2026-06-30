@@ -110,10 +110,10 @@ public:
 };
 
 #define LIST_CABS_TESTS(U, T, func)                                            \
-  using LlvmLibcCAbsTest = CAbsTest<U, T>;                                    \
-  TEST_F(LlvmLibcCAbsTest, ZeroValues) { testZeroValues(&func); }             \
-  TEST_F(LlvmLibcCAbsTest, BasicValues) { testBasicValues(&func); }           \
-  TEST_F(LlvmLibcCAbsTest, InfinityValues) { testInfinityValues(&func); }     \
+  using LlvmLibcCAbsTest = CAbsTest<U, T>;                                     \
+  TEST_F(LlvmLibcCAbsTest, ZeroValues) { testZeroValues(&func); }              \
+  TEST_F(LlvmLibcCAbsTest, BasicValues) { testBasicValues(&func); }            \
+  TEST_F(LlvmLibcCAbsTest, InfinityValues) { testInfinityValues(&func); }      \
   TEST_F(LlvmLibcCAbsTest, NaNValues) { testNaNValues(&func); }
 
 #endif // LLVM_LIBC_TEST_SRC_COMPLEX_CABSTEST_H
