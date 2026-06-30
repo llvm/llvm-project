@@ -2342,8 +2342,9 @@ def CIR_CmpOp : CIR_Op<"cmp", [Pure, SameTypeOperands]> {
   let summary = "Compare two values and produce a boolean result";
   let description = [{
     The `cir.cmp` operation compares two operands of the same type and produces
-    a `!cir.bool` result. It supports integral, floating-point, and pointer
-    types.
+    a `!cir.bool` result. It supports integral, boolean, floating-point, and
+    pointer types.  Booleans (including enums with a boolean underlying type)
+    are compared as unsigned integers.
 
     The following comparison predicates are available:
 

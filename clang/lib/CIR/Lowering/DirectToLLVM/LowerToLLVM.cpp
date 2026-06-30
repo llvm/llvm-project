@@ -2949,6 +2949,16 @@ mlir::LogicalResult CIRToLLVMCmpOpLowering::matchAndRewrite(
     return mlir::success();
   }
 
+  if (mlir::isa<cir::BoolType>(type)) {
+    // Booleans (and enums with a boolean underlying type) compare as
+    // unsigned integers.
+    mlir::LLVM::ICmpPredicate kind =
+        convertCmpKindToICmpPredicate(cmpOp.getKind(), /*isSigned=*/false);
+    rewriter.replaceOpWithNewOp<mlir::LLVM::ICmpOp>(
+        cmpOp, kind, adaptor.getLhs(), adaptor.getRhs());
+    return mlir::success();
+  }
+
   if (auto ptrTy = mlir::dyn_cast<cir::PointerType>(type)) {
     mlir::LLVM::ICmpPredicate kind =
         convertCmpKindToICmpPredicate(cmpOp.getKind(),

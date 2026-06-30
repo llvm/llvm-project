@@ -390,8 +390,8 @@ def CIR_AnyScalarType : AnyTypeOf<CIR_ScalarTypes, "cir scalar type"> {
 def CIR_AnyMethodType : CIR_TypeBase<"::cir::MethodType", "method type">;
 
 def CIR_ComparableType
-    : AnyTypeOf<[CIR_AnyIntType, CIR_AnyFloatType, CIR_AnyPtrType,
-                 CIR_AnyComplexType, CIR_AnyVPtrType,
+    : AnyTypeOf<[CIR_AnyIntType, CIR_AnyBoolType, CIR_AnyFloatType,
+                 CIR_AnyPtrType, CIR_AnyComplexType, CIR_AnyVPtrType,
                  CIR_AnyDataMemberType, CIR_AnyMethodType],
                 "comparable type"> {
   let cppFunctionName = "isComparableType";

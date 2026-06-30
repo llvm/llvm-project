@@ -33,3 +33,31 @@ void storeEnum(BoolEnum *p, BoolEnum v) { *p = v; }
 // LLVM:         store i8 %{{.*}}, ptr %{{.*}}, align 1
 // LLVM:         load i8, ptr %{{.*}}, align 1
 // LLVM:         store i8 %{{.*}}, ptr %{{.*}}, align 1
+
+// A scoped enum with a boolean underlying type is compared directly (no
+// integral promotion), so cir.cmp must accept !cir.bool operands.
+enum class ScopedBoolEnum : bool { No, Yes };
+
+bool eqEnum(ScopedBoolEnum a, ScopedBoolEnum b) { return a == b; }
+
+// CIR-LABEL: cir.func{{.*}} @_Z6eqEnum14ScopedBoolEnumS_
+// CIR:         cir.cmp eq %{{.*}}, %{{.*}} : !cir.bool
+
+// LLVM-LABEL: define dso_local noundef {{(zeroext )?}}i1 @_Z6eqEnum14ScopedBoolEnumS_
+// LLVM:         icmp eq i1 %{{.*}}, %{{.*}}
+
+bool neEnum(ScopedBoolEnum a, ScopedBoolEnum b) { return a != b; }
+
+// CIR-LABEL: cir.func{{.*}} @_Z6neEnum14ScopedBoolEnumS_
+// CIR:         cir.cmp ne %{{.*}}, %{{.*}} : !cir.bool
+
+// LLVM-LABEL: define dso_local noundef {{(zeroext )?}}i1 @_Z6neEnum14ScopedBoolEnumS_
+// LLVM:         icmp ne i1 %{{.*}}, %{{.*}}
+
+bool ltEnum(ScopedBoolEnum a, ScopedBoolEnum b) { return a < b; }
+
+// CIR-LABEL: cir.func{{.*}} @_Z6ltEnum14ScopedBoolEnumS_
+// CIR:         cir.cmp lt %{{.*}}, %{{.*}} : !cir.bool
+
+// LLVM-LABEL: define dso_local noundef {{(zeroext )?}}i1 @_Z6ltEnum14ScopedBoolEnumS_
+// LLVM:         icmp ult i1 %{{.*}}, %{{.*}}
