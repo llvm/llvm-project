@@ -420,9 +420,8 @@ public:
     if (const SymIntExpr *SIE = dyn_cast<SymIntExpr>(BSE)) {
       std::optional<llvm::SMTExprRef> LHS =
           getSymExpr(Solver, Ctx, SIE->getLHS(), LTy, hasComparison);
-      if (!LHS) {
+      if (!LHS)
         return std::nullopt;
-      }
       llvm::APSInt NewRInt;
       std::tie(NewRInt, RTy) = fixAPSInt(Ctx, SIE->getRHS());
       llvm::SMTExprRef RHS =
