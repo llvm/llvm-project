@@ -6998,9 +6998,9 @@ bool AArch64AsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     // Special case the error message for the very common case where only
     // a single subtarget feature is missing (neon, e.g.).
     std::string Msg = "instruction requires:";
-    for (unsigned Index : MissingFeatures) {
+    for (unsigned Feature : MissingFeatures) {
       Msg += " ";
-      Msg += getSubtargetFeatureName(Index);
+      Msg += getSubtargetFeatureName(Feature);
     }
     return Error(IDLoc, Msg);
   }

@@ -1483,9 +1483,9 @@ bool RISCVAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     assert(MissingFeatures.any() && "Unknown missing features!");
     bool FirstFeature = true;
     std::string Msg = "instruction requires the following:";
-    for (unsigned Index : MissingFeatures) {
+    for (unsigned Feature : MissingFeatures) {
       Msg += FirstFeature ? " " : ", ";
-      Msg += getSubtargetFeatureName(Index);
+      Msg += getSubtargetFeatureName(Feature);
       FirstFeature = false;
     }
     return Error(IDLoc, Msg);

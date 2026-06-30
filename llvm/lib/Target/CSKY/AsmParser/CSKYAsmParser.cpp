@@ -675,9 +675,9 @@ bool CSKYAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     assert(MissingFeatures.any() && "Unknown missing features!");
     ListSeparator LS;
     std::string Msg = "instruction requires the following: ";
-    for (unsigned Index : MissingFeatures) {
+    for (unsigned Feature : MissingFeatures) {
       Msg += LS;
-      Msg += getSubtargetFeatureName(Index);
+      Msg += getSubtargetFeatureName(Feature);
     }
     return Error(IDLoc, Msg);
   }
