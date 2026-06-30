@@ -24,10 +24,12 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
@@ -84,6 +86,22 @@ static cl::opt<bool>
     ClOmitNonCaptured("tsan-omit-by-pointer-capturing", cl::init(true),
                       cl::desc("Omit accesses due to pointer capturing"),
                       cl::Hidden);
+// Removes redundant TSan instrumentation using CFG dominance analysis.
+// If access A dominates access B, both target the same memory location
+// (confirmed via MustAlias), A covers at least as many bytes as B, and no
+// synchronization (atomic, fence, or call without nosync) exists on any CFG
+// path from A to B, then B's instrumentation is redundant: any race
+// detectable at B would already be detected at A.
+// Coverage rule: a dominating write subsumes a subsequent read or write; a
+// dominating read subsumes only a subsequent read.
+// Post-dominance elimination (removing A when B post-dominates A) will be
+// added in a follow-up patch. See DominanceBasedElimination for the full
+// correctness argument.
+static cl::opt<bool>
+    ClUseDominanceAnalysis("tsan-use-dominance-analysis", cl::init(true),
+                           cl::desc("Eliminate redundant instrumentation using "
+                                    "dominance analysis"),
+                           cl::Hidden);
 
 STATISTIC(NumInstrumentedReads, "Number of instrumented reads");
 STATISTIC(NumInstrumentedWrites, "Number of instrumented writes");
@@ -96,11 +114,86 @@ STATISTIC(NumOmittedReadsFromConstantGlobals,
           "Number of reads from constant globals");
 STATISTIC(NumOmittedReadsFromVtable, "Number of vtable reads");
 STATISTIC(NumOmittedNonCaptured, "Number of accesses ignored due to capturing");
+STATISTIC(NumOmittedByDominance, "Number of accesses ignored due to dominance");
 
 const char kTsanModuleCtorName[] = "tsan.module_ctor";
 const char kTsanInitName[] = "__tsan_init";
 
 namespace {
+// Internal Instruction wrapper that contains more information about the
+// Instruction from prior analysis.
+struct InstructionInfo {
+  // Instrumentation emitted for this instruction is for a compounded set of
+  // read and write operations in the same basic block.
+  static constexpr unsigned kCompoundRW = (1U << 0);
+
+  explicit InstructionInfo(Instruction *Inst) : Inst(Inst) {}
+
+  bool isWriteOperation() const {
+    return isa<StoreInst>(Inst) || (Flags & kCompoundRW);
+  }
+
+  Instruction *Inst;
+  unsigned Flags = 0;
+};
+
+/// Eliminates redundant TSan instrumentation using dominance analysis.
+///
+/// An instrumented access B is redundant if there exists a prior access A such
+/// that all four conditions hold:
+///
+///   (1) A dominates B — A executes on every path that reaches B, so any
+///       execution that sees a race at B also sees A beforehand.
+///   (2) A and B MustAlias — they access the same concrete memory location,
+///       so a race partner of B would also race with A.
+///   (3) Coverage: if B is a write, A must also be a write. A write races with
+///       both reads and writes, so a dominating write covers either type. A
+///       read races only with writes, so a dominating read cannot cover a
+///       subsequent write (the write could introduce a new race with a third
+///       thread's read).
+///   (4) The path from A to B is synchronization-free — no atomic, fence, or
+///       call without `nosync` appears on any CFG path between them. If such an
+///       instruction existed, a second thread could synchronize with the
+///       current thread between A and B (establishing a new happens-before
+///       edge), making it possible for B to race with that thread while A does
+///       not.
+///
+/// When all four conditions hold, any race detectable at B is already
+/// detectable at A; removing B's instrumentation is sound.
+class DominanceBasedElimination {
+public:
+  DominanceBasedElimination(SmallVectorImpl<InstructionInfo> &AllInstr,
+                            DominatorTree &DT, AAResults &AA)
+      : AllInstr(AllInstr), DT(DT), AA(AA) {}
+
+  void run() { eliminate(); }
+
+private:
+  /// Returns true if the instruction cannot cause inter-thread synchronization.
+  static bool isInstrSafe(const Instruction *Inst);
+
+  /// Returns true if no synchronization exists on any CFG path from DomInst
+  /// to CurrInst. CanReachEnd must be the reverse-reachability set of
+  /// CurrInst's block, pre-computed once per CurrInst by the caller.
+  static bool
+  isPathClear(Instruction *DomInst, Instruction *CurrInst,
+              const SmallPtrSetImpl<const BasicBlock *> &CanReachEnd);
+
+  DenseMap<Instruction *, size_t> createInstrToIndexMap() const;
+
+  /// Searches AllInstr for a dominating instruction that covers AllInstr[i].
+  /// Marks AllInstr[i] for removal and returns true if one is found.
+  bool findAndMarkDominatingInstr(
+      size_t i, const DenseMap<Instruction *, size_t> &InstrToIndexMap,
+      const SmallPtrSetImpl<const BasicBlock *> &CanReachEnd,
+      SmallVectorImpl<bool> &ToRemove);
+
+  void eliminate();
+
+  SmallVectorImpl<InstructionInfo> &AllInstr;
+  DominatorTree &DT;
+  AAResults &AA;
+};
 
 /// ThreadSanitizer: instrument the code in module to find races.
 ///
@@ -109,7 +202,8 @@ namespace {
 /// ensures the __tsan_init function is in the list of global constructors for
 /// the module.
 struct ThreadSanitizer {
-  ThreadSanitizer() {
+  ThreadSanitizer(DominatorTree *DT = nullptr, AAResults *AA = nullptr)
+      : DT(DT), AA(AA) {
     // Check options and warn user.
     if (ClInstrumentReadBeforeWrite && ClCompoundReadBeforeWrite) {
       errs()
@@ -121,19 +215,6 @@ struct ThreadSanitizer {
   bool sanitizeFunction(Function &F, const TargetLibraryInfo &TLI);
 
 private:
-  // Internal Instruction wrapper that contains more information about the
-  // Instruction from prior analysis.
-  struct InstructionInfo {
-    // Instrumentation emitted for this instruction is for a compounded set of
-    // read and write operations in the same basic block.
-    static constexpr unsigned kCompoundRW = (1U << 0);
-
-    explicit InstructionInfo(Instruction *Inst) : Inst(Inst) {}
-
-    Instruction *Inst;
-    unsigned Flags = 0;
-  };
-
   void initialize(Module &M, const TargetLibraryInfo &TLI);
   bool instrumentLoadOrStore(const InstructionInfo &II, const DataLayout &DL);
   bool instrumentAtomic(Instruction *I, const DataLayout &DL);
@@ -144,6 +225,9 @@ private:
   bool addrPointsToConstantData(Value *Addr);
   int getMemoryAccessFuncIndex(Type *OrigTy, Value *Addr, const DataLayout &DL);
   void InsertRuntimeIgnores(Function &F);
+
+  DominatorTree *DT = nullptr;
+  AAResults *AA = nullptr;
 
   Type *IntptrTy;
   FunctionCallee TsanFuncEntry;
@@ -174,6 +258,297 @@ private:
   FunctionCallee MemmoveFn, MemcpyFn, MemsetFn;
 };
 
+//-----------------------------------------------------------------------------
+// DominanceBasedElimination Implementation
+//-----------------------------------------------------------------------------
+
+static bool isTsanAtomic(const Instruction *I) {
+  // TODO: Ask TTI whether synchronization scope is between threads.
+  auto SSID = getAtomicSyncScopeID(I);
+  if (!SSID)
+    return false;
+  if (isa<LoadInst>(I) || isa<StoreInst>(I))
+    return *SSID != SyncScope::SingleThread;
+  return true;
+}
+
+bool DominanceBasedElimination::isInstrSafe(const Instruction *Inst) {
+  // Atomics with inter-thread scope establish happens-before between threads
+  // (e.g., a release store followed by an acquire load synchronizes the two
+  // threads). Any such operation on the path from A to B would allow another
+  // thread to "see" the state after A but before B, potentially racing with B
+  // while A does not observe the race.
+  if (isTsanAtomic(Inst))
+    return false;
+
+  // A function call may contain mutex unlocks, thread spawns, or other
+  // release-like operations that create new happens-before edges. A call is
+  // safe only if it is guaranteed not to synchronize with other threads in
+  // any way. hasFnAttr checks both the call-site attribute and the callee's
+  // function attributes, so it handles direct calls, indirect calls with a
+  // nosync call-site annotation, and intrinsics uniformly.
+  if (const auto *CB = dyn_cast<CallBase>(Inst))
+    return CB->hasFnAttr(Attribute::NoSync);
+
+  // Fences are handled by isTsanAtomic above. All remaining instructions
+  // (arithmetic, branches, GEPs, etc.) cannot establish inter-thread
+  // happens-before and are safe to cross.
+  return true;
+}
+
+DenseMap<Instruction *, size_t>
+DominanceBasedElimination::createInstrToIndexMap() const {
+  DenseMap<Instruction *, size_t> InstrToIndexMap;
+  InstrToIndexMap.reserve(AllInstr.size());
+  for (size_t i = 0; i < AllInstr.size(); ++i)
+    InstrToIndexMap[AllInstr[i].Inst] = i;
+  return InstrToIndexMap;
+}
+
+bool DominanceBasedElimination::isPathClear(
+    Instruction *DomInst, Instruction *CurrInst,
+    const SmallPtrSetImpl<const BasicBlock *> &CanReachEnd) {
+  BasicBlock *DomBB = DomInst->getParent();
+  BasicBlock *CurrBB = CurrInst->getParent();
+
+  // Intra-BB: only the instructions strictly between DomInst and CurrInst
+  // can introduce synchronization. Scan the open interval (DomInst, CurrInst).
+  // A loop around CurrBB is irrelevant here: DomInst and CurrInst share a
+  // block with DomInst first, so every dynamic execution of CurrInst is
+  // immediately preceded by DomInst within the same iteration.
+  if (DomBB == CurrBB) {
+    for (auto It = std::next(DomInst->getIterator());
+         It != CurrInst->getIterator(); ++It)
+      if (!isInstrSafe(&*It))
+        return false;
+    return true;
+  }
+
+  // Forward BFS that scans, in full, every block reachable from the given seed
+  // successors while staying inside the cone (CanReachEnd) and never passing
+  // back through CurrBB. Returns false if any scanned block synchronizes.
+  // Restricting traversal to CanReachEnd (the reverse-reachability set of
+  // CurrBB computed by the caller) ensures we only inspect blocks that lie on
+  // a path to CurrBB; blocks on diverging paths that never reach CurrBB must
+  // not veto the elimination.
+  auto ConeBlocksClear = [&](auto Seeds) {
+    SmallPtrSet<const BasicBlock *, 32> Visited;
+    SmallVector<const BasicBlock *, 16> Worklist;
+    auto Enqueue = [&](const BasicBlock *BB) {
+      if (CanReachEnd.count(BB) && BB != CurrBB && Visited.insert(BB).second)
+        Worklist.push_back(BB);
+    };
+    for (const BasicBlock *Succ : Seeds)
+      Enqueue(Succ);
+    while (!Worklist.empty()) {
+      const BasicBlock *BB = Worklist.pop_back_val();
+      for (const Instruction &I : *BB)
+        if (!isInstrSafe(&I))
+          return false;
+      for (const BasicBlock *Succ : successors(BB))
+        Enqueue(Succ);
+    }
+    return true;
+  };
+
+  // Inter-BB: every path from DomInst to CurrInst is covered by four regions.
+  //
+  // Region 1 — suffix of DomBB (instructions after DomInst in DomInst's block).
+  // These execute on every path from DomInst before leaving the block.
+  for (auto It = std::next(DomInst->getIterator()); It != DomBB->end(); ++It)
+    if (!isInstrSafe(&*It))
+      return false;
+
+  // Region 2 — prefix of CurrBB (instructions before CurrInst in CurrInst's
+  // block). These execute on every path that arrives at CurrInst.
+  for (auto It = CurrBB->begin(); It != CurrInst->getIterator(); ++It)
+    if (!isInstrSafe(&*It))
+      return false;
+
+  // Region 3 — intermediate blocks on a loop-free path from DomBB to CurrBB.
+  if (!ConeBlocksClear(successors(DomBB)))
+    return false;
+
+  // Region 4 — loop back-edge. If CurrInst can be reached again from itself,
+  // then between two consecutive dynamic executions of CurrInst the program
+  // runs CurrInst -> (suffix of CurrBB) -> ... -> (prefix of CurrBB) ->
+  // CurrInst. DomInst dominates CurrInst but, lying outside the loop, may
+  // execute only once and therefore cannot cover the later executions of
+  // CurrInst unless this back-edge path is itself synchronization-free. (When
+  // DomInst is inside the loop it re-executes every iteration and covers
+  // CurrInst directly; this check may then reject soundly-eliminable cases,
+  // but it is never unsound.) The cycle exists iff some successor of CurrBB can
+  // still reach CurrBB, i.e. is in CanReachEnd.
+  bool CurrInCycle = false;
+  for (const BasicBlock *Succ : successors(CurrBB))
+    if (CanReachEnd.count(Succ)) {
+      CurrInCycle = true;
+      break;
+    }
+  if (CurrInCycle) {
+    // Suffix of CurrBB (instructions after CurrInst), which executes before the
+    // back-edge re-enters CurrBB. CurrBB's prefix is already covered by
+    // Region 2, so the two scans together cover the whole block.
+    for (auto It = std::next(CurrInst->getIterator()); It != CurrBB->end();
+         ++It)
+      if (!isInstrSafe(&*It))
+        return false;
+    // Blocks on the CurrBB -> CurrBB back-edge path.
+    if (!ConeBlocksClear(successors(CurrBB)))
+      return false;
+  }
+
+  return true;
+}
+
+bool DominanceBasedElimination::findAndMarkDominatingInstr(
+    size_t i, const DenseMap<Instruction *, size_t> &InstrToIndexMap,
+    const SmallPtrSetImpl<const BasicBlock *> &CanReachEnd,
+    SmallVectorImpl<bool> &ToRemove) {
+  LLVM_DEBUG(dbgs() << "\nAnalyzing: " << *(AllInstr[i].Inst) << "\n");
+  const InstructionInfo &CurrII = AllInstr[i];
+  Instruction *CurrInst = CurrII.Inst;
+  const BasicBlock *CurrBB = CurrInst->getParent();
+
+  const DomTreeNode *CurrDTNode = DT.getNode(CurrBB);
+  if (!CurrDTNode)
+    return false;
+
+  // A dominating access A must be in a block that is an ancestor of CurrBB in
+  // the dominator tree (condition 1). Walking up from CurrBB's node to the
+  // tree root visits exactly those blocks, so we only scan instrumented
+  // accesses inside them. This is more efficient than scanning all of AllInstr
+  // and filtering by domination after the fact.
+  for (const DomTreeNode *IDomNode = CurrDTNode; IDomNode;
+       IDomNode = IDomNode->getIDom()) {
+    const BasicBlock *DomBB = IDomNode->getBlock();
+    if (!DomBB)
+      break;
+
+    // When DomBB == CurrBB, the dominating instruction must appear before
+    // CurrInst in program order; instructions after it do not dominate it.
+    auto EndIt = (DomBB == CurrBB) ? CurrInst->getIterator() : DomBB->end();
+
+    for (auto InstIt = DomBB->begin(); InstIt != EndIt; ++InstIt) {
+      LLVM_DEBUG(dbgs() << "Candidate: " << *InstIt << "\n");
+
+      const auto It = InstrToIndexMap.find(&*InstIt);
+      if (It == InstrToIndexMap.end() || ToRemove[It->second])
+        continue; // not an instrumented access, or already eliminated
+
+      const size_t DomIndex = It->second;
+      const InstructionInfo &DomII = AllInstr[DomIndex];
+      Instruction *DomInst = DomII.Inst;
+
+      auto IsVolatile = [](const Instruction *I) {
+        if (const auto *L = dyn_cast<LoadInst>(I))
+          return L->isVolatile();
+        if (const auto *S = dyn_cast<StoreInst>(I))
+          return S->isVolatile();
+        return false;
+      };
+      // With -tsan-distinguish-volatile, volatile and non-volatile accesses
+      // emit different runtime calls and must not be merged.
+      if (ClDistinguishVolatile &&
+          (IsVolatile(DomInst) || IsVolatile(CurrInst)))
+        continue;
+
+      // Condition (2): same memory location.
+      // isMustAlias checks that the base pointers are identical but does NOT
+      // compare access sizes — two MemoryLocations with the same pointer but
+      // different sizes both return MustAlias. We therefore check sizes
+      // separately: DomInst must cover at least as many bytes as CurrInst,
+      // otherwise races on the extra bytes in CurrInst's range would not be
+      // detected by DomInst's instrumentation call.
+      const MemoryLocation CurrLoc = MemoryLocation::get(CurrInst);
+      const MemoryLocation DomLoc = MemoryLocation::get(DomInst);
+      if (!AA.isMustAlias(CurrLoc, DomLoc))
+        continue;
+      // Require both sizes to be known, non-scalable, and DomSize >= CurrSize.
+      if (!DomLoc.Size.hasValue() || !CurrLoc.Size.hasValue() ||
+          DomLoc.Size.isScalable() || CurrLoc.Size.isScalable() ||
+          DomLoc.Size.getValue().getFixedValue() <
+              CurrLoc.Size.getValue().getFixedValue())
+        continue;
+
+      // Condition (3): write coverage rule.
+      // A write races with both reads and writes on other threads, so a
+      // dominating write makes CurrInst's check redundant regardless of
+      // whether CurrInst is a read or a write.
+      // A read races only with writes, so a dominating read cannot subsume
+      // a subsequent write: the write might race with a third thread's read
+      // that the dominating read would not catch.
+      if (!DomII.isWriteOperation() && CurrII.isWriteOperation())
+        continue;
+
+      // Condition (4): synchronization-free path (checked last because it
+      // involves CFG traversal and is the most expensive test).
+      if (isPathClear(DomInst, CurrInst, CanReachEnd)) {
+        LLVM_DEBUG(dbgs() << "TSAN: Omitting " << *CurrInst << " (dominated by "
+                          << *DomInst << ")\n");
+        ToRemove[i] = true;
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+void DominanceBasedElimination::eliminate() {
+  LLVM_DEBUG(dbgs() << "Starting dominance-based elimination\n");
+  if (AllInstr.empty())
+    return;
+
+  SmallVector<bool, 16> ToRemove(AllInstr.size(), false);
+  unsigned RemovedCount = 0;
+  const DenseMap<Instruction *, size_t> InstrToIndexMap =
+      createInstrToIndexMap();
+
+  for (size_t i = 0; i < AllInstr.size(); ++i) {
+    if (ToRemove[i])
+      continue;
+
+    // Build the reverse-reachability set of CurrBB: the set of all blocks
+    // from which CurrBB is reachable. isPathClear uses this to restrict its
+    // forward BFS to blocks that actually lie on a path from DomBB to CurrBB.
+    //
+    // We compute it here — once per CurrInst — rather than inside isPathClear,
+    // because findAndMarkDominatingInstr may call isPathClear several times
+    // for different DomInst candidates that all share the same CurrBB.
+    // Pre-computing avoids repeating the reverse BFS for each candidate.
+    const BasicBlock *CurrBB = AllInstr[i].Inst->getParent();
+    SmallPtrSet<const BasicBlock *, 32> CanReachEnd;
+    SmallVector<const BasicBlock *, 16> RBFSWorklist;
+    CanReachEnd.insert(CurrBB);
+    RBFSWorklist.push_back(CurrBB);
+    while (!RBFSWorklist.empty()) {
+      const BasicBlock *BB = RBFSWorklist.pop_back_val();
+      for (const BasicBlock *Pred : predecessors(BB))
+        if (CanReachEnd.insert(Pred).second)
+          RBFSWorklist.push_back(Pred);
+    }
+
+    if (findAndMarkDominatingInstr(i, InstrToIndexMap, CanReachEnd, ToRemove))
+      RemovedCount++;
+  }
+
+  LLVM_DEBUG(dbgs() << "\nFinal instruction status:\n";
+             for (size_t i = 0; i < AllInstr.size(); ++i) dbgs()
+             << "[" << (ToRemove[i] ? "REMOVED" : "KEPT") << "]\t"
+             << *AllInstr[i].Inst << "\n");
+
+  if (RemovedCount > 0) {
+    auto It = ToRemove.begin();
+    erase_if(AllInstr, [&](const InstructionInfo &) { return *It++; });
+    NumOmittedByDominance += RemovedCount;
+  }
+  LLVM_DEBUG(dbgs() << "Dominance elimination complete\n");
+}
+
+//-----------------------------------------------------------------------------
+// ThreadSanitizer Implementation
+//-----------------------------------------------------------------------------
+
 void insertModuleCtor(Module &M) {
   getOrCreateSanitizerCtorAndInitFunctions(
       M, kTsanModuleCtorName, kTsanInitName, /*InitArgTypes=*/{},
@@ -186,7 +561,15 @@ void insertModuleCtor(Module &M) {
 
 PreservedAnalyses ThreadSanitizerPass::run(Function &F,
                                            FunctionAnalysisManager &FAM) {
-  ThreadSanitizer TSan;
+  DominatorTree *DT = nullptr;
+  AAResults *AA = nullptr;
+
+  if (ClUseDominanceAnalysis) {
+    DT = &FAM.getResult<DominatorTreeAnalysis>(F);
+    AA = &FAM.getResult<AAManager>(F);
+  }
+
+  ThreadSanitizer TSan(DT, AA);
   if (TSan.sanitizeFunction(F, FAM.getResult<TargetLibraryAnalysis>(F)))
     return PreservedAnalyses::none();
   return PreservedAnalyses::all();
@@ -474,16 +857,6 @@ void ThreadSanitizer::chooseInstructionsToInstrument(
   Local.clear();
 }
 
-static bool isTsanAtomic(const Instruction *I) {
-  // TODO: Ask TTI whether synchronization scope is between threads.
-  auto SSID = getAtomicSyncScopeID(I);
-  if (!SSID)
-    return false;
-  if (isa<LoadInst>(I) || isa<StoreInst>(I))
-    return *SSID != SyncScope::SingleThread;
-  return true;
-}
-
 void ThreadSanitizer::InsertRuntimeIgnores(Function &F) {
   InstrumentationIRBuilder IRB(&F.getEntryBlock(),
                                F.getEntryBlock().getFirstNonPHIIt());
@@ -543,6 +916,11 @@ bool ThreadSanitizer::sanitizeFunction(Function &F,
       }
     }
     chooseInstructionsToInstrument(LocalLoadsAndStores, AllLoadsAndStores, DL);
+  }
+
+  if (ClUseDominanceAnalysis && DT && AA) {
+    DominanceBasedElimination DBE(AllLoadsAndStores, *DT, *AA);
+    DBE.run();
   }
 
   // We have collected all loads and stores.
