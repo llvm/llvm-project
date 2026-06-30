@@ -365,8 +365,6 @@ Optimizations
 Basic guard elimination
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-**Note**: not yet implemented.
-
 If a register is guarded multiple times in the same basic block without any
 modifications to it during the intervening instructions, then subsequent guards
 can be removed.
