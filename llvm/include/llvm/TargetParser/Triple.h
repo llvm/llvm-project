@@ -207,7 +207,8 @@ public:
     OpenEmbedded,
     Intel,
     Meta,
-    LastVendorType = Meta
+    openRuyi,
+    LastVendorType = openRuyi
   };
   enum OSType {
     UnknownOS,
