@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Analysis/FlowSensitive/Models/UncheckedOptionalAccessModel.h"
+#include "clang/AST/Attr.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/Expr.h"
@@ -70,6 +71,8 @@ static bool hasOptionalClassName(const CXXRecordDecl &RD) {
     return false;
   }
 
+  // this code could be removed if base::Optional and folly::Optional used
+  // [[clang::analyze_as_class("std::optional")]]
   if (RD.getName() == "Optional") {
     // Check whether namespace is "::base" or "::folly".
     const auto *N = dyn_cast_or_null<NamespaceDecl>(RD.getDeclContext());
@@ -77,17 +80,24 @@ static bool hasOptionalClassName(const CXXRecordDecl &RD) {
                             isFullyQualifiedNamespaceEqualTo(*N, "folly"));
   }
 
+  // this code could be removed if Optional_Base used
+  // [[clang::analyze_as_class("std::optional")]]
   if (RD.getName() == "Optional_Base") {
     const auto *N = dyn_cast_or_null<NamespaceDecl>(RD.getDeclContext());
     return N != nullptr &&
            isFullyQualifiedNamespaceEqualTo(*N, "bslstl", "BloombergLP");
   }
 
+  // this code could be removed if NullableValue used
+  // [[clang::analyze_as_class("std::optional")]]
   if (RD.getName() == "NullableValue") {
     const auto *N = dyn_cast_or_null<NamespaceDecl>(RD.getDeclContext());
     return N != nullptr &&
            isFullyQualifiedNamespaceEqualTo(*N, "bdlb", "BloombergLP");
   }
+
+  if (RD.hasAttr<AnalyzeAsClassAttr>())
+    return true;
 
   return false;
 }
@@ -226,6 +236,16 @@ AST_MATCHER(CXXOperatorCallExpr, hasOptionalOperatorObjectType) {
   return hasReceiverTypeDesugaringToOptional(Node.getArg(0));
 }
 
+AST_MATCHER_P(NamedDecl, hasAnalyzeAsMethodName, std::string, MethodName) {
+  if (const auto *MD = dyn_cast<CXXMethodDecl>(&Node)) {
+    if (const auto *Attr = MD->getAttr<AnalyzeAsMethodAttr>()) {
+      StringRef AttrValue = Attr->getMethodName();
+      return AttrValue == MethodName;
+    }
+  }
+  return false;
+}
+
 auto isOptionalMemberCallWithNameMatcher(
     ast_matchers::internal::Matcher<NamedDecl> matcher,
     const std::optional<StatementMatcher> &Ignorable = std::nullopt) {
@@ -340,7 +360,7 @@ auto isValueOrStringEmptyCall() {
       callee(cxxMethodDecl(hasName("empty"))),
       onImplicitObjectArgument(ignoringImplicit(
           cxxMemberCallExpr(on(expr(unless(cxxThisExpr()))),
-                            callee(cxxMethodDecl(hasName("value_or"),
+                            callee(cxxMethodDecl(anyOf(hasName("value_or"), hasAnalyzeAsMethodName("value_or")),
                                                  ofClass(optionalClass()))),
                             hasArgument(0, stringLiteral(hasSize(0))))
               .bind(ValueOrCallID))));
@@ -978,8 +998,9 @@ ignorableOptional(const UncheckedOptionalAccessModelOptions &Options) {
 
 StatementMatcher
 valueCall(const std::optional<StatementMatcher> &IgnorableOptional) {
-  return isOptionalMemberCallWithNameMatcher(hasName("value"),
-                                             IgnorableOptional);
+  return isOptionalMemberCallWithNameMatcher(
+      anyOf(hasName("value"), hasAnalyzeAsMethodName("value")),
+      IgnorableOptional);
 }
 
 StatementMatcher
@@ -1050,9 +1071,12 @@ auto buildTransferMatchSwitch() {
       // optional::has_value, optional::hasValue
       // Of the supported optionals only folly::Optional uses hasValue, but this
       // will also pass for other types
+      // "hasValue" could be removed if folly::Optional used
+      // [[clang::analyze_as_method("has_value")]] on hasValue()
       .CaseOfCFGStmt<CXXMemberCallExpr>(
           isOptionalMemberCallWithNameMatcher(
-              hasAnyName("has_value", "hasValue")),
+              anyOf(hasAnyName("has_value", "hasValue"),
+              hasAnalyzeAsMethodName("has_value"))),
           transferOptionalHasValueCall)
 
       // optional::operator bool
@@ -1060,12 +1084,16 @@ auto buildTransferMatchSwitch() {
           isOptionalMemberCallWithNameMatcher(hasName("operator bool")),
           transferOptionalHasValueCall)
 
+      // this code could be removed if NullableValue used
+      // [[clang::analyze_as_inverse_method("std::optional::has_value")]] on isNull() *NYI
       // NullableValue::isNull
       // Only NullableValue has isNull
       .CaseOfCFGStmt<CXXMemberCallExpr>(
           isOptionalMemberCallWithNameMatcher(hasName("isNull")),
           transferOptionalIsNullCall)
 
+      // this code could be removed if NullableValue used
+      // [[clang::analyze_as_method("emplace")]] on makeValue() and makeValueInplace()
       // NullableValue::makeValue, NullableValue::makeValueInplace
       // Only NullableValue has these methods, but this
       // will also pass for other types
@@ -1082,7 +1110,7 @@ auto buildTransferMatchSwitch() {
 
       // optional::emplace
       .CaseOfCFGStmt<CXXMemberCallExpr>(
-          isOptionalMemberCallWithNameMatcher(hasName("emplace")),
+          isOptionalMemberCallWithNameMatcher(anyOf(hasName("emplace"), hasAnalyzeAsMethodName("emplace"))),
           [](const CXXMemberCallExpr *E, const MatchFinder::MatchResult &,
              LatticeTransferState &State) {
             if (RecordStorageLocation *Loc =
@@ -1093,7 +1121,7 @@ auto buildTransferMatchSwitch() {
 
       // optional::reset
       .CaseOfCFGStmt<CXXMemberCallExpr>(
-          isOptionalMemberCallWithNameMatcher(hasName("reset")),
+          isOptionalMemberCallWithNameMatcher(anyOf(hasName("reset"), hasAnalyzeAsMethodName("reset"))),
           [](const CXXMemberCallExpr *E, const MatchFinder::MatchResult &,
              LatticeTransferState &State) {
             if (RecordStorageLocation *Loc =
@@ -1105,7 +1133,7 @@ auto buildTransferMatchSwitch() {
 
       // optional::swap
       .CaseOfCFGStmt<CXXMemberCallExpr>(
-          isOptionalMemberCallWithNameMatcher(hasName("swap")),
+          isOptionalMemberCallWithNameMatcher(anyOf(hasName("swap"), hasAnalyzeAsMethodName("swap"))),
           transferSwapCall)
 
       // std::swap

@@ -6562,6 +6562,53 @@ static void handleAbiTagAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
                  AbiTagAttr(S.Context, AL, Tags.data(), Tags.size()));
 }
 
+// for now this only handles std::optional (POC)
+static bool isValidAnalyzeAsClassAttr(Decl *D, StringRef Tag) {
+  if (Tag == "std::optional")
+    return true;
+  return false;
+}
+
+static void handleAnalyzeAsClass(Sema &S, Decl *D, const ParsedAttr &AL) {
+  StringRef Str;
+  if (!S.checkStringLiteralArgumentAttr(AL, 0, Str))
+    return;
+  if (D->hasAttr<AnalyzeAsClassAttr>()) {
+    S.Diag(AL.getLoc(), diag::err_duplicate_attribute) << AL;
+    return;
+  }
+  if (!isValidAnalyzeAsClassAttr(D, Str)) {
+    S.Diag(AL.getLoc(), diag::warn_attribute_type_not_supported) << AL;
+    return;
+  }
+
+  D->addAttr(::new (S.Context) AnalyzeAsClassAttr(S.Context, AL, Str));
+}
+
+// for now this only handles std::optional (POC)
+static bool isValidAnalyzeAsMethodAttr(Decl *D, StringRef Tag) {
+  // no validation is done currently.  if someone writes something with a nonsense name,
+  // it simply won't be validated but also no warning will be emitted
+  // would be nice to do something smarter in the real implementation
+  return true;
+}
+
+static void handleAnalyzeAsMethod(Sema &S, Decl *D, const ParsedAttr &AL) {
+  StringRef Str;
+  if (!S.checkStringLiteralArgumentAttr(AL, 0, Str))
+    return;
+  if (D->hasAttr<AnalyzeAsMethodAttr>()) {
+    S.Diag(AL.getLoc(), diag::err_duplicate_attribute) << AL;
+    return;
+  }
+  if (!isValidAnalyzeAsMethodAttr(D, Str)) {
+    S.Diag(AL.getLoc(), diag::warn_attribute_type_not_supported) << AL;
+    return;
+  }
+
+  D->addAttr(::new (S.Context) AnalyzeAsMethodAttr(S.Context, AL, Str));
+}
+
 static bool hasBTFDeclTagAttr(Decl *D, StringRef Tag) {
   for (const auto *I : D->specific_attrs<BTFDeclTagAttr>()) {
     if (I->getBTFDeclTag() == Tag)
@@ -7652,6 +7699,12 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     break;
   case ParsedAttr::AT_BPFPreserveStaticOffset:
     handleSimpleAttribute<BPFPreserveStaticOffsetAttr>(S, D, AL);
+    break;
+  case ParsedAttr::AT_AnalyzeAsClass:
+    handleAnalyzeAsClass(S, D, AL);
+    break;
+  case ParsedAttr::AT_AnalyzeAsMethod:
+    handleAnalyzeAsMethod(S, D, AL);
     break;
   case ParsedAttr::AT_BTFDeclTag:
     handleBTFDeclTagAttr(S, D, AL);
