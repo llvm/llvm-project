@@ -1462,6 +1462,7 @@ void ELFState<ELFT>::writeSectionContent(
       PGOAnalyses = &Section.PGOAnalyses.value();
   }
 
+  uint64_t CurrentOffset = CBA.getOffset();
   for (const auto &[Idx, E] : llvm::enumerate(*Section.Entries)) {
     // Write version and feature values.
     if (E.Version > 5)
@@ -1469,14 +1470,10 @@ void ELFState<ELFT>::writeSectionContent(
                            << static_cast<int>(E.Version)
                            << "; encoding using the most recent version";
     CBA.write(E.Version);
-    SHeader.sh_size += 1;
-    if (E.Version < 5) {
+    if (E.Version < 5)
       CBA.write(static_cast<uint8_t>(E.Feature));
-      SHeader.sh_size += 1;
-    } else {
+    else
       CBA.write<uint16_t>(E.Feature, ELFT::Endianness);
-      SHeader.sh_size += 2;
-    }
     auto FeatureOrErr = llvm::object::BBAddrMap::Features::decode(E.Feature);
     if (!FeatureOrErr) {
       // Invalid feature: warn and skip the entry.
@@ -1496,7 +1493,7 @@ void ELFState<ELFT>::writeSectionContent(
       // 'NumBBRanges' field when specified.
       uint64_t NumBBRanges =
           E.NumBBRanges.value_or(E.BBRanges ? E.BBRanges->size() : 0);
-      SHeader.sh_size += CBA.writeULEB128(NumBBRanges);
+      CBA.writeULEB128(NumBBRanges);
     }
     if (!E.BBRanges)
       continue;
@@ -1511,31 +1508,30 @@ void ELFState<ELFT>::writeSectionContent(
       // specified.
       uint64_t NumBlocks =
           BBR.NumBlocks.value_or(BBR.BBEntries ? BBR.BBEntries->size() : 0);
-      SHeader.sh_size += sizeof(uintX_t) + CBA.writeULEB128(NumBlocks);
+      CBA.writeULEB128(NumBlocks);
       // Write all BBEntries in this BBRange.
       if (!BBR.BBEntries || FeatureOrErr->OmitBBEntries)
         continue;
       for (const BBAddrMapYAML::BBAddrMapEntry::BBEntry &BBE : *BBR.BBEntries) {
         ++TotalNumBlocks;
         if (E.Version > 1)
-          SHeader.sh_size += CBA.writeULEB128(BBE.ID);
-        SHeader.sh_size += CBA.writeULEB128(BBE.AddressOffset);
+          CBA.writeULEB128(BBE.ID);
+        CBA.writeULEB128(BBE.AddressOffset);
         if (EmitCallsiteEndOffsets) {
           size_t NumCallsiteEndOffsets =
               BBE.CallsiteEndOffsets ? BBE.CallsiteEndOffsets->size() : 0;
-          SHeader.sh_size += CBA.writeULEB128(NumCallsiteEndOffsets);
+          CBA.writeULEB128(NumCallsiteEndOffsets);
           if (BBE.CallsiteEndOffsets) {
             for (uint32_t Offset : *BBE.CallsiteEndOffsets)
-              SHeader.sh_size += CBA.writeULEB128(Offset);
+              CBA.writeULEB128(Offset);
           }
         }
-        SHeader.sh_size += CBA.writeULEB128(BBE.Size);
-        SHeader.sh_size += CBA.writeULEB128(BBE.Metadata);
+        CBA.writeULEB128(BBE.Size);
+        CBA.writeULEB128(BBE.Metadata);
         if (FeatureOrErr->BBHash || BBE.Hash.has_value()) {
           uint64_t Hash =
               BBE.Hash.has_value() ? BBE.Hash.value() : llvm::yaml::Hex64(0);
           CBA.write<uint64_t>(Hash, ELFT::Endianness);
-          SHeader.sh_size += 8;
         }
       }
     }
@@ -1544,7 +1540,7 @@ void ELFState<ELFT>::writeSectionContent(
     const BBAddrMapYAML::PGOAnalysisMapEntry &PGOEntry = PGOAnalyses->at(Idx);
 
     if (PGOEntry.FuncEntryCount)
-      SHeader.sh_size += CBA.writeULEB128(*PGOEntry.FuncEntryCount);
+      CBA.writeULEB128(*PGOEntry.FuncEntryCount);
 
     if (!PGOEntry.PGOBBEntries)
       continue;
@@ -1560,20 +1556,21 @@ void ELFState<ELFT>::writeSectionContent(
 
     for (const auto &PGOBBE : PGOBBEntries) {
       if (PGOBBE.BBFreq)
-        SHeader.sh_size += CBA.writeULEB128(*PGOBBE.BBFreq);
+        CBA.writeULEB128(*PGOBBE.BBFreq);
       if (FeatureOrErr->PostLinkCfg || PGOBBE.PostLinkBBFreq.has_value())
-        SHeader.sh_size += CBA.writeULEB128(PGOBBE.PostLinkBBFreq.value_or(0));
+        CBA.writeULEB128(PGOBBE.PostLinkBBFreq.value_or(0));
       if (PGOBBE.Successors) {
-        SHeader.sh_size += CBA.writeULEB128(PGOBBE.Successors->size());
+        CBA.writeULEB128(PGOBBE.Successors->size());
         for (const auto &[ID, BrProb, PostLinkBrFreq] : *PGOBBE.Successors) {
-          SHeader.sh_size += CBA.writeULEB128(ID);
-          SHeader.sh_size += CBA.writeULEB128(BrProb);
+          CBA.writeULEB128(ID);
+          CBA.writeULEB128(BrProb);
           if (FeatureOrErr->PostLinkCfg || PostLinkBrFreq.has_value())
-            SHeader.sh_size += CBA.writeULEB128(PostLinkBrFreq.value_or(0));
+            CBA.writeULEB128(PostLinkBrFreq.value_or(0));
         }
       }
     }
   }
+  SHeader.sh_size += CBA.getOffset() - CurrentOffset;
 }
 
 template <class ELFT>

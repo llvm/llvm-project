@@ -1,4 +1,5 @@
 ; RUN: llc < %s | FileCheck %s
+; RUN: llc -enable-new-pm < %s | FileCheck %s
 
 ; Test that unnecessary masking with 0x1 is not inserted.
 

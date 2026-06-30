@@ -112,6 +112,22 @@ consteval int doubleDelete() { // both-error {{never produces a constant express
 static_assert(doubleDelete() == 1); // both-error {{not an integral constant expression}} \
                                     // both-note {{in call to 'doubleDelete()'}}
 
+template <int N>
+constexpr bool doubleDelete2(const char (&x)[N]) {
+  int *p[N];
+  for (int i = 0; i < N; i++)
+    p[i] = new int(x[i]);
+
+  delete p[0];
+  delete p[0]; // both-note {{delete of pointer that has already been deleted}}
+
+  return true;
+}
+static_assert(doubleDelete2("foo")); // both-error {{not an integral constant expression}} \
+                                     // both-note {{in call to}}
+
+
+
 constexpr int AutoArray() {
   auto array = new int[]{0, 1, 2, 3};
   int ret = array[3];
@@ -1265,6 +1281,28 @@ namespace FreeNonBlockPointer {
     return 10;
   }
   static_assert(foo() == 10); // both-error {{not an integral constant expression}}
+}
+
+namespace NonPrimitiveImplicitValueInitExpr {
+  constexpr int m() {
+    int r;
+    auto foo = new int[2][4][1]{};
+    r = foo[0][2][0];
+    delete[] foo;
+    return r;
+  }
+  static_assert(m() == 0);
+}
+
+namespace ZeroSizeElems {
+  typedef int U[0];
+
+  constexpr bool foo() {
+    auto p = new U[3.14]; // both-warning {{implicit conversion}}
+    delete[] p;
+    return true;
+  }
+  static_assert(foo());
 }
 
 #else

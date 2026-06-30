@@ -2139,7 +2139,7 @@ public:
   }
 
   virtual bool needsFixedCatchObjects() const {
-    report_fatal_error("Funclet EH is not implemented for this target");
+    reportFatalUsageError("Funclet EH is not implemented for this target");
   }
 
   /// Return the minimum stack alignment of an argument.
@@ -5150,7 +5150,7 @@ public:
   /// so the default action is to bail.
   virtual Register getRegisterByName(const char* RegName, LLT Ty,
                                      const MachineFunction &MF) const {
-    report_fatal_error("Named registers not implemented for this target");
+    reportFatalUsageError("Named registers not implemented for this target");
   }
 
   /// Return the type that should be used to zero or sign extend a

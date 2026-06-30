@@ -273,16 +273,6 @@ static unsigned getSelectFoldableOperands(BinaryOperator *I) {
 /// We have (select c, TI, FI), and we know that TI and FI have the same opcode.
 Instruction *InstCombinerImpl::foldSelectOpOp(SelectInst &SI, Instruction *TI,
                                               Instruction *FI) {
-  // Don't break up min/max patterns. The hasOneUse checks below prevent that
-  // for most cases, but vector min/max with bitcasts can be transformed. If the
-  // one-use restrictions are eased for other patterns, we still don't want to
-  // obfuscate min/max.
-  if ((match(&SI, m_SMin(m_Value(), m_Value())) ||
-       match(&SI, m_SMax(m_Value(), m_Value())) ||
-       match(&SI, m_UMin(m_Value(), m_Value())) ||
-       match(&SI, m_UMax(m_Value(), m_Value()))))
-    return nullptr;
-
   // If this is a cast from the same type, merge.
   Value *Cond = SI.getCondition();
   Type *CondTy = Cond->getType();
@@ -1504,17 +1494,21 @@ static Instruction *foldSelectCtlzToCttz(ICmpInst *ICI, Value *TrueVal,
                                          Value *FalseVal,
                                          InstCombiner::BuilderTy &Builder) {
   unsigned BitWidth = TrueVal->getType()->getScalarSizeInBits();
-  if (!isPowerOf2_32(BitWidth) || !ICI->isEquality() ||
-      !match(ICI->getOperand(1), m_Zero()))
+  if (!ICI->isEquality() || !match(ICI->getOperand(1), m_Zero()))
     return nullptr;
 
   if (ICI->getPredicate() == ICmpInst::ICMP_NE)
     std::swap(TrueVal, FalseVal);
 
   Value *Ctlz;
-  if (!match(FalseVal,
-             m_Xor(m_Value(Ctlz), m_SpecificInt(BitWidth - 1))))
+  if (match(FalseVal,
+            m_Xor(m_Value(Ctlz), m_SpecificIntAllowPoison(BitWidth - 1)))) {
+    if (!isPowerOf2_32(BitWidth))
+      return nullptr;
+  } else if (!match(FalseVal, m_Sub(m_SpecificIntAllowPoison(BitWidth - 1),
+                                    m_Value(Ctlz)))) {
     return nullptr;
+  }
 
   if (!match(Ctlz, m_Ctlz(m_Value(), m_Value())))
     return nullptr;
@@ -5294,6 +5288,20 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
                             Constant::getAllOnesValue(TrueVal->getType()));
     if (FalseVal == Trunc)
       return replaceOperand(SI, 2, ConstantInt::get(FalseVal->getType(), 0));
+  }
+
+  if (match(CondVal, m_Trunc(m_Value(Trunc))) && Trunc->getType() == SelType) {
+    if (match(FalseVal, m_Zero()) && impliesPoison(TrueVal, CondVal) &&
+        llvm::computeKnownBits(TrueVal, SQ.getWithInstruction(&SI))
+                .countMaxActiveBits() == 1)
+      return BinaryOperator::CreateAnd(Trunc, TrueVal);
+
+    if (cast<TruncInst>(CondVal)->hasNoUnsignedWrap() &&
+        match(TrueVal, m_One()) && impliesPoison(FalseVal, CondVal) &&
+        llvm::computeKnownBits(FalseVal, SQ.getWithInstruction(&SI))
+                .countMaxActiveBits() == 1) {
+      return BinaryOperator::CreateOr(Trunc, FalseVal);
+    }
   }
 
   Value *MaskedLoadPtr;

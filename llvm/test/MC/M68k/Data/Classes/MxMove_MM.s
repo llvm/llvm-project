@@ -46,36 +46,6 @@ move.l	(-1,%a1), (0,%a1)
 ; CHECK-SAME: encoding: [0x23,0x69,0x00,0x2a,0xff,0xff]
 move.l	(42,%a1), (-1,%a1)
 
-; CHECK:      move.b  -(%a0), -(%a0)
-; CHECK-SAME: encoding: [0x11,0x20]
-move.b	-(%a0), -(%a0)
-; CHECK:      move.l  -(%a1), -(%a1)
-; CHECK-SAME: encoding: [0x23,0x21]
-move.l	-(%a1), -(%a1)
-; CHECK:      move.l  -(%a1), -(%a1)
-; CHECK-SAME: encoding: [0x23,0x21]
-move.l	-(%a1), -(%a1)
-
-; CHECK:      move.b  (%a0)+, (%a0)+
-; CHECK-SAME: encoding: [0x10,0xd8]
-move.b	(%a0)+, (%a0)+
-; CHECK:      move.l  (%a1)+, (%a1)+
-; CHECK-SAME: encoding: [0x22,0xd9]
-move.l	(%a1)+, (%a1)+
-; CHECK:      move.l  (%a1)+, (%a1)+
-; CHECK-SAME: encoding: [0x22,0xd9]
-move.l	(%a1)+, (%a1)+
-
-; CHECK:      move.b  (%a0), (%a0)
-; CHECK-SAME: encoding: [0x10,0x90]
-move.b	(%a0), (%a0)
-; CHECK:      move.l  (%a1), (%a1)
-; CHECK-SAME: encoding: [0x22,0x91]
-move.l	(%a1), (%a1)
-; CHECK:      move.l  (%a1), (%a1)
-; CHECK-SAME: encoding: [0x22,0x91]
-move.l	(%a1), (%a1)
-
 ; FIXME: Currently we don't have the 'B' encoding
 ; (i.e. abs.W) so we're always using 32-bit absolute address.
 ; CHECK:      move.b  $ffffffffffffffff, $0
