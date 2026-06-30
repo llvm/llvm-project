@@ -664,6 +664,14 @@ static std::string DerivedTypeSpecAsFortran(
 
 llvm::raw_ostream &StructureConstructor::AsFortran(llvm::raw_ostream &o) const {
   o << DerivedTypeSpecAsFortran(result_.derivedTypeSpec());
+  if (result_.derivedTypeSpec().IsEnumerationType()) {
+    // Print as enum_name(ordinal) without exposing the hidden __ordinal keyword
+    o << '(';
+    if (!values_.empty()) {
+      values_.begin()->second.value().AsFortran(o);
+    }
+    return o << ')';
+  }
   if (values_.empty()) {
     o << '(';
   } else {
