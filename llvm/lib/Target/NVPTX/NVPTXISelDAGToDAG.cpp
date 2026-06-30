@@ -1193,8 +1193,7 @@ static bool isL2EvictionSupported(const NVPTXSubtarget &Subtarget,
   if (Eviction == NVPTX::L2Eviction::Normal)
     return true;
 
-  return Subtarget.hasL2EvictionHint() &&
-         isGlobalOrGeneric(Access.AddrSpace) &&
+  return Subtarget.hasL2EvictionHint() && isGlobalOrGeneric(Access.AddrSpace) &&
          ((Access.NumElts == 8 && Access.EltWidth == 32) ||
           (Access.NumElts == 4 && Access.EltWidth == 64));
 }
@@ -1246,8 +1245,7 @@ std::pair<unsigned, SDValue> NVPTXDAGToDAGISel::getMemCacheHintOperands(
     }
 
     if (KeyStr == "nvvm.l2_cache_hint") {
-      if (isGlobalOrGeneric(Access.AddrSpace) &&
-          Subtarget->hasL2CacheHint()) {
+      if (isGlobalOrGeneric(Access.AddrSpace) && Subtarget->hasL2CacheHint()) {
         if (auto *ValCI = mdconst::dyn_extract<ConstantInt>(Value))
           CachePolicy = ValCI->getZExtValue();
         else
@@ -1658,8 +1656,9 @@ bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
 
   // Extract eviction/prefetch hint and cache policy register.
   const auto [EvictionAndPrefetchHint, PolicyReg] = getMemCacheHintOperands(
-      ST, {CodeAddrSpace, /*IsLoad=*/false, /*NumElts=*/NumElts,
-           /*EltWidth=*/ToTypeWidth},
+      ST,
+      {CodeAddrSpace, /*IsLoad=*/false, /*NumElts=*/NumElts,
+       /*EltWidth=*/ToTypeWidth},
       DL);
 
   const auto [Base, Offset] = selectADDR(Addr, CurDAG);
