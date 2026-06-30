@@ -1,3 +1,4 @@
+; REQUIRES: x86-registered-target
 ; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/callback-external-addr.perfscript --binary=%S/Inputs/callback-external-addr.perfbin --output=%t --skip-symbolization
 ; RUN: FileCheck %s --input-file %t --check-prefix=CHECK-UNWINDER
 

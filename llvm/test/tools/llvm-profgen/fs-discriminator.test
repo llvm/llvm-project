@@ -1,3 +1,4 @@
+; REQUIRES: x86-registered-target
 ; RUN: llvm-profgen --format=text --unsymbolized-profile=%S/Inputs/fs-discriminator.raw.prof --binary=%S/Inputs/fs-discriminator.perfbin --output=%t1
 ; RUN: FileCheck %s --input-file %t1 --check-prefix=CHECK
 ; RUN: llvm-profgen --unsymbolized-profile=%S/Inputs/fs-discriminator.raw.prof --binary=%S/Inputs/fs-discriminator.perfbin --output=%t1

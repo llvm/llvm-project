@@ -1,0 +1,38 @@
+; REQUIRES: aarch64-registered-target
+
+; RUN: rm -rf %t.dir && mkdir -p %t.dir
+; RUN: llvm-mc -triple=arm64-apple-darwin -filetype=obj %S/Inputs/macho-profile.s \
+; RUN:     -o %t.dir/macho-profile.o
+
+; RUN: llvm-profgen --perfscript=%S/Inputs/macho-profile.perfscript \
+; RUN:     --binary=%t.dir/macho-profile.o --format=text --output=%t.prof \
+; RUN:     --show-mmap-events 2>&1 | FileCheck %s --check-prefix=MMAP
+; RUN: FileCheck %s --check-prefix=PROF --input-file %t.prof
+
+; MMAP: Mmap: Binary macho-profile.o loaded at 0x1000
+
+; PROF-LABEL: test:48:0
+; PROF-NEXT:   2: 3
+; PROF-NEXT:   3: 3
+; PROF-NEXT:   4: 3
+; PROF-NEXT:   6: 0
+; PROF-NEXT:   7: 0
+; PROF-NEXT:   65535: 0
+
+; Source used to regenerate %S/Inputs/macho-profile.s:
+;   clang -target arm64-apple-darwin -arch arm64 -O1 -g \
+;       -fno-asynchronous-unwind-tables -fno-stack-protector \
+;       -ffile-prefix-map=$(pwd)=. \
+;       -S macho-profile.c -o macho-profile.s
+
+int test(int lo, int hi, int *out) {
+  int sum = 0;
+  while (lo < hi) {
+    sum += lo;
+    lo *= 2;
+  }
+  *out = sum;
+  return sum;
+}
+
+

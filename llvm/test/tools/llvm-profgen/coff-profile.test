@@ -1,3 +1,4 @@
+; REQUIRES: x86-registered-target
 ; RUN: llvm-profgen --format=text --use-dwarf-correlation --perfscript=%S/Inputs/coff-profile.perfscript --binary=%S/Inputs/coff-profile.exe --output=%t
 ; RUN: FileCheck %s --input-file %t --check-prefix=DWARF
 ; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/coff-profile.perfscript --binary=%S/Inputs/coff-profile.exe --output=%t

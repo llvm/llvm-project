@@ -1,0 +1,52 @@
+; REQUIRES: aarch64-registered-target
+
+; RUN: yaml2obj %S/Inputs/macho-thin.yaml -o %t.arm64
+; RUN: yaml2obj %S/Inputs/macho-thin-arm64e.yaml -o %t.arm64e
+; RUN: llvm-lipo -create -arch arm64 %t.arm64 -arch arm64e %t.arm64e \
+; RUN:     -output %t.fat
+
+; Thin MachO arm64
+; RUN: llvm-profgen --binary=%t.arm64 --show-disassembly-only --output=%t.out \
+; RUN:     2>&1 | FileCheck %s --check-prefix=THIN
+
+; Universal MachO with --arch flag
+; RUN: llvm-profgen --binary=%t.fat --arch=arm64 --show-disassembly-only \
+; RUN:     --output=%t.out 2>&1 | FileCheck %s --check-prefix=FAT
+; RUN: llvm-profgen --binary=%t.fat --arch=arm64e --show-disassembly-only \
+; RUN:     --output=%t.out 2>&1 | FileCheck %s --check-prefix=FAT
+
+; Universal MachO without --arch: picks host arch slice (or first slice if
+; host arch is not present) and emits a warning.
+; RUN: llvm-profgen --binary=%t.fat --show-disassembly-only --output=%t.out \
+; RUN:     2>&1 | FileCheck %s --check-prefix=FAT
+; RUN: llvm-profgen --binary=%t.fat --show-disassembly-only --output=%t.out \
+; RUN:     2>&1 | FileCheck %s --check-prefix=WARN
+
+; Universal MachO as --debug-binary
+; RUN: llvm-profgen --binary=%t.arm64 --debug-binary=%t.fat --arch=arm64 \
+; RUN:     --show-disassembly-only --output=%t.out 2>&1 \
+; RUN:     | FileCheck %s --check-prefix=DEBUGFAT
+
+; --arch requests a slice that doesn't exists error
+; RUN: not llvm-profgen --binary=%t.fat --arch=x86_64 \
+; RUN:     --show-disassembly-only --output=%t.out 2>&1 \
+; RUN:     | FileCheck %s --check-prefix=MISSING
+
+; THIN: Disassembly of section __text [0x100003f80, 0x100003fb0]:
+; THIN: <_foo>:
+; THIN: 100003f80:{{.*}}ret
+; THIN: <_main>:
+; THIN: 100003f84:{{.*}}sub
+
+; FAT: Disassembly of section __text [0x100003f80, 0x100003fb0]:
+; FAT: <_foo>:
+; FAT: 100003f80:{{.*}}ret
+; FAT: <_main>:
+
+; WARN: warning: --arch was not specified and {{.*}}.fat has 2 slices. Defaulting to arm64
+
+; DEBUGFAT: Disassembly of section __text [0x100003f80, 0x100003fb0]:
+; DEBUGFAT: <_foo>:
+; DEBUGFAT: 100003f80:{{.*}}ret
+
+; MISSING: error: {{.*}}.fat: no matching slice in universal binary

@@ -1,3 +1,4 @@
+; REQUIRES: x86-registered-target
 ; RUN: llvm-profgen --format=text --unsymbolized-profile=%S/Inputs/cold-profile-trimming.raw.prof --binary=%S/Inputs/inline-noprobe2.perfbin --output=%t1 --use-offset=0
 ; RUN: llvm-profgen --format=text --llvm-sample-profile=%t1 --binary=%S/Inputs/inline-noprobe2.perfbin --output=%t2 --trim-cold-profile=1 --profile-summary-cold-count=1000
 ; RUN: FileCheck %s --input-file %t2 --check-prefix=CHECK-TRIM

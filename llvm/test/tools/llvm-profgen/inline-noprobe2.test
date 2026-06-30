@@ -1,3 +1,4 @@
+; REQUIRES: x86-registered-target
 ; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/artificial-branch.perfscript --binary=%S/Inputs/inline-noprobe2.perfbin --output=%t  --skip-symbolization --use-offset=0
 ; RUN: FileCheck %s --input-file %t --check-prefix=CHECK-EXT-ADDR
 ; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/inline-noprobe2.perfscript --binary=%S/Inputs/inline-noprobe2.perfbin --output=%t  --skip-symbolization --use-offset=0

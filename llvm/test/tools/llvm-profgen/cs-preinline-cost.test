@@ -1,4 +1,4 @@
-; REQUIRES: asserts
+; REQUIRES: asserts, x86-registered-target
 ; Test default using size of profile as a proxy
 ; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/cs-preinline-cost.perfscript --binary=%S/Inputs/cs-preinline-cost.perfbin --csspgo-preinliner --debug-only=cs-preinliner --use-context-cost-for-preinliner=0 --output=/dev/null 2>&1 | FileCheck %s --check-prefix=CHECK-DEFAULT
 

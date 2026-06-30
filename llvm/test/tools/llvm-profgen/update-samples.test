@@ -1,3 +1,4 @@
+; REQUIRES: x86-registered-target
 ; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/noprobe.perfscript --binary=%S/Inputs/noprobe.perfbin --output=%t1
 ; RUN: FileCheck %s --input-file %t1 --check-prefix=CALLSITE
 ; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/noprobe.perfscript --binary=%S/Inputs/noprobe.perfbin --output=%t2 --update-total-samples=1

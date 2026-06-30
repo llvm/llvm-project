@@ -1,3 +1,4 @@
+; REQUIRES: x86-registered-target
 ; RUN: llvm-profgen --format=text --use-dwarf-correlation --ignore-stack-samples --perfscript=%S/Inputs/cs-preinline-cost.perfscript --binary=%S/Inputs/cs-preinline-cost.perfbin --output %t
 ; RUN: FileCheck %s --input-file %t
 

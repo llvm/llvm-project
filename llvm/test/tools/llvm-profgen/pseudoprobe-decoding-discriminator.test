@@ -1,3 +1,4 @@
+; REQUIRES: x86-registered-target
 ; RUN: llvm-profgen --format=text --perfscript=%s  --binary=%S/Inputs/fs-discriminator-probe.perfbin --output=%t --show-pseudo-probe --show-disassembly-only | FileCheck %s
 
 ; CHECK:      <quick_sort>:

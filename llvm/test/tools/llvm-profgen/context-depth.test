@@ -1,3 +1,4 @@
+; REQUIRES: x86-registered-target
 ; Test --csprof-max-context-depth and --csprof-max-unsymbolized-context-depth
 
 ; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/recursion-compression-pseudoprobe.perfscript --binary=%S/Inputs/recursion-compression-pseudoprobe.perfbin --output=%t --compress-recursion=0 --profile-summary-hot-count=0 --csprof-max-context-depth=0 --csspgo-preinliner=0 --gen-cs-nested-profile=0
