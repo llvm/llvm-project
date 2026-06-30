@@ -2900,6 +2900,56 @@ int testDominanceInfo(MlirContext ctx) {
   return 0;
 }
 
+// Replace-uses filter that accepts only uses whose owner is an `arith.addi`.
+static bool useOwnerIsAddi(MlirOpOperand opOperand, void *userData) {
+  (void)userData;
+  MlirStringRef name =
+      mlirIdentifierStr(mlirOperationGetName(mlirOpOperandGetOwner(opOperand)));
+  return mlirStringRefEqual(name, mlirStringRefCreateFromCString("arith.addi"));
+}
+
+int testReplaceUsesWithIf(MlirContext ctx) {
+  fprintf(stderr, "@testReplaceUsesWithIf\n");
+  // CHECK-LABEL: @testReplaceUsesWithIf
+
+  mlirContextGetOrLoadDialect(ctx, mlirStringRefCreateFromCString("arith"));
+
+  const char *moduleStr = "func.func @f(%arg0: i32, %arg1: i32) -> i32 {\n"
+                          "  %0 = arith.addi %arg0, %arg0 : i32\n"
+                          "  %1 = arith.muli %arg0, %arg0 : i32\n"
+                          "  %2 = arith.addi %0, %1 : i32\n"
+                          "  return %2 : i32\n"
+                          "}\n";
+  MlirModule module =
+      mlirModuleCreateParse(ctx, mlirStringRefCreateFromCString(moduleStr));
+
+  MlirBlock moduleBody = mlirModuleGetBody(module);
+  MlirOperation funcOp = mlirBlockGetFirstOperation(moduleBody);
+  MlirRegion funcRegion = mlirOperationGetRegion(funcOp, 0);
+  MlirBlock funcBody = mlirRegionGetFirstBlock(funcRegion);
+  MlirValue arg0 = mlirBlockGetArgument(funcBody, 0);
+  MlirValue arg1 = mlirBlockGetArgument(funcBody, 1);
+  MlirOperation addOp = mlirBlockGetFirstOperation(funcBody);
+  MlirOperation mulOp = mlirOperationGetNextInBlock(addOp);
+
+  // Replace arg0 with arg1, but only in arith.addi ops.
+  mlirValueReplaceUsesWithIf(arg0, arg1, useOwnerIsAddi, NULL);
+
+  // The first addi now uses arg1 for both operands.
+  assert(mlirValueEqual(mlirOperationGetOperand(addOp, 0), arg1));
+  assert(mlirValueEqual(mlirOperationGetOperand(addOp, 1), arg1));
+
+  // The muli is not an addi, so its operands are untouched (still arg0).
+  assert(mlirValueEqual(mlirOperationGetOperand(mulOp, 0), arg0));
+  assert(mlirValueEqual(mlirOperationGetOperand(mulOp, 1), arg0));
+
+  mlirModuleDestroy(module);
+
+  // CHECK: testReplaceUsesWithIf: PASSED
+  fprintf(stderr, "testReplaceUsesWithIf: PASSED\n");
+  return 0;
+}
+
 int main(void) {
   MlirContext ctx = mlirContextCreate();
   registerAllUpstreamDialects(ctx);
@@ -2955,6 +3005,8 @@ int main(void) {
     return 19;
   if (testDominanceInfo(ctx))
     return 20;
+  if (testReplaceUsesWithIf(ctx))
+    return 21;
 
   // CHECK: DESTROY MAIN CONTEXT
   // CHECK: reportResourceDelete: resource_i64_blob
