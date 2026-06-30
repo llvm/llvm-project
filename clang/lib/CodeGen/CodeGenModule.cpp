@@ -351,7 +351,7 @@ bool CodeGenModule::shouldUseLLVMABILowering(unsigned CallingConv) const {
   if (T.isBPF())
     return true;
 
-  if (T.getArch() == llvm::Triple::x86_64 && !T.isOSWindows() &&
+  if (T.getArch() == llvm::Triple::x86_64 && !T.isOSWindows() && !T.isUEFI() &&
       !T.isOSDarwin() && !T.isOSCygMing()) {
     switch (CallingConv) {
     case llvm::CallingConv::Win64:
@@ -360,6 +360,13 @@ bool CodeGenModule::shouldUseLLVMABILowering(unsigned CallingConv) const {
     case llvm::CallingConv::X86_VectorCall:
     case llvm::CallingConv::X86_StdCall:
     case llvm::CallingConv::X86_ThisCall:
+    // These conventions are not yet handled by X86_64TargetInfo::computeInfo,
+    // so they must fall back to Clang's classic ABIInfo rather than hit its
+    // unreachable.
+    case llvm::CallingConv::Intel_OCL_BI:
+    case llvm::CallingConv::PreserveMost:
+    case llvm::CallingConv::PreserveAll:
+    case llvm::CallingConv::PreserveNone:
       return false;
     default:
       return true;
