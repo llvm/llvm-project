@@ -1227,7 +1227,7 @@ TEST_P(AArch64CPUAliasTestFixture, testCPUAlias) {
   StringRef MainName = params.Aliases[0];
   const std::optional<AArch64::CpuInfo> Cpu = AArch64::parseCpu(MainName);
   const AArch64::ArchInfo &MainAI = Cpu->Arch;
-  AArch64::ExtensionBitset MainFlags = Cpu->getImpliedExtensions();
+  AArch64::ExtensionBitset MainFlags = Cpu->DefaultExtensions;
 
   for (size_t I = 1, E = params.Aliases.size(); I != E; ++I) {
     StringRef OtherName = params.Aliases[I];
@@ -1244,7 +1244,7 @@ TEST_P(AArch64CPUAliasTestFixture, testCPUAlias) {
         << MainName << " vs " << OtherName;
     EXPECT_EQ(MainAI, OtherAI) << MainName << " vs " << OtherName;
 
-    AArch64::ExtensionBitset OtherFlags = OtherCpu->getImpliedExtensions();
+    AArch64::ExtensionBitset OtherFlags = OtherCpu->DefaultExtensions;
 
     EXPECT_EQ(MainFlags, OtherFlags) << MainName << " vs " << OtherName;
 
@@ -1319,7 +1319,7 @@ bool testAArch64Extension(StringRef CPUName, StringRef ArchExt) {
   if (!Extension)
     return false;
   std::optional<AArch64::CpuInfo> CpuInfo = AArch64::parseCpu(CPUName);
-  return CpuInfo->getImpliedExtensions().test(Extension->ID);
+  return CpuInfo->DefaultExtensions.test(Extension->ID);
 }
 
 bool testAArch64Extension(const AArch64::ArchInfo &AI, StringRef ArchExt) {
