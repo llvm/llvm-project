@@ -28,14 +28,20 @@
 // RUN:   | FileCheck %s --check-prefix=CHECK-NULL
 // RUN: %env_tool_opts=allocator_may_return_null=0 not %run %t new 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-nCRASH
-// RUN: %env_tool_opts=allocator_may_return_null=1 not %run %t new 2>&1 \
-// RUN:   | FileCheck %s --check-prefix=CHECK-nCRASH-OOM
+// flag=1 + throwing new: asan throws bad_alloc, the test catches it and
+// converges to CHECK-NULL; other sanitizers abort inside operator new.
+// RUN: %if asan %{ %env_tool_opts=allocator_may_return_null=1     %run %t new 2>&1 | FileCheck %s --check-prefix=CHECK-NULL %}
+// RUN: %if !asan %{ %env_tool_opts=allocator_may_return_null=1 not %run %t new 2>&1 | FileCheck %s --check-prefix=CHECK-nCRASH-OOM %}
 // RUN: %env_tool_opts=allocator_may_return_null=0 not %run %t new-nothrow 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-nnCRASH
 // RUN: %env_tool_opts=allocator_may_return_null=1     %run %t new-nothrow 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-NULL
 
 // TODO(alekseyshl): win32 is disabled due to failing errno tests, fix it there.
+// Windows asan would also fail the flag=1 + new cell above: its runtime is
+// built without exceptions and never throws bad_alloc, so the throwing form
+// always falls back to ReportOutOfMemory + Die(). Re-enabling this test on
+// Windows requires tightening the %if asan dispatch to exclude Windows.
 // UNSUPPORTED: ubsan, target={{.*windows-msvc.*}}
 
 #include <assert.h>
@@ -79,7 +85,14 @@ int main(int argc, char **argv) {
     assert(*t == 42);
     free(t);
   } else if (!strcmp(action, "new")) {
-    x = operator new(kMaxAllowedMallocSizePlusOne);
+    try {
+      x = operator new(kMaxAllowedMallocSizePlusOne);
+      assert(0 && "throwing operator new returned without throwing -- "
+                  "violates [basic.stc.dynamic.allocation]/3");
+    } catch (const std::bad_alloc &) {
+      x = nullptr;
+      errno = ENOMEM;
+    }
   } else if (!strcmp(action, "new-nothrow")) {
     x = operator new(kMaxAllowedMallocSizePlusOne, std::nothrow);
   } else {
@@ -110,13 +123,18 @@ int main(int argc, char **argv) {
 // CHECK-mrCRASH: {{SUMMARY: .*Sanitizer: allocation-size-too-big.*allocator_returns_null.cpp.*}} in main
 // CHECK-nCRASH: new:
 // CHECK-nCRASH: #{{[0-9]+.*}}allocator_returns_null.cpp
-// CHECK-nCRASH: {{SUMMARY: .*Sanitizer: allocation-size-too-big.*allocator_returns_null.cpp.*}} in main
+// asan's throwing/nothrow operator new forces may_return_null=true on
+// Allocate so std::get_new_handler() runs first; the chain-exhausted abort
+// path emits "out-of-memory" rather than the in-place
+// "allocation-size-too-big" emitted by other sanitizers. Same alternation
+// applies to CHECK-nnCRASH.
+// CHECK-nCRASH: {{SUMMARY: .*Sanitizer: (allocation-size-too-big|out-of-memory).*allocator_returns_null.cpp.*}} in main
 // CHECK-nCRASH-OOM: new:
-// CHECK-nCRASH-O#{{[0-9]+.*}}allocator_returns_null.cpp
+// CHECK-nCRASH-OOM: #{{[0-9]+.*}}allocator_returns_null.cpp
 // CHECK-nCRASH-OOM: {{SUMMARY: .*Sanitizer: out-of-memory.*allocator_returns_null.cpp.*}} in main
 // CHECK-nnCRASH: new-nothrow:
 // CHECK-nnCRASH: #{{[0-9]+.*}}allocator_returns_null.cpp
-// CHECK-nnCRASH: {{SUMMARY: .*Sanitizer: allocation-size-too-big.*allocator_returns_null.cpp.*}} in main
+// CHECK-nnCRASH: {{SUMMARY: .*Sanitizer: (allocation-size-too-big|out-of-memory).*allocator_returns_null.cpp.*}} in main
 
-// CHECK-NULL: {{malloc|calloc|calloc-overflow|realloc|realloc-after-malloc|new-nothrow}}
+// CHECK-NULL: {{malloc|calloc|calloc-overflow|realloc|realloc-after-malloc|new-nothrow|new}}
 // CHECK-NULL: errno: 12, x: 0

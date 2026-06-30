@@ -170,6 +170,8 @@ set(SANITIZER_IMPL_HEADERS
   sanitizer_mac.h
   sanitizer_malloc_mac.inc
   sanitizer_mutex.h
+  sanitizer_new_handler.h
+  sanitizer_new_operators.inc
   sanitizer_placement_new.h
   sanitizer_platform.h
   sanitizer_platform_interceptors.h
