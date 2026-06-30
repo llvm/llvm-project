@@ -422,12 +422,15 @@ void DiagnosticInfoUnsupported::print(DiagnosticPrinter &DP) const {
 DiagnosticInfoUnsupportedTargetIntrinsic::
     DiagnosticInfoUnsupportedTargetIntrinsic(const Function &Fn,
                                              unsigned IntrinsicID,
-                                             const DiagnosticLocation &Loc)
+                                             const DiagnosticLocation &Loc,
+                                             StringRef RequiredFeaturesOverride)
     : DiagnosticInfoWithLocationBase(DK_UnsupportedTargetIntrinsic, DS_Error,
                                      Fn, Loc),
       IntrinsicID(IntrinsicID),
-      RequiredFeatures(Intrinsic::getRequiredTargetFeatures(
-          static_cast<Intrinsic::ID>(IntrinsicID))) {
+      RequiredFeatures(RequiredFeaturesOverride.empty()
+                           ? Intrinsic::getRequiredTargetFeatures(
+                                 static_cast<Intrinsic::ID>(IntrinsicID))
+                           : RequiredFeaturesOverride) {
   assert(!RequiredFeatures.empty() &&
          "intrinsic without required features should be supported");
 }

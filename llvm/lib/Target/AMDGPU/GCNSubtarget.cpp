@@ -24,7 +24,9 @@
 #include "llvm/CodeGen/GlobalISel/InlineAsmLowering.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/MDBuilder.h"
 #include <algorithm>
 
@@ -53,6 +55,16 @@ static cl::opt<unsigned>
                  cl::init(2), cl::Hidden);
 
 GCNSubtarget::~GCNSubtarget() = default;
+
+StringRef GCNSubtarget::getRequiredTargetFeaturesForIntrinsic(
+    unsigned IntrinsicID, const FunctionType *FTy) const {
+  if (FTy && IntrinsicID == Intrinsic::amdgcn_ballot &&
+      FTy->getReturnType()->isIntegerTy(32))
+    return "wavefrontsize32";
+
+  return TargetSubtargetInfo::getRequiredTargetFeaturesForIntrinsic(IntrinsicID,
+                                                                    FTy);
+}
 
 GCNSubtarget &GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
                                                             StringRef GPU,
