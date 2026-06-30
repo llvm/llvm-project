@@ -8,8 +8,6 @@
 
 // REQUIRES: std-at-least-c++26
 
-// <ranges>
-
 // constexpr auto reserve_hint()
 //     requires (approximately_sized_range<Views> && ...);
 // constexpr auto reserve_hint() const
