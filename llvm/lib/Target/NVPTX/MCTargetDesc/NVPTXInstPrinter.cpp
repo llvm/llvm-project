@@ -447,16 +447,6 @@ void NVPTXInstPrinter::printHexu32imm(const MCInst *MI, int OpNum,
   O << formatHex(Imm) << "U";
 }
 
-void NVPTXInstPrinter::printProtoIdent(const MCInst *MI, int OpNum,
-                                       const MCSubtargetInfo &,
-                                       raw_ostream &O) {
-  const MCOperand &Op = MI->getOperand(OpNum);
-  assert(Op.isExpr() && "Call prototype is not an MCExpr?");
-  const MCExpr *Expr = Op.getExpr();
-  const MCSymbol &Sym = cast<MCSymbolRefExpr>(Expr)->getSymbol();
-  O << Sym.getName();
-}
-
 void NVPTXInstPrinter::printPrmtMode(const MCInst *MI, int OpNum,
                                      const MCSubtargetInfo &, raw_ostream &O) {
   const MCOperand &MO = MI->getOperand(OpNum);

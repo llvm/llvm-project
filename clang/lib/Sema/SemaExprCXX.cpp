@@ -2716,6 +2716,68 @@ bool Sema::CheckAllocatedType(QualType AllocType, SourceLocation Loc,
   return false;
 }
 
+static void diagnoseNoViableFunctionForAllocationOverloadResolution(
+    Sema &S, LookupResult &R, SourceRange Range, ArrayRef<Expr *> PrefArgs,
+    ArrayRef<Expr *> FallbackArgs, OverloadCandidateSet &PrefCandidates,
+    OverloadCandidateSet *FallbackCandidates) {
+  // If this is an allocation of the form 'new (p) X' for some object
+  // pointer p (or an expression that will decay to such a pointer),
+  // diagnose the reason for the error.
+  auto NonAlignArgs = FallbackArgs.empty() ? PrefArgs : FallbackArgs;
+  if (!R.isClassLookup() && NonAlignArgs.size() == 2 &&
+      (NonAlignArgs[1]->getType()->isObjectPointerType() ||
+       NonAlignArgs[1]->getType()->isArrayType())) {
+    const QualType Arg1Type = NonAlignArgs[1]->getType();
+    QualType UnderlyingType = S.Context.getBaseElementType(Arg1Type);
+    if (UnderlyingType->isPointerType())
+      UnderlyingType = UnderlyingType->getPointeeType();
+    if (UnderlyingType.isConstQualified()) {
+      S.Diag(NonAlignArgs[1]->getExprLoc(),
+             diag::err_placement_new_into_const_qualified_storage)
+          << Arg1Type << NonAlignArgs[1]->getSourceRange();
+      return;
+    }
+    S.Diag(R.getNameLoc(), diag::err_need_header_before_placement_new)
+        << R.getLookupName() << Range;
+    // Listing the candidates is unlikely to be useful; skip it.
+    return;
+  }
+
+  // Finish checking all candidates before we note any. This checking can
+  // produce additional diagnostics so can't be interleaved with our
+  // emission of notes.
+  //
+  // For an aligned allocation, separately check the aligned and unaligned
+  // candidates with their respective argument lists.
+  SmallVector<OverloadCandidate *, 32> PrefCands;
+  SmallVector<OverloadCandidate *, 32> FallbackCands;
+  if (FallbackCandidates) {
+    assert(!FallbackArgs.empty() && PrefArgs.size() == FallbackArgs.size() + 1);
+    auto IsAligned = [](OverloadCandidate &C) {
+      const unsigned AlignArgOffset = 1;
+      return C.Function->getNumParams() > AlignArgOffset &&
+             C.Function->getParamDecl(AlignArgOffset)->getType()->isAlignValT();
+    };
+    auto IsUnaligned = [&](OverloadCandidate &C) { return !IsAligned(C); };
+
+    PrefCands = PrefCandidates.CompleteCandidates(
+        S, OCD_AllCandidates, PrefArgs, R.getNameLoc(), IsAligned);
+
+    FallbackCands = FallbackCandidates->CompleteCandidates(
+        S, OCD_AllCandidates, FallbackArgs, R.getNameLoc(), IsUnaligned);
+  } else {
+    PrefCands = PrefCandidates.CompleteCandidates(S, OCD_AllCandidates,
+                                                  PrefArgs, R.getNameLoc());
+  }
+
+  S.Diag(R.getNameLoc(), diag::err_ovl_no_viable_function_in_call)
+      << R.getLookupName() << Range;
+  PrefCandidates.NoteCandidates(S, PrefArgs, PrefCands, "", R.getNameLoc());
+  if (FallbackCandidates)
+    FallbackCandidates->NoteCandidates(S, FallbackArgs, FallbackCands, "",
+                                       R.getNameLoc());
+}
+
 static std::unique_ptr<OverloadCandidateSet> fillNewDeleteOverloadCandidateSet(
     Sema &S, LookupResult &R, ArrayRef<Expr *> Args,
     llvm::function_ref<bool(NamedDecl *)> Filter = [](NamedDecl *) {
@@ -2787,68 +2849,6 @@ static bool resolveAllocationOverload(Sema &S, LookupResult &R,
   }
   }
   llvm_unreachable("Unreachable, bad result from BestViableFunction");
-}
-
-static void diagnoseNoViableFunctionForAllocationOverloadResolution(
-    Sema &S, LookupResult &R, SourceRange Range, ArrayRef<Expr *> PrefArgs,
-    ArrayRef<Expr *> FallbackArgs, OverloadCandidateSet &PrefCandidates,
-    OverloadCandidateSet *FallbackCandidates) {
-  // If this is an allocation of the form 'new (p) X' for some object
-  // pointer p (or an expression that will decay to such a pointer),
-  // diagnose the reason for the error.
-  auto NonAlignArgs = FallbackArgs.empty() ? PrefArgs : FallbackArgs;
-  if (!R.isClassLookup() && NonAlignArgs.size() == 2 &&
-      (NonAlignArgs[1]->getType()->isObjectPointerType() ||
-       NonAlignArgs[1]->getType()->isArrayType())) {
-    const QualType Arg1Type = NonAlignArgs[1]->getType();
-    QualType UnderlyingType = S.Context.getBaseElementType(Arg1Type);
-    if (UnderlyingType->isPointerType())
-      UnderlyingType = UnderlyingType->getPointeeType();
-    if (UnderlyingType.isConstQualified()) {
-      S.Diag(NonAlignArgs[1]->getExprLoc(),
-             diag::err_placement_new_into_const_qualified_storage)
-          << Arg1Type << NonAlignArgs[1]->getSourceRange();
-      return;
-    }
-    S.Diag(R.getNameLoc(), diag::err_need_header_before_placement_new)
-        << R.getLookupName() << Range;
-    // Listing the candidates is unlikely to be useful; skip it.
-    return;
-  }
-
-  // Finish checking all candidates before we note any. This checking can
-  // produce additional diagnostics so can't be interleaved with our
-  // emission of notes.
-  //
-  // For an aligned allocation, separately check the aligned and unaligned
-  // candidates with their respective argument lists.
-  SmallVector<OverloadCandidate *, 32> PrefCands;
-  SmallVector<OverloadCandidate *, 32> FallbackCands;
-  if (FallbackCandidates) {
-    assert(!FallbackArgs.empty() && PrefArgs.size() == FallbackArgs.size() + 1);
-    auto IsAligned = [](OverloadCandidate &C) {
-      const unsigned AlignArgOffset = 1;
-      return C.Function->getNumParams() > AlignArgOffset &&
-             C.Function->getParamDecl(AlignArgOffset)->getType()->isAlignValT();
-    };
-    auto IsUnaligned = [&](OverloadCandidate &C) { return !IsAligned(C); };
-
-    PrefCands = PrefCandidates.CompleteCandidates(
-        S, OCD_AllCandidates, PrefArgs, R.getNameLoc(), IsAligned);
-
-    FallbackCands = FallbackCandidates->CompleteCandidates(
-        S, OCD_AllCandidates, FallbackArgs, R.getNameLoc(), IsUnaligned);
-  } else {
-    PrefCands = PrefCandidates.CompleteCandidates(S, OCD_AllCandidates,
-                                                  PrefArgs, R.getNameLoc());
-  }
-
-  S.Diag(R.getNameLoc(), diag::err_ovl_no_viable_function_in_call)
-      << R.getLookupName() << Range;
-  PrefCandidates.NoteCandidates(S, PrefArgs, PrefCands, "", R.getNameLoc());
-  if (FallbackCandidates)
-    FallbackCandidates->NoteCandidates(S, FallbackArgs, FallbackCands, "",
-                                       R.getNameLoc());
 }
 
 enum class DeallocLookupMode { Untyped, OptionallyTyped };
