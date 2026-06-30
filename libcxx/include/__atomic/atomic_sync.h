@@ -23,9 +23,10 @@
 #  pragma GCC system_header
 #endif
 
+#if _LIBCPP_STD_VER >= 20
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER >= 20
 #  if _LIBCPP_HAS_THREADS
 
 _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
@@ -258,8 +259,8 @@ _LIBCPP_HIDE_FROM_ABI void __atomic_wait(_AtomicWaitable& __a, _Tp __val, memory
   });
 }
 
-#endif // C++20
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 20
 
 #endif // _LIBCPP___ATOMIC_ATOMIC_SYNC_H
