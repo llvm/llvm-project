@@ -173,7 +173,7 @@ private:
 };
 
 //===----------------------------------------------------------------------===//
-//                         Load/Store Properties
+//                                LoadInst Class
 //===----------------------------------------------------------------------===//
 
 /// A structure representing the properties of a load or store instruction.
@@ -183,10 +183,6 @@ struct LoadStoreInstProperties {
   AtomicOrdering Ordering = AtomicOrdering::NotAtomic;
   SyncScope::ID SSID = SyncScope::System;
 };
-
-//===----------------------------------------------------------------------===//
-//                                LoadInst Class
-//===----------------------------------------------------------------------===//
 
 /// An instruction for reading from memory. This uses the SubclassData field in
 /// Value to store whether or not the load is volatile.
