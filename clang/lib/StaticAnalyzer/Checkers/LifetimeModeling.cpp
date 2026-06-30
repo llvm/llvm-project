@@ -17,29 +17,47 @@ REGISTER_SET_WITH_PROGRAMSTATE(DeallocatedSourceSet, const MemRegion *)
 
 namespace {
 
-class LifetimeModeling : public Checker<check::PostCall, check::LifetimeEnd> {
+class LifetimeModeling : public Checker<check::PostCall, check::LifetimeEnd, check::DeadSymbols> {
 public:
   void printState(raw_ostream &Out, ProgramStateRef State, const char *NL,
                   const char *Sep) const override;
   void checkPostCall(const CallEvent &Call, CheckerContext &C) const;
   void checkLifetimeEnd(const VarDecl *VD, CheckerContext &C) const;
+  void checkDeadSymbols(SymbolReaper &SymReaper, CheckerContext &C) const;
 };
 
 } // namespace
 
-std::vector<const MemRegion *>
-lifetimemodeling::getLifetimeSourceSet(ProgramStateRef State, SVal Val) {
-  std::vector<const MemRegion *> StoreRegion;
-  if (const auto *SourceSet = State->get<LifetimeBoundMap>(Val)) {
-    for (const MemRegion *Region : *SourceSet)
-      StoreRegion.push_back(Region);
-  }
-  return StoreRegion;
-}
-
 bool lifetimemodeling::isDeallocated(ProgramStateRef State,
                                      const MemRegion *Region) {
   return State->contains<DeallocatedSourceSet>(Region);
+}
+
+static bool getDanglingStackFrame(const MemRegion *Source, ProgramStateRef State, CheckerContext &C) {
+  // FIXME: The checker currently handles stack-region sources. Other
+  // region kinds require separate methodology. For example, heap
+  // regions do not go out of scope at the end of a stack frame, so
+  // in order to detect those type of dangling sources the function
+  // needs to be expanded to an event-driven approach as well.
+  if (const auto *StackSpace = Source->getMemorySpaceAs<StackSpaceRegion>(State)) {
+    const StackFrame *SF = StackSpace->getStackFrame();
+    const StackFrame *CurrentSF = C.getStackFrame();
+    if (SF == CurrentSF || !SF->isParentOf(CurrentSF))
+      return true;
+  }
+  return false;
+}
+
+const std::vector<const MemRegion *> lifetimemodeling::checkReturnedBorrower(SVal Val, ProgramStateRef State,
+                                                CheckerContext &C) {
+  std::vector<const MemRegion *> Regions;
+  if (auto *SourceSet = State->get<LifetimeBoundMap>(Val)) {
+    for (const MemRegion *Region : *SourceSet) {
+      if (getDanglingStackFrame(Region, State, C))
+        Regions.push_back(Region);
+    }
+  }
+  return Regions;
 }
 
 static ProgramStateRef bindValues(ProgramStateRef State, SVal RetVal,
@@ -98,8 +116,8 @@ void LifetimeModeling::checkLifetimeEnd(const VarDecl *VD,
   }
 }
 
-ProgramStateRef lifetimemodeling::removeDeadBindings(ProgramStateRef State,
-                                                     SymbolReaper &SymReaper) {
+void LifetimeModeling::checkDeadSymbols(SymbolReaper &SymReaper, CheckerContext &C) const {
+  ProgramStateRef State = C.getState();
   LifetimeBoundMapTy LBMap = State->get<LifetimeBoundMap>();
 
   for (SVal Val : llvm::make_first_range(LBMap)) {
@@ -112,7 +130,25 @@ ProgramStateRef lifetimemodeling::removeDeadBindings(ProgramStateRef State,
         State = State->remove<LifetimeBoundMap>(Val);
     }
   }
-  return State;
+
+  const auto Sources = State->get<DeallocatedSourceSet>();
+  for (const auto *Source : Sources) {
+    if (!SymReaper.isLiveRegion(Source))
+      State = State->remove<DeallocatedSourceSet>(Source);
+  }
+  C.addTransition(State);
+}
+
+void lifetimemodeling::dumpLifetimeSources(ProgramStateRef State, SVal Source, raw_ostream &OS) {
+  const auto *SourceSet = State->get<LifetimeBoundMap>(Source);
+  if (!SourceSet)
+    return;
+
+  llvm::SmallVector<std::string> RegionNames = to_vector(map_range(llvm::make_pointee_range(*SourceSet), std::mem_fn(&MemRegion::getString)));
+  llvm::sort(RegionNames);
+
+  OS << " Origin " << Source << " bound to ";
+  llvm::interleaveComma(RegionNames, OS);
 }
 
 void LifetimeModeling::printState(raw_ostream &Out, ProgramStateRef State,

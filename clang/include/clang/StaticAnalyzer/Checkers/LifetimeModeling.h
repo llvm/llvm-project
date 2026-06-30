@@ -3,19 +3,19 @@
 
 #include "clang/StaticAnalyzer/Core/PathSensitive/MemRegion.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/SymbolManager.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include <vector>
 
-namespace clang {
-namespace ento {
-namespace lifetimemodeling {
+namespace clang::ento::lifetimemodeling {
+/// Returns true if the lifetime of a region has ended.
+bool isDeallocated(ProgramStateRef State, const MemRegion *Region);
 
-std::vector<const MemRegion *> getLifetimeSourceSet(ProgramStateRef, SVal);
-bool isDeallocated(ProgramStateRef, const MemRegion *);
-ProgramStateRef removeDeadBindings(ProgramStateRef, SymbolReaper &);
+/// Returns the set of of lifetime sources bound to \p Source that are dangling stack regions.
+const std::vector<const MemRegion *> checkReturnedBorrower(SVal Source, ProgramStateRef State, CheckerContext &C);
 
-} // namespace lifetimemodeling
-} // namespace ento
-} // namespace clang
+/// Writes the lifetime sources bound to Source to OS.
+void dumpLifetimeSources(ProgramStateRef State, SVal Source, raw_ostream &OS);
+
+} // namespace clang::ento::lifetimemodeling
 
 #endif // LLVM_CLANG_INCLUDE_STATICANALYZER_CHECKERS_LIFETIMEMODELING_H

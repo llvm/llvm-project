@@ -1,5 +1,3 @@
-#include "clang/AST/Attr.h"
-#include "clang/Analysis/Analyses/LifetimeSafety/LifetimeAnnotations.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Checkers/LifetimeModeling.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
@@ -13,52 +11,15 @@ using namespace ento;
 
 namespace {
 class UseAfterLifetimeEnd
-    : public Checker<check::EndFunction, check::DeadSymbols> {
+    : public Checker<check::EndFunction> {
 public:
-  void reportDanglingSource(const MemRegion *Region, ExplodedNode *N,
+  void reportDanglingSource(const MemRegion *Source, ExplodedNode *N,
                             CheckerContext &C) const;
-  void checkReturnedBorrower(SVal Val, ProgramStateRef State,
-                             CheckerContext &C) const;
   void checkEndFunction(const ReturnStmt *RS, CheckerContext &C) const;
-  void checkDeadSymbols(SymbolReaper &SymReaper, CheckerContext &C) const;
   const BugType BugMsg{this, "UseAfterLifetimeEnd", "LifetimeBound"};
 };
 
 } // namespace
-
-static bool hasDanglingSource(const MemRegion *Source, ProgramStateRef State,
-                              CheckerContext &C) {
-  // FIXME: The checker currently handles stack-region sources. Other
-  // region kinds require separate methodology. For example, heap
-  // regions do not go out of scope at the end of a stack frame, so
-  // in order to detect those type of dangling sources the function
-  // needs to be expanded to an event-driven approach as well.
-  if (const auto *StackSpace =
-          Source->getMemorySpaceAs<StackSpaceRegion>(State)) {
-    const StackFrame *SF = StackSpace->getStackFrame();
-    const StackFrame *CurrentSF = C.getStackFrame();
-    if (SF == CurrentSF || !SF->isParentOf(CurrentSF))
-      return true;
-  }
-  return false;
-}
-
-void UseAfterLifetimeEnd::checkReturnedBorrower(SVal Val, ProgramStateRef State,
-                                                CheckerContext &C) const {
-  auto SourceSet = lifetimemodeling::getLifetimeSourceSet(State, Val);
-  if (!SourceSet.empty()) {
-    ExplodedNode *N = nullptr;
-    for (const MemRegion *Region : SourceSet) {
-      if (hasDanglingSource(Region, State, C)) {
-        if (!N)
-          N = C.generateNonFatalErrorNode();
-        if (!N)
-          return;
-        reportDanglingSource(Region, N, C);
-      }
-    }
-  }
-}
 
 void UseAfterLifetimeEnd::checkEndFunction(const ReturnStmt *RS,
                                            CheckerContext &C) const {
@@ -73,25 +34,24 @@ void UseAfterLifetimeEnd::checkEndFunction(const ReturnStmt *RS,
 
   RetExpr = RetExpr->IgnoreParens();
   SVal RetVal = C.getSVal(RetExpr);
-  checkReturnedBorrower(RetVal, State, C);
+  ExplodedNode *N = nullptr;
+
+  std::vector<const MemRegion *> RetValRegion = lifetimemodeling::checkReturnedBorrower(RetVal, State, C);
+  for (const MemRegion *Region : RetValRegion) {
+    if (!N)
+      N = C.generateNonFatalErrorNode();
+    if (!N)
+      return;
+
+    reportDanglingSource(Region, N, C);
+  }
 }
 
-void UseAfterLifetimeEnd::reportDanglingSource(const MemRegion *Region,
+void UseAfterLifetimeEnd::reportDanglingSource(const MemRegion *Source,
                                                ExplodedNode *N,
                                                CheckerContext &C) const {
-  auto BR = std::make_unique<PathSensitiveBugReport>(
-      BugMsg,
-      (llvm::Twine("Returning value bound to '") + Region->getString() +
-       "' that will go out of scope"),
-      N);
+  auto BR = std::make_unique<PathSensitiveBugReport>(BugMsg, (llvm::Twine("Returning value bound to '") + Source->getString() + "' that will go out of scope"), N);
   C.emitReport(std::move(BR));
-}
-
-void UseAfterLifetimeEnd::checkDeadSymbols(SymbolReaper &SymReaper,
-                                           CheckerContext &C) const {
-  ProgramStateRef State =
-      lifetimemodeling::removeDeadBindings(C.getState(), SymReaper);
-  C.addTransition(State);
 }
 
 namespace {
@@ -144,22 +104,13 @@ void DebugUseAfterLifetimeEnd::analyzerDumpLifetimeOriginsOf(
   }
 
   SVal ArgSVal = Call.getArgSVal(0);
-  auto SourceSet = lifetimemodeling::getLifetimeSourceSet(State, ArgSVal);
+  llvm::SmallString<128> Str;
+  llvm::raw_svector_ostream OS(Str);
+  lifetimemodeling::dumpLifetimeSources(State, ArgSVal, OS);
 
-  if (SourceSet.empty())
-    return;
-
-  if (ExplodedNode *N = C.generateNonFatalErrorNode()) {
-    llvm::SmallVector<std::string> RegionNames =
-        to_vector(map_range(llvm::make_pointee_range(SourceSet),
-                            std::mem_fn(&MemRegion::getString)));
-    llvm::sort(RegionNames);
-
-    llvm::SmallString<128> Str;
-    llvm::raw_svector_ostream OS(Str);
-    OS << " Origin " << ArgSVal << " bound to ";
-    llvm::interleaveComma(RegionNames, OS);
-    C.emitReport(std::make_unique<PathSensitiveBugReport>(BugMsg, OS.str(), N));
+  if (!Str.empty()) {
+    if (ExplodedNode *N = C.generateNonFatalErrorNode())
+      C.emitReport(std::make_unique<PathSensitiveBugReport>(BugMsg, OS.str(), N));
   }
 }
 
