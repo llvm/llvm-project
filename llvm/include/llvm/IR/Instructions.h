@@ -172,6 +172,10 @@ private:
   }
 };
 
+//===----------------------------------------------------------------------===//
+//                         Load/Store Properties
+//===----------------------------------------------------------------------===//
+
 /// A structure representing the properties of a load or store instruction.
 struct LoadStoreInstProperties {
   bool IsVolatile = false;
