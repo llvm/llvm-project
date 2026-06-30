@@ -918,6 +918,8 @@ public:
        CodeCompleteConsumer *CompletionConsumer = nullptr);
   ~Sema();
 
+  llvm::SmallPtrSet<const NamedDecl *, 8> ActiveConcepts;
+
   /// Perform initialization that occurs after the parser has been
   /// initialized but before it parses anything.
   void Initialize();

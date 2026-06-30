@@ -1051,6 +1051,16 @@ ExprResult ConstraintSatisfactionChecker::Evaluate(
     const MultiLevelTemplateArgumentList &MLTAL) {
 
   const ConceptReference *ConceptId = Constraint.getConceptId();
+  const NamedDecl *ConceptDecl = cast<clang::NamedDecl>(ConceptId->getNamedConcept()->getCanonicalDecl());
+
+  if (S.ActiveConcepts.contains(ConceptDecl)) {
+    S.Diag(ConceptId->getBeginLoc(), diag::err_recursive_concept)
+        << ConceptId->getNamedConcept()->getName();
+    Satisfaction.IsSatisfied = false;
+    Satisfaction.ContainsErrors = true;
+    return ExprError();
+  }
+
   Sema::InstantiatingTemplate InstTemplate(
       S, ConceptId->getBeginLoc(),
       Sema::InstantiatingTemplate::ConstraintsCheck{},
@@ -1069,7 +1079,7 @@ ExprResult ConstraintSatisfactionChecker::Evaluate(
   unsigned Size = Satisfaction.Details.size();
 
   llvm::SaveAndRestore PushConceptDecl(
-      ParentConcept, cast<ConceptDecl>(ConceptId->getNamedConcept()));
+      ParentConcept, cast<clang::ConceptDecl>(ConceptId->getNamedConcept()));
 
   ExprResult E = Evaluate(Constraint.getNormalizedConstraint(), MLTAL);
 
