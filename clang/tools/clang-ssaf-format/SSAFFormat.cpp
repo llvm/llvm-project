@@ -11,12 +11,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/ScalableStaticAnalysisFramework/Core/EntityLinker/LUSummaryEncoding.h"
-#include "clang/ScalableStaticAnalysisFramework/Core/EntityLinker/TUSummaryEncoding.h"
-#include "clang/ScalableStaticAnalysisFramework/Core/Serialization/JSONFormat.h"
-#include "clang/ScalableStaticAnalysisFramework/Core/Serialization/SerializationFormatRegistry.h"
-#include "clang/ScalableStaticAnalysisFramework/SSAFForceLinker.h" // IWYU pragma: keep
-#include "clang/ScalableStaticAnalysisFramework/Tool/Utils.h"
+#include "clang/ScalableStaticAnalysis/Core/EntityLinker/LUSummaryEncoding.h"
+#include "clang/ScalableStaticAnalysis/Core/EntityLinker/StaticLibrary.h"
+#include "clang/ScalableStaticAnalysis/Core/EntityLinker/TUSummaryEncoding.h"
+#include "clang/ScalableStaticAnalysis/Core/Serialization/JSONFormat.h"
+#include "clang/ScalableStaticAnalysis/Core/Serialization/SerializationFormatRegistry.h"
+#include "clang/ScalableStaticAnalysis/SSAFForceLinker.h" // IWYU pragma: keep
+#include "clang/ScalableStaticAnalysis/Tool/Utils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/CommandLine.h"
@@ -39,7 +40,7 @@ namespace {
 // Summary Type
 //===----------------------------------------------------------------------===//
 
-enum class SummaryType { Auto, TU, LU, WPA };
+enum class SummaryType { Auto, TU, LU, StaticLibrary, WPA };
 
 //===----------------------------------------------------------------------===//
 // Command-Line Options
@@ -63,6 +64,8 @@ cl::opt<SummaryType> Type(
                           "Detect type from the file's 'type' field"),
                clEnumValN(SummaryType::TU, "tu", "Translation unit summary"),
                clEnumValN(SummaryType::LU, "lu", "Link unit summary"),
+               clEnumValN(SummaryType::StaticLibrary, "static-library",
+                          "Static library of translation unit summaries"),
                clEnumValN(SummaryType::WPA, "wpa",
                           "Whole-program analysis suite")),
     cl::init(SummaryType::Auto), cl::cat(SsafFormatCategory));
@@ -294,6 +297,12 @@ void convert(const FormatInput &FI) {
       run(FI, &SerializationFormat::readLUSummary,
           &SerializationFormat::writeLUSummary);
     }
+    return;
+  case SummaryType::StaticLibrary:
+    // StaticLibrary has only an encoded representation, so --encoding is a
+    // no-op here: both paths route to readStaticLibrary / writeStaticLibrary.
+    run(FI, &SerializationFormat::readStaticLibrary,
+        &SerializationFormat::writeStaticLibrary);
     return;
   case SummaryType::WPA:
     run(FI, &SerializationFormat::readWPASuite,
