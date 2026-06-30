@@ -532,7 +532,13 @@ void WebAssemblyAsmPrinter::EmitTargetFeatures(Module &M) {
     EmittedFeatures.push_back(Entry);
   };
 
-  for (const SubtargetFeatureKV &KV : WebAssemblyFeatureKV) {
+  // If we never compiled a single function, Subtarget is null.
+  if (!Subtarget) {
+    Subtarget = static_cast<WebAssemblyTargetMachine &>(TM).getSubtargetImpl(
+        std::string(TM.getTargetCPU()),
+        std::string(TM.getTargetFeatureString()));
+  }
+  for (const SubtargetFeatureKV &KV : Subtarget->getAllProcessorFeatures()) {
     EmitFeature(KV.key());
   }
   // This pseudo-feature tells the linker whether shared memory would be safe
@@ -540,8 +546,7 @@ void WebAssemblyAsmPrinter::EmitTargetFeatures(Module &M) {
 
   // This is an "architecture", not a "feature", but we emit it as such for
   // the benefit of tools like Binaryen and consistency with other producers.
-  // FIXME: Subtarget is null here, so can't Subtarget->hasAddr64() ?
-  if (M.getDataLayout().getPointerSize() == 8) {
+  if (Subtarget->hasAddr64()) {
     // Can't use EmitFeature since "wasm-feature-memory64" is not a module
     // flag.
     EmittedFeatures.push_back({wasm::WASM_FEATURE_PREFIX_USED, "memory64"});
