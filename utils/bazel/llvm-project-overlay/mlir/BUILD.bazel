@@ -6425,6 +6425,34 @@ cc_library(
     ],
 )
 
+gentbl_cc_library(
+    name = "NVVMPassIncGen",
+    strip_include_prefix = "include",
+    tbl_outs = {
+        "include/mlir/Dialect/NVVM/Transforms/Passes.h.inc": ["-gen-pass-decls -name NVVM"],
+    },
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/NVVM/Transforms/Passes.td",
+    deps = [
+        ":PassBaseTdFiles",
+    ],
+)
+
+cc_library(
+    name = "NVVMTransforms",
+    srcs = glob(["lib/Dialect/NVVM/Transforms/*.cpp"]),
+    hdrs = glob(["include/mlir/Dialect/NVVM/Transforms/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":IR",
+        ":LLVMDialect",
+        ":NVVMDialect",
+        ":NVVMPassIncGen",
+        ":Pass",
+        ":TransformUtils",
+    ],
+)
+
 cc_library(
     name = "TargetLLVM",
     srcs = ["lib/Target/LLVM/ModuleToObject.cpp"],
@@ -9806,6 +9834,7 @@ cc_library(
         ":MathTransforms",
         ":MemRefTransforms",
         ":NVGPUTransforms",
+        ":NVVMTransforms",
         ":OpenACCTransforms",
         ":OpenMPTransforms",
         ":QuantTransforms",
