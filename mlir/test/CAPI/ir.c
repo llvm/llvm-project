@@ -2900,6 +2900,54 @@ int testDominanceInfo(MlirContext ctx) {
   return 0;
 }
 
+int testGetParentWithName(MlirContext ctx) {
+  fprintf(stderr, "@testGetParentWithName\n");
+  // CHECK-LABEL: @testGetParentWithName
+
+  mlirContextGetOrLoadDialect(ctx, mlirStringRefCreateFromCString("arith"));
+
+  const char *moduleStr = "func.func @f() {\n"
+                          "  %c0 = arith.constant 0 : i32\n"
+                          "  return\n"
+                          "}\n";
+  MlirModule module =
+      mlirModuleCreateParse(ctx, mlirStringRefCreateFromCString(moduleStr));
+
+  MlirOperation moduleOp = mlirModuleGetOperation(module);
+  MlirBlock moduleBody = mlirModuleGetBody(module);
+  MlirOperation funcOp = mlirBlockGetFirstOperation(moduleBody);
+  MlirRegion funcRegion = mlirOperationGetRegion(funcOp, 0);
+  MlirBlock funcBody = mlirRegionGetFirstBlock(funcRegion);
+  MlirOperation constOp = mlirBlockGetFirstOperation(funcBody);
+
+  // Nearest enclosing func.func ancestor.
+  MlirOperation foundFunc = mlirOperationGetParentWithName(
+      constOp, mlirStringRefCreateFromCString("func.func"));
+  assert(mlirOperationEqual(foundFunc, funcOp));
+
+  // Walks past func.func to find the enclosing builtin.module ancestor.
+  MlirOperation foundModule = mlirOperationGetParentWithName(
+      constOp, mlirStringRefCreateFromCString("builtin.module"));
+  assert(mlirOperationEqual(foundModule, moduleOp));
+
+  // A name that matches no ancestor returns null.
+  MlirOperation notFound = mlirOperationGetParentWithName(
+      constOp, mlirStringRefCreateFromCString("scf.for"));
+  assert(mlirOperationIsNull(notFound));
+
+  // The lookup excludes the operation itself: arith.constant is not its own
+  // ancestor.
+  MlirOperation notSelf = mlirOperationGetParentWithName(
+      constOp, mlirStringRefCreateFromCString("arith.constant"));
+  assert(mlirOperationIsNull(notSelf));
+
+  mlirModuleDestroy(module);
+
+  // CHECK: testGetParentWithName: PASSED
+  fprintf(stderr, "testGetParentWithName: PASSED\n");
+  return 0;
+}
+
 int main(void) {
   MlirContext ctx = mlirContextCreate();
   registerAllUpstreamDialects(ctx);
@@ -2955,6 +3003,8 @@ int main(void) {
     return 19;
   if (testDominanceInfo(ctx))
     return 20;
+  if (testGetParentWithName(ctx))
+    return 21;
 
   // CHECK: DESTROY MAIN CONTEXT
   // CHECK: reportResourceDelete: resource_i64_blob
