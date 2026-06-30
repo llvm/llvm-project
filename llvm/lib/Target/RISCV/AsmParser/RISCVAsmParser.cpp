@@ -2027,7 +2027,8 @@ ParseStatus RISCVAsmParser::parseCSRSystemRegister(OperandVector &Operands) {
           if (Reg.IsAltName || Reg.IsDeprecatedName)
             continue;
           if (Reg.haveRequiredFeatures(STI->getFeatureBits()))
-            return RISCVOperand::createSysReg(Reg.Name, S, Imm);
+            return RISCVOperand::createSysReg(
+                RISCVSysReg::getSysRegStr(Reg.Name), S, Imm);
         }
         // Accept an immediate representing an un-named Sys Reg if the range is
         // valid, regardless of the required features.
@@ -2072,7 +2073,7 @@ ParseStatus RISCVAsmParser::parseCSRSystemRegister(OperandVector &Operands) {
           if (Reg.IsAltName || Reg.IsDeprecatedName)
             continue;
           Warning(S, "'" + Identifier + "' is a deprecated alias for '" +
-                         Reg.Name + "'");
+                         RISCVSysReg::getSysRegStr(Reg.Name) + "'");
         }
       }
 
@@ -2084,7 +2085,9 @@ ParseStatus RISCVAsmParser::parseCSRSystemRegister(OperandVector &Operands) {
             llvm::find_if(AllFeatures, [&](const auto &Feature) {
               return SysReg->FeaturesRequired[Feature.Value];
             });
-        auto ErrorMsg = std::string("system register '") + SysReg->Name + "' ";
+        std::string ErrorMsg =
+            std::string("system register '") +
+            std::string(RISCVSysReg::getSysRegStr(SysReg->Name)) + "' ";
         if (SysReg->IsRV32Only && FeatureBits[RISCV::Feature64Bit]) {
           ErrorMsg += "is RV32 only";
           if (Feature != std::end(AllFeatures))

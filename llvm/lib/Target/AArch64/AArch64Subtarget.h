@@ -71,6 +71,7 @@ protected:
   unsigned MaxBytesForLoopAlignment = 0;
   unsigned MinimumJumpTableEntries = 4;
   unsigned MaxJumpTableSize = 0;
+  unsigned FixedLoadLatency = 0;
 
   // ReserveXRegister[i] - X#i is not available as a general purpose register.
   BitVector ReserveXRegister;
@@ -299,6 +300,8 @@ public:
   unsigned getMinimumJumpTableEntries() const {
     return MinimumJumpTableEntries;
   }
+
+  unsigned getFixedLoadLatency() const { return FixedLoadLatency; }
 
   /// CPU has TBI (top byte of addresses is ignored during HW address
   /// translation) and OS enables it.

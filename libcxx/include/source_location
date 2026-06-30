@@ -36,9 +36,9 @@ namespace std {
 #    pragma GCC system_header
 #  endif
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #  if _LIBCPP_STD_VER >= 20
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 class source_location {
   // The names source_location::__impl, _M_file_name, _M_function_name, _M_line, and _M_column
@@ -81,9 +81,9 @@ public:
   }
 };
 
-#  endif // _LIBCPP_STD_VER >= 20
-
 _LIBCPP_END_NAMESPACE_STD
+
+#  endif // _LIBCPP_STD_VER >= 20
 
 #endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 

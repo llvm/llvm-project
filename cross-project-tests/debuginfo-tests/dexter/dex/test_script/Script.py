@@ -21,6 +21,7 @@ from dex.test_script.Nodes import (
     FileLabels,
     Where,
     Then,
+    ValueAll,
     setup_yaml_parser,
 )
 
@@ -169,9 +170,18 @@ class DexterScript:
             if source_root_dir is not None
             else os.path.dirname(scope.file)
         )
+        self._validate()
+
+    def _validate(self):
+        def validate_expect(expect: Expect, expected_value, scope: Scope):
+            if isinstance(expect, ValueAll) and expected_value is not None:
+                raise DexterScriptError(
+                    f"!expect/all node {expect} should not have an expected value."
+                )
+
         # `visit_script` will validate the structure of the script, as it traverses the full script and raises an
         # exception if it sees anything unexpected.
-        self.visit_script()
+        self.visit_script(visit_expect=validate_expect)
 
     # If a truthy value is returned, abort further visiting and return that value.
     def _visit_script(

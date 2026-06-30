@@ -20,9 +20,10 @@
 #  pragma GCC system_header
 #endif
 
+#if _LIBCPP_HAS_THREADS
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_HAS_THREADS
 class __thread_id;
 
 namespace this_thread {
@@ -114,8 +115,8 @@ inline _LIBCPP_HIDE_FROM_ABI __thread_id get_id() _NOEXCEPT { return __libcpp_th
 
 } // namespace this_thread
 
-#endif // _LIBCPP_HAS_THREADS
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_HAS_THREADS
 
 #endif // _LIBCPP___THREAD_ID_H

@@ -3713,6 +3713,8 @@ struct LoadOpConversion : public fir::FIROpConversion<fir::LoadOp> {
         loadOp.setTBAATags(*optionalTag);
       else
         attachTBAATag(loadOp, load.getType(), load.getType(), nullptr);
+      if (load.getInvariant())
+        loadOp.setInvariant(true);
       if (std::optional<mlir::ArrayAttr> optionalAccessGroups =
               load.getAccessGroups())
         loadOp.setAccessGroups(*optionalAccessGroups);
