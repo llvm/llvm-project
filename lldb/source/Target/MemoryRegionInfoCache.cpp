@@ -31,6 +31,9 @@ void MemoryRegionInfoCache::EraseRange(addr_t load_addr, size_t size) {
   uint64_t max_minus_addr = std::numeric_limits<addr_t>::max() - load_addr;
   if (size > max_minus_addr)
     return;
+  // We expect a VM range of at least one byte.
+  if (size == 0)
+    return;
 
   if (!m_is_sorted) {
     m_region_infos.Sort();
