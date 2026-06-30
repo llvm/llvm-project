@@ -1327,6 +1327,48 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
     break;
   }
 
+  // Packed Reduction Sum
+  case RISCV::BI__builtin_riscv_predsum_i8x4_i32:
+  case RISCV::BI__builtin_riscv_predsum_i16x2_i32:
+  case RISCV::BI__builtin_riscv_predsum_i8x8_i32:
+  case RISCV::BI__builtin_riscv_predsum_i16x4_i32:
+  case RISCV::BI__builtin_riscv_predsum_i8x8_i64:
+  case RISCV::BI__builtin_riscv_predsum_i16x4_i64:
+  case RISCV::BI__builtin_riscv_predsum_i32x2_i64:
+  case RISCV::BI__builtin_riscv_predsumu_u8x4_u32:
+  case RISCV::BI__builtin_riscv_predsumu_u16x2_u32:
+  case RISCV::BI__builtin_riscv_predsumu_u8x8_u32:
+  case RISCV::BI__builtin_riscv_predsumu_u16x4_u32:
+  case RISCV::BI__builtin_riscv_predsumu_u8x8_u64:
+  case RISCV::BI__builtin_riscv_predsumu_u16x4_u64:
+  case RISCV::BI__builtin_riscv_predsumu_u32x2_u64: {
+    switch (BuiltinID) {
+    default:
+      llvm_unreachable("unexpected builtin ID");
+    case RISCV::BI__builtin_riscv_predsum_i8x4_i32:
+    case RISCV::BI__builtin_riscv_predsum_i16x2_i32:
+    case RISCV::BI__builtin_riscv_predsum_i8x8_i32:
+    case RISCV::BI__builtin_riscv_predsum_i16x4_i32:
+    case RISCV::BI__builtin_riscv_predsum_i8x8_i64:
+    case RISCV::BI__builtin_riscv_predsum_i16x4_i64:
+    case RISCV::BI__builtin_riscv_predsum_i32x2_i64:
+      ID = Intrinsic::riscv_predsum;
+      break;
+    case RISCV::BI__builtin_riscv_predsumu_u8x4_u32:
+    case RISCV::BI__builtin_riscv_predsumu_u16x2_u32:
+    case RISCV::BI__builtin_riscv_predsumu_u8x8_u32:
+    case RISCV::BI__builtin_riscv_predsumu_u16x4_u32:
+    case RISCV::BI__builtin_riscv_predsumu_u8x8_u64:
+    case RISCV::BI__builtin_riscv_predsumu_u16x4_u64:
+    case RISCV::BI__builtin_riscv_predsumu_u32x2_u64:
+      ID = Intrinsic::riscv_predsumu;
+      break;
+    }
+
+    IntrinsicTypes = {ResultType, Ops[0]->getType()};
+    break;
+  }
+
   // Zk builtins
 
   // Zknh
