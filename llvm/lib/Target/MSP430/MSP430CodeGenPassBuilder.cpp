@@ -57,7 +57,7 @@ void MSP430CodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) const {
 
 void MSP430CodeGenPassBuilder::addAsmPrinterBegin(
     PassManagerWrapper &PMW) const {
-  addModulePass(MSP430AsmPrinterBeginPass(), PMW);
+  addModulePass(MSP430AsmPrinterBeginPass(), PMW, /*Force=*/true);
 }
 
 void MSP430CodeGenPassBuilder::addAsmPrinter(PassManagerWrapper &PMW) const {
