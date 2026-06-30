@@ -73,9 +73,9 @@ inline int useStaticAgain (void) { // expected-note 2 {{use 'static' to give inl
 
 #pragma clang diagnostic pop
 
-inline void defineStaticVar(void) { // expected-note {{use 'static' to give inline function 'defineStaticVar' internal linkage}}
+inline void defineStaticVar(void) { // ok (no -pedantic)
   static const int x = 0; // ok
-  static int y = 0; // expected-warning {{non-constant static local variable in inline function may be different in different files}}
+  static int y = 0; // ok (no -pedantic)
 }
 
 extern inline void defineStaticVarInExtern(void) {
