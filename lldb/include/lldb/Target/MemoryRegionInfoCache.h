@@ -45,7 +45,7 @@ private:
       InfoMap;
   InfoMap m_region_infos;
   bool m_is_sorted;
-  std::recursive_mutex m_mutex;
+  std::mutex m_mutex;
 };
 } // namespace lldb_private
 

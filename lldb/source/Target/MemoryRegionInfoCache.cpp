@@ -13,18 +13,18 @@ using namespace lldb;
 using namespace lldb_private;
 
 void MemoryRegionInfoCache::Clear() {
-  std::lock_guard<std::recursive_mutex> guard(m_mutex);
+  std::lock_guard<std::mutex> guard(m_mutex);
   m_region_infos.Clear();
   m_is_sorted = true;
 }
 
 size_t MemoryRegionInfoCache::GetSize() {
-  std::lock_guard<std::recursive_mutex> guard(m_mutex);
+  std::lock_guard<std::mutex> guard(m_mutex);
   return m_region_infos.GetSize();
 }
 
 void MemoryRegionInfoCache::EraseRange(addr_t load_addr, size_t size) {
-  std::lock_guard<std::recursive_mutex> guard(m_mutex);
+  std::lock_guard<std::mutex> guard(m_mutex);
 
   // If load_addr+size would overflow, do nothing.
   // Likely this is an LLDB_INVALID_ADDRESS plus something.
@@ -56,7 +56,7 @@ void MemoryRegionInfoCache::EraseContaining(addr_t load_addr) {
 
 std::optional<MemoryRegionInfo>
 MemoryRegionInfoCache::GetMemoryRegion(addr_t load_addr) {
-  std::lock_guard<std::recursive_mutex> guard(m_mutex);
+  std::lock_guard<std::mutex> guard(m_mutex);
   if (!m_is_sorted) {
     m_region_infos.Sort();
     m_is_sorted = true;
@@ -69,7 +69,7 @@ MemoryRegionInfoCache::GetMemoryRegion(addr_t load_addr) {
 }
 
 void MemoryRegionInfoCache::AddRegion(const MemoryRegionInfo &ri) {
-  std::lock_guard<std::recursive_mutex> guard(m_mutex);
+  std::lock_guard<std::mutex> guard(m_mutex);
   InfoMap::Entry new_entry(ri.GetRange().GetRangeBase(),
                            ri.GetRange().GetByteSize(), ri);
   m_region_infos.Append(new_entry);
