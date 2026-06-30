@@ -261,4 +261,40 @@ define i32 @ctz_v3i32(<3 x i32> %a) {
   ret i32 %res
 }
 
+define i32 @ctz_v3i32_poison(<3 x i32> %a) {
+; RV32-LABEL: ctz_v3i32_poison:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV32-NEXT:    vmsne.vi v8, v8, 0
+; RV32-NEXT:    vfirst.m a0, v8
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: ctz_v3i32_poison:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV64-NEXT:    vmsne.vi v8, v8, 0
+; RV64-NEXT:    vfirst.m a0, v8
+; RV64-NEXT:    ret
+  %res = call i32 @llvm.experimental.cttz.elts(<3 x i32> %a, i1 1)
+  ret i32 %res
+}
+
+define i32 @ctz_nxv3i32_poison(<vscale x 3 x i32> %a) {
+; RV32-LABEL: ctz_nxv3i32_poison:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
+; RV32-NEXT:    vmsne.vi v10, v8, 0
+; RV32-NEXT:    vfirst.m a0, v10
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: ctz_nxv3i32_poison:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
+; RV64-NEXT:    vmsne.vi v10, v8, 0
+; RV64-NEXT:    vfirst.m a0, v10
+; RV64-NEXT:    ret
+  %res = call i32 @llvm.experimental.cttz.elts(<vscale x 3 x i32> %a, i1 1)
+  ret i32 %res
+}
+
 attributes #0 = { vscale_range(2,1024) }
