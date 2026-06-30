@@ -201,6 +201,12 @@ uint64_t GDBRemoteCommunicationClient::GetRemoteMaxPacketSize() {
   return m_max_packet_size;
 }
 
+uint32_t GDBRemoteCommunicationClient::GetRemotePageSize() {
+  if (m_target_vm_page_size == 0)
+    GetRemoteQSupported();
+  return m_target_vm_page_size;
+}
+
 bool GDBRemoteCommunicationClient::GetReverseContinueSupported() {
   if (m_supports_reverse_continue == eLazyBoolCalculate)
     GetRemoteQSupported();

@@ -335,6 +335,8 @@ public:
 
   uint64_t GetRemoteMaxPacketSize();
 
+  uint32_t GetRemotePageSize();
+
   bool GetEchoSupported();
 
   bool GetQPassSignalsSupported();
