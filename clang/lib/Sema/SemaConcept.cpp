@@ -1051,7 +1051,8 @@ ExprResult ConstraintSatisfactionChecker::Evaluate(
     const MultiLevelTemplateArgumentList &MLTAL) {
 
   const ConceptReference *ConceptId = Constraint.getConceptId();
-  const NamedDecl *ConceptDecl = cast<clang::NamedDecl>(ConceptId->getNamedConcept()->getCanonicalDecl());
+  const NamedDecl *ConceptDecl = 
+      cast<clang::NamedDecl>(ConceptId->getNamedConcept()->getCanonicalDecl());
 
   if (S.ActiveConcepts.contains(ConceptDecl)) {
     S.Diag(ConceptId->getBeginLoc(), diag::err_recursive_concept)
