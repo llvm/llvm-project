@@ -233,8 +233,3 @@ define i32 @smax_zero_i32(i32 %x) {
   %r = call i32 @llvm.smax.i32(i32 %x, i32 0)
   ret i32 %r
 }
-
-declare i8 @llvm.smax.i8(i8, i8)
-declare i32 @llvm.smax.i32(i32, i32)
-declare i64 @llvm.smax.i64(i64, i64)
-declare <16 x i8> @llvm.smax.v16i8(<16 x i8>, <16 x i8>)
