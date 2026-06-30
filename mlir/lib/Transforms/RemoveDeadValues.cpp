@@ -820,5 +820,3 @@ void RemoveDeadValues::runOnOperation() {
     signalPassFailure();
   }
 }
-
-
