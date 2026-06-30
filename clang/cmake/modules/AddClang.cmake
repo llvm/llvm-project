@@ -47,7 +47,7 @@ endmacro()
 
 macro(add_clang_library name)
   cmake_parse_arguments(ARG
-    "SHARED;STATIC;INSTALL_WITH_TOOLCHAIN"
+    "SHARED;STATIC;OBJECT;INSTALL_WITH_TOOLCHAIN;CLANG_EXPORT"
     ""
     "ADDITIONAL_HEADERS"
     ${ARGN})
@@ -115,7 +115,7 @@ macro(add_clang_library name)
     if(TARGET "obj.${name}")
       target_compile_definitions("obj.${name}" PUBLIC CLANG_BUILD_STATIC)
     endif()
-  elseif(TARGET "obj.${name}" AND NOT ARG_SHARED AND NOT ARG_STATIC)
+  elseif(TARGET "obj.${name}" AND (ARG_CLANG_EXPORT OR NOT (ARG_SHARED OR ARG_STATIC OR ARG_OBJECT)))
     # Clang component libraries linked to clang-cpp are declared without SHARED or STATIC
     target_compile_definitions("obj.${name}" PUBLIC CLANG_EXPORTS)
   endif()
