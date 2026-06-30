@@ -350,10 +350,8 @@ lldb_private::formatters::LibcxxSharedPtrSyntheticFrontEnd::
 
 llvm::Expected<uint32_t> lldb_private::formatters::
     LibcxxSharedPtrSyntheticFrontEnd::CalculateNumChildren() {
-  if (m_cntrl) {
-    if (m_ptr_obj && m_ptr_obj->GetValueAsUnsigned(0) != 0)
-      return 1;
-  }
+  if (m_cntrl && m_ptr_obj && m_ptr_obj->GetValueAsUnsigned(0) != 0)
+    return 1;
   return 0;
 }
 
