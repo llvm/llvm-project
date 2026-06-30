@@ -622,11 +622,11 @@ public:
     /// Whether any diagnostic has been emitted. This is set regardless of
     /// whether @ref #Diag is set or not.
     bool DiagEmitted = false;
-    
+
     /// Whether part of expression is an LValue.
     /// Used when evaluating constant expression with Microsoft extensions.
     bool HasLValue = false;
-    
+
     /// Whether we've seen a ptr to int cast or null subobject while evaluating
     /// constant expression in MS compatibility mode.
     bool SeenCastOrNull = false;

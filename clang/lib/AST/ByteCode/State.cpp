@@ -56,6 +56,10 @@ OptionalDiagnostic State::FFDiag(SourceInfo SI, diag::kind DiagId,
 
 OptionalDiagnostic State::CCEDiag(SourceLocation Loc, diag::kind DiagId,
                                   unsigned ExtraNotes) {
+  if (shouldRelaxDiag(DiagId)) {
+    setActiveDiagnostic(false);
+    return OptionalDiagnostic();
+  }
   EvalStatus.DiagEmitted = true;
   // Don't override a previous diagnostic. Don't bother collecting
   // diagnostics if we're evaluating for overflow.
@@ -100,7 +104,7 @@ PartialDiagnostic &State::addDiag(SourceLocation Loc, diag::kind DiagId) {
 
 OptionalDiagnostic State::diag(SourceLocation Loc, diag::kind DiagId,
                                unsigned ExtraNotes, bool IsCCEDiag) {
-  if (EvalStatus.Diag && !shouldRelaxDiag(DiagId)) {
+  if (EvalStatus.Diag) {
     if (hasPriorDiagnostic()) {
       return OptionalDiagnostic();
     }

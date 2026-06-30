@@ -15,7 +15,6 @@ template<bool B>
 struct TplBool {};
 
 TplBool<FIELD_OFFSET(S, y)> tc; // expected-error {{non-type template argument evaluates to 4, which cannot be narrowed to type 'bool'}}
-			        // expected-warning@-1 {{folding constant expression involving cast that performs the conversions of a reinterpret_cast is a Microsoft extension}}
 constexpr long b = FIELD_OFFSET(S, y); // expected-warning {{folding constant expression involving cast that performs the conversions of a reinterpret_cast is a Microsoft extension}}
 constexpr long b2 = FIELD_OFFSET2(S, y); // expected-warning {{folding constant expression involving cast that performs the conversions of a reinterpret_cast is a Microsoft extension}}
 constexpr LONG_PTR b3 = (LONG_PTR)&ob; // expected-error {{constexpr variable 'b3' must be initialized by a constant expression}}
