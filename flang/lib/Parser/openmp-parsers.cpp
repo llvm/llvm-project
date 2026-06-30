@@ -281,6 +281,44 @@ TYPE_PARSER(construct<common::OmpMemoryOrderType>(
     "RELEASE" >> pure(common::OmpMemoryOrderType::Release) ||
     "SEQ_CST" >> pure(common::OmpMemoryOrderType::Seq_Cst)))
 
+static bool IsReservedName(const Name &name) {
+  llvm::StringRef s(name.source.begin(), name.source.size());
+  return s.starts_with_insensitive("OMP_") ||
+      s.starts_with_insensitive("OMPX_");
+}
+
+TYPE_PARSER( //
+    construct<OmpReservedIdentifier>(predicated(name, IsReservedName)))
+
+struct LocatorParser {
+  using resultType = OmpLocator;
+  using Token = TokenStringMatch<false, false>;
+
+  std::optional<resultType> Parse(ParseState &state) const {
+    // Parse x(...)(...) as a substring instead of a function reference.
+    auto funcRef{functionReference / !lookAhead("("_tok)};
+    if (auto &&result{attempt(funcRef).Parse(state)}) {
+      return std::move(*result);
+    }
+    for (llvm::StringRef n : llvm::omp::getReservedLocatorNames()) {
+      auto match{Token(n.data(), n.size())};
+      if (auto &&result{attempt(match >= name).Parse(state)}) {
+        return OmpReservedIdentifier(std::move(*result));
+      }
+    }
+    return std::nullopt;
+  }
+};
+
+TYPE_PARSER(construct<OmpLocator>(LocatorParser{}))
+
+TYPE_PARSER( //
+    construct<OmpObject>(Parser<OmpLocator>{}) ||
+    construct<OmpObject>(designator) ||
+    "/" >> construct<OmpObject>(name) / "/" ||
+    construct<OmpObject>(sourced(construct<OmpObject::Invalid>(
+        "//"_tok >> pure(OmpObject::Invalid::Kind::BlankCommonBlock)))))
+
 // --- Modifier helpers -----------------------------------------------
 
 template <typename Clause, typename Separator> struct ModifierList {
@@ -588,10 +626,6 @@ TYPE_PARSER( //
 // At the moment these are only directive arguments. This is needed for
 // parsing directive-specification.
 
-TYPE_PARSER( //
-    construct<OmpLocator>(Parser<OmpObject>{}) ||
-    construct<OmpLocator>(Parser<FunctionReference>{}))
-
 TYPE_PARSER(construct<OmpBaseVariantNames>(
     Parser<OmpObject>{} / ":", Parser<OmpObject>{}))
 
@@ -610,7 +644,7 @@ struct OmpArgumentParser {
         construct<OmpArgument>(Parser<OmpMapperSpecifier>{}),
         // By default, prefer OmpReductionSpecifier over OmpBaseVariantNames.
         construct<OmpArgument>(Parser<OmpReductionSpecifier>{}),
-        construct<OmpArgument>(Parser<OmpLocator>{})))};
+        construct<OmpArgument>(Parser<OmpObject>{})))};
     return parser.Parse(state);
   }
 };
@@ -625,12 +659,10 @@ struct OmpArgumentParser<llvm::omp::Directive::OMPD_declare_variant> {
         // In DECLARE_VARIANT parse OmpBaseVariantNames instead of
         // OmpReductionSpecifier.
         construct<OmpArgument>(Parser<OmpBaseVariantNames>{}),
-        construct<OmpArgument>(Parser<OmpLocator>{})))};
+        construct<OmpArgument>(Parser<OmpObject>{})))};
     return parser.Parse(state);
   }
 };
-
-TYPE_PARSER(construct<OmpLocatorList>(nonemptyList(Parser<OmpLocator>{})))
 
 template <llvm::omp::Directive Id = llvm::omp::Directive::OMPD_unknown>
 struct OmpArgumentListParser {
@@ -1404,12 +1436,6 @@ TYPE_PARSER(construct<OmpNumTeamsClause>(
 TYPE_PARSER(construct<OmpNumThreadsClause>(
     maybe(nonemptyList(Parser<OmpNumThreadsClause::Modifier>{}) / ":"),
     nonemptyList(scalarIntExpr)))
-
-TYPE_PARSER( //
-    construct<OmpObject>(designator) ||
-    "/" >> construct<OmpObject>(name) / "/" ||
-    construct<OmpObject>(sourced(construct<OmpObject::Invalid>(
-        "//"_tok >> pure(OmpObject::Invalid::Kind::BlankCommonBlock)))))
 
 // OMP 5.0 2.19.4.5 LASTPRIVATE ([lastprivate-modifier :] list)
 TYPE_PARSER(construct<OmpLastprivateClause>(

@@ -7,8 +7,8 @@ define i1 @nn_zext_eq_0(<4 x i1> %a, <4 x i1> %b) {
 ; CHECK-NEXT:    [[ZA:%.*]] = zext <4 x i1> [[A]] to <4 x i32>
 ; CHECK-NEXT:    [[ZB:%.*]] = zext <4 x i1> [[B]] to <4 x i32>
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw <4 x i32> [[ZA]], [[ZB]]
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[ADD]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP1]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <4 x i32> [[ADD]], zeroinitializer
+; CHECK-NEXT:    [[CMP:%.*]] = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> [[TMP1]])
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %za = zext <4 x i1> %a to <4 x i32>
@@ -25,8 +25,8 @@ define i1 @np_sext_eq_0(<4 x i1> %a, <4 x i1> %b) {
 ; CHECK-NEXT:    [[SA:%.*]] = sext <4 x i1> [[A]] to <4 x i32>
 ; CHECK-NEXT:    [[SB:%.*]] = sext <4 x i1> [[B]] to <4 x i32>
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw <4 x i32> [[SA]], [[SB]]
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[ADD]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP1]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <4 x i32> [[ADD]], zeroinitializer
+; CHECK-NEXT:    [[CMP:%.*]] = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> [[TMP1]])
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %sa = sext <4 x i1> %a to <4 x i32>
@@ -43,8 +43,8 @@ define i1 @np_sext_ne_0(<4 x i1> %a, <4 x i1> %b) {
 ; CHECK-NEXT:    [[SA:%.*]] = sext <4 x i1> [[A]] to <4 x i32>
 ; CHECK-NEXT:    [[SB:%.*]] = sext <4 x i1> [[B]] to <4 x i32>
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw <4 x i32> [[SA]], [[SB]]
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[ADD]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[TMP1]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <4 x i32> [[ADD]], zeroinitializer
+; CHECK-NEXT:    [[CMP:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP1]])
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %sa = sext <4 x i1> %a to <4 x i32>

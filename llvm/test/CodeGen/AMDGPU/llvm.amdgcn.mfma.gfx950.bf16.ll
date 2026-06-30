@@ -106,16 +106,16 @@ define amdgpu_kernel void @test_mfma_f32_32x32x16_bf16(<8 x bfloat> %arg0, <8 x 
 ; AGPR-NEXT:    v_accvgpr_write_b32 a13, s21
 ; AGPR-NEXT:    v_accvgpr_write_b32 a14, s22
 ; AGPR-NEXT:    v_accvgpr_write_b32 a15, s23
+; AGPR-NEXT:    v_mov_b64_e32 v[6:7], 0
 ; AGPR-NEXT:    v_mov_b32_e32 v16, s16
-; AGPR-NEXT:    v_mov_b32_e32 v17, s17
 ; AGPR-NEXT:    v_mfma_f32_32x32x16_bf16 a[16:31], v[8:11], v[12:15], a[0:15]
-; AGPR-NEXT:    v_mov_b32_e32 v18, s18
-; AGPR-NEXT:    v_mov_b32_e32 v19, s19
 ; AGPR-NEXT:    v_mov_b32_e32 v8, s20
 ; AGPR-NEXT:    v_mov_b32_e32 v9, s21
 ; AGPR-NEXT:    v_mov_b32_e32 v10, s22
 ; AGPR-NEXT:    v_mov_b32_e32 v11, s23
-; AGPR-NEXT:    v_mov_b64_e32 v[6:7], 0
+; AGPR-NEXT:    v_mov_b32_e32 v17, s17
+; AGPR-NEXT:    v_mov_b32_e32 v18, s18
+; AGPR-NEXT:    v_mov_b32_e32 v19, s19
 ; AGPR-NEXT:    s_nop 4
 ; AGPR-NEXT:    global_store_dwordx4 v[0:1], a[28:31], off sc0 sc1
 ; AGPR-NEXT:    s_waitcnt vmcnt(0)
@@ -164,12 +164,12 @@ define amdgpu_kernel void @test_mfma_f32_32x32x16_bf16(<8 x bfloat> %arg0, <8 x 
 ; VGPR-NEXT:    v_mov_b64_e32 v[10:11], s[18:19]
 ; VGPR-NEXT:    v_mov_b64_e32 v[12:13], s[20:21]
 ; VGPR-NEXT:    v_mov_b64_e32 v[14:15], s[22:23]
+; VGPR-NEXT:    v_mov_b64_e32 v[38:39], 0
 ; VGPR-NEXT:    v_mov_b32_e32 v48, s16
-; VGPR-NEXT:    v_mov_b32_e32 v49, s17
 ; VGPR-NEXT:    v_mfma_f32_32x32x16_bf16 v[16:31], v[40:43], v[44:47], v[0:15]
+; VGPR-NEXT:    v_mov_b32_e32 v49, s17
 ; VGPR-NEXT:    v_mov_b32_e32 v50, s18
 ; VGPR-NEXT:    v_mov_b32_e32 v51, s19
-; VGPR-NEXT:    v_mov_b64_e32 v[38:39], 0
 ; VGPR-NEXT:    s_nop 8
 ; VGPR-NEXT:    global_store_dwordx4 v[32:33], v[28:31], off sc0 sc1
 ; VGPR-NEXT:    s_waitcnt vmcnt(0)
@@ -179,12 +179,12 @@ define amdgpu_kernel void @test_mfma_f32_32x32x16_bf16(<8 x bfloat> %arg0, <8 x 
 ; VGPR-NEXT:    s_waitcnt vmcnt(0)
 ; VGPR-NEXT:    global_store_dwordx4 v[38:39], v[16:19], off sc0 sc1
 ; VGPR-NEXT:    s_waitcnt vmcnt(0)
+; VGPR-NEXT:    global_store_dwordx4 v[34:35], v[48:51], off sc0 sc1
+; VGPR-NEXT:    s_waitcnt vmcnt(0)
 ; VGPR-NEXT:    v_mov_b32_e32 v0, s20
 ; VGPR-NEXT:    v_mov_b32_e32 v1, s21
 ; VGPR-NEXT:    v_mov_b32_e32 v2, s22
 ; VGPR-NEXT:    v_mov_b32_e32 v3, s23
-; VGPR-NEXT:    global_store_dwordx4 v[34:35], v[48:51], off sc0 sc1
-; VGPR-NEXT:    s_waitcnt vmcnt(0)
 ; VGPR-NEXT:    global_store_dwordx4 v[32:33], v[0:3], off sc0 sc1
 ; VGPR-NEXT:    s_waitcnt vmcnt(0)
 ; VGPR-NEXT:    s_nop 0
@@ -303,16 +303,16 @@ define amdgpu_kernel void @test_mfma_f32_32x32x16_bf16__flags(<8 x bfloat> %arg0
 ; AGPR-NEXT:    v_accvgpr_write_b32 a13, s21
 ; AGPR-NEXT:    v_accvgpr_write_b32 a14, s22
 ; AGPR-NEXT:    v_accvgpr_write_b32 a15, s23
+; AGPR-NEXT:    v_mov_b64_e32 v[6:7], 0
 ; AGPR-NEXT:    v_mov_b32_e32 v16, s16
-; AGPR-NEXT:    v_mov_b32_e32 v17, s17
 ; AGPR-NEXT:    v_mfma_f32_32x32x16_bf16 a[16:31], v[8:11], v[12:15], a[0:15] cbsz:2 abid:3 blgp:1
-; AGPR-NEXT:    v_mov_b32_e32 v18, s18
-; AGPR-NEXT:    v_mov_b32_e32 v19, s19
 ; AGPR-NEXT:    v_mov_b32_e32 v8, s20
 ; AGPR-NEXT:    v_mov_b32_e32 v9, s21
 ; AGPR-NEXT:    v_mov_b32_e32 v10, s22
 ; AGPR-NEXT:    v_mov_b32_e32 v11, s23
-; AGPR-NEXT:    v_mov_b64_e32 v[6:7], 0
+; AGPR-NEXT:    v_mov_b32_e32 v17, s17
+; AGPR-NEXT:    v_mov_b32_e32 v18, s18
+; AGPR-NEXT:    v_mov_b32_e32 v19, s19
 ; AGPR-NEXT:    s_nop 4
 ; AGPR-NEXT:    global_store_dwordx4 v[0:1], a[28:31], off sc0 sc1
 ; AGPR-NEXT:    s_waitcnt vmcnt(0)
@@ -361,12 +361,12 @@ define amdgpu_kernel void @test_mfma_f32_32x32x16_bf16__flags(<8 x bfloat> %arg0
 ; VGPR-NEXT:    v_mov_b64_e32 v[10:11], s[18:19]
 ; VGPR-NEXT:    v_mov_b64_e32 v[12:13], s[20:21]
 ; VGPR-NEXT:    v_mov_b64_e32 v[14:15], s[22:23]
+; VGPR-NEXT:    v_mov_b64_e32 v[38:39], 0
 ; VGPR-NEXT:    v_mov_b32_e32 v48, s16
-; VGPR-NEXT:    v_mov_b32_e32 v49, s17
 ; VGPR-NEXT:    v_mfma_f32_32x32x16_bf16 v[16:31], v[40:43], v[44:47], v[0:15] cbsz:2 abid:3 blgp:1
+; VGPR-NEXT:    v_mov_b32_e32 v49, s17
 ; VGPR-NEXT:    v_mov_b32_e32 v50, s18
 ; VGPR-NEXT:    v_mov_b32_e32 v51, s19
-; VGPR-NEXT:    v_mov_b64_e32 v[38:39], 0
 ; VGPR-NEXT:    s_nop 8
 ; VGPR-NEXT:    global_store_dwordx4 v[32:33], v[28:31], off sc0 sc1
 ; VGPR-NEXT:    s_waitcnt vmcnt(0)
@@ -376,12 +376,12 @@ define amdgpu_kernel void @test_mfma_f32_32x32x16_bf16__flags(<8 x bfloat> %arg0
 ; VGPR-NEXT:    s_waitcnt vmcnt(0)
 ; VGPR-NEXT:    global_store_dwordx4 v[38:39], v[16:19], off sc0 sc1
 ; VGPR-NEXT:    s_waitcnt vmcnt(0)
+; VGPR-NEXT:    global_store_dwordx4 v[34:35], v[48:51], off sc0 sc1
+; VGPR-NEXT:    s_waitcnt vmcnt(0)
 ; VGPR-NEXT:    v_mov_b32_e32 v0, s20
 ; VGPR-NEXT:    v_mov_b32_e32 v1, s21
 ; VGPR-NEXT:    v_mov_b32_e32 v2, s22
 ; VGPR-NEXT:    v_mov_b32_e32 v3, s23
-; VGPR-NEXT:    global_store_dwordx4 v[34:35], v[48:51], off sc0 sc1
-; VGPR-NEXT:    s_waitcnt vmcnt(0)
 ; VGPR-NEXT:    global_store_dwordx4 v[32:33], v[0:3], off sc0 sc1
 ; VGPR-NEXT:    s_waitcnt vmcnt(0)
 ; VGPR-NEXT:    s_nop 0
