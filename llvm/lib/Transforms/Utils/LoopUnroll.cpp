@@ -1534,9 +1534,12 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
         Builder.setFastMathFlags(Reductions.begin()->second.getFastMathFlags());
         RecurKind RK = Reductions.begin()->second.getRecurrenceKind();
         for (Instruction *RdxPart : drop_begin(PartialReductions)) {
-          RdxResult = Builder.CreateBinOp(
-              (Instruction::BinaryOps)RecurrenceDescriptor::getOpcode(RK),
-              RdxPart, RdxResult, "bin.rdx");
+          if (RecurrenceDescriptor::isMinMaxRecurrenceKind(RK))
+            RdxResult = createMinMaxOp(Builder, RK, RdxResult, RdxPart);
+          else
+            RdxResult = Builder.CreateBinOp(
+                (Instruction::BinaryOps)RecurrenceDescriptor::getOpcode(RK),
+                RdxPart, RdxResult, "bin.rdx");
         }
         NeedToFixLCSSA = true;
         for (Instruction *RdxPart : PartialReductions)
@@ -1713,11 +1716,9 @@ llvm::canParallelizeReductionWhenUnrolling(PHINode &Phi, Loop *L,
     return std::nullopt;
   RecurKind RK = RdxDesc.getRecurrenceKind();
   // Skip unsupported reductions.
-  // TODO: Handle additional reductions, including FP and min-max
-  // reductions.
+  // TODO: Handle any-of and find-last reductions.
   if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RK) ||
-      RecurrenceDescriptor::isFindRecurrenceKind(RK) ||
-      RecurrenceDescriptor::isMinMaxRecurrenceKind(RK))
+      RecurrenceDescriptor::isFindRecurrenceKind(RK))
     return std::nullopt;
 
   if (RdxDesc.hasExactFPMath())
@@ -1726,18 +1727,21 @@ llvm::canParallelizeReductionWhenUnrolling(PHINode &Phi, Loop *L,
   if (RdxDesc.IntermediateStore)
     return std::nullopt;
 
+  BasicBlock *Latch = L->getLoopLatch();
+  if (!Latch)
+    return std::nullopt;
+  Instruction *LatchInst =
+      cast<Instruction>(Phi.getIncomingValueForBlock(Latch));
   // Don't unroll reductions with constant ops; those can be folded to a
-  // single induction update.
-  if (any_of(cast<Instruction>(Phi.getIncomingValueForBlock(L->getLoopLatch()))
-                 ->operands(),
-             IsaPred<Constant>))
+  // single induction update. For calls (e.g. fmuladd or min/max
+  // intrinsics), the called function is itself a Constant operand and is
+  // not a reduction operand, so restrict the check to the argument list.
+  auto Ops = isa<CallBase>(LatchInst) ? cast<CallBase>(LatchInst)->args()
+                                      : LatchInst->operands();
+  if (any_of(Ops, IsaPred<Constant>))
     return std::nullopt;
 
-  BasicBlock *Latch = L->getLoopLatch();
-  if (!Latch ||
-      !is_contained(
-          cast<Instruction>(Phi.getIncomingValueForBlock(Latch))->operands(),
-          &Phi))
+  if (!is_contained(LatchInst->operands(), &Phi))
     return std::nullopt;
 
   return RdxDesc;

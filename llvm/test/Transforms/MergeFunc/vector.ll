@@ -64,5 +64,3 @@ declare noalias ptr @_Znwm(i64)
 declare void @_ZNSt6vectorIlSaIlEE13_M_insert_auxEN9__gnu_cxx17__normal_iteratorIPlS1_EERKl(ptr nocapture %this, ptr %__position.coerce, ptr nocapture %__x) align 2
 
 declare void @_GLOBAL__I_a()
-
-declare %0 @llvm.uadd.with.overflow.i64(i64, i64) nounwind readnone

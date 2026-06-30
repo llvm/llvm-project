@@ -20,6 +20,7 @@ static_library("IR") {
     "AutoUpgrade.cpp",
     "BasicBlock.cpp",
     "BuiltinGCs.cpp",
+    "BundleAttributes.cpp",
     "Comdat.cpp",
     "ConstantFPRange.cpp",
     "ConstantFold.cpp",
@@ -94,5 +95,6 @@ static_library("IR") {
     "ValueSymbolTable.cpp",
     "VectorTypeUtils.cpp",
     "Verifier.cpp",
+    "VerifierAMDGPU.cpp",
   ]
 }

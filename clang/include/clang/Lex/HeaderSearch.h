@@ -21,6 +21,7 @@
 #include "clang/Lex/ModuleMap.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -287,7 +288,7 @@ class HeaderSearch {
   size_t NormalizedModuleCachePathLen = 0;
 
   /// All the preprocessor-specific data about files that are included.
-  mutable llvm::DenseMap<FileEntryRef, HeaderFileInfo> FileInfo;
+  mutable llvm::MapVector<FileEntryRef, HeaderFileInfo> FileInfo;
 
   /// Keeps track of each lookup performed by LookupFile.
   struct LookupFileCacheInfo {

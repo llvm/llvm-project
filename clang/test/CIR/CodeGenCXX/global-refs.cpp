@@ -1,8 +1,8 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir -mmlir --mlir-print-ir-before=cir-lowering-prepare %s -o %t.cir 2> %t-before.cir
 // RUN: FileCheck %s --input-file=%t-before.cir --check-prefixes=CIR,CIR-BEFORE
 // RUN: FileCheck %s --input-file=%t.cir --check-prefixes=CIR,CIR-AFTER
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o - | FileCheck %s --check-prefixes=LLVM
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefixes=LLVM
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o - | FileCheck %s --check-prefixes=LLVM,LLVMCIR
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefixes=LLVM,OGCG
 
 struct DefCtor{};
 struct WithCtor{
@@ -32,17 +32,22 @@ const int &constGlobalIntRef = 5;
 // LLVM: @constGlobalIntRef = constant ptr @_ZGR17constGlobalIntRef_, align 8
 
 DefCtor defCtor{};
-// CIR: cir.global external @defCtor = #cir.undef : !rec_DefCtor {alignment = 1 : i64}
-// LLVM: @defCtor = global %struct.DefCtor undef, align 1
+// FIXME(cir): Classic-codegen leaves this as undef, but we don't differentiate
+// between padding and not defined fields in lowering. IF this ends up being
+// necessary, we should do it here.
+// CIR: cir.global external @defCtor = #cir.zero : !rec_DefCtor {alignment = 1 : i64}
+// LLVMCIR: @defCtor = global %struct.DefCtor zeroinitializer, align 1
+// OGCG: @defCtor = global %struct.DefCtor undef, align 1
 
 DefCtor &defCtorRef = defCtor;
 // CIR: cir.global constant external @defCtorRef = #cir.global_view<@defCtor> : !cir.ptr<!rec_DefCtor> {alignment = 8 : i64}
 // LLVM: @defCtorRef = constant ptr @defCtor, align 8
 
 const DefCtor &constDefCtorRef{};
-// CIR: cir.global "private" constant internal @_ZGR15constDefCtorRef_ = #cir.undef : !rec_DefCtor {alignment = 1 : i64}
+// CIR: cir.global "private" constant internal @_ZGR15constDefCtorRef_ = #cir.zero : !rec_DefCtor {alignment = 1 : i64}
 // CIR: cir.global constant external @constDefCtorRef = #cir.global_view<@_ZGR15constDefCtorRef_> : !cir.ptr<!rec_DefCtor> {alignment = 8 : i64}
-// LLVM: @_ZGR15constDefCtorRef_ = {{.*}}constant %struct.DefCtor undef, align 1
+// LLVMCIR: @_ZGR15constDefCtorRef_ = {{.*}}constant %struct.DefCtor zeroinitializer, align 1
+// OGCG: @_ZGR15constDefCtorRef_ = {{.*}}constant %struct.DefCtor undef, align 1
 // LLVM: @constDefCtorRef = constant ptr @_ZGR15constDefCtorRef_, align 8
 
 WithCtor withCtor{};
@@ -115,7 +120,7 @@ WithCtorDtor withCtorDtor{};
 // CIR-AFTER-NEXT:   %[[VOID_FN_PTR:.*]] = cir.cast bitcast %[[GET_DTOR]] : !cir.ptr<!cir.func<(!cir.ptr<!rec_WithCtorDtor>)>> -> !cir.ptr<!cir.func<(!cir.ptr<!void>)>>
 // CIR-AFTER-NEXT:   %[[GLOB_TO_VOID:.*]] = cir.cast bitcast %[[GET_GLOB]] : !cir.ptr<!rec_WithCtorDtor> -> !cir.ptr<!void>
 // CIR-AFTER-NEXT:   %[[DSO_HANDLE:.*]] = cir.get_global @__dso_handle : !cir.ptr<i8>
-// CIR-AFTER-NEXT:   cir.call @__cxa_atexit(%[[VOID_FN_PTR]], %[[GLOB_TO_VOID]], %[[DSO_HANDLE]]) : (!cir.ptr<!cir.func<(!cir.ptr<!void>)>>, !cir.ptr<!void>, !cir.ptr<i8>{{.*}}) -> ()
+// CIR-AFTER-NEXT:   cir.call @__cxa_atexit(%[[VOID_FN_PTR]], %[[GLOB_TO_VOID]], %[[DSO_HANDLE]]) : (!cir.ptr<!cir.func<(!cir.ptr<!void>)>>, !cir.ptr<!void>, !cir.ptr<i8>{{.*}}) -> !s32i
 // CIR-AFTER-NEXT:   cir.return
 // CIR-AFTER-NEXT: }
 // LLVM: @withCtorDtor = global %struct.WithCtorDtor zeroinitializer, align 1
@@ -133,7 +138,7 @@ void use() {
   // CIR-LABEL: cir.func{{.*}}use
 
   WithCtor &local = ExternRef;
-  // CIR-NEXT: %[[LOCAL:.*]] = cir.alloca !cir.ptr<!rec_WithCtor>, !cir.ptr<!cir.ptr<!rec_WithCtor>>, ["local", init, const]
+  // CIR-NEXT: %[[LOCAL:.*]] = cir.alloca "local" {{.*}} init const : !cir.ptr<!cir.ptr<!rec_WithCtor>>
   // CIR-NEXT: %[[EXT_REF:.*]] = cir.get_global @ExternRef : !cir.ptr<!cir.ptr<!rec_WithCtor>>
   // CIR-NEXT: %[[EXT_REF_LOAD:.*]] = cir.load %[[EXT_REF]] : !cir.ptr<!cir.ptr<!rec_WithCtor>>, !cir.ptr<!rec_WithCtor>
   // CIR-NEXT: cir.store{{.*}}%[[EXT_REF_LOAD]], %[[LOCAL]]

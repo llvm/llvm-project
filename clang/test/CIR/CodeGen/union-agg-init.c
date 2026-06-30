@@ -10,12 +10,15 @@ typedef union vec3 {
   double component[3];
 } vec3;
 
+// LLVMCIR: @__const.ret_outer.__retval = {{.*}}%struct.outer { %union.needs_padding zeroinitializer, i32 1 }
 // OGCG: @__const.ret_outer.o = {{.*}}{ { i32, [4 x i8] }, i32, [4 x i8] } { { i32, [4 x i8] } zeroinitializer, i32 1, [4 x i8] zeroinitializer }
+
+// CIR: cir.global "private" constant cir_private @__const.ret_outer.__retval = #cir.const_record<{#cir.zero : !rec_needs_padding, #cir.int<1> : !s32i}> : !rec_outer
 
 // In C mode, this does do zero padding.
 vec3 ret_vec3() {
   // CIR-LABEL: ret_vec3
-  // CIR: %[[RET_ALLOCA:.*]] = cir.alloca !rec_vec3, !cir.ptr<!rec_vec3>, ["__retval"]
+  // CIR: %[[RET_ALLOCA:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!rec_vec3>
   // CIR: %[[GET_ANON:.*]] = cir.get_member %[[RET_ALLOCA]][0] {name = ""}
   // CIR: %[[GET_X:.*]] = cir.get_member %[[GET_ANON]][0] {name = "x"}
   // CIR: %[[FIVE:.*]] = cir.const #cir.fp<5.{{.*}}> : !cir.double
@@ -53,13 +56,11 @@ struct outer ret_outer() {
   return o;
 
   // CIR-LABEL: ret_outer
-  // CIR: %[[RET_ALLOCA:.*]] = cir.alloca !rec_outer, !cir.ptr<!rec_outer>, ["__retval", init]
-  // CIR: %[[BITCAST:.*]] = cir.cast bitcast %0 : !cir.ptr<!rec_outer> -> !cir.ptr<!{{.*}}>
-  // CIR: %[[RECORD:.*]] = cir.const #cir.const_record<{#cir.zero : !{{.*}}, #cir.int<1> : !s32i, #cir.const_array<[#cir.zero : !u8i, #cir.zero : !u8i, #cir.zero : !u8i, #cir.zero : !u8i]> : !cir.array<!u8i x 4>}> 
-  // CIR: cir.store {{.*}}%[[RECORD]], %[[BITCAST]] 
+  // CIR: %[[RET_ALLOCA:.*]] = cir.alloca "__retval" {{.*}} init : !cir.ptr<!rec_outer>
+  // CIR: %[[GET_GLOB:.*]] = cir.get_global @__const.ret_outer.__retval : !cir.ptr<!rec_outer>
+  // CIR: cir.copy %[[GET_GLOB]] to %[[RET_ALLOCA]] : !cir.ptr<!rec_outer>
 
   // LLVM-LABEL: ret_outer
   // LLVM: %[[RET_ALLOCA:.*]] = alloca %struct.outer
-  // LLVMCIR: store { { i32, [4 x i8] }, i32, [4 x i8] } { { i32, [4 x i8] } zeroinitializer, i32 1, [4 x i8] zeroinitializer }, ptr %[[RET_ALLOCA]]
-  // OGCG: call void @llvm.memcpy{{.*}}(ptr{{.*}}%[[RET_ALLOCA]], ptr {{.*}}@__const.ret_outer.o, i64 16, i1 false)
+  // LLVM: call void @llvm.memcpy.p0.p0.i64(ptr {{.*}}%[[RET_ALLOCA]], ptr {{.*}}@__const.ret_outer.{{.*}}, i64 16, i1 false)
 }

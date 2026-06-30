@@ -2720,6 +2720,33 @@ llvm.func @omp_atomic_compare(
 
 // -----
 
+// CHECK-LABEL: @omp_atomic_compare_weak
+// CHECK-SAME: (ptr %[[X:.*]], i32 %[[E:.*]], i32 %[[D:.*]])
+llvm.func @omp_atomic_compare_weak(%x : !llvm.ptr, %e : i32, %d : i32) {
+  // Integer equality with weak  →  cmpxchg weak
+  // CHECK: cmpxchg weak ptr %[[X]], i32 %[[E]], i32 %[[D]] monotonic monotonic
+  omp.atomic.compare %x : !llvm.ptr {
+  ^bb0(%xval : i32):
+    %cmp = llvm.icmp "eq" %xval, %e : i32
+    %sel = llvm.select %cmp, %d, %xval : i1, i32
+    omp.yield(%sel : i32)
+  } {weak}
+
+  // Integer equality with weak + seq_cst  →  cmpxchg weak + flush
+  // CHECK: cmpxchg weak ptr %[[X]], i32 %[[E]], i32 %[[D]] seq_cst seq_cst
+  // CHECK: call void @__kmpc_flush(ptr @{{.*}})
+  omp.atomic.compare memory_order(seq_cst) %x : !llvm.ptr {
+  ^bb0(%xval : i32):
+    %cmp = llvm.icmp "eq" %xval, %e : i32
+    %sel = llvm.select %cmp, %d, %xval : i1, i32
+    omp.yield(%sel : i32)
+  } {weak}
+
+  llvm.return
+}
+
+// -----
+
 // CHECK-LABEL: @omp_atomic_compare_float_neg_zero
 // CHECK-SAME: (ptr %[[XF:.*]], float %[[EF:.*]], float %[[DF:.*]])
 // Verify NaN guard + ±0.0 handling.

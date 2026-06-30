@@ -50,6 +50,8 @@
 ; CHECK-NEXT:   experimental-zvqwdota8i          - 'Zvqwdota8i' (8-bit Integer Dot-Product).
 ; CHECK-NEXT:   experimental-zvvfmm              - 'Zvvfmm' (Floating-Point Matrix Multiply-Accumulate).
 ; CHECK-NEXT:   experimental-zvvmm               - 'Zvvmm' (Integer Matrix Multiply-Accumulate).
+; CHECK-NEXT:   experimental-zvvmtls             - 'Zvvmtls' (Matrix Tile Load/Store).
+; CHECK-NEXT:   experimental-zvvmttls            - 'Zvvmttls' (Transposing Matrix Tile Load/Store).
 ; CHECK-NEXT:   experimental-zvzip               - 'Zvzip' (Vector Reordering Structured Data).
 ; CHECK-NEXT:   f                                - 'F' (Single-Precision Floating-Point).
 ; CHECK-NEXT:   forced-atomics                   - Assume that lock-free native-width atomics are available.
@@ -327,7 +329,7 @@
 ; CHECK-NEXT:   zihintpause                      - 'Zihintpause' (Pause Hint).
 ; CHECK-NEXT:   zihpm                            - 'Zihpm' (Hardware Performance Counters).
 ; CHECK-NEXT:   zilsd                            - 'Zilsd' (Load/Store Pair Instructions).
-; CHECK-NEXT:   zilsd-4byte-align                - Allow 4-byte alignment for Zilsd LD/SD instructions.
+; CHECK-NEXT:   zilsd-word-align                 - Allow 4-byte alignment for Zilsd LD/SD instructions.
 ; CHECK-NEXT:   zimop                            - 'Zimop' (May-Be-Operations).
 ; CHECK-NEXT:   zk                               - 'Zk' (Standard scalar cryptography extension).
 ; CHECK-NEXT:   zkn                              - 'Zkn' (NIST Algorithm Suite).

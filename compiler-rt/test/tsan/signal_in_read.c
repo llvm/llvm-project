@@ -1,4 +1,5 @@
 // RUN: %clang_tsan -O1 %s -o %t && %run %t 2>&1 | FileCheck %s
+// RUN: %clang_tsan -O1 -D_FORTIFY_SOURCE=3 %s -o %t.fortify && %run %t.fortify 2>&1 | FileCheck %s
 
 #include "test.h"
 

@@ -33,6 +33,7 @@ define void @reverse_unmasked_load_feeds_address(ptr noalias %src, i64 %n) {
 ; CHECK-NEXT:      EMIT ir<%cmp> = fcmp oeq ir<%val>, ir<0.000000e+00>
 ; CHECK-NEXT:      EMIT ir<%ptr.sel> = select ir<%cmp>, ir<@tbl.a>, ir<@tbl.b>
 ; CHECK-NEXT:      REPLICATE store ir<1.000000e+00>, ir<%ptr.sel>
+; CHECK-NEXT:      EMIT ir<%iv.next> = add ir<%iv>, ir<-1>
 ; CHECK-NEXT:      EMIT ir<%ec> = icmp eq ir<%iv>, ir<0>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
@@ -170,6 +171,78 @@ loop:
   store double %v, ptr %p, align 8
   %iv.next = add i64 %iv, 1
   %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; The load's value feeds the loop mask (via fcmp), and the mask reaches an
+; address computation only through the mask operand
+define void @load_feeds_mask_reaching_address(ptr noalias %src, ptr noalias %dst) {
+; CHECK-LABEL: VPlan for loop in 'load_feeds_mask_reaching_address'
+; CHECK:  VPlan ' for UF>=1' {
+; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
+; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
+; CHECK-NEXT:  Live-in vp<[[VP2:%[0-9]+]]> = vector-trip-count
+; CHECK-NEXT:  Live-in ir<1024> = original trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<entry>:
+; CHECK-NEXT:  Successor(s): scalar.ph, vector.ph
+; CHECK-EMPTY:
+; CHECK-NEXT:  vector.ph:
+; CHECK-NEXT:  Successor(s): vector loop
+; CHECK-EMPTY:
+; CHECK-NEXT:  <x1> vector loop: {
+; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = CANONICAL-IV
+; CHECK-EMPTY:
+; CHECK-NEXT:    vector.body:
+; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VP0]]>
+; CHECK-NEXT:      EMIT ir<%gep> = getelementptr ir<%src>, ir<%iv>
+; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = vector-pointer ir<%gep>, ir<1>
+; CHECK-NEXT:      WIDEN ir<%val> = load vp<[[VP4]]>
+; CHECK-NEXT:      EMIT ir<%cmp> = fcmp ole ir<0.000000e+00>, ir<%val>
+; CHECK-NEXT:    Successor(s): then
+; CHECK-EMPTY:
+; CHECK-NEXT:    then:
+; CHECK-NEXT:      EMIT ir<%idx> = add ir<%iv>, ir<1>, ir<%cmp>
+; CHECK-NEXT:      EMIT ir<%gep2> = getelementptr ir<@tbl.a>, ir<%idx>
+; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer ir<%gep2>, ir<1>
+; CHECK-NEXT:      WIDEN ir<%val2> = load vp<[[VP5]]>, ir<%cmp>
+; CHECK-NEXT:      REPLICATE store ir<%val2>, ir<%dst>, ir<%cmp>
+; CHECK-NEXT:    Successor(s): latch
+; CHECK-EMPTY:
+; CHECK-NEXT:    latch:
+; CHECK-NEXT:      EMIT ir<%iv.next> = add ir<%iv>, ir<1>
+; CHECK-NEXT:      EMIT ir<%ec> = icmp eq ir<%iv.next>, ir<1024>
+; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
+; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
+; CHECK-NEXT:    No successors
+; CHECK-NEXT:  }
+; CHECK-NEXT:  Successor(s): middle.block
+; CHECK-EMPTY:
+; CHECK-NEXT:  middle.block:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %latch ]
+  %gep = getelementptr double, ptr %src, i64 %iv
+  %val = load double, ptr %gep, align 8
+  %cmp = fcmp ole double 0.000000e+00, %val
+  br i1 %cmp, label %then, label %latch
+
+then:
+  %idx = add i64 %iv, 1
+  %gep2 = getelementptr double, ptr @tbl.a, i64 %idx
+  %val2 = load double, ptr %gep2, align 8
+  store double %val2, ptr %dst, align 8
+  br label %latch
+
+latch:
+  %iv.next = add i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 1024
   br i1 %ec, label %exit, label %loop
 
 exit:

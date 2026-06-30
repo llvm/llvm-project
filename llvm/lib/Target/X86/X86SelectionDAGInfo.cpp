@@ -374,7 +374,7 @@ static SDValue emitConstantSizeRepmov(
       Chain, dl,
       DAG.getNode(ISD::ADD, dl, DstVT, Dst, DAG.getConstant(Offset, dl, DstVT)),
       DAG.getNode(ISD::ADD, dl, SrcVT, Src, DAG.getConstant(Offset, dl, SrcVT)),
-      DAG.getConstant(BytesLeft, dl, SizeVT), Alignment, isVolatile,
+      DAG.getConstant(BytesLeft, dl, SizeVT), Alignment, Alignment, isVolatile,
       /*AlwaysInline*/ true, /*CI=*/nullptr, std::nullopt,
       DstPtrInfo.getWithOffset(Offset), SrcPtrInfo.getWithOffset(Offset)));
   return DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Results);
@@ -382,8 +382,9 @@ static SDValue emitConstantSizeRepmov(
 
 SDValue X86SelectionDAGInfo::EmitTargetCodeForMemcpy(
     SelectionDAG &DAG, const SDLoc &dl, SDValue Chain, SDValue Dst, SDValue Src,
-    SDValue Size, Align Alignment, bool isVolatile, bool AlwaysInline,
-    MachinePointerInfo DstPtrInfo, MachinePointerInfo SrcPtrInfo) const {
+    SDValue Size, Align DstAlign, Align SrcAlign, bool isVolatile,
+    bool AlwaysInline, MachinePointerInfo DstPtrInfo,
+    MachinePointerInfo SrcPtrInfo) const {
   const X86Subtarget &Subtarget =
       DAG.getMachineFunction().getSubtarget<X86Subtarget>();
 
@@ -407,12 +408,14 @@ SDValue X86SelectionDAGInfo::EmitTargetCodeForMemcpy(
   if (UseFSRMForMemcpy && Subtarget.hasFSRM())
     return emitRepmovs(Subtarget, DAG, dl, Chain, Dst, Src, Size, MVT::i8);
 
-  /// Handle constant sizes
-  if (ConstantSDNode *ConstantSize = dyn_cast<ConstantSDNode>(Size))
+  // Handle constant sizes
+  if (ConstantSDNode *ConstantSize = dyn_cast<ConstantSDNode>(Size)) {
+    Align Alignment = std::min(DstAlign, SrcAlign);
     return emitConstantSizeRepmov(DAG, Subtarget, dl, Chain, Dst, Src,
                                   ConstantSize->getZExtValue(),
                                   Size.getValueType(), Alignment, isVolatile,
                                   AlwaysInline, DstPtrInfo, SrcPtrInfo);
+  }
 
   return SDValue();
 }

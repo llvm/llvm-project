@@ -1,4 +1,4 @@
-; RUN: llc --filetype=asm %s -o - | FileCheck %s
+; RUN: llc %s -o - | FileCheck %s
 target triple = "dxil-unknown-shadermodel6.7-library"
 
 define float @fmaf(float %x, float %y, float %z) !dbg !4 {

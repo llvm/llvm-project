@@ -1067,6 +1067,45 @@ func.func @step_size1() -> vector<1xindex> {
 
 module attributes {
   spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.0, [Int8, Shader], []>, #spirv.resource_limits<>>
+  } {
+
+// CHECK-LABEL: @step_i8()
+//       CHECK:   %[[CST0:.*]] = spirv.Constant 0 : i8
+//       CHECK:   %[[CST1:.*]] = spirv.Constant 1 : i8
+//       CHECK:   %[[CST2:.*]] = spirv.Constant 2 : i8
+//       CHECK:   %[[CST3:.*]] = spirv.Constant 3 : i8
+//       CHECK:   %[[CONSTRUCT:.*]] = spirv.CompositeConstruct %[[CST0]], %[[CST1]], %[[CST2]], %[[CST3]] : (i8, i8, i8, i8) -> vector<4xi8>
+//       CHECK:   return %[[CONSTRUCT]] : vector<4xi8>
+func.func @step_i8() -> vector<4xi8> {
+  %0 = vector.step : vector<4xi8>
+  return %0 : vector<4xi8>
+}
+
+}
+
+// -----
+
+module attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.0, [Int16, Shader], []>, #spirv.resource_limits<>>
+  } {
+
+// CHECK-LABEL: @step_size1_i16()
+//       CHECK:   %[[CST0:.*]] = spirv.Constant 0 : i16
+//       CHECK:   %[[CAST:.*]] = builtin.unrealized_conversion_cast %[[CST0]] : i16 to vector<1xi16>
+//       CHECK:   return %[[CAST]] : vector<1xi16>
+func.func @step_size1_i16() -> vector<1xi16> {
+  %0 = vector.step : vector<1xi16>
+  return %0 : vector<1xi16>
+}
+
+}
+
+// -----
+
+module attributes {
+  spirv.target_env = #spirv.target_env<
     #spirv.vce<v1.0, [Shader], [SPV_KHR_storage_buffer_storage_class]>, #spirv.resource_limits<>>
   } {
 
@@ -1208,6 +1247,19 @@ func.func @vector_store_2d(%arg0 : memref<4x4xf32, #spirv.storage_class<StorageB
   %idx_0 = arith.constant 0 : index
   %idx_1 = arith.constant 1 : index
   vector.store %arg1, %arg0[%idx_0, %idx_1] : memref<4x4xf32, #spirv.storage_class<StorageBuffer>>, vector<4xf32>
+  return
+}
+
+// CHECK-LABEL: @vector_store_index
+//  CHECK-SAME: (%[[ARG0:.*]]: memref<4xindex, #spirv.storage_class<StorageBuffer>>
+//  CHECK-SAME:  %[[ARG1:.*]]: vector<4xindex>
+//       CHECK:   %[[S0:.+]] = builtin.unrealized_conversion_cast %[[ARG0]] : memref<4xindex, #spirv.storage_class<StorageBuffer>> to !spirv.ptr<!spirv.struct<(!spirv.array<4 x i32, stride=4> [0])>, StorageBuffer>
+//       CHECK:   %[[S1:.+]] = builtin.unrealized_conversion_cast %[[ARG1]] : vector<4xindex> to vector<4xi32>
+//       CHECK:   %[[S5:.+]] = spirv.Bitcast %{{.+}} : !spirv.ptr<i32, StorageBuffer> to !spirv.ptr<vector<4xi32>, StorageBuffer>
+//       CHECK:   spirv.Store "StorageBuffer" %[[S5]], %[[S1]] : vector<4xi32>
+func.func @vector_store_index(%arg0 : memref<4xindex, #spirv.storage_class<StorageBuffer>>, %arg1 : vector<4xindex>) {
+  %idx = arith.constant 0 : index
+  vector.store %arg1, %arg0[%idx] : memref<4xindex, #spirv.storage_class<StorageBuffer>>, vector<4xindex>
   return
 }
 
