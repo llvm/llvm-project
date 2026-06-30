@@ -1516,6 +1516,9 @@ bool VectorCombine::foldExtractedCmps(Instruction &I) {
   if (!VecTy)
     return false;
 
+  if (Index0 >= VecTy->getNumElements() || Index1 >= VecTy->getNumElements())
+    return false;
+
   InstructionCost Ext0Cost =
       TTI.getVectorInstrCost(*Ext0, VecTy, CostKind, Index0);
   InstructionCost Ext1Cost =
@@ -3248,6 +3251,10 @@ bool VectorCombine::foldShufflesOfLengthChangingShuffles(Instruction &I) {
     ChainLength++;
   }
   if (ChainLength <= 1)
+    return false;
+
+  // Bail out if all leaves were poison.
+  if (!Y)
     return false;
 
   if (llvm::all_of(Mask, [&](int M) {

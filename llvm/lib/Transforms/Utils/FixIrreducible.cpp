@@ -298,10 +298,8 @@ static bool fixIrreducible(Cycle &C, CycleInfo &CI, DominatorTree &DT,
       LLVM_DEBUG(dbgs() << "Added internal branch: " << printBasicBlock(P)
                         << " -> " << printBasicBlock(Header) << '\n');
     } else if (CondBrInst *Branch = dyn_cast<CondBrInst>(P->getTerminator())) {
-      // Exactly one of the two successors is the header.
       BasicBlock *Succ0 = Branch->getSuccessor(0) == Header ? Header : nullptr;
-      BasicBlock *Succ1 = Succ0 ? nullptr : Header;
-      assert(Succ0 || Branch->getSuccessor(1) == Header);
+      BasicBlock *Succ1 = Branch->getSuccessor(1) == Header ? Header : nullptr;
       assert(Succ0 || Succ1);
       CHub.addBranch(P, Succ0, Succ1);
 
