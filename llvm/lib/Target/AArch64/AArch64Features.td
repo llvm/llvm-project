@@ -410,6 +410,9 @@ def FeatureRME : Extension<"rme", "RME", "FEAT_RME",
 
 def FeatureSME : ExtensionWithMArch<"sme", "SME", "FEAT_SME",
   "Enable Scalable Matrix Extension (SME)", [FeatureBF16, FeatureFullFP16]>;
+def FeatureMCAStreamingSched : SubtargetFeature<
+  "mca-streaming-sched", "MCAStreamingSched", "true",
+  "Enable streaming-SVE schedule predicates for MC analysis tools">;
 
 def FeatureSMEF64F64 : ExtensionWithMArch<"sme-f64f64", "SMEF64F64", "FEAT_SME_F64F64",
   "Enable Scalable Matrix Extension (SME) F64F64 instructions", [FeatureSME]>;
