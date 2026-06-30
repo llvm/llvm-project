@@ -10,6 +10,7 @@
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/Transforms/Patterns.h"
+#include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Transforms/Passes.h"
@@ -356,12 +357,10 @@ struct SgToLaneElementWise : public ConversionPattern {
 /// Distributes a subgroup-level arith ConstantOp to lane-level arith
 /// ConstantOp.
 ///
-/// Splat constants are distributed by simply rebuilding the splat with the
-/// lane-local vector type. Non-splat dense constants are distributed as :
-/// `computeDistributedCoords` yields the coordinates each lane owns, each
-/// element is extracted from the full (subgroup-level) constant, and the
-/// per-lane elements are assembled into the distributed vector with
-/// `vector.from_elements` (or `vector.broadcast` for a single element).
+/// Splat constants are rebuilt with the lane-local vector type. Non-splat
+/// constants are distributed by extracting the elements each lane owns from
+/// the full constant and assembling them with vector.from_elements (or
+/// vector.broadcast for a single element).
 struct SgToLaneArithConstant : public OpConversionPattern<arith::ConstantOp> {
   using OpConversionPattern<arith::ConstantOp>::OpConversionPattern;
 
@@ -420,12 +419,39 @@ struct SgToLaneArithConstant : public OpConversionPattern<arith::ConstantOp> {
 
     SmallVector<SmallVector<Value>> coordsVec = maybeCoordsVec.value();
     int64_t numElements = newResultType.getNumElements();
-    assert(static_cast<int64_t>(coordsVec.size()) == numElements &&
+
+    // computeDistributedCoords returns the block start each lane owns. With
+    // all-ones lane_data the block is a single element. Otherwise expand each
+    // block start into its lane_data-sized element coordinates (row-major, to
+    // match vector.from_elements below).
+    SmallVector<int64_t> laneData = layout.getEffectiveLaneDataAsInt();
+    bool unitLaneData =
+        llvm::all_of(laneData, [](int64_t d) { return d == 1; });
+
+    SmallVector<SmallVector<Value>> elementCoords;
+    if (unitLaneData) {
+      elementCoords = std::move(coordsVec);
+    } else {
+      SmallVector<int64_t> unitTile(laneData.size(), 1);
+      for (const SmallVector<Value> &start : coordsVec) {
+        for (SmallVector<int64_t> off :
+             StaticTileOffsetRange(laneData, unitTile)) {
+          SmallVector<Value> coord(start.size());
+          for (size_t i = 0; i < start.size(); ++i)
+            coord[i] = arith::AddIOp::create(
+                rewriter, loc, start[i],
+                arith::ConstantIndexOp::create(rewriter, loc, off[i]));
+          elementCoords.push_back(std::move(coord));
+        }
+      }
+    }
+
+    assert(static_cast<int64_t>(elementCoords.size()) == numElements &&
            "number of coordinate sets must match number of distributed "
            "elements");
 
     SmallVector<Value> elements;
-    for (auto &coords : coordsVec) {
+    for (auto &coords : elementCoords) {
       SmallVector<OpFoldResult> mixedPos = getAsOpFoldResult(coords);
       elements.push_back(vector::ExtractOp::create(
           rewriter, loc, fullConst.getResult(), mixedPos));
