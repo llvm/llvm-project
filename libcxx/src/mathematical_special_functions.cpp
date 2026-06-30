@@ -37,7 +37,7 @@
 #endif
 
 #define BOOST_MATH_NO_EXCEPTIONS
-#include <boost/math/special_functions.hpp>
+#include <boost/math/special_functions/laguerre.hpp>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
