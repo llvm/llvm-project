@@ -604,3 +604,194 @@ void template_read_never_instantiated(int *p [[ref_to_uninit]]) {
   int y = *p;
   (void)y;
 }
+
+// std::init / ref_to_uninit (paper §5): a pointer/reference member given a
+// *written* constructor member-initializer is checked with the enclosing
+// constructor as the Decl, so a class-template pattern defers and fires once at
+// instantiation, mirroring ctor_uninit_member. Both the parenthesized and the
+// braced member-initializer forms reach the same recognizer.
+struct CtorMemberPtrBad {
+  int *p1;
+  int *p2 [[ref_to_uninit]];
+  CtorMemberPtrBad() : p1(&g_uninit), p2(&g_init) {}
+  // expected-error@-1 {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  // expected-error@-2 {{pointer marked '[[ref_to_uninit]]' must refer to uninitialized memory under profile 'std::init'}}
+};
+
+struct CtorMemberPtrOK {
+  int *p;
+  int *q [[ref_to_uninit]];
+  CtorMemberPtrOK() : p(&g_init), q(&g_uninit) {} // OK
+};
+
+struct CtorMemberRefBad {
+  int &r;
+  int &s [[ref_to_uninit]];
+  CtorMemberRefBad() : r(g_uninit), s(g_init) {}
+  // expected-error@-1 {{reference to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  // expected-error@-2 {{reference marked '[[ref_to_uninit]]' must refer to uninitialized memory under profile 'std::init'}}
+};
+
+struct CtorMemberRefOK {
+  int &r;
+  int &s [[ref_to_uninit]];
+  CtorMemberRefOK() : r(g_init), s(g_uninit) {} // OK
+};
+
+// A braced member-initializer is looked through to its single element, exactly
+// like the variable-init site.
+struct CtorBracedPtr {
+  int *p;
+  CtorBracedPtr() : p{&g_uninit} {} // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+};
+
+struct CtorBracedRef {
+  int &r;
+  CtorBracedRef() : r{g_uninit} {} // expected-error {{reference to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+};
+
+// An out-of-line constructor definition is checked where it is defined; the
+// enclosing constructor is still the CurContext there.
+struct CtorOutOfLine {
+  int *p;
+  CtorOutOfLine();
+};
+CtorOutOfLine::CtorOutOfLine() : p(&g_uninit) {} // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+
+// Cast and call sources reach the recognizer at the member-init site too: a
+// cast of a [[ref_to_uninit]]-returning call propagates the marking.
+struct CtorCastSource {
+  int *p;
+  CtorCastSource() : p((int *)alloc_void()) {} // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+};
+
+struct CtorSuppressWhole {
+  int *p;
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  [[profiles::suppress(std::init)]] CtorSuppressWhole() : p(&g_uninit) {} // OK: suppressed
+};
+
+struct CtorSuppressRule {
+  int *p;
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  [[profiles::suppress(std::init, rule: "ref_to_uninit")]] CtorSuppressRule() : p(&g_uninit) {} // OK: suppressed
+};
+
+template <typename T>
+struct CtorTmpl {
+  int *p;
+  CtorTmpl() : p(&g_uninit) {} // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+};
+template struct CtorTmpl<int>; // expected-note {{in instantiation of member function 'CtorTmpl<int>::CtorTmpl' requested here}}
+
+// A never-instantiated class template stays silent: the deferred check never
+// runs on the pattern.
+template <typename T>
+struct CtorTmplNever {
+  int *p;
+  CtorTmplNever() : p(&g_uninit) {}
+};
+
+// A written pointer member-initializer that binds to uninitialized memory
+// yields exactly one ref_to_uninit error; the member is written, so
+// ctor_uninit_member does not also fire.
+struct NoDoubleFire {
+  int *p;
+  NoDoubleFire() : p(&g_uninit) {} // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+};
+
+// A pointer member left uninitialized is not a ref_to_uninit binding (there is
+// no written initializer) and yields only the ctor_uninit_member error.
+struct UninitMemberOnly {
+  int *p; // expected-note {{member 'p' declared here}}
+  UninitMemberOnly() {} // expected-error {{constructor does not initialize member 'p' under profile 'std::init'}}
+};
+
+// std::init / ref_to_uninit (paper §5): a pointer/reference field initialized
+// by an enclosing aggregate's init list is checked Decl-less, scoped to the
+// field subobject, so the enclosing variable/argument/return is left to its own
+// site (the variable site is not a pointer/reference here) and there is no
+// double diagnostic.
+struct AggPtr { int *p; };
+struct AggPtrMarked { int *p [[ref_to_uninit]]; };
+struct AggRef { int &r; };
+struct AggRefMarked { int &r [[ref_to_uninit]]; };
+
+void test_aggregate_pointer() {
+  AggPtr a1{&g_uninit};       // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  AggPtr a2{&g_init};          // OK
+  AggPtr a3 = {&g_uninit};     // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  AggPtrMarked m1{&g_init};    // expected-error {{pointer marked '[[ref_to_uninit]]' must refer to uninitialized memory under profile 'std::init'}}
+  AggPtrMarked m2{&g_uninit};  // OK
+  (void)a1; (void)a2; (void)a3; (void)m1; (void)m2;
+}
+
+void test_aggregate_reference() {
+  AggRef a1{g_uninit};         // expected-error {{reference to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  AggRef a2{g_init};            // OK
+  AggRefMarked m1{g_init};      // expected-error {{reference marked '[[ref_to_uninit]]' must refer to uninitialized memory under profile 'std::init'}}
+  AggRefMarked m2{g_uninit};    // OK
+  (void)a1; (void)a2; (void)m1; (void)m2;
+}
+
+void test_aggregate_designated() {
+  AggPtr a{.p = &g_uninit}; // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  AggPtr b{.p = &g_init};    // OK
+  (void)a; (void)b;
+}
+
+struct AggNested { AggPtr inner; };
+
+void test_aggregate_nested() {
+  AggNested a{{&g_uninit}}; // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  AggNested b{{&g_init}};    // OK
+  (void)a; (void)b;
+}
+
+// An aggregate temporary built from an init list is checked the same way
+// wherever it appears -- as a call argument, a return value, or a new-expression
+// initializer. The enclosing pointer (the parameter, the return type, the
+// new-expression result) is not a pointer/reference to the field's storage, so
+// only the field binding is diagnosed.
+void take_agg_ptr(AggPtr a);
+AggPtr make_agg_bad() { return {&g_uninit}; } // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+AggPtr make_agg_ok() { return {&g_init}; }     // OK
+
+void test_aggregate_temporary() {
+  take_agg_ptr(AggPtr{&g_uninit});   // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  take_agg_ptr(AggPtr{&g_init});      // OK
+  AggPtr *h = new AggPtr{&g_uninit}; // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  delete h;
+}
+
+void test_aggregate_suppress() {
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  [[profiles::suppress(std::init)]] AggPtr a{&g_uninit};                        // OK: whole-profile suppress
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  [[profiles::suppress(std::init, rule: "ref_to_uninit")]] AggPtr b{&g_uninit}; // OK: rule-targeted suppress
+  (void)a; (void)b;
+}
+
+// Aggregate field init inside a template body is non-dependent here, so it
+// defers on the pattern (a dependent context) and fires once at instantiation;
+// a never-instantiated template stays silent.
+template <typename T>
+void template_aggregate_bad() {
+  AggPtr a{&g_uninit}; // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  (void)a;
+}
+template void template_aggregate_bad<int>(); // expected-note {{in instantiation of function template specialization 'template_aggregate_bad<int>' requested here}}
+
+template <typename T>
+void template_aggregate_never() {
+  AggPtr a{&g_uninit};
+  (void)a;
+}
+
+// A plain pointer *variable* with a braced initializer is checked once at its
+// own variable site (EK_Variable); the aggregate field hooks are scoped to a
+// member subobject, so this fires exactly once with no new duplicate.
+void test_variable_braced_once() {
+  int *p{&g_uninit}; // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  (void)p;
+}
