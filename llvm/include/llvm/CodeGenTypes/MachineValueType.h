@@ -288,7 +288,7 @@ namespace llvm {
       MVT WideEltTy = getVectorElementType().widenIntegerElementType();
       MVT VecTy = MVT::getVectorVT(WideEltTy, getVectorElementCount());
       assert(VecTy.SimpleTy != MVT::INVALID_SIMPLE_VALUE_TYPE &&
-             "Simple vector VT not representable by simple integer vector VT!");
+             "Widening of this Vector Integer type not supported !");
       return VecTy;
 
     }
