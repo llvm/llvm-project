@@ -438,14 +438,18 @@ private:
     if (!GenLRepl)
       return GenSE.getAddRecExpr(NewOps, L, E->getNoWrapFlags());
 
-    // evaluateAtIteration replaces the SCEVAddrExpr with a direct calculation.
+    // NewOps are already translated to GenSE terms by the visit() calls above,
+    // and GenLRepl belongs to GenSE, so Evaluated is fully a GenSE expression.
     const SCEV *Evaluated =
         SCEVAddRecExpr::evaluateAtIteration(NewOps, GenLRepl, GenSE);
 
-    // FIXME: This emits a SCEV for GenSE (since GenLRepl will refer to the
-    // induction variable of a generated loop), so we should not use SCEVVisitor
-    // with it. However, it still contains references to the SCoP region.
-    return visit(Evaluated);
+    // Do not call visit(Evaluated): visit() operates on original-SE SCEVs and
+    // remaps SCEVUnknown nodes via VMap. Applying it to an already-GenSE SCEV
+    // causes visitUnknown to miss the subfunction PHI in VMap, fall through to
+    // visitGenericInst, and recursively call expandCodeFor on operand SCEVs
+    // that contain the same SCEVAddRecExpr — infinite mutual recursion between
+    // visitAddRecExpr and visitUnknown. Return Evaluated directly instead.
+    return Evaluated;
   }
   ///}
 };
