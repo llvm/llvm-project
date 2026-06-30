@@ -67,3 +67,28 @@ EXIT1:
 EXIT2:
   ret i32 1
 }
+
+
+define i32 @PR197725() {
+; CHECK-LABEL: @PR197725(
+; CHECK-NEXT:  exit:
+; CHECK-NEXT:    [[NOT:%.*]] = xor i32 1, 1
+; CHECK-NEXT:    ret i32 1
+;
+entry:
+  br i1 false, label %loop2, label %loop1
+
+loop1:                                         ; preds = %loop2, %entry
+  %cond = phi i1 [ %tobool, %loop2 ], [ false, %entry ]
+  %val = phi i32 [ %not_phi, %loop2 ], [ 0, %entry ]
+  %not = xor i32 %val, 1
+  br i1 %cond, label %exit, label %loop2
+
+exit:                                         ; preds = %loop2
+  ret i32 %val
+
+loop2:                                         ; preds = %loop1, %entry
+  %not_phi = phi i32 [ %not, %loop1 ], [ 0, %entry ]
+  %tobool = icmp ne i8 1, 0
+  br label %loop1
+}
