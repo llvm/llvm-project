@@ -318,6 +318,14 @@ New checks
   Checks for presence or absence of trailing commas in enum definitions and
   initializer lists.
 
+- New :doc:`portability-avoid-platform-specific-fundamental-types
+  <clang-tidy/checks/portability/avoid-platform-specific-fundamental-types>` 
+  check.
+
+  Detects fundamental types (``int``, ``short``, ``long``, ``long long``,
+  ``char``, ``float``, etc) and warns against their use due to 
+  platform-dependent behavior.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
