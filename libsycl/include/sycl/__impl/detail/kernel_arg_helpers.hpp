@@ -127,12 +127,6 @@ public:
     return __spirv::initBuiltInGlobalInvocationId<Dims, id<Dims>>();
   }
 
-  /// \return the work group currently being operated on by the device.
-  template <int Dims> static const group<Dims> getElement(group<Dims> *) {
-    static_assert(isValidDimensions<Dims>, "invalid dimensions");
-    return group<Dims>();
-  }
-
   /// \return the nd_item currently being operated on by the device.
   template <int Dims> static const nd_item<Dims> getElement(nd_item<Dims> *) {
     static_assert(isValidDimensions<Dims>, "invalid dimensions");

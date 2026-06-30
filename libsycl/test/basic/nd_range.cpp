@@ -3,6 +3,7 @@
 
 #include <sycl/sycl.hpp>
 
+#include <cassert>
 #include <iostream>
 
 int main() {

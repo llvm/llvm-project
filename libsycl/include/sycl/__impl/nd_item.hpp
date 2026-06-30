@@ -43,7 +43,7 @@ public:
   nd_item &operator=(const nd_item &rhs) = default;
   nd_item &operator=(nd_item &&rhs) = default;
 
-  friend bool operator==(const nd_item &lhs, const nd_item &rhs) {
+  friend bool operator==(const nd_item &, const nd_item &) {
     // https://github.com/KhronosGroup/SYCL-Docs/issues/532
     return true;
   }

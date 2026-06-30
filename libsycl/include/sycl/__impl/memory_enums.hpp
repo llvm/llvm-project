@@ -16,6 +16,8 @@
 
 #include <sycl/__impl/detail/config.hpp>
 
+#include <cstdint>
+
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
 enum class memory_scope : std::uint32_t {
