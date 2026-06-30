@@ -576,6 +576,76 @@ DWARF:
       llvm::Failed());
 }
 
+TEST(DWARFExpression, TypedBinaryOpsRejectMismatchedTypes) {
+  class TypedDwarfDelegate : public MockDwarfDelegate {
+  public:
+    enum : uint8_t {
+      UnsignedChar = 1,
+      SignedChar = 2,
+      UnsignedShort = 3,
+    };
+
+    llvm::Expected<std::pair<uint64_t, bool>>
+    GetDIEBitSizeAndSign(uint64_t relative_die_offset) const override {
+      switch (relative_die_offset) {
+      case UnsignedChar:
+        return std::pair<uint64_t, bool>{8, false};
+      case SignedChar:
+        return std::pair<uint64_t, bool>{8, true};
+      case UnsignedShort:
+        return std::pair<uint64_t, bool>{16, false};
+      default:
+        return llvm::createStringError("unknown base type offset");
+      }
+    }
+  };
+
+  TypedDwarfDelegate unit;
+  constexpr uint8_t opcodes[] = {
+      DW_OP_plus, DW_OP_minus, DW_OP_div, DW_OP_mod, DW_OP_mul,  DW_OP_and,
+      DW_OP_or,   DW_OP_xor,   DW_OP_shl, DW_OP_shr, DW_OP_shra, DW_OP_lt,
+      DW_OP_le,   DW_OP_gt,    DW_OP_ge,  DW_OP_eq,  DW_OP_ne,
+  };
+
+  for (uint8_t opcode : opcodes) {
+    std::vector<uint8_t> expr = {DW_OP_constu,
+                                 0xff,
+                                 0x01,
+                                 DW_OP_convert,
+                                 TypedDwarfDelegate::UnsignedChar,
+                                 DW_OP_lit1,
+                                 DW_OP_convert,
+                                 TypedDwarfDelegate::UnsignedShort,
+                                 opcode,
+                                 DW_OP_stack_value};
+    EXPECT_THAT_EXPECTED(Evaluate(expr, {}, &unit), llvm::Failed())
+        << "opcode 0x" << llvm::utohexstr(opcode);
+  }
+
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_constu, 0xff, 0x01, DW_OP_convert,
+                TypedDwarfDelegate::UnsignedChar, DW_OP_lit1, DW_OP_convert,
+                TypedDwarfDelegate::SignedChar, DW_OP_plus, DW_OP_stack_value},
+               {}, &unit),
+      llvm::Failed());
+}
+
+TEST(DWARFExpression, GenericBinaryOpsAllowDifferentSignedness) {
+  // The DWARF generic type has unspecified signedness, so differently signed
+  // address-sized generic values are still compatible operands.
+  uint8_t expr[] = {DW_OP_lit8, DW_OP_consts, 4, DW_OP_minus,
+                    DW_OP_stack_value};
+  DataExtractor extractor(expr, sizeof(expr), lldb::eByteOrderLittle,
+                          /*addr_size*/ 8);
+  EXPECT_THAT_EXPECTED(
+      DWARFExpression::Evaluate(/*exe_ctx=*/nullptr, /*reg_ctx=*/nullptr,
+                                /*module_sp=*/{}, extractor,
+                                /*unit=*/nullptr, lldb::eRegisterKindLLDB,
+                                /*initial_value_ptr=*/nullptr,
+                                /*object_address_ptr=*/nullptr),
+      ExpectScalar(4));
+}
+
 TEST(DWARFExpression, DW_OP_stack_value) {
   EXPECT_THAT_EXPECTED(Evaluate({DW_OP_stack_value}), llvm::Failed());
 }
