@@ -88,11 +88,11 @@ else_branch:                                      ; preds = %bci_0
 ; CHECK-LABEL: else_branch:
 ; CHECK: gc.statepoint
 ; CHECK: gc.relocate
-; We need to end up with a single relocation phi updated from both paths
   call void @foo() [ "deopt"() ]
   br label %join
 
 join:                                             ; preds = %else_branch, %if_branch
+; We need to end up with a single relocation phi updated from both paths
 ; CHECK-LABEL: join:
 ; CHECK: phi ptr addrspace(1)
 ; CHECK-DAG: [ %arg.relocated, %if_branch ]
@@ -246,11 +246,11 @@ inner-loop:                                       ; preds = %inner-loop, %outer-
 
 outer-inc:                                        ; preds = %inner-loop
 ; CHECK-LABEL: outer-inc:
-; This test shows why updating just those uses of the original value being
-; relocated dominated by the inserted relocation is not always sufficient.
   br label %outer-loop
 }
 
+; This test shows why updating just those uses of the original value being
+; relocated dominated by the inserted relocation is not always sufficient.
 define ptr addrspace(1) @test7(ptr addrspace(1) %obj, ptr addrspace(1) %obj2, i1 %condition) gc "statepoint-example" {
 ; CHECK-LABEL: @test7
 entry:
@@ -269,6 +269,9 @@ join:                                             ; preds = %callbb, %entry
 ; CHECK: phi ptr addrspace(1)
 ; CHECK-DAG: [ %obj, %entry ]
 ; CHECK-DAG: [ %obj2.relocated, %callbb ]
+  ; This is a phi outside the dominator region of the new defs inserted by
+  ; the safepoint, BUT we can't stop the search here or we miss the second
+  ; phi below.
   %phi1 = phi ptr addrspace(1) [ %obj, %entry ], [ %obj2, %callbb ]
   br label %join2
 
