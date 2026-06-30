@@ -93,6 +93,18 @@ struct SimpleExecutorDylibManagerSymbolNames {
 extern const LLVM_ABI SimpleExecutorDylibManagerSymbolNames
     orc_rt_NativeDylibManagerSPSSymbols;
 
+/// Symbol names for the ORC runtime's StandaloneMachOUnwindInfoRegistrar
+/// SPS interface.
+struct MachOUnwindInfoRegistrarSymbolNames {
+  StringRef RegisterSectionsName;
+  StringRef DeregisterSectionsName;
+};
+
+/// Default symbol names for the ORC runtime's
+/// StandaloneMachOUnwindInfoRegistrar SPS interface.
+extern const LLVM_ABI MachOUnwindInfoRegistrarSymbolNames
+    orc_rt_MachOUnwindInfoRegistrarSPSSymbols;
+
 using SPSSimpleExecutorDylibManagerOpenSignature =
     shared::SPSExpected<shared::SPSExecutorAddr>(shared::SPSExecutorAddr,
                                                  shared::SPSString, uint64_t);

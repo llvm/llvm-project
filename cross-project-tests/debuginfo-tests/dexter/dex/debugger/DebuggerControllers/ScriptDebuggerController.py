@@ -128,7 +128,13 @@ class ScriptDebuggerController(DebuggerControllerBase):
                 for expect in where_match.active_expects
                 if (watch := expect.get_watched_expr())
             ]
-            self.debugger.collect_watches(step_info, watches)
+            scope_watches = [
+                scope_watch
+                for where_match in active_where_matches.values()
+                for expect in where_match.active_expects
+                if (scope_watch := expect.get_watched_scope())
+            ]
+            self.debugger.collect_watches(step_info, watches, scope_watches)
 
             active_thens = [
                 then

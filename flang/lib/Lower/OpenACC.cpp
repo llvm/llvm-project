@@ -3962,6 +3962,9 @@ genGlobalCtors(Fortran::lower::AbstractConverter &converter,
                mlir::acc::DataClause clause,
                Fortran::semantics::Symbol::Flag declareMappingFlag) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  const auto &langFeatures = converter.getFoldingContext().languageFeatures();
+  const bool managedMode =
+      langFeatures.IsEnabled(Fortran::common::LanguageFeature::CudaManaged);
   auto genCtors = [&](const mlir::Location operandLocation,
                       const Fortran::semantics::Symbol &symbol) {
     std::string globalName = converter.mangleName(symbol);
@@ -3998,10 +4001,15 @@ genGlobalCtors(Fortran::lower::AbstractConverter &converter,
     auto crtPos = builder.saveInsertionPoint();
     modBuilder.setInsertionPointAfter(globalOp);
     if (mlir::isa<fir::BaseBoxType>(fir::unwrapRefType(globalOp.getType()))) {
-      createDeclareGlobalOp<mlir::acc::GlobalConstructorOp, mlir::acc::CopyinOp,
-                            mlir::acc::DeclareEnterOp, ExitOp>(
-          modBuilder, builder, operandLocation, globalOp, clause,
-          declareGlobalCtorName.str(), /*implicit=*/true, asFortran);
+      if (!managedMode || clause == mlir::acc::DataClause::acc_declare_link ||
+          clause == mlir::acc::DataClause::acc_declare_device_resident) {
+        createDeclareGlobalOp<mlir::acc::GlobalConstructorOp,
+                              mlir::acc::CopyinOp, mlir::acc::DeclareEnterOp,
+                              ExitOp>(modBuilder, builder, operandLocation,
+                                      globalOp, clause,
+                                      declareGlobalCtorName.str(),
+                                      /*implicit=*/true, asFortran);
+      }
       createDeclareAllocFunc<EntryOp>(modBuilder, builder, operandLocation,
                                       globalOp, clause);
       if constexpr (!std::is_same_v<EntryOp, ExitOp>)
@@ -4014,6 +4022,13 @@ genGlobalCtors(Fortran::lower::AbstractConverter &converter,
           declareGlobalCtorName.str(), /*implicit=*/false, asFortran);
     }
     if constexpr (!std::is_same_v<EntryOp, ExitOp>) {
+      if (managedMode &&
+          mlir::isa<fir::BaseBoxType>(fir::unwrapRefType(globalOp.getType())) &&
+          clause != mlir::acc::DataClause::acc_declare_link &&
+          clause != mlir::acc::DataClause::acc_declare_device_resident) {
+        builder.restoreInsertionPoint(crtPos);
+        return;
+      }
       createDeclareGlobalOp<mlir::acc::GlobalDestructorOp,
                             mlir::acc::GetDevicePtrOp, mlir::acc::DeclareExitOp,
                             ExitOp>(

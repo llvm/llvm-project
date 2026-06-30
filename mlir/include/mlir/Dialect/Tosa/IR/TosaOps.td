@@ -2596,7 +2596,7 @@ def Tosa_RowGatherOp : Tosa_InferShapedTypeOp<"row_gather", [NoMemoryEffect]> {
   list<Availability> availability = [Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
                                      Extension<[Tosa_EXT_FP8E4M3,
                                                 Tosa_EXT_FP8E5M2, Tosa_EXT_BF16,
-                                                Tosa_EXT_INT64]>,
+                                                Tosa_EXT_INT16, Tosa_EXT_INT64]>,
   ];
 
   let hasCanonicalizer = 1;

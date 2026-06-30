@@ -20,10 +20,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include <string>
 
-namespace llvm {
-class format_object_base;
-}
-
 namespace clang {
 namespace cxindex {
 
