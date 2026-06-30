@@ -7,13 +7,54 @@
 """Utilities for matching debugger state, such as the call stack, conditions, or historical state (e.g. breakpoint
 hitcounts) to descriptions of expected state in a DexterScript."""
 
+from collections import Counter
 from dataclasses import dataclass, field
 import os
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Set
 
 from dex.dextIR import FrameIR, StepIR
 from dex.test_script import DexterScript, Scope
 from dex.test_script.Nodes import Expect, FileLabels, Where, Then
+
+
+class StateMatchContext:
+    """Class that holds any state needed for matching state nodes to debugger state across a run."""
+
+    def __init__(self):
+        self.where_hit_counts: Counter[Where] = Counter()
+        self.expired_wheres: Set[Where] = set()
+        self._last_match_result: Optional[StateMatchResult] = None
+
+    def where_hit_is_new(self, where: Where, step: StepIR) -> bool:
+        """Returns True if the current step can be counted as a new "hit" for `where`, assuming that `where` was hit in
+        this step (but does not check if `where` has actually been hit in the current step).
+        """
+        # If this is the first step, all hits are new.
+        if self._last_match_result is None:
+            return True
+        # If this !where did not appear in any frame in the previous step, this is a fresh hit.
+        if where not in self._last_match_result:
+            return True
+        # If !where uses a function breakpoint and that breakpoint was hit this step, this is a fresh hit.
+        if where.function and not where.lines and where in step.hit_where_bps:
+            return True
+        return False
+
+    def add_hit_if_where_hit_is_new(self, where: Where, step: StepIR) -> bool:
+        """Checks whether the current step can be counted as a new "hit" for `where`. Increments `where`'s hit count if
+        it has a new hit, and returns True iff so."""
+        assert (
+            where.for_hit_count is not None
+        ), "Tried to add hit count for !where without for_hit_count?"
+        if self.where_hit_is_new(where, step):
+            self.where_hit_counts[where] += 1
+            if self.where_hit_counts[where] >= where.for_hit_count:
+                self.expired_wheres.add(where)
+            return True
+        return False
+
+    def update(self, new_match_result: "StateMatchResult"):
+        self._last_match_result = new_match_result
 
 
 def is_subpath(subpath: str, superpath: str) -> bool:
@@ -24,11 +65,11 @@ def is_subpath(subpath: str, superpath: str) -> bool:
     return normalized_superpath.endswith(normalized_subpath)
 
 
-# A very simple matcher, returns True iff `where` matches `frame`.
-def match_where_to_frame(
+def _match_where_to_frame(
     where: Where,
     frame: FrameIR,
     labels: FileLabels,
+    context: StateMatchContext,
     default_path: Optional[str] = None,
 ) -> bool:
     """A very simple matcher, returns True iff `where` matches `frame`."""
@@ -46,15 +87,32 @@ def match_where_to_frame(
     if where.lines is not None:
         if frame.loc.lineno not in where.get_lines(labels):
             return False
-    if (
-        where.for_hit_count is not None
-        or where.after_hit_count is not None
-        or where.conditions is not None
-    ):
+    if where.for_hit_count is not None:
+        where_hit_count = context.where_hit_counts[where]
+        if where_hit_count > where.for_hit_count:
+            return False
+    if where.after_hit_count is not None or where.conditions is not None:
         raise NotImplementedError(
             "!where hit counts and conditions currently unsupported."
         )
     return True
+
+
+def match_where_to_frame(
+    where: Where,
+    frame: FrameIR,
+    step: StepIR,
+    labels: FileLabels,
+    context: StateMatchContext,
+    default_path: Optional[str] = None,
+) -> bool:
+    """Returns True if `where` matches `frame`. As part of this check, we perform the check once, and if necessary we
+    may increment `where`'s hit count and check again."""
+    result = _match_where_to_frame(where, frame, labels, context, default_path)
+    if result == True and where.for_hit_count is not None:
+        if context.add_hit_if_where_hit_is_new(where, step):
+            result = _match_where_to_frame(where, frame, labels, context, default_path)
+    return result
 
 
 @dataclass
@@ -67,10 +125,14 @@ class WhereMatchResult:
     active_expects: List[Expect] = field(default_factory=list)
     active_thens: List[Then] = field(default_factory=list)
     pending_wheres: List[Where] = field(default_factory=list)
+    expired_wheres: List[Where] = field(default_factory=list)
+
+
+StateMatchResult = Dict[Where, WhereMatchResult]
 
 
 def get_active_where_matches(
-    script: DexterScript, step_info: StepIR
+    script: DexterScript, step_info: StepIR, match_context: StateMatchContext
 ) -> Dict[Where, WhereMatchResult]:
     """Match the script against the step_info, producing a dict that maps each !where that matches a stack frame to the
     index of the (rootmost) stack frame that it matches, and if the frame that it matches is the current stack frame
@@ -97,14 +159,22 @@ def get_active_where_matches(
             labels = script.get_labels(
                 expected_file or step_info.frames[target_frame_idx].loc.path
             )
-            if match_where_to_frame(where, step_info.frames[target_frame_idx], labels):
+            if match_where_to_frame(
+                where,
+                step_info.frames[target_frame_idx],
+                step_info,
+                labels,
+                match_context,
+            ):
                 active_where_expects[where] = WhereMatchResult(target_frame_idx)
             return
         # For this !where, search for the rootmost stack frame that matches it.
         matching_frame_idx = None
         for frame_idx, frame in reversed(list(enumerate(step_info.frames))):
             labels = script.get_labels(expected_file or frame.loc.path)
-            if match_where_to_frame(where, frame, labels, script.root_scope.file):
+            if match_where_to_frame(
+                where, frame, step_info, labels, match_context, script.root_scope.file
+            ):
                 matching_frame_idx = frame_idx
                 break
 
@@ -133,4 +203,5 @@ def get_active_where_matches(
         visit_then=get_active_thens,
     )
 
+    match_context.update(active_where_expects)
     return active_where_expects
