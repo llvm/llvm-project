@@ -27326,6 +27326,7 @@ static SDValue narrowInsertExtractVectorBinOp(SDNode *N, SDValue BinOp,
 
   bool HasNonZeroExt = false;
   bool HasNonExtUser = false;
+  bool AllExtractsCheap = true;
   for (SDNode *User : BinOp->users()) {
     if (User->getOpcode() != ISD::EXTRACT_SUBVECTOR) {
       HasNonExtUser = true;
@@ -27343,10 +27344,17 @@ static SDValue narrowInsertExtractVectorBinOp(SDNode *N, SDValue BinOp,
     SDNode *&ExtSubVec = std::get<0>(Slot);
     if (!ExtSubVec) {
       ExtSubVec = User;
+      AllExtractsCheap &= TLI.isExtractSubvectorCheap(SubVT, VecVT, Idx);
       if (Idx != 0)
         HasNonZeroExt = true;
+    } else {
+      llvm_unreachable("Duplicate extract subvector");
     }
   }
+
+  if (TLI.isTypeLegal(VecVT) && AllExtractsCheap &&
+      !TLI.isNarrowingProfitable(BinOp.getNode(), VecVT, SubVT))
+    return SDValue();
 
   // Narrow for [SubVT, 0/undef,...,0/undef]: when the wide binop also has a
   // non-extract user it survives, so narrowing only pays off if it folds for
@@ -27373,24 +27381,12 @@ static SDValue narrowInsertExtractVectorBinOp(SDNode *N, SDValue BinOp,
     }
   }
 
-  if (TLI.isTypeLegal(VecVT)) {
-    bool AllExtractsCheap = true;
-    for (unsigned Part = 0; Part < NumParts; ++Part)
-      if (std::get<0>(Slots[Part])) // Only lanes actually consumed by extract.
-        AllExtractsCheap &=
-            TLI.isExtractSubvectorCheap(SubVT, VecVT, Part * NumSubElts);
-    if (AllExtractsCheap &&
-        !TLI.isNarrowingProfitable(BinOp.getNode(), VecVT, SubVT))
-      return SDValue();
-  }
-
   // Replace each extract with a narrow binop over the matching subvectors:
   // ext (binop (ins ?, X, Idx), (ins ?, Y, Idx)), Idx --> binop X, Y
   // Build N's replacement first so node creation order (and thus scheduling)
   // matches the combiner visiting N directly; rewrite the siblings in place.
   SDValue Result = SDValue();
-  for (auto &Slot : Slots) {
-    auto [Ext, Sub0, Sub1] = Slot;
+  for (auto [Ext, Sub0, Sub1] : Slots) {
     if (Ext) {
       SDValue Narrow = DAG.getNode(BinOpcode, SDLoc(Ext), SubVT, Sub0, Sub1,
                                    BinOp->getFlags());
