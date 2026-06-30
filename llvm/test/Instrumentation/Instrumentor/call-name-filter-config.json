@@ -1,0 +1,20 @@
+{
+  "instruction_pre": {
+    "call": {
+      "enabled": true,
+      "filter": "callee_name==\"foo\"",
+      "callee": true,
+      "callee_name": true,
+      "id": true
+    }
+  },
+  "instruction_post": {
+    "call": {
+      "enabled": true,
+      "filter": "callee_name==\"foo\"",
+      "callee": true,
+      "callee_name": true,
+      "id": true
+    }
+  }
+}

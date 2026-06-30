@@ -568,6 +568,7 @@ void InstrumentationConfig::populate(InstrumentorIRBuilderTy &IIRB) {
   UnreachableIO::populate(*this, IIRB);
   LoadIO::populate(*this, IIRB);
   StoreIO::populate(*this, IIRB);
+  CallIO::populate(*this, IIRB);
   CastIO::populate(*this, IIRB);
   NumericIO::populate(*this, IIRB);
   CompareIO::populate(*this, IIRB);
@@ -1433,6 +1434,120 @@ Value *LoadIO::isVolatile(Value &V, Type &Ty, InstrumentationConfig &IConf,
                           InstrumentorIRBuilderTy &IIRB) {
   auto &LI = cast<LoadInst>(V);
   return getCI(&Ty, LI.isVolatile());
+}
+
+void CallIO::init(InstrumentationConfig &IConf, InstrumentorIRBuilderTy &IIRB,
+                  ConfigTy *UserConfig) {
+  if (UserConfig)
+    Config = *UserConfig;
+
+  bool IsPRE = getLocationKind() == InstrumentationLocation::INSTRUCTION_PRE;
+  if (Config.has(PassCallee)) {
+    IRTArgs.push_back(IRTArg(IIRB.PtrTy, "callee",
+                             "The called function pointer.", IRTArg::NONE,
+                             getCallee));
+  }
+  if (Config.has(PassCalleeName)) {
+    IRTArgs.push_back(IRTArg(IIRB.PtrTy, "callee_name",
+                             "The called function name.", IRTArg::STRING,
+                             getCalleeName));
+  }
+  if (Config.has(PassNumArguments)) {
+    IRTArgs.push_back(IRTArg(IIRB.Int32Ty, "num_arguments",
+                             "Number of call arguments.", IRTArg::NONE,
+                             getNumArguments));
+  }
+  if (Config.has(PassArguments)) {
+    IRTArgs.push_back(IRTArg(IIRB.PtrTy, "arguments",
+                             "Description of the call arguments.",
+                             IRTArg::VALUE_PACK, getArguments));
+  }
+  if (!IsPRE && Config.has(PassReturnValue)) {
+    IRTArgs.push_back(
+        IRTArg(IIRB.Int64Ty, "return_value", "The call return value.",
+               IRTArg::POTENTIALLY_INDIRECT |
+                   (Config.has(PassReturnValueSize) ? IRTArg::INDIRECT_HAS_SIZE
+                                                    : IRTArg::NONE),
+               getReturnValue));
+  }
+  if (Config.has(PassReturnValueSize)) {
+    IRTArgs.push_back(IRTArg(IIRB.Int64Ty, "return_value_size",
+                             "The size of the call return value.", IRTArg::NONE,
+                             getReturnValueSize));
+  }
+  if (Config.has(PassReturnTypeId)) {
+    IRTArgs.push_back(IRTArg(IIRB.Int32Ty, "return_type_id",
+                             "The type id of the call return value.",
+                             IRTArg::TYPEID, getReturnTypeId));
+  }
+  if (Config.has(PassReturnSubTypeId)) {
+    IRTArgs.push_back(IRTArg(
+        IIRB.Int32Ty, "return_sub_type_id",
+        "The sub type id of the call return value (for arrays and vectors, or "
+        "-1).",
+        IRTArg::TYPEID, getReturnSubTypeId));
+  }
+
+  addCommonArgs(IConf, IIRB.Ctx, Config.has(PassId));
+  IConf.addChoice(*this, IIRB.Ctx);
+}
+
+Value *CallIO::getCallee(Value &V, Type &Ty, InstrumentationConfig &IConf,
+                         InstrumentorIRBuilderTy &IIRB) {
+  auto &CI = cast<CallInst>(V);
+  return CI.getCalledOperand();
+}
+
+Value *CallIO::getCalleeName(Value &V, Type &Ty, InstrumentationConfig &IConf,
+                             InstrumentorIRBuilderTy &IIRB) {
+  auto &CI = cast<CallInst>(V);
+  auto *Callee = CI.getCalledFunction();
+  if (!Callee)
+    return IConf.getGlobalString("", IIRB);
+  return IConf.getGlobalString(IConf.DemangleFunctionNames->getBool()
+                                   ? demangle(Callee->getName())
+                                   : Callee->getName(),
+                               IIRB);
+}
+
+Value *CallIO::getNumArguments(Value &V, Type &Ty, InstrumentationConfig &IConf,
+                               InstrumentorIRBuilderTy &IIRB) {
+  auto &CI = cast<CallInst>(V);
+  return getCI(&Ty, CI.arg_size());
+}
+
+Value *CallIO::getArguments(Value &V, Type &Ty, InstrumentationConfig &IConf,
+                            InstrumentorIRBuilderTy &IIRB) {
+  auto &CI = cast<CallInst>(V);
+  return createValuePack(CI.args(), IConf, IIRB);
+}
+
+Value *CallIO::getReturnValue(Value &V, Type &Ty, InstrumentationConfig &IConf,
+                              InstrumentorIRBuilderTy &IIRB) {
+  return &V;
+}
+
+Value *CallIO::getReturnValueSize(Value &V, Type &Ty,
+                                  InstrumentationConfig &IConf,
+                                  InstrumentorIRBuilderTy &IIRB) {
+  auto &CI = cast<CallInst>(V);
+  if (CI.getType()->isVoidTy())
+    return getCI(&Ty, 0);
+  auto &DL = CI.getDataLayout();
+  return getCI(&Ty, DL.getTypeStoreSize(CI.getType()));
+}
+
+Value *CallIO::getReturnTypeId(Value &V, Type &Ty, InstrumentationConfig &IConf,
+                               InstrumentorIRBuilderTy &IIRB) {
+  auto &CI = cast<CallInst>(V);
+  return getCI(&Ty, CI.getType()->getTypeID());
+}
+
+Value *CallIO::getReturnSubTypeId(Value &V, Type &Ty,
+                                  InstrumentationConfig &IConf,
+                                  InstrumentorIRBuilderTy &IIRB) {
+  auto &CI = cast<CallInst>(V);
+  return getSubTypeID(*CI.getType(), Ty);
 }
 
 void BasePointerIO::init(InstrumentationConfig &IConf,

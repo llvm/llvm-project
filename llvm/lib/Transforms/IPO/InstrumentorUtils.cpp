@@ -20,6 +20,45 @@ using namespace llvm::instrumentor;
 namespace {
 enum PropertyType { INT, STRING, POINTER, UNKNOWN };
 
+static GlobalVariable *findGlobalString(Value *V, unsigned Depth = 0) {
+  if (Depth > 4)
+    return nullptr;
+
+  V = V->stripPointerCasts();
+  if (auto *GV = dyn_cast<GlobalVariable>(V))
+    return GV;
+
+  auto *C = dyn_cast<Constant>(V);
+  if (!C)
+    return nullptr;
+
+  for (Value *Op : C->operands())
+    if (auto *GV = findGlobalString(Op, Depth + 1))
+      return GV;
+  return nullptr;
+}
+
+static bool getConstantCString(Value *V, StringRef &S) {
+  auto *GV = findGlobalString(V);
+  if (!GV || !GV->isConstant() || !GV->hasInitializer())
+    return false;
+
+  if (isa<ConstantAggregateZero>(GV->getInitializer())) {
+    auto *AT = dyn_cast<ArrayType>(GV->getValueType());
+    if (AT && AT->getElementType()->isIntegerTy(8)) {
+      S = "";
+      return true;
+    }
+  }
+
+  auto *CDA = dyn_cast<ConstantDataArray>(GV->getInitializer());
+  if (!CDA || !CDA->isCString())
+    return false;
+
+  S = CDA->getAsCString();
+  return true;
+}
+
 /// Simple filter expression evaluator for instrumentation opportunities.
 /// Supports integer comparisons (==, !=, <, >, <=, >=), string comparisons
 /// (==, !=), pointer comparisons (==, !=) against null, string prefix checks
@@ -438,11 +477,11 @@ bool llvm::instrumentor::evaluateFilter(Value &V, bool &Changed,
       IntPropertyValues[Arg.Name] = CI->getSExtValue();
     } else if ((Arg.Flags & IRTArg::STRING) && isa<Constant>(ArgValue)) {
       // Check for constant string values (marked with STRING flag).
-      if (auto *GV = dyn_cast<GlobalVariable>(ArgValue))
-        if (GV->isConstant() && GV->hasInitializer())
-          if (auto *CDA = dyn_cast<ConstantDataArray>(GV->getInitializer()))
-            if (CDA->isCString())
-              StringPropertyValues[Arg.Name] = CDA->getAsCString();
+      StringRef S;
+      if (getConstantCString(ArgValue, S))
+        StringPropertyValues[Arg.Name] = S;
+      else
+        DynamicProperties[Arg.Name] = STRING;
     } else if (ArgValue->getType()->isPointerTy()) {
       // Check for pointer values (for null comparisons), after the strings.
       PointerPropertyValues[Arg.Name] = ArgValue;

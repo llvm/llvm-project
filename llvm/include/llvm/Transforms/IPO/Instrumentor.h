@@ -1110,6 +1110,68 @@ struct LoadIO : public InstructionIO<Instruction::Load> {
   }
 };
 
+/// The instrumentation opportunity for call instructions.
+struct CallIO final : public InstructionIO<Instruction::Call> {
+  CallIO(InstrumentationLocation::KindTy Kind) : InstructionIO(Kind) {}
+
+  enum ConfigKind {
+    PassCallee = 0,
+    PassCalleeName,
+    PassNumArguments,
+    PassArguments,
+    PassReturnValue,
+    PassReturnValueSize,
+    PassReturnTypeId,
+    PassReturnSubTypeId,
+    PassId,
+    NumConfig,
+  };
+
+  using ConfigTy = BaseConfigTy<ConfigKind>;
+  ConfigTy Config;
+
+  StringRef getName() const override { return "call"; }
+
+  LLVM_ABI void init(InstrumentationConfig &IConf,
+                     InstrumentorIRBuilderTy &IIRB,
+                     ConfigTy *UserConfig = nullptr);
+
+  LLVM_ABI static Value *getCallee(Value &V, Type &Ty,
+                                   InstrumentationConfig &IConf,
+                                   InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *getCalleeName(Value &V, Type &Ty,
+                                       InstrumentationConfig &IConf,
+                                       InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *getNumArguments(Value &V, Type &Ty,
+                                         InstrumentationConfig &IConf,
+                                         InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *getArguments(Value &V, Type &Ty,
+                                      InstrumentationConfig &IConf,
+                                      InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *getReturnValue(Value &V, Type &Ty,
+                                        InstrumentationConfig &IConf,
+                                        InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *getReturnValueSize(Value &V, Type &Ty,
+                                            InstrumentationConfig &IConf,
+                                            InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *getReturnTypeId(Value &V, Type &Ty,
+                                         InstrumentationConfig &IConf,
+                                         InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *getReturnSubTypeId(Value &V, Type &Ty,
+                                            InstrumentationConfig &IConf,
+                                            InstrumentorIRBuilderTy &IIRB);
+
+  static void populate(InstrumentationConfig &IConf,
+                       InstrumentorIRBuilderTy &IIRB) {
+    auto *PreIO =
+        IConf.allocate<CallIO>(InstrumentationLocation::INSTRUCTION_PRE);
+    PreIO->init(IConf, IIRB);
+    auto *PostIO =
+        IConf.allocate<CallIO>(InstrumentationLocation::INSTRUCTION_POST);
+    PostIO->init(IConf, IIRB);
+  }
+};
+
 /// The instrumentation opportunity for type cast instructions.
 /// This includes PtrToInt, IntToPtr, Trunc, ZExt, SExt, FPToUI, FPToSI,
 /// UIToFP, SIToFP, FPTrunc, FPExt, AddrSpaceCast, and BitCast.

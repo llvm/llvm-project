@@ -1,0 +1,29 @@
+{
+  "instruction_pre": {
+    "call": {
+      "enabled": true,
+      "callee": true,
+      "callee_name": true,
+      "num_arguments": true,
+      "arguments": true,
+      "return_value_size": true,
+      "return_type_id": true,
+      "return_sub_type_id": true,
+      "id": true
+    }
+  },
+  "instruction_post": {
+    "call": {
+      "enabled": true,
+      "callee": true,
+      "callee_name": true,
+      "num_arguments": true,
+      "arguments": true,
+      "return_value": true,
+      "return_value_size": true,
+      "return_type_id": true,
+      "return_sub_type_id": true,
+      "id": true
+    }
+  }
+}
