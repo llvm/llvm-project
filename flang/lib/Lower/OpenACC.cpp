@@ -83,6 +83,13 @@ static llvm::cl::opt<bool> enableSymbolRemapping(
     llvm::cl::desc("Whether to remap symbols that appears in data clauses."),
     llvm::cl::init(true));
 
+static llvm::cl::opt<bool> emitIndependentLoopsAsUnstructured(
+    "emit-independent-loops-as-unstructured",
+    llvm::cl::desc("Whether to allow lowering unstructured do loops inside "
+                   "independent OpenACC loop constructs instead of emitting "
+                   "a TODO."),
+    llvm::cl::init(true));
+
 // Special value for * passed in device_type or gang clauses.
 static constexpr std::int64_t starCst = -1;
 
@@ -2385,9 +2392,32 @@ static mlir::acc::LoopOp createLoopOp(
   uint64_t loopsToProcess =
       Fortran::lower::getLoopCountForCollapseAndTile(accClauseList);
 
-  if (outerDoConstruct.IsDoConcurrent() &&
-      Fortran::lower::getCollapseSizeAndForce(accClauseList).first > 1)
-    TODO(currentLocation, "OpenACC LOOP COLLAPSE with DO CONCURRENT");
+  if (outerDoConstruct.IsDoConcurrent()) {
+    uint64_t collapseValue =
+        Fortran::lower::getCollapseSizeAndForce(accClauseList).first;
+    if (collapseValue > 1) {
+      // N>C reaches here only via mixed DO CONCURRENT + inner DO; semantics
+      // rejects the straight-line N>C case.
+      const Fortran::parser::LoopControl *loopControl =
+          &*outerDoConstruct.GetLoopControl();
+      const auto &concurrent =
+          std::get<Fortran::parser::LoopControl::Concurrent>(loopControl->u);
+      const auto &concurrentHeader =
+          std::get<Fortran::parser::ConcurrentHeader>(concurrent.t);
+      const auto &controls =
+          std::get<std::list<Fortran::parser::ConcurrentControl>>(
+              concurrentHeader.t);
+      uint64_t controlCount = controls.size();
+      if (collapseValue > controlCount)
+        TODO(currentLocation,
+             "OpenACC LOOP COLLAPSE greater than DO CONCURRENT control count");
+      if (collapseValue < controlCount)
+        TODO(currentLocation,
+             "OpenACC LOOP COLLAPSE less than DO CONCURRENT control count");
+      // N==C falls through; its body relies on Bridge.cpp not descending into
+      // the DO CONCURRENT.
+    }
+  }
 
   auto loopOp = buildACCLoopOp(
       converter, currentLocation, semanticsContext, stmtCtx, outerDoConstruct,
@@ -2478,7 +2508,8 @@ genACC(Fortran::lower::AbstractConverter &converter,
       std::get<std::optional<Fortran::parser::DoConstruct>>(loopConstruct.t);
 
   if (outerDoConstruct.has_value() && eval.lowerAsUnstructured() &&
-      loopWillBeIndependent(converter, accClauseList, loopDirective.v))
+      loopWillBeIndependent(converter, accClauseList, loopDirective.v) &&
+      !emitIndependentLoopsAsUnstructured)
     TODO(currentLocation,
          "unstructured do loop in independent OpenACC loop construct");
 
@@ -3136,9 +3167,18 @@ genACCHostDataOp(Fortran::lower::AbstractConverter &converter,
           const Fortran::semantics::Symbol *newSym =
               Fortran::parser::GetFirstName(accObject).symbol;
           if (newSym) {
-            const Fortran::semantics::Symbol *origSym =
-                localSymbols.lookupSymbolByName(newSym->name().ToString());
-            if (origSym)
+            // Resolve the host symbol this use_device copy shadows via the
+            // semantic enclosing scope, so USE-renamed (and same-name
+            // shadowed) references bind to the correct storage. Fall back to a
+            // name-based lookup if that symbol is not (yet) mapped.
+            const Fortran::semantics::Symbol *origSym = nullptr;
+            if (const Fortran::semantics::Symbol *hostSym =
+                    newSym->owner().parent().FindSymbol(newSym->name()))
+              origSym = &hostSym->GetUltimate();
+            if (!origSym || !localSymbols.lookupSymbol(*origSym))
+              origSym =
+                  localSymbols.lookupSymbolByName(newSym->name().ToString());
+            if (origSym && localSymbols.lookupSymbol(*origSym))
               localSymbols.copySymbolBinding(*origSym, *newSym);
           }
         }
@@ -3252,7 +3292,8 @@ genACC(Fortran::lower::AbstractConverter &converter,
   Fortran::lower::StatementContext stmtCtx;
 
   if (outerDoConstruct.has_value() && eval.lowerAsUnstructured() &&
-      loopWillBeIndependent(converter, accClauseList, combinedDirective.v))
+      loopWillBeIndependent(converter, accClauseList, combinedDirective.v) &&
+      !emitIndependentLoopsAsUnstructured)
     TODO(currentLocation, "unstructured do loop in combined acc construct");
 
   if (combinedDirective.v == llvm::acc::ACCD_kernels_loop) {
@@ -3921,6 +3962,9 @@ genGlobalCtors(Fortran::lower::AbstractConverter &converter,
                mlir::acc::DataClause clause,
                Fortran::semantics::Symbol::Flag declareMappingFlag) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  const auto &langFeatures = converter.getFoldingContext().languageFeatures();
+  const bool managedMode =
+      langFeatures.IsEnabled(Fortran::common::LanguageFeature::CudaManaged);
   auto genCtors = [&](const mlir::Location operandLocation,
                       const Fortran::semantics::Symbol &symbol) {
     std::string globalName = converter.mangleName(symbol);
@@ -3957,10 +4001,15 @@ genGlobalCtors(Fortran::lower::AbstractConverter &converter,
     auto crtPos = builder.saveInsertionPoint();
     modBuilder.setInsertionPointAfter(globalOp);
     if (mlir::isa<fir::BaseBoxType>(fir::unwrapRefType(globalOp.getType()))) {
-      createDeclareGlobalOp<mlir::acc::GlobalConstructorOp, mlir::acc::CopyinOp,
-                            mlir::acc::DeclareEnterOp, ExitOp>(
-          modBuilder, builder, operandLocation, globalOp, clause,
-          declareGlobalCtorName.str(), /*implicit=*/true, asFortran);
+      if (!managedMode || clause == mlir::acc::DataClause::acc_declare_link ||
+          clause == mlir::acc::DataClause::acc_declare_device_resident) {
+        createDeclareGlobalOp<mlir::acc::GlobalConstructorOp,
+                              mlir::acc::CopyinOp, mlir::acc::DeclareEnterOp,
+                              ExitOp>(modBuilder, builder, operandLocation,
+                                      globalOp, clause,
+                                      declareGlobalCtorName.str(),
+                                      /*implicit=*/true, asFortran);
+      }
       createDeclareAllocFunc<EntryOp>(modBuilder, builder, operandLocation,
                                       globalOp, clause);
       if constexpr (!std::is_same_v<EntryOp, ExitOp>)
@@ -3973,6 +4022,13 @@ genGlobalCtors(Fortran::lower::AbstractConverter &converter,
           declareGlobalCtorName.str(), /*implicit=*/false, asFortran);
     }
     if constexpr (!std::is_same_v<EntryOp, ExitOp>) {
+      if (managedMode &&
+          mlir::isa<fir::BaseBoxType>(fir::unwrapRefType(globalOp.getType())) &&
+          clause != mlir::acc::DataClause::acc_declare_link &&
+          clause != mlir::acc::DataClause::acc_declare_device_resident) {
+        builder.restoreInsertionPoint(crtPos);
+        return;
+      }
       createDeclareGlobalOp<mlir::acc::GlobalDestructorOp,
                             mlir::acc::GetDevicePtrOp, mlir::acc::DeclareExitOp,
                             ExitOp>(
@@ -4640,6 +4696,170 @@ void Fortran::lower::genOpenACCRoutineConstruct(
       bindStrNames, bindIdNameDeviceTypes, bindStrNameDeviceTypes,
       gangDeviceTypes, gangDimValues, gangDimDeviceTypes, seqDeviceTypes,
       workerDeviceTypes, vectorDeviceTypes);
+}
+
+void Fortran::lower::materializeOpenACCRoutineBindTargets(
+    Fortran::lower::AbstractConverter &converter, mlir::ModuleOp module) {
+  // There is only one module today; recurse in case submodules are added.
+  for (mlir::ModuleOp nested : module.getOps<mlir::ModuleOp>())
+    materializeOpenACCRoutineBindTargets(converter, nested);
+
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  // The converter's symbol table tracks only the top module.
+  mlir::SymbolTable *symbolTable =
+      module.getOperation() == converter.getModuleOp().getOperation()
+          ? converter.getMLIRSymbolTable()
+          : nullptr;
+
+  mlir::Attribute defaultDeviceTypeAttr = mlir::acc::DeviceTypeAttr::get(
+      builder.getContext(), mlir::acc::DeviceType::None);
+
+  auto getDeviceType = [](mlir::Attribute attr) -> mlir::acc::DeviceType {
+    return mlir::cast<mlir::acc::DeviceTypeAttr>(attr).getValue();
+  };
+
+  auto hasDeviceType = [&](llvm::ArrayRef<mlir::Attribute> deviceTypes,
+                           mlir::Attribute deviceType) {
+    mlir::acc::DeviceType value = getDeviceType(deviceType);
+    return llvm::any_of(deviceTypes, [&](mlir::Attribute attr) {
+      return getDeviceType(attr) == value;
+    });
+  };
+
+  auto deviceTypeAppliesToBindTarget =
+      [&](mlir::Attribute deviceType,
+          llvm::ArrayRef<mlir::Attribute> targetDeviceTypes) {
+        // Clauses without an explicit device_type are the default routine
+        // clauses used as a fallback by later routine lowering.
+        return getDeviceType(deviceType) == mlir::acc::DeviceType::None ||
+               hasDeviceType(targetDeviceTypes, deviceType);
+      };
+
+  auto appendMatchingDeviceTypes =
+      [&](mlir::ArrayAttr attrs, llvm::ArrayRef<mlir::Attribute> deviceTypes,
+          llvm::SmallVector<mlir::Attribute> &out) {
+        if (!attrs)
+          return;
+        for (mlir::Attribute attr : attrs)
+          if (deviceTypeAppliesToBindTarget(attr, deviceTypes))
+            out.push_back(attr);
+      };
+
+  auto appendMatchingAttrs =
+      [&](mlir::ArrayAttr attrs, mlir::ArrayAttr attrDeviceTypes,
+          llvm::ArrayRef<mlir::Attribute> deviceTypes,
+          llvm::SmallVector<mlir::Attribute> &outAttrs,
+          llvm::SmallVector<mlir::Attribute> &outDeviceTypes) {
+        if (!attrs || !attrDeviceTypes)
+          return;
+        assert(attrs.size() == attrDeviceTypes.size() &&
+               "expect same number of attributes");
+        for (auto it : llvm::enumerate(attrDeviceTypes)) {
+          mlir::Attribute deviceType = it.value();
+          if (!deviceTypeAppliesToBindTarget(deviceType, deviceTypes))
+            continue;
+          outAttrs.push_back(attrs[it.index()]);
+          outDeviceTypes.push_back(deviceType);
+        }
+      };
+
+  llvm::SmallVector<mlir::acc::RoutineOp> routineOps(
+      module.getOps<mlir::acc::RoutineOp>());
+  for (mlir::acc::RoutineOp routineOp : routineOps) {
+    // bind renames the same callable, so clone the decorated routine's type.
+    mlir::func::FuncOp decorated = fir::FirOpBuilder::getNamedFunction(
+        module, symbolTable, routineOp.getFuncName());
+    mlir::FunctionType type =
+        decorated ? decorated.getFunctionType()
+                  : mlir::FunctionType::get(builder.getContext(), {}, {});
+
+    auto declare = [&](llvm::StringRef name) {
+      if (mlir::func::FuncOp func =
+              fir::FirOpBuilder::getNamedFunction(module, symbolTable, name))
+        return func;
+      return fir::FirOpBuilder::createFunction(builder.getUnknownLoc(), module,
+                                               name, type, symbolTable);
+    };
+
+    auto createRoutineForBindTarget =
+        [&](mlir::func::FuncOp target,
+            llvm::ArrayRef<mlir::Attribute> bindTargetDeviceTypes) {
+          if (target->hasAttr(mlir::acc::getRoutineInfoAttrName()))
+            return;
+
+          llvm::SmallVector<mlir::Attribute> emptyBindIdNames,
+              emptyBindStrNames, emptyBindIdNameDeviceTypes,
+              emptyBindStrNameDeviceTypes, gangDeviceTypes, gangDimValues,
+              gangDimDeviceTypes, seqDeviceTypes, workerDeviceTypes,
+              vectorDeviceTypes;
+          appendMatchingDeviceTypes(routineOp.getGangAttr(),
+                                    bindTargetDeviceTypes, gangDeviceTypes);
+          appendMatchingAttrs(
+              routineOp.getGangDimAttr(), routineOp.getGangDimDeviceTypeAttr(),
+              bindTargetDeviceTypes, gangDimValues, gangDimDeviceTypes);
+          appendMatchingDeviceTypes(routineOp.getSeqAttr(),
+                                    bindTargetDeviceTypes, seqDeviceTypes);
+          appendMatchingDeviceTypes(routineOp.getWorkerAttr(),
+                                    bindTargetDeviceTypes, workerDeviceTypes);
+          appendMatchingDeviceTypes(routineOp.getVectorAttr(),
+                                    bindTargetDeviceTypes, vectorDeviceTypes);
+
+          createOpenACCRoutineConstruct(
+              converter, routineOp.getLoc(), module, target,
+              target.getName().str(), routineOp.getNohost(), emptyBindIdNames,
+              emptyBindStrNames, emptyBindIdNameDeviceTypes,
+              emptyBindStrNameDeviceTypes, gangDeviceTypes, gangDimValues,
+              gangDimDeviceTypes, seqDeviceTypes, workerDeviceTypes,
+              vectorDeviceTypes);
+        };
+
+    struct BindTarget {
+      mlir::func::FuncOp target;
+      llvm::SmallVector<mlir::Attribute> deviceTypes;
+    };
+    llvm::SmallVector<BindTarget> bindTargets;
+
+    auto addBindTarget = [&](mlir::func::FuncOp target,
+                             mlir::Attribute deviceType) {
+      for (BindTarget &bindTarget : bindTargets) {
+        if (bindTarget.target.getOperation() != target.getOperation())
+          continue;
+        if (!hasDeviceType(bindTarget.deviceTypes, deviceType))
+          bindTarget.deviceTypes.push_back(deviceType);
+        return;
+      }
+      bindTargets.push_back({target, {deviceType}});
+    };
+
+    auto getBindDeviceType = [&](mlir::ArrayAttr deviceTypes,
+                                 unsigned index) -> mlir::Attribute {
+      if (deviceTypes) {
+        assert(index < deviceTypes.size() &&
+               "expect bind name and device_type arrays to match");
+        return deviceTypes[index];
+      }
+      return defaultDeviceTypeAttr;
+    };
+
+    // bind(identifier) is mangled; bind("string") is a verbatim asm name.
+    if (mlir::ArrayAttr binds = routineOp.getBindIdNameAttr())
+      for (auto bind : llvm::enumerate(binds))
+        if (auto symRef = mlir::dyn_cast<mlir::SymbolRefAttr>(bind.value()))
+          addBindTarget(
+              declare(symRef.getLeafReference()),
+              getBindDeviceType(routineOp.getBindIdNameDeviceTypeAttr(),
+                                bind.index()));
+    if (mlir::ArrayAttr binds = routineOp.getBindStrNameAttr())
+      for (auto bind : llvm::enumerate(binds))
+        if (auto strAttr = mlir::dyn_cast<mlir::StringAttr>(bind.value()))
+          addBindTarget(
+              declare(strAttr.getValue()),
+              getBindDeviceType(routineOp.getBindStrNameDeviceTypeAttr(),
+                                bind.index()));
+
+    for (BindTarget &bindTarget : bindTargets)
+      createRoutineForBindTarget(bindTarget.target, bindTarget.deviceTypes);
+  }
 }
 
 static void

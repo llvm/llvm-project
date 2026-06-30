@@ -51,16 +51,13 @@ define swifttailcc void @caller_to0_from0() "branch-protection-pauth-lr" "sign-r
 ; COMPAT-NEXT:   adrp x16, .Ltmp0
 ; COMPAT-NEXT:   add x16, x16, :lo12:.Ltmp0
 ; COMPAT-NEXT:   hint #39
-; COMPAT-NEXT:   .cfi_negate_ra_state_with_pc
 ; COMPAT-NEXT:   hint #29
 
 ; V83A-NEXT:     adrp x16, .Ltmp0
 ; V83A-NEXT:     add x16, x16, :lo12:.Ltmp0
 ; V83A-NEXT:     hint #39
-; V83A-NEXT:     .cfi_negate_ra_state_with_pc
 ; V83A-NEXT:     autiasp
 
-; V9A-NEXT:      .cfi_negate_ra_state_with_pc
 ; V9A-NEXT:      autiasppc .Ltmp0
 
 ; PAUTH-NEXT:    autiasp
@@ -115,16 +112,13 @@ define swifttailcc void @caller_to0_from8([8 x i64], i64) "branch-protection-pau
 ; COMPAT-NEXT:   adrp x16, .Ltmp1
 ; COMPAT-NEXT:   add x16, x16, :lo12:.Ltmp1
 ; COMPAT-NEXT:   hint #39
-; COMPAT-NEXT:   .cfi_negate_ra_state_with_pc
 ; COMPAT-NEXT:   hint #29
 
 ; V83A-NEXT:     adrp x16, .Ltmp1
 ; V83A-NEXT:     add x16, x16, :lo12:.Ltmp1
 ; V83A-NEXT:     hint #39
-; V83A-NEXT:     .cfi_negate_ra_state_with_pc
 ; V83A-NEXT:     autiasp
 
-; V9A-NEXT:      .cfi_negate_ra_state_with_pc
 ; V9A-NEXT:      autiasppc .Ltmp1
 
 ; PAUTH-NEXT:    autiasp
@@ -178,18 +172,15 @@ define swifttailcc void @caller_to8_from0() "branch-protection-pauth-lr" "sign-r
 ; COMPAT-NEXT:   adrp x15, .Ltmp2
 ; COMPAT-NEXT:   add x15, x15, :lo12:.Ltmp2
 ; COMPAT-NEXT:   hint #39
-; COMPAT-NEXT:   .cfi_negate_ra_state_with_pc
 ; COMPAT-NEXT:   hint #12
 
 ; V83A-NEXT:     adrp x15, .Ltmp2
 ; V83A-NEXT:     add x15, x15, :lo12:.Ltmp2
 ; V83A-NEXT:     hint #39
-; V83A-NEXT:     .cfi_negate_ra_state_with_pc
 ; V83A-NEXT:     autia1716
 
 ; V9A-NEXT:      adrp x15, .Ltmp2
 ; V9A-NEXT:      add x15, x15, :lo12:.Ltmp2
-; V9A-NEXT:      .cfi_negate_ra_state_with_pc
 ; V9A-NEXT:      autia171615
 
 ; PAUTH-NEXT:    autia1716

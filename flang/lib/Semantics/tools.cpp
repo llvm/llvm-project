@@ -182,9 +182,18 @@ bool IsIntrinsicRelational(common::RelationalOperator opr,
       return opr == common::RelationalOperator::EQ ||
           opr == common::RelationalOperator::NE ||
           (cat0 != TypeCategory::Complex && cat1 != TypeCategory::Complex);
+    } else if (cat0 == TypeCategory::Character &&
+        cat1 == TypeCategory::Character) {
+      return true;
+    } else if (cat0 == TypeCategory::Derived && cat1 == TypeCategory::Derived) {
+      // Same enumeration type: all six relational operators are allowed
+      const auto *derived0{evaluate::GetDerivedTypeSpec(type0)};
+      const auto *derived1{evaluate::GetDerivedTypeSpec(type1)};
+      return derived0 && derived1 && derived0->IsEnumerationType() &&
+          derived1->IsEnumerationType() &&
+          &derived0->typeSymbol() == &derived1->typeSymbol();
     } else {
-      // not both numeric: only Character is ok
-      return cat0 == TypeCategory::Character && cat1 == TypeCategory::Character;
+      return false;
     }
   }
 }
@@ -1077,7 +1086,9 @@ bool IsAssumedType(const Symbol &symbol) {
 }
 
 bool IsEnumerationType(const Symbol &symbol) {
-  if (const auto *details{symbol.detailsIf<DerivedTypeDetails>()}) {
+  // Use the ultimate symbol for cases such as USE-associated enumeration types
+  if (const auto *details{
+          symbol.GetUltimate().detailsIf<DerivedTypeDetails>()}) {
     return details->isEnumerationType();
   }
   return false;

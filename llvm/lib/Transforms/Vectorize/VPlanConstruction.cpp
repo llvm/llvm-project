@@ -1404,8 +1404,7 @@ void VPlanTransforms::foldTailByMasking(VPlan &Plan) {
   for (const auto &[V, Users] : NeedsPhi) {
     if (isa<VPIRValue>(V))
       continue;
-    VPValue *TailVal =
-        Plan.getOrAddLiveIn(PoisonValue::get(V->getScalarType()));
+    VPValue *TailVal = Plan.getPoison(V->getScalarType());
     VPIRFlags Flags;
     assert(llvm::count_if(Users, IsaPred<VPReductionPHIRecipe>) <= 1 &&
            "Value used by more than two reduction phis?");
@@ -1759,7 +1758,7 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
       continue;
     if (auto *DerivedIV = dyn_cast<VPDerivedIVRecipe>(VecV)) {
       VPValue *DIVTC = DerivedIV->getOperand(1);
-      if (DerivedIV->getNumUsers() == 1 && IsTC(DIVTC)) {
+      if (DerivedIV->hasOneUse() && IsTC(DIVTC)) {
         auto *NewSel = MiddleBuilder.createSelect(
             AnyNaNLane, LoopRegion->getCanonicalIV(), DIVTC);
         DerivedIV->moveAfter(&*MiddleBuilder.getInsertPoint());
@@ -1973,7 +1972,7 @@ static bool handleFirstArgMinOrMax(
     FindIVSelectR->setOperand(FindIVSelectR->getOperand(1) == WideIV ? 1 : 2,
                               WidenCanIV);
   }
-  FindLastIVPhiR->setOperand(0, Plan.getOrAddLiveIn(PoisonValue::get(Ty)));
+  FindLastIVPhiR->setOperand(0, Plan.getPoison(Ty));
 
   // The reduction using MinOrMaxPhiR needs adjusting to compute the correct
   // result:

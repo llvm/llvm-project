@@ -4,19 +4,20 @@ set(files
   SimpleSymbolTable.cpp
   Error.cpp
   ExecutorProcessInfo.cpp
+  InProcessControllerAccess.cpp
   NativeDylibManager.cpp
-  QueueingTaskDispatcher.cpp
   RTTI.cpp
   Service.cpp
   Session.cpp
   SimpleNativeMemoryMap.cpp
-  TaskDispatcher.cpp
-  ThreadPoolTaskDispatcher.cpp
+  StandaloneMachOUnwindInfoRegistrar.cpp
+  ThreadPoolRunner.cpp
   sps-ci/AllSPSCI.cpp
   sps-ci/CallSPSCI.cpp
   sps-ci/MemoryAccessSPSCI.cpp
   sps-ci/NativeDylibManagerSPSCI.cpp
   sps-ci/SimpleNativeMemoryMapSPSCI.cpp
+  sps-ci/StandaloneMachOUnwindInfoRegistrarSPSCI.cpp
   )
 
 add_library(orc-rt-executor STATIC ${files})

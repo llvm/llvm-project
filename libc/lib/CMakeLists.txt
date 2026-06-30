@@ -70,6 +70,29 @@ foreach(file ${added_bitcode_targets})
   )
 endforeach()
 
+# Add empty archive libraries for compatibility with systems expecting certain
+# bits of libc to be located in separate files (e.g. libpthread).
+set(added_empty_archives "")
+if(LLVM_LIBC_FULL_BUILD AND ${LIBC_TARGET_OS} STREQUAL "linux")
+  list(APPEND libc_empty_archive_names pthread)
+  foreach(archive ${libc_empty_archive_names})
+    set(empty_archive_path ${LIBC_LIBRARY_DIR}/lib${archive}.a)
+    add_custom_command(
+      OUTPUT ${empty_archive_path}
+      COMMAND ${CMAKE_AR} cqs ${empty_archive_path}
+      COMMENT "Creating empty archive ${empty_archive_path}"
+      VERBATIM
+    )
+    install(
+      FILES ${empty_archive_path}
+      DESTINATION ${LIBC_INSTALL_LIBRARY_DIR}
+      COMPONENT libc
+    )
+    add_custom_target(empty-${archive} ALL DEPENDS ${empty_archive_path})
+    list(APPEND added_empty_archives empty-${archive})
+  endforeach()
+endif()
+
 set(startup_target "")
 if(LLVM_LIBC_FULL_BUILD AND NOT LIBC_TARGET_OS_IS_BAREMETAL)
   # For now we will disable libc-startup installation for baremetal. The
@@ -86,6 +109,7 @@ endif()
 add_custom_target(install-libc
                   DEPENDS ${added_archive_targets}
                           ${added_bitcode_targets}
+                          ${added_empty_archives}
                           ${startup_target}
                           ${header_install_target}
                   COMMAND "${CMAKE_COMMAND}"
@@ -94,6 +118,7 @@ add_custom_target(install-libc
 add_custom_target(install-libc-stripped
                   DEPENDS ${added_archive_targets}
                           ${added_bitcode_targets}
+                          ${added_empty_archives}
                           ${startup_target}
                           ${header_install_target}
                   COMMAND "${CMAKE_COMMAND}"

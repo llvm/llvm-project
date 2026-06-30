@@ -1024,7 +1024,9 @@ void SemaHLSL::CheckEntryPoint(FunctionDecl *FD) {
       FD->setInvalidDecl();
     }
     if (const auto *WS = FD->getAttr<HLSLWaveSizeAttr>()) {
-      if (Ver < VersionTuple(6, 6)) {
+      if (TargetInfo.getTriple().isSPIRV()) {
+        Diag(WS->getLocation(), diag::warn_hlsl_wavesize_unsupported_spirv);
+      } else if (Ver < VersionTuple(6, 6)) {
         Diag(WS->getLocation(), diag::err_hlsl_attribute_in_wrong_shader_model)
             << WS << "6.6";
         FD->setInvalidDecl();
@@ -2804,6 +2806,39 @@ bool SemaHLSL::diagnoseMatrixLayoutInstantiation(attr::Kind K, QualType T,
   return true;
 }
 
+// Transpose and matrix mul need to read the destination layout.
+// Elementwise builtins reuse the operand layout instead.
+static bool isLayoutAdaptingMatrixBuiltin(unsigned BuiltinID) {
+  switch (BuiltinID) {
+  case Builtin::BI__builtin_hlsl_mul:
+  case Builtin::BI__builtin_hlsl_transpose:
+    return true;
+  default:
+    return false;
+  }
+}
+
+void SemaHLSL::propagateContextualMatrixLayout(Expr *E, QualType DestType) {
+  if (!E || DestType.isNull())
+    return;
+  const auto *DestMat = DestType->getAs<ConstantMatrixType>();
+  if (!DestMat)
+    return;
+  auto *Call = dyn_cast<CallExpr>(E->IgnoreParenImpCasts());
+  if (!Call)
+    return;
+  const FunctionDecl *Callee = Call->getDirectCallee();
+  if (!Callee || !isLayoutAdaptingMatrixBuiltin(Callee->getBuiltinID()))
+    return;
+  const auto *CallMat = Call->getType()->getAs<ConstantMatrixType>();
+  if (!CallMat || CallMat->getNumRows() != DestMat->getNumRows() ||
+      CallMat->getNumColumns() != DestMat->getNumColumns())
+    return;
+  // Re-type the call with the destination sugar so CodeGen lowers into that
+  // layout, not the TU default.
+  Call->setType(DestType.getUnqualifiedType());
+}
+
 namespace {
 
 /// This class implements HLSL availability diagnostics for default
@@ -3651,7 +3686,8 @@ static bool CheckIndexType(Sema *S, CallExpr *TheCall, unsigned IndexArgIndex) {
 
   unsigned int ExpectedDim = 1;
   if (ResAttrs.ResourceDimension != llvm::dxil::ResourceDimension::Unknown)
-    ExpectedDim = getResourceDimensions(ResAttrs.ResourceDimension);
+    ExpectedDim = getResourceDimensions(ResAttrs.ResourceDimension) +
+                  (ResAttrs.IsArray ? 1 : 0);
 
   if (ActualDim != ExpectedDim) {
     S->Diag(TheCall->getArg(IndexArgIndex)->getBeginLoc(),
@@ -3706,7 +3742,8 @@ static bool CheckVectorElementCount(Sema *S, QualType PassedType,
 
 enum class SampleKind { Sample, Bias, Grad, Level, Cmp, CmpLevelZero };
 
-static bool CheckTextureSamplerAndLocation(Sema &S, CallExpr *TheCall) {
+static bool CheckTextureSamplerAndLocation(Sema &S, CallExpr *TheCall,
+                                           bool IncludeArraySlice = true) {
   // Check the texture handle.
   if (CheckResourceHandle(&S, TheCall, 0,
                           [](const HLSLAttributedResourceType *ResType) {
@@ -3728,7 +3765,8 @@ static bool CheckTextureSamplerAndLocation(Sema &S, CallExpr *TheCall) {
 
   // Check the location.
   unsigned ExpectedDim =
-      getResourceDimensions(ResourceTy->getAttrs().ResourceDimension);
+      getResourceDimensions(ResourceTy->getAttrs().ResourceDimension) +
+      (IncludeArraySlice && ResourceTy->getAttrs().IsArray ? 1 : 0);
   if (CheckVectorElementCount(&S, TheCall->getArg(2)->getType(),
                               S.Context.FloatTy, ExpectedDim,
                               TheCall->getBeginLoc()))
@@ -3741,7 +3779,9 @@ static bool CheckCalculateLodBuiltin(Sema &S, CallExpr *TheCall) {
   if (S.checkArgCount(TheCall, 3))
     return true;
 
-  if (CheckTextureSamplerAndLocation(S, TheCall))
+  // CalculateLevelOfDetail location uses resource dimension only (e.g. float2
+  // for 2D), not an extra array slice component like Sample/Gather.
+  if (CheckTextureSamplerAndLocation(S, TheCall, /*IncludeArraySlice=*/false))
     return true;
 
   TheCall->setType(S.Context.FloatTy);
@@ -3847,11 +3887,12 @@ static bool CheckLoadLevelBuiltin(Sema &S, CallExpr *TheCall) {
   auto *ResourceTy =
       TheCall->getArg(0)->getType()->castAs<HLSLAttributedResourceType>();
 
-  // Check the location + lod (int3 for Texture2D).
-  unsigned ExpectedDim =
+  // Check the location + lod (int3 for Texture2D, int4 for Texture2DArray).
+  unsigned ResourceDim =
       getResourceDimensions(ResourceTy->getAttrs().ResourceDimension);
+  unsigned LocationDim = ResourceDim + (ResourceTy->getAttrs().IsArray ? 1 : 0);
   QualType CoordLODTy = TheCall->getArg(1)->getType();
-  if (CheckVectorElementCount(&S, CoordLODTy, S.Context.IntTy, ExpectedDim + 1,
+  if (CheckVectorElementCount(&S, CoordLODTy, S.Context.IntTy, LocationDim + 1,
                               TheCall->getArg(1)->getBeginLoc()))
     return true;
 
@@ -3864,10 +3905,10 @@ static bool CheckLoadLevelBuiltin(Sema &S, CallExpr *TheCall) {
     return true;
   }
 
-  // Check the offset operand.
+  // Check the offset operand (int2 for 2D textures; no array slice).
   if (TheCall->getNumArgs() > 2) {
     if (CheckVectorElementCount(&S, TheCall->getArg(2)->getType(),
-                                S.Context.IntTy, ExpectedDim,
+                                S.Context.IntTy, ResourceDim,
                                 TheCall->getArg(2)->getBeginLoc()))
       return true;
   }
@@ -4622,7 +4663,8 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     break;
   }
   case Builtin::BI__builtin_hlsl_quad_read_across_x:
-  case Builtin::BI__builtin_hlsl_quad_read_across_y: {
+  case Builtin::BI__builtin_hlsl_quad_read_across_y:
+  case Builtin::BI__builtin_hlsl_quad_read_across_diagonal: {
     if (SemaRef.checkArgCount(TheCall, 1))
       return true;
 

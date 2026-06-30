@@ -642,8 +642,7 @@ class BitcodeReader : public BitcodeReaderBase, public GVMaterializer {
 
   // When intrinsic functions are encountered which require upgrading they are
   // stored here with their replacement function.
-  using UpdatedIntrinsicMap = DenseMap<Function *, Function *>;
-  UpdatedIntrinsicMap UpgradedIntrinsics;
+  DenseMap<Function *, Function *> UpgradedIntrinsics;
 
   // Several operations happen after the module header has been read, but
   // before function bodies are processed. This keeps track of whether
@@ -696,6 +695,12 @@ class BitcodeReader : public BitcodeReaderBase, public GVMaterializer {
   SmallVector<SyncScope::ID, 8> SSIDs;
 
   std::optional<ValueTypeCallbackTy> ValueTypeCallback;
+
+  /// Mirrors ParserCallbacks::SkipDebugIntrinsicUpgrade. When set, debug
+  /// intrinsic calls (llvm.dbg.*) are not auto-upgraded to non-instruction
+  /// debug records by globalCleanup(); the caller is expected to perform the
+  /// upgrade manually after any custom processing.
+  bool SkipDebugIntrinsicUpgrade = false;
 
 public:
   BitcodeReader(BitstreamCursor Stream, StringRef Strtab,
@@ -2302,6 +2307,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::DenormalFPEnv;
   case bitc::ATTR_KIND_NOOUTLINE:
     return Attribute::NoOutline;
+  case bitc::ATTR_KIND_NOIPA:
+    return Attribute::NoIPA;
   }
 }
 
@@ -4023,7 +4030,9 @@ Error BitcodeReader::globalCleanup() {
   for (Function &F : *TheModule) {
     MDLoader->upgradeDebugIntrinsics(F);
     Function *NewFn;
-    if (UpgradeIntrinsicFunction(&F, NewFn))
+    if (UpgradeIntrinsicFunction(&F,
+                                 NewFn, /*CanUpgradeDebugIntrinsicsToRecords=*/
+                                 !SkipDebugIntrinsicUpgrade))
       UpgradedIntrinsics[&F] = NewFn;
     // Look for functions that rely on old function attribute behavior.
     UpgradeFunctionAttributes(F);
@@ -4867,6 +4876,7 @@ Error BitcodeReader::parseBitcodeInto(Module *M, bool ShouldLazyLoadMetadata,
   };
   MDCallbacks.MDType = Callbacks.MDType;
   MDLoader = MetadataLoader(Stream, *M, ValueList, IsImporting, MDCallbacks);
+  SkipDebugIntrinsicUpgrade = Callbacks.SkipDebugIntrinsicUpgrade;
   return parseModule(0, ShouldLazyLoadMetadata, Callbacks);
 }
 
@@ -7207,15 +7217,15 @@ Error BitcodeReader::materializeModule() {
   // delete the old functions to clean up. We can't do this unless the entire
   // module is materialized because there could always be another function body
   // with calls to the old function.
-  for (auto &I : UpgradedIntrinsics) {
-    for (auto *U : I.first->users()) {
-      if (CallInst *CI = dyn_cast<CallInst>(U))
-        UpgradeIntrinsicCall(CI, I.second);
+  for (auto &[OldFn, NewFn] : UpgradedIntrinsics) {
+    for (User *U : OldFn->users()) {
+      if (auto *CI = dyn_cast<CallInst>(U))
+        UpgradeIntrinsicCall(CI, NewFn);
     }
-    if (I.first != I.second) {
-      if (!I.first->use_empty())
-        I.first->replaceAllUsesWith(I.second);
-      I.first->eraseFromParent();
+    if (OldFn != NewFn) {
+      if (!OldFn->use_empty())
+        OldFn->replaceAllUsesWith(NewFn);
+      OldFn->eraseFromParent();
     }
   }
   UpgradedIntrinsics.clear();
@@ -7476,7 +7486,7 @@ Error ModuleSummaryIndexBitcodeReader::parseModule() {
         /// MODULE_CODE_HASH: [5*i32]
         case bitc::MODULE_CODE_HASH: {
           if (Record.size() != 5)
-            return error("Invalid hash length " + Twine(Record.size()).str());
+            return error("Invalid hash length " + Twine(Record.size()));
           auto &Hash = getThisModule()->second;
           int Pos = 0;
           for (auto &Val : Record) {
@@ -7747,10 +7757,9 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
   // corresponding function summary.
   const bool MemProfAfterFunctionSummary = Version >= 13;
   if (Version < 1 || Version > ModuleSummaryIndex::BitcodeSummaryVersion)
-    return error("Invalid summary version " + Twine(Version) +
-                 ". Version should be in the range [1-" +
-                 Twine(ModuleSummaryIndex::BitcodeSummaryVersion) +
-                 "].");
+    return error("Invalid summary version " + Twine(Version) + " in module '" +
+                 ModulePath + "'. Version should be in the range [1-" +
+                 Twine(ModuleSummaryIndex::BitcodeSummaryVersion) + "].");
   Record.clear();
 
   // Keep around the last seen summary to be used when we see an optional
@@ -8466,7 +8475,7 @@ Error ModuleSummaryIndexBitcodeReader::parseModuleStringTable() {
     /// MST_CODE_HASH: [5*i32]
     case bitc::MST_CODE_HASH: {
       if (Record.size() != 5)
-        return error("Invalid hash length " + Twine(Record.size()).str());
+        return error("Invalid hash length " + Twine(Record.size()));
       if (!LastSeenModule)
         return error("Invalid hash that does not follow a module path");
       int Pos = 0;

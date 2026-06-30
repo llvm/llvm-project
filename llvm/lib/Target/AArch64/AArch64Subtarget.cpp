@@ -261,6 +261,7 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
     [[fallthrough]];
   case NeoverseN2:
   case NeoverseN3:
+  case NeoverseV3AE:
     PrefFunctionAlignment = Align(16);
     PrefLoopAlignment = Align(32);
     MaxBytesForLoopAlignment = 16;
@@ -303,6 +304,12 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
   case TSV110:
     PrefFunctionAlignment = Align(16);
     PrefLoopAlignment = Align(4);
+    break;
+  case HIP12:
+    PrefFunctionAlignment = Align(16);
+    PrefLoopAlignment = Align(4);
+    VScaleForTuning = 2;
+    DefaultSVETFOpts = TailFoldingOpts::Simple;
     break;
   case ThunderX3T110:
     PrefFunctionAlignment = Align(16);

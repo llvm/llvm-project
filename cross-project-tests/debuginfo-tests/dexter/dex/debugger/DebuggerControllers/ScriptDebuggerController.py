@@ -68,7 +68,7 @@ class ScriptDebuggerController(DebuggerControllerBase):
             file = where.file or default_file
             assert file, "Cannot set line breakpoints without a valid file!"
             # If this Where covers a range of lines, we breakpoint each of them to ensure that we don't miss any lines.
-            for line in where.get_lines():
+            for line in where.get_lines(self.script.get_labels(file)):
                 added_ids.append(self.debugger.add_breakpoint(file, line))
         self._where_bps[where] = added_ids
         for id in added_ids:
@@ -128,13 +128,32 @@ class ScriptDebuggerController(DebuggerControllerBase):
                 for expect in where_match.active_expects
                 if (watch := expect.get_watched_expr())
             ]
-            self.debugger.collect_watches(step_info, watches)
+            scope_watches = [
+                scope_watch
+                for where_match in active_where_matches.values()
+                for expect in where_match.active_expects
+                if (scope_watch := expect.get_watched_scope())
+            ]
+            self.debugger.collect_watches(step_info, watches, scope_watches)
+
+            active_thens = [
+                then
+                for where_match in active_where_matches.values()
+                for then in where_match.active_thens
+            ]
+            should_step_out = any(then.command == "step_out" for then in active_thens)
+            should_finish = any(then.command == "finish" for then in active_thens)
 
             # Our stepping behaviour is as follows:
-            # - If any !where matches the current stack frame, we step.
+            # - If any !then is active, we follow its command.
+            # - Otherwise, if any !where matches the current stack frame, we step.
             # - Otherwise, if any !where matches any non-current stack frame, we step out.
             # - Otherwise, we continue.
-            if any(
+            if should_finish:
+                next_action = DebuggerAction.EXIT
+            elif should_step_out:
+                next_action = DebuggerAction.STEP_OUT
+            elif any(
                 where_match.frame_idx == 0
                 for where_match in active_where_matches.values()
             ):
@@ -155,14 +174,15 @@ class ScriptDebuggerController(DebuggerControllerBase):
                 if (
                     bp_ids
                     and where not in script.root_wheres
-                    and where not in pending_wheres
+                    and (where not in pending_wheres or should_step_out)
                 ):
                     bp_to_delete.extend(bp_ids)
                     bp_ids.clear()
             self.debugger.delete_breakpoints(bp_to_delete)
-            for where in pending_wheres:
-                if not self._where_bps[where]:
-                    self.add_where_entry_bp(where)
+            if not should_step_out:
+                for where in pending_wheres:
+                    if not self._where_bps[where]:
+                        self.add_where_entry_bp(where)
 
             if step_info.current_frame:
                 self._step_index += 1

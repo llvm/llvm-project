@@ -309,3 +309,42 @@ func.func @negative_ne_constant_2() -> vector<3xi1> {
   return %1 : vector<3xi1>
 }
 
+// -----
+
+// CHECK-LABEL: @ult_i32_constant_4_rhs
+//       CHECK: %[[CST:.*]] = arith.constant dense<true> : vector<4xi1>
+//       CHECK: return %[[CST]] : vector<4xi1>
+func.func @ult_i32_constant_4_rhs() -> vector<4xi1> {
+  %cst = arith.constant dense<4> : vector<4xi32>
+  %0 = vector.step : vector<4xi32>
+  // [0, 1, 2, 3] < 4 => [true, true, true, true] => fold
+  %1 = arith.cmpi ult, %0, %cst : vector<4xi32>
+  return %1 : vector<4xi1>
+}
+
+// -----
+
+// CHECK-LABEL: @negative_ult_i32_constant_2_rhs
+//       CHECK: %[[CMP:.*]] = arith.cmpi
+//       CHECK: return %[[CMP]]
+func.func @negative_ult_i32_constant_2_rhs() -> vector<4xi1> {
+  %cst = arith.constant dense<2> : vector<4xi32>
+  %0 = vector.step : vector<4xi32>
+  // [0, 1, 2, 3] < 2 => [true, true, false, false] => don't fold
+  %1 = arith.cmpi ult, %0, %cst : vector<4xi32>
+  return %1 : vector<4xi1>
+}
+
+// -----
+
+// The element count (300) is greater than the constant (100), so the
+// count-based fold guard (`stepSize <= constValue`) already blocks the fold.
+// CHECK-LABEL: @negative_ult_i8_wrap
+//       CHECK: %[[CMP:.*]] = arith.cmpi
+//       CHECK: return %[[CMP]]
+func.func @negative_ult_i8_wrap() -> vector<300xi1> {
+  %cst = arith.constant dense<100> : vector<300xi8>
+  %0 = vector.step : vector<300xi8>
+  %1 = arith.cmpi ult, %0, %cst : vector<300xi8>
+  return %1 : vector<300xi1>
+}

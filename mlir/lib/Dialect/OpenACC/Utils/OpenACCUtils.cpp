@@ -106,6 +106,10 @@ mlir::acc::VariableTypeCategory mlir::acc::getTypeCategory(mlir::Value var) {
   return typeCategory;
 }
 
+llvm::StringLiteral mlir::acc::getVarNamePlaceholder() {
+  return llvm::StringLiteral("<acc.varname.placeholder>");
+}
+
 std::string mlir::acc::getVariableName(mlir::Value v) {
   Value current = v;
 
