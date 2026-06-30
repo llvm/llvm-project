@@ -34,9 +34,9 @@ namespace std // purposefully not using versioning namespace
 
 class _LIBCPP_EXPORTED_FROM_ABI bad_optional_access : public exception {
 public:
-  bad_optional_access() _NOEXCEPT                                      = default;
-  bad_optional_access(const bad_optional_access&) _NOEXCEPT            = default;
-  bad_optional_access& operator=(const bad_optional_access&) _NOEXCEPT = default;
+  _LIBCPP_HIDE_FROM_ABI bad_optional_access() _NOEXCEPT                                      = default;
+  _LIBCPP_HIDE_FROM_ABI bad_optional_access(const bad_optional_access&) _NOEXCEPT            = default;
+  _LIBCPP_HIDE_FROM_ABI bad_optional_access& operator=(const bad_optional_access&) _NOEXCEPT = default;
   // Get the key function ~bad_optional_access() into the dylib
   ~bad_optional_access() _NOEXCEPT override;
   [[__nodiscard__]] const char* what() const _NOEXCEPT override;
@@ -63,9 +63,6 @@ struct __is_std_optional : false_type {};
 
 template <class _Tp>
 struct __is_std_optional<optional<_Tp>> : true_type {};
-
-template <class _Tp, bool = is_reference_v<_Tp>>
-struct __optional_storage_base;
 
 #  if _LIBCPP_STD_VER < 26
 template <class _Tp>

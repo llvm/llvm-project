@@ -58,12 +58,12 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp>
-struct __optional_storage_base<_Tp, true> {
+struct __optional_ref_base {
   using value_type                 = _Tp;
   using __raw_type _LIBCPP_NODEBUG = remove_reference_t<_Tp>;
   __raw_type* __value_;
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __optional_storage_base() noexcept : __value_(nullptr) {}
+  _LIBCPP_HIDE_FROM_ABI constexpr __optional_ref_base() noexcept : __value_(nullptr) {}
 
   template <class _Up>
   _LIBCPP_HIDE_FROM_ABI constexpr void __convert_init_ref_val(_Up&& __val) {
@@ -72,7 +72,7 @@ struct __optional_storage_base<_Tp, true> {
   }
 
   template <class _UArg>
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit __optional_storage_base(in_place_t, _UArg&& __uarg) {
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit __optional_ref_base(in_place_t, _UArg&& __uarg) {
     static_assert(!__reference_constructs_from_temporary_v<_Tp, _UArg>,
                   "Attempted to construct a reference element in optional from a "
                   "possible temporary");
@@ -80,7 +80,7 @@ struct __optional_storage_base<_Tp, true> {
   }
 
   template <class _Fp, class... _Args>
-  constexpr __optional_storage_base(__optional_construct_from_invoke_tag, _Fp&& __f, _Args&&... __args) {
+  constexpr __optional_ref_base(__optional_construct_from_invoke_tag, _Fp&& __f, _Args&&... __args) {
     __convert_init_ref_val(std::forward<invoke_result_t<_Fp, _Args...>>(
         std::invoke(std::forward<_Fp>(__f), std::forward<_Args>(__args)...)));
   }
@@ -118,7 +118,7 @@ struct __optional_storage_base<_Tp, true> {
     }
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __swap(__optional_storage_base& __rhs) noexcept {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __swap(__optional_ref_base& __rhs) noexcept {
     std::swap(__value_, __rhs.__value_);
   }
 
@@ -141,23 +141,23 @@ struct __optional_storage_base<_Tp, true> {
 };
 
 template <class _Tp>
-struct __optional_iterator_base;
+struct __optional_ref_iterator_base;
 
 template <class _Tp>
-struct __optional_iterator_base<_Tp&> : __optional_storage_base<_Tp&> {
-  using __optional_storage_base<_Tp&>::__optional_storage_base;
+struct __optional_ref_iterator_base<_Tp&> : __optional_ref_base<_Tp&> {
+  using __optional_ref_base<_Tp&>::__optional_ref_base;
 };
 
 #  if _LIBCPP_HAS_EXPERIMENTAL_OPTIONAL_ITERATOR
 
 template <class _Tp>
   requires(is_object_v<_Tp> && !__is_unbounded_array_v<_Tp>)
-struct __optional_iterator_base<_Tp&> : __optional_storage_base<_Tp&> {
+struct __optional_ref_iterator_base<_Tp&> : __optional_ref_base<_Tp&> {
 private:
   using __pointer _LIBCPP_NODEBUG = add_pointer_t<_Tp>;
 
 public:
-  using __optional_storage_base<_Tp&>::__optional_storage_base;
+  using __optional_ref_base<_Tp&>::__optional_ref_base;
 
 #    ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL
   using iterator = __bounded_iter<__pointer>;
@@ -185,8 +185,8 @@ public:
 #  endif
 
 template <class _Tp>
-class optional<_Tp&> : public __optional_iterator_base<_Tp&> {
-  using __base _LIBCPP_NODEBUG = __optional_iterator_base<_Tp&>;
+class optional<_Tp&> : public __optional_ref_iterator_base<_Tp&> {
+  using __base _LIBCPP_NODEBUG = __optional_ref_iterator_base<_Tp&>;
 
   template <class _Up, class _QualUp>
   static constexpr bool __check_optionalU_ctor =

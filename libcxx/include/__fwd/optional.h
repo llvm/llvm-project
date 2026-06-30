@@ -27,6 +27,9 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Tp>
 class optional;
 
+template <class _Tp>
+class optional<_Tp&>;
+
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBPP_STD_VER >= 17

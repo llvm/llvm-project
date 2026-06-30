@@ -141,7 +141,7 @@ struct __optional_destruct_base<_Tp, true> {
   }
 };
 
-template <class _Tp, bool>
+template <class _Tp>
 struct __optional_storage_base : __optional_destruct_base<_Tp> {
   using __base _LIBCPP_NODEBUG = __optional_destruct_base<_Tp>;
   using value_type             = _Tp;
