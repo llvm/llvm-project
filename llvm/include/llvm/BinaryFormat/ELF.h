@@ -832,6 +832,7 @@ enum {
   X(0x53, EF_AMDGPU_MACH_AMDGCN_GFX10_3_GENERIC, "gfx10-3-generic")            \
   X(0x54, EF_AMDGPU_MACH_AMDGCN_GFX11_GENERIC, "gfx11-generic")                \
   X(0x55, EF_AMDGPU_MACH_AMDGCN_GFX1152, "gfx1152")                            \
+  X(0x57, EF_AMDGPU_MACH_AMDGCN_GFX1154, "gfx1154")                            \
   X(0x58, EF_AMDGPU_MACH_AMDGCN_GFX1153, "gfx1153")                            \
   X(0x59, EF_AMDGPU_MACH_AMDGCN_GFX12_GENERIC, "gfx12-generic")                \
   X(0x5a, EF_AMDGPU_MACH_AMDGCN_GFX1251, "gfx1251")                            \
@@ -839,7 +840,9 @@ enum {
   X(0x5c, EF_AMDGPU_MACH_AMDGCN_GFX1172, "gfx1172")                            \
   X(0x5d, EF_AMDGPU_MACH_AMDGCN_GFX1170, "gfx1170")                            \
   X(0x5e, EF_AMDGPU_MACH_AMDGCN_GFX1171, "gfx1171")                            \
-  X(0x5f, EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC, "gfx9-4-generic")
+  X(0x5f, EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC, "gfx9-4-generic")              \
+  X(0x62, EF_AMDGPU_MACH_AMDGCN_GFX11_7_GENERIC, "gfx11-7-generic")            \
+  X(0x63, EF_AMDGPU_MACH_AMDGCN_GFX13_GENERIC, "gfx13-generic")
 
 enum : unsigned {
   // clang-format off
@@ -867,10 +870,12 @@ enum : unsigned {
   EF_AMDGPU_MACH_AMDGCN_RESERVED_0X4D = 0x04d,
   EF_AMDGPU_MACH_AMDGCN_RESERVED_0X56 = 0x056,
   EF_AMDGPU_MACH_AMDGCN_RESERVED_0X57 = 0x057,
+  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X60 = 0x060,
+  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X61 = 0x061,
 
   // First/last AMDGCN-based processors.
   EF_AMDGPU_MACH_AMDGCN_FIRST = EF_AMDGPU_MACH_AMDGCN_GFX600,
-  EF_AMDGPU_MACH_AMDGCN_LAST = EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC,
+  EF_AMDGPU_MACH_AMDGCN_LAST = EF_AMDGPU_MACH_AMDGCN_GFX13_GENERIC,
 
   // Indicates if the "xnack" target feature is enabled for all code contained
   // in the object.

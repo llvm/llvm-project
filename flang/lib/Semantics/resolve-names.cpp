@@ -1635,22 +1635,40 @@ void AccVisitor::CopySymbolWithDevice(const parser::Name *name) {
 
 Symbol *AccVisitor::CopyUseDeviceSymbol(const Symbol &symbol) {
   const Symbol &ultimate{symbol.GetUltimate()};
-  Symbol *copy{currScope().CopySymbol(ultimate)};
+  // Key the device copy under the name as referenced here, which differs from
+  // the ultimate symbol's name for a USE-renamed variable, so that references
+  // inside the construct resolve to this copy rather than the host symbol.
+  const SourceName localName{symbol.name()};
+  Symbol *copy{nullptr};
+  // CopySymbol would key the copy under the ultimate's name; only use it when
+  // that matches the local name, otherwise reuse the host-associated symbol.
+  if (localName == ultimate.name()) {
+    copy = currScope().CopySymbol(ultimate);
+  }
   if (!copy) {
-    copy = FindInScope(currScope(), ultimate.name());
+    copy = FindInScope(currScope(), localName);
   }
   if (copy && copy->has<HostAssocDetails>()) {
     if (const auto *hostAssoc{copy->detailsIf<HostAssocDetails>()};
         hostAssoc && copy->owner().kind() == Scope::Kind::OpenACCConstruct) {
       Scope &hostScope{currScope().parent()};
-      if (!FindInScope(hostScope, ultimate.name())) {
+      if (!FindInScope(hostScope, localName)) {
         hostScope.CopySymbol(*copy);
       }
     }
     if (const auto *object{ultimate.detailsIf<ObjectEntityDetails>()}) {
       currScope().erase(copy->name());
       auto pair{currScope().try_emplace(
-          ultimate.name(), ultimate.attrs(), ObjectEntityDetails{*object})};
+          localName, ultimate.attrs(), ObjectEntityDetails{*object})};
+      copy = &*pair.first->second;
+      copy->flags() = ultimate.flags();
+    }
+  } else if (!copy) {
+    // USE-renamed object with no host-association symbol in this scope: key an
+    // object-entity copy under the local name (CopySymbol cannot rename).
+    if (const auto *object{ultimate.detailsIf<ObjectEntityDetails>()}) {
+      auto pair{currScope().try_emplace(
+          localName, ultimate.attrs(), ObjectEntityDetails{*object})};
       copy = &*pair.first->second;
       copy->flags() = ultimate.flags();
     }
@@ -1738,6 +1756,7 @@ public:
     return Pre(static_cast<const parser::OmpDirectiveSpecification &>(x));
   }
 
+  bool Pre(const parser::OmpReservedIdentifier &);
   void Post(const parser::OmpTypeName &);
   bool Pre(const parser::OmpStylizedDeclaration &);
   void Post(const parser::OmpStylizedDeclaration &);
@@ -1751,7 +1770,7 @@ public:
     // Iterate over elements of x, and resolve any common blocks that
     // are still unresolved.
     for (const parser::OmpObject &obj : x.v) {
-      auto *name{std::get_if<parser::Name>(&obj.u)};
+      auto *name{parser::omp::GetCommonBlockFromObj(obj)};
       if (name && !name->symbol) {
         Resolve(*name, currScope().MakeCommonBlock(name->source, name->source));
       }
@@ -1936,6 +1955,17 @@ void OmpVisitor::PushScopeWithSource(
     Scope::Kind kind, parser::CharBlock source, Symbol *symbol) {
   PushScope(kind, symbol);
   currScope().AddSourceRange(source);
+}
+
+bool OmpVisitor::Pre(const parser::OmpReservedIdentifier &x) {
+  // Create a unique symbol in the global scope.
+  if (auto *symbol{context().globalScope().FindSymbol(x.v.source)}) {
+    x.v.symbol = symbol;
+  } else {
+    MakePlaceholder(x.v, MiscDetails::Kind::None);
+  }
+  x.v.symbol->set(Symbol::Flag::OmpReserved);
+  return false;
 }
 
 void OmpVisitor::Post(const parser::OmpTypeName &x) {
@@ -2156,29 +2186,39 @@ void OmpVisitor::ProcessReductionSpecifier(
 }
 
 void OmpVisitor::ResolveCriticalName(const parser::OmpArgument &arg) {
-  auto &globalScope{[&]() -> Scope & {
-    for (Scope *s{&currScope()};; s = &s->parent()) {
-      if (s->IsTopLevel()) {
-        return *s;
-      }
-    }
-    llvm_unreachable("Cannot find global scope");
-  }()};
+  auto *object{parser::Unwrap<parser::OmpObject>(arg.u)};
+  if (!object) {
+    return;
+  }
 
-  if (auto *object{parser::Unwrap<parser::OmpObject>(arg.u)}) {
-    if (auto *desg{parser::omp::GetDesignatorFromObj(*object)}) {
-      if (auto *name{parser::GetDesignatorNameIfDataRef(*desg)}) {
-        if (auto *symbol{FindInScope(globalScope, *name)}) {
-          if (!symbol->test(Symbol::Flag::OmpCriticalLock)) {
-            SayWithDecl(*name, *symbol,
-                "CRITICAL construct name '%s' conflicts with a previous declaration"_warn_en_US,
-                name->ToString());
-          }
-        } else {
-          name->symbol = &MakeSymbol(globalScope, name->source, Attrs{});
-          name->symbol->set(Symbol::Flag::OmpCriticalLock);
-        }
+  const parser::Name *name{common::visit( //
+      common::visitors{//
+          [&](const parser::Designator &x) -> const parser::Name * {
+            return parser::GetDesignatorNameIfDataRef(x);
+          },
+          [&](const parser::OmpLocator &x) -> const parser::Name * {
+            if (auto *res{std::get_if<parser::OmpReservedIdentifier>(&x.u)}) {
+              return &res->v;
+            }
+            return nullptr;
+          },
+          [&](const parser::Name &) -> const parser::Name * { return nullptr; },
+          [&](const parser::OmpObject::Invalid &) -> const parser::Name * {
+            return nullptr;
+          }},
+      object->u)};
+
+  if (name) {
+    if (auto *symbol{FindInScope(context().globalScope(), *name)}) {
+      if (!symbol->test(Symbol::Flag::OmpCriticalLock)) {
+        SayWithDecl(*name, *symbol,
+            "CRITICAL construct name '%s' conflicts with a previous declaration"_warn_en_US,
+            name->ToString());
       }
+    } else {
+      name->symbol =
+          &MakeSymbol(context().globalScope(), name->source, Attrs{});
+      name->symbol->set(Symbol::Flag::OmpCriticalLock);
     }
   }
 }
@@ -2205,7 +2245,7 @@ bool OmpVisitor::Pre(const parser::OmpDirectiveSpecification &x) {
               Walk(std::get<0>(names.t));
               Walk(std::get<1>(names.t));
             },
-            [&](const parser::OmpLocator &locator) {
+            [&](const parser::OmpObject &object) {
               // Manually resolve names in CRITICAL directives. This is because
               // these names do not denote Fortran objects, and the CRITICAL
               // directive causes them to be "auto-declared", i.e. inserted into
@@ -2215,7 +2255,7 @@ bool OmpVisitor::Pre(const parser::OmpDirectiveSpecification &x) {
               if (x.DirId() == llvm::omp::Directive::OMPD_critical) {
                 ResolveCriticalName(arg);
               } else {
-                Walk(locator);
+                Walk(object);
               }
             },
         },
@@ -3416,9 +3456,16 @@ void ScopeHandler::ApplyImplicitRules(
 // or variables in COMMON to appear in specification expressions under
 // IMPLICIT NONE(TYPE) when what would otherwise have been their implicit
 // type is default INTEGER.
+// Also allow a named constant defined by a PARAMETER statement to be
+// explicitly typed by a later type declaration statement in the same
+// specification part under IMPLICIT NONE(TYPE); the constant acquires the
+// type it would have had under implicit typing rules (F2023 8.7), which a
+// subsequent declaration must match (F2023 8.6.11 p2).
 bool ScopeHandler::ImplicitlyTypeForwardRef(Symbol &symbol) {
+  const bool isNamedConstant{IsNamedConstant(symbol)};
   if (!inSpecificationPart_ || context().HasError(symbol) ||
-      !(IsDummy(symbol) || FindCommonBlockContaining(symbol)) ||
+      !(isNamedConstant || IsDummy(symbol) ||
+          FindCommonBlockContaining(symbol)) ||
       symbol.Rank() != 0 ||
       !context().languageFeatures().IsEnabled(
           common::LanguageFeature::ForwardRefImplicitNone)) {
@@ -3426,12 +3473,20 @@ bool ScopeHandler::ImplicitlyTypeForwardRef(Symbol &symbol) {
   }
   const DeclTypeSpec *type{
       GetImplicitType(symbol, false /*ignore IMPLICIT NONE*/)};
-  if (!type || !type->IsNumeric(TypeCategory::Integer)) {
+  if (!type) {
     return false;
   }
-  auto kind{evaluate::ToInt64(type->numericTypeSpec().kind())};
-  if (!kind || *kind != context().GetDefaultKind(TypeCategory::Integer)) {
-    return false;
+  if (!isNamedConstant) {
+    // For a forward-referenced dummy argument or COMMON variable, only a
+    // default-kind INTEGER implicit type is meaningful (e.g. as an array
+    // bound in a specification expression).
+    if (!type->IsNumeric(TypeCategory::Integer)) {
+      return false;
+    }
+    auto kind{evaluate::ToInt64(type->numericTypeSpec().kind())};
+    if (!kind || *kind != context().GetDefaultKind(TypeCategory::Integer)) {
+      return false;
+    }
   }
   if (!ConvertToObjectEntity(symbol)) {
     return false;
@@ -3621,12 +3676,17 @@ bool ScopeHandler::CheckPossibleBadForwardRef(const Symbol &symbol) {
       return true;
     }
     if ((IsDummy(symbol) ||
-            (!symbol.has<UseDetails>() && FindCommonBlockContaining(symbol))) &&
+            (!symbol.has<UseDetails>() &&
+                (IsNamedConstant(symbol) ||
+                    FindCommonBlockContaining(symbol)))) &&
         isImplicitNoneType() && symbol.test(Symbol::Flag::Implicit) &&
         !context().HasError(symbol)) {
-      // Dummy or COMMON was implicitly typed despite IMPLICIT NONE(TYPE) in
-      // ApplyImplicitRules() due to use in a specification expression,
-      // and no explicit type declaration appeared later.
+      // Dummy, COMMON, or PARAMETER named constant was implicitly typed despite
+      // IMPLICIT NONE(TYPE) in ApplyImplicitRules() due to a forward reference,
+      // and no explicit type declaration appeared later.  A use-associated
+      // named constant is excluded: its Symbol::Flag::Implicit may have been
+      // set legitimately by an IMPLICIT statement in the module that defined
+      // it, where IMPLICIT NONE(TYPE) was not in effect.
       Say(symbol.name(), "No explicit type declared for '%s'"_err_en_US);
       context().SetError(symbol);
       return true;
@@ -4511,38 +4571,6 @@ Scope *ModuleVisitor::FindModule(const parser::Name &name,
   return scope;
 }
 
-// Map a mangled declare reduction name (e.g., op.+, op.max, op..myop.) back
-// to the Fortran identifier that controls its accessibility in a module scope.
-// Intrinsic operators map to "operator(+)" etc., named functions to "max" etc.,
-// and defined operators to "operator(.myop.)" etc.
-static std::string GetReductionIdentifierName(const SourceName &mangledName) {
-  llvm::StringRef name{mangledName.begin(), mangledName.size()};
-  if (!name.starts_with("op.")) {
-    return {};
-  }
-  llvm::StringRef suffix{name.drop_front(3)};
-  // Intrinsic arithmetic operators: op.+ → operator(+)
-  if (suffix == "+" || suffix == "-" || suffix == "*") {
-    return ("operator(" + suffix + ")").str();
-  }
-  // Intrinsic logical operators (mangled uppercase, scope uses lowercase)
-  llvm::StringRef logicalOp{llvm::StringSwitch<llvm::StringRef>(suffix)
-          .Case("AND", ".and.")
-          .Case("OR", ".or.")
-          .Case("EQV", ".eqv.")
-          .Case("NEQV", ".neqv.")
-          .Default("")};
-  if (!logicalOp.empty()) {
-    return ("operator(" + logicalOp + ")").str();
-  }
-  // Defined operators: op..myop. → operator(.myop.)
-  if (suffix.size() > 2 && suffix.front() == '.' && suffix.back() == '.') {
-    return ("operator(" + suffix + ")").str();
-  }
-  // Named functions: op.max → max
-  return suffix.str();
-}
-
 void ModuleVisitor::ApplyDefaultAccess() {
   const auto *moduleDetails{
       DEREF(currScope().symbol()).detailsIf<ModuleDetails>()};
@@ -4569,7 +4597,7 @@ void ModuleVisitor::ApplyDefaultAccess() {
         // a module has accessibility as if it were declared as a module entity.
         // If the corresponding operator/procedure has explicit accessibility,
         // the reduction inherits it.
-        std::string opName{GetReductionIdentifierName(symbol.name())};
+        std::string opName{GetReductionFortranId(symbol.name())};
         if (!opName.empty()) {
           if (auto *opSym{FindInScope(currScope(), SourceName{opName})}) {
             if (opSym->attrs().test(Attr::PUBLIC)) {
@@ -5979,7 +6007,7 @@ bool DeclarationVisitor::Pre(const parser::NamedConstantDef &x) {
     }
   } else {
     // standard-conforming PARAMETER statement (with parentheses)
-    ApplyImplicitRules(symbol);
+    ApplyImplicitRules(symbol, /*allowForwardReference=*/true);
     Walk(expr);
     if (auto converted{EvaluateNonPointerInitializer(symbol, expr, at)}) {
       details->set_init(std::move(*converted));
@@ -10377,10 +10405,11 @@ void ResolveNamesVisitor::FinishSpecificationPart(
     }
 
     if (auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
-      if (IsAllocatable(symbol) && !object->cudaDataAttr()) {
-        // Implicitly treat allocatable arrays as managed when feature is
-        // enabled. This is done after all explicit CUDA attributes have been
-        // processed. Only applies when CUDA Fortran is enabled; otherwise
+      if ((IsAllocatable(symbol) || IsPointer(symbol)) &&
+          !object->cudaDataAttr()) {
+        // Implicitly treat allocatable/pointer arrays as managed when feature
+        // is enabled. This is done after all explicit CUDA attributes have
+        // been processed. Only applies when CUDA Fortran is enabled; otherwise
         // -gpu=mem:managed on a non-CUDA-Fortran translation unit (e.g. pure
         // OpenACC) would incorrectly route every allocatable through the CUDA
         // Fortran managed descriptor pipeline.
@@ -10391,8 +10420,9 @@ void ResolveNamesVisitor::FinishSpecificationPart(
           object->set_cudaDataAttr(common::CUDADataAttr::Managed);
         // Implicitly treat allocatable arrays as pinned when feature is
         // enabled.
-        else if (context().languageFeatures().IsEnabled(
-                     common::LanguageFeature::CudaPinned))
+        else if (IsAllocatable(symbol) &&
+            context().languageFeatures().IsEnabled(
+                common::LanguageFeature::CudaPinned))
           object->set_cudaDataAttr(common::CUDADataAttr::Pinned);
       }
     }

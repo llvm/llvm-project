@@ -23,16 +23,16 @@ int main() { return fib(4); }
 ---
 !where {function: main}:
     !where {function: fib}:
-        !and {lines: 8}:
+        !and {lines: 9}:
             !value n: 4
         !where {function: fib}:
-            !and {lines: 8}:
+            !and {lines: 9}:
                 !value n: [2, 3]
             !where {function: fib}:
-                !and {lines: 8}:
+                !and {lines: 9}:
                     !value n: [0, 1, 1, 2]
                 !where {function: fib}:
-                    !and {lines: 8}:
+                    !and {lines: 9}:
                         !value n: [0, 1]
 ...
 */

@@ -1301,7 +1301,7 @@ bool VPlanTransforms::handleEarlyExits(VPlan &Plan, UncountableExitStyle Style,
   return true;
 }
 
-void VPlanTransforms::addMiddleCheck(VPlan &Plan, bool TailFolded) {
+void VPlanTransforms::addMiddleCheck(VPlan &Plan) {
   auto *MiddleVPBB = VPBlockUtils::getPlainCFGMiddleBlock(Plan);
   // If MiddleVPBB has a single successor then the original loop does not exit
   // via the latch and the single successor must be the scalar preheader.
@@ -1332,12 +1332,9 @@ void VPlanTransforms::addMiddleCheck(VPlan &Plan, bool TailFolded) {
   auto *LatchVPBB = cast<VPBasicBlock>(MiddleVPBB->getSinglePredecessor());
   DebugLoc LatchDL = LatchVPBB->getTerminator()->getDebugLoc();
   VPBuilder Builder(MiddleVPBB);
-  VPValue *Cmp;
-  if (TailFolded)
-    Cmp = Plan.getTrue();
-  else
-    Cmp = Builder.createICmp(CmpInst::ICMP_EQ, Plan.getTripCount(),
-                             &Plan.getVectorTripCount(), LatchDL, "cmp.n");
+  VPValue *Cmp =
+      Builder.createICmp(CmpInst::ICMP_EQ, Plan.getTripCount(),
+                         &Plan.getVectorTripCount(), LatchDL, "cmp.n");
   Builder.createNaryOp(VPInstruction::BranchOnCond, {Cmp}, LatchDL);
 }
 
@@ -1416,8 +1413,7 @@ void VPlanTransforms::foldTailByMasking(VPlan &Plan) {
   for (const auto &[V, Users] : NeedsPhi) {
     if (isa<VPIRValue>(V))
       continue;
-    VPValue *TailVal =
-        Plan.getOrAddLiveIn(PoisonValue::get(V->getScalarType()));
+    VPValue *TailVal = Plan.getPoison(V->getScalarType());
     VPIRFlags Flags;
     assert(llvm::count_if(Users, IsaPred<VPReductionPHIRecipe>) <= 1 &&
            "Value used by more than two reduction phis?");
@@ -1449,6 +1445,14 @@ void VPlanTransforms::foldTailByMasking(VPlan &Plan) {
         Builder.createNaryOp(VPInstruction::ExtractLane, {LastActiveLane, Op});
     R.getVPSingleValue()->replaceAllUsesWith(Ext);
   }
+
+  // VectorTripCount now equals TripCount so simplify the MiddleVPBB branch.
+  assert(match(Plan.getMiddleBlock()->getTerminator(),
+               m_BranchOnCond(m_SpecificICmp(
+                   CmpInst::ICMP_EQ, m_Specific(Plan.getTripCount()),
+                   m_Specific(&Plan.getVectorTripCount())))) &&
+         "Unexpected MiddleVPBB branch");
+  Plan.getMiddleBlock()->getTerminator()->setOperand(0, Plan.getTrue());
 }
 
 /// Insert \p CheckBlockVPBB on the edge leading to the vector preheader,
@@ -1763,7 +1767,7 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
       continue;
     if (auto *DerivedIV = dyn_cast<VPDerivedIVRecipe>(VecV)) {
       VPValue *DIVTC = DerivedIV->getOperand(1);
-      if (DerivedIV->getNumUsers() == 1 && IsTC(DIVTC)) {
+      if (DerivedIV->hasOneUse() && IsTC(DIVTC)) {
         auto *NewSel = MiddleBuilder.createSelect(
             AnyNaNLane, LoopRegion->getCanonicalIV(), DIVTC);
         DerivedIV->moveAfter(&*MiddleBuilder.getInsertPoint());
@@ -1837,9 +1841,10 @@ bool VPlanTransforms::handleFindLastReductions(VPlan &Plan) {
 
     // If there's a header mask, the backedge select will not be the find-last
     // select.
-    if (HeaderMask && !match(BackedgeSelect,
-                             m_Select(m_Specific(HeaderMask),
-                                      m_VPValue(CondSelect), m_Specific(PhiR))))
+    if (HeaderMask &&
+        !match(BackedgeSelect,
+               m_SelectLike(m_Specific(HeaderMask), m_VPValue(CondSelect),
+                            m_Specific(PhiR))))
       return false;
 
     VPValue *Cond = nullptr, *Op1 = nullptr, *Op2 = nullptr;
@@ -1976,7 +1981,7 @@ static bool handleFirstArgMinOrMax(
     FindIVSelectR->setOperand(FindIVSelectR->getOperand(1) == WideIV ? 1 : 2,
                               WidenCanIV);
   }
-  FindLastIVPhiR->setOperand(0, Plan.getOrAddLiveIn(PoisonValue::get(Ty)));
+  FindLastIVPhiR->setOperand(0, Plan.getPoison(Ty));
 
   // The reduction using MinOrMaxPhiR needs adjusting to compute the correct
   // result:

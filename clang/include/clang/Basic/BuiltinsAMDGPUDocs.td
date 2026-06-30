@@ -645,6 +645,21 @@ scale variant.
 }];
 }
 
+def DocWMMA_f64_16x16x4_f64_GFX1251 : Documentation {
+  let Category = DocCatWMMA;
+  let Content = [{
+Wave matrix multiply-accumulate with f64 inputs and f64 output, using a
+4-deep K dimension. Multiplies a 16x4 matrix ``A`` by a 4x16 matrix ``B``
+and adds the 16x16 f64 accumulator ``C``.
+
+- ``a_neg`` / ``b_neg``: if true, negate the corresponding input matrix.
+- ``c_mod``: accumulator modifier (0 = none, 1 = neg, 2 = abs,
+  3 = neg(abs)).
+- ``matrix_a_reuse`` / ``matrix_b_reuse``: hints to the hardware that
+  matrix A or B data can be reused from a previous WMMA instruction.
+}];
+}
+
 //===----------------------------------------------------------------------===//
 // Tensor DMA Builtins
 //===----------------------------------------------------------------------===//
@@ -674,5 +689,25 @@ def DocTensorStoreFromLDS_GFX1250 : Documentation {
   let Category = DocCatTensorDMA;
   let Content = [{
 Asynchronously copies a tensor from LDS into global memory.
+}];
+}
+
+//===----------------------------------------------------------------------===//
+// Bit Manipulation Builtins
+//===----------------------------------------------------------------------===//
+
+def DocCatBitManip : DocumentationCategory<"Bit Manipulation Builtins"> {
+  let Content = [{
+These builtins perform bit-manipulation operations within a wavefront.
+}];
+}
+
+def DocSBitReplicate : Documentation {
+  let Category = DocCatBitManip;
+  let Content = [{
+Replicates each bit of the 32-bit ``src`` operand into two adjacent bits of a
+64-bit result. Bit ``i`` of the input is copied to bits ``2*i`` and ``2*i+1``
+of the output. The operand must be uniform across the wavefront. A divergent
+value gives an undefined result.
 }];
 }

@@ -127,6 +127,13 @@ Error DXContainer::parseDebugName(StringRef Part) {
   return Error::success();
 }
 
+Error DXContainer::parsePrivateData(StringRef Part) {
+  if (PrivateData)
+    return parseFailed("more than one PRIV part is present in the file");
+  PrivateData.emplace(Part);
+  return Error::success();
+}
+
 Error DXContainer::parseShaderFeatureFlags(StringRef Part) {
   if (ShaderFeatureFlags)
     return parseFailed("More than one SFI0 part is present in the file");
@@ -361,6 +368,7 @@ parseContentsEntries(StringRef Entries,
     return Contents.Parameters.EntriesSizeInBytes;
   }
   }
+  llvm_unreachable("unhandled compression type");
 }
 
 static Expected<size_t>
@@ -450,9 +458,9 @@ Error DXContainer::parseSourceInfo(StringRef Part) {
     return Err;
   Current += sizeof(SourceInfo->Parameters);
 
-  if (SourceInfo->Parameters.AlignedSizeInBytes != Part.size())
-    return parseFailed(formatv("size field in SRCI header ({0} bytes) does not "
-                               "match SRCI part size ({1} bytes)",
+  if (SourceInfo->Parameters.AlignedSizeInBytes > Part.size())
+    return parseFailed(formatv("size field in SRCI header ({0} bytes) is "
+                               "greater than SRCI part size ({1} bytes)",
                                SourceInfo->Parameters.AlignedSizeInBytes,
                                Part.size()));
   if (SourceInfo->Parameters.Flags)
@@ -574,6 +582,10 @@ Error DXContainer::parsePartOffsets() {
       break;
     case dxbc::PartType::ILDN:
       if (Error Err = parseDebugName(PartData))
+        return Err;
+      break;
+    case dxbc::PartType::PRIV:
+      if (Error Err = parsePrivateData(PartData))
         return Err;
       break;
     case dxbc::PartType::SFI0:

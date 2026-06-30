@@ -1,5 +1,5 @@
-; RUN: llc -mtriple amdgcn-unknown-linux-gnu -mcpu=tahiti < %s | FileCheck  %s
-; RUN: llc -mtriple amdgcn-unknown-linux-gnu -mcpu=tonga < %s | FileCheck  %s
+; RUN: llc -mtriple=amdgcn-unknown-linux-gnu -mcpu=tahiti < %s | FileCheck  %s
+; RUN: llc -mtriple=amdgcn-unknown-linux-gnu -mcpu=tonga < %s | FileCheck  %s
 ; RUN: llc -mtriple r600-unknown-linux-gnu -mcpu=redwood < %s | FileCheck %s --check-prefix=R600
 
 ; ALL-NOT: {{^}}func:
