@@ -15,7 +15,10 @@
 using namespace lldb;
 using namespace lldb_private;
 
-void MemoryRegionInfoCache::Clear() { m_region_infos.Clear(); }
+void MemoryRegionInfoCache::Clear() { 
+  std::lock_guard<std::recursive_mutex> guard(m_mutex);
+  m_region_infos.Clear(); 
+}
 
 void MemoryRegionInfoCache::EraseRange(addr_t load_addr, size_t size) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
