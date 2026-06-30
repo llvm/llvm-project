@@ -25,6 +25,7 @@
 #include "flang/Semantics/openmp-utils.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
+#include "flang/Support/Flags.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Frontend/OpenMP/OMP.h.inc"
@@ -624,7 +625,7 @@ public:
     PushContext(x.source, llvm::omp::Directive::OMPD_flush);
     for (auto &arg : x.v.Arguments().v) {
       if (auto *object{parser::omp::GetArgumentObject(arg)}) {
-        if (auto *name{std::get_if<parser::Name>(&object->u)}) {
+        if (auto *name{parser::omp::GetCommonBlockFromObj(*object)}) {
           // ResolveOmpCommonBlockName resolves the symbol as a side effect
           if (!ResolveOmpCommonBlockName(name)) {
             context_.Say(name->source, // 2.15.3
@@ -2736,7 +2737,8 @@ void OmpAttributeVisitor::CreateImplicitSymbols(
       // 4) not mapped target variable  -> firstprivate
       //    - i.e. implicit, but meets OpenMP specification rules for
       //    firstprivate "promotion"
-      if (IsTargetCaptureImplicitlyFirstprivatizeable(*symbol, prevDSA,
+      if (enableDelayedPrivatizationStaging &&
+          IsTargetCaptureImplicitlyFirstprivatizeable(*symbol, prevDSA,
               dataSharingAttributeFlags, dataMappingAttributeFlags,
               dirContext.defaultMap)) {
         prevDSA.set(Symbol::Flag::OmpImplicit);

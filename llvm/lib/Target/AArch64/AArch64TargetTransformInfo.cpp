@@ -691,6 +691,10 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
         return LT.first * 3;
       case MVT::v2i32:
         return LT.first * 6;
+      case MVT::v4i32:
+        return LT.first * 11;
+      case MVT::v4i16:
+        return LT.first * 14;
       default:
         break;
       }
@@ -5284,8 +5288,10 @@ bool AArch64TTIImpl::isLegalMaskedExpandLoad(Type *DataTy,
          (ST->isSVEorStreamingSVEAvailable() && ST->hasSME2p2());
 }
 
-unsigned AArch64TTIImpl::getMaxInterleaveFactor(ElementCount VF) const {
-  if (VF.isScalar())
+unsigned
+AArch64TTIImpl::getMaxInterleaveFactor(ElementCount VF,
+                                       bool HasUnorderedReductions) const {
+  if (VF.isScalar() || (HasUnorderedReductions && VF.getKnownMinValue() <= 4))
     return 4;
   return ST->getMaxInterleaveFactor();
 }

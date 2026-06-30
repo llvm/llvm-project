@@ -2210,6 +2210,12 @@ public:
     return VectorizableTree.front()->Scalars;
   }
 
+  /// Returns the lane the given value is vectorized to in the root node.
+  unsigned findRootLaneForValue(Value *V) const {
+    assert(!VectorizableTree.empty() && "No graph to get the first node from");
+    return VectorizableTree.front()->findLaneForValue(V);
+  }
+
   /// Returns the type/is-signed info for the root node in the graph without
   /// casting.
   std::optional<std::pair<Type *, bool>> getRootNodeTypeWithNoCast() const {
@@ -23330,6 +23336,24 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
            return !SI || isCommutative(SI);
          })))
       I->setHasNoUnsignedWrap(/*b=*/false);
+    // add nsw X, INT_MIN is not equivalent to sub nsw X, INT_MIN, because
+    // negating INT_MIN overflows. When an add/sub lane is converted to the
+    // opposite opcode its constant is negated, so nsw no longer holds and must
+    // be dropped.
+    if (!MinBWs.contains(E) &&
+        (Opcode == Instruction::Add || Opcode == Instruction::Sub) &&
+        any_of(UniqueInsts, [&](Value *V) {
+          auto *SI = cast<Instruction>(V);
+          if (SI->getOpcode() == Opcode ||
+              !is_contained({Instruction::Add, Instruction::Sub},
+                            SI->getOpcode()))
+            return false;
+          return any_of(SI->operands(), [](Value *Op) {
+            const auto *CI = dyn_cast<ConstantInt>(Op);
+            return CI && CI->getValue().isMinSignedValue();
+          });
+        }))
+      I->setHasNoSignedWrap(/*b=*/false);
     if (auto *ICmp = dyn_cast<ICmpInst>(I); ICmp && It == MinBWs.end())
       ICmp->setSameSign(/*B=*/false);
     return I;
@@ -30023,18 +30047,17 @@ public:
 
         // Emit code to correctly handle reused reduced values, if required.
         if (OptReusedScalars && !SameScaleFactor) {
-          // Build TrackedToOrig aligned with the root node scalars order,
-          // which may differ from Candidates order due to tree reordering.
+          // The reuse counters are stored in the deduplicated candidates
+          // order, but the emitted reduction vector lane order is defined by
+          // the root node, which may be reordered, split or have copyable
+          // elements. Place each counter at the lane the matching candidate is
+          // vectorized to, so the counter is applied to the correct lane.
           ArrayRef<Value *> RootVL = V.getRootNodeScalars();
           ArrayRef<Value *> CandSlice(Candidates.begin() + Pos, ReduxWidth);
           SmallVector<Value *> RootTrackedToOrig(RootVL.size());
-          for (auto [Idx, V] : enumerate(RootVL)) {
-            auto *It = find(CandSlice, V);
-            assert(It != CandSlice.end() &&
-                   "Root scalar not found in candidates");
-            RootTrackedToOrig[Idx] =
-                TrackedToOrig[Pos + std::distance(CandSlice.begin(), It)];
-          }
+          for (auto [Idx, Val] : enumerate(CandSlice))
+            RootTrackedToOrig[V.findRootLaneForValue(Val)] =
+                TrackedToOrig[Pos + Idx];
           VectorizedRoot = emitReusedOps(VectorizedRoot, Builder, V,
                                          SameValuesCounter, RootTrackedToOrig);
         }

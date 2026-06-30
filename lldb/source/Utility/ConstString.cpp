@@ -196,7 +196,6 @@ public:
       std::shared_lock<PoolMutex> lock(pool.m_mutex);
       const Allocator &alloc = pool.m_string_map.getAllocator();
       stats.bytes_total += alloc.getTotalMemory();
-      stats.bytes_used += alloc.getBytesAllocated();
     }
     return stats;
   }
