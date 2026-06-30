@@ -10,8 +10,8 @@
 #ifndef LLDB_BREAKPOINT_BREAKPOINTRESOLVERFILEREGEX_H
 #define LLDB_BREAKPOINT_BREAKPOINTRESOLVERFILEREGEX_H
 
-#include <set>
 #include "lldb/Breakpoint/BreakpointResolver.h"
+#include <set>
 
 namespace lldb_private {
 
