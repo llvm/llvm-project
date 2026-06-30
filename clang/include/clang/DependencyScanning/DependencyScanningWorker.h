@@ -92,12 +92,6 @@ public:
     return TracingFS.get();
   }
 
-  bool initializeCIWC(
-      StringRef CWD, ArrayRef<std::string> CC1CommandLine,
-      std::unique_ptr<DiagnosticsEngineWithDiagOpts> DiagEngineWithDiagOpts,
-      IntrusiveRefCntPtr<llvm::vfs::FileSystem> OverlayFS,
-      DependencyActionController &Controller);
-
 private:
   /// The parent dependency scanning service.
   DependencyScanningService &Service;
@@ -107,8 +101,6 @@ private:
   IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS;
   /// The tracing VFS overlaid on top of the base VFS.
   IntrusiveRefCntPtr<llvm::vfs::TracingFileSystem> TracingFS;
-
-  std::unique_ptr<CompilerInstanceWithContext> CIWC;
 
   friend class CompilerInstanceWithContext;
 };

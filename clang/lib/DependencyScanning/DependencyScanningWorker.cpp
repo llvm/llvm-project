@@ -59,21 +59,6 @@ DependencyScanningWorker::makeEffectiveVFS(
   return FS;
 }
 
-bool DependencyScanningWorker::initializeCIWC(
-    StringRef CWD, ArrayRef<std::string> CC1CommandLine,
-    std::unique_ptr<DiagnosticsEngineWithDiagOpts> DiagEngineWithDiagOpts,
-    IntrusiveRefCntPtr<llvm::vfs::FileSystem> OverlayFS,
-    DependencyActionController &Controller) {
-  CIWC.reset();
-  auto Result = CompilerInstanceWithContext::initializeFromCC1Commandline(
-      *this, CWD, CC1CommandLine, std::move(DiagEngineWithDiagOpts),
-      std::move(OverlayFS), Controller);
-  if (!Result)
-    return false;
-  CIWC = std::make_unique<CompilerInstanceWithContext>(std::move(*Result));
-  return true;
-}
-
 bool DependencyScanningWorker::computeDependenciesByNameWithDrain(
     StringRef CWD, ArrayRef<std::string> CC1CommandLine,
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> OverlayFS,
@@ -113,6 +98,7 @@ bool DependencyScanningWorker::computeDependencies(
   bool Scanned = false;
   std::shared_ptr<ModuleDepCollector> MDC;
 
+  std::optional<CompilerInstanceWithContext> CIWC;
   const bool Success = llvm::all_of(CommandLines, [&](const auto &Cmd) {
     if (StringRef(Cmd[1]) != "-cc1") {
       // Non-clang command. Just pass through to the dependency consumer.
@@ -125,10 +111,12 @@ bool DependencyScanningWorker::computeDependencies(
         std::make_unique<DiagnosticsEngineWithDiagOpts>(Cmd, FS, DiagConsumer);
     if (!Scanned) {
       Scanned = true;
-      if (!initializeCIWC(WorkingDirectory, Cmd,
-                          std::move(DiagEngineWithDiagOpts), OverlayFS,
-                          Controller))
+      auto Result = CompilerInstanceWithContext::initializeFromCC1Commandline(
+          *this, WorkingDirectory, Cmd, std::move(DiagEngineWithDiagOpts),
+          OverlayFS, Controller);
+      if (!Result)
         return false;
+      CIWC.emplace(std::move(*Result));
       MDC = CIWC->scanTranslationUnit(DepConsumer, Controller);
       return MDC != nullptr;
     }
@@ -139,8 +127,7 @@ bool DependencyScanningWorker::computeDependencies(
     if (!Invocation)
       return false;
 
-    if (!Invocation)
-      return false;
+    assert(CIWC && "Must have an initialized CIWC");
     return CIWC->applyAndReport(*MDC, *Invocation, DepConsumer, Controller,
                                 Cmd.front());
   });
