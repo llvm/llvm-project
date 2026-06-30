@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "Clang.h"
-#include "AMDGPUOpenMP.h"
 #include "Arch/AArch64.h"
 #include "Arch/ARM.h"
 #include "Arch/LoongArch.h"
