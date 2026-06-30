@@ -56,10 +56,10 @@ void foo() {
 // CHECK: @_ZTIZ3foovEN4Test1bMUlvE_E_0
 // CHECK: @_ZTSZ3foovEN4Test1bMUlvE_E_0
 
-// CHECK-LABEL: @_ZZ3foovEN4TestC2Ev
+// CHECK-LABEL: define internal void @_ZZ3foovEN4TestC2Ev
 // CHECK: store ptr @_ZTIZ3foovEN4Test1aMUlvE_E
 // CHECK: store ptr @_ZTIZ3foovEN4Test1bMUlvE_E
 
-// CHECK-LABEL: @_ZZ3foovEN4TestC2E_0v
+// CHECK-LABEL: define internal void @_ZZ3foovEN4TestC2E_0v
 // CHECK: store ptr @_ZTIZ3foovEN4Test1aMUlvE_E_0
 // CHECK: store ptr @_ZTIZ3foovEN4Test1bMUlvE_E_0

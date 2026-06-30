@@ -1947,10 +1947,10 @@ void CXXNameMangler::mangleLocalName(GlobalDecl GD,
       const NamedDecl *PrefixND = getClosurePrefix(ND);
       if (PrefixND && !isCompatibleWith(LangOptions::ClangABI::Ver18))
         mangleNestedNameWithClosurePrefix(GD, PrefixND, AdditionalAbiTags,
-                                          true /*NoFunction*/);
+                                          /*NoFunction=*/true);
       else
         mangleNestedName(GD, Context.getEffectiveDeclContext(ND),
-                         AdditionalAbiTags, true /*NoFunction*/);
+                         AdditionalAbiTags, /*NoFunction=*/true);
     }
   } else if (const BlockDecl *BD = dyn_cast<BlockDecl>(D)) {
     // Mangle a block in a default parameter; see above explanation for
