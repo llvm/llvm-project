@@ -95,7 +95,6 @@ add_proxy_header_library(
     libc.hdr.dirent_overlay
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.struct_dirent
-    libc.include.dirent
 )
 
 add_proxy_header_library(
@@ -362,7 +361,6 @@ add_proxy_header_library(
     libc.hdr.dirent_overlay
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.DIR
-    libc.include.dirent
 )
 
 add_proxy_header_library(

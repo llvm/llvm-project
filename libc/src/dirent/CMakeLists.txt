@@ -56,10 +56,10 @@ add_entrypoint_object(
   HDRS
     fdopendir.h
   DEPENDS
-    libc.include.dirent
+    libc.src.__support.common
+    libc.src.__support.macros.config
     libc.hdr.types.DIR
     libc.src.__support.File.dir
-    libc.src.__support.File.platform_dir
     libc.src.errno.errno
 )
 

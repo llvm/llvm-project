@@ -25,6 +25,8 @@ add_object_library(
   SRCS
     dir.cpp
   DEPENDS
+    libc.src.__support.common
+    libc.src.__support.macros.config
     libc.hdr.fcntl_macros
     libc.hdr.sys_stat_macros
     libc.src.__support.OSUtil.linux.stat.kernel_statx_types

@@ -45,9 +45,9 @@ TEST_F(LlvmLibcFdopendirTest, SuccessCase) {
     struct dirent *d = LIBC_NAMESPACE::readdir(dir);
     if (d == nullptr)
       break;
-    if (LIBC_NAMESPACE::cpp::string_view(&d->d_name[0]) == "file1.txt")
+    if (LIBC_NAMESPACE::cpp::string_view(d->d_name) == "file1.txt")
       file1 = d;
-    if (LIBC_NAMESPACE::cpp::string_view(&d->d_name[0]) == "file2.txt")
+    if (LIBC_NAMESPACE::cpp::string_view(d->d_name) == "file2.txt")
       file2 = d;
   }
   ASSERT_ERRNO_SUCCESS();
