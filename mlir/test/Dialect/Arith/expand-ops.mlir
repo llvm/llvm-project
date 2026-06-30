@@ -144,6 +144,69 @@ func.func @ceildivui_index(%arg0: index, %arg1: index) -> (index) {
 
 // -----
 
+// CHECK-LABEL:   func.func @ceildivui_dynamic_tensor(
+// CHECK-SAME:                                      %[[ARG0:.*]]: tensor<8x4x?xi64>,
+// CHECK-SAME:                                      %[[ARG1:.*]]: tensor<8x4x?xi64>) -> tensor<8x4x?xi64> {
+func.func @ceildivui_dynamic_tensor(%arg0: tensor<8x4x?xi64>, %arg1: tensor<8x4x?xi64>) -> tensor<8x4x?xi64> {
+  %res = arith.ceildivui %arg0, %arg1 : tensor<8x4x?xi64>
+  return %res : tensor<8x4x?xi64>
+// CHECK:       %[[ZERO_SCALAR:.*]] = arith.constant 0 : i64
+// CHECK:       %[[C2_IDX:.*]] = arith.constant 2 : index
+// CHECK:       %[[ZERO_DIM:.*]] = tensor.dim %[[ARG0]], %[[C2_IDX]] : tensor<8x4x?xi64>
+// CHECK:       %[[ZERO:.*]] = tensor.splat %[[ZERO_SCALAR]]{{\[}}%[[ZERO_DIM]]] : tensor<8x4x?xi64>
+// CHECK:       %[[ISZERO:.*]] = arith.cmpi eq, %[[ARG0]], %[[ZERO]] : tensor<8x4x?xi64>
+// CHECK:       %[[ONE_SCALAR:.*]] = arith.constant 1 : i64
+// CHECK:       %[[C2_IDX_1:.*]] = arith.constant 2 : index
+// CHECK:       %[[ONE_DIM:.*]] = tensor.dim %[[ARG0]], %[[C2_IDX_1]] : tensor<8x4x?xi64>
+// CHECK:       %[[ONE:.*]] = tensor.splat %[[ONE_SCALAR]]{{\[}}%[[ONE_DIM]]] : tensor<8x4x?xi64>
+// CHECK:       %[[SUB:.*]] = arith.subi %[[ARG0]], %[[ONE]] : tensor<8x4x?xi64>
+// CHECK:       %[[DIV:.*]] = arith.divui %[[SUB]], %[[ARG1]] : tensor<8x4x?xi64>
+// CHECK:       %[[ADD:.*]] = arith.addi %[[DIV]], %[[ONE]] : tensor<8x4x?xi64>
+// CHECK:       %[[RES:.*]] = arith.select %[[ISZERO]], %[[ZERO]], %[[ADD]] : tensor<8x4x?xi1>, tensor<8x4x?xi64>
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @ceildivsi_dynamic_tensor(
+// CHECK-SAME:                                      %[[ARG0:.*]]: tensor<8x?xi64>,
+// CHECK-SAME:                                      %[[ARG1:.*]]: tensor<8x?xi64>) -> tensor<8x?xi64> {
+func.func @ceildivsi_dynamic_tensor(%arg0: tensor<8x?xi64>, %arg1: tensor<8x?xi64>) -> tensor<8x?xi64> {
+  %res = arith.ceildivsi %arg0, %arg1 : tensor<8x?xi64>
+  return %res : tensor<8x?xi64>
+// CHECK:       %[[ZERO_SCALAR:.*]] = arith.constant 0 : i64
+// CHECK:       %[[C1_IDX:.*]] = arith.constant 1 : index
+// CHECK:       %[[ZERO_DIM:.*]] = tensor.dim %[[ARG0]], %[[C1_IDX]] : tensor<8x?xi64>
+// CHECK:       %[[ZERO:.*]] = tensor.splat %[[ZERO_SCALAR]]{{\[}}%[[ZERO_DIM]]] : tensor<8x?xi64>
+// CHECK:       %[[ONE_SCALAR:.*]] = arith.constant 1 : i64
+// CHECK:       %[[C1_IDX_1:.*]] = arith.constant 1 : index
+// CHECK:       %[[ONE_DIM:.*]] = tensor.dim %[[ARG0]], %[[C1_IDX_1]] : tensor<8x?xi64>
+// CHECK:       %[[ONE:.*]] = tensor.splat %[[ONE_SCALAR]]{{\[}}%[[ONE_DIM]]] : tensor<8x?xi64>
+// CHECK:       %[[DIV:.*]] = arith.divsi %[[ARG0]], %[[ARG1]] : tensor<8x?xi64>
+// CHECK:       %[[ADD:.*]] = arith.addi %[[DIV]], %[[ONE]] : tensor<8x?xi64>
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @floordivsi_dynamic_tensor(
+// CHECK-SAME:                                       %[[ARG0:.*]]: tensor<?x4xi64>,
+// CHECK-SAME:                                       %[[ARG1:.*]]: tensor<?x4xi64>) -> tensor<?x4xi64> {
+func.func @floordivsi_dynamic_tensor(%arg0: tensor<?x4xi64>, %arg1: tensor<?x4xi64>) -> tensor<?x4xi64> {
+  %res = arith.floordivsi %arg0, %arg1 : tensor<?x4xi64>
+  return %res : tensor<?x4xi64>
+// CHECK:       %[[DIV:.*]] = arith.divsi %[[ARG0]], %[[ARG1]] : tensor<?x4xi64>
+// CHECK:       %[[ZERO_SCALAR:.*]] = arith.constant 0 : i64
+// CHECK:       %[[C0_IDX:.*]] = arith.constant 0 : index
+// CHECK:       %[[ZERO_DIM:.*]] = tensor.dim %[[ARG0]], %[[C0_IDX]] : tensor<?x4xi64>
+// CHECK:       %[[ZERO:.*]] = tensor.splat %[[ZERO_SCALAR]]{{\[}}%[[ZERO_DIM]]] : tensor<?x4xi64>
+// CHECK:       %[[NEG_ONE_SCALAR:.*]] = arith.constant -1 : i64
+// CHECK:       %[[C0_IDX_1:.*]] = arith.constant 0 : index
+// CHECK:       %[[NEG_ONE_DIM:.*]] = tensor.dim %[[ARG0]], %[[C0_IDX_1]] : tensor<?x4xi64>
+// CHECK:       %[[NEG_ONE:.*]] = tensor.splat %[[NEG_ONE_SCALAR]]{{\[}}%[[NEG_ONE_DIM]]] : tensor<?x4xi64>
+// CHECK:       %[[SUB_ONE:.*]] = arith.addi %[[DIV]], %[[NEG_ONE]] : tensor<?x4xi64>
+}
+
+// -----
+
 // CHECK-LABEL: func @maximumf
 func.func @maximumf(%a: f32, %b: f32) -> f32 {
   %result = arith.maximumf %a, %b : f32

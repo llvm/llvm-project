@@ -89,6 +89,14 @@ func.func @vector_ceildivsi(%lhs: vector<4xi32>, %rhs: vector<4xi32>) -> vector<
   return %0 : vector<4xi32>
 }
 
+// CHECK-LABEL: @dynamic_tensor_ceildivui
+// CHECK-SAME: (%[[LHS:.+]]: tensor<8x4x?xi32>, %[[RHS:.+]]: tensor<8x4x?xi32>)
+func.func @dynamic_tensor_ceildivui(%lhs: tensor<8x4x?xi32>, %rhs: tensor<8x4x?xi32>) -> tensor<8x4x?xi32> {
+  // CHECK: arith.ceildivui %[[LHS]], %[[RHS]] : tensor<8x4x?xi32>
+  %0 = arith.ceildivui %lhs, %rhs : tensor<8x4x?xi32>
+  return %0 : tensor<8x4x?xi32>
+}
+
 // -----
 
 //===----------------------------------------------------------------------===//

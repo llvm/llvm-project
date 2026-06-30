@@ -8,6 +8,7 @@
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Transforms/Passes.h"
+#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "mlir/IR/Location.h"
@@ -32,6 +33,21 @@ static Value createConst(Location loc, Type type, int value,
                                      DenseElementsAttr::get(shapedTy, attr));
   }
   return arith::ConstantOp::create(rewriter, loc, attr);
+}
+
+/// Create an integer or index constant, using source as the dynamic shape
+/// source for ranked tensors whose splat cannot be represented as a dense
+/// attribute.
+static Value createConst(Location loc, Type type, int value,
+                         PatternRewriter &rewriter, Value source) {
+  auto rankedTensorTy = dyn_cast<RankedTensorType>(type);
+  if (!rankedTensorTy || rankedTensorTy.hasStaticShape())
+    return createConst(loc, type, value, rewriter);
+
+  Value scalar =
+      createConst(loc, rankedTensorTy.getElementType(), value, rewriter);
+  return tensor::SplatOp::create(rewriter, loc, scalar,
+                                 tensor::getMixedSizes(rewriter, loc, source));
 }
 
 /// Create an integer constant from an APInt.
@@ -76,10 +92,10 @@ struct CeilDivUIOpConverter : public OpRewritePattern<arith::CeilDivUIOp> {
     Location loc = op.getLoc();
     Value a = op.getLhs();
     Value b = op.getRhs();
-    Value zero = createConst(loc, a.getType(), 0, rewriter);
+    Value zero = createConst(loc, a.getType(), 0, rewriter, a);
     Value compare =
         arith::CmpIOp::create(rewriter, loc, arith::CmpIPredicate::eq, a, zero);
-    Value one = createConst(loc, a.getType(), 1, rewriter);
+    Value one = createConst(loc, a.getType(), 1, rewriter, a);
     Value minusOne = arith::SubIOp::create(rewriter, loc, a, one);
     Value quotient = arith::DivUIOp::create(rewriter, loc, minusOne, b);
     Value plusOne = arith::AddIOp::create(rewriter, loc, quotient, one);
@@ -104,8 +120,8 @@ struct CeilDivSIOpConverter : public OpRewritePattern<arith::CeilDivSIOp> {
     Value a = op.getLhs();
     Value b = op.getRhs();
 
-    Value zero = createConst(loc, type, 0, rewriter);
-    Value one = createConst(loc, type, 1, rewriter);
+    Value zero = createConst(loc, type, 0, rewriter, a);
+    Value one = createConst(loc, type, 1, rewriter, a);
 
     Value quotient = arith::DivSIOp::create(rewriter, loc, a, b);
     Value product = arith::MulIOp::create(rewriter, loc, quotient, b);
@@ -150,7 +166,7 @@ struct FloorDivSIOpConverter : public OpRewritePattern<arith::FloorDivSIOp> {
     Value product = arith::MulIOp::create(rewriter, loc, quotient, b);
     Value notEqualDivisor = arith::CmpIOp::create(
         rewriter, loc, arith::CmpIPredicate::ne, a, product);
-    Value zero = createConst(loc, type, 0, rewriter);
+    Value zero = createConst(loc, type, 0, rewriter, a);
 
     Value aNeg = arith::CmpIOp::create(rewriter, loc, arith::CmpIPredicate::slt,
                                        a, zero);
@@ -162,7 +178,7 @@ struct FloorDivSIOpConverter : public OpRewritePattern<arith::FloorDivSIOp> {
     Value cond =
         arith::AndIOp::create(rewriter, loc, notEqualDivisor, signOpposite);
 
-    Value minusOne = createConst(loc, type, -1, rewriter);
+    Value minusOne = createConst(loc, type, -1, rewriter, a);
     Value quotientMinusOne =
         arith::AddIOp::create(rewriter, loc, quotient, minusOne);
 
@@ -826,6 +842,7 @@ struct ArithExpandOpsPass
     arith::populateArithExpandOpsPatterns(patterns);
 
     target.addLegalDialect<arith::ArithDialect>();
+    target.addLegalDialect<tensor::TensorDialect>();
     target.addLegalDialect<vector::VectorDialect>();
 
     // clang-format off
