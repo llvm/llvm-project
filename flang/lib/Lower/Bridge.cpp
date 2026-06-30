@@ -3062,11 +3062,10 @@ private:
         // The loop variable is a doLoop op argument.
         mlir::Type loopVarType = info.getLoopVariableType();
 
-        // Plain DO loops nested in a DO CONCURRENT body can be lowered without
-        // the secondary-induction iter_arg: recompute the DO variable from the
-        // induction variable. This keeps the body free of a loop-carried value
-        // that would hide memory recurrences (e.g. reductions) from later
-        // analyses, matching how loops in OpenACC regions are lowered.
+        // Lower the loop without the secondary-induction iter_arg so memory
+        // recurrences (e.g. reductions) stay visible to later analyses. The DO
+        // variable is recomputed from the induction variable in the body; its
+        // post-loop value is materialized in genFIRIncrementLoopEnd.
         if (getLoweringOptions().getDoConcurrentCleanNestedLoops() &&
             isInsideDoConcurrentLoop()) {
           auto loopOp = fir::DoLoopOp::create(
@@ -3236,11 +3235,31 @@ private:
         // End fir.do_loop.
         // Decrement tripVariable.
         auto doLoopOp = mlir::cast<fir::DoLoopOp>(info.loopOp);
-        // A clean iter_arg-free loop (DoConcurrentCleanNestedLoops) has no
-        // loop-carried DO variable to step or write back; its terminator is
-        // already in place.
+        // Iter_arg-free loop (DoConcurrentCleanNestedLoops): nothing to step in
+        // the body. Materialize the Fortran post-loop value lb + tripCount*step
+        // after the loop so later uses of the DO variable stay correct.
         if (doLoopOp.getNumRegionIterArgs() == 0) {
           builder->setInsertionPointAfter(doLoopOp);
+          mlir::Type type = info.getLoopVariableType();
+          mlir::Value lb =
+              builder->createConvert(loc, type, doLoopOp.getLowerBound());
+          mlir::Value ub =
+              builder->createConvert(loc, type, doLoopOp.getUpperBound());
+          mlir::Value st =
+              builder->createConvert(loc, type, doLoopOp.getStep());
+          mlir::Value zero = builder->createIntegerConstant(loc, type, 0);
+          mlir::Value trip =
+              mlir::arith::SubIOp::create(*builder, loc, ub, lb, iofAttr);
+          trip = mlir::arith::AddIOp::create(*builder, loc, trip, st, iofAttr);
+          trip = mlir::arith::DivSIOp::create(*builder, loc, trip, st);
+          mlir::Value empty = mlir::arith::CmpIOp::create(
+              *builder, loc, mlir::arith::CmpIPredicate::slt, trip, zero);
+          trip =
+              mlir::arith::SelectOp::create(*builder, loc, empty, zero, trip);
+          mlir::Value last =
+              mlir::arith::MulIOp::create(*builder, loc, trip, st, iofAttr);
+          last = mlir::arith::AddIOp::create(*builder, loc, lb, last, iofAttr);
+          fir::StoreOp::create(*builder, loc, last, info.loopVariable);
           continue;
         }
         builder->setInsertionPointToEnd(doLoopOp.getBody());

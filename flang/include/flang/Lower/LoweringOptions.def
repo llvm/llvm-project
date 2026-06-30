@@ -95,11 +95,11 @@ ENUM_LOWERINGOPT(FPMaxminBehavior, Fortran::common::FPMaxminBehavior, 2, 0)
 
 /// If true, lower plain DO loops nested inside a DO CONCURRENT body without the
 /// secondary-induction iter_arg: the DO variable is recomputed from the
-/// induction variable. This keeps the loop body free of a loop-carried value
-/// that would otherwise hide memory recurrences (e.g. reductions) from later
-/// analyses. The post-loop final value of the DO variable is not preserved, so
-/// this is only valid where those loop variables are effectively private (the
-/// parallel do-concurrent path). Off by default.
+/// induction variable in the body. This keeps the loop body free of a
+/// loop-carried value that would otherwise hide memory recurrences (e.g.
+/// reductions) from later analyses. The Fortran post-loop value of the DO
+/// variable is still materialized after the loop, so the lowering is
+/// semantics-preserving. Off by default.
 ENUM_LOWERINGOPT(DoConcurrentCleanNestedLoops, unsigned, 1, 0)
 
 #undef LOWERINGOPT
