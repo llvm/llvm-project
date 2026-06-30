@@ -1315,7 +1315,8 @@ void CodeGenFunction::EmitOMPPrivateClause(
     for (const Expr *IInit : C->private_copies()) {
       const auto *OrigDecl = cast<DeclRefExpr>(*IRef)->getDecl();
       const auto *VD = cast<VarDecl>(cast<DeclRefExpr>(IInit)->getDecl());
-      if (EmittedAsPrivate.insert(OrigDecl).second) {
+      if (EmittedAsPrivate.insert(cast<ValueDecl>(OrigDecl->getCanonicalDecl()))
+              .second) {
         EmitDecl(*VD);
         bool IsRegistered =
             PrivateScope.addPrivate(OrigDecl, GetAddrOfLocalVar(VD));

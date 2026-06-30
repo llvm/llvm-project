@@ -3983,8 +3983,6 @@ static bool checkDecompositionCaptureConflict(
   bool IsByRef = false;
   switch (ClauseKind) {
   case OMPC_map:
-  case OMPC_to:
-  case OMPC_from:
     // Map clauses are by-reference.
     IsByRef = true;
     break;
@@ -20055,6 +20053,14 @@ OMPClause *SemaOpenMP::ActOnOpenMPLastprivateClause(
     QualType Type = D->getType();
     auto *VD = dyn_cast<VarDecl>(D);
 
+    // Structured bindings with conditional modifier are currently not
+    // supported.
+    if (LPKind == OMPC_LASTPRIVATE_conditional && isa<BindingDecl>(D)) {
+      Diag(ELoc, diag::err_omp_unsupported_on_binding) << 4;
+      Diag(D->getLocation(), diag::note_defined_here) << D;
+      continue;
+    }
+
     // OpenMP [2.14.3.5, Restrictions, C/C++, p.2]
     //  A variable that appears in a lastprivate clause must not have an
     //  incomplete type or a reference type.
@@ -20885,12 +20891,19 @@ static bool actOnOMPReductionKindClause(
     auto *BD = dyn_cast<BindingDecl>(D);
     if (BD && D->getType().getNonReferenceType()->isArrayType()) {
       // Array-type reductions are not supported.
-      S.Diag(ELoc, diag::err_omp_array_reduction_on_binding);
+      S.Diag(ELoc, diag::err_omp_unsupported_on_binding) << 0;
       continue;
     }
     if (BD && BOK == BO_Comma) {
       // User-defined reductions (declare reduction) are not supported.
-      S.Diag(ELoc, diag::err_omp_udr_reduction_on_binding);
+      S.Diag(ELoc, diag::err_omp_unsupported_on_binding) << 1;
+      continue;
+    }
+    if (BD && (RD.RedModifier == OMPC_REDUCTION_task ||
+               RD.RedModifier == OMPC_REDUCTION_inscan)) {
+      // Task and inscan reductions are not supported.
+      S.Diag(ELoc, diag::err_omp_unsupported_on_binding)
+          << (RD.RedModifier == OMPC_REDUCTION_inscan ? 3 : 2);
       continue;
     }
 
@@ -22821,7 +22834,7 @@ public:
         // Get the original variable that the decomposition was initialized
         // from.
         if (const VarDecl *OrigVar =
-                +getOriginalVarOrDiagnose(SemaRef, DD, DRE->getExprLoc())) {
+                getOriginalVarOrDiagnose(SemaRef, DD, DRE->getExprLoc())) {
 
           // Create a new member expression: OrigVar.field.
           // This transforms map(a) -> map(p.x)
@@ -22846,9 +22859,8 @@ public:
           // Now process this as a member expression, which will properly
           // handle the field-level mapping.
           return Visit(E);
-        } else {
-          return false;
         }
+        return false;
       }
 
       // Fallback: redirect to DecompositionDecl for non-struct bindings
