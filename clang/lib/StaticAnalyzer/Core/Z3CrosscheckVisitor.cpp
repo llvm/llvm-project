@@ -81,12 +81,11 @@ void Z3CrosscheckVisitor::finalizeVisitor(BugReporterContext &BRC,
                               /*InRange=*/true)
             .value();
     while ((++RangeIt) != Range.end()) {
-      llvm::SMTExprRef Constraint =
-          SMTConv::getRangeExpr(RefutationSolver, Ctx, Sym, RangeIt->From(),
-                                RangeIt->To(),
-                                /*InRange=*/true)
-              .value();
-      SMTConstraints = RefutationSolver->mkOr(SMTConstraints, Constraint);
+      SMTConstraints = RefutationSolver->mkOr(
+          SMTConstraints, SMTConv::getRangeExpr(RefutationSolver, Ctx, Sym,
+                                                RangeIt->From(), RangeIt->To(),
+                                                /*InRange=*/true)
+                              .value());
     }
     RefutationSolver->addConstraint(SMTConstraints);
   }
