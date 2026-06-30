@@ -982,3 +982,36 @@ bool lldb_private::formatters::LibcxxChronoYearMonthDaySummaryProvider(
 
   return true;
 }
+
+bool lldb_private::formatters::LibcxxSourceLocationSummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  ValueObjectSP ptr_sp = valobj.GetChildMemberWithName("__ptr_");
+  if (!ptr_sp)
+    return false;
+
+  ValueObjectSP file_sp = ptr_sp->GetChildMemberWithName("_M_file_name");
+  ValueObjectSP function_sp =
+      ptr_sp->GetChildMemberWithName("_M_function_name");
+  ValueObjectSP line_sp = ptr_sp->GetChildMemberWithName("_M_line");
+  ValueObjectSP column_sp = ptr_sp->GetChildMemberWithName("_M_column");
+
+  if (!file_sp || !function_sp || !line_sp || !column_sp)
+    return false;
+
+  bool success = false;
+  uint64_t line = line_sp->GetValueAsUnsigned(0, &success);
+  if (!success)
+    return false;
+
+  uint64_t column = column_sp->GetValueAsUnsigned(0, &success);
+  if (!success)
+    return false;
+
+  const char *file = file_sp->GetSummaryAsCString();
+  stream.Printf("%s:%lu:%lu", file ? file : "<unknown>", line, column);
+
+  if (const char *function = function_sp->GetSummaryAsCString())
+    stream.Printf(" (%s)", function);
+
+  return true;
+}

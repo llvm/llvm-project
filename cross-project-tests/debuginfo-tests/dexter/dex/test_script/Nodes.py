@@ -18,14 +18,7 @@ from dex.utils.Exceptions import Error
 
 
 def setup_yaml_parser(loader):
-    reg_classes = [
-        Where,
-        Value,
-        DexRange,
-        Label,
-        Then,
-        Address,
-    ]
+    reg_classes = [Where, Value, DexRange, Label, Then, Address, ValueAll]
     for c in reg_classes:
         c.register_yaml(loader)
 
@@ -70,7 +63,7 @@ class Where:
         self.lines: Union[Line, DexRange, None] = lines
         self.after_hit_count: Optional[int] = attributes.pop("after_hit_count", None)
         self.for_hit_count: Optional[int] = attributes.pop("for_hit_count", None)
-        self.conditions: dict = attributes.pop("conditions", None)
+        self.conditions: Optional[dict] = attributes.pop("conditions", None)
         self.is_and = is_and
         if attributes:
             raise DexterNodeError(
@@ -156,9 +149,13 @@ class Expect:
         excluding any subvalues (i.e. struct members), or None if there is no valid result for this ValueIR.
         """
 
-    @abc.abstractmethod
-    def get_watched_expr(self) -> str:
-        """Returns the list of expressions that this Expect wants to evaluate."""
+    def get_watched_expr(self) -> Optional[str]:
+        """Returns the expression that this Expect wants to evaluate."""
+        return None
+
+    def get_watched_scope(self) -> Optional[str]:
+        """Returns the scope that this Expect wants to evaluate."""
+        return None
 
 
 class Value(Expect):
@@ -192,6 +189,42 @@ class Value(Expect):
     def register_yaml(loader):
         yaml.add_constructor("!value", Value.constructor, loader)
         yaml.add_representer(Value, Value.representer)
+
+
+class ValueAll(Expect):
+    """Expect node used to write values for all variables within a particular debugger scope, as defined by the DAP
+    specification; see: https://microsoft.github.io/debug-adapter-protocol/specification#Requests_Scopes.
+
+    This node is not directly evaluated; it must have no expected values, and when Dexter rewrites the original script,
+    this node will be replaced with !value nodes for each variable that was seen in its scope inserted under !and nodes
+    that cover that variable's live range(s).
+    """
+
+    def __init__(self, scope_name: str):
+        self.scope_name = scope_name
+
+    def __repr__(self):
+        return f"ValueAll({self.scope_name})"
+
+    @staticmethod
+    def get_variable_result(value: ValueIR) -> Optional[str]:
+        return Value.get_variable_result(value)
+
+    def get_watched_scope(self) -> Optional[str]:
+        return self.scope_name
+
+    @staticmethod
+    def constructor(loader, node):
+        return ValueAll(loader.construct_scalar(node))
+
+    @staticmethod
+    def representer(dumper, data):
+        return dumper.represent_scalar("!value/all", data.scope_name)
+
+    @staticmethod
+    def register_yaml(loader):
+        yaml.add_constructor("!value/all", ValueAll.constructor, loader)
+        yaml.add_representer(ValueAll, ValueAll.representer)
 
 
 ##############
