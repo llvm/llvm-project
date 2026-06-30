@@ -882,6 +882,12 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
                        args.hasFlag(clang::options::OPT_funsigned,
                                     clang::options::OPT_fno_unsigned, false));
 
+  // -f{no-}enumeration-type (experimental; FIR lowering is incomplete)
+  opts.features.Enable(Fortran::common::LanguageFeature::EnumerationType,
+                       args.hasFlag(clang::options::OPT_fenumeration_type,
+                                    clang::options::OPT_fno_enumeration_type,
+                                    false));
+
   // -frelaxed-c-loc-checks
   if (args.hasArg(clang::options::OPT_relaxed_c_loc)) {
     opts.features.Enable(Fortran::common::LanguageFeature::RelaxedCLocChecks);
