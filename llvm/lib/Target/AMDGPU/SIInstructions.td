@@ -2635,6 +2635,36 @@ let True16Predicate = UseRealTrue16Insts in {
 /// conservative MachineCSE. If we end up with an s_mov_b64 + copy to
 /// vgpr pattern, MachineCSE will not perform the CSE which occurs
 /// after operand folding.
+let SubtargetPredicate = HasVMovB64Inst, AddedComplexity = 2 in {
+  def : GCNPat <
+    (VGPRImm<(i64 InlineImm64)>:$imm),
+    (V_MOV_B64_e32 InlineImm64:$imm)
+  >;
+
+  def : GCNPat <
+    (VGPRImm<(i64 i64imm_32bit)>:$imm),
+    (V_MOV_B64_e32 i64imm_32bit:$imm)
+  >;
+
+  def : GCNPat <
+    (VGPRImm<(f64 InlineImmFP64)>:$imm),
+    (V_MOV_B64_e32 (i64 (bitcast_fpimm_to_i64 $imm)))
+  >;
+}
+
+let SubtargetPredicate = HasVMovB64Inst, OtherPredicates = [Has64BitLiterals],
+    AddedComplexity = 2 in {
+  def : GCNPat <
+    (VGPRImm<(i64 imm)>:$imm),
+    (V_MOV_B64_e32 imm:$imm)
+  >;
+
+  def : GCNPat <
+    (VGPRImm<(f64 fpimm)>:$imm),
+    (V_MOV_B64_e32 (i64 (bitcast_fpimm_to_i64 $imm)))
+  >;
+}
+
 let AddedComplexity = 1 in {
  // V_MOV_B64_PSEUDO and S_MOV_B64_IMM_PSEUDO can be used with any 64-bit
   // immediate and wil be expanded as needed, but we will only use these patterns
