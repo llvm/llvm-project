@@ -342,11 +342,19 @@ static ConstantIntRanges inferDivSRange(const ConstantIntRanges &lhs,
                                         DivisionFixupFn fixup) {
   const APInt &lhsMin = lhs.smin(), &lhsMax = lhs.smax(), &rhsMin = rhs.smin(),
               &rhsMax = rhs.smax();
-  bool canDivide = rhsMin.isStrictlyPositive() || rhsMax.isNegative();
+  // Only enumerate endpoints when the signed divisor range is ordered and
+  // wholly non-zero; otherwise fall back to the conservative result below.
+  bool isOrdered = rhsMin.sle(rhsMax);
+  bool canDivide =
+      isOrdered &&
+      ((rhsMin.isStrictlyPositive() && rhsMax.isStrictlyPositive()) ||
+       (rhsMin.isNegative() && rhsMax.isNegative()));
 
   if (canDivide) {
     auto sdiv = [&fixup](const APInt &a,
                          const APInt &b) -> std::optional<APInt> {
+      if (b.isZero())
+        return std::nullopt;
       bool overflowed = false;
       APInt result = a.sdiv_ov(b, overflowed);
       return overflowed ? std::optional<APInt>() : fixup(a, b, result);
@@ -779,6 +787,9 @@ static ConstantIntRanges clampToPositive(const ConstantIntRanges &val) {
   APInt one(width, 1);
   APInt clampedUMin = val.umin().ult(one) ? one : val.umin();
   APInt clampedSMin = val.smin().slt(one) ? one : val.smin();
+  // The positive slice may be empty, which ConstantIntRanges cannot represent.
+  if (clampedUMin.ugt(val.umax()) || clampedSMin.sgt(val.smax()))
+    return ConstantIntRanges::maxRange(width);
   return ConstantIntRanges::fromUnsigned(clampedUMin, val.umax())
       .intersection(ConstantIntRanges::fromSigned(clampedSMin, val.smax()));
 }
