@@ -5,23 +5,23 @@
 # RUN: llvm-readobj --hex-dump=.eh_frame %t.o | FileCheck %s --check-prefix=HEX
 
   .cfi_startproc
-  .cfi_llvm_set_ra_state 1, 0
-  .cfi_llvm_set_ra_state 2, 0
-  .cfi_llvm_set_ra_state 0, -4
-  .cfi_llvm_set_ra_state 2, LSigningInstrAfter
+  .cfi_set_ra_state 1, 0
+  .cfi_set_ra_state 2, 0
+  .cfi_set_ra_state 0, -4
+  .cfi_set_ra_state 2, LSigningInstrAfter
 LSigningInstrBefore:
   nop
   nop
 LSigningInstrAfter:
-  .cfi_llvm_set_ra_state 2, LSigningInstrBefore
+  .cfi_set_ra_state 2, LSigningInstrBefore
   .cfi_endproc
 
 # ASM:      .cfi_startproc
-# ASM-NEXT: .cfi_llvm_set_ra_state 1, 0
-# ASM-NEXT: .cfi_llvm_set_ra_state 2, 0
-# ASM-NEXT: .cfi_llvm_set_ra_state 0, -4
-# ASM-NEXT: .cfi_llvm_set_ra_state 2, LSigningInstrAfter
-# ASM:      .cfi_llvm_set_ra_state 2, LSigningInstrBefore
+# ASM-NEXT: .cfi_set_ra_state 1, 0
+# ASM-NEXT: .cfi_set_ra_state 2, 0
+# ASM-NEXT: .cfi_set_ra_state 0, -4
+# ASM-NEXT: .cfi_set_ra_state 2, LSigningInstrAfter
+# ASM:      .cfi_set_ra_state 2, LSigningInstrBefore
 # ASM-NEXT: .cfi_endproc
 
 # DWARF:      DW_CFA_AARCH64_set_ra_state: 1 0

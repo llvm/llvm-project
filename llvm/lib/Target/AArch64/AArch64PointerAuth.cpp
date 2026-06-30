@@ -25,7 +25,7 @@ using namespace llvm::AArch64PAuth;
 
 namespace {
 
-/// Control the emission of .cfi_llvm_set_ra_state, which replaces the
+/// Control the emission of .cfi_set_ra_state, which replaces the
 /// deprecated .cfi_negate_ra_state_with_pc [1].
 ///
 /// The latter is fundamentally unable to express some program orders [2], as
@@ -43,13 +43,13 @@ namespace {
 /// 2: https://github.com/ARM-software/abi-aa/issues/327
 enum class SetRAStateMode {
   Never,   // Always use .cfi_negate_ra_state(_with_pc)
-  PAuthLR, // Use .cfi_llvm_set_ra_state only for PAuth_LR
-  Always,  // Use .cfi_llvm_set_ra_state for both PAuth and PAuth_LR
+  PAuthLR, // Use .cfi_set_ra_state only for PAuth_LR
+  Always,  // Use .cfi_set_ra_state for both PAuth and PAuth_LR
 };
 cl::opt<SetRAStateMode> CFILLVMSetRASignStateMode(
     "aarch64-cfi-llvm-set-ra-sign-state", cl::init(SetRAStateMode::PAuthLR),
     cl::desc(
-        "Control emission of .cfi_llvm_set_ra_state for PAC return address "
+        "Control emission of .cfi_set_ra_state for PAC return address "
         "signing CFI"),
     cl::values(clEnumValN(SetRAStateMode::Never, "never",
                           "Always use legacy .cfi_negate_ra_state[_with_pc]"),

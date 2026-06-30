@@ -5,23 +5,23 @@
   .globl _pauth
 _pauth:
   .cfi_startproc
-  .cfi_llvm_set_ra_state 1, 0
+  .cfi_set_ra_state 1, 0
   pacibsp
 
-  .cfi_llvm_set_ra_state 0, -4
+  .cfi_set_ra_state 0, -4
   retab
   .cfi_endproc
 
 
-# Vanilla ptrauth-returns=pauth-lr frame, with .cfi_llvm_set_ra_state instead of
+# Vanilla ptrauth-returns=pauth-lr frame, with .cfi_set_ra_state instead of
 # the deprecated .cfi_negate_ra_state_with_pc
   .globl _pauthlr
 _pauthlr:
   .cfi_startproc
-  .cfi_llvm_set_ra_state 2, 0
+  .cfi_set_ra_state 2, 0
   pacibsppc
 
-  .cfi_llvm_set_ra_state 0, -4
+  .cfi_set_ra_state 0, -4
   retabsppc _pauthlr
   .cfi_endproc
 
@@ -44,14 +44,14 @@ LBB1:
 
   adrp x16, LBB0@PAGE
   add x16, x16, LBB0@PAGEOFF
-  .cfi_llvm_set_ra_state 0, 16
+  .cfi_set_ra_state 0, 16
   autibsppcr x16
 
   mov w0, #42
   ret
 
 LBB0:
-  .cfi_llvm_set_ra_state 2, 0
+  .cfi_set_ra_state 2, 0
   pacibsppc
 
   stp x29, x30, [sp, #-16]!

@@ -139,10 +139,10 @@ check_negate(const char *note) {
   // clang-format on
 }
 
-#if defined(HAVE_CFI_LLVM_SET_RA_STATE)
+#if defined(HAVE_CFI_SET_RA_STATE)
 __attribute__((naked)) uint64_t check_set(const char *note) {
   // clang-format off
-  asm(".cfi_llvm_set_ra_state 1, 0\n"
+  asm(".cfi_set_ra_state 1, 0\n"
       "pacibsp\n"
 
       "stp x29, x30, [sp, #-16]!\n"
@@ -157,7 +157,7 @@ __attribute__((naked)) uint64_t check_set(const char *note) {
       ".cfi_restore x29\n"
       ".cfi_restore x30\n"
 
-      ".cfi_llvm_set_ra_state 0, -20\n"
+      ".cfi_set_ra_state 0, -20\n"
       "retab");
   // clang-format on
 }
@@ -183,7 +183,7 @@ FUNC_ATTR(main_func) int main(int, char **) {
   ret = check_negate("check_negate");
   assert(ret == 1);
 
-#if defined(HAVE_CFI_LLVM_SET_RA_STATE)
+#if defined(HAVE_CFI_SET_RA_STATE)
   ret = check_set("check_set");
   assert(ret == 1);
 #endif

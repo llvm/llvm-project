@@ -2290,7 +2290,7 @@ void MCAsmStreamer::emitCFINegateRAStateWithPC(SMLoc Loc) {
 void MCAsmStreamer::emitCFILLVMSetRAState(unsigned State, MCSymbol *PACSym,
                                           SMLoc Loc) {
   MCStreamer::emitCFILLVMSetRAState(State, PACSym, Loc);
-  OS << "\t.cfi_llvm_set_ra_state " << State << ", ";
+  OS << "\t.cfi_set_ra_state " << State << ", ";
   if (PACSym)
     PACSym->print(OS, MAI);
   else
@@ -2301,7 +2301,7 @@ void MCAsmStreamer::emitCFILLVMSetRAState(unsigned State, MCSymbol *PACSym,
 void MCAsmStreamer::emitCFILLVMSetRAState(unsigned State, int64_t Offset,
                                           SMLoc Loc) {
   MCStreamer::emitCFILLVMSetRAState(State, Offset, Loc);
-  OS << "\t.cfi_llvm_set_ra_state " << State << ", " << Offset;
+  OS << "\t.cfi_set_ra_state " << State << ", " << Offset;
   EmitEOL();
 }
 

@@ -45,7 +45,7 @@ define i32 @leaf_sign_all(i32 %x) "sign-return-address"="all" {
 ; DWARFCFI-COMPAT:       // %bb.0:
 ; DWARFCFI-COMPAT-NEXT:    hint #25
 ; DWARFCFI-COMPAT-NEXT:    .cfi_negate_ra_state
-; ALWAYS-CFI-COMPAT:    .cfi_llvm_set_ra_state 1, 0
+; ALWAYS-CFI-COMPAT:    .cfi_set_ra_state 1, 0
 ; DWARFCFI-COMPAT-NEXT:    hint #29
 ; DWARFCFI-COMPAT-NEXT:    ret
 ;
@@ -54,7 +54,7 @@ define i32 @leaf_sign_all(i32 %x) "sign-return-address"="all" {
 ; DWARFCFI-V83A:       // %bb.0:
 ; DWARFCFI-V83A-NEXT:    paciasp
 ; DWARFCFI-V83A-NEXT:    .cfi_negate_ra_state
-; ALWAYS-CFI-V83A:    .cfi_llvm_set_ra_state 1, 0
+; ALWAYS-CFI-V83A:    .cfi_set_ra_state 1, 0
 ; DWARFCFI-V83A-NEXT:    retaa
 ;
 ; NEGATE-CFI-COMPAT-LABEL: leaf_sign_all:
@@ -106,7 +106,7 @@ define i64 @leaf_clobbers_lr(i64 %x) "sign-return-address"="non-leaf"  {
 ; DWARFCFI-COMPAT:       // %bb.0:
 ; DWARFCFI-COMPAT-NEXT:    hint #25
 ; DWARFCFI-COMPAT-NEXT:    .cfi_negate_ra_state
-; ALWAYS-CFI-COMPAT:    .cfi_llvm_set_ra_state 1, 0
+; ALWAYS-CFI-COMPAT:    .cfi_set_ra_state 1, 0
 ; DWARFCFI-COMPAT-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; DWARFCFI-COMPAT-NEXT:    .cfi_def_cfa_offset 16
 ; DWARFCFI-COMPAT-NEXT:    .cfi_offset w30, -16
@@ -122,7 +122,7 @@ define i64 @leaf_clobbers_lr(i64 %x) "sign-return-address"="non-leaf"  {
 ; DWARFCFI-V83A:       // %bb.0:
 ; DWARFCFI-V83A-NEXT:    paciasp
 ; DWARFCFI-V83A-NEXT:    .cfi_negate_ra_state
-; ALWAYS-CFI-V83A:    .cfi_llvm_set_ra_state 1, 0
+; ALWAYS-CFI-V83A:    .cfi_set_ra_state 1, 0
 ; DWARFCFI-V83A-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; DWARFCFI-V83A-NEXT:    .cfi_def_cfa_offset 16
 ; DWARFCFI-V83A-NEXT:    .cfi_offset w30, -16
@@ -212,7 +212,7 @@ define i32 @non_leaf_sign_all(i32 %x) "sign-return-address"="all" {
 ; DWARFCFI-COMPAT:       // %bb.0:
 ; DWARFCFI-COMPAT-NEXT:    hint #25
 ; DWARFCFI-COMPAT-NEXT:    .cfi_negate_ra_state
-; ALWAYS-CFI-COMPAT:    .cfi_llvm_set_ra_state 1, 0
+; ALWAYS-CFI-COMPAT:    .cfi_set_ra_state 1, 0
 ; DWARFCFI-COMPAT-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; DWARFCFI-COMPAT-NEXT:    .cfi_def_cfa_offset 16
 ; DWARFCFI-COMPAT-NEXT:    .cfi_offset w30, -16
@@ -226,7 +226,7 @@ define i32 @non_leaf_sign_all(i32 %x) "sign-return-address"="all" {
 ; DWARFCFI-V83A:       // %bb.0:
 ; DWARFCFI-V83A-NEXT:    paciasp
 ; DWARFCFI-V83A-NEXT:    .cfi_negate_ra_state
-; ALWAYS-CFI-V83A:    .cfi_llvm_set_ra_state 1, 0
+; ALWAYS-CFI-V83A:    .cfi_set_ra_state 1, 0
 ; DWARFCFI-V83A-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; DWARFCFI-V83A-NEXT:    .cfi_def_cfa_offset 16
 ; DWARFCFI-V83A-NEXT:    .cfi_offset w30, -16
@@ -304,7 +304,7 @@ define i32 @non_leaf_sign_non_leaf(i32 %x) "sign-return-address"="non-leaf"  {
 ; DWARFCFI-COMPAT:       // %bb.0:
 ; DWARFCFI-COMPAT-NEXT:    hint #25
 ; DWARFCFI-COMPAT-NEXT:    .cfi_negate_ra_state
-; ALWAYS-CFI-COMPAT:    .cfi_llvm_set_ra_state 1, 0
+; ALWAYS-CFI-COMPAT:    .cfi_set_ra_state 1, 0
 ; DWARFCFI-COMPAT-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; DWARFCFI-COMPAT-NEXT:    .cfi_def_cfa_offset 16
 ; DWARFCFI-COMPAT-NEXT:    .cfi_offset w30, -16
@@ -318,7 +318,7 @@ define i32 @non_leaf_sign_non_leaf(i32 %x) "sign-return-address"="non-leaf"  {
 ; DWARFCFI-V83A:       // %bb.0:
 ; DWARFCFI-V83A-NEXT:    paciasp
 ; DWARFCFI-V83A-NEXT:    .cfi_negate_ra_state
-; ALWAYS-CFI-V83A:    .cfi_llvm_set_ra_state 1, 0
+; ALWAYS-CFI-V83A:    .cfi_set_ra_state 1, 0
 ; DWARFCFI-V83A-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; DWARFCFI-V83A-NEXT:    .cfi_def_cfa_offset 16
 ; DWARFCFI-V83A-NEXT:    .cfi_offset w30, -16
@@ -397,7 +397,7 @@ define i32 @non_leaf_scs(i32 %x) "sign-return-address"="non-leaf" shadowcallstac
 ; DWARFCFI:       // %bb.0:
 ; DWARFCFI-NEXT:    paciasp
 ; DWARFCFI-NEXT:    .cfi_negate_ra_state
-; ALWAYS-CFI:    .cfi_llvm_set_ra_state 1, 0
+; ALWAYS-CFI:    .cfi_set_ra_state 1, 0
 ; DWARFCFI-NEXT:    str x30, [x18], #8
 ; DWARFCFI-NEXT:    .cfi_escape 0x16, 0x12, 0x02, 0x82, 0x78 //
 ; DWARFCFI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
@@ -461,7 +461,7 @@ define void @shrink_wrap_sign_non_leaf(i32 %x, i32 %cond) "sign-return-address"=
 ; DWARFCFI-COMPAT-NEXT:  // %bb.1: // %if.then
 ; DWARFCFI-COMPAT-NEXT:    hint #25
 ; DWARFCFI-COMPAT-NEXT:    .cfi_negate_ra_state
-; ALWAYS-CFI-COMPAT:    .cfi_llvm_set_ra_state 1, 0
+; ALWAYS-CFI-COMPAT:    .cfi_set_ra_state 1, 0
 ; DWARFCFI-COMPAT-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; DWARFCFI-COMPAT-NEXT:    .cfi_def_cfa_offset 16
 ; DWARFCFI-COMPAT-NEXT:    .cfi_offset w30, -16
@@ -471,7 +471,7 @@ define void @shrink_wrap_sign_non_leaf(i32 %x, i32 %cond) "sign-return-address"=
 ; DWARFCFI-COMPAT-NEXT:    .cfi_restore w30
 ; DWARFCFI-COMPAT-NEXT:    hint #29
 ; DWARFCFI-COMPAT-NEXT:    .cfi_negate_ra_state
-; ALWAYS-CFI-COMPAT:    .cfi_llvm_set_ra_state 0, 0
+; ALWAYS-CFI-COMPAT:    .cfi_set_ra_state 0, 0
 ; DWARFCFI-COMPAT-NEXT:  .LBB8_2: // %exit
 ; DWARFCFI-COMPAT-NEXT:    adrp x8, var
 ; DWARFCFI-COMPAT-NEXT:    mov w9, #42 // =0x2a
@@ -485,7 +485,7 @@ define void @shrink_wrap_sign_non_leaf(i32 %x, i32 %cond) "sign-return-address"=
 ; DWARFCFI-V83A-NEXT:  // %bb.1: // %if.then
 ; DWARFCFI-V83A-NEXT:    paciasp
 ; DWARFCFI-V83A-NEXT:    .cfi_negate_ra_state
-; ALWAYS-CFI-V83A:    .cfi_llvm_set_ra_state 1, 0
+; ALWAYS-CFI-V83A:    .cfi_set_ra_state 1, 0
 ; DWARFCFI-V83A-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; DWARFCFI-V83A-NEXT:    .cfi_def_cfa_offset 16
 ; DWARFCFI-V83A-NEXT:    .cfi_offset w30, -16
@@ -495,7 +495,7 @@ define void @shrink_wrap_sign_non_leaf(i32 %x, i32 %cond) "sign-return-address"=
 ; DWARFCFI-V83A-NEXT:    .cfi_restore w30
 ; DWARFCFI-V83A-NEXT:    autiasp
 ; DWARFCFI-V83A-NEXT:    .cfi_negate_ra_state
-; ALWAYS-CFI-V83A:    .cfi_llvm_set_ra_state 0, 0
+; ALWAYS-CFI-V83A:    .cfi_set_ra_state 0, 0
 ; DWARFCFI-V83A-NEXT:  .LBB8_2: // %exit
 ; DWARFCFI-V83A-NEXT:    adrp x8, var
 ; DWARFCFI-V83A-NEXT:    mov w9, #42 // =0x2a
@@ -612,7 +612,7 @@ define void @shrink_wrap_sign_all(i32 %x, i32 %cond) "sign-return-address"="all"
 ; DWARFCFI-COMPAT:       // %bb.0: // %entry
 ; DWARFCFI-COMPAT-NEXT:    hint #25
 ; DWARFCFI-COMPAT-NEXT:    .cfi_negate_ra_state
-; ALWAYS-CFI-COMPAT:    .cfi_llvm_set_ra_state 1, 0
+; ALWAYS-CFI-COMPAT:    .cfi_set_ra_state 1, 0
 ; DWARFCFI-COMPAT-NEXT:    cbnz w1, .LBB9_2
 ; DWARFCFI-COMPAT-NEXT:  // %bb.1: // %if.then
 ; DWARFCFI-COMPAT-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
@@ -628,7 +628,7 @@ define void @shrink_wrap_sign_all(i32 %x, i32 %cond) "sign-return-address"="all"
 ; DWARFCFI-COMPAT-NEXT:    str x9, [x8, :lo12:var]
 ; DWARFCFI-COMPAT-NEXT:    hint #29
 ; DWARFCFI-COMPAT-NEXT:    .cfi_negate_ra_state
-; ALWAYS-CFI-COMPAT:    .cfi_llvm_set_ra_state 0, 0
+; ALWAYS-CFI-COMPAT:    .cfi_set_ra_state 0, 0
 ; DWARFCFI-COMPAT-NEXT:    ret
 ;
 ; DWARFCFI-V83A-LABEL: shrink_wrap_sign_all:
@@ -636,7 +636,7 @@ define void @shrink_wrap_sign_all(i32 %x, i32 %cond) "sign-return-address"="all"
 ; DWARFCFI-V83A:       // %bb.0: // %entry
 ; DWARFCFI-V83A-NEXT:    paciasp
 ; DWARFCFI-V83A-NEXT:    .cfi_negate_ra_state
-; ALWAYS-CFI-V83A:    .cfi_llvm_set_ra_state 1, 0
+; ALWAYS-CFI-V83A:    .cfi_set_ra_state 1, 0
 ; DWARFCFI-V83A-NEXT:    cbnz w1, .LBB9_2
 ; DWARFCFI-V83A-NEXT:  // %bb.1: // %if.then
 ; DWARFCFI-V83A-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
@@ -758,7 +758,7 @@ define i32 @leaf_sign_all_v83(i32 %x) "sign-return-address"="all" "target-featur
 ; DWARFCFI:       // %bb.0:
 ; DWARFCFI-NEXT:    paciasp
 ; DWARFCFI-NEXT:    .cfi_negate_ra_state
-; ALWAYS-CFI:    .cfi_llvm_set_ra_state 1, 0
+; ALWAYS-CFI:    .cfi_set_ra_state 1, 0
 ; DWARFCFI-NEXT:    retaa
 ;
 ; NEGATE-CFI-LABEL: leaf_sign_all_v83:
@@ -791,7 +791,7 @@ define fastcc void @spill_lr_and_tail_call(i64 %x) "sign-return-address"="all" {
 ; DWARFCFI-COMPAT:       // %bb.0:
 ; DWARFCFI-COMPAT-NEXT:    hint #25
 ; DWARFCFI-COMPAT-NEXT:    .cfi_negate_ra_state
-; ALWAYS-CFI-COMPAT:    .cfi_llvm_set_ra_state 1, 0
+; ALWAYS-CFI-COMPAT:    .cfi_set_ra_state 1, 0
 ; DWARFCFI-COMPAT-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; DWARFCFI-COMPAT-NEXT:    .cfi_def_cfa_offset 16
 ; DWARFCFI-COMPAT-NEXT:    .cfi_offset w30, -16
@@ -807,7 +807,7 @@ define fastcc void @spill_lr_and_tail_call(i64 %x) "sign-return-address"="all" {
 ; DWARFCFI-V83A:       // %bb.0:
 ; DWARFCFI-V83A-NEXT:    paciasp
 ; DWARFCFI-V83A-NEXT:    .cfi_negate_ra_state
-; ALWAYS-CFI-V83A:    .cfi_llvm_set_ra_state 1, 0
+; ALWAYS-CFI-V83A:    .cfi_set_ra_state 1, 0
 ; DWARFCFI-V83A-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; DWARFCFI-V83A-NEXT:    .cfi_def_cfa_offset 16
 ; DWARFCFI-V83A-NEXT:    .cfi_offset w30, -16
@@ -898,7 +898,7 @@ define i32 @leaf_sign_all_a_key(i32 %x) "sign-return-address"="all" "sign-return
 ; DWARFCFI-COMPAT:       // %bb.0:
 ; DWARFCFI-COMPAT-NEXT:    hint #25
 ; DWARFCFI-COMPAT-NEXT:    .cfi_negate_ra_state
-; ALWAYS-CFI-COMPAT:    .cfi_llvm_set_ra_state 1, 0
+; ALWAYS-CFI-COMPAT:    .cfi_set_ra_state 1, 0
 ; DWARFCFI-COMPAT-NEXT:    hint #29
 ; DWARFCFI-COMPAT-NEXT:    ret
 ;
@@ -907,7 +907,7 @@ define i32 @leaf_sign_all_a_key(i32 %x) "sign-return-address"="all" "sign-return
 ; DWARFCFI-V83A:       // %bb.0:
 ; DWARFCFI-V83A-NEXT:    paciasp
 ; DWARFCFI-V83A-NEXT:    .cfi_negate_ra_state
-; ALWAYS-CFI-V83A:    .cfi_llvm_set_ra_state 1, 0
+; ALWAYS-CFI-V83A:    .cfi_set_ra_state 1, 0
 ; DWARFCFI-V83A-NEXT:    retaa
 ;
 ; NEGATE-CFI-COMPAT-LABEL: leaf_sign_all_a_key:
@@ -960,7 +960,7 @@ define i32 @leaf_sign_all_b_key(i32 %x) "sign-return-address"="all" "sign-return
 ; DWARFCFI-COMPAT-NEXT:    .cfi_b_key_frame
 ; DWARFCFI-COMPAT-NEXT:    hint #27
 ; DWARFCFI-COMPAT-NEXT:    .cfi_negate_ra_state
-; ALWAYS-CFI-COMPAT:    .cfi_llvm_set_ra_state 1, 0
+; ALWAYS-CFI-COMPAT:    .cfi_set_ra_state 1, 0
 ; DWARFCFI-COMPAT-NEXT:    hint #31
 ; DWARFCFI-COMPAT-NEXT:    ret
 ;
@@ -970,7 +970,7 @@ define i32 @leaf_sign_all_b_key(i32 %x) "sign-return-address"="all" "sign-return
 ; DWARFCFI-V83A-NEXT:    .cfi_b_key_frame
 ; DWARFCFI-V83A-NEXT:    pacibsp
 ; DWARFCFI-V83A-NEXT:    .cfi_negate_ra_state
-; ALWAYS-CFI-V83A:    .cfi_llvm_set_ra_state 1, 0
+; ALWAYS-CFI-V83A:    .cfi_set_ra_state 1, 0
 ; DWARFCFI-V83A-NEXT:    retab
 ;
 ; NEGATE-CFI-COMPAT-LABEL: leaf_sign_all_b_key:
@@ -1025,7 +1025,7 @@ define i32 @leaf_sign_all_v83_b_key(i32 %x) "sign-return-address"="all" "target-
 ; DWARFCFI-NEXT:    .cfi_b_key_frame
 ; DWARFCFI-NEXT:    pacibsp
 ; DWARFCFI-NEXT:    .cfi_negate_ra_state
-; ALWAYS-CFI:    .cfi_llvm_set_ra_state 1, 0
+; ALWAYS-CFI:    .cfi_set_ra_state 1, 0
 ; DWARFCFI-NEXT:    retab
 ;
 ; NEGATE-CFI-LABEL: leaf_sign_all_v83_b_key:
@@ -1058,7 +1058,7 @@ define i32 @leaf_sign_all_a_key_bti(i32 %x) "sign-return-address"="all" "sign-re
 ; DWARFCFI-COMPAT:       // %bb.0:
 ; DWARFCFI-COMPAT-NEXT:    hint #25
 ; DWARFCFI-COMPAT-NEXT:    .cfi_negate_ra_state
-; ALWAYS-CFI-COMPAT:    .cfi_llvm_set_ra_state 1, 0
+; ALWAYS-CFI-COMPAT:    .cfi_set_ra_state 1, 0
 ; DWARFCFI-COMPAT-NEXT:    hint #29
 ; DWARFCFI-COMPAT-NEXT:    ret
 ;
@@ -1067,7 +1067,7 @@ define i32 @leaf_sign_all_a_key_bti(i32 %x) "sign-return-address"="all" "sign-re
 ; DWARFCFI-V83A:       // %bb.0:
 ; DWARFCFI-V83A-NEXT:    paciasp
 ; DWARFCFI-V83A-NEXT:    .cfi_negate_ra_state
-; ALWAYS-CFI-V83A:    .cfi_llvm_set_ra_state 1, 0
+; ALWAYS-CFI-V83A:    .cfi_set_ra_state 1, 0
 ; DWARFCFI-V83A-NEXT:    retaa
 ;
 ; NEGATE-CFI-COMPAT-LABEL: leaf_sign_all_a_key_bti:
@@ -1121,7 +1121,7 @@ define i32 @leaf_sign_all_b_key_bti(i32 %x) "sign-return-address"="all" "sign-re
 ; DWARFCFI-COMPAT-NEXT:    .cfi_b_key_frame
 ; DWARFCFI-COMPAT-NEXT:    hint #27
 ; DWARFCFI-COMPAT-NEXT:    .cfi_negate_ra_state
-; ALWAYS-CFI-COMPAT:    .cfi_llvm_set_ra_state 1, 0
+; ALWAYS-CFI-COMPAT:    .cfi_set_ra_state 1, 0
 ; DWARFCFI-COMPAT-NEXT:    hint #31
 ; DWARFCFI-COMPAT-NEXT:    ret
 ;
@@ -1131,7 +1131,7 @@ define i32 @leaf_sign_all_b_key_bti(i32 %x) "sign-return-address"="all" "sign-re
 ; DWARFCFI-V83A-NEXT:    .cfi_b_key_frame
 ; DWARFCFI-V83A-NEXT:    pacibsp
 ; DWARFCFI-V83A-NEXT:    .cfi_negate_ra_state
-; ALWAYS-CFI-V83A:    .cfi_llvm_set_ra_state 1, 0
+; ALWAYS-CFI-V83A:    .cfi_set_ra_state 1, 0
 ; DWARFCFI-V83A-NEXT:    retab
 ;
 ; NEGATE-CFI-COMPAT-LABEL: leaf_sign_all_b_key_bti:
@@ -1187,7 +1187,7 @@ define i32 @leaf_sign_all_v83_b_key_bti(i32 %x) "sign-return-address"="all" "tar
 ; DWARFCFI-NEXT:    .cfi_b_key_frame
 ; DWARFCFI-NEXT:    pacibsp
 ; DWARFCFI-NEXT:    .cfi_negate_ra_state
-; ALWAYS-CFI:    .cfi_llvm_set_ra_state 1, 0
+; ALWAYS-CFI:    .cfi_set_ra_state 1, 0
 ; DWARFCFI-NEXT:    retab
 ;
 ; NEGATE-CFI-LABEL: leaf_sign_all_v83_b_key_bti:

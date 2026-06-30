@@ -703,7 +703,7 @@ public:
     return {OpNegateRAStateWithPC, L, CommonFields{}, Loc};
   }
 
-  /// .cfi_llvm_set_ra_state AArch64 set RA sign state,
+  /// .cfi_set_ra_state AArch64 set RA sign state,
   // with a symbolic offset to the signing instruction.
   static MCCFIInstruction createLLVMSetRAState(MCSymbol *L, unsigned State,
                                                MCSymbol *PACSym = nullptr,
@@ -711,7 +711,7 @@ public:
     return {OpLLVMSetRAState, L, LLVMSetRAStateFields{State, PACSym, 0}, Loc};
   }
 
-  /// .cfi_llvm_set_ra_state AArch64 set RA sign state,
+  /// .cfi_set_ra_state AArch64 set RA sign state,
   /// with a pre-computed factored offset to the signing instruction.
   static MCCFIInstruction createLLVMSetRAState(MCSymbol *L, unsigned State,
                                                int64_t Offset, SMLoc Loc = {}) {

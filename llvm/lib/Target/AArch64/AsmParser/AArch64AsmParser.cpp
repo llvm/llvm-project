@@ -7296,7 +7296,7 @@ bool AArch64AsmParser::ParseDirective(AsmToken DirectiveID) {
     parseDirectiveCFINegateRAState();
   else if (IDVal == ".cfi_negate_ra_state_with_pc")
     parseDirectiveCFINegateRAStateWithPC();
-  else if (IDVal == ".cfi_llvm_set_ra_state")
+  else if (IDVal == ".cfi_set_ra_state")
     parseDirectiveCFILLVMSetRAState();
   else if (IDVal == ".cfi_b_key_frame")
     parseDirectiveCFIBKeyFrame();
@@ -7774,8 +7774,8 @@ bool AArch64AsmParser::parseDirectiveCFINegateRAStateWithPC() {
 }
 
 /// parseDirectiveCFILLVMSetRAState
-/// ::= .cfi_llvm_set_ra_state ra_state, offset
-/// ::= .cfi_llvm_set_ra_state ra_state, pac_sym
+/// ::= .cfi_set_ra_state ra_state, offset
+/// ::= .cfi_set_ra_state ra_state, pac_sym
 bool AArch64AsmParser::parseDirectiveCFILLVMSetRAState() {
   int64_t State;
   if (getParser().parseAbsoluteExpression(State))
@@ -7796,7 +7796,7 @@ bool AArch64AsmParser::parseDirectiveCFILLVMSetRAState() {
   } else {
     return Error(
         ExprLoc,
-        "expected an integer offset or a symbol for .cfi_llvm_set_ra_state");
+        "expected an integer offset or a symbol for .cfi_set_ra_state");
   }
   return false;
 }
