@@ -10,6 +10,9 @@
 
 #include "shared/math.h"
 #include "test/UnitTest/Test.h"
+#include "src/__support/FPUtil/float128.h"
+
+using LIBC_NAMESPACE::fputil::Float128;s
 
 #ifdef LIBC_USE_CONSTEXPR
 
@@ -373,6 +376,11 @@ static_assert(0 == LIBC_NAMESPACE::shared::isnanl(0.0L));
 
 #endif
 
+//emulated float128 
+
+static_assert(Float128(0.0) == LIBC_NAMESPACE::shared::ceilf128(Float128(0.0)));
+
+
 //===----------------------------------------------------------------------===//
 //                       Float128 Tests
 //===----------------------------------------------------------------------===//
@@ -384,7 +392,6 @@ static_assert(0 == [] {
   float128 x = float128(0.0);
   return LIBC_NAMESPACE::shared::canonicalizef128(&cx, &x);
 }());
-static_assert(float128(0.0) == LIBC_NAMESPACE::shared::ceilf128(float128(0.0)));
 static_assert(float128(1.0) ==
               LIBC_NAMESPACE::shared::fabsf128(float128(-1.0)));
 static_assert(float128(0.0) ==
