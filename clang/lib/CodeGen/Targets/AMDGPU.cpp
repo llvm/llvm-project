@@ -9,7 +9,11 @@
 #include "ABIInfoImpl.h"
 #include "TargetInfo.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/RecordLayout.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
 
 using namespace clang;
@@ -20,6 +24,92 @@ using namespace clang::CodeGen;
 //===----------------------------------------------------------------------===//
 
 namespace {
+
+/// True if \p Ty is a record whose fields (or bases) include a field that
+///  is empty for layout, or that contain such a field transitively through
+///  member or base types.
+static bool recordTypeHasEmptyFieldForLayout(ASTContext &Ctx, QualType Ty) {
+  const RecordDecl *RD = Ty->getAsRecordDecl();
+  if (!RD)
+    return false;
+
+  if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
+    for (const auto &B : CXXRD->bases()) {
+      if (recordTypeHasEmptyFieldForLayout(Ctx, B.getType()))
+        return true;
+    }
+  }
+
+  for (const FieldDecl *FD : RD->fields()) {
+    if (isEmptyFieldForLayout(Ctx, FD))
+      return true;
+    if (recordTypeHasEmptyFieldForLayout(Ctx, FD->getType()))
+      return true;
+  }
+  return false;
+}
+
+/// Build a LLVM struct for AMDGPU aggregate return coercion: one element per
+/// non-empty base subobject and per field, ordered by \c ASTRecordLayout
+/// offsets (matching in-object layout). Nested records that also need this
+/// coercion use a nested coerce type; otherwise \c ConvertType is used.
+static llvm::Type *buildAMDGPUAggregateReturnCoerceType(CodeGenTypes &CGT,
+                                                        ASTContext &Ctx,
+                                                        QualType Ty) {
+  if (!recordTypeHasEmptyFieldForLayout(Ctx, Ty))
+    return nullptr;
+
+  const RecordDecl *RD = Ty->getAsRecordDecl();
+  if (!RD || !RD->getDefinition() || RD->isUnion())
+    return nullptr;
+  assert(!RD->hasFlexibleArrayMember());
+
+  const ASTRecordLayout &Layout = Ctx.getASTRecordLayout(RD);
+
+  struct CoerceMember {
+    CharUnits Offset;
+    QualType Ty;
+  };
+  llvm::SmallVector<CoerceMember, 16> Members;
+
+  if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
+    // Vtable and dynamic-class layout are not represented here; use the normal
+    // LLVM record type as the coerce-to type.
+    if (CXXRD->isDynamicClass())
+      return nullptr;
+    for (const CXXBaseSpecifier &B : CXXRD->bases()) {
+      const CXXRecordDecl *BaseDecl = B.getType()->getAsCXXRecordDecl();
+      if (!BaseDecl || BaseDecl->isEmpty())
+        continue;
+      BaseDecl = BaseDecl->getDefinition();
+      // isDynamicClass() above guards against any class that has virtual bases
+      assert(!B.isVirtual() && "virtual base implies isDynamicClass");
+      Members.push_back({Layout.getBaseClassOffset(BaseDecl), B.getType()});
+    }
+  }
+
+  for (const FieldDecl *FD : RD->fields()) {
+    CharUnits Off =
+        Ctx.toCharUnitsFromBits(Layout.getFieldOffset(FD->getFieldIndex()));
+    Members.push_back({Off, FD->getType()});
+  }
+
+  llvm::sort(Members, [](const CoerceMember &A, const CoerceMember &B) {
+    return A.Offset < B.Offset;
+  });
+
+  llvm::LLVMContext &VM = CGT.getLLVMContext();
+  llvm::SmallVector<llvm::Type *, 16> Elts;
+  for (const CoerceMember &M : Members) {
+    if (llvm::Type *Nested =
+            buildAMDGPUAggregateReturnCoerceType(CGT, Ctx, M.Ty))
+      Elts.push_back(Nested);
+    else
+      Elts.push_back(CGT.ConvertType(M.Ty));
+  }
+
+  return llvm::StructType::create(VM, Elts);
+}
 
 class AMDGPUABIInfo final : public DefaultABIInfo {
 private:
@@ -99,7 +189,20 @@ uint64_t AMDGPUABIInfo::numRegsForType(QualType Ty) const {
   if (const auto *RD = Ty->getAsRecordDecl()) {
     assert(!RD->hasFlexibleArrayMember());
 
+    if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
+      for (const CXXBaseSpecifier &B : CXXRD->bases()) {
+        const CXXRecordDecl *BD = B.getType()->getAsCXXRecordDecl();
+        if (!BD || BD->isEmpty())
+          continue;
+        NumRegs += numRegsForType(B.getType());
+      }
+    }
+
     for (const FieldDecl *Field : RD->fields()) {
+      if (isEmptyFieldForLayout(getContext(), Field)) {
+        NumRegs += 1;
+        continue;
+      }
       QualType FieldTy = Field->getType();
       NumRegs += numRegsForType(FieldTy);
     }
@@ -169,8 +272,12 @@ ABIArgInfo AMDGPUABIInfo::classifyReturnType(QualType RetTy) const {
         return ABIArgInfo::getDirect(llvm::ArrayType::get(I32Ty, 2));
       }
 
-      if (numRegsForType(RetTy) <= MaxNumRegsForArgsRet)
+      if (numRegsForType(RetTy) <= MaxNumRegsForArgsRet) {
+        if (llvm::Type *CoerceTy =
+                buildAMDGPUAggregateReturnCoerceType(CGT, getContext(), RetTy))
+          return ABIArgInfo::getDirect(CoerceTy);
         return ABIArgInfo::getDirect();
+      }
     }
   }
 
