@@ -32,6 +32,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
 using namespace ore;
@@ -66,7 +67,7 @@ bool MachineFunctionPass::runOnFunction(Function &F) {
     errs() << "\nCurrent properties: ";
     MFProps.print(errs());
     errs() << "\n";
-    llvm_unreachable("MachineFunctionProperties check failed");
+    reportFatalUsageError("MachineFunctionProperties check failed");
   }
 #endif
   // Collect the MI count of the function before the pass.
