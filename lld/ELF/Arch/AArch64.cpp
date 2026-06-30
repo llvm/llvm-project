@@ -618,8 +618,11 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
                        uint64_t val) const {
   switch (rel.type) {
   case R_AARCH64_ABS16:
-  case R_AARCH64_PREL16:
     checkIntUInt(ctx, loc, val, 16, rel);
+    write16(ctx, loc, val);
+    break;
+  case R_AARCH64_PREL16:
+    checkInt(ctx, loc, val, 16, rel);
     write16(ctx, loc, val);
     break;
   case R_AARCH64_ABS32:
