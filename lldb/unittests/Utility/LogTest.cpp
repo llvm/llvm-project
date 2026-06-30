@@ -352,12 +352,12 @@ TEST_F(LogChannelEnabledTest, log_options) {
 }
 
 TEST_F(LogChannelEnabledTest, JSONLOutput) {
-  std::string Err;
-
   // With JSON, every line must parse as JSON and contain exactly the message we
   // logged.
-  EXPECT_TRUE(EnableChannel(
-      getLogHandler(), /*log_options=*/LLDB_LOG_OPTION_JSON, "chan", {}, Err));
+  EXPECT_THAT_ERROR(Log::EnableLogChannel(getLogHandler(),
+                                          /*log_options=*/LLDB_LOG_OPTION_JSON,
+                                          "chan", {}),
+                    llvm::Succeeded());
   llvm::StringRef Msg = logAndTakeOutput("Hello \"World\"\nsecond line");
   ASSERT_TRUE(Msg.ends_with("\n"));
   ASSERT_EQ(Msg.count('\n'), 1u) << "expected one JSON object per line";
@@ -377,7 +377,8 @@ TEST_F(LogChannelEnabledTest, JSONLOutput) {
                   LLDB_LOG_OPTION_PREPEND_THREAD_NAME |
                   LLDB_LOG_OPTION_BACKTRACE |
                   LLDB_LOG_OPTION_PREPEND_FILE_FUNCTION;
-  EXPECT_TRUE(EnableChannel(getLogHandler(), Opts, "chan", {}, Err));
+  EXPECT_THAT_ERROR(Log::EnableLogChannel(getLogHandler(), Opts, "chan", {}),
+                    llvm::Succeeded());
   Msg = logAndTakeOutput("payload");
   Parsed = llvm::json::parse(Msg);
   ASSERT_TRUE(static_cast<bool>(Parsed)) << llvm::toString(Parsed.takeError());
