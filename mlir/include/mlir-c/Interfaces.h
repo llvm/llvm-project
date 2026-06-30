@@ -165,6 +165,46 @@ MLIR_CAPI_EXPORTED void mlirMemoryEffectsOpInterfaceAttachFallbackModel(
     MlirContext ctx, MlirStringRef opName,
     MlirMemoryEffectsOpInterfaceCallbacks callbacks);
 
+//===---------------------------------------------------------------------===//
+// DestinationStyleOpInterface
+//===---------------------------------------------------------------------===//
+
+/// Returns the interface TypeID of the DestinationStyleOpInterface.
+MLIR_CAPI_EXPORTED MlirTypeID mlirDestinationStyleOpInterfaceTypeID(void);
+
+/// Returns the number of "init" (destination) operands of the given
+/// destination-style operation. The operation must implement
+/// DestinationStyleOpInterface.
+MLIR_CAPI_EXPORTED intptr_t
+mlirDestinationStyleOpInterfaceGetNumDpsInits(MlirOperation op);
+
+/// Returns the `i`-th "init" operand as an OpOperand. The operation must
+/// implement DestinationStyleOpInterface.
+MLIR_CAPI_EXPORTED MlirOpOperand
+mlirDestinationStyleOpInterfaceGetDpsInitOperand(MlirOperation op, intptr_t i);
+
+/// Returns the number of "input" operands of the given destination-style
+/// operation. The operation must implement DestinationStyleOpInterface.
+MLIR_CAPI_EXPORTED intptr_t
+mlirDestinationStyleOpInterfaceGetNumDpsInputs(MlirOperation op);
+
+/// Returns the `i`-th "input" operand as an OpOperand. The operation must
+/// implement DestinationStyleOpInterface.
+MLIR_CAPI_EXPORTED MlirOpOperand
+mlirDestinationStyleOpInterfaceGetDpsInputOperand(MlirOperation op, intptr_t i);
+
+/// Returns true if the given OpOperand is an "input" of the operation. The
+/// operation must implement DestinationStyleOpInterface.
+MLIR_CAPI_EXPORTED bool
+mlirDestinationStyleOpInterfaceIsDpsInput(MlirOperation op,
+                                          MlirOpOperand operand);
+
+/// Returns true if the given OpOperand is an "init" of the operation. The
+/// operation must implement DestinationStyleOpInterface.
+MLIR_CAPI_EXPORTED bool
+mlirDestinationStyleOpInterfaceIsDpsInit(MlirOperation op,
+                                         MlirOpOperand operand);
+
 #ifdef __cplusplus
 }
 #endif
