@@ -8,13 +8,14 @@ subroutine managed_only()
   real, allocatable :: m(:)
   allocate(m(10))
   !$acc enter data copyin(m)
+  !$acc update device(m)
   !$acc exit data copyout(m)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPmanaged_only()
 ! CHECK-NOT: acc.copyin
 ! CHECK-NOT: acc.enter_data
-! CHECK-NOT: acc.getdeviceptr
+! CHECK-NOT: acc.update
 ! CHECK-NOT: acc.exit_data
 ! CHECK-NOT: acc.copyout
 

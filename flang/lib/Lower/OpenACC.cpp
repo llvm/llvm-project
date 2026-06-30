@@ -3230,6 +3230,9 @@ genACCHostDataOp(Fortran::lower::AbstractConverter &converter,
     }
   }
 
+  if (dataOperands.empty())
+    return;
+
   // Prepare the operand segment size attribute and the operands value range.
   llvm::SmallVector<mlir::Value> operands;
   llvm::SmallVector<int32_t> operandSegments;
@@ -3765,6 +3768,9 @@ genACCUpdateOp(Fortran::lower::AbstractConverter &converter,
   }
 
   dataClauseOperands.append(updateHostOperands);
+
+  if (dataClauseOperands.empty())
+    return;
 
   mlir::acc::UpdateOp::create(
       builder, currentLocation, ifCond, asyncOperands,
