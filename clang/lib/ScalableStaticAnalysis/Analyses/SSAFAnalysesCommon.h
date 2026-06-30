@@ -104,7 +104,7 @@ template <typename ExtractorFnT>
 void extractAndAddSummaries(TUSummaryExtractor &Extractor,
                             TUSummaryBuilder &Builder, ASTContext &Ctx,
                             ExtractorFnT ExtractFn,
-                            llvm::StringRef ExtractorName = {}) {
+                            llvm::StringRef ExtractorName = "") {
   llvm::DenseMap<const NamedDecl *, std::vector<const NamedDecl *>>
       Contributors;
   findContributors(Ctx, Contributors);
