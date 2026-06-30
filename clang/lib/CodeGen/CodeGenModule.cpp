@@ -360,6 +360,13 @@ bool CodeGenModule::shouldUseLLVMABILowering(unsigned CallingConv) const {
     case llvm::CallingConv::X86_VectorCall:
     case llvm::CallingConv::X86_StdCall:
     case llvm::CallingConv::X86_ThisCall:
+    // These conventions are not yet handled by X86_64TargetInfo::computeInfo,
+    // so they must fall back to Clang's classic ABIInfo rather than hit its
+    // unreachable.
+    case llvm::CallingConv::Intel_OCL_BI:
+    case llvm::CallingConv::PreserveMost:
+    case llvm::CallingConv::PreserveAll:
+    case llvm::CallingConv::PreserveNone:
       return false;
     default:
       return true;

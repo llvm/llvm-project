@@ -33,6 +33,42 @@ static unsigned getNativeVectorSizeForAVXABI(X86AVXABILevel AVXLevel) {
   llvm_unreachable("Unknown AVXLevel");
 }
 
+// The width of an integer's storage container, mirroring Clang's
+// ASTContext::getTypeSize. For a plain integer this is its bit width; for a
+// _BitInt(N) it is N rounded up to the type's alignment. The x86-64 _BitInt
+// max alignment is 64, so this clamp is target-specific and kept file-local.
+static uint64_t getClangIntegerWidthInBits(const IntegerType *IT) {
+  uint64_t NumBits = IT->getSizeInBits().getFixedValue();
+  if (!IT->isBitInt())
+    return NumBits;
+  uint64_t BitAlign =
+      std::max<uint64_t>(8, std::min<uint64_t>(64, llvm::bit_ceil(NumBits)));
+  return llvm::alignTo(NumBits, BitAlign);
+}
+
+static uint64_t getClangVectorWidthInBits(const VectorType *VT) {
+  const Type *EltTy = VT->getElementType();
+  uint64_t EltWidth = EltTy->getSizeInBits().getFixedValue();
+  if (const auto *IT = dyn_cast<IntegerType>(EltTy))
+    EltWidth = getClangIntegerWidthInBits(IT);
+  uint64_t Width =
+      std::max<uint64_t>(8, EltWidth * VT->getNumElements().getKnownMinValue());
+  if (Width & (Width - 1))
+    Width = llvm::alignTo(Width, llvm::bit_ceil(Width));
+  return Width;
+}
+
+// The storage-container width of a type, mirroring Clang's getTypeSize. Used on
+// the stack path so a _BitInt or illegal vector coerces to the integer covering
+// its storage, not its raw iN width.
+static uint64_t getClangTypeWidthInBits(const Type *Ty) {
+  if (const auto *VT = dyn_cast<VectorType>(Ty))
+    return getClangVectorWidthInBits(VT);
+  if (const auto *IT = dyn_cast<IntegerType>(Ty))
+    return getClangIntegerWidthInBits(IT);
+  return Ty->getSizeInBits().getFixedValue();
+}
+
 class X86_64TargetInfo : public TargetInfo {
 public:
   enum Class { Integer, Sse, SseUp, X87, X87Up, ComplexX87, NoClass, Memory };
@@ -196,6 +232,10 @@ X86_64TargetInfo::Class X86_64TargetInfo::merge(Class Accum, Class Field) {
   return Sse;
 }
 
+// A record with a matrix-extension field is passed in memory.  clang has no
+// matrix-specific ABI code: a matrix falls through X86_64ABIInfo::classify to
+// the default MEMORY class.  We model matrices as arrays, so this check
+// reproduces that record-with-matrix -> MEMORY result.
 bool X86_64TargetInfo::containsMatrixField(const RecordType *RT) const {
   for (const auto &Field : RT->getFields()) {
     const Type *FieldType = Field.FieldType;
@@ -390,20 +430,42 @@ void X86_64TargetInfo::classify(const Type *T, uint64_t OffsetBase, Class &Lo,
   }
 
   if (const auto *AT = dyn_cast<ArrayType>(T)) {
+    // A matrix type is modeled as an array but, like Clang, is treated as a
+    // non-aggregate scalar: it matches no class here and stays in the Memory
+    // class, so classify*Type later returns it Direct (coerced to its
+    // flattened vector) rather than classifying it field-by-field.
+    if (AT->isMatrixType())
+      return;
+
+    // Arrays are treated like structures.
     uint64_t Size = AT->getSizeInBits().getFixedValue();
 
+    // AMD64-ABI 3.2.3p2: Rule 1. If the size of an object is larger
+    // than eight eightbytes, ..., it has class MEMORY.
+    // regcall ABI doesn't have limitation to an object. The only limitation
+    // is the free registers, which will be checked in computeInfo.
     if (!IsRegCall && Size > 512)
       return;
 
+    // AMD64-ABI 3.2.3p2: Rule 1. If ..., or it contains unaligned
+    // fields, it has class MEMORY.
+    //
+    // Only need to check alignment of array base.
     const Type *ElementType = AT->getElementType();
     uint64_t ElemAlign = ElementType->getAlignment().value() * 8;
     if (OffsetBase % ElemAlign)
       return;
 
+    // Otherwise implement simplified merge. We could be smarter about
+    // this, but it isn't worth it and would be harder to verify.
     Current = NoClass;
     uint64_t EltSize = ElementType->getSizeInBits().getFixedValue();
     uint64_t ArraySize = AT->getNumElements();
 
+    // The only case a 256-bit wide vector could be used is when the array
+    // contains a single 256-bit element. Since Lo and Hi logic isn't extended
+    // to work for sizes wider than 128, early check and fallback to memory.
+    //
     if (Size > 128 &&
         (Size != EltSize || Size > getNativeVectorSizeForAVXABI(AVXLevel)))
       return;
@@ -975,11 +1037,14 @@ const Type *X86_64TargetInfo::getIntegerTypeAtOffset(const Type *ABIType,
   // If we're dealing with an un-offset ABI type, then it means that we're
   // returning an 8-byte unit starting with it. See if we can safely use it.
   if (ABIOffset == 0) {
-    // Pointers and int64's always fill the 8-byte unit.
+    // Pointers and int64's always fill the 8-byte unit.  Return WorkingType,
+    // which is the in-memory-widened type (e.g. a _BitInt(37) field widened to
+    // i64): returning the raw ABIType here would coerce the eightbyte to the
+    // narrow iN instead of the storage integer clang uses.
     if ((WorkingType->isPointer() && Has64BitPointers) ||
         (WorkingType->isInteger() &&
          cast<IntegerType>(WorkingType)->getSizeInBits() == 64))
-      return ABIType;
+      return WorkingType;
 
     // If we have a 1/2/4-byte integer, we can use it only if the rest of the
     // goodness in the source type is just tail padding. This is allowed to
@@ -1322,7 +1387,10 @@ ArgInfo X86_64TargetInfo::getIndirectResult(const Type *Ty,
   // We can revisit this if the backend grows support for 'onstack' parameter
   // attributes. See PR12193.
   if (FreeIntRegs == 0) {
-    uint64_t Size = Ty->getSizeInBits().getFixedValue();
+    // Use the storage-container width (like Clang's getTypeSize) so a stack
+    // _BitInt or illegal vector coerces to the integer covering its storage,
+    // not its raw iN width.
+    uint64_t Size = getClangTypeWidthInBits(Ty);
 
     // If this type fits in an eightbyte, coerce it into the matching integral
     // type, which will end up on the stack (with alignment 8).
