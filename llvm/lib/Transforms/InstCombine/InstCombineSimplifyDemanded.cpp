@@ -1663,8 +1663,7 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
     unsigned DepthLimit = SimplifyDemandedVectorEltsDepthLimit;
     auto *IE = cast<InsertElementInst>(I);
     // Skip only when SDVE cannot simplify this insert chain before the limit.
-    if (Depth == 0 && DemandedElts.isAllOnes() &&
-        VWidth > DepthLimit &&
+    if (Depth == 0 && DemandedElts.isAllOnes() && VWidth > DepthLimit &&
         canSkipDemandedEltsInInsertChain(*IE, VWidth, DepthLimit))
       return nullptr;
 
