@@ -39,6 +39,21 @@ func.func @expression_recurring_args(%arg0: i32, %arg1: i32) -> i1 {
   return %c : i1
 }
 
+// CHECK-LABEL:   func.func @expression_with_call_recurring_args(
+// CHECK-SAME:      %[[ARG0:.*]]: i32,
+// CHECK-SAME:      %[[ARG1:.*]]: i32) -> i32 {
+// CHECK:           %[[EXPRESSION_0:.*]] = emitc.expression %[[ARG0]], %[[ARG1]] : (i32, i32) -> i32 {
+// CHECK:             %[[VAL_0:.*]] = call_opaque "minsi"(%[[ARG0]], %[[ARG0]], %[[ARG1]]) : (i32, i32, i32) -> i32
+// CHECK:             yield %[[VAL_0]] : i32
+// CHECK:           }
+// CHECK:           return %[[EXPRESSION_0]] : i32
+// CHECK:         }
+
+func.func @expression_with_call_recurring_args(%arg0: i32, %arg1: i32) -> i32 {
+  %0 = emitc.call_opaque "minsi"(%arg0, %arg0, %arg1) : (i32, i32, i32) -> i32
+  return %0 : i32
+}
+
 // CHECK-LABEL: func.func @multiple_expressions(
 // CHECK-SAME:      %[[VAL_0:.*]]: i32, %[[VAL_1:.*]]: i32, %[[VAL_2:.*]]: i32, %[[VAL_3:.*]]: i32) -> (i32, i32) {
 // CHECK:         %[[VAL_4:.*]] = emitc.expression %[[VAL_2]], %[[VAL_0]], %[[VAL_1]] : (i32, i32, i32) -> i32 {
