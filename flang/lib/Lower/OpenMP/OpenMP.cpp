@@ -4208,6 +4208,9 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    const parser::OmpAssumesDirective &assumesConstruct) {
   // Assumption clauses are hints with no representation in the OpenMP dialect,
   // so this declarative directive is a no-op.
+  if (!semaCtx.langOptions().OpenMPSimd)
+    TODO(converter.getCurrentLocation(),
+         "assumption clauses on the assumes directive");
 }
 
 static void
@@ -5322,11 +5325,11 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
     const parser::OmpDirectiveSpecification &beginSpec =
         assumeConstruct.BeginDir();
     for (const parser::OmpClause &clause : beginSpec.Clauses().v) {
-      const auto *holds = std::get_if<parser::OmpClause::Holds>(&clause.u);
-      if (!holds)
-        continue;
-
       mlir::Location clauseLoc = converter.genLocation(clause.source);
+      const auto *holds = std::get_if<parser::OmpClause::Holds>(&clause.u);
+      if (!holds) {
+        TODO(clauseLoc, "assumption clause is not implemented yet");
+      }
       const parser::Expr &parserExpr = holds->v.v.value();
       const semantics::SomeExpr *expr = semantics::GetExpr(semaCtx, parserExpr);
       assert(expr && "Expecting analyzed expression for holds clause");
