@@ -58,6 +58,7 @@ public:
     // underlying type that could be visited. However, in each of these
     // cases, the lower type is constrained to a fundamental type and
     // therefore doesn't contain any fields or base classes.
+
     if (auto *ResAtomicType = QT->getAs<AtomicType>()) {
       getDerived().visit(ResAtomicType->getValueType());
       return;
