@@ -103,6 +103,8 @@ unsigned CodeGenTypes::ClangCallConvToLLVMCallConv(CallingConv CC) {
     return llvm::CallingConv::SwiftTail;
   case CC_M68kRTD:
     return llvm::CallingConv::M68k_RTD;
+  case CC_WasmMultivalue:
+    return llvm::CallingConv::WASM_Multivalue;
   case CC_PreserveNone:
     return llvm::CallingConv::PreserveNone;
     // clang-format off

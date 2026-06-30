@@ -297,6 +297,10 @@ namespace CallingConv {
     /// stateless compartment.
     CHERIoT_LibraryCall = 127,
 
+    /// Calling convention for WebAssembly that takes advantage of the
+    /// multivalue proposal.
+    WASM_Multivalue = 128,
+
     /// The highest possible ID. Must be some 2^k - 1.
     MaxID = 1023
   };

@@ -1263,6 +1263,7 @@ static bool callingConvSupported(CallingConv::ID CallConv) {
          CallConv == CallingConv::PreserveAll ||
          CallConv == CallingConv::CXX_FAST_TLS ||
          CallConv == CallingConv::WASM_EmscriptenInvoke ||
+         CallConv == CallingConv::WASM_Multivalue ||
          CallConv == CallingConv::Swift || CallConv == CallingConv::SwiftTail;
 }
 
@@ -1570,11 +1571,11 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
 }
 
 bool WebAssemblyTargetLowering::CanLowerReturn(
-    CallingConv::ID /*CallConv*/, MachineFunction & /*MF*/, bool /*IsVarArg*/,
+    CallingConv::ID CallConv, MachineFunction & /*MF*/, bool /*IsVarArg*/,
     const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext & /*Context*/,
     const Type *RetTy) const {
   // WebAssembly can only handle returning tuples with multivalue enabled
-  return WebAssembly::canLowerReturn(Outs.size(), Subtarget);
+  return WebAssembly::canLowerReturn(Outs.size(), Subtarget, CallConv);
 }
 
 SDValue WebAssemblyTargetLowering::LowerReturn(
@@ -1582,7 +1583,7 @@ SDValue WebAssemblyTargetLowering::LowerReturn(
     const SmallVectorImpl<ISD::OutputArg> &Outs,
     const SmallVectorImpl<SDValue> &OutVals, const SDLoc &DL,
     SelectionDAG &DAG) const {
-  assert(WebAssembly::canLowerReturn(Outs.size(), Subtarget) &&
+  assert(WebAssembly::canLowerReturn(Outs.size(), Subtarget, CallConv) &&
          "MVP WebAssembly can only return up to one value");
   if (!callingConvSupported(CallConv))
     fail(DL, DAG, "WebAssembly doesn't support non-C calling conventions");

@@ -2275,6 +2275,7 @@ void LLParser::parseOptionalDLLStorageClass(unsigned &Res) {
 ///   ::= 'graalcc'
 ///   ::= 'riscv_vector_cc'
 ///   ::= 'riscv_vls_cc'
+///   ::= 'wasm_multivalue'
 ///   ::= 'cc' UINT
 ///
 bool LLParser::parseOptionalCallingConv(unsigned &CC) {
@@ -2393,6 +2394,9 @@ bool LLParser::parseOptionalCallingConv(unsigned &CC) {
     break;
   case lltok::kw_cheriot_librarycallcc:
     CC = CallingConv::CHERIoT_LibraryCall;
+    break;
+  case lltok::kw_wasm_multivalue:
+    CC = CallingConv::WASM_Multivalue;
     break;
   case lltok::kw_cc: {
       Lex.Lex();

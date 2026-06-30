@@ -1198,6 +1198,9 @@ void TypePrinter::printFunctionAfter(const FunctionType::ExtInfo &Info,
     case CC_M68kRTD:
       OS << " __attribute__((m68k_rtd))";
       break;
+    case CC_WasmMultivalue:
+      OS << " __attribute__((wasm_multivalue))";
+      break;
     case CC_PreserveNone:
       OS << " __attribute__((preserve_none))";
       break;
@@ -2113,6 +2116,9 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
     break;
   case attr::M68kRTD:
     OS << "m68k_rtd";
+    break;
+  case attr::WasmMultivalue:
+    OS << "wasm_multivalue";
     break;
   case attr::RISCVVectorCC:
     OS << "riscv_vector_cc";

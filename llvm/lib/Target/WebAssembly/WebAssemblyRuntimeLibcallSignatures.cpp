@@ -732,7 +732,7 @@ void WebAssembly::getLibcallSignature(const WebAssemblySubtarget &Subtarget,
     Params.push_back(PtrTy);
     break;
   case i64_i64_func_f32:
-    if (WebAssembly::canLowerMultivalueReturn(&Subtarget)) {
+    if (WebAssembly::canLowerMultivalueReturn(&Subtarget, CallingConv::C)) {
       Rets.push_back(wasm::ValType::I64);
       Rets.push_back(wasm::ValType::I64);
     } else {
@@ -741,7 +741,7 @@ void WebAssembly::getLibcallSignature(const WebAssemblySubtarget &Subtarget,
     Params.push_back(wasm::ValType::F32);
     break;
   case i64_i64_func_f64:
-    if (WebAssembly::canLowerMultivalueReturn(&Subtarget)) {
+    if (WebAssembly::canLowerMultivalueReturn(&Subtarget, CallingConv::C)) {
       Rets.push_back(wasm::ValType::I64);
       Rets.push_back(wasm::ValType::I64);
     } else {
@@ -750,7 +750,7 @@ void WebAssembly::getLibcallSignature(const WebAssemblySubtarget &Subtarget,
     Params.push_back(wasm::ValType::F64);
     break;
   case i16_i16_func_i16_i16:
-    if (WebAssembly::canLowerMultivalueReturn(&Subtarget)) {
+    if (WebAssembly::canLowerMultivalueReturn(&Subtarget, CallingConv::C)) {
       Rets.push_back(wasm::ValType::I32);
       Rets.push_back(wasm::ValType::I32);
     } else {
@@ -760,7 +760,7 @@ void WebAssembly::getLibcallSignature(const WebAssemblySubtarget &Subtarget,
     Params.push_back(wasm::ValType::I32);
     break;
   case i32_i32_func_i32_i32:
-    if (WebAssembly::canLowerMultivalueReturn(&Subtarget)) {
+    if (WebAssembly::canLowerMultivalueReturn(&Subtarget, CallingConv::C)) {
       Rets.push_back(wasm::ValType::I32);
       Rets.push_back(wasm::ValType::I32);
     } else {
@@ -770,7 +770,7 @@ void WebAssembly::getLibcallSignature(const WebAssemblySubtarget &Subtarget,
     Params.push_back(wasm::ValType::I32);
     break;
   case i64_i64_func_i64_i64:
-    if (WebAssembly::canLowerMultivalueReturn(&Subtarget)) {
+    if (WebAssembly::canLowerMultivalueReturn(&Subtarget, CallingConv::C)) {
       Rets.push_back(wasm::ValType::I64);
       Rets.push_back(wasm::ValType::I64);
     } else {
@@ -780,7 +780,7 @@ void WebAssembly::getLibcallSignature(const WebAssemblySubtarget &Subtarget,
     Params.push_back(wasm::ValType::I64);
     break;
   case i64_i64_func_i64_i64_iPTR:
-    if (WebAssembly::canLowerMultivalueReturn(&Subtarget)) {
+    if (WebAssembly::canLowerMultivalueReturn(&Subtarget, CallingConv::C)) {
       Rets.push_back(wasm::ValType::I64);
       Rets.push_back(wasm::ValType::I64);
     } else {
@@ -791,7 +791,7 @@ void WebAssembly::getLibcallSignature(const WebAssemblySubtarget &Subtarget,
     Params.push_back(PtrTy);
     break;
   case i64_i64_func_i64_i64_i64_i64:
-    if (WebAssembly::canLowerMultivalueReturn(&Subtarget)) {
+    if (WebAssembly::canLowerMultivalueReturn(&Subtarget, CallingConv::C)) {
       Rets.push_back(wasm::ValType::I64);
       Rets.push_back(wasm::ValType::I64);
     } else {
@@ -803,7 +803,7 @@ void WebAssembly::getLibcallSignature(const WebAssemblySubtarget &Subtarget,
     Params.push_back(wasm::ValType::I64);
     break;
   case i64_i64_func_i64_i64_i64_i64_iPTR:
-    if (WebAssembly::canLowerMultivalueReturn(&Subtarget)) {
+    if (WebAssembly::canLowerMultivalueReturn(&Subtarget, CallingConv::C)) {
       Rets.push_back(wasm::ValType::I64);
       Rets.push_back(wasm::ValType::I64);
     } else {
@@ -816,7 +816,7 @@ void WebAssembly::getLibcallSignature(const WebAssemblySubtarget &Subtarget,
     Params.push_back(PtrTy);
     break;
   case i64_i64_i64_i64_func_i64_i64_i64_i64:
-    if (WebAssembly::canLowerMultivalueReturn(&Subtarget)) {
+    if (WebAssembly::canLowerMultivalueReturn(&Subtarget, CallingConv::C)) {
       Rets.push_back(wasm::ValType::I64);
       Rets.push_back(wasm::ValType::I64);
       Rets.push_back(wasm::ValType::I64);
@@ -830,7 +830,7 @@ void WebAssembly::getLibcallSignature(const WebAssemblySubtarget &Subtarget,
     Params.push_back(wasm::ValType::I64);
     break;
   case i64_i64_func_i64_i64_i32:
-    if (WebAssembly::canLowerMultivalueReturn(&Subtarget)) {
+    if (WebAssembly::canLowerMultivalueReturn(&Subtarget, CallingConv::C)) {
       Rets.push_back(wasm::ValType::I64);
       Rets.push_back(wasm::ValType::I64);
     } else {
@@ -900,7 +900,7 @@ void WebAssembly::getLibcallSignature(const WebAssemblySubtarget &Subtarget,
     Params.push_back(wasm::ValType::I64);
     break;
   case i64_i64_func_i64_i64_i64_i64_i64_i64:
-    if (WebAssembly::canLowerMultivalueReturn(&Subtarget)) {
+    if (WebAssembly::canLowerMultivalueReturn(&Subtarget, CallingConv::C)) {
       Rets.push_back(wasm::ValType::I64);
       Rets.push_back(wasm::ValType::I64);
     } else {
@@ -914,7 +914,7 @@ void WebAssembly::getLibcallSignature(const WebAssemblySubtarget &Subtarget,
     Params.push_back(wasm::ValType::I64);
     break;
   case i64_i64_func_i32:
-    if (WebAssembly::canLowerMultivalueReturn(&Subtarget)) {
+    if (WebAssembly::canLowerMultivalueReturn(&Subtarget, CallingConv::C)) {
       Rets.push_back(wasm::ValType::I64);
       Rets.push_back(wasm::ValType::I64);
     } else {
@@ -923,7 +923,7 @@ void WebAssembly::getLibcallSignature(const WebAssemblySubtarget &Subtarget,
     Params.push_back(wasm::ValType::I32);
     break;
   case i64_i64_func_i64:
-    if (WebAssembly::canLowerMultivalueReturn(&Subtarget)) {
+    if (WebAssembly::canLowerMultivalueReturn(&Subtarget, CallingConv::C)) {
       Rets.push_back(wasm::ValType::I64);
       Rets.push_back(wasm::ValType::I64);
     } else {
