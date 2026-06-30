@@ -65,10 +65,7 @@ define <4 x i8> @test_non_sign_extended(i32 %val) {
 define <2 x i64> @test_bitcast_shuffle_ashr_sign_extend(<2 x i64> %x) {
 ; CHECK-LABEL: define <2 x i64> @test_bitcast_shuffle_ashr_sign_extend(
 ; CHECK-SAME: <2 x i64> [[X:%.*]]) {
-; CHECK-NEXT:    [[NARROW:%.*]] = bitcast <2 x i64> [[X]] to <4 x i32>
-; CHECK-NEXT:    [[SHIFTED:%.*]] = ashr <4 x i32> [[NARROW]], <i32 0, i32 31, i32 0, i32 31>
-; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i32> [[SHIFTED]], <4 x i32> poison, <4 x i32> <i32 1, i32 1, i32 3, i32 3>
-; CHECK-NEXT:    [[WIDE:%.*]] = bitcast <4 x i32> [[SHUF]] to <2 x i64>
+; CHECK-NEXT:    [[WIDE:%.*]] = ashr <2 x i64> [[X]], splat (i64 63)
 ; CHECK-NEXT:    ret <2 x i64> [[WIDE]]
 ;
   %narrow = bitcast <2 x i64> %x to <4 x i32>
@@ -82,10 +79,7 @@ define <2 x i64> @test_bitcast_shuffle_ashr_sign_extend(<2 x i64> %x) {
 define <4 x i64> @test_bitcast_shuffle_ashr_sign_extend_v4i64(<4 x i64> %x) {
 ; CHECK-LABEL: define <4 x i64> @test_bitcast_shuffle_ashr_sign_extend_v4i64(
 ; CHECK-SAME: <4 x i64> [[X:%.*]]) {
-; CHECK-NEXT:    [[NARROW:%.*]] = bitcast <4 x i64> [[X]] to <8 x i32>
-; CHECK-NEXT:    [[SHIFTED:%.*]] = ashr <8 x i32> [[NARROW]], <i32 0, i32 31, i32 0, i32 31, i32 0, i32 31, i32 0, i32 31>
-; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <8 x i32> [[SHIFTED]], <8 x i32> poison, <8 x i32> <i32 1, i32 1, i32 3, i32 3, i32 5, i32 5, i32 7, i32 7>
-; CHECK-NEXT:    [[WIDE:%.*]] = bitcast <8 x i32> [[SHUF]] to <4 x i64>
+; CHECK-NEXT:    [[WIDE:%.*]] = ashr <4 x i64> [[X]], splat (i64 63)
 ; CHECK-NEXT:    ret <4 x i64> [[WIDE]]
 ;
   %narrow = bitcast <4 x i64> %x to <8 x i32>
@@ -99,10 +93,7 @@ define <4 x i64> @test_bitcast_shuffle_ashr_sign_extend_v4i64(<4 x i64> %x) {
 define <4 x i32> @test_bitcast_shuffle_ashr_sign_extend_v4i32(<4 x i32> %x) {
 ; CHECK-LABEL: define <4 x i32> @test_bitcast_shuffle_ashr_sign_extend_v4i32(
 ; CHECK-SAME: <4 x i32> [[X:%.*]]) {
-; CHECK-NEXT:    [[NARROW:%.*]] = bitcast <4 x i32> [[X]] to <8 x i16>
-; CHECK-NEXT:    [[SHIFTED:%.*]] = ashr <8 x i16> [[NARROW]], <i16 0, i16 15, i16 0, i16 15, i16 0, i16 15, i16 0, i16 15>
-; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <8 x i16> [[SHIFTED]], <8 x i16> poison, <8 x i32> <i32 1, i32 1, i32 3, i32 3, i32 5, i32 5, i32 7, i32 7>
-; CHECK-NEXT:    [[WIDE:%.*]] = bitcast <8 x i16> [[SHUF]] to <4 x i32>
+; CHECK-NEXT:    [[WIDE:%.*]] = ashr <4 x i32> [[X]], splat (i32 31)
 ; CHECK-NEXT:    ret <4 x i32> [[WIDE]]
 ;
   %narrow = bitcast <4 x i32> %x to <8 x i16>
