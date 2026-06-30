@@ -216,6 +216,7 @@ bool NVPTXSubtarget::hasNativeBF16Support(int Opcode) const {
   case ISD::SELECT_CC:
   case ISD::SETCC:
   case ISD::FEXP2:
+  case ISD::FTANH:
   case ISD::FCEIL:
   case ISD::FFLOOR:
   case ISD::FNEARBYINT:
