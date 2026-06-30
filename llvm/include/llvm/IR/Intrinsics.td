@@ -763,6 +763,11 @@ class TypeInfoGen<list<LLVMType> RetTypes, list<LLVMType> ParamTypes> {
 //  * ParamTypes is a list containing the parameter types expected for the
 //    intrinsic.
 //  * Properties can be set to describe the behavior of the intrinsic.
+//  * TargetFeatures is a target feature expression required by the intrinsic.
+//    The empty string means no target features are required. The expression
+//    uses feature names from the target's subtarget feature table. Comma means
+//    AND, | means OR, comma has higher precedence than |, and parentheses group
+//    expressions.
 //
 class Intrinsic<list<LLVMType> ret_types,
                 list<LLVMType> param_types = [],
@@ -772,6 +777,7 @@ class Intrinsic<list<LLVMType> ret_types,
                 bit disable_default_attributes = true> : SDPatternOperator {
   string LLVMName = name;
   string TargetPrefix = "";   // Set to a prefix for target-specific intrinsics.
+  string TargetFeatures = ""; // Target features required by this intrinsic.
   list<LLVMType> RetTypes = ret_types;
   list<LLVMType> ParamTypes = param_types;
   list<IntrinsicProperty> IntrProperties = intr_properties;
@@ -803,6 +809,15 @@ class ClangBuiltin<string name> {
 
 class MSBuiltin<string name> {
   string MSBuiltinName = name;
+}
+
+/// RequiresTargetFeatures - If this intrinsic requires target features,
+/// this specifies the required feature expression using feature names from the
+/// target's subtarget feature table. The expression grammar matches Clang
+/// builtins: comma means AND, | means OR, comma has higher precedence than |,
+/// and parentheses group expressions.
+class RequiresTargetFeatures<string features> {
+  string TargetFeatures = features;
 }
 
 /// Utility class for intrinsics that

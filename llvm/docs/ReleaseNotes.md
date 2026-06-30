@@ -319,6 +319,11 @@ Makes programs 10x faster by doing Special New Thing.
 * Renamed ISD::CTTZ_ZERO_UNDEF to ISD::CTTZ_ZERO_POISON opcode to make it clear that
   a zero input results in poison.
 
+* LLVM intrinsics can now declare required target features using the
+  ``TargetFeatures`` TableGen field. SelectionDAG and GlobalISel use this
+  metadata to reject unsupported target intrinsics generically, so targets do
+  not need custom lowering checks for each annotated intrinsic.
+
 ### Changes to the GlobalISel infrastructure
 
 * Renamed G_CTLZ_ZERO_UNDEF to G_CTLZ_ZERO_POISON opcode to make it clear that

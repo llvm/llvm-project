@@ -4,11 +4,10 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 < %s | FileCheck -check-prefix=GFX1250 %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 < %s | FileCheck -check-prefix=GFX1250 %s
 
-; RUN: not --crash llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -filetype=null %s 2>&1 | FileCheck -check-prefix=ERR-SDAG %s
-; RUN: not llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -filetype=null %s 2>&1 | FileCheck -check-prefix=ERR-GISEL %s
+; RUN: not llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -filetype=null %s 2>&1 | FileCheck -check-prefix=ERR %s
+; RUN: not llc -global-isel=1 -global-isel-abort=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -filetype=null %s 2>&1 | FileCheck -check-prefix=ERR %s
 
-; ERR-SDAG: LLVM ERROR: Cannot select: intrinsic %llvm.amdgcn.permlane16.swap
-; ERR-GISEL: LLVM ERROR: cannot select: %{{[0-9]+}}:vgpr_32(s32), %{{[0-9]+}}:vgpr_32(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.permlane16.swap)
+; ERR: error: {{.*}}: in function {{@?}}v_permlane16_swap_b32_vv{{.*}}: llvm.amdgcn.permlane16.swap requires target feature 'permlane16-swap'
 
 
 declare { i32, i32 } @llvm.amdgcn.permlane16.swap(i32, i32, i1 immarg, i1 immarg)
