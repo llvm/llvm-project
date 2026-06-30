@@ -1043,7 +1043,7 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   Builder.defineMacro("__clang_literal_encoding__",
                       Twine("\"" +
                             (LangOpts.LiteralEncoding.empty()
-                                 ? TI.getDefaultOrdinaryTextEncoding()
+                                 ? TI.getDefaultOrdinaryLiteralEncoding()
                                  : LangOpts.LiteralEncoding) +
                             "\""));
 
