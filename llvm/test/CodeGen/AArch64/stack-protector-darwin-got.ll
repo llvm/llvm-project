@@ -8,18 +8,14 @@
 define void @test(ptr %a) #0 {
 ; CHECK-LABEL: test:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    sub sp, sp, #80
-; CHECK-NEXT:    stp x20, x19, [sp, #48] ; 16-byte Folded Spill
-; CHECK-NEXT:    stp x29, x30, [sp, #64] ; 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 80
+; CHECK-NEXT:    sub sp, sp, #64
+; CHECK-NEXT:    stp x29, x30, [sp, #48] ; 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-NEXT:    .cfi_offset w30, -8
 ; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    .cfi_offset w19, -24
-; CHECK-NEXT:    .cfi_offset w20, -32
 ; CHECK-NEXT:  Lloh0:
 ; CHECK-NEXT:    adrp x8, ___stack_chk_guard@GOTPAGE
 ; CHECK-NEXT:    mov x1, x0
-; CHECK-NEXT:    add x19, sp, #16
 ; CHECK-NEXT:  Lloh1:
 ; CHECK-NEXT:    ldr x8, [x8, ___stack_chk_guard@GOTPAGEOFF]
 ; CHECK-NEXT:  Lloh2:
@@ -32,7 +28,8 @@ define void @test(ptr %a) #0 {
 ; CHECK-NEXT:    adrp x0, l_.str@PAGE
 ; CHECK-NEXT:  Lloh4:
 ; CHECK-NEXT:    add x0, x0, l_.str@PAGEOFF
-; CHECK-NEXT:    str x19, [sp]
+; CHECK-NEXT:    add x8, sp, #16
+; CHECK-NEXT:    str x8, [sp]
 ; CHECK-NEXT:    bl _printf
 ; CHECK-NEXT:  Lloh5:
 ; CHECK-NEXT:    adrp x8, ___stack_chk_guard@GOTPAGE
@@ -44,9 +41,8 @@ define void @test(ptr %a) #0 {
 ; CHECK-NEXT:    cmp x8, x9
 ; CHECK-NEXT:    b.ne LBB0_2
 ; CHECK-NEXT:  ; %bb.1: ; %entry
-; CHECK-NEXT:    ldp x29, x30, [sp, #64] ; 16-byte Folded Reload
-; CHECK-NEXT:    ldp x20, x19, [sp, #48] ; 16-byte Folded Reload
-; CHECK-NEXT:    add sp, sp, #80
+; CHECK-NEXT:    ldp x29, x30, [sp, #48] ; 16-byte Folded Reload
+; CHECK-NEXT:    add sp, sp, #64
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  LBB0_2: ; %entry
 ; CHECK-NEXT:    bl ___stack_chk_fail

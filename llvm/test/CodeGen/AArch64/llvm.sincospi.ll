@@ -133,38 +133,34 @@ define { float, float } @test_sincospi_f32(float %a) #0 {
 define { <3 x float>, <3 x float> } @test_sincospi_v3f32(<3 x float> %a) #0 {
 ; CHECK-LABEL: test_sincospi_v3f32:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    sub sp, sp, #96
+; CHECK-NEXT:    sub sp, sp, #64
 ; CHECK-NEXT:    add x0, sp, #28
 ; CHECK-NEXT:    add x1, sp, #24
-; CHECK-NEXT:    stp x22, x21, [sp, #48] ; 16-byte Folded Spill
-; CHECK-NEXT:    stp x20, x19, [sp, #64] ; 16-byte Folded Spill
-; CHECK-NEXT:    stp x29, x30, [sp, #80] ; 16-byte Folded Spill
+; CHECK-NEXT:    stp x29, x30, [sp, #48] ; 16-byte Folded Spill
 ; CHECK-NEXT:    str q0, [sp] ; 16-byte Spill
 ; CHECK-NEXT:    ; kill: def $s0 killed $s0 killed $q0
 ; CHECK-NEXT:    bl ___sincospif
 ; CHECK-NEXT:    ldr q0, [sp] ; 16-byte Reload
 ; CHECK-NEXT:    add x0, sp, #36
 ; CHECK-NEXT:    add x1, sp, #32
-; CHECK-NEXT:    add x19, sp, #36
-; CHECK-NEXT:    add x20, sp, #32
 ; CHECK-NEXT:    mov s0, v0[1]
 ; CHECK-NEXT:    bl ___sincospif
 ; CHECK-NEXT:    ldr q0, [sp] ; 16-byte Reload
 ; CHECK-NEXT:    add x0, sp, #44
 ; CHECK-NEXT:    add x1, sp, #40
-; CHECK-NEXT:    add x21, sp, #44
-; CHECK-NEXT:    add x22, sp, #40
 ; CHECK-NEXT:    mov s0, v0[2]
 ; CHECK-NEXT:    bl ___sincospif
 ; CHECK-NEXT:    ldp s1, s0, [sp, #24]
-; CHECK-NEXT:    ldp x29, x30, [sp, #80] ; 16-byte Folded Reload
-; CHECK-NEXT:    ld1.s { v0 }[1], [x19]
-; CHECK-NEXT:    ld1.s { v1 }[1], [x20]
-; CHECK-NEXT:    ldp x20, x19, [sp, #64] ; 16-byte Folded Reload
-; CHECK-NEXT:    ld1.s { v0 }[2], [x21]
-; CHECK-NEXT:    ld1.s { v1 }[2], [x22]
-; CHECK-NEXT:    ldp x22, x21, [sp, #48] ; 16-byte Folded Reload
-; CHECK-NEXT:    add sp, sp, #96
+; CHECK-NEXT:    add x8, sp, #36
+; CHECK-NEXT:    ldp x29, x30, [sp, #48] ; 16-byte Folded Reload
+; CHECK-NEXT:    ld1.s { v0 }[1], [x8]
+; CHECK-NEXT:    add x8, sp, #32
+; CHECK-NEXT:    ld1.s { v1 }[1], [x8]
+; CHECK-NEXT:    add x8, sp, #44
+; CHECK-NEXT:    ld1.s { v0 }[2], [x8]
+; CHECK-NEXT:    add x8, sp, #40
+; CHECK-NEXT:    ld1.s { v1 }[2], [x8]
+; CHECK-NEXT:    add sp, sp, #64
 ; CHECK-NEXT:    ret
   %result = call { <3 x float>, <3 x float> } @llvm.sincospi.v3f32(<3 x float> %a)
   ret { <3 x float>, <3 x float> } %result
@@ -173,30 +169,28 @@ define { <3 x float>, <3 x float> } @test_sincospi_v3f32(<3 x float> %a) #0 {
 define { <2 x float>, <2 x float> } @test_sincospi_v2f32(<2 x float> %a) #0 {
 ; CHECK-LABEL: test_sincospi_v2f32:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    sub sp, sp, #64
+; CHECK-NEXT:    sub sp, sp, #48
 ; CHECK-NEXT:    ; kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    add x0, sp, #28
 ; CHECK-NEXT:    add x1, sp, #24
-; CHECK-NEXT:    stp x20, x19, [sp, #32] ; 16-byte Folded Spill
-; CHECK-NEXT:    stp x29, x30, [sp, #48] ; 16-byte Folded Spill
+; CHECK-NEXT:    stp x29, x30, [sp, #32] ; 16-byte Folded Spill
 ; CHECK-NEXT:    str q0, [sp] ; 16-byte Spill
 ; CHECK-NEXT:    ; kill: def $s0 killed $s0 killed $q0
 ; CHECK-NEXT:    bl ___sincospif
 ; CHECK-NEXT:    ldr q0, [sp] ; 16-byte Reload
 ; CHECK-NEXT:    add x0, sp, #20
 ; CHECK-NEXT:    add x1, sp, #16
-; CHECK-NEXT:    add x19, sp, #20
-; CHECK-NEXT:    add x20, sp, #16
 ; CHECK-NEXT:    mov s0, v0[1]
 ; CHECK-NEXT:    bl ___sincospif
 ; CHECK-NEXT:    ldp s1, s0, [sp, #24]
-; CHECK-NEXT:    ldp x29, x30, [sp, #48] ; 16-byte Folded Reload
-; CHECK-NEXT:    ld1.s { v0 }[1], [x19]
-; CHECK-NEXT:    ld1.s { v1 }[1], [x20]
-; CHECK-NEXT:    ldp x20, x19, [sp, #32] ; 16-byte Folded Reload
+; CHECK-NEXT:    add x8, sp, #20
+; CHECK-NEXT:    ldp x29, x30, [sp, #32] ; 16-byte Folded Reload
+; CHECK-NEXT:    ld1.s { v0 }[1], [x8]
+; CHECK-NEXT:    add x8, sp, #16
+; CHECK-NEXT:    ld1.s { v1 }[1], [x8]
 ; CHECK-NEXT:    ; kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ; kill: def $d1 killed $d1 killed $q1
-; CHECK-NEXT:    add sp, sp, #64
+; CHECK-NEXT:    add sp, sp, #48
 ; CHECK-NEXT:    ret
   %result = call { <2 x float>, <2 x float> } @llvm.sincospi.v2f32(<2 x float> %a)
   ret { <2 x float>, <2 x float> } %result
@@ -221,27 +215,25 @@ define { double, double } @test_sincospi_f64(double %a) #0 {
 define { <2 x double>, <2 x double> } @test_sincospi_v2f64(<2 x double> %a) #0 {
 ; CHECK-LABEL: test_sincospi_v2f64:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    sub sp, sp, #80
+; CHECK-NEXT:    sub sp, sp, #64
 ; CHECK-NEXT:    add x0, sp, #40
 ; CHECK-NEXT:    add x1, sp, #32
-; CHECK-NEXT:    stp x20, x19, [sp, #48] ; 16-byte Folded Spill
-; CHECK-NEXT:    stp x29, x30, [sp, #64] ; 16-byte Folded Spill
+; CHECK-NEXT:    stp x29, x30, [sp, #48] ; 16-byte Folded Spill
 ; CHECK-NEXT:    str q0, [sp] ; 16-byte Spill
 ; CHECK-NEXT:    ; kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    bl ___sincospi
 ; CHECK-NEXT:    ldr q0, [sp] ; 16-byte Reload
 ; CHECK-NEXT:    add x0, sp, #24
 ; CHECK-NEXT:    add x1, sp, #16
-; CHECK-NEXT:    add x19, sp, #24
-; CHECK-NEXT:    add x20, sp, #16
 ; CHECK-NEXT:    mov d0, v0[1]
 ; CHECK-NEXT:    bl ___sincospi
 ; CHECK-NEXT:    ldp d1, d0, [sp, #32]
-; CHECK-NEXT:    ldp x29, x30, [sp, #64] ; 16-byte Folded Reload
-; CHECK-NEXT:    ld1.d { v0 }[1], [x19]
-; CHECK-NEXT:    ld1.d { v1 }[1], [x20]
-; CHECK-NEXT:    ldp x20, x19, [sp, #48] ; 16-byte Folded Reload
-; CHECK-NEXT:    add sp, sp, #80
+; CHECK-NEXT:    add x8, sp, #24
+; CHECK-NEXT:    ldp x29, x30, [sp, #48] ; 16-byte Folded Reload
+; CHECK-NEXT:    ld1.d { v0 }[1], [x8]
+; CHECK-NEXT:    add x8, sp, #16
+; CHECK-NEXT:    ld1.d { v1 }[1], [x8]
+; CHECK-NEXT:    add sp, sp, #64
 ; CHECK-NEXT:    ret
   %result = call { <2 x double>, <2 x double> } @llvm.sincospi.v2f64(<2 x double> %a)
   ret { <2 x double>, <2 x double> } %result

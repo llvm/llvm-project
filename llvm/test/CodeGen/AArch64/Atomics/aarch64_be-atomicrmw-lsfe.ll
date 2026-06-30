@@ -244,7 +244,7 @@ define dso_local bfloat @atomicrmw_fadd_bfloat_unaligned_monotonic(ptr %ptr, bfl
 ; -O0:    bl __atomic_compare_exchange
 ;
 ; -O1-LABEL: atomicrmw_fadd_bfloat_unaligned_monotonic:
-; -O1:    add w8, w8, w20
+; -O1:    add w8, w8, w10
 ; -O1:    add w8, w9, w8
 ; -O1:    bl __atomic_compare_exchange
     %r = atomicrmw fadd ptr %ptr, bfloat %value monotonic, align 1
@@ -258,7 +258,7 @@ define dso_local bfloat @atomicrmw_fadd_bfloat_unaligned_acquire(ptr %ptr, bfloa
 ; -O0:    bl __atomic_compare_exchange
 ;
 ; -O1-LABEL: atomicrmw_fadd_bfloat_unaligned_acquire:
-; -O1:    add w8, w8, w20
+; -O1:    add w8, w8, w10
 ; -O1:    add w8, w9, w8
 ; -O1:    bl __atomic_compare_exchange
     %r = atomicrmw fadd ptr %ptr, bfloat %value acquire, align 1
@@ -272,7 +272,7 @@ define dso_local bfloat @atomicrmw_fadd_bfloat_unaligned_release(ptr %ptr, bfloa
 ; -O0:    bl __atomic_compare_exchange
 ;
 ; -O1-LABEL: atomicrmw_fadd_bfloat_unaligned_release:
-; -O1:    add w8, w8, w20
+; -O1:    add w8, w8, w10
 ; -O1:    add w8, w9, w8
 ; -O1:    bl __atomic_compare_exchange
     %r = atomicrmw fadd ptr %ptr, bfloat %value release, align 1
@@ -286,7 +286,7 @@ define dso_local bfloat @atomicrmw_fadd_bfloat_unaligned_acq_rel(ptr %ptr, bfloa
 ; -O0:    bl __atomic_compare_exchange
 ;
 ; -O1-LABEL: atomicrmw_fadd_bfloat_unaligned_acq_rel:
-; -O1:    add w8, w8, w20
+; -O1:    add w8, w8, w10
 ; -O1:    add w8, w9, w8
 ; -O1:    bl __atomic_compare_exchange
     %r = atomicrmw fadd ptr %ptr, bfloat %value acq_rel, align 1
@@ -300,7 +300,7 @@ define dso_local bfloat @atomicrmw_fadd_bfloat_unaligned_seq_cst(ptr %ptr, bfloa
 ; -O0:    bl __atomic_compare_exchange
 ;
 ; -O1-LABEL: atomicrmw_fadd_bfloat_unaligned_seq_cst:
-; -O1:    add w8, w8, w20
+; -O1:    add w8, w8, w10
 ; -O1:    add w8, w9, w8
 ; -O1:    bl __atomic_compare_exchange
     %r = atomicrmw fadd ptr %ptr, bfloat %value seq_cst, align 1
@@ -719,7 +719,7 @@ define dso_local bfloat @atomicrmw_fsub_bfloat_unaligned_monotonic(ptr %ptr, bfl
 ; -O0:    bl __atomic_compare_exchange
 ;
 ; -O1-LABEL: atomicrmw_fsub_bfloat_unaligned_monotonic:
-; -O1:    add w8, w8, w20
+; -O1:    add w8, w8, w10
 ; -O1:    add w8, w9, w8
 ; -O1:    bl __atomic_compare_exchange
     %r = atomicrmw fsub ptr %ptr, bfloat %value monotonic, align 1
@@ -733,7 +733,7 @@ define dso_local bfloat @atomicrmw_fsub_bfloat_unaligned_acquire(ptr %ptr, bfloa
 ; -O0:    bl __atomic_compare_exchange
 ;
 ; -O1-LABEL: atomicrmw_fsub_bfloat_unaligned_acquire:
-; -O1:    add w8, w8, w20
+; -O1:    add w8, w8, w10
 ; -O1:    add w8, w9, w8
 ; -O1:    bl __atomic_compare_exchange
     %r = atomicrmw fsub ptr %ptr, bfloat %value acquire, align 1
@@ -747,7 +747,7 @@ define dso_local bfloat @atomicrmw_fsub_bfloat_unaligned_release(ptr %ptr, bfloa
 ; -O0:    bl __atomic_compare_exchange
 ;
 ; -O1-LABEL: atomicrmw_fsub_bfloat_unaligned_release:
-; -O1:    add w8, w8, w20
+; -O1:    add w8, w8, w10
 ; -O1:    add w8, w9, w8
 ; -O1:    bl __atomic_compare_exchange
     %r = atomicrmw fsub ptr %ptr, bfloat %value release, align 1
@@ -761,7 +761,7 @@ define dso_local bfloat @atomicrmw_fsub_bfloat_unaligned_acq_rel(ptr %ptr, bfloa
 ; -O0:    bl __atomic_compare_exchange
 ;
 ; -O1-LABEL: atomicrmw_fsub_bfloat_unaligned_acq_rel:
-; -O1:    add w8, w8, w20
+; -O1:    add w8, w8, w10
 ; -O1:    add w8, w9, w8
 ; -O1:    bl __atomic_compare_exchange
     %r = atomicrmw fsub ptr %ptr, bfloat %value acq_rel, align 1
@@ -775,7 +775,7 @@ define dso_local bfloat @atomicrmw_fsub_bfloat_unaligned_seq_cst(ptr %ptr, bfloa
 ; -O0:    bl __atomic_compare_exchange
 ;
 ; -O1-LABEL: atomicrmw_fsub_bfloat_unaligned_seq_cst:
-; -O1:    add w8, w8, w20
+; -O1:    add w8, w8, w10
 ; -O1:    add w8, w9, w8
 ; -O1:    bl __atomic_compare_exchange
     %r = atomicrmw fsub ptr %ptr, bfloat %value seq_cst, align 1
@@ -1090,7 +1090,7 @@ define dso_local bfloat @atomicrmw_fmax_bfloat_unaligned_monotonic(ptr %ptr, bfl
 ; -O0:    bl __atomic_compare_exchange
 ;
 ; -O1-LABEL: atomicrmw_fmax_bfloat_unaligned_monotonic:
-; -O1:    add w8, w8, w20
+; -O1:    add w8, w8, w10
 ; -O1:    add w8, w9, w8
 ; -O1:    bl __atomic_compare_exchange
     %r = atomicrmw fmax ptr %ptr, bfloat %value monotonic, align 1
@@ -1104,7 +1104,7 @@ define dso_local bfloat @atomicrmw_fmax_bfloat_unaligned_acquire(ptr %ptr, bfloa
 ; -O0:    bl __atomic_compare_exchange
 ;
 ; -O1-LABEL: atomicrmw_fmax_bfloat_unaligned_acquire:
-; -O1:    add w8, w8, w20
+; -O1:    add w8, w8, w10
 ; -O1:    add w8, w9, w8
 ; -O1:    bl __atomic_compare_exchange
     %r = atomicrmw fmax ptr %ptr, bfloat %value acquire, align 1
@@ -1118,7 +1118,7 @@ define dso_local bfloat @atomicrmw_fmax_bfloat_unaligned_release(ptr %ptr, bfloa
 ; -O0:    bl __atomic_compare_exchange
 ;
 ; -O1-LABEL: atomicrmw_fmax_bfloat_unaligned_release:
-; -O1:    add w8, w8, w20
+; -O1:    add w8, w8, w10
 ; -O1:    add w8, w9, w8
 ; -O1:    bl __atomic_compare_exchange
     %r = atomicrmw fmax ptr %ptr, bfloat %value release, align 1
@@ -1132,7 +1132,7 @@ define dso_local bfloat @atomicrmw_fmax_bfloat_unaligned_acq_rel(ptr %ptr, bfloa
 ; -O0:    bl __atomic_compare_exchange
 ;
 ; -O1-LABEL: atomicrmw_fmax_bfloat_unaligned_acq_rel:
-; -O1:    add w8, w8, w20
+; -O1:    add w8, w8, w10
 ; -O1:    add w8, w9, w8
 ; -O1:    bl __atomic_compare_exchange
     %r = atomicrmw fmax ptr %ptr, bfloat %value acq_rel, align 1
@@ -1146,7 +1146,7 @@ define dso_local bfloat @atomicrmw_fmax_bfloat_unaligned_seq_cst(ptr %ptr, bfloa
 ; -O0:    bl __atomic_compare_exchange
 ;
 ; -O1-LABEL: atomicrmw_fmax_bfloat_unaligned_seq_cst:
-; -O1:    add w8, w8, w20
+; -O1:    add w8, w8, w10
 ; -O1:    add w8, w9, w8
 ; -O1:    bl __atomic_compare_exchange
     %r = atomicrmw fmax ptr %ptr, bfloat %value seq_cst, align 1
@@ -1461,7 +1461,7 @@ define dso_local bfloat @atomicrmw_fmin_bfloat_unaligned_monotonic(ptr %ptr, bfl
 ; -O0:    bl __atomic_compare_exchange
 ;
 ; -O1-LABEL: atomicrmw_fmin_bfloat_unaligned_monotonic:
-; -O1:    add w8, w8, w20
+; -O1:    add w8, w8, w10
 ; -O1:    add w8, w9, w8
 ; -O1:    bl __atomic_compare_exchange
     %r = atomicrmw fmin ptr %ptr, bfloat %value monotonic, align 1
@@ -1475,7 +1475,7 @@ define dso_local bfloat @atomicrmw_fmin_bfloat_unaligned_acquire(ptr %ptr, bfloa
 ; -O0:    bl __atomic_compare_exchange
 ;
 ; -O1-LABEL: atomicrmw_fmin_bfloat_unaligned_acquire:
-; -O1:    add w8, w8, w20
+; -O1:    add w8, w8, w10
 ; -O1:    add w8, w9, w8
 ; -O1:    bl __atomic_compare_exchange
     %r = atomicrmw fmin ptr %ptr, bfloat %value acquire, align 1
@@ -1489,7 +1489,7 @@ define dso_local bfloat @atomicrmw_fmin_bfloat_unaligned_release(ptr %ptr, bfloa
 ; -O0:    bl __atomic_compare_exchange
 ;
 ; -O1-LABEL: atomicrmw_fmin_bfloat_unaligned_release:
-; -O1:    add w8, w8, w20
+; -O1:    add w8, w8, w10
 ; -O1:    add w8, w9, w8
 ; -O1:    bl __atomic_compare_exchange
     %r = atomicrmw fmin ptr %ptr, bfloat %value release, align 1
@@ -1503,7 +1503,7 @@ define dso_local bfloat @atomicrmw_fmin_bfloat_unaligned_acq_rel(ptr %ptr, bfloa
 ; -O0:    bl __atomic_compare_exchange
 ;
 ; -O1-LABEL: atomicrmw_fmin_bfloat_unaligned_acq_rel:
-; -O1:    add w8, w8, w20
+; -O1:    add w8, w8, w10
 ; -O1:    add w8, w9, w8
 ; -O1:    bl __atomic_compare_exchange
     %r = atomicrmw fmin ptr %ptr, bfloat %value acq_rel, align 1
@@ -1517,7 +1517,7 @@ define dso_local bfloat @atomicrmw_fmin_bfloat_unaligned_seq_cst(ptr %ptr, bfloa
 ; -O0:    bl __atomic_compare_exchange
 ;
 ; -O1-LABEL: atomicrmw_fmin_bfloat_unaligned_seq_cst:
-; -O1:    add w8, w8, w20
+; -O1:    add w8, w8, w10
 ; -O1:    add w8, w9, w8
 ; -O1:    bl __atomic_compare_exchange
     %r = atomicrmw fmin ptr %ptr, bfloat %value seq_cst, align 1
@@ -1832,7 +1832,7 @@ define dso_local bfloat @atomicrmw_fmaximum_bfloat_unaligned_monotonic(ptr %ptr,
 ; -O0:    bl __atomic_compare_exchange
 ;
 ; -O1-LABEL: atomicrmw_fmaximum_bfloat_unaligned_monotonic:
-; -O1:    add w8, w8, w20
+; -O1:    add w8, w8, w10
 ; -O1:    add w8, w9, w8
 ; -O1:    bl __atomic_compare_exchange
     %r = atomicrmw fmaximum ptr %ptr, bfloat %value monotonic, align 1
@@ -1846,7 +1846,7 @@ define dso_local bfloat @atomicrmw_fmaximum_bfloat_unaligned_acquire(ptr %ptr, b
 ; -O0:    bl __atomic_compare_exchange
 ;
 ; -O1-LABEL: atomicrmw_fmaximum_bfloat_unaligned_acquire:
-; -O1:    add w8, w8, w20
+; -O1:    add w8, w8, w10
 ; -O1:    add w8, w9, w8
 ; -O1:    bl __atomic_compare_exchange
     %r = atomicrmw fmaximum ptr %ptr, bfloat %value acquire, align 1
@@ -1860,7 +1860,7 @@ define dso_local bfloat @atomicrmw_fmaximum_bfloat_unaligned_release(ptr %ptr, b
 ; -O0:    bl __atomic_compare_exchange
 ;
 ; -O1-LABEL: atomicrmw_fmaximum_bfloat_unaligned_release:
-; -O1:    add w8, w8, w20
+; -O1:    add w8, w8, w10
 ; -O1:    add w8, w9, w8
 ; -O1:    bl __atomic_compare_exchange
     %r = atomicrmw fmaximum ptr %ptr, bfloat %value release, align 1
@@ -1874,7 +1874,7 @@ define dso_local bfloat @atomicrmw_fmaximum_bfloat_unaligned_acq_rel(ptr %ptr, b
 ; -O0:    bl __atomic_compare_exchange
 ;
 ; -O1-LABEL: atomicrmw_fmaximum_bfloat_unaligned_acq_rel:
-; -O1:    add w8, w8, w20
+; -O1:    add w8, w8, w10
 ; -O1:    add w8, w9, w8
 ; -O1:    bl __atomic_compare_exchange
     %r = atomicrmw fmaximum ptr %ptr, bfloat %value acq_rel, align 1
@@ -1888,7 +1888,7 @@ define dso_local bfloat @atomicrmw_fmaximum_bfloat_unaligned_seq_cst(ptr %ptr, b
 ; -O0:    bl __atomic_compare_exchange
 ;
 ; -O1-LABEL: atomicrmw_fmaximum_bfloat_unaligned_seq_cst:
-; -O1:    add w8, w8, w20
+; -O1:    add w8, w8, w10
 ; -O1:    add w8, w9, w8
 ; -O1:    bl __atomic_compare_exchange
     %r = atomicrmw fmaximum ptr %ptr, bfloat %value seq_cst, align 1
@@ -2203,7 +2203,7 @@ define dso_local bfloat @atomicrmw_fminimum_bfloat_unaligned_monotonic(ptr %ptr,
 ; -O0:    bl __atomic_compare_exchange
 ;
 ; -O1-LABEL: atomicrmw_fminimum_bfloat_unaligned_monotonic:
-; -O1:    add w8, w8, w20
+; -O1:    add w8, w8, w10
 ; -O1:    add w8, w9, w8
 ; -O1:    bl __atomic_compare_exchange
     %r = atomicrmw fminimum ptr %ptr, bfloat %value monotonic, align 1
@@ -2217,7 +2217,7 @@ define dso_local bfloat @atomicrmw_fminimum_bfloat_unaligned_acquire(ptr %ptr, b
 ; -O0:    bl __atomic_compare_exchange
 ;
 ; -O1-LABEL: atomicrmw_fminimum_bfloat_unaligned_acquire:
-; -O1:    add w8, w8, w20
+; -O1:    add w8, w8, w10
 ; -O1:    add w8, w9, w8
 ; -O1:    bl __atomic_compare_exchange
     %r = atomicrmw fminimum ptr %ptr, bfloat %value acquire, align 1
@@ -2231,7 +2231,7 @@ define dso_local bfloat @atomicrmw_fminimum_bfloat_unaligned_release(ptr %ptr, b
 ; -O0:    bl __atomic_compare_exchange
 ;
 ; -O1-LABEL: atomicrmw_fminimum_bfloat_unaligned_release:
-; -O1:    add w8, w8, w20
+; -O1:    add w8, w8, w10
 ; -O1:    add w8, w9, w8
 ; -O1:    bl __atomic_compare_exchange
     %r = atomicrmw fminimum ptr %ptr, bfloat %value release, align 1
@@ -2245,7 +2245,7 @@ define dso_local bfloat @atomicrmw_fminimum_bfloat_unaligned_acq_rel(ptr %ptr, b
 ; -O0:    bl __atomic_compare_exchange
 ;
 ; -O1-LABEL: atomicrmw_fminimum_bfloat_unaligned_acq_rel:
-; -O1:    add w8, w8, w20
+; -O1:    add w8, w8, w10
 ; -O1:    add w8, w9, w8
 ; -O1:    bl __atomic_compare_exchange
     %r = atomicrmw fminimum ptr %ptr, bfloat %value acq_rel, align 1
@@ -2259,7 +2259,7 @@ define dso_local bfloat @atomicrmw_fminimum_bfloat_unaligned_seq_cst(ptr %ptr, b
 ; -O0:    bl __atomic_compare_exchange
 ;
 ; -O1-LABEL: atomicrmw_fminimum_bfloat_unaligned_seq_cst:
-; -O1:    add w8, w8, w20
+; -O1:    add w8, w8, w10
 ; -O1:    add w8, w9, w8
 ; -O1:    bl __atomic_compare_exchange
     %r = atomicrmw fminimum ptr %ptr, bfloat %value seq_cst, align 1

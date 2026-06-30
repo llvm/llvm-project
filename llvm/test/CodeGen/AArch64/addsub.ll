@@ -204,14 +204,13 @@ declare i32 @foox(i32)
 define void @add_in_loop(i32 %0) {
 ; CHECK-LABEL: add_in_loop:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    stp x30, x19, [sp, #-16]! // 16-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    mov w19, #43690 // =0xaaaa
-; CHECK-NEXT:    movk w19, #170, lsl #16
 ; CHECK-NEXT:  .LBB19_1: // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    add w0, w0, w19
+; CHECK-NEXT:    mov w8, #43690 // =0xaaaa
+; CHECK-NEXT:    movk w8, #170, lsl #16
+; CHECK-NEXT:    add w0, w0, w8
 ; CHECK-NEXT:    bl foox
 ; CHECK-NEXT:    b .LBB19_1
   br label %2

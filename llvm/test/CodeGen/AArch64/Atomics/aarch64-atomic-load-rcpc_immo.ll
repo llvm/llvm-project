@@ -902,7 +902,7 @@ define i8 @load_atomic_i8_from_gep() {
 ;
 ; SDAG-AVOIDLDAPUR-LABEL: load_atomic_i8_from_gep:
 ; SDAG-AVOIDLDAPUR:    bl init
-; SDAG-AVOIDLDAPUR:    orr x8, x19, #0x1
+; SDAG-AVOIDLDAPUR:    orr x8, x8, #0x1
 ; SDAG-AVOIDLDAPUR:    ldaprb w0, [x8]
 ;
 ; SDAG-NOAVOIDLDAPUR-LABEL: load_atomic_i8_from_gep:
@@ -922,7 +922,7 @@ define i16 @load_atomic_i16_from_gep() {
 ;
 ; SDAG-AVOIDLDAPUR-LABEL: load_atomic_i16_from_gep:
 ; SDAG-AVOIDLDAPUR:    bl init
-; SDAG-AVOIDLDAPUR:    orr x8, x19, #0x2
+; SDAG-AVOIDLDAPUR:    orr x8, x8, #0x2
 ; SDAG-AVOIDLDAPUR:    ldaprh w0, [x8]
 ;
 ; SDAG-NOAVOIDLDAPUR-LABEL: load_atomic_i16_from_gep:
@@ -942,7 +942,7 @@ define i32 @load_atomic_i32_from_gep() {
 ;
 ; SDAG-AVOIDLDAPUR-LABEL: load_atomic_i32_from_gep:
 ; SDAG-AVOIDLDAPUR:    bl init
-; SDAG-AVOIDLDAPUR:    add x8, x19, #4
+; SDAG-AVOIDLDAPUR:    add x8, x8, #4
 ; SDAG-AVOIDLDAPUR:    ldapr w0, [x8]
 ;
 ; SDAG-NOAVOIDLDAPUR-LABEL: load_atomic_i32_from_gep:
@@ -962,7 +962,7 @@ define i64 @load_atomic_i64_from_gep() {
 ;
 ; SDAG-AVOIDLDAPUR-LABEL: load_atomic_i64_from_gep:
 ; SDAG-AVOIDLDAPUR:    bl init
-; SDAG-AVOIDLDAPUR:    add x8, x19, #8
+; SDAG-AVOIDLDAPUR:    add x8, x8, #8
 ; SDAG-AVOIDLDAPUR:    ldapr x0, [x8]
 ;
 ; SDAG-NOAVOIDLDAPUR-LABEL: load_atomic_i64_from_gep:

@@ -55,11 +55,11 @@ handler:
 ; "caller2" is the caller of "foo", it calls "foo" inside a loop.
 define float @caller2(ptr %error_ref) {
 ; CHECK-LABEL: caller2:
-; CHECK: fmov [[CMP:s[0-9]+]], #1.0
 ; CHECK: mov [[ID:x[0-9]+]], x0
 ; CHECK: mov x21, xzr
 ; CHECK: bl {{.*}}foo
 ; CHECK: cbnz x21
+; CHECK: fmov [[CMP:s[0-9]+]], #1.0
 ; CHECK: fcmp s0, [[CMP]]
 ; CHECK: b.le
 ; Access part of the error object and save it to error_ref

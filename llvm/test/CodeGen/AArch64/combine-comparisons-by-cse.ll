@@ -519,40 +519,36 @@ declare ptr @Update(ptr) #1
 define void @combine_non_adjacent_cmp_br(ptr nocapture readonly %hdCall) #0 {
 ; CHECK-LABEL: combine_non_adjacent_cmp_br:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    str x30, [sp, #-48]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-NEXT:    stp x22, x21, [sp, #16] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x20, x19, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x30, x21, [sp, #-32]! // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    stp x20, x19, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w20, -16
 ; CHECK-NEXT:    .cfi_offset w21, -24
-; CHECK-NEXT:    .cfi_offset w22, -32
-; CHECK-NEXT:    .cfi_offset w30, -48
-; CHECK-NEXT:    ldr x20, [x0]
-; CHECK-NEXT:    mov w19, #24 // =0x18
-; CHECK-NEXT:    adrp x22, glob
-; CHECK-NEXT:    add x21, x20, #2
+; CHECK-NEXT:    .cfi_offset w30, -32
+; CHECK-NEXT:    ldr x19, [x0]
+; CHECK-NEXT:    adrp x21, glob
+; CHECK-NEXT:    add x20, x19, #2
 ; CHECK-NEXT:  .LBB9_1: // %land.rhs
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr x8, [x19]
+; CHECK-NEXT:    mov w8, #24 // =0x18
+; CHECK-NEXT:    ldr x8, [x8]
 ; CHECK-NEXT:    cmp x8, #1
 ; CHECK-NEXT:    b.lt .LBB9_3
 ; CHECK-NEXT:  // %bb.2: // %while.body
 ; CHECK-NEXT:    // in Loop: Header=BB9_1 Depth=1
-; CHECK-NEXT:    ldr x0, [x22, :lo12:glob]
+; CHECK-NEXT:    ldr x0, [x21, :lo12:glob]
 ; CHECK-NEXT:    bl Update
-; CHECK-NEXT:    sub x21, x21, #2
-; CHECK-NEXT:    cmp x20, x21
+; CHECK-NEXT:    sub x20, x20, #2
+; CHECK-NEXT:    cmp x19, x20
 ; CHECK-NEXT:    b.lt .LBB9_1
 ; CHECK-NEXT:  .LBB9_3: // %while.end
-; CHECK-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp x22, x21, [sp, #16] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x30, [sp], #48 // 8-byte Folded Reload
+; CHECK-NEXT:    ldp x20, x19, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp x30, x21, [sp], #32 // 16-byte Folded Reload
 ; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    .cfi_restore w19
 ; CHECK-NEXT:    .cfi_restore w20
 ; CHECK-NEXT:    .cfi_restore w21
-; CHECK-NEXT:    .cfi_restore w22
 ; CHECK-NEXT:    .cfi_restore w30
 ; CHECK-NEXT:    ret
 entry:

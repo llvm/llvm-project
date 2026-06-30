@@ -10,20 +10,20 @@ declare void @def(ptr)
 define void @alloc_v4i8(ptr %st_ptr) nounwind {
 ; CHECK-LABEL: alloc_v4i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-32]! // 8-byte Folded Spill
-; CHECK-NEXT:    stp x20, x19, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    sub sp, sp, #32
+; CHECK-NEXT:    stp x30, x19, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    mov x19, x0
 ; CHECK-NEXT:    add x0, sp, #12
-; CHECK-NEXT:    add x20, sp, #12
 ; CHECK-NEXT:    bl def
 ; CHECK-NEXT:    ptrue p0.b, vl2
-; CHECK-NEXT:    ld2b { z0.b, z1.b }, p0/z, [x20]
+; CHECK-NEXT:    add x8, sp, #12
+; CHECK-NEXT:    ld2b { z0.b, z1.b }, p0/z, [x8]
 ; CHECK-NEXT:    ptrue p0.s, vl2
 ; CHECK-NEXT:    mov z1.b, z0.b[1]
 ; CHECK-NEXT:    zip1 z0.s, z0.s, z1.s
 ; CHECK-NEXT:    st1b { z0.s }, p0, [x19]
-; CHECK-NEXT:    ldp x20, x19, [sp, #16] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x30, [sp], #32 // 8-byte Folded Reload
+; CHECK-NEXT:    ldp x30, x19, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    add sp, sp, #32
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: alloc_v4i8:
@@ -168,21 +168,19 @@ define void @alloc_v32i8(ptr %st_ptr) nounwind {
 define void @alloc_v8f64(ptr %st_ptr) nounwind {
 ; CHECK-LABEL: alloc_v8f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #96
-; CHECK-NEXT:    stp x20, x19, [sp, #80] // 16-byte Folded Spill
+; CHECK-NEXT:    sub sp, sp, #80
+; CHECK-NEXT:    stp x30, x19, [sp, #64] // 16-byte Folded Spill
 ; CHECK-NEXT:    mov x19, x0
 ; CHECK-NEXT:    mov x0, sp
-; CHECK-NEXT:    str x30, [sp, #64] // 8-byte Spill
-; CHECK-NEXT:    mov x20, sp
 ; CHECK-NEXT:    bl def
 ; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    mov x9, sp
 ; CHECK-NEXT:    mov x8, #4 // =0x4
-; CHECK-NEXT:    ld2d { z0.d, z1.d }, p0/z, [x20]
-; CHECK-NEXT:    ld2d { z1.d, z2.d }, p0/z, [x20, x8, lsl #3]
-; CHECK-NEXT:    ldr x30, [sp, #64] // 8-byte Reload
+; CHECK-NEXT:    ld2d { z0.d, z1.d }, p0/z, [x9]
+; CHECK-NEXT:    ld2d { z1.d, z2.d }, p0/z, [x9, x8, lsl #3]
 ; CHECK-NEXT:    stp q0, q1, [x19]
-; CHECK-NEXT:    ldp x20, x19, [sp, #80] // 16-byte Folded Reload
-; CHECK-NEXT:    add sp, sp, #96
+; CHECK-NEXT:    ldp x30, x19, [sp, #64] // 16-byte Folded Reload
+; CHECK-NEXT:    add sp, sp, #80
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: alloc_v8f64:

@@ -215,12 +215,11 @@ handler:
 define float @caller2(ptr %error_ref) {
 ; CHECK-APPLE-AARCH64-LABEL: caller2:
 ; CHECK-APPLE-AARCH64:       ; %bb.0: ; %entry
-; CHECK-APPLE-AARCH64-NEXT:    sub sp, sp, #80
-; CHECK-APPLE-AARCH64-NEXT:    stp d9, d8, [sp, #16] ; 16-byte Folded Spill
-; CHECK-APPLE-AARCH64-NEXT:    stp x22, x21, [sp, #32] ; 16-byte Folded Spill
-; CHECK-APPLE-AARCH64-NEXT:    stp x20, x19, [sp, #48] ; 16-byte Folded Spill
-; CHECK-APPLE-AARCH64-NEXT:    stp x29, x30, [sp, #64] ; 16-byte Folded Spill
-; CHECK-APPLE-AARCH64-NEXT:    add x29, sp, #64
+; CHECK-APPLE-AARCH64-NEXT:    sub sp, sp, #64
+; CHECK-APPLE-AARCH64-NEXT:    stp x22, x21, [sp, #16] ; 16-byte Folded Spill
+; CHECK-APPLE-AARCH64-NEXT:    stp x20, x19, [sp, #32] ; 16-byte Folded Spill
+; CHECK-APPLE-AARCH64-NEXT:    stp x29, x30, [sp, #48] ; 16-byte Folded Spill
+; CHECK-APPLE-AARCH64-NEXT:    add x29, sp, #48
 ; CHECK-APPLE-AARCH64-NEXT:    .cfi_def_cfa w29, 16
 ; CHECK-APPLE-AARCH64-NEXT:    .cfi_offset w30, -8
 ; CHECK-APPLE-AARCH64-NEXT:    .cfi_offset w29, -16
@@ -228,9 +227,6 @@ define float @caller2(ptr %error_ref) {
 ; CHECK-APPLE-AARCH64-NEXT:    .cfi_offset w20, -32
 ; CHECK-APPLE-AARCH64-NEXT:    .cfi_offset w21, -40
 ; CHECK-APPLE-AARCH64-NEXT:    .cfi_offset w22, -48
-; CHECK-APPLE-AARCH64-NEXT:    .cfi_offset b8, -56
-; CHECK-APPLE-AARCH64-NEXT:    .cfi_offset b9, -64
-; CHECK-APPLE-AARCH64-NEXT:    fmov s8, #1.00000000
 ; CHECK-APPLE-AARCH64-NEXT:    mov x19, x0
 ; CHECK-APPLE-AARCH64-NEXT:  LBB2_1: ; %bb_loop
 ; CHECK-APPLE-AARCH64-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -239,7 +235,8 @@ define float @caller2(ptr %error_ref) {
 ; CHECK-APPLE-AARCH64-NEXT:    cbnz x21, LBB2_4
 ; CHECK-APPLE-AARCH64-NEXT:  ; %bb.2: ; %cont
 ; CHECK-APPLE-AARCH64-NEXT:    ; in Loop: Header=BB2_1 Depth=1
-; CHECK-APPLE-AARCH64-NEXT:    fcmp s0, s8
+; CHECK-APPLE-AARCH64-NEXT:    fmov s1, #1.00000000
+; CHECK-APPLE-AARCH64-NEXT:    fcmp s0, s1
 ; CHECK-APPLE-AARCH64-NEXT:    b.le LBB2_1
 ; CHECK-APPLE-AARCH64-NEXT:  ; %bb.3: ; %bb_end
 ; CHECK-APPLE-AARCH64-NEXT:    ldrb w8, [x21, #8]
@@ -248,11 +245,10 @@ define float @caller2(ptr %error_ref) {
 ; CHECK-APPLE-AARCH64-NEXT:    mov x0, x21
 ; CHECK-APPLE-AARCH64-NEXT:    bl _free
 ; CHECK-APPLE-AARCH64-NEXT:    fmov s0, #1.00000000
-; CHECK-APPLE-AARCH64-NEXT:    ldp x29, x30, [sp, #64] ; 16-byte Folded Reload
-; CHECK-APPLE-AARCH64-NEXT:    ldp x20, x19, [sp, #48] ; 16-byte Folded Reload
-; CHECK-APPLE-AARCH64-NEXT:    ldp x22, x21, [sp, #32] ; 16-byte Folded Reload
-; CHECK-APPLE-AARCH64-NEXT:    ldp d9, d8, [sp, #16] ; 16-byte Folded Reload
-; CHECK-APPLE-AARCH64-NEXT:    add sp, sp, #80
+; CHECK-APPLE-AARCH64-NEXT:    ldp x29, x30, [sp, #48] ; 16-byte Folded Reload
+; CHECK-APPLE-AARCH64-NEXT:    ldp x20, x19, [sp, #32] ; 16-byte Folded Reload
+; CHECK-APPLE-AARCH64-NEXT:    ldp x22, x21, [sp, #16] ; 16-byte Folded Reload
+; CHECK-APPLE-AARCH64-NEXT:    add sp, sp, #64
 ; CHECK-APPLE-AARCH64-NEXT:    ret
 ;
 ; CHECK-O0-AARCH64-LABEL: caller2:
@@ -297,12 +293,11 @@ define float @caller2(ptr %error_ref) {
 ;
 ; CHECK-APPLE-ARM64_32-LABEL: caller2:
 ; CHECK-APPLE-ARM64_32:       ; %bb.0: ; %entry
-; CHECK-APPLE-ARM64_32-NEXT:    sub sp, sp, #80
-; CHECK-APPLE-ARM64_32-NEXT:    stp d9, d8, [sp, #16] ; 16-byte Folded Spill
-; CHECK-APPLE-ARM64_32-NEXT:    stp x22, x21, [sp, #32] ; 16-byte Folded Spill
-; CHECK-APPLE-ARM64_32-NEXT:    stp x20, x19, [sp, #48] ; 16-byte Folded Spill
-; CHECK-APPLE-ARM64_32-NEXT:    stp x29, x30, [sp, #64] ; 16-byte Folded Spill
-; CHECK-APPLE-ARM64_32-NEXT:    add x29, sp, #64
+; CHECK-APPLE-ARM64_32-NEXT:    sub sp, sp, #64
+; CHECK-APPLE-ARM64_32-NEXT:    stp x22, x21, [sp, #16] ; 16-byte Folded Spill
+; CHECK-APPLE-ARM64_32-NEXT:    stp x20, x19, [sp, #32] ; 16-byte Folded Spill
+; CHECK-APPLE-ARM64_32-NEXT:    stp x29, x30, [sp, #48] ; 16-byte Folded Spill
+; CHECK-APPLE-ARM64_32-NEXT:    add x29, sp, #48
 ; CHECK-APPLE-ARM64_32-NEXT:    .cfi_def_cfa w29, 16
 ; CHECK-APPLE-ARM64_32-NEXT:    .cfi_offset w30, -8
 ; CHECK-APPLE-ARM64_32-NEXT:    .cfi_offset w29, -16
@@ -310,9 +305,6 @@ define float @caller2(ptr %error_ref) {
 ; CHECK-APPLE-ARM64_32-NEXT:    .cfi_offset w20, -32
 ; CHECK-APPLE-ARM64_32-NEXT:    .cfi_offset w21, -40
 ; CHECK-APPLE-ARM64_32-NEXT:    .cfi_offset w22, -48
-; CHECK-APPLE-ARM64_32-NEXT:    .cfi_offset b8, -56
-; CHECK-APPLE-ARM64_32-NEXT:    .cfi_offset b9, -64
-; CHECK-APPLE-ARM64_32-NEXT:    fmov s8, #1.00000000
 ; CHECK-APPLE-ARM64_32-NEXT:    mov x19, x0
 ; CHECK-APPLE-ARM64_32-NEXT:  LBB2_1: ; %bb_loop
 ; CHECK-APPLE-ARM64_32-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -321,7 +313,8 @@ define float @caller2(ptr %error_ref) {
 ; CHECK-APPLE-ARM64_32-NEXT:    cbnz w21, LBB2_4
 ; CHECK-APPLE-ARM64_32-NEXT:  ; %bb.2: ; %cont
 ; CHECK-APPLE-ARM64_32-NEXT:    ; in Loop: Header=BB2_1 Depth=1
-; CHECK-APPLE-ARM64_32-NEXT:    fcmp s0, s8
+; CHECK-APPLE-ARM64_32-NEXT:    fmov s1, #1.00000000
+; CHECK-APPLE-ARM64_32-NEXT:    fcmp s0, s1
 ; CHECK-APPLE-ARM64_32-NEXT:    b.le LBB2_1
 ; CHECK-APPLE-ARM64_32-NEXT:  ; %bb.3: ; %bb_end
 ; CHECK-APPLE-ARM64_32-NEXT:    ldrb w8, [x21, #8]
@@ -330,11 +323,10 @@ define float @caller2(ptr %error_ref) {
 ; CHECK-APPLE-ARM64_32-NEXT:    mov x0, x21
 ; CHECK-APPLE-ARM64_32-NEXT:    bl _free
 ; CHECK-APPLE-ARM64_32-NEXT:    fmov s0, #1.00000000
-; CHECK-APPLE-ARM64_32-NEXT:    ldp x29, x30, [sp, #64] ; 16-byte Folded Reload
-; CHECK-APPLE-ARM64_32-NEXT:    ldp x20, x19, [sp, #48] ; 16-byte Folded Reload
-; CHECK-APPLE-ARM64_32-NEXT:    ldp x22, x21, [sp, #32] ; 16-byte Folded Reload
-; CHECK-APPLE-ARM64_32-NEXT:    ldp d9, d8, [sp, #16] ; 16-byte Folded Reload
-; CHECK-APPLE-ARM64_32-NEXT:    add sp, sp, #80
+; CHECK-APPLE-ARM64_32-NEXT:    ldp x29, x30, [sp, #48] ; 16-byte Folded Reload
+; CHECK-APPLE-ARM64_32-NEXT:    ldp x20, x19, [sp, #32] ; 16-byte Folded Reload
+; CHECK-APPLE-ARM64_32-NEXT:    ldp x22, x21, [sp, #16] ; 16-byte Folded Reload
+; CHECK-APPLE-ARM64_32-NEXT:    add sp, sp, #64
 ; CHECK-APPLE-ARM64_32-NEXT:    ret
 ;
 ; CHECK-O0-ARM64_32-LABEL: caller2:
@@ -501,26 +493,23 @@ normal:
 define float @foo_loop(ptr swifterror %error_ptr_ref, i32 %cc, float %cc2) {
 ; CHECK-APPLE-LABEL: foo_loop:
 ; CHECK-APPLE:       ; %bb.0: ; %entry
-; CHECK-APPLE-NEXT:    stp d9, d8, [sp, #-48]! ; 16-byte Folded Spill
-; CHECK-APPLE-NEXT:    stp x20, x19, [sp, #16] ; 16-byte Folded Spill
-; CHECK-APPLE-NEXT:    stp x29, x30, [sp, #32] ; 16-byte Folded Spill
-; CHECK-APPLE-NEXT:    add x29, sp, #32
+; CHECK-APPLE-NEXT:    str d8, [sp, #-32]! ; 8-byte Folded Spill
+; CHECK-APPLE-NEXT:    str x19, [sp, #8] ; 8-byte Spill
+; CHECK-APPLE-NEXT:    stp x29, x30, [sp, #16] ; 16-byte Folded Spill
+; CHECK-APPLE-NEXT:    add x29, sp, #16
 ; CHECK-APPLE-NEXT:    .cfi_def_cfa w29, 16
 ; CHECK-APPLE-NEXT:    .cfi_offset w30, -8
 ; CHECK-APPLE-NEXT:    .cfi_offset w29, -16
 ; CHECK-APPLE-NEXT:    .cfi_offset w19, -24
-; CHECK-APPLE-NEXT:    .cfi_offset w20, -32
-; CHECK-APPLE-NEXT:    .cfi_offset b8, -40
-; CHECK-APPLE-NEXT:    .cfi_offset b9, -48
+; CHECK-APPLE-NEXT:    .cfi_offset b8, -32
 ; CHECK-APPLE-NEXT:    fmov s8, s0
 ; CHECK-APPLE-NEXT:    mov w19, w0
 ; CHECK-APPLE-NEXT:    mov x0, x21
-; CHECK-APPLE-NEXT:    fmov s9, #1.00000000
-; CHECK-APPLE-NEXT:    mov w20, #1 ; =0x1
 ; CHECK-APPLE-NEXT:    b LBB4_2
 ; CHECK-APPLE-NEXT:  LBB4_1: ; %bb_cont
 ; CHECK-APPLE-NEXT:    ; in Loop: Header=BB4_2 Depth=1
-; CHECK-APPLE-NEXT:    fcmp s8, s9
+; CHECK-APPLE-NEXT:    fmov s0, #1.00000000
+; CHECK-APPLE-NEXT:    fcmp s8, s0
 ; CHECK-APPLE-NEXT:    b.gt LBB4_4
 ; CHECK-APPLE-NEXT:  LBB4_2: ; %bb_loop
 ; CHECK-APPLE-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -529,14 +518,15 @@ define float @foo_loop(ptr swifterror %error_ptr_ref, i32 %cc, float %cc2) {
 ; CHECK-APPLE-NEXT:    ; in Loop: Header=BB4_2 Depth=1
 ; CHECK-APPLE-NEXT:    mov w0, #16 ; =0x10
 ; CHECK-APPLE-NEXT:    bl _malloc
-; CHECK-APPLE-NEXT:    strb w20, [x0, #8]
+; CHECK-APPLE-NEXT:    mov w8, #1 ; =0x1
+; CHECK-APPLE-NEXT:    strb w8, [x0, #8]
 ; CHECK-APPLE-NEXT:    b LBB4_1
 ; CHECK-APPLE-NEXT:  LBB4_4: ; %bb_end
 ; CHECK-APPLE-NEXT:    movi d0, #0000000000000000
 ; CHECK-APPLE-NEXT:    mov x21, x0
-; CHECK-APPLE-NEXT:    ldp x29, x30, [sp, #32] ; 16-byte Folded Reload
-; CHECK-APPLE-NEXT:    ldp x20, x19, [sp, #16] ; 16-byte Folded Reload
-; CHECK-APPLE-NEXT:    ldp d9, d8, [sp], #48 ; 16-byte Folded Reload
+; CHECK-APPLE-NEXT:    ldp x29, x30, [sp, #16] ; 16-byte Folded Reload
+; CHECK-APPLE-NEXT:    ldr x19, [sp, #8] ; 8-byte Reload
+; CHECK-APPLE-NEXT:    ldr d8, [sp], #32 ; 8-byte Folded Reload
 ; CHECK-APPLE-NEXT:    ret
 ;
 ; CHECK-O0-AARCH64-LABEL: foo_loop:

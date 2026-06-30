@@ -179,7 +179,7 @@ define void @fromC_totail() #0 {
 
 define void @fromC_totail_noreservedframe(i32 %len) #0 {
 ; COMMON-LABEL: fromC_totail_noreservedframe:
-; COMMON: stp x29, x30, [sp, #-48]!
+; COMMON: stp x29, x30, [sp, #-32]!
 
 ; COMMON: mov w[[TMP:[0-9]+]], #42
   ; Note stack is subtracted here to allocate space for arg
