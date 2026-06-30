@@ -87,6 +87,7 @@ add_flang_library(FIRTransforms
   MLIRLLVMCommonConversion
   MLIRLLVMDialect
   MLIRMathTransforms
+  MLIRNVVMDialect
   MLIROpenACCDialect
   MLIROpenACCToLLVMIRTranslation
   MLIROpenMPDialect
