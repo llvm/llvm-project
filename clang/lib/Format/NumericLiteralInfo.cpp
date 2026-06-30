@@ -51,7 +51,7 @@ NumericLiteralInfo::NumericLiteralInfo(StringRef Text, char Separator) {
   const auto TrimmedText =
       Separator == '\'' ? Text.take_front(Text.find('_')) : Text;
 
-  // Clamp searches due to possible incomplete literals
+  // Clamp searches due to possible incomplete literals.
   ExponentLetterPos = TrimmedText.find_insensitive(
       IsHex ? 'p' : 'e', std::min(Pos, TrimmedText.size()));
 
@@ -61,8 +61,7 @@ NumericLiteralInfo::NumericLiteralInfo(StringRef Text, char Separator) {
         return (HasExponent || !IsHex ? isDigit : isHexDigit)(C) ||
                C == Separator;
       },
-      HasExponent ? std::min(ExponentLetterPos + 2, Text.size())
-                  : std::min(Pos, Text.size())); // e.g. 1e-2f
+      std::min(HasExponent ? ExponentLetterPos + 2 : Pos, Text.size()); // e.g. 1e-2f
 }
 
 } // namespace format
