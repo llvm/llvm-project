@@ -74,19 +74,23 @@ void test() {
   m.key_comp();      // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   m.value_comp();    // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 
+#if TEST_STD_VER >= 14
+  std::map<int, int, TransparentCompare> tm;
+  const std::map<int, int, TransparentCompare> ctm{};
+  TransparentKey tkey;
+#endif
+
 #if TEST_STD_VER >= 17
   m.extract(key);      // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   m.extract(m.cend()); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+#endif
+#if TEST_STD_VER >= 23
+  tm.extract(tkey); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 #endif
 
   m.find(key);  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   cm.find(key); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 #if TEST_STD_VER >= 14
-  std::map<int, int, TransparentCompare> tm;
-  const std::map<int, int, TransparentCompare> ctm{};
-
-  TransparentKey tkey;
-
   tm.find(tkey);  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   ctm.find(tkey); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 #endif
