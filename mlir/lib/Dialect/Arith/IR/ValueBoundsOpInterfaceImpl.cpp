@@ -111,7 +111,7 @@ struct DivSIOpInterface
     // negative/positive infinity respectively. When the result is non-negative,
     // divsi equals floorDiv(lhs, rhs); when negative, it equals ceilDiv(lhs,
     // rhs). Without knowing the sign, bound the result between those two
-    // expressions.
+    // expressions, which is always correct.
     cstr.bound(value) >= lhs.floorDiv(rhs);
     cstr.bound(value) <= lhs.ceilDiv(rhs);
 
