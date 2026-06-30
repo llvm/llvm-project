@@ -91,6 +91,14 @@ raw_ostream &LegalityQuery::print(raw_ostream &OS) const {
   for (const auto &MMODescr : MMODescrs) {
     OS << MMODescr.MemoryTy << ", ";
   }
+  OS << "}, Imms={";
+  for (const auto Imm : Immediates) {
+    OS << Imm << ", ";
+  }
+  OS << "}, Predicates={";
+  for (const auto Pred : Predicates) {
+    OS << Pred << ", ";
+  }
   OS << "}";
 
   return OS;
@@ -355,30 +363,36 @@ LegalizeActionStep
 LegalizerInfo::getAction(const MachineInstr &MI,
                          const MachineRegisterInfo &MRI) const {
   SmallVector<LLT, 8> Types;
+  SmallVector<int64_t, 8> Immediates;
+  SmallVector<CmpInst::Predicate, 8> Predicates;
   SmallBitVector SeenTypes(8);
   ArrayRef<MCOperandInfo> OpInfo = MI.getDesc().operands();
   // FIXME: probably we'll need to cache the results here somehow?
   for (unsigned i = 0; i < MI.getDesc().getNumOperands(); ++i) {
-    if (!OpInfo[i].isGenericType())
-      continue;
+    if (OpInfo[i].isGenericType()) {
+      // We must only record actions once for each TypeIdx; otherwise we'd
+      // try to legalize operands multiple times down the line.
+      unsigned TypeIdx = OpInfo[i].getGenericTypeIndex();
+      if (SeenTypes[TypeIdx])
+        continue;
 
-    // We must only record actions once for each TypeIdx; otherwise we'd
-    // try to legalize operands multiple times down the line.
-    unsigned TypeIdx = OpInfo[i].getGenericTypeIndex();
-    if (SeenTypes[TypeIdx])
-      continue;
+      SeenTypes.set(TypeIdx);
 
-    SeenTypes.set(TypeIdx);
-
-    LLT Ty = getTypeFromTypeIdx(MI, MRI, i, TypeIdx);
-    Types.push_back(Ty);
+      LLT Ty = getTypeFromTypeIdx(MI, MRI, i, TypeIdx);
+      Types.push_back(Ty);
+    } else if (OpInfo[i].isGenericImm()) {
+      Immediates.push_back(MI.getOperand(i).getImm());
+    } else if (MI.getOperand(i).isPredicate()) {
+      Predicates.push_back(
+          static_cast<CmpInst::Predicate>(MI.getOperand(i).getPredicate()));
+    }
   }
 
   SmallVector<LegalityQuery::MemDesc, 2> MemDescrs;
   for (const auto &MMO : MI.memoperands())
     MemDescrs.push_back({*MMO});
 
-  return getAction({MI.getOpcode(), Types, MemDescrs});
+  return getAction({MI.getOpcode(), Types, MemDescrs, Immediates, Predicates});
 }
 
 bool LegalizerInfo::isLegal(const MachineInstr &MI,
