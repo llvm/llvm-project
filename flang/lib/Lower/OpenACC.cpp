@@ -730,6 +730,14 @@ extractComponentFromDesignator(
   return componentRef;
 }
 
+static bool isOperandManaged(const Fortran::semantics::Symbol &symbol) {
+  const auto cudaAttr =
+      Fortran::semantics::GetCUDADataAttr(&symbol.GetUltimate());
+  if (cudaAttr && *cudaAttr == Fortran::common::CUDADataAttr::Managed)
+    return true;
+  return false;
+}
+
 template <typename Op>
 static void
 genDataOperandOperations(const Fortran::parser::AccObjectList &objectList,
@@ -752,6 +760,12 @@ genDataOperandOperations(const Fortran::parser::AccObjectList &objectList,
     mlir::Location operandLocation = genOperandLocation(converter, accObject);
 
     Fortran::semantics::Symbol &symbol = getSymbolFromAccObject(accObject);
+
+    // Enter/exit data movement for managed objects is redundant and
+    // can cause mismatched descriptor/data mappings with managed-memory mode.
+    // Treat these operands as no-ops.
+    if (isOperandManaged(symbol))
+      continue;
 
     Fortran::semantics::MaybeExpr designator = Fortran::common::visit(
         [&](auto &&s) { return ea.Analyze(s); }, accObject.u);
@@ -3415,6 +3429,9 @@ genACCEnterDataOp(Fortran::lower::AbstractConverter &converter,
     }
   }
 
+  if (dataClauseOperands.empty())
+    return;
+
   // Prepare the operand segment size attribute and the operands value range.
   llvm::SmallVector<mlir::Value, 16> operands;
   llvm::SmallVector<int32_t, 8> operandSegments;
@@ -3518,6 +3535,9 @@ genACCExitDataOp(Fortran::lower::AbstractConverter &converter,
   dataClauseOperands.append(copyoutOperands);
   dataClauseOperands.append(deleteOperands);
   dataClauseOperands.append(detachOperands);
+
+  if (dataClauseOperands.empty())
+    return;
 
   // Prepare the operand segment size attribute and the operands value range.
   llvm::SmallVector<mlir::Value, 14> operands;
