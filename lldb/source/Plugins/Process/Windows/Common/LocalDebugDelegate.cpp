@@ -45,19 +45,19 @@ void LocalDebugDelegate::OnExitThread(lldb::tid_t thread_id,
     process->OnExitThread(thread_id, exit_code);
 }
 
-bool LocalDebugDelegate::OnLoadDll(const lldb_private::ModuleSpec &module_spec,
-                                   lldb::addr_t module_addr,
-                                   lldb::tid_t thread_id) {
+DllEventAction
+LocalDebugDelegate::OnLoadDll(const lldb_private::ModuleSpec &module_spec,
+                              lldb::addr_t module_addr, lldb::tid_t thread_id) {
   if (ProcessWindowsSP process = GetProcessPointer())
     return process->OnLoadDll(module_spec, module_addr, thread_id);
-  return false;
+  return DllEventAction::ContinueDebugLoop;
 }
 
-bool LocalDebugDelegate::OnUnloadDll(lldb::addr_t module_addr,
-                                     lldb::tid_t thread_id) {
+DllEventAction LocalDebugDelegate::OnUnloadDll(lldb::addr_t module_addr,
+                                               lldb::tid_t thread_id) {
   if (ProcessWindowsSP process = GetProcessPointer())
     return process->OnUnloadDll(module_addr, thread_id);
-  return false;
+  return DllEventAction::ContinueDebugLoop;
 }
 
 void LocalDebugDelegate::OnDebugString(lldb::addr_t debug_string_addr,

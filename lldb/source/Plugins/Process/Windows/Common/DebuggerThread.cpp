@@ -696,7 +696,7 @@ DebuggerThread::HandleLoadDllEvent(const LOAD_DLL_DEBUG_INFO &info,
                                    DWORD thread_id) {
   Log *log = GetLog(WindowsLog::Event);
 
-  bool wants_park = false;
+  DllEventAction action = DllEventAction::ContinueDebugLoop;
   auto on_load_dll = [&](llvm::StringRef path) {
     FileSpec file_spec(path);
     ModuleSpec module_spec(file_spec);
@@ -706,7 +706,7 @@ DebuggerThread::HandleLoadDllEvent(const LOAD_DLL_DEBUG_INFO &info,
              m_process.GetProcessId(), path, info.lpBaseOfDll);
 
     m_dll_event_pred.SetValue(false, eBroadcastNever);
-    wants_park = m_debug_delegate->OnLoadDll(module_spec, load_addr, thread_id);
+    action = m_debug_delegate->OnLoadDll(module_spec, load_addr, thread_id);
   };
 
   std::optional<std::string> resolved_path;
@@ -747,7 +747,7 @@ DebuggerThread::HandleLoadDllEvent(const LOAD_DLL_DEBUG_INFO &info,
   if (info.hFile != nullptr)
     ::CloseHandle(info.hFile);
 
-  if (wants_park && !m_is_shutting_down.load())
+  if (action == DllEventAction::ParkDebugLoop && !m_is_shutting_down.load())
     m_dll_event_pred.WaitForValueEqualTo(true);
   return DBG_CONTINUE;
 }
@@ -760,9 +760,9 @@ DebuggerThread::HandleUnloadDllEvent(const UNLOAD_DLL_DEBUG_INFO &info,
            m_process.GetProcessId(), info.lpBaseOfDll);
 
   m_dll_event_pred.SetValue(false, eBroadcastNever);
-  bool wants_park = m_debug_delegate->OnUnloadDll(
+  DllEventAction action = m_debug_delegate->OnUnloadDll(
       reinterpret_cast<lldb::addr_t>(info.lpBaseOfDll), thread_id);
-  if (wants_park && !m_is_shutting_down.load())
+  if (action == DllEventAction::ParkDebugLoop && !m_is_shutting_down.load())
     m_dll_event_pred.WaitForValueEqualTo(true);
   return DBG_CONTINUE;
 }

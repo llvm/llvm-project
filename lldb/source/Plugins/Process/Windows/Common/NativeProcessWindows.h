@@ -132,9 +132,11 @@ public:
                                    const ExceptionRecord &record) override;
   void OnCreateThread(const HostThread &thread) override;
   void OnExitThread(lldb::tid_t thread_id, uint32_t exit_code) override;
-  bool OnLoadDll(const ModuleSpec &module_spec, lldb::addr_t module_addr,
-                 lldb::tid_t thread_id) override;
-  bool OnUnloadDll(lldb::addr_t module_addr, lldb::tid_t thread_id) override;
+  DllEventAction OnLoadDll(const ModuleSpec &module_spec,
+                           lldb::addr_t module_addr,
+                           lldb::tid_t thread_id) override;
+  DllEventAction OnUnloadDll(lldb::addr_t module_addr,
+                             lldb::tid_t thread_id) override;
   void OnDebugString(lldb::addr_t debug_string_addr, bool is_unicode,
                      uint16_t length_lower_word) override;
 
@@ -231,12 +233,14 @@ public:
     m_process.OnExitThread(thread_id, exit_code);
   }
 
-  bool OnLoadDll(const lldb_private::ModuleSpec &module_spec,
-                 lldb::addr_t module_addr, lldb::tid_t thread_id) override {
+  DllEventAction OnLoadDll(const lldb_private::ModuleSpec &module_spec,
+                           lldb::addr_t module_addr,
+                           lldb::tid_t thread_id) override {
     return m_process.OnLoadDll(module_spec, module_addr, thread_id);
   }
 
-  bool OnUnloadDll(lldb::addr_t module_addr, lldb::tid_t thread_id) override {
+  DllEventAction OnUnloadDll(lldb::addr_t module_addr,
+                             lldb::tid_t thread_id) override {
     return m_process.OnUnloadDll(module_addr, thread_id);
   }
 
