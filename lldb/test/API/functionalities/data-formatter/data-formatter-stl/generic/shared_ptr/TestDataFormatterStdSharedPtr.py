@@ -25,7 +25,7 @@ class TestCase(TestBase):
         )
         self.assertEqual(valobj.GetNumChildren(), 0)
         self.assertEqual(
-            valobj.GetChildAtIndex(0).GetValueAsUnsigned(lldb.LLDB_INVALID_ADDRESS), 0
+            valobj.member["pointer"].GetValueAsUnsigned(lldb.LLDB_INVALID_ADDRESS), 0
         )
         self.assertEqual(
             valobj.GetChildAtIndex(0).GetID(), valobj.member["pointer"].GetID()
