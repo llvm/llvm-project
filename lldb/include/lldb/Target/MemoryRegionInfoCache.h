@@ -18,7 +18,7 @@
 namespace lldb_private {
 class MemoryRegionInfoCache {
 public:
-  MemoryRegionInfoCache() : m_region_infos(), m_mutex() {}
+  MemoryRegionInfoCache() : m_region_infos(), m_is_sorted(true), m_mutex() {}
 
   /// Remove all cached entries.  Should be called whenever
   /// Process resumes execution of the inferior.
@@ -44,6 +44,7 @@ private:
   typedef RangeDataVector<lldb::addr_t, size_t, lldb_private::MemoryRegionInfo>
       InfoMap;
   InfoMap m_region_infos;
+  bool m_is_sorted;
   mutable std::recursive_mutex m_mutex;
 };
 } // namespace lldb_private
