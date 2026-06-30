@@ -18,7 +18,7 @@ define i1 @t0_const_after_fold_lshr_shl_ne(i32 %x, i64 %y, i32 %len) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[X:%.*]], 31
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext nneg i32 [[TMP1]] to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = and i64 [[Y:%.*]], [[TMP2]]
-; CHECK-NEXT:    [[T5:%.*]] = icmp ne i64 [[TMP3]], 0
+; CHECK-NEXT:    [[T5:%.*]] = trunc nuw i64 [[TMP3]] to i1
 ; CHECK-NEXT:    ret i1 [[T5]]
 ;
   %t0 = sub i32 32, %len
@@ -41,7 +41,7 @@ define <2 x i1> @t1_vec_splat(<2 x i32> %x, <2 x i64> %y, <2 x i32> %len) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i32> [[X:%.*]], splat (i32 31)
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext nneg <2 x i32> [[TMP1]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP3:%.*]] = and <2 x i64> [[Y:%.*]], [[TMP2]]
-; CHECK-NEXT:    [[T5:%.*]] = icmp ne <2 x i64> [[TMP3]], zeroinitializer
+; CHECK-NEXT:    [[T5:%.*]] = trunc nuw <2 x i64> [[TMP3]] to <2 x i1>
 ; CHECK-NEXT:    ret <2 x i1> [[T5]]
 ;
   %t0 = sub <2 x i32> <i32 32, i32 32>, %len
@@ -213,7 +213,7 @@ define i1 @t6_oneuse3(i32 %x, i64 %y, i32 %len) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[X:%.*]], 31
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext nneg i32 [[TMP1]] to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = and i64 [[Y]], [[TMP2]]
-; CHECK-NEXT:    [[T5:%.*]] = icmp ne i64 [[TMP3]], 0
+; CHECK-NEXT:    [[T5:%.*]] = trunc nuw i64 [[TMP3]] to i1
 ; CHECK-NEXT:    ret i1 [[T5]]
 ;
   %t0 = sub i32 32, %len
@@ -245,7 +245,7 @@ define i1 @t7_oneuse4(i32 %x, i64 %y, i32 %len) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[X:%.*]], 31
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext nneg i32 [[TMP1]] to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = and i64 [[Y]], [[TMP2]]
-; CHECK-NEXT:    [[T5:%.*]] = icmp ne i64 [[TMP3]], 0
+; CHECK-NEXT:    [[T5:%.*]] = trunc nuw i64 [[TMP3]] to i1
 ; CHECK-NEXT:    ret i1 [[T5]]
 ;
   %t0 = sub i32 32, %len ; no extra uses
