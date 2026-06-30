@@ -1064,9 +1064,112 @@ void Writer::calculateStubDependentSizes() {
   dataDirOffset64 = peHeaderOffset + sizeof(pe32plus_header);
 }
 
+// Mark duplicate COMDAT .pdata chunks as dead. After ICF folds identical
+// code sections, multiple .pdata COMDAT chunks may produce RUNTIME_FUNCTION
+// entries covering the same address range. We detect this by comparing the
+// BeginAddress and EndAddress relocation targets (the first two relocations),
+// and set live = false on duplicates so they are excluded from the output.
+void lld::coff::removeDuplicatePdataChunks(COFFLinkerContext &ctx) {
+  // Key: (beginChunk, beginValue, endChunk, endValue) identifying the range.
+  struct PdataKey {
+    Chunk *beginChunk;
+    uint32_t beginValue;
+    Chunk *endChunk;
+    uint32_t endValue;
+  };
+  struct PdataKeyInfo {
+    static PdataKey getEmptyKey() { return {nullptr, 0, nullptr, 0}; }
+    static PdataKey getTombstoneKey() { return {nullptr, ~0u, nullptr, ~0u}; }
+    static unsigned getHashValue(const PdataKey &k) {
+      return llvm::hash_combine(k.beginChunk, k.beginValue, k.endChunk,
+                                k.endValue);
+    }
+    static bool isEqual(const PdataKey &lhs, const PdataKey &rhs) {
+      return lhs.beginChunk == rhs.beginChunk &&
+             lhs.beginValue == rhs.beginValue && lhs.endChunk == rhs.endChunk &&
+             lhs.endValue == rhs.endValue;
+    }
+  };
+
+  llvm::DenseSet<PdataKey, PdataKeyInfo> seen;
+  llvm::DenseSet<SectionChunk *> orphanXdata;
+
+  for (Chunk *c : ctx.driver.getChunks()) {
+    auto *sc = dyn_cast<SectionChunk>(c);
+    if (!sc || !sc->live || !sc->isCOMDAT())
+      continue;
+    StringRef name = sc->getSectionName().split('$').first;
+    if (name != ".pdata")
+      continue;
+
+    ArrayRef<coff_relocation> relocs = sc->getRelocs();
+    if (relocs.size() != 3)
+      continue;
+
+    ArrayRef<uint8_t> contents = sc->getContents();
+    if (contents.size() != 12)
+      continue;
+
+    // Resolve the BeginAddress (reloc 0) and EndAddress (reloc 1) targets.
+    auto resolve =
+        [&](const coff_relocation &rel) -> std::pair<Chunk *, uint32_t> {
+      Symbol *sym = sc->file->getSymbol(rel.SymbolTableIndex);
+      if (auto *d = dyn_cast<DefinedRegular>(sym))
+        return {d->getChunk(), d->getValue()};
+      if (auto *d = dyn_cast<Defined>(sym))
+        return {d->getChunk(), 0};
+      return {nullptr, 0};
+    };
+
+    if (relocs[0].VirtualAddress != 0 || relocs[1].VirtualAddress != 4)
+      continue;
+
+    auto [beginChunk, beginVal] = resolve(relocs[0]);
+    auto [endChunk, endVal] = resolve(relocs[1]);
+    if (!beginChunk || !endChunk)
+      continue;
+
+    // Account for addends baked into the section data.
+    beginVal += support::endian::read32le(contents.data());
+    endVal += support::endian::read32le(contents.data() + 4);
+
+    PdataKey key{beginChunk, beginVal, endChunk, endVal};
+    if (!seen.insert(key).second) {
+      Warn(ctx) << "duplicate .pdata entry in " << sc->getSectionName();
+      sc->live = false;
+
+      // Track the .xdata chunk referenced by the dead .pdata's
+      // UnwindInfoAddress (reloc 2) as a candidate for removal.
+      auto [xdataChunk, xdataVal] = resolve(relocs[2]);
+      if (auto *xdataSC = dyn_cast_or_null<SectionChunk>(xdataChunk))
+        orphanXdata.insert(xdataSC);
+    }
+  }
+
+  // Remove orphan .xdata chunks that are no longer referenced by any live
+  // .pdata entry.
+  if (!orphanXdata.empty()) {
+    for (Chunk *c : ctx.driver.getChunks()) {
+      auto *sc = dyn_cast<SectionChunk>(c);
+      if (!sc || !sc->live)
+        continue;
+      StringRef name = sc->getSectionName().split('$').first;
+      if (name != ".pdata")
+        continue;
+      ArrayRef<coff_relocation> relocs = sc->getRelocs();
+      Symbol *sym = sc->file->getSymbol(relocs[2].SymbolTableIndex);
+      if (auto *d = dyn_cast<DefinedRegular>(sym))
+        orphanXdata.erase(dyn_cast<SectionChunk>(d->getChunk()));
+    }
+    for (SectionChunk *xdata : orphanXdata)
+      xdata->live = false;
+  }
+}
+
 // Create output section objects and add them to OutputSections.
 void Writer::createSections() {
   llvm::TimeTraceScope timeScope("Output sections");
+
   // First, create the builtin sections.
   const uint32_t data = IMAGE_SCN_CNT_INITIALIZED_DATA;
   const uint32_t bss = IMAGE_SCN_CNT_UNINITIALIZED_DATA;
