@@ -1853,6 +1853,21 @@ static void checkInitProfileCtorBody(Sema &S, const CXXConstructorDecl *Ctor,
         BlockEvents.push_back(
             {BO->isCompoundAssignmentOp() ? ReadWrite : Write, It->second, BO});
         Gen[B->getBlockID()].set(It->second);
+      } else if (const auto *UO = dyn_cast<UnaryOperator>(St)) {
+        // A built-in ++m / m++ / --m / m-- reads the old value and then writes,
+        // but unlike -m / !m it carries no lvalue-to-rvalue cast, so the Read
+        // arm above never sees it. Model it like the compound-assignment case:
+        // a ReadWrite that also marks the member assigned.
+        if (!UO->isIncrementDecrementOp())
+          continue;
+        const FieldDecl *F = getCurrentObjectMember(UO->getSubExpr());
+        if (!F)
+          continue;
+        auto It = Index.find(F);
+        if (It == Index.end())
+          continue;
+        BlockEvents.push_back({ReadWrite, It->second, UO});
+        Gen[B->getBlockID()].set(It->second);
       }
     }
   }
