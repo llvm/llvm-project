@@ -1438,7 +1438,8 @@ static void CollectARMPACBTIOptions(const ToolChain &TC, const ArgList &Args,
       auto isPAuthLR = [](const char *member) {
         llvm::AArch64::ExtensionInfo pauthlr_extension =
             llvm::AArch64::getExtensionByID(llvm::AArch64::AEK_PAUTHLR);
-        return pauthlr_extension.PosTargetFeature == member;
+        return llvm::AArch64::StrTab[pauthlr_extension.PosTargetFeature] ==
+               member;
       };
 
       if (llvm::any_of(CmdArgs, isPAuthLR))
