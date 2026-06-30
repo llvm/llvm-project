@@ -7,15 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Target/MemoryRegionInfoCache.h"
-#include "lldb/Core/AddressRange.h"
 #include "lldb/Target/MemoryRegionInfo.h"
-#include "lldb/Target/Process.h"
-#include "lldb/Utility/Status.h"
 
 using namespace lldb;
 using namespace lldb_private;
 
-void MemoryRegionInfoCache::Clear() { 
+void MemoryRegionInfoCache::Clear() {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   m_region_infos.Clear();
   m_is_sorted = true;
