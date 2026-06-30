@@ -16462,6 +16462,121 @@ static SDValue ConstantBuildVector(SDValue Op, SelectionDAG &DAG,
     if (SDValue R = trySVESplat64(Op, DAG, ST, DefBits))
       return R;
 
+    // If the low 32 or 64 bits are a non-zero FP constant and all upper bits
+    // are zero, lower to a scalar FMOV inserted into a zero vector.  On
+    // AArch64, writing a scalar FP register (s0 or d0) automatically zeroes
+    // the upper bits of the enclosing vector register, so no explicit zeroing
+    // of the upper lanes is needed.
+    //
+    // We check the flat DefBits APInt directly, which handles both the
+    // integer-typed vector case (FP BUILD_VECTORs are bitcast to integer
+    // before reaching here) and the general case.
+    //
+    // We require at least 2 elements so there is at least one upper lane to
+    // zero, and to avoid an infinite loop: for a single-element vector
+    // (e.g. v1f64 or v1i64), INSERT_VECTOR_ELT would be lowered back to
+    // BUILD_VECTOR, re-entering this function.
+    //
+    // We also require the element size to be exactly 32 or 64 bits so that
+    // the non-zero DefBits in the low lane correspond to a single f32/f64
+    // lane 0 value.  Smaller element types (e.g. v16i8, v8i16) can have
+    // non-zero bits in the low 32 bits that span multiple sub-32-bit lanes,
+    // which would be misinterpreted as an f32 bit-pattern.
+    if (VT.getVectorNumElements() >= 2) {
+      unsigned TotalBits = VT.getSizeInBits();
+      unsigned EltBits = VT.getVectorElementType().getSizeInBits();
+      SDLoc DL(Op);
+      MVT FpEltVT = MVT::INVALID_SIMPLE_VALUE_TYPE;
+      APInt LaneBits;
+      // True when Lo64 encodes two equal f32 lanes (v4f32 <fpimm,fpimm,0,0>);
+      // emit fmov v0.2s rather than fmov s0 in that case.
+      bool SplatV2f32 = false;
+
+      // 128-bit vector: check low-32-bits non-zero, high-96-bits zero -> fmov
+      // s0 or low-64-bits non-zero, high-64-bits zero -> fmov d0. 64-bit
+      // vector: check low-32-bits non-zero, high-32-bits zero -> fmov s0. In
+      // each case the element size must match the FP lane size so that the
+      // non-zero bits are confined to exactly lane 0 of the FP type.
+      if (TotalBits == 128) {
+        APInt Lo32 = DefBits.extractBits(32, 0);
+        APInt Hi96 = DefBits.extractBits(96, 32);
+        APInt Lo64 = DefBits.extractBits(64, 0);
+        APInt Hi64 = DefBits.extractBits(64, 64);
+        if (EltBits == 32 && !Lo32.isZero() && Hi96.isZero()) {
+          FpEltVT = MVT::f32;
+          LaneBits = Lo32;
+        } else if (EltBits == 64 && !Lo64.isZero() && Hi64.isZero()) {
+          // The DAG canonicalizes v4f32 constants to v2i64, so Lo64 may
+          // encode one or two f32 values rather than a single f64.
+          APInt Lo64Lo32 = Lo64.extractBits(32, 0);
+          APInt Lo64Hi32 = Lo64.extractBits(32, 32);
+          if (AArch64_AM::getFP64Imm(Lo64) != -1) {
+            // Native f64 immediate: <fpimm64, 0.0>.
+            FpEltVT = MVT::f64;
+            LaneBits = Lo64;
+          } else if (Lo64Hi32.isZero() &&
+                     AArch64_AM::getFP32Imm(Lo64Lo32) != -1) {
+            // v4f32 <fpimm32, 0, 0, 0>: only lane 0 is non-zero.
+            FpEltVT = MVT::f32;
+            LaneBits = Lo64Lo32;
+          } else if (Lo64Hi32 == Lo64Lo32 &&
+                     AArch64_AM::getFP32Imm(Lo64Lo32) != -1) {
+            // v4f32 <fpimm32, fpimm32, 0, 0>: low two lanes are equal.
+            FpEltVT = MVT::f32;
+            LaneBits = Lo64Lo32;
+            SplatV2f32 = true;
+          }
+        }
+      } else if (TotalBits == 64) {
+        APInt Lo32 = DefBits.extractBits(32, 0);
+        APInt Hi32 = DefBits.extractBits(32, 32);
+        if (EltBits == 32 && !Lo32.isZero() && Hi32.isZero()) {
+          FpEltVT = MVT::f32;
+          LaneBits = Lo32;
+        }
+      }
+
+      // Only proceed if the bit-pattern is a valid 8-bit AArch64 FP
+      // immediate.  Non-FP constants (e.g. <i64 -1, i64 0>) can satisfy
+      // the bit-range checks above but cannot be encoded as fmov immediates,
+      // so emitting INSERT_VECTOR_ELT for them would produce worse code.
+      if (FpEltVT != MVT::INVALID_SIMPLE_VALUE_TYPE) {
+        APFloat FPVal(FpEltVT == MVT::f32 ? APFloat::IEEEsingle()
+                                          : APFloat::IEEEdouble(),
+                      LaneBits);
+        if ((FpEltVT == MVT::f32 && AArch64_AM::getFP32Imm(LaneBits) == -1) ||
+            (FpEltVT == MVT::f64 && AArch64_AM::getFP64Imm(LaneBits) == -1))
+          FpEltVT = MVT::INVALID_SIMPLE_VALUE_TYPE;
+      }
+      if (FpEltVT != MVT::INVALID_SIMPLE_VALUE_TYPE) {
+        APFloat FPVal(FpEltVT == MVT::f32 ? APFloat::IEEEsingle()
+                                          : APFloat::IEEEdouble(),
+                      LaneBits);
+        SDValue FpScalar = DAG.getConstantFP(FPVal, DL, FpEltVT);
+        MVT IntVT = VT.changeVectorElementTypeToInteger().getSimpleVT();
+        SDValue Zero = DAG.getConstant(0, DL, IntVT);
+        if (SplatV2f32) {
+          // Emit a v2f32 splat (fmov v.2s) inserted into the low half of a
+          // zero v4f32.  Writing d0 (FMOVv2f32_ns) zeroes the upper 64 bits
+          // of q0, correctly materialising <fpimm,fpimm,0,0> without a load.
+          SDValue Splat = DAG.getNode(
+              AArch64ISD::FMOV, DL, MVT::v2f32,
+              DAG.getConstant(AArch64_AM::getFP32Imm(LaneBits), DL, MVT::i32));
+          SDValue ZeroV4F32 = DAG.getBitcast(MVT::v4f32, Zero);
+          SDValue Ins =
+              DAG.getNode(ISD::INSERT_SUBVECTOR, DL, MVT::v4f32, ZeroV4F32,
+                          Splat, DAG.getVectorIdxConstant(0, DL));
+          return DAG.getBitcast(VT, Ins);
+        }
+        unsigned NumElts = TotalBits / FpEltVT.getSizeInBits();
+        MVT FpVT = MVT::getVectorVT(FpEltVT, NumElts);
+        SDValue Inserted = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, FpVT,
+                                       DAG.getBitcast(FpVT, Zero), FpScalar,
+                                       DAG.getConstant(0, DL, MVT::i64));
+        return DAG.getBitcast(VT, Inserted);
+      }
+    }
+
     // See if a fneg of the constant can be materialized with a MOVI, etc
     auto TryWithFNeg = [&](APInt DefBits, MVT FVT) {
       // FNegate each sub-element of the constant
