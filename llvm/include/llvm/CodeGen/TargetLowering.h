@@ -125,8 +125,8 @@ private:
             // not overlap
     MemcpyStrSrc, // memcpy source is an in-register constant, so it does not
                   // need to be loaded
-    Memmove,      // memmove: like memcpy for source and destination regions may
-                  // overlap
+    Memmove, // memmove: like memcpy, but source and destination regions may
+             // overlap
   };
 
   // Shared
