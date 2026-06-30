@@ -19,11 +19,14 @@
 #include "src/stdlib/realpath.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 
-namespace LIBC_NAMESPACE_DECL {
+using LIBC_NAMESPACE::testing::ErrnoCheckingTest;
+namespace cpp = LIBC_NAMESPACE::cpp;
 
-class LlvmLibcRealpathTest : public testing::ErrnoCheckingTest {
+class LlvmLibcRealpathTest : public LIBC_NAMESPACE::testing::ErrnoCheckingTest {
 public:
-  char *realpath_buffered(const char *path) { return realpath(path, buf_); }
+  char *realpath_buffered(const char *path) {
+    return LIBC_NAMESPACE::realpath(path, buf_);
+  }
 
   char *realpath_buffered(const cpp::string &path) {
     return realpath_buffered(path.c_str());
@@ -99,5 +102,3 @@ TEST_F(LlvmLibcRealpathTest, AllocatesResultWhenBufferIsNull) {
   ASSERT_STREQ(result, "/a");
   ::free(result);
 }
-
-} // namespace LIBC_NAMESPACE_DECL
