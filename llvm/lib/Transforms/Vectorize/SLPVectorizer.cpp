@@ -2210,10 +2210,10 @@ public:
     return VectorizableTree.front()->Scalars;
   }
 
-  /// Returns true if the root node has copyable elements.
-  bool isRootNodeWithCopyableElements() const {
+  /// Returns the lane the given value is vectorized to in the root node.
+  unsigned findRootLaneForValue(Value *V) const {
     assert(!VectorizableTree.empty() && "No graph to get the first node from");
-    return VectorizableTree.front()->hasCopyableElements();
+    return VectorizableTree.front()->findLaneForValue(V);
   }
 
   /// Returns the type/is-signed info for the root node in the graph without
@@ -30047,30 +30047,17 @@ public:
 
         // Emit code to correctly handle reused reduced values, if required.
         if (OptReusedScalars && !SameScaleFactor) {
-          // The reuse counters must be aligned with the lane order of the
-          // emitted reduction vector. For a root node without copyable
-          // elements the emitted lane order matches getRootNodeScalars(),
-          // which may differ from the Candidates order due to tree reordering,
-          // so remap the counters through the candidates. For a root node with
-          // copyable elements getRootNodeScalars() may be reordered while the
-          // emitted lanes still follow the reduced values (candidates) order,
-          // so use that order directly to avoid applying a counter to the wrong
-          // lane.
+          // The reuse counters are stored in the deduplicated candidates
+          // order, but the emitted reduction vector lane order is defined by
+          // the root node, which may be reordered, split or have copyable
+          // elements. Place each counter at the lane the matching candidate is
+          // vectorized to, so the counter is applied to the correct lane.
           ArrayRef<Value *> RootVL = V.getRootNodeScalars();
           ArrayRef<Value *> CandSlice(Candidates.begin() + Pos, ReduxWidth);
           SmallVector<Value *> RootTrackedToOrig(RootVL.size());
-          if (V.isRootNodeWithCopyableElements()) {
-            for (unsigned Idx : seq<unsigned>(RootVL.size()))
-              RootTrackedToOrig[Idx] = TrackedToOrig[Pos + Idx];
-          } else {
-            for (auto [Idx, Val] : enumerate(RootVL)) {
-              auto *It = find(CandSlice, Val);
-              assert(It != CandSlice.end() &&
-                     "Root scalar not found in candidates");
-              RootTrackedToOrig[Idx] =
-                  TrackedToOrig[Pos + std::distance(CandSlice.begin(), It)];
-            }
-          }
+          for (auto [Idx, Val] : enumerate(CandSlice))
+            RootTrackedToOrig[V.findRootLaneForValue(Val)] =
+                TrackedToOrig[Pos + Idx];
           VectorizedRoot = emitReusedOps(VectorizedRoot, Builder, V,
                                          SameValuesCounter, RootTrackedToOrig);
         }
