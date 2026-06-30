@@ -212,4 +212,5 @@ void verifycpustrings(void) {
   (void)__builtin_cpu_is("c86-4g-m4");
   (void)__builtin_cpu_is("c86-4g-m6");
   (void)__builtin_cpu_is("c86-4g-m7");
+  (void)__builtin_cpu_is("c86-4g-m8");
 }

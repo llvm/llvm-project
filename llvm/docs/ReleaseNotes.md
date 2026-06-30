@@ -208,6 +208,7 @@ Makes programs 10x faster by doing Special New Thing.
 * The `r14` register can now be used as an alias for the link register `lr`
   in inline assembly. Clang always canonicalizes the name to `lr`, but other
   frontends may not.
+* `subs pc, lr, #imm` can now be predicated in Thumb2.
 
 ### Changes to the AVR Backend
 
@@ -318,6 +319,11 @@ Makes programs 10x faster by doing Special New Thing.
 
 * Renamed ISD::CTTZ_ZERO_UNDEF to ISD::CTTZ_ZERO_POISON opcode to make it clear that
   a zero input results in poison.
+
+* LLVM intrinsics can now declare required target features using the
+  ``TargetFeatures`` TableGen field. SelectionDAG and GlobalISel use this
+  metadata to reject unsupported target intrinsics generically, so targets do
+  not need custom lowering checks for each annotated intrinsic.
 
 ### Changes to the GlobalISel infrastructure
 
