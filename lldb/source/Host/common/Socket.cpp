@@ -242,7 +242,7 @@ Socket::CreatePair(std::optional<SocketProtocol> protocol) {
   case ProtocolTcp:
     return TCPSocket::CreatePair();
   case ProtocolUnixDomain:
-#if LLDB_ENABLE_POSIX
+#if LLDB_ENABLE_POSIX || defined(_WIN32)
     return DomainSocketPlatform::CreatePair();
 #else
     return llvm::createStringError("unsupported protocol");
