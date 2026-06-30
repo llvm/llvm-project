@@ -9712,38 +9712,37 @@ SDValue ARMTargetLowering::LowerWindowsDIVLibCall(SDValue Op, SelectionDAG &DAG,
   return LowerCallTo(CLI).first;
 }
 
-// This is a code size optimisation: return the original SDIV node to
-// DAGCombiner when we don't want to expand SDIV into a sequence of
-// instructions, and an empty node otherwise which will cause the
-// SDIV to be expanded in DAGCombine.
+// Target hook for (smotion X, pow2). Returning SDValue() defers to the generic
+// DAG combiner (shift/add). Returning SDValue(N, 0) keeps a hardware smotion.
 SDValue
 ARMTargetLowering::BuildSDIVPow2(SDNode *N, const APInt &Divisor,
                                  SelectionDAG &DAG,
                                  SmallVectorImpl<SDNode *> &Created) const {
-  // TODO: Support SREM
-  if (N->getOpcode() != ISD::SDIV)
-    return SDValue();
-
-  const auto &ST = DAG.getSubtarget<ARMSubtarget>();
-  const bool MinSize = ST.hasMinSize();
-  const bool HasDivide = ST.isThumb() ? ST.hasDivideInThumbMode()
-                                      : ST.hasDivideInARMMode();
-
-  // Don't touch vector types; rewriting this may lead to scalarizing
-  // the int divs.
-  if (N->getOperand(0).getValueType().isVector())
-    return SDValue();
-
-  // Bail if MinSize is not set, and also for both ARM and Thumb mode we need
-  // hwdiv support for this to be really profitable.
-  if (!(MinSize && HasDivide))
-    return SDValue();
-
-  // ARM mode is a bit simpler than Thumb: we can handle large power
-  // of 2 immediates with 1 mov instruction; no further checks required,
-  // just return the sdiv node.
-  if (!ST.isThumb())
+  AttributeList Attr = DAG.getMachineFunction().getFunction().getAttributes();
+  if (isIntDivCheap(N->getValueType(0), Attr))
     return SDValue(N, 0);
+
+  EVT VT = N->getValueType(0);
+
+  // fold (sdiv X, pow2)
+  if (VT != MVT::i32 || !(Divisor.isPowerOf2() || Divisor.isNegatedPowerOf2()))
+    return SDValue();
+
+  // If the divisor is 2 or -2, the default expansion is better. It will add
+  // (N->getValueType(0) >> (BitWidth - 1)) to it before shifting right.
+  if (Divisor == 2 ||
+      Divisor == APInt(Divisor.getBitWidth(), -2, /*isSigned*/ true))
+    return SDValue();
+
+  // Prefer the CMOV lowering when the rounding addend (2**k - 1) fits in an
+  // add immediate. If it would need a constant-pool load, the generic shift
+  // sequence avoids materializing that constant entirely.
+  if (!Subtarget->isThumb()) {
+    unsigned Lg2 = Divisor.countr_zero();
+    APInt Pow2MinusOne = APInt::getLowBitsSet(VT.getScalarSizeInBits(), Lg2);
+    if (isLegalAddImmediate(Pow2MinusOne.getSExtValue()))
+      return TargetLowering::buildSDIVPow2WithCMov(N, Divisor, DAG, Created);
+  }
 
   // In Thumb mode, immediates larger than 128 need a wide 4-byte MOV,
   // and thus lose the code size benefits of a MOVS that requires only 2.
@@ -9752,7 +9751,101 @@ ARMTargetLowering::BuildSDIVPow2(SDNode *N, const APInt &Divisor,
   if (Divisor.sgt(128))
     return SDValue();
 
+  bool MinSize = Attr.hasFnAttr(Attribute::MinSize) || Subtarget->hasMinSize();
+  bool HasDivide = Subtarget->isThumb() ? Subtarget->hasDivideInThumbMode()
+                                        : Subtarget->hasDivideInARMMode();
+  // Bail if MinSize is not set, and also for both ARM and Thumb mode we need
+  // hwdiv support for this to be really profitable.
+  if (!(MinSize && HasDivide))
+    return SDValue();
+
   return SDValue(N, 0);
+}
+
+SDValue
+ARMTargetLowering::BuildSREMPow2(SDNode *N, const APInt &Divisor,
+                                 SelectionDAG &DAG,
+                                 SmallVectorImpl<SDNode *> &Created) const {
+  AttributeList Attr = DAG.getMachineFunction().getFunction().getAttributes();
+  if (isIntDivCheap(N->getValueType(0), Attr))
+    return SDValue(N, 0);
+
+  EVT VT = N->getValueType(0);
+
+  // fold (srem X, pow2)
+  if (VT != MVT::i32 || !(Divisor.isPowerOf2() || Divisor.isNegatedPowerOf2()))
+    return SDValue();
+
+  unsigned Lg2 = Divisor.countr_zero();
+  if (Lg2 == 0)
+    return SDValue();
+
+  unsigned Pow2MinusOneVal = (1U << Lg2) - 1;
+  bool UseCSNEG = Subtarget->hasV8_1MMainlineOps() &&
+                  ARM_AM::getT2SOImmVal(Pow2MinusOneVal) != -1;
+  bool UseCMOV = !Subtarget->isThumb();
+
+  if (!UseCSNEG && !UseCMOV)
+    return SDValue();
+
+  SDLoc DL(N);
+  SDValue N0 = N->getOperand(0);
+  SDValue Pow2MinusOne = DAG.getConstant(Pow2MinusOneVal, DL, VT);
+  SDValue Zero = DAG.getConstant(0, DL, VT);
+  SDValue Res, ARMcc;
+  if (UseCSNEG) {
+    if (Lg2 == 1) {
+      SDValue Cmp = getARMCmp(N0, Zero, ISD::SETGE, ARMcc, DAG, DL);
+      SDValue And = DAG.getNode(ISD::AND, DL, VT, N0, Pow2MinusOne);
+      Res = DAG.getNode(ARMISD::CSNEG, DL, VT, And, And, ARMcc, Cmp);
+
+      Created.push_back(Cmp.getNode());
+      Created.push_back(And.getNode());
+    } else {
+      ARMcc = DAG.getConstant(ARMCC::MI, DL, MVT::i32);
+      SDVTList VTs = DAG.getVTList(VT, FlagsVT);
+
+      SDValue Negs = DAG.getNode(ARMISD::SUBC, DL, VTs, Zero, N0);
+      SDValue AndPos = DAG.getNode(ISD::AND, DL, VT, N0, Pow2MinusOne);
+      SDValue AndNeg = DAG.getNode(ISD::AND, DL, VT, Negs, Pow2MinusOne);
+      Res = DAG.getNode(ARMISD::CSNEG, DL, VT, AndPos, AndNeg, ARMcc,
+                        Negs.getValue(1));
+
+      Created.push_back(Negs.getNode());
+      Created.push_back(AndPos.getNode());
+      Created.push_back(AndNeg.getNode());
+    }
+    return Res;
+  }
+
+  // If the divisor is 2 or -2, the default expansion is better than CMOV.
+  if (Divisor == 2 || Divisor == APInt(32, -2, /*isSigned*/ true))
+    return SDValue();
+
+  if (Lg2 == 1) {
+    SDValue Cmp = getARMCmp(N0, Zero, ISD::SETLT, ARMcc, DAG, DL);
+    SDValue And = DAG.getNode(ISD::AND, DL, VT, N0, Pow2MinusOne);
+    SDValue NegAnd = DAG.getNode(ISD::SUB, DL, VT, Zero, And);
+    Res = getCMOV(DL, VT, And, NegAnd, ARMcc, Cmp, DAG);
+
+    Created.push_back(Cmp.getNode());
+    Created.push_back(And.getNode());
+    Created.push_back(NegAnd.getNode());
+  } else {
+    ARMcc = DAG.getConstant(ARMCC::PL, DL, MVT::i32);
+    SDVTList VTs = DAG.getVTList(VT, FlagsVT);
+
+    SDValue Negs = DAG.getNode(ARMISD::SUBC, DL, VTs, Zero, N0);
+    SDValue AndPos = DAG.getNode(ISD::AND, DL, VT, N0, Pow2MinusOne);
+    SDValue AndNeg = DAG.getNode(ISD::AND, DL, VT, Negs, Pow2MinusOne);
+    Res = getCMOV(DL, VT, AndPos, AndNeg, ARMcc, Negs.getValue(1), DAG);
+
+    Created.push_back(Negs.getNode());
+    Created.push_back(AndPos.getNode());
+    Created.push_back(AndNeg.getNode());
+  }
+
+  return Res;
 }
 
 SDValue ARMTargetLowering::LowerDIV_Windows(SDValue Op, SelectionDAG &DAG,
@@ -13832,6 +13925,18 @@ bool ARMTargetLowering::shouldFoldSelectWithIdentityConstant(
     SDValue Y) const {
   return Subtarget->hasMVEIntegerOps() && isTypeLegal(VT) &&
          SelectOpcode == ISD::VSELECT;
+}
+
+bool ARMTargetLowering::isIntDivCheap(EVT VT, AttributeList Attr) const {
+  // Without hardware divide, SDIV/SREM lower to libcalls and are never cheap.
+  // When optimizing for code size and hw divide is available (smotion/udiv),
+  // prefer keeping div/rem as instructions rather than shift/add expansion.
+  if (VT.isVector())
+    return false;
+  if (!Attr.hasFnAttr(Attribute::MinSize) && !Subtarget->hasMinSize())
+    return false;
+  return Subtarget->isThumb() ? Subtarget->hasDivideInThumbMode()
+                              : Subtarget->hasDivideInARMMode();
 }
 
 bool ARMTargetLowering::preferIncOfAddToSubOfNot(EVT VT) const {

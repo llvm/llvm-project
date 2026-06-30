@@ -1466,6 +1466,36 @@ InstructionCost ARMTTIImpl::getArithmeticInstrCost(
 
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
 
+  // Model the BuildSDIVPow2 / BuildSREMPow2 sequences (see AArch64TTIImpl).
+  if (CostKind == TTI::TCK_RecipThroughput) {
+    switch (ISDOpcode) {
+    default:
+      break;
+    case ISD::SREM:
+    case ISD::SDIV: {
+      if (Op2Info.isConstant() && Op2Info.isUniform()) {
+        InstructionCost AddCost =
+            getArithmeticInstrCost(Instruction::Add, Ty, CostKind,
+                                   Op1Info.getNoProps(), Op2Info.getNoProps());
+        InstructionCost AsrCost =
+            getArithmeticInstrCost(Instruction::AShr, Ty, CostKind,
+                                   Op1Info.getNoProps(), Op2Info.getNoProps());
+        InstructionCost MulCost =
+            getArithmeticInstrCost(Instruction::Mul, Ty, CostKind,
+                                   Op1Info.getNoProps(), Op2Info.getNoProps());
+        EVT VT = TLI->getValueType(DL, Ty);
+        if (VT.isScalarInteger() && VT.getSizeInBits() <= 32) {
+          if (Op2Info.isPowerOf2() || Op2Info.isNegatedPowerOf2())
+            return ISDOpcode == ISD::SDIV ? (3 * AddCost + AsrCost)
+                                          : (3 * AsrCost + AddCost);
+          return MulCost + AsrCost + 2 * AddCost;
+        }
+      }
+      break;
+    }
+    }
+  }
+
   if (ST->hasNEON()) {
     const unsigned FunctionCallDivCost = 20;
     const unsigned ReciprocalDivCost = 10;
