@@ -308,7 +308,7 @@ getIntegerWidthAndSignedness(const clang::ASTContext &astContext,
 template <typename OpTy>
 static std::pair<mlir::Value, mlir::Value>
 emitOverflowOp(CIRGenBuilderTy &builder, mlir::Location loc,
-               cir::IntType resultTy, mlir::Value lhs, mlir::Value rhs) {
+               mlir::Type resultTy, mlir::Value lhs, mlir::Value rhs) {
   auto op = OpTy::create(builder, loc, resultTy, lhs, rhs);
   return {op.getResult(), op.getOverflow()};
 }
@@ -1636,8 +1636,13 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
         builder.createIsFPClass(loc, v, cir::FPClassTest(test)),
         convertType(e->getType())));
   }
-  case Builtin::BI__builtin_nondeterministic_value:
-    return errorBuiltinNYI(*this, e, builtinID);
+  case Builtin::BI__builtin_nondeterministic_value: {
+    mlir::Type ty = convertType(e->getArg(0)->getType());
+    mlir::Value result =
+        cir::ConstantOp::create(builder, loc, ty, cir::PoisonAttr::get(ty));
+    result = cir::FreezeOp::create(builder, loc, result);
+    return RValue::get(result);
+  }
   case Builtin::BI__builtin_elementwise_abs: {
     mlir::Type cirTy = convertType(e->getArg(0)->getType());
     bool isIntTy = cir::isIntOrVectorOfIntType(cirTy);
@@ -2273,7 +2278,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
 
     auto encompassingCIRTy = cir::IntType::get(
         &getMLIRContext(), encompassingInfo.width, encompassingInfo.isSigned);
-    auto resultCIRTy = mlir::cast<cir::IntType>(cgm.convertType(resultQTy));
+    mlir::Type resultCIRTy = cgm.convertType(resultQTy);
 
     mlir::Value x = emitScalarExpr(leftArg);
     mlir::Value y = emitScalarExpr(rightArg);
@@ -2319,7 +2324,8 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     //     first computed as a value of the encompassing type, and then it is
     //     truncated to the actual result type with a second overflow checking.
     //   - In CIRGen, the checked arithmetic operation directly produce the
-    //     checked arithmetic result in its expected type.
+    //     checked arithmetic result in its expected type, which may be a
+    //     `cir.bool`.
     //
     // So we don't need a truncation and a second overflow checking here.
 

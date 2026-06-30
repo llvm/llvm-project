@@ -44,6 +44,7 @@ class BreakpointSite;
 class BroadcastEventSpec;
 class Broadcaster;
 class BroadcasterManager;
+class BugReporter;
 class CXXSyntheticChildren;
 struct CacheSignature;
 class CallFrameInfo;

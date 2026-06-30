@@ -7463,13 +7463,7 @@ SDValue SITargetLowering::splitUnaryVectorOp(SDValue Op,
                                              SelectionDAG &DAG) const {
   unsigned Opc = Op.getOpcode();
   EVT VT = Op.getValueType();
-  assert(VT == MVT::v4i16 || VT == MVT::v4f16 || VT == MVT::v4bf16 ||
-         VT == MVT::v4f32 || VT == MVT::v8i16 || VT == MVT::v8f16 ||
-         VT == MVT::v8bf16 || VT == MVT::v16i16 || VT == MVT::v16f16 ||
-         VT == MVT::v16bf16 || VT == MVT::v8f32 || VT == MVT::v16f32 ||
-         VT == MVT::v32f32 || VT == MVT::v32i16 || VT == MVT::v32f16 ||
-         VT == MVT::v32bf16 || VT == MVT::v4f64 || VT == MVT::v8f64 ||
-         VT == MVT::v16f64 || VT == MVT::v32f64);
+  assert(VT.isVector() && VT.getVectorElementCount().isKnownEven());
 
   auto [Lo, Hi] = DAG.SplitVectorOperand(Op.getNode(), 0);
   auto [LoVT, HiVT] = DAG.GetSplitDestVTs(VT);
@@ -7509,14 +7503,7 @@ SDValue SITargetLowering::splitBinaryVectorOp(SDValue Op,
                                               SelectionDAG &DAG) const {
   unsigned Opc = Op.getOpcode();
   EVT VT = Op.getValueType();
-  assert(VT == MVT::v4i16 || VT == MVT::v4f16 || VT == MVT::v4bf16 ||
-         VT == MVT::v4f32 || VT == MVT::v8i16 || VT == MVT::v8f16 ||
-         VT == MVT::v8bf16 || VT == MVT::v16i16 || VT == MVT::v16f16 ||
-         VT == MVT::v16bf16 || VT == MVT::v8f32 || VT == MVT::v16f32 ||
-         VT == MVT::v32f32 || VT == MVT::v32i16 || VT == MVT::v32f16 ||
-         VT == MVT::v32bf16 || VT == MVT::v4f64 || VT == MVT::v8f64 ||
-         VT == MVT::v16f64 || VT == MVT::v32f64 || VT == MVT::v4i64 ||
-         VT == MVT::v8i64 || VT == MVT::v16i64 || VT == MVT::v32i64);
+  assert(VT.isVector() && VT.getVectorElementCount().isKnownEven());
 
   auto [Lo0, Hi0] = DAG.SplitVectorOperand(Op.getNode(), 0);
   auto [Lo1, Hi1] = DAG.SplitVectorOperand(Op.getNode(), 1);
@@ -10823,25 +10810,38 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   switch (IntrinsicID) {
   case Intrinsic::amdgcn_wave_reduce_min:
   case Intrinsic::amdgcn_wave_reduce_umin:
+  case Intrinsic::amdgcn_wave_reduce_fmin:
   case Intrinsic::amdgcn_wave_reduce_max:
   case Intrinsic::amdgcn_wave_reduce_umax:
+  case Intrinsic::amdgcn_wave_reduce_fmax:
   case Intrinsic::amdgcn_wave_reduce_add:
+  case Intrinsic::amdgcn_wave_reduce_fadd:
   case Intrinsic::amdgcn_wave_reduce_sub:
+  case Intrinsic::amdgcn_wave_reduce_fsub:
   case Intrinsic::amdgcn_wave_reduce_and:
   case Intrinsic::amdgcn_wave_reduce_or:
   case Intrinsic::amdgcn_wave_reduce_xor: {
     EVT SrcVT = Op.getOperand(1).getValueType();
-    if (SrcVT == MVT::i16) {
+    if (SrcVT.getFixedSizeInBits() == 16) {
+      bool IsFPOp = SrcVT.isFloatingPoint();
       bool NeedsSignExt = IntrinsicID == Intrinsic::amdgcn_wave_reduce_min ||
                           IntrinsicID == Intrinsic::amdgcn_wave_reduce_max ||
                           IntrinsicID == Intrinsic::amdgcn_wave_reduce_add ||
                           IntrinsicID == Intrinsic::amdgcn_wave_reduce_sub;
-      unsigned ExtOpc = NeedsSignExt ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND;
-      SDValue ExtendedSrc = DAG.getNode(ExtOpc, DL, MVT::i32, Op.getOperand(1));
+      unsigned ExtOpc = IsFPOp         ? ISD::FP_EXTEND
+                        : NeedsSignExt ? ISD::SIGN_EXTEND
+                                       : ISD::ZERO_EXTEND;
+      auto SrcType = IsFPOp ? MVT::f16 : MVT::i16;
+      auto ExtType = IsFPOp ? MVT::f32 : MVT::i32;
+      SDValue ExtendedSrc = DAG.getNode(ExtOpc, DL, ExtType, Op.getOperand(1));
       SDValue Strategy = Op.getOperand(2);
-      SDValue Result = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::i32,
+      SDValue Result = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, ExtType,
                                    Op.getOperand(0), ExtendedSrc, Strategy);
-      return DAG.getNode(ISD::TRUNCATE, DL, MVT::i16, Result);
+      if (IsFPOp)
+        return DAG.getNode(ISD::FP_ROUND, DL, SrcType, Result,
+                           DAG.getTargetConstant(1, DL, MVT::i32));
+      else
+        return DAG.getNode(ISD::TRUNCATE, DL, SrcType, Result);
     }
     return SDValue();
   }
@@ -11133,7 +11133,7 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return lowerBALLOTIntrinsic(*this, Op.getNode(), DAG);
   case Intrinsic::amdgcn_fmed3:
     return DAG.getNode(AMDGPUISD::FMED3, DL, VT, Op.getOperand(1),
-                       Op.getOperand(2), Op.getOperand(3));
+                       Op.getOperand(2), Op.getOperand(3), Op->getFlags());
   case Intrinsic::amdgcn_fdot2:
     return DAG.getNode(AMDGPUISD::FDOT2, DL, VT, Op.getOperand(1),
                        Op.getOperand(2), Op.getOperand(3), Op.getOperand(4));

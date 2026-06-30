@@ -223,7 +223,9 @@ class DebuggerBase(object, metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
-    def collect_watches(self, step: StepIR, watches: List[str]):
+    def collect_watches(
+        self, step: StepIR, watches: List[str], scope_watches: List[str]
+    ):
         pass
 
     @abc.abstractproperty
