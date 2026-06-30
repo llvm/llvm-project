@@ -13,6 +13,7 @@
 #include <ranges>
 #include <utility>
 #include <functional>
+#include <string_view>
 #include <map>
 
 struct View : std::ranges::view_interface<View> {
@@ -27,10 +28,10 @@ static_assert(!std::same_as<std::ranges::sentinel_t<View>, std::ranges::sentinel
 
 void test() {
     auto historical_figures = std::map{
-      std::pair{"Lovelace"sv, 1815},
-      {"Turing"sv, 1912},
-      {"Babbage"sv, 1791},
-      {"Hamilton"sv, 1936}
+        std::pair{"Lovelace", 1815},
+        std::pair{"Turing", 1912},
+        std::pair{"Babbage", 1791},
+        std::pair{"Hamilton", 1936}
     };
 
     // [range.elements.overview]
