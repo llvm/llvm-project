@@ -77,7 +77,7 @@
 // WRAPPER-SAME: --hip-path=[[HIP_PATH]]
 
 // RUN: touch %t.dummy.o
-// RUN: %clang -### --no-default-config -o %t.dummy.img \
+// RUN: env "PATH=" %clang -### --no-default-config -o %t.dummy.img \
 // RUN:   --target=spirv64-unknown-chipstar %t.dummy.o \
 // RUN:   --hip-path="%S/Inputs/hipspv" \
 // RUN: 2>&1 | FileCheck %s --check-prefix=CHIPSTAR -DHIP_PATH=%S/Inputs/hipspv
@@ -94,7 +94,7 @@
 // CHIPSTAR-SAME: "-mllvm" "-spirv-ext=+SPV_INTEL_function_pointers,+SPV_INTEL_subgroups,+SPV_EXT_relaxed_printf_string_address_space,+SPV_KHR_bit_instructions,+SPV_EXT_shader_atomic_float_add"
 // CHIPSTAR-SAME: [[LOWER_BC]] "-o" "[[SPIRV_OUT:.*img]]"
 
-// RUN: %clang -### --no-default-config -o %t.dummy.img \
+// RUN: env "PATH=" %clang -### --no-default-config -o %t.dummy.img \
 // RUN:   --target=spirv64v1.3-unknown-chipstar \
 // RUN:   %t.dummy.o --hip-path="%S/Inputs/hipspv" \
 // RUN: 2>&1 | FileCheck %s --check-prefix=CHIPSTAR-SUBARCH -DHIP_PATH=%S/Inputs/hipspv
@@ -113,7 +113,7 @@
 
 // Check unknown linker options are ignored - such as ones that are targeted at
 // spirv-link. HIPSPV toolchain does linking via llvm-link.
-// RUN: %clang -### --no-default-config -o %t.dummy.img \
+// RUN: env "PATH=" %clang -### --no-default-config -o %t.dummy.img \
 // RUN:   --target=spirv64-unknown-chipstar %t.dummy.o \
 // RUN:   --hip-path="%S/Inputs/hipspv" -Xlinker foobar \
 // RUN: 2>&1 | FileCheck %s --check-prefix=CHIPSTAR -DHIP_PATH=%S/Inputs/hipspv

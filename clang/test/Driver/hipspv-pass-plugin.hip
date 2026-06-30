@@ -20,19 +20,19 @@
 // backend instead of llvm-spirv):
 
 // RUN: touch %t.dummy.o
-// RUN: %clang -### --no-default-config -o /dev/null --target=spirv64-unknown-chipstar \
+// RUN: env "PATH=" %clang -### --no-default-config -o /dev/null --target=spirv64-unknown-chipstar \
 // RUN:   %t.dummy.o --hip-path=%S/Inputs/hipspv \
 // RUN: 2>&1 | FileCheck %s --check-prefixes=CHIPSTAR,FROM-HIP-PATH
 
-// RUN: %clang -### --no-default-config -o /dev/null --target=spirv64-unknown-chipstar \
+// RUN: env "PATH=" %clang -### --no-default-config -o /dev/null --target=spirv64-unknown-chipstar \
 // RUN:   %t.dummy.o --hipspv-pass-plugin=%S/Inputs/pass-plugin.so \
 // RUN: 2>&1 | FileCheck %s --check-prefixes=CHIPSTAR,FROM-OPTION
 
-// RUN: not %clang -### --no-default-config -o /dev/null --target=spirv64-unknown-chipstar \
+// RUN: not env "PATH=" %clang -### --no-default-config -o /dev/null --target=spirv64-unknown-chipstar \
 // RUN:   %t.dummy.o --hipspv-pass-plugin=foo.so \
 // RUN: 2>&1 | FileCheck %s --check-prefixes=CHIPSTAR,FROM-OPTION-INVALID
 
-// RUN: %clang -### --no-default-config -o /dev/null --target=spirv64-unknown-chipstar \
+// RUN: env "PATH=" %clang -### --no-default-config -o /dev/null --target=spirv64-unknown-chipstar \
 // RUN:   %t.dummy.o 2>&1 | FileCheck %s --check-prefixes=CHIPSTAR,NO-PLUGIN
 
 // FROM-HIP-PATH: {{".*opt"}} {{".*.bc"}} "-load-pass-plugin"

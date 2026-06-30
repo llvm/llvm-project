@@ -49,6 +49,28 @@ static std::string findPassPlugin(const Driver &D,
   return std::string();
 }
 
+// Runs the HipSpvPasses plugin via `opt` on TempFile when the plugin is found.
+// Returns the lowered bitcode path, or TempFile unchanged if no plugin exists.
+static const char *runHipSpvPasses(Compilation &C, const JobAction &JA,
+                                   const Tool &Creator, const ToolChain &TC,
+                                   const InputInfoList &Inputs,
+                                   const InputInfo &Output,
+                                   const llvm::opt::ArgList &Args,
+                                   StringRef Name, const char *TempFile) {
+  auto PassPluginPath = findPassPlugin(C.getDriver(), Args);
+  if (PassPluginPath.empty())
+    return TempFile;
+  const char *PassPathCStr = C.getArgs().MakeArgString(PassPluginPath);
+  const char *OptOutput = HIP::getTempFile(C, Name.str() + "-lower", "bc");
+  ArgStringList OptArgs{TempFile,     "-load-pass-plugin",
+                        PassPathCStr, "-passes=hip-post-link-passes",
+                        "-o",         OptOutput};
+  const char *Opt = Args.MakeArgString(TC.GetProgramPath("opt"));
+  C.addCommand(std::make_unique<Command>(
+      JA, Creator, ResponseFileSupport::None(), Opt, OptArgs, Inputs, Output));
+  return OptOutput;
+}
+
 void HIPSPV::Linker::constructLinkAndEmitSpirvCommand(
     Compilation &C, const JobAction &JA, const InputInfoList &Inputs,
     const InputInfo &Output, const llvm::opt::ArgList &Args) const {
@@ -87,32 +109,17 @@ void HIPSPV::Linker::constructLinkAndEmitSpirvCommand(
 
     // Run HipSpvPasses plugin via opt (must run on LLVM IR before
     // the SPIR-V backend lowers to MIR).
-    auto PassPluginPath = findPassPlugin(C.getDriver(), Args);
-    if (!PassPluginPath.empty()) {
-      const char *PassPathCStr = C.getArgs().MakeArgString(PassPluginPath);
-      const char *OptOutput = HIP::getTempFile(C, Name + "-lower", "bc");
-      ArgStringList OptArgs{TempFile,     "-load-pass-plugin",
-                            PassPathCStr, "-passes=hip-post-link-passes",
-                            "-o",         OptOutput};
-      const char *Opt =
-          Args.MakeArgString(getToolChain().GetProgramPath("opt"));
-      C.addCommand(std::make_unique<Command>(JA, *this,
-                                             ResponseFileSupport::None(), Opt,
-                                             OptArgs, Inputs, Output));
-      TempFile = OptOutput;
-    }
+    TempFile = runHipSpvPasses(C, JA, *this, getToolChain(), Inputs, Output,
+                               Args, Name, TempFile);
 
     // Prefer the external llvm-spirv translator when it is available next to
-    // the toolchain — required when LLVM is built without the in-tree SPIR-V
+    // the toolchain - required when LLVM is built without the in-tree SPIR-V
     // target. Use findProgramByName (not GetProgramPath) so a missing binary
     // is reported as not-found rather than being silently substituted.
     std::string LLVMSpirvPath;
     {
       llvm::ErrorOr<std::string> P = llvm::sys::findProgramByName(
-          "llvm-spirv", {llvm::sys::path::parent_path(C.getDriver().Dir)});
-      if (!P)
-        P = llvm::sys::findProgramByName("llvm-spirv",
-                                         {llvm::StringRef(C.getDriver().Dir)});
+          "llvm-spirv", {llvm::StringRef(C.getDriver().Dir)});
       if (!P)
         P = llvm::sys::findProgramByName("llvm-spirv");
       if (P)
@@ -168,18 +175,8 @@ void HIPSPV::Linker::constructLinkAndEmitSpirvCommand(
   }
 
   // Non-chipStar: run HIP passes via opt, then translate with llvm-spirv.
-  auto PassPluginPath = findPassPlugin(C.getDriver(), Args);
-  if (!PassPluginPath.empty()) {
-    const char *PassPathCStr = C.getArgs().MakeArgString(PassPluginPath);
-    const char *OptOutput = HIP::getTempFile(C, Name + "-lower", "bc");
-    ArgStringList OptArgs{TempFile,     "-load-pass-plugin",
-                          PassPathCStr, "-passes=hip-post-link-passes",
-                          "-o",         OptOutput};
-    const char *Opt = Args.MakeArgString(getToolChain().GetProgramPath("opt"));
-    C.addCommand(std::make_unique<Command>(
-        JA, *this, ResponseFileSupport::None(), Opt, OptArgs, Inputs, Output));
-    TempFile = OptOutput;
-  }
+  TempFile = runHipSpvPasses(C, JA, *this, getToolChain(), Inputs, Output, Args,
+                             Name, TempFile);
 
   // Emit SPIR-V binary via llvm-spirv translator (non-chipStar targets).
   llvm::opt::ArgStringList TrArgs;
