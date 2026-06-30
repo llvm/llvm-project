@@ -200,6 +200,52 @@ static Operation *cloneOpWithOperandsAndTypes(RewriterBase &rewriter,
 
 namespace {
 
+/// Reuse an args buffer from `buffers` to transit a value of `targetType`, or
+/// return null if none fits.
+static Value tryReuseArgBuffer(SmallVectorImpl<std::pair<Value, bool>> &buffers,
+                               Type targetType, Location loc,
+                               RewriterBase &rewriter) {
+  auto targetVecType = dyn_cast<VectorType>(targetType);
+  if (!targetVecType || !targetVecType.hasStaticShape())
+    return Value();
+
+  for (auto &entry : buffers) {
+    if (entry.second)
+      continue;
+    Value candidate = entry.first;
+    auto candidateMemref = dyn_cast<MemRefType>(candidate.getType());
+    if (!candidateMemref || !candidateMemref.hasStaticShape())
+      continue;
+    if (candidateMemref.getElementType() != targetVecType.getElementType())
+      continue;
+    if (candidateMemref.getNumElements() < targetVecType.getNumElements())
+      continue;
+    // Skip rank mismatch up-front to avoid guessing a reshape.
+    if (candidateMemref.getRank() != targetVecType.getRank())
+      continue;
+
+    // All checks passed: claim the buffer.
+    entry.second = true;
+
+    // Same shape: reuse directly.
+    if (candidateMemref.getShape() == targetVecType.getShape())
+      return candidate;
+
+    // Larger candidate: take a leading subview of the target shape.
+    int64_t candidateRank = candidateMemref.getRank();
+    SmallVector<OpFoldResult> offsets(candidateRank, rewriter.getIndexAttr(0));
+    SmallVector<OpFoldResult> strides(candidateRank, rewriter.getIndexAttr(1));
+    SmallVector<OpFoldResult> sizes;
+    sizes.reserve(candidateRank);
+    for (int64_t dim : targetVecType.getShape())
+      sizes.push_back(rewriter.getIndexAttr(dim));
+
+    return memref::SubViewOp::create(rewriter, loc, candidate, offsets, sizes,
+                                     strides);
+  }
+  return Value();
+}
+
 /// Rewrite a WarpExecuteOnLane0Op into a predicated scf.if op where the single
 /// thread `laneId` executes the entirety of the computation.
 ///
@@ -256,6 +302,10 @@ struct WarpOpToScfIfPattern : public WarpDistributionPattern {
     // Step 2: insert appropriate (alloc, write)-pairs before the scf.if and
     // reads within the scf.if to transit the values captured from above.
     SmallVector<Value> bbArgReplacements;
+    // Pool of args buffers paired with a "consumed" flag, so Step 5 can try
+    // to reuse them for yielded values' transit buffers.
+    SmallVector<std::pair<Value, /*consumed=*/bool>> reusableArgBuffers;
+    reusableArgBuffers.reserve(warpOp.getArgs().size());
     for (const auto &it : llvm::enumerate(warpOp.getArgs())) {
       Value sequentialVal = warpOpBody->getArgument(it.index());
       Value distributedVal = it.value();
@@ -266,6 +316,7 @@ struct WarpOpToScfIfPattern : public WarpDistributionPattern {
       rewriter.setInsertionPoint(ifOp);
       Value buffer = options.warpAllocationFn(loc, rewriter, warpOp,
                                               sequentialVal.getType());
+      reusableArgBuffers.emplace_back(buffer, /*consumed=*/false);
       // Store distributed vector into buffer, before the ifOp.
       helper.buildStore(rewriter, loc, distributedVal, buffer);
       // Load sequential vector from buffer, inside the ifOp.
@@ -285,7 +336,7 @@ struct WarpOpToScfIfPattern : public WarpDistributionPattern {
 
     // Step 5. Insert appropriate writes within scf.if and reads after the
     // scf.if to transit the values returned by the op.
-    // TODO: at this point, we can reuse the shared memory from previous
+    // The args buffers from Step 2 are unused by now, try to reuse previous
     // buffers.
     SmallVector<Value> replacements;
     auto yieldOp = cast<gpu::YieldOp>(ifOp.thenBlock()->getTerminator());
@@ -296,10 +347,13 @@ struct WarpOpToScfIfPattern : public WarpDistributionPattern {
       DistributedLoadStoreHelper helper(sequentialVal, distributedVal,
                                         warpOp.getLaneid(), c0);
 
-      // Create buffer before the ifOp.
+      // Reuse an args buffer if possible, otherwise allocate.
       rewriter.setInsertionPoint(ifOp);
-      Value buffer = options.warpAllocationFn(loc, rewriter, warpOp,
-                                              sequentialVal.getType());
+      Value buffer = tryReuseArgBuffer(reusableArgBuffers,
+                                       sequentialVal.getType(), loc, rewriter);
+      if (!buffer)
+        buffer = options.warpAllocationFn(loc, rewriter, warpOp,
+                                          sequentialVal.getType());
 
       // Store yielded value into buffer, inside the ifOp, before the
       // terminator.

@@ -19,10 +19,10 @@
 // CHECK-SCF-IF-DAG: #[[$TIMES2:.*]] = affine_map<()[s0] -> (s0 * 2)>
 // CHECK-SCF-IF-DAG: #[[$TIMES4:.*]] = affine_map<()[s0] -> (s0 * 4)>
 // CHECK-SCF-IF-DAG: #[[$TIMES8:.*]] = affine_map<()[s0] -> (s0 * 8)>
-// CHECK-SCF-IF-DAG: memref.global "private" @__shared_32xf32 : memref<32xf32, 3>
-// CHECK-SCF-IF-DAG: memref.global "private" @__shared_64xf32 : memref<64xf32, 3>
 // CHECK-SCF-IF-DAG: memref.global "private" @__shared_128xf32 : memref<128xf32, 3>
 // CHECK-SCF-IF-DAG: memref.global "private" @__shared_256xf32 : memref<256xf32, 3>
+// CHECK-SCF-IF-NOT: memref.global "private" @__shared_32xf32
+// CHECK-SCF-IF-NOT: memref.global "private" @__shared_64xf32
 
 // CHECK-SCF-IF-LABEL: func @rewrite_warp_op_to_scf_if(
 //  CHECK-SCF-IF-SAME:     %[[laneid:.*]]: index,
@@ -40,8 +40,11 @@ func.func @rewrite_warp_op_to_scf_if(%laneid: index,
 //       CHECK-SCF-IF:   vector.transfer_write %[[v1]], %[[buffer_v1]][%[[s1]]]
 
 //   CHECK-SCF-IF-DAG:   gpu.barrier memfence [#gpu.address_space<workgroup>]
-//   CHECK-SCF-IF-DAG:   %[[buffer_def_0:.*]] = memref.get_global @__shared_32xf32
-//   CHECK-SCF-IF-DAG:   %[[buffer_def_1:.*]] = memref.get_global @__shared_64xf32
+// Step 5 reuses the args buffers for the result buffers via memref.subview.
+//   CHECK-SCF-IF-DAG:   %[[buffer_def_0:.*]] = memref.subview %[[buffer_v0]][0] [32] [1] : memref<128xf32, 3> to memref<32xf32, strided<[1]>, 3>
+//   CHECK-SCF-IF-DAG:   %[[buffer_def_1:.*]] = memref.subview %[[buffer_v1]][0] [64] [1] : memref<256xf32, 3> to memref<64xf32, strided<[1]>, 3>
+//   CHECK-SCF-IF-NOT:   memref.get_global @__shared_32xf32
+//   CHECK-SCF-IF-NOT:   memref.get_global @__shared_64xf32
 
 //       CHECK-SCF-IF:   scf.if %[[is_lane_0]] {
   %r:2 = gpu.warp_execute_on_lane_0(%laneid)[32]
@@ -60,12 +63,30 @@ func.func @rewrite_warp_op_to_scf_if(%laneid: index,
 //       CHECK-SCF-IF:   }
 //       CHECK-SCF-IF:   gpu.barrier memfence [#gpu.address_space<workgroup>]
 //       CHECK-SCF-IF:   %[[o1:.*]] = affine.apply #[[$TIMES2]]()[%[[laneid]]]
-//       CHECK-SCF-IF:   %[[r1:.*]] = vector.transfer_read %[[buffer_def_1]][%[[o1]]], %{{.*}} {in_bounds = [true]} : memref<64xf32, 3>, vector<2xf32>
-//       CHECK-SCF-IF:   %[[r0:.*]] = vector.transfer_read %[[buffer_def_0]][%[[laneid]]], %{{.*}} {in_bounds = [true]} : memref<32xf32, 3>, vector<1xf32>
+//       CHECK-SCF-IF:   %[[r1:.*]] = vector.transfer_read %[[buffer_def_1]][%[[o1]]], %{{.*}} {in_bounds = [true]} : memref<64xf32, strided<[1]>, 3>, vector<2xf32>
+//       CHECK-SCF-IF:   %[[r0:.*]] = vector.transfer_read %[[buffer_def_0]][%[[laneid]]], %{{.*}} {in_bounds = [true]} : memref<32xf32, strided<[1]>, 3>, vector<1xf32>
 //       CHECK-SCF-IF:   "some_use"(%[[r0]]) : (vector<1xf32>) -> ()
 //       CHECK-SCF-IF:   "some_use"(%[[r1]]) : (vector<2xf32>) -> ()
   "some_use"(%r#0) : (vector<1xf32>) -> ()
   "some_use"(%r#1) : (vector<2xf32>) -> ()
+  return
+}
+
+// -----
+
+// No args: nothing to reuse, result buffer is allocated fresh.
+
+// CHECK-SCF-IF-LABEL: func @rewrite_warp_op_to_scf_if_no_args(
+//  CHECK-SCF-IF-SAME:     %[[laneid:.*]]: index)
+func.func @rewrite_warp_op_to_scf_if_no_args(%laneid: index) {
+//       CHECK-SCF-IF:   %[[buffer:.*]] = memref.get_global @__shared_32xindex
+//   CHECK-SCF-IF-NOT:   memref.subview
+//       CHECK-SCF-IF:   scf.if
+  %r = gpu.warp_execute_on_lane_0(%laneid)[32] -> (vector<1xindex>) {
+    %step = vector.step : vector<32xindex>
+    gpu.yield %step : vector<32xindex>
+  }
+  "some_use"(%r) : (vector<1xindex>) -> ()
   return
 }
 
