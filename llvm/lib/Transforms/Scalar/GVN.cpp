@@ -2018,9 +2018,42 @@ bool GVNPass::performLoopLoadPRE(LoadInst *Load,
   if (LoadPtr->canBeFreed())
     return false;
 
-  // TODO: Support critical edge splitting if blocker has more than 1 successor.
+  // The reload is inserted at the end of the chosen in-loop block so its value
+  // reaches the header along the path back to the latch. If that block has
+  // multiple successors, inserting there would also run the load on paths that
+  // leave the loop. Split the critical edge to the unique in-loop successor so
+  // the reload only runs on the path that feeds the header.
+  BasicBlock *InsertBlock = LoopBlock;
+  if (LoopBlock->getTerminator()->getNumSuccessors() != 1) {
+    if (isa<IndirectBrInst>(LoopBlock->getTerminator()))
+      return false;
+
+    BasicBlock *InLoopSucc = nullptr;
+    for (BasicBlock *Succ : successors(LoopBlock)) {
+      if (!L->contains(Succ))
+        continue;
+      // Bail if there is more than one in-loop successor: it is unclear which
+      // edge feeds the header.
+      if (InLoopSucc)
+        return false;
+      InLoopSucc = Succ;
+    }
+    if (!InLoopSucc)
+      return false;
+
+    // Do not split a backedge unless explicitly enabled; it would break
+    // canonical loop form.
+    if (!isLoadPRESplitBackedgeEnabled() &&
+        DT->dominates(InLoopSucc, LoopBlock))
+      return false;
+
+    InsertBlock = splitCriticalEdges(LoopBlock, InLoopSucc);
+    if (!InsertBlock)
+      return false;
+  }
+
   MapVector<BasicBlock *, Value *> AvailableLoads;
-  AvailableLoads[LoopBlock] = LoadPtr;
+  AvailableLoads[InsertBlock] = LoadPtr;
   AvailableLoads[Preheader] = LoadPtr;
 
   LLVM_DEBUG(dbgs() << "GVN REMOVING PRE LOOP LOAD: " << *Load << '\n');

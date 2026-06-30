@@ -355,7 +355,8 @@ exit:
   ret i32 %x
 }
 
-; TODO: We can PRE via splitting of the critical edge in the cold path.
+; TODO: not PRE'd because the pointer may be freed, so reloading is unsafe.
+; The cold-path critical edge is split once the pointer is known non-freeable.
 define i32 @test_load_on_exiting_cold_path_01(ptr %p) {
 ; CHECK-LABEL: @test_load_on_exiting_cold_path_01(
 ; CHECK-NEXT:  entry:
@@ -407,7 +408,8 @@ cold_exit:
   ret i32 -1
 }
 
-; TODO: We can PRE via splitting of the critical edge in the cold path.
+; TODO: not PRE'd because the pointer may be freed, so reloading is unsafe.
+; The cold-path critical edge is split once the pointer is known non-freeable.
 define i32 @test_load_on_exiting_cold_path_02(ptr %p) gc "statepoint-example" personality ptr @personality_function {
 ; CHECK-LABEL: @test_load_on_exiting_cold_path_02(
 ; CHECK-NEXT:  entry:
@@ -462,9 +464,9 @@ cold_exit:
   ret i32 -1
 }
 
-; The gc-managed pointer cannot be freed, so loop-load PRE fires, but the
-; reload is sunk into the cold path and also runs on the loop side-exit.
-; TODO: split the critical edge so it only runs on the path back to the header.
+; PRE the load from gc-managed memory by splitting the critical edge in the
+; cold path. The reload runs only on the path back to the header, not on the
+; loop side-exit. The pointer is gc-managed so it cannot be freed.
 define i32 @test_load_on_exiting_cold_path_gc(ptr addrspace(1) %p) gc "statepoint-example" personality ptr @personality_function {
 ; CHECK-LABEL: @test_load_on_exiting_cold_path_gc(
 ; CHECK-NEXT:  entry:
@@ -479,10 +481,12 @@ define i32 @test_load_on_exiting_cold_path_gc(ptr addrspace(1) %p) gc "statepoin
 ; CHECK-NEXT:    br label [[BACKEDGE]]
 ; CHECK:       cold_path:
 ; CHECK-NEXT:    [[SIDE_COND:%.*]] = call i1 @side_effect_cond() #[[ATTR0]]
+; CHECK-NEXT:    br i1 [[SIDE_COND]], label [[COLD_PATH_BACKEDGE_CRIT_EDGE:%.*]], label [[COLD_EXIT:%.*]]
+; CHECK:       cold_path.backedge_crit_edge:
 ; CHECK-NEXT:    [[X_PRE:%.*]] = load i32, ptr addrspace(1) [[P]], align 4
-; CHECK-NEXT:    br i1 [[SIDE_COND]], label [[BACKEDGE]], label [[COLD_EXIT:%.*]]
+; CHECK-NEXT:    br label [[BACKEDGE]]
 ; CHECK:       backedge:
-; CHECK-NEXT:    [[X3]] = phi i32 [ [[X_PRE]], [[COLD_PATH]] ], [ [[X]], [[HOT_PATH]] ]
+; CHECK-NEXT:    [[X3]] = phi i32 [ [[X_PRE]], [[COLD_PATH_BACKEDGE_CRIT_EDGE]] ], [ [[X]], [[HOT_PATH]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], [[X]]
 ; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp ult i32 [[IV_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
@@ -519,9 +523,9 @@ cold_exit:
   ret i32 -1
 }
 
-; The function is nofree, so the pointer cannot be freed and loop-load PRE
-; fires, but the reload is sunk into the cold path and also runs on the loop
-; side-exit. TODO: split the critical edge so it only runs on the backedge.
+; PRE the load when the pointer cannot be freed because the enclosing function
+; is nofree. The cold-path critical edge is split so the reload runs only on
+; the path back to the header.
 define i32 @test_load_on_exiting_cold_path_nofree_fn(ptr %p) nofree {
 ; CHECK-LABEL: @test_load_on_exiting_cold_path_nofree_fn(
 ; CHECK-NEXT:  entry:
@@ -536,10 +540,12 @@ define i32 @test_load_on_exiting_cold_path_nofree_fn(ptr %p) nofree {
 ; CHECK-NEXT:    br label [[BACKEDGE]]
 ; CHECK:       cold_path:
 ; CHECK-NEXT:    [[SIDE_COND:%.*]] = call i1 @side_effect_cond() #[[ATTR0]]
+; CHECK-NEXT:    br i1 [[SIDE_COND]], label [[COLD_PATH_BACKEDGE_CRIT_EDGE:%.*]], label [[COLD_EXIT:%.*]]
+; CHECK:       cold_path.backedge_crit_edge:
 ; CHECK-NEXT:    [[X_PRE:%.*]] = load i32, ptr [[P]], align 4
-; CHECK-NEXT:    br i1 [[SIDE_COND]], label [[BACKEDGE]], label [[COLD_EXIT:%.*]]
+; CHECK-NEXT:    br label [[BACKEDGE]]
 ; CHECK:       backedge:
-; CHECK-NEXT:    [[X3]] = phi i32 [ [[X_PRE]], [[COLD_PATH]] ], [ [[X]], [[HOT_PATH]] ]
+; CHECK-NEXT:    [[X3]] = phi i32 [ [[X_PRE]], [[COLD_PATH_BACKEDGE_CRIT_EDGE]] ], [ [[X]], [[HOT_PATH]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], [[X]]
 ; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp ult i32 [[IV_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
@@ -684,7 +690,9 @@ exit:
   ret i32 %x
 }
 
-; TODO: We can PRE via splitting of the critical edge in the cold path. Make sure we only insert 1 load.
+; TODO: not PRE'd because the pointer may be freed, so reloading is unsafe.
+; The cold-path critical edge is split once the pointer is known non-freeable,
+; inserting a single reload before the latch.
 define i32 @test_load_on_multi_exiting_cold_path(ptr %p) {
 ; CHECK-LABEL: @test_load_on_multi_exiting_cold_path(
 ; CHECK-NEXT:  entry:
