@@ -16,7 +16,6 @@
 #include "PrimType.h"
 #include "Program.h"
 #include "clang/AST/Attr.h"
-#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "llvm/Support/SaveAndRestore.h"
 
 using namespace clang;
@@ -5402,15 +5401,22 @@ bool Compiler<Emitter>::visitDtorCall(const VarDecl *VD, const APValue &Value) {
   return this->emitDestructionPop(D, VD);
 }
 
-class ParamFinder : public ConstDynamicRecursiveASTVisitor {
+class ParamFinder final {
 public:
   llvm::SmallPtrSet<const ParmVarDecl *, 1> FoundParams;
-  explicit ParamFinder() {}
+  void visit(const Stmt *S) {
+    llvm::SmallVector<const Stmt *> WorkList(1, S);
+    while (!WorkList.empty()) {
+      const Stmt *WorkItem = WorkList.pop_back_val();
+      if (const auto *DRE = dyn_cast<DeclRefExpr>(WorkItem)) {
+        if (const auto *P = dyn_cast<ParmVarDecl>(DRE->getDecl()))
+          FoundParams.insert(P);
+        continue;
+      }
 
-  bool VisitDeclRefExpr(const DeclRefExpr *E) override {
-    if (const auto *P = dyn_cast<ParmVarDecl>(E->getDecl()))
-      FoundParams.insert(P);
-    return true;
+      for (const Stmt *Child : WorkItem->children())
+        WorkList.push_back(Child);
+    }
   }
 };
 
@@ -5443,7 +5449,7 @@ bool Compiler<Emitter>::visitWithSubstitutions(const FunctionDecl *Callee,
   // failure might be inconsequential in the end,
   // e.g. in the case of `true || x`.
   ParamFinder PF;
-  PF.TraverseStmt(Condition);
+  PF.visit(Condition);
 
   LocalScope<Emitter> ArgScope(this);
   for (const ParmVarDecl *PVD : PF.FoundParams) {
