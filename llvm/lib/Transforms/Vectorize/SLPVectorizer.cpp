@@ -2210,6 +2210,12 @@ public:
     return VectorizableTree.front()->Scalars;
   }
 
+  /// Returns the lane the given value is vectorized to in the root node.
+  unsigned findRootLaneForValue(Value *V) const {
+    assert(!VectorizableTree.empty() && "No graph to get the first node from");
+    return VectorizableTree.front()->findLaneForValue(V);
+  }
+
   /// Returns the type/is-signed info for the root node in the graph without
   /// casting.
   std::optional<std::pair<Type *, bool>> getRootNodeTypeWithNoCast() const {
@@ -7010,14 +7016,10 @@ static bool isReverseOrder(ArrayRef<unsigned> Order) {
 /// %x + c_2 * stride
 /// ...
 /// ```
-/// where each `c_i` is constant. The `Coeffs` will contain `c_0, c_1, c_2, ..`
-/// and the SCEV of the `stride` will be returned.
+/// where each `c_i` is constant. The SCEV of the `stride` will be returned.
 static const SCEV *calculateRtStride(ArrayRef<Value *> PointerOps, Type *ElemTy,
                                      const DataLayout &DL, ScalarEvolution &SE,
-                                     SmallVectorImpl<unsigned> &SortedIndices,
-                                     SmallVectorImpl<int64_t> &Coeffs) {
-  assert(Coeffs.size() == PointerOps.size() &&
-         "Coeffs vector needs to be of correct size");
+                                     SmallVectorImpl<unsigned> &SortedIndices) {
   SmallVector<const SCEV *> SCEVs;
   const SCEV *PtrSCEVLowest = nullptr;
   const SCEV *PtrSCEVHighest = nullptr;
@@ -7080,7 +7082,6 @@ static const SCEV *calculateRtStride(ArrayRef<Value *> PointerOps, Type *ElemTy,
   using DistOrdPair = std::pair<int64_t, int>;
   auto Compare = llvm::less_first();
   std::set<DistOrdPair, decltype(Compare)> Offsets(Compare);
-  int Cnt = 0;
   bool IsConsecutive = true;
   for (const auto [Idx, PtrSCEV] : enumerate(SCEVs)) {
     unsigned Dist = 0;
@@ -7092,36 +7093,27 @@ static const SCEV *calculateRtStride(ArrayRef<Value *> PointerOps, Type *ElemTy,
       const auto *SC = dyn_cast<SCEVConstant>(Coeff);
       if (!SC || isa<SCEVCouldNotCompute>(SC))
         return nullptr;
-      Coeffs[Idx] = (int64_t)SC->getAPInt().getLimitedValue();
       if (!SE.getMinusSCEV(PtrSCEV, SE.getAddExpr(PtrSCEVLowest,
                                                   SE.getMulExpr(Stride, SC)))
                ->isZero())
         return nullptr;
       Dist = SC->getAPInt().getZExtValue();
-    } else {
-      Coeffs[Idx] = 0;
     }
     // If the strides are not the same or repeated, we can't vectorize.
     if ((Dist / Size) * Size != Dist || (Dist / Size) >= SCEVs.size())
       return nullptr;
-    auto Res = Offsets.emplace(Dist, Cnt);
+    auto Res = Offsets.emplace(Dist, Idx);
     if (!Res.second)
       return nullptr;
     // Consecutive order if the inserted element is the last one.
     IsConsecutive = IsConsecutive && std::next(Res.first) == Offsets.end();
-    ++Cnt;
   }
-  if (Offsets.size() != SCEVs.size())
-    return nullptr;
   SortedIndices.clear();
   if (!IsConsecutive) {
     // Fill SortedIndices array only if it is non-consecutive.
     SortedIndices.resize(PointerOps.size());
-    Cnt = 0;
-    for (const std::pair<int64_t, int> &Pair : Offsets) {
-      SortedIndices[Cnt] = Pair.second;
-      ++Cnt;
-    }
+    for (const auto [Idx, Pair] : enumerate(Offsets))
+      SortedIndices[Idx] = Pair.second;
   }
   return Stride;
 }
@@ -7619,7 +7611,7 @@ bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
   // `PointerOps` and their indicies in `PointerOps`.
   SmallDenseMap<int64_t, std::pair<SmallVector<Value *>, SmallVector<unsigned>>>
       OffsetToPointerOpIdxMap;
-  // Track to make sure that only VecSz different base pointers are consumed
+  // Track to make sure that only VecSz different stride multiples are consumed
   // Prevents cases such as:
   // 1, x + 0, x + 1, 2x + 0 from being recognized as legal RT strided as there
   // are 2 "0" and 2 "1" offsets and a stride of "x" between both offsets
@@ -7746,13 +7738,9 @@ bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
   // PointerOps_(NumOffsets - 1)[SortedIndices_(NumOffsets - 1)[VecSz - 1]] =
   // PointerOps[IndicesInAllPointerOps_(NumOffsets - 1)[VecSz - 1]],
   // ```
-  // In order to be able to generate a strided load, we need the following
-  // checks to pass:
-  //
-  //  (1) for each `PointerOps_j` check that the distance
-  // between adjacent pointers are all equal to the same value (stride).
-  //  (2) for each `PointerOps_j` check that coefficients calculated by
-  //  `calculateRtStride` are all the same.
+  // In order to be able to generate a strided load, for each `PointerOps_j`
+  // check that the distance between adjacent pointers are all equal to the same
+  // value (stride).
   //
   // As we do that, also calculate SortedIndices. Since we should not modify
   // `SortedIndices` unless we know that all the checks succeed, record the
@@ -7784,16 +7772,11 @@ bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
   int64_t LowestOffset = SortedOffsetsV[0];
   ArrayRef<Value *> PointerOps0 = OffsetToPointerOpIdxMap[LowestOffset].first;
 
-  SmallVector<int64_t> Coeffs0(VecSz);
   SmallVector<unsigned> SortedIndicesForOffset0;
-  const SCEV *Stride0 = calculateRtStride(PointerOps0, BaseTy, *DL, *SE,
-                                          SortedIndicesForOffset0, Coeffs0);
+  const SCEV *Stride0 =
+      calculateRtStride(PointerOps0, BaseTy, *DL, *SE, SortedIndicesForOffset0);
   if (!Stride0)
     return false;
-  unsigned NumCoeffs0 = Coeffs0.size();
-  if (NumCoeffs0 * NumOffsets != Sz)
-    return false;
-  sort(Coeffs0);
 
   ArrayRef<unsigned> IndicesInAllPointerOps0 =
       OffsetToPointerOpIdxMap[LowestOffset].second;
@@ -7801,11 +7784,8 @@ bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
 
   // Now that we know what the common stride and coefficients has to be check
   // the remaining `PointerOps_j`.
-  SmallVector<int64_t> Coeffs;
   SmallVector<unsigned> SortedIndicesForOffset;
   for (int J : seq<int>(1, NumOffsets)) {
-    Coeffs.clear();
-    Coeffs.resize(VecSz);
     SortedIndicesForOffset.clear();
 
     int64_t Offset = SortedOffsetsV[J];
@@ -7814,14 +7794,9 @@ bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
     ArrayRef<unsigned> IndicesInAllPointerOps =
         OffsetToPointerOpIdxMap[Offset].second;
     const SCEV *StrideWithinGroup = calculateRtStride(
-        PointerOpsForOffset, BaseTy, *DL, *SE, SortedIndicesForOffset, Coeffs);
+        PointerOpsForOffset, BaseTy, *DL, *SE, SortedIndicesForOffset);
 
     if (!StrideWithinGroup || StrideWithinGroup != Stride0)
-      return false;
-    if (Coeffs.size() != NumCoeffs0)
-      return false;
-    sort(Coeffs);
-    if (Coeffs != Coeffs0)
       return false;
 
     UpdateSortedIndices(SortedIndicesForOffset, IndicesInAllPointerOps, J);
@@ -23361,6 +23336,24 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
            return !SI || isCommutative(SI);
          })))
       I->setHasNoUnsignedWrap(/*b=*/false);
+    // add nsw X, INT_MIN is not equivalent to sub nsw X, INT_MIN, because
+    // negating INT_MIN overflows. When an add/sub lane is converted to the
+    // opposite opcode its constant is negated, so nsw no longer holds and must
+    // be dropped.
+    if (!MinBWs.contains(E) &&
+        (Opcode == Instruction::Add || Opcode == Instruction::Sub) &&
+        any_of(UniqueInsts, [&](Value *V) {
+          auto *SI = cast<Instruction>(V);
+          if (SI->getOpcode() == Opcode ||
+              !is_contained({Instruction::Add, Instruction::Sub},
+                            SI->getOpcode()))
+            return false;
+          return any_of(SI->operands(), [](Value *Op) {
+            const auto *CI = dyn_cast<ConstantInt>(Op);
+            return CI && CI->getValue().isMinSignedValue();
+          });
+        }))
+      I->setHasNoSignedWrap(/*b=*/false);
     if (auto *ICmp = dyn_cast<ICmpInst>(I); ICmp && It == MinBWs.end())
       ICmp->setSameSign(/*B=*/false);
     return I;
@@ -28935,10 +28928,7 @@ public:
       return RecurKind::FMaximum;
     if (match(I, m_FMinimum(m_Value(), m_Value())))
       return RecurKind::FMinimum;
-    // This matches either cmp+select or intrinsics. SLP is expected to handle
-    // either form.
-    // TODO: If we are canonicalizing to intrinsics, we can remove several
-    //       special-case paths that deal with selects.
+    // TODO: remove several special-case paths that deal with selects.
     if (match(I, m_SMax(m_Value(), m_Value())))
       return RecurKind::SMax;
     if (match(I, m_SMin(m_Value(), m_Value())))
@@ -29663,6 +29653,13 @@ public:
       SmallVector<Value *> Candidates;
       Candidates.reserve(2 * OrigReducedVals.size());
       SmallVector<Value *> TrackedToOrig;
+      // Reduced values that were replaced by an extractelement (because they
+      // were vectorized in another reduction subset or operand cone) and are
+      // not compatible with this group. They are not vectorized again here, but
+      // they are still live and consumed by the final reduction, so they must
+      // be kept externally used to avoid erasing them while vectorizing this
+      // group, which may use them as operands.
+      SmallVector<Value *> ExcludedVectorizedReducedVals;
       for (Value *ReducedVal : OrigReducedVals) {
         Value *RdxVal = TrackedVals.at(ReducedVal);
         // Check if the reduction value was not overriden by the extractelement
@@ -29672,11 +29669,14 @@ public:
         auto *Inst = dyn_cast<Instruction>(RdxVal);
         if (Inst && V.isDeleted(Inst))
           continue;
-        if ((Inst && isVectorLikeInstWithConstOps(Inst) &&
-             (!S || (!S.getMatchingMainOpOrAltOp(Inst) &&
-                     !S.isCopyableElement(Inst)))) ||
-            (S && !Inst && !isa<PoisonValue>(RdxVal) &&
-             !S.isCopyableElement(RdxVal)))
+        if (Inst && isVectorLikeInstWithConstOps(Inst) &&
+            (!S || (!S.getMatchingMainOpOrAltOp(Inst) &&
+                    !S.isCopyableElement(Inst)))) {
+          ExcludedVectorizedReducedVals.push_back(RdxVal);
+          continue;
+        }
+        if (S && !Inst && !isa<UndefValue>(RdxVal) &&
+            !S.isCopyableElement(RdxVal))
           continue;
         Candidates.push_back(RdxVal);
         TrackedToOrig.push_back(ReducedVal);
@@ -29756,6 +29756,8 @@ public:
       bool OptReusedScalars = IsSupportedHorRdxIdentityOp &&
                               SameValuesCounter.size() != Candidates.size();
       BoUpSLP::ExtraValueToDebugLocsMap ExternallyUsedValues;
+      for (Value *RdxVal : ExcludedVectorizedReducedVals)
+        ExternallyUsedValues.insert(RdxVal);
       if (OptReusedScalars) {
         SameScaleFactor =
             (RdxKind == RecurKind::Add || RdxKind == RecurKind::FAdd ||
@@ -30045,18 +30047,17 @@ public:
 
         // Emit code to correctly handle reused reduced values, if required.
         if (OptReusedScalars && !SameScaleFactor) {
-          // Build TrackedToOrig aligned with the root node scalars order,
-          // which may differ from Candidates order due to tree reordering.
+          // The reuse counters are stored in the deduplicated candidates
+          // order, but the emitted reduction vector lane order is defined by
+          // the root node, which may be reordered, split or have copyable
+          // elements. Place each counter at the lane the matching candidate is
+          // vectorized to, so the counter is applied to the correct lane.
           ArrayRef<Value *> RootVL = V.getRootNodeScalars();
           ArrayRef<Value *> CandSlice(Candidates.begin() + Pos, ReduxWidth);
           SmallVector<Value *> RootTrackedToOrig(RootVL.size());
-          for (auto [Idx, V] : enumerate(RootVL)) {
-            auto *It = find(CandSlice, V);
-            assert(It != CandSlice.end() &&
-                   "Root scalar not found in candidates");
-            RootTrackedToOrig[Idx] =
-                TrackedToOrig[Pos + std::distance(CandSlice.begin(), It)];
-          }
+          for (auto [Idx, Val] : enumerate(CandSlice))
+            RootTrackedToOrig[V.findRootLaneForValue(Val)] =
+                TrackedToOrig[Pos + Idx];
           VectorizedRoot = emitReusedOps(VectorizedRoot, Builder, V,
                                          SameValuesCounter, RootTrackedToOrig);
         }

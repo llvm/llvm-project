@@ -235,6 +235,10 @@ static unsigned getRelaxedOpcode(unsigned Opcode, ArrayRef<MCOperand> Operands,
     return RISCV::PseudoLongQC_E_BLTUI;
   case RISCV::QC_E_BGEUI:
     return RISCV::PseudoLongQC_E_BGEUI;
+  case RISCV::CV_BEQIMM:
+    return RISCV::PseudoLongCV_BEQIMM;
+  case RISCV::CV_BNEIMM:
+    return RISCV::PseudoLongCV_BNEIMM;
   }
 
   // Returning the original opcode means we cannot relax the instruction.
@@ -310,6 +314,8 @@ void RISCVAsmBackend::relaxInstruction(MCInst &Inst,
   case RISCV::QC_E_BGEI:
   case RISCV::QC_E_BLTUI:
   case RISCV::QC_E_BGEUI:
+  case RISCV::CV_BEQIMM:
+  case RISCV::CV_BNEIMM:
     Res.setOpcode(getRelaxedOpcode(Inst.getOpcode(), Inst.getOperands(), STI));
     Res.addOperand(Inst.getOperand(0));
     Res.addOperand(Inst.getOperand(1));
