@@ -1090,21 +1090,24 @@ void Verifier::visitDISubrangeType(const DISubrangeType &N) {
   auto *LBound = N.getRawLowerBound();
   CheckDI(!LBound || isa<ConstantAsMetadata>(LBound) ||
               isa<DIVariable>(LBound) || isa<DIExpression>(LBound) ||
-              isa<DIDerivedType>(LBound),
+              isa<DIDerivedType>(LBound) || isa<DIVariableExpression>(LBound),
           "LowerBound must be signed constant or DIVariable or DIExpression or "
-          "DIDerivedType",
+          "DIDerivedType or DIVariableExpression",
           &N);
   auto *UBound = N.getRawUpperBound();
   CheckDI(!UBound || isa<ConstantAsMetadata>(UBound) ||
               isa<DIVariable>(UBound) || isa<DIExpression>(UBound) ||
-              isa<DIDerivedType>(UBound),
+              isa<DIDerivedType>(UBound) || isa<DIVariableExpression>(UBound),
           "UpperBound must be signed constant or DIVariable or DIExpression or "
-          "DIDerivedType",
+          "DIDerivedType or DIVariableExpression",
           &N);
   auto *Stride = N.getRawStride();
   CheckDI(!Stride || isa<ConstantAsMetadata>(Stride) ||
-              isa<DIVariable>(Stride) || isa<DIExpression>(Stride),
-          "Stride must be signed constant or DIVariable or DIExpression", &N);
+              isa<DIVariable>(Stride) || isa<DIExpression>(Stride) ||
+              isa<DIVariableExpression>(Stride),
+          "Stride must be signed constant or DIVariable or DIExpression or "
+          "DIVariableExpression",
+          &N);
   auto *Bias = N.getRawBias();
   CheckDI(!Bias || isa<ConstantAsMetadata>(Bias) || isa<DIVariable>(Bias) ||
               isa<DIExpression>(Bias),
@@ -1290,8 +1293,9 @@ void Verifier::visitDIDerivedType(const DIDerivedType &N) {
 
   auto *Size = N.getRawSizeInBits();
   CheckDI(!Size || isa<ConstantAsMetadata>(Size) || isa<DIVariable>(Size) ||
-              isa<DIExpression>(Size),
-          "SizeInBits must be a constant or DIVariable or DIExpression");
+              isa<DIExpression>(Size) || isa<DIVariableExpression>(Size),
+          "SizeInBits must be a constant or DIVariable or DIExpression or "
+          "DIVariableExpression");
 }
 
 /// Detect mutually exclusive flags.
@@ -1379,10 +1383,22 @@ void Verifier::visitDICompositeType(const DICompositeType &N) {
     CheckDI(N.getRawBaseType(), "array types must have a base type", &N);
   }
 
+  auto *Stride = N.getRawBitStride();
+  if (N.getTag() == dwarf::DW_TAG_array_type) {
+    CheckDI(!Stride || isa<ConstantAsMetadata>(Stride) ||
+                isa<DIVariable>(Stride) || isa<DIExpression>(Stride) ||
+                isa<DIVariableExpression>(Stride),
+            "BitStride must be a constant or DIVariable or DIExpression or "
+            "DIVariableExpression");
+  } else {
+    CheckDI(!Stride, "BitStride is only valid for DW_TAG_array_type");
+  }
+
   auto *Size = N.getRawSizeInBits();
   CheckDI(!Size || isa<ConstantAsMetadata>(Size) || isa<DIVariable>(Size) ||
-              isa<DIExpression>(Size),
-          "SizeInBits must be a constant or DIVariable or DIExpression");
+              isa<DIExpression>(Size) || isa<DIVariableExpression>(Size),
+          "SizeInBits must be a constant or DIVariable or DIExpression or "
+          "DIVariableExpression");
 }
 
 void Verifier::visitDISubroutineType(const DISubroutineType &N) {
@@ -1732,6 +1748,18 @@ void Verifier::visitDIGlobalVariableExpression(
     visitDIExpression(*Expr);
     if (auto Fragment = Expr->getFragmentInfo())
       verifyFragmentExpression(*GVE.getVariable(), *Fragment, &GVE);
+  }
+}
+
+void Verifier::visitDIVariableExpression(const DIVariableExpression &N) {
+  CheckDI(N.getExpression(), "missing expression");
+  if (auto *Expr = N.getExpression())
+    visitDIExpression(*Expr);
+  if (auto *Vars = N.getRawVariableArray()) {
+    CheckDI(isa<MDTuple>(Vars), "invalid composite elements", &N, Vars);
+    for (Metadata *V : N.getVariableArray()->operands()) {
+      CheckDI(isa<DIVariable>(V), "invalid variable", &N);
+    }
   }
 }
 

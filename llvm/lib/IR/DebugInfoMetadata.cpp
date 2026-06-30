@@ -839,7 +839,8 @@ DISubrangeType::convertRawToBound(Metadata *IN) const {
     return BoundType();
 
   assert(isa<ConstantAsMetadata>(IN) || isa<DIVariable>(IN) ||
-         isa<DIExpression>(IN) || isa<DIDerivedType>(IN));
+         isa<DIExpression>(IN) || isa<DIDerivedType>(IN) ||
+         isa<DIVariableExpression>(IN));
 
   if (auto *MD = dyn_cast<ConstantAsMetadata>(IN))
     return BoundType(cast<ConstantInt>(MD->getValue()));
@@ -852,6 +853,9 @@ DISubrangeType::convertRawToBound(Metadata *IN) const {
 
   if (auto *DT = dyn_cast<DIDerivedType>(IN))
     return BoundType(DT);
+
+  if (auto *VE = dyn_cast<DIVariableExpression>(IN))
+    return BoundType(VE);
 
   return BoundType();
 }
@@ -2615,6 +2619,16 @@ DIExpression *DIExpression::appendExt(const DIExpression *Expr,
                                       unsigned FromSize, unsigned ToSize,
                                       bool Signed) {
   return appendToStack(Expr, getExtOps(FromSize, ToSize, Signed));
+}
+
+DIVariableExpression *DIVariableExpression::getImpl(LLVMContext &Context,
+                                                    Metadata *Expr,
+                                                    Metadata *VarArray,
+                                                    StorageType Storage,
+                                                    bool ShouldCreate) {
+  DEFINE_GETIMPL_LOOKUP(DIVariableExpression, (Expr, VarArray));
+  Metadata *Ops[] = {Expr, VarArray};
+  DEFINE_GETIMPL_STORE_NO_CONSTRUCTOR_ARGS(DIVariableExpression, Ops);
 }
 
 DIGlobalVariableExpression *

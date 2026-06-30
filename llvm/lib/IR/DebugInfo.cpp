@@ -247,6 +247,11 @@ void DebugInfoFinder::processVariable(DIVariable *DV) {
     processVariable(DLV);
 }
 
+void DebugInfoFinder::processVariableExpression(DIVariableExpression *DVE) {
+  for (auto *V : DVE->getVariableArray())
+    processVariable(dyn_cast_or_null<DIVariable>(V));
+}
+
 void DebugInfoFinder::processType(DIType *DT) {
   if (!addType(DT))
     return;
@@ -264,6 +269,14 @@ void DebugInfoFinder::processType(DIType *DT) {
     processVariable(DCT->getDataLocation());
     processVariable(DCT->getAssociated());
     processVariable(DCT->getAllocated());
+    if (auto *DVE =
+            dyn_cast_or_null<DIVariableExpression>(DCT->getRawBitStride()))
+      processVariableExpression(DVE);
+    if (auto *DV = dyn_cast_or_null<DIVariable>(DCT->getRawSizeInBits()))
+      processVariable(DV);
+    else if (auto *DVE = dyn_cast_or_null<DIVariableExpression>(
+                 DCT->getRawSizeInBits()))
+      processVariableExpression(DVE);
     for (Metadata *D : DCT->getElements()) {
       if (auto *T = dyn_cast<DIType>(D))
         processType(T);
@@ -302,6 +315,8 @@ void DebugInfoFinder::processType(DIType *DT) {
         processVariable(V);
       else if (auto *T = dyn_cast_if_present<DIDerivedType *>(Bound))
         processType(T);
+      else if (auto *DVE = dyn_cast_if_present<DIVariableExpression *>(Bound))
+        processVariableExpression(DVE);
     };
     VisitBound(SRT->getLowerBound());
     VisitBound(SRT->getUpperBound());
@@ -311,6 +326,16 @@ void DebugInfoFinder::processType(DIType *DT) {
   }
   if (auto *DDT = dyn_cast<DIDerivedType>(DT)) {
     processType(DDT->getBaseType());
+    if (auto *DV = dyn_cast_or_null<DIVariable>(DDT->getRawSizeInBits()))
+      processVariable(DV);
+    else if (auto *DVE = dyn_cast_or_null<DIVariableExpression>(
+                 DDT->getRawSizeInBits()))
+      processVariableExpression(DVE);
+    if (auto *DV = dyn_cast_or_null<DIVariable>(DDT->getRawOffsetInBits()))
+      processVariable(DV);
+    else if (auto *DVE = dyn_cast_or_null<DIVariableExpression>(
+                 DDT->getRawOffsetInBits()))
+      processVariableExpression(DVE);
   }
 }
 
