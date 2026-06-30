@@ -1139,6 +1139,29 @@ def ConvertPDLToPDLInterpPass : Pass<"convert-pdl-to-pdl-interp", "ModuleOp"> {
 }
 
 //===----------------------------------------------------------------------===//
+// PtrToSPIRV
+//===----------------------------------------------------------------------===//
+
+def ConvertPtrToSPIRVPass : Pass<"convert-ptr-to-spirv"> {
+  let summary = "Convert Ptr dialect operations to SPIR-V dialect operations";
+  let description = [{
+    This pass lowers supported Ptr dialect operations to SPIR-V operations.
+    Ptr dialect pointer types are converted to address integer types. Memory
+    operations materialize SPIR-V pointer types in the selected storage class.
+    The default storage class is PhysicalStorageBuffer, which enables physical
+    buffer address style pointer arithmetic.
+  }];
+
+  let dependentDialects = ["ptr::PtrDialect", "spirv::SPIRVDialect"];
+
+  let options = [
+    Option<"storageClass", "storage-class", "std::string",
+           /*default=*/"\"PhysicalStorageBuffer\"",
+           "SPIR-V storage class to use for materialized pointer accesses">
+  ];
+}
+
+//===----------------------------------------------------------------------===//
 // ReconcileUnrealizedCasts
 //===----------------------------------------------------------------------===//
 
