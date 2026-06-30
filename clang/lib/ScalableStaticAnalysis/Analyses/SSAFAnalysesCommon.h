@@ -109,7 +109,7 @@ void extractAndAddSummaries(TUSummaryExtractor &Extractor,
       Contributors;
   findContributors(Ctx, Contributors);
   for (const auto &[Cano, Decls] : Contributors) {
-    assert(Decls.size() > 0 && !Decls[0]->isImplicit() &&
+    assert(!Decls.empty() && !Decls[0]->isImplicit() &&
            "guaranteed by 'findContributors'");
     const NamedDecl *Rep = Cano->isImplicit() ? Decls[0] : Cano;
 
