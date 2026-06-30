@@ -142,7 +142,8 @@ void DefaultInlineAdvice::recordInliningImpl() {
 }
 
 std::optional<llvm::InlineCost> static getDefaultInlineAdvice(
-    CallBase &CB, FunctionAnalysisManager &FAM, const InlineParams &Params) {
+    CallBase &CB, FunctionAnalysisManager &FAM, const InlineParams &Params,
+    bool IsInlinedCall) {
   Function &Caller = *CB.getCaller();
   ProfileSummaryInfo *PSI =
       FAM.getResult<ModuleAnalysisManagerFunctionProxy>(Caller)
@@ -172,7 +173,7 @@ std::optional<llvm::InlineCost> static getDefaultInlineAdvice(
             DEBUG_TYPE);
     return getInlineCost(CB, Params, CalleeTTI, GetAssumptionCache, GetTLI,
                          GetBFI, PSI, RemarksEnabled ? &ORE : nullptr,
-                         GetEphValuesCache);
+                         GetEphValuesCache, IsInlinedCall);
   };
   return llvm::shouldInline(
       CB, CalleeTTI, GetInlineCost, ORE,
@@ -180,8 +181,8 @@ std::optional<llvm::InlineCost> static getDefaultInlineAdvice(
 }
 
 std::unique_ptr<InlineAdvice>
-DefaultInlineAdvisor::getAdviceImpl(CallBase &CB) {
-  auto OIC = getDefaultInlineAdvice(CB, FAM, Params);
+DefaultInlineAdvisor::getAdviceImpl(CallBase &CB, bool IsInlinedCall) {
+  auto OIC = getDefaultInlineAdvice(CB, FAM, Params, IsInlinedCall);
   return std::make_unique<DefaultInlineAdvice>(
       this, CB, OIC,
       FAM.getResult<OptimizationRemarkEmitterAnalysis>(*CB.getCaller()));
@@ -237,8 +238,8 @@ bool InlineAdvisorAnalysis::Result::tryCreate(
     Advisor.reset(DA.Factory(M, FAM, Params, IC));
     return !!Advisor;
   }
-  auto GetDefaultAdvice = [&FAM, Params](CallBase &CB) {
-    auto OIC = getDefaultInlineAdvice(CB, FAM, Params);
+  auto GetDefaultAdvice = [&FAM, Params](CallBase &CB, bool IsInlinedCall) {
+    auto OIC = getDefaultInlineAdvice(CB, FAM, Params, IsInlinedCall);
     return OIC.has_value();
   };
   switch (Mode) {
@@ -644,10 +645,10 @@ InlineAdvisor::getMandatoryKind(CallBase &CB, FunctionAnalysisManager &FAM,
   return MandatoryInliningKind::NotMandatory;
 }
 
-std::unique_ptr<InlineAdvice> InlineAdvisor::getAdvice(CallBase &CB,
-                                                       bool MandatoryOnly) {
+std::unique_ptr<InlineAdvice>
+InlineAdvisor::getAdvice(CallBase &CB, bool MandatoryOnly, bool IsInlinedCall) {
   if (!MandatoryOnly)
-    return getAdviceImpl(CB);
+    return getAdviceImpl(CB, IsInlinedCall);
   bool Advice = CB.getCaller() != CB.getCalledFunction() &&
                 MandatoryInliningKind::Always ==
                     getMandatoryKind(CB, FAM, getCallerORE(CB));
