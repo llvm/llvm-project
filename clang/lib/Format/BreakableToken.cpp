@@ -506,6 +506,8 @@ BreakableBlockComment::BreakableBlockComment(
   }
 
   Decoration = "* ";
+  if (Style.ReflowCommentsNoStar)
+    Decoration = "";
   if (Lines.size() == 1 && !FirstInLine) {
     // Comments for which FirstInLine is false can start on arbitrary column,
     // and available horizontal space can be too small to align consecutive
