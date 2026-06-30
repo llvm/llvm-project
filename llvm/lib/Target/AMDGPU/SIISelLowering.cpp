@@ -21,6 +21,7 @@
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIMachineFunctionInfo.h"
 #include "SIRegisterInfo.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/ADT/Statistic.h"
@@ -1028,6 +1029,17 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
   if (Subtarget->hasBF16TransInsts()) {
     setOperationAction({ISD::FEXP2, ISD::FLOG2, ISD::FSQRT}, MVT::bf16, Legal);
+  }
+
+  if (Subtarget->hasOCPFP8ConversionInsts()) {
+    setOperationAction(ISD::CONVERT_FROM_ARBITRARY_FP, {MVT::f32, MVT::v2f32},
+                       Custom);
+    setOperationAction(ISD::CONVERT_FROM_ARBITRARY_FP, MVT::v2i8, Custom);
+  }
+
+  if (Subtarget->hasFP8F16ConversionInsts()) {
+    setOperationAction(ISD::CONVERT_FROM_ARBITRARY_FP, {MVT::f16, MVT::v2f16},
+                       Custom);
   }
 
   if (Subtarget->hasCvtPkF16F32Inst()) {
@@ -7591,6 +7603,8 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerExternalSymbol(Op, DAG);
   case ISD::INTRINSIC_WO_CHAIN:
     return LowerINTRINSIC_WO_CHAIN(Op, DAG);
+  case ISD::CONVERT_FROM_ARBITRARY_FP:
+    return LowerCONVERT_FROM_ARBITRARY_FP(Op, DAG);
   case ISD::INTRINSIC_W_CHAIN:
     return LowerINTRINSIC_W_CHAIN(Op, DAG);
   case ISD::INTRINSIC_VOID:
@@ -10794,6 +10808,72 @@ SDValue SITargetLowering::lowerWorkitemID(SelectionDAG &DAG, SDValue Op,
   EVT SmallVT = EVT::getIntegerVT(*DAG.getContext(), llvm::bit_width(MaxID));
   return DAG.getNode(ISD::AssertZext, SL, MVT::i32, Val,
                      DAG.getValueType(SmallVT));
+}
+
+// Pack a vector of i8 lanes into i32 via bitcast.
+// FIXME: packing loses lane-wise poison. Should we do something about it?
+SDValue SITargetLowering::packBytesToI32(SelectionDAG &DAG, const SDLoc &SL,
+                                         SDValue Src) {
+  assert(Src.getValueType() == MVT::v2i8 &&
+         "packBytesToI32 expects a v2i8 source");
+  // Widen v2i8 to v4i8 with the high half poison, then bitcast to i32. This
+  // selects to v_perm_b32, packing two i8 values into low 16 bits of an i32.
+  SDValue Wide = DAG.getNode(ISD::CONCAT_VECTORS, SL, MVT::v4i8, Src,
+                             DAG.getPOISON(MVT::v2i8));
+  return DAG.getNode(ISD::BITCAST, SL, MVT::i32, Wide);
+}
+
+SDValue SITargetLowering::lowerFromFP8ToF32(SDValue Op, bool IsBF8,
+                                            SelectionDAG &DAG) const {
+  SDLoc SL(Op);
+  SDValue Src = Op.getOperand(0);
+  unsigned Opc = IsBF8 ? AMDGPUISD::CVT_PK_F32_BF8 : AMDGPUISD::CVT_PK_F32_FP8;
+  SDValue PackedI32 = packBytesToI32(DAG, SL, Src);
+  return DAG.getNode(Opc, SL, MVT::v2f32, PackedI32);
+}
+
+SDValue SITargetLowering::lowerFromFP8ToF16(SDValue Op, bool IsBF8,
+                                            SelectionDAG &DAG) const {
+  assert(Subtarget->hasFP8F16ConversionInsts() &&
+         "fp8/bf8 -> f16 conversion requires FP8F16ConversionInsts");
+  SDLoc SL(Op);
+  SDValue Src = Op.getOperand(0);
+  unsigned Opc = IsBF8 ? AMDGPUISD::CVT_PK_F16_BF8 : AMDGPUISD::CVT_PK_F16_FP8;
+  SDValue PackedI32 = packBytesToI32(DAG, SL, Src);
+  SDValue PackedI16 = DAG.getNode(ISD::TRUNCATE, SL, MVT::i16, PackedI32);
+  return DAG.getNode(Opc, SL, MVT::v2f16, PackedI16);
+}
+
+SDValue
+SITargetLowering::LowerCONVERT_FROM_ARBITRARY_FP(SDValue Op,
+                                                 SelectionDAG &DAG) const {
+  // Only handle OCP FP8 formats (E4M3FN, E5M2). FNUZ formats that are supported
+  // by gfx942 fall through to the generic expansion.
+  APFloatBase::Semantics FPSemantic =
+      static_cast<APFloatBase::Semantics>(Op.getConstantOperandVal(1));
+  if (FPSemantic != APFloatBase::S_Float8E4M3FN &&
+      FPSemantic != APFloatBase::S_Float8E5M2)
+    return SDValue();
+  const bool IsBF8 = FPSemantic == APFloatBase::S_Float8E5M2;
+
+  EVT DstVT = Op.getValueType();
+  if (!DstVT.isVector()) {
+    SDValue Src = Op.getOperand(0);
+    if (Src.getValueType() != MVT::i32) {
+      SDLoc SL(Op);
+      SDValue SrcI32 = DAG.getAnyExtOrTrunc(Src, SL, MVT::i32);
+      return DAG.getNode(ISD::CONVERT_FROM_ARBITRARY_FP, SL, DstVT, SrcI32,
+                         Op.getOperand(1));
+    }
+    return Op;
+  }
+
+  EVT EltVT = DstVT.getVectorElementType();
+  if (EltVT == MVT::f16)
+    return lowerFromFP8ToF16(Op, IsBF8, DAG);
+  if (EltVT == MVT::f32)
+    return lowerFromFP8ToF32(Op, IsBF8, DAG);
+  return SDValue();
 }
 
 SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,

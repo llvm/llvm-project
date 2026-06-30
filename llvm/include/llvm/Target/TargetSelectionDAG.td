@@ -175,6 +175,9 @@ def SDIsFPClassOp : SDTypeProfile<1, 2, [   // is_fpclass
 def SDTIntToFPOp : SDTypeProfile<1, 1, [    // [su]int_to_fp
   SDTCisFP<0>, SDTCisInt<1>, SDTCisSameNumEltsAs<0, 1>
 ]>;
+def SDTConvertFromArbitraryFPOp : SDTypeProfile<1, 2, [
+  SDTCisFP<0>, SDTCisInt<1>, SDTCisInt<2>, SDTCisSameNumEltsAs<0, 1>
+]>;
 def SDTFPToIntOp : SDTypeProfile<1, 1, [    // fp_to_[su]int
   SDTCisInt<0>, SDTCisFP<1>, SDTCisSameNumEltsAs<0, 1>
 ]>;
@@ -640,6 +643,8 @@ def is_fpclass : SDNode<"ISD::IS_FPCLASS" , SDIsFPClassOp>;
 
 def sint_to_fp : SDNode<"ISD::SINT_TO_FP" , SDTIntToFPOp>;
 def uint_to_fp : SDNode<"ISD::UINT_TO_FP" , SDTIntToFPOp>;
+def convert_from_arbitrary_fp : SDNode<"ISD::CONVERT_FROM_ARBITRARY_FP",
+                                        SDTConvertFromArbitraryFPOp>;
 def fp_to_sint : SDNode<"ISD::FP_TO_SINT" , SDTFPToIntOp>;
 def fp_to_uint : SDNode<"ISD::FP_TO_UINT" , SDTFPToIntOp>;
 def fp_to_sint_sat : SDNode<"ISD::FP_TO_SINT_SAT" , SDTFPToIntSatOp>;
@@ -1259,6 +1264,11 @@ class ImmLeaf<ValueType vt, code pred, SDNodeXForm xform = NOOP_SDNodeXForm,
 // `Imm` in the snippet is the value sign-extended to `int64_t`.
 class TImmLeaf<ValueType vt, code pred, SDNodeXForm xform = NOOP_SDNodeXForm,
   SDNode ImmNode = timm> : ImmLeaf<vt, pred, xform, ImmNode>;
+
+// llvm.convert.from.arbitrary.fp format-selector predicates.
+// Only OCP formats are matched here; FNUZ formats use the generic expansion.
+def Float8E4M3FN : TImmLeaf<i32, [{ return Imm == APFloatBase::S_Float8E4M3FN; }]>;
+def Float8E5M2 : TImmLeaf<i32, [{ return Imm == APFloatBase::S_Float8E5M2; }]>;
 
 // An ImmLeaf where the `Imm` in the C++ predicate is an `APInt`.
 //
