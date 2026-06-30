@@ -5265,9 +5265,6 @@ InstructionCost AArch64TTIImpl::getInterleavedMemoryOpCost(
             getMemoryOpCost(Opcode, VecTy, Alignment, AddressSpace, CostKind);
       }
 
-      if (!MemCost.isValid())
-        return InstructionCost::getInvalid();
-
       // llvm.vector.deinterleaveN is lowered as a binary tree of deinterleave2
       // operations. A binary tree producing Factor leaf vectors has
       // (Factor -1) inner deinterleave2 nodes. Each deinterleave2 on a pair of

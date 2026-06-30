@@ -1,4 +1,4 @@
-; RUN: opt -passes=loop-vectorize -mtriple=aarch64-linux-gnu -mattr=+sve -debug-only=loop-vectorize -disable-output %s 2>&1 | FileCheck %s
+; RUN: opt -passes=loop-vectorize -debug-only=loop-vectorize -disable-output %s 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 
 target triple = "aarch64"
@@ -16,6 +16,7 @@ target triple = "aarch64"
 ; CHECK-LABEL: LV: Checking a loop in 'deinterleave4_nxv2i16_load'
 ; CHECK: Cost of 4 for VF vscale x 2: INTERLEAVE-GROUP with factor 4, ir<%ptr.b>
 ; CHECK: Cost of 8 for VF vscale x 4: INTERLEAVE-GROUP with factor 4, ir<%ptr.b>
+; CHECK: LV: Selecting VF: vscale x 2
 define void @deinterleave4_nxv2i16_load(ptr noalias readonly %src, ptr noalias %out, i64 %n) #0 {
 entry:
   br label %loop
