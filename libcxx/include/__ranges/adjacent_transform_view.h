@@ -110,10 +110,10 @@ public:
   {
     return __inner_.base();
   }
-
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _View base() && { return std::move(__inner_).base(); }
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto begin() { return __iterator<false>(*this, __inner_.begin()); }
+
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto begin() const
     requires range<const _InnerView> && regular_invocable<__apply_n<const _Fn&, _Np>, range_reference_t<const _View>>
   {
