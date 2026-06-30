@@ -3,7 +3,7 @@
 bugprone-container-bounds-check-overflow
 ========================================
 
-This check finds potential overflow in unsigned integer addition before comparison with a container's
+Finds potential overflow in unsigned integer addition before comparison with a container's
 ``size()`` method. It flags all of the following combinations:
 - ``a + b < v.size()``
 - ``a + b <= v.size()``
