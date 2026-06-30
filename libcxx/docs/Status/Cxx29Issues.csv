@@ -1,7 +1,7 @@
 "Issue #","Issue Name","Meeting","Status","First released version","GitHub issue","Notes"
 "`LWG3417 <https://wg21.link/LWG3417>`__","Missing ``volatile`` atomic deprecations","2026-06 (Brno)","","","`#204440 <https://github.com/llvm/llvm-project/issues/204440>`__",""
 "`LWG4121 <https://wg21.link/LWG4121>`__","``ranges::to`` constructs associative containers via ``c.emplace(c.end(), *it)``","2026-06 (Brno)","","","`#204441 <https://github.com/llvm/llvm-project/issues/204441>`__",""
-"`LWG4125 <https://wg21.link/LWG4125>`__","``move_iterator``'s default constructor should be constrained","2026-06 (Brno)","","","`#204442 <https://github.com/llvm/llvm-project/issues/204442>`__",""
+"`LWG4125 <https://wg21.link/LWG4125>`__","``move_iterator``'s default constructor should be constrained","2026-06 (Brno)","|Complete|","23","`#204442 <https://github.com/llvm/llvm-project/issues/204442>`__",""
 "`LWG4158 <https://wg21.link/LWG4158>`__","``packaged_task::operator=`` should abandon its shared state","2026-06 (Brno)","","","`#204443 <https://github.com/llvm/llvm-project/issues/204443>`__",""
 "`LWG4182 <https://wg21.link/LWG4182>`__","Definition of ``NULL`` is too broad","2026-06 (Brno)","","","`#204444 <https://github.com/llvm/llvm-project/issues/204444>`__",""
 "`LWG4218 <https://wg21.link/LWG4218>`__","Constraint recursion in ``basic_const_iterator``'s relational operators due to ADL + CWG 2369","2026-06 (Brno)","","","`#204445 <https://github.com/llvm/llvm-project/issues/204445>`__",""

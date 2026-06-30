@@ -173,6 +173,7 @@ split_list(LIBCXX_LINK_FLAGS)
 include(FindLibcCommonUtils)
 
 # Build the shared library.
+if (LIBCXX_SUPPORTS_SHARED_LIBRARY)
 add_library(cxx_shared SHARED ${LIBCXX_SOURCES} ${LIBCXX_HEADERS})
 target_include_directories(cxx_shared PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(cxx_shared PUBLIC cxx-headers runtimes-libc-shared
@@ -256,6 +257,7 @@ if(WIN32 AND NOT MINGW AND NOT "${CMAKE_HOST_SYSTEM_NAME}" STREQUAL "Windows")
                           APPEND_STRING PROPERTY LINK_FLAGS " -Xlinker /MANIFEST:NO")
   endif()
 endif()
+endif(LIBCXX_SUPPORTS_SHARED_LIBRARY)
 
 set(CMAKE_STATIC_LIBRARY_PREFIX "lib")
 
@@ -325,7 +327,7 @@ endif()
 
 add_library(cxx_experimental STATIC ${LIBCXX_EXPERIMENTAL_SOURCES})
 target_link_libraries(cxx_experimental PUBLIC cxx-headers)
-if (LIBCXX_ENABLE_SHARED)
+if (LIBCXX_ENABLE_SHARED AND TARGET cxx_shared)
   target_link_libraries(cxx_experimental PRIVATE cxx_shared)
 else()
   target_link_libraries(cxx_experimental PRIVATE cxx_static)
@@ -347,14 +349,14 @@ target_compile_options(cxx_experimental PUBLIC -D_LIBCPP_ENABLE_EXPERIMENTAL)
 
 # Add a meta-target for both libraries and the experimental library.
 add_custom_target(cxx DEPENDS cxx_experimental)
-if (LIBCXX_ENABLE_SHARED)
+if (LIBCXX_ENABLE_SHARED AND TARGET cxx_shared)
   add_dependencies(cxx cxx_shared)
 endif()
 if (LIBCXX_ENABLE_STATIC)
   add_dependencies(cxx cxx_static)
 endif()
 
-if (LIBCXX_INSTALL_SHARED_LIBRARY)
+if (LIBCXX_INSTALL_SHARED_LIBRARY AND TARGET cxx_shared)
   install(TARGETS cxx_shared
     ARCHIVE DESTINATION ${LIBCXX_INSTALL_LIBRARY_DIR} COMPONENT cxx
     LIBRARY DESTINATION ${LIBCXX_INSTALL_LIBRARY_DIR} COMPONENT cxx
@@ -377,7 +379,7 @@ endif()
 
 # NOTE: This install command must go after the cxx install command otherwise
 # it will not be executed after the library symlinks are installed.
-if (LIBCXX_ENABLE_SHARED AND LIBCXX_ENABLE_ABI_LINKER_SCRIPT)
+if (LIBCXX_ENABLE_SHARED AND LIBCXX_ENABLE_ABI_LINKER_SCRIPT AND TARGET cxx_shared)
   install(FILES "$<TARGET_LINKER_FILE:cxx_shared>"
     DESTINATION ${LIBCXX_INSTALL_LIBRARY_DIR}
     COMPONENT cxx)

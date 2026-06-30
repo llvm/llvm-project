@@ -14,16 +14,16 @@
   define void @fun6(ptr %Arg) { ret void }
 ...
 
-# The LHIMux could be scheduled below the CGHI to avoid the overlap of %0 and
+# The LHIMux could be scheduled below the CGHI to avoid the overlap of %1 and
 # %3, but this is not done in small regions like this.
 # CHECK:      ********** MI Scheduling **********
 # CHECK-NEXT: fun0:%bb.0
 # CHECK-NOT:  Pick Bot REG-EXCESS [pre-RA]
 # CHECK:      *** Final schedule for %bb.0 ***
 # CHECK-NEXT: SU(0):   %0:gr64bit = COPY $r2d
+# CHECK-NEXT: SU(1):   %1:gr32bit = LHIMux 1
 # CHECK-NEXT: SU(2):   %2:gr64bit = LCGR %0:gr64bit, implicit-def dead $cc
 # CHECK-NEXT: SU(3):   %3:gr64bit = RISBGN undef %3:gr64bit(tied-def 0), %2:gr64bit, 29, 188, 0
-# CHECK-NEXT: SU(1):   %1:gr32bit = LHIMux 1
 # CHECK-NEXT: SU(4):   CGHI %3:gr64bit, 0, implicit-def $cc
 # CHECK: fun0:%bb.1
 ---
@@ -171,7 +171,7 @@ body:             |
 # CHECK:      Queue BotQ.A: 36 2
 # CHECK-NOT:  Cand SU(2) REG-EXCESS
 # CHECK-NOT:  Scheduling SU(2)
-# CHECK:      Pick Bot BOT-HEIGHT [pre-RA]
+# CHECK:      Pick Bot FIRST [pre-RA]
 # CHECK-NEXT: Scheduling SU(36)
 # CHECK:      Queue BotQ.A: 2 32
 # CHECK:      Pick Bot REG-EXCESS [pre-RA]
@@ -242,8 +242,7 @@ body:             |
 
 # Check a case (AGR) where a use is tied to the def which means the register
 # is live into the instruction and there is no point in scheduling it low
-# (pressure diff is empty). It still ends up low in the final schedule due to
-# the latency reduction heuristic.
+# (pressure diff is empty).
 # CHECK:      ********** MI Scheduling **********
 # CHECK-NEXT: fun3:%bb.0
 #
@@ -259,14 +258,14 @@ body:             |
 #
 # CHECK:      Queue BotQ.A: 37 3
 # CHECK:      Scheduling SU(37)
-# CHECK:      Queue BotQ.A: 3 36
-# CHECK:      Pick Bot BOT-HEIGHT [pre-RA]
-# CHECK-NEXT: Scheduling SU(3)
+# CHECK-NOT:  Pick Bot BOT-HEIGHT [pre-RA]
+# CHECK-NOT:  Pick Bot REG-EXCESS [pre-RA]
 #
 # CHECK:      *** Final schedule for %bb.0 ***
-# CHECK:      SU(36):  %35:gr64bit = AGFI %34:gr64bit(tied-def 0), 1, implicit-def dead $cc
+# CHECK-NEXT: SU(0):   %0:gr64bit = COPY $r2d
+# CHECK-NEXT: SU(1):   %1:gr64bit = COPY $r3d
+# CHECK-NEXT: SU(2):   %2:gr64bit = COPY %1:gr64bit
 # CHECK-NEXT: SU(3):   %2:gr64bit = AGR %2:gr64bit(tied-def 0), %1:gr64bit, implicit-def dead $cc
-# CHECK-NEXT: SU(37):  %36:gr64bit = AGFI %35:gr64bit(tied-def 0), 1, implicit-def dead $cc
 # CHECK: fun3:%bb.1
 ---
 name:            fun3
@@ -439,39 +438,29 @@ body:             |
 # CHECK:      ********** MI Scheduling **********
 # CHECK-NEXT: fun5:%bb.0
 #
-# CHECK:      SU(30):   %A0:gr64bit = AGRK %Z0:gr64bit, %Z0:gr64bit, implicit-def dead $cc
-# CHECK:      Height             : 1
-# CHECK:      SU(31):   %A1:gr64bit = AGRK %Z1:gr64bit, %Z1:gr64bit, implicit-def dead $cc
-# CHECK:      Height             : 1
-# CHECK:      SU(32):
-# CHECK:      SU(36):   %A6:gr64bit = AGRK %A5:gr64bit, %Z0:gr64bit, implicit-def dead $cc
-# CHECK:      Height             : 1
-# CHECK:      SU(37):
-# CHECK:      SU(38):   %A9:gr64bit = AGRK %A7:gr64bit, %A7:gr64bit, implicit-def dead $cc
-# CHECK:      Height             : 1
-# CHECK:      SU(39):
-#
 # CHECK:      Queue BotQ.A: 27 38 36 34 33 32 31 30
-# CHECK:      Pick Bot ORDER      [pre-RA]
-# CHECK-NEXT: Scheduling SU(38)
+# CHECK:      Scheduling SU(38)
 # CHECK:      Queue BotQ.A: 27 30 36 34 33 32 31 37
-# CHECK:      Pick Bot BOT-HEIGHT [pre-RA]
-# CHECK-NEXT: Scheduling SU(36)
-# CHECK:      Queue BotQ.A: 27 30 37 34 33 32 31 35
+# CHECK:      Scheduling SU(37)
+# CHECK:      Queue BotQ.A: 27 30 36 34 33 32 31
+# CHECK:      Scheduling SU(36)
+# CHECK:      Queue BotQ.A: 27 30 31 34 33 32 35
+# CHECK:      Scheduling SU(35)
+# CHECK:      Queue BotQ.A: 27 30 31 34 33 32
 # CHECK:      Pick Bot REG-EXCESS [pre-RA]
 # CHECK-NEXT: Scheduling SU(30)
 #
 # CHECK:      *** Final schedule for %bb.0 ***
-# CHECK:      SU(28):   %Z0:gr64bit = LGHI 1
-# CHECK-NEXT: SU(29):   %Z1:gr64bit = LGHI 1
+# CHECK:      SU(29):   %Z1:gr64bit = LGHI 1
 # CHECK-NEXT: SU(31):   %A1:gr64bit = AGRK %Z1:gr64bit, %Z1:gr64bit, implicit-def dead $cc
 # CHECK-NEXT: SU(32):   %A2:gr64bit = AGRK %Z1:gr64bit, %Z1:gr64bit, implicit-def dead $cc
 # CHECK-NEXT: SU(33):   %A3:gr64bit = AGRK %Z1:gr64bit, %Z1:gr64bit, implicit-def dead $cc
-# CHECK-NEXT: SU(35):   %A5:gr64bit = AGRK undef %F0:gr64bit, undef %F0:gr64bit, implicit-def dead $cc
-# CHECK-NEXT: SU(37):   %A7:gr64bit = AGRK undef %F1:gr64bit, undef %F1:gr64bit, implicit-def dead $cc
 # CHECK-NEXT: SU(34):   %A4:gr64bit = AGRK %Z1:gr64bit, %Z1:gr64bit, implicit-def dead $cc
+# CHECK-NEXT: SU(28):   %Z0:gr64bit = LGHI 1
 # CHECK-NEXT: SU(30):   %A0:gr64bit = AGRK %Z0:gr64bit, %Z0:gr64bit, implicit-def dead $cc
+# CHECK-NEXT: SU(35):   %A5:gr64bit = AGRK undef %F0:gr64bit, undef %F0:gr64bit, implicit-def dead $cc
 # CHECK-NEXT: SU(36):   %A6:gr64bit = AGRK %A5:gr64bit, %Z0:gr64bit, implicit-def dead $cc
+# CHECK-NEXT: SU(37):   %A7:gr64bit = AGRK undef %F1:gr64bit, undef %F1:gr64bit, implicit-def dead $cc
 # CHECK-NEXT: SU(38):   %A9:gr64bit = AGRK %A7:gr64bit, %A7:gr64bit, implicit-def dead $cc
 # CHECK-NEXT: SU(39):   STG %A0:gr64bit, $noreg, 0, $noreg :: (store (s64) into `ptr null`)
 # CHECK-NEXT: SU(40):   STG %A1:gr64bit, $noreg, 0, $noreg :: (store (s64) into `ptr null`)

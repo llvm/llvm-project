@@ -2093,7 +2093,7 @@ def fcolor_diagnostics : Flag<["-"], "fcolor-diagnostics">, Group<f_Group>,
   Visibility<[ClangOption, CLOption, DXCOption, CC1Option, FlangOption, FC1Option]>,
   HelpText<"Enable colors in diagnostics">;
 def fno_color_diagnostics : Flag<["-"], "fno-color-diagnostics">, Group<f_Group>,
-  Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>,
+  Visibility<[ClangOption, CLOption, DXCOption, CC1Option, FlangOption, FC1Option]>,
   HelpText<"Disable colors in diagnostics">;
 def : Flag<["-"], "fdiagnostics-color">, Group<f_Group>,
   Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>,
@@ -7040,6 +7040,9 @@ def mhexagon_hvx_length_EQ : Joined<["-"], "mhvx-length=">,
 def mhexagon_hvx_qfloat : Flag<["-"], "mhvx-qfloat">,
   Group<m_hexagon_Features_HVX_Group>,
   HelpText<"Enable Hexagon HVX QFloat instructions">;
+def mhexagon_hvx_qfloat_EQ : Joined<["-"], "mhvx-qfloat=">,
+  Group<m_hexagon_Features_HVX_Group>,
+  HelpText<"Enable Hexagon HVX QFloat instructions with mode: strict-ieee, ieee, lossy, legacy (v79+)">;
 def mno_hexagon_hvx_qfloat : Flag<["-"], "mno-hvx-qfloat">,
   Group<m_hexagon_Features_HVX_Group>,
   HelpText<"Disable Hexagon HVX QFloat instructions">;

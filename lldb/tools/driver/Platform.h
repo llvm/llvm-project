@@ -28,9 +28,6 @@ typedef unsigned char cc_t;
 typedef unsigned int speed_t;
 typedef unsigned int tcflag_t;
 
-// fcntl.h
-#define O_NOCTTY 0400
-
 // ioctls.h
 #define TIOCGWINSZ 0x5413
 
@@ -60,8 +57,7 @@ struct timeval {
   long tv_sec;
   long tv_usec;
 };
-typedef long pid_t;
-#define PATH_MAX MAX_PATH
+#include "lldb/Host/PosixApi.h"
 #endif
 
 #define STDIN_FILENO 0
