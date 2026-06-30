@@ -459,22 +459,49 @@ private:
     fir::StoreOp::create(builder, loc, falseConv, pinned);
   }
 
-  /// When the allocate object is a structure component
-  /// (e.g., managed_var(1)%component), check whether the base variable has
-  /// CUDA attributes. If so, update \p sym to the base symbol and return true
-  /// so allocations use the parent's memory space.
+  /// Search a DataRef for a symbol with CUDA attributes. Returns true and
+  /// sets \p sym if found.
+  static bool findCUDAAttrInDataRef(const Fortran::parser::DataRef &ref,
+                                    const Fortran::semantics::Symbol *&sym) {
+    return Fortran::common::visit(
+        Fortran::common::visitors{
+            [&](const Fortran::parser::Name &name) {
+              if (name.symbol &&
+                  Fortran::semantics::HasCUDAAttr(*name.symbol)) {
+                sym = name.symbol;
+                return true;
+              }
+              return false;
+            },
+            [&](const Fortran::common::Indirection<
+                Fortran::parser::StructureComponent> &sc) {
+              if (sc.value().Component().symbol &&
+                  Fortran::semantics::HasCUDAAttr(
+                      *sc.value().Component().symbol)) {
+                sym = sc.value().Component().symbol;
+                return true;
+              }
+              return findCUDAAttrInDataRef(sc.value().Base(), sym);
+            },
+            [&](const Fortran::common::Indirection<
+                Fortran::parser::ArrayElement> &ae) {
+              return findCUDAAttrInDataRef(ae.value().Base(), sym);
+            },
+            [&](const Fortran::common::Indirection<
+                Fortran::parser::CoindexedNamedObject> &) { return false; },
+        },
+        ref.u);
+  }
+
+  /// When the allocate object is a structure component (e.g.,
+  /// managed_var(1)%component or a%b%c), walk the DataRef chain and check
+  /// whether any parent has CUDA attributes. If so, update \p sym to that
+  /// symbol and return true so allocations use its memory space.
   bool propagateCUDAAttrsFromParent(const Allocation &alloc,
                                     const Fortran::semantics::Symbol *&sym) {
     if (const auto *sc = std::get_if<Fortran::parser::StructureComponent>(
-            &alloc.getAllocObj().u)) {
-      const Fortran::parser::Name &baseName =
-          Fortran::parser::GetFirstName(*sc);
-      if (baseName.symbol &&
-          Fortran::semantics::HasCUDAAttr(*baseName.symbol)) {
-        sym = baseName.symbol;
-        return true;
-      }
-    }
+            &alloc.getAllocObj().u))
+      return findCUDAAttrInDataRef(sc->Base(), sym);
     return false;
   }
 

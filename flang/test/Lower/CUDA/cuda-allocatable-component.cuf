@@ -41,7 +41,7 @@ end subroutine
 ! CHECK: fir.embox %{{.*}} {allocator_idx = 2 : i32}
 ! CHECK: cuf.allocate %{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf64>>>> {data_attr = #cuf.cuda<device>} -> i32
 
-! SOURCE= allocation of a managed component.
+! Managed component with source allocation.
 subroutine managed_component_source()
   use m
   type(chunk_type), managed, allocatable :: chunks(:)
