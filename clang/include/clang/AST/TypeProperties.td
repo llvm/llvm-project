@@ -226,12 +226,15 @@ let Class = DependentSizedExtVectorType in {
   def : Property<"size", ExprRef> {
     let Read = [{ node->getSizeExpr() }];
   }
+  def : Property<"scalable", ExprRef> {
+    let Read = [{ node->getScalableExpr() }];
+  }
   def : Property<"attributeLoc", SourceLocation> {
     let Read = [{ node->getAttributeLoc() }];
   }
 
   def : Creator<[{
-    return ctx.getDependentSizedExtVectorType(elementType, size, attributeLoc);
+    return ctx.getDependentSizedExtVectorType(elementType, size, scalable, attributeLoc);
   }]>;
 }
 

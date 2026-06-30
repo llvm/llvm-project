@@ -13,6 +13,10 @@ typedef int int8 __attribute__((vector_size(32)));
 typedef int int16 __attribute__((vector_size(64)));
 typedef float float2 __attribute__((vector_size(8)));
 typedef long extLong4 __attribute__((ext_vector_type(4)));
+#if defined(__ARM_FEATURE_SVE)
+#define SCALABLE_SIZE(N) (N), 1
+typedef long extLong1s __attribute__((ext_vector_type(SCALABLE_SIZE(1))));
+#endif
 
 
 int test_builtin_vectorelements_int1() {
@@ -75,6 +79,22 @@ int test_builtin_vectorelements_neon64x1() {
 
 #if defined(__ARM_FEATURE_SVE)
 #include <arm_sve.h>
+
+long test_builtin_vectorelements_sve64() {
+  // SVE: i64 @test_builtin_vectorelements_sve64(
+  // SVE: [[VSCALE:%.+]] = call i64 [[I64_VSCALE_CALL:@llvm.vscale.i64]]()
+  // SVE: [[RES:%.+]] = mul nuw i64 [[VSCALE]], [[I64_MUL:2]]
+  // SVE: ret i64 [[RES]]
+  return __builtin_vectorelements(svuint64_t);
+}
+
+long test_builtin_vectorelements_extLong1s() {
+  // SVE-LABEL: i64 @test_builtin_vectorelements_extLong1s(
+  // SVE: [[VSCALE:%.+]] = call i64 [[I64_VSCALE_CALL]]()
+  // SVE: [[RES:%.+]] = mul nuw i64 %0, [[I64_MUL]]
+  // SVE: ret i64 [[RES]]
+  return __builtin_vectorelements(extLong1s);
+}
 
 long test_builtin_vectorelements_sve32() {
   // SVE: i64 @test_builtin_vectorelements_sve32(

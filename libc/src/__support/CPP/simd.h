@@ -37,25 +37,36 @@ namespace internal {
 #if defined(LIBC_TARGET_CPU_HAS_AVX512F)
 template <typename T>
 LIBC_INLINE_VAR constexpr size_t native_vector_size = 64 / sizeof(T);
+template <typename T>
+LIBC_INLINE_VAR constexpr bool native_vector_scalable = false;
 #elif defined(LIBC_TARGET_CPU_HAS_AVX2)
 template <typename T>
 LIBC_INLINE_VAR constexpr size_t native_vector_size = 32 / sizeof(T);
+template <typename T>
+LIBC_INLINE_VAR constexpr bool native_vector_scalable = false;
 #elif defined(LIBC_TARGET_CPU_HAS_SSE2) || defined(LIBC_TARGET_CPU_HAS_ARM_NEON)
 template <typename T>
 LIBC_INLINE_VAR constexpr size_t native_vector_size = 16 / sizeof(T);
+template <typename T>
+LIBC_INLINE_VAR constexpr bool native_vector_scalable = false;
 #else
 template <typename T> LIBC_INLINE constexpr size_t native_vector_size = 1;
+template <typename T> LIBC_INLINE constexpr bool native_vector_scalable = false;
 #endif
 
 } // namespace internal
 
 // Type aliases.
 template <typename T, size_t N>
-using fixed_size_simd = T [[clang::ext_vector_type(N)]];
-template <typename T, size_t N = internal::native_vector_size<T>>
-using simd = T [[clang::ext_vector_type(N)]];
-template <typename T>
-using simd_mask = simd<bool, internal::native_vector_size<T>>;
+using fixed_size_simd = T [[clang::ext_vector_type(N, false)]];
+template <typename T, size_t N>
+using scalable_size_simd = T [[clang::ext_vector_type(N, true)]];
+template <typename T, size_t N = internal::native_vector_size<T>,
+          bool S = internal::native_vector_scalable<T>>
+using simd = T [[clang::ext_vector_type(N, S)]];
+template <typename T, size_t N = internal::native_vector_size<T>,
+          bool S = internal::native_vector_scalable<T>>
+using simd_mask = simd<bool, N, S>;
 
 // Type trait helpers.
 template <typename T>
@@ -356,29 +367,36 @@ LIBC_INLINE constexpr static void compress(simd<bool, simd_size_v<T>> mask, T v,
 }
 
 // Construction helpers.
-template <typename T, size_t N>
-LIBC_INLINE constexpr static simd<T, N> splat(T v) {
-  return simd<T, N>(v);
+template <typename T, size_t N = internal::native_vector_size<T>,
+          bool S = internal::native_vector_scalable<T>,
+          cpp::enable_if_t<!S, bool> = 0>
+LIBC_INLINE constexpr static simd<T, N, S> splat(T v) {
+  return simd<T, N, S>(v);
 }
-template <typename T> LIBC_INLINE constexpr static simd<T> splat(T v) {
-  return splat<T, simd_size_v<simd<T>>>(v);
+template <typename T, size_t N = internal::native_vector_size<T>,
+          bool S = internal::native_vector_scalable<T>,
+          cpp::enable_if_t<S, bool> = 0>
+LIBC_INLINE constexpr static simd<T, N, S> splat(T v) {
+  simd<T, N, S> sv;
+  size_t n = __builtin_vectorelements(simd<T, N, S>);
+  for (unsigned i = 0U; i < n; ++i)
+    sv[i] = v;
+  return sv;
 }
-template <typename T, unsigned N>
-LIBC_INLINE constexpr static simd<T, N> iota(T base = T(0), T step = T(1)) {
-  simd<T, N> v{};
-  for (unsigned i = 0; i < N; ++i)
+template <typename T, size_t N = internal::native_vector_size<T>,
+          bool S = internal::native_vector_scalable<T>>
+LIBC_INLINE constexpr static simd<T, N, S> iota(T base = T(0), T step = T(1)) {
+  simd<T, N, S> v{};
+  size_t n = __builtin_vectorelements(simd<T, N, S>);
+  for (unsigned i = 0; i < n; ++i)
     v[i] = base + T(i) * step;
   return v;
 }
-template <typename T>
-LIBC_INLINE constexpr static simd<T> iota(T base = T(0), T step = T(1)) {
-  return iota<T, simd_size_v<simd<T>>>(base, step);
-}
 
 // Conditional helpers.
-template <typename T, size_t N>
-LIBC_INLINE constexpr static simd<T, N> select(simd<bool, N> m, simd<T, N> x,
-                                               simd<T, N> y) {
+template <typename T, size_t N, bool S>
+LIBC_INLINE constexpr static simd<T, N, S>
+select(simd<bool, N, S> m, simd<T, N, S> x, simd<T, N, S> y) {
   return m ? x : y;
 }
 
