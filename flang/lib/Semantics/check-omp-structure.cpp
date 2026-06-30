@@ -205,6 +205,9 @@ void OmpStructureChecker::Enter(const parser::ModuleSubprogram &) {
 }
 
 void OmpStructureChecker::Enter(const parser::SpecificationPart &) {
+  // The pending metadirective requirement is reset once per program unit.
+  if (partStack_.empty())
+    metadirectiveLoopVariants_.clear();
   partStack_.push_back(PartKind::SpecificationPart);
 }
 
