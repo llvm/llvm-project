@@ -290,6 +290,11 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   against or converted to a null pointer, the same as a bare function name.
   (#GH46362)
 
+- Added `-Wcounted-by-addrof` (default off) warning when unary `&` is applied to a `__counted_by`
+  flexible array member as a whole (e.g. `&p->fam`). This form bypasses the count when lowering
+  `__builtin_dynamic_object_size` and falls back to the object's static layout, silently discarding
+  the annotation. A fix-it removes the `&` when the object's allocation is not statically known,
+  where the count-derived bound is the useful answer.
 
 ### Improvements to Clang's time-trace
 
