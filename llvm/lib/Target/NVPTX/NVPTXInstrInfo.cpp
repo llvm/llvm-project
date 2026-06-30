@@ -20,7 +20,6 @@
 using namespace llvm;
 
 #define GET_INSTRINFO_CTOR_DTOR
-#define GET_INSTRINFO_NAMED_OPS
 #include "NVPTXGenInstrInfo.inc"
 
 // Pin the vtable to this file.
