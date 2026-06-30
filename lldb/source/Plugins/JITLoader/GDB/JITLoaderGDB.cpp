@@ -115,7 +115,13 @@ static PluginProperties &GetGlobalPluginProperties() {
 template <typename ptr_t>
 static bool ReadJITEntry(const addr_t from_addr, Process *process,
                          jit_code_entry<ptr_t> *entry) {
-  lldbassert(from_addr % sizeof(ptr_t) == 0);
+  // Skip a misaligned entry pointer (corrupt input) instead of asserting.
+  if (from_addr % sizeof(ptr_t) != 0) {
+    LLDB_LOGF(GetLog(LLDBLog::JITLoader),
+              "JITLoaderGDB::%s skipping misaligned JIT entry 0x%" PRIx64,
+              __FUNCTION__, from_addr);
+    return false;
+  }
 
   ArchSpec::Core core = process->GetTarget().GetArchitecture().GetCore();
   bool i386_target = ArchSpec::kCore_x86_32_first <= core &&
@@ -141,6 +147,62 @@ static bool ReadJITEntry(const addr_t from_addr, Process *process,
   entry->symfile_size = extractor.GetU64(&offset);
 
   return true;
+}
+
+// True if the descriptor reads back sane (first_entry is null or aligned).
+template <typename ptr_t>
+static bool JITDescriptorIsValid(addr_t descriptor_addr, Process *process) {
+  jit_descriptor<ptr_t> jit_desc;
+  Status error;
+  // Reject if the descriptor can't be fully read (unmapped/garbage address).
+  const size_t bytes_read =
+      process->ReadMemory(descriptor_addr, &jit_desc, sizeof(jit_desc), error);
+  if (bytes_read != sizeof(jit_desc) || !error.Success())
+    return false;
+  // Valid only if first_entry (the chain head we walk) is null or aligned.
+  const addr_t first_entry = (addr_t)jit_desc.first_entry;
+  return first_entry == 0 || first_entry % sizeof(ptr_t) == 0;
+}
+
+// Pick the first sane __jit_debug_descriptor among modules (fallback: first
+// match).
+static addr_t GetValidJITDescriptorAddress(ModuleList &module_list,
+                                           Process *process) {
+  // all matches
+  SymbolContextList target_symbols;
+  module_list.FindSymbolsWithNameAndType(ConstString("__jit_debug_descriptor"),
+                                         eSymbolTypeData, target_symbols);
+  if (target_symbols.IsEmpty())
+    return LLDB_INVALID_ADDRESS;
+
+  Target &target = process->GetTarget();
+  const bool is_64bit = target.GetArchitecture().GetAddressByteSize() == 8;
+
+  addr_t first_addr = LLDB_INVALID_ADDRESS;
+  // scan all the candidates.
+  for (uint32_t i = 0; i < target_symbols.GetSize(); ++i) {
+    SymbolContext sym_ctx;
+    target_symbols.GetContextAtIndex(i, sym_ctx);
+    if (!sym_ctx.symbol)
+      continue;
+    const Address descriptor_addr = sym_ctx.symbol->GetAddress();
+    if (!descriptor_addr.IsValid())
+      continue;
+    const addr_t load_addr = descriptor_addr.GetLoadAddress(&target);
+    if (load_addr == LLDB_INVALID_ADDRESS)
+      continue;
+
+    if (first_addr == LLDB_INVALID_ADDRESS)
+      first_addr = load_addr; // fallback.
+
+    // take first valid.
+    const bool valid = is_64bit
+                           ? JITDescriptorIsValid<uint64_t>(load_addr, process)
+                           : JITDescriptorIsValid<uint32_t>(load_addr, process);
+    if (valid)
+      return load_addr;
+  }
+  return first_addr;
 }
 
 JITLoaderGDB::JITLoaderGDB(lldb_private::Process *process)
@@ -194,8 +256,7 @@ void JITLoaderGDB::SetJITBreakpoint(lldb_private::ModuleList &module_list) {
   if (jit_addr == LLDB_INVALID_ADDRESS)
     return;
 
-  m_jit_descriptor_addr = GetSymbolAddress(
-      module_list, ConstString("__jit_debug_descriptor"), eSymbolTypeData);
+  m_jit_descriptor_addr = GetValidJITDescriptorAddress(module_list, m_process);
   if (m_jit_descriptor_addr == LLDB_INVALID_ADDRESS) {
     LLDB_LOGF(log, "JITLoaderGDB::%s failed to find JIT descriptor address",
               __FUNCTION__);
