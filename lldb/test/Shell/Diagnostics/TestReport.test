@@ -4,7 +4,10 @@
 # RUN: rm -rf %t.report
 # RUN: %lldb --no-lldbinit -b -o 'diagnostics report --no-open -d %t.report' 2>&1 | FileCheck %s
 # CHECK: Bug report written to
-# CHECK: WARNING: the report may contain
+# CHECK: Attach the following files to the issue:
+# CHECK-DAG: [ ] statistics.json
+# CHECK-DAG: [ ] commands.txt
+# CHECK: warning: the report may contain
 
 # Scalars (version, OS, invocation) ride in the report, not as redundant files.
 # RUN: test -f %t.report/statistics.json
