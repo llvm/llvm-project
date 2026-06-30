@@ -1,6 +1,7 @@
-! Test lowering of `lastprivate(conditional:)` on an omp sections construct
-! with the nowait clause.  The lowering must emit an explicit barrier
-! before the copy-back to ensure the reduction is fully finalized.
+! Test lowering of `lastprivate(conditional:)` on an omp sections construct with
+! the nowait clause.  With nowait there is no closing barrier, so the lowering
+! emits an explicit barrier before the copy-back.  The copy-back runs in an
+! omp.single sibling of the sections; the parallel is not marked omp.combined.
 
 ! RUN: bbc -fopenmp -fopenmp-version=50 -emit-hlfir %s -o - | FileCheck %s
 ! RUN: %flang_fc1 -fopenmp -fopenmp-version=50 -emit-hlfir %s -o - | FileCheck %s
@@ -10,7 +11,7 @@ subroutine test_conditional_lp_sections_nowait(x)
   integer, intent(inout) :: x
 
   !$omp parallel
-  !$omp sections lastprivate(conditional: x) nowait
+  !$omp sections lastprivate(conditional: x)
     !$omp section
     x = 10
     !$omp section
@@ -40,3 +41,5 @@ end subroutine
 ! CHECK:             }
 ! CHECK:             omp.terminator
 ! CHECK:           }
+! CHECK:           omp.terminator
+! CHECK:         }

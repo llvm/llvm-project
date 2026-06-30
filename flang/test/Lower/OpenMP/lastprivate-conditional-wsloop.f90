@@ -72,7 +72,9 @@ end subroutine
 ! CHECK:                 fir.coordinate_of %[[SARG]], $y
 ! CHECK:                 fir.store %{{.*}} : !fir.ref<i64>
 
-! -- Copy-back after wsloop (guarded: only store if index >= 0) ----------------
+! -- Copy-back in an omp.single sibling of the wsloop inside the parallel.  The
+! -- extra immediately-nested construct means the parallel is not omp.combined.
+! -- Guarded: only store if index >= 0. --------------------------------------
 ! CHECK:           omp.single {
 ! CHECK:             fir.coordinate_of %[[STRUCT]], {{[xy]}}
 ! CHECK:             fir.load
@@ -90,3 +92,7 @@ end subroutine
 ! CHECK:             fir.if
 ! CHECK:               fir.store
 ! CHECK:             }
+! CHECK:             omp.terminator
+! CHECK:           }
+! CHECK:           omp.terminator
+! CHECK:         }

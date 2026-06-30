@@ -1,6 +1,8 @@
-! Test lowering of `lastprivate(conditional:)` on a worksharing do loop
-! with the nowait clause.  The lowering must emit an explicit barrier
-! before the copy-back to ensure the reduction is fully finalized.
+! Test lowering of `lastprivate(conditional:)` on a worksharing do loop with the
+! nowait clause.  With nowait there is no closing barrier, so the lowering emits
+! an explicit barrier before the copy-back.  The copy-back runs in an omp.single
+! sibling of the wsloop; the extra nested construct means the parallel is not
+! marked omp.combined.
 
 ! RUN: bbc -fopenmp -fopenmp-version=50 -emit-hlfir %s -o - | FileCheck %s
 ! RUN: %flang_fc1 -fopenmp -fopenmp-version=50 -emit-hlfir %s -o - | FileCheck %s
@@ -12,7 +14,7 @@ subroutine test_conditional_lp_nowait(n, x)
   integer :: k
 
   !$omp parallel
-  !$omp do lastprivate(conditional: x) nowait
+  !$omp do lastprivate(conditional: x)
   do k = 1, n
     x = k
   end do
@@ -41,3 +43,5 @@ end subroutine
 ! CHECK:             }
 ! CHECK:             omp.terminator
 ! CHECK:           }
+! CHECK:           omp.terminator
+! CHECK:         }

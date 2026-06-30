@@ -3308,8 +3308,12 @@ genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   // original variables.  When nowait is absent, the worksharing construct's
   // implicit end-barrier guarantees all reductions are combined before we
   // reach this point.  When nowait is present, the barrier above ensures
-  // the reduction is fully finalized before reading the struct.
-  // Wrapped in omp.single so exactly one thread performs the stores.
+  // the reduction is fully finalized before reading the struct.  Wrapped in
+  // omp.single so exactly one thread performs the stores, at the sections
+  // construct's barrier (the semantically correct finalization point) inside
+  // the enclosing parallel.  Because this copy-back adds a second
+  // immediately-nested construct to the parallel, the parallel is not marked
+  // omp.combined (see the combined-marking logic in genOMPDispatch).
   if (!condLpSyms.empty()) {
     mlir::omp::SingleOperands singleClauseOps;
     auto singleOp = mlir::omp::SingleOp::create(builder, loc, singleClauseOps);
@@ -4232,7 +4236,11 @@ static mlir::omp::WsloopOp genStandaloneDo(
   // Post-reduction copy-back.  When nowait is absent, the wsloop's implicit
   // end-barrier guarantees all reductions are combined.  When nowait is
   // present, an explicit barrier is needed before reading the struct.
-  // Wrapped in omp.single so exactly one thread performs the stores.
+  // Wrapped in omp.single so exactly one thread performs the stores, at the
+  // worksharing construct's barrier (the semantically correct finalization
+  // point) inside the enclosing parallel.  Because this copy-back adds a second
+  // immediately-nested construct to the parallel, the parallel is not marked
+  // omp.combined (see the combined-marking logic in genOMPDispatch).
   if (!condLpSyms.empty()) {
     fir::FirOpBuilder &builder = converter.getFirOpBuilder();
     mlir::OpBuilder::InsertionGuard guard(builder);
@@ -4979,6 +4987,20 @@ static void genOMPDispatch(lower::AbstractConverter &converter,
 
       if (combinableDirs.test(firstLeafDir))
         isCombined = true;
+    }
+    // Conditional-lastprivate lowering emits an auxiliary omp.single copy-back
+    // as a sibling of the worksharing op inside the same region.  That makes
+    // the region an immediate nesting of two constructs rather than one, so it
+    // no longer qualifies as combined.  Detect this by counting eligible nested
+    // constructs and clear the combined status when there is more than one.
+    if (isCombined) {
+      int eligibleNested = 0;
+      for (mlir::Operation &nested : newOp->getRegion(0).getOps())
+        if (llvm::isa<mlir::omp::ComposableOpInterface,
+                      mlir::omp::LoopWrapperInterface>(nested))
+          ++eligibleNested;
+      if (eligibleNested > 1)
+        isCombined = false;
     }
     if (isCombined)
       llvm::cast<mlir::omp::ComposableOpInterface>(newOp).setCombined(true);
