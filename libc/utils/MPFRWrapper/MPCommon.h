@@ -123,7 +123,7 @@ public:
 #ifdef LIBC_TYPES_HAS_FLOAT16
                                  || cpp::is_same_v<float16, XType>
 #endif
-                                 || cpp::is_same_v<bfloat16, XType> || cpp::is_same<Float128,XType>,
+                                 || cpp::is_same_v<bfloat16, XType> || cpp::is_same_v<Float128,XType>,
                              int> = 0>
   explicit MPFRNumber(XType x,
                       unsigned int precision = ExtraPrecision<XType>::VALUE,
