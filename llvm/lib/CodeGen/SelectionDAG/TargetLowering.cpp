@@ -10871,6 +10871,49 @@ SDValue TargetLowering::expandCTLZ(SDNode *Node, SelectionDAG &DAG) const {
   return DAG.getNode(ISD::CTPOP, dl, VT, Op);
 }
 
+SDValue TargetLowering::expandCTLZWithFP(SDNode *Node,
+                                         SelectionDAG &DAG) const {
+  // pseudocode :
+  // v = v & ~(v >> 8)
+  // v = (f32)v
+  // v = bitcast<i32>(v)
+  // v = v >> 23
+  // v = 158 - v
+  // v = min(v, 32)
+
+  SDLoc dl(Node);
+  EVT VT = Node->getValueType(0);
+  SDValue Op = Node->getOperand(0);
+
+  EVT SVT = VT.getScalarType();
+  if (SVT != MVT::i32)
+    return SDValue();
+
+  EVT FloatVT = VT.changeVectorElementType(*DAG.getContext(), MVT::f32);
+  const fltSemantics &Sem = FloatVT.getVectorElementType().getFltSemantics();
+  unsigned BitWidth = SVT.getSizeInBits();
+  unsigned MantissaBits = APFloat::semanticsPrecision(Sem);
+  unsigned ExponentBias = APFloat::semanticsMaxExponent(Sem);
+
+  // v = v & ~(v >> 8)
+  SDValue ShiftOp =
+      DAG.getNode(ISD::SRL, dl, VT, Op, DAG.getShiftAmountConstant(8, VT, dl));
+  SDValue Tmp = DAG.getNode(ISD::AND, dl, VT, Op, DAG.getNOT(dl, ShiftOp, VT));
+
+  SDValue Float = DAG.getNode(ISD::SINT_TO_FP, dl, FloatVT, Tmp);
+  SDValue Int = DAG.getBitcast(VT, Float);
+
+  SDValue ShiftExp =
+      DAG.getNode(ISD::SRL, dl, VT, Int,
+                  DAG.getShiftAmountConstant(MantissaBits - 1, VT, dl));
+  SDValue UndoBias = DAG.getNode(
+      ISD::USUBSAT, dl, VT,
+      DAG.getConstant(BitWidth - 1 + ExponentBias, dl, VT), ShiftExp);
+
+  return DAG.getNode(ISD::SMIN, dl, VT, UndoBias,
+                     DAG.getConstant(BitWidth, dl, VT));
+}
+
 SDValue TargetLowering::expandVPCTLZ(SDNode *Node, SelectionDAG &DAG) const {
   SDLoc dl(Node);
   EVT VT = Node->getValueType(0);
