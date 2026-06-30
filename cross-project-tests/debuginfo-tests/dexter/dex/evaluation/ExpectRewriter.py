@@ -25,7 +25,20 @@ class ExpectedValueRewriter:
     def __init__(self, expect: Expect, value: ValueIR):
         self.expect = expect
         self.root_value = value
-        self.expected_value = expect.get_variable_result(value)
+        self.expected_value: Union[Dict, str, None] = None
+        if sub_values := self.root_value.sub_values:
+            self.expected_value = {
+                sub_value.expression: expected_value
+                for sub_value in sub_values
+                if (
+                    expected_value := ExpectedValueRewriter(
+                        expect, sub_value
+                    ).expected_value
+                )
+                is not None
+            }
+        if not self.expected_value:
+            self.expected_value = expect.get_variable_result(value)
 
 
 def unique_expected_values(elements: List[ExpectedValueRewriter]):
@@ -33,14 +46,21 @@ def unique_expected_values(elements: List[ExpectedValueRewriter]):
     values, or a single item if there is only one non-duplicated expected value in the list, or None if there are no
     valid expected values."""
 
+    def freeze(input):
+        assert input is not None, "Unexpected 'None' in an expected_value"
+        if isinstance(input, dict):
+            return tuple(sorted((str(k), freeze(v)) for k, v in input.items()))
+        return input
+
     unique_set = set()
     result = []
     for element in elements:
         expected_value = element.expected_value
         if expected_value is None:
             continue
-        if expected_value not in unique_set:
-            unique_set.add(expected_value)
+        frozen_value = freeze(expected_value)
+        if frozen_value not in unique_set:
+            unique_set.add(frozen_value)
             result.append(expected_value)
     if not result:
         return None
