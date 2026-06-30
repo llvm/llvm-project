@@ -5003,9 +5003,10 @@ static bool AreAPValuesPotentiallyMergeableSlow(const APValue &LHS,
   }
 
   // For every scalar kind (Int, Float, FixedPoint, ComplexInt, ComplexFloat,
-  // AddrLabelDiff, None, Indeterminate), Profile already captures the full
-  // observable content. If Profile disagreed, the values are observably
-  // distinct.
+  // AddrLabelDiff), Profile already captures the full observable content, so a
+  // Profile disagreement means the values are observably distinct. (None and
+  // Indeterminate never reach here: APValue::hasValue() is false for both, so
+  // they are intercepted by the early return above.)
   default:
     return false;
   }
@@ -5053,327 +5054,355 @@ std::optional<ArraySubobjectLocation> getArraySubobjectLocationImpl(
   if (OffsetInElement > ElementSize)
     return std::nullopt;
 
+  // Canonicalize a pointer to the byte just past element Index: it designates
+  // the start of element Index + 1 (or, when Index + 1 == ArraySize, the
+  // array's one-past-the-end position). Without this, the same address could
+  // be described as either {Index, ElementSize} or {Index + 1, 0}, and the two
+  // encodings would not compare equal in callers that match on OffsetInElement.
+  // After this step OffsetInElement is always strictly inside the element,
+  // except for the one-past-the-end location {ArraySize, 0}.
+  if (ElementSize != 0 && OffsetInElement == ElementSize) {
+    ++Index;
+    OffsetInElement = 0;
+  }
+
   return ArraySubobjectLocation{Index,
                                 CharUnits::fromQuantity(OffsetInElement)};
 }
 
-/// Returns the array element and element-relative location that LV
-/// designates, or std::nullopt if LV is not an element, one-past-the-end
-/// position, or subobject of an element of its base array.
-static std::optional<ArraySubobjectLocation>
-getArraySubobjectLocation(const ASTContext &Ctx, const LValue &LV) {
-  if (LV.Designator.Invalid || LV.Designator.Entries.empty())
+namespace {
+/// A potentially-non-unique array object: a string literal, an
+/// initializer_list backing array, or an array subobject of a
+/// template-parameter object (NTTP). [intro.object]/9 lets the implementation
+/// merge two such objects when their overlapping contents agree, which is what
+/// makes their address comparisons non-constant.
+///
+/// The kind is recorded explicitly; the InitializerList and TemplateParamObject
+/// kinds are both read through an APValue array (borrowed and owned,
+/// respectively), while the StringLiteral kind materializes characters lazily.
+/// The single public entry point is arePotentiallyOverlapping().
+class NonUniqueObject {
+public:
+  /// Returns true when two lvalues designate potentially non-unique arrays
+  /// whose overlapping elements could be merged into the same storage, making
+  /// their address comparison non-constant.
+  static bool arePotentiallyOverlapping(EvalInfo &Info, const Expr *E,
+                                        const LValue &LHS, const LValue &RHS);
+
+private:
+  enum class Kind { StringLiteral, InitializerList, TemplateParamObject };
+
+  /// Identifies an enclosing constant array subobject within an lvalue path.
+  struct ArraySubobjectPathInfo {
+    const ConstantArrayType *ArrayType = nullptr;
+    unsigned ArrayPathLength = 0;
+    ArraySubobjectLocation Loc;
+  };
+
+  /// The evaluation state and diagnostic expression are stored so the member
+  /// functions need not thread them through every call.
+  NonUniqueObject(EvalInfo &Info, const Expr *E) : Info(Info), E(E) {}
+
+  /// Recognizes the non-unique array LV designates, filling in this object and
+  /// returning true, or returning false when LV is not such an object.
+  bool recognize(const LValue &LV);
+
+  /// Returns true when *this and Other could be merged into the same storage at
+  /// their designated positions: the positions must share an in-element byte
+  /// offset and element-compatible types, and every element the overlap would
+  /// alias must be pairwise mergeable. Element data the representation cannot
+  /// expose is treated conservatively as a possible match.
+  bool mayShareStorageWith(const NonUniqueObject &Other) const;
+
+  // Lvalue classification helpers used by recognize().
+
+  /// Returns the underlying string literal expression for bases that denote
+  /// string literal objects in the evaluator.
+  static const Expr *getStringLiteralBase(APValue::LValueBase Base);
+  /// Whether LV's base is an initializer_list backing array.
+  static bool isInitializerListBackingArray(const LValue &LV);
+  /// Reads the complete object value an lvalue's base denotes.
+  const APValue *getCompleteObjectValue(const LValue &LV) const;
+  /// Returns the array element and element-relative location that LV
+  /// designates, or std::nullopt if LV is not an element, one-past-the-end
+  /// position, or subobject of an element of its base array.
+  std::optional<ArraySubobjectLocation>
+  getArraySubobjectLocation(const LValue &LV) const;
+  /// Returns the string-literal array element and element-relative offset
+  /// designated by LV, including byte-offset-only lvalues.
+  std::optional<ArraySubobjectLocation>
+  getStringArraySubobjectLocation(const LValue &LV) const;
+  /// Finds the innermost enclosing constant array subobject for an lvalue into
+  /// a template parameter object.
+  std::optional<ArraySubobjectPathInfo>
+  getArraySubobjectPathInfo(const LValue &LV) const;
+
+  bool isStringLiteral() const { return TheKind == Kind::StringLiteral; }
+  const ArraySubobjectLocation &location() const { return Loc; }
+
+  /// Number of elements visible through this view.
+  int64_t size() const {
+    if (TheKind == Kind::StringLiteral)
+      return ArrayType->getZExtSize();
+    return arrayValue()->getArraySize();
+  }
+
+  /// Value of the element at Index, or std::nullopt when the representation
+  /// cannot expose enough data to prove it differs.
+  std::optional<APValue> operator[](int64_t Index) const {
+    if (Index < 0)
+      return std::nullopt;
+    uint64_t UIndex = static_cast<uint64_t>(Index);
+    if (TheKind == Kind::StringLiteral)
+      return APValue(extractStringLiteralCharacter(Info, StringExpr, UIndex));
+    if (const APValue *Elt = GetArrayInitializedElt(*arrayValue(), UIndex))
+      return *Elt;
     return std::nullopt;
+  }
 
-  const auto *ArrayType = Ctx.getAsConstantArrayType(getType(LV.Base));
-  if (!ArrayType)
-    return std::nullopt;
+  /// Returns the APValue array for the InitializerList / TemplateParamObject
+  /// kinds (borrowed or owned, respectively).
+  const APValue *arrayValue() const {
+    const APValue *Arr = OwnedArrayValue ? &*OwnedArrayValue : ArrayValue;
+    assert(Arr && Arr->isArray() && "invalid APValue array");
+    return Arr;
+  }
 
-  uint64_t Index = LV.Designator.Entries.front().getAsArrayIndex();
-  bool IsValidOnePastEnd =
-      LV.Designator.Entries.size() == 1 && LV.Designator.isOnePastTheEnd();
-  return getArraySubobjectLocationImpl(Ctx, ArrayType, Index, LV.Offset,
-                                       IsValidOnePastEnd);
-}
+  EvalInfo &Info;
+  const Expr *E;
+  Kind TheKind = Kind::StringLiteral;
+  const ConstantArrayType *ArrayType = nullptr;
+  ArraySubobjectLocation Loc;
+  const Expr *StringExpr = nullptr;        // Kind::StringLiteral
+  const APValue *ArrayValue = nullptr;     // Kind::InitializerList (borrowed)
+  std::optional<APValue> OwnedArrayValue;  // Kind::TemplateParamObject (owned)
+};
+} // namespace
 
-static const APValue *GetCompleteObjectValue(EvalInfo &Info, const Expr *E,
-                                             const LValue &LV) {
-  CompleteObject Obj =
-      findCompleteObject(Info, E, AK_Read, LV, getType(LV.Base));
-  return Obj ? Obj.Value : nullptr;
-}
-
-static bool isInitializerListBackingArray(const LValue &LV) {
-  const auto *BaseExpr = LV.Base.dyn_cast<const Expr *>();
-  const auto *MTE = dyn_cast_or_null<MaterializeTemporaryExpr>(BaseExpr);
-  return MTE && MTE->isBackingArrayForInitializerList();
-}
-
-/// Returns the underlying string literal expression for bases that denote
-/// string literal objects in the evaluator.
-static const Expr *getStringLiteralBase(APValue::LValueBase Base) {
+const Expr *NonUniqueObject::getStringLiteralBase(APValue::LValueBase Base) {
   const auto *BaseExpr = Base.dyn_cast<const Expr *>();
   if (isa_and_nonnull<StringLiteral, PredefinedExpr>(BaseExpr))
     return BaseExpr;
   return nullptr;
 }
 
-/// Returns the string-literal array element and element-relative offset
-/// designated by LV, including byte-offset-only lvalues.
-static std::optional<ArraySubobjectLocation>
-getStringArraySubobjectLocation(const ASTContext &Ctx, const LValue &LV) {
+bool NonUniqueObject::isInitializerListBackingArray(const LValue &LV) {
+  const auto *BaseExpr = LV.Base.dyn_cast<const Expr *>();
+  const auto *MTE = dyn_cast_or_null<MaterializeTemporaryExpr>(BaseExpr);
+  return MTE && MTE->isBackingArrayForInitializerList();
+}
+
+const APValue *NonUniqueObject::getCompleteObjectValue(const LValue &LV) const {
+  CompleteObject Obj =
+      findCompleteObject(Info, E, AK_Read, LV, getType(LV.Base));
+  return Obj ? Obj.Value : nullptr;
+}
+
+std::optional<ArraySubobjectLocation>
+NonUniqueObject::getArraySubobjectLocation(const LValue &LV) const {
+  if (LV.Designator.Invalid || LV.Designator.Entries.empty())
+    return std::nullopt;
+
+  const auto *CAT = Info.Ctx.getAsConstantArrayType(getType(LV.Base));
+  if (!CAT)
+    return std::nullopt;
+
+  uint64_t Index = LV.Designator.Entries.front().getAsArrayIndex();
+  bool IsValidOnePastEnd =
+      LV.Designator.Entries.size() == 1 && LV.Designator.isOnePastTheEnd();
+  return getArraySubobjectLocationImpl(Info.Ctx, CAT, Index, LV.Offset,
+                                       IsValidOnePastEnd);
+}
+
+std::optional<ArraySubobjectLocation>
+NonUniqueObject::getStringArraySubobjectLocation(const LValue &LV) const {
   if (!getStringLiteralBase(LV.Base))
     return std::nullopt;
 
-  if (std::optional<ArraySubobjectLocation> Loc =
-          getArraySubobjectLocation(Ctx, LV))
-    return Loc;
+  if (std::optional<ArraySubobjectLocation> EltLoc =
+          getArraySubobjectLocation(LV))
+    return EltLoc;
 
-  const auto *ArrayType = Ctx.getAsConstantArrayType(getType(LV.Base));
-  if (!ArrayType || LV.Offset.isNegative())
+  const auto *CAT = Info.Ctx.getAsConstantArrayType(getType(LV.Base));
+  if (!CAT || LV.Offset.isNegative())
     return std::nullopt;
 
   uint64_t ElementSize =
-      Ctx.getTypeSizeInChars(ArrayType->getElementType()).getQuantity();
+      Info.Ctx.getTypeSizeInChars(CAT->getElementType()).getQuantity();
   if (!ElementSize)
     return std::nullopt;
 
   uint64_t Offset = LV.Offset.getQuantity();
   uint64_t Index = Offset / ElementSize;
-  if (Index > ArrayType->getZExtSize())
+  uint64_t OffsetInElement = Offset % ElementSize;
+  uint64_t ArraySize = CAT->getZExtSize();
+  // Accept element and subobject positions, plus the single one-past-the-end
+  // byte {ArraySize, 0}. Reject anything beyond that, including an offset that
+  // lands past the one-past-the-end byte with a nonzero in-element remainder.
+  if (Index > ArraySize || (Index == ArraySize && OffsetInElement != 0))
     return std::nullopt;
 
   return ArraySubobjectLocation{Index,
-                                CharUnits::fromQuantity(Offset % ElementSize)};
+                                CharUnits::fromQuantity(OffsetInElement)};
 }
 
-namespace {
-/// Identifies an enclosing constant array subobject within an lvalue path.
-struct ArraySubobjectPathInfo {
-  const ConstantArrayType *ArrayType = nullptr;
-  unsigned ArrayPathLength = 0;
-  ArraySubobjectLocation Loc;
-};
-
-/// Describes a potentially non-unique array visible to the constant evaluator.
-struct NonUniqueArrayInfo {
-  const ConstantArrayType *ArrayType = nullptr;
-  ArraySubobjectLocation Loc;
-  /// Non-null for string literal arrays; otherwise ArrayValue or
-  /// OwnedArrayValue contains an APValue array.
-  const Expr *StringBase = nullptr;
-  const APValue *ArrayValue = nullptr;
-  std::optional<APValue> OwnedArrayValue;
-
-  /// Returns true when this view describes a string literal array.
-  bool isStringLiteral() const { return StringBase; }
-
-  /// Returns the APValue storage for non-string arrays.
-  const APValue *getArrayValue() const {
-    return OwnedArrayValue ? &*OwnedArrayValue : ArrayValue;
-  }
-
-  /// Returns the number of array elements visible through this view.
-  int64_t getSize() const {
-    if (isStringLiteral())
-      return ArrayType->getZExtSize();
-
-    const APValue *Array = getArrayValue();
-    assert(Array && Array->isArray() && "invalid APValue array");
-    return Array->getArraySize();
-  }
-
-  /// Returns the value of one element, or nullopt when the representation does
-  /// not expose enough data to prove it differs.
-  std::optional<APValue> getElement(EvalInfo &Info, int64_t Index) const {
-    if (Index < 0)
-      return std::nullopt;
-    uint64_t UIndex = static_cast<uint64_t>(Index);
-
-    if (isStringLiteral())
-      return APValue(extractStringLiteralCharacter(Info, StringBase, UIndex));
-
-    const APValue *Array = getArrayValue();
-    assert(Array && Array->isArray() && "invalid APValue array");
-    if (const APValue *Elt = GetArrayInitializedElt(*Array, UIndex))
-      return *Elt;
+std::optional<NonUniqueObject::ArraySubobjectPathInfo>
+NonUniqueObject::getArraySubobjectPathInfo(const LValue &LV) const {
+  const ASTContext &Ctx = Info.Ctx;
+  if (LV.Designator.Invalid || LV.Designator.Entries.empty())
     return std::nullopt;
-  }
-};
 
-/// Performs potentially-non-unique object overlap checks for two evaluator
-/// lvalues.
-class NonUniqueObjectOverlapChecker {
-public:
-  /// Creates a checker for comparisons diagnosed at expression E.
-  NonUniqueObjectOverlapChecker(EvalInfo &Info, const Expr *E)
-      : Info(Info), E(E) {}
+  QualType Type = getType(LV.Base).getNonReferenceType();
+  CharUnits PathOffset = CharUnits::Zero();
+  std::optional<ArraySubobjectPathInfo> Result;
 
-  /// Returns true when LHS and RHS could designate merged storage.
-  bool mayOverlap(const LValue &LHS, const LValue &RHS) const {
-    const ASTContext &Ctx = Info.Ctx;
-    std::optional<NonUniqueArrayInfo> LHSArray = getArrayInfo(LHS);
-    std::optional<NonUniqueArrayInfo> RHSArray = getArrayInfo(RHS);
-    if (!LHSArray || !RHSArray)
-      return false;
+  for (unsigned I = 0, N = LV.Designator.Entries.size(); I != N; ++I) {
+    APValue::LValuePathEntry Entry = LV.Designator.Entries[I];
 
-    // Keep the existing string-literal diagnostic path authoritative for
-    // string/string comparisons.
-    if (LHSArray->isStringLiteral() && RHSArray->isStringLiteral())
-      return false;
+    if (const auto *CAT = Ctx.getAsConstantArrayType(Type)) {
+      uint64_t Index = Entry.getAsArrayIndex();
+      CharUnits OffsetInArray = LV.Offset - PathOffset;
+      bool IsValidOnePastEnd = I + 1 == N && LV.Designator.isOnePastTheEnd();
+      std::optional<ArraySubobjectLocation> EltLoc =
+          getArraySubobjectLocationImpl(Ctx, CAT, Index, OffsetInArray,
+                                        IsValidOnePastEnd);
+      if (EltLoc)
+        Result = ArraySubobjectPathInfo{CAT, I, *EltLoc};
 
-    if (LHSArray->Loc.OffsetInElement != RHSArray->Loc.OffsetInElement)
-      return false;
-
-    if (!Ctx.hasSameUnqualifiedType(LHSArray->ArrayType->getElementType(),
-                                    RHSArray->ArrayType->getElementType()))
-      return false;
-
-    int64_t LHSOffset = LHSArray->Loc.Index;
-    int64_t RHSOffset = RHSArray->Loc.Index;
-    int64_t LHSSize = LHSArray->getSize();
-    int64_t RHSSize = RHSArray->getSize();
-    int64_t OverlapBegin = std::max(-LHSOffset, -RHSOffset);
-    int64_t OverlapEnd = std::min(LHSSize - LHSOffset, RHSSize - RHSOffset);
-    if (OverlapBegin >= OverlapEnd)
-      return false;
-
-    for (int64_t I = OverlapBegin; I != OverlapEnd; ++I) {
-      std::optional<APValue> LHSElt = LHSArray->getElement(Info, I + LHSOffset);
-      std::optional<APValue> RHSElt = RHSArray->getElement(Info, I + RHSOffset);
-      // Missing element data: be conservative and assume the arrays may share
-      // storage.
-      if (!LHSElt || !RHSElt)
-        return true;
-      if (!AreAPValuesPotentiallyMergeable(*LHSElt, *RHSElt, Ctx))
-        return false;
+      QualType ElementType = CAT->getElementType();
+      CharUnits ElementSize = Ctx.getTypeSizeInChars(ElementType);
+      if (ElementSize.isZero())
+        return std::nullopt;
+      if (Index >
+          std::numeric_limits<uint64_t>::max() / ElementSize.getQuantity())
+        return std::nullopt;
+      PathOffset += Index * ElementSize;
+      Type = ElementType;
+      continue;
     }
 
+    if (const FieldDecl *FD = getAsField(Entry)) {
+      if (FD->getParent()->isInvalidDecl())
+        return std::nullopt;
+      const ASTRecordLayout &Layout = Ctx.getASTRecordLayout(FD->getParent());
+      PathOffset +=
+          Ctx.toCharUnitsFromBits(Layout.getFieldOffset(FD->getFieldIndex()));
+      Type = FD->getType();
+      continue;
+    }
+
+    const CXXRecordDecl *Base = getAsBaseClass(Entry);
+    const CXXRecordDecl *Derived = Type->getAsCXXRecordDecl();
+    if (!Derived || !Base)
+      return std::nullopt;
+    const ASTRecordLayout &Layout = Ctx.getASTRecordLayout(Derived);
+    PathOffset += isVirtualBaseClass(Entry) ? Layout.getVBaseClassOffset(Base)
+                                            : Layout.getBaseClassOffset(Base);
+    Type = Ctx.getCanonicalTagType(Base);
+  }
+
+  if (const auto *CAT = Ctx.getAsConstantArrayType(Type)) {
+    CharUnits OffsetInArray = LV.Offset - PathOffset;
+    if (OffsetInArray.isZero())
+      Result = ArraySubobjectPathInfo{
+          CAT, static_cast<unsigned>(LV.Designator.Entries.size()),
+          ArraySubobjectLocation{0, CharUnits::Zero()}};
+  }
+
+  return Result;
+}
+
+bool NonUniqueObject::recognize(const LValue &LV) {
+  ASTContext &Ctx = Info.Ctx;
+
+  if (const Expr *StringBase = getStringLiteralBase(LV.Base)) {
+    std::optional<ArraySubobjectLocation> EltLoc =
+        getStringArraySubobjectLocation(LV);
+    const auto *CAT = Ctx.getAsConstantArrayType(getType(LV.Base));
+    if (!EltLoc || !CAT)
+      return false;
+    TheKind = Kind::StringLiteral;
+    ArrayType = CAT;
+    Loc = *EltLoc;
+    StringExpr = StringBase;
     return true;
   }
 
-private:
-  /// Finds the innermost enclosing constant array subobject for an lvalue into
-  /// a template parameter object.
-  std::optional<ArraySubobjectPathInfo>
-  getArraySubobjectPathInfo(const LValue &LV) const {
-    const ASTContext &Ctx = Info.Ctx;
-    if (LV.Designator.Invalid || LV.Designator.Entries.empty())
-      return std::nullopt;
-
-    QualType Type = getType(LV.Base).getNonReferenceType();
-    CharUnits PathOffset = CharUnits::Zero();
-    std::optional<ArraySubobjectPathInfo> Result;
-
-    for (unsigned I = 0, N = LV.Designator.Entries.size(); I != N; ++I) {
-      APValue::LValuePathEntry Entry = LV.Designator.Entries[I];
-
-      if (const auto *ArrayType = Ctx.getAsConstantArrayType(Type)) {
-        uint64_t Index = Entry.getAsArrayIndex();
-        CharUnits OffsetInArray = LV.Offset - PathOffset;
-        bool IsValidOnePastEnd = I + 1 == N && LV.Designator.isOnePastTheEnd();
-        std::optional<ArraySubobjectLocation> Loc =
-            getArraySubobjectLocationImpl(Ctx, ArrayType, Index, OffsetInArray,
-                                          IsValidOnePastEnd);
-        if (Loc)
-          Result = ArraySubobjectPathInfo{ArrayType, I, *Loc};
-
-        QualType ElementType = ArrayType->getElementType();
-        CharUnits ElementSize = Ctx.getTypeSizeInChars(ElementType);
-        if (ElementSize.isZero())
-          return std::nullopt;
-        if (Index >
-            std::numeric_limits<uint64_t>::max() / ElementSize.getQuantity())
-          return std::nullopt;
-        PathOffset += Index * ElementSize;
-        Type = ElementType;
-        continue;
-      }
-
-      if (const FieldDecl *FD = getAsField(Entry)) {
-        if (FD->getParent()->isInvalidDecl())
-          return std::nullopt;
-        const ASTRecordLayout &Layout = Ctx.getASTRecordLayout(FD->getParent());
-        PathOffset +=
-            Ctx.toCharUnitsFromBits(Layout.getFieldOffset(FD->getFieldIndex()));
-        Type = FD->getType();
-        continue;
-      }
-
-      const CXXRecordDecl *Base = getAsBaseClass(Entry);
-      const CXXRecordDecl *Derived = Type->getAsCXXRecordDecl();
-      if (!Derived || !Base)
-        return std::nullopt;
-      const ASTRecordLayout &Layout = Ctx.getASTRecordLayout(Derived);
-      PathOffset += isVirtualBaseClass(Entry) ? Layout.getVBaseClassOffset(Base)
-                                              : Layout.getBaseClassOffset(Base);
-      Type = Ctx.getCanonicalTagType(Base);
-    }
-
-    if (const auto *ArrayType = Ctx.getAsConstantArrayType(Type)) {
-      CharUnits OffsetInArray = LV.Offset - PathOffset;
-      if (OffsetInArray.isZero())
-        Result = ArraySubobjectPathInfo{
-            ArrayType, static_cast<unsigned>(LV.Designator.Entries.size()),
-            ArraySubobjectLocation{0, CharUnits::Zero()}};
-    }
-
-    return Result;
+  if (isInitializerListBackingArray(LV)) {
+    std::optional<ArraySubobjectLocation> EltLoc = getArraySubobjectLocation(LV);
+    const auto *CAT = Ctx.getAsConstantArrayType(getType(LV.Base));
+    const APValue *ArrVal = getCompleteObjectValue(LV);
+    if (!EltLoc || !CAT || !ArrVal || !ArrVal->isArray())
+      return false;
+    TheKind = Kind::InitializerList;
+    ArrayType = CAT;
+    Loc = *EltLoc;
+    ArrayValue = ArrVal;
+    return true;
   }
 
-  /// Builds a comparable array view for a string literal, initializer_list
-  /// backing array, or array subobject of a template parameter object.
-  std::optional<NonUniqueArrayInfo> getArrayInfo(const LValue &LV) const {
-    ASTContext &Ctx = Info.Ctx;
+  const auto *VD = LV.Base.dyn_cast<const ValueDecl *>();
+  const auto *TPO = dyn_cast_if_present<TemplateParamObjectDecl>(VD);
+  if (!TPO)
+    return false;
 
-    if (const Expr *StringBase = getStringLiteralBase(LV.Base)) {
-      std::optional<ArraySubobjectLocation> Loc =
-          getStringArraySubobjectLocation(Ctx, LV);
-      const auto *ArrayType = Ctx.getAsConstantArrayType(getType(LV.Base));
-      if (!Loc || !ArrayType)
-        return std::nullopt;
+  std::optional<ArraySubobjectPathInfo> PathInfo = getArraySubobjectPathInfo(LV);
+  if (!PathInfo)
+    return false;
 
-      NonUniqueArrayInfo Result;
-      Result.ArrayType = ArrayType;
-      Result.Loc = *Loc;
-      Result.StringBase = StringBase;
-      return Result;
-    }
+  APValue ArrVal;
+  SubobjectDesignator ArrayDesignator = LV.Designator;
+  ArrayDesignator.truncate(Ctx, LV.Base, PathInfo->ArrayPathLength);
+  CompleteObject Obj(LV.Base, const_cast<APValue *>(&TPO->getValue()),
+                     TPO->getType());
+  if (!extractSubobject(Info, E, Obj, ArrayDesignator, ArrVal))
+    return false;
+  if (!ArrVal.isArray())
+    return false;
+  TheKind = Kind::TemplateParamObject;
+  ArrayType = PathInfo->ArrayType;
+  Loc = PathInfo->Loc;
+  OwnedArrayValue = std::move(ArrVal);
+  return true;
+}
 
-    if (isInitializerListBackingArray(LV)) {
-      std::optional<ArraySubobjectLocation> Loc =
-          getArraySubobjectLocation(Ctx, LV);
-      const auto *ArrayType = Ctx.getAsConstantArrayType(getType(LV.Base));
-      const APValue *ArrayValue = GetCompleteObjectValue(Info, E, LV);
-      if (!Loc || !ArrayType || !ArrayValue || !ArrayValue->isArray())
-        return std::nullopt;
+bool NonUniqueObject::mayShareStorageWith(const NonUniqueObject &Other) const {
+  if (location().OffsetInElement != Other.location().OffsetInElement)
+    return false;
+  if (!Info.Ctx.hasSameUnqualifiedType(ArrayType->getElementType(),
+                                       Other.ArrayType->getElementType()))
+    return false;
 
-      NonUniqueArrayInfo Result;
-      Result.ArrayType = ArrayType;
-      Result.Loc = *Loc;
-      Result.ArrayValue = ArrayValue;
-      return Result;
-    }
+  int64_t LHSStart = location().Index, RHSStart = Other.location().Index;
+  int64_t Begin = std::max(-LHSStart, -RHSStart);
+  int64_t End = std::min(size() - LHSStart, Other.size() - RHSStart);
+  if (Begin >= End)
+    return false;
 
-    const auto *VD = LV.Base.dyn_cast<const ValueDecl *>();
-    const auto *TPO = dyn_cast_if_present<TemplateParamObjectDecl>(VD);
-    if (!TPO)
-      return std::nullopt;
-
-    std::optional<ArraySubobjectPathInfo> PathInfo =
-        getArraySubobjectPathInfo(LV);
-    if (!PathInfo)
-      return std::nullopt;
-
-    APValue ArrayValue;
-    SubobjectDesignator ArrayDesignator = LV.Designator;
-    ArrayDesignator.truncate(Ctx, LV.Base, PathInfo->ArrayPathLength);
-    CompleteObject Obj(LV.Base, const_cast<APValue *>(&TPO->getValue()),
-                       TPO->getType());
-    if (!extractSubobject(Info, E, Obj, ArrayDesignator, ArrayValue))
-      return std::nullopt;
-    if (!ArrayValue.isArray())
-      return std::nullopt;
-
-    NonUniqueArrayInfo Result;
-    Result.ArrayType = PathInfo->ArrayType;
-    Result.Loc = PathInfo->Loc;
-    Result.OwnedArrayValue = std::move(ArrayValue);
-    return Result;
+  for (int64_t I = Begin; I != End; ++I) {
+    std::optional<APValue> LHSElt = (*this)[I + LHSStart];
+    std::optional<APValue> RHSElt = Other[I + RHSStart];
+    if (!LHSElt || !RHSElt)
+      return true;
+    if (!AreAPValuesPotentiallyMergeable(*LHSElt, *RHSElt, Info.Ctx))
+      return false;
   }
+  return true;
+}
 
-  EvalInfo &Info;
-  const Expr *E;
-};
-} // namespace
+bool NonUniqueObject::arePotentiallyOverlapping(EvalInfo &Info, const Expr *E,
+                                                const LValue &LHS,
+                                                const LValue &RHS) {
+  NonUniqueObject LHSObj(Info, E);
+  NonUniqueObject RHSObj(Info, E);
+  if (!LHSObj.recognize(LHS) || !RHSObj.recognize(RHS))
+    return false;
 
-/// Returns true when two lvalues designate potentially non-unique arrays whose
-/// overlapping elements could be merged into the same storage.
-static bool ArePotentiallyOverlappingNonUniqueObjects(EvalInfo &Info,
-                                                      const Expr *E,
-                                                      const LValue &LHS,
-                                                      const LValue &RHS) {
-  return NonUniqueObjectOverlapChecker(Info, E).mayOverlap(LHS, RHS);
+  // String/string comparisons stay with the dedicated string-literal path.
+  if (LHSObj.isStringLiteral() && RHSObj.isStringLiteral())
+    return false;
+
+  return LHSObj.mayShareStorageWith(RHSObj);
 }
 
 /// Perform an lvalue-to-rvalue conversion on the given glvalue. This
@@ -19399,8 +19428,8 @@ EvaluateComparisonBinaryOperator(EvalInfo &Info, const BinaryOperator *E,
       //
       if (ArePotentiallyOverlappingStringLiterals(Info, LHSValue, RHSValue))
         return DiagComparison(diag::note_constexpr_literal_comparison);
-      if (ArePotentiallyOverlappingNonUniqueObjects(Info, E, LHSValue,
-                                                    RHSValue))
+      if (NonUniqueObject::arePotentiallyOverlapping(Info, E, LHSValue,
+                                                     RHSValue))
         return DiagComparison(
             diag::note_constexpr_non_unique_object_comparison);
       if (IsOpaqueConstantCall(LHSValue) || IsOpaqueConstantCall(RHSValue))
