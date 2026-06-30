@@ -1,7 +1,8 @@
 ! Test -fdo-concurrent-clean-nested-loops: a plain DO loop nested in a DO
 ! CONCURRENT body is lowered without the secondary-induction iter_arg (the DO
 ! variable is recomputed from the induction variable), while the Fortran
-! post-loop value of the DO variable is still materialized after the loop.
+! post-loop value of the DO variable is still materialized after the loop. A
+! plain DO loop that is not nested in a DO CONCURRENT body is unaffected.
 
 ! RUN: bbc -emit-hlfir -o - %s | FileCheck %s --check-prefixes=CHECK,DEFAULT
 ! RUN: bbc -emit-hlfir -fdo-concurrent-clean-nested-loops -o - %s | FileCheck %s --check-prefixes=CHECK,CLEAN
@@ -27,16 +28,36 @@ end subroutine
 ! DEFAULT:           %[[RES:.*]] = fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} iter_args(%{{.*}} = %{{.*}}) -> (i32) {
 ! DEFAULT:           fir.store %[[RES]] to %[[J_DECL]]#0 : !fir.ref<i32>
 
-! Clean lowering: nested loop has no iter_arg; the post-loop value is computed
-! as lb + tripCount*step after the loop and stored to the DO variable.
-! CLEAN:             fir.do_loop %{{.*}} = %[[LB:.*]] to %[[UB:.*]] step %[[ST:.*]] {
+! Clean lowering: nested loop has no iter_arg and the body recomputes the DO
+! variable from the induction variable; the post-loop value is computed as
+! lb + tripCount*step after the loop and stored to the DO variable.
+! CLEAN:             fir.do_loop %{{.*}} = %[[LB:[^ ]+]] to %[[UB:[^ ]+]] step %[[ST:[^ ]+]] {
 ! CLEAN-NOT:           iter_args
+! CLEAN:               %[[IV:.*]] = fir.convert %{{.*}} : (index) -> i32
+! CLEAN:               fir.store %[[IV]] to %[[J_DECL]]#0 : !fir.ref<i32>
 ! CLEAN:             }
-! CLEAN:             %[[DIFF:.*]] = arith.subi %{{.*}}, %{{.*}} overflow<nsw> : i32
-! CLEAN:             %[[ADD:.*]] = arith.addi %[[DIFF]], %{{.*}} overflow<nsw> : i32
-! CLEAN:             %[[TRIP:.*]] = arith.divsi %[[ADD]], %{{.*}} : i32
-! CLEAN:             %[[CMP:.*]] = arith.cmpi slt, %[[TRIP]], %{{.*}} : i32
-! CLEAN:             %[[SEL:.*]] = arith.select %[[CMP]], %{{.*}}, %[[TRIP]] : i32
-! CLEAN:             %[[MUL:.*]] = arith.muli %[[SEL]], %{{.*}} overflow<nsw> : i32
-! CLEAN:             %[[LAST:.*]] = arith.addi %{{.*}}, %[[MUL]] overflow<nsw> : i32
+! CLEAN:             %[[LBI:.*]] = fir.convert %[[LB]] : (index) -> i32
+! CLEAN:             %[[UBI:.*]] = fir.convert %[[UB]] : (index) -> i32
+! CLEAN:             %[[STI:.*]] = fir.convert %[[ST]] : (index) -> i32
+! CLEAN:             %[[C0:.*]] = arith.constant 0 : i32
+! CLEAN:             %[[DIFF:.*]] = arith.subi %[[UBI]], %[[LBI]] overflow<nsw> : i32
+! CLEAN:             %[[ADD:.*]] = arith.addi %[[DIFF]], %[[STI]] overflow<nsw> : i32
+! CLEAN:             %[[TRIP:.*]] = arith.divsi %[[ADD]], %[[STI]] : i32
+! CLEAN:             %[[CMP:.*]] = arith.cmpi slt, %[[TRIP]], %[[C0]] : i32
+! CLEAN:             %[[SEL:.*]] = arith.select %[[CMP]], %[[C0]], %[[TRIP]] : i32
+! CLEAN:             %[[MUL:.*]] = arith.muli %[[SEL]], %[[STI]] overflow<nsw> : i32
+! CLEAN:             %[[LAST:.*]] = arith.addi %[[LBI]], %[[MUL]] overflow<nsw> : i32
 ! CLEAN:             fir.store %[[LAST]] to %[[J_DECL]]#0 : !fir.ref<i32>
+
+! A plain DO loop not nested in a DO CONCURRENT body keeps its iter_arg even
+! when the option is enabled.
+subroutine not_nested(x)
+  implicit none
+  integer :: x, j
+  do j = 1, 3
+  end do
+  x = j
+end subroutine
+
+! CHECK-LABEL:   func.func @_QPnot_nested
+! CLEAN:           fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} iter_args(%{{.*}} = %{{.*}}) -> (i32) {
