@@ -11507,7 +11507,7 @@ defm UMIN : ComparisonOp<1, 1, "umin", umin>, Requires<[HasCSSC]>;
 def RPRFM:
     I<(outs), (ins rprfop:$Rt, GPR64:$Rm, GPR64sp:$Rn),
       "rprfm", "\t$Rt, $Rm, [$Rn]", "", []>,
-    Sched<[]> {
+    Sched<[WriteLD]> {
   bits<6> Rt;
   bits<5> Rn;
   bits<5> Rm;
