@@ -17979,7 +17979,7 @@ combineVectorSizedSetCCEquality(EVT VT, SDValue X, SDValue Y, ISD::CondCode CC,
                                 const RISCVSubtarget &Subtarget) {
   assert(ISD::isIntEqualitySetCC(CC) && "Bad comparison predicate");
 
-  if (!Subtarget.hasVInstructions())
+  if (!Subtarget.useRVVForFixedLengthVectors())
     return SDValue();
 
   MVT XLenVT = Subtarget.getXLenVT();
