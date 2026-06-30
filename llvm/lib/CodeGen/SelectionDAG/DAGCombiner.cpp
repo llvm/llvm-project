@@ -6316,8 +6316,8 @@ SDValue DAGCombiner::visitIMINMAX(SDNode *N) {
   // Both reduce to two instructions vs. a compare+cmov on x86-64.
   // Only fold when the target has no native SMAX/SMIN instruction for this
   // type (isOperationExpand), the type is legal (not needing splitting), and
-  // the operand is not a min/max chain (preserving saturation patterns such as
-  // RISCV-P sati which combine smin+smax into a single instruction).
+  // the operand is not a min/max chain (preserving target combine patterns
+  // that fold smax(smin(x,C),D) into a single saturation instruction).
   APInt C;
   if (TLI.isTypeLegal(VT) &&
       !TLI.shouldAvoidTransformToShift(VT, VT.getScalarSizeInBits() - 1) &&
