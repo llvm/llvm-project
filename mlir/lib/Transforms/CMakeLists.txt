@@ -12,6 +12,7 @@ add_mlir_library(MLIRTransforms
   LocationSnapshot.cpp
   LoopInvariantCodeMotion.cpp
   Mem2Reg.cpp
+  Normalize.cpp
   OpStats.cpp
   PrintIR.cpp
   RemoveDeadValues.cpp

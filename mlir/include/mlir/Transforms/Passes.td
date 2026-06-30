@@ -656,4 +656,18 @@ def BubbleDownMemorySpaceCasts :
   }];
 }
 
+def NormalizePass : InterfacePass<"normalize", "FunctionOpInterface"> {
+  let summary = "Transforms IR into a normal form that's easier to diff.";
+  let description = [{
+    This pass aims to transform MLIR Modules into a normal form by reordering
+    operations while preserving the same semantics. It attempts to relocate
+    the defining ops of operands for any side-effecting or terminator operation
+    to their nearest dominating positions.
+
+    Note: The pass trying to increase syntactic equivalence of code to reduce
+    diff size while retaining semantic equivalence. It cannot replace the
+    canonicalization pass (a pass that aims for increasing semantic equivalence instead).
+  }];
+}
+
 #endif // MLIR_TRANSFORMS_PASSES
