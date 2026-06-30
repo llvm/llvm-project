@@ -967,11 +967,10 @@ private:
 
 } // end anonymous namespace
 
-/// Try to compute a constant stride for \p AR. Used by getPtrStride and
-/// isNoWrap.
-static std::optional<int64_t>
-getStrideFromAddRec(const SCEVAddRecExpr *AR, const Loop *Lp, Type *AccessTy,
-                    Value *Ptr, PredicatedScalarEvolution &PSE) {
+std::optional<int64_t>
+llvm::getStrideFromAddRec(const SCEVAddRecExpr *AR, const Loop *Lp,
+                          Type *AccessTy, Value *Ptr,
+                          PredicatedScalarEvolution &PSE) {
   if (isa<ScalableVectorType>(AccessTy)) {
     LLVM_DEBUG(dbgs() << "LAA: Bad stride - Scalable object: " << *AccessTy
                       << "\n");

@@ -1636,8 +1636,13 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
         builder.createIsFPClass(loc, v, cir::FPClassTest(test)),
         convertType(e->getType())));
   }
-  case Builtin::BI__builtin_nondeterministic_value:
-    return errorBuiltinNYI(*this, e, builtinID);
+  case Builtin::BI__builtin_nondeterministic_value: {
+    mlir::Type ty = convertType(e->getArg(0)->getType());
+    mlir::Value result =
+        cir::ConstantOp::create(builder, loc, ty, cir::PoisonAttr::get(ty));
+    result = cir::FreezeOp::create(builder, loc, result);
+    return RValue::get(result);
+  }
   case Builtin::BI__builtin_elementwise_abs: {
     mlir::Type cirTy = convertType(e->getArg(0)->getType());
     bool isIntTy = cir::isIntOrVectorOfIntType(cirTy);

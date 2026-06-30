@@ -30,8 +30,8 @@ bb2:
 define amdgpu_kernel void @test_switch_cost(i32 %a) #0 {
 ; ALL-LABEL: 'test_switch_cost'
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: switch i32 %a, label %default [
-; ALL-NEXT:    i32 0, label %case0
-; ALL-NEXT:    i32 1, label %case1
+; ALL-NEXT:      i32 0, label %case0
+; ALL-NEXT:      i32 1, label %case1
 ; ALL-NEXT:    ]
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
@@ -39,8 +39,8 @@ define amdgpu_kernel void @test_switch_cost(i32 %a) #0 {
 ;
 ; ALL-SIZE-LABEL: 'test_switch_cost'
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: switch i32 %a, label %default [
-; ALL-SIZE-NEXT:    i32 0, label %case0
-; ALL-SIZE-NEXT:    i32 1, label %case1
+; ALL-SIZE-NEXT:      i32 0, label %case0
+; ALL-SIZE-NEXT:      i32 1, label %case1
 ; ALL-SIZE-NEXT:    ]
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void

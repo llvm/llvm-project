@@ -333,7 +333,7 @@ function(build_nanobind_lib)
   cmake_parse_arguments(ARG
     ""
     "INSTALL_COMPONENT;INSTALL_DESTINATION;OUTPUT_DIRECTORY;MLIR_BINDINGS_PYTHON_NB_DOMAIN"
-    ""
+    "EXTRA_COMPILE_OPTIONS;EXTRA_LINK_LIBS"
     ${ARGN})
 
   # Only build in free-threaded mode if the Python ABI supports it.
@@ -359,6 +359,14 @@ function(build_nanobind_lib)
   target_compile_definitions(${NB_LIBRARY_TARGET_NAME}
     PRIVATE
     NB_DOMAIN=${ARG_MLIR_BINDINGS_PYTHON_NB_DOMAIN}
+  )
+  target_compile_options(${NB_LIBRARY_TARGET_NAME}
+    PRIVATE
+      ${ARG_EXTRA_COMPILE_OPTIONS}
+  )
+  target_link_libraries(${NB_LIBRARY_TARGET_NAME}
+    PRIVATE
+      ${ARG_EXTRA_LINK_LIBS}
   )
   # Propagate stable ABI to the shared nanobind library. nanobind internally
   # skips this when the interpreter is free-threaded.
@@ -420,11 +428,19 @@ endfunction()
 #     DAG of source modules is included.
 #   COMMON_CAPI_LINK_LIBS: List of dylibs (typically one) to make every
 #     extension depend on (see mlir_python_add_common_capi_library).
+#   MLIR_BINDINGS_PYTHON_EXTRA_NANOBIND_COMPILE_OPTIONS: Extra compile options
+#     to add to the shared nanobind runtime library.
+#   MLIR_BINDINGS_PYTHON_EXTRA_NANOBIND_LINK_LIBS: Extra libraries to link into
+#     the shared nanobind runtime library.
+#   MLIR_BINDINGS_PYTHON_EXTRA_EXTENSION_COMPILE_OPTIONS: Extra compile options
+#     to add to every generated extension DSO.
+#   MLIR_BINDINGS_PYTHON_EXTRA_EXTENSION_LINK_LIBS: Extra libraries to link into
+#     every generated extension DSO.
 function(add_mlir_python_modules name)
   cmake_parse_arguments(ARG
     ""
     "ROOT_PREFIX;INSTALL_PREFIX;MLIR_BINDINGS_PYTHON_NB_DOMAIN"
-    "COMMON_CAPI_LINK_LIBS;DECLARED_SOURCES"
+    "COMMON_CAPI_LINK_LIBS;DECLARED_SOURCES;MLIR_BINDINGS_PYTHON_EXTRA_NANOBIND_COMPILE_OPTIONS;MLIR_BINDINGS_PYTHON_EXTRA_NANOBIND_LINK_LIBS;MLIR_BINDINGS_PYTHON_EXTRA_EXTENSION_COMPILE_OPTIONS;MLIR_BINDINGS_PYTHON_EXTRA_EXTENSION_LINK_LIBS"
     ${ARGN})
 
   # TODO(max): do the same for MLIR_PYTHON_PACKAGE_PREFIX?
@@ -459,6 +475,10 @@ function(add_mlir_python_modules name)
       INSTALL_DESTINATION "${ARG_INSTALL_PREFIX}/_mlir_libs"
       OUTPUT_DIRECTORY "${ARG_ROOT_PREFIX}/_mlir_libs"
       MLIR_BINDINGS_PYTHON_NB_DOMAIN ${ARG_MLIR_BINDINGS_PYTHON_NB_DOMAIN}
+      EXTRA_COMPILE_OPTIONS
+        ${ARG_MLIR_BINDINGS_PYTHON_EXTRA_NANOBIND_COMPILE_OPTIONS}
+      EXTRA_LINK_LIBS
+        ${ARG_MLIR_BINDINGS_PYTHON_EXTRA_NANOBIND_LINK_LIBS}
     )
   endif()
 
@@ -486,6 +506,10 @@ function(add_mlir_python_modules name)
         INSTALL_DIR "${ARG_INSTALL_PREFIX}/_mlir_libs"
         OUTPUT_DIRECTORY "${ARG_ROOT_PREFIX}/_mlir_libs"
         MLIR_BINDINGS_PYTHON_NB_DOMAIN ${ARG_MLIR_BINDINGS_PYTHON_NB_DOMAIN}
+        EXTRA_COMPILE_OPTIONS
+          ${ARG_MLIR_BINDINGS_PYTHON_EXTRA_EXTENSION_COMPILE_OPTIONS}
+        EXTRA_LINK_LIBS
+          ${ARG_MLIR_BINDINGS_PYTHON_EXTRA_EXTENSION_LINK_LIBS}
         LINK_LIBS PRIVATE
           ${sources_target}
           ${ARG_COMMON_CAPI_LINK_LIBS}
@@ -518,6 +542,10 @@ function(add_mlir_python_modules name)
         INSTALL_DIR "${ARG_INSTALL_PREFIX}/_mlir_libs"
         OUTPUT_DIRECTORY "${ARG_ROOT_PREFIX}/_mlir_libs"
         MLIR_BINDINGS_PYTHON_NB_DOMAIN ${ARG_MLIR_BINDINGS_PYTHON_NB_DOMAIN}
+        EXTRA_COMPILE_OPTIONS
+          ${ARG_MLIR_BINDINGS_PYTHON_EXTRA_EXTENSION_COMPILE_OPTIONS}
+        EXTRA_LINK_LIBS
+          ${ARG_MLIR_BINDINGS_PYTHON_EXTRA_EXTENSION_LINK_LIBS}
         _PRIVATE_SUPPORT_LIB
         LINK_LIBS PRIVATE
         # LLVMSupport is intentionally removed to avoid introducing an LLVM dependency
@@ -922,10 +950,10 @@ endfunction()
 ################################################################################
 function(add_mlir_python_extension libname extname nb_library_target_name)
   cmake_parse_arguments(ARG
-  "_PRIVATE_SUPPORT_LIB"
-  "INSTALL_COMPONENT;INSTALL_DIR;OUTPUT_DIRECTORY;MLIR_BINDINGS_PYTHON_NB_DOMAIN"
-  "SOURCES;LINK_LIBS"
-  ${ARGN})
+    "_PRIVATE_SUPPORT_LIB"
+    "INSTALL_COMPONENT;INSTALL_DIR;OUTPUT_DIRECTORY;MLIR_BINDINGS_PYTHON_NB_DOMAIN"
+    "SOURCES;LINK_LIBS;EXTRA_COMPILE_OPTIONS;EXTRA_LINK_LIBS"
+    ${ARGN})
   if(ARG_UNPARSED_ARGUMENTS)
     message(FATAL_ERROR "Unhandled arguments to add_mlir_python_extension(${libname}, ... : ${ARG_UNPARSED_ARGUMENTS}")
   endif()
@@ -1038,6 +1066,9 @@ function(add_mlir_python_extension libname extname nb_library_target_name)
 
   target_compile_options(${libname} PRIVATE ${eh_rtti_enable})
 
+  # Apply caller-provided extra options last so they have higher precedence.
+  target_compile_options(${libname} PRIVATE ${ARG_EXTRA_COMPILE_OPTIONS})
+
   # Quoting CMake:
   #
   # "If you use it on normal shared libraries which other targets link against, on some platforms a
@@ -1073,6 +1104,7 @@ function(add_mlir_python_extension libname extname nb_library_target_name)
   target_link_libraries(${libname}
     PRIVATE
     ${ARG_LINK_LIBS}
+    ${ARG_EXTRA_LINK_LIBS}
   )
 
   target_link_options(${libname}
