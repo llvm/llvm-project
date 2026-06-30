@@ -770,6 +770,8 @@ void DwarfExpression::maskSubRegister() {
     addShr(SubRegisterOffsetInBits);
   uint64_t Mask = (1ULL << (uint64_t)SubRegisterSizeInBits) - 1ULL;
   addAnd(Mask);
+  // The mask consumes the pending subregister description.
+  setSubRegisterPiece(0, 0);
 }
 
 void DwarfExpression::finalize() {
