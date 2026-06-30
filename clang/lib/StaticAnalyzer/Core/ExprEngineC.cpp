@@ -123,7 +123,7 @@ void ExprEngine::VisitBinaryOperator(const BinaryOperator* B,
       const auto *CAOpB = cast<CompoundAssignOperator>(B);
       QualType CTy = ACtx.getCanonicalType(CAOpB->getComputationResultType());
       QualType CLHSTy = ACtx.getCanonicalType(CAOpB->getComputationLHSType());
-      QualType LTy = getContext().getCanonicalType(LHS->getType());
+      QualType LTy = ACtx.getCanonicalType(LHS->getType());
 
       // Promote LHS.
       V = svalBuilder.evalCast(V, CLHSTy, LTy);
