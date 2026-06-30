@@ -2878,6 +2878,13 @@ bool IRTranslator::translateCall(const User &U, MachineIRBuilder &MIRBuilder) {
 
   assert(ID != Intrinsic::not_intrinsic && "unknown intrinsic");
 
+  if (!MF->getSubtarget().isIntrinsicSupported(ID)) {
+    const Function &Fn = MF->getFunction();
+    Fn.getContext().diagnose(
+        DiagnosticInfoUnsupportedTargetIntrinsic(Fn, ID, CI.getDebugLoc()));
+    return false;
+  }
+
   if (translateKnownIntrinsic(CI, ID, MIRBuilder))
     return true;
 
@@ -2891,6 +2898,13 @@ bool IRTranslator::translateCall(const User &U, MachineIRBuilder &MIRBuilder) {
 bool IRTranslator::translateIntrinsic(
     const CallBase &CB, Intrinsic::ID ID, MachineIRBuilder &MIRBuilder,
     ArrayRef<TargetLowering::IntrinsicInfo> TgtMemIntrinsicInfos) {
+  if (!MF->getSubtarget().isIntrinsicSupported(ID)) {
+    const Function &F = MF->getFunction();
+    F.getContext().diagnose(
+        DiagnosticInfoUnsupportedTargetIntrinsic(F, ID, CB.getDebugLoc()));
+    return false;
+  }
+
   ArrayRef<Register> ResultRegs;
   if (!CB.getType()->isVoidTy())
     ResultRegs = getOrCreateVRegs(CB);

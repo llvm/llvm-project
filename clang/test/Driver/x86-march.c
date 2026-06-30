@@ -275,6 +275,10 @@
 // RUN:   | FileCheck %s -check-prefix=c86-4g-m7
 // c86-4g-m7: "-target-cpu" "c86-4g-m7"
 
+// RUN: %clang -target x86_64-unknown-unknown -c -### %s -march=c86-4g-m8 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=c86-4g-m8
+// c86-4g-m8: "-target-cpu" "c86-4g-m8"
+
 // RUN: %clang -target x86_64 -c -### %s -march=x86-64 2>&1 | FileCheck %s --check-prefix=x86-64
 // x86-64: "-target-cpu" "x86-64"
 // RUN: %clang -target x86_64 -c -### %s -march=x86-64-v2 2>&1 | FileCheck %s --check-prefix=x86-64-v2

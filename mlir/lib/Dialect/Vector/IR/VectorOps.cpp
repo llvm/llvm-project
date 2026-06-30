@@ -8222,10 +8222,14 @@ void StepOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
     return;
   }
   unsigned bitwidth = ConstantIntRanges::getStorageBitwidth(resultType);
-  APInt zero(bitwidth, 0);
-  APInt high(bitwidth, resultType.getDimSize(0) - 1);
-  ConstantIntRanges result = {zero, high, zero, high};
-  setResultRanges(getResult(), result);
+  // The result holds the sequence [0, 1, ..., N-1], with each value truncated
+  // to the result element type.
+  uint64_t maxIndex = resultType.getDimSize(0) - 1;
+  APInt umin = APInt::getZero(bitwidth);
+  APInt umax = APInt::getMaxValue(bitwidth).ugt(maxIndex)
+                   ? APInt(bitwidth, maxIndex)
+                   : APInt::getMaxValue(bitwidth);
+  setResultRanges(getResult(), ConstantIntRanges::fromUnsigned(umin, umax));
 }
 
 namespace {
