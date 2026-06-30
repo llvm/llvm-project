@@ -2390,6 +2390,44 @@ auto capture_multilevel_pointer() {
 }
 } // namespace lambda_captures
 
+namespace global_init_lambda {
+// A lambda defined in a global-storage variable initializer is reached by the
+// call graph, so TU-end analysis (not just per-function mode) sees a stack
+// address escaping to a global.
+int *leaked = nullptr; // expected-note 3 {{this global dangles}}
+
+int escaping = [] {
+  int local = 0;
+  leaked = &local; // expected-warning {{stack memory associated with local variable 'local' escapes to the global variable 'leaked' which will dangle}}
+  return 1;
+}();
+
+// A lambda nested inside another global-init lambda is reached too.
+int nested = [] {
+  auto inner = [] {
+    int local = 0;
+    leaked = &local; // expected-warning {{stack memory associated with local variable 'local' escapes to the global variable 'leaked' which will dangle}}
+    return 0;
+  };
+  return inner();
+}();
+
+// A static data member initializer is reached the same way.
+struct S {
+  static inline int member = [] {
+    int local = 0;
+    leaked = &local; // expected-warning {{stack memory associated with local variable 'local' escapes to the global variable 'leaked' which will dangle}}
+    return 1;
+  }();
+};
+
+// A clean lambda introduces no false positive.
+int ok = [] {
+  int local = 42;
+  return local;
+}();
+} // namespace global_init_lambda
+
 namespace LoopLocalPointers {
 
 void conditional_assignment_in_loop() {

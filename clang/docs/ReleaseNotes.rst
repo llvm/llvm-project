@@ -71,6 +71,17 @@ C/C++ Language Potentially Breaking Changes
   Clang would previously ``break`` out of the ``while`` loop, whereas GCC (since version 9) would
   ``break`` out of the ``for`` loop here. Now, Clang and GCC both break out of the ``for`` loop.
 
+- Clang now parses line and digit directives, module names, and original filenames as unevaluated
+  strings. This means that code containing strings with escape sequences such as
+
+  .. code-block:: c++
+
+    # 1 "original\x12source.c"
+    #pragma clang module import "\x41"
+    # 50 "a\012.c"
+
+  are now ill-formed.
+
 C++ Specific Potentially Breaking Changes
 -----------------------------------------
 
@@ -531,7 +542,9 @@ Attribute Changes in Clang
   ISO 18037 fixed-point ``printf`` specifiers.
 
 - The ``const`` and ``pure`` attributes only apply to functions; they are now
-  diagnosed and ignored when applied to anything else.
+  diagnosed and ignored when applied to anything else. Additionally, calling
+  a function marked ``noreturn`` from a function marked ``const`` or ``pure``
+  is now diagnosed as undefined behavior (#GH129022).
 
 Improvements to Clang's diagnostics
 -----------------------------------
@@ -795,7 +808,9 @@ Bug Fixes to C++ Support
 - Fixed crash instantiating class member specializations.
 - Fix a problem where a substitution failure when evaluating a type requirement
   could directly make the program ill-formed.
+- Typo correction now corrects the name qualifier for invalid template names.
 - Fix a problem where pack index expressions where incorrectly being regarded as equivalent.
+- Correctly diagnose narrowing in pack index expressions. (#GH205650)
 - Fixed a bug where captured variables in non-mutable lambdas were incorrectly treated as mutable
   when used inside decltype in the return type. (#GH180460)
 - Fixed a crash when evaluating uninitialized GCC vector/ext_vector_type vectors in ``constexpr``. (#GH180044)

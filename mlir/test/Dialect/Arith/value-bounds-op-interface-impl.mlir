@@ -371,6 +371,18 @@ func.func @arith_maxsi_ub(%a: index) -> index {
 
 // -----
 
+// CHECK-LABEL: func @arith_extsi_const(
+//       CHECK:   %[[c:.*]] = arith.constant -5 : index
+//       CHECK:   return %[[c]]
+func.func @arith_extsi_const() -> index {
+  %c_5 = arith.constant -5 : i32
+  %ext = arith.extsi %c_5 : i32 to i64
+  %0 = "test.reify_bound"(%ext) {constant, allow_integer_type} : (i64) -> (index)
+  return %0 : index
+}
+
+// -----
+
 // CHECK-LABEL: func @arith_minui(
 //       CHECK:   %[[ub:.*]] = arith.constant 5 : index
 //       CHECK:   return %[[ub]]

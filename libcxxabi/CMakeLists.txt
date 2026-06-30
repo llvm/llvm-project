@@ -89,6 +89,19 @@ set(LIBCXXABI_LIBDIR_SUFFIX "${LLVM_LIBDIR_SUFFIX}" CACHE STRING
 option(LIBCXXABI_INSTALL_HEADERS "Install the libc++abi headers." ON)
 option(LIBCXXABI_INSTALL_LIBRARY "Install the libc++abi library." ON)
 
+# On platforms that don't support shared library targets
+# (e.g. CMAKE_SYSTEM_NAME of "Generic", used for GPU and other
+# baremetal targets), the shared library target is not built at
+# all. The global TARGET_SUPPORTS_SHARED_LIBS property is left
+# undefined on platforms that do support shared libraries, and only
+# set to FALSE on those that don't.  See
+# https://gitlab.kitware.com/cmake/cmake/-/issues/25759.
+get_property(LIBCXXABI_TARGET_SUPPORTS_SHARED_LIBS GLOBAL PROPERTY TARGET_SUPPORTS_SHARED_LIBS)
+if(NOT DEFINED LIBCXXABI_TARGET_SUPPORTS_SHARED_LIBS OR LIBCXXABI_TARGET_SUPPORTS_SHARED_LIBS)
+  set(LIBCXXABI_SUPPORTS_SHARED_LIBRARY ON)
+else()
+  set(LIBCXXABI_SUPPORTS_SHARED_LIBRARY OFF)
+endif()
 set(LIBCXXABI_SHARED_OUTPUT_NAME "c++abi" CACHE STRING "Output name for the shared libc++abi runtime library.")
 set(LIBCXXABI_STATIC_OUTPUT_NAME "c++abi" CACHE STRING "Output name for the static libc++abi runtime library.")
 
