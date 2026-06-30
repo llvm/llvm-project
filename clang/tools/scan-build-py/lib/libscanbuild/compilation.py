@@ -135,7 +135,7 @@ def compiler_language(command):
     cplusplus = re.compile(r"^(.+)(\+\+)(-.+|)$")
 
     if command:
-        executable = os.path.basename(command[0])
+        executable = os.path.basename(command[0]).removesuffix('.exe')
         if any(pattern.match(executable) for pattern in COMPILER_PATTERNS):
             return "c++" if cplusplus.match(executable) else "c"
     return None
