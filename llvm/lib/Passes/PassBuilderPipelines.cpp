@@ -21,6 +21,7 @@
 #include "llvm/Analysis/CtxProfAnalysis.h"
 #include "llvm/Analysis/FunctionPropertiesAnalysis.h"
 #include "llvm/Analysis/GlobalsModRef.h"
+#include "llvm/Analysis/HeapProvenanceAnalysis.h"
 #include "llvm/Analysis/InlineAdvisor.h"
 #include "llvm/Analysis/InstCount.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
@@ -1678,6 +1679,7 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
                           .hoistLoadsStoresWithCondFaulting(true)));
 
   // Add the core optimizing pipeline.
+  MPM.addPass(RequireAnalysisPass<HeapProvenanceAnalysis, llvm::Module>());
   MPM.addPass(createModuleToFunctionPassAdaptor(std::move(OptimizePM),
                                                 PTO.EagerlyInvalidateAnalyses));
 

@@ -3967,7 +3967,9 @@ Instruction *InstCombinerImpl::visitAllocSite(Instruction &MI) {
         if (II->getIntrinsicID() == Intrinsic::objectsize) {
           SmallVector<Instruction *> InsertedInstructions;
           Value *Result = lowerObjectSizeCall(
-              II, DL, &TLI, AA, /*MustSucceed=*/true, &InsertedInstructions);
+              II, DL, &TLI, AA, /*MustSucceed=*/false, &InsertedInstructions);
+          if (!Result)
+            continue;
           for (Instruction *Inserted : InsertedInstructions)
             Worklist.add(Inserted);
           replaceInstUsesWith(*I, Result);

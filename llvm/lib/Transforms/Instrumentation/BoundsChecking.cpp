@@ -10,6 +10,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Analysis/HeapProvenanceAnalysis.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/TargetFolder.h"
@@ -198,7 +199,9 @@ getRuntimeCallName(const BoundsCheckingPass::Options::Runtime &Opts) {
 
 static bool addBoundsChecking(Function &F, TargetLibraryInfo &TLI,
                               ScalarEvolution &SE,
-                              const BoundsCheckingPass::Options &Opts) {
+                              const BoundsCheckingPass::Options &Opts,
+                              const ForwardHeapProvenanceAnalysisResult *FwdHPA,
+                              const BackwardHeapProvenanceAnalysisResult *BwdHPA) {
   if (F.hasFnAttribute(Attribute::NoSanitizeBounds))
     return false;
 
@@ -206,7 +209,7 @@ static bool addBoundsChecking(Function &F, TargetLibraryInfo &TLI,
   ObjectSizeOpts EvalOpts;
   EvalOpts.RoundToAlign = true;
   EvalOpts.EvalMode = ObjectSizeOpts::Mode::ExactUnderlyingSizeAndOffset;
-  ObjectSizeOffsetEvaluator ObjSizeEval(DL, &TLI, F.getContext(), EvalOpts);
+  ObjectSizeOffsetEvaluator ObjSizeEval(DL, &TLI, F.getContext(), EvalOpts, FwdHPA, BwdHPA);
 
   // check HANDLE_MEMORY_INST in include/llvm/Instruction.def for memory
   // touching instructions
@@ -304,8 +307,15 @@ static bool addBoundsChecking(Function &F, TargetLibraryInfo &TLI,
 PreservedAnalyses BoundsCheckingPass::run(Function &F, FunctionAnalysisManager &AM) {
   auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
   auto &SE = AM.getResult<ScalarEvolutionAnalysis>(F);
+  auto *MAMProxy = AM.getCachedResult<ModuleAnalysisManagerFunctionProxy>(F);
+  const ForwardHeapProvenanceAnalysisResult *FwdHPA = nullptr;
+  const BackwardHeapProvenanceAnalysisResult *BwdHPA = nullptr;
+  if (MAMProxy) {
+    FwdHPA = MAMProxy->getCachedResult<ForwardHeapProvenanceAnalysis>(*F.getParent());
+    BwdHPA = MAMProxy->getCachedResult<BackwardHeapProvenanceAnalysis>(*F.getParent());
+  }
 
-  if (!addBoundsChecking(F, TLI, SE, Opts))
+  if (!addBoundsChecking(F, TLI, SE, Opts, FwdHPA, BwdHPA))
     return PreservedAnalyses::all();
 
   return PreservedAnalyses::none();
