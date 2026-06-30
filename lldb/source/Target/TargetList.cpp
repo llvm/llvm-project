@@ -356,7 +356,7 @@ Status TargetList::CreateTargetInternal(Debugger &debugger,
       target_sp->SetArg0(file.GetPath().c_str());
     }
   }
-  if (file.GetDirectory()) {
+  if (!file.GetDirectory().empty()) {
     FileSpec file_dir;
     file_dir.SetDirectory(file.GetDirectory());
     target_sp->AppendExecutableSearchPaths(file_dir);

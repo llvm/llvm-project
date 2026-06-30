@@ -173,7 +173,7 @@ bool HostInfoPosix::ComputeSupportExeDirectory(FileSpec &file_spec) {
       file_spec.IsAbsolute() && FileSystem::Instance().Exists(file_spec))
     return true;
   file_spec.SetDirectory(HostInfo::GetProgramFileSpec().GetDirectory());
-  return !file_spec.GetDirectory().IsEmpty();
+  return !file_spec.GetDirectory().empty();
 }
 
 bool HostInfoPosix::ComputeSystemPluginsDirectory(FileSpec &file_spec) {

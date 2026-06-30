@@ -145,9 +145,8 @@ static llvm::StringRef getFileName(const ModuleSpec &module_spec,
   // Check if the URL path requests an executable file or a symbol file
   bool is_executable = url_path.find("debuginfo") == std::string::npos;
   if (is_executable)
-    return module_spec.GetFileSpec().GetFilename().GetStringRef();
-  llvm::StringRef symbol_file =
-      module_spec.GetSymbolFileSpec().GetFilename().GetStringRef();
+    return module_spec.GetFileSpec().GetFilename();
+  llvm::StringRef symbol_file = module_spec.GetSymbolFileSpec().GetFilename();
   // Remove llvmcache- prefix and hash, keep origin file name
   if (symbol_file.starts_with("llvmcache-")) {
     size_t pos = symbol_file.rfind('-');

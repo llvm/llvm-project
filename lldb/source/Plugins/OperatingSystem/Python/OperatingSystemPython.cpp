@@ -84,8 +84,7 @@ OperatingSystemPython::OperatingSystemPython(lldb_private::Process *process,
   if (!m_interpreter)
     return;
 
-  std::string os_plugin_class_name(
-      python_module_path.GetFilename().AsCString(""));
+  std::string os_plugin_class_name(python_module_path.GetFilename());
   if (os_plugin_class_name.empty())
     return;
 

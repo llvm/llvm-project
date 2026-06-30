@@ -792,7 +792,7 @@ public:
     // different filename. For example, when searching by UUID and finding a
     // module with an alias.
     assert((matching_module_list.IsEmpty() ||
-            module_spec.GetFileSpec().GetFilename().IsEmpty() ||
+            module_spec.GetFileSpec().GetFilename().empty() ||
             module_spec.GetFileSpec().GetFilename() !=
                 matching_module_list.GetModuleAtIndex(0)
                     ->GetFileSpec()
@@ -870,10 +870,10 @@ public:
 
 private:
   ModuleSP FindModuleInMap(const Module &module) const {
-    if (!module.GetFileSpec().GetFilename())
+    if (module.GetFileSpec().GetFilename().empty())
       return ModuleSP();
-    ConstString name = module.GetFileSpec().GetFilename();
-    auto it = m_name_to_modules.find(name);
+    llvm::StringRef name = module.GetFileSpec().GetFilename();
+    auto it = m_name_to_modules.find(ConstString(name));
     if (it == m_name_to_modules.end())
       return ModuleSP();
     const llvm::SmallVectorImpl<ModuleSP> &vector = it->second;
@@ -886,7 +886,8 @@ private:
 
   void FindModulesInMap(const ModuleSpec &module_spec,
                         ModuleList &matching_module_list) const {
-    auto it = m_name_to_modules.find(module_spec.GetFileSpec().GetFilename());
+    auto it = m_name_to_modules.find(
+        ConstString(module_spec.GetFileSpec().GetFilename()));
     if (it == m_name_to_modules.end())
       return;
     const llvm::SmallVectorImpl<ModuleSP> &vector = it->second;
@@ -897,15 +898,15 @@ private:
   }
 
   void AddToMap(const ModuleSP &module_sp) {
-    ConstString name = module_sp->GetFileSpec().GetFilename();
-    if (name.IsEmpty())
+    llvm::StringRef name = module_sp->GetFileSpec().GetFilename();
+    if (name.empty())
       return;
-    m_name_to_modules[name].push_back(module_sp);
+    m_name_to_modules[ConstString(name)].push_back(module_sp);
   }
 
   void RemoveFromMap(const ModuleWP module_wp, bool if_orphaned = false) {
     if (auto module_sp = module_wp.lock()) {
-      ConstString name = module_sp->GetFileSpec().GetFilename();
+      ConstString name = ConstString(module_sp->GetFileSpec().GetFilename());
       if (!m_name_to_modules.contains(name))
         return;
       llvm::SmallVectorImpl<ModuleSP> &vec = m_name_to_modules[name];
@@ -930,11 +931,11 @@ private:
   }
 
   void RemoveEquivalentModulesFromMap(const ModuleSP &module_sp) {
-    ConstString name = module_sp->GetFileSpec().GetFilename();
-    if (name.IsEmpty())
+    llvm::StringRef name = module_sp->GetFileSpec().GetFilename();
+    if (name.empty())
       return;
 
-    auto it = m_name_to_modules.find(name);
+    auto it = m_name_to_modules.find(ConstString(name));
     if (it == m_name_to_modules.end())
       return;
 
@@ -1087,10 +1088,11 @@ ModuleList::GetSharedModule(const ModuleSpec &module_spec, ModuleSP &module_sp,
             old_modules->push_back(module_sp);
 
           Log *log = GetLog(LLDBLog::Modules);
-          LLDB_LOGF(log,
-                    "%p '%s' module changed: removing from global module list",
-                    static_cast<void *>(module_sp.get()),
-                    module_sp->GetFileSpec().GetFilename().GetCString());
+          LLDB_LOG(
+              log,
+              "{0:x} '{1}' module changed: removing from global module list",
+              static_cast<void *>(module_sp.get()),
+              module_sp->GetFileSpec().GetFilename());
 
           shared_module_list.Remove(module_sp);
           module_sp.reset();
@@ -1171,7 +1173,7 @@ ModuleList::GetSharedModule(const ModuleSpec &module_spec, ModuleSP &module_sp,
       if (!FileSystem::Instance().IsDirectory(search_path_spec))
         continue;
       search_path_spec.AppendPathComponent(
-          module_spec.GetFileSpec().GetFilename().GetStringRef());
+          module_spec.GetFileSpec().GetFilename());
       if (!FileSystem::Instance().Exists(search_path_spec))
         continue;
 

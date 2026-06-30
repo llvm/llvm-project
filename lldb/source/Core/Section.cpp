@@ -312,16 +312,16 @@ void Section::DumpName(llvm::raw_ostream &s) const {
     s << '.';
   } else {
     // The top most section prints the module basename
-    const char *name = nullptr;
+    llvm::StringRef name;
     ModuleSP module_sp(GetModule());
 
     if (m_obj_file) {
       const FileSpec &file_spec = m_obj_file->GetFileSpec();
-      name = file_spec.GetFilename().AsCString(nullptr);
+      name = file_spec.GetFilename();
     }
-    if ((!name || !name[0]) && module_sp)
-      name = module_sp->GetFileSpec().GetFilename().AsCString(nullptr);
-    if (name && name[0])
+    if (name.empty() && module_sp)
+      name = module_sp->GetFileSpec().GetFilename();
+    if (!name.empty())
       s << name << '.';
   }
   s << m_name;

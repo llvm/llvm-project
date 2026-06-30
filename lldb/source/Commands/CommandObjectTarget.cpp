@@ -1338,9 +1338,10 @@ static void DumpDirectory(Stream &strm, const FileSpec *file_spec_ptr,
                           uint32_t width) {
   if (file_spec_ptr) {
     if (width > 0)
-      strm.Printf("%-*s", width, file_spec_ptr->GetDirectory().AsCString(""));
+      strm.Format("{0}", fmt_align(file_spec_ptr->GetDirectory(),
+                                   llvm::AlignStyle::Left, width));
     else
-      file_spec_ptr->GetDirectory().Dump(&strm);
+      strm.PutCString(file_spec_ptr->GetDirectory());
     return;
   }
   // Keep the width spacing correct if things go wrong...
@@ -1352,9 +1353,10 @@ static void DumpBasename(Stream &strm, const FileSpec *file_spec_ptr,
                          uint32_t width) {
   if (file_spec_ptr) {
     if (width > 0)
-      strm.Printf("%-*s", width, file_spec_ptr->GetFilename().AsCString(""));
+      strm.Format("{0}", fmt_align(file_spec_ptr->GetFilename(),
+                                   llvm::AlignStyle::Left, width));
     else
-      file_spec_ptr->GetFilename().Dump(&strm);
+      strm.PutCString(file_spec_ptr->GetFilename());
     return;
   }
   // Keep the width spacing correct if things go wrong...

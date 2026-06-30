@@ -100,13 +100,13 @@ void RegisterAssertFrameRecognizer(Process *process) {
   if (!location.symbols_are_regex) {
     target.GetFrameRecognizerManager().AddRecognizer(
         std::make_shared<AssertFrameRecognizer>(),
-        location.module_spec.GetFilename(), location.symbols,
+        ConstString(location.module_spec.GetFilename()), location.symbols,
         Mangled::ePreferDemangled,
         /*first_instruction_only*/ false);
     return;
   }
   std::string module_re = "^";
-  for (char c : location.module_spec.GetFilename().GetStringRef()) {
+  for (char c : location.module_spec.GetFilename()) {
     if (c == '.')
       module_re += '\\';
     module_re += c;

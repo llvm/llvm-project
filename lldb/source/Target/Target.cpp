@@ -137,7 +137,7 @@ private:
       return {};
 
     remote_file = platform->GetRemoteWorkingDirectory();
-    remote_file.AppendPathComponent(local_file.GetFilename().GetCString());
+    remote_file.AppendPathComponent(local_file.GetFilename());
 
     return remote_file;
   }
@@ -268,7 +268,7 @@ void Target::Dump(Stream *s, lldb::DescriptionLevel description_level) {
   } else {
     Module *exe_module = GetExecutableModulePointer();
     if (exe_module)
-      s->PutCString(exe_module->GetFileSpec().GetFilename().GetCString());
+      s->PutCString(exe_module->GetFileSpec().GetFilename());
     else
       s->PutCString("No executable module.");
   }
@@ -2469,7 +2469,8 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &orig_module_spec,
         ModuleSpec transformed_spec(module_spec);
         ConstString transformed_dir;
         if (m_image_search_paths.RemapPath(
-                module_spec.GetFileSpec().GetDirectory(), transformed_dir)) {
+                ConstString(module_spec.GetFileSpec().GetDirectory()),
+                transformed_dir)) {
           transformed_spec.GetFileSpec().SetDirectory(transformed_dir);
           transformed_spec.GetFileSpec().SetFilename(
                 module_spec.GetFileSpec().GetFilename());
@@ -2555,8 +2556,8 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &orig_module_spec,
         // in the target's module list. Only do this if there is SOMETHING else
         // in the module spec...
         if (module_spec.GetUUID().IsValid() &&
-            !module_spec.GetFileSpec().GetFilename().IsEmpty() &&
-            !module_spec.GetFileSpec().GetDirectory().IsEmpty()) {
+            !module_spec.GetFileSpec().GetFilename().empty() &&
+            !module_spec.GetFileSpec().GetDirectory().empty()) {
           ModuleSpec module_spec_copy(module_spec.GetFileSpec());
           module_spec_copy.GetUUID().Clear();
 
@@ -3052,7 +3053,7 @@ llvm::Expected<lldb_private::Address> Target::GetEntryPointAddress() {
 
   return llvm::createStringError(
       "Could not find entry point address for primary executable module \"" +
-      exe_module->GetFileSpec().GetFilename().GetStringRef() + "\"");
+      exe_module->GetFileSpec().GetFilename() + "\"");
 }
 
 lldb::addr_t Target::GetCallableLoadAddress(lldb::addr_t load_addr,

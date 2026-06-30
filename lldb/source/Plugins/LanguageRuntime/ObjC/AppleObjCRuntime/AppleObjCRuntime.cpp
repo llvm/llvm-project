@@ -332,8 +332,7 @@ uint32_t AppleObjCRuntime::GetFoundationVersion() {
       lldb::ModuleSP module_sp = modules.GetModuleAtIndex(idx);
       if (!module_sp)
         continue;
-      if (strcmp(module_sp->GetFileSpec().GetFilename().AsCString(""),
-                 "Foundation") == 0) {
+      if (module_sp->GetFileSpec().GetFilename() == "Foundation") {
         m_Foundation_major = module_sp->GetVersion().getMajor();
         return *m_Foundation_major;
       }
