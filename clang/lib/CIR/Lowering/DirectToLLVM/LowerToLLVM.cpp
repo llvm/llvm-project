@@ -130,19 +130,6 @@ static mlir::Type convertTypeForMemory(const mlir::TypeConverter &converter,
   return converter.convertType(type);
 }
 
-/// True for a _BitInt atomic operand whose width is not a natural atomic-legal
-/// integer width.  Such an operand's value type iN differs from its in-memory
-/// storage iM, and the atomic op lowerings here pass the value through without
-/// the widening the load/store helpers apply, so they must report errorNYI.
-static bool isUnsupportedBitIntAtomic(mlir::Type cirType) {
-  auto intTy = mlir::dyn_cast<cir::IntType>(cirType);
-  if (!intTy || !intTy.isBitInt())
-    return false;
-  unsigned width = intTy.getWidth();
-  return width != 8 && width != 16 && width != 32 && width != 64 &&
-         width != 128;
-}
-
 /// Alignment to use for a memory access whose op carries no explicit alignment.
 /// For _BitInt the storage integer iM's ABI alignment (e.g. i128's 16)
 /// over-aligns the value, so use the CIR _BitInt ABI alignment (e.g. 8).
@@ -174,6 +161,23 @@ static mlir::Value createIntCast(mlir::OpBuilder &bld, mlir::Value src,
   return mlir::LLVM::BitcastOp::create(bld, loc, dstTy, src);
 }
 
+/// Cast a _BitInt(N) value between its literal width iN and its padded
+/// in-memory storage iM (sign/zero-extend to memory per signedness so the
+/// padding bits are well-defined, truncate back on load; matches classic
+/// CodeGen).  Callers must first rule out the unsupported byte-array storage
+/// form (isSplitStorageBitInt / a null convertTypeForMemory result).
+static mlir::Value
+castBitIntMemoryStorage(mlir::ConversionPatternRewriter &rewriter,
+                        const mlir::DataLayout &dataLayout, cir::IntType intTy,
+                        mlir::Value value, bool toMemory) {
+  unsigned storageBits = getBitIntMemoryStorageBits(intTy, dataLayout);
+  if (storageBits == intTy.getWidth())
+    return value;
+  unsigned dstBits = toMemory ? storageBits : intTy.getWidth();
+  return createIntCast(rewriter, value, rewriter.getIntegerType(dstBits),
+                       /*isSigned=*/toMemory && intTy.isSigned());
+}
+
 static mlir::LLVM::Visibility
 lowerCIRVisibilityToLLVMVisibility(cir::VisibilityKind visibilityKind) {
   switch (visibilityKind) {
@@ -202,13 +206,9 @@ static mlir::Value emitFromMemory(mlir::ConversionPatternRewriter &rewriter,
 
   // Truncate the padded storage integer back to the _BitInt's literal width.
   if (auto intTy = mlir::dyn_cast<cir::IntType>(op.getType());
-      intTy && intTy.isBitInt()) {
-    unsigned storageBits = getBitIntMemoryStorageBits(intTy, dataLayout);
-    if (storageBits == intTy.getWidth())
-      return value;
-    return createIntCast(rewriter, value,
-                         rewriter.getIntegerType(intTy.getWidth()));
-  }
+      intTy && intTy.isBitInt())
+    return castBitIntMemoryStorage(rewriter, dataLayout, intTy, value,
+                                   /*toMemory=*/false);
 
   return value;
 }
@@ -228,17 +228,11 @@ static mlir::Value emitToMemory(mlir::ConversionPatternRewriter &rewriter,
     return createIntCast(rewriter, value, memType);
   }
 
-  // Sign/zero-extend the _BitInt value to its padded storage integer so the
-  // in-memory padding bits are well-defined (sign bits for signed, zero
-  // otherwise), matching classic CodeGen.
+  // Sign/zero-extend the _BitInt value to its padded storage integer.
   if (auto intTy = mlir::dyn_cast<cir::IntType>(origType);
-      intTy && intTy.isBitInt()) {
-    unsigned storageBits = getBitIntMemoryStorageBits(intTy, dataLayout);
-    if (storageBits == intTy.getWidth())
-      return value;
-    return createIntCast(rewriter, value, rewriter.getIntegerType(storageBits),
-                         intTy.isSigned());
-  }
+      intTy && intTy.isBitInt())
+    return castBitIntMemoryStorage(rewriter, dataLayout, intTy, value,
+                                   /*toMemory=*/true);
 
   return value;
 }
@@ -1014,9 +1008,6 @@ getLLVMSyncScope(std::optional<cir::SyncScopeKind> syncScope) {
 mlir::LogicalResult CIRToLLVMAtomicCmpXchgOpLowering::matchAndRewrite(
     cir::AtomicCmpXchgOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
-  if (isUnsupportedBitIntAtomic(op.getExpected().getType()))
-    return op.emitError()
-           << "NYI: atomic compare-exchange on a _BitInt with padded storage";
   mlir::Value expected = adaptor.getExpected();
   mlir::Value desired = adaptor.getDesired();
 
@@ -1043,9 +1034,6 @@ mlir::LogicalResult CIRToLLVMAtomicCmpXchgOpLowering::matchAndRewrite(
 mlir::LogicalResult CIRToLLVMAtomicXchgOpLowering::matchAndRewrite(
     cir::AtomicXchgOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
-  if (isUnsupportedBitIntAtomic(op.getVal().getType()))
-    return op.emitError()
-           << "NYI: atomic exchange on a _BitInt with padded storage";
   assert(!cir::MissingFeatures::atomicSyncScopeID());
   mlir::LLVM::AtomicOrdering llvmOrder = getLLVMMemOrder(adaptor.getMemOrder());
   llvm::StringRef llvmSyncScope = getLLVMSyncScope(adaptor.getSyncScope());
@@ -1218,9 +1206,6 @@ mlir::Value CIRToLLVMAtomicFetchOpLowering::buildMinMaxPostOp(
 mlir::LogicalResult CIRToLLVMAtomicFetchOpLowering::matchAndRewrite(
     cir::AtomicFetchOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
-  if (isUnsupportedBitIntAtomic(op.getVal().getType()))
-    return op.emitError()
-           << "NYI: atomic fetch on a _BitInt with padded storage";
   bool isInt = false;
   bool isSignedInt = false;
   if (auto intTy = mlir::dyn_cast<cir::IntType>(op.getVal().getType())) {
@@ -1826,7 +1811,7 @@ mlir::LogicalResult CIRToLLVMAllocaOpLowering::matchAndRewrite(
       convertTypeForMemory(*getTypeConverter(), dataLayout, op.getAllocaType());
   if (!elementTy)
     return op.emitError()
-           << "NYI: lowering alloca of a _BitInt with byte-array storage";
+           << "NYI: lowering alloca of a type with no memory representation";
   mlir::Type resultTy =
       convertTypeForMemory(*getTypeConverter(), dataLayout, op.getType());
 
@@ -2035,7 +2020,7 @@ mlir::LogicalResult CIRToLLVMLoadOpLowering::matchAndRewrite(
       convertTypeForMemory(*getTypeConverter(), dataLayout, op.getType());
   if (!llvmTy)
     return op.emitError()
-           << "NYI: lowering load of a _BitInt with byte-array storage";
+           << "NYI: lowering load of a type with no memory representation";
   mlir::LLVM::AtomicOrdering ordering = getLLVMMemOrder(op.getMemOrder());
   std::optional<size_t> opAlign = op.getAlignment();
   unsigned alignment = (unsigned)opAlign.value_or(
@@ -2068,7 +2053,8 @@ cir::direct::CIRToLLVMVecMaskedLoadOpLowering::matchAndRewrite(
       convertTypeForMemory(*getTypeConverter(), dataLayout, op.getType());
   if (!llvmResTy)
     return op.emitError()
-           << "NYI: lowering masked load of a _BitInt with byte-array storage";
+           << "NYI: lowering masked load of a type with no memory "
+              "representation";
 
   std::optional<size_t> opAlign = op.getAlignment();
   unsigned alignment =
@@ -2089,11 +2075,11 @@ mlir::LogicalResult CIRToLLVMStoreOpLowering::matchAndRewrite(
     mlir::ConversionPatternRewriter &rewriter) const {
   mlir::LLVM::AtomicOrdering memorder = getLLVMMemOrder(op.getMemOrder());
   mlir::Type valueType = op.getValue().getType();
-  if (auto intTy = mlir::dyn_cast<cir::IntType>(valueType);
-      intTy && isSplitStorageBitInt(intTy, dataLayout))
+  const mlir::Type llvmTy =
+      convertTypeForMemory(*getTypeConverter(), dataLayout, valueType);
+  if (!llvmTy)
     return op.emitError()
-           << "NYI: lowering store of a _BitInt with byte-array storage";
-  const mlir::Type llvmTy = getTypeConverter()->convertType(valueType);
+           << "NYI: lowering store of a type with no memory representation";
   std::optional<size_t> opAlign = op.getAlignment();
   unsigned alignment = (unsigned)opAlign.value_or(
       getMemoryFallbackAlignment(valueType, llvmTy, dataLayout));
@@ -2634,7 +2620,7 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
       convertTypeForMemory(*getTypeConverter(), dataLayout, cirSymType);
   if (!llvmType)
     return op.emitError()
-           << "NYI: lowering global of a _BitInt with byte-array storage";
+           << "NYI: lowering global of a type with no memory representation";
 
   // FIXME: These default values are placeholders until the the equivalent
   //        attributes are available on cir.global ops.
