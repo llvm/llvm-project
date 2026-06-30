@@ -387,21 +387,10 @@ public:
   LLVM_ABI Triple(ArchType A, SubArchType SA, VendorType V, OSType OS,
                   EnvironmentType E, ObjectFormatType OF);
 
-  bool operator==(const Triple &Other) const {
-    return Arch == Other.Arch && SubArch == Other.SubArch &&
-           Vendor == Other.Vendor && OS == Other.OS &&
-           Environment == Other.Environment &&
-           ObjectFormat == Other.ObjectFormat;
-  }
-
+  LLVM_ABI bool operator==(const Triple &Other) const;
   bool operator!=(const Triple &Other) const { return !(*this == Other); }
 
-  bool operator<(const Triple &Other) const {
-    return std::tie(Arch, SubArch, Vendor, OS, Environment, ObjectFormat,
-                    Data) < std::tie(Other.Arch, Other.SubArch, Other.Vendor,
-                                     Other.OS, Other.Environment,
-                                     Other.ObjectFormat, Other.Data);
-  }
+  LLVM_ABI bool operator<(const Triple &Other) const;
 
   /// @}
   /// @name Normalization
@@ -697,6 +686,12 @@ public:
 
   /// Tests whether the OS is Windows.
   bool isOSWindows() const { return getOS() == Triple::Win32; }
+
+  /// Tests whether the OS is Windows or UEFI. These targets generally share
+  /// Windows low-level platform ABI conventions, but this does not imply
+  /// support for a hosted Windows environment or its runtime libraries. Use
+  /// object format or environment predicates when those properties matter.
+  bool isOSWindowsOrUEFI() const { return isOSWindows() || isUEFI(); }
 
   /// Checks if the environment is MSVC.
   bool isKnownWindowsMSVCEnvironment() const {

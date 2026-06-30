@@ -21,12 +21,12 @@
 #  pragma GCC system_header
 #endif
 
+#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_RAW_STORAGE_ITERATOR)
+
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
-
-#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_RAW_STORAGE_ITERATOR)
 
 template <class _OutputIterator, class _Tp>
 class _LIBCPP_DEPRECATED_IN_CXX17 raw_storage_iterator
@@ -71,10 +71,10 @@ public:
 #  endif
 };
 
-#endif // _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_RAW_STORAGE_ITERATOR)
-
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
+
+#endif // _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_RAW_STORAGE_ITERATOR)
 
 #endif // _LIBCPP___MEMORY_RAW_STORAGE_ITERATOR_H

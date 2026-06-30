@@ -262,11 +262,6 @@ public:
     case CK_NonAtomicToAtomic:
     case CK_AtomicToNonAtomic: {
       bool isToAtomic = (e->getCastKind() == CK_NonAtomicToAtomic);
-      if (!isToAtomic) {
-        cgf.cgm.errorNYI(e->getSourceRange(),
-                         "AggExprEmitter: CK_AtomicToNonAtomic");
-        return;
-      }
 
       // Determine the atomic and value types.
       QualType atomicType = e->getSubExpr()->getType();
@@ -443,8 +438,7 @@ public:
   }
 
   void VisitCXXRewrittenBinaryOperator(CXXRewrittenBinaryOperator *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(),
-                     "AggExprEmitter: VisitCXXRewrittenBinaryOperator");
+    Visit(e->getSemanticForm());
   }
   void VisitObjCMessageExpr(ObjCMessageExpr *e) {
     cgf.cgm.errorNYI(e->getSourceRange(),
@@ -692,7 +686,10 @@ void AggExprEmitter::emitAggLoadOfLValue(const Expr *e) {
   LValue lv = cgf.emitLValue(e);
 
   // If the type of the l-value is atomic, then do an atomic load.
-  assert(!cir::MissingFeatures::opLoadStoreAtomic());
+  if (lv.getType()->isAtomicType() || cgf.isLValueSuitableForInlineAtomic(lv)) {
+    cgf.emitAtomicLoad(lv, e->getExprLoc(), dest);
+    return;
+  }
 
   emitFinalDestCopy(e->getType(), lv);
 }

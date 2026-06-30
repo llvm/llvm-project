@@ -468,7 +468,9 @@ void GDBRemoteCommunicationClient::GetRemoteQSupported() {
                                        "fork-events+",
                                        "vfork-events+",
                                        "swbreak+",
-                                       "hwbreak+"};
+                                       "hwbreak+",
+                                       "qXfer:libraries:read+",
+                                       "qXfer:libraries-svr4:read+"};
   StreamString packet;
   packet.PutCString("qSupported");
   for (uint32_t i = 0; i < features.size(); ++i) {
@@ -2039,7 +2041,8 @@ int GDBRemoteCommunicationClient::SetSTDERR(const FileSpec &file_spec) {
 
 int GDBRemoteCommunicationClient::SetSTDIOWindowSize(uint16_t cols,
                                                      uint16_t rows) {
-  if (cols == 0 || rows == 0)
+  // The size is only valid if both or none of the dimensions are zero.
+  if ((cols == 0) != (rows == 0))
     return -1;
   StreamString packet;
   packet.Printf("QSetSTDIOWindowSize:cols=%u;rows=%u",

@@ -12673,18 +12673,29 @@ static SDValue lowerShuffleAsVALIGN(const SDLoc &DL, MVT VT, SDValue V1,
                                     const APInt &Zeroable,
                                     const X86Subtarget &Subtarget,
                                     SelectionDAG &DAG) {
-  assert((VT.getScalarType() == MVT::i32 || VT.getScalarType() == MVT::i64) &&
-         "Only 32-bit and 64-bit elements are supported!");
+  unsigned EltBits = VT.getScalarSizeInBits();
+  if (EltBits != 32 && EltBits != 64)
+    return SDValue();
+
+  MVT AlignVT = VT.changeVectorElementTypeToInteger();
 
   // 128/256-bit vectors are only supported with VLX.
-  assert((Subtarget.hasVLX() || (!VT.is128BitVector() && !VT.is256BitVector()))
-         && "VLX required for 128/256-bit vectors");
+  assert((Subtarget.hasVLX() ||
+          (!AlignVT.is128BitVector() && !AlignVT.is256BitVector())) &&
+         "VLX required for 128/256-bit vectors");
+
+  auto emitVALIGN = [&](SDValue Lo, SDValue Hi, unsigned Imm) -> SDValue {
+    SDValue AlignLo = VT.isFloatingPoint() ? DAG.getBitcast(AlignVT, Lo) : Lo;
+    SDValue AlignHi = VT.isFloatingPoint() ? DAG.getBitcast(AlignVT, Hi) : Hi;
+    SDValue Res = DAG.getNode(X86ISD::VALIGN, DL, AlignVT, AlignLo, AlignHi,
+                              DAG.getTargetConstant(Imm, DL, MVT::i8));
+    return VT.isFloatingPoint() ? DAG.getBitcast(VT, Res) : Res;
+  };
 
   SDValue Lo = V1, Hi = V2;
   int Rotation = matchShuffleAsElementRotate(Lo, Hi, Mask);
   if (0 < Rotation)
-    return DAG.getNode(X86ISD::VALIGN, DL, VT, Lo, Hi,
-                       DAG.getTargetConstant(Rotation, DL, MVT::i8));
+    return emitVALIGN(Lo, Hi, Rotation);
 
   // See if we can use VALIGN as a cross-lane version of VSHLDQ/VSRLDQ.
   // TODO: Pull this out as a matchShuffleAsElementShift helper?
@@ -12701,18 +12712,16 @@ static SDValue lowerShuffleAsVALIGN(const SDLoc &DL, MVT VT, SDValue V1,
     SDValue Src = Mask[ZeroLo] < (int)NumElts ? V1 : V2;
     int Low = Mask[ZeroLo] < (int)NumElts ? 0 : NumElts;
     if (isSequentialOrUndefInRange(Mask, ZeroLo, NumElts - ZeroLo, Low))
-      return DAG.getNode(X86ISD::VALIGN, DL, VT, Src,
-                         getZeroVector(VT, Subtarget, DAG, DL),
-                         DAG.getTargetConstant(NumElts - ZeroLo, DL, MVT::i8));
+      return emitVALIGN(Src, getZeroVector(AlignVT, Subtarget, DAG, DL),
+                        NumElts - ZeroLo);
   }
 
   if (ZeroHi) {
     SDValue Src = Mask[0] < (int)NumElts ? V1 : V2;
     int Low = Mask[0] < (int)NumElts ? 0 : NumElts;
     if (isSequentialOrUndefInRange(Mask, 0, NumElts - ZeroHi, Low + ZeroHi))
-      return DAG.getNode(X86ISD::VALIGN, DL, VT,
-                         getZeroVector(VT, Subtarget, DAG, DL), Src,
-                         DAG.getTargetConstant(ZeroHi, DL, MVT::i8));
+      return emitVALIGN(getZeroVector(AlignVT, Subtarget, DAG, DL), Src,
+                        ZeroHi);
   }
 
   return SDValue();
@@ -18111,6 +18120,12 @@ static SDValue lowerV8F64Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
                                           Zeroable, Subtarget, DAG))
     return Blend;
 
+  // Try to use VALIGN via integer domain bitcast. Avoids VPERMPD which
+  // requires an extra register for the index vector; VALIGNQ uses an immediate.
+  if (SDValue Rotate = lowerShuffleAsVALIGN(DL, MVT::v8f64, V1, V2, Mask,
+                                            Zeroable, Subtarget, DAG))
+    return Rotate;
+
   return lowerShuffleWithPERMV(DL, MVT::v8f64, Mask, V1, V2, Subtarget, DAG);
 }
 
@@ -18177,6 +18192,12 @@ static SDValue lowerV16F32Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
   if (SDValue V = lowerShuffleWithEXPAND(DL, MVT::v16f32, V1, V2, Mask,
                                          Zeroable, Subtarget, DAG))
     return V;
+
+  // Try to use VALIGN via integer domain bitcast. Avoids VPERMPS which
+  // requires an extra register for the index vector; VALIGND uses an immediate.
+  if (SDValue Rotate = lowerShuffleAsVALIGN(DL, MVT::v16f32, V1, V2, Mask,
+                                            Zeroable, Subtarget, DAG))
+    return Rotate;
 
   return lowerShuffleWithPERMV(DL, MVT::v16f32, Mask, V1, V2, Subtarget, DAG);
 }
@@ -32384,6 +32405,15 @@ static SDValue LowerRotate(SDValue Op, const X86Subtarget &Subtarget,
     return DAG.getNode(ISD::AVGCEILU, DL, VT, R, Neg);
   }
 
+  // rotl(x,1) -> sub(add(x, x), icmp_slt(x, 0))
+  if (IsROTL && EltSizeInBits == 8 && IsCstSplat &&
+      CstSplatValue.urem(EltSizeInBits) == 1 && !Subtarget.hasAVX512()) {
+    SDValue Double = DAG.getNode(ISD::ADD, DL, VT, R, R);
+    SDValue Zero = DAG.getConstant(0, DL, VT);
+    SDValue CmpNeg = DAG.getSetCC(DL, VT, R, Zero, ISD::SETLT);
+    return DAG.getNode(ISD::SUB, DL, VT, Double, CmpNeg);
+  }
+
   // Rotate by an uniform constant - expand back to shifts.
   // TODO: Can't use generic expansion as UNDEF amt elements can be converted
   // to other values when folded to shift amounts, losing the splat.
@@ -43267,6 +43297,22 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
         TLI.isTypeLegal(Src.getOperand(0).getValueType()))
       return DAG.getNode(X86ISD::VBROADCAST, DL, VT, Src.getOperand(0));
 
+    // broadcast(truncate(extract_vector_elt(x, 0))) -> bitcast(broadcast(x)).
+    if (Src.getOpcode() == ISD::TRUNCATE &&
+        Src.getOperand(0).getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
+        isNullConstant(Src.getOperand(0).getOperand(1))) {
+      SDValue NewSrc = Src.getOperand(0).getOperand(0);
+      if (Src.getOperand(0).getValueType() ==
+              NewSrc.getValueType().getScalarType() &&
+          TLI.isTypeLegal(NewSrc.getValueType())) {
+        MVT VecVT = MVT::getVectorVT(Src.getSimpleValueType(),
+                                     NewSrc.getValueSizeInBits() /
+                                         Src.getValueSizeInBits());
+        return DAG.getNode(X86ISD::VBROADCAST, DL, VT,
+                           DAG.getBitcast(VecVT, NewSrc));
+      }
+    }
+
     // Share broadcast with the longest vector and extract low subvector (free).
     // Ensure the same SDValue from the SDNode use is being used.
     for (SDNode *User : Src->users())
@@ -50663,7 +50709,7 @@ static SDValue combineMulToPMADDWD(SDNode *N, const SDLoc &DL,
     if (Op.getOpcode() == ISD::SIGN_EXTEND && N->isOnlyUserOf(Op.getNode())) {
       SDValue Src = Op.getOperand(0);
       // Convert sext(vXi16) to zext(vXi16).
-      if (Src.getScalarValueSizeInBits() == 16 && VT.getSizeInBits() <= 128)
+      if (Src.getScalarValueSizeInBits() == 16)
         return DAG.getNode(ISD::ZERO_EXTEND, DL, VT, Src);
       // Convert sext(vXi8) to zext(vXi16 sext(vXi8)) on pre-SSE41 targets
       // which will expand the extension.
@@ -59660,9 +59706,9 @@ static SDValue matchPMADDWD(SelectionDAG &DAG, SDNode *N,
     if (N0.getValueType().getScalarType() != MVT::i16)
       return SDValue();
 
-    // A shift by more than 15 would overflow an i16.
+    // A shift by more 15 or more would overflow a signed i16.
     if (!ISD::matchUnaryPredicate(Mul.getOperand(1), [](ConstantSDNode *C) {
-          return C->getAPIntValue().ule(15);
+          return C->getAPIntValue().ult(15);
         }))
       return SDValue();
 
@@ -62761,11 +62807,47 @@ static SDValue combineNestedGF2P8AFFINEQB(SDNode *N, const SDLoc &DL,
                      DAG.getTargetConstant(FoldedImm, DL, MVT::i8));
 }
 
+// Fold: GF2P8AFFINEQB(X ^ Splat(C), Y, Imm)
+//    => GF2P8AFFINEQB(X, Y, (u8)GF2P8AFFINEQB(C, Y, Imm))
+// Reassociating a XOR (by permuting it in the same manner as the input) allows
+// it to be applied for free using the immediate.
+static SDValue combineXorOnGF2P8AFFINEQBOperand(SDNode *N, const SDLoc &DL,
+                                                SelectionDAG &DAG, EVT VT) {
+  using namespace SDPatternMatch;
+
+  unsigned MatrixWidth = 64;
+
+  SDValue X, Y, SplatOp;
+  APInt Imm, SplatVal, ConstUndef;
+  SmallVector<APInt> MatEltBits;
+
+  if (sd_match(N, m_TernaryOp(X86ISD::GF2P8AFFINEQB,
+                              m_Xor(m_Value(X), m_Value(SplatOp)), m_Value(Y),
+                              m_ConstInt(Imm))) &&
+      X86::isConstantSplat(SplatOp, SplatVal, /*AllowPartialUndefs=*/false) &&
+      getTargetConstantBitsFromNode(Y, MatrixWidth, ConstUndef, MatEltBits,
+                                    /*AllowWholeUndefs=*/false)) {
+    // Immediate is shared, so all matrices need to permute it in the same way
+    if (!llvm::all_equal(MatEltBits))
+      return SDValue();
+
+    APInt NewImm = getGFNIByteAffine(SplatVal, MatEltBits[0], Imm);
+
+    return DAG.getNode(X86ISD::GF2P8AFFINEQB, DL, VT, X, Y,
+                       DAG.getTargetConstant(NewImm, DL, MVT::i8));
+  }
+
+  return SDValue();
+}
+
 static SDValue combineGF2P8AFFINEQB(SDNode *N, SelectionDAG &DAG) {
   EVT VT = N->getValueType(0);
   SDLoc dl(N);
 
   if (SDValue R = combineAndOnGF2P8AFFINEQBOperand(N, dl, DAG, VT))
+    return R;
+
+  if (SDValue R = combineXorOnGF2P8AFFINEQBOperand(N, dl, DAG, VT))
     return R;
 
   if (SDValue R = combineNestedGF2P8AFFINEQB(N, dl, DAG, VT))
@@ -64755,7 +64837,7 @@ bool X86TargetLowering::hasStackProbeSymbol(const MachineFunction &MF) const {
 bool X86TargetLowering::hasInlineStackProbe(const MachineFunction &MF) const {
 
   // No inline stack probe for Windows, they have their own mechanism.
-  if (Subtarget.isOSWindows() || Subtarget.isUEFI() ||
+  if (Subtarget.isOSWindowsOrUEFI() ||
       MF.getFunction().hasFnAttribute("no-stack-arg-probe"))
     return false;
 
@@ -64781,8 +64863,7 @@ X86TargetLowering::getStackProbeSymbolName(const MachineFunction &MF) const {
 
   // Generally, if we aren't on Windows, the platform ABI does not include
   // support for stack probes, so don't emit them.
-  if ((!Subtarget.isOSWindows() && !Subtarget.isUEFI()) ||
-      Subtarget.isTargetMachO() ||
+  if (!Subtarget.isOSWindowsOrUEFI() || Subtarget.isTargetMachO() ||
       MF.getFunction().hasFnAttribute("no-stack-arg-probe"))
     return "";
 

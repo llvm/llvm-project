@@ -18,7 +18,7 @@ program do_concurrent_host_eval
     end do
 end program do_concurrent_host_eval
 
-! HOST: omp.target host_eval(
+! HOST: omp.target kernel_type(spmd) host_eval(
 ! HOST-SAME:    %{{[^[:space:]]+}} -> %[[I_LB:[^,]+]],
 ! HOST-SAME:    %{{[^[:space:]]+}} -> %[[I_UB:[^,]+]],
 ! HOST-SAME:    %{{[^[:space:]]+}} -> %[[I_ST:[^,]+]],
@@ -30,7 +30,7 @@ end program do_concurrent_host_eval
 ! HOST-SAME:    (%[[I_UB]], %[[J_UB]]) inclusive step
 ! HOST-SAME:    (%[[I_ST]], %[[J_ST]])
 
-! DEVICE: omp.target map_entries(
+! DEVICE: omp.target kernel_type(spmd) map_entries(
 ! DEVICE-SAME:  %{{[^[:space:]]+}} -> %[[I_LB_MAP:[^,]+]],
 ! DEVICE-SAME:  %{{[^[:space:]]+}} -> %[[I_UB_MAP:[^,]+]],
 ! DEVICE-SAME:  %{{[^[:space:]]+}} -> %[[I_ST_MAP:[^,]+]],

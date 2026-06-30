@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -acc-bind-routine -split-input-file | FileCheck %s
+// RUN: mlir-opt %s --pass-pipeline='builtin.module(gpu.module(any(acc-bind-routine)), any(acc-bind-routine))' -split-input-file | FileCheck %s
 
 // Call to routine with bind is rewritten to the bound symbol inside
 // offload region.
@@ -89,3 +89,27 @@ module {
 }
 
 // CHECK: func.call_indirect %{{.*}}() : () -> ()
+
+// -----
+
+module {
+  acc.routine @acc_routine_0 func(@my_device_func) bind("__wrapper_my_device_func") seq
+  acc.routine @acc_routine_1 func(@my_device_sub) bind("__wrapper_my_device_sub") seq
+  func.func private @my_device_func(i32) -> i32 attributes {acc.routine_info = #acc.routine_info<[@acc_routine_0]>}
+  func.func private @my_device_sub(i32, memref<i32>) attributes {acc.routine_info = #acc.routine_info<[@acc_routine_1]>}
+  gpu.module @cuda_device_mod {
+    gpu.func @test(%arg0: i32, %arg1: memref<i32>) {
+      %0 = func.call @my_device_func(%arg0) : (i32) -> i32
+      func.call @my_device_sub(%arg0, %arg1) : (i32, memref<i32>) -> ()
+      gpu.return
+    }
+    func.func private @my_device_func(i32) -> i32 attributes {acc.routine_info = #acc.routine_info<[@acc_routine_0]>}
+    func.func private @my_device_sub(i32, memref<i32>) attributes {acc.routine_info = #acc.routine_info<[@acc_routine_1]>}
+  }
+}
+
+// CHECK-LABEL: gpu.func @test
+// CHECK: func.call @__wrapper_my_device_func
+// CHECK: func.call @__wrapper_my_device_sub
+// CHECK: func.func private @__wrapper_my_device_func
+// CHECK: func.func private @__wrapper_my_device_sub

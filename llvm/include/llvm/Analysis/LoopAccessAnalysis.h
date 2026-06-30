@@ -879,6 +879,14 @@ replaceSymbolicStrideSCEV(PredicatedScalarEvolution &PSE,
                           const DenseMap<Value *, const SCEV *> &PtrToStride,
                           Value *Ptr);
 
+/// If \p AR is an affine AddRec for \p Lp with a constant step, return the
+/// step in units of \p AccessTy's allocation size. Returns std::nullopt if the
+/// step is not constant, does not divide the access size, or \p AccessTy is a
+/// scalable vector. \p Ptr is only used for debug output and may be null.
+LLVM_ABI std::optional<int64_t>
+getStrideFromAddRec(const SCEVAddRecExpr *AR, const Loop *Lp, Type *AccessTy,
+                    Value *Ptr, PredicatedScalarEvolution &PSE);
+
 /// If the pointer has a constant stride return it in units of the access type
 /// size. If the pointer is loop-invariant, return 0. Otherwise return
 /// std::nullopt.

@@ -39,6 +39,7 @@
 //    _mt                  <=>     _MERGE_PASSTHRU
 //    _z                   <=>     _MERGE_ZERO
 //    _p                   <=>     _PRED
+//    _pn                  <=>     _PRED_COUNTER
 //
 //  Given the context of this file, it is not strictly necessary to use _p to
 //  distinguish predicated from unpredicated nodes given that most SVE
@@ -72,6 +73,21 @@ def SDT_AArch64_LD1Replicate : SDTypeProfile<1, 2, [
 
 def AArch64ld1rq_z : SDNode<"AArch64ISD::LD1RQ_MERGE_ZERO",  SDT_AArch64_LD1Replicate, [SDNPHasChain, SDNPMayLoad]>;
 def AArch64ld1ro_z : SDNode<"AArch64ISD::LD1RO_MERGE_ZERO",  SDT_AArch64_LD1Replicate, [SDNPHasChain, SDNPMayLoad]>;
+
+def SDT_AArch64_PredCounterWhile : SDTypeProfile<2, 4, [
+  SDTCisVT<0, aarch64svcount>, SDTCisVT<1, FlagsVT>,
+  SDTCisInt<2>, SDTCisInt<3>,
+  SDTCisInt<4>, SDTCisInt<5>
+]>;
+
+def AArch64whilege_pn_flag : SDNode<"AArch64ISD::WHILEGE_PRED_COUNTER", SDT_AArch64_PredCounterWhile>;
+def AArch64whilegt_pn_flag : SDNode<"AArch64ISD::WHILEGT_PRED_COUNTER", SDT_AArch64_PredCounterWhile>;
+def AArch64whilelt_pn_flag : SDNode<"AArch64ISD::WHILELT_PRED_COUNTER", SDT_AArch64_PredCounterWhile>;
+def AArch64whilele_pn_flag : SDNode<"AArch64ISD::WHILELE_PRED_COUNTER", SDT_AArch64_PredCounterWhile>;
+def AArch64whilehs_pn_flag : SDNode<"AArch64ISD::WHILEHS_PRED_COUNTER", SDT_AArch64_PredCounterWhile>;
+def AArch64whilehi_pn_flag : SDNode<"AArch64ISD::WHILEHI_PRED_COUNTER", SDT_AArch64_PredCounterWhile>;
+def AArch64whilelo_pn_flag : SDNode<"AArch64ISD::WHILELO_PRED_COUNTER", SDT_AArch64_PredCounterWhile>;
+def AArch64whilels_pn_flag : SDNode<"AArch64ISD::WHILELS_PRED_COUNTER", SDT_AArch64_PredCounterWhile>;
 
 // Gather loads - node definitions
 //
@@ -1977,17 +1993,6 @@ let Predicates = [HasSVE] in {
     def : Pat<(Ty (AArch64mla_p (PredTy (SVEAnyPredicate)), Ty:$Acc, Ty:$Op,
                                 (Ty (splat_vector (ScalarTy 8))))),
               (Adr3 $Acc, $Op)>;
-
-    // MLA commuted. These can be removed if the commuted forms are canonicalized.
-    def : Pat<(Ty (AArch64mla_p (PredTy (SVEAnyPredicate)), Ty:$Acc,
-                                (Ty (splat_vector (ScalarTy 2))), Ty:$Op)),
-              (Adr1 $Acc, $Op)>;
-    def : Pat<(Ty (AArch64mla_p (PredTy (SVEAnyPredicate)), Ty:$Acc,
-                                (Ty (splat_vector (ScalarTy 4))), Ty:$Op)),
-              (Adr2 $Acc, $Op)>;
-    def : Pat<(Ty (AArch64mla_p (PredTy (SVEAnyPredicate)), Ty:$Acc,
-                                (Ty (splat_vector (ScalarTy 8))), Ty:$Op)),
-              (Adr3 $Acc, $Op)>;
   }
 
   let AddedComplexity = 10 in {
@@ -2781,22 +2786,22 @@ let Predicates = [HasSVE_or_SME] in {
   // These get expanded to individual LDR_ZXI/STR_ZXI instructions in
   // AArch64ExpandPseudoInsts.
   let mayLoad = 1, hasSideEffects = 0 in {
-    def LDR_ZZXI_STRIDED_CONTIGUOUS   : Pseudo<(outs   ZZ_b_strided_and_contiguous:$Zd), (ins GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[]>;
-    def LDR_ZZZZXI_STRIDED_CONTIGUOUS : Pseudo<(outs ZZZZ_b_strided_and_contiguous:$Zd), (ins GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[]>;
+    def LDR_ZZXI_STRIDED_CONTIGUOUS   : Pseudo<(outs   ZZ_b_strided_and_contiguous:$Zd), (ins GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[WriteLD]>;
+    def LDR_ZZZZXI_STRIDED_CONTIGUOUS : Pseudo<(outs ZZZZ_b_strided_and_contiguous:$Zd), (ins GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[WriteLD]>;
 
-    def LDR_ZZXI   : Pseudo<(outs   ZZ_b:$Zd), (ins GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[]>;
-    def LDR_ZZZXI  : Pseudo<(outs  ZZZ_b:$Zd), (ins GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[]>;
-    def LDR_ZZZZXI : Pseudo<(outs ZZZZ_b:$Zd), (ins GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[]>;
-    def LDR_PPXI   : Pseudo<(outs   PPR2:$pp), (ins GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[]>;
+    def LDR_ZZXI   : Pseudo<(outs   ZZ_b:$Zd), (ins GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[WriteLD]>;
+    def LDR_ZZZXI  : Pseudo<(outs  ZZZ_b:$Zd), (ins GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[WriteLD]>;
+    def LDR_ZZZZXI : Pseudo<(outs ZZZZ_b:$Zd), (ins GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[WriteLD]>;
+    def LDR_PPXI   : Pseudo<(outs   PPR2:$pp), (ins GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[WriteLD]>;
   }
   let mayStore = 1, hasSideEffects = 0 in {
-    def STR_ZZXI_STRIDED_CONTIGUOUS   : Pseudo<(outs), (ins   ZZ_b_strided_and_contiguous:$Zs, GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[]>;
-    def STR_ZZZZXI_STRIDED_CONTIGUOUS : Pseudo<(outs), (ins ZZZZ_b_strided_and_contiguous:$Zs, GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[]>;
+    def STR_ZZXI_STRIDED_CONTIGUOUS   : Pseudo<(outs), (ins   ZZ_b_strided_and_contiguous:$Zs, GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[WriteST]>;
+    def STR_ZZZZXI_STRIDED_CONTIGUOUS : Pseudo<(outs), (ins ZZZZ_b_strided_and_contiguous:$Zs, GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[WriteST]>;
 
-    def STR_ZZXI   : Pseudo<(outs), (ins   ZZ_b:$Zs, GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[]>;
-    def STR_ZZZXI  : Pseudo<(outs), (ins  ZZZ_b:$Zs, GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[]>;
-    def STR_ZZZZXI : Pseudo<(outs), (ins ZZZZ_b:$Zs, GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[]>;
-    def STR_PPXI   : Pseudo<(outs), (ins   PPR2:$pp, GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[]>;
+    def STR_ZZXI   : Pseudo<(outs), (ins   ZZ_b:$Zs, GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[WriteST]>;
+    def STR_ZZZXI  : Pseudo<(outs), (ins  ZZZ_b:$Zs, GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[WriteST]>;
+    def STR_ZZZZXI : Pseudo<(outs), (ins ZZZZ_b:$Zs, GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[WriteST]>;
+    def STR_PPXI   : Pseudo<(outs), (ins   PPR2:$pp, GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[WriteST]>;
   }
 
   let AddedComplexity = 1 in {
@@ -4658,14 +4663,14 @@ defm : store_pn_x4<nxv8bf16, int_aarch64_sve_stnt1_pn_x4, STNT1H_4Z_IMM>;
 defm : store_pn_x4<nxv4f32, int_aarch64_sve_stnt1_pn_x4, STNT1W_4Z_IMM>;
 defm : store_pn_x4<nxv2f64, int_aarch64_sve_stnt1_pn_x4, STNT1D_4Z_IMM>;
 
-defm WHILEGE_CXX  : sve2p1_int_while_rr_pn<"whilege", 0b000>;
-defm WHILEGT_CXX  : sve2p1_int_while_rr_pn<"whilegt", 0b001>;
-defm WHILELT_CXX  : sve2p1_int_while_rr_pn<"whilelt", 0b010>;
-defm WHILELE_CXX  : sve2p1_int_while_rr_pn<"whilele", 0b011>;
-defm WHILEHS_CXX  : sve2p1_int_while_rr_pn<"whilehs", 0b100>;
-defm WHILEHI_CXX  : sve2p1_int_while_rr_pn<"whilehi", 0b101>;
-defm WHILELO_CXX  : sve2p1_int_while_rr_pn<"whilelo", 0b110>;
-defm WHILELS_CXX  : sve2p1_int_while_rr_pn<"whilels", 0b111>;
+defm WHILEGE_CXX : sve2p1_int_while_rr_pn<"whilege", 0b000, AArch64whilege_pn_flag>;
+defm WHILEGT_CXX : sve2p1_int_while_rr_pn<"whilegt", 0b001, AArch64whilegt_pn_flag>;
+defm WHILELT_CXX : sve2p1_int_while_rr_pn<"whilelt", 0b010, AArch64whilelt_pn_flag>;
+defm WHILELE_CXX : sve2p1_int_while_rr_pn<"whilele", 0b011, AArch64whilele_pn_flag>;
+defm WHILEHS_CXX : sve2p1_int_while_rr_pn<"whilehs", 0b100, AArch64whilehs_pn_flag>;
+defm WHILEHI_CXX : sve2p1_int_while_rr_pn<"whilehi", 0b101, AArch64whilehi_pn_flag>;
+defm WHILELO_CXX : sve2p1_int_while_rr_pn<"whilelo", 0b110, AArch64whilelo_pn_flag>;
+defm WHILELS_CXX : sve2p1_int_while_rr_pn<"whilels", 0b111, AArch64whilels_pn_flag>;
 } // End HasSVE2p1_or_StreamingSME2
 
 let Predicates = [HasSVE_or_SME] in {

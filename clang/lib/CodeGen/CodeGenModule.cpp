@@ -1809,10 +1809,23 @@ void CodeGenModule::Release() {
   // for an int access. This allows LLVM to reason about what memory can be
   // accessed by certain library calls that only touch errno.
   if (TBAA) {
-    TBAAAccessInfo TBAAInfo = getTBAAAccessInfo(Context.IntTy);
-    if (llvm::MDNode *IntegerNode = getTBAAAccessTagInfo(TBAAInfo)) {
+    if (llvm::MDNode *IntegerNode = getTBAATypeInfo(Context.IntTy)) {
+      // Pretend that errno is part of a __libc_errno struct, to indicate that
+      // it should alias with plain integer accesses, but not int member
+      // accesses in structs.
+      llvm::MDBuilder MDB(TheModule.getContext());
+      uint64_t Size = Context.getTypeSizeInChars(Context.IntTy).getQuantity();
+      llvm::MDNode *StructNode =
+          CodeGenOpts.NewStructPathTBAA
+              ? MDB.createTBAATypeNode(TBAA->getChar(), Size,
+                                       MDB.createString("__libc_errno"),
+                                       {{0, Size, IntegerNode}})
+              : MDB.createTBAAStructTypeNode("__libc_errno",
+                                             {{IntegerNode, 0}});
+      TBAAAccessInfo Info(StructNode, IntegerNode, 0, Size);
+      llvm::MDNode *StructTagNode = getTBAAAccessTagInfo(Info);
       auto *ErrnoTBAAMD = TheModule.getOrInsertNamedMetadata(ErrnoTBAAMDName);
-      ErrnoTBAAMD->addOperand(IntegerNode);
+      ErrnoTBAAMD->addOperand(StructTagNode);
     }
   }
 }
@@ -4731,120 +4744,69 @@ static bool HasNonDllImportDtor(QualType T) {
 }
 
 namespace {
-  struct FunctionIsDirectlyRecursive
-      : public ConstStmtVisitor<FunctionIsDirectlyRecursive, bool> {
-    const StringRef Name;
-    const Builtin::Context &BI;
-    FunctionIsDirectlyRecursive(StringRef N, const Builtin::Context &C)
-        : Name(N), BI(C) {}
+// Make sure we're not referencing non-imported vars or functions.
+struct DLLImportFunctionVisitor
+    : public RecursiveASTVisitor<DLLImportFunctionVisitor> {
+  bool SafeToInline = true;
 
-    bool VisitCallExpr(const CallExpr *E) {
-      const FunctionDecl *FD = E->getDirectCallee();
-      if (!FD)
-        return false;
-      AsmLabelAttr *Attr = FD->getAttr<AsmLabelAttr>();
-      if (Attr && Name == Attr->getLabel())
-        return true;
-      unsigned BuiltinID = FD->getBuiltinID();
-      if (!BuiltinID || !BI.isLibFunction(BuiltinID))
-        return false;
-      std::string BuiltinNameStr = BI.getName(BuiltinID);
-      StringRef BuiltinName = BuiltinNameStr;
-      return BuiltinName.consume_front("__builtin_") && Name == BuiltinName;
-    }
+  bool shouldVisitImplicitCode() const { return true; }
 
-    bool VisitStmt(const Stmt *S) {
-      for (const Stmt *Child : S->children())
-        if (Child && this->Visit(Child))
-          return true;
-      return false;
-    }
-  };
-
-  // Make sure we're not referencing non-imported vars or functions.
-  struct DLLImportFunctionVisitor
-      : public RecursiveASTVisitor<DLLImportFunctionVisitor> {
-    bool SafeToInline = true;
-
-    bool shouldVisitImplicitCode() const { return true; }
-
-    bool VisitVarDecl(VarDecl *VD) {
-      if (VD->getTLSKind()) {
-        // A thread-local variable cannot be imported.
-        SafeToInline = false;
-        return SafeToInline;
-      }
-
-      // A variable definition might imply a destructor call.
-      if (VD->isThisDeclarationADefinition())
-        SafeToInline = !HasNonDllImportDtor(VD->getType());
-
+  bool VisitVarDecl(VarDecl *VD) {
+    if (VD->getTLSKind()) {
+      // A thread-local variable cannot be imported.
+      SafeToInline = false;
       return SafeToInline;
     }
 
-    bool VisitCXXBindTemporaryExpr(CXXBindTemporaryExpr *E) {
-      if (const auto *D = E->getTemporary()->getDestructor())
-        SafeToInline = D->hasAttr<DLLImportAttr>();
-      return SafeToInline;
-    }
+    // A variable definition might imply a destructor call.
+    if (VD->isThisDeclarationADefinition())
+      SafeToInline = !HasNonDllImportDtor(VD->getType());
 
-    bool VisitDeclRefExpr(DeclRefExpr *E) {
-      ValueDecl *VD = E->getDecl();
-      if (isa<FunctionDecl>(VD))
-        SafeToInline = VD->hasAttr<DLLImportAttr>();
-      else if (VarDecl *V = dyn_cast<VarDecl>(VD))
-        SafeToInline = !V->hasGlobalStorage() || V->hasAttr<DLLImportAttr>();
-      return SafeToInline;
-    }
-
-    bool VisitCXXConstructExpr(CXXConstructExpr *E) {
-      SafeToInline = E->getConstructor()->hasAttr<DLLImportAttr>();
-      return SafeToInline;
-    }
-
-    bool VisitCXXMemberCallExpr(CXXMemberCallExpr *E) {
-      CXXMethodDecl *M = E->getMethodDecl();
-      if (!M) {
-        // Call through a pointer to member function. This is safe to inline.
-        SafeToInline = true;
-      } else {
-        SafeToInline = M->hasAttr<DLLImportAttr>();
-      }
-      return SafeToInline;
-    }
-
-    bool VisitCXXDeleteExpr(CXXDeleteExpr *E) {
-      SafeToInline = E->getOperatorDelete()->hasAttr<DLLImportAttr>();
-      return SafeToInline;
-    }
-
-    bool VisitCXXNewExpr(CXXNewExpr *E) {
-      SafeToInline = E->getOperatorNew()->hasAttr<DLLImportAttr>();
-      return SafeToInline;
-    }
-  };
-}
-
-// isTriviallyRecursive - Check if this function calls another
-// decl that, because of the asm attribute or the other decl being a builtin,
-// ends up pointing to itself.
-bool
-CodeGenModule::isTriviallyRecursive(const FunctionDecl *FD) {
-  StringRef Name;
-  if (getCXXABI().getMangleContext().shouldMangleDeclName(FD)) {
-    // asm labels are a special kind of mangling we have to support.
-    AsmLabelAttr *Attr = FD->getAttr<AsmLabelAttr>();
-    if (!Attr)
-      return false;
-    Name = Attr->getLabel();
-  } else {
-    Name = FD->getName();
+    return SafeToInline;
   }
 
-  FunctionIsDirectlyRecursive Walker(Name, Context.BuiltinInfo);
-  const Stmt *Body = FD->getBody();
-  return Body ? Walker.Visit(Body) : false;
-}
+  bool VisitCXXBindTemporaryExpr(CXXBindTemporaryExpr *E) {
+    if (const auto *D = E->getTemporary()->getDestructor())
+      SafeToInline = D->hasAttr<DLLImportAttr>();
+    return SafeToInline;
+  }
+
+  bool VisitDeclRefExpr(DeclRefExpr *E) {
+    ValueDecl *VD = E->getDecl();
+    if (isa<FunctionDecl>(VD))
+      SafeToInline = VD->hasAttr<DLLImportAttr>();
+    else if (VarDecl *V = dyn_cast<VarDecl>(VD))
+      SafeToInline = !V->hasGlobalStorage() || V->hasAttr<DLLImportAttr>();
+    return SafeToInline;
+  }
+
+  bool VisitCXXConstructExpr(CXXConstructExpr *E) {
+    SafeToInline = E->getConstructor()->hasAttr<DLLImportAttr>();
+    return SafeToInline;
+  }
+
+  bool VisitCXXMemberCallExpr(CXXMemberCallExpr *E) {
+    CXXMethodDecl *M = E->getMethodDecl();
+    if (!M) {
+      // Call through a pointer to member function. This is safe to inline.
+      SafeToInline = true;
+    } else {
+      SafeToInline = M->hasAttr<DLLImportAttr>();
+    }
+    return SafeToInline;
+  }
+
+  bool VisitCXXDeleteExpr(CXXDeleteExpr *E) {
+    SafeToInline = E->getOperatorDelete()->hasAttr<DLLImportAttr>();
+    return SafeToInline;
+  }
+
+  bool VisitCXXNewExpr(CXXNewExpr *E) {
+    SafeToInline = E->getOperatorNew()->hasAttr<DLLImportAttr>();
+    return SafeToInline;
+  }
+};
+} // namespace
 
 bool CodeGenModule::shouldEmitFunction(GlobalDecl GD) {
   if (getFunctionLinkage(GD) != llvm::Function::AvailableExternallyLinkage)
@@ -4906,7 +4868,7 @@ bool CodeGenModule::shouldEmitFunction(GlobalDecl GD) {
   // but a function that calls itself through asm label/`__builtin_` trickery is
   // clearly not equivalent to the real implementation.
   // This happens in glibc's btowc and in some configure checks.
-  return !isTriviallyRecursive(F);
+  return !getCXXABI().getMangleContext().isTriviallyRecursive(F);
 }
 
 bool CodeGenModule::shouldOpportunisticallyEmitVTables() {

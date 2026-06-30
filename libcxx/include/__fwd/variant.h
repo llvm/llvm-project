@@ -16,9 +16,9 @@
 #  pragma GCC system_header
 #endif
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 17
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class... _Types>
 class variant;
@@ -61,8 +61,8 @@ _LIBCPP_HIDE_FROM_ABI constexpr const _Tp& get(const variant<_Types...>&);
 template <class _Tp, class... _Types>
 _LIBCPP_HIDE_FROM_ABI constexpr const _Tp&& get(const variant<_Types...>&&);
 
-#endif // _LIBCPP_STD_VER >= 17
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 17
 
 #endif // _LIBCPP___FWD_VARIANT_H
