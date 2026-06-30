@@ -3833,6 +3833,11 @@ _LIBCPP_HIDE_FROM_ABI constexpr _String __integer_to_string(_Integer __val) {
 
 #    if !defined(_LIBCPP_BUILDING_LIBRARY)
 
+_LIBCPP_DIAGNOSTIC_PUSH
+#      if __has_warning("-Wgnu-inline-cpp-without-extern")
+_LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wgnu-inline-cpp-without-extern")
+#      endif
+
 [[nodiscard, __gnu__::__gnu_inline__, __gnu__::__noinline__]] inline constexpr string to_string(int __val) {
   return std::__integer_to_string<string>(__val);
 }
@@ -3874,6 +3879,8 @@ to_wstring(unsigned long long __val) {
   return std::__integer_to_string<wstring>(__val);
 }
 #      endif // _LIBCPP_HAS_WIDE_CHARACTERS
+
+_LIBCPP_DIAGNOSTIC_POP
 
 #    endif // !defined(_LIBCPP_BUILDING_LIBRARY)
 
