@@ -2,9 +2,10 @@
 # RUN: llvm-mc -triple=aarch64-unknown-linux-gnu -x86-relax-relocations=false \
 # RUN:   -position-independent -filetype=obj -o %t/elf_reloc.o %s
 # RUN: llvm-jitlink -noexec \
-# RUN:              -abs external_data=0xdeadbeef \
-# RUN:              -abs external_func=0xcafef00d \
-# RUN:              -check %s %t/elf_reloc.o
+# RUN:    -slab-allocate 100Kb -slab-address 0xffff000000 -slab-page-size 16384 \
+# RUN:    -abs external_data=0xdeadbeef \
+# RUN:    -abs external_func=0xcafef00d \
+# RUN:    -check %s %t/elf_reloc.o
 
         .text
 

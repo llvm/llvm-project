@@ -1,6 +1,10 @@
 # RUN: rm -rf %t && mkdir -p %t
 # RUN: llvm-mc -triple=arm64-apple-darwin19 -filetype=obj -o %t/macho_reloc.o %s
-# RUN: llvm-jitlink -noexec -abs external_data=0xdeadbeef -abs external_func=0xcafef00d -check=%s %t/macho_reloc.o
+# RUN: llvm-jitlink -noexec \
+# RUN:    -slab-allocate 100Kb -slab-address 0xffff000000 -slab-page-size 16384 \
+# RUN:    -abs external_data=0xdeadbeef \
+# RUN:    -abs external_func=0xcafef00d \
+# RUN:    -check=%s %t/macho_reloc.o
 
         .section        __TEXT,__text,regular,pure_instructions
 
