@@ -69,3 +69,36 @@ func.func @broadcast_only(%x : tensor<2x16x32xf32>, %y:  tensor<2x32xf32>, %z : 
 // CHECK: %[[X_bc:.+]] = linalg.broadcast ins(%[[Y]] : tensor<2x32xf32>) outs(%[[E0]] : tensor<2x16x32xf32>) dimensions = [1]
 // CHECK: {{.*}} = linalg.div ins(%[[X]], %[[X_bc]] : tensor<2x16x32xf32>, tensor<2x16x32xf32>) outs(%arg2 : tensor<2x16x32xf32>) -> tensor<2x16x32xf32>
 // CHECK-NOT: linalg.generic
+
+// -----
+
+// Verify that linalg.generic with scalar (non-tensor) inputs is not decomposed
+// and does not crash. Scalar inputs have 0-D affine maps and are not
+// RankedTensorType; the pass must handle them gracefully by bailing out.
+// (GitHub issue #122094)
+
+// CHECK-LABEL: func @scalar_input
+// The op must survive unchanged: linalg.generic is preserved (not decomposed).
+// CHECK: linalg.generic
+// CHECK: } -> tensor<4x4xi32>
+// CHECK-NOT: linalg.broadcast
+// CHECK-NOT: linalg.transpose
+
+#map = affine_map<(d0, d1) -> (d0)>
+#map1 = affine_map<(d0, d1) -> (d1)>
+#map2 = affine_map<(d0, d1) -> ()>
+#map3 = affine_map<(d0, d1) -> (d0, d1)>
+
+func.func @scalar_input(%arg0: tensor<4xi32>, %arg1: tensor<4xi32>, %arg2: i32) -> tensor<4x4xi32> {
+  %0 = tensor.empty() : tensor<4x4xi32>
+  %1 = linalg.generic {indexing_maps = [#map, #map1, #map2, #map3],
+                        iterator_types = ["parallel", "parallel"]}
+    ins(%arg0, %arg1, %arg2 : tensor<4xi32>, tensor<4xi32>, i32)
+    outs(%0 : tensor<4x4xi32>) {
+  ^bb0(%in: i32, %in2: i32, %in3: i32, %out: i32):
+    %2 = arith.muli %in, %in2 : i32
+    %3 = arith.addi %in3, %2 : i32
+    linalg.yield %3 : i32
+  } -> tensor<4x4xi32>
+  return %1 : tensor<4x4xi32>
+}
