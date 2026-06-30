@@ -1314,26 +1314,11 @@ let TargetPrefix = "nvvm" in {
   let IntrProperties = [IntrNoMem, IntrSpeculatable, Commutative,
                         IntrNoCreateUndefOrPoison] in {
     foreach operation = ["min", "max"] in {
-      def int_nvvm_f # operation # _d : NVVMBuiltin,
-        DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty, llvm_double_ty]>;
-
       foreach variant = ["", "_xorsign_abs"] in {
         foreach nan = ["", "_nan"] in {
           foreach ftz = ["", "_ftz"] in {
-            def int_nvvm_f # operation # ftz # nan # variant # _f : NVVMBuiltin,
-              DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty]>;
-
-            def int_nvvm_f # operation # ftz # nan # variant # _f16 :
-              DefaultAttrsIntrinsic<[llvm_half_ty], [llvm_half_ty, llvm_half_ty]>;
-
-            def int_nvvm_f # operation # ftz # nan # variant # _f16x2 :
-              DefaultAttrsIntrinsic<[llvm_v2f16_ty], [llvm_v2f16_ty, llvm_v2f16_ty]>;
-
-            def int_nvvm_f # operation # ftz # nan # variant # _bf16 : NVVMBuiltin,
-              DefaultAttrsIntrinsic<[llvm_bfloat_ty], [llvm_bfloat_ty, llvm_bfloat_ty]>;
-
-            def int_nvvm_f # operation # ftz # nan # variant # _bf16x2 : NVVMBuiltin,
-              DefaultAttrsIntrinsic<[llvm_v2bf16_ty], [llvm_v2bf16_ty, llvm_v2bf16_ty]>;
+            def int_nvvm_f # operation # ftz # nan # variant : NVVMBuiltin,
+              DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>, LLVMMatchType<0>]>;
           } // ftz
         } // nan
       } // variant

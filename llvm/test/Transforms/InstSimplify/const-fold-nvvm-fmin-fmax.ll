@@ -916,3 +916,43 @@ define float @test_fmin_nan_undef_xorsign_abs_f() {
   %res = call float @llvm.nvvm.fmin.xorsign.abs.f(float 0x7fff444400000000, float undef)
   ret float %res
 }
+
+;###############################################################
+;#       NaN inputs are not folded for f16/bf16 (deferred)     #
+;###############################################################
+
+define half @test_fmax_f16_no_fold() {
+; CHECK-LABEL: define half @test_fmax_f16_no_fold() {
+; CHECK-NEXT:    [[RES:%.*]] = call half @llvm.nvvm.fmax.f16(half 0xH7C01, half 0xH7C01)
+; CHECK-NEXT:    ret half [[RES]]
+;
+  %res = call half @llvm.nvvm.fmax.f16(half 0xH7C01, half 0xH7C01)
+  ret half %res
+}
+
+define bfloat @test_fmax_bf16_no_fold() {
+; CHECK-LABEL: define bfloat @test_fmax_bf16_no_fold() {
+; CHECK-NEXT:    [[RES:%.*]] = call bfloat @llvm.nvvm.fmax.bf16(bfloat 0xR7F81, bfloat 0xR7F81)
+; CHECK-NEXT:    ret bfloat [[RES]]
+;
+  %res = call bfloat @llvm.nvvm.fmax.bf16(bfloat 0xR7F81, bfloat 0xR7F81)
+  ret bfloat %res
+}
+
+define half @test_fmin_f16_no_fold() {
+; CHECK-LABEL: define half @test_fmin_f16_no_fold() {
+; CHECK-NEXT:    [[RES:%.*]] = call half @llvm.nvvm.fmin.f16(half 0xH7C01, half 0xH7C01)
+; CHECK-NEXT:    ret half [[RES]]
+;
+  %res = call half @llvm.nvvm.fmin.f16(half 0xH7C01, half 0xH7C01)
+  ret half %res
+}
+
+define bfloat @test_fmin_bf16_no_fold() {
+; CHECK-LABEL: define bfloat @test_fmin_bf16_no_fold() {
+; CHECK-NEXT:    [[RES:%.*]] = call bfloat @llvm.nvvm.fmin.bf16(bfloat 0xR7F81, bfloat 0xR7F81)
+; CHECK-NEXT:    ret bfloat [[RES]]
+;
+  %res = call bfloat @llvm.nvvm.fmin.bf16(bfloat 0xR7F81, bfloat 0xR7F81)
+  ret bfloat %res
+}

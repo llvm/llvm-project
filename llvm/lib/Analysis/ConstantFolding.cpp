@@ -1897,26 +1897,24 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
   case Intrinsic::x86_avx512_cvttsd2usi64:
 
   // NVVM FMax intrinsics
-  case Intrinsic::nvvm_fmax_d:
-  case Intrinsic::nvvm_fmax_f:
-  case Intrinsic::nvvm_fmax_ftz_f:
-  case Intrinsic::nvvm_fmax_ftz_nan_f:
-  case Intrinsic::nvvm_fmax_ftz_nan_xorsign_abs_f:
-  case Intrinsic::nvvm_fmax_ftz_xorsign_abs_f:
-  case Intrinsic::nvvm_fmax_nan_f:
-  case Intrinsic::nvvm_fmax_nan_xorsign_abs_f:
-  case Intrinsic::nvvm_fmax_xorsign_abs_f:
+  case Intrinsic::nvvm_fmax:
+  case Intrinsic::nvvm_fmax_ftz:
+  case Intrinsic::nvvm_fmax_ftz_nan:
+  case Intrinsic::nvvm_fmax_ftz_nan_xorsign_abs:
+  case Intrinsic::nvvm_fmax_ftz_xorsign_abs:
+  case Intrinsic::nvvm_fmax_nan:
+  case Intrinsic::nvvm_fmax_nan_xorsign_abs:
+  case Intrinsic::nvvm_fmax_xorsign_abs:
 
   // NVVM FMin intrinsics
-  case Intrinsic::nvvm_fmin_d:
-  case Intrinsic::nvvm_fmin_f:
-  case Intrinsic::nvvm_fmin_ftz_f:
-  case Intrinsic::nvvm_fmin_ftz_nan_f:
-  case Intrinsic::nvvm_fmin_ftz_nan_xorsign_abs_f:
-  case Intrinsic::nvvm_fmin_ftz_xorsign_abs_f:
-  case Intrinsic::nvvm_fmin_nan_f:
-  case Intrinsic::nvvm_fmin_nan_xorsign_abs_f:
-  case Intrinsic::nvvm_fmin_xorsign_abs_f:
+  case Intrinsic::nvvm_fmin:
+  case Intrinsic::nvvm_fmin_ftz:
+  case Intrinsic::nvvm_fmin_ftz_nan:
+  case Intrinsic::nvvm_fmin_ftz_nan_xorsign_abs:
+  case Intrinsic::nvvm_fmin_ftz_xorsign_abs:
+  case Intrinsic::nvvm_fmin_nan:
+  case Intrinsic::nvvm_fmin_nan_xorsign_abs:
+  case Intrinsic::nvvm_fmin_xorsign_abs:
 
   // NVVM float/double to int32/uint32 conversion intrinsics
   case Intrinsic::nvvm_f2i_rm:
@@ -3432,38 +3430,46 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
     bool IsOp0Undef = isa<UndefValue>(Operands[0]);
     bool IsOp1Undef = isa<UndefValue>(Operands[1]);
     switch (IntrinsicID) {
+    case Intrinsic::nvvm_fmax:
+    case Intrinsic::nvvm_fmin:
+      // Only fold f32/f64; f16/bf16 NaN canonicalization isn't yet modeled
+      // here.
+      if (!Ty->isFloatTy() && !Ty->isDoubleTy())
+        return nullptr;
+      [[fallthrough]];
+
     case Intrinsic::maxnum:
     case Intrinsic::minnum:
     case Intrinsic::maximum:
     case Intrinsic::minimum:
     case Intrinsic::maximumnum:
     case Intrinsic::minimumnum:
-    case Intrinsic::nvvm_fmax_d:
-    case Intrinsic::nvvm_fmin_d:
-      // If one argument is undef, return the other argument.
-      if (IsOp0Undef)
-        return Operands[1];
-      if (IsOp1Undef)
-        return Operands[0];
-      break;
+      // If one argument is undef, return the other argument — unless it is a
+      // float NaN, in which case fall through to canonicalize it. PTX only
+      // canonicalizes f32 NaNs; double NaNs are returned as-is.
+      if (IsOp0Undef || IsOp1Undef) {
+        Constant *Other = Operands[IsOp0Undef ? 1 : 0];
+        auto *Op = dyn_cast<ConstantFP>(Other);
+        if (!Op || !Op->isNaN() || Ty->isDoubleTy())
+          return Other;
+      }
+      [[fallthrough]];
 
-    case Intrinsic::nvvm_fmax_f:
-    case Intrinsic::nvvm_fmax_ftz_f:
-    case Intrinsic::nvvm_fmax_ftz_nan_f:
-    case Intrinsic::nvvm_fmax_ftz_nan_xorsign_abs_f:
-    case Intrinsic::nvvm_fmax_ftz_xorsign_abs_f:
-    case Intrinsic::nvvm_fmax_nan_f:
-    case Intrinsic::nvvm_fmax_nan_xorsign_abs_f:
-    case Intrinsic::nvvm_fmax_xorsign_abs_f:
+    case Intrinsic::nvvm_fmax_ftz:
+    case Intrinsic::nvvm_fmax_ftz_nan:
+    case Intrinsic::nvvm_fmax_ftz_nan_xorsign_abs:
+    case Intrinsic::nvvm_fmax_ftz_xorsign_abs:
+    case Intrinsic::nvvm_fmax_nan:
+    case Intrinsic::nvvm_fmax_nan_xorsign_abs:
+    case Intrinsic::nvvm_fmax_xorsign_abs:
 
-    case Intrinsic::nvvm_fmin_f:
-    case Intrinsic::nvvm_fmin_ftz_f:
-    case Intrinsic::nvvm_fmin_ftz_nan_f:
-    case Intrinsic::nvvm_fmin_ftz_nan_xorsign_abs_f:
-    case Intrinsic::nvvm_fmin_ftz_xorsign_abs_f:
-    case Intrinsic::nvvm_fmin_nan_f:
-    case Intrinsic::nvvm_fmin_nan_xorsign_abs_f:
-    case Intrinsic::nvvm_fmin_xorsign_abs_f:
+    case Intrinsic::nvvm_fmin_ftz:
+    case Intrinsic::nvvm_fmin_ftz_nan:
+    case Intrinsic::nvvm_fmin_ftz_nan_xorsign_abs:
+    case Intrinsic::nvvm_fmin_ftz_xorsign_abs:
+    case Intrinsic::nvvm_fmin_nan:
+    case Intrinsic::nvvm_fmin_nan_xorsign_abs:
+    case Intrinsic::nvvm_fmin_xorsign_abs:
       // If one arg is undef, the other arg can be returned only if it is
       // constant, as we may need to flush it to sign-preserving zero or
       // canonicalize the NaN.
@@ -3543,28 +3549,27 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
       case Intrinsic::maximumnum:
         return ConstantFP::get(Ty, maximumnum(Op1V, Op2V));
 
-      case Intrinsic::nvvm_fmax_d:
-      case Intrinsic::nvvm_fmax_f:
-      case Intrinsic::nvvm_fmax_ftz_f:
-      case Intrinsic::nvvm_fmax_ftz_nan_f:
-      case Intrinsic::nvvm_fmax_ftz_nan_xorsign_abs_f:
-      case Intrinsic::nvvm_fmax_ftz_xorsign_abs_f:
-      case Intrinsic::nvvm_fmax_nan_f:
-      case Intrinsic::nvvm_fmax_nan_xorsign_abs_f:
-      case Intrinsic::nvvm_fmax_xorsign_abs_f:
+      case Intrinsic::nvvm_fmax:
+      case Intrinsic::nvvm_fmax_ftz:
+      case Intrinsic::nvvm_fmax_ftz_nan:
+      case Intrinsic::nvvm_fmax_ftz_nan_xorsign_abs:
+      case Intrinsic::nvvm_fmax_ftz_xorsign_abs:
+      case Intrinsic::nvvm_fmax_nan:
+      case Intrinsic::nvvm_fmax_nan_xorsign_abs:
+      case Intrinsic::nvvm_fmax_xorsign_abs:
 
-      case Intrinsic::nvvm_fmin_d:
-      case Intrinsic::nvvm_fmin_f:
-      case Intrinsic::nvvm_fmin_ftz_f:
-      case Intrinsic::nvvm_fmin_ftz_nan_f:
-      case Intrinsic::nvvm_fmin_ftz_nan_xorsign_abs_f:
-      case Intrinsic::nvvm_fmin_ftz_xorsign_abs_f:
-      case Intrinsic::nvvm_fmin_nan_f:
-      case Intrinsic::nvvm_fmin_nan_xorsign_abs_f:
-      case Intrinsic::nvvm_fmin_xorsign_abs_f: {
+      case Intrinsic::nvvm_fmin:
+      case Intrinsic::nvvm_fmin_ftz:
+      case Intrinsic::nvvm_fmin_ftz_nan:
+      case Intrinsic::nvvm_fmin_ftz_nan_xorsign_abs:
+      case Intrinsic::nvvm_fmin_ftz_xorsign_abs:
+      case Intrinsic::nvvm_fmin_nan:
+      case Intrinsic::nvvm_fmin_nan_xorsign_abs:
+      case Intrinsic::nvvm_fmin_xorsign_abs: {
+        if (!Ty->isFloatTy() && !Ty->isDoubleTy())
+          return nullptr;
 
-        bool ShouldCanonicalizeNaNs = !(IntrinsicID == Intrinsic::nvvm_fmax_d ||
-                                        IntrinsicID == Intrinsic::nvvm_fmin_d);
+        bool ShouldCanonicalizeNaNs = !Ty->isDoubleTy();
         bool IsFTZ = nvvm::FMinFMaxShouldFTZ(IntrinsicID);
         bool IsNaNPropagating = nvvm::FMinFMaxPropagatesNaNs(IntrinsicID);
         bool IsXorSignAbs = nvvm::FMinFMaxIsXorSignAbs(IntrinsicID);
@@ -3581,15 +3586,14 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
 
         bool IsFMax = false;
         switch (IntrinsicID) {
-        case Intrinsic::nvvm_fmax_d:
-        case Intrinsic::nvvm_fmax_f:
-        case Intrinsic::nvvm_fmax_ftz_f:
-        case Intrinsic::nvvm_fmax_ftz_nan_f:
-        case Intrinsic::nvvm_fmax_ftz_nan_xorsign_abs_f:
-        case Intrinsic::nvvm_fmax_ftz_xorsign_abs_f:
-        case Intrinsic::nvvm_fmax_nan_f:
-        case Intrinsic::nvvm_fmax_nan_xorsign_abs_f:
-        case Intrinsic::nvvm_fmax_xorsign_abs_f:
+        case Intrinsic::nvvm_fmax:
+        case Intrinsic::nvvm_fmax_ftz:
+        case Intrinsic::nvvm_fmax_ftz_nan:
+        case Intrinsic::nvvm_fmax_ftz_nan_xorsign_abs:
+        case Intrinsic::nvvm_fmax_ftz_xorsign_abs:
+        case Intrinsic::nvvm_fmax_nan:
+        case Intrinsic::nvvm_fmax_nan_xorsign_abs:
+        case Intrinsic::nvvm_fmax_xorsign_abs:
           IsFMax = true;
           break;
         }

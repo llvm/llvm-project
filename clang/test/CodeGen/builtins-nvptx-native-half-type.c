@@ -58,13 +58,13 @@ __device__ void nvvm_min_max_sm80() {
   __nvvm_fmin_nan_f16(0.1f16, 0.1f16);
   // CHECK_PTX70_SM80: call half @llvm.nvvm.fmin.ftz.nan.f16
   __nvvm_fmin_ftz_nan_f16(0.1f16, 0.1f16);
-  // CHECK_PTX70_SM80: call <2 x half> @llvm.nvvm.fmin.f16x2
+  // CHECK_PTX70_SM80: call <2 x half> @llvm.nvvm.fmin.v2f16
   __nvvm_fmin_f16x2({0.1f16, 0.7f16}, {0.1f16, 0.7f16});
-  // CHECK_PTX70_SM80: call <2 x half> @llvm.nvvm.fmin.ftz.f16x2
+  // CHECK_PTX70_SM80: call <2 x half> @llvm.nvvm.fmin.ftz.v2f16
   __nvvm_fmin_ftz_f16x2({0.1f16, 0.7f16}, {0.1f16, 0.7f16});
-  // CHECK_PTX70_SM80: call <2 x half> @llvm.nvvm.fmin.nan.f16x2
+  // CHECK_PTX70_SM80: call <2 x half> @llvm.nvvm.fmin.nan.v2f16
   __nvvm_fmin_nan_f16x2({0.1f16, 0.7f16}, {0.1f16, 0.7f16});
-  // CHECK_PTX70_SM80: call <2 x half> @llvm.nvvm.fmin.ftz.nan.f16x2
+  // CHECK_PTX70_SM80: call <2 x half> @llvm.nvvm.fmin.ftz.nan.v2f16
   __nvvm_fmin_ftz_nan_f16x2({0.1f16, 0.7f16}, {0.1f16, 0.7f16});
 
   // CHECK_PTX70_SM80: call half @llvm.nvvm.fmax.f16
@@ -75,13 +75,13 @@ __device__ void nvvm_min_max_sm80() {
   __nvvm_fmax_nan_f16(0.1f16, 0.1f16);
   // CHECK_PTX70_SM80: call half @llvm.nvvm.fmax.ftz.nan.f16
   __nvvm_fmax_ftz_nan_f16(0.1f16, 0.1f16);
-  // CHECK_PTX70_SM80: call <2 x half> @llvm.nvvm.fmax.f16x2
+  // CHECK_PTX70_SM80: call <2 x half> @llvm.nvvm.fmax.v2f16
   __nvvm_fmax_f16x2({0.1f16, 0.7f16}, {0.1f16, 0.7f16});
-  // CHECK_PTX70_SM80: call <2 x half> @llvm.nvvm.fmax.ftz.f16x2
+  // CHECK_PTX70_SM80: call <2 x half> @llvm.nvvm.fmax.ftz.v2f16
   __nvvm_fmax_ftz_f16x2({0.1f16, 0.7f16}, {0.1f16, 0.7f16});
-  // CHECK_PTX70_SM80: call <2 x half> @llvm.nvvm.fmax.nan.f16x2
+  // CHECK_PTX70_SM80: call <2 x half> @llvm.nvvm.fmax.nan.v2f16
   __nvvm_fmax_nan_f16x2({0.1f16, 0.7f16}, {0.1f16, 0.7f16});
-  // CHECK_PTX70_SM80: call <2 x half> @llvm.nvvm.fmax.ftz.nan.f16x2
+  // CHECK_PTX70_SM80: call <2 x half> @llvm.nvvm.fmax.ftz.nan.v2f16
   __nvvm_fmax_ftz_nan_f16x2({0.1f16, 0.7f16}, {0.1f16, 0.7f16});
 #endif
   // CHECK: ret void
@@ -144,13 +144,13 @@ __device__ void nvvm_min_max_sm86() {
   __nvvm_fmin_nan_xorsign_abs_f16(0.1f16, 0.1f16);
   // CHECK_PTX72_SM86: call half @llvm.nvvm.fmin.ftz.nan.xorsign.abs.f16
   __nvvm_fmin_ftz_nan_xorsign_abs_f16(0.1f16, 0.1f16);
-  // CHECK_PTX72_SM86: call <2 x half> @llvm.nvvm.fmin.xorsign.abs.f16x2
+  // CHECK_PTX72_SM86: call <2 x half> @llvm.nvvm.fmin.xorsign.abs.v2f16
   __nvvm_fmin_xorsign_abs_f16x2({0.1f16, 0.7f16}, {0.1f16, 0.7f16});
-  // CHECK_PTX72_SM86: call <2 x half> @llvm.nvvm.fmin.ftz.xorsign.abs.f16x2
+  // CHECK_PTX72_SM86: call <2 x half> @llvm.nvvm.fmin.ftz.xorsign.abs.v2f16
   __nvvm_fmin_ftz_xorsign_abs_f16x2({0.1f16, 0.7f16}, {0.1f16, 0.7f16});
-  // CHECK_PTX72_SM86: call <2 x half> @llvm.nvvm.fmin.nan.xorsign.abs.f16x2
+  // CHECK_PTX72_SM86: call <2 x half> @llvm.nvvm.fmin.nan.xorsign.abs.v2f16
   __nvvm_fmin_nan_xorsign_abs_f16x2({0.1f16, 0.7f16}, {0.1f16, 0.7f16});
-  // CHECK_PTX72_SM86: call <2 x half> @llvm.nvvm.fmin.ftz.nan.xorsign.abs.f16x2
+  // CHECK_PTX72_SM86: call <2 x half> @llvm.nvvm.fmin.ftz.nan.xorsign.abs.v2f16
   __nvvm_fmin_ftz_nan_xorsign_abs_f16x2({0.1f16, 0.7f16}, {0.1f16, 0.7f16});
 
   // CHECK_PTX72_SM86: call half @llvm.nvvm.fmax.xorsign.abs.f16
@@ -161,13 +161,13 @@ __device__ void nvvm_min_max_sm86() {
   __nvvm_fmax_nan_xorsign_abs_f16(0.1f16, 0.1f16);
   // CHECK_PTX72_SM86: call half @llvm.nvvm.fmax.ftz.nan.xorsign.abs.f16
   __nvvm_fmax_ftz_nan_xorsign_abs_f16(0.1f16, 0.1f16);
-  // CHECK_PTX72_SM86: call <2 x half> @llvm.nvvm.fmax.xorsign.abs.f16x2
+  // CHECK_PTX72_SM86: call <2 x half> @llvm.nvvm.fmax.xorsign.abs.v2f16
   __nvvm_fmax_xorsign_abs_f16x2({0.1f16, 0.7f16}, {0.1f16, 0.7f16});
-  // CHECK_PTX72_SM86: call <2 x half> @llvm.nvvm.fmax.ftz.xorsign.abs.f16x2
+  // CHECK_PTX72_SM86: call <2 x half> @llvm.nvvm.fmax.ftz.xorsign.abs.v2f16
   __nvvm_fmax_ftz_xorsign_abs_f16x2({0.1f16, 0.7f16}, {0.1f16, 0.7f16});
-  // CHECK_PTX72_SM86: call <2 x half> @llvm.nvvm.fmax.nan.xorsign.abs.f16x2
+  // CHECK_PTX72_SM86: call <2 x half> @llvm.nvvm.fmax.nan.xorsign.abs.v2f16
   __nvvm_fmax_nan_xorsign_abs_f16x2({0.1f16, 0.7f16}, {0.1f16, 0.7f16});
-  // CHECK_PTX72_SM86: call <2 x half> @llvm.nvvm.fmax.ftz.nan.xorsign.abs.f16x2
+  // CHECK_PTX72_SM86: call <2 x half> @llvm.nvvm.fmax.ftz.nan.xorsign.abs.v2f16
   __nvvm_fmax_ftz_nan_xorsign_abs_f16x2({0.1f16, 0.7f16}, {0.1f16, 0.7f16});
 #endif
   // CHECK: ret void
