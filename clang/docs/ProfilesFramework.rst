@@ -663,9 +663,10 @@ double-initialization / double-destruction detection remain deferred.  The
 constructor is *not* required to initialize a ``[[uninit]]`` member (paper §5.1
 excepts members with an uninitialized indicator, and §5.3 leaves such a member
 for the user): the obligation is keyed on a read before assignment, not on the
-constructor's end.  Writes *through* a ``[[ref_to_uninit]]`` pointer/reference
-are not yet verified (the paper relegates them to ``construct_at`` or
-suppression).
+constructor's end.  A scalar *read through* a ``[[ref_to_uninit]]``
+pointer/reference is diagnosed at the lvalue-to-rvalue conversion (R7,
+``uninit_read``); *writes* through such a pointer/reference are not yet verified
+(the paper relegates them to ``construct_at`` or suppression).
 
 Dynamically-created objects are covered when bound: a ``new`` expression that
 default-initializes its allocated object and leaves a scalar subobject
@@ -955,11 +956,16 @@ pointer; a cast of such a pointer to another pointer type (paper §4.3), or of
 such a glvalue to another reference; a call to a
 ``[[ref_to_uninit]]``-returning function; or a ``new`` expression that
 default-initializes its allocated object and leaves a scalar subobject
-indeterminate (e.g. ``new int``, ``new int[n]``, paper §1.2 / §4.3).  Anything
-else is treated as initialized (the trust model).  The reference cast and the
-``[[ref_to_uninit]]``-returning reference call are not spelled out by the
-paper but follow from the profile's guarantee that uninitialized objects are
-not used, and keep the pointer and reference recognizers symmetric.
+indeterminate (e.g. ``new int``, ``new int[n]``, paper §1.2 / §4.3).
+Pass-through forms are transparent to the operand they forward: a single-element
+braced initializer (``{e}``) is looked through to its element, a conditional
+(``c ? a : b``) is uninitialized if either arm is, and a comma (``(a, b)``)
+takes its right operand -- so each is handled like the direct binding it
+forwards.  Anything else is treated as initialized (the trust model).  The
+reference cast and the ``[[ref_to_uninit]]``-returning reference call are not
+spelled out by the paper but follow from the profile's guarantee that
+uninitialized objects are not used, and keep the pointer and reference
+recognizers symmetric.
 
 - Diagnostics: ``err_init_ref_to_uninit_requires_uninit`` (marked target,
   initialized source) and ``err_init_uninit_requires_ref_to_uninit`` (unmarked
@@ -988,13 +994,33 @@ not used, and keep the pointer and reference recognizers symmetric.
   defer via a ``CurContext->isDependentContext()`` guard in
   ``checkRefToUninitInit``, so they neither double-fire nor fire in a discarded
   ``if constexpr`` branch or a never-instantiated template.
-- Known gaps: the recognizer has no ``InitListExpr`` arm, so a *braced* source
-  (``= {p}``, ``f({p})``, ``return {p}``) is treated as initialized -- a missed
-  diagnostic for an unmarked target, and a *false positive* for a
-  ``[[ref_to_uninit]]`` target.  Variadic (``...``) call arguments and calls
-  with no ``FunctionDecl`` (e.g. through a function pointer) are not checked,
-  and only plain ``=`` pointer assignment is covered (compound assignment
-  rebinds nothing and is skipped).
+- Read-through enforcement (paper §4.5): a scalar *read* through a
+  ``[[ref_to_uninit]]`` pointer or reference loads an uninitialized value and is
+  diagnosed at the single lvalue-to-rvalue chokepoint
+  (``Sema::DefaultLvalueConversion`` calling ``Sema::checkRefToUninitRead``),
+  which by-value reads -- copy-initialization, by-value arguments, returns, and
+  operator/condition operands -- all funnel through.  It reuses the recognizer
+  in a read-only mode (a ``ForRead`` flag that drops the directly-named
+  ``[[uninit]]`` arm, leaving a direct read of such a named object to the
+  flow-based ``uninit_read`` pass while still recognizing indirection through a
+  ``[[ref_to_uninit]]`` pointer/reference), reports the shared rule
+  ``uninit_read`` via ``err_init_uninit_read_through``, and exempts ``std::byte``
+  (paper §4.5).  Being Decl-less, it defers on a dependent context and fires
+  once, at instantiation.  An address-of (``&*p``), a reference binding, a
+  discarded-value expression (``(void)*p``), and a write (``*p = 5``) apply no
+  lvalue-to-rvalue conversion and so are not reads.  Out of scope, as remaining
+  limitations: class-type read-through (copy construction from ``*p``) and
+  compound-assignment reads (``*p += 1``, which build no lvalue-to-rvalue node),
+  consistent with the scalar slice and the deferred-writes stance.
+- Known gaps: recognition is purely of the source's syntactic form, so a
+  binding whose underlying operand is unrecognized -- pointer arithmetic, an
+  integer-to-pointer cast, a call through a function pointer (no
+  ``FunctionDecl``), or a variadic (``...``) argument -- is treated as
+  initialized: a missed diagnostic for an unmarked target, and a *false
+  positive* for a ``[[ref_to_uninit]]`` target.  The pass-through forms above
+  forward to such an operand without laundering it, so they inherit this gap
+  rather than introducing one.  Only plain ``=`` pointer assignment is covered;
+  compound assignment is not a binding and is skipped.
 
 R8. ``pointer_marker`` -- attribute handler
 ...........................................
