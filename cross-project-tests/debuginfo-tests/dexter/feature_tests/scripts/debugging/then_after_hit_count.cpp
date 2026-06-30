@@ -1,6 +1,6 @@
 // RUN: %dexter_regression_test_cxx_build %s -o %t
 // RUN: %dexter_regression_test_run --use-script --skip-evaluate --binary %t \
-// RUN:   -- %s | FileCheck %s
+// RUN:   --timeout-total 10 -- %s | FileCheck %s
 
 /// Test !then finish with !and{after_hit_count}.
 /// The infinite loop will be exited when we hit the `!then finish` command,

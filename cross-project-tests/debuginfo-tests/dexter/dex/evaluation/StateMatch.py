@@ -101,9 +101,9 @@ def _match_where_to_frame(
         if frame.loc.lineno not in where.get_lines(labels):
             return WhereFrameMatchResult.FALSE
     if where.for_hit_count is not None:
-        pre_hit_count = where.after_hit_count or 0
+        after_hit_count = where.after_hit_count or 0
         where_hit_count = context.where_hit_counts[where]
-        if where_hit_count > where.for_hit_count + pre_hit_count:
+        if where_hit_count > where.for_hit_count + (after_hit_count):
             return WhereFrameMatchResult.FALSE
     if where.conditions is not None:
         raise NotImplementedError("!where conditions currently unsupported.")
@@ -124,8 +124,10 @@ def match_where_to_frame(
     context: StateMatchContext,
     default_path: Optional[str] = None,
 ) -> WhereFrameMatchResult:
-    """Returns True if `where` matches `frame`. As part of this check, we perform the check once, and if necessary we
-    may increment `where`'s hit count and check again."""
+    """Returns True if `where` matches `frame`. As part of this check, we perform the where-to-frame check once, and if
+    we get a result that could change due to an increased hit count (i.e. if we get a match with a `for_hit_count`
+    where, or if we get an "early" result), we increment `where`'s hit count and run the check again to check whether
+    the result changes."""
     result = _match_where_to_frame(where, frame, labels, context, default_path)
     if result == WhereFrameMatchResult.EARLY or (
         result == WhereFrameMatchResult.TRUE and where.for_hit_count is not None
