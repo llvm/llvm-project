@@ -14931,9 +14931,17 @@ public:
 /// should be copied with __builtin_memcpy rather than via explicit assignments,
 /// do so. This optimization only applies for arrays of scalars, and for arrays
 /// of class type where the selected copy/move-assignment operator is trivial.
+///
+/// \param SuppressMemaccessWarning casts the source and destination addresses
+/// to void pointers so that CheckMemaccessArguments does not warn.  A union's
+/// defaulted assignment copies the whole object representation by memcpy (like
+/// the defaulted union copy constructor), which is correct even when the union
+/// is not trivially copyable; the cast marks the copy as intentional, matching
+/// the documented (void*) silencing of -Wnontrivial-memcall.
 static StmtResult
 buildMemcpyForAssignmentOp(Sema &S, SourceLocation Loc, QualType T,
-                           const ExprBuilder &ToB, const ExprBuilder &FromB) {
+                           const ExprBuilder &ToB, const ExprBuilder &FromB,
+                           bool SuppressMemaccessWarning = false) {
   // Compute the size of the memory buffer to be copied.
   QualType SizeType = S.Context.getSizeType();
   llvm::APInt Size(S.Context.getTypeSize(SizeType),
@@ -14950,6 +14958,22 @@ buildMemcpyForAssignmentOp(Sema &S, SourceLocation Loc, QualType T,
   To = UnaryOperator::Create(
       S.Context, To, UO_AddrOf, S.Context.getPointerType(To->getType()),
       VK_PRValue, OK_Ordinary, Loc, false, S.CurFPFeatureOverrides());
+
+  if (SuppressMemaccessWarning) {
+    // An explicit cast to void* survives IgnoreParenImpCasts, so the memaccess
+    // check sees a void pointee and skips the non-trivial-copy warning.
+    QualType ConstVoidPtr =
+        S.Context.getPointerType(S.Context.VoidTy.withConst());
+    ExprResult FromCast = S.BuildCStyleCastExpr(
+        Loc, S.Context.getTrivialTypeSourceInfo(ConstVoidPtr, Loc), Loc, From);
+    ExprResult ToCast = S.BuildCStyleCastExpr(
+        Loc, S.Context.getTrivialTypeSourceInfo(S.Context.VoidPtrTy, Loc), Loc,
+        To);
+    assert(FromCast.isUsable() && ToCast.isUsable() &&
+           "cast to void* cannot fail");
+    From = FromCast.get();
+    To = ToCast.get();
+  }
 
   bool NeedsCollectableMemCpy = false;
   if (auto *RD = T->getBaseElementTypeUnsafe()->getAsRecordDecl())
@@ -15369,7 +15393,8 @@ static bool buildUnionAssignmentCopy(Sema &S, SourceLocation Loc,
   ExprBuilder &To = ExplicitObject ? static_cast<ExprBuilder &>(*ExplicitObject)
                                    : static_cast<ExprBuilder &>(*DerefThis);
   StmtResult Copy = buildMemcpyForAssignmentOp(
-      S, Loc, S.Context.getCanonicalTagType(ClassDecl), To, From);
+      S, Loc, S.Context.getCanonicalTagType(ClassDecl), To, From,
+      /*SuppressMemaccessWarning=*/true);
   if (Copy.isInvalid()) {
     AssignOp->setInvalidDecl();
     return false;
