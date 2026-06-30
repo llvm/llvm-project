@@ -1486,8 +1486,6 @@ public:
 
   bool hasNonLBRProfile() const {
     for (const auto &[Context, FuncSamples] : *this) {
-      if (FuncSamples.hasNonLBRSamples()) {
-        return true;
       if (FuncSamples.hasNonLBRSamples())
         return true;
     }
