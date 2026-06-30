@@ -23,7 +23,11 @@
 #include "test_macros.h"
 
 struct NoConv {};
-struct Bad { template<class T> Bad(T v) noexcept(noexcept(member_ = v)) {} int member_; };
+struct Bad {
+  template <class T>
+  Bad(T v) noexcept(noexcept(member_ = v)) {}
+  int member_;
+};
 
 template <typename T, typename U, bool Expected>
 constexpr void test_reference_constructs_from_temporary() {
