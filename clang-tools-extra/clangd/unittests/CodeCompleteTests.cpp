@@ -707,7 +707,7 @@ TEST(CompletionTest, DeclParamName) {
   auto FuncFromSource = completions(R"cpp(
       void sun(int);
       void sun(int day);
-      void sun(int);
+      void sun(int night);
       void position() {
         sun^;
       }

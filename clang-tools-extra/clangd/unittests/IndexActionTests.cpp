@@ -271,7 +271,7 @@ TEST_F(IndexActionTest, DeclParamName) {
   std::string HeaderCode = R"cpp(
       void moon(int, int);
       void moon(int month, int day);
-      void moon(int, int);
+      void moon(int month, int night);
       )cpp";
 
   addFile(MainFilePath, MainCode);

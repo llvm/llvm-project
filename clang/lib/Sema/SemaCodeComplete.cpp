@@ -3320,12 +3320,10 @@ static void AddFunctionParameterChunks(
 
   for (unsigned P = Start, N = Function->getNumParams(); P != N; ++P) {
     const ParmVarDecl *Param = Function->getParamDecl(P);
-    // Select a parameter with identifier if possible for better signature
-    if (!Param->getIdentifier()) {
-      for (auto *Redecl : Function->redecls()) {
-        if (auto *RParam = Redecl->getParamDecl(P); RParam->getIdentifier())
-          Param = RParam;
-      }
+    // Select the first parameter name for consistent results with Index.
+    for (auto *Redecl : Function->redecls()) {
+      if (auto *RParam = Redecl->getParamDecl(P); RParam->getIdentifier())
+        Param = RParam;
     }
 
     if (Param->hasDefaultArg() && !InOptional && !IsInDeclarationContext &&
