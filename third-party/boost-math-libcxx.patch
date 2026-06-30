@@ -1,0 +1,47 @@
+# Local libc++ patch for the vendored Boost.Math snapshot.
+#
+# Boost.Math only uses <sstream>/<iomanip> and detail::prec_format to build the
+# what() text of the exceptions it throws. That machinery sits OUTSIDE Boost's own
+# `#ifndef BOOST_MATH_NO_EXCEPTIONS` guard (unlike the adjacent <stdexcept> /
+# throw_exception.hpp includes), so it is compiled even when exceptions are disabled.
+# libc++ builds the Math Special Functions back-end with BOOST_MATH_NO_EXCEPTIONS,
+# and on configurations without localization (e.g. -DLIBCXX_ENABLE_LOCALIZATION=OFF)
+# libc++ ships no functional <sstream>, so prec_format fails to compile.
+#
+# This patch guards the iostream-only message formatting under BOOST_MATH_NO_EXCEPTIONS.
+# Reported upstream: https://github.com/boostorg/math/issues (see PR description).
+# Re-applied by update_boost_math.sh after each snapshot refresh; drop once upstream.
+diff --git a/boost-math/include/boost/math/policies/error_handling.hpp b/boost-math/include/boost/math/policies/error_handling.hpp
+index d7ba694564ba..da167171f650 100644
+--- a/boost-math/include/boost/math/policies/error_handling.hpp
++++ b/boost-math/include/boost/math/policies/error_handling.hpp
+@@ -26,9 +26,9 @@
+ #include <complex>
+ #include <cstdint>
+ #include <cstring>
++#ifndef BOOST_MATH_NO_EXCEPTIONS
+ #include <iomanip>
+ #include <sstream>
+-#ifndef BOOST_MATH_NO_EXCEPTIONS
+ #include <stdexcept>
+ #endif
+ #include <string>
+@@ -95,6 +95,10 @@ T user_indeterminate_result_error(const char* function, const char* message, con
+ namespace detail
+ {
+ 
++// prec_format is only used to build exception what() messages, so it is gated on
++// exceptions being enabled. It relies on <sstream>, which is unavailable in some
++// standard-library configurations (e.g. libc++ built without localization).
++#ifndef BOOST_MATH_NO_EXCEPTIONS
+ template <class T>
+ inline std::string prec_format(const T& val)
+ {
+@@ -125,6 +129,7 @@ inline std::string prec_format<std::float128_t>(const std::float128_t& val)
+ }
+ 
+ #endif
++#endif // BOOST_MATH_NO_EXCEPTIONS
+ 
+ inline void replace_all_in_string(std::string& result, const char* what, const char* with)
+ {

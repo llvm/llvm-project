@@ -11,6 +11,7 @@
 #define _LIBCPP___MATH_SPECIAL_FUNCTIONS_H
 
 #include <__config>
+#include <__configuration/attributes.h>
 #include <__math/copysign.h>
 #include <__math/traits.h>
 #include <__type_traits/enable_if.h>
@@ -24,6 +25,36 @@
 #if _LIBCPP_STD_VER >= 17
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
+
+// assoc_laguerre
+namespace __math {
+[[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI float __assoc_laguerre(unsigned, unsigned, float) noexcept;
+[[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI double __assoc_laguerre(unsigned, unsigned, double) noexcept;
+[[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI long double __assoc_laguerre(unsigned, unsigned, long double) noexcept;
+} // namespace __math
+
+[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI float assoc_laguerref(unsigned __n, unsigned __m, float __x) noexcept {
+  return __math::__assoc_laguerre(__n, __m, __x);
+}
+
+[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI double assoc_laguerre(unsigned __n, unsigned __m, double __x) noexcept {
+  return __math::__assoc_laguerre(__n, __m, __x);
+}
+
+[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI long double
+assoc_laguerrel(unsigned __n, unsigned __m, long double __x) noexcept {
+  return __math::__assoc_laguerre(__n, __m, __x);
+}
+
+template <class _Int, std::enable_if_t<std::is_integral_v<_Int>, int> = 0>
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI double assoc_laguerre(unsigned __n, unsigned __m, _Int __x) noexcept {
+  return __math::__assoc_laguerre(__n, __m, static_cast<double>(__x));
+}
+
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
+
+// hermite
 
 template <class _Real>
 _LIBCPP_HIDE_FROM_ABI _Real __hermite(unsigned __n, _Real __x) {
@@ -80,5 +111,4 @@ _LIBCPP_HIDE_FROM_ABI double hermite(unsigned __n, _Integer __x) {
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 17
-
 #endif // _LIBCPP___MATH_SPECIAL_FUNCTIONS_H

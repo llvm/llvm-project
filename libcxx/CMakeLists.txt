@@ -920,6 +920,14 @@ add_custom_target(cxx-test-depends
   COMMENT "Build dependencies required to run the libc++ test suite.")
 
 add_subdirectory(include)
+
+# Header-only Boost.Math (INTERFACE target `boost_math`). Lives outside the
+# libcxx source tree, so a binary dir must be supplied.
+add_subdirectory(
+  ${LLVM_THIRD_PARTY_DIR}/boost-math
+  ${LIBCXX_BINARY_DIR}/third-party/boost-math
+  EXCLUDE_FROM_ALL)
+
 add_subdirectory(src)
 add_subdirectory(utils)
 add_subdirectory(modules)
