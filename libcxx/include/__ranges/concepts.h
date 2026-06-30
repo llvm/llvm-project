@@ -25,6 +25,7 @@
 #include <__ranges/data.h>
 #include <__ranges/enable_borrowed_range.h>
 #include <__ranges/enable_view.h>
+#include <__ranges/reserve_hint.h>
 #include <__ranges/size.h>
 #include <__type_traits/add_pointer.h>
 #include <__type_traits/common_reference.h>

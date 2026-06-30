@@ -32,6 +32,7 @@
 #include <__ranges/concepts.h>
 #include <__ranges/movable_box.h>
 #include <__ranges/range_adaptor.h>
+#include <__ranges/reserve_hint.h>
 #include <__ranges/size.h>
 #include <__ranges/view_interface.h>
 #include <__tuple/tuple_transform.h>

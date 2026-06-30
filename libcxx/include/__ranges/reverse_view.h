@@ -21,6 +21,7 @@
 #include <__ranges/enable_borrowed_range.h>
 #include <__ranges/non_propagating_cache.h>
 #include <__ranges/range_adaptor.h>
+#include <__ranges/reserve_hint.h>
 #include <__ranges/size.h>
 #include <__ranges/subrange.h>
 #include <__ranges/view_interface.h>

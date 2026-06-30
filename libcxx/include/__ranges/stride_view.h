@@ -30,7 +30,7 @@
 #include <__ranges/concepts.h>
 #include <__ranges/enable_borrowed_range.h>
 #include <__ranges/range_adaptor.h>
-#include <__ranges/size.h>
+#include <__ranges/reserve_hint.h>
 #include <__ranges/view_interface.h>
 #include <__type_traits/make_unsigned.h>
 
