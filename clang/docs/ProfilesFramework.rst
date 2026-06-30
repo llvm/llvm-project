@@ -982,18 +982,29 @@ recognizers symmetric.
   ``new`` (``new int[n]``) is handled uniformly.
 - Check sites: variable initialization
   (``Sema::CheckCompleteVariableDeclaration``), default member initializers
-  (``Sema::ActOnFinishCXXInClassMemberInitializer``), pointer assignment
+  (``Sema::ActOnFinishCXXInClassMemberInitializer``), constructor
+  member-initializers (``Sema::BuildMemberInitializer``), aggregate/list field
+  initialization (``InitListChecker``), pointer assignment
   (``Sema::CreateBuiltinBinOp``), call arguments -- including arguments
   supplied by a parameter's default argument
   (``Sema::GatherArgumentsForCall``), and return statements
   (``Sema::BuildReturnStmt``).  Every site defers on a template pattern and
-  fires once, at instantiation.  The variable and data-member sites pass the
-  instantiated ``Decl`` (deferred by the ``D->isTemplated()`` check in
-  ``shouldEmitProfileViolation``); the Decl-less call-argument, assignment, and
-  return sites -- whose ``Build*`` routine is re-run at instantiation -- instead
-  defer via a ``CurContext->isDependentContext()`` guard in
-  ``checkRefToUninitInit``, so they neither double-fire nor fire in a discarded
-  ``if constexpr`` branch or a never-instantiated template.
+  fires once, at instantiation.  The variable, data-member, and constructor
+  member-initializer sites pass the instantiated ``Decl`` (deferred by the
+  ``D->isTemplated()`` check in ``shouldEmitProfileViolation``); the
+  constructor site passes the enclosing constructor and is re-run by
+  ``BuildMemberInitializer`` at instantiation, exactly like
+  ``ctor_uninit_member``.  The Decl-less call-argument, assignment, return, and
+  aggregate-field sites -- whose ``Build*`` / ``InitListChecker`` routine is
+  re-run at instantiation -- instead defer via a
+  ``CurContext->isDependentContext()`` guard in ``checkRefToUninitInit``, so
+  they neither double-fire nor fire in a discarded ``if constexpr`` branch or a
+  never-instantiated template.  The aggregate-field hooks
+  (``CheckSubElementType`` for a pointer field, ``CheckReferenceType`` for a
+  reference field) are scoped to a member subobject (``EK_Member`` with a
+  non-null parent), so the enclosing variable/argument/return is left to its own
+  site, and a top-level member braced-initializer -- which the constructor or
+  NSDMI site already checks -- is not diagnosed twice.
 - Read-through enforcement (paper §4.5): a scalar *read* through a
   ``[[ref_to_uninit]]`` pointer or reference loads an uninitialized value and is
   diagnosed at the single lvalue-to-rvalue chokepoint
@@ -1020,7 +1031,13 @@ recognizers symmetric.
   positive* for a ``[[ref_to_uninit]]`` target.  The pass-through forms above
   forward to such an operand without laundering it, so they inherit this gap
   rather than introducing one.  Only plain ``=`` pointer assignment is covered;
-  compound assignment is not a binding and is skipped.
+  compound assignment is not a binding and is skipped.  Aggregate field
+  initialization is checked per scalar field, so an array-of-pointer (or
+  array-of-reference) member is out of scope -- its elements are
+  ``EK_ArrayElement`` and the ``[[ref_to_uninit]]`` marking lives on the field,
+  not the element -- as is a pointer/reference member reached through an
+  ``IndirectFieldDecl`` (a member of an anonymous struct/union), consistent with
+  the scalar slice.
 
 R8. ``pointer_marker`` -- attribute handler
 ...........................................
