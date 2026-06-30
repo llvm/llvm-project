@@ -1,6 +1,6 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.cplusplus.UseAfterLifetimeEnd,debug.DebugUseAfterLifetimeEnd \
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.cplusplus.UseAfterLifetimeEnd,debug.DebugLifetimeModeling \
 // RUN:   -analyzer-config cfg-lifetime=true -verify %s
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.cplusplus.UseAfterLifetimeEnd,debug.DebugUseAfterLifetimeEnd \
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.cplusplus.UseAfterLifetimeEnd,debug.DebugLifetimeModeling \
 // RUN:   -analyzer-config c++-container-inlining=false -analyzer-config cfg-lifetime=true -verify %s
 
 struct A {};
@@ -166,5 +166,54 @@ int *g() {
   int *p = test_func(&i);
   (void)p;
   return nullptr; // no-warning
+}
+
+int &multi_param_test_ref(int &a [[clang::lifetimebound]], int &b [[clang::lifetimebound]]);
+
+// Return value bound to annotated parameters (two dangling sources).
+int &dangling_sources_ref() {
+  int x = 1, y = 2;
+  return multi_param_test_ref(x, y);
+  // expected-warning@-1 {{Returning value bound to 'x' that will go out of scope}}
+  // expected-warning@-2 {{Returning value bound to 'y' that will go out of scope}}
+  // expected-warning@-3 {{reference to stack memory associated with local variable 'x' returned}}
+  // expected-warning@-4 {{reference to stack memory associated with local variable 'y' returned}}
+}
+
+// Return value bound to annotated parameters (no dangling sources).
+int &no_dangling_sources_ref(int &a [[clang::lifetimebound]], int &b [[clang::lifetimebound]]) {
+  return multi_param_test_ref(a, b); // no-warning
+}
+
+// Return value bound to annotated parameters (one dangling source).
+int &one_dangling_source_ref(int &a [[clang::lifetimebound]]) {
+  int x = 1;
+  return multi_param_test_ref(a, x);
+  // expected-warning@-1 {{Returning value bound to 'x' that will go out of scope}}
+  // expected-warning@-2 {{reference to stack memory associated with local variable 'x' returned}}
+}
+
+int *multi_param_test_ptr(int *a [[clang::lifetimebound]], int *b [[clang::lifetimebound]]);
+
+// Return value bound to annotated parameters (two dangling sources).
+int *dangling_sources_ptr() {
+  int x = 1, y = 2;
+  int *x_ptr = &x;
+  int *y_ptr = &y;
+  return multi_param_test_ptr(x_ptr, y_ptr);
+  // expected-warning@-1 {{Returning value bound to 'x' that will go out of scope}}
+  // expected-warning@-2 {{Returning value bound to 'y' that will go out of scope}}
+}
+
+// Return value bound to annotated parameters (no dangling sources).
+int *no_dangling_sources_ptr(int *a [[clang::lifetimebound]], int *b [[clang::lifetimebound]]) {
+  return multi_param_test_ptr(a, b); // no-warning
+}
+
+// Return value bound to annotated parameters (one dangling source).
+int *one_dangling_source_ptr(int *a [[clang::lifetimebound]]) {
+  int x = 1;
+  int *x_ptr = &x;
+  return multi_param_test_ptr(a, x_ptr); // expected-warning {{Returning value bound to 'x' that will go out of scope}}
 }
 
