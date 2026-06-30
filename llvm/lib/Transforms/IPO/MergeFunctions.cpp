@@ -734,7 +734,7 @@ static void copyMetadataIfPresent(Function *From, Function *To,
 // For better debugability, under MergeFunctionsPDI, we do not modify G's
 // call sites to point to F even when within the same translation unit.
 void MergeFunctions::writeThunk(Function *F, Function *G) {
-  std::optional<Function::ProfileCount> GEC = G->getEntryCount();
+  std::optional<uint64_t> GEC = G->getEntryCount();
   BasicBlock *GEntryBlock = nullptr;
   std::vector<Instruction *> PDIUnrelatedWL;
   std::vector<DbgVariableRecord *> PDVRUnrelatedWL;
@@ -880,21 +880,19 @@ static bool isODR(const Function *F) {
   return F->hasWeakODRLinkage() || F->hasLinkOnceODRLinkage();
 }
 
-static void mergeEntryCountsInto(Function *F,
-                                 std::optional<Function::ProfileCount> FC,
-                                 std::optional<Function::ProfileCount> GC) {
+static void mergeEntryCountsInto(Function *F, std::optional<uint64_t> FC,
+                                 std::optional<uint64_t> GC) {
   if (!FC && !GC)
     return;
-  uint64_t Sum = SaturatingAdd(FC ? FC->getCount() : uint64_t{0},
-                               GC ? GC->getCount() : uint64_t{0});
+  uint64_t Sum = SaturatingAdd(FC ? *FC : uint64_t{0}, GC ? *GC : uint64_t{0});
   F->setEntryCount(Sum);
 }
 
 // Merge two equivalent functions. Upon completion, Function G is deleted.
 void MergeFunctions::mergeTwoFunctions(Function *F, Function *G) {
 
-  std::optional<Function::ProfileCount> FEC = F->getEntryCount();
-  std::optional<Function::ProfileCount> GEC = G->getEntryCount();
+  std::optional<uint64_t> FEC = F->getEntryCount();
+  std::optional<uint64_t> GEC = G->getEntryCount();
 
   // Create a new thunk that both F and G can call, if F cannot call G directly.
   // That is the case if F is either interposable or if G is either weak_odr or
