@@ -60,4 +60,20 @@ def WrapFuncInClassPass : Pass<"wrap-emitc-func-in-class", "ModuleOp"> {
   ];
 }
 
+def LowerNestedModuleToClassPass : Pass<"lower-nested-module-to-class", "ModuleOp"> {
+  let summary = "Lower nested ModuleOps to EmitC ClassOps.";
+  let description = [{
+    This pass lowers nested `builtin.module` operations to `emitc.class` operations,
+    based on a heuristic or explicit tags.
+  }];
+  let dependentDialects = ["emitc::EmitCDialect"];
+  let options = [
+    Option<"lowerAll", "lower-all", "bool", /*default=*/"false",
+           "Force all nested modules to lower to classes.">,
+    Option<"useHeuristic", "use-heuristic", "bool", /*default=*/"true",
+           "Use the globals-and-funcs heuristic to identify classes.">
+  ];
+}
+
 #endif // MLIR_DIALECT_EMITC_TRANSFORMS_PASSES
+
