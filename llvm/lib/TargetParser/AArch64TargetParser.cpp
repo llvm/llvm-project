@@ -344,9 +344,8 @@ void AArch64::ExtensionSet::addCPUDefaults(const CpuInfo &CPU) {
   LLVM_DEBUG(llvm::dbgs() << "addCPUDefaults(" << CPU.Name << ")\n");
   BaseArch = &CPU.Arch;
 
-  AArch64::ExtensionBitset CPUExtensions = CPU.getImpliedExtensions();
   for (const auto &E : Extensions)
-    if (CPUExtensions.test(E.ID))
+    if (CPU.DefaultExtensions.test(E.ID))
       enable(E.ID);
 }
 
