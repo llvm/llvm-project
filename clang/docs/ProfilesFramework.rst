@@ -174,6 +174,17 @@ or template instantiation; selected specializations replay suppressed
 diagnostics when used.  Unevaluated and discarded-statement contexts are
 skipped.  The profile name is passed as ``%0``.
 
+``checkProfileViolation`` fires at parse time.  For a *non-dependent*
+expression inside a template, the check therefore runs on the template
+*pattern*, and -- because for some node kinds (such as casts) a non-dependent
+``Build*`` result is reused unchanged at instantiation -- it is not re-run on
+the specialization.  As a result it can fire for a never-instantiated template
+or in an ``if constexpr`` branch discarded only at instantiation.
+``test::type_cast`` accepts this (it is a test-only profile).  A profile whose
+``Build*`` routine *is* re-run at instantiation can instead defer on a template
+pattern with a ``CurContext->isDependentContext()`` guard, as the ``std::init``
+ref_to_uninit binding checks do (see ``checkRefToUninitInit``).
+
 Suppression for parse-time check sites is consulted via the
 ``ProfileSuppressStack`` maintained by the parser-side ``ProfileSuppressScope``
 RAII guards (see :ref:`profiles-internals` below).  Profile implementers do
@@ -952,8 +963,14 @@ not used, and keep the pointer and reference recognizers symmetric.
   (``Sema::CreateBuiltinBinOp``), call arguments -- including arguments
   supplied by a parameter's default argument
   (``Sema::GatherArgumentsForCall``), and return statements
-  (``Sema::BuildReturnStmt``).  A dependent target type defers to
-  instantiation.
+  (``Sema::BuildReturnStmt``).  Every site defers on a template pattern and
+  fires once, at instantiation.  The variable and data-member sites pass the
+  instantiated ``Decl`` (deferred by the ``D->isTemplated()`` check in
+  ``shouldEmitProfileViolation``); the Decl-less call-argument, assignment, and
+  return sites -- whose ``Build*`` routine is re-run at instantiation -- instead
+  defer via a ``CurContext->isDependentContext()`` guard in
+  ``checkRefToUninitInit``, so they neither double-fire nor fire in a discarded
+  ``if constexpr`` branch or a never-instantiated template.
 
 R8. ``pointer_marker`` -- attribute handler
 ...........................................

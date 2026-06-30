@@ -3179,9 +3179,15 @@ bool Sema::shouldEmitProfileViolation(StringRef ProfileName, StringRef RuleName,
   // only on its instantiation -- where D is the instantiated, non-templated
   // declaration -- not on the template pattern. Checking the pattern too would
   // diagnose never-instantiated templates and double-fire (once when the
-  // pattern is parsed and again at each instantiation). Decl-less check sites
-  // (the [[uninit]] / [[ref_to_uninit]] markers and casts) pass D == nullptr;
-  // they run once at parse time and are unaffected.
+  // pattern is parsed and again at each instantiation).
+  //
+  // Decl-less expression check sites whose Build* routine is re-run at
+  // instantiation (the ref_to_uninit binding checks: call argument, pointer
+  // assignment, return) instead defer in a dependent context from their own
+  // wrapper, checkRefToUninitInit, since no Decl is available here. The
+  // [[uninit]] marker handlers and the reinterpret_cast check also pass
+  // D == nullptr but are not re-checked at instantiation, so they keep running
+  // once at parse time (their template false positives are a separate gap).
   if (D && D->isTemplated())
     return false;
   if (isUnevaluatedContext())
