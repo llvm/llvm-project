@@ -94,6 +94,18 @@ contains
   end function
 end subroutine
 
+! When the base name is omitted, the enclosing procedure is the base
+
+subroutine incompatible_omitted_base(x)
+  integer :: x
+!ERROR: The variant procedure 'vsub' is not compatible with the base procedure 'incompatible_omitted_base': distinct numbers of dummy arguments
+  !$omp declare variant (vsub) match (construct={parallel})
+contains
+  subroutine vsub(x, y)
+    integer :: x, y
+  end subroutine
+end subroutine
+
 ! Differing dummy argument names are fine; only characteristics matter.
 
 subroutine compatible_interface
