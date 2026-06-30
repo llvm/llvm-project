@@ -440,9 +440,9 @@ void AMDGPUCombinerHelper::applyExpandPromotedF16FMed3(MachineInstr &MI,
                                                        Register Src2) const {
   // We expect fptrunc (fpext x) to fold out, and to constant fold any constant
   // sources.
-  Src0 = Builder.buildFPTrunc(LLT::scalar(16), Src0).getReg(0);
-  Src1 = Builder.buildFPTrunc(LLT::scalar(16), Src1).getReg(0);
-  Src2 = Builder.buildFPTrunc(LLT::scalar(16), Src2).getReg(0);
+  Src0 = Builder.buildFPTrunc(LLT::float16(), Src0).getReg(0);
+  Src1 = Builder.buildFPTrunc(LLT::float16(), Src1).getReg(0);
+  Src2 = Builder.buildFPTrunc(LLT::float16(), Src2).getReg(0);
 
   LLT Ty = MRI.getType(Src0);
   auto A1 = Builder.buildFMinNumIEEE(Ty, Src0, Src1);
@@ -499,7 +499,7 @@ bool AMDGPUCombinerHelper::matchCombineFmulWithSelectToFldexp(
     return false;
 
   MatchInfo = [=, &MI](MachineIRBuilder &Builder) {
-    LLT IntDestTy = DestTy.changeElementType(LLT::scalar(32));
+    LLT IntDestTy = DestTy.changeElementType(LLT::integer(32));
     auto NewSel = Builder.buildSelect(
         IntDestTy, SelectCondReg,
         Builder.buildConstant(IntDestTy, SelectTrueLog2Val),

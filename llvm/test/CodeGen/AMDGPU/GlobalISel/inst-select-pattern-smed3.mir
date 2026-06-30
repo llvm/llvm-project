@@ -21,10 +21,10 @@ body: |
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = COPY $vgpr1
     %2:vgpr(s32) = COPY $vgpr2
-    %3:vgpr(s32) = G_SMAX %0, %1
-    %4:vgpr(s32) = G_SMIN %0, %1
-    %5:vgpr(s32) = G_SMAX %4, %2
-    %6:vgpr(s32) = G_SMIN %3, %5
+    %3:vgpr(i32) = G_SMAX %0, %1
+    %4:vgpr(i32) = G_SMIN %0, %1
+    %5:vgpr(i32) = G_SMAX %4, %2
+    %6:vgpr(i32) = G_SMIN %3, %5
     S_ENDPGM 0, implicit %6
 ...
 
@@ -52,10 +52,10 @@ body: |
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = COPY $sgpr1
     %2:sgpr(s32) = COPY $sgpr2
-    %3:sgpr(s32) = G_SMAX %0, %1
-    %4:sgpr(s32) = G_SMIN %0, %1
-    %5:sgpr(s32) = G_SMAX %4, %2
-    %6:sgpr(s32) = G_SMIN %3, %5
+    %3:sgpr(i32) = G_SMAX %0, %1
+    %4:sgpr(i32) = G_SMIN %0, %1
+    %5:sgpr(i32) = G_SMAX %4, %2
+    %6:sgpr(i32) = G_SMIN %3, %5
     S_ENDPGM 0, implicit %6
 ...
 
@@ -80,10 +80,10 @@ body: |
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = COPY $vgpr1
     %2:vgpr(s32) = COPY $vgpr2
-    %3:vgpr(s32) = G_SMAX %0, %1
-    %4:vgpr(s32) = G_SMIN %0, %1
-    %5:vgpr(s32) = G_SMAX %4, %2
-    %6:vgpr(s32) = G_SMIN %3, %5
+    %3:vgpr(i32) = G_SMAX %0, %1
+    %4:vgpr(i32) = G_SMIN %0, %1
+    %5:vgpr(i32) = G_SMAX %4, %2
+    %6:vgpr(i32) = G_SMIN %3, %5
     S_ENDPGM 0, implicit %6, implicit %3
 ...
 
@@ -108,10 +108,10 @@ body: |
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = COPY $vgpr1
     %2:vgpr(s32) = COPY $vgpr2
-    %3:vgpr(s32) = G_SMAX %0, %1
-    %4:vgpr(s32) = G_SMIN %0, %1
-    %5:vgpr(s32) = G_SMAX %4, %2
-    %6:vgpr(s32) = G_SMIN %3, %5
+    %3:vgpr(i32) = G_SMAX %0, %1
+    %4:vgpr(i32) = G_SMIN %0, %1
+    %5:vgpr(i32) = G_SMAX %4, %2
+    %6:vgpr(i32) = G_SMIN %3, %5
     S_ENDPGM 0, implicit %6, implicit %4
 ...
 
@@ -137,10 +137,10 @@ body: |
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = COPY $vgpr1
     %2:vgpr(s32) = COPY $vgpr2
-    %3:vgpr(s32) = G_SMAX %0, %1
-    %4:vgpr(s32) = G_SMIN %0, %1
-    %5:vgpr(s32) = G_SMAX %4, %2
-    %6:vgpr(s32) = G_SMIN %3, %5
+    %3:vgpr(i32) = G_SMAX %0, %1
+    %4:vgpr(i32) = G_SMIN %0, %1
+    %5:vgpr(i32) = G_SMAX %4, %2
+    %6:vgpr(i32) = G_SMIN %3, %5
     S_ENDPGM 0, implicit %6, implicit %5
 ...
 
@@ -167,11 +167,11 @@ body: |
     %1:vgpr(s32) = COPY $vgpr1
     %2:vgpr(s32) = COPY $vgpr2
     %3:vgpr(s32) = COPY $vgpr3
-    %4:vgpr(s32) = G_SMAX %0, %1
-    %5:vgpr(s32) = G_SMIN %0, %1
-    %6:vgpr(s32) = G_SMIN %2, %4
-    %7:vgpr(s32) = G_SMAX %6, %5
-    %8:vgpr(s32) = G_SMIN %3, %4
-    %9:vgpr(s32) = G_SMAX %8, %5
+    %4:vgpr(i32) = G_SMAX %0, %1
+    %5:vgpr(i32) = G_SMIN %0, %1
+    %6:vgpr(i32) = G_SMIN %2, %4
+    %7:vgpr(i32) = G_SMAX %6, %5
+    %8:vgpr(i32) = G_SMIN %3, %4
+    %9:vgpr(i32) = G_SMAX %8, %5
     S_ENDPGM 0, implicit %7, implicit %9
 ...

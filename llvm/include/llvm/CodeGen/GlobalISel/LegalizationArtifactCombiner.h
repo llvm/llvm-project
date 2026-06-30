@@ -74,6 +74,9 @@ public:
       if (MRI.getType(DstReg) == MRI.getType(TruncSrc))
         replaceRegOrBuildCopy(DstReg, TruncSrc, MRI, Builder, UpdatedDefs,
                               Observer);
+      else if (MRI.getType(DstReg).getSizeInBits() ==
+               MRI.getType(TruncSrc).getSizeInBits())
+        Builder.buildBitcast(DstReg, TruncSrc);
       else
         Builder.buildAnyExtOrTrunc(DstReg, TruncSrc);
       UpdatedDefs.push_back(DstReg);
@@ -988,19 +991,33 @@ public:
       Register UnmergeSrc = Unmerge->getSourceReg();
       LLT UnmergeSrcTy = MRI.getType(UnmergeSrc);
 
-      // Recognize copy of UnmergeSrc to Dst.
+      // Recognize copy or bitcast of UnmergeSrc to Dst.
       // Unmerge UnmergeSrc and reassemble it using merge-like opcode into Dst.
       //
-      // %0:_(EltTy), %1, ... = G_UNMERGE_VALUES %UnmergeSrc:_(Ty)
-      // %Dst:_(Ty) = G_merge_like_opcode %0:_(EltTy), %1, ...
+      // %0:_(EltTy), %1, ... = G_UNMERGE_VALUES %UnmergeSrc:_(UnmergeSrcTy)
+      // %Dst:_(DstTy) = G_merge_like_opcode %0:_(EltTy), %1, ...
       //
-      // %Dst:_(Ty) = COPY %UnmergeSrc:_(Ty)
-      if ((DstTy == UnmergeSrcTy) && (Elt0UnmergeIdx == 0)) {
+      // %Dst:_(DstTy) = COPY %UnmergeSrc        ; if DstTy == UnmergeSrcTy
+      // %Dst:_(DstTy) = G_BITCAST %UnmergeSrc   ; otherwise
+      if ((DstTy.getSizeInBits() == UnmergeSrcTy.getSizeInBits()) &&
+          (Elt0UnmergeIdx == 0)) {
         if (!isSequenceFromUnmerge(MI, 0, Unmerge, 0, NumMIElts, EltSize,
                                    /*AllowUndef=*/DstTy.isVector()))
           return false;
 
-        replaceRegOrBuildCopy(Dst, UnmergeSrc, MRI, MIB, UpdatedDefs, Observer);
+        if (DstTy == UnmergeSrcTy) {
+          replaceRegOrBuildCopy(Dst, UnmergeSrc, MRI, MIB, UpdatedDefs,
+                                Observer);
+        } else if (!DstTy.isPointer() && !UnmergeSrcTy.isPointer() &&
+                   LI.getAction(
+                         {TargetOpcode::G_BITCAST, {DstTy, UnmergeSrcTy}})
+                           .Action == LegalizeActions::Legal) {
+          MIB.setInstrAndDebugLoc(MI);
+          MIB.buildBitcast(Dst, UnmergeSrc);
+          UpdatedDefs.push_back(Dst);
+        } else {
+          return false;
+        }
         DeadInsts.push_back(&MI);
         return true;
       }

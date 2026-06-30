@@ -375,8 +375,8 @@ body: |
     ; MOVREL-NEXT: [[COPY:%[0-9]+]]:sgpr_256 = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7
     ; MOVREL-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr8
     ; MOVREL-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 -1
-    ; MOVREL-NEXT: [[S_ADD_I32_:%[0-9]+]]:sreg_32 = S_ADD_I32 [[COPY1]], [[S_MOV_B32_]], implicit-def dead $scc
-    ; MOVREL-NEXT: $m0 = COPY [[S_ADD_I32_]]
+    ; MOVREL-NEXT: [[S_ADD_U32_:%[0-9]+]]:sreg_32 = S_ADD_U32 [[COPY1]], [[S_MOV_B32_]], implicit-def dead $scc
+    ; MOVREL-NEXT: $m0 = COPY [[S_ADD_U32_]]
     ; MOVREL-NEXT: [[S_MOVRELS_B32_:%[0-9]+]]:sreg_32 = S_MOVRELS_B32 [[COPY]].sub0, implicit $m0, implicit [[COPY]]
     ; MOVREL-NEXT: S_ENDPGM 0, implicit [[S_MOVRELS_B32_]]
     ;
@@ -386,8 +386,8 @@ body: |
     ; GPRIDX-NEXT: [[COPY:%[0-9]+]]:sgpr_256 = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7
     ; GPRIDX-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr8
     ; GPRIDX-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 -1
-    ; GPRIDX-NEXT: [[S_ADD_I32_:%[0-9]+]]:sreg_32 = S_ADD_I32 [[COPY1]], [[S_MOV_B32_]], implicit-def dead $scc
-    ; GPRIDX-NEXT: $m0 = COPY [[S_ADD_I32_]]
+    ; GPRIDX-NEXT: [[S_ADD_U32_:%[0-9]+]]:sreg_32 = S_ADD_U32 [[COPY1]], [[S_MOV_B32_]], implicit-def dead $scc
+    ; GPRIDX-NEXT: $m0 = COPY [[S_ADD_U32_]]
     ; GPRIDX-NEXT: [[S_MOVRELS_B32_:%[0-9]+]]:sreg_32 = S_MOVRELS_B32 [[COPY]].sub0, implicit $m0, implicit [[COPY]]
     ; GPRIDX-NEXT: S_ENDPGM 0, implicit [[S_MOVRELS_B32_]]
     %0:sgpr(<8 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7
@@ -447,8 +447,8 @@ body: |
     ; MOVREL-NEXT: [[COPY:%[0-9]+]]:sgpr_256 = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7
     ; MOVREL-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr8
     ; MOVREL-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 8
-    ; MOVREL-NEXT: [[S_ADD_I32_:%[0-9]+]]:sreg_32 = S_ADD_I32 [[COPY1]], [[S_MOV_B32_]], implicit-def dead $scc
-    ; MOVREL-NEXT: $m0 = COPY [[S_ADD_I32_]]
+    ; MOVREL-NEXT: [[S_ADD_U32_:%[0-9]+]]:sreg_32 = S_ADD_U32 [[COPY1]], [[S_MOV_B32_]], implicit-def dead $scc
+    ; MOVREL-NEXT: $m0 = COPY [[S_ADD_U32_]]
     ; MOVREL-NEXT: [[S_MOVRELS_B32_:%[0-9]+]]:sreg_32 = S_MOVRELS_B32 [[COPY]].sub0, implicit $m0, implicit [[COPY]]
     ; MOVREL-NEXT: S_ENDPGM 0, implicit [[S_MOVRELS_B32_]]
     ;
@@ -458,8 +458,8 @@ body: |
     ; GPRIDX-NEXT: [[COPY:%[0-9]+]]:sgpr_256 = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7
     ; GPRIDX-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr8
     ; GPRIDX-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 8
-    ; GPRIDX-NEXT: [[S_ADD_I32_:%[0-9]+]]:sreg_32 = S_ADD_I32 [[COPY1]], [[S_MOV_B32_]], implicit-def dead $scc
-    ; GPRIDX-NEXT: $m0 = COPY [[S_ADD_I32_]]
+    ; GPRIDX-NEXT: [[S_ADD_U32_:%[0-9]+]]:sreg_32 = S_ADD_U32 [[COPY1]], [[S_MOV_B32_]], implicit-def dead $scc
+    ; GPRIDX-NEXT: $m0 = COPY [[S_ADD_U32_]]
     ; GPRIDX-NEXT: [[S_MOVRELS_B32_:%[0-9]+]]:sreg_32 = S_MOVRELS_B32 [[COPY]].sub0, implicit $m0, implicit [[COPY]]
     ; GPRIDX-NEXT: S_ENDPGM 0, implicit [[S_MOVRELS_B32_]]
     %0:sgpr(<8 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7
@@ -553,8 +553,8 @@ body: |
     ; MOVREL-NEXT: [[COPY:%[0-9]+]]:sgpr_512 = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
     ; MOVREL-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr8
     ; MOVREL-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 -1
-    ; MOVREL-NEXT: [[S_ADD_I32_:%[0-9]+]]:sreg_32 = S_ADD_I32 [[COPY1]], [[S_MOV_B32_]], implicit-def dead $scc
-    ; MOVREL-NEXT: $m0 = COPY [[S_ADD_I32_]]
+    ; MOVREL-NEXT: [[S_ADD_U32_:%[0-9]+]]:sreg_32 = S_ADD_U32 [[COPY1]], [[S_MOV_B32_]], implicit-def dead $scc
+    ; MOVREL-NEXT: $m0 = COPY [[S_ADD_U32_]]
     ; MOVREL-NEXT: [[S_MOVRELS_B64_:%[0-9]+]]:sreg_64 = S_MOVRELS_B64 [[COPY]].sub0_sub1, implicit $m0, implicit [[COPY]]
     ; MOVREL-NEXT: S_ENDPGM 0, implicit [[S_MOVRELS_B64_]]
     ;
@@ -564,8 +564,8 @@ body: |
     ; GPRIDX-NEXT: [[COPY:%[0-9]+]]:sgpr_512 = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
     ; GPRIDX-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr8
     ; GPRIDX-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 -1
-    ; GPRIDX-NEXT: [[S_ADD_I32_:%[0-9]+]]:sreg_32 = S_ADD_I32 [[COPY1]], [[S_MOV_B32_]], implicit-def dead $scc
-    ; GPRIDX-NEXT: $m0 = COPY [[S_ADD_I32_]]
+    ; GPRIDX-NEXT: [[S_ADD_U32_:%[0-9]+]]:sreg_32 = S_ADD_U32 [[COPY1]], [[S_MOV_B32_]], implicit-def dead $scc
+    ; GPRIDX-NEXT: $m0 = COPY [[S_ADD_U32_]]
     ; GPRIDX-NEXT: [[S_MOVRELS_B64_:%[0-9]+]]:sreg_64 = S_MOVRELS_B64 [[COPY]].sub0_sub1, implicit $m0, implicit [[COPY]]
     ; GPRIDX-NEXT: S_ENDPGM 0, implicit [[S_MOVRELS_B64_]]
     %0:sgpr(<8 x s64>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
@@ -810,8 +810,8 @@ body: |
     ; MOVREL-NEXT: [[COPY:%[0-9]+]]:vreg_256 = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
     ; MOVREL-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr8
     ; MOVREL-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 -1
-    ; MOVREL-NEXT: [[S_ADD_I32_:%[0-9]+]]:sreg_32 = S_ADD_I32 [[COPY1]], [[S_MOV_B32_]], implicit-def dead $scc
-    ; MOVREL-NEXT: $m0 = COPY [[S_ADD_I32_]]
+    ; MOVREL-NEXT: [[S_ADD_U32_:%[0-9]+]]:sreg_32 = S_ADD_U32 [[COPY1]], [[S_MOV_B32_]], implicit-def dead $scc
+    ; MOVREL-NEXT: $m0 = COPY [[S_ADD_U32_]]
     ; MOVREL-NEXT: [[V_MOVRELS_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOVRELS_B32_e32 [[COPY]].sub0, implicit $m0, implicit $exec, implicit [[COPY]]
     ; MOVREL-NEXT: S_ENDPGM 0, implicit [[V_MOVRELS_B32_e32_]]
     ;
@@ -821,8 +821,8 @@ body: |
     ; GPRIDX-NEXT: [[COPY:%[0-9]+]]:vreg_256 = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
     ; GPRIDX-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr8
     ; GPRIDX-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 -1
-    ; GPRIDX-NEXT: [[S_ADD_I32_:%[0-9]+]]:sreg_32 = S_ADD_I32 [[COPY1]], [[S_MOV_B32_]], implicit-def dead $scc
-    ; GPRIDX-NEXT: [[V_INDIRECT_REG_READ_GPR_IDX_B32_V8_:%[0-9]+]]:vgpr_32 = V_INDIRECT_REG_READ_GPR_IDX_B32_V8 [[COPY]], [[S_ADD_I32_]], 3, implicit-def $m0, implicit $m0, implicit $exec
+    ; GPRIDX-NEXT: [[S_ADD_U32_:%[0-9]+]]:sreg_32 = S_ADD_U32 [[COPY1]], [[S_MOV_B32_]], implicit-def dead $scc
+    ; GPRIDX-NEXT: [[V_INDIRECT_REG_READ_GPR_IDX_B32_V8_:%[0-9]+]]:vgpr_32 = V_INDIRECT_REG_READ_GPR_IDX_B32_V8 [[COPY]], [[S_ADD_U32_]], 3, implicit-def $m0, implicit $m0, implicit $exec
     ; GPRIDX-NEXT: S_ENDPGM 0, implicit [[V_INDIRECT_REG_READ_GPR_IDX_B32_V8_]]
     %0:vgpr(<8 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
     %1:sgpr(s32) = COPY $sgpr8
@@ -880,8 +880,8 @@ body: |
     ; MOVREL-NEXT: [[COPY:%[0-9]+]]:vreg_256 = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
     ; MOVREL-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr8
     ; MOVREL-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 8
-    ; MOVREL-NEXT: [[S_ADD_I32_:%[0-9]+]]:sreg_32 = S_ADD_I32 [[COPY1]], [[S_MOV_B32_]], implicit-def dead $scc
-    ; MOVREL-NEXT: $m0 = COPY [[S_ADD_I32_]]
+    ; MOVREL-NEXT: [[S_ADD_U32_:%[0-9]+]]:sreg_32 = S_ADD_U32 [[COPY1]], [[S_MOV_B32_]], implicit-def dead $scc
+    ; MOVREL-NEXT: $m0 = COPY [[S_ADD_U32_]]
     ; MOVREL-NEXT: [[V_MOVRELS_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOVRELS_B32_e32 [[COPY]].sub0, implicit $m0, implicit $exec, implicit [[COPY]]
     ; MOVREL-NEXT: S_ENDPGM 0, implicit [[V_MOVRELS_B32_e32_]]
     ;
@@ -891,8 +891,8 @@ body: |
     ; GPRIDX-NEXT: [[COPY:%[0-9]+]]:vreg_256 = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
     ; GPRIDX-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr8
     ; GPRIDX-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 8
-    ; GPRIDX-NEXT: [[S_ADD_I32_:%[0-9]+]]:sreg_32 = S_ADD_I32 [[COPY1]], [[S_MOV_B32_]], implicit-def dead $scc
-    ; GPRIDX-NEXT: [[V_INDIRECT_REG_READ_GPR_IDX_B32_V8_:%[0-9]+]]:vgpr_32 = V_INDIRECT_REG_READ_GPR_IDX_B32_V8 [[COPY]], [[S_ADD_I32_]], 3, implicit-def $m0, implicit $m0, implicit $exec
+    ; GPRIDX-NEXT: [[S_ADD_U32_:%[0-9]+]]:sreg_32 = S_ADD_U32 [[COPY1]], [[S_MOV_B32_]], implicit-def dead $scc
+    ; GPRIDX-NEXT: [[V_INDIRECT_REG_READ_GPR_IDX_B32_V8_:%[0-9]+]]:vgpr_32 = V_INDIRECT_REG_READ_GPR_IDX_B32_V8 [[COPY]], [[S_ADD_U32_]], 3, implicit-def $m0, implicit $m0, implicit $exec
     ; GPRIDX-NEXT: S_ENDPGM 0, implicit [[V_INDIRECT_REG_READ_GPR_IDX_B32_V8_]]
     %0:vgpr(<8 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
     %1:sgpr(s32) = COPY $sgpr8

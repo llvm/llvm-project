@@ -56,8 +56,8 @@ body: |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(<2 x s16>) = COPY $sgpr0
     ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:sgpr(s32) = G_BITCAST [[COPY]](<2 x s16>)
     ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:sgpr(s32) = G_SEXT_INREG [[BITCAST]], 16
-    ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 16
-    ; CHECK-NEXT: [[ASHR:%[0-9]+]]:sgpr(s32) = G_ASHR [[BITCAST]], [[C]](s32)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 16
+    ; CHECK-NEXT: [[ASHR:%[0-9]+]]:sgpr(i32) = G_ASHR [[BITCAST]], [[C]](i32)
     ; CHECK-NEXT: [[ABS:%[0-9]+]]:sgpr(s32) = G_ABS [[SEXT_INREG]]
     ; CHECK-NEXT: [[ABS1:%[0-9]+]]:sgpr(s32) = G_ABS [[ASHR]]
     ; CHECK-NEXT: [[BUILD_VECTOR_TRUNC:%[0-9]+]]:sgpr(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[ABS]](s32), [[ABS1]](s32)

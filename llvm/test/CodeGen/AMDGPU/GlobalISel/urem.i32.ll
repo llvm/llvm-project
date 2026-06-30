@@ -59,7 +59,7 @@ define amdgpu_ps i32 @s_urem_i32(i32 inreg %num, i32 inreg %den) {
 ; GISEL-LABEL: s_urem_i32:
 ; GISEL:       ; %bb.0:
 ; GISEL-NEXT:    v_cvt_f32_u32_e32 v0, s1
-; GISEL-NEXT:    s_sub_i32 s2, 0, s1
+; GISEL-NEXT:    s_sub_u32 s2, 0, s1
 ; GISEL-NEXT:    v_rcp_iflag_f32_e32 v0, v0
 ; GISEL-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v0
 ; GISEL-NEXT:    v_cvt_u32_f32_e32 v0, v0
@@ -67,7 +67,7 @@ define amdgpu_ps i32 @s_urem_i32(i32 inreg %num, i32 inreg %den) {
 ; GISEL-NEXT:    s_mul_i32 s2, s2, s3
 ; GISEL-NEXT:    v_mul_hi_u32 v0, v0, s2
 ; GISEL-NEXT:    v_readfirstlane_b32 s2, v0
-; GISEL-NEXT:    s_add_i32 s2, s3, s2
+; GISEL-NEXT:    s_add_u32 s2, s3, s2
 ; GISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GISEL-NEXT:    v_mul_hi_u32 v0, s0, v0
 ; GISEL-NEXT:    v_readfirstlane_b32 s2, v0
@@ -75,12 +75,12 @@ define amdgpu_ps i32 @s_urem_i32(i32 inreg %num, i32 inreg %den) {
 ; GISEL-NEXT:    s_sub_i32 s0, s0, s2
 ; GISEL-NEXT:    s_cmp_ge_u32 s0, s1
 ; GISEL-NEXT:    s_cselect_b32 s2, 1, 0
-; GISEL-NEXT:    s_sub_i32 s3, s0, s1
+; GISEL-NEXT:    s_sub_u32 s3, s0, s1
 ; GISEL-NEXT:    s_cmp_lg_u32 s2, 0
 ; GISEL-NEXT:    s_cselect_b32 s0, s3, s0
 ; GISEL-NEXT:    s_cmp_ge_u32 s0, s1
 ; GISEL-NEXT:    s_cselect_b32 s2, 1, 0
-; GISEL-NEXT:    s_sub_i32 s1, s0, s1
+; GISEL-NEXT:    s_sub_u32 s1, s0, s1
 ; GISEL-NEXT:    s_cmp_lg_u32 s2, 0
 ; GISEL-NEXT:    s_cselect_b32 s0, s1, s0
 ; GISEL-NEXT:    ; return to shader part epilog

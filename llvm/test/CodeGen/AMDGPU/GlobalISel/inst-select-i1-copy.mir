@@ -58,11 +58,11 @@ body: |
     %6:sgpr(s32) = G_CONSTANT i32 2
     %7:vgpr(s32) = COPY %6(s32)
     %8:vcc(s1) = G_ICMP intpred(eq), %0(s32), %7
-    %9:vgpr(s32) = G_SELECT %8(s1), %1, %2
+    %9:vgpr(i32) = G_SELECT %8(s1), %1, %2
     %10:vgpr(s32) = G_SELECT %8(s1), %3, %4
     %11:vgpr(s32) = COPY %5(s32)
     %12:vgpr(s32) = COPY %5(s32)
-    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.exp), 0, 15, %9(s32), %10(s32), %11(s32), %12(s32), -1, -1
+    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.exp), 0, 15, %9(i32), %10(s32), %11(s32), %12(s32), -1, -1
     S_ENDPGM 0
 ...
 
@@ -131,12 +131,12 @@ body: |
     %7:sgpr(s32) = G_ICMP intpred(eq), %0(s32), %6
     %8:sgpr(s1) = G_TRUNC %7(s32)
     %9:vcc(s1) = COPY %8(s1)
-    %10:vgpr(s32) = G_SELECT %9(s1), %1, %2
+    %10:vgpr(i32) = G_SELECT %9(s1), %1, %2
     %11:vcc(s1) = COPY %8(s1)
     %12:vgpr(s32) = G_SELECT %11(s1), %3, %4
     %13:vgpr(s32) = COPY %5(s32)
     %14:vgpr(s32) = COPY %5(s32)
-    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.exp), 0, 15, %10(s32), %12(s32), %13(s32), %14(s32), -1, -1
+    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.exp), 0, 15, %10(i32), %12(s32), %13(s32), %14(s32), -1, -1
     S_ENDPGM 0
 ...
 

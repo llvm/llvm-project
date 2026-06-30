@@ -64,10 +64,10 @@ body: |
     ; GFX-NEXT: [[COPY:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
     ; GFX-NEXT: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY]](s64)
     ; GFX-NEXT: [[C:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 1
-    ; GFX-NEXT: [[AND:%[0-9]+]]:vgpr(s32) = G_AND [[UV]], [[C]]
+    ; GFX-NEXT: [[AND:%[0-9]+]]:vgpr(i32) = G_AND [[UV]], [[C]]
     ; GFX-NEXT: [[C1:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 0
-    ; GFX-NEXT: [[AND1:%[0-9]+]]:vgpr(s32) = G_AND [[UV1]], [[C1]]
-    ; GFX-NEXT: [[MV:%[0-9]+]]:vgpr(s64) = G_MERGE_VALUES [[AND]](s32), [[AND1]](s32)
+    ; GFX-NEXT: [[AND1:%[0-9]+]]:vgpr(i32) = G_AND [[UV1]], [[C1]]
+    ; GFX-NEXT: [[MV:%[0-9]+]]:vgpr(s64) = G_MERGE_VALUES [[AND]](i32), [[AND1]](i32)
     ; GFX-NEXT: [[C2:%[0-9]+]]:vgpr(s64) = G_CONSTANT i64 0
     ; GFX-NEXT: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(ne), [[MV]](s64), [[C2]]
     %0:_(s64) = COPY $vgpr0_vgpr1

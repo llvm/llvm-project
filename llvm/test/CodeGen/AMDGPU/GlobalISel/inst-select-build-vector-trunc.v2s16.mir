@@ -45,7 +45,7 @@ body: |
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = COPY $sgpr1
     %2:sgpr(s32) = G_CONSTANT i32 16
-    %3:sgpr(s32) = G_LSHR %1, %2
+    %3:sgpr(i32) = G_LSHR %1, %2
     %4:sgpr(<2 x s16>) = G_BUILD_VECTOR_TRUNC %0, %3
     S_ENDPGM 0, implicit %4
 ...
@@ -81,7 +81,7 @@ body: |
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = COPY $sgpr1
     %2:sgpr(s32) = G_CONSTANT i32 16
-    %3:sgpr(s32) = G_LSHR %1, %2
+    %3:sgpr(i32) = G_LSHR %1, %2
     %4:sgpr(<2 x s16>) = G_BUILD_VECTOR_TRUNC %3, %0
     S_ENDPGM 0, implicit %4
 ...
@@ -106,8 +106,8 @@ body: |
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = COPY $sgpr1
     %2:sgpr(s32) = G_CONSTANT i32 16
-    %3:sgpr(s32) = G_LSHR %0, %2
-    %4:sgpr(s32) = G_LSHR %1, %2
+    %3:sgpr(i32) = G_LSHR %0, %2
+    %4:sgpr(i32) = G_LSHR %1, %2
     %5:sgpr(<2 x s16>) = G_BUILD_VECTOR_TRUNC %3, %4
     S_ENDPGM 0, implicit %5
 ...
@@ -312,7 +312,7 @@ body: |
     %0:sgpr(s32) = G_CONSTANT i32 0
     %1:sgpr(s32) = COPY $sgpr0
     %2:sgpr(s32) = G_CONSTANT i32 16
-    %3:sgpr(s32) = G_LSHR %1, %2
+    %3:sgpr(i32) = G_LSHR %1, %2
     %4:sgpr(<2 x s16>) = G_BUILD_VECTOR_TRUNC %3, %0
     S_ENDPGM 0, implicit %4
 ...
@@ -340,7 +340,7 @@ body: |
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = COPY $sgpr1
     %2:sgpr(s32) = G_CONSTANT i32 16
-    %3:sgpr(s32) = G_LSHR %1, %2
+    %3:sgpr(i32) = G_LSHR %1, %2
     %4:sgpr(<2 x s16>) = G_BUILD_VECTOR_TRUNC %0, %3
     S_ENDPGM 0, implicit %4, implicit %3
 ...
@@ -367,8 +367,8 @@ body: |
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = COPY $sgpr1
     %2:sgpr(s32) = G_CONSTANT i32 16
-    %3:sgpr(s32) = G_LSHR %0, %2
-    %4:sgpr(s32) = G_LSHR %1, %2
+    %3:sgpr(i32) = G_LSHR %0, %2
+    %4:sgpr(i32) = G_LSHR %1, %2
     %5:sgpr(<2 x s16>) = G_BUILD_VECTOR_TRUNC %3, %4
     S_ENDPGM 0, implicit %5, implicit %3
 ...
@@ -406,8 +406,8 @@ body: |
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = COPY $sgpr1
     %2:sgpr(s32) = G_CONSTANT i32 16
-    %3:sgpr(s32) = G_LSHR %0, %2
-    %4:sgpr(s32) = G_LSHR %1, %2
+    %3:sgpr(i32) = G_LSHR %0, %2
+    %4:sgpr(i32) = G_LSHR %1, %2
     %5:sgpr(<2 x s16>) = G_BUILD_VECTOR_TRUNC %3, %4
     S_ENDPGM 0, implicit %5, implicit %4
 ...
@@ -434,7 +434,7 @@ body: |
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = COPY $sgpr1
     %2:sgpr(s32) = G_CONSTANT i32 15
-    %3:sgpr(s32) = G_LSHR %1, %2
+    %3:sgpr(i32) = G_LSHR %1, %2
     %4:sgpr(<2 x s16>) = G_BUILD_VECTOR_TRUNC %0, %3
     S_ENDPGM 0, implicit %4
 ...
@@ -462,8 +462,8 @@ body: |
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = COPY $sgpr1
     %2:sgpr(s32) = G_CONSTANT i32 15
-    %3:sgpr(s32) = G_LSHR %0, %2
-    %4:sgpr(s32) = G_LSHR %1, %2
+    %3:sgpr(i32) = G_LSHR %0, %2
+    %4:sgpr(i32) = G_LSHR %1, %2
     %5:sgpr(<2 x s16>) = G_BUILD_VECTOR_TRUNC %3, %4
     S_ENDPGM 0, implicit %5
 ...
@@ -574,11 +574,9 @@ body: |
     ; GFX9PLUS-LABEL: name: test_build_vector_trunc_s_v2s16_zext_impdef_zext_constant
     ; GFX9PLUS: [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
     ; GFX9PLUS-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 123
-    ; GFX9PLUS-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 65535
-    ; GFX9PLUS-NEXT: [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[S_MOV_B32_1]], [[DEF]], implicit-def dead $scc
-    ; GFX9PLUS-NEXT: [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 65535
-    ; GFX9PLUS-NEXT: [[S_AND_B32_1:%[0-9]+]]:sreg_32 = S_AND_B32 [[S_MOV_B32_2]], [[S_MOV_B32_]], implicit-def dead $scc
-    ; GFX9PLUS-NEXT: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[S_AND_B32_]], [[S_AND_B32_1]]
+    ; GFX9PLUS-NEXT: [[S_BFE_U32_:%[0-9]+]]:sreg_32 = S_BFE_U32 [[DEF]], 1048576, implicit-def $scc
+    ; GFX9PLUS-NEXT: [[S_BFE_U32_1:%[0-9]+]]:sreg_32 = S_BFE_U32 [[S_MOV_B32_]], 1048576, implicit-def $scc
+    ; GFX9PLUS-NEXT: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[S_BFE_U32_]], [[S_BFE_U32_1]]
     ; GFX9PLUS-NEXT: S_ENDPGM 0, implicit [[S_PACK_LL_B32_B16_]]
     %0:sgpr(s16) = G_IMPLICIT_DEF
     %1:sgpr(s16) = G_CONSTANT i16 123

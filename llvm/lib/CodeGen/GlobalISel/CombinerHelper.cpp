@@ -241,7 +241,17 @@ bool CombinerHelper::matchCombineCopy(MachineInstr &MI) const {
     return false;
   Register DstReg = MI.getOperand(0).getReg();
   Register SrcReg = MI.getOperand(1).getReg();
-  return canReplaceReg(DstReg, SrcReg, MRI);
+  if (!canReplaceReg(DstReg, SrcReg, MRI))
+    return false;
+
+  // Verifier will fail if unmerge has mixed types
+  MachineInstr *Instr = MRI.getVRegDef(SrcReg);
+  if (Instr->getOpcode() == TargetOpcode::G_UNMERGE_VALUES) {
+    for (auto Def : Instr->defs())
+      if (MRI.getType(Def.getReg()) != MRI.getType(DstReg))
+        return false;
+  }
+  return true;
 }
 void CombinerHelper::applyCombineCopy(MachineInstr &MI) const {
   Register DstReg = MI.getOperand(0).getReg();
@@ -2390,6 +2400,14 @@ void CombinerHelper::applyCombineUnmergeMergeToPlainValues(
   LLT SrcTy = MRI.getType(Operands[0]);
   LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
   bool CanReuseInputDirectly = DstTy == SrcTy;
+
+  // replaceRegWith can change type of Register, need to notify CSE observer.
+  SmallVector<MachineInstr *, 8> SrcDefs;
+  if (CanReuseInputDirectly) {
+    for (unsigned Idx = 0; Idx < NumElems; ++Idx)
+      SrcDefs.push_back(MRI.getUniqueVRegDef(Operands[Idx]));
+  }
+
   for (unsigned Idx = 0; Idx < NumElems; ++Idx) {
     Register DstReg = MI.getOperand(Idx).getReg();
     Register SrcReg = Operands[Idx];
@@ -2402,9 +2420,11 @@ void CombinerHelper::applyCombineUnmergeMergeToPlainValues(
       MRI.setRegClassOrRegBank(SrcReg, DstCB);
     }
 
-    if (CanReuseInputDirectly)
+    if (CanReuseInputDirectly) {
+      Observer.changingInstr(*SrcDefs[Idx]);
       replaceRegWith(MRI, DstReg, SrcReg);
-    else
+      Observer.changedInstr(*SrcDefs[Idx]);
+    } else
       Builder.buildCast(DstReg, SrcReg);
   }
   MI.eraseFromParent();
@@ -2580,7 +2600,7 @@ void CombinerHelper::applyCombineShiftToUnmerge(
   unsigned HalfSize = Size / 2;
   assert(ShiftVal >= HalfSize);
 
-  LLT HalfTy = LLT::scalar(HalfSize);
+  LLT HalfTy = Ty.changeElementSize(HalfSize);
 
   auto Unmerge = Builder.buildUnmerge(HalfTy, SrcReg);
   unsigned NarrowShiftAmt = ShiftVal - HalfSize;

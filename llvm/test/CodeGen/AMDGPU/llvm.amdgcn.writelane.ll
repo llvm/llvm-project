@@ -2241,11 +2241,11 @@ define void @test_writelane_bfloat(ptr addrspace(1) %out, bfloat %src, i32 %src1
 ; GFX802-GISEL:       ; %bb.0:
 ; GFX802-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX802-GISEL-NEXT:    flat_load_ushort v4, v[0:1]
-; GFX802-GISEL-NEXT:    v_readfirstlane_b32 s4, v3
-; GFX802-GISEL-NEXT:    v_readfirstlane_b32 s5, v2
-; GFX802-GISEL-NEXT:    s_mov_b32 m0, s4
+; GFX802-GISEL-NEXT:    v_readfirstlane_b32 s5, v3
+; GFX802-GISEL-NEXT:    v_readfirstlane_b32 s4, v2
+; GFX802-GISEL-NEXT:    s_mov_b32 m0, s5
 ; GFX802-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GFX802-GISEL-NEXT:    v_writelane_b32 v4, s5, m0
+; GFX802-GISEL-NEXT:    v_writelane_b32 v4, s4, m0
 ; GFX802-GISEL-NEXT:    flat_store_short v[0:1], v4
 ; GFX802-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX802-GISEL-NEXT:    s_setpc_b64 s[30:31]

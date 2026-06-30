@@ -10,11 +10,11 @@ define void @addi32(i32 %arg1, i32 %arg2) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $vgpr1
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[COPY]], [[COPY1]]
-  ; CHECK-NEXT:   G_STORE [[ADD]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
+  ; CHECK-NEXT:   [[ADD:%[0-9]+]]:_(i32) = G_ADD [[COPY]], [[COPY1]]
+  ; CHECK-NEXT:   G_STORE [[ADD]](i32), [[DEF]](p1) :: (store (i32) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   %res = add i32 %arg1, %arg2
   store i32 %res, ptr addrspace(1) poison
@@ -27,11 +27,11 @@ define void @byte_constant(ptr addrspace(1) %p) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 42
-  ; CHECK-NEXT:   G_STORE [[C]](s64), [[MV]](p1) :: (store (s64) into %ir.p, addrspace 1)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $vgpr1
+  ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY]](i32), [[COPY1]](i32)
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 42
+  ; CHECK-NEXT:   G_STORE [[C]](i64), [[MV]](p1) :: (store (i64) into %ir.p, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store b64 42, ptr addrspace(1) %p
   ret void
@@ -44,12 +44,12 @@ define void @bitcast_b64_to_p1(b64 %b) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-  ; CHECK-NEXT:   [[INTTOPTR:%[0-9]+]]:_(p1) = G_INTTOPTR [[MV]](s64)
-  ; CHECK-NEXT:   G_STORE [[C]](s64), [[INTTOPTR]](p1) :: (store (s64) into %ir.p, addrspace 1)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $vgpr1
+  ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(i64) = G_MERGE_VALUES [[COPY]](i32), [[COPY1]](i32)
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
+  ; CHECK-NEXT:   [[INTTOPTR:%[0-9]+]]:_(p1) = G_INTTOPTR [[MV]](i64)
+  ; CHECK-NEXT:   G_STORE [[C]](i64), [[INTTOPTR]](p1) :: (store (i64) into %ir.p, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   %p = bitcast b64 %b to ptr addrspace(1)
   store i64 0, ptr addrspace(1) %p
@@ -62,12 +62,12 @@ define void @bitcast_p1_to_b64(ptr addrspace(1) %p) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $vgpr1
+  ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY]](i32), [[COPY1]](i32)
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p0) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   [[PTRTOINT:%[0-9]+]]:_(s64) = G_PTRTOINT [[MV]](p1)
-  ; CHECK-NEXT:   G_STORE [[PTRTOINT]](s64), [[DEF]](p0) :: (store (s64) into `ptr poison`)
+  ; CHECK-NEXT:   [[PTRTOINT:%[0-9]+]]:_(i64) = G_PTRTOINT [[MV]](p1)
+  ; CHECK-NEXT:   G_STORE [[PTRTOINT]](i64), [[DEF]](p0) :: (store (i64) into `ptr poison`)
   ; CHECK-NEXT:   SI_RETURN
   %b = bitcast ptr addrspace(1) %p to b64
   store b64 %b, ptr poison
@@ -80,13 +80,13 @@ define void @bitcast_b64_to_i64(b64 %b, ptr addrspace(1) %p) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
-  ; CHECK-NEXT:   [[MV1:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY2]](s32), [[COPY3]](s32)
-  ; CHECK-NEXT:   G_STORE [[MV]](s64), [[MV1]](p1) :: (store (s64) into %ir.p, addrspace 1)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $vgpr1
+  ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(i64) = G_MERGE_VALUES [[COPY]](i32), [[COPY1]](i32)
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $vgpr2
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $vgpr3
+  ; CHECK-NEXT:   [[MV1:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY2]](i32), [[COPY3]](i32)
+  ; CHECK-NEXT:   G_STORE [[MV]](i64), [[MV1]](p1) :: (store (i64) into %ir.p, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   %i = bitcast b64 %b to i64
   store i64 %i, ptr addrspace(1) %p
@@ -99,13 +99,13 @@ define void @bitcast_i64_to_b64(i64 %i, ptr addrspace(1) %p) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
-  ; CHECK-NEXT:   [[MV1:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY2]](s32), [[COPY3]](s32)
-  ; CHECK-NEXT:   G_STORE [[MV]](s64), [[MV1]](p1) :: (store (s64) into %ir.p, addrspace 1)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $vgpr1
+  ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(i64) = G_MERGE_VALUES [[COPY]](i32), [[COPY1]](i32)
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $vgpr2
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $vgpr3
+  ; CHECK-NEXT:   [[MV1:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY2]](i32), [[COPY3]](i32)
+  ; CHECK-NEXT:   G_STORE [[MV]](i64), [[MV1]](p1) :: (store (i64) into %ir.p, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   %b = bitcast i64 %i to b64
   store b64 %b, ptr addrspace(1) %p
@@ -119,13 +119,14 @@ define void @bitcast_b64_to_double(b64 %b, ptr addrspace(1) %p) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
-  ; CHECK-NEXT:   [[MV1:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY2]](s32), [[COPY3]](s32)
-  ; CHECK-NEXT:   G_STORE [[MV]](s64), [[MV1]](p1) :: (store (s64) into %ir.p, addrspace 1)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $vgpr1
+  ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(i64) = G_MERGE_VALUES [[COPY]](i32), [[COPY1]](i32)
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $vgpr2
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $vgpr3
+  ; CHECK-NEXT:   [[MV1:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY2]](i32), [[COPY3]](i32)
+  ; CHECK-NEXT:   [[BITCAST:%[0-9]+]]:_(f64) = G_BITCAST [[MV]](i64)
+  ; CHECK-NEXT:   G_STORE [[BITCAST]](f64), [[MV1]](p1) :: (store (f64) into %ir.p, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   %d = bitcast b64 %b to double
   store double %d, ptr addrspace(1) %p
@@ -139,10 +140,10 @@ define void @bitcast_v2i16_to_i32(<2 x i16> %v) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<2 x i16>) = COPY $vgpr0
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[COPY]](<2 x s16>)
-  ; CHECK-NEXT:   G_STORE [[BITCAST]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
+  ; CHECK-NEXT:   [[BITCAST:%[0-9]+]]:_(i32) = G_BITCAST [[COPY]](<2 x i16>)
+  ; CHECK-NEXT:   G_STORE [[BITCAST]](i32), [[DEF]](p1) :: (store (i32) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   %i = bitcast <2 x i16> %v to i32
   store i32 %i, ptr addrspace(1) poison
@@ -155,15 +156,15 @@ define void @byte_vector_constant(ptr addrspace(1) %p) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 1
-  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s8) = G_CONSTANT i8 2
-  ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(s8) = G_CONSTANT i8 3
-  ; CHECK-NEXT:   [[C3:%[0-9]+]]:_(s8) = G_CONSTANT i8 4
-  ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s8>) = G_BUILD_VECTOR [[C]](s8), [[C1]](s8), [[C2]](s8), [[C3]](s8)
-  ; CHECK-NEXT:   G_STORE [[BUILD_VECTOR]](<4 x s8>), [[MV]](p1) :: (store (<4 x s8>) into %ir.p, addrspace 1)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $vgpr1
+  ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY]](i32), [[COPY1]](i32)
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i8) = G_CONSTANT i8 1
+  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(i8) = G_CONSTANT i8 2
+  ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(i8) = G_CONSTANT i8 3
+  ; CHECK-NEXT:   [[C3:%[0-9]+]]:_(i8) = G_CONSTANT i8 4
+  ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<4 x i8>) = G_BUILD_VECTOR [[C]](i8), [[C1]](i8), [[C2]](i8), [[C3]](i8)
+  ; CHECK-NEXT:   G_STORE [[BUILD_VECTOR]](<4 x i8>), [[MV]](p1) :: (store (<4 x i8>) into %ir.p, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store <4 x b8> <b8 1, b8 2, b8 3, b8 4>, ptr addrspace(1) %p
   ret void
@@ -175,13 +176,13 @@ define b64 @load_b64(ptr addrspace(1) %p) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[MV]](p1) :: (load (s64) from %ir.p, addrspace 1)
-  ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD]](s64)
-  ; CHECK-NEXT:   $vgpr0 = COPY [[UV]](s32)
-  ; CHECK-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $vgpr1
+  ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY]](i32), [[COPY1]](i32)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i64) = G_LOAD [[MV]](p1) :: (load (i64) from %ir.p, addrspace 1)
+  ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(i32), [[UV1:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[LOAD]](i64)
+  ; CHECK-NEXT:   $vgpr0 = COPY [[UV]](i32)
+  ; CHECK-NEXT:   $vgpr1 = COPY [[UV1]](i32)
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0, implicit $vgpr1
   %b = load b64, ptr addrspace(1) %p
   ret b64 %b

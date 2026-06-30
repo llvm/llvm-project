@@ -198,9 +198,9 @@ body: |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(<2 x s16>) = COPY $sgpr1
     ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:sgpr(s32) = G_BITCAST [[COPY]](<2 x s16>)
     ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 16
-    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:sgpr(s32) = G_LSHR [[BITCAST]], [[C]](s32)
+    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:sgpr(i32) = G_LSHR [[BITCAST]], [[C]](s32)
     ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:sgpr(s32) = G_BITCAST [[COPY1]](<2 x s16>)
-    ; CHECK-NEXT: [[LSHR1:%[0-9]+]]:sgpr(s32) = G_LSHR [[BITCAST1]], [[C]](s32)
+    ; CHECK-NEXT: [[LSHR1:%[0-9]+]]:sgpr(i32) = G_LSHR [[BITCAST1]], [[C]](s32)
     ; CHECK-NEXT: [[SUB:%[0-9]+]]:sgpr(s32) = G_SUB [[BITCAST]], [[BITCAST1]]
     ; CHECK-NEXT: [[SUB1:%[0-9]+]]:sgpr(s32) = G_SUB [[LSHR]], [[LSHR1]]
     ; CHECK-NEXT: [[BUILD_VECTOR_TRUNC:%[0-9]+]]:sgpr(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[SUB]](s32), [[SUB1]](s32)

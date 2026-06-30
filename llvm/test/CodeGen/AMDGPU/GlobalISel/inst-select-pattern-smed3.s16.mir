@@ -71,10 +71,10 @@ body: |
     %4:vgpr(s16) = G_TRUNC %1
     %5:vgpr(s16) = G_TRUNC %2
 
-    %6:vgpr(s16) = G_SMAX %3, %4
-    %7:vgpr(s16) = G_SMIN %3, %4
-    %8:vgpr(s16) = G_SMAX %7, %5
-    %9:vgpr(s16) = G_SMIN %6, %8
+    %6:vgpr(i16) = G_SMAX %3, %4
+    %7:vgpr(i16) = G_SMIN %3, %4
+    %8:vgpr(i16) = G_SMAX %7, %5
+    %9:vgpr(i16) = G_SMIN %6, %8
 
     S_ENDPGM 0, implicit %9
 ...
@@ -149,10 +149,10 @@ body: |
     %4:vgpr(s16) = G_TRUNC %1
     %5:vgpr(s16) = G_TRUNC %2
 
-    %6:vgpr(s16) = G_SMAX %3, %4
-    %7:vgpr(s16) = G_SMIN %3, %4
-    %8:vgpr(s16) = G_SMAX %7, %5
-    %9:vgpr(s16) = G_SMIN %6, %8
+    %6:vgpr(i16) = G_SMAX %3, %4
+    %7:vgpr(i16) = G_SMIN %3, %4
+    %8:vgpr(i16) = G_SMAX %7, %5
+    %9:vgpr(i16) = G_SMIN %6, %8
 
     S_ENDPGM 0, implicit %9, implicit %6
 ...
@@ -227,10 +227,10 @@ body: |
     %4:vgpr(s16) = G_TRUNC %1
     %5:vgpr(s16) = G_TRUNC %2
 
-    %6:vgpr(s16) = G_SMAX %3, %4
-    %7:vgpr(s16) = G_SMIN %3, %4
-    %8:vgpr(s16) = G_SMAX %7, %5
-    %9:vgpr(s16) = G_SMIN %6, %8
+    %6:vgpr(i16) = G_SMAX %3, %4
+    %7:vgpr(i16) = G_SMIN %3, %4
+    %8:vgpr(i16) = G_SMAX %7, %5
+    %9:vgpr(i16) = G_SMIN %6, %8
 
     S_ENDPGM 0, implicit %9, implicit %7
 ...
@@ -309,10 +309,10 @@ body: |
     %4:vgpr(s16) = G_TRUNC %1
     %5:vgpr(s16) = G_TRUNC %2
 
-    %6:vgpr(s16) = G_SMAX %3, %4
-    %7:vgpr(s16) = G_SMIN %3, %4
-    %8:vgpr(s16) = G_SMAX %7, %5
-    %9:vgpr(s16) = G_SMIN %6, %8
+    %6:vgpr(i16) = G_SMAX %3, %4
+    %7:vgpr(i16) = G_SMIN %3, %4
+    %8:vgpr(i16) = G_SMAX %7, %5
+    %9:vgpr(i16) = G_SMIN %6, %8
 
     S_ENDPGM 0, implicit %9, implicit %8
 ...

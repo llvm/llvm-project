@@ -610,13 +610,13 @@ define amdgpu_kernel void @fptrunc_f64_to_f16(
 ; SI-GISEL-NEXT:    s_bfe_u32 s4, s3, 0xb0014
 ; SI-GISEL-NEXT:    s_lshr_b32 s5, s3, 8
 ; SI-GISEL-NEXT:    s_and_b32 s6, s3, 0x1ff
-; SI-GISEL-NEXT:    s_addk_i32 s4, 0xfc10
+; SI-GISEL-NEXT:    s_add_u32 s4, s4, 0xfffffc10
 ; SI-GISEL-NEXT:    s_and_b32 s5, s5, 0xffe
 ; SI-GISEL-NEXT:    s_or_b32 s2, s6, s2
 ; SI-GISEL-NEXT:    s_cselect_b32 s2, 1, 0
 ; SI-GISEL-NEXT:    s_or_b32 s2, s5, s2
 ; SI-GISEL-NEXT:    s_cselect_b32 s5, 1, 0
-; SI-GISEL-NEXT:    s_sub_i32 s7, 1, s4
+; SI-GISEL-NEXT:    s_sub_u32 s7, 1, s4
 ; SI-GISEL-NEXT:    s_lshl_b32 s6, s4, 12
 ; SI-GISEL-NEXT:    s_max_i32 s7, s7, 0
 ; SI-GISEL-NEXT:    s_or_b32 s6, s2, s6
@@ -640,7 +640,7 @@ define amdgpu_kernel void @fptrunc_f64_to_f16(
 ; SI-GISEL-NEXT:    s_or_b32 s6, s7, s6
 ; SI-GISEL-NEXT:    s_cmp_lg_u32 s6, 0
 ; SI-GISEL-NEXT:    s_cselect_b32 s6, 1, 0
-; SI-GISEL-NEXT:    s_add_i32 s2, s2, s6
+; SI-GISEL-NEXT:    s_add_u32 s2, s2, s6
 ; SI-GISEL-NEXT:    s_cmp_gt_i32 s4, 30
 ; SI-GISEL-NEXT:    s_cselect_b32 s2, 0x7c00, s2
 ; SI-GISEL-NEXT:    s_cmpk_eq_i32 s4, 0x40f
@@ -722,13 +722,13 @@ define amdgpu_kernel void @fptrunc_f64_to_f16(
 ; VI-GISEL-NEXT:    s_bfe_u32 s4, s3, 0xb0014
 ; VI-GISEL-NEXT:    s_lshr_b32 s5, s3, 8
 ; VI-GISEL-NEXT:    s_and_b32 s6, s3, 0x1ff
-; VI-GISEL-NEXT:    s_addk_i32 s4, 0xfc10
+; VI-GISEL-NEXT:    s_add_u32 s4, s4, 0xfffffc10
 ; VI-GISEL-NEXT:    s_and_b32 s5, s5, 0xffe
 ; VI-GISEL-NEXT:    s_or_b32 s2, s6, s2
 ; VI-GISEL-NEXT:    s_cselect_b32 s2, 1, 0
 ; VI-GISEL-NEXT:    s_or_b32 s2, s5, s2
 ; VI-GISEL-NEXT:    s_cselect_b32 s5, 1, 0
-; VI-GISEL-NEXT:    s_sub_i32 s7, 1, s4
+; VI-GISEL-NEXT:    s_sub_u32 s7, 1, s4
 ; VI-GISEL-NEXT:    s_lshl_b32 s6, s4, 12
 ; VI-GISEL-NEXT:    s_max_i32 s7, s7, 0
 ; VI-GISEL-NEXT:    s_or_b32 s6, s2, s6
@@ -752,7 +752,7 @@ define amdgpu_kernel void @fptrunc_f64_to_f16(
 ; VI-GISEL-NEXT:    s_or_b32 s6, s7, s6
 ; VI-GISEL-NEXT:    s_cmp_lg_u32 s6, 0
 ; VI-GISEL-NEXT:    s_cselect_b32 s6, 1, 0
-; VI-GISEL-NEXT:    s_add_i32 s2, s2, s6
+; VI-GISEL-NEXT:    s_add_u32 s2, s2, s6
 ; VI-GISEL-NEXT:    s_cmp_gt_i32 s4, 30
 ; VI-GISEL-NEXT:    s_cselect_b32 s2, 0x7c00, s2
 ; VI-GISEL-NEXT:    s_cmpk_eq_i32 s4, 0x40f
@@ -834,13 +834,13 @@ define amdgpu_kernel void @fptrunc_f64_to_f16(
 ; GFX9-GISEL-NEXT:    s_bfe_u32 s4, s3, 0xb0014
 ; GFX9-GISEL-NEXT:    s_lshr_b32 s5, s3, 8
 ; GFX9-GISEL-NEXT:    s_and_b32 s6, s3, 0x1ff
-; GFX9-GISEL-NEXT:    s_addk_i32 s4, 0xfc10
+; GFX9-GISEL-NEXT:    s_add_u32 s4, s4, 0xfffffc10
 ; GFX9-GISEL-NEXT:    s_and_b32 s5, s5, 0xffe
 ; GFX9-GISEL-NEXT:    s_or_b32 s2, s6, s2
 ; GFX9-GISEL-NEXT:    s_cselect_b32 s2, 1, 0
 ; GFX9-GISEL-NEXT:    s_or_b32 s2, s5, s2
 ; GFX9-GISEL-NEXT:    s_cselect_b32 s5, 1, 0
-; GFX9-GISEL-NEXT:    s_sub_i32 s7, 1, s4
+; GFX9-GISEL-NEXT:    s_sub_u32 s7, 1, s4
 ; GFX9-GISEL-NEXT:    s_lshl_b32 s6, s4, 12
 ; GFX9-GISEL-NEXT:    s_max_i32 s7, s7, 0
 ; GFX9-GISEL-NEXT:    s_or_b32 s6, s2, s6
@@ -864,7 +864,7 @@ define amdgpu_kernel void @fptrunc_f64_to_f16(
 ; GFX9-GISEL-NEXT:    s_or_b32 s6, s7, s6
 ; GFX9-GISEL-NEXT:    s_cmp_lg_u32 s6, 0
 ; GFX9-GISEL-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX9-GISEL-NEXT:    s_add_i32 s2, s2, s6
+; GFX9-GISEL-NEXT:    s_add_u32 s2, s2, s6
 ; GFX9-GISEL-NEXT:    s_cmp_gt_i32 s4, 30
 ; GFX9-GISEL-NEXT:    s_cselect_b32 s2, 0x7c00, s2
 ; GFX9-GISEL-NEXT:    s_cmpk_eq_i32 s4, 0x40f
@@ -946,13 +946,13 @@ define amdgpu_kernel void @fptrunc_f64_to_f16(
 ; GFX950-GISEL-NEXT:    s_bfe_u32 s4, s3, 0xb0014
 ; GFX950-GISEL-NEXT:    s_lshr_b32 s5, s3, 8
 ; GFX950-GISEL-NEXT:    s_and_b32 s6, s3, 0x1ff
-; GFX950-GISEL-NEXT:    s_addk_i32 s4, 0xfc10
+; GFX950-GISEL-NEXT:    s_add_u32 s4, s4, 0xfffffc10
 ; GFX950-GISEL-NEXT:    s_and_b32 s5, s5, 0xffe
 ; GFX950-GISEL-NEXT:    s_or_b32 s2, s6, s2
 ; GFX950-GISEL-NEXT:    s_cselect_b32 s2, 1, 0
 ; GFX950-GISEL-NEXT:    s_or_b32 s2, s5, s2
 ; GFX950-GISEL-NEXT:    s_cselect_b32 s5, 1, 0
-; GFX950-GISEL-NEXT:    s_sub_i32 s7, 1, s4
+; GFX950-GISEL-NEXT:    s_sub_u32 s7, 1, s4
 ; GFX950-GISEL-NEXT:    s_lshl_b32 s6, s4, 12
 ; GFX950-GISEL-NEXT:    s_max_i32 s7, s7, 0
 ; GFX950-GISEL-NEXT:    s_or_b32 s6, s2, s6
@@ -976,7 +976,7 @@ define amdgpu_kernel void @fptrunc_f64_to_f16(
 ; GFX950-GISEL-NEXT:    s_or_b32 s6, s7, s6
 ; GFX950-GISEL-NEXT:    s_cmp_lg_u32 s6, 0
 ; GFX950-GISEL-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX950-GISEL-NEXT:    s_add_i32 s2, s2, s6
+; GFX950-GISEL-NEXT:    s_add_u32 s2, s2, s6
 ; GFX950-GISEL-NEXT:    s_cmp_gt_i32 s4, 30
 ; GFX950-GISEL-NEXT:    s_cselect_b32 s2, 0x7c00, s2
 ; GFX950-GISEL-NEXT:    s_cmpk_eq_i32 s4, 0x40f
@@ -1133,14 +1133,14 @@ define amdgpu_kernel void @fptrunc_f64_to_f16(
 ; GFX11-GISEL-TRUE16-NEXT:    s_bfe_u32 s4, s3, 0xb0014
 ; GFX11-GISEL-TRUE16-NEXT:    s_lshr_b32 s5, s3, 8
 ; GFX11-GISEL-TRUE16-NEXT:    s_and_b32 s6, s3, 0x1ff
-; GFX11-GISEL-TRUE16-NEXT:    s_addk_i32 s4, 0xfc10
+; GFX11-GISEL-TRUE16-NEXT:    s_add_u32 s4, s4, 0xfffffc10
 ; GFX11-GISEL-TRUE16-NEXT:    s_and_b32 s5, s5, 0xffe
 ; GFX11-GISEL-TRUE16-NEXT:    s_or_b32 s2, s6, s2
 ; GFX11-GISEL-TRUE16-NEXT:    s_cselect_b32 s2, 1, 0
 ; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-GISEL-TRUE16-NEXT:    s_or_b32 s2, s5, s2
 ; GFX11-GISEL-TRUE16-NEXT:    s_cselect_b32 s5, 1, 0
-; GFX11-GISEL-TRUE16-NEXT:    s_sub_i32 s6, 1, s4
+; GFX11-GISEL-TRUE16-NEXT:    s_sub_u32 s6, 1, s4
 ; GFX11-GISEL-TRUE16-NEXT:    s_or_b32 s8, s2, 0x1000
 ; GFX11-GISEL-TRUE16-NEXT:    s_max_i32 s6, s6, 0
 ; GFX11-GISEL-TRUE16-NEXT:    s_lshl_b32 s7, s4, 12
@@ -1167,7 +1167,7 @@ define amdgpu_kernel void @fptrunc_f64_to_f16(
 ; GFX11-GISEL-TRUE16-NEXT:    s_cmp_lg_u32 s6, 0
 ; GFX11-GISEL-TRUE16-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-GISEL-TRUE16-NEXT:    s_add_i32 s2, s2, s6
+; GFX11-GISEL-TRUE16-NEXT:    s_add_u32 s2, s2, s6
 ; GFX11-GISEL-TRUE16-NEXT:    s_cmp_gt_i32 s4, 30
 ; GFX11-GISEL-TRUE16-NEXT:    s_cselect_b32 s2, 0x7c00, s2
 ; GFX11-GISEL-TRUE16-NEXT:    s_cmpk_eq_i32 s4, 0x40f
@@ -1191,14 +1191,14 @@ define amdgpu_kernel void @fptrunc_f64_to_f16(
 ; GFX11-GISEL-FAKE16-NEXT:    s_bfe_u32 s4, s3, 0xb0014
 ; GFX11-GISEL-FAKE16-NEXT:    s_lshr_b32 s5, s3, 8
 ; GFX11-GISEL-FAKE16-NEXT:    s_and_b32 s6, s3, 0x1ff
-; GFX11-GISEL-FAKE16-NEXT:    s_addk_i32 s4, 0xfc10
+; GFX11-GISEL-FAKE16-NEXT:    s_add_u32 s4, s4, 0xfffffc10
 ; GFX11-GISEL-FAKE16-NEXT:    s_and_b32 s5, s5, 0xffe
 ; GFX11-GISEL-FAKE16-NEXT:    s_or_b32 s2, s6, s2
 ; GFX11-GISEL-FAKE16-NEXT:    s_cselect_b32 s2, 1, 0
 ; GFX11-GISEL-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-GISEL-FAKE16-NEXT:    s_or_b32 s2, s5, s2
 ; GFX11-GISEL-FAKE16-NEXT:    s_cselect_b32 s5, 1, 0
-; GFX11-GISEL-FAKE16-NEXT:    s_sub_i32 s6, 1, s4
+; GFX11-GISEL-FAKE16-NEXT:    s_sub_u32 s6, 1, s4
 ; GFX11-GISEL-FAKE16-NEXT:    s_or_b32 s8, s2, 0x1000
 ; GFX11-GISEL-FAKE16-NEXT:    s_max_i32 s6, s6, 0
 ; GFX11-GISEL-FAKE16-NEXT:    s_lshl_b32 s7, s4, 12
@@ -1225,7 +1225,7 @@ define amdgpu_kernel void @fptrunc_f64_to_f16(
 ; GFX11-GISEL-FAKE16-NEXT:    s_cmp_lg_u32 s6, 0
 ; GFX11-GISEL-FAKE16-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX11-GISEL-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-GISEL-FAKE16-NEXT:    s_add_i32 s2, s2, s6
+; GFX11-GISEL-FAKE16-NEXT:    s_add_u32 s2, s2, s6
 ; GFX11-GISEL-FAKE16-NEXT:    s_cmp_gt_i32 s4, 30
 ; GFX11-GISEL-FAKE16-NEXT:    s_cselect_b32 s2, 0x7c00, s2
 ; GFX11-GISEL-FAKE16-NEXT:    s_cmpk_eq_i32 s4, 0x40f
@@ -1386,14 +1386,14 @@ define amdgpu_kernel void @fptrunc_f64_to_f16(
 ; GFX1250-GISEL-TRUE16-NEXT:    s_bfe_u32 s4, s3, 0xb0014
 ; GFX1250-GISEL-TRUE16-NEXT:    s_lshr_b32 s5, s3, 8
 ; GFX1250-GISEL-TRUE16-NEXT:    s_and_b32 s6, s3, 0x1ff
-; GFX1250-GISEL-TRUE16-NEXT:    s_addk_co_i32 s4, 0xfc10
+; GFX1250-GISEL-TRUE16-NEXT:    s_add_co_u32 s4, s4, 0xfffffc10
 ; GFX1250-GISEL-TRUE16-NEXT:    s_and_b32 s5, s5, 0xffe
 ; GFX1250-GISEL-TRUE16-NEXT:    s_or_b32 s2, s6, s2
 ; GFX1250-GISEL-TRUE16-NEXT:    s_cselect_b32 s2, 1, 0
 ; GFX1250-GISEL-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-GISEL-TRUE16-NEXT:    s_or_b32 s2, s5, s2
 ; GFX1250-GISEL-TRUE16-NEXT:    s_cselect_b32 s5, 1, 0
-; GFX1250-GISEL-TRUE16-NEXT:    s_sub_co_i32 s6, 1, s4
+; GFX1250-GISEL-TRUE16-NEXT:    s_sub_co_u32 s6, 1, s4
 ; GFX1250-GISEL-TRUE16-NEXT:    s_or_b32 s8, s2, 0x1000
 ; GFX1250-GISEL-TRUE16-NEXT:    s_max_i32 s6, s6, 0
 ; GFX1250-GISEL-TRUE16-NEXT:    s_lshl_b32 s7, s4, 12
@@ -1420,7 +1420,7 @@ define amdgpu_kernel void @fptrunc_f64_to_f16(
 ; GFX1250-GISEL-TRUE16-NEXT:    s_cmp_lg_u32 s6, 0
 ; GFX1250-GISEL-TRUE16-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX1250-GISEL-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1250-GISEL-TRUE16-NEXT:    s_add_co_i32 s2, s2, s6
+; GFX1250-GISEL-TRUE16-NEXT:    s_add_co_u32 s2, s2, s6
 ; GFX1250-GISEL-TRUE16-NEXT:    s_cmp_gt_i32 s4, 30
 ; GFX1250-GISEL-TRUE16-NEXT:    s_cselect_b32 s2, 0x7c00, s2
 ; GFX1250-GISEL-TRUE16-NEXT:    s_cmp_eq_u32 s4, 0x40f
@@ -1445,14 +1445,14 @@ define amdgpu_kernel void @fptrunc_f64_to_f16(
 ; GFX1250-GISEL-FAKE16-NEXT:    s_bfe_u32 s4, s3, 0xb0014
 ; GFX1250-GISEL-FAKE16-NEXT:    s_lshr_b32 s5, s3, 8
 ; GFX1250-GISEL-FAKE16-NEXT:    s_and_b32 s6, s3, 0x1ff
-; GFX1250-GISEL-FAKE16-NEXT:    s_addk_co_i32 s4, 0xfc10
+; GFX1250-GISEL-FAKE16-NEXT:    s_add_co_u32 s4, s4, 0xfffffc10
 ; GFX1250-GISEL-FAKE16-NEXT:    s_and_b32 s5, s5, 0xffe
 ; GFX1250-GISEL-FAKE16-NEXT:    s_or_b32 s2, s6, s2
 ; GFX1250-GISEL-FAKE16-NEXT:    s_cselect_b32 s2, 1, 0
 ; GFX1250-GISEL-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-GISEL-FAKE16-NEXT:    s_or_b32 s2, s5, s2
 ; GFX1250-GISEL-FAKE16-NEXT:    s_cselect_b32 s5, 1, 0
-; GFX1250-GISEL-FAKE16-NEXT:    s_sub_co_i32 s6, 1, s4
+; GFX1250-GISEL-FAKE16-NEXT:    s_sub_co_u32 s6, 1, s4
 ; GFX1250-GISEL-FAKE16-NEXT:    s_or_b32 s8, s2, 0x1000
 ; GFX1250-GISEL-FAKE16-NEXT:    s_max_i32 s6, s6, 0
 ; GFX1250-GISEL-FAKE16-NEXT:    s_lshl_b32 s7, s4, 12
@@ -1479,7 +1479,7 @@ define amdgpu_kernel void @fptrunc_f64_to_f16(
 ; GFX1250-GISEL-FAKE16-NEXT:    s_cmp_lg_u32 s6, 0
 ; GFX1250-GISEL-FAKE16-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX1250-GISEL-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1250-GISEL-FAKE16-NEXT:    s_add_co_i32 s2, s2, s6
+; GFX1250-GISEL-FAKE16-NEXT:    s_add_co_u32 s2, s2, s6
 ; GFX1250-GISEL-FAKE16-NEXT:    s_cmp_gt_i32 s4, 30
 ; GFX1250-GISEL-FAKE16-NEXT:    s_cselect_b32 s2, 0x7c00, s2
 ; GFX1250-GISEL-FAKE16-NEXT:    s_cmp_eq_u32 s4, 0x40f
@@ -1820,8 +1820,8 @@ define amdgpu_kernel void @fptrunc_v2f32_to_v2f16(
 ; SI-GISEL-NEXT:    s_mov_b32 s2, -1
 ; SI-GISEL-NEXT:    v_readfirstlane_b32 s4, v1
 ; SI-GISEL-NEXT:    v_readfirstlane_b32 s3, v0
-; SI-GISEL-NEXT:    s_and_b32 s4, 0xffff, s4
-; SI-GISEL-NEXT:    s_and_b32 s3, 0xffff, s3
+; SI-GISEL-NEXT:    s_bfe_u32 s4, s4, 0x100000
+; SI-GISEL-NEXT:    s_bfe_u32 s3, s3, 0x100000
 ; SI-GISEL-NEXT:    s_lshl_b32 s4, s4, 16
 ; SI-GISEL-NEXT:    s_or_b32 s3, s3, s4
 ; SI-GISEL-NEXT:    v_mov_b32_e32 v0, s3
@@ -1860,8 +1860,8 @@ define amdgpu_kernel void @fptrunc_v2f32_to_v2f16(
 ; VI-GISEL-NEXT:    s_mov_b32 s2, -1
 ; VI-GISEL-NEXT:    v_readfirstlane_b32 s4, v1
 ; VI-GISEL-NEXT:    v_readfirstlane_b32 s3, v0
-; VI-GISEL-NEXT:    s_and_b32 s4, 0xffff, s4
-; VI-GISEL-NEXT:    s_and_b32 s3, 0xffff, s3
+; VI-GISEL-NEXT:    s_bfe_u32 s4, s4, 0x100000
+; VI-GISEL-NEXT:    s_bfe_u32 s3, s3, 0x100000
 ; VI-GISEL-NEXT:    s_lshl_b32 s4, s4, 16
 ; VI-GISEL-NEXT:    s_or_b32 s3, s3, s4
 ; VI-GISEL-NEXT:    v_mov_b32_e32 v0, s3
@@ -2202,13 +2202,13 @@ define amdgpu_kernel void @fptrunc_v2f64_to_v2f16(
 ; SI-GISEL-NEXT:    s_bfe_u32 s2, s5, 0xb0014
 ; SI-GISEL-NEXT:    s_lshr_b32 s3, s5, 8
 ; SI-GISEL-NEXT:    s_and_b32 s8, s5, 0x1ff
-; SI-GISEL-NEXT:    s_addk_i32 s2, 0xfc10
+; SI-GISEL-NEXT:    s_add_u32 s2, s2, 0xfffffc10
 ; SI-GISEL-NEXT:    s_and_b32 s3, s3, 0xffe
 ; SI-GISEL-NEXT:    s_or_b32 s4, s8, s4
 ; SI-GISEL-NEXT:    s_cselect_b32 s4, 1, 0
 ; SI-GISEL-NEXT:    s_or_b32 s3, s3, s4
 ; SI-GISEL-NEXT:    s_cselect_b32 s4, 1, 0
-; SI-GISEL-NEXT:    s_sub_i32 s9, 1, s2
+; SI-GISEL-NEXT:    s_sub_u32 s9, 1, s2
 ; SI-GISEL-NEXT:    s_lshl_b32 s8, s2, 12
 ; SI-GISEL-NEXT:    s_max_i32 s9, s9, 0
 ; SI-GISEL-NEXT:    s_or_b32 s8, s3, s8
@@ -2232,7 +2232,7 @@ define amdgpu_kernel void @fptrunc_v2f64_to_v2f16(
 ; SI-GISEL-NEXT:    s_or_b32 s8, s9, s8
 ; SI-GISEL-NEXT:    s_cmp_lg_u32 s8, 0
 ; SI-GISEL-NEXT:    s_cselect_b32 s8, 1, 0
-; SI-GISEL-NEXT:    s_add_i32 s3, s3, s8
+; SI-GISEL-NEXT:    s_add_u32 s3, s3, s8
 ; SI-GISEL-NEXT:    s_cmp_gt_i32 s2, 30
 ; SI-GISEL-NEXT:    s_cselect_b32 s3, 0x7c00, s3
 ; SI-GISEL-NEXT:    s_cmpk_eq_i32 s2, 0x40f
@@ -2242,14 +2242,14 @@ define amdgpu_kernel void @fptrunc_v2f64_to_v2f16(
 ; SI-GISEL-NEXT:    s_or_b32 s2, s3, s2
 ; SI-GISEL-NEXT:    s_bfe_u32 s3, s7, 0xb0014
 ; SI-GISEL-NEXT:    s_lshr_b32 s4, s7, 8
-; SI-GISEL-NEXT:    s_addk_i32 s3, 0xfc10
+; SI-GISEL-NEXT:    s_add_u32 s3, s3, 0xfffffc10
 ; SI-GISEL-NEXT:    s_and_b32 s4, s4, 0xffe
 ; SI-GISEL-NEXT:    s_and_b32 s5, s7, 0x1ff
 ; SI-GISEL-NEXT:    s_or_b32 s5, s5, s6
 ; SI-GISEL-NEXT:    s_cselect_b32 s5, 1, 0
 ; SI-GISEL-NEXT:    s_or_b32 s4, s4, s5
 ; SI-GISEL-NEXT:    s_cselect_b32 s5, 1, 0
-; SI-GISEL-NEXT:    s_sub_i32 s8, 1, s3
+; SI-GISEL-NEXT:    s_sub_u32 s8, 1, s3
 ; SI-GISEL-NEXT:    s_lshl_b32 s6, s3, 12
 ; SI-GISEL-NEXT:    s_max_i32 s8, s8, 0
 ; SI-GISEL-NEXT:    s_or_b32 s6, s4, s6
@@ -2273,7 +2273,7 @@ define amdgpu_kernel void @fptrunc_v2f64_to_v2f16(
 ; SI-GISEL-NEXT:    s_or_b32 s6, s8, s6
 ; SI-GISEL-NEXT:    s_cmp_lg_u32 s6, 0
 ; SI-GISEL-NEXT:    s_cselect_b32 s6, 1, 0
-; SI-GISEL-NEXT:    s_add_i32 s4, s4, s6
+; SI-GISEL-NEXT:    s_add_u32 s4, s4, s6
 ; SI-GISEL-NEXT:    s_cmp_gt_i32 s3, 30
 ; SI-GISEL-NEXT:    s_cselect_b32 s4, 0x7c00, s4
 ; SI-GISEL-NEXT:    s_cmpk_eq_i32 s3, 0x40f
@@ -2402,13 +2402,13 @@ define amdgpu_kernel void @fptrunc_v2f64_to_v2f16(
 ; VI-GISEL-NEXT:    s_bfe_u32 s2, s5, 0xb0014
 ; VI-GISEL-NEXT:    s_lshr_b32 s3, s5, 8
 ; VI-GISEL-NEXT:    s_and_b32 s8, s5, 0x1ff
-; VI-GISEL-NEXT:    s_addk_i32 s2, 0xfc10
+; VI-GISEL-NEXT:    s_add_u32 s2, s2, 0xfffffc10
 ; VI-GISEL-NEXT:    s_and_b32 s3, s3, 0xffe
 ; VI-GISEL-NEXT:    s_or_b32 s4, s8, s4
 ; VI-GISEL-NEXT:    s_cselect_b32 s4, 1, 0
 ; VI-GISEL-NEXT:    s_or_b32 s3, s3, s4
 ; VI-GISEL-NEXT:    s_cselect_b32 s4, 1, 0
-; VI-GISEL-NEXT:    s_sub_i32 s9, 1, s2
+; VI-GISEL-NEXT:    s_sub_u32 s9, 1, s2
 ; VI-GISEL-NEXT:    s_lshl_b32 s8, s2, 12
 ; VI-GISEL-NEXT:    s_max_i32 s9, s9, 0
 ; VI-GISEL-NEXT:    s_or_b32 s8, s3, s8
@@ -2432,7 +2432,7 @@ define amdgpu_kernel void @fptrunc_v2f64_to_v2f16(
 ; VI-GISEL-NEXT:    s_or_b32 s8, s9, s8
 ; VI-GISEL-NEXT:    s_cmp_lg_u32 s8, 0
 ; VI-GISEL-NEXT:    s_cselect_b32 s8, 1, 0
-; VI-GISEL-NEXT:    s_add_i32 s3, s3, s8
+; VI-GISEL-NEXT:    s_add_u32 s3, s3, s8
 ; VI-GISEL-NEXT:    s_cmp_gt_i32 s2, 30
 ; VI-GISEL-NEXT:    s_cselect_b32 s3, 0x7c00, s3
 ; VI-GISEL-NEXT:    s_cmpk_eq_i32 s2, 0x40f
@@ -2442,14 +2442,14 @@ define amdgpu_kernel void @fptrunc_v2f64_to_v2f16(
 ; VI-GISEL-NEXT:    s_or_b32 s2, s3, s2
 ; VI-GISEL-NEXT:    s_bfe_u32 s3, s7, 0xb0014
 ; VI-GISEL-NEXT:    s_lshr_b32 s4, s7, 8
-; VI-GISEL-NEXT:    s_addk_i32 s3, 0xfc10
+; VI-GISEL-NEXT:    s_add_u32 s3, s3, 0xfffffc10
 ; VI-GISEL-NEXT:    s_and_b32 s4, s4, 0xffe
 ; VI-GISEL-NEXT:    s_and_b32 s5, s7, 0x1ff
 ; VI-GISEL-NEXT:    s_or_b32 s5, s5, s6
 ; VI-GISEL-NEXT:    s_cselect_b32 s5, 1, 0
 ; VI-GISEL-NEXT:    s_or_b32 s4, s4, s5
 ; VI-GISEL-NEXT:    s_cselect_b32 s5, 1, 0
-; VI-GISEL-NEXT:    s_sub_i32 s8, 1, s3
+; VI-GISEL-NEXT:    s_sub_u32 s8, 1, s3
 ; VI-GISEL-NEXT:    s_lshl_b32 s6, s3, 12
 ; VI-GISEL-NEXT:    s_max_i32 s8, s8, 0
 ; VI-GISEL-NEXT:    s_or_b32 s6, s4, s6
@@ -2473,7 +2473,7 @@ define amdgpu_kernel void @fptrunc_v2f64_to_v2f16(
 ; VI-GISEL-NEXT:    s_or_b32 s6, s8, s6
 ; VI-GISEL-NEXT:    s_cmp_lg_u32 s6, 0
 ; VI-GISEL-NEXT:    s_cselect_b32 s6, 1, 0
-; VI-GISEL-NEXT:    s_add_i32 s4, s4, s6
+; VI-GISEL-NEXT:    s_add_u32 s4, s4, s6
 ; VI-GISEL-NEXT:    s_cmp_gt_i32 s3, 30
 ; VI-GISEL-NEXT:    s_cselect_b32 s4, 0x7c00, s4
 ; VI-GISEL-NEXT:    s_cmpk_eq_i32 s3, 0x40f
@@ -2600,13 +2600,13 @@ define amdgpu_kernel void @fptrunc_v2f64_to_v2f16(
 ; GFX9-GISEL-NEXT:    s_bfe_u32 s2, s5, 0xb0014
 ; GFX9-GISEL-NEXT:    s_lshr_b32 s3, s5, 8
 ; GFX9-GISEL-NEXT:    s_and_b32 s8, s5, 0x1ff
-; GFX9-GISEL-NEXT:    s_addk_i32 s2, 0xfc10
+; GFX9-GISEL-NEXT:    s_add_u32 s2, s2, 0xfffffc10
 ; GFX9-GISEL-NEXT:    s_and_b32 s3, s3, 0xffe
 ; GFX9-GISEL-NEXT:    s_or_b32 s4, s8, s4
 ; GFX9-GISEL-NEXT:    s_cselect_b32 s4, 1, 0
 ; GFX9-GISEL-NEXT:    s_or_b32 s3, s3, s4
 ; GFX9-GISEL-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX9-GISEL-NEXT:    s_sub_i32 s9, 1, s2
+; GFX9-GISEL-NEXT:    s_sub_u32 s9, 1, s2
 ; GFX9-GISEL-NEXT:    s_lshl_b32 s8, s2, 12
 ; GFX9-GISEL-NEXT:    s_max_i32 s9, s9, 0
 ; GFX9-GISEL-NEXT:    s_or_b32 s8, s3, s8
@@ -2630,7 +2630,7 @@ define amdgpu_kernel void @fptrunc_v2f64_to_v2f16(
 ; GFX9-GISEL-NEXT:    s_or_b32 s8, s9, s8
 ; GFX9-GISEL-NEXT:    s_cmp_lg_u32 s8, 0
 ; GFX9-GISEL-NEXT:    s_cselect_b32 s8, 1, 0
-; GFX9-GISEL-NEXT:    s_add_i32 s3, s3, s8
+; GFX9-GISEL-NEXT:    s_add_u32 s3, s3, s8
 ; GFX9-GISEL-NEXT:    s_cmp_gt_i32 s2, 30
 ; GFX9-GISEL-NEXT:    s_cselect_b32 s3, 0x7c00, s3
 ; GFX9-GISEL-NEXT:    s_cmpk_eq_i32 s2, 0x40f
@@ -2640,14 +2640,14 @@ define amdgpu_kernel void @fptrunc_v2f64_to_v2f16(
 ; GFX9-GISEL-NEXT:    s_or_b32 s2, s3, s2
 ; GFX9-GISEL-NEXT:    s_bfe_u32 s3, s7, 0xb0014
 ; GFX9-GISEL-NEXT:    s_lshr_b32 s4, s7, 8
-; GFX9-GISEL-NEXT:    s_addk_i32 s3, 0xfc10
+; GFX9-GISEL-NEXT:    s_add_u32 s3, s3, 0xfffffc10
 ; GFX9-GISEL-NEXT:    s_and_b32 s4, s4, 0xffe
 ; GFX9-GISEL-NEXT:    s_and_b32 s5, s7, 0x1ff
 ; GFX9-GISEL-NEXT:    s_or_b32 s5, s5, s6
 ; GFX9-GISEL-NEXT:    s_cselect_b32 s5, 1, 0
 ; GFX9-GISEL-NEXT:    s_or_b32 s4, s4, s5
 ; GFX9-GISEL-NEXT:    s_cselect_b32 s5, 1, 0
-; GFX9-GISEL-NEXT:    s_sub_i32 s8, 1, s3
+; GFX9-GISEL-NEXT:    s_sub_u32 s8, 1, s3
 ; GFX9-GISEL-NEXT:    s_lshl_b32 s6, s3, 12
 ; GFX9-GISEL-NEXT:    s_max_i32 s8, s8, 0
 ; GFX9-GISEL-NEXT:    s_or_b32 s6, s4, s6
@@ -2671,7 +2671,7 @@ define amdgpu_kernel void @fptrunc_v2f64_to_v2f16(
 ; GFX9-GISEL-NEXT:    s_or_b32 s6, s8, s6
 ; GFX9-GISEL-NEXT:    s_cmp_lg_u32 s6, 0
 ; GFX9-GISEL-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX9-GISEL-NEXT:    s_add_i32 s4, s4, s6
+; GFX9-GISEL-NEXT:    s_add_u32 s4, s4, s6
 ; GFX9-GISEL-NEXT:    s_cmp_gt_i32 s3, 30
 ; GFX9-GISEL-NEXT:    s_cselect_b32 s4, 0x7c00, s4
 ; GFX9-GISEL-NEXT:    s_cmpk_eq_i32 s3, 0x40f
@@ -2795,13 +2795,13 @@ define amdgpu_kernel void @fptrunc_v2f64_to_v2f16(
 ; GFX950-GISEL-NEXT:    s_bfe_u32 s2, s5, 0xb0014
 ; GFX950-GISEL-NEXT:    s_lshr_b32 s3, s5, 8
 ; GFX950-GISEL-NEXT:    s_and_b32 s8, s5, 0x1ff
-; GFX950-GISEL-NEXT:    s_addk_i32 s2, 0xfc10
+; GFX950-GISEL-NEXT:    s_add_u32 s2, s2, 0xfffffc10
 ; GFX950-GISEL-NEXT:    s_and_b32 s3, s3, 0xffe
 ; GFX950-GISEL-NEXT:    s_or_b32 s4, s8, s4
 ; GFX950-GISEL-NEXT:    s_cselect_b32 s4, 1, 0
 ; GFX950-GISEL-NEXT:    s_or_b32 s3, s3, s4
 ; GFX950-GISEL-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX950-GISEL-NEXT:    s_sub_i32 s9, 1, s2
+; GFX950-GISEL-NEXT:    s_sub_u32 s9, 1, s2
 ; GFX950-GISEL-NEXT:    s_lshl_b32 s8, s2, 12
 ; GFX950-GISEL-NEXT:    s_max_i32 s9, s9, 0
 ; GFX950-GISEL-NEXT:    s_or_b32 s8, s3, s8
@@ -2825,7 +2825,7 @@ define amdgpu_kernel void @fptrunc_v2f64_to_v2f16(
 ; GFX950-GISEL-NEXT:    s_or_b32 s8, s9, s8
 ; GFX950-GISEL-NEXT:    s_cmp_lg_u32 s8, 0
 ; GFX950-GISEL-NEXT:    s_cselect_b32 s8, 1, 0
-; GFX950-GISEL-NEXT:    s_add_i32 s3, s3, s8
+; GFX950-GISEL-NEXT:    s_add_u32 s3, s3, s8
 ; GFX950-GISEL-NEXT:    s_cmp_gt_i32 s2, 30
 ; GFX950-GISEL-NEXT:    s_cselect_b32 s3, 0x7c00, s3
 ; GFX950-GISEL-NEXT:    s_cmpk_eq_i32 s2, 0x40f
@@ -2835,14 +2835,14 @@ define amdgpu_kernel void @fptrunc_v2f64_to_v2f16(
 ; GFX950-GISEL-NEXT:    s_or_b32 s2, s3, s2
 ; GFX950-GISEL-NEXT:    s_bfe_u32 s3, s7, 0xb0014
 ; GFX950-GISEL-NEXT:    s_lshr_b32 s4, s7, 8
-; GFX950-GISEL-NEXT:    s_addk_i32 s3, 0xfc10
+; GFX950-GISEL-NEXT:    s_add_u32 s3, s3, 0xfffffc10
 ; GFX950-GISEL-NEXT:    s_and_b32 s4, s4, 0xffe
 ; GFX950-GISEL-NEXT:    s_and_b32 s5, s7, 0x1ff
 ; GFX950-GISEL-NEXT:    s_or_b32 s5, s5, s6
 ; GFX950-GISEL-NEXT:    s_cselect_b32 s5, 1, 0
 ; GFX950-GISEL-NEXT:    s_or_b32 s4, s4, s5
 ; GFX950-GISEL-NEXT:    s_cselect_b32 s5, 1, 0
-; GFX950-GISEL-NEXT:    s_sub_i32 s8, 1, s3
+; GFX950-GISEL-NEXT:    s_sub_u32 s8, 1, s3
 ; GFX950-GISEL-NEXT:    s_lshl_b32 s6, s3, 12
 ; GFX950-GISEL-NEXT:    s_max_i32 s8, s8, 0
 ; GFX950-GISEL-NEXT:    s_or_b32 s6, s4, s6
@@ -2866,7 +2866,7 @@ define amdgpu_kernel void @fptrunc_v2f64_to_v2f16(
 ; GFX950-GISEL-NEXT:    s_or_b32 s6, s8, s6
 ; GFX950-GISEL-NEXT:    s_cmp_lg_u32 s6, 0
 ; GFX950-GISEL-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX950-GISEL-NEXT:    s_add_i32 s4, s4, s6
+; GFX950-GISEL-NEXT:    s_add_u32 s4, s4, s6
 ; GFX950-GISEL-NEXT:    s_cmp_gt_i32 s3, 30
 ; GFX950-GISEL-NEXT:    s_cselect_b32 s4, 0x7c00, s4
 ; GFX950-GISEL-NEXT:    s_cmpk_eq_i32 s3, 0x40f
@@ -3122,14 +3122,14 @@ define amdgpu_kernel void @fptrunc_v2f64_to_v2f16(
 ; GFX11-GISEL-TRUE16-NEXT:    s_bfe_u32 s2, s5, 0xb0014
 ; GFX11-GISEL-TRUE16-NEXT:    s_lshr_b32 s3, s5, 8
 ; GFX11-GISEL-TRUE16-NEXT:    s_and_b32 s8, s5, 0x1ff
-; GFX11-GISEL-TRUE16-NEXT:    s_addk_i32 s2, 0xfc10
+; GFX11-GISEL-TRUE16-NEXT:    s_add_u32 s2, s2, 0xfffffc10
 ; GFX11-GISEL-TRUE16-NEXT:    s_and_b32 s3, s3, 0xffe
 ; GFX11-GISEL-TRUE16-NEXT:    s_or_b32 s4, s8, s4
 ; GFX11-GISEL-TRUE16-NEXT:    s_cselect_b32 s4, 1, 0
 ; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-GISEL-TRUE16-NEXT:    s_or_b32 s3, s3, s4
 ; GFX11-GISEL-TRUE16-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX11-GISEL-TRUE16-NEXT:    s_sub_i32 s8, 1, s2
+; GFX11-GISEL-TRUE16-NEXT:    s_sub_u32 s8, 1, s2
 ; GFX11-GISEL-TRUE16-NEXT:    s_or_b32 s10, s3, 0x1000
 ; GFX11-GISEL-TRUE16-NEXT:    s_max_i32 s8, s8, 0
 ; GFX11-GISEL-TRUE16-NEXT:    s_lshl_b32 s9, s2, 12
@@ -3156,7 +3156,7 @@ define amdgpu_kernel void @fptrunc_v2f64_to_v2f16(
 ; GFX11-GISEL-TRUE16-NEXT:    s_cmp_lg_u32 s8, 0
 ; GFX11-GISEL-TRUE16-NEXT:    s_cselect_b32 s8, 1, 0
 ; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-GISEL-TRUE16-NEXT:    s_add_i32 s3, s3, s8
+; GFX11-GISEL-TRUE16-NEXT:    s_add_u32 s3, s3, s8
 ; GFX11-GISEL-TRUE16-NEXT:    s_cmp_gt_i32 s2, 30
 ; GFX11-GISEL-TRUE16-NEXT:    s_cselect_b32 s3, 0x7c00, s3
 ; GFX11-GISEL-TRUE16-NEXT:    s_cmpk_eq_i32 s2, 0x40f
@@ -3166,7 +3166,7 @@ define amdgpu_kernel void @fptrunc_v2f64_to_v2f16(
 ; GFX11-GISEL-TRUE16-NEXT:    s_lshr_b32 s5, s7, 8
 ; GFX11-GISEL-TRUE16-NEXT:    s_and_b32 s3, s3, 0x8000
 ; GFX11-GISEL-TRUE16-NEXT:    s_and_b32 s8, s7, 0x1ff
-; GFX11-GISEL-TRUE16-NEXT:    s_addk_i32 s4, 0xfc10
+; GFX11-GISEL-TRUE16-NEXT:    s_add_u32 s4, s4, 0xfffffc10
 ; GFX11-GISEL-TRUE16-NEXT:    s_and_b32 s5, s5, 0xffe
 ; GFX11-GISEL-TRUE16-NEXT:    s_or_b32 s2, s3, s2
 ; GFX11-GISEL-TRUE16-NEXT:    s_or_b32 s3, s8, s6
@@ -3174,7 +3174,7 @@ define amdgpu_kernel void @fptrunc_v2f64_to_v2f16(
 ; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-GISEL-TRUE16-NEXT:    s_or_b32 s3, s5, s3
 ; GFX11-GISEL-TRUE16-NEXT:    s_cselect_b32 s5, 1, 0
-; GFX11-GISEL-TRUE16-NEXT:    s_sub_i32 s6, 1, s4
+; GFX11-GISEL-TRUE16-NEXT:    s_sub_u32 s6, 1, s4
 ; GFX11-GISEL-TRUE16-NEXT:    s_or_b32 s9, s3, 0x1000
 ; GFX11-GISEL-TRUE16-NEXT:    s_max_i32 s6, s6, 0
 ; GFX11-GISEL-TRUE16-NEXT:    s_lshl_b32 s8, s4, 12
@@ -3201,7 +3201,7 @@ define amdgpu_kernel void @fptrunc_v2f64_to_v2f16(
 ; GFX11-GISEL-TRUE16-NEXT:    s_cmp_lg_u32 s6, 0
 ; GFX11-GISEL-TRUE16-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-GISEL-TRUE16-NEXT:    s_add_i32 s3, s3, s6
+; GFX11-GISEL-TRUE16-NEXT:    s_add_u32 s3, s3, s6
 ; GFX11-GISEL-TRUE16-NEXT:    s_cmp_gt_i32 s4, 30
 ; GFX11-GISEL-TRUE16-NEXT:    s_cselect_b32 s3, 0x7c00, s3
 ; GFX11-GISEL-TRUE16-NEXT:    s_cmpk_eq_i32 s4, 0x40f
@@ -3227,14 +3227,14 @@ define amdgpu_kernel void @fptrunc_v2f64_to_v2f16(
 ; GFX11-GISEL-FAKE16-NEXT:    s_bfe_u32 s2, s5, 0xb0014
 ; GFX11-GISEL-FAKE16-NEXT:    s_lshr_b32 s3, s5, 8
 ; GFX11-GISEL-FAKE16-NEXT:    s_and_b32 s8, s5, 0x1ff
-; GFX11-GISEL-FAKE16-NEXT:    s_addk_i32 s2, 0xfc10
+; GFX11-GISEL-FAKE16-NEXT:    s_add_u32 s2, s2, 0xfffffc10
 ; GFX11-GISEL-FAKE16-NEXT:    s_and_b32 s3, s3, 0xffe
 ; GFX11-GISEL-FAKE16-NEXT:    s_or_b32 s4, s8, s4
 ; GFX11-GISEL-FAKE16-NEXT:    s_cselect_b32 s4, 1, 0
 ; GFX11-GISEL-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-GISEL-FAKE16-NEXT:    s_or_b32 s3, s3, s4
 ; GFX11-GISEL-FAKE16-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX11-GISEL-FAKE16-NEXT:    s_sub_i32 s8, 1, s2
+; GFX11-GISEL-FAKE16-NEXT:    s_sub_u32 s8, 1, s2
 ; GFX11-GISEL-FAKE16-NEXT:    s_or_b32 s10, s3, 0x1000
 ; GFX11-GISEL-FAKE16-NEXT:    s_max_i32 s8, s8, 0
 ; GFX11-GISEL-FAKE16-NEXT:    s_lshl_b32 s9, s2, 12
@@ -3261,7 +3261,7 @@ define amdgpu_kernel void @fptrunc_v2f64_to_v2f16(
 ; GFX11-GISEL-FAKE16-NEXT:    s_cmp_lg_u32 s8, 0
 ; GFX11-GISEL-FAKE16-NEXT:    s_cselect_b32 s8, 1, 0
 ; GFX11-GISEL-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-GISEL-FAKE16-NEXT:    s_add_i32 s3, s3, s8
+; GFX11-GISEL-FAKE16-NEXT:    s_add_u32 s3, s3, s8
 ; GFX11-GISEL-FAKE16-NEXT:    s_cmp_gt_i32 s2, 30
 ; GFX11-GISEL-FAKE16-NEXT:    s_cselect_b32 s3, 0x7c00, s3
 ; GFX11-GISEL-FAKE16-NEXT:    s_cmpk_eq_i32 s2, 0x40f
@@ -3271,7 +3271,7 @@ define amdgpu_kernel void @fptrunc_v2f64_to_v2f16(
 ; GFX11-GISEL-FAKE16-NEXT:    s_lshr_b32 s5, s7, 8
 ; GFX11-GISEL-FAKE16-NEXT:    s_and_b32 s3, s3, 0x8000
 ; GFX11-GISEL-FAKE16-NEXT:    s_and_b32 s8, s7, 0x1ff
-; GFX11-GISEL-FAKE16-NEXT:    s_addk_i32 s4, 0xfc10
+; GFX11-GISEL-FAKE16-NEXT:    s_add_u32 s4, s4, 0xfffffc10
 ; GFX11-GISEL-FAKE16-NEXT:    s_and_b32 s5, s5, 0xffe
 ; GFX11-GISEL-FAKE16-NEXT:    s_or_b32 s2, s3, s2
 ; GFX11-GISEL-FAKE16-NEXT:    s_or_b32 s3, s8, s6
@@ -3279,7 +3279,7 @@ define amdgpu_kernel void @fptrunc_v2f64_to_v2f16(
 ; GFX11-GISEL-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-GISEL-FAKE16-NEXT:    s_or_b32 s3, s5, s3
 ; GFX11-GISEL-FAKE16-NEXT:    s_cselect_b32 s5, 1, 0
-; GFX11-GISEL-FAKE16-NEXT:    s_sub_i32 s6, 1, s4
+; GFX11-GISEL-FAKE16-NEXT:    s_sub_u32 s6, 1, s4
 ; GFX11-GISEL-FAKE16-NEXT:    s_or_b32 s9, s3, 0x1000
 ; GFX11-GISEL-FAKE16-NEXT:    s_max_i32 s6, s6, 0
 ; GFX11-GISEL-FAKE16-NEXT:    s_lshl_b32 s8, s4, 12
@@ -3306,7 +3306,7 @@ define amdgpu_kernel void @fptrunc_v2f64_to_v2f16(
 ; GFX11-GISEL-FAKE16-NEXT:    s_cmp_lg_u32 s6, 0
 ; GFX11-GISEL-FAKE16-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX11-GISEL-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-GISEL-FAKE16-NEXT:    s_add_i32 s3, s3, s6
+; GFX11-GISEL-FAKE16-NEXT:    s_add_u32 s3, s3, s6
 ; GFX11-GISEL-FAKE16-NEXT:    s_cmp_gt_i32 s4, 30
 ; GFX11-GISEL-FAKE16-NEXT:    s_cselect_b32 s3, 0x7c00, s3
 ; GFX11-GISEL-FAKE16-NEXT:    s_cmpk_eq_i32 s4, 0x40f
@@ -3567,14 +3567,14 @@ define amdgpu_kernel void @fptrunc_v2f64_to_v2f16(
 ; GFX1250-GISEL-TRUE16-NEXT:    s_bfe_u32 s2, s5, 0xb0014
 ; GFX1250-GISEL-TRUE16-NEXT:    s_lshr_b32 s3, s5, 8
 ; GFX1250-GISEL-TRUE16-NEXT:    s_and_b32 s8, s5, 0x1ff
-; GFX1250-GISEL-TRUE16-NEXT:    s_addk_co_i32 s2, 0xfc10
+; GFX1250-GISEL-TRUE16-NEXT:    s_add_co_u32 s2, s2, 0xfffffc10
 ; GFX1250-GISEL-TRUE16-NEXT:    s_and_b32 s3, s3, 0xffe
 ; GFX1250-GISEL-TRUE16-NEXT:    s_or_b32 s4, s8, s4
 ; GFX1250-GISEL-TRUE16-NEXT:    s_cselect_b32 s4, 1, 0
 ; GFX1250-GISEL-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-GISEL-TRUE16-NEXT:    s_or_b32 s3, s3, s4
 ; GFX1250-GISEL-TRUE16-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX1250-GISEL-TRUE16-NEXT:    s_sub_co_i32 s8, 1, s2
+; GFX1250-GISEL-TRUE16-NEXT:    s_sub_co_u32 s8, 1, s2
 ; GFX1250-GISEL-TRUE16-NEXT:    s_or_b32 s10, s3, 0x1000
 ; GFX1250-GISEL-TRUE16-NEXT:    s_max_i32 s8, s8, 0
 ; GFX1250-GISEL-TRUE16-NEXT:    s_lshl_b32 s9, s2, 12
@@ -3601,7 +3601,7 @@ define amdgpu_kernel void @fptrunc_v2f64_to_v2f16(
 ; GFX1250-GISEL-TRUE16-NEXT:    s_cmp_lg_u32 s8, 0
 ; GFX1250-GISEL-TRUE16-NEXT:    s_cselect_b32 s8, 1, 0
 ; GFX1250-GISEL-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1250-GISEL-TRUE16-NEXT:    s_add_co_i32 s3, s3, s8
+; GFX1250-GISEL-TRUE16-NEXT:    s_add_co_u32 s3, s3, s8
 ; GFX1250-GISEL-TRUE16-NEXT:    s_cmp_gt_i32 s2, 30
 ; GFX1250-GISEL-TRUE16-NEXT:    s_cselect_b32 s3, 0x7c00, s3
 ; GFX1250-GISEL-TRUE16-NEXT:    s_cmp_eq_u32 s2, 0x40f
@@ -3611,7 +3611,7 @@ define amdgpu_kernel void @fptrunc_v2f64_to_v2f16(
 ; GFX1250-GISEL-TRUE16-NEXT:    s_lshr_b32 s5, s7, 8
 ; GFX1250-GISEL-TRUE16-NEXT:    s_and_b32 s3, s3, 0x8000
 ; GFX1250-GISEL-TRUE16-NEXT:    s_and_b32 s8, s7, 0x1ff
-; GFX1250-GISEL-TRUE16-NEXT:    s_addk_co_i32 s4, 0xfc10
+; GFX1250-GISEL-TRUE16-NEXT:    s_add_co_u32 s4, s4, 0xfffffc10
 ; GFX1250-GISEL-TRUE16-NEXT:    s_and_b32 s5, s5, 0xffe
 ; GFX1250-GISEL-TRUE16-NEXT:    s_or_b32 s2, s3, s2
 ; GFX1250-GISEL-TRUE16-NEXT:    s_or_b32 s3, s8, s6
@@ -3619,7 +3619,7 @@ define amdgpu_kernel void @fptrunc_v2f64_to_v2f16(
 ; GFX1250-GISEL-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-GISEL-TRUE16-NEXT:    s_or_b32 s3, s5, s3
 ; GFX1250-GISEL-TRUE16-NEXT:    s_cselect_b32 s5, 1, 0
-; GFX1250-GISEL-TRUE16-NEXT:    s_sub_co_i32 s6, 1, s4
+; GFX1250-GISEL-TRUE16-NEXT:    s_sub_co_u32 s6, 1, s4
 ; GFX1250-GISEL-TRUE16-NEXT:    s_or_b32 s9, s3, 0x1000
 ; GFX1250-GISEL-TRUE16-NEXT:    s_max_i32 s6, s6, 0
 ; GFX1250-GISEL-TRUE16-NEXT:    s_lshl_b32 s8, s4, 12
@@ -3646,7 +3646,7 @@ define amdgpu_kernel void @fptrunc_v2f64_to_v2f16(
 ; GFX1250-GISEL-TRUE16-NEXT:    s_cmp_lg_u32 s6, 0
 ; GFX1250-GISEL-TRUE16-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX1250-GISEL-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1250-GISEL-TRUE16-NEXT:    s_add_co_i32 s3, s3, s6
+; GFX1250-GISEL-TRUE16-NEXT:    s_add_co_u32 s3, s3, s6
 ; GFX1250-GISEL-TRUE16-NEXT:    s_cmp_gt_i32 s4, 30
 ; GFX1250-GISEL-TRUE16-NEXT:    s_cselect_b32 s3, 0x7c00, s3
 ; GFX1250-GISEL-TRUE16-NEXT:    s_cmp_eq_u32 s4, 0x40f
@@ -3673,14 +3673,14 @@ define amdgpu_kernel void @fptrunc_v2f64_to_v2f16(
 ; GFX1250-GISEL-FAKE16-NEXT:    s_bfe_u32 s2, s5, 0xb0014
 ; GFX1250-GISEL-FAKE16-NEXT:    s_lshr_b32 s3, s5, 8
 ; GFX1250-GISEL-FAKE16-NEXT:    s_and_b32 s8, s5, 0x1ff
-; GFX1250-GISEL-FAKE16-NEXT:    s_addk_co_i32 s2, 0xfc10
+; GFX1250-GISEL-FAKE16-NEXT:    s_add_co_u32 s2, s2, 0xfffffc10
 ; GFX1250-GISEL-FAKE16-NEXT:    s_and_b32 s3, s3, 0xffe
 ; GFX1250-GISEL-FAKE16-NEXT:    s_or_b32 s4, s8, s4
 ; GFX1250-GISEL-FAKE16-NEXT:    s_cselect_b32 s4, 1, 0
 ; GFX1250-GISEL-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-GISEL-FAKE16-NEXT:    s_or_b32 s3, s3, s4
 ; GFX1250-GISEL-FAKE16-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX1250-GISEL-FAKE16-NEXT:    s_sub_co_i32 s8, 1, s2
+; GFX1250-GISEL-FAKE16-NEXT:    s_sub_co_u32 s8, 1, s2
 ; GFX1250-GISEL-FAKE16-NEXT:    s_or_b32 s10, s3, 0x1000
 ; GFX1250-GISEL-FAKE16-NEXT:    s_max_i32 s8, s8, 0
 ; GFX1250-GISEL-FAKE16-NEXT:    s_lshl_b32 s9, s2, 12
@@ -3707,7 +3707,7 @@ define amdgpu_kernel void @fptrunc_v2f64_to_v2f16(
 ; GFX1250-GISEL-FAKE16-NEXT:    s_cmp_lg_u32 s8, 0
 ; GFX1250-GISEL-FAKE16-NEXT:    s_cselect_b32 s8, 1, 0
 ; GFX1250-GISEL-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1250-GISEL-FAKE16-NEXT:    s_add_co_i32 s3, s3, s8
+; GFX1250-GISEL-FAKE16-NEXT:    s_add_co_u32 s3, s3, s8
 ; GFX1250-GISEL-FAKE16-NEXT:    s_cmp_gt_i32 s2, 30
 ; GFX1250-GISEL-FAKE16-NEXT:    s_cselect_b32 s3, 0x7c00, s3
 ; GFX1250-GISEL-FAKE16-NEXT:    s_cmp_eq_u32 s2, 0x40f
@@ -3717,7 +3717,7 @@ define amdgpu_kernel void @fptrunc_v2f64_to_v2f16(
 ; GFX1250-GISEL-FAKE16-NEXT:    s_lshr_b32 s5, s7, 8
 ; GFX1250-GISEL-FAKE16-NEXT:    s_and_b32 s3, s3, 0x8000
 ; GFX1250-GISEL-FAKE16-NEXT:    s_and_b32 s8, s7, 0x1ff
-; GFX1250-GISEL-FAKE16-NEXT:    s_addk_co_i32 s4, 0xfc10
+; GFX1250-GISEL-FAKE16-NEXT:    s_add_co_u32 s4, s4, 0xfffffc10
 ; GFX1250-GISEL-FAKE16-NEXT:    s_and_b32 s5, s5, 0xffe
 ; GFX1250-GISEL-FAKE16-NEXT:    s_or_b32 s2, s3, s2
 ; GFX1250-GISEL-FAKE16-NEXT:    s_or_b32 s3, s8, s6
@@ -3725,7 +3725,7 @@ define amdgpu_kernel void @fptrunc_v2f64_to_v2f16(
 ; GFX1250-GISEL-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-GISEL-FAKE16-NEXT:    s_or_b32 s3, s5, s3
 ; GFX1250-GISEL-FAKE16-NEXT:    s_cselect_b32 s5, 1, 0
-; GFX1250-GISEL-FAKE16-NEXT:    s_sub_co_i32 s6, 1, s4
+; GFX1250-GISEL-FAKE16-NEXT:    s_sub_co_u32 s6, 1, s4
 ; GFX1250-GISEL-FAKE16-NEXT:    s_or_b32 s9, s3, 0x1000
 ; GFX1250-GISEL-FAKE16-NEXT:    s_max_i32 s6, s6, 0
 ; GFX1250-GISEL-FAKE16-NEXT:    s_lshl_b32 s8, s4, 12
@@ -3752,7 +3752,7 @@ define amdgpu_kernel void @fptrunc_v2f64_to_v2f16(
 ; GFX1250-GISEL-FAKE16-NEXT:    s_cmp_lg_u32 s6, 0
 ; GFX1250-GISEL-FAKE16-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX1250-GISEL-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1250-GISEL-FAKE16-NEXT:    s_add_co_i32 s3, s3, s6
+; GFX1250-GISEL-FAKE16-NEXT:    s_add_co_u32 s3, s3, s6
 ; GFX1250-GISEL-FAKE16-NEXT:    s_cmp_gt_i32 s4, 30
 ; GFX1250-GISEL-FAKE16-NEXT:    s_cselect_b32 s3, 0x7c00, s3
 ; GFX1250-GISEL-FAKE16-NEXT:    s_cmp_eq_u32 s4, 0x40f
@@ -3814,8 +3814,8 @@ define amdgpu_kernel void @fptrunc_v2f64_to_v2f16_afn(
 ; SI-GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; SI-GISEL-NEXT:    v_readfirstlane_b32 s4, v1
 ; SI-GISEL-NEXT:    v_readfirstlane_b32 s3, v0
-; SI-GISEL-NEXT:    s_and_b32 s4, 0xffff, s4
-; SI-GISEL-NEXT:    s_and_b32 s3, 0xffff, s3
+; SI-GISEL-NEXT:    s_bfe_u32 s4, s4, 0x100000
+; SI-GISEL-NEXT:    s_bfe_u32 s3, s3, 0x100000
 ; SI-GISEL-NEXT:    s_lshl_b32 s4, s4, 16
 ; SI-GISEL-NEXT:    s_or_b32 s3, s3, s4
 ; SI-GISEL-NEXT:    v_mov_b32_e32 v0, s3
@@ -3858,8 +3858,8 @@ define amdgpu_kernel void @fptrunc_v2f64_to_v2f16_afn(
 ; VI-GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; VI-GISEL-NEXT:    v_readfirstlane_b32 s4, v1
 ; VI-GISEL-NEXT:    v_readfirstlane_b32 s3, v0
-; VI-GISEL-NEXT:    s_and_b32 s4, 0xffff, s4
-; VI-GISEL-NEXT:    s_and_b32 s3, 0xffff, s3
+; VI-GISEL-NEXT:    s_bfe_u32 s4, s4, 0x100000
+; VI-GISEL-NEXT:    s_bfe_u32 s3, s3, 0x100000
 ; VI-GISEL-NEXT:    s_lshl_b32 s4, s4, 16
 ; VI-GISEL-NEXT:    s_or_b32 s3, s3, s4
 ; VI-GISEL-NEXT:    v_mov_b32_e32 v0, s3
@@ -4974,7 +4974,7 @@ define amdgpu_kernel void @fptrunc_f32_to_f16_zext_i32(
 ; SI-GISEL-NEXT:    v_cvt_f16_f32_e32 v0, s2
 ; SI-GISEL-NEXT:    s_mov_b32 s2, -1
 ; SI-GISEL-NEXT:    v_readfirstlane_b32 s3, v0
-; SI-GISEL-NEXT:    s_and_b32 s3, 0xffff, s3
+; SI-GISEL-NEXT:    s_and_b32 s3, s3, 0xffff
 ; SI-GISEL-NEXT:    v_mov_b32_e32 v0, s3
 ; SI-GISEL-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-GISEL-NEXT:    buffer_store_dword v0, off, s[0:3], 0
@@ -5007,7 +5007,7 @@ define amdgpu_kernel void @fptrunc_f32_to_f16_zext_i32(
 ; VI-GISEL-NEXT:    v_cvt_f16_f32_e32 v0, s2
 ; VI-GISEL-NEXT:    s_mov_b32 s2, -1
 ; VI-GISEL-NEXT:    v_readfirstlane_b32 s3, v0
-; VI-GISEL-NEXT:    s_and_b32 s3, 0xffff, s3
+; VI-GISEL-NEXT:    s_and_b32 s3, s3, 0xffff
 ; VI-GISEL-NEXT:    v_mov_b32_e32 v0, s3
 ; VI-GISEL-NEXT:    s_mov_b32 s3, 0xf000
 ; VI-GISEL-NEXT:    s_nop 1
@@ -5041,7 +5041,7 @@ define amdgpu_kernel void @fptrunc_f32_to_f16_zext_i32(
 ; GFX9-GISEL-NEXT:    v_cvt_f16_f32_e32 v0, s2
 ; GFX9-GISEL-NEXT:    s_mov_b32 s2, -1
 ; GFX9-GISEL-NEXT:    v_readfirstlane_b32 s3, v0
-; GFX9-GISEL-NEXT:    s_and_b32 s3, 0xffff, s3
+; GFX9-GISEL-NEXT:    s_and_b32 s3, s3, 0xffff
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v0, s3
 ; GFX9-GISEL-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX9-GISEL-NEXT:    s_nop 1
@@ -5075,7 +5075,7 @@ define amdgpu_kernel void @fptrunc_f32_to_f16_zext_i32(
 ; GFX950-GISEL-NEXT:    v_cvt_f16_f32_e32 v0, s2
 ; GFX950-GISEL-NEXT:    s_mov_b32 s2, -1
 ; GFX950-GISEL-NEXT:    v_readfirstlane_b32 s3, v0
-; GFX950-GISEL-NEXT:    s_and_b32 s3, 0xffff, s3
+; GFX950-GISEL-NEXT:    s_and_b32 s3, s3, 0xffff
 ; GFX950-GISEL-NEXT:    s_nop 0
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v0, s3
 ; GFX950-GISEL-NEXT:    s_mov_b32 s3, 0xf000
@@ -5149,7 +5149,7 @@ define amdgpu_kernel void @fptrunc_f32_to_f16_zext_i32(
 ; GFX11-GISEL-FAKE16-NEXT:    v_cvt_f16_f32_e32 v0, s2
 ; GFX11-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-GISEL-FAKE16-NEXT:    v_readfirstlane_b32 s2, v0
-; GFX11-GISEL-FAKE16-NEXT:    s_and_b32 s2, 0xffff, s2
+; GFX11-GISEL-FAKE16-NEXT:    s_and_b32 s2, s2, 0xffff
 ; GFX11-GISEL-FAKE16-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX11-GISEL-FAKE16-NEXT:    s_mov_b32 s2, -1
 ; GFX11-GISEL-FAKE16-NEXT:    buffer_store_b32 v0, off, s[0:3], 0
@@ -5229,7 +5229,7 @@ define amdgpu_kernel void @fptrunc_f32_to_f16_zext_i32(
 ; GFX1250-GISEL-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 2, 2), 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-FAKE16-NEXT:    s_cvt_f16_f32 s2, s2
 ; GFX1250-GISEL-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_3) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX1250-GISEL-FAKE16-NEXT:    s_and_b32 s2, 0xffff, s2
+; GFX1250-GISEL-FAKE16-NEXT:    s_and_b32 s2, s2, 0xffff
 ; GFX1250-GISEL-FAKE16-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX1250-GISEL-FAKE16-NEXT:    s_mov_b32 s2, -1
 ; GFX1250-GISEL-FAKE16-NEXT:    buffer_store_b32 v0, off, s[0:3], null
@@ -5273,7 +5273,7 @@ define amdgpu_kernel void @fptrunc_fabs_f32_to_f16_zext_i32(
 ; SI-GISEL-NEXT:    v_cvt_f16_f32_e64 v0, |s2|
 ; SI-GISEL-NEXT:    s_mov_b32 s2, -1
 ; SI-GISEL-NEXT:    v_readfirstlane_b32 s3, v0
-; SI-GISEL-NEXT:    s_and_b32 s3, 0xffff, s3
+; SI-GISEL-NEXT:    s_and_b32 s3, s3, 0xffff
 ; SI-GISEL-NEXT:    v_mov_b32_e32 v0, s3
 ; SI-GISEL-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-GISEL-NEXT:    buffer_store_dword v0, off, s[0:3], 0
@@ -5306,7 +5306,7 @@ define amdgpu_kernel void @fptrunc_fabs_f32_to_f16_zext_i32(
 ; VI-GISEL-NEXT:    v_cvt_f16_f32_e64 v0, |s2|
 ; VI-GISEL-NEXT:    s_mov_b32 s2, -1
 ; VI-GISEL-NEXT:    v_readfirstlane_b32 s3, v0
-; VI-GISEL-NEXT:    s_and_b32 s3, 0xffff, s3
+; VI-GISEL-NEXT:    s_and_b32 s3, s3, 0xffff
 ; VI-GISEL-NEXT:    v_mov_b32_e32 v0, s3
 ; VI-GISEL-NEXT:    s_mov_b32 s3, 0xf000
 ; VI-GISEL-NEXT:    s_nop 1
@@ -5340,7 +5340,7 @@ define amdgpu_kernel void @fptrunc_fabs_f32_to_f16_zext_i32(
 ; GFX9-GISEL-NEXT:    v_cvt_f16_f32_e64 v0, |s2|
 ; GFX9-GISEL-NEXT:    s_mov_b32 s2, -1
 ; GFX9-GISEL-NEXT:    v_readfirstlane_b32 s3, v0
-; GFX9-GISEL-NEXT:    s_and_b32 s3, 0xffff, s3
+; GFX9-GISEL-NEXT:    s_and_b32 s3, s3, 0xffff
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v0, s3
 ; GFX9-GISEL-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX9-GISEL-NEXT:    s_nop 1
@@ -5374,7 +5374,7 @@ define amdgpu_kernel void @fptrunc_fabs_f32_to_f16_zext_i32(
 ; GFX950-GISEL-NEXT:    v_cvt_f16_f32_e64 v0, |s2|
 ; GFX950-GISEL-NEXT:    s_mov_b32 s2, -1
 ; GFX950-GISEL-NEXT:    v_readfirstlane_b32 s3, v0
-; GFX950-GISEL-NEXT:    s_and_b32 s3, 0xffff, s3
+; GFX950-GISEL-NEXT:    s_and_b32 s3, s3, 0xffff
 ; GFX950-GISEL-NEXT:    s_nop 0
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v0, s3
 ; GFX950-GISEL-NEXT:    s_mov_b32 s3, 0xf000
@@ -5448,7 +5448,7 @@ define amdgpu_kernel void @fptrunc_fabs_f32_to_f16_zext_i32(
 ; GFX11-GISEL-FAKE16-NEXT:    v_cvt_f16_f32_e64 v0, |s2|
 ; GFX11-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-GISEL-FAKE16-NEXT:    v_readfirstlane_b32 s2, v0
-; GFX11-GISEL-FAKE16-NEXT:    s_and_b32 s2, 0xffff, s2
+; GFX11-GISEL-FAKE16-NEXT:    s_and_b32 s2, s2, 0xffff
 ; GFX11-GISEL-FAKE16-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX11-GISEL-FAKE16-NEXT:    s_mov_b32 s2, -1
 ; GFX11-GISEL-FAKE16-NEXT:    buffer_store_b32 v0, off, s[0:3], 0
@@ -5532,7 +5532,7 @@ define amdgpu_kernel void @fptrunc_fabs_f32_to_f16_zext_i32(
 ; GFX1250-GISEL-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 2, 2), 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-FAKE16-NEXT:    s_cvt_f16_f32 s2, s2
 ; GFX1250-GISEL-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_3) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX1250-GISEL-FAKE16-NEXT:    s_and_b32 s2, 0xffff, s2
+; GFX1250-GISEL-FAKE16-NEXT:    s_and_b32 s2, s2, 0xffff
 ; GFX1250-GISEL-FAKE16-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX1250-GISEL-FAKE16-NEXT:    s_mov_b32 s2, -1
 ; GFX1250-GISEL-FAKE16-NEXT:    buffer_store_b32 v0, off, s[0:3], null

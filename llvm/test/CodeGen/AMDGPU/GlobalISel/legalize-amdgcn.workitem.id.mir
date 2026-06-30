@@ -129,7 +129,7 @@ body: |
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
     ; GCN-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
-    ; GCN-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY]], [[C]](s32)
+    ; GCN-NEXT: [[LSHR:%[0-9]+]]:_(i32) = G_LSHR [[COPY]], [[C]](s32)
     ; GCN-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1023
     ; GCN-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[LSHR]], [[C1]]
     ; GCN-NEXT: S_ENDPGM 0, implicit [[AND]](s32)
@@ -151,7 +151,7 @@ body: |
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
     ; GCN-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
-    ; GCN-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY]], [[C]](s32)
+    ; GCN-NEXT: [[LSHR:%[0-9]+]]:_(i32) = G_LSHR [[COPY]], [[C]](s32)
     ; GCN-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1023
     ; GCN-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[LSHR]], [[C1]]
     ; GCN-NEXT: S_ENDPGM 0, implicit [[AND]](s32)

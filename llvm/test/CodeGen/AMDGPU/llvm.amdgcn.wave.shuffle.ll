@@ -24,13 +24,13 @@
 ; RUN: not llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx600 -filetype=null %s 2>&1 | FileCheck -check-prefixes=GFX6-GISEL-ERR %s
 
 ; GFX6-SDAG-ERR: LLVM ERROR: Cannot select: intrinsic %llvm.amdgcn.ds.bpermute
-; GFX6-GISEL-ERR: LLVM ERROR: cannot select: %10:vgpr_32(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.wave.shuffle), %0:vgpr(s32), %1:vgpr(s32) (in function: test_wave_shuffle_float)
+; GFX6-GISEL-ERR: LLVM ERROR: cannot select: %10:vgpr_32(f32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.wave.shuffle), %0:vgpr(f32), %1:vgpr(i32) (in function: test_wave_shuffle_float)
 
 ; RUN: not --crash llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 -filetype=null %s 2>&1 | FileCheck -check-prefixes=GFX7-SDAG-ERR %s
 ; RUN: not llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 -filetype=null %s 2>&1 | FileCheck -check-prefixes=GFX7-GISEL-ERR %s
 
 ; GFX7-SDAG-ERR: LLVM ERROR: Cannot select: intrinsic %llvm.amdgcn.ds.bpermute
-; GFX7-GISEL-ERR: LLVM ERROR: cannot select: %10:vgpr_32(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.wave.shuffle), %0:vgpr(s32), %1:vgpr(s32) (in function: test_wave_shuffle_float)
+; GFX7-GISEL-ERR: LLVM ERROR: cannot select: %10:vgpr_32(f32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.wave.shuffle), %0:vgpr(f32), %1:vgpr(i32) (in function: test_wave_shuffle_float)
 
 
 

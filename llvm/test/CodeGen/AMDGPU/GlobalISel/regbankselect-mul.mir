@@ -105,15 +105,15 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s64) = COPY $vgpr2_vgpr3
-    ; CHECK-NEXT: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY]](s64)
-    ; CHECK-NEXT: [[UV2:%[0-9]+]]:vgpr(s32), [[UV3:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY1]](s64)
-    ; CHECK-NEXT: [[MUL:%[0-9]+]]:vgpr(s32) = G_MUL [[UV]], [[UV2]]
-    ; CHECK-NEXT: [[UMULH:%[0-9]+]]:vgpr(s32) = G_UMULH [[UV]], [[UV2]]
-    ; CHECK-NEXT: [[MUL1:%[0-9]+]]:vgpr(s32) = G_MUL [[UV]], [[UV3]]
-    ; CHECK-NEXT: [[MUL2:%[0-9]+]]:vgpr(s32) = G_MUL [[UV1]], [[UV2]]
-    ; CHECK-NEXT: [[ADD:%[0-9]+]]:vgpr(s32) = G_ADD [[MUL1]], [[MUL2]]
-    ; CHECK-NEXT: [[ADD1:%[0-9]+]]:vgpr(s32) = G_ADD [[ADD]], [[UMULH]]
-    ; CHECK-NEXT: [[MV:%[0-9]+]]:vgpr(s64) = G_MERGE_VALUES [[MUL]](s32), [[ADD1]](s32)
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:vgpr(i32), [[UV1:%[0-9]+]]:vgpr(i32) = G_UNMERGE_VALUES [[COPY]](s64)
+    ; CHECK-NEXT: [[UV2:%[0-9]+]]:vgpr(i32), [[UV3:%[0-9]+]]:vgpr(i32) = G_UNMERGE_VALUES [[COPY1]](s64)
+    ; CHECK-NEXT: [[MUL:%[0-9]+]]:vgpr(i32) = G_MUL [[UV]], [[UV2]]
+    ; CHECK-NEXT: [[UMULH:%[0-9]+]]:vgpr(i32) = G_UMULH [[UV]], [[UV2]]
+    ; CHECK-NEXT: [[MUL1:%[0-9]+]]:vgpr(i32) = G_MUL [[UV]], [[UV3]]
+    ; CHECK-NEXT: [[MUL2:%[0-9]+]]:vgpr(i32) = G_MUL [[UV1]], [[UV2]]
+    ; CHECK-NEXT: [[ADD:%[0-9]+]]:vgpr(i32) = G_ADD [[MUL1]], [[MUL2]]
+    ; CHECK-NEXT: [[ADD1:%[0-9]+]]:vgpr(i32) = G_ADD [[ADD]], [[UMULH]]
+    ; CHECK-NEXT: [[MV:%[0-9]+]]:vgpr(s64) = G_MERGE_VALUES [[MUL]](i32), [[ADD1]](i32)
     %0:_(s64) = COPY $vgpr0_vgpr1
     %1:_(s64) = COPY $vgpr2_vgpr3
     %2:_(s64) = G_MUL %0, %1

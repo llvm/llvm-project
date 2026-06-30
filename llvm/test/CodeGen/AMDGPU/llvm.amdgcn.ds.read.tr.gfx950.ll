@@ -135,14 +135,23 @@ entry:
 }
 
 define amdgpu_ps void @ds_read_b64_tr_b16_v4bf16(ptr addrspace(3) %addr, ptr addrspace(1) %use) {
-; GFX950-LABEL: ds_read_b64_tr_b16_v4bf16:
-; GFX950:       ; %bb.0: ; %entry
-; GFX950-NEXT:    v_mov_b32_e32 v3, v2
-; GFX950-NEXT:    v_mov_b32_e32 v2, v1
-; GFX950-NEXT:    ds_read_b64_tr_b16 v[0:1], v0 offset:32
-; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX950-NEXT:    global_store_dwordx2 v[2:3], v[0:1], off
-; GFX950-NEXT:    s_endpgm
+; GFX950-SDAG-LABEL: ds_read_b64_tr_b16_v4bf16:
+; GFX950-SDAG:       ; %bb.0: ; %entry
+; GFX950-SDAG-NEXT:    v_mov_b32_e32 v3, v2
+; GFX950-SDAG-NEXT:    v_mov_b32_e32 v2, v1
+; GFX950-SDAG-NEXT:    ds_read_b64_tr_b16 v[0:1], v0 offset:32
+; GFX950-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-SDAG-NEXT:    global_store_dwordx2 v[2:3], v[0:1], off
+; GFX950-SDAG-NEXT:    s_endpgm
+;
+; GFX950-GISEL-LABEL: ds_read_b64_tr_b16_v4bf16:
+; GFX950-GISEL:       ; %bb.0: ; %entry
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v4, v1
+; GFX950-GISEL-NEXT:    ds_read_b64_tr_b16 v[0:1], v0 offset:32
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
+; GFX950-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-GISEL-NEXT:    global_store_dwordx2 v[4:5], v[0:1], off
+; GFX950-GISEL-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(3) %addr, i32 4
   %val = call <4 x bfloat> @llvm.amdgcn.ds.read.tr16.b64.v4bf16.p3(ptr addrspace(3) %gep)

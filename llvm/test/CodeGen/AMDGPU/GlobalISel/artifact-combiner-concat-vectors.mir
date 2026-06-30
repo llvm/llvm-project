@@ -15,16 +15,16 @@ body:             |
     ; GFX9: liveins: $vgpr0_vgpr1
     ; GFX9-NEXT: {{  $}}
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; GFX9-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-    ; GFX9-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY]], [[C]](s32)
-    ; GFX9-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; GFX9-NEXT: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[COPY]], [[C1]](s32)
-    ; GFX9-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
-    ; GFX9-NEXT: [[LSHR2:%[0-9]+]]:_(s32) = G_LSHR [[COPY]], [[C2]](s32)
+    ; GFX9-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 8
+    ; GFX9-NEXT: [[LSHR:%[0-9]+]]:_(i32) = G_LSHR [[COPY]], [[C]](i32)
+    ; GFX9-NEXT: [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 16
+    ; GFX9-NEXT: [[LSHR1:%[0-9]+]]:_(i32) = G_LSHR [[COPY]], [[C1]](i32)
+    ; GFX9-NEXT: [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 24
+    ; GFX9-NEXT: [[LSHR2:%[0-9]+]]:_(i32) = G_LSHR [[COPY]], [[C2]](i32)
     ; GFX9-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
-    ; GFX9-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
-    ; GFX9-NEXT: [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR1]](s32)
-    ; GFX9-NEXT: [[TRUNC3:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR2]](s32)
+    ; GFX9-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](i32)
+    ; GFX9-NEXT: [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR1]](i32)
+    ; GFX9-NEXT: [[TRUNC3:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR2]](i32)
     ; GFX9-NEXT: [[C3:%[0-9]+]]:_(s16) = G_CONSTANT i16 2
     ; GFX9-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[C3]](s16), [[C3]](s16)
     ; GFX9-NEXT: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[C3]](s16), [[C3]](s16)

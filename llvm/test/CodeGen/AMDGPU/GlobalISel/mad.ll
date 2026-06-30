@@ -26,7 +26,7 @@ define amdgpu_ps void @mad_i64_uniform(i64 inreg %a, i64 inreg %b, ptr addrspace
 ; GFX90A-NEXT:    s_mul_i32 s0, s0, s3
 ; GFX90A-NEXT:    s_mul_i32 s1, s1, s2
 ; GFX90A-NEXT:    s_add_u32 s0, s1, s0
-; GFX90A-NEXT:    s_add_i32 s5, s5, s0
+; GFX90A-NEXT:    s_add_u32 s5, s5, s0
 ; GFX90A-NEXT:    v_pk_mov_b32 v[2:3], s[4:5], s[4:5] op_sel:[0,1]
 ; GFX90A-NEXT:    global_store_dwordx2 v[0:1], v[2:3], off
 ; GFX90A-NEXT:    s_endpgm
@@ -36,9 +36,9 @@ define amdgpu_ps void @mad_i64_uniform(i64 inreg %a, i64 inreg %b, ptr addrspace
 ; GFX11-NEXT:    s_mul_hi_u32 s4, s0, s2
 ; GFX11-NEXT:    s_mul_i32 s3, s0, s3
 ; GFX11-NEXT:    s_mul_i32 s1, s1, s2
-; GFX11-NEXT:    s_add_i32 s3, s4, s3
+; GFX11-NEXT:    s_add_u32 s3, s4, s3
 ; GFX11-NEXT:    s_mul_i32 s0, s0, s2
-; GFX11-NEXT:    s_add_i32 s1, s3, s1
+; GFX11-NEXT:    s_add_u32 s1, s3, s1
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_dual_mov_b32 v3, s1 :: v_dual_mov_b32 v2, s0
 ; GFX11-NEXT:    global_store_b64 v[0:1], v[2:3], off
@@ -111,9 +111,11 @@ define amdgpu_ps void @mad_i64_div(i64 %a, i64 %b, ptr addrspace(1) %out) {
 ; GFX11-LABEL: mad_i64_div:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    v_mad_u64_u32 v[6:7], null, v0, v2, 0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_mad_u64_u32 v[9:10], null, v0, v3, v[7:8]
-; GFX11-NEXT:    v_mad_u64_u32 v[7:8], null, v1, v2, v[9:10]
+; GFX11-NEXT:    v_mul_lo_u32 v0, v0, v3
+; GFX11-NEXT:    v_mul_lo_u32 v1, v1, v2
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    v_add_nc_u32_e32 v0, v7, v0
+; GFX11-NEXT:    v_add_nc_u32_e32 v7, v0, v1
 ; GFX11-NEXT:    global_store_b64 v[4:5], v[6:7], off
 ; GFX11-NEXT:    s_endpgm
   %result = mul i64 %a, %b

@@ -202,13 +202,13 @@ body: |
     ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:sgpr(s32) = G_BITCAST [[COPY]](<2 x s16>)
     ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:sgpr(s32) = G_SEXT_INREG [[BITCAST]], 16
     ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 16
-    ; CHECK-NEXT: [[ASHR:%[0-9]+]]:sgpr(s32) = G_ASHR [[BITCAST]], [[C]](s32)
+    ; CHECK-NEXT: [[ASHR:%[0-9]+]]:sgpr(i32) = G_ASHR [[BITCAST]], [[C]](s32)
     ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:sgpr(s32) = G_BITCAST [[COPY1]](<2 x s16>)
     ; CHECK-NEXT: [[SEXT_INREG1:%[0-9]+]]:sgpr(s32) = G_SEXT_INREG [[BITCAST1]], 16
-    ; CHECK-NEXT: [[ASHR1:%[0-9]+]]:sgpr(s32) = G_ASHR [[BITCAST1]], [[C]](s32)
-    ; CHECK-NEXT: [[ASHR2:%[0-9]+]]:sgpr(s32) = G_ASHR [[SEXT_INREG]], [[SEXT_INREG1]](s32)
-    ; CHECK-NEXT: [[ASHR3:%[0-9]+]]:sgpr(s32) = G_ASHR [[ASHR]], [[ASHR1]](s32)
-    ; CHECK-NEXT: [[BUILD_VECTOR_TRUNC:%[0-9]+]]:sgpr(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[ASHR2]](s32), [[ASHR3]](s32)
+    ; CHECK-NEXT: [[ASHR1:%[0-9]+]]:sgpr(i32) = G_ASHR [[BITCAST1]], [[C]](s32)
+    ; CHECK-NEXT: [[ASHR2:%[0-9]+]]:sgpr(i32) = G_ASHR [[SEXT_INREG]], [[SEXT_INREG1]](s32)
+    ; CHECK-NEXT: [[ASHR3:%[0-9]+]]:sgpr(i32) = G_ASHR [[ASHR]], [[ASHR1]](i32)
+    ; CHECK-NEXT: [[BUILD_VECTOR_TRUNC:%[0-9]+]]:sgpr(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[ASHR2]](i32), [[ASHR3]](i32)
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[BUILD_VECTOR_TRUNC]](<2 x s16>)
     %0:_(<2 x s16>) = COPY $sgpr0
     %1:_(<2 x s16>) = COPY $sgpr1

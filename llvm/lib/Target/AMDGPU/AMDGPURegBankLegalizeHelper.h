@@ -92,7 +92,10 @@ class RegBankLegalizeHelper {
 
   MachineRegisterInfo::VRegAttrs SgprRB_S32 = {SgprRB, S32};
   MachineRegisterInfo::VRegAttrs SgprRB_S16 = {SgprRB, S16};
+  MachineRegisterInfo::VRegAttrs SgprRB_I32 = {SgprRB, LLT::integer(32)};
   MachineRegisterInfo::VRegAttrs VgprRB_S32 = {VgprRB, S32};
+  MachineRegisterInfo::VRegAttrs VgprRB_I32 = {VgprRB, LLT::integer(32)};
+  MachineRegisterInfo::VRegAttrs VgprRB_I64 = {VgprRB, LLT::integer(64)};
   MachineRegisterInfo::VRegAttrs VccRB_S1 = {VccRB, S1};
 
 public:

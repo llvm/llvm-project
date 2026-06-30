@@ -54,7 +54,7 @@ body: |
     %1:vgpr(s32) = COPY $vgpr1
     %2:vgpr(s16) = G_TRUNC %0
     %3:vgpr(s16) = G_TRUNC %1
-    %4:vgpr(s16) = G_ADD %2, %3
+    %4:vgpr(i16) = G_ADD %2, %3
     S_ENDPGM 0, implicit %4
 
 ...
@@ -112,8 +112,8 @@ body: |
     %1:vgpr(s32) = COPY $vgpr1
     %2:vgpr(s16) = G_TRUNC %0
     %3:vgpr(s16) = G_TRUNC %1
-    %4:vgpr(s16) = G_ADD %2, %3
-    %5:vgpr(s32) = G_ZEXT %4
+    %4:vgpr(i16) = G_ADD %2, %3
+    %5:vgpr(i32) = G_ZEXT %4
     S_ENDPGM 0, implicit %5
 
 ...
@@ -159,7 +159,7 @@ body: |
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s16) = G_TRUNC %0
     %2:vgpr(s16) = G_CONSTANT i16 -64
-    %3:vgpr(s16) = G_ADD %1, %2
+    %3:vgpr(i16) = G_ADD %1, %2
     S_ENDPGM 0, implicit %3
 
 ...
@@ -211,8 +211,8 @@ body: |
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s16) = G_TRUNC %0
     %2:vgpr(s16) = G_CONSTANT i16 -64
-    %3:vgpr(s16) = G_ADD %1, %2
-    %4:vgpr(s32) = G_ZEXT %3
+    %3:vgpr(i16) = G_ADD %1, %2
+    %4:vgpr(i32) = G_ZEXT %3
     S_ENDPGM 0, implicit %4
 
 ...

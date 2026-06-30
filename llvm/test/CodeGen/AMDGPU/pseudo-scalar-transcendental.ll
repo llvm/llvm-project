@@ -485,11 +485,11 @@ define amdgpu_cs float @v_s_sqrt_f32(float inreg %src) {
 ; GFX12-GISEL-NEXT:    s_mov_b32 s4, s0
 ; GFX12-GISEL-NEXT:    s_mov_b32 s6, s0
 ; GFX12-GISEL-NEXT:    s_delay_alu instid0(TRANS32_DEP_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX12-GISEL-NEXT:    s_add_co_i32 s3, s2, -1
+; GFX12-GISEL-NEXT:    s_add_co_u32 s3, s2, -1
 ; GFX12-GISEL-NEXT:    s_xor_b32 s5, s3, 0x80000000
 ; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-GISEL-NEXT:    s_fmac_f32 s4, s5, s2
-; GFX12-GISEL-NEXT:    s_add_co_i32 s5, s2, 1
+; GFX12-GISEL-NEXT:    s_add_co_u32 s5, s2, 1
 ; GFX12-GISEL-NEXT:    s_xor_b32 s7, s5, 0x80000000
 ; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_2)
 ; GFX12-GISEL-NEXT:    s_cmp_le_f32 s4, 0
@@ -521,9 +521,9 @@ define amdgpu_cs float @v_s_sqrt_f32(float inreg %src) {
 ; GCN-GISEL-NEXT:    v_sqrt_f32_e32 v0, s0
 ; GCN-GISEL-NEXT:    s_cselect_b32 s1, 1, 0
 ; GCN-GISEL-NEXT:    v_readfirstlane_b32 s2, v0
-; GCN-GISEL-NEXT:    s_add_i32 s3, s2, -1
+; GCN-GISEL-NEXT:    s_add_u32 s3, s2, -1
 ; GCN-GISEL-NEXT:    v_mov_b32_e32 v1, s3
-; GCN-GISEL-NEXT:    s_add_i32 s4, s2, 1
+; GCN-GISEL-NEXT:    s_add_u32 s4, s2, 1
 ; GCN-GISEL-NEXT:    v_fma_f32 v1, -v1, v0, s0
 ; GCN-GISEL-NEXT:    v_mov_b32_e32 v2, s4
 ; GCN-GISEL-NEXT:    v_fma_f32 v0, -v2, v0, s0

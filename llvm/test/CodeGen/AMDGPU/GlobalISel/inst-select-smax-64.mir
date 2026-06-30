@@ -18,7 +18,7 @@ body: |
     ; GCN-NEXT: S_ENDPGM 0, implicit [[V_MAX_I64_e64_]]
     %0:sgpr(s64) = COPY $sgpr0_sgpr1
     %1:vgpr(s64) = COPY $vgpr2_vgpr3
-    %2:vgpr(s64) = G_SMAX %0, %1
+    %2:vgpr(i64) = G_SMAX %0, %1
     S_ENDPGM 0, implicit %2
 ...
 
@@ -39,7 +39,7 @@ body: |
     ; GCN-NEXT: S_ENDPGM 0, implicit [[V_MAX_I64_e64_]]
     %0:sgpr(s64) = COPY $vgpr0_vgpr1
     %1:vgpr(s64) = COPY $sgpr2_sgpr3
-    %2:vgpr(s64) = G_SMAX %0, %1
+    %2:vgpr(i64) = G_SMAX %0, %1
     S_ENDPGM 0, implicit %2
 ...
 
@@ -60,6 +60,6 @@ body: |
     ; GCN-NEXT: S_ENDPGM 0, implicit [[V_MAX_I64_e64_]]
     %0:vgpr(s64) = COPY $vgpr0_vgpr1
     %1:vgpr(s64) = COPY $vgpr2_vgpr3
-    %2:vgpr(s64) = G_SMAX %0, %1
+    %2:vgpr(i64) = G_SMAX %0, %1
     S_ENDPGM 0, implicit %2
 ...

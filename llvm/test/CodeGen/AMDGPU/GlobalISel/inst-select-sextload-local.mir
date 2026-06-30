@@ -38,7 +38,7 @@ body: |
     ; GFX9-NEXT: [[DS_READ_I8_gfx9_:%[0-9]+]]:vgpr_32 = DS_READ_I8_gfx9 [[COPY]], 0, 0, implicit $exec :: (load (s8), addrspace 3)
     ; GFX9-NEXT: $vgpr0 = COPY [[DS_READ_I8_gfx9_]]
     %0:vgpr(p3) = COPY $vgpr0
-    %1:vgpr(s32) = G_SEXTLOAD %0 :: (load (s8), align 1, addrspace 3)
+    %1:vgpr(i32) = G_SEXTLOAD %0 :: (load (s8), align 1, addrspace 3)
     $vgpr0 = COPY %1
 
 ...
@@ -76,7 +76,7 @@ body: |
     ; GFX9-NEXT: [[DS_READ_I16_gfx9_:%[0-9]+]]:vgpr_32 = DS_READ_I16_gfx9 [[COPY]], 0, 0, implicit $exec :: (load (s16), addrspace 3)
     ; GFX9-NEXT: $vgpr0 = COPY [[DS_READ_I16_gfx9_]]
     %0:vgpr(p3) = COPY $vgpr0
-    %1:vgpr(s32) = G_SEXTLOAD %0 :: (load (s16), align 2, addrspace 3)
+    %1:vgpr(i32) = G_SEXTLOAD %0 :: (load (s16), align 2, addrspace 3)
     $vgpr0 = COPY %1
 
 ...
@@ -135,7 +135,7 @@ body: |
     %0:vgpr(p3) = COPY $vgpr0
     %1:vgpr(s32) = G_CONSTANT i32 4095
     %2:vgpr(p3) = G_PTR_ADD %0, %1
-    %3:vgpr(s32) = G_SEXTLOAD %2 :: (load (s8), align 1, addrspace 3)
+    %3:vgpr(i32) = G_SEXTLOAD %2 :: (load (s8), align 1, addrspace 3)
     $vgpr0 = COPY %3
 
 ...

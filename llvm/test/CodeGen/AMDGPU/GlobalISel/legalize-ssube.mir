@@ -121,7 +121,7 @@ body: |
     ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY2]](s32), [[C]]
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](s64)
     ; CHECK-NEXT: [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY1]](s64)
-    ; CHECK-NEXT: [[USUBE:%[0-9]+]]:_(s32), [[USUBE1:%[0-9]+]]:_(s1) = G_USUBE [[UV]], [[UV2]], [[ICMP]]
+    ; CHECK-NEXT: [[USUBE:%[0-9]+]]:_(s32), [[USUBE1:%[0-9]+]]:_(i1) = G_USUBE [[UV]], [[UV2]], [[ICMP]]
     ; CHECK-NEXT: [[SSUBE:%[0-9]+]]:_(s32), [[SSUBE1:%[0-9]+]]:_(s1) = G_SSUBE [[UV1]], [[UV3]], [[USUBE1]]
     ; CHECK-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[USUBE]](s32), [[SSUBE]](s32)
     ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[SSUBE1]](s1)

@@ -120,14 +120,14 @@ define amdgpu_ps half @fptrunc_f64_to_f16_uniform(double inreg %a) {
 ; GFX11-NEXT:    s_bfe_u32 s2, s1, 0xb0014
 ; GFX11-NEXT:    s_lshr_b32 s3, s1, 8
 ; GFX11-NEXT:    s_and_b32 s4, s1, 0x1ff
-; GFX11-NEXT:    s_addk_i32 s2, 0xfc10
+; GFX11-NEXT:    s_add_u32 s2, s2, 0xfffffc10
 ; GFX11-NEXT:    s_and_b32 s3, s3, 0xffe
 ; GFX11-NEXT:    s_or_b32 s0, s4, s0
 ; GFX11-NEXT:    s_cselect_b32 s0, 1, 0
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_or_b32 s0, s3, s0
 ; GFX11-NEXT:    s_cselect_b32 s3, 1, 0
-; GFX11-NEXT:    s_sub_i32 s4, 1, s2
+; GFX11-NEXT:    s_sub_u32 s4, 1, s2
 ; GFX11-NEXT:    s_or_b32 s5, s0, 0x1000
 ; GFX11-NEXT:    s_max_i32 s4, s4, 0
 ; GFX11-NEXT:    s_lshl_b32 s3, s3, 9
@@ -154,7 +154,7 @@ define amdgpu_ps half @fptrunc_f64_to_f16_uniform(double inreg %a) {
 ; GFX11-NEXT:    s_cmp_lg_u32 s4, 0
 ; GFX11-NEXT:    s_cselect_b32 s4, 1, 0
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-NEXT:    s_add_i32 s0, s0, s4
+; GFX11-NEXT:    s_add_u32 s0, s0, s4
 ; GFX11-NEXT:    s_cmp_gt_i32 s2, 30
 ; GFX11-NEXT:    s_cselect_b32 s0, 0x7c00, s0
 ; GFX11-NEXT:    s_cmpk_eq_i32 s2, 0x40f
@@ -172,14 +172,14 @@ define amdgpu_ps half @fptrunc_f64_to_f16_uniform(double inreg %a) {
 ; GFX12-NEXT:    s_bfe_u32 s2, s1, 0xb0014
 ; GFX12-NEXT:    s_lshr_b32 s3, s1, 8
 ; GFX12-NEXT:    s_and_b32 s4, s1, 0x1ff
-; GFX12-NEXT:    s_addk_co_i32 s2, 0xfc10
+; GFX12-NEXT:    s_add_co_u32 s2, s2, 0xfffffc10
 ; GFX12-NEXT:    s_and_b32 s3, s3, 0xffe
 ; GFX12-NEXT:    s_or_b32 s0, s4, s0
 ; GFX12-NEXT:    s_cselect_b32 s0, 1, 0
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_or_b32 s0, s3, s0
 ; GFX12-NEXT:    s_cselect_b32 s3, 1, 0
-; GFX12-NEXT:    s_sub_co_i32 s4, 1, s2
+; GFX12-NEXT:    s_sub_co_u32 s4, 1, s2
 ; GFX12-NEXT:    s_or_b32 s5, s0, 0x1000
 ; GFX12-NEXT:    s_max_i32 s4, s4, 0
 ; GFX12-NEXT:    s_lshl_b32 s3, s3, 9
@@ -206,7 +206,7 @@ define amdgpu_ps half @fptrunc_f64_to_f16_uniform(double inreg %a) {
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 0
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX12-NEXT:    s_add_co_i32 s0, s0, s4
+; GFX12-NEXT:    s_add_co_u32 s0, s0, s4
 ; GFX12-NEXT:    s_cmp_gt_i32 s2, 30
 ; GFX12-NEXT:    s_cselect_b32 s0, 0x7c00, s0
 ; GFX12-NEXT:    s_cmp_eq_u32 s2, 0x40f
@@ -225,14 +225,14 @@ define amdgpu_ps half @fptrunc_f64_to_f16_uniform(double inreg %a) {
 ; GFX1250-NEXT:    s_bfe_u32 s2, s1, 0xb0014
 ; GFX1250-NEXT:    s_lshr_b32 s3, s1, 8
 ; GFX1250-NEXT:    s_and_b32 s4, s1, 0x1ff
-; GFX1250-NEXT:    s_addk_co_i32 s2, 0xfc10
+; GFX1250-NEXT:    s_add_co_u32 s2, s2, 0xfffffc10
 ; GFX1250-NEXT:    s_and_b32 s3, s3, 0xffe
 ; GFX1250-NEXT:    s_or_b32 s0, s4, s0
 ; GFX1250-NEXT:    s_cselect_b32 s0, 1, 0
 ; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-NEXT:    s_or_b32 s0, s3, s0
 ; GFX1250-NEXT:    s_cselect_b32 s3, 1, 0
-; GFX1250-NEXT:    s_sub_co_i32 s4, 1, s2
+; GFX1250-NEXT:    s_sub_co_u32 s4, 1, s2
 ; GFX1250-NEXT:    s_or_b32 s5, s0, 0x1000
 ; GFX1250-NEXT:    s_max_i32 s4, s4, 0
 ; GFX1250-NEXT:    s_lshl_b32 s3, s3, 9
@@ -259,7 +259,7 @@ define amdgpu_ps half @fptrunc_f64_to_f16_uniform(double inreg %a) {
 ; GFX1250-NEXT:    s_cmp_lg_u32 s4, 0
 ; GFX1250-NEXT:    s_cselect_b32 s4, 1, 0
 ; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1250-NEXT:    s_add_co_i32 s0, s0, s4
+; GFX1250-NEXT:    s_add_co_u32 s0, s0, s4
 ; GFX1250-NEXT:    s_cmp_gt_i32 s2, 30
 ; GFX1250-NEXT:    s_cselect_b32 s0, 0x7c00, s0
 ; GFX1250-NEXT:    s_cmp_eq_u32 s2, 0x40f

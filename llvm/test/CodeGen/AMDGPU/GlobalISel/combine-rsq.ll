@@ -12,8 +12,8 @@ define amdgpu_cs float @div_sqrt(float inreg %arg1) {
 ; GCN-NEXT:    s_cselect_b32 s2, s2, s0
 ; GCN-NEXT:    v_sqrt_f32_e32 v0, s2
 ; GCN-NEXT:    v_readfirstlane_b32 s3, v0
-; GCN-NEXT:    s_add_i32 s4, s3, -1
-; GCN-NEXT:    s_add_i32 s5, s3, 1
+; GCN-NEXT:    s_add_u32 s4, s3, -1
+; GCN-NEXT:    s_add_u32 s5, s3, 1
 ; GCN-NEXT:    v_fma_f32 v1, -s4, v0, s2
 ; GCN-NEXT:    v_fma_f32 v0, -s5, v0, s2
 ; GCN-NEXT:    v_cmp_ge_f32_e32 vcc_lo, 0, v1
@@ -50,8 +50,8 @@ define amdgpu_cs float @sqrt_div(float inreg %arg1) {
 ; GCN-NEXT:    s_cselect_b32 s1, s1, s0
 ; GCN-NEXT:    v_sqrt_f32_e32 v0, s1
 ; GCN-NEXT:    v_readfirstlane_b32 s3, v0
-; GCN-NEXT:    s_add_i32 s4, s3, -1
-; GCN-NEXT:    s_add_i32 s5, s3, 1
+; GCN-NEXT:    s_add_u32 s4, s3, -1
+; GCN-NEXT:    s_add_u32 s5, s3, 1
 ; GCN-NEXT:    v_fma_f32 v1, -s4, v0, s1
 ; GCN-NEXT:    v_fma_f32 v0, -s5, v0, s1
 ; GCN-NEXT:    v_cmp_ge_f32_e32 vcc_lo, 0, v1
@@ -86,8 +86,8 @@ define amdgpu_cs float @rcp_sqrt(float inreg %arg1) {
 ; GCN-NEXT:    s_cselect_b32 s2, s2, s0
 ; GCN-NEXT:    v_sqrt_f32_e32 v0, s2
 ; GCN-NEXT:    v_readfirstlane_b32 s3, v0
-; GCN-NEXT:    s_add_i32 s4, s3, -1
-; GCN-NEXT:    s_add_i32 s5, s3, 1
+; GCN-NEXT:    s_add_u32 s4, s3, -1
+; GCN-NEXT:    s_add_u32 s5, s3, 1
 ; GCN-NEXT:    v_fma_f32 v1, -s4, v0, s2
 ; GCN-NEXT:    v_fma_f32 v0, -s5, v0, s2
 ; GCN-NEXT:    v_cmp_ge_f32_e32 vcc_lo, 0, v1
@@ -124,8 +124,8 @@ define amdgpu_cs float @sqrt_rcp(float inreg %arg1) {
 ; GCN-NEXT:    s_cselect_b32 s1, s1, s0
 ; GCN-NEXT:    v_sqrt_f32_e32 v0, s1
 ; GCN-NEXT:    v_readfirstlane_b32 s3, v0
-; GCN-NEXT:    s_add_i32 s4, s3, -1
-; GCN-NEXT:    s_add_i32 s5, s3, 1
+; GCN-NEXT:    s_add_u32 s4, s3, -1
+; GCN-NEXT:    s_add_u32 s5, s3, 1
 ; GCN-NEXT:    v_fma_f32 v1, -s4, v0, s1
 ; GCN-NEXT:    v_fma_f32 v0, -s5, v0, s1
 ; GCN-NEXT:    v_cmp_ge_f32_e32 vcc_lo, 0, v1
@@ -160,8 +160,8 @@ define amdgpu_cs float @div_sqrt_contract(float inreg %arg1) {
 ; GCN-NEXT:    s_cselect_b32 s2, s2, s0
 ; GCN-NEXT:    v_sqrt_f32_e32 v0, s2
 ; GCN-NEXT:    v_readfirstlane_b32 s3, v0
-; GCN-NEXT:    s_add_i32 s4, s3, -1
-; GCN-NEXT:    s_add_i32 s5, s3, 1
+; GCN-NEXT:    s_add_u32 s4, s3, -1
+; GCN-NEXT:    s_add_u32 s5, s3, 1
 ; GCN-NEXT:    v_fma_f32 v1, -s4, v0, s2
 ; GCN-NEXT:    v_fma_f32 v0, -s5, v0, s2
 ; GCN-NEXT:    v_cmp_ge_f32_e32 vcc_lo, 0, v1
@@ -198,8 +198,8 @@ define amdgpu_cs float @sqrt_div_contract(float inreg %arg1) {
 ; GCN-NEXT:    s_cselect_b32 s1, s1, s0
 ; GCN-NEXT:    v_sqrt_f32_e32 v0, s1
 ; GCN-NEXT:    v_readfirstlane_b32 s3, v0
-; GCN-NEXT:    s_add_i32 s4, s3, -1
-; GCN-NEXT:    s_add_i32 s5, s3, 1
+; GCN-NEXT:    s_add_u32 s4, s3, -1
+; GCN-NEXT:    s_add_u32 s5, s3, 1
 ; GCN-NEXT:    v_fma_f32 v1, -s4, v0, s1
 ; GCN-NEXT:    v_fma_f32 v0, -s5, v0, s1
 ; GCN-NEXT:    v_cmp_ge_f32_e32 vcc_lo, 0, v1
@@ -234,8 +234,8 @@ define amdgpu_cs float @rcp_sqrt_contract(float inreg %arg1) {
 ; GCN-NEXT:    s_cselect_b32 s2, s2, s0
 ; GCN-NEXT:    v_sqrt_f32_e32 v0, s2
 ; GCN-NEXT:    v_readfirstlane_b32 s3, v0
-; GCN-NEXT:    s_add_i32 s4, s3, -1
-; GCN-NEXT:    s_add_i32 s5, s3, 1
+; GCN-NEXT:    s_add_u32 s4, s3, -1
+; GCN-NEXT:    s_add_u32 s5, s3, 1
 ; GCN-NEXT:    v_fma_f32 v1, -s4, v0, s2
 ; GCN-NEXT:    v_fma_f32 v0, -s5, v0, s2
 ; GCN-NEXT:    v_cmp_ge_f32_e32 vcc_lo, 0, v1
@@ -272,8 +272,8 @@ define amdgpu_cs float @sqrt_rcp_contract(float inreg %arg1) {
 ; GCN-NEXT:    s_cselect_b32 s1, s1, s0
 ; GCN-NEXT:    v_sqrt_f32_e32 v0, s1
 ; GCN-NEXT:    v_readfirstlane_b32 s3, v0
-; GCN-NEXT:    s_add_i32 s4, s3, -1
-; GCN-NEXT:    s_add_i32 s5, s3, 1
+; GCN-NEXT:    s_add_u32 s4, s3, -1
+; GCN-NEXT:    s_add_u32 s5, s3, 1
 ; GCN-NEXT:    v_fma_f32 v1, -s4, v0, s1
 ; GCN-NEXT:    v_fma_f32 v0, -s5, v0, s1
 ; GCN-NEXT:    v_cmp_ge_f32_e32 vcc_lo, 0, v1

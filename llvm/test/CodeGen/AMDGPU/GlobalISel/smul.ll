@@ -66,10 +66,10 @@ define amdgpu_ps i64 @s_mul_i64_i32(i32 inreg %a, i32 inreg %b) {
 ; GFX11-NEXT:    s_mul_hi_u32 s3, s0, s1
 ; GFX11-NEXT:    s_mul_i32 s2, s0, s2
 ; GFX11-NEXT:    s_ashr_i32 s4, s0, 31
-; GFX11-NEXT:    s_add_i32 s2, s3, s2
+; GFX11-NEXT:    s_add_u32 s2, s3, s2
 ; GFX11-NEXT:    s_mul_i32 s4, s4, s1
 ; GFX11-NEXT:    s_mul_i32 s0, s0, s1
-; GFX11-NEXT:    s_add_i32 s1, s2, s4
+; GFX11-NEXT:    s_add_u32 s1, s2, s4
 ; GFX11-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-LABEL: s_mul_i64_i32:
@@ -157,13 +157,16 @@ define i64 @v_mul_i64_i32(i32 %a, i32 %b) {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_dual_mov_b32 v2, v0 :: v_dual_mov_b32 v3, v1
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_mad_u64_u32 v[0:1], null, v2, v3, 0
-; GFX11-NEXT:    v_ashrrev_i32_e32 v6, 31, v3
-; GFX11-NEXT:    v_mad_u64_u32 v[4:5], null, v2, v6, v[1:2]
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_ashrrev_i32_e32 v5, 31, v2
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_mad_u64_u32 v[1:2], null, v5, v3, v[4:5]
+; GFX11-NEXT:    v_ashrrev_i32_e32 v4, 31, v3
+; GFX11-NEXT:    v_mad_u64_u32 v[0:1], null, v2, v3, 0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX11-NEXT:    v_mul_lo_u32 v3, v5, v3
+; GFX11-NEXT:    v_mul_lo_u32 v2, v2, v4
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    v_add_nc_u32_e32 v1, v1, v2
+; GFX11-NEXT:    v_add_nc_u32_e32 v1, v1, v3
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-LABEL: v_mul_i64_i32:

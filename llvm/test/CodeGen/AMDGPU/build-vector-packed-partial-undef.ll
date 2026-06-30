@@ -171,9 +171,10 @@ define void @undef_lo_op_v2f16(half %arg0) {
 ; GFX8-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-GISEL-NEXT:    v_add_f16_e64 v1, s4, 1.0
 ; GFX8-GISEL-NEXT:    v_readfirstlane_b32 s4, v1
-; GFX8-GISEL-NEXT:    v_mov_b32_e32 v1, 0x3c00
-; GFX8-GISEL-NEXT:    v_add_f16_sdwa v0, v0, v1 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; GFX8-GISEL-NEXT:    s_and_b32 s4, 0xffff, s4
+; GFX8-GISEL-NEXT:    v_add_f16_e32 v0, 1.0, v0
+; GFX8-GISEL-NEXT:    v_mov_b32_e32 v1, 16
+; GFX8-GISEL-NEXT:    s_bfe_u32 s4, s4, 0x100000
+; GFX8-GISEL-NEXT:    v_lshlrev_b32_sdwa v0, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GFX8-GISEL-NEXT:    v_or_b32_e32 v0, s4, v0
 ; GFX8-GISEL-NEXT:    ;;#ASMSTART
 ; GFX8-GISEL-NEXT:    ; use v0
@@ -744,10 +745,11 @@ define void @undef_hi_op_v2f16(half %arg0) {
 ; GFX8-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-GISEL-NEXT:    v_add_f16_e64 v1, s4, 1.0
 ; GFX8-GISEL-NEXT:    v_readfirstlane_b32 s4, v1
-; GFX8-GISEL-NEXT:    s_and_b32 s4, 0xffff, s4
-; GFX8-GISEL-NEXT:    v_add_f16_e32 v0, 1.0, v0
+; GFX8-GISEL-NEXT:    s_bfe_u32 s4, s4, 0x100000
 ; GFX8-GISEL-NEXT:    s_lshl_b32 s4, s4, 16
-; GFX8-GISEL-NEXT:    v_or_b32_e32 v0, s4, v0
+; GFX8-GISEL-NEXT:    v_add_f16_e32 v0, 1.0, v0
+; GFX8-GISEL-NEXT:    v_mov_b32_e32 v1, s4
+; GFX8-GISEL-NEXT:    v_or_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; GFX8-GISEL-NEXT:    ;;#ASMSTART
 ; GFX8-GISEL-NEXT:    ; use v0
 ; GFX8-GISEL-NEXT:    ;;#ASMEND
