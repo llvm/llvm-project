@@ -1258,9 +1258,6 @@ define void @void_func_sret_struct_i8_i32(ptr addrspace(5) sret({ i8, i32 }) %ar
   ret void
 }
 
-; FIXME: Should be able to fold offsets in all of these pre-gfx9. Call
-; lowering introduces an extra CopyToReg/CopyFromReg obscuring the
-; AssertZext inserted. Not using it introduces the spills.
 define <33 x i32> @v33i32_func_void() #0 {
 ; CI-LABEL: v33i32_func_void:
 ; CI:       ; %bb.0:

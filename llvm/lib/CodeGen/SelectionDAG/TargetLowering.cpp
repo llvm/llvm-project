@@ -3997,6 +3997,9 @@ SDValue TargetLowering::annotateStackObjectPointer(SDValue Ptr,
                                                    SelectionDAG &DAG,
                                                    const SDLoc &DL,
                                                    Align Alignment) const {
+  // Materialize leading-zero stack object pointer facts as AssertZext.
+  // Alignment-derived low zero bits are not represented on the returned DAG
+  // value here.
   EVT PtrVT = Ptr.getValueType();
 
   unsigned RegSize = PtrVT.getScalarSizeInBits();
@@ -4008,9 +4011,6 @@ SDValue TargetLowering::annotateStackObjectPointer(SDValue Ptr,
   if (!NumZeroBits)
     return Ptr;
 
-  // TODO: This helper only materializes leading-zero facts. Use
-  // ISD::AssertAlign if callers need alignment-derived low-zero bits to be
-  // represented in the DAG.
   EVT FromVT = EVT::getIntegerVT(*DAG.getContext(), RegSize - NumZeroBits);
   return DAG.getNode(ISD::AssertZext, DL, PtrVT, Ptr, DAG.getValueType(FromVT));
 }
