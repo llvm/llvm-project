@@ -15014,22 +15014,45 @@ void Sema::diagnoseInitUninitMarkerPlacement(const Decl *D) {
 // analysis and no type-system tracking. Uninitialized storage is only ever
 // introduced by an explicit [[uninit]] / [[ref_to_uninit]] marker;
 // anything unrecognized is treated as initialized (the trust model).
-static bool glvalueDenotesUninitStorage(ASTContext &Ctx, const Expr *E);
+//
+// \p ForRead selects read-through mode (Sema::checkRefToUninitRead): a
+// directly named [[uninit]] object is then not treated as uninitialized,
+// because a read of such a named object is the flow-based uninit_read pass's
+// responsibility; only indirection through a [[ref_to_uninit]]
+// pointer/reference still counts.
+static bool glvalueDenotesUninitStorage(ASTContext &Ctx, const Expr *E,
+                                        bool ForRead = false);
 
 // \p E is a pointer prvalue. True if it points to uninitialized storage.
-static bool pointerRefersToUninitStorage(ASTContext &Ctx, const Expr *E) {
+static bool pointerRefersToUninitStorage(ASTContext &Ctx, const Expr *E,
+                                         bool ForRead = false) {
   if (!E)
     return false;
   E = E->IgnoreParenImpCasts();
 
+  // Pass-through forms are transparent to their operand: a single-element
+  // braced initializer { e } binds from e (modeling
+  // MismatchingNewDeleteDetector::getNewExprFromInitListOrExpr); empty {} and
+  // multi-element lists are not pointer sources and fall through. A conditional
+  // is uninit if either arm is, so a value that may be uninit forces a marked
+  // target; a comma yields its right operand.
+  if (const auto *ILE = dyn_cast<InitListExpr>(E))
+    return ILE->getNumInits() == 1 &&
+           pointerRefersToUninitStorage(Ctx, ILE->getInit(0), ForRead);
+  if (const auto *CO = dyn_cast<ConditionalOperator>(E))
+    return pointerRefersToUninitStorage(Ctx, CO->getTrueExpr(), ForRead) ||
+           pointerRefersToUninitStorage(Ctx, CO->getFalseExpr(), ForRead);
+  if (const auto *BO = dyn_cast<BinaryOperator>(E); BO && BO->isCommaOp())
+    return pointerRefersToUninitStorage(Ctx, BO->getRHS(), ForRead);
+
   // Array-to-pointer decay has been stripped above, leaving the array glvalue.
   if (E->getType()->isArrayType())
-    return glvalueDenotesUninitStorage(Ctx, E);
+    return glvalueDenotesUninitStorage(Ctx, E, ForRead);
 
   // &G, where G denotes uninitialized storage.
   if (const auto *UO = dyn_cast<UnaryOperator>(E))
     if (UO->getOpcode() == UO_AddrOf)
-      return glvalueDenotesUninitStorage(Ctx, UO->getSubExpr());
+      return glvalueDenotesUninitStorage(Ctx, UO->getSubExpr(), ForRead);
 
   // A value of a [[ref_to_uninit]] pointer, or a call to a
   // [[ref_to_uninit]]-returning function.
@@ -15063,23 +15086,40 @@ static bool pointerRefersToUninitStorage(ASTContext &Ctx, const Expr *E) {
   // manufactured from an integer (operand not a pointer) is not propagated.
   if (const auto *CE = dyn_cast<ExplicitCastExpr>(E))
     if (CE->getSubExpr()->getType()->isPointerType())
-      return pointerRefersToUninitStorage(Ctx, CE->getSubExpr());
+      return pointerRefersToUninitStorage(Ctx, CE->getSubExpr(), ForRead);
 
   return false;
 }
 
 // \p E is a glvalue. True if it denotes uninitialized storage.
-static bool glvalueDenotesUninitStorage(ASTContext &Ctx, const Expr *E) {
+static bool glvalueDenotesUninitStorage(ASTContext &Ctx, const Expr *E,
+                                        bool ForRead) {
   if (!E)
     return false;
   E = E->IgnoreParenImpCasts();
+
+  // Pass-through forms are transparent to their operand, routed through the
+  // glvalue recognizer (symmetric to the pointer side): a single-element braced
+  // initializer binds from its element, a conditional is uninit if either arm
+  // is, and a comma yields its right operand.
+  if (const auto *ILE = dyn_cast<InitListExpr>(E))
+    return ILE->getNumInits() == 1 &&
+           glvalueDenotesUninitStorage(Ctx, ILE->getInit(0), ForRead);
+  if (const auto *CO = dyn_cast<ConditionalOperator>(E))
+    return glvalueDenotesUninitStorage(Ctx, CO->getTrueExpr(), ForRead) ||
+           glvalueDenotesUninitStorage(Ctx, CO->getFalseExpr(), ForRead);
+  if (const auto *BO = dyn_cast<BinaryOperator>(E); BO && BO->isCommaOp())
+    return glvalueDenotesUninitStorage(Ctx, BO->getRHS(), ForRead);
 
   // A named entity denotes uninitialized storage if it is [[uninit]], or
   // if it is a reference marked [[ref_to_uninit]] (the glvalue is its referent,
   // which is uninitialized). A [[ref_to_uninit]] *pointer* named here denotes
   // the pointer object itself -- which is initialized -- so it does not count.
-  auto DeclDenotesUninit = [](const ValueDecl *VD) {
-    return VD->hasAttr<UninitAttr>() ||
+  // In read mode the [[uninit]] arm is dropped: a direct read of a named
+  // [[uninit]] object is left to the flow-based uninit_read pass, so only a
+  // [[ref_to_uninit]] reference (or indirection, handled below) still counts.
+  auto DeclDenotesUninit = [&](const ValueDecl *VD) {
+    return (!ForRead && VD->hasAttr<UninitAttr>()) ||
            (VD->getType()->isReferenceType() && VD->hasAttr<RefToUninitAttr>());
   };
   if (const auto *DRE = dyn_cast<DeclRefExpr>(E))
@@ -15088,26 +15128,27 @@ static bool glvalueDenotesUninitStorage(ASTContext &Ctx, const Expr *E) {
     // a->m reaches m through the pointer a (object *a); a.m through the
     // glvalue a.
     return DeclDenotesUninit(ME->getMemberDecl()) ||
-           (ME->isArrow() ? pointerRefersToUninitStorage(Ctx, ME->getBase())
-                          : glvalueDenotesUninitStorage(Ctx, ME->getBase()));
+           (ME->isArrow()
+                ? pointerRefersToUninitStorage(Ctx, ME->getBase(), ForRead)
+                : glvalueDenotesUninitStorage(Ctx, ME->getBase(), ForRead));
   // A call to a [[ref_to_uninit]]-returning reference function: the referent
   // it returns is uninitialized. Mirrors the pointer recognizer's call arm.
   if (const auto *CE = dyn_cast<CallExpr>(E))
     if (const FunctionDecl *FD = CE->getDirectCallee())
       return FD->hasAttr<RefToUninitAttr>();
   if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(E))
-    return pointerRefersToUninitStorage(Ctx, ASE->getBase());
+    return pointerRefersToUninitStorage(Ctx, ASE->getBase(), ForRead);
 
   // *p, where p points to uninitialized storage.
   if (const auto *UO = dyn_cast<UnaryOperator>(E))
     if (UO->getOpcode() == UO_Deref)
-      return pointerRefersToUninitStorage(Ctx, UO->getSubExpr());
+      return pointerRefersToUninitStorage(Ctx, UO->getSubExpr(), ForRead);
 
   // A reference cast (an explicit cast yielding a glvalue) denotes the same
   // storage as its operand; propagate. Symmetric to the pointer-cast arm.
   if (const auto *CE = dyn_cast<ExplicitCastExpr>(E))
     if (CE->getSubExpr()->isGLValue())
-      return glvalueDenotesUninitStorage(Ctx, CE->getSubExpr());
+      return glvalueDenotesUninitStorage(Ctx, CE->getSubExpr(), ForRead);
 
   return false;
 }
