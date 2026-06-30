@@ -14187,4 +14187,7 @@ def err_init_ref_to_uninit_requires_uninit : ProfileRuleError<
 def err_init_uninit_requires_ref_to_uninit : ProfileRuleError<
   "%select{pointer|reference}1 to uninitialized memory must be marked "
   "'[[ref_to_uninit]]' under profile '%0'">;
+def err_init_uninit_read_through : ProfileRuleError<
+  "read through a '[[ref_to_uninit]]' pointer or reference accesses "
+  "uninitialized memory under profile '%0'">;
 } // end of sema component.

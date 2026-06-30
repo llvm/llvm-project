@@ -15185,6 +15185,29 @@ void Sema::checkRefToUninitInit(SourceLocation Loc, bool TargetIsRefToUninit,
     Diag(Loc, diag::err_init_uninit_requires_ref_to_uninit) << Profile << IsRef;
 }
 
+void Sema::checkRefToUninitRead(SourceLocation Loc, const Expr *Glvalue,
+                                QualType ValueType) {
+  // A RecoveryExpr is a placeholder for an expression that already failed, not
+  // a read the user wrote, so it must not drive this rule.
+  if (!Glvalue || isa<RecoveryExpr>(Glvalue->IgnoreParens()))
+    return;
+  // This read site passes no Decl, so the D->isTemplated() deferral in
+  // shouldEmitProfileViolation can't fire. Defer on a template pattern here:
+  // the read is re-checked on the instantiated expression, so firing on the
+  // pattern double-diagnoses and wrongly fires in discarded if-constexpr
+  // branches / never-instantiated templates (mirrors checkRefToUninitInit).
+  if (CurContext && CurContext->isDependentContext())
+    return;
+  // Paper §4.5: reading an uninitialized std::byte is permitted.
+  if (Context.getBaseElementType(ValueType)->isStdByteType())
+    return;
+  if (!shouldEmitProfileViolation("std::init", "uninit_read", Loc))
+    return;
+  if (!glvalueDenotesUninitStorage(Context, Glvalue, /*ForRead=*/true))
+    return;
+  Diag(Loc, diag::err_init_uninit_read_through) << "std::init";
+}
+
 void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
   if (var->isInvalidDecl()) return;
 

@@ -737,6 +737,13 @@ ExprResult Sema::DefaultLvalueConversion(Expr *E) {
   if (!BoundsSafetyCheckUseOfCountAttrPtr(Res.get()))
     return ExprError();
 
+  // std::init / uninit_read (paper §4.5): a read through a [[ref_to_uninit]]
+  // pointer or reference accesses uninitialized memory. This is the single
+  // lvalue-to-rvalue chokepoint that by-value reads (copy-init, by-value
+  // arguments, returns, operator operands) all funnel through.
+  if (getLangOpts().Profiles)
+    checkRefToUninitRead(E->getExprLoc(), E, T);
+
   // C++ [conv.lval]p3:
   //   If T is cv std::nullptr_t, the result is a null pointer constant.
   CastKind CK = T->isNullPtrType() ? CK_NullToPointer : CK_LValueToRValue;

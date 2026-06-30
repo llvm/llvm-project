@@ -1146,6 +1146,16 @@ public:
                             bool IsReference, const Expr *Src,
                             const Decl *D = nullptr);
 
+  /// std::init / uninit_read (paper §4.5): diagnose a read *through* a
+  /// [[ref_to_uninit]] pointer or reference, whose result is itself
+  /// uninitialized. Called from Sema::DefaultLvalueConversion at the single
+  /// lvalue-to-rvalue chokepoint, with \p Glvalue the operand being loaded and
+  /// \p ValueType its value type. Reuses the ref_to_uninit recognizer in
+  /// read-only mode, so a direct read of a named [[uninit]] object is left to
+  /// the flow-based uninit_read pass. A std::byte read is exempt (paper §4.5).
+  void checkRefToUninitRead(SourceLocation Loc, const Expr *Glvalue,
+                            QualType ValueType);
+
   /// std::init / pointer_marker + union_marker (paper §4.1, §5.6): diagnose
   /// [[uninit]] placed on a pointer, a union variable, or a union member.
   /// \p D must already carry the UninitAttr (the marker location is taken from
