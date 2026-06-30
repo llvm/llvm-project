@@ -6429,7 +6429,10 @@ gentbl_cc_library(
     name = "NVVMPassIncGen",
     strip_include_prefix = "include",
     tbl_outs = {
-        "include/mlir/Dialect/NVVM/Transforms/Passes.h.inc": ["-gen-pass-decls -name NVVM"],
+        "include/mlir/Dialect/NVVM/Transforms/Passes.h.inc": [
+            "-gen-pass-decls",
+            "-name=NVVM",
+        ],
     },
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/NVVM/Transforms/Passes.td",
