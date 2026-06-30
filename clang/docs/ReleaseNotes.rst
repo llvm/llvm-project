@@ -1183,6 +1183,9 @@ SYCL Support
   library was unconditionally added to the link line even when the flag was
   passed.
 
+- Clang now is capable of diagnosing reference kernel parameters which are not
+  allowed by SYCL 2020 spec.
+
 Improvements
 ^^^^^^^^^^^^
 - Improved substitution performance in concept checking. (#GH172266)
