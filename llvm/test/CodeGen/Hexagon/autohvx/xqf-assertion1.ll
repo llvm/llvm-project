@@ -1,9 +1,8 @@
 ; On v79 and above, checks for Assertion `isImm() && "Wrong MachineOperand accessor"' failed
 
-; REQUIRES: asserts
-; RUN: llc -march=hexagon -enable-xqf-gen=true \
+; RUN: llc -march=hexagon -enable-xqf-gen=true -enable-rem-conv=true \
 ; RUN: -mattr=+hvx-ieee-fp,+hvx-length128b,+hvxv79 -o /dev/null < %s
-; RUN: llc -march=hexagon -enable-xqf-gen=true \
+; RUN: llc -march=hexagon -enable-xqf-gen=true -enable-rem-conv=true \
 ; RUN: -mattr=+hvx-ieee-fp,+hvx-length128b,+hvxv81 -o /dev/null < %s
 
 
@@ -72,3 +71,14 @@ attributes #4 = { nocallback nofree nosync nounwind willreturn memory(none) }
 attributes #5 = { nofree nounwind }
 attributes #6 = { nounwind }
 attributes #7 = { noreturn nounwind }
+
+!llvm.module.flags = !{!0, !1, !2}
+!llvm.ident = !{!6}
+
+!0 = !{i32 1, !"wchar_size", i32 4}
+!1 = !{i32 7, !"frame-pointer", i32 2}
+!2 = !{i32 5, !"CG MDInfo", !3}
+!3 = !{!4, !5}
+!4 = !{!"F", !"no_filename_available", !"", !"", i1 false, !""}
+!5 = !{!"C", !"set_double_vector_mode", !"(void)", !"(...)", i1 true, !""}
+!6 = !{!"QuIC LLVM Hexagon Clang version 8.8-alpha3 Engineering Release: hexagon-clang-88"}
