@@ -625,7 +625,7 @@ public:
     PushContext(x.source, llvm::omp::Directive::OMPD_flush);
     for (auto &arg : x.v.Arguments().v) {
       if (auto *object{parser::omp::GetArgumentObject(arg)}) {
-        if (auto *name{std::get_if<parser::Name>(&object->u)}) {
+        if (auto *name{parser::omp::GetCommonBlockFromObj(*object)}) {
           // ResolveOmpCommonBlockName resolves the symbol as a side effect
           if (!ResolveOmpCommonBlockName(name)) {
             context_.Say(name->source, // 2.15.3
