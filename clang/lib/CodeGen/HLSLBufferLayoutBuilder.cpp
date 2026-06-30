@@ -61,6 +61,8 @@ HLSLBufferLayoutBuilder::layOutStruct(const RecordType *RT,
   CharUnits CurrentOffset = CharUnits::Zero();
   for (auto &[FD, Offset] : FieldsWithOffset) {
     llvm::Type *LayoutType = layOutType(FD->getType());
+    if (!LayoutType)
+      continue;
 
     const llvm::DataLayout &DL = CGM.getDataLayout();
     CharUnits Size =
@@ -131,17 +133,21 @@ llvm::Type *HLSLBufferLayoutBuilder::layOutArray(const ConstantArrayType *AT) {
   return padArrayElements(EltTy, Count);
 }
 
-llvm::Type *
-HLSLBufferLayoutBuilder::layOutMatrix(const ConstantMatrixType *MT) {
+llvm::Type *HLSLBufferLayoutBuilder::layOutMatrix(QualType Ty) {
   // ConvertTypeForMem already handles row/column-major layout and bool
   // promotion, producing [Count x <VecLen x EltTy>]. We just need to add
-  // cbuffer padding between the array elements.
+  // cbuffer padding between the array elements. Pass the sugared QualType so
+  // that the `row_major`/`column_major` orientation attribute is preserved.
   llvm::ArrayType *MemTy =
-      cast<llvm::ArrayType>(CGM.getTypes().ConvertTypeForMem(QualType(MT, 0)));
+      cast<llvm::ArrayType>(CGM.getTypes().ConvertTypeForMem(Ty));
   return padArrayElements(MemTy->getElementType(), MemTy->getNumElements());
 }
 
 llvm::Type *HLSLBufferLayoutBuilder::layOutType(QualType Ty) {
+  // HLSL resource types are not included in the buffer layout.
+  if (Ty->isHLSLResourceRecord() || Ty->isHLSLResourceRecordArray())
+    return nullptr;
+
   if (const auto *AT = CGM.getContext().getAsConstantArrayType(Ty))
     return layOutArray(AT);
 
@@ -150,10 +156,8 @@ llvm::Type *HLSLBufferLayoutBuilder::layOutType(QualType Ty) {
     return layOutStruct(Ty->getAsCanonical<RecordType>(), EmptyOffsets);
   }
 
-  if (Ty->isConstantMatrixType()) {
-    const auto *MT = Ty->castAs<ConstantMatrixType>();
-    return layOutMatrix(MT);
-  }
+  if (Ty->isConstantMatrixType())
+    return layOutMatrix(Ty);
 
   return CGM.getTypes().ConvertTypeForMem(Ty);
 }

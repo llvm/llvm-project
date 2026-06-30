@@ -519,8 +519,8 @@ struct WasmSignature {
   // but does not actually model them. Instead a placeholder signature is
   // created in the Object's signature list.
   enum { Function, Tag, Placeholder } Kind = Function;
-  // Support empty and tombstone instances, needed by DenseMap.
-  enum { Plain, Empty, Tombstone } State = Plain;
+  // Support empty instances, needed by DenseMap.
+  enum { Plain, Empty } State = Plain;
 
   WasmSignature(SmallVector<ValType, 1> &&InReturns,
                 SmallVector<ValType, 4> &&InParams)

@@ -229,6 +229,12 @@ static cl::opt<bool> EnableSRLTSubregToRegMitigation(
              "super-regs when using Subreg Liveness Tracking"),
     cl::init(true), cl::Hidden);
 
+static cl::opt<bool> EnableSVEShuffleOpt(
+    "aarch64-enable-sve-shuffle-opts",
+    cl::desc("Enable pattern matching of shuffles that could make use of SVE "
+             "instructions like tbl or the bottom/top variants"),
+    cl::init(true), cl::Hidden);
+
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
 LLVMInitializeAArch64Target() {
   // Register the target.
@@ -258,7 +264,7 @@ LLVMInitializeAArch64Target() {
   initializeAArch64PreLegalizerCombinerLegacyPass(PR);
   initializeAArch64PointerAuthLegacyPass(PR);
   initializeAArch64PostCoalescerLegacyPass(PR);
-  initializeAArch64PostLegalizerCombinerPass(PR);
+  initializeAArch64PostLegalizerCombinerLegacyPass(PR);
   initializeAArch64PostSelectOptimizeLegacyPass(PR);
   initializeAArch64PostLegalizerLoweringLegacyPass(PR);
   initializeAArch64PromoteConstantPass(PR);
@@ -270,17 +276,28 @@ LLVMInitializeAArch64Target() {
   initializeLDTLSCleanupPass(PR);
   initializeMachineKCFILegacyPass(PR);
   initializeMachineSMEABIPass(PR);
-  initializeAArch64SRLTDefineSuperRegsPass(PR);
+  initializeAArch64SRLTDefineSuperRegsLegacyPass(PR);
   initializeSMEPeepholeOptPass(PR);
   initializeSVEIntrinsicOptsPass(PR);
   initializeAArch64SpeculationHardeningPass(PR);
   initializeAArch64SLSHardeningLegacyPass(PR);
   initializeAArch64StackTaggingPass(PR);
   initializeAArch64StackTaggingPreRALegacyPass(PR);
-  initializeAArch64LowerHomogeneousPrologEpilogPass(PR);
+  initializeAArch64LowerHomogeneousPrologEpilogLegacyPass(PR);
   initializeAArch64DAGToDAGISelLegacyPass(PR);
   initializeAArch64CondBrTuningPass(PR);
   initializeAArch64Arm64ECCallLoweringPass(PR);
+  initializeSVEShuffleOptsPass(PR);
+}
+
+bool AArch64TargetMachine::isGlobalISelOptNone() const {
+  const bool GlobalISelFlag = getCGPassBuilderOption().EnableGlobalISelOption ==
+                              cl::boolOrDefault::BOU_TRUE;
+
+  return getOptLevel() == CodeGenOptLevel::None ||
+         (static_cast<unsigned>(getOptLevel()) >
+              static_cast<unsigned>(EnableGlobalISelAtO) &&
+          !GlobalISelFlag);
 }
 
 void AArch64TargetMachine::reset() { SubtargetMap.clear(); }
@@ -387,8 +404,8 @@ AArch64TargetMachine::AArch64TargetMachine(const Target &T, const Triple &TT,
       TT.getEnvironment() != Triple::GNUILP32 &&
       !(getCodeModel() == CodeModel::Large && TT.isOSBinFormatMachO());
 
-  const bool GlobalISelFlag =
-      getCGPassBuilderOption().EnableGlobalISelOption.value_or(false);
+  const bool GlobalISelFlag = getCGPassBuilderOption().EnableGlobalISelOption ==
+                              cl::boolOrDefault::BOU_TRUE;
 
   // Enable GlobalISel at or below EnableGlobalISelAt0, unless this is
   // MachO/CodeModel::Large, which GlobalISel does not support.
@@ -481,10 +498,6 @@ AArch64TargetMachine::getSubtargetImpl(const Function &F) const {
 
   auto &I = SubtargetMap[Key];
   if (!I) {
-    // This needs to be done before we create a new subtarget since any
-    // creation will depend on the TM and the code generation flags on the
-    // function that reside in TargetOptions.
-    resetTargetOptions(F);
     I = std::make_unique<AArch64Subtarget>(
         TargetTriple, CPU, TuneCPU, FS, *this, isLittle, MinSVEVectorSize,
         MaxSVEVectorSize, IsStreaming, IsStreamingCompatible, HasMinSize,
@@ -585,9 +598,6 @@ public:
   bool addRegAssignAndRewriteOptimized() override;
 
   std::unique_ptr<CSEConfigBase> getCSEConfig() const override;
-
-private:
-  bool isGlobalISelOptNone() const;
 };
 
 } // end anonymous namespace
@@ -619,21 +629,6 @@ TargetPassConfig *AArch64TargetMachine::createPassConfig(PassManagerBase &PM) {
 
 std::unique_ptr<CSEConfigBase> AArch64PassConfig::getCSEConfig() const {
   return getStandardCSEConfigForOpt(TM->getOptLevel());
-}
-
-// This function checks whether the opt level is explicitly set to none,
-// or whether GlobalISel was enabled due to SDAG encountering an optnone
-// function. If the opt level is greater than the level we automatically enable
-// globalisel at, and it wasn't enabled via CLI, we know that it must be because
-// of an optnone function.
-bool AArch64PassConfig::isGlobalISelOptNone() const {
-  const bool GlobalISelFlag =
-      getCGPassBuilderOption().EnableGlobalISelOption.value_or(false);
-
-  return getOptLevel() == CodeGenOptLevel::None ||
-         (static_cast<unsigned>(getOptLevel()) >
-              getAArch64TargetMachine().getEnableGlobalISelAtO() &&
-          !GlobalISelFlag);
 }
 
 void AArch64PassConfig::addIRPasses() {
@@ -690,6 +685,13 @@ void AArch64PassConfig::addIRPasses() {
   addPass(createAArch64StackTaggingPass(
       /*IsOptNone=*/TM->getOptLevel() == CodeGenOptLevel::None));
 
+  // Try to use tbl in place of other shuffling operations if doing so would
+  // reduce the total number of instructions. Shuffle masks for big endian may
+  // be different, so require a little endian target.
+  if (TM->createDataLayout().isLittleEndian() &&
+      getOptLevel() >= CodeGenOptLevel::Default && EnableSVEShuffleOpt)
+    addPass(createSVEShuffleOptsPass());
+
   // Match complex arithmetic patterns
   if (TM->getOptLevel() >= CodeGenOptLevel::Default)
     addPass(createComplexDeinterleavingPass(TM));
@@ -722,11 +724,11 @@ bool AArch64PassConfig::addPreISel() {
   // Basically, the addressable offsets are up to 4095 * Ty.getSizeInBytes().
   // and the offset has to be a multiple of the related size in bytes.
   if ((TM->getOptLevel() != CodeGenOptLevel::None &&
-       EnableGlobalMerge == cl::BOU_UNSET) ||
-      EnableGlobalMerge == cl::BOU_TRUE) {
+       EnableGlobalMerge == cl::boolOrDefault::BOU_UNSET) ||
+      EnableGlobalMerge == cl::boolOrDefault::BOU_TRUE) {
     bool OnlyOptimizeForSize =
         (TM->getOptLevel() < CodeGenOptLevel::Aggressive) &&
-        (EnableGlobalMerge == cl::BOU_UNSET);
+        (EnableGlobalMerge == cl::boolOrDefault::BOU_UNSET);
 
     // Merging of extern globals is enabled by default on non-Mach-O as we
     // expect it to be generally either beneficial or harmless. On Mach-O it
@@ -764,7 +766,7 @@ bool AArch64PassConfig::addIRTranslator() {
 }
 
 void AArch64PassConfig::addPreLegalizeMachineIR() {
-  if (isGlobalISelOptNone()) {
+  if (getAArch64TargetMachine().isGlobalISelOptNone()) {
     addPass(createAArch64O0PreLegalizerCombiner());
     addPass(new Localizer());
   } else {
@@ -781,8 +783,10 @@ bool AArch64PassConfig::addLegalizeMachineIR() {
 }
 
 void AArch64PassConfig::addPreRegBankSelect() {
-  if (!isGlobalISelOptNone()) {
-    addPass(createAArch64PostLegalizerCombiner(isGlobalISelOptNone()));
+  const bool IsGlobalISelOptNone =
+      getAArch64TargetMachine().isGlobalISelOptNone();
+  if (!IsGlobalISelOptNone) {
+    addPass(createAArch64PostLegalizerCombinerLegacy(IsGlobalISelOptNone));
     if (EnableGISelLoadStoreOptPostLegal)
       addPass(new LoadStoreOpt());
   }
@@ -796,7 +800,7 @@ bool AArch64PassConfig::addRegBankSelect() {
 
 bool AArch64PassConfig::addGlobalInstructionSelect() {
   addPass(new InstructionSelect(getOptLevel()));
-  if (!isGlobalISelOptNone())
+  if (!getAArch64TargetMachine().isGlobalISelOptNone())
     addPass(createAArch64PostSelectOptimize());
   return false;
 }
@@ -856,7 +860,7 @@ void AArch64PassConfig::addPreRegAlloc() {
 
 void AArch64PassConfig::addPostRewrite() {
   if (EnableSRLTSubregToRegMitigation)
-    addPass(createAArch64SRLTDefineSuperRegsPass());
+    addPass(createAArch64SRLTDefineSuperRegsLegacyPass());
 }
 
 void AArch64PassConfig::addPostRegAlloc() {

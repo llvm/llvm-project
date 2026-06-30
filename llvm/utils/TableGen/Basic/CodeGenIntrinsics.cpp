@@ -276,6 +276,7 @@ CodeGenIntrinsic::CodeGenIntrinsic(const Record *R,
       R->getValueAsOptionalString("ClangBuiltinName").value_or("");
   // Ignore a missing MSBuiltinName field.
   MSBuiltinName = R->getValueAsOptionalString("MSBuiltinName").value_or("");
+  TargetFeatures = R->getValueAsString("TargetFeatures");
 
   TargetPrefix = R->getValueAsString("TargetPrefix");
   Name = R->getValueAsString("LLVMName").str();
@@ -535,6 +536,7 @@ CodeGenIntrinsic::getValueAsIRMemLocation(const Record *R) const {
   StringRef Name = R->getName();
   IRMemLocation Loc =
       StringSwitch<IRMemLocation>(Name)
+          .Case("ArgMem", IRMemLocation::ArgMem)
           .Case("TargetMem0", IRMemLocation::TargetMem0)
           .Case("TargetMem1", IRMemLocation::TargetMem1)
           .Case("InaccessibleMem", IRMemLocation::InaccessibleMem)

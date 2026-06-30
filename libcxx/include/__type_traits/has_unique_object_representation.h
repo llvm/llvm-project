@@ -16,9 +16,9 @@
 #  pragma GCC system_header
 #endif
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 17
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp>
 struct _LIBCPP_NO_SPECIALIZATIONS has_unique_object_representations
@@ -28,8 +28,8 @@ template <class _Tp>
 _LIBCPP_NO_SPECIALIZATIONS inline constexpr bool has_unique_object_representations_v =
     __has_unique_object_representations(_Tp);
 
-#endif
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 17
 
 #endif // _LIBCPP___TYPE_TRAITS_HAS_UNIQUE_OBJECT_REPRESENTATION_H

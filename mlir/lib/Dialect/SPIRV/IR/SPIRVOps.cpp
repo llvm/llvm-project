@@ -90,6 +90,46 @@ spirv::verifyMemorySemantics(Operation *op,
   return success();
 }
 
+LogicalResult spirv::verifyPhysicalStorageBufferDecorations(Operation *op,
+                                                            Type pointeeType) {
+  // From SPV_KHR_physical_storage_buffer:
+  // > If an OpVariable's pointee type is a pointer (or array of pointers) in
+  // > PhysicalStorageBuffer storage class, then the variable must be decorated
+  // > with exactly one of AliasedPointer or RestrictPointer.
+  auto pointeePtrType = dyn_cast<spirv::PointerType>(pointeeType);
+  if (!pointeePtrType) {
+    if (auto pointeeArrayType = dyn_cast<spirv::ArrayType>(pointeeType)) {
+      pointeePtrType =
+          dyn_cast<spirv::PointerType>(pointeeArrayType.getElementType());
+    }
+  }
+
+  if (!pointeePtrType || pointeePtrType.getStorageClass() !=
+                             spirv::StorageClass::PhysicalStorageBuffer)
+    return success();
+
+  auto getDecorationAttr = [op](spirv::Decoration decoration) {
+    return op->getAttr(spirv::getDecorationString(decoration));
+  };
+
+  bool hasAliasedPtr =
+      getDecorationAttr(spirv::Decoration::AliasedPointer) != nullptr;
+  bool hasRestrictPtr =
+      getDecorationAttr(spirv::Decoration::RestrictPointer) != nullptr;
+
+  if (!hasAliasedPtr && !hasRestrictPtr)
+    return op->emitOpError()
+           << " with physical buffer pointer must be decorated "
+              "either 'AliasedPointer' or 'RestrictPointer'";
+
+  if (hasAliasedPtr && hasRestrictPtr)
+    return op->emitOpError()
+           << " with physical buffer pointer must have exactly one "
+              "aliasing decoration";
+
+  return success();
+}
+
 void spirv::printVariableDecorations(Operation *op, OpAsmPrinter &printer,
                                      SmallVectorImpl<StringRef> &elidedAttrs) {
   // Print optional descriptor binding
@@ -555,7 +595,7 @@ ParseResult spirv::ConstantOp::parse(OpAsmParser &parser,
 
 void spirv::ConstantOp::print(OpAsmPrinter &printer) {
   printer << ' ' << getValue();
-  if (isa<spirv::ArrayType>(getType()))
+  if (isa<spirv::ArrayType, spirv::StructType>(getType()))
     printer << " : " << getType();
 }
 
@@ -610,10 +650,27 @@ static LogicalResult verifyConstantType(spirv::ConstantOp op, Attribute value,
     return success();
   }
   if (auto arrayAttr = dyn_cast<ArrayAttr>(value)) {
+    if (auto structType = dyn_cast<spirv::StructType>(opType)) {
+      // Identified (possibly recursive) structs are not supported as constants.
+      if (structType.isIdentified())
+        return op.emitOpError(
+            "cannot have an identified struct as a constant type");
+      if (arrayAttr.size() != structType.getNumElements())
+        return op.emitOpError("number of constituents (")
+               << arrayAttr.size()
+               << ") does not match number of struct members ("
+               << structType.getNumElements() << ")";
+      for (auto [idx, element] : llvm::enumerate(arrayAttr.getValue())) {
+        if (failed(verifyConstantType(op, element,
+                                      structType.getElementType(idx))))
+          return failure();
+      }
+      return success();
+    }
     auto arrayType = dyn_cast<spirv::ArrayType>(opType);
     if (!arrayType)
       return op.emitOpError(
-          "must have spirv.array result type for array value");
+          "must have spirv.array or spirv.struct result type for array value");
     Type elemType = arrayType.getElementType();
     for (Attribute element : arrayAttr.getValue()) {
       // Verify array elements recursively.
@@ -638,7 +695,8 @@ bool spirv::ConstantOp::isBuildableWith(Type type) {
     return false;
 
   if (isa<SPIRVDialect>(type.getDialect())) {
-    // TODO: support constant struct
+    if (auto structType = dyn_cast<spirv::StructType>(type))
+      return !structType.isIdentified();
     return isa<spirv::ArrayType>(type);
   }
 
@@ -1227,6 +1285,16 @@ ParseResult spirv::GLSClampOp::parse(OpAsmParser &parser,
 void spirv::GLSClampOp::print(OpAsmPrinter &p) { printOneResultOp(*this, p); }
 
 //===----------------------------------------------------------------------===//
+// spirv.GLNClampOp
+//===----------------------------------------------------------------------===//
+
+ParseResult spirv::GLNClampOp::parse(OpAsmParser &parser,
+                                     OperationState &result) {
+  return parseOneResultSameOperandTypeOp(parser, result);
+}
+void spirv::GLNClampOp::print(OpAsmPrinter &p) { printOneResultOp(*this, p); }
+
+//===----------------------------------------------------------------------===//
 // spirv.GLFmaOp
 //===----------------------------------------------------------------------===//
 
@@ -1371,6 +1439,11 @@ LogicalResult spirv::GlobalVariableOp::verify() {
                          "spirv.SpecConstantCompositeOp op");
     }
   }
+
+  Type pointeeType = cast<spirv::PointerType>(getType()).getPointeeType();
+  if (failed(
+          verifyPhysicalStorageBufferDecorations(getOperation(), pointeeType)))
+    return failure();
 
   return success();
 }

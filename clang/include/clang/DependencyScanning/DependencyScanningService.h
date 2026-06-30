@@ -60,6 +60,12 @@ enum class ScanningOptimizations {
 
 #undef DSS_LAST_BITMASK_ENUM
 
+bool shouldCacheNegativeStatsDefault();
+
+/// \return true if failed stats for files with this name should be cached,
+///         false otherwise.
+bool shouldCacheNegativeStatsForPath(StringRef Path);
+
 /// The configuration knobs for the dependency scanning service.
 struct DependencyScanningServiceOptions {
   DependencyScanningServiceOptions();
@@ -90,6 +96,8 @@ struct DependencyScanningServiceOptions {
   /// Whether to automatically flush the module cache from memory to disk at the
   /// end of the service lifetime.
   bool FlushModuleCache = true;
+  /// Whether the caching VFS should cache missing filesystem entries.
+  bool CacheNegativeStats = shouldCacheNegativeStatsDefault();
 };
 
 /// The dependency scanning service contains shared configuration and state that

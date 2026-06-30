@@ -284,7 +284,7 @@ public:
                             uint8_t FillLen = 1,
                             unsigned MaxBytesToEmit = 0) override;
 
-  void emitCodeAlignment(Align Alignment, const MCSubtargetInfo *STI,
+  void emitCodeAlignment(Align Alignment, const MCSubtargetInfo &STI,
                          unsigned MaxBytesToEmit = 0) override;
   void emitPrefAlign(Align Alignment, const MCSymbol &End, bool EmitNops,
                      uint8_t Fill, const MCSubtargetInfo &STI) override;
@@ -397,6 +397,20 @@ public:
   void emitCFINegateRAState(SMLoc Loc) override;
   void emitCFINegateRAStateWithPC(SMLoc Loc) override;
   void emitCFIReturnColumn(int64_t Register) override;
+  void emitCFILLVMRegisterPair(int64_t Register, int64_t R1, int64_t R1Size,
+                               int64_t R2, int64_t R2Size, SMLoc Loc) override;
+  void emitCFILLVMVectorRegisters(
+      int64_t Register, ArrayRef<MCCFIInstruction::VectorRegisterWithLane> VRs,
+      SMLoc Loc) override;
+  void emitCFILLVMVectorOffset(int64_t Register, int64_t RegisterSize,
+                               int64_t MaskRegister, int64_t MaskRegisterSize,
+                               int64_t Offset, SMLoc Loc) override;
+  void emitCFILLVMVectorRegisterMask(int64_t Register, int64_t SpillRegister,
+                                     int64_t SpillRegisterLaneSizeInBits,
+                                     int64_t MaskRegister,
+                                     int64_t MaskRegisterSizeInBits,
+                                     SMLoc Loc) override;
+
   void emitCFILabelDirective(SMLoc Loc, StringRef Name) override;
   void emitCFIValOffset(int64_t Register, int64_t Offset, SMLoc Loc) override;
 
@@ -405,6 +419,8 @@ public:
   void emitWinCFIFuncletOrFuncEnd(SMLoc Loc) override;
   void emitWinCFISplitChained(SMLoc Loc) override;
   void emitWinCFIPushReg(MCRegister Register, SMLoc Loc) override;
+  void emitWinCFIPush2Regs(MCRegister Reg1, MCRegister Reg2,
+                           SMLoc Loc) override;
   void emitWinCFISetFrame(MCRegister Register, unsigned Offset,
                           SMLoc Loc) override;
   void emitWinCFIAllocStack(unsigned Size, SMLoc Loc) override;
@@ -1557,7 +1573,7 @@ void MCAsmStreamer::emitValueToAlignment(Align Alignment, int64_t Fill,
 }
 
 void MCAsmStreamer::emitCodeAlignment(Align Alignment,
-                                      const MCSubtargetInfo *STI,
+                                      const MCSubtargetInfo &STI,
                                       unsigned MaxBytesToEmit) {
   // Emit with a text fill value.
   if (MAI->getTextAlignFillValue())
@@ -1862,7 +1878,7 @@ void MCAsmStreamer::emitCVLocDirective(unsigned FunctionId, unsigned FileNo,
                                        bool PrologueEnd, bool IsStmt,
                                        StringRef FileName, SMLoc Loc) {
   // Validate the directive.
-  if (!checkCVLocSection(FunctionId, FileNo, Loc))
+  if (!checkCVLocSection(FunctionId, Loc))
     return;
 
   OS << "\t.cv_loc\t" << FunctionId << " " << FileNo << " " << Line << " "
@@ -2188,6 +2204,67 @@ void MCAsmStreamer::emitCFIRegister(int64_t Register1, int64_t Register2,
   EmitEOL();
 }
 
+void MCAsmStreamer::emitCFILLVMRegisterPair(int64_t Register, int64_t R1,
+                                            int64_t R1Size, int64_t R2,
+                                            int64_t R2Size, SMLoc Loc) {
+  MCStreamer::emitCFILLVMRegisterPair(Register, R1, R1Size, R2, R2Size, Loc);
+
+  OS << "\t.cfi_llvm_register_pair ";
+  EmitRegisterName(Register);
+  OS << ", ";
+  EmitRegisterName(R1);
+  OS << ", " << R1Size << ", ";
+  EmitRegisterName(R2);
+  OS << ", " << R2Size;
+  EmitEOL();
+}
+
+void MCAsmStreamer::emitCFILLVMVectorRegisters(
+    int64_t Register, ArrayRef<MCCFIInstruction::VectorRegisterWithLane> VRs,
+    SMLoc Loc) {
+  MCStreamer::emitCFILLVMVectorRegisters(Register, VRs, Loc);
+
+  OS << "\t.cfi_llvm_vector_registers ";
+  EmitRegisterName(Register);
+  for (auto [Reg, Lane, Size] : VRs)
+    OS << ", " << Reg << ", " << Lane << ", " << Size;
+  EmitEOL();
+}
+
+void MCAsmStreamer::emitCFILLVMVectorOffset(int64_t Register,
+                                            int64_t RegisterSize,
+                                            int64_t MaskRegister,
+                                            int64_t MaskRegisterSize,
+                                            int64_t Offset, SMLoc Loc) {
+  MCStreamer::emitCFILLVMVectorOffset(Register, RegisterSize, MaskRegister,
+                                      MaskRegisterSize, Offset, Loc);
+
+  OS << "\t.cfi_llvm_vector_offset ";
+  EmitRegisterName(Register);
+  OS << ", " << RegisterSize << ", ";
+  EmitRegisterName(MaskRegister);
+  OS << ", " << MaskRegisterSize << ", " << Offset;
+  EmitEOL();
+}
+
+void MCAsmStreamer::emitCFILLVMVectorRegisterMask(
+    int64_t Register, int64_t SpillRegister,
+    int64_t SpillRegisterLaneSizeInBits, int64_t MaskRegister,
+    int64_t MaskRegisterSizeInBits, SMLoc Loc) {
+  MCStreamer::emitCFILLVMVectorRegisterMask(
+      Register, SpillRegister, SpillRegisterLaneSizeInBits, MaskRegister,
+      MaskRegisterSizeInBits, Loc);
+
+  OS << "\t.cfi_llvm_vector_register_mask ";
+  EmitRegisterName(Register);
+  OS << ", ";
+  EmitRegisterName(SpillRegister);
+  OS << ", " << SpillRegisterLaneSizeInBits << ", ";
+  EmitRegisterName(MaskRegister);
+  OS << ", " << MaskRegisterSizeInBits;
+  EmitEOL();
+}
+
 void MCAsmStreamer::emitCFIWindowSave(SMLoc Loc) {
   MCStreamer::emitCFIWindowSave(Loc);
   OS << "\t.cfi_window_save";
@@ -2313,6 +2390,17 @@ void MCAsmStreamer::emitWinCFIPushReg(MCRegister Register, SMLoc Loc) {
 
   OS << "\t.seh_pushreg ";
   InstPrinter->printRegName(OS, Register);
+  EmitEOL();
+}
+
+void MCAsmStreamer::emitWinCFIPush2Regs(MCRegister Reg1, MCRegister Reg2,
+                                        SMLoc Loc) {
+  MCStreamer::emitWinCFIPush2Regs(Reg1, Reg2, Loc);
+
+  OS << "\t.seh_push2regs ";
+  InstPrinter->printRegName(OS, Reg1);
+  OS << ", ";
+  InstPrinter->printRegName(OS, Reg2);
   EmitEOL();
 }
 

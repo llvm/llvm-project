@@ -504,8 +504,8 @@ unsigned char test_InterlockedCompareExchange128(
 }
 // CHECK-64: define{{.*}}i8 @test_InterlockedCompareExchange128(ptr{{.*}}%Destination, i64{{[a-z_ ]*}}%ExchangeHigh, i64{{[a-z_ ]*}}%ExchangeLow, ptr{{.*}}%ComparandResult){{.*}}{
 // CHECK-64: %incdec.ptr = getelementptr inbounds nuw i8, ptr %Destination, i64 8
-// CHECK-64: %inc = add nsw i64 %ExchangeHigh, 1
-// CHECK-64: %inc1 = add nsw i64 %ExchangeLow, 1
+// CHECK-64: %inc = add i64 %ExchangeHigh, 1
+// CHECK-64: %inc1 = add i64 %ExchangeLow, 1
 // CHECK-64: %incdec.ptr2 = getelementptr inbounds nuw i8, ptr %ComparandResult, i64 8
 // CHECK-64: [[EH:%[0-9]+]] = zext i64 %inc to i128
 // CHECK-64: [[EL:%[0-9]+]] = zext i64 %inc1 to i128

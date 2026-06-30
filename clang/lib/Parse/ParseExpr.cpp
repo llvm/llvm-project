@@ -1343,6 +1343,7 @@ Parser::ParseCastExpression(CastParseKind ParseKind, bool isAddressOfOperand,
   case tok::kw_auto:
   case tok::kw_typename:
   case tok::kw_typeof:
+  case tok::kw_typeof_unqual:
   case tok::kw___vector:
   case tok::kw__Accum:
   case tok::kw__Fract:
@@ -2407,56 +2408,73 @@ ExprResult Parser::ParseBuiltinPrimaryExpression() {
       return ExprError();
     }
 
+    auto TriggerCompletion = [&](const Designation &D) {
+      cutOffParsing();
+      Actions.CodeCompletion().CodeCompleteOffsetOfDesignator(
+          Actions.GetTypeFromParser(Ty.get()), D);
+    };
+
     // We must have at least one identifier here.
+    Designation D;
+    if (Tok.is(tok::code_completion)) {
+      TriggerCompletion(D);
+      return ExprError();
+    }
     if (Tok.isNot(tok::identifier)) {
       Diag(Tok, diag::err_expected) << tok::identifier;
       SkipUntil(tok::r_paren, StopAtSemi);
       return ExprError();
     }
 
-    // Keep track of the various subcomponents we see.
-    SmallVector<Sema::OffsetOfComponent, 4> Comps;
-
-    Comps.push_back(Sema::OffsetOfComponent());
-    Comps.back().isBrackets = false;
-    Comps.back().U.IdentInfo = Tok.getIdentifierInfo();
-    Comps.back().LocStart = Comps.back().LocEnd = ConsumeToken();
+    D.AddDesignator(Designator::CreateFieldDesignator(
+        Tok.getIdentifierInfo(), SourceLocation(), Tok.getLocation()));
+    ConsumeToken();
 
     // FIXME: This loop leaks the index expressions on error.
     while (true) {
       if (Tok.is(tok::period)) {
         // offsetof-member-designator: offsetof-member-designator '.' identifier
-        Comps.push_back(Sema::OffsetOfComponent());
-        Comps.back().isBrackets = false;
-        Comps.back().LocStart = ConsumeToken();
+        SourceLocation DotLoc = ConsumeToken();
 
+        if (Tok.is(tok::code_completion)) {
+          TriggerCompletion(D);
+          return ExprError();
+        }
         if (Tok.isNot(tok::identifier)) {
           Diag(Tok, diag::err_expected) << tok::identifier;
           SkipUntil(tok::r_paren, StopAtSemi);
           return ExprError();
         }
-        Comps.back().U.IdentInfo = Tok.getIdentifierInfo();
-        Comps.back().LocEnd = ConsumeToken();
+        D.AddDesignator(Designator::CreateFieldDesignator(
+            Tok.getIdentifierInfo(), DotLoc, Tok.getLocation()));
+        ConsumeToken();
       } else if (Tok.is(tok::l_square)) {
         if (CheckProhibitedCXX11Attribute())
           return ExprError();
 
         // offsetof-member-designator: offsetof-member-design '[' expression ']'
-        Comps.push_back(Sema::OffsetOfComponent());
-        Comps.back().isBrackets = true;
         BalancedDelimiterTracker ST(*this, tok::l_square);
         ST.consumeOpen();
-        Comps.back().LocStart = ST.getOpenLocation();
         Res = ParseExpression();
         if (Res.isInvalid()) {
           SkipUntil(tok::r_paren, StopAtSemi);
           return Res;
         }
-        Comps.back().U.E = Res.get();
 
         ST.consumeClose();
-        Comps.back().LocEnd = ST.getCloseLocation();
+        Designator ArrayD =
+            Designator::CreateArrayDesignator(Res.get(), ST.getOpenLocation());
+        ArrayD.setRBracketLoc(ST.getCloseLocation());
+        D.AddDesignator(ArrayD);
       } else {
+        // A code-completion token here (e.g. cursor right after `]`) is past
+        // the point where a field can be applied without a leading `.`. Drop
+        // it on the floor rather than leak into outer-scope completion or
+        // emit field suggestions that wouldn't compose.
+        if (Tok.is(tok::code_completion)) {
+          cutOffParsing();
+          return ExprError();
+        }
         if (Tok.isNot(tok::r_paren)) {
           PT.consumeClose();
           Res = ExprError();
@@ -2464,9 +2482,9 @@ ExprResult Parser::ParseBuiltinPrimaryExpression() {
           Res = ExprError();
         } else {
           PT.consumeClose();
-          Res = Actions.ActOnBuiltinOffsetOf(getCurScope(), StartLoc, TypeLoc,
-                                             Ty.get(), Comps,
-                                             PT.getCloseLocation());
+          Res =
+              Actions.ActOnBuiltinOffsetOf(getCurScope(), StartLoc, TypeLoc,
+                                           Ty.get(), D, PT.getCloseLocation());
         }
         break;
       }

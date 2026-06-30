@@ -8,45 +8,26 @@ target datalayout = "e-p:64:64:64"
 
 @G = external global [100 x i32]
 define i32 @foo(i32 %x, i32 %z) !dbg !6 {
-; MDEP-LABEL: define i32 @foo(
-; MDEP-SAME: i32 [[X:%.*]], i32 [[Z:%.*]]) !dbg [[DBG5:![0-9]+]] {
-; MDEP-NEXT:  [[ENTRY:.*:]]
-; MDEP-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[Z]], 0, !dbg [[DBG8:![0-9]+]]
-; MDEP-NEXT:    br i1 [[TOBOOL]], label %[[ENTRY_END_CRIT_EDGE:.*]], label %[[THEN:.*]], !dbg [[DBG8]]
-; MDEP:       [[ENTRY_END_CRIT_EDGE]]:
-; MDEP-NEXT:    [[J_PHI_TRANS_INSERT:%.*]] = sext i32 [[X]] to i64
-; MDEP-NEXT:    [[Q_PHI_TRANS_INSERT:%.*]] = getelementptr [100 x i32], ptr @G, i64 0, i64 [[J_PHI_TRANS_INSERT]]
-; MDEP-NEXT:    [[N_PRE:%.*]] = load i32, ptr [[Q_PHI_TRANS_INSERT]], align 4, !dbg [[DBG9:![0-9]+]]
-; MDEP-NEXT:    br label %[[END:.*]], !dbg [[DBG8]]
-; MDEP:       [[THEN]]:
-; MDEP-NEXT:    [[I:%.*]] = sext i32 [[X]] to i64, !dbg [[DBG10:![0-9]+]]
-; MDEP-NEXT:    [[P:%.*]] = getelementptr [100 x i32], ptr @G, i64 0, i64 [[I]], !dbg [[DBG10]]
-; MDEP-NEXT:    store i32 [[Z]], ptr [[P]], align 4, !dbg [[DBG10]]
-; MDEP-NEXT:    br label %[[END]], !dbg [[DBG10]]
-; MDEP:       [[END]]:
-; MDEP-NEXT:    [[J_PRE_PHI:%.*]] = phi i64 [ [[J_PHI_TRANS_INSERT]], %[[ENTRY_END_CRIT_EDGE]] ], [ [[I]], %[[THEN]] ], !dbg [[DBG11:![0-9]+]]
-; MDEP-NEXT:    [[N:%.*]] = phi i32 [ [[N_PRE]], %[[ENTRY_END_CRIT_EDGE]] ], [ [[Z]], %[[THEN]] ], !dbg [[DBG9]]
-; MDEP-NEXT:    [[Q:%.*]] = getelementptr [100 x i32], ptr @G, i64 0, i64 [[J_PRE_PHI]], !dbg [[DBG12:![0-9]+]]
-; MDEP-NEXT:    ret i32 [[N]], !dbg [[DBG9]]
-;
-; MSSA-LABEL: define i32 @foo(
-; MSSA-SAME: i32 [[X:%.*]], i32 [[Z:%.*]]) !dbg [[DBG5:![0-9]+]] {
-; MSSA-NEXT:  [[ENTRY:.*:]]
-; MSSA-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[Z]], 0, !dbg [[DBG8:![0-9]+]]
-; MSSA-NEXT:    br i1 [[TOBOOL]], label %[[ENTRY_END_CRIT_EDGE:.*]], label %[[THEN:.*]], !dbg [[DBG8]]
-; MSSA:       [[ENTRY_END_CRIT_EDGE]]:
-; MSSA-NEXT:    [[DOTPRE:%.*]] = sext i32 [[X]] to i64, !dbg [[DBG9:![0-9]+]]
-; MSSA-NEXT:    br label %[[END:.*]], !dbg [[DBG8]]
-; MSSA:       [[THEN]]:
-; MSSA-NEXT:    [[I:%.*]] = sext i32 [[X]] to i64, !dbg [[DBG10:![0-9]+]]
-; MSSA-NEXT:    [[P:%.*]] = getelementptr [100 x i32], ptr @G, i64 0, i64 [[I]], !dbg [[DBG10]]
-; MSSA-NEXT:    store i32 [[Z]], ptr [[P]], align 4, !dbg [[DBG10]]
-; MSSA-NEXT:    br label %[[END]], !dbg [[DBG10]]
-; MSSA:       [[END]]:
-; MSSA-NEXT:    [[J_PRE_PHI:%.*]] = phi i64 [ [[DOTPRE]], %[[ENTRY_END_CRIT_EDGE]] ], [ [[I]], %[[THEN]] ], !dbg [[DBG9]]
-; MSSA-NEXT:    [[Q:%.*]] = getelementptr [100 x i32], ptr @G, i64 0, i64 [[J_PRE_PHI]], !dbg [[DBG11:![0-9]+]]
-; MSSA-NEXT:    [[N:%.*]] = load i32, ptr [[Q]], align 4, !dbg [[DBG12:![0-9]+]]
-; MSSA-NEXT:    ret i32 [[N]], !dbg [[DBG12]]
+; CHECK-LABEL: define i32 @foo(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Z:%.*]]) !dbg [[DBG5:![0-9]+]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[Z]], 0, !dbg [[DBG8:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TOBOOL]], label %[[ENTRY_END_CRIT_EDGE:.*]], label %[[THEN:.*]], !dbg [[DBG8]]
+; CHECK:       [[ENTRY_END_CRIT_EDGE]]:
+; CHECK-NEXT:    [[J_PHI_TRANS_INSERT:%.*]] = sext i32 [[X]] to i64
+; CHECK-NEXT:    [[Q_PHI_TRANS_INSERT:%.*]] = getelementptr [100 x i32], ptr @G, i64 0, i64 [[J_PHI_TRANS_INSERT]]
+; CHECK-NEXT:    [[N_PRE:%.*]] = load i32, ptr [[Q_PHI_TRANS_INSERT]], align 4, !dbg [[DBG9:![0-9]+]]
+; CHECK-NEXT:    br label %[[END:.*]], !dbg [[DBG8]]
+; CHECK:       [[THEN]]:
+; CHECK-NEXT:    [[I:%.*]] = sext i32 [[X]] to i64, !dbg [[DBG10:![0-9]+]]
+; CHECK-NEXT:    [[P:%.*]] = getelementptr [100 x i32], ptr @G, i64 0, i64 [[I]], !dbg [[DBG10]]
+; CHECK-NEXT:    store i32 [[Z]], ptr [[P]], align 4, !dbg [[DBG10]]
+; CHECK-NEXT:    br label %[[END]], !dbg [[DBG10]]
+; CHECK:       [[END]]:
+; CHECK-NEXT:    [[J_PRE_PHI:%.*]] = phi i64 [ [[J_PHI_TRANS_INSERT]], %[[ENTRY_END_CRIT_EDGE]] ], [ [[I]], %[[THEN]] ], !dbg [[DBG11:![0-9]+]]
+; CHECK-NEXT:    [[N:%.*]] = phi i32 [ [[N_PRE]], %[[ENTRY_END_CRIT_EDGE]] ], [ [[Z]], %[[THEN]] ], !dbg [[DBG9]]
+; CHECK-NEXT:    [[Q:%.*]] = getelementptr [100 x i32], ptr @G, i64 0, i64 [[J_PRE_PHI]], !dbg [[DBG12:![0-9]+]]
+; CHECK-NEXT:    ret i32 [[N]], !dbg [[DBG9]]
 ;
 entry:
   %tobool = icmp eq i32 %z, 0, !dbg !7
@@ -85,27 +66,17 @@ end:
   isOptimized: true, flags: "-O2",
   splitDebugFilename: "abc.debug", emissionKind: 2)
 ;.
-; MDEP: [[META3:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C99, file: [[META4:![0-9]+]], producer: "clang", isOptimized: true, flags: "-O2", runtimeVersion: 0, splitDebugFilename: "abc.debug", emissionKind: LineTablesOnly)
-; MDEP: [[META4]] = !DIFile(filename: "{{.*}}a.cc", directory: {{.*}})
-; MDEP: [[DBG5]] = distinct !DISubprogram(name: "foo", scope: [[META4]], file: [[META4]], line: 42, type: [[META6:![0-9]+]], scopeLine: 43, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: [[META3]], retainedNodes: [[META7:![0-9]+]])
-; MDEP: [[META6]] = !DISubroutineType(types: [[META7]])
-; MDEP: [[META7]] = !{}
-; MDEP: [[DBG8]] = !DILocation(line: 43, column: 1, scope: [[DBG5]])
-; MDEP: [[DBG9]] = !DILocation(line: 47, column: 1, scope: [[DBG5]])
-; MDEP: [[DBG10]] = !DILocation(line: 44, column: 1, scope: [[DBG5]])
-; MDEP: [[DBG11]] = !DILocation(line: 45, column: 1, scope: [[DBG5]])
-; MDEP: [[DBG12]] = !DILocation(line: 46, column: 1, scope: [[DBG5]])
-;.
-; MSSA: [[META3:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C99, file: [[META4:![0-9]+]], producer: "clang", isOptimized: true, flags: "-O2", runtimeVersion: 0, splitDebugFilename: "abc.debug", emissionKind: LineTablesOnly)
-; MSSA: [[META4]] = !DIFile(filename: "{{.*}}a.cc", directory: {{.*}})
-; MSSA: [[DBG5]] = distinct !DISubprogram(name: "foo", scope: [[META4]], file: [[META4]], line: 42, type: [[META6:![0-9]+]], scopeLine: 43, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: [[META3]], retainedNodes: [[META7:![0-9]+]])
-; MSSA: [[META6]] = !DISubroutineType(types: [[META7]])
-; MSSA: [[META7]] = !{}
-; MSSA: [[DBG8]] = !DILocation(line: 43, column: 1, scope: [[DBG5]])
-; MSSA: [[DBG9]] = !DILocation(line: 45, column: 1, scope: [[DBG5]])
-; MSSA: [[DBG10]] = !DILocation(line: 44, column: 1, scope: [[DBG5]])
-; MSSA: [[DBG11]] = !DILocation(line: 46, column: 1, scope: [[DBG5]])
-; MSSA: [[DBG12]] = !DILocation(line: 47, column: 1, scope: [[DBG5]])
+; CHECK: [[META3:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C99, file: [[META4:![0-9]+]], producer: "clang", isOptimized: true, flags: "-O2", runtimeVersion: 0, splitDebugFilename: "abc.debug", emissionKind: LineTablesOnly)
+; CHECK: [[META4]] = !DIFile(filename: "{{.*}}a.cc", directory: {{.*}})
+; CHECK: [[DBG5]] = distinct !DISubprogram(name: "foo", scope: [[META4]], file: [[META4]], line: 42, type: [[META6:![0-9]+]], scopeLine: 43, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: [[META3]], retainedNodes: [[META7:![0-9]+]])
+; CHECK: [[META6]] = !DISubroutineType(types: [[META7]])
+; CHECK: [[META7]] = !{}
+; CHECK: [[DBG8]] = !DILocation(line: 43, column: 1, scope: [[DBG5]])
+; CHECK: [[DBG9]] = !DILocation(line: 47, column: 1, scope: [[DBG5]])
+; CHECK: [[DBG10]] = !DILocation(line: 44, column: 1, scope: [[DBG5]])
+; CHECK: [[DBG11]] = !DILocation(line: 45, column: 1, scope: [[DBG5]])
+; CHECK: [[DBG12]] = !DILocation(line: 46, column: 1, scope: [[DBG5]])
 ;.
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; CHECK: {{.*}}
+; MDEP: {{.*}}
+; MSSA: {{.*}}

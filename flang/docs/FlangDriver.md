@@ -463,9 +463,9 @@ static FrontendPluginRegistry::Add<PrintFunctionNamesAction> X(
 ### Loading and Running a Plugin
 In order to use plugins, there are 2 command line options made available to the
 frontend driver, `flang -fc1`:
-* [`-load <dsopath>`](#the--load-dsopath-option) for loading the dynamic shared
+* [`-load <dsopath>`](#the-load-dsopath-option) for loading the dynamic shared
   object of the plugin
-* [`-plugin <name>`](#the--plugin-name-option) for calling the registered plugin
+* [`-plugin <name>`](#the-plugin-name-option) for calling the registered plugin
 
 Invocation of the example plugin is done through:
 ```bash

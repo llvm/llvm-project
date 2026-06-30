@@ -35,6 +35,7 @@ class Symbol;
 class DefinedData;
 class GlobalSymbol;
 class DefinedFunction;
+class UndefinedFunction;
 class DefinedGlobal;
 class UndefinedGlobal;
 class TableSymbol;
@@ -64,6 +65,8 @@ struct Config {
   bool growableTable;
   bool gcSections;
   llvm::StringSet<> keepSections;
+  bool cooperativeThreading;
+  bool libcallThreadContext;
   std::optional<std::pair<llvm::StringRef, llvm::StringRef>> memoryImport;
   std::optional<llvm::StringRef> memoryExport;
   bool sharedMemory;
@@ -132,6 +135,8 @@ struct Config {
   std::optional<std::vector<std::string>> features;
   std::optional<std::vector<std::string>> extraFeatures;
   llvm::SmallVector<uint8_t, 0> buildIdVector;
+
+  bool isMultithreaded() const { return sharedMemory || cooperativeThreading; }
 };
 
 // The Ctx object hold all other (non-configuration) global state.
@@ -164,15 +169,15 @@ struct Ctx {
     // __tls_base
     // Global that holds the address of the base of the current thread's
     // TLS block.
-    GlobalSymbol *tlsBase;
+    DefinedGlobal *tlsBase;
 
     // __tls_size
     // Symbol whose value is the size of the TLS block.
-    GlobalSymbol *tlsSize;
+    DefinedGlobal *tlsSize;
 
-    // __tls_size
+    // __tls_align
     // Symbol whose value is the alignment of the TLS block.
-    GlobalSymbol *tlsAlign;
+    DefinedGlobal *tlsAlign;
 
     // __rodata_start/__rodata_end
     // Symbols marking the start/end of readonly data
@@ -252,6 +257,14 @@ struct Ctx {
     // Used as an address space for function pointers, with each function that
     // is used as a function pointer being allocated a slot.
     TableSymbol *indirectFunctionTable;
+
+    // __wasm_set_tls_base
+    // Function used to set TLS base in libcall thread context modules.
+    UndefinedFunction *setTLSBase;
+
+    // __wasm_get_tls_base
+    // Function used to get TLS base in libcall thread context modules.
+    UndefinedFunction *getTLSBase;
   };
   WasmSym sym;
 

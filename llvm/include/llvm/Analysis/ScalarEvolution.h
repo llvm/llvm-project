@@ -63,6 +63,7 @@ class SCEVUnknown;
 class StructType;
 class TargetLibraryInfo;
 class Type;
+class VPSCEVExpander;
 enum SCEVTypes : unsigned short;
 
 LLVM_ABI extern bool VerifySCEV;
@@ -200,16 +201,6 @@ template <> struct PointerLikeTypeTraits<SCEVUse> {
 };
 
 template <> struct DenseMapInfo<SCEVUse> {
-  static inline SCEVUse getEmptyKey() {
-    uintptr_t Val = static_cast<uintptr_t>(-1);
-    return PointerLikeTypeTraits<SCEVUse>::getFromVoidPointer((void *)Val);
-  }
-
-  static inline SCEVUse getTombstoneKey() {
-    uintptr_t Val = static_cast<uintptr_t>(-2);
-    return PointerLikeTypeTraits<SCEVUse>::getFromVoidPointer((void *)Val);
-  }
-
   static unsigned getHashValue(SCEVUse U) {
     return hash_value(U.getOpaqueValue());
   }
@@ -336,7 +327,7 @@ public:
   LLVM_ABI void computeAndSetCanonical(ScalarEvolution &SE);
 
   /// Return the canonical SCEV.
-  LLVM_ABI const SCEV *getCanonical() const {
+  const SCEV *getCanonical() const {
     assert(CanonicalSCEV && "canonical SCEV not yet computed");
     return CanonicalSCEV;
   }
@@ -630,6 +621,7 @@ public:
   enum LoopDisposition {
     LoopVariant,   ///< The SCEV is loop-variant (unknown).
     LoopInvariant, ///< The SCEV is loop-invariant.
+    LoopUniform,   ///< The SCEV is loop-uniform.
     LoopComputable ///< The SCEV varies predictably with the loop.
   };
 
@@ -1243,6 +1235,9 @@ public:
   /// Test if the given expression is known to be non-zero.
   LLVM_ABI bool isKnownNonZero(const SCEV *S);
 
+  /// Returns true if \p Op is guaranteed to not be poison.
+  LLVM_ABI static bool isGuaranteedNotToBePoison(const SCEV *Op);
+
   /// Test if the given expression is known to be a power of 2.  OrNegative
   /// allows matching negative power of 2s, and OrZero allows matching 0.
   LLVM_ABI bool isKnownToBeAPowerOfTwo(const SCEV *S, bool OrZero = false,
@@ -1451,6 +1446,29 @@ public:
   /// loop.
   LLVM_ABI LoopDisposition getLoopDisposition(const SCEV *S, const Loop *L);
 
+  /// Returns true if the given SCEV is loop-uniform with respect to the
+  /// specified loop L.
+  ///
+  /// A SCEV is considered loop-uniform if its value is invariant across all
+  /// iterations of L, meaning it does not depend on any induction variables
+  /// or values that vary within L.
+  ///
+  /// This notion is particularly useful in nested loops, where a value may vary
+  /// in an inner loop but remain invariant in an outer loop.
+  ///
+  /// Example:
+  /// \code
+  ///   for (i)
+  ///     for (j)
+  ///       dep(j);
+  ///       dep(i, j);
+  /// \endcode
+  /// isLoopUniform(SCEV(dep(j)), loop_i) returns true, as `j` is independent of
+  /// `i`.
+  /// isLoopUniform(SCEV(dep(i, j)), loop_i) returns false, as the expression
+  /// depends on `i`, which varies in loop_i.
+  LLVM_ABI bool isLoopUniform(const SCEV *S, const Loop *L);
+
   /// Return true if the value of the given SCEV is unchanging in the
   /// specified loop.
   LLVM_ABI bool isLoopInvariant(const SCEV *S, const Loop *L);
@@ -1636,6 +1654,7 @@ private:
   friend class SCEVCallbackVH;
   friend class SCEVExpander;
   friend class SCEVUnknown;
+  friend class VPSCEVExpander;
 
   /// The function we are analyzing.
   Function &F;
@@ -1964,10 +1983,11 @@ private:
   /// operands iteratively first.
   const ConstantRange &getRangeRefIter(const SCEV *S, RangeSignHint Hint);
 
-  /// Determines the range for the affine SCEVAddRecExpr {\p Start,+,\p Step}.
-  /// Helper for \c getRange.
-  ConstantRange getRangeForAffineAR(const SCEV *Start, const SCEV *Step,
-                                    const APInt &MaxBECount);
+  /// Determines the range for the affine SCEVAddRecExpr {\p Start,+,\p Step},
+  /// and whether it may wrap. Helper for \c getRange.
+  std::pair<ConstantRange, SCEV::NoWrapFlags>
+  getRangeForAffineAR(const SCEV *Start, const SCEV *Step,
+                      const APInt &MaxBECount);
 
   /// Determines the range for the affine non-self-wrapping SCEVAddRecExpr {\p
   /// Start,+,\p Step}<nw>.
@@ -2106,9 +2126,10 @@ private:
                                          Value *ExitCond, bool ExitIfTrue,
                                          bool ControlsOnlyExit,
                                          bool AllowPredicates);
-  std::optional<ScalarEvolution::ExitLimit> computeExitLimitFromCondFromBinOp(
-      ExitLimitCacheTy &Cache, const Loop *L, Value *ExitCond, bool ExitIfTrue,
-      bool ControlsOnlyExit, bool AllowPredicates);
+  std::optional<ScalarEvolution::ExitLimit>
+  computeExitLimitFromCondFromBinOp(ExitLimitCacheTy &Cache, const Loop *L,
+                                    Value *ExitCond, bool ExitIfTrue,
+                                    bool AllowPredicates);
 
   /// Compute the number of times the backedge of the specified loop will
   /// execute if its exit condition were a conditional branch of the ICmpInst
@@ -2366,8 +2387,8 @@ private:
   bool proveNoWrapByVaryingStart(const SCEV *Start, const SCEV *Step,
                                  const Loop *L);
 
-  /// Try to prove NSW or NUW on \p AR relying on ConstantRange manipulation.
-  SCEV::NoWrapFlags proveNoWrapViaConstantRanges(const SCEVAddRecExpr *AR);
+  /// Try to infer NSW or NUW on \p AR relying on ConstantRange manipulation.
+  void inferNoWrapViaConstantRanges(const SCEVAddRecExpr *AR);
 
   /// Try to prove NSW on \p AR by proving facts about conditions known  on
   /// entry and backedge.
@@ -2409,9 +2430,6 @@ private:
 
   /// Returns true if \p Op is guaranteed not to cause immediate UB.
   bool isGuaranteedNotToCauseUB(const SCEV *Op);
-
-  /// Returns true if \p Op is guaranteed to not be poison.
-  static bool isGuaranteedNotToBePoison(const SCEV *Op);
 
   /// Return true if the SCEV corresponding to \p I is never poison.  Proving
   /// this is more complex than proving that just \p I is never poison, since
@@ -2627,25 +2645,27 @@ public:
   /// Adds a new predicate.
   LLVM_ABI void addPredicate(const SCEVPredicate &Pred);
 
+  /// Adds all predicates in \p Preds.
+  LLVM_ABI void addPredicates(ArrayRef<const SCEVPredicate *> Preds);
+
   /// Attempts to produce an AddRecExpr for V by adding additional SCEV
   /// predicates. If we can't transform the expression into an AddRecExpr we
   /// return nullptr and not add additional SCEV predicates to the current
-  /// context.
-  LLVM_ABI const SCEVAddRecExpr *getAsAddRec(Value *V);
+  /// context. If \p WrapPredsAdded is non-null, the required predicates are
+  /// collected there instead of being added to this context.
+  LLVM_ABI const SCEVAddRecExpr *
+  getAsAddRec(Value *V,
+              SmallVectorImpl<const SCEVPredicate *> *WrapPredsAdded = nullptr);
 
-  /// Proves that V doesn't overflow by adding SCEV predicate.
-  LLVM_ABI void setNoOverflow(Value *V,
-                              SCEVWrapPredicate::IncrementWrapFlags Flags);
-
-  /// Returns true if we've proved that V doesn't wrap by means of a SCEV
-  /// predicate.
+  /// Returns true if we've statically proved that V doesn't wrap.
   LLVM_ABI bool hasNoOverflow(Value *V,
                               SCEVWrapPredicate::IncrementWrapFlags Flags);
 
   /// Returns the ScalarEvolution analysis used.
   ScalarEvolution *getSE() const { return &SE; }
 
-  /// We need to explicitly define the copy constructor because of FlagsMap.
+  /// We need to explicitly define the copy constructor due to the ownership of
+  /// the SCEVUnionPredicate Preds.
   LLVM_ABI PredicatedScalarEvolution(const PredicatedScalarEvolution &);
 
   /// Print the SCEV mappings done by the Predicated Scalar Evolution.
@@ -2653,9 +2673,10 @@ public:
   LLVM_ABI void print(raw_ostream &OS, unsigned Depth) const;
 
   /// Check if \p AR1 and \p AR2 are equal, while taking into account
-  /// Equal predicates in Preds.
-  LLVM_ABI bool areAddRecsEqualWithPreds(const SCEVAddRecExpr *AR1,
-                                         const SCEVAddRecExpr *AR2) const;
+  /// Equal predicates in Preds and \p ExtraPreds.
+  LLVM_ABI bool areAddRecsEqualWithPreds(
+      const SCEVAddRecExpr *AR1, const SCEVAddRecExpr *AR2,
+      ArrayRef<const SCEVPredicate *> ExtraPreds = {}) const;
 
 private:
   /// Increments the version number of the predicate.  This needs to be called
@@ -2672,9 +2693,6 @@ private:
   /// rewrites, we will rewrite the previous result instead of the original
   /// SCEV.
   DenseMap<const SCEV *, RewriteEntry> RewriteMap;
-
-  /// Records what NoWrap flags we've added to a Value *.
-  ValueMap<Value *, SCEVWrapPredicate::IncrementWrapFlags> FlagsMap;
 
   /// The ScalarEvolution analysis.
   ScalarEvolution &SE;
@@ -2703,15 +2721,6 @@ private:
 };
 
 template <> struct DenseMapInfo<ScalarEvolution::FoldID> {
-  static inline ScalarEvolution::FoldID getEmptyKey() {
-    ScalarEvolution::FoldID ID(0);
-    return ID;
-  }
-  static inline ScalarEvolution::FoldID getTombstoneKey() {
-    ScalarEvolution::FoldID ID(1);
-    return ID;
-  }
-
   static unsigned getHashValue(const ScalarEvolution::FoldID &Val) {
     return Val.computeHash();
   }

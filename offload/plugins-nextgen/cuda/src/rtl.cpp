@@ -133,8 +133,7 @@ struct CUDAKernelTy : public GenericKernelTy {
     // Set the static block memory size required by the kernel.
     StaticBlockMemSize = SharedMemSize;
 
-    // Retrieve the size of the arguments.
-    return initArgsSize();
+    return Plugin::success();
   }
 
   /// Launch the CUDA kernel function.
@@ -157,33 +156,18 @@ struct CUDAKernelTy : public GenericKernelTy {
     return MaxBlockSize;
   }
 
+  /// Get maximum cooperative group count
+  Expected<uint32_t>
+  getMaxCooperativeGroupCount(GenericDeviceTy &GenericDevice,
+                              const uint32_t NumThreads[3],
+                              uint32_t DynBlockMemSize) const override;
+
 private:
-  /// Initialize the size of the arguments.
-  Error initArgsSize() {
-    CUresult Res;
-    size_t ArgOffset, ArgSize;
-    size_t Arg = 0;
-
-    ArgsSize = 0;
-
-    // Find the last argument to know the total size of the arguments.
-    while ((Res = cuFuncGetParamInfo(Func, Arg++, &ArgOffset, &ArgSize)) ==
-           CUDA_SUCCESS)
-      ArgsSize = ArgOffset + ArgSize;
-
-    if (Res != CUDA_ERROR_INVALID_VALUE)
-      return Plugin::check(Res, "error in cuFuncGetParamInfo: %s");
-    return Plugin::success();
-  }
-
   /// The CUDA kernel function to execute.
   CUfunction Func;
   /// The maximum amount of dynamic shared memory per thread group. By default,
   /// this is set to 48 KB.
   mutable uint32_t MaxDynBlockMemSize = 49152;
-
-  /// The size of the kernel arguments.
-  size_t ArgsSize;
 };
 
 /// Class wrapping a CUDA stream reference. These are the objects handled by the
@@ -254,7 +238,7 @@ struct CUDAEventRef final : public GenericDeviceResourceRef {
       return Plugin::error(ErrorCode::INVALID_ARGUMENT,
                            "creating an existing event");
 
-    CUresult Res = cuEventCreate(&Event, CU_EVENT_DEFAULT);
+    CUresult Res = cuEventCreate(&Event, CU_EVENT_DISABLE_TIMING);
     if (auto Err = Plugin::check(Res, "error in cuEventCreate: %s"))
       return Err;
 
@@ -390,6 +374,20 @@ struct CUDADeviceTy : public GenericDeviceTy {
             CU_DEVICE_ATTRIBUTE_MAX_SHARED_MEMORY_PER_BLOCK, MaxSharedMem))
       return Err;
     MaxBlockSharedMemSize = MaxSharedMem;
+
+    CUmemAllocationProp Prop = {};
+    Prop.type = CU_MEM_ALLOCATION_TYPE_PINNED;
+    Prop.location.type = CU_MEM_LOCATION_TYPE_DEVICE;
+    Prop.location.id = DeviceId;
+
+    Res = cuMemGetAllocationGranularity(&Granularity, &Prop,
+                                        CU_MEM_ALLOC_GRANULARITY_MINIMUM);
+    if (auto Err = Plugin::check(
+            Res, "error in cuMemGetAllocationGranularity for the device: %s"))
+      return Err;
+    if (Granularity == 0)
+      return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                           "wrong device page size");
 
     return Plugin::success();
   }
@@ -580,7 +578,8 @@ struct CUDADeviceTy : public GenericDeviceTy {
   }
 
   /// Allocate memory on the device or related to the device.
-  Expected<void *> allocate(size_t Size, void *, TargetAllocTy Kind) override {
+  Expected<void *> allocate(size_t Size, void *, TargetAllocTy Kind,
+                            size_t Alignment = 0) override {
     if (Size == 0)
       return nullptr;
 
@@ -590,6 +589,13 @@ struct CUDADeviceTy : public GenericDeviceTy {
     void *MemAlloc = nullptr;
     CUdeviceptr DevicePtr;
     CUresult Res;
+
+    if (Alignment > 0 && Alignment > Granularity) {
+      return Plugin::error(ErrorCode::UNSUPPORTED,
+                           "requested alignment (%lu) larger than maximum "
+                           "supported alignment (%lu)",
+                           Alignment, Granularity);
+    }
 
     switch (Kind) {
     case TARGET_ALLOC_DEFAULT:
@@ -608,6 +614,19 @@ struct CUDADeviceTy : public GenericDeviceTy {
 
     if (auto Err = Plugin::check(Res, "error in cuMemAlloc[Host|Managed]: %s"))
       return std::move(Err);
+
+    if (Alignment > 0 && !isAddrAligned(Align(Alignment), MemAlloc)) {
+      if (auto FreeErr = free(MemAlloc, Kind)) {
+        return Plugin::error(ErrorCode::UNKNOWN,
+                             "Failure in deallcation of the incorrectly "
+                             "aligned pointer; requested alignemnt: %lu",
+                             Alignment);
+      }
+
+      return Plugin::error(ErrorCode::UNSUPPORTED,
+                           "unsupported alignment size");
+    }
+
     return MemAlloc;
   }
 
@@ -962,21 +981,31 @@ struct CUDADeviceTy : public GenericDeviceTy {
     return Plugin::check(Res, "error in cuStreamLaunchHostFunc: %s");
   };
 
-  /// Create an event.
-  Error createEventImpl(void **EventPtrStorage) override {
+  /// Non-profiling events use CU_EVENT_DISABLE_TIMING from the pool.
+  /// Profiling events are created directly with timing and not pooled.
+  Error createEventImpl(void **EventPtrStorage, bool EnableProfiling) override {
     CUevent *Event = reinterpret_cast<CUevent *>(EventPtrStorage);
+    if (EnableProfiling) {
+      CUresult Res = cuEventCreate(Event, CU_EVENT_DEFAULT);
+      return Plugin::check(Res, "error in cuEventCreate: %s");
+    }
     return CUDAEventManager.getResource(*Event);
   }
 
-  /// Destroy a previously created event.
-  Error destroyEventImpl(void *EventPtr) override {
+  /// Profiling events are destroyed directly; non-profiling events return to
+  /// the pool.
+  Error destroyEventImpl(void *EventPtr, bool EnableProfiling) override {
     CUevent Event = reinterpret_cast<CUevent>(EventPtr);
+    if (EnableProfiling) {
+      CUresult Res = cuEventDestroy(Event);
+      return Plugin::check(Res, "error in cuEventDestroy: %s");
+    }
     return CUDAEventManager.returnResource(Event);
   }
 
   /// Record the event.
-  Error recordEventImpl(void *EventPtr,
-                        AsyncInfoWrapperTy &AsyncInfoWrapper) override {
+  Error recordEventImpl(void *EventPtr, AsyncInfoWrapperTy &AsyncInfoWrapper,
+                        bool EnableProfiling) override {
     CUevent Event = reinterpret_cast<CUevent>(EventPtr);
 
     CUstream Stream;
@@ -1234,7 +1263,8 @@ struct CUDADeviceTy : public GenericDeviceTy {
 
     Res = getDeviceAttrRaw(CU_DEVICE_ATTRIBUTE_COOPERATIVE_LAUNCH, TmpInt);
     if (Res == CUDA_SUCCESS)
-      Info.add("Cooperative Launch", bool(TmpInt));
+      Info.add("Cooperative Launch", bool(TmpInt), "",
+               DeviceInfo::COOPERATIVE_LAUNCH_SUPPORT);
 
     Res = getDeviceAttrRaw(CU_DEVICE_ATTRIBUTE_MULTI_GPU_BOARD, TmpInt);
     if (Res == CUDA_SUCCESS)
@@ -1443,6 +1473,9 @@ private:
   /// simultaneously.
   uint32_t HardwareParallelism = 0;
 
+  /// Device page size.
+  size_t Granularity = 0;
+
   /// Tracker for virtual address reservations.
   VMemTrackerTy<CUmemGenericAllocationHandle> VMemTracker;
 };
@@ -1455,21 +1488,9 @@ Error CUDAKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
                                AsyncInfoWrapperTy &AsyncInfoWrapper) const {
   CUDADeviceTy &CUDADevice = static_cast<CUDADeviceTy &>(GenericDevice);
 
-  // The args size passed in LaunchParams may have tail padding, which is not
-  // accepted by the CUDA driver.
-  if (ArgsSize > LaunchParams.Size)
-    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
-                         "mismatch in kernel arguments");
-
   CUstream Stream;
   if (auto Err = CUDADevice.getStream(AsyncInfoWrapper, Stream))
     return Err;
-
-  size_t ConfigArgsSize = ArgsSize;
-  void *Config[] = {CU_LAUNCH_PARAM_BUFFER_POINTER, LaunchParams.Data,
-                    CU_LAUNCH_PARAM_BUFFER_SIZE,
-                    reinterpret_cast<void *>(&ConfigArgsSize),
-                    CU_LAUNCH_PARAM_END};
 
   // If we are running an RPC server we want to wake up the server thread
   // whenever there is a kernel running and let it sleep otherwise.
@@ -1487,9 +1508,18 @@ Error CUDAKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
     MaxDynBlockMemSize = DynBlockMemSize;
   }
 
-  CUresult Res = cuLaunchKernel(Func, NumBlocks[0], NumBlocks[1], NumBlocks[2],
-                                NumThreads[0], NumThreads[1], NumThreads[2],
-                                DynBlockMemSize, Stream, nullptr, Config);
+  CUlaunchAttribute CoopAttr;
+  CoopAttr.id = CU_LAUNCH_ATTRIBUTE_COOPERATIVE;
+  CoopAttr.value.cooperative = KernelArgs.Flags.Cooperative;
+
+  CUlaunchConfig LaunchConfig = {NumBlocks[0],    NumBlocks[1],
+                                 NumBlocks[2],    NumThreads[0],
+                                 NumThreads[1],   NumThreads[2],
+                                 DynBlockMemSize, Stream,
+                                 &CoopAttr,       1};
+
+  CUresult Res = cuLaunchKernelEx(&LaunchConfig, Func, LaunchParams.Args,
+                                  /*extra=*/nullptr);
 
   // Register a callback to indicate when the kernel is complete.
   if (GenericDevice.getRPCServer())
@@ -1501,7 +1531,53 @@ Error CUDAKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
         },
         &GenericDevice.Plugin);
 
-  return Plugin::check(Res, "error in cuLaunchKernel for '%s': %s", getName());
+  return Plugin::check(Res, "error in cuLaunchKernelEx for '%s': %s",
+                       getName());
+}
+
+Expected<uint32_t>
+CUDAKernelTy::getMaxCooperativeGroupCount(GenericDeviceTy &GenericDevice,
+                                          const uint32_t NumThreads[3],
+                                          uint32_t DynBlockMemSize) const {
+  CUDADeviceTy &CUDADevice = static_cast<CUDADeviceTy &>(GenericDevice);
+
+  uint32_t SupportsCooperative = 0;
+  if (auto Err = CUDADevice.getDeviceAttr(
+          CU_DEVICE_ATTRIBUTE_COOPERATIVE_LAUNCH, SupportsCooperative))
+    return Err;
+
+  if (!SupportsCooperative)
+    return Plugin::error(ErrorCode::UNSUPPORTED,
+                         "device does not support cooperative launch");
+
+  // Calculate total local work size
+  size_t LocalWorkSizeTotal = NumThreads[0] * NumThreads[1] * NumThreads[2];
+
+  // Query max active blocks per multiprocessor
+  int32_t MaxNumActiveGroupsPerCU = 0;
+  CUresult Res = cuOccupancyMaxActiveBlocksPerMultiprocessor(
+      &MaxNumActiveGroupsPerCU, Func, LocalWorkSizeTotal, DynBlockMemSize);
+  if (auto Err = Plugin::check(
+          Res, "error in cuOccupancyMaxActiveBlocksPerMultiprocessor: %s"))
+    return Err;
+
+  assert(MaxNumActiveGroupsPerCU >= 0);
+
+  // Handle the case where we can't have all SMs active with at least 1 group
+  // per SM. In that case, the device is still able to run 1 work-group, hence
+  // we will manually check if it is possible with the available HW resources.
+  if (MaxNumActiveGroupsPerCU == 0)
+    // Check if we can launch at least 1 work-group
+    return (LocalWorkSizeTotal <= MaxNumThreads &&
+            DynBlockMemSize <= CUDADevice.getMaxBlockSharedMemSize());
+
+  // Multiply by the number of multiprocessors (compute units) on the device
+  uint32_t NumMultiprocessors = 0;
+  if (auto Err = CUDADevice.getDeviceAttr(
+          CU_DEVICE_ATTRIBUTE_MULTIPROCESSOR_COUNT, NumMultiprocessors))
+    return Err;
+
+  return NumMultiprocessors * MaxNumActiveGroupsPerCU;
 }
 
 /// Class implementing the CUDA-specific functionalities of the global handler.

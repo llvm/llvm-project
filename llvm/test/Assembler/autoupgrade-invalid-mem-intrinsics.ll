@@ -1,13 +1,16 @@
-; RUN: llvm-as < %s | llvm-dis | FileCheck %s
+; RUN: not llvm-as < %s 2>&1 | FileCheck %s
 
-; Check that remangling code doesn't fail on an intrinsic with wrong signature
-; TODO: This should probably produce an error.
-
-; CHECK: declare void @llvm.memset.i64
+; CHECK: intrinsic has incorrect number of args. Expected 4, but got 3
+; CHECK-NEXT: ; {{.*}}
+; CHECK-NEXT: declare void @llvm.memset.i64(ptr captures(none), i8, i64)
 declare void @llvm.memset.i64(ptr nocapture, i8, i64) nounwind
 
-; CHECK: declare void @llvm.memcpy.i64
+; CHECK: intrinsic has incorrect number of args. Expected 4, but got 3
+; CHECK-NEXT: ; {{.*}}
+; CHECK-NEXT: declare void @llvm.memcpy.i64(ptr captures(none), i8, i64)
 declare void @llvm.memcpy.i64(ptr nocapture, i8, i64) nounwind
 
-; CHECK: declare void @llvm.memmove.i64
+; CHECK: intrinsic has incorrect number of args. Expected 4, but got 3
+; CHECK-NEXT: ; {{.*}}
+; CHECK-NEXT: declare void @llvm.memmove.i64(ptr captures(none), i8, i64)
 declare void @llvm.memmove.i64(ptr nocapture, i8, i64) nounwind

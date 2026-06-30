@@ -962,7 +962,7 @@ func.func @omp_atomic_read2(%x: memref<i32>, %v: memref<i32>) {
 // -----
 
 func.func @omp_atomic_read3(%x: memref<i32>, %v: memref<i32>) {
-  // expected-error @below {{memory-order must not be acq_rel or release for atomic reads}}
+  // expected-error @below {{memory-order must not be acq_rel for atomic reads}}
   omp.atomic.read %v = %x memory_order(acq_rel) : memref<i32>, memref<i32>, i32
   return
 }
@@ -970,7 +970,7 @@ func.func @omp_atomic_read3(%x: memref<i32>, %v: memref<i32>) {
 // -----
 
 func.func @omp_atomic_read4(%x: memref<i32>, %v: memref<i32>) {
-  // expected-error @below {{memory-order must not be acq_rel or release for atomic reads}}
+  // expected-error @below {{memory-order must not be release for atomic reads}}
   omp.atomic.read %v = %x memory_order(release) : memref<i32>, memref<i32>, i32
   return
 }
@@ -1010,7 +1010,7 @@ func.func @omp_atomic_write1(%addr : memref<i32>, %val : i32) {
 // -----
 
 func.func @omp_atomic_write2(%addr : memref<i32>, %val : i32) {
-  // expected-error @below {{memory-order must not be acq_rel or acquire for atomic writes}}
+  // expected-error @below {{memory-order must not be acq_rel for atomic writes}}
   omp.atomic.write  %addr = %val memory_order(acq_rel) : memref<i32>, i32
   return
 }
@@ -1018,7 +1018,7 @@ func.func @omp_atomic_write2(%addr : memref<i32>, %val : i32) {
 // -----
 
 func.func @omp_atomic_write3(%addr : memref<i32>, %val : i32) {
-  // expected-error @below {{memory-order must not be acq_rel or acquire for atomic writes}}
+  // expected-error @below {{memory-order must not be acquire for atomic writes}}
   omp.atomic.write  %addr = %val memory_order(acquire) : memref<i32>, i32
   return
 }
@@ -1420,6 +1420,523 @@ func.func @omp_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
 
 // -----
 
+func.func @omp_atomic_compare_no_block_arg(%x: memref<i32>, %e: i32, %d: i32) {
+  // expected-error @below {{the region must accept exactly one argument}}
+  omp.atomic.compare %x : memref<i32> {
+    omp.yield
+  }
+  return
+}
+
+// -----
+
+func.func @omp_atomic_compare_empty_region(%x: memref<i32>, %e: i32, %d: i32) {
+  // expected-error @below {{region must contain a comparison operation}}
+  omp.atomic.compare %x : memref<i32> {
+  ^bb0(%xval: i32):
+    omp.yield(%xval : i32)
+  }
+  return
+}
+
+// -----
+
+func.func @omp_atomic_compare_invalid_hint(%x: memref<i32>, %e: i32, %d: i32) {
+  // expected-error @below {{the hints omp_sync_hint_uncontended and omp_sync_hint_contended cannot be combined}}
+  omp.atomic.compare hint(contended, uncontended) %x : memref<i32> {
+  ^bb0(%xval: i32):
+    %cmp = llvm.icmp "eq" %xval, %e : i32
+    %sel = llvm.select %cmp, %d, %xval : i1, i32
+    omp.yield(%sel : i32)
+  }
+  return
+}
+
+// -----
+
+func.func @omp_atomic_compare_invalid_hint2(%x: memref<i32>, %e: i32, %d: i32) {
+  // expected-error @below {{the hints omp_sync_hint_nonspeculative and omp_sync_hint_speculative cannot be combined}}
+  omp.atomic.compare hint(nonspeculative, speculative) %x : memref<i32> {
+  ^bb0(%xval: i32):
+    %cmp = llvm.icmp "eq" %xval, %e : i32
+    %sel = llvm.select %cmp, %d, %xval : i1, i32
+    omp.yield(%sel : i32)
+  }
+  return
+}
+
+// -----
+// float comparison operators mentionend in ArithBase.td not permitted for
+//     !omp atomic compare
+
+func.func @omp_atomic_compare_invalid_cmpf_predicate(%x: memref<f32>, %e: f32, %d: f32) {
+  // expected-error @below {{unsupported comparison operator 'one' in atomic compare region, supported operators are: oeq, ogt, olt}}
+  omp.atomic.compare %x : memref<f32> {
+  ^bb0(%xval: f32):
+    %cmp = arith.cmpf one, %xval, %e : f32
+    %sel = arith.select %cmp, %d, %xval : f32
+    omp.yield(%sel : f32)
+  }
+  return
+}
+
+// -----
+
+func.func @omp_atomic_compare_invalid_fcmp_predicate(%x: memref<f64>, %e: f64, %d: f64) {
+  // expected-error @below {{unsupported comparison operator 'one' in atomic compare region, supported operators are: oeq, ogt, olt}}
+  omp.atomic.compare %x : memref<f64> {
+  ^bb0(%xval: f64):
+    %cmp = llvm.fcmp "one" %xval, %e : f64
+    %sel = llvm.select %cmp, %d, %xval : i1, f64
+    omp.yield(%sel : f64)
+  }
+  return
+}
+
+// -----
+
+func.func @omp_atomic_compare_invalid_cmpf_predicate(%x: memref<f32>, %e: f32, %d: f32) {
+  // expected-error @below {{unsupported comparison operator 'oge' in atomic compare region, supported operators are: oeq, ogt, olt}}
+  omp.atomic.compare %x : memref<f32> {
+  ^bb0(%xval: f32):
+    %cmp = arith.cmpf oge, %xval, %e : f32
+    %sel = arith.select %cmp, %d, %xval : f32
+    omp.yield(%sel : f32)
+  }
+  return
+}
+
+// -----
+
+func.func @omp_atomic_compare_invalid_fcmp_predicate(%x: memref<f64>, %e: f64, %d: f64) {
+  // expected-error @below {{unsupported comparison operator 'oge' in atomic compare region, supported operators are: oeq, ogt, olt}}
+  omp.atomic.compare %x : memref<f64> {
+  ^bb0(%xval: f64):
+    %cmp = llvm.fcmp "oge" %xval, %e : f64
+    %sel = llvm.select %cmp, %d, %xval : i1, f64
+    omp.yield(%sel : f64)
+  }
+  return
+}
+
+// -----
+
+func.func @omp_atomic_compare_invalid_cmpf_predicate(%x: memref<f64>, %e: f64, %d: f64) {
+  // expected-error @below {{unsupported comparison operator 'ole' in atomic compare region, supported operators are: oeq, ogt, olt}}
+  omp.atomic.compare %x : memref<f64> {
+  ^bb0(%xval: f64):
+    %cmp = arith.cmpf ole, %xval, %e : f64
+    %sel = arith.select %cmp, %d, %xval : f64
+    omp.yield(%sel : f64)
+  }
+  return
+}
+
+// -----
+
+func.func @omp_atomic_compare_invalid_fcmp_predicate(%x: memref<f32>, %e: f32, %d: f32) {
+  // expected-error @below {{unsupported comparison operator 'ole' in atomic compare region, supported operators are: oeq, ogt, olt}}
+  omp.atomic.compare %x : memref<f32> {
+  ^bb0(%xval: f32):
+    %cmp = llvm.fcmp "ole" %xval, %e : f32
+    %sel = llvm.select %cmp, %d, %xval : i1, f32
+    omp.yield(%sel : f32)
+  }
+  return
+}
+
+// -----
+
+func.func @omp_atomic_compare_invalid_cmpf_predicate(%x: memref<f64>, %e: f64, %d: f64) {
+  // expected-error @below {{unsupported comparison operator 'ord' in atomic compare region, supported operators are: oeq, ogt, olt}}
+  omp.atomic.compare %x : memref<f64> {
+  ^bb0(%xval: f64):
+    %cmp = arith.cmpf ord, %xval, %e : f64
+    %sel = arith.select %cmp, %d, %xval : f64
+    omp.yield(%sel : f64)
+  }
+  return
+}
+
+// -----
+
+func.func @omp_atomic_compare_invalid_fcmp_predicate(%x: memref<f32>, %e: f32, %d: f32) {
+  // expected-error @below {{unsupported comparison operator 'ord' in atomic compare region, supported operators are: oeq, ogt, olt}}
+  omp.atomic.compare %x : memref<f32> {
+  ^bb0(%xval: f32):
+    %cmp = llvm.fcmp "ord" %xval, %e : f32
+    %sel = llvm.select %cmp, %d, %xval : i1, f32
+    omp.yield(%sel : f32)
+  }
+  return
+}
+
+// -----
+
+func.func @omp_atomic_compare_invalid_cmpf_predicate(%x: memref<f32>, %e: f32, %d: f32) {
+  // expected-error @below {{unsupported comparison operator 'ueq' in atomic compare region, supported operators are: oeq, ogt, olt}}
+  omp.atomic.compare %x : memref<f32> {
+  ^bb0(%xval: f32):
+    %cmp = arith.cmpf ueq, %xval, %e : f32
+    %sel = arith.select %cmp, %d, %xval : f32
+    omp.yield(%sel : f32)
+  }
+  return
+}
+
+// -----
+
+func.func @omp_atomic_compare_invalid_fcmp_predicate(%x: memref<f64>, %e: f64, %d: f64) {
+  // expected-error @below {{unsupported comparison operator 'ueq' in atomic compare region, supported operators are: oeq, ogt, olt}}
+  omp.atomic.compare %x : memref<f64> {
+  ^bb0(%xval: f64):
+    %cmp = llvm.fcmp "ueq" %xval, %e : f64
+    %sel = llvm.select %cmp, %d, %xval : i1, f64
+    omp.yield(%sel : f64)
+  }
+  return
+}
+
+// -----
+
+func.func @omp_atomic_compare_invalid_cmpf_predicate(%x: memref<f32>, %e: f32, %d: f32) {
+  // expected-error @below {{unsupported comparison operator 'ugt' in atomic compare region, supported operators are: oeq, ogt, olt}}
+  omp.atomic.compare %x : memref<f32> {
+  ^bb0(%xval: f32):
+    %cmp = arith.cmpf ugt, %xval, %e : f32
+    %sel = arith.select %cmp, %d, %xval : f32
+    omp.yield(%sel : f32)
+  }
+  return
+}
+
+// -----
+
+func.func @omp_atomic_compare_invalid_fcmp_predicate(%x: memref<f64>, %e: f64, %d: f64) {
+  // expected-error @below {{unsupported comparison operator 'ugt' in atomic compare region, supported operators are: oeq, ogt, olt}}
+  omp.atomic.compare %x : memref<f64> {
+  ^bb0(%xval: f64):
+    %cmp = llvm.fcmp "ugt" %xval, %e : f64
+    %sel = llvm.select %cmp, %d, %xval : i1, f64
+    omp.yield(%sel : f64)
+  }
+  return
+}
+
+// -----
+
+func.func @omp_atomic_compare_invalid_cmpf_predicate(%x: memref<f32>, %e: f32, %d: f32) {
+  // expected-error @below {{unsupported comparison operator 'uge' in atomic compare region, supported operators are: oeq, ogt, olt}}
+  omp.atomic.compare %x : memref<f32> {
+  ^bb0(%xval: f32):
+    %cmp = arith.cmpf uge, %xval, %e : f32
+    %sel = arith.select %cmp, %d, %xval : f32
+    omp.yield(%sel : f32)
+  }
+  return
+}
+
+// -----
+
+func.func @omp_atomic_compare_invalid_fcmp_predicate(%x: memref<f32>, %e: f32, %d: f32) {
+  // expected-error @below {{unsupported comparison operator 'uge' in atomic compare region, supported operators are: oeq, ogt, olt}}
+  omp.atomic.compare %x : memref<f32> {
+  ^bb0(%xval: f32):
+    %cmp = llvm.fcmp "uge" %xval, %e : f32
+    %sel = llvm.select %cmp, %d, %xval : i1, f32
+    omp.yield(%sel : f32)
+  }
+  return
+}
+
+// -----
+
+func.func @omp_atomic_compare_invalid_cmpf_predicate(%x: memref<f64>, %e: f64, %d: f64) {
+  // expected-error @below {{unsupported comparison operator 'ult' in atomic compare region, supported operators are: oeq, ogt, olt}}
+  omp.atomic.compare %x : memref<f64> {
+  ^bb0(%xval: f64):
+    %cmp = arith.cmpf ult, %xval, %e : f64
+    %sel = arith.select %cmp, %d, %xval : f64
+    omp.yield(%sel : f64)
+  }
+  return
+}
+
+// -----
+
+func.func @omp_atomic_compare_invalid_fcmp_predicate(%x: memref<f32>, %e: f32, %d: f32) {
+  // expected-error @below {{unsupported comparison operator 'ult' in atomic compare region, supported operators are: oeq, ogt, olt}}
+  omp.atomic.compare %x : memref<f32> {
+  ^bb0(%xval: f32):
+    %cmp = llvm.fcmp "ult" %xval, %e : f32
+    %sel = llvm.select %cmp, %d, %xval : i1, f32
+    omp.yield(%sel : f32)
+  }
+  return
+}
+
+// -----
+
+func.func @omp_atomic_compare_invalid_cmpf_predicate(%x: memref<f32>, %e: f32, %d: f32) {
+  // expected-error @below {{unsupported comparison operator 'ule' in atomic compare region, supported operators are: oeq, ogt, olt}}
+  omp.atomic.compare %x : memref<f32> {
+  ^bb0(%xval: f32):
+    %cmp = arith.cmpf ule, %xval, %e : f32
+    %sel = arith.select %cmp, %d, %xval : f32
+    omp.yield(%sel : f32)
+  }
+  return
+}
+
+// -----
+
+func.func @omp_atomic_compare_invalid_fcmp_predicate(%x: memref<f64>, %e: f64, %d: f64) {
+  // expected-error @below {{unsupported comparison operator 'ule' in atomic compare region, supported operators are: oeq, ogt, olt}}
+  omp.atomic.compare %x : memref<f64> {
+  ^bb0(%xval: f64):
+    %cmp = llvm.fcmp "ule" %xval, %e : f64
+    %sel = llvm.select %cmp, %d, %xval : i1, f64
+    omp.yield(%sel : f64)
+  }
+  return
+}
+
+// -----
+
+func.func @omp_atomic_compare_invalid_cmpf_predicate(%x: memref<f32>, %e: f32, %d: f32) {
+  // expected-error @below {{unsupported comparison operator 'une' in atomic compare region, supported operators are: oeq, ogt, olt}}
+  omp.atomic.compare %x : memref<f32> {
+  ^bb0(%xval: f32):
+    %cmp = arith.cmpf une, %xval, %e : f32
+    %sel = arith.select %cmp, %d, %xval : f32
+    omp.yield(%sel : f32)
+  }
+  return
+}
+
+// -----
+
+func.func @omp_atomic_compare_invalid_fcmp_predicate(%x: memref<f32>, %e: f32, %d: f32) {
+  // expected-error @below {{unsupported comparison operator 'une' in atomic compare region, supported operators are: oeq, ogt, olt}}
+  omp.atomic.compare %x : memref<f32> {
+  ^bb0(%xval: f32):
+    %cmp = llvm.fcmp "une" %xval, %e : f32
+    %sel = llvm.select %cmp, %d, %xval : i1, f32
+    omp.yield(%sel : f32)
+  }
+  return
+}
+
+// -----
+
+func.func @omp_atomic_compare_invalid_cmpf_predicate(%x: memref<f64>, %e: f64, %d: f64) {
+  // expected-error @below {{unsupported comparison operator 'uno' in atomic compare region, supported operators are: oeq, ogt, olt}}
+  omp.atomic.compare %x : memref<f64> {
+  ^bb0(%xval: f64):
+    %cmp = arith.cmpf uno, %xval, %e : f64
+    %sel = arith.select %cmp, %d, %xval : f64
+    omp.yield(%sel : f64)
+  }
+  return
+}
+
+// -----
+
+func.func @omp_atomic_compare_invalid_fcmp_predicate(%x: memref<f32>, %e: f32, %d: f32) {
+  // expected-error @below {{unsupported comparison operator 'uno' in atomic compare region, supported operators are: oeq, ogt, olt}}
+  omp.atomic.compare %x : memref<f32> {
+  ^bb0(%xval: f32):
+    %cmp = llvm.fcmp "uno" %xval, %e : f32
+    %sel = llvm.select %cmp, %d, %xval : i1, f32
+    omp.yield(%sel : f32)
+  }
+  return
+}
+
+// -----
+
+func.func @omp_atomic_compare_invalid_cmpi_predicate(%x: memref<i32>, %e: i32, %d: i32) {
+  // expected-error @below {{unsupported comparison operator 'ne' in atomic compare region, supported operators are: eq, slt, sgt}}
+  omp.atomic.compare %x : memref<i32> {
+  ^bb0(%xval: i32):
+    %cmp = arith.cmpi ne, %xval, %e : i32
+    %sel = arith.select %cmp, %d, %xval : i32
+    omp.yield(%sel : i32)
+  }
+  return
+}
+
+// -----
+
+func.func @omp_atomic_compare_invalid_icmp_predicate(%x: memref<i32>, %e: i32, %d: i32) {
+  // expected-error @below {{unsupported comparison operator 'ne' in atomic compare region, supported operators are: eq, slt, sgt}}
+  omp.atomic.compare %x : memref<i32> {
+  ^bb0(%xval: i32):
+    %cmp = llvm.icmp "ne" %xval, %e : i32
+    %sel = llvm.select %cmp, %d, %xval : i1, i32
+    omp.yield(%sel : i32)
+  }
+  return
+}
+
+// -----
+
+func.func @omp_atomic_compare_invalid_cmpi_predicate(%x: memref<i32>, %e: i32, %d: i32) {
+  // expected-error @below {{unsupported comparison operator 'sle' in atomic compare region, supported operators are: eq, slt, sgt}}
+  omp.atomic.compare %x : memref<i32> {
+  ^bb0(%xval: i32):
+    %cmp = arith.cmpi sle, %xval, %e : i32
+    %sel = arith.select %cmp, %d, %xval : i32
+    omp.yield(%sel : i32)
+  }
+  return
+}
+
+// -----
+
+func.func @omp_atomic_compare_invalid_icmp_predicate(%x: memref<i32>, %e: i32, %d: i32) {
+  // expected-error @below {{unsupported comparison operator 'sle' in atomic compare region, supported operators are: eq, slt, sgt}}
+  omp.atomic.compare %x : memref<i32> {
+  ^bb0(%xval: i32):
+    %cmp = llvm.icmp "sle" %xval, %e : i32
+    %sel = llvm.select %cmp, %d, %xval : i1, i32
+    omp.yield(%sel : i32)
+  }
+  return
+}
+
+// -----
+
+func.func @omp_atomic_compare_invalid_cmpi_predicate(%x: memref<i32>, %e: i32, %d: i32) {
+  // expected-error @below {{unsupported comparison operator 'sge' in atomic compare region, supported operators are: eq, slt, sgt}}
+  omp.atomic.compare %x : memref<i32> {
+  ^bb0(%xval: i32):
+    %cmp = arith.cmpi sge, %xval, %e : i32
+    %sel = arith.select %cmp, %d, %xval : i32
+    omp.yield(%sel : i32)
+  }
+  return
+}
+
+// -----
+
+func.func @omp_atomic_compare_invalid_icmp_predicate(%x: memref<i32>, %e: i32, %d: i32) {
+  // expected-error @below {{unsupported comparison operator 'sge' in atomic compare region, supported operators are: eq, slt, sgt}}
+  omp.atomic.compare %x : memref<i32> {
+  ^bb0(%xval: i32):
+    %cmp = llvm.icmp "sge" %xval, %e : i32
+    %sel = llvm.select %cmp, %d, %xval : i1, i32
+    omp.yield(%sel : i32)
+  }
+  return
+}
+
+// -----
+
+func.func @omp_atomic_compare_invalid_cmpi_predicate(%x: memref<i32>, %e: i32, %d: i32) {
+  // expected-error @below {{unsupported comparison operator 'ult' in atomic compare region, supported operators are: eq, slt, sgt}}
+  omp.atomic.compare %x : memref<i32> {
+  ^bb0(%xval: i32):
+    %cmp = arith.cmpi ult, %xval, %e : i32
+    %sel = arith.select %cmp, %d, %xval : i32
+    omp.yield(%sel : i32)
+  }
+  return
+}
+
+// -----
+
+func.func @omp_atomic_compare_invalid_icmp_predicate(%x: memref<i32>, %e: i32, %d: i32) {
+  // expected-error @below {{unsupported comparison operator 'ult' in atomic compare region, supported operators are: eq, slt, sgt}}
+  omp.atomic.compare %x : memref<i32> {
+  ^bb0(%xval: i32):
+    %cmp = llvm.icmp "ult" %xval, %e : i32
+    %sel = llvm.select %cmp, %d, %xval : i1, i32
+    omp.yield(%sel : i32)
+  }
+  return
+}
+
+// -----
+
+func.func @omp_atomic_compare_invalid_cmpi_predicate(%x: memref<i32>, %e: i32, %d: i32) {
+  // expected-error @below {{unsupported comparison operator 'ule' in atomic compare region, supported operators are: eq, slt, sgt}}
+  omp.atomic.compare %x : memref<i32> {
+  ^bb0(%xval: i32):
+    %cmp = arith.cmpi ule, %xval, %e : i32
+    %sel = arith.select %cmp, %d, %xval : i32
+    omp.yield(%sel : i32)
+  }
+  return
+}
+
+// -----
+
+func.func @omp_atomic_compare_invalid_icmp_predicate(%x: memref<i32>, %e: i32, %d: i32) {
+  // expected-error @below {{unsupported comparison operator 'ule' in atomic compare region, supported operators are: eq, slt, sgt}}
+  omp.atomic.compare %x : memref<i32> {
+  ^bb0(%xval: i32):
+    %cmp = llvm.icmp "ule" %xval, %e : i32
+    %sel = llvm.select %cmp, %d, %xval : i1, i32
+    omp.yield(%sel : i32)
+  }
+  return
+}
+
+// -----
+
+func.func @omp_atomic_compare_invalid_cmpi_predicate(%x: memref<i32>, %e: i32, %d: i32) {
+  // expected-error @below {{unsupported comparison operator 'ugt' in atomic compare region, supported operators are: eq, slt, sgt}}
+  omp.atomic.compare %x : memref<i32> {
+  ^bb0(%xval: i32):
+    %cmp = arith.cmpi ugt, %xval, %e : i32
+    %sel = arith.select %cmp, %d, %xval : i32
+    omp.yield(%sel : i32)
+  }
+  return
+}
+
+// -----
+
+func.func @omp_atomic_compare_invalid_icmp_predicate(%x: memref<i32>, %e: i32, %d: i32) {
+  // expected-error @below {{unsupported comparison operator 'ugt' in atomic compare region, supported operators are: eq, slt, sgt}}
+  omp.atomic.compare %x : memref<i32> {
+  ^bb0(%xval: i32):
+    %cmp = llvm.icmp "ugt" %xval, %e : i32
+    %sel = llvm.select %cmp, %d, %xval : i1, i32
+    omp.yield(%sel : i32)
+  }
+  return
+}
+
+// -----
+
+func.func @omp_atomic_compare_invalid_cmpi_predicate(%x: memref<i32>, %e: i32, %d: i32) {
+  // expected-error @below {{unsupported comparison operator 'uge' in atomic compare region, supported operators are: eq, slt, sgt}}
+  omp.atomic.compare %x : memref<i32> {
+  ^bb0(%xval: i32):
+    %cmp = arith.cmpi uge, %xval, %e : i32
+    %sel = arith.select %cmp, %d, %xval : i32
+    omp.yield(%sel : i32)
+  }
+  return
+}
+
+// -----
+
+func.func @omp_atomic_compare_invalid_icmp_predicate(%x: memref<i32>, %e: i32, %d: i32) {
+  // expected-error @below {{unsupported comparison operator 'uge' in atomic compare region, supported operators are: eq, slt, sgt}}
+  omp.atomic.compare %x : memref<i32> {
+  ^bb0(%xval: i32):
+    %cmp = llvm.icmp "uge" %xval, %e : i32
+    %sel = llvm.select %cmp, %d, %xval : i1, i32
+    omp.yield(%sel : i32)
+  }
+  return
+}
+
+// -----
+
 func.func @omp_teams_parent() {
   omp.parallel {
     // expected-error @below {{expected to be nested inside of omp.target or not nested in any OpenMP dialect operations}}
@@ -1434,7 +1951,7 @@ func.func @omp_teams_parent() {
 // -----
 
 func.func @omp_teams_allocate(%data_var : memref<i32>) {
-  omp.target {
+  omp.target kernel_type(generic) {
     // expected-error @below {{expected equal sizes for allocate and allocator variables}}
     "omp.teams" (%data_var) ({
       omp.terminator
@@ -1447,7 +1964,7 @@ func.func @omp_teams_allocate(%data_var : memref<i32>) {
 // -----
 
 func.func @omp_teams_num_teams1(%lb : i32) {
-  omp.target {
+  omp.target kernel_type(generic) {
     // expected-error @below {{expected exactly one num_teams upper bound when lower bound is specified}}
     "omp.teams" (%lb) ({
       omp.terminator
@@ -1460,7 +1977,7 @@ func.func @omp_teams_num_teams1(%lb : i32) {
 // -----
 
 func.func @omp_teams_num_teams_multidim_with_bounds() {
-  omp.target {
+  omp.target kernel_type(generic) {
     %v0 = arith.constant 1 : i32
     %v1 = arith.constant 2 : i32
     %lb = arith.constant 3 : i32
@@ -1477,7 +1994,7 @@ func.func @omp_teams_num_teams_multidim_with_bounds() {
 // -----
 
 func.func @omp_teams_num_teams2(%lb : i32, %ub : i16) {
-  omp.target {
+  omp.target kernel_type(generic) {
     // expected-error @below {{expected num_teams upper bound and lower bound to be the same type}}
     omp.teams num_teams(%lb : i32 to %ub : i16) {
       omp.terminator
@@ -1671,6 +2188,19 @@ func.func @omp_sections() {
   ^bb2:
     omp.terminator
   }
+  return
+}
+
+// -----
+
+func.func @omp_sections() {
+  // expected-error @below {{op cannot be a non-innermost combined construct leaf}}
+  omp.sections {
+    omp.section {
+      omp.terminator
+    }
+    omp.terminator
+  } {omp.combined}
   return
 }
 
@@ -2120,7 +2650,7 @@ func.func @scan_test_2(%lb: i32, %ub: i32, %step: i32) {
       }
     }
     omp.terminator
-  }
+  } {omp.combined}
   return
 }
 
@@ -2136,7 +2666,7 @@ func.func @taskloop(%lb: i32, %ub: i32, %step: i32) {
       }
     }
     omp.terminator
-  }) {operandSegmentSizes = array<i32: 1, 0, 0, 0, 0, 0, 0, 0, 0, 0>} : (memref<i32>) -> ()
+  }) {omp.combined, operandSegmentSizes = array<i32: 1, 0, 0, 0, 0, 0, 0, 0, 0, 0>} : (memref<i32>) -> ()
   return
 }
 
@@ -2154,7 +2684,7 @@ func.func @taskloop(%lb: i32, %ub: i32, %step: i32) {
       }
     }
     omp.terminator
-  }) {operandSegmentSizes = array<i32: 0, 0, 0, 0, 0, 0, 0, 0, 0, 2>, reduction_syms = [@add_f32]} : (!llvm.ptr, !llvm.ptr) -> ()
+  }) {omp.combined, operandSegmentSizes = array<i32: 0, 0, 0, 0, 0, 0, 0, 0, 0, 2>, reduction_syms = [@add_f32]} : (!llvm.ptr, !llvm.ptr) -> ()
   return
 }
 
@@ -2171,7 +2701,7 @@ func.func @taskloop(%lb: i32, %ub: i32, %step: i32) {
       }
     }
     omp.terminator
-  }) {operandSegmentSizes = array<i32: 0, 0, 0, 0, 0, 0, 0, 0, 0, 1>, reduction_syms = [@add_f32, @add_f32]} : (!llvm.ptr) -> ()
+  }) {omp.combined, operandSegmentSizes = array<i32: 0, 0, 0, 0, 0, 0, 0, 0, 0, 1>, reduction_syms = [@add_f32, @add_f32]} : (!llvm.ptr) -> ()
   return
 }
 
@@ -2189,7 +2719,7 @@ func.func @taskloop(%lb: i32, %ub: i32, %step: i32) {
       }
     }
     omp.terminator
-  }) {in_reduction_syms = [@add_f32], operandSegmentSizes = array<i32: 0, 0, 0, 0, 0, 2, 0, 0, 0, 0>} : (!llvm.ptr, !llvm.ptr) -> ()
+  }) {omp.combined, in_reduction_syms = [@add_f32], operandSegmentSizes = array<i32: 0, 0, 0, 0, 0, 2, 0, 0, 0, 0>} : (!llvm.ptr, !llvm.ptr) -> ()
   return
 }
 
@@ -2206,7 +2736,7 @@ func.func @taskloop(%lb: i32, %ub: i32, %step: i32) {
       }
     }
     omp.terminator
-  }) {in_reduction_syms = [@add_f32, @add_f32], operandSegmentSizes = array<i32: 0, 0, 0, 0, 0, 1, 0, 0, 0, 0>} : (!llvm.ptr) -> ()
+  }) {omp.combined, in_reduction_syms = [@add_f32, @add_f32], operandSegmentSizes = array<i32: 0, 0, 0, 0, 0, 1, 0, 0, 0, 0>} : (!llvm.ptr) -> ()
   return
 }
 
@@ -2235,7 +2765,7 @@ func.func @taskloop(%lb: i32, %ub: i32, %step: i32) {
       }
     }
     omp.terminator
-  }
+  } {omp.combined}
   return
 }
 
@@ -2263,7 +2793,7 @@ func.func @taskloop(%lb: i32, %ub: i32, %step: i32) {
       }
     }
     omp.terminator
-  }
+  } {omp.combined}
   return
 }
 
@@ -2279,7 +2809,7 @@ func.func @taskloop(%lb: i32, %ub: i32, %step: i32) {
       }
     }
     omp.terminator
-  }
+  } {omp.combined}
   return
 }
 
@@ -2295,7 +2825,7 @@ func.func @taskloop(%lb: i32, %ub: i32, %step: i32) {
       }
     }
     omp.terminator
-  }
+  } {omp.combined}
   return
 }
 // -----
@@ -2310,7 +2840,7 @@ func.func @taskloop(%lb: i32, %ub: i32, %step: i32) {
       }
     }
     omp.terminator
-  }
+  } {omp.combined}
   return
 }
 // -----
@@ -2322,7 +2852,7 @@ func.func @taskloop(%lb: i32, %ub: i32, %step: i32) {
       %0 = arith.constant 0 : i32
     }
     omp.terminator
-  }
+  } {omp.combined}
   return
 }
 
@@ -2338,6 +2868,21 @@ func.func @taskloop(%lb: i32, %ub: i32, %step: i32) {
         }
       }
     } {omp.composite}
+    omp.terminator
+  } {omp.combined}
+  return
+}
+
+// -----
+
+func.func @taskloop(%lb: i32, %ub: i32, %step: i32) {
+  // expected-error @below {{op must always contain the 'omp.combined' attribute}}
+  omp.taskloop.context {
+    omp.taskloop.wrapper {
+      omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
+        omp.yield
+      }
+    }
     omp.terminator
   }
   return
@@ -2357,7 +2902,7 @@ func.func @omp_threadprivate() {
 func.func @omp_target(%map1: memref<?xi32>) {
   %mapv = omp.map.info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>)   map_clauses(delete) capture(ByRef) -> memref<?xi32> {name = ""}
   // expected-error @below {{to, from, tofrom and alloc map types are permitted}}
-  omp.target map_entries(%mapv -> %arg0: memref<?xi32>) {
+  omp.target kernel_type(generic) map_entries(%mapv -> %arg0: memref<?xi32>) {
     omp.terminator
   }
   return
@@ -2394,7 +2939,7 @@ func.func @omp_target_enter_data(%map1: memref<?xi32>) {
 func.func @omp_target_enter_data_depend(%a: memref<?xi32>) {
   %0 = omp.map.info var_ptr(%a: memref<?xi32>, tensor<?xi32>) map_clauses(to) capture(ByRef) -> memref<?xi32>
   // expected-error @below {{op expected as many depend values as depend variables}}
-  omp.target_enter_data map_entries(%0: memref<?xi32> ) {operandSegmentSizes = array<i32: 1, 0, 0, 0, 0>}
+  omp.target_enter_data map_entries(%0: memref<?xi32> ) {operandSegmentSizes = array<i32: 1, 0, 0, 0, 0, 0>}
   return
 }
 
@@ -2412,7 +2957,7 @@ func.func @omp_target_exit_data(%map1: memref<?xi32>) {
 func.func @omp_target_exit_data_depend(%a: memref<?xi32>) {
   %0 = omp.map.info var_ptr(%a: memref<?xi32>, tensor<?xi32>) map_clauses(from) capture(ByRef) -> memref<?xi32>
   // expected-error @below {{op expected as many depend values as depend variables}}
-  omp.target_exit_data map_entries(%0: memref<?xi32> ) {operandSegmentSizes = array<i32: 1, 0, 0, 0, 0>}
+  omp.target_exit_data map_entries(%0: memref<?xi32> ) {operandSegmentSizes = array<i32: 1, 0, 0, 0, 0, 0>}
   return
 }
 
@@ -2421,8 +2966,19 @@ func.func @omp_target_exit_data_depend(%a: memref<?xi32>) {
 func.func @omp_target_update_invalid_motion_type(%map1 : memref<?xi32>) {
   %mapv = omp.map.info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>) map_clauses(exit_release_or_enter_alloc) capture(ByRef) -> memref<?xi32> {name = ""}
 
-  // expected-error @below {{at least one of to or from map types must be specified, other map types are not permitted}}
+  // expected-error @below {{at least one of to or from or attach map types must be specified, other map types are not permitted}}
   omp.target_update map_entries(%mapv : memref<?xi32>)
+  return
+}
+
+
+// -----
+
+func.func @omp_target_map_must_specify_both_var_ptr_ptr_args(%arg : memref<?xi32>) {
+  %map1 = omp.map.info var_ptr(%arg : memref<?xi32>, tensor<?xi32>) map_clauses(to) capture(ByRef) var_ptr_ptr(%arg : memref<?xi32>, ) -> memref<?xi32> {name = ""}
+
+  // expected-error @below {{if varPtrPtr or varPtrPtrType is specified, then both must be present}}
+  omp.target_update map_entries(%map1 : memref<?xi32>)
   return
 }
 
@@ -2493,7 +3049,7 @@ llvm.mlir.global internal @_QFsubEx() : i32
 func.func @omp_target_update_data_depend(%a: memref<?xi32>) {
   %0 = omp.map.info var_ptr(%a: memref<?xi32>, tensor<?xi32>) map_clauses(to) capture(ByRef) -> memref<?xi32>
   // expected-error @below {{op expected as many depend values as depend variables}}
-  omp.target_update map_entries(%0: memref<?xi32> ) {operandSegmentSizes = array<i32: 1, 0, 0, 0, 0>}
+  omp.target_update map_entries(%0: memref<?xi32> ) {operandSegmentSizes = array<i32: 1, 0, 0, 0, 0, 0>}
   return
 }
 
@@ -2501,7 +3057,7 @@ func.func @omp_target_update_data_depend(%a: memref<?xi32>) {
 
 func.func @omp_target_multiple_teams() {
   // expected-error @below {{target containing multiple 'omp.teams' nested ops}}
-  omp.target {
+  omp.target kernel_type(generic) {
     omp.teams {
       omp.terminator
     }
@@ -2517,7 +3073,7 @@ func.func @omp_target_multiple_teams() {
 
 func.func @omp_target_host_eval(%x : !llvm.ptr) {
   // expected-error @below {{op host_eval argument illegal use in 'llvm.load' operation}}
-  omp.target host_eval(%x -> %arg0 : !llvm.ptr) {
+  omp.target kernel_type(generic) host_eval(%x -> %arg0 : !llvm.ptr) {
     %0 = llvm.load %arg0 : !llvm.ptr -> f32
     omp.terminator
   }
@@ -2528,7 +3084,7 @@ func.func @omp_target_host_eval(%x : !llvm.ptr) {
 
 func.func @omp_target_host_eval_teams(%x : i1) {
   // expected-error @below {{op host_eval argument only legal as 'num_teams' and 'thread_limit' in 'omp.teams'}}
-  omp.target host_eval(%x -> %arg0 : i1) {
+  omp.target kernel_type(generic) host_eval(%x -> %arg0 : i1) {
     omp.teams if(%arg0) {
       omp.terminator
     }
@@ -2539,10 +3095,10 @@ func.func @omp_target_host_eval_teams(%x : i1) {
 
 // -----
 
-func.func @omp_target_host_eval_parallel(%x : i32) {
-  // expected-error @below {{op host_eval argument only legal as 'num_threads' in 'omp.parallel' when representing target SPMD}}
-  omp.target host_eval(%x -> %arg0 : i32) {
-    omp.parallel num_threads(%arg0 : i32) {
+func.func @omp_target_host_eval_parallel(%x : i1) {
+  // expected-error @below {{op host_eval argument only legal as 'num_threads' in 'omp.parallel'}}
+  omp.target kernel_type(generic) host_eval(%x -> %arg0 : i1) {
+    omp.parallel if(%arg0) {
       omp.terminator
     }
     omp.terminator
@@ -2554,14 +3110,14 @@ func.func @omp_target_host_eval_parallel(%x : i32) {
 
 func.func @omp_target_host_eval_loop1(%x : i32) {
   // expected-error @below {{op host_eval argument only legal as loop bounds and steps in 'omp.loop_nest' when trip count must be evaluated in the host}}
-  omp.target host_eval(%x -> %arg0 : i32) {
+  omp.target kernel_type(generic) host_eval(%x -> %arg0 : i32) {
     omp.wsloop {
       omp.loop_nest (%iv) : i32 = (%arg0) to (%arg0) step (%arg0) {
         omp.yield
       }
     }
     omp.terminator
-  }
+  } {omp.combined}
   return
 }
 
@@ -2569,19 +3125,58 @@ func.func @omp_target_host_eval_loop1(%x : i32) {
 
 func.func @omp_target_host_eval_loop2(%x : i32) {
   // expected-error @below {{op host_eval argument only legal as loop bounds and steps in 'omp.loop_nest' when trip count must be evaluated in the host}}
-  omp.target host_eval(%x -> %arg0 : i32) {
+  omp.target kernel_type(bare) host_eval(%x -> %arg0 : i32) {
     omp.teams {
-    ^bb0:
-      %0 = arith.constant 0 : i1
-      llvm.cond_br %0, ^bb1, ^bb2
-    ^bb1:
-      omp.distribute {
+      omp.wsloop {
         omp.loop_nest (%iv) : i32 = (%arg0) to (%arg0) step (%arg0) {
           omp.yield
         }
       }
-      llvm.br ^bb2
-    ^bb2:
+      omp.terminator
+    } {omp.combined}
+    omp.terminator
+  } {omp.combined}
+  return
+}
+
+// -----
+
+func.func @omp_target_host_eval_tripcount() {
+  // expected-error @below {{op nested 'omp.loop_nest' bounds expected to be host-evaluated}}
+  omp.target kernel_type(spmd) {
+    %0 = arith.constant 1 : i32
+    omp.teams {
+      omp.loop {
+        omp.loop_nest (%iv) : i32 = (%0) to (%0) step (%0) {
+          omp.yield
+        }
+      }
+      omp.terminator
+    } {omp.combined}
+    omp.terminator
+  } {omp.combined}
+  return
+}
+
+// -----
+
+func.func @omp_target_bare1(%x : i32) {
+  // expected-error @below {{op bare kernel must contain a nested 'omp.teams' operation}}
+  omp.target kernel_type(bare) {
+    omp.parallel {
+      omp.terminator
+    }
+    omp.terminator
+  } {omp.combined}
+  return
+}
+
+// -----
+
+func.func @omp_target_bare2(%x : i32) {
+  // expected-error @below {{op bare kernel requires 'omp.combined'}}
+  omp.target kernel_type(bare) {
+    omp.teams {
       omp.terminator
     }
     omp.terminator
@@ -2591,11 +3186,49 @@ func.func @omp_target_host_eval_loop2(%x : i32) {
 
 // -----
 
+func.func @omp_target_spmd() {
+  // expected-error @below {{op SPMD kernel must capture an 'omp.loop_nest' operation}}
+  omp.target kernel_type(spmd) {
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+func.func @omp_target_no_loop() {
+  // expected-error @below {{op SPMD kernel must capture an 'omp.loop_nest' operation}}
+  omp.target kernel_type(spmd_no_loop) {
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+func.func @omp_target_no_loop_num_teams(%x : i32) {
+  omp.target kernel_type(spmd_no_loop) host_eval(%x -> %arg0 : i32) {
+    // expected-error @below {{op 'num_teams' not allowed in SPMD-no-loop kernels}}
+    omp.teams num_teams(to %arg0 : i32) {
+      omp.loop {
+        omp.loop_nest (%iv) : i32 = (%arg0) to (%arg0) step (%arg0) {
+          omp.yield
+        }
+      }
+      omp.terminator
+    } {omp.combined}
+    omp.terminator
+  } {omp.combined}
+  return
+}
+
+// -----
+
 func.func @omp_target_depend(%data_var: memref<i32>) {
   // expected-error @below {{op expected as many depend values as depend variables}}
     "omp.target"(%data_var) ({
       "omp.terminator"() : () -> ()
-    }) {depend_kinds = [], operandSegmentSizes = array<i32: 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>} : (memref<i32>) -> ()
+    }) {kernel_type = #omp<kernel_type(generic)>, depend_kinds = [], operandSegmentSizes = array<i32: 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>} : (memref<i32>) -> ()
    "func.return"() : () -> ()
 }
 
@@ -2853,6 +3486,437 @@ func.func @byref_in_private(%arg0: index) {
 }
 
 // -----
+func.func @loop_undefined_privatizer(%lb : index, %ub : index, %step : index,
+                                     %arg0 : index) {
+  // expected-error @below {{failed to lookup privatizer op with symbol: '@missing.privatizer'}}
+  omp.loop private(@missing.privatizer %arg0 -> %arg1 : index) {
+    omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+      omp.yield
+    }
+  }
+
+  return
+}
+
+// -----
+omp.private {type = private} @target.var1.privatizer : index init {
+^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
+  omp.yield(%arg0 : !llvm.ptr)
+}
+
+func.func @target_private_type_mismatch(%arg0: index) {
+  // expected-error @below {{type mismatch between a private variable and its privatizer op, var type: 'index' vs. privatizer op type: '!llvm.ptr'}}
+  omp.target kernel_type(generic) private(@target.var1.privatizer %arg0 -> %arg1 : index) {
+    omp.terminator
+  }
+
+  return
+}
+
+func.func @wsloop_private_count_mismatch(%lb : index, %ub : index, %step : index,
+                                         %arg0 : !llvm.ptr) {
+  // expected-error @below {{inconsistent number of private variables and privatizer op symbols, private vars: 1 vs. privatizer op symbols: 2}}
+  "omp.wsloop"(%arg0) ({
+  ^bb0(%arg1 : !llvm.ptr):
+    omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+      omp.yield
+    }
+  }) {operandSegmentSizes = array<i32: 0, 0, 0, 0, 1, 0, 0>,
+       private_syms = [@x.privatizer, @y.privatizer]} : (!llvm.ptr) -> ()
+
+  return
+}
+
+// -----
+omp.private {type = private} @teams.private.type_mismatch.privatizer : index init {
+^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
+  omp.yield(%arg0 : !llvm.ptr)
+}
+
+omp.private {type = firstprivate} @teams.firstprivate.type_mismatch.privatizer : index copy {
+^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
+  omp.yield(%arg0 : !llvm.ptr)
+}
+
+func.func @teams_private_type_mismatch(%arg0: index) {
+  // expected-error @below {{type mismatch between a private variable and its privatizer op, var type: 'index' vs. privatizer op type: '!llvm.ptr'}}
+  omp.teams private(@teams.private.type_mismatch.privatizer %arg0 -> %arg1 : index) {
+    omp.terminator
+  }
+  return
+}
+
+func.func @teams_firstprivate_type_mismatch(%arg0: index) {
+  // expected-error @below {{type mismatch between a firstprivate variable and its privatizer op, var type: 'index' vs. privatizer op type: '!llvm.ptr'}}
+  omp.teams private(@teams.firstprivate.type_mismatch.privatizer %arg0 -> %arg1 : index) {
+    omp.terminator
+  }
+  return
+}
+
+func.func @teams_undefined_privatizer(%arg0: index) {
+  // expected-error @below {{failed to lookup privatizer op with symbol: '@missing.teams.privatizer'}}
+  omp.teams private(@missing.teams.privatizer %arg0 -> %arg1 : index) {
+    omp.terminator
+  }
+  return
+}
+
+func.func @teams_private_count_mismatch(%arg0: !llvm.ptr) {
+  // expected-error @below {{inconsistent number of private variables and privatizer op symbols, private vars: 1 vs. privatizer op symbols: 2}}
+  "omp.teams"(%arg0) ({
+  ^bb0(%arg1 : !llvm.ptr):
+    omp.terminator
+  }) {operandSegmentSizes = array<i32: 0, 0, 0, 0, 0, 0, 1, 0, 0>,
+       private_syms = [@x.privatizer, @y.privatizer]} : (!llvm.ptr) -> ()
+  return
+}
+
+// -----
+omp.private {type = private} @loop.private.type_mismatch.privatizer : index init {
+^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
+  omp.yield(%arg0 : !llvm.ptr)
+}
+
+omp.private {type = firstprivate} @loop.firstprivate.type_mismatch.privatizer : index copy {
+^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
+  omp.yield(%arg0 : !llvm.ptr)
+}
+
+func.func @loop_private_type_mismatch(%lb : index, %ub : index, %step : index,
+                                      %arg0 : index) {
+  // expected-error @below {{type mismatch between a private variable and its privatizer op, var type: 'index' vs. privatizer op type: '!llvm.ptr'}}
+  omp.loop private(@loop.private.type_mismatch.privatizer %arg0 -> %arg1 : index) {
+    omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+      omp.yield
+    }
+  }
+
+  return
+}
+
+func.func @loop_firstprivate_type_mismatch(%lb : index, %ub : index, %step : index,
+                                           %arg0 : index) {
+  // expected-error @below {{type mismatch between a firstprivate variable and its privatizer op, var type: 'index' vs. privatizer op type: '!llvm.ptr'}}
+  omp.loop private(@loop.firstprivate.type_mismatch.privatizer %arg0 -> %arg1 : index) {
+    omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+      omp.yield
+    }
+  }
+
+  return
+}
+
+func.func @loop_private_count_mismatch(%lb : index, %ub : index, %step : index,
+                                       %arg0 : !llvm.ptr) {
+  // expected-error @below {{inconsistent number of private variables and privatizer op symbols, private vars: 1 vs. privatizer op symbols: 2}}
+  "omp.loop"(%arg0) ({
+  ^bb0(%arg1 : !llvm.ptr):
+    omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+      omp.yield
+    }
+  }) {operandSegmentSizes = array<i32: 1, 0>,
+       private_syms = [@x.privatizer, @y.privatizer]} : (!llvm.ptr) -> ()
+
+  return
+}
+
+// -----
+omp.private {type = firstprivate} @target.firstprivate.type_mismatch.privatizer : index copy {
+^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
+  omp.yield(%arg0 : !llvm.ptr)
+}
+
+func.func @target_firstprivate_type_mismatch(%arg0: index) {
+  // expected-error @below {{type mismatch between a firstprivate variable and its privatizer op, var type: 'index' vs. privatizer op type: '!llvm.ptr'}}
+  omp.target kernel_type(generic) private(@target.firstprivate.type_mismatch.privatizer %arg0 -> %arg1 : index) {
+    omp.terminator
+  }
+
+  return
+}
+
+func.func @target_undefined_privatizer(%arg0: index) {
+  // expected-error @below {{failed to lookup privatizer op with symbol: '@missing.target.privatizer'}}
+  omp.target kernel_type(generic) private(@missing.target.privatizer %arg0 -> %arg1 : index) {
+    omp.terminator
+  }
+
+  return
+}
+
+func.func @target_private_count_mismatch(%arg0: !llvm.ptr) {
+  // expected-error @below {{inconsistent number of private variables and privatizer op symbols, private vars: 1 vs. privatizer op symbols: 2}}
+  "omp.target"(%arg0) <{operandSegmentSizes = array<i32: 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0>,
+                         private_syms = [@x.privatizer, @y.privatizer],
+                         kernel_type = #omp<kernel_type(generic)>}> ({
+  ^bb0(%arg1 : !llvm.ptr):
+    omp.terminator
+  }) : (!llvm.ptr) -> ()
+  return
+}
+
+// -----
+omp.private {type = private} @wsloop.private.type_mismatch.privatizer : index init {
+^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
+  omp.yield(%arg0 : !llvm.ptr)
+}
+
+omp.private {type = firstprivate} @wsloop.firstprivate.type_mismatch.privatizer : index copy {
+^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
+  omp.yield(%arg0 : !llvm.ptr)
+}
+
+func.func @wsloop_private_type_mismatch(%lb : index, %ub : index, %step : index,
+                                        %arg0 : index) {
+  // expected-error @below {{type mismatch between a private variable and its privatizer op, var type: 'index' vs. privatizer op type: '!llvm.ptr'}}
+  omp.wsloop private(@wsloop.private.type_mismatch.privatizer %arg0 -> %arg1 : index) {
+    omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+      omp.yield
+    }
+  }
+
+  return
+}
+
+func.func @wsloop_firstprivate_type_mismatch(%lb : index, %ub : index, %step : index,
+                                             %arg0 : index) {
+  // expected-error @below {{type mismatch between a firstprivate variable and its privatizer op, var type: 'index' vs. privatizer op type: '!llvm.ptr'}}
+  omp.wsloop private(@wsloop.firstprivate.type_mismatch.privatizer %arg0 -> %arg1 : index) {
+    omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+      omp.yield
+    }
+  }
+
+  return
+}
+
+func.func @wsloop_undefined_privatizer(%lb : index, %ub : index, %step : index,
+                                       %arg0 : index) {
+  // expected-error @below {{failed to lookup privatizer op with symbol: '@missing.wsloop.privatizer'}}
+  omp.wsloop private(@missing.wsloop.privatizer %arg0 -> %arg1 : index) {
+    omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+      omp.yield
+    }
+  }
+
+  return
+}
+
+// -----
+omp.private {type = private} @simd.private.type_mismatch.privatizer : index init {
+^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
+  omp.yield(%arg0 : !llvm.ptr)
+}
+
+omp.private {type = private} @simd.count_mismatch.x.privatizer : !llvm.ptr
+omp.private {type = private} @simd.count_mismatch.y.privatizer : !llvm.ptr
+
+func.func @simd_private_type_mismatch(%lb : index, %ub : index, %step : index,
+                                      %arg0 : index) {
+  // expected-error @below {{type mismatch between a private variable and its privatizer op, var type: 'index' vs. privatizer op type: '!llvm.ptr'}}
+  omp.simd private(@simd.private.type_mismatch.privatizer %arg0 -> %arg1 : index) {
+    omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+      omp.yield
+    }
+  }
+
+  return
+}
+
+func.func @simd_private_count_mismatch(%lb : index, %ub : index, %step : index,
+                                       %arg0 : !llvm.ptr) {
+  // expected-error @below {{inconsistent number of private variables and privatizer op symbols, private vars: 1 vs. privatizer op symbols: 2}}
+  "omp.simd"(%arg0) ({
+  ^bb0(%arg1 : !llvm.ptr):
+    omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+      omp.yield
+    }
+  }) {operandSegmentSizes = array<i32: 0, 0, 0, 0, 0, 1, 0>,
+       private_syms = [@simd.count_mismatch.x.privatizer, @simd.count_mismatch.y.privatizer]} : (!llvm.ptr) -> ()
+
+  return
+}
+
+// -----
+omp.private {type = private} @distribute.private.type_mismatch.privatizer : index init {
+^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
+  omp.yield(%arg0 : !llvm.ptr)
+}
+
+omp.private {type = firstprivate} @distribute.firstprivate.type_mismatch.privatizer : index copy {
+^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
+  omp.yield(%arg0 : !llvm.ptr)
+}
+
+func.func @distribute_private_type_mismatch(%lb : index, %ub : index, %step : index,
+                                            %arg0 : index) {
+  // expected-error @below {{type mismatch between a private variable and its privatizer op, var type: 'index' vs. privatizer op type: '!llvm.ptr'}}
+  omp.distribute private(@distribute.private.type_mismatch.privatizer %arg0 -> %arg1 : index) {
+    omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+      omp.yield
+    }
+  }
+
+  return
+}
+
+func.func @distribute_firstprivate_type_mismatch(%lb : index, %ub : index, %step : index,
+                                                 %arg0 : index) {
+  // expected-error @below {{type mismatch between a firstprivate variable and its privatizer op, var type: 'index' vs. privatizer op type: '!llvm.ptr'}}
+  omp.distribute private(@distribute.firstprivate.type_mismatch.privatizer %arg0 -> %arg1 : index) {
+    omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+      omp.yield
+    }
+  }
+
+  return
+}
+
+func.func @distribute_undefined_privatizer(%lb : index, %ub : index, %step : index,
+                                           %arg0 : index) {
+  // expected-error @below {{failed to lookup privatizer op with symbol: '@missing.distribute.privatizer'}}
+  omp.distribute private(@missing.distribute.privatizer %arg0 -> %arg1 : index) {
+    omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+      omp.yield
+    }
+  }
+
+  return
+}
+
+func.func @distribute_private_count_mismatch(%lb : index, %ub : index, %step : index,
+                                             %arg0 : !llvm.ptr) {
+  // expected-error @below {{inconsistent number of private variables and privatizer op symbols, private vars: 1 vs. privatizer op symbols: 2}}
+  "omp.distribute"(%arg0) ({
+  ^bb0(%arg1 : !llvm.ptr):
+    omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+      omp.yield
+    }
+  }) {operandSegmentSizes = array<i32: 0, 0, 0, 1>,
+       private_syms = [@x.privatizer, @y.privatizer]} : (!llvm.ptr) -> ()
+
+  return
+}
+
+// -----
+omp.private {type = private} @task.private.type_mismatch.privatizer : index init {
+^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
+  omp.yield(%arg0 : !llvm.ptr)
+}
+
+omp.private {type = firstprivate} @task.firstprivate.type_mismatch.privatizer : index copy {
+^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
+  omp.yield(%arg0 : !llvm.ptr)
+}
+
+func.func @task_private_type_mismatch(%arg0 : index) {
+  // expected-error @below {{type mismatch between a private variable and its privatizer op, var type: 'index' vs. privatizer op type: '!llvm.ptr'}}
+  omp.task private(@task.private.type_mismatch.privatizer %arg0 -> %arg1 : index) {
+    omp.terminator
+  }
+
+  return
+}
+
+func.func @task_firstprivate_type_mismatch(%arg0 : index) {
+  // expected-error @below {{type mismatch between a firstprivate variable and its privatizer op, var type: 'index' vs. privatizer op type: '!llvm.ptr'}}
+  omp.task private(@task.firstprivate.type_mismatch.privatizer %arg0 -> %arg1 : index) {
+    omp.terminator
+  }
+
+  return
+}
+
+func.func @task_undefined_privatizer(%arg0 : index) {
+  // expected-error @below {{failed to lookup privatizer op with symbol: '@missing.task.privatizer'}}
+  omp.task private(@missing.task.privatizer %arg0 -> %arg1 : index) {
+    omp.terminator
+  }
+
+  return
+}
+
+func.func @task_private_count_mismatch(%arg0 : !llvm.ptr) {
+  // expected-error @below {{inconsistent number of private variables and privatizer op symbols, private vars: 1 vs. privatizer op symbols: 2}}
+  "omp.task"(%arg0) ({
+  ^bb0(%arg1 : !llvm.ptr):
+    omp.terminator
+  }) {operandSegmentSizes = array<i32: 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0>,
+       private_syms = [@x.privatizer, @y.privatizer]} : (!llvm.ptr) -> ()
+  return
+}
+
+// -----
+omp.private {type = private} @taskloop.private.type_mismatch.privatizer : index init {
+^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
+  omp.yield(%arg0 : !llvm.ptr)
+}
+
+omp.private {type = firstprivate} @taskloop.firstprivate.type_mismatch.privatizer : index copy {
+^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
+  omp.yield(%arg0 : !llvm.ptr)
+}
+
+func.func @taskloop_private_type_mismatch(%lb : index, %ub : index, %step : index,
+                                          %arg0 : index) {
+  // expected-error @below {{type mismatch between a private variable and its privatizer op, var type: 'index' vs. privatizer op type: '!llvm.ptr'}}
+  omp.taskloop.context private(@taskloop.private.type_mismatch.privatizer %arg0 -> %arg1 : index) {
+    omp.taskloop.wrapper {
+      omp.loop_nest (%i) : index = (%lb) to (%ub) step (%step) {
+        omp.yield
+      }
+    }
+    omp.terminator
+  }
+  return
+}
+
+func.func @taskloop_firstprivate_type_mismatch(%lb : index, %ub : index, %step : index,
+                                               %arg0 : index) {
+  // expected-error @below {{type mismatch between a firstprivate variable and its privatizer op, var type: 'index' vs. privatizer op type: '!llvm.ptr'}}
+  omp.taskloop.context private(@taskloop.firstprivate.type_mismatch.privatizer %arg0 -> %arg1 : index) {
+    omp.taskloop.wrapper {
+      omp.loop_nest (%i) : index = (%lb) to (%ub) step (%step) {
+        omp.yield
+      }
+    }
+    omp.terminator
+  }
+  return
+}
+
+func.func @taskloop_undefined_privatizer(%lb : index, %ub : index, %step : index,
+                                         %arg0 : index) {
+  // expected-error @below {{failed to lookup privatizer op with symbol: '@missing.taskloop.privatizer'}}
+  omp.taskloop.context private(@missing.taskloop.privatizer %arg0 -> %arg1 : index) {
+    omp.taskloop.wrapper {
+      omp.loop_nest (%i) : index = (%lb) to (%ub) step (%step) {
+        omp.yield
+      }
+    }
+    omp.terminator
+  }
+  return
+}
+
+func.func @taskloop_private_count_mismatch(%lb : index, %ub : index, %step : index,
+                                           %arg0 : !llvm.ptr) {
+  // expected-error @below {{inconsistent number of private variables and privatizer op symbols, private vars: 1 vs. privatizer op symbols: 2}}
+  "omp.taskloop.context"(%arg0) ({
+  ^bb0(%arg1 : !llvm.ptr):
+    omp.taskloop.wrapper {
+      omp.loop_nest (%i) : index = (%lb) to (%ub) step (%step) {
+        omp.yield
+      }
+    }
+    omp.terminator
+  }) {operandSegmentSizes = array<i32: 0, 0, 0, 0, 0, 0, 0, 0, 1, 0>,
+       private_syms = [@x.privatizer, @y.privatizer]} : (!llvm.ptr) -> ()
+  return
+}
+
+// -----
 func.func @masked_arg_type_mismatch(%arg0: f32) {
   // expected-error @below {{'omp.masked' op operand #0 must be integer or index, but got 'f32'}}
   "omp.masked"(%arg0) ({
@@ -3031,10 +4095,13 @@ func.func @omp_distribute_invalid_composite(%lb: index, %ub: index, %step: index
 
 // -----
 func.func @omp_taskloop_missing_loop() -> () {
-  // expected-error @below {{'omp.taskloop.context' op expected exactly 1 TaskloopWrapperOp directly nested in the region, but 0 were found}}
+  // expected-error @below {{'omp.taskloop.context' op expected a TaskloopWrapperOp directly nested in the region}}
   omp.taskloop.context {
+    omp.parallel {
+      omp.terminator
+    }
     omp.terminator
-  }
+  } {omp.combined}
   return
 }
 
@@ -3045,13 +4112,13 @@ func.func @omp_taskloop_missing_context(%lb: index, %ub: index, %step: index) ->
     omp.loop_nest (%i) : index = (%lb) to (%ub) step (%step)  {
       omp.yield
     }
-  }
+  } {omp.combined}
   return
 }
 
 // -----
 func.func @omp_taskloop_shared_context(%lb: index, %ub: index, %step: index) -> () {
-  // expected-error @below {{'omp.taskloop.context' op expected exactly 1 TaskloopWrapperOp directly nested in the region, but 2 were found}}
+  // expected-error @below {{'omp.taskloop.context' op multiple eligible child ops found in combined op}}
   omp.taskloop.context {
     omp.taskloop.wrapper {
       omp.loop_nest (%i) : index = (%lb) to (%ub) step (%step)  {
@@ -3064,7 +4131,7 @@ func.func @omp_taskloop_shared_context(%lb: index, %ub: index, %step: index) -> 
       }
     }
     omp.terminator
-  }
+  } {omp.combined}
   return
 }
 
@@ -3079,7 +4146,7 @@ func.func @omp_taskloop_missing_composite(%lb: index, %ub: index, %step: index) 
         }
       } {omp.composite}
     }
-  }
+  } {omp.combined}
   return
 }
 
@@ -3092,7 +4159,7 @@ func.func @omp_taskloop_invalid_composite(%lb: index, %ub: index, %step: index) 
         omp.yield
       }
     } {omp.composite}
-  }
+  } {omp.combined}
   return
 }
 
@@ -3102,10 +4169,15 @@ omp.private {type = private} @taskloop.bound.privatizer : index init {
 }
 
 // -----
+omp.private {type = private} @taskloop.bound.local.privatizer : index init {
+^bb0(%arg0: index, %arg1: index):
+  omp.yield(%arg0 : index)
+}
+
 func.func @omp_taskloop_local_loop_bounds_from_block_arg(%arg0: index) {
   %c1 = arith.constant 1 : index
   // expected-error @below {{'omp.taskloop.context' op expects loop bounds and steps to be defined outside of the taskloop.context region or by pure, regionless operations that do not depend on block arguments}}
-  omp.taskloop.context private(@taskloop.bound.privatizer %arg0 -> %arg1 : index) {
+  omp.taskloop.context private(@taskloop.bound.local.privatizer %arg0 -> %arg1 : index) {
     %lb = arith.addi %arg1, %c1 : index
     %ub = arith.constant 10 : index
     %step = arith.constant 1 : index
@@ -3115,7 +4187,7 @@ func.func @omp_taskloop_local_loop_bounds_from_block_arg(%arg0: index) {
       }
     }
     omp.terminator
-  }
+  } {omp.combined}
   return
 }
 
@@ -3194,12 +4266,24 @@ func.func @not_wrapper() {
 
 // -----
 func.func @missing_workshare(%idx : index) {
-  // expected-error @below {{must be nested in an omp.workshare}}
+  // expected-error @below {{'omp.workshare.loop_wrapper' op expects ancestor op 'omp.workshare'}}
   omp.workshare.loop_wrapper {
     omp.loop_nest (%iv) : index = (%idx) to (%idx) step (%idx) {
       omp.yield
     }
   }
+  return
+}
+
+// -----
+func.func @omp_workshare() {
+  // expected-error @below {{op cannot be a non-innermost combined construct leaf}}
+  omp.workshare {
+    omp.parallel {
+      omp.terminator
+    }
+    omp.terminator
+  } {omp.combined}
   return
 }
 
@@ -3343,6 +4427,20 @@ func.func @invalid_workdistribute() -> () {
   return
 }
 
+// -----
+func.func @invalid_workdistribute() {
+  omp.teams {
+    // expected-error @below {{op cannot be a non-innermost combined construct leaf}}
+    omp.workdistribute {
+      omp.parallel {
+        omp.terminator
+      }
+      omp.terminator
+    } {omp.combined}
+    omp.terminator
+  } {omp.combined}
+  return
+}
 // -----
 // expected-error @+1 {{'omp.declare_simd' op must be nested inside a function}}
 omp.declare_simd
@@ -3493,6 +4591,15 @@ func.func @iterator_missing_yield(%lb : index, %ub : index, %st : index) {
 
 // -----
 
+func.func @iterator_empty_body(%lb : index, %ub : index, %st : index) {
+  // expected-error@+1 {{expects a non-empty block}}
+  %0 = omp.iterator(%i: index) = (%lb to %ub step %st) {
+  } -> !omp.iterated<index>
+  return
+}
+
+// -----
+
 func.func @iterator_yield_wrong_num_operands(%lb : index, %ub : index, %st : index) {
   // expected-error@+1 {{omp.yield in omp.iterator region must yield exactly one value}}
   %0 = omp.iterator(%i: index) = (%lb to %ub step %st) {
@@ -3509,6 +4616,131 @@ func.func @iterator_yield_type_mismatch(%lb : index, %ub : index, %st : index) {
     omp.yield(%i : index)
   } -> !omp.iterated<i64>
   return
+}
+
+// -----
+
+func.func @map_iterated_not_iterator(%it : !omp.iterated<!llvm.ptr>) {
+  // expected-error @below {{'omp.target_update' op 'map_iterated' arguments must be defined by 'omp.iterator' ops}}
+  omp.target_update map_iterated(%it : !omp.iterated<!llvm.ptr>)
+  return
+}
+
+// -----
+
+func.func @map_iterated_yield_not_map_info(%lb : index, %ub : index, %st : index,
+                                            %addr : !llvm.ptr) {
+  %it = omp.iterator(%iv: index) = (%lb to %ub step %st) {
+    omp.yield(%addr : !llvm.ptr)
+  } -> !omp.iterated<!llvm.ptr>
+  // expected-error @below {{'omp.target_enter_data' op 'map_iterated' iterator body must yield a value defined by 'omp.map.info'}}
+  omp.target_enter_data map_iterated(%it : !omp.iterated<!llvm.ptr>) {}
+  return
+}
+
+// -----
+
+func.func @map_iterated_yield_not_map_info_exit(%lb : index, %ub : index, %st : index,
+                                                  %addr : !llvm.ptr) {
+  %it = omp.iterator(%iv: index) = (%lb to %ub step %st) {
+    omp.yield(%addr : !llvm.ptr)
+  } -> !omp.iterated<!llvm.ptr>
+  // expected-error @below {{'omp.target_exit_data' op 'map_iterated' iterator body must yield a value defined by 'omp.map.info'}}
+  omp.target_exit_data map_iterated(%it : !omp.iterated<!llvm.ptr>) {}
+  return
+}
+
+// -----
+
+func.func @target_enter_data_map_iterated_invalid_from(%lb : index, %ub : index,
+                                                       %st : index,
+                                                       %addr : !llvm.ptr) {
+  %it = omp.iterator(%iv: index) = (%lb to %ub step %st) {
+    %m = omp.map.info var_ptr(%addr : !llvm.ptr, i32) map_clauses(from) capture(ByRef) -> !llvm.ptr {name = ""}
+    omp.yield(%m : !llvm.ptr)
+  } -> !omp.iterated<!llvm.ptr>
+  // expected-error @below {{to and alloc map types are permitted}}
+  omp.target_enter_data map_iterated(%it : !omp.iterated<!llvm.ptr>) {}
+  return
+}
+
+// -----
+
+func.func @target_exit_data_map_iterated_invalid_to(%lb : index, %ub : index,
+                                                    %st : index,
+                                                    %addr : !llvm.ptr) {
+  %it = omp.iterator(%iv: index) = (%lb to %ub step %st) {
+    %m = omp.map.info var_ptr(%addr : !llvm.ptr, i32) map_clauses(to) capture(ByRef) -> !llvm.ptr {name = ""}
+    omp.yield(%m : !llvm.ptr)
+  } -> !omp.iterated<!llvm.ptr>
+  // expected-error @below {{from, release and delete map types are permitted}}
+  omp.target_exit_data map_iterated(%it : !omp.iterated<!llvm.ptr>) {}
+  return
+}
+
+// -----
+
+func.func @target_update_map_iterated_invalid_delete(%lb : index, %ub : index,
+                                                     %st : index,
+                                                     %addr : !llvm.ptr) {
+  %it = omp.iterator(%iv: index) = (%lb to %ub step %st) {
+    %m = omp.map.info var_ptr(%addr : !llvm.ptr, i32) map_clauses(delete) capture(ByRef) -> !llvm.ptr {name = ""}
+    omp.yield(%m : !llvm.ptr)
+  } -> !omp.iterated<!llvm.ptr>
+  // expected-error @below {{at least one of to or from map types must be specified, other map types are not permitted}}
+  omp.target_update map_iterated(%it : !omp.iterated<!llvm.ptr>)
+  return
+}
+
+// -----
+
+func.func @target_update_map_iterated_invalid_conflict(%lb : index, %ub : index,
+                                                       %st : index,
+                                                       %addr : !llvm.ptr) {
+  %mapv = omp.map.info var_ptr(%addr : !llvm.ptr, i32) map_clauses(to) capture(ByRef) -> !llvm.ptr {name = ""}
+  %it = omp.iterator(%iv: index) = (%lb to %ub step %st) {
+    %m = omp.map.info var_ptr(%addr : !llvm.ptr, i32) map_clauses(from) capture(ByRef) -> !llvm.ptr {name = ""}
+    omp.yield(%m : !llvm.ptr)
+  } -> !omp.iterated<!llvm.ptr>
+  // expected-error @below {{either to or from map types can be specified, not both}}
+  omp.target_update map_entries(%mapv : !llvm.ptr) map_iterated(%it : !omp.iterated<!llvm.ptr>)
+  return
+}
+
+// -----
+
+func.func @target_data_map_iterated_invalid_delete(%lb : index, %ub : index,
+                                                   %st : index,
+                                                   %addr : !llvm.ptr) {
+  %it = omp.iterator(%iv: index) = (%lb to %ub step %st) {
+    %m = omp.map.info var_ptr(%addr : !llvm.ptr, i32) map_clauses(delete) capture(ByRef) -> !llvm.ptr {name = ""}
+    omp.yield(%m : !llvm.ptr)
+  } -> !omp.iterated<!llvm.ptr>
+  // expected-error @below {{to, from, tofrom and alloc map types are permitted}}
+  omp.target_data map_iterated(%it : !omp.iterated<!llvm.ptr>) {}
+  return
+}
+
+// -----
+
+omp.declare_mapper @declare_mapper_iterated_not_iterator : !llvm.struct<"mapper_type", (i32)> {
+^bb0(%arg: !llvm.ptr, %it: !omp.iterated<!llvm.ptr>):
+  // expected-error @below {{'omp.declare_mapper.info' op 'map_iterated' arguments must be defined by 'omp.iterator' ops}}
+  omp.declare_mapper.info map_iterated(%it : !omp.iterated<!llvm.ptr>)
+}
+
+// -----
+
+omp.declare_mapper @declare_mapper_iterated_yield_not_map_info : !llvm.struct<"mapper_type", (i32)> {
+^bb0(%arg: !llvm.ptr):
+  %lb = arith.constant 0 : index
+  %ub = arith.constant 4 : index
+  %st = arith.constant 1 : index
+  %it = omp.iterator(%iv: index) = (%lb to %ub step %st) {
+    omp.yield(%arg : !llvm.ptr)
+  } -> !omp.iterated<!llvm.ptr>
+  // expected-error @below {{'omp.declare_mapper.info' op 'map_iterated' iterator body must yield a value defined by 'omp.map.info'}}
+  omp.declare_mapper.info map_iterated(%it : !omp.iterated<!llvm.ptr>)
 }
 
 // -----

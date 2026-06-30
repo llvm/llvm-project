@@ -20,9 +20,9 @@ atomic {
   omp.yield
 }
 omp.private {type = private} @privatizer_i32 : i32
-omp.private {type = firstprivate} @firstprivatizer_f32 : f32 copy {
-^bb0(%arg0: f32, %arg1: f32):
-  omp.yield(%arg0 : f32)
+omp.private {type = firstprivate} @firstprivatizer_f32 : !llvm.ptr copy {
+^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
+  omp.yield(%arg0 : !llvm.ptr)
 }
 
 llvm.func @foo(%arg0: !llvm.ptr) attributes {omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (to)>}
@@ -99,8 +99,8 @@ llvm.func @host_func(%arg0: i64) {
   omp.parallel {
     // CHECK: llvm.call @foo(%[[ALLOC0]]) : (!llvm.ptr) -> ()
     llvm.call @foo(%0) : (!llvm.ptr) -> ()
-    // CHECK: omp.target
-    omp.target {
+    // CHECK: omp.target kernel_type(generic)
+    omp.target kernel_type(generic) {
       %c0 = llvm.mlir.constant(1 : i64) : i64
       // CHECK: %[[ALLOC1:.*]] = omp.alloc_shared_mem [[ALLOC1_SIZE:.*]] -> !llvm.ptr
       %1 = llvm.alloca %c0 x i32 : (i64) -> !llvm.ptr
@@ -119,7 +119,7 @@ llvm.func @host_func(%arg0: i64) {
 llvm.func @target_spmd() {
   // CHECK-NOT: omp.alloc_shared_mem
   // CHECK-NOT: omp.free_shared_mem
-  omp.target {
+  omp.target kernel_type(spmd) {
     %c = llvm.mlir.constant(1 : i64) : i64
     %0 = llvm.alloca %c x i32 : (i64) -> !llvm.ptr
     omp.teams {
@@ -139,9 +139,9 @@ llvm.func @target_spmd() {
         omp.terminator
       } {omp.composite}
       omp.terminator
-    }
+    } {omp.combined}
     omp.terminator
-  }
+  } {omp.combined}
   // CHECK: return
   llvm.return
 }

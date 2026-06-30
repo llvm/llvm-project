@@ -285,6 +285,7 @@ struct GPUInlinerInterface : public DialectInlinerInterface {
 void GPUDialect::initialize() {
   addTypes<AsyncTokenType>();
   addTypes<MMAMatrixType>();
+  addTypes<NamedBarrierType>();
   addTypes<SparseDnTensorHandleType>();
   addTypes<SparseSpMatHandleType>();
   addTypes<SparseSpGEMMOpHandleType>();
@@ -365,6 +366,9 @@ Type GPUDialect::parseType(DialectAsmParser &parser) const {
                                      shape, elementType, operand);
   }
 
+  if (keyword == "named_barrier")
+    return NamedBarrierType::get(context);
+
   if (keyword == getSparseHandleKeyword(SparseHandleKind::DnTensor))
     return SparseDnTensorHandleType::get(context);
   if (keyword == getSparseHandleKeyword(SparseHandleKind::SpMat))
@@ -380,6 +384,7 @@ Type GPUDialect::parseType(DialectAsmParser &parser) const {
 void GPUDialect::printType(Type type, DialectAsmPrinter &os) const {
   TypeSwitch<Type>(type)
       .Case<AsyncTokenType>([&](Type) { os << "async.token"; })
+      .Case<NamedBarrierType>([&](Type) { os << "named_barrier"; })
       .Case<SparseDnTensorHandleType>([&](Type) {
         os << getSparseHandleKeyword(SparseHandleKind::DnTensor);
       })
@@ -839,9 +844,13 @@ LogicalResult LaunchOp::verifyRegions() {
   if (getBody().empty()) {
     return emitOpError("body region is empty");
   }
-  if (getBody().getNumArguments() <
-      kNumConfigRegionAttributes + getNumWorkgroupAttributions()) {
-    return emitOpError("unexpected number of region arguments");
+  unsigned actualNumRegionArgs = getBody().getNumArguments();
+  unsigned expectedNumRegionArgs =
+      getNumConfigRegionAttributes() + getNumWorkgroupAttributions();
+  if (actualNumRegionArgs < expectedNumRegionArgs) {
+    return emitOpError("expected at least ")
+           << expectedNumRegionArgs << " region arguments, but got "
+           << actualNumRegionArgs;
   }
 
   // Verify Attributions Address Spaces.
@@ -1516,11 +1525,28 @@ LogicalResult RotateOp::verify() {
 // BarrierOp
 //===----------------------------------------------------------------------===//
 
+LogicalResult BarrierOp::verify() {
+  BarrierScope scope = getScope();
+
+  if (getNamedBarrier() && scope != BarrierScope::Workgroup)
+    return emitOpError("named barriers require workgroup scope");
+
+  return success();
+}
+
 /// Remove gpu.barrier after gpu.barrier, the threads are already synchronized!
 static LogicalResult eraseRedundantGpuBarrierOps(BarrierOp op,
                                                  PatternRewriter &rewriter) {
   auto nextOp = dyn_cast_or_null<BarrierOp>(op->getNextNode());
   if (!nextOp)
+    return failure();
+
+  // Cannot merge barriers of different scopes.
+  if (op.getScope() != nextOp.getScope())
+    return failure();
+
+  // Cannot merge named barriers unless both refer to the same handle.
+  if (op.getNamedBarrier() != nextOp.getNamedBarrier())
     return failure();
 
   std::optional<ArrayAttr> thisMemfence = op.getAddressSpaces();
@@ -1562,7 +1588,9 @@ void BarrierOp::build(mlir::OpBuilder &odsBuilder,
   if (addressSpace)
     addressSpacesAttr = odsBuilder.getArrayAttr(
         AddressSpaceAttr::get(odsBuilder.getContext(), addressSpace.value()));
-  build(odsBuilder, odsState, addressSpacesAttr);
+  build(
+      odsBuilder, odsState, addressSpacesAttr, /*named_barrier=*/Value{},
+      BarrierScopeAttr::get(odsBuilder.getContext(), BarrierScope::Workgroup));
 }
 
 /// Builds a barrier that causes memory operations affecting `memrefToFence` to
@@ -2295,9 +2323,10 @@ struct SimplifyDimOfAllocOp : public OpRewritePattern<memref::DimOp> {
     if (!index)
       return failure();
 
+    int64_t indexVal = index.value();
     auto memrefType = llvm::dyn_cast<MemRefType>(dimOp.getSource().getType());
-    if (!memrefType || index.value() >= memrefType.getRank() ||
-        !memrefType.isDynamicDim(index.value()))
+    if (!memrefType || indexVal < 0 || indexVal >= memrefType.getRank() ||
+        !memrefType.isDynamicDim(indexVal))
       return failure();
 
     auto alloc = dimOp.getSource().getDefiningOp<AllocOp>();
@@ -2305,7 +2334,7 @@ struct SimplifyDimOfAllocOp : public OpRewritePattern<memref::DimOp> {
       return failure();
 
     Value substituteOp = *(alloc.getDynamicSizes().begin() +
-                           memrefType.getDynamicDimIndex(index.value()));
+                           memrefType.getDynamicDimIndex(indexVal));
     rewriter.replaceOp(dimOp, substituteOp);
     return success();
   }
@@ -2493,7 +2522,7 @@ ParseResult WarpExecuteOnLane0Op::parse(OpAsmParser &parser,
 void WarpExecuteOnLane0Op::getSuccessorRegions(
     RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
   if (!point.isParent()) {
-    regions.push_back(RegionSuccessor::parent());
+    regions.push_back(RegionSuccessor(getOperation()));
     return;
   }
 
@@ -2502,7 +2531,7 @@ void WarpExecuteOnLane0Op::getSuccessorRegions(
 }
 
 ValueRange WarpExecuteOnLane0Op::getSuccessorInputs(RegionSuccessor successor) {
-  return successor.isParent() ? ValueRange(getResults()) : ValueRange();
+  return successor.isOperation() ? ValueRange(getResults()) : ValueRange();
 }
 void WarpExecuteOnLane0Op::build(OpBuilder &builder, OperationState &result,
                                  TypeRange resultTypes, Value laneId,

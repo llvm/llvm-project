@@ -24,9 +24,9 @@
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/WindowsError.h"
 
-#if LLDB_ENABLE_POSIX
-#include "lldb/Host/posix/DomainSocket.h"
+#include "lldb/Host/DomainSocket.h"
 
+#if LLDB_ENABLE_POSIX
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <netinet/in.h>
@@ -241,10 +241,17 @@ Socket::CreatePair(std::optional<SocketProtocol> protocol) {
   switch (protocol.value_or(kBestProtocol)) {
   case ProtocolTcp:
     return TCPSocket::CreatePair();
-#if LLDB_ENABLE_POSIX
   case ProtocolUnixDomain:
+#if LLDB_ENABLE_POSIX
+    return DomainSocketPlatform::CreatePair();
+#else
+    return llvm::createStringError("unsupported protocol");
+#endif
   case ProtocolUnixAbstract:
-    return DomainSocket::CreatePair();
+#if LLDB_ENABLE_POSIX
+    return DomainSocketPlatform::CreatePair();
+#else
+    return llvm::createStringError("unsupported protocol");
 #endif
   default:
     return llvm::createStringError("unsupported protocol");
@@ -403,8 +410,12 @@ int Socket::SetOption(NativeSocket sockfd, int level, int option_name,
                       sizeof(option_value));
 }
 
-size_t Socket::Send(const void *buf, const size_t num_bytes) {
-  return ::send(m_socket, static_cast<const char *>(buf), num_bytes, 0);
+ssize_t Socket::Send(const void *buf, const size_t num_bytes) {
+  int flags = 0;
+#if defined(MSG_NOSIGNAL)
+  flags |= MSG_NOSIGNAL;
+#endif
+  return ::send(m_socket, static_cast<const char *>(buf), num_bytes, flags);
 }
 
 void Socket::SetLastError(Status &error) {
@@ -443,6 +454,12 @@ NativeSocket Socket::CreateSocket(const int domain, const int type,
   auto sock = ::socket(domain, socket_type, protocol);
   if (sock == kInvalidSocketValue)
     SetLastError(error);
+
+#if defined(SO_NOSIGPIPE)
+  if (Socket::SetOption(sock, SOL_SOCKET, SO_NOSIGPIPE, 1) == -1)
+    LLDB_LOG(GetLog(LLDBLog::Host), "failed to set SO_NOSIGPIPE on fd {0}: {1}",
+             sock, llvm::sys::StrError());
+#endif
 
   return sock;
 }
