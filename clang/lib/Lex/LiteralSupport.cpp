@@ -539,10 +539,8 @@ static bool ProcessNumericUCNEscape(const char *ThisTokBegin,
   return !HasError;
 }
 
-static bool AllowedInCharacterName(llvm::UTF32 CodePoint) {
-  return (CodePoint >= U'A' && CodePoint <= U'Z') ||
-         (CodePoint >= U'0' && CodePoint <= U'9') || CodePoint == U'-' ||
-         CodePoint == U' ';
+static bool AllowedInCharacterName(char C) {
+  return (C >= 'A' && C < 'Z') || (C >= '0' && C < '9') || C == '-' || C == ' ';
 }
 
 static void DiagnoseInvalidUnicodeCharacterName(
@@ -556,40 +554,23 @@ static void DiagnoseInvalidUnicodeCharacterName(
 
   namespace u = llvm::sys::unicode;
 
-  auto StringifyCodePoint = [](llvm::UTF32 CodePoint) -> llvm::SmallString<16> {
-    llvm::SmallString<16> Result;
-    if (u::isPrintable(CodePoint)) {
-      std::string CharUTF8;
-      llvm::convertUTF32ToUTF8String(llvm::ArrayRef<llvm::UTF32>(&CodePoint, 1),
-                                     CharUTF8);
-      Result.append("'");
-      Result.append(CharUTF8);
-      Result.append("' U+");
-    } else {
-      Result.append("U+");
-    }
-    llvm::raw_svector_ostream OS(Result);
-    llvm::write_hex(OS, CodePoint, llvm::HexPrintStyle::Upper, 4);
-    return Result;
-  };
-
   bool HasIllegalCharacter = false;
   for (const char *P = Name.begin(), *E = Name.end(); P != E;) {
+    if (AllowedInCharacterName(*P)) {
+      ++P;
+      continue;
+    }
     const auto *Src = reinterpret_cast<const llvm::UTF8 *>(P);
     const auto *SrcEnd = reinterpret_cast<const llvm::UTF8 *>(E);
     llvm::UTF32 CodePoint = 0;
     if (llvm::convertUTF8Sequence(&Src, SrcEnd, &CodePoint,
                                   llvm::strictConversion) != llvm::conversionOK)
       break;
-    if (AllowedInCharacterName(CodePoint)) {
-      P = reinterpret_cast<const char *>(Src);
-      continue;
-    }
     SourceLocation CharLoc = Lexer::AdvanceToTokenCharacter(
         Loc, (TokRangeBegin - TokBegin) + (P - Name.begin()), Loc.getManager(),
         Features);
     Diags->Report(CharLoc, diag::note_invalid_ucn_name_character)
-        << StringifyCodePoint(CodePoint);
+        << DisplayCodePointForDiagnostic(CodePoint);
     HasIllegalCharacter = true;
     break;
   }
@@ -628,7 +609,7 @@ static void DiagnoseInvalidUnicodeCharacterName(
 
     Diag(Diags, Features, Loc, TokBegin, TokRangeBegin, TokRangeEnd,
          diag::note_invalid_ucn_name_candidate)
-        << Match.Name << StringifyCodePoint(Match.Value)
+        << Match.Name << DisplayCodePointForDiagnostic(Match.Value)
         << FixItHint::CreateReplacement(
                MakeCharSourceRange(Features, Loc, TokBegin, TokRangeBegin,
                                    TokRangeEnd),
