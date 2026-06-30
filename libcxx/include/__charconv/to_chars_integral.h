@@ -331,8 +331,8 @@ template <typename _Tp, __enable_if_t<is_integral<_Tp>::value, int> = 0>
 inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI to_chars_result
 to_chars(char* __first, char* __last, _Tp __value) {
   if constexpr (__is_wide_bitint_v<_Tp>)
-    // A _BitInt wider than 128 bits has no native promotion target; the
-    // base-aware path converts it using the type's own arithmetic.
+    // A _BitInt wider than 128 bits has no promotion target, so it uses the
+    // base-aware path.
     return std::__to_chars_integral(__first, __last, __value, 10);
   else
     return std::__to_chars_itoa(

@@ -139,11 +139,9 @@ TEST_CONSTEXPR_CXX23 bool test_wide_4096() {
   return true;
 }
 
-// Independent oracle for a huge 4096-bit value. The decimal and hex strings are
-// computed by Python's arbitrary-precision int, so they catch a bug that
-// to_chars and from_chars might share, which a pure round-trip cannot. The value
-// is built from its bits, independent of the strings; the sparse pattern gives
-// long interior-zero digit runs plus a few clusters.
+// Independent oracle: dec/hex strings computed by Python's bignum catch a bug
+// to_chars and from_chars could share (a round-trip cannot). Sparse bit pattern
+// gives long interior-zero digit runs.
 TEST_CONSTEXPR_CXX23 bool test_wide_oracle() {
   using U   = unsigned _BitInt(4096);
   const U v = (U(1) << 4095) | (U(1) << 3000) | (U(1) << 1500) | (U(1) << 700) | U(0xDEADBEEFCAFEULL);
