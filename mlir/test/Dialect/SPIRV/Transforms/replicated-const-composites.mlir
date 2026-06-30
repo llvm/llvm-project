@@ -186,6 +186,12 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, ReplicatedCompos
     %0 = spirv.Constant [[dense<[1, 2]> : vector<2xi32>]] : !spirv.array<1 x !spirv.array<1 x vector<2xi32>>>
     spirv.ReturnValue %0 : !spirv.array<1 x !spirv.array<1 x vector<2xi32>>>
   }
+
+  spirv.func @empty_struct() -> (!spirv.struct<()>) "None" {
+    // CHECK-NOT: spirv.EXT.ConstantCompositeReplicate
+    %0 = spirv.Constant [] : !spirv.struct<()>
+    spirv.ReturnValue %0 : !spirv.struct<()>
+  }
 }
 
 // -----
