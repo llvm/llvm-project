@@ -303,7 +303,6 @@ add_llvm_component_library(LLVMSupport
   Z3Solver.cpp
 
   ${ALLOCATOR_FILES}
-  $<TARGET_OBJECTS:LLVMSupportBlake3>
 
 # System
   Atomic.cpp
@@ -333,6 +332,7 @@ add_llvm_component_library(LLVMSupport
 
   LINK_LIBS
   ${system_libs} ${imported_libs} ${delayload_flags}
+  $<TARGET_OBJECTS:LLVMSupportBlake3>
 
   LINK_COMPONENTS
   Demangle

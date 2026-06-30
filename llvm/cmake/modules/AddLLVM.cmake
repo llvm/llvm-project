@@ -693,6 +693,7 @@ function(llvm_add_library name)
           add_dependencies(${obj_name} ${link_lib})
         endif()
       endforeach()
+      target_link_libraries(${obj_name} ${ARG_LINK_LIBS})
     endif()
 
     if(ARG_DISABLE_LLVM_LINK_LLVM_DYLIB)
@@ -1005,7 +1006,7 @@ function(add_llvm_component_library name)
     "COMPONENT_NAME;ADD_TO_COMPONENT"
     ""
     ${ARGN})
-  add_llvm_library(${name} COMPONENT_LIB ${ARG_UNPARSED_ARGUMENTS})
+  add_llvm_library(${name} COMPONENT_LIB OBJECT ${ARG_UNPARSED_ARGUMENTS})
   string(REGEX REPLACE "^LLVM" "" component_name ${name})
   set_property(TARGET ${name} PROPERTY LLVM_COMPONENT_NAME ${component_name})
 
@@ -1369,8 +1370,11 @@ function(process_llvm_pass_plugins)
 
   # Add static plugins to the Extension component
   foreach(llvm_extension ${LLVM_STATIC_EXTENSIONS})
-      set_property(TARGET LLVMExtensions APPEND PROPERTY LINK_LIBRARIES ${llvm_extension})
-      set_property(TARGET LLVMExtensions APPEND PROPERTY INTERFACE_LINK_LIBRARIES ${llvm_extension})
+      # Update the properties for the normal library and the object library.
+      foreach (lib "LLVMExtensions;obj.LLVMExtensions")
+         set_property(TARGET ${lib} APPEND PROPERTY LINK_LIBRARIES ${llvm_extension})
+         set_property(TARGET ${lib} APPEND PROPERTY INTERFACE_LINK_LIBRARIES ${llvm_extension})
+      endforeach()
   endforeach()
 
   # Eventually generate the extension headers, and store config to a cmake file
