@@ -128,18 +128,18 @@ define void @test_3_inductions(ptr noalias %dst, ptr noalias %src, i64 %n) #1 {
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl i32 [[TMP3]], 1
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i32> poison, i32 [[TMP4]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP5:%.*]] = or <vscale x 2 x i32> [[VEC_IND1]], [[VEC_IND]]
-; CHECK-NEXT:    [[TMP6:%.*]] = sext <vscale x 2 x i32> [[TMP5]] to <vscale x 2 x i64>
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[SRC]], <vscale x 2 x i64> [[TMP6]]
-; CHECK-NEXT:    [[TMP11:%.*]] = sub i64 [[TMP8]], 1
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <vscale x 2 x ptr> [[TMP7]], i64 [[TMP11]]
-; CHECK-NEXT:    store ptr [[TMP10]], ptr [[DST]], align 8
 ; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP8]]
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 2 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[VEC_IND_NEXT2]] = add <vscale x 2 x i32> [[VEC_IND1]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[TMP5:%.*]] = or <vscale x 2 x i32> [[VEC_IND1]], [[VEC_IND]]
+; CHECK-NEXT:    [[TMP6:%.*]] = sext <vscale x 2 x i32> [[TMP5]] to <vscale x 2 x i64>
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[SRC]], <vscale x 2 x i64> [[TMP6]]
+; CHECK-NEXT:    [[TMP11:%.*]] = sub i64 [[TMP8]], 1
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <vscale x 2 x ptr> [[TMP7]], i64 [[TMP11]]
+; CHECK-NEXT:    store ptr [[TMP10]], ptr [[DST]], align 8
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void

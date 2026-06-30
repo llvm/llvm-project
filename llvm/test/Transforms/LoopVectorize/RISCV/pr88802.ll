@@ -23,6 +23,11 @@ define void @test(ptr %p, i64 %a, i8 %b) {
 ; CHECK-NEXT:    [[TMP11:%.*]] = call i32 @llvm.experimental.get.vector.length.i32(i32 [[AVL]], i32 8, i1 true)
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <vscale x 8 x i32> poison, i32 [[TMP11]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <vscale x 8 x i32> [[BROADCAST_SPLATINSERT3]], <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer
+; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i32 [[AVL]], [[TMP11]]
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 8 x i32> [[VEC_IND]], [[BROADCAST_SPLAT4]]
+; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i32 [[AVL_NEXT]], 0
+; CHECK-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[FOR_COND]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK:       middle.block:
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp slt <vscale x 8 x i32> [[VEC_IND]], splat (i32 2)
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <vscale x 8 x i1> [[TMP6]], <vscale x 8 x i32> [[TMP3]], <vscale x 8 x i32> [[TMP2]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = shl <vscale x 8 x i32> [[PREDPHI]], splat (i32 8)
@@ -31,11 +36,6 @@ define void @test(ptr %p, i64 %a, i8 %b) {
 ; CHECK-NEXT:    [[TMP10:%.*]] = sub i64 [[TMP9]], 1
 ; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <vscale x 8 x i8> [[TMP8]], i64 [[TMP10]]
 ; CHECK-NEXT:    store i8 [[TMP12]], ptr [[P]], align 1
-; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i32 [[AVL]], [[TMP11]]
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 8 x i32> [[VEC_IND]], [[BROADCAST_SPLAT4]]
-; CHECK-NEXT:    [[TMP21:%.*]] = icmp eq i32 [[AVL_NEXT]], 0
-; CHECK-NEXT:    br i1 [[TMP21]], label [[MIDDLE_BLOCK:%.*]], label [[FOR_COND]], !llvm.loop [[LOOP0:![0-9]+]]
-; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void

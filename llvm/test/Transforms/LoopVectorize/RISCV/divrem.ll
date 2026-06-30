@@ -650,6 +650,11 @@ define void @udiv_sdiv_with_invariant_divisors(i8 %x, i16 %y, i1 %c, ptr %p) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = trunc i32 [[TMP2]] to i8
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT5:%.*]] = insertelement <vscale x 4 x i8> poison, i8 [[TMP3]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT6:%.*]] = shufflevector <vscale x 4 x i8> [[BROADCAST_SPLATINSERT5]], <vscale x 4 x i8> poison, <vscale x 4 x i32> zeroinitializer
+; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i32 [[AVL]], [[TMP2]]
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 4 x i8> [[VEC_IND]], [[BROADCAST_SPLAT6]]
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[AVL_NEXT]], 0
+; CHECK-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[EXIT]], !llvm.loop [[LOOP11:![0-9]+]]
+; CHECK:       middle.block:
 ; CHECK-NEXT:    [[TMP4:%.*]] = call <vscale x 4 x i8> @llvm.vp.udiv.nxv4i8(<vscale x 4 x i8> [[VEC_IND]], <vscale x 4 x i8> [[BROADCAST_SPLAT2]], <vscale x 4 x i1> [[TMP0]], i32 [[TMP2]])
 ; CHECK-NEXT:    [[TMP5:%.*]] = zext <vscale x 4 x i8> [[TMP4]] to <vscale x 4 x i16>
 ; CHECK-NEXT:    [[TMP6:%.*]] = call <vscale x 4 x i16> @llvm.vp.sdiv.nxv4i16(<vscale x 4 x i16> [[TMP5]], <vscale x 4 x i16> [[BROADCAST_SPLAT4]], <vscale x 4 x i1> [[TMP0]], i32 [[TMP2]])
@@ -659,11 +664,6 @@ define void @udiv_sdiv_with_invariant_divisors(i8 %x, i16 %y, i1 %c, ptr %p) {
 ; CHECK-NEXT:    [[TMP9:%.*]] = sub i64 [[TMP8]], 1
 ; CHECK-NEXT:    [[MERGE:%.*]] = extractelement <vscale x 4 x i32> [[PREDPHI]], i64 [[TMP9]]
 ; CHECK-NEXT:    store i32 [[MERGE]], ptr [[P:%.*]], align 4
-; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i32 [[AVL]], [[TMP2]]
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 4 x i8> [[VEC_IND]], [[BROADCAST_SPLAT6]]
-; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i32 [[AVL_NEXT]], 0
-; CHECK-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[EXIT]], !llvm.loop [[LOOP11:![0-9]+]]
-; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[EXIT1:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void

@@ -38,15 +38,15 @@ define void @predicated_uniform_load(ptr %src, i32 %n, ptr %dst, i1 %cond) {
 ; CHECK-NEXT:    [[AVL:%.*]] = phi i32 [ [[TMP3]], [[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP11:%.*]] = call i32 @llvm.experimental.get.vector.length.i32(i32 [[AVL]], i32 4, i1 true)
 ; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 4 x i32> @llvm.vp.gather.nxv4i32.nxv4p0(<vscale x 4 x ptr> align 4 [[BROADCAST_SPLAT4]], <vscale x 4 x i1> [[TMP10]], i32 [[TMP11]]), !alias.scope [[META0:![0-9]+]]
+; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i32 [[AVL]], [[TMP11]]
+; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i32 [[AVL_NEXT]], 0
+; CHECK-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK:       middle.block:
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[COND]], <vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> [[WIDE_MASKED_GATHER]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = zext i32 [[TMP11]] to i64
 ; CHECK-NEXT:    [[TMP13:%.*]] = sub i64 [[TMP12]], 1
 ; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <vscale x 4 x i32> [[PREDPHI]], i64 [[TMP13]]
-; CHECK-NEXT:    store i32 [[TMP14]], ptr [[DST]], align 4, !alias.scope [[META3:![0-9]+]], !noalias [[META0]]
-; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i32 [[AVL]], [[TMP11]]
-; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i32 [[AVL_NEXT]], 0
-; CHECK-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
-; CHECK:       middle.block:
+; CHECK-NEXT:    store i32 [[TMP14]], ptr [[DST]], align 4, !alias.scope [[META6:![0-9]+]], !noalias [[META0]]
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
