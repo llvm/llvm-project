@@ -29,6 +29,19 @@ namespace SystemZ {
   extern const MCPhysReg XPLINK64ArgFPRs[XPLINK64NumArgFPRs];
 } // end namespace SystemZ
 
+class SystemZCCState : public CCState {
+private:
+  bool IsFormalArgLowering = false;
+
+public:
+  SystemZCCState(CallingConv::ID CC, bool isVarArg, MachineFunction &MF,
+                 SmallVectorImpl<CCValAssign> &locs, LLVMContext &C)
+      : CCState(CC, isVarArg, MF, locs, C) {}
+
+  bool isFormalArgLowering() const { return IsFormalArgLowering; }
+  void setIsFormalArgLowering() { IsFormalArgLowering = true; }
+};
+
 // Handle i128 argument types.  These need to be passed by implicit
 // reference.  This could be as simple as the following .td line:
 //    CCIfType<[i128], CCPassIndirect<i64>>,
@@ -153,6 +166,33 @@ inline bool CC_XPLINK64_Allocate128BitVararg(unsigned &ValNo, MVT &ValVT,
     return true;
   }
 
+  return false;
+}
+
+inline bool CC_XPLINK_Promote_i32(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
+                              CCValAssign::LocInfo &LocInfo,
+                              ISD::ArgFlagsTy &ArgFlags, CCState &State) {
+
+  assert(ValVT.isInteger() && ValVT == MVT::i32 && "Expected MVT:32 as ValVT");
+  LocVT = MVT::i64;
+  // When lowering formal arguments, do not assume the caller has widened the
+  // value (ABI interoperability with xxlc). For args and return values,
+  // preserve SExt/ZExt so the correct extension instruction is emitted.
+  if (static_cast<SystemZCCState &>(State).isFormalArgLowering()) {
+    LocInfo = CCValAssign::AExt;
+  } else if (ArgFlags.isVarArg()) {
+    // For vararg args, always zero-extend for ABI interoperability with xxlc:
+    // the callee treats formal varargs with AExt (no sign/zero extension
+    // assumption), so the caller must zero-extend to avoid upper-bit garbage.
+    LocInfo = CCValAssign::ZExt;
+  } else {
+    if (ArgFlags.isSExt())
+      LocInfo = CCValAssign::SExt;
+    else if (ArgFlags.isZExt())
+      LocInfo = CCValAssign::ZExt;
+    else
+      LocInfo = CCValAssign::AExt;
+  }
   return false;
 }
 

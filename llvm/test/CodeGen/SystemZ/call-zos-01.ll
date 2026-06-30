@@ -1,6 +1,6 @@
 ; Test the passing of scalar values in GPRs, FPRs in 64-bit calls on z/OS.
 ;
-; RUN: llc < %s -mtriple=s390x-ibm-zos -mcpu=z10 | FileCheck %s
+; RUN: llc < %s -mtriple=s390x-ibm-zos -mcpu=z10  | FileCheck %s
 
 ; CHECK-LABEL: call_char DS 0H
 ; CHECK: lghi  1,8
@@ -55,21 +55,21 @@ entry:
 }
 
 ; CHECK-LABEL: pass_char DS 0H
-; CHECK: lgr 3,1
+; CHECK: lgfr 3,1
 define signext i8 @pass_char(i8 signext %arg) {
 entry:
   ret i8 %arg
 }
 
 ; CHECK-LABEL: pass_short DS 0H
-; CHECK: lgr 3,1
+; CHECK: lgfr 3,1
 define signext i16 @pass_short(i16 signext %arg) {
 entry:
   ret i16 %arg
 }
 
 ; CHECK-LABEL: pass_int DS 0H
-; CHECK: lgr 3,2
+; CHECK: lgfr 3,2
 define signext i32 @pass_int(i32 signext %arg0, i32 signext %arg1) {
 entry:
   ret i32 %arg1
@@ -86,8 +86,8 @@ entry:
 }
 
 ; CHECK-LABEL: pass_integrals0 DS 0H
-; CHECK: ag  2,2200(4)
-; CHECK-NEXT: lgr 3,2
+; CHECK: lgfr 3,2
+; CHECK-NEXT: ag  3,2200(4)
 define signext i64 @pass_integrals0(i64 signext %arg0, i32 signext %arg1, i16 signext %arg2, i64 signext %arg3) {
 entry:
   %N = sext i32 %arg1 to i64
