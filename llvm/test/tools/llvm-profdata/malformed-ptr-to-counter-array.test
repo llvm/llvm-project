@@ -62,7 +62,6 @@ RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\02\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
-RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
 
 // Counter Section
 
