@@ -637,6 +637,21 @@ ModRefInfo AAResults::getModRefInfo(const AtomicRMWInst *RMW,
   return ModRefInfo::ModRef;
 }
 
+ModRefInfo AAResults::getModRefInfo(const StoreRMWInst *SI,
+                                    const MemoryLocation &Loc,
+                                    AAQueryInfo &AAQI) {
+  if (Loc.Ptr) {
+    AliasResult AR = alias(MemoryLocation::get(SI), Loc, AAQI, SI);
+    if (AR == AliasResult::NoAlias) {
+      if (isStrongerThanMonotonic(SI->getOrdering()))
+        return getSyncEffects(this, Loc, AAQI);
+      return ModRefInfo::NoModRef;
+    }
+  }
+
+  return ModRefInfo::ModRef;
+}
+
 ModRefInfo AAResults::getModRefInfo(const Instruction *I,
                                     const std::optional<MemoryLocation> &OptLoc,
                                     AAQueryInfo &AAQIP) {
@@ -660,6 +675,8 @@ ModRefInfo AAResults::getModRefInfo(const Instruction *I,
     return getModRefInfo((const AtomicCmpXchgInst *)I, Loc, AAQIP);
   case Instruction::AtomicRMW:
     return getModRefInfo((const AtomicRMWInst *)I, Loc, AAQIP);
+  case Instruction::StoreRMW:
+    return getModRefInfo((const StoreRMWInst *)I, Loc, AAQIP);
   case Instruction::Call:
   case Instruction::CallBr:
   case Instruction::Invoke:

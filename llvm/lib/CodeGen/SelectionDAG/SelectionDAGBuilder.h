@@ -43,6 +43,7 @@ namespace llvm {
 class AAResults;
 class AllocaInst;
 class AtomicCmpXchgInst;
+class StoreRMWInst;
 class AtomicRMWInst;
 class AssumptionCache;
 class BasicBlock;
@@ -624,6 +625,7 @@ private:
   void visitMaskedScatter(const CallInst &I);
   void visitAtomicCmpXchg(const AtomicCmpXchgInst &I);
   void visitAtomicRMW(const AtomicRMWInst &I);
+  void visitStoreRMW(const StoreRMWInst &I);
   void visitFence(const FenceInst &I);
   void visitPHI(const PHINode &I);
   void visitCall(const CallInst &I);

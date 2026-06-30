@@ -612,6 +612,9 @@ public:
   LLVM_ABI ModRefInfo getModRefInfo(const AtomicRMWInst *RMW,
                                     const MemoryLocation &Loc,
                                     AAQueryInfo &AAQI);
+  LLVM_ABI ModRefInfo getModRefInfo(const StoreRMWInst *SI,
+                                    const MemoryLocation &Loc,
+                                    AAQueryInfo &AAQI);
   LLVM_ABI ModRefInfo getModRefInfo(const CatchPadInst *I,
                                     const MemoryLocation &Loc,
                                     AAQueryInfo &AAQI);

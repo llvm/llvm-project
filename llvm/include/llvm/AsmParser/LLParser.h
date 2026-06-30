@@ -703,6 +703,7 @@ namespace llvm {
     int parseStore(Instruction *&Inst, PerFunctionState &PFS);
     int parseCmpXchg(Instruction *&Inst, PerFunctionState &PFS);
     int parseAtomicRMW(Instruction *&Inst, PerFunctionState &PFS);
+    int parseStoreRMW(Instruction *&Inst, PerFunctionState &PFS);
     int parseFence(Instruction *&Inst, PerFunctionState &PFS);
     int parseGetElementPtr(Instruction *&Inst, PerFunctionState &PFS);
     int parseExtractValue(Instruction *&Inst, PerFunctionState &PFS);

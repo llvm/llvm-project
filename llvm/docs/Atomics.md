@@ -118,9 +118,9 @@ ordering; see {ref}`Atomic orderings`.
 non-atomic loads and stores, but provide additional guarantees in situations
 where threads and signals are involved.
 
-`cmpxchg` and `atomicrmw` are essentially like an atomic load followed by an
-atomic store (where the store is conditional for `cmpxchg`), but no other
-memory operation can happen on any thread between the load and store.
+`cmpxchg`, `atomicrmw`, and `storermw` are essentially like an atomic load
+followed by an atomic store (where the store is conditional for `cmpxchg`),
+but no other memory operation can happen on any thread between the load and store.
 
 A `fence` provides Acquire and/or Release ordering which is not part
 of another operation; it is normally used along with Monotonic memory
@@ -251,8 +251,8 @@ Notes for optimizers
 
 Notes for code generation
 : Code generation is essentially the same as that for unordered for loads and
-  stores.  No fences are required.  `cmpxchg` and `atomicrmw` are required
-  to appear as a single operation.
+  stores.  No fences are required.  `cmpxchg`, `atomicrmw`, and `storermw` are
+  required to appear as a single operation.
 
 ### Acquire
 
@@ -473,17 +473,17 @@ atomic constructs. Here are some lowerings it can do:
 For an example of these, look at the ARM (first five lowerings) or RISC-V (last
 lowering) backend.
 
-AtomicExpandPass supports two strategies for lowering atomicrmw/cmpxchg to
-load-linked/store-conditional (LL/SC) loops. The first expands the LL/SC loop
+AtomicExpandPass supports two strategies for lowering atomicrmw/storermw/cmpxchg
+to load-linked/store-conditional (LL/SC) loops. The first expands the LL/SC loop
 in IR, calling target lowering hooks to emit intrinsics for the LL and SC
 operations. However, many architectures have strict requirements for LL/SC
 loops to ensure forward progress, such as restrictions on the number and type
 of instructions in the loop. It isn't possible to enforce these restrictions
 when the loop is expanded in LLVM IR, and so affected targets may prefer to
 expand to LL/SC loops at a very late stage (i.e. after register allocation).
-AtomicExpandPass can help support lowering of part-word atomicrmw or cmpxchg
-using this strategy by producing IR for any shifting and masking that can be
-performed outside of the LL/SC loop.
+AtomicExpandPass can help support lowering of part-word atomicrmw, storermw, or
+cmpxchg using this strategy by producing IR for any shifting and masking that
+can be performed outside of the LL/SC loop.
 
 ## Libcalls: `__atomic_*`
 
