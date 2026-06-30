@@ -2522,3 +2522,36 @@ define i32 @test_predsumu_u16x2_u32(<2 x i16> %a, i32 %b) {
   %res = call i32 @llvm.riscv.predsumu.i32.v2i16(<2 x i16> %a, i32 %b)
   ret i32 %res
 }
+
+; Packed absolute difference sum
+define i32 @test_pabdsumu_u8x4_u32(<4 x i8> %a, <4 x i8> %b) {
+; RV32-LABEL: test_pabdsumu_u8x4_u32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    pabdsumu.b a0, a0, a1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pabdsumu_u8x4_u32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    zext.w a1, a1
+; RV64-NEXT:    zext.w a0, a0
+; RV64-NEXT:    pabdsumu.b a0, a0, a1
+; RV64-NEXT:    ret
+  %res = call i32 @llvm.riscv.pabdsumu.i32.v4i8(<4 x i8> %a, <4 x i8> %b)
+  ret i32 %res
+}
+
+define i32 @test_pabdsumau_u8x4_u32(i32 %rd, <4 x i8> %a, <4 x i8> %b) {
+; RV32-LABEL: test_pabdsumau_u8x4_u32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    pabdsumau.b a0, a1, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pabdsumau_u8x4_u32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    zext.w a2, a2
+; RV64-NEXT:    zext.w a1, a1
+; RV64-NEXT:    pabdsumau.b a0, a1, a2
+; RV64-NEXT:    ret
+  %res = call i32 @llvm.riscv.pabdsumau.i32.v4i8(i32 %rd, <4 x i8> %a, <4 x i8> %b)
+  ret i32 %res
+}

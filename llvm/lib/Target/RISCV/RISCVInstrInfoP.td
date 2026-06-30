@@ -1765,6 +1765,14 @@ class PatRedSumPair<SDPatternOperator OpNode, RVInst Inst, ValueType VecVT>
     : Pat<(i32 (OpNode (VecVT GPRPair:$rs1), (i32 GPR:$rs2))),
           (Inst GPRPair:$rs1, GPR:$rs2)>;
 
+// Absolute difference sum, optionally accumulating into rd.
+class PatAbdSum<SDPatternOperator OpNode, RVInst Inst, ValueType VecVT>
+    : Pat<(XLenVT (OpNode (VecVT GPR:$rs1), (VecVT GPR:$rs2))),
+          (Inst GPR:$rs1, GPR:$rs2)>;
+class PatAbdSumAcc<SDPatternOperator OpNode, RVInst Inst, ValueType VecVT>
+    : Pat<(XLenVT (OpNode (XLenVT GPR:$rd), (VecVT GPR:$rs1), (VecVT GPR:$rs2))),
+          (Inst GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+
 class PatGprPairImm<SDPatternOperator OpNode, RVInst Inst,
                     SDPatternOperator ImmType, ValueType vt>
     : Pat<(vt (OpNode (vt GPRPair:$rs1), ImmType:$imm)),
@@ -2037,6 +2045,10 @@ let Predicates = [HasStdExtP] in {
   def : Pat<(XLenVecI16VT (abs GPR:$rs1)), (PABD_H GPR:$rs1, (XLenVecI16VT X0))>;
   def : PatGprGpr<abds, PABD_H, XLenVecI16VT>;
   def : PatGprGpr<abdu, PABDU_H, XLenVecI16VT>;
+
+  // 8-bit absolute difference sum patterns
+  def : PatAbdSum<int_riscv_pabdsumu, PABDSUMU_B, XLenVecI8VT>;
+  def : PatAbdSumAcc<int_riscv_pabdsumau, PABDSUMAU_B, XLenVecI8VT>;
 
   // 16-bit multiply high patterns
   def : PatGprGpr<mulhs, PMULH_H, XLenVecI16VT>;
@@ -2413,6 +2425,22 @@ let append Predicates = [IsRV32] in {
   def : PatRedSum<int_riscv_predsumu, PREDSUMU_HS, v2i16>;
   def : PatRedSumPair<int_riscv_predsum, PREDSUM_DHS, v4i16>;
   def : PatRedSumPair<int_riscv_predsumu, PREDSUMU_DHS, v4i16>;
+
+  // 8-bit absolute difference sum patterns
+  def : Pat<(i32 (int_riscv_pabdsumu (v8i8 GPRPair:$rs1), (v8i8 GPRPair:$rs2))),
+            (PABDSUMAU_B
+                (PABDSUMU_B (EXTRACT_SUBREG GPRPair:$rs1, sub_gpr_even),
+                            (EXTRACT_SUBREG GPRPair:$rs2, sub_gpr_even)),
+                (EXTRACT_SUBREG GPRPair:$rs1, sub_gpr_odd),
+                (EXTRACT_SUBREG GPRPair:$rs2, sub_gpr_odd))>;
+  def : Pat<(i32 (int_riscv_pabdsumau (i32 GPR:$rd), (v8i8 GPRPair:$rs1),
+                                      (v8i8 GPRPair:$rs2))),
+            (PABDSUMAU_B
+                (PABDSUMAU_B GPR:$rd,
+                             (EXTRACT_SUBREG GPRPair:$rs1, sub_gpr_even),
+                             (EXTRACT_SUBREG GPRPair:$rs2, sub_gpr_even)),
+                (EXTRACT_SUBREG GPRPair:$rs1, sub_gpr_odd),
+                (EXTRACT_SUBREG GPRPair:$rs2, sub_gpr_odd))>;
 
   // [s|u]min/[s|u]max patterns
   def : PatGprPairGprPair<smin, PMIN_DB, v8i8>;
