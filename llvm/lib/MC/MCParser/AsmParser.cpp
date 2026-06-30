@@ -54,6 +54,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SMLoc.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -180,6 +181,17 @@ private:
 
   // Is alt macro mode enabled.
   bool AltMacroMode = false;
+
+  /// Current recursion depth of parsePrimaryExpr. This bounds the combined
+  /// nesting depth of all recursive forms it handles -- unary operators
+  /// (!, ~, unary +/-) as well as parenthesized and bracketed sub-expressions
+  /// -- so that pathological input cannot overflow the stack.
+  unsigned ExprParseDepth = 0;
+
+  /// Maximum nesting depth accepted by parsePrimaryExpr. Chosen to be well
+  /// above any plausible hand-written or machine-generated expression while
+  /// still small enough to fail before exhausting the stack.
+  static constexpr unsigned MaxExprParseDepth = 1024;
 
 protected:
   virtual bool parseStatement(ParseStatementInfo &Info,
@@ -1140,6 +1152,11 @@ bool AsmParser::parseBracketExpr(const MCExpr *&Res, SMLoc &EndLoc) {
 ///  primaryexpr ::= ~,+,- primaryexpr
 bool AsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc,
                                  AsmTypeInfo *TypeInfo) {
+  if (ExprParseDepth >= MaxExprParseDepth)
+    return TokError("expression nesting limit reached (possible infinite "
+                    "recursion)");
+  SaveAndRestore<unsigned> RAII(ExprParseDepth, ExprParseDepth + 1);
+
   SMLoc FirstTokenLoc = getLexer().getLoc();
   AsmToken::TokenKind FirstTokenKind = Lexer.getKind();
   switch (FirstTokenKind) {
