@@ -358,6 +358,8 @@ template <typename T> struct NodeAddr {
     return !operator==(NA);
   }
 
+  bool operator<(const NodeAddr<T> &NA) const { return Id < NA.Id; }
+
   T Addr = nullptr;
   NodeId Id = 0;
 };
