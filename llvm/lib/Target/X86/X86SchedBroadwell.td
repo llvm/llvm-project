@@ -212,15 +212,15 @@ defm : BWWriteResPair<WriteBEXTR, [BWPort06,BWPort15], 2, [1,1], 2>;
 defm : BWWriteResPair<WriteBLS,   [BWPort15], 1>;
 defm : BWWriteResPair<WriteBZHI,  [BWPort15], 1>;
 
-defm : BWWriteResPair<WriteDiv8,  [BWPort0, BWDivider], 24, [1,9],   9>;
-defm : BWWriteResPair<WriteDiv16, [BWPort0, BWDivider], 25, [1,9],  11>;
-defm : BWWriteResPair<WriteDiv32, [BWPort0, BWDivider], 28, [1,9],  10>;
-defm : BWWriteResPair<WriteDiv64, [BWPort0, BWDivider], 92, [1,21], 36>;
+defm : BWWriteResPair<WriteDiv8,  [BWPort0, BWPort1, BWPort5, BWPort06, BWPort0156, BWDivider], 24, [2, 2, 2, 1, 2, 9],   9>;
+defm : BWWriteResPair<WriteDiv16, [BWPort0, BWPort1, BWPort5, BWPort06, BWPort15, BWPort0156, BWDivider], 25, [2, 2, 2, 2, 1, 2, 9],  11>;
+defm : BWWriteResPair<WriteDiv32, [BWPort0, BWPort1, BWPort5, BWPort06, BWPort15, BWPort0156, BWDivider], 28, [2, 2, 2, 2, 1, 1, 9],  10>;
+defm : BWWriteResPair<WriteDiv64, [BWPort0, BWPort1, BWPort5, BWPort06, BWPort015, BWPort0156, BWDivider], 92, [2, 3, 3, 12, 7, 5, 21], 36>;
 
-defm : BWWriteResPair<WriteIDiv8,  [BWPort0, BWDivider], 24, [1,6],  9>;
-defm : BWWriteResPair<WriteIDiv16, [BWPort0, BWDivider], 26, [1,6], 10>;
-defm : BWWriteResPair<WriteIDiv32, [BWPort0, BWDivider], 28, [1,6],  9>;
-defm : BWWriteResPair<WriteIDiv64, [BWPort0, BWDivider], 100, [1,24], 59>;
+defm : BWWriteResPair<WriteIDiv8,  [BWPort0, BWPort1, BWPort5, BWPort0156, BWDivider], 24, [2, 2, 2, 3, 6],  9>;
+defm : BWWriteResPair<WriteIDiv16, [BWPort0, BWPort1, BWPort5, BWPort06, BWPort15, BWPort0156, BWDivider], 26, [2, 2, 2, 1, 1, 2, 6], 10>;
+defm : BWWriteResPair<WriteIDiv32, [BWPort0, BWPort1, BWPort5, BWPort06, BWPort15, BWPort0156, BWDivider], 28, [2, 2, 2, 1, 1, 1, 6],  9>;
+defm : BWWriteResPair<WriteIDiv64, [BWPort0, BWPort1, BWPort5, BWPort01, BWPort06, BWPort15, BWPort015, BWPort0156, BWDivider], 100, [2, 3, 5, 7, 26, 2, 11, 1, 24], 59>;
 
 // Floating point. This covers both scalar and vector operations.
 defm : X86WriteRes<WriteFLD0,          [BWPort01], 1, [1], 1>;

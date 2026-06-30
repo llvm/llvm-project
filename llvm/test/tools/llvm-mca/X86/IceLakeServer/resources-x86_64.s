@@ -1964,7 +1964,7 @@ xorq (%rax), %rdi
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]
-# CHECK-NEXT: 112.00  -     591.25 334.75 249.50 249.50 172.50 244.75 652.25 193.50 193.50 172.50
+# CHECK-NEXT: 112.00  -     582.25 381.75 249.50 249.50 172.50 255.75 659.25 193.50 193.50 172.50
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   Instructions:
@@ -2255,23 +2255,23 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  -      -     0.25   0.25    -      -      -     0.25   0.25    -      -      -     decq	%rdi
 # CHECK-NEXT:  -      -     0.25   0.25   0.50   0.50   0.50   0.25   0.25   0.50   0.50   0.50   decq	(%rax)
 # CHECK-NEXT:  -      -     0.25   0.25   0.50   0.50   0.50   0.25   0.25   0.50   0.50   0.50   lock		decq	(%rax)
-# CHECK-NEXT: 6.00    -     1.00    -      -      -      -      -      -      -      -      -     divb	%dil
-# CHECK-NEXT: 6.00    -     1.00    -     0.50   0.50    -      -      -      -      -      -     divb	(%rax)
-# CHECK-NEXT: 6.00    -     1.00    -      -      -      -      -      -      -      -      -     divw	%si
-# CHECK-NEXT: 6.00    -     1.00    -     0.50   0.50    -      -      -      -      -      -     divw	(%rax)
-# CHECK-NEXT: 6.00    -     1.00    -      -      -      -      -      -      -      -      -     divl	%edx
-# CHECK-NEXT: 6.00    -     1.00    -     0.50   0.50    -      -      -      -      -      -     divl	(%rax)
-# CHECK-NEXT: 10.00   -     1.00    -      -      -      -      -      -      -      -      -     divq	%rcx
-# CHECK-NEXT: 10.00   -     1.00    -     0.50   0.50    -      -      -      -      -      -     divq	(%rax)
+# CHECK-NEXT: 6.00    -     0.50   2.50    -      -      -     0.50   0.50    -      -      -     divb	%dil
+# CHECK-NEXT: 6.00    -     0.50   2.50   0.50   0.50    -     0.50   0.50    -      -      -     divb	(%rax)
+# CHECK-NEXT: 6.00    -     0.75   3.25    -      -      -     1.25   0.75    -      -      -     divw	%si
+# CHECK-NEXT: 6.00    -     0.75   3.25   0.50   0.50    -     1.25   0.75    -      -      -     divw	(%rax)
+# CHECK-NEXT: 6.00    -     0.25   2.75    -      -      -     0.75   0.25    -      -      -     divl	%edx
+# CHECK-NEXT: 6.00    -     0.25   2.75   0.50   0.50    -     0.75   0.25    -      -      -     divl	(%rax)
+# CHECK-NEXT: 10.00   -     0.25   3.25    -      -      -     0.25   0.25    -      -      -     divq	%rcx
+# CHECK-NEXT: 10.00   -     0.25   3.25   0.50   0.50    -     0.25   0.25    -      -      -     divq	(%rax)
 # CHECK-NEXT:  -      -     0.25   0.25    -      -      -     0.25   0.25    -      -      -     enter	$7, $4095
-# CHECK-NEXT: 6.00    -     1.00    -      -      -      -      -      -      -      -      -     idivb	%dil
-# CHECK-NEXT: 6.00    -     1.00    -     0.50   0.50    -      -      -      -      -      -     idivb	(%rax)
-# CHECK-NEXT: 6.00    -     1.00    -      -      -      -      -      -      -      -      -     idivw	%si
-# CHECK-NEXT: 6.00    -     1.00    -     0.50   0.50    -      -      -      -      -      -     idivw	(%rax)
-# CHECK-NEXT: 6.00    -     1.00    -      -      -      -      -      -      -      -      -     idivl	%edx
-# CHECK-NEXT: 6.00    -     1.00    -     0.50   0.50    -      -      -      -      -      -     idivl	(%rax)
-# CHECK-NEXT: 10.00   -     1.00    -      -      -      -      -      -      -      -      -     idivq	%rcx
-# CHECK-NEXT: 10.00   -     1.00    -     0.50   0.50    -      -      -      -      -      -     idivq	(%rax)
+# CHECK-NEXT: 6.00    -     0.50   2.50    -      -      -     0.50   0.50    -      -      -     idivb	%dil
+# CHECK-NEXT: 6.00    -     0.50   2.50   0.50   0.50    -     0.50   0.50    -      -      -     idivb	(%rax)
+# CHECK-NEXT: 6.00    -     0.75   3.25    -      -      -     1.25   0.75    -      -      -     idivw	%si
+# CHECK-NEXT: 6.00    -     0.75   3.25   0.50   0.50    -     1.25   0.75    -      -      -     idivw	(%rax)
+# CHECK-NEXT: 6.00    -     0.25   2.75    -      -      -     0.75   0.25    -      -      -     idivl	%edx
+# CHECK-NEXT: 6.00    -     0.25   2.75   0.50   0.50    -     0.75   0.25    -      -      -     idivl	(%rax)
+# CHECK-NEXT: 10.00   -     0.25   3.25    -      -      -     0.25   0.25    -      -      -     idivq	%rcx
+# CHECK-NEXT: 10.00   -     0.25   3.25   0.50   0.50    -     0.25   0.25    -      -      -     idivq	(%rax)
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -      -      -      -      -     imulb	%dil
 # CHECK-NEXT:  -      -      -     1.00   0.50   0.50    -      -      -      -      -      -     imulb	(%rax)
 # CHECK-NEXT:  -      -     1.00   1.50    -      -      -     0.50   1.00    -      -      -     imulw	%di

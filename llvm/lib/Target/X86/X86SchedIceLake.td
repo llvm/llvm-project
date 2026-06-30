@@ -148,15 +148,15 @@ defm : X86WriteRes<WriteCMPXCHG,[ICXPort06, ICXPort0156], 5, [2,3], 5>;
 defm : X86WriteRes<WriteCMPXCHGRMW,[ICXPort23,ICXPort06,ICXPort0156,ICXPort78,ICXPort49], 8, [1,2,1,1,1], 6>;
 defm : X86WriteRes<WriteXCHG,       [ICXPort0156], 2, [3], 3>;
 
-defm : ICXWriteResPair<WriteDiv8,  [ICXPort0, ICXDivider], 15, [1,6],  4>;
-defm : ICXWriteResPair<WriteDiv16, [ICXPort0, ICXDivider], 16, [1,6],  6>;
-defm : ICXWriteResPair<WriteDiv32, [ICXPort0, ICXDivider], 15, [1,6],  4>;
-defm : ICXWriteResPair<WriteDiv64, [ICXPort0, ICXDivider], 18, [1,10], 4>;
+defm : ICXWriteResPair<WriteDiv8,  [ICXPort1, ICXPort0156, ICXDivider], 15, [2, 2, 6],  4>;
+defm : ICXWriteResPair<WriteDiv16, [ICXPort1, ICXPort15, ICXPort0156, ICXDivider], 16, [2, 1, 3, 6],  6>;
+defm : ICXWriteResPair<WriteDiv32, [ICXPort1, ICXPort15, ICXPort0156, ICXDivider], 15, [2, 1, 1, 6],  4>;
+defm : ICXWriteResPair<WriteDiv64, [ICXPort1, ICXPort0156, ICXDivider], 18, [3, 1, 10], 4>;
 
-defm : ICXWriteResPair<WriteIDiv8,  [ICXPort0, ICXDivider], 15, [1,6],  4>;
-defm : ICXWriteResPair<WriteIDiv16, [ICXPort0, ICXDivider], 16, [1,6],  6>;
-defm : ICXWriteResPair<WriteIDiv32, [ICXPort0, ICXDivider], 15, [1,6],  4>;
-defm : ICXWriteResPair<WriteIDiv64, [ICXPort0, ICXDivider], 18, [1,10], 4>;
+defm : ICXWriteResPair<WriteIDiv8,  [ICXPort1, ICXPort0156, ICXDivider], 15, [2, 2, 6],  4>;
+defm : ICXWriteResPair<WriteIDiv16, [ICXPort1, ICXPort15, ICXPort0156, ICXDivider], 16, [2, 1, 3, 6],  6>;
+defm : ICXWriteResPair<WriteIDiv32, [ICXPort1, ICXPort15, ICXPort0156, ICXDivider], 15, [2, 1, 1, 6],  4>;
+defm : ICXWriteResPair<WriteIDiv64, [ICXPort1, ICXPort0156, ICXDivider], 18, [3, 1, 10], 4>;
 
 defm : ICXWriteResPair<WriteCRC32, [ICXPort1], 3>;
 

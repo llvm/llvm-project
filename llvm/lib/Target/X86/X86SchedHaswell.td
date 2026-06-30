@@ -214,15 +214,15 @@ defm : HWWriteResPair<WriteBEXTR, [HWPort06,HWPort15], 2, [1,1], 2>;
 defm : HWWriteResPair<WriteBLS,   [HWPort15], 1>;
 defm : HWWriteResPair<WriteBZHI,  [HWPort15], 1>;
 
-defm : HWWriteResPair<WriteDiv8,  [HWPort0, HWDivider], 24, [1,9],   9>;
-defm : HWWriteResPair<WriteDiv16, [HWPort0, HWDivider], 25, [1,9],  11>;
-defm : HWWriteResPair<WriteDiv32, [HWPort0, HWDivider], 28, [1,9],  10>;
-defm : HWWriteResPair<WriteDiv64, [HWPort0, HWDivider], 94, [1,21], 36>;
+defm : HWWriteResPair<WriteDiv8,  [HWPort0, HWPort1, HWPort5, HWPort06, HWPort0156, HWDivider], 24, [2, 2, 2, 1, 2, 9],   9>;
+defm : HWWriteResPair<WriteDiv16, [HWPort0, HWPort1, HWPort5, HWPort06, HWPort15, HWPort0156, HWDivider], 25, [2, 2, 2, 2, 1, 2, 9],  11>;
+defm : HWWriteResPair<WriteDiv32, [HWPort0, HWPort1, HWPort5, HWPort06, HWPort15, HWPort0156, HWDivider], 28, [2, 2, 2, 2, 1, 1, 9],  10>;
+defm : HWWriteResPair<WriteDiv64, [HWPort0, HWPort1, HWPort5, HWPort06, HWPort015, HWPort0156, HWDivider], 94, [2, 3, 3, 12, 8, 4, 21], 36>;
 
-defm : HWWriteResPair<WriteIDiv8,  [HWPort0, HWDivider], 24, [1,8],  9>;
-defm : HWWriteResPair<WriteIDiv16, [HWPort0, HWDivider], 25, [1,8], 10>;
-defm : HWWriteResPair<WriteIDiv32, [HWPort0, HWDivider], 28, [1,8],  9>;
-defm : HWWriteResPair<WriteIDiv64, [HWPort0, HWDivider], 101, [1,24], 59>;
+defm : HWWriteResPair<WriteIDiv8,  [HWPort0, HWPort1, HWPort5, HWPort0156, HWDivider], 24, [2, 2, 2, 3, 8],  9>;
+defm : HWWriteResPair<WriteIDiv16, [HWPort0, HWPort1, HWPort5, HWPort06, HWPort15, HWPort0156, HWDivider], 25, [2, 2, 2, 1, 1, 2, 8], 10>;
+defm : HWWriteResPair<WriteIDiv32, [HWPort0, HWPort1, HWPort5, HWPort06, HWPort15, HWPort0156, HWDivider], 28, [2, 2, 2, 1, 1, 1, 8],  9>;
+defm : HWWriteResPair<WriteIDiv64, [HWPort0, HWPort1, HWPort5, HWPort01, HWPort06, HWPort15, HWPort015, HWPort0156, HWDivider], 101, [2, 3, 5, 7, 26, 1, 12, 1, 24], 59>;
 
 // Floating point. This covers both scalar and vector operations.
 defm : X86WriteRes<WriteFLD0,          [HWPort01], 1, [1], 1>;

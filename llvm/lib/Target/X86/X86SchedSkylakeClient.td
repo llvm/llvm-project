@@ -146,15 +146,15 @@ defm : X86WriteRes<WriteCMPXCHG,[SKLPort06, SKLPort0156], 5, [2,3], 5>;
 defm : X86WriteRes<WriteCMPXCHGRMW,[SKLPort23,SKLPort06,SKLPort0156,SKLPort237,SKLPort4], 8, [1,2,1,1,1], 6>;
 defm : X86WriteRes<WriteXCHG, [SKLPort0156], 2, [3], 3>;
 
-defm : SKLWriteResPair<WriteDiv8,  [SKLPort0, SKLDivider], 25, [1,6],  10>;
-defm : SKLWriteResPair<WriteDiv16, [SKLPort0, SKLDivider], 24, [1,6],  10>;
-defm : SKLWriteResPair<WriteDiv32, [SKLPort0, SKLDivider], 28, [1,6],  10>;
-defm : SKLWriteResPair<WriteDiv64, [SKLPort0, SKLDivider], 90, [1,21], 36>;
+defm : SKLWriteResPair<WriteDiv8,  [SKLPort0, SKLPort5, SKLPort06, SKLPort15, SKLPort0156, SKLDivider], 25, [2, 4, 1, 1, 2, 6],  10>;
+defm : SKLWriteResPair<WriteDiv16, [SKLPort0, SKLPort5, SKLPort06, SKLPort15, SKLPort0156, SKLDivider], 24, [2, 4, 1, 1, 2, 6],  10>;
+defm : SKLWriteResPair<WriteDiv32, [SKLPort0, SKLPort5, SKLPort06, SKLPort15, SKLPort0156, SKLDivider], 28, [2, 4, 1, 1, 2, 6],  10>;
+defm : SKLWriteResPair<WriteDiv64, [SKLPort0, SKLPort1, SKLPort5, SKLPort05, SKLPort06, SKLPort015, SKLPort0156, SKLDivider], 90, [2, 1, 3, 1, 13, 8, 5, 21], 36>;
 
-defm : SKLWriteResPair<WriteIDiv8,  [SKLPort0, SKLDivider], 25, [1,6],  11>;
-defm : SKLWriteResPair<WriteIDiv16, [SKLPort0, SKLDivider], 24, [1,6],  10>;
-defm : SKLWriteResPair<WriteIDiv32, [SKLPort0, SKLDivider], 28, [1,6],  10>;
-defm : SKLWriteResPair<WriteIDiv64, [SKLPort0, SKLDivider], 96, [1,24], 57>;
+defm : SKLWriteResPair<WriteIDiv8,  [SKLPort0, SKLPort5, SKLPort06, SKLPort15, SKLPort0156, SKLDivider], 25, [2, 4, 1, 1, 3, 6],  11>;
+defm : SKLWriteResPair<WriteIDiv16, [SKLPort0, SKLPort5, SKLPort06, SKLPort15, SKLPort0156, SKLDivider], 24, [2, 4, 1, 1, 2, 6],  10>;
+defm : SKLWriteResPair<WriteIDiv32, [SKLPort0, SKLPort5, SKLPort06, SKLPort15, SKLPort0156, SKLDivider], 28, [2, 4, 1, 1, 2, 6],  10>;
+defm : SKLWriteResPair<WriteIDiv64, [SKLPort0, SKLPort1, SKLPort5, SKLPort01, SKLPort05, SKLPort06, SKLPort15, SKLPort015, SKLDivider], 96, [2, 1, 3, 5, 6, 27, 4, 10, 24], 57>;
 
 defm : SKLWriteResPair<WriteCRC32, [SKLPort1], 3>;
 
