@@ -348,6 +348,80 @@ private:
   CommandMangler Mangler;
 };
 
+/// Reads project module information directly from build database.
+///
+/// The build database contains the translation unit sets and their visibility
+/// into other sets. This heirarchy allows for a single project to contain
+/// multiple isolated linked programs that guarantee unique module names within
+/// the context of a set and all visible sets while allowing for duplicate
+/// module names within the larger project.
+///
+/// Note the build database can be stale, so results from this backend
+/// should be treated as preferred hints rather than unquestionable truth.
+/// The compound layer below validates or falls back when needed.
+class BuildDatabaseProjectModules : public ProjectModules {
+public:
+  BuildDatabaseProjectModules(
+      std::shared_ptr<const clang::tooling::CompilationDatabase> CDB)
+      : CDB(std::move(CDB)) {}
+
+  std::vector<std::string> getRequiredModules(PathRef File) override {
+    const auto *ModuleManager = CDB->getModuleManager();
+    if (ModuleManager)
+      return ModuleManager->getRequiredModules(File);
+
+    return {};
+  }
+
+  std::string getModuleNameForSource(PathRef File) override {
+    const auto *ModuleManager = CDB->getModuleManager();
+    if (ModuleManager) {
+      auto ModuleName = ModuleManager->getModuleName(File);
+      if (ModuleName)
+        return *ModuleName;
+    }
+
+    return "";
+  }
+
+  ModuleNameState getModuleNameState(llvm::StringRef ModuleName) override {
+    const auto *ModuleManager = CDB->getModuleManager();
+    if (ModuleManager)
+      return (ModuleNameState)ModuleManager->getModuleNameState(ModuleName);
+
+    return ModuleNameState::Unknown;
+  }
+
+  std::string getSourceForModuleName(llvm::StringRef ModuleName,
+                                     PathRef RequiredSourceFile) override {
+    const auto *ModuleManager = CDB->getModuleManager();
+    if (ModuleManager)
+      return ModuleManager->getSourceForModuleName(ModuleName,
+                                                   RequiredSourceFile);
+
+    return "";
+  }
+
+  void setCommandMangler(CommandMangler Mangler) override {
+    this->Mangler = std::move(Mangler);
+  }
+
+private:
+  std::shared_ptr<const clang::tooling::CompilationDatabase> CDB;
+  CommandMangler Mangler;
+
+  llvm::StringMap<std::string> PCMToSource;
+
+  using DistinctSourceSet = llvm::StringSet<>;
+  llvm::StringMap<DistinctSourceSet> ModuleNameToDistinctSources;
+
+  struct RecoveredModuleName {
+    std::string Name;
+    bool Ambiguous = false;
+  };
+  llvm::StringMap<RecoveredModuleName> SourceToModuleName;
+};
+
 /// Reads project module information directly from compile commands.
 ///
 /// The key observation is that compile commands may already encode the mapping
@@ -529,7 +603,8 @@ public:
   CompoundProjectModules(
       std::shared_ptr<const clang::tooling::CompilationDatabase> CDB,
       const ThreadsafeFS &TFS)
-      : CompileCommands(
+      : BuildDatabase(std::make_unique<BuildDatabaseProjectModules>(CDB)),
+        CompileCommands(
             std::make_unique<CompileCommandsProjectModules>(CDB, TFS)),
         Scanning(
             std::make_unique<ScanningAllProjectModules>(std::move(CDB), TFS)) {}
@@ -546,20 +621,33 @@ public:
 
   std::string getSourceForModuleName(llvm::StringRef ModuleName,
                                      PathRef RequiredSourceFile) override {
-    auto FromCompileCommands =
-        CompileCommands->getSourceForModuleName(ModuleName, RequiredSourceFile);
-    // Check if the source still declares the module.
-    // This is to validate compile-command-derived results may be stale and
-    // scan a single file is fast enough. We just don't want to scan the project
-    // entirely.
-    if (!FromCompileCommands.empty() &&
-        Scanning->getModuleNameForSource(FromCompileCommands) == ModuleName)
-      return FromCompileCommands;
+    auto FromBuildDatabase =
+        BuildDatabase->getSourceForModuleName(ModuleName, RequiredSourceFile);
+    if (!FromBuildDatabase.empty()) {
+      // Check if the source still declares the module.
+      // This is to validate compile-command-derived results may be stale and
+      // scan a single file is fast enough. We just don't want to scan the
+      // project entirely.
+      if (Scanning->getModuleNameForSource(FromBuildDatabase) == ModuleName)
+        return FromBuildDatabase;
+    } else {
+      // The build database does not have module knowledge. Fall back to parse
+      // compile command.
+      auto FromCompileCommands = CompileCommands->getSourceForModuleName(
+          ModuleName, RequiredSourceFile);
+      if (!FromCompileCommands.empty() &&
+          Scanning->getModuleNameForSource(FromCompileCommands) == ModuleName)
+        return FromCompileCommands;
+    }
 
     return Scanning->getSourceForModuleName(ModuleName, RequiredSourceFile);
   }
 
   ModuleNameState getModuleNameState(llvm::StringRef ModuleName) override {
+    auto FromBuildDatabase = BuildDatabase->getModuleNameState(ModuleName);
+    if (FromBuildDatabase != ModuleNameState::Unknown)
+      return FromBuildDatabase;
+
     auto FromCompileCommands = CompileCommands->getModuleNameState(ModuleName);
     if (FromCompileCommands != ModuleNameState::Unknown)
       return FromCompileCommands;
@@ -578,6 +666,7 @@ public:
   }
 
 private:
+  std::unique_ptr<BuildDatabaseProjectModules> BuildDatabase;
   std::unique_ptr<CompileCommandsProjectModules> CompileCommands;
   std::unique_ptr<ScanningAllProjectModules> Scanning;
   CommandMangler Mangler;

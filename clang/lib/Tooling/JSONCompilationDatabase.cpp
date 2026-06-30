@@ -179,7 +179,7 @@ namespace tooling {
 
 // This anchor is used to force the linker to link in the generated object file
 // and thus register the JSONCompilationDatabasePlugin.
-volatile int JSONAnchorSource = 0;
+volatile int JSONCompilationAnchorSource = 0;
 
 } // namespace tooling
 } // namespace clang

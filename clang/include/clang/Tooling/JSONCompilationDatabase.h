@@ -92,6 +92,8 @@ public:
   /// database.
   std::vector<CompileCommand> getAllCompileCommands() const override;
 
+  const ModuleManager *getModuleManager() const override { return nullptr; }
+
 private:
   /// Constructs a JSON compilation database on a memory buffer.
   JSONCompilationDatabase(std::unique_ptr<llvm::MemoryBuffer> Database,

@@ -730,8 +730,7 @@ bool ReusablePrerequisiteModules::canReuse(
 /// variants do not collide.
 class ModuleFileCache {
 public:
-  ModuleFileCache(const GlobalCompilationDatabase &CDB) : CDB(CDB) {}
-  const GlobalCompilationDatabase &getCDB() const { return CDB; }
+  ModuleFileCache() {}
 
   std::shared_ptr<const ModuleFile> getModule(StringRef ModuleName,
                                               PathRef ModuleUnitSource,
@@ -761,8 +760,6 @@ private:
     Key.append(CommandHash);
     return Key;
   }
-
-  const GlobalCompilationDatabase &CDB;
 
   llvm::StringMap<std::weak_ptr<const ModuleFile>> ModuleFiles;
   std::mutex ModuleFilesMutex;
@@ -1008,12 +1005,13 @@ void garbageCollectModuleCache(PathRef CacheRoot) {
 
 class ModulesBuilder::ModulesBuilderImpl {
 public:
-  ModulesBuilderImpl(const GlobalCompilationDatabase &CDB) : Cache(CDB) {}
+  ModulesBuilderImpl(const GlobalCompilationDatabase &CDB)
+      : CDB(CDB), Cache() {}
 
   ModuleNameToSourceCache &getProjectModulesCache() {
     return ProjectModulesCache;
   }
-  const GlobalCompilationDatabase &getCDB() const { return Cache.getCDB(); }
+  const GlobalCompilationDatabase &getCDB() const { return CDB; }
 
   llvm::Error
   getOrBuildModuleFile(PathRef RequiredSource, StringRef ModuleName,
@@ -1029,6 +1027,7 @@ private:
   /// Runs GC once for the cache root owning a project root.
   void garbageCollectModuleCacheForProjectRoot(PathRef ProjectRoot);
 
+  const GlobalCompilationDatabase &CDB;
   ModuleFileCache Cache;
   ModuleNameToSourceCache ProjectModulesCache;
   std::mutex GarbageCollectedProjectRootsMutex;

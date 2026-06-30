@@ -76,6 +76,36 @@ struct CompileCommand {
   }
 };
 
+class ModuleManager {
+public:
+  enum class ModuleNameState {
+    Unknown,
+    Unique,
+    Multiple,
+  };
+
+  // Returns all required modules for the specified file.
+  //
+  // This is the set of imported modules that are required to compile this file.
+  virtual std::vector<std::string>
+  getRequiredModules(StringRef FilePath) const = 0;
+
+  // Returns the module name for the specified file.
+  //
+  // Will return no value when the module information is unknown (not provided)
+  // or unknowable (C). Empty string indicates this file does not produce a
+  // named module. Otherwise returns the name of the module exported by this
+  // file
+  virtual std::optional<std::string>
+  getModuleName(StringRef FilePath) const = 0;
+
+  virtual ModuleNameState getModuleNameState(StringRef ModuleName) const = 0;
+
+  virtual std::string
+  getSourceForModuleName(StringRef ModuleName,
+                         StringRef RequiredSourceFile) const = 0;
+};
+
 /// Interface for compilation databases.
 ///
 /// A compilation database allows the user to retrieve compile command lines
@@ -126,8 +156,8 @@ public:
   /// $ clang++ -o production a.cc b.cc -DPRODUCTION
   /// A compilation database representing the project would return both command
   /// lines for a.cc and b.cc and only the first command line for t.cc.
-  virtual std::vector<CompileCommand> getCompileCommands(
-      StringRef FilePath) const = 0;
+  virtual std::vector<CompileCommand>
+  getCompileCommands(StringRef FilePath) const = 0;
 
   /// Returns the list of all files available in the compilation database.
   ///
@@ -145,6 +175,12 @@ public:
   /// By default, this is implemented in terms of getAllFiles() and
   /// getCompileCommands(). Subclasses may override this for efficiency.
   virtual std::vector<CompileCommand> getAllCompileCommands() const;
+
+  /// Returns the module manager.
+  ///
+  /// By default, returns nothing. Implementations should override this if they
+  /// can enumerate their source files.
+  virtual const ModuleManager *getModuleManager() const = 0;
 };
 
 /// A compilation database that returns a single compile command line.
@@ -206,6 +242,8 @@ public:
   /// and 'FilePath' as positional argument.
   std::vector<CompileCommand>
   getCompileCommands(StringRef FilePath) const override;
+
+  const ModuleManager *getModuleManager() const override { return nullptr; }
 
 private:
   /// This is built up to contain a single entry vector to be returned from

@@ -81,7 +81,7 @@ public:
 
 /// This class handles building module files for a given source file.
 ///
-/// In the future, we want the class to manage the module files acorss
+/// In the future, we want the class to manage the module files across
 /// different versions and different source files.
 class ModulesBuilder {
 public:

@@ -18,6 +18,7 @@
 #include "clang/Tooling/ArgumentsAdjusters.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "clang/Tooling/CompilationDatabasePluginRegistry.h"
+#include "clang/Tooling/JSONBuildDatabase.h"
 #include "clang/Tooling/JSONCompilationDatabase.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/PointerIntPair.h"
@@ -133,6 +134,8 @@ class DirectoryBasedGlobalCompilationDatabase::DirectoryCache {
   // shared_ptr so we can overwrite this when callers are still using the CDB.
   std::shared_ptr<tooling::CompilationDatabase> CDB;
   // File metadata for the CDB files we support tracking directly.
+  CachedFile BuildDatabaseJson;
+  CachedFile BuildBuildDatabaseJson;
   CachedFile CompileCommandsJson;
   CachedFile BuildCompileCommandsJson;
   CachedFile CompileFlagsTxt;
@@ -146,7 +149,9 @@ class DirectoryBasedGlobalCompilationDatabase::DirectoryCache {
 
 public:
   DirectoryCache(llvm::StringRef Path)
-      : CompileCommandsJson(Path, "compile_commands.json"),
+      : BuildDatabaseJson(Path, "build_database.json"),
+        BuildBuildDatabaseJson(Path, "build/build_database.json"),
+        CompileCommandsJson(Path, "compile_commands.json"),
         BuildCompileCommandsJson(Path, "build/compile_commands.json"),
         CompileFlagsTxt(Path, "compile_flags.txt"), Path(Path) {
     assert(llvm::sys::path::is_absolute(Path));
@@ -247,7 +252,25 @@ DirectoryBasedGlobalCompilationDatabase::DirectoryCache::CachedFile::load(
 
 // Adapt CDB-loading functions to a common interface for DirectoryCache::load().
 static std::unique_ptr<tooling::CompilationDatabase>
-parseJSON(PathRef Path, llvm::StringRef Data, std::string &Error) {
+parseBuildDatabaseJSON(PathRef Path, llvm::StringRef Data, std::string &Error) {
+  if (auto CDB = tooling::JSONBuildDatabase::loadFromBuffer(Data, Error)) {
+    // FS used for expanding response files.
+    // FIXME: ExpandResponseFilesDatabase appears not to provide the usual
+    // thread-safety guarantees, as the access to FS is not locked!
+    // For now, use the real FS, which is known to be threadsafe (if we don't
+    // use/change working directory, which ExpandResponseFilesDatabase doesn't).
+    // NOTE: response files have to be expanded before inference because
+    // inference needs full command line to check/fix driver mode and file type.
+    auto FS = llvm::vfs::getRealFileSystem();
+    return tooling::inferMissingCompileCommands(
+        expandResponseFiles(std::move(CDB), std::move(FS)));
+  }
+  return nullptr;
+}
+// Adapt CDB-loading functions to a common interface for DirectoryCache::load().
+static std::unique_ptr<tooling::CompilationDatabase>
+parseComplilationCommandsJSON(PathRef Path, llvm::StringRef Data,
+                              std::string &Error) {
   if (auto CDB = tooling::JSONCompilationDatabase::loadFromBuffer(
           Data, Error, tooling::JSONCommandLineSyntax::AutoDetect)) {
     // FS used for expanding response files.
@@ -286,9 +309,12 @@ bool DirectoryBasedGlobalCompilationDatabase::DirectoryCache::load(
         /*Data*/ llvm::StringRef,
         /*ErrorMsg*/ std::string &);
   };
-  for (const auto &Entry : {CDBFile{&CompileCommandsJson, parseJSON},
-                            CDBFile{&BuildCompileCommandsJson, parseJSON},
-                            CDBFile{&CompileFlagsTxt, parseFixed}}) {
+  for (const auto &Entry :
+       {CDBFile{&BuildDatabaseJson, parseBuildDatabaseJSON},
+        CDBFile{&BuildBuildDatabaseJson, parseBuildDatabaseJSON},
+        CDBFile{&CompileCommandsJson, parseComplilationCommandsJSON},
+        CDBFile{&BuildCompileCommandsJson, parseComplilationCommandsJSON},
+        CDBFile{&CompileFlagsTxt, parseFixed}}) {
     bool Active = ActiveCachedFile == Entry.File;
     auto Loaded = Entry.File->load(FS, Active);
     switch (Loaded.Result) {
@@ -333,6 +359,7 @@ bool DirectoryBasedGlobalCompilationDatabase::DirectoryCache::load(
        tooling::CompilationDatabasePluginRegistry::entries()) {
     // Avoid duplicating the special cases handled above.
     if (Entry.getName() == "fixed-compilation-database" ||
+        Entry.getName() == "json-build-database" ||
         Entry.getName() == "json-compilation-database")
       continue;
     auto Plugin = Entry.instantiate();

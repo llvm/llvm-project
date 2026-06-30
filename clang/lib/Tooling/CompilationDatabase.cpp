@@ -402,8 +402,12 @@ namespace tooling {
 
 // This anchor is used to force the linker to link in the generated object file
 // and thus register the JSONCompilationDatabasePlugin.
-extern volatile int JSONAnchorSource;
-[[maybe_unused]] static int JSONAnchorDest = JSONAnchorSource;
+extern volatile int JSONBuildAnchorSource;
+[[maybe_unused]] static int JSONBuildAnchorDest = JSONBuildAnchorSource;
+
+extern volatile int JSONCompilationAnchorSource;
+[[maybe_unused]] static int JSONCompilationAnchorDest =
+    JSONCompilationAnchorSource;
 
 } // namespace tooling
 } // namespace clang

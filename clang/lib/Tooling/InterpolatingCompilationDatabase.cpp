@@ -586,6 +586,10 @@ public:
     return Inner->getAllCompileCommands();
   }
 
+  const ModuleManager *getModuleManager() const override {
+    return Inner->getModuleManager();
+  }
+
 private:
   std::unique_ptr<CompilationDatabase> Inner;
   FileIndex Index;
