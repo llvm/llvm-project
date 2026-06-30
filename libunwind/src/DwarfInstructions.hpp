@@ -181,7 +181,7 @@ v128 DwarfInstructions<A, R>::getSavedVectorRegister(
 }
 #if defined(_LIBUNWIND_TARGET_AARCH64)
 template <typename A, typename R>
-DwarfInstructions<A, R>::RASignStatus
+typename DwarfInstructions<A, R>::RASignStatus
 DwarfInstructions<A, R>::getReturnAddressSignStatus(A &addressSpace,
                                                     R registers, pint_t cfa,
                                                     PrologInfo &prolog) {
