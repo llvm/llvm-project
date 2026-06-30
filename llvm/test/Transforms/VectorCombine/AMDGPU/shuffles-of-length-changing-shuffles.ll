@@ -44,3 +44,21 @@ define <4 x i8> @shrinking0(<4 x i8> %a, <8 x i8> %b) {
   %merge1  = shufflevector <4 x i8> %merge0, <4 x i8> %shrink1, <4 x i32> <i32 0, i32 2, i32 6, i32 7>
   ret <4 x i8> %merge1
 }
+
+define <4 x i32> @all_poison_leaves(<4 x i32> %a, <4 x i32> %b) {
+; OPT-LABEL: define <4 x i32> @all_poison_leaves(
+; OPT-SAME: <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]]) #[[ATTR0]] {
+; OPT-NEXT:    [[Q:%.*]] = shufflevector <4 x i32> [[A]], <4 x i32> [[B]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; OPT-NEXT:    [[L2:%.*]] = shufflevector <2 x i32> poison, <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
+; OPT-NEXT:    [[P:%.*]] = shufflevector <4 x i32> [[Q]], <4 x i32> [[L2]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; OPT-NEXT:    [[L1:%.*]] = shufflevector <2 x i32> poison, <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
+; OPT-NEXT:    [[I:%.*]] = shufflevector <4 x i32> [[P]], <4 x i32> [[L1]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; OPT-NEXT:    ret <4 x i32> [[I]]
+;
+  %Q  = shufflevector <4 x i32> %a, <4 x i32> %b, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+  %L2 = shufflevector <2 x i32> poison, <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
+  %P  = shufflevector <4 x i32> %Q, <4 x i32> %L2, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+  %L1 = shufflevector <2 x i32> poison, <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
+  %I  = shufflevector <4 x i32> %P, <4 x i32> %L1, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+  ret <4 x i32> %I
+}

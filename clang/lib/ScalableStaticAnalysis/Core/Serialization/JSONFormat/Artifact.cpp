@@ -145,10 +145,21 @@ JSONFormat::readArtifactEncoding(llvm::StringRef Path) {
     return ArtifactEncoding{std::move(*ExpectedLU)};
   }
 
+  if (*ExpectedType == JSONTypeValueStaticLibrary) {
+    auto ExpectedStaticLibrary = readStaticLibraryFromObject(*RootObjectPtr);
+    if (!ExpectedStaticLibrary) {
+      return ErrorBuilder::wrap(ExpectedStaticLibrary.takeError())
+          .context(ErrorMessages::ReadingFromFile, "ArtifactEncoding", Path)
+          .build();
+    }
+    return ArtifactEncoding{std::move(*ExpectedStaticLibrary)};
+  }
+
   return ErrorBuilder::create(std::errc::invalid_argument,
                               ErrorMessages::UnknownArtifactEncodingType,
                               *ExpectedType, JSONTypeKey,
-                              JSONTypeValueTUSummary, JSONTypeValueLUSummary)
+                              JSONTypeValueTUSummary, JSONTypeValueLUSummary,
+                              JSONTypeValueStaticLibrary)
       .context(ErrorMessages::ReadingFromFile, "ArtifactEncoding", Path)
       .build();
 }
@@ -160,11 +171,13 @@ llvm::Error JSONFormat::writeArtifactEncoding(const ArtifactEncoding &E,
         using T = std::decay_t<decltype(Enc)>;
         if constexpr (std::is_same_v<T, TUSummaryEncoding>) {
           return writeTUSummaryEncoding(Enc, Path);
+        } else if constexpr (std::is_same_v<T, LUSummaryEncoding>) {
+          return writeLUSummaryEncoding(Enc, Path);
         } else {
           static_assert(
-              std::is_same_v<T, LUSummaryEncoding>,
+              std::is_same_v<T, StaticLibrary>,
               "ArtifactEncoding visitor must cover all variant alternatives");
-          return writeLUSummaryEncoding(Enc, Path);
+          return writeStaticLibrary(Enc, Path);
         }
       },
       E);

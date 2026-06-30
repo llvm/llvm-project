@@ -5342,7 +5342,6 @@ define i32 @test_predsum_i8x8_i32(<8 x i8> %a, i32 %b) {
 ;
 ; RV64-LABEL: test_predsum_i8x8_i32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    sext.w a1, a1
 ; RV64-NEXT:    predsum.bs a0, a0, a1
 ; RV64-NEXT:    ret
   %res = call i32 @llvm.riscv.predsum.i32.v8i8(<8 x i8> %a, i32 %b)
@@ -5357,7 +5356,6 @@ define i32 @test_predsumu_u8x8_u32(<8 x i8> %a, i32 %b) {
 ;
 ; RV64-LABEL: test_predsumu_u8x8_u32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    zext.w a1, a1
 ; RV64-NEXT:    predsumu.bs a0, a0, a1
 ; RV64-NEXT:    ret
   %res = call i32 @llvm.riscv.predsumu.i32.v8i8(<8 x i8> %a, i32 %b)
@@ -5404,7 +5402,6 @@ define i32 @test_predsum_i16x4_i32(<4 x i16> %a, i32 %b) {
 ;
 ; RV64-LABEL: test_predsum_i16x4_i32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    sext.w a1, a1
 ; RV64-NEXT:    predsum.hs a0, a0, a1
 ; RV64-NEXT:    ret
   %res = call i32 @llvm.riscv.predsum.i32.v4i16(<4 x i16> %a, i32 %b)
@@ -5419,7 +5416,6 @@ define i32 @test_predsumu_u16x4_u32(<4 x i16> %a, i32 %b) {
 ;
 ; RV64-LABEL: test_predsumu_u16x4_u32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    zext.w a1, a1
 ; RV64-NEXT:    predsumu.hs a0, a0, a1
 ; RV64-NEXT:    ret
   %res = call i32 @llvm.riscv.predsumu.i32.v4i16(<4 x i16> %a, i32 %b)

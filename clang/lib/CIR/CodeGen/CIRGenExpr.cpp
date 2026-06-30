@@ -769,9 +769,12 @@ mlir::Value CIRGenFunction::emitLoadOfScalar(Address addr, bool isVolatile,
 
   mlir::Value loadOp =
       builder.createLoad(getLoc(loc), addr, isVolatile, isNontemporal);
-  if (!ty->isBooleanType() && ty->hasBooleanRepresentation())
-    cgm.errorNYI("emitLoadOfScalar: boolean type with boolean representation");
 
+  // Types with a boolean representation that are not the builtin bool (an enum
+  // whose underlying type is bool, or a _BitInt(1)) need no register/memory
+  // conversion here: like bool and _BitInt(N), CIR keeps them in their literal
+  // type until LowerToLLVM widens them to the in-memory integer type (see
+  // emitToMemory).
   return loadOp;
 }
 

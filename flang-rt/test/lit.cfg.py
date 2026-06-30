@@ -117,3 +117,8 @@ if config.flang_rt_experimental_offload_support == "CUDA":
 
 if config.flang_rt_fortran_modules:
     config.available_features.add("fortran-modules")
+
+# Tools that support OBJECT_MODE default to 32-bit on AIX. Set
+# OBJECT_MODE=any to handle both 32-bit and 64-bit objects.
+if "system-aix" in config.available_features:
+    config.environment["OBJECT_MODE"] = "any"

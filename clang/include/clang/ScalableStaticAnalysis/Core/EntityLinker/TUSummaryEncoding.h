@@ -35,6 +35,7 @@ namespace clang::ssaf {
 class TUSummaryEncoding {
   friend class EntityLinker;
   friend class SerializationFormat;
+  friend class StaticLibrary;
   friend class TestFixture;
 
   // Target triple of the translation unit.

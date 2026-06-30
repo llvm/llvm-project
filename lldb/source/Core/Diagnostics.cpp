@@ -7,12 +7,29 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Core/Diagnostics.h"
+#include "lldb/Core/Debugger.h"
+#include "lldb/Host/Host.h"
+#include "lldb/Host/HostInfo.h"
+#include "lldb/Interpreter/CommandInterpreter.h"
+#include "lldb/Interpreter/CommandReturnObject.h"
+#include "lldb/Target/ExecutionContext.h"
+#include "lldb/Target/Platform.h"
+#include "lldb/Target/Statistics.h"
+#include "lldb/Target/Target.h"
+#include "lldb/Utility/Args.h"
 #include "lldb/Utility/LLDBAssert.h"
+#include "lldb/Utility/ProcessInfo.h"
+#include "lldb/Version/Version.h"
 
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/JSON.h"
 #include "llvm/Support/raw_ostream.h"
+
 #include <optional>
+#include <string>
+#include <vector>
 
 using namespace lldb_private;
 using namespace lldb;
@@ -92,6 +109,183 @@ llvm::Error Diagnostics::DumpDiangosticsLog(const FileSpec &dir) const {
   return Error::success();
 }
 
-void Diagnostics::Report(llvm::StringRef message) {
+void Diagnostics::Record(llvm::StringRef message) {
   m_log_handler.Emit(message);
+}
+
+// Write a single artifact into the bundle and, on success, record its name in
+// \p files. Best-effort: a write failure leaves the file out of the list, so a
+// missing artifact stays visible. The file is made owner-only because the
+// bundle can contain paths, argv, and command history.
+static void WriteArtifact(const FileSpec &dir, llvm::StringRef name,
+                          llvm::StringRef content,
+                          std::vector<std::string> &files) {
+  FileSpec file = dir.CopyByAppendingPathComponent(name);
+  std::error_code ec;
+  llvm::raw_fd_ostream os(file.GetPath(), ec, llvm::sys::fs::OF_Text);
+  if (ec)
+    return;
+  os << content;
+  os.flush();
+  llvm::sys::fs::setPermissions(file.GetPath(), llvm::sys::fs::owner_read |
+                                                    llvm::sys::fs::owner_write);
+  files.push_back(name.str());
+}
+
+// Run a command through the interpreter and return its combined output and
+// error text, for inclusion as a snapshot in the bundle.
+static std::string CaptureCommand(Debugger &debugger, llvm::StringRef command) {
+  CommandReturnObject result(/*colors=*/false);
+  debugger.GetCommandInterpreter().HandleCommand(command.str().c_str(),
+                                                 eLazyBoolNo, result);
+  return (result.GetOutputString() + result.GetErrorString()).str();
+}
+
+namespace {
+/// The execution context a triage command needs before it is worth running.
+enum class Requires { Always, Target, Process, Frame };
+
+struct TriageCommand {
+  llvm::StringRef command;
+  Requires requirement;
+};
+} // namespace
+
+// The commands a triager runs first, captured into the bundle. Add a row to
+// extend the snapshot. The requirement keeps a command from emitting a spurious
+// "no process" error when its context is absent.
+static constexpr TriageCommand g_triage_commands[] = {
+    {"target list", Requires::Always},
+    {"image list", Requires::Target},
+    {"process status", Requires::Process},
+    {"thread list", Requires::Process},
+    {"thread backtrace all", Requires::Process},
+    {"image lookup -va $pc", Requires::Frame},
+    {"register read", Requires::Frame},
+    {"frame variable", Requires::Frame},
+};
+
+static bool Available(Requires requirement, const ExecutionContext &exe_ctx) {
+  switch (requirement) {
+  case Requires::Always:
+    return true;
+  case Requires::Target:
+    return exe_ctx.GetTargetPtr() != nullptr;
+  case Requires::Process:
+    return exe_ctx.GetProcessPtr() != nullptr;
+  case Requires::Frame:
+    return exe_ctx.GetFramePtr() != nullptr;
+  }
+  llvm_unreachable("unhandled Requires");
+}
+
+llvm::Expected<Diagnostics::Report>
+Diagnostics::Collect(Debugger &debugger, const ExecutionContext &exe_ctx,
+                     const FileSpec &dir) {
+  // The bundle holds potentially sensitive data (paths, argv, command history),
+  // so restrict the directory to the owner before writing anything into it.
+  llvm::sys::fs::setPermissions(dir.GetPath(), llvm::sys::fs::owner_read |
+                                                   llvm::sys::fs::owner_write |
+                                                   llvm::sys::fs::owner_exe);
+
+  Report report;
+  report.attachments.directory = dir.GetPath();
+  CollectLogs(debugger, dir, report.attachments.files);
+  CollectStatistics(debugger, exe_ctx, dir, report.attachments.files);
+  CollectCommands(debugger, exe_ctx, dir, report.attachments.files);
+
+  report.version = lldb_private::GetVersion();
+  report.os = GetHostDescription(exe_ctx);
+  report.invocation = GetInvocation();
+  return report;
+}
+
+void Diagnostics::CollectLogs(Debugger &debugger, const FileSpec &dir,
+                              std::vector<std::string> &files) {
+  // The always-on diagnostic log.
+  if (Error error = Create(dir))
+    consumeError(std::move(error));
+  else
+    files.push_back("diagnostics.log");
+
+  // This debugger's file-backed logs.
+  for (std::string &name : debugger.CopyLogFilesToDirectory(dir))
+    files.push_back(std::move(name));
+}
+
+void Diagnostics::CollectStatistics(Debugger &debugger,
+                                    const ExecutionContext &exe_ctx,
+                                    const FileSpec &dir,
+                                    std::vector<std::string> &files) {
+  StatisticsOptions options;
+  json::Value stats = DebuggerStats::ReportStatistics(
+      debugger, exe_ctx.GetTargetPtr(), options);
+  std::string str;
+  raw_string_ostream os(str);
+  os << formatv("{0:2}", stats);
+  WriteArtifact(dir, "statistics.json", str, files);
+}
+
+void Diagnostics::CollectCommands(Debugger &debugger,
+                                  const ExecutionContext &exe_ctx,
+                                  const FileSpec &dir,
+                                  std::vector<std::string> &files) {
+  std::string snapshot;
+  for (const TriageCommand &tc : g_triage_commands) {
+    if (!Available(tc.requirement, exe_ctx))
+      continue;
+    snapshot += formatv("=== {0} ===\n", tc.command).str();
+    snapshot += CaptureCommand(debugger, tc.command);
+    snapshot += "\n\n";
+  }
+  WriteArtifact(dir, "commands.txt", snapshot, files);
+}
+
+std::string Diagnostics::GetHostDescription(const ExecutionContext &exe_ctx) {
+  std::string os = HostInfo::GetTargetTriple().str();
+  Target *target = exe_ctx.GetTargetPtr();
+  if (!target)
+    return os;
+  PlatformSP platform_sp = target->GetPlatform();
+  if (!platform_sp)
+    return os;
+
+  os += formatv(" platform={0}", platform_sp->GetName()).str();
+  VersionTuple version = platform_sp->GetOSVersion();
+  if (!version.empty())
+    os += " os=" + version.getAsString();
+  if (std::optional<std::string> build = platform_sp->GetOSBuildString())
+    os += " build=" + *build;
+  return os;
+}
+
+std::string Diagnostics::GetInvocation() {
+  // libLLDB does not store its own argv, so read the invocation from the host
+  // process.
+  ProcessInstanceInfo info;
+  if (!Host::GetProcessInfo(Host::GetCurrentProcessID(), info))
+    return {};
+
+  const Args &args = info.GetArguments();
+  std::string invocation;
+  for (size_t i = 0; i < args.GetArgumentCount(); ++i) {
+    if (i)
+      invocation += ' ';
+    invocation += args.GetArgumentAtIndex(i);
+  }
+  return invocation;
+}
+
+llvm::json::Value lldb_private::toJSON(const Diagnostics::Report &report) {
+  json::Object obj{
+      {"version", report.version},
+      {"os", report.os},
+  };
+  if (!report.invocation.empty())
+    obj["invocation"] = report.invocation;
+  obj["attachments"] = json::Object{
+      {"directory", report.attachments.directory},
+      {"files", json::Array(report.attachments.files)},
+  };
+  return obj;
 }

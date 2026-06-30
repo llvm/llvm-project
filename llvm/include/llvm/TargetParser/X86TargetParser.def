@@ -114,6 +114,7 @@ X86_CPU_SUBTYPE(INTEL_COREI7_NOVALAKE,       "novalake")
 X86_CPU_SUBTYPE(HYGONFAM18H_C86_4G_M4,       "c86-4g-m4")
 X86_CPU_SUBTYPE(HYGONFAM18H_C86_4G_M6,       "c86-4g-m6")
 X86_CPU_SUBTYPE(HYGONFAM18H_C86_4G_M7,       "c86-4g-m7")
+X86_CPU_SUBTYPE(HYGONFAM18H_C86_4G_M8,       "c86-4g-m8")
 
 // Alternate names supported by __builtin_cpu_is and target multiversioning.
 X86_CPU_SUBTYPE_ALIAS(INTEL_COREI7_ALDERLAKE, "raptorlake")

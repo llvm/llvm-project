@@ -733,6 +733,9 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
   case CK_C86_4G_M7:
     defineCPUMacros(Builder, "c86_4g_m7");
     break;
+  case CK_C86_4G_M8:
+    defineCPUMacros(Builder, "c86_4g_m8");
+    break;
   }
 
   // Target properties.
@@ -1665,6 +1668,7 @@ std::optional<unsigned> X86TargetInfo::getCPUCacheLineSize() const {
     case CK_C86_4G_M4:
     case CK_C86_4G_M6:
     case CK_C86_4G_M7:
+    case CK_C86_4G_M8:
     // Deprecated
     case CK_x86_64:
     case CK_x86_64_v2:

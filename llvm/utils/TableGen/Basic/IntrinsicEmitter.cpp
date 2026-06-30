@@ -59,6 +59,8 @@ public:
   void EmitTargetInfo(const CodeGenIntrinsicTable &Ints, raw_ostream &OS);
   void EmitIntrinsicToNameTable(const CodeGenIntrinsicTable &Ints,
                                 raw_ostream &OS);
+  void EmitIntrinsicToTargetFeaturesTable(const CodeGenIntrinsicTable &Ints,
+                                          raw_ostream &OS);
   void EmitIntrinsicToOverloadTable(const CodeGenIntrinsicTable &Ints,
                                     raw_ostream &OS);
   void EmitIntrinsicToScalarizableTable(const CodeGenIntrinsicTable &Ints,
@@ -110,6 +112,9 @@ void IntrinsicEmitter::run(raw_ostream &OS, bool Enums) {
 
     // Emit the intrinsic ID -> name table.
     EmitIntrinsicToNameTable(Ints, OS);
+
+    // Emit the intrinsic ID -> required target features table.
+    EmitIntrinsicToTargetFeaturesTable(Ints, OS);
 
     // Emit the intrinsic ID -> overload table.
     EmitIntrinsicToOverloadTable(Ints, OS);
@@ -313,6 +318,33 @@ static constexpr unsigned IntrinsicNameOffsetTable[] = {
     OS << formatv("  {}, // {}\n", Table.GetStringOffset(Int.Name), Int.Name);
 
   OS << "\n}; // IntrinsicNameOffsetTable\n";
+}
+
+void IntrinsicEmitter::EmitIntrinsicToTargetFeaturesTable(
+    const CodeGenIntrinsicTable &Ints, raw_ostream &OS) {
+  StringToOffsetTable Table;
+  for (const CodeGenIntrinsic &Int : Ints)
+    Table.GetOrAddStringOffset(Int.TargetFeatures);
+
+  IfDefEmitter IfDef(OS, "GET_INTRINSIC_TARGET_FEATURES_TABLE");
+  OS << R"(// Intrinsic ID to required target features table.
+// Note that entry #0 is the invalid intrinsic!
+
+)";
+
+  Table.EmitStringTableDef(OS, "IntrinsicTargetFeaturesTable");
+
+  OS << R"(
+static constexpr unsigned IntrinsicTargetFeaturesOffsetTable[] = {
+)";
+
+  OS << "  0, // not_intrinsic\n";
+  for (const CodeGenIntrinsic &Int : Ints) {
+    OS << formatv("  {}, // {}\n", *Table.GetStringOffset(Int.TargetFeatures),
+                  Int.Name);
+  }
+
+  OS << "\n}; // IntrinsicTargetFeaturesOffsetTable\n";
 }
 
 void IntrinsicEmitter::EmitIntrinsicToOverloadTable(
@@ -953,7 +985,7 @@ void IntrinsicEmitter::EmitIntrinsicToBuiltinMap(
 // C front-end. The builtin name is passed in as BuiltinName, and a target
 // prefix (e.g. 'ppc') is passed in as TargetPrefix.
 Intrinsic::ID
-Intrinsic::getIntrinsicFor{}Builtin(StringRef TargetPrefix, 
+Intrinsic::getIntrinsicFor{}Builtin(StringRef TargetPrefix,
                                       StringRef BuiltinName) {{
   using namespace Intrinsic;
 )",

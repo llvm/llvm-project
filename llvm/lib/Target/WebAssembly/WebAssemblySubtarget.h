@@ -32,10 +32,6 @@
 
 namespace llvm {
 
-// Defined in WebAssemblyGenSubtargetInfo.inc.
-extern const SubtargetFeatureKV
-    WebAssemblyFeatureKV[WebAssembly::NumSubtargetFeatures];
-
 class WebAssemblySubtarget final : public WebAssemblyGenSubtargetInfo {
   enum SIMDEnum {
     NoSIMD,

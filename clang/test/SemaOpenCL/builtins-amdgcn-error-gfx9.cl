@@ -9,9 +9,17 @@ struct S {
   int x;
 };
 
-void test_gfx9_fmed3h(global half *out, half a, half b, half c)
+void test_gfx9_builtins(global half *out0, half a0, half b0, half c0,
+                        global unsigned long *out1, unsigned int a1)
 {
-  *out = __builtin_amdgcn_fmed3h(a, b, c); // expected-error {{'__builtin_amdgcn_fmed3h' needs target feature gfx9-insts}}
+  *out0 = __builtin_amdgcn_fmed3h(a0, b0, c0); // expected-error {{'__builtin_amdgcn_fmed3h' needs target feature gfx9-insts}}
+  *out1 = __builtin_amdgcn_s_bitreplicate(a1); // expected-error {{'__builtin_amdgcn_s_bitreplicate' needs target feature gfx9-insts}}
+}
+
+void test_s_bitreplicate(global unsigned long *out, unsigned int a)
+{
+  *out = __builtin_amdgcn_s_bitreplicate(); // expected-error {{too few arguments to function call, expected 1, have 0}}
+  *out = __builtin_amdgcn_s_bitreplicate(a, a); // expected-error {{too many arguments to function call, expected 1, have 2}}
 }
 
 void test_mov_dpp(global int* out, int src, int i, int2 i2, struct S s, float _Complex fc)

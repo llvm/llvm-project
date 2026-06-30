@@ -20,8 +20,10 @@ define amdgpu_kernel void @hoge(i1 %c0, i1 %c1, i1 %c2, i1 %c3, i1 %c4) {
 ; CHECK-NEXT:    s_xor_b64 s[0:1], s[0:1], -1
 ; CHECK-NEXT:  .LBB0_1: ; %bb25
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    s_andn2_b64 vcc, exec, s[0:1]
-; CHECK-NEXT:    s_cbranch_vccnz .LBB0_1
+; CHECK-NEXT:    s_and_b64 s[2:3], s[0:1], exec
+; CHECK-NEXT:    s_cselect_b32 s2, 1, 0
+; CHECK-NEXT:    s_cmp_lg_u32 s2, 1
+; CHECK-NEXT:    s_cbranch_scc1 .LBB0_1
 ; CHECK-NEXT:  ; %bb.2: ; %bb30
 ; CHECK-NEXT:    s_endpgm
 bb:

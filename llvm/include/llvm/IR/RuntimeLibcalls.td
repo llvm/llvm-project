@@ -3370,10 +3370,10 @@ def isCygwinMinGW32 : RuntimeLibcallPredicate<
 
 def isWin32NotCygMing : RuntimeLibcallPredicate<
   [{TT.getArch() == Triple::x86 &&
-     (TT.isOSWindows() || TT.isUEFI()) && !TT.isOSCygMing()}]>;
+     TT.isOSWindowsOrUEFI() && !TT.isOSCygMing()}]>;
 def isWin64NotCygMing : RuntimeLibcallPredicate<
   [{TT.getArch() == Triple::x86_64 &&
-    (TT.isOSWindows() || TT.isUEFI()) && !TT.isOSCygMing()}]>;
+    TT.isOSWindowsOrUEFI() && !TT.isOSCygMing()}]>;
 
 
 // Some darwins have an optimized __bzero/bzero function.
@@ -3544,7 +3544,8 @@ def isZOS : RuntimeLibcallPredicate<"TT.isOSzOS()">;
 def SystemZZOSSystemLibrary
     : SystemRuntimeLibrary<
           isSystemZZOS, (add DefaultLibcallImpls64,
-                            LibcallImpls<(add ZOSRuntimeLibcalls), isZOS>)>;
+                            LibcallImpls<(add ZOSRuntimeLibcalls), isZOS>,
+                            DefaultStackProtector)>;
 
 //===----------------------------------------------------------------------===//
 // WebAssembly Runtime Libcalls

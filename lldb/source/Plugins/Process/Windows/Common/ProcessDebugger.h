@@ -59,9 +59,11 @@ public:
                                            const ExceptionRecord &record);
   virtual void OnCreateThread(const HostThread &thread);
   virtual void OnExitThread(lldb::tid_t thread_id, uint32_t exit_code);
-  virtual void OnLoadDll(const ModuleSpec &module_spec,
-                         lldb::addr_t module_addr);
-  virtual void OnUnloadDll(lldb::addr_t module_addr);
+  virtual DllEventAction OnLoadDll(const ModuleSpec &module_spec,
+                                   lldb::addr_t module_addr,
+                                   lldb::tid_t thread_id);
+  virtual DllEventAction OnUnloadDll(lldb::addr_t module_addr,
+                                     lldb::tid_t thread_id);
   virtual void OnDebugString(lldb::addr_t debug_string_addr, bool is_unicode,
                              uint16_t length_lower_word);
   virtual void OnDebuggerError(const Status &error, uint32_t type);

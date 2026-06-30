@@ -651,11 +651,13 @@ struct CheckColoredDiagnosticsAction : public clang::ASTFrontendAction {
       : ShouldShowColor(ShouldShowColor) {}
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &Compiler,
                                                  StringRef) override {
-    if (Compiler.getDiagnosticOpts().ShowColors != ShouldShowColor)
+    bool HasColors =
+        Compiler.getDiagnosticOpts().getShowColors() ==
+        (ShouldShowColor ? ShowColorsKind::On : ShowColorsKind::Off);
+    if (!HasColors)
       Compiler.getDiagnostics().Report(
           Compiler.getDiagnostics().getCustomDiagID(
-              DiagnosticsEngine::Fatal,
-              "getDiagnosticOpts().ShowColors != ShouldShowColor"));
+              DiagnosticsEngine::Fatal, "getShowColors() != expected"));
     return std::make_unique<ASTConsumer>();
   }
 

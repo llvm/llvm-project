@@ -36,6 +36,8 @@ inline llvm::StringRef buildNamespaceKindToString(BuildNamespaceKind BNK) {
     return "CompilationUnit";
   case BuildNamespaceKind::LinkUnit:
     return "LinkUnit";
+  case BuildNamespaceKind::StaticLibrary:
+    return "StaticLibrary";
   }
   llvm_unreachable("Unhandled BuildNamespaceKind variant");
 }
@@ -48,6 +50,8 @@ buildNamespaceKindFromString(llvm::StringRef Str) {
     return BuildNamespaceKind::CompilationUnit;
   if (Str == "LinkUnit")
     return BuildNamespaceKind::LinkUnit;
+  if (Str == "StaticLibrary")
+    return BuildNamespaceKind::StaticLibrary;
   return std::nullopt;
 }
 

@@ -333,13 +333,106 @@ bool MCSubtargetInfo::checkFeatures(StringRef FS) const {
            "Feature flags should start with '+' or '-'");
     const SubtargetFeatureKV *FeatureEntry =
         Find(SubtargetFeatures::StripFlag(F), ProcFeatures);
-    if (!FeatureEntry)
-      report_fatal_error(Twine("'") + F +
-                         "' is not a recognized feature for this target");
+    if (!FeatureEntry) {
+      reportFatalInternalError(Twine("'") + F +
+                               "' is not a recognized feature for this target");
+    }
 
     return FeatureBits.test(FeatureEntry->Value) ==
            SubtargetFeatures::isEnabled(F);
   });
+}
+
+static bool hasFeature(StringRef Feature, const FeatureBitset &FeatureBits,
+                       ArrayRef<SubtargetFeatureKV> ProcFeatures) {
+  bool ShouldBeEnabled = true;
+  if (!Feature.consume_front("+") && Feature.consume_front("-"))
+    ShouldBeEnabled = false;
+
+  const SubtargetFeatureKV *FeatureEntry = Find(Feature, ProcFeatures);
+  if (!FeatureEntry) {
+    reportFatalInternalError(Twine("'") + Feature +
+                             "' is not a recognized feature for this target");
+  }
+
+  return FeatureBits.test(FeatureEntry->Value) == ShouldBeEnabled;
+}
+
+namespace {
+class FeatureExpressionParser {
+  StringRef Expr;
+  const FeatureBitset &FeatureBits;
+  ArrayRef<SubtargetFeatureKV> ProcFeatures;
+  size_t Pos = 0;
+
+public:
+  FeatureExpressionParser(StringRef Expr, const FeatureBitset &FeatureBits,
+                          ArrayRef<SubtargetFeatureKV> ProcFeatures)
+      : Expr(Expr), FeatureBits(FeatureBits), ProcFeatures(ProcFeatures) {}
+
+  bool parse() {
+    bool Result = parseOr();
+    if (Pos != Expr.size())
+      reportFatalInternalError("malformed target feature expression");
+    return Result;
+  }
+
+private:
+  bool consume(char C) {
+    if (Pos == Expr.size() || Expr[Pos] != C)
+      return false;
+    ++Pos;
+    return true;
+  }
+
+  bool parseOr() {
+    bool Result = parseAnd();
+    while (consume('|')) {
+      bool RHS = parseAnd();
+      Result |= RHS;
+    }
+    return Result;
+  }
+
+  bool parseAnd() {
+    bool Result = parsePrimary();
+    while (consume(',')) {
+      bool RHS = parsePrimary();
+      Result &= RHS;
+    }
+    return Result;
+  }
+
+  bool parsePrimary() {
+    if (consume('(')) {
+      bool Result = parseOr();
+      if (!consume(')'))
+        reportFatalInternalError("malformed target feature expression");
+      return Result;
+    }
+
+    size_t Start = Pos;
+    Pos = Expr.find_first_of(",|()", Pos);
+    if (Pos == StringRef::npos)
+      Pos = Expr.size();
+
+    if (Start == Pos)
+      reportFatalInternalError("malformed target feature expression");
+
+    return hasFeature(Expr.slice(Start, Pos), FeatureBits, ProcFeatures);
+  }
+};
+} // namespace
+
+bool MCSubtargetInfo::checkFeatureExpression(StringRef FeatureExpr) const {
+  if (FeatureExpr.empty())
+    return true;
+  if (FeatureExpr.contains(' ')) {
+    reportFatalInternalError(
+        "spaces are not allowed in target feature expressions");
+  }
+  FeatureExpressionParser Parser(FeatureExpr, FeatureBits, ProcFeatures);
+  return Parser.parse();
 }
 
 const MCSchedModel &MCSubtargetInfo::getSchedModelForCPU(StringRef CPU) const {

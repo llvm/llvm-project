@@ -1,0 +1,29 @@
+# diagnostics report writes a bundle without contacting a tracker, and the
+# bugreport alias runs the same command.
+
+# RUN: rm -rf %t.report
+# RUN: %lldb --no-lldbinit -b -o 'diagnostics report --no-open -d %t.report' 2>&1 | FileCheck %s
+# CHECK: Bug report written to
+# CHECK: Attach the following files to the issue:
+# CHECK-DAG: [ ] statistics.json
+# CHECK-DAG: [ ] commands.txt
+# CHECK: warning: the report may contain
+
+# Scalars (version, OS, invocation) ride in the report, not as redundant files.
+# RUN: test -f %t.report/statistics.json
+# RUN: test -f %t.report/commands.txt
+
+# The snapshot has content, not just an empty file.
+# RUN: FileCheck %s --check-prefix=CMDS --input-file=%t.report/commands.txt
+# CMDS: target list
+
+# RUN: rm -rf %t.report2
+# RUN: %lldb --no-lldbinit -b -o 'bugreport --no-open -d %t.report2' 2>&1 | FileCheck %s --check-prefix=ALIAS
+# ALIAS: Bug report written to
+# RUN: test -f %t.report2/commands.txt
+
+# An unknown reporter name is rejected after the bundle is written.
+# RUN: rm -rf %t.report3
+# RUN: not %lldb --no-lldbinit -b -o 'diagnostics report -P nonesuch -d %t.report3' 2>&1 | FileCheck %s --check-prefix=BADNAME
+# BADNAME: error: no bug reporter named 'nonesuch'
+# RUN: test -f %t.report3/commands.txt

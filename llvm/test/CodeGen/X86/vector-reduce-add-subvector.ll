@@ -11,6 +11,8 @@
 ; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx,+fast-hops | FileCheck %s --check-prefixes=AVX,X64-AVX,AVX1,AVX1-FAST,X64-AVX1,X64-AVX1-FAST
 ; RUN: llc < %s -mtriple=i686--   -mattr=+avx2           | FileCheck %s --check-prefixes=AVX,X86-AVX,AVX2,X86-AVX2
 ; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx2           | FileCheck %s --check-prefixes=AVX,X64-AVX,AVX2,X64-AVX2
+; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx512f        | FileCheck %s --check-prefixes=AVX,X64-AVX,AVX512
+; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx512f,+avx512vl | FileCheck %s --check-prefixes=AVX,X64-AVX,AVX512
 ; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx512f,+avx512bw | FileCheck %s --check-prefixes=AVX,X64-AVX,AVX512
 ; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx512f,+avx512bw,+avx512vl | FileCheck %s --check-prefixes=AVX,X64-AVX,AVX512
 

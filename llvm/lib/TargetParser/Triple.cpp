@@ -2510,7 +2510,7 @@ bool Triple::isLittleEndian() const {
 unsigned Triple::getDefaultWCharSize() const {
   if (getArch() == Triple::xcore)
     return 1;
-  if (isOSWindows() || isWindowsCygwinEnvironment() || isPS() || isUEFI())
+  if (isOSWindowsOrUEFI() || isPS())
     return 2;
   if (isOSAIX() && isArch32Bit())
     return 2;

@@ -7468,9 +7468,9 @@ bool ARMAsmParser::parseInstruction(ParseInstructionInfo &Info, StringRef Name,
   // FIXME: As said above, this is all a pretty gross hack.  This instruction
   // does not fit with other "subs" and tblgen.
   // Adjust operands of B9.3.19 SUBS PC, LR, #imm (Thumb2) system instruction
-  // so the Mnemonic is the original name "subs" and delete the predicate
-  // operand so it will match the table entry.
-  if (isThumbTwo() && Mnemonic == "sub" &&
+  // so the Mnemonic is "subs" and delete the CCOut operand so it will match
+  // the table entry.
+  if (isThumbTwo() && Mnemonic == "sub" && CarrySetting &&
       Operands.size() == MnemonicOpsEndInd + 3 &&
       static_cast<ARMOperand &>(*Operands[MnemonicOpsEndInd]).isReg() &&
       static_cast<ARMOperand &>(*Operands[MnemonicOpsEndInd]).getReg() ==
@@ -7479,7 +7479,7 @@ bool ARMAsmParser::parseInstruction(ParseInstructionInfo &Info, StringRef Name,
       static_cast<ARMOperand &>(*Operands[MnemonicOpsEndInd + 1]).getReg() ==
           ARM::LR &&
       static_cast<ARMOperand &>(*Operands[MnemonicOpsEndInd + 2]).isImm()) {
-    Operands.front() = ARMOperand::CreateToken(Name, NameLoc, *this);
+    Operands.front() = ARMOperand::CreateToken("subs", NameLoc, *this);
     removeCCOut(Operands, MnemonicOpsEndInd);
   }
   return false;

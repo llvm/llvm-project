@@ -26,3 +26,10 @@ void test_groupstaticsize(global uint* out)
 {
   *out = __builtin_amdgcn_groupstaticsize();
 }
+
+// CHECK-LABEL: @test_s_bitreplicate
+// CHECK: call i64 @llvm.amdgcn.s.bitreplicate(i32 %a)
+void test_s_bitreplicate(global ulong* out, uint a)
+{
+  *out = __builtin_amdgcn_s_bitreplicate(a);
+}

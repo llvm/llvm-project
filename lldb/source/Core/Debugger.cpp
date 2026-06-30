@@ -195,6 +195,25 @@ static constexpr OptionEnumValueElement s_stop_show_column_values[] = {
     },
 };
 
+static constexpr OptionEnumValueElement g_show_autosuggestion_enum_values[] = {
+    {
+        eAutosuggestionOff,
+        "false",
+        "Do not show any autosuggestion.",
+    },
+    {
+        eAutosuggestionOn,
+        "true",
+        "Show a suggestion sourced from previously entered commands.",
+    },
+    {
+        eAutosuggestionTabMode,
+        "tab-mode",
+        "Show the prefix that tab completion would insert for the current "
+        "line.",
+    },
+};
+
 #define LLDB_PROPERTIES_debugger
 #include "CoreProperties.inc"
 
@@ -600,10 +619,11 @@ bool Debugger::SetSeparator(llvm::StringRef s) {
   return ret;
 }
 
-bool Debugger::GetUseAutosuggestion() const {
+AutosuggestionMode Debugger::GetAutosuggestionMode() const {
   const uint32_t idx = ePropertyShowAutosuggestion;
-  return GetPropertyAtIndexAs<bool>(
-      idx, g_debugger_properties[idx].default_uint_value != 0);
+  return GetPropertyAtIndexAs<AutosuggestionMode>(
+      idx, static_cast<AutosuggestionMode>(
+               g_debugger_properties[idx].default_uint_value));
 }
 
 llvm::StringRef Debugger::GetAutosuggestionAnsiPrefix() const {
@@ -1673,14 +1693,18 @@ void Debugger::SetLoggingCallback(lldb::LogOutputCallback log_callback,
       std::make_shared<CallbackLogHandler>(log_callback, baton);
 }
 
-void Debugger::CopyLogFilesToDirectory(const FileSpec &dir) {
+std::vector<std::string>
+Debugger::CopyLogFilesToDirectory(const FileSpec &dir) {
+  std::vector<std::string> copied;
   for (auto &entry : m_stream_handlers) {
     llvm::StringRef log_path = entry.first();
     llvm::StringRef file_name = llvm::sys::path::filename(log_path);
     FileSpec destination = dir.CopyByAppendingPathComponent(file_name);
     // Best-effort: skip logs that can't be copied rather than aborting.
-    llvm::sys::fs::copy_file(log_path, destination.GetPath());
+    if (!llvm::sys::fs::copy_file(log_path, destination.GetPath()))
+      copied.push_back(file_name.str());
   }
+  return copied;
 }
 
 void Debugger::SetDestroyCallback(
@@ -1797,7 +1821,7 @@ void Debugger::ReportDiagnosticImpl(Severity severity, std::string message,
     // The diagnostic subsystem is optional but we still want to broadcast
     // events when it's disabled.
     if (Diagnostics::Enabled())
-      Diagnostics::Instance().Report(message);
+      Diagnostics::Instance().Record(message);
 
     // We don't broadcast info events.
     if (severity == lldb::eSeverityInfo)

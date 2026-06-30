@@ -9,7 +9,7 @@
 ! RUN: not %flang_fc1 %s -fcolor-diagnostics 2>&1 \
 ! RUN:     | FileCheck %s --check-prefix=CHECK_CD
 ! RUN: not %flang_fc1 %s -fno-color-diagnostics 2>&1 \
-! RUN:     | FileCheck %s --check-prefix=UNSUPPORTED_COLOR_DIAGS
+! RUN:     | FileCheck %s --check-prefix=CHECK_NCD
 
 ! RUN: not %flang %s -fdiagnostics-color 2>&1 \
 ! RUN:     | FileCheck %s --check-prefix=CHECK_CD
@@ -31,7 +31,6 @@
 
 ! CHECK_NCD: Semantic errors in {{.*}}color-diagnostics.f90
 
-! UNSUPPORTED_COLOR_DIAGS: error: unknown argument: '-fno-color-diagnostics'
 ! UNSUPPORTED_DIAGS_COLOR: error: unknown argument: '-fdiagnostics-color'
 ! UNSUPPORTED_NO_DIAGS_COLOR: error: unknown argument: '-fno-diagnostics-color'
 

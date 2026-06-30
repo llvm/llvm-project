@@ -437,7 +437,7 @@ int main_gdbserver(int argc, char *argv[]) {
           log_file, log_channels,
           LLDB_LOG_OPTION_PREPEND_TIMESTAMP |
               LLDB_LOG_OPTION_PREPEND_FILE_FUNCTION))
-    return -1;
+    return EXIT_FAILURE;
 
   std::vector<llvm::StringRef> Inputs;
   for (opt::Arg *Arg : Args.filtered(OPT_INPUT))
