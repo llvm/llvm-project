@@ -18,7 +18,6 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/LLVM.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
