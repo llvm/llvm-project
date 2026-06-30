@@ -138,6 +138,10 @@ clang_tablegen(BuiltinsSystemZ.inc -gen-clang-builtins
   SOURCE BuiltinsSystemZ.td
   TARGET ClangBuiltinsSystemZ)
 
+clang_tablegen(BuiltinsXCore.inc -gen-clang-builtins
+  SOURCE BuiltinsXCore.td
+  TARGET ClangBuiltinsXCore)
+
 clang_tablegen(BuiltinsX86.inc -gen-clang-builtins
   SOURCE BuiltinsX86.td
   TARGET ClangBuiltinsX86)

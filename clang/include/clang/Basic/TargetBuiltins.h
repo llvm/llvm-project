@@ -447,12 +447,13 @@ namespace clang {
 
   /// XCore builtins
   namespace XCore {
-    enum {
-        LastTIBuiltin = clang::Builtin::FirstTSBuiltin-1,
-#define BUILTIN(ID, TYPE, ATTRS) BI##ID,
-#include "clang/Basic/BuiltinsXCore.def"
-        LastTSBuiltin
-    };
+  enum {
+    LastTIBuiltin = clang::Builtin::FirstTSBuiltin - 1,
+#define GET_BUILTIN_ENUMERATORS
+#include "clang/Basic/BuiltinsXCore.inc"
+#undef GET_BUILTIN_ENUMERATORS
+    LastTSBuiltin
+  };
   }
 
   /// SystemZ builtins
