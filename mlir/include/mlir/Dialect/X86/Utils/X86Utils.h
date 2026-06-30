@@ -29,6 +29,10 @@ namespace x86 {
 bool isInVnniLayout(Operation *op, llvm::ArrayRef<AffineMap> indexingMaps,
                     std::optional<unsigned> blockingFactor = std::nullopt);
 
+// Recursively follows single-use values through scf.yield operations
+// and returns the first non-yield user result in the contraction chain.
+Value contractionUsersAfterYield(Value v);
+
 // Returns true if two contraction ops form a valid pair for VNNI packing.
 // It verifies that both contractions share the appropriate operand, read from
 // the same source buffer, and use constant indices that differ by 8 or 16.
@@ -59,9 +63,9 @@ LogicalResult shuffleAfterReadLikeOp(PatternRewriter &rewriter, Operation *opA,
 
 // Shuffles vectors produced by vector.contraction ops into a flat layout
 // before they are written to memory.
-LogicalResult shuffleBeforeWriteLikeOp(PatternRewriter &rewriter,
-                                       Operation *opA, Operation *opB,
-                                       int64_t nonUnitDimAcc, VectorType accTy);
+LogicalResult shuffleBeforeWriteLikeOp(PatternRewriter &rewriter, Value opA,
+                                       Value opB, int64_t nonUnitDimAcc,
+                                       VectorType accTy);
 
 } // namespace x86
 } // namespace mlir

@@ -325,17 +325,17 @@ struct VectorContractToPackedTypeDotProduct
       }
 
       // If the accumulators are shuffled we get nullptr else the
-      // transfer_read or load operations.
-      Operation *accRead =
-          traceToVectorReadLikeParentOperation(contractOp.getAcc());
+      // transfer_load or store operations.
+      Operation *accWrite =
+          traceToVectorWriteLikeUserOperation(contractOp.getResult());
 
       if (!pairContractOp &&
-          (!isNonUnitDimOperandShuffled(nonUnitDimOperand) || accRead))
+          (!isNonUnitDimOperandShuffled(nonUnitDimOperand) || accWrite))
         return rewriter.notifyMatchFailure(contractOp,
                                            "Could not find a contract pair");
 
       // Validate and shuffle the accumulator
-      if (accRead) {
+      if (accWrite) {
         // Trace back to the load or transfer_read operations of the contract
         // accumulators.
         Operation *accReadOp0 =
@@ -373,18 +373,22 @@ struct VectorContractToPackedTypeDotProduct
           return rewriter.notifyMatchFailure(
               contractOp, "The store/write operation of contract operation is "
                           "before the pair contract operation");
-        // Shuffle the accumulators of the contract operations.
-        LogicalResult readShuffle =
-            shuffleAfterReadLikeOp(rewriter, accReadOp0, accReadOp1, contractOp,
-                                   pairContractOp, nonUnitDimValue, accTy);
 
-        if (failed(readShuffle))
-          return rewriter.notifyMatchFailure(
-              contractOp, "Accumulator read is not by transfer_read or load");
+        if (!(dyn_cast<arith::ConstantOp>(accReadOp0))) {
+          // Shuffle the accumulators of the contract operations.
+          LogicalResult readShuffle = shuffleAfterReadLikeOp(
+              rewriter, accReadOp0, accReadOp1, contractOp, pairContractOp,
+              nonUnitDimValue, accTy);
+
+          if (failed(readShuffle))
+            return rewriter.notifyMatchFailure(
+                contractOp, "Accumulator read is not by transfer_read or load");
+        }
 
         // Shuffle the output of contract operations before it's use.
         LogicalResult writeShuffle = shuffleBeforeWriteLikeOp(
-            rewriter, resultWriteOp0, resultWriteOp1, nonUnitDimValue, accTy);
+            rewriter, contractOp.getResult(), pairContractOp.getResult(),
+            nonUnitDimValue, accTy);
 
         if (failed(writeShuffle))
           return rewriter.notifyMatchFailure(
