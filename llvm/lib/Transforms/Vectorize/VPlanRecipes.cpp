@@ -4818,6 +4818,13 @@ void VPExpandSCEVRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   printAsOperand(O, SlotTracker);
   O << " = EXPAND SCEV " << *Expr;
 }
+
+void VPExpandStridePredicatesRecipe::printRecipe(
+    raw_ostream &O, const Twine &Indent, VPSlotTracker &SlotTracker) const {
+  O << Indent << "EMIT ";
+  printAsOperand(O, SlotTracker);
+  O << " = EXPAND SCEVPredicate " << StridePredicates;
+}
 #endif
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

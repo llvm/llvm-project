@@ -421,6 +421,7 @@ public:
     VPBranchOnMaskSC,
     VPDerivedIVSC,
     VPExpandSCEVSC,
+    VPExpandStridePredicatesSC,
     VPExpressionSC,
     VPIRInstructionSC,
     VPInstructionSC,
@@ -625,6 +626,7 @@ public:
     switch (R->getVPRecipeID()) {
     case VPRecipeBase::VPDerivedIVSC:
     case VPRecipeBase::VPExpandSCEVSC:
+    case VPRecipeBase::VPExpandStridePredicatesSC:
     case VPRecipeBase::VPExpressionSC:
     case VPRecipeBase::VPInstructionSC:
     case VPRecipeBase::VPReductionEVLSC:
@@ -4028,6 +4030,46 @@ public:
   }
 
   const SCEV *getSCEV() const { return Expr; }
+
+protected:
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void printRecipe(raw_ostream &O, const Twine &Indent,
+                   VPSlotTracker &SlotTracker) const override;
+#endif
+};
+
+class VPExpandStridePredicatesRecipe : public VPSingleDefRecipe {
+  SCEVUnionPredicate StridePredicates;
+
+public:
+  VPExpandStridePredicatesRecipe(const SCEVUnionPredicate &StridePredicates,
+                                 LLVMContext &Ctx)
+      : VPSingleDefRecipe(VPRecipeBase::VPExpandStridePredicatesSC, {},
+                          Type::getInt1Ty(Ctx)),
+        StridePredicates(StridePredicates) {}
+
+  ~VPExpandStridePredicatesRecipe() override = default;
+
+  VPExpandStridePredicatesRecipe *clone() override {
+    return new VPExpandStridePredicatesRecipe(StridePredicates,
+                                              getScalarType()->getContext());
+  }
+
+  VP_CLASSOF_IMPL(VPRecipeBase::VPExpandStridePredicatesSC)
+
+  void execute(VPTransformState &State) override {
+    llvm_unreachable("SCEVPredicates must be expanded before final execute");
+  }
+
+  /// Return the cost of this VPExpandSCEVRecipe.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override {
+    // TODO: Compute accurate cost after retiring the legacy cost model.
+    return 0;
+  }
+
+  const SCEVPredicate *getSCEVPredicate() const { return &StridePredicates; }
 
 protected:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
