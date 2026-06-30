@@ -14,19 +14,19 @@
 #ifndef MSAN_H
 #define MSAN_H
 
+#include "msan_flags.h"
+#include "msan_interface_internal.h"
 #include "sanitizer_common/sanitizer_flags.h"
 #include "sanitizer_common/sanitizer_internal_defs.h"
 #include "sanitizer_common/sanitizer_stacktrace.h"
-#include "msan_interface_internal.h"
-#include "msan_flags.h"
 #include "ubsan/ubsan_platform.h"
 
 #ifndef MSAN_REPLACE_OPERATORS_NEW_AND_DELETE
-# define MSAN_REPLACE_OPERATORS_NEW_AND_DELETE 1
+#  define MSAN_REPLACE_OPERATORS_NEW_AND_DELETE 1
 #endif
 
 #ifndef MSAN_CONTAINS_UBSAN
-# define MSAN_CONTAINS_UBSAN CAN_SANITIZE_UB
+#  define MSAN_CONTAINS_UBSAN CAN_SANITIZE_UB
 #endif
 
 struct MappingDesc {
@@ -39,7 +39,7 @@ struct MappingDesc {
     SHADOW = 8,
     ORIGIN = 16,
   } type;
-  const char *name;
+  const char* name;
 };
 
 // Note: MappingDesc::ALLOCATOR entries are only used to check for memory
@@ -66,8 +66,8 @@ const MappingDesc kMemoryLayout[] = {
     {0x00c000000000ULL, 0x00e200000000ULL, MappingDesc::INVALID, "invalid"},
     {0x00e200000000ULL, 0x00ffffffffffULL, MappingDesc::APP, "app-3"}};
 
-#define MEM_TO_SHADOW(mem) (((uptr)(mem)) ^ 0x8000000000ULL)
-#define SHADOW_TO_ORIGIN(shadow) (((uptr)(shadow)) + 0x2000000000ULL)
+#  define MEM_TO_SHADOW(mem) (((uptr)(mem)) ^ 0x8000000000ULL)
+#  define SHADOW_TO_ORIGIN(shadow) (((uptr)(shadow)) + 0x2000000000ULL)
 
 #elif SANITIZER_LINUX && defined(__aarch64__)
 
@@ -93,8 +93,8 @@ const MappingDesc kMemoryLayout[] = {
     {0x0E00000000000, 0x0E40000000000, MappingDesc::ALLOCATOR, "allocator"},
     {0X0E40000000000, 0X1000000000000, MappingDesc::APP, "app-15"},
 };
-# define MEM_TO_SHADOW(mem) ((uptr)mem ^ 0xB00000000000ULL)
-# define SHADOW_TO_ORIGIN(shadow) (((uptr)(shadow)) + 0x200000000000ULL)
+#  define MEM_TO_SHADOW(mem) ((uptr)mem ^ 0xB00000000000ULL)
+#  define SHADOW_TO_ORIGIN(shadow) (((uptr)(shadow)) + 0x200000000000ULL)
 
 #elif SANITIZER_LINUX && SANITIZER_LOONGARCH64
 // LoongArch64 maps:
@@ -137,10 +137,33 @@ const MappingDesc kMemoryLayout[] = {
 //   High: 3000 0000 0000 - 3fff ffff ffff  ->  0000 0000 0000 - 0fff ffff ffff
 //   High: 4000 0000 0000 - 4fff ffff ffff  ->  0000 0000 0000 - 0fff ffff ffff
 //   High: 7000 0000 0000 - 7fff ffff ffff  ->  0000 0000 0000 - 0fff ffff ffff
-#define LINEARIZE_MEM(mem) \
-  (((uptr)(mem) & ~0xE00000000000ULL) ^ 0x100000000000ULL)
-#define MEM_TO_SHADOW(mem) (LINEARIZE_MEM((mem)) + 0x080000000000ULL)
-#define SHADOW_TO_ORIGIN(shadow) (((uptr)(shadow)) + 0x140000000000ULL)
+#  define LINEARIZE_MEM(mem) \
+    (((uptr)(mem) & ~0xE00000000000ULL) ^ 0x100000000000ULL)
+#  define MEM_TO_SHADOW(mem) (LINEARIZE_MEM((mem)) + 0x080000000000ULL)
+#  define SHADOW_TO_ORIGIN(shadow) (((uptr)(shadow)) + 0x140000000000ULL)
+
+#elif SANITIZER_LINUX && SANITIZER_RISCV64
+// RISC-V 64 SV39 layout (256GB VMA). Zero-aliasing via split shadow/origin
+// with -no-pie. Binary at <2GB, allocator inside app-lo (shadow stays
+// within shadow-lo), libs/stack near 256GB. Fold by bit 37 (128GB) separates
+// the two clusters with no aliasing. LoongArch uses a similar multi-region
+// design.
+const MappingDesc kMemoryLayout[] = {
+    {0x000000000000ULL, 0x000000001000ULL, MappingDesc::INVALID, "null"},
+    {0x000000001000ULL, 0x000080000000ULL, MappingDesc::APP, "app-lo"},
+    {0x000080000000ULL, 0x000100000000ULL, MappingDesc::ALLOCATOR, "alloc"},
+    {0x000100000000ULL, 0x000200000000ULL, MappingDesc::SHADOW, "shadow-lo"},
+    {0x000200000000ULL, 0x000300000000ULL, MappingDesc::ORIGIN, "origin-lo"},
+    {0x000300000000ULL, 0x002080000000ULL, MappingDesc::INVALID, "gap-lo"},
+    {0x002080000000ULL, 0x002100000000ULL, MappingDesc::SHADOW, "shadow-hi"},
+    {0x002100000000ULL, 0x002180000000ULL, MappingDesc::INVALID, "pad-hi"},
+    {0x002180000000ULL, 0x002200000000ULL, MappingDesc::ORIGIN, "origin-hi"},
+    {0x002200000000ULL, 0x003f80000000ULL, MappingDesc::INVALID, "gap-hi"},
+    {0x003f80000000ULL, 0x004000000000ULL, MappingDesc::APP, "app-hi"},
+};
+#  define MEM_TO_SHADOW(mem) \
+    ((((uptr)(mem) & ~0x2000000000ULL)) + 0x100000000ULL)
+#  define SHADOW_TO_ORIGIN(shadow) (((uptr)(shadow)) + 0x100000000ULL)
 
 #elif SANITIZER_LINUX && SANITIZER_S390_64
 const MappingDesc kMemoryLayout[] = {
@@ -153,9 +176,9 @@ const MappingDesc kMemoryLayout[] = {
     {0x440000000000ULL, 0x460000000000ULL, MappingDesc::ALLOCATOR, "allocator"},
     {0x460000000000ULL, 0x500000000000ULL, MappingDesc::APP, "high memory"}};
 
-#define MEM_TO_SHADOW(mem) \
-  ((((uptr)(mem)) & ~0xC00000000000ULL) + 0x080000000000ULL)
-#define SHADOW_TO_ORIGIN(shadow) (((uptr)(shadow)) + 0x140000000000ULL)
+#  define MEM_TO_SHADOW(mem) \
+    ((((uptr)(mem)) & ~0xC00000000000ULL) + 0x080000000000ULL)
+#  define SHADOW_TO_ORIGIN(shadow) (((uptr)(shadow)) + 0x140000000000ULL)
 
 #elif SANITIZER_FREEBSD && defined(__aarch64__)
 
@@ -173,10 +196,10 @@ const MappingDesc kMemoryLayout[] = {
 // Maps low and high app ranges to contiguous space with zero base:
 //   Low:  0000 0000 0000 - 01ff ffff ffff -> 4000 0000 0000 - 41ff ffff ffff
 //   High: c000 0000 0000 - ffff ffff ffff -> 0000 0000 0000 - 3fff ffff ffff
-#define LINEARIZE_MEM(mem) \
-  (((uptr)(mem) & ~0x1800000000000ULL) ^ 0x400000000000ULL)
-#define MEM_TO_SHADOW(mem) (LINEARIZE_MEM((mem)) + 0x200000000000ULL)
-#define SHADOW_TO_ORIGIN(shadow) (((uptr)(shadow)) + 0x500000000000)
+#  define LINEARIZE_MEM(mem) \
+    (((uptr)(mem) & ~0x1800000000000ULL) ^ 0x400000000000ULL)
+#  define MEM_TO_SHADOW(mem) (LINEARIZE_MEM((mem)) + 0x200000000000ULL)
+#  define SHADOW_TO_ORIGIN(shadow) (((uptr)(shadow)) + 0x500000000000)
 
 #elif SANITIZER_FREEBSD && SANITIZER_WORDSIZE == 64
 
@@ -194,10 +217,10 @@ const MappingDesc kMemoryLayout[] = {
 // Maps low and high app ranges to contiguous space with zero base:
 //   Low:  0000 0000 0000 - 00ff ffff ffff  ->  2000 0000 0000 - 20ff ffff ffff
 //   High: 6000 0000 0000 - 7fff ffff ffff  ->  0000 0000 0000 - 1fff ffff ffff
-#define LINEARIZE_MEM(mem) \
-  (((uptr)(mem) & ~0xc00000000000ULL) ^ 0x200000000000ULL)
-#define MEM_TO_SHADOW(mem) (LINEARIZE_MEM((mem)) + 0x100000000000ULL)
-#define SHADOW_TO_ORIGIN(shadow) (((uptr)(shadow)) + 0x280000000000)
+#  define LINEARIZE_MEM(mem) \
+    (((uptr)(mem) & ~0xc00000000000ULL) ^ 0x200000000000ULL)
+#  define MEM_TO_SHADOW(mem) (LINEARIZE_MEM((mem)) + 0x100000000000ULL)
+#  define SHADOW_TO_ORIGIN(shadow) (((uptr)(shadow)) + 0x280000000000)
 
 #elif SANITIZER_LINUX && defined(__hexagon__)
 // Hexagon 32-bit layout (fits within 3GB for QEMU user-mode):
@@ -244,11 +267,11 @@ const MappingDesc kMemoryLayout[] = {
     {0x610000000000ULL, 0x700000000000ULL, MappingDesc::INVALID, "invalid"},
     {0x700000000000ULL, 0x740000000000ULL, MappingDesc::ALLOCATOR, "allocator"},
     {0x740000000000ULL, 0x800000000000ULL, MappingDesc::APP, "app-3"}};
-#define MEM_TO_SHADOW(mem) (((uptr)(mem)) ^ 0x500000000000ULL)
-#define SHADOW_TO_ORIGIN(mem) (((uptr)(mem)) + 0x100000000000ULL)
+#  define MEM_TO_SHADOW(mem) (((uptr)(mem)) ^ 0x500000000000ULL)
+#  define SHADOW_TO_ORIGIN(mem) (((uptr)(mem)) + 0x100000000000ULL)
 
 #else
-#error "Unsupported platform"
+#  error "Unsupported platform"
 #endif
 
 const uptr kMemoryLayoutSize = sizeof(kMemoryLayout) / sizeof(kMemoryLayout[0]);
@@ -258,12 +281,11 @@ const uptr kMemoryLayoutSize = sizeof(kMemoryLayout) / sizeof(kMemoryLayout[0]);
 #ifndef __clang__
 __attribute__((optimize("unroll-loops")))
 #endif
-inline bool
-addr_is_type(uptr addr, int mapping_types) {
+inline bool addr_is_type(uptr addr, int mapping_types) {
 // It is critical for performance that this loop is unrolled (because then it is
 // simplified into just a few constant comparisons).
 #ifdef __clang__
-#pragma unroll
+#  pragma unroll
 #endif
   for (unsigned i = 0; i < kMemoryLayoutSize; ++i)
     if ((kMemoryLayout[i].type & mapping_types) &&
@@ -288,28 +310,28 @@ extern int msan_report_count;
 
 bool ProtectRange(uptr beg, uptr end);
 bool InitShadowWithReExec(bool init_origins);
-char *GetProcSelfMaps();
+char* GetProcSelfMaps();
 void InitializeInterceptors();
 
 void MsanAllocatorInit();
-void MsanDeallocate(BufferedStackTrace *stack, void *ptr);
+void MsanDeallocate(BufferedStackTrace* stack, void* ptr);
 
-void *msan_malloc(uptr size, BufferedStackTrace *stack);
-void *msan_calloc(uptr nmemb, uptr size, BufferedStackTrace *stack);
-void *msan_realloc(void *ptr, uptr size, BufferedStackTrace *stack);
-void *msan_reallocarray(void *ptr, uptr nmemb, uptr size,
-                        BufferedStackTrace *stack);
-void *msan_valloc(uptr size, BufferedStackTrace *stack);
-void *msan_pvalloc(uptr size, BufferedStackTrace *stack);
-void *msan_aligned_alloc(uptr alignment, uptr size, BufferedStackTrace *stack);
-void *msan_memalign(uptr alignment, uptr size, BufferedStackTrace *stack);
-int msan_posix_memalign(void **memptr, uptr alignment, uptr size,
-                        BufferedStackTrace *stack);
+void* msan_malloc(uptr size, BufferedStackTrace* stack);
+void* msan_calloc(uptr nmemb, uptr size, BufferedStackTrace* stack);
+void* msan_realloc(void* ptr, uptr size, BufferedStackTrace* stack);
+void* msan_reallocarray(void* ptr, uptr nmemb, uptr size,
+                        BufferedStackTrace* stack);
+void* msan_valloc(uptr size, BufferedStackTrace* stack);
+void* msan_pvalloc(uptr size, BufferedStackTrace* stack);
+void* msan_aligned_alloc(uptr alignment, uptr size, BufferedStackTrace* stack);
+void* msan_memalign(uptr alignment, uptr size, BufferedStackTrace* stack);
+int msan_posix_memalign(void** memptr, uptr alignment, uptr size,
+                        BufferedStackTrace* stack);
 
 void InstallTrapHandler();
 void InstallAtExitHandler();
 
-const char *GetStackOriginDescr(u32 id, uptr *pc);
+const char* GetStackOriginDescr(u32 id, uptr* pc);
 
 bool IsInSymbolizerOrUnwider();
 
@@ -322,7 +344,7 @@ void UnpoisonThreadLocalState();
 
 // Returns a "chained" origin id, pointing to the given stack trace followed by
 // the previous origin id.
-u32 ChainOrigin(u32 id, StackTrace *stack);
+u32 ChainOrigin(u32 id, StackTrace* stack);
 
 const int STACK_TRACE_TAG_POISON = StackTrace::TAG_CUSTOM + 1;
 const int STACK_TRACE_TAG_FIELDS = STACK_TRACE_TAG_POISON + 1;
@@ -377,14 +399,15 @@ class ScopedThreadLocalStateBackup {
   ~ScopedThreadLocalStateBackup() { Restore(); }
   void Backup();
   void Restore();
+
  private:
   u64 va_arg_overflow_size_tls;
 };
 
-void MsanTSDInit(void (*destructor)(void *tsd));
-void *MsanTSDGet();
-void MsanTSDSet(void *tsd);
-void MsanTSDDtor(void *tsd);
+void MsanTSDInit(void (*destructor)(void* tsd));
+void* MsanTSDGet();
+void MsanTSDSet(void* tsd);
+void MsanTSDDtor(void* tsd);
 
 void InstallAtForkHandler();
 
