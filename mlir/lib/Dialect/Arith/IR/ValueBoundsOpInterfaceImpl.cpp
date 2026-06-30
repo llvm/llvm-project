@@ -103,11 +103,16 @@ struct DivSIOpInterface
         ValueBoundsConstraintSet::isProvablyPositive(rhsValue, cstr);
     bool rhsNegative =
         ValueBoundsConstraintSet::isProvablyNegative(rhsValue, cstr);
-    if ((!lhsNonNegative && !lhsNonPositive) || (!rhsPositive && !rhsNegative))
-      return;
 
     AffineExpr lhs = cstr.getExpr(lhsValue);
     AffineExpr rhs = cstr.getExpr(rhsValue);
+
+    cstr.bound(value) >= lhs.floorDiv(rhs);
+    cstr.bound(value) <= lhs.ceilDiv(rhs);
+
+    if ((!lhsNonNegative && !lhsNonPositive) || (!rhsPositive && !rhsNegative))
+      return;
+
     if ((lhsNonNegative && rhsPositive) || (lhsNonPositive && rhsNegative)) {
       cstr.bound(value) == lhs.floorDiv(rhs);
       cstr.bound(value) >= 0;

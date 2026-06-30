@@ -195,6 +195,24 @@ func.func @arith_divsi_negative_lhs() -> index {
 
 // -----
 
+func.func @arith_divsi_unknown_lhs_constant_rhs(%a: index) {
+  %c5 = arith.constant 5 : index
+  %0 = arith.divsi %a, %c5 : index
+  // expected-remark @below{{true}}
+  "test.compare"(%0, %a) {
+      cmp = "GE",
+      rhs_map = affine_map<()[s0] -> (s0 floordiv 5)>
+  } : (index, index) -> ()
+  // expected-remark @below{{true}}
+  "test.compare"(%0, %a) {
+      cmp = "LE",
+      rhs_map = affine_map<()[s0] -> (s0 ceildiv 5)>
+  } : (index, index) -> ()
+  return
+}
+
+// -----
+
 // CHECK-LABEL: func @arith_remsi_positive_positive()
 //       CHECK:   %[[c0:.*]] = arith.constant 0 : index
 //       CHECK:   %[[c5:.*]] = arith.constant 5 : index
