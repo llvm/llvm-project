@@ -488,6 +488,10 @@ private:
   /// breakpoints are still set.
   llvm::Error HandleAcceleratorBreakpoints(const AcceleratorActions &actions);
 
+  /// Create a new target for an accelerator and connect it to the GDB server
+  /// described by the action's connection info.
+  llvm::Error HandleAcceleratorConnection(const AcceleratorActions &actions);
+
   /// Breakpoint callback invoked when an accelerator-plugin-requested
   /// breakpoint is hit. Resolves any requested symbol values, notifies the
   /// plugin via the "jAcceleratorPluginBreakpointHit" packet, and handles the

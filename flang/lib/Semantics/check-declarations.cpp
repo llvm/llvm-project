@@ -1754,7 +1754,7 @@ void CheckHelper::CheckSubprogram(
     messages_.Say(symbol.name(),
         "A subroutine may not have LAUNCH_BOUNDS() or CLUSTER_DIMS() unless it has ATTRIBUTES(GLOBAL) or ATTRIBUTES(GRID_GLOBAL)"_err_en_US);
   }
-  if (!IsStmtFunction(symbol)) {
+  if (!IsStmtFunction(symbol) && !details.isInterface() && !details.isDummy()) {
     if (const Scope * outerDevice{FindCUDADeviceContext(&symbol.owner())};
         outerDevice && outerDevice->symbol()) {
       if (auto *msg{messages_.Say(symbol.name(),

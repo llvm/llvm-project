@@ -660,13 +660,7 @@ llvm::Error Host::OpenURL(llvm::StringRef url) {
 std::string Host::URLEncode(llvm::StringRef str) {
   std::string out;
   llvm::raw_string_ostream os(out);
-  for (unsigned char c : str) {
-    if (std::isalnum(c) || llvm::StringRef("-_.~").contains(c))
-      os << c;
-    else
-      os << '%' << llvm::hexdigit((c >> 4) & 0xF, /*LowerCase=*/false)
-         << llvm::hexdigit(c & 0xF, /*LowerCase=*/false);
-  }
+  llvm::printPercentEncoded(str, os);
   return out;
 }
 
