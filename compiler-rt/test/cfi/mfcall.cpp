@@ -64,26 +64,31 @@ int main(int argc, char **argv) {
     case 'a':
       // A: runtime error: control flow integrity check for type 'int (S::*)()' failed during non-virtual pointer to member function call
       // A: note: S::f1() {{.*}}defined here
+      // A: SUMMARY: UndefinedBehaviorSanitizer: cfi-bad-type
       (s.*bitcast<S_int>(&S::f1))();
       break;
     case 'b':
       // B: runtime error: control flow integrity check for type 'int (T::*)()' failed during non-virtual pointer to member function call
       // B: note: S::f2() {{.*}}defined here
+      // B: SUMMARY: UndefinedBehaviorSanitizer: cfi-bad-type
       (t.*bitcast<T_int>(&S::f2))();
       break;
     case 'c':
       // C: runtime error: control flow integrity check for type 'int (S::*)()' failed during virtual pointer to member function call
       // C: note: vtable is of type 'S'
+      // C: SUMMARY: UndefinedBehaviorSanitizer: cfi-bad-type
       (s.*bitcast<S_int>(&S::g1))();
       break;
     case 'd':
       // D: runtime error: control flow integrity check for type 'int (S::*)()' failed during virtual pointer to member function call
       // D: note: vtable is of type 'T'
+      // D: SUMMARY: UndefinedBehaviorSanitizer: cfi-bad-type
       (reinterpret_cast<S &>(t).*&S::g2)();
       break;
     case 'e':
       // E: runtime error: control flow integrity check for type 'void (S::*)()' failed during virtual pointer to member function call
       // E: note: vtable is of type 'S'
+      // E: SUMMARY: UndefinedBehaviorSanitizer: cfi-bad-type
       (s.*bitcast<S_void>(&T::g3))();
       break;
     case 'f':
