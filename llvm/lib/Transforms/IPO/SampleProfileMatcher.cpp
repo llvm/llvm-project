@@ -1036,7 +1036,7 @@ bool SampleProfileMatcher::functionMatchesProfile(Function &IRFunc,
   bool Matched = functionMatchesProfileHelper(IRFunc, ProfFunc);
   FuncProfileMatchCache[{&IRFunc, ProfFunc}] = Matched;
   if (Matched) {
-    FuncToProfileNameMap[&IRFunc] = ProfFunc;
+    FuncToProfileNameMap.try_emplace(&IRFunc, ProfFunc);
     LLVM_DEBUG(dbgs() << "Function:" << IRFunc.getName()
                       << " matches profile:" << ProfFunc << "\n");
   }
