@@ -3,13 +3,14 @@
 
 declare void @use(i32, i16)
 
+; Should retain both the s32 and s16 MMOs here.
 define void @test(ptr %p) nounwind {
   ; CHECK-LABEL: name: test
   ; CHECK: bb.0 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $rdi
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr64 = COPY $rdi
-  ; CHECK-NEXT:   [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm [[COPY]], 1, $noreg, 0, $noreg :: (load (s16) from %ir.p, align 4)
+  ; CHECK-NEXT:   [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm [[COPY]], 1, $noreg, 0, $noreg :: (load (s32) from %ir.p), (load (s16) from %ir.p, align 4)
   ; CHECK-NEXT:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
   ; CHECK-NEXT:   $edi = COPY [[MOV32rm]]
   ; CHECK-NEXT:   $esi = COPY [[MOV32rm]]
