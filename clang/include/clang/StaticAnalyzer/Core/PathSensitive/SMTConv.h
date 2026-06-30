@@ -355,12 +355,11 @@ public:
     }
 
     if (Ty->isIntegralOrEnumerationType() || Ty->isAnyPointerType() ||
-        Ty->isBlockPointerType() || Ty->isReferenceType()) {
+        Ty->isBlockPointerType() || Ty->isReferenceType())
       return fromBinOp(Solver, Exp, BO_NE,
                        Solver->mkBitvector(llvm::APSInt::getUnsigned(0),
                                            Ctx.getTypeSize(Ty)),
                        Ty->isSignedIntegerOrEnumerationType());
-    }
     assert(false && "Unsupported type for boolean conversion!");
     return std::nullopt;
   }
@@ -438,9 +437,8 @@ public:
           Solver->mkBitvector(NewLInt, NewLInt.getBitWidth());
       std::optional<llvm::SMTExprRef> RHS =
           getSymExpr(Solver, Ctx, ISE->getRHS(), RTy, hasComparison);
-      if (!RHS) {
+      if (!RHS)
         return std::nullopt;
-      }
       return getBinExpr(Solver, Ctx, LHS, LTy, Op, RHS.value(), RTy, RetTy);
     }
 
@@ -449,9 +447,8 @@ public:
           getSymExpr(Solver, Ctx, SSM->getLHS(), LTy, hasComparison);
       std::optional<llvm::SMTExprRef> RHS =
           getSymExpr(Solver, Ctx, SSM->getRHS(), RTy, hasComparison);
-      if (!LHS || !RHS) {
+      if (!LHS || !RHS)
         return std::nullopt;
-      }
       return getBinExpr(Solver, Ctx, LHS.value(), LTy, Op, RHS.value(), RTy,
                         RetTy);
     }
@@ -477,9 +474,8 @@ public:
       QualType FromTy;
       std::optional<llvm::SMTExprRef> Exp =
           getSymExpr(Solver, Ctx, SC->getOperand(), FromTy, hasComparison);
-      if (!Exp) {
+      if (!Exp)
         return std::nullopt;
-      }
       // Casting an expression with a comparison invalidates it. Note that this
       // must occur after the recursive call above.
       // e.g. (signed char) (x > 0)
@@ -494,9 +490,8 @@ public:
       QualType OperandTy;
       std::optional<llvm::SMTExprRef> OperandExp =
           getSymExpr(Solver, Ctx, USE->getOperand(), OperandTy, hasComparison);
-      if (!OperandExp) {
+      if (!OperandExp)
         return std::nullopt;
-      }
       // When the operand is a bool expr, but the operator is an integeral
       // operator, casting the bool expr to the integer before creating the
       // unary operator.
@@ -599,9 +594,8 @@ public:
     // Convert symbol
     QualType SymTy;
     std::optional<llvm::SMTExprRef> Exp = getExpr(Solver, Ctx, Sym, SymTy);
-    if (!Exp) {
+    if (!Exp)
       return std::nullopt;
-    }
     // Construct single (in)equality
     if (From == To) {
       QualType UnusedRetTy;
@@ -625,9 +619,8 @@ public:
     std::optional<llvm::SMTExprRef> RHS = getBinExpr(
         Solver, Ctx, Exp.value(), SymTy, InRange ? BO_LE : BO_GT, ToExp, ToTy,
         /*RetTy=*/UnusedRetTy);
-    if (!LHS || !RHS) {
+    if (!LHS || !RHS)
       return std::nullopt;
-    }
     return fromBinOp(Solver, LHS.value(), InRange ? BO_LAnd : BO_LOr,
                      RHS.value(), SymTy->isSignedIntegerOrEnumerationType());
   }

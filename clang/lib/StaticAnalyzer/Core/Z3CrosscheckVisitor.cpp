@@ -78,9 +78,8 @@ void Z3CrosscheckVisitor::finalizeVisitor(BugReporterContext &BRC,
     std::optional<llvm::SMTExprRef> SMTConstraintsOpt = SMTConv::getRangeExpr(
         RefutationSolver, Ctx, Sym, RangeIt->From(), RangeIt->To(),
         /*InRange=*/true);
-    if (!SMTConstraintsOpt) {
+    if (!SMTConstraintsOpt)
       continue;
-    }
     auto SMTConstraints = SMTConstraintsOpt.value();
     bool ShouldAddConstraint = true;
     while ((++RangeIt) != Range.end()) {
@@ -94,9 +93,8 @@ void Z3CrosscheckVisitor::finalizeVisitor(BugReporterContext &BRC,
       SMTConstraints =
           RefutationSolver->mkOr(SMTConstraints, ConstraintOpt.value());
     }
-    if (ShouldAddConstraint) {
+    if (ShouldAddConstraint)
       RefutationSolver->addConstraint(SMTConstraints);
-    }
   }
 
   auto GetUsedRLimit = [](const llvm::SMTSolverRef &Solver) {

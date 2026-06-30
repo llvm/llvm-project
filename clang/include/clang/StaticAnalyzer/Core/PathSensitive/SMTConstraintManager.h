@@ -54,9 +54,8 @@ public:
 
     std::optional<llvm::SMTExprRef> Exp =
         SMTConv::getExpr(Solver, Ctx, Sym, RetTy, &hasComparison);
-    if (!Exp) {
+    if (!Exp)
       return assumeSymUnsupported(State, Sym, Assumption);
-    }
     // Create zero comparison for implicit boolean cast, with reversed
     // assumption
     if (!hasComparison && !RetTy->isBooleanType())
@@ -75,9 +74,8 @@ public:
     ASTContext &Ctx = getBasicVals().getContext();
     std::optional<llvm::SMTExprRef> Expr =
         SMTConv::getRangeExpr(Solver, Ctx, Sym, From, To, InRange);
-    if (!Expr) {
+    if (!Expr)
       return assumeSymUnsupported(State, Sym, false);
-    }
     return assumeExpr(State, Sym, Expr.value());
   }
 
@@ -98,9 +96,8 @@ public:
     // The expression may be casted, so we cannot call getZ3DataExpr() directly
     std::optional<llvm::SMTExprRef> VarExp =
         SMTConv::getExpr(Solver, Ctx, Sym, RetTy);
-    if (!VarExp) {
+    if (!VarExp)
       return ConditionTruthVal();
-    }
     llvm::SMTExprRef Exp = SMTConv::getZeroExpr(Solver, Ctx, VarExp.value(),
                                                 RetTy, /*Assumption=*/true);
 
@@ -182,10 +179,9 @@ public:
       return BVF.Convert(SC->getType(), *Value).get();
     }
 
-    if (const UnarySymExpr *USE = dyn_cast<UnarySymExpr>(Sym)) {
-      SymbolRef Operand = USE->getOperand();
+    if (const auto *USE = dyn_cast<UnarySymExpr>(Sym)) {
       const llvm::APSInt *Value;
-      if (!(Value = getSymVal(State, Operand)))
+      if (!(Value = getSymVal(State, USE->getOperand())))
         return nullptr;
       std::optional<APSIntPtr> Res = BVF.evalAPSInt(USE->getOpcode(), *Value);
       return Res ? Res.value().get() : nullptr;
@@ -301,9 +297,8 @@ public:
     if (const SymbolCast *SC = dyn_cast<SymbolCast>(Sym))
       return canReasonAbout(SVB.makeSymbolVal(SC->getOperand()));
 
-    if (const auto *USE = dyn_cast<UnarySymExpr>(Sym)) {
+    if (const auto *USE = dyn_cast<UnarySymExpr>(Sym))
       return canReasonAbout(SVB.makeSymbolVal(USE->getOperand()));
-    }
 
     if (const BinarySymExpr *BSE = dyn_cast<BinarySymExpr>(Sym)) {
       if (const SymIntExpr *SIE = dyn_cast<SymIntExpr>(BSE))
