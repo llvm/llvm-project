@@ -3253,6 +3253,10 @@ bool VectorCombine::foldShufflesOfLengthChangingShuffles(Instruction &I) {
   if (ChainLength <= 1)
     return false;
 
+  // Bail out if all leaves were poison.
+  if (!Y)
+    return false;
+
   if (llvm::all_of(Mask, [&](int M) {
         return M < 0 || M >= static_cast<int>(NumTrunkElts);
       })) {
