@@ -21,7 +21,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Testing/Support/Error.h"
 
-#if LLDB_ENABLE_POSIX
+#if LLDB_ENABLE_POSIX || defined(_WIN32)
 #include "lldb/Host/common/DomainSocket.h"
 #endif
 
