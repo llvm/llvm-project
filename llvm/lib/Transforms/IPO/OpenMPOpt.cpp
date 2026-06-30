@@ -5024,6 +5024,13 @@ struct AAKernelInfoCallSite : AAKernelInfo {
         SPMDCompatibilityTracker.insert(&CB);
         ReachedUnknownParallelRegions.insert(&CB);
         break;
+      case OMPRTL_omp_alloc:
+      case OMPRTL_omp_free:
+        // omp_alloc/omp_free are okay in SPMD-mode but must be guarded to
+        // ensure allocation/free occur only once and to maintain allocator
+        // consistency.
+        SPMDCompatibilityTracker.insert(&CB);
+        break;
       case OMPRTL___kmpc_alloc_shared:
       case OMPRTL___kmpc_free_shared:
         // Return without setting a fixpoint, to be resolved in updateImpl.
