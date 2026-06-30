@@ -522,16 +522,17 @@ bool StringRef::consumeInteger(unsigned Radix, APInt &Result) {
     return false;
   }
 
-  // (Over-)estimate the required number of bits.
   unsigned Log2Radix = 0;
   while ((1U << Log2Radix) < Radix) Log2Radix++;
   bool IsPowerOf2Radix = ((1U << Log2Radix) == Radix);
 
-  unsigned BitWidth = Log2Radix * Str.size();
-  if (BitWidth < Result.getBitWidth())
-    BitWidth = Result.getBitWidth(); // don't shrink the result
-  else if (BitWidth > Result.getBitWidth())
+  // Initialize Result to a reasonable starting width (at least 64 bits),
+  // but do not shrink it if it was already larger.
+  unsigned BitWidth = std::max(64U, Result.getBitWidth());
+
+  if (Result.getBitWidth() < BitWidth) {
     Result = Result.zext(BitWidth);
+  }
 
   APInt RadixAP, CharAP; // unused unless !IsPowerOf2Radix
   if (!IsPowerOf2Radix) {
@@ -557,6 +558,21 @@ bool StringRef::consumeInteger(unsigned Radix, APInt &Result) {
     // invalid.
     if (CharVal >= Radix)
       break;
+
+    // Check if one more digit will overflow, and grow if so.
+    if (Result.getActiveBits() + Log2Radix > Result.getBitWidth()) {
+      unsigned NewWidth = Result.getBitWidth() * 2;
+
+      // Guard against overflow of the NewWidth itself
+      if (NewWidth < Result.getBitWidth())
+        return true;
+
+      Result = Result.zext(NewWidth);
+      if (!IsPowerOf2Radix) {
+        RadixAP = RadixAP.zext(NewWidth);
+        CharAP = CharAP.zext(NewWidth);
+      }
+    }
 
     // Add in this character.
     if (IsPowerOf2Radix) {
