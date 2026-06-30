@@ -151,3 +151,12 @@ X test24() {
 
 /// Used to crash in codegen because the cast worked.
 auto MemcpySemantics = *(_Complex double *)&(float[2]){};
+
+namespace InvalidReinterpretCast {
+  struct X {};
+  const X &_S_ti() {
+    constexpr char __tag{};
+    // CHECK: ret ptr %__tag
+    return reinterpret_cast<const X &>(__tag);
+  }
+}
