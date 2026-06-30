@@ -1574,6 +1574,27 @@ Currently, only the following parameter attributes are defined:
 
     This is not a valid attribute for return values.
 
+``nofreeobj``
+    On arguments, this indicates that the underlying object of the argument
+    cannot be freed during the execution of the function (where "during" is in
+    the same sense as for ``nofree``).
+
+    On return values, this indicates that the underlying object of the return
+    value cannot be freed from this point forward, for the duration of the
+    program's execution.
+
+    Unlike ``nofree``, it is not possible to free the underlying object through
+    a different pointer either.
+
+    ``nofreeobj`` on arguments implies ``nofree``. ``nofreeobj`` is primarily
+    useful in cases where it's not possible to mark the argument as ``noalias``.
+    The combination of ``nofree`` and ``noalias`` does *not* imply ``nofreeobj``
+    by itself, because it still allows freeing the underlying object through
+    a different pointer, as long as the object is never accessed through the
+    ``noalias`` pointer. However, it does imply ``nofreeobj`` if such an access
+    exists, for example in the form of the implied read of a ``dereferenceable``
+    attribute.
+
 .. _nest:
 
 ``nest``
@@ -13341,7 +13362,7 @@ Syntax:
 
 ::
 
-      <result> = inttoptr <ty> <value> to <ty2>[, !dereferenceable !<deref_bytes_node>][, !dereferenceable_or_null !<deref_bytes_node>][, !nofree !<empty_node>]            ; yields ty2
+      <result> = inttoptr <ty> <value> to <ty2>[, !dereferenceable !<deref_bytes_node>][, !dereferenceable_or_null !<deref_bytes_node>][, !nofreeobj !<empty_node>]            ; yields ty2
 
 Overview:
 """""""""
@@ -13366,10 +13387,11 @@ metadata name ``<deref_bytes_node>`` corresponding to a metadata node with one
 ``i64`` entry.
 See ``dereferenceable_or_null`` metadata.
 
-The optional ``!nofree`` metadata must reference a single metadata name
+The optional ``!nofreeobj`` metadata must reference a single metadata name
 ``<empty_node>`` corresponding to a metadata node with no entries.
-The existence of the ``!nofree`` metadata on the instruction tells the optimizer
-that the memory pointed by the pointer will not be freed after this point.
+The existence of the ``!nofreeobj`` metadata on the instruction tells the
+optimizer that the underlying object of the pointer will not be freed after
+this point.
 
 Semantics:
 """"""""""

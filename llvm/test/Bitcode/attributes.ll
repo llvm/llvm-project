@@ -597,6 +597,11 @@ define void @noipa() noipa {
   ret void
 }
 
+; CHECK: define nofreeobj ptr @nofreeobj(ptr nofreeobj %p)
+define nofreeobj ptr @nofreeobj(ptr nofreeobj %p) {
+  ret ptr %p
+}
+
 ; CHECK: attributes #0 = { noreturn }
 ; CHECK: attributes #1 = { nounwind }
 ; CHECK: attributes #2 = { memory(none) }
