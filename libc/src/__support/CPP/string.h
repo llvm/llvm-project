@@ -15,6 +15,7 @@
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/integer_to_string.h" // IntegerToString
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/null_check.h"
 #include "src/string/memory_utils/inline_memcpy.h"
 #include "src/string/memory_utils/inline_memset.h"
 #include "src/string/string_utils.h" // string_length
@@ -27,12 +28,8 @@ namespace {
 
 char *realloc_or_die(char *ptr, size_t size) {
   void *new_ptr = ::realloc(ptr, size);
-  if (new_ptr == nullptr) {
-    // Out of memory: this is not handled in current implementation,
-    // We trap the program and exits.
-    __builtin_trap();
-  }
-
+  // Out of memory: this is not handled in current implementation, so crash.
+  LIBC_CRASH_ON_NULLPTR(new_ptr);
   return reinterpret_cast<char *>(new_ptr);
 }
 
