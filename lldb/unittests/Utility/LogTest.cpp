@@ -228,8 +228,14 @@ TEST_F(LogChannelTest, Enable) {
   EXPECT_NE(nullptr, GetLog(TestChannel::FOO));
   EXPECT_NE(nullptr, GetLog(TestChannel::BAR));
 
-  EXPECT_TRUE(EnableChannel(log_handler_sp, 0, "chan", {"baz"}, error));
+  EXPECT_FALSE(EnableChannel(log_handler_sp, 0, "chan", {"baz"}, error));
   EXPECT_NE(std::string::npos, error.find("unrecognized log category 'baz'"))
+      << "error: " << error;
+
+  EXPECT_FALSE(
+      EnableChannel(log_handler_sp, 0, "chan", {"baz", "bar", "abc"}, error));
+  EXPECT_NE(std::string::npos,
+            error.find("unrecognized log categories 'baz', 'abc'"))
       << "error: " << error;
 }
 
@@ -257,7 +263,7 @@ TEST_F(LogChannelTest, Disable) {
   EXPECT_NE(nullptr, GetLog(TestChannel::FOO));
   EXPECT_EQ(nullptr, GetLog(TestChannel::BAR));
 
-  EXPECT_TRUE(DisableChannel("chan", {"baz"}, error));
+  EXPECT_FALSE(DisableChannel("chan", {"baz"}, error));
   EXPECT_NE(std::string::npos, error.find("unrecognized log category 'baz'"))
       << "error: " << error;
   EXPECT_NE(nullptr, GetLog(TestChannel::FOO));
