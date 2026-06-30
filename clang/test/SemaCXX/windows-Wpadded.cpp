@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple x86_64-windows-msvc -fsyntax-only -verify -Wpadded %s
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only -verify -Wpadded %s
+// RUN: %clang_cc1 -triple x86_64-windows-msvc -fsyntax-only -verify -Wpadded %s -DUSED
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only -verify -Wpadded %s -DUSED
 
 struct __attribute__((ms_struct)) Foo { // expected-warning {{padding size of 'Foo' with 3 bytes to alignment boundary}}
   int b : 1;
@@ -45,7 +47,22 @@ struct alignas(32) __attribute__((ms_struct)) AlignedNonEmptyStruct { // expecte
 
 struct alignas(16) __attribute__((ms_struct)) AlignedEmptyStruct {}; // expected-warning {{padding size of 'AlignedEmptyStruct' with 15 bytes to alignment boundary}}
 
+#define ETH_ALEN 14
+struct ethhdr {
+        unsigned char   h_dest[ETH_ALEN];
+        unsigned char   h_source[ETH_ALEN];
+        unsigned short  h_proto;
+} __attribute__((packed)); // Should suppress the diagnostic.
+
+
+struct arc_eth_encap {
+        unsigned char proto;
+        struct ethhdr eth;
+        unsigned char payload[];
+};
+
 int main() {
+#ifdef USED
   Foo f;
   AlignedStruct a;
   Derived d;
@@ -54,4 +71,6 @@ int main() {
   AlignedNonEmptyStruct anes;
   AlignedMemberStruct ams;
   AlignedEmptyStruct aes;
+  arc_eth_encap aee;
+#endif
 }
