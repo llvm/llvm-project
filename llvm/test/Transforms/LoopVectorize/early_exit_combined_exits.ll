@@ -4,10 +4,36 @@
 define void @combined_exit_conditions(ptr align 4 dereferenceable(80) readonly %src, ptr align 4 dereferenceable(80) noalias %dst, ptr align 4 dereferenceable(80) readonly %pred) {
 ; CHECK-LABEL: define void @combined_exit_conditions(
 ; CHECK-SAME: ptr readonly align 4 dereferenceable(80) [[SRC:%.*]], ptr noalias align 4 dereferenceable(80) [[DST:%.*]], ptr readonly align 4 dereferenceable(80) [[PRED:%.*]]) {
-; CHECK-NEXT:  [[SCALAR_PH:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
+; CHECK:       [[FOR_BODY]]:
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[FOR_BODY]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[PRED]], i64 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP1]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <4 x i32> [[WIDE_LOAD]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP2]], i1 false)
+; CHECK-NEXT:    [[UNCOUNTABLE_EXIT_MASK:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 0, i64 [[TMP3]])
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr [4 x i8], ptr [[SRC]], i64 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[TMP0]], <4 x i1> [[UNCOUNTABLE_EXIT_MASK]], <4 x i32> poison)
+; CHECK-NEXT:    [[TMP4:%.*]] = add nsw <4 x i32> [[WIDE_MASKED_LOAD]], splat (i32 1)
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr [4 x i8], ptr [[DST]], i64 [[INDEX]]
+; CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[TMP4]], ptr align 4 [[TMP5]], <4 x i1> [[UNCOUNTABLE_EXIT_MASK]])
+; CHECK-NEXT:    [[TMP6:%.*]] = freeze <4 x i1> [[TMP2]]
+; CHECK-NEXT:    [[TMP7:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP6]])
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 20
+; CHECK-NEXT:    [[TMP9:%.*]] = or i1 [[TMP7]], [[TMP8]]
+; CHECK-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[TMP10:%.*]] = add i64 [[INDEX]], [[TMP3]]
+; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[TMP10]], 20
+; CHECK-NEXT:    br i1 [[TMP11]], label %[[EXIT:.*]], label %[[SCALAR_PH:.*]]
+; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    br label %[[FOR_BODY1:.*]]
 ; CHECK:       [[FOR_BODY1]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY1]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[TMP10]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY1]] ]
 ; CHECK-NEXT:    [[SRC_PTR:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[SRC]], i64 [[IV]]
 ; CHECK-NEXT:    [[DATA:%.*]] = load i32, ptr [[SRC_PTR]], align 4
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[DATA]], 1
@@ -19,7 +45,7 @@ define void @combined_exit_conditions(ptr align 4 dereferenceable(80) readonly %
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[COUNTED_CMP:%.*]] = icmp eq i64 [[IV_NEXT]], 20
 ; CHECK-NEXT:    [[COMBINED_COND:%.*]] = select i1 [[EE_CMP]], i1 true, i1 [[COUNTED_CMP]]
-; CHECK-NEXT:    br i1 [[COMBINED_COND]], label %[[EXIT:.*]], label %[[FOR_BODY1]]
+; CHECK-NEXT:    br i1 [[COMBINED_COND]], label %[[EXIT]], label %[[FOR_BODY1]], !llvm.loop [[LOOP13:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;

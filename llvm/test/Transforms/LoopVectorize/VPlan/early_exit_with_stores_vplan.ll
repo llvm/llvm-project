@@ -270,6 +270,76 @@ exit:
 }
 
 define void @combined_exit_conditions(ptr align 4 dereferenceable(80) readonly %src, ptr align 4 dereferenceable(80) noalias %dst, ptr align 4 dereferenceable(80) readonly %pred) {
+; CHECK-LABEL: VPlan for loop in 'combined_exit_conditions'
+; CHECK:  VPlan 'Initial VPlan for VF={4},UF>=1' {
+; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
+; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
+; CHECK-NEXT:  Live-in vp<[[VP2:%[0-9]+]]> = vector-trip-count
+; CHECK-NEXT:  Live-in ir<20> = original trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<entry>:
+; CHECK-NEXT:  Successor(s): scalar.ph, vector.ph
+; CHECK-EMPTY:
+; CHECK-NEXT:  vector.ph:
+; CHECK-NEXT:  Successor(s): vector loop
+; CHECK-EMPTY:
+; CHECK-NEXT:  <x1> vector loop: {
+; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = CANONICAL-IV
+; CHECK-EMPTY:
+; CHECK-NEXT:    vector.body:
+; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
+; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
+; CHECK-NEXT:      CLONE ir<%ee.ptr> = getelementptr inbounds nuw ir<%pred>, vp<[[VP4]]>
+; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds nuw ir<%ee.ptr>, ir<1>
+; CHECK-NEXT:      WIDEN ir<%ee.val> = load vp<[[VP5]]>
+; CHECK-NEXT:      WIDEN ir<%ee.cmp> = icmp ne ir<%ee.val>, ir<0>
+; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = first-active-lane ir<%ee.cmp>
+; CHECK-NEXT:      EMIT vp<%uncountable.exit.mask> = active lane mask ir<0>, vp<[[VP6]]>, ir<1>
+; CHECK-NEXT:      CLONE ir<%src.ptr> = getelementptr ir<%src>, vp<[[VP4]]>
+; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = vector-pointer ir<%src.ptr>, ir<1>
+; CHECK-NEXT:      WIDEN ir<%data> = load vp<[[VP7]]>, vp<%uncountable.exit.mask>
+; CHECK-NEXT:      WIDEN ir<%add> = add nsw ir<%data>, ir<1>
+; CHECK-NEXT:      CLONE ir<%dst.ptr> = getelementptr ir<%dst>, vp<[[VP4]]>
+; CHECK-NEXT:      vp<[[VP8:%[0-9]+]]> = vector-pointer ir<%dst.ptr>, ir<1>
+; CHECK-NEXT:      WIDEN store vp<[[VP8]]>, ir<%add>, vp<%uncountable.exit.mask>
+; CHECK-NEXT:      EMIT vp<[[VP9:%[0-9]+]]> = any-of ir<%ee.cmp>
+; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
+; CHECK-NEXT:      EMIT vp<[[VP10:%[0-9]+]]> = icmp eq vp<%index.next>, vp<[[VP2]]>
+; CHECK-NEXT:      EMIT branch-on-two-conds vp<[[VP9]]>, vp<[[VP10]]>
+; CHECK-NEXT:    No successors
+; CHECK-NEXT:  }
+; CHECK-NEXT:  Successor(s): middle.block, middle.block
+; CHECK-EMPTY:
+; CHECK-NEXT:  middle.block:
+; CHECK-NEXT:    EMIT vp<[[VP12:%[0-9]+]]> = extract-lane ir<0>, ir<%iv>
+; CHECK-NEXT:    EMIT vp<[[VP13:%[0-9]+]]> = add vp<[[VP12]]>, vp<[[VP6]]>
+; CHECK-NEXT:    EMIT vp<[[VP14:%[0-9]+]]> = icmp eq vp<[[VP13]]>, ir<20>
+; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP14]]>
+; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<exit>:
+; CHECK-NEXT:  No successors
+; CHECK-EMPTY:
+; CHECK-NEXT:  scalar.ph:
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP13]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT:  Successor(s): ir-bb<for.body>
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<for.body>:
+; CHECK-NEXT:    IR   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ] (extra operand: vp<%bc.resume.val> from scalar.ph)
+; CHECK-NEXT:    IR   %src.ptr = getelementptr inbounds nuw [4 x i8], ptr %src, i64 %iv
+; CHECK-NEXT:    IR   %data = load i32, ptr %src.ptr, align 4
+; CHECK-NEXT:    IR   %add = add nsw i32 %data, 1
+; CHECK-NEXT:    IR   %dst.ptr = getelementptr inbounds nuw [4 x i8], ptr %dst, i64 %iv
+; CHECK-NEXT:    IR   store i32 %add, ptr %dst.ptr, align 4
+; CHECK-NEXT:    IR   %ee.ptr = getelementptr inbounds nuw [4 x i8], ptr %pred, i64 %iv
+; CHECK-NEXT:    IR   %ee.val = load i32, ptr %ee.ptr, align 4
+; CHECK-NEXT:    IR   %ee.cmp = icmp ne i32 %ee.val, 0
+; CHECK-NEXT:    IR   %iv.next = add nuw nsw i64 %iv, 1
+; CHECK-NEXT:    IR   %counted.cmp = icmp eq i64 %iv.next, 20
+; CHECK-NEXT:    IR   %combined.cond = select i1 %ee.cmp, i1 true, i1 %counted.cmp
+; CHECK-NEXT:  No successors
+; CHECK-NEXT:  }
+;
 entry:
   br label %for.body
 

@@ -2706,6 +2706,27 @@ void LoopVectorizationCostModel::collectLoopUniforms(ElementCount VF) {
     if (Legal->hasUncountableEarlyExit() && TheLoop->getLoopLatch() != E)
       continue;
     auto *Cmp = dyn_cast<Instruction>(E->getTerminator()->getOperand(0));
+    // TODO: This might occur for a multi-exit readonly loop too?
+    //       Excluded for now in LVL.
+    // TODO: Do we have the main IV available somewhere? this feels a little
+    //       fragile.
+    // If we have an exit condition that is actually two conditions combined
+    // via an or, only add the countable comparison as a uniform value.
+    if (Legal->hasUncountableExitWithSideEffects() &&
+        TheLoop->getLoopLatch() == E) {
+      Value *Uncounted, *Counted, *IV;
+      using namespace llvm::PatternMatch;
+      if (match(Cmp,
+                m_c_LogicalOr(
+                    m_Value(Uncounted, m_Cmp(m_Load(m_Value()), m_Value())),
+                    m_Value(Counted, m_Cmp(m_Add(m_Value(IV), m_Value()),
+                                           m_Value()))))) {
+        if (isa<PHINode>(IV)) {
+          AddToWorklistIfAllowed(cast<Instruction>(Counted));
+          continue;
+        }
+      }
+    }
     if (Cmp && TheLoop->contains(Cmp) && Cmp->hasOneUse())
       AddToWorklistIfAllowed(Cmp);
   }
