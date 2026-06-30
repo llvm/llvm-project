@@ -9,7 +9,7 @@ hitcounts) to descriptions of expected state in a DexterScript."""
 
 from dataclasses import dataclass, field
 import os
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from dex.dextIR import FrameIR, StepIR
 from dex.test_script import DexterScript, Scope
@@ -29,9 +29,13 @@ def match_where_to_frame(
     where: Where,
     frame: FrameIR,
     labels: FileLabels,
+    default_path: Optional[str] = None,
 ) -> bool:
     """A very simple matcher, returns True iff `where` matches `frame`."""
-    if where.file is not None and not is_subpath(where.file, frame.loc.path):
+    file = where.file
+    if not file and where.lines and not where.function:
+        file = default_path
+    if file is not None and not is_subpath(file, frame.loc.path):
         return False
     if where.function is not None:
         fn = frame.function
@@ -100,7 +104,7 @@ def get_active_where_matches(
         matching_frame_idx = None
         for frame_idx, frame in reversed(list(enumerate(step_info.frames))):
             labels = script.get_labels(expected_file or frame.loc.path)
-            if match_where_to_frame(where, frame, labels):
+            if match_where_to_frame(where, frame, labels, script.root_scope.file):
                 matching_frame_idx = frame_idx
                 break
 
