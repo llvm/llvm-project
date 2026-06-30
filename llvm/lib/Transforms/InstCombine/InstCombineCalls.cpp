@@ -700,6 +700,21 @@ static Instruction *foldCtpop(IntrinsicInst &II, InstCombinerImpl &IC) {
   KnownBits Known(BitWidth);
   IC.computeKnownBits(Op0, Known, &II);
 
+  // If the upper bits are known zero, narrow to the smallest
+  // power-of-2 type that fits the active bits.
+  // ctpop(x) --> zext(ctpop(trunc(x)))
+  unsigned ActiveBits = BitWidth - Known.countMinLeadingZeros();
+  if (ActiveBits > 0) {
+    unsigned NewWidth = llvm::bit_ceil(ActiveBits);
+    if (NewWidth < BitWidth) {
+      Type *NarrowTy = Ty->getWithNewBitWidth(NewWidth);
+      Value *Trunc = IC.Builder.CreateTrunc(Op0, NarrowTy);
+      Value *NarrowPop =
+          IC.Builder.CreateUnaryIntrinsic(Intrinsic::ctpop, Trunc);
+      return CastInst::Create(Instruction::ZExt, NarrowPop, Ty);
+    }
+  }
+
   // If all bits are zero except for exactly one fixed bit, then the result
   // must be 0 or 1, and we can get that answer by shifting to LSB:
   // ctpop (X & 32) --> (X & 32) >> 5
