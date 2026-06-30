@@ -3857,6 +3857,24 @@ void ModuleBitcodeWriter::writeFunction(
           Vals.clear();
           LastDL = DL;
         }
+
+        // Emit a second DEBUG_LOC record for the intermediate location
+        // (e.g., TileIR). The 8th field carries the kind MDString ID
+        // using 1-based indexing (via getMetadataOrNullID) so the reader
+        // can distinguish it from a regular DEBUG_LOC.
+        if (DILocation *IntDL = I.getDebugLoc().getIntermediateLoc()) {
+          Vals.push_back(IntDL->getLine());
+          Vals.push_back(IntDL->getColumn());
+          Vals.push_back(VE.getMetadataOrNullID(IntDL->getScope()));
+          Vals.push_back(VE.getMetadataOrNullID(IntDL->getInlinedAt()));
+          Vals.push_back(IntDL->isImplicitCode());
+          Vals.push_back(IntDL->getAtomGroup());
+          Vals.push_back(IntDL->getAtomRank());
+          Vals.push_back(
+              VE.getMetadataOrNullID(I.getDebugLoc().getIntermediateLocKind()));
+          Stream.EmitRecord(bitc::FUNC_CODE_DEBUG_LOC, Vals);
+          Vals.clear();
+        }
       }
 
       // If the instruction has DbgRecords attached to it, emit them. Note that

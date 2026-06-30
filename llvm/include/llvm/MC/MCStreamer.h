@@ -919,8 +919,8 @@ public:
   virtual void emitDwarfLocDirective(unsigned FileNo, unsigned Line,
                                      unsigned Column, unsigned Flags,
                                      unsigned Isa, unsigned Discriminator,
-                                     StringRef FileName,
-                                     StringRef Comment = {});
+                                     StringRef FileName, StringRef Comment = {},
+                                     StringRef LocOpcode = ".loc");
 
   /// This is same as emitDwarfLocDirective, except it has the capability to
   /// add inlined_at information.

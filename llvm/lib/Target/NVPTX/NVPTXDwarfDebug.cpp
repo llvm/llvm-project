@@ -19,11 +19,14 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/MD5.h"
 #include "llvm/Support/NVPTXAddrSpace.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
@@ -188,6 +191,112 @@ void NVPTXDwarfDebug::recordTargetSourceLine(const DebugLoc &DL,
     if (EnhancedLineinfo)
       EmittedInlinedAtLocs.insert(Current);
   }
+
+  recordIntermediateLoc(DL, Flags);
+}
+
+SmallString<32>
+NVPTXDwarfDebug::getIntermediateLocBasename(StringRef IRFileName) {
+  auto It = IntermediateFilenameMD5Cache.find(IRFileName);
+  if (It != IntermediateFilenameMD5Cache.end())
+    return It->second;
+  MD5 Hash;
+  Hash.update(IRFileName);
+  SmallString<32> Result = Hash.final().digest();
+  IntermediateFilenameMD5Cache[IRFileName] = Result;
+  return Result;
+}
+
+void NVPTXDwarfDebug::recordIntermediateLoc(const DebugLoc &DL,
+                                            unsigned Flags) {
+  MDNode *LocMD = DL.getAsMDNode();
+  if (!LocMD || isa<DILocation>(LocMD))
+    return;
+  auto *Tuple = dyn_cast<MDTuple>(LocMD);
+  if (!Tuple)
+    return;
+  // Extract intermediate DILocations from inner !{kind, loc} sub-tuples and
+  // emit secondary .loc_intermediate DWARF directives for each one.
+  const unsigned CUID = Asm->OutStreamer->getContext().getDwarfCompileUnitID();
+  for (const MDOperand &Op : Tuple->operands()) {
+    if (isa_and_nonnull<DILocation>(Op.get()))
+      continue;
+    auto *InnerTuple = dyn_cast_or_null<MDTuple>(Op.get());
+    if (!InnerTuple || InnerTuple->getNumOperands() < 2)
+      continue;
+    auto *IntLoc =
+        dyn_cast_or_null<DILocation>(InnerTuple->getOperand(1).get());
+    if (!IntLoc)
+      continue;
+    const DIScope *Scope = IntLoc->getScope();
+    if (!Scope)
+      continue;
+    const unsigned Line = IntLoc->getLine();
+    const DIFile *OrigFile = Scope->getFile();
+    if (!Line || !OrigFile)
+      continue;
+    const SmallString<32> SecondaryFilename =
+        getIntermediateLocBasename(OrigFile->getFilename());
+    DIFile *SecondaryFile = DIFile::get(Scope->getContext(), SecondaryFilename,
+                                        OrigFile->getDirectory());
+    const unsigned FileNo = static_cast<DwarfCompileUnit &>(*getUnits()[CUID])
+                                .getOrCreateSourceID(SecondaryFile);
+    const unsigned Col = IntLoc->getColumn();
+    unsigned Discriminator = 0;
+    if (const auto *LBF = dyn_cast<DILexicalBlockFile>(Scope))
+      Discriminator = LBF->getDiscriminator();
+    Asm->OutStreamer->emitDwarfLocDirective(
+        FileNo, Line, Col, Flags, 0, Discriminator,
+        Scope->getFile()->getFilename(), "", ".loc_intermediate");
+    FileToFileNum[OrigFile] = FileNo;
+  }
+}
+
+std::string NVPTXDwarfDebug::buildIntermediateSourceSection(Module &M) {
+  NamedMDNode *IntermediateSrc =
+      M.getNamedMetadata("llvm.intermediate_level_source");
+  if (!IntermediateSrc || IntermediateSrc->getNumOperands() == 0)
+    return {};
+
+  // Build the body first so we can suppress the section header/footer when
+  // no entry produced a .code_block (e.g. all entries are malformed or none
+  // match a recorded intermediate file). Emitting an empty
+  // .nv_intermediate_source_section { } would otherwise add a useless stub
+  // to the PTX output.
+  std::string Body;
+  raw_string_ostream BodyOS(Body);
+
+  for (MDNode *Node : IntermediateSrc->operands()) {
+    if (Node->getNumOperands() < 3)
+      continue;
+
+    auto *IRName = dyn_cast_or_null<MDString>(Node->getOperand(0));
+    auto *IRFile = dyn_cast_or_null<DIFile>(Node->getOperand(1));
+    auto *SourceCode = dyn_cast_or_null<MDString>(Node->getOperand(2));
+    if (!IRName || !IRFile || !SourceCode)
+      continue;
+
+    auto It = FileToFileNum.find(IRFile);
+    unsigned FileNum = 0;
+    if (It != FileToFileNum.end())
+      FileNum = It->second;
+    if (!FileNum)
+      continue;
+
+    BodyOS << "  .code_block {\n";
+    BodyOS << "    .ir_name: \"" << IRName->getString() << "\"\n";
+    BodyOS << "    .sourceFileName: " << FileNum << "\n";
+    BodyOS << "    .source: <<< " << SourceCode->getString() << " >>>\n";
+    BodyOS << "  }\n";
+  }
+
+  if (Body.empty())
+    return {};
+
+  std::string Buf;
+  raw_string_ostream OS(Buf);
+  OS << ".nv_intermediate_source_section {\n" << Body << "}";
+  return Buf;
 }
 
 /// NVPTX-specific debug info initialization.

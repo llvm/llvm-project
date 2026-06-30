@@ -308,7 +308,8 @@ public:
   void emitDwarfLocDirective(unsigned FileNo, unsigned Line, unsigned Column,
                              unsigned Flags, unsigned Isa,
                              unsigned Discriminator, StringRef FileName,
-                             StringRef Location = {}) override;
+                             StringRef Location = {},
+                             StringRef LocOpcode = ".loc") override;
   void emitDwarfLocLabelDirective(SMLoc Loc, StringRef Name) override;
 
   /// This is same as emitDwarfLocDirective, except also emits inlined function
@@ -1784,8 +1785,8 @@ void MCAsmStreamer::emitDwarfLocDirectiveSuffix(unsigned FileNo, unsigned Line,
 void MCAsmStreamer::emitDwarfLocDirective(unsigned FileNo, unsigned Line,
                                           unsigned Column, unsigned Flags,
                                           unsigned Isa, unsigned Discriminator,
-                                          StringRef FileName,
-                                          StringRef Comment) {
+                                          StringRef FileName, StringRef Comment,
+                                          StringRef LocOpcode) {
   // If target doesn't support .loc/.file directive, we need to record the lines
   // same way like we do in object mode.
   if (MAI->isAIX()) {
@@ -1798,7 +1799,7 @@ void MCAsmStreamer::emitDwarfLocDirective(unsigned FileNo, unsigned Line,
   }
 
   // Emit the basic .loc directive.
-  OS << "\t.loc\t" << FileNo << " " << Line << " " << Column;
+  OS << "\t" << LocOpcode << "\t" << FileNo << " " << Line << " " << Column;
 
   // Emit common suffix (flags, comment, EOL, parent call).
   emitDwarfLocDirectiveSuffix(FileNo, Line, Column, Flags, Isa, Discriminator,

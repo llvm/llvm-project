@@ -542,6 +542,13 @@ public:
   /// Set the debug location information for this instruction.
   void setDebugLoc(DebugLoc Loc) { DbgLoc = std::move(Loc).getCopied(); }
 
+  /// Append an intermediate debug location to the current debug location.
+  /// Requires that a DILocation is already present; it becomes the first
+  /// operand of the resulting MDTuple. If Loc is a plain DILocation, wraps it
+  /// in a new MDTuple alongside IntermediateLoc. If Loc is already an MDTuple,
+  /// appends IntermediateLoc.
+  LLVM_ABI void appendIntermediateDebugLoc(MDNode *IntermediateLoc);
+
   /// Return the debug location for this node as a DebugLoc.
   const DebugLoc &getDebugLoc() const { return DbgLoc; }
 

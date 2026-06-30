@@ -36,9 +36,36 @@ void DbgLocOrigin::addTrace() {
 }
 #endif // LLVM_ENABLE_DEBUGLOC_TRACKING_ORIGIN
 
+#if LLVM_ENABLE_DEBUGLOC_TRACKING_COVERAGE
+// Out-of-line: the DILocation*->MDNode* upcast needs the complete DILocation
+// type (available here via DebugInfo.h), which is not visible against the
+// forward declaration in DebugLoc.h. Storing MDNode* keeps tuple-shaped
+// (intermediate-location) nodes representable.
+DILocAndCoverageTracking::DILocAndCoverageTracking(const DILocation *L)
+    : DbgLocOrigin(!L),
+      Loc(const_cast<MDNode *>(static_cast<const MDNode *>(L))),
+      Kind(DebugLocKind::Normal) {}
+#endif // LLVM_ENABLE_DEBUGLOC_TRACKING_COVERAGE
+
 //===----------------------------------------------------------------------===//
 // DebugLoc Implementation
 //===----------------------------------------------------------------------===//
+DebugLoc::DebugLoc(const DILocation *L) : Loc(const_cast<DILocation *>(L)) {}
+DebugLoc::DebugLoc(const MDNode *L) : Loc(const_cast<MDNode *>(L)) {}
+
+// Unwrap the stored node to the primary DILocation: a bare DILocation is
+// returned directly (hot path), while an intermediate-location MDTuple
+// !{ DILocation, !{ MDString, DILocation } } yields operand 0.
+DILocation *DebugLoc::get() const {
+  MDNode *MD = Loc;
+  if (!MD)
+    return nullptr;
+  if (auto *DI = dyn_cast<DILocation>(MD))
+    return DI;
+  if (auto *Tuple = dyn_cast<MDTuple>(MD))
+    return dyn_cast<DILocation>(Tuple->getOperand(0));
+  return nullptr;
+}
 
 unsigned DebugLoc::getLine() const {
   assert(get() && "Expected valid DebugLoc");
@@ -60,8 +87,75 @@ DILocation *DebugLoc::getInlinedAt() const {
   return get()->getInlinedAt();
 }
 
+//===----------------------------------------------------------------------===//
+// Intermediate Location Accessors
+//===----------------------------------------------------------------------===//
+
+DILocation *DebugLoc::getIntermediateLoc() const {
+  auto *Tuple = dyn_cast_or_null<MDTuple>(Loc);
+  if (!Tuple)
+    return nullptr;
+  // Tuple layout: !{DILocation, !{MDString kind, DILocation intermediateLoc}}
+  // Skip bare DILocation operands; find the inner !{kind, loc} sub-tuple and
+  // extract operand 1 (the intermediate DILocation).
+  for (const MDOperand &Op : Tuple->operands()) {
+    auto *Node = dyn_cast_or_null<MDNode>(Op.get());
+    if (!Node || isa<DILocation>(Node))
+      continue;
+    if (Node->getNumOperands() >= 2)
+      return dyn_cast_or_null<DILocation>(Node->getOperand(1));
+  }
+  return nullptr;
+}
+
+MDString *DebugLoc::getIntermediateLocKind() const {
+  auto *Tuple = dyn_cast_or_null<MDTuple>(Loc);
+  if (!Tuple)
+    return nullptr;
+  // Tuple layout: !{DILocation, !{MDString kind, DILocation intermediateLoc}}
+  // Skip bare DILocation operands; find the inner !{kind, loc} sub-tuple and
+  // extract operand 0 (the MDString describing the intermediate location kind).
+  for (const MDOperand &Op : Tuple->operands()) {
+    auto *Node = dyn_cast_or_null<MDNode>(Op.get());
+    if (!Node || isa<DILocation>(Node))
+      continue;
+    if (Node->getNumOperands() >= 1)
+      return dyn_cast_or_null<MDString>(Node->getOperand(0));
+  }
+  return nullptr;
+}
+
+LLVMContext *DebugLoc::getIntermediateLocContext() const {
+  auto *Tuple = dyn_cast_or_null<MDTuple>(Loc);
+  return Tuple ? &Tuple->getContext() : nullptr;
+}
+
+DebugLoc DebugLoc::getWithoutAtom() const {
+  DILocation *Primary = get();
+  if (!Primary)
+    return *this;
+  auto *PrimaryNoAtom = const_cast<DILocation *>(Primary->getWithoutAtom());
+  // No intermediate? Return the bare primary (no MDTuple wrapper needed).
+  DILocation *IntLoc = getIntermediateLoc();
+  if (!IntLoc)
+    return DebugLoc(PrimaryNoAtom);
+  // Preserve the intermediate by rebuilding the MDTuple wrapper around the
+  // atom-stripped primary.
+  MDString *IntKind = getIntermediateLocKind();
+  LLVMContext *IntCtx = getIntermediateLocContext();
+  assert(IntKind && IntCtx &&
+         "MDTuple-shaped DebugLoc must have an intermediate-loc kind string "
+         "and a context");
+  auto *IntMD = MDTuple::get(*IntCtx, {IntKind, IntLoc});
+  return DebugLoc(MDTuple::get(*IntCtx, {PrimaryNoAtom, IntMD}));
+}
+
 MDNode *DebugLoc::getInlinedAtScope() const {
-  return cast<DILocation>(Loc)->getInlinedAtScope();
+  // Route through get() so a tuple-shaped (intermediate-location) DebugLoc is
+  // unwrapped to its primary DILocation first; cast<DILocation>(Loc) would
+  // assert on an MDTuple.
+  DILocation *DL = get();
+  return DL ? DL->getInlinedAtScope() : nullptr;
 }
 
 DebugLoc DebugLoc::getFnDebugLoc() const {
@@ -183,27 +277,93 @@ DebugLoc DebugLoc::getMergedLocation(DebugLoc LocA, DebugLoc LocB) {
       return LocA;
     return LocB;
   }
-  return DILocation::getMergedLocation(LocA, LocB);
+
+  // Merge the primary source locations.
+  DILocation *MergedSourceLoc = DILocation::getMergedLocation(LocA, LocB);
+
+  // Merge the intermediate locations if both exist.
+  DILocation *MergedIntermediateLoc = nullptr;
+  DILocation *IntA = LocA.getIntermediateLoc();
+  DILocation *IntB = LocB.getIntermediateLoc();
+  MDString *IntKind = nullptr;
+  LLVMContext *IntCtx = nullptr;
+  if (IntA && IntB) {
+    MergedIntermediateLoc = DILocation::getMergedLocation(IntA, IntB);
+    IntKind = LocA.getIntermediateLocKind();
+    IntCtx = LocA.getIntermediateLocContext();
+  } else if (IntA) {
+    MergedIntermediateLoc = IntA;
+    IntKind = LocA.getIntermediateLocKind();
+    IntCtx = LocA.getIntermediateLocContext();
+  } else if (IntB) {
+    MergedIntermediateLoc = IntB;
+    IntKind = LocB.getIntermediateLocKind();
+    IntCtx = LocB.getIntermediateLocContext();
+  }
+
+  if (MergedIntermediateLoc && IntCtx) {
+    auto *IntMD = MDTuple::get(*IntCtx, {IntKind, MergedIntermediateLoc});
+    return DebugLoc(MDTuple::get(*IntCtx, {MergedSourceLoc, IntMD}));
+  }
+  return MergedSourceLoc;
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void DebugLoc::dump() const { print(dbgs()); }
 #endif
 
+static void printDILocation(raw_ostream &OS, const DILocation *DI) {
+  auto *Scope = cast<DIScope>(DI->getScope());
+  OS << Scope->getFilename();
+  OS << ':' << DI->getLine();
+  if (DI->getColumn() != 0)
+    OS << ':' << DI->getColumn();
+
+  if (DebugLoc InlinedAtDL = DI->getInlinedAt()) {
+    OS << " @[ ";
+    InlinedAtDL.print(OS);
+    OS << " ]";
+  }
+}
+
 void DebugLoc::print(raw_ostream &OS) const {
   if (!Loc)
     return;
 
   // Print source line info.
-  auto *Scope = cast<DIScope>(getScope());
-  OS << Scope->getFilename();
-  OS << ':' << getLine();
-  if (getCol() != 0)
-    OS << ':' << getCol();
+  MDNode *MD = Loc;
 
-  if (DebugLoc InlinedAtDL = getInlinedAt()) {
-    OS << " @[ ";
-    InlinedAtDL.print(OS);
-    OS << " ]";
+  // Tuple layout: !{DILocation, !{MDString kind, DILocation intermediateLoc}}
+  // Walk each operand: print bare DILocations directly, and for inner
+  // sub-tuples print the kind string followed by the intermediate DILocation.
+  if (auto *Tuple = dyn_cast<MDTuple>(MD)) {
+    bool First = true;
+    for (const MDOperand &Op : Tuple->operands()) {
+      if (auto *DI = dyn_cast_or_null<DILocation>(Op.get())) {
+        if (!First)
+          OS << ", ";
+        First = false;
+        printDILocation(OS, DI);
+      } else if (auto *InnerTuple = dyn_cast_or_null<MDTuple>(Op.get())) {
+        if (InnerTuple->getNumOperands() >= 2) {
+          auto *Str =
+              dyn_cast_or_null<MDString>(InnerTuple->getOperand(0).get());
+          auto *DI =
+              dyn_cast_or_null<DILocation>(InnerTuple->getOperand(1).get());
+          if (Str && DI) {
+            if (!First)
+              OS << ", ";
+            First = false;
+            OS << Str->getString() << ": ";
+            printDILocation(OS, DI);
+          }
+        }
+      }
+    }
+    return;
+  }
+
+  if (auto *DI = dyn_cast<DILocation>(MD)) {
+    printDILocation(OS, DI);
   }
 }
