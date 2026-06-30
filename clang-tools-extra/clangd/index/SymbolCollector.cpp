@@ -725,11 +725,6 @@ bool SymbolCollector::handleDeclOccurrence(
     BasicSymbol = addDeclaration(*ND, std::move(ID), IsMainFileOnly);
     SkipDocCheckInDef = true;
   }
-  if (ND != OriginalDecl &&
-      BasicSymbol->Flags & Symbol::IndexedForCodeCompletion &&
-      isLikelyMissingParameterName(BasicSymbol->Signature)) {
-    getNewSignature(*BasicSymbol, *OriginalDecl);
-  }
 
   if (Roles & static_cast<unsigned>(index::SymbolRole::Definition))
     addDefinition(*OriginalDecl, *BasicSymbol, SkipDocCheckInDef);
@@ -1068,23 +1063,6 @@ void SymbolCollector::finish() {
   IncludeFiles.clear();
   SymbolProviders.clear();
   FilesWithObjCConstructs.clear();
-}
-
-void SymbolCollector::getNewSignature(const Symbol &OldSymbol,
-                                         const NamedDecl &ND) {
-  CodeCompletionResult SymbolCompletion(&getTemplateOrThis(ND), 0);
-  const auto *CCS = SymbolCompletion.CreateCodeCompletionString(
-      *ASTCtx, *PP, CodeCompletionContext::CCC_Symbol, *CompletionAllocator,
-      *CompletionTUInfo,
-      /*IncludeBriefComments*/ false);
-  std::string Signature;
-  std::string SnippetSuffix;
-  getSignature(*CCS, &Signature, &SnippetSuffix, SymbolCompletion.Kind,
-               SymbolCompletion.CursorKind);
-  Symbol UpdatedSymbol = OldSymbol;
-  UpdatedSymbol.Signature = Signature;
-  UpdatedSymbol.CompletionSnippetSuffix = SnippetSuffix;
-  Symbols.insert(UpdatedSymbol);
 }
 
 const Symbol *SymbolCollector::addDeclaration(const NamedDecl &ND, SymbolID ID,

@@ -160,17 +160,6 @@ std::string getDeclComment(const ASTContext &Ctx, const NamedDecl &Decl) {
   return Doc;
 }
 
-bool isLikelyMissingParameterName(llvm::StringRef Signature) {
-  size_t LPara = Signature.find('(');
-  size_t Space = Signature.find(' ', LPara);
-  size_t RightEnd = Signature.find(',', LPara);
-  if (Signature.npos == RightEnd)
-    RightEnd = Signature.find(')', Space);
-  if (LPara < Space && Space < RightEnd)
-    return false;
-  return true;
-}
-
 void getSignature(const CodeCompletionString &CCS, std::string *Signature,
                   std::string *Snippet,
                   CodeCompletionResult::ResultKind ResultKind,

@@ -165,8 +165,6 @@ private:
   SmallVector<const CXXConstructorDecl *, 1>
   findIndirectConstructors(const Decl *D);
 
-  void getNewSignature(const Symbol &OldSymbol, const NamedDecl &ND);
-
   const Symbol *addDeclaration(const NamedDecl &, SymbolID,
                                bool IsMainFileSymbol);
   void addDefinition(const NamedDecl &, const Symbol &DeclSymbol,
