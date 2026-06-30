@@ -20310,7 +20310,7 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
       if (randstruct::randomizeStructureLayout(Context, Record,
                                                NewDeclOrdering))
         Record->reorderDecls(NewDeclOrdering);
-      }
+    }
 
     // We may have deferred checking for a deleted destructor. Check now.
     if (CXXRecord) {
