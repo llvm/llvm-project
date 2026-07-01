@@ -9881,12 +9881,11 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       if (Kind == Action::OFK_SYCL) {
         if (Arg *A = ToolChainArgs.getLastArg(OPT_fsycl_device_code_split_EQ)) {
           StringRef Mode = A->getValue();
-          StringRef SplitMode =
-              llvm::StringSwitch<StringRef>(Mode)
-                  .Case("per_kernel", "kernel")
-                  .Case("per_source", "source")
-                  .Case("off", "none")
-                  .Default("");
+          StringRef SplitMode = llvm::StringSwitch<StringRef>(Mode)
+                                    .Case("per_kernel", "kernel")
+                                    .Case("per_source", "source")
+                                    .Case("off", "none")
+                                    .Default("");
           if (SplitMode.empty())
             C.getDriver().Diag(clang::diag::err_drv_invalid_value)
                 << A->getSpelling() << Mode;
