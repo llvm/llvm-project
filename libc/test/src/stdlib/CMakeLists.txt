@@ -388,6 +388,7 @@ add_libc_test(
     libc.hdr.types.size_t
     libc.src.__support.CPP.string
     libc.src.__support.macros.config
+    libc.src.__support.OSUtil.path
     libc.src.stdlib.realpath
     libc.test.UnitTest.ErrnoCheckingTest
 )

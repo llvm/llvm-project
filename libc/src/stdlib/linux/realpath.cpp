@@ -140,10 +140,10 @@ cpp::optional<Error> resolve_path(PendingPath &pending_path,
                                   ResolvedPath &resolved_path) {
   while (!pending_path.empty()) {
     cpp::string_view component = pending_path.advance_component();
-    if (component.empty() || component == ".")
+    if (component.empty() || component == path::CURRENT_DIR_COMPONENT)
       continue;
 
-    if (component == "..") {
+    if (component == path::PARENT_DIR_COMPONENT) {
       resolved_path.set_to_parent();
       continue;
     }

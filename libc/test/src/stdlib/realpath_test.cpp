@@ -15,12 +15,19 @@
 #include "hdr/limits_macros.h"
 #include "hdr/types/size_t.h"
 #include "src/__support/CPP/string.h"
+#include "src/__support/OSUtil/path.h"
 #include "src/__support/macros/config.h"
 #include "src/stdlib/realpath.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 
-using LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 namespace cpp = LIBC_NAMESPACE::cpp;
+namespace path = LIBC_NAMESPACE::path;
+using LIBC_NAMESPACE::testing::ErrnoCheckingTest;
+
+// This test assumes the following values, so fail early if they mismatch.
+static_assert(path::SEPARATOR == '/');
+static_assert(path::CURRENT_DIR_COMPONENT == ".");
+static_assert(path::PARENT_DIR_COMPONENT == "..");
 
 class LlvmLibcRealpathTest : public LIBC_NAMESPACE::testing::ErrnoCheckingTest {
 public:

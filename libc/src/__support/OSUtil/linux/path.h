@@ -23,6 +23,12 @@ namespace path {
 // Separator character for linux paths.
 constexpr char SEPARATOR = '/';
 
+// Component pointing to the current directory.
+constexpr cpp::string_view CURRENT_DIR_COMPONENT = ".";
+
+// Component pointing to the parent directory.
+constexpr cpp::string_view PARENT_DIR_COMPONENT = "..";
+
 // Whether `path` is absolute.
 LIBC_INLINE constexpr bool is_absolute(cpp::string_view path) {
   return path.starts_with(SEPARATOR);
