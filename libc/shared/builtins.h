@@ -20,6 +20,7 @@
 #include "builtins/adddf3.h"
 #include "builtins/addtf3.h"
 #include "builtins/divtf3.h"
+#include "builtins/muldf3.h"
 #include "builtins/multf3.h"
 #include "builtins/subdf3.h"
 #include "builtins/subtf3.h"
