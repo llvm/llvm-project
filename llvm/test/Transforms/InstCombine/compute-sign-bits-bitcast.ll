@@ -59,3 +59,151 @@ define <4 x i8> @test_non_sign_extended(i32 %val) {
   %sra = ashr <4 x i8> %bc, <i8 1, i8 1, i8 1, i8 1>
   ret <4 x i8> %sra
 }
+
+; Case 5: bitcast+ashr+shuffle+bitcast sign-extension idiom (pre-AVX512
+; emulation of wide-element vector ashr). See issue #125189.
+define <2 x i64> @test_bitcast_shuffle_ashr_sign_extend(<2 x i64> %x) {
+; CHECK-LABEL: define <2 x i64> @test_bitcast_shuffle_ashr_sign_extend(
+; CHECK-SAME: <2 x i64> [[X:%.*]]) {
+; CHECK-NEXT:    [[WIDE:%.*]] = ashr <2 x i64> [[X]], splat (i64 63)
+; CHECK-NEXT:    ret <2 x i64> [[WIDE]]
+;
+  %narrow = bitcast <2 x i64> %x to <4 x i32>
+  %shifted = ashr <4 x i32> %narrow, <i32 0, i32 31, i32 0, i32 31>
+  %shuf = shufflevector <4 x i32> %shifted, <4 x i32> poison, <4 x i32> <i32 1, i32 1, i32 3, i32 3>
+  %wide = bitcast <4 x i32> %shuf to <2 x i64>
+  ret <2 x i64> %wide
+}
+
+; Case 6: same idiom at AVX2 width (<4 x i64> via <8 x i32>)
+define <4 x i64> @test_bitcast_shuffle_ashr_sign_extend_v4i64(<4 x i64> %x) {
+; CHECK-LABEL: define <4 x i64> @test_bitcast_shuffle_ashr_sign_extend_v4i64(
+; CHECK-SAME: <4 x i64> [[X:%.*]]) {
+; CHECK-NEXT:    [[WIDE:%.*]] = ashr <4 x i64> [[X]], splat (i64 63)
+; CHECK-NEXT:    ret <4 x i64> [[WIDE]]
+;
+  %narrow = bitcast <4 x i64> %x to <8 x i32>
+  %shifted = ashr <8 x i32> %narrow, <i32 0, i32 31, i32 0, i32 31, i32 0, i32 31, i32 0, i32 31>
+  %shuf = shufflevector <8 x i32> %shifted, <8 x i32> poison, <8 x i32> <i32 1, i32 1, i32 3, i32 3, i32 5, i32 5, i32 7, i32 7>
+  %wide = bitcast <8 x i32> %shuf to <4 x i64>
+  ret <4 x i64> %wide
+}
+
+; Case 7: same idiom at narrower width (<4 x i32> via <8 x i16>)
+define <4 x i32> @test_bitcast_shuffle_ashr_sign_extend_v4i32(<4 x i32> %x) {
+; CHECK-LABEL: define <4 x i32> @test_bitcast_shuffle_ashr_sign_extend_v4i32(
+; CHECK-SAME: <4 x i32> [[X:%.*]]) {
+; CHECK-NEXT:    [[WIDE:%.*]] = ashr <4 x i32> [[X]], splat (i32 31)
+; CHECK-NEXT:    ret <4 x i32> [[WIDE]]
+;
+  %narrow = bitcast <4 x i32> %x to <8 x i16>
+  %shifted = ashr <8 x i16> %narrow, <i16 0, i16 15, i16 0, i16 15, i16 0, i16 15, i16 0, i16 15>
+  %shuf = shufflevector <8 x i16> %shifted, <8 x i16> poison, <8 x i32> <i32 1, i32 1, i32 3, i32 3, i32 5, i32 5, i32 7, i32 7>
+  %wide = bitcast <8 x i16> %shuf to <4 x i32>
+  ret <4 x i32> %wide
+}
+
+; (Negative) Case 8: wrong shift amount on the high lane - must not fold
+define <2 x i64> @test_bitcast_shuffle_ashr_wrong_shift(<2 x i64> %x) {
+; CHECK-LABEL: define <2 x i64> @test_bitcast_shuffle_ashr_wrong_shift(
+; CHECK-SAME: <2 x i64> [[X:%.*]]) {
+; CHECK-NEXT:    [[NARROW:%.*]] = bitcast <2 x i64> [[X]] to <4 x i32>
+; CHECK-NEXT:    [[SHIFTED:%.*]] = ashr <4 x i32> [[NARROW]], <i32 0, i32 30, i32 0, i32 30>
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i32> [[SHIFTED]], <4 x i32> poison, <4 x i32> <i32 1, i32 1, i32 3, i32 3>
+; CHECK-NEXT:    [[WIDE:%.*]] = bitcast <4 x i32> [[SHUF]] to <2 x i64>
+; CHECK-NEXT:    ret <2 x i64> [[WIDE]]
+;
+  %narrow = bitcast <2 x i64> %x to <4 x i32>
+  %shifted = ashr <4 x i32> %narrow, <i32 0, i32 30, i32 0, i32 30>
+  %shuf = shufflevector <4 x i32> %shifted, <4 x i32> poison, <4 x i32> <i32 1, i32 1, i32 3, i32 3>
+  %wide = bitcast <4 x i32> %shuf to <2 x i64>
+  ret <2 x i64> %wide
+}
+
+; (Negative) Case 9: shuffle mask selects low half instead of high - must not fold
+define <2 x i64> @test_bitcast_shuffle_ashr_wrong_mask(<2 x i64> %x) {
+; CHECK-LABEL: define <2 x i64> @test_bitcast_shuffle_ashr_wrong_mask(
+; CHECK-SAME: <2 x i64> [[X:%.*]]) {
+; CHECK-NEXT:    [[NARROW:%.*]] = bitcast <2 x i64> [[X]] to <4 x i32>
+; CHECK-NEXT:    [[SHIFTED:%.*]] = ashr <4 x i32> [[NARROW]], <i32 0, i32 31, i32 0, i32 31>
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i32> [[SHIFTED]], <4 x i32> poison, <4 x i32> <i32 0, i32 0, i32 2, i32 2>
+; CHECK-NEXT:    [[WIDE:%.*]] = bitcast <4 x i32> [[SHUF]] to <2 x i64>
+; CHECK-NEXT:    ret <2 x i64> [[WIDE]]
+;
+  %narrow = bitcast <2 x i64> %x to <4 x i32>
+  %shifted = ashr <4 x i32> %narrow, <i32 0, i32 31, i32 0, i32 31>
+  %shuf = shufflevector <4 x i32> %shifted, <4 x i32> poison, <4 x i32> <i32 0, i32 0, i32 2, i32 2>
+  %wide = bitcast <4 x i32> %shuf to <2 x i64>
+  ret <2 x i64> %wide
+}
+
+; (Negative) Case 10: non-constant shift amount - must not fold
+define <2 x i64> @test_bitcast_shuffle_ashr_nonconstant_shift(<2 x i64> %x, <4 x i32> %shamt) {
+; CHECK-LABEL: define <2 x i64> @test_bitcast_shuffle_ashr_nonconstant_shift(
+; CHECK-SAME: <2 x i64> [[X:%.*]], <4 x i32> [[SHAMT:%.*]]) {
+; CHECK-NEXT:    [[NARROW:%.*]] = bitcast <2 x i64> [[X]] to <4 x i32>
+; CHECK-NEXT:    [[SHIFTED:%.*]] = ashr <4 x i32> [[NARROW]], [[SHAMT]]
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i32> [[SHIFTED]], <4 x i32> poison, <4 x i32> <i32 1, i32 1, i32 3, i32 3>
+; CHECK-NEXT:    [[WIDE:%.*]] = bitcast <4 x i32> [[SHUF]] to <2 x i64>
+; CHECK-NEXT:    ret <2 x i64> [[WIDE]]
+;
+  %narrow = bitcast <2 x i64> %x to <4 x i32>
+  %shifted = ashr <4 x i32> %narrow, %shamt
+  %shuf = shufflevector <4 x i32> %shifted, <4 x i32> poison, <4 x i32> <i32 1, i32 1, i32 3, i32 3>
+  %wide = bitcast <4 x i32> %shuf to <2 x i64>
+  ret <2 x i64> %wide
+}
+
+; (Negative) Case 11: poison shift amount on the high lane - must not fold,
+; since we cannot prove the resulting wide ashr amount is well-defined.
+define <2 x i64> @neg_poison_shift_amount(<2 x i64> %x) {
+; CHECK-LABEL: define <2 x i64> @neg_poison_shift_amount(
+; CHECK-SAME: <2 x i64> [[X:%.*]]) {
+; CHECK-NEXT:    [[NARROW:%.*]] = bitcast <2 x i64> [[X]] to <4 x i32>
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i32> [[NARROW]], <4 x i32> poison, <4 x i32> <i32 1, i32 1, i32 3, i32 3>
+; CHECK-NEXT:    [[WIDE:%.*]] = bitcast <4 x i32> [[SHUF]] to <2 x i64>
+; CHECK-NEXT:    ret <2 x i64> [[WIDE]]
+;
+  %narrow = bitcast <2 x i64> %x to <4 x i32>
+  %shifted = ashr <4 x i32> %narrow, <i32 0, i32 poison, i32 0, i32 poison>
+  %shuf = shufflevector <4 x i32> %shifted, <4 x i32> poison, <4 x i32> <i32 1, i32 1, i32 3, i32 3>
+  %wide = bitcast <4 x i32> %shuf to <2 x i64>
+  ret <2 x i64> %wide
+}
+
+; (Negative) Case 12: poison element in the shuffle mask itself - must not
+; fold, since the broadcast structure cannot be confirmed for that lane.
+define <2 x i64> @neg_poison_shuffle_mask_elt(<2 x i64> %x) {
+; CHECK-LABEL: define <2 x i64> @neg_poison_shuffle_mask_elt(
+; CHECK-SAME: <2 x i64> [[X:%.*]]) {
+; CHECK-NEXT:    [[NARROW:%.*]] = bitcast <2 x i64> [[X]] to <4 x i32>
+; CHECK-NEXT:    [[SHIFTED:%.*]] = ashr <4 x i32> [[NARROW]], <i32 0, i32 31, i32 0, i32 31>
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i32> [[SHIFTED]], <4 x i32> poison, <4 x i32> <i32 1, i32 poison, i32 3, i32 3>
+; CHECK-NEXT:    [[WIDE:%.*]] = bitcast <4 x i32> [[SHUF]] to <2 x i64>
+; CHECK-NEXT:    ret <2 x i64> [[WIDE]]
+;
+  %narrow = bitcast <2 x i64> %x to <4 x i32>
+  %shifted = ashr <4 x i32> %narrow, <i32 0, i32 31, i32 0, i32 31>
+  %shuf = shufflevector <4 x i32> %shifted, <4 x i32> poison, <4 x i32> <i32 1, i32 poison, i32 3, i32 3>
+  %wide = bitcast <4 x i32> %shuf to <2 x i64>
+  ret <2 x i64> %wide
+}
+
+; Positive: low-lane shift amount is poison instead of a literal 0. This is
+; still safe to fold, since the low half is discarded by the shuffle and its
+; value (poison or not) never reaches the result.
+define <2 x i64> @pos_poison_low_shift_is_safe(<2 x i64> %x) {
+; CHECK-LABEL: define <2 x i64> @pos_poison_low_shift_is_safe(
+; CHECK-SAME: <2 x i64> [[X:%.*]]) {
+; CHECK-NEXT:    [[NARROW:%.*]] = bitcast <2 x i64> [[X]] to <4 x i32>
+; CHECK-NEXT:    [[SHIFTED:%.*]] = ashr <4 x i32> [[NARROW]], <i32 poison, i32 31, i32 poison, i32 31>
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i32> [[SHIFTED]], <4 x i32> poison, <4 x i32> <i32 1, i32 1, i32 3, i32 3>
+; CHECK-NEXT:    [[WIDE:%.*]] = bitcast <4 x i32> [[SHUF]] to <2 x i64>
+; CHECK-NEXT:    ret <2 x i64> [[WIDE]]
+;
+  %narrow = bitcast <2 x i64> %x to <4 x i32>
+  %shifted = ashr <4 x i32> %narrow, <i32 poison, i32 31, i32 poison, i32 31>
+  %shuf = shufflevector <4 x i32> %shifted, <4 x i32> poison, <4 x i32> <i32 1, i32 1, i32 3, i32 3>
+  %wide = bitcast <4 x i32> %shuf to <2 x i64>
+  ret <2 x i64> %wide
+}
