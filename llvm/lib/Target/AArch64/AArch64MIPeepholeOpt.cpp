@@ -121,6 +121,7 @@ private:
 
   bool checkMovImmInstr(MachineInstr &MI, MachineInstr *&MovMI,
                         MachineInstr *&SubregToRegMI);
+  bool isOperandComplexDup(MachineInstr &MI, int operand);
 
   template <typename T>
   bool visitADDSUB(unsigned PosOpc, unsigned NegOpc, MachineInstr &MI);
@@ -143,6 +144,7 @@ private:
   bool visitFMOVDr(MachineInstr &MI);
   bool visitUBFMXri(MachineInstr &MI);
   bool visitCopy(MachineInstr &MI);
+  bool visitFCMLA(MachineInstr &MI);
 };
 
 struct AArch64MIPeepholeOptLegacy : public MachineFunctionPass {
@@ -936,6 +938,130 @@ bool AArch64MIPeepholeOptImpl::visitCopy(MachineInstr &MI) {
   return true;
 }
 
+bool AArch64MIPeepholeOptImpl::isOperandComplexDup(MachineInstr &MI,
+                                                   int operand) {
+  Register Reg = MI.getOperand(operand).getReg();
+  MachineInstr *Dup = MRI->getVRegDef(Reg);
+  // Only support vector types which duplicates a whole complex.
+  if (MI.getOpcode() == AArch64::FCMLAv8f16 ||
+      MI.getOpcode() == AArch64::FCMLAv4f16)
+    return Dup->getOpcode() == AArch64::DUPv2i32lane ||
+           Dup->getOpcode() == AArch64::DUPv4i32lane;
+  else if (MI.getOpcode() == AArch64::FCMLAv4f32)
+    return Dup->getOpcode() == AArch64::DUPv2i64lane;
+  return false;
+}
+
+// Folds a complex multiplication (2 FCMLAs with orthogonal rotations) with
+// a broadcasted LHS to two orthognal FCMLA_indexed.
+// This optimisation uses complex multiplication commutativity to allow changing
+// the operands order. Permitting FCMLA indexed on LHS.
+//
+// Ex:
+// Dup v1 lane
+// v5 = FCMLA v0, v1, v2 #0
+// res = FCMLA v5, v1, v2 #90
+// into
+// v5 = FCMLA_indexed v0, v2, v1[lane], #0
+// res = FCMLA_indexed v5, v2, v1[lane], #90
+bool AArch64MIPeepholeOptImpl::visitFCMLA(MachineInstr &MI) {
+  MachineFunction *MF = MI.getMF();
+  // LHS must be a dup but not RHS to prevent continuous rewritting.
+  if (!isOperandComplexDup(MI, 2) || isOperandComplexDup(MI, 3)) {
+    return false;
+  }
+
+  // The parent of the accumulator must be another FCMLA with the same operands
+  Register AccReg = MI.getOperand(1).getReg();
+  MachineInstr *ParentFCMLA = MRI->getVRegDef(AccReg);
+  if (!ParentFCMLA) {
+    return false;
+  }
+  if (MI.getOpcode() != ParentFCMLA->getOpcode()) {
+    return false;
+  }
+
+  Register LHSReg = MI.getOperand(2).getReg();
+  Register RHSReg = MI.getOperand(3).getReg();
+  if (LHSReg != ParentFCMLA->getOperand(2).getReg() ||
+      RHSReg != ParentFCMLA->getOperand(3).getReg()) {
+    return false;
+  }
+
+  // Their rotation must be orthogonal to represent a complex multiplication.
+  int FirstRotation = MI.getOperand(4).getImm();
+  int SecondRotation = ParentFCMLA->getOperand(4).getImm();
+  bool Orthogonal = (SecondRotation - FirstRotation) % 2;
+  if (!Orthogonal) {
+    return false;
+  }
+
+  // Only perform this folding if the FCMLAS are on the same block.
+  if (MI.getParent() != ParentFCMLA->getParent()) {
+    return false;
+  }
+
+  unsigned IndexedFCMLAOpc = 0;
+  switch (MI.getOpcode()) {
+  default: {
+    return false;
+  }
+  case AArch64::FCMLAv8f16:
+    IndexedFCMLAOpc = AArch64::FCMLAv8f16_indexed;
+    break;
+  case AArch64::FCMLAv4f16:
+    IndexedFCMLAOpc = AArch64::FCMLAv4f16_indexed;
+    break;
+  case AArch64::FCMLAv4f32:
+    IndexedFCMLAOpc = AArch64::FCMLAv4f32_indexed;
+    break;
+  }
+  MachineInstr *Dup = MF->getRegInfo().getUniqueVRegDef(LHSReg);
+  Register DupSrcReg = Dup->getOperand(1).getReg();
+  unsigned DupSrcLane = Dup->getOperand(2).getImm();
+  MRI->clearKillFlags(DupSrcReg);
+
+  Register DstReg = MI.getOperand(0).getReg();
+  MRI->constrainRegClass(AccReg, MRI->getRegClass(DstReg));
+
+  MachineInstr *FirstFCMLAUpdated =
+      BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), TII->get(IndexedFCMLAOpc),
+              DstReg)
+          .addReg(AccReg)
+          .addReg(RHSReg)
+          .addReg(DupSrcReg)
+          .addImm(DupSrcLane)
+          .addImm(FirstRotation)
+          .setMIFlags(MI.getFlags());
+  LLVM_DEBUG(dbgs() << MI << "  replace by:\n: " << *FirstFCMLAUpdated << "\n");
+  MI.eraseFromParent();
+
+  DstReg = ParentFCMLA->getOperand(0).getReg();
+  Register ParentAccReg = ParentFCMLA->getOperand(1).getReg();
+  MRI->constrainRegClass(ParentAccReg, MRI->getRegClass(DstReg));
+  MachineInstr *SecondFCMLAUpdated =
+      BuildMI(*ParentFCMLA->getParent(), *ParentFCMLA,
+              ParentFCMLA->getDebugLoc(), TII->get(IndexedFCMLAOpc), DstReg)
+          .addReg(ParentAccReg)
+          .addReg(RHSReg)
+          .addReg(DupSrcReg)
+          .addImm(DupSrcLane)
+          .addImm(SecondRotation)
+          .setMIFlags(ParentFCMLA->getFlags());
+
+  LLVM_DEBUG(dbgs() << *ParentFCMLA
+                    << "  replace by:\n: " << *SecondFCMLAUpdated << "\n");
+
+  ParentFCMLA->eraseFromParent();
+  unsigned UsesCount = std::distance(MRI->use_nodbg_operands(LHSReg).begin(),
+                                     MRI->use_nodbg_operands(LHSReg).end());
+  if (UsesCount == 0) {
+    LLVM_DEBUG(dbgs() << "Removing " << *Dup << "\n");
+    Dup->eraseFromParent();
+  }
+  return true;
+}
+
 bool AArch64MIPeepholeOptImpl::run(MachineFunction &MF) {
   TII = static_cast<const AArch64InstrInfo *>(MF.getSubtarget().getInstrInfo());
   TRI = static_cast<const AArch64RegisterInfo *>(
@@ -1048,6 +1174,11 @@ bool AArch64MIPeepholeOptImpl::run(MachineFunction &MF) {
         break;
       case AArch64::COPY:
         Changed |= visitCopy(MI);
+        break;
+      case AArch64::FCMLAv8f16:
+      case AArch64::FCMLAv4f16:
+      case AArch64::FCMLAv4f32:
+        Changed |= visitFCMLA(MI);
         break;
       }
     }
