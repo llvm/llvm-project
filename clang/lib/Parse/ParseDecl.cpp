@@ -4877,7 +4877,7 @@ ParsedAttributes Parser::ParseLexedCAttributeTokens(LateParsedAttribute &LA) {
 
   // Due to a parsing error, we either went over the cached tokens or
   // there are still cached tokens left, so we skip the leftover tokens.
-  while (Tok.isNot(tok::eof))
+  while (!isAtInputEnd(Tok))
     ConsumeAnyToken();
 
   // Consume the fake EOF token if it's there
@@ -4931,7 +4931,7 @@ void Parser::ParseStructUnionBody(SourceLocation RecordLoc,
 
   // While we still have something to read, read the declarations in the struct.
   while (!tryParseMisplacedModuleImport() && Tok.isNot(tok::r_brace) &&
-         Tok.isNot(tok::eof)) {
+         !isAtInputEnd(Tok)) {
     // Each iteration of this loop reads one struct-declaration.
 
     // Check for extraneous top-level semicolon.
@@ -8280,13 +8280,13 @@ TypeResult Parser::ParseTypeFromString(StringRef TypeStr, StringRef Context,
 
   // Check if we parsed the whole thing.
   if (Result.isUsable() &&
-      (Tok.isNot(tok::eof) || Tok.getEofData() != TypeStr.data())) {
+      (!isAtInputEnd(Tok) || Tok.getEofData() != TypeStr.data())) {
     Diag(Tok.getLocation(), diag::err_type_unparsed);
   }
 
   // There could be leftover tokens (e.g. because of an error).
   // Skip through until we reach the 'end of directive' token.
-  while (Tok.isNot(tok::eof))
+  while (!isAtInputEnd(Tok))
     ConsumeAnyToken();
 
   // Consume the end token.
