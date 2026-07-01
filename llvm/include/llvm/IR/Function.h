@@ -18,6 +18,7 @@
 #define LLVM_IR_FUNCTION_H
 
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/ilist_node.h"
@@ -61,6 +62,7 @@ class Type;
 class User;
 class BranchProbabilityInfo;
 class BlockFrequencyInfo;
+class InstructionListener;
 
 class LLVM_ABI Function : public GlobalObject, public ilist_node<Function> {
 public:
@@ -112,7 +114,17 @@ private:
 
   friend class SymbolTableListTraits<Function>;
 
+  friend class InstructionListener;
+  friend class BasicBlock;
+  friend class Instruction;
+  friend class Value;
+  SmallVector<InstructionListener *, 2> InstructionListeners;
+
+  void addInstructionListener(InstructionListener *L);
+  void removeInstructionListener(InstructionListener *L);
+
 public:
+  bool hasInstructionListeners() const { return !InstructionListeners.empty(); }
   /// hasLazyArguments/CheckLazyArguments - The argument list of a function is
   /// built on demand, so that the list isn't allocated until the first client
   /// needs it.  The hasLazyArguments predicate returns true if the arg list

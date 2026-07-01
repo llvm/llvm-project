@@ -16,7 +16,9 @@
 #include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/Function.h"
 #include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/InstructionListener.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
@@ -93,6 +95,20 @@ const Function *Instruction::getFunction() const {
 
 const DataLayout &Instruction::getDataLayout() const {
   return getModule()->getDataLayout();
+}
+
+void Instruction::setParent(BasicBlock *P) {
+  if (BasicBlock *OldBB = getParent()) {
+    Function *OldF = OldBB->getParent();
+    Function *NewF = P ? P->getParent() : nullptr;
+    if (OldF && OldF != NewF)
+      for (InstructionListener *L : OldF->InstructionListeners)
+        L->instructionRemoved(this);
+  }
+  using Base =
+      ilist_node_with_parent<Instruction, BasicBlock, ilist_iterator_bits<true>,
+                             ilist_parent<BasicBlock>>;
+  Base::setParent(P);
 }
 
 void Instruction::removeFromParent() {

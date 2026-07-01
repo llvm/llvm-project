@@ -30,6 +30,7 @@
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/IR/InstructionListener.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
@@ -60,6 +61,16 @@ using namespace llvm;
 // Explicit instantiations of SymbolTableListTraits since some of the methods
 // are not in the public header file...
 template class LLVM_EXPORT_TEMPLATE llvm::SymbolTableListTraits<BasicBlock>;
+
+void Function::addInstructionListener(InstructionListener *L) {
+  assert(!llvm::is_contained(InstructionListeners, L) &&
+         "Listener already registered");
+  InstructionListeners.push_back(L);
+}
+
+void Function::removeInstructionListener(InstructionListener *L) {
+  InstructionListeners.erase(llvm::find(InstructionListeners, L));
+}
 
 static cl::opt<int> NonGlobalValueMaxNameSize(
     "non-global-value-max-name-size", cl::Hidden, cl::init(1024),
@@ -511,6 +522,12 @@ Function::Function(FunctionType *Ty, LinkageTypes Linkage, unsigned AddrSpace,
 }
 
 Function::~Function() {
+  // Detach all instruction listeners before destruction so their destructors
+  // don't try to call back into this Function.
+  for (InstructionListener *L : InstructionListeners)
+    L->detach();
+  InstructionListeners.clear();
+
   validateBlockNumbers();
 
   dropAllReferences();    // After this it is safe to delete instructions.
