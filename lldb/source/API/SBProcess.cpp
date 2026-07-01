@@ -1014,7 +1014,8 @@ bool SBProcess::GetDescription(SBStream &description) {
     Module *exe_module = process_sp->GetTarget().GetExecutableModulePointer();
     const char *exe_name = nullptr;
     if (exe_module)
-      exe_name = exe_module->GetFileSpec().GetFilename().AsCString(nullptr);
+      exe_name = ConstString(exe_module->GetFileSpec().GetFilename())
+                     .AsCString(nullptr);
 
     strm.Printf("SBProcess: pid = %" PRIu64 ", state = %s, threads = %d%s%s",
                 process_sp->GetID(), lldb_private::StateAsCString(GetState()),

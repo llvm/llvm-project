@@ -6995,9 +6995,6 @@ class OMPNumTeamsClause final
   friend OMPVarListClause;
   friend TrailingObjects;
 
-  /// Location of '('.
-  SourceLocation LParenLoc;
-
   /// Modifier that was specified.
   OpenMPNumTeamsClauseModifier Modifier = OMPC_NUMTEAMS_unknown;
 
@@ -7040,12 +7037,6 @@ public:
   /// \param C AST context.
   /// \param N The number of variables.
   static OMPNumTeamsClause *CreateEmpty(const ASTContext &C, unsigned N);
-
-  /// Sets the location of '('.
-  void setLParenLoc(SourceLocation Loc) { LParenLoc = Loc; }
-
-  /// Returns the location of '('.
-  SourceLocation getLParenLoc() const { return LParenLoc; }
 
   /// Return NumTeams expressions.
   ArrayRef<Expr *> getNumTeams() { return getVarRefs(); }
@@ -7119,9 +7110,6 @@ class OMPThreadLimitClause final
   friend OMPVarListClause;
   friend TrailingObjects;
 
-  /// Location of '('.
-  SourceLocation LParenLoc;
-
   OMPThreadLimitClause(const ASTContext &C, SourceLocation StartLoc,
                        SourceLocation LParenLoc, SourceLocation EndLoc,
                        unsigned N)
@@ -7154,12 +7142,6 @@ public:
   /// \param C AST context.
   /// \param N The number of variables.
   static OMPThreadLimitClause *CreateEmpty(const ASTContext &C, unsigned N);
-
-  /// Sets the location of '('.
-  void setLParenLoc(SourceLocation Loc) { LParenLoc = Loc; }
-
-  /// Returns the location of '('.
-  SourceLocation getLParenLoc() const { return LParenLoc; }
 
   /// Return ThreadLimit expressions.
   ArrayRef<Expr *> getThreadLimit() { return getVarRefs(); }

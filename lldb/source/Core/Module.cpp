@@ -1041,8 +1041,8 @@ void Module::GetDescription(llvm::raw_ostream &s,
   }
 
   if (level == eDescriptionLevelBrief) {
-    const char *filename = m_file.GetFilename().GetCString();
-    if (filename)
+    llvm::StringRef filename = m_file.GetFilename();
+    if (!filename.empty())
       s << filename;
   } else {
     char path[PATH_MAX];
@@ -1070,8 +1070,8 @@ bool Module::FileHasChanged() const {
 
 void Module::ReportWarningOptimization(
     std::optional<lldb::user_id_t> debugger_id) {
-  ConstString file_name = GetFileSpec().GetFilename();
-  if (file_name.IsEmpty())
+  llvm::StringRef file_name = GetFileSpec().GetFilename();
+  if (file_name.empty())
     return;
 
   StreamString ss;
@@ -1183,7 +1183,7 @@ ObjectFile *Module::GetObjectFile() {
     std::lock_guard<std::recursive_mutex> guard(m_mutex);
     if (!m_did_load_objfile.load()) {
       LLDB_SCOPED_TIMERF("Module::GetObjectFile () module = %s",
-                         GetFileSpec().GetFilename().AsCString(""));
+                         GetFileSpec().GetFilename().str().c_str());
       lldb::offset_t data_offset = 0;
       lldb::offset_t file_size = 0;
 

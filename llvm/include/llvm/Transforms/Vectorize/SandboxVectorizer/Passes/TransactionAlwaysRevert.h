@@ -20,7 +20,9 @@ namespace llvm::sandboxir {
 
 class TransactionAlwaysRevert : public RegionPass {
 public:
-  TransactionAlwaysRevert() : RegionPass("tr-revert") {}
+  TransactionAlwaysRevert(StringRef AuxArg) : RegionPass("tr-revert") {
+    assert(AuxArg.empty() && "This pass ignores aux arg!");
+  }
   bool runOnRegion(Region &Rgn, const Analyses &A) final {
     auto &Tracker = Rgn.getContext().getTracker();
     bool HasChanges = !Tracker.empty();

@@ -3095,8 +3095,8 @@ bool SIInsertWaitcnts::removeRedundantSoftXcnts(MachineBasicBlock &Block) {
     if (!IsLDS && (MI.mayLoad() ^ MI.mayStore()))
       LastAtomicWithSoftXcnt = nullptr;
 
-    bool IsAtomicRMW = (MI.getDesc().TSFlags & SIInstrFlags::maybeAtomic) &&
-                       MI.mayLoad() && MI.mayStore();
+    bool IsAtomicRMW =
+        SIInstrFlags::isMaybeAtomic(MI) && MI.mayLoad() && MI.mayStore();
     MachineInstr &PrevMI = *MI.getPrevNode();
     // This is an atomic with a soft xcnt.
     if (PrevMI.getOpcode() == AMDGPU::S_WAIT_XCNT_soft && IsAtomicRMW) {
