@@ -49,6 +49,7 @@
 #include "flang/Support/OpenMP-utils.h"
 #include "flang/Utils/OpenMP.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Support/StateStack.h"
 #include "mlir/Transforms/RegionUtils.h"
@@ -4469,8 +4470,11 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    semantics::SemanticsContext &semaCtx,
                    lower::pft::Evaluation &eval,
                    const parser::OmpAssumesDirective &assumesConstruct) {
+  // Assumption clauses are hints with no representation in the OpenMP dialect,
+  // so this declarative directive is a no-op.
   if (!semaCtx.langOptions().OpenMPSimd)
-    TODO(converter.getCurrentLocation(), "OpenMP ASSUMES declaration");
+    TODO(converter.getCurrentLocation(),
+         "assumption clauses on the assumes directive");
 }
 
 static void
@@ -5617,9 +5621,31 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    semantics::SemanticsContext &semaCtx,
                    lower::pft::Evaluation &eval,
                    const parser::OmpAssumeDirective &assumeConstruct) {
-  mlir::Location clauseLocation = converter.genLocation(assumeConstruct.source);
-  if (!semaCtx.langOptions().OpenMPSimd)
-    TODO(clauseLocation, "OpenMP ASSUME construct");
+  if (!semaCtx.langOptions().OpenMPSimd) {
+    fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+    lower::StatementContext stmtCtx;
+
+    const parser::OmpDirectiveSpecification &beginSpec =
+        assumeConstruct.BeginDir();
+    for (const parser::OmpClause &clause : beginSpec.Clauses().v) {
+      mlir::Location clauseLoc = converter.genLocation(clause.source);
+      const auto *holds = std::get_if<parser::OmpClause::Holds>(&clause.u);
+      if (!holds) {
+        TODO(clauseLoc, "assumption clause is not implemented yet");
+      }
+      const parser::Expr &parserExpr = holds->v.v.value();
+      const semantics::SomeExpr *expr = semantics::GetExpr(semaCtx, parserExpr);
+      assert(expr && "Expecting analyzed expression for holds clause");
+
+      mlir::Value cond =
+          fir::getBase(converter.genExprValue(*expr, stmtCtx, &clauseLoc));
+      cond =
+          firOpBuilder.createConvert(clauseLoc, firOpBuilder.getI1Type(), cond);
+      mlir::LLVM::AssumeOp::create(firOpBuilder, clauseLoc, cond);
+    }
+    stmtCtx.finalizeAndPop();
+  }
+  genNestedEvaluations(converter, eval);
 }
 
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
