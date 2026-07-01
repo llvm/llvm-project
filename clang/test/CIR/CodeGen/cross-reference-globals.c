@@ -15,6 +15,8 @@ int b1 = 100;
 // LLVM-DAG: @a1 = global ptr @b1
 
 struct E2 {};
+// CIR-DAG: !rec_E2 = !cir.struct<"E2" {}>
+// LLVMCIR-DAG: %struct.E2 = type {}
 struct B2 { struct E2 e; int x; int y; };
 extern struct B2 b2;
 int *a2 = &b2.y;
