@@ -10588,6 +10588,32 @@ void ResolveNamesVisitor::AnalyzeStmtFunctionStmt(
       details->moduleInterface() || symbol->test(Symbol::Flag::Subroutine)) {
     return; // error recovery
   }
+
+  // F2023 19.4 p2: a statement-function dummy argument name may be the same
+  // as an accessible name only if that name is a scalar variable.  The lookup
+  // walks the host chain (but not into the global scope), so host-associated
+  // identifiers are also considered.
+  for (const auto &dummyName : std::get<std::list<parser::Name>>(stmtFunc.t)) {
+    if (const Symbol *hostSymbol{currScope().FindSymbol(dummyName.source)}) {
+      const Symbol &ultimate{hostSymbol->GetUltimate()};
+      const bool isScalarVariable{(ultimate.has<ObjectEntityDetails>() ||
+                                      ultimate.has<EntityDetails>()) &&
+          !IsNamedConstant(ultimate) && ultimate.Rank() == 0};
+      if (!isScalarVariable) {
+        Say(dummyName.source,
+            "The name '%s' of a statement function dummy argument may not be the same as an accessible name unless that name is a scalar variable"_err_en_US);
+      }
+    } else {
+      // Also check the global scope, which FindSymbol skips
+      const Scope &globals{context().globalScope()};
+      if (auto it{globals.find(dummyName.source)}; it != globals.end()) {
+        // global function/subroutine — definitely not a scalar variable
+        Say(dummyName.source,
+            "The name '%s' of a statement function dummy argument may not be the same as an accessible name unless that name is a scalar variable"_err_en_US);
+      }
+    }
+  }
+
   // Resolve the symbols on the RHS of the statement function.
   PushScope(*symbol->scope());
   const auto &parsedExpr{std::get<parser::Scalar<parser::Expr>>(stmtFunc.t)};
