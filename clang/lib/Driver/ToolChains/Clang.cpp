@@ -986,24 +986,32 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("__clang_openmp_device_functions.h");
   }
 
-  if (Args.hasArg(options::OPT_foffload_via_llvm)) {
+  if (Args.hasArg(options::OPT_foffload_via_llvm) &&
+      (JA.isHostOffloading(C.getActiveOffloadKinds()) ||
+       JA.isDeviceOffloading(Action::OFK_OpenMP))) {
     // Add llvm_wrappers/* to our system include path.  This lets us wrap
     // standard library headers and other headers.
     SmallString<128> P(D.ResourceDir);
     llvm::sys::path::append(P, "include", "llvm_offload_wrappers");
     CmdArgs.append({"-internal-isystem", Args.MakeArgString(P), "-include"});
     if (JA.isDeviceOffloading(Action::OFK_OpenMP)) {
+      llvm::errs() << "Including offload_device\n";
       CmdArgs.push_back("__llvm_offload_device.h");
     } else {
+      llvm::errs() << "Including offload_host\n";
       CmdArgs.push_back("__llvm_offload_host.h");
     }
-    SmallString<128> OffloadCudaInclude(D.Dir);
-    llvm::sys::path::append(OffloadCudaInclude, "..", "include", "offload",
-                            "cuda");
-    CmdArgs.append({"-internal-isystem", Args.MakeArgString(OffloadCudaInclude),
-                    "-include"});
-    // CmdArgs.push_back("-include");
-    CmdArgs.push_back("cuda_runtime.h");
+    if (llvm::any_of(Inputs, [](const InputInfo &I) {
+          return types::isCuda(I.getType());
+        })) {
+      SmallString<128> OffloadCudaInclude(D.Dir);
+      llvm::sys::path::append(OffloadCudaInclude, "..", "include", "offload",
+                              "cuda");
+      CmdArgs.append({"-internal-isystem",
+                      Args.MakeArgString(OffloadCudaInclude), "-include"});
+      // CmdArgs.push_back("-include");
+      CmdArgs.push_back("cuda_runtime.h");
+    }
   }
 
   // Add -i* options, and automatically translate to
@@ -1185,7 +1193,7 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
       Args.hasFlag(options::OPT_offload_inc, options::OPT_no_offload_inc,
                    true) &&
       !Args.hasArg(options::OPT_nobuiltininc) &&
-      (C.getActiveOffloadKinds() == Action::OFK_OpenMP)) {
+      JA.isDeviceOffloading(Action::OFK_OpenMP)) {
     // TODO: CUDA / HIP include their own headers for some common functions
     // implemented here. We'll need to clean those up so they do not conflict.
     SmallString<128> P(D.ResourceDir);

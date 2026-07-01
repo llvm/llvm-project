@@ -924,8 +924,10 @@ static TripleSet inferOffloadToolchains(Compilation &C,
     for (StringRef Arch : A->getValues()) {
       if (A->getOption().matches(options::OPT_offload_arch_EQ)) {
         if (Arch == "native") {
-          for (StringRef Str : getSystemOffloadArchs(C, Kind))
+          for (StringRef Str : getSystemOffloadArchs(C, Kind)) {
+            llvm::errs() << "Inserting into Archs: " << Str.str() << '\n';
             Archs.insert(Str.str());
+          }
         } else {
           Archs.insert(Arch.str());
         }
@@ -969,6 +971,7 @@ static TripleSet inferOffloadToolchains(Compilation &C,
 
     llvm::Triple Triple =
         OffloadArchToTriple(C.getDefaultToolChain().getTriple(), ID);
+    llvm::errs() << "Detected triple: " << Triple.str() << "\n";
 
     // Make a new argument that dispatches this argument to the appropriate
     // toolchain. This is required when we infer it and create potentially
@@ -1012,14 +1015,11 @@ static TripleSet inferOffloadToolchains(Compilation &C,
 
 void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
                                               InputList &Inputs) {
-  bool UseLLVMOffload = C.getInputArgs().hasArg(
-      options::OPT_foffload_via_llvm, options::OPT_fno_offload_via_llvm, false);
-  bool IsCuda = !UseLLVMOffload &&
-      llvm::any_of(Inputs,
-                   [](std::pair<types::ID, const llvm::opt::Arg *> &I) {
-                     return types::isCuda(I.first);
-                   });
-  bool IsHIP = !UseLLVMOffload &&
+  bool IsCuda =
+      llvm::any_of(Inputs, [](std::pair<types::ID, const llvm::opt::Arg *> &I) {
+        return types::isCuda(I.first);
+      });
+  bool IsHIP =
       (llvm::any_of(Inputs,
                     [](std::pair<types::ID, const llvm::opt::Arg *> &I) {
                       return types::isHIP(I.first);
@@ -1029,12 +1029,21 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
   bool IsSYCL = C.getInputArgs().hasFlag(options::OPT_fsycl,
                                          options::OPT_fno_sycl, false);
   bool IsOpenMPOffloading =
-      UseLLVMOffload ||
       (C.getInputArgs().hasFlag(options::OPT_fopenmp, options::OPT_fopenmp_EQ,
                                 options::OPT_fno_openmp, false) &&
        (C.getInputArgs().hasArg(options::OPT_offload_targets_EQ) ||
         (C.getInputArgs().hasArg(options::OPT_offload_arch_EQ) &&
          !(IsCuda || IsHIP))));
+
+  bool UseLLVMOffload = C.getInputArgs().hasArg(
+      options::OPT_foffload_via_llvm, options::OPT_fno_offload_via_llvm, false);
+
+  IsOpenMPOffloading =
+      (IsCuda || IsHIP || IsSYCL || IsOpenMPOffloading) && UseLLVMOffload;
+
+  // We currently don't support any kind of mixed offloading.
+  if (IsOpenMPOffloading)
+    IsCuda = IsHIP = IsSYCL = false;
 
   llvm::SmallSet<Action::OffloadKind, 4> Kinds;
   const std::pair<bool, Action::OffloadKind> ActiveKinds[] = {
@@ -1119,6 +1128,7 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
 
       auto &TC = getOffloadToolChain(C.getInputArgs(), Kind, Target,
                                      C.getDefaultToolChain().getTriple());
+      llvm::errs() << "Determined TC: " << TC.getArchName() << '\n';
 
       // Emit a warning if the detected CUDA version is too new.
       if (Kind == Action::OFK_Cuda) {
@@ -5043,11 +5053,19 @@ Driver::BuildOffloadingActions(Compilation &C, llvm::opt::DerivedArgList &Args,
 
     types::ID InputType = Input.first;
     const Arg *InputArg = Input.second;
+    llvm::errs() << "Input Type: " << types::getTypeName(InputType)
+                 << ", Input Arg: " << InputArg->getAsString(Args) << '\n';
 
     // Allow the toolchain to be active for unsupported file types if we are "offload-cross-compiling" via llvm-offload.
     if (!UseLLVMOffload && ((Kind == Action::OFK_Cuda && !types::isCuda(InputType)) ||
         (Kind == Action::OFK_HIP && !types::isHIP(InputType))))
       continue;
+    // FIX: this effectively disables OpenMP offloading for now
+    if (UseLLVMOffload &&
+        (!types::isCuda(InputType) && !types::isHIP(InputType))) {
+      llvm::errs() << "Not making toolchain\n";
+      continue;
+    }
 
     // Get the product of all bound architectures and toolchains.
     SmallVector<std::pair<const ToolChain *, BoundArch>> TCAndArchs;
@@ -7030,6 +7048,9 @@ std::string Driver::GetClPchPath(Compilation &C, StringRef BaseName) const {
 const ToolChain &Driver::getOffloadToolChain(
     const llvm::opt::ArgList &Args, const Action::OffloadKind Kind,
     const llvm::Triple &Target, const llvm::Triple &AuxTarget) const {
+
+  llvm::errs() << "gettting offload TC for Offloading Kind: " << Kind
+               << "and target triple: " << Target.str() << '\n';
   std::unique_ptr<ToolChain> &TC =
       ToolChains[Target.str() + "/" + AuxTarget.str()];
   std::unique_ptr<ToolChain> &HostTC = ToolChains[AuxTarget.str()];
@@ -7054,6 +7075,7 @@ const ToolChain &Driver::getOffloadToolChain(
       break;
     }
   }
+  llvm::errs() << "Determined Toolchain: " << TC->getArchName() << '\n';
   if (!TC) {
     // Detect the toolchain based off of the target architecture if that failed.
     switch (Target.getArch()) {
