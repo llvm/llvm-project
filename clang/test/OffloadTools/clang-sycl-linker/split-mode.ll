@@ -9,8 +9,8 @@
 ; RUN:   | FileCheck %s --check-prefix=SPLIT-INVALID
 ; SPLIT-INVALID: module-split-mode value isn't recognized: bogus
 ;
-; Test the split mode ("none"): kernels from different TUs are not split into separate images.
-; RUN: clang-sycl-linker --dry-run -v --module-split-mode=none %t.bc -o %t-none.out 2>&1 \
+; Test the split mode ("link_unit"): kernels from different TUs are not split into separate images.
+; RUN: clang-sycl-linker --dry-run -v --module-split-mode=link_unit %t.bc -o %t-none.out 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=SPLIT-NONE
 ; SPLIT-NONE:      link: inputs: {{.*}}.bc output: [[LLVMLINKOUT:.*]].bc
 ; SPLIT-NONE-NEXT: LLVM backend: input: [[LLVMLINKOUT]].bc, output: {{.*}}_0.spv
@@ -33,18 +33,18 @@
 ; SPLIT-KERNEL-NEXT: sycl-bundle: image kind: spv, triple: spirv64, arch: {{$}}
 ; SPLIT-KERNEL-NOT:  {{.+}}
 ;
-; Test default split mode ('source'): no --module-split-mode flag needed.
+; Test default split mode ('translation_unit'): no --module-split-mode flag needed.
 ; Two kernels with different sycl-module-id values produce two device images.
 ; sycl_external function is not treated as entry point and doesn't produce a separate image
 ; despite having a different sycl-module-id.
 ; RUN: clang-sycl-linker --dry-run -v %t.bc -o %t-src.out 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=SPLIT-SRC
 ;
-; Test per-TU split ('source' explicitly provided)
-; RUN: clang-sycl-linker --dry-run -v --module-split-mode=source %t.bc -o %t-src.out 2>&1 \
+; Test per-TU split ('translation_unit' explicitly provided)
+; RUN: clang-sycl-linker --dry-run -v --module-split-mode=translation_unit %t.bc -o %t-src.out 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=SPLIT-SRC
 ; SPLIT-SRC:      link: inputs: {{.*}}.bc output: [[LLVMLINKOUT:.*]].bc
-; SPLIT-SRC-NEXT: sycl-module-split: input: [[LLVMLINKOUT]].bc, mode: source
+; SPLIT-SRC-NEXT: sycl-module-split: input: [[LLVMLINKOUT]].bc, mode: translation_unit
 ; SPLIT-SRC-NEXT: [[S0:.*]].bc [kernel_b kernel_c ]
 ; SPLIT-SRC-NEXT: [[S1:.*]].bc [kernel_a ]
 ; SPLIT-SRC-NEXT: LLVM backend: input: [[S0]].bc, output: {{.*}}_0.spv
