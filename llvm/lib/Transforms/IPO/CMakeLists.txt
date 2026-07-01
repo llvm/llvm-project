@@ -39,6 +39,7 @@ add_llvm_component_library(LLVMipo
   ModuleInliner.cpp
   OpenMPOpt.cpp
   PartialInlining.cpp
+  PGOVerify.cpp
   SampleContextTracker.cpp
   SampleProfile.cpp
   SampleProfileMatcher.cpp

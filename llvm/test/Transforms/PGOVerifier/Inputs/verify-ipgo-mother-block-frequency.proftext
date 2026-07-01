@@ -1,0 +1,57 @@
+# IR level Instrumentation Flag
+:ir
+consistent_flow
+# Func Hash:
+146835647075900052
+# Num Counters:
+3
+# Counter Values:
+1000
+600
+400
+
+inconsistent_entry
+# Func Hash:
+784007058953177093
+# Num Counters:
+3
+# Counter Values:
+1000
+700
+200
+
+inconsistent_branches
+# Func Hash:
+536873293986372656
+# Num Counters:
+6
+# Counter Values:
+1000
+600
+400
+700
+200
+300
+
+inconsistent_loop
+# Func Hash:
+146835646621254984
+# Num Counters:
+4
+# Counter Values:
+100
+900
+800
+100
+
+inconsistent_switch
+# Func Hash:
+1124680651005410801
+# Num Counters:
+5
+# Counter Values:
+1000
+200
+300
+300
+100
