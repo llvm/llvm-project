@@ -13,12 +13,9 @@
 // template<class IndexType, size_t... Extents>
 //  class extents;
 //
-// After [libc++] recognized _BitInt as an integer type in
-// __type_traits/integer_traits.h, extents silently starts accepting
-// _BitInt(N) as IndexType because __signed_or_unsigned_integer is now
-// satisfied. This test pins that behavior: construction, extent() and
-// static_extent() all work, and the representability static_assert on
-// static extents fires when the extent does not fit in the index type.
+// extents accepts _BitInt(N) as IndexType now that libc++ treats it as an
+// integer type. Pin construction, extent(), static_extent(), and the
+// representability static_assert on static extents that exceed the index type.
 
 #include <cassert>
 #include <cstddef>
