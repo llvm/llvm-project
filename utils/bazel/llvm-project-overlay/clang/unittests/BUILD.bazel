@@ -676,11 +676,13 @@ cc_test(
     ),
     deps = [
         "//clang:ast",
+        "//clang:ast_matchers",
         "//clang:basic",
         "//clang:frontend",
         "//clang:index",
         "//clang:lex",
         "//clang:tooling",
+        "//clang:unified_symbol_resolution",
         "//llvm:Support",
         "//third-party/unittest:gmock",
         "//third-party/unittest:gtest",
@@ -786,11 +788,11 @@ cc_test(
     name = "scalable_static_analysis_tests",
     size = "small",
     srcs = glob([
-        "ScalableStaticAnalysisFramework/**/*.cpp",
-        "ScalableStaticAnalysisFramework/**/*.h",
+        "ScalableStaticAnalysis/**/*.cpp",
+        "ScalableStaticAnalysis/**/*.h",
     ]),
-    features = ["-layering_check"],  # #include "../../lib/ScalableStaticAnalysisFramework/Core/ModelStringConversions.h"
-    includes = ["ScalableStaticAnalysisFramework"],
+    features = ["-layering_check"],  # #include "../../lib/ScalableStaticAnalysis/Core/ModelStringConversions.h"
+    includes = ["ScalableStaticAnalysis"],
     deps = [
         "//clang:ast",
         "//clang:ast_matchers",

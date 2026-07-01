@@ -2,7 +2,7 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck --check-prefixes=SIVI,GCN %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1010 -mattr=-flat-for-global < %s | FileCheck -check-prefix=GCN %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1030 -mattr=-flat-for-global < %s | FileCheck -check-prefix=GCN %s
-; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1030 -mattr=-flat-for-global < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1030 -mattr=-flat-for-global < %s | FileCheck -check-prefix=GCN %s
 
 declare i64 @llvm.amdgcn.s.memtime() #0
 

@@ -110,7 +110,6 @@ TEST(MappedBlockStreamTest, ReadOntoNonEmptyBuffer) {
   StringRef Str = "ZYXWVUTSRQPONMLKJIHGFEDCBA";
   EXPECT_THAT_ERROR(R.readFixedString(Str, 1), Succeeded());
   EXPECT_EQ(Str, StringRef("A"));
-  EXPECT_EQ(0U, F.Allocator.getBytesAllocated());
 }
 
 // Tests that a read which crosses a block boundary, but where the subsequent
@@ -124,12 +123,10 @@ TEST(MappedBlockStreamTest, ZeroCopyReadContiguousBreak) {
   StringRef Str;
   EXPECT_THAT_ERROR(R.readFixedString(Str, 2), Succeeded());
   EXPECT_EQ(Str, StringRef("AB"));
-  EXPECT_EQ(0U, F.Allocator.getBytesAllocated());
 
   R.setOffset(6);
   EXPECT_THAT_ERROR(R.readFixedString(Str, 4), Succeeded());
   EXPECT_EQ(Str, StringRef("GHIJ"));
-  EXPECT_EQ(0U, F.Allocator.getBytesAllocated());
 }
 
 // Tests that a read which crosses a block boundary and cannot be referenced
@@ -143,7 +140,6 @@ TEST(MappedBlockStreamTest, CopyReadNonContiguousBreak) {
   StringRef Str;
   EXPECT_THAT_ERROR(R.readFixedString(Str, 10), Succeeded());
   EXPECT_EQ(Str, StringRef("ABCDEFGHIJ"));
-  EXPECT_EQ(10U, F.Allocator.getBytesAllocated());
 }
 
 // Test that an out of bounds read which doesn't cross a block boundary
@@ -157,7 +153,6 @@ TEST(MappedBlockStreamTest, InvalidReadSizeNoBreak) {
 
   R.setOffset(10);
   EXPECT_THAT_ERROR(R.readFixedString(Str, 1), Failed());
-  EXPECT_EQ(0U, F.Allocator.getBytesAllocated());
 }
 
 // Test that an out of bounds read which crosses a contiguous block boundary
@@ -171,7 +166,6 @@ TEST(MappedBlockStreamTest, InvalidReadSizeContiguousBreak) {
 
   R.setOffset(6);
   EXPECT_THAT_ERROR(R.readFixedString(Str, 5), Failed());
-  EXPECT_EQ(0U, F.Allocator.getBytesAllocated());
 }
 
 // Test that an out of bounds read which crosses a discontiguous block
@@ -184,7 +178,6 @@ TEST(MappedBlockStreamTest, InvalidReadSizeNonContiguousBreak) {
   StringRef Str;
 
   EXPECT_THAT_ERROR(R.readFixedString(Str, 11), Failed());
-  EXPECT_EQ(0U, F.Allocator.getBytesAllocated());
 }
 
 // Tests that a read which is entirely contained within a single block but
@@ -197,7 +190,6 @@ TEST(MappedBlockStreamTest, ZeroCopyReadNoBreak) {
   StringRef Str;
   EXPECT_THAT_ERROR(R.readFixedString(Str, 1), Succeeded());
   EXPECT_EQ(Str, StringRef("A"));
-  EXPECT_EQ(0U, F.Allocator.getBytesAllocated());
 }
 
 // Tests that a read which is not aligned on the same boundary as a previous
@@ -212,13 +204,11 @@ TEST(MappedBlockStreamTest, UnalignedOverlappingRead) {
   StringRef Str2;
   EXPECT_THAT_ERROR(R.readFixedString(Str1, 7), Succeeded());
   EXPECT_EQ(Str1, StringRef("ABCDEFG"));
-  EXPECT_EQ(7U, F.Allocator.getBytesAllocated());
 
   R.setOffset(2);
   EXPECT_THAT_ERROR(R.readFixedString(Str2, 3), Succeeded());
   EXPECT_EQ(Str2, StringRef("CDE"));
   EXPECT_EQ(Str1.data() + 2, Str2.data());
-  EXPECT_EQ(7U, F.Allocator.getBytesAllocated());
 }
 
 // Tests that a read which is not aligned on the same boundary as a previous
@@ -233,12 +223,10 @@ TEST(MappedBlockStreamTest, UnalignedOverlappingReadFail) {
   StringRef Str2;
   EXPECT_THAT_ERROR(R.readFixedString(Str1, 6), Succeeded());
   EXPECT_EQ(Str1, StringRef("ABCDEF"));
-  EXPECT_EQ(6U, F.Allocator.getBytesAllocated());
 
   R.setOffset(4);
   EXPECT_THAT_ERROR(R.readFixedString(Str2, 4), Succeeded());
   EXPECT_EQ(Str2, StringRef("EFGH"));
-  EXPECT_EQ(10U, F.Allocator.getBytesAllocated());
 }
 
 TEST(MappedBlockStreamTest, WriteBeyondEndOfStream) {

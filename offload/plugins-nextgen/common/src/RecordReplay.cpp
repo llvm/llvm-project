@@ -292,7 +292,7 @@ Error NativeRecordReplayTy::recordDescImpl(
 
   json::Array JsonArgPtrs;
   for (uint32_t I = 0; I < KernelArgs.NumArgs; ++I)
-    JsonArgPtrs.push_back((intptr_t)(*(void **)LaunchParams.Ptrs[I]));
+    JsonArgPtrs.push_back((intptr_t)(*(void **)LaunchParams.Args[I]));
   JsonKernelInfo["ArgPtrs"] = json::Value(std::move(JsonArgPtrs));
 
   json::Array JsonArgOffsets;

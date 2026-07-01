@@ -28,7 +28,7 @@ LLVM_LIBC_FUNCTION(ssize_t, recv,
     return -1;
   }
 
-  MSAN_UNPOISON(buf, result.value());
+  LIBC_MSAN_UNPOISON(buf, result.value());
 
   return result.value();
 }

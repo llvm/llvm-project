@@ -178,7 +178,7 @@ bool UnrollLoopsCheck::hasLargeNumIterations(const Stmt *Statement,
       InitDeclStatement && InitDeclStatement->isSingleDecl()) {
     if (const auto *VariableDecl =
             dyn_cast<VarDecl>(InitDeclStatement->getSingleDecl())) {
-      APValue *Evaluation = VariableDecl->evaluateValue();
+      const APValue *Evaluation = VariableDecl->evaluateValue();
       if (!Evaluation || !Evaluation->isInt())
         return true;
       InitValue = Evaluation->getInt().getExtValue();

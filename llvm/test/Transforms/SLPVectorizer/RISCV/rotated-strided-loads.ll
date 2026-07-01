@@ -195,14 +195,54 @@ define void @constant_stride_widen_rotatedn_1(ptr %pl, i64 %stride, ptr %ps) {
 define void @rt_stride_widen_rotate1(ptr %pl, i64 %stride, ptr %ps) {
 ; CHECK-LABEL: define void @rt_stride_widen_rotate1(
 ; CHECK-SAME: ptr [[PL:%.*]], i64 [[STRIDE:%.*]], ptr [[PS:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[OFFSET0:%.*]] = mul nsw i64 [[STRIDE]], 0
+; CHECK-NEXT:    [[OFFSET1:%.*]] = add nsw i64 [[OFFSET0]], 1
+; CHECK-NEXT:    [[OFFSET2:%.*]] = add nsw i64 [[OFFSET0]], 2
 ; CHECK-NEXT:    [[OFFSET4:%.*]] = mul nsw i64 [[STRIDE]], 1
+; CHECK-NEXT:    [[OFFSET6:%.*]] = add nsw i64 [[OFFSET4]], 2
+; CHECK-NEXT:    [[OFFSET8:%.*]] = mul nsw i64 [[STRIDE]], 2
+; CHECK-NEXT:    [[OFFSET10:%.*]] = add nsw i64 [[OFFSET8]], 2
+; CHECK-NEXT:    [[OFFSET12:%.*]] = mul nsw i64 [[STRIDE]], 3
+; CHECK-NEXT:    [[OFFSET14:%.*]] = add nsw i64 [[OFFSET12]], 2
+; CHECK-NEXT:    [[OFFSET16:%.*]] = mul nsw i64 [[STRIDE]], 4
+; CHECK-NEXT:    [[GEP_L1:%.*]] = getelementptr inbounds i8, ptr [[PL]], i64 [[OFFSET1]]
+; CHECK-NEXT:    [[GEP_L2:%.*]] = getelementptr inbounds i8, ptr [[PL]], i64 [[OFFSET2]]
 ; CHECK-NEXT:    [[GEP_L4:%.*]] = getelementptr inbounds i8, ptr [[PL]], i64 [[OFFSET4]]
+; CHECK-NEXT:    [[GEP_L6:%.*]] = getelementptr inbounds i8, ptr [[PL]], i64 [[OFFSET6]]
+; CHECK-NEXT:    [[GEP_L8:%.*]] = getelementptr inbounds i8, ptr [[PL]], i64 [[OFFSET8]]
+; CHECK-NEXT:    [[GEP_L10:%.*]] = getelementptr inbounds i8, ptr [[PL]], i64 [[OFFSET10]]
+; CHECK-NEXT:    [[GEP_L12:%.*]] = getelementptr inbounds i8, ptr [[PL]], i64 [[OFFSET12]]
+; CHECK-NEXT:    [[GEP_L14:%.*]] = getelementptr inbounds i8, ptr [[PL]], i64 [[OFFSET14]]
+; CHECK-NEXT:    [[GEP_L16:%.*]] = getelementptr inbounds i8, ptr [[PL]], i64 [[OFFSET16]]
+; CHECK-NEXT:    [[LOAD1:%.*]] = load i8, ptr [[GEP_L1]], align 1
+; CHECK-NEXT:    [[LOAD16:%.*]] = load i8, ptr [[GEP_L16]], align 1
 ; CHECK-NEXT:    [[GEP_S1:%.*]] = getelementptr inbounds i8, ptr [[PS]], i64 1
-; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[STRIDE]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = call <4 x i32> @llvm.experimental.vp.strided.load.v4i32.p0.i64(ptr align 1 [[GEP_L4]], i64 [[TMP1]], <4 x i1> splat (i1 true), i32 4)
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x i32> [[TMP2]] to <16 x i8>
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <16 x i8> [[TMP3]], <16 x i8> poison, <16 x i32> <i32 1, i32 2, i32 3, i32 0, i32 5, i32 6, i32 7, i32 4, i32 9, i32 10, i32 11, i32 8, i32 13, i32 14, i32 15, i32 12>
-; CHECK-NEXT:    store <16 x i8> [[TMP4]], ptr [[GEP_S1]], align 1
+; CHECK-NEXT:    [[GEP_S2:%.*]] = getelementptr inbounds i8, ptr [[PS]], i64 2
+; CHECK-NEXT:    [[GEP_S10:%.*]] = getelementptr inbounds i8, ptr [[PS]], i64 10
+; CHECK-NEXT:    [[GEP_S14:%.*]] = getelementptr inbounds i8, ptr [[PS]], i64 14
+; CHECK-NEXT:    [[GEP_S16:%.*]] = getelementptr inbounds i8, ptr [[PS]], i64 16
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i8>, ptr [[GEP_L2]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i8>, ptr [[GEP_L4]], align 1
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i8>, ptr [[GEP_L6]], align 1
+; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x i8>, ptr [[GEP_L8]], align 1
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i8> [[TMP1]], <2 x i8> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i8> [[TMP2]], <2 x i8> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i8> [[TMP1]], <2 x i8> [[TMP2]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x i8> [[TMP3]], <2 x i8> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <8 x i8> [[TMP7]], <8 x i8> [[TMP8]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x i8> [[TMP4]], <2 x i8> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <8 x i8> [[TMP9]], <8 x i8> [[TMP10]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 8, i32 9>
+; CHECK-NEXT:    [[TMP12:%.*]] = load <2 x i8>, ptr [[GEP_L10]], align 1
+; CHECK-NEXT:    [[TMP13:%.*]] = load <2 x i8>, ptr [[GEP_L12]], align 1
+; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <2 x i8> [[TMP12]], <2 x i8> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP15:%.*]] = shufflevector <2 x i8> [[TMP13]], <2 x i8> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP16:%.*]] = shufflevector <2 x i8> [[TMP12]], <2 x i8> [[TMP13]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP17:%.*]] = load <2 x i8>, ptr [[GEP_L14]], align 1
+; CHECK-NEXT:    store i8 [[LOAD1]], ptr [[GEP_S1]], align 1
+; CHECK-NEXT:    store <8 x i8> [[TMP11]], ptr [[GEP_S2]], align 1
+; CHECK-NEXT:    store <4 x i8> [[TMP16]], ptr [[GEP_S10]], align 1
+; CHECK-NEXT:    store <2 x i8> [[TMP17]], ptr [[GEP_S14]], align 1
+; CHECK-NEXT:    store i8 [[LOAD16]], ptr [[GEP_S16]], align 1
 ; CHECK-NEXT:    ret void
 ;
   %offset0  = mul nsw i64 %stride, 0
@@ -304,14 +344,33 @@ define void @rt_stride_widen_rotaten_1(ptr %pl, i64 %stride, ptr %ps) {
 ; CHECK-NEXT:    [[OFFSET0:%.*]] = mul nsw i64 [[STRIDE]], 0
 ; CHECK-NEXT:    [[OFFSET1:%.*]] = add nsw i64 [[OFFSET0]], 1
 ; CHECK-NEXT:    [[OFFSET2:%.*]] = add nsw i64 [[OFFSET0]], 2
+; CHECK-NEXT:    [[OFFSET3:%.*]] = add nsw i64 [[OFFSET0]], 3
 ; CHECK-NEXT:    [[OFFSET4:%.*]] = mul nsw i64 [[STRIDE]], 1
+; CHECK-NEXT:    [[OFFSET12:%.*]] = mul nsw i64 [[STRIDE]], 3
+; CHECK-NEXT:    [[OFFSET16:%.*]] = mul nsw i64 [[STRIDE]], 4
+; CHECK-NEXT:    [[OFFSET18:%.*]] = add nsw i64 [[OFFSET16]], 2
+; CHECK-NEXT:    [[GEP_L3:%.*]] = getelementptr inbounds i8, ptr [[PL]], i64 [[OFFSET3]]
 ; CHECK-NEXT:    [[GEP_L4:%.*]] = getelementptr inbounds i8, ptr [[PL]], i64 [[OFFSET4]]
+; CHECK-NEXT:    [[GEP_L12:%.*]] = getelementptr inbounds i8, ptr [[PL]], i64 [[OFFSET12]]
+; CHECK-NEXT:    [[GEP_L16:%.*]] = getelementptr inbounds i8, ptr [[PL]], i64 [[OFFSET16]]
+; CHECK-NEXT:    [[GEP_L18:%.*]] = getelementptr inbounds i8, ptr [[PL]], i64 [[OFFSET18]]
+; CHECK-NEXT:    [[LOAD3:%.*]] = load i8, ptr [[GEP_L3]], align 1
+; CHECK-NEXT:    [[LOAD18:%.*]] = load i8, ptr [[GEP_L18]], align 1
 ; CHECK-NEXT:    [[GEP_S3:%.*]] = getelementptr inbounds i8, ptr [[PS]], i64 3
+; CHECK-NEXT:    [[GEP_S4:%.*]] = getelementptr inbounds i8, ptr [[PS]], i64 4
+; CHECK-NEXT:    [[GEP_S12:%.*]] = getelementptr inbounds i8, ptr [[PS]], i64 12
+; CHECK-NEXT:    [[GEP_S16:%.*]] = getelementptr inbounds i8, ptr [[PS]], i64 16
+; CHECK-NEXT:    [[GEP_S18:%.*]] = getelementptr inbounds i8, ptr [[PS]], i64 18
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[STRIDE]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = call <4 x i32> @llvm.experimental.vp.strided.load.v4i32.p0.i64(ptr align 1 [[GEP_L4]], i64 [[TMP1]], <4 x i1> splat (i1 true), i32 4)
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x i32> [[TMP2]] to <16 x i8>
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <16 x i8> [[TMP3]], <16 x i8> poison, <16 x i32> <i32 3, i32 0, i32 1, i32 2, i32 7, i32 4, i32 5, i32 6, i32 11, i32 8, i32 9, i32 10, i32 15, i32 12, i32 13, i32 14>
-; CHECK-NEXT:    store <16 x i8> [[TMP4]], ptr [[GEP_S3]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i32> @llvm.experimental.vp.strided.load.v2i32.p0.i64(ptr align 1 [[GEP_L4]], i64 [[TMP1]], <2 x i1> splat (i1 true), i32 2)
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <2 x i32> [[TMP2]] to <8 x i8>
+; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i8>, ptr [[GEP_L12]], align 1
+; CHECK-NEXT:    [[TMP5:%.*]] = load <2 x i8>, ptr [[GEP_L16]], align 1
+; CHECK-NEXT:    store i8 [[LOAD3]], ptr [[GEP_S3]], align 1
+; CHECK-NEXT:    store <8 x i8> [[TMP3]], ptr [[GEP_S4]], align 1
+; CHECK-NEXT:    store <4 x i8> [[TMP4]], ptr [[GEP_S12]], align 1
+; CHECK-NEXT:    store <2 x i8> [[TMP5]], ptr [[GEP_S16]], align 1
+; CHECK-NEXT:    store i8 [[LOAD18]], ptr [[GEP_S18]], align 1
 ; CHECK-NEXT:    ret void
 ;
   %offset0  = mul nsw i64 %stride, 0

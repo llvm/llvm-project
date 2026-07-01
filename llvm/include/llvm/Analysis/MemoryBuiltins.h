@@ -309,7 +309,7 @@ private:
   OffsetSpan combineOffsetRange(OffsetSpan LHS, OffsetSpan RHS);
   OffsetSpan computeImpl(Value *V);
   OffsetSpan computeValue(Value *V);
-  bool CheckedZextOrTrunc(APInt &I);
+  bool checkedZextOrTrunc(APInt &I);
 };
 
 /// SizeOffsetValue - Used by \p ObjectSizeOffsetEvaluator, which works with

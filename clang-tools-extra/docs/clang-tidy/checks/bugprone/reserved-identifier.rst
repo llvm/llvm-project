@@ -38,10 +38,10 @@ standards, e.g. C++ 'zombie names' and C future library directions.
 
 This check corresponds to CERT C Coding Standard rule `DCL37-C. Do not declare
 or define a reserved identifier
-<https://wiki.sei.cmu.edu/confluence/display/c/DCL37-C.+Do+not+declare+or+define+a+reserved+identifier>`_
+<https://cmu-sei.github.io/secure-coding-standards/sei-cert-c-coding-standard/rules/declarations-and-initialization-dcl/dcl37-c/>`_
 as well as its C++ counterpart, `DCL51-CPP. Do not declare or define a reserved
 identifier
-<https://wiki.sei.cmu.edu/confluence/display/cplusplus/DCL51-CPP.+Do+not+declare+or+define+a+reserved+identifier>`_.
+<https://cmu-sei.github.io/secure-coding-standards/sei-cert-cpp-coding-standard/rules/declarations-and-initialization-dcl/dcl51-cpp/>`_.
 
 Options
 -------

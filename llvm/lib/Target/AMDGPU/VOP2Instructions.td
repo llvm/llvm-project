@@ -1040,9 +1040,6 @@ def : DivergentClampingBinOp<add, V_ADD_CO_U32_e64>;
 def : DivergentClampingBinOp<sub, V_SUB_CO_U32_e64>;
 }
 
-def : DivergentBinOp<adde, V_ADDC_U32_e32>;
-def : DivergentBinOp<sube, V_SUBB_U32_e32>;
-
 class divergent_i64_BinOp <SDPatternOperator Op, Instruction Inst, ValueType vt = i64> :
   GCNPat<
       (DivergentBinFrag<Op> vt:$src0, vt:$src1),

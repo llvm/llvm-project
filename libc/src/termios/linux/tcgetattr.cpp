@@ -7,24 +7,22 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/termios/tcgetattr.h"
-#include "kernel_termios.h"
-
-#include "src/__support/OSUtil/syscall.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/ioctl.h"
 #include "src/__support/common.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
+#include "src/termios/linux/kernel_termios.h"
 
 #include <asm/ioctls.h> // Safe to include without the risk of name pollution.
-#include <sys/syscall.h> // For syscall numbers
 #include <termios.h>
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, tcgetattr, (int fd, struct termios *t)) {
   LIBC_NAMESPACE::kernel_termios kt;
-  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_ioctl, fd, TCGETS, &kt);
-  if (ret < 0) {
-    libc_errno = -ret;
+  auto ret = linux_syscalls::ioctl(fd, TCGETS, &kt);
+  if (!ret.has_value()) {
+    libc_errno = ret.error();
     return -1;
   }
   t->c_iflag = kt.c_iflag;

@@ -547,6 +547,14 @@ bool Sema::LookupTemplateName(LookupResult &Found, Scope *S, CXXScopeSpec &SS,
         } else {
           diagnoseTypo(Corrected, PDiag(diag::err_no_template_suggest) << Name);
         }
+
+        if (Corrected.WillReplaceSpecifier()) {
+          NestedNameSpecifier NNS = Corrected.getCorrectionSpecifier();
+          // In order to be valid, a non-empty CXXScopeSpec needs a source
+          // range.
+          SS.MakeTrivial(Context, NNS,
+                         NNS ? Found.getNameLoc() : SourceRange());
+        }
       }
     }
   }
@@ -2246,7 +2254,7 @@ DeclResult Sema::CheckClassTemplate(
   if (ModulePrivateLoc.isValid())
     NewTemplate->setModulePrivate();
 
-  if (IsMemberSpecialization) {
+  if (!Invalid && IsMemberSpecialization) {
     assert(PrevClassTemplate &&
            "Member specialization without a primary template?");
     NewTemplate->setMemberSpecialization();

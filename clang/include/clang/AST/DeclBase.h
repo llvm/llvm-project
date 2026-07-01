@@ -687,6 +687,10 @@ public:
 
   /// Whether the definition of the declaration should be emitted in external
   /// sources.
+  /// FIXME: This conflates two questions: if the entity should be emitted into
+  ///   other object files (because there's no primary), and if the debug info
+  ///   should be emitted into other object files. This matters for
+  //    `-fmodules-debuginfo`, `-fmodules-codgen`, and `isInNamedModule()`.
   bool shouldEmitInExternalSource() const;
 
   /// Whether this declaration comes from explicit global module.

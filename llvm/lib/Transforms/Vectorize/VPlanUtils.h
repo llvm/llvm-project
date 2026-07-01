@@ -92,9 +92,9 @@ template <typename Ty> Intrinsic::ID getIntrinsicID(const Ty *R) {
   };
   if (const auto *Rep = dyn_cast<VPReplicateRecipe>(R))
     if (Rep->getOpcode() == Instruction::Call)
-      // The mask is always the last operand if predicated.
+      // The callee is the last operand, excluding the mask if predicated.
       return GetCalleeIntrinsic(
-          Rep->getOperand(Rep->getNumOperands() - 1 - Rep->isPredicated()));
+          Rep->getOperand(Rep->getNumOperandsWithoutMask() - 1));
   if (const auto *VPI = dyn_cast<VPInstruction>(R))
     if (VPI->getOpcode() == Instruction::Call)
       return GetCalleeIntrinsic(VPI->getOperand(VPI->getNumOperands() - 1));

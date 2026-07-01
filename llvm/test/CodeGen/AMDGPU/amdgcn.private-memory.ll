@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=amdgcn < %s | FileCheck --check-prefixes=GCN,GCN-PROMOTE %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx600 < %s | FileCheck --check-prefixes=GCN,GCN-PROMOTE %s
 ; RUN: llc -mattr=-flat-for-global -mtriple=amdgcn--amdhsa -mcpu=kaveri < %s | FileCheck --check-prefixes=GCN,GCN-PROMOTE %s
-; RUN: llc -disable-promote-alloca-to-vector -disable-promote-alloca-to-lds -mtriple=amdgcn < %s | FileCheck --check-prefixes=GCN,GCN-ALLOCA %s
+; RUN: llc -disable-promote-alloca-to-vector -disable-promote-alloca-to-lds -mtriple=amdgcn -mcpu=gfx600 < %s | FileCheck --check-prefixes=GCN,GCN-ALLOCA %s
 ; RUN: llc -disable-promote-alloca-to-vector -disable-promote-alloca-to-lds -mattr=-flat-for-global -mtriple=amdgcn-amdhsa -mcpu=kaveri < %s | FileCheck  --check-prefixes=GCN,GCN-ALLOCA %s
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck --check-prefixes=GCN,GCN-PROMOTE %s
 ; RUN: llc -disable-promote-alloca-to-vector -disable-promote-alloca-to-lds -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck --check-prefixes=GCN,GCN-ALLOCA %s
