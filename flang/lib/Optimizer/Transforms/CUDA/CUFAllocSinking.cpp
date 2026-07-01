@@ -59,8 +59,7 @@ findSinkTarget(hlfir::DeclareOp declareOp, mlir::Block *entryBlock,
     mlir::Operation *target = user;
     while (target->getBlock() != entryBlock) {
       // User in another block of the same function.
-      if (target->getBlock() &&
-          target->getBlock()->getParent() == funcRegion) {
+      if (target->getBlock() && target->getBlock()->getParent() == funcRegion) {
         mlir::Block *blk = target->getBlock();
         auto it = successorEarliest.find(blk);
         if (it == successorEarliest.end() ||
