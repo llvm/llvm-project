@@ -1040,6 +1040,7 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 - Fixed a crash in code completion when using a C-Style cast with a parenthesized
   operand in Objective-C++ mode. (#GH180125)
+- Fixed a crash when code completion is triggered inside an ill-formed lambda's trailing requires-clause. (#GH201632)  
 
 ### Static Analyzer
 
@@ -1141,6 +1142,8 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   `per_source` (one device image per translation unit), and `off` (no split).
   The bare `-fsycl-device-code-split` flag is an alias for
   `-fsycl-device-code-split=per_source`, which is also the default.
+- Clang now is capable of diagnosing reference kernel parameters which are not
+  allowed by SYCL 2020 spec.
 
 #### Improvements
 
