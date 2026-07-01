@@ -62,6 +62,71 @@ struct AddIOpInterface
   }
 };
 
+struct DivUIOpInterface
+    : public ValueBoundsOpInterface::ExternalModel<DivUIOpInterface,
+                                                   arith::DivUIOp> {
+  void populateBoundsForIndexValue(Operation *op, Value value,
+                                   ValueBoundsConstraintSet &cstr) const {
+    auto divOp = cast<arith::DivUIOp>(op);
+    assert(value == divOp.getResult() && "invalid value");
+
+    bool lhsNonNegative =
+        ValueBoundsConstraintSet::isProvablyNonNegative(divOp.getLhs(), cstr);
+    bool rhsPositive =
+        ValueBoundsConstraintSet::isProvablyPositive(divOp.getRhs(), cstr);
+    if (!lhsNonNegative || !rhsPositive)
+      return;
+
+    AffineExpr lhs = cstr.getExpr(divOp.getLhs());
+    AffineExpr rhs = cstr.getExpr(divOp.getRhs());
+    cstr.bound(value) >= 0;
+    cstr.bound(value) == lhs.floorDiv(rhs);
+  }
+};
+
+struct DivSIOpInterface
+    : public ValueBoundsOpInterface::ExternalModel<DivSIOpInterface,
+                                                   arith::DivSIOp> {
+  void populateBoundsForIndexValue(Operation *op, Value value,
+                                   ValueBoundsConstraintSet &cstr) const {
+    auto divOp = cast<arith::DivSIOp>(op);
+    assert(value == divOp.getResult() && "invalid value");
+
+    Value lhsValue = divOp.getLhs();
+    Value rhsValue = divOp.getRhs();
+
+    bool lhsNonNegative =
+        ValueBoundsConstraintSet::isProvablyNonNegative(lhsValue, cstr);
+    bool lhsNonPositive =
+        ValueBoundsConstraintSet::isProvablyNonPositive(lhsValue, cstr);
+    bool rhsPositive =
+        ValueBoundsConstraintSet::isProvablyPositive(rhsValue, cstr);
+    bool rhsNegative =
+        ValueBoundsConstraintSet::isProvablyNegative(rhsValue, cstr);
+
+    AffineExpr lhs = cstr.getExpr(lhsValue);
+    AffineExpr rhs = cstr.getExpr(rhsValue);
+
+    // divsi rounds toward zero, unlike floorDiv/ceilDiv which round toward
+    // negative/positive infinity respectively. When the result is non-negative,
+    // divsi equals floorDiv(lhs, rhs); when negative, it equals ceilDiv(lhs,
+    // rhs). Without knowing the sign, bound the result between those two
+    // expressions, which is always correct.
+    cstr.bound(value) >= lhs.floorDiv(rhs);
+    cstr.bound(value) <= lhs.ceilDiv(rhs);
+
+    // If the sign of the result is known, we can use the exact expression.
+    if ((lhsNonNegative && rhsPositive) || (lhsNonPositive && rhsNegative)) {
+      cstr.bound(value) == lhs.floorDiv(rhs);
+      cstr.bound(value) >= 0;
+    } else if ((lhsNonPositive && rhsPositive) ||
+               (lhsNonNegative && rhsNegative)) {
+      cstr.bound(value) == lhs.ceilDiv(rhs);
+      cstr.bound(value) <= 0;
+    }
+  }
+};
+
 struct SubIOpInterface
     : public ValueBoundsOpInterface::ExternalModel<SubIOpInterface, SubIOp> {
   void populateBoundsForIndexValue(Operation *op, Value value,
@@ -338,6 +403,8 @@ void mlir::arith::registerValueBoundsOpInterfaceExternalModels(
     arith::ConstantOp::attachInterface<arith::ConstantOpInterface>(*ctx);
     arith::ExtSIOp::attachInterface<arith::ExtSIOpInterface>(*ctx);
     arith::AddIOp::attachInterface<arith::AddIOpInterface>(*ctx);
+    arith::DivUIOp::attachInterface<arith::DivUIOpInterface>(*ctx);
+    arith::DivSIOp::attachInterface<arith::DivSIOpInterface>(*ctx);
     arith::SubIOp::attachInterface<arith::SubIOpInterface>(*ctx);
     arith::MulIOp::attachInterface<arith::MulIOpInterface>(*ctx);
     arith::FloorDivSIOp::attachInterface<arith::FloorDivSIOpInterface>(*ctx);

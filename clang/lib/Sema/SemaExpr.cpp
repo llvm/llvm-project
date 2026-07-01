@@ -7394,6 +7394,7 @@ ExprResult Sema::BuildResolvedCallExpr(Expr *Fn, NamedDecl *NDecl,
       return ExprError();
 
     checkFortifiedBuiltinMemoryFunction(FDecl, TheCall);
+    checkFortifiedLibcArgument(FDecl, TheCall);
 
     if (BuiltinID)
       return CheckBuiltinFunctionCall(FDecl, BuiltinID, TheCall);
@@ -16135,10 +16136,20 @@ ExprResult Sema::BuildBinOp(Scope *S, SourceLocation OpLoc,
     RHSExpr = resolvedRHS.get();
   }
 
-  if (getLangOpts().HLSL && (LHSExpr->getType()->isHLSLResourceRecord() ||
-                             LHSExpr->getType()->isHLSLResourceRecordArray())) {
-    if (!HLSL().CheckResourceBinOp(Opc, LHSExpr, RHSExpr, OpLoc))
-      return ExprError();
+  if (getLangOpts().HLSL) {
+    if (LHSExpr->getType()->isHLSLResourceRecord() ||
+        LHSExpr->getType()->isHLSLResourceRecordArray()) {
+      if (!HLSL().CheckResourceBinOp(Opc, LHSExpr, RHSExpr, OpLoc))
+        return ExprError();
+    } else if (RHSExpr->getType()->isHLSLResourceRecord()) {
+      std::optional<ExprResult> ConvRHS =
+          HLSL().tryPerformConstantBufferConversion(RHSExpr);
+      if (ConvRHS && Context.hasSameUnqualifiedType(
+                         LHSExpr->getType(), ConvRHS->get()->getType())) {
+        assert(!ConvRHS->isInvalid());
+        RHSExpr = ConvRHS->get();
+      }
+    }
   }
 
   if (getLangOpts().CPlusPlus) {
