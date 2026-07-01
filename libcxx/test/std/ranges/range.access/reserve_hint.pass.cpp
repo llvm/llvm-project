@@ -20,8 +20,8 @@ using RangeReserveHintT = decltype(std::ranges::reserve_hint);
 
 struct Incomplete;
 static_assert(!std::is_invocable_v<RangeReserveHintT, Incomplete[]>);
-static_assert(!std::is_invocable_v<RangeReserveHintT, Incomplete(&)[]>);
-static_assert(!std::is_invocable_v<RangeReserveHintT, Incomplete(&&)[]>);
+static_assert(!std::is_invocable_v<RangeReserveHintT, Incomplete (&)[]>);
+static_assert(!std::is_invocable_v<RangeReserveHintT, Incomplete (&&)[]>);
 
 extern int bounded_array[42];
 extern int unbounded_array[];
