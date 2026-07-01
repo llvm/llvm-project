@@ -609,51 +609,51 @@ define void @trunc_v128i16_v128i8(ptr %in, ptr %out) nounwind {
 ; NONEON-NOSVE-NEXT:    stp q4, q6, [sp, #560]
 ; NONEON-NOSVE-NEXT:    str w8, [sp, #400] // 4-byte Spill
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #436]
-; NONEON-NOSVE-NEXT:    str q5, [sp, #544]
+; NONEON-NOSVE-NEXT:    stp q2, q1, [sp, #608]
 ; NONEON-NOSVE-NEXT:    str w8, [sp, #396] // 4-byte Spill
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #438]
-; NONEON-NOSVE-NEXT:    stp q2, q1, [sp, #608]
-; NONEON-NOSVE-NEXT:    str w8, [sp, #392] // 4-byte Spill
-; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #440]
 ; NONEON-NOSVE-NEXT:    ldrh w15, [sp, #638]
 ; NONEON-NOSVE-NEXT:    stp q7, q21, [sp, #640]
 ; NONEON-NOSVE-NEXT:    ldrh w16, [sp, #636]
 ; NONEON-NOSVE-NEXT:    ldrh w17, [sp, #634]
-; NONEON-NOSVE-NEXT:    str w8, [sp, #388] // 4-byte Spill
-; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #442]
+; NONEON-NOSVE-NEXT:    str w8, [sp, #392] // 4-byte Spill
+; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #440]
 ; NONEON-NOSVE-NEXT:    ldrh w9, [sp, #666]
-; NONEON-NOSVE-NEXT:    str q3, [sp, #416]
+; NONEON-NOSVE-NEXT:    str q5, [sp, #544]
 ; NONEON-NOSVE-NEXT:    ldrh w18, [sp, #632]
 ; NONEON-NOSVE-NEXT:    ldrh w0, [sp, #630]
-; NONEON-NOSVE-NEXT:    str w8, [sp, #384] // 4-byte Spill
-; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #444]
+; NONEON-NOSVE-NEXT:    str w8, [sp, #388] // 4-byte Spill
+; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #442]
 ; NONEON-NOSVE-NEXT:    ldrh w1, [sp, #628]
+; NONEON-NOSVE-NEXT:    str q3, [sp, #416]
 ; NONEON-NOSVE-NEXT:    ldrh w2, [sp, #626]
 ; NONEON-NOSVE-NEXT:    ldrh w3, [sp, #624]
+; NONEON-NOSVE-NEXT:    str w8, [sp, #384] // 4-byte Spill
+; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #444]
 ; NONEON-NOSVE-NEXT:    ldrh w4, [sp, #622]
-; NONEON-NOSVE-NEXT:    str w8, [sp, #380] // 4-byte Spill
-; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #446]
 ; NONEON-NOSVE-NEXT:    ldrh w5, [sp, #620]
 ; NONEON-NOSVE-NEXT:    ldrh w6, [sp, #618]
 ; NONEON-NOSVE-NEXT:    ldrh w7, [sp, #616]
+; NONEON-NOSVE-NEXT:    str w8, [sp, #380] // 4-byte Spill
+; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #446]
 ; NONEON-NOSVE-NEXT:    ldrh w19, [sp, #614]
-; NONEON-NOSVE-NEXT:    str w8, [sp, #376] // 4-byte Spill
-; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #480]
 ; NONEON-NOSVE-NEXT:    ldrh w20, [sp, #612]
 ; NONEON-NOSVE-NEXT:    ldrh w21, [sp, #610]
 ; NONEON-NOSVE-NEXT:    ldrh w22, [sp, #608]
+; NONEON-NOSVE-NEXT:    str w8, [sp, #376] // 4-byte Spill
+; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #480]
 ; NONEON-NOSVE-NEXT:    ldrh w23, [sp, #430]
-; NONEON-NOSVE-NEXT:    str w8, [sp, #372] // 4-byte Spill
-; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #482]
 ; NONEON-NOSVE-NEXT:    ldrh w24, [sp, #428]
 ; NONEON-NOSVE-NEXT:    ldrh w25, [sp, #426]
 ; NONEON-NOSVE-NEXT:    ldrh w26, [sp, #424]
+; NONEON-NOSVE-NEXT:    str w8, [sp, #372] // 4-byte Spill
+; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #482]
 ; NONEON-NOSVE-NEXT:    ldrh w27, [sp, #422]
-; NONEON-NOSVE-NEXT:    str w8, [sp, #368] // 4-byte Spill
-; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #484]
 ; NONEON-NOSVE-NEXT:    ldrh w28, [sp, #420]
 ; NONEON-NOSVE-NEXT:    ldrh w29, [sp, #418]
 ; NONEON-NOSVE-NEXT:    strb w30, [sp, #767]
+; NONEON-NOSVE-NEXT:    str w8, [sp, #368] // 4-byte Spill
+; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #484]
 ; NONEON-NOSVE-NEXT:    str w8, [sp, #364] // 4-byte Spill
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #486]
 ; NONEON-NOSVE-NEXT:    str w8, [sp, #360] // 4-byte Spill
@@ -2101,30 +2101,30 @@ define void @trunc_v64i32_v64i16(ptr %in, ptr %out) nounwind {
 ; NONEON-NOSVE-NEXT:    ldr w30, [sp, #376]
 ; NONEON-NOSVE-NEXT:    stp w8, w9, [sp, #136] // 8-byte Folded Spill
 ; NONEON-NOSVE-NEXT:    ldp w9, w8, [sp, #168]
-; NONEON-NOSVE-NEXT:    stp q4, q6, [sp, #288]
 ; NONEON-NOSVE-NEXT:    stp q2, q1, [sp, #336]
-; NONEON-NOSVE-NEXT:    ldr w3, [sp, #300]
-; NONEON-NOSVE-NEXT:    ldr w4, [sp, #296]
-; NONEON-NOSVE-NEXT:    stp w8, w9, [sp, #128] // 8-byte Folded Spill
 ; NONEON-NOSVE-NEXT:    ldr w11, [sp, #360]
 ; NONEON-NOSVE-NEXT:    ldr w12, [sp, #356]
-; NONEON-NOSVE-NEXT:    ldp w9, w8, [sp, #208]
 ; NONEON-NOSVE-NEXT:    ldr w13, [sp, #352]
+; NONEON-NOSVE-NEXT:    stp w8, w9, [sp, #128] // 8-byte Folded Spill
 ; NONEON-NOSVE-NEXT:    ldr w14, [sp, #348]
 ; NONEON-NOSVE-NEXT:    ldr w15, [sp, #344]
+; NONEON-NOSVE-NEXT:    ldp w9, w8, [sp, #208]
 ; NONEON-NOSVE-NEXT:    str q3, [sp, #144]
 ; NONEON-NOSVE-NEXT:    ldr w16, [sp, #340]
 ; NONEON-NOSVE-NEXT:    ldr w17, [sp, #336]
+; NONEON-NOSVE-NEXT:    stp q4, q6, [sp, #288]
 ; NONEON-NOSVE-NEXT:    stp w8, w9, [sp, #120] // 8-byte Folded Spill
+; NONEON-NOSVE-NEXT:    ldr w3, [sp, #300]
+; NONEON-NOSVE-NEXT:    ldr w4, [sp, #296]
 ; NONEON-NOSVE-NEXT:    ldr w6, [sp, #292]
-; NONEON-NOSVE-NEXT:    ldr w7, [sp, #288]
 ; NONEON-NOSVE-NEXT:    str q5, [sp, #272]
-; NONEON-NOSVE-NEXT:    ldr w25, [sp, #316]
-; NONEON-NOSVE-NEXT:    ldr w26, [sp, #312]
+; NONEON-NOSVE-NEXT:    ldr w7, [sp, #288]
 ; NONEON-NOSVE-NEXT:    ldr w19, [sp, #284]
 ; NONEON-NOSVE-NEXT:    ldr w20, [sp, #280]
 ; NONEON-NOSVE-NEXT:    ldr w22, [sp, #276]
 ; NONEON-NOSVE-NEXT:    ldr w24, [sp, #272]
+; NONEON-NOSVE-NEXT:    ldr w25, [sp, #316]
+; NONEON-NOSVE-NEXT:    ldr w26, [sp, #312]
 ; NONEON-NOSVE-NEXT:    ldr w27, [sp, #308]
 ; NONEON-NOSVE-NEXT:    ldr w28, [sp, #304]
 ; NONEON-NOSVE-NEXT:    strh w21, [sp, #494]
@@ -2990,10 +2990,19 @@ define void @trunc_v32i64_v32i16(ptr %in, ptr %out) nounwind {
 ; NONEON-NOSVE-NEXT:    ldr w3, [sp, #56]
 ; NONEON-NOSVE-NEXT:    add w9, w9, w9
 ; NONEON-NOSVE-NEXT:    ldr w18, [sp, #80]
-; NONEON-NOSVE-NEXT:    stp q22, q16, [sp, #112]
-; NONEON-NOSVE-NEXT:    stp q6, q5, [sp, #208]
 ; NONEON-NOSVE-NEXT:    ldr w0, [sp, #88]
+; NONEON-NOSVE-NEXT:    strh w9, [sp, #308]
 ; NONEON-NOSVE-NEXT:    ldr w16, [sp, #32]
+; NONEON-NOSVE-NEXT:    ldr w17, [sp, #40]
+; NONEON-NOSVE-NEXT:    str q7, [sp, #16]
+; NONEON-NOSVE-NEXT:    ldr w12, [sp, #96]
+; NONEON-NOSVE-NEXT:    ldr w13, [sp, #104]
+; NONEON-NOSVE-NEXT:    ldr w20, [sp, #24]
+; NONEON-NOSVE-NEXT:    stp q22, q16, [sp, #112]
+; NONEON-NOSVE-NEXT:    ldr w19, [sp, #16]
+; NONEON-NOSVE-NEXT:    stp q6, q5, [sp, #208]
+; NONEON-NOSVE-NEXT:    ldr w14, [sp, #112]
+; NONEON-NOSVE-NEXT:    ldr w15, [sp, #120]
 ; NONEON-NOSVE-NEXT:    stp q3, q17, [sp, #240]
 ; NONEON-NOSVE-NEXT:    ldr w23, [sp, #224]
 ; NONEON-NOSVE-NEXT:    ldr w24, [sp, #232]
@@ -3001,50 +3010,41 @@ define void @trunc_v32i64_v32i16(ptr %in, ptr %out) nounwind {
 ; NONEON-NOSVE-NEXT:    ldr w8, [sp, #264]
 ; NONEON-NOSVE-NEXT:    ldr w27, [sp, #240]
 ; NONEON-NOSVE-NEXT:    ldr w28, [sp, #248]
-; NONEON-NOSVE-NEXT:    strh w9, [sp, #308]
 ; NONEON-NOSVE-NEXT:    ldr w21, [sp, #208]
+; NONEON-NOSVE-NEXT:    ldr w22, [sp, #216]
 ; NONEON-NOSVE-NEXT:    add w9, w27, w27
 ; NONEON-NOSVE-NEXT:    stp w8, w10, [sp, #8] // 8-byte Folded Spill
 ; NONEON-NOSVE-NEXT:    ldr w8, [sp, #184]
-; NONEON-NOSVE-NEXT:    str q7, [sp, #16]
-; NONEON-NOSVE-NEXT:    ldr w22, [sp, #216]
-; NONEON-NOSVE-NEXT:    ldr w17, [sp, #40]
-; NONEON-NOSVE-NEXT:    add w8, w8, w8
 ; NONEON-NOSVE-NEXT:    strh w9, [sp, #304]
 ; NONEON-NOSVE-NEXT:    add w9, w25, w25
+; NONEON-NOSVE-NEXT:    ldr w10, [sp, #128]
+; NONEON-NOSVE-NEXT:    add w8, w8, w8
+; NONEON-NOSVE-NEXT:    str q18, [sp, #64]
+; NONEON-NOSVE-NEXT:    ldr w11, [sp, #136]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #310]
 ; NONEON-NOSVE-NEXT:    add w8, w28, w28
-; NONEON-NOSVE-NEXT:    ldr w19, [sp, #16]
+; NONEON-NOSVE-NEXT:    ldr w4, [sp, #64]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #306]
 ; NONEON-NOSVE-NEXT:    add w8, w26, w26
-; NONEON-NOSVE-NEXT:    ldr w20, [sp, #24]
-; NONEON-NOSVE-NEXT:    str q18, [sp, #64]
-; NONEON-NOSVE-NEXT:    ldr w14, [sp, #112]
-; NONEON-NOSVE-NEXT:    ldr w15, [sp, #120]
+; NONEON-NOSVE-NEXT:    ldr w7, [sp, #72]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #302]
 ; NONEON-NOSVE-NEXT:    add w8, w24, w24
-; NONEON-NOSVE-NEXT:    ldr w4, [sp, #64]
+; NONEON-NOSVE-NEXT:    ldr w29, [sp, #144]
 ; NONEON-NOSVE-NEXT:    strh w9, [sp, #300]
 ; NONEON-NOSVE-NEXT:    add w9, w23, w23
-; NONEON-NOSVE-NEXT:    ldr w7, [sp, #72]
+; NONEON-NOSVE-NEXT:    ldr w30, [sp, #152]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #298]
 ; NONEON-NOSVE-NEXT:    add w8, w22, w22
-; NONEON-NOSVE-NEXT:    ldr w12, [sp, #96]
 ; NONEON-NOSVE-NEXT:    strh w9, [sp, #296]
 ; NONEON-NOSVE-NEXT:    add w9, w21, w21
-; NONEON-NOSVE-NEXT:    ldr w13, [sp, #104]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #294]
 ; NONEON-NOSVE-NEXT:    add w8, w20, w20
-; NONEON-NOSVE-NEXT:    ldr w10, [sp, #128]
 ; NONEON-NOSVE-NEXT:    strh w9, [sp, #292]
 ; NONEON-NOSVE-NEXT:    add w9, w19, w19
-; NONEON-NOSVE-NEXT:    ldr w11, [sp, #136]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #290]
 ; NONEON-NOSVE-NEXT:    add w8, w7, w7
-; NONEON-NOSVE-NEXT:    ldr w29, [sp, #144]
 ; NONEON-NOSVE-NEXT:    strh w9, [sp, #288]
 ; NONEON-NOSVE-NEXT:    add w9, w4, w4
-; NONEON-NOSVE-NEXT:    ldr w30, [sp, #152]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #286]
 ; NONEON-NOSVE-NEXT:    add w8, w3, w3
 ; NONEON-NOSVE-NEXT:    strh w9, [sp, #284]
@@ -3073,9 +3073,9 @@ define void @trunc_v32i64_v32i16(ptr %in, ptr %out) nounwind {
 ; NONEON-NOSVE-NEXT:    ldr w8, [sp, #8] // 4-byte Reload
 ; NONEON-NOSVE-NEXT:    strh w9, [sp, #324]
 ; NONEON-NOSVE-NEXT:    ldr w9, [sp, #12] // 4-byte Reload
-; NONEON-NOSVE-NEXT:    add w8, w8, w8
 ; NONEON-NOSVE-NEXT:    strh w5, [sp, #318]
 ; NONEON-NOSVE-NEXT:    add w5, w30, w30
+; NONEON-NOSVE-NEXT:    add w8, w8, w8
 ; NONEON-NOSVE-NEXT:    strh w6, [sp, #316]
 ; NONEON-NOSVE-NEXT:    add w6, w29, w29
 ; NONEON-NOSVE-NEXT:    add w9, w9, w9
@@ -3090,8 +3090,8 @@ define void @trunc_v32i64_v32i16(ptr %in, ptr %out) nounwind {
 ; NONEON-NOSVE-NEXT:    ldp q2, q0, [sp, #304]
 ; NONEON-NOSVE-NEXT:    ldp x26, x25, [sp, #368] // 16-byte Folded Reload
 ; NONEON-NOSVE-NEXT:    ldp x28, x27, [sp, #352] // 16-byte Folded Reload
-; NONEON-NOSVE-NEXT:    stp q3, q2, [x1]
 ; NONEON-NOSVE-NEXT:    ldp x29, x30, [sp, #336] // 16-byte Folded Reload
+; NONEON-NOSVE-NEXT:    stp q3, q2, [x1]
 ; NONEON-NOSVE-NEXT:    stp q0, q1, [x1, #32]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #432
 ; NONEON-NOSVE-NEXT:    ret
@@ -3354,38 +3354,41 @@ define void @trunc_v32i64_v32i32(ptr %in, ptr %out) nounwind {
 ; NONEON-NOSVE-NEXT:    stp q17, q23, [sp, #32]
 ; NONEON-NOSVE-NEXT:    ldr w9, [sp, #200]
 ; NONEON-NOSVE-NEXT:    ldr w10, [sp, #32]
-; NONEON-NOSVE-NEXT:    stp q4, q6, [sp, #160]
+; NONEON-NOSVE-NEXT:    stp q22, q16, [sp, #64]
 ; NONEON-NOSVE-NEXT:    ldr w12, [sp, #48]
 ; NONEON-NOSVE-NEXT:    add w6, w8, w8
 ; NONEON-NOSVE-NEXT:    add w5, w9, w9
 ; NONEON-NOSVE-NEXT:    ldr w8, [sp, #40]
 ; NONEON-NOSVE-NEXT:    stp q18, q20, [sp, #112]
-; NONEON-NOSVE-NEXT:    ldr w25, [sp, #160]
-; NONEON-NOSVE-NEXT:    ldr w26, [sp, #168]
-; NONEON-NOSVE-NEXT:    str q5, [sp, #144]
-; NONEON-NOSVE-NEXT:    ldr w21, [sp, #176]
-; NONEON-NOSVE-NEXT:    ldr w22, [sp, #184]
+; NONEON-NOSVE-NEXT:    ldr w14, [sp, #64]
+; NONEON-NOSVE-NEXT:    ldr w15, [sp, #72]
 ; NONEON-NOSVE-NEXT:    stp q2, q1, [sp, #208]
-; NONEON-NOSVE-NEXT:    ldr w23, [sp, #144]
-; NONEON-NOSVE-NEXT:    ldr w24, [sp, #152]
+; NONEON-NOSVE-NEXT:    ldr w4, [sp, #112]
+; NONEON-NOSVE-NEXT:    ldr w7, [sp, #120]
 ; NONEON-NOSVE-NEXT:    str q3, [sp, #16]
 ; NONEON-NOSVE-NEXT:    ldr w9, [sp, #208]
-; NONEON-NOSVE-NEXT:    ldr w4, [sp, #112]
+; NONEON-NOSVE-NEXT:    ldr w18, [sp, #128]
 ; NONEON-NOSVE-NEXT:    stp w8, w10, [sp, #8] // 8-byte Folded Spill
 ; NONEON-NOSVE-NEXT:    ldr w8, [sp, #216]
 ; NONEON-NOSVE-NEXT:    ldr w27, [sp, #16]
 ; NONEON-NOSVE-NEXT:    add w9, w9, w9
+; NONEON-NOSVE-NEXT:    stp q4, q6, [sp, #160]
 ; NONEON-NOSVE-NEXT:    ldr w28, [sp, #24]
-; NONEON-NOSVE-NEXT:    stp q22, q16, [sp, #64]
 ; NONEON-NOSVE-NEXT:    add w8, w8, w8
-; NONEON-NOSVE-NEXT:    str w9, [sp, #344]
-; NONEON-NOSVE-NEXT:    add w9, w27, w27
+; NONEON-NOSVE-NEXT:    str q5, [sp, #144]
+; NONEON-NOSVE-NEXT:    ldr w25, [sp, #160]
+; NONEON-NOSVE-NEXT:    ldr w26, [sp, #168]
+; NONEON-NOSVE-NEXT:    ldr w23, [sp, #144]
+; NONEON-NOSVE-NEXT:    ldr w24, [sp, #152]
 ; NONEON-NOSVE-NEXT:    str w8, [sp, #348]
 ; NONEON-NOSVE-NEXT:    add w8, w28, w28
-; NONEON-NOSVE-NEXT:    ldr w7, [sp, #120]
+; NONEON-NOSVE-NEXT:    ldr w21, [sp, #176]
+; NONEON-NOSVE-NEXT:    str w9, [sp, #344]
+; NONEON-NOSVE-NEXT:    add w9, w27, w27
+; NONEON-NOSVE-NEXT:    ldr w22, [sp, #184]
 ; NONEON-NOSVE-NEXT:    stp q7, q21, [sp, #240]
-; NONEON-NOSVE-NEXT:    ldr w18, [sp, #128]
 ; NONEON-NOSVE-NEXT:    ldr w0, [sp, #136]
+; NONEON-NOSVE-NEXT:    ldr w13, [sp, #56]
 ; NONEON-NOSVE-NEXT:    str w8, [sp, #340]
 ; NONEON-NOSVE-NEXT:    add w8, w26, w26
 ; NONEON-NOSVE-NEXT:    ldr w19, [sp, #240]
@@ -3399,8 +3402,8 @@ define void @trunc_v32i64_v32i32(ptr %in, ptr %out) nounwind {
 ; NONEON-NOSVE-NEXT:    add w9, w23, w23
 ; NONEON-NOSVE-NEXT:    ldr w17, [sp, #264]
 ; NONEON-NOSVE-NEXT:    str q19, [sp, #96]
-; NONEON-NOSVE-NEXT:    ldr w14, [sp, #64]
-; NONEON-NOSVE-NEXT:    ldr w15, [sp, #72]
+; NONEON-NOSVE-NEXT:    ldr w10, [sp, #80]
+; NONEON-NOSVE-NEXT:    ldr w11, [sp, #88]
 ; NONEON-NOSVE-NEXT:    str w8, [sp, #324]
 ; NONEON-NOSVE-NEXT:    add w8, w22, w22
 ; NONEON-NOSVE-NEXT:    ldr w2, [sp, #96]
@@ -3409,19 +3412,16 @@ define void @trunc_v32i64_v32i32(ptr %in, ptr %out) nounwind {
 ; NONEON-NOSVE-NEXT:    ldr w3, [sp, #104]
 ; NONEON-NOSVE-NEXT:    str w8, [sp, #380]
 ; NONEON-NOSVE-NEXT:    add w8, w20, w20
-; NONEON-NOSVE-NEXT:    ldr w13, [sp, #56]
+; NONEON-NOSVE-NEXT:    ldr w29, [sp, #224]
 ; NONEON-NOSVE-NEXT:    str w9, [sp, #376]
 ; NONEON-NOSVE-NEXT:    add w9, w19, w19
-; NONEON-NOSVE-NEXT:    ldr w10, [sp, #80]
+; NONEON-NOSVE-NEXT:    ldr w30, [sp, #232]
 ; NONEON-NOSVE-NEXT:    str w8, [sp, #372]
 ; NONEON-NOSVE-NEXT:    add w8, w7, w7
-; NONEON-NOSVE-NEXT:    ldr w11, [sp, #88]
 ; NONEON-NOSVE-NEXT:    str w9, [sp, #368]
 ; NONEON-NOSVE-NEXT:    add w9, w4, w4
-; NONEON-NOSVE-NEXT:    ldr w29, [sp, #224]
 ; NONEON-NOSVE-NEXT:    str w8, [sp, #316]
 ; NONEON-NOSVE-NEXT:    add w8, w3, w3
-; NONEON-NOSVE-NEXT:    ldr w30, [sp, #232]
 ; NONEON-NOSVE-NEXT:    str w9, [sp, #312]
 ; NONEON-NOSVE-NEXT:    add w9, w2, w2
 ; NONEON-NOSVE-NEXT:    str w8, [sp, #308]
@@ -3448,12 +3448,12 @@ define void @trunc_v32i64_v32i32(ptr %in, ptr %out) nounwind {
 ; NONEON-NOSVE-NEXT:    ldr w8, [sp, #8] // 4-byte Reload
 ; NONEON-NOSVE-NEXT:    str w9, [sp, #296]
 ; NONEON-NOSVE-NEXT:    ldr w9, [sp, #12] // 4-byte Reload
-; NONEON-NOSVE-NEXT:    add w8, w8, w8
 ; NONEON-NOSVE-NEXT:    str w5, [sp, #364]
 ; NONEON-NOSVE-NEXT:    add w5, w30, w30
-; NONEON-NOSVE-NEXT:    add w9, w9, w9
+; NONEON-NOSVE-NEXT:    add w8, w8, w8
 ; NONEON-NOSVE-NEXT:    str w6, [sp, #360]
 ; NONEON-NOSVE-NEXT:    add w6, w29, w29
+; NONEON-NOSVE-NEXT:    add w9, w9, w9
 ; NONEON-NOSVE-NEXT:    str w5, [sp, #356]
 ; NONEON-NOSVE-NEXT:    ldp q6, q3, [sp, #304]
 ; NONEON-NOSVE-NEXT:    str w6, [sp, #352]
