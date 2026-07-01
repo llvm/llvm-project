@@ -3169,10 +3169,16 @@ protected:
 class LLVM_ABI_FOR_TEST VPInterleaveEVLRecipe final : public VPInterleaveBase {
 public:
   VPInterleaveEVLRecipe(VPInterleaveRecipe &R, VPValue &EVL, VPValue *Mask)
-      : VPInterleaveBase(VPRecipeBase::VPInterleaveEVLSC,
-                         R.getInterleaveGroup(), {R.getAddr(), &EVL},
-                         R.getStoredValues(), Mask, R.needsMaskForGaps(), R,
-                         R.getDebugLoc()) {
+      : VPInterleaveEVLRecipe(R.getInterleaveGroup(), R.getAddr(), EVL,
+                              R.getStoredValues(), Mask, R.needsMaskForGaps(),
+                              R, R.getDebugLoc()) {}
+
+  VPInterleaveEVLRecipe(const InterleaveGroup<Instruction> *IG, VPValue *Addr,
+                        VPValue &EVL, ArrayRef<VPValue *> StoredValues,
+                        VPValue *Mask, bool NeedsMaskForGaps,
+                        const VPIRMetadata &MD, DebugLoc DL)
+      : VPInterleaveBase(VPRecipeBase::VPInterleaveEVLSC, IG, {Addr, &EVL},
+                         StoredValues, Mask, NeedsMaskForGaps, MD, DL) {
     assert(!getInterleaveGroup()->isReverse() &&
            "Reversed interleave-group with tail folding is not supported.");
     assert(!needsMaskForGaps() && "Interleaved access with gap mask is not "
@@ -3182,7 +3188,9 @@ public:
   ~VPInterleaveEVLRecipe() override = default;
 
   VPInterleaveEVLRecipe *clone() override {
-    llvm_unreachable("cloning not implemented yet");
+    return new VPInterleaveEVLRecipe(getInterleaveGroup(), getAddr(), *getEVL(),
+                                     getStoredValues(), getMask(),
+                                     needsMaskForGaps(), *this, getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPInterleaveEVLSC)
@@ -3351,7 +3359,8 @@ public:
   ~VPReductionEVLRecipe() override = default;
 
   VPReductionEVLRecipe *clone() override {
-    llvm_unreachable("cloning not implemented yet");
+    return new VPReductionEVLRecipe(*this, *getEVL(), getCondOp(),
+                                    getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPReductionEVLSC)
@@ -3850,15 +3859,22 @@ struct LLVM_ABI_FOR_TEST VPWidenLoadEVLRecipe final
       public VPWidenMemoryRecipe {
   VPWidenLoadEVLRecipe(VPWidenLoadRecipe &L, VPValue *Addr, VPValue &EVL,
                        VPValue *Mask)
+      : VPWidenLoadEVLRecipe(cast<LoadInst>(L.getIngredient()), Addr, EVL, Mask,
+                             L.isConsecutive(), L, L.getDebugLoc()) {}
+
+  VPWidenLoadEVLRecipe(LoadInst &Load, VPValue *Addr, VPValue &EVL,
+                       VPValue *Mask, bool Consecutive,
+                       const VPIRMetadata &Metadata, DebugLoc DL)
       : VPSingleDefRecipe(VPRecipeBase::VPWidenLoadEVLSC, {Addr, &EVL},
-                          L.getIngredient().getType(), &L.getIngredient(),
-                          L.getDebugLoc()),
-        VPWidenMemoryRecipe(L.getIngredient(), L.isConsecutive(), L) {
+                          Load.getType(), &Load, DL),
+        VPWidenMemoryRecipe(Load, Consecutive, Metadata) {
     setMask(Mask);
   }
 
   VPWidenLoadEVLRecipe *clone() override {
-    llvm_unreachable("cloning not supported");
+    return new VPWidenLoadEVLRecipe(cast<LoadInst>(Ingredient), getAddr(),
+                                    *getEVL(), getMask(), Consecutive, *this,
+                                    getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPWidenLoadEVLSC)
@@ -3953,14 +3969,23 @@ struct LLVM_ABI_FOR_TEST VPWidenStoreEVLRecipe final
       public VPWidenMemoryRecipe {
   VPWidenStoreEVLRecipe(VPWidenStoreRecipe &S, VPValue *Addr,
                         VPValue *StoredVal, VPValue &EVL, VPValue *Mask)
+      : VPWidenStoreEVLRecipe(cast<StoreInst>(S.getIngredient()), Addr,
+                              StoredVal, EVL, Mask, S.isConsecutive(), S,
+                              S.getDebugLoc()) {}
+
+  VPWidenStoreEVLRecipe(StoreInst &Store, VPValue *Addr, VPValue *StoredVal,
+                        VPValue &EVL, VPValue *Mask, bool Consecutive,
+                        const VPIRMetadata &Metadata, DebugLoc DL)
       : VPRecipeBase(VPRecipeBase::VPWidenStoreEVLSC, {Addr, StoredVal, &EVL},
-                     S.getDebugLoc()),
-        VPWidenMemoryRecipe(S.getIngredient(), S.isConsecutive(), S) {
+                     DL),
+        VPWidenMemoryRecipe(Store, Consecutive, Metadata) {
     setMask(Mask);
   }
 
   VPWidenStoreEVLRecipe *clone() override {
-    llvm_unreachable("cloning not supported");
+    return new VPWidenStoreEVLRecipe(cast<StoreInst>(Ingredient), getAddr(),
+                                     getStoredValue(), *getEVL(), getMask(),
+                                     Consecutive, *this, getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPWidenStoreEVLSC)
@@ -4080,7 +4105,10 @@ public:
   ~VPCurrentIterationPHIRecipe() override = default;
 
   VPCurrentIterationPHIRecipe *clone() override {
-    llvm_unreachable("cloning not implemented yet");
+    auto *R = new VPCurrentIterationPHIRecipe(getOperand(0), getDebugLoc());
+    if (getNumOperands() == 2)
+      R->addBackedgeValue(getOperand(1));
+    return R;
   }
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPCurrentIterationPHISC)
