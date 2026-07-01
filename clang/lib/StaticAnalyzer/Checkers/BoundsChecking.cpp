@@ -21,11 +21,12 @@
 
 using llvm::formatv;
 
-namespace clang {
-namespace ento {
+using namespace clang;
+using namespace ento;
+using namespace bounds;
 
 const ArraySubscriptExpr *
-getAsCleanArraySubscriptExpr(const Expr *E, const CheckerContext &C) {
+bounds::getAsCleanArraySubscriptExpr(const Expr *E, const CheckerContext &C) {
   const auto *ASE = dyn_cast<ArraySubscriptExpr>(E);
   if (!ASE)
     return nullptr;
@@ -160,8 +161,8 @@ compareValueToThreshold(ProgramStateRef State, NonLoc Value, NonLoc Threshold,
   return {nullptr, nullptr};
 }
 
-std::string getRegionName(const MemSpaceRegion *Space,
-                          const SubRegion *Region) {
+std::string bounds::getRegionName(const MemSpaceRegion *Space,
+                                  const SubRegion *Region) {
   if (std::string RegName = Region->getDescriptiveName(); !RegName.empty())
     return RegName;
 
@@ -200,8 +201,8 @@ static std::optional<int64_t> getConcreteValue(std::optional<NonLoc> SV) {
 /// it can be performed (`Divisor` is nonzero and there is no remainder). The
 /// values `Val1` and `Val2` may be nullopt and in that case the corresponding
 /// division is considered to be successful.
-bool SizeUnit::tryConvertValuesFromBytes(std::optional<int64_t> &Val1,
-                                         std::optional<int64_t> &Val2) const {
+bool bounds::SizeUnit::tryConvertValuesFromBytes(
+    std::optional<int64_t> &Val1, std::optional<int64_t> &Val2) const {
   if (!AsCharUnits)
     return false;
   const bool Val1HasRemainder = Val1 && *Val1 % AsCharUnits;
@@ -215,8 +216,9 @@ bool SizeUnit::tryConvertValuesFromBytes(std::optional<int64_t> &Val1,
   return true;
 }
 
-Messages getNonTaintMsgs(std::string RegName, SizeUnit SU, NonLoc Offset,
-                         std::optional<NonLoc> Extent, BadOffsetKind Problem) {
+Messages bounds::getNonTaintMsgs(std::string RegName, SizeUnit SU,
+                                 NonLoc Offset, std::optional<NonLoc> Extent,
+                                 BadOffsetKind Problem) {
 
   std::optional<int64_t> OffsetN = getConcreteValue(Offset);
   std::optional<int64_t> ExtentN = getConcreteValue(Extent);
@@ -264,8 +266,8 @@ Messages getNonTaintMsgs(std::string RegName, SizeUnit SU, NonLoc Offset,
           std::string(Buf)};
 }
 
-Messages getTaintMsgs(std::string RegName, const char *OffsetName,
-                      bool AlsoMentionUnderflow) {
+Messages bounds::getTaintMsgs(std::string RegName, const char *OffsetName,
+                              bool AlsoMentionUnderflow) {
   return {formatv("Potential out of bound access to {0} with tainted {1}",
                   RegName, OffsetName),
           formatv("Access of {0} with a tainted {1} that may be {2}too large",
@@ -273,9 +275,9 @@ Messages getTaintMsgs(std::string RegName, const char *OffsetName,
                   AlsoMentionUnderflow ? "negative or " : "")};
 }
 
-std::string BoundsCheckResult::getMessage(PathSensitiveBugReport &BR,
-                                          StringRef RegName,
-                                          SizeUnit SU) const {
+std::string bounds::CheckResult::getMessage(PathSensitiveBugReport &BR,
+                                            StringRef RegName,
+                                            SizeUnit SU) const {
   bool ShouldReportNonNegative = AssumedNonNegative;
   if (!providesInformationAboutInteresting(Offset, BR)) {
     if (AssumedUpperBound && providesInformationAboutInteresting(*Extent, BR)) {
@@ -327,7 +329,7 @@ std::string BoundsCheckResult::getMessage(PathSensitiveBugReport &BR,
   return std::string(Out.str());
 }
 
-bool BoundsCheckResult::providesInformationAboutInteresting(
+bool bounds::CheckResult::providesInformationAboutInteresting(
     SVal SV, PathSensitiveBugReport &BR) {
   SymbolRef Sym = SV.getAsSymbol();
   if (!Sym)
@@ -346,10 +348,10 @@ bool BoundsCheckResult::providesInformationAboutInteresting(
   return false;
 }
 
-BoundsCheckResult checkBounds(ProgramStateRef State, SValBuilder &SVB,
-                              NonLoc Offset, std::optional<NonLoc> Extent,
-                              CheckFlags Flags) {
-  BoundsCheckResult Res(Offset, Extent);
+CheckResult bounds::checkBounds(ProgramStateRef State, SValBuilder &SVB,
+                                NonLoc Offset, std::optional<NonLoc> Extent,
+                                CheckFlags Flags) {
+  CheckResult Res(Offset, Extent);
 
   // CHECK LOWER BOUND
   if (Flags.CheckUnderflow) {
@@ -377,7 +379,7 @@ BoundsCheckResult checkBounds(ProgramStateRef State, SValBuilder &SVB,
 
         if (!WithinLowerBound) {
           // The state is completely nonsense -- let's just sink it!
-          Res.finalize(BoundsCheckResult::Kind::Paradox, PrecedesLowerBound);
+          Res.finalize(CheckResult::Kind::Paradox, PrecedesLowerBound);
           return Res;
         }
         // Otherwise continue on the 'WithinLowerBound' branch where the
@@ -386,7 +388,7 @@ BoundsCheckResult checkBounds(ProgramStateRef State, SValBuilder &SVB,
       } else {
         if (!WithinLowerBound) {
           // ...and it cannot be valid (>= 0), so report an error.
-          Res.finalize(BoundsCheckResult::Kind::Underflow, PrecedesLowerBound);
+          Res.finalize(CheckResult::Kind::Underflow, PrecedesLowerBound);
           return Res;
         }
         // ...but it can be valid as well, so the checker will (optimistically)
@@ -418,18 +420,18 @@ BoundsCheckResult checkBounds(ProgramStateRef State, SValBuilder &SVB,
               compareValueToThreshold(State, Offset, *Extent, SVB,
                                       /*CheckEquality=*/true);
           if (EqualsToThreshold && !NotEqualToThreshold) {
-            Res.finalize(BoundsCheckResult::Kind::Valid, State);
+            Res.finalize(CheckResult::Kind::Valid, State);
             return Res;
           }
         }
 
-        Res.finalize(BoundsCheckResult::Kind::Overflow, ExceedsUpperBound);
+        Res.finalize(CheckResult::Kind::Overflow, ExceedsUpperBound);
         return Res;
       }
       // ...and it can be valid as well...
       if (taint::isTainted(State, Offset)) {
         // ...but it's tainted, so report an error.
-        Res.finalize(BoundsCheckResult::Kind::TaintBug, State);
+        Res.finalize(CheckResult::Kind::TaintBug, State);
         return Res;
       }
       // ...and it isn't tainted, so the checker will (optimistically) assume
@@ -443,9 +445,6 @@ BoundsCheckResult checkBounds(ProgramStateRef State, SValBuilder &SVB,
     if (WithinUpperBound)
       State = WithinUpperBound;
   }
-  Res.finalize(BoundsCheckResult::Kind::Valid, State);
+  Res.finalize(CheckResult::Kind::Valid, State);
   return Res;
 }
-
-} // namespace ento
-} // namespace clang

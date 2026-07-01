@@ -22,8 +22,7 @@
 #include "llvm/Support/FormatVariadic.h"
 #include <optional>
 
-namespace clang {
-namespace ento {
+namespace clang::ento::bounds {
 
 /// If `E` is an array subscript expression with a base that is "clean" (= not
 /// modified by pointer arithmetic = the beginning of a memory region), return
@@ -119,7 +118,7 @@ struct CheckFlags {
   unsigned AcceptPastTheEnd : 1;
 };
 
-class BoundsCheckResult {
+class CheckResult {
 public:
   enum class Kind { Underflow, Overflow, TaintBug, Paradox, Valid };
 
@@ -131,8 +130,7 @@ private:
   std::optional<NonLoc> Extent;
   ProgramStateRef State = nullptr;
 
-  BoundsCheckResult(NonLoc Offs, std::optional<NonLoc> E)
-      : Offset(Offs), Extent(E) {}
+  CheckResult(NonLoc Offs, std::optional<NonLoc> E) : Offset(Offs), Extent(E) {}
 
   void recordNonNegativeAssumption() { AssumedNonNegative = true; }
 
@@ -144,10 +142,9 @@ private:
   }
 
 public:
-  friend BoundsCheckResult checkBounds(ProgramStateRef State, SValBuilder &SVB,
-                                       NonLoc Offset,
-                                       std::optional<NonLoc> Extent,
-                                       CheckFlags Flags);
+  friend CheckResult checkBounds(ProgramStateRef State, SValBuilder &SVB,
+                                 NonLoc Offset, std::optional<NonLoc> Extent,
+                                 CheckFlags Flags);
 
   bool assumedNonNegative() const { return AssumedNonNegative; }
 
@@ -191,10 +188,10 @@ private:
                                                   PathSensitiveBugReport &BR);
 };
 
-BoundsCheckResult checkBounds(ProgramStateRef State, SValBuilder &SVB,
-                              NonLoc Offset, std::optional<NonLoc> Extent,
-                              CheckFlags Flags);
+CheckResult checkBounds(ProgramStateRef State, SValBuilder &SVB, NonLoc Offset,
+                        std::optional<NonLoc> Extent, CheckFlags Flags);
 
+// FIXME: This utility probably should become a method of `MemRegion`.
 std::string getRegionName(const MemSpaceRegion *Space, const SubRegion *Region);
 
 Messages getTaintMsgs(std::string RegName, const char *OffsetName,
@@ -203,7 +200,6 @@ Messages getTaintMsgs(std::string RegName, const char *OffsetName,
 Messages getNonTaintMsgs(std::string RegName, SizeUnit SU, NonLoc Offset,
                          std::optional<NonLoc> Extent, BadOffsetKind Problem);
 
-} // namespace ento
-} // namespace clang
+} // namespace clang::ento::bounds
 
 #endif // LLVM_CLANG_STATICANALYZER_CHECKERS_BOUNDSCHECKING_H

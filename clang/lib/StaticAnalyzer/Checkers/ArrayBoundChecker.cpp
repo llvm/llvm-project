@@ -40,8 +40,9 @@ class ArrayBoundChecker : public Checker<check::PostStmt<ArraySubscriptExpr>,
 
   void handleAccessExpr(const Expr *E, CheckerContext &C) const;
 
-  void reportOOB(CheckerContext &C, ProgramStateRef ErrorState, Messages Msgs,
-                 ArrayRef<NonLoc> Extent, bool IsTaintBug = false) const;
+  void reportOOB(CheckerContext &C, ProgramStateRef ErrorState,
+                 bounds::Messages Msgs, ArrayRef<NonLoc> Extent,
+                 bool IsTaintBug = false) const;
 
   static void markPartsInteresting(PathSensitiveBugReport &BR,
                                    ProgramStateRef ErrorState, NonLoc Val,
@@ -158,7 +159,7 @@ void ArrayBoundChecker::handleAccessExpr(const Expr *E,
   // non-symbolic regions (e.g. a field subregion of a symbolic region) in
   // unknown space.
 
-  CheckFlags Flags = {
+  bounds::CheckFlags Flags = {
       /*CheckUnderflow=*/!(isa<SymbolicRegion>(Reg) &&
                            isa<UnknownSpaceRegion>(Space)),
       /*OffsetObviouslyNonnegative=*/isOffsetObviouslyNonnegative(E, C),
@@ -166,22 +167,22 @@ void ArrayBoundChecker::handleAccessExpr(const Expr *E,
           isInAddressOf(E, C.getASTContext()),
   };
 
-  BoundsCheckResult Res = checkBounds(State, SVB, ByteOffset, Extent, Flags);
+  bounds::CheckResult Res = checkBounds(State, SVB, ByteOffset, Extent, Flags);
 
-  std::string RN = getRegionName(Space, Reg);
+  std::string RN = bounds::getRegionName(Space, Reg);
 
   switch (Res.getKind()) {
-  case BoundsCheckResult::Kind::Paradox:
+  case bounds::CheckResult::Kind::Paradox:
     // The current state is paradoxical (due to bad modeling of casts we
     // assumed that an unsigned value is negative), so we should sink the
     // execution path.
     C.addSink();
     return;
 
-  case BoundsCheckResult::Kind::Valid: {
+  case bounds::CheckResult::Kind::Valid: {
     const NoteTag *Tag = nullptr;
     if (Res.hasAssumption()) {
-      SizeUnit SU = SizeUnit::forExpr(E, C);
+      bounds::SizeUnit SU = bounds::SizeUnit::forExpr(E, C);
       Tag = C.getNoteTag(
           [Res, RN, SU](PathSensitiveBugReport &BR) -> std::string {
             return Res.getMessage(BR, RN, SU);
@@ -191,7 +192,7 @@ void ArrayBoundChecker::handleAccessExpr(const Expr *E,
     C.addTransition(Res.getState(), Tag);
     return;
   }
-  case BoundsCheckResult::Kind::TaintBug: {
+  case bounds::CheckResult::Kind::TaintBug: {
     // Diagnostic detail: saying "tainted offset" is always correct, but
     // the common case is that 'idx' is tainted in 'arr[idx]' and then it's
     // nicer to say "tainted index".
@@ -200,9 +201,9 @@ void ArrayBoundChecker::handleAccessExpr(const Expr *E,
       if (taint::isTainted(State, ASE->getIdx(), C.getStackFrame()))
         OffsetName = "index";
 
-    Messages Msgs =
-        getTaintMsgs(RN, OffsetName,
-                     /*AlsoMentionUnderflow=*/Res.assumedNonNegative());
+    bounds::Messages Msgs =
+        bounds::getTaintMsgs(RN, OffsetName,
+                             /*AlsoMentionUnderflow=*/Res.assumedNonNegative());
     SmallVector<NonLoc, 2> Interesting = {ByteOffset};
     if (Extent)
       Interesting.push_back(*Extent);
@@ -210,11 +211,12 @@ void ArrayBoundChecker::handleAccessExpr(const Expr *E,
     return;
   }
   default: {
-    SizeUnit SU = SizeUnit::forSVal(Location, C.getASTContext());
-    BadOffsetKind BOK = *Res.getBadOffsetKind();
-    Messages Msgs = getNonTaintMsgs(RN, SU, ByteOffset, Extent, BOK);
+    bounds::SizeUnit SU =
+        bounds::SizeUnit::forSVal(Location, C.getASTContext());
+    bounds::BadOffsetKind BOK = *Res.getBadOffsetKind();
+    bounds::Messages Msgs = getNonTaintMsgs(RN, SU, ByteOffset, Extent, BOK);
     SmallVector<NonLoc, 2> Interesting = {ByteOffset};
-    if (Extent && BOK != BadOffsetKind::Negative)
+    if (Extent && BOK != bounds::BadOffsetKind::Negative)
       Interesting.push_back(*Extent);
     reportOOB(C, Res.getState(), Msgs, Interesting);
     return;
@@ -246,7 +248,8 @@ void ArrayBoundChecker::markPartsInteresting(PathSensitiveBugReport &BR,
 }
 
 void ArrayBoundChecker::reportOOB(CheckerContext &C, ProgramStateRef ErrorState,
-                                  Messages Msgs, ArrayRef<NonLoc> Interesting,
+                                  bounds::Messages Msgs,
+                                  ArrayRef<NonLoc> Interesting,
                                   bool IsTaintBug /*=false*/) const {
 
   ExplodedNode *ErrorNode = C.generateErrorNode(ErrorState);
@@ -296,7 +299,7 @@ bool ArrayBoundChecker::isFromCtypeMacro(const Expr *E, ASTContext &ACtx) {
 
 bool ArrayBoundChecker::isOffsetObviouslyNonnegative(const Expr *E,
                                                      CheckerContext &C) {
-  const ArraySubscriptExpr *ASE = getAsCleanArraySubscriptExpr(E, C);
+  const ArraySubscriptExpr *ASE = bounds::getAsCleanArraySubscriptExpr(E, C);
   if (!ASE)
     return false;
   return ASE->getIdx()->getType()->isUnsignedIntegerOrEnumerationType();
