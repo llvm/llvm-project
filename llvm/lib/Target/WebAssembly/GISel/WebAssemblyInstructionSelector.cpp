@@ -13,6 +13,8 @@
 
 #include "GISel/WebAssemblyRegisterBankInfo.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
+#include "Utils/WasmAddressSpaces.h"
+#include "Utils/WebAssemblyTypeUtilities.h"
 #include "WebAssemblyRegisterInfo.h"
 #include "WebAssemblySubtarget.h"
 #include "WebAssemblyTargetMachine.h"
@@ -42,14 +44,26 @@ public:
 
   bool select(MachineInstr &I) override;
 
+  InstructionSelector::ComplexRendererFns
+  selectAddrOperands32(MachineOperand &Root) const;
+  InstructionSelector::ComplexRendererFns
+  selectAddrOperands64(MachineOperand &Root) const;
+
   static const char *getName() { return DEBUG_TYPE; }
 
 private:
   bool selectImpl(MachineInstr &I, CodeGenCoverage &CoverageInfo) const;
   bool selectCopy(MachineInstr &I, MachineRegisterInfo &MRI) const;
 
+  void renderFrameIndex(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                        int OpIdx) const;
+
+  InstructionSelector::ComplexRendererFns
+  selectAddrOperands(LLT AddrType, unsigned int ConstOpc,
+                     MachineOperand &Root) const;
+
   const WebAssemblyTargetMachine &TM;
-  // const WebAssemblySubtarget &STI;
+  const WebAssemblySubtarget &STI;
   const WebAssemblyInstrInfo &TII;
   const WebAssemblyRegisterInfo &TRI;
   const WebAssemblyRegisterBankInfo &RBI;
@@ -72,8 +86,8 @@ private:
 WebAssemblyInstructionSelector::WebAssemblyInstructionSelector(
     const WebAssemblyTargetMachine &TM, const WebAssemblySubtarget &STI,
     const WebAssemblyRegisterBankInfo &RBI)
-    : TM(TM), /*STI(STI),*/ TII(*STI.getInstrInfo()),
-      TRI(*STI.getRegisterInfo()), RBI(RBI),
+    : TM(TM), STI(STI), TII(*STI.getInstrInfo()), TRI(*STI.getRegisterInfo()),
+      RBI(RBI),
 
 #define GET_GLOBALISEL_PREDICATES_INIT
 #include "WebAssemblyGenGlobalISel.inc"
@@ -82,6 +96,40 @@ WebAssemblyInstructionSelector::WebAssemblyInstructionSelector(
 #include "WebAssemblyGenGlobalISel.inc"
 #undef GET_GLOBALISEL_TEMPORARIES_INIT
 {
+}
+
+void WebAssemblyInstructionSelector::renderFrameIndex(MachineInstrBuilder &MIB,
+                                                      const MachineInstr &MI,
+                                                      int OpIdx) const {
+  assert(MI.getOpcode() == TargetOpcode::G_FRAME_INDEX && OpIdx == -1 &&
+         "Expected G_FRAME_INDEX");
+  MIB.add(MI.getOperand(1));
+}
+
+InstructionSelector::ComplexRendererFns
+WebAssemblyInstructionSelector::selectAddrOperands(LLT AddrType,
+                                                   unsigned int ConstOpc,
+                                                   MachineOperand &Root) const {
+
+  if (!Root.isReg())
+    return std::nullopt;
+
+  return {{
+      [=](MachineInstrBuilder &MIB) { MIB.addImm(0); },
+      [=](MachineInstrBuilder &MIB) { MIB.addReg(Root.getReg()); },
+  }};
+}
+
+InstructionSelector::ComplexRendererFns
+WebAssemblyInstructionSelector::selectAddrOperands32(
+    MachineOperand &Root) const {
+  return selectAddrOperands(LLT::integer(32), WebAssembly::CONST_I32, Root);
+}
+
+InstructionSelector::ComplexRendererFns
+WebAssemblyInstructionSelector::selectAddrOperands64(
+    MachineOperand &Root) const {
+  return selectAddrOperands(LLT::integer(64), WebAssembly::CONST_I64, Root);
 }
 
 bool WebAssemblyInstructionSelector::selectCopy(
@@ -140,6 +188,7 @@ bool WebAssemblyInstructionSelector::select(MachineInstr &I) {
   MachineBasicBlock &MBB = *I.getParent();
   MachineFunction &MF = *MBB.getParent();
   MachineRegisterInfo &MRI = MF.getRegInfo();
+  const TargetLowering &TLI = *STI.getTargetLowering();
 
   if (!I.isPreISelOpcode()) {
     if (I.isCopy())
@@ -151,6 +200,9 @@ bool WebAssemblyInstructionSelector::select(MachineInstr &I) {
     return true;
 
   using namespace TargetOpcode;
+
+  auto PointerWidth = MF.getDataLayout().getPointerSizeInBits();
+  auto PtrIsI64 = PointerWidth == 64;
 
   switch (I.getOpcode()) {
   case G_IMPLICIT_DEF: {
@@ -164,6 +216,101 @@ bool WebAssemblyInstructionSelector::select(MachineInstr &I) {
 
     I.setDesc(TII.get(TargetOpcode::IMPLICIT_DEF));
     return RBI.constrainGenericRegister(DefReg, *DefRC, MRI) != nullptr;
+  }
+  case G_PTRTOINT: {
+    assert(MRI.getType(I.getOperand(1).getReg()).isPointer() &&
+           "G_PTRTOINT selection with non-pointer?");
+
+    I.setDesc(
+        TII.get(PtrIsI64 ? WebAssembly::COPY_I64 : WebAssembly::COPY_I32));
+    constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+
+    return true;
+  }
+  case G_INTTOPTR: {
+    assert(MRI.getType(I.getOperand(0).getReg()).isPointer() &&
+           "G_INTTOPTR selection with non-pointer?");
+
+    I.setDesc(
+        TII.get(PtrIsI64 ? WebAssembly::COPY_I64 : WebAssembly::COPY_I32));
+    constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+
+    return true;
+  }
+  case G_PTRMASK: {
+    assert(MRI.getType(I.getOperand(0).getReg()).isPointer() &&
+           "G_PTRMASK selection with non-pointer?");
+
+    I.setDesc(TII.get(PtrIsI64 ? WebAssembly::AND_I64 : WebAssembly::AND_I32));
+    constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+
+    return true;
+  }
+  case G_GLOBAL_VALUE: {
+    assert(I.getOperand(1).getTargetFlags() == 0 &&
+           "Unexpected target flags on generic G_GLOBAL_VALUE instruction");
+    assert(WebAssembly::isValidAddressSpace(
+               MRI.getType(I.getOperand(0).getReg()).getAddressSpace()) &&
+           "Invalid address space for WebAssembly target");
+
+    unsigned OperandFlags = 0;
+    const llvm::GlobalValue *GV = I.getOperand(1).getGlobal();
+
+    if (TLI.isPositionIndependent()) {
+      if (TM.shouldAssumeDSOLocal(GV)) {
+        const char *BaseName;
+        if (GV->getValueType()->isFunctionTy()) {
+          BaseName = MF.createExternalSymbolName("__table_base");
+          OperandFlags = WebAssemblyII::MO_TABLE_BASE_REL;
+        } else {
+          BaseName = MF.createExternalSymbolName("__memory_base");
+          OperandFlags = WebAssemblyII::MO_MEMORY_BASE_REL;
+        }
+        MachineIRBuilder B(I);
+
+        auto MemBase =
+            MRI.createGenericVirtualRegister(LLT::pointer(0, PointerWidth));
+        MRI.setRegClass(MemBase, PtrIsI64 ? &WebAssembly::I64RegClass
+                                          : &WebAssembly::I32RegClass);
+        auto Offset =
+            MRI.createGenericVirtualRegister(LLT::pointer(0, PointerWidth));
+        MRI.setRegClass(Offset, PtrIsI64 ? &WebAssembly::I64RegClass
+                                         : &WebAssembly::I32RegClass);
+
+        B.buildInstr(PtrIsI64 ? WebAssembly::GLOBAL_GET_I64
+                              : WebAssembly::GLOBAL_GET_I32)
+            .addDef(MemBase)
+            .addExternalSymbol(BaseName);
+
+        B.buildInstr(PtrIsI64 ? WebAssembly::CONST_I64 : WebAssembly::CONST_I32)
+            .addDef(Offset)
+            .addGlobalAddress(GV, I.getOperand(1).getOffset(), OperandFlags);
+
+        auto MIB =
+            B.buildInstr(PtrIsI64 ? WebAssembly::ADD_I64 : WebAssembly::ADD_I32)
+                .addDef(I.getOperand(0).getReg())
+                .addReg(MemBase)
+                .addReg(Offset);
+        constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
+
+        I.eraseFromParent();
+        return true;
+      }
+      OperandFlags = WebAssemblyII::MO_GOT;
+    }
+
+    auto NewOpc = PtrIsI64 ? WebAssembly::CONST_I64 : WebAssembly::CONST_I32;
+
+    if (OperandFlags & WebAssemblyII::MO_GOT) {
+      NewOpc =
+          PtrIsI64 ? WebAssembly::GLOBAL_GET_I64 : WebAssembly::GLOBAL_GET_I32;
+    }
+
+    I.setDesc(TII.get(NewOpc));
+    I.getOperand(1).setTargetFlags(OperandFlags);
+    constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+
+    return true;
   }
   default:
     break;
