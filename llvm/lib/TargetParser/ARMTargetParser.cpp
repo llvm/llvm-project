@@ -26,9 +26,9 @@ namespace {
 using namespace llvm::ARM;
 
 // List of Arch Extension names.
-constexpr EnumStringDef<uint64_t, 3> ExtNameDefs[] = {
+constexpr EnumStringDef<ArchExtKind, 3> ExtNameDefs[] = {
 #define ARM_ARCH_EXT_NAME(NAME, ID, FEATURE, NEGFEATURE)                       \
-  {{NAME, FEATURE, NEGFEATURE}, ID},
+  {{NAME, FEATURE, NEGFEATURE}, ArchExtKind(ID)},
 #include "llvm/TargetParser/ARMTargetParser.def"
 };
 static constexpr auto ExtNames = BUILD_ENUM_STRINGS(ExtNameDefs);
@@ -419,7 +419,7 @@ unsigned ARM::getArchAttr(ARM::ArchKind AK) {
   return ArchNames[static_cast<unsigned>(AK)].value().ArchAttr;
 }
 
-EnumStrings<uint64_t, 3> ARM::getArchExts() { return EnumStrings(ExtNames); }
+EnumStrings<ArchExtKind, 3> ARM::getArchExts() { return EnumStrings(ExtNames); }
 
 StringRef ARM::getArchExtName(uint64_t ArchExtKind) {
   return EnumStrings(ExtNames).toString(ArchExtKind);

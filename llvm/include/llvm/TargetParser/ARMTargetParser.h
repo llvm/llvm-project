@@ -162,7 +162,7 @@ LLVM_ABI StringRef getCPUAttr(ArchKind AK);
 LLVM_ABI StringRef getSubArch(ArchKind AK);
 /// Get list of architecture extensions. The name strings are: 0=Name,
 /// 1=PosFeature (incl. "+"), 2=NegFeature (incl. "-").
-LLVM_ABI EnumStrings<uint64_t, 3> getArchExts();
+LLVM_ABI EnumStrings<ArchExtKind, 3> getArchExts();
 LLVM_ABI StringRef getArchExtName(uint64_t ArchExtKind);
 LLVM_ABI StringRef getArchExtFeature(StringRef ArchExt);
 LLVM_ABI bool appendArchExtFeatures(StringRef CPU, ARM::ArchKind AK,
