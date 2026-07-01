@@ -429,8 +429,11 @@ SourceManager::GetDefaultFileAndLine() {
         function_options.include_symbols =
             false; // Force it to be a debug symbol.
         function_options.include_inlines = true;
+        // The linkage name can differ from the source name, so match on the
+        // base name to find the function regardless of how it was mangled or
+        // renamed.
         executable_ptr->FindFunctions(main_name, CompilerDeclContext(),
-                                      lldb::eFunctionNameTypeFull,
+                                      lldb::eFunctionNameTypeBase,
                                       function_options, sc_list);
         for (const SymbolContext &sc : sc_list) {
           if (sc.function) {
