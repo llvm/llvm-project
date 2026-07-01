@@ -37,6 +37,30 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
+/// Secrets used to encrypt and verify forward and backward pointers in free
+/// lists when hardening is enabled.
+///
+/// When hardening is enabled (LIBC_COPT_HARDEN_FREELIST), we use XOR and
+/// bit-rotation encoding to protect the forward (`next`) and backward (`prev`)
+/// pointers in free list nodes. This encoding mechanism protects heap integrity
+/// against memory corruption and software bugs.
+///
+/// Threat Model and Security Guarantees:
+/// To effectively protect against intentional attackers who might attempt to
+/// infer the secret keys from memory, this hardening mechanism relies on the
+/// following assumptions:
+///
+/// - Header Separation: We assume that the allocator metadata (the heap header
+///   and secret keys) is isolated from dynamic data memory. This ensures that a
+///   linear buffer overflow read cannot easily dump the secret keys from
+///   adjacent memory.
+///
+/// - Allocation Randomness: We assume that allocation and deallocation patterns
+///   have sufficient randomness or diversity such that an attacker cannot
+///   reliably predict the exact memory layout of free list nodes. If an
+///   attacker could reliably guess node addresses and read forward/backward
+///   pointers via local overflow reads, they could XOR known addresses against
+///   encoded pointers to derive the secret keys.
 struct FreeListSecrets {
   static constexpr int NODE_PTR_ROTATE_DISTANCE = 17;
 
