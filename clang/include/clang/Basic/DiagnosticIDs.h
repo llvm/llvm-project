@@ -514,6 +514,12 @@ private:
   getDiagnosticSeverity(unsigned DiagID, SourceLocation Loc,
                         const DiagnosticsEngine &Diag) const LLVM_READONLY;
 
+  /// Given a collection of diagnostic IDs, get the 'highest' severity of them
+  /// at the provided location for this DiagnosticsEngine.  
+  diag::Severity getDiagnosticListHighestSeverity(
+      llvm::ArrayRef<diag::kind> DiagIDs, SourceLocation Loc,
+      const DiagnosticsEngine &Diag) const LLVM_READONLY;
+
   Class getDiagClass(unsigned DiagID) const;
 
   /// Whether the diagnostic may leave the AST in a state where some

@@ -968,9 +968,8 @@ public:
                                                Group, diagsInGroup);
     assert(!Failed && "Incorrect group name?");
     (void)Failed;
-    return llvm::all_of(diagsInGroup, [&](diag::kind DiagID) {
-      return isIgnored(DiagID, Loc);
-    });
+    return Diags->getDiagnosticListHighestSeverity(diagsInGroup, Loc, *this) ==
+           diag::Severity::Ignored;
   }
 
   /// Based on the way the client configured the DiagnosticsEngine
