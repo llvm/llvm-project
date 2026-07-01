@@ -10,6 +10,8 @@
 #define LLVM_CLANG_SCALABLESTATICANALYSIS_SOURCETRANSFORMATION_TRANSFORMATIONREPORTFORMAT_H
 
 #include "clang/ScalableStaticAnalysis/SourceTransformation/TransformationReport.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Error.h"
 
 namespace clang::ssaf {
 
