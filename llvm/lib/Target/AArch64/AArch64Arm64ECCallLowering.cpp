@@ -336,7 +336,8 @@ ThunkArgInfo AArch64Arm64ECCallLowering::canonicalizeThunkType(
   if (T->isFP128Ty()) {
     // Prefix with `llvm` since MSVC doesn't specify `_Float128`
     Out << "__llvm_q__";
-    // f128 uses sret for compatibility with GCC.
+    // On windows f128 is passed indirectly, and Clang/LLVM
+    // returns using sret for compatibility with GCC.
     return pointerIndirection(T);
   }
 
