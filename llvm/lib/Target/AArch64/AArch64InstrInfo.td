@@ -11612,7 +11612,7 @@ let Predicates = [HasRCPC3, HasNEON] in {
 def SYSPxt  : SystemPXtI<0, "sysp">;
 
 def : InstAlias<"sysp $op1, $Cn, $Cm, $op2",
-                (SYSPxt imm0_7:$op1, sys_cr_op:$Cn, sys_cr_op:$Cm, imm0_7:$op2, XZR_XZR)>;
+                (SYSPxt imm0_7:$op1, sys_cr_op:$Cn, sys_cr_op:$Cm, imm0_7:$op2, XZR)>;
 
 //---
 // 128-bit System Registers (FEAT_SYSREG128)

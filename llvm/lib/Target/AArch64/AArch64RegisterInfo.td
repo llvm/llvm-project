@@ -804,10 +804,6 @@ def WSeqPairs : RegisterTuples<[sube32, subo32],
 def XSeqPairs : RegisterTuples<[sube64, subo64],
                                [(decimate (rotl GPR64, 0), 2),
                                 (decimate (rotl GPR64, 1), 2)]>;
-def XZR_XZR : AArch64Reg<31, "xzr_xzr"> {
-  let isArtificial = 1;
-  let isConstant = true;
-}
 
 def WSeqPairsClass   : RegisterClass<"AArch64", [untyped], 32,
                                      (add WSeqPairs)>{
@@ -818,10 +814,10 @@ def XSeqPairsClass   : RegisterClass<"AArch64", [untyped], 64,
   let Size = 128;
 }
 def SyspPairsClass   : RegisterClass<"AArch64", [untyped], 64,
-                                     (add XSeqPairs, XZR_XZR)>{
+                                     (add XSeqPairs, XZR)>{
   let Size = 128;
-  // This is an asm/disasm operand class. XZR_XZR is an artificial register
-  // used to model the SYSP Rt == 31 encoding and must not be allocated.
+  // This is an asm/disasm operand class. XZR is used to model the SYSP
+  // Rt == 31 encoding and must not be allocated as a register pair.
   let isAllocatable = 0;
 }
 
