@@ -118,7 +118,7 @@ void DerivedTypeSpec::EvaluateParameters(SemanticsContext &context) {
   auto &messages{foldingContext.messages()};
   for (const Symbol &symbol : OrderParameterDeclarations(typeSymbol_)) {
     SourceName name{symbol.name()};
-    int parameterKind{evaluate::TypeParamInquiry::Result::kind};
+    int parameterKind{evaluate::subscriptIntegerKind};
     // Compute the integer kind value of the type parameter,
     // which may depend on the values of earlier ones.
     if (const auto *typeSpec{symbol.GetType()}) {
@@ -422,12 +422,17 @@ void DerivedTypeSpec::Instantiate(Scope &containingScope) {
         sep = ',';
         if (MaybeIntExpr expr{paramValue->GetExplicit()}) {
           desc += expr->AsFortran();
-          instanceDetails.set_init(
-              std::move(DEREF(evaluate::UnwrapExpr<SomeIntExpr>(*expr))));
+          // Determine the parameter's type before moving the expression into
+          // the instance's initializer: with kind now a runtime property,
+          // GetType() of a moved-from expression no longer yields a valid
+          // kind (it formerly came from the compile-time KIND template
+          // parameter).
           if (auto dyType{expr->GetType()}) {
             instanceDetails.set_type(newScope.MakeNumericType(
                 TypeCategory::Integer, KindExpr{dyType->kind()}));
           }
+          instanceDetails.set_init(
+              std::move(DEREF(evaluate::UnwrapExpr<SomeIntExpr>(*expr))));
         }
         if (!instanceDetails.type()) {
           if (const DeclTypeSpec * type{details.type()}) {
@@ -651,7 +656,7 @@ const DeclTypeSpec &InstantiateHelper::InstantiateIntrinsicType(
     if (MaybeExpr analyzed{AnalyzeExpr(scope_.context(), *originalKindExpr)}) {
       if (auto *intExpr{evaluate::UnwrapExpr<SomeIntExpr>(*analyzed)}) {
         kindExpr = evaluate::ConvertToType<evaluate::SubscriptInteger>(
-            std::move(*intExpr));
+            evaluate::subscriptIntegerKind, std::move(*intExpr));
       }
     }
   }

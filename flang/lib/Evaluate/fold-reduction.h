@@ -18,6 +18,8 @@ template <typename T>
 static Expr<T> FoldDotProduct(
     FoldingContext &context, FunctionRef<T> &&funcRef) {
   using Element = typename Constant<T>::Element;
+  const DynamicType resultDynamicType{funcRef.GetType().value()};
+  const int kind{resultDynamicType.kind()};
   auto args{funcRef.arguments()};
   CHECK(args.size() == 2);
   Folder<T> folder{context};
@@ -32,6 +34,13 @@ static Expr<T> FoldDotProduct(
       return MakeInvalidIntrinsic(std::move(funcRef));
     }
     Element sum{};
+    if constexpr (T::category == TypeCategory::Real ||
+        T::category == TypeCategory::Complex) {
+      sum = Element::Zero(kind);
+    } else if constexpr (T::category == TypeCategory::Integer ||
+        T::category == TypeCategory::Unsigned) {
+      sum = Element{0, kind};
+    }
     bool overflow{false};
     if constexpr (T::category == TypeCategory::Complex) {
       std::vector<Element> conjugates;
@@ -43,7 +52,7 @@ static Expr<T> FoldDotProduct(
       Expr<T> products{Fold(
           context, Expr<T>{std::move(conjgA)} * Expr<T>{Constant<T>{*vb}})};
       Constant<T> &cProducts{DEREF(UnwrapConstantValue<T>(products))};
-      [[maybe_unused]] Element correction{};
+      [[maybe_unused]] Element correction{Element::Zero(kind)};
       const auto &rounding{context.targetCharacteristics().roundingMode()};
       for (const Element &x : cProducts.values()) {
         if constexpr (useKahanSummation) {
@@ -58,7 +67,7 @@ static Expr<T> FoldDotProduct(
       }
     } else if constexpr (T::category == TypeCategory::Logical) {
       Expr<T> conjunctions{Fold(context,
-          Expr<T>{LogicalOperation<T::kind>{LogicalOperator::And,
+          Expr<T>{LogicalOperation{LogicalOperator::And,
               Expr<T>{Constant<T>{*va}}, Expr<T>{Constant<T>{*vb}}}})};
       Constant<T> &cConjunctions{DEREF(UnwrapConstantValue<T>(conjunctions))};
       for (const Element &x : cConjunctions.values()) {
@@ -88,7 +97,7 @@ static Expr<T> FoldDotProduct(
       Expr<T> products{
           Fold(context, Expr<T>{Constant<T>{*va}} * Expr<T>{Constant<T>{*vb}})};
       Constant<T> &cProducts{DEREF(UnwrapConstantValue<T>(products))};
-      [[maybe_unused]] Element correction{};
+      [[maybe_unused]] Element correction{Element::Zero(kind)};
       const auto &rounding{context.targetCharacteristics().roundingMode()};
       for (const Element &x : cProducts.values()) {
         if constexpr (useKahanSummation) {
@@ -105,7 +114,7 @@ static Expr<T> FoldDotProduct(
     if (overflow) {
       context.Warn(common::UsageWarning::FoldingException,
           "DOT_PRODUCT of %s data overflowed during computation"_warn_en_US,
-          T::AsFortran());
+          resultDynamicType.AsFortran());
     }
     return Expr<T>{Constant<T>{std::move(sum)}};
   }
@@ -324,7 +333,8 @@ static Expr<T> FoldProduct(
         arrayAndMask->array, arrayAndMask->mask, dim, identity, accumulator)}};
     if (accumulator.overflow()) {
       context.Warn(common::UsageWarning::FoldingException,
-          "PRODUCT() of %s data overflowed"_warn_en_US, T::AsFortran());
+          "PRODUCT() of %s data overflowed"_warn_en_US,
+          ref.GetType().value().AsFortran());
     }
     return result;
   }
@@ -337,7 +347,12 @@ template <typename T> class SumAccumulator {
 
 public:
   SumAccumulator(const Constant<T> &array, Rounding rounding)
-      : array_{array}, rounding_{rounding} {}
+      : array_{array}, rounding_{rounding}, kind_{array.GetType().kind()} {
+    if constexpr (T::category == TypeCategory::Real ||
+        T::category == TypeCategory::Complex) {
+      correction_ = Element::Zero(kind_);
+    }
+  }
   void operator()(
       Element &element, const ConstantSubscripts &at, bool /*first*/) {
     if constexpr (T::category == TypeCategory::Integer) {
@@ -358,7 +373,7 @@ public:
         T::category != TypeCategory::Unsigned) {
       auto corrected{element.Add(correction_, rounding_)};
       overflow_ |= corrected.flags.test(RealFlag::Overflow);
-      correction_ = Scalar<T>{};
+      correction_ = Element::Zero(kind_);
       element = corrected.value;
     }
   }
@@ -367,6 +382,7 @@ private:
   const Constant<T> &array_;
   Rounding rounding_;
   bool overflow_{false};
+  int kind_;
   Element correction_{};
 };
 
@@ -377,8 +393,16 @@ static Expr<T> FoldSum(FoldingContext &context, FunctionRef<T> &&ref) {
       T::category == TypeCategory::Real ||
       T::category == TypeCategory::Complex);
   using Element = typename Constant<T>::Element;
+  const int kind{ref.GetType().value().kind()};
   std::optional<int> dim;
   Element identity{};
+  if constexpr (T::category == TypeCategory::Integer ||
+      T::category == TypeCategory::Unsigned) {
+    identity = Scalar<T>{0, kind};
+  } else if constexpr (T::category == TypeCategory::Real ||
+      T::category == TypeCategory::Complex) {
+    identity = Element::Zero(kind);
+  }
   if (std::optional<ArrayAndMask<T>> arrayAndMask{
           ProcessReductionArgs<T>(context, ref.arguments(), dim,
               /*ARRAY=*/0, /*DIM=*/1, /*MASK=*/2)}) {
@@ -388,7 +412,8 @@ static Expr<T> FoldSum(FoldingContext &context, FunctionRef<T> &&ref) {
         arrayAndMask->array, arrayAndMask->mask, dim, identity, accumulator)}};
     if (accumulator.overflow()) {
       context.Warn(common::UsageWarning::FoldingException,
-          "SUM() of %s data overflowed"_warn_en_US, T::AsFortran());
+          "SUM() of %s data overflowed"_warn_en_US,
+          ref.GetType().value().AsFortran());
     }
     return result;
   }

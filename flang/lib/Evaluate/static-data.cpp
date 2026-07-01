@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Evaluate/static-data.h"
+// #include "flang/Evaluate/char-storage-access.h"
+#include "flang/Evaluate/character-value-impl.h"
 #include "flang/Parser/characters.h"
 
 namespace Fortran::evaluate {
@@ -52,6 +54,15 @@ StaticDataObject &StaticDataObject::Push(
     data_.push_back(static_cast<std::uint8_t>(ch >> (shift ^ 24)));
   }
   return *this;
+}
+
+StaticDataObject &StaticDataObject::Push(
+    const value::CharacterValue &v, bool bigEndian) {
+  if (v.value().IsMonostate()) {
+    return *this;
+  }
+  return v.value().WithChar(
+      [&](const auto &s) -> StaticDataObject & { return Push(s, bigEndian); });
 }
 
 std::optional<std::string> StaticDataObject::AsString() const {

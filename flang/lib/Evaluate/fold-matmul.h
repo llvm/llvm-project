@@ -16,6 +16,8 @@ namespace Fortran::evaluate {
 template <typename T>
 static Expr<T> FoldMatmul(FoldingContext &context, FunctionRef<T> &&funcRef) {
   using Element = typename Constant<T>::Element;
+  const DynamicType resultDynamicType{funcRef.GetType().value()};
+  const int kind{resultDynamicType.kind()};
   auto args{funcRef.arguments()};
   CHECK(args.size() == 2);
   Folder<T> folder{context};
@@ -52,7 +54,18 @@ static Expr<T> FoldMatmul(FoldingContext &context, FunctionRef<T> &&funcRef) {
         bAt[1] += ci;
       }
       Element sum{};
+      if constexpr (T::category == TypeCategory::Integer ||
+          T::category == TypeCategory::Unsigned) {
+        sum = Scalar<T>{0, kind};
+      } else if constexpr (T::category == TypeCategory::Real ||
+          T::category == TypeCategory::Complex) {
+        sum = Element::Zero(kind);
+      }
       [[maybe_unused]] Element correction{};
+      if constexpr (T::category == TypeCategory::Real ||
+          T::category == TypeCategory::Complex) {
+        correction = Element::Zero(kind);
+      }
       for (ConstantSubscript j{0}; j < commonExtent; ++j) {
         Element aElt{ma->At(aAt)};
         Element bElt{mb->At(bAt)};
@@ -90,7 +103,7 @@ static Expr<T> FoldMatmul(FoldingContext &context, FunctionRef<T> &&funcRef) {
   if (overflow) {
     context.Warn(common::UsageWarning::FoldingException,
         "MATMUL of %s data overflowed during computation"_warn_en_US,
-        T::AsFortran());
+        resultDynamicType.AsFortran());
   }
   ConstantSubscripts shape;
   if (ma->Rank() == 2) {

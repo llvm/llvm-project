@@ -362,12 +362,18 @@ static Fortran::evaluate::ExtentExpr
 getExtentExpr(const Fortran::semantics::ShapeSpec &shapeSpec) {
   if (shapeSpec.ubound().isStar())
     // F'2023 18.5.3 point 5.
-    return Fortran::evaluate::ExtentExpr{-1};
+    return Fortran::evaluate::ExtentExpr{
+        Fortran::evaluate::Constant<Fortran::evaluate::ExtentType>{
+            Fortran::evaluate::ExtentType::Scalar{
+                -1, Fortran::evaluate::subscriptIntegerKind}}};
   const auto &ubound = shapeSpec.ubound().GetExplicit();
   const auto &lbound = shapeSpec.lbound().GetExplicit();
   assert(lbound && ubound && "shape must be explicit");
   return Fortran::common::Clone(*ubound) - Fortran::common::Clone(*lbound) +
-         Fortran::evaluate::ExtentExpr{1};
+         Fortran::evaluate::ExtentExpr{
+             Fortran::evaluate::Constant<Fortran::evaluate::ExtentType>{
+                 Fortran::evaluate::ExtentType::Scalar{
+                     1, Fortran::evaluate::subscriptIntegerKind}}};
 }
 
 static void

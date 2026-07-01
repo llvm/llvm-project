@@ -814,8 +814,8 @@ struct ArrayExpressionRecognizer {
     return common::visit([](auto &&s) { return isArrayExpression(s); }, x.u);
   }
 
-  template <TypeCategory C, int K>
-  static bool isArrayExpression(const evaluate::Expr<evaluate::Type<C, K>> &x) {
+  template <TypeCategory C>
+  static bool isArrayExpression(const evaluate::Expr<evaluate::Type<C>> &x) {
     return common::visit([](auto &&s) { return isArrayExpression(s); },
         evaluate::match::deparen(x).u);
   }

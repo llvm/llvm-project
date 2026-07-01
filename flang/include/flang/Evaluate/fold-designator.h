@@ -114,13 +114,13 @@ private:
     return common::visit(
         [&](const auto &x) { return FoldDesignator(x, which); }, designator.u);
   }
-  template <int KIND>
   std::optional<OffsetSymbol> FoldDesignator(
-      const Designator<Type<TypeCategory::Character, KIND>> &designator,
+      const Designator<Type<TypeCategory::Character>> &designator,
       ConstantSubscript which) {
+    const int KIND{designator.GetType().value().kind()};
     return common::visit(
         common::visitors{
-            [&](const Substring &ss) {
+            [&, KIND](const Substring &ss) {
               if (const auto *dataRef{ss.GetParentIf<DataRef>()}) {
                 if (auto result{FoldDesignator(*dataRef, which)}) {
                   if (auto start{ToInt64(ss.lower())}) {

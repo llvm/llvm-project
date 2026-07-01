@@ -3,13 +3,12 @@
 #include <cstdio>
 
 template <int KIND> void testKind() {
-  using Type =
-      Fortran::evaluate::Type<Fortran::common::TypeCategory::Logical, KIND>;
+  using Type = Fortran::evaluate::Type<Fortran::common::TypeCategory::Logical>;
   TEST(Fortran::evaluate::IsSpecificIntrinsicType<Type>);
   TEST(Type::category == Fortran::common::TypeCategory::Logical);
-  TEST(Type::kind == KIND);
+  TEST(Type{KIND}.kind() == KIND);
   using Value = Fortran::evaluate::Scalar<Type>;
-  MATCH(8 * KIND, Value::bits);
+  MATCH(8 * KIND, Value::Zero(KIND).bits());
   TEST(!Value{}.IsTrue());
   TEST(!Value{false}.IsTrue());
   TEST(Value{true}.IsTrue());

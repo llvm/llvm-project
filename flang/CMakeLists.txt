@@ -296,7 +296,17 @@ endif()
 # Always build tco tool
 set(LLVM_BUILD_TOOLS ON)
 
+# The first entry holds build-time generated, per-configuration headers (namely
+# flang/Evaluate/object-sizes-generated.h emitted by
+# flang-evaluate-object-size-probe and picked up via __has_include from
+# flang/Evaluate/object-sizes.h).  It is per-$<CONFIG> because multi-config
+# generators (Ninja Multi-Config, Visual Studio, Xcode) may produce different
+# object layouts per configuration (e.g. MSVC's _ITERATOR_DEBUG_LEVEL changes
+# std::string/std::variant sizes in Debug).  The generated header has a distinct
+# name from its checked-in fallback, so include ordering does not matter; this
+# directory only needs to be on the path.
 include_directories(BEFORE
+  ${FLANG_BINARY_DIR}/include/object-sizes/$<CONFIG>
   ${FLANG_BINARY_DIR}/include
   ${FLANG_SOURCE_DIR}/include)
 

@@ -71,10 +71,8 @@ public:
     return (*this)(component.base());
   }
   // Prevent integer division by known zeroes in constant expressions.
-  template <int KIND>
-  bool operator()(
-      const Divide<Type<TypeCategory::Integer, KIND>> &division) const {
-    using T = Type<TypeCategory::Integer, KIND>;
+  bool operator()(const Divide<Type<TypeCategory::Integer>> &division) const {
+    using T = Type<TypeCategory::Integer>;
     if ((*this)(division.left()) && (*this)(division.right())) {
       const auto divisor{GetScalarConstantValue<T>(division.right())};
       return !divisor || !divisor->IsZero();
@@ -475,9 +473,9 @@ public:
   SuspiciousRealLiteralFinder(int kind, FoldingContext &c)
       : Base{*this}, kind_{kind}, context_{c} {}
   using Base::operator();
-  template <int KIND>
-  bool operator()(const Constant<Type<TypeCategory::Real, KIND>> &x) const {
-    if (kind_ > KIND && x.result().isFromInexactLiteralConversion()) {
+  bool operator()(const Constant<Type<TypeCategory::Real>> &x) const {
+    if (kind_ > x.result().kind() &&
+        x.result().isFromInexactLiteralConversion()) {
       context_.Warn(common::UsageWarning::RealConstantWidening,
           "Default real literal in REAL(%d) context might need a kind suffix, as its rounded value %s is inexact"_warn_en_US,
           kind_, x.AsFortran());
@@ -486,9 +484,9 @@ public:
       return false;
     }
   }
-  template <int KIND>
-  bool operator()(const Constant<Type<TypeCategory::Complex, KIND>> &x) const {
-    if (kind_ > KIND && x.result().isFromInexactLiteralConversion()) {
+  bool operator()(const Constant<Type<TypeCategory::Complex>> &x) const {
+    if (kind_ > x.result().kind() &&
+        x.result().isFromInexactLiteralConversion()) {
       context_.Warn(common::UsageWarning::RealConstantWidening,
           "Default real literal in COMPLEX(%d) context might need a kind suffix, as its rounded value %s is inexact"_warn_en_US,
           kind_, x.AsFortran());
@@ -497,13 +495,14 @@ public:
       return false;
     }
   }
-  template <TypeCategory TOCAT, int TOKIND, TypeCategory FROMCAT>
-  bool operator()(const Convert<Type<TOCAT, TOKIND>, FROMCAT> &x) const {
+  template <TypeCategory TOCAT, TypeCategory FROMCAT>
+  bool operator()(const Convert<Type<TOCAT>, FROMCAT> &x) const {
     if constexpr ((TOCAT == TypeCategory::Real ||
                       TOCAT == TypeCategory::Complex) &&
         (FROMCAT == TypeCategory::Real || FROMCAT == TypeCategory::Complex)) {
       auto fromType{x.left().GetType()};
-      if (!fromType || fromType->kind() < TOKIND) {
+      auto toType{x.GetType()};
+      if (!fromType || !toType || fromType->kind() < toType->kind()) {
         return false;
       }
     }
@@ -542,9 +541,8 @@ public:
   using Base = AnyTraverse<InexactLiteralConversionFlagClearer>;
   InexactLiteralConversionFlagClearer() : Base(*this) {}
   using Base::operator();
-  template <int KIND>
-  bool operator()(const Constant<Type<TypeCategory::Real, KIND>> &x) const {
-    auto &mut{const_cast<Type<TypeCategory::Real, KIND> &>(x.result())};
+  bool operator()(const Constant<Type<TypeCategory::Real>> &x) const {
+    auto &mut{const_cast<Type<TypeCategory::Real> &>(x.result())};
     mut.set_isFromInexactLiteralConversion(false);
     return false;
   }

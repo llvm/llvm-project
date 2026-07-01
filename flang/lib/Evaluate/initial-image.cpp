@@ -100,11 +100,8 @@ public:
     if (T::category != type_.category()) {
       return std::nullopt;
     }
-    if constexpr (T::category != TypeCategory::Derived) {
-      if (T::kind != type_.kind()) {
-        return std::nullopt;
-      }
-    }
+    // There is a single Type per category now; the kind is a runtime property
+    // taken from type_ rather than a compile-time template parameter.
     using Const = Constant<T>;
     using Scalar = typename Const::Element;
     std::optional<uint64_t> optElements{TotalElementCount(extents_)};
@@ -159,9 +156,9 @@ public:
       return AsGenericExpr(
           Const{derived, std::move(typedValue), std::move(extents_)});
     } else if constexpr (T::category == TypeCategory::Character) {
-      auto length{static_cast<ConstantSubscript>(stride) / T::kind};
+      int charKind{type_.kind()};
+      auto length{static_cast<ConstantSubscript>(stride) / charKind};
       for (std::size_t j{0}; j < elements; ++j) {
-        using Char = typename Scalar::value_type;
         auto at{static_cast<std::size_t>(offset_ + j * stride)};
         auto chunk{length};
         if (at + chunk > image_.data_.size()) {
@@ -172,22 +169,50 @@ public:
             chunk = image_.data_.size() - at;
           }
         }
-        if (chunk > 0) {
-          const Char *data{reinterpret_cast<const Char *>(&image_.data_[at])};
-          typedValue[j].assign(data, chunk);
-        }
-        if (chunk < length && padWithZero_) {
-          typedValue[j].append(length - chunk, Char{});
+        // The element character type depends on the runtime kind.
+        auto build{[&](auto charProto) {
+          using Char = decltype(charProto);
+          std::basic_string<Char> s;
+          if (chunk > 0) {
+            s.assign(reinterpret_cast<const Char *>(&image_.data_[at]),
+                static_cast<std::size_t>(chunk));
+          }
+          if (chunk < length && padWithZero_) {
+            s.append(static_cast<std::size_t>(length - chunk), Char{});
+          }
+          typedValue[j] = value::CharacterValue{std::move(s)};
+        }};
+        switch (charKind) {
+        case 1:
+          build(char{});
+          break;
+        case 2:
+          build(char16_t{});
+          break;
+        default:
+          build(char32_t{});
+          break;
         }
       }
       return AsGenericExpr(
           Const{length, std::move(typedValue), std::move(extents_)});
     } else {
       // Lengthless intrinsic type
-      CHECK(sizeof(Scalar) <= stride);
+      std::size_t byteLen;
+      if constexpr (T::category == TypeCategory::Integer ||
+          T::category == TypeCategory::Unsigned) {
+        byteLen = type_.kind(); // kind is the storage size in bytes
+      } else if constexpr (T::category == TypeCategory::Real ||
+          T::category == TypeCategory::Complex) {
+        byteLen = (Scalar::Zero(type_.kind()).bits() + 7) / 8;
+      } else {
+        // Logical: kind is the storage size in bytes.
+        byteLen = type_.kind();
+      }
+      CHECK(byteLen <= stride);
       for (std::size_t j{0}; j < elements; ++j) {
         auto at{static_cast<std::size_t>(offset_ + j * stride)};
-        std::size_t chunk{sizeof(Scalar)};
+        std::size_t chunk{byteLen};
         if (at + chunk > image_.data_.size()) {
           CHECK(padWithZero_);
           if (at >= image_.data_.size()) {
@@ -198,7 +223,28 @@ public:
         }
         // TODO endianness
         if (chunk > 0) {
-          std::memcpy(&typedValue[j], &image_.data_[at], chunk);
+          // Largest intrinsic raw image is COMPLEX(16) at 32 bytes.
+          constexpr std::size_t maxRawBytes{32};
+          CHECK(byteLen <= maxRawBytes);
+          alignas(16) std::uint8_t rawBuf[maxRawBytes]{};
+          std::memcpy(rawBuf, &image_.data_[at], chunk);
+          const int valueKind{type_.kind()};
+          if constexpr (T::category == TypeCategory::Real) {
+            typedValue[j] =
+                Scalar{value::IntegerValue::FromRawBytes(rawBuf, valueKind),
+                    valueKind};
+          } else if constexpr (T::category == TypeCategory::Complex) {
+            std::size_t partBytes{byteLen / 2};
+            typedValue[j] =
+                Scalar{value::RealValue{
+                           value::IntegerValue::FromRawBytes(rawBuf, valueKind),
+                           valueKind},
+                    value::RealValue{value::IntegerValue::FromRawBytes(
+                                         rawBuf + partBytes, valueKind),
+                        valueKind}};
+          } else {
+            typedValue[j] = Scalar::FromRawBytes(rawBuf, valueKind);
+          }
         }
       }
       return AsGenericExpr(Const{std::move(typedValue), std::move(extents_)});

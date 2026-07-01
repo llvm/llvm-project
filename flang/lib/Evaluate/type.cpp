@@ -142,10 +142,13 @@ bool DynamicType::operator==(const DynamicType &that) const {
 std::optional<Expr<SubscriptInteger>> DynamicType::GetCharLength() const {
   if (category_ == TypeCategory::Character) {
     if (knownLength()) {
-      return AsExpr(Constant<SubscriptInteger>(*knownLength()));
+      return AsExpr(Constant<SubscriptInteger>{
+          SubscriptInteger::Scalar{*knownLength(), subscriptIntegerKind},
+          SubscriptInteger{subscriptIntegerKind}});
     } else if (charLengthParamValue_) {
       if (auto length{charLengthParamValue_->GetExplicit()}) {
-        return ConvertToType<SubscriptInteger>(std::move(*length));
+        return ConvertToType<SubscriptInteger>(
+            subscriptIntegerKind, std::move(*length));
       }
     }
   }
@@ -186,15 +189,24 @@ std::optional<Expr<SubscriptInteger>> DynamicType::MeasureSizeInBytes(
   case TypeCategory::Real:
   case TypeCategory::Complex:
   case TypeCategory::Logical:
-    return Expr<SubscriptInteger>{
-        context.targetCharacteristics().GetByteSize(category_, kind())};
+    return Expr<SubscriptInteger>{Constant<SubscriptInteger>{
+        SubscriptInteger::Scalar{
+            context.targetCharacteristics().GetByteSize(category_, kind()),
+            subscriptIntegerKind},
+        SubscriptInteger{subscriptIntegerKind}}};
   case TypeCategory::Character:
     if (auto len{charLength ? Expr<SubscriptInteger>{Constant<SubscriptInteger>{
-                                  *charLength}}
+                                  SubscriptInteger::Scalar{
+                                      *charLength, subscriptIntegerKind},
+                                  SubscriptInteger{subscriptIntegerKind}}}
                             : GetCharLength()}) {
       return Fold(context,
-          Expr<SubscriptInteger>{
-              context.targetCharacteristics().GetByteSize(category_, kind())} *
+          Expr<SubscriptInteger>{Constant<SubscriptInteger>{
+              SubscriptInteger::Scalar{
+                  context.targetCharacteristics().GetByteSize(
+                      category_, kind()),
+                  subscriptIntegerKind},
+              SubscriptInteger{subscriptIntegerKind}}} *
               std::move(*len));
     }
     break;
@@ -203,8 +215,10 @@ std::optional<Expr<SubscriptInteger>> DynamicType::MeasureSizeInBytes(
       auto size{derived_->scope()->size()};
       auto align{aligned ? derived_->scope()->alignment().value_or(0) : 0};
       auto alignedSize{align > 0 ? ((size + align - 1) / align) * align : size};
-      return Expr<SubscriptInteger>{
-          static_cast<ConstantSubscript>(alignedSize)};
+      return Expr<SubscriptInteger>{Constant<SubscriptInteger>{
+          SubscriptInteger::Scalar{static_cast<ConstantSubscript>(alignedSize),
+              subscriptIntegerKind},
+          SubscriptInteger{subscriptIntegerKind}}};
     }
     break;
   }
@@ -861,7 +875,7 @@ std::optional<DynamicType> ComparisonType(
   case TypeCategory::Logical:
     switch (t2.category()) {
     case TypeCategory::Logical:
-      return DynamicType{TypeCategory::Logical, LogicalResult::kind};
+      return DynamicType{TypeCategory::Logical, logicalResultKind};
     default:
       return std::nullopt;
     }

@@ -59,8 +59,7 @@ template <typename...> struct IsIntegral {
   static constexpr bool value{false};
 };
 
-template <common::TypeCategory C, int K>
-struct IsIntegral<evaluate::Type<C, K>> {
+template <common::TypeCategory C> struct IsIntegral<evaluate::Type<C>> {
   static constexpr bool value{//
       C == common::TypeCategory::Integer ||
       C == common::TypeCategory::Unsigned};
@@ -72,8 +71,7 @@ template <typename...> struct IsFloatingPoint {
   static constexpr bool value{false};
 };
 
-template <common::TypeCategory C, int K>
-struct IsFloatingPoint<evaluate::Type<C, K>> {
+template <common::TypeCategory C> struct IsFloatingPoint<evaluate::Type<C>> {
   static constexpr bool value{//
       C == common::TypeCategory::Real || C == common::TypeCategory::Complex};
 };
@@ -88,8 +86,7 @@ template <typename...> struct IsLogical {
   static constexpr bool value{false};
 };
 
-template <common::TypeCategory C, int K>
-struct IsLogical<evaluate::Type<C, K>> {
+template <common::TypeCategory C> struct IsLogical<evaluate::Type<C>> {
   static constexpr bool value{C == common::TypeCategory::Logical};
 };
 
@@ -160,7 +157,7 @@ struct ReassocRewriter : public evaluate::rewrite::Identity {
     // Since this works with clang, MSVC and at least GCC 8.5, I'm assuming
     // that this is some kind of a GCC issue.
     using MatchTypes = std::tuple<evaluate::Add<T>, evaluate::Multiply<T>,
-        evaluate::LogicalOperation<T::kind>>;
+        evaluate::LogicalOperation>;
 #else
     using MatchTypes = typename decltype(outer1)::MatchTypes;
 #endif
@@ -212,8 +209,7 @@ private:
     if constexpr (!common::HasMember<TypeS, MatchTypes>) {
       return evaluate::Expr<T>(TypeS(op));
     } else if constexpr (is_logical_v<T>) {
-      constexpr int K{T::kind};
-      if constexpr (std::is_same_v<TypeS, evaluate::LogicalOperation<K>>) {
+      if constexpr (std::is_same_v<TypeS, evaluate::LogicalOperation>) {
         // Logical operators take an extra argument in their constructor,
         // so they need their own reconstruction code.
         common::LogicalOperator opCode{op.logicalOperator};

@@ -10,16 +10,36 @@
 using namespace Fortran::evaluate;
 using namespace Fortran::common;
 
-using Real2 = Scalar<Type<TypeCategory::Real, 2>>;
-using Real3 = Scalar<Type<TypeCategory::Real, 3>>;
-using Real4 = Scalar<Type<TypeCategory::Real, 4>>;
-using Real8 = Scalar<Type<TypeCategory::Real, 8>>;
+using Real2 = Scalar<Type<TypeCategory::Real>>;
+using Real3 = Scalar<Type<TypeCategory::Real>>;
+using Real4 = Scalar<Type<TypeCategory::Real>>;
+using Real8 = Scalar<Type<TypeCategory::Real>>;
 #ifdef __x86_64__
-using Real10 = Scalar<Type<TypeCategory::Real, 10>>;
+using Real10 = Scalar<Type<TypeCategory::Real>>;
 #endif
-using Real16 = Scalar<Type<TypeCategory::Real, 16>>;
-using Integer4 = Scalar<Type<TypeCategory::Integer, 4>>;
-using Integer8 = Scalar<Type<TypeCategory::Integer, 8>>;
+using Real16 = Scalar<Type<TypeCategory::Real>>;
+using Integer4 = Scalar<Type<TypeCategory::Integer>>;
+using Integer8 = Scalar<Type<TypeCategory::Integer>>;
+
+// Storage width in bits for a Fortran real KIND.
+static constexpr int BitsOfRealKind(int kind) {
+  switch (kind) {
+  case 2:
+    return 16;
+  case 3:
+    return 16;
+  case 4:
+    return 32;
+  case 8:
+    return 64;
+  case 10:
+    return 80;
+  case 16:
+    return 128;
+  default:
+    return 0;
+  }
+}
 
 void dumpTest() {
   struct {
@@ -42,18 +62,20 @@ void dumpTest() {
       {0, nullptr},
   };
   for (int j{0}; table[j].expected != nullptr; ++j) {
-    TEST(Real4{Integer4{table[j].raw}}.DumpHexadecimal() == table[j].expected)
-    ("%d", j);
+    TEST((Real4{Integer4{table[j].raw, 4}, 4}.DumpHexadecimal() ==
+        table[j].expected))("%d", j);
   }
 }
 
-template <typename R> void basicTests(int rm, Rounding rounding) {
-  static constexpr int kind{R::bits / 8};
+template <int KIND> void basicTests(int rm, Rounding rounding) {
+  using R = Scalar<Type<TypeCategory::Real>>;
+  constexpr int bits{BitsOfRealKind(KIND)};
+  static constexpr int kind{KIND};
   char desc[64];
   using Word = typename R::Word;
-  std::snprintf(desc, sizeof desc, "bits=%d, le=%d, kind=%d", R::bits,
-      Word::littleEndian, kind);
-  R zero;
+  std::snprintf(desc, sizeof desc, "bits=%d, le=%d, kind=%d", bits,
+      isHostLittleEndian, kind);
+  R zero{Word{std::uint64_t{0}, KIND}, KIND};
   TEST(!zero.IsNegative())(desc);
   TEST(!zero.IsNotANumber())(desc);
   TEST(!zero.IsInfinite())(desc);
@@ -62,9 +84,9 @@ template <typename R> void basicTests(int rm, Rounding rounding) {
   TEST(zero.RawBits().IsZero())(desc);
   MATCH(0, zero.RawBits().ToUInt64())(desc);
   TEST(zero.ABS().RawBits().IsZero())(desc);
-  TEST(zero.Negate().RawBits().IEOR(Word::MASKL(1)).IsZero())(desc);
+  TEST(zero.Negate().RawBits().IEOR(Word::MASKL(1, kind)).IsZero())(desc);
   TEST(zero.Compare(zero) == Relation::Equal)(desc);
-  R minusZero{Word{std::uint64_t{1}}.SHIFTL(R::bits - 1)};
+  R minusZero{Word{std::uint64_t{1}, KIND}.SHIFTL(bits - 1), KIND};
   TEST(minusZero.IsNegative())(desc);
   TEST(!minusZero.IsNotANumber())(desc);
   TEST(!minusZero.IsInfinite())(desc);
@@ -79,11 +101,12 @@ template <typename R> void basicTests(int rm, Rounding rounding) {
   ValueWithRealFlags<R> vr;
   MATCH(0, vr.value.RawBits().ToUInt64())(desc);
   TEST(vr.flags.empty())(desc);
-  R nan{Word{std::uint64_t{1}}
-            .SHIFTL(R::bits)
-            .SubtractSigned(Word{std::uint64_t{1}})
-            .value};
-  MATCH(R::bits, nan.RawBits().POPCNT())(desc);
+  R nan{Word{std::uint64_t{1}, KIND}
+            .SHIFTL(bits)
+            .SubtractSigned(Word{std::uint64_t{1}, KIND})
+            .value,
+      KIND};
+  MATCH(bits, nan.RawBits().POPCNT())(desc);
   TEST(!nan.IsNegative())(desc);
   TEST(nan.IsNotANumber())(desc);
   TEST(!nan.IsInfinite())(desc);
@@ -93,19 +116,20 @@ template <typename R> void basicTests(int rm, Rounding rounding) {
   TEST(nan.Compare(zero) == Relation::Unordered)(desc);
   TEST(nan.Compare(minusZero) == Relation::Unordered)(desc);
   TEST(nan.Compare(nan) == Relation::Unordered)(desc);
-  int significandBits{R::binaryPrecision - R::isImplicitMSB};
-  int exponentBits{R::bits - significandBits - 1};
+  int significandBits{R::binaryPrecision(KIND) - R::isImplicitMSB(KIND)};
+  int exponentBits{bits - significandBits - 1};
   std::uint64_t maxExponent{(std::uint64_t{1} << exponentBits) - 1};
   MATCH(nan.Exponent(), maxExponent)(desc);
-  Word infWord{Word{maxExponent}.SHIFTL(significandBits)};
-  Word negInfWord{
-      Word{maxExponent}.SHIFTL(significandBits).IOR(Word::MASKL(1))};
+  Word infWord{Word{maxExponent, KIND}.SHIFTL(significandBits)};
+  Word negInfWord{Word{maxExponent, KIND}
+          .SHIFTL(significandBits)
+          .IOR(Word::MASKL(1, kind))};
   if constexpr (kind == 10) { // x87
     infWord = infWord.IBSET(63);
     negInfWord = negInfWord.IBSET(63);
   }
-  R inf{infWord};
-  R negInf{negInfWord};
+  R inf{infWord, KIND};
+  R negInf{negInfWord, KIND};
   TEST(!inf.IsNegative())(desc);
   TEST(!inf.IsNotANumber())(desc);
   TEST(inf.IsInfinite())(desc);
@@ -139,14 +163,14 @@ template <typename R> void basicTests(int rm, Rounding rounding) {
     x <<= j;
     std::snprintf(ldesc, sizeof ldesc, "%s j=%d x=0x%jx rm=%d", desc,
         static_cast<int>(j), static_cast<std::intmax_t>(x), rm);
-    Integer8 ix{x};
+    Integer8 ix{x, 8};
     TEST(!ix.IsNegative())(ldesc);
     MATCH(x, ix.ToUInt64())(ldesc);
-    vr = R::FromInteger(ix, false, rounding);
+    vr = R::FromInteger(ix, KIND, false, rounding);
     TEST(!vr.value.IsNegative())(ldesc);
     TEST(!vr.value.IsNotANumber())(ldesc);
     TEST(!vr.value.IsZero())(ldesc);
-    auto ivf = vr.value.template ToInteger<Integer8>();
+    auto ivf = vr.value.ToInteger(RoundingMode::ToZero, 64);
     if (j > (maxExponent / 2)) {
       TEST(vr.flags.test(RealFlag::Overflow))(ldesc);
       TEST(vr.value.IsInfinite())(ldesc);
@@ -164,8 +188,8 @@ template <typename R> void basicTests(int rm, Rounding rounding) {
         const char *p{decimal.data()};
         MATCH(x, static_cast<std::uint64_t>(std::stold(decimal)))
         ("%s %s", ldesc, p);
-        auto check{R::Read(p, rounding)};
-        auto icheck{check.value.template ToInteger<Integer8>()};
+        auto check{R::Read(p, KIND, rounding)};
+        auto icheck{check.value.ToInteger(RoundingMode::ToZero, 64)};
         MATCH(x, icheck.value.ToUInt64())(ldesc);
         TEST(vr.value.Compare(check.value) == Relation::Equal)(ldesc);
       }
@@ -178,11 +202,11 @@ template <typename R> void basicTests(int rm, Rounding rounding) {
     std::int64_t nx = x;
     MATCH(x, ix.ToUInt64())(ldesc);
     MATCH(nx, ix.ToInt64())(ldesc);
-    vr = R::FromInteger(ix);
+    vr = R::FromInteger(ix, KIND);
     TEST(vr.value.IsNegative())(ldesc);
     TEST(!vr.value.IsNotANumber())(ldesc);
     TEST(!vr.value.IsZero())(ldesc);
-    ivf = vr.value.template ToInteger<Integer8>();
+    ivf = vr.value.ToInteger(RoundingMode::ToZero, 64);
     if (j > (maxExponent / 2)) {
       TEST(vr.flags.test(RealFlag::Overflow))(ldesc);
       TEST(vr.value.IsInfinite())(ldesc);
@@ -294,16 +318,17 @@ inline std::uint32_t FlagsToBits(const RealFlags &flags) {
 }
 #endif // __clang__
 
-template <typename UINT = std::uint32_t, typename FLT = float, typename REAL>
+template <typename UINT = std::uint32_t, typename FLT = float, int KIND = 4>
 void inttest(std::int64_t x, int pass, Rounding rounding) {
+  using REAL = Scalar<Type<TypeCategory::Real>>;
   union {
     UINT ui;
     FLT f;
   } u;
   ScopedHostFloatingPointEnvironment fpenv;
-  Integer8 ix{x};
+  Integer8 ix{x, 8};
   ValueWithRealFlags<REAL> real;
-  real = real.value.FromInteger(ix, false, rounding);
+  real = REAL::FromInteger(ix, KIND, false, rounding);
 #ifndef __clang__ // broken and also slow
   fpenv.ClearFlags();
 #endif
@@ -351,17 +376,17 @@ FLT TimesIntPowerOfTen(FLT x, int power) {
   return x * ToIntPower<FLT>(10.0, power);
 }
 
-template <typename UINT = std::uint32_t, typename FLT = float,
-    typename REAL = Real4>
+template <typename UINT = std::uint32_t, typename FLT = float, int KIND = 4>
 void subsetTests(int pass, Rounding rounding, std::uint32_t opds) {
+  using REAL = Scalar<Type<TypeCategory::Real>>;
   for (int j{0}; j < 63; ++j) {
     std::int64_t x{1};
     x <<= j;
-    inttest<UINT, FLT, REAL>(x, pass, rounding);
-    inttest<UINT, FLT, REAL>(-x, pass, rounding);
+    inttest<UINT, FLT, KIND>(x, pass, rounding);
+    inttest<UINT, FLT, KIND>(-x, pass, rounding);
   }
-  inttest<UINT, FLT, REAL>(0, pass, rounding);
-  inttest<UINT, FLT, REAL>(
+  inttest<UINT, FLT, KIND>(0, pass, rounding);
+  inttest<UINT, FLT, KIND>(
       static_cast<std::int64_t>(0x8000000000000000), pass, rounding);
 
   union {
@@ -375,7 +400,7 @@ void subsetTests(int pass, Rounding rounding, std::uint32_t opds) {
     UINT rj{MakeReal(j)};
     u.ui = rj;
     FLT fj{u.f};
-    REAL x{typename REAL::Word{std::uint64_t{rj}}};
+    REAL x{typename REAL::Word{std::uint64_t{rj}, KIND}, KIND};
 
     // unary operations
     {
@@ -422,7 +447,7 @@ void subsetTests(int pass, Rounding rounding, std::uint32_t opds) {
       MATCH(IsInfinite(rj), x.IsInfinite())
       ("%d IsInfinite(0x%jx)", pass, static_cast<std::intmax_t>(rj));
 
-      static constexpr int kind{REAL::bits / 8};
+      static constexpr int kind{KIND};
       std::string s, cssBuf;
       llvm::raw_string_ostream ss{s};
       llvm::raw_string_ostream css{cssBuf};
@@ -444,7 +469,7 @@ void subsetTests(int pass, Rounding rounding, std::uint32_t opds) {
         if (*p == '(') {
           ++p;
         }
-        auto readBack{REAL::Read(p, rounding)};
+        auto readBack{REAL::Read(p, KIND, rounding)};
         MATCH(rj, readBack.value.RawBits().ToUInt64())
         ("%d Read(AsFortran()) 0x%jx %s %g", pass,
             static_cast<std::intmax_t>(rj), s.data(), static_cast<double>(fj));
@@ -460,7 +485,7 @@ void subsetTests(int pass, Rounding rounding, std::uint32_t opds) {
       UINT rk{MakeReal(k)};
       u.ui = rk;
       FLT fk{u.f};
-      REAL y{typename REAL::Word{std::uint64_t{rk}}};
+      REAL y{typename REAL::Word{std::uint64_t{rk}, KIND}, KIND};
       {
         ValueWithRealFlags<REAL> sum{x.Add(y, rounding)};
 #ifndef __clang__ // broken and also slow
@@ -534,17 +559,17 @@ void subsetTests(int pass, Rounding rounding, std::uint32_t opds) {
 }
 
 void roundTest(int rm, Rounding rounding, std::uint32_t opds) {
-  basicTests<Real2>(rm, rounding);
-  basicTests<Real3>(rm, rounding);
-  basicTests<Real4>(rm, rounding);
-  basicTests<Real8>(rm, rounding);
+  basicTests<2>(rm, rounding);
+  basicTests<3>(rm, rounding);
+  basicTests<4>(rm, rounding);
+  basicTests<8>(rm, rounding);
 #ifdef __x86_64__
-  basicTests<Real10>(rm, rounding);
+  basicTests<10>(rm, rounding);
 #endif
-  basicTests<Real16>(rm, rounding);
+  basicTests<16>(rm, rounding);
   ScopedHostFloatingPointEnvironment::SetRounding(rounding);
-  subsetTests<std::uint32_t, float, Real4>(rm, rounding, opds);
-  subsetTests<std::uint64_t, double, Real8>(rm, rounding, opds);
+  subsetTests<std::uint32_t, float, 4>(rm, rounding, opds);
+  subsetTests<std::uint64_t, double, 8>(rm, rounding, opds);
 }
 
 int main() {

@@ -314,7 +314,7 @@ Bound ArraySpecAnalyzer::GetBound(const parser::SpecificationExpr &x) {
     if (auto *intExpr{evaluate::UnwrapExpr<SomeIntExpr>(*maybeExpr)}) {
       expr = evaluate::Fold(context_.foldingContext(),
           evaluate::ConvertToType<evaluate::SubscriptInteger>(
-              std::move(*intExpr)));
+              evaluate::subscriptIntegerKind, std::move(*intExpr)));
     }
   }
   return Bound{std::move(expr)};

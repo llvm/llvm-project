@@ -130,23 +130,37 @@ private:
     return D(Mutate(std::move(op.template operand<Is>()))...);
   }
 
+  // A Convert's result kind is a runtime property carried in resultKind_, not
+  // an operand.  Reconstructing it from operands alone (as the generic MutateOp
+  // does) would reset resultKind_ to its default of 0, producing an invalid
+  // (kind-0) conversion, so preserve it explicitly here.
+  template <typename TO, common::TypeCategory FROMCAT, size_t... Is>
+  Convert<TO, FROMCAT> MutateOp(
+      Convert<TO, FROMCAT> &&op, std::index_sequence<Is...>) const {
+    const int resultKind{op.resultKind_};
+    Convert<TO, FROMCAT> result(
+        Mutate(std::move(op.template operand<Is>()))...);
+    result.resultKind_ = resultKind;
+    return result;
+  }
+
   template <typename T, size_t... Is>
   Extremum<T> MutateOp(Extremum<T> &&op, std::index_sequence<Is...>) const {
     return Extremum<T>(
         op.ordering, Mutate(std::move(op.template operand<Is>()))...);
   }
 
-  template <int K, size_t... Is>
-  ComplexComponent<K> MutateOp(
-      ComplexComponent<K> &&op, std::index_sequence<Is...>) const {
-    return ComplexComponent<K>(
+  template <size_t... Is>
+  ComplexComponent MutateOp(
+      ComplexComponent &&op, std::index_sequence<Is...>) const {
+    return ComplexComponent(
         op.isImaginaryPart, Mutate(std::move(op.template operand<Is>()))...);
   }
 
-  template <int K, size_t... Is>
-  LogicalOperation<K> MutateOp(
-      LogicalOperation<K> &&op, std::index_sequence<Is...>) const {
-    return LogicalOperation<K>(
+  template <size_t... Is>
+  LogicalOperation MutateOp(
+      LogicalOperation &&op, std::index_sequence<Is...>) const {
+    return LogicalOperation(
         op.logicalOperator, Mutate(std::move(op.template operand<Is>()))...);
   }
 

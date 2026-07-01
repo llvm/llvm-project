@@ -27,7 +27,7 @@ namespace Fortran::semantics {
 void DataChecker::Enter(const parser::DataImpliedDo &x) {
   const auto &name{parser::UnwrapRef<parser::Name>(
       std::get<parser::DataImpliedDo::Bounds>(x.t).Name())};
-  int kind{evaluate::ResultType<evaluate::ImpliedDoIndex>::kind};
+  int kind{evaluate::subscriptIntegerKind};
   if (const auto dynamicType{evaluate::DynamicType::From(DEREF(name.symbol))}) {
     if (dynamicType->category() == TypeCategory::Integer) {
       kind = dynamicType->kind();

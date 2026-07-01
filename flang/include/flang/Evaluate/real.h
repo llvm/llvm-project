@@ -9,14 +9,14 @@
 #ifndef FORTRAN_EVALUATE_REAL_H_
 #define FORTRAN_EVALUATE_REAL_H_
 
-#include "formatting.h"
-#include "integer.h"
-#include "rounding-bits.h"
+// Fixed-width IEEE binary floating-point template used internally by RealValue.
+// Prefer RealValue for new code.
+
 #include "flang/Common/real.h"
+#include "flang/Evaluate/integer.h"
+#include "flang/Evaluate/rounding-bits.h"
 #include "flang/Evaluate/target.h"
-#include <cinttypes>
-#include <limits>
-#include <string>
+#include "llvm/ADT/APFloat.h"
 
 // Some environments, viz. glibc 2.17 and *BSD, allow the macro HUGE
 // to leak out of <math.h>.
@@ -25,6 +25,7 @@
 namespace llvm {
 class raw_ostream;
 }
+
 namespace Fortran::evaluate::value {
 
 // LOG10(2.)*1E12
@@ -452,6 +453,10 @@ public:
       llvm::raw_ostream &, int kind, bool minimal = false) const;
   std::string AsFortran(int kind, bool minimal = false) const;
 
+  template <typename R>
+  friend ValueWithRealFlags<R> FromIntegerValue(
+      const IntegerValue &n, bool isUnsigned, Rounding rounding);
+
 private:
   using Significand = Integer<significandBits>; // no implicit bit
 
@@ -515,5 +520,30 @@ extern template class Real<Integer<64>, 53>; // IEEE double
 extern template class Real<X87IntegerContainer, 64>; // 80387 extended precision
 extern template class Real<Integer<128>, 113>; // IEEE quad
 // N.B. No "double-double" support.
+
+// Maps a Fortran REAL kind to its fixed-width backing format and calls f with
+// a prototype value of that type.  Defined inline here so that real.cpp can
+// instantiate it.
+template <typename F> static inline auto realWithKind(int kind, F &&f) {
+  using namespace Fortran::evaluate::value;
+  switch (kind) {
+  case 2:
+    return f(Real<Integer<16>, 11>{});
+  case 3:
+    return f(Real<Integer<16>, 8>{});
+  case 4:
+    return f(Real<Integer<32>, 24>{});
+  case 8:
+    return f(Real<Integer<64>, 53>{});
+  case 10:
+    return f(Real<X87IntegerContainer, 64>{});
+  case 16:
+    return f(Real<Integer<128>, 113>{});
+  default:
+    llvm_unreachable("arbitrary bits not yet supported");
+    return f(Real<Integer<64>, 53>{});
+  }
+}
+
 } // namespace Fortran::evaluate::value
 #endif // FORTRAN_EVALUATE_REAL_H_

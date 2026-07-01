@@ -232,14 +232,12 @@ private:
 
 LLVM_DUMP_METHOD void DumpEvExpr(const evaluate::Expr<evaluate::SomeType> &x);
 LLVM_DUMP_METHOD void DumpEvExpr(
-    const evaluate::Expr<evaluate::Type<common::TypeCategory::Integer, 4>> &x);
-LLVM_DUMP_METHOD void DumpEvExpr(
-    const evaluate::Expr<evaluate::Type<common::TypeCategory::Integer, 8>> &x);
+    const evaluate::Expr<evaluate::Type<common::TypeCategory::Integer>> &x);
 LLVM_DUMP_METHOD void DumpEvExpr(const evaluate::ArrayRef &x);
 LLVM_DUMP_METHOD void DumpEvExpr(const evaluate::DataRef &x);
 LLVM_DUMP_METHOD void DumpEvExpr(const evaluate::Substring &x);
 LLVM_DUMP_METHOD void DumpEvExpr(
-    const evaluate::Designator<evaluate::Type<common::TypeCategory::Integer, 4>>
+    const evaluate::Designator<evaluate::Type<common::TypeCategory::Integer>>
         &x);
 
 } // namespace Fortran::semantics

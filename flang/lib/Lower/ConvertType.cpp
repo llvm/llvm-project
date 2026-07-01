@@ -55,8 +55,7 @@ static mlir::Type genRealType(mlir::MLIRContext *context, int kind) {
 
 template <int KIND>
 int getIntegerBits() {
-  return Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer,
-                                 KIND>::Scalar::bits;
+  return 8 * KIND;
 }
 static mlir::Type genIntegerType(mlir::MLIRContext *context, int kind,
                                  bool isUnsigned = false) {
@@ -66,6 +65,7 @@ static mlir::Type genIntegerType(mlir::MLIRContext *context, int kind,
         (isUnsigned ? mlir::IntegerType::SignednessSemantics::Unsigned
                     : mlir::IntegerType::SignednessSemantics::Signless);
 
+    // PAPAYA: return 8*kind;
     switch (kind) {
     case 1:
       return mlir::IntegerType::get(context, getIntegerBits<1>(), signedness);
@@ -488,11 +488,10 @@ struct TypeBuilderImpl {
   // To get the character length from a symbol, make an fold a designator for
   // the symbol to cover the case where the symbol is an assumed length named
   // constant and its length comes from its init expression length.
-  template <int Kind>
   fir::SequenceType::Extent
   getCharacterLengthHelper(const Fortran::semantics::Symbol &symbol) {
     using TC =
-        Fortran::evaluate::Type<Fortran::common::TypeCategory::Character, Kind>;
+        Fortran::evaluate::Type<Fortran::common::TypeCategory::Character>;
     auto designator = Fortran::evaluate::Fold(
         converter.getFoldingContext(),
         Fortran::evaluate::Expr<TC>{Fortran::evaluate::Designator<TC>{symbol}});
@@ -517,17 +516,7 @@ struct TypeBuilderImpl {
         type->category() != Fortran::semantics::DeclTypeSpec::Character ||
         !type->AsIntrinsic())
       llvm::report_fatal_error("not a character symbol");
-    int kind =
-        toInt64(Fortran::common::Clone(type->AsIntrinsic()->kind())).value();
-    switch (kind) {
-    case 1:
-      return getCharacterLengthHelper<1>(symbol);
-    case 2:
-      return getCharacterLengthHelper<2>(symbol);
-    case 4:
-      return getCharacterLengthHelper<4>(symbol);
-    }
-    llvm_unreachable("unknown character kind");
+    return getCharacterLengthHelper(symbol);
   }
 
   template <typename A>

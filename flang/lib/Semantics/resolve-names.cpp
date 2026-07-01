@@ -220,7 +220,7 @@ public:
   MaybeSubscriptIntExpr EvaluateSubscriptIntExpr(const T &expr) {
     if (MaybeIntExpr maybeIntExpr{EvaluateIntExpr(expr)}) {
       return FoldExpr(evaluate::ConvertToType<evaluate::SubscriptInteger>(
-          std::move(*maybeIntExpr)));
+          evaluate::subscriptIntegerKind, std::move(*maybeIntExpr)));
     } else {
       return std::nullopt;
     }
@@ -2463,8 +2463,11 @@ void AttrsVisitor::SetBindNameOn(Symbol &symbol) {
     return;
   }
   symbol.SetIsCDefined(isCDefined_);
-  std::optional<std::string> label{
-      evaluate::GetScalarConstantValue<evaluate::Ascii>(bindName_)};
+  std::optional<std::string> label;
+  if (auto charVal{
+          evaluate::GetScalarConstantValue<evaluate::Ascii>(bindName_)}) {
+    label = charVal->ToStdString();
+  }
   // 18.9.2(2): discard leading and trailing blanks
   if (label) {
     symbol.SetIsExplicitBindName(true);
@@ -5976,7 +5979,7 @@ bool DeclarationVisitor::Pre(const parser::Enumerator &enumerator) {
     // Enumerators are treated as PARAMETER (section 7.6 paragraph (4))
     symbol = &MakeSymbol(name, Attrs{Attr::PARAMETER}, ObjectEntityDetails{});
     symbol->SetType(context().MakeNumericType(
-        TypeCategory::Integer, evaluate::CInteger::kind));
+        TypeCategory::Integer, evaluate::cIntegerKind));
   }
 
   if (auto &init{std::get<std::optional<parser::ScalarIntConstantExpr>>(
@@ -5997,8 +6000,17 @@ bool DeclarationVisitor::Pre(const parser::Enumerator &enumerator) {
 
   if (symbol) {
     if (enumerationState_.value) {
-      symbol->get<ObjectEntityDetails>().set_init(SomeExpr{
-          evaluate::Expr<evaluate::CInteger>{*enumerationState_.value}});
+      // Enumerators have C int kind; build the initializer constant with that
+      // runtime kind explicitly.  The Expr<CInteger>(int) constructor would
+      // otherwise default to subscriptIntegerKind (8), since the kind is now a
+      // runtime property of the value rather than a template parameter.
+      symbol->get<ObjectEntityDetails>().set_init(
+          SomeExpr{evaluate::Expr<evaluate::CInteger>{
+              evaluate::Constant<evaluate::CInteger>{
+                  evaluate::value::IntegerValue{
+                      static_cast<std::int64_t>(*enumerationState_.value),
+                      evaluate::cIntegerKind},
+                  evaluate::CInteger{evaluate::cIntegerKind}}}});
     } else {
       context().SetError(*symbol);
     }
@@ -9016,12 +9028,14 @@ public:
   bool Pre(const parser::IoControlSpec::Asynchronous &async) {
     if (auto folded{evaluate::Fold(
             context_.foldingContext(), AnalyzeExpr(context_, async.v))}) {
-      if (auto str{
+      if (auto charVal{
               evaluate::GetScalarConstantValue<evaluate::Ascii>(*folded)}) {
-        for (char ch : *str) {
-          if (ch != ' ') {
-            inAsyncIO_ = ch == 'y' || ch == 'Y';
-            break;
+        if (auto str{charVal->ToStdString()}) {
+          for (char ch : *str) {
+            if (ch != ' ') {
+              inAsyncIO_ = ch == 'y' || ch == 'Y';
+              break;
+            }
           }
         }
       }

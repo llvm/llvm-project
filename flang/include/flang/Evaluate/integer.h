@@ -9,13 +9,8 @@
 #ifndef FORTRAN_EVALUATE_INTEGER_H_
 #define FORTRAN_EVALUATE_INTEGER_H_
 
-// Emulates binary integers of an arbitrary (but fixed) bit size for use
-// when the host C++ environment does not support that size or when the
-// full suite of Fortran's integer intrinsic scalar functions are needed.
-// The data model is typeless, so signed* and unsigned operations
-// are distinguished from each other with distinct member function interfaces.
-// (*"Signed" here means two's-complement, just to be clear.  Ones'-complement
-// and signed-magnitude encodings appear to be extinct in 2018.)
+// Fixed-width binary integer template used internally by RealValue and related
+// code.  Prefer IntegerValue for new code.
 
 #include "flang/Common/bit-population-count.h"
 #include "flang/Common/leading-zero-bit-count.h"
@@ -1066,5 +1061,6 @@ using X87IntegerContainer =
 extern template class Integer<80, isHostLittleEndian, 16, std::uint16_t,
     std::uint32_t, 128>;
 extern template class Integer<128>;
+
 } // namespace Fortran::evaluate::value
 #endif // FORTRAN_EVALUATE_INTEGER_H_

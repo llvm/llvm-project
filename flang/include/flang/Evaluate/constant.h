@@ -99,8 +99,8 @@ private:
   ConstantSubscripts lbounds_;
 };
 
-// Constant<> is specialized for Character kinds and SomeDerived.
-// The non-Character intrinsic types, and SomeDerived, share enough
+// Constant<> is specialized for CharacterValue kinds and SomeDerived.
+// The non-CharacterValue intrinsic types, and SomeDerived, share enough
 // common behavior that they use this common base class.
 template <typename RESULT, typename ELEMENT = Scalar<RESULT>>
 class ConstantBase : public ConstantBounds {
@@ -131,7 +131,22 @@ public:
   Result &result() { return result_; }
   const Result &result() const { return result_; }
 
-  constexpr DynamicType GetType() const { return result_.GetType(); }
+  DynamicType GetType() const {
+    if constexpr (Result::category == TypeCategory::Derived) {
+      return result_.GetType();
+    } else {
+      // Source the kind from the runtime field rather than the compile-time
+      // template parameter, in preparation for removing the parameter.  For
+      // categories whose Result carries no kind (Integer/Unsigned/Logical),
+      // result_ is default-constructed (kind 0); fall back to the kind that
+      // the stored scalar value carries at runtime.
+      int kind{result_.runtimeKind()};
+      if (kind == 0 && !values_.empty()) {
+        kind = values_.front().kind();
+      }
+      return DynamicType{Result::category, kind};
+    }
+  }
   llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
   std::string AsFortran() const;
 
@@ -141,6 +156,7 @@ protected:
       ConstantSubscripts &resultSubscripts, const std::vector<int> *dimOrder);
 
   Result result_; // usually empty except for Real & Complex
+  // PAPAYA: store result kind
   std::vector<Element> values_;
 };
 
@@ -170,10 +186,10 @@ public:
       ConstantSubscripts &resultSubscripts, const std::vector<int> *dimOrder);
 };
 
-template <int KIND>
-class Constant<Type<TypeCategory::Character, KIND>> : public ConstantBounds {
+template <>
+class Constant<Type<TypeCategory::Character>> : public ConstantBounds {
 public:
-  using Result = Type<TypeCategory::Character, KIND>;
+  using Result = Type<TypeCategory::Character>;
   using Element = Scalar<Result>;
 
   CLASS_BOILERPLATE(Constant)
@@ -184,8 +200,10 @@ public:
   ~Constant();
 
   bool operator==(const Constant &that) const {
-    return LEN() == that.LEN() && shape() == that.shape() &&
-        values_ == that.values_;
+    // Kind is now a runtime property; constants of different character kinds
+    // were distinct C++ types in the baseline and must remain unequal here.
+    return kind_ == that.kind_ && LEN() == that.LEN() &&
+        shape() == that.shape() && values_ == that.values_;
   }
   bool empty() const;
   std::size_t size() const;
@@ -212,7 +230,7 @@ public:
   Constant Reshape(ConstantSubscripts &&) const;
   llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
   std::string AsFortran() const;
-  DynamicType GetType() const { return {KIND, length_}; }
+  DynamicType GetType() const { return {kind_, length_}; }
   std::size_t CopyFrom(const Constant &source, std::size_t count,
       ConstantSubscripts &resultSubscripts, const std::vector<int> *dimOrder);
 
@@ -220,6 +238,8 @@ private:
   Scalar<Result> values_; // one contiguous string
   ConstantSubscript length_;
   bool wasHollerith_{false};
+
+  int kind_{0}; // runtime character kind
 };
 
 class StructureConstructor;

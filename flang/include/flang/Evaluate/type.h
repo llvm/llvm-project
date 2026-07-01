@@ -16,12 +16,13 @@
 // are suitable for use as template parameters to instantiate other class
 // templates, like expressions, over the supported types and kinds.
 
+#include "character-value.h"
 #include "common.h"
-#include "complex.h"
+#include "complex-value.h"
 #include "formatting.h"
-#include "integer.h"
-#include "logical.h"
-#include "real.h"
+#include "integer-value.h"
+#include "logical-value.h"
+#include "real-value.h"
 #include "flang/Common/idioms.h"
 #include "flang/Common/real.h"
 #include "flang/Common/template.h"
@@ -53,15 +54,27 @@ using common::TypeCategory;
 class TargetCharacteristics;
 
 // Specific intrinsic types are represented by specializations of
-// this class template Type<CATEGORY, KIND>.
-template <TypeCategory CATEGORY, int KIND = 0> class Type;
+// this class template Type<CATEGORY>.  The kind of a Type is carried at
+// runtime rather than as a template parameter.
+template <TypeCategory CATEGORY> class Type;
 
-using SubscriptInteger = Type<TypeCategory::Integer, 8>;
-using CInteger = Type<TypeCategory::Integer, 4>;
-using LargestInt = Type<TypeCategory::Integer, 16>;
-using LogicalResult = Type<TypeCategory::Logical, 4>;
-using LargestReal = Type<TypeCategory::Real, 16>;
-using Ascii = Type<TypeCategory::Character, 1>;
+// Default kinds for type aliases that used to encode a specific kind in their
+// template arguments.  Now that Type is not parameterized on kind, the kind is
+// carried at runtime; these named constants preserve the previously-implied
+// kind values for the constructors and width computations that need them.
+inline constexpr int subscriptIntegerKind{8};
+inline constexpr int cIntegerKind{4};
+inline constexpr int largestIntKind{16};
+inline constexpr int logicalResultKind{4};
+inline constexpr int largestRealKind{16};
+inline constexpr int asciiKind{1};
+
+using SubscriptInteger = Type<TypeCategory::Integer>;
+using CInteger = Type<TypeCategory::Integer>;
+using LargestInt = Type<TypeCategory::Integer>;
+using LogicalResult = Type<TypeCategory::Logical>;
+using LargestReal = Type<TypeCategory::Real>;
+using Ascii = Type<TypeCategory::Character>;
 
 // DynamicType is meant to be suitable for use as the result type for
 // GetType() functions and member functions; consequently, it must be
@@ -253,26 +266,33 @@ const semantics::DerivedTypeSpec *GetDerivedTypeSpec(
 const semantics::DerivedTypeSpec *GetParentTypeSpec(
     const semantics::DerivedTypeSpec &);
 
-template <TypeCategory CATEGORY, int KIND = 0> struct TypeBase {
+template <TypeCategory CATEGORY> struct TypeBase {
   static constexpr TypeCategory category{CATEGORY};
-  static constexpr int kind{KIND};
-  constexpr bool operator==(const TypeBase &) const { return true; }
-  static constexpr DynamicType GetType() { return {category, kind}; }
-  static std::string AsFortran() { return GetType().AsFortran(); }
+  // The kind is carried at runtime.  A default-constructed Type has a kind of
+  // zero, which denotes an as-yet-unspecified kind.
+  constexpr TypeBase(int k = 0) : runtimeKind_{k} {}
+  constexpr bool operator==(const TypeBase &that) const {
+    return runtimeKind_ == that.runtimeKind_;
+  }
+  constexpr int runtimeKind() const { return runtimeKind_; }
+  constexpr int kind() const { return runtimeKind_; }
+  constexpr DynamicType GetType() const { return {category, runtimeKind_}; }
+  std::string AsFortran() const { return GetType().AsFortran(); }
+  int runtimeKind_{0};
 };
 
-template <int KIND>
-class Type<TypeCategory::Integer, KIND>
-    : public TypeBase<TypeCategory::Integer, KIND> {
+template <>
+class Type<TypeCategory::Integer> : public TypeBase<TypeCategory::Integer> {
 public:
-  using Scalar = value::Integer<8 * KIND>;
+  using TypeBase::TypeBase;
+  using Scalar = value::IntegerValue;
 };
 
-template <int KIND>
-class Type<TypeCategory::Unsigned, KIND>
-    : public TypeBase<TypeCategory::Unsigned, KIND> {
+template <>
+class Type<TypeCategory::Unsigned> : public TypeBase<TypeCategory::Unsigned> {
 public:
-  using Scalar = value::Integer<8 * KIND>;
+  using TypeBase::TypeBase;
+  using Scalar = value::IntegerValue;
 };
 
 // Records when a default REAL literal constant is inexactly converted to binary
@@ -291,62 +311,51 @@ private:
   bool isFromInexactLiteralConversion_{false};
 };
 
-template <int KIND>
-class Type<TypeCategory::Real, KIND>
-    : public TypeBase<TypeCategory::Real, KIND>,
-      public TrackInexactLiteralConversion {
+template <>
+class Type<TypeCategory::Real> : public TypeBase<TypeCategory::Real>,
+                                 public TrackInexactLiteralConversion {
 public:
-  static constexpr int precision{common::PrecisionOfRealKind(KIND)};
-  static constexpr int bits{common::BitsForBinaryPrecision(precision)};
-  using Scalar =
-      value::Real<std::conditional_t<precision == 64,
-                      value::X87IntegerContainer, value::Integer<bits>>,
-          precision>;
+  using TypeBase::TypeBase;
+  static constexpr int precision(int kind) {
+    return common::PrecisionOfRealKind(kind);
+  }
+  static constexpr int bits(int kind) {
+    return common::BitsForBinaryPrecision(precision(kind));
+  }
+  using Scalar = value::RealValue;
 };
 
-// The KIND type parameter on COMPLEX is the kind of each of its components.
-template <int KIND>
-class Type<TypeCategory::Complex, KIND>
-    : public TypeBase<TypeCategory::Complex, KIND>,
-      public TrackInexactLiteralConversion {
+// The kind of a COMPLEX value is the kind of each of its components.
+template <>
+class Type<TypeCategory::Complex> : public TypeBase<TypeCategory::Complex>,
+                                    public TrackInexactLiteralConversion {
 public:
-  using Part = Type<TypeCategory::Real, KIND>;
-  using Scalar = value::Complex<typename Part::Scalar>;
+  using TypeBase::TypeBase;
+  using Part = Type<TypeCategory::Real>;
+  using Scalar = value::ComplexValue;
 };
 
 template <>
-class Type<TypeCategory::Character, 1>
-    : public TypeBase<TypeCategory::Character, 1> {
+class Type<TypeCategory::Character> : public TypeBase<TypeCategory::Character> {
 public:
-  using Scalar = std::string;
+  using TypeBase::TypeBase;
+  using Scalar = value::CharacterValue;
 };
 
 template <>
-class Type<TypeCategory::Character, 2>
-    : public TypeBase<TypeCategory::Character, 2> {
+class Type<TypeCategory::Logical> : public TypeBase<TypeCategory::Logical> {
 public:
-  using Scalar = std::u16string;
-};
-
-template <>
-class Type<TypeCategory::Character, 4>
-    : public TypeBase<TypeCategory::Character, 4> {
-public:
-  using Scalar = std::u32string;
-};
-
-template <int KIND>
-class Type<TypeCategory::Logical, KIND>
-    : public TypeBase<TypeCategory::Logical, KIND> {
-public:
-  using Scalar = value::Logical<8 * KIND>;
+  using TypeBase::TypeBase;
+  using Scalar = value::LogicalValue;
 };
 
 // Type functions
 
 // Given a specific type, find the type of the same kind in another category.
-template <TypeCategory CATEGORY, typename T>
-using SameKind = Type<CATEGORY, std::decay_t<T>::kind>;
+// The kind is now a runtime property, so "same kind" is no longer expressible
+// purely in the type system; SameKind maps only the category.
+// PAPAYA: Remove completely
+// template <TypeCategory CATEGORY, typename T> using SameKind = Type<CATEGORY>;
 
 // Many expressions, including subscripts, CHARACTER lengths, array bounds,
 // and effective type parameter values, are of a maximal kind of INTEGER.
@@ -356,17 +365,10 @@ using IndirectSubscriptIntegerExpr =
 // For each intrinsic type category CAT, CategoryTypes<CAT> is an instantiation
 // of std::tuple<Type<CAT, K>> that comprises every kind value K in that
 // category that could possibly be supported on any target.
-template <TypeCategory CATEGORY, int KIND>
-using CategoryKindTuple =
-    std::conditional_t<common::IsValidKindOfIntrinsicType(CATEGORY, KIND),
-        std::tuple<Type<CATEGORY, KIND>>, std::tuple<>>;
-
-template <TypeCategory CATEGORY, int... KINDS>
-using CategoryTypesHelper =
-    common::CombineTuples<CategoryKindTuple<CATEGORY, KINDS>...>;
-
+// With kind carried at runtime there is a single Type per category.
+// PAPAYA: Remove completely
 template <TypeCategory CATEGORY>
-using CategoryTypes = CategoryTypesHelper<CATEGORY, 1, 2, 3, 4, 8, 10, 16, 32>;
+using CategoryTypes = std::tuple<Type<CATEGORY>>;
 
 using IntegerTypes = CategoryTypes<TypeCategory::Integer>;
 using RealTypes = CategoryTypes<TypeCategory::Real>;
@@ -511,42 +513,21 @@ bool AreSameDerivedTypeIgnoringTypeParameters(
 bool AreSameDerivedTypeIgnoringSequence(
     const semantics::DerivedTypeSpec &, const semantics::DerivedTypeSpec &);
 
-// For generating "[extern] template class", &c. boilerplate
-#define EXPAND_FOR_EACH_INTEGER_KIND(M, P, S) \
-  M(P, S, 1) M(P, S, 2) M(P, S, 4) M(P, S, 8) M(P, S, 16)
-#define EXPAND_FOR_EACH_REAL_KIND(M, P, S) \
-  M(P, S, 2) M(P, S, 3) M(P, S, 4) M(P, S, 8) M(P, S, 10) M(P, S, 16)
-#define EXPAND_FOR_EACH_COMPLEX_KIND(M, P, S) EXPAND_FOR_EACH_REAL_KIND(M, P, S)
-#define EXPAND_FOR_EACH_CHARACTER_KIND(M, P, S) M(P, S, 1) M(P, S, 2) M(P, S, 4)
-#define EXPAND_FOR_EACH_LOGICAL_KIND(M, P, S) \
-  M(P, S, 1) M(P, S, 2) M(P, S, 4) M(P, S, 8)
-#define EXPAND_FOR_EACH_UNSIGNED_KIND EXPAND_FOR_EACH_INTEGER_KIND
-
-#define FOR_EACH_INTEGER_KIND_HELP(PREFIX, SUFFIX, K) \
-  PREFIX<Type<TypeCategory::Integer, K>> SUFFIX;
-#define FOR_EACH_REAL_KIND_HELP(PREFIX, SUFFIX, K) \
-  PREFIX<Type<TypeCategory::Real, K>> SUFFIX;
-#define FOR_EACH_COMPLEX_KIND_HELP(PREFIX, SUFFIX, K) \
-  PREFIX<Type<TypeCategory::Complex, K>> SUFFIX;
-#define FOR_EACH_CHARACTER_KIND_HELP(PREFIX, SUFFIX, K) \
-  PREFIX<Type<TypeCategory::Character, K>> SUFFIX;
-#define FOR_EACH_LOGICAL_KIND_HELP(PREFIX, SUFFIX, K) \
-  PREFIX<Type<TypeCategory::Logical, K>> SUFFIX;
-#define FOR_EACH_UNSIGNED_KIND_HELP(PREFIX, SUFFIX, K) \
-  PREFIX<Type<TypeCategory::Unsigned, K>> SUFFIX;
-
+// For generating "[extern] template class", &c. boilerplate.  With kind
+// carried at runtime there is a single Type per category, so these now expand
+// to one instantiation per category rather than one per kind.
 #define FOR_EACH_INTEGER_KIND(PREFIX, SUFFIX) \
-  EXPAND_FOR_EACH_INTEGER_KIND(FOR_EACH_INTEGER_KIND_HELP, PREFIX, SUFFIX)
+  PREFIX<Type<TypeCategory::Integer>> SUFFIX;
 #define FOR_EACH_REAL_KIND(PREFIX, SUFFIX) \
-  EXPAND_FOR_EACH_REAL_KIND(FOR_EACH_REAL_KIND_HELP, PREFIX, SUFFIX)
+  PREFIX<Type<TypeCategory::Real>> SUFFIX;
 #define FOR_EACH_COMPLEX_KIND(PREFIX, SUFFIX) \
-  EXPAND_FOR_EACH_COMPLEX_KIND(FOR_EACH_COMPLEX_KIND_HELP, PREFIX, SUFFIX)
+  PREFIX<Type<TypeCategory::Complex>> SUFFIX;
 #define FOR_EACH_CHARACTER_KIND(PREFIX, SUFFIX) \
-  EXPAND_FOR_EACH_CHARACTER_KIND(FOR_EACH_CHARACTER_KIND_HELP, PREFIX, SUFFIX)
+  PREFIX<Type<TypeCategory::Character>> SUFFIX;
 #define FOR_EACH_LOGICAL_KIND(PREFIX, SUFFIX) \
-  EXPAND_FOR_EACH_LOGICAL_KIND(FOR_EACH_LOGICAL_KIND_HELP, PREFIX, SUFFIX)
+  PREFIX<Type<TypeCategory::Logical>> SUFFIX;
 #define FOR_EACH_UNSIGNED_KIND(PREFIX, SUFFIX) \
-  EXPAND_FOR_EACH_UNSIGNED_KIND(FOR_EACH_UNSIGNED_KIND_HELP, PREFIX, SUFFIX)
+  PREFIX<Type<TypeCategory::Unsigned>> SUFFIX;
 
 #define FOR_EACH_LENGTHLESS_INTRINSIC_KIND(PREFIX, SUFFIX) \
   FOR_EACH_INTEGER_KIND(PREFIX, SUFFIX) \
@@ -573,5 +554,15 @@ bool AreSameDerivedTypeIgnoringSequence(
 #define FOR_EACH_TYPE_AND_KIND(PREFIX, SUFFIX) \
   FOR_EACH_INTRINSIC_KIND(PREFIX, SUFFIX) \
   FOR_EACH_CATEGORY_TYPE(PREFIX, SUFFIX)
+
+// CharacterValue comparison with Fortran blank-padding semantics.  This
+// overload is necessary because value::CharacterValue holds an opaque variant
+// over string types, while the generic Compare in common.h only handles
+// std::basic_string directly.  Being a non-template, it is preferred over that
+// generic template for value::CharacterValue operands.  It is defined in
+// character-value.cpp, which can see the CharacterValueImpl storage.
+Ordering Compare(
+    const value::CharacterValue &x, const value::CharacterValue &y);
+
 } // namespace Fortran::evaluate
 #endif // FORTRAN_EVALUATE_TYPE_H_

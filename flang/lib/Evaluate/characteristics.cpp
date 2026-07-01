@@ -195,9 +195,11 @@ std::optional<Expr<SubscriptInteger>> TypeAndShape::MeasureElementSizeInBytes(
     CHECK(type_.category() == TypeCategory::Character);
     return Fold(foldingContext,
         Expr<SubscriptInteger>{
-            foldingContext.targetCharacteristics().GetByteSize(
-                type_.category(), type_.kind())} *
-            Expr<SubscriptInteger>{*LEN_});
+            Constant<SubscriptInteger>{SubscriptInteger::Scalar{
+                foldingContext.targetCharacteristics().GetByteSize(
+                    type_.category(), type_.kind()),
+                subscriptIntegerKind}}} *
+            common::Clone(*LEN_));
   }
   if (auto elementBytes{type_.MeasureSizeInBytes(foldingContext, align)}) {
     return Fold(foldingContext, std::move(*elementBytes));
