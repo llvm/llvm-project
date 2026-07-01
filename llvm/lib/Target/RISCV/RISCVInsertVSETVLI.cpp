@@ -970,6 +970,8 @@ bool RISCVInsertVSETVLI::canMutatePriorConfigWithTWiden(
   auto PrevInfo = VIA.getInfoForVSETVLI(PrevMI);
   auto CurrInfo = VIA.getInfoForVSETVLI(MI);
 
+  assert(CurrInfo.hasAVLReg() && "Invalid PseudoSF_VSETTNT without an AVLReg.");
+
   auto AVLReg = CurrInfo.getAVLReg();
 
   auto *AVLRegDefMI = MRI->getUniqueVRegDef(AVLReg);
