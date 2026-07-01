@@ -271,27 +271,6 @@ m_scev_c_NUWMul(const Op0_t &Op0, const Op1_t &Op1) {
 }
 
 template <typename Op0_t, typename Op1_t>
-inline SCEVBinaryExpr_match<SCEVMulExpr, Op0_t, Op1_t, SCEV::FlagNSW, true>
-m_scev_c_NSWMul(const Op0_t &Op0, const Op1_t &Op1) {
-  return m_scev_Binary<SCEVMulExpr, Op0_t, Op1_t, SCEV::FlagNSW, true>(Op0,
-                                                                       Op1);
-}
-
-template <typename Op0_t, typename Op1_t>
-inline SCEVBinaryExpr_match<SCEVAddExpr, Op0_t, Op1_t, SCEV::FlagNUW, true>
-m_scev_c_NUWAdd(const Op0_t &Op0, const Op1_t &Op1) {
-  return m_scev_Binary<SCEVAddExpr, Op0_t, Op1_t, SCEV::FlagNUW, true>(Op0,
-                                                                       Op1);
-}
-
-template <typename Op0_t, typename Op1_t>
-inline SCEVBinaryExpr_match<SCEVAddExpr, Op0_t, Op1_t, SCEV::FlagNSW, true>
-m_scev_c_NSWAdd(const Op0_t &Op0, const Op1_t &Op1) {
-  return m_scev_Binary<SCEVAddExpr, Op0_t, Op1_t, SCEV::FlagNSW, true>(Op0,
-                                                                       Op1);
-}
-
-template <typename Op0_t, typename Op1_t>
 inline SCEVBinaryExpr_match<SCEVUDivExpr, Op0_t, Op1_t>
 m_scev_UDiv(const Op0_t &Op0, const Op1_t &Op1) {
   return m_scev_Binary<SCEVUDivExpr>(Op0, Op1);

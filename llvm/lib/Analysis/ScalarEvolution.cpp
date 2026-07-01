@@ -11128,37 +11128,40 @@ bool ScalarEvolution::SimplifyICmpOperands(CmpPredicate &Pred, SCEVUse &LHS,
   // For signed, both adds must be NSW. For unsigned, both must be NUW.
   {
     const SCEVConstant *C = nullptr;
-    if ((ICmpInst::isEquality(Pred) &&
-         match(LHS, m_scev_c_Add(m_SCEVConstant(C), m_SCEV(NewLHS))) &&
-         match(RHS, m_scev_c_Add(m_scev_Specific(C), m_SCEV(NewRHS)))) ||
-        (ICmpInst::isSigned(Pred) &&
-         match(LHS, m_scev_c_NSWAdd(m_SCEVConstant(C), m_SCEV(NewLHS))) &&
-         match(RHS, m_scev_c_NSWAdd(m_scev_Specific(C), m_SCEV(NewRHS)))) ||
-        (ICmpInst::isUnsigned(Pred) &&
-         match(LHS, m_scev_c_NUWAdd(m_SCEVConstant(C), m_SCEV(NewLHS))) &&
-         match(RHS, m_scev_c_NUWAdd(m_scev_Specific(C), m_SCEV(NewRHS))))) {
-      LHS = NewLHS;
-      RHS = NewRHS;
-      Changed = true;
+    if (match(LHS, m_scev_c_Add(m_SCEVConstant(C), m_SCEV(NewLHS))) &&
+        match(RHS, m_scev_c_Add(m_scev_Specific(C), m_SCEV(NewRHS)))) {
+      const auto *LAdd = cast<SCEVAddExpr>(LHS);
+      const auto *RAdd = cast<SCEVAddExpr>(RHS);
+      if (ICmpInst::isEquality(Pred) ||
+          (ICmpInst::isSigned(Pred) && LAdd->hasNoSignedWrap() &&
+           RAdd->hasNoSignedWrap()) ||
+          (ICmpInst::isUnsigned(Pred) && LAdd->hasNoUnsignedWrap() &&
+           RAdd->hasNoUnsignedWrap())) {
+        LHS = NewLHS;
+        RHS = NewRHS;
+        Changed = true;
+      }
     }
   }
 
   // (C * A) pred (C * B) --> A pred B
   // For signed predicates, C must be positive and both muls must be NSW.
-  // For unsigned predicates, C must be non-zero and both muls must be NUW.
+  // For unsigned predicates, both muls must be NUW. C == 0 is impossible
+  // because SCEV would fold 0 * X to 0.
   {
     const SCEVConstant *C = nullptr;
-    if ((ICmpInst::isSigned(Pred) &&
-         match(LHS, m_scev_c_NSWMul(m_SCEVConstant(C), m_SCEV(NewLHS))) &&
-         match(RHS, m_scev_c_NSWMul(m_scev_Specific(C), m_SCEV(NewRHS))) &&
-         C->getAPInt().isStrictlyPositive()) ||
-        (ICmpInst::isUnsigned(Pred) &&
-         match(LHS, m_scev_c_NUWMul(m_SCEVConstant(C), m_SCEV(NewLHS))) &&
-         match(RHS, m_scev_c_NUWMul(m_scev_Specific(C), m_SCEV(NewRHS))) &&
-         !C->getAPInt().isZero())) {
-      LHS = NewLHS;
-      RHS = NewRHS;
-      Changed = true;
+    if (match(LHS, m_scev_c_Mul(m_SCEVConstant(C), m_SCEV(NewLHS))) &&
+        match(RHS, m_scev_c_Mul(m_scev_Specific(C), m_SCEV(NewRHS)))) {
+      const auto *LMul = cast<SCEVMulExpr>(LHS);
+      const auto *RMul = cast<SCEVMulExpr>(RHS);
+      if ((ICmpInst::isSigned(Pred) && LMul->hasNoSignedWrap() &&
+           RMul->hasNoSignedWrap() && C->getAPInt().isStrictlyPositive()) ||
+          (ICmpInst::isUnsigned(Pred) && LMul->hasNoUnsignedWrap() &&
+           RMul->hasNoUnsignedWrap())) {
+        LHS = NewLHS;
+        RHS = NewRHS;
+        Changed = true;
+      }
     }
   }
 
