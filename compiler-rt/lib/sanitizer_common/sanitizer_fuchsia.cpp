@@ -556,7 +556,13 @@ bool GetRandom(void *buffer, uptr length, bool blocking) {
 
 u32 GetNumberOfCPUs() { return zx_system_get_num_cpus(); }
 
-uptr GetRSS() { UNIMPLEMENTED(); }
+uptr GetRSS() {
+  zx_info_task_stats_t i;
+  if (_zx_object_get_info(_zx_process_self(), ZX_INFO_TASK_STATS, &i, sizeof(i),
+                          nullptr, nullptr) != ZX_OK)
+    return 0;
+  return i.mem_private_bytes + i.mem_shared_bytes;
+}
 
 void *internal_start_thread(void *(*func)(void *arg), void *arg) { return 0; }
 void internal_join_thread(void *th) {}
