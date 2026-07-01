@@ -155,7 +155,7 @@ public:
   unsigned getResolverID() const { return SubclassID; }
 
   /// This checks whether the resolver's type matches the enum
-  /// lldb::eBreakpointResolverType.
+  /// lldb::BreakpointResolverType.
   bool ResolverTyInMask(uint64_t mask);
 
   enum ResolverTy GetResolverTy() {
