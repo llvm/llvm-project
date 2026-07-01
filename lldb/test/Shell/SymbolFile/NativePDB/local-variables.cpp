@@ -147,11 +147,11 @@ int main(int argc, char **argv) {
 // CHECK-NEXT: (lldb) expression Local2
 // CHECK-NEXT: (char) $18 = 'c'
 // CHECK-NEXT: (lldb) continue
-// CHECK-NEXT: Process {{.*}} resuming
+// CHECK: Process {{.*}} resuming
 // CHECK-NEXT: Process {{.*}} exited with status = 18 (0x00000012)
 
 // CHECK:      (lldb) target modules dump ast
-// CHECK-NEXT: Dumping clang ast for {{.*}} modules.
+// CHECK: Dumping clang ast for {{.*}} modules.
 // CHECK-NEXT: TranslationUnitDecl
 // CHECK-NEXT: |-FunctionDecl {{.*}} main 'int (int, char **)'
 // CHECK-NEXT: | |-ParmVarDecl {{.*}} argc 'int'

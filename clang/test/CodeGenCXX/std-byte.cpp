@@ -7,12 +7,22 @@ namespace std {
 enum byte : unsigned char {};
 }
 
-// CHECK-LABEL: define{{.*}} void @test0(
+// CHECK-LABEL: define dso_local void @test0(
+// CHECK-SAME: ptr noundef [[SB:%.*]], ptr noundef [[I:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[SB_ADDR:%.*]] = alloca ptr, align 4
+// CHECK-NEXT:    [[I_ADDR:%.*]] = alloca ptr, align 4
+// CHECK-NEXT:    store ptr [[SB]], ptr [[SB_ADDR]], align 4, !tbaa [[TBAA7:![0-9]+]]
+// CHECK-NEXT:    store ptr [[I]], ptr [[I_ADDR]], align 4, !tbaa [[TBAA9:![0-9]+]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[SB_ADDR]], align 4, !tbaa [[TBAA7]]
+// CHECK-NEXT:    store i8 0, ptr [[TMP0]], align 1, !tbaa [[TBAA11:![0-9]+]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[I_ADDR]], align 4, !tbaa [[TBAA9]]
+// CHECK-NEXT:    store i32 1, ptr [[TMP1]], align 4, !tbaa [[TBAA12:![0-9]+]]
+// CHECK-NEXT:    ret void
+//
 extern "C" void test0(std::byte *sb, int *i) {
-  // CHECK: store i8 0, ptr %{{.*}}, align 1, !tbaa [[TBAA11:![0-9]+]]
   *sb = std::byte{0};
 
-  // CHECK: store i32 1, ptr %{{.*}}, align 4, !tbaa [[TBAA3:![0-9]+]]
   *i = 1;
 }
 
@@ -26,26 +36,43 @@ enum byte : unsigned char {};
 
 // Make sure we don't get confused with other enums named 'byte'.
 
-// CHECK-LABEL: define{{.*}} void @test1(
+// CHECK-LABEL: define dso_local void @test1(
+// CHECK-SAME: ptr noundef [[B:%.*]], ptr noundef [[MB:%.*]], ptr noundef [[MSB:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[B_ADDR:%.*]] = alloca ptr, align 4
+// CHECK-NEXT:    [[MB_ADDR:%.*]] = alloca ptr, align 4
+// CHECK-NEXT:    [[MSB_ADDR:%.*]] = alloca ptr, align 4
+// CHECK-NEXT:    store ptr [[B]], ptr [[B_ADDR]], align 4, !tbaa [[TBAA7]]
+// CHECK-NEXT:    store ptr [[MB]], ptr [[MB_ADDR]], align 4, !tbaa [[TBAA7]]
+// CHECK-NEXT:    store ptr [[MSB]], ptr [[MSB_ADDR]], align 4, !tbaa [[TBAA7]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[B_ADDR]], align 4, !tbaa [[TBAA7]]
+// CHECK-NEXT:    store i8 0, ptr [[TMP0]], align 1, !tbaa [[TBAA13:![0-9]+]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[MB_ADDR]], align 4, !tbaa [[TBAA7]]
+// CHECK-NEXT:    store i8 0, ptr [[TMP1]], align 1, !tbaa [[TBAA15:![0-9]+]]
+// CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[MSB_ADDR]], align 4, !tbaa [[TBAA7]]
+// CHECK-NEXT:    store i8 0, ptr [[TMP2]], align 1, !tbaa [[TBAA17:![0-9]+]]
+// CHECK-NEXT:    ret void
+//
 extern "C" void test1(::byte *b, ::my::byte *mb, ::my::std::byte *msb) {
-  // CHECK: store i8 0, ptr %{{.*}}, align 1, !tbaa [[TBAA12:![0-9]+]]
   *b = ::byte{0};
-  // CHECK: store i8 0, ptr %{{.*}}, align 1, !tbaa [[TBAA14:![0-9]+]]
   *mb = ::my::byte{0};
-  // CHECK: store i8 0, ptr %{{.*}}, align 1, !tbaa [[TBAA16:![0-9]+]]
   *msb = ::my::std::byte{0};
 }
 
 //.
-// CHECK: [[TBAA3]] = !{[[META4:![0-9]+]], [[META4]], i64 0}
-// CHECK: [[META4]] = !{!"int", [[META5:![0-9]+]], i64 0}
+// CHECK: [[META4:![0-9]+]] = !{!"int", [[META5:![0-9]+]], i64 0}
 // CHECK: [[META5]] = !{!"omnipotent char", [[META6:![0-9]+]], i64 0}
 // CHECK: [[META6]] = !{!"Simple C++ TBAA"}
+// CHECK: [[TBAA7]] = !{[[META8:![0-9]+]], [[META8]], i64 0}
+// CHECK: [[META8]] = !{!"any pointer", [[META5]], i64 0}
+// CHECK: [[TBAA9]] = !{[[META10:![0-9]+]], [[META10]], i64 0}
+// CHECK: [[META10]] = !{!"p1 int", [[META8]], i64 0}
 // CHECK: [[TBAA11]] = !{[[META5]], [[META5]], i64 0}
-// CHECK: [[TBAA12]] = !{[[META13:![0-9]+]], [[META13]], i64 0}
-// CHECK: [[META13]] = !{!"_ZTS4byte", [[META5]], i64 0}
-// CHECK: [[TBAA14]] = !{[[META15:![0-9]+]], [[META15]], i64 0}
-// CHECK: [[META15]] = !{!"_ZTSN2my4byteE", [[META5]], i64 0}
-// CHECK: [[TBAA16]] = !{[[META17:![0-9]+]], [[META17]], i64 0}
-// CHECK: [[META17]] = !{!"_ZTSN2my3std4byteE", [[META5]], i64 0}
+// CHECK: [[TBAA12]] = !{[[META4]], [[META4]], i64 0}
+// CHECK: [[TBAA13]] = !{[[META14:![0-9]+]], [[META14]], i64 0}
+// CHECK: [[META14]] = !{!"_ZTS4byte", [[META5]], i64 0}
+// CHECK: [[TBAA15]] = !{[[META16:![0-9]+]], [[META16]], i64 0}
+// CHECK: [[META16]] = !{!"_ZTSN2my4byteE", [[META5]], i64 0}
+// CHECK: [[TBAA17]] = !{[[META18:![0-9]+]], [[META18]], i64 0}
+// CHECK: [[META18]] = !{!"_ZTSN2my3std4byteE", [[META5]], i64 0}
 //.

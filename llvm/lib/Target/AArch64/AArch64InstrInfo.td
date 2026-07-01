@@ -2758,6 +2758,12 @@ def copyFromSP: PatLeaf<(i64 GPR64:$src), [{
          cast<RegisterSDNode>(N->getOperand(1))->getReg() == AArch64::SP;
 }]>;
 
+// Pseudo instruction for stack guard cookie unmixing (epilogue).
+// This will be expanded post-RA to use FP directly, avoiding an extra mov.
+// Pattern matching for this will be done via custom C++ code during instruction selection.
+def STACK_GUARD_UNMIX : Pseudo<(outs GPR64:$dst), (ins GPR64:$stored_val), []>,
+                        Sched<[]>;
+
 // Use SUBS instead of SUB to enable CSE between SUBS and SUB.
 def : Pat<(sub GPR32sp:$Rn, addsub_shifted_imm32:$imm),
           (SUBSWri GPR32sp:$Rn, addsub_shifted_imm32:$imm)>;
@@ -11507,7 +11513,7 @@ defm UMIN : ComparisonOp<1, 1, "umin", umin>, Requires<[HasCSSC]>;
 def RPRFM:
     I<(outs), (ins rprfop:$Rt, GPR64:$Rm, GPR64sp:$Rn),
       "rprfm", "\t$Rt, $Rm, [$Rn]", "", []>,
-    Sched<[]> {
+    Sched<[WriteLD]> {
   bits<6> Rt;
   bits<5> Rn;
   bits<5> Rm;

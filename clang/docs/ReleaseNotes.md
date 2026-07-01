@@ -88,6 +88,24 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
   are now ill-formed.
 
+- `__has_feature(modules)` is no longer true when just `-std=c++20` (or higher)
+  is passed. It's only true if `-fmodules` is passed, which enables Clang's
+  module map semantics. Objective-C++ of the form
+
+  ```objc
+  #if __has_feature(modules)
+  @import Foundation;
+  #else
+  #import <Foundation/Foundation.h>
+  #endif
+  ```
+
+  previously took the `@import` branch under `-std=c++20` even though no module
+  maps were in use, which would always fail.
+
+  `__cpp_modules` continues to be the standard macro to use to check if C++20
+  modules are available.
+
 ### C++ Specific Potentially Breaking Changes
 
 - Clang now more aggressively optimizes away stores to objects after they are
@@ -656,6 +674,11 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 - Diagnostics for the C++11 range-based for statement now report the correct
   iterator type in notes for invalid iterator types.
 
+- `-Wfortify-source` now warns when the constant-evaluated argument to
+  `umask` has bits set outside `0777`. Those bits are silently discarded
+  by the kernel, so setting them is almost always a typo (matching the
+  bionic libc `diagnose_if` check).
+
 ### Improvements to Clang's time-trace
 
 ### Improvements to Coverage Mapping
@@ -729,6 +752,9 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   crash when using it with `-fms-extensions` on other platforms. (#GH184318)
 - Fixed a compiler crash due to an unresolved overloaded function type when
   calling `__builtin_bit_cast`. (#GH200112)
+- Clang now SFINAE friendly when the ``__reference_meows_from_temporary`` builtins
+  should SFINAE friendly when the 1st type is not a reference type. (#GH206524)
+
 
 #### Bug Fixes to Attribute Support
 
@@ -973,6 +999,8 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 ### AST Matchers
 
+- Fixed `nullPointerConstant` matcher falsely matching integer literal `0`
+  in non-null-pointer contexts such as array subscripts and pointer arithmetic.
 - Add `functionTypeLoc` matcher for matching `FunctionTypeLoc`.
 - Add missing support for `TraversalKind` in some `addMatcher()` overloads.
 
@@ -1012,6 +1040,7 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 - Fixed a crash in code completion when using a C-Style cast with a parenthesized
   operand in Objective-C++ mode. (#GH180125)
+- Fixed a crash when code completion is triggered inside an ill-formed lambda's trailing requires-clause. (#GH201632)  
 
 ### Static Analyzer
 
@@ -1108,6 +1137,8 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 - Fixed `-nolibsycl` being silently ignored on Linux: the SYCL runtime
   library was unconditionally added to the link line even when the flag was
   passed.
+- Clang now is capable of diagnosing reference kernel parameters which are not
+  allowed by SYCL 2020 spec.
 
 #### Improvements
 

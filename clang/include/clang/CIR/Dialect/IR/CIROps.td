@@ -2027,6 +2027,35 @@ def CIR_FNegOp : CIR_UnaryOp<"fneg", CIR_AnyFloatOrVecOfFloatType> {
 }
 
 //===----------------------------------------------------------------------===//
+// FreezeOp
+//===----------------------------------------------------------------------===//
+
+def CIR_FreezeOp : CIR_Op<"freeze", [Pure, SameOperandsAndResultType]> {
+  let summary = "Stop propagation of undef and poison values";
+  let description = [{
+    The `cir.freeze` operation takes a single operand and returns a value of the
+    same type. If the operand is a poison or undef value, `cir.freeze` returns
+    an arbitrary, but fixed, value of the operand type. Otherwise it returns
+    the operand unchanged.
+
+    Example:
+
+    ```mlir
+    %1 = cir.freeze %0 : !s32i
+    ```
+  }];
+
+  let arguments = (ins CIR_AnyType:$input);
+  let results = (outs CIR_AnyType:$result);
+
+  let assemblyFormat = [{
+    $input `:` type($input) attr-dict
+  }];
+
+  let llvmOp = "FreezeOp";
+}
+
+//===----------------------------------------------------------------------===//
 // BrCondOp
 //===----------------------------------------------------------------------===//
 

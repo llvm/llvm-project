@@ -38,3 +38,12 @@
 // RUN: diff %S/Inputs/rt-lu-empty.json %t/rt-lu-empty-enc.json
 // RUN: clang-ssaf-format --type auto --encoding %S/Inputs/rt-lu-empty.json -o %t/rt-lu-empty-enc-explicit.json
 // RUN: diff %S/Inputs/rt-lu-empty.json %t/rt-lu-empty-enc-explicit.json
+
+// StaticLibrary appears only in the ArtifactEncoding variant (the archiver
+// tool and the linker pass member payloads through encoded), so it
+// round-trips only via --encoding here.
+
+// RUN: clang-ssaf-format --encoding %S/Inputs/rt-static-library-empty.json -o %t/rt-static-library-empty-enc.json
+// RUN: diff %S/Inputs/rt-static-library-empty.json %t/rt-static-library-empty-enc.json
+// RUN: clang-ssaf-format --type auto --encoding %S/Inputs/rt-static-library-empty.json -o %t/rt-static-library-empty-enc-explicit.json
+// RUN: diff %S/Inputs/rt-static-library-empty.json %t/rt-static-library-empty-enc-explicit.json

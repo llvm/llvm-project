@@ -2471,7 +2471,6 @@ define i32 @test_predsum_i8x4_i32(<4 x i8> %a, i32 %b) {
 ;
 ; RV64-LABEL: test_predsum_i8x4_i32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    sext.w a1, a1
 ; RV64-NEXT:    zext.w a0, a0
 ; RV64-NEXT:    predsum.bs a0, a0, a1
 ; RV64-NEXT:    ret
@@ -2487,7 +2486,6 @@ define i32 @test_predsumu_u8x4_u32(<4 x i8> %a, i32 %b) {
 ;
 ; RV64-LABEL: test_predsumu_u8x4_u32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    zext.w a1, a1
 ; RV64-NEXT:    zext.w a0, a0
 ; RV64-NEXT:    predsumu.bs a0, a0, a1
 ; RV64-NEXT:    ret
@@ -2503,7 +2501,6 @@ define i32 @test_predsum_i16x2_i32(<2 x i16> %a, i32 %b) {
 ;
 ; RV64-LABEL: test_predsum_i16x2_i32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    sext.w a1, a1
 ; RV64-NEXT:    zext.w a0, a0
 ; RV64-NEXT:    predsum.hs a0, a0, a1
 ; RV64-NEXT:    ret
@@ -2519,7 +2516,6 @@ define i32 @test_predsumu_u16x2_u32(<2 x i16> %a, i32 %b) {
 ;
 ; RV64-LABEL: test_predsumu_u16x2_u32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    zext.w a1, a1
 ; RV64-NEXT:    zext.w a0, a0
 ; RV64-NEXT:    predsumu.hs a0, a0, a1
 ; RV64-NEXT:    ret

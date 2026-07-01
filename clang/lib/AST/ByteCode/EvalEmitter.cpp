@@ -129,6 +129,23 @@ bool EvalEmitter::interpretCall(const FunctionDecl *FD, const Expr *E) {
   return this->visitExpr(E, /*DestroyToplevelScope=*/false);
 }
 
+std::optional<bool> EvalEmitter::interpretWithSubstitutions(
+    const FunctionDecl *Callee, ArrayRef<const Expr *> Args, const Expr *This,
+    const Expr *Condition) {
+
+  if (!this->visitWithSubstitutions(Callee, Args, This, Condition))
+    return std::nullopt;
+
+  if (EvalResult.empty() || EvalResult.isInvalid())
+    return false;
+
+  assert(!EvalResult.empty());
+  APValue Result = EvalResult.stealAPValue();
+
+  assert(Result.isInt());
+  return Result.getInt().getBoolValue();
+}
+
 void EvalEmitter::emitLabel(LabelTy Label) { CurrentLabel = Label; }
 
 EvalEmitter::LabelTy EvalEmitter::getLabel() { return NextLabel++; }

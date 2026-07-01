@@ -32,7 +32,6 @@ namespace llvm {
 
 class Duration;
 class formatv_object_base;
-class format_object_base;
 class FormattedString;
 class FormattedNumber;
 class FormattedBytes;
