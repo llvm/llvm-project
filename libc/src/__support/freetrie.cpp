@@ -10,10 +10,10 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-void FreeTrie::remove(Node *node) {
+void FreeTrie::remove(Node *node, const FreeListSecrets &secrets) {
   LIBC_ASSERT(!empty() && "cannot remove from empty trie");
   FreeList list = node;
-  list.pop(FreeListSecrets{});
+  list.pop(secrets);
   Node *new_node = static_cast<Node *>(list.begin());
   if (!new_node) {
     // The freelist is empty. Replace the subtrie root with an arbitrary leaf.
@@ -59,6 +59,18 @@ void FreeTrie::replace_node(Node *node, Node *new_node) {
     node->lower->parent = new_node;
   if (node->upper)
     node->upper->parent = new_node;
+}
+
+void FreeTrie::sanitize(const FreeListSecrets &secrets) const {
+  auto sanitize_trie_node = [&](auto &self, const Node *node) -> void {
+    if (!node)
+      return;
+    FreeList list = const_cast<Node *>(node);
+    list.sanitize(secrets);
+    self(self, node->lower);
+    self(self, node->upper);
+  };
+  sanitize_trie_node(sanitize_trie_node, root);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

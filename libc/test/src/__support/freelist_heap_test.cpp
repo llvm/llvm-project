@@ -358,3 +358,19 @@ TEST_FOR_EACH_ALLOCATOR(InvalidAlignedAllocAlignment, 2048) {
   ptr = allocator.aligned_allocate(0, 8);
   EXPECT_EQ(ptr, static_cast<void *>(nullptr));
 }
+
+TEST_FOR_EACH_ALLOCATOR(SanitizeHeap, 2048) {
+  void *ptr1 = allocator.allocate(128);
+  void *ptr2 = allocator.allocate(256);
+  void *ptr3 = allocator.allocate(512);
+  EXPECT_NE(ptr1, static_cast<void *>(nullptr));
+  EXPECT_NE(ptr2, static_cast<void *>(nullptr));
+  EXPECT_NE(ptr3, static_cast<void *>(nullptr));
+
+  allocator.free(ptr2);
+  allocator.sanitize_heap();
+
+  allocator.free(ptr1);
+  allocator.free(ptr3);
+  allocator.sanitize_heap();
+}

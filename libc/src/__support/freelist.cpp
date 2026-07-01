@@ -57,4 +57,22 @@ void FreeList::remove(Node *node, const FreeListSecrets &secrets) {
   }
 }
 
+void FreeList::sanitize(const FreeListSecrets &secrets) const {
+  if (!begin_)
+    return;
+  Node *curr = begin_;
+  do {
+    Node *next_node = secrets.decrypt_next(curr->next);
+    Node *prev_node = secrets.decrypt_prev(curr, curr->prev);
+    (void)prev_node;
+    LIBC_HARDENING_ASSERT(
+        secrets.decrypt_next(prev_node->next) == curr &&
+        "Corrupted free list links (sanitize check prev->next)");
+    LIBC_HARDENING_ASSERT(
+        secrets.decrypt_prev(next_node, next_node->prev) == curr &&
+        "Corrupted free list links (sanitize check next->prev)");
+    curr = next_node;
+  } while (curr != begin_);
+}
+
 } // namespace LIBC_NAMESPACE_DECL

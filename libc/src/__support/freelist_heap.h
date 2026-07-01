@@ -60,6 +60,8 @@ public:
   void init(const FreeListSecrets &secrets = {});
 #endif
 
+  void sanitize_heap() const;
+
 private:
   void *allocate_impl(size_t alignment, size_t size);
 
@@ -252,6 +254,12 @@ LIBC_INLINE void *FreeListHeap::calloc(size_t num, size_t size) {
   if (ptr != nullptr)
     LIBC_NAMESPACE::inline_memset(ptr, 0, bytes);
   return ptr;
+}
+
+LIBC_INLINE void FreeListHeap::sanitize_heap() const {
+  if (!is_initialized)
+    return;
+  free_store.sanitize(secrets);
 }
 
 extern FreeListHeap *freelist_heap;

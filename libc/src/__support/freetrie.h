@@ -101,14 +101,17 @@ public:
   LIBC_INLINE bool empty() const { return !root; }
 
   /// Push a block to the trie.
-  void push(BlockRef block);
+  void push(BlockRef block, const FreeListSecrets &secrets);
 
   /// Remove a node from this trie node's free list.
-  void remove(Node *node);
+  void remove(Node *node, const FreeListSecrets &secrets);
 
   /// @returns A smallest node that can allocate the given size; otherwise
   /// nullptr.
   Node *find_best_fit(size_t size);
+
+  /// Verify secret invariants for all free lists in the trie.
+  void sanitize(const FreeListSecrets &secrets) const;
 
 private:
   /// @returns Whether a node is the head of its containing freelist.
@@ -122,7 +125,8 @@ private:
   SizeRange range;
 };
 
-LIBC_INLINE void FreeTrie::push(BlockRef block) {
+LIBC_INLINE void FreeTrie::push(BlockRef block,
+                                const FreeListSecrets &secrets) {
   LIBC_ASSERT(block.inner_size_free() >= sizeof(Node) &&
               "block too small to accomodate free trie node");
   size_t size = block.inner_size();
@@ -152,7 +156,7 @@ LIBC_INLINE void FreeTrie::push(BlockRef block) {
   } else {
     node->parent = nullptr;
   }
-  list.push(node, FreeListSecrets{});
+  list.push(node, secrets);
   *cur = static_cast<Node *>(list.begin());
 }
 
