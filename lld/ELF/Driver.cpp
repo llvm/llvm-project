@@ -113,6 +113,22 @@ llvm::raw_fd_ostream Ctx::openAuxiliaryFile(llvm::StringRef filename,
   return {filename, ec, flags};
 }
 
+static void initContext(Ctx &ctx, LinkerScript &script, StringRef arg0,
+                        llvm::raw_ostream &stdoutOS,
+                        llvm::raw_ostream &stderrOS, bool exitEarly,
+                        bool disableOutput) {
+  ErrorHandler &e = ctx.e;
+  e.initialize(stdoutOS, stderrOS, exitEarly, disableOutput);
+  e.logName = args::getFilenameWithoutExe(arg0);
+  e.errorLimitExceededMsg = "too many errors emitted, stopping now (use "
+                            "--error-limit=0 to see all errors)";
+  ctx.script = &script;
+  ctx.symAux.emplace_back();
+  ctx.symtab = std::make_unique<SymbolTable>(ctx);
+
+  ctx.arg.progName = arg0;
+}
+
 namespace lld {
 namespace elf {
 bool link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
@@ -120,19 +136,9 @@ bool link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
   // This driver-specific context will be freed later by unsafeLldMain().
   auto *context = new Ctx;
   Ctx &ctx = *context;
-
-  context->e.initialize(stdoutOS, stderrOS, exitEarly, disableOutput);
-  context->e.logName = args::getFilenameWithoutExe(args[0]);
-  context->e.errorLimitExceededMsg =
-      "too many errors emitted, stopping now (use "
-      "--error-limit=0 to see all errors)";
-
   LinkerScript script(ctx);
-  ctx.script = &script;
-  ctx.symAux.emplace_back();
-  ctx.symtab = std::make_unique<SymbolTable>(ctx);
-
-  ctx.arg.progName = args[0];
+  initContext(ctx, script, args[0], stdoutOS, stderrOS, exitEarly,
+              disableOutput);
 
   ctx.driver.linkerMain(args);
 
@@ -299,6 +305,11 @@ void LinkerDriver::addLibrary(StringRef name) {
   else
     ctx.e.error("unable to find library -l" + name, ErrorTag::LibNotFound,
                 {name});
+}
+
+// Add an ELF input file directly.
+void LinkerDriver::addFile(std::unique_ptr<ELFFileBase> ef) {
+  files.push_back(std::move(ef));
 }
 
 // This function is called on startup. We need this for LTO since
@@ -2223,8 +2234,6 @@ void LinkerDriver::createFiles(opt::InputArgList &args) {
 
   // Iterate over argv to process input files and positional arguments.
   std::optional<MemoryBufferRef> defaultScript;
-  nextGroupId = 0;
-  isInGroup = false;
   bool hasInput = false, hasScript = false;
   for (auto *arg : args) {
     switch (arg->getOption().getID()) {
@@ -3233,6 +3242,41 @@ static void postParseObjectFile(ELFFileBase *file) {
   }
 }
 
+template <class ELFT> static void linkDynamicDebug(Ctx &ctx) {
+  Ctx dc;
+  LinkerScript script(dc);
+  initContext(dc, script, ctx.arg.progName, ctx.e.outs(), ctx.e.errs(),
+              ctx.e.exitEarly, ctx.e.disableOutput);
+  dc.inDynDbgLink = true;
+  dc.dynDbgRelocatable = !ctx.arg.relocatable;
+
+  for (auto *file : ctx.objectFiles) {
+    auto *obj = cast<ObjFile<ELFT>>(file);
+    if (obj->dynDbgSec) {
+      auto content = obj->dynDbgSec->content();
+      MemoryBufferRef mb({(const char *)content.data(), content.size()},
+                         obj->mb.getBufferIdentifier());
+      dc.driver.addFile(createObjFile(dc, mb));
+    }
+  }
+
+  if (errCount(ctx))
+    return;
+
+  std::vector<const char *> args{
+      dc.arg.progName.data(), "-r", "-o", "-",
+      dc.saver.save(Twine("-O") + Twine(ctx.arg.optimize)).data()};
+  if (ctx.arg.resolveGroups)
+    args.push_back("--force-group-allocation");
+  dc.driver.linkerMain(args);
+  if (errCount(dc) > 0 || !dc.dynDbgOutput) {
+    Err(ctx) << "Failed to create relocatable dynamic debug object";
+    return;
+  }
+
+  ctx.dynDbgOutput.swap(dc.dynDbgOutput);
+}
+
 // Do actual linking. Note that when this function is called,
 // all linker scripts have already been parsed.
 template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
@@ -3524,6 +3568,13 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   if (canHaveMemtagGlobals(ctx)) {
     llvm::TimeTraceScope timeScope("Process memory tagged symbols");
     createTaggedSymbols(ctx);
+  }
+
+  if (ctx.hasDynDbg) {
+    llvm::TimeTraceScope timeScope("Link dynamic debugging");
+    linkDynamicDebug<ELFT>(ctx);
+    if (errCount(ctx))
+      return;
   }
 
   // Create synthesized sections such as .got and .plt. This is called before

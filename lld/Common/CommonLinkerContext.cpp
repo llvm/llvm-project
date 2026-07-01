@@ -22,7 +22,14 @@ using namespace lld;
 // state.
 static CommonLinkerContext *lctx;
 
+static uint32_t numNestedCtx;
+
 CommonLinkerContext::CommonLinkerContext() {
+  if (lctx) {
+    ++numNestedCtx;
+    return;
+  }
+
   lctx = this;
   // Fire off the static initializations in CGF's constructor.
   codegen::RegisterCodeGenFlags CGF;
@@ -34,6 +41,13 @@ CommonLinkerContext::~CommonLinkerContext() {
   // new in SpecificAlloc::create().
   for (auto &it : instances)
     it.second->~SpecificAllocBase();
+
+  if (numNestedCtx) {
+    assert(lctx != this);
+    --numNestedCtx;
+    return;
+  }
+
   lctx = nullptr;
 }
 

@@ -346,11 +346,20 @@ template <class ELFT, bool TrackWhyLive>
 void MarkLive<ELFT, TrackWhyLive>::run() {
   // Add GC root symbols.
 
-  // Preserve externally-visible symbols if the symbols defined by this
-  // file can interpose other ELF file's symbols at runtime.
-  for (Symbol *sym : ctx.symtab->getSymbols())
+  for (Symbol *sym : ctx.symtab->getSymbols()) {
+    // For now, preserve all symbols required by the embedded unoptimized part
+    // of dynamic debugging. TODO: support `--gc-sections`.
+    if (sym->isDynDbgRef) {
+      markSymbol(sym, "dynamic debugging");
+      sym->setFlags(USED);
+      continue;
+    }
+
+    // Preserve externally-visible symbols if the symbols defined by this
+    // file can interpose other ELF file's symbols at runtime.
     if (sym->isExported)
       markSymbol(sym, "externally visible symbol");
+  }
 
   markSymbol(ctx.symtab->find(ctx.arg.entry), "entry point");
   markSymbol(ctx.symtab->find(ctx.arg.init), "initializer function");

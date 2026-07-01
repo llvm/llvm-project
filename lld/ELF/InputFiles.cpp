@@ -588,6 +588,7 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
 
     if (LLVM_LIKELY(sec.sh_type == SHT_PROGBITS))
       continue;
+
     if (LLVM_LIKELY(sec.sh_type == SHT_GROUP)) {
       StringRef signature = getShtGroupSignature(objSections, sec);
       ArrayRef<Elf_Word> entries =
@@ -636,6 +637,26 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
         }
       }
       sections[i] = &InputSection::discarded;
+      continue;
+    }
+
+    if (sec.sh_type == SHT_LLVM_ELF) {
+      // Check for presence of dynamic debugging section and create the input
+      // section but mark for discard.
+      StringRef name = check(obj.getSectionName(sec, shstrtab));
+      if (name == dynDbgSecName) {
+        sections[i] = &InputSection::discarded;
+        dynDbgSec = std::make_unique<InputSection>(*this, sec, name);
+        ctx.hasDynDbg = true;
+
+        // If ICF is enabled, warn and disable it because it's incompatible with
+        // dynamic debugging.
+        if (ctx.arg.icf != ICFLevel::None) {
+          Warn(ctx) << "ICF disabled because it is incompatible with dynamic "
+                       "debugging";
+          ctx.arg.icf = ICFLevel::None;
+        }
+      }
       continue;
     }
 
@@ -824,7 +845,9 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
     }
     switch (type) {
     case SHT_GROUP: {
-      if (!ctx.arg.relocatable)
+      // Discard groups for the embedded unoptimized dynamic debugging
+      // relocatable link.
+      if (!ctx.arg.relocatable || ctx.dynDbgRelocatable)
         sections[i] = &InputSection::discarded;
       StringRef signature =
           cantFail(this->getELFSyms<ELFT>()[sec.sh_info].getName(stringTable));
@@ -1243,6 +1266,72 @@ void ObjFile<ELFT>::initializeSymbols(const object::ELFFile<ELFT> &obj) {
                                 eSym.st_other, eSym.getType()});
     sym->isUsedInRegularObj = true;
     sym->referenced = true;
+  }
+
+  // Process the undefined symbols of the "inner" embedded unoptimized dynamic
+  // debugging object to ensure that the "outer" ELF contains the dependencies
+  // of the "inner" ELF. Also tag which "outer" global symbols are dynamic
+  // debugging references, i.e. used in an "inner" relocation for a SHT_PROGBITS
+  // and SHF_ALLOC section, via the `isDynDbgRef` flag.
+  if (dynDbgSec) {
+    auto content = dynDbgSec->content();
+    MemoryBufferRef dbgMb({(const char *)content.data(), content.size()},
+                          mb.getBufferIdentifier());
+    std::unique_ptr<ELFFileBase> efb = createObjFile(ctx, dbgMb);
+    ObjFile<ELFT> *dbgObj = dyn_cast<ObjFile<ELFT>>(efb.get());
+    if (dbgObj) {
+      SmallVector<bool, 0> globalUsed(dbgObj->numSymbols - dbgObj->firstGlobal);
+      ArrayRef<Elf_Shdr> shdrs = dbgObj->template getELFShdrs<ELFT>();
+      for (size_t i = 0, end = shdrs.size(); i != end; ++i) {
+        const Elf_Shdr &sh = shdrs[i];
+        if (!isStaticRelSecType(sh.sh_type))
+          continue;
+
+        const Elf_Shdr &target = shdrs[sh.sh_info];
+        if (target.sh_type != SHT_PROGBITS ||
+            (target.sh_flags & SHF_ALLOC) == 0)
+          continue;
+
+        auto setSymUsed = [&,
+                           firstGlobal = dbgObj->firstGlobal](uint32_t symIdx) {
+          if (symIdx >= firstGlobal)
+            globalUsed[symIdx - firstGlobal] = true;
+        };
+
+        auto isec = std::make_unique<InputSection>(*dbgObj, sh, StringRef());
+        isec->relSecIdx = i;
+        auto relocs = isec->template relsOrRelas<ELFT>(/*supportsCrel=*/false);
+        if (relocs.areRelocsRel()) {
+          for (auto const &r : relocs.rels)
+            setSymUsed(r.getSymbol(ctx.arg.isMips64EL));
+        } else {
+          for (auto const &r : relocs.relas)
+            setSymUsed(r.getSymbol(ctx.arg.isMips64EL));
+        }
+      }
+
+      ArrayRef<Elf_Sym> dbgSyms = dbgObj->template getGlobalELFSyms<ELFT>();
+      assert(dbgSyms.size() == globalUsed.size());
+      for (size_t i = 0, end = dbgSyms.size(); i != end; ++i) {
+        const Elf_Sym &s = dbgSyms[i];
+        if (s.st_shndx != SHN_UNDEF)
+          continue;
+
+        StringRef name = CHECK2(s.getName(dbgObj->stringTable), this);
+        Symbol *sym = symtab->addSymbol(
+            Undefined{this, name, s.getBinding(), s.st_other, s.getType()});
+        sym->isUsedInRegularObj = true;
+        sym->referenced = true;
+        if (globalUsed[i]) {
+          sym->isDynDbgRef = true;
+          if (sym->traced)
+            Msg(ctx) << this << ": dynamic debugging reference to " << name;
+        }
+      }
+    } else {
+      Err(ctx) << this << ": " << dynDbgSecName
+               << " contains an incompatible ELF type";
+    }
   }
 }
 

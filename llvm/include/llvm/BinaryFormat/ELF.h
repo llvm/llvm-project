@@ -1196,6 +1196,7 @@ enum : unsigned {
   SHT_LLVM_JT_SIZES = 0x6fff4c0d,           // LLVM jump tables sizes.
   SHT_LLVM_CFI_JUMP_TABLE = 0x6fff4c0e,     // LLVM CFI jump table.
   SHT_LLVM_CALL_GRAPH = 0x6fff4c0f,         // LLVM Call Graph Section.
+  SHT_LLVM_ELF = 0x6fff4c10,                // LLVM ELF.
   // Android's experimental support for SHT_RELR sections.
   // https://android.googlesource.com/platform/bionic/+/b7feec74547f84559a1467aca02708ff61346d2a/libc/include/elf.h#512
   SHT_ANDROID_RELR = 0x6fffff00,   // Relocation entries; only offsets.
@@ -1807,6 +1808,7 @@ enum : unsigned {
 // LLVM-specific notes.
 enum {
   NT_LLVM_HWASAN_GLOBALS = 3,
+  NT_LLVM_DYNAMIC_DEBUGGING = 4,
 };
 
 // GNU note types.
