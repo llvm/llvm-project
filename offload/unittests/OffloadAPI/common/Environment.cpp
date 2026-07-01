@@ -28,7 +28,14 @@ struct OffloadInitWrapper {
       std::abort();
     }
   }
-  ~OffloadInitWrapper() { olShutDown(); }
+  ~OffloadInitWrapper() {
+    if (ol_result_t Res = olShutDown()) {
+      errs() << "olShutDown failed: "
+             << (Res->Details ? Res->Details : "(no details)") << " (code "
+             << Res->Code << ")\n";
+      std::abort();
+    }
+  }
 };
 static OffloadInitWrapper Wrapper{};
 #endif
