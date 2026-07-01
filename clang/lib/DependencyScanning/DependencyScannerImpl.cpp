@@ -450,9 +450,14 @@ std::shared_ptr<CompilerInvocation> dependencies::createScanCompilerInvocation(
       true;
   ScanInvocation->getHeaderSearchOpts().ModulesForceValidateUserHeaders = false;
 
-  // Application extension only affects the handling of availability attributes,
-  // which cannot change the dependencies.
-  ScanInvocation->getLangOpts().AppExt = false;
+  // FIXME: Do this even with PCHs by marking the option as something like
+  // "preprocessor benign" in LangOptions.def so that it passes the
+  // compatibility checks in ASTReader.
+  if (ScanInvocation->getPreprocessorOpts().ImplicitPCHInclude.empty()) {
+    // Application extension only affects the handling of availability
+    // attributes, which cannot change the dependencies.
+    ScanInvocation->getLangOpts().AppExt = false;
+  }
 
   // Ensure that the scanner does not create new dependency collectors,
   // and thus won't write out the extra '.d' files to disk.
