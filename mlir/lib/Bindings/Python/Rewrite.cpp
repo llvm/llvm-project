@@ -226,7 +226,9 @@ void PyRewritePatternSet::addConversion(nb::handle root,
   std::string opName = operationNameFromObject(root);
   MlirStringRef rootName = mlirStringRefCreate(opName.data(), opName.size());
 
-  MlirConversionPatternCallbacks callbacks;
+  // Value-initialize so optional callbacks (e.g. matchAndRewrite1ToN) default
+  // to null rather than an indeterminate pointer.
+  MlirConversionPatternCallbacks callbacks{};
   callbacks.construct = [](void *userData) {
     nb::handle(static_cast<PyObject *>(userData)).inc_ref();
   };
