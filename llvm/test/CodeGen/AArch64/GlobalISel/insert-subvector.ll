@@ -58,8 +58,11 @@ define <8 x i32> @insert_v8i32_v2i32_high(<8 x i32> %a, <2 x i32> %b) {
 ;
 ; CHECK-GI-LABEL: insert_v8i32_v2i32_high:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 def $q2
-; CHECK-GI-NEXT:    mov v0.s[1], v2.s[1]
+; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 def $q31_q0
+; CHECK-GI-NEXT:    adrp x8, .LCPI4_0
+; CHECK-GI-NEXT:    fmov d31, d2
+; CHECK-GI-NEXT:    ldr q3, [x8, :lo12:.LCPI4_0]
+; CHECK-GI-NEXT:    tbl v0.16b, { v31.16b, v0.16b }, v3.16b
 ; CHECK-GI-NEXT:    ret
 entry:
   %vector = call <8 x i32> @llvm.vector.insert.v4i32.v2i32(<8 x i32> %a, <2 x i32> %b, i64 0)
@@ -75,8 +78,11 @@ define <8 x i32> @insert_v8i32_v2i32_low(<8 x i32> %a, <2 x i32> %b) {
 ;
 ; CHECK-GI-LABEL: insert_v8i32_v2i32_low:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 def $q2
-; CHECK-GI-NEXT:    mov v1.s[3], v2.s[1]
+; CHECK-GI-NEXT:    adrp x8, .LCPI5_0
+; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q1_q2 def $q1_q2
+; CHECK-GI-NEXT:    ldr q3, [x8, :lo12:.LCPI5_0]
+; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 killed $q1_q2 def $q1_q2
+; CHECK-GI-NEXT:    tbl v1.16b, { v1.16b, v2.16b }, v3.16b
 ; CHECK-GI-NEXT:    ret
 entry:
   %vector = call <8 x i32> @llvm.vector.insert.v4i32.v2i32(<8 x i32> %a, <2 x i32> %b, i64 6)
@@ -117,10 +123,13 @@ define <8 x i16> @insert_v8i16_v2i16_high(<8 x i16> %a, <2 x i16> %b) {
 ;
 ; CHECK-GI-LABEL: insert_v8i16_v2i16_high:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
+; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    mov w8, v1.s[1]
 ; CHECK-GI-NEXT:    mov v1.h[1], w8
-; CHECK-GI-NEXT:    mov v0.h[1], v1.h[1]
+; CHECK-GI-NEXT:    adrp x8, .LCPI8_0
+; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI8_0]
+; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
 ; CHECK-GI-NEXT:    ret
 entry:
   %vector = call <8 x i16> @llvm.vector.insert.v4i32.v2i32(<8 x i16> %a, <2 x i16> %b, i64 0)
@@ -139,10 +148,13 @@ define <8 x i16> @insert_v8i16_v2i16_low(<8 x i16> %a, <2 x i16> %b) {
 ;
 ; CHECK-GI-LABEL: insert_v8i16_v2i16_low:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
+; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    mov w8, v1.s[1]
 ; CHECK-GI-NEXT:    mov v1.h[1], w8
-; CHECK-GI-NEXT:    mov v0.h[7], v1.h[1]
+; CHECK-GI-NEXT:    adrp x8, .LCPI9_0
+; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI9_0]
+; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
 ; CHECK-GI-NEXT:    ret
 entry:
   %vector = call <8 x i16> @llvm.vector.insert.v4i32.v2i32(<8 x i16> %a, <2 x i16> %b, i64 6)

@@ -4914,7 +4914,7 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
       SmallVector<int> Mask;
       for (int i = 0; i < VectorTy.getNumElements(); i++) {
         // If this index is within bounds, put subvector's index into mask
-        if (i > InsertionPointImm &&
+        if (i >= InsertionPointImm &&
             i < InsertionPointImm + SubvectorTy.getNumElements())
           Mask.push_back(VectorTy.getNumElements() + i - InsertionPointImm);
         else
