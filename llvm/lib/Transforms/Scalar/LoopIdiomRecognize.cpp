@@ -1398,7 +1398,22 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(
     // the only user of TheLoad.
     if (!TheLoad->hasOneUse())
       return Changed;
+
     IgnoredInsts.insert(TheLoad);
+
+    if (!TTI->isMemmoveProfitable(DestPtr, SourcePtr, SE)) {
+      ORE.emit([&]() {
+        return OptimizationRemarkMissed(DEBUG_TYPE,
+                                        "LoopMayAccessUnalignedStore", TheStore)
+               << ore::NV("Inst", InstRemark) << " in "
+               << ore::NV("Function", TheStore->getFunction())
+               << " function will not be hoisted: "
+               << ore::NV("Reason",
+                          "The conversion is not profitable for the target");
+      });
+      return Changed;
+    }
+
     if (mayLoopAccessLocation(StoreBasePtr, ModRefInfo::ModRef, CurLoop,
                               BECount, StoreSizeSCEV, *AA, IgnoredInsts)) {
       ORE.emit([&]() {

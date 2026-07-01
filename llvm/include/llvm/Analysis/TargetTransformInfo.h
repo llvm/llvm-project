@@ -499,6 +499,11 @@ public:
   /// minimal.
   LLVM_ABI InstructionCost getBranchMispredictPenalty() const;
 
+  /// \return true if promoting loop access to memmove is profitable for
+  /// the architecture.
+  LLVM_ABI bool isMemmoveProfitable(Value *DestPtr, Value *SourcePtr,
+                                    ScalarEvolution *SE) const;
+
   /// Return true if branch divergence exists.
   ///
   /// Branch divergence has a significantly negative impact on GPU performance
