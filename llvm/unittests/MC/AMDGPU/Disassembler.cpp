@@ -32,8 +32,8 @@ static const char *symbolLookupCallback(void *DisInfo, uint64_t ReferenceValue,
   return nullptr;
 }
 
-static constexpr char TripleName[] = "amdgcn--amdpal";
-static constexpr char CPUName[] = "gfx1030";
+static constexpr char TripleName[] = "amdgpu10.30--amdpal";
+static constexpr char CPUName[] = "";
 
 // Basic smoke test.
 TEST(AMDGPUDisassembler, Basic) {
