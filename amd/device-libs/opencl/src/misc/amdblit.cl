@@ -52,6 +52,13 @@ typedef union streamBatchMemOpParams_union {
   ulong pad[6];
 } BatchMemOpParams;
 
+typedef struct CopyBufferBatchDescriptor {
+  ulong source_address;
+  ulong destination_address;
+  ulong aligned_element_count;
+  uint aligned_element_size;
+  uint trailing_byte_count;
+} CopyBufferBatchDescriptor;
 
 static const uint SplitCount = 3;
 
@@ -466,6 +473,49 @@ __amd_copyBufferExt(
   if ((remainder != 0) && (id_remainder == 0)) {
     for (ulong i = size - remainder; i < size; ++i) {
       dst[i] = src[i];
+    }
+  }
+}
+
+__attribute__((always_inline)) void
+__amd_copyBufferBatch(
+    __global void* descriptor_buffer,
+    uint workgroup_size,
+    uint copy_stride)
+{
+  __global const CopyBufferBatchDescriptor* descriptors =
+      (__global const CopyBufferBatchDescriptor*)descriptor_buffer;
+  uint work_item_id = (uint)get_local_id(0);
+  uint group_ordinal = (uint)get_group_id(0);
+  uint descriptor_index = (uint)get_group_id(1);
+
+  CopyBufferBatchDescriptor descriptor = descriptors[descriptor_index];
+  __global uchar* source = (__global uchar*)descriptor.source_address;
+  __global uchar* destination = (__global uchar*)descriptor.destination_address;
+  ulong copy_index = ((ulong)group_ordinal * workgroup_size) + work_item_id;
+
+  if (descriptor.aligned_element_size == sizeof(ulong2)) {
+    __global ulong2* source_data = (__global ulong2*)source;
+    __global ulong2* destination_data = (__global ulong2*)destination;
+    while (copy_index < descriptor.aligned_element_count) {
+      destination_data[copy_index] = source_data[copy_index];
+      copy_index += copy_stride;
+    }
+  } else {
+    __global uint* source_data = (__global uint*)source;
+    __global uint* destination_data = (__global uint*)destination;
+    while (copy_index < descriptor.aligned_element_count) {
+      destination_data[copy_index] = source_data[copy_index];
+      copy_index += copy_stride;
+    }
+  }
+  if ((descriptor.trailing_byte_count != 0) && (group_ordinal == 0) &&
+      (work_item_id == 0)) {
+    ulong tail_start =
+        descriptor.aligned_element_count * descriptor.aligned_element_size;
+    ulong tail_end = tail_start + descriptor.trailing_byte_count;
+    for (ulong i = tail_start; i < tail_end; ++i) {
+      destination[i] = source[i];
     }
   }
 }
