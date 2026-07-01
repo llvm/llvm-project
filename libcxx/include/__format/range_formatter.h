@@ -207,7 +207,7 @@ struct range_formatter {
     return ranges::copy(__closing_bracket_, __ctx.out()).out;
   }
 
-  __format_spec::__parser<_CharT> __parser_{.__alignment_ = __format_spec::__alignment::__left};
+  __format_spec::__parser<_CharT> __parser_ = {{.__alignment_ = __format_spec::__alignment::__left}};
 
 private:
   template <contiguous_iterator _Iterator>
