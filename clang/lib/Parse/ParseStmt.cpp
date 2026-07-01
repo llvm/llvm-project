@@ -261,6 +261,35 @@ Retry:
   }
 
   case tok::kw_template: {
+    if (NextToken().is(tok::kw_for)) {
+      // Expansion statements are not backported for now.
+      if (!getLangOpts().CPlusPlus26) {
+        Diag(Tok.getLocation(), diag::err_expansion_stmt_requires_cxx2c);
+
+        // Trying to parse this as a regular 'for' statement instead yields
+        // better error recovery.
+        ConsumeToken();
+        return ParseForStatement(TrailingElseLoc, PrecedingLabel);
+      }
+
+      SourceLocation TemplateLoc = ConsumeToken();
+      return ParseExpansionStatement(TrailingElseLoc, PrecedingLabel,
+                                     TemplateLoc);
+    }
+
+    // Since 'template for' is a thing, users might reasonably try to write
+    // 'template while' or something like that; diagnose that here for better
+    // QOI (and basically just ignore the 'template' token for error recovery).
+    if (NextToken().isOneOf(tok::kw_while, tok::kw_do)) {
+      Diag(Tok.getLocation(), diag::err_expansion_stmt_invalid_kw)
+          << NextToken().getKind();
+
+      ConsumeToken();
+      if (Tok.is(tok::kw_while))
+        return ParseWhileStatement(TrailingElseLoc, PrecedingLabel);
+      return ParseDoStatement(PrecedingLabel);
+    }
+
     SourceLocation DeclEnd;
     ParseTemplateDeclarationOrSpecialization(DeclaratorContext::Block, DeclEnd,
                                              getAccessSpecifierIfPresent());
@@ -291,6 +320,19 @@ Retry:
     SemiError = "do/while";
     break;
   case tok::kw_for:                 // C99 6.8.5.3: for-statement
+    // Correct 'for template' to 'template for'.
+    if (NextToken().is(tok::kw_template)) {
+      Diag(Tok.getLocation(), diag::err_for_template)
+          << FixItHint::CreateReplacement(
+                 SourceRange(Tok.getLocation(), NextToken().getEndLoc()),
+                 "template for");
+      Tok.setKind(tok::kw_template);
+      SourceLocation TemplateLoc = ConsumeToken();
+      Tok.setKind(tok::kw_for);
+      return ParseExpansionStatement(TrailingElseLoc, PrecedingLabel,
+                                     TemplateLoc);
+    }
+
     return ParseForStatement(TrailingElseLoc, PrecedingLabel);
 
   case tok::kw_goto:                // C99 6.8.6.1: goto-statement
@@ -1895,8 +1937,56 @@ bool Parser::isForRangeIdentifier() {
   return false;
 }
 
-StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc,
-                                     LabelDecl *PrecedingLabel) {
+void Parser::ParseForRangeInitializerAfterColon(ForRangeInit &FRI,
+                                                ParsingDeclSpec *VarDeclSpec) {
+  // Use an immediate function context if this is the initializer for a
+  // constexpr variable in an expansion statement.
+  auto Ctx = Sema::ExpressionEvaluationContext::PotentiallyEvaluated;
+  if (FRI.ExpansionStmt && VarDeclSpec && VarDeclSpec->hasConstexprSpecifier())
+    Ctx = Sema::ExpressionEvaluationContext::ImmediateFunctionContext;
+
+  EnterExpressionEvaluationContext InitContext(
+      Actions, Ctx,
+      /*LambdaContextDecl=*/nullptr,
+      Sema::ExpressionEvaluationContextRecord::EK_Other,
+      getLangOpts().CPlusPlus23);
+
+  // P2718R0 - Lifetime extension in range-based for loops.
+  if (getLangOpts().CPlusPlus23) {
+    auto &LastRecord = Actions.currentEvaluationContext();
+    LastRecord.InLifetimeExtendingContext = true;
+    LastRecord.RebuildDefaultArgOrDefaultInit = true;
+  }
+
+  if (FRI.ExpansionStmt) {
+    // The expansion-initializer is not in a dependent context and should
+    // thus be parsed in the parent context of the expansion statement.
+    assert(Actions.CurContext->isExpansionStmt());
+    Sema::ContextRAII CtxGuard(Actions, Actions.CurContext->getParent(),
+                               /*NewThis=*/false);
+    FRI.RangeExpr =
+        Tok.is(tok::l_brace) ? ParseExpansionInitList() : ParseExpression();
+    FRI.RangeExpr = Actions.MaybeCreateExprWithCleanups(FRI.RangeExpr);
+  } else if (Tok.is(tok::l_brace)) {
+    FRI.RangeExpr = ParseBraceInitializer();
+  } else {
+    FRI.RangeExpr = ParseExpression();
+  }
+
+  // Before c++23, ForRangeLifetimeExtendTemps should be empty.
+  assert(getLangOpts().CPlusPlus23 ||
+         Actions.ExprEvalContexts.back().ForRangeLifetimeExtendTemps.empty());
+
+  // Move the collected materialized temporaries into ForRangeInit before
+  // ForRangeInitContext exit.
+  FRI.LifetimeExtendTemps =
+      std::move(Actions.ExprEvalContexts.back().ForRangeLifetimeExtendTemps);
+}
+
+StmtResult
+Parser::ParseForStatement(SourceLocation *TrailingElseLoc,
+                          LabelDecl *PrecedingLabel,
+                          CXXExpansionStmtDecl *ESD) {
   assert(Tok.is(tok::kw_for) && "Not a for stmt!");
   SourceLocation ForLoc = ConsumeToken();  // eat the 'for'.
 
@@ -1931,8 +2021,14 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc,
   unsigned ScopeFlags = 0;
   if (C99orCXXorObjC)
     ScopeFlags = Scope::DeclScope | Scope::ControlScope;
+  if (ESD)
+    ScopeFlags |= Scope::TemplateParamScope;
 
   ParseScope ForScope(this, ScopeFlags);
+  if (ESD)
+    // FIXME: Combine this with the scope flags above once this is actually a
+    // proper scope flag.
+    getCurScope()->setIsExpansionStmtScope();
 
   BalancedDelimiterTracker T(*this, tok::l_paren);
   T.consumeOpen();
@@ -1945,7 +2041,21 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc,
   ExprResult Collection;
   ForRangeInfo ForRangeInfo;
   FullExprArg ThirdPart(Actions);
+  ForRangeInfo.ExpansionStmt = ESD;
 
+  // RAII helper to enter a context if we're parsing an expansion statement.
+  //
+  // This is required because some parts of an expansion statement (e.g. the
+  // init-statement) are not in a dependent context and must thus be parsed in
+  // the parent context.
+  struct [[nodiscard]] ExpansionStmtContextRAII : Sema::ContextRAII {
+    ExpansionStmtContextRAII(Sema &S, struct ForRangeInfo &Info,
+                             DeclContext *Ctx)
+        : ContextRAII(S, Info.ExpansionStmt ? Ctx : S.CurContext,
+                      /*NewThis=*/false) {}
+  };
+
+  assert(!ESD || Actions.CurContext->isExpansionStmt());
   if (Tok.is(tok::code_completion)) {
     cutOffParsing();
     Actions.CodeCompletion().CodeCompleteOrdinaryName(
@@ -1969,26 +2079,30 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc,
     ConsumeToken();
   } else if (getLangOpts().CPlusPlus && Tok.is(tok::identifier) &&
              isForRangeIdentifier()) {
+    // Note: This path is solely for error recovery if a user omits the type-id
+    // and writes 'for (x : ...)'; normally, the for-range-declaration is parsed
+    // in the 'if (isForInitDeclaration())' branch below.
     ProhibitAttributes(attrs);
     IdentifierInfo *Name = Tok.getIdentifierInfo();
     SourceLocation Loc = ConsumeToken();
     MaybeParseCXX11Attributes(attrs);
 
     ForRangeInfo.ColonLoc = ConsumeToken();
-    if (Tok.is(tok::l_brace))
-      ForRangeInfo.RangeExpr = ParseBraceInitializer();
-    else
-      ForRangeInfo.RangeExpr = ParseExpression();
+    ParseForRangeInitializerAfterColon(ForRangeInfo, /*VarDeclSpec=*/nullptr);
 
     Diag(Loc, diag::err_for_range_identifier)
-      << ((getLangOpts().CPlusPlus11 && !getLangOpts().CPlusPlus17)
-              ? FixItHint::CreateInsertion(Loc, "auto &&")
-              : FixItHint());
+        << (ForRangeInfo.ExpansionStmt != nullptr)
+        << ((getLangOpts().CPlusPlus11 && !getLangOpts().CPlusPlus17)
+                ? FixItHint::CreateInsertion(Loc, "auto &&")
+                : FixItHint());
 
-    ForRangeInfo.LoopVar =
-        Actions.ActOnCXXForRangeIdentifier(getCurScope(), Loc, Name, attrs);
+    if (!ForRangeInfo.ExpansionStmt)
+      ForRangeInfo.LoopVar =
+          Actions.ActOnCXXForRangeIdentifier(getCurScope(), Loc, Name, attrs);
   } else if (isForInitDeclaration()) {  // for (int X = 4;
     ParenBraceBracketBalancer BalancerRAIIObj(*this);
+    ExpansionStmtContextRAII EnterParentContext{
+        Actions, ForRangeInfo, Actions.CurContext->getParent()};
 
     // Parse declaration, which eats the ';'.
     if (!C99orCXXorObjC) {   // Use of C99-style for loops in C90 mode?
@@ -2041,6 +2155,9 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc,
       }
     }
   } else {
+    // An expression here should not be inside the expansion statement context.
+    ExpansionStmtContextRAII EnterParentContext{
+      Actions, ForRangeInfo, Actions.CurContext->getParent()};
     ProhibitAttributes(attrs);
     Value = ParseExpression();
 
@@ -2078,7 +2195,8 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc,
       // User tried to write the reasonable, but ill-formed, for-range-statement
       //   for (expr : expr) { ... }
       Diag(Tok, diag::err_for_range_expected_decl)
-        << FirstPart.get()->getSourceRange();
+          << (ESD != nullptr)
+          << FirstPart.get()->getSourceRange();
       SkipUntil(tok::r_paren, StopBeforeMatch);
       SecondPart = Sema::ConditionError();
     } else {
@@ -2200,7 +2318,13 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc,
   StmtResult ForRangeStmt;
   StmtResult ForEachStmt;
 
-  if (ForRangeInfo.ParsedForRangeDecl()) {
+  if (ESD) {
+    ForRangeStmt = Actions.ActOnCXXExpansionStmtPattern(
+        ESD, FirstPart.get(), ForRangeInfo.LoopVar.get(),
+        ForRangeInfo.RangeExpr.get(), T.getOpenLocation(),
+        ForRangeInfo.ColonLoc, T.getCloseLocation(),
+        ForRangeInfo.LifetimeExtendTemps);
+  } else if (ForRangeInfo.ParsedForRangeDecl()) {
     ForRangeStmt = Actions.ActOnCXXForRangeStmt(
         getCurScope(), ForLoc, CoawaitLoc, FirstPart.get(),
         ForRangeInfo.LoopVar.get(), ForRangeInfo.ColonLoc,
@@ -2222,7 +2346,9 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc,
   // OpenACC Restricts a for-loop inside of certain construct/clause
   // combinations, so diagnose that here in OpenACC mode.
   SemaOpenACC::LoopInConstructRAII LCR{getActions().OpenACC()};
-  if (ForRangeInfo.ParsedForRangeDecl())
+  if (ESD)
+    ; // Nothing.
+  else if (ForRangeInfo.ParsedForRangeDecl())
     getActions().OpenACC().ActOnRangeForStmtBegin(ForLoc, ForRangeStmt.get());
   else
     getActions().OpenACC().ActOnForStmtBegin(
@@ -2275,6 +2401,15 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc,
   if (ForEach)
     return Actions.ObjC().FinishObjCForCollectionStmt(ForEachStmt.get(),
                                                       Body.get());
+
+  if (ESD) {
+    if (!ForRangeInfo.ParsedForRangeDecl()) {
+      Diag(ForLoc, diag::err_expansion_stmt_requires_range);
+      return StmtError();
+    }
+
+    return Actions.FinishCXXExpansionStmt(ForRangeStmt.get(), Body.get());
+  }
 
   if (ForRangeInfo.ParsedForRangeDecl())
     return Actions.FinishCXXForRangeStmt(ForRangeStmt.get(), Body.get());
@@ -2655,6 +2790,37 @@ StmtResult Parser::ParseCXXCatchBlock(bool FnCatch) {
     return Block;
 
   return Actions.ActOnCXXCatchBlock(CatchLoc, ExceptionDecl, Block.get());
+}
+
+StmtResult Parser::ParseExpansionStatement(SourceLocation *TrailingElseLoc,
+                                           LabelDecl *PrecedingLabel,
+                                           SourceLocation TemplateLoc) {
+  assert(Tok.is(tok::kw_for));
+
+  CXXExpansionStmtDecl *ExpansionDecl =
+      Actions.ActOnCXXExpansionStmtDecl(TemplateParameterDepth, TemplateLoc);
+
+  CXXExpansionStmtPattern *Expansion;
+  {
+    Sema::ContextRAII CtxGuard(Actions, ExpansionDecl, /*NewThis=*/false);
+    TemplateParameterDepthRAII TParamDepthGuard(TemplateParameterDepth);
+    ++TParamDepthGuard;
+
+    StmtResult SR =
+        ParseForStatement(TrailingElseLoc, PrecedingLabel, ExpansionDecl);
+    if (SR.isInvalid())
+      return SR;
+
+    Expansion = cast<CXXExpansionStmtPattern>(SR.get());
+    ExpansionDecl->setExpansionPattern(Expansion);
+  }
+
+  DeclSpec DS(AttrFactory);
+  DeclGroupPtrTy DeclGroupPtr =
+      Actions.FinalizeDeclaratorGroup(getCurScope(), DS, {ExpansionDecl});
+
+  return Actions.ActOnDeclStmt(DeclGroupPtr, Expansion->getBeginLoc(),
+                               Expansion->getEndLoc());
 }
 
 void Parser::ParseMicrosoftIfExistsStatement(StmtVector &Stmts) {
