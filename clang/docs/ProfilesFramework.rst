@@ -721,8 +721,10 @@ profile rule carries weight only when ``std::init`` is enforced.
   custom handler in ``clang/lib/Sema/SemaDeclAttr.cpp``.
 - Subjects: ``Var``, ``Field``, and ``Function``.  The handler rejects any
   subject whose type (or, for a function, return type) is not a pointer or
-  reference, via ``err_ref_to_uninit_attr_invalid_type`` -- regardless of
-  ``-fprofiles``.
+  reference to an object, via ``err_ref_to_uninit_attr_invalid_type`` --
+  regardless of ``-fprofiles``.  A function pointer or reference (and a
+  pointer-to-member) denotes a function or member, never uninitialized memory,
+  so it is rejected too.
 - Behaviour: drives the ``ref_to_uninit`` rule (below); has no other effect.
 
 Rules

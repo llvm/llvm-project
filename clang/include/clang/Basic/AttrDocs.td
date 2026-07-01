@@ -938,7 +938,9 @@ only be bound to initialized memory.
 
 The attribute applies to a variable, non-static data member, function
 parameter, or function (for its return value) whose type is a pointer or
-reference; applying it elsewhere is diagnosed regardless of ``-fprofiles``.
+reference to an object; applying it elsewhere is diagnosed regardless of
+``-fprofiles``. A function pointer or reference (or a pointer-to-member)
+denotes a function or member, never uninitialized memory, so it is rejected.
 
 Outside the initialization profile the attribute is otherwise silently
 accepted and has no effect, so code that uses it remains valid when compiled

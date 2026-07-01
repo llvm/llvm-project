@@ -6975,16 +6975,20 @@ static void handleUninitAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 static void handleRefToUninitAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   // The SubjectList restricts D to a variable, non-static data member, or
   // function. "Refers to uninitialized memory" is only meaningful for a
-  // pointer or reference (for a function, its return value), so reject any
-  // other type. Like the [[uninit]] subject checks, this is not
-  // profile policy and so fires regardless of -fprofiles.
+  // pointer or reference to an object (for a function, its return value), so
+  // reject any other type. A function pointer or reference denotes a function,
+  // never uninitialized storage, so the marker could never be satisfied; reject
+  // it too (like a pointer-to-member, which is not a pointer type here). Like
+  // the [[uninit]] subject checks, this is not profile policy and so fires
+  // regardless of -fprofiles.
   QualType T;
   if (const auto *FD = dyn_cast<FunctionDecl>(D))
     T = FD->getReturnType();
   else
     T = cast<ValueDecl>(D)->getType();
 
-  if (!T->isPointerType() && !T->isReferenceType()) {
+  if ((!T->isPointerType() && !T->isReferenceType()) ||
+      T->isFunctionPointerType() || T->isFunctionReferenceType()) {
     S.Diag(AL.getLoc(), diag::err_ref_to_uninit_attr_invalid_type);
     AL.setInvalid();
     return;
