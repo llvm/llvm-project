@@ -386,7 +386,8 @@ private:
   Symbol *DeclareOrMarkOtherAccessEntity(const parser::Name &, Symbol::Flag);
   Symbol *DeclareOrMarkOtherAccessEntity(Symbol &, Symbol::Flag);
   void CheckMultipleAppearances(const parser::Name &, const Symbol &,
-      Symbol::Flag, const parser::AccObject *occurrence = nullptr);
+      Symbol::Flag, const parser::AccObject *occurrence = nullptr,
+      bool warnSameKindDuplicate = true);
   void AllowOnlyArrayAndSubArray(const parser::AccObjectList &objectList);
   void DoNotAllowAssumedSizedArray(const parser::AccObjectList &objectList);
   void AllowOnlyVariable(const parser::AccObject &object);
@@ -625,7 +626,7 @@ public:
     PushContext(x.source, llvm::omp::Directive::OMPD_flush);
     for (auto &arg : x.v.Arguments().v) {
       if (auto *object{parser::omp::GetArgumentObject(arg)}) {
-        if (auto *name{std::get_if<parser::Name>(&object->u)}) {
+        if (auto *name{parser::omp::GetCommonBlockFromObj(*object)}) {
           // ResolveOmpCommonBlockName resolves the symbol as a side effect
           if (!ResolveOmpCommonBlockName(name)) {
             context_.Say(name->source, // 2.15.3
@@ -1655,6 +1656,13 @@ void AccAttributeVisitor::CheckAssociatedLoop(
     return;
   }
 
+  // Non-standard extension; warn for collapse(N>1) on a DO CONCURRENT.
+  if (outerDoConstruct.IsDoConcurrent() && level > 1) {
+    context_.Warn(common::UsageWarning::Portability,
+        GetContext().directiveSource,
+        "COLLAPSE on DO CONCURRENT is non-standard"_warn_en_US);
+  }
+
   const auto getNextDoConstruct =
       [this, forceCollapsed](const parser::Block &block,
           std::int64_t &level) -> const parser::DoConstruct * {
@@ -1850,8 +1858,9 @@ void AccAttributeVisitor::Post(const parser::Name &name) {
             context_.Warn(
                 common::LanguageFeature::OpenAccDefaultNoneScalarsStrict,
                 name.source,
-                "Implicit attribute inferred for DEFAULT(NONE) scalar '%s'"_warn_en_US,
-                symbol.name());
+                "OpenACC DEFAULT(NONE) ignored for scalar '%s' (%s)"_warn_en_US,
+                symbol.name(),
+                context_.openAccDefaultNoneScalarsStrictDisableOption());
           } else {
             context_.Say(name.source,
                 "The DEFAULT(NONE) clause requires that '%s' must be listed in a data-mapping clause"_err_en_US,
@@ -1894,29 +1903,79 @@ void AccAttributeVisitor::ResolveAccObjectList(
   }
 }
 
+static bool ContainsStructureComponent(const parser::DataRef &dataRef);
+
+static bool ContainsStructureComponent(const parser::DataRef &dataRef) {
+  return common::visit(
+      common::visitors{
+          [](const parser::Name &) { return false; },
+          [](const common::Indirection<parser::StructureComponent> &) {
+            return true;
+          },
+          [](const common::Indirection<parser::ArrayElement> &arrayElement) {
+            return ContainsStructureComponent(arrayElement.value().Base());
+          },
+          [](const common::Indirection<parser::CoindexedNamedObject>
+                  &coindexed) {
+            return ContainsStructureComponent(
+                std::get<parser::DataRef>(coindexed.value().t));
+          },
+      },
+      dataRef.u);
+}
+
+static bool ContainsStructureComponent(const parser::Designator &designator) {
+  return common::visit(common::visitors{
+                           [](const parser::DataRef &dataRef) {
+                             return ContainsStructureComponent(dataRef);
+                           },
+                           [](const parser::Substring &substring) {
+                             return ContainsStructureComponent(
+                                 std::get<parser::DataRef>(substring.t));
+                           },
+                       },
+      designator.u);
+}
+
 void AccAttributeVisitor::ResolveAccObject(
     const parser::AccObject &accObject, Symbol::Flag accFlag) {
   common::visit(
       common::visitors{
           [&](const parser::Designator &designator) {
-            if (const auto *name{
-                    parser::GetDesignatorNameIfDataRef(designator)}) {
-              if (auto *symbol{ResolveAcc(*name, accFlag, currScope())}) {
-                AddToContextObjectWithDSA(*symbol, accFlag);
-                if (dataSharingAttributeFlags.test(accFlag)) {
-                  CheckMultipleAppearances(*name, *symbol, accFlag, &accObject);
-                }
-              }
-            } else {
-              // Array sections to be changed to substrings as needed
+            const bool preciseDesignator{
+                parser::GetDesignatorNameIfDataRef(designator) != nullptr};
+            if (!preciseDesignator) {
+              // Subscripted designator: evaluate subscripts and detect
+              // the substring case that is disallowed in OpenACC clauses.
               if (AnalyzeExpr(context_, designator)) {
                 if (std::holds_alternative<parser::Substring>(designator.u)) {
                   context_.Say(designator.source,
                       "Substrings are not allowed on OpenACC "
                       "directives or clauses"_err_en_US);
+                  return;
                 }
               }
-              // other checks, more TBD
+            }
+            if (ContainsStructureComponent(designator)) {
+              // Do not register the base object for a component reference until
+              // OpenACC DSA tracking can distinguish subcomponents.
+              return;
+            }
+            // GetFirstName extracts the base symbol from both bare data
+            // references and array sections, unifying DSA registration so
+            // that DEFAULT(NONE) checking does not spuriously flag variables
+            // that are explicitly listed in a data clause as array sections.
+            // TODO: Multiple array sections of the same array with different
+            // data sharing attributes is not currently supported.
+            // TODO: Subcomponent designators should also be tracked precisely.
+            const parser::Name &baseName{parser::GetFirstName(designator)};
+            if (auto *symbol{ResolveAcc(baseName, accFlag, currScope())}) {
+              AddToContextObjectWithDSA(*symbol, accFlag);
+              if (preciseDesignator &&
+                  dataSharingAttributeFlags.test(accFlag)) {
+                CheckMultipleAppearances(
+                    baseName, *symbol, accFlag, &accObject, preciseDesignator);
+              }
             }
           },
           [&](const parser::Name &name) { // common block
@@ -1973,7 +2032,7 @@ Symbol *AccAttributeVisitor::DeclareOrMarkOtherAccessEntity(
 
 void AccAttributeVisitor::CheckMultipleAppearances(const parser::Name &name,
     const Symbol &symbol, Symbol::Flag accFlag,
-    const parser::AccObject *occurrence) {
+    const parser::AccObject *occurrence, bool warnSameKindDuplicate) {
   const auto *target{&symbol};
   if (HasDataSharingAttributeObject(*target)) {
     // A same-kind duplicate (e.g. private(x, x) or private(x) private(x))
@@ -1985,12 +2044,15 @@ void AccAttributeVisitor::CheckMultipleAppearances(const parser::Name &name,
     // with the same Symbol::Flag may still differ in operator, which is a
     // real conflict that dedup would silently hide.
     auto firstFlag{GetContext().FindSymbolWithDSA(*target)};
-    if (occurrence && firstFlag && *firstFlag == accFlag &&
-        accFlag != Symbol::Flag::AccReduction) {
+    if (warnSameKindDuplicate && occurrence && firstFlag &&
+        *firstFlag == accFlag && accFlag != Symbol::Flag::AccReduction) {
       context_.Warn(common::UsageWarning::OpenAccUsage, name.source,
           "'%s' appears more than once in the same kind of data-sharing clause on an OpenACC directive; duplicate ignored"_warn_en_US,
           name.ToString());
       context_.MarkAccObjectDuplicate(occurrence);
+    } else if (firstFlag && *firstFlag == accFlag &&
+        accFlag != Symbol::Flag::AccReduction) {
+      return;
     } else {
       context_.Say(name.source,
           "'%s' appears in more than one data-sharing clause on the same OpenACC directive"_err_en_US,
@@ -2191,6 +2253,37 @@ bool OmpAttributeVisitor::Pre(const parser::OmpGroupprivateDirective &x) {
       ResolveOmpObject(*object, Symbol::Flag::OmpGroupPrivate);
     }
   }
+
+  // groupprivate carries an optional device_type clause (OpenMP 6.0). Always
+  // record it, like declare_target's enter clause, so a clause-less directive
+  // still round-trips through symbol dumps and .mod files; an absent clause
+  // means the spec default (any).
+  common::OmpDeviceType device{common::OmpDeviceType::Any};
+  if (auto *devClause{
+          parser::omp::FindClause(x.v, llvm::omp::Clause::OMPC_device_type)}) {
+    device = parser::UnwrapRef<common::OmpDeviceType>(*devClause);
+  }
+
+  unsigned version{context_.langOptions().OpenMPVersion};
+  WithOmpDeclarative::OmpClauseSet clauses;
+  clauses.set(llvm::omp::Clause::OMPC_device_type);
+  for (const parser::OmpArgument &arg : x.v.Arguments().v) {
+    if (const parser::OmpObject *object{parser::omp::GetArgumentObject(arg)}) {
+      if (const Symbol *sym{omp::GetObjectSymbol(*object)}) {
+        common::visit(
+            [&](auto &d) {
+              using TypeD = llvm::remove_cvref_t<decltype(d)>;
+              if constexpr (std::is_base_of_v<WithOmpDeclarative, TypeD>) {
+                d.set_version(version);
+                d.set_ompGroupprivate(clauses);
+                d.set_ompGroupprivate(device);
+              }
+            },
+            const_cast<Symbol &>(sym->GetUltimate()).details());
+      }
+    }
+  }
+
   return true;
 }
 
@@ -2286,7 +2379,7 @@ bool OmpAttributeVisitor::Pre(const parser::OmpDeclareTargetDirective &x) {
             if (device) {
               clauseSet.set(llvm::omp::Clause::OMPC_device_type);
               auto &deviceType{
-                  const_cast<decltype(device) &>(d.ompDeviceType())};
+                  const_cast<decltype(device) &>(d.ompDeclTargetDeviceType())};
               deviceType = device;
             }
           } else if constexpr (std::is_same_v<GenericDetails, TypeD> ||
@@ -3076,16 +3169,19 @@ void OmpAttributeVisitor::PropagateOmpFlagToEquivalenceSet(
 
 void OmpAttributeVisitor::ResolveOmpCommonBlock(
     const parser::Name &name, Symbol::Flag ompFlag) {
+  bool cbResolved{false};
   if (name.symbol) {
     if (auto *details{name.symbol->detailsIf<CommonBlockDetails>()}) {
       if (!details->objects().empty()) {
         // Common block already resolved
-        return;
+        cbResolved = true;
       }
     }
   }
 
-  if (auto *symbol{ResolveOmpCommonBlockName(&name)}) {
+  parser::Name cbName{name};
+  Symbol *originalCB{ResolveOmpCommonBlockName(&cbName)};
+  if (auto *symbol{cbResolved ? name.symbol : originalCB}) {
     if (!dataCopyingAttributeFlags.test(ompFlag)) {
       CheckMultipleAppearances(name, *symbol, Symbol::Flag::OmpCommonBlock);
     }
@@ -3093,7 +3189,8 @@ void OmpAttributeVisitor::ResolveOmpCommonBlock(
     // same meaning as if every explicit member of the common block
     // appeared in the list
     auto &details{symbol->get<CommonBlockDetails>()};
-    bool cloneCommonBlock{dataSharingAttributeFlags.test(ompFlag)};
+    bool cbCloned{cbResolved && name.symbol != originalCB};
+    bool cloneCommonBlock{dataSharingAttributeFlags.test(ompFlag) && !cbCloned};
     CommonBlockDetails cloneDetails{symbol->name()};
     for (auto [index, object] : llvm::enumerate(details.objects())) {
       if (auto *resolvedObject{ResolveOmp(*object, ompFlag, currScope())}) {
@@ -3117,6 +3214,8 @@ void OmpAttributeVisitor::ResolveOmpCommonBlock(
     if (cloneCommonBlock) {
       name.symbol = &currScope().MakeSymbol(
           symbol->name(), symbol->attrs(), std::move(cloneDetails));
+    } else {
+      name.symbol = symbol;
     }
   } else {
     context_.Say(name.source, // 2.15.3
@@ -3133,6 +3232,9 @@ void OmpAttributeVisitor::ResolveOmpObject(
           },
           [&](const parser::Name &name) { // common block
             ResolveOmpCommonBlock(name, ompFlag);
+          },
+          [&](const parser::OmpLocator &ref) {
+            // Do nothing here.
           },
           [&](const parser::OmpObject::Invalid &invalid) {
             switch (invalid.v) {

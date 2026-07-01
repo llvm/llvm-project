@@ -426,7 +426,7 @@ public:
   }
 
   static DenseSet<Function *> kernelsThatIndirectlyAccessAnyOfPassedVariables(
-      Module &M, LDSUsesInfoTy &LDSUsesInfo,
+      Module &M, GVUsesInfoTy &LDSUsesInfo,
       DenseSet<GlobalVariable *> const &VariableSet) {
 
     DenseSet<Function *> KernelSet;
@@ -437,7 +437,7 @@ public:
     for (Function &Func : M.functions()) {
       if (Func.isDeclaration() || !isKernel(Func))
         continue;
-      for (GlobalVariable *GV : LDSUsesInfo.indirect_access[&Func]) {
+      for (GlobalVariable *GV : LDSUsesInfo.IndirectAccess[&Func]) {
         if (VariableSet.contains(GV)) {
           KernelSet.insert(&Func);
           break;
@@ -581,7 +581,7 @@ public:
   }
 
   static void partitionVariablesIntoIndirectStrategies(
-      Module &M, LDSUsesInfoTy const &LDSUsesInfo,
+      Module &M, GVUsesInfoTy const &LDSUsesInfo,
       VariableFunctionMap &LDSToKernelsThatNeedToAccessItIndirectly,
       DenseSet<GlobalVariable *> &ModuleScopeVariables,
       DenseSet<GlobalVariable *> &TableLookupVariables,
@@ -726,7 +726,7 @@ public:
 
   static DenseMap<Function *, LDSVariableReplacement>
   lowerKernelScopeStructVariables(
-      Module &M, LDSUsesInfoTy &LDSUsesInfo,
+      Module &M, GVUsesInfoTy &LDSUsesInfo,
       DenseSet<GlobalVariable *> const &ModuleScopeVariables,
       DenseSet<Function *> const &KernelsThatAllocateModuleLDS,
       GlobalVariable *MaybeModuleScopeStruct) {
@@ -741,7 +741,7 @@ public:
       DenseSet<GlobalVariable *> KernelUsedVariables;
       // Allocating variables that are used directly in this struct to get
       // alignment aware allocation and predictable frame size.
-      for (auto &v : LDSUsesInfo.direct_access[&Func]) {
+      for (auto &v : LDSUsesInfo.DirectAccess[&Func]) {
         if (!AMDGPU::isDynamicLDS(*v)) {
           KernelUsedVariables.insert(v);
         }
@@ -749,7 +749,7 @@ public:
 
       // Allocating variables that are accessed indirectly so that a lookup of
       // this struct instance can find them from nested functions.
-      for (auto &v : LDSUsesInfo.indirect_access[&Func]) {
+      for (auto &v : LDSUsesInfo.IndirectAccess[&Func]) {
         if (!AMDGPU::isDynamicLDS(*v)) {
           KernelUsedVariables.insert(v);
         }
@@ -788,8 +788,8 @@ public:
       // If any indirect uses, create a direct use to ensure allocation
       // TODO: Simpler to unconditionally mark used but that regresses
       // codegen in test/CodeGen/AMDGPU/noclobber-barrier.ll
-      auto Accesses = LDSUsesInfo.indirect_access.find(&Func);
-      if ((Accesses != LDSUsesInfo.indirect_access.end()) &&
+      auto Accesses = LDSUsesInfo.IndirectAccess.find(&Func);
+      if ((Accesses != LDSUsesInfo.IndirectAccess.end()) &&
           !Accesses->second.empty())
         markUsedByKernel(&Func, Replacement.SGV);
 
@@ -808,7 +808,7 @@ public:
   }
 
   static GlobalVariable *
-  buildRepresentativeDynamicLDSInstance(Module &M, LDSUsesInfoTy &LDSUsesInfo,
+  buildRepresentativeDynamicLDSInstance(Module &M, GVUsesInfoTy &LDSUsesInfo,
                                         Function *func) {
     // Create a dynamic lds variable with a name associated with the passed
     // function that has the maximum alignment of any dynamic lds variable
@@ -833,11 +833,11 @@ public:
       }
     };
 
-    for (GlobalVariable *GV : LDSUsesInfo.indirect_access[func]) {
+    for (GlobalVariable *GV : LDSUsesInfo.IndirectAccess[func]) {
       UpdateMaxAlignment(GV);
     }
 
-    for (GlobalVariable *GV : LDSUsesInfo.direct_access[func]) {
+    for (GlobalVariable *GV : LDSUsesInfo.DirectAccess[func]) {
       UpdateMaxAlignment(GV);
     }
 
@@ -854,7 +854,7 @@ public:
   }
 
   DenseMap<Function *, GlobalVariable *> lowerDynamicLDSVariables(
-      Module &M, LDSUsesInfoTy &LDSUsesInfo,
+      Module &M, GVUsesInfoTy &LDSUsesInfo,
       DenseSet<Function *> const &KernelsThatIndirectlyAllocateDynamicLDS,
       DenseSet<GlobalVariable *> const &DynamicVariables,
       std::vector<Function *> const &OrderedKernels) {
@@ -916,11 +916,13 @@ public:
   // assign offsets across TUs.
   bool runOnModuleLinkTime(Module &M) {
     bool Changed = superAlignLDSGlobals(M);
-    Changed |= eliminateConstantExprUsesOfLDSFromAllInstructions(M);
+    Changed |=
+        eliminateGVConstantExprUsesFromAllInstructions(M, isLDSVariableToLower);
 
     CallGraph CG(M);
     FunctionVariableMap KernelLDSUses, FunctionLDSUses;
-    getUsesOfLDSByFunction(CG, M, KernelLDSUses, FunctionLDSUses);
+    getUsesOfGVByFunction(CG, M, isLDSVariableToLower, KernelLDSUses,
+                          FunctionLDSUses);
 
     if (KernelLDSUses.empty() && FunctionLDSUses.empty())
       return Changed;
@@ -1079,17 +1081,18 @@ public:
     CallGraph CG = CallGraph(M);
     bool Changed = superAlignLDSGlobals(M);
 
-    Changed |= eliminateConstantExprUsesOfLDSFromAllInstructions(M);
+    Changed |=
+        eliminateGVConstantExprUsesFromAllInstructions(M, isLDSVariableToLower);
 
     Changed = true; // todo: narrow this down
 
     // For each kernel, what variables does it access directly or through
     // callees
-    LDSUsesInfoTy LDSUsesInfo = getTransitiveUsesOfLDS(CG, M);
+    GVUsesInfoTy LDSUsesInfo = getTransitiveUsesOfLDSForLowering(CG, M);
 
     // For each variable accessed through callees, which kernels access it
     VariableFunctionMap LDSToKernelsThatNeedToAccessItIndirectly;
-    for (auto &K : LDSUsesInfo.indirect_access) {
+    for (auto &K : LDSUsesInfo.IndirectAccess) {
       Function *F = K.first;
       assert(isKernel(*F));
       for (GlobalVariable *GV : K.second) {

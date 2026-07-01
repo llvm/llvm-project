@@ -137,7 +137,7 @@ int main(int, char**)
     test<std::size_t>();
 
     // _BitInt tests. Width tiers follow C23 7.18.2.5.
-#if TEST_HAS_EXTENSION(bit_int)
+#if TEST_HAS_BITINT
     {
       using T8  = unsigned _BitInt(8);
       using T13 = unsigned _BitInt(13);
@@ -167,8 +167,7 @@ int main(int, char**)
       assert(std::countl_zero(T64(T64(1) << 63)) == 0);
       assert(std::countl_zero(T64(~T64(0))) == 0);
 
-      // Odd widths: safe for nonzero inputs only (digits is the fallback
-      // for zero via __builtin_clzg).
+      // Odd widths: safe for nonzero inputs only.
       assert(std::countl_zero(T13(1)) == 12);
       assert(std::countl_zero(T13(2)) == 11);
       assert(std::countl_zero(T13(3)) == 11);
@@ -219,7 +218,7 @@ int main(int, char**)
       assert(std::countl_zero(T4096(~T4096(0))) == 0);
     }
 #  endif
-#endif // TEST_HAS_EXTENSION(bit_int)
+#endif // TEST_HAS_BITINT
 
     return 0;
 }

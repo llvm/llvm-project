@@ -40,6 +40,10 @@ ELF Improvements
   beats positional last-match-wins; default: positional). In ELF, the glob
   matches input section names (e.g. ``.text.unlikely.code1``).
 
+* When a ``SECTIONS`` command interleaves relro and non-relro sections, lld now
+  emits one ``PT_GNU_RELRO`` segment per contiguous run of relro sections
+  instead of reporting a ``not contiguous with other relro sections`` error.
+
 Breaking changes
 ----------------
 
@@ -54,6 +58,8 @@ Breaking changes
   in line with GNU ld, but is a change in behavior from previous LLD
   releases.
   
+* The default extension for time trace files is now ``.time-trace.json``.
+
 COFF Improvements
 -----------------
 

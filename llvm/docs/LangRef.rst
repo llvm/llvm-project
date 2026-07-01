@@ -1357,7 +1357,11 @@ Currently, only the following parameter attributes are defined:
     ``byval`` parameters). This is not a valid attribute for return
     values.
 
-    The byval type argument indicates the in-memory value type.
+    The byval type argument is only used for its allocation size and alignment
+    (if there is no explicit align attribute). That is, the hidden copy is
+    interpreted as a call to memcpy with the allocation size of the specified type,
+    instead of loading from the pointee and storing back into the copy in the type.
+    In particular, the padding between field types of a struct type is still copied.
 
     The byval attribute also supports specifying an alignment with the
     ``align`` attribute. It indicates the alignment of the stack slot to
@@ -2390,6 +2394,14 @@ For example:
     This attribute indicates that the inliner should never inline this
     function in any situation. This attribute may not be used together
     with the ``alwaysinline`` attribute.
+``noipa``
+    Disables any interprocedural analysis that inspects the definition of this
+    function. This attribute is equivalent to moving this function definition to
+    a separate, optimizer-opaque, module. Any attributes on the function are
+    still respected (as they would be if they remained on a function declaration
+    in this module). This attribute does *not* control inlining or outlining.
+    Add the ``noinline`` and ``nooutline`` attributes as well in cases where
+    inlining and outlining should additionally be disabled.
 ``nomerge``
     This attribute indicates that calls to this function should never be merged
     during optimization. For example, it will prevent tail merging otherwise
@@ -8688,10 +8700,81 @@ change in the future.
 
 See :doc:`TypeMetadata`.
 
+.. _metadata_callee_type:
+
 '``callee_type``' Metadata
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-See :doc:`CalleeTypeMetadata`.
+The ``!callee_type`` metadata is introduced to support the generation of a call graph
+section in the object file. The ``!callee_type`` metadata is used
+to identify the types of the intended callees of indirect call instructions. The ``!callee_type`` metadata is a
+list of one or more generalized ``!callgraph`` metadata objects (See the :ref:`metadata_callgraph` section) with each ``!callgraph``
+metadata pointing to a callee's :ref:`type identifier <calleetype-type-identifier>`.
+
+While ``!callee_type`` and ``!callgraph`` are private to the Call Graph Section pipeline and contain no offsets,
+LLVM's `Control Flow Integrity (CFI)
+<https://clang.org/docs/ControlFlowIntegrity.html>`_ uses a structurally similar ``!type`` metadata in its implementation (See :doc:`TypeMetadata`),
+which shares the same type identifier format but includes a leading offset for vtable compatibility.
+
+.. _calleetype-type-identifier:
+
+Type identifier
+"""""""""""""""
+
+The type for an indirect call target is the callee's function signature.
+Mapping from a type to an identifier is an ABI detail.
+In the current implementation, an identifier of type T is
+computed as follows:
+
+  -  Obtain the generalized mangled name for “typeinfo name for T”.
+  -  Compute MD5 hash of the name as a string.
+  -  Reinterpret the first 8 bytes of the hash as a little-endian 64-bit integer.
+
+To avoid mismatched pointer types, generalizations are applied.
+Pointers in return and argument types are treated as equivalent as long as the qualifiers for the 
+type they point to match. For example, ``char*``, ``char**``, and ``int*`` are considered equivalent
+types. However, ``char*`` and ``const char*`` are considered distinct types.
+
+.. _metadata_callgraph:
+
+'``callgraph``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+The ``!callgraph`` metadata associates a function definition with its type
+identifier. It uses the same generalized type encoding as the ``!type`` metadata
+used for CFI and WPD, and allows us to emit a call graph section in the object
+file that can be used to compute a conservative and precise static call graph
+in a linked binary.
+
+Syntax:
+"""""""
+
+A ``!callgraph`` metadata node is attached to a function definition as follows:
+
+.. code-block:: llvm
+
+  define void @foo() !callgraph !0
+  !0 = !{!"_ZTSFvvE.generalized"}
+
+The metadata node is a 1-element tuple containing only the generalized type
+identifier as ``MDString``.
+
+Relation to Control Flow Integrity (CFI)
+""""""""""""""""""""""""""""""""""""""""
+
+While ``!callgraph`` metadata is structurally similar to LLVM's ``!type``
+metadata (which is used by `Control Flow Integrity (CFI)
+<https://clang.org/docs/ControlFlowIntegrity.html>`_ and Whole Program
+Devirtualization), they serve different purposes:
+
+* ``!type`` (CFI): Contains an offset (e.g., ``!{i64 0, !"_ZTSFvvE.generalized"}``)
+  to support virtual table offset calculations and devirtualization.
+* ``!callgraph`` (Call Graph Section): Does not contain an offset. This is
+  private to the Call Graph Section pipeline.
+
+The generalized type identifier format used by both is identical. For more
+details on the generalized type identifier format and CFI's metadata, see
+:doc:`TypeMetadata` and :ref:`metadata_callee_type`.
 
 '``associated``' Metadata
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -13156,6 +13239,9 @@ the default rounding mode.
 If the ``nneg`` flag is set, and the ``uitofp`` argument is negative,
 the result is a poison value.
 
+If the '``nsz``' flag is set and the input value is 0, the sign bit of
+the result is non-deterministic.
+
 
 Example:
 """"""""
@@ -13202,6 +13288,9 @@ The '``sitofp``' instruction interprets its operand as a signed integer
 quantity and converts it to the corresponding floating-point value. If the
 value cannot be exactly represented, it is rounded using the default rounding
 mode.
+
+If the '``nsz``' flag is set and the input value is 0, the sign bit of
+the result is non-deterministic.
 
 Example:
 """"""""
@@ -14536,6 +14625,9 @@ does not define what this type is, so all transformations should be
 prepared to handle these functions regardless of the type used. The intrinsics
 are overloaded, and can be used for pointers to different address spaces.
 
+The underlying argument list is destroyed when a function returns, so
+a ``va_list`` must not outlive the function that created it.
+
 This example shows how the :ref:`va_arg <i_va_arg>` instruction and the
 variable argument handling intrinsic functions are used.
 
@@ -14632,10 +14724,13 @@ Semantics:
 
 The '``llvm.va_end``' intrinsic works just like the ``va_end`` macro
 available in C. In a target-dependent way, it destroys the ``va_list``
-element to which the argument points. Calls to
+element to which the argument points. Calls to ``llvm.va_end`` can be
+omitted when they are a no-op for the given target. ``llvm.va_end``
+is a no-op for all currently supported targets.
+
+When used, calls to ``llvm.va_end`` must be matched exactly with calls to
 :ref:`llvm.va_start <int_va_start>` and
-:ref:`llvm.va_copy <int_va_copy>` must be matched exactly with calls to
-``llvm.va_end``.
+:ref:`llvm.va_copy <int_va_copy>`.
 
 .. _int_va_copy:
 
@@ -14671,6 +14766,10 @@ available in C. In a target-dependent way, it copies the source
 ``va_list`` element into the destination ``va_list`` element. This
 intrinsic is necessary because the ``llvm.va_start`` intrinsic may be
 arbitrarily complex and require, for example, memory allocation.
+
+On targets where ``llvm.va_copy`` is equivalent to ``memcpy``, ``memcpy``
+can be used instead to duplicate a ``va_list``. ``llvm.va_copy`` is
+equivalent to ``memcpy`` on all currently supported targets.
 
 Accurate Garbage Collection Intrinsics
 --------------------------------------
@@ -19326,6 +19425,102 @@ Example:
       %r = call i4 @llvm.clmul.i4(i4 5, i4 6)    ; %r = 14
       %r = call i4 @llvm.clmul.i4(i4 -4, i4 2)   ; %r = -8
       %r = call i4 @llvm.clmul.i4(i4 -4, i4 -5)  ; %r = 4
+
+.. _int_pext:
+
+'``llvm.pext.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.pext`` on any integer
+or integer vector type.
+
+::
+
+      declare i32 @llvm.pext.i32(i32 %val, i32 %mask)
+      declare i64 @llvm.pext.i64(i64 %val, i64 %mask)
+      declare <4 x i32> @llvm.pext.v4i32(<4 x i32> %val, <4 x i32> %mask)
+
+Overview:
+"""""""""
+
+The '``llvm.pext``' family of intrinsic functions extracts the bits from ``val``
+where the ``mask`` has bits set and packs them contiguously in the low bits
+of the result, same as the x86 ``PEXT`` instruction.
+
+Arguments:
+""""""""""
+
+The arguments may be any integer type or vector of integer type. Both
+arguments and result must have the same type.
+
+Semantics:
+""""""""""
+
+The '``llvm.pext``' intrinsic extracts bits from the first argument
+``val`` at the positions indicated by set bits in ``mask``, and packs
+them contiguously into the low bits of the result. The remaining high
+bits of the result are zero.
+
+Equivalently, if the set bit positions in ``mask`` (from LSB to MSB)
+are ``p0, p1, ..., pk``, then the result bit ``i`` equals bit ``pi``
+of ``val``.
+
+.. code-block:: text
+
+      %r = call i8 @llvm.pext.i8(i8 0b10101010, i8 0b11001100) ; %r = 0b00001010
+      %r = call i8 @llvm.pext.i8(i8 0b11111111, i8 0b10101010) ; %r = 0b00001111
+
+.. _int_pdep:
+
+'``llvm.pdep.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.pdep`` on any integer or
+integer vector type.
+
+::
+
+      declare i32 @llvm.pdep.i32(i32 %val, i32 %mask)
+      declare i64 @llvm.pdep.i64(i64 %val, i64 %mask)
+      declare <4 x i32> @llvm.pdep.v4i32(<4 x i32> %val, <4 x i32> %mask)
+
+Overview:
+"""""""""
+
+The '``llvm.pdep``' family of intrinsic functions deposits the low bits of
+``val`` into the result at the positions where ``mask`` has bits set, same as
+the x86 ``PDEP`` instruction.
+
+Arguments:
+""""""""""
+
+The arguments may be any integer type or vector of integer type. Both
+arguments and result must have the same type.
+
+Semantics:
+""""""""""
+
+The '``llvm.pdep``' intrinsic takes the low bits of the first argument
+``val`` and scatters them to the bit positions in the result indicated by
+set bits in ``mask``. Bits in the result at positions where ``mask`` is
+zero are zero.
+
+Equivalently, if the set bit positions in ``mask`` (from LSB to MSB) are
+``p0, p1, ..., pk``, then result bit ``pi`` equals bit ``i`` of ``val``.
+
+The operations satisfy the round-trip identity:
+``pdep(pext(val, mask), mask) == val & mask``.
+
+.. code-block:: text
+
+      %r = call i8 @llvm.pdep.i8(i8 0b00001010, i8 0b11001100) ; %r = 0b10001000
+      %r = call i8 @llvm.pdep.i8(i8 0b00001111, i8 0b10101010) ; %r = 0b10101010
 
 .. _int_overflow:
 

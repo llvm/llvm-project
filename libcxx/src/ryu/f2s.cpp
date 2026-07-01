@@ -41,6 +41,7 @@
 
 #include <__assert>
 #include <__config>
+#include <bit>
 #include <charconv>
 #include <cstdint>
 #include <cstddef>
@@ -535,8 +536,7 @@ struct __floating_decimal_32 {
         static constexpr uint32_t _Max_shifted_mantissa[11] = {
           16777215, 3355443, 671088, 134217, 26843, 5368, 1073, 214, 42, 8, 1 };
 
-        unsigned long _Trailing_zero_bits;
-        (void) _BitScanForward(&_Trailing_zero_bits, __v.__mantissa); // __v.__mantissa is guaranteed nonzero
+        unsigned long _Trailing_zero_bits = std::countr_zero(__v.__mantissa); // __v.__mantissa is guaranteed nonzero
         const uint32_t _Shifted_mantissa = __v.__mantissa >> _Trailing_zero_bits;
         _Can_use_ryu = _Shifted_mantissa <= _Max_shifted_mantissa[_Ryu_exponent];
       }

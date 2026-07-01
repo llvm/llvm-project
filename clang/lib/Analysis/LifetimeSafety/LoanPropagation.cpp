@@ -66,8 +66,12 @@ static llvm::BitVector computePersistentOrigins(const FactManager &FactMgr,
       case Fact::Kind::KillOrigin:
         CheckOrigin(F->getAs<KillOriginFact>()->getKilledOrigin());
         break;
-      case Fact::Kind::MovedOrigin:
       case Fact::Kind::OriginEscapes:
+        // An escaping origin is read at the exit block but defined earlier, so
+        // it spans blocks and must participate in joins.
+        CheckOrigin(F->getAs<OriginEscapesFact>()->getEscapedOriginID());
+        break;
+      case Fact::Kind::MovedOrigin:
       case Fact::Kind::Expire:
       case Fact::Kind::TestPoint:
       case Fact::Kind::InvalidateOrigin:

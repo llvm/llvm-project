@@ -26,7 +26,7 @@ define i32 @cttz_neg_value_multiuse(i32 %x) {
 
 define i64 @cttz_neg_value_64(i64 %x) {
 ; CHECK-LABEL: @cttz_neg_value_64(
-; CHECK-NEXT:    [[B:%.*]] = tail call range(i64 0, 65) i64 @llvm.cttz.i64(i64 [[X:%.*]], i1 true)
+; CHECK-NEXT:    [[B:%.*]] = call range(i64 0, 65) i64 @llvm.cttz.i64(i64 [[X:%.*]], i1 true)
 ; CHECK-NEXT:    ret i64 [[B]]
 ;
   %a = sub i64 0, %x
@@ -36,7 +36,7 @@ define i64 @cttz_neg_value_64(i64 %x) {
 
 define i64 @cttz_neg_value2_64(i64 %x) {
 ; CHECK-LABEL: @cttz_neg_value2_64(
-; CHECK-NEXT:    [[B:%.*]] = tail call range(i64 0, 65) i64 @llvm.cttz.i64(i64 [[X:%.*]], i1 false)
+; CHECK-NEXT:    [[B:%.*]] = call range(i64 0, 65) i64 @llvm.cttz.i64(i64 [[X:%.*]], i1 false)
 ; CHECK-NEXT:    ret i64 [[B]]
 ;
   %a = sub i64 0, %x

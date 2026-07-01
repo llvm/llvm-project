@@ -222,16 +222,6 @@ public:
   ///     The size in bytes of this address range.
   lldb::addr_t GetByteSize() const { return m_byte_size; }
 
-  /// Get the memory cost of this object.
-  ///
-  /// \return
-  ///     The number of bytes that this object occupies in memory.
-  size_t MemorySize() const {
-    // Noting special for the memory size of a single AddressRange object, it
-    // is just the size of itself.
-    return sizeof(AddressRange);
-  }
-
   /// Set accessor for the byte size of this range.
   ///
   /// \param[in] byte_size

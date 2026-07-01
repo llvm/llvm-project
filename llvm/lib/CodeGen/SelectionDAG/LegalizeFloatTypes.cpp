@@ -3194,6 +3194,9 @@ bool DAGTypeLegalizer::SoftPromoteHalfOperand(SDNode *N, unsigned OpNo) {
   case ISD::FP_TO_SINT_SAT:
   case ISD::FP_TO_UINT_SAT:
                         Res = SoftPromoteHalfOp_FP_TO_XINT_SAT(N); break;
+  case ISD::CONVERT_TO_ARBITRARY_FP:
+    Res = SoftPromoteHalfOp_CONVERT_TO_ARBITRARY_FP(N);
+    break;
   case ISD::STRICT_FP_EXTEND:
   case ISD::FP_EXTEND:  Res = SoftPromoteHalfOp_FP_EXTEND(N); break;
   case ISD::SELECT_CC:  Res = SoftPromoteHalfOp_SELECT_CC(N, OpNo); break;
@@ -3310,6 +3313,23 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfOp_FP_TO_XINT_SAT(SDNode *N) {
 
   return DAG.getNode(N->getOpcode(), dl, N->getValueType(0), Res,
                      N->getOperand(1));
+}
+
+// TODO: CONVERT_TO_ARBITRARY_FP also needs SoftenFloatOperand and
+// ExpandFloatOperand handlers for targets with software float or ppcf128
+// source types. Same gap exists for CONVERT_FROM_ARBITRARY_FP.
+SDValue DAGTypeLegalizer::SoftPromoteHalfOp_CONVERT_TO_ARBITRARY_FP(SDNode *N) {
+  EVT RVT = N->getValueType(0);
+  SDValue Op = N->getOperand(0);
+  EVT SVT = Op.getValueType();
+  SDLoc dl(N);
+
+  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), Op.getValueType());
+  Op = GetSoftPromotedHalf(Op);
+  SDValue Res = DAG.getNode(GetPromotionOpcode(SVT, RVT), dl, NVT, Op);
+
+  return DAG.getNode(ISD::CONVERT_TO_ARBITRARY_FP, dl, N->getValueType(0), Res,
+                     N->getOperand(1), N->getOperand(2), N->getOperand(3));
 }
 
 SDValue DAGTypeLegalizer::SoftPromoteHalfOp_BR_CC(SDNode *N) {

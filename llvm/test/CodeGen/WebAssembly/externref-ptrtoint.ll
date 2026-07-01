@@ -1,15 +1,10 @@
-; RUN: llc < %s --mtriple=wasm32-unknown-unknown -asm-verbose=false -mattr=+reference-types 2>&1 | FileCheck %s
+; RUN: not llc --mtriple=wasm32-unknown-unknown -asm-verbose=false -mattr=+reference-types < %s 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
 
-%externref = type ptr addrspace(10)
+%externref = type target("wasm.externref")
 
 define i32 @externref_to_int(%externref %ref) {
   %i = ptrtoint %externref %ref to i32
   ret i32 %i
 }
 
-; CHECK-LABEL: externref_to_int:
-; CHECK-NEXT: .functype       externref_to_int (externref) -> (i32)
-; CHECK-NEXT: .local i32
-; CHECK-NEXT: unreachable
-; CHECK-NEXT: local.get 1
-; CHECK-NEXT: end_function
+# CHECK-ERROR: error: invalid cast opcode for cast from 'target("wasm.externref")' to 'i32'

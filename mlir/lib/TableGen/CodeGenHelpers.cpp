@@ -244,7 +244,7 @@ static ::llvm::LogicalResult {0}(
     ::llvm::StringRef successorName, unsigned successorIndex) {
   if (!({1})) {
     return op->emitOpError("successor #") << successorIndex << " ('"
-        << successorName << ")' failed to verify constraint: {2}";
+        << successorName << "') failed to verify constraint: {2}";
   }
   return ::mlir::success();
 }

@@ -78,9 +78,8 @@ void ExceptionSearchFilter::UpdateModuleListIfNeeded() {
   }
 }
 
-SearchFilterSP ExceptionSearchFilter::DoCreateCopy() {
-  return SearchFilterSP(
-      new ExceptionSearchFilter(TargetSP(), m_language, false));
+std::unique_ptr<SearchFilter> ExceptionSearchFilter::DoCreateCopy() {
+  return std::make_unique<ExceptionSearchFilter>(TargetSP(), m_language, false);
 }
 
 SearchFilter *ExceptionSearchFilter::CreateFromStructuredData(

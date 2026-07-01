@@ -8,8 +8,7 @@ define <vscale x 4 x i32> @combine_ld1(ptr %ptr) #0 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <vscale x 4 x i32>, ptr [[PTR:%.*]], align 16, !annotation [[META0:![0-9]+]]
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP2]]
 ;
-  %1 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
-  %2 = call <vscale x 4 x i32> @llvm.aarch64.sve.ld1.nxv4i32(<vscale x 4 x i1> %1, ptr %ptr), !annotation !0
+  %2 = call <vscale x 4 x i32> @llvm.aarch64.sve.ld1.nxv4i32(<vscale x 4 x i1> splat (i1 true), ptr %ptr), !annotation !0
   ret <vscale x 4 x i32> %2
 }
 
@@ -18,8 +17,7 @@ define <vscale x 4 x i32> @combine_ld1_casted_predicate(ptr %ptr) #0 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <vscale x 4 x i32>, ptr [[PTR:%.*]], align 16, !annotation [[META0]]
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP2]]
 ;
-  %1 = tail call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
-  %2 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> %1)
+  %2 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> splat (i1 true))
   %3 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %2)
   %4 = call <vscale x 4 x i32> @llvm.aarch64.sve.ld1.nxv4i32(<vscale x 4 x i1> %3, ptr %ptr), !annotation !0
   ret <vscale x 4 x i32> %4
@@ -43,8 +41,7 @@ define <vscale x 8 x i16> @combine_ld1_masked_casted_predicate(ptr %ptr) #0 {
 ; CHECK-NEXT:    [[TMP5:%.*]] = call <vscale x 8 x i16> @llvm.masked.load.nxv8i16.p0(ptr align 1 [[PTR:%.*]], <vscale x 8 x i1> [[TMP3]], <vscale x 8 x i16> zeroinitializer), !annotation [[META0]]
 ; CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP5]]
 ;
-  %1 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
-  %2 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> %1)
+  %2 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> splat (i1 true))
   %3 = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> %2)
   %4 = call <vscale x 8 x i16> @llvm.aarch64.sve.ld1.nxv8i16(<vscale x 8 x i1> %3, ptr %ptr), !annotation !0
   ret <vscale x 8 x i16> %4
@@ -55,8 +52,7 @@ define void @combine_st1(<vscale x 4 x i32> %vec, ptr %ptr) #0 {
 ; CHECK-NEXT:    store <vscale x 4 x i32> [[VEC:%.*]], ptr [[PTR:%.*]], align 16, !annotation [[META0]]
 ; CHECK-NEXT:    ret void
 ;
-  %1 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
-  call void @llvm.aarch64.sve.st1.nxv4i32(<vscale x 4 x i32> %vec, <vscale x 4 x i1> %1, ptr %ptr), !annotation !0
+  call void @llvm.aarch64.sve.st1.nxv4i32(<vscale x 4 x i32> %vec, <vscale x 4 x i1> splat (i1 true), ptr %ptr), !annotation !0
   ret void
 }
 
@@ -65,8 +61,7 @@ define void @combine_st1_casted_predicate(<vscale x 4 x i32> %vec, ptr %ptr) #0 
 ; CHECK-NEXT:    store <vscale x 4 x i32> [[VEC:%.*]], ptr [[PTR:%.*]], align 16, !annotation [[META0]]
 ; CHECK-NEXT:    ret void
 ;
-  %1 = tail call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
-  %2 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> %1)
+  %2 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> splat (i1 true))
   %3 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %2)
   call void @llvm.aarch64.sve.st1.nxv4i32(<vscale x 4 x i32> %vec, <vscale x 4 x i1> %3, ptr %ptr), !annotation !0
   ret void
@@ -90,8 +85,7 @@ define void @combine_st1_masked_casted_predicate(<vscale x 8 x i16> %vec, ptr %p
 ; CHECK-NEXT:    call void @llvm.masked.store.nxv8i16.p0(<vscale x 8 x i16> [[VEC:%.*]], ptr align 1 [[PTR:%.*]], <vscale x 8 x i1> [[TMP3]]), !annotation [[META0]]
 ; CHECK-NEXT:    ret void
 ;
-  %1 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
-  %2 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> %1)
+  %2 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> splat (i1 true))
   %3 = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> %2)
   call void @llvm.aarch64.sve.st1.nxv8i16(<vscale x 8 x i16> %vec, <vscale x 8 x i1> %3, ptr %ptr), !annotation !0
   ret void
@@ -107,8 +101,6 @@ declare <vscale x 4 x i32> @llvm.aarch64.sve.ld1.nxv4i32(<vscale x 4 x i1>, ptr)
 declare <vscale x 8 x i16> @llvm.aarch64.sve.ld1.nxv8i16(<vscale x 8 x i1>, ptr)
 
 declare <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32)
-declare <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32)
-declare <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32)
 
 declare void @llvm.aarch64.sve.st1.nxv4i32(<vscale x 4 x i32>, <vscale x 4 x i1>, ptr)
 declare void @llvm.aarch64.sve.st1.nxv8i16(<vscale x 8 x i16>, <vscale x 8 x i1>, ptr)

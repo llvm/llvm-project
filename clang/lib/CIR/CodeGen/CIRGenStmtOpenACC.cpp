@@ -187,9 +187,7 @@ CIRGenFunction::emitOpenACCWaitConstruct(const OpenACCWaitConstruct &s) {
             ? mlir::IntegerType::SignednessSemantics::Signed
             : mlir::IntegerType::SignednessSemantics::Unsigned);
 
-    auto conversionOp = mlir::UnrealizedConversionCastOp::create(
-        builder, exprLoc, targetType, expr);
-    return conversionOp.getResult(0);
+    return builder.createBuiltinIntCast(exprLoc, expr, targetType);
   };
 
   // Emit the correct 'wait' clauses.

@@ -27,3 +27,106 @@ body: |
     $vgpr64 = GLOBAL_LOAD_DWORD $vgpr16_vgpr17, 0, 0, implicit $exec
     $vgpr64 = GLOBAL_LOAD_DWORD $vgpr40_vgpr41, 0, 0, implicit $exec
 ...
+
+---
+name: async_global_to_lds_vaddr_raw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr1, $vgpr2
+    ; CHECK-LABEL: name: async_global_to_lds_vaddr_raw
+    ; CHECK: liveins: $vgpr1, $vgpr2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: S_SETREG_IMM32_B32 2, 2074, implicit-def $mode, implicit $mode
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr0 = V_MOV_B32_e32 1, implicit $exec
+    ; CHECK-NEXT: S_WAITCNT_DEPCTR .VaVdst_0
+    ; CHECK-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B32 $vgpr2, $vgpr0_vgpr1, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load (s32), addrspace 1), (store (s32), addrspace 3)
+    $vgpr0 = V_MOV_B32_e32 1, implicit $exec
+    GLOBAL_LOAD_ASYNC_TO_LDS_B32 $vgpr2, $vgpr0_vgpr1, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load (s32), addrspace 1), (store (s32), addrspace 3)
+...
+
+---
+name: async_global_to_lds_vaddr_vsrc_war
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr4, $vgpr5
+    ; CHECK-LABEL: name: async_global_to_lds_vaddr_vsrc_war
+    ; CHECK: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr4, $vgpr5
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: S_SETREG_IMM32_B32 2, 2074, implicit-def $mode, implicit $mode
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B32 $vgpr2, $vgpr0_vgpr1, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load (s32), addrspace 1), (store (s32), addrspace 3)
+    ; CHECK-NEXT: S_WAITCNT_DEPCTR .VmVsrc_0
+    ; CHECK-NEXT: $vgpr0 = V_MOV_B32_e32 1, implicit $exec
+    ; CHECK-NEXT: S_WAITCNT_DEPCTR .VaVdst_0
+    ; CHECK-NEXT: GLOBAL_STORE_DWORD $vgpr4_vgpr5, $vgpr0, 0, 0, implicit $exec :: (store (s32), addrspace 1)
+    GLOBAL_LOAD_ASYNC_TO_LDS_B32 $vgpr2, $vgpr0_vgpr1, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load (s32), addrspace 1), (store (s32), addrspace 3)
+    $vgpr0 = V_MOV_B32_e32 1, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr4_vgpr5, $vgpr0, 0, 0, implicit $exec :: (store (s32), addrspace 1)
+...
+
+---
+name: async_global_to_lds_vdst_vsrc_war
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr4, $vgpr5
+    ; CHECK-LABEL: name: async_global_to_lds_vdst_vsrc_war
+    ; CHECK: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr4, $vgpr5
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: S_SETREG_IMM32_B32 2, 2074, implicit-def $mode, implicit $mode
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B32 $vgpr2, $vgpr0_vgpr1, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load (s32), addrspace 1), (store (s32), addrspace 3)
+    ; CHECK-NEXT: S_WAITCNT_DEPCTR .VmVsrc_0
+    ; CHECK-NEXT: $vgpr2 = V_MOV_B32_e32 1, implicit $exec
+    ; CHECK-NEXT: S_WAITCNT_DEPCTR .VaVdst_0
+    ; CHECK-NEXT: GLOBAL_STORE_DWORD $vgpr4_vgpr5, $vgpr2, 0, 0, implicit $exec :: (store (s32), addrspace 1)
+    GLOBAL_LOAD_ASYNC_TO_LDS_B32 $vgpr2, $vgpr0_vgpr1, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load (s32), addrspace 1), (store (s32), addrspace 3)
+    $vgpr2 = V_MOV_B32_e32 1, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr4_vgpr5, $vgpr2, 0, 0, implicit $exec :: (store (s32), addrspace 1)
+...
+
+---
+name: global_load_vsrc_war
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+    ; CHECK-LABEL: name: global_load_vsrc_war
+    ; CHECK: liveins: $vgpr0, $vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: S_SETREG_IMM32_B32 2, 2074, implicit-def $mode, implicit $mode
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec :: (load (s32), addrspace 1)
+    ; CHECK-NEXT: S_WAIT_XCNT 0
+    ; CHECK-NEXT: S_WAITCNT_DEPCTR .VmVsrc_0
+    ; CHECK-NEXT: $vgpr0 = V_MOV_B32_e32 1, implicit $exec
+    $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec :: (load (s32), addrspace 1)
+    $vgpr0 = V_MOV_B32_e32 1, implicit $exec
+...
+
+---
+name: buffer_load_vsrc_war
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $sgpr0_sgpr1_sgpr2_sgpr3
+    ; CHECK-LABEL: name: buffer_load_vsrc_war
+    ; CHECK: liveins: $vgpr0, $vgpr1, $sgpr0_sgpr1_sgpr2_sgpr3
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: S_SETREG_IMM32_B32 2, 2074, implicit-def $mode, implicit $mode
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr2 = BUFFER_LOAD_DWORD_ADDR64 $vgpr0_vgpr1, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec
+    ; CHECK-NEXT: S_WAIT_XCNT 0
+    ; CHECK-NEXT: S_WAITCNT_DEPCTR .VmVsrc_0
+    ; CHECK-NEXT: $vgpr0 = V_MOV_B32_e32 1, implicit $exec
+    $vgpr2 = BUFFER_LOAD_DWORD_ADDR64 $vgpr0_vgpr1, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec
+    $vgpr0 = V_MOV_B32_e32 1, implicit $exec
+...

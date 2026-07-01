@@ -75,7 +75,8 @@ bool CheckDowncast(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 bool CheckConst(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
 
 /// Checks if the Descriptor is of a constexpr or const global variable.
-bool CheckConstant(InterpState &S, CodePtr OpPC, const Descriptor *Desc);
+bool CheckConstant(InterpState &S, CodePtr OpPC, const Descriptor *Desc,
+                   AccessKinds AK = AK_Read);
 
 bool CheckFinalLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
 
@@ -143,7 +144,8 @@ bool handleFixedPointOverflow(InterpState &S, CodePtr OpPC,
 bool Destroy(InterpState &S, CodePtr OpPC, uint32_t I);
 bool isConstexprUnknown(const Pointer &P);
 bool isConstexprUnknown(const Block *B);
-bool CheckDynamicCast(InterpState &S, CodePtr OpPC);
+bool DynamicCast(InterpState &S, CodePtr OpPC, const Type *DestType,
+                 bool IsReferenceCast);
 
 enum class ShiftDir { Left, Right };
 
@@ -1835,7 +1837,7 @@ inline bool InitGlobalTempComp(InterpState &S, CodePtr OpPC,
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool InitThisField(InterpState &S, CodePtr OpPC, uint32_t I) {
-  if (S.checkingPotentialConstantExpression() && S.Current->getDepth() == 0)
+  if (S.checkingPotentialConstantExpression() && S.Current->isBottomFrame())
     return false;
   if (!CheckThis(S, OpPC))
     return false;
@@ -1852,7 +1854,7 @@ bool InitThisField(InterpState &S, CodePtr OpPC, uint32_t I) {
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool InitThisFieldActivate(InterpState &S, CodePtr OpPC, uint32_t I) {
-  if (S.checkingPotentialConstantExpression() && S.Current->getDepth() == 0)
+  if (S.checkingPotentialConstantExpression() && S.Current->isBottomFrame())
     return false;
   if (!CheckThis(S, OpPC))
     return false;
@@ -1871,7 +1873,7 @@ bool InitThisFieldActivate(InterpState &S, CodePtr OpPC, uint32_t I) {
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool InitThisBitField(InterpState &S, CodePtr OpPC, uint32_t FieldOffset,
                       uint32_t FieldBitWidth) {
-  if (S.checkingPotentialConstantExpression() && S.Current->getDepth() == 0)
+  if (S.checkingPotentialConstantExpression() && S.Current->isBottomFrame())
     return false;
   if (!CheckThis(S, OpPC))
     return false;
@@ -1896,7 +1898,7 @@ bool InitThisBitField(InterpState &S, CodePtr OpPC, uint32_t FieldOffset,
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool InitThisBitFieldActivate(InterpState &S, CodePtr OpPC,
                               uint32_t FieldOffset, uint32_t FieldBitWidth) {
-  if (S.checkingPotentialConstantExpression() && S.Current->getDepth() == 0)
+  if (S.checkingPotentialConstantExpression() && S.Current->isBottomFrame())
     return false;
   if (!CheckThis(S, OpPC))
     return false;
@@ -2050,6 +2052,14 @@ inline bool GetRefLocal(InterpState &S, CodePtr OpPC, uint32_t I) {
 inline bool GetRefGlobal(InterpState &S, CodePtr OpPC, uint32_t I) {
   Block *B = S.P.getGlobal(I);
 
+  // If we're currently evaluating this variable, use that in-flight value.
+  // It will otherwise be diagnosed as non-initialized reference and we will
+  // complain about a missing initializer.
+  if (S.EvaluatingDecl && B->getDescriptor()->asVarDecl() == S.EvaluatingDecl) {
+    S.Stk.push<Pointer>(B);
+    return true;
+  }
+
   if (isConstexprUnknown(B)) {
     S.Stk.push<Pointer>(B);
     return true;
@@ -2092,7 +2102,7 @@ bool GetPtrDerivedPop(InterpState &S, CodePtr OpPC, uint32_t Off, bool NullOK,
                       const Type *TargetType);
 
 inline bool GetPtrThisField(InterpState &S, CodePtr OpPC, uint32_t Off) {
-  if (S.checkingPotentialConstantExpression() && S.Current->getDepth() == 0)
+  if (S.checkingPotentialConstantExpression() && S.Current->isBottomFrame())
     return false;
   if (!CheckThis(S, OpPC))
     return false;
@@ -2168,6 +2178,8 @@ inline bool VirtBaseHelper(InterpState &S, CodePtr OpPC, const RecordDecl *Decl,
     return false;
   Pointer Base = Ptr.stripBaseCasts();
   const Record::Base *VirtBase = Base.getRecord()->getVirtualBase(Decl);
+  if (!VirtBase)
+    return false;
   S.Stk.push<Pointer>(Base.atField(VirtBase->Offset));
   return true;
 }
@@ -2690,7 +2702,7 @@ static inline bool DecPtr(InterpState &S, CodePtr OpPC) {
 /// 2) Pops another Pointer from the stack.
 /// 3) Pushes the difference of the indices of the two pointers on the stack.
 template <PrimType Name, class T = typename PrimConv<Name>::T>
-inline bool SubPtr(InterpState &S, CodePtr OpPC, bool ElemSizeIsZero) {
+inline bool SubPtr(InterpState &S, CodePtr OpPC, uint32_t ElemSize) {
   const Pointer &LHS = S.Stk.pop<Pointer>().expand();
   const Pointer &RHS = S.Stk.pop<Pointer>().expand();
 
@@ -2725,11 +2737,8 @@ inline bool SubPtr(InterpState &S, CodePtr OpPC, bool ElemSizeIsZero) {
     return false;
   }
 
-  if (ElemSizeIsZero) {
-    QualType PtrT = LHS.getType();
-    while (auto *AT = dyn_cast<ArrayType>(PtrT))
-      PtrT = AT->getElementType();
-
+  if (ElemSize == 0) {
+    QualType PtrT = S.getASTContext().getBaseElementType(LHS.getType());
     QualType ArrayTy = S.getASTContext().getConstantArrayType(
         PtrT, APInt::getZero(1), nullptr, ArraySizeModifier::Normal, 0);
     S.FFDiag(S.Current->getSource(OpPC),
@@ -2744,17 +2753,16 @@ inline bool SubPtr(InterpState &S, CodePtr OpPC, bool ElemSizeIsZero) {
     return true;
   }
 
-  int64_t A64 =
-      LHS.isBlockPointer()
-          ? (LHS.isElementPastEnd() ? LHS.getNumElems() : LHS.getIndex())
-          : LHS.getIntegerRepresentation();
+  std::optional<size_t> VL = LHS.computeLayoutOffset(S.getASTContext());
+  if (!VL)
+    return false;
+  std::optional<size_t> VR = RHS.computeLayoutOffset(S.getASTContext());
+  if (!VR)
+    return false;
 
-  int64_t B64 =
-      RHS.isBlockPointer()
-          ? (RHS.isElementPastEnd() ? RHS.getNumElems() : RHS.getIndex())
-          : RHS.getIntegerRepresentation();
-
-  int64_t R64 = A64 - B64;
+  assert(((int64_t)*VL - (int64_t)*VR) % ElemSize == 0);
+  int64_t R64 =
+      (static_cast<int64_t>(*VL) - static_cast<int64_t>(*VR)) / ElemSize;
   if (static_cast<int64_t>(T::from(R64)) != R64)
     return handleOverflow(S, OpPC, R64);
 
@@ -3640,6 +3648,7 @@ inline bool PushIgnoreDiags(InterpState &S, CodePtr OpPC) {
     return true;
   assert(S.PrevDiags == nullptr);
   S.PrevDiags = S.getEvalStatus().Diag;
+  S.PrevDiagsEmitted = S.getEvalStatus().DiagEmitted;
   S.getEvalStatus().Diag = nullptr;
   assert(!S.diagnosing());
   return true;
@@ -3650,6 +3659,7 @@ inline bool PopIgnoreDiags(InterpState &S, CodePtr OpPC) {
   --S.DiagIgnoreDepth;
   if (S.DiagIgnoreDepth == 0) {
     S.getEvalStatus().Diag = S.PrevDiags;
+    S.getEvalStatus().DiagEmitted = S.PrevDiagsEmitted;
     S.PrevDiags = nullptr;
   }
   return true;
@@ -3664,12 +3674,12 @@ inline bool StartSpeculation(InterpState &S, CodePtr OpPC) {
 
 inline bool StartInit(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.peek<Pointer>();
-  S.InitializingBlocks.push_back(Ptr.block());
+  S.InitializingPtrs.push_back(Ptr.view());
   return true;
 }
 
 inline bool EndInit(InterpState &S, CodePtr OpPC) {
-  S.InitializingBlocks.pop_back();
+  S.InitializingPtrs.pop_back();
   return true;
 }
 

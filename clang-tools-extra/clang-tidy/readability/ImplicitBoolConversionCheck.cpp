@@ -47,7 +47,7 @@ AST_MATCHER(Stmt, isNULLMacroExpansion) {
 
 static StringRef getZeroLiteralToCompareWithForType(CastKind CastExprKind,
                                                     QualType Type,
-                                                    ASTContext &Context) {
+                                                    const ASTContext &Context) {
   switch (CastExprKind) {
   case CK_IntegralToBoolean:
     return Type->isUnsignedIntegerType() ? "0u" : "0";
@@ -71,7 +71,7 @@ static bool isUnaryLogicalNotOperator(const Stmt *Statement) {
   return UnaryOperatorExpr && UnaryOperatorExpr->getOpcode() == UO_LNot;
 }
 
-static void fixGenericExprCastToBool(DiagnosticBuilder &Diag,
+static void fixGenericExprCastToBool(const DiagnosticBuilder &Diag,
                                      const ImplicitCastExpr *Cast,
                                      const Stmt *Parent, ASTContext &Context,
                                      bool UseUpperCaseLiteralSuffix) {
@@ -167,7 +167,7 @@ static bool needsSpacePrefix(SourceLocation Loc, ASTContext &Context) {
   return !AllowedCharacters.contains(SpaceBeforeStmtStr.back());
 }
 
-static void fixGenericExprCastFromBool(DiagnosticBuilder &Diag,
+static void fixGenericExprCastFromBool(const DiagnosticBuilder &Diag,
                                        const ImplicitCastExpr *Cast,
                                        ASTContext &Context,
                                        StringRef OtherType) {
@@ -197,7 +197,7 @@ static void fixGenericExprCastFromBool(DiagnosticBuilder &Diag,
 
 static StringRef
 getEquivalentForBoolLiteral(const CXXBoolLiteralExpr *BoolLiteral,
-                            QualType DestType, ASTContext &Context) {
+                            QualType DestType, const ASTContext &Context) {
   // Prior to C++11, false literal could be implicitly converted to pointer.
   if (!Context.getLangOpts().CPlusPlus11 &&
       (DestType->isPointerType() || DestType->isMemberPointerType()) &&

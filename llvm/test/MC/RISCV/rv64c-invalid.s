@@ -3,13 +3,13 @@
 
 ## GPRC
 c.ld ra, 4(sp)
-# CHECK: :[[#@LINE-1]]:6: error: invalid operand for instruction
+# CHECK: :[[#@LINE-1]]:6: error: register must be a GPR from x8 to x15
 c.sd sp, 4(sp)
-# CHECK: :[[#@LINE-1]]:6: error: invalid operand for instruction
+# CHECK: :[[#@LINE-1]]:6: error: register must be a GPR from x8 to x15
 c.addw   a0, a7
-# CHECK: :[[#@LINE-1]]:14: error: invalid operand for instruction
+# CHECK: :[[#@LINE-1]]:14: error: register must be a GPR from x8 to x15
 c.subw   a0, a6
-# CHECK: :[[#@LINE-1]]:14: error: invalid operand for instruction
+# CHECK: :[[#@LINE-1]]:14: error: register must be a GPR from x8 to x15
 
 ## GPRNoX0
 c.ldsp  x0, 4(sp)

@@ -2293,11 +2293,11 @@ LegalizerHelper::widenScalarMergeValues(MachineInstr &MI, unsigned TypeIdx,
   // %10:_(s12) = G_MERGE_VALUES %8, %9
 
   const int GCD = std::gcd(SrcSize, WideSize);
-  LLT GCDTy = LLT::scalar(GCD);
+  LLT GCDTy = WideTy.changeElementSize(GCD);
 
   SmallVector<Register, 8> NewMergeRegs;
   SmallVector<Register, 8> Unmerges;
-  LLT WideDstTy = LLT::scalar(NumMerge * WideSize);
+  LLT WideDstTy = WideTy.changeElementSize(NumMerge * WideSize);
 
   // Decompose the original operands if they don't evenly divide.
   for (const MachineOperand &MO : llvm::drop_begin(MI.operands())) {
@@ -4309,8 +4309,8 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerLoad(GAnyLoad &LoadMI) {
     AnyExtTy = LLT::scalar(AnyExtSize);
     OffsetCstRes = LLT::scalar(PtrTy.getSizeInBits());
   } else {
-    AnyExtTy = EltTy.changeElementSize(AnyExtSize);
-    OffsetCstRes = EltTy.changeElementSize(PtrTy.getSizeInBits());
+    AnyExtTy = DstTy.changeElementSize(AnyExtSize);
+    OffsetCstRes = DstTy.changeElementSize(PtrTy.getSizeInBits());
   }
 
   auto LargeLoad = MIRBuilder.buildLoadInstr(TargetOpcode::G_ZEXTLOAD, AnyExtTy,
@@ -4947,6 +4947,7 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
   case G_MEMCPY:
   case G_MEMMOVE:
   case G_MEMCPY_INLINE:
+  case G_MEMSET_INLINE:
     return lowerMemCpyFamily(MI);
   case G_ZEXT:
   case G_SEXT:
@@ -11005,7 +11006,8 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerMemCpyFamily(
   const unsigned Opc = MI.getOpcode();
   assert((Opc == TargetOpcode::G_MEMCPY ||
           Opc == TargetOpcode::G_MEMCPY_INLINE ||
-          Opc == TargetOpcode::G_MEMMOVE || Opc == TargetOpcode::G_MEMSET) &&
+          Opc == TargetOpcode::G_MEMMOVE || Opc == TargetOpcode::G_MEMSET ||
+          Opc == TargetOpcode::G_MEMSET_INLINE) &&
          "Expected memcpy like instruction");
 
   if (KnownLen == 0) {
@@ -11020,7 +11022,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerMemCpyFamily(
   if (Opc == TargetOpcode::G_MEMMOVE)
     return lowerMemmove(MI, Dst, Src, KnownLen, Alignment, DstAlignCanChange,
                         MemOps);
-  if (Opc == TargetOpcode::G_MEMSET)
+  if (Opc == TargetOpcode::G_MEMSET || Opc == TargetOpcode::G_MEMSET_INLINE)
     return lowerMemset(MI, Dst, Src, KnownLen, Alignment, DstAlignCanChange,
                        MemOps);
   return UnableToLegalize;

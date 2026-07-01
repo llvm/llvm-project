@@ -520,6 +520,13 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                                         work-item                       Add product
                                                                         IDs                             names.
 
+     ``gfx1154``                 ``amdgcn``   APU   - cumode          - Architected                   *TBA*
+                                                    - wavefrontsize64   flat
+                                                                        scratch                       .. TODO::
+                                                                      - Packed
+                                                                        work-item                       Add product
+                                                                        IDs                             names.
+
      **GCN GFX11.7 (RDNA 4m)**
      -----------------------------------------------------------------------------------------------------------------------
      ``gfx1170``                 ``amdgcn``   APU   - cumode          - Architected                   *TBA*
@@ -671,12 +678,10 @@ Generic processor code objects are versioned. See :ref:`amdgpu-generic-processor
                                          - ``gfx1102``                        - Packed          hazards specific to some targets
                                          - ``gfx1103``                          work-item       within this family.
                                          - ``gfx1150``                          IDs
-                                         - ``gfx1151``
+                                         - ``gfx1151``                                          Not all VGPRs can be used on:
                                          - ``gfx1152``
-                                         - ``gfx1153``                                          Not all VGPRs can be used on:
-
-                                                                                                - ``gfx1100``
-                                                                                                - ``gfx1101``
+                                         - ``gfx1153``                                          - ``gfx1100``
+                                         - ``gfx1154``                                          - ``gfx1101``
                                                                                                 - ``gfx1151``
 
                                                                                                 SALU floating point instructions
@@ -696,6 +701,12 @@ Generic processor code objects are versioned. See :ref:`amdgpu-generic-processor
                                                                                                 - ``gfx1103``
 
 
+     ``gfx11-7-generic``  ``amdgcn``     - ``gfx1170``     - wavefrontsize64  - Architected     No restrictions.
+                                         - ``gfx1171``     - cumode             flat scratch
+                                         - ``gfx1172``                        - Packed
+                                                                                work-item
+                                                                                IDs
+
      ``gfx12-generic``    ``amdgcn``     - ``gfx1200``     - wavefrontsize64  - Architected     No restrictions.
                                          - ``gfx1201``     - cumode             flat scratch
                                                                               - Packed
@@ -704,6 +715,12 @@ Generic processor code objects are versioned. See :ref:`amdgpu-generic-processor
 
      ``gfx12-5-generic``  ``amdgcn``     - ``gfx1250``                        - Architected     Functionally equivalent to
                                          - ``gfx1251``                          flat scratch    gfx1250.
+                                                                              - Packed
+                                                                                work-item
+                                                                                IDs
+
+     ``gfx13-generic``    ``amdgcn``     - ``gfx1310``     - wavefrontsize64  - Architected     No restrictions.
+                                                           - cumode             flat scratch
                                                                               - Packed
                                                                                 work-item
                                                                                 IDs
@@ -2259,6 +2276,9 @@ The AMDGPU backend supports the following LLVM IR attributes.
      "amdgpu-flat-work-group-size"="min,max"          Specify the minimum and maximum flat work group sizes that
                                                       will be specified when the kernel is dispatched. Generated
                                                       by the ``amdgpu_flat_work_group_size`` CLANG attribute [CLANG-ATTR]_.
+                                                      If the ``reqd_work_group_size`` metadata is present, the product
+                                                      of its three workgroup size dimensions must match both ``min``
+                                                      and ``max``.
                                                       The IR implied default value is 1,1024. Clang may emit this attribute
                                                       with more restrictive bounds depending on language defaults.
                                                       If the actual block or workgroup size exceeds the limit at any point during
@@ -3045,7 +3065,7 @@ The AMDGPU backend uses the following ELF header:
      ``EF_AMDGPU_MACH_AMDGCN_GFX11_GENERIC``    0x054      ``gfx11-generic``
      ``EF_AMDGPU_MACH_AMDGCN_GFX1152``          0x055      ``gfx1152``.
      *reserved*                                 0x056      Reserved.
-     *reserved*                                 0x057      Reserved.
+     ``EF_AMDGPU_MACH_AMDGCN_GFX1154``          0x057      ``gfx1154``.
      ``EF_AMDGPU_MACH_AMDGCN_GFX1153``          0x058      ``gfx1153``.
      ``EF_AMDGPU_MACH_AMDGCN_GFX12_GENERIC``    0x059      ``gfx12-generic``
      ``EF_AMDGPU_MACH_AMDGCN_GFX1251``          0x05a      ``gfx1251``
@@ -3055,6 +3075,9 @@ The AMDGPU backend uses the following ELF header:
      ``EF_AMDGPU_MACH_AMDGCN_GFX1171``          0x05e      ``gfx1171``
      ``EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC``   0x05f      ``gfx9-4-generic``
      *reserved*                                 0x060      Reserved.
+     *reserved*                                 0x061      Reserved.
+     ``EF_AMDGPU_MACH_AMDGCN_GFX11_7_GENERIC``  0x062      ``gfx11-7-generic``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX13_GENERIC``    0x063      ``gfx13-generic``
      *reserved*                                 0x070      Reserved.
      ========================================== ========== =============================
 

@@ -81,6 +81,7 @@ if(STUBS_LIBRARY)
 else()
   # Get C++ files
   set(LIBOMP_CXXFILES
+    kmp_adt.cpp
     kmp_alloc.cpp
     kmp_atomic.cpp
     kmp_csupport.cpp

@@ -19,7 +19,7 @@ subroutine loop_transformation_construct2
   integer :: v(i)
 
   !$omp do
-  !ERROR: At least one of SIZES clause must appear on the TILE directive
+  !ERROR: At least one of SIZES clause must appear on TILE directive
   !$omp tile
   do x = 1, i
     v(x) = v(x) * 2
@@ -54,7 +54,7 @@ subroutine loop_transformation_construct4
     v(x) = v(x) * 2
   end do
   !ERROR: This construct should contain a DO-loop or a loop-nest-generating construct
-  !ERROR: At least one of SIZES clause must appear on the TILE directive
+  !ERROR: At least one of SIZES clause must appear on TILE directive
   !$omp tile
 end subroutine
 
@@ -66,7 +66,7 @@ subroutine loop_transformation_construct5
 
   !$omp do
   !ERROR: This construct requires a canonical loop nest
-  !ERROR: At least one of SIZES clause must appear on the TILE directive
+  !ERROR: At least one of SIZES clause must appear on TILE directive
   !$omp tile
   !BECAUSE: Fully unrolled loop does not result in a loop nest
   !$omp unroll full
@@ -83,7 +83,7 @@ subroutine loop_transformation_construct6
 
   !$omp do
   !ERROR: This construct requires a canonical loop nest
-  !ERROR: At least one of SIZES clause must appear on the TILE directive
+  !ERROR: At least one of SIZES clause must appear on TILE directive
   !$omp tile
   !BECAUSE: Fully unrolled loop does not result in a loop nest
   !$omp unroll
@@ -99,7 +99,7 @@ subroutine loop_transformation_construct7
   integer :: v(i)
 
   !$omp do
-  !ERROR: At least one of SIZES clause must appear on the TILE directive
+  !ERROR: At least one of SIZES clause must appear on TILE directive
   !$omp tile
   !$omp unroll partial(2)
   do x = 1, i

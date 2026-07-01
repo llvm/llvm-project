@@ -17,6 +17,7 @@
 #define EDITLINE_TEST_DUMP_OUTPUT 0
 
 #include <stdio.h>
+#include <sys/ioctl.h>
 #include <unistd.h>
 
 #include "gmock/gmock.h"
@@ -62,6 +63,8 @@ public:
                 size_t timeout_millis);
 
   void ConsumeAllOutput();
+
+  bool SetTerminalSize(unsigned short columns, unsigned short rows);
 
 private:
   bool IsInputComplete(lldb_private::Editline *editline,
@@ -214,6 +217,14 @@ void EditlineAdapter::ConsumeAllOutput() {
   }
 }
 
+bool EditlineAdapter::SetTerminalSize(unsigned short columns,
+                                      unsigned short rows) {
+  struct winsize ws = {};
+  ws.ws_col = columns;
+  ws.ws_row = rows;
+  return ::ioctl(_el_primary_file->GetDescriptor(), TIOCSWINSZ, &ws) == 0;
+}
+
 class EditlineTestFixture : public ::testing::Test {
   SubsystemRAII<FileSystem, HostInfo> subsystems;
   EditlineAdapter _el_adapter;
@@ -287,6 +298,30 @@ TEST_F(EditlineTestFixture, EditlineReceivesMultiLineText) {
     reported_lines.push_back(line);
 
   EXPECT_THAT(reported_lines, testing::ContainerEq(input_lines));
+}
+
+TEST_F(EditlineTestFixture, TerminalResizeIsAppliedBeforeRefresh) {
+  EditlineAdapter &adapter = GetEditlineAdapter();
+  Editline &editline = adapter.GetEditline();
+
+  // Drive one line so the EditLine instance is configured and has queried the
+  // initial terminal size.
+  EXPECT_TRUE(adapter.SendLine("hello"));
+  std::string line;
+  bool interrupted = false;
+  EXPECT_TRUE(adapter.GetLine(line, interrupted, TIMEOUT_MILLIS));
+
+  const size_t initial_width = editline.GetTerminalWidth();
+  const unsigned short new_width = initial_width == 80 ? 100 : 80;
+  ASSERT_TRUE(adapter.SetTerminalSize(new_width, 24));
+
+  // A resize signaled out of band stays pending until a repaint consumes it.
+  // Refresh performs that repaint, so it must redraw at the new size rather
+  // than the size cached before the resize.
+  editline.TerminalSizeChanged();
+  editline.Refresh();
+
+  EXPECT_EQ(editline.GetTerminalWidth(), static_cast<size_t>(new_width));
 }
 
 #endif

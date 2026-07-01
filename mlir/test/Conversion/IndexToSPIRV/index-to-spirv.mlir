@@ -1,9 +1,10 @@
-// RUN: mlir-opt %s -convert-index-to-spirv | FileCheck %s
-// RUN: mlir-opt %s -convert-index-to-spirv=use-64bit-index=false | FileCheck %s --check-prefix=INDEX32
-// RUN: mlir-opt %s -convert-index-to-spirv=use-64bit-index=true | FileCheck %s --check-prefix=INDEX64
+// RUN: mlir-opt %s -split-input-file -convert-index-to-spirv | FileCheck %s
+// RUN: mlir-opt %s -split-input-file -convert-index-to-spirv=use-64bit-index=false | FileCheck %s --check-prefix=INDEX32
+// RUN: mlir-opt %s -split-input-file -convert-index-to-spirv=use-64bit-index=true | FileCheck %s --check-prefix=INDEX64
+// RUN: mlir-opt %s -split-input-file -convert-index-to-spirv | FileCheck %s --check-prefix=CL
 
 module attributes {
-  spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [Int64], []>, #spirv.resource_limits<>>
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [Shader, Int64], []>, #spirv.resource_limits<>>
 } {
 // CHECK-LABEL: @trivial_ops
 func.func @trivial_ops(%a: index, %b: index) {
@@ -218,5 +219,26 @@ func.func @index_cast_to(%a: i32, %b: i64) -> (index, index, index, index) {
   // INDEX32: %[[V3:.*]] = spirv.UConvert %[[B]] : i64 to i32
   %3 = index.castu %b : i64 to index
   return %0, %1, %2, %3 : index, index, index, index
+}
+}
+
+// -----
+
+// On an OpenCL/Kernel target the GLSL extended ops are unavailable, so
+// index.min/max must lower to the OpenCL extended instructions instead.
+module attributes {
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [Kernel, Int64], []>, #spirv.resource_limits<>>
+} {
+// CL-LABEL: @min_max_ops
+func.func @min_max_ops(%a: index, %b: index) {
+  // CL: spirv.CL.s_max
+  %0 = index.maxs %a, %b
+  // CL: spirv.CL.u_max
+  %1 = index.maxu %a, %b
+  // CL: spirv.CL.s_min
+  %2 = index.mins %a, %b
+  // CL: spirv.CL.u_min
+  %3 = index.minu %a, %b
+  return
 }
 }

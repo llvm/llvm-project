@@ -334,6 +334,42 @@ inline raw_ostream &operator<<(raw_ostream &OS, const Pointer &P) {
   return OS;
 }
 
+inline AnyValue addNoWrap(const APInt &LHS, const APInt &RHS, bool HasNSW,
+                          bool HasNUW) {
+  APInt Res = LHS + RHS;
+  if (HasNUW && Res.ult(RHS))
+    return AnyValue::poison();
+  if (HasNSW && LHS.isNonNegative() == RHS.isNonNegative() &&
+      LHS.isNonNegative() != Res.isNonNegative())
+    return AnyValue::poison();
+  return Res;
+}
+
+inline AnyValue subNoWrap(const APInt &LHS, const APInt &RHS, bool HasNSW,
+                          bool HasNUW) {
+  APInt Res = LHS - RHS;
+  if (HasNUW && Res.ugt(LHS))
+    return AnyValue::poison();
+  if (HasNSW && LHS.isNonNegative() != RHS.isNonNegative() &&
+      LHS.isNonNegative() != Res.isNonNegative())
+    return AnyValue::poison();
+  return Res;
+}
+
+inline AnyValue mulNoWrap(const APInt &LHS, const APInt &RHS, bool HasNSW,
+                          bool HasNUW) {
+  bool Overflow = false;
+  APInt Res = LHS.smul_ov(RHS, Overflow);
+  if (HasNSW && Overflow)
+    return AnyValue::poison();
+  if (HasNUW) {
+    (void)LHS.umul_ov(RHS, Overflow);
+    if (Overflow)
+      return AnyValue::poison();
+  }
+  return Res;
+}
+
 } // namespace llvm::ubi
 
 #endif

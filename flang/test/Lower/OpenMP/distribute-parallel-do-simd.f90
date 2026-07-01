@@ -112,7 +112,7 @@ implicit none
 integer :: x_min,x_max,y_min,y_max
 integer :: i,j
 
-! CHECK:           omp.target {{.*}} {
+! CHECK:           omp.target kernel_type(spmd) {{.*}} {
 ! CHECK:             %[[X_MAX_MAPPED:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "{{.*}}x_max"}
 ! CHECK:             omp.teams {
 ! CHECK:               omp.parallel {

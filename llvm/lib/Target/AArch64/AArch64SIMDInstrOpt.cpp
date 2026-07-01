@@ -36,6 +36,7 @@
 #include "AArch64Subtarget.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -52,7 +53,6 @@
 #include "llvm/MC/MCSchedule.h"
 #include "llvm/Pass.h"
 #include <map>
-#include <unordered_map>
 
 using namespace llvm;
 
@@ -78,7 +78,7 @@ public:
 
   using SIMDInstrTableMap = std::map<std::pair<unsigned, std::string>, bool>;
 
-  using InterlEarlyExitMap = std::unordered_map<std::string, bool>;
+  using InterlEarlyExitMap = StringMap<bool>;
 
   // The two maps below are used to cache decisions instead of recomputing. Note
   // that we're only storing references, the data is scoped at the Pass level to

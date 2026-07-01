@@ -32,6 +32,7 @@ cc_library(
         "//flang/include/flang/Optimizer/HLFIR:HLFIRHeaders",
         "//flang/include/flang/Optimizer/OpenACC:OpenACCHeaders",
         "//flang/include/flang/Optimizer/Support:FIRSupportHeaders",
+        "//flang/include/flang/Optimizer/Transforms:TransformsHeaders",
         "//flang/lib/Optimizer/Builder:FIRBuilder",
         "//flang/lib/Optimizer/Dialect:FIRDialect",
         "//flang/lib/Optimizer/Dialect/CUF:CUFDialect",

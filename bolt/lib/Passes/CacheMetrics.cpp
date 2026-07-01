@@ -14,7 +14,7 @@
 #include "bolt/Passes/CacheMetrics.h"
 #include "bolt/Core/BinaryBasicBlock.h"
 #include "bolt/Core/BinaryFunction.h"
-#include <unordered_map>
+#include <cmath>
 
 using namespace llvm;
 using namespace bolt;
@@ -29,10 +29,9 @@ constexpr unsigned ITLBPageSize = 4096;
 constexpr unsigned ITLBEntries = 16;
 
 /// Initialize and return a position map for binary basic blocks
-void extractBasicBlockInfo(
-    const BinaryFunctionListType &BinaryFunctions,
-    std::unordered_map<BinaryBasicBlock *, uint64_t> &BBAddr,
-    std::unordered_map<BinaryBasicBlock *, uint64_t> &BBSize) {
+void extractBasicBlockInfo(const BinaryFunctionListType &BinaryFunctions,
+                           DenseMap<BinaryBasicBlock *, uint64_t> &BBAddr,
+                           DenseMap<BinaryBasicBlock *, uint64_t> &BBSize) {
 
   for (BinaryFunction *BF : BinaryFunctions) {
     const BinaryContext &BC = BF->getBinaryContext();
@@ -55,8 +54,8 @@ void extractBasicBlockInfo(
 /// (the number of fallthrough branches, the total number of branches)
 std::pair<uint64_t, uint64_t>
 calcTSPScore(const BinaryFunctionListType &BinaryFunctions,
-             const std::unordered_map<BinaryBasicBlock *, uint64_t> &BBAddr,
-             const std::unordered_map<BinaryBasicBlock *, uint64_t> &BBSize) {
+             const DenseMap<BinaryBasicBlock *, uint64_t> &BBAddr,
+             const DenseMap<BinaryBasicBlock *, uint64_t> &BBSize) {
   uint64_t Score = 0;
   uint64_t JumpCount = 0;
   for (BinaryFunction *BF : BinaryFunctions) {
@@ -94,9 +93,9 @@ using Predecessors = std::vector<std::pair<BinaryFunction *, uint64_t>>;
 
 /// Build a simplified version of the call graph: For every function, keep
 /// its callers and the frequencies of the calls
-std::unordered_map<const BinaryFunction *, Predecessors>
+DenseMap<const BinaryFunction *, Predecessors>
 extractFunctionCalls(const BinaryFunctionListType &BinaryFunctions) {
-  std::unordered_map<const BinaryFunction *, Predecessors> Calls;
+  DenseMap<const BinaryFunction *, Predecessors> Calls;
 
   for (BinaryFunction *SrcFunction : BinaryFunctions) {
     const BinaryContext &BC = SrcFunction->getBinaryContext();
@@ -139,15 +138,15 @@ extractFunctionCalls(const BinaryFunctionListType &BinaryFunctions) {
 /// is proportional to the number of samples corresponding to the functions on
 /// the page. The following procedure detects short and long calls, and
 /// estimates the expected number of cache misses for the long ones.
-double expectedCacheHitRatio(
-    const BinaryFunctionListType &BinaryFunctions,
-    const std::unordered_map<BinaryBasicBlock *, uint64_t> &BBAddr,
-    const std::unordered_map<BinaryBasicBlock *, uint64_t> &BBSize) {
-  std::unordered_map<const BinaryFunction *, Predecessors> Calls =
+double
+expectedCacheHitRatio(const BinaryFunctionListType &BinaryFunctions,
+                      const DenseMap<BinaryBasicBlock *, uint64_t> &BBAddr,
+                      const DenseMap<BinaryBasicBlock *, uint64_t> &BBSize) {
+  DenseMap<const BinaryFunction *, Predecessors> Calls =
       extractFunctionCalls(BinaryFunctions);
   // Compute 'hotness' of the functions
   double TotalSamples = 0;
-  std::unordered_map<BinaryFunction *, double> FunctionSamples;
+  DenseMap<BinaryFunction *, double> FunctionSamples;
   for (BinaryFunction *BF : BinaryFunctions) {
     double Samples = 0;
     for (std::pair<BinaryFunction *, uint64_t> Pair : Calls[BF])
@@ -158,7 +157,7 @@ double expectedCacheHitRatio(
   }
 
   // Compute 'hotness' of the pages
-  std::unordered_map<uint64_t, double> PageSamples;
+  DenseMap<uint64_t, double> PageSamples;
   for (BinaryFunction *BF : BinaryFunctions) {
     if (BF->getLayout().block_empty())
       continue;
@@ -266,8 +265,8 @@ void CacheMetrics::printAll(raw_ostream &OS,
                double(HotCodeSize) / HugePage2MB);
 
   // Stats related to expected cache performance
-  std::unordered_map<BinaryBasicBlock *, uint64_t> BBAddr;
-  std::unordered_map<BinaryBasicBlock *, uint64_t> BBSize;
+  DenseMap<BinaryBasicBlock *, uint64_t> BBAddr;
+  DenseMap<BinaryBasicBlock *, uint64_t> BBSize;
   extractBasicBlockInfo(BFs, BBAddr, BBSize);
 
   OS << "  Expected i-TLB cache hit ratio: "

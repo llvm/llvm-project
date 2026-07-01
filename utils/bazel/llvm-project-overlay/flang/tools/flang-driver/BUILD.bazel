@@ -22,6 +22,7 @@ cc_binary(
     deps = [
         "//clang:basic",
         "//clang:driver",
+        "//clang:options",
         "//flang:FrontendHeaders",
         "//flang:FrontendToolHeaders",
         "//flang:config",

@@ -961,7 +961,8 @@ public:
   void AddNameToBreakpoint(lldb::BreakpointSP &bp_sp, llvm::StringRef name,
                            Status &error);
 
-  void RemoveNameFromBreakpoint(lldb::BreakpointSP &bp_sp, ConstString name);
+  void RemoveNameFromBreakpoint(lldb::BreakpointSP &bp_sp,
+                                llvm::StringRef name);
 
   BreakpointName *FindBreakpointName(ConstString name, bool can_create,
                                      Status &error);
@@ -2087,9 +2088,8 @@ protected:
   SectionLoadHistory m_section_load_history;
   BreakpointList m_breakpoint_list;
   BreakpointList m_internal_breakpoint_list;
-  using BreakpointNameList =
-      std::map<ConstString, std::unique_ptr<BreakpointName>>;
-  BreakpointNameList m_breakpoint_names;
+  using BreakpointNameMap = llvm::StringMap<std::unique_ptr<BreakpointName>>;
+  BreakpointNameMap m_breakpoint_names;
 
   std::map<lldb::user_id_t, BreakpointResolverOverrideUP>
       m_breakpoint_overrides;

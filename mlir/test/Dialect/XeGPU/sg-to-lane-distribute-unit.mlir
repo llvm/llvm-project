@@ -794,6 +794,61 @@ gpu.func @vector_extract_strided_slice_partial_offsets() {
   gpu.return
 }
 
+// A convert_layout that only repacks lane_data along the non-distributed outer
+// dimension (from [4, 1] to [1, 1] with order = [1, 0]), keeping lane_layout
+// unchanged, folds to its source when consumed by exactly 4 (== outer
+// lane_data) extract_strided_slice ops. After distribution both layouts yield
+// the same per-lane vector, so the convert is redundant and the slices operate
+// directly on the distributed source.
+// CHECK-LABEL: gpu.func @convert_layout_repack_lane_data
+// CHECK-NOT:     xegpu.convert_layout
+// CHECK:         %[[SRC:.*]] = builtin.unrealized_conversion_cast %{{.*}} : vector<32x16xi8> to vector<32x1xi8>
+// CHECK:         vector.extract_strided_slice %[[SRC]] {offsets = [0, 0], sizes = [8, 1], strides = [1, 1]} : vector<32x1xi8> to vector<8x1xi8>
+// CHECK:         vector.extract_strided_slice %[[SRC]] {offsets = [8, 0], sizes = [8, 1], strides = [1, 1]} : vector<32x1xi8> to vector<8x1xi8>
+// CHECK:         vector.extract_strided_slice %[[SRC]] {offsets = [16, 0], sizes = [8, 1], strides = [1, 1]} : vector<32x1xi8> to vector<8x1xi8>
+// CHECK:         vector.extract_strided_slice %[[SRC]] {offsets = [24, 0], sizes = [8, 1], strides = [1, 1]} : vector<32x1xi8> to vector<8x1xi8>
+gpu.func @convert_layout_repack_lane_data() {
+  %src = "some_op"() : () -> vector<32x16xi8>
+  %cvt = xegpu.convert_layout %src
+    <{
+      input_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [4, 1]>,
+      target_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1], order = [1, 0]>
+    }> : vector<32x16xi8>
+  %s0 = vector.extract_strided_slice %cvt
+    {offsets = [0, 0], sizes = [8, 16], strides = [1, 1]}
+    : vector<32x16xi8> to vector<8x16xi8>
+  %s1 = vector.extract_strided_slice %cvt
+    {offsets = [8, 0], sizes = [8, 16], strides = [1, 1]}
+    : vector<32x16xi8> to vector<8x16xi8>
+  %s2 = vector.extract_strided_slice %cvt
+    {offsets = [16, 0], sizes = [8, 16], strides = [1, 1]}
+    : vector<32x16xi8> to vector<8x16xi8>
+  %s3 = vector.extract_strided_slice %cvt
+    {offsets = [24, 0], sizes = [8, 16], strides = [1, 1]}
+    : vector<32x16xi8> to vector<8x16xi8>
+  %a0 = xegpu.convert_layout %s0
+    <{
+      input_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1], order = [1, 0]>,
+      target_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1], order = [1, 0]>
+    }> : vector<8x16xi8>
+  %a1 = xegpu.convert_layout %s1
+    <{
+      input_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1], order = [1, 0]>,
+      target_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1], order = [1, 0]>
+    }> : vector<8x16xi8>
+  %a2 = xegpu.convert_layout %s2
+    <{
+      input_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1], order = [1, 0]>,
+      target_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1], order = [1, 0]>
+    }> : vector<8x16xi8>
+  %a3 = xegpu.convert_layout %s3
+    <{
+      input_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1], order = [1, 0]>,
+      target_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1], order = [1, 0]>
+    }> : vector<8x16xi8>
+  gpu.return
+}
+
 // CHECK-LABEL: gpu.func @vector_insert_strided_slice_distributed_dim_fully_inserted
 // CHECK: %[[ISS:.*]] = vector.insert_strided_slice %{{.*}}, %{{.*}} {offsets = [24, 0], strides = [1, 1]} : vector<16x1xf32> into vector<64x1xf32>
 gpu.func @vector_insert_strided_slice_distributed_dim_fully_inserted() {

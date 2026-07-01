@@ -127,6 +127,7 @@ void ClangOpcodesEmitter::EmitInterpFnDispatchers(raw_ostream &OS, StringRef N,
     bool CanReturn = R->getValueAsBit("CanReturn");
     const auto &Args = R->getValueAsListOfDefs("Args");
     bool ChangesPC = R->getValueAsBit("ChangesPC");
+    bool CanFail = R->getValueAsBit("CanFail");
 
     if (Args.empty()) {
       if (CanReturn) {
@@ -137,10 +138,19 @@ void ClangOpcodesEmitter::EmitInterpFnDispatchers(raw_ostream &OS, StringRef N,
         return;
       }
 
-      OS << "  if (!" << N;
+      OS << "  ";
+      if (CanFail)
+        OS << "if (!";
+
+      OS << N;
       PrintTypes(OS, TS);
-      OS << "(S, PC))\n";
-      OS << "    return false;\n";
+      OS << "(S, PC)";
+
+      if (CanFail)
+        OS << ") return false";
+
+      OS << ";\n";
+
       OS << "#if USE_TAILCALLS\n";
       OS << "  MUSTTAIL return InterpNext(S, PC);\n";
       OS << "#else\n";
@@ -168,7 +178,11 @@ void ClangOpcodesEmitter::EmitInterpFnDispatchers(raw_ostream &OS, StringRef N,
       OS << "ReadArg<" << Arg->getValueAsString("Name") << ">(S, PC);\n";
     }
 
-    OS << "    if (!" << N;
+    OS << "    ";
+    if (CanFail)
+      OS << "if (!";
+
+    OS << N;
     PrintTypes(OS, TS);
     OS << "(S";
     if (ChangesPC)
@@ -177,9 +191,13 @@ void ClangOpcodesEmitter::EmitInterpFnDispatchers(raw_ostream &OS, StringRef N,
       OS << ", OpPC";
     for (size_t I = 0, N = Args.size(); I < N; ++I)
       OS << ", V" << I;
-    OS << "))\n";
-    OS << "      return false;\n";
 
+    OS << ")";
+
+    if (CanFail)
+      OS << ") return false";
+
+    OS << ";\n";
     OS << "  }\n";
 
     if (!CanReturn) {

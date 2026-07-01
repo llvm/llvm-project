@@ -19,8 +19,13 @@ RUN apt-get update && \
         LLVM-${LLVM_VERSION}-Linux-X64/bin/git-clang-format && \
     rm llvm.tar.xz
 
+FROM docker.io/library/ubuntu:24.04@sha256:c4a8d5503dfb2a3eb8ab5f807da5bc69a85730fb49b5cfca2330194ebcc41c7b AS minimal
+# Create a new user with id 1001 as that is the user id that
+# Github Actions uses to perform the checkout action.
+RUN useradd gha -u 1001 -m -s /bin/bash
 
-FROM docker.io/library/ubuntu:24.04@sha256:c4a8d5503dfb2a3eb8ab5f807da5bc69a85730fb49b5cfca2330194ebcc41c7b AS base
+
+FROM minimal AS base
 ENV LLVM_SYSROOT=/opt/llvm
 ENV PATH=${LLVM_SYSROOT}/bin:${PATH}
 
@@ -38,9 +43,6 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-# Create a new user with id 1001 as that is the user id that
-# Github Actions uses to perform the checkout action.
-RUN useradd gha -u 1001 -m -s /bin/bash
 RUN adduser gha sudo
 RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 # Don't set USER gha right away because we still need to install packages
@@ -114,7 +116,7 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-FROM base as ci-container-github-automation
+FROM minimal AS ci-container-github-automation
 
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y \

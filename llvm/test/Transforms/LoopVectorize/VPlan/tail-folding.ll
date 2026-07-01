@@ -47,6 +47,7 @@ define i32 @live_out(ptr noalias %p, i32 %n) {
 ; CHECK-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = exiting-iv-value ir<%iv>
 ; CHECK-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = extract-last-part vp<[[VP8]]>
 ; CHECK-NEXT:    EMIT vp<[[VP12:%[0-9]+]]> = extract-last-lane vp<[[VP11]]>
+; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<%n>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT vp<[[VP13:%[0-9]+]]> = last-active-lane vp<[[VP6]]>
 ; CHECK-NEXT:    EMIT vp<[[VP14:%[0-9]+]]> = extract-lane vp<[[VP13]]>, vp<[[VP8]]>
 ; CHECK-NEXT:    EMIT branch-on-cond ir<true>
@@ -142,6 +143,7 @@ define i32 @conditional_live_out(ptr noalias %p, i32 %n, i1 %c) {
 ; CHECK-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = exiting-iv-value ir<%iv>
 ; CHECK-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = extract-last-part vp<[[VP8]]>
 ; CHECK-NEXT:    EMIT vp<[[VP12:%[0-9]+]]> = extract-last-lane vp<[[VP11]]>
+; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<%n>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT vp<[[VP13:%[0-9]+]]> = last-active-lane vp<[[VP6]]>
 ; CHECK-NEXT:    EMIT vp<[[VP14:%[0-9]+]]> = extract-lane vp<[[VP13]]>, vp<[[VP8]]>
 ; CHECK-NEXT:    EMIT branch-on-cond ir<true>
@@ -226,6 +228,7 @@ define void @header_unconditional_branch(ptr noalias %p, i32 %n) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
 ; CHECK-NEXT:    EMIT vp<[[VP9:%[0-9]+]]> = exiting-iv-value ir<%iv>
+; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<%n>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond ir<true>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
@@ -305,6 +308,7 @@ define i32 @reduction(ptr noalias %p, i32 %n) {
 ; CHECK-NEXT:    EMIT vp<[[VP12:%[0-9]+]]> = extract-last-lane vp<[[VP11]]>
 ; CHECK-NEXT:    EMIT vp<[[VP13:%[0-9]+]]> = extract-last-part vp<[[VP8]]>
 ; CHECK-NEXT:    EMIT vp<[[VP14:%[0-9]+]]> = extract-last-lane vp<[[VP13]]>
+; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<%n>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT vp<[[VP15:%[0-9]+]]> = last-active-lane vp<[[VP6]]>
 ; CHECK-NEXT:    EMIT vp<[[VP16:%[0-9]+]]> = extract-lane vp<[[VP15]]>, vp<[[VP8]]>
 ; CHECK-NEXT:    EMIT vp<[[VP17:%[0-9]+]]> = last-active-lane vp<[[VP6]]>

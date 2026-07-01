@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/MathToXeVM/MathToXeVM.h"
+#include "mlir/Analysis/DataLayoutAnalysis.h"
 #include "mlir/Conversion/ArithCommon/AttrToLLVMConverter.h"
 #include "mlir/Dialect/LLVMIR/FunctionCallUtils.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
@@ -14,6 +15,9 @@
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/Pass/Pass.h"
 #include "llvm/Support/FormatVariadic.h"
+
+#include "../GPUCommon/GPUOpsLowering.h"
+#include "../GPUCommon/OpToFuncCallLowering.h"
 
 namespace mlir {
 #define GEN_PASS_DEF_CONVERTMATHTOXEVM
@@ -119,33 +123,104 @@ struct ConvertNativeFuncPattern final : public OpConversionPattern<Op> {
   const StringRef nativeFunc;
 };
 
+template <typename OpTy>
+static void populateOCLExtSetOpPatterns(const LLVMTypeConverter &converter,
+                                        RewritePatternSet &patterns,
+                                        PatternBenefit benefit,
+                                        StringRef opName) {
+  std::string prefix = "__spirv_ocl_";
+  std::string mangledName = "_Z" +
+                            std::to_string(prefix.size() + opName.size()) +
+                            prefix + opName.str();
+
+  patterns.add<ScalarizeVectorOpLowering<OpTy>>(converter, benefit);
+  patterns.add<OpToFuncCallLowering<OpTy>>(
+      converter, mangledName + "f", mangledName + "d",
+      /*f32ApproxFunc=*/"", /*f16Func=*/"",
+      /*i32Func=*/"", benefit, LLVM::cconv::CConv::SPIR_FUNC);
+}
+
+void mlir::populateMathToScalarOCLExtSetConversionPatterns(
+    const LLVMTypeConverter &converter, RewritePatternSet &patterns,
+    PatternBenefit benefit) {
+  populateOCLExtSetOpPatterns<math::AcosOp>(converter, patterns, benefit,
+                                            "acos");
+  populateOCLExtSetOpPatterns<math::AcoshOp>(converter, patterns, benefit,
+                                             "acosh");
+  populateOCLExtSetOpPatterns<math::AsinOp>(converter, patterns, benefit,
+                                            "asin");
+  populateOCLExtSetOpPatterns<math::AsinhOp>(converter, patterns, benefit,
+                                             "asinh");
+  populateOCLExtSetOpPatterns<math::AtanOp>(converter, patterns, benefit,
+                                            "atan");
+  populateOCLExtSetOpPatterns<math::Atan2Op>(converter, patterns, benefit,
+                                             "atan2");
+  populateOCLExtSetOpPatterns<math::AtanhOp>(converter, patterns, benefit,
+                                             "atanh");
+  populateOCLExtSetOpPatterns<math::CbrtOp>(converter, patterns, benefit,
+                                            "cbrt");
+  populateOCLExtSetOpPatterns<math::CopySignOp>(converter, patterns, benefit,
+                                                "copysign");
+  populateOCLExtSetOpPatterns<math::CosOp>(converter, patterns, benefit, "cos");
+  populateOCLExtSetOpPatterns<math::CoshOp>(converter, patterns, benefit,
+                                            "cosh");
+  populateOCLExtSetOpPatterns<math::ErfOp>(converter, patterns, benefit, "erf");
+  populateOCLExtSetOpPatterns<math::ErfcOp>(converter, patterns, benefit,
+                                            "erfc");
+  populateOCLExtSetOpPatterns<math::ExpOp>(converter, patterns, benefit, "exp");
+  populateOCLExtSetOpPatterns<math::Exp2Op>(converter, patterns, benefit,
+                                            "exp2");
+  populateOCLExtSetOpPatterns<math::ExpM1Op>(converter, patterns, benefit,
+                                             "expm1");
+  populateOCLExtSetOpPatterns<math::LogOp>(converter, patterns, benefit, "log");
+  populateOCLExtSetOpPatterns<math::Log10Op>(converter, patterns, benefit,
+                                             "log10");
+  populateOCLExtSetOpPatterns<math::Log1pOp>(converter, patterns, benefit,
+                                             "log1p");
+  populateOCLExtSetOpPatterns<math::Log2Op>(converter, patterns, benefit,
+                                            "log2");
+  populateOCLExtSetOpPatterns<math::PowFOp>(converter, patterns, benefit,
+                                            "pow");
+  populateOCLExtSetOpPatterns<math::RsqrtOp>(converter, patterns, benefit,
+                                             "rsqrt");
+  populateOCLExtSetOpPatterns<math::SinOp>(converter, patterns, benefit, "sin");
+  populateOCLExtSetOpPatterns<math::SinhOp>(converter, patterns, benefit,
+                                            "sinh");
+  populateOCLExtSetOpPatterns<math::SqrtOp>(converter, patterns, benefit,
+                                            "sqrt");
+  populateOCLExtSetOpPatterns<math::TanOp>(converter, patterns, benefit, "tan");
+  populateOCLExtSetOpPatterns<math::TanhOp>(converter, patterns, benefit,
+                                            "tanh");
+}
+
 void mlir::populateMathToXeVMConversionPatterns(RewritePatternSet &patterns,
-                                                bool convertArith) {
-  patterns.add<ConvertNativeFuncPattern<math::ExpOp>>(patterns.getContext(),
-                                                      "__spirv_ocl_native_exp");
-  patterns.add<ConvertNativeFuncPattern<math::CosOp>>(patterns.getContext(),
-                                                      "__spirv_ocl_native_cos");
+                                                bool convertArith,
+                                                PatternBenefit benefit) {
+  patterns.add<ConvertNativeFuncPattern<math::ExpOp>>(
+      patterns.getContext(), "__spirv_ocl_native_exp", benefit);
+  patterns.add<ConvertNativeFuncPattern<math::CosOp>>(
+      patterns.getContext(), "__spirv_ocl_native_cos", benefit);
   patterns.add<ConvertNativeFuncPattern<math::Exp2Op>>(
-      patterns.getContext(), "__spirv_ocl_native_exp2");
-  patterns.add<ConvertNativeFuncPattern<math::LogOp>>(patterns.getContext(),
-                                                      "__spirv_ocl_native_log");
+      patterns.getContext(), "__spirv_ocl_native_exp2", benefit);
+  patterns.add<ConvertNativeFuncPattern<math::LogOp>>(
+      patterns.getContext(), "__spirv_ocl_native_log", benefit);
   patterns.add<ConvertNativeFuncPattern<math::Log2Op>>(
-      patterns.getContext(), "__spirv_ocl_native_log2");
+      patterns.getContext(), "__spirv_ocl_native_log2", benefit);
   patterns.add<ConvertNativeFuncPattern<math::Log10Op>>(
-      patterns.getContext(), "__spirv_ocl_native_log10");
+      patterns.getContext(), "__spirv_ocl_native_log10", benefit);
   patterns.add<ConvertNativeFuncPattern<math::PowFOp>>(
-      patterns.getContext(), "__spirv_ocl_native_powr");
+      patterns.getContext(), "__spirv_ocl_native_powr", benefit);
   patterns.add<ConvertNativeFuncPattern<math::RsqrtOp>>(
-      patterns.getContext(), "__spirv_ocl_native_rsqrt");
-  patterns.add<ConvertNativeFuncPattern<math::SinOp>>(patterns.getContext(),
-                                                      "__spirv_ocl_native_sin");
+      patterns.getContext(), "__spirv_ocl_native_rsqrt", benefit);
+  patterns.add<ConvertNativeFuncPattern<math::SinOp>>(
+      patterns.getContext(), "__spirv_ocl_native_sin", benefit);
   patterns.add<ConvertNativeFuncPattern<math::SqrtOp>>(
-      patterns.getContext(), "__spirv_ocl_native_sqrt");
-  patterns.add<ConvertNativeFuncPattern<math::TanOp>>(patterns.getContext(),
-                                                      "__spirv_ocl_native_tan");
+      patterns.getContext(), "__spirv_ocl_native_sqrt", benefit);
+  patterns.add<ConvertNativeFuncPattern<math::TanOp>>(
+      patterns.getContext(), "__spirv_ocl_native_tan", benefit);
   if (convertArith)
     patterns.add<ConvertNativeFuncPattern<arith::DivFOp>>(
-        patterns.getContext(), "__spirv_ocl_native_divide");
+        patterns.getContext(), "__spirv_ocl_native_divide", benefit);
 }
 
 namespace {
@@ -157,9 +232,26 @@ struct ConvertMathToXeVMPass
 } // namespace
 
 void ConvertMathToXeVMPass::runOnOperation() {
+  Operation *op = getOperation();
+  MLIRContext *ctx = op->getContext();
+
+  const auto &dl = getAnalysis<DataLayoutAnalysis>();
+
   RewritePatternSet patterns(&getContext());
-  populateMathToXeVMConversionPatterns(patterns, convertArith);
+  LowerToLLVMOptions options(ctx, dl.getAtOrAbove(op));
+  LLVMTypeConverter converter(ctx, options);
   ConversionTarget target(getContext());
+
+  // Native OCL patterns should take precedence for `fast` ops even when
+  // convertToOCL is set.
+  populateMathToXeVMConversionPatterns(patterns, convertArith,
+                                       convertToOCL + 1);
+  if (convertToOCL) {
+    populateMathToScalarOCLExtSetConversionPatterns(converter, patterns, 1);
+    target
+        .addIllegalOp<LLVM::CosOp, LLVM::ExpOp, LLVM::Exp2Op, LLVM::LogOp,
+                      LLVM::Log10Op, LLVM::Log2Op, LLVM::SinOp, LLVM::SqrtOp>();
+  }
   target.addLegalDialect<BuiltinDialect, LLVM::LLVMDialect>();
   if (failed(
           applyPartialConversion(getOperation(), target, std::move(patterns))))

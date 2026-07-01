@@ -61,11 +61,8 @@ emitc.func @return_two(%arg0: i32, %arg1: i32) -> !emitc.opaque<"struct return_i
 
 emitc.func @call_two(%arg0: i32) -> i32 {
   %0 = call @return_two(%arg0, %arg0) : (i32, i32) -> !emitc.opaque<"struct return_i32_i32">
-  %1 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.lvalue<!emitc.opaque<"struct return_i32_i32">>
-  assign %0 : !emitc.opaque<"struct return_i32_i32"> to %1 : <!emitc.opaque<"struct return_i32_i32">>
-  %2 = "emitc.member"(%1) <{member = "field1"}> : (!emitc.lvalue<!emitc.opaque<"struct return_i32_i32">>) -> !emitc.lvalue<i32>
-  %3 = load %2 : <i32>
-  return %3 : i32
+  %1 = "emitc.member"(%0) <{member = "field1"}> : (!emitc.opaque<"struct return_i32_i32">) -> i32
+  return %1 : i32
 }
 
 // CPP-DEFAULT: struct return_i32_i32 {
@@ -81,10 +78,8 @@ emitc.func @call_two(%arg0: i32) -> i32 {
 // CPP-DEFAULT-NEXT: }
 // CPP-DEFAULT-NEXT: int32_t call_two(int32_t [[V1:[^ ]*]]) {
 // CPP-DEFAULT-NEXT:   struct return_i32_i32 [[V2:[^ ]*]] = return_two([[V1]], [[V1]]);
-// CPP-DEFAULT-NEXT:   struct return_i32_i32 [[V3:[^ ]*]];
-// CPP-DEFAULT-NEXT:   [[V3]] = [[V2]];
-// CPP-DEFAULT-NEXT:   int32_t [[V4:[^ ]*]] = [[V3]].field1;
-// CPP-DEFAULT-NEXT:   return [[V4]];
+// CPP-DEFAULT-NEXT:   int32_t [[V3:[^ ]*]] = [[V2]].field1;
+// CPP-DEFAULT-NEXT:   return [[V3]];
 
 // CPP-DECLTOP: struct return_i32_i32 {
 // CPP-DECLTOP-NEXT:   int32_t field0;
@@ -100,9 +95,7 @@ emitc.func @call_two(%arg0: i32) -> i32 {
 // CPP-DECLTOP-NEXT: }
 // CPP-DECLTOP-NEXT: int32_t call_two(int32_t [[V1:[^ ]*]]) {
 // CPP-DECLTOP-NEXT:   struct return_i32_i32 [[V2:[^ ]*]];
-// CPP-DECLTOP-NEXT:   struct return_i32_i32 [[V3:[^ ]*]];
-// CPP-DECLTOP-NEXT:   int32_t [[V4:[^ ]*]];
+// CPP-DECLTOP-NEXT:   int32_t [[V3:[^ ]*]];
 // CPP-DECLTOP-NEXT:   [[V2]] = return_two([[V1]], [[V1]]);
-// CPP-DECLTOP:        [[V3]] = [[V2]];
-// CPP-DECLTOP-NEXT:   [[V4]] = [[V3]].field1;
-// CPP-DECLTOP-NEXT:   return [[V4]];
+// CPP-DECLTOP-NEXT:   [[V3]] = [[V2]].field1;
+// CPP-DECLTOP-NEXT:   return [[V3]];

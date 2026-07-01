@@ -109,6 +109,18 @@ define void @test_zero_first_arg(ptr %ap) {
   ret void
 }
 
+;; The first argument index is 0, and the format string is constant and doesn't
+;; contain a float specifier. The "float" aspect is optimized away, and it is
+;; transformed to call the modular implementation.
+define void @test_zero_first_arg_optimized(ptr %ap) {
+; CHECK-LABEL: @test_zero_first_arg_optimized(
+; CHECK-NEXT:    call void @zero_first_arg_mod(ptr nonnull @.str.int, ptr [[AP:%.*]])
+; CHECK-NEXT:    ret void
+;
+  call void @zero_first_arg(ptr @.str.int, ptr %ap)
+  ret void
+}
+
 declare void @zero_first_arg(ptr, ptr) #5
 
 @.str.fixed = constant [3 x i8] c"%r\00"

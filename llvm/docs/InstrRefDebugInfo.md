@@ -191,4 +191,4 @@ instruction number of any cloned instruction, to avoid duplicate numbers
 appearing to `LiveDebugValues`. Dealing with duplicated instructions is a
 natural extension to instruction referencing that's currently unimplemented.
 
-[LiveDebugValues]: project:SourceLevelDebugging.rst#LiveDebugValues expansion of variable locations
+[LiveDebugValues]: project:SourceLevelDebugging.md#LiveDebugValues expansion of variable locations

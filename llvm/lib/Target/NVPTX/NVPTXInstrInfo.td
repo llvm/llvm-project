@@ -187,8 +187,8 @@ class zeroinitializer<ValueType vt> :
 
 def fpimm_pos_inf : FPImmLeaf<fAny, [{ return Imm.isPosInfinity(); }]>;
 def fpimm_0 : FPImmLeaf<fAny, [{ return Imm.isZero(); }]>;
-def fpimm_1 : FPImmLeaf<fAny, [{ return Imm.isExactlyValue(1.0); }]>;
-def fpimm_neg_1 : FPImmLeaf<fAny, [{ return Imm.isExactlyValue(-1.0); }]>;
+def fpimm_1 : FPImmLeaf<fAny, [{ return Imm.isOne(); }]>;
+def fpimm_neg_1 : FPImmLeaf<fAny, [{ return Imm.isMinusOne(); }]>;
 
 
 // Operands which can hold a Register or an Immediate.
@@ -1876,18 +1876,6 @@ def : Pat<(declare_array_param externalsym:$a, imm:$align, imm:$size),
 def : Pat<(declare_scalar_param externalsym:$a, imm:$size),
           (DECLARE_PARAM_scalar (to_texternsym $a), imm:$size)>;
 
-// Call prototype wrapper, this is a dummy instruction that just prints it's
-// operand which is string defining the prototype.
-def SDTCallPrototype : SDTypeProfile<0, 1, [SDTCisInt<0>]>;
-def CallPrototype :
-  SDNode<"NVPTXISD::CallPrototype", SDTCallPrototype,
-         [SDNPHasChain, SDNPSideEffect]>;
-def ProtoIdent : Operand<i32> { let PrintMethod = "printProtoIdent"; }
-def CALL_PROTOTYPE :
-  NVPTXInst<(outs), (ins ProtoIdent:$ident),
-            "$ident", [(CallPrototype (i32 texternalsym:$ident))]>;
-
-
 foreach t = [I32RT, I64RT] in {
   defvar inst_name = "MOV" # t.Size # "_PARAM";
   def inst_name : BasicNVPTXInst<(outs t.RC:$dst), (ins t.RC:$src), "mov.b" # t.Size>;
@@ -2454,8 +2442,8 @@ let isTerminator=1 in {
 
   let isBranch=1 in {
     def CBranch : NVPTXInst<(outs),
-                              (ins B1:$a, brtarget:$target, BranchFlag:$not),
-                              "@${not}$a bra \t$target;",
+                              (ins B1:$a, brtarget:$target, BranchFlag:$negate),
+                              "@${negate}$a bra \t$target;",
                               [(brcond i1:$a, bb:$target)]>;
 
     let isBarrier=1 in

@@ -24,6 +24,28 @@ using namespace clang::index;
 // USR generation.
 //===----------------------------------------------------------------------===//
 
+/// Print only the offset part of \p Loc
+/// \returns true on error.
+static bool printLocOffset(llvm::raw_ostream &OS, SourceLocation Loc,
+                           const SourceManager &SM) {
+  if (Loc.isInvalid())
+    return true;
+  if (SM.getExpansionLoc(Loc) == SM.getSpellingLoc(Loc)) {
+    // Use the offest into the FileID to represent the location.  Using
+    // a line/column can cause us to look back at the original source file,
+    // which is expensive.
+    OS << '@' << SM.getDecomposedLoc(Loc).second;
+    return false;
+  }
+  // In case expansion and spelling locations differ, we need both of them to
+  // make the USR distinguishable:
+  OS << '@' << SM.getDecomposedLoc(SM.getExpansionLoc(Loc)).second;
+  OS << '@' << SM.getDecomposedLoc(SM.getSpellingLoc(Loc)).second;
+  return false;
+}
+
+/// Print \p Loc including both the file and offset, if \p IncludeOffset is
+/// true.  Print only the file of \p Loc otherwise.
 /// \returns true on error.
 static bool printLoc(llvm::raw_ostream &OS, SourceLocation Loc,
                      const SourceManager &SM, bool IncludeOffset) {
@@ -43,7 +65,7 @@ static bool printLoc(llvm::raw_ostream &OS, SourceLocation Loc,
     // Use the offest into the FileID to represent the location.  Using
     // a line/column can cause us to look back at the original source file,
     // which is expensive.
-    OS << '@' << Decomposed.second;
+    printLocOffset(OS, Loc, SM);
   }
   return false;
 }
@@ -64,7 +86,11 @@ class USRGenerator : public ConstDeclVisitor<USRGenerator> {
   ASTContext *Context;
   const LangOptions &LangOpts;
   bool IgnoreResults = false;
-  bool generatedLoc = false;
+  // The flag below ensures that, when a source location needs to be printed,
+  // the filename is printed at most once during the recursive visit.  The
+  // offset part may be printed multiple times, since sub-decls along the
+  // visit may each need a distinct location to disambiguate them.
+  bool GeneratedFilename = false;
 
   llvm::DenseMap<const Type *, unsigned> TypeSubstitutions;
 
@@ -636,23 +662,28 @@ void USRGenerator::GenExtSymbolContainer(const NamedDecl *D) {
 }
 
 bool USRGenerator::GenLoc(const Decl *D, bool IncludeOffset) {
-  if (generatedLoc)
-    return IgnoreResults;
-  generatedLoc = true;
-
   // Guard against null declarations in invalid code.
   if (!D) {
     IgnoreResults = true;
     return true;
   }
+  // Do nothing if no need to print the offset nor the filename:
+  if (!IncludeOffset && GeneratedFilename)
+    return IgnoreResults;
+
+  bool PrintErr = false;
 
   // Use the location of canonical decl.
   D = D->getCanonicalDecl();
-
-  IgnoreResults =
-      IgnoreResults || printLoc(Out, D->getBeginLoc(),
-                                Context->getSourceManager(), IncludeOffset);
-
+  if (!GeneratedFilename) {
+    GeneratedFilename = true;
+    PrintErr = printLoc(Out, D->getBeginLoc(), Context->getSourceManager(),
+                        IncludeOffset);
+  } else {
+    PrintErr =
+        printLocOffset(Out, D->getBeginLoc(), Context->getSourceManager());
+  }
+  IgnoreResults = IgnoreResults || PrintErr;
   return IgnoreResults;
 }
 

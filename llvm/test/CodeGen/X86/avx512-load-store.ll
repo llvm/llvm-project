@@ -588,3 +588,63 @@ define <80 x i32> @test_maskz_load_v80i32(ptr %p, <80 x i1> %mask) nounwind {
   %r = call <80 x i32> @llvm.masked.load.v80i32.p0(ptr %p, <80 x i1> %mask, <80 x i32> zeroinitializer)
   ret <80 x i32> %r
 }
+
+; A volatile scalar load must NOT be folded into the masked-load form: doing so
+; would conditionally elide an observable memory access when the mask is 0. The
+; load must remain unconditional, with a register-form masked move for the select.
+
+define float @no_fold_volatile_load_f32(i1 %c, ptr %p, float %s0) nounwind {
+; CHECK64-LABEL: no_fold_volatile_load_f32:
+; CHECK64:       # %bb.0:
+; CHECK64-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK64-NEXT:    kmovw %edi, %k1
+; CHECK64-NEXT:    vmovss %xmm1, %xmm0, %xmm0 {%k1}
+; CHECK64-NEXT:    retq
+;
+; CHECK32-LABEL: no_fold_volatile_load_f32:
+; CHECK32:       # %bb.0:
+; CHECK32-NEXT:    pushl %eax
+; CHECK32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK32-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK32-NEXT:    kmovw %eax, %k1
+; CHECK32-NEXT:    vmovss %xmm1, %xmm0, %xmm0 {%k1}
+; CHECK32-NEXT:    vmovss %xmm0, (%esp)
+; CHECK32-NEXT:    flds (%esp)
+; CHECK32-NEXT:    popl %eax
+; CHECK32-NEXT:    retl
+  %ld = load volatile float, ptr %p
+  %r = select i1 %c, float %ld, float %s0
+  ret float %r
+}
+
+define double @no_fold_volatile_load_f64(i1 %c, ptr %p, double %s0) nounwind {
+; CHECK64-LABEL: no_fold_volatile_load_f64:
+; CHECK64:       # %bb.0:
+; CHECK64-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; CHECK64-NEXT:    kmovw %edi, %k1
+; CHECK64-NEXT:    vmovsd %xmm1, %xmm0, %xmm0 {%k1}
+; CHECK64-NEXT:    retq
+;
+; CHECK32-LABEL: no_fold_volatile_load_f64:
+; CHECK32:       # %bb.0:
+; CHECK32-NEXT:    pushl %ebp
+; CHECK32-NEXT:    movl %esp, %ebp
+; CHECK32-NEXT:    andl $-8, %esp
+; CHECK32-NEXT:    subl $8, %esp
+; CHECK32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; CHECK32-NEXT:    movzbl 8(%ebp), %eax
+; CHECK32-NEXT:    movl 12(%ebp), %ecx
+; CHECK32-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; CHECK32-NEXT:    kmovw %eax, %k1
+; CHECK32-NEXT:    vmovsd %xmm1, %xmm0, %xmm0 {%k1}
+; CHECK32-NEXT:    vmovsd %xmm0, (%esp)
+; CHECK32-NEXT:    fldl (%esp)
+; CHECK32-NEXT:    movl %ebp, %esp
+; CHECK32-NEXT:    popl %ebp
+; CHECK32-NEXT:    retl
+  %ld = load volatile double, ptr %p
+  %r = select i1 %c, double %ld, double %s0
+  ret double %r
+}

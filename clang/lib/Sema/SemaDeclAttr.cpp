@@ -8436,6 +8436,40 @@ static bool isKernelDecl(Decl *D) {
          D->hasAttr<CUDAGlobalAttr>();
 }
 
+static void checkAMDGPUReqdWorkGroupSize(Sema &S, Decl *D) {
+  if (!S.Context.getTargetInfo().getTriple().isAMDGPU())
+    return;
+
+  const auto *Flat = D->getAttr<AMDGPUFlatWorkGroupSizeAttr>();
+  const auto *Reqd = D->getAttr<ReqdWorkGroupSizeAttr>();
+  if (!Flat || !Reqd)
+    return;
+
+  auto Eval = [&](Expr *E) -> std::optional<uint64_t> {
+    if (E->isValueDependent())
+      return std::nullopt;
+    std::optional<llvm::APSInt> V = E->getIntegerConstantExpr(S.Context);
+    if (!V)
+      return std::nullopt;
+    return V->getZExtValue();
+  };
+
+  std::optional<uint64_t> X = Eval(Reqd->getXDim());
+  std::optional<uint64_t> Y = Eval(Reqd->getYDim());
+  std::optional<uint64_t> Z = Eval(Reqd->getZDim());
+  std::optional<uint64_t> Min = Eval(Flat->getMin());
+  std::optional<uint64_t> Max = Eval(Flat->getMax());
+  if (!X || !Y || !Z || !Min || !Max)
+    return;
+
+  uint64_t Product = *X * *Y * *Z;
+  if (*Min != Product || *Max != Product) {
+    S.Diag(Flat->getLocation(),
+           diag::err_attribute_amdgpu_flat_work_group_size_mismatch);
+    D->setInvalidDecl();
+  }
+}
+
 void Sema::ProcessDeclAttributeList(
     Scope *S, Decl *D, const ParsedAttributesView &AttrList,
     const ProcessDeclAttributeOptions &Options) {
@@ -8499,6 +8533,7 @@ void Sema::ProcessDeclAttributeList(
       D->setInvalidDecl();
     }
   }
+  checkAMDGPUReqdWorkGroupSize(*this, D);
 
   // CUDA/HIP: restrict explicit CUDA target attributes on deduction guides.
   //
