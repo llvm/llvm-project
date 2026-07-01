@@ -1,0 +1,85 @@
+# This test validates the --domain flag on the plugin enable and disable
+# commands when one target with an alive process exists.
+
+# RUN: %clang_host -g %S/Inputs/main.c -o %t
+# RUN: %lldb -o "target create %t" -o "b main" -o "run" \
+# RUN:   -s %s -o exit 2>&1 | FileCheck %s
+
+# Verify that the plugin is enabled globally and per-target by default.
+plugin list --domain global instrumentation-runtime.UndefinedBehaviorSanitizer
+# CHECK-LABEL: plugin list --domain global instrumentation-runtime.UndefinedBehaviorSanitizer
+# CHECK: instrumentation-runtime
+# CHECK:  [+] UndefinedBehaviorSanitizer
+
+plugin list --domain target instrumentation-runtime.UndefinedBehaviorSanitizer
+# CHECK-LABEL: plugin list --domain target instrumentation-runtime.UndefinedBehaviorSanitizer
+# CHECK: instrumentation-runtime
+# CHECK:  [+] UndefinedBehaviorSanitizer
+
+# Disable via --domain target.
+plugin disable --domain target instrumentation-runtime.UndefinedBehaviorSanitizer
+# CHECK-LABEL: plugin disable --domain target instrumentation-runtime.UndefinedBehaviorSanitizer
+# CHECK: instrumentation-runtime
+# CHECK:  [-] UndefinedBehaviorSanitizer
+
+# Verify disabled per-target but still enabled globally.
+plugin list --domain target instrumentation-runtime.UndefinedBehaviorSanitizer
+# CHECK-LABEL: plugin list --domain target instrumentation-runtime.UndefinedBehaviorSanitizer
+# CHECK: instrumentation-runtime
+# CHECK:  [-] UndefinedBehaviorSanitizer
+
+plugin list --domain global instrumentation-runtime.UndefinedBehaviorSanitizer
+# CHECK-LABEL: plugin list --domain global instrumentation-runtime.UndefinedBehaviorSanitizer
+# CHECK: instrumentation-runtime
+# CHECK:  [+] UndefinedBehaviorSanitizer
+
+# Re-enable via --domain target.
+plugin enable --domain target instrumentation-runtime.UndefinedBehaviorSanitizer
+# CHECK-LABEL: plugin enable --domain target instrumentation-runtime.UndefinedBehaviorSanitizer
+# CHECK: instrumentation-runtime
+# CHECK:  [+] UndefinedBehaviorSanitizer
+
+# Verify re-enabled per-target and still enabled globally.
+plugin list --domain target instrumentation-runtime.UndefinedBehaviorSanitizer
+# CHECK-LABEL: plugin list --domain target instrumentation-runtime.UndefinedBehaviorSanitizer
+# CHECK: instrumentation-runtime
+# CHECK:  [+] UndefinedBehaviorSanitizer
+
+plugin list --domain global instrumentation-runtime.UndefinedBehaviorSanitizer
+# CHECK-LABEL: plugin list --domain global instrumentation-runtime.UndefinedBehaviorSanitizer
+# CHECK: instrumentation-runtime
+# CHECK:  [+] UndefinedBehaviorSanitizer
+
+# Disable via --domain debugger.
+plugin disable --domain debugger instrumentation-runtime.UndefinedBehaviorSanitizer
+# CHECK-LABEL: plugin disable --domain debugger instrumentation-runtime.UndefinedBehaviorSanitizer
+# CHECK: instrumentation-runtime
+# CHECK:  [-] UndefinedBehaviorSanitizer
+
+# Verify disabled per-target but still enabled globally.
+plugin list --domain target instrumentation-runtime.UndefinedBehaviorSanitizer
+# CHECK-LABEL: plugin list --domain target instrumentation-runtime.UndefinedBehaviorSanitizer
+# CHECK: instrumentation-runtime
+# CHECK:  [-] UndefinedBehaviorSanitizer
+
+plugin list --domain global instrumentation-runtime.UndefinedBehaviorSanitizer
+# CHECK-LABEL: plugin list --domain global instrumentation-runtime.UndefinedBehaviorSanitizer
+# CHECK: instrumentation-runtime
+# CHECK:  [+] UndefinedBehaviorSanitizer
+
+# Re-enable via --domain debugger.
+plugin enable --domain debugger instrumentation-runtime.UndefinedBehaviorSanitizer
+# CHECK-LABEL: plugin enable --domain debugger instrumentation-runtime.UndefinedBehaviorSanitizer
+# CHECK: instrumentation-runtime
+# CHECK:  [+] UndefinedBehaviorSanitizer
+
+# Verify re-enabled per-target and still enabled globally.
+plugin list --domain target instrumentation-runtime.UndefinedBehaviorSanitizer
+# CHECK-LABEL: plugin list --domain target instrumentation-runtime.UndefinedBehaviorSanitizer
+# CHECK: instrumentation-runtime
+# CHECK:  [+] UndefinedBehaviorSanitizer
+
+plugin list --domain global instrumentation-runtime.UndefinedBehaviorSanitizer
+# CHECK-LABEL: plugin list --domain global instrumentation-runtime.UndefinedBehaviorSanitizer
+# CHECK: instrumentation-runtime
+# CHECK:  [+] UndefinedBehaviorSanitizer

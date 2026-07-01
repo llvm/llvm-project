@@ -80,7 +80,7 @@ struct RegisteredPluginInfo {
 using GetPluginInfo = std::function<llvm::SmallVector<RegisteredPluginInfo>()>;
 using SetPluginEnabledGlobalDomain = std::function<bool(llvm::StringRef, bool)>;
 using SetPluginEnabledAllDomains = std::function<llvm::Error(
-    llvm::StringRef, bool, Debugger &, lldb::PluginDomainKind)>;
+    llvm::StringRef, bool, Debugger &, lldb::TargetSP, lldb::PluginDomainKind)>;
 class PluginNamespace {
 public:
   static constexpr uint8_t kAllDomains = lldb::ePluginDomainKindGlobal |
@@ -200,7 +200,12 @@ public:
   // If pattern is given it will be used to filter the plugins that are
   // are returned. The pattern filters the plugin names using the
   // PluginManager::MatchPluginName() function.
-  static llvm::json::Object GetJSON(llvm::StringRef pattern = "");
+  static llvm::json::Object
+  GetJSON(llvm::StringRef pattern = "",
+          lldb::DebuggerSP requesting_debugger = nullptr,
+          lldb::TargetSP selected_target = nullptr,
+          lldb::PluginDomainKind domain =
+              lldb::PluginDomainKind::ePluginDomainKindGlobal);
 
   // Return true if the pattern matches the plugin name.
   //
@@ -212,6 +217,10 @@ public:
   static bool MatchPluginName(llvm::StringRef pattern,
                               const PluginNamespace &plugin_ns,
                               const RegisteredPluginInfo &plugin);
+
+  static llvm::Expected<bool> IsPluginEnabled(
+      const PluginNamespace &plugin_ns, const RegisteredPluginInfo &plugin,
+      lldb::TargetSP selected_target, lldb::PluginDomainKind domain);
 
   // ABI
   static bool RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
@@ -818,10 +827,13 @@ public:
   static llvm::SmallVector<RegisteredPluginInfo>
   GetInstrumentationRuntimePluginInfo();
   static llvm::StringRef PluginDomainKindToStr(lldb::PluginDomainKind kind);
-  static llvm::Error
-  SetInstrumentationRuntimePluginEnabled(llvm::StringRef name, bool enable,
-                                         Debugger &requesting_debugger,
-                                         lldb::PluginDomainKind domain);
+  static llvm::Error SetInstrumentationRuntimePluginEnabled(
+      llvm::StringRef name, bool enable, Debugger &requesting_debugger,
+      lldb::TargetSP selected_target, lldb::PluginDomainKind domain);
+  static llvm::Expected<bool>
+  IsInstrumentationRuntimePluginEnabled(llvm::StringRef name,
+                                        lldb::TargetSP target,
+                                        lldb::PluginDomainKind domain);
 
   static llvm::SmallVector<RegisteredPluginInfo> GetJITLoaderPluginInfo();
   static bool SetJITLoaderPluginEnabled(llvm::StringRef name, bool enable);

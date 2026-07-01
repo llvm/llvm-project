@@ -2741,6 +2741,12 @@ void PruneThreadPlans();
   lldb::InstrumentationRuntimeSP
   GetInstrumentationRuntime(lldb::InstrumentationRuntimeType type);
 
+  llvm::Error
+  SetInstrumentationRuntimeEnabled(lldb::InstrumentationRuntimeType irt,
+                                   bool enabled);
+
+  bool InstrumentationRuntimeIsEnabled(lldb::InstrumentationRuntimeType irt);
+
   /// Try to fetch the module specification for a module with the given file
   /// name and architecture. Process sub-classes have to override this method
   /// if they support platforms where the Platform object can't get the module

@@ -6421,6 +6421,59 @@ Process::GetInstrumentationRuntime(lldb::InstrumentationRuntimeType type) {
     return (*pos).second;
 }
 
+llvm::Error
+Process::SetInstrumentationRuntimeEnabled(InstrumentationRuntimeType irt,
+                                          bool enabled) {
+  if (!IsAlive())
+    return llvm::createStringErrorV("process {} is not alive", GetID());
+
+  if (auto instrumentation_runtime = GetInstrumentationRuntime(irt)) {
+    // This process already has an instance of this plugin so just
+    // enable/disable it.
+    if (enabled)
+      return instrumentation_runtime->Enable();
+    return instrumentation_runtime->Disable();
+  }
+
+  // There's no instance of this plugin for this process.
+
+  if (!enabled)
+    return llvm::Error::success();
+
+  // The requested plugin was never instantiated for this process so we need
+  // to create an instance so we can activate it. This can happen if
+  // `plugin disable instrumentation-runtime.*` is executed (e.g. in .lldbinit).
+
+  // Create the plugin by finding its create callback and calling it.
+  lldb::InstrumentationRuntimeSP new_plugin = nullptr;
+  for (auto &cbs : PluginManager::GetInstrumentationRuntimeCallbacks(
+           /*enabled_only=*/false)) {
+    InstrumentationRuntimeType other_irt = cbs.get_type_callback();
+    if (other_irt != irt)
+      continue;
+
+    new_plugin = cbs.create_callback(shared_from_this());
+    break;
+  }
+  if (!new_plugin)
+    return llvm::createStringError("failed to create new instance of plugin");
+
+  m_instrumentation_runtimes[irt] = new_plugin;
+  return new_plugin->Enable();
+}
+
+bool Process::InstrumentationRuntimeIsEnabled(
+    lldb::InstrumentationRuntimeType irt) {
+  if (auto instrumentation_runtime = GetInstrumentationRuntime(irt)) {
+    // This process has a instrumentation runtime instance
+    return instrumentation_runtime->IsEnabled();
+  }
+
+  // There's no instance of the InstrumentationRuntimeType so the plugin must
+  // be disabled.
+  return false;
+}
+
 bool Process::GetModuleSpec(const FileSpec &module_file_spec,
                             const ArchSpec &arch, ModuleSpec &module_spec) {
   module_spec.Clear();

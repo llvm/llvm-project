@@ -17,6 +17,7 @@
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-private.h"
 #include "lldb/lldb-types.h"
+#include "llvm/Support/Error.h"
 
 namespace lldb_private {
 
@@ -41,8 +42,10 @@ class InstrumentationRuntime
   bool m_is_active;
 
 protected:
+  bool m_is_enabled;
+
   InstrumentationRuntime(const lldb::ProcessSP &process_sp)
-      : m_breakpoint_id(0), m_is_active(false) {
+      : m_breakpoint_id(0), m_is_active(false), m_is_enabled(true) {
     if (process_sp)
       m_process_wp = process_sp;
   }
@@ -60,6 +63,7 @@ protected:
   void SetBreakpointID(lldb::user_id_t ID) { m_breakpoint_id = ID; }
 
   void SetActive(bool IsActive) { m_is_active = IsActive; }
+  void SetEnabled(bool enabled) { m_is_enabled = enabled; }
 
   /// Return a regular expression which can be used to identify a valid version
   /// of the runtime library.
@@ -72,6 +76,9 @@ protected:
   /// necessary initialization. The runtime library
   /// is guaranteed to be loaded.
   virtual void Activate() = 0;
+
+  /// Remove any breakpoints and perform any necessary clean up.
+  virtual void Deactivate() = 0;
 
   /// \return true if `CheckIfRuntimeIsValid` should be called on all modules.
   /// In this case the return value of `GetPatternForRuntimeLibrary` will be
@@ -90,7 +97,23 @@ public:
   /// been done.
   void ModulesDidLoad(lldb_private::ModuleList &module_list);
 
+  /// \return true if the plugin is active (e.g. for breakpoint-based plugins
+  /// this means the breakpoint has been set). This is distinct from
+  /// IsEnabled().
   bool IsActive() const { return m_is_active; }
+
+  /// Enable the plugin and activate it if possible.
+  virtual llvm::Error Enable();
+
+  /// Disable the plugin. If the plugin is currently active it will be
+  /// deactivated first. Once disabled, the plugin cannot activate until
+  /// re-enabled via Enable().
+  virtual llvm::Error Disable();
+
+  /// \return true if the plugin is enabled and eligible for activation. An
+  /// enabled plugin is not necessarily active (e.g. the relevant runtime
+  /// library has not been loaded). See IsActive().
+  bool IsEnabled() const { return m_is_enabled; }
 
   virtual lldb::ThreadCollectionSP
   GetBacktracesFromExtendedStopInfo(StructuredData::ObjectSP info);

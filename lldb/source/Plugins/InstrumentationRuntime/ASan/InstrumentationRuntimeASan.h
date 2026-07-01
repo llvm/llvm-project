@@ -42,7 +42,7 @@ private:
 
   void Activate() override;
 
-  void Deactivate();
+  void Deactivate() override;
 
   static bool NotifyBreakpointHit(void *baton,
                                   StoppointCallbackContext *context,

@@ -1891,6 +1891,43 @@ class Base(unittest.TestCase):
         metrics_json = return_obj.GetOutput()
         return json.loads(metrics_json)
 
+    def plugin_is_enabled(self, namespace: str, name: str, domain: str = "global"):
+        assert domain in {"global", "debugger", "target"}
+        interp = self.dbg.GetCommandInterpreter()
+        result = lldb.SBCommandReturnObject()
+        cmd = f"plugin list --json --domain {domain} {namespace}.{name}"
+        interp.HandleCommand(cmd, result)
+        if not result.Succeeded():
+            raise Exception(f'Failed to run "{cmd}"')
+        output = result.GetOutput()
+        # Parse output like
+        # {
+        #   "instrumentation-runtime": [
+        #     {
+        #       "enabled": true,
+        #       "name": "BoundsSafety"
+        #     }
+        #   ]
+        # }
+        parsed_json = json.loads(output)
+        if not isinstance(parsed_json, dict):
+            raise TypeError(f"{parsed_json} is not a dict")
+        error_data = parsed_json.get("error")
+        if error_data:
+            raise Exception(f'Querying enablement failed with "{error_data}"')
+        namespace_data = parsed_json.get(namespace)
+        if not isinstance(namespace_data, list):
+            raise TypeError(f"{namespace_data} is not a list")
+        for entry in namespace_data:
+            if not isinstance(entry, dict):
+                continue
+            if entry.get("name") == name:
+                enabled = entry.get("enabled")
+                if not isinstance(enabled, bool):
+                    raise TypeError("not bool")
+                return enabled
+        return None
+
 
 # Metaclass for TestBase to change the list of test metods when a new TestCase is loaded.
 # We change the test methods to create a new test method for each test for each debug info we are

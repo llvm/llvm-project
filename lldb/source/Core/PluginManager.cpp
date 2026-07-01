@@ -15,12 +15,14 @@
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Symbol/SaveCoreOptions.h"
 #include "lldb/Target/Process.h"
+#include "lldb/Target/Target.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StringList.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/DynamicLibrary.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorExtras.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
@@ -475,20 +477,36 @@ llvm::ArrayRef<PluginNamespace> PluginManager::GetPluginNamespaces() {
   return PluginNamespaces;
 }
 
-llvm::json::Object PluginManager::GetJSON(llvm::StringRef pattern) {
+llvm::json::Object PluginManager::GetJSON(llvm::StringRef pattern,
+                                          lldb::DebuggerSP requesting_debugger,
+                                          lldb::TargetSP selected_target,
+                                          lldb::PluginDomainKind domain) {
   llvm::json::Object plugin_stats;
+
+  auto ErrorJSON = [&plugin_stats](llvm::Error error) -> llvm::json::Object & {
+    plugin_stats.clear();
+    plugin_stats.try_emplace("error", llvm::toString(std::move(error)));
+    return plugin_stats;
+  };
 
   for (const PluginNamespace &plugin_ns : GetPluginNamespaces()) {
     llvm::json::Array namespace_stats;
 
     for (const RegisteredPluginInfo &plugin : plugin_ns.get_info()) {
-      if (MatchPluginName(pattern, plugin_ns, plugin)) {
-        llvm::json::Object plugin_json;
-        plugin_json.try_emplace("name", plugin.name);
-        plugin_json.try_emplace("enabled", plugin.enabled);
-        namespace_stats.emplace_back(std::move(plugin_json));
-      }
+      if (!MatchPluginName(pattern, plugin_ns, plugin))
+        continue;
+
+      llvm::Expected<bool> enabled =
+          IsPluginEnabled(plugin_ns, plugin, selected_target, domain);
+      if (auto E = enabled.takeError())
+        return ErrorJSON(std::move(E));
+
+      llvm::json::Object plugin_json;
+      plugin_json.try_emplace("name", plugin.name);
+      plugin_json.try_emplace("enabled", *enabled);
+      namespace_stats.emplace_back(std::move(plugin_json));
     }
+
     if (!namespace_stats.empty())
       plugin_stats.try_emplace(plugin_ns.name, std::move(namespace_stats));
   }
@@ -510,6 +528,31 @@ bool PluginManager::MatchPluginName(llvm::StringRef pattern,
   // Check if the pattern matches the qualified name.
   std::string qualified_name = (plugin_ns.name + "." + plugin_info.name).str();
   return pattern == qualified_name;
+}
+
+llvm::Expected<bool> PluginManager::IsPluginEnabled(
+    const PluginNamespace &plugin_ns, const RegisteredPluginInfo &plugin,
+    lldb::TargetSP selected_target, lldb::PluginDomainKind domain) {
+  switch (domain) {
+  case lldb::ePluginDomainKindGlobal:
+    return plugin.enabled;
+  case lldb::ePluginDomainKindDebugger:
+    return llvm::createStringErrorV(
+        "plugin namespace {0} does not support querying "
+        "enablement in the debugger domain",
+        plugin_ns.name);
+  case lldb::ePluginDomainKindTarget:
+    if (!plugin_ns.SupportsDomain(lldb::ePluginDomainKindTarget))
+      return llvm::createStringErrorV(
+          "plugin namespace {0} does not support querying "
+          "enablement in the target domain",
+          plugin_ns.name);
+    // Currently only instrumentation-runtime plugins support this domain.
+    assert(plugin_ns.name == "instrumentation-runtime");
+    return IsInstrumentationRuntimePluginEnabled(plugin.name, selected_target,
+                                                 domain);
+  }
+  llvm_unreachable("Unhandled domain");
 }
 
 template <typename Callback> struct PluginInstance {
@@ -2589,14 +2632,114 @@ llvm::StringRef PluginManager::PluginDomainKindToStr(PluginDomainKind kind) {
 
 llvm::Error PluginManager::SetInstrumentationRuntimePluginEnabled(
     llvm::StringRef name, bool enable, Debugger &requesting_debugger,
-    PluginDomainKind domain) {
-  if (domain != lldb::ePluginDomainKindGlobal)
-    return llvm::createStringErrorV("{} domain is not supported",
-                                    PluginDomainKindToStr(domain));
-  if (!GetInstrumentationRuntimeInstances().SetInstanceEnabled(name, enable))
-    return llvm::createStringError("plugin could not be found");
+    lldb::TargetSP selected_target, PluginDomainKind domain) {
 
-  return llvm::Error::success();
+  auto GetInstrumentationRuntimeTy =
+      [&]() -> llvm::Expected<lldb::InstrumentationRuntimeType> {
+    auto type_cb = GetInstrumentationRuntimeInstances().GetTypeCallbackForName(
+        name, /*enabled_only=*/false);
+    if (!type_cb)
+      return llvm::createStringErrorV(
+          "Could not get InstrumentationRuntimeType for plugin {}", name);
+    return type_cb();
+  };
+
+  switch (domain) {
+  case lldb::ePluginDomainKindGlobal:
+    // Update the global enablement flag
+    if (!GetInstrumentationRuntimeInstances().SetInstanceEnabled(name, enable))
+      return llvm::createStringErrorV("could not find plugin {}", name);
+    // We should in principle iterate over all debuggers and enable/disable
+    // their runtimes. However, this doesn't work because we need to hold
+    // `GetDebuggerListMutex` to safely iterate and this can cause deadlock when
+    // trying to activate a plugin (creating a breakpoint might call
+    // `Debugger::ReportProgress` which also tries to lock the mutex). For now
+    // just don't update live processes.
+    // FIXME: We should probably emit a warning about this.
+    return llvm::Error::success();
+  case lldb::ePluginDomainKindDebugger: {
+    // Deliberately don't update the global enablement flag here.
+    auto instrumentation_runtime_ty = GetInstrumentationRuntimeTy();
+    if (auto E = instrumentation_runtime_ty.takeError())
+      return E;
+
+    // Loop over all targets in requesting debugger and enable the plugin in
+    // each of them.
+    llvm::Error errors = llvm::Error::success();
+    bool found_targets = false;
+    bool found_alive_process = false;
+    for (const auto &target_sp :
+         requesting_debugger.GetTargetList().Targets()) {
+      found_targets = true;
+      ProcessSP process_sp = target_sp->GetProcessSP();
+      if (!process_sp || !process_sp->IsAlive())
+        continue;
+      found_alive_process = true;
+      errors = llvm::joinErrors(std::move(errors),
+                                process_sp->SetInstrumentationRuntimeEnabled(
+                                    *instrumentation_runtime_ty, enable));
+    }
+    if (!found_targets)
+      errors =
+          llvm::joinErrors(std::move(errors),
+                           llvm::createStringError("debugger has no targets"));
+    else if (!found_alive_process)
+      errors = llvm::joinErrors(
+          std::move(errors),
+          llvm::createStringError("no alive processes in debugger"));
+
+    return errors;
+  }
+  case lldb::ePluginDomainKindTarget: {
+    // Deliberately don't update the global enablement flag here.
+    auto instrumentation_runtime_ty = GetInstrumentationRuntimeTy();
+    if (auto E = instrumentation_runtime_ty.takeError())
+      return E;
+
+    if (!selected_target)
+      return llvm::createStringError("no target is selected");
+    ProcessSP process_sp = selected_target->GetProcessSP();
+    if (!process_sp || !process_sp->IsAlive())
+      return llvm::createStringError(
+          "failed to find alive process for selected target");
+    return process_sp->SetInstrumentationRuntimeEnabled(
+        *instrumentation_runtime_ty, enable);
+  }
+  }
+  llvm_unreachable("Unhandled domain");
+}
+
+llvm::Expected<bool> PluginManager::IsInstrumentationRuntimePluginEnabled(
+    llvm::StringRef name, lldb::TargetSP target,
+    lldb::PluginDomainKind domain) {
+
+  switch (domain) {
+
+  case lldb::ePluginDomainKindGlobal:
+    if (auto instance = GetInstrumentationRuntimeInstances().GetInstanceForName(
+            name, /*enabled_only=*/false)) {
+      return instance->enabled;
+    }
+    return llvm::createStringErrorV("cannot find plugin {}", name);
+  case lldb::ePluginDomainKindDebugger:
+    // Not supported. Each process could have a different enablement setting
+    // so it doesn't make sense to return anything.
+    return llvm::createStringError("debugger domain is not supported");
+  case lldb::ePluginDomainKindTarget:
+    if (!target)
+      return llvm::createStringError("target not available");
+    ProcessSP process = target->GetProcessSP();
+    if (!process)
+      return llvm::createStringError("process not available");
+    auto type_cb = GetInstrumentationRuntimeInstances().GetTypeCallbackForName(
+        name, /*enabled_only=*/false);
+    if (!type_cb)
+      return llvm::createStringErrorV("cannot find plugin {} in process", name);
+    lldb::InstrumentationRuntimeType irt = type_cb();
+
+    return process->InstrumentationRuntimeIsEnabled(irt);
+  }
+  llvm_unreachable("Unhandled domain");
 }
 
 llvm::SmallVector<RegisteredPluginInfo>
