@@ -39,6 +39,12 @@
 // CONVERT:   fir.call @_FortranAAssign
 // CONVERT: }
 
+// CHECK-LABEL: func.func @_QPstatically_disjoint
+// CHECK-NOT: fir.if
+// CHECK: fir.do_loop
+// CHECK-NOT: fir.if
+// CHECK: return
+
 func.func @_QPassign_pointers(%arg0: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>> {fir.bindc_name = "arr"}, %arg1: !fir.ref<i32> {fir.bindc_name = "n"}, %arg2: !fir.ref<i32> {fir.bindc_name = "lo1"}, %arg3: !fir.ref<i32> {fir.bindc_name = "hi1"}, %arg4: !fir.ref<i32> {fir.bindc_name = "lo2"}, %arg5: !fir.ref<i32> {fir.bindc_name = "hi2"}) {
   %0 = fir.dummy_scope : !fir.dscope
   %1:2 = hlfir.declare %arg0 dummy_scope %0 arg 1 {fortran_attrs = #fir.var_attrs<intent_inout, pointer>, uniq_name = "_QFassign_pointersEarr"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>)
@@ -100,5 +106,19 @@ func.func @_QPassign_pointers(%arg0: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32
   %47 = fir.load %16#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
   %48 = fir.load %11#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
   hlfir.assign %47 to %48 : !fir.box<!fir.ptr<!fir.array<?xi32>>>, !fir.box<!fir.ptr<!fir.array<?xi32>>>
+  return
+}
+
+func.func @_QPstatically_disjoint(%arg0: !fir.ref<!fir.array<8xi32>> {fir.bindc_name = "arr"}) {
+  %c1 = arith.constant 1 : index
+  %c4 = arith.constant 4 : index
+  %c5 = arith.constant 5 : index
+  %c8 = arith.constant 8 : index
+  %shape8 = fir.shape %c8 : (index) -> !fir.shape<1>
+  %shape4 = fir.shape %c4 : (index) -> !fir.shape<1>
+  %0:2 = hlfir.declare %arg0(%shape8) {uniq_name = "_QFstatically_disjointEarr"} : (!fir.ref<!fir.array<8xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<8xi32>>, !fir.ref<!fir.array<8xi32>>)
+  %lhs = hlfir.designate %0#0 (%c1:%c4:%c1)  shape %shape4 : (!fir.ref<!fir.array<8xi32>>, index, index, index, !fir.shape<1>) -> !fir.ref<!fir.array<4xi32>>
+  %rhs = hlfir.designate %0#0 (%c5:%c8:%c1)  shape %shape4 : (!fir.ref<!fir.array<8xi32>>, index, index, index, !fir.shape<1>) -> !fir.ref<!fir.array<4xi32>>
+  hlfir.assign %rhs to %lhs : !fir.ref<!fir.array<4xi32>>, !fir.ref<!fir.array<4xi32>>
   return
 }

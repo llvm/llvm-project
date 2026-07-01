@@ -97,6 +97,8 @@ std::optional<mlir::Value> genConformingAddressBasedDisjointnessCheck(
           builder, loc, mlir::arith::CmpIPredicate::sgt, extent, zero);
       nonEmpty =
           mlir::arith::AndIOp::create(builder, loc, nonEmpty, isExtentPositive);
+      // Empty arrays fall back to runtime assignment; clamp the extent only to
+      // keep the range arithmetic valid while building the guard.
       mlir::Value rangeExtent = mlir::arith::SelectOp::create(
           builder, loc, isExtentPositive, extent, one);
       mlir::Value extentM1 =
