@@ -29,7 +29,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 define void @Test(ptr nocapture %obj, i64 %z) #0 {
 ; CHECK-LABEL: 'Test'
 ; CHECK-NEXT:    .inner:
-; CHECK-NEXT:      Memory dependences are safe with a maximum safe vector width of 2048 bits with run-time checks
+; CHECK-NEXT:      Memory dependences are safe with a maximum safe number of elements to operate on equal to 64 with run-time checks
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:

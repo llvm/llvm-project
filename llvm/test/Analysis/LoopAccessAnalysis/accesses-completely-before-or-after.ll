@@ -254,7 +254,7 @@ exit:
 define void @accesses_may_overlap_backwards_vectorizable(ptr dereferenceable(800) %dst) {
 ; CHECK-LABEL: 'accesses_may_overlap_backwards_vectorizable'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Memory dependences are safe with a maximum safe vector width of 128 bits
+; CHECK-NEXT:      Memory dependences are safe with a maximum safe number of elements to operate on equal to 8
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:        BackwardVectorizable:
 ; CHECK-NEXT:            store i16 0, ptr %gep.mul.2, align 2 ->
