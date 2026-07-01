@@ -357,6 +357,12 @@ class TargetRegisterInfo;
           isHeightCurrent(false), isNode(false), isInst(false),
           SchedulingPref(Sched::None) {}
 
+    // Don't allow copying, SUnit can be very large.
+    SUnit(const SUnit &) = delete;
+    SUnit &operator=(const SUnit &) = delete;
+    SUnit(SUnit &&) = default;
+    SUnit &operator=(SUnit &&) = default;
+
     /// Boundary nodes are placeholders for the boundary of the
     /// scheduling region.
     ///
