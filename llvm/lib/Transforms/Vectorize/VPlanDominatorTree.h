@@ -19,7 +19,6 @@
 #include "VPlanCFG.h"
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/Analysis/DominanceFrontier.h"
-#include "llvm/Analysis/DominanceFrontierImpl.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/Support/GenericDomTree.h"
 #include "llvm/Support/GenericDomTreeConstruction.h"
@@ -73,7 +72,7 @@ struct GraphTraits<const VPDomTreeNode *>
 class VPPostDominanceFrontier
     : public DominanceFrontierBase<VPBlockBase, true> {
 public:
-  explicit VPPostDominanceFrontier(const DomTreeT &VPDT) { analyze(VPDT); }
+  explicit VPPostDominanceFrontier(const DomTreeT &VPDT);
 };
 } // namespace llvm
 #endif // LLVM_TRANSFORMS_VECTORIZE_VPLANDOMINATORTREE_H
