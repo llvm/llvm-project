@@ -273,6 +273,9 @@ protected:
   unsigned HasBuiltinMSVaList : 1;
 
   LLVM_PREFERRED_TYPE(bool)
+  unsigned HasBuiltinZOSVaList : 1;
+
+  LLVM_PREFERRED_TYPE(bool)
   unsigned HasAArch64ACLETypes : 1;
 
   LLVM_PREFERRED_TYPE(bool)
@@ -1071,6 +1074,10 @@ public:
   /// Returns whether or not type \c __builtin_ms_va_list type is
   /// available on this target.
   bool hasBuiltinMSVaList() const { return HasBuiltinMSVaList; }
+
+  /// Returns whether or not type \c __builtin_zos_va_list type is
+  /// available on this target.
+  bool hasBuiltinZOSVaList() const { return HasBuiltinZOSVaList; }
 
   /// Returns whether or not the AArch64 ACLE built-in types are
   /// available on this target.

@@ -439,6 +439,9 @@ class ASTContext : public RefCountedBase<ASTContext> {
   /// The typedef for the predefined \c __builtin_ms_va_list type.
   mutable TypedefDecl *BuiltinMSVaListDecl = nullptr;
 
+  /// The typedef for the predefined \c __builtin_zos_va_list type.
+  mutable TypedefDecl *BuiltinZOSVaListDecl = nullptr;
+
   /// The typedef for the predefined \c id type.
   mutable TypedefDecl *ObjCIdDecl = nullptr;
 
@@ -2521,6 +2524,17 @@ public:
     if (!MSTypeInfoTagDecl)
       MSTypeInfoTagDecl = buildImplicitRecord("type_info", TagTypeKind::Class);
     return MSTypeInfoTagDecl;
+  }
+
+  /// Retrieve the C type declaration corresponding to the predefined
+  /// \c __builtin_zos_va_list type.
+  TypedefDecl *getBuiltinZOSVaListDecl() const;
+
+  /// Retrieve the type of the \c __builtin_zos_va_list type.
+  QualType getBuiltinZOSVaListType() const {
+    return getTypedefType(ElaboratedTypeKeyword::None,
+                          /*Qualifier=*/std::nullopt,
+                          getBuiltinZOSVaListDecl());
   }
 
   /// Return whether a declaration to a builtin is allowed to be

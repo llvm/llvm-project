@@ -80,6 +80,9 @@ enum PredefinedDeclIDs {
   /// The predeclared 'type_info' struct.
   PREDEF_DECL_BUILTIN_MS_TYPE_INFO_TAG_ID,
 
+  /// The internal '__builtin_zos_va_list' typedef.
+  PREDEF_DECL_BUILTIN_ZOS_VA_LIST_ID,
+
 #define BuiltinTemplate(BTName) PREDEF_DECL##BTName##_ID,
 #include "clang/Basic/BuiltinTemplates.inc"
 
