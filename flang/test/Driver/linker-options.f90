@@ -58,20 +58,20 @@
 ! RUN: %flang -target i386-pc-openbsd -pie -### %s 2>&1 \
 ! RUN:   | FileCheck %s --check-prefix=PIE
 !
-! On FreeBSD, pie is passed to the linker, but can be forced cancelled.
-! RUN: %flang -no-pie -target amd64-pc-freebsd -### %s 2>&1 \
+! On FreeBSD, -pie is not passed to the linker, but can be forced.
+! RUN: %flang -target amd64-pc-freebsd -### %s 2>&1 \
 ! RUN:   | FileCheck %s --check-prefix=NO-PIE
-! RUN: %flang -no-pie -target i386-pc-freebsd -### %s 2>&1 \
+! RUN: %flang -target i386-pc-freebsd -### %s 2>&1 \
 ! RUN:   | FileCheck %s --check-prefix=NO-PIE
-! RUN: %flang -no-pie -target aarch64-unknown-freebsd -### %s 2>&1 \
+! RUN: %flang -target aarch64-unknown-freebsd -### %s 2>&1 \
 ! RUN:   | FileCheck %s --check-prefix=NO-PIE
-! RUN: %flang -no-pie -target arm-unknown-freebsd -### %s 2>&1 \
+! RUN: %flang -target arm-unknown-freebsd -### %s 2>&1 \
 ! RUN:   | FileCheck %s --check-prefix=NO-PIE
-! RUN: %flang -no-pie -target powerpc-unknown-freebsd -### %s 2>&1 \
+! RUN: %flang -target powerpc-unknown-freebsd -### %s 2>&1 \
 ! RUN:   | FileCheck %s --check-prefix=NO-PIE
-! RUN: %flang -no-pie -target sparc64-unknown-freebsd -### %s 2>&1 \
+! RUN: %flang -target sparc64-unknown-freebsd -### %s 2>&1 \
 ! RUN:   | FileCheck %s --check-prefix=NO-PIE
-! RUN: %flang -no-pie -target i386-pc-freebsd -pie -### %s 2>&1 \
+! RUN: %flang -target i386-pc-freebsd -pie -### %s 2>&1 \
 ! RUN:   | FileCheck %s --check-prefix=PIE
 !
 ! On AIX, -pie is never passed to the linker.
