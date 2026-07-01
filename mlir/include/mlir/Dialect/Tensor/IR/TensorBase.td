@@ -13,6 +13,7 @@ include "mlir/IR/OpBase.td"
 
 def Tensor_Dialect : Dialect {
   let name = "tensor";
+  let useStrictPropertiesInAssemblyFormat = 1;
   let cppNamespace = "::mlir::tensor";
 
   let description = [{

@@ -5,8 +5,16 @@ include "mlir/IR/OpBase.td"
 def TestDialect : Dialect {
   let name = "test";
 }
+def TestStrictPropertiesDialect : Dialect {
+  let name = "test_strict_properties";
+  let useStrictPropertiesInAssemblyFormat = 1;
+}
 class TestFormat_Op<string fmt, list<Trait> traits = []>
     : Op<TestDialect, "format_op", traits> {
+  let assemblyFormat = fmt;
+}
+class TestStrictPropertiesFormat_Op<string fmt, list<Trait> traits = []>
+    : Op<TestStrictPropertiesDialect, "format_op", traits> {
   let assemblyFormat = fmt;
 }
 
@@ -17,6 +25,50 @@ class TestFormat_Op<string fmt, list<Trait> traits = []>
 //===----------------------------------------------------------------------===//
 // custom
 //===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: AttrDictDefaultInherentAttr::parse
+// CHECK: verifyInherentAttrs
+def AttrDictDefaultInherentAttr : TestFormat_Op<[{
+  $attr attr-dict
+}]>, Arguments<(ins I64Attr:$attr)>;
+
+// CHECK-LABEL: AttrDictStrictInferredSegmentAttr::parse
+// CHECK: result.getOrAddProperties<AttrDictStrictInferredSegmentAttr::Properties>().segment_sizes = parser.getBuilder().getDenseI32ArrayAttr(inputsOperandGroupSizes);
+// CHECK-LABEL: AttrDictStrictInferredSegmentAttr::print
+// CHECK: elidedAttrs.push_back("segment_sizes");
+def AttrDictStrictInferredSegmentAttr : TestStrictPropertiesFormat_Op<[{
+  custom<Foo>($inputs, type($inputs)) attr-dict
+}]>, Arguments<(ins VariadicOfVariadic<I64, "segment_sizes">:$inputs,
+                    DenseI32ArrayAttr:$segment_sizes)>;
+
+def PropDictStrictInferredSegmentAttr : TestStrictPropertiesFormat_Op<[{
+  custom<Foo>($inputs, type($inputs)) prop-dict attr-dict
+}]>, Arguments<(ins VariadicOfVariadic<I64, "segment_sizes">:$inputs,
+                    DenseI32ArrayAttr:$segment_sizes)>;
+
+// CHECK-LABEL: AttrDictStrictInherentAttr::parse
+// CHECK-NOT: verifyInherentAttrs
+// CHECK: if (result.attributes.get("attr"))
+// CHECK-NEXT: return parser.emitError(loc, "inherent attribute 'attr' cannot
+// CHECK-SAME: be parsed from attr-dict when strict properties in assembly
+// CHECK-SAME: format is enabled");
+// CHECK-NOT: verifyInherentAttrs
+// CHECK: return ::mlir::success();
+def AttrDictStrictInherentAttr : TestStrictPropertiesFormat_Op<[{
+  $attr attr-dict
+}]>, Arguments<(ins I64Attr:$attr)>;
+
+def AttrDictStrictProperty : TestStrictPropertiesFormat_Op<[{
+  $prop attr-dict
+}]>, Arguments<(ins IntProp<"int64_t">:$prop)>;
+
+def AttrDictStrictPropDict : TestStrictPropertiesFormat_Op<[{
+  prop-dict attr-dict
+}]>, Arguments<(ins IntProp<"int64_t">:$prop)>;
+
+def AttrDictStrictPropDictInherentAttr : TestStrictPropertiesFormat_Op<[{
+  prop-dict attr-dict
+}]>, Arguments<(ins I64Attr:$attr)>;
 
 // CHECK-LABEL: CustomStringLiteralA::parse
 // CHECK: parseFoo({{.*}}, parser.getBuilder().getI1Type())
@@ -109,6 +161,12 @@ def OptionalGroupC : TestFormat_Op<[{
 def OptionalGroupD : TestFormat_Op<[{
   (custom<Custom>($a, $b)^)? attr-dict
 }], [AttrSizedOperandSegments]>, Arguments<(ins Optional<I64>:$a, Optional<I64>:$b)>;
+
+// CHECK-LABEL: PropDictStrictInferredSegmentAttr::setPropertiesFromParsedAttr
+// CHECK-NOT: segment_sizes
+// CHECK: return ::mlir::success();
+// CHECK-LABEL: PropDictStrictInferredSegmentAttr::print
+// CHECK: elidedProps.push_back("segment_sizes");
 
 // CHECK-LABEL: RegionRef::parse
 // CHECK:   auto odsResult = parseCustom(parser, *bodyRegion);

@@ -24,6 +24,7 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 
 def Affine_Dialect : Dialect {
   let name = "affine";
+  let useStrictPropertiesInAssemblyFormat = 1;
   let cppNamespace = "::mlir::affine";
   let hasConstantMaterializer = 1;
   let dependentDialects = ["arith::ArithDialect", "ub::UBDialect"];
