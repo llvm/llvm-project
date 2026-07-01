@@ -1037,6 +1037,10 @@ getIntegerVecAttribute(const Function &F, StringRef Name, unsigned Size);
 /// \returns The maximum number of workgroups for the function.
 SmallVector<unsigned> getMaxNumWorkGroups(const Function &F);
 
+inline bool isTgSplitEnabled(const Function &F) {
+  return F.hasFnAttribute("amdgpu-tg-split");
+}
+
 /// Checks if \p Val is inside \p MD, a !range-like metadata.
 bool hasValueInRangeLikeMetadata(const MDNode &MD, int64_t Val);
 

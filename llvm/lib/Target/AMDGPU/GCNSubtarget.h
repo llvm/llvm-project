@@ -345,8 +345,6 @@ public:
 
   bool isXNACKEnabled() const { return TargetID.isXnackOnOrAny(); }
 
-  bool isTgSplitEnabled() const { return EnableTgSplit; }
-
   bool hasRelaxedBufferOOBMode() const { return BufferOOBRelaxed; }
   bool hasRelaxedTBufferOOBMode() const { return TBufferOOBRelaxed; }
 
@@ -1039,8 +1037,8 @@ public:
     return hasTrue16BitInsts() && EnableRealTrue16Insts;
   }
 
-  bool requiresWaitOnWorkgroupReleaseFence() const {
-    return getGeneration() >= GFX10 || isTgSplitEnabled();
+  bool requiresWaitOnWorkgroupReleaseFence(bool TgSplit) const {
+    return getGeneration() >= GFX10 || TgSplit;
   }
 };
 
