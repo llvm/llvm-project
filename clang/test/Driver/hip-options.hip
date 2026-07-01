@@ -20,15 +20,15 @@
 
 // Check -mprintf-kind=hostcall
 // RUN: %clang -### -nogpulib -nogpuinc --target=x86_64-unknown-linux-gnu -mprintf-kind=hostcall  %s -save-temps 2>&1 | FileCheck -check-prefix=HOSTC %s
-// HOSTC: "-cc1" "-triple" "amdgcn-amd-amdhsa"{{.*}}"-mprintf-kind=hostcall" "-Werror=format-invalid-specifier"{{.*}}"-E" {{.*}}
-// HOSTC: "-cc1" "-triple" "amdgcn-amd-amdhsa"{{.*}} "-mprintf-kind=hostcall" "-Werror=format-invalid-specifier" {{.*}}"-x" "hip-cpp-output"
+// HOSTC: "-cc1" "-triple" "amdgpu9.06-amd-amdhsa"{{.*}} "-mprintf-kind=hostcall" "-Werror=format-invalid-specifier"{{.*}}"-E" {{.*}}
+// HOSTC: "-cc1" "-triple" "amdgpu9.06-amd-amdhsa"{{.*}} "-mprintf-kind=hostcall" "-Werror=format-invalid-specifier" {{.*}}"-x" "hip-cpp-output"
 // HOSTC: "-cc1" "-triple" "x86_64-unknown-linux-gnu"{{.*}} "-E" {{.*}}
 // HOSTC: "-cc1" "-triple" "x86_64-unknown-linux-gnu"{{.*}}"-x" "ir"
 
 // Check -mprintf-kind=buffered
 // RUN: %clang -### -nogpulib -nogpuinc --target=x86_64-unknown-linux-gnu -mprintf-kind=buffered  %s -save-temps 2>&1 | FileCheck -check-prefix=BUFF %s
-// BUFF: "-cc1" "-triple" "amdgcn-amd-amdhsa"{{.*}}"-mprintf-kind=buffered" "-Werror=format-invalid-specifier"{{.*}}"-E" {{.*}}
-// BUFF: "-cc1" "-triple" "amdgcn-amd-amdhsa"{{.*}} "-mprintf-kind=buffered" "-Werror=format-invalid-specifier" {{.*}}"-x" "hip-cpp-output"
+// BUFF: "-cc1" "-triple" "amdgpu9.06-amd-amdhsa"{{.*}} "-mprintf-kind=buffered" "-Werror=format-invalid-specifier"{{.*}}"-E" {{.*}}
+// BUFF: "-cc1" "-triple" "amdgpu9.06-amd-amdhsa"{{.*}} "-mprintf-kind=buffered" "-Werror=format-invalid-specifier" {{.*}}"-x" "hip-cpp-output"
 // BUFF: "-cc1" "-triple" "x86_64-unknown-linux-gnu"{{.*}} "-E" {{.*}}
 // BUFF: "-cc1" "-triple" "x86_64-unknown-linux-gnu"{{.*}}"-x" "ir"
 
@@ -52,15 +52,15 @@
 
 // RUN: %clang -### -nogpuinc -nogpulib -munsafe-fp-atomics \
 // RUN:   --cuda-gpu-arch=gfx906  %s 2>&1 | FileCheck -check-prefix=UNSAFE-FP-ATOMICS %s
-// UNSAFE-FP-ATOMICS: clang{{.*}} "-triple" "amdgcn-amd-amdhsa" {{.*}} "-fatomic-ignore-denormal-mode"
+// UNSAFE-FP-ATOMICS: clang{{.*}} "-triple" "amdgpu9.06-amd-amdhsa" {{.*}} "-fatomic-ignore-denormal-mode"
 
 // RUN: %clang -### -nogpuinc -nogpulib \
 // RUN:   --cuda-gpu-arch=gfx906  %s 2>&1 | FileCheck -check-prefix=DEFAULT-UNSAFE-FP-ATOMICS %s
-// DEFAULT-UNSAFE-FP-ATOMICS-NOT: clang{{.*}} "-triple" "amdgcn-amd-amdhsa" {{.*}} "-fatomic-ignore-denormal-mode"
+// DEFAULT-UNSAFE-FP-ATOMICS-NOT: clang{{.*}} "-triple" "amdgpu9.06-amd-amdhsa" {{.*}} "-fatomic-ignore-denormal-mode"
 
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -nogpuinc -nogpulib -fgpu-exclude-wrong-side-overloads \
 // RUN:   --cuda-gpu-arch=gfx906  %s 2>&1 | FileCheck -check-prefix=FIX-OVERLOAD %s
-// FIX-OVERLOAD: "-cc1"{{.*}} "-triple" "amdgcn-amd-amdhsa" {{.*}} "-fgpu-exclude-wrong-side-overloads" "-fgpu-defer-diag"
+// FIX-OVERLOAD: "-cc1"{{.*}} "-triple" "amdgpu9.06-amd-amdhsa" {{.*}} "-fgpu-exclude-wrong-side-overloads" "-fgpu-defer-diag"
 // FIX-OVERLOAD: "-cc1"{{.*}} "-triple" "x86_64-unknown-linux-gnu" {{.*}} "-fgpu-exclude-wrong-side-overloads" "-fgpu-defer-diag"
 
 // Check -mconstructor-aliases is not passed to device compilation.
@@ -68,11 +68,11 @@
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -nogpuinc -nogpulib \
 // RUN:   --cuda-gpu-arch=gfx906  %s 2>&1 | FileCheck -check-prefix=CTA %s
 // CTA: "-cc1"{{.*}} "-triple" "x86_64-unknown-linux-gnu" {{.*}} "-mconstructor-aliases"
-// CTA-NOT: "-cc1"{{.*}} "-triple" "amdgcn-amd-amdhsa" {{.*}} "-mconstructor-aliases"
+// CTA-NOT: "-cc1"{{.*}} "-triple" "amdgpu9.06-amd-amdhsa" {{.*}} "-mconstructor-aliases"
 
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -nogpuinc -nogpulib \
 // RUN:   --offload-arch=gfx906 -fgpu-inline-threshold=1000 %s 2>&1 | FileCheck -check-prefix=THRESH %s
-// THRESH: "-cc1"{{.*}} "-triple" "amdgcn-amd-amdhsa" {{.*}} "-mllvm" "-inline-threshold=1000"
+// THRESH: "-cc1"{{.*}} "-triple" "amdgpu9.06-amd-amdhsa" {{.*}} "-mllvm" "-inline-threshold=1000"
 // THRESH-NOT: "-cc1"{{.*}} "-triple" "x86_64-unknown-linux-gnu" {{.*}} "-inline-threshold=1000"
 
 // Check -foffload-lto=thin translated correctly.
@@ -84,9 +84,9 @@
 // Ensure we don't error about -fwhole-program-vtables for the non-device offload compile.
 // HIPTHINLTO-NOT: error: invalid argument '-fwhole-program-vtables' only allowed with '-flto'
 // HIPTHINLTO-NOT: "-cc1"{{.*}} "-triple" "x86_64-unknown-linux-gnu" {{.*}} "-flto-unit"
-// HIPTHINLTO: "-cc1"{{.*}} "-triple" "amdgcn-amd-amdhsa" {{.*}} "-flto=thin" "-flto-unit" {{.*}} "-fwhole-program-vtables"
+// HIPTHINLTO: "-cc1"{{.*}} "-triple" "amdgpu9.06-amd-amdhsa" {{.*}} "-flto=thin" "-flto-unit" {{.*}} "-fwhole-program-vtables"
 // HIPTHINLTO-NOT: "-cc1"{{.*}} "-triple" "x86_64-unknown-linux-gnu" {{.*}} "-flto-unit"
-// HIPTHINLTO: clang-linker-wrapper{{.*}} "--device-compiler=amdgcn-amd-amdhsa=-flto=thin"
+// HIPTHINLTO: clang-linker-wrapper{{.*}} "--device-compiler=amdgpu-amd-amdhsa=-flto=thin"
 
 // Check -no-canonical-prefixes is propagated correctly.
 
@@ -96,7 +96,7 @@
 
 // Ensure that we invoke clang-linker-wrapper with --no-canonical-prefixes and
 // pass -no-canonical-prefixes as a device compiler flag.
-// HIPTHINLTO-NO-CANON-PREFIXES: clang-linker-wrapper{{.*}} "--device-compiler=amdgcn-amd-amdhsa=-no-canonical-prefixes" {{.*}} "--no-canonical-prefixes"
+// HIPTHINLTO-NO-CANON-PREFIXES: clang-linker-wrapper{{.*}} "--device-compiler=amdgpu-amd-amdhsa=-no-canonical-prefixes" {{.*}} "--no-canonical-prefixes"
 
 // Check that -flto=thin is handled correctly, particularly with -fwhole-program-vtables.
 //
@@ -108,15 +108,15 @@
 // drop -fwhole-program-vtables for the device offload compile and pass it through for the
 // non-device offload compile along with -flto=thin.
 // THINLTO-NOT: error: invalid argument '-fwhole-program-vtables' only allowed with '-flto'
-// THINLTO-NOT: "-cc1"{{.*}}" "-triple" "amdgcn-amd-amdhsa" {{.*}} "-fwhole-program-vtables"
+// THINLTO-NOT: "-cc1"{{.*}}" "-triple" "amdgpu9-amd-amdhsa" {{.*}} "-fwhole-program-vtables"
 // THINLTO: "-cc1"{{.*}} "-triple" "x86_64-unknown-linux-gnu" {{.*}} "-flto=thin" {{.*}} "-fwhole-program-vtables"
-// THINLTO-NOT: "-cc1"{{.*}}" "-triple" "amdgcn-amd-amdhsa" {{.*}} "-fwhole-program-vtables"
+// THINLTO-NOT: "-cc1"{{.*}}" "-triple" "amdgpu9-amd-amdhsa" {{.*}} "-fwhole-program-vtables"
 
 // Check -fopenmp=libomp is allowed with HIP but -fopenmp-targets= is not allowed.
 
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -nogpuinc -nogpulib \
 // RUN:   --offload-arch=gfx906 -fopenmp=libomp %s 2>&1 | FileCheck -check-prefix=OMP %s
-// OMP-NOT: "-cc1"{{.*}} "-triple" "amdgcn-amd-amdhsa" {{.*}} "-fopenmp"
+// OMP-NOT: "-cc1"{{.*}} "-triple" "amdgpu9-amd-amdhsa" {{.*}} "-fopenmp"
 // OMP: "-cc1"{{.*}} "-triple" "x86_64-unknown-linux-gnu" {{.*}} "-fopenmp"
 
 // Check -Xoffload-linker option is passed to lld.
@@ -129,7 +129,7 @@
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -nogpuinc -nogpulib \
 // RUN:   --offload-arch=gfx906 -fhip-kernel-arg-name %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=KAN %s
-// KAN: "-cc1"{{.*}} "-triple" "amdgcn-amd-amdhsa" {{.*}} "-fhip-kernel-arg-name"
+// KAN: "-cc1"{{.*}} "-triple" "amdgpu9.06-amd-amdhsa" {{.*}} "-fhip-kernel-arg-name"
 
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -nogpuinc -nogpulib \
 // RUN:   --offload-arch=gfx906 %s 2>&1 \
@@ -138,22 +138,22 @@
 
 // RUN: %clang -### -nogpuinc -nogpulib -mno-amdgpu-ieee -mamdgpu-ieee \
 // RUN:   --cuda-gpu-arch=gfx906  %s 2>&1 | FileCheck -check-prefix=IEEE-ON %s
-// IEEE-ON-NOT: clang{{.*}} "-triple" "amdgcn-amd-amdhsa" {{.*}} "-m{{(no-)?}}amdgpu-ieee"
+// IEEE-ON-NOT: clang{{.*}} "-triple" "amdgpu9.06-amd-amdhsa" {{.*}} "-m{{(no-)?}}amdgpu-ieee"
 
 // RUN: %clang -### -nogpuinc -nogpulib -mamdgpu-ieee -mno-amdgpu-ieee -ffast-math \
 // RUN:   --cuda-gpu-arch=gfx906  %s 2>&1 | FileCheck -check-prefixes=IEEE-OFF %s
-// IEEE-OFF: clang{{.*}} "-triple" "amdgcn-amd-amdhsa" {{.*}} "-mno-amdgpu-ieee"
+// IEEE-OFF: clang{{.*}} "-triple" "amdgpu9.06-amd-amdhsa" {{.*}} "-mno-amdgpu-ieee"
 
 // RUN: %clang -### -nogpuinc -nogpulib -mamdgpu-ieee -mno-amdgpu-ieee -ffast-math \
 // RUN:   --cuda-gpu-arch=gfx906  %s 2>&1 | FileCheck -check-prefixes=IEEE-OFF-NEG %s
-// IEEE-OFF-NEG-NOT: clang{{.*}} "-triple" "amdgcn-amd-amdhsa" {{.*}} "-mamdgpu-ieee"
+// IEEE-OFF-NEG-NOT: clang{{.*}} "-triple" "amdgpu9.06-amd-amdhsa" {{.*}} "-mamdgpu-ieee"
 
 // Check -fno-hip-fp32-correctly-rounded-divide-sqrt is passed to -cc1 but
 // (default) -fhip-fp32-correctly-rounded-divide-sqrt is not.
 
 // RUN: %clang -### -nogpuinc -nogpulib -fno-hip-fp32-correctly-rounded-divide-sqrt \
 // RUN:   --cuda-gpu-arch=gfx906  %s 2>&1 | FileCheck -check-prefixes=NOCRDS %s
-// NOCRDS: clang{{.*}} "-triple" "amdgcn-amd-amdhsa" {{.*}} "-fno-hip-fp32-correctly-rounded-divide-sqrt"
+// NOCRDS: clang{{.*}} "-triple" "amdgpu9.06-amd-amdhsa" {{.*}} "-fno-hip-fp32-correctly-rounded-divide-sqrt"
 
 // RUN: %clang -### -nogpuinc -nogpulib \
 // RUN:   --cuda-gpu-arch=gfx906  %s 2>&1 | FileCheck -check-prefixes=CRDS %s
@@ -174,7 +174,7 @@
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -nogpuinc -nogpulib -ffast-math \
 // RUN:   --cuda-gpu-arch=gfx906 %s 2>&1 | FileCheck -check-prefix=APPROX %s
 
-// APPROX: "-cc1"{{.*}} "-triple" "amdgcn-amd-amdhsa" {{.*}} "-fgpu-approx-transcendentals"
+// APPROX: "-cc1"{{.*}} "-triple" "amdgpu9.06-amd-amdhsa" {{.*}} "-fgpu-approx-transcendentals"
 // APPROX: "-cc1"{{.*}} "-triple" "x86_64-unknown-linux-gnu" {{.*}} "-fgpu-approx-transcendentals"
 
 // RUN: %clang -### -nogpuinc -nogpulib -fno-gpu-approx-transcendentals \
@@ -204,13 +204,13 @@
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -nogpuinc -nogpulib -fno-offload-uniform-block \
 // RUN:   --cuda-gpu-arch=gfx906 %s 2>&1 | FileCheck -check-prefix=NOUNIBLK %s
 
-// NOUNIBLK: "-cc1"{{.*}} "-triple" "amdgcn-amd-amdhsa" {{.*}} "-fno-offload-uniform-block"
+// NOUNIBLK: "-cc1"{{.*}} "-triple" "amdgpu9.06-amd-amdhsa" {{.*}} "-fno-offload-uniform-block"
 // NOUNIBLK: "-cc1"{{.*}} "-triple" "x86_64-unknown-linux-gnu" {{.*}} "-fno-offload-uniform-block"
 
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -nogpuinc -nogpulib -foffload-uniform-block \
 // RUN:   --cuda-gpu-arch=gfx906 %s 2>&1 | FileCheck -check-prefix=UNIBLK %s
 
-// UNIBLK: "-cc1"{{.*}} "-triple" "amdgcn-amd-amdhsa" {{.*}} "-foffload-uniform-block"
+// UNIBLK: "-cc1"{{.*}} "-triple" "amdgpu9.06-amd-amdhsa" {{.*}} "-foffload-uniform-block"
 // UNIBLK: "-cc1"{{.*}} "-triple" "x86_64-unknown-linux-gnu" {{.*}} "-foffload-uniform-block"
 
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -nogpuinc -nogpulib \
@@ -227,7 +227,7 @@
 
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -nogpuinc -nogpulib \
 // RUN:   --cuda-gpu-arch=gfx906 %s 2>&1 | FileCheck -check-prefix=WARN-ATOMIC %s
-// WARN-ATOMIC: clang{{.*}} "-triple" "amdgcn-amd-amdhsa" {{.*}} "-Werror=atomic-alignment"
+// WARN-ATOMIC: clang{{.*}} "-triple" "amdgpu9.06-amd-amdhsa" {{.*}} "-Werror=atomic-alignment"
 // WARN-ATOMIC-NOT: clang{{.*}} "-triple" "x86_64-unknown-linux-gnu" {{.*}} "-Werror=atomic-alignment"
 
 // Check the default -Werror=atomic-alignment can be overridden.
@@ -235,7 +235,7 @@
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -nogpuinc -nogpulib \
 // RUN:   --cuda-gpu-arch=gfx906 -Xarch_device -Wno-error=atomic-alignment %s \
 // RUN:   2>&1 | FileCheck -check-prefix=NO-WARN-ATOMIC %s
-// NO-WARN-ATOMIC: clang{{.*}} "-triple" "amdgcn-amd-amdhsa" {{.*}} "-Werror=atomic-alignment" {{.*}} "-Wno-error=atomic-alignment"
+// NO-WARN-ATOMIC: clang{{.*}} "-triple" "amdgpu9.06-amd-amdhsa" {{.*}} "-Werror=atomic-alignment" {{.*}} "-Wno-error=atomic-alignment"
 // NO-WARN-ATOMIC-NOT: clang{{.*}} "-triple" "x86_64-unknown-linux-gnu" {{.*}} "-Werror=atomic-alignment"
 // NO-WARN-ATOMIC-NOT: clang{{.*}} "-triple" "x86_64-unknown-linux-gnu" {{.*}} "-Wno-error=atomic-alignment"
 
@@ -268,7 +268,7 @@
 // RUN:   --offload-arch=gfx1100 --offload-new-driver \
 // RUN:   -fprofile-instr-generate -fcoverage-mapping %s 2>&1 | \
 // RUN:   FileCheck -check-prefix=COV %s
-// COV: clang-linker-wrapper{{.*}} "--device-compiler=amdgcn-amd-amdhsa=-fprofile-instr-generate" "--device-compiler=amdgcn-amd-amdhsa=-fcoverage-mapping"
+// COV: clang-linker-wrapper{{.*}} "--device-compiler=amdgpu-amd-amdhsa=-fprofile-instr-generate" "--device-compiler=amdgpu-amd-amdhsa=-fcoverage-mapping"
 
 // RUN: %clang -### -Werror --target=x86_64-unknown-linux-gnu -nogpuinc -nogpulib \
 // RUN:   -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
@@ -276,7 +276,7 @@
 // RUN:   -fprofile-instr-generate -fcoverage-mapping \
 // RUN:   -fcoverage-compilation-dir=/src %s 2>&1 | \
 // RUN:   FileCheck -check-prefix=COV-DIR %s
-// COV-DIR: clang-linker-wrapper{{.*}} "--device-compiler=amdgcn-amd-amdhsa=-fcoverage-compilation-dir=/src"
+// COV-DIR: clang-linker-wrapper{{.*}} "--device-compiler=amdgpu-amd-amdhsa=-fcoverage-compilation-dir=/src"
 
 // RUN: %clang -### -Werror --target=x86_64-unknown-linux-gnu -nogpuinc -nogpulib \
 // RUN:   -resource-dir=%S/Inputs/resource_dir \

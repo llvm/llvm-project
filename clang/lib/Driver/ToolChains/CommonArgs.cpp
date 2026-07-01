@@ -3147,32 +3147,66 @@ void tools::addOpenCLBuiltinsLib(const Driver &D, const llvm::Triple &TT,
   }
 
   // The OpenCL libraries are stored in <ResourceDir>/lib/<triple>.
-  SmallString<128> BasePath(D.ResourceDir);
-  llvm::sys::path::append(BasePath, "lib");
-  llvm::sys::path::append(BasePath, D.getTargetTriple());
+  SmallString<128> ResourceLibPath(D.ResourceDir);
+  llvm::sys::path::append(ResourceLibPath, "lib");
 
-  // First check for a CPU-specific library in <ResourceDir>/lib/<triple>/<CPU>.
-  // TODO: Factor this into common logic that checks for valid subtargets.
-  if (const Arg *CPUArg = DriverArgs.getLastArg(options::OPT_mcpu_EQ)) {
-    StringRef CPU = CPUArg->getValue();
+  StringRef CPU;
+  if (const Arg *CPUArg = DriverArgs.getLastArg(options::OPT_mcpu_EQ))
+    CPU = CPUArg->getValue();
+
+  // Helper to check for libclc.bc in a specific triple directory.
+  auto TryTriplePath = [&](StringRef TripleStr) -> bool {
+    SmallString<128> BasePath(ResourceLibPath);
+    llvm::sys::path::append(BasePath, TripleStr);
+
+    // First check for a CPU-specific library in
+    // <ResourceDir>/lib/<triple>/<CPU>.
+    // TODO: Factor this into common logic that checks for valid subtargets.
     if (!CPU.empty()) {
       SmallString<128> CPUPath(BasePath);
       llvm::sys::path::append(CPUPath, CPU, "libclc.bc");
       if (D.getVFS().exists(CPUPath)) {
         CC1Args.push_back("-mlink-builtin-bitcode");
         CC1Args.push_back(DriverArgs.MakeArgString(CPUPath));
-        return;
+        return true;
       }
     }
-  }
 
-  // Fall back to the generic library for the triple.
-  SmallString<128> GenericPath(BasePath);
-  llvm::sys::path::append(GenericPath, "libclc.bc");
-  if (D.getVFS().exists(GenericPath)) {
-    CC1Args.push_back("-mlink-builtin-bitcode");
-    CC1Args.push_back(DriverArgs.MakeArgString(GenericPath));
+    // Fall back to the generic library for the triple.
+    SmallString<128> GenericPath(BasePath);
+    llvm::sys::path::append(GenericPath, "libclc.bc");
+    if (D.getVFS().exists(GenericPath)) {
+      CC1Args.push_back("-mlink-builtin-bitcode");
+      CC1Args.push_back(DriverArgs.MakeArgString(GenericPath));
+      return true;
+    }
+    return false;
+  };
+
+  // First, try the exact target triple.
+  if (TryTriplePath(TT.str()))
     return;
+
+  llvm::Triple::SubArchType SubArch = TT.getSubArch();
+  if (TT.isAMDGCN() && SubArch != llvm::Triple::NoSubArch) {
+    // For AMDGPU with a subarch, try major version and generic fallbacks.
+    // 1. Specific subarch (e.g., amdgpu9.0a-amd-amdhsa)
+    // 2. Major subarch (e.g., amdgpu9-amd-amdhsa)
+    // 3. Generic triple (e.g., amdgpu-amd-amdhsa)
+    llvm::Triple::SubArchType MajorSubArch =
+        llvm::AMDGPU::getMajorSubArch(SubArch);
+    if (MajorSubArch != SubArch) {
+      llvm::Triple MajorTT(TT);
+      MajorTT.setArch(TT.getArch(), MajorSubArch);
+      if (TryTriplePath(MajorTT.str()))
+        return;
+    }
+
+    // Try generic amdgpu triple without any subarch.
+    llvm::Triple NoSubArchTT(TT);
+    NoSubArchTT.setArch(TT.getArch(), llvm::Triple::NoSubArch);
+    if (TryTriplePath(NoSubArchTT.str()))
+      return;
   }
 
   D.Diag(diag::err_drv_libclc_not_found) << "libclc.bc";

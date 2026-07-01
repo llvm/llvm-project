@@ -18,7 +18,7 @@
 // RUN: %clang -### -target amdgcn--amdhsa -nogpulib -c %s 2>&1 | FileCheck -check-prefixes=AMDGCN,AMDGCN-DENORM %s
 // RUN: %clang -### -cl-denorms-are-zero -o - -target amdgcn--amdhsa -nogpulib -c %s 2>&1 | FileCheck -check-prefixes=AMDGCN,AMDGCN-FLUSH %s
 
-// AMDGCN: "-triple" "amdgcn-unknown-amdhsa"
+// AMDGCN: "-triple" "amdgpu{{([0-9].)*}}-unknown-amdhsa"
 // AMDGCN-FLUSH: "-fdenormal-fp-math-f32=preserve-sign,preserve-sign"
 
 // This should be omitted and default to ieee

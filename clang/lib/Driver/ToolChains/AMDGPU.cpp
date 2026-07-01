@@ -957,6 +957,21 @@ AMDGPUToolChain::checkTargetID(const llvm::opt::ArgList &DriverArgs) const {
   if (PTID.OptionalTargetID && !PTID.OptionalGPUArch) {
     getDriver().Diag(clang::diag::err_drv_bad_target_id)
         << *PTID.OptionalTargetID;
+    return PTID;
+  }
+
+  if (getTriple().getSubArch() != llvm::Triple::NoSubArch &&
+      PTID.OptionalGPUArch) {
+    llvm::AMDGPU::GPUKind Kind =
+        llvm::AMDGPU::parseArchAMDGCN(*PTID.OptionalGPUArch);
+    llvm::Triple::SubArchType KindSubArch =
+        static_cast<llvm::Triple::SubArchType>(llvm::AMDGPU::getSubArch(Kind));
+    if (getTriple().getSubArch() != KindSubArch &&
+        getTriple().getSubArch() !=
+            llvm::AMDGPU::getMajorSubArch(KindSubArch)) {
+      getDriver().Diag(clang::diag::err_target_unsupported_arch)
+          << *PTID.OptionalGPUArch << getTriple().getArchName();
+    }
   }
   return PTID;
 }

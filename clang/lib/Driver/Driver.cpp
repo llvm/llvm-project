@@ -940,9 +940,11 @@ static TripleSet inferOffloadToolchains(Compilation &C,
   TripleSet Triples;
   for (llvm::StringRef Arch : Archs) {
     OffloadArch ID = StringToOffloadArch(Arch);
-    if (ID == OffloadArch::Unknown)
-      ID = StringToOffloadArch(
-          getProcessorFromTargetID(llvm::Triple("amdgcn-amd-amdhsa"), Arch));
+    if (ID == OffloadArch::Unknown) {
+      llvm::Triple AMDGPUTriple(llvm::Triple::amdgpu, llvm::Triple::NoSubArch,
+                                llvm::Triple::AMD, llvm::Triple::AMDHSA);
+      ID = StringToOffloadArch(getProcessorFromTargetID(AMDGPUTriple, Arch));
+    }
 
     if (Kind == Action::OFK_HIP && !IsAMDOffloadArch(ID)) {
       C.getDriver().Diag(clang::diag::err_drv_offload_bad_gpu_arch)
@@ -987,9 +989,10 @@ static TripleSet inferOffloadToolchains(Compilation &C,
   }
 
   // Infer the default target triple if no specific architectures are given.
-  if (Archs.empty() && Kind == Action::OFK_HIP)
-    Triples.insert(llvm::Triple("amdgcn-amd-amdhsa"));
-  else if (Archs.empty() && Kind == Action::OFK_Cuda) {
+  if (Archs.empty() && Kind == Action::OFK_HIP) {
+    Triples.insert(llvm::Triple(llvm::Triple::amdgpu, llvm::Triple::NoSubArch,
+                                llvm::Triple::AMD, llvm::Triple::AMDHSA));
+  } else if (Archs.empty() && Kind == Action::OFK_Cuda) {
     llvm::Triple::ArchType Arch =
         C.getDefaultToolChain().getTriple().isArch64Bit()
             ? llvm::Triple::nvptx64
@@ -4853,11 +4856,22 @@ static StringRef getCanonicalArchString(Compilation &C,
     C.getDriver().Diag(clang::diag::err_drv_offload_bad_gpu_arch)
         << "CUDA" << ArchStr;
     return StringRef();
-  } else if (Triple.isAMDGPU() &&
-             (Arch == OffloadArch::Unknown || !IsAMDOffloadArch(Arch))) {
-    C.getDriver().Diag(clang::diag::err_drv_offload_bad_gpu_arch)
-        << "HIP" << ArchStr;
-    return StringRef();
+  } else if (Triple.isAMDGPU()) {
+    if (Arch == OffloadArch::Unknown || !IsAMDOffloadArch(Arch)) {
+      C.getDriver().Diag(clang::diag::err_drv_offload_bad_gpu_arch)
+          << "HIP" << ArchStr;
+      return {};
+    }
+
+    if (Triple.getSubArch() != llvm::Triple::NoSubArch) {
+      llvm::Triple::SubArchType ArchSubArch = getOffloadArchSubArch(Arch);
+      if (ArchSubArch != Triple.getSubArch() &&
+          llvm::AMDGPU::getMajorSubArch(ArchSubArch) != Triple.getSubArch()) {
+        C.getDriver().Diag(clang::diag::err_target_unsupported_arch)
+            << ArchStr << Triple.getArchName();
+        return {};
+      }
+    }
   }
 
   if (IsNVIDIAOffloadArch(Arch))
@@ -4955,7 +4969,9 @@ Driver::getOffloadArchs(Compilation &C, const llvm::opt::DerivedArgList &Args,
         << ConflictingArchs->first << ConflictingArchs->second;
 
   // Fill in the default architectures if not provided explicitly.
-  if (Archs.empty()) {
+  bool HasSubArch = TC.getTriple().isAMDGCN() &&
+                    TC.getTriple().getSubArch() != llvm::Triple::NoSubArch;
+  if (Archs.empty() && !HasSubArch) {
     if (Kind == Action::OFK_Cuda) {
       Archs.insert(OffloadArchToString(TC.getTriple().isSPIRV()
                                            ? OffloadArch::Unused
@@ -4985,7 +5001,22 @@ Driver::getOffloadArchs(Compilation &C, const llvm::opt::DerivedArgList &Args,
         }
       }
     }
+  } else if (Archs.empty() && HasSubArch) {
+    // Use default CPU if we have a subarch in the triple.
+    //
+    // TODO: We ought to be able to get away with the empty string here, but
+    // many tests require removal of redundant -target-cpu arguments
+    OffloadArch TripleOffloadArch =
+        getSubArchOffloadArch(TC.getTriple().getSubArch());
+    llvm::StringRef ArchStr = TripleOffloadArch == OffloadArch::Unknown
+                                  ? ""
+                                  : OffloadArchToString(TripleOffloadArch);
+    StringRef CanonicalStr =
+        getCanonicalArchString(C, Args, ArchStr, TC.getTriple());
+    if (!CanonicalStr.empty())
+      Archs.insert(CanonicalStr);
   }
+
   Args.ClaimAllArgs(options::OPT_offload_arch_EQ);
   Args.ClaimAllArgs(options::OPT_no_offload_arch_EQ);
 

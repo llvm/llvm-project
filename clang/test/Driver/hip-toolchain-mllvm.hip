@@ -26,12 +26,12 @@
 // RUN:   -Xoffload-linker -mllvm=-inline-threshold=100 \
 // RUN:   %s 2>&1 | FileCheck -check-prefix=NEG %s
 
-// CHECK: [[CLANG:".*clang.*"]] "-cc1" "-triple" "amdgcn-amd-amdhsa"
+// CHECK: [[CLANG:".*clang.*"]] "-cc1" "-triple" "amdgpu8.03-amd-amdhsa"
 // CHECK-SAME: "-aux-triple" "x86_64-unknown-linux-gnu"
 // CHECK-SAME: {{.*}} "-target-cpu" "gfx803"
 // CHECK-SAME: {{.*}} "-mllvm" "-unroll-count=10" {{.*}}
 
-// CHECK: [[CLANG]] "-cc1" "-triple" "amdgcn-amd-amdhsa"
+// CHECK: [[CLANG]] "-cc1" "-triple" "amdgpu9.00-amd-amdhsa"
 // CHECK-SAME: "-aux-triple" "x86_64-unknown-linux-gnu"
 // CHECK-SAME: {{.*}} "-target-cpu" "gfx900"
 // CHECK-SAME: {{.*}} "-mllvm" "-unroll-count=10" {{.*}}

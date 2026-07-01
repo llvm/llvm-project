@@ -158,6 +158,236 @@ OffloadArch StringToOffloadArch(llvm::StringRef S) {
   return Result->Arch;
 }
 
+OffloadArch getSubArchOffloadArch(llvm::Triple::SubArchType SubArch) {
+  static const OffloadArch AMDGPUSubArchs[llvm::Triple::LastAMDGPUSubArch -
+                                          llvm::Triple::FirstAMDGPUSubArch +
+                                          1] = {
+      OffloadArch::Unknown,         OffloadArch::GFX600,  OffloadArch::GFX601,
+      OffloadArch::GFX602,
+
+      OffloadArch::Unknown,         OffloadArch::GFX700,  OffloadArch::GFX701,
+      OffloadArch::GFX702,          OffloadArch::GFX703,  OffloadArch::GFX704,
+      OffloadArch::GFX705,
+
+      OffloadArch::Unknown,         OffloadArch::GFX801,  OffloadArch::GFX802,
+      OffloadArch::GFX803,          OffloadArch::GFX805,
+
+      OffloadArch::GFX810,
+
+      OffloadArch::GFX9_GENERIC,    OffloadArch::GFX900,  OffloadArch::GFX902,
+      OffloadArch::GFX904,          OffloadArch::GFX906,  OffloadArch::GFX909,
+      OffloadArch::GFX90c,
+
+      OffloadArch::GFX908,
+
+      OffloadArch::GFX90a,
+
+      OffloadArch::GFX9_4_GENERIC,  OffloadArch::GFX942,  OffloadArch::GFX950,
+
+      OffloadArch::GFX10_1_GENERIC, OffloadArch::GFX1010, OffloadArch::GFX1011,
+      OffloadArch::GFX1012,         OffloadArch::GFX1013,
+
+      OffloadArch::GFX10_3_GENERIC, OffloadArch::GFX1030, OffloadArch::GFX1031,
+      OffloadArch::GFX1032,         OffloadArch::GFX1033, OffloadArch::GFX1034,
+      OffloadArch::GFX1035,         OffloadArch::GFX1036,
+
+      OffloadArch::GFX11_GENERIC,   OffloadArch::GFX1100, OffloadArch::GFX1101,
+      OffloadArch::GFX1102,         OffloadArch::GFX1103, OffloadArch::GFX1150,
+      OffloadArch::GFX1151,         OffloadArch::GFX1152, OffloadArch::GFX1153,
+      OffloadArch::GFX1154,
+
+      OffloadArch::GFX11_7_GENERIC, OffloadArch::GFX1170, OffloadArch::GFX1171,
+      OffloadArch::GFX1172,
+
+      OffloadArch::GFX12_GENERIC,   OffloadArch::GFX1200, OffloadArch::GFX1201,
+
+      OffloadArch::GFX12_5_GENERIC, OffloadArch::GFX1250, OffloadArch::GFX1251,
+
+      OffloadArch::GFX13_GENERIC,   OffloadArch::GFX1310};
+
+  if (SubArch < llvm::Triple::FirstAMDGPUSubArch ||
+      SubArch > llvm::Triple::LastAMDGPUSubArch)
+    return OffloadArch::Unknown;
+
+  return AMDGPUSubArchs[SubArch - llvm::Triple::FirstAMDGPUSubArch];
+}
+
+llvm::Triple::SubArchType getOffloadArchSubArch(OffloadArch ID) {
+  switch (ID) {
+  case OffloadArch::Unused:
+  case OffloadArch::Unknown:
+  case OffloadArch::SM_20:
+  case OffloadArch::SM_21:
+  case OffloadArch::SM_30:
+  case OffloadArch::SM_32_:
+  case OffloadArch::SM_35:
+  case OffloadArch::SM_37:
+  case OffloadArch::SM_50:
+  case OffloadArch::SM_52:
+  case OffloadArch::SM_53:
+  case OffloadArch::SM_60:
+  case OffloadArch::SM_61:
+  case OffloadArch::SM_62:
+  case OffloadArch::SM_70:
+  case OffloadArch::SM_72:
+  case OffloadArch::SM_75:
+  case OffloadArch::SM_80:
+  case OffloadArch::SM_86:
+  case OffloadArch::SM_87:
+  case OffloadArch::SM_88:
+  case OffloadArch::SM_89:
+  case OffloadArch::SM_90:
+  case OffloadArch::SM_90a:
+  case OffloadArch::SM_100:
+  case OffloadArch::SM_100a:
+  case OffloadArch::SM_100f:
+  case OffloadArch::SM_101:
+  case OffloadArch::SM_101a:
+  case OffloadArch::SM_101f:
+  case OffloadArch::SM_103:
+  case OffloadArch::SM_103a:
+  case OffloadArch::SM_103f:
+  case OffloadArch::SM_110:
+  case OffloadArch::SM_110a:
+  case OffloadArch::SM_110f:
+  case OffloadArch::SM_120:
+  case OffloadArch::SM_120a:
+  case OffloadArch::SM_120f:
+  case OffloadArch::SM_121:
+  case OffloadArch::SM_121a:
+  case OffloadArch::SM_121f:
+  case OffloadArch::AMDGCNSPIRV:
+  case OffloadArch::Generic:
+  case OffloadArch::GRANITERAPIDS:
+  case OffloadArch::BMG_G21:
+    return llvm::Triple::NoSubArch;
+  case OffloadArch::GFX600:
+    return llvm::Triple::AMDGPUSubArch600;
+  case OffloadArch::GFX601:
+    return llvm::Triple::AMDGPUSubArch601;
+  case OffloadArch::GFX602:
+    return llvm::Triple::AMDGPUSubArch602;
+  case OffloadArch::GFX700:
+    return llvm::Triple::AMDGPUSubArch700;
+  case OffloadArch::GFX701:
+    return llvm::Triple::AMDGPUSubArch701;
+  case OffloadArch::GFX702:
+    return llvm::Triple::AMDGPUSubArch702;
+  case OffloadArch::GFX703:
+    return llvm::Triple::AMDGPUSubArch703;
+  case OffloadArch::GFX704:
+    return llvm::Triple::AMDGPUSubArch704;
+  case OffloadArch::GFX705:
+    return llvm::Triple::AMDGPUSubArch705;
+  case OffloadArch::GFX801:
+    return llvm::Triple::AMDGPUSubArch801;
+  case OffloadArch::GFX802:
+    return llvm::Triple::AMDGPUSubArch802;
+  case OffloadArch::GFX803:
+    return llvm::Triple::AMDGPUSubArch803;
+  case OffloadArch::GFX805:
+    return llvm::Triple::AMDGPUSubArch805;
+  case OffloadArch::GFX810:
+    return llvm::Triple::AMDGPUSubArch810;
+  case OffloadArch::GFX9_GENERIC:
+    return llvm::Triple::AMDGPUSubArch9;
+  case OffloadArch::GFX900:
+    return llvm::Triple::AMDGPUSubArch900;
+  case OffloadArch::GFX902:
+    return llvm::Triple::AMDGPUSubArch902;
+  case OffloadArch::GFX904:
+    return llvm::Triple::AMDGPUSubArch904;
+  case OffloadArch::GFX906:
+    return llvm::Triple::AMDGPUSubArch906;
+  case OffloadArch::GFX908:
+    return llvm::Triple::AMDGPUSubArch908;
+  case OffloadArch::GFX909:
+    return llvm::Triple::AMDGPUSubArch909;
+  case OffloadArch::GFX90a:
+    return llvm::Triple::AMDGPUSubArch90A;
+  case OffloadArch::GFX90c:
+    return llvm::Triple::AMDGPUSubArch90C;
+  case OffloadArch::GFX9_4_GENERIC:
+    return llvm::Triple::AMDGPUSubArch9_4;
+  case OffloadArch::GFX942:
+    return llvm::Triple::AMDGPUSubArch942;
+  case OffloadArch::GFX950:
+    return llvm::Triple::AMDGPUSubArch950;
+  case OffloadArch::GFX10_1_GENERIC:
+    return llvm::Triple::AMDGPUSubArch10_1;
+  case OffloadArch::GFX1010:
+    return llvm::Triple::AMDGPUSubArch1010;
+  case OffloadArch::GFX1011:
+    return llvm::Triple::AMDGPUSubArch1011;
+  case OffloadArch::GFX1012:
+    return llvm::Triple::AMDGPUSubArch1012;
+  case OffloadArch::GFX1013:
+    return llvm::Triple::AMDGPUSubArch1013;
+  case OffloadArch::GFX10_3_GENERIC:
+    return llvm::Triple::AMDGPUSubArch10_3;
+  case OffloadArch::GFX1030:
+    return llvm::Triple::AMDGPUSubArch1030;
+  case OffloadArch::GFX1031:
+    return llvm::Triple::AMDGPUSubArch1031;
+  case OffloadArch::GFX1032:
+    return llvm::Triple::AMDGPUSubArch1032;
+  case OffloadArch::GFX1033:
+    return llvm::Triple::AMDGPUSubArch1033;
+  case OffloadArch::GFX1034:
+    return llvm::Triple::AMDGPUSubArch1034;
+  case OffloadArch::GFX1035:
+    return llvm::Triple::AMDGPUSubArch1035;
+  case OffloadArch::GFX1036:
+    return llvm::Triple::AMDGPUSubArch1036;
+  case OffloadArch::GFX11_GENERIC:
+    return llvm::Triple::AMDGPUSubArch11;
+  case OffloadArch::GFX1100:
+    return llvm::Triple::AMDGPUSubArch1100;
+  case OffloadArch::GFX1101:
+    return llvm::Triple::AMDGPUSubArch1101;
+  case OffloadArch::GFX1102:
+    return llvm::Triple::AMDGPUSubArch1102;
+  case OffloadArch::GFX1103:
+    return llvm::Triple::AMDGPUSubArch1103;
+  case OffloadArch::GFX1150:
+    return llvm::Triple::AMDGPUSubArch1150;
+  case OffloadArch::GFX1151:
+    return llvm::Triple::AMDGPUSubArch1151;
+  case OffloadArch::GFX1152:
+    return llvm::Triple::AMDGPUSubArch1152;
+  case OffloadArch::GFX1153:
+    return llvm::Triple::AMDGPUSubArch1153;
+  case OffloadArch::GFX1154:
+    return llvm::Triple::AMDGPUSubArch1154;
+  case OffloadArch::GFX1170:
+    return llvm::Triple::AMDGPUSubArch1170;
+  case OffloadArch::GFX11_7_GENERIC:
+    return llvm::Triple::AMDGPUSubArch11_7;
+  case OffloadArch::GFX1171:
+    return llvm::Triple::AMDGPUSubArch1171;
+  case OffloadArch::GFX1172:
+    return llvm::Triple::AMDGPUSubArch1172;
+  case OffloadArch::GFX12_GENERIC:
+    return llvm::Triple::AMDGPUSubArch12;
+  case OffloadArch::GFX1200:
+    return llvm::Triple::AMDGPUSubArch1200;
+  case OffloadArch::GFX1201:
+    return llvm::Triple::AMDGPUSubArch1201;
+  case OffloadArch::GFX1250:
+    return llvm::Triple::AMDGPUSubArch1250;
+  case OffloadArch::GFX1251:
+    return llvm::Triple::AMDGPUSubArch1251;
+  case OffloadArch::GFX12_5_GENERIC:
+    return llvm::Triple::AMDGPUSubArch12_5;
+  case OffloadArch::GFX13_GENERIC:
+    return llvm::Triple::AMDGPUSubArch13;
+  case OffloadArch::GFX1310:
+    return llvm::Triple::AMDGPUSubArch1310;
+  }
+
+  llvm_unreachable("covered switch");
+}
+
 llvm::Triple OffloadArchToTriple(const llvm::Triple &DefaultToolchainTriple,
                                  OffloadArch ID) {
   if (ID == OffloadArch::AMDGCNSPIRV)
@@ -172,8 +402,10 @@ llvm::Triple OffloadArchToTriple(const llvm::Triple &DefaultToolchainTriple,
                         llvm::Triple::CUDA);
   }
 
-  if (IsAMDOffloadArch(ID))
-    return llvm::Triple("amdgcn-amd-amdhsa");
+  if (IsAMDOffloadArch(ID)) {
+    return llvm::Triple(llvm::Triple::amdgpu, llvm::Triple::NoSubArch,
+                        llvm::Triple::AMD, llvm::Triple::AMDHSA);
+  }
 
   return {};
 }

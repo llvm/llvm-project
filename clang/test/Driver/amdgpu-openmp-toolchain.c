@@ -7,9 +7,9 @@
 
 // verify the tools invocations
 // CHECK: "-cc1" "-triple" "x86_64-unknown-linux-gnu"{{.*}}"-emit-llvm-bc"{{.*}}"-x" "c"
-// CHECK: "-cc1" "-triple" "amdgcn-amd-amdhsa" "-aux-triple" "x86_64-unknown-linux-gnu"{{.*}}"-flto=full" "-flto-unit"{{.*}}"-target-cpu" "gfx906"
+// CHECK: "-cc1" "-triple" "amdgpu9.06-amd-amdhsa" "-aux-triple" "x86_64-unknown-linux-gnu"{{.*}}"-flto=full" "-flto-unit"{{.*}}"-target-cpu" "gfx906"
 // CHECK: "-cc1" "-triple" "x86_64-unknown-linux-gnu"{{.*}}"-emit-obj"
-// CHECK: clang-linker-wrapper{{.*}}"--device-compiler=amdgcn-amd-amdhsa=-flto=full"{{.*}} "-o" "a.out"
+// CHECK: clang-linker-wrapper{{.*}}"--device-compiler=amdgpu-amd-amdhsa=-flto=full"{{.*}} "-o" "a.out"
 
 // RUN:   %clang -ccc-print-phases --target=x86_64-unknown-linux-gnu -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx906 %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-PHASES %s
@@ -19,9 +19,9 @@
 // CHECK-PHASES: 3: input, "[[INPUT]]", c, (device-openmp, gfx906)
 // CHECK-PHASES: 4: preprocessor, {3}, cpp-output, (device-openmp, gfx906)
 // CHECK-PHASES: 5: compiler, {4}, ir, (device-openmp, gfx906)
-// CHECK-PHASES: 6: offload, "host-openmp (x86_64-unknown-linux-gnu)" {2}, "device-openmp (amdgcn-amd-amdhsa:gfx906)" {5}, ir
+// CHECK-PHASES: 6: offload, "host-openmp (x86_64-unknown-linux-gnu)" {2}, "device-openmp (amdgpu-amd-amdhsa:gfx906)" {5}, ir
 // CHECK-PHASES: 7: backend, {6}, lto-bc, (device-openmp, gfx906)
-// CHECK-PHASES: 8: offload, "device-openmp (amdgcn-amd-amdhsa:gfx906)" {7}, lto-bc
+// CHECK-PHASES: 8: offload, "device-openmp (amdgpu-amd-amdhsa:gfx906)" {7}, lto-bc
 // CHECK-PHASES: 9: llvm-offload-binary, {8}, image, (device-openmp)
 // CHECK-PHASES: 10: offload, "host-openmp (x86_64-unknown-linux-gnu)" {2}, "device-openmp (x86_64-unknown-linux-gnu)" {9}, ir
 // CHECK-PHASES: 11: backend, {10}, assembler, (host-openmp)
@@ -31,7 +31,7 @@
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -ccc-print-bindings -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx803 -nogpulib %s 2>&1 | FileCheck %s --check-prefix=CHECK-BINDINGS
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -ccc-print-bindings -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa --offload-arch=gfx803 -nogpulib %s 2>&1 | FileCheck %s --check-prefix=CHECK-BINDINGS
 // CHECK-BINDINGS: "x86_64-unknown-linux-gnu" - "clang", inputs: ["[[INPUT:.+]]"], output: "[[HOST_BC:.+]]"
-// CHECK-BINDINGS: "amdgcn-amd-amdhsa" - "clang", inputs: ["[[INPUT]]", "[[HOST_BC]]"], output: "[[DEVICE_BC:.+]]"
+// CHECK-BINDINGS: "amdgpu8.03-amd-amdhsa" - "clang", inputs: ["[[INPUT]]", "[[HOST_BC]]"], output: "[[DEVICE_BC:.+]]"
 // CHECK-BINDINGS: "x86_64-unknown-linux-gnu" - "Offload::Packager", inputs: ["[[DEVICE_BC]]"], output: "[[BINARY:.+]]"
 // CHECK-BINDINGS: "x86_64-unknown-linux-gnu" - "clang", inputs: ["[[HOST_BC]]", "[[BINARY]]"], output: "[[HOST_OBJ:.+]]"
 // CHECK-BINDINGS: "x86_64-unknown-linux-gnu" - "Offload::Linker", inputs: ["[[HOST_OBJ]]"], output: "a.out"
@@ -40,16 +40,16 @@
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -ccc-print-bindings -save-temps -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa --offload-arch=gfx803 -nogpulib %s 2>&1 | FileCheck %s --check-prefix=CHECK-BINDINGS-TEMPS
 // CHECK-BINDINGS-TEMPS: "x86_64-unknown-linux-gnu" - "clang", inputs: ["[[INPUT:.+]]"], output: "[[HOST_PP:.+]]"
 // CHECK-BINDINGS-TEMPS: "x86_64-unknown-linux-gnu" - "clang", inputs: ["[[HOST_PP]]"], output: "[[HOST_BC:.+]]"
-// CHECK-BINDINGS-TEMPS: "amdgcn-amd-amdhsa" - "clang", inputs: ["[[INPUT]]"], output: "[[DEVICE_PP:.+]]"
-// CHECK-BINDINGS-TEMPS: "amdgcn-amd-amdhsa" - "clang", inputs: ["[[DEVICE_PP]]", "[[HOST_BC]]"], output: "[[DEVICE_TEMP_BC:.+]]"
-// CHECK-BINDINGS-TEMPS: "amdgcn-amd-amdhsa" - "clang", inputs: ["[[DEVICE_TEMP_BC]]"], output: "[[DEVICE_BC:.+]]"
+// CHECK-BINDINGS-TEMPS: "amdgpu8.03-amd-amdhsa" - "clang", inputs: ["[[INPUT]]"], output: "[[DEVICE_PP:.+]]"
+// CHECK-BINDINGS-TEMPS: "amdgpu8.03-amd-amdhsa" - "clang", inputs: ["[[DEVICE_PP]]", "[[HOST_BC]]"], output: "[[DEVICE_TEMP_BC:.+]]"
+// CHECK-BINDINGS-TEMPS: "amdgpu8.03-amd-amdhsa" - "clang", inputs: ["[[DEVICE_TEMP_BC]]"], output: "[[DEVICE_BC:.+]]"
 // CHECK-BINDINGS-TEMPS: "x86_64-unknown-linux-gnu" - "Offload::Packager", inputs: ["[[DEVICE_BC]]"], output: "[[DEVICE_IMAGE:.+]]"
 // CHECK-BINDINGS-TEMPS: "x86_64-unknown-linux-gnu" - "clang", inputs: ["[[HOST_BC]]", "[[DEVICE_IMAGE]]"], output: "[[HOST_ASM:.+]]"
 // CHECK-BINDINGS-TEMPS: "x86_64-unknown-linux-gnu" - "clang::as", inputs: ["[[HOST_ASM]]"], output: "[[HOST_OBJ:.+]]"
 // CHECK-BINDINGS-TEMPS: "x86_64-unknown-linux-gnu" - "Offload::Linker", inputs: ["[[HOST_OBJ]]"], output: "a.out"
 
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -emit-llvm -S -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx803 -nogpulib %s 2>&1 | FileCheck %s --check-prefix=CHECK-EMIT-LLVM-IR
-// CHECK-EMIT-LLVM-IR: "-cc1" "-triple" "amdgcn-amd-amdhsa"{{.*}}"-emit-llvm"
+// CHECK-EMIT-LLVM-IR: "-cc1" "-triple" "amdgpu8.03-amd-amdhsa"{{.*}}"-emit-llvm"
 
 // RUN: %clang -### -target x86_64-pc-linux-gnu -fopenmp --offload-arch=gfx803 \
 // RUN:   --no-offloadlib --offloadlib --rocm-device-lib-path=%S/Inputs/rocm/amdgcn/bitcode %s  2>&1 | \
@@ -63,7 +63,7 @@
 
 // RUN: %clang -### -target x86_64-pc-linux-gnu -fopenmp --offload-arch=gfx90a:sramecc-:xnack+ \
 // RUN:   -nogpulib %s 2>&1 | FileCheck %s --check-prefix=CHECK-TARGET-ID
-// CHECK-TARGET-ID: "-cc1" "-triple" "amdgcn-amd-amdhsa" {{.*}} "-target-cpu" "gfx90a" "-target-feature" "+xnack" "-target-feature" "-sramecc"
+// CHECK-TARGET-ID: "-cc1" "-triple" "amdgpu9.0a-amd-amdhsa" {{.*}} "-target-cpu" "gfx90a" "-target-feature" "+xnack" "-target-feature" "-sramecc"
 // CHECK-TARGET-ID: llvm-offload-binary{{.*}}arch=gfx90a:sramecc-:xnack+,kind=openmp
 
 // RUN: not %clang -### -target x86_64-pc-linux-gnu -fopenmp --offload-arch=gfx90a,gfx90a:xnack+ \
@@ -72,11 +72,11 @@
 
 // RUN: %clang -### -target x86_64-pc-linux-gnu -fopenmp --offload-arch=gfx90a \
 // RUN:   -O3 -nogpulib %s 2>&1 | FileCheck %s --check-prefix=CHECK-OPT
-// CHECK-OPT: clang-linker-wrapper{{.*}}"--device-compiler=amdgcn-amd-amdhsa=-O3"
+// CHECK-OPT: clang-linker-wrapper{{.*}}"--device-compiler=amdgpu-amd-amdhsa=-O3"
 
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -emit-llvm -S -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx803 -nogpulib %s 2>&1 | FileCheck %s --check-prefix=CHECK-WARN-ATOMIC
 // CHECK-WARN-ATOMIC-NOT: "-cc1" "-triple" "x86_64-unknown-linux-gnu"{{.*}}"-Werror=atomic-alignment"
-// CHECK-WARN-ATOMIC: "-cc1" "-triple" "amdgcn-amd-amdhsa"{{.*}}"-Werror=atomic-alignment"
+// CHECK-WARN-ATOMIC: "-cc1" "-triple" "amdgpu8.03-amd-amdhsa"{{.*}}"-Werror=atomic-alignment"
 
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -emit-llvm -S -fopenmp --offload-arch=gfx803 \
 // RUN:     -stdlib=libc++ -nogpulib %s 2>&1 | FileCheck %s --check-prefix=LIBCXX
@@ -84,4 +84,4 @@
 
 // RUN: %clang -### -target x86_64-pc-linux-gnu -nogpulib  -fopenmp --offload-arch=gfx90a \
 // RUN:   -ftime-report %s 2>&1 | FileCheck %s --check-prefix=CHECK-TIME-REPORT
-// CHECK-TIME-REPORT: clang-linker-wrapper{{.*}}"--device-compiler=amdgcn-amd-amdhsa=-ftime-report"
+// CHECK-TIME-REPORT: clang-linker-wrapper{{.*}}"--device-compiler=amdgpu-amd-amdhsa=-ftime-report"

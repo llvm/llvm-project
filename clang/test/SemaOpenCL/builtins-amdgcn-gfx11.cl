@@ -1,5 +1,9 @@
 // RUN: %clang_cc1 -triple amdgcn-- -target-cpu gfx1030 -verify=GFX10 -S -o - %s
 // RUN: %clang_cc1 -triple amdgcn-- -target-cpu gfx1100 -verify=GFX11 -S -o - %s
+// The subarch alone drives the target-feature and __has_builtin checks, with no
+// -target-cpu.
+// RUN: %clang_cc1 -triple amdgpu10.30 -verify=GFX10 -S -o - %s
+// RUN: %clang_cc1 -triple amdgpu11.00 -verify=GFX11 -S -o - %s
 
 typedef unsigned int uint;
 typedef unsigned long ulong;

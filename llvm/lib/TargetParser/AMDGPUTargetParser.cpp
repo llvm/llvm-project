@@ -369,7 +369,10 @@ static std::pair<FeatureError, StringRef>
 insertWaveSizeFeature(StringRef GPU, const Triple &T,
                       const StringMap<bool> &DefaultFeatures,
                       StringMap<bool> &Features) {
-  const bool IsNullGPU = GPU.empty();
+  // A bare subarch triple (no -target-cpu) still pins down the target, so it is
+  // not a null GPU: DefaultFeatures has already been populated from the
+  // subarch.
+  const bool IsNullGPU = T.getSubArch() == Triple::NoSubArch && GPU.empty();
   const bool TargetHasWave32 = DefaultFeatures.count("wavefrontsize32");
   const bool TargetHasWave64 = DefaultFeatures.count("wavefrontsize64");
 
@@ -426,7 +429,10 @@ insertWaveSizeFeature(StringRef GPU, const Triple &T,
 /// default target features with entries overridden by \p Features.
 static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
                                  StringMap<bool> &Features) {
-  AMDGPU::GPUKind Kind = parseArchAMDGCN(GPU);
+  // With no explicit GPU, the triple's subarch identifies the target.
+  AMDGPU::GPUKind Kind = GPU.empty() && T.getSubArch() != Triple::NoSubArch
+                             ? getGPUKindFromSubArch(T.getSubArch())
+                             : parseArchAMDGCN(GPU);
   switch (Kind) {
   case GK_GFX1251:
     Features["gfx1251-gemm-insts"] = true;
