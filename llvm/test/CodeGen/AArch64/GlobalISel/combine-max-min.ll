@@ -85,3 +85,87 @@ define <4 x i32> @ASubUMaxVec(<4 x i32> %a) {
   %sub2 = sub <4 x i32> zeroinitializer, %max
   ret <4 x i32> %sub2
 }
+
+define i64 @ASubSMin(i64 %a) {
+; CHECK-SD-LABEL: ASubSMin:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    neg x8, x0
+; CHECK-SD-NEXT:    cmp x0, x8
+; CHECK-SD-NEXT:    cneg x0, x0, lt
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: ASubSMin:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    neg x8, x0
+; CHECK-GI-NEXT:    cmp x0, x8
+; CHECK-GI-NEXT:    cneg x0, x0, le
+; CHECK-GI-NEXT:    ret
+  %sub1 = sub i64 0, %a
+  %min = call i64 @llvm.smin.i64(i64 %a, i64 %sub1)
+  %sub2 = sub i64 0, %min
+  ret i64 %sub2
+}
+
+; Extra use of %min blocks the combine.
+define i64 @ASubSMinOneUse(i64 %a) {
+; CHECK-LABEL: ASubSMinOneUse:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    neg x8, x0
+; CHECK-NEXT:    cmp x0, x8
+; CHECK-NEXT:    cneg x8, x0, ge
+; CHECK-NEXT:    mneg x0, x8, x8
+; CHECK-NEXT:    ret
+  %sub1 = sub i64 0, %a
+  %min = call i64 @llvm.smin.i64(i64 %a, i64 %sub1)
+  %sub2 = sub i64 0, %min
+  %mul = mul i64 %min, %sub2
+  ret i64 %mul
+}
+
+; 0 - smin(a, 0 - a)  ->  smax(a, 0 - a)   (i.e. -abs(a))
+define <4 x i32> @ASubSMinVec(<4 x i32> %a) {
+; CHECK-LABEL: ASubSMinVec:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    neg v1.4s, v0.4s
+; CHECK-NEXT:    smax v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    ret
+  %sub1 = sub <4 x i32> zeroinitializer, %a
+  %min = call <4 x i32> @llvm.smin.v4i32(<4 x i32> %a, <4 x i32> %sub1)
+  %sub2 = sub <4 x i32> zeroinitializer, %min
+  ret <4 x i32> %sub2
+}
+
+; 0 - umin(a, 0 - a)  ->  umax(a, 0 - a)
+define i64 @ASubUMin(i64 %a) {
+; CHECK-SD-LABEL: ASubUMin:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    neg x8, x0
+; CHECK-SD-NEXT:    cmp x0, x8
+; CHECK-SD-NEXT:    cneg x0, x0, lo
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: ASubUMin:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    neg x8, x0
+; CHECK-GI-NEXT:    cmp x0, x8
+; CHECK-GI-NEXT:    cneg x0, x0, ls
+; CHECK-GI-NEXT:    ret
+  %sub1 = sub i64 0, %a
+  %min = call i64 @llvm.umin.i64(i64 %a, i64 %sub1)
+  %sub2 = sub i64 0, %min
+  ret i64 %sub2
+}
+
+; 0 - umin(a, 0 - a)  ->  umax(a, 0 - a)
+define <4 x i32> @ASubUMinVec(<4 x i32> %a) {
+; CHECK-LABEL: ASubUMinVec:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    neg v1.4s, v0.4s
+; CHECK-NEXT:    umax v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    ret
+  %sub1 = sub <4 x i32> zeroinitializer, %a
+  %min = call <4 x i32> @llvm.umin.v4i32(<4 x i32> %a, <4 x i32> %sub1)
+  %sub2 = sub <4 x i32> zeroinitializer, %min
+  ret <4 x i32> %sub2
+}
+
