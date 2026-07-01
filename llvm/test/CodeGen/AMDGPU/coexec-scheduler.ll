@@ -73,9 +73,9 @@ define amdgpu_kernel void @ds_wmma(ptr addrspace(3) %base, ptr addrspace(1) %out
 ; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[0:7], v[88:95], v[80:87], v[0:7]
 ; COEXEC-NEXT:    s_cbranch_scc1 .LBB0_1
 ; COEXEC-NEXT:  ; %bb.2: ; %end
+; COEXEC-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8 nv
 ; COEXEC-NEXT:    v_nop
 ; COEXEC-NEXT:    v_mov_b32_e32 v32, 0
-; COEXEC-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8 nv
 ; COEXEC-NEXT:    s_wait_kmcnt 0x0
 ; COEXEC-NEXT:    s_clause 0x7
 ; COEXEC-NEXT:    global_store_b128 v32, v[28:31], s[0:1] offset:16
@@ -346,8 +346,8 @@ define amdgpu_kernel void @ds_wmma_permute(ptr addrspace(3) %base, ptr addrspace
 ; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[0:7], v[120:127], v[152:159], v[0:7]
 ; COEXEC-NEXT:    s_cbranch_scc1 .LBB1_1
 ; COEXEC-NEXT:  ; %bb.2: ; %end
-; COEXEC-NEXT:    v_mov_b32_e32 v32, 0
 ; COEXEC-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8 nv
+; COEXEC-NEXT:    v_mov_b32_e32 v32, 0
 ; COEXEC-NEXT:    s_wait_kmcnt 0x0
 ; COEXEC-NEXT:    s_clause 0x7
 ; COEXEC-NEXT:    global_store_b128 v32, v[28:31], s[0:1] offset:16

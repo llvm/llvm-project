@@ -180,6 +180,11 @@ CandidateHeuristics::getHWUIFromFlavor(InstructionFlavor Flavor) {
 
 unsigned CandidateHeuristics::getHWUICyclesForInst(SUnit *SU) {
   assert(SchedModel && SchedModel->hasInstrSchedModel());
+
+  MachineInstr *MI = SU->getInstr();
+  if (MI->mayLoadOrStore())
+    return SchedModel->computeInstrLatency(MI);
+
   unsigned ReleaseAtCycle = 0;
   const MCSchedClassDesc *SC = DAG->getSchedClass(SU);
   for (TargetSchedModel::ProcResIter PI = SchedModel->getWriteProcResBegin(SC),

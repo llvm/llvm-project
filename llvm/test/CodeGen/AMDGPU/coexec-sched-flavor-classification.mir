@@ -2,11 +2,11 @@
 # RUN: llc -mtriple=amdgcn -mcpu=gfx1250 -run-pass=machine-scheduler -amdgpu-sched-strategy=coexec -debug-only=machine-scheduler %s -filetype=null 2>&1 | FileCheck %s
 
 # CHECK: HWUI Resource Pressure:
-# CHECK-DAG: VMEM: {{[0-9]+}} cycles, 10 instrs
-# CHECK-DAG: DS: {{[0-9]+}} cycles, 4 instrs
-# CHECK-DAG: DMA: {{[0-9]+}} cycles, 2 instrs
-# CHECK-DAG: VALU(1c): {{[0-9]+}} cycles, 4 instrs
-# CHECK-DAG: TRANS: {{[0-9]+}} cycles, 2 instrs
+# CHECK-DAG: VALU(1c): 4 cycles, 4 instrs
+# CHECK-DAG: TRANS: 2 cycles, 2 instrs
+# CHECK-DAG: VMEM: 3200 cycles, 10 instrs
+# CHECK-DAG: DS: 80 cycles, 4 instrs
+# CHECK-DAG: DMA: 640 cycles, 2 instrs
 
 --- |
   define void @test_flavor_classification() #0 { ret void }
