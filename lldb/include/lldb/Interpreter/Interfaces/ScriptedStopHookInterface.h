@@ -14,7 +14,7 @@
 #include "ScriptedInterface.h"
 
 namespace lldb_private {
-class ScriptedStopHookInterface : public ScriptedInterface {
+class ScriptedStopHookInterface : virtual public ScriptedInterface {
 public:
   virtual llvm::Expected<StructuredData::GenericSP>
   CreatePluginObject(const ScriptedMetadata &scripted_metadata,
