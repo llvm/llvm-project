@@ -13,7 +13,7 @@
 // class set
 
 // template <class... Args>
-//   iterator emplace_hint(const_iterator position, Args&&... args);
+//   constexpr iterator emplace_hint(const_iterator position, Args&&... args); // constexpr since C++26
 
 #include <set>
 #include <cassert>
@@ -23,8 +23,8 @@
 #include "DefaultOnly.h"
 #include "min_allocator.h"
 
-int main(int, char**) {
-  {
+TEST_CONSTEXPR_CXX26 bool test() {
+  if (!TEST_IS_CONSTANT_EVALUATED) {
     typedef std::set<DefaultOnly> M;
     typedef M::iterator R;
     M m;
@@ -41,7 +41,8 @@ int main(int, char**) {
     assert(*m.begin() == DefaultOnly());
     assert(DefaultOnly::count == 1);
   }
-  assert(DefaultOnly::count == 0);
+  if (!TEST_IS_CONSTANT_EVALUATED)
+    assert(DefaultOnly::count == 0);
   {
     typedef std::set<Emplaceable> M;
     typedef M::iterator R;
@@ -78,5 +79,12 @@ int main(int, char**) {
     assert(*r == 2);
   }
 
+  return true;
+}
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }
