@@ -202,6 +202,88 @@ define <vscale x 2 x i1> @dupq_d_d() #0 {
   ret <vscale x 2 x i1> %5
 }
 
+define <vscale x 16 x i1> @not_cmpne(<vscale x 16 x i8> %vec, <vscale x 16 x i1> %pg) #0 {
+; CHECK-LABEL: define <vscale x 16 x i1> @not_cmpne(
+; CHECK-SAME: <vscale x 16 x i8> [[VEC:%.*]], <vscale x 16 x i1> [[PG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[NOT:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.cmpeq.nxv16i8(<vscale x 16 x i1> [[PG]], <vscale x 16 x i8> [[VEC]], <vscale x 16 x i8> zeroinitializer)
+; CHECK-NEXT:    ret <vscale x 16 x i1> [[NOT]]
+;
+  %cmp = call <vscale x 16 x i1> @llvm.aarch64.sve.cmpne.nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %vec, <vscale x 16 x i8> zeroinitializer)
+  %not = xor <vscale x 16 x i1> %cmp, %pg
+  ret <vscale x 16 x i1> %not
+}
+
+define <vscale x 16 x i1> @not_cmpne_true(<vscale x 16 x i8> %vec) #0 {
+; CHECK-LABEL: define <vscale x 16 x i1> @not_cmpne_true(
+; CHECK-SAME: <vscale x 16 x i8> [[VEC:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[NOT:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.cmpeq.nxv16i8(<vscale x 16 x i1> splat (i1 true), <vscale x 16 x i8> [[VEC]], <vscale x 16 x i8> zeroinitializer)
+; CHECK-NEXT:    ret <vscale x 16 x i1> [[NOT]]
+;
+  %cmp = call <vscale x 16 x i1> @llvm.aarch64.sve.cmpne.nxv16i8(<vscale x 16 x i1> splat (i1 true), <vscale x 16 x i8> %vec, <vscale x 16 x i8> zeroinitializer)
+  %not = xor <vscale x 16 x i1> %cmp, splat (i1 true)
+  ret <vscale x 16 x i1> %not
+}
+
+define <vscale x 16 x i1> @not_cmpne_swapped_xor(<vscale x 16 x i8> %vec, <vscale x 16 x i1> %pg) #0 {
+; CHECK-LABEL: define <vscale x 16 x i1> @not_cmpne_swapped_xor(
+; CHECK-SAME: <vscale x 16 x i8> [[VEC:%.*]], <vscale x 16 x i1> [[PG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[NOT:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.cmpeq.nxv16i8(<vscale x 16 x i1> [[PG]], <vscale x 16 x i8> [[VEC]], <vscale x 16 x i8> zeroinitializer)
+; CHECK-NEXT:    ret <vscale x 16 x i1> [[NOT]]
+;
+  %cmp = call <vscale x 16 x i1> @llvm.aarch64.sve.cmpne.nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %vec, <vscale x 16 x i8> zeroinitializer)
+  %not = xor <vscale x 16 x i1> %pg, %cmp
+  ret <vscale x 16 x i1> %not
+}
+
+define <vscale x 16 x i1> @not_cmpne_wide(<vscale x 16 x i8> %vec, <vscale x 16 x i1> %pg) #0 {
+; CHECK-LABEL: define <vscale x 16 x i1> @not_cmpne_wide(
+; CHECK-SAME: <vscale x 16 x i8> [[VEC:%.*]], <vscale x 16 x i1> [[PG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[NOT:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.cmpeq.wide.nxv16i8(<vscale x 16 x i1> [[PG]], <vscale x 16 x i8> [[VEC]], <vscale x 2 x i64> zeroinitializer)
+; CHECK-NEXT:    ret <vscale x 16 x i1> [[NOT]]
+;
+  %cmp = call <vscale x 16 x i1> @llvm.aarch64.sve.cmpne.wide.nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %vec, <vscale x 2 x i64> zeroinitializer)
+  %not = xor <vscale x 16 x i1> %cmp, %pg
+  ret <vscale x 16 x i1> %not
+}
+
+define <vscale x 16 x i1> @not_cmpne_nonzero_rhs(<vscale x 16 x i8> %vec, <vscale x 16 x i1> %pg) #0 {
+; CHECK-LABEL: define <vscale x 16 x i1> @not_cmpne_nonzero_rhs(
+; CHECK-SAME: <vscale x 16 x i8> [[VEC:%.*]], <vscale x 16 x i1> [[PG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[CMP:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.cmpne.nxv16i8(<vscale x 16 x i1> [[PG]], <vscale x 16 x i8> [[VEC]], <vscale x 16 x i8> splat (i8 1))
+; CHECK-NEXT:    [[NOT:%.*]] = xor <vscale x 16 x i1> [[CMP]], [[PG]]
+; CHECK-NEXT:    ret <vscale x 16 x i1> [[NOT]]
+;
+  %cmp = call <vscale x 16 x i1> @llvm.aarch64.sve.cmpne.nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %vec, <vscale x 16 x i8> splat (i8 1))
+  %not = xor <vscale x 16 x i1> %cmp, %pg
+  ret <vscale x 16 x i1> %not
+}
+
+define <vscale x 16 x i1> @not_cmpne_multiple_uses(<vscale x 16 x i8> %vec, <vscale x 16 x i1> %pg) #0 {
+; CHECK-LABEL: define <vscale x 16 x i1> @not_cmpne_multiple_uses(
+; CHECK-SAME: <vscale x 16 x i8> [[VEC:%.*]], <vscale x 16 x i1> [[PG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[CMP:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.cmpne.nxv16i8(<vscale x 16 x i1> [[PG]], <vscale x 16 x i8> [[VEC]], <vscale x 16 x i8> zeroinitializer)
+; CHECK-NEXT:    call void @use_nxv16i1(<vscale x 16 x i1> [[CMP]])
+; CHECK-NEXT:    [[NOT:%.*]] = xor <vscale x 16 x i1> [[CMP]], [[PG]]
+; CHECK-NEXT:    ret <vscale x 16 x i1> [[NOT]]
+;
+  %cmp = call <vscale x 16 x i1> @llvm.aarch64.sve.cmpne.nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %vec, <vscale x 16 x i8> zeroinitializer)
+  call void @use_nxv16i1(<vscale x 16 x i1> %cmp)
+  %not = xor <vscale x 16 x i1> %cmp, %pg
+  ret <vscale x 16 x i1> %not
+}
+
+define <vscale x 16 x i1> @not_cmpne_wrong_xor_operand(<vscale x 16 x i8> %vec, <vscale x 16 x i1> %pg) #0 {
+; CHECK-LABEL: define <vscale x 16 x i1> @not_cmpne_wrong_xor_operand(
+; CHECK-SAME: <vscale x 16 x i8> [[VEC:%.*]], <vscale x 16 x i1> [[PG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[CMP:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.cmpne.nxv16i8(<vscale x 16 x i1> [[PG]], <vscale x 16 x i8> [[VEC]], <vscale x 16 x i8> zeroinitializer)
+; CHECK-NEXT:    [[NOT:%.*]] = xor <vscale x 16 x i1> [[CMP]], splat (i1 true)
+; CHECK-NEXT:    ret <vscale x 16 x i1> [[NOT]]
+;
+  %cmp = call <vscale x 16 x i1> @llvm.aarch64.sve.cmpne.nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %vec, <vscale x 16 x i8> zeroinitializer)
+  %not = xor <vscale x 16 x i1> %cmp, splat (i1 true)
+  ret <vscale x 16 x i1> %not
+}
+
 ; Cases that cannot be converted
 
 define <vscale x 2 x i1> @dupq_neg1() #0 {
@@ -450,5 +532,7 @@ declare <vscale x 4 x i1> @llvm.aarch64.sve.cmpne.wide.nxv4i32(<vscale x 4 x i1>
 declare <vscale x 2 x i1> @llvm.aarch64.sve.cmpne.nxv2i64(<vscale x 2 x i1>, <vscale x 2 x i64>, <vscale x 2 x i64>)
 
 declare <vscale x 2 x i64> @llvm.aarch64.sve.dup.x.nxv2i64(i64)
+
+declare void @use_nxv16i1(<vscale x 16 x i1>)
 
 attributes #0 = { "target-features"="+sve" }
