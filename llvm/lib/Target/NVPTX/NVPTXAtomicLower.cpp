@@ -43,33 +43,27 @@ public:
 
 bool NVPTXAtomicLower::runOnFunction(Function &F) {
   SmallVector<AtomicRMWInst *> LocalRMWs;
-  SmallVector<LoadInst *> LocalAtomicLoads;
-  SmallVector<StoreInst *> LocalAtomicStores;
   // TODO: Handle cmpxchg
+  // NOTE: AtomicRMW instructions are replaced with other instructions. This cannot be done
+  // while iterating over instructions. Load/Store instructions *can* be modified in-place.
+  bool Changed = false;
   for (Instruction &I : instructions(F)) {
     if (auto *RMWI = dyn_cast<AtomicRMWInst>(&I)) {
       if (RMWI->getPointerAddressSpace() == ADDRESS_SPACE_LOCAL)
         LocalRMWs.push_back(RMWI);
     } else if (auto *LI = dyn_cast<LoadInst>(&I)) {
       if (LI->isAtomic() && LI->getPointerAddressSpace() == ADDRESS_SPACE_LOCAL)
-        LocalAtomicLoads.push_back(LI);
+          LI->setAtomic(AtomicOrdering::NotAtomic);
+          Changed = true;
     } else if (auto *SI = dyn_cast<StoreInst>(&I)) {
       if (SI->isAtomic() && SI->getPointerAddressSpace() == ADDRESS_SPACE_LOCAL)
-        LocalAtomicStores.push_back(SI);
+          SI->setAtomic(AtomicOrdering::NotAtomic);
+          Changed = true;
     }
   }
 
-  bool Changed = false;
   for (AtomicRMWInst *RMWI : LocalRMWs)
     Changed |= lowerAtomicRMWInst(RMWI);
-  for (LoadInst *LI : LocalAtomicLoads) {
-    LI->setAtomic(AtomicOrdering::NotAtomic);
-    Changed = true;
-  }
-  for (StoreInst *SI : LocalAtomicStores) {
-    SI->setAtomic(AtomicOrdering::NotAtomic);
-    Changed = true;
-  }
   return Changed;
 }
 

@@ -7604,21 +7604,19 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
 // Atomic load lowering grid (rows: native memory-ordering support; columns:
 // LLVM ordering):
 //
-//                 seq_cst                              acquire
+//   ld.acquire    seq_cst                              acquire
 //   supported     fence.sc; ld.acquire                 ld.acquire
 //   unsupported   fence.sc; ld.relaxed; fence.acquire  ld.relaxed; fence.acquire
 //
 // Atomic store lowering grid (same rows; columns are the store-side orderings):
 //
-//                 seq_cst                       release
+//   st.relaxed    seq_cst                       release
 //   supported     fence.sc; st.relaxed          st.release
 //   unsupported   fence.sc; st.relaxed          fence.release; st.relaxed
 //
-// "supported" = STI.hasMemoryOrdering() (sm_70+ with PTX 6.0+). monotonic and
-// weaker drop out of these grids -- they need no fences and pass through.
-// Stores never get a trailing fence here; their release-side ordering is
-// provided entirely by the leading fence (or by typed `st.release` when
-// available).
+// "supported" = STI.hasMemoryOrdering() (sm_70+ with PTX 6.0+).
+//  Lowering is based on the PTX Atomics ABI:
+//  https://docs.nvidia.com/cuda/ptx-writers-guide-to-interoperability/atomic-abi.html
 // clang-format on
 
 bool NVPTXTargetLowering::shouldInsertFencesForAtomic(
