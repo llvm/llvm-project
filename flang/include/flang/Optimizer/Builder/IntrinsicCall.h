@@ -174,6 +174,7 @@ struct IntrinsicLibrary {
                                          llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genCmplx(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genConjg(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  fir::ExtendedValue genCoshape(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genCount(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   void genCpuTime(llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genCshift(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
@@ -296,6 +297,8 @@ struct IntrinsicLibrary {
   mlir::Value genIeeeUnordered(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genIeeeValue(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genIeor(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  fir::ExtendedValue genImageIndex(mlir::Type,
+                                   llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genIndex(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genIor(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genIparity(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
@@ -310,6 +313,8 @@ struct IntrinsicLibrary {
   mlir::Value genIshft(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genIshftc(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genLbound(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genLcobound(mlir::Type,
+                                 llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genLeadz(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genLen(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genLenTrim(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
@@ -416,6 +421,8 @@ struct IntrinsicLibrary {
                                   llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genTrim(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genUbound(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genUcobound(mlir::Type,
+                                 llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genUnlink(std::optional<mlir::Type> resultType,
                                llvm::ArrayRef<fir::ExtendedValue> args);
   fir::ExtendedValue genUnpack(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
