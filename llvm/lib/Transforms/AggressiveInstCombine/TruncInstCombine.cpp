@@ -32,6 +32,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/Support/KnownBits.h"
 
 using namespace llvm;
@@ -263,6 +264,9 @@ unsigned TruncInstCombine::getMinBitWidth() {
 }
 
 Type *TruncInstCombine::getBestTruncatedType() {
+  // Reset per-graph state from any previous run.
+  NarrowedICmps.clear();
+
   if (!buildTruncExpressionGraph())
     return nullptr;
 
@@ -271,6 +275,7 @@ Type *TruncInstCombine::getBestTruncatedType() {
   // post-dominated by the trunc instruction, i.e., were visited during the
   // expression evaluation.
   unsigned DesiredBitWidth = 0;
+  SmallVector<ICmpInst *, 4> ICmpCandidates;
   for (auto Itr : InstInfoMap) {
     Instruction *I = Itr.first;
     if (I->hasOneUse())
@@ -279,6 +284,18 @@ Type *TruncInstCombine::getBestTruncatedType() {
     for (auto *U : I->users())
       if (auto *UI = dyn_cast<Instruction>(U))
         if (UI != CurrentTruncInst && !InstInfoMap.count(UI)) {
+          // Outside-graph equality and unsigned icmp users can be narrowed
+          // alongside the graph if KnownBits proves both operands fit in the
+          // narrow type. Defer that check to after MinBitWidth is known.
+          if (auto *Cmp = dyn_cast<ICmpInst>(UI))
+            if (Cmp->isEquality() || Cmp->isUnsigned()) {
+              // The same icmp can be reached via more than one of its
+              // operands when both are in-graph; rewriting it twice would
+              // dereference a freed pointer.
+              if (!llvm::is_contained(ICmpCandidates, Cmp))
+                ICmpCandidates.push_back(Cmp);
+              continue;
+            }
           if (!IsExtInst)
             return nullptr;
           // If this is an extension from the dest type, we can eliminate it,
@@ -348,6 +365,20 @@ Type *TruncInstCombine::getBestTruncatedType() {
   if (MinBitWidth >= OrigBitWidth ||
       (DesiredBitWidth && DesiredBitWidth != MinBitWidth))
     return nullptr;
+
+  // Validate any deferred outside-graph icmp candidates against the now-known
+  // narrow bit-width. Each operand must have KnownBits proving its full value
+  // fits in MinBitWidth — the in-graph operand's narrow form is its low
+  // MinBitWidth bits, so if the full value exceeds that the rewritten icmp
+  // would observe a different value and could change the comparison result.
+  for (ICmpInst *Cmp : ICmpCandidates) {
+    for (Value *Op : Cmp->operands()) {
+      KnownBits K = llvm::computeKnownBits(Op, DL, &AC, /*CtxI=*/Cmp, &DT);
+      if (K.getMaxValue().getActiveBits() > MinBitWidth)
+        return nullptr;
+    }
+  }
+  NarrowedICmps = std::move(ICmpCandidates);
 
   return IntegerType::get(CurrentTruncInst->getContext(), MinBitWidth);
 }
@@ -498,6 +529,33 @@ void TruncInstCombine::ReduceExpressionGraph(Type *SclTy) {
   // Erase old expression graph, which was replaced by the reduced expression
   // graph.
   CurrentTruncInst->eraseFromParent();
+
+  // Rewrite admitted outside-graph icmp users at the narrow type. Must
+  // happen BEFORE the phi-erase loop below: phi-valued in-graph operands
+  // are RAUW'd to poison there, and any still-wide icmp referencing them
+  // would otherwise capture poison.
+  for (ICmpInst *Cmp : NarrowedICmps) {
+    IRBuilder<> Builder(Cmp);
+    auto Narrow = [&](Value *V) -> Value * {
+      // In-graph instructions and Constants already have a narrow form
+      // produced by the main rewrite loop / getReducedOperand. Outside-graph
+      // values (e.g. an Argument or unrelated SSA value) need a fresh trunc.
+      if (isa<Constant>(V))
+        return getReducedOperand(V, SclTy);
+      if (auto *I = dyn_cast<Instruction>(V); I && InstInfoMap.count(I))
+        return getReducedOperand(V, SclTy);
+      return Builder.CreateTrunc(V, getReducedType(V, SclTy));
+    };
+    Value *L = Narrow(Cmp->getOperand(0));
+    Value *R = Narrow(Cmp->getOperand(1));
+    Value *NewCmp = Builder.CreateICmp(Cmp->getPredicate(), L, R);
+    if (auto *NewI = dyn_cast<Instruction>(NewCmp))
+      NewI->takeName(Cmp);
+    Cmp->replaceAllUsesWith(NewCmp);
+    Cmp->eraseFromParent();
+  }
+  NarrowedICmps.clear();
+
   // First, erase old phi-nodes and its uses
   for (auto &Node : OldNewPHINodes) {
     PHINode *OldPN = Node.first;
