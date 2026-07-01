@@ -7,11 +7,11 @@
 """Utilities for matching debugger state, such as the call stack, conditions, or historical state (e.g. breakpoint
 hitcounts) to descriptions of expected state in a DexterScript."""
 
-from collections import Counter
+from collections import Counter, defaultdict
 from dataclasses import dataclass, field
 from enum import Enum, IntEnum
 import os
-from typing import Dict, List, Optional, Set
+from typing import Callable, Dict, List, Optional, Set
 
 from dex.dextIR import FrameIR, StepIR
 from dex.test_script import DexterScript, Scope
@@ -21,10 +21,41 @@ from dex.test_script.Nodes import Expect, FileLabels, Where, Then
 class StateMatchContext:
     """Class that holds any state needed for matching state nodes to debugger state across a run."""
 
-    def __init__(self):
+    def __init__(self, check_condition: Callable[[StepIR, int, str], bool]):
         self.where_hit_counts: Counter[Where] = Counter()
         self.expired_wheres: Set[Where] = set()
         self._last_match_result: Optional[StateMatchResult] = None
+        # To avoid constantly re-evaluating conditions above the current function, and potentially causing them to
+        # be unfulfillable if we have imperfect stack unwinding, we track conditions that have been found True for state
+        # nodes above the current function and consider those conditions true until we return to/pass that frame.
+        # Key is a frame index counting from the root upwards, to keep stable as we grow and shrink the stack.
+        self._cached_frame_conditions: Dict[int, Dict[str, bool]] = defaultdict(dict)
+        self._check_condition = check_condition
+
+    def check_condition(self, step: StepIR, frame_idx: int, condition: str) -> bool:
+        reverse_frame_idx = step.num_frames - frame_idx - 1
+        cached_conditions = self._cached_frame_conditions[reverse_frame_idx]
+        if condition in cached_conditions:
+            return cached_conditions[condition]
+        # In an ideal world we would always cache conditions in a caller frame before moving to a called frame, but
+        # some optimized code makes this infeasible, so we settle for computing it after reaching the called frame
+        # instead.
+        result = self._check_condition(step, frame_idx, condition)
+        # We cache this now, but we won't actually use it *unless* the next step adds a new frame (i.e. we step into a
+        # call).
+        self._cached_frame_conditions[reverse_frame_idx][condition] = result
+        return result
+
+    def refresh_condition_cache(self, step: StepIR):
+        """Call once we start matching a new step, to clear out any stale/invalid cached conditions."""
+        to_delete = []
+        for reverse_frame_idx in self._cached_frame_conditions:
+            # Any cached condition for the current frame, or a lower frame no longer on the stack at all, must be
+            # cleared.
+            if reverse_frame_idx + 1 >= step.num_frames:
+                to_delete.append(reverse_frame_idx)
+        for idx in to_delete:
+            del self._cached_frame_conditions[idx]
 
     def where_hit_is_new(self, where: Where, step: StepIR) -> bool:
         """Returns True if the current step can be counted as a new "hit" for `where`, assuming that `where` was hit in
@@ -80,12 +111,14 @@ class WhereFrameMatchResult(IntEnum):
 
 def _match_where_to_frame(
     where: Where,
-    frame: FrameIR,
+    frame_idx: int,
+    step: StepIR,
     labels: FileLabels,
     context: StateMatchContext,
     default_path: Optional[str] = None,
 ) -> WhereFrameMatchResult:
     """A very simple matcher, returns True iff `where` matches `frame`."""
+    frame = step.frames[frame_idx]
     file = where.file
     if not file and where.lines and not where.function:
         file = default_path
@@ -105,8 +138,10 @@ def _match_where_to_frame(
         where_hit_count = context.where_hit_counts[where]
         if where_hit_count > where.for_hit_count + (after_hit_count):
             return WhereFrameMatchResult.FALSE
+    # We place the condition check as far down as possible to avoid unnecessary debugger calls.
     if where.conditions is not None:
-        raise NotImplementedError("!where conditions currently unsupported.")
+        if not context.check_condition(step, frame_idx, where.conditions):
+            return WhereFrameMatchResult.FALSE
     # The check for after_hit_count must go last, as before we return EARLY, we need to know that the only condition
     # preventing the match is after_hit_count.
     if where.after_hit_count is not None:
@@ -118,7 +153,7 @@ def _match_where_to_frame(
 
 def match_where_to_frame(
     where: Where,
-    frame: FrameIR,
+    frame_idx: int,
     step: StepIR,
     labels: FileLabels,
     context: StateMatchContext,
@@ -128,12 +163,16 @@ def match_where_to_frame(
     we get a result that could change due to an increased hit count (i.e. if we get a match with a `for_hit_count`
     where, or if we get an "early" result), we increment `where`'s hit count and run the check again to check whether
     the result changes."""
-    result = _match_where_to_frame(where, frame, labels, context, default_path)
+    result = _match_where_to_frame(
+        where, frame_idx, step, labels, context, default_path
+    )
     if result == WhereFrameMatchResult.EARLY or (
         result == WhereFrameMatchResult.TRUE and where.for_hit_count is not None
     ):
         if context.add_hit_if_where_hit_is_new(where, step):
-            result = _match_where_to_frame(where, frame, labels, context, default_path)
+            result = _match_where_to_frame(
+                where, frame_idx, step, labels, context, default_path
+            )
     return result
 
 
@@ -170,6 +209,7 @@ def get_state_match(
     """
     active_where_expects: Dict[Where, WhereMatchResult] = {}
     early_wheres: Set[Where] = set()
+    match_context.refresh_condition_cache(step_info)
 
     def get_active_wheres(where: Where, scope: Scope):
         # For nested !wheres, we must match a specific frame relative to the parent !where.
@@ -200,7 +240,7 @@ def get_state_match(
             )
             match_result = match_where_to_frame(
                 where,
-                step_info.frames[target_frame_idx],
+                target_frame_idx,
                 step_info,
                 labels,
                 match_context,
@@ -214,7 +254,12 @@ def get_state_match(
         for frame_idx, frame in reversed(list(enumerate(step_info.frames))):
             labels = script.get_labels(expected_file or frame.loc.path)
             match_result = match_where_to_frame(
-                where, frame, step_info, labels, match_context, script.root_scope.file
+                where,
+                frame_idx,
+                step_info,
+                labels,
+                match_context,
+                script.root_scope.file,
             )
             if match_result == WhereFrameMatchResult.TRUE:
                 active_where_expects[where] = WhereMatchResult(frame_idx)
