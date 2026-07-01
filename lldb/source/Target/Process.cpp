@@ -1287,9 +1287,6 @@ StateType Process::GetState() {
   if (policy.view == Policy::View::Private)
     return GetPrivateState();
 
-  if (CurrentThreadPosesAsPrivateStateThread())
-    return GetPrivateState();
-
   return GetPublicState();
 }
 
@@ -4107,8 +4104,6 @@ ProcessRunLock &Process::PrivateStateThread::GetRunLock() {
   Policy policy = PolicyStack::Get().Current();
   if (policy.view == Policy::View::Private)
     return m_private_run_lock;
-  if (IsOnThread(Host::GetCurrentThread()))
-    return m_private_run_lock;
   return m_public_run_lock;
 }
 
@@ -4368,11 +4363,16 @@ Status Process::HaltPrivate() {
 }
 
 thread_result_t Process::RunPrivateStateThread(bool is_override) {
-  // Override PSTs exist solely to service RunThreadPlan expression evaluation.
-  // They must see parent frames, not provider-augmented frames.
-  std::optional<PolicyStack::Guard> policy_guard;
-  if (is_override)
-    policy_guard = PolicyStack::Get().PushPrivateState();
+  // All PSTs see the private reality (private state, private run lock).
+  // Override PSTs additionally skip frame providers and recognizers. At
+  // present, expression evaluation (RunThreadPlan) is the only reason we
+  // ever create an override PST, so is_override is treated as synonymous
+  // with "is running an expression" here. If another modal interaction
+  // starts spinning up an override PST for a different reason, this
+  // assumption breaks and we'll need a way to distinguish the two cases.
+  PolicyStack::Guard policy_guard =
+      is_override ? PolicyStack::Get().PushPrivateStateRunningExpression()
+                  : PolicyStack::Get().PushPrivateState();
 
   bool control_only = true;
 
@@ -5427,7 +5427,7 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
     // GetStackFrameList returns parent frames during event processing.
     std::optional<PolicyStack::Guard> policy_guard;
     if (backup_private_state_thread)
-      policy_guard = PolicyStack::Get().PushPrivateState();
+      policy_guard = PolicyStack::Get().PushPrivateStateRunningExpression();
 
     while (true) {
       // We usually want to resume the process if we get to the top of the

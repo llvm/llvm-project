@@ -18,6 +18,7 @@
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/Policy.h"
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
@@ -1580,6 +1581,9 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
       }
 
       process->SetRunningUserExpression(true);
+
+      lldb_private::PolicyStack::Guard expr_policy_guard =
+          lldb_private::PolicyStack::Get().PushPublicStateRunningExpression();
 
       // Execute the actual function call thread plan
       lldb::ExpressionResults res =

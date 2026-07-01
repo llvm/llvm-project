@@ -34,6 +34,11 @@ Policy Policy::CreatePublicState() { return {}; }
 Policy Policy::CreatePrivateState() {
   Policy p = PolicyStack::Get().Current();
   p.view = View::Private;
+  return p;
+}
+
+Policy Policy::CreatePrivateStateRunningExpression() {
+  Policy p = CreatePrivateState();
   p.capabilities.can_load_frame_providers = false;
   p.capabilities.can_run_frame_recognizers = false;
   return p;

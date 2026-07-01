@@ -25,6 +25,7 @@
 #include "lldb/Utility/ErrorMessages.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/Policy.h"
 #include "lldb/Utility/State.h"
 #include "lldb/ValueObject/ValueObject.h"
 #include "lldb/ValueObject/ValueObjectList.h"
@@ -383,6 +384,9 @@ lldb::ExpressionResults FunctionCaller::ExecuteFunction(
   // Objective-C object description
   if (exe_ctx.GetProcessPtr())
     exe_ctx.GetProcessPtr()->SetRunningUserExpression(true);
+
+  PolicyStack::Guard expr_policy_guard =
+      PolicyStack::Get().PushPublicStateRunningExpression();
 
   return_value = exe_ctx.GetProcessRef().RunThreadPlan(
       exe_ctx, call_plan_sp, real_options, diagnostic_manager);

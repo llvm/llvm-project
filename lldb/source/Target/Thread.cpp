@@ -1531,8 +1531,8 @@ StackFrameListSP Thread::GetStackFrameList() {
   //     - Any other thread: would run the provider concurrently with the
   //       thread that is already mid-construction.
   //
-  //  2. Current thread is a private state thread that should see the
-  //     private reality (Policy::View::Private).
+  //  2. The current policy disallows loading frame providers (expression
+  //     evaluation on a PST), which requires the private reality.
   //
   // For case 1, if a provider is active we return its input (parent)
   // frames. For case (2), we return/create the unwinder frame list
@@ -1558,10 +1558,11 @@ StackFrameListSP Thread::GetStackFrameList() {
     return m_curr_frames_sp;
 
   // The private state thread must see the raw unwinder frames, not the
-  // provider-augmented public view. Policy::CreatePrivateState is pushed by
-  // RunThreadPlan and RunPrivateStateThread.
+  // provider-augmented public view, while it is servicing expression
+  // evaluation. PushPrivateStateRunningExpression is pushed by
+  // RunThreadPlan and by RunPrivateStateThread for override PSTs.
   Policy policy = PolicyStack::Get().Current();
-  if (policy.view == Policy::View::Private) {
+  if (!policy.capabilities.can_load_frame_providers) {
     if (!m_unwinder_frames_sp)
       m_unwinder_frames_sp = std::make_shared<StackFrameList>(
           *this, m_prev_frames_sp, true, /*provider_id=*/0);
