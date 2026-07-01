@@ -1236,11 +1236,6 @@ defm __log2_finite : LibmLibcallImpls<"LOG2_FINITE", "__log2X_finite">;
 defm __log_finite : LibmLibcallImpls<"LOG_FINITE", "__logX_finite">;
 defm __pow_finite : LibmLibcallImpls<"POW_FINITE", "__powX_finite">;
 
-// Not specified as of C23 but present in numerous implementations
-defm sincos : LibmLibcallImpls;
-
-// Exists in sun math library
-defm sincospi : LibmLibcallImpls;
 
 /* Standard complex.h routines */
 
@@ -1658,15 +1653,19 @@ defset list<RuntimeLibcallImpl> CompilerRTOnlyInt128Libcalls = {
 
 // TODO: Define other custom names targets use to override
 
-def __exp10f : RuntimeLibcallImpl<EXP10_F32>;
+// Not specified as of C23 but present in numerous implementations
+defm sincos : LibmLibcallImpls;
+
+// Exists in sun math library
+defm sincospi : LibmLibcallImpls;
+
+// Exists on Apple targets
 def __exp10 : RuntimeLibcallImpl<EXP10_F64>;
-
-def __sincosf_stret : RuntimeLibcallImpl<SINCOS_STRET_F32>;
+def __exp10f : RuntimeLibcallImpl<EXP10_F32>;
 def __sincos_stret : RuntimeLibcallImpl<SINCOS_STRET_F64>;
-
-// Exists on macOS
-def __sincospif : RuntimeLibcallImpl<SINCOSPI_F32>;
+def __sincosf_stret : RuntimeLibcallImpl<SINCOS_STRET_F32>;
 def __sincospi : RuntimeLibcallImpl<SINCOSPI_F64>;
+def __sincospif : RuntimeLibcallImpl<SINCOSPI_F32>;
 
 def bzero : RuntimeLibcallImpl<BZERO>;
 def __bzero : RuntimeLibcallImpl<BZERO>;
