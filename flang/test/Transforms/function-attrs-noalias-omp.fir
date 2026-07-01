@@ -30,7 +30,7 @@ func.func @test_omp_barrier(%arg0: !fir.ref<f64> {fir.bindc_name = "tmp"}) {
 }
 
 // CHECK-LABEL:   func.func @test_omp_master(
-// CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<f64> {fir.bindc_name = "tmp"}) {
+// CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<f64> {fir.bindc_name = "tmp", llvm.noalias}) {
 func.func @test_omp_master(%arg0: !fir.ref<f64> {fir.bindc_name = "tmp"}) {
   omp.master {
     omp.terminator

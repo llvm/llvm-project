@@ -48,9 +48,11 @@ public:
 static bool containsOpenMPSyncOrWorkshare(mlir::func::FuncOp func) {
   bool found = false;
   func.walk([&](mlir::Operation *op) {
-    if (mlir::isa<mlir::omp::SingleOp, mlir::omp::MasterOp,
-                  mlir::omp::BarrierOp, mlir::omp::CriticalOp,
-                  mlir::omp::OrderedOp, mlir::omp::ParallelOp>(op)) {
+    // Note: omp.master (and omp.masked) are intentionally excluded here. They
+    // are neither work-sharing nor synchronizing constructs.
+    if (mlir::isa<mlir::omp::SingleOp, mlir::omp::BarrierOp,
+                  mlir::omp::CriticalOp, mlir::omp::OrderedOp,
+                  mlir::omp::ParallelOp>(op)) {
       found = true;
       return mlir::WalkResult::interrupt();
     }
