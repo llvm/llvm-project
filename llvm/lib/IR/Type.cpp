@@ -653,7 +653,7 @@ void StructType::setName(StringRef Name) {
 
   // Look up the entry for the name.
   auto IterBool =
-      getContext().pImpl->NamedStructTypes.insert(std::make_pair(Name, this));
+      getContext().pImpl->NamedStructTypes.try_emplace(Name, this);
 
   // While we have a name collision, try a random rename.
   if (!IterBool.second) {
@@ -666,8 +666,8 @@ void StructType::setName(StringRef Name) {
       TempStr.resize(NameSize + 1);
       TmpStream << getContext().pImpl->NamedStructTypesUniqueID++;
 
-      IterBool = getContext().pImpl->NamedStructTypes.insert(
-          std::make_pair(TmpStream.str(), this));
+      IterBool = getContext().pImpl->NamedStructTypes.try_emplace(
+          TmpStream.str(), this);
     } while (!IterBool.second);
   }
 

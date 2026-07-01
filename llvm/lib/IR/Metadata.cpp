@@ -302,7 +302,7 @@ ReplaceableMetadataImpl::getAllDbgVariableRecordUsers() {
 
 void ReplaceableMetadataImpl::addRef(void *Ref, OwnerTy Owner) {
   bool WasInserted =
-      UseMap.insert(std::make_pair(Ref, std::make_pair(Owner, NextIndex)))
+      UseMap.try_emplace(Ref, Owner, NextIndex)
           .second;
   (void)WasInserted;
   assert(WasInserted && "Expected to add a reference");
@@ -323,7 +323,7 @@ void ReplaceableMetadataImpl::moveRef(void *Ref, void *New,
   assert(I != UseMap.end() && "Expected to move a reference");
   auto OwnerAndIndex = I->second;
   UseMap.erase(I);
-  bool WasInserted = UseMap.insert(std::make_pair(New, OwnerAndIndex)).second;
+  bool WasInserted = UseMap.try_emplace(New, OwnerAndIndex).second;
   (void)WasInserted;
   assert(WasInserted && "Expected to add a reference");
 

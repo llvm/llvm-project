@@ -55,7 +55,7 @@ class SignpostEmitterImpl {
     if (SIGNPOSTS_AVAILABLE()) {
       ID = os_signpost_id_make_with_pointer(getLogger(), O);
     }
-    const auto &Inserted = Signposts.insert(std::make_pair(O, ID));
+    const auto &Inserted = Signposts.try_emplace(O, ID);
     return Inserted.first->second;
   }
 

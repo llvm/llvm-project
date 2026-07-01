@@ -1936,7 +1936,7 @@ Verifier::visitModuleFlag(const MDNode *Op,
 
   // Unless this is a "requires" flag, check the ID is unique.
   if (MFB != Module::Require) {
-    bool Inserted = SeenIDs.insert(std::make_pair(ID, Op)).second;
+    bool Inserted = SeenIDs.try_emplace(ID, Op).second;
     Check(Inserted,
           "module flag identifiers must be unique (or of 'require' type)", ID);
   }

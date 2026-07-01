@@ -188,7 +188,7 @@ unsigned MDNodeOpsKey::calculateHash(ArrayRef<Metadata *> Ops) {
 
 StringMapEntry<uint32_t> *LLVMContextImpl::getOrInsertBundleTag(StringRef Tag) {
   uint32_t NewIdx = BundleTagCache.size();
-  return &*(BundleTagCache.insert(std::make_pair(Tag, NewIdx)).first);
+  return &*(BundleTagCache.try_emplace(Tag, NewIdx).first);
 }
 
 void LLVMContextImpl::getOperandBundleTags(SmallVectorImpl<StringRef> &Tags) const {
@@ -207,7 +207,7 @@ SyncScope::ID LLVMContextImpl::getOrInsertSyncScopeID(StringRef SSN) {
   auto NewSSID = SSC.size();
   assert(NewSSID < std::numeric_limits<SyncScope::ID>::max() &&
          "Hit the maximum number of synchronization scopes allowed!");
-  return SSC.insert(std::make_pair(SSN, SyncScope::ID(NewSSID))).first->second;
+  return SSC.try_emplace(SSN, SyncScope::ID(NewSSID)).first->second;
 }
 
 void LLVMContextImpl::getSyncScopeNames(
