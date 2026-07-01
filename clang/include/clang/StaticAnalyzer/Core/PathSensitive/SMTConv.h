@@ -385,9 +385,8 @@ public:
       RetTy = Ctx.BoolTy;
       auto LHSOpt = convertToBoolExpr(Solver, Ctx, LHS, LTy);
       auto RHSOpt = convertToBoolExpr(Solver, Ctx, RHS, RTy);
-      if (!LHSOpt || !RHSOpt) {
+      if (!LHSOpt || !RHSOpt)
         return std::nullopt;
-      }
       NewLHS = LHSOpt.value();
       NewRHS = RHSOpt.value();
       return fromBinOp(Solver, NewLHS, Op, NewRHS, false);
