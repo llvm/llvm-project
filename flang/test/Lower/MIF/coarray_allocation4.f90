@@ -1,7 +1,7 @@
 ! RUN: %flang_fc1 -emit-hlfir -fcoarray %s -o - 2>&1 | FileCheck %s
 ! RUN: %flang_fc1 -emit-llvm -fcoarray %s -o - 2>&1 | FileCheck %s --check-prefix=LLVM
 
-! LLVM: llvm.global_ctors = appending global [2 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 0, ptr @__mif_initialization, ptr null }, { i32, ptr, ptr } { i32 1, ptr @__mif_save_coarrays_allocate, ptr null }]
+! LLVM: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 0, ptr @__mif_save_coarrays_allocate, ptr null }]
 
 subroutine test_coarray_save()
     implicit none
