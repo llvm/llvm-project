@@ -207,8 +207,8 @@ TEST(TransformationReportFormatRegistryTest, PrintAvailableFullOutput) {
                         [&](llvm::StringRef L) { return L == Expected; });
   };
 
-  EXPECT_TRUE(containsLine(
-      "  report-sarif - Fake transformation-report format A"));
+  EXPECT_TRUE(
+      containsLine("  report-sarif - Fake transformation-report format A"));
   EXPECT_TRUE(containsLine(
       "  report-sarif - Fake transformation-report format B (duplicate)"));
 }
