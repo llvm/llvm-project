@@ -4534,12 +4534,11 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
   bool isInScanRegion =
       wsloopOp.getReductionMod() && (wsloopOp.getReductionMod().value() ==
                                      mlir::omp::ReductionModifier::inscan);
-  if (failed(initReductionVars(wsloopOp, reductionArgs, builder,
-                               moduleTranslation,
-                               afterAllocas.get()->getSinglePredecessor(),
-                               reductionDecls, privateReductionVariables,
-                               reductionVariableMap, isByRef, deferredStores,
-                               isInScanRegion)))
+  if (failed(initReductionVars(
+          wsloopOp, reductionArgs, builder, moduleTranslation,
+          afterAllocas.get()->getSinglePredecessor(), reductionDecls,
+          privateReductionVariables, reductionVariableMap, isByRef,
+          deferredStores, isInScanRegion)))
     return failure();
 
   // For `reduction(task, ...)` open a task-reduction scope for the worksharing
@@ -5262,9 +5261,9 @@ initScanReductionVars(omp::LoopNestOp loopOp, llvm::IRBuilderBase &builder,
     SmallVector<llvm::Value *, 1> phis;
     mapInitializationArgs(wsloopOp, moduleTranslation, builder, reductionDecls,
                           reductionVariableMap, i);
-    if (failed(inlineConvertOmpRegions(
-            reductionDecls[i].getInitializerRegion(),
-            "omp.scan.reduction.init", builder, moduleTranslation, &phis)))
+    if (failed(inlineConvertOmpRegions(reductionDecls[i].getInitializerRegion(),
+                                       "omp.scan.reduction.init", builder,
+                                       moduleTranslation, &phis)))
       return failure();
     assert(phis.size() == 1 &&
            "expected one value to be yielded from the reduction init region");
