@@ -18,6 +18,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "gtest/gtest.h"
+#include <memory>
 #include <string>
 
 namespace llvm {
@@ -1104,7 +1105,92 @@ void checkVPRecipeCastImpl(RecipeT *R) {
   if constexpr (sizeof...(Rest) > 0)
     checkVPRecipeCastImpl<RecipeT, Rest...>(R);
 }
+
+void checkDuplicatedRecipeShape(const VPRecipeBase &Recipe,
+                                const VPRecipeBase &Clone) {
+  EXPECT_NE(&Recipe, &Clone);
+  EXPECT_EQ(Recipe.getVPRecipeID(), Clone.getVPRecipeID());
+  EXPECT_EQ(Recipe.getNumOperands(), Clone.getNumOperands());
+  EXPECT_EQ(Recipe.getNumDefinedValues(), Clone.getNumDefinedValues());
+  EXPECT_EQ(Recipe.getDebugLoc(), Clone.getDebugLoc());
+}
+
 } // namespace
+
+TEST_F(VPRecipeTest, DuplicatePlanWithEVLRecipes) {
+  VPlan &Plan = getPlan();
+  VPBasicBlock *Body = Plan.createVPBasicBlock("vector.body");
+  VPBlockUtils::connectBlocks(Plan.getEntry(), Body);
+
+  IntegerType *Int32 = IntegerType::get(C, 32);
+  PointerType *Int32Ptr = PointerType::get(C, 0);
+  auto Load = std::make_unique<LoadInst>(Int32, PoisonValue::get(Int32Ptr), "",
+                                         false, Align(4));
+  auto Store = std::make_unique<StoreInst>(
+      PoisonValue::get(Int32), PoisonValue::get(Int32Ptr), false, Align(4));
+
+  VPIRValue *Addr = Plan.getPoison(Int32Ptr);
+  VPIRValue *Mask = Plan.getTrue();
+  VPIRValue *Start = Plan.getConstantInt(Int32, 0);
+  VPIRValue *Step = Plan.getConstantInt(Int32, 1);
+  VPIRValue *ChainOp = Plan.getConstantInt(Int32, 2);
+  VPIRValue *VecOp = Plan.getConstantInt(Int32, 3);
+
+  auto *CurrentIter = new VPCurrentIterationPHIRecipe(Start, DebugLoc());
+  VPWidenLoadRecipe BaseLoad(*Load, Addr, Mask, true, VPIRMetadata(),
+                             DebugLoc());
+  auto *LoadEVL = new VPWidenLoadEVLRecipe(BaseLoad, Addr, *CurrentIter, Mask);
+  VPReductionRecipe BaseRdx(RecurKind::Add, FastMathFlags(), ChainOp, VecOp,
+                            Mask, RdxInLoop{});
+  auto *RdxEVL = new VPReductionEVLRecipe(BaseRdx, *CurrentIter, Mask);
+  InterleaveGroup<Instruction> IG(4, false, Align(4));
+  VPInterleaveRecipe BaseInterleave(&IG, Addr, {LoadEVL}, Mask, false,
+                                    VPIRMetadata(), DebugLoc());
+  auto *InterleaveEVL =
+      new VPInterleaveEVLRecipe(BaseInterleave, *CurrentIter, Mask);
+  VPWidenStoreRecipe BaseStore(*Store, Addr, LoadEVL, Mask, false,
+                               VPIRMetadata(), DebugLoc());
+  auto *StoreEVL =
+      new VPWidenStoreEVLRecipe(BaseStore, Addr, LoadEVL, *CurrentIter, Mask);
+  auto *NextIter =
+      new VPInstruction(Instruction::Add, {CurrentIter, Step},
+                        VPIRFlags::getDefaultFlags(Instruction::Add));
+  CurrentIter->addBackedgeValue(NextIter);
+
+  Body->appendRecipe(CurrentIter);
+  Body->appendRecipe(LoadEVL);
+  Body->appendRecipe(RdxEVL);
+  Body->appendRecipe(InterleaveEVL);
+  Body->appendRecipe(StoreEVL);
+  Body->appendRecipe(NextIter);
+
+  std::unique_ptr<VPlan> Clone(Plan.duplicate());
+  auto *ClonedBody =
+      dyn_cast_or_null<VPBasicBlock>(Clone->getEntry()->getSingleSuccessor());
+  ASSERT_NE(nullptr, ClonedBody);
+  ASSERT_EQ(6u, ClonedBody->size());
+
+  auto It = ClonedBody->begin();
+  auto *ClonedCurrentIter = dyn_cast<VPCurrentIterationPHIRecipe>(&*It++);
+  auto *ClonedLoadEVL = dyn_cast<VPWidenLoadEVLRecipe>(&*It++);
+  auto *ClonedRdxEVL = dyn_cast<VPReductionEVLRecipe>(&*It++);
+  auto *ClonedInterleaveEVL = dyn_cast<VPInterleaveEVLRecipe>(&*It++);
+  auto *ClonedStoreEVL = dyn_cast<VPWidenStoreEVLRecipe>(&*It++);
+  auto *ClonedNextIter = dyn_cast<VPInstruction>(&*It++);
+  ASSERT_NE(nullptr, ClonedCurrentIter);
+  ASSERT_NE(nullptr, ClonedLoadEVL);
+  ASSERT_NE(nullptr, ClonedRdxEVL);
+  ASSERT_NE(nullptr, ClonedInterleaveEVL);
+  ASSERT_NE(nullptr, ClonedStoreEVL);
+  ASSERT_NE(nullptr, ClonedNextIter);
+
+  checkDuplicatedRecipeShape(*CurrentIter, *ClonedCurrentIter);
+  checkDuplicatedRecipeShape(*LoadEVL, *ClonedLoadEVL);
+  checkDuplicatedRecipeShape(*RdxEVL, *ClonedRdxEVL);
+  checkDuplicatedRecipeShape(*InterleaveEVL, *ClonedInterleaveEVL);
+  checkDuplicatedRecipeShape(*StoreEVL, *ClonedStoreEVL);
+  checkDuplicatedRecipeShape(*NextIter, *ClonedNextIter);
+}
 
 TEST_F(VPRecipeTest, CastVPInstructionToVPUser) {
   IntegerType *Int32 = IntegerType::get(C, 32);
@@ -1758,6 +1844,7 @@ TEST_F(VPRecipeTest, CastVPReductionEVLRecipeToVPUser) {
   VPReductionEVLRecipe EVLRecipe(Recipe, *EVL, CondOp);
   checkVPRecipeCastImpl<VPReductionEVLRecipe, VPUser>(&EVLRecipe);
 }
+
 } // namespace
 
 struct VPDoubleValueDef : public VPRecipeBase {
