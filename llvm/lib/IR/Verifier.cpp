@@ -3267,25 +3267,10 @@ void Verifier::visitFunction(const Function &F) {
   }
 
   // Check intrinsics' signatures.
-  switch (IID) {
-  case Intrinsic::experimental_gc_get_pointer_base: {
+  if (IID == Intrinsic::experimental_gc_get_pointer_base) {
     FunctionType *FT = F.getFunctionType();
-    Check(FT->getNumParams() == 1, "wrong number of parameters", F);
-    Check(isa<PointerType>(F.getReturnType()),
-          "gc.get.pointer.base must return a pointer", F);
     Check(FT->getParamType(0) == F.getReturnType(),
           "gc.get.pointer.base operand and result must be of the same type", F);
-    break;
-  }
-  case Intrinsic::experimental_gc_get_pointer_offset: {
-    FunctionType *FT = F.getFunctionType();
-    Check(FT->getNumParams() == 1, "wrong number of parameters", F);
-    Check(isa<PointerType>(FT->getParamType(0)),
-          "gc.get.pointer.offset operand must be a pointer", F);
-    Check(F.getReturnType()->isIntegerTy(),
-          "gc.get.pointer.offset must return integer", F);
-    break;
-  }
   }
 
   auto *N = F.getSubprogram();
