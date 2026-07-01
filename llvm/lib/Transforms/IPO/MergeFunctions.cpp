@@ -805,6 +805,7 @@ void MergeFunctions::writeThunk(Function *F, Function *G) {
     // Ensure CFI type metadata is propagated to the new function.
     copyMetadataIfPresent(G, NewG, "type");
     copyMetadataIfPresent(G, NewG, "kcfi_type");
+    copyMetadataIfPresent(G, NewG, "callgraph");
     removeUsers(G);
     G->replaceAllUsesWith(NewG);
     G->eraseFromParent();
@@ -902,6 +903,7 @@ void MergeFunctions::mergeTwoFunctions(Function *F, Function *G) {
     // Ensure CFI type metadata is propagated to the new function.
     copyMetadataIfPresent(F, NewF, "type");
     copyMetadataIfPresent(F, NewF, "kcfi_type");
+    copyMetadataIfPresent(F, NewF, "callgraph");
     removeUsers(F);
     F->replaceAllUsesWith(NewF);
 

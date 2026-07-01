@@ -442,6 +442,12 @@ public:
   }
 
   mlir::Value emitIntToBoolConversion(mlir::Value srcVal, mlir::Location loc) {
+    // The enumerator of an enum with an integral underlying type is lowered to
+    // that type, which can be bool.  In that case the operand is already a
+    // !cir.bool, so return it -- int_to_bool requires a !cir.int source.
+    if (mlir::isa<cir::BoolType>(srcVal.getType()))
+      return srcVal;
+
     // Because of the type rules of C, we often end up computing a
     // logical value, then zero extending it to int, then wanting it
     // as a logical value again.

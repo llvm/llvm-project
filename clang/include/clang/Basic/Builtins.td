@@ -3860,6 +3860,14 @@ def VFork : LibBuiltin<"unistd.h"> {
   let Prototype = "pid_t()";
 }
 
+// POSIX sys/stat.h
+
+def Umask : LibBuiltin<"sys/stat.h"> {
+  let Spellings = ["umask"];
+  let Attributes = [IgnoreSignature, NoThrow];
+  let Prototype = ""; // mode_t(mode_t); mode_t is target-specific
+}
+
 // POSIX pthread.h
 
 def PthreadCreate : GNULibBuiltin<"pthread.h"> {

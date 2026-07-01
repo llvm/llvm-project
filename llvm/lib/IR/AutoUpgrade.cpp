@@ -1552,21 +1552,34 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
       return true;
     }
     break;
-  case 'l':
-    if ((Name.starts_with("lifetime.start") ||
-         Name.starts_with("lifetime.end")) &&
-        F->arg_size() == 2) {
-      Intrinsic::ID IID = Name.starts_with("lifetime.start")
-                              ? Intrinsic::lifetime_start
-                              : Intrinsic::lifetime_end;
-      rename(F);
-      // Old 2 argument form of these intrinsics have [Size, Ptr] as arguments.
-      // Use the Ptr argument to create new declaration.
-      NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID,
-                                                F->getArg(1)->getType());
-      return true;
+  case 'l': {
+    bool IsLifetimeStart = Name.consume_front("lifetime.start");
+    bool IsLifetimeEnd = !IsLifetimeStart && Name.consume_front("lifetime.end");
+    if (IsLifetimeStart || IsLifetimeEnd) {
+      if (F->arg_size() == 2) {
+        Intrinsic::ID IID = IsLifetimeStart ? Intrinsic::lifetime_start
+                                            : Intrinsic::lifetime_end;
+        rename(F);
+        // Old 2 argument form of these intrinsics have [Size, Ptr] as
+        // arguments. Use the Ptr argument to create new declaration.
+        NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID,
+                                                  F->getArg(1)->getType());
+        return true;
+      } else if (F->arg_size() == 1 && Name == ".i64") {
+        // Matches @llvm.lifetime.{start/end}.i64 which used to be created by
+        // Autoupgrade prior to
+        // https://github.com/llvm/llvm-project/pull/204601. This is an invalid
+        // intrinsic with no expected calls. To allow auto-upgrade process to
+        // delete such invalid intrinsic declaration, set NewFn = nullptr
+        // and return true here. If there are actual calls to this intrinsic
+        // (which is not expected), they will be deleted in
+        // UpgradeIntrinsicCall.
+        NewFn = nullptr;
+        return true;
+      }
     }
     break;
+  }
   case 'm': {
     // Updating the memory intrinsics (memcpy/memmove/memset) that have an
     // alignment parameter to embedding the alignment as an attribute of
@@ -5125,6 +5138,9 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       Rep = upgradeVectorSplice(CI, Builder);
     } else if (Name.consume_front("convert.")) {
       Rep = upgradeConvertIntrinsicCall(Name, CI, F, Builder);
+    } else if (Name == "lifetime.start.i64" || Name == "lifetime.end.i64") {
+      // Delete calls to invalid @llvm.lifetime.{start,end}.i64 intrinsics.
+      Rep = nullptr;
     } else {
       llvm_unreachable("Unknown function for CallBase upgrade.");
     }

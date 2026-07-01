@@ -63,7 +63,7 @@ bool CppModuleConfiguration::analyzeFile(const FileSpec &f,
                                          const llvm::Triple &triple) {
   using namespace llvm::sys::path;
   // Convert to slashes to make following operations simpler.
-  std::string dir_buffer = convert_to_slash(f.GetDirectory().GetStringRef());
+  std::string dir_buffer = convert_to_slash(f.GetDirectory());
   llvm::StringRef posix_dir(dir_buffer);
 
   // Check for /c++/vX/ that is used by libc++.
