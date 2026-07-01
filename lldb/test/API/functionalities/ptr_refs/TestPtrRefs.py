@@ -13,6 +13,7 @@ class TestPtrRefs(TestBase):
     @skipIfAsan  # The output looks different under ASAN.
     @skipIfMTE  # Heap scanning reads tagged memory with untagged pointers.
     @skipUnlessDarwin
+    @skipIf(archs=["arm64e"])  # ptr_refs does not work with pointer authentication
     def test_ptr_refs(self):
         """Test format string functionality."""
         self.build()

@@ -12,6 +12,7 @@ from lldbsuite.test import lldbutil
 class TestPtrRefsObjC(TestBase):
     @skipIfAsan  # The output looks different under ASAN.
     @skipIfMTE  # Heap scanning reads tagged memory with untagged pointers.
+    @skipIf(archs=["arm64e"])  # ptr_refs does not work with pointer authentication
     def test_ptr_refs(self):
         """Test the ptr_refs tool on Darwin with Objective-C"""
         self.build()
