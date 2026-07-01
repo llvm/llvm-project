@@ -172,9 +172,14 @@ struct SelectOpInterface
         return selectOp->emitError(
             "incompatible buffer types on true/false operands");
       }
-      trueBuffer = *options.createCast(rewriter, loc, *targetType, trueBuffer);
-      falseBuffer =
-          *options.createCast(rewriter, loc, *targetType, falseBuffer);
+      if (trueBuffer.getType() != *targetType) {
+        trueBuffer =
+            *options.createCast(rewriter, loc, *targetType, trueBuffer);
+      }
+      if (falseBuffer.getType() != *targetType) {
+        falseBuffer =
+            *options.createCast(rewriter, loc, *targetType, falseBuffer);
+      }
     }
 
     replaceOpWithNewBufferizedOp<arith::SelectOp>(

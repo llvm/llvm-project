@@ -843,10 +843,6 @@ LogicalResult BufferizationOptions::createMemCpy(OpBuilder &b, Location loc,
 FailureOr<Value> BufferizationOptions::createCast(OpBuilder &b, Location loc,
                                                   Type dest,
                                                   Value value) const {
-  // If the value already has the correct type, no cast is needed.
-  if (value.getType() == dest)
-    return value;
-
   if (castFn)
     return (*castFn)(b, loc, dest, value);
 

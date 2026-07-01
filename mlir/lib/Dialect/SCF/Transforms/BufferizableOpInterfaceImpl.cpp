@@ -29,6 +29,17 @@ namespace mlir {
 namespace scf {
 namespace {
 
+/// Helper function for loop bufferization. Cast the given buffer to the given
+/// memref type.
+static Value castBuffer(OpBuilder &b, Value buffer, Type type,
+                        const BufferizationOptions &options) {
+  // If the buffer already has the correct type, no cast is needed.
+  if (buffer.getType() == type)
+    return buffer;
+
+  return *options.createCast(b, buffer.getLoc(), type, buffer);
+}
+
 /// Helper function for loop bufferization. Return "true" if the given value
 /// is guaranteed to not alias with an external tensor apart from values in
 /// `exceptions`. A value is external if it is defined outside of the given
@@ -95,8 +106,7 @@ struct ConditionOpInterface
             whileOp.getAfterArguments()[it.index()], options, state);
         if (failed(resultType))
           return failure();
-        Value buffer = *options.createCast(rewriter, maybeBuffer->getLoc(),
-                                           *resultType, *maybeBuffer);
+        Value buffer = castBuffer(rewriter, *maybeBuffer, *resultType, options);
         newArgs.push_back(buffer);
       } else {
         newArgs.push_back(value);
@@ -744,8 +754,8 @@ struct ForOpInterface
       auto targetType = bufferization::getBufferType(result, options, state);
       if (failed(targetType))
         return failure();
-      castedInitArgs.push_back(*options.createCast(rewriter, initArg.getLoc(),
-                                                   *targetType, initArg));
+      castedInitArgs.push_back(
+          castBuffer(rewriter, initArg, *targetType, options));
     }
 
     // Construct a new scf.for op with memref instead of tensor values.
@@ -969,8 +979,8 @@ struct WhileOpInterface
       auto targetType = bufferization::getBufferType(beforeArg, options, state);
       if (failed(targetType))
         return failure();
-      castedInitArgs.push_back(*options.createCast(rewriter, initArg.getLoc(),
-                                                   *targetType, initArg));
+      castedInitArgs.push_back(
+          castBuffer(rewriter, initArg, *targetType, options));
     }
 
     // The result types of a WhileOp are the same as the "after" bbArg types.
@@ -1170,16 +1180,14 @@ struct YieldOpInterface
               yieldOp->getParentOp()->getResult(it.index()), options, state);
           if (failed(resultType))
             return failure();
-          buffer = *options.createCast(rewriter, buffer.getLoc(), *resultType,
-                                       buffer);
+          buffer = castBuffer(rewriter, buffer, *resultType, options);
         } else if (auto whileOp =
                        dyn_cast<scf::WhileOp>(yieldOp->getParentOp())) {
           FailureOr<BufferLikeType> resultType = bufferization::getBufferType(
               whileOp.getBeforeArguments()[it.index()], options, state);
           if (failed(resultType))
             return failure();
-          buffer = *options.createCast(rewriter, buffer.getLoc(), *resultType,
-                                       buffer);
+          buffer = castBuffer(rewriter, buffer, *resultType, options);
         }
         newResults.push_back(buffer);
       } else {
