@@ -1093,6 +1093,10 @@ public:
     return hasProperty(MCID::DelaySlot, Type);
   }
 
+  bool lateRegAllocDefs(QueryType Type = AnyInBundle) const {
+    return hasProperty(MCID::LateRegAllocDefs, Type);
+  }
+
   /// Return true for instructions that can be folded as
   /// memory operands in other instructions. The most common use for this
   /// is instructions that are simple loads from memory that don't modify

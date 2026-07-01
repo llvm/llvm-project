@@ -73,13 +73,13 @@ define void @fdot_multi_za32_f16_vg1x4(i32 %slice, <vscale x 16 x i8> %unused, <
 define void @fdot_multi_za32_f16_vg1x4_tuple(i64 %stride, ptr %ptr) #0 {
 ; CHECK-LABEL: fdot_multi_za32_f16_vg1x4_tuple:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    add x9, x0, x0, lsl #1
+; CHECK-NEXT:    add x10, x0, x0, lsl #1
 ; CHECK-NEXT:    ptrue pn8.b
-; CHECK-NEXT:    add x10, x1, x0
+; CHECK-NEXT:    add x9, x1, x0
 ; CHECK-NEXT:    ld1h { z16.h, z20.h, z24.h, z28.h }, pn8/z, [x1]
-; CHECK-NEXT:    ld1h { z17.h, z21.h, z25.h, z29.h }, pn8/z, [x10]
+; CHECK-NEXT:    ld1h { z17.h, z21.h, z25.h, z29.h }, pn8/z, [x9]
 ; CHECK-NEXT:    ld1h { z18.h, z22.h, z26.h, z30.h }, pn8/z, [x1, x0, lsl #1]
-; CHECK-NEXT:    add x9, x1, x9
+; CHECK-NEXT:    add x9, x1, x10
 ; CHECK-NEXT:    mov w8, wzr
 ; CHECK-NEXT:    ld1h { z19.h, z23.h, z27.h, z31.h }, pn8/z, [x9]
 ; CHECK-NEXT:    fdot za.s[w8, 0, vgx4], { z16.h - z19.h }, { z20.h - z23.h }

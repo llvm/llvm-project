@@ -60,13 +60,13 @@ define { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8
 ; CHECK-NEXT:    str z16, [sp, #8, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0a, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x11, 0xc8, 0x00, 0x1e, 0x22 // sp + 16 + 72 * VG
 ; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    lsl x8, x0, #1
-; CHECK-NEXT:    add x9, x1, x0
+; CHECK-NEXT:    lsl x9, x0, #1
 ; CHECK-NEXT:    ptrue pn8.b
+; CHECK-NEXT:    add x8, x1, x0
 ; CHECK-NEXT:    ld1d { z16.d, z20.d, z24.d, z28.d }, pn8/z, [x1]
-; CHECK-NEXT:    ld1d { z17.d, z21.d, z25.d, z29.d }, pn8/z, [x9]
-; CHECK-NEXT:    add x10, x1, x8
-; CHECK-NEXT:    add x8, x9, x8
+; CHECK-NEXT:    ld1d { z17.d, z21.d, z25.d, z29.d }, pn8/z, [x8]
+; CHECK-NEXT:    add x10, x1, x9
+; CHECK-NEXT:    add x8, x8, x9
 ; CHECK-NEXT:    ld1d { z18.d, z22.d, z26.d, z30.d }, pn8/z, [x10]
 ; CHECK-NEXT:    ld1d { z19.d, z23.d, z27.d, z31.d }, pn8/z, [x8]
 ; CHECK-NEXT:    sqcvt z0.h, { z16.d - z19.d }

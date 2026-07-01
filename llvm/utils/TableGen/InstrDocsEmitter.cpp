@@ -148,6 +148,7 @@ static void EmitInstrDocs(const RecordKeeper &RK, raw_ostream &OS) {
     FLAG(hasNoSchedulingInfo)
     FLAG(variadicOpsAreDefs)
     FLAG(isAuthenticated)
+    FLAG(lateRegAllocDefs)
     if (!FlagStrings.empty()) {
       OS << "Flags: ";
       ListSeparator LS;

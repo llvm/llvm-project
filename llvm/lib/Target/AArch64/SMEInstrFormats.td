@@ -46,15 +46,10 @@ def am_sme_indexed_b4 : ComplexPattern<iPTR, 2, "SelectAddrModeIndexedSVE<0, 15>
 // suggesting a contigious multi-vector register which matches the
 // subregister sequence used by the operands.
 
-def FORM_TRANSPOSED_REG_TUPLE_X2_PSEUDO :
-  Pseudo<(outs ZPR2:$tup),
-         (ins ZPR:$zn0, ZPR:$zn1), []>, Sched<[]>{
-  let hasSideEffects = 0;
-}
+def COPY_INTO_TRANSPOSED_TUPLE :
+  Pseudo<(outs ZPR:$tup), (ins ZPR:$zn, imm0_31: $size), []>, Sched<[]>{
 
-def FORM_TRANSPOSED_REG_TUPLE_X4_PSEUDO :
-  Pseudo<(outs ZPR4:$tup),
-         (ins ZPR:$zn0, ZPR:$zn1, ZPR:$zn2, ZPR:$zn3), []>, Sched<[]>{
+  let lateRegAllocDefs = 1;
   let hasSideEffects = 0;
 }
 

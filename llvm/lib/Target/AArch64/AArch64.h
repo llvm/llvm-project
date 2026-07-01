@@ -44,6 +44,8 @@ class FunctionPass;
 class InstructionSelector;
 class ModulePass;
 
+extern char &SMEPeepholeOptLegacyID;
+
 FunctionPass *createAArch64DeadRegisterDefinitions();
 FunctionPass *createAArch64RedundantCopyEliminationPass();
 FunctionPass *createAArch64RedundantCondBranchPass();

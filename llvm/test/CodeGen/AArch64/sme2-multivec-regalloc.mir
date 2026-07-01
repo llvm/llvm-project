@@ -42,13 +42,13 @@ body:             |
     ; CHECK-NEXT: mov z23.d, z5.d
     ; CHECK-NEXT: mov z26.d, z27.d
     ; CHECK-NEXT: mov z27.d, z6.d
-    ; CHECK-NEXT: mov z29.d, z30.d
-    ; CHECK-NEXT: mov z30.d, z31.d
-    ; CHECK-NEXT: mov z31.d, z7.d
+    ; CHECK-NEXT: mov z4.d, z28.d
+    ; CHECK-NEXT: mov z5.d, z30.d
+    ; CHECK-NEXT: mov z6.d, z31.d
     ; CHECK-NEXT: udot za.s[w8, 0, vgx4], { z8.b - z11.b }, z0.b[0]
     ; CHECK-NEXT: udot za.s[w8, 0, vgx4], { z20.b - z23.b }, z0.b[0]
     ; CHECK-NEXT: udot za.s[w8, 0, vgx4], { z24.b - z27.b }, z0.b[0]
-    ; CHECK-NEXT: udot za.s[w8, 0, vgx4], { z28.b - z31.b }, z0.b[0]
+    ; CHECK-NEXT: udot za.s[w8, 0, vgx4], { z4.b - z7.b }, z0.b[0]
     ; CHECK-NEXT: st1b { z0.b }, p0, [x0]
     ; CHECK-NEXT: st1b { z17.b }, p0, [x0]
     ; CHECK-NEXT: addvl sp, sp, #2
@@ -70,10 +70,27 @@ body:             |
     %10:zpr4stridedorcontiguous = LD1B_4Z_PSEUDO %pred, %0, %1
     %11:zpr4stridedorcontiguous = LD1B_4Z_PSEUDO %pred, %0, %6
     %12:zpr4stridedorcontiguous = LD1B_4Z_PSEUDO %pred, %0, %8
-    %13:zpr4mul4 = FORM_TRANSPOSED_REG_TUPLE_X4_PSEUDO %9.zsub0, %10.zsub0, %11.zsub0, %12.zsub0
-    %14:zpr4mul4 = FORM_TRANSPOSED_REG_TUPLE_X4_PSEUDO %9.zsub1, %10.zsub1, %11.zsub1, %12.zsub1
-    %15:zpr4mul4 = FORM_TRANSPOSED_REG_TUPLE_X4_PSEUDO %9.zsub2, %10.zsub2, %11.zsub2, %12.zsub2
-    %16:zpr4mul4 = FORM_TRANSPOSED_REG_TUPLE_X4_PSEUDO %9.zsub3, %10.zsub3, %11.zsub3, %12.zsub3
+
+    undef %13.zsub0:zpr4mul4 = COPY_INTO_TRANSPOSED_TUPLE %9.zsub0, 4
+    %13.zsub1:zpr4mul4 = COPY_INTO_TRANSPOSED_TUPLE %10.zsub0, 4
+    %13.zsub2:zpr4mul4 = COPY_INTO_TRANSPOSED_TUPLE %11.zsub0, 4
+    %13.zsub3:zpr4mul4 = COPY_INTO_TRANSPOSED_TUPLE %12.zsub0, 4
+
+    undef %14.zsub0:zpr4mul4 = COPY_INTO_TRANSPOSED_TUPLE %9.zsub1, 4
+    %14.zsub1:zpr4mul4 = COPY_INTO_TRANSPOSED_TUPLE %10.zsub1, 4
+    %14.zsub2:zpr4mul4 = COPY_INTO_TRANSPOSED_TUPLE %11.zsub1, 4
+    %14.zsub3:zpr4mul4 = COPY_INTO_TRANSPOSED_TUPLE %12.zsub1, 4
+
+    undef %15.zsub0:zpr4mul4 = COPY_INTO_TRANSPOSED_TUPLE %9.zsub2, 4
+    %15.zsub1:zpr4mul4 = COPY_INTO_TRANSPOSED_TUPLE %10.zsub2, 4
+    %15.zsub2:zpr4mul4 = COPY_INTO_TRANSPOSED_TUPLE %11.zsub2, 4
+    %15.zsub3:zpr4mul4 = COPY_INTO_TRANSPOSED_TUPLE %12.zsub2, 4
+
+    undef %16.zsub0:zpr4mul4 = COPY_INTO_TRANSPOSED_TUPLE %9.zsub3, 4
+    %16.zsub1:zpr4mul4 = COPY_INTO_TRANSPOSED_TUPLE %10.zsub3, 4
+    %16.zsub2:zpr4mul4 = COPY_INTO_TRANSPOSED_TUPLE %11.zsub3, 4
+    %16.zsub3:zpr4mul4 = COPY_INTO_TRANSPOSED_TUPLE %12.zsub3, 4
+
     $za = UDOT_VG4_M4ZZI_BtoS $za, %5, 0, %13, undef %28:zpr_4b, 0
     $za = UDOT_VG4_M4ZZI_BtoS $za, %5, 0, %14, undef %30:zpr_4b, 0
     $za = UDOT_VG4_M4ZZI_BtoS $za, %5, 0, %15, undef %32:zpr_4b, 0
@@ -129,10 +146,27 @@ body:             |
     %10:zpr4stridedorcontiguous = LD1B_4Z_PSEUDO %pred, %0, %6
     %11:zpr4stridedorcontiguous = LD1B_4Z_PSEUDO %pred, %0, %1
     %12:zpr4stridedorcontiguous  = LD1B_4Z_IMM_PSEUDO %pred, %0, 0
-    %13:zpr4mul4 = FORM_TRANSPOSED_REG_TUPLE_X4_PSEUDO %12.zsub0, %11.zsub0, %10.zsub0, %9.zsub0
-    %14:zpr4mul4 = FORM_TRANSPOSED_REG_TUPLE_X4_PSEUDO %12.zsub1, %11.zsub1, %10.zsub1, %9.zsub1
-    %15:zpr4mul4 = FORM_TRANSPOSED_REG_TUPLE_X4_PSEUDO %12.zsub2, %11.zsub2, %10.zsub2, %9.zsub2
-    %16:zpr4mul4 = FORM_TRANSPOSED_REG_TUPLE_X4_PSEUDO %12.zsub3, %11.zsub3, %10.zsub3, %9.zsub3
+
+    undef %13.zsub0:zpr4mul4 = COPY_INTO_TRANSPOSED_TUPLE %12.zsub0, 4
+    %13.zsub1:zpr4mul4 = COPY_INTO_TRANSPOSED_TUPLE %11.zsub0, 4
+    %13.zsub2:zpr4mul4 = COPY_INTO_TRANSPOSED_TUPLE %10.zsub0, 4
+    %13.zsub3:zpr4mul4 = COPY_INTO_TRANSPOSED_TUPLE %9.zsub0, 4
+
+    undef %14.zsub0:zpr4mul4 = COPY_INTO_TRANSPOSED_TUPLE %12.zsub1, 4
+    %14.zsub1:zpr4mul4 = COPY_INTO_TRANSPOSED_TUPLE %11.zsub1, 4
+    %14.zsub2:zpr4mul4 = COPY_INTO_TRANSPOSED_TUPLE %10.zsub1, 4
+    %14.zsub3:zpr4mul4 = COPY_INTO_TRANSPOSED_TUPLE %9.zsub1, 4
+
+    undef %15.zsub0:zpr4mul4 = COPY_INTO_TRANSPOSED_TUPLE %12.zsub2, 4
+    %15.zsub1:zpr4mul4 = COPY_INTO_TRANSPOSED_TUPLE %11.zsub2, 4
+    %15.zsub2:zpr4mul4 = COPY_INTO_TRANSPOSED_TUPLE %10.zsub2, 4
+    %15.zsub3:zpr4mul4 = COPY_INTO_TRANSPOSED_TUPLE %9.zsub2, 4
+
+    undef %16.zsub0:zpr4mul4 = COPY_INTO_TRANSPOSED_TUPLE %12.zsub3, 4
+    %16.zsub1:zpr4mul4 = COPY_INTO_TRANSPOSED_TUPLE %11.zsub3, 4
+    %16.zsub2:zpr4mul4 = COPY_INTO_TRANSPOSED_TUPLE %10.zsub3, 4
+    %16.zsub3:zpr4mul4 = COPY_INTO_TRANSPOSED_TUPLE %9.zsub3, 4
+
     $za = UDOT_VG4_M4ZZI_BtoS $za, %5, 0, %13, undef %28:zpr_4b, 0
     $za = UDOT_VG4_M4ZZI_BtoS $za, %5, 0, %14, undef %30:zpr_4b, 0
     $za = UDOT_VG4_M4ZZI_BtoS $za, %5, 0, %15, undef %32:zpr_4b, 0
@@ -176,8 +210,13 @@ body:             |
      %10:pnr_p8to15 = PTRUE_C_B implicit $vg
      %11:zpr2stridedorcontiguous = LD1B_2Z_IMM_PSEUDO %10, %1, 0
      %12:zpr2stridedorcontiguous = LD1B_2Z_PSEUDO %10, %1, %0
-     %13:zpr2 = FORM_TRANSPOSED_REG_TUPLE_X2_PSEUDO %11.zsub0, %12.zsub0
-     %14:zpr2 = FORM_TRANSPOSED_REG_TUPLE_X2_PSEUDO %11.zsub1, %12.zsub1
+
+     undef %13.zsub0:zpr2 = COPY_INTO_TRANSPOSED_TUPLE %11.zsub0, 2
+     %13.zsub1:zpr2 = COPY_INTO_TRANSPOSED_TUPLE %12.zsub0, 2
+
+     undef %14.zsub0:zpr2 = COPY_INTO_TRANSPOSED_TUPLE %11.zsub1, 2
+     %14.zsub1:zpr2 = COPY_INTO_TRANSPOSED_TUPLE %12.zsub1, 2
+
      $za = UDOT_VG2_M2ZZ_BtoS $za, %9, 0, %13, undef %15:zpr_4b
      $za = UDOT_VG2_M2ZZ_BtoS $za, %9, 0, %14, undef %16:zpr_4b
      RET_ReallyLR

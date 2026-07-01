@@ -445,7 +445,6 @@ unsigned DefaultPriorityAdvisor::getPriority(const LiveInterval &LI) const {
   const Register Reg = LI.reg();
   unsigned Prio;
   LiveRangeStage Stage = RA.getExtraInfo().getStage(LI);
-
   if (Stage == RS_Split) {
     // Unsplit ranges that couldn't be allocated immediately are deferred until
     // everything else has been allocated.
@@ -460,8 +459,14 @@ unsigned DefaultPriorityAdvisor::getPriority(const LiveInterval &LI) const {
                             (2 * RegClassInfo.getNumAllocatableRegs(&RC)));
     unsigned GlobalBit = 0;
 
-    if (Stage == RS_Assign && !ForceGlobal && !LI.empty() &&
-        LIS->intervalIsInOneMBB(LI)) {
+    bool LateRegAllocDefs =
+        all_of(MRI->def_instructions(Reg),
+               [](MachineInstr &MI) { return MI.lateRegAllocDefs(); });
+
+    if (Stage == RS_Assign && LateRegAllocDefs) {
+      return 0;
+    } else if (Stage == RS_Assign && !ForceGlobal && !LI.empty() &&
+               LIS->intervalIsInOneMBB(LI)) {
       // Allocate original local ranges in linear instruction order. Since they
       // are singly defined, this produces optimal coloring in the absence of
       // global interference and other constraints.

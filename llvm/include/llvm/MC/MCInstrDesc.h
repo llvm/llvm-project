@@ -188,6 +188,7 @@ enum Flag {
   Trap,
   VariadicOpsAreDefs,
   Authenticated,
+  LateRegAllocDefs
 };
 } // namespace MCID
 
@@ -419,6 +420,10 @@ public:
   /// Return true if variadic operands of this instruction are definitions.
   bool variadicOpsAreDefs() const {
     return Flags & (1ULL << MCID::VariadicOpsAreDefs);
+  }
+
+  bool lateRegAllocDefs() const {
+    return Flags & (1ULL << MCID::LateRegAllocDefs);
   }
 
   /// Return true if this instruction authenticates a pointer (e.g. LDRAx/BRAx

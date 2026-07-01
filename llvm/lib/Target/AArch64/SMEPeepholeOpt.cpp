@@ -14,6 +14,8 @@
 #include "AArch64MachineFunctionInfo.h"
 #include "AArch64Subtarget.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/CodeGen/LiveIntervals.h"
+#include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -27,6 +29,7 @@ namespace {
 
 struct SMEPeepholeOpt : public MachineFunctionPass {
   static char ID;
+  LiveVariables *LV = nullptr;
 
   SMEPeepholeOpt() : MachineFunctionPass(ID) {}
 
@@ -38,6 +41,8 @@ struct SMEPeepholeOpt : public MachineFunctionPass {
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
+    AU.addUsedIfAvailable<LiveVariablesWrapperPass>();
+    AU.addPreserved<LiveVariablesWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -49,6 +54,8 @@ struct SMEPeepholeOpt : public MachineFunctionPass {
 char SMEPeepholeOpt::ID = 0;
 
 } // end anonymous namespace
+
+char &llvm::SMEPeepholeOptLegacyID = SMEPeepholeOpt::ID;
 
 static bool isConditionalStartStop(const MachineInstr *MI) {
   return MI->getOpcode() == AArch64::MSRpstatePseudo;
@@ -228,8 +235,8 @@ bool SMEPeepholeOpt::optimizeStartStopPairs(
 //   ->  %9:zpr2mul2 = FORM_TRANSPOSED_REG_TUPLE_X2_PSEUDO %5:zpr, %8:zpr
 //
 bool SMEPeepholeOpt::visitRegSequence(MachineInstr &MI) {
-  assert(MI.getMF()->getRegInfo().isSSA() && "Expected to be run on SSA form!");
-
+  assert(!MI.getMF()->getRegInfo().isSSA() &&
+         "Expected not to run on SSA form!");
   MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
   switch (MRI.getRegClass(MI.getOperand(0).getReg())->getID()) {
   case AArch64::ZPR2RegClassID:
@@ -247,41 +254,67 @@ bool SMEPeepholeOpt::visitRegSequence(MachineInstr &MI) {
   if (MI.getNumOperands() != 5 && MI.getNumOperands() != 9)
     return false;
 
+  unsigned TupleSize = MI.getNumOperands() == 5 ? 2 : 4;
+
+  SmallSet<Register, 4> DefRegs;
   MCRegister SubReg = MCRegister::NoRegister;
   for (unsigned I = 1; I < MI.getNumOperands(); I += 2) {
-    MachineOperand &MO = MI.getOperand(I);
+    MachineOperand *Src = &MI.getOperand(I);
 
-    MachineOperand *Def = MRI.getOneDef(MO.getReg());
-    if (!Def || !Def->getParent()->isCopy())
+    MachineOperand *Def = MRI.getOneDef(Src->getReg());
+    if (!Def || !Def->isReg())
       return false;
 
-    const MachineOperand &CopySrc = Def->getParent()->getOperand(1);
-    unsigned OpSubReg = CopySrc.getSubReg();
+    // Look through sub-reg copies.
+    if (!Src->getSubReg() && Def->getParent()->isCopy()) {
+      Src = &Def->getParent()->getOperand(1);
+      Def = MRI.getOneDef(Src->getReg());
+    }
+
+    if (!Src->getSubReg() || !Def)
+      return false;
+
+    unsigned OpSubReg = Src->getSubReg();
     if (SubReg == MCRegister::NoRegister)
       SubReg = OpSubReg;
 
-    MachineOperand *CopySrcOp = MRI.getOneDef(CopySrc.getReg());
-    if (!CopySrcOp || !CopySrcOp->isReg() || OpSubReg != SubReg ||
-        CopySrcOp->getReg().isPhysical())
+    if (OpSubReg != SubReg || Def->getReg().isPhysical())
       return false;
 
-    const TargetRegisterClass *CopySrcClass =
-        MRI.getRegClass(CopySrcOp->getReg());
-    if (CopySrcClass != &AArch64::ZPR2StridedOrContiguousRegClass &&
-        CopySrcClass != &AArch64::ZPR4StridedOrContiguousRegClass)
+    DefRegs.insert(Def->getReg());
+    const TargetRegisterClass *SrcClass = MRI.getRegClass(Def->getReg());
+    if (SrcClass != &AArch64::ZPR2StridedOrContiguousRegClass &&
+        SrcClass != &AArch64::ZPR4StridedOrContiguousRegClass) {
       return false;
+    }
   }
 
-  unsigned Opc = MI.getNumOperands() == 5
-                     ? AArch64::FORM_TRANSPOSED_REG_TUPLE_X2_PSEUDO
-                     : AArch64::FORM_TRANSPOSED_REG_TUPLE_X4_PSEUDO;
+  if (DefRegs.size() != TupleSize)
+    return false;
 
   const TargetInstrInfo *TII =
       MI.getMF()->getSubtarget<AArch64Subtarget>().getInstrInfo();
-  MachineInstrBuilder MIB = BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
-                                    TII->get(Opc), MI.getOperand(0).getReg());
-  for (unsigned I = 1; I < MI.getNumOperands(); I += 2)
-    MIB.addReg(MI.getOperand(I).getReg());
+
+  MachineBasicBlock &MBB = *MI.getParent();
+
+  unsigned Idx = 0;
+  for (unsigned I = 1; I < MI.getNumOperands(); I += 2) {
+    MachineOperand &SrcOp = MI.getOperand(I);
+    MachineInstr *Copy =
+        BuildMI(MBB, MI, MI.getDebugLoc(),
+                TII->get(AArch64::COPY_INTO_TRANSPOSED_TUPLE))
+            .addReg(MI.getOperand(0).getReg(),
+                    RegState::Define |
+                        (I == 1 ? RegState::Undef : RegState::NoFlags),
+                    AArch64::zsub0 + Idx)
+            .addReg(SrcOp.getReg(), RegState::NoFlags, SrcOp.getSubReg())
+            .addImm(TupleSize);
+
+    if (LV && SrcOp.isKill())
+      LV->replaceKillInstruction(SrcOp.getReg(), MI, *Copy);
+
+    ++Idx;
+  }
 
   MI.eraseFromParent();
   return true;
@@ -297,7 +330,11 @@ bool SMEPeepholeOpt::runOnMachineFunction(MachineFunction &MF) {
   if (!MF.getSubtarget<AArch64Subtarget>().hasSME())
     return false;
 
-  assert(MF.getRegInfo().isSSA() && "Expected to be run on SSA form!");
+  auto *LVWrapper = getAnalysisIfAvailable<LiveVariablesWrapperPass>();
+  LV = LVWrapper ? &LVWrapper->getLV() : nullptr;
+
+  assert(!LV || !MF.getRegInfo().isSSA() &&
+                    "Only expect to update LV when running on non-SSA MIR");
 
   bool Changed = false;
   bool FunctionHasAllSMChangesRemoved = false;
@@ -306,11 +343,14 @@ bool SMEPeepholeOpt::runOnMachineFunction(MachineFunction &MF) {
   // still have to analyze all the blocks because we may call a streaming
   // function that requires smstart/smstop pairs.
   for (MachineBasicBlock &MBB : MF) {
-    bool BlockHasAllSMChangesRemoved;
-    Changed |= optimizeStartStopPairs(MBB, BlockHasAllSMChangesRemoved);
-    FunctionHasAllSMChangesRemoved |= BlockHasAllSMChangesRemoved;
+    if (MF.getRegInfo().isSSA()) {
+      bool BlockHasAllSMChangesRemoved;
+      Changed |= optimizeStartStopPairs(MBB, BlockHasAllSMChangesRemoved);
+      FunctionHasAllSMChangesRemoved |= BlockHasAllSMChangesRemoved;
+    }
 
-    if (MF.getSubtarget<AArch64Subtarget>().isStreaming()) {
+    if (!MF.getRegInfo().isSSA() &&
+        MF.getSubtarget<AArch64Subtarget>().isStreaming()) {
       for (MachineInstr &MI : make_early_inc_range(MBB))
         if (MI.getOpcode() == AArch64::REG_SEQUENCE)
           Changed |= visitRegSequence(MI);

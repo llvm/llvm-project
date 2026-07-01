@@ -752,6 +752,7 @@ class Instruction : InstructionEncoding {
                                 // TargetInstrInfo::getInsertSubregLikeInputs.
   bit variadicOpsAreDefs = false; // Are variadic operands definitions?
   bit supportsDeactivationSymbol = false;
+  bit lateRegAllocDefs = false;
 
   // Does the instruction have side effects that are not captured by any
   // operands of the instruction or other flags?

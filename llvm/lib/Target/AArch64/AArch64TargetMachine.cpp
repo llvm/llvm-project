@@ -596,6 +596,7 @@ public:
   void addPostBBSections() override;
   void addPreEmitPass2() override;
   bool addRegAssignAndRewriteOptimized() override;
+  void addOptimizedRegAlloc() override;
 
   std::unique_ptr<CSEConfigBase> getCSEConfig() const override;
 };
@@ -959,6 +960,12 @@ void AArch64PassConfig::addPreEmitPass2() {
 bool AArch64PassConfig::addRegAssignAndRewriteOptimized() {
   addPass(createAArch64PostCoalescerPass());
   return TargetPassConfig::addRegAssignAndRewriteOptimized();
+}
+
+void AArch64PassConfig::addOptimizedRegAlloc() {
+  if (EnableSMEPeepholeOpt)
+    insertPass(&PHIEliminationID, &SMEPeepholeOptLegacyID);
+  return TargetPassConfig::addOptimizedRegAlloc();
 }
 
 MachineFunctionInfo *AArch64TargetMachine::createMachineFunctionInfo(
