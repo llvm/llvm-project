@@ -18,11 +18,13 @@
 #include "lldb/Utility/StreamString.h"
 
 #include "Plugins/DynamicLoader/FreeBSD-Kernel/DynamicLoaderFreeBSDKernel.h"
+#include "Plugins/Platform/FreeBSD-Kernel/PlatformFreeBSDKernel.h"
 #include "ProcessFreeBSDKernelCore.h"
 #include "ThreadFreeBSDKernelCore.h"
 
 using namespace lldb;
 using namespace lldb_private;
+using namespace lldb_private::platform_freebsdkernel;
 
 LLDB_PLUGIN_DEFINE(ProcessFreeBSDKernelCore)
 
@@ -207,6 +209,13 @@ Status ProcessFreeBSDKernelCore::DoLoadCore() {
   }
 
   SetKernelDisplacement();
+
+  PlatformSP platform_sp =
+      PlatformFreeBSDKernel::CreateInstance(/*force=*/true, nullptr);
+  GetTarget().SetPlatform(platform_sp);
+
+  static_cast<PlatformFreeBSDKernel *>(platform_sp.get())
+      ->PopulateTrapHandlerNames(GetTarget());
 
   return Status();
 }
