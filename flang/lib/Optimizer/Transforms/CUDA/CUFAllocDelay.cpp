@@ -93,8 +93,7 @@ findDelayTarget(hlfir::DeclareOp declareOp, mlir::Block *entryBlock,
   return nullptr;
 }
 
-struct CUFAllocDelay
-    : public fir::impl::CUFAllocDelayBase<CUFAllocDelay> {
+struct CUFAllocDelay : public fir::impl::CUFAllocDelayBase<CUFAllocDelay> {
 
   void runOnOperation() override {
     mlir::func::FuncOp func = getOperation();
