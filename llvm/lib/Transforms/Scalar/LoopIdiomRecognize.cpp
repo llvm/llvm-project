@@ -1577,20 +1577,31 @@ bool LoopIdiomRecognize::optimizeCRCLoopUsingClmul(const PolynomialInfo &Info) {
   // First, generate the constants required for GF(2) Barrett reduction.
   auto [Mu, FullGenPoly] =
       HashRecognize::genBarrettConstants(Info.RHS, TC, Info.IsBigEndian);
-  Value *MuExt = ConstantInt::get(Ctx, Mu.zext(ClmulBW));
-  Value *FullGenPolyExt = ConstantInt::get(Ctx, FullGenPoly.zext(ClmulBW));
+  Value *MuConst = ConstantInt::get(Ctx, Mu.zext(ClmulBW));
+  Value *GenPolyConst = ConstantInt::get(Ctx, FullGenPoly.zext(ClmulBW));
 
   IRBuilder<> Builder(CurLoop->getLoopPreheader()->getTerminator());
 
-  auto GetMostSignificantTCBits = [&](Value *Op, unsigned BW,
-                                      const Twine &Name) {
+  auto ShiftNetAmt = [&](Value *Op, unsigned LShrAmt, unsigned ShlAmt,
+                         const Twine &Name) {
+    if (LShrAmt > ShlAmt)
+      return Builder.CreateLShr(Op, LShrAmt - ShlAmt, Name);
+    if (ShlAmt > LShrAmt)
+      return Builder.CreateShl(Op, ShlAmt - LShrAmt, Name);
+    return Op;
+  };
+
+  auto LoTCBits = [&](Value *Op, const Twine &Name) {
     unsigned OpBW = Op->getType()->getIntegerBitWidth();
-    assert(BW > TC && OpBW > TC &&
-           "Trip count should not exceed the bit width");
-    if (Info.IsBigEndian)
-      return Builder.CreateLShr(Op, BW - TC, Name + ".be.lshr");
+    assert(OpBW >= TC && "Bit width should be at least TripCount");
     auto *Mask = ConstantInt::get(Ctx, APInt::getLowBitsSet(OpBW, TC));
-    return Builder.CreateAnd(Op, Mask, Name + ".le.mask");
+    return Builder.CreateAnd(Op, Mask, Name);
+  };
+
+  auto MostSignificantTCBits = [&](Value *Op, unsigned BW, const Twine &Name) {
+    assert(BW >= TC && "Bit width should be at least TripCount");
+    return Info.IsBigEndian ? Builder.CreateLShr(Op, BW - TC, Name + ".be.lshr")
+                            : LoTCBits(Op, Name + ".le.mask");
   };
 
   Value *LHS = Builder.CreateZExt(Info.LHS, ClmulTy, "crc.ext");
@@ -1598,59 +1609,53 @@ bool LoopIdiomRecognize::optimizeCRCLoopUsingClmul(const PolynomialInfo &Info) {
   // For the big-endian case, align the leftmost bit of the CRC with the
   // leftmost bit of the data which is used. For the little-endian case, align
   // the rightmost bits (nothing to do).
-  Value *CRCAlignTC;
-  if (!Info.IsBigEndian || CRCBW == TC)
-    CRCAlignTC = LHS;
-  else if (CRCBW > TC)
-    CRCAlignTC = Builder.CreateLShr(LHS, CRCBW - TC, "crc.be.tcbits");
-  else
-    CRCAlignTC = Builder.CreateShl(LHS, TC - CRCBW, "crc.be.tcbits");
+  Value *ClmulMuInput =
+      Info.IsBigEndian ? ShiftNetAmt(LHS, CRCBW, TC, "crc.be.align.tc") : LHS;
 
   // If auxiliary data is present, XOR it in with the CRC.
-  Value *ClmulMuInput;
   if (Value *Data = Info.LHSAux) {
-    unsigned DataBW = Data->getType()->getIntegerBitWidth();
-    // For big-endian CRC loops where auxiliary data is XORed with the CRC
-    // inside the loop, the bits won't be aligned properly if the bit widths
-    // don't match, and thus the CRC computation is incorrect, but HashRecognize
-    // will still detect the loop. To handle the case where the data is zexted
-    // before XORing with the CRC, just ignore the auxiliary data entirely,
-    // because the extracted bit will always be zero.
-    if (!Info.IsBigEndian || DataBW >= CRCBW) {
-      // For the aforementioned HashRecognize quirk, to handle the case where
-      // the data is truncated before XORing with the CRC, shift the data so the
-      // CRCBW-1 bit becomes the leftmost bit, and then the remaining logic
-      // treats the DataBW-1 bit as the first bit to be processed.
-      if (Info.IsBigEndian && DataBW > CRCBW)
-        Data = Builder.CreateShl(Data, DataBW - CRCBW, "data.be.shl");
-      if (DataBW > TC) {
-        // Extract the useful bits of the data and discard the rest.
-        Data = GetMostSignificantTCBits(Data, DataBW, "data");
-      }
-      // This is usually a zext, but DataBW may exceed ClmulBW if both CRCBW and
-      // TC are small enough.
-      Data = Builder.CreateZExtOrTrunc(Data, ClmulTy, "data.cast");
-
-      ClmulMuInput = Builder.CreateXor(CRCAlignTC, Data, "xor.crc.data");
-    } else {
-      ClmulMuInput = CRCAlignTC;
+    if (Info.IsBigEndian) {
+      // For big-endian CRC loops where auxiliary data is XORed with the CRC
+      // inside the loop, the bits won't be aligned properly if the bit widths
+      // don't match, and thus the CRC computation is incorrect, but
+      // HashRecognize will still detect the loop. So, to set up the data
+      // properly in the big-endian case, two shifts need to be done instead of
+      // just one:
+      // - Shift right by CRCBW - DataBW so that the (CRCBW-1) bit becomes the
+      //   (DataBW-1) bit to account for the aforementioned misalignment quirk.
+      // - Shift right by DataBW - TC so that only the most significant TC bits
+      //   are used in calculation.
+      // This ends up being a shift right by CRCBW and left by TC. However, just
+      // replace the data with zero instead if CRCBW > DataBW since that is the
+      // effective outcome, and doing a shift in this case could create poison.
+      Data = CRCBW > Data->getType()->getIntegerBitWidth()
+                 ? Constant::getNullValue(Data->getType())
+                 : ShiftNetAmt(Data, CRCBW, TC, "data.be.align.tc");
     }
-  } else {
-    ClmulMuInput = CRCAlignTC;
+
+    // Zero out any data bits above (TC-1) for calculation since the original
+    // loop doesn't use them.
+    Data = LoTCBits(Data, "data.tcbits");
+
+    // This is usually a zext, but DataBW may exceed ClmulBW if both CRCBW and
+    // TC are small enough.
+    Data = Builder.CreateZExtOrTrunc(Data, ClmulTy, "data.cast");
+
+    ClmulMuInput = Builder.CreateXor(ClmulMuInput, Data, "xor.crc.data");
   }
 
   // Perform the first clmul operation with the mu constant. Input is TC bits
   // and mu is TC+1 bits, so the result will be 2*TC bits.
   Value *ClmulMu = Builder.CreateBinaryIntrinsic(
-      Intrinsic::clmul, ClmulMuInput, MuExt, /*FMFSource=*/{}, "clmul.mu");
+      Intrinsic::clmul, ClmulMuInput, MuConst, /*FMFSource=*/{}, "clmul.mu");
 
   // Extract the relevant bits from the result.
-  Value *ClmulGPInput = GetMostSignificantTCBits(ClmulMu, 2 * TC, "quot");
+  Value *ClmulGPInput = MostSignificantTCBits(ClmulMu, 2 * TC, "quot");
 
   // Perform the second clmul operation with the P(x) constant. Input is TC bits
   // and P(x) is CRCBW+1 bits, so the result will be CRCBW+TC bits.
   Value *ClmulGP = Builder.CreateBinaryIntrinsic(Intrinsic::clmul, ClmulGPInput,
-                                                 FullGenPolyExt,
+                                                 GenPolyConst,
                                                  /*FMFSource=*/{}, "clmul.gp");
 
   // For the big-endian case, align the leftmost bit of the CRC with the
