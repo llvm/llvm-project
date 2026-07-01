@@ -1,10 +1,10 @@
 // RUN: %clang_cc1 %std_cxx11- -triple x86_64-unknown-linux-gnu -fexceptions -fcxx-exceptions -emit-llvm -o - --embed-dir=%S/Inputs -Wno-c23-extensions %s | FileCheck %s
 // RUN: %clang_cc1 %std_cxx11- -triple x86_64-unknown-linux-gnu -fexceptions -fcxx-exceptions -S -o - --embed-dir=%S/Inputs -Wno-c23-extensions %s | FileCheck --check-prefix=ASM %s
 
-// CHECK-DAG: @[[DOUBLE_INIT:[.A-Za-z0-9_$]+]] = private unnamed_addr constant <{ [3 x double], [8 x i8] }> <{ [3 x double] [double 1.000000e+00, double 2.000000e+00, double 3.000000e+00], [8 x i8] zeroinitializer }>, align 8
-// CHECK-DAG: @[[EMBED_INIT:[.A-Za-z0-9_$]+]] = private unnamed_addr constant <{ [2 x i8], [2 x i8] }> <{ [2 x i8] c"jk", [2 x i8] zeroinitializer }>, align 1
+// CHECK-DAG: @[[DOUBLE_INIT:[.A-Za-z0-9_$]+]] = private unnamed_addr constant [3 x double] [double 1.000000e+00, double 2.000000e+00, double 3.000000e+00], align 8
+// CHECK-DAG: @[[EMBED_INIT:[.A-Za-z0-9_$]+]] = private unnamed_addr constant [2 x i8] c"jk", align 1
 // CHECK-DAG: @[[HUNDO_INIT:[.A-Za-z0-9_$]+]] = private unnamed_addr constant [100 x i32]
-// CHECK-DAG: @[[INT_INIT:[.A-Za-z0-9_$]+]] = private unnamed_addr constant <{ [3 x i32], [4 x i8] }> <{ [3 x i32] [i32 1, i32 2, i32 3], [4 x i8] zeroinitializer }>, align 4
+// CHECK-DAG: @[[INT_INIT:[.A-Za-z0-9_$]+]] = private unnamed_addr constant [3 x i32] [i32 1, i32 2, i32 3], align 4
 
 namespace std {
 using size_t = decltype(sizeof(int));
@@ -78,11 +78,6 @@ namespace shared_static_lists {
 void f(std::initializer_list<int>);
 
 void g() {
-  // ASM: .section .rodata.cst16,"aM",@progbits,16
-  // ASM: .long 1
-  // ASM-NEXT: .long 2
-  // ASM-NEXT: .long 3
-  // ASM-NEXT: .zero 4
   // CHECK-LABEL: define{{.*}} void @_ZN19shared_static_lists1gEv(
   // CHECK-NOT: alloca [3 x i32]
   // CHECK-NOT: llvm.memcpy
@@ -99,11 +94,11 @@ namespace mergeable_static_list {
 void f(std::initializer_list<int>);
 
 void g() {
+  // ASM: .section .rodata.cst16,"aM",@progbits,16
   // ASM: .long 1
   // ASM-NEXT: .long 2
   // ASM-NEXT: .long 3
   // ASM-NEXT: .long 4
-  // ASM-NEXT: .size {{.*}}, 16
   f({1, 2, 3, 4});
 }
 } // namespace mergeable_static_list

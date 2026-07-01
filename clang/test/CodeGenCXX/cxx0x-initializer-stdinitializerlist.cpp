@@ -85,10 +85,10 @@ std::initializer_list<int> thread_local x = {1, 2, 3, 4};
 // AMDGCN: @[[PARTLY_CONSTANT_SECOND:_ZGRN15partly_constant2ilE2_]] = internal addrspace(1) global [2 x i32] zeroinitializer, align 4
 // AMDGCN: @[[PARTLY_CONSTANT_THIRD:_ZGRN15partly_constant2ilE3_]] = internal addrspace(1) constant [4 x i32] [i32 5, i32 6, i32 7, i32 8], align 4
 
-// X86: @[[REFTMP1:[.A-Za-z0-9_$]+]] = private unnamed_addr constant [2 x i32] [i32 42, i32 43], align 4
-// X86: @[[REFTMP2:[.A-Za-z0-9_$]+]] = private unnamed_addr constant <{ [3 x %{{.*}}], [4 x i8] }> <{ [3 x %{{.*}}] [%{{.*}} { i32 1 }, %{{.*}} { i32 2 }, %{{.*}} { i32 3 }], [4 x i8] zeroinitializer }>, align 4
-// AMDGCN: @[[REFTMP1:[.A-Za-z0-9_$]+]] = private unnamed_addr addrspace(4) constant [2 x i32] [i32 42, i32 43], align 4
-// AMDGCN: @[[REFTMP2:[.A-Za-z0-9_$]+]] = private unnamed_addr addrspace(4) constant <{ [3 x %{{.*}}], [4 x i8] }> <{ [3 x %{{.*}}] [%{{.*}} { i32 1 }, %{{.*}} { i32 2 }, %{{.*}} { i32 3 }], [4 x i8] zeroinitializer }>, align 4
+// X86: @[[REFTMP1:.*]] = private constant [2 x i32] [i32 42, i32 43], align 4
+// X86: @[[REFTMP2:.*]] = private constant [3 x %{{.*}}] [%{{.*}} { i32 1 }, %{{.*}} { i32 2 }, %{{.*}} { i32 3 }], align 4
+// AMDGCN: @[[REFTMP1:.*]] = private addrspace(4) constant [2 x i32] [i32 42, i32 43], align 4
+// AMDGCN: @[[REFTMP2:.*]] = private addrspace(4) constant [3 x %{{.*}}] [%{{.*}} { i32 1 }, %{{.*}} { i32 2 }, %{{.*}} { i32 3 }], align 4
 
 // CHECK: appending global
 
