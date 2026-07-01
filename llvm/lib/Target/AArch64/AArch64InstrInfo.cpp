@@ -36,6 +36,7 @@
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/MachinePipeliner.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/CodeGen/StackMaps.h"
@@ -102,6 +103,11 @@ static cl::opt<unsigned> GatherOptSearchLimit(
     "aarch64-search-limit", cl::Hidden, cl::init(2048),
     cl::desc("Restrict range of instructions to search for the "
              "machine-combiner gather pattern optimization"));
+
+static cl::opt<int> AArch64PipelinerMaxScalarII(
+    "aarch64-pipeliner-max-scalar-ii", cl::Hidden, cl::init(-1),
+    cl::desc("Reject scalar-only AArch64 MachinePipeliner schedules above this "
+             "initiation interval (-1 disables the check)"));
 
 AArch64InstrInfo::AArch64InstrInfo(const AArch64Subtarget &STI)
     : AArch64GenInstrInfo(STI, RI, AArch64::ADJCALLSTACKDOWN,
@@ -11718,6 +11724,8 @@ class AArch64PipelinerLoopInfo : public TargetInstrInfo::PipelinerLoopInfo {
   /// The normalized condition used by createTripCountGreaterCondition()
   SmallVector<MachineOperand, 4> Cond;
 
+  bool containsFpOrVectorRegisters(SwingSchedulerDAG &SSD) const;
+
 public:
   AArch64PipelinerLoopInfo(MachineBasicBlock *LoopBB, MachineInstr *CondBranch,
                            MachineInstr *Comp, unsigned CompCounterOprNum,
@@ -11736,6 +11744,15 @@ public:
     // Make the instructions for loop control be placed in stage 0.
     // The predecessors of Comp are considered by the caller.
     return MI == Comp;
+  }
+
+  bool shouldUseSchedule(SwingSchedulerDAG &SSD, SMSchedule &SMS) override {
+    if (AArch64PipelinerMaxScalarII >= 0 &&
+        SMS.getInitiationInterval() > AArch64PipelinerMaxScalarII &&
+        !containsFpOrVectorRegisters(SSD))
+      return false;
+
+    return true;
   }
 
   std::optional<bool> createTripCountGreaterCondition(
@@ -11758,6 +11775,44 @@ public:
 
   bool isMVEExpanderSupported() override { return true; }
 };
+
+bool AArch64PipelinerLoopInfo::containsFpOrVectorRegisters(
+    SwingSchedulerDAG &SSD) const {
+  auto IsFpOrVectorRC = [](const TargetRegisterClass *RC) {
+    return RC && (AArch64::FPR8RegClass.hasSubClassEq(RC) ||
+                  AArch64::FPR16RegClass.hasSubClassEq(RC) ||
+                  AArch64::FPR32RegClass.hasSubClassEq(RC) ||
+                  AArch64::FPR64RegClass.hasSubClassEq(RC) ||
+                  AArch64::FPR128RegClass.hasSubClassEq(RC) ||
+                  AArch64::PPRRegClass.hasSubClassEq(RC) ||
+                  AArch64::PNRRegClass.hasSubClassEq(RC) ||
+                  AArch64::ZPRRegClass.hasSubClassEq(RC) ||
+                  AArch64::ZPR2RegClass.hasSubClassEq(RC) ||
+                  AArch64::ZPR3RegClass.hasSubClassEq(RC) ||
+                  AArch64::ZPR4RegClass.hasSubClassEq(RC));
+  };
+
+  for (SUnit &SU : SSD.SUnits) {
+    const MachineInstr *MI = SU.getInstr();
+    for (const MachineOperand &MO : MI->operands()) {
+      if (!MO.isReg() || !MO.getReg())
+        continue;
+
+      Register Reg = MO.getReg();
+      const TargetRegisterClass *RC = nullptr;
+      if (Reg.isVirtual())
+        RC = MRI.getRegClassOrNull(Reg);
+      else if (Reg.isPhysical())
+        RC = TRI->getMinimalPhysRegClass(Reg.asMCReg());
+
+      if (IsFpOrVectorRC(RC))
+        return true;
+    }
+  }
+
+  return false;
+}
+
 } // namespace
 
 /// Clone an instruction from MI. The register of ReplaceOprNum-th operand
