@@ -547,6 +547,9 @@ public:
   bool isDECStructure() const { return isDECStructure_; }
   bool isEnumerationType() const { return isEnumerationType_; }
   void set_isEnumerationType(bool x = true) { isEnumerationType_ = x; }
+  // Name of the hidden component created for an enumeration type to hold
+  // the 1-based enumerator ordinal.
+  static constexpr char ordinalComponentName[]{"__ordinal"};
   int enumeratorCount() const { return enumeratorCount_; }
   void set_enumeratorCount(int n) { enumeratorCount_ = n; }
   std::map<SourceName, SymbolRef> &finals() { return finals_; }

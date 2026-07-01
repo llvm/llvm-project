@@ -242,8 +242,8 @@ define amdgpu_kernel void @ds_wmma_permute(ptr addrspace(3) %base, ptr addrspace
 ; COEXEC-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; COEXEC-NEXT:    s_mov_b32 s6, 0
 ; COEXEC-NEXT:    s_clause 0x1
-; COEXEC-NEXT:    s_load_b64 s[2:3], s[4:5], 0x0 nv
-; COEXEC-NEXT:    s_load_b64 s[0:1], s[4:5], 0x10 nv
+; COEXEC-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
+; COEXEC-NEXT:    s_load_b64 s[2:3], s[4:5], 0x10 nv
 ; COEXEC-NEXT:    v_mov_b32_e32 v0, 0
 ; COEXEC-NEXT:    v_dual_mov_b32 v1, v0 :: v_dual_mov_b32 v2, v0
 ; COEXEC-NEXT:    v_dual_mov_b32 v3, v0 :: v_dual_mov_b32 v4, v0
