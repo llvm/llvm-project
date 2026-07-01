@@ -45,6 +45,22 @@
 // CHECK-NOT: fir.if
 // CHECK: return
 
+// CONVERT-LABEL: func.func @_QPstatically_disjoint
+// CONVERT-NOT: fir.if
+// CONVERT-NOT: fir.call @_FortranAAssign
+// CONVERT: fir.do_loop
+
+// CHECK-LABEL: func.func @_QPzero_extent_runtime_fallback
+// CHECK-NOT: fir.if
+// CHECK-NOT: fir.do_loop
+// CHECK: hlfir.assign %{{.*}} to %{{.*}} : !fir.box<!fir.ptr<!fir.array<0xi32>>>, !fir.box<!fir.ptr<!fir.array<0xi32>>>
+// CHECK: return
+
+// CONVERT-LABEL: func.func @_QPzero_extent_runtime_fallback
+// CONVERT-NOT: fir.if
+// CONVERT-NOT: fir.do_loop
+// CONVERT: fir.call @_FortranAAssign
+
 func.func @_QPassign_pointers(%arg0: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>> {fir.bindc_name = "arr"}, %arg1: !fir.ref<i32> {fir.bindc_name = "n"}, %arg2: !fir.ref<i32> {fir.bindc_name = "lo1"}, %arg3: !fir.ref<i32> {fir.bindc_name = "hi1"}, %arg4: !fir.ref<i32> {fir.bindc_name = "lo2"}, %arg5: !fir.ref<i32> {fir.bindc_name = "hi2"}) {
   %0 = fir.dummy_scope : !fir.dscope
   %1:2 = hlfir.declare %arg0 dummy_scope %0 arg 1 {fortran_attrs = #fir.var_attrs<intent_inout, pointer>, uniq_name = "_QFassign_pointersEarr"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>)
@@ -120,5 +136,22 @@ func.func @_QPstatically_disjoint(%arg0: !fir.ref<!fir.array<8xi32>> {fir.bindc_
   %lhs = hlfir.designate %0#0 (%c1:%c4:%c1)  shape %shape4 : (!fir.ref<!fir.array<8xi32>>, index, index, index, !fir.shape<1>) -> !fir.ref<!fir.array<4xi32>>
   %rhs = hlfir.designate %0#0 (%c5:%c8:%c1)  shape %shape4 : (!fir.ref<!fir.array<8xi32>>, index, index, index, !fir.shape<1>) -> !fir.ref<!fir.array<4xi32>>
   hlfir.assign %rhs to %lhs : !fir.ref<!fir.array<4xi32>>, !fir.ref<!fir.array<4xi32>>
+  return
+}
+
+func.func @_QPzero_extent_runtime_fallback() {
+  %c0 = arith.constant 0 : index
+  %shape0 = fir.shape %c0 : (index) -> !fir.shape<1>
+  %addr1 = fir.zero_bits !fir.ptr<!fir.array<0xi32>>
+  %addr2 = fir.zero_bits !fir.ptr<!fir.array<0xi32>>
+  %lhsAddr = fir.alloca !fir.box<!fir.ptr<!fir.array<0xi32>>>
+  %rhsAddr = fir.alloca !fir.box<!fir.ptr<!fir.array<0xi32>>>
+  %lhsBox = fir.embox %addr1(%shape0) : (!fir.ptr<!fir.array<0xi32>>, !fir.shape<1>) -> !fir.box<!fir.ptr<!fir.array<0xi32>>>
+  %rhsBox = fir.embox %addr2(%shape0) : (!fir.ptr<!fir.array<0xi32>>, !fir.shape<1>) -> !fir.box<!fir.ptr<!fir.array<0xi32>>>
+  fir.store %lhsBox to %lhsAddr : !fir.ref<!fir.box<!fir.ptr<!fir.array<0xi32>>>>
+  fir.store %rhsBox to %rhsAddr : !fir.ref<!fir.box<!fir.ptr<!fir.array<0xi32>>>>
+  %lhs = fir.load %lhsAddr : !fir.ref<!fir.box<!fir.ptr<!fir.array<0xi32>>>>
+  %rhs = fir.load %rhsAddr : !fir.ref<!fir.box<!fir.ptr<!fir.array<0xi32>>>>
+  hlfir.assign %rhs to %lhs : !fir.box<!fir.ptr<!fir.array<0xi32>>>, !fir.box<!fir.ptr<!fir.array<0xi32>>>
   return
 }

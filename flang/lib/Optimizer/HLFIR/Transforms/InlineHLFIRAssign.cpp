@@ -21,6 +21,7 @@
 #include "flang/Optimizer/HLFIR/Passes.h"
 #include "flang/Optimizer/OpenMP/Passes.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/LLVM.h"
@@ -77,21 +78,33 @@ std::optional<mlir::Value> genConformingAddressBasedDisjointnessCheck(
 
     auto boxTy = mlir::cast<fir::BaseBoxType>(box.getType());
     unsigned rank = 0;
+    llvm::ArrayRef<int64_t> staticShape;
     if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(
-            fir::unwrapRefType(boxTy.getEleTy())))
+            fir::unwrapRefType(boxTy.getEleTy()))) {
+      staticShape = seqTy.getShape();
       rank = seqTy.getShape().size();
+    }
 
     if (rank == 0)
       return {};
 
     llvm::SmallVector<mlir::Value> extents;
     for (unsigned dim = 0; dim < rank; ++dim) {
+      if (staticShape[dim] != fir::SequenceType::getUnknownExtent() &&
+          staticShape[dim] <= 0)
+        return {};
+
       mlir::Value dimVal = builder.createIntegerConstant(loc, idxTy, dim);
       auto dims = fir::BoxDimsOp::create(builder, loc, idxTy, idxTy, idxTy, box,
                                          dimVal);
       mlir::Value extent = dims.getExtent();
       mlir::Value stride = dims.getByteStride();
       extents.push_back(extent);
+
+      llvm::APInt constantExtent;
+      if (mlir::matchPattern(extent, mlir::m_ConstantInt(&constantExtent)) &&
+          constantExtent.isNonPositive())
+        return {};
 
       mlir::Value isExtentPositive = mlir::arith::CmpIOp::create(
           builder, loc, mlir::arith::CmpIPredicate::sgt, extent, zero);
@@ -267,8 +280,12 @@ public:
     if (needRuntimeDisjointnessCheck) {
       std::optional<mlir::Value> inlineGuard =
           genConformingAddressBasedDisjointnessCheck(loc, builder, lhs, rhs);
-      if (!inlineGuard)
-        return rewriter.notifyMatchFailure(assign, "RHS/LHS may alias");
+      if (!inlineGuard) {
+        mlir::Operation *fallback = builder.clone(*assign.getOperation());
+        fallback->setAttr(keepRuntimeAssignAttrName, builder.getUnitAttr());
+        rewriter.eraseOp(assign);
+        return mlir::success();
+      }
 
       builder.genIfThenElse(loc, *inlineGuard)
           .genThen([&]() { emitAssignFrom(rhs); })
