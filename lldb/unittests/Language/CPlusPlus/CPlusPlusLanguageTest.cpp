@@ -35,7 +35,7 @@ TEST(CPlusPlusLanguage, MethodNameParsing) {
       {"int foo::bar::func01(int a, double b)", "int", "foo::bar", "func01",
        "(int a, double b)", "", "foo::bar::func01"},
       {"foo(struct AStruct)", "", "", "foo", "(struct AStruct)", "", "foo"},
-      {"struct foo(class a)", "struct foo", "", "struct foo", "(class a)", "",
+      {"struct foo(class a)", "", "", "struct foo", "(class a)", "",
        "struct foo"},
       {"struct AStruct struct_foo(class class_::_AClass)", "struct AStruct", "",
        "struct_foo", "(class class_::_AClass)", "", "struct_foo"},
