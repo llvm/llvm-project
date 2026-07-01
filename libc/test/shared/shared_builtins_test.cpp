@@ -11,7 +11,7 @@
 #include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcSharedBuiltinsTest, AllFloat) {
-  // TODO: assertions for shared::*sf3 builtins.
+  EXPECT_FP_EQ(3.0f, LIBC_NAMESPACE::shared::addsf3(1.0f, 2.0f));
 }
 
 TEST(LlvmLibcSharedBuiltinsTest, AllDouble) {
