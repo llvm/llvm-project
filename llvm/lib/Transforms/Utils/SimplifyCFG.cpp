@@ -7834,9 +7834,8 @@ static bool simplifySwitchDefaultBranch(SwitchInst *SI, DomTreeUpdater *DTU,
       ConstantInt::get(SI->getContext(), Known.getConstant());
   const llvm::SwitchInst::CaseIt CaseIt = SI->findCaseValue(CaseVal);
   if (CaseIt != SI->case_default()) {
-   createUnreachableSwitchDefault(SI, DTU,
-                                 /*RemoveOrigDefaultBlock*/ false);
-   return true;
+    createUnreachableSwitchDefault(SI, DTU, /*RemoveOrigDefaultBlock*/ false);
+    return true;
   }
 
   // Otherwise, we can move the default branch into an explicit case branch.
