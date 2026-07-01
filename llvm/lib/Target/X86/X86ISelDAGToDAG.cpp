@@ -2895,6 +2895,29 @@ bool X86DAGToDAGISel::matchAddressRecursively(SDValue N, X86ISelAddressMode &AM,
 
     break;
   }
+  case ISD::AssertZext:
+  case ISD::AssertSext:
+    // Peek through assert extension nodes - the underlying value is
+    // unchanged, so we can continue matching the operand directly.
+    return matchAddressRecursively(N.getOperand(0), AM, Depth + 1);
+
+  case ISD::CopyFromReg: {
+    // If this is a copy from a virtual register that was defined as a
+    // constant, try to fold the constant value into the displacement field.
+    Register Reg = cast<RegisterSDNode>(N.getOperand(1))->getReg();
+    if (Reg.isVirtual()) {
+      MachineRegisterInfo &MRI = CurDAG->getMachineFunction().getRegInfo();
+      MachineInstr *DefMI = MRI.getVRegDef(Reg);
+      if (DefMI) {
+        int64_t ImmVal;
+        if (Subtarget->getInstrInfo()->getConstValDefinedInReg(*DefMI, Reg,
+                                                               ImmVal) &&
+            !foldOffsetIntoAddress(ImmVal, AM))
+          return false;
+      }
+    }
+    break;
+  }
   }
 
   return matchAddressBase(N, AM);
