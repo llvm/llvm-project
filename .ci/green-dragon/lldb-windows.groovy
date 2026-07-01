@@ -53,6 +53,8 @@ call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\\Au
 
 set "PATH=%PATH%;C:\\Program Files\\Git\\usr\\bin"
 
+if not exist ..\\llvm-build\\test mkdir ..\\llvm-build\\test
+
 cmake -G Ninja ^
     -S llvm ^
     -B ..\\llvm-build\\ ^
@@ -74,12 +76,11 @@ cmake -G Ninja ^
     -DLLDB_TEST_USE_LLDB_SERVER=0 ^
     -DLLVM_LIT_ARGS="-v --time-tests --xunit-xml-output=C:\\workspace\\llvm-build\\test\\results-no-lldb-server.xml" ^
     -DPython3_EXECUTABLE="C:\\Program Files\\Python313\\python.exe" || exit /b 1
-
-if not exist ..\\llvm-build\\test mkdir ..\\llvm-build\\test
-
 ninja check-lldb -C ..\\llvm-build || exit /b 1
 
-cmake -B ..\\llvm-build\\ ^
+cmake -G Ninja ^
+    -S llvm ^
+    -B ..\\llvm-build\\ ^
     -DLLDB_TEST_USE_LLDB_SERVER=1 ^
     -DLLVM_LIT_ARGS="-v --time-tests --xunit-xml-output=C:\\workspace\\llvm-build\\test\\results-lldb-server.xml" || exit /b 1
 ninja check-lldb -C ..\\llvm-build || exit /b 1
