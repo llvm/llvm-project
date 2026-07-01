@@ -17,6 +17,7 @@
 #include "llvm/TargetParser/AArch64TargetParser.h"
 #include "llvm/TargetParser/ARMTargetParser.h"
 #include "llvm/TargetParser/ARMTargetParserCommon.h"
+#include "llvm/TargetParser/SubtargetFeature.h"
 #include "llvm/TargetParser/Triple.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -534,6 +535,36 @@ INSTANTIATE_TEST_SUITE_P(
     ARMCPUTestParams<uint64_t>::PrintToStringParamName);
 
 static constexpr unsigned NumARMCPUArchs = 95;
+
+TEST(FeatureBitsetTest, Iterator) {
+  // Empty bitset yields nothing.
+  FeatureBitset Empty;
+  EXPECT_EQ(Empty.begin(), Empty.end());
+  for (unsigned Index : Empty) {
+    (void)Index;
+    FAIL() << "empty bitset should yield no set bits";
+  }
+
+  // Yields the set indices in order, crossing the 63/64 word boundary.
+  FeatureBitset Bits;
+  Bits.set(0).set(5).set(63).set(64).set(200);
+  std::vector<unsigned> SetIndices;
+  for (unsigned Index : Bits)
+    SetIndices.push_back(Index);
+  EXPECT_EQ(SetIndices, (std::vector<unsigned>{0, 5, 63, 64, 200}));
+
+  // Every yielded index is set, and the count matches.
+  for (unsigned Index : Bits)
+    EXPECT_TRUE(Bits[Index]);
+  EXPECT_EQ(SetIndices.size(), Bits.count());
+
+  // The final position is reached.
+  FeatureBitset Last;
+  unsigned LastIndex = Last.size() - 1;
+  Last.set(LastIndex);
+  SetIndices.assign(Last.begin(), Last.end());
+  EXPECT_EQ(SetIndices, (std::vector<unsigned>{LastIndex}));
+}
 
 TEST(TargetParserTest, testARMCPUArchList) {
   SmallVector<StringRef, NumARMCPUArchs> List;

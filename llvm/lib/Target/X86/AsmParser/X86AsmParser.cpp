@@ -4314,10 +4314,8 @@ bool X86AsmParser::ErrorMissingFeature(SMLoc IDLoc,
   SmallString<126> Msg;
   raw_svector_ostream OS(Msg);
   OS << "instruction requires:";
-  for (unsigned i = 0, e = MissingFeatures.size(); i != e; ++i) {
-    if (MissingFeatures[i])
-      OS << ' ' << getSubtargetFeatureName(i);
-  }
+  for (unsigned Feature : MissingFeatures)
+    OS << ' ' << getSubtargetFeatureName(Feature);
   return Error(IDLoc, OS.str(), SMRange(), MatchingInlineAsm);
 }
 
