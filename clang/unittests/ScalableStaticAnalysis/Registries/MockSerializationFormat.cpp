@@ -9,6 +9,8 @@
 #include "Registries/MockSerializationFormat.h"
 #include "clang/ScalableStaticAnalysis/Core/EntityLinker/LUSummary.h"
 #include "clang/ScalableStaticAnalysis/Core/EntityLinker/LUSummaryEncoding.h"
+#include "clang/ScalableStaticAnalysis/Core/EntityLinker/MultiArchStaticLibrary.h"
+#include "clang/ScalableStaticAnalysis/Core/EntityLinker/StaticLibrary.h"
 #include "clang/ScalableStaticAnalysis/Core/EntityLinker/TUSummaryEncoding.h"
 #include "clang/ScalableStaticAnalysis/Core/Model/BuildNamespace.h"
 #include "clang/ScalableStaticAnalysis/Core/Model/EntityName.h"
@@ -196,6 +198,28 @@ llvm::Error MockSerializationFormat::writeLUSummaryEncoding(
     const LUSummaryEncoding &SummaryEncoding, llvm::StringRef Path) {
   llvm_unreachable(
       "MockSerializationFormat does not support LUSummaryEncoding");
+}
+
+llvm::Expected<StaticLibrary>
+MockSerializationFormat::readStaticLibrary(llvm::StringRef Path) {
+  llvm_unreachable("MockSerializationFormat does not support StaticLibrary");
+}
+
+llvm::Error MockSerializationFormat::writeStaticLibrary(const StaticLibrary &S,
+                                                        llvm::StringRef Path) {
+  llvm_unreachable("MockSerializationFormat does not support StaticLibrary");
+}
+
+llvm::Expected<MultiArchStaticLibrary>
+MockSerializationFormat::readMultiArchStaticLibrary(llvm::StringRef Path) {
+  llvm_unreachable(
+      "MockSerializationFormat does not support MultiArchStaticLibrary");
+}
+
+llvm::Error MockSerializationFormat::writeMultiArchStaticLibrary(
+    const MultiArchStaticLibrary &M, llvm::StringRef Path) {
+  llvm_unreachable(
+      "MockSerializationFormat does not support MultiArchStaticLibrary");
 }
 
 llvm::Expected<WPASuite>

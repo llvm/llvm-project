@@ -6,7 +6,7 @@ fadd.h fa0, fa1, fa2 # CHECK: :[[@LINE]]:1: error: instruction requires the foll
 
 # Invalid instructions
 fsw a5, 12(sp) # CHECK: :[[@LINE]]:5: error: invalid operand for instruction
-fmv.x.h s0, s1 # CHECK: :[[@LINE]]:13: error: invalid operand for instruction
+fmv.x.h s0, s1 # CHECK: :[[@LINE]]:1: error: invalid instruction
 
 # Invalid register names
 fadd.h a100, a2, a3 # CHECK: :[[@LINE]]:8: error: invalid operand for instruction

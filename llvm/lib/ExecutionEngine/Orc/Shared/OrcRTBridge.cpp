@@ -99,6 +99,11 @@ const SimpleExecutorDylibManagerSymbolNames
         "orc_rt_ci_sps_NativeDylibManager_lookup",
 };
 
+const MachOUnwindInfoRegistrarSymbolNames
+    orc_rt_MachOUnwindInfoRegistrarSPSSymbols = {
+        "orc_rt_ci_aa_sps_MachOUnwindInfoRegistrar_registerSections",
+        "orc_rt_ci_aa_sps_MachOUnwindInfoRegistrar_deregisterSections"};
+
 } // end namespace rt
 namespace rt_alt {
 const char *UnwindInfoManagerRegisterActionName =

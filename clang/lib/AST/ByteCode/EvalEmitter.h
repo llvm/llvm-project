@@ -49,6 +49,11 @@ public:
   /// function, i.e. the parameters of the function are available for use.
   bool interpretCall(const FunctionDecl *FD, const Expr *E);
 
+  std::optional<bool> interpretWithSubstitutions(const FunctionDecl *Callee,
+                                                 ArrayRef<const Expr *> Args,
+                                                 const Expr *This,
+                                                 const Expr *Condition);
+
   /// Clean up all resources.
   void cleanup();
 
@@ -68,6 +73,10 @@ protected:
   virtual bool visitDeclAndReturn(const VarDecl *VD, const Expr *Init,
                                   bool ConstantContext) = 0;
   virtual bool visitDtorCall(const VarDecl *VD, const APValue &Value) = 0;
+  virtual bool visitWithSubstitutions(const FunctionDecl *Callee,
+                                      ArrayRef<const Expr *> Args,
+                                      const Expr *This,
+                                      const Expr *Condition) = 0;
   virtual bool visitFunc(const FunctionDecl *F) = 0;
   virtual bool visit(const Expr *E) = 0;
   virtual bool emitBool(bool V, const Expr *E) = 0;
