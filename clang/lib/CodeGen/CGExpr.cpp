@@ -3646,22 +3646,24 @@ LValue CodeGenFunction::EmitOMPCapturedBindingLValue(const BindingDecl *BD) {
   // by temporarily installing the decomposed storage address, then routing
   // through EmitLValue for the binding expression.
   Expr *BindingExpr = BD->getBinding();
-  auto DDIt = LocalDeclMap.find(DD);
-  bool DDWasMapped = DDIt != LocalDeclMap.end();
-  Address SavedAddr = DDWasMapped ? DDIt->second : Address::invalid();
-  if (DDWasMapped)
-    DDIt->second = BaseAddr;
+  auto It = LocalDeclMap.find(DD);
+  bool WasMapped = It != LocalDeclMap.end();
+  Address SavedAddr = WasMapped ? It->second : Address::invalid();
+  if (WasMapped)
+    It->second = BaseAddr;
   else
     LocalDeclMap.insert({DD, BaseAddr});
-  LValue Result = EmitLValue(BindingExpr);
-  if (DDWasMapped) {
-    auto RestoreIt = LocalDeclMap.find(DD);
-    assert(RestoreIt != LocalDeclMap.end() && "DD should still be in map");
-    RestoreIt->second = SavedAddr;
-  } else {
-    LocalDeclMap.erase(DD);
-  }
-  return Result;
+  llvm::scope_exit Guard([&] {
+    if (WasMapped) {
+      auto RestoreIt = LocalDeclMap.find(DD);
+      assert(RestoreIt != LocalDeclMap.end() && "DD should still be in map");
+      RestoreIt->second = SavedAddr;
+    } else {
+      LocalDeclMap.erase(DD);
+    }
+  });
+
+  return EmitLValue(BindingExpr);
 }
 
 LValue CodeGenFunction::EmitDeclRefLValue(const DeclRefExpr *E) {
