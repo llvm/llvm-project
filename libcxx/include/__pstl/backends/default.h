@@ -9,10 +9,11 @@
 #ifndef _LIBCPP___PSTL_BACKENDS_DEFAULT_H
 #define _LIBCPP___PSTL_BACKENDS_DEFAULT_H
 
-#include <__algorithm/any_of.h>
 #include <__algorithm/copy_n.h>
 #include <__algorithm/equal.h>
 #include <__algorithm/fill_n.h>
+#include <__algorithm/find.h>
+#include <__algorithm/find_if.h>
 #include <__algorithm/for_each_n.h>
 #include <__algorithm/is_sorted.h>
 #include <__config>
@@ -24,6 +25,8 @@
 #include <__iterator/next.h>
 #include <__pstl/backend_fwd.h>
 #include <__pstl/dispatch.h>
+#include <__type_traits/desugars_to.h>
+#include <__type_traits/remove_cvref.h>
 #include <__utility/empty.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
@@ -197,7 +200,12 @@ struct __find_first_of<__default_backend_tag, _ExecutionPolicy> {
     using _Ref1   = __iterator_reference<_ForwardIterator1>;
     using _Ref2   = __iterator_reference<_ForwardIterator2>;
     return _FindIf()(__policy, std::move(__first1), std::move(__last1), [&](_Ref1 __element) {
-      return std::any_of(__first2, __last2, [&](_Ref2 __value) { return __pred(__element, __value); });
+      if constexpr (__desugars_to_v<__equal_tag, _Predicate, __remove_cvref_t<_Ref1>, __remove_cvref_t<_Ref2>>) {
+        // bypass an equality predicate and call directly to std::find() to allow more vectorization
+        return std::find(__first2, __last2, __element) != __last2;
+      } else {
+        return std::find_if(__first2, __last2, [&](_Ref2 __value) { return __pred(__element, __value); }) != __last2;
+      }
     });
   }
 };
