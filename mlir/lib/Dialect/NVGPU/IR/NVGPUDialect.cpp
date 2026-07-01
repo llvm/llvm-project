@@ -50,7 +50,8 @@ bool NVGPUDialect::isSharedMemoryAddressSpace(Attribute memorySpace) {
   if (!memorySpace)
     return false;
   if (auto intAttr = llvm::dyn_cast<IntegerAttr>(memorySpace))
-    return intAttr.getInt() == NVGPUDialect::kSharedMemoryAddressSpace;
+    return intAttr.getValue().getZExtValue() ==
+           NVGPUDialect::kSharedMemoryAddressSpace;
   if (auto gpuAttr = llvm::dyn_cast<gpu::AddressSpaceAttr>(memorySpace))
     return gpuAttr.getValue() == gpu::AddressSpace::Workgroup;
   return false;

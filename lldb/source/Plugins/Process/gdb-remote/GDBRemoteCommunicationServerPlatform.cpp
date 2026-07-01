@@ -156,15 +156,12 @@ GDBRemoteCommunicationServerPlatform::Handle_qLaunchGDBServer(
             __FUNCTION__);
 
   ConnectionFileDescriptor file_conn;
-  std::string hostname;
   packet.SetFilePos(::strlen("qLaunchGDBServer;"));
   llvm::StringRef name;
   llvm::StringRef value;
   std::optional<uint16_t> port;
   while (packet.GetNameColonValue(name, value)) {
-    if (name == "host")
-      hostname = std::string(value);
-    else if (name == "port") {
+    if (name == "port") {
       // Make the Optional valid so we can use its value
       port = 0;
       value.getAsInteger(0, *port);

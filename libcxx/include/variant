@@ -307,9 +307,9 @@ private:
 _LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_UNVERSIONED_NAMESPACE_STD
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #  if _LIBCPP_STD_VER >= 17
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 // Light N-dimensional array of function pointers. Used in place of std::array to avoid
 // adding a dependency.
@@ -554,7 +554,7 @@ private:
   }
 
   template <class, class _Tp>
-  using __expander = _Tp;
+  using __expander _LIBCPP_NODEBUG = _Tp;
 
   template <size_t _Ip, class _Fp, class... _Vs>
   _LIBCPP_HIDE_FROM_ABI static constexpr auto __make_fdiagonal_impl() {
@@ -1593,6 +1593,7 @@ template < class _Visitor, class... _Vs, typename>
 _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) visit(_Visitor&& __visitor, _Vs&&... __vs) {
   using __variant_detail::__visitation::__variant;
   std::__throw_if_valueless(std::forward<_Vs>(__vs)...);
+  // NOLINTNEXTLINE(bugprone-use-after-move) __throw_if_valueless doesn't actually forward the variants
   return __variant::__visit_value(std::forward<_Visitor>(__visitor), std::forward<_Vs>(__vs)...);
 }
 
@@ -1654,9 +1655,9 @@ _LIBCPP_HIDE_FROM_ABI constexpr auto&& __unchecked_get(variant<_Types...>& __v) 
   return std::__unchecked_get<__find_exactly_one_t<_Tp, _Types...>::value>(__v);
 }
 
-#  endif // _LIBCPP_STD_VER >= 17
-
 _LIBCPP_END_NAMESPACE_STD
+
+#  endif // _LIBCPP_STD_VER >= 17
 
 _LIBCPP_POP_MACROS
 

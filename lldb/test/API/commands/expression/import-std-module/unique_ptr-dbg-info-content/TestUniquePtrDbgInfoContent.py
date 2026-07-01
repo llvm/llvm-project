@@ -13,6 +13,7 @@ class TestUniquePtrDbgInfoContent(TestBase):
     @skipIf(compiler="clang", compiler_version=["<", "9.0"])
     @skipIf(macos_version=["<", "15.0"])
     @skipIfLinux  # s.reset() causes link errors on ubuntu 18.04/Clang 9
+    @skipIf(macos_sdk_version=["<", "16.0"])
     def test(self):
         self.build()
 

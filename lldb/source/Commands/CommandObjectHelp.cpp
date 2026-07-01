@@ -64,7 +64,6 @@ CommandObjectHelp::CommandOptions::GetDefinitions() {
 }
 
 void CommandObjectHelp::DoExecute(Args &command, CommandReturnObject &result) {
-  CommandObject::CommandMap::iterator pos;
   CommandObject *cmd_obj;
   const size_t argc = command.GetArgumentCount();
 

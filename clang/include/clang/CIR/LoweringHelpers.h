@@ -38,6 +38,11 @@ lowerConstArrayAttr(cir::ConstArrayAttr constArr,
                     const mlir::TypeConverter *converter,
                     mlir::ModuleOp moduleOp = {});
 
+std::optional<mlir::Attribute>
+lowerConstRecordAttr(cir::ConstRecordAttr constRecord,
+                     const mlir::TypeConverter *converter,
+                     mlir::ModuleOp moduleOp = {});
+
 mlir::Value getConstAPInt(mlir::OpBuilder &bld, mlir::Location loc,
                           mlir::Type typ, const llvm::APInt &val);
 

@@ -12,7 +12,7 @@ func.func @test_if_false_simple() {
   // CHECK-NOT: omp.target
   // CHECK: }
   fir.if %false {
-    omp.target {
+    omp.target kernel_type(generic) {
       omp.terminator
     }
   }
@@ -27,7 +27,7 @@ func.func @test_if_true_simple() {
   // The target should remain since the branch is reachable
   // CHECK: omp.target
   fir.if %true {
-    omp.target {
+    omp.target kernel_type(generic) {
       omp.terminator
     }
   }
@@ -46,7 +46,7 @@ func.func @test_nested_outer_false() {
   // CHECK: }
   fir.if %false {
     fir.if %true {
-      omp.target {
+      omp.target kernel_type(generic) {
         omp.terminator
       }
     }
@@ -67,7 +67,7 @@ func.func @test_nested_inner_false() {
   // CHECK: }
   fir.if %true {
     fir.if %false {
-      omp.target {
+      omp.target kernel_type(generic) {
         omp.terminator
       }
     }
@@ -84,7 +84,7 @@ func.func @test_nested_both_true() {
   // CHECK: omp.target
   fir.if %true1 {
     fir.if %true2 {
-      omp.target {
+      omp.target kernel_type(generic) {
         omp.terminator
       }
     }
@@ -101,14 +101,14 @@ func.func @test_mixed_targets() {
 
   // Live target - should remain (expect 2 targets total in output)
   // CHECK: omp.target
-  omp.target {
+  omp.target kernel_type(generic) {
     omp.terminator
   }
 
   // Another live target in if (true) - should remain
   // CHECK: omp.target
   fir.if %true {
-    omp.target {
+    omp.target kernel_type(generic) {
       omp.terminator
     }
   }
@@ -116,7 +116,7 @@ func.func @test_mixed_targets() {
   // Dead target - will be removed
   // CHECK-NOT: omp.target
   fir.if %false {
-    omp.target {
+    omp.target kernel_type(generic) {
       omp.terminator
     }
   }
@@ -133,15 +133,15 @@ func.func @test_multiple_dead_targets() {
   // All targets inside dead branch should be removed
   // CHECK-NOT: omp.target
   fir.if %false {
-    omp.target {
+    omp.target kernel_type(generic) {
       omp.terminator
     }
 
-    omp.target {
+    omp.target kernel_type(generic) {
       omp.terminator
     }
 
-    omp.target {
+    omp.target kernel_type(generic) {
       omp.terminator
     }
   }
@@ -157,7 +157,7 @@ func.func @test_if_else_false() {
   // CHECK: fir.if %false {
   fir.if %false {
     // Then branch is unreachable, target should be deleted
-    omp.target {
+    omp.target kernel_type(generic) {
       omp.terminator
     }
   } else {
@@ -165,7 +165,7 @@ func.func @test_if_else_false() {
     // CHECK: } else {
     // Else branch is reachable, target should remain
     // CHECK: omp.target
-    omp.target {
+    omp.target kernel_type(generic) {
       omp.terminator
     }
   }
@@ -180,7 +180,7 @@ func.func @test_runtime_condition(%arg0: i1) {
   // CHECK: fir.if %arg0 {
   fir.if %arg0 {
     // CHECK: omp.target
-    omp.target {
+    omp.target kernel_type(generic) {
       omp.terminator
     }
   }
@@ -202,7 +202,7 @@ func.func @test_nested_in_unreachable_block() {
   // CHECK-NOT: omp.target
   // CHECK: cf.br ^bb2
   fir.if %true {
-    omp.target {
+    omp.target kernel_type(generic) {
       omp.terminator
     }
   }
@@ -210,7 +210,7 @@ func.func @test_nested_in_unreachable_block() {
 ^bb2:
   // CHECK: ^bb2:
   // CHECK-NEXT: omp.target
-  omp.target {
+  omp.target kernel_type(generic) {
     omp.terminator
   }
   return
@@ -226,7 +226,7 @@ func.func @test_unreachable_block_after_branch() {
   // CHECK: ^bb1:
   // CHECK-NOT: omp.target
   // CHECK: cf.br ^bb2
-  omp.target {
+  omp.target kernel_type(generic) {
     omp.terminator
   }
   cf.br ^bb2
@@ -234,7 +234,7 @@ func.func @test_unreachable_block_after_branch() {
   // This block is reachable
   // CHECK: ^bb2:
   // CHECK-NEXT: omp.target
-  omp.target {
+  omp.target kernel_type(generic) {
     omp.terminator
   }
   return
@@ -250,7 +250,7 @@ func.func @test_multiple_unreachable_blocks() {
   // CHECK: ^bb1:
   // CHECK-NOT: omp.target
   // CHECK: cf.br ^bb2
-  omp.target {
+  omp.target kernel_type(generic) {
     omp.terminator
   }
   cf.br ^bb2
@@ -259,7 +259,7 @@ func.func @test_multiple_unreachable_blocks() {
   // CHECK: ^bb2:
   // CHECK-NOT: omp.target
   // CHECK: return
-  omp.target {
+  omp.target kernel_type(generic) {
     omp.terminator
   }
   return
@@ -267,7 +267,7 @@ func.func @test_multiple_unreachable_blocks() {
   // Reachable from entry
   // CHECK: ^bb3:
   // CHECK-NEXT: omp.target
-  omp.target {
+  omp.target kernel_type(generic) {
     omp.terminator
   }
   return
@@ -281,14 +281,14 @@ func.func @test_both_branches_reachable(%arg0: i1) {
 ^bb1:
   // CHECK: ^bb1:
   // CHECK-NEXT: omp.target
-  omp.target {
+  omp.target kernel_type(generic) {
     omp.terminator
   }
   cf.br ^bb3
 ^bb2:
   // CHECK: ^bb2:
   // CHECK-NEXT: omp.target
-  omp.target {
+  omp.target kernel_type(generic) {
     omp.terminator
   }
   cf.br ^bb3
@@ -307,7 +307,7 @@ func.func @test_disconnected_block() {
   // CHECK: ^bb1:
   // CHECK-NOT: omp.target
   // CHECK: cf.br ^bb2
-  omp.target {
+  omp.target kernel_type(generic) {
     omp.terminator
   }
   cf.br ^bb2
@@ -315,7 +315,7 @@ func.func @test_disconnected_block() {
   // Reachable from entry
   // CHECK: ^bb2:
   // CHECK-NEXT: omp.target
-  omp.target {
+  omp.target kernel_type(generic) {
     omp.terminator
   }
   return

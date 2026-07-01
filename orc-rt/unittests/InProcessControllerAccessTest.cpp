@@ -23,8 +23,6 @@
 
 using namespace orc_rt;
 
-using TaskQueue = std::deque<move_only_function<void()>>;
-
 namespace {
 
 // A minimal stand-in for llvm::orc::InProcessEPC. Registers itself on the
@@ -293,7 +291,7 @@ TEST(InProcessControllerAccessTest, CallFromControllerSuccess) {
   // invocation; draining the queue runs the wrapper, which echoes its
   // arguments back. Verify the mock receives the echoed bytes via
   // ReturnWrapperResult.
-  TaskQueue Tasks;
+  QueueingRunner<>::WorkQueue Tasks;
   Session S(mockExecutorProcessInfo(), QueueingRunner(Tasks), noErrors);
 
   std::unique_ptr<MockIPEPC> Mock;
@@ -313,7 +311,7 @@ TEST(InProcessControllerAccessTest, CallFromControllerSuccess) {
   // dispatched.
   ASSERT_FALSE(Result);
 
-  QueueingRunner<TaskQueue>::runFIFOUntilEmpty(Tasks);
+  QueueingRunner<>::runFIFOUntilEmpty(Tasks);
 
   ASSERT_TRUE(Result);
   EXPECT_EQ(*Result, "world");

@@ -142,208 +142,214 @@ bool ShaderHash::isPopulated() {
   return Flags > 0 || 0 != memcmp(&Digest, &Zeros, 16);
 }
 
-#define COMPONENT_PRECISION(Val, Enum) {#Enum, SigMinPrecision::Enum},
-
-static const EnumEntry<SigMinPrecision> SigMinPrecisionNames[] = {
+EnumStrings<SigMinPrecision> dxbc::getSigMinPrecisions() {
+  constexpr EnumStringDef<SigMinPrecision> SigMinPrecisionNameDefs[] = {
+#define COMPONENT_PRECISION(Val, Enum) {{#Enum}, SigMinPrecision::Enum},
 #include "llvm/BinaryFormat/DXContainerConstants.def"
-};
-
-ArrayRef<EnumEntry<SigMinPrecision>> dxbc::getSigMinPrecisions() {
-  return ArrayRef(SigMinPrecisionNames);
+  };
+  static constexpr auto SigMinPrecisionNames =
+      BUILD_ENUM_STRINGS(SigMinPrecisionNameDefs);
+  return EnumStrings(SigMinPrecisionNames);
 }
 
-#define D3D_SYSTEM_VALUE(Val, Enum) {#Enum, D3DSystemValue::Enum},
-
-static const EnumEntry<D3DSystemValue> D3DSystemValueNames[] = {
+EnumStrings<D3DSystemValue> dxbc::getD3DSystemValues() {
+  constexpr EnumStringDef<D3DSystemValue> D3DSystemValueNameDefs[] = {
+#define D3D_SYSTEM_VALUE(Val, Enum) {{#Enum}, D3DSystemValue::Enum},
 #include "llvm/BinaryFormat/DXContainerConstants.def"
-};
-
-ArrayRef<EnumEntry<D3DSystemValue>> dxbc::getD3DSystemValues() {
-  return ArrayRef(D3DSystemValueNames);
+  };
+  static constexpr auto D3DSystemValueNames =
+      BUILD_ENUM_STRINGS(D3DSystemValueNameDefs);
+  return EnumStrings(D3DSystemValueNames);
 }
 
-#define COMPONENT_TYPE(Val, Enum) {#Enum, SigComponentType::Enum},
-
-static const EnumEntry<SigComponentType> SigComponentTypes[] = {
+EnumStrings<SigComponentType> dxbc::getSigComponentTypes() {
+  constexpr EnumStringDef<SigComponentType> SigComponentTypeDefs[] = {
+#define COMPONENT_TYPE(Val, Enum) {{#Enum}, SigComponentType::Enum},
 #include "llvm/BinaryFormat/DXContainerConstants.def"
-};
-
-ArrayRef<EnumEntry<SigComponentType>> dxbc::getSigComponentTypes() {
-  return ArrayRef(SigComponentTypes);
+  };
+  static constexpr auto SigComponentTypes =
+      BUILD_ENUM_STRINGS(SigComponentTypeDefs);
+  return EnumStrings(SigComponentTypes);
 }
 
-static const EnumEntry<RootFlags> RootFlagNames[] = {
-#define ROOT_SIGNATURE_FLAG(Val, Enum) {#Enum, RootFlags::Enum},
+EnumStrings<RootFlags> dxbc::getRootFlags() {
+  constexpr EnumStringDef<RootFlags> RootFlagNameDefs[] = {
+#define ROOT_SIGNATURE_FLAG(Val, Enum) {{#Enum}, RootFlags::Enum},
 #include "llvm/BinaryFormat/DXContainerConstants.def"
-};
-
-ArrayRef<EnumEntry<RootFlags>> dxbc::getRootFlags() {
-  return ArrayRef(RootFlagNames);
+  };
+  static constexpr auto RootFlagNames = BUILD_ENUM_STRINGS(RootFlagNameDefs);
+  return EnumStrings(RootFlagNames);
 }
 
-static const EnumEntry<RootDescriptorFlags> RootDescriptorFlagNames[] = {
+EnumStrings<RootDescriptorFlags> dxbc::getRootDescriptorFlags() {
+  constexpr EnumStringDef<RootDescriptorFlags> RootDescriptorFlagNameDefs[] = {
 #define ROOT_DESCRIPTOR_FLAG(Val, Enum, Flag)                                  \
-  {#Enum, RootDescriptorFlags::Enum},
+  {{#Enum}, RootDescriptorFlags::Enum},
 #include "llvm/BinaryFormat/DXContainerConstants.def"
-};
-
-ArrayRef<EnumEntry<RootDescriptorFlags>> dxbc::getRootDescriptorFlags() {
-  return ArrayRef(RootDescriptorFlagNames);
+  };
+  static constexpr auto RootDescriptorFlagNames =
+      BUILD_ENUM_STRINGS(RootDescriptorFlagNameDefs);
+  return EnumStrings(RootDescriptorFlagNames);
 }
 
-static const EnumEntry<DescriptorRangeFlags> DescriptorRangeFlagNames[] = {
+EnumStrings<DescriptorRangeFlags> dxbc::getDescriptorRangeFlags() {
+  constexpr EnumStringDef<DescriptorRangeFlags> DescriptorRangeFlagNameDefs[] =
+      {
 #define DESCRIPTOR_RANGE_FLAG(Val, Enum, Flag)                                 \
-  {#Enum, DescriptorRangeFlags::Enum},
+  {{#Enum}, DescriptorRangeFlags::Enum},
 #include "llvm/BinaryFormat/DXContainerConstants.def"
-};
-
-ArrayRef<EnumEntry<DescriptorRangeFlags>> dxbc::getDescriptorRangeFlags() {
-  return ArrayRef(DescriptorRangeFlagNames);
+      };
+  static constexpr auto DescriptorRangeFlagNames =
+      BUILD_ENUM_STRINGS(DescriptorRangeFlagNameDefs);
+  return EnumStrings(DescriptorRangeFlagNames);
 }
 
-static const EnumEntry<StaticSamplerFlags> StaticSamplerFlagNames[] = {
-#define STATIC_SAMPLER_FLAG(Val, Enum, Flag) {#Enum, StaticSamplerFlags::Enum},
+EnumStrings<StaticSamplerFlags> dxbc::getStaticSamplerFlags() {
+  constexpr EnumStringDef<StaticSamplerFlags> StaticSamplerFlagNameDefs[] = {
+#define STATIC_SAMPLER_FLAG(Val, Enum, Flag)                                   \
+  {{#Enum}, StaticSamplerFlags::Enum},
 #include "llvm/BinaryFormat/DXContainerConstants.def"
-};
-
-ArrayRef<EnumEntry<StaticSamplerFlags>> dxbc::getStaticSamplerFlags() {
-  return ArrayRef(StaticSamplerFlagNames);
+  };
+  static constexpr auto StaticSamplerFlagNames =
+      BUILD_ENUM_STRINGS(StaticSamplerFlagNameDefs);
+  return EnumStrings(StaticSamplerFlagNames);
 }
 
-#define SHADER_VISIBILITY(Val, Enum) {#Enum, ShaderVisibility::Enum},
-
-static const EnumEntry<ShaderVisibility> ShaderVisibilityValues[] = {
+EnumStrings<ShaderVisibility> dxbc::getShaderVisibility() {
+  constexpr EnumStringDef<ShaderVisibility> ShaderVisibilityValueDefs[] = {
+#define SHADER_VISIBILITY(Val, Enum) {{#Enum}, ShaderVisibility::Enum},
 #include "llvm/BinaryFormat/DXContainerConstants.def"
-};
-
-ArrayRef<EnumEntry<ShaderVisibility>> dxbc::getShaderVisibility() {
-  return ArrayRef(ShaderVisibilityValues);
+  };
+  static constexpr auto ShaderVisibilityValues =
+      BUILD_ENUM_STRINGS(ShaderVisibilityValueDefs);
+  return EnumStrings(ShaderVisibilityValues);
 }
 
-#define FILTER(Val, Enum) {#Enum, SamplerFilter::Enum},
-
-static const EnumEntry<SamplerFilter> SamplerFilterNames[] = {
+EnumStrings<SamplerFilter> dxbc::getSamplerFilters() {
+  constexpr EnumStringDef<SamplerFilter> SamplerFilterNameDefs[] = {
+#define FILTER(Val, Enum) {{#Enum}, SamplerFilter::Enum},
 #include "llvm/BinaryFormat/DXContainerConstants.def"
-};
-
-ArrayRef<EnumEntry<SamplerFilter>> dxbc::getSamplerFilters() {
-  return ArrayRef(SamplerFilterNames);
+  };
+  static constexpr auto SamplerFilterNames =
+      BUILD_ENUM_STRINGS(SamplerFilterNameDefs);
+  return EnumStrings(SamplerFilterNames);
 }
 
-#define TEXTURE_ADDRESS_MODE(Val, Enum) {#Enum, TextureAddressMode::Enum},
-
-static const EnumEntry<TextureAddressMode> TextureAddressModeNames[] = {
+EnumStrings<TextureAddressMode> dxbc::getTextureAddressModes() {
+  constexpr EnumStringDef<TextureAddressMode> TextureAddressModeNameDefs[] = {
+#define TEXTURE_ADDRESS_MODE(Val, Enum) {{#Enum}, TextureAddressMode::Enum},
 #include "llvm/BinaryFormat/DXContainerConstants.def"
-};
-
-ArrayRef<EnumEntry<TextureAddressMode>> dxbc::getTextureAddressModes() {
-  return ArrayRef(TextureAddressModeNames);
+  };
+  static constexpr auto TextureAddressModeNames =
+      BUILD_ENUM_STRINGS(TextureAddressModeNameDefs);
+  return EnumStrings(TextureAddressModeNames);
 }
 
-#define COMPARISON_FUNC(Val, Enum) {#Enum, ComparisonFunc::Enum},
-
-static const EnumEntry<ComparisonFunc> ComparisonFuncNames[] = {
+EnumStrings<ComparisonFunc> dxbc::getComparisonFuncs() {
+  constexpr EnumStringDef<ComparisonFunc> ComparisonFuncNameDefs[] = {
+#define COMPARISON_FUNC(Val, Enum) {{#Enum}, ComparisonFunc::Enum},
 #include "llvm/BinaryFormat/DXContainerConstants.def"
-};
-
-ArrayRef<EnumEntry<ComparisonFunc>> dxbc::getComparisonFuncs() {
-  return ArrayRef(ComparisonFuncNames);
+  };
+  static constexpr auto ComparisonFuncNames =
+      BUILD_ENUM_STRINGS(ComparisonFuncNameDefs);
+  return EnumStrings(ComparisonFuncNames);
 }
 
-#define STATIC_BORDER_COLOR(Val, Enum) {#Enum, StaticBorderColor::Enum},
-
-static const EnumEntry<StaticBorderColor> StaticBorderColorValues[] = {
+EnumStrings<StaticBorderColor> dxbc::getStaticBorderColors() {
+  constexpr EnumStringDef<StaticBorderColor> StaticBorderColorValueDefs[] = {
+#define STATIC_BORDER_COLOR(Val, Enum) {{#Enum}, StaticBorderColor::Enum},
 #include "llvm/BinaryFormat/DXContainerConstants.def"
-};
-
-ArrayRef<EnumEntry<StaticBorderColor>> dxbc::getStaticBorderColors() {
-  return ArrayRef(StaticBorderColorValues);
+  };
+  static constexpr auto StaticBorderColorValues =
+      BUILD_ENUM_STRINGS(StaticBorderColorValueDefs);
+  return EnumStrings(StaticBorderColorValues);
 }
 
-#define ROOT_PARAMETER(Val, Enum) {#Enum, RootParameterType::Enum},
-
-static const EnumEntry<RootParameterType> RootParameterTypes[] = {
+EnumStrings<RootParameterType> dxbc::getRootParameterTypes() {
+  constexpr EnumStringDef<RootParameterType> RootParameterTypeDefs[] = {
+#define ROOT_PARAMETER(Val, Enum) {{#Enum}, RootParameterType::Enum},
 #include "llvm/BinaryFormat/DXContainerConstants.def"
-};
-
-ArrayRef<EnumEntry<RootParameterType>> dxbc::getRootParameterTypes() {
-  return ArrayRef(RootParameterTypes);
+  };
+  static constexpr auto RootParameterTypes =
+      BUILD_ENUM_STRINGS(RootParameterTypeDefs);
+  return EnumStrings(RootParameterTypes);
 }
 
-#define SEMANTIC_KIND(Val, Enum) {#Enum, PSV::SemanticKind::Enum},
-
-static const EnumEntry<PSV::SemanticKind> SemanticKindNames[] = {
+EnumStrings<PSV::SemanticKind> PSV::getSemanticKinds() {
+  constexpr EnumStringDef<PSV::SemanticKind> SemanticKindNameDefs[] = {
+#define SEMANTIC_KIND(Val, Enum) {{#Enum}, PSV::SemanticKind::Enum},
 #include "llvm/BinaryFormat/DXContainerConstants.def"
-};
-
-ArrayRef<EnumEntry<PSV::SemanticKind>> PSV::getSemanticKinds() {
-  return ArrayRef(SemanticKindNames);
+  };
+  static constexpr auto SemanticKindNames =
+      BUILD_ENUM_STRINGS(SemanticKindNameDefs);
+  return EnumStrings(SemanticKindNames);
 }
 
-#define COMPONENT_TYPE(Val, Enum) {#Enum, PSV::ComponentType::Enum},
-
-static const EnumEntry<PSV::ComponentType> ComponentTypeNames[] = {
+EnumStrings<PSV::ComponentType> PSV::getComponentTypes() {
+  constexpr EnumStringDef<PSV::ComponentType> ComponentTypeNameDefs[] = {
+#define COMPONENT_TYPE(Val, Enum) {{#Enum}, PSV::ComponentType::Enum},
 #include "llvm/BinaryFormat/DXContainerConstants.def"
-};
-
-ArrayRef<EnumEntry<PSV::ComponentType>> PSV::getComponentTypes() {
-  return ArrayRef(ComponentTypeNames);
+  };
+  static constexpr auto ComponentTypeNames =
+      BUILD_ENUM_STRINGS(ComponentTypeNameDefs);
+  return EnumStrings(ComponentTypeNames);
 }
 
-#define INTERPOLATION_MODE(Val, Enum) {#Enum, PSV::InterpolationMode::Enum},
-
-static const EnumEntry<PSV::InterpolationMode> InterpolationModeNames[] = {
+EnumStrings<PSV::InterpolationMode> PSV::getInterpolationModes() {
+  constexpr EnumStringDef<PSV::InterpolationMode> InterpolationModeNameDefs[] =
+      {
+#define INTERPOLATION_MODE(Val, Enum) {{#Enum}, PSV::InterpolationMode::Enum},
 #include "llvm/BinaryFormat/DXContainerConstants.def"
-};
-
-ArrayRef<EnumEntry<PSV::InterpolationMode>> PSV::getInterpolationModes() {
-  return ArrayRef(InterpolationModeNames);
+      };
+  static constexpr auto InterpolationModeNames =
+      BUILD_ENUM_STRINGS(InterpolationModeNameDefs);
+  return EnumStrings(InterpolationModeNames);
 }
 
-#define RESOURCE_TYPE(Val, Enum) {#Enum, PSV::ResourceType::Enum},
-
-static const EnumEntry<PSV::ResourceType> ResourceTypeNames[] = {
+EnumStrings<PSV::ResourceType> PSV::getResourceTypes() {
+  constexpr EnumStringDef<PSV::ResourceType> ResourceTypeNameDefs[] = {
+#define RESOURCE_TYPE(Val, Enum) {{#Enum}, PSV::ResourceType::Enum},
 #include "llvm/BinaryFormat/DXContainerConstants.def"
-};
-
-ArrayRef<EnumEntry<PSV::ResourceType>> PSV::getResourceTypes() {
-  return ArrayRef(ResourceTypeNames);
+  };
+  static constexpr auto ResourceTypeNames =
+      BUILD_ENUM_STRINGS(ResourceTypeNameDefs);
+  return EnumStrings(ResourceTypeNames);
 }
 
-#define RESOURCE_KIND(Val, Enum) {#Enum, PSV::ResourceKind::Enum},
-
-static const EnumEntry<PSV::ResourceKind> ResourceKindNames[] = {
+EnumStrings<PSV::ResourceKind> PSV::getResourceKinds() {
+  constexpr EnumStringDef<PSV::ResourceKind> ResourceKindNameDefs[] = {
+#define RESOURCE_KIND(Val, Enum) {{#Enum}, PSV::ResourceKind::Enum},
 #include "llvm/BinaryFormat/DXContainerConstants.def"
-};
-
-ArrayRef<EnumEntry<PSV::ResourceKind>> PSV::getResourceKinds() {
-  return ArrayRef(ResourceKindNames);
+  };
+  static constexpr auto ResourceKindNames =
+      BUILD_ENUM_STRINGS(ResourceKindNameDefs);
+  return EnumStrings(ResourceKindNames);
 }
 
-static const EnumEntry<SourceInfo::SectionType> SectionNames[] = {
-#define SOURCE_INFO_TYPE(Num, Val) {#Val, SourceInfo::SectionType::Val},
+EnumStrings<SourceInfo::SectionType> SourceInfo::getSectionTypes() {
+  constexpr EnumStringDef<SectionType> SectionNameDefs[] = {
+#define SOURCE_INFO_TYPE(Num, Val) {{#Val}, SourceInfo::SectionType::Val},
 #include "llvm/BinaryFormat/DXContainerConstants.def"
-};
-
-ArrayRef<EnumEntry<SourceInfo::SectionType>> SourceInfo::getSectionTypes() {
-  return ArrayRef(SectionNames);
+  };
+  static constexpr auto SectionNames = BUILD_ENUM_STRINGS(SectionNameDefs);
+  return EnumStrings(SectionNames);
 }
 
 StringRef SourceInfo::getSectionName(SourceInfo::SectionType Type) {
   auto V = to_underlying(Type);
   if (!isValidSectionType(V))
     return StringRef();
-  return getSectionTypes()[V].Name;
+  return getSectionTypes()[V].name();
 }
 
-static const EnumEntry<SourceInfo::Contents::CompressionType>
-    CompressionTypes[] = {
-#define COMPRESSION_TYPE(Num, Val)                                             \
-  {#Val, SourceInfo::Contents::CompressionType::Val},
-#include "llvm/BinaryFormat/DXContainerConstants.def"
-};
-
-ArrayRef<EnumEntry<SourceInfo::Contents::CompressionType>>
+EnumStrings<SourceInfo::Contents::CompressionType>
 SourceInfo::Contents::getCompressionTypes() {
-  return ArrayRef(CompressionTypes);
+  constexpr EnumStringDef<CompressionType> CompressionTypeDefs[] = {
+#define COMPRESSION_TYPE(Num, Val)                                             \
+  {{#Val}, SourceInfo::Contents::CompressionType::Val},
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+  };
+  static constexpr auto CompressionTypes =
+      BUILD_ENUM_STRINGS(CompressionTypeDefs);
+  return EnumStrings(CompressionTypes);
 }

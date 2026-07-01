@@ -499,12 +499,7 @@ void CIRGenFunction::emitStoreOfScalar(mlir::Value value, Address addr,
   }
 
   assert(currSrcLoc && "must pass in source location");
-  builder.createStore(*currSrcLoc, value, addr, isVolatile);
-
-  if (isNontemporal) {
-    cgm.errorNYI(addr.getPointer().getLoc(), "emitStoreOfScalar nontemporal");
-    return;
-  }
+  builder.createStore(*currSrcLoc, value, addr, isVolatile, isNontemporal);
 
   assert(!cir::MissingFeatures::opTBAA());
 }
@@ -736,12 +731,13 @@ void CIRGenFunction::emitStoreOfScalar(mlir::Value value, LValue lvalue,
 
   emitStoreOfScalar(value, lvalue.getAddress(), lvalue.isVolatile(),
                     lvalue.getType(), lvalue.getBaseInfo(), isInit,
-                    /*isNontemporal=*/false);
+                    lvalue.isNontemporal());
 }
 
 mlir::Value CIRGenFunction::emitLoadOfScalar(Address addr, bool isVolatile,
                                              QualType ty, SourceLocation loc,
-                                             LValueBaseInfo baseInfo) {
+                                             LValueBaseInfo baseInfo,
+                                             bool isNontemporal) {
   // Traditional LLVM codegen handles thread local separately, CIR handles
   // as part of getAddrOfGlobalVar (GetGlobalOp).
   mlir::Type eltTy = addr.getElementType();
@@ -771,19 +767,23 @@ mlir::Value CIRGenFunction::emitLoadOfScalar(Address addr, bool isVolatile,
 
   assert(!cir::MissingFeatures::opLoadEmitScalarRangeCheck());
 
-  mlir::Value loadOp = builder.createLoad(getLoc(loc), addr, isVolatile);
-  if (!ty->isBooleanType() && ty->hasBooleanRepresentation())
-    cgm.errorNYI("emitLoadOfScalar: boolean type with boolean representation");
+  mlir::Value loadOp =
+      builder.createLoad(getLoc(loc), addr, isVolatile, isNontemporal);
 
+  // Types with a boolean representation that are not the builtin bool (an enum
+  // whose underlying type is bool, or a _BitInt(1)) need no register/memory
+  // conversion here: like bool and _BitInt(N), CIR keeps them in their literal
+  // type until LowerToLLVM widens them to the in-memory integer type (see
+  // emitToMemory).
   return loadOp;
 }
 
 mlir::Value CIRGenFunction::emitLoadOfScalar(LValue lvalue,
                                              SourceLocation loc) {
-  assert(!cir::MissingFeatures::opLoadStoreNontemporal());
   assert(!cir::MissingFeatures::opLoadStoreTbaa());
   return emitLoadOfScalar(lvalue.getAddress(), lvalue.isVolatile(),
-                          lvalue.getType(), loc, lvalue.getBaseInfo());
+                          lvalue.getType(), loc, lvalue.getBaseInfo(),
+                          lvalue.isNontemporal());
 }
 
 /// Given an expression that represents a value lvalue, this

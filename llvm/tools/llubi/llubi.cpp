@@ -123,7 +123,19 @@ cl::opt<ubi::NaNPropagationBehavior> NaNPropagationBehavior(
                    "payloads.")),
     cl::init(ubi::NaNPropagationBehavior::NonDeterministic));
 
-class VerboseEventHandler : public ubi::EventHandler {
+class NoopEventHandler : public ubi::EventHandler {
+  void onImmediateUB(StringRef Msg) override {
+    errs() << "Immediate UB detected: " << Msg << '\n';
+  }
+
+  void onError(StringRef Msg) override { errs() << "Error: " << Msg << '\n'; }
+
+  void onUnrecognizedInstruction(Instruction &I) override {
+    errs() << "Unrecognized instruction: " << I << '\n';
+  }
+};
+
+class VerboseEventHandler : public NoopEventHandler {
 public:
   bool onInstructionExecuted(Instruction &I,
                              const ubi::AnyValue &Result) override {
@@ -135,12 +147,6 @@ public:
 
     return true;
   }
-
-  void onImmediateUB(StringRef Msg) override {
-    errs() << "Immediate UB detected: " << Msg << '\n';
-  }
-
-  void onError(StringRef Msg) override { errs() << "Error: " << Msg << '\n'; }
 
   bool onBBJump(Instruction &I, BasicBlock &To) override {
     errs() << I << " jump to ";
@@ -185,10 +191,6 @@ public:
     }
 
     llvm_unreachable("Unknown ProgramExitKind");
-  }
-
-  void onUnrecognizedInstruction(Instruction &I) override {
-    errs() << "Unrecognized instruction: " << I << '\n';
   }
 };
 
@@ -317,7 +319,7 @@ int main(int argc, char **argv) {
       Args.push_back(ubi::AnyValue::getNullValue(Ctx, Arg.getType()));
   }
 
-  ubi::EventHandler NoopHandler;
+  NoopEventHandler NoopHandler;
   VerboseEventHandler VerboseHandler;
   ubi::AnyValue RetVal;
   ubi::ProgramExitInfo ExitInfo = Ctx.runFunction(

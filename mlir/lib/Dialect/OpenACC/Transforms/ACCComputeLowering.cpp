@@ -313,15 +313,14 @@ public:
     LoopParMode parMode = loopOp.getDefaultOrDeviceTypeParallelism(deviceType);
 
     if (parMode == LoopParMode::loop_seq || isOpInSerialRegion(loopOp)) {
-      // Although it might seem unintuitive, scf.parallel is used here because
-      // the parallelism of the loop is already predetermined (as sequential).
-      // scf.for will become a candidate for auto-parallelization analysis.
-      auto parallelOp = convertACCLoopToSCFParallel(loopOp, rewriter);
-      if (!parallelOp)
+      // Use scf.for with sequential loops, because the loop's parallelism is
+      // already determined.
+      auto forOp =
+          convertACCLoopToSCFFor(loopOp, rewriter, /*enableCollapse=*/true);
+      if (!forOp)
         return failure();
-      setParDimsAttr(parallelOp,
-                     GPUParallelDimsAttr::seq(loopOp->getContext()));
-      rewriter.replaceOp(loopOp, parallelOp);
+      setParDimsAttr(forOp, GPUParallelDimsAttr::seq(loopOp->getContext()));
+      rewriter.replaceOp(loopOp, forOp);
     } else if (parMode == LoopParMode::loop_auto) {
       // All loops in serial regions should have already been handled.
       assert(!isOpInSerialRegion(loopOp) &&

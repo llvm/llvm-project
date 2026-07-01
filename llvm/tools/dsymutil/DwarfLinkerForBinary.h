@@ -21,6 +21,7 @@
 #include <optional>
 
 namespace llvm {
+class ThreadPoolInterface;
 using namespace dwarf_linker;
 
 namespace dsymutil {
@@ -73,9 +74,10 @@ struct ObjectWithRelocMap {
 class DwarfLinkerForBinary {
 public:
   DwarfLinkerForBinary(raw_fd_ostream &OutFile, BinaryHolder &BinHolder,
-                       LinkOptions Options, std::mutex &ErrorHandlerMutex)
+                       LinkOptions Options, std::mutex &ErrorHandlerMutex,
+                       ThreadPoolInterface *ThreadPool = nullptr)
       : OutFile(OutFile), BinHolder(BinHolder), Options(std::move(Options)),
-        ErrorHandlerMutex(ErrorHandlerMutex) {}
+        ErrorHandlerMutex(ErrorHandlerMutex), ThreadPool(ThreadPool) {}
 
   /// Link the contents of the DebugMap.
   bool link(const DebugMap &);
@@ -295,6 +297,7 @@ private:
   BinaryHolder &BinHolder;
   LinkOptions Options;
   std::mutex &ErrorHandlerMutex;
+  ThreadPoolInterface *ThreadPool;
 
   std::vector<std::string> EmptyWarnings;
 

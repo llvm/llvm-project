@@ -40,7 +40,7 @@ TEST_F(MDBuilderTest, createFPMath) {
   EXPECT_TRUE(mdconst::hasa<ConstantFP>(Op));
   ConstantFP *Val = mdconst::extract<ConstantFP>(Op);
   EXPECT_TRUE(Val->getType()->isFloatingPointTy());
-  EXPECT_TRUE(Val->isExactlyValue(1.0));
+  EXPECT_TRUE(Val->isOne());
 }
 TEST_F(MDBuilderTest, createRangeMetadata) {
   MDBuilder MDHelper(Context);

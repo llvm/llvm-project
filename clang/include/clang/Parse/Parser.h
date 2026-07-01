@@ -1377,15 +1377,17 @@ private:
 
   /// Parse all attributes in LAs, and attach them to Decl D.
   void ParseLexedAttributeList(LateParsedAttrList &LAs, Decl *D,
-                               bool EnterScope, bool OnDefinition);
+                               bool EnterScope, bool OnDefinition,
+                               ParsedAttributes *OutAttrs = nullptr);
 
   /// Finish parsing an attribute for which parsing was delayed.
   /// This will be called at the end of parsing a class declaration
   /// for each LateParsedAttribute. We consume the saved tokens and
   /// create an attribute with the arguments filled in. We add this
   /// to the Attribute list for the decl.
-  void ParseLexedAttribute(LateParsedAttribute &LA, bool EnterScope,
-                           bool OnDefinition);
+  void ParseLexedAttribute(LateParsedAttribute &LPA, bool EnterScope,
+                           bool OnDefinition,
+                           ParsedAttributes *OutAttrs = nullptr);
 
   /// ParseLexedMethodDeclarations - We finished parsing the member
   /// specification of a top (non-nested) C++ class. Now go over the
@@ -1517,17 +1519,6 @@ private:
   bool TryAltiVecTokenOutOfLine(DeclSpec &DS, SourceLocation Loc,
                                 const char *&PrevSpec, unsigned &DiagID,
                                 bool &isInvalid);
-
-  void ParseLexedCAttributeList(LateParsedAttrList &LA,
-                                ParsedAttributes *OutAttrs = nullptr);
-
-  /// Finish parsing an attribute for which parsing was delayed.
-  /// This will be called at the end of parsing a class declaration
-  /// for each LateParsedAttribute. We consume the saved tokens and
-  /// create an attribute with the arguments filled in. We add this
-  /// to the Attribute list for the decl.
-  void ParseLexedCAttribute(LateParsedAttribute &LA,
-                            ParsedAttributes *OutAttrs = nullptr);
 
   void ParseLexedTypeAttribute(LateParsedTypeAttribute &LA,
                                ParsedAttributes &OutAttrs);

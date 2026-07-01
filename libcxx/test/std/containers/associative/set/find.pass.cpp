@@ -10,8 +10,8 @@
 
 // class set
 
-//       iterator find(const key_type& k);
-// const_iterator find(const key_type& k) const;
+// constexpr       iterator find(const key_type& k); // constexpr since C++26
+// constexpr const_iterator find(const key_type& k) const; // constexpr since C++26
 
 #include <set>
 #include <cassert>
@@ -20,7 +20,7 @@
 #include "min_allocator.h"
 #include "private_constructor.h"
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   {
     typedef int V;
     typedef std::set<int> M;
@@ -202,5 +202,12 @@ int main(int, char**) {
   }
 #endif
 
+  return true;
+}
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }

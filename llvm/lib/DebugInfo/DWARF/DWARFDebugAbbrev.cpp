@@ -15,6 +15,18 @@
 
 using namespace llvm;
 
+bool llvm::readAbbrevAttribute(const DataExtractor &AbbrevData,
+                               uint64_t *Offset, dwarf::Attribute &Name,
+                               dwarf::Form &Form,
+                               std::optional<int64_t> &ImplicitConst) {
+  Name = static_cast<dwarf::Attribute>(AbbrevData.getULEB128(Offset));
+  Form = static_cast<dwarf::Form>(AbbrevData.getULEB128(Offset));
+  ImplicitConst = std::nullopt;
+  if (Form == dwarf::DW_FORM_implicit_const)
+    ImplicitConst = AbbrevData.getSLEB128(Offset);
+  return Name != 0 || Form != 0;
+}
+
 DWARFAbbreviationDeclarationSet::DWARFAbbreviationDeclarationSet() {
   clear();
 }

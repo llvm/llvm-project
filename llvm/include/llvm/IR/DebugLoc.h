@@ -28,6 +28,8 @@ class Function;
 
 #if LLVM_ENABLE_DEBUGLOC_TRACKING_COVERAGE
 #if LLVM_ENABLE_DEBUGLOC_TRACKING_ORIGIN
+extern bool DebugLocOriginCollectionEnabled;
+
 struct DbgLocOrigin {
   static constexpr unsigned long MaxDepth = 16;
   using StackTracesTy =

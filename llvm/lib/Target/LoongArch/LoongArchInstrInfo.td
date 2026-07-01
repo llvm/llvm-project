@@ -579,7 +579,7 @@ def NegImm : SDNodeXForm<imm, [{
 // FP immediate patterns.
 def fpimm0    : PatLeaf<(fpimm), [{return N->isPosZero();}]>;
 def fpimm0neg : PatLeaf<(fpimm), [{return N->isNegZero();}]>;
-def fpimm1    : PatLeaf<(fpimm), [{return N->isExactlyValue(+1.0);}]>;
+def fpimm1    : PatLeaf<(fpimm), [{return N->isOne();}]>;
 
 // Return an immediate subtracted from 32.
 def ImmSubFrom32 : SDNodeXForm<imm, [{

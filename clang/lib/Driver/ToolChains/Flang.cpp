@@ -136,6 +136,8 @@ void Flang::addDebugOptions(const llvm::opt::ArgList &Args, const JobAction &JA,
                    options::OPT_fconvert_EQ, options::OPT_fpass_plugin_EQ,
                    options::OPT_funderscoring, options::OPT_fno_underscoring,
                    options::OPT_funsigned, options::OPT_fno_unsigned,
+                   options::OPT_fenumeration_type,
+                   options::OPT_fno_enumeration_type,
                    options::OPT_fopenacc_default_none_scalars_strict,
                    options::OPT_fno_openacc_default_none_scalars_strict,
                    options::OPT_fopenacc_multiple_names_in_routine,
@@ -528,7 +530,7 @@ static void processVSRuntimeLibrary(const ToolChain &TC, const ArgList &Args,
 }
 
 void Flang::AddAMDGPUTargetArgs(const ArgList &Args, ArgStringList &CmdArgs,
-                                StringRef BoundArch,
+                                BoundArch BA,
                                 Action::OffloadKind DeviceOffloadKind) const {
   if (Arg *A = Args.getLastArg(options::OPT_mcode_object_version_EQ)) {
     StringRef Val = A->getValue();
@@ -539,11 +541,11 @@ void Flang::AddAMDGPUTargetArgs(const ArgList &Args, ArgStringList &CmdArgs,
   }
 
   const ToolChain &TC = getToolChain();
-  TC.addClangTargetOptions(Args, CmdArgs, BoundArch, DeviceOffloadKind);
+  TC.addClangTargetOptions(Args, CmdArgs, BA, DeviceOffloadKind);
 }
 
 void Flang::AddNVPTXTargetArgs(const ArgList &Args, ArgStringList &CmdArgs,
-                               StringRef BoundArch,
+                               BoundArch BA,
                                Action::OffloadKind DeviceOffloadKind) const {
   // we cannot use addClangTargetOptions, as it appends unsupported args for
   // flang: -fcuda-is-device, -fno-threadsafe-statics,
@@ -580,7 +582,7 @@ void Flang::AddNVPTXTargetArgs(const ArgList &Args, ArgStringList &CmdArgs,
 }
 
 void Flang::addTargetOptions(const ArgList &Args, ArgStringList &CmdArgs,
-                             StringRef BoundArch,
+                             BoundArch BA,
                              Action::OffloadKind DeviceOffloadKind) const {
   const ToolChain &TC = getToolChain();
   const llvm::Triple &Triple = TC.getEffectiveTriple();
@@ -607,11 +609,11 @@ void Flang::addTargetOptions(const ArgList &Args, ArgStringList &CmdArgs,
   case llvm::Triple::r600:
   case llvm::Triple::amdgcn:
     getTargetFeatures(D, Triple, Args, CmdArgs, /*ForAs*/ false);
-    AddAMDGPUTargetArgs(Args, CmdArgs, BoundArch, DeviceOffloadKind);
+    AddAMDGPUTargetArgs(Args, CmdArgs, BA, DeviceOffloadKind);
     break;
   case llvm::Triple::nvptx:
   case llvm::Triple::nvptx64:
-    AddNVPTXTargetArgs(Args, CmdArgs, BoundArch, DeviceOffloadKind);
+    AddNVPTXTargetArgs(Args, CmdArgs, BA, DeviceOffloadKind);
     break;
   case llvm::Triple::riscv64:
     getTargetFeatures(D, Triple, Args, CmdArgs, /*ForAs*/ false);
@@ -1022,6 +1024,11 @@ static void addPGOAndCoverageFlags(const ToolChain &TC, const JobAction &JA,
         A->render(Args, CmdArgs);
     }
   }
+
+  //-fpseudo-probe-for-profiling
+  if (Args.hasFlag(options::OPT_fpseudo_probe_for_profiling,
+                   options::OPT_fno_pseudo_probe_for_profiling, false))
+    CmdArgs.push_back("-fpseudo-probe-for-profiling");
 }
 
 void Flang::ConstructJob(Compilation &C, const JobAction &JA,
