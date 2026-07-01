@@ -271,7 +271,7 @@ TEST_F(IndexActionTest, DeclParamName) {
   std::string HeaderCode = R"cpp(
       void moon(int, int);
       void moon(int month, int night);
-      void moon(int month, int day);
+      void moon(int, int day);
       )cpp";
 
   addFile(MainFilePath, MainCode);
@@ -280,7 +280,7 @@ TEST_F(IndexActionTest, DeclParamName) {
   IndexFileIn IndexFile = runIndexingAction(MainFilePath);
 
   EXPECT_THAT(*IndexFile.Symbols,
-              ElementsAre(hasSignature("(int month, int day)")));
+              ElementsAre(hasSignature("(int, int day)")));
 }
 
 TEST_F(IndexActionTest, SkipFiles) {
