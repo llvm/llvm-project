@@ -143,8 +143,12 @@ void CodeGenFunction::EmitDecl(const Decl &D, bool EvaluateConditionDecl) {
     // None of these decls require codegen support.
     return;
 
-  case Decl::CXXExpansionStmt:
-    llvm_unreachable("TODO");
+  case Decl::CXXExpansionStmt: {
+    const auto *ESD = cast<CXXExpansionStmtDecl>(&D);
+    assert(ESD->getInstantiations() && "expansion statement not expanded?");
+    EmitStmt(ESD->getInstantiations());
+    return;
+  }
 
   case Decl::NamespaceAlias:
     if (CGDebugInfo *DI = getDebugInfo())
