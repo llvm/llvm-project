@@ -267,8 +267,8 @@ define <2 x i32> @ctls_v2i32(<2 x i32> %x) {
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-NEXT:    v_ashrrev_i32_e32 v2, 31, v1
 ; GFX6-NEXT:    v_ashrrev_i32_e32 v3, 31, v0
-; GFX6-NEXT:    v_xor_b32_e32 v1, v1, v2
 ; GFX6-NEXT:    v_xor_b32_e32 v0, v0, v3
+; GFX6-NEXT:    v_xor_b32_e32 v1, v1, v2
 ; GFX6-NEXT:    v_ffbh_u32_e32 v1, v1
 ; GFX6-NEXT:    v_ffbh_u32_e32 v0, v0
 ; GFX6-NEXT:    v_min_u32_e32 v1, 32, v1
@@ -356,8 +356,8 @@ define <2 x i32> @ctls_v2i32_known_mixed_bits(<2 x i32> %x) {
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-NEXT:    v_or_b32_e32 v1, 1, v1
 ; GFX6-NEXT:    v_or_b32_e32 v0, 1, v0
-; GFX6-NEXT:    v_and_b32_e32 v1, 0x7fffffff, v1
 ; GFX6-NEXT:    v_and_b32_e32 v0, 0x7fffffff, v0
+; GFX6-NEXT:    v_and_b32_e32 v1, 0x7fffffff, v1
 ; GFX6-NEXT:    v_ffbh_u32_e32 v1, v1
 ; GFX6-NEXT:    v_ffbh_u32_e32 v0, v0
 ; GFX6-NEXT:    v_add_i32_e32 v0, vcc, -1, v0
@@ -395,8 +395,8 @@ define <2 x i32> @ctls_v2i32_zero_poison(<2 x i32> %x) {
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-NEXT:    v_ashrrev_i32_e32 v2, 31, v1
 ; GFX6-NEXT:    v_ashrrev_i32_e32 v3, 31, v0
-; GFX6-NEXT:    v_xor_b32_e32 v1, v1, v2
 ; GFX6-NEXT:    v_xor_b32_e32 v0, v0, v3
+; GFX6-NEXT:    v_xor_b32_e32 v1, v1, v2
 ; GFX6-NEXT:    v_ffbh_u32_e32 v1, v1
 ; GFX6-NEXT:    v_ffbh_u32_e32 v0, v0
 ; GFX6-NEXT:    v_add_i32_e32 v0, vcc, -1, v0
@@ -432,8 +432,8 @@ define <2 x i32> @ctls_v2i32_xor_commuted(<2 x i32> %x) {
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-NEXT:    v_ashrrev_i32_e32 v2, 31, v1
 ; GFX6-NEXT:    v_ashrrev_i32_e32 v3, 31, v0
-; GFX6-NEXT:    v_xor_b32_e32 v1, v2, v1
 ; GFX6-NEXT:    v_xor_b32_e32 v0, v3, v0
+; GFX6-NEXT:    v_xor_b32_e32 v1, v2, v1
 ; GFX6-NEXT:    v_ffbh_u32_e32 v1, v1
 ; GFX6-NEXT:    v_ffbh_u32_e32 v0, v0
 ; GFX6-NEXT:    v_min_u32_e32 v1, 32, v1
@@ -472,8 +472,8 @@ define <2 x i32> @ctls_v2i32_known_positive(<2 x i32> %x) {
 ; GFX6-LABEL: ctls_v2i32_known_positive:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-NEXT:    v_and_b32_e32 v1, 0x7fffffff, v1
 ; GFX6-NEXT:    v_and_b32_e32 v0, 0x7fffffff, v0
+; GFX6-NEXT:    v_and_b32_e32 v1, 0x7fffffff, v1
 ; GFX6-NEXT:    v_ffbh_u32_e32 v1, v1
 ; GFX6-NEXT:    v_ffbh_u32_e32 v0, v0
 ; GFX6-NEXT:    v_min_u32_e32 v1, 32, v1

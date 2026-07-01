@@ -20,15 +20,15 @@ define <2 x i32> @v_xor_v2i32(<2 x i32> %num, <2 x i32> %den) {
 ; SI-LABEL: v_xor_v2i32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    v_xor_b32_e32 v1, v1, v3
 ; SI-NEXT:    v_xor_b32_e32 v0, v0, v2
+; SI-NEXT:    v_xor_b32_e32 v1, v1, v3
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: v_xor_v2i32:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_xor_b32_e32 v1, v1, v3
 ; VI-NEXT:    v_xor_b32_e32 v0, v0, v2
+; VI-NEXT:    v_xor_b32_e32 v1, v1, v3
 ; VI-NEXT:    s_setpc_b64 s[30:31]
   %result = xor <2 x i32> %num, %den
   ret <2 x i32> %result

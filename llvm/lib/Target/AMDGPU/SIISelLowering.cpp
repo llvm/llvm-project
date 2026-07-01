@@ -14521,6 +14521,39 @@ static uint32_t getPermuteMask(SDValue V) {
   return ~0;
 }
 
+static SDValue splitAndOrXorv2i32Toi32(SDNode *N, SelectionDAG &DAG,
+                                       const GCNSubtarget *Subtarget) {
+  EVT VT = N->getValueType(0);
+  assert(VT == MVT::v2i32 && N->isDivergent());
+  const unsigned Opc = N->getOpcode();
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+
+  if (Subtarget->hasVOP3AndOrOr3()) {
+    // Do not split v2i32-v2i32 patterns e.g., and_or/or3 as they will be
+    // handled by ThreeOp_v2i32_Pats in VOP3instructions.td
+    auto matchV2I32Patterns = [](const unsigned Opc,
+                                 const unsigned userOpc) -> bool {
+      return (Opc == ISD::AND || Opc == ISD::OR) && userOpc == ISD::OR;
+    };
+    if (matchV2I32Patterns(LHS.getOpcode(), Opc) ||
+        matchV2I32Patterns(RHS.getOpcode(), Opc))
+      return SDValue();
+
+    if (N->hasOneUse() && matchV2I32Patterns(Opc, N->user_begin()->getOpcode()))
+      return SDValue();
+  }
+
+  SDLoc DL(N);
+  SmallVector<SDValue, 2> LhsValues;
+  SmallVector<SDValue, 2> RhsValues;
+  DAG.ExtractVectorElements(LHS, LhsValues, 0, 2, MVT::i32);
+  DAG.ExtractVectorElements(RHS, RhsValues, 0, 2, MVT::i32);
+  SDValue Lo = DAG.getNode(Opc, DL, MVT::i32, LhsValues[0], RhsValues[0]);
+  SDValue Hi = DAG.getNode(Opc, DL, MVT::i32, LhsValues[1], RhsValues[1]);
+  return DAG.getNode(ISD::BUILD_VECTOR, DL, MVT::v2i32, Lo, Hi);
+}
+
 SDValue SITargetLowering::performAndCombine(SDNode *N,
                                             DAGCombinerInfo &DCI) const {
   if (DCI.isBeforeLegalize())
@@ -14702,6 +14735,10 @@ SDValue SITargetLowering::performAndCombine(SDNode *N,
       }
     }
   }
+
+  if (DCI.isAfterLegalizeDAG() && VT == MVT::v2i32 && N->isDivergent())
+    if (SDValue RV = splitAndOrXorv2i32Toi32(N, DAG, getSubtarget()))
+      return RV;
 
   return SDValue();
 }
@@ -15458,6 +15495,10 @@ SDValue SITargetLowering::performOrCombine(SDNode *N,
     }
   }
 
+  if (DCI.isAfterLegalizeDAG() && VT == MVT::v2i32 && N->isDivergent())
+    if (SDValue RV = splitAndOrXorv2i32Toi32(N, DAG, getSubtarget()))
+      return RV;
+
   if (VT != MVT::i64 || DCI.isBeforeLegalizeOps())
     return SDValue();
 
@@ -15552,6 +15593,10 @@ SDValue SITargetLowering::performXorCombine(SDNode *N,
       return DAG.getNode(ISD::BITCAST, DL, VT, NewSelect);
     }
   }
+
+  if (DCI.isAfterLegalizeDAG() && VT == MVT::v2i32 && N->isDivergent())
+    if (SDValue RV = splitAndOrXorv2i32Toi32(N, DAG, getSubtarget()))
+      return RV;
 
   return SDValue();
 }
