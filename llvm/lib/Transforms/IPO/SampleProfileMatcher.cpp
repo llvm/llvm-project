@@ -810,15 +810,35 @@ static std::string getDemangledBaseName(ItaniumPartialDemangler &Demangler,
   auto FunctionName = FName.str();
   if (Demangler.partialDemangle(FunctionName.c_str()))
     return std::string();
-  size_t BaseNameSize = 0;
+
   // The demangler API follows the __cxa_demangle one, and thus needs a
   // pointer that originates from malloc (or nullptr) and the caller is
   // responsible for free()-ing the buffer.
-  char *BaseNamePtr = Demangler.getFunctionBaseName(nullptr, &BaseNameSize);
-  std::string Result = (BaseNamePtr && BaseNameSize)
-                           ? std::string(BaseNamePtr, BaseNameSize)
-                           : std::string();
-  free(BaseNamePtr);
+  size_t NameSize = 0;
+  // Get the full function name (namespace::base<templates>).
+  char *NamePtr = Demangler.getFunctionName(nullptr, &NameSize);
+  if (!NamePtr || !NameSize) {
+    free(NamePtr);
+    return std::string();
+  }
+  std::string Result(NamePtr, NameSize);
+  free(NamePtr);
+
+  // Strip the namespace/class context prefix to get "base<templates>".
+  size_t CtxSize = 0;
+  char *CtxPtr = Demangler.getFunctionDeclContextName(nullptr, &CtxSize);
+  if (CtxPtr && CtxSize) {
+    StringRef CtxStr(CtxPtr, CtxSize);
+    // Trim trailing null from context before comparing.
+    while (!CtxStr.empty() && CtxStr.back() == '\0')
+      CtxStr = CtxStr.drop_back();
+    StringRef ResultRef(Result);
+    if (ResultRef.starts_with(CtxStr) && ResultRef.size() > CtxStr.size() + 2 &&
+        ResultRef[CtxStr.size()] == ':' && ResultRef[CtxStr.size() + 1] == ':')
+      Result = ResultRef.substr(CtxStr.size() + 2).str();
+  }
+  free(CtxPtr);
+
   // Trim trailing whitespace/null — getFunctionBaseName may include trailing
   // characters in the reported size.
   while (!Result.empty() && (Result.back() == ' ' || Result.back() == '\0'))
