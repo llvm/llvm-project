@@ -31723,6 +31723,18 @@ bool AArch64TargetLowering::shouldInsertTrailingSeqCstFenceForAtomicStore(
   return !Subtarget->hasLSE();
 }
 
+Instruction *AArch64TargetLowering::emitLeadingFence(IRBuilderBase &Builder,
+                                                     Instruction *Inst,
+                                                     AtomicOrdering Ord) const {
+  // Keep seq_cst 128-bit LSE2 loads ordered against v8.0-style seq_cst LL/SC
+  // stores by placing the full barrier before the single-copy atomic load.
+  if (isa<LoadInst>(Inst) && Ord == AtomicOrdering::SequentiallyConsistent &&
+      isOpSuitableForLDPSTP(Inst))
+    return Builder.CreateFence(Ord);
+
+  return TargetLoweringBase::emitLeadingFence(Builder, Inst, Ord);
+}
+
 // Loads and stores less than 128-bits are already atomic; ones above that
 // are doomed anyway, so defer to the default libcall and blame the OS when
 // things go wrong.

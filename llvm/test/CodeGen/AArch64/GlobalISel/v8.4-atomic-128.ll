@@ -46,6 +46,7 @@ define void @test_atomic_load_128_seq_cst(ptr %addr) {
 
 ; CHECK: dmb ish
 ; CHECK: ldp [[LO:x[0-9]+]], [[HI:x[0-9]+]], [x0]
+; CHECK: dmb ish
 ; CHECK: mov v[[Q:[0-9]+]].d[0], [[LO]]
 ; CHECK: mov v[[Q]].d[1], [[HI]]
 ; CHECK: str q[[Q]], [x0]

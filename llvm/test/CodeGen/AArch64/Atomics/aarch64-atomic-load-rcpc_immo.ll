@@ -383,6 +383,7 @@ define i128 @load_atomic_i128_aligned_acquire_const(ptr readonly %ptr) {
 
 define i128 @load_atomic_i128_aligned_seq_cst(ptr %ptr) {
 ; CHECK-LABEL: load_atomic_i128_aligned_seq_cst:
+; CHECK:    dmb ish
 ; CHECK:    ldp x0, x1, [x0, #64]
 ; CHECK:    dmb ish
     %gep = getelementptr inbounds i128, ptr %ptr, i32 4
@@ -392,6 +393,7 @@ define i128 @load_atomic_i128_aligned_seq_cst(ptr %ptr) {
 
 define i128 @load_atomic_i128_aligned_seq_cst_const(ptr readonly %ptr) {
 ; CHECK-LABEL: load_atomic_i128_aligned_seq_cst_const:
+; CHECK:    dmb ish
 ; CHECK:    ldp x0, x1, [x0, #64]
 ; CHECK:    dmb ish
     %gep = getelementptr inbounds i128, ptr %ptr, i32 4
