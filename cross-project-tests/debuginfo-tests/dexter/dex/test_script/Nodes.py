@@ -61,9 +61,10 @@ class Where:
         if isinstance(lines, (int, Label)):
             lines = Line(lines)
         self.lines: Union[Line, DexRange, None] = lines
+        self.at_frame_idx: Optional[int] = attributes.pop("at_frame_idx", None)
         self.after_hit_count: Optional[int] = attributes.pop("after_hit_count", None)
         self.for_hit_count: Optional[int] = attributes.pop("for_hit_count", None)
-        self.conditions: Optional[dict] = attributes.pop("conditions", None)
+        self.conditions: dict = attributes.pop("conditions", None)
         self.is_and = is_and
         if attributes:
             raise DexterNodeError(
@@ -77,6 +78,8 @@ class Where:
             raise DexterNodeError(
                 self, "can't check hit counts without an explicit lines or function arg"
             )
+        if self.at_frame_idx is not None and not self.is_and:
+            raise DexterNodeError(self, "at_frame_idx can only be used with !and nodes")
 
     def __repr__(self):
         elts = [
@@ -92,6 +95,7 @@ class Where:
             "file": self.file,
             "function": self.function,
             "lines": self.lines.value if isinstance(self.lines, Line) else self.lines,
+            "at_frame_idx": self.at_frame_idx,
             "for_hit_count": self.for_hit_count,
             "after_hit_count": self.after_hit_count,
             "conditions": self.conditions,
