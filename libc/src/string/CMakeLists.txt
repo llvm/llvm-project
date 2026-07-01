@@ -173,6 +173,25 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  strcpy_s
+  SRCS
+    strcpy_s.cpp
+  HDRS
+    strcpy_s.h
+  DEPENDS
+    .memory_utils.inline_memcpy
+    .string_utils
+    .strnlen_s
+    libc.src.__support.common
+    libc.src.__support.constraint_handler
+    libc.src.__support.macros.config
+    libc.hdr.types.constraint_handler_t
+    libc.hdr.types.errno_t
+    libc.hdr.types.rsize_t
+    libc.hdr.stdint_proxy
+)
+
+add_entrypoint_object(
   strcspn
   SRCS
     strcspn.cpp
