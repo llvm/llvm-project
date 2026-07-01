@@ -82,11 +82,7 @@ def parse_memory_read_packet(packet):
     """
     Parse a memory-read packet ("m<addr>,<len>" or "x<addr>,<len>") into its
     (addr, length) integers, or return None if it isn't a memory read.
-
-    Accepts the raw packet contents, with or without a leading "$".
     """
-    if packet and packet[0] == "$":
-        packet = packet[1:]
     if not packet or packet[0] not in ("m", "x"):
         return None
     try:
