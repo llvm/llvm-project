@@ -166,6 +166,53 @@ static bool inThisOrder(const Instruction *Src, const Instruction *Dst) {
 }
 #endif
 
+/// Check if the direction vector is negative. A negative direction
+/// vector means Src and Dst are reversed in the actual program.
+///
+/// FIXME: in some cases the meaning of a negative direction vector
+/// may not be straightforward, e.g.,
+/// for (int i = 0; i < 32; ++i) {
+///   Src:    A[i] = ...;
+///   Dst:    use(A[31 - i]);
+/// }
+/// The dependency is
+///   flow { Src[i] -> Dst[31 - i] : when i >= 16 } and
+///   anti { Dst[i] -> Src[31 - i] : when i < 16 },
+/// -- hence a [<>].
+/// As long as a dependence result contains '>' ('<>', '<=>', "*"), it
+/// means that a reversed/normalized dependence needs to be considered
+/// as well. Nevertheless, current isDirectionNegative() only returns
+/// true with a '>' or '>=' dependency for ease of canonicalizing the
+/// dependency vector, since the reverse of '<>', '<=>' and "*" is itself.
+static bool isDirectionNegative(const Dependence &D) {
+  for (unsigned Level = 1; Level <= D.getLevels(); ++Level) {
+    unsigned char Direction = D.getDirection(Level);
+    if (Direction == Dependence::DVEntry::EQ)
+      continue;
+    if (Direction == Dependence::DVEntry::GT ||
+        Direction == Dependence::DVEntry::GE)
+      return true;
+    return false;
+  }
+  return false;
+}
+
+/// If the direction vector is negative, normalize the direction
+/// vector to make it non-negative. Normalization is done by reversing
+/// Src and Dst, plus reversing the dependence directions and distances
+/// in the vector.
+bool normalize(Dependence *D, ScalarEvolution *SE) {
+  if (!isDirectionNegative(*D))
+    return false;
+
+  LLVM_DEBUG(dbgs() << "Before normalizing negative direction vectors:\n";
+             D->dump(dbgs()););
+  D->negate(*SE);
+  LLVM_DEBUG(dbgs() << "After normalizing negative direction vectors:\n";
+             D->dump(dbgs()););
+  return true;
+}
+
 static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
                                      Loop *L, DependenceInfo *DI,
                                      ScalarEvolution *SE,
@@ -230,7 +277,7 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
         assert(D->isOrdered() && "Expected an output, flow or anti dep.");
         // If the direction vector is negative, normalize it to
         // make it non-negative.
-        if (D->normalize(SE))
+        if (normalize(&*D, SE))
           LLVM_DEBUG(dbgs() << "Negative dependence vector normalized.\n");
         LLVM_DEBUG(StringRef DepType =
                        D->isFlow() ? "flow" : D->isAnti() ? "anti" : "output";
