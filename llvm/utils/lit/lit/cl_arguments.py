@@ -364,18 +364,20 @@ def parse_args():
         help="Enable individual test case coverage",
     )
     execution_group.add_argument(
-        "--per-test-output-subdir",
-        dest="per_test_output_subdir",
-        metavar="ID",
+        "--test-output-root",
+        dest="test_output_root",
+        metavar="DIR",
         default=None,
-        help="Isolate this run's writable output by appending the given ID as a "
-        "subdirectory to each test suite's test_exec_root, so %%t/%%T/Output "
-        "resolve under test_exec_root/<ID>. This lets multiple lit runs use the "
-        "same tests concurrently against a single build tree (e.g. test stress "
-        "runs) without clobbering each other's output; give each run a distinct "
-        "ID (a PID, CI job id, etc.). Reusing an ID reuses that output tree, "
-        "preserving artifacts like .lit_test_times.txt across runs. [Default: "
-        "disabled]",
+        help="Write all test output under DIR instead of each test suite's "
+        "default test_exec_root. Each suite's exec root becomes DIR/<suite-name>, "
+        "so %%t/%%T/Output and .lit_test_times.txt resolve under DIR (a relative "
+        "DIR is resolved against the current directory). This lets test output "
+        "live outside the build tree, and lets multiple lit runs use the same "
+        "tests concurrently against a single build tree (e.g. test stress runs) "
+        "without clobbering each other -- give each concurrent run a distinct DIR "
+        "(from a PID, CI job id, per-run temp dir, etc.). Reusing a DIR reuses "
+        "that output tree, preserving artifacts like .lit_test_times.txt across "
+        "runs. [Default: disabled]",
     )
     execution_group.add_argument(
         "--ignore-fail",
