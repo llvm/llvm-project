@@ -135,12 +135,12 @@ class Response(ProtocolMessage):
     def __post_init__(self):
         assert (
             self.type == MessageType.RESPONSE
-        ), f"expected '{type(self).__name__}' to be of type response: {self}"
+        ), f"expected '{type(self).__name__}' to be of type response: {self}."
 
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
         if not dataclasses.is_dataclass(cls):
-            raise TypeError(f"{cls.__name__} must be a dataclass")
+            raise TypeError(f"{cls.__name__!r} must be a dataclass.")
 
 
 AnyResponse = TypeVar("AnyResponse", bound=Response)
@@ -601,18 +601,12 @@ class BreakpointReason(StrEnum):
     REMOVED = "removed"
 
 
-class InvalidatedAreas(StrEnum):
-    ALL = "all"
-    STACKS = "stacks"
-    THREADS = "threads"
-    VARIABLES = "variables"
-
-
 class StartDebuggingRequestType(StrEnum):
     LAUNCH = "launch"
     ATTACH = "attach"
 
 
+InvalidatedAreas = Literal["all", "stacks", "threads", "variables"]
 ExceptionBreakMode = Literal["never", "always", "unhandled", "userUnhandled"]
 ChecksumAlgorithm = Literal["MD5", "SHA1", "SHA256", "timestamp"]
 
@@ -1394,7 +1388,7 @@ SteppingGranularity = Literal["statement", "line", "instruction"]
 @dataclass(frozen=True)
 @args_protocol
 class NextArgs:
-    threadId: int = 0
+    threadId: int
     singleThread: Optional[bool] = None
     granularity: Optional[SteppingGranularity] = None
 
@@ -1405,7 +1399,7 @@ class NextArgs:
 @dataclass(frozen=True)
 @args_protocol
 class StepInArgs:
-    threadId: int = 0
+    threadId: int
     singleThread: Optional[bool] = None
     targetId: Optional[int] = None
     granularity: Optional[SteppingGranularity] = None

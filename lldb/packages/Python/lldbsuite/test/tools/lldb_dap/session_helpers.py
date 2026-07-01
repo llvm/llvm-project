@@ -745,17 +745,12 @@ class DAPTestSession(Session):
         return self.send_request(bp_args).result()
 
     def set_function_breakpoints(
-        self,
-        breakpoints: list[str] | list[FunctionBreakpoint],
-        condition: Optional[str] = None,
-        hitCondition: Optional[str] = None,
+        self, breakpoints: list[str] | list[FunctionBreakpoint]
     ):
         f_breakpoints: list[FunctionBreakpoint] = []
         for bp in breakpoints:
             if isinstance(bp, str):
-                func_bp = FunctionBreakpoint(
-                    bp, condition=condition, hitCondition=hitCondition
-                )
+                func_bp = FunctionBreakpoint(name=bp)
                 f_breakpoints.append(func_bp)
             elif isinstance(bp, FunctionBreakpoint):
                 f_breakpoints.append(bp)
@@ -833,17 +828,14 @@ class DAPTestSession(Session):
         return self.breakpoints_to_ids(r_breakpoints)
 
     def resolve_function_breakpoints(
-        self,
-        breakpoints: list[str] | list[FunctionBreakpoint],
-        condition: Optional[str] = None,
-        hitCondition: Optional[str] = None,
+        self, breakpoints: list[str] | list[FunctionBreakpoint]
     ) -> list[int]:
         """Sets breakpoints by function name given an array of function names
         and returns an array of strings containing the breakpoint IDs
         ("1", "2") for each breakpoint that was set.
         """
         last_event = self.last_event()
-        response = self.set_function_breakpoints(breakpoints, condition, hitCondition)
+        response = self.set_function_breakpoints(breakpoints)
         resp_bps = response.body.breakpoints
 
         all_verified = all(bp.verified for bp in resp_bps)
@@ -890,15 +882,13 @@ class DAPTestSession(Session):
 
     def step_in(
         self,
-        threadId: Optional[int] = None,
+        threadId: int,
         *,
         targetId: Optional[int] = None,
         granularity: SteppingGranularity = "statement",
     ):
-        thread_id = threadId or self.stopped_thread_id
-        self.test_case.assertIsNotNone(thread_id)
         stepin_args = StepInArgs(
-            threadId=thread_id, targetId=targetId, granularity=granularity
+            threadId=threadId, targetId=targetId, granularity=granularity
         )
         response = self.send_request(stepin_args).result()
         stop_event = self.verify_stopped(StoppedReason.STEP, after=response)
@@ -906,26 +896,22 @@ class DAPTestSession(Session):
 
     def step_over(
         self,
-        threadId: Optional[int] = None,
+        threadId: int,
         *,
         granularity: SteppingGranularity = "statement",
     ):
-        thread_id = threadId or self.stopped_thread_id
-        self.test_case.assertIsNotNone(thread_id)
-        next_args = NextArgs(threadId=thread_id, granularity=granularity)
+        next_args = NextArgs(threadId=threadId, granularity=granularity)
         response = self.send_request(next_args).result()
         stop_event = self.verify_stopped(StoppedReason.STEP, after=response)
         return stop_event
 
     def step_out(
         self,
-        threadId: Optional[int] = None,
+        threadId: int,
         *,
         granularity: SteppingGranularity = "statement",
     ):
-        thread_id = threadId or self.stopped_thread_id
-        self.test_case.assertIsNotNone(thread_id)
-        step_out_args = StepOutArgs(threadId=thread_id, granularity=granularity)
+        step_out_args = StepOutArgs(threadId=threadId, granularity=granularity)
         response = self.send_request(step_out_args).result()
 
         stop_event = self.verify_stopped(StoppedReason.STEP, after=response)

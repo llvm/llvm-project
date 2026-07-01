@@ -1,10 +1,8 @@
 # FIXME: remove when LLDB_MINIMUM_PYTHON_VERSION > 3.8
 from __future__ import annotations
 
-import contextlib
 import dataclasses
 import functools
-import io
 import itertools
 import json
 import logging
@@ -45,7 +43,6 @@ from .dap_types import (
     RunInTerminalResponse,
     StepInArgs,
     StepOutArgs,
-    StoppedEvent,
     TerminateArgs,
     dict_to_message,
 )
@@ -157,7 +154,6 @@ class _DAPSessionState:
             OutputCategory.IMPORTANT: OutputBuffer(),
             OutputCategory.TELEMETRY: OutputBuffer(),
         }
-        self._stopped_thread_id: Optional[int] = None
         self._stop_generation: int = 0
 
     @property
@@ -168,16 +164,6 @@ class _DAPSessionState:
     @_synchronized
     def set_initialized(self, val: bool):
         self._initialized = val
-
-    @property
-    @_synchronized
-    def stopped_thread_id(self):
-        return self._stopped_thread_id
-
-    @_synchronized
-    def set_stopped_thread_id(self, id: int):
-        assert isinstance(id, int)
-        self._stopped_thread_id = id
 
     @property
     @_synchronized
@@ -274,12 +260,6 @@ class Session:
         event = self._event_history.last_event()
         return dataclasses.replace(event)
 
-    @property
-    def stopped_thread_id(self):
-        thread_id = self._state.stopped_thread_id
-        assert thread_id is not None, "stopped thread id is never set."
-        return thread_id
-
     def _current_stop_generation(self) -> int:
         return self._state.stop_generation
 
@@ -319,9 +299,6 @@ class Session:
             self._state.set_initialized(True)
         elif isinstance(event, CapabilitiesEvent):
             self._state.update_capabilities(event.body.capabilities)
-        elif isinstance(event, StoppedEvent):
-            if (thread_id := event.body.threadId) and not event.body.preserveFocusHint:
-                self._state.set_stopped_thread_id(thread_id)
         elif isinstance(event, OutputEvent):
             category_buffer = self._state.output_buffers[event.body.category]
             category_buffer.write(event.body.output)

@@ -522,15 +522,15 @@ def redirect_stream(
     Returns a thread that redirects the stream.
     """
 
-    def read_loop(in_stream: IO[bytes], out_buffer: OutputBuffer):
+    def read_loop(in_stream: IO[bytes], out_stream: OutputBuffer):
         with contextlib.suppress(OSError, ValueError):  # Nothing to report.
             while True:
                 chunk = in_stream.read(4096)
                 if not chunk:
                     break
 
-                out_buffer.write(chunk.decode(errors="replace"))
-                out_buffer.flush()
+                out_stream.write(chunk.decode(errors="replace"))
+                out_stream.flush()
 
     thread_name = f"redirect_{thread_name}"
     redirect_thread = threading.Thread(
@@ -602,6 +602,7 @@ class DAPConnection:
         # A request that's been sent and is awaiting its response.
         self._in_flight_requests: dict[int, tuple[RawMessage, Future[RawMessage]]] = {}
         self._in_flight_lock = threading.Lock()
+        # received_messages is not accessed anywhere. It only exists for debugging purposes.
         self._received_messages: list[RawMessage] = []
 
         # Event to sync when the Connection start listening for messages.
@@ -647,7 +648,7 @@ class DAPConnection:
         error = None
         try:
             while self.is_alive():
-                message = self._read_message()
+                message = DAPConnection.read_message(self._transport)
                 if not message:
                     break
 
@@ -701,13 +702,14 @@ class DAPConnection:
         else:
             raise DAPError(f"Unknown message type: {msg_type}")
 
-    def _read_message(self):
+    @staticmethod
+    def read_message(transport: Transport):
         HEADER_TERMINATOR = b"\r\n\r\n"
         CONTENT_LEN_PREFIX = b"Content-Length: "
         buffer = bytearray()
 
         while True:
-            chunk = self._transport.readline()
+            chunk = transport.readline()
             if not chunk:
                 if buffer:
                     raise EOFError(f"unexpected EOF when parsing header: {buffer}")
@@ -733,7 +735,7 @@ class DAPConnection:
             message_start = header_end + len(HEADER_TERMINATOR)
             buffer = buffer[message_start:]
             while len(buffer) < content_length:
-                chunk = self._transport.read(content_length - len(buffer))
+                chunk = transport.read(content_length - len(buffer))
                 if not chunk:
                     raise EOFError(f"unexpected EOF when parsing message: {buffer}")
                 buffer += chunk
