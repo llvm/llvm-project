@@ -496,7 +496,7 @@ private:
   } CandidateDict;
 
   const SCEV *getAndRecordSCEV(Value *V) {
-    auto *S = SE->getSCEV(V);
+    const SCEV *S = SE->getSCEV(V);
     if (isa<Instruction>(V) && !(isa<SCEVCouldNotCompute>(S) ||
                                  isa<SCEVUnknown>(S) || isa<SCEVConstant>(S)))
       SCEVToInsts[S].insert(cast<Instruction>(V));

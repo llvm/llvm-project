@@ -140,6 +140,9 @@ struct SCEVUseT : private PointerIntPair<SCEVPtrT, 2> {
   /// operands.
   bool isCanonical() const { return getCanonical() == getOpaqueValue(); }
 
+  /// Returns true if this use itself carries use-specific no-wrap flags.
+  bool hasUseFlags() const { return getOpaqueValue() != getPointer(); }
+
   /// Return the canonical SCEV for this SCEVUse.
   const SCEV *getCanonical() const;
 
@@ -713,8 +716,14 @@ public:
   getStrengthenedNoWrapFlagsFromBinOp(const OverflowingBinaryOperator *OBO);
 
   /// Notify this ScalarEvolution that \p User directly uses SCEVs in \p Ops.
-  LLVM_ABI void registerUser(const SCEV *User, ArrayRef<const SCEV *> Ops);
   LLVM_ABI void registerUser(const SCEV *User, ArrayRef<SCEVUse> Ops);
+
+  /// Attach use-specific no-wrap \p Flags to \p S and record the use.
+  SCEVUse getUseWithFlags(const SCEV *S, SCEVNoWrapFlags Flags) {
+    SCEVUse U(S, Flags);
+    registerFlaggedUse(U);
+    return U;
+  }
 
   /// Return true if the SCEV expression contains an undef value.
   LLVM_ABI bool containsUndefs(const SCEV *S) const;
@@ -724,11 +733,12 @@ public:
   LLVM_ABI bool containsErasedValue(const SCEV *S) const;
 
   /// Return a SCEV expression for the full generality of the specified
-  /// expression.
-  LLVM_ABI const SCEV *getSCEV(Value *V);
+  /// expression. If \p UseCtx is true, returns a SCEV with use-specific flags
+  /// valid only for existing uses of \p V.
+  LLVM_ABI SCEVUse getSCEV(Value *V, bool UseCtx = false);
 
   /// Return an existing SCEV for V if there is one, otherwise return nullptr.
-  LLVM_ABI const SCEV *getExistingSCEV(Value *V);
+  LLVM_ABI SCEVUse getExistingSCEV(Value *V);
 
   LLVM_ABI const SCEV *getConstant(ConstantInt *V);
   LLVM_ABI const SCEV *getConstant(const APInt &Val);
@@ -754,9 +764,10 @@ public:
   LLVM_ABI const SCEV *getCastExpr(SCEVTypes Kind, const SCEV *Op, Type *Ty);
   LLVM_ABI const SCEV *getAnyExtendExpr(const SCEV *Op, Type *Ty);
 
-  LLVM_ABI const SCEV *getAddExpr(SmallVectorImpl<SCEVUse> &Ops,
-                                  SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap,
-                                  unsigned Depth = 0);
+  LLVM_ABI SCEVUse getAddExpr(SmallVectorImpl<SCEVUse> &Ops,
+                              SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap,
+                              unsigned Depth = 0,
+                              SCEV::NoWrapFlags UseFlags = SCEV::FlagAnyWrap);
   const SCEV *getAddExpr(SCEVUse LHS, SCEVUse RHS,
                          SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap,
                          unsigned Depth = 0) {
@@ -810,12 +821,11 @@ public:
   /// \p GEP The GEP. The indices contained in the GEP itself are ignored,
   /// instead we use IndexExprs.
   /// \p IndexExprs The expressions for the indices.
-  LLVM_ABI const SCEV *getGEPExpr(GEPOperator *GEP,
-                                  ArrayRef<SCEVUse> IndexExprs);
-  LLVM_ABI const SCEV *getGEPExpr(SCEVUse BaseExpr,
-                                  ArrayRef<SCEVUse> IndexExprs,
-                                  Type *SrcElementTy,
-                                  GEPNoWrapFlags NW = GEPNoWrapFlags::none());
+  LLVM_ABI SCEVUse getGEPExpr(GEPOperator *GEP, ArrayRef<SCEVUse> IndexExprs);
+  LLVM_ABI SCEVUse
+  getGEPExpr(SCEVUse BaseExpr, ArrayRef<SCEVUse> IndexExprs, Type *SrcElementTy,
+             GEPNoWrapFlags NW = GEPNoWrapFlags::none(),
+             GEPNoWrapFlags UseSpecificNW = GEPNoWrapFlags::none());
   LLVM_ABI const SCEV *getAbsExpr(const SCEV *Op, bool IsNSW);
   LLVM_ABI const SCEV *getMinMaxExpr(SCEVTypes Kind,
                                      SmallVectorImpl<SCEVUse> &Operands);
@@ -956,7 +966,7 @@ public:
   ///
   /// In the case that a relevant loop exit value cannot be computed, the
   /// original value V is returned.
-  LLVM_ABI const SCEV *getSCEVAtScope(const SCEV *S, const Loop *L);
+  LLVM_ABI SCEVUse getSCEVAtScope(SCEVUse S, const Loop *L);
 
   /// This is a convenience function which does getSCEVAtScope(getSCEV(V), L).
   LLVM_ABI const SCEV *getSCEVAtScope(Value *V, const Loop *L);
@@ -1503,7 +1513,7 @@ public:
   /// Return the size of an element read or written by Inst.
   LLVM_ABI const SCEV *getElementSize(Instruction *Inst);
 
-  LLVM_ABI void print(raw_ostream &OS) const;
+  LLVM_ABI void print(raw_ostream &OS, bool UseCtx = false) const;
   LLVM_ABI void verify() const;
   LLVM_ABI bool invalidate(Function &F, const PreservedAnalyses &PA,
                            FunctionAnalysisManager::Invalidator &Inv);
@@ -1698,7 +1708,7 @@ private:
 
   /// The type for ValueExprMap.
   using ValueExprMapType =
-      DenseMap<SCEVCallbackVH, const SCEV *, DenseMapInfo<Value *>>;
+      DenseMap<SCEVCallbackVH, SCEVUse, DenseMapInfo<Value *>>;
 
   /// This is a cache of the values we have analyzed so far.
   ValueExprMapType ValueExprMap;
@@ -1903,13 +1913,16 @@ private:
   /// This map contains entries for all the expressions that we attempt to
   /// compute getSCEVAtScope information for, which can be expensive in
   /// extreme cases.
-  DenseMap<const SCEV *, SmallVector<std::pair<const Loop *, const SCEV *>, 2>>
+  DenseMap<SCEVUse, SmallVector<std::pair<const Loop *, SCEVUse>, 2>>
       ValuesAtScopes;
 
   /// Reverse map for invalidation purposes: Stores of which SCEV and which
   /// loop this is the value-at-scope of.
-  DenseMap<const SCEV *, SmallVector<std::pair<const Loop *, const SCEV *>, 2>>
+  DenseMap<SCEVUse, SmallVector<std::pair<const Loop *, SCEVUse>, 2>>
       ValuesAtScopesUsers;
+
+  /// Map canonical SCEV to SCEVUse variants created for it.
+  DenseMap<const SCEV *, SmallSetVector<SCEVUse, 2>> FlaggedUses;
 
   /// Memoized computeLoopDisposition results.
   DenseMap<const SCEV *,
@@ -2010,11 +2023,11 @@ private:
 
   /// We know that there is no SCEV for the specified value.  Analyze the
   /// expression recursively.
-  const SCEV *createSCEV(Value *V);
+  SCEVUse createSCEV(Value *V);
 
   /// We know that there is no SCEV for the specified value. Create a new SCEV
   /// for \p V iteratively.
-  const SCEV *createSCEVIter(Value *V);
+  SCEVUse createSCEVIter(Value *V);
   /// Collect operands of \p V for which SCEV expressions should be constructed
   /// first. Returns a SCEV directly if it can be constructed trivially for \p
   /// V.
@@ -2058,11 +2071,11 @@ private:
                                        Value *FalseVal);
 
   /// Provide the special handling we need to analyze GEP SCEVs.
-  const SCEV *createNodeForGEP(GEPOperator *GEP);
+  SCEVUse createNodeForGEP(GEPOperator *GEP);
 
   /// Implementation code for getSCEVAtScope; called at most once for each
   /// SCEV+Loop pair.
-  const SCEV *computeSCEVAtScope(const SCEV *S, const Loop *L);
+  SCEVUse computeSCEVAtScope(SCEVUse S, const Loop *L);
 
   /// Return the BackedgeTakenInfo for the given loop, lazily computing new
   /// values if the loop hasn't been analyzed yet. The returned result is
@@ -2370,7 +2383,14 @@ private:
   void forgetMemoizedResults(ArrayRef<SCEVUse> SCEVs);
 
   /// Helper for forgetMemoizedResults.
-  void forgetMemoizedResultsImpl(const SCEV *S);
+  void forgetMemoizedResultsImpl(SCEVUse S);
+
+  /// If \p U carries use-specific flags, record it as a flagged use of the
+  /// underlying canonical SCEV.
+  void registerFlaggedUse(SCEVUse U) {
+    if (U.hasUseFlags())
+      FlaggedUses[U.getPointer()].insert(U);
+  }
 
   /// Iterate over instructions in \p Worklist and their users. Erase entries
   /// from ValueExprMap and collect SCEV expressions in \p ToForget
@@ -2382,7 +2402,7 @@ private:
   void eraseValueFromMap(Value *V);
 
   /// Insert V to S mapping into ValueExprMap and ExprValueMap.
-  void insertValueToMap(Value *V, const SCEV *S);
+  void insertValueToMap(Value *V, SCEVUse S);
 
   /// Return false iff given SCEV contains a SCEVUnknown with NULL value-
   /// pointer.
@@ -2502,16 +2522,17 @@ private:
   bool canIVOverflowOnGT(const SCEV *RHS, const SCEV *Stride, bool IsSigned);
 
   /// Get add expr already created or create a new one.
-  const SCEV *getOrCreateAddExpr(ArrayRef<SCEVUse> Ops,
-                                 SCEV::NoWrapFlags Flags);
+  SCEVUse getOrCreateAddExpr(ArrayRef<SCEVUse> Ops, SCEV::NoWrapFlags Flags,
+                             SCEV::NoWrapFlags UseFlags = SCEV::FlagAnyWrap);
 
   /// Get mul expr already created or create a new one.
-  const SCEV *getOrCreateMulExpr(ArrayRef<SCEVUse> Ops,
-                                 SCEV::NoWrapFlags Flags);
+  SCEVUse getOrCreateMulExpr(ArrayRef<SCEVUse> Ops, SCEV::NoWrapFlags Flags,
+                             SCEV::NoWrapFlags UseFlags = SCEV::FlagAnyWrap);
 
   // Get addrec expr already created or create a new one.
-  const SCEV *getOrCreateAddRecExpr(ArrayRef<SCEVUse> Ops, const Loop *L,
-                                    SCEV::NoWrapFlags Flags);
+  SCEVUse getOrCreateAddRecExpr(ArrayRef<SCEVUse> Ops, const Loop *L,
+                                SCEV::NoWrapFlags Flags,
+                                SCEV::NoWrapFlags UseFlags = SCEV::FlagAnyWrap);
 
   /// Return x if \p Val is f(x) where f is a 1-1 function.
   const SCEV *stripInjectiveFunctions(const SCEV *Val) const;
@@ -2586,9 +2607,11 @@ public:
 class ScalarEvolutionPrinterPass
     : public RequiredPassInfoMixin<ScalarEvolutionPrinterPass> {
   raw_ostream &OS;
+  bool UseCtx;
 
 public:
-  explicit ScalarEvolutionPrinterPass(raw_ostream &OS) : OS(OS) {}
+  explicit ScalarEvolutionPrinterPass(raw_ostream &OS, bool UseCtx = false)
+      : OS(OS), UseCtx(UseCtx) {}
 
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
