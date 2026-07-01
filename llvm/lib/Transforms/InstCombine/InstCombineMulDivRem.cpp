@@ -1446,6 +1446,23 @@ Instruction *InstCombinerImpl::commonIDivTransforms(BinaryOperator &I) {
       return BinaryOperator::CreateNUWAdd(X,
                                           ConstantInt::get(Ty, C1->udiv(*C2)));
     }
+    Value *MulOp;
+    if (IsSigned && I.isExact() &&
+        match(Op0, m_Add(m_Value(MulOp), m_APInt(C1))) &&
+        match(MulOp, m_Mul(m_Value(X), m_SpecificInt(*C2))) &&
+        isMultiple(*C1, *C2, Quotient, IsSigned)) {
+      auto *MulOBO = cast<OverflowingBinaryOperator>(MulOp);
+      bool HasNSW = MulOBO->hasNoSignedWrap();
+      bool NUWAndNonNeg =
+          MulOBO->hasNoUnsignedWrap() && isKnownNonNegative(X, SQ);
+      if (HasNSW || NUWAndNonNeg) {
+        bool CanNSW = HasNSW && C2->abs().ugt(1);
+        auto *NewAdd =
+            BinaryOperator::CreateAdd(X, ConstantInt::get(Ty, Quotient));
+        NewAdd->setHasNoSignedWrap(CanNSW);
+        return NewAdd;
+      }
+    }
 
     if (!C2->isZero()) // avoid X udiv 0
       if (Instruction *FoldedDiv = foldBinOpIntoSelectOrPhi(I))

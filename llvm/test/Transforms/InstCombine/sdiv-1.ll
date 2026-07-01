@@ -29,3 +29,232 @@ define i32 @c(i32 %X) {
   %t1 = sdiv i32 %t0, -3
   ret i32 %t1
 }
+
+;=======positive tests==========
+define i8 @fold_basic(i8 %x) {
+; CHECK-LABEL: @fold_basic(
+; CHECK-NEXT:    [[D:%.*]] = add nsw i8 [[X:%.*]], -1
+; CHECK-NEXT:    ret i8 [[D]]
+;
+  %m = mul nsw i8 %x, 24
+  %a = add i8 %m, -24
+  %d = sdiv exact i8 %a, 24
+  ret i8 %d
+}
+
+
+define i8 @fold_positive_offset(i8 %x) {
+; CHECK-LABEL: @fold_positive_offset(
+; CHECK-NEXT:    [[D:%.*]] = add nsw i8 [[X:%.*]], 2
+; CHECK-NEXT:    ret i8 [[D]]
+;
+  %m = mul nsw i8 %x, 6
+  %a = add i8 %m, 12
+  %d = sdiv exact i8 %a, 6
+  ret i8 %d
+}
+
+
+define i8 @fold_divisor_one(i8 %x) {
+; CHECK-LABEL: @fold_divisor_one(
+; CHECK-NEXT:    [[A:%.*]] = add i8 [[X:%.*]], -1
+; CHECK-NEXT:    ret i8 [[A]]
+;
+  %m = mul nsw i8 %x, 1
+  %a = add i8 %m, -1
+  %d = sdiv exact i8 %a, 1
+  ret i8 %d
+}
+
+
+define i8 @fold_large_negative_offset(i8 %x) {
+; CHECK-LABEL: @fold_large_negative_offset(
+; CHECK-NEXT:    [[D:%.*]] = add nsw i8 [[X:%.*]], -3
+; CHECK-NEXT:    ret i8 [[D]]
+;
+  %m = mul nsw i8 %x, 6
+  %a = add i8 %m, -18
+  %d = sdiv exact i8 %a, 6
+  ret i8 %d
+}
+
+
+
+define i8 @fold_negative_divisor(i8 %x) {
+; CHECK-LABEL: @fold_negative_divisor(
+; CHECK-NEXT:    [[A_NEG:%.*]] = add i8 [[X:%.*]], -1
+; CHECK-NEXT:    ret i8 [[A_NEG]]
+;
+  %m = mul nsw i8 %x, -1
+  %a = add i8 %m, 1
+  %d = sdiv exact i8 %a, -1
+  ret i8 %d
+}
+
+
+
+define i8 @fold_commuted_add(i8 %x) {
+; CHECK-LABEL: @fold_commuted_add(
+; CHECK-NEXT:    [[D:%.*]] = add nsw i8 [[X:%.*]], -1
+; CHECK-NEXT:    ret i8 [[D]]
+;
+  %m = mul nsw i8 %x, 24
+  %a = add i8 -24, %m
+  %d = sdiv exact i8 %a, 24
+  ret i8 %d
+}
+
+
+define i8 @fold_nsw_propagated(i8 %x) {
+; CHECK-LABEL: @fold_nsw_propagated(
+; CHECK-NEXT:    [[D:%.*]] = add nsw i8 [[X:%.*]], -1
+; CHECK-NEXT:    ret i8 [[D]]
+;
+  %m = mul nsw i8 %x, 24
+  %a = add i8 %m, -24
+  %d = sdiv exact i8 %a, 24
+  ret i8 %d
+}
+
+
+define i8 @fold_nsw_not_propagated_c2_one(i8 %x) {
+; CHECK-LABEL: @fold_nsw_not_propagated_c2_one(
+; CHECK-NEXT:    [[A:%.*]] = add i8 [[X:%.*]], -1
+; CHECK-NEXT:    ret i8 [[A]]
+;
+  %m = mul nsw i8 %x, 1
+  %a = add i8 %m, -1
+  %d = sdiv exact i8 %a, 1
+  ret i8 %d
+}
+
+define <2 x i8> @fold_vector(<2 x i8> %x) {
+; CHECK-LABEL: @fold_vector(
+; CHECK-NEXT:    [[D:%.*]] = add nsw <2 x i8> [[X:%.*]], splat (i8 -1)
+; CHECK-NEXT:    ret <2 x i8> [[D]]
+;
+  %m = mul nsw <2 x i8> %x, <i8 24, i8 24>
+  %a = add <2 x i8> %m, <i8 -24, i8 -24>
+  %d = sdiv exact <2 x i8> %a, <i8 24, i8 24>
+  ret <2 x i8> %d
+}
+
+define i32 @fold_trunc_sext(i32 %x) {
+; CHECK-LABEL: @fold_trunc_sext(
+; CHECK-NEXT:    [[T:%.*]] = trunc nuw nsw i32 [[X:%.*]] to i8
+; CHECK-NEXT:    [[D:%.*]] = add nsw i8 [[T]], -1
+; CHECK-NEXT:    [[S:%.*]] = sext i8 [[D]] to i32
+; CHECK-NEXT:    ret i32 [[S]]
+;
+  %t = trunc nuw nsw i32 %x to i8
+  %m = mul nuw nsw i8 %t, 24
+  %a = add i8 %m, -24
+  %d = sdiv exact i8 %a, 24
+  %s = sext i8 %d to i32
+  ret i32 %s
+}
+
+;============Negative=================
+define i8 @no_fold_no_nsw(i8 %x) {
+; CHECK-LABEL: @no_fold_no_nsw(
+; CHECK-NEXT:    [[M:%.*]] = mul i8 [[X:%.*]], 6
+; CHECK-NEXT:    [[A:%.*]] = add i8 [[M]], -18
+; CHECK-NEXT:    [[D:%.*]] = sdiv exact i8 [[A]], 6
+; CHECK-NEXT:    ret i8 [[D]]
+;
+  %m = mul i8 %x, 6
+  %a = add i8 %m, -18
+  %d = sdiv exact i8 %a, 6
+  ret i8 %d
+}
+
+
+define i8 @no_fold_nuw_only(i8 %x) {
+; CHECK-LABEL: @no_fold_nuw_only(
+; CHECK-NEXT:    [[M:%.*]] = mul nuw i8 [[X:%.*]], 6
+; CHECK-NEXT:    [[A:%.*]] = add i8 [[M]], -18
+; CHECK-NEXT:    [[D:%.*]] = sdiv exact i8 [[A]], 6
+; CHECK-NEXT:    ret i8 [[D]]
+;
+  %m = mul nuw i8 %x, 6
+  %a = add i8 %m, -18
+  %d = sdiv exact i8 %a, 6
+  ret i8 %d
+}
+
+
+define i8 @no_fold_not_exact(i8 %x) {
+; CHECK-LABEL: @no_fold_not_exact(
+; CHECK-NEXT:    [[M:%.*]] = mul nsw i8 [[X:%.*]], 24
+; CHECK-NEXT:    [[A:%.*]] = add i8 [[M]], -24
+; CHECK-NEXT:    [[D:%.*]] = sdiv i8 [[A]], 24
+; CHECK-NEXT:    ret i8 [[D]]
+;
+  %m = mul nsw i8 %x, 24
+  %a = add i8 %m, -24
+  %d = sdiv i8 %a, 24
+  ret i8 %d
+}
+
+
+define i8 @no_fold_non_multiple(i8 %x) {
+; CHECK-LABEL: @no_fold_non_multiple(
+; CHECK-NEXT:    ret i8 poison
+;
+  %m = mul nsw i8 %x, 24
+  %a = add i8 %m, -25
+  %d = sdiv exact i8 %a, 24
+  ret i8 %d
+}
+
+define i8 @no_fold_udiv(i8 %x) {
+; CHECK-LABEL: @no_fold_udiv(
+; CHECK-NEXT:    [[M:%.*]] = mul nuw i8 [[X:%.*]], 24
+; CHECK-NEXT:    [[A:%.*]] = add i8 [[M]], 24
+; CHECK-NEXT:    [[D:%.*]] = udiv exact i8 [[A]], 24
+; CHECK-NEXT:    ret i8 [[D]]
+;
+  %m = mul nuw i8 %x, 24
+  %a = add i8 %m, 24
+  %d = udiv exact i8 %a, 24
+  ret i8 %d
+}
+
+
+define i8 @src(i8 %x) {
+; CHECK-LABEL: @src(
+; CHECK-NEXT:    [[M:%.*]] = mul i8 [[X:%.*]], 6
+; CHECK-NEXT:    [[A:%.*]] = add i8 [[M]], -18
+; CHECK-NEXT:    [[D:%.*]] = sdiv exact i8 [[A]], 6
+; CHECK-NEXT:    ret i8 [[D]]
+;
+  %m = mul i8 %x, 6
+  %a = add i8 238, %m
+  %d = sdiv exact i8 %a, 6
+  ret i8 %d
+}
+
+define i8 @no_fold_divisor_mismatch(i8 %x) {
+; CHECK-LABEL: @no_fold_divisor_mismatch(
+; CHECK-NEXT:    [[M:%.*]] = mul nsw i8 [[X:%.*]], 24
+; CHECK-NEXT:    [[A:%.*]] = add i8 [[M]], -6
+; CHECK-NEXT:    [[D:%.*]] = sdiv exact i8 [[A]], 6
+; CHECK-NEXT:    ret i8 [[D]]
+;
+  %m = mul nsw i8 %x, 24
+  %a = add i8 %m, -6
+  %d = sdiv exact i8 %a, 6
+  ret i8 %d
+}
+
+define i8 @no_fold_wrong_shape(i8 %x, i8 %y) {
+; CHECK-LABEL: @no_fold_wrong_shape(
+; CHECK-NEXT:    [[A:%.*]] = add i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[D:%.*]] = sdiv exact i8 [[A]], 24
+; CHECK-NEXT:    ret i8 [[D]]
+;
+  %a = add i8 %x, %y
+  %d = sdiv exact i8 %a, 24
+  ret i8 %d
+}
+
