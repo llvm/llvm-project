@@ -53,7 +53,7 @@
 // CHECK-LABEL: func.func @_QPzero_extent_runtime_fallback
 // CHECK-NOT: fir.if
 // CHECK-NOT: fir.do_loop
-// CHECK: hlfir.assign %{{.*}} to %{{.*}} : !fir.box<!fir.ptr<!fir.array<0xi32>>>, !fir.box<!fir.ptr<!fir.array<0xi32>>>
+// CHECK: hlfir.assign %{{.*}} to %{{.*}} {fir.keep_runtime_assign} : !fir.box<!fir.ptr<!fir.array<0xi32>>>, !fir.box<!fir.ptr<!fir.array<0xi32>>>
 // CHECK: return
 
 // CONVERT-LABEL: func.func @_QPzero_extent_runtime_fallback
