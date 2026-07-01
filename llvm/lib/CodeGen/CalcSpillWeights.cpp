@@ -30,6 +30,12 @@ using namespace llvm;
 
 #define DEBUG_TYPE "calcspillweights"
 
+cl::opt<bool> AllowRematerializePhysReg(
+    "allow-rematerialize-phys-reg",
+    cl::desc("Allow rematerialize instructions with physical register "
+             "definition, like POPCNT on x86 can write EFLAGS register."),
+    cl::init(false), cl::Hidden);
+
 void VirtRegAuxInfo::calculateSpillWeightsAndHints() {
   LLVM_DEBUG(dbgs() << "********** Compute Spill Weights **********\n"
                     << "********** Function: " << MF.getName() << '\n');
@@ -146,16 +152,43 @@ bool VirtRegAuxInfo::isRematerializable(const LiveInterval &LI,
   return true;
 }
 
-bool VirtRegAuxInfo::allUsesAvailableAt(const MachineInstr *MI,
+bool VirtRegAuxInfo::allUsesAvailableAt(const MachineInstr *OrigMI,
                                         SlotIndex UseIdx,
                                         const LiveIntervals &LIS,
                                         const MachineRegisterInfo &MRI,
                                         const TargetInstrInfo &TII) {
-  SlotIndex OrigIdx = LIS.getInstructionIndex(*MI).getRegSlot(true);
+  SlotIndex OrigIdx = LIS.getInstructionIndex(*OrigMI).getRegSlot(true);
+  auto MBB = LIS.getMBBFromIndex(UseIdx);
+  MachineInstr *UseMI = LIS.getInstructionFromIndex(UseIdx);
+  MachineBasicBlock::iterator UseIt = UseMI;
+  if (!UseMI) {
+    if (MBB->empty() ||
+        UseIdx < LIS.getInstructionIndex(*MBB->begin()).getBaseIndex())
+      UseIt = MBB->begin();
+    else {
+      UseIt = MBB->end();
+    }
+  }
   UseIdx = std::max(UseIdx, UseIdx.getRegSlot(true));
-  for (const MachineOperand &MO : MI->operands()) {
-    if (!MO.isReg() || !MO.getReg() || !MO.readsReg())
+
+  for (const MachineOperand &MO : OrigMI->operands()) {
+    if (!MO.isReg() || !MO.getReg())
       continue;
+
+    if (!MO.readsReg()) {
+      if (MO.getReg().isVirtual() || !AllowRematerializePhysReg)
+        continue;
+      // A physical register is defined here, and we allow rematerialization of
+      // an instruction with physical register definition, it must be dead at
+      // this position.
+      const TargetRegisterInfo *TRI = MRI.getTargetRegisterInfo();
+      if ((MBB->computeRegisterLiveness(TRI, MO.getReg(), UseIt) ==
+           MachineBasicBlock::LQR_Dead) ||
+          TII.canRematerializeIgnorePhysRegDef(*OrigMI, MO))
+        continue;
+      else
+        return false;
+    }
 
     // We can't remat physreg uses, unless it is a constant or target wants
     // to ignore this use.

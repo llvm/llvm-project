@@ -57,6 +57,8 @@ static cl::opt<unsigned int> MaxAccumulatorWidth(
     "acc-max-width", cl::Hidden, cl::init(3),
     cl::desc("Maximum number of branches in the accumulator tree"));
 
+extern cl::opt<bool> AllowRematerializePhysReg;
+
 TargetInstrInfo::~TargetInstrInfo() = default;
 
 const TargetRegisterClass *TargetInstrInfo::getRegClass(const MCInstrDesc &MCID,
@@ -1660,8 +1662,10 @@ bool TargetInstrInfo::isReMaterializableImpl(
         if (!MRI.isConstantPhysReg(Reg))
           return false;
       } else {
-        // A physreg def. We can't remat it.
-        return false;
+        // If a physreg def is allowed, we must make sure it is dead at the use
+        // site.
+        if (!AllowRematerializePhysReg)
+          return false;
       }
       continue;
     }
