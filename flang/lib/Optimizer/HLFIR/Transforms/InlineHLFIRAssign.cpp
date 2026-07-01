@@ -20,6 +20,7 @@
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/HLFIR/Passes.h"
 #include "flang/Optimizer/OpenMP/Passes.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/LLVM.h"
@@ -41,6 +42,109 @@ static llvm::cl::opt<bool> inlineAllocatableExprAssignFlag(
     llvm::cl::init(false));
 
 namespace {
+constexpr llvm::StringLiteral keepRuntimeAssignAttrName =
+    "fir.keep_runtime_assign";
+
+std::optional<mlir::Value> genConformingAddressBasedDisjointnessCheck(
+    mlir::Location loc, fir::FirOpBuilder &builder, mlir::Value lhsRef,
+    mlir::Value rhsRef) {
+  if (!mlir::isa<fir::BaseBoxType>(lhsRef.getType()) ||
+      !mlir::isa<fir::BaseBoxType>(rhsRef.getType()))
+    return std::nullopt;
+
+  mlir::Type idxTy = builder.getIndexType();
+  mlir::Type intPtrTy = builder.getIntPtrType();
+
+  struct BoxRange {
+    mlir::Value start;
+    mlir::Value end;
+    llvm::SmallVector<mlir::Value> extents;
+  };
+
+  auto computeRange = [&](mlir::Value box) -> BoxRange {
+    mlir::Value baseAddr = fir::BoxAddrOp::create(builder, loc, box);
+    mlir::Value baseInt =
+        fir::ConvertOp::create(builder, loc, intPtrTy, baseAddr);
+
+    mlir::Value eleSize = fir::BoxEleSizeOp::create(builder, loc, idxTy, box);
+    mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
+    mlir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
+
+    mlir::Value least = zero;
+    mlir::Value most = zero;
+
+    auto boxTy = mlir::cast<fir::BaseBoxType>(box.getType());
+    unsigned rank = 0;
+    if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(
+            fir::unwrapRefType(boxTy.getEleTy())))
+      rank = seqTy.getShape().size();
+
+    if (rank == 0)
+      return {};
+
+    llvm::SmallVector<mlir::Value> extents;
+    for (unsigned dim = 0; dim < rank; ++dim) {
+      mlir::Value dimVal = builder.createIntegerConstant(loc, idxTy, dim);
+      auto dims = fir::BoxDimsOp::create(builder, loc, idxTy, idxTy, idxTy, box,
+                                         dimVal);
+      mlir::Value extent = dims.getExtent();
+      mlir::Value stride = dims.getByteStride();
+      extents.push_back(extent);
+
+      mlir::Value extentM1 =
+          mlir::arith::SubIOp::create(builder, loc, extent, one);
+      mlir::Value dimOffset =
+          mlir::arith::MulIOp::create(builder, loc, extentM1, stride);
+
+      mlir::Value isStrideNeg = mlir::arith::CmpIOp::create(
+          builder, loc, mlir::arith::CmpIPredicate::slt, stride, zero);
+      mlir::Value addToLeast = mlir::arith::SelectOp::create(
+          builder, loc, isStrideNeg, dimOffset, zero);
+      mlir::Value addToMost = mlir::arith::SelectOp::create(
+          builder, loc, isStrideNeg, zero, dimOffset);
+      least = mlir::arith::AddIOp::create(builder, loc, least, addToLeast);
+      most = mlir::arith::AddIOp::create(builder, loc, most, addToMost);
+    }
+
+    mlir::Value eleSizeM1 =
+        mlir::arith::SubIOp::create(builder, loc, eleSize, one);
+    most = mlir::arith::AddIOp::create(builder, loc, most, eleSizeM1);
+
+    mlir::Value leastInt =
+        fir::ConvertOp::create(builder, loc, intPtrTy, least);
+    mlir::Value mostInt = fir::ConvertOp::create(builder, loc, intPtrTy, most);
+    mlir::Value rangeStart =
+        mlir::arith::AddIOp::create(builder, loc, baseInt, leastInt);
+    mlir::Value rangeEnd =
+        mlir::arith::AddIOp::create(builder, loc, baseInt, mostInt);
+    return {rangeStart, rangeEnd, extents};
+  };
+
+  BoxRange lhsRange = computeRange(lhsRef);
+  BoxRange rhsRange = computeRange(rhsRef);
+  if (!lhsRange.start || !rhsRange.start ||
+      lhsRange.extents.size() != rhsRange.extents.size())
+    return std::nullopt;
+
+  mlir::Value cond1 =
+      mlir::arith::CmpIOp::create(builder, loc, mlir::arith::CmpIPredicate::ult,
+                                  lhsRange.end, rhsRange.start);
+  mlir::Value cond2 =
+      mlir::arith::CmpIOp::create(builder, loc, mlir::arith::CmpIPredicate::ult,
+                                  rhsRange.end, lhsRange.start);
+  mlir::Value disjoint = mlir::arith::OrIOp::create(builder, loc, cond1, cond2);
+
+  mlir::Value sameShape = builder.createBool(loc, true);
+  for (unsigned i = 0, e = lhsRange.extents.size(); i < e; ++i) {
+    mlir::Value sameExtent = mlir::arith::CmpIOp::create(
+        builder, loc, mlir::arith::CmpIPredicate::eq, lhsRange.extents[i],
+        rhsRange.extents[i]);
+    sameShape =
+        mlir::arith::AndIOp::create(builder, loc, sameShape, sameExtent);
+  }
+  return mlir::arith::AndIOp::create(builder, loc, sameShape, disjoint);
+}
+
 /// Expand hlfir.assign of array RHS to array LHS into a loop nest
 /// of element-by-element assignments. Also handles scalar RHS broadcast
 /// to an array LHS; scalar RHS values are evaluated before the loop.
@@ -74,6 +178,9 @@ public:
   llvm::LogicalResult
   matchAndRewrite(hlfir::AssignOp assign,
                   mlir::PatternRewriter &rewriter) const override {
+    if (assign->hasAttr(keepRuntimeAssignAttrName))
+      return rewriter.notifyMatchFailure(assign, "kept as runtime assignment");
+
     if (assign.isAllocatableAssignment())
       return rewriter.notifyMatchFailure(assign,
                                          "AssignOp may imply allocation");
@@ -103,11 +210,10 @@ public:
       return rewriter.notifyMatchFailure(assign,
                                          "RHS/LHS element types mismatch");
 
+    bool needRuntimeDisjointnessCheck = false;
     if (rhs.isArray() && !mlir::isa<hlfir::ExprType>(rhs.getType())) {
       // If RHS is not an hlfir.expr, then we should prove that
       // LHS and RHS do not alias.
-      // TODO: if they may alias, we can insert hlfir.as_expr for RHS,
-      // and proceed with the inlining.
       fir::AliasAnalysis aliasAnalysis;
       mlir::AliasResult aliasRes = aliasAnalysis.alias(lhs, rhs);
       if (!aliasRes.isNo()) {
@@ -121,7 +227,7 @@ public:
                                   << "\tLHS: " << lhs << "\n"
                                   << "\tRHS: " << rhs << "\n"
                                   << "\tALIAS: " << aliasRes << "\n");
-          return rewriter.notifyMatchFailure(assign, "RHS/LHS may alias");
+          needRuntimeDisjointnessCheck = true;
         }
       }
     }
@@ -129,6 +235,36 @@ public:
     mlir::Location loc = assign->getLoc();
     fir::FirOpBuilder builder(rewriter, assign.getOperation());
     builder.setInsertionPoint(assign);
+
+    mlir::ArrayAttr accessGroups;
+    if (auto attrs = assign.getOperation()->getAttrOfType<mlir::ArrayAttr>(
+            fir::getAccessGroupsAttrName()))
+      accessGroups = attrs;
+
+    const bool useWorkshare = flangomp::shouldUseWorkshareLowering(assign);
+    auto emitAssignFrom = [&](hlfir::Entity rhsEntity) {
+      hlfir::genNoAliasArrayAssignment(loc, builder, rhsEntity, lhs,
+                                       useWorkshare,
+                                       /*temporaryLHS=*/false,
+                                       /*combiner=*/nullptr, accessGroups);
+    };
+
+    if (needRuntimeDisjointnessCheck) {
+      std::optional<mlir::Value> inlineGuard =
+          genConformingAddressBasedDisjointnessCheck(loc, builder, lhs, rhs);
+      if (!inlineGuard)
+        return rewriter.notifyMatchFailure(assign, "RHS/LHS may alias");
+
+      builder.genIfThenElse(loc, *inlineGuard)
+          .genThen([&]() { emitAssignFrom(rhs); })
+          .genElse([&]() {
+            mlir::Operation *fallback = builder.clone(*assign.getOperation());
+            fallback->setAttr(keepRuntimeAssignAttrName, builder.getUnitAttr());
+          })
+          .end();
+      rewriter.eraseOp(assign);
+      return mlir::success();
+    }
 
     // Materialize scalar RHS before the assignment loop. Fortran 10.2.1.3
     // requires that the RHS expression is fully evaluated before any part
@@ -138,13 +274,7 @@ public:
     if (!rhs.isArray())
       rhs = hlfir::loadTrivialScalar(loc, builder, rhs);
 
-    mlir::ArrayAttr accessGroups;
-    if (auto attrs = assign.getOperation()->getAttrOfType<mlir::ArrayAttr>(
-            fir::getAccessGroupsAttrName()))
-      accessGroups = attrs;
-    hlfir::genNoAliasArrayAssignment(
-        loc, builder, rhs, lhs, flangomp::shouldUseWorkshareLowering(assign),
-        /*temporaryLHS=*/false, /*combiner=*/nullptr, accessGroups);
+    emitAssignFrom(rhs);
     rewriter.eraseOp(assign);
     return mlir::success();
   }
