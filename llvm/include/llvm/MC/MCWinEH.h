@@ -23,17 +23,22 @@ namespace WinEH {
 struct Instruction {
   const MCSymbol *Label;
   unsigned Offset;
-  unsigned Register;
-  unsigned Operation;
+  uint16_t Register;
+  uint16_t Register2; // For 2-register ops (e.g. PUSH2)
+  uint8_t Operation;
 
   Instruction(unsigned Op, MCSymbol *L, unsigned Reg, unsigned Off)
-    : Label(L), Offset(Off), Register(Reg), Operation(Op) {}
+      : Label(L), Offset(Off), Register(Reg), Register2(0), Operation(Op) {}
+
+  Instruction(unsigned Op, MCSymbol *L, unsigned Reg1, unsigned Reg2,
+              unsigned Off)
+      : Label(L), Offset(Off), Register(Reg1), Register2(Reg2), Operation(Op) {}
 
   bool operator==(const Instruction &I) const {
     // Check whether two instructions refer to the same operation
     // applied at a different spot (i.e. pointing at a different label).
     return Offset == I.Offset && Register == I.Register &&
-           Operation == I.Operation;
+           Register2 == I.Register2 && Operation == I.Operation;
   }
   bool operator!=(const Instruction &I) const { return !(*this == I); }
 };
@@ -59,7 +64,7 @@ struct FrameInfo {
   uint8_t Version = DefaultVersion;
 
   int LastFrameInst = -1;
-  const FrameInfo *ChainedParent = nullptr;
+  FrameInfo *ChainedParent = nullptr;
   std::vector<Instruction> Instructions;
   struct Epilog {
     std::vector<Instruction> Instructions;
@@ -90,9 +95,9 @@ struct FrameInfo {
   FrameInfo(const MCSymbol *Function, const MCSymbol *BeginFuncEHLabel)
       : Begin(BeginFuncEHLabel), Function(Function) {}
   FrameInfo(const MCSymbol *Function, const MCSymbol *BeginFuncEHLabel,
-            const FrameInfo *ChainedParent)
+            FrameInfo *ChainedParent)
       : Begin(BeginFuncEHLabel), Function(Function),
-        ChainedParent(ChainedParent) {}
+        Version(ChainedParent->Version), ChainedParent(ChainedParent) {}
 
   bool empty() const {
     if (!Instructions.empty())

@@ -24,7 +24,8 @@ int array2[recurse2]; // both-warning {{variable length arrays in C++}} \
                       // ref-warning {{variable length array folded to constant array as an extension}}
 
 constexpr int b = b; // both-error {{must be initialized by a constant expression}} \
-                     // both-note {{read of object outside its lifetime is not allowed in a constant expression}}
+                     // both-note {{read of object outside its lifetime is not allowed in a constant expression}} \
+                     // both-note {{declared here}}
 
 
 [[clang::require_constant_initialization]] int c = c; // both-error {{variable does not have a constant initializer}} \
@@ -32,6 +33,10 @@ constexpr int b = b; // both-error {{must be initialized by a constant expressio
                                                       // both-note {{read of non-const variable}} \
                                                       // both-note {{declared here}}
 
+
+  void func();
+  constexpr int (&fp4)() = (int(&)())func; // both-error {{constant expression}} \
+                                           // both-note {{reinterpret_cast}}
 
 struct S {
   int m;
@@ -338,7 +343,18 @@ namespace ReadMutableInCopyCtor {
   constexpr G g1 = {};
   constexpr G g2 = g1; // both-error {{must be initialized by a constant expression}} \
                        // both-note {{read of mutable member 'u'}} \
+                       // expected-note {{in call to 'U(g1.u)'}} \
                        // both-note {{in call to 'G(g1)'}}
+}
+
+namespace ReadAnonUnionInCopyCtor {
+  struct G {
+    struct X {};
+    union U { X a; };
+    union {X a; };
+  };
+  constexpr G g1 = {};
+  constexpr G g2 = g1;
 }
 
 namespace GH150709 {
@@ -349,7 +365,7 @@ namespace GH150709 {
   struct E : C { };
   struct F : D { };
   struct G : E { };
-  
+
   constexpr C c1, c2[2];
   constexpr D d1, d2[2];
   constexpr E e1, e2[2];
@@ -362,13 +378,13 @@ namespace GH150709 {
   static_assert((c1.*mp)() == 1, ""); // both-error {{constant expression}}
   static_assert((d1.*mp)() == 1, "");
   static_assert((f.*mp)() == 1, "");
-  static_assert((c2[0].*mp)() == 1, ""); // ref-error {{constant expression}}
+  static_assert((c2[0].*mp)() == 1, ""); // both-error {{constant expression}}
   static_assert((d2[0].*mp)() == 1, "");
 
   // incorrectly undiagnosed before fix of GH150709
-  static_assert((e1.*mp)() == 1, ""); // ref-error {{constant expression}}
-  static_assert((e2[0].*mp)() == 1, ""); // ref-error {{constant expression}}
-  static_assert((g.*mp)() == 1, ""); // ref-error {{constant expression}}
+  static_assert((e1.*mp)() == 1, ""); // both-error {{constant expression}}
+  static_assert((e2[0].*mp)() == 1, ""); // both-error {{constant expression}}
+  static_assert((g.*mp)() == 1, ""); // both-error {{constant expression}}
 }
 
 namespace DiscardedAddrLabel {
@@ -389,13 +405,12 @@ constexpr int PassByValue(Counter c) { return c.copies; }
 static_assert(PassByValue(Counter(0)) == 0, "expect no copies");
 
 namespace PointerCast {
-  /// The two interpreters disagree here.
   struct S { int x, y; } s;
   constexpr S* sptr = &s;
   struct U {};
   struct Str {
-    int e : (Str*)(sptr) == (Str*)(sptr); // expected-error {{not an integral constant expression}} \
-                                          // expected-note {{cast that performs the conversions of a reinterpret_cast}}
+    int e : (Str*)(sptr) == (Str*)(sptr);
+    int f : &(U&)(*sptr) == &(U&)(*sptr);
   };
 }
 
@@ -418,4 +433,45 @@ namespace DummyToGlobalBlockMove {
   const AP Bar::m = {0, &Bar::_m[0]};
   Baz Bar::_m[] = {{0}};
   const AP m = {&Bar ::m};
+}
+
+namespace AddSubMulNonNumber {
+#define fold(x) (__builtin_constant_p(x) ? (x) : (x))
+
+  typedef decltype(sizeof(int)) LabelDiffTy;
+  constexpr LabelDiffTy mulBy3(LabelDiffTy x) { return x * 3; } // both-note {{subexpression}}
+  void LabelDiffTest() {
+    static_assert(mulBy3(fold((LabelDiffTy)&&a-(LabelDiffTy)&&b)) == 3, ""); // both-error {{constant expression}} \
+                                                                             // both-note {{call to 'mulBy3(&&a - &&b)'}}
+    a:b:return;
+  }
+}
+
+namespace SubobjectCompare {
+  struct S {
+    int i;
+  };
+  constexpr S s[2] = {};
+  static_assert(&s[0].i < &s[1].i, "");
+  static_assert(&s[0].i != &s[1].i, "");
+  static_assert(!(&s[0] < &s[0]), "");
+
+  class A            { public: int a; };
+  class B : public A { public: int b; };
+  class C : public B {                };
+  constexpr C c{};
+  static_assert(&c.a < &c.b, ""); // both-error {{not an integral constant expression}} \
+                                  // both-note {{comparison of address of base class subobject 'A' of class 'B' to field 'b' has unspecified value}}
+  static_assert(&c.a != &c.b, "");
+
+  class X { public: int x; };
+  class Y { public: int y; };
+  class Z : public X, public Y {};
+  constexpr Z z{};
+  static_assert(&z.x < &z.y, ""); // both-error {{not an integral constant expression}} \
+                                  // both-note {{comparison of addresses of subobjects of different base classes has unspecified value}}
+  static_assert(&z.x != &z.y, "");
+  static_assert((void*)(X*)&z < (void*)(Y*)&z, ""); // both-error {{not an integral constant expression}} \
+                                                    // both-note {{comparison of addresses of subobjects of different base classes has unspecified value}}
+  static_assert((void*)(X*)&z != (void*)(Y*)&z, "");
 }

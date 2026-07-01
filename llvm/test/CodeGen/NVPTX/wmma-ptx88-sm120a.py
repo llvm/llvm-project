@@ -1,5 +1,5 @@
 # Check all variants of instructions supported by PTX88 on SM120a
-# RUN: %python %s --ptx=88 --gpu-arch=120 --aa > %t-ptx88-sm_120a.ll
+# RUN: %python %s --ptx=88 --gpu-arch=120a > %t-ptx88-sm_120a.ll
 # RUN: llc < %t-ptx88-sm_120a.ll -mtriple=nvptx64 -mcpu=sm_120a -mattr=+ptx88 \
 # RUN:           | FileCheck %t-ptx88-sm_120a.ll
 # RUN: %if ptxas-sm_120a && ptxas-isa-8.8 %{                                  \

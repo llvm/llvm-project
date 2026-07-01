@@ -83,7 +83,7 @@ collectPrivatizingConstructs(llvm::SmallSet<Directive, 16> &Constructs,
   llvm::SmallSet<Clause, 16> Privatizing;
   for (auto C :
        llvm::enum_seq_inclusive<Clause>(Clause::First_, Clause::Last_)) {
-    if (isPrivatizingClause(C))
+    if (isPrivatizingClause(C, Version))
       Privatizing.insert(C);
   }
 
@@ -226,6 +226,12 @@ bool isPrivatizingConstruct(Directive D, unsigned Version) {
   // parallel, scope, sections, simd, single, target, target_data, task,
   // taskgroup, taskloop, and teams.
   return llvm::is_contained(Privatizing, D);
+}
+
+ArrayRef<StringRef> getReservedLocatorNames() {
+  // All names must be lowercase.
+  static StringRef names[]{"omp_all_memory"};
+  return names;
 }
 
 std::string prettifyFunctionName(StringRef FunctionName) {

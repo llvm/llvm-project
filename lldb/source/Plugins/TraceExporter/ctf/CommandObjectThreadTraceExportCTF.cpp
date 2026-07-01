@@ -89,7 +89,7 @@ void CommandObjectThreadTraceExportCTF::DoExecute(Args &command,
     };
 
     if (llvm::Error err = do_work()) {
-      result.AppendErrorWithFormat("%s\n", toString(std::move(err)).c_str());
+      result.AppendErrorWithFormat("%s", toString(std::move(err)).c_str());
     }
   }
 }

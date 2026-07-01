@@ -46,6 +46,8 @@ static const unsigned WebAssemblyAddrSpaceMap[] = {
     0,  // hlsl_private
     0,  // hlsl_device
     0,  // hlsl_input
+    0,  // hlsl_output
+    0,  // hlsl_push_constant
     20, // wasm_funcref
 };
 
@@ -61,15 +63,19 @@ class LLVM_LIBRARY_VISIBILITY WebAssemblyTargetInfo : public TargetInfo {
   bool HasBulkMemory = false;
   bool HasBulkMemoryOpt = false;
   bool HasCallIndirectOverlong = false;
+  bool HasCooperativeThreading = false;
+  bool HasCompactImports = false;
   bool HasExceptionHandling = false;
   bool HasExtendedConst = false;
   bool HasFP16 = false;
   bool HasGC = false;
+  bool HasLibcallThreadContext = false;
   bool HasMultiMemory = false;
   bool HasMultivalue = false;
   bool HasMutableGlobals = false;
   bool HasNontrappingFPToInt = false;
   bool HasReferenceTypes = false;
+  bool HasRelaxedAtomics = false;
   bool HasSignExt = false;
   bool HasTailCall = false;
   bool HasWideArithmetic = false;
@@ -80,6 +86,7 @@ public:
   explicit WebAssemblyTargetInfo(const llvm::Triple &T, const TargetOptions &)
       : TargetInfo(T) {
     AddrSpaceMap = &WebAssemblyAddrSpaceMap;
+    UseAddrSpaceMapMangling = true;
     NoAsmVariants = true;
     SuitableAlign = 128;
     LargeArrayMinWidth = 128;
@@ -104,6 +111,10 @@ public:
       SizeType = UnsignedLong;
       PtrDiffType = SignedLong;
       IntPtrType = SignedLong;
+    }
+    if (T.getOS() == llvm::Triple::WASIp3) {
+      HasLibcallThreadContext = true;
+      HasCooperativeThreading = true;
     }
   }
 
@@ -134,7 +145,7 @@ private:
   bool isValidCPUName(StringRef Name) const final;
   void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const final;
 
-  bool setCPU(const std::string &Name) final { return isValidCPUName(Name); }
+  bool setCPU(StringRef Name) final { return isValidCPUName(Name); }
 
   llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const final;
 
@@ -178,7 +189,7 @@ private:
     case CC_Swift:
       return CCCR_OK;
     case CC_SwiftAsync:
-      return CCCR_Error;
+      return HasTailCall ? CCCR_OK : CCCR_Error;
     default:
       return CCCR_Warning;
     }
@@ -198,13 +209,7 @@ public:
   explicit WebAssembly32TargetInfo(const llvm::Triple &T,
                                    const TargetOptions &Opts)
       : WebAssemblyTargetInfo(T, Opts) {
-    if (T.isOSEmscripten())
-      resetDataLayout(
-          "e-m:e-p:32:32-p10:8:8-p20:8:8-i64:64-i128:128-f128:64-n32:64-"
-          "S128-ni:1:10:20");
-    else
-      resetDataLayout("e-m:e-p:32:32-p10:8:8-p20:8:8-i64:64-i128:128-n32:64-"
-                      "S128-ni:1:10:20");
+    resetDataLayout();
   }
 
 protected:
@@ -223,13 +228,7 @@ public:
     SizeType = UnsignedLong;
     PtrDiffType = SignedLong;
     IntPtrType = SignedLong;
-    if (T.isOSEmscripten())
-      resetDataLayout(
-          "e-m:e-p:64:64-p10:8:8-p20:8:8-i64:64-i128:128-f128:64-n32:64-"
-          "S128-ni:1:10:20");
-    else
-      resetDataLayout("e-m:e-p:64:64-p10:8:8-p20:8:8-i64:64-i128:128-n32:64-"
-                      "S128-ni:1:10:20");
+    resetDataLayout();
   }
 
 protected:

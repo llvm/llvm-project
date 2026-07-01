@@ -29,7 +29,7 @@ llvm.func @target_allocatable_(%arg0: !llvm.ptr {fir.bindc_name = "lb"}, %arg1: 
   %53 = omp.map.info var_ptr(%7 : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !llvm.ptr {name = "mapped_var"}
   %54 = omp.map.info var_ptr(%13 : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>) map_clauses(to) capture(ByRef) -> !llvm.ptr
   %55 = omp.map.info var_ptr(%14 : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>) map_clauses(to) capture(ByRef) -> !llvm.ptr
-  omp.target map_entries(%53 -> %arg3, %54 -> %arg4, %55 ->%arg5 : !llvm.ptr, !llvm.ptr, !llvm.ptr) private(@box.heap_privatizer0 %13 -> %arg6 [map_idx=1], @box.heap_privatizer1 %14 -> %arg7  [map_idx=2]: !llvm.ptr, !llvm.ptr) {
+  omp.target kernel_type(generic) map_entries(%53 -> %arg3, %54 -> %arg4, %55 ->%arg5 : !llvm.ptr, !llvm.ptr, !llvm.ptr) private(@box.heap_privatizer0 %13 -> %arg6 [map_idx=1], @box.heap_privatizer1 %14 -> %arg7  [map_idx=2]: !llvm.ptr, !llvm.ptr) {
     llvm.call @use_private_var0(%arg6) : (!llvm.ptr) -> ()
     llvm.call @use_private_var1(%arg7) : (!llvm.ptr) -> ()
     omp.terminator
@@ -49,11 +49,11 @@ llvm.func @use_private_var1(!llvm.ptr) -> ()
 // CHECK: %[[DESC_ALLOC0:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8 }, i64 1
 // CHECK: %[[DESC_ALLOC1:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8 }, i64 1
 // CHECK: call void @__omp_offloading_[[OFFLOADED_FUNCTION:.*]](ptr {{[^,]+}},
-// CHECK-SAME: ptr %[[DESC_ALLOC0]], ptr %[[DESC_ALLOC1]])
+// CHECK-SAME: ptr %[[DESC_ALLOC0]], ptr %[[DESC_ALLOC1]], ptr null)
 
 // CHECK: define internal void @__omp_offloading_[[OFFLOADED_FUNCTION]]
 // CHECK-SAME: (ptr {{[^,]+}}, ptr %[[DESCRIPTOR_ARG0:[^,]+]],
-// CHECK-SAME: ptr %[[DESCRIPTOR_ARG1:.*]]) {
+// CHECK-SAME: ptr %[[DESCRIPTOR_ARG1:[^,]+]], ptr %{{.*}}) {
 
 // `var0` privatrizer `alloc`
 // CHECK: %[[PRIV_DESC0:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8 }

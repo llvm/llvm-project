@@ -19,7 +19,7 @@
 
 #include <__cxxabi_config.h>
 
-#define _LIBCPPABI_VERSION 15000
+#define _LIBCPPABI_VERSION 230000
 #define _LIBCXXABI_NORETURN  __attribute__((noreturn))
 #define _LIBCXXABI_ALWAYS_COLD __attribute__((cold))
 
@@ -31,7 +31,7 @@ class _LIBCXXABI_TYPE_VIS type_info; // forward declaration
 #else
 class type_info; // forward declaration
 #endif
-}
+} // namespace std
 
 
 // runtime routines use C calling conventions, but are in __cxxabiv1 namespace

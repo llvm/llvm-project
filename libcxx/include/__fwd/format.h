@@ -11,28 +11,45 @@
 #define _LIBCPP___FWD_FORMAT_H
 
 #include <__config>
-#include <__iterator/concepts.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 20
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Context>
 class basic_format_arg;
 
 template <class _OutIt, class _CharT>
-  requires output_iterator<_OutIt, const _CharT&>
 class basic_format_context;
 
 template <class _Tp, class _CharT = char>
 struct formatter;
 
-#endif // _LIBCPP_STD_VER >= 20
+#  if _LIBCPP_STD_VER >= 23
+
+_LIBCPP_DIAGNOSTIC_PUSH
+_LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wshadow")
+_LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wshadow")
+// This shadows map, set, and string.
+enum class range_format { disabled, map, set, sequence, string, debug_string };
+_LIBCPP_DIAGNOSTIC_POP
+
+template <class _Rp>
+constexpr range_format format_kind = [] {
+  // [format.range.fmtkind]/1
+  // A program that instantiates the primary template of format_kind is ill-formed.
+  static_assert(sizeof(_Rp) != sizeof(_Rp), "create a template specialization of format_kind for your type");
+  return range_format::disabled;
+}();
+
+#  endif // _LIBCPP_STD_VER >= 23
 
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 20
 
 #endif // _LIBCPP___FWD_FORMAT_H

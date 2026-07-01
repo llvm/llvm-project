@@ -4,6 +4,7 @@
 
 """Helper macros to configure the LLVM overlay project."""
 
+# Should be kept in sync with LLVM_ALL_TARGETS in llvm/CMakeLists.txt
 DEFAULT_TARGETS = [
     "AArch64",
     "AMDGPU",
@@ -197,10 +198,11 @@ def _llvm_configure_impl(repository_ctx):
         executable = False,
     )
 
+    if hasattr(repository_ctx, "repo_metadata"):
+        return repository_ctx.repo_metadata(reproducible = True)
+
 llvm_configure = repository_rule(
     implementation = _llvm_configure_impl,
-    local = True,
-    configure = True,
     attrs = {
         "targets": attr.string_list(default = DEFAULT_TARGETS),
     },

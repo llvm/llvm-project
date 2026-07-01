@@ -158,7 +158,7 @@ On MachO platforms, this attribute also does not control the order of initializa
 across translation units, where it only affects the order within a single TU.
 
 This attribute is only supported for C++ and Objective-C++ and is ignored in
-other language modes. Currently, this attribute is not implemented on z/OS.
+other language modes.
   }];
 }
 
@@ -190,6 +190,54 @@ model to use. It accepts the following strings:
 * local-exec
 
 TLS models are mutually exclusive.
+  }];
+}
+
+def AddressSpaceDocs : Documentation {
+  let Category = DocCatType;
+  let Heading = "address_space";
+  let Label = "langext-address_space_documentation";
+  let Content = [{
+.. Note:: This attribute is mainly intended to be used by target headers
+  provided by the toolchain. End users should prefer the documented, named
+  address space annotations for their platform, such as the
+  `OpenCL address spaces`_, ``__global__``, ``__local__``, or something else.
+
+The ``address_space`` attribute functions as a type qualifier that allows the
+programmer to specify the address space for a pointer or reference type.
+Qualified pointer types are considered distinct types for the purposes of
+overload resolution. The attribute takes a single, non-negative integer
+constant expression identifying the address space. For example:
+
+.. code-block:: c
+
+  int * __attribute__((address_space(1))) ptr;
+
+  void foo(__attribute__((address_space(2))) float *buf);
+
+
+Only one address space qualifier may be applied to a given pointer or reference
+type. Where address spaces are allowed (e.g., variables, parameters, return
+types) and what values are valid depends on the target and language mode.
+
+The meaning of each value is defined by the target; multiple address spaces are
+used in environments such as OpenCL, CUDA, HIP, and other GPU programming
+models to distinguish global, local, constant, and private memory. See for
+example the address spaces defined in the `NVPTX Usage Guide`_ and the
+`AMDGPU Usage Guide`_.
+
+.. _`NVPTX Usage Guide`: https://llvm.org/docs/NVPTXUsage.html#address-spaces
+.. _`AMDGPU Usage Guide`: https://llvm.org/docs/AMDGPUUsage.html#address-spaces
+
+Address spaces may partially overlap or be entirely distinct. The compiler may
+reject attempts to convert between distinct, incompatible address spaces.
+Pointer width may vary between different address spaces, so some explicit casts
+may truncate.
+
+For more information, refer to `ISO TR18037`_, which covers embedded C language
+extensions. Section 5 covers named address spaces.
+
+.. _`ISO TR18037`: https://standards.iso.org/ittf/PubliclyAvailableStandards/c051126_ISO_IEC_TR_18037_2008.zip
   }];
 }
 
@@ -249,8 +297,14 @@ def NoEscapeDocs : Documentation {
 the compiler that the pointer cannot escape: that is, no reference to the object
 the pointer points to that is derived from the parameter value will survive
 after the function returns. Users are responsible for making sure parameters
-annotated with ``noescape`` do not actually escape. Calling ``free()`` on such
-a parameter does not constitute an escape.
+annotated with ``noescape`` do not actually escape. The optimizer may make
+assumptions based on the fact that it knows that a call to the function does
+not escape a certain parameter, so incorrectly annotating a parameter with
+``noescape`` leads to undefined behavior. The callee is also not allowed to
+deallocate memory through a ``noescape`` parameter: the optimizer does not make
+assumptions based on this information at the moment, but may do so in the
+future. Some cases of invalid uses of ``noescape`` can be found with
+:ref:`-Wlifetime-safety-noescape <Wlifetime-safety-noescape>`.
 
 For example:
 
@@ -264,6 +318,23 @@ For example:
 
   void escapingFunc(__attribute__((noescape)) int *p) {
     gp = p; // Not OK.
+  }
+
+  void freeingFunc(__attribute__((noescape)) int *p) {
+    free(p); // Not OK.
+  }
+
+Since ``noescape`` is a parameter attribute and not a type attribute, it only
+applies to the outermost pointer level, regardless of where in the parameter
+declaration you place it:
+
+.. code-block:: c
+
+  int **gp;
+
+  void nestingEscapes(__attribute__((noescape)) int **p) {
+    gp = p; // Not OK.
+    *gp = *p; // OK, p does not escape.
   }
 
 Additionally, when the parameter is a `block pointer
@@ -284,6 +355,70 @@ applies to copies of the block. For example:
     g1 = Block_copy(block); // Not OK either.
   }
 
+The function *is* allowed to leak information about the memory address of the
+pointer, but not any provenance of the allocation:
+
+.. code-block:: c
+
+  bool isNull(__attribute__((noescape)) void *p) {
+    return !p; // OK.
+  }
+
+  uintptr_t gi;
+
+  void escapingAddress(__attribute__((noescape)) int *p) {
+    // OK *if and only if* gi is never casted back to a pointer.
+    gi = (uintptr_t)p;
+  }
+
+  bool usingEscapedAddress(int *p) {
+    return (uintptr_t)p > gi; // OK.
+  }
+
+  bool usingEscapedPointer(int *p) {
+    return p > (int*)gi; // Not OK.
+  }
+
+  int *gp;
+
+  void escapingEndFunc(__attribute__((noescape)) int *p, size_t len) {
+    gp = p + len; // Not OK.
+  }
+
+  }];
+}
+
+def WarnUnusedDocs : Documentation {
+  let Category = DocCatType;
+  let Content = [{
+The ``warn_unused`` attribute can be placed on the declaration of a structure or union type.
+When the ``-Wunused-variable`` diagnostic is enabled, local variables of types which have a non-trivial constructor or destructor are considered "used" by virtue of the constructor or destructor invocations involved.
+Those constructor or destructor invocations are not considered a use if the type is declared with the ``warn_unused`` attribute.
+The variable is considered used if it is named outside of its declaration.
+
+This attribute is available in both C and C++ language modes but is primarily useful in C++ for classes which have a non-trivial constructor or destructor but act as a value type rather than an RAII type.
+
+.. code-block:: c++
+
+  struct [[gnu::warn_unused]] S {
+    S();
+    ~S();
+  };
+
+  struct T {
+    T();
+    ~T();
+   };
+
+   int func() {
+     S s1; // -Wunused-variable warning
+     S s2; // No -Wunused-variable warning because of the member access expression below
+     S s3; // No -Wunused-variable warning because of the sizeof operand below
+     T t;  // No -Wunused-variable warning
+
+     s2.~S();
+     return sizeof(s3);
+   }
   }];
 }
 
@@ -532,25 +667,26 @@ The following examples demonstrate the use of this attribute:
 def SYCLKernelEntryPointDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
-The ``sycl_kernel_entry_point`` attribute facilitates the generation of an
-offload kernel entry point, sometimes called a SYCL kernel caller function,
-suitable for invoking a SYCL kernel on an offload device. The attribute is
-intended for use in the implementation of SYCL kernel invocation functions
-like the ``single_task`` and ``parallel_for`` member functions of the
-``sycl::handler`` class specified in section 4.9.4, "Command group ``handler``
-class", of the SYCL 2020 specification.
+The ``sycl_kernel_entry_point`` attribute facilitates the launch of a SYCL
+kernel and the generation of an offload kernel entry point, sometimes called
+a SYCL kernel caller function, suitable for invoking a SYCL kernel on an
+offload device. The attribute is intended for use in the implementation of
+SYCL kernel invocation functions like the ``single_task`` and ``parallel_for``
+member functions of the ``sycl::handler`` class specified in section 4.9.4,
+"Command group ``handler`` class", of the SYCL 2020 specification.
 
-The attribute requires a single type argument that specifies a class type that
-meets the requirements for a SYCL kernel name as described in section 5.2,
-"Naming of kernels", of the SYCL 2020 specification. A unique kernel name type
-is required for each function declared with the attribute. The attribute may
-not first appear on a declaration that follows a definition of the function.
+The attribute requires a single type argument that meets the requirements for
+a SYCL kernel name as described in section 5.2, "Naming of kernels", of the
+SYCL 2020 specification. A unique kernel name type is required for each
+function declared with the attribute. The attribute may not first appear on a
+declaration that follows a definition of the function.
 
 The attribute only appertains to functions and only those that meet the
 following requirements.
 
 * Has a non-deduced ``void`` return type.
-* Is not a non-static member function, constructor, or destructor.
+* Is not a constructor or destructor.
+* Is not a non-static member function with an explicit object parameter.
 * Is not a C variadic function.
 * Is not a coroutine.
 * Is not defined as deleted or as defaulted.
@@ -565,73 +701,84 @@ follows.
 
   namespace sycl {
   class handler {
-    template<typename KernelNameType, typename KernelType>
-    [[ clang::sycl_kernel_entry_point(KernelNameType) ]]
-    static void kernel_entry_point(KernelType kernel) {
-      kernel();
+    template<typename KernelName, typename... Ts>
+    void sycl_kernel_launch(const char* kernelSymbol, Ts&&... kernelArgs) {
+      // This code will run on the host and is responsible for calling functions
+      // appropriate for the desired offload backend (OpenCL, CUDA, HIP,
+      // Level Zero, etc...) to copy the kernel arguments denoted by kernelArgs
+      // to a device and to schedule an invocation of the offload kernel entry
+      // point denoted by kernelSymbol with the copied arguments.
+    }
+
+    template<typename KernelName, typename KernelType>
+    [[ clang::sycl_kernel_entry_point(KernelName) ]]
+    void kernel_entry_point(KernelType kernelFunc) {
+      // This code will run on the device. The call to kernelFunc() invokes
+      // the SYCL kernel.
+      kernelFunc();
     }
 
   public:
-    template<typename KernelNameType, typename KernelType>
-    void single_task(KernelType kernel) {
-      // Call kernel_entry_point() to trigger generation of an offload
-      // kernel entry point.
-      kernel_entry_point<KernelNameType>(kernel);
-      // Call functions appropriate for the desired offload backend
-      // (OpenCL, CUDA, HIP, Level Zero, etc...).
+    template<typename KernelName, typename KernelType>
+    void single_task(const KernelType& kernelFunc) {
+      // This code will run on the host. kernel_entry_point() is called to
+      // trigger generation of an offload kernel entry point and to schedule
+      // an invocation of it on a device with kernelFunc (a SYCL kernel object)
+      // passed as a kernel argument. This call will result in an implicit call
+      // to sycl_kernel_launch() with the symbol name for the generated offload
+      // kernel entry point passed as the first function argument followed by
+      // kernelFunc.
+      kernel_entry_point<KernelName>(kernelFunc);
     }
   };
   } // namespace sycl
 
-A SYCL kernel is a callable object of class type that is constructed on a host,
-often via a lambda expression, and then passed to a SYCL kernel invocation
-function to be executed on an offload device. A SYCL kernel invocation function
-is responsible for copying the provided SYCL kernel object to an offload
-device and initiating a call to it. The SYCL kernel object and its data members
-constitute the parameters of an offload kernel.
+A SYCL kernel object is a callable object of class type that is constructed on
+a host, often via a lambda expression, and then passed to a SYCL kernel
+invocation function to be executed on an offload device. The ``kernelFunc``
+parameters in the example code above correspond to SYCL kernel objects.
 
-A SYCL kernel type is required to satisfy the device copyability requirements
-specified in section 3.13.1, "Device copyable", of the SYCL 2020 specification.
-Additionally, any data members of the kernel object type are required to satisfy
-section 4.12.4, "Rules for parameter passing to kernels". For most types, these
-rules require that the type is trivially copyable.  However, the SYCL
-specification mandates that certain special SYCL types, such as
-``sycl::accessor`` and ``sycl::stream`` be device copyable even if they are not
-trivially copyable. These types require special handling because they cannot
-be copied to device memory as if by ``memcpy()``. Additionally, some offload
-backends, OpenCL for example, require objects of some of these types to be
-passed as individual arguments to the offload kernel.
+A SYCL kernel object type is required to satisfy the device copyability
+requirements specified in section 3.13.1, "Device copyable", of the SYCL 2020
+specification. Additionally, any data members of the kernel object type are
+required to satisfy section 4.12.4, "Rules for parameter passing to kernels".
+For most types, these rules require that the type is trivially copyable.
+However, the SYCL specification mandates that certain special SYCL types, such
+as ``sycl::accessor`` and ``sycl::stream``, be device copyable even if they are
+not trivially copyable. These types require special handling because they cannot
+necessarily be copied to device memory as if by ``memcpy()``.
 
-An offload kernel consists of an entry point function that declares the
-parameters of the offload kernel and the set of all functions and variables that
-are directly or indirectly used by the entry point function.
+The SYCL kernel object and its data members constitute the parameters of an
+offload kernel. An offload kernel consists of an offload entry point function
+and the set of all functions and variables that are directly or indirectly used
+by the entry point function.
 
-A SYCL kernel invocation function invokes a SYCL kernel on a device by
-performing the following tasks (likely with the help of an offload backend
-like OpenCL):
+A SYCL kernel invocation function is responsible for performing the following
+tasks (likely with the help of an offload backend like OpenCL):
 
 #. Identifying the offload kernel entry point to be used for the SYCL kernel.
 
-#. Deconstructing the SYCL kernel object, if necessary, to produce the set of
-   offload kernel arguments required by the offload kernel entry point.
+#. Validating that the SYCL kernel object type and its data members meet the
+   SYCL device copyability and kernel parameter requirements noted above.
 
-#. Copying the offload kernel arguments to device memory.
+#. Copying the SYCL kernel object and any other kernel arguments to device
+   memory including any special handling required for SYCL special types.
 
 #. Initiating execution of the offload kernel entry point.
 
 The offload kernel entry point for a SYCL kernel performs the following tasks:
 
-#. Reconstituting the SYCL kernel object, if necessary, using the offload
-   kernel parameters.
+#. Calling the ``operator()`` member function of the SYCL kernel object.
 
-#. Calling the ``operator()`` member function of the (reconstituted) SYCL kernel
-   object.
+The ``sycl_kernel_entry_point`` attribute facilitates or automates these tasks
+by providing generation of an offload kernel entry point with a unique symbol
+name, type checking of kernel argument requirements, and initiation of kernel
+execution via synthesized calls to a ``sycl_kernel_launch`` template.
 
-The ``sycl_kernel_entry_point`` attribute automates generation of an offload
-kernel entry point that performs those latter tasks. The parameters and body of
-a function declared with the ``sycl_kernel_entry_point`` attribute specify a
-pattern from which the parameters and body of the entry point function are
-derived. Consider the following call to a SYCL kernel invocation function.
+A function declared with the ``sycl_kernel_entry_point`` attribute specifies
+the parameters and body of an offload entry point function. Consider the
+following call to the ``single_task()`` SYCL kernel invocation function assuming
+an implementation similar to the one shown above.
 
 .. code-block:: c++
 
@@ -642,65 +789,87 @@ derived. Consider the following call to a SYCL kernel invocation function.
     });
   }
 
-The SYCL kernel object is the result of the lambda expression. It has two
-data members corresponding to the captures of ``sout`` and ``s``. Since one
-of these data members corresponds to a special SYCL type that must be passed
-individually as an offload kernel parameter, it is necessary to decompose the
-SYCL kernel object into its constituent parts; the offload kernel will have
-two kernel parameters. Given a SYCL implementation that uses a
-``sycl_kernel_entry_point`` attributed function like the one shown above, an
-offload kernel entry point function will be generated that looks approximately
+The SYCL kernel object is the result of the lambda expression. The call to
+``kernel_entry_point()`` via the call to ``single_task()`` triggers the
+generation of an offload kernel entry point function that looks approximately
 as follows.
 
 .. code-block:: c++
 
-  void sycl-kernel-caller-for-KN(sycl::stream sout, S s) {
-    kernel-type kernel = { sout, s );
-    kernel();
+  void sycl-kernel-caller-for-KN(kernel-type kernelFunc) {
+    kernelFunc();
   }
 
 There are a few items worthy of note:
 
-#. The name of the generated function incorporates the SYCL kernel name,
-   ``KN``, that was passed as the ``KernelNameType`` template parameter to
-   ``kernel_entry_point()`` and provided as the argument to the
-   ``sycl_kernel_entry_point`` attribute. There is a one-to-one correspondence
-   between SYCL kernel names and offload kernel entry points.
+#.  ``sycl-kernel-caller-for-KN`` is an exposition only name; the actual name
+    generated for an entry point is an implementation detail and subject to
+    change. However, the name will incorporate the SYCL kernel name, ``KN``,
+    that was passed as the ``KernelName`` template parameter to
+    ``single_task()`` and eventually provided as the argument to the
+    ``sycl_kernel_entry_point`` attribute in order to ensure that a unique
+    name is generated for each entry point. There is a one-to-one correspondence
+    between SYCL kernel names and offload kernel entry points.
 
 #. The SYCL kernel is a lambda closure type and therefore has no name;
    ``kernel-type`` is substituted above and corresponds to the ``KernelType``
-   template parameter deduced in the call to ``kernel_entry_point()``.
-   Lambda types cannot be declared and initialized using the aggregate
-   initialization syntax used above, but the intended behavior should be clear.
+   template parameter deduced in the call to ``single_task()``.
 
-#. ``S`` is a device copyable type that does not directly or indirectly contain
-   a data member of a SYCL special type. It therefore does not need to be
-   decomposed into its constituent members to be passed as a kernel argument.
+#. The parameter and the call to ``kernelFunc()`` in the function body
+   correspond to the definition of ``kernel_entry_point()`` as called by
+   ``single_task()``.
 
-#. The depiction of the ``sycl::stream`` parameter as a single self contained
-   kernel parameter is an oversimplification. SYCL special types may require
-   additional decomposition such that the generated function might have three
-   or more parameters depending on how the SYCL library implementation defines
-   these types.
+#. The parameter is type checked for conformance with the SYCL device
+   copyability and kernel parameter requirements.
 
-#. The call to ``kernel_entry_point()`` has no effect other than to trigger
-   emission of the entry point function. The statments that make up the body
-   of the function are not executed when the function is called; they are
-   only used in the generation of the entry point function.
+Within ``single_task()``, the call to ``kernel_entry_point()`` is effectively
+replaced with a synthesized call to a ''sycl_kernel_launch`` template that
+looks approximately as follows.
+
+.. code-block:: c++
+
+  sycl_kernel_launch<KN>("sycl-kernel-caller-for-KN", kernelFunc);
+
+There are a few items worthy of note:
+
+#. Lookup for the ``sycl_kernel_launch`` template is performed as if from the
+   body of the (possibly instantiated) definition of ``kernel_entry_point()``.
+   If name lookup or overload resolution fails, the program is ill-formed.
+   If the selected overload is a non-static member function, then ``this`` is
+   passed as the implicit object parameter.
+
+#. Function arguments passed to ``sycl_kernel_launch()`` are passed
+   as if by ``std::move(x)``.
+
+#. The ``sycl_kernel_launch`` template is expected to be provided by the SYCL
+   library implementation. It is responsible for copying the kernel arguments
+   to device memory and for scheduling execution of the generated offload
+   kernel entry point identified by the symbol name passed as the first
+   function argument. ``sycl-kernel-caller-for-KN`` is substituted above for
+   the actual symbol name that would be generated for the offload kernel entry
+   point.
 
 It is not necessary for a function declared with the ``sycl_kernel_entry_point``
 attribute to be called for the offload kernel entry point to be emitted. For
 inline functions and function templates, any ODR-use will suffice. For other
 functions, an ODR-use is not required; the offload kernel entry point will be
-emitted if the function is defined.
+emitted if the function is defined. In any case, a call to the function is
+required for the synthesized call to ``sycl_kernel_launch()`` to occur.
+
+A function declared with the ``sycl_kernel_entry_point`` attribute may include
+an exception specification. If a non-throwing exception specification is
+present, an exception propagating from the implicit call to the
+``sycl_kernel_launch`` template will result in a call to ``std::terminate()``.
+Otherwise, such an exception will propagate normally.
 
 Functions declared with the ``sycl_kernel_entry_point`` attribute are not
 limited to the simple example shown above. They may have additional template
 parameters, declare additional function parameters, and have complex control
-flow in the function body. Function parameter decomposition and reconstitution
-is performed for all function parameters. The function must abide by the
-language feature restrictions described in section 5.4, "Language restrictions
-for device functions" in the SYCL 2020 specification.
+flow in the function body. The function must abide by the language feature
+restrictions described in section 5.4, "Language restrictions for device
+functions" in the SYCL 2020 specification. If the function is a non-static
+member function, ``this`` shall not be used in a potentially evaluated
+expression.
   }];
 }
 
@@ -859,6 +1028,18 @@ with ``__noinline__`` defined as a macro as ``__attribute__((noinline))``.
     return r;
   }
 
+  }];
+}
+
+def NoOutlineDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+This function attribute suppresses outlining from the annotated function.
+
+Outlining is the process where common parts of separate functions are extracted
+into a separate function (or assembly snippet), and calls to that function or
+snippet are inserted in the original functions. In this way, it can be seen as
+the opposite of inlining. It can help to reduce code size.
   }];
 }
 
@@ -1545,20 +1726,33 @@ the Clang Static Analyzer makes sure that allocating functions annotated with
 ``malloc`` are treated like they used the standard ``malloc()``, and can be
 safely deallocated with the standard ``free()``.
 
-* Use ``ownership_returns`` to mark a function as an allocating function. Takes
-  1 parameter to denote the allocation type.
+* Use ``ownership_returns`` to mark a function as an allocating function.
+  It takes 1 or 2 arguments.
+  The first argument is a user-provided identifier representing the "kind" of the allocation.
+  This is basically what is enforced when checking the deallocation. This is mandatory.
+  The second argument is optional.
+  It represents the index of the parameter that represents the allocation size in bytes (counting from 1).
+  The referenced parameter must have some integral type.
+  This attribute may appear at most once per declaration.
+  If this argument is not set, then tooling, such as the Clang Static Analyzer,
+  won't be able to reason about the size of the allocation, thus check potential out-of-bounds accesses.
+  However, such tooling could still warn if the wrong deallocation function
+  was used for the ``ownership_returns`` attributed resource.
+  If forward declarations have this attribute, those must have the same arguments.
 * Use ``ownership_takes`` to mark a function as a deallocating function. Takes 2
-  parameters: the allocation type, and the index of the parameter that is being
+  arguments: the allocation type, and the index of the parameter that is being
   deallocated (counting from 1).
 * Use ``ownership_holds`` to mark that a function takes over the ownership of a
   piece of memory and will free it at some unspecified point in the future. Like
-  ``ownership_takes``, this takes 2 parameters: the allocation type, and the
+  ``ownership_takes``, this takes 2 arguments: the allocation type, and the
   index of the parameter whose ownership will be taken over (counting from 1).
 
 The annotations ``ownership_takes`` and ``ownership_holds`` both prevent memory
-leak reports (concerning the specified argument); the difference between them
+leak reports (concerning the specified parameter); the difference between them
 is that using taken memory is a use-after-free error, while using held memory
-is assumed to be legitimate.
+is assumed to be legitimate. However, releasing the held memory or passing it
+to another holding call is reported by the analyzer as an "attempt to release
+non-owned memory".
 
 Example:
 
@@ -1566,12 +1760,15 @@ Example:
 
   // Denotes that my_malloc will return with a dynamically allocated piece of
   // memory using malloc().
-  void __attribute((ownership_returns(malloc))) *my_malloc(size_t);
+  void __attribute((ownership_returns(malloc))) *my_malloc(size_t sz);
 
-  // Denotes that my_free will deallocate its parameter using free().
+  // 'sz' (parameter 1) is the allocation size.
+  void __attribute((ownership_returns(malloc, 1))) *my_sized_malloc(size_t sz);
+
+  // Denotes that my_free will deallocate its argument using free().
   void __attribute((ownership_takes(malloc, 1))) my_free(void *);
 
-  // Denotes that my_hold will take over the ownership of its parameter that was
+  // Denotes that my_hold will take over the ownership of its argument that was
   // allocated via malloc().
   void __attribute((ownership_holds(malloc, 1))) my_hold(void *);
 
@@ -2090,6 +2287,7 @@ attributes are ignored. Supported platforms are:
 ``visionOS``
 ``visionOSApplicationExtension``
 ``driverkit``
+``anyAppleOS``
 ``swift``
 ``android``
 ``fuchsia``
@@ -2113,6 +2311,7 @@ Some platforms have alias names:
 ``maccatalyst_app_extension``
 ``visionos``
 ``visionos_app_extension``
+``anyappleos``
 ``shadermodel``
 
 Supported environment names for the ShaderModel platform:
@@ -2132,6 +2331,13 @@ Supported environment names for the ShaderModel platform:
 ``mesh``
 ``amplification``
 ``library``
+
+The special platform ``anyAppleOS`` (alias: ``anyappleos``) is a shorthand that
+applies the availability attribute to all Apple Darwin platforms. An explicit
+platform-specific availability attribute takes precedence over an ``anyAppleOS``
+attribute for that platform. Versions specified with ``anyAppleOS`` must be at
+least 26.0, which is the first OS release where all supported Apple platforms
+share a unified version number.
 
 A declaration can typically be used even when deploying back to a platform
 version prior to when the declaration was introduced. When this happens, the
@@ -2592,8 +2798,10 @@ path of execution, but that can be confusing:
 .. code-block:: c++
 
   if (b) {
-    [[unlikely]] --b; // In the path of execution,
-                      // this branch is considered unlikely.
+    [[unlikely]] --b; // Per the standard this is in the path of
+                      // execution, so this branch should be considered
+                      // unlikely. However, Clang ignores the attribute
+                      // here since it is not on the substatement.
   }
 
   if (b) {
@@ -2834,8 +3042,35 @@ def BTFTypeTagDocs : Documentation {
   let Category = DocCatType;
   let Content = [{
 Clang supports the ``__attribute__((btf_type_tag("ARGUMENT")))`` attribute for
-all targets. It only has effect when ``-g`` is specified on the command line and
-is currently silently ignored when not applied to a pointer type (note: this
+all targets. It only has effect when ``-g`` is specified on the command line.
+
+The attribute can be applied to a pointer type, in which case the tag is
+associated with the pointee type, e.g.:
+
+.. code-block:: c
+
+  int __attribute__((btf_type_tag("tag"))) *p;
+
+It can also be applied to the underlying type of a typedef, in which case the
+tag follows the typedef down to its base type, e.g.:
+
+.. code-block:: c
+
+  typedef struct foo __attribute__((btf_type_tag("tag"))) foo_t;
+
+The following is the corresponding btf:
+
+.. code-block::
+
+  ...
+  [2] TYPE_TAG 'tag' type_id=4
+  [3] TYPEDEF 'foo_t' type_id=2
+  [4] STRUCT 'foo' size=4 vlen=1
+      'c' type_id=5 bits_offset=0
+  [5] INT 'int' size=4 bits_offset=0 nr_bits=32 encoding=SIGNED
+  ...
+
+The attribute is currently silently ignored in any other position (note: this
 scenario may be diagnosed in the future).
 
 The ``ARGUMENT`` string will be preserved in IR and emitted to DWARF for the
@@ -3198,6 +3433,12 @@ multiversioned function would have if it had been declared without the attribute
 For backward compatibility with earlier Clang releases, a function alias with an
 ``.ifunc`` suffix is also emitted. The  ``.ifunc`` suffixed symbol is a deprecated
 feature and support for it may be removed in the future.
+
+For PowerPC targets, ``target_clones`` is supported on AIX only. Only CPU
+(specified as ``cpu=CPU``) and ``default`` options are allowed. IFUNC is supported
+on AIX in Clang, so dispatch is implemented similar to other targets using IFUNC.
+An FMV function that is only declared in a translation unit is treated as a
+non-FMV. The resolver and the function clones are given internal linkage.
 }];
 }
 
@@ -3307,6 +3548,10 @@ create machine code that meets the request.
 def AMDGPUNumSGPRNumVGPRDocs : Documentation {
   let Category = DocCatAMDGPUAttributes;
   let Content = [{
+.. warning::
+  These attributes are deprecated. Use the ``amdgpu_waves_per_eu`` attribute to
+  control SGPR and VGPR usage instead.
+
 Clang supports the ``__attribute__((amdgpu_num_sgpr(<num_sgpr>)))`` and
 ``__attribute__((amdgpu_num_vgpr(<num_vgpr>)))`` attributes for the AMDGPU
 target. These attributes may be attached to a kernel function definition and are
@@ -4140,7 +4385,7 @@ of 2.
    .. code-block:: c
 
      typedef double * aligned_double_ptr __attribute__((align_value(64)));
-     void foo(double & x  __attribute__((align_value(128)),
+     void foo(double & x  __attribute__((align_value(128))),
               aligned_double_ptr y) { ... }
 
 If the pointer value does not have the specified alignment at runtime, the
@@ -4969,6 +5214,8 @@ As ``global_device`` and ``global_host`` are a subset of
 ``global_device`` and ``global_host`` address spaces to
 ``__global/opencl_global`` address spaces (following ISO/IEC TR 18037 5.1.3
 "Address space nesting and rules for pointers").
+
+These attributes are deprecated and may be removed in a future version of Clang.
   }];
 }
 
@@ -5736,6 +5983,20 @@ option.
     }];
 }
 
+def StackProtectorIgnoreDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``stack_protector_ignore`` attribute skips analysis of the given local
+variable when determining if a function should use a stack protector.
+
+The ``-fstack-protector`` option uses a heuristic to only add stack protectors
+to functions which contain variables or buffers over some size threshold.  This
+attribute overrides that heuristic for the attached variable, opting
+them out.  If this results in no variables or buffers remaining over the stack
+protector threshold, then the function will no longer use a stack protector.
+  }];
+}
+
 def StrictGuardStackCheckDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
@@ -5903,6 +6164,25 @@ TUs where it is used.
 This attribute can be used on static and non-static member functions of class
 templates, static data members of class templates and member classes of class
 templates.
+
+**Interaction with __declspec(dllexport/dllimport)**
+
+For a DLL platform (i.e., Windows), this attribute also means "this member will
+never be exported or imported". Despite its name, this semantics applies to
+implicit instantiations and non-template entities as well.
+
+  .. code-block:: c++
+
+    // in <exception>
+    class __declspec(dllimport) nested_exception {
+      ...
+    public:
+      __attribute__((exclude_from_explicit_instantiation))
+      exception_ptr nested_ptr() const noexcept { ... }
+    };
+
+In this case, ``nested_exception::nested_ptr`` will never be attempted to be
+imported.
   }];
 }
 
@@ -6684,6 +6964,13 @@ Not all targets support this attribute:
   with an indirect call. The function pointer is initialized by a constructor
   that calls the resolver.
 - Baremetal target supports it on AVR.
+- AIX/XCOFF supports it via a compiler-only solution. An ifunc appears as a
+  regular function (has an entry point ``.foo[PR]`` and a function descriptor
+  ``foo[DS]``). The entry point is a stub that branches to the function address
+  in the descriptor, and the descriptor is initialized via a constructor
+  function (``__init_ifuncs``) that is linked into every shared object and
+  executable. ``__init_ifuncs`` calls the resolver of each ifunc and stores the
+  result in the corresponding descriptor.
 - Other targets currently do not support this attribute.
   }];
 }
@@ -6749,7 +7036,7 @@ if omitted.``Section`` defaults  to the ``-fpatchable-function-entry`` section n
 set, or to ``__patchable_function_entries`` otherwise.
 
 This attribute is only supported on
-aarch64/aarch64-be/loongarch32/loongarch64/riscv32/riscv64/i386/x86-64/ppc/ppc64/ppc64le targets.
+aarch64/aarch64-be/loongarch32/loongarch64/riscv32/riscv64/i386/x86-64/ppc/ppc64/ppc64le/s390x targets.
 For ppc/ppc64 targets, AIX is still not supported.
 }];
 }
@@ -7065,7 +7352,9 @@ def CFIUncheckedCalleeDocs : Documentation {
   let Content = [{
 ``cfi_unchecked_callee`` is a function type attribute which prevents the compiler from instrumenting
 `Control Flow Integrity <https://clang.llvm.org/docs/ControlFlowIntegrity.html>`_ checks on indirect
-function calls. Specifically, the attribute has the following semantics:
+function calls. This also includes control flow checks added by
+`-fsanitize=function <https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html#available-checks>`.
+Specifically, the attribute has the following semantics:
 
 1. Indirect calls to a function type with this attribute will not be instrumented with CFI. That is,
    the indirect call will not be checked. Note that this only changes the behavior for indirect calls
@@ -7359,7 +7648,7 @@ already being compiled with GNU inline semantics as the implied default. It is
 unspecified which macro is defined in a C++ compilation.
 
 GNU inline semantics are the default behavior with ``-std=gnu89``,
-``-std=c89``, ``-std=c94``, or ``-fgnu89-inline``.
+``-std=c89``, ``-fgnu89-inline``, or ``-std=iso9899:199409``.
   }];
 }
 
@@ -7662,6 +7951,46 @@ When the Owner's lifetime ends, it will consider the Pointer to be dangling.
     IntPointer P(IntOwner{}); // P "points into" a temporary IntOwner object
     P.getInt(); // P is dangling
   }
+
+**Transparent Member Functions**
+
+The analysis automatically tracks certain member functions of ``[[gsl::Pointer]]`` types
+that provide transparent access to the pointed-to object. These include:
+
+* Dereference operators: ``operator*``, ``operator->``
+* Data access methods: ``data()``, ``c_str()``, ``get()``
+* Iterator operations: ``begin()``, ``end()``, ``rbegin()``, ``rend()``, ``cbegin()``, ``cend()``, ``crbegin()``, ``crend()``, ``operator+``, ``operator-``, ``operator++``, ``operator--``
+
+When these methods return pointers, view types, or references, the analysis treats them as
+transparently borrowing from the same object that the pointer itself borrows from,
+enabling detection of use-after-free through these access patterns:
+
+.. code-block:: c++
+
+  // For example, .data() here returns a borrow to 's' instead of 'v'.
+  const char* f() {
+    std::string s = "hello";
+    std::string_view v = s; // warning: address of stack memory returned
+    return v.data();        // note: returned here
+  }
+
+  const MyObj& g(MyObj obj) {
+    View v = obj; // warning: address of stack memory returned
+    return *v;    // note: returned here
+  }
+
+This tracking also applies to range-based for loops, where the ``begin()`` and ``end()``
+iterators are used to access elements:
+
+.. code-block:: c++
+
+  std::string_view f(std::vector<std::string> vec) {
+    for (const std::string& s : vec) {  // warning: address of stack memory returned
+      return s; // note: returned here
+    }
+  }
+
+**Container Template Specialization**
 
 If a template class is annotated with ``[[gsl::Owner]]``, and the first
 instantiated template argument is a pointer type (raw pointer, or ``[[gsl::Pointer]]``),
@@ -8395,6 +8724,18 @@ pointing to precise locations of the call site in the source.
       dontcall(); // No Warning
     sizeof(dontcall()); // No Warning
   }
+
+When the call occurs through inlined functions, the
+``-fdiagnostics-show-inlining-chain`` option can be used to show the
+inlining chain that led to the call. This helps identify which call site
+triggered the diagnostic when the attributed function is called from
+multiple locations through inline functions.
+
+When enabled, this option automatically uses debug info for accurate source
+locations if available (``-gline-directives-only`` (implicitly enabled at
+``-g1``) or higher), or falls back to a heuristic based on metadata tracking.
+When falling back, a note is emitted suggesting ``-gline-directives-only`` for
+more accurate locations.
   }];
 }
 
@@ -8794,6 +9135,72 @@ https://github.com/microsoft/hlsl-specs/blob/main/proposals/0011-inline-spirv.md
   }];
 }
 
+def HLSLVkExtBuiltinOutputDocs : Documentation {
+  let Category = DocCatVariable;
+  let Content = [{
+Vulkan shaders have `Output` builtins. Those variables are externally
+visible to the driver/pipeline, but each copy is private to the current
+lane.
+
+Those builtins can be declared using the `[[vk::ext_builtin_output]]`
+attribute like follows:
+
+.. code-block:: c++
+
+  [[vk::ext_builtin_output(/* Position */ 0)]]
+  static float4 position;
+
+This variable will be lowered into a module-level variable, with the `Output`
+storage class, and the `BuiltIn 0` decoration.
+
+The full documentation for this inline SPIR-V attribute can be found here:
+https://github.com/microsoft/hlsl-specs/blob/main/proposals/0011-inline-spirv.md
+  }];
+}
+
+def HLSLVkPushConstantDocs : Documentation {
+  let Category = DocCatVariable;
+  let Content = [{
+Vulkan shaders have `PushConstants`
+
+The ``[[vk::push_constant]]`` attribute allows you to declare this
+global variable as a push constant when targeting Vulkan.
+This attribute is ignored otherwise.
+
+This attribute must be applied to the variable, not underlying type.
+The variable type must be a struct, per the requirements of Vulkan, "there
+must be no more than one push constant block statically used per shader entry
+point."
+}];
+}
+
+def AnnotateDocs : Documentation {
+  let Category = DocCatDecl;
+  let Content = [{
+The `annotate` attribute is used to add annotations to declarations or statements,
+typically for use by static analysis tools that are not integrated into the
+core Clang compiler (e.g., Clang-Tidy checks or out-of-tree Clang-based tools).
+It is a counterpart to the `annotate_type` attribute, which serves the same
+purpose, but for types.
+
+The attribute takes a mandatory string literal argument specifying the
+annotation category and an arbitrary number of optional arguments that provide
+additional information specific to the annotation category. The optional
+arguments must be constant expressions of arbitrary type.
+
+For example:
+
+.. code-block:: c++
+
+  [[clang::annotate("category1", "foo", 1)]] void func(int val [[clang::annotate("category2")]]) {
+    [[clang::annotate("category3")]] if (val) {
+
+    }
+  }
+
+  }];
+}
+
 def AnnotateTypeDocs : Documentation {
   let Category = DocCatType;
   let Heading = "annotate_type";
@@ -8990,6 +9397,23 @@ fields. This parameter has no effect when used outside of an entrypoint
 parameter/parameter field/return value.
 
 This attribute maps to the 'Location' SPIR-V decoration.
+  }];
+}
+
+def HLSLMatrixLayoutDocs : Documentation {
+  let Category = DocCatVariable;
+  let Heading = "row_major, column_major";
+  let Content = [{
+The ``row_major`` and ``column_major`` keywords specify the memory layout
+of an HLSL matrix type.
+
+* ``row_major``: Matrices are stored in memory row-by-row.
+* ``column_major``: Matrices are stored in memory column-by-column (default).
+
+Example:
+.. code-block:: hlsl
+
+  row_major float2x2 myMatrix;
   }];
 }
 
@@ -9654,16 +10078,16 @@ not all aspects of the implementation are needed for a given call, the compiler
 may redirect the call to the identifier given as the first argument to the
 attribute (the modular implementation function).
 
-The second argument is a implementation name, and the remaining arguments are
+The second argument is an implementation name, and the remaining arguments are
 aspects of the format string for the compiler to report. The implementation
-name is an unevaluated identifier be in the C namespace.
+name is an unevaluated identifier in the C namespace.
 
 The compiler reports that a call requires an aspect by issuing a relocation for
 the symbol ``<impl_name>_<aspect>`` at the point of the call. This arranges for
 code and data needed to support the aspect of the implementation to be brought
 into the link to satisfy weak references in the modular implemenation function.
 If the compiler does not understand an aspect, it must summarily consider any
-call to require that aspect. 
+call to require that aspect.
 
 For example, say ``printf`` is annotated with
 ``modular_format(__modular_printf, "__printf", "float")``. Then, a call to
@@ -9679,6 +10103,153 @@ excepting that the aspects may be in any order.
 
 The following aspects are currently supported:
 
-- ``float``: The call has a floating point argument
+- ``fixed``: The call has a C ISO 18037 fixed-point argument.
+- ``float``: The call has a floating-point argument.
+  }];
+}
+
+def OverflowBehaviorDocs : Documentation {
+  let Category = DocCatType;
+  let Content = [{
+The ``overflow_behavior`` attribute provides fine-grained, type-level control
+over how arithmetic operations on an integer type behave on overflow. It may be
+applied to a ``typedef``, to a variable or data member, or to an integer type
+directly, and accepts one of two behaviors as its argument:
+
+* ``wrap``: arithmetic on the attributed type wraps on overflow, using two's
+  complement semantics. This is equivalent to ``-fwrapv`` but scoped to the
+  attributed type, and works for both signed and unsigned types. UBSan's
+  ``signed-integer-overflow``, ``unsigned-integer-overflow``,
+  ``implicit-signed-integer-truncation``, and
+  ``implicit-unsigned-integer-truncation`` checks are suppressed for the type.
+
+* ``trap``: arithmetic on the attributed type is checked for overflow, enabling
+  overflow checks for the type even when ``-fwrapv`` is in effect globally.
+
+.. code-block:: c++
+
+  typedef unsigned int __attribute__((overflow_behavior(trap))) non_wrapping_uint;
+
+  non_wrapping_uint add_one(non_wrapping_uint a) {
+    return a + 1; // Overflow is checked for this operation.
+  }
+
+  int mul_alot(int n) {
+    int __attribute__((overflow_behavior(wrap))) a = n;
+    return a * 1337; // Overflow is not checked and is well-defined.
+  }
+
+The keyword spellings ``__ob_wrap`` and ``__ob_trap`` are equivalent to
+``overflow_behavior(wrap)`` and ``overflow_behavior(trap)`` respectively.
+
+The attribute wholly overrides global flags (``-ftrapv``, ``-fwrapv``,
+sanitizers, and Sanitizer Special Case Lists) for the attributed type. It can
+only be applied to integer types.
+
+This feature is experimental and must be enabled with the ``-cc1`` option
+``-fexperimental-overflow-behavior-types``. For full details on promotion and
+conversion rules, pointer semantics, diagnostics, and interaction with
+sanitizers, see :doc:`OverflowBehaviorTypes`.
+  }];
+}
+
+def MSStructDocs : Documentation {
+  let Category = DocCatDecl;
+  let Content = [{
+The ``ms_struct`` and ``gcc_struct`` attributes request the compiler to enter a
+special record layout compatibility mode which mimics the layout of Microsoft or
+Itanium C++ ABI respectively. Obviously, if the current C++ ABI matches the
+requested ABI, the attribute does nothing. However, if it does not, annotated
+structure or class is laid out in a special compatibility mode, which slightly
+changes offsets for fields and bit-fields. The intention is to match the layout
+of the requested ABI for structures which only use C features.
+
+Note that the default behavior can be controlled by ``-mms-bitfields`` and
+``-mno-ms-bitfields`` switches and via ``#pragma ms_struct``.
+
+The primary difference is for bitfields, where the MS variant only packs
+adjacent fields into the same allocation unit if they have integral types
+of the same size, while the GCC/Itanium variant packs all fields in a bitfield
+tightly.
+  }];
+}
+
+def PersonalityDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+``__attribute__((personality(<routine>)))`` is used to specify a personality
+routine that is different from the language that is being used to implement the
+function. This is a targeted, low-level feature aimed at language runtime
+implementors who write runtime support code in C/C++ but need that code to
+participate in a foreign language's exception-handling or unwinding model.
+
+A personality routine is a language-specific callback attached to each stack
+frame that the unwinder invokes to determine whether that frame handles a given
+exception and what cleanup actions to perform. It effectively colors the
+language-agnostic unwinding mechanism with language-specific semantics, enabling
+different languages to coexist on the same call stack while each interpreting
+exceptions according to their own rules.
+  }];
+}
+
+def SentinelDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``sentinel`` attribute can be applied to variadic functions and pointers to
+variadic functions, to diagnose each function call that does not pass a
+sentinel value (a null pointer constant) as the last argument to the function
+call. The attribute accepts two optional arguments: the first argument is the
+position of the expected sentinel value, starting from the last parameter. The
+second argument describes whether the last fixed parameter is treated as a
+valid sentinel value when set to '1'.
+All arguments described above default to '0' when elided.
+The attribute is also supported with blocks and in Objective-C.
+
+.. code-block:: c
+
+  void foo(const char*, ...) __attribute__((sentinel));
+  void bar(int, ...) __attribute__((sentinel(1)));
+  void baz(const char*, const char*, ...) __attribute__((sentinel(0, 1)));
+
+  void example() {
+    foo("Example", (void*)0);
+    foo("Another", "example", NULL);
+    foo("Missing", "sentinel"); // Not OK
+
+    bar(1, 2, NULL, 3);         // OK: sentinel value at the 2nd to last position
+    bar(1, 2, 3, nullptr, 4);   // OK: `nullptr` is valid in C23
+    bar(1, 2, 3, 4, NULL);      // Not OK
+
+    baz("Test", "with", "multiple", "args", NULL);
+    baz("One", NULL);           // OK: last fixed parameter is a valid sentinel
+
+    void (*ptr) (int arg, ...) __attribute__ ((__sentinel__));
+    ptr(1, 2, 3, NULL);
+  }
+
+.. code-block:: c++
+
+  struct Ty {
+      int value;
+
+      template<typename T>
+      auto&& foo(T&& val, ...) __attribute__((sentinel(1))) {
+          return std::forward<T>(val);
+      }
+
+      template<class Self>
+      auto&& bar(this Self&& self, ...) __attribute__((sentinel(1))) {
+          return std::forward<Self>(self).value;
+      }
+  };
+
+  void example2() {
+      auto sty = Ty{};
+      sty.foo(1, nullptr, 3);
+      sty.bar(1, nullptr, 3);
+
+      auto lmbd = [](int a, ...) __attribute__((sentinel)) {};
+      lmbd(1, 2, nullptr);
+  }
   }];
 }

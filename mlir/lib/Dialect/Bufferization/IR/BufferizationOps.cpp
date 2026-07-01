@@ -12,7 +12,9 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/Utils/VerificationUtils.h"
 #include "mlir/IR/Matchers.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include <optional>
 
 using namespace mlir;
@@ -58,7 +60,7 @@ FailureOr<Value> mlir::bufferization::castOrReallocMemRefValue(
   // a fix extra conditions in `isGuaranteedCastCompatible`.
   if (memref::CastOp::areCastCompatible(srcType, destType) &&
       isGuaranteedCastCompatible(srcType, destType)) {
-    Value casted = memref::CastOp::create(b, value.getLoc(), destType, value);
+    Value casted = *options.createCast(b, value.getLoc(), destType, value);
     return casted;
   }
 
@@ -95,6 +97,20 @@ LogicalResult mlir::bufferization::foldToBufferToTensorPair(
   // Directly rewrite if the type did not change.
   if (srcType == destType) {
     rewriter.replaceOp(toBuffer, bufferToTensor.getBuffer());
+    return success();
+  }
+
+  if (!llvm::isa<BaseMemRefType>(srcType) ||
+      !llvm::isa<BaseMemRefType>(destType)) {
+    // Non-builtin case: the best is to try the user-provided cast.
+    assert(options.castFn.has_value() &&
+           "user-provided cast is required for non-builtin types");
+    auto replacement =
+        options.createCast(rewriter, bufferToTensor.getBuffer().getLoc(),
+                           destType, bufferToTensor.getBuffer());
+    if (failed(replacement))
+      return failure();
+    rewriter.replaceOp(toBuffer, *replacement);
     return success();
   }
 
@@ -238,7 +254,8 @@ AllocTensorOp::getBufferType(Value value, const BufferizationOptions &options,
     if (failed(copyBufferType))
       return failure();
     memorySpace = copyBufferType->getMemorySpace();
-  } else if (auto ms = options.defaultMemorySpaceFn(getType())) {
+  } else if (auto ms = options.defaultMemorySpaceFn(
+                 cast<TensorLikeType>(getType()))) {
     memorySpace = *ms;
   } else {
     return getOperation()->emitError("could not infer memory space");
@@ -251,9 +268,9 @@ AllocTensorOp::getBufferType(Value value, const BufferizationOptions &options,
 LogicalResult AllocTensorOp::verify() {
   if (getCopy() && !getDynamicSizes().empty())
     return emitError("dynamic sizes not needed when copying a tensor");
-  if (!getCopy() && getType().getNumDynamicDims() != getDynamicSizes().size())
-    return emitError("expected ")
-           << getType().getNumDynamicDims() << " dynamic sizes";
+  if (!getCopy() && failed(verifyDynamicDimensionCount(
+                        getOperation(), getType(), getDynamicSizes())))
+    return failure();
   if (getCopy() && getCopy().getType() != getType())
     return emitError("expected that `copy` and return type match");
   return success();
@@ -356,13 +373,13 @@ void AllocTensorOp::getCanonicalizationPatterns(RewritePatternSet &results,
 
 LogicalResult AllocTensorOp::reifyResultShapes(
     OpBuilder &builder, ReifiedRankedShapedTypeDims &reifiedReturnShapes) {
-  auto shapes = llvm::to_vector<4>(
-      llvm::map_range(llvm::seq<int64_t>(0, getType().getRank()),
-                      [&](int64_t dim) -> OpFoldResult {
-                        if (isDynamicDim(dim))
-                          return getDynamicSize(builder, dim);
-                        return builder.getIndexAttr(getStaticSize(dim));
-                      }));
+  auto shapes =
+      llvm::map_to_vector<4>(llvm::seq<int64_t>(0, getType().getRank()),
+                             [&](int64_t dim) -> OpFoldResult {
+                               if (isDynamicDim(dim))
+                                 return getDynamicSize(builder, dim);
+                               return builder.getIndexAttr(getStaticSize(dim));
+                             });
   reifiedReturnShapes.emplace_back(std::move(shapes));
   return success();
 }
@@ -701,8 +718,9 @@ LogicalResult MaterializeInDestinationOp::verify() {
   if (srcType.hasRank() != destType.hasRank())
     return emitOpError("source/destination shapes are incompatible");
   if (srcType.hasRank()) {
-    if (srcType.getRank() != destType.getRank())
-      return emitOpError("rank mismatch between source and destination shape");
+    if (failed(verifyRanksMatch(getOperation(), srcType, destType, "source",
+                                "destination")))
+      return failure();
     for (auto [src, dest] :
          llvm::zip(srcType.getShape(), destType.getShape())) {
       if (src == ShapedType::kDynamic || dest == ShapedType::kDynamic) {
@@ -846,7 +864,7 @@ struct LoadOfToBuffer : public OpRewritePattern<memref::LoadOp> {
   LogicalResult matchAndRewrite(memref::LoadOp load,
                                 PatternRewriter &rewriter) const override {
     auto toBuffer = load.getMemref().getDefiningOp<ToBufferOp>();
-    if (!toBuffer)
+    if (!toBuffer || !toBuffer.getReadOnly())
       return failure();
 
     rewriter.replaceOpWithNewOp<tensor::ExtractOp>(load, toBuffer.getTensor(),
@@ -905,7 +923,7 @@ std::optional<Value> CloneOp::buildClone(OpBuilder &builder, Value alloc) {
 
 LogicalResult DeallocOp::inferReturnTypes(
     MLIRContext *context, std::optional<::mlir::Location> location,
-    ValueRange operands, DictionaryAttr attributes, OpaqueProperties properties,
+    ValueRange operands, DictionaryAttr attributes, PropertyRef properties,
     RegionRange regions, SmallVectorImpl<Type> &inferredReturnTypes) {
   DeallocOpAdaptor adaptor(operands, attributes, properties, regions);
   inferredReturnTypes = SmallVector<Type>(adaptor.getRetained().size(),

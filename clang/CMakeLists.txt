@@ -1,4 +1,12 @@
 cmake_minimum_required(VERSION 3.20.0)
+if("${CMAKE_VERSION}" VERSION_LESS "3.31.0")
+  message(WARNING
+    "Your CMake version is ${CMAKE_VERSION}. Starting with LLVM 24, the "
+    "minimum version of CMake required to build LLVM will become 3.31.0, and "
+    "using an older CMake will become an error. Please upgrade your CMake to "
+    "at least 3.31.0 now to avoid issues in the future.")
+endif()
+
 set(LLVM_SUBPROJECT_TITLE "Clang")
 
 if(NOT DEFINED LLVM_COMMON_CMAKE_UTILS)
@@ -229,6 +237,44 @@ if(GCC_INSTALL_PREFIX AND NOT USE_DEPRECATED_GCC_INSTALL_PREFIX)
     "See https://github.com/llvm/llvm-project/pull/77537 for detail.")
 endif()
 
+cmake_dependent_option(CLANG_USE_XCSELECT "Use libxcselect to find the macOS SDK." OFF "APPLE" OFF)
+
+if(CLANG_USE_XCSELECT)
+  if(DEFAULT_SYSROOT)
+    message(FATAL_ERROR "Setting DEFAULT_SYSROOT is incompatible with CLANG_USE_XCSELECT.")
+  endif()
+
+  check_include_file(xcselect.h CLANG_HAVE_XCSELECT_H)
+  if(NOT CLANG_HAVE_XCSELECT_H)
+    message(FATAL_ERROR "CLANG_USE_XCSELECT is enabled but xcselect.h was not found.")
+  endif()
+
+  include(CheckSymbolExists)
+  list(APPEND CMAKE_REQUIRED_LIBRARIES xcselect)
+  check_symbol_exists(xcselect_host_sdk_path xcselect.h CLANG_HAVE_XCSELECT_HOST_SDK_PATH)
+  list(REMOVE_ITEM CMAKE_REQUIRED_LIBRARIES xcselect)
+
+  if(NOT CLANG_HAVE_XCSELECT_HOST_SDK_PATH)
+    message(FATAL_ERROR "CLANG_USE_XCSELECT is enabled but either libxcselect is not available "
+      "or it is missing xcselect_host_sdk_path.")
+  endif()
+
+  set(XCSELECT_VALID_POLICIES LATEST MATCHING_ONLY MATCHING_PREFERRED)
+  set(CLANG_XCSELECT_HOST_SDK_POLICY "LATEST" CACHE STRING
+    "Policy to use for xcselect. One of: ${XCSELECT_VALID_POLICIES}")
+  set_property(CACHE CLANG_XCSELECT_HOST_SDK_POLICY PROPERTY STRINGS ${XCSELECT_VALID_POLICIES})
+  string(TOUPPER ${CLANG_XCSELECT_HOST_SDK_POLICY} CLANG_XCSELECT_HOST_SDK_POLICY)
+  list(JOIN XCSELECT_VALID_POLICIES "|" XCSELECT_POLICY_REGEX)
+
+  if(NOT CLANG_XCSELECT_HOST_SDK_POLICY MATCHES "^XCSELECT_HOST_SDK_POLICY_(${XCSELECT_POLICY_REGEX})$")
+    if(NOT CLANG_XCSELECT_HOST_SDK_POLICY IN_LIST XCSELECT_VALID_POLICIES)
+      message(FATAL_ERROR
+        "CLANG_XCSELECT_HOST_SDK_POLICY (${CLANG_XCSELECT_HOST_SDK_POLICY}) must be one of: ${XCSELECT_VALID_POLICIES}")
+    endif()
+    set(CLANG_XCSELECT_HOST_SDK_POLICY "XCSELECT_HOST_SDK_POLICY_${CLANG_XCSELECT_HOST_SDK_POLICY}")
+  endif()
+endif()
+
 set(ENABLE_LINKER_BUILD_ID OFF CACHE BOOL "pass --build-id to ld")
 
 set(ENABLE_X86_RELAX_RELOCATIONS ON CACHE BOOL
@@ -369,9 +415,12 @@ if (LLVM_COMPILER_IS_GCC_COMPATIBLE)
 endif ()
 
 # Determine HOST_LINK_VERSION on Darwin.
-set(HOST_LINK_VERSION)
-if (APPLE AND NOT CMAKE_LINKER MATCHES ".*lld.*")
+set(HOST_LINK_VERSION "" CACHE STRING "Host linker version on Darwin")
+if (APPLE AND NOT HOST_LINK_VERSION AND NOT CMAKE_LINKER MATCHES ".*lld.*")
   get_darwin_linker_version(HOST_LINK_VERSION)
+  set(HOST_LINK_VERSION "${HOST_LINK_VERSION}" CACHE STRING "Host linker version on Darwin" FORCE)
+endif()
+if (HOST_LINK_VERSION)
   message(STATUS "Host linker version: ${HOST_LINK_VERSION}")
 endif()
 
@@ -450,6 +499,9 @@ option(CLANG_ENABLE_STATIC_ANALYZER
   "Include static analyzer in clang binary." ON)
 
 option(CLANG_ENABLE_PROTO_FUZZER "Build Clang protobuf fuzzer." OFF)
+
+option(CLANG_USE_EXPERIMENTAL_CONST_INTERP
+  "Use the new experimental constant interpreter for compile-time evaluation." OFF)
 
 if (DEFINED CLANG_ENABLE_ARCMT)
   set(CLANG_ENABLE_OBJC_REWRITER ${CLANG_ENABLE_ARCMT})
@@ -547,8 +599,9 @@ if( CLANG_INCLUDE_TESTS )
   if(CLANG_BUILT_STANDALONE)
     umbrella_lit_testsuite_end(check-all)
   endif()
-  add_subdirectory(utils/perf-training)
 endif()
+
+add_subdirectory(utils/perf-training)
 
 option(CLANG_INCLUDE_DOCS "Generate build targets for the Clang docs."
   ${LLVM_INCLUDE_DOCS})
@@ -645,6 +698,7 @@ if (CLANG_ENABLE_BOOTSTRAP)
       # variable, and have LLVM's CMake append the envar to the archiver calls.
       set(LTO_LIBRARY -DDARWIN_LTO_LIBRARY=${LLVM_SHLIB_OUTPUT_INTDIR}/libLTO.dylib
         -DDYLD_LIBRARY_PATH=${LLVM_LIBRARY_OUTPUT_INTDIR})
+      set(${CLANG_STAGE}_LIBTOOL -DCMAKE_LIBTOOL=${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-libtool-darwin)
     elseif(MSVC)
       add_dependencies(clang-bootstrap-deps llvm-lib)
       set(${CLANG_STAGE}_AR -DCMAKE_AR=${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-lib)
@@ -685,6 +739,9 @@ if (CLANG_ENABLE_BOOTSTRAP)
     LLVM_VERSION_MAJOR
     LLVM_VERSION_MINOR
     LLVM_VERSION_PATCH
+    LLVM_VERSIONED_DYLIB_NAME_ON_DARWIN
+    LLVM_UNVERSIONED_LIBCLANG_ON_DARWIN
+    LLVM_UNVERSIONED_LIBLTO_ON_DARWIN
     CLANG_VERSION_MAJOR
     CLANG_VERSION_MINOR
     CLANG_VERSION_PATCHLEVEL
@@ -764,11 +821,15 @@ if (CLANG_ENABLE_BOOTSTRAP)
   if(LLVM_BUILD_INSTRUMENTED)
     string(TOUPPER "${LLVM_BUILD_INSTRUMENTED}" LLVM_BUILD_INSTRUMENTED)
     if (LLVM_BUILD_INSTRUMENTED STREQUAL "CSSPGO")
-      add_dependencies(clang-bootstrap-deps generate-sprofdata)
-      set(PGO_OPT -DLLVM_SPROFDATA_FILE=${CMAKE_CURRENT_BINARY_DIR}/utils/perf-training/clang.sprofdata)
+      set(PGO_OPT_SPROFDATA "${CMAKE_CURRENT_BINARY_DIR}/utils/perf-training/clang.sprofdata" CACHE STRING "")
+      set(PGO_OPT_SPROFDATA_PROVIDER generate-sprofdata CACHE STRING "")
+      add_dependencies(clang-bootstrap-deps ${PGO_OPT_SPROFDATA_PROVIDER})
+      set(PGO_OPT -DLLVM_SPROFDATA_FILE=${PGO_OPT_SPROFDATA})
     else()
-      add_dependencies(clang-bootstrap-deps generate-profdata)
-      set(PGO_OPT -DLLVM_PROFDATA_FILE=${CMAKE_CURRENT_BINARY_DIR}/utils/perf-training/clang.profdata)
+      set(PGO_OPT_PROFDATA "${CMAKE_CURRENT_BINARY_DIR}/utils/perf-training/clang.profdata" CACHE STRING "")
+      set(PGO_OPT_PROFDATA_PROVIDER generate-profdata CACHE STRING "")
+      add_dependencies(clang-bootstrap-deps ${PGO_OPT_PROFDATA_PROVIDER})
+      set(PGO_OPT -DLLVM_PROFDATA_FILE=${PGO_OPT_PROFDATA})
     endif()
     # Use the current tools for LTO instead of the instrumented ones
     list(APPEND _BOOTSTRAP_DEFAULT_PASSTHROUGH
@@ -845,6 +906,7 @@ if (CLANG_ENABLE_BOOTSTRAP)
                 ${${CLANG_STAGE}_RANLIB}
                 ${${CLANG_STAGE}_OBJCOPY}
                 ${${CLANG_STAGE}_STRIP}
+                ${${CLANG_STAGE}_LIBTOOL}
     BUILD_COMMAND ${CMAKE_COMMAND} --build ${BINARY_DIR}
                                    --config ${build_configuration}
                                    ${build_tool_args}

@@ -19,6 +19,8 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 
+#include "llvm/Support/Endian.h"
+
 using namespace lldb_private;
 using namespace lldb;
 
@@ -113,7 +115,7 @@ lldb::addr_t ArchitectureMips::GetBreakableLoadAddress(lldb::addr_t addr,
   if (current_offset == 0)
     return addr;
 
-  auto insn = GetInstructionAtAddress(target, current_offset, addr);
+  auto insn = GetInstructionAtAddress(target, Address(current_offset), addr);
 
   if (nullptr == insn || !insn->HasDelaySlot())
     return addr;
@@ -228,4 +230,13 @@ Instruction *ArchitectureMips::GetInstructionAtAddress(
   }
 
   return nullptr;
+}
+
+bool ArchitectureMips::IsValidTrapInstruction(
+    llvm::ArrayRef<uint8_t> reference, llvm::ArrayRef<uint8_t> observed) const {
+  // The middle twenty bits of BREAK can be anything, so zero them
+  uint32_t mask = 0xFC00003F;
+  auto ref_bytes = llvm::support::endian::read32le(reference.data());
+  auto bytes = llvm::support::endian::read32le(observed.data());
+  return (ref_bytes & mask) == (bytes & mask);
 }

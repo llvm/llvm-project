@@ -13,11 +13,17 @@
 #include "TestingSupport/SubsystemRAII.h"
 #include "TestingSupport/TestUtilities.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Core/Section.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Target/Language.h"
+#include "lldb/Utility/ConstString.h"
 #include "gtest/gtest.h"
+#include <condition_variable>
+#include <mutex>
 #include <optional>
+#include <thread>
+#include <vector>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -122,4 +128,138 @@ Symbols:
   // Assert that the symbol we found is what we expected.
   ASSERT_EQ(name, "std::vector<int>::size()");
   ASSERT_EQ(result.GetLanguage(), eLanguageTypeC_plus_plus);
+}
+
+TEST(ModuleTest, ResolveSymbolContextForAddressExactMatch) {
+  // Test that ResolveSymbolContextForAddress prefers exact symbol matches
+  // over symbols that merely contain the address.
+  SubsystemRAII<FileSystem, HostInfo, ObjectFileELF, SymbolFileSymtab>
+      subsystems;
+
+  auto ExpectedFile = TestFile::fromYaml(R"(
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_DYN
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1000
+    AddressAlign:    0x10
+    Size:            0x200
+Symbols:
+  - Name:            outer_function
+    Type:            STT_FUNC
+    Section:         .text
+    Value:           0x1000
+    Size:            0x100
+  - Name:            inner_function
+    Type:            STT_FUNC
+    Section:         .text
+    Value:           0x1050
+    Size:            0x10
+...
+)");
+  ASSERT_THAT_EXPECTED(ExpectedFile, llvm::Succeeded());
+
+  auto module_sp = std::make_shared<Module>(ExpectedFile->moduleSpec());
+
+  Address addr(module_sp->GetSectionList()->GetSectionAtIndex(0), 0x50);
+  SymbolContext sc;
+  uint32_t resolved =
+      module_sp->ResolveSymbolContextForAddress(addr, eSymbolContextSymbol, sc);
+
+  ASSERT_TRUE(resolved & eSymbolContextSymbol);
+  ASSERT_NE(sc.symbol, nullptr);
+  EXPECT_STREQ(sc.symbol->GetName().GetCString(), "inner_function");
+}
+
+// Module::GetSectionList builds the module's section list lazily. Concurrent
+// first-time callers (e.g. AppleObjCRuntime::GetObjCVersion during parallel
+// SBTarget module loading) must not race on m_sections_up. This hammers
+// GetSectionList from several threads on a fresh module so a sanitizer flags an
+// unsynchronized build.
+TEST(ModuleTest, GetSectionListConcurrent) {
+  SubsystemRAII<FileSystem, HostInfo, ObjectFileELF, SymbolFileSymtab>
+      subsystems;
+
+  // Several sections widen the window during which CreateSections is appending
+  // to the SectionList vector while another thread iterates it.
+  const char *yaml = R"(
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_DYN
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1000
+    AddressAlign:    0x10
+    Size:            0x100
+  - Name:            .data
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_WRITE ]
+    Address:         0x2000
+    AddressAlign:    0x10
+    Size:            0x100
+  - Name:            .rodata
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x3000
+    AddressAlign:    0x10
+    Size:            0x100
+  - Name:            .bss
+    Type:            SHT_NOBITS
+    Flags:           [ SHF_ALLOC, SHF_WRITE ]
+    Address:         0x4000
+    AddressAlign:    0x10
+    Size:            0x100
+...
+)";
+
+  const ConstString text_name(".text");
+  constexpr int kThreads = 8;
+  // Each iteration uses a fresh module so the lazy build (and its race) is
+  // re-triggered every time.
+  for (int iter = 0; iter < 100; ++iter) {
+    auto ExpectedFile = TestFile::fromYaml(yaml);
+    ASSERT_THAT_EXPECTED(ExpectedFile, llvm::Succeeded());
+    auto module_sp = std::make_shared<Module>(ExpectedFile->moduleSpec());
+
+    // Release the threads together with a blocking gate. A busy-wait would peg
+    // every core and starve the workers when many test binaries run at once.
+    std::mutex mutex;
+    std::condition_variable cv;
+    bool go = false;
+    std::vector<std::thread> threads;
+    threads.reserve(kThreads);
+    for (int t = 0; t < kThreads; ++t) {
+      threads.emplace_back([&] {
+        {
+          std::unique_lock<std::mutex> lock(mutex);
+          cv.wait(lock, [&] { return go; });
+        }
+        if (SectionList *sections = module_sp->GetSectionList())
+          sections->FindSectionByName(text_name);
+      });
+    }
+    {
+      std::lock_guard<std::mutex> lock(mutex);
+      go = true;
+    }
+    cv.notify_all();
+    for (auto &th : threads)
+      th.join();
+
+    // The concurrently-built list must be intact and complete.
+    SectionList *sections = module_sp->GetSectionList();
+    ASSERT_NE(sections, nullptr);
+    EXPECT_TRUE(sections->FindSectionByName(text_name));
+  }
 }

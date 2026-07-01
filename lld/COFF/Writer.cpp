@@ -216,6 +216,7 @@ private:
   void appendImportThunks();
   void locateImportTables();
   void createExportTable();
+  StringRef getMergeDestination(StringRef fromSection, StringRef toSection);
   void mergeSection(const std::map<StringRef, StringRef>::value_type &p);
   void mergeSections();
   void sortECChunks();
@@ -840,8 +841,10 @@ void Writer::run() {
                << "': " << toString(std::move(e));
 }
 
-static StringRef getOutputSectionName(StringRef name) {
+static StringRef getOutputSectionName(StringRef name, bool isMinGW) {
   StringRef s = name.split('$').first;
+  if (!isMinGW)
+    return s;
 
   // Treat a later period as a separator for MinGW, for sections like
   // ".ctors.01234".
@@ -1155,7 +1158,7 @@ void Writer::createSections() {
   // contributes to .text, for example. See PE/COFF spec 3.2.
   for (auto it : partialSections) {
     PartialSection *pSec = it.second;
-    StringRef name = getOutputSectionName(pSec->name);
+    StringRef name = getOutputSectionName(pSec->name, ctx.config.mingw);
     uint32_t outChars = pSec->characteristics;
 
     if (name == ".CRT") {
@@ -1330,7 +1333,7 @@ void Writer::createImportTables() {
     if (file->impSym && !isa<DefinedImportData>(file->impSym))
       Fatal(ctx) << file->symtab.printSymbol(file->impSym) << " was replaced";
     DefinedImportData *impSym = cast_or_null<DefinedImportData>(file->impSym);
-    if (ctx.config.delayLoads.count(StringRef(file->dllName).lower())) {
+    if (ctx.config.delayLoads.contains(StringRef(file->dllName).lower())) {
       if (!file->thunkSym)
         Fatal(ctx) << "cannot delay-load " << toString(file)
                    << " due to import of data: "
@@ -1654,25 +1657,32 @@ void Writer::createSymbolAndStringTable() {
   fileSize = alignTo(fileOff, ctx.config.fileAlign);
 }
 
-void Writer::mergeSection(const std::map<StringRef, StringRef>::value_type &p) {
-  StringRef toName = p.second;
-  if (p.first == toName)
-    return;
+StringRef Writer::getMergeDestination(StringRef fromSection,
+                                      StringRef toSection) {
   StringSet<> names;
   while (true) {
-    if (!names.insert(toName).second)
-      Fatal(ctx) << "/merge: cycle found for section '" << p.first << "'";
-    auto i = ctx.config.merge.find(toName);
+    if (!names.insert(toSection).second)
+      Fatal(ctx) << "/merge: cycle found for section '" << fromSection << "'";
+    auto i = ctx.config.merge.find(toSection);
     if (i == ctx.config.merge.end())
       break;
-    toName = i->second;
+    toSection = i->second;
   }
+  return toSection;
+}
+
+void Writer::mergeSection(const std::map<StringRef, StringRef>::value_type &p) {
+  if (p.first == p.second)
+    return;
+
+  StringRef toSection = getMergeDestination(p.first, p.second);
+
   OutputSection *from = findSection(p.first);
-  OutputSection *to = findSection(toName);
+  OutputSection *to = findSection(toSection);
   if (!from)
     return;
   if (!to) {
-    from->name = toName;
+    from->name = toSection;
     return;
   }
   to->merge(from);
@@ -1714,8 +1724,17 @@ void Writer::mergeSections() {
   // whatever section it is being merged into (usually .data) so that the image
   // need not actually contain all of the zeros.
   auto it = ctx.config.merge.find(".bss");
-  if (it != ctx.config.merge.end())
-    mergeSection(*it);
+  if (it != ctx.config.merge.end()) {
+    // Resolve the final merge target name following the chain.
+    StringRef toSection = getMergeDestination(it->first, it->second);
+    // Don't merge .bss into a shared section. MSVC link.exe keeps .bss
+    // separate when the target has IMAGE_SCN_MEM_SHARED, preventing unexpected
+    // sharing across processes.
+    auto secIt = ctx.config.section.find(toSection);
+    if (secIt == ctx.config.section.end() ||
+        !(secIt->second & IMAGE_SCN_MEM_SHARED))
+      mergeSection({it->first, toSection});
+  }
 }
 
 // EC targets may have chunks of various architectures mixed together at this
@@ -1856,7 +1875,8 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
   buf += sizeof(PEMagic);
 
   // Write COFF header
-  assert(coffHeaderOffset == buf - buffer->getBufferStart());
+  assert(coffHeaderOffset ==
+         static_cast<size_t>(buf - buffer->getBufferStart()));
   auto *coff = reinterpret_cast<coff_file_header *>(buf);
   buf += sizeof(*coff);
   SymbolTable &symtab =
@@ -1882,7 +1902,7 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
       sizeof(PEHeaderTy) + sizeof(data_directory) * numberOfDataDirectory;
 
   // Write PE header
-  assert(peHeaderOffset == buf - buffer->getBufferStart());
+  assert(peHeaderOffset == static_cast<size_t>(buf - buffer->getBufferStart()));
   auto *pe = reinterpret_cast<PEHeaderTy *>(buf);
   buf += sizeof(*pe);
   pe->Magic = config->is64() ? PE32Header::PE32_PLUS : PE32Header::PE32;
@@ -1949,7 +1969,8 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
 
   // Write data directory
   assert(!ctx.config.is64() ||
-         dataDirOffset64 == buf - buffer->getBufferStart());
+         dataDirOffset64 ==
+             static_cast<size_t>(buf - buffer->getBufferStart()));
   auto *dir = reinterpret_cast<data_directory *>(buf);
   buf += sizeof(*dir) * numberOfDataDirectory;
   if (symtab.edataStart) {
@@ -2617,12 +2638,17 @@ void Writer::writeSections() {
     if ((sec->header.Characteristics & IMAGE_SCN_CNT_CODE) &&
         (ctx.config.machine == AMD64 || ctx.config.machine == I386)) {
       uint32_t prevEnd = 0;
+      uint32_t rawSize = sec->getRawSize();
       for (Chunk *c : sec->chunks) {
         uint32_t off = c->getRVA() - sec->getRVA();
+        // Chunks without data (e.g., .bss) have virtual addresses beyond
+        // rawSize; stop filling when we reach the end of raw data.
+        if (off >= rawSize)
+          break;
         memset(secBuf + prevEnd, 0xCC, off - prevEnd);
-        prevEnd = off + c->getSize();
+        prevEnd = std::min(off + static_cast<uint32_t>(c->getSize()), rawSize);
       }
-      memset(secBuf + prevEnd, 0xCC, sec->getRawSize() - prevEnd);
+      memset(secBuf + prevEnd, 0xCC, rawSize - prevEnd);
     }
 
     parallelForEach(sec->chunks, [&](Chunk *c) {

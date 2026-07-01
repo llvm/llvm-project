@@ -7,6 +7,10 @@ module m1
   interface
     module subroutine separate
     end subroutine
+    subroutine hasentry
+      !ERROR: An ENTRY statement may not appear in an interface body
+      entry ent
+    end subroutine
   end interface
  contains
   subroutine modproc
@@ -262,7 +266,8 @@ end
 !ERROR: Explicit RESULT('f8e1') of function 'f8' cannot have the same name as a distinct ENTRY into the same scope
 function f8() result(f8e1)
   entry f8e1()
-  entry f8e2() result(f8e2) ! ok
+  !ERROR: Explicit RESULT('f8e2') of ENTRY 'f8e2' cannot have the same name as the ENTRY
+  entry f8e2() result(f8e2)
   !ERROR: Explicit RESULT('f8e1') of function 'f8e3' cannot have the same name as a distinct ENTRY into the same scope
   entry f8e3() result(f8e1)
   !ERROR: ENTRY cannot have RESULT(f8) that is not a variable

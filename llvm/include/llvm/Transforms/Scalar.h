@@ -44,7 +44,8 @@ LLVM_ABI FunctionPass *createDeadStoreEliminationPass();
 //
 // SROA - Replace aggregates or pieces of aggregates with scalar SSA values.
 //
-LLVM_ABI FunctionPass *createSROAPass(bool PreserveCFG = true);
+LLVM_ABI FunctionPass *createSROAPass(bool PreserveCFG = true,
+                                      bool AggregateToVector = false);
 
 //===----------------------------------------------------------------------===//
 //
@@ -145,11 +146,6 @@ LLVM_ABI FunctionPass *createSinkingPass();
 LLVM_ABI Pass *createLowerAtomicPass();
 
 //===----------------------------------------------------------------------===//
-//
-// MergeICmps - Merge integer comparison chains into a memcmp
-//
-LLVM_ABI Pass *createMergeICmpsLegacyPass();
-
 //===----------------------------------------------------------------------===//
 //
 // InferAddressSpaces - Modify users of addrspacecast instructions with values

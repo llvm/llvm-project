@@ -12,7 +12,7 @@
 // FIXED-PARTS: [[LLD: ".*lld.*"]] {{.*}} "-plugin-opt=-amdgpu-internalize-symbols"
 // FIXED-PARTS-SAME: "--lto-partitions=42"
 // FIXED-PARTS-SAME: "-plugin-opt=mcpu=gfx803"
-// FIXED-PARTS-SAME: "-o" "{{.*out}}" "{{.*bc}}"
+// FIXED-PARTS-SAME: "-o" "{{.*out}}" "{{.*o}}"
 
 // RUN: not %clang -### --target=x86_64-linux-gnu \
 // RUN:   -x hip --cuda-gpu-arch=gfx803 -flto-partitions=a \

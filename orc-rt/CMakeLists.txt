@@ -5,6 +5,13 @@
 #===============================================================================
 
 cmake_minimum_required(VERSION 3.20.0)
+if("${CMAKE_VERSION}" VERSION_LESS "3.31.0")
+  message(WARNING
+    "Your CMake version is ${CMAKE_VERSION}. Starting with LLVM 24, the "
+    "minimum version of CMake required to build LLVM will become 3.31.0, and "
+    "using an older CMake will become an error. Please upgrade your CMake to "
+    "at least 3.31.0 now to avoid issues in the future.")
+endif()
 
 set(LLVM_COMMON_CMAKE_UTILS ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
 include(${LLVM_COMMON_CMAKE_UTILS}/Modules/CMakePolicy.cmake
@@ -30,6 +37,8 @@ option(ORC_RT_INCLUDE_DOCS "Build the ORC-RT documentation." ON)
 option(ORC_RT_ENABLE_ASSERTIONS "Enable assertions independent of build mode." ON)
 option(ORC_RT_ENABLE_PEDANTIC "Compile with pedantic enabled." ON)
 option(ORC_RT_ENABLE_WERROR "Fail and stop if a warning is triggered." OFF)
+option(ORC_RT_ENABLE_RTTI "Enable RTTI." ON)
+option(ORC_RT_ENABLE_EXCEPTIONS "Enable exceptions." ON)
 option(ORC_RT_INCLUDE_TESTS "Build ORC-RT tests." ${LLVM_INCLUDE_TESTS})
 
 set(CMAKE_CXX_STANDARD 17 CACHE STRING "C++ standard to conform to")
@@ -39,6 +48,27 @@ set(CMAKE_FOLDER "orc-rt")
 
 set(ORC_RT_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(ORC_RT_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
+
+# Configure RTTI and exceptions compile flags
+set(ORC_RT_COMPILE_FLAGS)
+if(ORC_RT_ENABLE_RTTI)
+  list(APPEND ORC_RT_COMPILE_FLAGS -frtti)
+else()
+  list(APPEND ORC_RT_COMPILE_FLAGS -fno-rtti)
+endif()
+
+if(ORC_RT_ENABLE_EXCEPTIONS)
+  list(APPEND ORC_RT_COMPILE_FLAGS -fexceptions)
+else()
+  list(APPEND ORC_RT_COMPILE_FLAGS -fno-exceptions)
+endif()
+
+# Generate config header
+configure_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/orc-rt-c/config.h.in
+  ${CMAKE_CURRENT_BINARY_DIR}/include/orc-rt-c/config.h
+  @ONLY
+)
 
 #===============================================================================
 # Setup Source Code

@@ -18,9 +18,7 @@ static Error ExtractDebugNames(StringRef NamesSecData, StringRef StrSecData) {
   DWARFDataExtractor NamesExtractor(NamesSecData,
                                     /*isLittleEndian=*/true,
                                     /*AddrSize=*/4);
-  DataExtractor StrExtractor(StrSecData,
-                             /*isLittleEndian=*/true,
-                             /*AddrSize=*/4);
+  DataExtractor StrExtractor(StrSecData, /*isLittleEndian=*/true);
   DWARFDebugNames Table(NamesExtractor, StrExtractor);
   return Table.extract();
 }
@@ -299,4 +297,18 @@ TEST(DWARFDebugNames, UnsupportedForm) {
       Sections,
       FailedWithMessage("unsupported Form for YAML debug_names emitter"));
 }
+
+TEST(DWARFDebugNames, TestStripTemplateParameters) {
+
+  std::optional<StringRef> stripped_name;
+  // Make sure we can extract the name "foo" from the template parameters.
+  stripped_name = StripTemplateParameters("foo<int>");
+  ASSERT_TRUE(stripped_name.has_value());
+  ASSERT_EQ(*stripped_name, StringRef("foo"));
+  // Make sure that we don't get a valid name back when the string starts with
+  // '<'.
+  stripped_name = StripTemplateParameters("<int>");
+  ASSERT_FALSE(stripped_name.has_value());
+}
+
 } // end anonymous namespace

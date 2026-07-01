@@ -31,8 +31,8 @@ if lit_shell_env:
 # testFormat: The test format to use to interpret tests.
 extra_substitutions = extra_substitutions = (
     [
-        (r"FileCheck .*", "cat > /dev/null"),
         (r"not FileCheck .*", "cat > /dev/null"),
+        (r"FileCheck .*", "cat > /dev/null"),
     ]
     if config.enable_profcheck
     else []
@@ -63,12 +63,35 @@ if config.enable_profcheck:
     config.excludes.append("llvm-objcopy")
     # (Issue #161235) Temporarily exclude LoopVectorize.
     config.excludes.append("LoopVectorize")
-    # exclude UpdateTestChecks - they fail because of inserted prof annotations
-    config.excludes.append("UpdateTestChecks")
+    # Exclude suites that fail due to inserted profile annotations.
+    config.excludes.extend(["UpdateTestChecks", "Bitcode"])
     # TODO(#166655): Reenable Instrumentation tests
     config.excludes.append("Instrumentation")
     # profiling doesn't work quite well on GPU, excluding
     config.excludes.append("AMDGPU")
+    # TODO targets where profiling may make sense but will be addressed later
+    config.excludes.extend(
+        ["Hexagon", "NVPTX", "PowerPC", "RISCV", "SPARC", "SPIRV", "WebAssembly"]
+    )
+    # these passes aren't hooked up to the pass pipeline:
+    config.excludes.extend(["IRCE", "LoopBoundSplit", "LoopInterchange", "Scalarizer"])
+    # Not on by default in any standard CPU pipeline.
+    config.excludes.extend(
+        [
+            "Attributor",
+            "IROutliner",
+            "BlockExtractor",
+            "CodeExtractor",
+            "HotColdSplit",
+            "LowerGlobalDestructors",
+            "LowerSwitch",
+            "StructurizeCFG",
+            "UnifyLoopExits",
+        ]
+    )
+    # Not aimed at being used for peak-optimized binaries. These will be
+    # addressed later. PhaseOrdering has a couple of merge function tests.
+    config.excludes.extend(["GCOVProfiling", "MergeFunc", "PhaseOrdering"])
 
 # test_source_root: The root path where tests are located.
 config.test_source_root = os.path.dirname(__file__)
@@ -220,6 +243,7 @@ tools = [
     ToolSubst("%llvm-strip", FindTool("llvm-strip")),
     ToolSubst("%llvm-install-name-tool", FindTool("llvm-install-name-tool")),
     ToolSubst("%llvm-bitcode-strip", FindTool("llvm-bitcode-strip")),
+    ToolSubst("%llvm-extract-bundle-entry", FindTool("llvm-extract-bundle-entry")),
     ToolSubst("%split-file", FindTool("split-file")),
 ]
 
@@ -229,6 +253,7 @@ tools.extend(
         "dsymutil",
         "lli",
         "lli-child-target",
+        "llubi",
         "llvm-ar",
         "llvm-as",
         "llvm-addr2line",
@@ -251,6 +276,7 @@ tools.extend(
         "llvm-dlltool",
         "llvm-exegesis",
         "llvm-extract",
+        "llvm-extract-bundle-entry",
         "llvm-ir2vec",
         "llvm-isel-fuzzer",
         "llvm-ifs",
@@ -293,7 +319,6 @@ tools.extend(
         "obj2yaml",
         "yaml-bench",
         "verify-uselistorder",
-        "bugpoint",
         "llc",
         "llvm-symbolizer",
         "opt",
@@ -511,7 +536,7 @@ elif uname_r.endswith("microsoft-standard-WSL2"):
 if config.has_plugins:
     config.available_features.add("plugins")
 
-if config.build_examples:
+if config.include_examples:
     config.available_features.add("examples")
 
 if config.linked_bye_extension:
@@ -565,6 +590,9 @@ if config.link_llvm_dylib:
 
 if config.have_tf_aot:
     config.available_features.add("have_tf_aot")
+
+if getattr(config, "have_opencsd", False):
+    config.available_features.add("opencsd")
 
 if config.have_tflite:
     config.available_features.add("have_tflite")
@@ -804,6 +832,8 @@ if config.have_ondisk_cas:
 if "MemoryWithOrigins" in config.llvm_use_sanitizer:
     config.available_features.add("use_msan_with_origins")
 
+if "Undefined" in config.llvm_use_sanitizer:
+    config.available_features.add("ubsan")
 
 # Restrict the size of the on-disk CAS for tests. This allows testing in
 # constrained environments (e.g. small TMPDIR). It also prevents leaving
@@ -822,6 +852,99 @@ if "system-aix" in config.available_features:
 
 if config.has_logf128:
     config.available_features.add("has_logf128")
+
+# ANSI escape sequences.
+#
+# For example:
+#
+#   REQUIRES: ansi-escapes
+#   RUN: some-cmd -color 2>&1 | %{reveal-ansi-escapes} | FileCheck %s
+#   CHECK: Once in a <blue>blue moon<reset>, I'm <green>green with envy<reset>.
+if platform.system() not in ["Windows"]:
+    config.available_features.add("ansi-escapes")
+    # It is not clear that the escape sequence \x1b is portable across sed
+    # implementations, but that is ok because python substitutes the raw
+    # character here.
+    config.substitutions.append(
+        (
+            "%{reveal-ansi-escapes}",
+            "sed "
+            # Foreground colors.
+            "-e 's/\x1b\\[0;30m/<black>/g' "
+            "-e 's/\x1b\\[0;31m/<red>/g' "
+            "-e 's/\x1b\\[0;32m/<green>/g' "
+            "-e 's/\x1b\\[0;33m/<yellow>/g' "
+            "-e 's/\x1b\\[0;34m/<blue>/g' "
+            "-e 's/\x1b\\[0;35m/<magenta>/g' "
+            "-e 's/\x1b\\[0;36m/<cyan>/g' "
+            "-e 's/\x1b\\[0;37m/<white>/g' "
+            "-e 's/\x1b\\[0;90m/<bright-black>/g' "
+            "-e 's/\x1b\\[0;91m/<bright-red>/g' "
+            "-e 's/\x1b\\[0;92m/<bright-green>/g' "
+            "-e 's/\x1b\\[0;93m/<bright-yellow>/g' "
+            "-e 's/\x1b\\[0;94m/<bright-blue>/g' "
+            "-e 's/\x1b\\[0;95m/<bright-magenta>/g' "
+            "-e 's/\x1b\\[0;96m/<bright-cyan>/g' "
+            "-e 's/\x1b\\[0;97m/<bright-white>/g' "
+            # Bold foreground colors.
+            "-e 's/\x1b\\[0;1;30m/<bold-black>/g' "
+            "-e 's/\x1b\\[0;1;31m/<bold-red>/g' "
+            "-e 's/\x1b\\[0;1;32m/<bold-green>/g' "
+            "-e 's/\x1b\\[0;1;33m/<bold-yellow>/g' "
+            "-e 's/\x1b\\[0;1;34m/<bold-blue>/g' "
+            "-e 's/\x1b\\[0;1;35m/<bold-magenta>/g' "
+            "-e 's/\x1b\\[0;1;36m/<bold-cyan>/g' "
+            "-e 's/\x1b\\[0;1;37m/<bold-white>/g' "
+            "-e 's/\x1b\\[0;1;90m/<bold-bright-black>/g' "
+            "-e 's/\x1b\\[0;1;91m/<bold-bright-red>/g' "
+            "-e 's/\x1b\\[0;1;92m/<bold-bright-green>/g' "
+            "-e 's/\x1b\\[0;1;93m/<bold-bright-yellow>/g' "
+            "-e 's/\x1b\\[0;1;94m/<bold-bright-blue>/g' "
+            "-e 's/\x1b\\[0;1;95m/<bold-bright-magenta>/g' "
+            "-e 's/\x1b\\[0;1;96m/<bold-bright-cyan>/g' "
+            "-e 's/\x1b\\[0;1;97m/<bold-bright-white>/g' "
+            # Background colors.
+            "-e 's/\x1b\\[0;40m/<bg-black>/g' "
+            "-e 's/\x1b\\[0;41m/<bg-red>/g' "
+            "-e 's/\x1b\\[0;42m/<bg-green>/g' "
+            "-e 's/\x1b\\[0;43m/<bg-yellow>/g' "
+            "-e 's/\x1b\\[0;44m/<bg-blue>/g' "
+            "-e 's/\x1b\\[0;45m/<bg-magenta>/g' "
+            "-e 's/\x1b\\[0;46m/<bg-cyan>/g' "
+            "-e 's/\x1b\\[0;47m/<bg-white>/g' "
+            "-e 's/\x1b\\[0;100m/<bg-bright-black>/g' "
+            "-e 's/\x1b\\[0;101m/<bg-bright-red>/g' "
+            "-e 's/\x1b\\[0;102m/<bg-bright-green>/g' "
+            "-e 's/\x1b\\[0;103m/<bg-bright-yellow>/g' "
+            "-e 's/\x1b\\[0;104m/<bg-bright-blue>/g' "
+            "-e 's/\x1b\\[0;105m/<bg-bright-magenta>/g' "
+            "-e 's/\x1b\\[0;106m/<bg-bright-cyan>/g' "
+            "-e 's/\x1b\\[0;107m/<bg-bright-white>/g' "
+            # Bold background colors.
+            "-e 's/\x1b\\[0;1;40m/<bg-bold-black>/g' "
+            "-e 's/\x1b\\[0;1;41m/<bg-bold-red>/g' "
+            "-e 's/\x1b\\[0;1;42m/<bg-bold-green>/g' "
+            "-e 's/\x1b\\[0;1;43m/<bg-bold-yellow>/g' "
+            "-e 's/\x1b\\[0;1;44m/<bg-bold-blue>/g' "
+            "-e 's/\x1b\\[0;1;45m/<bg-bold-magenta>/g' "
+            "-e 's/\x1b\\[0;1;46m/<bg-bold-cyan>/g' "
+            "-e 's/\x1b\\[0;1;47m/<bg-bold-white>/g' "
+            "-e 's/\x1b\\[0;1;100m/<bg-bold-bright-black>/g' "
+            "-e 's/\x1b\\[0;1;101m/<bg-bold-bright-red>/g' "
+            "-e 's/\x1b\\[0;1;102m/<bg-bold-bright-green>/g' "
+            "-e 's/\x1b\\[0;1;103m/<bg-bold-bright-yellow>/g' "
+            "-e 's/\x1b\\[0;1;104m/<bg-bold-bright-blue>/g' "
+            "-e 's/\x1b\\[0;1;105m/<bg-bold-bright-magenta>/g' "
+            "-e 's/\x1b\\[0;1;106m/<bg-bold-bright-cyan>/g' "
+            "-e 's/\x1b\\[0;1;107m/<bg-bold-bright-white>/g' "
+            # Misc.
+            "-e 's/\x1b\\[1m/<bold>/g' "
+            "-e 's/\x1b\\[7m/<reverse>/g' "
+            "-e 's/\x1b\\[0m/<reset>/g' "
+            # Reveal any sequence we missed above.
+            "-e 's/\x1b/<esc>/g' ",
+        )
+    )
 
 if lit_config.update_tests:
     import sys

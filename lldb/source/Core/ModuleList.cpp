@@ -80,7 +80,7 @@ enum {
 
 ModuleListProperties::ModuleListProperties() {
   m_collection_sp = std::make_shared<OptionValueProperties>("symbols");
-  m_collection_sp->Initialize(g_modulelist_properties);
+  m_collection_sp->Initialize(g_modulelist_properties_def);
   m_collection_sp->SetValueChangedCallback(ePropertySymLinkPaths,
                                            [this] { UpdateSymlinkMappings(); });
 
@@ -95,7 +95,6 @@ ModuleListProperties::ModuleListProperties() {
     llvm::sys::path::append(path, "IndexCache");
     lldbassert(SetLLDBIndexCachePath(FileSpec(path)));
   }
-
 }
 
 bool ModuleListProperties::GetEnableExternalLookup() const {
@@ -116,6 +115,13 @@ SymbolDownload ModuleListProperties::GetSymbolAutoDownload() const {
   const uint32_t idx = ePropertyAutoDownload;
   return GetPropertyAtIndexAs<lldb::SymbolDownload>(
       idx, static_cast<lldb::SymbolDownload>(
+               g_modulelist_properties[idx].default_uint_value));
+}
+
+SymbolSharedCacheUse ModuleListProperties::GetSharedCacheBinaryLoading() const {
+  const uint32_t idx = ePropertySharedCacheBinaryLoading;
+  return GetPropertyAtIndexAs<lldb::SymbolSharedCacheUse>(
+      idx, static_cast<lldb::SymbolSharedCacheUse>(
                g_modulelist_properties[idx].default_uint_value));
 }
 
@@ -186,7 +192,7 @@ PathMappingList ModuleListProperties::GetSymlinkMappings() const {
   return m_symlink_paths;
 }
 
-bool ModuleListProperties::GetLoadSymbolOnDemand() {
+bool ModuleListProperties::GetLoadSymbolOnDemand() const {
   const uint32_t idx = ePropertyLoadSymbolOnDemand;
   return GetPropertyAtIndexAs<bool>(
       idx, g_modulelist_properties[idx].default_uint_value != 0);
@@ -786,7 +792,7 @@ public:
     // different filename. For example, when searching by UUID and finding a
     // module with an alias.
     assert((matching_module_list.IsEmpty() ||
-            module_spec.GetFileSpec().GetFilename().IsEmpty() ||
+            module_spec.GetFileSpec().GetFilename().empty() ||
             module_spec.GetFileSpec().GetFilename() !=
                 matching_module_list.GetModuleAtIndex(0)
                     ->GetFileSpec()
@@ -864,10 +870,10 @@ public:
 
 private:
   ModuleSP FindModuleInMap(const Module &module) const {
-    if (!module.GetFileSpec().GetFilename())
+    if (module.GetFileSpec().GetFilename().empty())
       return ModuleSP();
-    ConstString name = module.GetFileSpec().GetFilename();
-    auto it = m_name_to_modules.find(name);
+    llvm::StringRef name = module.GetFileSpec().GetFilename();
+    auto it = m_name_to_modules.find(ConstString(name));
     if (it == m_name_to_modules.end())
       return ModuleSP();
     const llvm::SmallVectorImpl<ModuleSP> &vector = it->second;
@@ -880,7 +886,8 @@ private:
 
   void FindModulesInMap(const ModuleSpec &module_spec,
                         ModuleList &matching_module_list) const {
-    auto it = m_name_to_modules.find(module_spec.GetFileSpec().GetFilename());
+    auto it = m_name_to_modules.find(
+        ConstString(module_spec.GetFileSpec().GetFilename()));
     if (it == m_name_to_modules.end())
       return;
     const llvm::SmallVectorImpl<ModuleSP> &vector = it->second;
@@ -891,15 +898,15 @@ private:
   }
 
   void AddToMap(const ModuleSP &module_sp) {
-    ConstString name = module_sp->GetFileSpec().GetFilename();
-    if (name.IsEmpty())
+    llvm::StringRef name = module_sp->GetFileSpec().GetFilename();
+    if (name.empty())
       return;
-    m_name_to_modules[name].push_back(module_sp);
+    m_name_to_modules[ConstString(name)].push_back(module_sp);
   }
 
   void RemoveFromMap(const ModuleWP module_wp, bool if_orphaned = false) {
     if (auto module_sp = module_wp.lock()) {
-      ConstString name = module_sp->GetFileSpec().GetFilename();
+      ConstString name = ConstString(module_sp->GetFileSpec().GetFilename());
       if (!m_name_to_modules.contains(name))
         return;
       llvm::SmallVectorImpl<ModuleSP> &vec = m_name_to_modules[name];
@@ -924,11 +931,11 @@ private:
   }
 
   void RemoveEquivalentModulesFromMap(const ModuleSP &module_sp) {
-    ConstString name = module_sp->GetFileSpec().GetFilename();
-    if (name.IsEmpty())
+    llvm::StringRef name = module_sp->GetFileSpec().GetFilename();
+    if (name.empty())
       return;
 
-    auto it = m_name_to_modules.find(name);
+    auto it = m_name_to_modules.find(ConstString(name));
     if (it == m_name_to_modules.end())
       return;
 
@@ -1000,9 +1007,8 @@ struct SharedModuleListInfo {
   SharedModuleList module_list;
   ModuleListProperties module_list_properties;
 };
-}
-static SharedModuleListInfo &GetSharedModuleListInfo()
-{
+} // namespace
+static SharedModuleListInfo &GetSharedModuleListInfo() {
   static SharedModuleListInfo *g_shared_module_list_info = nullptr;
   static llvm::once_flag g_once_flag;
   llvm::call_once(g_once_flag, []() {
@@ -1047,8 +1053,7 @@ size_t ModuleList::RemoveOrphanSharedModules(bool mandatory) {
 Status
 ModuleList::GetSharedModule(const ModuleSpec &module_spec, ModuleSP &module_sp,
                             llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules,
-                            bool *did_create_ptr, bool always_create,
-                            bool invoke_locate_callback) {
+                            bool *did_create_ptr, bool invoke_locate_callback) {
   SharedModuleList &shared_module_list = GetSharedModuleList();
   std::lock_guard<std::recursive_mutex> guard(shared_module_list.GetMutex());
   char path[PATH_MAX];
@@ -1067,7 +1072,7 @@ ModuleList::GetSharedModule(const ModuleSpec &module_spec, ModuleSP &module_sp,
   // Make sure no one else can try and get or create a module while this
   // function is actively working on it by doing an extra lock on the global
   // mutex list.
-  if (!always_create) {
+  {
     ModuleList matching_module_list;
     shared_module_list.FindModules(module_spec, matching_module_list);
     const size_t num_matching_modules = matching_module_list.GetSize();
@@ -1083,11 +1088,11 @@ ModuleList::GetSharedModule(const ModuleSpec &module_spec, ModuleSP &module_sp,
             old_modules->push_back(module_sp);
 
           Log *log = GetLog(LLDBLog::Modules);
-          if (log != nullptr)
-            LLDB_LOGF(
-                log, "%p '%s' module changed: removing from global module list",
-                static_cast<void *>(module_sp.get()),
-                module_sp->GetFileSpec().GetFilename().GetCString());
+          LLDB_LOG(
+              log,
+              "{0:x} '{1}' module changed: removing from global module list",
+              static_cast<void *>(module_sp.get()),
+              module_sp->GetFileSpec().GetFilename());
 
           shared_module_list.Remove(module_sp);
           module_sp.reset();
@@ -1103,18 +1108,26 @@ ModuleList::GetSharedModule(const ModuleSpec &module_spec, ModuleSP &module_sp,
   if (module_sp)
     return error;
 
-  // Try target's platform locate module callback before second attempt.
+  // Try platform's locate module callback before second attempt.
+  // The platform can come from either the Target (if available) or directly
+  // from the ModuleSpec (useful when Target is not yet created, e.g., during
+  // target creation for launch mode).
   if (invoke_locate_callback) {
-    TargetSP target_sp = module_spec.GetTargetSP();
-    if (target_sp && target_sp->IsValid()) {
-      if (PlatformSP platform_sp = target_sp->GetPlatform()) {
-        FileSpec symbol_file_spec;
-        platform_sp->CallLocateModuleCallbackIfSet(
-            module_spec, module_sp, symbol_file_spec, did_create_ptr);
-        if (module_sp) {
-          // The callback found a module.
-          return error;
-        }
+    PlatformSP platform_sp;
+    if (TargetSP target_sp = module_spec.GetTargetSP()) {
+      if (target_sp->IsValid())
+        platform_sp = target_sp->GetPlatform();
+    }
+    if (!platform_sp)
+      platform_sp = module_spec.GetPlatformSP();
+
+    if (platform_sp) {
+      FileSpec symbol_file_spec;
+      platform_sp->CallLocateModuleCallbackIfSet(
+          module_spec, module_sp, symbol_file_spec, did_create_ptr);
+      if (module_sp) {
+        // The callback found a module.
+        return error;
       }
     }
   }
@@ -1129,9 +1142,8 @@ ModuleList::GetSharedModule(const ModuleSpec &module_spec, ModuleSP &module_sp,
     if (uuid_ptr && *uuid_ptr != module_sp->GetUUID()) {
       module_sp.reset();
     } else {
-      if (module_sp->GetObjectFile() &&
-          module_sp->GetObjectFile()->GetType() ==
-              ObjectFile::eTypeStubLibrary) {
+      if (module_sp->GetObjectFile() && module_sp->GetObjectFile()->GetType() ==
+                                            ObjectFile::eTypeStubLibrary) {
         module_sp.reset();
       } else {
         if (did_create_ptr) {
@@ -1161,7 +1173,7 @@ ModuleList::GetSharedModule(const ModuleSpec &module_spec, ModuleSP &module_sp,
       if (!FileSystem::Instance().IsDirectory(search_path_spec))
         continue;
       search_path_spec.AppendPathComponent(
-          module_spec.GetFileSpec().GetFilename().GetStringRef());
+          module_spec.GetFileSpec().GetFilename());
       if (!FileSystem::Instance().Exists(search_path_spec))
         continue;
 
@@ -1320,9 +1332,103 @@ bool ModuleList::RemoveSharedModuleIfOrphaned(const ModuleWP module_wp) {
   return GetSharedModuleList().RemoveIfOrphaned(module_wp);
 }
 
+static bool LoadScriptingModule(const FileSpec &scripting_fspec,
+                                ScriptInterpreter &script_interpreter,
+                                Target &target, Status &error) {
+  assert(scripting_fspec);
+
+  StreamString scripting_stream;
+  scripting_fspec.Dump(scripting_stream.AsRawOstream());
+  LoadScriptOptions options;
+  return script_interpreter.LoadScriptingModule(
+      scripting_stream.GetData(), options, error,
+      /*module_sp*/ nullptr, /*extra_path*/ {}, target.shared_from_this());
+}
+
+bool ModuleList::LoadScriptingResourceInTargetForModule(Module &module,
+                                                        Target &target,
+                                                        Status &error) {
+  Log *log = GetLog(LLDBLog::Modules);
+
+  Debugger &debugger = target.GetDebugger();
+  const ScriptLanguage script_language = debugger.GetScriptLanguage();
+  if (script_language == eScriptLanguageNone)
+    return true;
+
+  ScriptInterpreter *script_interpreter = debugger.GetScriptInterpreter();
+  if (!script_interpreter) {
+    error = Status::FromErrorString("invalid ScriptInterpreter");
+    return false;
+  }
+
+  PlatformSP platform_sp = target.GetPlatform();
+  if (!platform_sp) {
+    error = Status::FromErrorString("invalid Platform");
+    return false;
+  }
+
+  StreamString feedback_stream;
+  llvm::SmallDenseMap<FileSpec, LoadScriptFromSymFile> file_specs =
+      platform_sp->LocateExecutableScriptingResources(&target, module,
+                                                      feedback_stream);
+
+  if (!feedback_stream.Empty())
+    debugger.ReportWarning(feedback_stream.GetString().str(), debugger.GetID());
+
+  const bool trusted = platform_sp->IsSymbolFileTrusted(module);
+
+  for (const auto &[scripting_fspec, load_style] : file_specs) {
+    if (load_style == eLoadScriptFromSymFileFalse)
+      continue;
+
+    if (!FileSystem::Instance().Exists(scripting_fspec))
+      continue;
+
+    switch (load_style) {
+    case eLoadScriptFromSymFileFalse:
+      llvm_unreachable("case already handled");
+    case eLoadScriptFromSymFileTrue:
+      break;
+    case eLoadScriptFromSymFileTrusted:
+      if (trusted)
+        break;
+      LLVM_FALLTHROUGH;
+    case eLoadScriptFromSymFileWarn:
+      debugger.ReportWarning(
+          llvm::formatv(
+              // clang-format off
+R"('{0}' contains {1} debug script. To run this script in this debug session:
+
+    command script import "{2}"
+
+To run all discovered debug scripts in this session:
+
+    settings set target.load-script-from-symbol-file true
+)",
+              // clang-format on
+              module.GetFileSpec().GetFileNameStrippingExtension(),
+              trusted ? "a trusted" : "an untrusted",
+              scripting_fspec.GetPath()),
+          debugger.GetID());
+
+      continue;
+    }
+
+    LLDB_LOG(log, "Auto-loading {0}", scripting_fspec.GetPath());
+
+    if (!LoadScriptingModule(scripting_fspec, *script_interpreter, target,
+                             error)) {
+      LLDB_LOG(log, "Failed to load '{0}'. Remaining scripts won't be loaded.",
+               scripting_fspec.GetPath());
+      return false;
+    }
+  }
+
+  return true;
+}
+
 bool ModuleList::LoadScriptingResourcesInTarget(Target *target,
                                                 std::list<Status> &errors,
-                                                Stream &feedback_stream,
                                                 bool continue_on_error) {
   if (!target)
     return false;
@@ -1336,15 +1442,12 @@ bool ModuleList::LoadScriptingResourcesInTarget(Target *target,
   for (auto module : tmp_module_list.ModulesNoLocking()) {
     if (module) {
       Status error;
-      if (!module->LoadScriptingResourceInTarget(target, error,
-                                                 feedback_stream)) {
+      if (!LoadScriptingResourceInTargetForModule(*module, *target, error)) {
         if (error.Fail() && error.AsCString()) {
-          error = Status::FromErrorStringWithFormat(
+          error = Status::FromErrorStringWithFormatv(
               "unable to load scripting data for "
-              "module %s - error reported was %s",
-              module->GetFileSpec()
-                  .GetFileNameStrippingExtension()
-                  .GetCString(),
+              "module {0} - error reported was {1}",
+              module->GetFileSpec().GetFileNameStrippingExtension(),
               error.AsCString());
           errors.push_back(std::move(error));
           if (!continue_on_error)
@@ -1379,7 +1482,6 @@ bool ModuleList::AnyOf(
 
   return false;
 }
-
 
 void ModuleList::Swap(ModuleList &other) {
   // scoped_lock locks both mutexes at once.

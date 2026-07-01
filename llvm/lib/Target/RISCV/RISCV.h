@@ -26,7 +26,8 @@ class RISCVRegisterBankInfo;
 class RISCVSubtarget;
 class RISCVTargetMachine;
 
-class RISCVCodeGenPreparePass : public PassInfoMixin<RISCVCodeGenPreparePass> {
+class RISCVCodeGenPreparePass
+    : public OptionalPassInfoMixin<RISCVCodeGenPreparePass> {
 private:
   const RISCVTargetMachine *TM;
 
@@ -131,6 +132,9 @@ void initializeRISCVVLOptimizerPass(PassRegistry &);
 
 FunctionPass *createRISCVVMV0EliminationPass();
 void initializeRISCVVMV0EliminationPass(PassRegistry &);
+
+FunctionPass *createRISCVQCRelaxMarkingPass();
+void initializeRISCVQCRelaxMarkingPass(PassRegistry &);
 
 void initializeRISCVAsmPrinterPass(PassRegistry &);
 } // namespace llvm

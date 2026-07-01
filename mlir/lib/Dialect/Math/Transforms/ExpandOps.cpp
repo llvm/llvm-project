@@ -13,6 +13,7 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/Math/Transforms/Passes.h"
+#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/TypeUtilities.h"
@@ -25,9 +26,18 @@ namespace mlir::math {
 #include "mlir/Dialect/Math/Transforms/Passes.h.inc"
 } // namespace mlir::math
 
-/// Create a float constant.
+/// Returns true if the type is an unranked shaped type (e.g., tensor<*xf32>).
+/// Unranked types can't be expanded because tensor.splat requires ranked types.
+static bool isUnrankedShaped(Type type) {
+  auto shapedTy = dyn_cast<ShapedType>(type);
+  return shapedTy && !shapedTy.hasRank();
+}
+
+/// Create a float constant. For dynamically-shaped tensors, creates a scalar
+/// constant and uses tensor.dim + tensor.splat to broadcast to the target
+/// shape. The optional `dynamicShapeRef` provides the runtime dimension sizes.
 static Value createFloatConst(Location loc, Type type, APFloat value,
-                              OpBuilder &b) {
+                              OpBuilder &b, Value dynamicShapeRef = Value()) {
   bool losesInfo = false;
   auto eltType = getElementTypeOrSelf(type);
   // Convert double to the given `FloatType` with round-to-nearest-ties-to-even.
@@ -35,25 +45,50 @@ static Value createFloatConst(Location loc, Type type, APFloat value,
                 APFloat::rmNearestTiesToEven, &losesInfo);
   auto attr = b.getFloatAttr(eltType, value);
   if (auto shapedTy = dyn_cast<ShapedType>(type)) {
-    return arith::ConstantOp::create(b, loc,
-                                     DenseElementsAttr::get(shapedTy, attr));
+    if (shapedTy.hasStaticShape())
+      return arith::ConstantOp::create(b, loc,
+                                       DenseElementsAttr::get(shapedTy, attr));
+
+    // Dynamic shape: create scalar constant and splat to the target shape.
+    Value scalar = arith::ConstantOp::create(b, loc, eltType, attr);
+    SmallVector<Value> dynamicSizes;
+    for (int64_t i = 0; i < shapedTy.getRank(); ++i) {
+      if (shapedTy.isDynamicDim(i))
+        dynamicSizes.push_back(
+            tensor::DimOp::create(b, loc, dynamicShapeRef, i));
+    }
+    return tensor::SplatOp::create(b, loc, type, scalar, dynamicSizes);
   }
 
   return arith::ConstantOp::create(b, loc, attr);
 }
 
 static Value createFloatConst(Location loc, Type type, double value,
-                              OpBuilder &b) {
-  return createFloatConst(loc, type, APFloat(value), b);
+                              OpBuilder &b, Value dynamicShapeRef = Value()) {
+  return createFloatConst(loc, type, APFloat(value), b, dynamicShapeRef);
 }
 
-/// Create an integer constant.
+/// Create an integer constant. For dynamically-shaped tensors, creates a scalar
+/// constant and uses tensor.dim + tensor.splat to broadcast to the target
+/// shape. The optional `dynamicShapeRef` provides the runtime dimension sizes.
 static Value createIntConst(Location loc, Type type, int64_t value,
-                            OpBuilder &b) {
-  auto attr = b.getIntegerAttr(getElementTypeOrSelf(type), value);
+                            OpBuilder &b, Value dynamicShapeRef = Value()) {
+  auto eltType = getElementTypeOrSelf(type);
+  auto attr = b.getIntegerAttr(eltType, value);
   if (auto shapedTy = dyn_cast<ShapedType>(type)) {
-    return arith::ConstantOp::create(b, loc,
-                                     DenseElementsAttr::get(shapedTy, attr));
+    if (shapedTy.hasStaticShape())
+      return arith::ConstantOp::create(b, loc,
+                                       DenseElementsAttr::get(shapedTy, attr));
+
+    // Dynamic shape: create scalar constant and splat to the target shape.
+    Value scalar = arith::ConstantOp::create(b, loc, eltType, attr);
+    SmallVector<Value> dynamicSizes;
+    for (int64_t i = 0; i < shapedTy.getRank(); ++i) {
+      if (shapedTy.isDynamicDim(i))
+        dynamicSizes.push_back(
+            tensor::DimOp::create(b, loc, dynamicShapeRef, i));
+    }
+    return tensor::SplatOp::create(b, loc, type, scalar, dynamicSizes);
   }
 
   return arith::ConstantOp::create(b, loc, attr);
@@ -77,11 +112,14 @@ static LogicalResult convertSinhOp(math::SinhOp op, PatternRewriter &rewriter) {
   Value operand = op.getOperand();
   Type opType = operand.getType();
 
+  if (isUnrankedShaped(opType))
+    return failure();
+
   Value exp = math::ExpOp::create(b, operand);
   Value neg = arith::NegFOp::create(b, operand);
   Value nexp = math::ExpOp::create(b, neg);
   Value sub = arith::SubFOp::create(b, exp, nexp);
-  Value half = createFloatConst(op->getLoc(), opType, 0.5, rewriter);
+  Value half = createFloatConst(op->getLoc(), opType, 0.5, rewriter, operand);
   Value res = arith::MulFOp::create(b, sub, half);
   rewriter.replaceOp(op, res);
   return success();
@@ -93,11 +131,14 @@ static LogicalResult convertCoshOp(math::CoshOp op, PatternRewriter &rewriter) {
   Value operand = op.getOperand();
   Type opType = operand.getType();
 
+  if (isUnrankedShaped(opType))
+    return failure();
+
   Value exp = math::ExpOp::create(b, operand);
   Value neg = arith::NegFOp::create(b, operand);
   Value nexp = math::ExpOp::create(b, neg);
   Value add = arith::AddFOp::create(b, exp, nexp);
-  Value half = createFloatConst(op->getLoc(), opType, 0.5, rewriter);
+  Value half = createFloatConst(op->getLoc(), opType, 0.5, rewriter, operand);
   Value res = arith::MulFOp::create(b, add, half);
   rewriter.replaceOp(op, res);
   return success();
@@ -112,15 +153,20 @@ static LogicalResult convertCoshOp(math::CoshOp op, PatternRewriter &rewriter) {
 /// 1]. Expand the computation on the input `x * sign(x)`, then multiply the
 /// result by `sign(x)` to retain sign of the real result.
 static LogicalResult convertTanhOp(math::TanhOp op, PatternRewriter &rewriter) {
-  auto floatType = op.getOperand().getType();
+  Value operand = op.getOperand();
+  auto floatType = operand.getType();
+
+  if (isUnrankedShaped(floatType))
+    return failure();
+
   Location loc = op.getLoc();
-  Value zero = createFloatConst(loc, floatType, 0.0, rewriter);
-  Value one = createFloatConst(loc, floatType, 1.0, rewriter);
-  Value negTwo = createFloatConst(loc, floatType, -2.0, rewriter);
+  Value zero = createFloatConst(loc, floatType, 0.0, rewriter, operand);
+  Value one = createFloatConst(loc, floatType, 1.0, rewriter, operand);
+  Value negTwo = createFloatConst(loc, floatType, -2.0, rewriter, operand);
 
   // Compute sign(x) = cast<float_type>(x < 0) * (-2) + 1
   Value isNegative = arith::CmpFOp::create(
-      rewriter, loc, arith::CmpFPredicate::OLT, op.getOperand(), zero);
+      rewriter, loc, arith::CmpFPredicate::OLT, operand, zero);
   Value isNegativeFloat =
       arith::UIToFPOp::create(rewriter, loc, floatType, isNegative);
   Value isNegativeTimesNegTwo =
@@ -128,7 +174,7 @@ static LogicalResult convertTanhOp(math::TanhOp op, PatternRewriter &rewriter) {
   Value sign = arith::AddFOp::create(rewriter, loc, isNegativeTimesNegTwo, one);
 
   // Normalize input to positive value: y = sign(x) * x
-  Value positiveX = arith::MulFOp::create(rewriter, loc, sign, op.getOperand());
+  Value positiveX = arith::MulFOp::create(rewriter, loc, sign, operand);
 
   // Decompose on normalized input
   Value negDoubledX = arith::MulFOp::create(rewriter, loc, negTwo, positiveX);
@@ -162,7 +208,10 @@ static LogicalResult convertAsinhOp(math::AsinhOp op,
   Value operand = op.getOperand();
   Type opType = operand.getType();
 
-  Value one = createFloatConst(op->getLoc(), opType, 1.0, rewriter);
+  if (isUnrankedShaped(opType))
+    return failure();
+
+  Value one = createFloatConst(op->getLoc(), opType, 1.0, rewriter, operand);
   Value fma = math::FmaOp::create(b, operand, operand, one);
   Value sqrt = math::SqrtOp::create(b, fma);
   Value add = arith::AddFOp::create(b, operand, sqrt);
@@ -178,7 +227,11 @@ static LogicalResult convertAcoshOp(math::AcoshOp op,
   Value operand = op.getOperand();
   Type opType = operand.getType();
 
-  Value negOne = createFloatConst(op->getLoc(), opType, -1.0, rewriter);
+  if (isUnrankedShaped(opType))
+    return failure();
+
+  Value negOne =
+      createFloatConst(op->getLoc(), opType, -1.0, rewriter, operand);
   Value fma = math::FmaOp::create(b, operand, operand, negOne);
   Value sqrt = math::SqrtOp::create(b, fma);
   Value add = arith::AddFOp::create(b, operand, sqrt);
@@ -194,13 +247,16 @@ static LogicalResult convertAtanhOp(math::AtanhOp op,
   Value operand = op.getOperand();
   Type opType = operand.getType();
 
-  Value one = createFloatConst(op->getLoc(), opType, 1.0, rewriter);
+  if (isUnrankedShaped(opType))
+    return failure();
+
+  Value one = createFloatConst(op->getLoc(), opType, 1.0, rewriter, operand);
   Value add = arith::AddFOp::create(b, operand, one);
   Value neg = arith::NegFOp::create(b, operand);
   Value sub = arith::AddFOp::create(b, neg, one);
   Value div = arith::DivFOp::create(b, add, sub);
   Value log = math::LogOp::create(b, div);
-  Value half = createFloatConst(op->getLoc(), opType, 0.5, rewriter);
+  Value half = createFloatConst(op->getLoc(), opType, 0.5, rewriter, operand);
   Value res = arith::MulFOp::create(b, log, half);
   rewriter.replaceOp(op, res);
   return success();
@@ -224,26 +280,74 @@ static LogicalResult convertFmaFOp(math::FmaOp op, PatternRewriter &rewriter) {
 //      if (x > y) then incr = 1 else incr = 0
 //      y = y + incr   <= replace this op with the ceilf op.
 static LogicalResult convertCeilOp(math::CeilOp op, PatternRewriter &rewriter) {
-  // Creating constants assumes the static shaped type.
-  auto shapedType = dyn_cast<ShapedType>(op.getType());
-  if (shapedType && !shapedType.hasStaticShape())
-    return failure();
-
   ImplicitLocOpBuilder b(op->getLoc(), rewriter);
   Value operand = op.getOperand();
   Type opType = operand.getType();
+
+  if (isUnrankedShaped(opType))
+    return failure();
+
+  Type operandETy = getElementTypeOrSelf(opType);
+  FloatType floatTy = llvm::dyn_cast<FloatType>(operandETy);
+  const llvm::fltSemantics &semantics = floatTy.getFloatSemantics();
+
+  unsigned bitWidth = floatTy.getWidth();
+  unsigned mantissaWidth = floatTy.getFPMantissaWidth() - 1;
+  const int bias = (&semantics == &APFloat::Float8E8M0FNU())
+                       ? -semantics.minExponent
+                       : -(semantics.minExponent - 1);
+  bool hasNegativeZeroNaNEncoding =
+      (semantics.nanEncoding == llvm::fltNanEncoding::NegativeZero);
+
+  Type iTy = rewriter.getIntegerType(bitWidth);
+  if (auto shapedTy = dyn_cast<ShapedType>(opType))
+    iTy = shapedTy.clone(iTy);
+
+  // For IEEE-like floating-point formats with an unbiased exponent ≥
+  // `mantissaWidth` falls into one of these categories:
+  //   - a large finite value (|x| ≥ 2^mantissaWidth), where all representable
+  //     numbers are already integral, or
+  //   - a special value (NaN or ±Inf), which also satisfies this exponent
+  //     condition.
+  // For all such cases, `ceilf(x)` is defined to return `x` directly.
+  Value operandBitcast = arith::BitcastOp::create(b, iTy, operand);
+  Value cMask = createIntConst(
+      op->getLoc(), iTy, static_cast<int64_t>((1ull << (bitWidth - 1)) - 1), b,
+      operand);
+  Value unsignedBits = arith::AndIOp::create(b, operandBitcast, cMask);
+  Value cThreshold = createIntConst(
+      op->getLoc(), iTy,
+      static_cast<int64_t>((uint64_t(bias + mantissaWidth)) << mantissaWidth),
+      b, operand);
+  Value isLargeExp = arith::CmpIOp::create(b, arith::CmpIPredicate::uge,
+                                           unsignedBits, cThreshold);
+  Value isSpecialValOrLargeVal = isLargeExp;
+
+  // In FNUZ-suffixed floating point, NaN is represented by a sign bit of 1 and
+  // all 0s in the exponent and mantissa, therefore requires an explicit check.
+  if (hasNegativeZeroNaNEncoding) {
+    Value cNegZeroBits = createIntConst(
+        op->getLoc(), iTy, static_cast<int64_t>(1ull << (bitWidth - 1)), b,
+        operand);
+    Value isNegZeroEncoding = arith::CmpIOp::create(
+        b, arith::CmpIPredicate::eq, operandBitcast, cNegZeroBits);
+    isSpecialValOrLargeVal =
+        arith::OrIOp::create(b, isLargeExp, isNegZeroEncoding);
+  }
+
   Value fpFixedConvert = createTruncatedFPValue(operand, b);
 
   // Creating constants for later use.
-  Value zero = createFloatConst(op->getLoc(), opType, 0.00, rewriter);
-  Value one = createFloatConst(op->getLoc(), opType, 1.00, rewriter);
+  Value zero = createFloatConst(op->getLoc(), opType, 0.00, rewriter, operand);
+  Value one = createFloatConst(op->getLoc(), opType, 1.00, rewriter, operand);
 
   Value gtCheck = arith::CmpFOp::create(b, arith::CmpFPredicate::OGT, operand,
                                         fpFixedConvert);
   Value incrValue =
       arith::SelectOp::create(b, op->getLoc(), gtCheck, one, zero);
 
-  Value ret = arith::AddFOp::create(b, opType, fpFixedConvert, incrValue);
+  Value add = arith::AddFOp::create(b, opType, fpFixedConvert, incrValue);
+  Value ret = arith::SelectOp::create(b, isSpecialValOrLargeVal, operand, add);
   rewriter.replaceOp(op, ret);
   return success();
 }
@@ -402,7 +506,12 @@ static LogicalResult convertExp2fOp(math::Exp2Op op,
   ImplicitLocOpBuilder b(op->getLoc(), rewriter);
   Value operand = op.getOperand();
   Type opType = operand.getType();
-  Value ln2 = createFloatConst(op->getLoc(), opType, llvm::numbers::ln2, b);
+
+  if (isUnrankedShaped(opType))
+    return failure();
+
+  Value ln2 =
+      createFloatConst(op->getLoc(), opType, llvm::numbers::ln2, b, operand);
   Value mult = arith::MulFOp::create(b, opType, operand, ln2);
   Value exp = math::ExpOp::create(b, op->getLoc(), mult);
   rewriter.replaceOp(op, exp);
@@ -417,6 +526,9 @@ static LogicalResult convertRoundOp(math::RoundOp op,
   Type opType = operand.getType();
   Type opEType = getElementTypeOrSelf(opType);
 
+  if (isUnrankedShaped(opType))
+    return failure();
+
   if (!opEType.isF32()) {
     return rewriter.notifyMatchFailure(op, "not a round of f32.");
   }
@@ -425,10 +537,10 @@ static LogicalResult convertRoundOp(math::RoundOp op,
   if (auto shapedTy = dyn_cast<ShapedType>(opType))
     i32Ty = shapedTy.clone(i32Ty);
 
-  Value half = createFloatConst(loc, opType, 0.5, b);
-  Value c23 = createIntConst(loc, i32Ty, 23, b);
-  Value c127 = createIntConst(loc, i32Ty, 127, b);
-  Value expMask = createIntConst(loc, i32Ty, (1 << 8) - 1, b);
+  Value half = createFloatConst(loc, opType, 0.5, b, operand);
+  Value c23 = createIntConst(loc, i32Ty, 23, b, operand);
+  Value c127 = createIntConst(loc, i32Ty, 127, b, operand);
+  Value expMask = createIntConst(loc, i32Ty, (1 << 8) - 1, b, operand);
 
   Value incrValue = math::CopySignOp::create(b, half, operand);
   Value add = arith::AddFOp::create(b, opType, operand, incrValue);
@@ -476,6 +588,14 @@ static LogicalResult convertCtlzOp(math::CountLeadingZerosOp op,
   auto eTy = getElementTypeOrSelf(operandTy);
   Location loc = op.getLoc();
 
+  if (isUnrankedShaped(operandTy))
+    return failure();
+
+  // Only expand for integer or float element types (index has no fixed bitwidth).
+  if (!eTy.isIntOrFloat()) {
+    return rewriter.notifyMatchFailure(op, "ctlz expansion only supports int or float types");
+  }
+
   int32_t bitwidth = eTy.getIntOrFloatBitWidth();
   if (bitwidth > 64)
     return failure();
@@ -486,11 +606,12 @@ static LogicalResult convertCtlzOp(math::CountLeadingZerosOp op,
   }
 
   Value x = operand;
-  Value count = createIntConst(loc, operandTy, 0, rewriter);
+  Value count = createIntConst(loc, operandTy, 0, rewriter, operand);
   for (int32_t bw = bitwidth; bw > 1; bw = bw / 2) {
     auto half = bw / 2;
-    auto bits = createIntConst(loc, operandTy, half, rewriter);
-    auto mask = createIntConst(loc, operandTy, allbits >> half, rewriter);
+    auto bits = createIntConst(loc, operandTy, half, rewriter, operand);
+    auto mask =
+        createIntConst(loc, operandTy, allbits >> half, rewriter, operand);
 
     Value pred = arith::CmpIOp::create(rewriter, loc, arith::CmpIPredicate::ule,
                                        x, mask);
@@ -501,11 +622,11 @@ static LogicalResult convertCtlzOp(math::CountLeadingZerosOp op,
     count = arith::SelectOp::create(rewriter, loc, pred, add, count);
   }
 
-  Value zero = createIntConst(loc, operandTy, 0, rewriter);
+  Value zero = createIntConst(loc, operandTy, 0, rewriter, operand);
   Value pred = arith::CmpIOp::create(rewriter, loc, arith::CmpIPredicate::eq,
                                      operand, zero);
 
-  Value bwval = createIntConst(loc, operandTy, bitwidth, rewriter);
+  Value bwval = createIntConst(loc, operandTy, bitwidth, rewriter, operand);
   Value sel = arith::SelectOp::create(rewriter, loc, pred, bwval, count);
   rewriter.replaceOp(op, sel);
   return success();
@@ -521,6 +642,9 @@ static LogicalResult convertRoundEvenOp(math::RoundEvenOp op,
   Type resultTy = op.getType();
   Type operandETy = getElementTypeOrSelf(operandTy);
   Type resultETy = getElementTypeOrSelf(resultTy);
+
+  if (isUnrankedShaped(operandTy))
+    return failure();
 
   if (!isa<FloatType>(operandETy) || !isa<FloatType>(resultETy)) {
     return rewriter.notifyMatchFailure(op, "not a roundeven of f16 or f32.");
@@ -542,16 +666,20 @@ static LogicalResult convertRoundEvenOp(math::RoundEvenOp op,
   // f64: 1 bit sign | 11 bits exponent | 52 bits mantissa.
   // f32: 1 bit sign | 8 bits exponent  | 23 bits mantissa.
   // f16: 1 bit sign | 5 bits exponent  | 10 bits mantissa.
-  Value c1Float = createFloatConst(loc, fTy, 1.0, b);
-  Value c0 = createIntConst(loc, iTy, 0, b);
-  Value c1 = createIntConst(loc, iTy, 1, b);
-  Value cNeg1 = createIntConst(loc, iTy, -1, b);
-  Value c23 = createIntConst(loc, iTy, mantissaWidth, b);
-  Value c31 = createIntConst(loc, iTy, bitWidth - 1, b);
-  Value c127 = createIntConst(loc, iTy, (1ull << (exponentWidth - 1)) - 1, b);
-  Value c2To22 = createIntConst(loc, iTy, 1ull << (mantissaWidth - 1), b);
-  Value c23Mask = createIntConst(loc, iTy, (1ull << mantissaWidth) - 1, b);
-  Value expMask = createIntConst(loc, iTy, (1ull << exponentWidth) - 1, b);
+  Value c1Float = createFloatConst(loc, fTy, 1.0, b, operand);
+  Value c0 = createIntConst(loc, iTy, 0, b, operand);
+  Value c1 = createIntConst(loc, iTy, 1, b, operand);
+  Value cNeg1 = createIntConst(loc, iTy, -1, b, operand);
+  Value c23 = createIntConst(loc, iTy, mantissaWidth, b, operand);
+  Value c31 = createIntConst(loc, iTy, bitWidth - 1, b, operand);
+  Value c127 =
+      createIntConst(loc, iTy, (1ull << (exponentWidth - 1)) - 1, b, operand);
+  Value c2To22 =
+      createIntConst(loc, iTy, 1ull << (mantissaWidth - 1), b, operand);
+  Value c23Mask =
+      createIntConst(loc, iTy, (1ull << mantissaWidth) - 1, b, operand);
+  Value expMask =
+      createIntConst(loc, iTy, (1ull << exponentWidth) - 1, b, operand);
 
   Value operandBitcast = arith::BitcastOp::create(b, iTy, operand);
   Value round = math::RoundOp::create(b, operand);
@@ -646,12 +774,10 @@ static LogicalResult convertRoundEvenOp(math::RoundEvenOp op,
 // Convert `math.rsqrt` into `arith.divf` + `math.sqrt`
 static LogicalResult convertRsqrtOp(math::RsqrtOp op,
                                     PatternRewriter &rewriter) {
-
   auto operand = op.getOperand();
   auto operandTy = operand.getType();
-  // Operand type must be shatic shaped type to create const float.
-  auto shapedOperandType = dyn_cast<ShapedType>(operandTy);
-  if (shapedOperandType && !shapedOperandType.hasStaticShape())
+
+  if (isUnrankedShaped(operandTy))
     return failure();
 
   auto eTy = getElementTypeOrSelf(operandTy);
@@ -659,7 +785,7 @@ static LogicalResult convertRsqrtOp(math::RsqrtOp op,
     return failure();
 
   Location loc = op->getLoc();
-  auto constOneFloat = createFloatConst(loc, operandTy, 1.0, rewriter);
+  auto constOneFloat = createFloatConst(loc, operandTy, 1.0, rewriter, operand);
   auto sqrtOp = math::SqrtOp::create(rewriter, loc, operand);
   rewriter.replaceOpWithNewOp<arith::DivFOp>(op, constOneFloat, sqrtOp);
   return success();
@@ -669,8 +795,8 @@ static LogicalResult convertRsqrtOp(math::RsqrtOp op,
 static LogicalResult convertClampfOp(math::ClampFOp op,
                                      PatternRewriter &rewriter) {
   auto minOp = arith::MinimumFOp::create(rewriter, op.getLoc(), op.getValue(),
-                                         op.getMin(), op.getFastmath());
-  rewriter.replaceOpWithNewOp<arith::MaximumFOp>(op, minOp, op.getMax(),
+                                         op.getMax(), op.getFastmath());
+  rewriter.replaceOpWithNewOp<arith::MaximumFOp>(op, minOp, op.getMin(),
                                                  op.getFastmath());
   return success();
 }

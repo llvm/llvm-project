@@ -33,8 +33,7 @@
 #include "gtest/gtest.h"
 #include <memory>
 
-namespace llvm {
-namespace {
+using namespace llvm;
 
 static std::unique_ptr<Module> parseIR(LLVMContext &C, const char *IR) {
   SMDiagnostic Err;
@@ -43,6 +42,8 @@ static std::unique_ptr<Module> parseIR(LLVMContext &C, const char *IR) {
     Err.print("InstructionsTests", errs());
   return Mod;
 }
+
+namespace {
 
 TEST(InstructionsTest, ReturnInst) {
   LLVMContext C;
@@ -53,7 +54,7 @@ TEST(InstructionsTest, ReturnInst) {
   EXPECT_EQ(r0->op_begin(), r0->op_end());
 
   IntegerType* Int1 = IntegerType::get(C, 1);
-  Constant* One = ConstantInt::get(Int1, 1, true);
+  Constant* One = ConstantInt::getTrue(Int1);
   const ReturnInst* r1 = ReturnInst::Create(C, One);
   EXPECT_EQ(1U, r1->getNumOperands());
   User::const_op_iterator b(r1->op_begin());
@@ -129,18 +130,20 @@ TEST_F(ModuleWithFunctionTest, InvokeInst) {
   }
 }
 
-TEST(InstructionsTest, BranchInst) {
+TEST(InstructionsTest, UncondBrInst) {
   LLVMContext C;
 
-  // Make a BasicBlocks
-  BasicBlock* bb0 = BasicBlock::Create(C);
-  BasicBlock* bb1 = BasicBlock::Create(C);
+  // Make a BasicBlock
+  BasicBlock *bb0 = BasicBlock::Create(C);
 
-  // Mandatory BranchInst
-  const BranchInst* b0 = BranchInst::Create(bb0);
+  const UncondBrInst *b0 = UncondBrInst::Create(bb0);
 
-  EXPECT_TRUE(b0->isUnconditional());
-  EXPECT_FALSE(b0->isConditional());
+  // Test legacy BranchInst API.
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
+  EXPECT_TRUE(cast<BranchInst>(b0)->isUnconditional());
+  EXPECT_FALSE(cast<BranchInst>(b0)->isConditional());
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
+
   EXPECT_EQ(1U, b0->getNumSuccessors());
 
   // check num operands
@@ -151,14 +154,29 @@ TEST(InstructionsTest, BranchInst) {
 
   EXPECT_EQ(b0->op_end(), std::next(b0->op_begin()));
 
+  // clean up
+  delete b0;
+  delete bb0;
+}
+
+TEST(InstructionsTest, CondBrInst) {
+  LLVMContext C;
+
+  // Make a BasicBlocks
+  BasicBlock *bb0 = BasicBlock::Create(C);
+  BasicBlock *bb1 = BasicBlock::Create(C);
+
   IntegerType* Int1 = IntegerType::get(C, 1);
-  Constant* One = ConstantInt::get(Int1, 1, true);
+  Constant* One = ConstantInt::getTrue(Int1);
 
-  // Conditional BranchInst
-  BranchInst* b1 = BranchInst::Create(bb0, bb1, One);
+  CondBrInst *b1 = CondBrInst::Create(One, bb0, bb1);
 
-  EXPECT_FALSE(b1->isUnconditional());
-  EXPECT_TRUE(b1->isConditional());
+  // Test legacy BranchInst API.
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
+  EXPECT_FALSE(cast<BranchInst>(b1)->isUnconditional());
+  EXPECT_TRUE(cast<BranchInst>(b1)->isConditional());
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
+
   EXPECT_EQ(2U, b1->getNumSuccessors());
 
   // check num operands
@@ -173,22 +191,21 @@ TEST(InstructionsTest, BranchInst) {
   EXPECT_EQ(One, b1->getCondition());
   ++b;
 
-  // check ELSE
-  EXPECT_EQ(bb1, *b);
-  EXPECT_EQ(bb1, b1->getOperand(1));
-  EXPECT_EQ(bb1, b1->getSuccessor(1));
-  ++b;
-
   // check THEN
   EXPECT_EQ(bb0, *b);
-  EXPECT_EQ(bb0, b1->getOperand(2));
+  EXPECT_EQ(bb0, b1->getOperand(1));
   EXPECT_EQ(bb0, b1->getSuccessor(0));
+  ++b;
+
+  // check ELSE
+  EXPECT_EQ(bb1, *b);
+  EXPECT_EQ(bb1, b1->getOperand(2));
+  EXPECT_EQ(bb1, b1->getSuccessor(1));
   ++b;
 
   EXPECT_EQ(b1->op_end(), b);
 
   // clean up
-  delete b0;
   delete b1;
 
   delete bb0;
@@ -751,7 +768,7 @@ TEST(InstructionsTest, AlterCallBundles) {
   AttrBuilder AB(C);
   AB.addAttribute(Attribute::Cold);
   Call->setAttributes(AttributeList::get(C, AttributeList::FunctionIndex, AB));
-  Call->setDebugLoc(DebugLoc(MDNode::get(C, {})));
+  Call->setDebugLoc(DebugLoc(DILocation::get(C, 1, 1, MDNode::get(C, {}))));
 
   OperandBundleDef NewBundle("after", ConstantInt::get(Int32Ty, 7));
   std::unique_ptr<CallInst> Clone(CallInst::Create(Call.get(), NewBundle));
@@ -781,7 +798,7 @@ TEST(InstructionsTest, AlterInvokeBundles) {
   AB.addAttribute(Attribute::Cold);
   Invoke->setAttributes(
       AttributeList::get(C, AttributeList::FunctionIndex, AB));
-  Invoke->setDebugLoc(DebugLoc(MDNode::get(C, {})));
+  Invoke->setDebugLoc(DebugLoc(DILocation::get(C, 1, 1, MDNode::get(C, {}))));
 
   OperandBundleDef NewBundle("after", ConstantInt::get(Int32Ty, 7));
   std::unique_ptr<InvokeInst> Clone(
@@ -968,6 +985,29 @@ TEST(InstructionsTest, SwitchInst) {
   const auto &Handle = *CCI;
   EXPECT_EQ(1, Handle.getCaseValue()->getSExtValue());
   EXPECT_EQ(BB1.get(), Handle.getCaseSuccessor());
+
+  // C API tests.
+  EXPECT_EQ(BB0.get(), unwrap(LLVMGetSwitchDefaultDest(wrap(SI))));
+  EXPECT_EQ(BB0.get(), unwrap(LLVMGetSuccessor(wrap(SI), 0)));
+  EXPECT_EQ(BB1.get(), unwrap(LLVMGetSuccessor(wrap(SI), 1)));
+  EXPECT_EQ(
+      1,
+      unwrap<ConstantInt>(LLVMGetSwitchCaseValue(wrap(SI), 1))->getSExtValue());
+  EXPECT_EQ(BB2.get(), unwrap(LLVMGetSuccessor(wrap(SI), 2)));
+  EXPECT_EQ(
+      2,
+      unwrap<ConstantInt>(LLVMGetSwitchCaseValue(wrap(SI), 2))->getSExtValue());
+  EXPECT_EQ(BB3.get(), unwrap(LLVMGetSuccessor(wrap(SI), 3)));
+  EXPECT_EQ(
+      3,
+      unwrap<ConstantInt>(LLVMGetSwitchCaseValue(wrap(SI), 3))->getSExtValue());
+  // Test case value modification. The C API provides case value indices
+  // matching the successor indices.
+  LLVMSetSwitchCaseValue(wrap(SI), 2, wrap(ConstantInt::get(Int32Ty, 12)));
+  EXPECT_EQ(12, (SI->case_begin() + 1)->getCaseValue()->getSExtValue());
+  EXPECT_EQ(
+      12,
+      unwrap<ConstantInt>(LLVMGetSwitchCaseValue(wrap(SI), 2))->getSExtValue());
 }
 
 TEST(InstructionsTest, SwitchInstProfUpdateWrapper) {
@@ -1972,4 +2012,3 @@ TEST(InstructionsTest, StripAndAccumulateConstantOffset) {
 }
 
 } // end anonymous namespace
-} // end namespace llvm

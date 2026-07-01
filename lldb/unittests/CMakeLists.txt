@@ -10,6 +10,12 @@ if (CXX_SUPPORTS_SUGGEST_OVERRIDE_FLAG)
   add_compile_options("-Wno-suggest-override")
 endif()
 
+if (MSVC)
+  option(LLDB_UNITTEST_STRIP_DEBUG_INFO
+    "Strip debug info from lldb unit-test binaries to cut link time and disk \
+  usage when building with MSVC. Turn OFF when you need to debug a unittest binary." OFF)
+endif()
+
 function(add_lldb_unittest test_name)
   cmake_parse_arguments(ARG
     "SBAPITEST"
@@ -23,6 +29,9 @@ function(add_lldb_unittest test_name)
 
   if ("liblldb" IN_LIST ARG_LINK_LIBS AND NOT ARG_SBAPITEST)
     message(FATAL_ERROR "The ${test_name} are not allowed to link liblldb.")
+  endif()
+  if ("lldbSBUtilityHelpers" IN_LIST ARG_LINK_LIBS AND NOT ARG_SBAPITEST)
+    message(FATAL_ERROR "The ${test_name} are not allowed to link lldbSBUtilityHelpers.")
   endif()
 
   list(APPEND LLVM_LINK_COMPONENTS ${ARG_LINK_COMPONENTS})
@@ -38,6 +47,16 @@ function(add_lldb_unittest test_name)
     COMMAND "${CMAKE_COMMAND}" -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/Inputs)
 
   target_link_libraries(${test_name} PRIVATE ${ARG_LINK_LIBS})
+
+  if (MSVC)
+    if (LLDB_UNITTEST_STRIP_DEBUG_INFO)
+      target_link_options(${test_name} PRIVATE
+        "LINKER:/DEBUG:NONE"
+        "LINKER:/INCREMENTAL:NO"
+        "LINKER:/OPT:REF"
+        "LINKER:/OPT:ICF")
+    endif()
+  endif()
 endfunction()
 
 function(add_unittest_inputs test_name inputs)
@@ -51,6 +70,7 @@ function(add_unittest_inputs test_name inputs)
 endfunction()
 
 add_subdirectory(TestingSupport)
+add_subdirectory(SBTestingSupport)
 if (NOT CMAKE_SYSTEM_NAME MATCHES "Windows")
   # FIXME: Tests linking against libLLDB don't work on Windows.
   add_subdirectory(API)
@@ -64,10 +84,12 @@ add_subdirectory(DataFormatter)
 add_subdirectory(Disassembler)
 add_subdirectory(Editline)
 add_subdirectory(Expression)
+add_subdirectory(Highlighter)
 add_subdirectory(Host)
 add_subdirectory(Instruction)
 add_subdirectory(Interpreter)
 add_subdirectory(Language)
+add_subdirectory(ObjectContainer)
 add_subdirectory(ObjectFile)
 add_subdirectory(Platform)
 add_subdirectory(Process)

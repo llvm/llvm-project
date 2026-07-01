@@ -78,8 +78,50 @@ TEST(DarwinSDKInfo, VersionMappingParseError) {
           .has_value());
 }
 
+TEST(DarwinSDKInfo, PlatformPrefix) {
+  llvm::json::Object SDKSettings({{"CanonicalName", "macosx26.0"},
+                                  {"Version", "26.0"},
+                                  {"MaximumDeploymentTarget", "26.0.99"}});
+  llvm::json::Object SupportedTargets;
+  llvm::json::Object MacOS({{"Archs", {"x86_64", "arm64"}},
+                            {"LLVMTargetTripleVendor", "apple"},
+                            {"LLVMTargetTripleSys", "macos"},
+                            {"LLVMTargetTripleEnvironment", ""},
+                            {"SystemPrefix", "/System/macOSSupport"}});
+  llvm::json::Object MacCatalyst({{"Archs", {"x86_64", "arm64"}},
+                                  {"LLVMTargetTripleVendor", "apple"},
+                                  {"LLVMTargetTripleSys", "ios"},
+                                  {"LLVMTargetTripleEnvironment", "macabi"},
+                                  {"SystemPrefix", "/System/iOSSupport"}});
+  llvm::json::Object DriverKit({{"Archs", {"x86_64", "arm64"}},
+                                {"LLVMTargetTripleVendor", "apple"},
+                                {"LLVMTargetTripleSys", "driverkit"},
+                                {"LLVMTargetTripleEnvironment", ""},
+                                {"SystemPrefix", ""}});
+  SupportedTargets["macosx"] = std::move(MacOS);
+  SupportedTargets["iosmac"] = std::move(MacCatalyst);
+  SupportedTargets["driverkit"] = std::move(DriverKit);
+  SDKSettings["SupportedTargets"] = std::move(SupportedTargets);
+
+  auto SDKInfo = DarwinSDKInfo::parseDarwinSDKSettingsJSON("", &SDKSettings);
+  ASSERT_TRUE(SDKInfo);
+  EXPECT_EQ(SDKInfo->getPlatformPrefix(Triple("arm64-apple-macos26.0")),
+            "/System/macOSSupport");
+  // When there are multiple system prefixes, non-matching triples don't get a
+  // system prefix.
+  EXPECT_EQ(SDKInfo->getPlatformPrefix(Triple("ppc-apple-macos26.0")), "");
+  EXPECT_EQ(SDKInfo->getPlatformPrefix(Triple("arm64-apple-ios26.0")), "");
+  // /System/iOSSupport is not a system prefix, and is ignored.
+  EXPECT_EQ(SDKInfo->getPlatformPrefix(Triple("arm64-apple-ios26.0-macabi")),
+            "");
+  // Should future versions of DriverKit drop the system prefix, that will be
+  // respected.
+  EXPECT_EQ(SDKInfo->getPlatformPrefix(Triple("arm64-apple-driverkit")), "");
+}
+
 TEST(DarwinSDKInfoTest, ParseAndTestMappingMacCatalyst) {
   llvm::json::Object Obj;
+  Obj["CanonicalName"] = "macosx11.0";
   Obj["Version"] = "11.0";
   Obj["MaximumDeploymentTarget"] = "11.99";
   llvm::json::Object VersionMap;
@@ -90,7 +132,7 @@ TEST(DarwinSDKInfoTest, ParseAndTestMappingMacCatalyst) {
   MacOS2iOSMac["macOS_iOSMac"] = std::move(VersionMap);
   Obj["VersionMap"] = std::move(MacOS2iOSMac);
 
-  auto SDKInfo = DarwinSDKInfo::parseDarwinSDKSettingsJSON(&Obj);
+  auto SDKInfo = DarwinSDKInfo::parseDarwinSDKSettingsJSON("", &Obj);
   ASSERT_TRUE(SDKInfo);
   EXPECT_EQ(SDKInfo->getVersion(), VersionTuple(11, 0));
 
@@ -126,6 +168,7 @@ TEST(DarwinSDKInfoTest, ParseAndTestMappingMacCatalyst) {
 
 TEST(DarwinSDKInfoTest, ParseAndTestMappingIOSDerived) {
   llvm::json::Object Obj;
+  Obj["CanonicalName"] = "appletvos15.0";
   Obj["Version"] = "15.0";
   Obj["MaximumDeploymentTarget"] = "15.0.99";
   llvm::json::Object VersionMap;
@@ -136,7 +179,7 @@ TEST(DarwinSDKInfoTest, ParseAndTestMappingIOSDerived) {
   IOSToTvOS["iOS_tvOS"] = std::move(VersionMap);
   Obj["VersionMap"] = std::move(IOSToTvOS);
 
-  auto SDKInfo = DarwinSDKInfo::parseDarwinSDKSettingsJSON(&Obj);
+  auto SDKInfo = DarwinSDKInfo::parseDarwinSDKSettingsJSON("", &Obj);
   ASSERT_TRUE(SDKInfo);
   EXPECT_EQ(SDKInfo->getVersion(), VersionTuple(15, 0));
 
@@ -182,7 +225,7 @@ TEST(DarwinSDKInfoTest, ParseAndTestMappingIOSDerived) {
 
 TEST(DarwinSDKInfoTest, MissingKeys) {
   llvm::json::Object Obj;
-  ASSERT_FALSE(DarwinSDKInfo::parseDarwinSDKSettingsJSON(&Obj));
+  ASSERT_FALSE(DarwinSDKInfo::parseDarwinSDKSettingsJSON("", &Obj));
   Obj["Version"] = "11.0";
-  ASSERT_FALSE(DarwinSDKInfo::parseDarwinSDKSettingsJSON(&Obj));
+  ASSERT_FALSE(DarwinSDKInfo::parseDarwinSDKSettingsJSON("", &Obj));
 }

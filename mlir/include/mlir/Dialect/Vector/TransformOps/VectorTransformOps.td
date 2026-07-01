@@ -223,15 +223,60 @@ def ApplyMaterializeMasksPatternsOp : Op<Transform_Dialect,
   let assemblyFormat = "attr-dict";
 }
 
-def ApplyLowerMultiReductionPatternsOp : Op<Transform_Dialect,
-    "apply_patterns.vector.lower_multi_reduction",
+def ApplyReorderMultiReductionPatternsOp: Op<Transform_Dialect,
+    "apply_patterns.vector.reorder_multi_reduction_dims",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
   let description = [{
-    Indicates that vector multi_reduction-like operations should be lowered to
-    finer-grained vector primitives.
+    Indicates that vector multi_reduction-like operations should be
+    transformed such that all reduction dimensions become innermost or
+    outermost, depending on `lowering_strategy`.
 
-    This is usually a late step that is run after bufferization as part of the
-    process of lowering to e.g. LLVM or NVVM.
+    This populates the patterns from
+    `populateVectorMultiReductionReorderPatterns`, i.e.:
+    * `InnerOuterDimReductionConversion`
+  }];
+
+  let arguments = (ins DefaultValuedAttr<VectorMultiReductionLoweringAttr,
+      "vector::VectorMultiReductionLowering::InnerParallel">:$lowering_strategy
+  );
+
+  let assemblyFormat = [{
+    (`lowering_strategy` `=` $lowering_strategy^)? attr-dict
+  }];
+}
+
+def ApplyMultiReductionFlatteningPatternsOp: Op<Transform_Dialect,
+    "apply_patterns.vector.multi_reduction_flattening",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Indicates that vector multi_reduction operations should be flattened from
+    more than 2-D to 2-D.
+  }];
+
+  let arguments = (ins DefaultValuedAttr<VectorMultiReductionLoweringAttr,
+      "vector::VectorMultiReductionLowering::InnerParallel">:$lowering_strategy
+  );
+
+  let assemblyFormat = [{
+    (`lowering_strategy` `=` $lowering_strategy^)? attr-dict
+  }];
+}
+
+def ApplyMultiReductionUnrollingPatternsOp: Op<Transform_Dialect,
+    "apply_patterns.vector.multi_reduction_unrolling",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Indicates that vector multi_reduction operations should be unrolled.
+    1-D multi_reductions are converted directly to vector.reduction.
+    2-D multi_reductions are unrolled into either a sequence of
+    vector.reduction ops (innerreduction) or element-wise arith ops
+    (innerparallel).
+
+    This populates the patterns from
+    `populateVectorMultiReductionUnrollingPatterns`, i.e.:
+    * `OneDimMultiReductionToReduction`
+    * `TwoDimMultiReductionToReduction` (innerreduction)
+    * `TwoDimMultiReductionToElementWise` (innerparallel)
   }];
 
   let arguments = (ins DefaultValuedAttr<VectorMultiReductionLoweringAttr,
@@ -315,6 +360,26 @@ def ApplyLowerShapeCastPatternsOp : Op<Transform_Dialect,
   let assemblyFormat = "attr-dict";
 }
 
+def ApplyLowerStepPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.vector.lower_step",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Indicates that vector.step operations should be lowered to finer-grained
+    vector primitives.
+
+    `index_bitwidth` is the bitwidth used to materialize `index`-typed steps; a
+    bitwidth of 0 leaves them untouched (e.g. to defer to a later, target-aware
+    lowering). It must not exceed the index storage bitwidth. Integer-typed
+    steps are unaffected by this option.
+  }];
+
+  let arguments = (ins I64Attr:$index_bitwidth);
+
+  let assemblyFormat = [{
+    `index_bitwidth` `=` $index_bitwidth attr-dict
+  }];
+}
+
 def ApplyLowerTransferPatternsOp : Op<Transform_Dialect,
     "apply_patterns.vector.lower_transfer",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
@@ -373,15 +438,15 @@ def ApplyLowerInterleavePatternsOp : Op<Transform_Dialect,
   let assemblyFormat = "attr-dict";
 }
 
-def ApplyInterleaveToShufflePatternsOp : Op<Transform_Dialect,
-    "apply_patterns.vector.interleave_to_shuffle",
+def ApplyInterleaveAndDeinterleaveToShufflePatternsOp : Op<Transform_Dialect,
+    "apply_patterns.vector.interleave_and_deinterleave_to_shuffle",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
   let description = [{
-    Indicates that 1D vector interleave operations should be rewritten as
-    vector shuffle operations.
+    Indicates that 1D vector interleave and deinterleave operations should be
+    rewritten as vector shuffle operations.
 
     This is motivated by some current codegen backends not handling vector
-    interleave operations.
+    interleave and deinterleave operations.
   }];
 
   let assemblyFormat = "attr-dict";
@@ -537,6 +602,24 @@ def ApplySinkVectorMemPatternsOp : Op<Transform_Dialect,
   }];
 
   let assemblyFormat = "attr-dict";
+}
+
+def ApplyFlattenVectorTransferOpsPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.vector.flatten_vector_transfer_ops",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Collect patterns to rewrite contiguous row-major vector.transfer_read or 
+    vector.transfer_write operations to a 1D operation.
+  }];
+
+  let arguments = (ins
+  DefaultValuedAttr<UI32Attr,
+    "std::numeric_limits<unsigned>::max()">:$target_vector_bitwidth
+  );
+
+  let assemblyFormat = [{
+    (`target_vector_bitwidth` `=` $target_vector_bitwidth^)? attr-dict
+  }];
 }
 
 #endif // VECTOR_TRANSFORM_OPS

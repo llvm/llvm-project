@@ -40,7 +40,7 @@ const char *ErrnoVarName = "errno";
 
 // Names of functions that return a location of the "errno" value.
 // FIXME: Are there other similar function names?
-CallDescriptionSet ErrnoLocationCalls{
+const CallDescriptionSet ErrnoLocationCalls{
     {CDM::CLibrary, {"__errno_location"}, 0, 0},
     {CDM::CLibrary, {"___errno"}, 0, 0},
     {CDM::CLibrary, {"__errno"}, 0, 0},
@@ -103,7 +103,7 @@ void ErrnoModeling::checkBeginFunction(CheckerContext &C) const {
   if (ErrnoDecl) {
     // There is an external 'errno' variable, so we can simply use the memory
     // region that's associated with it.
-    ErrnoR = State->getRegion(ErrnoDecl, C.getLocationContext());
+    ErrnoR = State->getRegion(ErrnoDecl, C.getStackFrame());
     assert(ErrnoR && "Memory region should exist for the 'errno' variable.");
   } else {
     // There is no 'errno' variable, so create a new symbolic memory region
@@ -122,7 +122,7 @@ void ErrnoModeling::checkBeginFunction(CheckerContext &C) const {
     // of the data member `ErrnoDecl` of the singleton `ErrnoModeling` checker
     // object.
     const SymbolConjured *Sym = SVB.conjureSymbol(
-        C.getCFGElementRef(), C.getLocationContext(),
+        C.getCFGElementRef(), C.getStackFrame(),
         ACtx.getLValueReferenceType(ACtx.IntTy), C.blockCount(), &ErrnoDecl);
 
     // The symbolic region is untyped, create a typed sub-region in it.
@@ -148,7 +148,7 @@ bool ErrnoModeling::evalCall(const CallEvent &Call, CheckerContext &C) const {
     if (!ErrnoR)
       return false;
 
-    State = State->BindExpr(Call.getOriginExpr(), C.getLocationContext(),
+    State = State->BindExpr(Call.getOriginExpr(), C.getStackFrame(),
                             loc::MemRegionVal{ErrnoR});
     C.addTransition(State);
     return true;
@@ -176,15 +176,14 @@ std::optional<SVal> getErrnoValue(ProgramStateRef State) {
   return State->getSVal(ErrnoR, IntTy);
 }
 
-ProgramStateRef setErrnoValue(ProgramStateRef State,
-                              const LocationContext *LCtx, SVal Value,
-                              ErrnoCheckState EState) {
+ProgramStateRef setErrnoValue(ProgramStateRef State, const StackFrame *SF,
+                              SVal Value, ErrnoCheckState EState) {
   const MemRegion *ErrnoR = State->get<ErrnoRegion>();
   if (!ErrnoR)
     return State;
   // First set the errno value, the old state is still available at 'checkBind'
   // or 'checkLocation' for errno value.
-  State = State->bindLoc(loc::MemRegionVal{ErrnoR}, Value, LCtx);
+  State = State->bindLoc(loc::MemRegionVal{ErrnoR}, Value, SF);
   return State->set<ErrnoState>(EState);
 }
 
@@ -196,7 +195,7 @@ ProgramStateRef setErrnoValue(ProgramStateRef State, CheckerContext &C,
   State = State->bindLoc(
       loc::MemRegionVal{ErrnoR},
       C.getSValBuilder().makeIntVal(Value, C.getASTContext().IntTy),
-      C.getLocationContext());
+      C.getStackFrame());
   return State->set<ErrnoState>(EState);
 }
 
@@ -249,7 +248,7 @@ ProgramStateRef setErrnoForStdFailure(ProgramStateRef State, CheckerContext &C,
   State = State->assume(Cond, true);
   if (!State)
     return nullptr;
-  return setErrnoValue(State, C.getLocationContext(), ErrnoSym, Irrelevant);
+  return setErrnoValue(State, C.getStackFrame(), ErrnoSym, Irrelevant);
 }
 
 ProgramStateRef setErrnoStdMustBeChecked(ProgramStateRef State,
@@ -259,7 +258,7 @@ ProgramStateRef setErrnoStdMustBeChecked(ProgramStateRef State,
   if (!ErrnoR)
     return State;
   State = State->invalidateRegions(ErrnoR, Elem, C.blockCount(),
-                                   C.getLocationContext(), false);
+                                   C.getStackFrame(), false);
   if (!State)
     return nullptr;
   return setErrnoState(State, MustBeChecked);

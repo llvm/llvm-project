@@ -41,6 +41,12 @@ public:
     return VT.changeVectorElementTypeToInteger();
   }
 
+  Register
+  getExceptionPointerRegister(const Constant *PersonalityFn) const override;
+
+  Register
+  getExceptionSelectorRegister(const Constant *PersonalityFn) const override;
+
   bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
 
   bool isFPImmLegal(const APFloat &Imm, EVT VT,
@@ -86,7 +92,8 @@ public:
     return true;
   }
 
-  AtomicExpansionKind shouldExpandAtomicRMWInIR(AtomicRMWInst *) const override;
+  AtomicExpansionKind
+  shouldExpandAtomicRMWInIR(const AtomicRMWInst *) const override;
 
   bool decomposeMulByConstant(LLVMContext &Context, EVT VT,
                               SDValue C) const override;

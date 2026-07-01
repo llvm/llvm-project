@@ -396,6 +396,18 @@ define void @f24(ptr %src, ptr %dst) {
   ret void
 }
 
+define void @f25_half(ptr %src, ptr %dst) {
+; CHECK-LABEL: f25_half:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vlreph %v0, 0(%r2)
+; CHECK-NEXT:    vst %v0, 0(%r3), 3
+; CHECK-NEXT:    br %r14
+  %b = load atomic half, ptr %src seq_cst, align 2
+  %v = insertelement <8 x half> undef, half %b, i32 1
+  store volatile <8 x half> %v, ptr %dst
+  ret void
+}
+
 define void @f25(ptr %src, ptr %dst) {
 ; CHECK-LABEL: f25:
 ; CHECK:       # %bb.0:
@@ -614,7 +626,7 @@ define void @f43(ptr %ptr) {
 define void @f44(ptr %ptr) {
 ; CHECK-LABEL: f44:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    larl %r1, .LCPI49_0
+; CHECK-NEXT:    larl %r1, .LCPI50_0
 ; CHECK-NEXT:    ld %f0, 0(%r1)
 ; CHECK-NEXT:    std %f0, 0(%r2)
 ; CHECK-NEXT:    bcr 14, %r0
@@ -666,6 +678,17 @@ define void @f48(<2 x i64> %val, ptr %ptr) {
 ; CHECK-NEXT:    br %r14
   %element = extractelement <2 x i64> %val, i32 1
   store atomic i64 %element, ptr %ptr seq_cst, align 8
+  ret void
+}
+
+define void @f49_half(<8 x half> %val, ptr %ptr) {
+; CHECK-LABEL: f49_half:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsteh %v24, 0(%r2), 0
+; CHECK-NEXT:    bcr 14, %r0
+; CHECK-NEXT:    br %r14
+  %element = extractelement <8 x half> %val, i32 0
+  store atomic half %element, ptr %ptr seq_cst, align 4
   ret void
 }
 

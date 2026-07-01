@@ -18,9 +18,11 @@ define void @unsupported_argument(i64 %arg1) {
 !1 = distinct !DICompileUnit(language: DW_LANG_C, file: !2)
 !2 = !DIFile(filename: "import-failure.ll", directory: "/")
 !3 = !DILocalVariable(scope: !4, name: "arg1", file: !2, line: 1, arg: 1, align: 64);
-!4 = distinct !DISubprogram(name: "intrinsic", scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1)
+!4 = distinct !DISubprogram(name: "intrinsic", scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1, type: !999)
 !5 = !DILocation(line: 1, column: 2, scope: !4)
 !6 = !{}
+!999 = !DISubroutineType(types: !1000)
+!1000 = !{null}
 
 ; // -----
 
@@ -454,3 +456,15 @@ bb1:
 !91885 = !{!91886, !91887}
 !91886 = !{i32 10000, i64 86427, i32 1}
 !91887 = !{i32 100000, i64 86427, i32 1}
+
+; // -----
+
+; CHECK: error: unsupported metadata: !{{[0-9]+}} = distinct !{!{{[0-9]+}}}
+declare i32 @llvm.read_register.i32(metadata)
+
+define i32 @cyclic_metadata_as_value() {
+  %r = call i32 @llvm.read_register.i32(metadata !0)
+  ret i32 %r
+}
+
+!0 = distinct !{!0}

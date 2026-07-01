@@ -11,7 +11,7 @@ define i64 @split_assertzext(ptr %x) nounwind {
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
-  %e = call <16 x i64> @test(), !range !0, !noundef !{}
+  %e = call <16 x i64> @test(), !range !0
   %d = extractelement <16 x i64> %e, i32 15
   ret i64 %d
 }
@@ -23,13 +23,13 @@ define i64 @widen_assertzext(ptr %x) nounwind {
 ; CHECK-NEXT:    callq test2@PLT
 ; CHECK-NEXT:    movb $127, %al
 ; CHECK-NEXT:    kmovw %eax, %k1
-; CHECK-NEXT:    vpexpandq %zmm0, %zmm0 {%k1} {z}
+; CHECK-NEXT:    vmovdqa64 %zmm0, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    vextracti32x4 $3, %zmm0, %xmm0
 ; CHECK-NEXT:    vmovq %xmm0, %rax
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
-  %e = call <7 x i64> @test2(), !range !0, !noundef !{}
+  %e = call <7 x i64> @test2(), !range !0
   %d = extractelement <7 x i64> %e, i32 6
   ret i64 %d
 }
@@ -41,7 +41,7 @@ define i64 @widen_assertzext_range_attr(ptr %x) nounwind {
 ; CHECK-NEXT:    callq test2@PLT
 ; CHECK-NEXT:    movb $127, %al
 ; CHECK-NEXT:    kmovw %eax, %k1
-; CHECK-NEXT:    vpexpandq %zmm0, %zmm0 {%k1} {z}
+; CHECK-NEXT:    vmovdqa64 %zmm0, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    vextracti32x4 $3, %zmm0, %xmm0
 ; CHECK-NEXT:    vmovq %xmm0, %rax
 ; CHECK-NEXT:    popq %rcx

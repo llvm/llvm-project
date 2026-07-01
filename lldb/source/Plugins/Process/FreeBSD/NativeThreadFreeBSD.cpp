@@ -35,11 +35,9 @@ using namespace lldb_private::process_freebsd;
 NativeThreadFreeBSD::NativeThreadFreeBSD(NativeProcessFreeBSD &process,
                                          lldb::tid_t tid)
     : NativeThreadProtocol(process, tid), m_state(StateType::eStateInvalid),
-      m_stop_info(),
       m_reg_context_up(
           NativeRegisterContextFreeBSD::CreateHostNativeRegisterContextFreeBSD(
-              process.GetArchitecture(), *this)),
-      m_stop_description() {}
+              process.GetArchitecture(), *this)) {}
 
 Status NativeThreadFreeBSD::Resume() {
   Status ret = NativeProcessFreeBSD::PtraceWrapper(PT_RESUME, GetID());
@@ -171,12 +169,12 @@ void NativeThreadFreeBSD::SetStopped() {
 
 void NativeThreadFreeBSD::SetRunning() {
   m_state = StateType::eStateRunning;
-  m_stop_info.reason = StopReason::eStopReasonNone;
+  ClearStopInfo();
 }
 
 void NativeThreadFreeBSD::SetStepping() {
   m_state = StateType::eStateStepping;
-  m_stop_info.reason = StopReason::eStopReasonNone;
+  ClearStopInfo();
 }
 
 std::string NativeThreadFreeBSD::GetName() {

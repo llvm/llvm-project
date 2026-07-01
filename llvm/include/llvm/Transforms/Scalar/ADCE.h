@@ -28,8 +28,8 @@ class Function;
 /// instructions are dead until proven otherwise. This allows it to eliminate
 /// dead computations that other DCE passes do not catch, particularly involving
 /// loop computations.
-struct ADCEPass : PassInfoMixin<ADCEPass> {
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &);
+struct ADCEPass : OptionalPassInfoMixin<ADCEPass> {
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &);
 };
 
 } // end namespace llvm

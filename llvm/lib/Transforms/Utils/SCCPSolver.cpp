@@ -90,6 +90,27 @@ bool SCCPSolver::tryToReplaceWithConstant(Value *V) {
   return true;
 }
 
+/// Helper for propagting !implicit.ref metadata from callee to caller before
+/// erasing a call instruction. This ensures that references to global objects
+/// (e.g., copyright strings) are preserved even when calls are optimized away.
+static void propagateImplicitRefFromCall(CallBase *CB) {
+  Function *Callee = CB->getCalledFunction();
+  if (!Callee)
+    return;
+
+  if (!Callee->hasMetadata(LLVMContext::MD_implicit_ref))
+    return;
+
+  Function *Caller = CB->getParent()->getParent();
+  if (!Caller)
+    return;
+
+  SmallVector<MDNode *> MDs;
+  Callee->getMetadata(LLVMContext::MD_implicit_ref, MDs);
+  for (MDNode *MD : MDs)
+    Caller->addMetadata(LLVMContext::MD_implicit_ref, *MD);
+}
+
 /// Helper for getting ranges from \p Solver. Instructions inserted during
 /// simplification are unavailable in the solver, so we return a full range for
 /// them.
@@ -356,8 +377,13 @@ bool SCCPSolver::simplifyInstsInBlock(BasicBlock &BB,
     if (Inst.getType()->isVoidTy())
       continue;
     if (tryToReplaceWithConstant(&Inst)) {
-      if (wouldInstructionBeTriviallyDead(&Inst))
+      if (wouldInstructionBeTriviallyDead(&Inst)) {
+        // Propagate !implicit.ref before erasing the call.
+        if (auto *CB = dyn_cast<CallBase>(&Inst))
+          propagateImplicitRefFromCall(CB);
+
         Inst.eraseFromParent();
+      }
 
       MadeChanges = true;
       ++InstRemovedStat;
@@ -393,8 +419,7 @@ bool SCCPSolver::removeNonFeasibleEdges(BasicBlock *BB, DomTreeUpdater &DTU,
 
   // SCCP can only determine non-feasible edges for br, switch and indirectbr.
   Instruction *TI = BB->getTerminator();
-  assert((isa<BranchInst>(TI) || isa<SwitchInst>(TI) ||
-          isa<IndirectBrInst>(TI)) &&
+  assert((isa<UncondBrInst, CondBrInst, SwitchInst, IndirectBrInst>(TI)) &&
          "Terminator must be a br, switch or indirectbr");
 
   if (FeasibleSuccessors.size() == 0) {
@@ -426,7 +451,7 @@ bool SCCPSolver::removeNonFeasibleEdges(BasicBlock *BB, DomTreeUpdater &DTU,
       Updates.push_back({DominatorTree::Delete, BB, Succ});
     }
 
-    Instruction *BI = BranchInst::Create(OnlyFeasibleSuccessor, BB);
+    Instruction *BI = UncondBrInst::Create(OnlyFeasibleSuccessor, BB);
     BI->setDebugLoc(TI->getDebugLoc());
     TI->eraseFromParent();
     DTU.applyUpdatesPermissive(Updates);
@@ -939,8 +964,7 @@ public:
   const ValueLatticeElement &getLatticeValueFor(Value *V) const {
     assert(!V->getType()->isStructTy() &&
            "Should use getStructLatticeValueFor");
-    DenseMap<Value *, ValueLatticeElement>::const_iterator I =
-        ValueState.find(V);
+    auto I = ValueState.find(V);
     assert(I != ValueState.end() &&
            "V not found in ValueState nor Paramstate map!");
     return I->second;
@@ -1251,12 +1275,12 @@ bool SCCPInstVisitor::markEdgeExecutable(BasicBlock *Source, BasicBlock *Dest) {
 void SCCPInstVisitor::getFeasibleSuccessors(Instruction &TI,
                                             SmallVectorImpl<bool> &Succs) {
   Succs.resize(TI.getNumSuccessors());
-  if (auto *BI = dyn_cast<BranchInst>(&TI)) {
-    if (BI->isUnconditional()) {
-      Succs[0] = true;
-      return;
-    }
+  if (isa<UncondBrInst>(TI)) {
+    Succs[0] = true;
+    return;
+  }
 
+  if (auto *BI = dyn_cast<CondBrInst>(&TI)) {
     const ValueLatticeElement &BCValue = getValueState(BI->getCondition());
     ConstantInt *CI = getConstantInt(BCValue, BI->getCondition()->getType());
     if (!CI) {
@@ -1498,8 +1522,11 @@ void SCCPInstVisitor::visitCastInst(CastInst &I) {
   if (Constant *OpC = getConstant(OpSt, I.getOperand(0)->getType())) {
     // Fold the constant as we build.
     if (Constant *C =
-            ConstantFoldCastOperand(I.getOpcode(), OpC, I.getType(), DL))
-      return (void)markConstant(&I, C);
+            ConstantFoldCastOperand(I.getOpcode(), OpC, I.getType(), DL)) {
+      auto &LV = ValueState[&I];
+      mergeInValue(LV, &I, ValueLatticeElement::get(C));
+      return;
+    }
   }
 
   // Ignore bitcasts, as they may change the number of vector elements.
@@ -2060,7 +2087,7 @@ void SCCPInstVisitor::handlePredicate(Instruction *I, Value *CopyOf,
     // a chained predicate, as the != x information is more likely to be
     // helpful in practice.
     if (!CopyOfCR.contains(NewCR) && CopyOfCR.getSingleMissingElement())
-      NewCR = CopyOfCR;
+      NewCR = std::move(CopyOfCR);
 
     // The new range is based on a branch condition. That guarantees that
     // neither of the compare operands can be undef in the branch targets,
@@ -2118,13 +2145,14 @@ void SCCPInstVisitor::handleCallResult(CallBase &CB) {
             MaxLanes.multiply(getVScaleRange(II->getFunction(), BitWidth));
 
       // The result is always less than both Count and MaxLanes.
-      ConstantRange Result(
+      ConstantRange Result = ConstantRange::getNonEmpty(
           APInt::getZero(BitWidth),
-          APIntOps::umin(Count.getUpper(), MaxLanes.getUpper()));
+          APIntOps::umin(Count.getUnsignedMax(), MaxLanes.getUnsignedMax()) +
+              1);
 
       // If Count <= MaxLanes, getvectorlength(Count, MaxLanes) = Count
       if (Count.icmp(CmpInst::ICMP_ULE, MaxLanes))
-        Result = Count;
+        Result = std::move(Count);
 
       Result = Result.truncate(II->getType()->getScalarSizeInBits());
       return (void)mergeInValue(ValueState[II], II,

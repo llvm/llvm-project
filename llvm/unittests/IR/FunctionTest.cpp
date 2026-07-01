@@ -644,4 +644,17 @@ TEST(FunctionTest, LLVMGetOrInsertFunction) {
   EXPECT_EQ(FuncRef, FuncRef2);
 }
 
+TEST(FunctionTest, NoIPAInterposable) {
+  LLVMContext Ctx;
+  std::unique_ptr<Module> M = parseIR(Ctx, R"(
+    define void @foo() { bb1: ret void }
+    define void @bar() #0 { bb1: ret void }
+    attributes #0 = { noipa }
+  )");
+  EXPECT_FALSE(M->getFunction("foo")->isInterposable());
+  EXPECT_TRUE(M->getFunction("foo")->isDefinitionExact());
+  EXPECT_TRUE(M->getFunction("bar")->isInterposable());
+  EXPECT_FALSE(M->getFunction("bar")->isDefinitionExact());
+}
+
 } // end namespace

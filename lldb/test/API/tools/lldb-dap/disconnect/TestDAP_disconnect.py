@@ -11,7 +11,10 @@ import time
 import os
 
 
+@skipIfWasm  # no attach support
 class TestDAP_disconnect(lldbdap_testcase.DAPTestCaseBase):
+    SHARED_BUILD_TESTCASE = False
+
     source = "main.cpp"
 
     def disconnect_and_assert_no_output_printed(self):

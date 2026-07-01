@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -std=c++98 %s -verify=expected -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++11 %s -verify=expected,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++14 %s -verify=expected,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++17 %s -verify=expected,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++20 %s -verify=expected,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++23 %s -verify=expected,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++2c %s -verify=expected,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++98 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected
+// RUN: %clang_cc1 -std=c++11 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11
+// RUN: %clang_cc1 -std=c++14 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11
+// RUN: %clang_cc1 -std=c++17 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11
+// RUN: %clang_cc1 -std=c++20 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11
+// RUN: %clang_cc1 -std=c++23 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11
+// RUN: %clang_cc1 -std=c++2c %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11
 
 namespace std {
   __extension__ typedef __SIZE_TYPE__ size_t;
@@ -21,6 +21,34 @@ static_assert(alignof(int[]) == alignof(int), "");
 static_assert(alignof(int[][2]) == alignof(int[2]), "");
 #endif
 } // namespace cwg930
+
+namespace cwg941 { // cwg941: 3.9
+#if __cplusplus >= 201103L
+template <typename>
+void f() = delete;
+
+template<> void f<int>() {}
+
+template <typename>
+struct A {
+  void f() = delete;
+
+  template <typename>
+  void g() = delete;
+};
+
+template<> void A<int>::f() {}
+
+template<> template<> void A<int>::g<int>() {}
+
+struct B {
+  template <typename>
+  void f() = delete;
+};
+
+template<> void B::f<int>() {}
+#endif
+} // namespace cwg941
 
 namespace cwg948 { // cwg948: 3.7
 #if __cplusplus >= 201103L
@@ -51,6 +79,16 @@ namespace cwg948 { // cwg948: 3.7
 #endif
 } // namespace cwg948
 
+namespace cwg950 { // cwg950: 3.1
+#if __cplusplus >= 201103L
+struct A {};
+struct B : decltype(A()) {};
+
+template <typename T>
+struct C : decltype(T()) {};
+#endif
+} // namespace cwg950
+
 namespace cwg952 { // cwg952: 2.8
 namespace example1 {
 struct A {
@@ -59,29 +97,33 @@ struct A {
 struct B : private A { // #cwg952-B
 };
 struct C : B {
-  void f() {
-    I i1;
-    // expected-error@-1 {{'I' is a private member of 'cwg952::example1::A'}}
-    //   expected-note@#cwg952-B {{constrained by private inheritance here}}
-    //   expected-note@#cwg952-I {{member is declared here}}
-  }
-  I i2;
+  void f();
+  I i1;
   // expected-error@-1 {{'I' is a private member of 'cwg952::example1::A'}}
   //   expected-note@#cwg952-B {{constrained by private inheritance here}}
   //   expected-note@#cwg952-I {{member is declared here}}
   struct D {
-    I i3;
+    I i2;
     // expected-error@-1 {{'I' is a private member of 'cwg952::example1::A'}}
     //   expected-note@#cwg952-B {{constrained by private inheritance here}}
     //   expected-note@#cwg952-I {{member is declared here}}
-    void g() {
-      I i4;
-      // expected-error@-1 {{'I' is a private member of 'cwg952::example1::A'}}
-      //   expected-note@#cwg952-B {{constrained by private inheritance here}}
-      //   expected-note@#cwg952-I {{member is declared here}}
-    }
+    void g();
   };
 };
+
+void C::f() {
+  I i3;
+  // expected-error@-1 {{'I' is a private member of 'cwg952::example1::A'}}
+  //   expected-note@#cwg952-B {{constrained by private inheritance here}}
+  //   expected-note@#cwg952-I {{member is declared here}}
+}
+
+void C::D::g() {
+  I i4;
+  // expected-error@-1 {{'I' is a private member of 'cwg952::example1::A'}}
+  //   expected-note@#cwg952-B {{constrained by private inheritance here}}
+  //   expected-note@#cwg952-I {{member is declared here}}
+}
 } // namespace example1
 namespace example2 {
 struct A {
@@ -164,6 +206,17 @@ enum struct E3 { e = static_cast<int>(E3()) };
 enum struct E4 : int { e = static_cast<int>(E4()) };
 #endif
 } // namespace cwg977
+
+namespace cwg988 { // cwg988: 2.7
+#if __cplusplus >= 201103L
+void f(int& lvalue_ref, int&& rvalue_ref) {
+  static_assert(__is_same(decltype(lvalue_ref)&,  int&),  "");
+  static_assert(__is_same(decltype(lvalue_ref)&&, int&),  "");
+  static_assert(__is_same(decltype(rvalue_ref)&,  int&),  "");
+  static_assert(__is_same(decltype(rvalue_ref)&&, int&&), "");
+}
+#endif
+} // namespace cwg988
 
 namespace cwg990 { // cwg990: 3.5
 #if __cplusplus >= 201103L

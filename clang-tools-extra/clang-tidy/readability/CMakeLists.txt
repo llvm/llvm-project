@@ -24,6 +24,7 @@ add_clang_library(clangTidyReadabilityModule STATIC
   IdentifierLengthCheck.cpp
   IdentifierNamingCheck.cpp
   ImplicitBoolConversionCheck.cpp
+  InconsistentIfElseBracesCheck.cpp
   RedundantInlineSpecifierCheck.cpp
   InconsistentDeclarationParameterNameCheck.cpp
   IsolateDeclarationCheck.cpp
@@ -43,9 +44,12 @@ add_clang_library(clangTidyReadabilityModule STATIC
   RedundantControlFlowCheck.cpp
   RedundantDeclarationCheck.cpp
   RedundantFunctionPtrDereferenceCheck.cpp
+  RedundantLambdaParameterListCheck.cpp
   RedundantMemberInitCheck.cpp
+  RedundantNestedIfCheck.cpp
   RedundantParenthesesCheck.cpp
   RedundantPreprocessorCheck.cpp
+  RedundantQualifiedAliasCheck.cpp
   RedundantSmartptrGetCheck.cpp
   RedundantStringCStrCheck.cpp
   RedundantStringInitCheck.cpp
@@ -57,6 +61,8 @@ add_clang_library(clangTidyReadabilityModule STATIC
   StaticDefinitionInAnonymousNamespaceCheck.cpp
   StringCompareCheck.cpp
   SuspiciousCallArgumentCheck.cpp
+  TrailingCommaCheck.cpp
+  TrivialSwitchCheck.cpp
   UniqueptrDeleteReleaseCheck.cpp
   UppercaseLiteralSuffixCheck.cpp
   UseAnyOfAllOfCheck.cpp

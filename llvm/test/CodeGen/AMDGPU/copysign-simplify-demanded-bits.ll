@@ -149,7 +149,7 @@ define <2 x double> @test_pown_reduced_fast_v2f64_known_odd(<2 x double> %x, <2 
   ret <2 x double> %pow_sign1
 }
 
-define float @copysign_f32_f32_sign_known_p0_or_n0(float %x, i32 %y.i) {
+define float @copysign_f32_f32_sign_known_p0_or_n0(float %x, i32 %y.i) #2 {
 ; GFX9-LABEL: copysign_f32_f32_sign_known_p0_or_n0:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -163,7 +163,7 @@ define float @copysign_f32_f32_sign_known_p0_or_n0(float %x, i32 %y.i) {
   ret float %copysign
 }
 
-define double @copysign_f64_f32_sign_known_p0_or_n0(double %x, i32 %y.i) {
+define double @copysign_f64_f32_sign_known_p0_or_n0(double %x, i32 %y.i) #2 {
 ; GFX9-LABEL: copysign_f64_f32_sign_known_p0_or_n0:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -178,7 +178,7 @@ define double @copysign_f64_f32_sign_known_p0_or_n0(double %x, i32 %y.i) {
   ret double %copysign
 }
 
-define half @copysign_f16_f32_sign_known_p0_or_n0(half %x, i32 %y.i) {
+define half @copysign_f16_f32_sign_known_p0_or_n0(half %x, i32 %y.i) #2 {
 ; GFX9-LABEL: copysign_f16_f32_sign_known_p0_or_n0:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -194,7 +194,7 @@ define half @copysign_f16_f32_sign_known_p0_or_n0(half %x, i32 %y.i) {
   ret half %copysign
 }
 
-define float @copysign_f32_f32_sign_known_p0_or_n0__mag_known_positive_fabs(float %x.arg, i32 %y.i) {
+define float @copysign_f32_f32_sign_known_p0_or_n0__mag_known_positive_fabs(float %x.arg, i32 %y.i) #2 {
 ; GFX9-LABEL: copysign_f32_f32_sign_known_p0_or_n0__mag_known_positive_fabs:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -209,7 +209,7 @@ define float @copysign_f32_f32_sign_known_p0_or_n0__mag_known_positive_fabs(floa
   ret float %copysign
 }
 
-define float @copysign_f32_f32_sign_known_p0_or_n0__mag_known_positive_select(float %x.arg, i32 %y.i) {
+define float @copysign_f32_f32_sign_known_p0_or_n0__mag_known_positive_select(float %x.arg, i32 %y.i) #2 {
 ; GFX9-LABEL: copysign_f32_f32_sign_known_p0_or_n0__mag_known_positive_select:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -227,7 +227,7 @@ define float @copysign_f32_f32_sign_known_p0_or_n0__mag_known_positive_select(fl
   ret float %copysign
 }
 
-define float @copysign_f32_f32_sign_known_p0_or_n0__mag_known_positive_nnan_nsz_sqrt(float %x.arg, i32 %y.i) {
+define float @copysign_f32_f32_sign_known_p0_or_n0__mag_known_positive_nnan_nsz_sqrt(float %x.arg, i32 %y.i) #2 {
 ; GFX9-LABEL: copysign_f32_f32_sign_known_p0_or_n0__mag_known_positive_nnan_nsz_sqrt:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -260,7 +260,7 @@ define float @copysign_f32_f32_sign_known_p0_or_n0__mag_known_positive_nnan_nsz_
   ret float %copysign
 }
 
-define float @copysign_f32_f32_sign_known_p0_or_n0__mag_almost_positive_nsz_sqrt(float %x.arg, i32 %y.i) {
+define float @copysign_f32_f32_sign_known_p0_or_n0__mag_almost_positive_nsz_sqrt(float %x.arg, i32 %y.i) #2 {
 ; GFX9-LABEL: copysign_f32_f32_sign_known_p0_or_n0__mag_almost_positive_nsz_sqrt:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -293,7 +293,7 @@ define float @copysign_f32_f32_sign_known_p0_or_n0__mag_almost_positive_nsz_sqrt
   ret float %copysign
 }
 
-define float @copysign_f32_f32_sign_known_p0_or_n0__mag_almost_positive_nnan_sqrt(float %x.arg, i32 %y.i) {
+define float @copysign_f32_f32_sign_known_p0_or_n0__mag_almost_positive_nnan_sqrt(float %x.arg, i32 %y.i) #2 {
 ; GFX9-LABEL: copysign_f32_f32_sign_known_p0_or_n0__mag_almost_positive_nnan_sqrt:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -326,7 +326,7 @@ define float @copysign_f32_f32_sign_known_p0_or_n0__mag_almost_positive_nnan_sqr
   ret float %copysign
 }
 
-define float @test_copysign_pow_fast_f32__integral_y(float %x, i32 %y.i) {
+define float @test_copysign_pow_fast_f32__integral_y(float %x, i32 %y.i) #2 {
 ; GFX9-LABEL: test_copysign_pow_fast_f32__integral_y:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -378,29 +378,29 @@ define double @test_pow_fast_f64integral_y(double %x, i32 %y.i) #0 {
 ; GFX9-NEXT:    buffer_store_dword v43, off, s[0:3], s33 offset:12 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_mov_b64 exec, s[18:19]
 ; GFX9-NEXT:    v_writelane_b32 v43, s16, 14
-; GFX9-NEXT:    v_writelane_b32 v43, s30, 0
-; GFX9-NEXT:    v_writelane_b32 v43, s31, 1
-; GFX9-NEXT:    v_writelane_b32 v43, s34, 2
-; GFX9-NEXT:    v_writelane_b32 v43, s35, 3
-; GFX9-NEXT:    v_writelane_b32 v43, s36, 4
-; GFX9-NEXT:    v_writelane_b32 v43, s37, 5
-; GFX9-NEXT:    v_writelane_b32 v43, s38, 6
-; GFX9-NEXT:    v_writelane_b32 v43, s39, 7
-; GFX9-NEXT:    v_writelane_b32 v43, s48, 8
-; GFX9-NEXT:    v_writelane_b32 v43, s49, 9
-; GFX9-NEXT:    v_writelane_b32 v43, s50, 10
 ; GFX9-NEXT:    s_addk_i32 s32, 0x800
 ; GFX9-NEXT:    buffer_store_dword v40, off, s[0:3], s33 offset:8 ; 4-byte Folded Spill
 ; GFX9-NEXT:    buffer_store_dword v41, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
 ; GFX9-NEXT:    buffer_store_dword v42, off, s[0:3], s33 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_writelane_b32 v43, s51, 11
+; GFX9-NEXT:    v_writelane_b32 v43, s34, 0
+; GFX9-NEXT:    v_writelane_b32 v43, s35, 1
+; GFX9-NEXT:    v_writelane_b32 v43, s36, 2
+; GFX9-NEXT:    v_writelane_b32 v43, s37, 3
+; GFX9-NEXT:    v_writelane_b32 v43, s38, 4
+; GFX9-NEXT:    v_writelane_b32 v43, s39, 5
+; GFX9-NEXT:    v_writelane_b32 v43, s48, 6
+; GFX9-NEXT:    v_writelane_b32 v43, s49, 7
+; GFX9-NEXT:    v_writelane_b32 v43, s50, 8
+; GFX9-NEXT:    v_writelane_b32 v43, s51, 9
+; GFX9-NEXT:    v_writelane_b32 v43, s52, 10
+; GFX9-NEXT:    v_writelane_b32 v43, s53, 11
+; GFX9-NEXT:    v_writelane_b32 v43, s30, 12
+; GFX9-NEXT:    v_writelane_b32 v43, s31, 13
 ; GFX9-NEXT:    v_mov_b32_e32 v42, v1
-; GFX9-NEXT:    v_writelane_b32 v43, s52, 12
 ; GFX9-NEXT:    v_and_b32_e32 v1, 0x7fffffff, v42
 ; GFX9-NEXT:    s_getpc_b64 s[16:17]
 ; GFX9-NEXT:    s_add_u32 s16, s16, _Z4log2d@rel32@lo+4
 ; GFX9-NEXT:    s_addc_u32 s17, s17, _Z4log2d@rel32@hi+12
-; GFX9-NEXT:    v_writelane_b32 v43, s53, 13
 ; GFX9-NEXT:    v_mov_b32_e32 v40, v31
 ; GFX9-NEXT:    v_mov_b32_e32 v41, v2
 ; GFX9-NEXT:    s_mov_b32 s50, s15
@@ -432,21 +432,21 @@ define double @test_pow_fast_f64integral_y(double %x, i32 %y.i) #0 {
 ; GFX9-NEXT:    buffer_load_dword v42, off, s[0:3], s33 ; 4-byte Folded Reload
 ; GFX9-NEXT:    buffer_load_dword v41, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload
 ; GFX9-NEXT:    buffer_load_dword v40, off, s[0:3], s33 offset:8 ; 4-byte Folded Reload
+; GFX9-NEXT:    v_readlane_b32 s30, v43, 12
 ; GFX9-NEXT:    v_or_b32_e32 v1, v1, v2
-; GFX9-NEXT:    v_readlane_b32 s53, v43, 13
-; GFX9-NEXT:    v_readlane_b32 s52, v43, 12
-; GFX9-NEXT:    v_readlane_b32 s51, v43, 11
-; GFX9-NEXT:    v_readlane_b32 s50, v43, 10
-; GFX9-NEXT:    v_readlane_b32 s49, v43, 9
-; GFX9-NEXT:    v_readlane_b32 s48, v43, 8
-; GFX9-NEXT:    v_readlane_b32 s39, v43, 7
-; GFX9-NEXT:    v_readlane_b32 s38, v43, 6
-; GFX9-NEXT:    v_readlane_b32 s37, v43, 5
-; GFX9-NEXT:    v_readlane_b32 s36, v43, 4
-; GFX9-NEXT:    v_readlane_b32 s35, v43, 3
-; GFX9-NEXT:    v_readlane_b32 s34, v43, 2
-; GFX9-NEXT:    v_readlane_b32 s31, v43, 1
-; GFX9-NEXT:    v_readlane_b32 s30, v43, 0
+; GFX9-NEXT:    v_readlane_b32 s31, v43, 13
+; GFX9-NEXT:    v_readlane_b32 s53, v43, 11
+; GFX9-NEXT:    v_readlane_b32 s52, v43, 10
+; GFX9-NEXT:    v_readlane_b32 s51, v43, 9
+; GFX9-NEXT:    v_readlane_b32 s50, v43, 8
+; GFX9-NEXT:    v_readlane_b32 s49, v43, 7
+; GFX9-NEXT:    v_readlane_b32 s48, v43, 6
+; GFX9-NEXT:    v_readlane_b32 s39, v43, 5
+; GFX9-NEXT:    v_readlane_b32 s38, v43, 4
+; GFX9-NEXT:    v_readlane_b32 s37, v43, 3
+; GFX9-NEXT:    v_readlane_b32 s36, v43, 2
+; GFX9-NEXT:    v_readlane_b32 s35, v43, 1
+; GFX9-NEXT:    v_readlane_b32 s34, v43, 0
 ; GFX9-NEXT:    s_mov_b32 s32, s33
 ; GFX9-NEXT:    v_readlane_b32 s4, v43, 14
 ; GFX9-NEXT:    s_or_saveexec_b64 s[6:7], -1
@@ -474,3 +474,4 @@ declare hidden double @_Z4log2d(double) #1
 
 attributes #0 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 attributes #1 = { norecurse nounwind memory(read) }
+attributes #2 = { nounwind }

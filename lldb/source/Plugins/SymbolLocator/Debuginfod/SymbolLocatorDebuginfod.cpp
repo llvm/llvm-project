@@ -15,7 +15,7 @@
 #include "lldb/Utility/Log.h"
 
 #include "llvm/Debuginfod/Debuginfod.h"
-#include "llvm/Debuginfod/HTTPClient.h"
+#include "llvm/HTTP/HTTPClient.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -40,7 +40,7 @@ public:
 
   PluginProperties() {
     m_collection_sp = std::make_shared<OptionValueProperties>(GetSettingName());
-    m_collection_sp->Initialize(g_symbollocatordebuginfod_properties);
+    m_collection_sp->Initialize(g_symbollocatordebuginfod_properties_def);
 
     // We need to read the default value first to read the environment variable.
     llvm::SmallVector<llvm::StringRef> urls = llvm::getDefaultDebuginfodUrls();
@@ -145,9 +145,8 @@ static llvm::StringRef getFileName(const ModuleSpec &module_spec,
   // Check if the URL path requests an executable file or a symbol file
   bool is_executable = url_path.find("debuginfo") == std::string::npos;
   if (is_executable)
-    return module_spec.GetFileSpec().GetFilename().GetStringRef();
-  llvm::StringRef symbol_file =
-      module_spec.GetSymbolFileSpec().GetFilename().GetStringRef();
+    return module_spec.GetFileSpec().GetFilename();
+  llvm::StringRef symbol_file = module_spec.GetSymbolFileSpec().GetFilename();
   // Remove llvmcache- prefix and hash, keep origin file name
   if (symbol_file.starts_with("llvmcache-")) {
     size_t pos = symbol_file.rfind('-');
@@ -173,8 +172,11 @@ GetFileForModule(const ModuleSpec &module_spec,
   PluginProperties &plugin_props = GetGlobalPluginProperties();
   llvm::Expected<std::string> cache_path_or_err = plugin_props.GetCachePath();
   // A cache location is *required*.
-  if (!cache_path_or_err)
+  if (!cache_path_or_err) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), cache_path_or_err.takeError(),
+                   "debuginfod cache path unavailable: {0}");
     return {};
+  }
   std::string cache_path = *cache_path_or_err;
   llvm::SmallVector<llvm::StringRef> debuginfod_urls =
       llvm::getDefaultDebuginfodUrls();
@@ -194,9 +196,9 @@ GetFileForModule(const ModuleSpec &module_spec,
 
   Log *log = GetLog(LLDBLog::Symbols);
   auto err_message = llvm::toString(result.takeError());
-  LLDB_LOGV(log,
-            "Debuginfod failed to download symbol artifact {0} with error {1}",
-            url_path, err_message);
+  LLDB_LOG_VERBOSE(
+      log, "Debuginfod failed to download symbol artifact {0} with error {1}",
+      url_path, err_message);
   return {};
 }
 

@@ -29,6 +29,7 @@
 #include "mlir/Dialect/SparseTensor/Transforms/Passes.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 
 #include <optional>
 
@@ -911,7 +912,11 @@ public:
     Type boolType = rewriter.getIntegerType(1);
     Type idxType = rewriter.getIndexType();
     // All initialization should be done on entry of the loop nest.
-    rewriter.setInsertionPointAfter(op.getTensor().getDefiningOp());
+    if (isa<BlockArgument>(op.getTensor())) {
+      rewriter.setInsertionPointToStart(op->getBlock());
+    } else {
+      rewriter.setInsertionPointAfter(op.getTensor().getDefiningOp());
+    }
 
     // Determine the size for access expansion (always the innermost stored
     // level size).
@@ -992,8 +997,8 @@ public:
     Value crd = genLoad(rewriter, loc, added, i);
     Value value = genLoad(rewriter, loc, values, crd);
     SmallVector<Value> params(desc.getFields().begin(), desc.getFields().end());
-    SmallVector<Type> flatSpTensorTps = llvm::to_vector(
-        llvm::map_range(desc.getFields(), [](Value v) { return v.getType(); }));
+    SmallVector<Type> flatSpTensorTps = llvm::map_to_vector(
+        desc.getFields(), [](Value v) { return v.getType(); });
     SmallVector<Value> flatLvlCoords = flattenValues(adaptor.getLvlCoords());
     params.append(flatLvlCoords.begin(), flatLvlCoords.end());
     params.push_back(crd);
@@ -1149,6 +1154,13 @@ public:
     SparseTensorEncodingAttr encDst = getSparseTensorEncoding(op.getType());
     SparseTensorEncodingAttr encSrc =
         getSparseTensorEncoding(op.getSource().getType());
+
+    // If either the source or the destination don't have a valid sparse
+    // tensor encoding, we should fail to legalize. This should be handled
+    // by another set of passes before reaching here.
+    if (!encSrc || !encDst)
+      return failure();
+
     // The output tensor can not be a slice and those cases should have been
     // rejected by ConvertOp::verify() already.
     assert(!encDst.isSlice() && "Cannot convert to a sparse tensor slices.");
@@ -1352,7 +1364,7 @@ struct SparseAssembleOpConverter : public OpConversionPattern<AssembleOp> {
     Level trailCOORank = stt.getLvlRank() - trailCOOStart;
     // Sets up SparseTensorSpecifier.
     for (Level lvl = 0, lvlRank = stt.getLvlRank(); lvl < lvlRank; lvl++) {
-      assert(ShapedType::isStatic(stt.getDimShape()[lvl]));
+      assert(ShapedType::isStatic(stt.getLvlShape()[lvl]));
 
       // Sets up the level size.
       auto lvlSize = constantIndex(rewriter, loc, stt.getLvlShape()[lvl]);
@@ -1473,12 +1485,12 @@ struct SparseDisassembleOpConverter
     });
 
     // Converts MemRefs back to Tensors.
-    SmallVector<Value> retValues = llvm::to_vector(
-        llvm::map_range(retMem, [&rewriter, loc](Value v) -> Value {
+    SmallVector<Value> retValues =
+        llvm::map_to_vector(retMem, [&rewriter, loc](Value v) -> Value {
           return bufferization::ToTensorOp::create(
               rewriter, loc, memref::getTensorTypeFromMemRefType(v.getType()),
               v);
-        }));
+        });
     // Appends the actual memory length used in each buffer returned.
     retValues.append(retLen.begin(), retLen.end());
     rewriter.replaceOp(op, retValues);

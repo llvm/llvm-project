@@ -138,19 +138,19 @@ SDValue ARMSelectionDAGInfo::EmitSpecializedLibcall(
   } AEABILibcall;
   switch (LC) {
   case RTLIB::MEMCPY:
-    if (TLI->getLibcallImpl(LC) != RTLIB::impl___aeabi_memcpy)
+    if (DAG.getLibcalls().getLibcallImpl(LC) != RTLIB::impl___aeabi_memcpy)
       return SDValue();
 
     AEABILibcall = AEABI_MEMCPY;
     break;
   case RTLIB::MEMMOVE:
-    if (TLI->getLibcallImpl(LC) != RTLIB::impl___aeabi_memmove)
+    if (DAG.getLibcalls().getLibcallImpl(LC) != RTLIB::impl___aeabi_memmove)
       return SDValue();
 
     AEABILibcall = AEABI_MEMMOVE;
     break;
   case RTLIB::MEMSET:
-    if (TLI->getLibcallImpl(LC) != RTLIB::impl___aeabi_memset)
+    if (DAG.getLibcalls().getLibcallImpl(LC) != RTLIB::impl___aeabi_memset)
       return SDValue();
 
     AEABILibcall = AEABI_MEMSET;
@@ -207,14 +207,17 @@ SDValue ARMSelectionDAGInfo::EmitSpecializedLibcall(
       {RTLIB::AEABI_MEMCLR, RTLIB::AEABI_MEMCLR4, RTLIB::AEABI_MEMCLR8}};
 
   RTLIB::Libcall NewLC = FunctionImpls[AEABILibcall][AlignVariant];
+  RTLIB::LibcallImpl LCImpl = DAG.getLibcalls().getLibcallImpl(NewLC);
+  if (LCImpl == RTLIB::Unsupported)
+    return SDValue();
 
   TargetLowering::CallLoweringInfo CLI(DAG);
   CLI.setDebugLoc(dl)
       .setChain(Chain)
       .setLibCallee(
-          TLI->getLibcallCallingConv(NewLC), Type::getVoidTy(*DAG.getContext()),
-          DAG.getExternalSymbol(TLI->getLibcallName(NewLC),
-                                TLI->getPointerTy(DAG.getDataLayout())),
+          DAG.getLibcalls().getLibcallImplCallingConv(LCImpl),
+          Type::getVoidTy(*DAG.getContext()),
+          DAG.getExternalSymbol(LCImpl, TLI->getPointerTy(DAG.getDataLayout())),
           std::move(Args))
       .setDiscardResult();
   std::pair<SDValue,SDValue> CallResult = TLI->LowerCallTo(CLI);
@@ -251,8 +254,10 @@ static bool shouldGenerateInlineTPLoop(const ARMSubtarget &Subtarget,
 
 SDValue ARMSelectionDAGInfo::EmitTargetCodeForMemcpy(
     SelectionDAG &DAG, const SDLoc &dl, SDValue Chain, SDValue Dst, SDValue Src,
-    SDValue Size, Align Alignment, bool isVolatile, bool AlwaysInline,
-    MachinePointerInfo DstPtrInfo, MachinePointerInfo SrcPtrInfo) const {
+    SDValue Size, Align DstAlign, Align SrcAlign, bool isVolatile,
+    bool AlwaysInline, MachinePointerInfo DstPtrInfo,
+    MachinePointerInfo SrcPtrInfo) const {
+  Align Alignment = std::min(DstAlign, SrcAlign);
   const ARMSubtarget &Subtarget =
       DAG.getMachineFunction().getSubtarget<ARMSubtarget>();
   ConstantSDNode *ConstantSize = dyn_cast<ConstantSDNode>(Size);
@@ -300,7 +305,7 @@ SDValue ARMSelectionDAGInfo::EmitTargetCodeForMemcpy(
   unsigned NumMEMCPYs = (NumMemOps + MaxLoadsInLDM - 1) / MaxLoadsInLDM;
 
   // Code size optimisation: do not inline memcpy if expansion results in
-  // more instructions than the libary call.
+  // more instructions than the library call.
   if (NumMEMCPYs > 1 && Subtarget.hasMinSize()) {
     return SDValue();
   }
@@ -369,8 +374,9 @@ SDValue ARMSelectionDAGInfo::EmitTargetCodeForMemcpy(
 
 SDValue ARMSelectionDAGInfo::EmitTargetCodeForMemmove(
     SelectionDAG &DAG, const SDLoc &dl, SDValue Chain, SDValue Dst, SDValue Src,
-    SDValue Size, Align Alignment, bool isVolatile,
+    SDValue Size, Align DstAlign, Align SrcAlign, bool isVolatile,
     MachinePointerInfo DstPtrInfo, MachinePointerInfo SrcPtrInfo) const {
+  Align Alignment = std::min(DstAlign, SrcAlign);
   return EmitSpecializedLibcall(DAG, dl, Chain, Dst, Src, Size,
                                 Alignment.value(), RTLIB::MEMMOVE);
 }

@@ -385,7 +385,9 @@ define void @Foo1() {
 !1 = distinct !DICompileUnit(language: DW_LANG_C99, file: !2, producer: "clang1", isOptimized: true, flags: "-O2", runtimeVersion: 0, splitDebugFilename: "abc.debug", emissionKind: LineTablesOnly)
 !2 = !DIFile(filename: "path/to/file1", directory: "/path/to/dir1")
 !3 = !DILocation(line: 12, column: 34, scope: !4)
-!4 = distinct !DISubprogram(name: "foo1", scope: null, spFlags: DISPFlagDefinition, unit: !1)
+!4 = distinct !DISubprogram(name: "foo1", scope: null, type: !5, spFlags: DISPFlagDefinition, unit: !1)
+!5 = !DISubroutineType(types: !6)
+!6 = !{null}
 )",
                                                    Err, Context);
   ASSERT_TRUE(M1.get());
@@ -411,7 +413,9 @@ define void @Foo2() {
 !1 = distinct !DICompileUnit(language: DW_LANG_C99, file: !2, producer: "clang2", isOptimized: true, flags: "-O2", runtimeVersion: 0, splitDebugFilename: "abc.debug", emissionKind: LineTablesOnly)
 !2 = !DIFile(filename: "path/to/file2", directory: "/path/to/dir2")
 !3 = !DILocation(line: 1234, column: 56, scope: !4)
-!4 = distinct !DISubprogram(name: "foo2", scope: null, spFlags: DISPFlagDefinition, unit: !1)
+!4 = distinct !DISubprogram(name: "foo2", scope: null, type: !5, spFlags: DISPFlagDefinition, unit: !1)
+!5 = !DISubroutineType(types: !6)
+!6 = !{null}
 )";
   {
     std::unique_ptr<Module> M2 = parseAssemblyString(M2Str, Err, Context);
@@ -421,8 +425,17 @@ define void @Foo2() {
     auto *GV2 = M2->getNamedValue("GV2");
     ASSERT_TRUE(GV2);
     ASSERT_EQ(GV2->getParent(), &*M2);
+
+    auto *Foo2MD = M2->getNamedMetadata("foo2");
+    auto *Bar2MD = M2->getNamedMetadata("bar2");
     *M1 = std::move(*M2);
     ASSERT_EQ(GV2->getParent(), &*M1);
+    ASSERT_EQ(M1->getNamedMetadata("foo2"), Foo2MD);
+    ASSERT_EQ(M1->getNamedMetadata("bar2"), Bar2MD);
+    ASSERT_EQ(M1->getNamedMetadata("foo1"), nullptr);
+
+    for (const NamedMDNode &NMD : M1->named_metadata())
+      ASSERT_EQ(NMD.getParent(), &*M1);
   }
 
   std::string M1Print;

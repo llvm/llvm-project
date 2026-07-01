@@ -5,6 +5,9 @@
 // RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s --check-prefix=OGCG
 
+// CIR-DAG: cir.global "private" constant cir_private @[[L5_ARR:.*]] = #cir.const_array<[#cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i, #cir.int<4> : !s32i]>
+// LLVM-DAG: @[[L5_ARR:.*]] = private constant [4 x i32] [i32 1, i32 2, i32 3, i32 4]
+
 void l0() {
   for (;;) {
   }
@@ -52,7 +55,7 @@ void l1() {
 
 // CIR:      cir.func{{.*}} @_Z2l1v
 // CIR-NEXT:   cir.scope {
-// CIR-NEXT:     %[[I:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init] {alignment = 4 : i64}
+// CIR-NEXT:     %[[I:.*]] = cir.alloca "i" align(4) init : !cir.ptr<!s32i>
 // CIR-NEXT:     %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
 // CIR-NEXT:     cir.store{{.*}} %[[ZERO]], %[[I]] : !s32i, !cir.ptr<!s32i>
 // CIR-NEXT:     cir.for : cond {
@@ -105,7 +108,7 @@ void l2() {
 // CIR-NEXT:       cir.condition(%[[TRUE]])
 // CIR-NEXT:     } body {
 // CIR-NEXT:       cir.scope {
-// CIR-NEXT:         %[[I:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init] {alignment = 4 : i64}
+// CIR-NEXT:         %[[I:.*]] = cir.alloca "i" align(4) init : !cir.ptr<!s32i>
 // CIR-NEXT:         %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
 // CIR-NEXT:         cir.store{{.*}} %[[ZERO]], %[[I]] : !s32i, !cir.ptr<!s32i>
 // CIR-NEXT:       }
@@ -150,7 +153,7 @@ void l3() {
 
 // CIR:      cir.func{{.*}} @_Z2l3v
 // CIR-NEXT:   cir.scope {
-// CIR-NEXT:     %[[I:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init] {alignment = 4 : i64}
+// CIR-NEXT:     %[[I:.*]] = cir.alloca "i" align(4) init : !cir.ptr<!s32i>
 // CIR-NEXT:     cir.for : cond {
 // CIR-NEXT:       %[[TRUE:.*]] = cir.const #true
 // CIR-NEXT:       cir.condition(%[[TRUE]])
@@ -197,12 +200,12 @@ void l4() {
 }
 
 // CIR: cir.func{{.*}} @_Z2l4v
-// CIR:   %[[A_ADDR:.*]] = cir.alloca {{.*}} ["a"]
+// CIR:   %[[A_ADDR:.*]] = cir.alloca "a"
 // CIR:   cir.scope {
-// CIR:     %[[RANGE_ADDR:.*]] = cir.alloca {{.*}} ["__range1", init, const]
-// CIR:     %[[BEGIN_ADDR:.*]] = cir.alloca {{.*}} ["__begin1", init]
-// CIR:     %[[END_ADDR:.*]] = cir.alloca {{.*}} ["__end1", init]
-// CIR:     %[[N_ADDR:.*]] = cir.alloca {{.*}} ["n", init]
+// CIR:     %[[RANGE_ADDR:.*]] = cir.alloca "__range1" {{.*}} init const
+// CIR:     %[[BEGIN_ADDR:.*]] = cir.alloca "__begin1" {{.*}} init
+// CIR:     %[[END_ADDR:.*]] = cir.alloca "__end1" {{.*}} init
+// CIR:     %[[N_ADDR:.*]] = cir.alloca "n" {{.*}} init
 // CIR:     cir.store{{.*}} %[[A_ADDR]], %[[RANGE_ADDR]]
 // CIR:     %[[RANGE_LOAD:.*]] = cir.load{{.*}} %[[RANGE_ADDR]]
 // CIR:     %[[RANGE_CAST:.*]] = cir.cast array_to_ptrdecay %[[RANGE_LOAD]] : {{.*}}
@@ -215,7 +218,7 @@ void l4() {
 // CIR:     cir.for : cond {
 // CIR:       %[[CUR:.*]] = cir.load{{.*}} %[[BEGIN_ADDR]]
 // CIR:       %[[END:.*]] = cir.load{{.*}} %[[END_ADDR]]
-// CIR:       %[[CMP:.*]] = cir.cmp(ne, %[[CUR]], %[[END]])
+// CIR:       %[[CMP:.*]] = cir.cmp ne %[[CUR]], %[[END]]
 // CIR:       cir.condition(%[[CMP]])
 // CIR:     } body {
 // CIR:       %[[CUR:.*]] = cir.load deref{{.*}} %[[BEGIN_ADDR]]
@@ -307,13 +310,13 @@ void l5() {
 
 // CIR: cir.func{{.*}} @_Z2l5v
 // CIR:   cir.scope {
-// CIR:     %[[ARR_ADDR:.*]] = cir.alloca {{.*}} ["arr", init]
-// CIR:     %[[RANGE_ADDR:.*]] = cir.alloca {{.*}} ["__range1", init, const]
-// CIR:     %[[BEGIN_ADDR:.*]] = cir.alloca {{.*}} ["__begin1", init]
-// CIR:     %[[END_ADDR:.*]] = cir.alloca {{.*}} ["__end1", init]
-// CIR:     %[[X_ADDR:.*]] = cir.alloca {{.*}} ["x", init]
-// CIR:     %[[ARR_INIT:.*]] = cir.const #cir.const_array<[#cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i, #cir.int<4> : !s32i]>
-// CIR:     cir.store{{.*}} %[[ARR_INIT]], %[[ARR_ADDR]]
+// CIR:     %[[ARR_ADDR:.*]] = cir.alloca "arr" {{.*}} init
+// CIR:     %[[RANGE_ADDR:.*]] = cir.alloca "__range1" {{.*}} init const
+// CIR:     %[[BEGIN_ADDR:.*]] = cir.alloca "__begin1" {{.*}} init
+// CIR:     %[[END_ADDR:.*]] = cir.alloca "__end1" {{.*}} init
+// CIR:     %[[X_ADDR:.*]] = cir.alloca "x" {{.*}} init
+// CIR:     %[[ARR_INIT:.*]] = cir.get_global @[[L5_ARR]]
+// CIR:     cir.copy %[[ARR_INIT]] to %[[ARR_ADDR]]
 // CIR:     cir.store{{.*}} %[[ARR_ADDR]], %[[RANGE_ADDR]]
 // CIR:     %[[RANGE_LOAD:.*]] = cir.load %[[RANGE_ADDR]]
 // CIR:     %[[RANGE_CAST:.*]] = cir.cast array_to_ptrdecay %[[RANGE_LOAD]] : {{.*}}
@@ -326,7 +329,7 @@ void l5() {
 // CIR:     cir.for : cond {
 // CIR:       %[[CUR:.*]] = cir.load{{.*}} %[[BEGIN_ADDR]]
 // CIR:       %[[END:.*]] = cir.load{{.*}} %[[END_ADDR]]
-// CIR:       %[[CMP:.*]] = cir.cmp(ne, %[[CUR]], %[[END]])
+// CIR:       %[[CMP:.*]] = cir.cmp ne %[[CUR]], %[[END]]
 // CIR:       cir.condition(%[[CMP]])
 // CIR:     } body {
 // CIR:       %[[CUR:.*]] = cir.load deref{{.*}} %[[BEGIN_ADDR]]
@@ -350,7 +353,7 @@ void l5() {
 // LLVM:   %[[X_ADDR:.*]] = alloca i32
 // LLVM:   br label %[[SETUP:.*]]
 // LLVM: [[SETUP]]:
-// LLVM:   store [4 x i32] [i32 1, i32 2, i32 3, i32 4], ptr %[[ARR_ADDR]]
+// LLVM:   call void @llvm.memcpy{{.*}}(ptr %[[ARR_ADDR]], ptr @[[L5_ARR]], i64 16, i1 false)
 // LLVM:   store ptr %[[ARR_ADDR]], ptr %[[RANGE_ADDR]]
 // LLVM:   %[[BEGIN:.*]] = load ptr, ptr %[[RANGE_ADDR]]
 // LLVM:   %[[BEGIN_CAST:.*]] = getelementptr i32, ptr %[[BEGIN]], i32 0
@@ -504,7 +507,7 @@ void unreachable_after_continue() {
 // CIR:       cir.condition(%[[TRUE]])
 // CIR:     } body {
 // CIR:       cir.scope {
-// CIR:         %[[X:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["x", init] {alignment = 4 : i64}
+// CIR:         %[[X:.*]] = cir.alloca "x" align(4) init : !cir.ptr<!s32i>
 // CIR:         cir.continue
 // CIR:       ^bb1:  // no predecessors
 // CIR:         %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
@@ -564,7 +567,7 @@ void unreachable_after_break() {
 // CIR:       cir.condition(%[[TRUE]])
 // CIR:     } body {
 // CIR:       cir.scope {
-// CIR:         %[[X:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["x", init] {alignment = 4 : i64}
+// CIR:         %[[X:.*]] = cir.alloca "x" align(4) init : !cir.ptr<!s32i>
 // CIR:         cir.break
 // CIR:       ^bb1:  // no predecessors
 // CIR:         %[[ONE:.*]] = cir.const #cir.int<1> : !s32i

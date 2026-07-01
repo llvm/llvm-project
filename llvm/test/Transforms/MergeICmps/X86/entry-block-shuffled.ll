@@ -28,7 +28,7 @@ define zeroext i1 @opeq1(
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[TMP8]], [[TMP9]]
 ; CHECK-NEXT:    br label [[OPEQ1_EXIT]]
 ; CHECK:       opeq1.exit:
-; CHECK-NEXT:    [[TMP11:%.*]] = phi i1 [ [[TMP10]], [[LAND_RHS_I_31]] ], [ false, %"land.rhs.i+land.rhs.i.2" ], [ false, [[ENTRY2:%.*]] ]
+; CHECK-NEXT:    [[TMP11:%.*]] = phi i1 [ false, [[ENTRY2:%.*]] ], [ false, %"land.rhs.i+land.rhs.i.2" ], [ [[TMP10]], [[LAND_RHS_I_31]] ]
 ; CHECK-NEXT:    ret i1 [[TMP11]]
 ;
   ptr nocapture readonly dereferenceable(16) %a,
@@ -74,7 +74,7 @@ opeq1.exit:
 !3 = !{!"branch_weights", i32 11, i32 13}
 ;.
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { nofree nosync }
-; CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: read) }
+; CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: read) }
 ;.
 ; CHECK: [[META0:![0-9]+]] = !{!"function_entry_count", i32 10}
 ; CHECK: [[PROF1]] = !{!"branch_weights", i32 2, i32 3}

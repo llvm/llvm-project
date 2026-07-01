@@ -8,8 +8,13 @@
 
 #include "TestDialect.h"
 #include "TestOps.h"
+#include "TestTypes.h"
+#include "mlir/Conversion/ConvertToEmitC/ToEmitCInterface.h"
+#include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
+#include "mlir/Dialect/EmitC/IR/EmitC.h"
 #include "mlir/Interfaces/FoldInterfaces.h"
 #include "mlir/Reducer/ReductionPatternInterface.h"
+#include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/InliningUtils.h"
 
 using namespace mlir;
@@ -177,6 +182,22 @@ struct TestOpAsmInterface : public OpAsmDialectInterface {
   //===------------------------------------------------------------------===//
 
   AliasResult getAlias(Attribute attr, raw_ostream &os) const final {
+    if (auto nestedAttr = dyn_cast<TestNestedAliasAttr>(attr)) {
+      std::optional<StringRef> aliasName =
+          StringSwitch<std::optional<StringRef>>(nestedAttr.getValue())
+              .Case("alias_test:trailing_digit_conflict_base",
+                    StringRef("unique_base"))
+              .Case("alias_test:trailing_digit_conflict_base_conflict",
+                    StringRef("unique_base"))
+              .Case("alias_test:trailing_digit_conflict_base1",
+                    StringRef("unique_base1"))
+              .Default(std::nullopt);
+      if (!aliasName)
+        return AliasResult::NoAlias;
+      os << *aliasName;
+      return AliasResult::FinalAlias;
+    }
+
     StringAttr strAttr = dyn_cast<StringAttr>(attr);
     if (!strAttr)
       return AliasResult::NoAlias;
@@ -327,6 +348,19 @@ struct TestInlinerInterface : public DialectInlinerInterface {
   //===--------------------------------------------------------------------===//
 
   /// Handle the given inlined terminator by replacing it with a new operation
+  /// as necessary (multi-block inlining case: replace test.return with a
+  /// branch to the successor block that carries the inlined results).
+  void handleTerminator(Operation *op, Block *newDest) const final {
+    auto returnOp = dyn_cast<TestReturnOp>(op);
+    if (!returnOp)
+      return;
+    OpBuilder builder(op);
+    cf::BranchOp::create(builder, op->getLoc(), newDest,
+                         returnOp.getOperands());
+    op->erase();
+  }
+
+  /// Handle the given inlined terminator by replacing it with a new operation
   /// as necessary.
   void handleTerminator(Operation *op, ValueRange valuesToRepl) const final {
     // Only handle "test.return" here.
@@ -334,8 +368,11 @@ struct TestInlinerInterface : public DialectInlinerInterface {
     if (!returnOp)
       return;
 
-    // Replace the values directly with the return operands.
-    assert(returnOp.getNumOperands() == valuesToRepl.size());
+    // Replace the values directly with the return operands. Skip if the
+    // number of operands doesn't match (e.g., when inlining into a call
+    // with a different result arity due to invalid IR mixing dialects).
+    if (returnOp.getNumOperands() != valuesToRepl.size())
+      return;
     for (const auto &it : llvm::enumerate(returnOp.getOperands()))
       valuesToRepl[it.index()].replaceAllUsesWith(it.value());
   }
@@ -399,6 +436,20 @@ public:
   }
 };
 
+struct TestToEmitCDialectInterface : public ConvertToEmitCPatternInterface {
+  explicit TestToEmitCDialectInterface(Dialect *dialect)
+      : ConvertToEmitCPatternInterface(dialect) {}
+
+  void populateConvertToEmitCConversionPatterns(
+      ConversionTarget &target, TypeConverter &typeConverter,
+      RewritePatternSet &patterns,
+      ::std::optional<bool> lowerToCpp) const final {
+    typeConverter.addConversion([](test::TestMemRefElementTypeType type) {
+      return emitc::OpaqueType::get(type.getContext(), "TestElementT");
+    });
+  }
+};
+
 } // namespace
 
 void TestDialect::registerInterfaces() {
@@ -407,4 +458,5 @@ void TestDialect::registerInterfaces() {
 
   addInterfaces<TestDialectFoldInterface, TestInlinerInterface,
                 TestReductionPatternInterface, TestBytecodeDialectInterface>();
+  addInterface<TestToEmitCDialectInterface>();
 }

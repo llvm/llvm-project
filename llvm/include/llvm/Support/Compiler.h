@@ -171,10 +171,12 @@
 /// for both functions and classes. On windows its turned in to dllimport for
 /// library consumers, for other platforms its a default visibility attribute.
 ///
-/// LLVM_ABI_FOR_TEST is for annotating symbols that are only exported because
-/// they are imported from a test. These symbols are not technically part of the
-/// LLVM public interface and could be conditionally excluded when not building
-/// tests in the future.
+/// LLVM_ABI_FOR_TEST is for annotating symbols that are exported from a
+/// library-internal header solely so that unit tests can link against them.
+/// Symbols in LLVM's public headers are part of the LLVM public interface and
+/// should use LLVM_ABI. LLVM_ABI_FOR_TEST is reserved for internal headers,
+/// whose symbols could be conditionally excluded when not building tests in the
+/// future.
 ///
 #ifndef LLVM_ABI_GENERATING_ANNOTATIONS
 // Marker to add to classes or functions in public headers that should not have
@@ -439,6 +441,29 @@
 #define LLVM_CTOR_NODISCARD [[nodiscard]]
 #else
 #define LLVM_CTOR_NODISCARD
+#endif
+
+// Macro to suppress the MSVC warning C4848:
+// "support for attribute [[msvc::no_unique_address]] in C++17 and earlier
+// is a vendor extension".
+// This warning is removed in versions >= 19.43.
+#if !defined(_MSC_VER) || _MSC_VER >= 1943 || defined(__clang__)
+#define LLVM_SUPPRESS_MSVC_ATTR_IS_VENDOR_EXT_PUSH
+#define LLVM_SUPPRESS_MSVC_ATTR_IS_VENDOR_EXT_POP
+#else // MSVC < 19.43
+#define LLVM_SUPPRESS_MSVC_ATTR_IS_VENDOR_EXT_PUSH                             \
+  _Pragma("warning(push)") _Pragma("warning(disable : 4848)")
+#define LLVM_SUPPRESS_MSVC_ATTR_IS_VENDOR_EXT_POP _Pragma("warning(pop)")
+#endif
+
+#if LLVM_HAS_CPP_ATTRIBUTE(no_unique_address)
+#define LLVM_NO_UNIQUE_ADDRESS [[no_unique_address]]
+#elif LLVM_HAS_CPP_ATTRIBUTE(msvc::no_unique_address)
+#define LLVM_NO_UNIQUE_ADDRESS                                                 \
+  LLVM_SUPPRESS_MSVC_ATTR_IS_VENDOR_EXT_PUSH                                   \
+  [[msvc::no_unique_address]] LLVM_SUPPRESS_MSVC_ATTR_IS_VENDOR_EXT_POP
+#else
+#define LLVM_NO_UNIQUE_ADDRESS
 #endif
 
 /// LLVM_EXTENSION - Support compilers where we have a keyword to suppress

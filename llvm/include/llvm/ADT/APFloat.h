@@ -22,6 +22,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/float128.h"
 #include <memory>
+#include <optional>
 
 #define APFLOAT_DISPATCH_ON_SEMANTICS(METHOD_CALL)                             \
   do {                                                                         \
@@ -407,6 +408,15 @@ public:
   /// Returns the size of the floating point number (in bits) in the given
   /// semantics.
   LLVM_ABI static unsigned getSizeInBits(const fltSemantics &Sem);
+
+  /// Returns true if the given string is a valid arbitrary floating-point
+  /// format interpretation for llvm.convert.to.arbitrary.fp and
+  /// llvm.convert.from.arbitrary.fp intrinsics.
+  LLVM_ABI static bool isValidArbitraryFPFormat(StringRef Format);
+
+  /// Returns the fltSemantics for a given arbitrary FP format string,
+  /// or nullptr if invalid.
+  LLVM_ABI static const fltSemantics *getArbitraryFPSemantics(StringRef Format);
 };
 
 namespace detail {
@@ -668,6 +678,8 @@ public:
 
   LLVM_ABI cmpResult compareAbsoluteValue(const IEEEFloat &) const;
 
+  LLVM_ABI APInt getNaNPayload() const;
+
 private:
   /// \name Simple Queries
   /// @{
@@ -914,6 +926,8 @@ public:
   LLVM_ABI bool isLargest() const;
   LLVM_ABI bool isInteger() const;
 
+  LLVM_ABI APInt getNaNPayload() const;
+
   LLVM_ABI void toString(SmallVectorImpl<char> &Str, unsigned FormatPrecision,
                          unsigned FormatMaxPadding,
                          bool TruncateZero = true) const;
@@ -934,6 +948,87 @@ LLVM_ABI DoubleAPFloat scalbn(const DoubleAPFloat &Arg, int Exp,
 LLVM_ABI DoubleAPFloat frexp(const DoubleAPFloat &X, int &Exp, roundingMode);
 
 } // End detail namespace
+
+// How the nonfinite values Inf and NaN are represented.
+enum class fltNonfiniteBehavior {
+  // Represents standard IEEE 754 behavior. A value is nonfinite if the
+  // exponent field is all 1s. In such cases, a value is Inf if the
+  // significand bits are all zero, and NaN otherwise
+  IEEE754,
+
+  // This behavior is present in the Float8ExMyFN* types (Float8E4M3FN,
+  // Float8E5M2FNUZ, Float8E4M3FNUZ, and Float8E4M3B11FNUZ). There is no
+  // representation for Inf, and operations that would ordinarily produce Inf
+  // produce NaN instead.
+  // The details of the NaN representation(s) in this form are determined by the
+  // `fltNanEncoding` enum. We treat all NaNs as quiet, as the available
+  // encodings do not distinguish between signalling and quiet NaN.
+  NanOnly,
+
+  // This behavior is present in Float6E3M2FN, Float6E2M3FN, and
+  // Float4E2M1FN types, which do not support Inf or NaN values.
+  FiniteOnly,
+};
+
+// How NaN values are represented. This is curently only used in combination
+// with fltNonfiniteBehavior::NanOnly, and using a variant other than IEEE
+// while having IEEE non-finite behavior is liable to lead to unexpected
+// results.
+enum class fltNanEncoding {
+  // Represents the standard IEEE behavior where a value is NaN if its
+  // exponent is all 1s and the significand is non-zero.
+  IEEE,
+
+  // Represents the behavior in the Float8E4M3FN floating point type where NaN
+  // is represented by having the exponent and mantissa set to all 1s.
+  // This behavior matches the FP8 E4M3 type described in
+  // https://arxiv.org/abs/2209.05433. We treat both signed and unsigned NaNs
+  // as non-signalling, although the paper does not state whether the NaN
+  // values are signalling or not.
+  AllOnes,
+
+  // Represents the behavior in Float8E{5,4}E{2,3}FNUZ floating point types
+  // where NaN is represented by a sign bit of 1 and all 0s in the exponent
+  // and mantissa (i.e. the negative zero encoding in a IEEE float). Since
+  // there is only one NaN value, it is treated as quiet NaN. This matches the
+  // behavior described in https://arxiv.org/abs/2206.02915 .
+  NegativeZero,
+};
+/* Represents floating point arithmetic semantics.  */
+struct fltSemantics {
+  /* The largest E such that 2^E is representable; this matches the
+     definition of IEEE 754.  */
+  APFloatBase::ExponentType maxExponent;
+
+  /* The smallest E such that 2^E is a normalized number; this
+     matches the definition of IEEE 754.  */
+  APFloatBase::ExponentType minExponent;
+
+  /* Number of bits in the significand.  This includes the integer
+     bit.  */
+  unsigned int precision;
+
+  /* Number of bits actually used in the semantics. */
+  unsigned int sizeInBits;
+
+  fltNonfiniteBehavior nonFiniteBehavior = fltNonfiniteBehavior::IEEE754;
+
+  fltNanEncoding nanEncoding = fltNanEncoding::IEEE;
+
+  /* Whether this semantics has an encoding for Zero */
+  bool hasZero = true;
+
+  /* Whether this semantics can represent signed values */
+  bool hasSignedRepr = true;
+
+  /* Whether the sign bit of this semantics is the most significant bit */
+  bool hasSignBitInMSB = true;
+
+  /* Whether the format supports IEEE754 denormal representation.
+     If both hasDenormals and hasZero are false exponent 0 is assumed to be a
+     regular exponent instead of being reserved. This changes the bias by +1. */
+  bool hasDenormals = true;
+};
 
 // This is a interface class that is currently forwarding functionalities from
 // detail::IEEEFloat.
@@ -1022,18 +1117,6 @@ class APFloat : public APFloatBase {
   explicit APFloat(IEEEFloat F, const fltSemantics &S) : U(std::move(F), S) {}
   explicit APFloat(DoubleAPFloat F, const fltSemantics &S)
       : U(std::move(F), S) {}
-
-  // Compares the absolute value of this APFloat with another.  Both operands
-  // must be finite non-zero.
-  cmpResult compareAbsoluteValue(const APFloat &RHS) const {
-    assert(&getSemantics() == &RHS.getSemantics() &&
-           "Should only compare APFloats with the same semantics");
-    if (usesLayout<IEEEFloat>(getSemantics()))
-      return U.IEEE.compareAbsoluteValue(RHS.U.IEEE);
-    if (usesLayout<DoubleAPFloat>(getSemantics()))
-      return U.Double.compareAbsoluteValue(RHS.U.Double);
-    llvm_unreachable("Unexpected semantics");
-  }
 
 public:
   APFloat(const fltSemantics &Semantics) : U(Semantics) {}
@@ -1331,6 +1414,24 @@ public:
     APFLOAT_DISPATCH_ON_SEMANTICS(convertFromAPInt(Input, IsSigned, RM));
   }
 
+  /// Fill this APFloat with the result of a string conversion.
+  ///
+  /// The following strings are accepted for conversion purposes:
+  /// * Decimal floating-point literals (e.g., `0.1e-5`)
+  /// * Hexadecimal floating-point literals (e.g., `0x1.0p-5`)
+  /// * Positive infinity via "inf", "INFINITY", "Inf", "+Inf", or "+inf".
+  /// * Negative infinity via "-inf", "-INFINITY", or "-Inf".
+  /// * Quiet NaNs via "nan", "NaN", "nan(...)", or "NaN(...)", where the
+  ///   "..." is either a decimal or hexadecimal integer representing the
+  ///   payload. A negative sign may be optionally provided.
+  /// * Signaling NaNs via "snan", "sNaN", "snan(...)", or "sNaN(...)", where
+  ///   the "..." is either a decimal or hexadecimal integer representing the
+  ///   payload. A negative sign may be optionally provided.
+  ///
+  /// If the input string is none of these forms, then an error is returned.
+  ///
+  /// If a floating-point exception occurs during conversion, then no error is
+  /// returned, and the exception is indicated via opStatus.
   LLVM_ABI Expected<opStatus> convertFromString(StringRef, roundingMode);
   APInt bitcastToAPInt() const {
     APFLOAT_DISPATCH_ON_SEMANTICS(bitcastToAPInt());
@@ -1393,6 +1494,18 @@ public:
     llvm_unreachable("Unexpected semantics");
   }
 
+  // Compares the absolute value of this APFloat with another.  Both operands
+  // must be finite non-zero.
+  cmpResult compareAbsoluteValue(const APFloat &RHS) const {
+    assert(&getSemantics() == &RHS.getSemantics() &&
+           "Should only compare APFloats with the same semantics");
+    if (usesLayout<IEEEFloat>(getSemantics()))
+      return U.IEEE.compareAbsoluteValue(RHS.U.IEEE);
+    if (usesLayout<DoubleAPFloat>(getSemantics()))
+      return U.Double.compareAbsoluteValue(RHS.U.Double);
+    llvm_unreachable("Unexpected semantics");
+  }
+
   bool bitwiseIsEqual(const APFloat &RHS) const {
     if (&getSemantics() != &RHS.getSemantics())
       return false;
@@ -1451,6 +1564,14 @@ public:
     APFLOAT_DISPATCH_ON_SEMANTICS(isSmallestNormalized());
   }
 
+  /// If the value is a NaN value, return an integer containing the payload of
+  /// this value. This payload will include the quiet bit as part of the
+  /// returned integer.
+  APInt getNaNPayload() const {
+    assert(isNaN() && "Can only call this on a NaN value");
+    APFLOAT_DISPATCH_ON_SEMANTICS(getNaNPayload());
+  }
+
   /// Return the FPClassTest which will return true for the value.
   LLVM_ABI FPClassTest classify() const;
 
@@ -1486,6 +1607,22 @@ public:
   int getExactLog2() const {
     return isNegative() ? INT_MIN : getExactLog2Abs();
   }
+
+  // Returns true if this value is exactly 2^N.
+  LLVM_READONLY
+  bool isPowerOf2(int N) const { return N != INT_MIN && getExactLog2() == N; }
+
+  // Returns true if this value is exactly -(2^N).
+  LLVM_READONLY
+  bool isNegPowerOf2(int N) const {
+    return N != INT_MIN && isNegative() && getExactLog2Abs() == N;
+  }
+
+  // Returns true if this value is exactly +1.0.
+  LLVM_READONLY bool isOne() const { return isPowerOf2(0); }
+
+  // Returns true if this value is exactly -1.0.
+  LLVM_READONLY bool isMinusOne() const { return isNegPowerOf2(0); }
 
   LLVM_ABI friend hash_code hash_value(const APFloat &Arg);
   friend int ilogb(const APFloat &Arg);
@@ -1644,6 +1781,12 @@ inline APFloat maximumnum(const APFloat &A, const APFloat &B) {
     return A.isNegative() ? B : A;
   return A < B ? B : A;
 }
+
+/// Implement IEEE 754-2019 exp functions
+LLVM_READONLY
+LLVM_ABI std::optional<APFloat>
+exp(const APFloat &X, RoundingMode RM = APFloat::rmNearestTiesToEven,
+    APFloat::opStatus *Status = nullptr);
 
 inline raw_ostream &operator<<(raw_ostream &OS, const APFloat &V) {
   V.print(OS);

@@ -338,7 +338,7 @@ public:
   /// \return
   ///     A lldb::SBModule object that represents the found module, or an
   ///     invalid SBModule object if no module was found.
-  lldb::SBModule FindModule(const lldb::SBModuleSpec &module_spec);
+  lldb::SBModule FindModule(const lldb::SBModuleSpec &module_spec) const;
 
   /// Find compile units related to *this target and passed source
   /// file.
@@ -359,7 +359,7 @@ public:
 
   const char *GetTriple();
 
-  const char *GetArchName();
+  const char *GetArchName() const;
 
   const char *GetABIName();
 
@@ -397,18 +397,10 @@ public:
   /// The maximum size in 8-bit (host) bytes of an opcode.
   uint32_t GetMaximumOpcodeByteSize() const;
 
-  /// Architecture data byte width accessor
-  ///
-  /// \return
-  /// The size in 8-bit (host) bytes of a minimum addressable
-  /// unit from the Architecture's data bus
+  LLDB_DEPRECATED("Always returns 1.")
   uint32_t GetDataByteSize();
 
-  /// Architecture code byte width accessor
-  ///
-  /// \return
-  /// The size in 8-bit (host) bytes of a minimum addressable
-  /// unit from the Architecture's code bus
+  LLDB_DEPRECATED("Always returns 1.")
   uint32_t GetCodeByteSize();
 
   /// Gets the target.max-children-count value
@@ -645,6 +637,14 @@ public:
   ///     The amount of data read in host bytes.
   size_t ReadMemory(const SBAddress addr, void *buf, size_t size,
                     lldb::SBError &error);
+
+  /// Adds a breakpoint override implemented by class_name.  Returns the ID
+  /// of the new override or LLDB_INVALID_INDEX64 on error.
+  uint64_t AddBreakpointOverride(const char *class_name,
+                                 const char *description,
+                                 SBStructuredData &args_data, SBError &status);
+
+  bool RemoveBreakpointOverride(uint64_t id);
 
   lldb::SBBreakpoint BreakpointCreateByLocation(const char *file,
                                                 uint32_t line);
@@ -923,6 +923,13 @@ public:
 
   lldb::SBType GetBasicType(lldb::BasicType type);
 
+  lldb::SBType FindExpressionTypeForLanguage(const char *typename_cstr,
+                                             lldb::LanguageType lang,
+                                             SBError &error);
+
+  lldb::SBValue FindExpressionVariableForLanguage(const char *varname_cstr,
+                                                  lldb::LanguageType lang);
+
   lldb::SBValue CreateValueFromAddress(const char *name, lldb::SBAddress addr,
                                        lldb::SBType type);
 
@@ -1058,6 +1065,8 @@ protected:
   friend class SBVariablesOptions;
 
   friend class lldb_private::python::SWIGBridge;
+  friend class lldb_private::lua::SWIGBridge;
+  friend class lldb_private::ScriptInterpreter;
 
   // Constructors are private, use static Target::Create function to create an
   // instance of this class.

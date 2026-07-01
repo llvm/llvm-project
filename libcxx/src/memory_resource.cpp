@@ -6,20 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <atomic>
 #include <cstddef>
 #include <memory>
 #include <memory_resource>
 
-#if _LIBCPP_HAS_ATOMIC_HEADER
-#  include <atomic>
-#elif _LIBCPP_HAS_THREADS
-#  include <mutex>
-#  if defined(__ELF__) && defined(_LIBCPP_LINK_PTHREAD_LIB)
-#    pragma comment(lib, "pthread")
-#  endif
-#endif
-
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 namespace pmr {
 
@@ -94,7 +87,6 @@ memory_resource* null_memory_resource() noexcept { return &res_init.resources.nu
 // default_memory_resource()
 
 static memory_resource* __default_memory_resource(bool set = false, memory_resource* new_res = nullptr) noexcept {
-#if _LIBCPP_HAS_ATOMIC_HEADER
   static constinit atomic<memory_resource*> __res{&res_init.resources.new_delete_res};
   if (set) {
     new_res = new_res ? new_res : new_delete_resource();
@@ -103,30 +95,6 @@ static memory_resource* __default_memory_resource(bool set = false, memory_resou
   } else {
     return std::atomic_load_explicit(&__res, memory_order_acquire);
   }
-#elif _LIBCPP_HAS_THREADS
-  static constinit memory_resource* res = &res_init.resources.new_delete_res;
-  static mutex res_lock;
-  if (set) {
-    new_res = new_res ? new_res : new_delete_resource();
-    lock_guard<mutex> guard(res_lock);
-    memory_resource* old_res = res;
-    res                      = new_res;
-    return old_res;
-  } else {
-    lock_guard<mutex> guard(res_lock);
-    return res;
-  }
-#else
-  static constinit memory_resource* res = &res_init.resources.new_delete_res;
-  if (set) {
-    new_res                  = new_res ? new_res : new_delete_resource();
-    memory_resource* old_res = res;
-    res                      = new_res;
-    return old_res;
-  } else {
-    return res;
-  }
-#endif
 }
 
 memory_resource* get_default_resource() noexcept { return __default_memory_resource(); }
@@ -497,4 +465,5 @@ void* monotonic_buffer_resource::do_allocate(size_t bytes, size_t align) {
 
 } // namespace pmr
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD

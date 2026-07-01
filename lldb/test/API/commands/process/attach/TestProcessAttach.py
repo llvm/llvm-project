@@ -13,7 +13,9 @@ from lldbsuite.test import lldbutil
 exe_name = "ProcessAttach"  # Must match Makefile
 
 
+@skipIfWasm  # attaching requires launching the inferior as a host process
 class ProcessAttachTestCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
     NO_DEBUG_INFO_TESTCASE = True
 
     def setUp(self):
@@ -47,23 +49,42 @@ class ProcessAttachTestCase(TestBase):
         # Spawn a new process
         popen = self.spawnSubprocess(exe)
 
+        # Don't wait for the continue to finish.
+        self.setAsync(True)
         self.runCmd("process attach -c -p " + str(popen.pid))
 
         target = self.dbg.GetSelectedTarget()
 
+        # Start listening to process events.
         process = target.GetProcess()
         self.assertTrue(process, PROCESS_IS_VALID)
-        self.assertTrue(process.GetState(), lldb.eStateRunning)
+        broadcaster = process.GetBroadcaster()
+        listener = self.dbg.GetListener()
+        state = process.GetState()
+        self.assertEqual(
+            state, lldb.eStateStopped, "The attach stopped before continuing"
+        )
+
+        # Listen for events until we see the process continue.
+        event = lldb.SBEvent()
+        got_running = False
+        got_event = False
+        timeout = 180
+        while listener.WaitForEventForBroadcaster(timeout, broadcaster, event):
+            state = process.GetState()
+            got_event = True
+            if state == lldb.eStateRunning:
+                got_running = True
+                break
+
+        self.assertTrue(got_event, "Didn't receive any events after attaching")
+        self.assertTrue(got_running, "Process didn't auto-continue")
 
     @skipIfWindows  # This is flakey on Windows AND when it fails, it hangs: llvm.org/pr48806
     def test_attach_to_process_from_different_dir_by_id(self):
         """Test attach by process id"""
         newdir = self.getBuildArtifact("newdir")
-        try:
-            os.mkdir(newdir)
-        except OSError as e:
-            if e.errno != os.errno.EEXIST:
-                raise
+        os.makedirs(newdir, exist_ok=True)
         testdir = self.getBuildDir()
         exe = os.path.join(newdir, "proc_attach")
         self.buildProgram("main.cpp", exe)

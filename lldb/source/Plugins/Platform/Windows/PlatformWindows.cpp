@@ -131,33 +131,23 @@ PlatformWindows::PlatformWindows(bool is_host) : RemoteAwarePlatform(is_host) {
 }
 
 Status PlatformWindows::ConnectRemote(Args &args) {
-  Status error;
-  if (IsHost()) {
-    error = Status::FromErrorStringWithFormatv(
+  if (IsHost())
+    return Status::FromErrorStringWithFormatv(
         "can't connect to the host platform '{0}', always connected",
         GetPluginName());
-  } else {
-    if (!m_remote_platform_sp)
-      m_remote_platform_sp =
-          platform_gdb_server::PlatformRemoteGDBServer::CreateInstance(
-              /*force=*/true, nullptr);
 
-    if (m_remote_platform_sp) {
-      if (error.Success()) {
-        if (m_remote_platform_sp) {
-          error = m_remote_platform_sp->ConnectRemote(args);
-        } else {
-          error = Status::FromErrorString(
-              "\"platform connect\" takes a single argument: <connect-url>");
-        }
-      }
-    } else
-      error = Status::FromErrorString(
-          "failed to create a 'remote-gdb-server' platform");
+  if (!m_remote_platform_sp)
+    m_remote_platform_sp =
+        platform_gdb_server::PlatformRemoteGDBServer::CreateInstance(
+            /*force=*/true, nullptr);
 
-    if (error.Fail())
-      m_remote_platform_sp.reset();
-  }
+  if (!m_remote_platform_sp)
+    return Status::FromErrorString(
+        "failed to create a 'remote-gdb-server' platform");
+
+  Status error = m_remote_platform_sp->ConnectRemote(args);
+  if (error.Fail())
+    m_remote_platform_sp.reset();
 
   return error;
 }
@@ -217,9 +207,8 @@ uint32_t PlatformWindows::DoLoadImage(Process *process,
     return LLDB_INVALID_IMAGE_TOKEN;
   }
 
-  auto name_cleanup = llvm::make_scope_exit([process, injected_name]() {
-    process->DeallocateMemory(injected_name);
-  });
+  llvm::scope_exit name_cleanup(
+      [process, injected_name]() { process->DeallocateMemory(injected_name); });
 
   process->WriteMemory(injected_name, name.data(),
                        name.size() * sizeof(llvm::UTF16), status);
@@ -231,7 +220,7 @@ uint32_t PlatformWindows::DoLoadImage(Process *process,
 
   /* Inject paths parameter into inferior */
   lldb::addr_t injected_paths{0x0};
-  std::optional<llvm::detail::scope_exit<std::function<void()>>> paths_cleanup;
+  std::optional<llvm::scope_exit<std::function<void()>>> paths_cleanup;
   if (paths) {
     llvm::SmallVector<llvm::UTF16, 261> search_paths;
 
@@ -289,10 +278,10 @@ uint32_t PlatformWindows::DoLoadImage(Process *process,
     return LLDB_INVALID_IMAGE_TOKEN;
   }
 
-  auto injected_module_path_cleanup =
-      llvm::make_scope_exit([process, injected_module_path]() {
-    process->DeallocateMemory(injected_module_path);
-  });
+  llvm::scope_exit injected_module_path_cleanup(
+      [process, injected_module_path]() {
+        process->DeallocateMemory(injected_module_path);
+      });
 
   /* Inject __lldb_LoadLibraryResult into inferior */
   const uint32_t word_size = process->GetAddressByteSize();
@@ -307,7 +296,7 @@ uint32_t PlatformWindows::DoLoadImage(Process *process,
     return LLDB_INVALID_IMAGE_TOKEN;
   }
 
-  auto result_cleanup = llvm::make_scope_exit([process, injected_result]() {
+  llvm::scope_exit result_cleanup([process, injected_result]() {
     process->DeallocateMemory(injected_result);
   });
 
@@ -347,8 +336,8 @@ uint32_t PlatformWindows::DoLoadImage(Process *process,
     return LLDB_INVALID_IMAGE_TOKEN;
   }
 
-  auto parameter_cleanup =
-      llvm::make_scope_exit([invocation, &context, injected_parameters]() {
+  llvm::scope_exit parameter_cleanup(
+      [invocation, &context, injected_parameters]() {
         invocation->DeallocateFunctionResults(context, injected_parameters);
       });
 
@@ -399,10 +388,10 @@ uint32_t PlatformWindows::DoLoadImage(Process *process,
   }
 
   if (!token) {
-    // XXX(compnerd) should we use the compiler to get the sizeof(unsigned)?
-    uint64_t error_code =
-        process->ReadUnsignedIntegerFromMemory(injected_result + 2 * word_size + sizeof(unsigned),
-                                               word_size, 0, status);
+    // ErrorCode is a 4-byte `unsigned` field in __lldb_LoadLibraryResult.
+    uint64_t error_code = process->ReadUnsignedIntegerFromMemory(
+        injected_result + 2 * word_size + sizeof(unsigned), sizeof(unsigned), 0,
+        status);
     if (status.Fail()) {
       error = Status::FromErrorStringWithFormat(
           "LoadLibrary error: could not read error status: %s",
@@ -431,7 +420,7 @@ uint32_t PlatformWindows::DoLoadImage(Process *process,
 
 Status PlatformWindows::UnloadImage(Process *process, uint32_t image_token) {
   const addr_t address = process->GetImagePtrFromToken(image_token);
-  if (address == LLDB_INVALID_IMAGE_TOKEN)
+  if (address == LLDB_INVALID_ADDRESS)
     return Status::FromErrorString("invalid image token");
 
   StreamString expression;
@@ -514,13 +503,23 @@ ProcessSP PlatformWindows::DebugProcess(ProcessLaunchInfo &launch_info,
   ProcessSP process_sp =
       target.CreateProcess(launch_info.GetListener(),
                            launch_info.GetProcessPluginName(), nullptr, false);
+  if (!process_sp)
+    return nullptr;
 
   process_sp->HijackProcessEvents(launch_info.GetHijackListener());
 
   // We need to launch and attach to the process.
   launch_info.GetFlags().Set(eLaunchFlagDebug);
-  if (process_sp)
-    error = process_sp->Launch(launch_info);
+  error = process_sp->Launch(launch_info);
+#ifdef _WIN32
+  if (error.Success()) {
+    process_sp->SetPseudoConsoleHandle();
+  } else {
+    Log *log = GetLog(LLDBLog::Platform);
+    LLDB_LOGF(log, "Platform::%s LaunchProcess() failed: %s", __FUNCTION__,
+              error.AsCString());
+  }
+#endif
 
   return process_sp;
 }
@@ -542,9 +541,6 @@ lldb::ProcessSP PlatformWindows::Attach(ProcessAttachInfo &attach_info,
 
   if (target == nullptr) {
     TargetSP new_target_sp;
-    FileSpec emptyFileSpec;
-    ArchSpec emptyArchSpec;
-
     error = debugger.GetTargetList().CreateTarget(
         debugger, "", "", eLoadDependentsNo, nullptr, new_target_sp);
     target = new_target_sp.get();
@@ -636,6 +632,11 @@ extern "C" {
 // application should include in its DLL search path.
 #define LOAD_LIBRARY_SEARCH_DEFAULT_DIRS 0x00001000
 
+// If this value is used, and lpFileName specifies an absolute path, the system
+// uses the alternate file search strategy to find associated executable
+// modules.
+#define LOAD_WITH_ALTERED_SEARCH_PATH 0x00000008
+
 // WINBASEAPI DWORD WINAPI GetLastError(VOID);
 /* __declspec(dllimport) */ uint32_t __stdcall GetLastError();
 
@@ -679,6 +680,32 @@ void * __lldb_LoadLibraryHelper(const wchar_t *name, const wchar_t *paths,
 
   result->ImageBase = LoadLibraryExW(name, nullptr,
                                      LOAD_LIBRARY_SEARCH_DEFAULT_DIRS);
+
+  // Fallback: if the AddDllDirectory + LOAD_LIBRARY_SEARCH_DEFAULT_DIRS path
+  // failed to find the library, iterate the search paths ourselves and
+  // load by absolute path using LOAD_WITH_ALTERED_SEARCH_PATH, which makes
+  // Windows use the loaded DLL's own directory to resolve its sibling imports.
+  if (result->ImageBase == nullptr) {
+    wchar_t full[4096];
+    for (const wchar_t *path = paths; path && *path; path += wcslen(path) + 1) {
+      size_t plen = wcslen(path);
+      size_t nlen = wcslen(name);
+      // Need room for: path + '\\' + name + '\0'
+      if (plen + 1 + nlen + 1 > 4096)
+        continue;
+      wchar_t *p = full;
+      for (size_t i = 0; i < plen; ++i)
+        *p++ = path[i];
+      *p++ = L'\\';
+      for (size_t i = 0; i <= nlen; ++i) // Copy name including trailing '\0'.
+        *p++ = name[i];
+      result->ImageBase = LoadLibraryExW(full, nullptr,
+                                         LOAD_WITH_ALTERED_SEARCH_PATH);
+      if (result->ImageBase != nullptr)
+        break;
+    }
+  }
+
   if (result->ImageBase == nullptr)
     result->ErrorCode = GetLastError();
   else

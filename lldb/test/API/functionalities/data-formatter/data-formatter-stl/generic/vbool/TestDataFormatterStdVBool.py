@@ -9,6 +9,7 @@ from lldbsuite.test import lldbutil
 
 
 class StdVBoolDataFormatterTestCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
     TEST_WITH_PDB_DEBUG_INFO = True
 
     def setUp(self):
@@ -43,11 +44,12 @@ class StdVBoolDataFormatterTestCase(TestBase):
             self.runCmd("type synth clear", check=False)
             self.runCmd("settings set target.max-children-count 24", check=False)
 
+        self.runCmd("settings set target.max-children-count 128", check=False)
         # Execute the cleanup function during test case tear down.
         self.addTearDownHook(cleanup)
 
         self.expect(
-            "frame variable -A vBool",
+            "frame variable vBool",
             substrs=[
                 "size=73",
                 "[0] = false",
@@ -68,7 +70,7 @@ class StdVBoolDataFormatterTestCase(TestBase):
         )
 
         self.expect(
-            "expr -A -- vBool",
+            "expr -- vBool",
             substrs=[
                 "size=73",
                 "[0] = false",
@@ -106,7 +108,7 @@ class StdVBoolDataFormatterTestCase(TestBase):
         self.do_test()
 
     @add_test_categories(["msvcstl"])
-    def test_libstdcxx(self):
+    def test_msvcstl(self):
         # No flags, because the "msvcstl" category checks that the MSVC STL is used by default.
         self.build()
         self.do_test()

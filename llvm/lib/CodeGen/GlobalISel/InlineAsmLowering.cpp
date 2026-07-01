@@ -17,6 +17,7 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Module.h"
 
 #define DEBUG_TYPE "inline-asm-lowering"
@@ -24,6 +25,16 @@
 using namespace llvm;
 
 void InlineAsmLowering::anchor() {}
+
+/// Emit an inline asm error diagnostic and materialize undef values for the
+/// call results so that the rest of the function remains well-formed.
+static void emitInlineAsmError(MachineIRBuilder &MIRBuilder,
+                               const CallBase &Call, const Twine &Message,
+                               ArrayRef<Register> ResRegs) {
+  Call.getContext().diagnose(DiagnosticInfoInlineAsm(Call, Message));
+  for (Register Reg : ResRegs)
+    MIRBuilder.buildUndef(Reg);
+}
 
 namespace {
 
@@ -51,6 +62,8 @@ public:
       Flags |= InlineAsm::Extra_HasSideEffects;
     if (IA->isAlignStack())
       Flags |= InlineAsm::Extra_IsAlignStack;
+    if (IA->canThrow())
+      Flags |= InlineAsm::Extra_MayUnwind;
     if (CB.isConvergent())
       Flags |= InlineAsm::Extra_IsConvergent;
     Flags |= IA->getDialect() * InlineAsm::Extra_AsmDialect;
@@ -345,9 +358,12 @@ bool InlineAsmLowering::lowerInlineAsm(
 
         // Find a register that we can use.
         if (OpInfo.Regs.empty()) {
-          LLVM_DEBUG(dbgs()
-                     << "Couldn't allocate output register for constraint\n");
-          return false;
+          emitInlineAsmError(MIRBuilder, Call,
+                             "could not allocate output register for "
+                             "constraint '" +
+                                 Twine(OpInfo.ConstraintCode) + "'",
+                             GetOrCreateVRegs(Call));
+          return true;
         }
 
         // Add information to the INLINEASM instruction to know that this
@@ -368,9 +384,9 @@ bool InlineAsmLowering::lowerInlineAsm(
         Inst.addImm(Flag);
 
         for (Register Reg : OpInfo.Regs) {
-          Inst.addReg(Reg,
-                      RegState::Define | getImplRegState(Reg.isPhysical()) |
-                          (OpInfo.isEarlyClobber ? RegState::EarlyClobber : 0));
+          Inst.addReg(Reg, RegState::Define |
+                               getImplRegState(Reg.isPhysical()) |
+                               getEarlyClobberRegState(OpInfo.isEarlyClobber));
         }
 
         // Remember this output operand for later processing
@@ -406,14 +422,23 @@ bool InlineAsmLowering::lowerInlineAsm(
         ArrayRef<Register> SrcRegs = GetOrCreateVRegs(*OpInfo.CallOperandVal);
         assert(SrcRegs.size() == 1 && "Single register is expected here");
 
-        // When Def is physreg: use given input.
-        Register In = SrcRegs[0];
-        // When Def is vreg: copy input to new vreg with same reg class as Def.
-        if (Def.isVirtual()) {
-          In = MRI->createVirtualRegister(MRI->getRegClass(Def));
-          if (!buildAnyextOrCopy(In, SrcRegs[0], MIRBuilder))
-            return false;
-        }
+        // We need the tied input to live in the same register class as the def.
+        //
+        // - if Def is a vreg, we can just use its regclass.
+        // - if Def is a physreg, create a vreg in the minimal regclass for that
+        //   physreg.
+        //
+        // Otherwise RegBankSelect may leave it in the wrong bank (e.g. GPR even
+        // though it's tied to an FP physreg).
+        const TargetRegisterClass *RC = Def.isVirtual()
+                                            ? MRI->getRegClass(Def)
+                                            : TRI->getMinimalPhysRegClass(Def);
+
+        // Materialize `In` in a new vreg that has a register class that matches
+        // the register class of `Def`.
+        Register In = MRI->createVirtualRegister(RC);
+        if (!buildAnyextOrCopy(In, SrcRegs[0], MIRBuilder))
+          return false;
 
         // Add Flag and input register operand (In) to Inst. Tie In to Def.
         InlineAsm::Flag UseFlag(InlineAsm::Kind::RegUse, 1);
@@ -517,19 +542,16 @@ bool InlineAsmLowering::lowerInlineAsm(
 
       // Copy the input into the appropriate registers.
       if (OpInfo.Regs.empty()) {
-        LLVM_DEBUG(
-            dbgs()
-            << "Couldn't allocate input register for register constraint\n");
-        return false;
+        emitInlineAsmError(MIRBuilder, Call,
+                           "could not allocate input reg for constraint '" +
+                               Twine(OpInfo.ConstraintCode) + "'",
+                           GetOrCreateVRegs(Call));
+        return true;
       }
 
       unsigned NumRegs = OpInfo.Regs.size();
       ArrayRef<Register> SourceRegs = GetOrCreateVRegs(*OpInfo.CallOperandVal);
-      assert(NumRegs == SourceRegs.size() &&
-             "Expected the number of input registers to match the number of "
-             "source registers");
-
-      if (NumRegs > 1) {
+      if (NumRegs != 1 || SourceRegs.size() != 1) {
         LLVM_DEBUG(dbgs() << "Input operands with multiple input registers are "
                              "not supported yet\n");
         return false;
@@ -657,7 +679,18 @@ bool InlineAsmLowering::lowerAsmOperandForConstraint(
   switch (ConstraintLetter) {
   default:
     return false;
+  case 's': // Integer immediate not known at compile time
+    if (const auto *GV = dyn_cast<GlobalValue>(Val)) {
+      Ops.push_back(MachineOperand::CreateGA(GV, /*Offset=*/0));
+      return true;
+    }
+    return false;
   case 'i': // Simple Integer or Relocatable Constant
+    if (const auto *GV = dyn_cast<GlobalValue>(Val)) {
+      Ops.push_back(MachineOperand::CreateGA(GV, /*Offset=*/0));
+      return true;
+    }
+    [[fallthrough]];
   case 'n': // immediate integer with a known value.
     if (ConstantInt *CI = dyn_cast<ConstantInt>(Val)) {
       assert(CI->getBitWidth() <= 64 &&

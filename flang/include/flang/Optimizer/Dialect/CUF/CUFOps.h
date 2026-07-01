@@ -9,8 +9,10 @@
 #ifndef FORTRAN_OPTIMIZER_DIALECT_CUF_CUFOPS_H
 #define FORTRAN_OPTIMIZER_DIALECT_CUF_CUFOPS_H
 
+#include "flang/Optimizer/Dialect/CUDAKernelOpInterface.h"
 #include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.h"
 #include "flang/Optimizer/Dialect/CUF/CUFDialect.h"
+#include "flang/Optimizer/Dialect/FIROperationMoveOpInterface.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/OpDefinition.h"

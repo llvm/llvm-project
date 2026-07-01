@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Affine/Passes.h"
+#include "mlir/Dialect/Affine/Transforms/Passes.h"
 
 #include "mlir/Dialect/Affine/Analysis/LoopAnalysis.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
@@ -21,7 +21,7 @@
 namespace mlir {
 namespace affine {
 #define GEN_PASS_DEF_AFFINELOOPUNROLL
-#include "mlir/Dialect/Affine/Passes.h.inc"
+#include "mlir/Dialect/Affine/Transforms/Passes.h.inc"
 } // namespace affine
 } // namespace mlir
 
@@ -100,8 +100,8 @@ void LoopUnroll::runOnOperation() {
     // so that loops are gathered from innermost to outermost (or else
     // unrolling an outer one may delete gathered inner ones).
     getOperation().walk([&](AffineForOp forOp) {
-      std::optional<uint64_t> tripCount = getConstantTripCount(forOp);
-      if (tripCount && *tripCount <= unrollFullThreshold)
+      std::optional<APInt> tripCount = forOp.getStaticTripCount();
+      if (tripCount && tripCount->getZExtValue() <= unrollFullThreshold)
         loops.push_back(forOp);
     });
     for (auto forOp : loops)

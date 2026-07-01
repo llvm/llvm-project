@@ -232,7 +232,25 @@
 #endif
 
 #ifndef _POSIX_NAME_MAX
+#define _POSIX_NAME_MAX 14
+#endif
+
+#ifndef _POSIX_PATH_MAX
 #define _POSIX_PATH_MAX 256
+#endif
+
+#ifndef _POSIX_THREAD_DESTRUCTOR_ITERATIONS
+#define _POSIX_THREAD_DESTRUCTOR_ITERATIONS 4
+#endif
+
+#ifndef PTHREAD_DESTRUCTOR_ITERATIONS
+#define PTHREAD_DESTRUCTOR_ITERATIONS _POSIX_THREAD_DESTRUCTOR_ITERATIONS
+#endif
+
+#ifdef __linux__
+#ifndef PATH_MAX
+#define PATH_MAX 4096
+#endif
 #endif
 
 #ifndef _POSIX_ARG_MAX
@@ -242,5 +260,12 @@
 #ifndef IOV_MAX
 #define IOV_MAX 1024
 #endif // IOV_MAX
+
+#ifndef SSIZE_MAX
+#ifdef __PTRDIFF_MAX__
+/// The maximum value that can be stored in an object of type ssize_t.
+#define SSIZE_MAX __PTRDIFF_MAX__
+#endif
+#endif
 
 #endif // LLVM_LIBC_MACROS_LIMITS_MACROS_H

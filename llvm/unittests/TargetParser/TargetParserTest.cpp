@@ -17,6 +17,7 @@
 #include "llvm/TargetParser/AArch64TargetParser.h"
 #include "llvm/TargetParser/ARMTargetParser.h"
 #include "llvm/TargetParser/ARMTargetParserCommon.h"
+#include "llvm/TargetParser/SubtargetFeature.h"
 #include "llvm/TargetParser/Triple.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -534,6 +535,36 @@ INSTANTIATE_TEST_SUITE_P(
     ARMCPUTestParams<uint64_t>::PrintToStringParamName);
 
 static constexpr unsigned NumARMCPUArchs = 95;
+
+TEST(FeatureBitsetTest, Iterator) {
+  // Empty bitset yields nothing.
+  FeatureBitset Empty;
+  EXPECT_EQ(Empty.begin(), Empty.end());
+  for (unsigned Index : Empty) {
+    (void)Index;
+    FAIL() << "empty bitset should yield no set bits";
+  }
+
+  // Yields the set indices in order, crossing the 63/64 word boundary.
+  FeatureBitset Bits;
+  Bits.set(0).set(5).set(63).set(64).set(200);
+  std::vector<unsigned> SetIndices;
+  for (unsigned Index : Bits)
+    SetIndices.push_back(Index);
+  EXPECT_EQ(SetIndices, (std::vector<unsigned>{0, 5, 63, 64, 200}));
+
+  // Every yielded index is set, and the count matches.
+  for (unsigned Index : Bits)
+    EXPECT_TRUE(Bits[Index]);
+  EXPECT_EQ(SetIndices.size(), Bits.count());
+
+  // The final position is reached.
+  FeatureBitset Last;
+  unsigned LastIndex = Last.size() - 1;
+  Last.set(LastIndex);
+  SetIndices.assign(Last.begin(), Last.end());
+  EXPECT_EQ(SetIndices, (std::vector<unsigned>{LastIndex}));
+}
 
 TEST(TargetParserTest, testARMCPUArchList) {
   SmallVector<StringRef, NumARMCPUArchs> List;
@@ -1078,7 +1109,8 @@ TEST_P(AArch64CPUTestFixture, testAArch64CPU) {
 
   const std::optional<AArch64::CpuInfo> Cpu = AArch64::parseCpu(params.CPUName);
   EXPECT_TRUE(Cpu);
-  EXPECT_EQ(params.ExpectedArch, Cpu->Arch.Name);
+  EXPECT_EQ(params.ExpectedArch,
+            AArch64::StrTab[AArch64::ArchInfos[Cpu->ArchIdx].Name]);
 }
 
 INSTANTIATE_TEST_SUITE_P(
@@ -1112,6 +1144,7 @@ INSTANTIATE_TEST_SUITE_P(
                       AArch64CPUTestParams("neoverse-v2", "armv9-a"),
                       AArch64CPUTestParams("neoverse-v3", "armv9.2-a"),
                       AArch64CPUTestParams("neoverse-v3ae", "armv9.2-a"),
+                      AArch64CPUTestParams("armagicpu", "armv9.2-a"),
                       AArch64CPUTestParams("cortex-r82", "armv8-r"),
                       AArch64CPUTestParams("cortex-r82ae", "armv8-r"),
                       AArch64CPUTestParams("cortex-x1", "armv8.2-a"),
@@ -1120,6 +1153,10 @@ INSTANTIATE_TEST_SUITE_P(
                       AArch64CPUTestParams("cortex-x3", "armv9-a"),
                       AArch64CPUTestParams("cortex-x4", "armv9.2-a"),
                       AArch64CPUTestParams("cortex-x925", "armv9.2-a"),
+                      AArch64CPUTestParams("c1-nano", "armv9.3-a"),
+                      AArch64CPUTestParams("c1-premium", "armv9.3-a"),
+                      AArch64CPUTestParams("c1-pro", "armv9.3-a"),
+                      AArch64CPUTestParams("c1-ultra", "armv9.3-a"),
                       AArch64CPUTestParams("cyclone", "armv8-a"),
                       AArch64CPUTestParams("apple-a7", "armv8-a"),
                       AArch64CPUTestParams("apple-a8", "armv8-a"),
@@ -1144,6 +1181,7 @@ INSTANTIATE_TEST_SUITE_P(
                       AArch64CPUTestParams("apple-a17", "armv8.6-a"),
                       AArch64CPUTestParams("apple-m4", "armv8.7-a"),
                       AArch64CPUTestParams("apple-a18", "armv8.7-a"),
+                      AArch64CPUTestParams("apple-m5", "armv8.7-a"),
                       AArch64CPUTestParams("exynos-m3", "armv8-a"),
                       AArch64CPUTestParams("exynos-m4", "armv8.2-a"),
                       AArch64CPUTestParams("exynos-m5", "armv8.2-a"),
@@ -1156,6 +1194,7 @@ INSTANTIATE_TEST_SUITE_P(
                       AArch64CPUTestParams("ampere1", "armv8.6-a"),
                       AArch64CPUTestParams("ampere1a", "armv8.6-a"),
                       AArch64CPUTestParams("ampere1b", "armv8.7-a"),
+                      AArch64CPUTestParams("ampere1c", "armv9.2-a"),
                       AArch64CPUTestParams("neoverse-512tvb", "armv8.4-a"),
                       AArch64CPUTestParams("thunderx2t99", "armv8.1-a"),
                       AArch64CPUTestParams("thunderx3t110", "armv8.3-a"),
@@ -1164,6 +1203,7 @@ INSTANTIATE_TEST_SUITE_P(
                       AArch64CPUTestParams("thunderxt83", "armv8-a"),
                       AArch64CPUTestParams("thunderxt88", "armv8-a"),
                       AArch64CPUTestParams("tsv110", "armv8.2-a"),
+                      AArch64CPUTestParams("hip12", "armv8.7-a"),
                       AArch64CPUTestParams("a64fx", "armv8.2-a"),
                       AArch64CPUTestParams("fujitsu-monaka", "armv9.3-a"),
                       AArch64CPUTestParams("carmel", "armv8.2-a"),
@@ -1218,14 +1258,14 @@ TEST_P(AArch64CPUAliasTestFixture, testCPUAlias) {
 
   StringRef MainName = params.Aliases[0];
   const std::optional<AArch64::CpuInfo> Cpu = AArch64::parseCpu(MainName);
-  const AArch64::ArchInfo &MainAI = Cpu->Arch;
-  AArch64::ExtensionBitset MainFlags = Cpu->getImpliedExtensions();
+  const AArch64::ArchInfo &MainAI = AArch64::ArchInfos[Cpu->ArchIdx];
+  AArch64::ExtensionBitset MainFlags = Cpu->DefaultExtensions;
 
   for (size_t I = 1, E = params.Aliases.size(); I != E; ++I) {
     StringRef OtherName = params.Aliases[I];
     const std::optional<AArch64::CpuInfo> OtherCpu =
         AArch64::parseCpu(OtherName);
-    const AArch64::ArchInfo &OtherAI = OtherCpu->Arch;
+    const AArch64::ArchInfo &OtherAI = AArch64::ArchInfos[OtherCpu->ArchIdx];
 
     EXPECT_EQ(MainAI.Version, OtherAI.Version)
         << MainName << " vs " << OtherName;
@@ -1236,7 +1276,7 @@ TEST_P(AArch64CPUAliasTestFixture, testCPUAlias) {
         << MainName << " vs " << OtherName;
     EXPECT_EQ(MainAI, OtherAI) << MainName << " vs " << OtherName;
 
-    AArch64::ExtensionBitset OtherFlags = OtherCpu->getImpliedExtensions();
+    AArch64::ExtensionBitset OtherFlags = OtherCpu->DefaultExtensions;
 
     EXPECT_EQ(MainFlags, OtherFlags) << MainName << " vs " << OtherName;
 
@@ -1260,11 +1300,12 @@ INSTANTIATE_TEST_SUITE_P(
                       AArch64CPUAliasTestParams({"apple-a15", "apple-m2"}),
                       AArch64CPUAliasTestParams({"apple-a16", "apple-m3",
                                                  "apple-s9", "apple-s10"}),
-                      AArch64CPUAliasTestParams({"apple-m4", "apple-a18"})),
+                      AArch64CPUAliasTestParams({"apple-m4", "apple-a18"}),
+                      AArch64CPUAliasTestParams({"apple-m5", "apple-a19"})),
     AArch64CPUAliasTestParams::PrintToStringParamName);
 
 // Note: number of CPUs includes aliases.
-static constexpr unsigned NumAArch64CPUArchs = 91;
+static constexpr unsigned NumAArch64CPUArchs = 100;
 
 TEST(TargetParserTest, testAArch64CPUArchList) {
   SmallVector<StringRef, NumAArch64CPUArchs> List;
@@ -1310,7 +1351,7 @@ bool testAArch64Extension(StringRef CPUName, StringRef ArchExt) {
   if (!Extension)
     return false;
   std::optional<AArch64::CpuInfo> CpuInfo = AArch64::parseCpu(CPUName);
-  return CpuInfo->getImpliedExtensions().test(Extension->ID);
+  return CpuInfo->DefaultExtensions.test(Extension->ID);
 }
 
 bool testAArch64Extension(const AArch64::ArchInfo &AI, StringRef ArchExt) {
@@ -1441,19 +1482,18 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
       AArch64::AEK_F8F16MM,      AArch64::AEK_LSFE,
       AArch64::AEK_FPRCVT,       AArch64::AEK_CMPBR,
       AArch64::AEK_LSUI,         AArch64::AEK_OCCMO,
-      AArch64::AEK_PCDPHINT,     AArch64::AEK_POPS,
       AArch64::AEK_SVEAES,       AArch64::AEK_SME_MOP4,
       AArch64::AEK_SME_TMOP,     AArch64::AEK_SVEBITPERM,
       AArch64::AEK_SSVE_BITPERM, AArch64::AEK_SVESHA3,
-      AArch64::AEK_SVESM4,       AArch64::AEK_CMH,
       AArch64::AEK_LSCP,         AArch64::AEK_TLBID,
-      AArch64::AEK_MPAMV2,       AArch64::AEK_MTETC,
       AArch64::AEK_GCIE,         AArch64::AEK_SME2P3,
       AArch64::AEK_SVE2P3,       AArch64::AEK_SVE_B16MM,
       AArch64::AEK_F16MM,        AArch64::AEK_F16F32DOT,
       AArch64::AEK_F16F32MM,     AArch64::AEK_MOPS_GO,
       AArch64::AEK_POE2,         AArch64::AEK_TEV,
       AArch64::AEK_BTIE,         AArch64::AEK_F64MM,
+      AArch64::AEK_POPS,         AArch64::AEK_SVESM4,
+      AArch64::AEK_MTETC,
   };
 
   std::vector<StringRef> Features;
@@ -1560,14 +1600,11 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
   EXPECT_TRUE(llvm::is_contained(Features, "+cmpbr"));
   EXPECT_TRUE(llvm::is_contained(Features, "+lsui"));
   EXPECT_TRUE(llvm::is_contained(Features, "+occmo"));
-  EXPECT_TRUE(llvm::is_contained(Features, "+pcdphint"));
   EXPECT_TRUE(llvm::is_contained(Features, "+pops"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sme-mop4"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sme-tmop"));
-  EXPECT_TRUE(llvm::is_contained(Features, "+cmh"));
   EXPECT_TRUE(llvm::is_contained(Features, "+lscp"));
   EXPECT_TRUE(llvm::is_contained(Features, "+tlbid"));
-  EXPECT_TRUE(llvm::is_contained(Features, "+mpamv2"));
   EXPECT_TRUE(llvm::is_contained(Features, "+mtetc"));
   EXPECT_TRUE(llvm::is_contained(Features, "+gcie"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sme2p3"));
@@ -1589,35 +1626,35 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
 }
 
 TEST(TargetParserTest, AArch64ArchFeatures) {
-  EXPECT_EQ(AArch64::ARMV8A.ArchFeature, "+v8a");
-  EXPECT_EQ(AArch64::ARMV8_1A.ArchFeature, "+v8.1a");
-  EXPECT_EQ(AArch64::ARMV8_2A.ArchFeature, "+v8.2a");
-  EXPECT_EQ(AArch64::ARMV8_3A.ArchFeature, "+v8.3a");
-  EXPECT_EQ(AArch64::ARMV8_4A.ArchFeature, "+v8.4a");
-  EXPECT_EQ(AArch64::ARMV8_5A.ArchFeature, "+v8.5a");
-  EXPECT_EQ(AArch64::ARMV8_6A.ArchFeature, "+v8.6a");
-  EXPECT_EQ(AArch64::ARMV8_7A.ArchFeature, "+v8.7a");
-  EXPECT_EQ(AArch64::ARMV8_8A.ArchFeature, "+v8.8a");
-  EXPECT_EQ(AArch64::ARMV8_9A.ArchFeature, "+v8.9a");
-  EXPECT_EQ(AArch64::ARMV9A.ArchFeature, "+v9a");
-  EXPECT_EQ(AArch64::ARMV9_1A.ArchFeature, "+v9.1a");
-  EXPECT_EQ(AArch64::ARMV9_2A.ArchFeature, "+v9.2a");
-  EXPECT_EQ(AArch64::ARMV9_3A.ArchFeature, "+v9.3a");
-  EXPECT_EQ(AArch64::ARMV9_4A.ArchFeature, "+v9.4a");
-  EXPECT_EQ(AArch64::ARMV9_5A.ArchFeature, "+v9.5a");
-  EXPECT_EQ(AArch64::ARMV9_6A.ArchFeature, "+v9.6a");
-  EXPECT_EQ(AArch64::ARMV9_7A.ArchFeature, "+v9.7a");
-  EXPECT_EQ(AArch64::ARMV8R.ArchFeature, "+v8r");
+  EXPECT_EQ(AArch64::StrTab[AArch64::ARMV8A.ArchFeature], "+v8a");
+  EXPECT_EQ(AArch64::StrTab[AArch64::ARMV8_1A.ArchFeature], "+v8.1a");
+  EXPECT_EQ(AArch64::StrTab[AArch64::ARMV8_2A.ArchFeature], "+v8.2a");
+  EXPECT_EQ(AArch64::StrTab[AArch64::ARMV8_3A.ArchFeature], "+v8.3a");
+  EXPECT_EQ(AArch64::StrTab[AArch64::ARMV8_4A.ArchFeature], "+v8.4a");
+  EXPECT_EQ(AArch64::StrTab[AArch64::ARMV8_5A.ArchFeature], "+v8.5a");
+  EXPECT_EQ(AArch64::StrTab[AArch64::ARMV8_6A.ArchFeature], "+v8.6a");
+  EXPECT_EQ(AArch64::StrTab[AArch64::ARMV8_7A.ArchFeature], "+v8.7a");
+  EXPECT_EQ(AArch64::StrTab[AArch64::ARMV8_8A.ArchFeature], "+v8.8a");
+  EXPECT_EQ(AArch64::StrTab[AArch64::ARMV8_9A.ArchFeature], "+v8.9a");
+  EXPECT_EQ(AArch64::StrTab[AArch64::ARMV9A.ArchFeature], "+v9a");
+  EXPECT_EQ(AArch64::StrTab[AArch64::ARMV9_1A.ArchFeature], "+v9.1a");
+  EXPECT_EQ(AArch64::StrTab[AArch64::ARMV9_2A.ArchFeature], "+v9.2a");
+  EXPECT_EQ(AArch64::StrTab[AArch64::ARMV9_3A.ArchFeature], "+v9.3a");
+  EXPECT_EQ(AArch64::StrTab[AArch64::ARMV9_4A.ArchFeature], "+v9.4a");
+  EXPECT_EQ(AArch64::StrTab[AArch64::ARMV9_5A.ArchFeature], "+v9.5a");
+  EXPECT_EQ(AArch64::StrTab[AArch64::ARMV9_6A.ArchFeature], "+v9.6a");
+  EXPECT_EQ(AArch64::StrTab[AArch64::ARMV9_7A.ArchFeature], "+v9.7a");
+  EXPECT_EQ(AArch64::StrTab[AArch64::ARMV8R.ArchFeature], "+v8r");
 }
 
 TEST(TargetParserTest, AArch64ArchPartialOrder) {
-  for (const auto *A : AArch64::ArchInfos) {
-    EXPECT_EQ(*A, *A);
+  for (const auto &A : AArch64::ArchInfos) {
+    EXPECT_EQ(A, A);
 
     // v8r has no relation to other valid architectures
-    if (*A != AArch64::ARMV8R) {
-      EXPECT_FALSE(A->implies(AArch64::ARMV8R));
-      EXPECT_FALSE(AArch64::ARMV8R.implies(*A));
+    if (A != AArch64::ARMV8R) {
+      EXPECT_FALSE(A.implies(AArch64::ARMV8R));
+      EXPECT_FALSE(AArch64::ARMV8R.implies(A));
     }
   }
 
@@ -1741,14 +1778,11 @@ TEST(TargetParserTest, AArch64ArchExtFeature) {
       {"cmpbr", "nocmpbr", "+cmpbr", "-cmpbr"},
       {"lsui", "nolsui", "+lsui", "-lsui"},
       {"occmo", "nooccmo", "+occmo", "-occmo"},
-      {"pcdphint", "nopcdphint", "+pcdphint", "-pcdphint"},
       {"pops", "nopops", "+pops", "-pops"},
       {"sme-mop4", "nosme-mop4", "+sme-mop4", "-sme-mop4"},
       {"sme-tmop", "nosme-tmop", "+sme-tmop", "-sme-tmop"},
-      {"cmh", "nocmh", "+cmh", "-cmh"},
       {"lscp", "nolscp", "+lscp", "-lscp"},
       {"tlbid", "notlbid", "+tlbid", "-tlbid"},
-      {"mpamv2", "nompamv2", "+mpamv2", "-mpamv2"},
       {"mtetc", "nomtetc", "+mtetc", "-mtetc"},
       {"gcie", "nogcie", "+gcie", "-gcie"},
       {"sme2p3", "nosme2p3", "+sme2p3", "-sme2p3"},
@@ -1906,6 +1940,7 @@ AArch64ExtensionDependenciesBaseArchTestParams
          {"v8.1a", "crc", "fp-armv8", "lse", "rdm", "neon"},
          {}},
         {AArch64::ARMV9_5A, {}, {"v9.5a", "mops", "cpa"}, {}},
+        {AArch64::ARMV9_7A, {}, {"v9.7a", "f16f32dot"}, {}},
 
         // Positive modifiers
         {AArch64::ARMV8A, {"fp16"}, {"fullfp16"}, {}},
@@ -2021,6 +2056,8 @@ AArch64ExtensionDependenciesBaseArchTestParams
         {AArch64::ARMV8A, {"sve", "nofp16"}, {}, {"fullfp16", "sve"}},
         {AArch64::ARMV9_7A, {"nofp16", "f16mm"}, {"fullfp16", "f16mm"}, {}},
         {AArch64::ARMV9_7A, {"f16mm", "nofp16"}, {}, {"fullfp16", "f16mm"}},
+        {AArch64::ARMV9_7A, {"nosimd", "f16mm"}, {"neon", "f16mm"}, {}},
+        {AArch64::ARMV9_7A, {"f16mm", "nosimd"}, {}, {"neon", "f16mm"}},
         {AArch64::ARMV9_7A,
          {"nofp16", "f16f32mm"},
          {"fullfp16", "f16f32mm"},
@@ -2199,6 +2236,15 @@ AArch64ExtensionDependenciesBaseArchTestParams
         // lse -> lse128
         {AArch64::ARMV8A, {"nolse", "lse128"}, {"lse", "lse128"}, {}},
         {AArch64::ARMV8A, {"lse128", "nolse"}, {}, {"lse", "lse128"}},
+
+        // mtetc -> mte
+        {AArch64::ARMV9_7A, {"nomemtag", "mtetc"}, {"mte"}, {}},
+
+        // mops-go -> mops, mte
+        {AArch64::ARMV9_7A,
+         {"nomops", "nomemtag", "mops-go"},
+         {"mops", "mte"},
+         {}},
 
         // predres -> predres2
         {AArch64::ARMV8A,

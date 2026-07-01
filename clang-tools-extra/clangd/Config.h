@@ -26,6 +26,7 @@
 
 #include "support/Context.h"
 #include "llvm/ADT/FunctionExtras.h"
+#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSet.h"
 #include <functional>
@@ -157,6 +158,12 @@ struct Config {
     None // Suggest none of the code patterns and snippets
   };
 
+  enum class MacroFilterPolicy {
+    ExactPrefix, // Suggest macros if the prefix matches exactly
+    FuzzyMatch,  // Fuzzy-match macros if they do not have "_" as prefix or
+                 // suffix
+  };
+
   /// Configures code completion feature.
   struct {
     /// Whether code completion includes results that are not visible in current
@@ -168,6 +175,8 @@ struct Config {
     HeaderInsertionPolicy HeaderInsertion = HeaderInsertionPolicy::IWYU;
     /// Enables code patterns & snippets suggestions
     CodePatternsPolicy CodePatterns = CodePatternsPolicy::All;
+    /// Controls how macros are filtered
+    MacroFilterPolicy MacroFilter = MacroFilterPolicy::ExactPrefix;
   } Completion;
 
   /// Configures hover feature.
@@ -220,12 +229,6 @@ struct Config {
 namespace llvm {
 template <> struct DenseMapInfo<clang::clangd::Config::ExternalIndexSpec> {
   using ExternalIndexSpec = clang::clangd::Config::ExternalIndexSpec;
-  static inline ExternalIndexSpec getEmptyKey() {
-    return {ExternalIndexSpec::File, "", ""};
-  }
-  static inline ExternalIndexSpec getTombstoneKey() {
-    return {ExternalIndexSpec::File, "TOMB", "STONE"};
-  }
   static unsigned getHashValue(const ExternalIndexSpec &Val) {
     return llvm::hash_combine(Val.Kind, Val.Location, Val.MountPoint);
   }

@@ -14,17 +14,17 @@
 ; ELF: Flags [ (0x6)
 ; ELF: SHF_ALLOC (0x2)
 ; ELF: SHF_EXECINSTR (0x4)
-; ELF: AddressAlignment: 4
+; ELF: AddressAlignment: 64
 ; ELF: }
 
 ; ELF: SHT_NOTE
-; ELF: 0000: 07000000 4F000000 20000000 414D4447
+; ELF: 0000: 07000000 57000000 20000000 414D4447
 ; ELF: 0010: 50550000 83AE616D 64687361 2E6B6572
 ; ELF: 0020: 6E656C73 90AD616D 64687361 2E746172
-; ELF: 0030: 676574BD 616D6467 636E2D75 6E6B6E6F
-; ELF: 0040: 776E2D61 6D646873 612D2D67 66783730
-; ELF: 0050: 30AE616D 64687361 2E766572 73696F6E
-; ELF: 0060: 92010100
+; ELF: 0030: 676574D9 24616D64 67636E2D 756E6B6E
+; ELF: 0040: 6F776E2D 616D6468 73612D75 6E6B6E6F
+; ELF: 0050: 776E2D67 66783730 30AE616D 64687361
+; ELF: 0060: 2E766572 73696F6E 92010100
 
 ; ELF: Symbol {
 ; ELF: Name: simple
@@ -33,12 +33,12 @@
 ; ELF: }
 
 ; HSA: .text
-; HSA-CI: .amdgcn_target "amdgcn-unknown-amdhsa--gfx700" 
-; HSA-VI: .amdgcn_target "amdgcn-unknown-amdhsa--gfx801" 
+; HSA-CI: .amdgcn_target "amdgcn-unknown-amdhsa-unknown-gfx700"
+; HSA-VI: .amdgcn_target "amdgcn-unknown-amdhsa-unknown-gfx801"
 
 ; HSA-NOT: .amdgpu_hsa_kernel simple
 ; HSA: .globl simple
-; HSA: .p2align 2
+; HSA: .p2align 6
 ; HSA: {{^}}simple:
 ; HSA-NOT: amd_kernel_code_t
 ; HSA: flat_load_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, v[0:1]
@@ -60,7 +60,7 @@ entry:
 
 ; Ignore explicit alignment that is too low.
 ; HSA: .globl simple_align2
-; HSA: .p2align 2
+; HSA: .p2align 6
 define void @simple_align2(ptr addrspace(4) %ptr.out) align 2 {
 entry:
   %out = load ptr addrspace(1), ptr addrspace(4) %ptr.out

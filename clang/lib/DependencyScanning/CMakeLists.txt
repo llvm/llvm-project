@@ -6,6 +6,7 @@ set(LLVM_LINK_COMPONENTS
   )
 
 add_clang_library(clangDependencyScanning
+  DependencyGraph.cpp
   DependencyScanningFilesystem.cpp
   DependencyScanningService.cpp
   DependencyScanningWorker.cpp
@@ -20,7 +21,6 @@ add_clang_library(clangDependencyScanning
   LINK_LIBS
   clangAST
   clangBasic
-  clangDriver
   clangFrontend
   clangLex
   clangSerialization

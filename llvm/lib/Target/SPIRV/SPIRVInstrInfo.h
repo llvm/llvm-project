@@ -38,8 +38,7 @@ public:
   bool isAliasingInstr(const MachineInstr &MI) const;
   bool canUseFastMathFlags(const MachineInstr &MI,
                            bool KHRFloatControls2) const;
-  bool canUseNSW(const MachineInstr &MI) const;
-  bool canUseNUW(const MachineInstr &MI) const;
+  bool canUseIntegerWrapDecoration(const MachineInstr &MI) const;
 
   bool analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
                      MachineBasicBlock *&FBB,
@@ -60,7 +59,7 @@ public:
 };
 
 namespace SPIRV {
-enum AsmComments {
+enum AsmComments : MachineInstr::AsmPrinterFlagTy {
   // It is a half type
   ASM_PRINTER_WIDTH16 = MachineInstr::TAsmComments,
   // It is a 64 bit type

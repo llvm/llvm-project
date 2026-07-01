@@ -61,10 +61,11 @@ include "RISCVSchedSiFiveP500.td"
 include "RISCVSchedSiFiveP600.td"
 include "RISCVSchedSiFiveP800.td"
 include "RISCVSchedSpacemitX60.td"
+include "RISCVSchedSpacemitX100.td"
 include "RISCVSchedSyntacoreSCR1.td"
 include "RISCVSchedSyntacoreSCR345.td"
 include "RISCVSchedSyntacoreSCR7.td"
-include "RISCVSchedTTAscalonD8.td"
+include "RISCVSchedTTAscalonX.td"
 include "RISCVSchedXiangShanNanHu.td"
 
 //===----------------------------------------------------------------------===//
@@ -84,12 +85,12 @@ include "RISCVPfmCounters.td"
 //===----------------------------------------------------------------------===//
 
 def RISCVInstrInfo : InstrInfo {
-  let guessInstructionProperties = 0;
+  let guessInstructionProperties = false;
 }
 
 def RISCVAsmParser : AsmParser {
-  let ShouldEmitMatchRegisterAltName = 1;
-  let AllowDuplicateRegisterNames = 1;
+  let ShouldEmitMatchRegisterAltName = true;
+  let AllowDuplicateRegisterNames = true;
 }
 
 def RISCVAsmWriter : AsmWriter {
@@ -102,5 +103,5 @@ def RISCV : Target {
   let InstructionSet = RISCVInstrInfo;
   let AssemblyParsers = [RISCVAsmParser];
   let AssemblyWriters = [RISCVAsmWriter];
-  let AllowRegisterRenaming = 1;
+  let AllowRegisterRenaming = true;
 }

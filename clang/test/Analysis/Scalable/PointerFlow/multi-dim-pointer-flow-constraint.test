@@ -1,0 +1,41 @@
+// Test that a node '(a, 2)' can propagate to node '(b, 2)' through an edge '(a, 1) -> (b, 1)'
+// properly.
+
+// RUN: rm -rf %t && mkdir -p %t
+// RUN: split-file %s %t
+
+
+// RUN: %clang_cc1 -fsyntax-only %t/src.cpp \
+// RUN:   --ssaf-extract-summaries=PointerFlow,UnsafeBufferUsage \
+// RUN:   --ssaf-compilation-unit-id="tu-1" \
+// RUN:   --ssaf-tu-summary-file=%t/src.summary.json
+
+// RUN: clang-ssaf-linker %t/src.summary.json -o %t/lu.json
+
+// RUN: clang-ssaf-analyzer %t/lu.json -o %t/wpa.json \
+// RUN:   -a UnsafeBufferReachableAnalysisResult
+
+// RUN: FileCheck %s --input-file=%t/wpa.json
+
+//--- src.cpp
+void foo(char **bufs, char **vlines, int i, int j) {
+  bufs[i] = nullptr;           // unsafe at (bufs, 1)
+  bufs[i][j] = 0;              // unsafe at (bufs, 2)
+  bufs = vlines;               // PFG: (bufs, 1) -> (vlines, 1)
+}
+
+// Check that both (vlines, 1) and (vlines, 2) are in the reachable
+// set of unsafe buffers.
+
+// CHECK-DAG: "id": [[bufs_ID:[0-9]+]],{{([^]]|[[:space:]])+\],[[:space:]]+"suffix": "1",[[:space:]]+"usr": }}"c:@F@foo#**C#S0_#I#I#"
+// CHECK-DAG: "id": [[vlines_ID:[0-9]+]],{{([^]]|[[:space:]])+\],[[:space:]]+"suffix": "2",[[:space:]]+"usr": }}"c:@F@foo#**C#S0_#I#I#"
+
+// CHECK: "analysis_name": "UnsafeBufferReachableAnalysisResult"
+
+// CHECK-DAG: {{\{[[:space:]]+}}"@": [[bufs_ID]]{{[[:space:]]+\},[[:space:]]+1[[:space:]]+\]}}
+// CHECK-DAG: {{\{[[:space:]]+}}"@": [[bufs_ID]]{{[[:space:]]+\},[[:space:]]+2[[:space:]]+\]}}
+// CHECK-DAG: {{\{[[:space:]]+}}"@": [[vlines_ID]]{{[[:space:]]+\},[[:space:]]+1[[:space:]]+\]}}
+// CHECK-DAG: {{\{[[:space:]]+}}"@": [[vlines_ID]]{{[[:space:]]+\},[[:space:]]+2[[:space:]]+\]}}
+// CHECK-NOT: {{\{[[:space:]]+}}"@": {{[0-9]+[[:space:]]+\},[[:space:]]+3[[:space:]]+\]}}
+
+// CHECK: "analysis_name":

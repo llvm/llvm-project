@@ -207,3 +207,22 @@
 // CHECK-TARGETLIB-SAME: "-Luser"
 // CHECK-TARGETLIB-SAME: "-L{{.*}}myroot{{/|\\\\}}target{{/|\\\\}}lib"
 // CHECK-TARGETLIB-SAME: "-L."
+
+// Test that -ffat-lto-objects is forwarded to the linker.
+
+// RUN: %clang --target=x86_64-sie-ps5 -flto=full -ffat-lto-objects %s -### 2>&1 | FileCheck --check-prefixes=CHECK-FAT-LTO %s
+// RUN: %clang --target=x86_64-sie-ps5 -flto=full -funified-lto -ffat-lto-objects %s -### 2>&1 | FileCheck --check-prefixes=CHECK-FAT-LTO %s
+// RUN: %clang --target=x86_64-sie-ps5 -flto=full %s -### 2>&1 | FileCheck --check-prefixes=CHECK-NO-FAT-LTO %s
+// RUN: %clang --target=x86_64-sie-ps5 -flto=full -funified-lto %s -### 2>&1 | FileCheck --check-prefixes=CHECK-NO-FAT-LTO %s
+
+// CHECK-FAT-LTO: {{ld(\.exe)?}}"
+// CHECK-FAT-LTO-SAME: "--fat-lto-objects"
+// CHECK-NO-FAT-LTO: {{ld(\.exe)?}}"
+// CHECK-NO-FAT-LTO-NOT: "--fat-lto-objects"
+// CHECK-NO-FAT-LTO-SAME: {{$}}
+
+// Check -plugin-opt=mcpu=znver2 is passed to prospero-lld.
+// RUN: %clang --target=x86_64-sie-ps5 %s -### 2>&1 | FileCheck --check-prefixes=CHECK-CLANG-TARGET-CPU %s
+
+// CHECK-CLANG-TARGET-CPU: {{ld(\.exe)?}}"
+// CHECK-CLANG-TARGET-CPU: "-plugin-opt=mcpu=znver2"

@@ -187,9 +187,8 @@ bool MagicNumbersCheck::isConstant(const MatchFinder::MatchResult &Result,
 }
 
 bool MagicNumbersCheck::isIgnoredValue(const IntegerLiteral *Literal) const {
-  if (Literal->getType()->isBitIntType()) {
+  if (Literal->getType()->isBitIntType())
     return true;
-  }
   const llvm::APInt IntValue = Literal->getValue();
   const int64_t Value = IntValue.getZExtValue();
   if (Value == 0)
@@ -233,7 +232,7 @@ bool MagicNumbersCheck::isSyntheticValue(const SourceManager *SourceManager,
 }
 
 bool MagicNumbersCheck::isBitFieldWidth(
-    const clang::ast_matchers::MatchFinder::MatchResult &Result,
+    const ast_matchers::MatchFinder::MatchResult &Result,
     const IntegerLiteral &Literal) const {
   return IgnoreBitFieldsWidths &&
          llvm::any_of(Result.Context->getParents(Literal),
@@ -243,8 +242,8 @@ bool MagicNumbersCheck::isBitFieldWidth(
 }
 
 bool MagicNumbersCheck::isUserDefinedLiteral(
-    const clang::ast_matchers::MatchFinder::MatchResult &Result,
-    const clang::Expr &Literal) const {
+    const ast_matchers::MatchFinder::MatchResult &Result,
+    const Expr &Literal) const {
   const DynTypedNodeList Parents = Result.Context->getParents(Literal);
   if (Parents.empty())
     return false;

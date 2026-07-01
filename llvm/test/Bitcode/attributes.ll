@@ -526,6 +526,11 @@ define void @f_no_create_undef_or_poison() nocreateundeforpoison {
         ret void;
 }
 
+; CHECK: define void @f_flatten() [[FLATTEN:#[0-9]+]]
+define void @f_flatten() flatten {
+        ret void;
+}
+
 ; CHECK: define void @f87() [[FNRETTHUNKEXTERN:#[0-9]+]]
 define void @f87() fn_ret_thunk_extern { ret void }
 
@@ -579,6 +584,16 @@ define void @captures(ptr captures(address) %p) {
 
 ; CHECK: define void @dead_on_return(ptr dead_on_return %p)
 define void @dead_on_return(ptr dead_on_return %p) {
+  ret void
+}
+
+; CHECK: define void @dead_on_return_sized(ptr dead_on_return(4) %p)
+define void @dead_on_return_sized(ptr dead_on_return(4) %p) {
+  ret void
+}
+
+; CHECK: define void @noipa() [[NOIPA:#[0-9]+]]
+define void @noipa() noipa {
   ret void
 }
 
@@ -639,8 +654,10 @@ define void @dead_on_return(ptr dead_on_return %p) {
 ; CHECK: attributes #54 = { sanitize_realtime_blocking }
 ; CHECK: attributes #55 = { sanitize_alloc_token }
 ; CHECK: attributes #56 = { nocreateundeforpoison }
+; CHECK: attributes [[FLATTEN]] = { flatten }
 ; CHECK: attributes [[FNRETTHUNKEXTERN]] = { fn_ret_thunk_extern }
 ; CHECK: attributes [[SKIPPROFILE]] = { skipprofile }
 ; CHECK: attributes [[OPTDEBUG]] = { optdebug }
 ; CHECK: attributes [[NODIVERGENCESOURCE]] = { nodivergencesource }
+; CHECK: attributes [[NOIPA]] = { noipa }
 ; CHECK: attributes #[[NOBUILTIN]] = { nobuiltin }

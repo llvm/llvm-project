@@ -111,11 +111,6 @@ static cl::opt<bool> NoScan(
         "slower binary)"),
     cl::Hidden, cl::cat(BoltOptCategory));
 
-cl::opt<bool>
-    PreserveBlocksAlignment("preserve-blocks-alignment",
-                            cl::desc("try to preserve basic block alignment"),
-                            cl::cat(BoltOptCategory));
-
 static cl::opt<bool> PrintOutputAddressRange(
     "print-output-address-range",
     cl::desc(
@@ -147,6 +142,11 @@ static cl::opt<bool> TrapOnAVX512(
     cl::init(false), cl::ZeroOrMore, cl::Hidden, cl::cat(BoltCategory));
 
 bool shouldPrint(const BinaryFunction &Function) {
+  // PLT stubs are disassembled for BTI binaries, therefore they should be
+  // printed.
+  if (Function.getBinaryContext().usesBTI() && Function.isPLTFunction())
+    return true;
+
   if (Function.isIgnored())
     return false;
 
@@ -1038,8 +1038,10 @@ MCSymbol *BinaryFunction::getOrCreateLocalLabel(uint64_t Address) {
 
   // For AArch64, check if this address is part of a constant island.
   if (BC.isAArch64()) {
-    if (MCSymbol *IslandSym = getOrCreateIslandAccess(Address))
+    if (MCSymbol *IslandSym = getOrCreateIslandAccess(Address)) {
+      Labels[Offset] = IslandSym;
       return IslandSym;
+    }
   }
 
   if (Offset == getSize())
@@ -1275,6 +1277,29 @@ BinaryFunction::disassembleInstructionAtOffset(uint64_t Offset) const {
                                 InstrAddress, nulls()))
     return Instr;
   return std::nullopt;
+}
+
+uint64_t
+BinaryFunction::getInstructionSequenceLength(uint64_t Offset,
+                                             uint64_t MinLength) const {
+  assert(Offset + MinLength <= MaxSize && "Invalid offset / min length");
+  ErrorOr<ArrayRef<unsigned char>> FunctionData = getData();
+  assert(FunctionData && "Cannot get function as data");
+  uint64_t Current = Offset;
+  const uint64_t Target = Offset + MinLength;
+  while (Current < Target) {
+    MCInst Instr;
+    uint64_t InstrSize = 0;
+    const uint64_t InstrAddress = getAddress() + Current;
+    [[maybe_unused]] MCDisassembler::DecodeStatus Res =
+        BC.DisAsm->getInstruction(Instr, InstrSize,
+                                  FunctionData->slice(Current), InstrAddress,
+                                  nulls());
+    assert(Res != MCDisassembler::DecodeStatus::Fail &&
+           "Function has been disassembled previously");
+    Current += InstrSize;
+  }
+  return Current - Offset;
 }
 
 Error BinaryFunction::disassemble() {
@@ -1692,7 +1717,7 @@ bool BinaryFunction::scanExternalRefs() {
       // Get a reference symbol for the function when address is a valid code
       // reference.
       BranchTargetSymbol =
-          BC.handleExternalBranchTarget(TargetAddress, *TargetFunction);
+          BC.handleExternalBranchTarget(TargetAddress, *this, *TargetFunction);
       if (!BranchTargetSymbol)
         continue;
     }
@@ -1898,6 +1923,36 @@ bool BinaryFunction::scanExternalRefs() {
     BC.outs() << "BOLT-INFO: failed to scan refs for  " << *this << '\n';
 
   return Success;
+}
+
+bool BinaryFunction::validateInternalBranches() {
+  if (!hasInstructions() || !isSimple() || TrapsOnEntry)
+    return true;
+
+  for (const auto &KV : Labels) {
+    MCSymbol *Label = KV.second;
+    if (getSecondaryEntryPointSymbol(Label))
+      continue;
+
+    const uint32_t Offset = KV.first;
+    // Skip empty functions and out-of-bounds offsets,
+    // as they may not be disassembled.
+    if (!Offset || (Offset > getSize()))
+      continue;
+
+    if (!getInstructionAtOffset(Offset) ||
+        isInConstantIsland(getAddress() + Offset)) {
+      BC.errs() << "BOLT-WARNING: corrupted control flow detected in function "
+                << *this << ": an internal branch/call targets an invalid "
+                << "instruction at address 0x"
+                << Twine::utohexstr(getAddress() + Offset)
+                << "; ignoring this function\n";
+      setIgnored();
+      return false;
+    }
+  }
+
+  return true;
 }
 
 void BinaryFunction::postProcessEntryPoints() {
@@ -2314,7 +2369,7 @@ Error BinaryFunction::buildCFG(MCPlusBuilder::AllocatorIdTy AllocatorId) {
       // Always create new BB at branch destination.
       PrevBB = InsertBB ? InsertBB : PrevBB;
       InsertBB = addBasicBlockAt(LI->first, LI->second);
-      if (opts::PreserveBlocksAlignment && IsLastInstrNop)
+      if (BC.PreserveBlocksAlignment && IsLastInstrNop)
         InsertBB->setDerivedAlignment();
 
       if (PrevBB)
@@ -2351,7 +2406,7 @@ Error BinaryFunction::buildCFG(MCPlusBuilder::AllocatorIdTy AllocatorId) {
           Label = BC.Ctx->createNamedTempSymbol("FT");
         }
         InsertBB = addBasicBlockAt(Offset, Label);
-        if (opts::PreserveBlocksAlignment && IsLastInstrNop)
+        if (BC.PreserveBlocksAlignment && IsLastInstrNop)
           InsertBB->setDerivedAlignment();
         updateOffset(LastInstrOffset);
       }
@@ -2797,8 +2852,12 @@ private:
     case MCCFIInstruction::OpLabel:
     case MCCFIInstruction::OpValOffset:
     case MCCFIInstruction::OpNegateRAState:
-      llvm_unreachable("unsupported CFI opcode");
-      break;
+      reportFatalUsageError("unsupported CFI opcode");
+    case MCCFIInstruction::OpLLVMRegisterPair:
+    case MCCFIInstruction::OpLLVMVectorRegisters:
+    case MCCFIInstruction::OpLLVMVectorOffset:
+    case MCCFIInstruction::OpLLVMVectorRegisterMask:
+      reportFatalInternalError("saw LLVM-specific pseudo-CFI opcode");
     case MCCFIInstruction::OpRememberState:
     case MCCFIInstruction::OpRestoreState:
     case MCCFIInstruction::OpGnuArgsSize:
@@ -2938,8 +2997,12 @@ struct CFISnapshotDiff : public CFISnapshot {
     case MCCFIInstruction::OpLabel:
     case MCCFIInstruction::OpValOffset:
     case MCCFIInstruction::OpNegateRAState:
-      llvm_unreachable("unsupported CFI opcode");
-      return false;
+      reportFatalUsageError("unsupported CFI opcode");
+    case MCCFIInstruction::OpLLVMRegisterPair:
+    case MCCFIInstruction::OpLLVMVectorRegisters:
+    case MCCFIInstruction::OpLLVMVectorOffset:
+    case MCCFIInstruction::OpLLVMVectorRegisterMask:
+      reportFatalInternalError("saw LLVM-specific pseudo-CFI opcode");
     case MCCFIInstruction::OpRememberState:
     case MCCFIInstruction::OpRestoreState:
     case MCCFIInstruction::OpGnuArgsSize:
@@ -3089,8 +3152,12 @@ BinaryFunction::unwindCFIState(int32_t FromState, int32_t ToState,
     case MCCFIInstruction::OpLabel:
     case MCCFIInstruction::OpValOffset:
     case MCCFIInstruction::OpNegateRAState:
-      llvm_unreachable("unsupported CFI opcode");
-      break;
+      reportFatalUsageError("unsupported CFI opcode");
+    case MCCFIInstruction::OpLLVMRegisterPair:
+    case MCCFIInstruction::OpLLVMVectorRegisters:
+    case MCCFIInstruction::OpLLVMVectorOffset:
+    case MCCFIInstruction::OpLLVMVectorRegisterMask:
+      reportFatalInternalError("saw LLVM-specific pseudo-CFI opcode");
     case MCCFIInstruction::OpGnuArgsSize:
       // do not affect CFI state
       break;
@@ -3219,6 +3286,30 @@ void BinaryFunction::clearDisasmState() {
   clearList(TakenBranches);
 }
 
+void BinaryFunction::resetState() {
+  clearDisasmState();
+
+  // Clear CFG state too.
+  if (hasCFG()) {
+    releaseCFG();
+
+    for (BinaryBasicBlock *BB : BasicBlocks)
+      delete BB;
+    clearList(BasicBlocks);
+
+    for (BinaryBasicBlock *BB : DeletedBasicBlocks)
+      delete BB;
+    clearList(DeletedBasicBlocks);
+
+    Layout.clear();
+  }
+
+  IsSimple = false;
+  IsIgnored = true;
+
+  CurrentState = State::Empty;
+}
+
 void BinaryFunction::setTrapOnEntry() {
   clearDisasmState();
 
@@ -3253,24 +3344,7 @@ void BinaryFunction::setIgnored() {
   if (CurrentState == State::Empty)
     return;
 
-  clearDisasmState();
-
-  // Clear CFG state too.
-  if (hasCFG()) {
-    releaseCFG();
-
-    for (BinaryBasicBlock *BB : BasicBlocks)
-      delete BB;
-    clearList(BasicBlocks);
-
-    for (BinaryBasicBlock *BB : DeletedBasicBlocks)
-      delete BB;
-    clearList(DeletedBasicBlocks);
-
-    Layout.clear();
-  }
-
-  CurrentState = State::Empty;
+  resetState();
 
   // Fix external references in the original function body.
   if (BC.HasRelocations) {
@@ -3841,8 +3915,9 @@ MCSymbol *BinaryFunction::getSymbolForEntryID(uint64_t EntryID) {
   return nullptr;
 }
 
-uint64_t BinaryFunction::getEntryIDForSymbol(const MCSymbol *Symbol) const {
-  if (!isMultiEntry())
+std::optional<uint64_t>
+BinaryFunction::getEntryIDForSymbol(const MCSymbol *Symbol) const {
+  if (!isMultiEntry() || !Symbol)
     return 0;
 
   for (const MCSymbol *FunctionSymbol : getSymbols())
@@ -3868,8 +3943,7 @@ uint64_t BinaryFunction::getEntryIDForSymbol(const MCSymbol *Symbol) const {
       return NumEntries;
     ++NumEntries;
   }
-
-  llvm_unreachable("symbol not found");
+  return std::nullopt;
 }
 
 bool BinaryFunction::forEachEntryPoint(EntryPointCallbackTy Callback) const {
@@ -4587,8 +4661,10 @@ uint64_t BinaryFunction::translateInputToOutputAddress(uint64_t Address) const {
 
   // Check if the address is associated with an instruction that is tracked
   // by address translation.
-  if (auto OutputAddress = BC.getIOAddressMap().lookup(Address))
-    return *OutputAddress;
+  if (BC.hasIOAddressMap()) {
+    if (auto OutputAddress = BC.getIOAddressMap().lookup(Address))
+      return *OutputAddress;
+  }
 
   // FIXME: #18950828 - we rely on relative offsets inside basic blocks to stay
   //        intact. Instead we can use pseudo instructions and/or annotations.
@@ -4795,6 +4871,13 @@ bool BinaryFunction::isAArch64Veneer() const {
   }
 
   return true;
+}
+
+bool BinaryFunction::isPossibleVeneer() const {
+  return BC.isAArch64() &&
+         (isAArch64Veneer() || getOneName().starts_with("__AArch64") ||
+          getOneName().starts_with("e843419") ||
+          getOneName().starts_with("__CortexA53843419_"));
 }
 
 void BinaryFunction::addRelocation(uint64_t Address, MCSymbol *Symbol,

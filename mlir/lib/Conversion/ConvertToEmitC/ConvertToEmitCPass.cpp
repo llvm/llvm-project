@@ -9,6 +9,7 @@
 #include "mlir/Conversion/ConvertToEmitC/ConvertToEmitCPass.h"
 
 #include "mlir/Conversion/ConvertToEmitC/ToEmitCInterface.h"
+#include "mlir/Conversion/EmitCCommon/TypeConverter.h"
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -31,7 +32,8 @@ namespace {
 class ConvertToEmitCPassInterface {
 public:
   ConvertToEmitCPassInterface(MLIRContext *context,
-                              ArrayRef<std::string> filterDialects);
+                              ArrayRef<std::string> filterDialects,
+                              std::optional<bool> lowerToCpp);
   virtual ~ConvertToEmitCPassInterface() = default;
 
   /// Get the dependent dialects used by `convert-to-emitc`.
@@ -60,6 +62,7 @@ protected:
   MLIRContext *context;
   /// List of dialects names to use as filters.
   ArrayRef<std::string> filterDialects;
+  std::optional<bool> lowerToCpp;
 };
 
 /// This DialectExtension can be attached to the context, which will invoke the
@@ -110,21 +113,14 @@ struct StaticConvertToEmitC : public ConvertToEmitCPassInterface {
   /// Configure the conversion to EmitC at pass initialization.
   LogicalResult initialize() final {
     auto target = std::make_shared<ConversionTarget>(*context);
-    auto typeConverter = std::make_shared<TypeConverter>();
-
-    // Add fallback identity converison.
-    typeConverter->addConversion([](Type type) -> std::optional<Type> {
-      if (emitc::isSupportedEmitCType(type))
-        return type;
-      return std::nullopt;
-    });
+    auto typeConverter = std::make_shared<EmitCTypeConverter>(context);
 
     RewritePatternSet tempPatterns(context);
     target->addLegalDialect<emitc::EmitCDialect>();
     // Populate the patterns with the dialect interface.
     if (failed(visitInterfaces([&](ConvertToEmitCPatternInterface *iface) {
           iface->populateConvertToEmitCConversionPatterns(
-              *target, *typeConverter, tempPatterns);
+              *target, *typeConverter, tempPatterns, lowerToCpp);
         })))
       return failure();
     this->patterns =
@@ -160,7 +156,11 @@ public:
 
   LogicalResult initialize(MLIRContext *context) final {
     std::shared_ptr<ConvertToEmitCPassInterface> impl;
-    impl = std::make_shared<StaticConvertToEmitC>(context, filterDialects);
+    std::optional<bool> lowerToCppOverride;
+    if (this->lowerToCpp.hasValue())
+      lowerToCppOverride = this->lowerToCpp;
+    impl = std::make_shared<StaticConvertToEmitC>(context, filterDialects,
+                                                  lowerToCppOverride);
     if (failed(impl->initialize()))
       return failure();
     this->impl = impl;
@@ -180,8 +180,10 @@ public:
 //===----------------------------------------------------------------------===//
 
 ConvertToEmitCPassInterface::ConvertToEmitCPassInterface(
-    MLIRContext *context, ArrayRef<std::string> filterDialects)
-    : context(context), filterDialects(filterDialects) {}
+    MLIRContext *context, ArrayRef<std::string> filterDialects,
+    std::optional<bool> lowerToCpp)
+    : context(context), filterDialects(filterDialects), lowerToCpp(lowerToCpp) {
+}
 
 void ConvertToEmitCPassInterface::getDependentDialects(
     DialectRegistry &registry) {

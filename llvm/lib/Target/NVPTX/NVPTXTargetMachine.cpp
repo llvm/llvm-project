@@ -51,6 +51,13 @@ static cl::opt<bool>
                                cl::desc("Disable load/store vectorizer"),
                                cl::init(false), cl::Hidden);
 
+// NVPTX IR Peephole is a new pass; this option will lets us turn it off in case
+// we encounter some issues.
+static cl::opt<bool>
+    DisableNVPTXIRPeephole("disable-nvptx-ir-peephole",
+                           cl::desc("Disable NVPTX IR Peephole"),
+                           cl::init(false), cl::Hidden);
+
 // TODO: Remove this flag when we are confident with no regressions.
 static cl::opt<bool> DisableRequireStructuredCFG(
     "disable-nvptx-require-structured-cfg",
@@ -104,17 +111,21 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeNVPTXTarget() {
   initializeNVPTXAssignValidGlobalNamesPass(PR);
   initializeNVPTXAtomicLowerPass(PR);
   initializeNVPTXLowerArgsLegacyPassPass(PR);
+  initializeNVPTXSetByValParamAlignLegacyPassPass(PR);
+  initializeNVPTXMarkKernelPtrsGlobalLegacyPassPass(PR);
   initializeNVPTXLowerAllocaPass(PR);
   initializeNVPTXLowerUnreachablePass(PR);
   initializeNVPTXCtorDtorLoweringLegacyPass(PR);
   initializeNVPTXLowerAggrCopiesPass(PR);
   initializeNVPTXProxyRegErasurePass(PR);
   initializeNVPTXForwardParamsPassPass(PR);
+  initializeNVPTXAddressFolderPassPass(PR);
   initializeNVPTXDAGToDAGISelLegacyPass(PR);
   initializeNVPTXAAWrapperPassPass(PR);
   initializeNVPTXExternalAAWrapperPass(PR);
   initializeNVPTXPeepholePass(PR);
   initializeNVPTXTagInvariantLoadLegacyPassPass(PR);
+  initializeNVPTXIRPeepholePass(PR);
   initializeNVPTXPrologEpilogPassPass(PR);
 }
 
@@ -281,7 +292,8 @@ NVPTXTargetMachine::getPredicatedAddrSpace(const Value *V) const {
 
 void NVPTXPassConfig::addEarlyCSEOrGVNPass() {
   if (getOptLevel() == CodeGenOptLevel::Aggressive)
-    addPass(createGVNPass());
+    // Disable scalar PRE due to Register Pressure increase
+    addPass(createGVNPass(/*ScalarPRE=*/false));
   else
     addPass(createEarlyCSEPass());
 }
@@ -289,7 +301,8 @@ void NVPTXPassConfig::addEarlyCSEOrGVNPass() {
 void NVPTXPassConfig::addAddressSpaceInferencePasses() {
   // NVPTXLowerArgs emits alloca for byval parameters which can often
   // be eliminated by SROA.
-  addPass(createSROAPass());
+  addPass(createSROAPass(/*PreserveCFG=*/true,
+                         /*AggregateToVector=*/true));
   addPass(createNVPTXLowerAllocaPass());
   // TODO: Consider running InferAddressSpaces during opt, earlier in the
   // compilation flow.
@@ -347,8 +360,14 @@ void NVPTXPassConfig::addIRPasses() {
   addPass(createNVPTXAssignValidGlobalNamesPass());
   addPass(createGenericToNVVMLegacyPass());
 
+  // Lower variadic calls before address space inference.
+  addPass(createExpandVariadicsPass(ExpandVariadicsMode::Lowering));
+
   // NVPTXLowerArgs is required for correctness and should be run right
   // before the address space inference passes.
+  if (getNVPTXTargetMachine().getDrvInterface() == NVPTX::CUDA)
+    addPass(createNVPTXMarkKernelPtrsGlobalPass());
+  addPass(createNVPTXSetByValParamAlignPass());
   addPass(createNVPTXLowerArgsPass());
   if (getOptLevel() != CodeGenOptLevel::None) {
     addAddressSpaceInferencePasses();
@@ -356,7 +375,6 @@ void NVPTXPassConfig::addIRPasses() {
   }
 
   addPass(createAtomicExpandLegacyPass());
-  addPass(createExpandVariadicsPass(ExpandVariadicsMode::Lowering));
   addPass(createNVPTXCtorDtorLoweringLegacyPass());
 
   // === LSR and other generic IR passes ===
@@ -377,8 +395,11 @@ void NVPTXPassConfig::addIRPasses() {
     addEarlyCSEOrGVNPass();
     if (!DisableLoadStoreVectorizer)
       addPass(createLoadStoreVectorizerPass());
-    addPass(createSROAPass());
+    addPass(createSROAPass(/*PreserveCFG=*/true,
+                           /*AggregateToVector=*/true));
     addPass(createNVPTXTagInvariantLoadsPass());
+    if (!DisableNVPTXIRPeephole)
+      addPass(createNVPTXIRPeepholePass());
   }
 
   if (ST.hasPTXASUnreachableBug()) {
@@ -401,6 +422,8 @@ bool NVPTXPassConfig::addInstSelector() {
 
 void NVPTXPassConfig::addPreRegAlloc() {
   addPass(createNVPTXForwardParamsPass());
+  if (getOptLevel() != CodeGenOptLevel::None)
+    addPass(createNVPTXAddressFolderPass());
   // Remove Proxy Register pseudo instructions used to keep `callseq_end` alive.
   addPass(createNVPTXProxyRegErasurePass());
 }

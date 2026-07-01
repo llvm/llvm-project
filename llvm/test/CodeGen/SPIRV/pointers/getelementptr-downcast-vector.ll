@@ -22,7 +22,7 @@ define internal spir_func <3 x i32> @foo(ptr addrspace(10) %a) {
 
   ; partial loading of a vector: v4 -> v3.
   %2 = load <3 x i32>, ptr addrspace(10) %1, align 16
-; CHECK: %[[#load:]] = OpLoad %[[#v4]] %[[#tmp]] Aligned 16
+; CHECK: %[[#load:]] = OpLoad %[[#v4]] %[[#tmp]]
 ; CHECK: %[[#val:]] = OpVectorShuffle %[[#v3]] %[[#load]] %[[#load]] 0 1 2
 
   ret <3 x i32> %2
@@ -36,7 +36,7 @@ define internal spir_func <3 x i32> @fooDefault(ptr %a) {
 
   ; partial loading of a vector: v4 -> v3.
   %2 = load <3 x i32>, ptr %1, align 16
-; CHECK: %[[#load:]] = OpLoad %[[#v4]] %[[#tmp]] Aligned 16
+; CHECK: %[[#load:]] = OpLoad %[[#v4]] %[[#tmp]]
 ; CHECK: %[[#val:]] = OpVectorShuffle %[[#v3]] %[[#load]] %[[#load]] 0 1 2
 
   ret <3 x i32> %2
@@ -50,7 +50,7 @@ define internal spir_func <3 x i32> @fooBounds(ptr %a) {
 
   ; partial loading of a vector: v4 -> v3.
   %2 = load <3 x i32>, ptr %1, align 16
-; CHECK: %[[#load:]] = OpLoad %[[#v4]] %[[#tmp]] Aligned 16
+; CHECK: %[[#load:]] = OpLoad %[[#v4]] %[[#tmp]]
 ; CHECK: %[[#val:]] = OpVectorShuffle %[[#v3]] %[[#load]] %[[#load]] 0 1 2
 
   ret <3 x i32> %2
@@ -64,7 +64,7 @@ define internal spir_func <2 x i32> @bar(ptr addrspace(10) %a) {
 
   ; partial loading of a vector: v4 -> v2.
   %2 = load <2 x i32>, ptr addrspace(10) %1, align 16
-; CHECK: %[[#load:]] = OpLoad %[[#v4]] %[[#tmp]] Aligned 16
+; CHECK: %[[#load:]] = OpLoad %[[#v4]] %[[#tmp]]
 ; CHECK: %[[#val:]] = OpVectorShuffle %[[#v2]] %[[#load]] %[[#load]] 0 1
 
   ret <2 x i32> %2
@@ -79,7 +79,7 @@ define internal spir_func i32 @baz(ptr addrspace(10) %a) {
   ; Loading of the first scalar of a vector: v4 -> int.
   %2 = load i32, ptr addrspace(10) %1, align 16
 ; CHECK: %[[#ptr:]] = OpAccessChain %[[#uint_pp]] %[[#tmp]] %[[#uint_0]]
-; CHECK: %[[#val:]] = OpLoad %[[#uint]] %[[#ptr]] Aligned 16
+; CHECK: %[[#val:]] = OpLoad %[[#uint]] %[[#ptr]]
 
   ret i32 %2
 ; CHECK: OpReturnValue %[[#val]]
@@ -93,7 +93,7 @@ define internal spir_func i32 @bazDefault(ptr %a) {
   ; Loading of the first scalar of a vector: v4 -> int.
   %2 = load i32, ptr %1, align 16
 ; CHECK: %[[#ptr:]] = OpAccessChain %[[#uint_fp]] %[[#tmp]] %[[#uint_0]]
-; CHECK: %[[#val:]] = OpLoad %[[#uint]] %[[#ptr]] Aligned 16
+; CHECK: %[[#val:]] = OpLoad %[[#uint]] %[[#ptr]]
 
   ret i32 %2
 ; CHECK: OpReturnValue %[[#val]]
@@ -107,7 +107,7 @@ define internal spir_func i32 @bazBounds(ptr %a) {
   ; Loading of the first scalar of a vector: v4 -> int.
   %2 = load i32, ptr %1, align 16
 ; CHECK: %[[#ptr:]]  = OpAccessChain %[[#uint_fp]] %[[#tmp]] %[[#uint_0]]
-; CHECK: %[[#val:]] = OpLoad %[[#uint]] %[[#ptr]] Aligned 16
+; CHECK: %[[#val:]] = OpLoad %[[#uint]] %[[#ptr]]
 
   ret i32 %2
 ; CHECK: OpReturnValue %[[#val]]
@@ -119,14 +119,14 @@ define internal spir_func void @foos(ptr addrspace(10) %a) {
 ; CHECK: %[[#ptr:]]  = OpInBoundsAccessChain %[[#v4_pp]] %[[#]]
 
   store <3 x i32> <i32 0, i32 1, i32 2>, ptr addrspace(10) %1, align 16
-; CHECK: %[[#out0:]] = OpLoad %[[#v4]] %[[#ptr]] Aligned 16
+; CHECK: %[[#out0:]] = OpLoad %[[#v4]] %[[#ptr]]
 ; CHECK:    %[[#A:]] = OpCompositeExtract %[[#uint]] %[[#v3_012]] 0
 ; CHECK: %[[#out1:]] = OpCompositeInsert %[[#v4]] %[[#A]] %[[#out0]] 0
 ; CHECK:    %[[#B:]] = OpCompositeExtract %[[#uint]] %[[#v3_012]] 1
 ; CHECK: %[[#out2:]] = OpCompositeInsert %[[#v4]] %[[#B]] %[[#out1]] 1
 ; CHECK:    %[[#C:]] = OpCompositeExtract %[[#uint]] %[[#v3_012]] 2
 ; CHECK: %[[#out3:]] = OpCompositeInsert %[[#v4]] %[[#C]] %[[#out2]] 2
-; CHECK: OpStore %[[#ptr]] %[[#out3]] Aligned 16
+; CHECK: OpStore %[[#ptr]] %[[#out3]]
 
   ret void
 }
@@ -137,14 +137,14 @@ define internal spir_func void @foosDefault(ptr %a) {
 ; CHECK: %[[#ptr:]]  = OpInBoundsAccessChain %[[#v4_fp]] %[[#]]
 
   store <3 x i32> <i32 0, i32 1, i32 2>, ptr %1, align 16
-; CHECK: %[[#out0:]] = OpLoad %[[#v4]] %[[#ptr]] Aligned 16
+; CHECK: %[[#out0:]] = OpLoad %[[#v4]] %[[#ptr]]
 ; CHECK:    %[[#A:]] = OpCompositeExtract %[[#uint]] %[[#v3_012]] 0
 ; CHECK: %[[#out1:]] = OpCompositeInsert %[[#v4]] %[[#A]] %[[#out0]] 0
 ; CHECK:    %[[#B:]] = OpCompositeExtract %[[#uint]] %[[#v3_012]] 1
 ; CHECK: %[[#out2:]] = OpCompositeInsert %[[#v4]] %[[#B]] %[[#out1]] 1
 ; CHECK:    %[[#C:]] = OpCompositeExtract %[[#uint]] %[[#v3_012]] 2
 ; CHECK: %[[#out3:]] = OpCompositeInsert %[[#v4]] %[[#C]] %[[#out2]] 2
-; CHECK: OpStore %[[#ptr]] %[[#out3]] Aligned 16
+; CHECK: OpStore %[[#ptr]] %[[#out3]]
 
   ret void
 }
@@ -155,14 +155,14 @@ define internal spir_func void @foosBounds(ptr %a) {
 ; CHECK: %[[#ptr:]]  = OpAccessChain %[[#v4_fp]] %[[#]]
 
   store <3 x i32> <i32 0, i32 1, i32 2>, ptr %1, align 64
-; CHECK: %[[#out0:]] = OpLoad %[[#v4]] %[[#ptr]] Aligned 64
+; CHECK: %[[#out0:]] = OpLoad %[[#v4]] %[[#ptr]]
 ; CHECK:    %[[#A:]] = OpCompositeExtract %[[#uint]] %[[#v3_012]] 0
 ; CHECK: %[[#out1:]] = OpCompositeInsert %[[#v4]] %[[#A]] %[[#out0]] 0
 ; CHECK:    %[[#B:]] = OpCompositeExtract %[[#uint]] %[[#v3_012]] 1
 ; CHECK: %[[#out2:]] = OpCompositeInsert %[[#v4]] %[[#B]] %[[#out1]] 1
 ; CHECK:    %[[#C:]] = OpCompositeExtract %[[#uint]] %[[#v3_012]] 2
 ; CHECK: %[[#out3:]] = OpCompositeInsert %[[#v4]] %[[#C]] %[[#out2]] 2
-; CHECK: OpStore %[[#ptr]] %[[#out3]] Aligned 64
+; CHECK: OpStore %[[#ptr]] %[[#out3]]
 
   ret void
 }
@@ -173,12 +173,12 @@ define internal spir_func void @bars(ptr addrspace(10) %a) {
 ; CHECK: %[[#ptr:]]  = OpAccessChain %[[#v4_pp]] %[[#]]
 
   store <2 x i32> <i32 0, i32 1>, ptr addrspace(10) %1, align 16
-; CHECK: %[[#out0:]] = OpLoad %[[#v4]] %[[#ptr]] Aligned 16
+; CHECK: %[[#out0:]] = OpLoad %[[#v4]] %[[#ptr]]
 ; CHECK:    %[[#A:]] = OpCompositeExtract %[[#uint]] %[[#v2_01]] 0
 ; CHECK: %[[#out1:]] = OpCompositeInsert %[[#v4]] %[[#A]] %[[#out0]] 0
 ; CHECK:    %[[#B:]] = OpCompositeExtract %[[#uint]] %[[#v2_01]] 1
 ; CHECK: %[[#out2:]] = OpCompositeInsert %[[#v4]] %[[#B]] %[[#out1]] 1
-; CHECK: OpStore %[[#ptr]] %[[#out2]] Aligned 1
+; CHECK: OpStore %[[#ptr]] %[[#out2]]
 
   ret void
 }
@@ -190,7 +190,7 @@ define internal spir_func void @bazs(ptr addrspace(10) %a) {
 
   store i32 0, ptr addrspace(10) %1, align 32
 ; CHECK:  %[[#tmp:]] = OpInBoundsAccessChain %[[#uint_pp]] %[[#ptr]] %[[#uint_0]]
-; CHECK: OpStore %[[#tmp]] %[[#uint_0]] Aligned 32
+; CHECK: OpStore %[[#tmp]] %[[#uint_0]]
 
   ret void
 }
@@ -202,7 +202,7 @@ define internal spir_func void @bazsDefault(ptr %a) {
 
   store i32 0, ptr %1, align 16
 ; CHECK:  %[[#tmp:]] = OpInBoundsAccessChain %[[#uint_fp]] %[[#ptr]] %[[#uint_0]]
-; CHECK: OpStore %[[#tmp]] %[[#uint_0]] Aligned 16
+; CHECK: OpStore %[[#tmp]] %[[#uint_0]]
 
   ret void
 }
@@ -214,7 +214,7 @@ define internal spir_func void @bazsBounds(ptr %a) {
 
   store i32 0, ptr %1, align 16
 ; CHECK:  %[[#tmp:]] = OpInBoundsAccessChain %[[#uint_fp]] %[[#ptr]] %[[#uint_0]]
-; CHECK: OpStore %[[#tmp]] %[[#uint_0]] Aligned 16
+; CHECK: OpStore %[[#tmp]] %[[#uint_0]]
 
   ret void
 }

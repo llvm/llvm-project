@@ -489,4 +489,34 @@ define i32 @strcmp_memcmp_msan(ptr dereferenceable (12) %buf) sanitize_memory {
   ret i32 %conv
 }
 
+define i32 @strcmp_memcmp_assume(ptr %buf) {
+; CHECK-LABEL: @strcmp_memcmp_assume(
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[BUF:%.*]], i64 4) ]
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @memcmp(ptr noundef nonnull dereferenceable(4) [[BUF]], ptr noundef nonnull dereferenceable(4) @key, i64 4)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[CALL]], 0
+; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
+; CHECK-NEXT:    ret i32 [[CONV]]
+;
+  call void @llvm.assume(i1 true) ["dereferenceable"(ptr %buf, i64 4)]
+  %call = call i32 @strcmp(ptr nonnull %buf, ptr @key)
+  %cmp = icmp eq i32 %call, 0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+define i32 @strcmp_memcmp_assume_insufficient(ptr %buf) {
+; CHECK-LABEL: @strcmp_memcmp_assume_insufficient(
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[BUF:%.*]], i64 3) ]
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @strcmp(ptr noundef nonnull dereferenceable(1) [[BUF]], ptr noundef nonnull dereferenceable(4) @key)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[CALL]], 0
+; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
+; CHECK-NEXT:    ret i32 [[CONV]]
+;
+  call void @llvm.assume(i1 true) ["dereferenceable"(ptr %buf, i64 3)]
+  %call = call i32 @strcmp(ptr nonnull %buf, ptr @key)
+  %cmp = icmp eq i32 %call, 0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
 declare i32 @memcmp(ptr nocapture, ptr nocapture, i64)

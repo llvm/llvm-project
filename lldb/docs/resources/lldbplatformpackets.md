@@ -4,6 +4,13 @@ This is a list of the packets that an lldb platform server
 needs to implement for the lldb testsuite to be run on a remote
 target device/system.
 
+::{note}
+LLDB's platform server mode is not the same as GDB's "extended-remote" mode,
+though they do have similar goals. LLDB
+[does not support](https://github.com/llvm/llvm-project/issues/196936)
+"extended-remote" mode.
+:::
+
 These are almost all lldb extensions to the gdb-remote serial
 protocol. Many of the `vFile:` packets are also described in the "Host
 I/O Packets" detailed in the gdb-remote protocol documentation,

@@ -36,9 +36,8 @@ QualType getSufficientTypeForOverflowOp(CheckerContext &C, const QualType &T) {
   assert(T->isIntegerType());
 
   ASTContext &ACtx = C.getASTContext();
-
   unsigned BitWidth = ACtx.getIntWidth(T);
-  return ACtx.getIntTypeForBitwidth(BitWidth * 2, T->isSignedIntegerType());
+  return ACtx.getBitIntType(T->isUnsignedIntegerType(), BitWidth * 2);
 }
 
 QualType getOverflowBuiltinResultType(const CallEvent &Call) {
@@ -181,11 +180,11 @@ ProgramStateRef BuiltinFunctionChecker::initStateAftetBuiltinOverflow(
   auto BoolTy = C.getASTContext().BoolTy;
 
   ProgramStateRef NewState =
-      State->BindExpr(Call.getOriginExpr(), C.getLocationContext(),
+      State->BindExpr(Call.getOriginExpr(), C.getStackFrame(),
                       SVB.makeTruthVal(IsOverflow, BoolTy));
 
   if (auto L = Call.getArgSVal(2).getAs<Loc>()) {
-    NewState = NewState->bindLoc(*L, RetVal, C.getLocationContext());
+    NewState = NewState->bindLoc(*L, RetVal, C.getStackFrame());
 
     // Propagate taint if any of the arguments were tainted
     if (isTainted(State, Arg1) || isTainted(State, Arg2))
@@ -208,8 +207,10 @@ void BuiltinFunctionChecker::handleOverflowBuiltin(const CallEvent &Call,
   SVal Arg1 = Call.getArgSVal(0);
   SVal Arg2 = Call.getArgSVal(1);
 
-  SVal RetValMax = SVB.evalBinOp(State, Op, Arg1, Arg2,
-                                 getSufficientTypeForOverflowOp(C, ResultType));
+  QualType SufficientlyWideTy = getSufficientTypeForOverflowOp(C, ResultType);
+  assert(!SufficientlyWideTy.isNull());
+
+  SVal RetValMax = SVB.evalBinOp(State, Op, Arg1, Arg2, SufficientlyWideTy);
   SVal RetVal = SVB.evalBinOp(State, Op, Arg1, Arg2, ResultType);
 
   auto [Overflow, NotOverflow] = checkOverflow(C, RetValMax, ResultType);
@@ -254,11 +255,11 @@ bool BuiltinFunctionChecker::evalCall(const CallEvent &Call,
   if (!FD)
     return false;
 
-  const LocationContext *LCtx = C.getLocationContext();
+  const StackFrame *SF = C.getStackFrame();
   const Expr *CE = Call.getOriginExpr();
 
   if (isBuiltinLikeFunction(Call)) {
-    C.addTransition(state->BindExpr(CE, LCtx, Call.getArgSVal(0)));
+    C.addTransition(state->BindExpr(CE, SF, Call.getArgSVal(0)));
     return true;
   }
 
@@ -310,7 +311,7 @@ bool BuiltinFunctionChecker::evalCall(const CallEvent &Call,
     // are represented the same way in the analyzer.
     assert (Call.getNumArgs() > 0);
     SVal Arg = Call.getArgSVal(0);
-    C.addTransition(state->BindExpr(CE, LCtx, Arg));
+    C.addTransition(state->BindExpr(CE, SF, Arg));
     return true;
   }
 
@@ -338,7 +339,7 @@ bool BuiltinFunctionChecker::evalCall(const CallEvent &Call,
         V = SVB.makeIntVal(0, CE->getType());
     }
 
-    C.addTransition(state->BindExpr(CE, LCtx, V));
+    C.addTransition(state->BindExpr(CE, SF, V));
     return true;
   }
   }

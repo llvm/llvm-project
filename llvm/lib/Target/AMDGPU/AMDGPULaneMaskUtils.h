@@ -27,6 +27,7 @@ public:
   const unsigned AndN2Opc;
   const unsigned AndN2SaveExecOpc;
   const unsigned AndN2TermOpc;
+  const unsigned AndN2WrExecOpc; // GFX10+ (HasNoSdstCMPX) only
   const unsigned AndSaveExecOpc;
   const unsigned AndSaveExecTermOpc;
   const unsigned BfmOpc;
@@ -35,6 +36,7 @@ public:
   const unsigned MovOpc;
   const unsigned MovTermOpc;
   const unsigned OrOpc;
+  const unsigned OrN2Opc;
   const unsigned OrTermOpc;
   const unsigned OrSaveExecOpc;
   const unsigned XorOpc;
@@ -51,6 +53,8 @@ public:
                                   : AMDGPU::S_ANDN2_SAVEEXEC_B64),
         AndN2TermOpc(IsWave32 ? AMDGPU::S_ANDN2_B32_term
                               : AMDGPU::S_ANDN2_B64_term),
+        AndN2WrExecOpc(IsWave32 ? AMDGPU::S_ANDN2_WREXEC_B32
+                                : AMDGPU::S_ANDN2_WREXEC_B64),
         AndSaveExecOpc(IsWave32 ? AMDGPU::S_AND_SAVEEXEC_B32
                                 : AMDGPU::S_AND_SAVEEXEC_B64),
         AndSaveExecTermOpc(IsWave32 ? AMDGPU::S_AND_SAVEEXEC_B32_term
@@ -61,6 +65,7 @@ public:
         MovOpc(IsWave32 ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64),
         MovTermOpc(IsWave32 ? AMDGPU::S_MOV_B32_term : AMDGPU::S_MOV_B64_term),
         OrOpc(IsWave32 ? AMDGPU::S_OR_B32 : AMDGPU::S_OR_B64),
+        OrN2Opc(IsWave32 ? AMDGPU::S_ORN2_B32 : AMDGPU::S_ORN2_B64),
         OrTermOpc(IsWave32 ? AMDGPU::S_OR_B32_term : AMDGPU::S_OR_B64_term),
         OrSaveExecOpc(IsWave32 ? AMDGPU::S_OR_SAVEEXEC_B32
                                : AMDGPU::S_OR_SAVEEXEC_B64),

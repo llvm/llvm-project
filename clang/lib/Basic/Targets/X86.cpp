@@ -446,6 +446,8 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasCF = true;
     } else if (Feature == "+zu") {
       HasZU = true;
+    } else if (Feature == "+jmpabs") {
+      HasJMPABS = true;
     } else if (Feature == "+branch-hint") {
       HasBranchHint = true;
     }
@@ -716,8 +718,23 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
   case CK_ZNVER5:
     defineCPUMacros(Builder, "znver5");
     break;
+  case CK_ZNVER6:
+    defineCPUMacros(Builder, "znver6");
+    break;
   case CK_Geode:
     defineCPUMacros(Builder, "geode");
+    break;
+  case CK_C86_4G_M4:
+    defineCPUMacros(Builder, "c86_4g_m4");
+    break;
+  case CK_C86_4G_M6:
+    defineCPUMacros(Builder, "c86_4g_m6");
+    break;
+  case CK_C86_4G_M7:
+    defineCPUMacros(Builder, "c86_4g_m7");
+    break;
+  case CK_C86_4G_M8:
+    defineCPUMacros(Builder, "c86_4g_m8");
     break;
   }
 
@@ -967,7 +984,10 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__CF__");
   if (HasZU)
     Builder.defineMacro("__ZU__");
-  if (HasEGPR && HasPush2Pop2 && HasPPX && HasNDD && HasCCMP && HasNF && HasZU)
+  if (HasJMPABS)
+    Builder.defineMacro("__JMPABS__");
+  if (HasEGPR && HasPush2Pop2 && HasPPX && HasNDD && HasCCMP && HasNF &&
+      HasZU && HasJMPABS)
     Builder.defineMacro("__APX_F__");
   if (HasEGPR && HasInlineAsmUseGPR32)
     Builder.defineMacro("__APX_INLINE_ASM_USE_GPR32__");
@@ -1168,6 +1188,7 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
       .Case("nf", true)
       .Case("cf", true)
       .Case("zu", true)
+      .Case("jmpabs", true)
       .Default(false);
 }
 
@@ -1291,6 +1312,7 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
       .Case("nf", HasNF)
       .Case("cf", HasCF)
       .Case("zu", HasZU)
+      .Case("jmpabs", HasJMPABS)
       .Case("branch-hint", HasBranchHint)
       .Default(false);
 }
@@ -1639,6 +1661,12 @@ std::optional<unsigned> X86TargetInfo::getCPUCacheLineSize() const {
     case CK_ZNVER3:
     case CK_ZNVER4:
     case CK_ZNVER5:
+    case CK_ZNVER6:
+    // Hygon
+    case CK_C86_4G_M4:
+    case CK_C86_4G_M6:
+    case CK_C86_4G_M7:
+    case CK_C86_4G_M8:
     // Deprecated
     case CK_x86_64:
     case CK_x86_64_v2:
@@ -1833,4 +1861,13 @@ X86_64TargetInfo::getTargetBuiltins() const {
       {&X86_64::BuiltinStrings, X86_64::PrefixedBuiltinInfos,
        "__builtin_ia32_"},
   };
+}
+
+unsigned
+MicrosoftX86_64TargetInfo::getMinGlobalAlign(uint64_t TypeSize,
+                                             bool HasNonWeakDef) const {
+  unsigned Align =
+      WindowsX86_64TargetInfo::getMinGlobalAlign(TypeSize, HasNonWeakDef);
+
+  return std::max(Align, Microsoft64BitMinGlobalAlign(TypeSize));
 }

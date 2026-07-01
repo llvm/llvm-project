@@ -29,6 +29,11 @@
 // CHK-DEVICE-TRIPLE-SAME: "-O2"
 // CHK-DEVICE-TRIPLE: llvm-offload-binary{{.*}} "--image=file={{.*}}.bc,triple=spirv64-unknown-unknown,arch=generic,kind=sycl"
 
+// Check that -fsycl -fno-sycl does not pass libLLVMSYCL.so to the linker.
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl -fno-sycl %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-NO-SYCL-RT %s
+// CHECK-NO-SYCL-RT-NOT: libLLVMSYCL.so
+
 /// Check -fsycl-is-device is passed when compiling for the device.
 /// Check -fsycl-is-host is passed when compiling for host.
 // RUN: %clang -### -fsycl -c %s 2>&1 \
@@ -41,6 +46,13 @@
 // RUN:   | FileCheck -check-prefix=CHK-FSYCL-IS-HOST %s
 // CHK-FSYCL-IS-DEVICE: "-cc1"{{.*}} "-fsycl-is-device" {{.*}} "-emit-llvm-bc"
 // CHK-FSYCL-IS-HOST: "-cc1"{{.*}} "-fsycl-is-host"
+
+// Check that --allow-partial-linkage and --create-library are not passed to
+// clang-linker-wrapper for SYCL (they are spirv-link flags, not clang-sycl-linker flags).
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-NO-SPIRVLINK-FLAGS %s
+// CHECK-NO-SPIRVLINK-FLAGS-NOT: --device-linker=spirv64-unknown-unknown=--allow-partial-linkage
+// CHECK-NO-SPIRVLINK-FLAGS-NOT: --device-linker=spirv64-unknown-unknown=--create-library
 
 /// Check for option incompatibility with -fsycl
 // RUN: not %clang -### -fsycl -ffreestanding %s 2>&1 \

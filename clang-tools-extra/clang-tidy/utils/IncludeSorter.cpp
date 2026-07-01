@@ -9,7 +9,6 @@
 #include "IncludeSorter.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Lexer.h"
-#include <algorithm>
 #include <optional>
 
 namespace clang::tidy {
@@ -17,10 +16,9 @@ namespace utils {
 
 static StringRef removeFirstSuffix(StringRef Str,
                                    ArrayRef<const char *> Suffixes) {
-  for (const StringRef Suffix : Suffixes) {
+  for (const StringRef Suffix : Suffixes)
     if (Str.consume_back(Suffix))
       return Str;
-  }
   return Str;
 }
 
@@ -45,9 +43,8 @@ static StringRef makeCanonicalName(StringRef Str,
     // Objective-C categories have a `+suffix` format, but should be grouped
     // with the file they are a category of.
     size_t StartIndex = Canonical.find_last_of('/');
-    if (StartIndex == StringRef::npos) {
+    if (StartIndex == StringRef::npos)
       StartIndex = 0;
-    }
     return Canonical.substr(0, Canonical.find_first_of('+', StartIndex));
   }
   return removeFirstSuffix(
@@ -87,9 +84,8 @@ determineIncludeKind(StringRef CanonicalFile, StringRef IncludeFile,
     if (FileCopy.consume_front(Parts.first) &&
         FileCopy.consume_back(Parts.second)) {
       // Determine the kind of this inclusion.
-      if (FileCopy == "/internal/" || FileCopy == "/proto/") {
+      if (FileCopy == "/internal/" || FileCopy == "/proto/")
         return IncludeSorter::IK_MainTUInclude;
-      }
     }
   }
   if (Style == IncludeSorter::IS_Google_ObjC) {
@@ -106,14 +102,12 @@ static int compareHeaders(StringRef LHS, StringRef RHS,
                           IncludeSorter::IncludeStyle Style) {
   if (Style == IncludeSorter::IncludeStyle::IS_Google_ObjC) {
     const std::pair<const char *, const char *> &Mismatch =
-        std::mismatch(LHS.begin(), LHS.end(), RHS.begin(), RHS.end());
+        llvm::mismatch(LHS, RHS);
     if ((Mismatch.first != LHS.end()) && (Mismatch.second != RHS.end())) {
-      if ((*Mismatch.first == '.') && (*Mismatch.second == '+')) {
+      if ((*Mismatch.first == '.') && (*Mismatch.second == '+'))
         return -1;
-      }
-      if ((*Mismatch.first == '+') && (*Mismatch.second == '.')) {
+      if ((*Mismatch.first == '+') && (*Mismatch.second == '.'))
         return 1;
-      }
     }
   }
   return LHS.compare(RHS);
@@ -148,20 +142,24 @@ void IncludeSorter::addInclude(StringRef FileName, bool IsAngled,
 
 std::optional<FixItHint>
 IncludeSorter::createIncludeInsertion(StringRef FileName, bool IsAngled) {
+  const StringRef LineEnding =
+      SourceMgr->getBufferData(CurrentFileID).detectEOL();
   std::string IncludeStmt;
   if (Style == IncludeStyle::IS_Google_ObjC) {
-    IncludeStmt = IsAngled
-                      ? llvm::Twine("#import <" + FileName + ">\n").str()
-                      : llvm::Twine("#import \"" + FileName + "\"\n").str();
+    IncludeStmt =
+        IsAngled
+            ? llvm::Twine("#import <" + FileName + ">" + LineEnding).str()
+            : llvm::Twine("#import \"" + FileName + "\"" + LineEnding).str();
   } else {
-    IncludeStmt = IsAngled
-                      ? llvm::Twine("#include <" + FileName + ">\n").str()
-                      : llvm::Twine("#include \"" + FileName + "\"\n").str();
+    IncludeStmt =
+        IsAngled
+            ? llvm::Twine("#include <" + FileName + ">" + LineEnding).str()
+            : llvm::Twine("#include \"" + FileName + "\"" + LineEnding).str();
   }
   if (SourceLocations.empty()) {
     // If there are no includes in this file, add it in the first line.
     // FIXME: insert after the file comment or the header guard, if present.
-    IncludeStmt.append("\n");
+    IncludeStmt.append(LineEnding);
     return FixItHint::CreateInsertion(
         SourceMgr->getLocForStartOfFile(CurrentFileID), IncludeStmt);
   }
@@ -175,9 +173,8 @@ IncludeSorter::createIncludeInsertion(StringRef FileName, bool IsAngled) {
         const auto &Location = IncludeLocations[IncludeEntry][0];
         return FixItHint::CreateInsertion(Location.getBegin(), IncludeStmt);
       }
-      if (FileName == IncludeEntry) {
+      if (FileName == IncludeEntry)
         return std::nullopt;
-      }
     }
     // FileName comes after all include entries in bucket, insert it after
     // last.
@@ -200,16 +197,15 @@ IncludeSorter::createIncludeInsertion(StringRef FileName, bool IsAngled) {
         break;
     }
   }
-  if (NonEmptyKind == IK_InvalidInclude) {
+  if (NonEmptyKind == IK_InvalidInclude)
     return std::nullopt;
-  }
 
   if (NonEmptyKind < IncludeKind) {
     // Create a block after.
     const std::string &LastInclude = IncludeBucket[NonEmptyKind].back();
     const SourceRange LastIncludeLocation =
         IncludeLocations[LastInclude].back();
-    IncludeStmt = '\n' + IncludeStmt;
+    IncludeStmt.insert(0, LineEnding);
     return FixItHint::CreateInsertion(LastIncludeLocation.getEnd(),
                                       IncludeStmt);
   }
@@ -217,7 +213,7 @@ IncludeSorter::createIncludeInsertion(StringRef FileName, bool IsAngled) {
   const std::string &FirstInclude = IncludeBucket[NonEmptyKind][0];
   const SourceRange FirstIncludeLocation =
       IncludeLocations[FirstInclude].back();
-  IncludeStmt.append("\n");
+  IncludeStmt.append(LineEnding);
   return FixItHint::CreateInsertion(FirstIncludeLocation.getBegin(),
                                     IncludeStmt);
 }

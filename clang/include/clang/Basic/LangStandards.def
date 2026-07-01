@@ -209,6 +209,9 @@ LANGSTANDARD(opencl20, "cl2.0",
 LANGSTANDARD(opencl30, "cl3.0",
              OpenCL, "OpenCL 3.0",
              LineComment | C99 | Digraphs | HexFloat | OpenCL, std::nullopt)
+LANGSTANDARD(opencl31, "cl3.1",
+             OpenCL, "OpenCL 3.1",
+             LineComment | C99 | Digraphs | HexFloat | OpenCL, std::nullopt)
 
 LANGSTANDARD(openclcpp10, "clc++1.0",
              OpenCL, "C++ for OpenCL 1.0",
@@ -226,6 +229,7 @@ LANGSTANDARD_ALIAS_DEPR(opencl11, "CL1.1")
 LANGSTANDARD_ALIAS_DEPR(opencl12, "CL1.2")
 LANGSTANDARD_ALIAS_DEPR(opencl20, "CL2.0")
 LANGSTANDARD_ALIAS_DEPR(opencl30, "CL3.0")
+LANGSTANDARD_ALIAS_DEPR(opencl31, "CL3.1")
 LANGSTANDARD_ALIAS_DEPR(openclcpp10, "CLC++")
 LANGSTANDARD_ALIAS_DEPR(openclcpp10, "CLC++1.0")
 LANGSTANDARD_ALIAS_DEPR(openclcpp2021, "CLC++2021")

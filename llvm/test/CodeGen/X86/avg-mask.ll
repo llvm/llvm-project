@@ -274,10 +274,10 @@ define <16 x i16> @avg_v16i16_mask(<16 x i16> %a, <16 x i16> %b, <16 x i16> %src
 ; AVX512F-LABEL: avg_v16i16_mask:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpavgw %ymm1, %ymm0, %ymm0
+; AVX512F-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
 ; AVX512F-NEXT:    kmovw %edi, %k1
-; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm1 {%k1} {z} = -1
-; AVX512F-NEXT:    vpmovdw %zmm1, %ymm1
-; AVX512F-NEXT:    vpblendvb %ymm1, %ymm0, %ymm2, %ymm0
+; AVX512F-NEXT:    vpmovdw %zmm0, %ymm2 {%k1}
+; AVX512F-NEXT:    vmovdqa %ymm2, %ymm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BWVL-LABEL: avg_v16i16_mask:
@@ -301,10 +301,9 @@ define <16 x i16> @avg_v16i16_maskz(<16 x i16> %a, <16 x i16> %b, i16 %mask) nou
 ; AVX512F-LABEL: avg_v16i16_maskz:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpavgw %ymm1, %ymm0, %ymm0
+; AVX512F-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
 ; AVX512F-NEXT:    kmovw %edi, %k1
-; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm1 {%k1} {z} = -1
-; AVX512F-NEXT:    vpmovdw %zmm1, %ymm1
-; AVX512F-NEXT:    vpand %ymm0, %ymm1, %ymm0
+; AVX512F-NEXT:    vpmovdw %zmm0, %ymm0 {%k1} {z}
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BWVL-LABEL: avg_v16i16_maskz:

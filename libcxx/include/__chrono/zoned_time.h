@@ -24,6 +24,8 @@
 #  include <__chrono/tzdb_list.h>
 #  include <__concepts/constructible.h>
 #  include <__config>
+#  include <__cstddef/size_t.h>
+#  include <__functional/hash.h>
 #  include <__type_traits/common_type.h>
 #  include <__type_traits/conditional.h>
 #  include <__type_traits/remove_cvref.h>
@@ -38,9 +40,9 @@
 _LIBCPP_PUSH_MACROS
 #  include <__undef_macros>
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #  if _LIBCPP_STD_VER >= 20 && _LIBCPP_HAS_TIME_ZONE_DATABASE && _LIBCPP_HAS_FILESYSTEM && _LIBCPP_HAS_LOCALIZATION
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace chrono {
 
@@ -216,10 +218,24 @@ operator==(const zoned_time<_Duration1, _TimeZonePtr>& __lhs, const zoned_time<_
 
 } // namespace chrono
 
-#  endif // _LIBCPP_STD_VER >= 20 && _LIBCPP_HAS_TIME_ZONE_DATABASE && _LIBCPP_HAS_FILESYSTEM &&
-         // _LIBCPP_HAS_LOCALIZATION
+#    if _LIBCPP_STD_VER >= 26
+
+template <class _Duration, class _TimeZonePtr>
+  requires __has_enabled_hash<_Duration>::value && __has_enabled_hash<_TimeZonePtr>::value
+struct hash<chrono::zoned_time<_Duration, _TimeZonePtr>> {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static size_t
+  operator()(const chrono::zoned_time<_Duration, _TimeZonePtr>& __zt) {
+    return std::__hash_combine(
+        hash<chrono::sys_time<_Duration>>{}(__zt.get_sys_time()), hash<_TimeZonePtr>{}(__zt.get_time_zone()));
+  }
+};
+
+#    endif // _LIBCPP_STD_VER >= 26
 
 _LIBCPP_END_NAMESPACE_STD
+
+#  endif // _LIBCPP_STD_VER >= 20 && _LIBCPP_HAS_TIME_ZONE_DATABASE && _LIBCPP_HAS_FILESYSTEM &&
+         // _LIBCPP_HAS_LOCALIZATION
 
 _LIBCPP_POP_MACROS
 

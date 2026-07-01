@@ -51,23 +51,23 @@ namespace {
 struct Designators {
   Designators(const InitListExpr *InitList) : InitList(InitList) {
     assert(InitList->isSyntacticForm());
-  };
+  }
 
   unsigned size() { return getCached().size(); }
 
-  std::optional<llvm::StringRef> operator[](const SourceLocation &Location) {
+  std::optional<StringRef> operator[](const SourceLocation &Location) {
     const auto &Designators = getCached();
     const auto Result = Designators.find(Location);
     if (Result == Designators.end())
       return {};
-    const llvm::StringRef Designator = Result->getSecond();
+    const StringRef Designator = Result->getSecond();
     return (Designator.front() == '.' ? Designator.substr(1) : Designator)
         .trim("\0"); // Trim NULL characters appearing on Windows in the
                      // name.
   }
 
 private:
-  using LocationToNameMap = llvm::DenseMap<clang::SourceLocation, std::string>;
+  using LocationToNameMap = llvm::DenseMap<SourceLocation, std::string>;
 
   std::optional<LocationToNameMap> CachedDesignators;
   const InitListExpr *InitList;

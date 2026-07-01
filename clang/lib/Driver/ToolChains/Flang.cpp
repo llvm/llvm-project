@@ -8,6 +8,7 @@
 
 #include "Flang.h"
 #include "Arch/RISCV.h"
+#include "Cuda.h"
 
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Driver/CommonArgs.h"
@@ -51,6 +52,8 @@ void Flang::addFortranDialectOptions(const ArgList &Args,
                             options::OPT_fxor_operator,
                             options::OPT_fno_xor_operator,
                             options::OPT_falternative_parameter_statement,
+                            options::OPT_fdefault_integer_4,
+                            options::OPT_fdefault_real_4,
                             options::OPT_fdefault_real_8,
                             options::OPT_fdefault_integer_8,
                             options::OPT_fdefault_double_8,
@@ -133,6 +136,12 @@ void Flang::addDebugOptions(const llvm::opt::ArgList &Args, const JobAction &JA,
                    options::OPT_fconvert_EQ, options::OPT_fpass_plugin_EQ,
                    options::OPT_funderscoring, options::OPT_fno_underscoring,
                    options::OPT_funsigned, options::OPT_fno_unsigned,
+                   options::OPT_fenumeration_type,
+                   options::OPT_fno_enumeration_type,
+                   options::OPT_fopenacc_default_none_scalars_strict,
+                   options::OPT_fno_openacc_default_none_scalars_strict,
+                   options::OPT_fopenacc_multiple_names_in_routine,
+                   options::OPT_fno_openacc_multiple_names_in_routine,
                    options::OPT_finstrument_functions});
 
   llvm::codegenoptions::DebugInfoKind DebugInfoKind;
@@ -190,6 +199,7 @@ void Flang::addDebugOptions(const llvm::opt::ArgList &Args, const JobAction &JA,
       CmdArgs.push_back(SplitDWARFOut);
     }
   }
+  addDebugInfoForProfilingArgs(D, TC, Args, CmdArgs);
 }
 
 void Flang::addCodegenOptions(const ArgList &Args,
@@ -200,6 +210,33 @@ void Flang::addCodegenOptions(const ArgList &Args,
   if (stackArrays &&
       !stackArrays->getOption().matches(options::OPT_fno_stack_arrays))
     CmdArgs.push_back("-fstack-arrays");
+
+  if (Args.hasFlag(options::OPT_fsafe_trampoline,
+                   options::OPT_fno_safe_trampoline, false)) {
+    const llvm::Triple &T = getToolChain().getTriple();
+    if (T.getArch() == llvm::Triple::x86_64 ||
+        T.getArch() == llvm::Triple::aarch64 ||
+        T.getArch() == llvm::Triple::aarch64_be) {
+      CmdArgs.push_back("-fsafe-trampoline");
+    } else {
+      getToolChain().getDriver().Diag(
+          diag::warn_drv_unsupported_option_for_target)
+          << "-fsafe-trampoline" << T.str();
+    }
+  }
+
+  // -fno-protect-parens is the default for -Ofast.
+  if (!Args.hasFlag(options::OPT_fprotect_parens,
+                    options::OPT_fno_protect_parens,
+                    /*Default=*/!Args.hasArg(options::OPT_Ofast)))
+    CmdArgs.push_back("-fno-protect-parens");
+
+  if (Args.hasFlag(options::OPT_funsafe_cray_pointers,
+                   options::OPT_fno_unsafe_cray_pointers, false)) {
+    // TODO: currently passed as MLIR option
+    CmdArgs.push_back("-mmlir");
+    CmdArgs.push_back("-unsafe-cray-pointers");
+  }
 
   Args.addOptInFlag(CmdArgs, options::OPT_fexperimental_loop_fusion,
                     options::OPT_fno_experimental_loop_fusion);
@@ -221,8 +258,6 @@ void Flang::addCodegenOptions(const ArgList &Args,
   Args.addAllArgs(
       CmdArgs,
       {options::OPT_fdo_concurrent_to_openmp_EQ,
-       options::OPT_flang_experimental_hlfir,
-       options::OPT_flang_deprecated_no_hlfir,
        options::OPT_fno_ppc_native_vec_elem_order,
        options::OPT_fppc_native_vec_elem_order, options::OPT_finit_global_zero,
        options::OPT_fno_init_global_zero, options::OPT_frepack_arrays,
@@ -230,26 +265,30 @@ void Flang::addCodegenOptions(const ArgList &Args,
        options::OPT_frepack_arrays_contiguity_EQ,
        options::OPT_fstack_repack_arrays, options::OPT_fno_stack_repack_arrays,
        options::OPT_ftime_report, options::OPT_ftime_report_EQ,
-       options::OPT_funroll_loops, options::OPT_fno_unroll_loops});
+       options::OPT_funroll_loops, options::OPT_fno_unroll_loops,
+       options::OPT_relaxed_c_loc});
+
+  const llvm::Triple &Triple = getToolChain().getEffectiveTriple();
+  addSeparateSectionFlags(Triple, Args, CmdArgs);
+
   if (Args.hasArg(options::OPT_fcoarray))
     CmdArgs.push_back("-fcoarray");
 }
 
 void Flang::addLTOOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
   const ToolChain &TC = getToolChain();
-  const Driver &D = TC.getDriver();
-  DiagnosticsEngine &Diags = D.getDiags();
-  LTOKind LTOMode = D.getLTOMode();
+  LTOKind LTOMode = TC.getLTOMode(Args);
   // LTO mode is parsed by the Clang driver library.
   assert(LTOMode != LTOK_Unknown && "Unknown LTO mode.");
   if (LTOMode == LTOK_Full)
     CmdArgs.push_back("-flto=full");
-  else if (LTOMode == LTOK_Thin) {
-    Diags.Report(
-        Diags.getCustomDiagID(DiagnosticsEngine::Warning,
-                              "the option '-flto=thin' is a work in progress"));
+  else if (LTOMode == LTOK_Thin)
     CmdArgs.push_back("-flto=thin");
-  }
+
+  if (Args.hasFlag(options::OPT_fsplit_lto_unit,
+                   options::OPT_fno_split_lto_unit, /*Default=*/false))
+    CmdArgs.push_back("-fsplit-lto-unit");
+
   Args.addAllArgs(CmdArgs, {options::OPT_ffat_lto_objects,
                             options::OPT_fno_fat_lto_objects});
 }
@@ -490,8 +529,9 @@ static void processVSRuntimeLibrary(const ToolChain &TC, const ArgList &Args,
   }
 }
 
-void Flang::AddAMDGPUTargetArgs(const ArgList &Args,
-                                ArgStringList &CmdArgs) const {
+void Flang::AddAMDGPUTargetArgs(const ArgList &Args, ArgStringList &CmdArgs,
+                                BoundArch BA,
+                                Action::OffloadKind DeviceOffloadKind) const {
   if (Arg *A = Args.getLastArg(options::OPT_mcode_object_version_EQ)) {
     StringRef Val = A->getValue();
     CmdArgs.push_back(Args.MakeArgString("-mcode-object-version=" + Val));
@@ -501,11 +541,49 @@ void Flang::AddAMDGPUTargetArgs(const ArgList &Args,
   }
 
   const ToolChain &TC = getToolChain();
-  TC.addClangTargetOptions(Args, CmdArgs, Action::OffloadKind::OFK_OpenMP);
+  TC.addClangTargetOptions(Args, CmdArgs, BA, DeviceOffloadKind);
 }
 
-void Flang::addTargetOptions(const ArgList &Args,
-                             ArgStringList &CmdArgs) const {
+void Flang::AddNVPTXTargetArgs(const ArgList &Args, ArgStringList &CmdArgs,
+                               BoundArch BA,
+                               Action::OffloadKind DeviceOffloadKind) const {
+  // we cannot use addClangTargetOptions, as it appends unsupported args for
+  // flang: -fcuda-is-device, -fno-threadsafe-statics,
+  // -fcuda-allow-variadic-functions and -target-sdk-version Instead we manually
+  // detect the CUDA installation and link libdevice
+  const ToolChain &TC = getToolChain();
+  const Driver &D = TC.getDriver();
+  const llvm::Triple &Triple = TC.getEffectiveTriple();
+
+  if (!Args.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib, true))
+    return;
+
+  // Detect CUDA installation and link libdevice
+  CudaInstallationDetector CudaInstallation(D, Triple, Args);
+  if (!CudaInstallation.isValid()) {
+    D.Diag(diag::err_drv_no_cuda_installation);
+    return;
+  }
+
+  StringRef GpuArch = Args.getLastArgValue(options::OPT_march_EQ);
+  if (GpuArch.empty()) {
+    D.Diag(diag::err_drv_offload_missing_gpu_arch) << "NVPTX" << "flang";
+    return;
+  }
+
+  std::string LibDeviceFile = CudaInstallation.getLibDeviceFile(GpuArch);
+  if (LibDeviceFile.empty()) {
+    D.Diag(diag::err_drv_no_cuda_libdevice) << GpuArch;
+    return;
+  }
+
+  CmdArgs.push_back("-mlink-builtin-bitcode");
+  CmdArgs.push_back(Args.MakeArgString(LibDeviceFile));
+}
+
+void Flang::addTargetOptions(const ArgList &Args, ArgStringList &CmdArgs,
+                             BoundArch BA,
+                             Action::OffloadKind DeviceOffloadKind) const {
   const ToolChain &TC = getToolChain();
   const llvm::Triple &Triple = TC.getEffectiveTriple();
   const Driver &D = TC.getDriver();
@@ -531,7 +609,11 @@ void Flang::addTargetOptions(const ArgList &Args,
   case llvm::Triple::r600:
   case llvm::Triple::amdgcn:
     getTargetFeatures(D, Triple, Args, CmdArgs, /*ForAs*/ false);
-    AddAMDGPUTargetArgs(Args, CmdArgs);
+    AddAMDGPUTargetArgs(Args, CmdArgs, BA, DeviceOffloadKind);
+    break;
+  case llvm::Triple::nvptx:
+  case llvm::Triple::nvptx64:
+    AddNVPTXTargetArgs(Args, CmdArgs, BA, DeviceOffloadKind);
     break;
   case llvm::Triple::riscv64:
     getTargetFeatures(D, Triple, Args, CmdArgs, /*ForAs*/ false);
@@ -544,6 +626,7 @@ void Flang::addTargetOptions(const ArgList &Args,
   case llvm::Triple::ppc:
   case llvm::Triple::ppc64:
   case llvm::Triple::ppc64le:
+    getTargetFeatures(D, Triple, Args, CmdArgs, /*ForAs*/ false);
     AddPPCTargetArgs(Args, CmdArgs);
     break;
   case llvm::Triple::loongarch64:
@@ -622,6 +705,11 @@ void Flang::addOffloadOptions(Compilation &C, const InputInfoList &Inputs,
   bool IsOpenMPDevice = JA.isDeviceOffloading(Action::OFK_OpenMP);
   bool IsHostOffloadingAction = JA.isHostOffloading(Action::OFK_OpenMP) ||
                                 JA.isHostOffloading(C.getActiveOffloadKinds());
+
+  // Tell the frontend when it is compiling for an offloading device, regardless
+  // of offloading programming model.
+  if (JA.getOffloadingDeviceKind() > Action::OFK_Host)
+    CmdArgs.push_back("-foffload-device");
 
   // Skips the primary input file, which is the input file that the compilation
   // proccess will be executed upon (e.g. the host bitcode file) and
@@ -905,6 +993,44 @@ static void renderRemarksOptions(const ArgList &Args, ArgStringList &CmdArgs,
   }
 }
 
+static void addPGOAndCoverageFlags(const ToolChain &TC, const JobAction &JA,
+                                   const ArgList &Args,
+                                   ArgStringList &CmdArgs) {
+  const Driver &D = TC.getDriver();
+  const llvm::Triple &T = TC.getTriple();
+
+  bool IsCudaDevice = JA.isDeviceOffloading(Action::OFK_Cuda);
+  bool IsHIPDevice = JA.isDeviceOffloading(Action::OFK_HIP);
+
+  if (T.isOSAIX()) {
+    if (Arg *ProfileSampleUseArg = getLastProfileSampleUseArg(Args))
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << ProfileSampleUseArg->getSpelling() << TC.getTriple().str();
+  }
+
+  if (!(IsCudaDevice || IsHIPDevice)) {
+    // recognise options: -fprofile-sample-use= and -fno-profile-sample-use=
+    if (Arg *A = getLastProfileSampleUseArg(Args)) {
+      if (Arg *PGOArg = Args.getLastArg(options::OPT_fprofile_generate,
+                                        options::OPT_fprofile_generate_EQ)) {
+        D.Diag(diag::err_drv_argument_not_allowed_with)
+            << PGOArg->getAsString(Args) << A->getAsString(Args);
+      }
+
+      StringRef fname = A->getValue();
+      if (!llvm::sys::fs::exists(fname))
+        D.Diag(diag::err_drv_no_such_file) << fname;
+      else
+        A->render(Args, CmdArgs);
+    }
+  }
+
+  //-fpseudo-probe-for-profiling
+  if (Args.hasFlag(options::OPT_fpseudo_probe_for_profiling,
+                   options::OPT_fno_pseudo_probe_for_profiling, false))
+    CmdArgs.push_back("-fpseudo-probe-for-profiling");
+}
+
 void Flang::ConstructJob(Compilation &C, const JobAction &JA,
                          const InputInfo &Output, const InputInfoList &Inputs,
                          const ArgList &Args, const char *LinkingOutput) const {
@@ -959,6 +1085,14 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
     if (const Arg *A = Args.getLastArg(Opt))
       D.Diag(diag::warn_drv_invalid_argument_for_flang) << A->getSpelling();
 
+  // Warn about options that are ignored by flang. These are options that are
+  // accepted by gfortran, but have no equivalent in flang.
+  for (const Arg *A :
+       Args.filtered(options::OPT_clang_ignored_gcc_optimization_f_Group)) {
+    D.Diag(diag::warn_ignored_gcc_optimization) << A->getAsString(Args);
+    A->claim();
+  }
+
   const InputInfo &Input = Inputs[0];
   types::ID InputType = Input.getType();
 
@@ -992,7 +1126,11 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
   addFloatingPointOptions(D, Args, CmdArgs);
 
   // Add target args, features, etc.
-  addTargetOptions(Args, CmdArgs);
+  addTargetOptions(Args, CmdArgs, JA.getOffloadingArch(),
+                   JA.getOffloadingDeviceKind());
+
+  if (!TC.useIntegratedAs())
+    CmdArgs.push_back("-no-integrated-as");
 
   llvm::Reloc::Model RelocationModel =
       std::get<0>(ParsePICArgs(getToolChain(), Args));
@@ -1019,6 +1157,8 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
   // recognise options: fprofile-generate -fprofile-use=
   Args.addAllArgs(
       CmdArgs, {options::OPT_fprofile_generate, options::OPT_fprofile_use_EQ});
+
+  addPGOAndCoverageFlags(TC, JA, Args, CmdArgs);
 
   // Forward flags for OpenMP. We don't do this if the current action is an
   // device offloading action other than OpenMP.
@@ -1060,6 +1200,38 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
   // Pass the path to compiler resource files.
   CmdArgs.push_back("-resource-dir");
   CmdArgs.push_back(D.ResourceDir.c_str());
+
+  // Default intrinsic module dirs must be added after any user-provided dirs in
+  // -fintrinsic-modules-path since the default dirs have lower precedence than
+  // user-provided dirs
+  if (std::optional<std::string> IntrModPath =
+          TC.getDefaultIntrinsicModuleDir()) {
+    CmdArgs.push_back("-fintrinsic-modules-path");
+    CmdArgs.push_back(Args.MakeArgString(*IntrModPath));
+  }
+
+  // Ideally, every target triple has its own set of builtin modules since they
+  // are compiled with platform-dependent conditionals such as `#if __x86_64__`.
+  // However, getting the builtin modules for offload targets requires building
+  // the flang-rt and openmp for those targets as well:
+  // -DLLVM_RUNTIME_TARGETS=default;amdgcn-amd-amdhsa;nvptx64-nvidia-cuda.
+  // To reduce friction when build systems have not yet been updated, we also
+  // add the host's builtin module to the search path (with lower priority), in
+  // case a module file has not been found for the offload targets itself.
+  // FIXME: This workaround may mix module files targeting different triples and
+  //        should eventually be removed.
+  auto &&HostTCs =
+      C.getOffloadToolChains<clang::driver::OffloadAction ::OFK_Host>();
+  for (auto [OKind, HostTC] : llvm::make_range(HostTCs.first, HostTCs.second)) {
+    if (HostTC == &TC)
+      continue;
+
+    if (std::optional<std::string> IntrModPath =
+            HostTC->getDefaultIntrinsicModuleDir()) {
+      CmdArgs.push_back("-fintrinsic-modules-path");
+      CmdArgs.push_back(Args.MakeArgString(*IntrModPath));
+    }
+  }
 
   // Offloading related options
   addOffloadOptions(C, Inputs, JA, Args, CmdArgs);
@@ -1123,7 +1295,8 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
-  renderCommonIntegerOverflowOptions(Args, CmdArgs);
+  renderGlobalISelOptions(D, Args, CmdArgs, Triple);
+  renderCommonIntegerOverflowOptions(Args, CmdArgs, false);
 
   assert((Output.isFilename() || Output.isNothing()) && "Invalid output.");
   if (Output.isFilename()) {
@@ -1138,7 +1311,9 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
 
   bool FRecordCmdLine = false;
   bool GRecordCmdLine = false;
-  if (shouldRecordCommandLine(TC, Args, FRecordCmdLine, GRecordCmdLine)) {
+  bool DXRecordCmdLine = false;
+  if (shouldRecordCommandLine(TC, Args, FRecordCmdLine, GRecordCmdLine,
+                              DXRecordCmdLine)) {
     const char *CmdLine = renderEscapedCommandLine(TC, Args);
     if (FRecordCmdLine) {
       CmdArgs.push_back("-record-command-line");
@@ -1163,7 +1338,17 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
       Input.getInputArg().renderAsInput(Args, CmdArgs);
   }
 
-  const char *Exec = Args.MakeArgString(D.GetProgramPath("flang", TC));
+  // Handle "clang --driver-mode=flang" case
+  bool isClangDriverWithFlangMode = false;
+  std::string DriverName = D.Name;
+  if (const char *PA = D.getPrependArg())
+    DriverName = PA;
+  if (DriverName.find("clang") != std::string::npos && D.IsFlangMode())
+    isClangDriverWithFlangMode = true;
+
+  const char *Exec = isClangDriverWithFlangMode
+                         ? Args.MakeArgString(D.GetProgramPath("flang", TC))
+                         : D.getDriverProgramPath();
   C.addCommand(std::make_unique<Command>(JA, *this,
                                          ResponseFileSupport::AtFileUTF8(),
                                          Exec, CmdArgs, Inputs, Output));

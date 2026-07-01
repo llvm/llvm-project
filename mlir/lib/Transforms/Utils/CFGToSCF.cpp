@@ -404,9 +404,6 @@ struct ReturnLikeOpEquivalence : public llvm::DenseMapInfo<Operation *> {
   static bool isEqual(const Operation *lhs, const Operation *rhs) {
     if (lhs == rhs)
       return true;
-    if (lhs == getTombstoneKey() || lhs == getEmptyKey() ||
-        rhs == getTombstoneKey() || rhs == getEmptyKey())
-      return false;
     return OperationEquivalence::isEquivalentTo(
         const_cast<Operation *>(lhs), const_cast<Operation *>(rhs),
         OperationEquivalence::ignoreValueEquivalence, nullptr,
@@ -1156,8 +1153,20 @@ static FailureOr<SmallVector<Block *>> transformToStructuredCFBranches(
     FailureOr<Operation *> result = interface.createStructuredBranchRegionOp(
         opBuilder, regionEntry->getTerminator(),
         continuation->getArgumentTypes(), conditionalRegions);
-    if (failed(result))
+    if (failed(result)) {
+      // Blocks were moved from the parent region into conditionalRegions before
+      // calling createStructuredBranchRegionOp. On failure, move them back to
+      // avoid use-after-free crashes: the moved blocks may still be referenced
+      // as successors by blocks remaining in the parent region, so destroying
+      // conditionalRegions with live uses would trigger an assertion.
+      // This patching does not undo the change, it barely makes it so that the
+      // pass can gracefully fail instead of crashing.
+      Region *parentRegion = regionEntry->getParent();
+      for (Region &conditionalRegion : conditionalRegions)
+        parentRegion->getBlocks().splice(parentRegion->getBlocks().end(),
+                                         conditionalRegion.getBlocks());
       return failure();
+    }
     structuredCondOp = *result;
     regionEntry->getTerminator()->erase();
   }
@@ -1223,9 +1232,15 @@ static ReturnLikeExitCombiner createSingleExitBlocksForReturnLike(
 
 /// Checks all preconditions of the transformation prior to any transformations.
 /// Returns failure if any precondition is violated.
-static LogicalResult checkTransformationPreconditions(Region &region) {
+static LogicalResult
+checkTransformationPreconditions(Region &region, CFGToSCFInterface &interface) {
+  llvm::df_iterator_default_set<Block *, 16> reachable;
+  // Find all blocks reachable from the entry.
+  for (Block *block : depth_first_ext(&region.front(), reachable))
+    (void)block;
+
   for (Block &block : region.getBlocks())
-    if (block.hasNoPredecessors() && !block.isEntryBlock())
+    if (!reachable.contains(&block))
       return block.front().emitOpError(
           "transformation does not support unreachable blocks");
 
@@ -1267,7 +1282,21 @@ static LogicalResult checkTransformationPreconditions(Region &region) {
     }
     return WalkResult::advance();
   });
-  return failure(result.wasInterrupted());
+  if (result.wasInterrupted())
+    return failure();
+
+  // Verify all multi-successor terminators are convertible before touching IR.
+  for (Block &block : region.getBlocks()) {
+    if (block.getNumSuccessors() <= 1)
+      continue;
+    Operation *terminator = block.getTerminator();
+    if (!interface.canConvertMultiSuccessorBranchOp(terminator)) {
+      terminator->emitOpError(
+          "cannot convert unknown control flow op to structured control flow");
+      return failure();
+    }
+  }
+  return success();
 }
 
 FailureOr<bool> mlir::transformCFGToSCF(Region &region,
@@ -1276,7 +1305,7 @@ FailureOr<bool> mlir::transformCFGToSCF(Region &region,
   if (region.empty() || region.hasOneBlock())
     return false;
 
-  if (failed(checkTransformationPreconditions(region)))
+  if (failed(checkTransformationPreconditions(region, interface)))
     return failure();
 
   DenseMap<Type, Value> typedUndefCache;

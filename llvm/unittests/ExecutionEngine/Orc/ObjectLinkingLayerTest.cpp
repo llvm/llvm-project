@@ -291,41 +291,40 @@ TEST(ObjectLinkingLayerSearchGeneratorTest, AbsoluteSymbolsObjectLayer) {
   public:
     TestEPC()
         : UnsupportedExecutorProcessControl(nullptr, nullptr,
-                                            "x86_64-apple-darwin") {
-      this->DylibMgr = this;
-    }
+                                            "x86_64-apple-darwin") {}
 
     Expected<tpctypes::DylibHandle> loadDylib(const char *DylibPath) override {
       return ExecutorAddr::fromPtr((void *)nullptr);
     }
 
-    void lookupSymbolsAsync(ArrayRef<LookupRequest> Request,
+    void lookupSymbolsAsync(tpctypes::DylibHandle H,
+                            const SymbolLookupSet &Symbols,
                             SymbolLookupCompleteFn Complete) override {
-      std::vector<std::optional<ExecutorSymbolDef>> Result;
-      EXPECT_EQ(Request.size(), 1u);
-      for (auto &LR : Request) {
-        EXPECT_EQ(LR.Symbols.size(), 1u);
-        for (auto &Sym : LR.Symbols) {
-          if (*Sym.first == "_testFunc") {
-            ExecutorSymbolDef Def{ExecutorAddr::fromPtr((void *)0x1000),
-                                  JITSymbolFlags::Exported};
-            Result.emplace_back(Def);
-          } else {
-            ADD_FAILURE() << "unexpected symbol request " << *Sym.first;
-          }
-        }
+      tpctypes::LookupResult Result;
+      EXPECT_EQ(Symbols.size(), 1u);
+      for (auto &Sym : Symbols) {
+        if (*Sym.first == "_testFunc")
+          Result.emplace_back(ExecutorAddr::fromPtr((void *)0x1000));
+        else
+          ADD_FAILURE() << "unexpected symbol request " << *Sym.first;
       }
-      Complete(std::vector<tpctypes::LookupResult>{1, Result});
+      Complete(std::move(Result));
+    }
+
+    Expected<std::unique_ptr<DylibManager>> createDefaultDylibMgr() override {
+      llvm_unreachable("Unsupported");
     }
   };
 
-  ExecutionSession ES{std::make_unique<TestEPC>()};
+  auto TestEPCPtr = std::make_unique<TestEPC>();
+  auto &TestDylibMgr = static_cast<DylibManager &>(*TestEPCPtr);
+  ExecutionSession ES{std::move(TestEPCPtr)};
   JITDylib &JD = ES.createBareJITDylib("main");
   ObjectLinkingLayer ObjLinkingLayer{
       ES, std::make_unique<InProcessMemoryManager>(4096)};
 
   auto G = EPCDynamicLibrarySearchGenerator::GetForTargetProcess(
-      ES, {}, [&](JITDylib &JD, SymbolMap Syms) {
+      ES, TestDylibMgr, {}, [&](JITDylib &JD, SymbolMap Syms) {
         auto G =
             absoluteSymbolsLinkGraph(Triple("x86_64-apple-darwin"),
                                      ES.getSymbolStringPool(), std::move(Syms));

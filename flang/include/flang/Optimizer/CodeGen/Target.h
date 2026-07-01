@@ -74,30 +74,32 @@ public:
   static std::unique_ptr<CodeGenSpecifics>
   get(mlir::MLIRContext *ctx, llvm::Triple &&trp, KindMapping &&kindMap,
       llvm::StringRef targetCPU, mlir::LLVM::TargetFeaturesAttr targetFeatures,
-      const mlir::DataLayout &dl);
+      llvm::StringRef targetABI, const mlir::DataLayout &dl);
 
   static std::unique_ptr<CodeGenSpecifics>
   get(mlir::MLIRContext *ctx, llvm::Triple &&trp, KindMapping &&kindMap,
       llvm::StringRef targetCPU, mlir::LLVM::TargetFeaturesAttr targetFeatures,
-      const mlir::DataLayout &dl, llvm::StringRef tuneCPU);
+      llvm::StringRef targetABI, const mlir::DataLayout &dl,
+      llvm::StringRef tuneCPU);
 
   static TypeAndAttr getTypeAndAttr(mlir::Type t) { return TypeAndAttr{t, {}}; }
 
   CodeGenSpecifics(mlir::MLIRContext *ctx, llvm::Triple &&trp,
                    KindMapping &&kindMap, llvm::StringRef targetCPU,
                    mlir::LLVM::TargetFeaturesAttr targetFeatures,
-                   const mlir::DataLayout &dl)
+                   llvm::StringRef targetABI, const mlir::DataLayout &dl)
       : context{*ctx}, triple{std::move(trp)}, kindMap{std::move(kindMap)},
-        targetCPU{targetCPU}, targetFeatures{targetFeatures}, dataLayout{&dl},
-        tuneCPU{""} {}
+        targetCPU{targetCPU}, targetFeatures{targetFeatures},
+        targetABI{targetABI}, dataLayout{&dl}, tuneCPU{""} {}
 
   CodeGenSpecifics(mlir::MLIRContext *ctx, llvm::Triple &&trp,
                    KindMapping &&kindMap, llvm::StringRef targetCPU,
                    mlir::LLVM::TargetFeaturesAttr targetFeatures,
-                   const mlir::DataLayout &dl, llvm::StringRef tuneCPU)
+                   llvm::StringRef targetABI, const mlir::DataLayout &dl,
+                   llvm::StringRef tuneCPU)
       : context{*ctx}, triple{std::move(trp)}, kindMap{std::move(kindMap)},
-        targetCPU{targetCPU}, targetFeatures{targetFeatures}, dataLayout{&dl},
-        tuneCPU{tuneCPU} {}
+        targetCPU{targetCPU}, targetFeatures{targetFeatures},
+        targetABI{targetABI}, dataLayout{&dl}, tuneCPU{tuneCPU} {}
 
   CodeGenSpecifics() = delete;
   virtual ~CodeGenSpecifics() {}
@@ -183,6 +185,8 @@ public:
     return targetFeatures;
   }
 
+  llvm::StringRef getTargetABI() const { return targetABI; }
+
   const mlir::DataLayout &getDataLayout() const {
     assert(dataLayout && "dataLayout must be set");
     return *dataLayout;
@@ -194,6 +198,7 @@ protected:
   KindMapping kindMap;
   llvm::StringRef targetCPU;
   mlir::LLVM::TargetFeaturesAttr targetFeatures;
+  llvm::StringRef targetABI;
   const mlir::DataLayout *dataLayout = nullptr;
   llvm::StringRef tuneCPU;
 };

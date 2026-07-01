@@ -443,7 +443,7 @@ public:
       assert(BitWidth && "zero width values not allowed");
       return isPowerOf2_64(U.VAL);
     }
-    return countPopulationSlowCase() == 1;
+    return isPowerOf2SlowCase();
   }
 
   /// Check if this APInt's negated value is a power of two greater than zero.
@@ -549,16 +549,22 @@ public:
   /// \returns the low "numBits" bits of this APInt.
   LLVM_ABI APInt getLoBits(unsigned numBits) const;
 
-  /// Determine if two APInts have the same value, after zero-extending
-  /// one of them (if needed!) to ensure that the bit-widths match.
-  static bool isSameValue(const APInt &I1, const APInt &I2) {
+  /// Determine if two APInts have the same value, after zero-extending or
+  /// sign-extending (if \p SignedCompare) one of them (if needed!) to ensure
+  /// that the bit-widths match.
+  static bool isSameValue(const APInt &I1, const APInt &I2,
+                          bool SignedCompare = false) {
     if (I1.getBitWidth() == I2.getBitWidth())
       return I1 == I2;
 
-    if (I1.getBitWidth() > I2.getBitWidth())
-      return I1 == I2.zext(I1.getBitWidth());
+    auto ZExtOrSExt = [SignedCompare](const APInt &I, unsigned BitWidth) {
+      return SignedCompare ? I.sext(BitWidth) : I.zext(BitWidth);
+    };
 
-    return I1.zext(I2.getBitWidth()) == I2;
+    if (I1.getBitWidth() > I2.getBitWidth())
+      return I1 == ZExtOrSExt(I2, I1.getBitWidth());
+
+    return ZExtOrSExt(I1, I2.getBitWidth()) == I2;
   }
 
   /// Overload to compute a hash_code for an APInt value.
@@ -1262,6 +1268,14 @@ public:
     return isSubsetOfSlowCase(RHS);
   }
 
+  /// This operation checks if all bits are set in either this or RHS.
+  bool isInverseOf(const APInt &RHS) const {
+    assert(BitWidth == RHS.BitWidth && "Bit widths must be the same");
+    if (isSingleWord())
+      return (U.VAL ^ RHS.U.VAL) == llvm::maskTrailingOnes<WordType>(BitWidth);
+    return isInverseOfSlowCase(RHS);
+  }
+
   /// @}
   /// \name Resizing Operators
   /// @{
@@ -1278,12 +1292,20 @@ public:
   /// the new bitwidth, then return truncated APInt. Else, return max value.
   LLVM_ABI APInt truncUSat(unsigned width) const;
 
-  /// Truncate to new width with signed saturation.
+  /// Truncate to new width with signed saturation to signed result.
   ///
   /// If this APInt, treated as signed integer, can be losslessly truncated to
   /// the new bitwidth, then return truncated APInt. Else, return either
   /// signed min value if the APInt was negative, or signed max value.
   LLVM_ABI APInt truncSSat(unsigned width) const;
+
+  /// Truncate to new width with signed saturation to unsigned result.
+  ///
+  /// If this APInt, treated as signed integer, can be losslessly truncated to
+  /// the new bitwidth, then return truncated APInt. Else, return either
+  /// zero if the APInt was negative, or unsigned max value.
+  /// If \p width matches the current bit width then no changes are made.
+  LLVM_ABI APInt truncSSatU(unsigned width) const;
 
   /// Sign extend to a new width.
   ///
@@ -1787,8 +1809,8 @@ public:
     return logBase2();
   }
 
-  /// Compute the square root.
-  LLVM_ABI APInt sqrt() const;
+  /// Compute the floor of the square root of the unsigned value.
+  LLVM_ABI APInt sqrtFloor() const;
 
   /// Get the absolute value.  If *this is < 0 then return -(*this), otherwise
   /// *this.  Note that the "most negative" signed number (e.g. -128 for 8 bit
@@ -2071,11 +2093,17 @@ private:
   /// out-of-line slow case for countPopulation
   LLVM_ABI unsigned countPopulationSlowCase() const LLVM_READONLY;
 
+  /// out-of-line slow case for isPowerOf2
+  LLVM_ABI bool isPowerOf2SlowCase() const LLVM_READONLY;
+
   /// out-of-line slow case for intersects.
   LLVM_ABI bool intersectsSlowCase(const APInt &RHS) const LLVM_READONLY;
 
   /// out-of-line slow case for isSubsetOf.
   LLVM_ABI bool isSubsetOfSlowCase(const APInt &RHS) const LLVM_READONLY;
+
+  /// out-of-line slow case for isInverseOf.
+  LLVM_ABI bool isInverseOfSlowCase(const APInt &RHS) const LLVM_READONLY;
 
   /// out-of-line slow case for setBits.
   LLVM_ABI void setBitsSlowCase(unsigned loBit, unsigned hiBit);
@@ -2461,36 +2489,44 @@ LLVM_ABI APInt clmulr(const APInt &LHS, const APInt &RHS);
 /// clmulh(a, b) = clmulr(a, b) >> 1
 LLVM_ABI APInt clmulh(const APInt &LHS, const APInt &RHS);
 
+/// Perform a "compress" operation, also known as pext or bext.
+///
+/// Selects the bits from /p Val at the positions where /p Mask has a 1-bit,
+/// and packs them contiguously into the least significant bits of the result.
+///
+/// Examples:
+/// (1) pext(i8 0b1010'1010, i8 0b1100'1100) = 0b0000'1010
+/// (2) pext(i8 0b1111'1111, i8 0b1010'1010) = 0b0000'1111
+LLVM_ABI APInt pext(const APInt &Val, const APInt &Mask);
+
+/// Perform an "expand" operation, also known as pdep or bdep.
+///
+/// Places the least significant bits of /p Val at the positions where /p Mask
+/// has a 1-bit, and zeros the remaining bits.
+///
+/// Examples:
+/// (1) pdep(i8 0b0000'1010, i8 0b1100'1100) = 0b1000'1000
+/// (2) pdep(i8 0b0000'1111, i8 0b1010'1010) = 0b1010'1010
+LLVM_ABI APInt pdep(const APInt &Val, const APInt &Mask);
+
 } // namespace APIntOps
 
 // See friend declaration above. This additional declaration is required in
 // order to compile LLVM with IBM xlC compiler.
 LLVM_ABI hash_code hash_value(const APInt &Arg);
 
-/// StoreIntToMemory - Fills the StoreBytes bytes of memory starting from Dst
-/// with the integer held in IntVal.
+/// Fills the StoreBytes bytes of memory starting from Dst with the integer held
+/// in IntVal.
 LLVM_ABI void StoreIntToMemory(const APInt &IntVal, uint8_t *Dst,
                                unsigned StoreBytes);
 
-/// LoadIntFromMemory - Loads the integer stored in the LoadBytes bytes starting
-/// from Src into IntVal, which is assumed to be wide enough and to hold zero.
+/// Loads the integer stored in the LoadBytes bytes starting from Src into
+/// IntVal, which is assumed to be wide enough and to hold zero.
 LLVM_ABI void LoadIntFromMemory(APInt &IntVal, const uint8_t *Src,
                                 unsigned LoadBytes);
 
 /// Provide DenseMapInfo for APInt.
 template <> struct DenseMapInfo<APInt, void> {
-  static inline APInt getEmptyKey() {
-    APInt V(nullptr, 0);
-    V.U.VAL = ~0ULL;
-    return V;
-  }
-
-  static inline APInt getTombstoneKey() {
-    APInt V(nullptr, 0);
-    V.U.VAL = ~1ULL;
-    return V;
-  }
-
   LLVM_ABI static unsigned getHashValue(const APInt &Key);
 
   static bool isEqual(const APInt &LHS, const APInt &RHS) {

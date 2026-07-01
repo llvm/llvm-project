@@ -52,6 +52,8 @@ static const LangASMap FakeAddrSpaceMap = {
     15, // hlsl_private
     16, // hlsl_device
     17, // hlsl_input
+    18, // hlsl_output
+    19, // hlsl_push_constant
     20, // wasm_funcref
 };
 
@@ -129,6 +131,7 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : Triple(T) {
   MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 0;
   MaxVectorAlign = 0;
   MaxTLSAlign = 0;
+  VectorsAreElementAligned = false;
   SizeType = UnsignedLong;
   PtrDiffType = SignedLong;
   IntMaxType = SignedLongLong;
@@ -156,7 +159,7 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : Triple(T) {
   Float128Format = &llvm::APFloat::IEEEquad();
   Ibm128Format = &llvm::APFloat::PPCDoubleDouble();
   MCountName = "mcount";
-  UserLabelPrefix = "_";
+  UserLabelPrefix = Triple.isOSBinFormatMachO() ? "_" : "";
   RegParmMax = 0;
   SSERegParmMax = 0;
   HasAlignMac68kSupport = false;
@@ -196,9 +199,10 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : Triple(T) {
 // Out of line virtual dtor for TargetInfo.
 TargetInfo::~TargetInfo() {}
 
-void TargetInfo::resetDataLayout(StringRef DL, const char *ULP) {
-  DataLayoutString = DL.str();
-  UserLabelPrefix = ULP;
+void TargetInfo::resetDataLayout(StringRef DL) { DataLayoutString = DL.str(); }
+
+void TargetInfo::resetDataLayout() {
+  DataLayoutString = Triple.computeDataLayout(getABI());
 }
 
 bool
@@ -487,7 +491,7 @@ void TargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
     // for OpenCL C 2.0 but with no access to target capabilities. Target
     // should be immutable once created and thus these language options need
     // to be defined only once.
-    if (Opts.getOpenCLCompatibleVersion() == 300) {
+    if (Opts.getOpenCLCompatibleVersion() >= 300) {
       const auto &OpenCLFeaturesMap = getSupportedOpenCLOpts();
       Opts.OpenCLGenericAddressSpace = hasFeatureEnabled(
           OpenCLFeaturesMap, "__opencl_c_generic_address_space");
@@ -631,13 +635,20 @@ TargetInfo::getCallingConvKind(bool ClangABICompat4) const {
 bool TargetInfo::callGlobalDeleteInDeletingDtor(
     const LangOptions &LangOpts) const {
   if (getCXXABI() == TargetCXXABI::Microsoft &&
-      LangOpts.getClangABICompat() > LangOptions::ClangABI::Ver21)
+      !LangOpts.isCompatibleWith(LangOptions::ClangABI::Ver21))
+    return true;
+  return false;
+}
+
+bool TargetInfo::emitVectorDeletingDtors(const LangOptions &LangOpts) const {
+  if (getCXXABI() == TargetCXXABI::Microsoft &&
+      !LangOpts.isCompatibleWith(LangOptions::ClangABI::Ver21))
     return true;
   return false;
 }
 
 bool TargetInfo::areDefaultedSMFStillPOD(const LangOptions &LangOpts) const {
-  return LangOpts.getClangABICompat() > LangOptions::ClangABI::Ver15;
+  return !LangOpts.isCompatibleWith(LangOptions::ClangABI::Ver15);
 }
 
 void TargetInfo::setDependentOpenCLOpts() {
@@ -1061,6 +1072,9 @@ TargetInfo::simplifyConstraint(StringRef Constraint,
                                SmallVectorImpl<ConstraintInfo> *OutCons) const {
   std::string Result;
 
+  // Stop at '\0' to match the old behavior.
+  Constraint = Constraint.split('\0').first;
+
   for (const char *I = Constraint.begin(), *E = Constraint.end(); I < E; I++) {
     switch (*I) {
     default:
@@ -1102,4 +1116,21 @@ TargetInfo::simplifyConstraint(StringRef Constraint,
     }
   }
   return Result;
+}
+
+unsigned clang::Microsoft64BitMinGlobalAlign(uint64_t TypeSize) {
+  // MSVC does size based alignment for arm64 based on alignment section in
+  // below document. Replicate that to keep alignment consistent with object
+  // files compiled by MSVC.
+  // https://docs.microsoft.com/en-us/cpp/build/arm64-windows-abi-conventions
+  // The same is done for x64, but not documented.
+
+  if (TypeSize >= 512) // TypeSize >= 64 bytes
+    return 128;        // align type at least 16 bytes
+  if (TypeSize >= 64)  // TypeSize >= 8 bytes
+    return 64;         // align type at least 8 bytes
+  if (TypeSize >= 16)  // TypeSize >= 2 bytes
+    return 32;         // align type at least 4 bytes
+
+  return 0;
 }

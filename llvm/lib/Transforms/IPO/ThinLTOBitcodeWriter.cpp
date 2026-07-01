@@ -46,7 +46,7 @@ static bool allowPromotionAlias(const std::string &Name) {
 // Promote each local-linkage entity defined by ExportM and used by ImportM by
 // changing visibility and appending the given ModuleId.
 void promoteInternals(Module &ExportM, Module &ImportM, StringRef ModuleId,
-                      SetVector<GlobalValue *> &PromoteExtra) {
+                      const SetVector<GlobalValue *> &PromoteExtra) {
   DenseMap<const Comdat *, Comdat *> RenamedComdats;
   for (auto &ExportGV : ExportM.global_values()) {
     if (!ExportGV.hasLocalLinkage())
@@ -168,6 +168,22 @@ void promoteTypeIds(Module &M, StringRef ModuleId) {
       GO.addMetadata(
           LLVMContext::MD_type,
           *MDNode::get(M.getContext(), {MD->getOperand(0), I->second}));
+    }
+
+    SmallVector<MDNode *, 1> CGMDs;
+    GO.getMetadata(LLVMContext::MD_callgraph, CGMDs);
+
+    GO.eraseMetadata(LLVMContext::MD_callgraph);
+    for (auto *MD : CGMDs) {
+      if (MD->getNumOperands() == 1) {
+        auto I = LocalToGlobal.find(MD->getOperand(0));
+        if (I == LocalToGlobal.end()) {
+          GO.addMetadata(LLVMContext::MD_callgraph, *MD);
+          continue;
+        }
+        GO.addMetadata(LLVMContext::MD_callgraph,
+                       *MDNode::get(M.getContext(), {I->second}));
+      }
     }
   }
 }
@@ -411,7 +427,11 @@ void splitAndWriteThinLTOBitcode(
     return true;
   });
 
-  promoteInternals(*MergedM, M, ModuleId, CfiFunctions);
+  // CfiFunctions contains only symbols from M. promoteInternals tries to find
+  // match values from its first argument (the "exporting module") in
+  // CfiFunctions. So we only need CfiFunctions for the second promotion (M ->
+  // MergedM)
+  promoteInternals(*MergedM, M, ModuleId, {});
   promoteInternals(M, *MergedM, ModuleId, CfiFunctions);
 
   auto &Ctx = MergedM->getContext();
@@ -432,6 +452,11 @@ void splitAndWriteThinLTOBitcode(
       Linkage = CFL_Declaration;
     Elts.push_back(ConstantAsMetadata::get(
         llvm::ConstantInt::get(Type::getInt8Ty(Ctx), Linkage)));
+    // TODO: use F->getGUID() once #184065 is relanded.
+    GlobalValue::GUID GUID = GlobalValue::getGUIDAssumingExternalLinkage(
+        GlobalValue::dropLLVMManglingEscape(V->getName()));
+    Elts.push_back(ConstantAsMetadata::get(
+        llvm::ConstantInt::get(Type::getInt64Ty(Ctx), GUID)));
     append_range(Elts, Types);
     CfiFunctionMDs.push_back(MDTuple::get(Ctx, Elts));
   }
@@ -594,8 +619,6 @@ PreservedAnalyses
 llvm::ThinLTOBitcodeWriterPass::run(Module &M, ModuleAnalysisManager &AM) {
   FunctionAnalysisManager &FAM =
       AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
-
-  M.removeDebugIntrinsicDeclarations();
 
   bool Changed = writeThinLTOBitcode(
       OS, ThinLinkOS,

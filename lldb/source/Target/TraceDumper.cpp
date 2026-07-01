@@ -21,24 +21,24 @@ using namespace llvm;
 
 /// \return
 ///   The given string or \b std::nullopt if it's empty.
-static std::optional<const char *> ToOptionalString(const char *s) {
-  if (!s)
+static std::optional<llvm::StringRef> ToOptionalString(llvm::StringRef s) {
+  if (s.empty())
     return std::nullopt;
   return s;
 }
 
-static const char *GetModuleName(const SymbolContext &sc) {
+static llvm::StringRef GetModuleName(const SymbolContext &sc) {
   if (!sc.module_sp)
-    return nullptr;
-  return sc.module_sp->GetFileSpec().GetFilename().AsCString();
+    return {};
+  return sc.module_sp->GetFileSpec().GetFilename();
 }
 
 /// \return
 ///   The module name (basename if the module is a file, or the actual name if
 ///   it's a virtual module), or \b nullptr if no name nor module was found.
-static const char *GetModuleName(const TraceDumper::TraceItem &item) {
+static llvm::StringRef GetModuleName(const TraceDumper::TraceItem &item) {
   if (!item.symbol_info)
-    return nullptr;
+    return {};
   return GetModuleName(item.symbol_info->sc);
 }
 
@@ -133,8 +133,8 @@ public:
           !IsSameInstructionSymbolContext(*item.prev_symbol_info,
                                           *item.symbol_info)) {
         m_s << "  ";
-        const char *module_name = GetModuleName(item);
-        if (!module_name)
+        llvm::StringRef module_name = GetModuleName(item);
+        if (module_name.empty())
           m_s << "(none)";
         else if (!item.symbol_info->sc.function && !item.symbol_info->sc.symbol)
           m_s.Format("{0}`(none)", module_name);
@@ -156,9 +156,10 @@ public:
     m_s.Format("    {0}: ", item.id);
 
     if (m_options.show_timestamps) {
-      m_s.Format("[{0}] ", item.timestamp
-                               ? formatv("{0:3} ns", *item.timestamp).str()
-                               : "unavailable");
+      if (item.timestamp)
+        m_s << formatv("[{0:3} ns]", *item.timestamp);
+      else
+        m_s << "[unavailable]";
     }
 
     if (item.event) {
@@ -238,13 +239,13 @@ private:
     }
     const SymbolContext &sc = function_call.GetSymbolInfo().sc;
 
-    const char *module_name = GetModuleName(sc);
-    if (!module_name)
+    llvm::StringRef module_name = GetModuleName(sc);
+    if (module_name.empty())
       m_s << "(none)";
     else if (!sc.function && !sc.symbol)
       m_s << module_name << "`(none)";
     else
-      m_s << module_name << "`" << sc.GetFunctionName().AsCString();
+      m_s << module_name << "`" << sc.GetFunctionName();
   }
 
   void DumpFunctionCallTree(const TraceDumper::FunctionCall &function_call) {
@@ -376,7 +377,8 @@ public:
       m_j.attribute("module", ToOptionalString(GetModuleName(item)));
       m_j.attribute(
           "symbol",
-          ToOptionalString(item.symbol_info->sc.GetFunctionName().AsCString()));
+          ToOptionalString(
+              item.symbol_info->sc.GetFunctionName().AsCString(nullptr)));
 
       if (lldb::InstructionSP instruction = item.symbol_info->instruction) {
         ExecutionContext exe_ctx = item.symbol_info->exe_ctx;

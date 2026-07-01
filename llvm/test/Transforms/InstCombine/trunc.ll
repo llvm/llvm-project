@@ -1218,3 +1218,139 @@ define i2 @neg_trunc_nsw_i2_non_zero(i8 %1) {
   %ret = trunc nsw i8 %1 to i2
   ret i2 %ret
 }
+
+define i1 @trunc_i1_usub_sat_one(i8 %x) {
+; CHECK-LABEL: @trunc_i1_usub_sat_one(
+; CHECK-NEXT:    [[TRUNC:%.*]] = icmp eq i8 [[X:%.*]], 0
+; CHECK-NEXT:    ret i1 [[TRUNC]]
+;
+  %call = call i8 @llvm.usub.sat.i8(i8 1, i8 %x)
+  %trunc = trunc i8 %call to i1
+  ret i1 %trunc
+}
+
+define <2 x i1> @trunc_i1_usub_sat_one_vec(<2 x i8> %x) {
+; CHECK-LABEL: @trunc_i1_usub_sat_one_vec(
+; CHECK-NEXT:    [[TRUNC:%.*]] = icmp eq <2 x i8> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[TRUNC]]
+;
+  %call = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> <i8 1, i8 1>, <2 x i8> %x)
+  %trunc = trunc <2 x i8> %call to <2 x i1>
+  ret <2 x i1> %trunc
+}
+
+define i1 @neg_trunc_i1_usub_sat_two(i8 %x) {
+; CHECK-LABEL: @neg_trunc_i1_usub_sat_two(
+; CHECK-NEXT:    [[CALL:%.*]] = call i8 @llvm.usub.sat.i8(i8 2, i8 [[X:%.*]])
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[CALL]] to i1
+; CHECK-NEXT:    ret i1 [[TRUNC]]
+;
+  %call = call i8 @llvm.usub.sat.i8(i8 2, i8 %x)
+  %trunc = trunc i8 %call to i1
+  ret i1 %trunc
+}
+
+define i2 @neg_trunc_i2_usub_sat_one(i8 %x) {
+; CHECK-LABEL: @neg_trunc_i2_usub_sat_one(
+; CHECK-NEXT:    [[CALL:%.*]] = call i8 @llvm.usub.sat.i8(i8 1, i8 [[X:%.*]])
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw nsw i8 [[CALL]] to i2
+; CHECK-NEXT:    ret i2 [[TRUNC]]
+;
+  %call = call i8 @llvm.usub.sat.i8(i8 1, i8 %x)
+  %trunc = trunc i8 %call to i2
+  ret i2 %trunc
+}
+
+define i1 @neg_trunc_i1_usub_sat_one_multi_use(i8 %x) {
+; CHECK-LABEL: @neg_trunc_i1_usub_sat_one_multi_use(
+; CHECK-NEXT:    [[CALL:%.*]] = call i8 @llvm.usub.sat.i8(i8 1, i8 [[X:%.*]])
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw i8 [[CALL]] to i1
+; CHECK-NEXT:    call void @use.i8(i8 [[CALL]])
+; CHECK-NEXT:    ret i1 [[TRUNC]]
+;
+  %call = call i8 @llvm.usub.sat.i8(i8 1, i8 %x)
+  %trunc = trunc i8 %call to i1
+  call void @use.i8(i8 %call)
+  ret i1 %trunc
+}
+
+define i32 @zext_i32_trunc_nuw_i8(i16 %x, i32 %y) {
+; CHECK-LABEL: @zext_i32_trunc_nuw_i8(
+; CHECK-NEXT:    [[TRUNC1:%.*]] = zext nneg i16 [[X:%.*]] to i32
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[Y:%.*]], [[TRUNC1]]
+; CHECK-NEXT:    [[E:%.*]] = and i32 [[OR]], 255
+; CHECK-NEXT:    ret i32 [[E]]
+;
+  %trunc1 = trunc nuw i16 %x to i8
+  %trunc2 = trunc i32 %y to i8
+  %or = or i8 %trunc1, %trunc2
+  %e = zext i8 %or to i32
+  ret i32 %e
+}
+
+define i32 @neg_zext_i32_trunc_nsw_i8(i16 %x, i32 %y) {
+; CHECK-LABEL: @neg_zext_i32_trunc_nsw_i8(
+; CHECK-NEXT:    [[TRUNC1:%.*]] = zext i16 [[X:%.*]] to i32
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[Y:%.*]], [[TRUNC1]]
+; CHECK-NEXT:    [[E:%.*]] = and i32 [[OR]], 255
+; CHECK-NEXT:    ret i32 [[E]]
+;
+  %trunc1 = trunc nsw i16 %x to i8
+  %trunc2 = trunc i32 %y to i8
+  %or = or i8 %trunc1, %trunc2
+  %e = zext i8 %or to i32
+  ret i32 %e
+}
+
+define i16 @zext_i16_trunc_nuw_nsw_i8(i32 %x) {
+; CHECK-LABEL: @zext_i16_trunc_nuw_nsw_i8(
+; CHECK-NEXT:    [[C:%.*]] = trunc nuw nsw i32 [[X:%.*]] to i16
+; CHECK-NEXT:    [[E:%.*]] = and i16 [[C]], 255
+; CHECK-NEXT:    ret i16 [[E]]
+;
+  %c = trunc nuw nsw i32 %x to i8
+  %e = zext i8 %c to i16
+  ret i16 %e
+}
+
+define i16 @zext_i16_trunc_nsw_i8(i32 %x) {
+; CHECK-LABEL: @zext_i16_trunc_nsw_i8(
+; CHECK-NEXT:    [[C:%.*]] = trunc nsw i32 [[X:%.*]] to i16
+; CHECK-NEXT:    [[E:%.*]] = and i16 [[C]], 255
+; CHECK-NEXT:    ret i16 [[E]]
+;
+  %c = trunc nsw i32 %x to i8
+  %e = zext i8 %c to i16
+  ret i16 %e
+}
+
+define i16 @zext_i16_trunc_nuw_i8(i32 %x) {
+; CHECK-LABEL: @zext_i16_trunc_nuw_i8(
+; CHECK-NEXT:    [[C:%.*]] = trunc nuw i32 [[X:%.*]] to i16
+; CHECK-NEXT:    [[E:%.*]] = and i16 [[C]], 255
+; CHECK-NEXT:    ret i16 [[E]]
+;
+  %c = trunc nuw i32 %x to i8
+  %e = zext i8 %c to i16
+  ret i16 %e
+}
+
+define i8 @neg_trunc_i8_trunc_nuw_i16(i32 %x) {
+; CHECK-LABEL: @neg_trunc_i8_trunc_nuw_i16(
+; CHECK-NEXT:    [[E:%.*]] = trunc i32 [[X:%.*]] to i8
+; CHECK-NEXT:    ret i8 [[E]]
+;
+  %c = trunc nuw i32 %x to i16
+  %e = trunc i16 %c to i8
+  ret i8 %e
+}
+
+define i8 @neg_trunc_nuw_i8_trunc_nuw_i16(i32 %x) {
+; CHECK-LABEL: @neg_trunc_nuw_i8_trunc_nuw_i16(
+; CHECK-NEXT:    [[E:%.*]] = trunc i32 [[X:%.*]] to i8
+; CHECK-NEXT:    ret i8 [[E]]
+;
+  %c = trunc nuw i32 %x to i16
+  %e = trunc nuw i16 %c to i8
+  ret i8 %e
+}

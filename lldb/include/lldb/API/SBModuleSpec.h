@@ -87,7 +87,7 @@ public:
 
   bool GetDescription(lldb::SBStream &description);
 
-  lldb::SBTarget GetTarget();
+  lldb::SBTarget GetTarget() const;
 
   /// Set the target to be used when resolving a module.
   ///
@@ -135,6 +135,9 @@ public:
   bool GetDescription(lldb::SBStream &description);
 
 private:
+  friend class SBModule;
+
+  SBModuleSpecList(lldb_private::ModuleSpecList &&module_spec_list);
   std::unique_ptr<lldb_private::ModuleSpecList> m_opaque_up;
 };
 

@@ -12,6 +12,8 @@
 // template <class U>
 //   optional(optional<U>&& rhs);
 
+// optional<T&>: optional(optional<U>& rhs)
+
 #include <cassert>
 #include <memory>
 #include <optional>
@@ -19,6 +21,11 @@
 #include <utility>
 
 #include "test_macros.h"
+#if TEST_STD_VER >= 26
+#  include "copy_move_types.h"
+#endif
+
+#include "../optional_helper_types.h"
 
 using std::optional;
 
@@ -68,6 +75,109 @@ TEST_CONSTEXPR_CXX20 bool test_all() {
   return true;
 }
 
+#if TEST_STD_VER >= 26
+constexpr bool test_ref() {
+  // optional(optional<U>&)
+  {
+    int i = 1;
+    std::optional<int&> o1{i};
+    std::optional<int&> o2{o1};
+
+    ASSERT_NOEXCEPT(std::optional<int&>(o2));
+    assert(o2.has_value());
+    assert(&(*o1) == &(*o2));
+    assert(*o1 == i);
+    assert(*o2 == i);
+  }
+
+  {
+    std::optional<int&> o1;
+    std::optional<int&> o2{o1};
+    ASSERT_NOEXCEPT(std::optional<int&>(o2));
+    assert(!o2.has_value());
+  }
+
+  {
+    ReferenceConversion<int> t{1, 2};
+    std::optional<ReferenceConversion<int>&> o1(t);
+    std::optional<int&> o2(o1);
+    ASSERT_NOEXCEPT(std::optional<int&>(o1));
+    assert(o2.has_value());
+    assert(&(*o2) == &t.lvalue);
+    assert(*o2 == 1);
+  }
+  // optional(optional<U>&&)
+  {
+    int i = 1;
+    std::optional<int&> o1{i};
+    std::optional<int&> o2{std::move(o1)};
+
+    // trivial move constructor should just copy the reference
+    ASSERT_NOEXCEPT(std::optional<int&>(o2));
+    assert(o2.has_value());
+    assert(&(*o1) == &(*o2));
+    assert(*o1 == i);
+    assert(*o2 == i);
+  }
+
+  {
+    std::optional<int&> o1;
+    std::optional<int&> o2{std::move(o1)};
+    ASSERT_NOEXCEPT(std::optional<int&>(o2));
+    assert(!o2.has_value());
+  }
+  {
+    TracedCopyMove t{};
+    std::optional<TracedCopyMove&> o1{t};
+    std::optional<TracedCopyMove> o2{std::move(o1)};
+    assert(t.constMove == 0);
+    assert(t.nonConstMove == 0);
+  }
+
+  {
+    ReferenceConversion<int> t{1, 2};
+    std::optional<ReferenceConversion<int>&> o1(t);
+    std::optional<int&> o2(std::move(o1));
+    ASSERT_NOEXCEPT(std::optional<int&>(o1));
+    assert(o2.has_value());
+    assert(&(*o2) == &t.lvalue);
+    assert(*o2 == 1);
+  }
+
+  {
+    std::optional<int> o1(1);
+    std::optional<const int&> o2(o1);
+    assert(o2.has_value());
+    assert(*o2 == 1);
+    assert(&(*o2) == &(*o1));
+  }
+
+  {
+    std::optional<ReferenceConversion<int>> o1({1, 2});
+    std::optional<const int&> o2(o1);
+    assert(o2.has_value());
+    assert(*o2 == 1);
+    assert(&(*o2) == &o1->lvalue);
+  }
+
+  {
+    std::optional<ReferenceConversion<int>> o1({1, 2});
+    std::optional<const int&> o2(std::move(o1));
+    assert(o2.has_value());
+    assert(*o2 == 2);
+    assert(&(*o2) == &o1->rvalue);
+  }
+
+  {
+    std::optional<ReferenceConversionThrows<int>> o1({1, 2});
+    ASSERT_NOT_NOEXCEPT(std::optional<const int&>(o1));
+    ASSERT_NOT_NOEXCEPT(std::optional<const int&>(std::move(o1)));
+  }
+
+  return true;
+}
+#endif
+
 int main(int, char**) {
   test_all<short, int>();
   test_all<int, X>();
@@ -84,7 +194,16 @@ int main(int, char**) {
     test<Z>(std::move(rhs), true);
   }
 
+#if TEST_STD_VER >= 26
+  // GH: #194415
+  static_assert(!std::is_constructible_v<std::optional<int>, std::optional<LValueOnly<int>>&>);
+#endif
+
   static_assert(!(std::is_constructible<optional<X>, optional<Z>>::value), "");
 
+#if TEST_STD_VER >= 26
+  assert(test_ref());
+  static_assert(test_ref());
+#endif
   return 0;
 }

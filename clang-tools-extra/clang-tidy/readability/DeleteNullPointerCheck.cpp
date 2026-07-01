@@ -34,8 +34,14 @@ void DeleteNullPointerCheck::registerMatchers(MatchFinder *Finder) {
   const auto BinaryPointerCheckCondition = binaryOperator(hasOperands(
       anyOf(cxxNullPtrLiteralExpr(), integerLiteral(equals(0))), PointerExpr));
 
+  const auto IfWithScopedCondition =
+      ifStmt(anyOf(hasInitStatement(stmt()),
+                   hasConditionVariableStatement(declStmt())))
+          .bind("ifWithScopedCondition");
+
   Finder->addMatcher(
       ifStmt(hasCondition(anyOf(PointerExpr, BinaryPointerCheckCondition)),
+             optionally(IfWithScopedCondition),
              hasThen(anyOf(
                  DeleteExpr, DeleteMemberExpr,
                  compoundStmt(anyOf(has(DeleteExpr), has(DeleteMemberExpr)),
@@ -47,21 +53,25 @@ void DeleteNullPointerCheck::registerMatchers(MatchFinder *Finder) {
 
 void DeleteNullPointerCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *IfWithDelete = Result.Nodes.getNodeAs<IfStmt>("ifWithDelete");
+  const bool HasScopedCondition =
+      Result.Nodes.getNodeAs<IfStmt>("ifWithScopedCondition") != nullptr;
   const auto *Compound = Result.Nodes.getNodeAs<CompoundStmt>("compound");
 
   auto Diag = diag(
       IfWithDelete->getBeginLoc(),
       "'if' statement is unnecessary; deleting null pointer has no effect");
-  if (IfWithDelete->getElse())
+  if (HasScopedCondition || IfWithDelete->hasElseStorage())
     return;
   // FIXME: generate fixit for this case.
 
+  const std::optional<Token> PrevTok = utils::lexer::getPreviousToken(
+      IfWithDelete->getThen()->getBeginLoc(), *Result.SourceManager,
+      Result.Context->getLangOpts());
+  if (!PrevTok)
+    return;
+
   Diag << FixItHint::CreateRemoval(CharSourceRange::getTokenRange(
-      IfWithDelete->getBeginLoc(),
-      utils::lexer::getPreviousToken(IfWithDelete->getThen()->getBeginLoc(),
-                                     *Result.SourceManager,
-                                     Result.Context->getLangOpts())
-          .getLocation()));
+      IfWithDelete->getBeginLoc(), PrevTok->getLocation()));
 
   if (Compound) {
     Diag << FixItHint::CreateRemoval(

@@ -110,6 +110,8 @@ XtensaTargetLowering::XtensaTargetLowering(const TargetMachine &TM,
   // indirect jump.
   setOperationAction(ISD::BR_JT, MVT::Other, Custom);
 
+  setOperationAction({ISD::TRAP, ISD::DEBUGTRAP}, MVT::Other, Legal);
+
   setOperationAction(ISD::BR_CC, MVT::i32, Legal);
   setOperationAction(ISD::BR_CC, MVT::i64, Expand);
 
@@ -174,8 +176,8 @@ XtensaTargetLowering::XtensaTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::CTPOP, MVT::i32, Custom);
   setOperationAction(ISD::CTTZ, MVT::i32, Expand);
   setOperationAction(ISD::CTLZ, MVT::i32, Expand);
-  setOperationAction(ISD::CTTZ_ZERO_UNDEF, MVT::i32, Expand);
-  setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i32, Expand);
+  setOperationAction(ISD::CTTZ_ZERO_POISON, MVT::i32, Expand);
+  setOperationAction(ISD::CTLZ_ZERO_POISON, MVT::i32, Expand);
 
   setOperationAction({ISD::SMIN, ISD::SMAX, ISD::UMIN, ISD::UMAX}, MVT::i32,
                      Subtarget.hasMINMAX() ? Legal : Expand);
@@ -217,7 +219,7 @@ XtensaTargetLowering::XtensaTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::FSQRT, VT, Expand);
       setOperationAction(ISD::FSIN, VT, Expand);
       setOperationAction(ISD::FCOS, VT, Expand);
-      setOperationAction(ISD::FREM, VT, Expand);
+      setOperationAction(ISD::FREM, VT, LibCall);
       setOperationAction(ISD::FDIV, VT, Expand);
       setOperationAction(ISD::FPOW, VT, Expand);
       setOperationAction(ISD::FSQRT, VT, Expand);
@@ -256,6 +258,16 @@ XtensaTargetLowering::XtensaTargetLowering(const TargetMachine &TM,
 
   // Compute derived properties from the register classes
   computeRegisterProperties(STI.getRegisterInfo());
+}
+
+Register XtensaTargetLowering::getExceptionPointerRegister(
+    const Constant *PersonalityFn) const {
+  return Xtensa::A2;
+}
+
+Register XtensaTargetLowering::getExceptionSelectorRegister(
+    const Constant *PersonalityFn) const {
+  return Xtensa::A3;
 }
 
 bool XtensaTargetLowering::isOffsetFoldingLegal(
@@ -643,8 +655,9 @@ XtensaTargetLowering::LowerCall(CallLoweringInfo &CLI,
       SDValue Address = DAG.getNode(ISD::ADD, DL, PtrVT, StackPtr,
                                     DAG.getIntPtrConstant(Offset, DL));
       SDValue SizeNode = DAG.getConstant(Flags.getByValSize(), DL, MVT::i32);
+      Align Alignment = Flags.getNonZeroByValAlign();
       SDValue Memcpy = DAG.getMemcpy(
-          Chain, DL, Address, ArgValue, SizeNode, Flags.getNonZeroByValAlign(),
+          Chain, DL, Address, ArgValue, SizeNode, Alignment, Alignment,
           /*isVolatile=*/false, /*AlwaysInline=*/false,
           /*CI=*/nullptr, std::nullopt, MachinePointerInfo(),
           MachinePointerInfo());
@@ -964,7 +977,7 @@ SDValue XtensaTargetLowering::LowerImmediate(SDValue Op,
         isShiftedInt<8, 8>(Value))
       return Op;
     Type *Ty = Type::getInt32Ty(*DAG.getContext());
-    Constant *CV = ConstantInt::get(Ty, Value);
+    Constant *CV = ConstantInt::getSigned(Ty, Value);
     SDValue CP = DAG.getConstantPool(CV, MVT::i32);
     SDValue Res =
         DAG.getLoad(MVT::i32, DL, DAG.getEntryNode(), CP, MachinePointerInfo());
@@ -1269,7 +1282,8 @@ SDValue XtensaTargetLowering::LowerVACOPY(SDValue Op, SelectionDAG &DAG) const {
 
   return DAG.getMemcpy(Chain, DL, DstPtr, SrcPtr,
                        DAG.getConstant(VAListSize, SDLoc(Op), MVT::i32),
-                       Align(4), /*isVolatile*/ false, /*AlwaysInline*/ true,
+                       Align(4), Align(4), /*isVolatile*/ false,
+                       /*AlwaysInline*/ true,
                        /*CI=*/nullptr, std::nullopt, MachinePointerInfo(DstSV),
                        MachinePointerInfo(SrcSV));
 }
@@ -1512,7 +1526,7 @@ SDValue XtensaTargetLowering::LowerOperation(SDValue Op,
 }
 
 TargetLowering::AtomicExpansionKind
-XtensaTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
+XtensaTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
   return AtomicExpansionKind::CmpXChg;
 }
 

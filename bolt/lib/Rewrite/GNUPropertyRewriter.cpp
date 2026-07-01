@@ -41,8 +41,7 @@ Error GNUPropertyRewriter::sectionInitializer() {
   uint32_t FeaturesAcc = 0;
 
   StringRef Buf = Sec->getContents();
-  DataExtractor DE(Buf, BC.AsmInfo->isLittleEndian(),
-                   BC.AsmInfo->getCodePointerSize());
+  DataExtractor DE(Buf, BC.AsmInfo->isLittleEndian());
   DataExtractor::Cursor Cursor(0);
   while (Cursor && !DE.eof(Cursor)) {
     const uint32_t NameSz = DE.getU32(Cursor);
@@ -75,8 +74,7 @@ Error GNUPropertyRewriter::sectionInitializer() {
   if (BC.isAArch64()) {
     BC.setUsesBTI(FeaturesAcc & llvm::ELF::GNU_PROPERTY_AARCH64_FEATURE_1_BTI);
     if (BC.usesBTI())
-      BC.outs() << "BOLT-WARNING: binary is using BTI. Optimized binary may be "
-                   "corrupted\n";
+      BC.outs() << "BOLT-INFO: binary is using BTI\n";
   }
 
   return Error::success();
@@ -94,10 +92,9 @@ Error GNUPropertyRewriter::sectionInitializer() {
 /// As there is no guarantee that the features are encoded in which element of
 /// the array, we have to read all, and OR together the result.
 Expected<uint32_t> GNUPropertyRewriter::decodeGNUPropertyNote(StringRef Desc) {
-  DataExtractor DE(Desc, BC.AsmInfo->isLittleEndian(),
-                   BC.AsmInfo->getCodePointerSize());
+  DataExtractor DE(Desc, BC.AsmInfo->isLittleEndian());
   DataExtractor::Cursor Cursor(0);
-  const uint32_t Align = DE.getAddressSize();
+  const uint32_t Align = BC.AsmInfo->getCodePointerSize();
 
   std::optional<uint32_t> Features = 0;
   while (Cursor && !DE.eof(Cursor)) {

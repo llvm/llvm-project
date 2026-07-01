@@ -79,7 +79,7 @@ std::unique_ptr<Module> llvm::CloneModule(
   // Loop over the functions in the module, making external functions as before
   for (const Function &I : M) {
     Function *NF =
-        Function::Create(cast<FunctionType>(I.getValueType()), I.getLinkage(),
+        Function::Create(I.getFunctionType(), I.getLinkage(),
                          I.getAddressSpace(), I.getName(), New.get());
     NF->copyAttributesFrom(&I);
     VMap[&I] = NF;
@@ -117,6 +117,18 @@ std::unique_ptr<Module> llvm::CloneModule(
 
   for (const GlobalIFunc &I : M.ifuncs()) {
     // Defer setting the resolver function until after functions are cloned.
+    if (!ShouldCloneDefinition(&I)) {
+      // An ifunc also cannot act as an external reference, so we need to create
+      // a function.
+      GlobalValue *GV;
+      assert(I.getValueType()->isFunctionTy() &&
+             "ValueType of ifunc must be function type!");
+      GV = Function::Create(cast<FunctionType>(I.getValueType()),
+                            GlobalValue::ExternalLinkage, I.getAddressSpace(),
+                            I.getName(), New.get());
+      VMap[&I] = GV;
+      continue;
+    }
     auto *GI =
         GlobalIFunc::create(I.getValueType(), I.getAddressSpace(),
                             I.getLinkage(), I.getName(), nullptr, New.get());
@@ -174,6 +186,9 @@ std::unique_ptr<Module> llvm::CloneModule(
   }
 
   for (const GlobalIFunc &I : M.ifuncs()) {
+    // We already dealt with undefined ifuncs above.
+    if (!ShouldCloneDefinition(&I))
+      continue;
     GlobalIFunc *GI = cast<GlobalIFunc>(VMap[&I]);
     if (const Constant *Resolver = I.getResolver())
       GI->setResolver(MapValue(Resolver, VMap));

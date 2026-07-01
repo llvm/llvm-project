@@ -33,7 +33,7 @@ static bool requiresGOTAccess(const Symbol *sym) {
   return true;
 }
 
-static bool allowUndefined(const Symbol* sym) {
+static bool allowUndefined(const Symbol *sym) {
   // Symbols that are explicitly imported are always allowed to be undefined at
   // link time.
   if (sym->isImported())
@@ -41,7 +41,7 @@ static bool allowUndefined(const Symbol* sym) {
   if (isa<UndefinedFunction>(sym) && ctx.arg.importUndefined)
     return true;
 
-  return ctx.arg.allowUndefinedSymbols.count(sym->getName()) != 0;
+  return ctx.arg.allowUndefinedSymbols.contains(sym->getName());
 }
 
 static void reportUndefined(ObjFile *file, Symbol *sym) {
@@ -125,7 +125,7 @@ void scanRelocations(InputChunk *chunk) {
       // In single-threaded builds TLS is lowered away and TLS data can be
       // merged with normal data and allowing TLS relocation in non-TLS
       // segments.
-      if (ctx.arg.sharedMemory) {
+      if (ctx.arg.isMultithreaded()) {
         if (!sym->isTLS()) {
           error(toString(file) + ": relocation " +
                 relocTypeToString(reloc.Type) +

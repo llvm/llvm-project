@@ -15,6 +15,7 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/VirtRegMap.h"
 #include "llvm/IR/Function.h"
 #include "llvm/InitializePasses.h"
 
@@ -27,12 +28,11 @@ PreservedAnalyses PrintMIRPreparePass::run(Module &M, ModuleAnalysisManager &) {
 
 PreservedAnalyses PrintMIRPass::run(MachineFunction &MF,
                                     MachineFunctionAnalysisManager &MFAM) {
-  auto &MAMP = MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF);
-  Module *M = MF.getFunction().getParent();
-  const MachineModuleInfo &MMI =
-      MAMP.getCachedResult<MachineModuleAnalysis>(*M)->getMMI();
+  auto &FAM = MFAM.getResult<FunctionAnalysisManagerMachineFunctionProxy>(MF)
+                  .getManager();
 
-  printMIR(OS, MMI, MF);
+  const VirtRegMap *VRM = MFAM.getCachedResult<VirtRegMapAnalysis>(MF);
+  printMIR(OS, FAM, MF, VRM);
   return PreservedAnalyses::all();
 }
 
@@ -52,6 +52,7 @@ struct MIRPrintingPass : public MachineFunctionPass {
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
+    AU.addUsedIfAvailable<VirtRegMapWrapperLegacy>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -59,10 +60,14 @@ struct MIRPrintingPass : public MachineFunctionPass {
     std::string Str;
     raw_string_ostream StrOS(Str);
 
-    const MachineModuleInfo &MMI =
-        getAnalysis<MachineModuleInfoWrapperPass>().getMMI();
+    MachineModuleInfo *MMI =
+        &getAnalysis<MachineModuleInfoWrapperPass>().getMMI();
 
-    printMIR(StrOS, MMI, MF);
+    const VirtRegMap *VRM = nullptr;
+    if (auto *W = getAnalysisIfAvailable<VirtRegMapWrapperLegacy>())
+      VRM = &W->getVRM();
+
+    printMIR(StrOS, *MMI, MF, VRM);
     MachineFunctions.append(Str);
     return false;
   }

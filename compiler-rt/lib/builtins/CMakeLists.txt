@@ -57,6 +57,19 @@ if (COMPILER_RT_STANDALONE_BUILD)
     ON)
 endif()
 
+function(set_special_properties source_file)
+  cmake_parse_arguments(ARG "" "" "SUPERSEDES;PROVIDES" ${ARGN})
+  if(ARG_SUPERSEDES)
+    set_property(SOURCE ${source_file}
+      PROPERTY crt_supersedes "${ARG_SUPERSEDES}")
+  endif()
+  if(ARG_PROVIDES AND NOT COMPILER_RT_BUILTINS_STANDALONE_BUILD)
+    set_property(SOURCE ${source_file}
+      DIRECTORY ${COMPILER_RT_SOURCE_DIR}
+      PROPERTY crt_provides "${ARG_PROVIDES}")
+  endif()
+endfunction()
+
 include(builtin-config-ix)
 include(CMakeDependentOption)
 include(CMakePushCheckState)
@@ -336,13 +349,16 @@ if (NOT MSVC)
     )
   endif()
 
-  if (NOT ANDROID)
+  if(NOT ANDROID AND (NOT WIN32 OR MINGW))
     set(x86_64_SOURCES
       ${x86_64_SOURCES}
       ${x86_80_BIT_SOURCES}
       x86_64/floatdixf.c
     )
-    if (NOT WIN32)
+
+    # TODO(compnerd) floatundixf.S currently implements the SysV calling
+    # convention, this must be ported to the Windows ABI.
+    if(NOT WIN32)
       set(x86_64_SOURCES
         ${x86_64_SOURCES}
         x86_64/floatundixf.S
@@ -380,7 +396,6 @@ if (NOT MSVC)
   if (NOT ANDROID)
     set(i386_SOURCES
       ${i386_SOURCES}
-      ${x86_80_BIT_SOURCES}
       i386/floatdixf.S
       i386/floatundixf.S
     )
@@ -392,6 +407,12 @@ if (NOT MSVC)
       i386/chkstk.S
       i386/chkstk2.S
     )
+  endif()
+
+  if(NOT ANDROID AND NOT (WIN32 AND NOT MINGW))
+    set(i386_SOURCES
+      ${i386_SOURCES}
+      ${x86_80_BIT_SOURCES})
   endif()
 else () # MSVC
   # Use C versions of functions when building on MSVC
@@ -445,8 +466,35 @@ if(COMPILER_RT_ARM_OPTIMIZED_FP AND BUILTIN_SUPPORTED_ARCH MATCHES "arm")
 
   if(implicit_it_flag)
     set(assembly_files
+      arm/addsf3.S
       arm/mulsf3.S
       arm/divsf3.S
+      arm/adddf3.S
+      arm/muldf3.S
+      arm/divdf3.S
+      arm/cmpdf2.S
+      arm/cmpsf2.S
+      arm/gedf2.S
+      arm/gesf2.S
+      arm/unorddf2.S
+      arm/unordsf2.S
+      arm/extendsfdf2.S
+      arm/fixdfdi.S
+      arm/fixdfsi.S
+      arm/fixsfdi.S
+      arm/fixsfsi.S
+      arm/fixunsdfdi.S
+      arm/fixunsdfsi.S
+      arm/fixunssfdi.S
+      arm/fixunssfsi.S
+      arm/floatdidf.S
+      arm/floatdisf.S
+      arm/floatsidf.S
+      arm/floatsisf.S
+      arm/floatundidf.S
+      arm/floatunsidf.S
+      arm/floatunsisf.S
+      arm/truncdfsf2.S
       )
     set_source_files_properties(${assembly_files}
       PROPERTIES COMPILE_OPTIONS ${implicit_it_flag})
@@ -455,6 +503,9 @@ if(COMPILER_RT_ARM_OPTIMIZED_FP AND BUILTIN_SUPPORTED_ARCH MATCHES "arm")
       arm/fnan2.c
       arm/fnorm2.c
       arm/funder.c
+      arm/dnan2.c
+      arm/dnorm2.c
+      arm/dunder.c
       )
   endif()
 endif()
@@ -487,17 +538,41 @@ set(arm_sync_SOURCES
 set(thumb1_base_SOURCES
   arm/divsi3.S
   arm/udivsi3.S
-  arm/comparesf2.S
-  arm/addsf3.S
   ${GENERIC_SOURCES}
 )
+set_special_properties(arm/addsf3.S SUPERSEDES subsf3.c PROVIDES subsf3)
+set_special_properties(arm/adddf3.S SUPERSEDES subdf3.c PROVIDES subdf3)
+set_special_properties(arm/cmpdf2.S SUPERSEDES comparedf2.c PROVIDES comparedf2)
+set_special_properties(arm/cmpsf2.S SUPERSEDES arm/comparesf2.S PROVIDES comparesf2)
+set_special_properties(arm/floatdisf.S SUPERSEDES floatundisf.c PROVIDES floatundisf)
 
 if(COMPILER_RT_ARM_OPTIMIZED_FP)
   set(thumb1_base_SOURCES
     arm/thumb1/mulsf3.S
+    arm/thumb1/addsf3fast.S
+    arm/thumb1/cmpdf2.S
+    arm/thumb1/cmpsf2.S
+    arm/thumb1/gedf2.S
+    arm/thumb1/gesf2.S
+    arm/thumb1/unorddf2.S
+    arm/thumb1/unordsf2.S
     arm/fnan2.c
     arm/fnorm2.c
     arm/funder.c
+    ${thumb1_base_SOURCES}
+  )
+  set_special_properties(arm/thumb1/addsf3fast.S
+    SUPERSEDES addsf3.c subsf3.c PROVIDES addsf3 subsf3)
+  set_special_properties(arm/thumb1/cmpdf2.S
+    SUPERSEDES comparedf2.c PROVIDES comparedf2)
+  set_special_properties(arm/thumb1/cmpsf2.S
+    SUPERSEDES comparesf2.c PROVIDES comparesf2)
+else()
+  # Other Thumb1 assembly implementations which do not fall under the
+  # COMPILER_RT_ARM_OPTIMIZED_FP umbrella
+  set(thumb1_base_SOURCES
+    arm/thumb1/addsf3.S
+    arm/comparesf2.S
     ${thumb1_base_SOURCES}
   )
 endif()
@@ -516,6 +591,10 @@ set(arm_EABI_RT_SOURCES
   arm/aeabi_ldivmod.S
   arm/aeabi_uidivmod.S
   arm/aeabi_uldivmod.S
+  arm/aeabi_uread4.S
+  arm/aeabi_uread8.S
+  arm/aeabi_uwrite4.S
+  arm/aeabi_uwrite8.S
 )
 
 set(arm_EABI_CLIB_SOURCES
@@ -660,7 +739,7 @@ if (COMPILER_RT_HAS_AARCH64_SME)
   elseif (NOT COMPILER_RT_DISABLE_AARCH64_FMV AND COMPILER_RT_HAS_FNO_BUILTIN_FLAG AND COMPILER_RT_AARCH64_FMV_USES_GLOBAL_CONSTRUCTOR)
     list(APPEND aarch64_SOURCES aarch64/sme-abi.S aarch64/sme-abi-assert.c)
     if(COMPILER_RT_HAS_ARM_UNALIGNED AND COMPILER_RT_HAS_ARM_FP)
-      list(APPEND aarch64_SOURCES aarch64/sme-libc-opt-memset-memchr.S aarch64/sme-libc-opt-memcpy-memmove.S)
+      list(APPEND aarch64_SOURCES aarch64/sme-libc-opt-memset-memchr.S aarch64/sme-libc-opt-memcpy-memmove.S aarch64/sme-libc-opt-memcpy-memmove-sve.S)
     elseif(COMPILER_RT_HAS_ARM_UNALIGNED)
       list(APPEND aarch64_SOURCES aarch64/sme-libc-memset-memchr.c aarch64/sme-libc-opt-memcpy-memmove.S)
       message(WARNING "AArch64 SME ABI assembly-optimized memset/memchr disabled: target does not have hardware floating-point support.")
@@ -741,6 +820,7 @@ set(arm64_SOURCES ${aarch64_SOURCES})
 set(arm64e_SOURCES ${aarch64_SOURCES})
 set(arm64_32_SOURCES ${aarch64_SOURCES})
 set(arm64ec_SOURCES ${aarch64_SOURCES})
+set(aarch64_lfi_SOURCES ${aarch64_SOURCES})
 
 # macho_embedded archs
 set(armv6m_SOURCES ${thumb1_SOURCES})
@@ -838,6 +918,16 @@ if (NOT OS_NAME MATCHES "AIX")
     ${powerpc64_SOURCES}
   )
 endif()
+if (OS_NAME MATCHES "AIX")
+  set(powerpc_SOURCES
+    ppc/init_ifuncs.c
+    ${powerpc_SOURCES}
+  )
+  set(powerpc64_SOURCES
+    ppc/init_ifuncs.c
+    ${powerpc64_SOURCES}
+  )
+endif()
 set(powerpc64le_SOURCES ${powerpc64_SOURCES})
 
 set(riscv_SOURCES
@@ -860,6 +950,8 @@ set(riscv64_SOURCES
 set(sparc_SOURCES ${GENERIC_SOURCES} ${GENERIC_TF_SOURCES})
 set(sparcv9_SOURCES ${GENERIC_SOURCES} ${GENERIC_TF_SOURCES})
 
+set(spirv64_SOURCES ${GENERIC_SOURCES})
+
 set(s390x_SOURCES
   ${GENERIC_SOURCES}
   ${GENERIC_TF_SOURCES}
@@ -867,8 +959,6 @@ set(s390x_SOURCES
 
 
 set(wasm_SOURCES
-  wasm/__c_longjmp.S
-  wasm/__cpp_exception.S
   ${GENERIC_TF_SOURCES}
   ${GENERIC_SOURCES}
 )
@@ -905,6 +995,9 @@ else ()
   append_list_if(COMPILER_RT_HAS_NOSTDINCXX_FLAG -nostdinc++ BUILTIN_CFLAGS)
   append_list_if(COMPILER_RT_HAS_WBUILTIN_DECLARATION_MISMATCH_FLAG -Werror=builtin-declaration-mismatch BUILTIN_CFLAGS)
 
+  # Builtins use __COUNTER__
+  append_list_if(COMPILER_RT_HAS_WNO_C2Y_EXTENSIONS -Wno-c2y-extensions BUILTIN_CFLAGS)
+
   # Don't embed directives for picking any specific CRT
   if (MSVC)
     set(CMAKE_MSVC_RUNTIME_LIBRARY "")
@@ -927,15 +1020,13 @@ else ()
   endif()
 
   # Directly targeting the GPU requires a few extra flags.
-  if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "amdgcn|nvptx")
+  if(COMPILER_RT_GPU_BUILD)
     append_list_if(COMPILER_RT_HAS_FFREESTANDING_FLAG -ffreestanding BUILTIN_CFLAGS)
     append_list_if(COMPILER_RT_HAS_NOGPULIB_FLAG -nogpulib BUILTIN_CFLAGS)
     append_list_if(COMPILER_RT_HAS_FLTO_FLAG -flto BUILTIN_CFLAGS)
-    append_list_if(COMPILER_RT_HAS_FCONVERGENT_FUNCTIONS_FLAG
-                   -fconvergent-functions BUILTIN_CFLAGS)
 
     # AMDGPU targets want to use a generic ABI.
-    if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "amdgcn")
+    if(COMPILER_RT_TARGET_AMDGPU)
       append_list_if(COMPILER_RT_HAS_CODE_OBJECT_VERSION_FLAG
                      "SHELL:-Xclang -mcode-object-version=none" BUILTIN_CFLAGS)
     endif()
@@ -952,7 +1043,7 @@ else ()
   elseif(COMPILER_RT_BAREMETAL_BUILD)
     foreach (arch ${BUILTIN_SUPPORTED_ARCH})
       if("${arch}" MATCHES "arm64|aarch64")
-        list(APPEND BUILTIN_DEFS ENABLE_BAREMETAL_AARCH64_FMV)
+        list(APPEND BUILTIN_DEFS TARGET_BAREMETAL_AARCH64)
       endif()
     endforeach ()
   endif()
@@ -990,9 +1081,6 @@ else ()
           endif()
         endif()
       endif()
-      check_c_source_compiles("_Float16 foo(_Float16 x) { return x; }
-                               int main(void) { return 0; }"
-                              COMPILER_RT_HAS_${arch}_FLOAT16)
       append_list_if(COMPILER_RT_HAS_${arch}_FLOAT16 -DCOMPILER_RT_HAS_FLOAT16 BUILTIN_CFLAGS_${arch})
       check_c_source_compiles("__bf16 foo(__bf16 x) { return x; }
                                int main(void) { return 0; }"
@@ -1028,6 +1116,12 @@ else ()
                               C_STANDARD 11
                               CXX_STANDARD 17
                               PARENT_TARGET builtins)
+
+      # Write out the sources that were used to compile the builtins so that tests can be run in
+      # an independent compiler-rt build (see: compiler-rt/test/builtins/CMakeLists.txt)
+      get_compiler_rt_output_dir(${arch} BUILTIN_LIB_OUTPUT_DIR)
+      set_output_name(BUILTIN_LIB_OUTPUT_NAME clang_rt.builtins ${arch})
+      file(WRITE "${BUILTIN_LIB_OUTPUT_DIR}/${BUILTIN_LIB_OUTPUT_NAME}.sources.txt" "${${arch}_SOURCES}")
       cmake_pop_check_state()
     endif ()
   endforeach ()
@@ -1068,10 +1162,10 @@ if(COMPILER_RT_BUILD_STANDALONE_LIBATOMIC)
     endif()
   endforeach()
   # FIXME: On AIX, we have to archive built shared libraries into a static
-  # archive, i.e., libatomic.a. Once cmake adds support of such usage for AIX,
+  # archive, i.e., libcompiler_rt.a. Once cmake adds support of such usage for AIX,
   # this ad-hoc part can be removed.
   if(OS_NAME MATCHES "AIX")
-    archive_aix_libatomic(clang_rt.atomic libatomic
+    archive_aix_libatomic(clang_rt.atomic libcompiler_rt
                           ARCHS ${BUILTIN_SUPPORTED_ARCH}
                           PARENT_TARGET builtins-standalone-atomic)
   endif()

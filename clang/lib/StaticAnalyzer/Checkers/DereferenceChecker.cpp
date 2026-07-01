@@ -57,8 +57,7 @@ public:
   static void AddDerefSource(raw_ostream &os,
                              SmallVectorImpl<SourceRange> &Ranges,
                              const Expr *Ex, const ProgramState *state,
-                             const LocationContext *LCtx,
-                             bool loadedFrom = false);
+                             const StackFrame *SF, bool loadedFrom = false);
 
   CheckerFrontend NullDerefChecker, FixedDerefChecker, NullPointerArithmChecker;
   const DerefBugType NullBug{&NullDerefChecker, "Dereference of null pointer",
@@ -86,20 +85,18 @@ struct ValueDescStr {
   SmallVectorImpl<SourceRange> &Ranges;
   const Expr *Ex;
   const ProgramState *State;
-  const LocationContext *LCtx;
+  const StackFrame *SF;
   bool IsPointer;
   ConditionTruthVal IsNull;
 };
 
 } // end anonymous namespace
 
-void
-DereferenceChecker::AddDerefSource(raw_ostream &os,
-                                   SmallVectorImpl<SourceRange> &Ranges,
-                                   const Expr *Ex,
-                                   const ProgramState *state,
-                                   const LocationContext *LCtx,
-                                   bool loadedFrom) {
+void DereferenceChecker::AddDerefSource(raw_ostream &os,
+                                        SmallVectorImpl<SourceRange> &Ranges,
+                                        const Expr *Ex,
+                                        const ProgramState *state,
+                                        const StackFrame *SF, bool loadedFrom) {
   Ex = Ex->IgnoreParenLValueCasts();
   switch (Ex->getStmtClass()) {
     default:
@@ -219,7 +216,7 @@ void DereferenceChecker::reportDerefBug(const DerefBugType &BT,
     Out << "Array access";
     const ArraySubscriptExpr *AE = cast<ArraySubscriptExpr>(S);
     AddDerefSource(Out, Ranges, AE->getBase()->IgnoreParenCasts(), State.get(),
-                   N->getLocationContext());
+                   N->getStackFrame());
     Out << " results in " << BT.getArrayMsg();
     break;
   }
@@ -227,7 +224,7 @@ void DereferenceChecker::reportDerefBug(const DerefBugType &BT,
     Out << "Array access";
     const ArraySectionExpr *AE = cast<ArraySectionExpr>(S);
     AddDerefSource(Out, Ranges, AE->getBase()->IgnoreParenCasts(), State.get(),
-                   N->getLocationContext());
+                   N->getStackFrame());
     Out << " results in " << BT.getArrayMsg();
     break;
   }
@@ -235,7 +232,7 @@ void DereferenceChecker::reportDerefBug(const DerefBugType &BT,
     Out << BT.getDescription();
     const UnaryOperator *U = cast<UnaryOperator>(S);
     AddDerefSource(Out, Ranges, U->getSubExpr()->IgnoreParens(), State.get(),
-                   N->getLocationContext(), true);
+                   N->getStackFrame(), true);
     break;
   }
   case Stmt::MemberExprClass: {
@@ -244,7 +241,7 @@ void DereferenceChecker::reportDerefBug(const DerefBugType &BT,
       Out << "Access to field '" << M->getMemberNameInfo() << "' results in "
           << BT.getFieldMsg();
       AddDerefSource(Out, Ranges, M->getBase()->IgnoreParenCasts(), State.get(),
-                     N->getLocationContext(), true);
+                     N->getStackFrame(), true);
     }
     break;
   }
@@ -253,7 +250,7 @@ void DereferenceChecker::reportDerefBug(const DerefBugType &BT,
     Out << "Access to instance variable '" << *IV->getDecl() << "' results in "
         << BT.getFieldMsg();
     AddDerefSource(Out, Ranges, IV->getBase()->IgnoreParenCasts(), State.get(),
-                   N->getLocationContext(), true);
+                   N->getStackFrame(), true);
     break;
   }
   default:
@@ -315,7 +312,8 @@ void DereferenceChecker::checkLocation(SVal l, bool isLoad, const Stmt* S,
 
   if (location.isConstant()) {
     const Expr *DerefExpr = getDereferenceExpr(S, isLoad);
-    if (!suppressReport(C, DerefExpr))
+    if (!DerefExpr->getType().isVolatileQualified() &&
+        !suppressReport(C, DerefExpr))
       reportDerefBug(FixedAddressBug, notNullState, DerefExpr, C);
     return;
   }
@@ -406,7 +404,7 @@ template <> struct format_provider<ValueDescStr> {
         << ValueStr[V.IsPointer][V.IsNull.isConstrainedTrue()
                                      ? 0
                                      : (V.IsNull.isConstrainedFalse() ? 1 : 2)];
-    DereferenceChecker::AddDerefSource(Stream, V.Ranges, V.Ex, V.State, V.LCtx,
+    DereferenceChecker::AddDerefSource(Stream, V.Ranges, V.Ex, V.State, V.SF,
                                        false);
   }
 };
@@ -461,10 +459,10 @@ void DereferenceChecker::checkPreStmt(const BinaryOperator *Op,
   const char *OpcodeStr =
       Op->getOpcode() == BO_Add ? "Addition" : "Subtraction";
   const char *ResultStr = IsConstrained ? "results" : "may result";
-  ValueDescStr DerefArg1{
-      Ranges, E1, State.get(), C.getLocationContext(), T1IsPointer, V1IsNull};
-  ValueDescStr DerefArg2{
-      Ranges, E2, State.get(), C.getLocationContext(), T2IsPointer, V2IsNull};
+  ValueDescStr DerefArg1{Ranges,      E1,      State.get(), C.getStackFrame(),
+                         T1IsPointer, V1IsNull};
+  ValueDescStr DerefArg2{Ranges,      E2,      State.get(), C.getStackFrame(),
+                         T2IsPointer, V2IsNull};
   std::string Msg =
       llvm::formatv("{0} of a {1} and a {2} {3} in undefined behavior",
                     OpcodeStr, DerefArg1, DerefArg2, ResultStr);

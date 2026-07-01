@@ -3,6 +3,9 @@
 ; NVPTX does not support 'alias' yet
 ; XFAIL: target=nvptx{{.*}}
 
+; The z/OS does not support 'alias'.
+; UNSUPPORTED: target={{.*}}-zos{{.*}}
+
 @v = available_externally global i32 42, align 4
 @va = available_externally alias i32, ptr @v
 

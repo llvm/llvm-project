@@ -30,7 +30,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
-LIBC_INLINE static constexpr float atanf(float x) {
+LIBC_INLINE float atanf(float x) {
   using namespace inv_trigf_utils_internal;
   using FPBits = typename fputil::FPBits<float>;
 
@@ -67,7 +67,6 @@ LIBC_INLINE static constexpr float atanf(float x) {
 #if defined(LIBC_TARGET_CPU_HAS_FMA_FLOAT)
       return fputil::multiply_add(x, -0x1.0p-25f, x);
 #else
-      double x_d = static_cast<double>(x);
       return static_cast<float>(fputil::multiply_add(x_d, -0x1.0p-25, x_d));
 #endif // LIBC_TARGET_CPU_HAS_FMA_FLOAT
     }

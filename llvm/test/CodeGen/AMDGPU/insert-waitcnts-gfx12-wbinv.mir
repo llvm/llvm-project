@@ -12,7 +12,7 @@ body:             |
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   S_WAIT_LOADCNT_DSCNT 0
+  ; CHECK-NEXT:   S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
   ; CHECK-NEXT:   S_WAIT_EXPCNT 0
   ; CHECK-NEXT:   S_WAIT_SAMPLECNT 0
   ; CHECK-NEXT:   S_WAIT_BVHCNT 0
@@ -54,7 +54,7 @@ body:             |
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   S_WAIT_LOADCNT_DSCNT 0
+  ; CHECK-NEXT:   S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
   ; CHECK-NEXT:   S_WAIT_EXPCNT 0
   ; CHECK-NEXT:   S_WAIT_SAMPLECNT 0
   ; CHECK-NEXT:   S_WAIT_BVHCNT 0
@@ -96,7 +96,7 @@ body:             |
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   S_WAIT_LOADCNT_DSCNT 0
+  ; CHECK-NEXT:   S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
   ; CHECK-NEXT:   S_WAIT_EXPCNT 0
   ; CHECK-NEXT:   S_WAIT_SAMPLECNT 0
   ; CHECK-NEXT:   S_WAIT_BVHCNT 0

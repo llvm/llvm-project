@@ -1,0 +1,47 @@
+name: Prune Unused Branches
+
+permissions:
+  contents: read
+
+on:
+  pull_request:
+    paths:
+     - .github/workflows/prune-branches.yml
+     - .github/workflows/prune-unused-branches.py
+  schedule:
+    - cron: '0 8 * * *' # Runs daily at 08:00 UTC.
+
+jobs:
+  prune-branches:
+    name: Prune Branches
+    if: github.repository_owner == 'llvm'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Fetch LLVM sources
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: true # Relies on persisted credentials to delete unused remote branches
+          fetch-depth: 0
+      - name: Install dependencies
+        run: |
+          pip install --require-hashes -r ./llvm/utils/git/requirements.txt
+      - name: Run Script
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir patches
+          python3 .github/workflows/prune-unused-branches.py .
+      - name: Upload Patches
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: BranchDiffs
+          retention-days: 90
+          path: patches/*.patch
+      - name: Upload Branch List
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: BranchList
+          retention-days: 90
+          path: branches.txt

@@ -78,7 +78,7 @@ void OutlinedHashTree::insert(const HashSequencePair &SequencePair) {
       std::unique_ptr<HashNode> Next = std::make_unique<HashNode>();
       HashNode *NextPtr = Next.get();
       NextPtr->Hash = StableHash;
-      Current->Successors.emplace(StableHash, std::move(Next));
+      Current->Successors.try_emplace(StableHash, std::move(Next));
       Current = NextPtr;
     } else
       Current = I->second.get();
@@ -106,7 +106,7 @@ void OutlinedHashTree::merge(const OutlinedHashTree *Tree) {
         auto NextDst = std::make_unique<HashNode>();
         NextDstNode = NextDst.get();
         NextDstNode->Hash = Hash;
-        DstNode->Successors.emplace(Hash, std::move(NextDst));
+        DstNode->Successors.try_emplace(Hash, std::move(NextDst));
       } else
         NextDstNode = I->second.get();
 

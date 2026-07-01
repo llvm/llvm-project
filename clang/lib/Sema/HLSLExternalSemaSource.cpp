@@ -15,12 +15,17 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/Type.h"
+#include "clang/Basic/AddressSpaces.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaHLSL.h"
+#include "clang/Sema/TemplateDeduction.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 
 using namespace clang;
@@ -51,6 +56,7 @@ void HLSLExternalSemaSource::InitializeSema(Sema &S) {
   (void)HLSLNamespace->getCanonicalDecl()->decls_begin();
   defineTrivialHLSLTypes();
   defineHLSLTypesWithForwardDeclarations();
+  defineHLSLAtomicIntrinsics();
 
   // This adds a `using namespace hlsl` directive. In DXC, we don't put HLSL's
   // built in types inside a namespace, but we are planning to change that in
@@ -87,9 +93,8 @@ void HLSLExternalSemaSource::defineHLSLVectorAlias() {
   llvm::APInt Val(AST.getIntWidth(AST.IntTy), 4);
   TemplateArgument Default(AST, llvm::APSInt(std::move(Val)), AST.IntTy,
                            /*IsDefaulted=*/true);
-  SizeParam->setDefaultArgument(
-      AST, SemaPtr->getTrivialTemplateArgumentLoc(Default, AST.IntTy,
-                                                  SourceLocation(), SizeParam));
+  SizeParam->setDefaultArgument(AST, SemaPtr->getTrivialTemplateArgumentLoc(
+                                         Default, AST.IntTy, SourceLocation()));
   TemplateParams.emplace_back(SizeParam);
 
   auto *ParamList =
@@ -144,7 +149,7 @@ void HLSLExternalSemaSource::defineHLSLMatrixAlias() {
                             /*IsDefaulted=*/true);
   RowsParam->setDefaultArgument(
       AST, SemaPtr->getTrivialTemplateArgumentLoc(RDefault, AST.IntTy,
-                                                  SourceLocation(), RowsParam));
+                                                  SourceLocation()));
   TemplateParams.emplace_back(RowsParam);
 
   auto *ColsParam = NonTypeTemplateParmDecl::Create(
@@ -156,7 +161,7 @@ void HLSLExternalSemaSource::defineHLSLMatrixAlias() {
                             /*IsDefaulted=*/true);
   ColsParam->setDefaultArgument(
       AST, SemaPtr->getTrivialTemplateArgumentLoc(CDefault, AST.IntTy,
-                                                  SourceLocation(), ColsParam));
+                                                  SourceLocation()));
   TemplateParams.emplace_back(ColsParam);
 
   const unsigned MaxMatDim = SemaPtr->getLangOpts().MaxMatrixDimension;
@@ -240,6 +245,105 @@ static BuiltinTypeDeclBuilder setupBufferType(CXXRecordDecl *Decl, Sema &S,
       .addStaticInitializationFunctions(HasCounter);
 }
 
+/// Set up common members and attributes for sampler types
+static BuiltinTypeDeclBuilder setupSamplerType(CXXRecordDecl *Decl, Sema &S) {
+  return BuiltinTypeDeclBuilder(S, Decl)
+      .addSamplerHandle()
+      .addDefaultHandleConstructor()
+      .addCopyConstructor()
+      .addCopyAssignmentOperator()
+      .addStaticInitializationFunctions(false);
+}
+
+/// Set up common members and attributes for texture types
+static BuiltinTypeDeclBuilder setupTextureType(CXXRecordDecl *Decl, Sema &S,
+                                               ResourceClass RC, bool IsROV,
+                                               bool IsArray,
+                                               ResourceDimension Dim) {
+  return BuiltinTypeDeclBuilder(S, Decl)
+      .addTextureHandle(RC, IsROV, IsArray, Dim)
+      .addTextureLoadMethods(Dim, IsArray)
+      .addArraySubscriptOperators(Dim, IsArray)
+      .addMipsMember(Dim)
+      .addDefaultHandleConstructor()
+      .addCopyConstructor()
+      .addCopyAssignmentOperator()
+      .addStaticInitializationFunctions(false)
+      .addSampleMethods(Dim, IsArray)
+      .addSampleBiasMethods(Dim, IsArray)
+      .addSampleGradMethods(Dim, IsArray)
+      .addSampleLevelMethods(Dim, IsArray)
+      .addSampleCmpMethods(Dim, IsArray)
+      .addSampleCmpLevelZeroMethods(Dim, IsArray)
+      .addCalculateLodMethods(Dim)
+      .addGetDimensionsMethods(Dim)
+      .addGatherMethods(Dim, IsArray)
+      .addGatherCmpMethods(Dim, IsArray);
+}
+
+// Add a partial specialization for a template. The `TextureTemplate` is
+// `Texture<element_type>`, and it will be specialized for vectors:
+// `Texture<vector<element_type, element_count>>`.
+static ClassTemplatePartialSpecializationDecl *
+addVectorTexturePartialSpecialization(Sema &S, NamespaceDecl *HLSLNamespace,
+                                      ClassTemplateDecl *TextureTemplate) {
+  ASTContext &AST = S.getASTContext();
+
+  // Create the template parameters: element_type and element_count.
+  auto *ElementType = TemplateTypeParmDecl::Create(
+      AST, HLSLNamespace, SourceLocation(), SourceLocation(), 0, 0,
+      &AST.Idents.get("element_type"), false, false);
+  auto *ElementCount = NonTypeTemplateParmDecl::Create(
+      AST, HLSLNamespace, SourceLocation(), SourceLocation(), 0, 1,
+      &AST.Idents.get("element_count"), AST.IntTy, false,
+      AST.getTrivialTypeSourceInfo(AST.IntTy));
+
+  auto *TemplateParams = TemplateParameterList::Create(
+      AST, SourceLocation(), SourceLocation(), {ElementType, ElementCount},
+      SourceLocation(), nullptr);
+
+  // Create the dependent vector type: vector<element_type, element_count>.
+  QualType VectorType = AST.getDependentSizedExtVectorType(
+      AST.getTemplateTypeParmType(0, 0, false, ElementType),
+      DeclRefExpr::Create(
+          AST, NestedNameSpecifierLoc(), SourceLocation(), ElementCount, false,
+          DeclarationNameInfo(ElementCount->getDeclName(), SourceLocation()),
+          AST.IntTy, VK_LValue),
+      SourceLocation());
+
+  // Create the partial specialization declaration.
+  QualType CanonInjectedTST =
+      AST.getCanonicalType(AST.getTemplateSpecializationType(
+          ElaboratedTypeKeyword::Class, TemplateName(TextureTemplate),
+          {TemplateArgument(VectorType)}, {}));
+
+  auto *PartialSpec = ClassTemplatePartialSpecializationDecl::Create(
+      AST, TagDecl::TagKind::Class, HLSLNamespace, SourceLocation(),
+      SourceLocation(), TemplateParams, TextureTemplate,
+      {TemplateArgument(VectorType)},
+      CanQualType::CreateUnsafe(CanonInjectedTST), nullptr);
+
+  // Set the template arguments as written.
+  TemplateArgument Arg(VectorType);
+  TemplateArgumentLoc ArgLoc =
+      S.getTrivialTemplateArgumentLoc(Arg, QualType(), SourceLocation());
+  TemplateArgumentListInfo ArgsInfo =
+      TemplateArgumentListInfo(SourceLocation(), SourceLocation());
+  ArgsInfo.addArgument(ArgLoc);
+  PartialSpec->setTemplateArgsAsWritten(
+      ASTTemplateArgumentListInfo::Create(AST, ArgsInfo));
+
+  PartialSpec->setImplicit(true);
+  PartialSpec->setLexicalDeclContext(HLSLNamespace);
+  PartialSpec->setHasExternalLexicalStorage();
+
+  // Add the partial specialization to the namespace and the class template.
+  HLSLNamespace->addDecl(PartialSpec);
+  TextureTemplate->AddPartialSpecialization(PartialSpec, nullptr);
+
+  return PartialSpec;
+}
+
 // This function is responsible for constructing the constraint expression for
 // this concept:
 // template<typename T> concept is_typed_resource_element_compatible =
@@ -263,6 +367,32 @@ static Expr *constructTypedBufferConstraintExpr(Sema &S, SourceLocation NameLoc,
       {TTypeSourceInfo}, NameLoc, true);
 
   return TypedResExpr;
+}
+
+// This function is responsible for constructing the constraint expression for
+// this concept:
+// template<typename T> concept is_constant_buffer_element_compatible =
+//     std::is_class_v<T> && !__is_intangible(T);
+static Expr *constructConstantBufferConstraintExpr(Sema &S,
+                                                   SourceLocation NameLoc,
+                                                   TemplateTypeParmDecl *T) {
+  ASTContext &Context = S.getASTContext();
+
+  // Obtain the QualType for 'bool'
+  QualType BoolTy = Context.BoolTy;
+
+  // Create a QualType that points to this TemplateTypeParmDecl
+  QualType TType = Context.getTypeDeclType(T);
+
+  // Create a TypeSourceInfo for the template type parameter 'T'
+  TypeSourceInfo *TTypeSourceInfo =
+      Context.getTrivialTypeSourceInfo(TType, NameLoc);
+
+  TypeTraitExpr *ResExpr = TypeTraitExpr::Create(
+      Context, BoolTy, NameLoc, UTT_IsConstantBufferElementCompatible,
+      {TTypeSourceInfo}, NameLoc, true);
+
+  return ResExpr;
 }
 
 // This function is responsible for constructing the constraint expression for
@@ -315,8 +445,10 @@ static Expr *constructStructuredBufferConstraintExpr(Sema &S,
   return CombinedExpr;
 }
 
+enum class HLSLBufferType { Typed, Structured, Constant };
+
 static ConceptDecl *constructBufferConceptDecl(Sema &S, NamespaceDecl *NSD,
-                                               bool isTypedBuffer) {
+                                               HLSLBufferType BT) {
   ASTContext &Context = S.getASTContext();
   DeclContext *DC = NSD->getDeclContext();
   SourceLocation DeclLoc = SourceLocation();
@@ -340,14 +472,22 @@ static ConceptDecl *constructBufferConceptDecl(Sema &S, NamespaceDecl *NSD,
   DeclarationName DeclName;
   Expr *ConstraintExpr = nullptr;
 
-  if (isTypedBuffer) {
+  switch (BT) {
+  case HLSLBufferType::Typed:
     DeclName = DeclarationName(
         &Context.Idents.get("__is_typed_resource_element_compatible"));
     ConstraintExpr = constructTypedBufferConstraintExpr(S, DeclLoc, T);
-  } else {
+    break;
+  case HLSLBufferType::Structured:
     DeclName = DeclarationName(
         &Context.Idents.get("__is_structured_resource_element_compatible"));
     ConstraintExpr = constructStructuredBufferConstraintExpr(S, DeclLoc, T);
+    break;
+  case HLSLBufferType::Constant:
+    DeclName = DeclarationName(
+        &Context.Idents.get("__is_constant_buffer_element_compatible"));
+    ConstraintExpr = constructConstantBufferConstraintExpr(S, DeclLoc, T);
+    break;
   }
 
   // Create a ConceptDecl
@@ -365,11 +505,25 @@ static ConceptDecl *constructBufferConceptDecl(Sema &S, NamespaceDecl *NSD,
 }
 
 void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
+  ASTContext &AST = SemaPtr->getASTContext();
   CXXRecordDecl *Decl;
   ConceptDecl *TypedBufferConcept = constructBufferConceptDecl(
-      *SemaPtr, HLSLNamespace, /*isTypedBuffer*/ true);
+      *SemaPtr, HLSLNamespace, HLSLBufferType::Typed);
   ConceptDecl *StructuredBufferConcept = constructBufferConceptDecl(
-      *SemaPtr, HLSLNamespace, /*isTypedBuffer*/ false);
+      *SemaPtr, HLSLNamespace, HLSLBufferType::Structured);
+  ConceptDecl *ConstantBufferConcept = constructBufferConceptDecl(
+      *SemaPtr, HLSLNamespace, HLSLBufferType::Constant);
+
+  Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "ConstantBuffer")
+             .addSimpleTemplateParams({"element_type"}, ConstantBufferConcept)
+             .finalizeForwardDeclaration();
+
+  onCompletion(Decl, [this](CXXRecordDecl *Decl) {
+    setupBufferType(Decl, *SemaPtr, ResourceClass::CBuffer, /*IsROV=*/false,
+                    /*RawBuffer=*/false, /*HasCounter=*/false)
+        .addConstantBufferConversionToType()
+        .completeDefinition();
+  });
 
   Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "Buffer")
              .addSimpleTemplateParams({"element_type"}, TypedBufferConcept)
@@ -480,6 +634,7 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
     setupBufferType(Decl, *SemaPtr, ResourceClass::SRV, /*IsROV=*/false,
                     /*RawBuffer=*/true, /*HasCounter=*/false)
+        .addByteAddressBufferLoadMethods()
         .addGetDimensionsMethodForBuffer()
         .completeDefinition();
   });
@@ -488,6 +643,8 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
     setupBufferType(Decl, *SemaPtr, ResourceClass::UAV, /*IsROV=*/false,
                     /*RawBuffer=*/true, /*HasCounter=*/false)
+        .addByteAddressBufferLoadMethods()
+        .addByteAddressBufferStoreMethods()
         .addGetDimensionsMethodForBuffer()
         .completeDefinition();
   });
@@ -500,6 +657,132 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
         .addGetDimensionsMethodForBuffer()
         .completeDefinition();
   });
+
+  Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "SamplerState")
+             .finalizeForwardDeclaration();
+  onCompletion(Decl, [this](CXXRecordDecl *Decl) {
+    setupSamplerType(Decl, *SemaPtr).completeDefinition();
+  });
+
+  Decl =
+      BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "SamplerComparisonState")
+          .finalizeForwardDeclaration();
+  onCompletion(Decl, [this](CXXRecordDecl *Decl) {
+    setupSamplerType(Decl, *SemaPtr).completeDefinition();
+  });
+
+  QualType Float4Ty = AST.getExtVectorType(AST.FloatTy, 4);
+  Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "Texture2D")
+             .addSimpleTemplateParams({"element_type"}, {Float4Ty},
+                                      TypedBufferConcept)
+             .finalizeForwardDeclaration();
+
+  onCompletion(Decl, [this](CXXRecordDecl *Decl) {
+    setupTextureType(Decl, *SemaPtr, ResourceClass::SRV, /*IsROV=*/false,
+                     /*IsArray=*/false, ResourceDimension::Dim2D)
+        .completeDefinition();
+  });
+
+  auto *PartialSpec = addVectorTexturePartialSpecialization(
+      *SemaPtr, HLSLNamespace, Decl->getDescribedClassTemplate());
+  onCompletion(PartialSpec, [this](CXXRecordDecl *Decl) {
+    setupTextureType(Decl, *SemaPtr, ResourceClass::SRV, /*IsROV=*/false,
+                     /*IsArray=*/false, ResourceDimension::Dim2D)
+        .completeDefinition();
+  });
+
+  // Texture2DArray — same as Texture2D but IsArray=true
+  Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "Texture2DArray")
+             .addSimpleTemplateParams({"element_type"}, {Float4Ty},
+                                      TypedBufferConcept)
+             .finalizeForwardDeclaration();
+
+  onCompletion(Decl, [this](CXXRecordDecl *Decl) {
+    setupTextureType(Decl, *SemaPtr, ResourceClass::SRV, /*IsROV=*/false,
+                     /*IsArray=*/true, ResourceDimension::Dim2D)
+        .completeDefinition();
+  });
+
+  auto *PartialSpec2DA = addVectorTexturePartialSpecialization(
+      *SemaPtr, HLSLNamespace, Decl->getDescribedClassTemplate());
+  onCompletion(PartialSpec2DA, [this](CXXRecordDecl *Decl) {
+    setupTextureType(Decl, *SemaPtr, ResourceClass::SRV, /*IsROV=*/false,
+                     /*IsArray=*/true, ResourceDimension::Dim2D)
+        .completeDefinition();
+  });
+}
+
+// Build a single overload of an HLSL atomic intrinsic in the hlsl namespace.
+// `dest` is an address-space-qualified reference; `original_value` (when
+// present) is a plain reference. The synthesized FunctionDecl aliases the
+// underlying clang builtin via BuiltinAliasAttr.
+static void buildAtomicOverload(Sema &S, NamespaceDecl *NS, StringRef FuncName,
+                                StringRef BuiltinName, QualType ElemTy,
+                                LangAS DestAS, bool ThreeArg) {
+  ASTContext &AST = S.getASTContext();
+
+  QualType DestTy =
+      AST.getLValueReferenceType(AST.getAddrSpaceQualType(ElemTy, DestAS));
+  QualType OrigRefTy = AST.getLValueReferenceType(ElemTy);
+
+  SmallVector<QualType, 3> ParamTypes;
+  ParamTypes.push_back(DestTy);
+  ParamTypes.push_back(ElemTy);
+  if (ThreeArg)
+    ParamTypes.push_back(OrigRefTy);
+
+  FunctionProtoType::ExtProtoInfo EPI;
+  QualType FuncTy = AST.getFunctionType(AST.VoidTy, ParamTypes, EPI);
+  auto *TSInfo = AST.getTrivialTypeSourceInfo(FuncTy, SourceLocation());
+
+  IdentifierInfo &FuncII = AST.Idents.get(FuncName, tok::TokenKind::identifier);
+  DeclarationName FuncDeclName(&FuncII);
+
+  FunctionDecl *FD = FunctionDecl::Create(
+      AST, NS, SourceLocation(), SourceLocation(), FuncDeclName, FuncTy, TSInfo,
+      SC_Extern, /*UsesFPIntrin=*/false, /*isInlineSpecified=*/false,
+      /*hasWrittenPrototype=*/true);
+
+  constexpr const char *ParamNames[] = {"dest", "value", "original_value"};
+  SmallVector<ParmVarDecl *, 3> ParmDecls;
+  unsigned I = 0;
+  for (auto [ParamType, ParamName] : llvm::zip(ParamTypes, ParamNames)) {
+    IdentifierInfo &PII = AST.Idents.get(ParamName, tok::TokenKind::identifier);
+    ParmVarDecl *Parm = ParmVarDecl::Create(
+        AST, FD, SourceLocation(), SourceLocation(), &PII, ParamType,
+        AST.getTrivialTypeSourceInfo(ParamType, SourceLocation()), SC_None,
+        nullptr);
+    Parm->setScopeInfo(0, I++);
+    ParmDecls.push_back(Parm);
+  }
+  FD->setParams(ParmDecls);
+
+  IdentifierInfo &BuiltinII =
+      S.getPreprocessor().getIdentifierTable().get(BuiltinName);
+  FD->addAttr(BuiltinAliasAttr::CreateImplicit(AST, &BuiltinII));
+  FD->setImplicit();
+  NS->addDecl(FD);
+}
+
+// Synthesize the InterlockedAdd overload set: {int, uint, int64_t, uint64_t}
+// x {groupshared, device} x {2-arg, 3-arg}.
+static void defineHLSLInterlockedAdd(Sema &S, NamespaceDecl *NS) {
+  ASTContext &AST = S.getASTContext();
+  // HLSL: int64_t == long, uint64_t == unsigned long (see hlsl_basic_types.h).
+  QualType Elems[] = {AST.IntTy, AST.UnsignedIntTy, AST.LongTy,
+                      AST.UnsignedLongTy};
+  LangAS AddrSpaces[] = {LangAS::hlsl_groupshared, LangAS::hlsl_device};
+
+  for (QualType ElemTy : Elems)
+    for (LangAS AS : AddrSpaces)
+      for (bool ThreeArg : {false, true})
+        buildAtomicOverload(S, NS, "InterlockedAdd",
+                            "__builtin_hlsl_interlocked_add", ElemTy, AS,
+                            ThreeArg);
+}
+
+void HLSLExternalSemaSource::defineHLSLAtomicIntrinsics() {
+  defineHLSLInterlockedAdd(*SemaPtr, HLSLNamespace);
 }
 
 void HLSLExternalSemaSource::onCompletion(CXXRecordDecl *Record,
@@ -515,11 +798,35 @@ void HLSLExternalSemaSource::CompleteType(TagDecl *Tag) {
 
   // If this is a specialization, we need to get the underlying templated
   // declaration and complete that.
-  if (auto TDecl = dyn_cast<ClassTemplateSpecializationDecl>(Record))
-    Record = TDecl->getSpecializedTemplate()->getTemplatedDecl();
+  if (auto TDecl = dyn_cast<ClassTemplateSpecializationDecl>(Record)) {
+    if (!isa<ClassTemplatePartialSpecializationDecl>(TDecl)) {
+      ClassTemplateDecl *Template = TDecl->getSpecializedTemplate();
+      llvm::SmallVector<ClassTemplatePartialSpecializationDecl *, 4> Partials;
+      Template->getPartialSpecializations(Partials);
+      ClassTemplatePartialSpecializationDecl *MatchedPartial = nullptr;
+      for (auto *Partial : Partials) {
+        sema::TemplateDeductionInfo Info(TDecl->getLocation());
+        if (SemaPtr->DeduceTemplateArguments(Partial, TDecl->getTemplateArgs(),
+                                             Info) ==
+            TemplateDeductionResult::Success) {
+          MatchedPartial = Partial;
+          break;
+        }
+      }
+      if (MatchedPartial)
+        Record = MatchedPartial;
+      else
+        Record = Template->getTemplatedDecl();
+    }
+  }
   Record = Record->getCanonicalDecl();
   auto It = Completions.find(Record);
   if (It == Completions.end())
     return;
-  It->second(Record);
+  // Move out the callback and erase before invoking it: the callback can
+  // re-enter CompleteType and mutate Completions, which invalidates It under
+  // backward-shift deletion.
+  CompletionFunction Fn = std::move(It->second);
+  Completions.erase(It);
+  Fn(Record);
 }

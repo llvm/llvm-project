@@ -43,6 +43,7 @@ public:
     bool HasDynamicallySizedStack = false;
     bool HasRecursion = false;
     bool HasIndirectCall = false;
+    bool HasNonChainIndirectCall = false;
     SmallVector<const Function *, 16> Callees;
   };
 

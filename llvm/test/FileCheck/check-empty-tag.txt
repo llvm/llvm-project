@@ -31,6 +31,18 @@ CHECK3B: found non-empty check string for empty check with prefix 'CHECK3A:'
 CHECK4A-EMPTY:
 CHECK4B: found 'CHECK4A-EMPTY' without previous 'CHECK4A: line
 
+; CHECK-EMPTY at EOF without trailing newline cannot be the first check.
+; RUN: printf "# CHECK-EMPTY:" > %t.no-newline-fail.chk
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck --allow-empty --input-file=/dev/null %t.no-newline-fail.chk 2>&1 \
+; RUN: | FileCheck %s --check-prefix=CHECK4C
+CHECK4C: found 'CHECK-EMPTY' without previous 'CHECK: line
+
+; CHECK-EMPTY at EOF without trailing newline still works after a prior check.
+; RUN: printf "foo\n\n" > %t.no-newline-success.in
+; RUN: printf "CHECK: foo\nCHECK-EMPTY:" > %t.no-newline-success.chk
+; RUN: FileCheck --input-file=%t.no-newline-success.in %t.no-newline-success.chk
+
 ; CHECK-EMPTY-NOT and CHECK-NOT-EMPTY rejected
 ; RUN: %ProtectFileCheckOutput \
 ; RUN: not FileCheck %s --input-file %s --check-prefixes=CHECK5A 2>&1 \

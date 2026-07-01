@@ -42,9 +42,10 @@
 ; CHECK-MATRIX-NEXT: Running analysis: TargetIRAnalysis
 ; CHECK-CORO-NEXT: Running pass: CoroConditionalWrapper
 ; CHECK-ALLOCTOKEN-NEXT: Running pass: AllocTokenPass
+; CHECK-CORO-NEXT: Running pass: LowerCommentStringPass
 ; CHECK-PRE-LINK: Running pass: CanonicalizeAliasesPass
 ; CHECK-PRE-LINK-NEXT: Running pass: NameAnonGlobalPass
-; CHECK-THINLTO: Running pass: LowerTypeTestsPass
+; CHECK-THINLTO: Running pass: DropTypeTestsPass
 ; CHECK-THINLTO-NEXT: Running pass: CoroConditionalWrapper
 ; CHECK-THINLTO-NEXT: Running pass: AllocTokenPass
 ; CHECK-THINLTO-NEXT: Running analysis: InnerAnalysisManagerProxy
@@ -54,7 +55,7 @@
 ; CHECK-LTO-NEXT: Running pass: WholeProgramDevirtPass
 ; CHECK-LTO-NEXT: Running analysis: InnerAnalysisManagerProxy
 ; CHECK-LTO-NEXT: Running pass: LowerTypeTestsPass
-; CHECK-LTO-NEXT: Running pass: LowerTypeTestsPass
+; CHECK-LTO-NEXT: Running pass: DropTypeTestsPass
 ; CHECK-LTO-NEXT: CoroConditionalWrapper
 ; CHECK-LTO-NEXT: Running pass: AllocTokenPass
 ; CHECK-CORO-NEXT: Running pass: AnnotationRemarksPass

@@ -1,4 +1,4 @@
-//===- ExpandModularHeadersPPCallbacks.h - clang-tidy -----------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -88,11 +88,11 @@ ExpandModularHeadersPPCallbacks::ExpandModularHeadersPPCallbacks(
   HeaderInfo = std::make_unique<HeaderSearch>(HSOpts, Sources, Diags, LangOpts,
                                               &Compiler.getTarget());
 
-  PP = std::make_unique<clang::Preprocessor>(Compiler.getPreprocessorOpts(),
-                                             Diags, LangOpts, Sources,
-                                             *HeaderInfo, ModuleLoader,
-                                             /*IILookup=*/nullptr,
-                                             /*OwnsHeaderSearch=*/false);
+  PP = std::make_unique<Preprocessor>(Compiler.getPreprocessorOpts(), Diags,
+                                      LangOpts, Sources, *HeaderInfo,
+                                      ModuleLoader,
+                                      /*IILookup=*/nullptr,
+                                      /*OwnsHeaderSearch=*/false);
   PP->Initialize(Compiler.getTarget(), Compiler.getAuxTarget());
   InitializePreprocessor(*PP, Compiler.getPreprocessorOpts(),
                          Compiler.getPCHContainerReader(),
@@ -129,13 +129,11 @@ void ExpandModularHeadersPPCallbacks::handleModuleFile(
 
 void ExpandModularHeadersPPCallbacks::parseToLocation(SourceLocation Loc) {
   // Load all source locations present in the external sources.
-  for (unsigned I = 0, N = Sources.loaded_sloc_entry_size(); I != N; ++I) {
+  for (unsigned I = 0, N = Sources.loaded_sloc_entry_size(); I != N; ++I)
     Sources.getLoadedSLocEntry(I, nullptr);
-  }
   // Record contents of files we are interested in and add to the FileSystem.
-  for (auto It = Sources.fileinfo_begin(); It != Sources.fileinfo_end(); ++It) {
+  for (auto It = Sources.fileinfo_begin(); It != Sources.fileinfo_end(); ++It)
     Recorder->recordFileContent(It->getFirst(), *It->getSecond(), *InMemoryFs);
-  }
   Recorder->checkAllFilesRecorded();
 
   if (!StartedLexing) {
@@ -166,7 +164,7 @@ void ExpandModularHeadersPPCallbacks::InclusionDirective(
   if (ModuleImported) {
     serialization::ModuleFile *MF =
         Compiler.getASTReader()->getModuleManager().lookup(
-            *SuggestedModule->getASTFile());
+            *SuggestedModule->getASTFileKey());
     handleModuleFile(MF);
   }
   parseToLocation(DirectiveLoc);

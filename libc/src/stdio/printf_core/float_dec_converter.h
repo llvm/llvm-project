@@ -29,7 +29,6 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace printf_core {
 
-using StorageType = fputil::FPBits<long double>::StorageType;
 using DecimalString = IntegerToString<intmax_t>;
 using ExponentString =
     IntegerToString<intmax_t, radix::Dec::WithWidth<2>::WithSign>;
@@ -47,10 +46,17 @@ constexpr uint32_t MAX_BLOCK = 999999999;
 
 // constexpr size_t BLOCK_SIZE = 18;
 // constexpr uint32_t MAX_BLOCK = 999999999999999999;
-constexpr char DECIMAL_POINT = '.';
 
 LIBC_INLINE RoundDirection get_round_direction(int last_digit, bool truncated,
                                                Sign sign) {
+#ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+  if (last_digit != 5) {
+    return last_digit > 5 ? RoundDirection::Up : RoundDirection::Down;
+  } else {
+    return !truncated ? RoundDirection::Even : RoundDirection::Up;
+  }
+#endif
+
   switch (fputil::quick_get_round()) {
   case FE_TONEAREST:
     // Round to nearest, if it's exactly halfway then round to even.
@@ -172,6 +178,7 @@ template <WriteMode write_mode> class FloatWriter {
 
   LIBC_INLINE int flush_buffer(bool round_up_max_blocks = false) {
     const char MAX_BLOCK_DIGIT = (round_up_max_blocks ? '0' : '9');
+    constexpr char DECIMAL_POINT = '.';
 
     // Write the most recent buffered block, and mark has_written
     if (!has_written) {
@@ -243,7 +250,9 @@ template <WriteMode write_mode> class FloatWriter {
   // -exponent will never overflow because all long double types we support
   // have at most 15 bits of mantissa and the C standard defines an int as
   // being at least 16 bits.
+#ifndef LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
   static_assert(fputil::FPBits<long double>::EXP_LEN < (sizeof(int) * 8));
+#endif // LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
 
 public:
   LIBC_INLINE FloatWriter(Writer<write_mode> *init_writer,
@@ -362,6 +371,8 @@ public:
       // has_carry should only be true here if every previous digit is 9, which
       // implies that the number has never been written.
       if (has_carry /* && !has_written */) {
+        constexpr char DECIMAL_POINT = '.';
+
         if (has_exp) { // This is in %e style
           // Since this is exponential notation, we don't write any more digits
           // but we do increment the exponent.
@@ -598,6 +609,12 @@ template <typename T, WriteMode write_mode,
 LIBC_INLINE int convert_float_dec_exp_typed(Writer<write_mode> *writer,
                                             const FormatSection &to_conv,
                                             fputil::FPBits<T> float_bits) {
+#ifdef LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
+  using StorageType = UInt128;
+#else
+  using StorageType = fputil::FPBits<long double>::StorageType;
+#endif // LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
+
   // signed because later we use -FRACTION_LEN
   constexpr int32_t FRACTION_LEN = fputil::FPBits<T>::FRACTION_LEN;
   int exponent = float_bits.get_explicit_exponent();
@@ -760,6 +777,12 @@ template <typename T, WriteMode write_mode,
 LIBC_INLINE int convert_float_dec_auto_typed(Writer<write_mode> *writer,
                                              const FormatSection &to_conv,
                                              fputil::FPBits<T> float_bits) {
+#ifdef LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
+  using StorageType = UInt128;
+#else
+  using StorageType = fputil::FPBits<long double>::StorageType;
+#endif // LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
+
   // signed because later we use -FRACTION_LEN
   constexpr int32_t FRACTION_LEN = fputil::FPBits<T>::FRACTION_LEN;
   int exponent = float_bits.get_explicit_exponent();
@@ -1127,6 +1150,7 @@ LIBC_INLINE int convert_float_dec_auto_typed(Writer<write_mode> *writer,
 template <WriteMode write_mode>
 LIBC_INLINE int convert_float_decimal(Writer<write_mode> *writer,
                                       const FormatSection &to_conv) {
+#ifndef LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
   if (to_conv.length_modifier == LengthModifier::L) {
     fputil::FPBits<long double>::StorageType float_raw = to_conv.conv_val_raw;
     fputil::FPBits<long double> float_bits(float_raw);
@@ -1134,7 +1158,9 @@ LIBC_INLINE int convert_float_decimal(Writer<write_mode> *writer,
       return convert_float_decimal_typed<long double>(writer, to_conv,
                                                       float_bits);
     }
-  } else {
+  } else
+#endif // !LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
+  {
     fputil::FPBits<double>::StorageType float_raw =
         static_cast<fputil::FPBits<double>::StorageType>(to_conv.conv_val_raw);
     fputil::FPBits<double> float_bits(float_raw);
@@ -1149,6 +1175,7 @@ LIBC_INLINE int convert_float_decimal(Writer<write_mode> *writer,
 template <WriteMode write_mode>
 LIBC_INLINE int convert_float_dec_exp(Writer<write_mode> *writer,
                                       const FormatSection &to_conv) {
+#ifndef LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
   if (to_conv.length_modifier == LengthModifier::L) {
     fputil::FPBits<long double>::StorageType float_raw = to_conv.conv_val_raw;
     fputil::FPBits<long double> float_bits(float_raw);
@@ -1156,7 +1183,9 @@ LIBC_INLINE int convert_float_dec_exp(Writer<write_mode> *writer,
       return convert_float_dec_exp_typed<long double>(writer, to_conv,
                                                       float_bits);
     }
-  } else {
+  } else
+#endif // !LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
+  {
     fputil::FPBits<double>::StorageType float_raw =
         static_cast<fputil::FPBits<double>::StorageType>(to_conv.conv_val_raw);
     fputil::FPBits<double> float_bits(float_raw);
@@ -1171,6 +1200,7 @@ LIBC_INLINE int convert_float_dec_exp(Writer<write_mode> *writer,
 template <WriteMode write_mode>
 LIBC_INLINE int convert_float_dec_auto(Writer<write_mode> *writer,
                                        const FormatSection &to_conv) {
+#ifndef LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
   if (to_conv.length_modifier == LengthModifier::L) {
     fputil::FPBits<long double>::StorageType float_raw = to_conv.conv_val_raw;
     fputil::FPBits<long double> float_bits(float_raw);
@@ -1178,7 +1208,9 @@ LIBC_INLINE int convert_float_dec_auto(Writer<write_mode> *writer,
       return convert_float_dec_auto_typed<long double>(writer, to_conv,
                                                        float_bits);
     }
-  } else {
+  } else
+#endif // !LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
+  {
     fputil::FPBits<double>::StorageType float_raw =
         static_cast<fputil::FPBits<double>::StorageType>(to_conv.conv_val_raw);
     fputil::FPBits<double> float_bits(float_raw);

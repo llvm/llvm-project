@@ -1,0 +1,268 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
+load("@rules_cc//cc:defs.bzl", "cc_library")
+load("//:vars.bzl", "LLVM_VERSION_MAJOR", "LLVM_VERSION_MINOR", "LLVM_VERSION_PATCH", "PACKAGE_VERSION")
+
+# Note: `parse_headers` is intentionally not enabled here.  Many flang public
+# headers (e.g. flang/Runtime/*.h, flang/Decimal/*.h) intentionally rely on
+# preprocessor macros defined in flang/Common/api-attrs.h being in scope at
+# inclusion time and are not designed to be syntax-checked in isolation.
+package(
+    default_visibility = ["//visibility:public"],
+    features = ["layering_check"],
+)
+
+licenses(["notice"])
+
+exports_files(["LICENSE.TXT"])
+
+expand_template(
+    name = "config_h_gen",
+    out = "include/flang/Config/config.h",
+    substitutions = {
+        "${FLANG_DEFAULT_LINKER}": "",
+        "${FLANG_VERSION}": PACKAGE_VERSION,
+    },
+    template = "include/flang/Config/config.h.cmake",
+)
+
+expand_template(
+    name = "version_inc_gen",
+    out = "include/flang/Version.inc",
+    substitutions = {
+        "@FLANG_VERSION@": PACKAGE_VERSION,
+        "@FLANG_VERSION_MAJOR@": LLVM_VERSION_MAJOR,
+        "@FLANG_VERSION_MINOR@": LLVM_VERSION_MINOR,
+        "@FLANG_VERSION_PATCHLEVEL@": LLVM_VERSION_PATCH,
+    },
+    template = "include/flang/Version.inc.in",
+)
+
+cc_library(
+    name = "config",
+    hdrs = [
+        "include/flang/Config/config.h",
+        "include/flang/Version.inc",
+    ],
+    includes = ["include"],
+)
+
+# Common headers used across nearly every flang library.  Mirrors the implicit
+# header-only "flang/Common" component in the source tree (there is no CMake
+# library for it because the headers are template-heavy and consumed in-place).
+cc_library(
+    name = "CommonHeaders",
+    hdrs = glob([
+        "include/flang/Common/**/*.h",
+    ]) + ["include/flang/ISO_Fortran_binding.h"],
+    includes = ["include"],
+    deps = [
+        ":config",
+        "//llvm:Support",
+    ],
+)
+
+# Header-only target for runtime headers used by both the compiler (FIRBuilder
+# refers to them when generating runtime calls) and the runtime library itself.
+#
+# CUDA-specific runtime headers are excluded because they #include the CUDA
+# SDK's cuda_runtime.h, which we don't model in Bazel.
+cc_library(
+    name = "RuntimeHeaders",
+    hdrs = glob(
+        ["include/flang/Runtime/**/*.h"],
+        exclude = [
+            "include/flang/Runtime/CUDA/allocator.h",
+            "include/flang/Runtime/CUDA/stream.h",
+        ],
+    ),
+    includes = ["include"],
+    textual_hdrs = glob(["include/flang/Runtime/**/*.inc"]),
+    deps = [
+        ":CommonHeaders",
+    ],
+)
+
+# Public Decimal headers consumed by FortranDecimal (lib/Decimal) and by
+# downstream libraries that perform decimal/binary conversions.
+cc_library(
+    name = "DecimalHeaders",
+    hdrs = glob(["include/flang/Decimal/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":CommonHeaders",
+        ":RuntimeHeaders",
+    ],
+)
+
+# Public Support headers consumed by FortranSupport and most downstream
+# flang libraries.
+cc_library(
+    name = "SupportHeaders",
+    hdrs = glob([
+        "include/flang/Support/*.h",
+        "include/flang/Support/*.def",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":CommonHeaders",
+        "//llvm:Support",
+        "//llvm:TargetParser",
+    ],
+)
+
+# Public Parser headers.
+cc_library(
+    name = "ParserHeaders",
+    hdrs = glob(["include/flang/Parser/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":CommonHeaders",
+        ":SupportHeaders",
+        "//llvm:FrontendOpenACC",
+        "//llvm:FrontendOpenMP",
+        "//llvm:Support",
+    ],
+)
+
+# Public Evaluate headers.
+cc_library(
+    name = "EvaluateHeaders",
+    hdrs = glob([
+        "include/flang/Evaluate/*.h",
+        "include/flang/Evaluate/*.inc",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":CommonHeaders",
+        ":ParserHeaders",
+        ":SemanticsHeaders",
+        ":SupportHeaders",
+        "//llvm:Support",
+    ],
+)
+
+# Public Semantics headers.
+#
+# Note: EvaluateHeaders and SemanticsHeaders include each other (see e.g.
+# Evaluate/call.h pulling in Semantics/attr.h, and Semantics/expression.h pulling
+# in Evaluate/expression.h).  Reflecting that cycle, EvaluateHeaders depends on
+# SemanticsHeaders, so SemanticsHeaders here cannot also depend on
+# EvaluateHeaders.  We instead recreate the surface area Semantics headers
+# require directly (Parser, Support, Common).
+cc_library(
+    name = "SemanticsHeaders",
+    hdrs = glob(["include/flang/Semantics/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":CommonHeaders",
+        ":ParserHeaders",
+        ":SupportHeaders",
+        "//llvm:FrontendOpenMP",
+        "//llvm:Support",
+    ],
+)
+
+# Public Lower headers.
+cc_library(
+    name = "LowerHeaders",
+    hdrs = glob([
+        "include/flang/Lower/**/*.h",
+        "include/flang/Lower/**/*.def",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":CommonHeaders",
+        ":EvaluateHeaders",
+        ":ParserHeaders",
+        ":SemanticsHeaders",
+        ":SupportHeaders",
+        "//flang/include/flang/Optimizer/Builder:BuilderHeaders",
+        "//flang/include/flang/Optimizer/Dialect:DialectHeaders",
+        "//flang/include/flang/Optimizer/Dialect/CUF:CUFHeaders",
+        "//flang/include/flang/Optimizer/Support:FIRSupportHeaders",
+        "//llvm:FrontendOpenACC",
+        "//llvm:FrontendOpenMP",
+        "//llvm:Support",
+        "//mlir:IR",
+        "//mlir:OpenACCDialect",
+        "//mlir:OpenMPDialect",
+    ],
+)
+
+# Public Frontend headers.
+cc_library(
+    name = "FrontendHeaders",
+    hdrs = glob([
+        "include/flang/Frontend/*.h",
+        "include/flang/Frontend/*.def",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":CommonHeaders",
+        ":LowerHeaders",
+        ":ParserHeaders",
+        ":SemanticsHeaders",
+        ":SupportHeaders",
+        "//clang:basic",
+        "//llvm:Option",
+        "//llvm:Plugins",
+        "//llvm:Support",
+        "//llvm:Target",
+        "//llvm:TargetParser",
+        "//mlir:IR",
+    ],
+)
+
+# Public FrontendTool headers.
+cc_library(
+    name = "FrontendToolHeaders",
+    hdrs = glob(["include/flang/FrontendTool/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":FrontendHeaders",
+        "//llvm:Support",
+    ],
+)
+
+# Public Tools headers (used by lib/Frontend and Optimizer).
+cc_library(
+    name = "ToolsHeaders",
+    hdrs = glob(["include/flang/Tools/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":CommonHeaders",
+        "//flang/include/flang/Optimizer/Dialect:DialectHeaders",
+        "//flang/include/flang/Optimizer/Passes:PassesHeaders",
+        "//llvm:Support",
+        "//mlir:IR",
+        "//mlir:Pass",
+    ],
+)
+
+# Public Utils headers.
+cc_library(
+    name = "UtilsHeaders",
+    hdrs = glob(["include/flang/Utils/*.h"]),
+    includes = ["include"],
+    deps = [
+        "//flang/include/flang/Optimizer/Dialect:DialectHeaders",
+        "//flang/include/flang/Optimizer/HLFIR:HLFIRHeaders",
+        "//llvm:FrontendOpenMP",
+        "//mlir:IR",
+        "//mlir:OpenMPDialect",
+    ],
+)
+
+# Public Testing headers (used by unit tests).
+cc_library(
+    name = "TestingHeaders",
+    hdrs = glob(["include/flang/Testing/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":CommonHeaders",
+    ],
+)

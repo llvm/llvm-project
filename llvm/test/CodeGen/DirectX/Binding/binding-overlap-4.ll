@@ -1,5 +1,5 @@
 ; Use llc for this test so that we don't abort after the first error.
-; RUN: not llc %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: not llc %s -disable-dxil-remove-unused-resources -o /dev/null 2>&1 | FileCheck %s
 
 ; Check multiple overlap errors.
 

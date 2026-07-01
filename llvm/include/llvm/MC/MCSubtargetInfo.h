@@ -34,19 +34,31 @@ class MCInst;
 
 /// Used to provide key value pairs for feature and CPU bit flags.
 struct SubtargetFeatureKV {
+private:
   const char *Key;                      ///< K-V key string
   const char *Desc;                     ///< Help descriptor
+
+public:
   unsigned Value;                       ///< K-V integer value
   FeatureBitArray Implies;              ///< K-V bit mask
 
+  constexpr SubtargetFeatureKV(const char *Key, const char *Desc,
+                               unsigned Value, FeatureBitArray Implies)
+      : Key(Key), Desc(Desc), Value(Value), Implies(Implies) {}
+
+  // Because of relative string offsets, this type is not copyable.
+  SubtargetFeatureKV(const SubtargetFeatureKV &) = delete;
+  SubtargetFeatureKV &operator=(const SubtargetFeatureKV &) = delete;
+
+  const char *key() const { return Key; }
+  const char *desc() const { return Desc; }
+
   /// Compare routine for std::lower_bound
-  bool operator<(StringRef S) const {
-    return StringRef(Key) < S;
-  }
+  bool operator<(StringRef S) const { return StringRef(key()) < S; }
 
   /// Compare routine for std::is_sorted.
   bool operator<(const SubtargetFeatureKV &Other) const {
-    return StringRef(Key) < StringRef(Other.Key);
+    return StringRef(key()) < StringRef(Other.key());
   }
 };
 
@@ -54,19 +66,33 @@ struct SubtargetFeatureKV {
 
 /// Used to provide key value pairs for feature and CPU bit flags.
 struct SubtargetSubTypeKV {
-  const char *Key;                      ///< K-V key string
-  FeatureBitArray Implies;              ///< K-V bit mask
-  FeatureBitArray TuneImplies;          ///< K-V bit mask
+private:
+  const char *Key; ///< K-V key string
   const MCSchedModel *SchedModel;
 
+public:
+  FeatureBitArray Implies;              ///< K-V bit mask
+  FeatureBitArray TuneImplies;          ///< K-V bit mask
+
+  constexpr SubtargetSubTypeKV(const char *Key, FeatureBitArray Implies,
+                               FeatureBitArray TuneImplies,
+                               const MCSchedModel *SchedModel)
+      : Key(Key), SchedModel(SchedModel), Implies(Implies),
+        TuneImplies(TuneImplies) {}
+
+  // Because of relative string offsets, this type is not copyable.
+  SubtargetSubTypeKV(const SubtargetSubTypeKV &) = delete;
+  SubtargetSubTypeKV &operator=(const SubtargetSubTypeKV &) = delete;
+
+  const char *key() const { return Key; }
+  const MCSchedModel *schedModel() const { return SchedModel; }
+
   /// Compare routine for std::lower_bound
-  bool operator<(StringRef S) const {
-    return StringRef(Key) < S;
-  }
+  bool operator<(StringRef S) const { return StringRef(key()) < S; }
 
   /// Compare routine for std::is_sorted.
   bool operator<(const SubtargetSubTypeKV &Other) const {
-    return StringRef(Key) < StringRef(Other.Key);
+    return StringRef(key()) < StringRef(Other.key());
   }
 };
 
@@ -137,27 +163,33 @@ public:
 
   /// Toggle a feature and return the re-computed feature bits.
   /// This version does not change the implied bits.
-  FeatureBitset ToggleFeature(uint64_t FB);
+  const FeatureBitset &ToggleFeature(uint64_t FB);
 
   /// Toggle a feature and return the re-computed feature bits.
   /// This version does not change the implied bits.
-  FeatureBitset ToggleFeature(const FeatureBitset& FB);
+  const FeatureBitset &ToggleFeature(const FeatureBitset &FB);
 
   /// Toggle a set of features and return the re-computed feature bits.
   /// This version will also change all implied bits.
-  FeatureBitset ToggleFeature(StringRef FS);
+  const FeatureBitset &ToggleFeature(StringRef FS);
 
   /// Apply a feature flag and return the re-computed feature bits, including
   /// all feature bits implied by the flag.
-  FeatureBitset ApplyFeatureFlag(StringRef FS);
+  const FeatureBitset &ApplyFeatureFlag(StringRef FS);
 
   /// Set/clear additional feature bits, including all other bits they imply.
-  FeatureBitset SetFeatureBitsTransitively(const FeatureBitset& FB);
-  FeatureBitset ClearFeatureBitsTransitively(const FeatureBitset &FB);
+  const FeatureBitset &SetFeatureBitsTransitively(const FeatureBitset &FB);
+  const FeatureBitset &ClearFeatureBitsTransitively(const FeatureBitset &FB);
 
   /// Check whether the subtarget features are enabled/disabled as per
   /// the provided string, ignoring all other features.
   bool checkFeatures(StringRef FS) const;
+
+  /// Check whether the current subtarget satisfies a target feature expression.
+  /// The expression uses feature names from the target's subtarget feature
+  /// table. Comma means AND, | means OR, comma has higher precedence than |,
+  /// and parentheses group expressions.
+  bool checkFeatureExpression(StringRef FeatureExpr) const;
 
   /// Get the machine model of a CPU.
   const MCSchedModel &getSchedModelForCPU(StringRef CPU) const;
@@ -230,7 +262,7 @@ public:
   /// Check whether the CPU string is valid.
   virtual bool isCPUStringValid(StringRef CPU) const {
     auto Found = llvm::lower_bound(ProcDesc, CPU);
-    return Found != ProcDesc.end() && StringRef(Found->Key) == CPU;
+    return Found != ProcDesc.end() && StringRef(Found->key()) == CPU;
   }
 
   /// Return processor descriptions.
@@ -244,7 +276,7 @@ public:
   }
 
   /// Return the list of processor features currently enabled.
-  std::vector<SubtargetFeatureKV> getEnabledProcessorFeatures() const;
+  std::vector<const SubtargetFeatureKV *> getEnabledProcessorFeatures() const;
 
   /// HwMode IDs are stored and accessed in a bit set format, enabling
   /// users to efficiently retrieve specific IDs, such as the RegInfo

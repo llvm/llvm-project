@@ -28,8 +28,6 @@ namespace llvm {
 
     bool useSoftFloat() const override;
 
-    bool softPromoteHalfType() const override { return true; }
-
     /// computeKnownBitsForTargetNode - Determine which of the bits specified
     /// in Mask are known to be either zero or one and return them in the
     /// KnownZero/KnownOne bitsets.
@@ -140,15 +138,18 @@ namespace llvm {
 
     SDValue LowerF128_LibCallArg(SDValue Chain, ArgListTy &Args, SDValue Arg,
                                  const SDLoc &DL, SelectionDAG &DAG) const;
-    SDValue LowerF128Op(SDValue Op, SelectionDAG &DAG,
-                        const char *LibFuncName,
+    SDValue LowerF128Op(SDValue Op, SelectionDAG &DAG, RTLIB::Libcall LibFunc,
                         unsigned numArgs) const;
     SDValue LowerF128Compare(SDValue LHS, SDValue RHS, unsigned &SPCC,
                              const SDLoc &DL, SelectionDAG &DAG) const;
 
+    SDValue LowerBSWAP(SDValue Op, SelectionDAG &DAG) const;
+
     SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG) const;
 
     SDValue PerformBITCASTCombine(SDNode *N, DAGCombinerInfo &DCI) const;
+    SDValue PerformBSWAPCombine(SDNode *N, DAGCombinerInfo &DCI) const;
+    SDValue PerformSTORECombine(SDNode *N, DAGCombinerInfo &DCI) const;
 
     SDValue bitcastConstantFPToInt(ConstantFPSDNode *C, const SDLoc &DL,
                                    SelectionDAG &DAG) const;
@@ -195,7 +196,8 @@ namespace llvm {
       return true;
     }
 
-    AtomicExpansionKind shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const override;
+    AtomicExpansionKind
+    shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const override;
 
     void ReplaceNodeResults(SDNode *N,
                             SmallVectorImpl<SDValue>& Results,

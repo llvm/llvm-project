@@ -51,7 +51,7 @@ public:
     HasStrictFP = true;
   }
 
-  bool setCPU(const std::string &Name) override {
+  bool setCPU(StringRef Name) override {
     if (!isValidCPUName(Name))
       return false;
     CPU = Name;
@@ -109,6 +109,10 @@ public:
 
   bool hasBitIntType() const override { return true; }
 
+  size_t getMaxBitIntWidth() const override {
+    return llvm::IntegerType::MAX_INT_BITS;
+  }
+
   bool hasBFloat16Type() const override { return true; }
 
   CallingConvCheckResult checkCallingConvention(CallingConv CC) const override;
@@ -158,15 +162,7 @@ public:
 
   bool
   checkCFBranchLabelSchemeSupported(const CFBranchLabelSchemeKind Scheme,
-                                    DiagnosticsEngine &Diags) const override {
-    switch (Scheme) {
-    case CFBranchLabelSchemeKind::Default:
-    case CFBranchLabelSchemeKind::Unlabeled:
-    case CFBranchLabelSchemeKind::FuncSig:
-      return true;
-    }
-    return TargetInfo::checkCFBranchLabelSchemeSupported(Scheme, Diags);
-  }
+                                    DiagnosticsEngine &Diags) const override;
 };
 class LLVM_LIBRARY_VISIBILITY RISCV32TargetInfo : public RISCVTargetInfo {
 public:
@@ -175,13 +171,13 @@ public:
     IntPtrType = SignedInt;
     PtrDiffType = SignedInt;
     SizeType = UnsignedInt;
-    resetDataLayout("e-m:e-p:32:32-i64:64-n32-S128");
+    resetDataLayout();
   }
 
   bool setABI(const std::string &Name) override {
     if (Name == "ilp32e") {
       ABI = Name;
-      resetDataLayout("e-m:e-p:32:32-i64:64-n32-S32");
+      resetDataLayout();
       return true;
     }
 
@@ -206,13 +202,13 @@ public:
       : RISCVTargetInfo(Triple, Opts) {
     LongWidth = LongAlign = PointerWidth = PointerAlign = 64;
     IntMaxType = Int64Type = SignedLong;
-    resetDataLayout("e-m:e-p:64:64-i64:64-i128:128-n32:64-S128");
+    resetDataLayout();
   }
 
   bool setABI(const std::string &Name) override {
     if (Name == "lp64e") {
       ABI = Name;
-      resetDataLayout("e-m:e-p:64:64-i64:64-i128:128-n32:64-S64");
+      resetDataLayout();
       return true;
     }
 

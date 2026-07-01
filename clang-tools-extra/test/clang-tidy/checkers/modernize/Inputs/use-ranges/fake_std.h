@@ -1,28 +1,9 @@
 #ifndef USE_RANGES_FAKE_STD_H
 #define USE_RANGES_FAKE_STD_H
 
+#include <vector>
+
 namespace std {
-
-template <typename T> class vector {
-public:
-  using iterator = T *;
-  using const_iterator = const T *;
-  using reverse_iterator = T *;
-  using reverse_const_iterator = const T *;
-
-  constexpr const_iterator begin() const;
-  constexpr const_iterator end() const;
-  constexpr const_iterator cbegin() const;
-  constexpr const_iterator cend() const;
-  constexpr iterator begin();
-  constexpr iterator end();
-  constexpr reverse_const_iterator rbegin() const;
-  constexpr reverse_const_iterator rend() const;
-  constexpr reverse_const_iterator crbegin() const;
-  constexpr reverse_const_iterator crend() const;
-  constexpr reverse_iterator rbegin();
-  constexpr reverse_iterator rend();
-};
 
 template <typename Container> constexpr auto begin(const Container &Cont) {
   return Cont.begin();
@@ -107,6 +88,29 @@ bool equal(InputIt1 first1, InputIt1 last1, InputIt2 first2, InputIt2 last2,
 
 template <class ForwardIt, class T>
 void iota(ForwardIt first, ForwardIt last, T value);
+
+template <class ForwardIt>
+ForwardIt unique(ForwardIt first, ForwardIt last);
+template <class ForwardIt, class BinaryPred>
+ForwardIt unique(ForwardIt first, ForwardIt last, BinaryPred pred) {
+  return first;
+}
+
+template <class ForwardIt, class T>
+ForwardIt remove(ForwardIt first, ForwardIt last, const T &value);
+template <class ForwardIt, class UnaryPred>
+ForwardIt remove_if(ForwardIt first, ForwardIt last, UnaryPred pred) {
+  return first;
+}
+
+template <class ForwardIt, class UnaryPred>
+ForwardIt partition(ForwardIt first, ForwardIt last, UnaryPred pred) {
+  return first;
+}
+template <class BidirIt, class UnaryPred>
+BidirIt stable_partition(BidirIt first, BidirIt last, UnaryPred pred) {
+  return first;
+}
 
 template <class ForwardIt>
 ForwardIt rotate(ForwardIt first, ForwardIt middle, ForwardIt last);

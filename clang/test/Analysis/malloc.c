@@ -1,5 +1,6 @@
 // RUN: %clang_analyze_cc1 -Wno-strict-prototypes -Wno-error=implicit-int -verify %s \
 // RUN:   -Wno-alloc-size \
+// RUN:   -Wno-stringop-overread \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=alpha.deadcode.UnreachableCode \
 // RUN:   -analyzer-checker=unix \
@@ -870,10 +871,21 @@ void doNotInvalidateWhenPassedToSystemCalls(char *s) {
   strlen(p);
   strcpy(p, s);
   strcpy(s, p);
+  // FIXME: We should stop analysis here, even if we emit no warnings, since
+  // overlapping buffers for strycpy is a fatal error.
   strcpy(p, p);
   memcpy(p, s, 1);
   memcpy(s, p, 1);
   memcpy(p, p, 1);
+} // expected-warning {{leak}}
+
+void overlappingMemcpyDoesNotSinkPath(char *s) {
+  char *p = malloc(12);
+  // FIXME: We should stop analysis here, even if we emit no warnings, since
+  // overlapping buffers for strycpy is a fatal error.
+  int a[4] = {0};
+  memcpy(a+2, a+1, 8);
+  (void)p;
 } // expected-warning {{leak}}
 
 // Treat source buffer contents as escaped.

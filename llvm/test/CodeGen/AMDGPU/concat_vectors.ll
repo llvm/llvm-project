@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn < %s | FileCheck -enable-var-scope --check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx600 < %s | FileCheck -enable-var-scope --check-prefix=GCN %s
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck -check-prefixes=GCN,VI %s
 
 ; GCN-LABEL: {{^}}test_concat_v1i32:
@@ -314,6 +314,6 @@ define amdgpu_kernel void @concat_vector_crash2(ptr addrspace(1) %out, ptr addrs
 define amdgpu_kernel void @build_vector_splat_concat_v8i16() {
 entry:
   store <8 x i16> zeroinitializer, ptr addrspace(3) poison, align 16
-  store <8 x i16> zeroinitializer, ptr addrspace(3) null, align 16
+  store <8 x i16> zeroinitializer, ptr addrspace(3) zeroinitializer, align 16
   ret void
 }

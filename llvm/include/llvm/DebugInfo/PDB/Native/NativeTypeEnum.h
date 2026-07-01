@@ -21,7 +21,7 @@ namespace pdb {
 
 class NativeTypeBuiltin;
 
-class NativeTypeEnum : public NativeRawSymbol {
+class LLVM_ABI NativeTypeEnum : public NativeRawSymbol {
 public:
   NativeTypeEnum(NativeSession &Session, SymIndexId Id, codeview::TypeIndex TI,
                  codeview::EnumRecord Record);

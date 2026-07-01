@@ -12,25 +12,30 @@ tablegen(LLVM NVPTXGenSubtargetInfo.inc -gen-subtarget)
 add_public_tablegen_target(NVPTXCommonTableGen)
 
 set(NVPTXCodeGen_sources
+  NVPTXAddressFolder.cpp
   NVPTXAliasAnalysis.cpp
   NVPTXAllocaHoisting.cpp
   NVPTXAsmPrinter.cpp
   NVPTXAssignValidGlobalNames.cpp
   NVPTXAtomicLower.cpp
   NVPTXCtorDtorLowering.cpp
+  NVPTXDwarfDebug.cpp
   NVPTXForwardParams.cpp
   NVPTXFrameLowering.cpp
   NVPTXGenericToNVVM.cpp
-  NVPTXImageOptimizer.cpp
-  NVPTXInstrInfo.cpp
+  NVPTXIRPeephole.cpp
   NVPTXISelDAGToDAG.cpp
   NVPTXISelLowering.cpp
+  NVPTXImageOptimizer.cpp
+  NVPTXInstrInfo.cpp
   NVPTXLowerAggrCopies.cpp
   NVPTXLowerAlloca.cpp
   NVPTXLowerArgs.cpp
   NVPTXLowerUnreachable.cpp
   NVPTXMCExpr.cpp
+  NVPTXMarkKernelPtrsGlobal.cpp
   NVPTXPeephole.cpp
+  NVPTXSetByValParamAlign.cpp
   NVPTXPrologEpilogPass.cpp
   NVPTXProxyRegErasure.cpp
   NVPTXRegisterInfo.cpp
@@ -42,6 +47,7 @@ set(NVPTXCodeGen_sources
   NVPTXTargetTransformInfo.cpp
   NVPTXUtilities.cpp
   NVVMIntrRange.cpp
+  NVVMProperties.cpp
   NVVMReflect.cpp
   )
 

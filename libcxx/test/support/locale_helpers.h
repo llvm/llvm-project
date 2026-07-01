@@ -87,7 +87,7 @@ MultiStringType currency_symbol_ru_RU() {
 MultiStringType currency_symbol_zh_CN() {
 #if defined(_WIN32)
   return MKSTR("\u00A5"); // U+00A5 YEN SIGN
-#elif defined(__APPLE__)
+#elif defined(__APPLE__) || defined(__FreeBSD__)
   if (__builtin_available(macOS 15.4, *)) {
     return MKSTR("\u00A5"); // U+00A5 YEN SIGN
   } else {

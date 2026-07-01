@@ -7,8 +7,8 @@
 struct __declspec(dllimport) S {
   virtual void f() {}
 } s;
-// MSVC: [[VF_S:.*]] = private unnamed_addr constant { [2 x ptr] }
-// MSVC-DAG: @"??_SS@@6B@" = unnamed_addr alias ptr, getelementptr inbounds ({ [2 x ptr] }, ptr [[VF_S]], i32 0, i32 0, i32 1)
+// MSVC: [[VF_S:.*]] = private constant { [2 x ptr] }
+// MSVC-DAG: @"??_SS@@6B@" = alias ptr, getelementptr inbounds ({ [2 x ptr] }, ptr [[VF_S]], i32 0, i32 0, i32 1)
 // MSVC-DAG: @"??_R0?AUS@@@8" = linkonce_odr
 // MSVC-DAG: @"??_R1A@?0A@EA@S@@8" = linkonce_odr
 // MSVC-DAG: @"??_R2S@@8" = linkonce_odr

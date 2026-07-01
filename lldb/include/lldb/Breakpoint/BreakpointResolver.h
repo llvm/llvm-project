@@ -12,7 +12,6 @@
 #include "lldb/Breakpoint/Breakpoint.h"
 #include "lldb/Core/Address.h"
 #include "lldb/Core/SearchFilter.h"
-#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/lldb-private.h"
@@ -76,7 +75,7 @@ public:
   void SetOffset(lldb::addr_t offset);
 
   lldb::addr_t GetOffset() const { return m_offset; }
-  lldb::addr_t GetOffsetIsInsnCount() const { return m_offset_is_insn_count; }
+  bool GetOffsetIsInsnCount() const { return m_offset_is_insn_count; }
 
   /// In response to this method the resolver scans all the modules in the
   /// breakpoint's target, and adds any new locations it finds.
@@ -111,6 +110,14 @@ public:
 
   virtual StructuredData::ObjectSP SerializeToStructuredData() {
     return StructuredData::ObjectSP();
+  }
+
+  /// The resolver_sp won't have had its breakpoint set by the time we are
+  /// checking the Override, but it might need to access the Target, so we pass
+  /// that in here.
+  virtual bool OverridesResolver(Target &target,
+                                 lldb::BreakpointResolverSP resolver_sp) {
+    return false;
   }
 
   static const char *GetSerializationKey() { return "BKPTResolver"; }

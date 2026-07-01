@@ -52,7 +52,11 @@
 #ifndef ORC_RT_RTTI_H
 #define ORC_RT_RTTI_H
 
+#include <type_traits>
+
 namespace orc_rt {
+
+class ErrorInfoBase;
 
 template <typename ThisT, typename ParentT> class RTTIExtends;
 
@@ -62,7 +66,7 @@ template <typename ThisT, typename ParentT> class RTTIExtends;
 /// type comparisons.
 class RTTIRoot {
 public:
-  virtual ~RTTIRoot() = default;
+  virtual ~RTTIRoot() noexcept = default;
 
   /// Returns the class ID for this type.
   static const void *classID() noexcept { return &ID; }
@@ -83,7 +87,7 @@ public:
   static bool classof(const RTTIRoot *R) noexcept { return R->isA<RTTIRoot>(); }
 
 private:
-  virtual void anchor();
+  virtual void anchor() noexcept;
 
   static char ID;
 };
@@ -107,6 +111,10 @@ private:
 ///
 template <typename ThisT, typename ParentT> class RTTIExtends : public ParentT {
 public:
+  static_assert(!std::is_base_of_v<ErrorInfoBase, ParentT>,
+                "RTTIExtends should not be used to define orc_rt custom error "
+                "types, use ErrorExtends instead");
+
   // Inherit constructors and isA methods from ParentT.
   using ParentT::isA;
   using ParentT::ParentT;
@@ -121,7 +129,7 @@ public:
     return ClassID == classID() || ParentT::isA(ClassID);
   }
 
-  static bool classof(const RTTIRoot *R) { return R->isA<ThisT>(); }
+  static bool classof(const RTTIRoot *R) noexcept { return R->isA<ThisT>(); }
 };
 
 template <typename ThisT, typename ParentT>

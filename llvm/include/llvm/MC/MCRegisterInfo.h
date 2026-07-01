@@ -39,13 +39,13 @@ public:
   using iterator = const MCPhysReg*;
   using const_iterator = const MCPhysReg*;
 
-  const iterator RegsBegin;
-  const uint8_t *const RegSet;
+  const uint32_t RegsOff;   ///< Relative offset to MCPhysReg array.
+  const uint32_t RegSetOff; ///< Relative offset to uint8_t array.
   const uint32_t NameIdx;
+  const uint32_t RegSizeInBits;
   const uint16_t RegsSize;
   const uint16_t RegSetSize;
   const uint16_t ID;
-  const uint16_t RegSizeInBits;
   const uint8_t CopyCost;
   const bool Allocatable;
   const bool BaseClass;
@@ -56,8 +56,11 @@ public:
 
   /// begin/end - Return all of the registers in this class.
   ///
-  iterator       begin() const { return RegsBegin; }
-  iterator         end() const { return RegsBegin + RegsSize; }
+  iterator begin() const {
+    return reinterpret_cast<iterator>(reinterpret_cast<const char *>(this) +
+                                      RegsOff);
+  }
+  iterator end() const { return begin() + RegsSize; }
 
   /// getNumRegs - Return the number of registers in this class.
   ///
@@ -67,7 +70,7 @@ public:
   ///
   MCRegister getRegister(unsigned i) const {
     assert(i < getNumRegs() && "Register number out of range!");
-    return RegsBegin[i];
+    return begin()[i];
   }
 
   /// contains - Return true if the specified register is included in this
@@ -78,6 +81,7 @@ public:
     unsigned Byte = RegNo / 8;
     if (Byte >= RegSetSize)
       return false;
+    const uint8_t *RegSet = reinterpret_cast<const uint8_t *>(this) + RegSetOff;
     return (RegSet[Byte] & (1 << InByte)) != 0;
   }
 
@@ -103,6 +107,13 @@ public:
 
   /// Return true if this register class has a defined BaseClassOrder.
   bool isBaseClass() const { return BaseClass; }
+};
+
+template <unsigned RegClassCount, unsigned RegCount, unsigned BitSetSize>
+struct MCRegisterClassStorage {
+  MCRegisterClass Classes[RegClassCount];
+  MCPhysReg Regs[RegCount];
+  uint8_t BitSets[BitSetSize];
 };
 
 /// MCRegisterDesc - This record contains information about a particular
@@ -180,6 +191,7 @@ private:
   unsigned NumSubRegIndices;                  // Number of subreg indices.
   const uint16_t *RegEncodingTable;           // Pointer to array of register
                                               // encodings.
+  const unsigned (*RegUnitIntervals)[2]; // Pointer to regunit interval table.
 
   unsigned L2DwarfRegsSize;
   unsigned EHL2DwarfRegsSize;
@@ -286,7 +298,8 @@ public:
                           const int16_t *DL, const LaneBitmask *RUMS,
                           const char *Strings, const char *ClassStrings,
                           const uint16_t *SubIndices, unsigned NumIndices,
-                          const uint16_t *RET) {
+                          const uint16_t *RET,
+                          const unsigned (*RUI)[2] = nullptr) {
     Desc = D;
     NumRegs = NR;
     RAReg = RA;
@@ -302,6 +315,7 @@ public:
     SubRegIndices = SubIndices;
     NumSubRegIndices = NumIndices;
     RegEncodingTable = RET;
+    RegUnitIntervals = RUI;
 
     // Initialize DWARF register mapping variables
     EHL2DwarfRegs = nullptr;
@@ -511,6 +525,19 @@ public:
 
   /// Returns true if the two registers are equal or alias each other.
   bool regsOverlap(MCRegister RegA, MCRegister RegB) const;
+
+  /// Returns true if this target uses regunit intervals.
+  bool hasRegUnitIntervals() const { return RegUnitIntervals != nullptr; }
+
+  /// Returns an iterator range over all native regunits in the RegUnitInterval
+  /// table for \p Reg.
+  iota_range<unsigned> regunits_interval(MCRegister Reg) const {
+    assert(hasRegUnitIntervals() &&
+           "Target does not support regunit intervals");
+    assert(Reg.id() < NumRegs && "Invalid register number");
+    return seq<unsigned>(RegUnitIntervals[Reg.id()][0],
+                         RegUnitIntervals[Reg.id()][1]);
+  }
 };
 
 //===----------------------------------------------------------------------===//

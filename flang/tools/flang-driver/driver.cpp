@@ -23,6 +23,7 @@
 #include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Driver/Compilation.h"
+#include "clang/Options/Options.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/Option/ArgList.h"
@@ -81,6 +82,28 @@ static void ExpandResponseFiles(llvm::StringSaver &saver,
   if (llvm::Error Err = ExpCtx.expandResponseFiles(args)) {
     llvm::errs() << toString(std::move(Err)) << '\n';
   }
+}
+
+static bool rejectAssemblyInputs(const llvm::opt::ArgList &args,
+                                 clang::DiagnosticsEngine &diags) {
+  for (const llvm::opt::Arg *arg : args) {
+    if (arg->getOption().getKind() == llvm::opt::Option::InputClass) {
+      llvm::StringRef filename(arg->getValue());
+      llvm::StringRef ext = filename.rsplit('.').second;
+      clang::driver::types::ID type =
+          clang::driver::types::lookupTypeForExtension(ext);
+
+      if (type == clang::driver::types::TY_Asm ||
+          type == clang::driver::types::TY_PP_Asm) {
+        diags.Report(diags.getCustomDiagID(
+            clang::DiagnosticsEngine::Error,
+            "flang does not support assembly files as input: '%0'"))
+            << filename;
+        return true;
+      }
+    }
+  }
+  return false;
 }
 
 int main(int argc, const char **argv) {
@@ -147,22 +170,34 @@ int main(int argc, const char **argv) {
   llvm::SmallVector<std::pair<int, const clang::driver::Command *>, 4>
       failingCommands;
 
-  // Set the environment variable, FLANG_COMPILER_OPTIONS_STRING, to contain all
-  // the compiler options. This is intended for the frontend driver,
-  // flang -fc1, to enable the implementation of the COMPILER_OPTIONS
-  // intrinsic. To this end, the frontend driver requires the list of the
-  // original compiler options, which is not available through other means.
+  // Reject assembly files as flang does not support assembly inputs.
+  // TODO: Since clang supports this, flang should too.
+  if (rejectAssemblyInputs(c->getInputArgs(), diags))
+    return 1;
+
+  // Set the environment variable, FLANG_COMPILER_OPTIONS_STRING, to contain
+  // the compiler options (excluding input file names and the program name).
+  // This is intended for the frontend driver, flang -fc1, to enable the
+  // implementation of the COMPILER_OPTIONS intrinsic. To this end, the
+  // frontend driver requires the list of the original compiler options,
+  // which is not available through other means.
   // TODO: This way of passing information between the compiler and frontend
   // drivers is discouraged. We should find a better way not involving env
   // variables.
   std::string compilerOptsGathered;
   llvm::raw_string_ostream os(compilerOptsGathered);
-  for (int i = 0; i < argc; ++i) {
-    os << argv[i];
-    if (i < argc - 1) {
-      os << ' ';
+  const llvm::opt::InputArgList &argList = c->getInputArgs();
+  bool first = true;
+  for (const llvm::opt::Arg *arg : argList) {
+    if (!arg->getOption().matches(clang::options::OPT_INPUT)) {
+      if (!first) {
+        os << ' ';
+      }
+      os << arg->getAsString(argList);
+      first = false;
     }
   }
+
 #ifdef _WIN32
   _putenv_s("FLANG_COMPILER_OPTIONS_STRING", compilerOptsGathered.c_str());
 #else
@@ -193,8 +228,6 @@ int main(int argc, const char **argv) {
       break;
     }
   }
-
-  diags.getClient()->finish();
 
   // If we have multiple failing commands, we return the result of the first
   // failing command.

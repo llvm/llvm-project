@@ -36,6 +36,7 @@ def Async_ExecuteOp :
   Async_Op<"execute", [SingleBlockImplicitTerminator<"YieldOp">,
                        DeclareOpInterfaceMethods<RegionBranchOpInterface,
                                                  ["getEntrySuccessorOperands",
+                                                  "getSuccessorInputs",
                                                   "areTypesCompatible"]>,
                        AttrSizedOperandSegments,
                        AutomaticAllocationScope,
@@ -173,7 +174,9 @@ def Async_FuncOp : Async_Op<"func",
     unsigned getNumResults() {return getResultTypes().size();}
 
     /// Is the async func stateful
-    bool isStateful() { return isa<TokenType>(getFunctionType().getResult(0));}
+    bool isStateful() {
+      return isa<async::TokenType>(getFunctionType().getResult(0));
+    }
 
     //===------------------------------------------------------------------===//
     // OpAsmOpInterface Methods

@@ -90,8 +90,11 @@ multiple file formats.
  within segments, except for .gnu.warning, .ARM.attribute sections and the
  section name table.
 
- For COFF objects, remove all symbols, debug sections, and relocations from the
- output.
+ For COFF and Mach-O objects, remove all symbols, debug sections, and
+ relocations from the output.
+
+ For WebAssembly objects, remove all custom sections except for those named
+ metadata.code.*.
 
 .. option:: --strip-debug, -d, -g, -S
 
@@ -106,6 +109,10 @@ multiple file formats.
 
  Remove from the output all local or undefined symbols that are not required by
  relocations. Also remove all debug sections.
+
+.. option:: --verbose, -v
+
+ Print the paths of files that are copied.
 
 .. option:: --version, -V
 

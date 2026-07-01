@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/CodeGen/ModuleBuilder.h"
+#include "CGCXXABI.h"
 #include "CGDebugInfo.h"
 #include "CodeGenModule.h"
 #include "clang/AST/ASTContext.h"
@@ -19,6 +20,7 @@
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/Frontend/CompilerInstance.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/LLVMContext.h"
@@ -31,7 +33,7 @@ using namespace clang;
 using namespace CodeGen;
 
 namespace {
-  class CodeGeneratorImpl : public CodeGenerator {
+  class CodeGeneratorImpl final : public CodeGenerator {
     DiagnosticsEngine &Diags;
     ASTContext *Ctx;
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS; // Only used for debug info.
@@ -60,12 +62,8 @@ namespace {
     };
 
     CoverageSourceInfo *CoverageInfo;
-
-  protected:
     std::unique_ptr<llvm::Module> M;
     std::unique_ptr<CodeGen::CodeGenModule> Builder;
-
-  private:
     SmallVector<FunctionDecl *, 8> DeferredInlineMemberFuncDefs;
 
     static llvm::StringRef ExpandModuleName(llvm::StringRef ModuleName,
@@ -107,8 +105,8 @@ namespace {
       return Builder->getModuleDebugInfo();
     }
 
-    llvm::Module *ReleaseModule() {
-      return M.release();
+    std::unique_ptr<llvm::Module> ReleaseModule() {
+      return std::exchange(M, nullptr);
     }
 
     const Decl *GetDeclForMangledName(StringRef MangledName) {
@@ -134,6 +132,11 @@ namespace {
       return Builder->GetAddrOfGlobal(global, ForDefinition_t(isForDefinition));
     }
 
+    llvm::Constant *GetAddrOfVTable(BaseSubobject subobject,
+                                    const CXXRecordDecl *decl) {
+      return Builder->getCXXABI().getVTableAddressPoint(subobject, decl);
+    }
+
     llvm::Module *StartModule(llvm::StringRef ModuleName,
                               llvm::LLVMContext &C) {
       assert(!M && "Replacing existing Module?");
@@ -143,6 +146,7 @@ namespace {
 
       std::unique_ptr<CodeGenModule> OldBuilder = std::move(Builder);
 
+      assert(Ctx && "must call Initialize() before calling StartModule()");
       Initialize(*Ctx);
 
       if (OldBuilder)
@@ -230,8 +234,9 @@ namespace {
 
       // Provide some coverage mapping even for methods that aren't emitted.
       // Don't do this for templated classes though, as they may not be
-      // instantiable.
-      if (!D->getLexicalDeclContext()->isDependentContext())
+      // instantiable. Also skip consteval methods as they are never emitted.
+      if (!D->getLexicalDeclContext()->isDependentContext() &&
+          !D->getAsFunction()->isImmediateFunction())
         Builder->AddDeferredUnusedCoverageMapping(D);
     }
 
@@ -251,6 +256,7 @@ namespace {
 
       // For MSVC compatibility, treat declarations of static data members with
       // inline initializers as definitions.
+      assert(Ctx && "Initialize() not called");
       if (Ctx->getTargetInfo().getCXXABI().isMicrosoft()) {
         for (Decl *Member : D->decls()) {
           if (VarDecl *VD = dyn_cast<VarDecl>(Member)) {
@@ -261,6 +267,21 @@ namespace {
           }
         }
       }
+
+      // Emit dllexport inherited constructors. These are synthesized during
+      // Sema (in checkClassLevelDLLAttribute) but have no written definition,
+      // so they must be emitted now while visiting the class definition.
+      if (auto *RD = dyn_cast<CXXRecordDecl>(D);
+          RD && RD->hasAttr<DLLExportAttr>()) {
+        for (Decl *Member : RD->decls()) {
+          if (auto *CD = dyn_cast<CXXConstructorDecl>(Member)) {
+            if (CD->getInheritedConstructor() && CD->hasAttr<DLLExportAttr>() &&
+                !CD->isDeleted())
+              Builder->EmitTopLevelDecl(CD);
+          }
+        }
+      }
+
       // For OpenMP emit declare reduction functions, if required.
       if (Ctx->getLangOpts().OpenMP) {
         for (Decl *Member : D->decls()) {
@@ -341,7 +362,7 @@ llvm::Module *CodeGenerator::GetModule() {
   return static_cast<CodeGeneratorImpl*>(this)->GetModule();
 }
 
-llvm::Module *CodeGenerator::ReleaseModule() {
+std::unique_ptr<llvm::Module> CodeGenerator::ReleaseModule() {
   return static_cast<CodeGeneratorImpl*>(this)->ReleaseModule();
 }
 
@@ -363,28 +384,43 @@ llvm::Constant *CodeGenerator::GetAddrOfGlobal(GlobalDecl global,
            ->GetAddrOfGlobal(global, isForDefinition);
 }
 
+llvm::Constant *CodeGenerator::GetAddrOfVTable(BaseSubobject base,
+                                               const CXXRecordDecl *decl) {
+  return static_cast<CodeGeneratorImpl *>(this)->GetAddrOfVTable(base, decl);
+}
+
 llvm::Module *CodeGenerator::StartModule(llvm::StringRef ModuleName,
                                          llvm::LLVMContext &C) {
   return static_cast<CodeGeneratorImpl*>(this)->StartModule(ModuleName, C);
 }
 
-CodeGenerator *
+std::unique_ptr<CodeGenerator>
 clang::CreateLLVMCodeGen(DiagnosticsEngine &Diags, llvm::StringRef ModuleName,
                          IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
                          const HeaderSearchOptions &HeaderSearchOpts,
                          const PreprocessorOptions &PreprocessorOpts,
                          const CodeGenOptions &CGO, llvm::LLVMContext &C,
                          CoverageSourceInfo *CoverageInfo) {
-  return new CodeGeneratorImpl(Diags, ModuleName, std::move(FS),
-                               HeaderSearchOpts, PreprocessorOpts, CGO, C,
-                               CoverageInfo);
+  return std::make_unique<CodeGeneratorImpl>(Diags, ModuleName, std::move(FS),
+                                             HeaderSearchOpts, PreprocessorOpts,
+                                             CGO, C, CoverageInfo);
+}
+
+std::unique_ptr<CodeGenerator>
+clang::CreateLLVMCodeGen(const CompilerInstance &CI, StringRef ModuleName,
+                         llvm::LLVMContext &C,
+                         CoverageSourceInfo *CoverageInfo) {
+  return CreateLLVMCodeGen(CI.getDiagnostics(), ModuleName,
+                           CI.getVirtualFileSystemPtr(),
+                           CI.getHeaderSearchOpts(), CI.getPreprocessorOpts(),
+                           CI.getCodeGenOpts(), C, CoverageInfo);
 }
 
 namespace clang {
 namespace CodeGen {
 std::optional<std::pair<StringRef, StringRef>>
 DemangleTrapReasonInDebugInfo(StringRef FuncName) {
-  static auto TrapRegex =
+  static const auto TrapRegex =
       llvm::Regex(llvm::formatv("^{0}\\$(.*)\\$(.*)$", ClangTrapPrefix).str());
   llvm::SmallVector<llvm::StringRef, 3> Matches;
   std::string *ErrorPtr = nullptr;

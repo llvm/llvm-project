@@ -34,11 +34,7 @@ public:
     IntMaxType = SignedLong;
     Int64Type = SignedLong;
     RegParmMax = 5;
-    if (Triple.getArch() == llvm::Triple::bpfeb) {
-      resetDataLayout("E-m:e-p:64:64-i64:64-i128:128-n32:64-S128");
-    } else {
-      resetDataLayout("e-m:e-p:64:64-i64:64-i128:128-n32:64-S128");
-    }
+    resetDataLayout();
     MaxAtomicPromoteWidth = 64;
     MaxAtomicInlineWidth = 64;
     TLSSupported = false;
@@ -103,7 +99,7 @@ public:
 
   void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
 
-  bool setCPU(const std::string &Name) override {
+  bool setCPU(StringRef Name) override {
     if (Name == "v3" || Name == "v4") {
       HasAlu32 = true;
     }

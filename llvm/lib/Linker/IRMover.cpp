@@ -446,7 +446,9 @@ public:
         AddLazyFor(std::move(AddLazyFor)), TypeMap(Set),
         GValMaterializer(*this), LValMaterializer(*this), SharedMDs(SharedMDs),
         IsPerformingImport(IsPerformingImport),
-        Mapper(ValueMap, RF_ReuseAndMutateDistinctMDs | RF_IgnoreMissingLocals,
+        Mapper(ValueMap,
+               RF_ReuseAndMutateDistinctMDs | RF_IgnoreMissingLocals |
+                   (IsPerformingImport ? RF_Importing : RF_None),
                &TypeMap, &GValMaterializer),
         IndirectSymbolMCID(Mapper.registerAlternateMappingContext(
             IndirectSymbolValueMap, &LValMaterializer)) {
@@ -943,6 +945,16 @@ Expected<Constant *> IRLinker::linkGlobalValueProto(GlobalValue *SGV,
   GlobalValue *NewGV;
   if (DGV && !ShouldLink) {
     NewGV = DGV;
+
+    // If the source is an exact definition, optimizations may have modified
+    // its attributes, e.g. by dropping noundef attributes when replacing
+    // arguments with poison. In this case, it is important for correctness
+    // that we use the signature from the exact definition.
+    if (isa<Function>(SGV) && DGV->isDeclaration() &&
+        SGV->hasExactDefinition() && !DoneLinkingBodies) {
+      NewGV = copyGlobalValueProto(SGV, /*ForDefinition=*/false);
+      NeedsRenaming = true;
+    }
   } else {
     // If we are done linking global value bodies (i.e. we are performing
     // metadata linking), don't link in the global value due to this
@@ -1601,14 +1613,6 @@ bool IRMover::StructTypeKeyInfo::KeyTy::operator!=(const KeyTy &That) const {
   return !this->operator==(That);
 }
 
-StructType *IRMover::StructTypeKeyInfo::getEmptyKey() {
-  return DenseMapInfo<StructType *>::getEmptyKey();
-}
-
-StructType *IRMover::StructTypeKeyInfo::getTombstoneKey() {
-  return DenseMapInfo<StructType *>::getTombstoneKey();
-}
-
 unsigned IRMover::StructTypeKeyInfo::getHashValue(const KeyTy &Key) {
   return hash_combine(hash_combine_range(Key.ETypes), Key.IsPacked);
 }
@@ -1619,15 +1623,11 @@ unsigned IRMover::StructTypeKeyInfo::getHashValue(const StructType *ST) {
 
 bool IRMover::StructTypeKeyInfo::isEqual(const KeyTy &LHS,
                                          const StructType *RHS) {
-  if (RHS == getEmptyKey() || RHS == getTombstoneKey())
-    return false;
   return LHS == KeyTy(RHS);
 }
 
 bool IRMover::StructTypeKeyInfo::isEqual(const StructType *LHS,
                                          const StructType *RHS) {
-  if (RHS == getEmptyKey() || RHS == getTombstoneKey())
-    return LHS == RHS;
   return KeyTy(LHS) == KeyTy(RHS);
 }
 

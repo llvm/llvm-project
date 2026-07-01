@@ -774,9 +774,9 @@ define void @crash(ptr %ptr) {
 ; CHECK-LABEL: 'crash'
 ; CHECK-NEXT:  Classifying expressions for: @crash
 ; CHECK-NEXT:    %text.addr.5 = phi ptr [ %incdec.ptr112, %while.cond111 ], [ null, %while.body ]
-; CHECK-NEXT:    --> {null,+,-1}<nw><%while.cond111> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %while.cond111: Computable, %while.body: Variant }
+; CHECK-NEXT:    --> {null,+,-1}<nw><%while.cond111> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %while.cond111: Computable, %while.body: Uniform }
 ; CHECK-NEXT:    %incdec.ptr112 = getelementptr inbounds i8, ptr %text.addr.5, i64 -1
-; CHECK-NEXT:    --> {(-1 + null)<nuw><nsw>,+,-1}<nw><%while.cond111> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %while.cond111: Computable, %while.body: Variant }
+; CHECK-NEXT:    --> {(-1 + null)<nuw><nsw>,+,-1}<nw><%while.cond111> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %while.cond111: Computable, %while.body: Uniform }
 ; CHECK-NEXT:    %lastout.2271 = phi ptr [ %incdec.ptr126, %while.body125 ], [ %ptr, %while.end117 ]
 ; CHECK-NEXT:    --> {%ptr,+,1}<nuw><%while.body125> U: full-set S: full-set Exits: {(-2 + (-1 * (ptrtoint ptr %ptr to i64)) + %ptr),+,-1}<nw><%while.cond111> LoopDispositions: { %while.body125: Computable }
 ; CHECK-NEXT:    %incdec.ptr126 = getelementptr inbounds i8, ptr %lastout.2271, i64 1
@@ -1334,7 +1334,7 @@ define i32 @ptr_induction_ult_1(ptr %a, ptr %b) {
 ; CHECK-LABEL: 'ptr_induction_ult_1'
 ; CHECK-NEXT:  Classifying expressions for: @ptr_induction_ult_1
 ; CHECK-NEXT:    %ptr.iv = phi ptr [ %ptr.iv.next, %loop ], [ %a, %entry ]
-; CHECK-NEXT:    --> {%a,+,4}<nw><%loop> U: full-set S: full-set Exits: %a LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {%a,+,4}<nuw><nsw><%loop> U: full-set S: full-set Exits: %a LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %ptr.iv.next = getelementptr i32, ptr %ptr.iv, i64 1
 ; CHECK-NEXT:    --> {(4 + %a),+,4}<nw><%loop> U: full-set S: full-set Exits: (4 + %a) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @ptr_induction_ult_1

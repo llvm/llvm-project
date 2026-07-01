@@ -14,13 +14,19 @@ unittest("AMDGPUTests") {
     "//llvm/lib/Target/AMDGPU/Utils",
     "//llvm/lib/TargetParser",
   ]
-  include_dirs = [ "//llvm/lib/Target/AMDGPU" ]
+  include_dirs = [
+    "//llvm/lib/Target/AMDGPU",
+    "//llvm/unittests/CodeGen",
+  ]
   sources = [
+    "AMDGPUMCExprTest.cpp",
     "AMDGPUUnitTests.cpp",
     "CSETest.cpp",
     "DwarfRegMappings.cpp",
     "ExecMayBeModifiedBeforeAnyUse.cpp",
+    "GCNRegPressureTest.cpp",
     "LiveRegUnits.cpp",
     "PALMetadata.cpp",
+    "UniformityAnalysisTest.cpp",
   ]
 }

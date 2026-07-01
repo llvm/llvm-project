@@ -25,17 +25,17 @@ namespace jitlink {
 /// Note: The graph does not take ownership of the underlying buffer, nor copy
 /// its contents. The caller is responsible for ensuring that the object buffer
 /// outlives the graph.
-Expected<std::unique_ptr<LinkGraph>>
+LLVM_ABI Expected<std::unique_ptr<LinkGraph>>
 createLinkGraphFromELFObject_riscv(MemoryBufferRef ObjectBuffer,
                                    std::shared_ptr<orc::SymbolStringPool> SSP);
 
 /// jit-link the given object buffer, which must be a ELF riscv object file.
-void link_ELF_riscv(std::unique_ptr<LinkGraph> G,
-                    std::unique_ptr<JITLinkContext> Ctx);
+LLVM_ABI void link_ELF_riscv(std::unique_ptr<LinkGraph> G,
+                             std::unique_ptr<JITLinkContext> Ctx);
 
 /// Returns a pass that performs linker relaxation. Should be added to
 /// PostAllocationPasses.
-LinkGraphPassFunction createRelaxationPass_ELF_riscv();
+LLVM_ABI LinkGraphPassFunction createRelaxationPass_ELF_riscv();
 
 } // end namespace jitlink
 } // end namespace llvm

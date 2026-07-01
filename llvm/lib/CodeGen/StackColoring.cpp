@@ -402,11 +402,8 @@ class StackColoring {
   using LivenessMap = DenseMap<const MachineBasicBlock *, BlockLifetimeInfo>;
   LivenessMap BlockLiveness;
 
-  /// Maps serial numbers to basic blocks.
-  DenseMap<const MachineBasicBlock *, int> BasicBlocks;
-
-  /// Maps basic blocks to a serial number.
-  SmallVector<const MachineBasicBlock *, 8> BasicBlockNumbering;
+  /// Depth-first ordering of the basic blocks.
+  SmallVector<const MachineBasicBlock *, 8> BasicBlockOrdering;
 
   /// Maps slots to their use interval. Outside of this interval, slots
   /// values are either dead or `undef` and they will not be written to.
@@ -438,7 +435,7 @@ class StackColoring {
 
 public:
   StackColoring(SlotIndexes *Indexes) : Indexes(Indexes) {}
-  bool run(MachineFunction &Func);
+  bool run(MachineFunction &Func, bool OnlyRemoveMarkers = false);
 
 private:
   /// Used in collectMarkers
@@ -640,6 +637,8 @@ unsigned StackColoring::collectMarkers(unsigned NumSlot) {
   // Step 1: collect markers and populate the "InterestingSlots"
   // and "ConservativeSlots" sets.
   for (MachineBasicBlock *MBB : depth_first(MF)) {
+    BasicBlockOrdering.push_back(MBB);
+
     // Compute the set of slots for which we've seen a START marker but have
     // not yet seen an END marker at this point in the walk (e.g. on entry
     // to this bb).
@@ -719,17 +718,15 @@ unsigned StackColoring::collectMarkers(unsigned NumSlot) {
             H.CatchObj.FrameIndex >= 0)
           ConservativeSlots.set(H.CatchObj.FrameIndex);
 
+  // Treat all stack slots as conservative if we happen to have calls to
+  // setjmp/sigsetjmp, as longjmp may re-enter the function on a different path.
+  if (MF->exposesReturnsTwice())
+    ConservativeSlots.set();
+
   LLVM_DEBUG(dumpBV("Conservative slots", ConservativeSlots));
 
   // Step 2: compute begin/end sets for each block
-
-  // NOTE: We use a depth-first iteration to ensure that we obtain a
-  // deterministic numbering.
-  for (MachineBasicBlock *MBB : depth_first(MF)) {
-    // Assign a serial number to this basic block.
-    BasicBlocks[MBB] = BasicBlockNumbering.size();
-    BasicBlockNumbering.push_back(MBB);
-
+  for (const MachineBasicBlock *MBB : BasicBlockOrdering) {
     // Keep a reference to avoid repeated lookups.
     BlockLifetimeInfo &BlockInfo = BlockLiveness[MBB];
 
@@ -737,7 +734,7 @@ unsigned StackColoring::collectMarkers(unsigned NumSlot) {
     BlockInfo.End.resize(NumSlot);
 
     SmallVector<int, 4> slots;
-    for (MachineInstr &MI : *MBB) {
+    for (const MachineInstr &MI : *MBB) {
       bool isStart = false;
       slots.clear();
       if (isLifetimeStartOrEnd(MI, slots, isStart)) {
@@ -786,7 +783,7 @@ void StackColoring::calculateLocalLiveness() {
     changed = false;
     ++NumIters;
 
-    for (const MachineBasicBlock *BB : BasicBlockNumbering) {
+    for (const MachineBasicBlock *BB : BasicBlockOrdering) {
       // Use an iterator to avoid repeated lookups.
       LivenessMap::iterator BI = BlockLiveness.find(BB);
       assert(BI != BlockLiveness.end() && "Block not found");
@@ -815,13 +812,13 @@ void StackColoring::calculateLocalLiveness() {
       LocalLiveOut |= BlockInfo.Begin;
 
       // Update block LiveIn set, noting whether it has changed.
-      if (LocalLiveIn.test(BlockInfo.LiveIn)) {
+      if (!LocalLiveIn.subsetOf(BlockInfo.LiveIn)) {
         changed = true;
         BlockInfo.LiveIn |= LocalLiveIn;
       }
 
       // Update block LiveOut set, noting whether it has changed.
-      if (LocalLiveOut.test(BlockInfo.LiveOut)) {
+      if (!LocalLiveOut.subsetOf(BlockInfo.LiveOut)) {
         changed = true;
         BlockInfo.LiveOut |= LocalLiveOut;
       }
@@ -1190,11 +1187,8 @@ void StackColoring::expungeSlotMap(DenseMap<int, int> &SlotRemap,
 }
 
 bool StackColoringLegacy::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(MF.getFunction()))
-    return false;
-
   StackColoring SC(&getAnalysis<SlotIndexesWrapperPass>().getSI());
-  return SC.run(MF);
+  return SC.run(MF, skipFunction(MF.getFunction()));
 }
 
 PreservedAnalyses StackColoringPass::run(MachineFunction &MF,
@@ -1205,14 +1199,13 @@ PreservedAnalyses StackColoringPass::run(MachineFunction &MF,
   return PreservedAnalyses::all();
 }
 
-bool StackColoring::run(MachineFunction &Func) {
+bool StackColoring::run(MachineFunction &Func, bool OnlyRemoveMarkers) {
   LLVM_DEBUG(dbgs() << "********** Stack Coloring **********\n"
                     << "********** Function: " << Func.getName() << '\n');
   MF = &Func;
   MFI = &MF->getFrameInfo();
   BlockLiveness.clear();
-  BasicBlocks.clear();
-  BasicBlockNumbering.clear();
+  BasicBlockOrdering.clear();
   Markers.clear();
   Intervals.clear();
   LiveStarts.clear();
@@ -1245,8 +1238,10 @@ bool StackColoring::run(MachineFunction &Func) {
   LLVM_DEBUG(dbgs() << "Total Stack size: " << TotalSize << " bytes\n\n");
 
   // Don't continue because there are not enough lifetime markers, or the
-  // stack is too small, or we are told not to optimize the slots.
-  if (NumMarkers < 2 || TotalSize < 16 || DisableColoring) {
+  // stack is too small, or we are told not to optimize the slots, or
+  // opt-bisect-limit is skipping this pass.
+  if (NumMarkers < 2 || TotalSize < 16 || DisableColoring ||
+      OnlyRemoveMarkers) {
     LLVM_DEBUG(dbgs() << "Will not try to merge slots.\n");
     return removeAllMarkers();
   }

@@ -790,6 +790,11 @@ void test_opencl_vector_format(int x) {
   printf("%hld", x); // expected-warning{{invalid conversion specifier 'l'}}
 }
 
+void test_int_width_modifiers(int x) {
+  printf("%w32d", x);    // expected-warning {{invalid conversion specifier '3'}}
+  printf("%wf32d", 1.0); // expected-warning {{length modifier 'w' results in undefined behavior or no effect with 'f' conversion specifier}}
+}
+
 // Test that we correctly merge the format in both orders.
 extern void test14_foo(const char *, const char *, ...)
      __attribute__((__format__(__printf__, 1, 3)));
@@ -982,4 +987,38 @@ void test_promotion(void) {
   
   // pointers
   printf("%s", i); // expected-warning{{format specifies type 'char *' but the argument has type 'int'}}
+}
+
+void test_bool(_Bool b, _Bool* bp)
+{
+#if __SIZEOF_INT__ != __SIZEOF_SIZE_T__
+  printf("%zu", b); // expected-warning-re{{format specifies type 'size_t' (aka '{{.+}}') but the argument has type '_Bool'}}
+  printf("%td", b); // expected-warning-re{{format specifies type 'ptrdiff_t' (aka '{{.+}}') but the argument has type '_Bool'}}
+#endif
+  printf("%jd", b); // expected-warning-re{{format specifies type 'intmax_t' (aka '{{.+}}') but the argument has type '_Bool'}}
+  printf("%lld", b); // expected-warning{{format specifies type 'long long' but the argument has type '_Bool'}}
+  printf("%ld", b); // expected-warning{{format specifies type 'long' but the argument has type '_Bool'}}
+  printf("%d", b); // promoted from _Bool to int
+  printf("%hhd", b); // promoted from _Bool to int
+  printf("%hd", b); // promoted from _Bool to int
+#if !defined(__Fuchsia__) && !defined(__ANDROID__) //'%n' specifier not supported on this platform
+  // The n conversion specifier only supports signed types
+  printf("%zn", bp); // expected-warning-re{{format specifies type 'signed size_t *' (aka '{{.+}}') but the argument has type '_Bool *'}}
+  printf("%jn", bp); // expected-warning-re{{format specifies type 'intmax_t *' (aka '{{.+}}') but the argument has type '_Bool *'}}
+  printf("%lln", bp); // expected-warning{{format specifies type 'long long *' but the argument has type '_Bool *'}}
+  printf("%ln", bp); // expected-warning{{format specifies type 'long *' but the argument has type '_Bool *'}}
+  printf("%n", bp); // expected-warning{{format specifies type 'int *' but the argument has type '_Bool *'}}
+  printf("%hhn", bp); // expected-warning{{format specifies type 'signed char *' but the argument has type '_Bool *'}}
+  printf("%hn", bp); // belong to -Wformat-type-confusion
+#endif
+  printf("%c", b); // expected-warning{{using '%c' format specifier, but argument has boolean value}}
+  printf("%s", b); // expected-warning{{format specifies type 'char *' but the argument has type '_Bool'}}
+  printf("%d", b); // promoted from _Bool to int
+  printf("%o", b); // promoted from _Bool to int
+  printf("%x", b); // promoted from _Bool to int
+  printf("%u", b); // promoted from _Bool to int
+  printf("%f", b); // expected-warning{{format specifies type 'double' but the argument has type '_Bool'}}
+  printf("%e", b); // expected-warning{{format specifies type 'double' but the argument has type '_Bool'}}
+  printf("%a", b); // expected-warning{{format specifies type 'double' but the argument has type '_Bool'}}
+  printf("%g", b); // expected-warning{{format specifies type 'double' but the argument has type '_Bool'}}
 }

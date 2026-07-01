@@ -37,6 +37,7 @@
 
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/DebuggerEvents.h"
+#include "lldb/Core/Diagnostics.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Progress.h"
 #include "lldb/Core/StructuredDataImpl.h"
@@ -51,7 +52,6 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/TargetList.h"
 #include "lldb/Utility/Args.h"
-#include "lldb/Utility/Diagnostics.h"
 #include "lldb/Utility/State.h"
 #include "lldb/Version/Version.h"
 
@@ -113,7 +113,7 @@ SBDebugger &SBDebugger::operator=(const SBDebugger &rhs) {
 const char *SBDebugger::GetBroadcasterClass() {
   LLDB_INSTRUMENT();
 
-  return ConstString(Debugger::GetStaticBroadcasterClass()).AsCString();
+  return ConstString(Debugger::GetStaticBroadcasterClass()).AsCString(nullptr);
 }
 
 const char *SBDebugger::GetProgressFromEvent(const lldb::SBEvent &event,
@@ -132,7 +132,7 @@ const char *SBDebugger::GetProgressFromEvent(const lldb::SBEvent &event,
   total = progress_data->GetTotal();
   is_debugger_specific = progress_data->IsDebuggerSpecific();
   ConstString message(progress_data->GetMessage());
-  return message.AsCString();
+  return message.AsCString(nullptr);
 }
 
 lldb::SBStructuredData
@@ -167,8 +167,11 @@ SBDebugger::GetDiagnosticFromEvent(const lldb::SBEvent &event) {
 
 SBBroadcaster SBDebugger::GetBroadcaster() {
   LLDB_INSTRUMENT_VA(this);
-  SBBroadcaster broadcaster(&m_opaque_sp->GetBroadcaster(), false);
-  return broadcaster;
+
+  if (m_opaque_sp)
+    return SBBroadcaster(&m_opaque_sp->GetBroadcaster(), false);
+
+  return SBBroadcaster();
 }
 
 void SBDebugger::Initialize() {
@@ -179,7 +182,7 @@ void SBDebugger::Initialize() {
 lldb::SBError SBDebugger::InitializeWithErrorHandling() {
   LLDB_INSTRUMENT();
 
-  SBError error((Status()));
+  SBError error;
   if (auto e = g_debugger_lifetime->Initialize(
           std::make_unique<SystemInitializerFull>())) {
     error.SetError(Status::FromError(std::move(e)));
@@ -526,7 +529,8 @@ void SBDebugger::HandleCommand(const char *command) {
   LLDB_INSTRUMENT_VA(this, command);
 
   if (m_opaque_sp) {
-    TargetSP target_sp(m_opaque_sp->GetSelectedTarget());
+    TargetSP target_sp(
+        m_opaque_sp->GetCommandInterpreter().GetSelectedTarget());
     std::unique_lock<std::recursive_mutex> lock;
     if (target_sp)
       lock = std::unique_lock<std::recursive_mutex>(target_sp->GetAPIMutex());
@@ -709,61 +713,11 @@ const char *SBDebugger::StateAsCString(StateType state) {
   return lldb_private::StateAsCString(state);
 }
 
-static void AddBoolConfigEntry(StructuredData::Dictionary &dict,
-                               llvm::StringRef name, bool value,
-                               llvm::StringRef description) {
-  auto entry_up = std::make_unique<StructuredData::Dictionary>();
-  entry_up->AddBooleanItem("value", value);
-  entry_up->AddStringItem("description", description);
-  dict.AddItem(name, std::move(entry_up));
-}
-
-static void AddLLVMTargets(StructuredData::Dictionary &dict) {
-  auto array_up = std::make_unique<StructuredData::Array>();
-#define LLVM_TARGET(target)                                                    \
-  array_up->AddItem(std::make_unique<StructuredData::String>(#target));
-#include "llvm/Config/Targets.def"
-  auto entry_up = std::make_unique<StructuredData::Dictionary>();
-  entry_up->AddItem("value", std::move(array_up));
-  entry_up->AddStringItem("description", "A list of configured LLVM targets.");
-  dict.AddItem("targets", std::move(entry_up));
-}
-
 SBStructuredData SBDebugger::GetBuildConfiguration() {
   LLDB_INSTRUMENT();
 
-  auto config_up = std::make_unique<StructuredData::Dictionary>();
-  AddBoolConfigEntry(
-      *config_up, "xml", XMLDocument::XMLEnabled(),
-      "A boolean value that indicates if XML support is enabled in LLDB");
-  AddBoolConfigEntry(
-      *config_up, "curl", LLVM_ENABLE_CURL,
-      "A boolean value that indicates if CURL support is enabled in LLDB");
-  AddBoolConfigEntry(
-      *config_up, "curses", LLDB_ENABLE_CURSES,
-      "A boolean value that indicates if curses support is enabled in LLDB");
-  AddBoolConfigEntry(
-      *config_up, "editline", LLDB_ENABLE_LIBEDIT,
-      "A boolean value that indicates if editline support is enabled in LLDB");
-  AddBoolConfigEntry(*config_up, "editline_wchar", LLDB_EDITLINE_USE_WCHAR,
-                     "A boolean value that indicates if editline wide "
-                     "characters support is enabled in LLDB");
-  AddBoolConfigEntry(
-      *config_up, "lzma", LLDB_ENABLE_LZMA,
-      "A boolean value that indicates if lzma support is enabled in LLDB");
-  AddBoolConfigEntry(
-      *config_up, "python", LLDB_ENABLE_PYTHON,
-      "A boolean value that indicates if python support is enabled in LLDB");
-  AddBoolConfigEntry(
-      *config_up, "lua", LLDB_ENABLE_LUA,
-      "A boolean value that indicates if lua support is enabled in LLDB");
-  AddBoolConfigEntry(*config_up, "fbsdvmcore", LLDB_ENABLE_FBSDVMCORE,
-                     "A boolean value that indicates if fbsdvmcore support is "
-                     "enabled in LLDB");
-  AddLLVMTargets(*config_up);
-
   SBStructuredData data;
-  data.m_impl_up->SetObjectSP(std::move(config_up));
+  data.m_impl_up->SetObjectSP(Debugger::GetBuildConfiguration());
   return data;
 }
 
@@ -987,7 +941,7 @@ uint32_t SBDebugger::GetIndexOfTarget(lldb::SBTarget target) {
   return m_opaque_sp->GetTargetList().GetIndexOfTarget(target.GetSP());
 }
 
-SBTarget SBDebugger::FindTargetByGloballyUniqueID(lldb::user_id_t id) {
+SBTarget SBDebugger::FindTargetByGloballyUniqueID(lldb::user_id_t id) const {
   LLDB_INSTRUMENT_VA(this, id);
   SBTarget sb_target;
   if (m_opaque_sp) {
@@ -1319,7 +1273,7 @@ const char *SBDebugger::GetInstanceName() {
   if (!m_opaque_sp)
     return nullptr;
 
-  return ConstString(m_opaque_sp->GetInstanceName()).AsCString();
+  return ConstString(m_opaque_sp->GetInstanceName()).AsCString(nullptr);
 }
 
 SBError SBDebugger::SetInternalVariable(const char *var_name, const char *value,
@@ -1387,7 +1341,7 @@ void SBDebugger::SetTerminalWidth(uint32_t term_width) {
 uint32_t SBDebugger::GetTerminalHeight() const {
   LLDB_INSTRUMENT_VA(this);
 
-  return (m_opaque_sp ? m_opaque_sp->GetTerminalWidth() : 0);
+  return (m_opaque_sp ? m_opaque_sp->GetTerminalHeight() : 0);
 }
 
 void SBDebugger::SetTerminalHeight(uint32_t term_height) {
@@ -1395,6 +1349,14 @@ void SBDebugger::SetTerminalHeight(uint32_t term_height) {
 
   if (m_opaque_sp)
     m_opaque_sp->SetTerminalHeight(term_height);
+}
+
+void SBDebugger::SetTerminalDimensions(uint32_t term_width,
+                                       uint32_t term_height) {
+  LLDB_INSTRUMENT_VA(this, term_width, term_height);
+
+  if (m_opaque_sp)
+    m_opaque_sp->SetTerminalDimensions(term_width, term_height);
 }
 
 const char *SBDebugger::GetPrompt() const {
@@ -1680,11 +1642,12 @@ bool SBDebugger::EnableLog(const char *channel, const char **categories) {
   if (m_opaque_sp) {
     uint32_t log_options =
         LLDB_LOG_OPTION_PREPEND_TIMESTAMP | LLDB_LOG_OPTION_PREPEND_THREAD_NAME;
-    std::string error;
-    llvm::raw_string_ostream error_stream(error);
-    return m_opaque_sp->EnableLog(channel, GetCategoryArray(categories), "",
-                                  log_options, /*buffer_size=*/0,
-                                  eLogHandlerStream, error_stream);
+    llvm::Error err = m_opaque_sp->EnableLog(
+        channel, GetCategoryArray(categories), "", log_options,
+        /*buffer_size=*/0, eLogHandlerStream);
+    bool succeeded = !bool(err);
+    llvm::consumeError(std::move(err));
+    return succeeded;
   } else
     return false;
 }

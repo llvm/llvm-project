@@ -14,9 +14,9 @@ import lldbsuite.test.lldbutil
 class AttachCancelTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
+    @skipIfRemote
     @skipIf(
-        remote=True,
-        hostoslist=["windows"],
+        hostoslist=["windows", "linux"],
         bugnumber="https://github.com/llvm/llvm-project/issues/115618",
     )
     def test_scripted_implementation(self):

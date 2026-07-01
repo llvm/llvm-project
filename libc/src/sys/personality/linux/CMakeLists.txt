@@ -1,0 +1,13 @@
+add_entrypoint_object(
+  personality
+  SRCS
+    personality.cpp
+  HDRS
+    ../personality.h
+  DEPENDS
+    libc.src.__support.OSUtil.linux.syscall_wrappers.personality
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+)

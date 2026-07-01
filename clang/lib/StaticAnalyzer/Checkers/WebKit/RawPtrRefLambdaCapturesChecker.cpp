@@ -52,7 +52,8 @@ public:
       llvm::DenseSet<const ValueDecl *> ProtectedThisDecls;
       llvm::DenseSet<const CallExpr *> CallToIgnore;
       llvm::DenseSet<const CXXConstructExpr *> ConstructToIgnore;
-      llvm::DenseMap<const VarDecl *, const LambdaExpr *> LambdaOwnerMap;
+      llvm::DenseMap<const VarDecl *, SmallVector<const LambdaExpr *>>
+          LambdaOwnerMap;
 
       QualType ClsType;
 
@@ -61,6 +62,18 @@ public:
         assert(Checker);
         ShouldVisitTemplateInstantiations = true;
         ShouldVisitImplicitCode = false;
+      }
+
+      bool TraverseCXXConstructorDecl(CXXConstructorDecl *Ctor) override {
+        llvm::SaveAndRestore SavedDecl(ClsType);
+        ClsType = Ctor->getThisType();
+        return DynamicRecursiveASTVisitor::TraverseCXXConstructorDecl(Ctor);
+      }
+
+      bool TraverseCXXDestructorDecl(CXXDestructorDecl *Dtor) override {
+        llvm::SaveAndRestore SavedDecl(ClsType);
+        ClsType = Dtor->getThisType();
+        return DynamicRecursiveASTVisitor::TraverseCXXDestructorDecl(Dtor);
       }
 
       bool TraverseCXXMethodDecl(CXXMethodDecl *CXXMD) override {
@@ -121,21 +134,15 @@ public:
               auto *Arg = CE->getArg(0);
               if (auto *E = dyn_cast<MaterializeTemporaryExpr>(Arg))
                 Arg = E->getSubExpr();
-              if (auto *L = dyn_cast<LambdaExpr>(Arg)) {
-                LambdaOwnerMap.insert(std::make_pair(VD, L));
-                CallToIgnore.insert(CE);
-                LambdasToIgnore.insert(L);
-              }
+              if (auto *L = dyn_cast<LambdaExpr>(Arg))
+                addLambdaOwner(VD, CE, L);
             } else if (FnName == "makeVisitor") {
               for (unsigned ArgIndex = 0; ArgIndex < ArgCnt; ++ArgIndex) {
                 auto *Arg = CE->getArg(ArgIndex);
                 if (auto *E = dyn_cast<MaterializeTemporaryExpr>(Arg))
                   Arg = E->getSubExpr();
-                if (auto *L = dyn_cast<LambdaExpr>(Arg)) {
-                  LambdaOwnerMap.insert(std::make_pair(VD, L));
-                  CallToIgnore.insert(CE);
-                  LambdasToIgnore.insert(L);
-                }
+                if (auto *L = dyn_cast<LambdaExpr>(Arg))
+                  addLambdaOwner(VD, CE, L);
               }
             }
           }
@@ -148,16 +155,31 @@ public:
                 auto *Arg = CE->getArg(0);
                 if (auto *E = dyn_cast<MaterializeTemporaryExpr>(Arg))
                   Arg = E->getSubExpr();
-                if (auto *L = dyn_cast<LambdaExpr>(Arg)) {
-                  LambdaOwnerMap.insert(std::make_pair(VD, L));
-                  ConstructToIgnore.insert(CE);
-                  LambdasToIgnore.insert(L);
-                }
+                if (auto *L = dyn_cast<LambdaExpr>(Arg))
+                  addLambdaOwner(VD, CE, L);
               }
             }
           }
         }
         return true;
+      }
+
+      void addLambdaOwner(VarDecl *VD, CallExpr *CE, LambdaExpr *L) {
+        auto result = LambdaOwnerMap.insert(
+            std::make_pair(VD, SmallVector<const LambdaExpr *>{L}));
+        if (!result.second)
+          result.first->second.push_back(L);
+        CallToIgnore.insert(CE);
+        LambdasToIgnore.insert(L);
+      }
+
+      void addLambdaOwner(VarDecl *VD, CXXConstructExpr *CE, LambdaExpr *L) {
+        auto result = LambdaOwnerMap.insert(
+            std::make_pair(VD, SmallVector<const LambdaExpr *>{L}));
+        if (!result.second)
+          result.first->second.push_back(L);
+        ConstructToIgnore.insert(CE);
+        LambdasToIgnore.insert(L);
       }
 
       bool VisitDeclRefExpr(DeclRefExpr *DRE) override {
@@ -167,9 +189,10 @@ public:
         if (!VD)
           return true;
         if (auto It = LambdaOwnerMap.find(VD); It != LambdaOwnerMap.end()) {
-          auto *L = It->second;
-          Checker->visitLambdaExpr(L, shouldCheckThis() && !hasProtectedThis(L),
-                                   ClsType);
+          for (auto *L : It->second) {
+            Checker->visitLambdaExpr(
+                L, shouldCheckThis() && !hasProtectedThis(L), ClsType);
+          }
           return true;
         }
         auto *Init = VD->getInit();
@@ -343,6 +366,17 @@ public:
         auto *Callee = CE->getCallee();
         if (!Callee)
           return;
+        Callee = Callee->IgnoreParenCasts();
+        if (auto *MTE = dyn_cast<MaterializeTemporaryExpr>(Callee)) {
+          Callee = MTE->getSubExpr();
+          if (!Callee)
+            return;
+          Callee = Callee->IgnoreParenCasts();
+        }
+        if (auto *L = dyn_cast<LambdaExpr>(Callee)) {
+          LambdasToIgnore.insert(L); // Calling a lambda upon creation is safe.
+          return;
+        }
         auto *DRE = dyn_cast<DeclRefExpr>(Callee->IgnoreParenCasts());
         if (!DRE)
           return;
@@ -416,12 +450,9 @@ public:
             return false;
           }
           if (auto *CE = dyn_cast<CallExpr>(Arg)) {
-            if (CE->isCallToStdMove() && CE->getNumArgs() == 1) {
-              Arg = CE->getArg(0)->IgnoreParenCasts();
-              continue;
-            }
             if (auto *Callee = CE->getDirectCallee()) {
-              if (isCtorOfSafePtr(Callee) && CE->getNumArgs() == 1) {
+              if ((isStdOrWTFMove(Callee) || isCtorOfSafePtr(Callee)) &&
+                  CE->getNumArgs() == 1) {
                 Arg = CE->getArg(0)->IgnoreParenCasts();
                 continue;
               }
@@ -587,6 +618,8 @@ public:
   }
 
   std::optional<bool> isUnsafePtr(QualType QT) const final {
+    if (QT.hasStrongOrWeakObjCLifetime())
+      return false;
     return RTC->isUnretained(QT);
   }
 

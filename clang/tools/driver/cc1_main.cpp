@@ -39,6 +39,7 @@
 #include "llvm/Support/BuryPointer.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
@@ -143,13 +144,13 @@ static int PrintSupportedExtensions(std::string TargetStr) {
   std::unique_ptr<llvm::TargetMachine> TheTargetMachine(
       TheTarget->createTargetMachine(Triple, "", "", Options, std::nullopt));
   const llvm::Triple &MachineTriple = TheTargetMachine->getTargetTriple();
-  const llvm::MCSubtargetInfo *MCInfo = TheTargetMachine->getMCSubtargetInfo();
+  const llvm::MCSubtargetInfo &MCInfo = TheTargetMachine->getMCSubtargetInfo();
   const llvm::ArrayRef<llvm::SubtargetFeatureKV> Features =
-    MCInfo->getAllProcessorFeatures();
+      MCInfo.getAllProcessorFeatures();
 
   llvm::StringMap<llvm::StringRef> DescMap;
   for (const llvm::SubtargetFeatureKV &feature : Features)
-    DescMap.insert({feature.Key, feature.Desc});
+    DescMap.insert({feature.key(), feature.desc()});
 
   if (MachineTriple.isRISCV())
     llvm::RISCVISAInfo::printSupportedExtensions(DescMap);
@@ -186,23 +187,23 @@ static int PrintEnabledExtensions(const TargetOptions& TargetOpts) {
       TheTarget->createTargetMachine(Triple, TargetOpts.CPU, FeaturesStr,
                                      BackendOptions, std::nullopt));
   const llvm::Triple &MachineTriple = TheTargetMachine->getTargetTriple();
-  const llvm::MCSubtargetInfo *MCInfo = TheTargetMachine->getMCSubtargetInfo();
+  const llvm::MCSubtargetInfo &MCInfo = TheTargetMachine->getMCSubtargetInfo();
 
   // Extract the feature names that are enabled for the given target.
   // We do that by capturing the key from the set of SubtargetFeatureKV entries
   // provided by MCSubtargetInfo, which match the '-target-feature' values.
-  const std::vector<llvm::SubtargetFeatureKV> Features =
-    MCInfo->getEnabledProcessorFeatures();
+  const std::vector<const llvm::SubtargetFeatureKV *> Features =
+      MCInfo.getEnabledProcessorFeatures();
   std::set<llvm::StringRef> EnabledFeatureNames;
-  for (const llvm::SubtargetFeatureKV &feature : Features)
-    EnabledFeatureNames.insert(feature.Key);
+  for (const llvm::SubtargetFeatureKV *feature : Features)
+    EnabledFeatureNames.insert(feature->key());
 
   if (MachineTriple.isAArch64())
     llvm::AArch64::printEnabledExtensions(EnabledFeatureNames);
   else if (MachineTriple.isRISCV()) {
     llvm::StringMap<llvm::StringRef> DescMap;
-    for (const llvm::SubtargetFeatureKV &feature : Features)
-      DescMap.insert({feature.Key, feature.Desc});
+    for (const llvm::SubtargetFeatureKV *feature : Features)
+      DescMap.insert({feature->key(), feature->desc()});
     llvm::RISCVISAInfo::printEnabledExtensions(MachineTriple.isArch64Bit(),
                                                EnabledFeatureNames, DescMap);
   } else {
@@ -273,12 +274,14 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
         GetResourcesPath(Argv0, MainAddr);
 
   /// Create the actual file system.
-  Clang->createVirtualFileSystem(llvm::vfs::getRealFileSystem(), DiagsBuffer);
+  auto VFS = [] {
+    auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
+    return llvm::vfs::getRealFileSystem();
+  }();
+  Clang->createVirtualFileSystem(std::move(VFS), DiagsBuffer);
 
   // Create the actual diagnostics engine.
   Clang->createDiagnostics();
-  if (!Clang->hasDiagnostics())
-    return 1;
 
   // Set an error handler, so that any LLVM backend diagnostics go through our
   // error handler.
@@ -286,32 +289,27 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
                                   static_cast<void*>(&Clang->getDiagnostics()));
 
   DiagsBuffer->FlushDiagnostics(Clang->getDiagnostics());
-  if (!Success) {
-    Clang->getDiagnosticClient().finish();
+  if (!Success)
     return 1;
-  }
 
   // Execute the frontend actions.
-  {
-    llvm::TimeTraceScope TimeScope("ExecuteCompiler");
-    bool TimePasses = Clang->getCodeGenOpts().TimePasses;
-    if (TimePasses)
-      Clang->createFrontendTimer();
-    llvm::TimeRegion Timer(TimePasses ? &Clang->getFrontendTimer() : nullptr);
-    Success = ExecuteCompilerInvocation(Clang.get());
-  }
+  Success = ExecuteCompilerInvocation(Clang.get());
 
   // If any timers were active but haven't been destroyed yet, print their
   // results now.  This happens in -disable-free mode.
-  std::unique_ptr<raw_ostream> IOFile = llvm::CreateInfoOutputFile();
-  if (Clang->getCodeGenOpts().TimePassesJson) {
-    *IOFile << "{\n";
-    llvm::TimerGroup::printAllJSONValues(*IOFile, "");
-    *IOFile << "\n}\n";
-  } else if (!Clang->getCodeGenOpts().TimePassesStatsFile) {
-    llvm::TimerGroup::printAll(*IOFile);
+  {
+    // This isn't a formal input or output of the compiler.
+    auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
+    std::unique_ptr<raw_ostream> IOFile = llvm::CreateInfoOutputFile();
+    if (Clang->getCodeGenOpts().TimePassesJson) {
+      *IOFile << "{\n";
+      llvm::TimerGroup::printAllJSONValues(*IOFile, "");
+      *IOFile << "\n}\n";
+    } else if (!Clang->getCodeGenOpts().TimePassesStatsFile) {
+      llvm::TimerGroup::printAll(*IOFile);
+    }
+    llvm::TimerGroup::clearAll();
   }
-  llvm::TimerGroup::clearAll();
 
   if (llvm::timeTraceProfilerEnabled()) {
     if (auto profilerOutput = Clang->createOutputFile(
@@ -332,6 +330,8 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
 
   // When running with -disable-free, don't do any destruction or shutdown.
   if (Clang->getFrontendOpts().DisableFree) {
+    // DiagnosticConsumer must be always destroyed.
+    Clang->getDiagnosticClient().~DiagnosticConsumer();
     llvm::BuryPointer(std::move(Clang));
     return !Success;
   }

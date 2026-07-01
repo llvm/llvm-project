@@ -680,7 +680,8 @@ public:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 bitset& flip(size_t __pos);
 
   // element access:
-#  ifdef _LIBCPP_ABI_BITSET_VECTOR_BOOL_CONST_SUBSCRIPT_RETURN_BOOL
+  // TODO(LLVM 24): Remove the opt-out
+#  ifndef _LIBCPP_DEPRECATED_ABI_BITSET_CONST_SUBSCRIPT_RETURN_REF
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool operator[](size_t __p) const {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__p < _Size, "bitset::operator[] index out of bounds");
     return __base::__make_ref(__p);
@@ -970,7 +971,7 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#  if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#  if defined(_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23) && _LIBCPP_STD_VER <= 20
 #    include <concepts>
 #    include <cstdlib>
 #    include <optional>
