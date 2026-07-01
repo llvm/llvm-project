@@ -3266,13 +3266,6 @@ void Verifier::visitFunction(const Function &F) {
           PrintDecl);
   }
 
-  // Check intrinsics' signatures.
-  if (IID == Intrinsic::experimental_gc_get_pointer_base) {
-    FunctionType *FT = F.getFunctionType();
-    Check(FT->getParamType(0) == F.getReturnType(),
-          "gc.get.pointer.base operand and result must be of the same type", F);
-  }
-
   auto *N = F.getSubprogram();
   HasDebugInfo = (N != nullptr);
   if (!HasDebugInfo)
