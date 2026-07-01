@@ -74,12 +74,8 @@ Parser::Parser(Preprocessor &pp, Sema &actions, bool skipFunctionBodies)
   // destructor.
   initializePragmaHandlers();
 
-  // Only install the comment handler when some consumer may read documentation
-  // comments back.
-  if (actions.shouldRetainCommentsFromLexer(SourceLocation())) {
-    CommentSemaHandler.reset(new ActionCommentHandler(actions));
-    PP.addCommentHandler(CommentSemaHandler.get());
-  }
+  CommentSemaHandler.reset(new ActionCommentHandler(actions));
+  PP.addCommentHandler(CommentSemaHandler.get());
 
   PP.setCodeCompletionHandler(*this);
 
@@ -485,8 +481,7 @@ Parser::~Parser() {
 
   resetPragmaHandlers();
 
-  if (CommentSemaHandler)
-    PP.removeCommentHandler(CommentSemaHandler.get());
+  PP.removeCommentHandler(CommentSemaHandler.get());
 
   PP.clearCodeCompletionHandler();
 
