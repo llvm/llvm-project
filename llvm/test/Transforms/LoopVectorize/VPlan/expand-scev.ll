@@ -286,6 +286,40 @@ exit:
   ret void
 }
 
+; FIXME: shl incorrectly carries nsw.
+; Test for https://github.com/llvm/llvm-project/issues/205252.
+define i32 @mul_by_signed_min_expanded_to_shl(i1 %a) {
+; CHECK-LABEL: VPlan for loop in 'mul_by_signed_min_expanded_to_shl'
+; CHECK:  VPlan 'Final VPlan for VF={4},UF={1}' {
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<entry>:
+; CHECK-NEXT:    IR   %rem.neg = zext i1 %a to i32
+; CHECK-NEXT:    IR   %sub = sub i32 %rem.neg, 1
+; CHECK-NEXT:    IR   %shl = shl i32 %sub, 31
+; CHECK-NEXT:    EMIT vp<[[VP2:%[0-9]+]]> = shl nuw nsw ir<%rem.neg>, ir<31>
+; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = add vp<[[VP2]]>, ir<-2147483547>
+; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult vp<[[VP3]]>, ir<4>
+; CHECK-NEXT:    EMIT branch-on-cond vp<%min.iters.check>
+; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.ph
+;
+entry:
+  %rem.neg = zext i1 %a to i32
+  %sub = sub i32 %rem.neg, 1
+  %shl = shl i32 %sub, 31
+  br label %loop
+
+loop:
+  %arg = phi i32 [ 0, %entry ], [ %add, %loop ]
+  %iv = phi i32 [ %shl, %entry ], [ %iv.next, %loop ]
+  %add = or i32 %arg, 2
+  %iv.next = add i32 %iv, 1
+  %c = icmp slt i32 %iv, 100
+  br i1 %c, label %loop, label %exit
+
+exit:
+  ret i32 %add
+}
+
 !0 = distinct !{!0, !1, !2}
 !1 = !{!"llvm.loop.vectorize.scalable.enable", i1 true}
 !2 = !{!"llvm.loop.vectorize.width", i32 4}
