@@ -487,10 +487,11 @@ To apply to be a triager, read the following developer policy docs, and file an
 issue using [this template][triager-issue], stating that you've read the
 policies and agree to abide by them:
 
-* {ref}`LLVM Community Code of Conduct` -- 
-* {ref}`LLVM AI Tool Use Policy` -- Write your own designs and PR descriptions.
-  Don't generate them.
-* {ref}`Developer Policy` -- This document.
+* {ref}`LLVM Community Code of Conduct` -- Be welcoming, respectful, and
+  considerate in all project spaces.
+* {doc}`LLVM AI Tool Use Policy <AIToolPolicy>` -- Write your own designs and
+  PR descriptions. Don't generate them.
+* {ref}`LLVM Developer Policy <developer_policy>` -- This document.
 
 Failing to follow the policies will result in moderation action and loss of the
 triager role.
@@ -501,12 +502,15 @@ Link](https://github.com/orgs/llvm/invitation) directly. Once you accept the
 invitation, you'll be granted LLVM github org affiliation and LLVM triager team
 membership.
 
-[triager-issue]: TODO: create template
+[triager-issue]: https://github.com/llvm/llvm-project/issues/new?template=triager-access-request.yml
 
 ### Obtaining Code Ownership
 
 The next step in contributing to LLVM is joining the LLVM committers team,
-which grants rights to self-approve PRs or approve other contributor PRs.
+which grants the right to approve other contributors' PRs, and to land your own
+changes without waiting for approval (see {ref}`merging pull requests
+<merging_pull_requests>`; GitHub does not allow literally approving your own
+PR, so this is implemented as a merge requirement bypass).
 
 Commit access is granted to contributors who have provided helpful feedback
 that demonstrates good technical judgement. The most important resource the
@@ -527,7 +531,8 @@ demonstrate good technical judgement, and that based on those interactions and
 others elsewhere in the LLVM community they have no concern about you adhering
 to our Developer Policy and Code of Conduct. In straightforward cases,
 reviewers can use the thumbs-up emoji to indicate approval, but simple
-statements of approval, e.g. I approve, looks good to me, are also acceptable.
+statements of approval, e.g. "I approve" or "looks good to me", are also
+acceptable.
 At least one reviewer needs to make a statement like "We don't share an
 organizational affiliation." We trust existing committers to be honest about
 their affiliations, and not rubber stamp the work of team mates as a favor to
@@ -547,15 +552,17 @@ it is not unusual for a large commit to require a moderator to approve the
 email, so do not be concerned if a commit does not immediately appear in the
 archives.
 
-If you have recently been granted commit access, these policies apply:
+If you have recently joined the triager or committer teams, these policies
+apply:
 
 1. You are granted *commit-after-approval* to all parts of LLVM. For
    information on how to get approval for a patch, please see
-   {doc}`CodeReview`. When approved, you may commit it yourself.
-2. You are allowed to self-approve PRs to land changes without waiting for
-   approval when appropriate. This is clearly a subjective decision \-\-- we
-   simply expect you to
-   use good judgement. Examples include: fixing build breakage, reverting
+   {doc}`CodeReview`. When approved, you may merge it yourself.
+2. Committers are allowed to land their own changes without waiting for
+   approval when appropriate (see {ref}`merging pull requests
+   <merging_pull_requests>`). This is clearly a subjective decision \-\-- we
+   simply expect you to use good judgement. Examples include: fixing build
+   breakage, reverting
    obviously broken patches, documentation/comment changes, any other minor
    changes. Avoid committing formatting- or whitespace-only changes outside of
    code you plan to make subsequent changes to. Also, try to separate
@@ -564,8 +571,8 @@ If you have recently been granted commit access, these policies apply:
    highly localized and the commit message should clearly state that the commit
    is not intended to change functionality, usually by stating it is
    {ref}`NFC <nfc>`.
-3. You are allowed to commit patches without approval to those portions of LLVM
-   that you have contributed or maintain (i.e., have been assigned
+3. Committers are allowed to commit patches without approval to those portions
+   of LLVM that they have contributed or maintain (i.e., have been assigned
    responsibility for), with the proviso that such commits must not break the
    build. This is a "trust but verify" policy, and commits of this nature are
    reviewed after they are committed.

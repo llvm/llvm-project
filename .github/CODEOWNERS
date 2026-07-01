@@ -1,217 +1,233 @@
-# This file lists reviewers that are auto-assigned when a pull request modifies
-# certain files or directories. If you add yourself to this file, you commit to
-# reviewing a large fraction of pull requests in the relevant area.
+# This file serves two purposes:
 #
-# The GitHub "code owners" mechanism is used exclusively to auto-assign
-# reviewers and does not carry significance beyond that. It is not necessary
-# to receive an approval from a "code owner" in particular -- any LLVM project
-# member can approve pull requests.
+# 1. It assigns ownership of all paths to the LLVM committers team
+#    (@llvm/llvm-committers). Together with the "require review from code
+#    owners" branch rule, this means a pull request must be approved by a
+#    member of the committers team before it can be merged. Committers may
+#    bypass this requirement for their own pull requests as described in the
+#    developer policy:
+#    https://llvm.org/docs/DeveloperPolicy.html#merging-pull-requests
+#
+#    For any given file, only the *last* matching rule in this file determines
+#    its owners, so @llvm/llvm-committers must be listed on every rule for the
+#    approval requirement to apply everywhere.
+#
+# 2. It lists reviewers that are auto-assigned when a pull request modifies
+#    certain files or directories. If you add yourself to this file, you
+#    commit to reviewing a large fraction of pull requests in the relevant
+#    area. An approval from an auto-assigned reviewer who is not a committer
+#    does not satisfy the code owner review requirement.
 #
 # This is independent of LLVM's own "maintainer" concept.
 # See https://llvm.org/docs/DeveloperPolicy.html#maintainers as well as the
 # Maintainers.md files in the the respective subproject directories.
 
-/libc/ @llvm/reviewers-libc
-/libcxx/ @llvm/reviewers-libcxx
-/libcxxabi/ @llvm/reviewers-libcxxabi
-/libunwind/ @llvm/reviewers-libunwind
-/runtimes/ @llvm/reviewers-libcxx
+# Default rule: the committers team owns all paths. The rules below override
+# this one for reviewer auto-assignment, so each of them must also list
+# @llvm/llvm-committers.
+* @llvm/llvm-committers
 
-/llvm/lib/Analysis/BasicAliasAnalysis.cpp @nikic
-/llvm/lib/Analysis/HashRecognize.cpp @artagnon @pfusik
-/llvm/lib/Analysis/InstructionSimplify.cpp @nikic
-/llvm/lib/Analysis/LazyValueInfo.cpp @nikic
-/llvm/lib/Analysis/ScalarEvolution.cpp @nikic
-/llvm/lib/Analysis/ValueTracking.cpp @nikic
-/llvm/lib/IR/ConstantRange.cpp @nikic
-/llvm/lib/IR/Core.cpp @nikic
-/llvm/lib/Transforms/Scalar/CorrelatedValuePropagation.cpp @nikic
-/llvm/lib/Transforms/Scalar/MemCpyOptimizer.cpp @nikic
-/llvm/lib/Transforms/InstCombine/ @nikic
+/libc/ @llvm/reviewers-libc @llvm/llvm-committers
+/libcxx/ @llvm/reviewers-libcxx @llvm/llvm-committers
+/libcxxabi/ @llvm/reviewers-libcxxabi @llvm/llvm-committers
+/libunwind/ @llvm/reviewers-libunwind @llvm/llvm-committers
+/runtimes/ @llvm/reviewers-libcxx @llvm/llvm-committers
+
+/llvm/lib/Analysis/BasicAliasAnalysis.cpp @nikic @llvm/llvm-committers
+/llvm/lib/Analysis/HashRecognize.cpp @artagnon @pfusik @llvm/llvm-committers
+/llvm/lib/Analysis/InstructionSimplify.cpp @nikic @llvm/llvm-committers
+/llvm/lib/Analysis/LazyValueInfo.cpp @nikic @llvm/llvm-committers
+/llvm/lib/Analysis/ScalarEvolution.cpp @nikic @llvm/llvm-committers
+/llvm/lib/Analysis/ValueTracking.cpp @nikic @llvm/llvm-committers
+/llvm/lib/IR/ConstantRange.cpp @nikic @llvm/llvm-committers
+/llvm/lib/IR/Core.cpp @nikic @llvm/llvm-committers
+/llvm/lib/Transforms/Scalar/CorrelatedValuePropagation.cpp @nikic @llvm/llvm-committers
+/llvm/lib/Transforms/Scalar/MemCpyOptimizer.cpp @nikic @llvm/llvm-committers
+/llvm/lib/Transforms/InstCombine/ @nikic @llvm/llvm-committers
 
 # AMDGPU buffer pointer lowerings
-/llvm/lib/Target/AMDGPU/AMDGPULowerBufferFatPointers.cpp @krzysz00
+/llvm/lib/Target/AMDGPU/AMDGPULowerBufferFatPointers.cpp @krzysz00 @llvm/llvm-committers
 
-/clang/test/CXX/drs/ @Endilll
-/clang/www/cxx_dr_status.html @Endilll
-/clang/www/make_cxx_dr_status @Endilll
+/clang/test/CXX/drs/ @Endilll @llvm/llvm-committers
+/clang/www/cxx_dr_status.html @Endilll @llvm/llvm-committers
+/clang/www/make_cxx_dr_status @Endilll @llvm/llvm-committers
 
-/clang/include/clang/CIR @lanza @bcardosolopes @xlauko @andykaylor
-/clang/lib/CIR @lanza @bcardosolopes @xlauko @andykaylor
-/clang/lib/CIR/CodeGen/CIRGenBuiltinAArch64.cpp @lanza @bcardosolopes @xlauko @andykaylor @banach-space
-/clang/tools/cir-* @lanza @bcardosolopes @xlauko @andykaylor
+/clang/include/clang/CIR @lanza @bcardosolopes @xlauko @andykaylor @llvm/llvm-committers
+/clang/lib/CIR @lanza @bcardosolopes @xlauko @andykaylor @llvm/llvm-committers
+/clang/lib/CIR/CodeGen/CIRGenBuiltinAArch64.cpp @lanza @bcardosolopes @xlauko @andykaylor @banach-space @llvm/llvm-committers
+/clang/tools/cir-* @lanza @bcardosolopes @xlauko @andykaylor @llvm/llvm-committers
 
-/lldb/ @JDevlieghere
-/lldb/**/*FreeBSD* @mchoo7
+/lldb/ @JDevlieghere @llvm/llvm-committers
+/lldb/**/*FreeBSD* @mchoo7 @llvm/llvm-committers
 
 # MLIR Interfaces.
-/mlir/include/mlir/Interfaces/TilingInterface.* @MaheshRavishankar @nicolasvasilache
-/mlir/lib/Interfaces/TilingInterface.* @MaheshRavishankar @nicolasvasilache
-/mlir/include/mlir/Interfaces/ValueBoundsOpInterface.* @matthias-springer
-/mlir/lib/Interfaces/ValueBoundsOpInterface.* @matthias-springer
-/mlir/**/ValueBoundsOpInterfaceImpl.* @matthias-springer
-/mlir/include/mlir/Interfaces/RuntimeVerifiableOpInterface.* @matthias-springer
-/mlir/lib/Interfaces/RuntimeVerifiableOpInterface.* @matthias-springer
-/mlir/**/RuntimeVerifiableOpInterfaceImpl.* @matthias-springer
-/mlir/include/mlir/Interfaces/SubsetOpInterface.* @matthias-springer
-/mlir/lib/Interfaces/SubsetOpInterface.* @matthias-springer
-/mlir/**/SubsetOpInterfaceImpl.* @matthias-springer
-/mlir/include/mlir/Interfaces/DestinationStyleOpInterface.* @matthias-springer
-/mlir/lib/Interfaces/DestinationStyleOpInterface.* @matthias-springer
-/mlir/**/Interfaces/ControlFlowInterfaces.* @matthias-springer
+/mlir/include/mlir/Interfaces/TilingInterface.* @MaheshRavishankar @nicolasvasilache @llvm/llvm-committers
+/mlir/lib/Interfaces/TilingInterface.* @MaheshRavishankar @nicolasvasilache @llvm/llvm-committers
+/mlir/include/mlir/Interfaces/ValueBoundsOpInterface.* @matthias-springer @llvm/llvm-committers
+/mlir/lib/Interfaces/ValueBoundsOpInterface.* @matthias-springer @llvm/llvm-committers
+/mlir/**/ValueBoundsOpInterfaceImpl.* @matthias-springer @llvm/llvm-committers
+/mlir/include/mlir/Interfaces/RuntimeVerifiableOpInterface.* @matthias-springer @llvm/llvm-committers
+/mlir/lib/Interfaces/RuntimeVerifiableOpInterface.* @matthias-springer @llvm/llvm-committers
+/mlir/**/RuntimeVerifiableOpInterfaceImpl.* @matthias-springer @llvm/llvm-committers
+/mlir/include/mlir/Interfaces/SubsetOpInterface.* @matthias-springer @llvm/llvm-committers
+/mlir/lib/Interfaces/SubsetOpInterface.* @matthias-springer @llvm/llvm-committers
+/mlir/**/SubsetOpInterfaceImpl.* @matthias-springer @llvm/llvm-committers
+/mlir/include/mlir/Interfaces/DestinationStyleOpInterface.* @matthias-springer @llvm/llvm-committers
+/mlir/lib/Interfaces/DestinationStyleOpInterface.* @matthias-springer @llvm/llvm-committers
+/mlir/**/Interfaces/ControlFlowInterfaces.* @matthias-springer @llvm/llvm-committers
 
 # AMDGPU and ROCDL dialects in MLIR.
-/mlir/include/mlir/Dialect/AMDGPU @krzysz00 @kuhar
-/mlir/lib/Dialect/AMDGPU @krzysz00 @kuhar
-/mlir/lib/Conversion/*AMDGPU* @krzysz00 @kuhar
-/mlir/lib/Conversion/*ToROCDL @krzysz00 @kuhar
-/mlir/include/mlir/Dialect/LLVMIR/ROCDL* @krzysz00 @kuhar
+/mlir/include/mlir/Dialect/AMDGPU @krzysz00 @kuhar @llvm/llvm-committers
+/mlir/lib/Dialect/AMDGPU @krzysz00 @kuhar @llvm/llvm-committers
+/mlir/lib/Conversion/*AMDGPU* @krzysz00 @kuhar @llvm/llvm-committers
+/mlir/lib/Conversion/*ToROCDL @krzysz00 @kuhar @llvm/llvm-committers
+/mlir/include/mlir/Dialect/LLVMIR/ROCDL* @krzysz00 @kuhar @llvm/llvm-committers
 
 # Arith dialect in MLIR.
-/mlir/include/mlir/Dialect/Arith @kuhar
-/mlir/lib/Dialect/Arith @kuhar
-/mlir/lib/Conversion/ArithTo* @kuhar
+/mlir/include/mlir/Dialect/Arith @kuhar @llvm/llvm-committers
+/mlir/lib/Dialect/Arith @kuhar @llvm/llvm-committers
+/mlir/lib/Conversion/ArithTo* @kuhar @llvm/llvm-committers
 
 # XeGPU and XeVM dialects in MLIR.
-/mlir/include/mlir/Dialect/XeGPU @charithaintc @Jianhui-Li
-/mlir/lib/Dialect/XeGPU @charithaintc @Jianhui-Li
-/mlir/lib/Conversion/*XeGPU* @charithaintc @Jianhui-Li
-/mlir/include/mlir/Dialect/XeGPU/Transforms @charithaintc @Jianhui-Li
-/mlir/lib/Dialect/XeGPU/Transforms @charithaintc @Jianhui-Li
-/mlir/include/mlir/Dialect/XeGPU/TransformOps @charithaintc @Jianhui-Li @tkarna
-/mlir/lib/Dialect/XeGPU/TransformOps @charithaintc @Jianhui-Li @tkarna
-/mlir/include/mlir/Dialect/LLVMIR/XeVM* @silee2 @akroviakov
-/mlir/lib/Dialect/LLVMIR/IR/XeVM @silee2 @akroviakov
-/mlir/lib/Conversion/*XeVM* @silee2 @akroviakov
+/mlir/include/mlir/Dialect/XeGPU @charithaintc @Jianhui-Li @llvm/llvm-committers
+/mlir/lib/Dialect/XeGPU @charithaintc @Jianhui-Li @llvm/llvm-committers
+/mlir/lib/Conversion/*XeGPU* @charithaintc @Jianhui-Li @llvm/llvm-committers
+/mlir/include/mlir/Dialect/XeGPU/Transforms @charithaintc @Jianhui-Li @llvm/llvm-committers
+/mlir/lib/Dialect/XeGPU/Transforms @charithaintc @Jianhui-Li @llvm/llvm-committers
+/mlir/include/mlir/Dialect/XeGPU/TransformOps @charithaintc @Jianhui-Li @tkarna @llvm/llvm-committers
+/mlir/lib/Dialect/XeGPU/TransformOps @charithaintc @Jianhui-Li @tkarna @llvm/llvm-committers
+/mlir/include/mlir/Dialect/LLVMIR/XeVM* @silee2 @akroviakov @llvm/llvm-committers
+/mlir/lib/Dialect/LLVMIR/IR/XeVM @silee2 @akroviakov @llvm/llvm-committers
+/mlir/lib/Conversion/*XeVM* @silee2 @akroviakov @llvm/llvm-committers
 
 # Bufferization Dialect in MLIR.
-/mlir/include/mlir/Dialect/Bufferization @matthias-springer
-/mlir/lib/Dialect/Bufferization @matthias-springer
-/mlir/**/BufferizableOpInterfaceImpl.* @matthias-springer
-/mlir/Dialect/*/Transforms/Bufferize.cpp @matthias-springer
+/mlir/include/mlir/Dialect/Bufferization @matthias-springer @llvm/llvm-committers
+/mlir/lib/Dialect/Bufferization @matthias-springer @llvm/llvm-committers
+/mlir/**/BufferizableOpInterfaceImpl.* @matthias-springer @llvm/llvm-committers
+/mlir/Dialect/*/Transforms/Bufferize.cpp @matthias-springer @llvm/llvm-committers
 
 # DLTI Dialect in MLIR
-/mlir/**/Dialect/DLTI @rolfmorel
-/mlir/**/DataLayoutInterfaces.* @rolfmorel
+/mlir/**/Dialect/DLTI @rolfmorel @llvm/llvm-committers
+/mlir/**/DataLayoutInterfaces.* @rolfmorel @llvm/llvm-committers
 
 # Linalg Dialect in MLIR.
-/mlir/include/mlir/Dialect/Linalg @dcaballe @nicolasvasilache @rengolin
-/mlir/lib/Dialect/Linalg @dcaballe @nicolasvasilache @rengolin
-/mlir/lib/Dialect/Linalg/Transforms/DecomposeLinalgOps.cpp @MaheshRavishankar @nicolasvasilache
-/mlir/lib/Dialect/Linalg/Transforms/DropUnitDims.cpp @dcaballe @MaheshRavishankar @nicolasvasilache
-/mlir/lib/Dialect/Linalg/Transforms/ElementwiseOpFusion.cpp @MaheshRavishankar @nicolasvasilache
-/mlir/lib/Dialect/Linalg/Transforms/DataLayoutPropagation.cpp @nicolasvasilache
-/mlir/lib/Dialect/Linalg/Transforms/Transforms.cpp @dcaballe @nicolasvasilache
-/mlir/lib/Dialect/Linalg/Transforms/Vectorization.cpp @banach-space @dcaballe @nicolasvasilache @Groverkss
+/mlir/include/mlir/Dialect/Linalg @dcaballe @nicolasvasilache @rengolin @llvm/llvm-committers
+/mlir/lib/Dialect/Linalg @dcaballe @nicolasvasilache @rengolin @llvm/llvm-committers
+/mlir/lib/Dialect/Linalg/Transforms/DecomposeLinalgOps.cpp @MaheshRavishankar @nicolasvasilache @llvm/llvm-committers
+/mlir/lib/Dialect/Linalg/Transforms/DropUnitDims.cpp @dcaballe @MaheshRavishankar @nicolasvasilache @llvm/llvm-committers
+/mlir/lib/Dialect/Linalg/Transforms/ElementwiseOpFusion.cpp @MaheshRavishankar @nicolasvasilache @llvm/llvm-committers
+/mlir/lib/Dialect/Linalg/Transforms/DataLayoutPropagation.cpp @nicolasvasilache @llvm/llvm-committers
+/mlir/lib/Dialect/Linalg/Transforms/Transforms.cpp @dcaballe @nicolasvasilache @llvm/llvm-committers
+/mlir/lib/Dialect/Linalg/Transforms/Vectorization.cpp @banach-space @dcaballe @nicolasvasilache @Groverkss @llvm/llvm-committers
 
 # MemRef Dialect in MLIR.
-/mlir/lib/Dialect/MemRef/Transforms/EmulateNarrowType.cpp @MaheshRavishankar @nicolasvasilache
+/mlir/lib/Dialect/MemRef/Transforms/EmulateNarrowType.cpp @MaheshRavishankar @nicolasvasilache @llvm/llvm-committers
 
 # Vector Dialect in MLIR.
-/mlir/**/*Neon* @banach-space @dcaballe @nicolasvasilache
-/mlir/**/*SME* @banach-space @dcaballe @nicolasvasilache
-/mlir/**/*SVE* @banach-space @dcaballe @nicolasvasilache
-/mlir/**/*VectorInterfaces* @dcaballe @nicolasvasilache
-/mlir/**/*VectorToSCF* @banach-space @dcaballe @matthias-springer @nicolasvasilache
-/mlir/**/*VectorToLLVM* @banach-space @dcaballe @nicolasvasilache
-/mlir/**/*X86* @aartbik @dcaballe @nicolasvasilache @adam-smnk
-/mlir/include/mlir/Dialect/Vector @banach-space @dcaballe @nicolasvasilache @Groverkss
-/mlir/include/mlir/Dialect/Vector/IR @kuhar
-/mlir/lib/Dialect/Vector @banach-space @dcaballe @nicolasvasilache @Groverkss
-/mlir/lib/Dialect/Vector/Transforms/* @banach-space @dcaballe @nicolasvasilache
-/mlir/lib/Dialect/Vector/Transforms/VectorEmulateNarrowType.cpp @banach-space @dcaballe @MaheshRavishankar @nicolasvasilache
-/mlir/**/*EmulateNarrowType* @dcaballe
+/mlir/**/*Neon* @banach-space @dcaballe @nicolasvasilache @llvm/llvm-committers
+/mlir/**/*SME* @banach-space @dcaballe @nicolasvasilache @llvm/llvm-committers
+/mlir/**/*SVE* @banach-space @dcaballe @nicolasvasilache @llvm/llvm-committers
+/mlir/**/*VectorInterfaces* @dcaballe @nicolasvasilache @llvm/llvm-committers
+/mlir/**/*VectorToSCF* @banach-space @dcaballe @matthias-springer @nicolasvasilache @llvm/llvm-committers
+/mlir/**/*VectorToLLVM* @banach-space @dcaballe @nicolasvasilache @llvm/llvm-committers
+/mlir/**/*X86* @aartbik @dcaballe @nicolasvasilache @adam-smnk @llvm/llvm-committers
+/mlir/include/mlir/Dialect/Vector @banach-space @dcaballe @nicolasvasilache @Groverkss @llvm/llvm-committers
+/mlir/include/mlir/Dialect/Vector/IR @kuhar @llvm/llvm-committers
+/mlir/lib/Dialect/Vector @banach-space @dcaballe @nicolasvasilache @Groverkss @llvm/llvm-committers
+/mlir/lib/Dialect/Vector/Transforms/* @banach-space @dcaballe @nicolasvasilache @llvm/llvm-committers
+/mlir/lib/Dialect/Vector/Transforms/VectorEmulateNarrowType.cpp @banach-space @dcaballe @MaheshRavishankar @nicolasvasilache @llvm/llvm-committers
+/mlir/**/*EmulateNarrowType* @dcaballe @llvm/llvm-committers
 
 # Presburger library in MLIR
-/mlir/**/*Presburger* @Groverkss @Superty
+/mlir/**/*Presburger* @Groverkss @Superty @llvm/llvm-committers
 
 # Tensor Dialect in MLIR.
-/mlir/lib/Dialect/Tensor/IR/TensorTilingInterfaceImpl.cpp @nicolasvasilache
-/mlir/lib/Dialect/Tensor/Transforms/* @nicolasvasilache
+/mlir/lib/Dialect/Tensor/IR/TensorTilingInterfaceImpl.cpp @nicolasvasilache @llvm/llvm-committers
+/mlir/lib/Dialect/Tensor/Transforms/* @nicolasvasilache @llvm/llvm-committers
 
 # Transform Dialect in MLIR.
-/mlir/include/mlir/Dialect/Transform/* @ftynse @nicolasvasilache @rolfmorel
-/mlir/lib/Dialect/Transform/* @ftynse @nicolasvasilache @rolfmorel
-/mlir/**/*TransformOps* @ftynse @nicolasvasilache @rolfmorel
+/mlir/include/mlir/Dialect/Transform/* @ftynse @nicolasvasilache @rolfmorel @llvm/llvm-committers
+/mlir/lib/Dialect/Transform/* @ftynse @nicolasvasilache @rolfmorel @llvm/llvm-committers
+/mlir/**/*TransformOps* @ftynse @nicolasvasilache @rolfmorel @llvm/llvm-committers
 
 # SPIR-V Dialect in MLIR.
-/mlir/**/SPIRV/ @antiagainst @kuhar @IgWod
-/mlir/**/SPIRVTo*/ @antiagainst @kuhar @IgWod
-/mlir/**/*ToSPIRV/ @antiagainst @kuhar @IgWod
-/mlir/tools/mlir-tblgen/SPIRVUtilsGen.cpp @antiagainst @kuhar @IgWod
+/mlir/**/SPIRV/ @antiagainst @kuhar @IgWod @llvm/llvm-committers
+/mlir/**/SPIRVTo*/ @antiagainst @kuhar @IgWod @llvm/llvm-committers
+/mlir/**/*ToSPIRV/ @antiagainst @kuhar @IgWod @llvm/llvm-committers
+/mlir/tools/mlir-tblgen/SPIRVUtilsGen.cpp @antiagainst @kuhar @IgWod @llvm/llvm-committers
 
 # MLIR Sparsifier.
-/mlir/**/*SparseTensor*/ @aartbik @PeimingLiu @yinying-lisa-li @matthias-springer
+/mlir/**/*SparseTensor*/ @aartbik @PeimingLiu @yinying-lisa-li @matthias-springer @llvm/llvm-committers
 
 # MLIR NVGPU Dialect
-/mlir/**/NVGPU*/ @grypp
-/mlir/test/**/CUDA/ @grypp
+/mlir/**/NVGPU*/ @grypp @llvm/llvm-committers
+/mlir/test/**/CUDA/ @grypp @llvm/llvm-committers
 
 # MLIR GPU Dialect
-/mlir/**/GPU*/ @fabianmcg
+/mlir/**/GPU*/ @fabianmcg @llvm/llvm-committers
 
 # MLIR NVVM Dialect in MLIR
-/mlir/**/LLVMIR/**/BasicPtxBuilderInterface* @grypp
-/mlir/**/NVVM* @grypp
+/mlir/**/LLVMIR/**/BasicPtxBuilderInterface* @grypp @llvm/llvm-committers
+/mlir/**/NVVM* @grypp @llvm/llvm-committers
 
 # MLIR Index Dialect
-/mlir/**/Index* @mogball
+/mlir/**/Index* @mogball @llvm/llvm-committers
 
 # MLIR Shard Dialect
-/mlir/**/*shard* @fschlimb
-/mlir/**/*Shard* @fschlimb
+/mlir/**/*shard* @fschlimb @llvm/llvm-committers
+/mlir/**/*Shard* @fschlimb @llvm/llvm-committers
 
 # MLIR Python Bindings
-/mlir/test/python/ @ftynse @makslevental @stellaraccident @rolfmorel
-/mlir/python/ @ftynse @makslevental @stellaraccident @rolfmorel
-/mlir/lib/Bindings/Python @makslevental @rolfmorel
-/mlir/include/Bindings/Python @makslevental @rolfmorel
+/mlir/test/python/ @ftynse @makslevental @stellaraccident @rolfmorel @llvm/llvm-committers
+/mlir/python/ @ftynse @makslevental @stellaraccident @rolfmorel @llvm/llvm-committers
+/mlir/lib/Bindings/Python @makslevental @rolfmorel @llvm/llvm-committers
+/mlir/include/Bindings/Python @makslevental @rolfmorel @llvm/llvm-committers
 
 # MLIR Mem2Reg/SROA
-/mlir/**/Transforms/Mem2Reg.* @moxinilian
-/mlir/**/Transforms/SROA.* @moxinilian
+/mlir/**/Transforms/Mem2Reg.* @moxinilian @llvm/llvm-committers
+/mlir/**/Transforms/SROA.* @moxinilian @llvm/llvm-committers
 
 # MLIR IRDL-related
-/mlir/**/*IRDL* @moxinilian
+/mlir/**/*IRDL* @moxinilian @llvm/llvm-committers
 
 # BOLT
-/bolt/ @aaupov @maksfb @rafaelauler @ayermolo @yota9 @paschalis-mpeis @yozhu @yavtuk
+/bolt/ @aaupov @maksfb @rafaelauler @ayermolo @yota9 @paschalis-mpeis @yozhu @yavtuk @llvm/llvm-committers
 
 # Bazel build system.
-/utils/bazel/ @rupprecht @keith @aaronmondal @googlewalt
+/utils/bazel/ @rupprecht @keith @aaronmondal @googlewalt @llvm/llvm-committers
 
 # InstallAPI and TextAPI
-/llvm/**/TextAPI/ @cyndyishida
-/clang/**/InstallAPI/ @cyndyishida
-/clang/tools/clang-installapi/ @cyndyishida
+/llvm/**/TextAPI/ @cyndyishida @llvm/llvm-committers
+/clang/**/InstallAPI/ @cyndyishida @llvm/llvm-committers
+/clang/tools/clang-installapi/ @cyndyishida @llvm/llvm-committers
 
 # ExtractAPI
-/clang/**/ExtractAPI @QuietMisdreavus @snprajwal
+/clang/**/ExtractAPI @QuietMisdreavus @snprajwal @llvm/llvm-committers
 
 # DWARFLinker, dwarfutil, dsymutil
-/llvm/**/DWARFLinker/ @JDevlieghere
-/llvm/**/dsymutil/ @JDevlieghere
-/llvm/**/llvm-dwarfutil/ @JDevlieghere
+/llvm/**/DWARFLinker/ @JDevlieghere @llvm/llvm-committers
+/llvm/**/dsymutil/ @JDevlieghere @llvm/llvm-committers
+/llvm/**/llvm-dwarfutil/ @JDevlieghere @llvm/llvm-committers
 
 # libclang/Python bindings
-/clang/bindings/python @DeinAlptraum
+/clang/bindings/python @DeinAlptraum @llvm/llvm-committers
 
 # AMDGPU assembler and disassembler
-/llvm-project/llvm/lib/Target/AMDGPU/AsmParser/AMDGPUAsmParser.cpp @jwanggit86
-/llvm-project/llvm/lib/Target/AMDGPU/Disassembler/AMDGPUDisassembler.cpp @jwanggit86
+/llvm-project/llvm/lib/Target/AMDGPU/AsmParser/AMDGPUAsmParser.cpp @jwanggit86 @llvm/llvm-committers
+/llvm-project/llvm/lib/Target/AMDGPU/Disassembler/AMDGPUDisassembler.cpp @jwanggit86 @llvm/llvm-committers
 
 # Clang Driver
-/clang/lib/Driver/ToolChains/AMDGPU.cpp @lamb-j
-/clang/lib/Driver/OffloadBundler.cpp @lamb-j @david-salinas
+/clang/lib/Driver/ToolChains/AMDGPU.cpp @lamb-j @llvm/llvm-committers
+/clang/lib/Driver/OffloadBundler.cpp @lamb-j @david-salinas @llvm/llvm-committers
 
 # GlobalIsel
-/llvm/lib/Target/AMDGPU/AMDGPURegBankLegalize* @vangthao95
+/llvm/lib/Target/AMDGPU/AMDGPURegBankLegalize* @vangthao95 @llvm/llvm-committers
 
 # AMDGPU Memory Model
-/llvm/lib/Target/AMDGPU/SIMemoryLegalizer* @Pierre-vh @ritter-x2a
-/llvm/lib/Target/AMDGPU/SIInsertWaitcnts* @Pierre-vh @ritter-x2a
+/llvm/lib/Target/AMDGPU/SIMemoryLegalizer* @Pierre-vh @ritter-x2a @llvm/llvm-committers
+/llvm/lib/Target/AMDGPU/SIInsertWaitcnts* @Pierre-vh @ritter-x2a @llvm/llvm-committers
 
 # Clang-Tidy tool
-/clang-tools-extra/clang-tidy/ @vbvictor @zeyi2
-/clang-tools-extra/test/clang-tidy/ @vbvictor @zeyi2
-/clang-tools-extra/docs/clang-tidy/ @vbvictor @zeyi2
+/clang-tools-extra/clang-tidy/ @vbvictor @zeyi2 @llvm/llvm-committers
+/clang-tools-extra/test/clang-tidy/ @vbvictor @zeyi2 @llvm/llvm-committers
+/clang-tools-extra/docs/clang-tidy/ @vbvictor @zeyi2 @llvm/llvm-committers
