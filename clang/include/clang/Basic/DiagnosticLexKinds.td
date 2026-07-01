@@ -170,9 +170,11 @@ def err_hex_escape_no_digits : Error<
 def err_invalid_ucn_name : Error<
   "'%0' is not a valid Unicode character name">;
 def note_invalid_ucn_name_loose_matching : Note<
-  "characters names in Unicode escape sequences are sensitive to case and whitespaces">;
+  "character names in Unicode escape sequences are sensitive to case and whitespaces">;
 def note_invalid_ucn_name_candidate : Note<
-  "did you mean %0 ('%2' U+%1)?">;
+  "did you mean %0 (%1)?">;
+def note_invalid_ucn_name_character : Note<
+  "character %0 cannot appear in a Unicode character name">;
 
 def warn_ucn_escape_no_digits : Warning<
   "\\%0 used with no following hex digits; "
