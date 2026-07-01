@@ -520,7 +520,7 @@ TEST(VerifierTest, AtomicRMWIntVector) {
   Constant *CV = ConstantVector::getSplat(ElementCount::getScalable(2), CI);
   new AtomicRMWInst(AtomicRMWInst::Add, Ptr, CV, Align(8),
                     AtomicOrdering::SequentiallyConsistent, SyncScope::System,
-                    Entry);
+                    /*Elementwise=*/false, Entry);
   ReturnInst::Create(C, Entry);
 
   std::string Error;
@@ -530,6 +530,25 @@ TEST(VerifierTest, AtomicRMWIntVector) {
       StringRef(Error).starts_with("atomicrmw add operand must have integer or "
                                    "fixed vector of integer type!"))
       << Error;
+}
+
+TEST(VerifierTest, AtomicRMWFixedIntVector) {
+  LLVMContext C;
+  Module M("M", C);
+  FunctionType *FTy = FunctionType::get(Type::getVoidTy(C), /*isVarArg=*/false);
+  Function *F = Function::Create(FTy, Function::ExternalLinkage, "foo", M);
+  BasicBlock *Entry = BasicBlock::Create(C, "entry", F);
+  Value *Ptr = PoisonValue::get(PointerType::get(C, 0));
+
+  Type *IntTy = Type::getInt16Ty(C);
+  Constant *CV = ConstantVector::getSplat(ElementCount::getFixed(2),
+                                          ConstantInt::get(IntTy, 0));
+  new AtomicRMWInst(AtomicRMWInst::Add, Ptr, CV, Align(4),
+                    AtomicOrdering::SequentiallyConsistent, SyncScope::System,
+                    /*Elementwise=*/false, Entry);
+  ReturnInst::Create(C, Entry);
+
+  EXPECT_FALSE(verifyFunction(*F));
 }
 
 TEST(VerifierTest, GetElementPtrInst) {
