@@ -10787,8 +10787,8 @@ LegalizerHelper::lowerMemset(MachineInstr &MI, Register Dst, Register Val,
     LLT Ty = MemOps[I];
     unsigned TySize = Ty.getSizeInBytes();
     if (TySize > Size) {
-      // Issuing an unaligned load / store pair that overlaps with the previous
-      // pair. Adjust the offset accordingly.
+      // Issuing a load / store pair that overlaps with the previous pair.
+      // Adjust the offset accordingly.
       assert(I == MemOps.size() - 1 && I != 0);
       DstOff -= TySize - Size;
     }
@@ -10879,8 +10879,8 @@ LegalizerHelper::lowerMemcpy(MachineInstr &MI, Register Dst, Register Src,
   unsigned CurrOffset = 0;
   unsigned Size = KnownLen;
   for (auto CopyTy : MemOps) {
-    // Issuing an unaligned load / store pair  that overlaps with the previous
-    // pair. Adjust the offset accordingly.
+    // Issuing a load / store pair that overlaps with the previous pair. Adjust
+    // the offset accordingly.
     if (CopyTy.getSizeInBytes() > Size)
       CurrOffset -= CopyTy.getSizeInBytes() - Size;
 
@@ -10961,8 +10961,14 @@ LegalizerHelper::lowerMemmove(MachineInstr &MI, Register Dst, Register Src,
   // Apart from that, this loop is pretty much doing the same thing as the
   // memcpy codegen function.
   unsigned CurrOffset = 0;
+  unsigned Size = KnownLen;
   SmallVector<Register, 16> LoadVals;
   for (auto CopyTy : MemOps) {
+    // Issuing a load that overlaps with the previous load. Adjust the offset
+    // accordingly.
+    if (CopyTy.getSizeInBytes() > Size)
+      CurrOffset -= CopyTy.getSizeInBytes() - Size;
+
     // Construct MMO for the load.
     auto *LoadMMO =
         MF.getMachineMemOperand(&SrcMMO, CurrOffset, CopyTy.getSizeInBytes());
@@ -10977,11 +10983,19 @@ LegalizerHelper::lowerMemmove(MachineInstr &MI, Register Dst, Register Src,
     }
     LoadVals.push_back(MIB.buildLoad(CopyTy, LoadPtr, *LoadMMO).getReg(0));
     CurrOffset += CopyTy.getSizeInBytes();
+    Size -= CopyTy.getSizeInBytes();
   }
 
   CurrOffset = 0;
+  Size = KnownLen;
   for (unsigned I = 0; I < MemOps.size(); ++I) {
     LLT CopyTy = MemOps[I];
+
+    // Issuing a store that overlaps with the previous store. Adjust the offset
+    // accordingly.
+    if (CopyTy.getSizeInBytes() > Size)
+      CurrOffset -= CopyTy.getSizeInBytes() - Size;
+
     // Now store the values loaded.
     auto *StoreMMO =
         MF.getMachineMemOperand(&DstMMO, CurrOffset, CopyTy.getSizeInBytes());
@@ -10995,6 +11009,7 @@ LegalizerHelper::lowerMemmove(MachineInstr &MI, Register Dst, Register Src,
     }
     MIB.buildStore(LoadVals[I], StorePtr, *StoreMMO);
     CurrOffset += CopyTy.getSizeInBytes();
+    Size -= CopyTy.getSizeInBytes();
   }
   MI.eraseFromParent();
   return Legalized;
