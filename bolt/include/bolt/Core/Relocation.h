@@ -38,12 +38,16 @@ namespace bolt {
 class Relocation {
 public:
   Relocation(uint64_t Offset, MCSymbol *Symbol, uint32_t Type, uint64_t Addend,
-             uint64_t Value)
+             uint64_t Value, bool IsRELR = false)
       : Offset(Offset), Symbol(Symbol), Type(Type), Optional(false),
-        Addend(Addend), Value(Value) {}
+        IsRELR(IsRELR), Addend(Addend), Value(Value) {
+    assert((isRelative() || !isRELR()) &&
+           "Only relative relocations can be relr.");
+  }
 
   Relocation()
-      : Offset(0), Symbol(0), Type(0), Optional(0), Addend(0), Value(0) {}
+      : Offset(0), Symbol(0), Type(0), Optional(0), IsRELR(0), Addend(0),
+        Value(0) {}
 
   static Triple::ArchType Arch; /// set by BinaryContext ctor.
 
@@ -61,6 +65,11 @@ private:
   /// omitted under certain circumstances.
   bool Optional = false;
 
+  /// Track which relocations originate from a relr section. Emit these
+  /// exclusively into the relr section and do not accidentally promote relative
+  /// rela entries, because that would require growing the relr section.
+  bool IsRELR = false;
+
 public:
   /// The offset from the \p Symbol base used to compute the final
   /// value of this relocation.
@@ -76,6 +85,8 @@ public:
   void setOptional() { Optional = true; }
 
   bool isOptional() { return Optional; }
+
+  bool isRELR() const { return IsRELR; }
 
   /// Return size of this relocation.
   size_t getSize() const { return getSizeForType(Type); }

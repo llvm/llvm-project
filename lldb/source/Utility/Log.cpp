@@ -10,6 +10,7 @@
 #include "lldb/Utility/VASPrintf.h"
 
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/iterator.h"
 
@@ -70,11 +71,11 @@ void Log::ListCategories(llvm::raw_ostream &stream,
                   });
 }
 
-Log::MaskType Log::GetFlags(llvm::raw_ostream &stream,
-                            const ChannelMap::value_type &entry,
-                            llvm::ArrayRef<const char *> categories) {
-  bool list_categories = false;
+std::optional<Log::MaskType>
+Log::GetFlags(llvm::raw_ostream &stream, const ChannelMap::value_type &entry,
+              llvm::ArrayRef<const char *> categories) {
   Log::MaskType flags = 0;
+  llvm::SmallVector<std::string> unrecognized_categories;
   for (const char *category : categories) {
     if (llvm::StringRef("all").equals_insensitive(category)) {
       flags |= std::numeric_limits<Log::MaskType>::max();
@@ -92,12 +93,20 @@ Log::MaskType Log::GetFlags(llvm::raw_ostream &stream,
       flags |= cat->flag;
       continue;
     }
-    stream << llvm::formatv("error: unrecognized log category '{0}'\n",
-                            category);
-    list_categories = true;
+    unrecognized_categories.push_back(llvm::formatv("'{}'", category));
   }
-  if (list_categories)
+
+  if (unrecognized_categories.size()) {
+    stream << "error: unrecognized log "
+           << ((unrecognized_categories.size() == 1) ? "category "
+                                                     : "categories ")
+           << llvm::join(unrecognized_categories.begin(),
+                         unrecognized_categories.end(), ", ")
+           << "\n";
     ListCategories(stream, entry);
+    return {};
+  }
+
   return flags;
 }
 
@@ -224,8 +233,13 @@ bool Log::EnableLogChannel(const std::shared_ptr<LogHandler> &log_handler_sp,
     return false;
   }
 
-  auto flags = categories.empty() ? std::optional<MaskType>{}
-                                  : GetFlags(error_stream, *iter, categories);
+  std::optional<MaskType> flags;
+
+  if (!categories.empty()) {
+    flags = GetFlags(error_stream, *iter, categories);
+    if (!flags)
+      return false;
+  }
 
   iter->second.Enable(log_handler_sp, flags, log_options);
   return true;
@@ -240,8 +254,13 @@ bool Log::DisableLogChannel(llvm::StringRef channel,
     return false;
   }
 
-  auto flags = categories.empty() ? std::optional<MaskType>{}
-                                  : GetFlags(error_stream, *iter, categories);
+  std::optional<MaskType> flags;
+
+  if (!categories.empty()) {
+    flags = GetFlags(error_stream, *iter, categories);
+    if (!flags)
+      return false;
+  }
 
   iter->second.Disable(flags);
   return true;

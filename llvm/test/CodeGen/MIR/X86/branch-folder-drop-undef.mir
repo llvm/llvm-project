@@ -26,8 +26,7 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.3(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT:   liveins: $edi, $xmm0, $xmm1, $xmm2
   ; CHECK-NEXT: {{  $}}
-  ; FIXME: This is a miscompilation issue, should intersect flags when hoisting common code.
-  ; CHECK-NEXT:   renamable $xmm1 = PUNPCKLBWrr killed renamable $xmm1, undef renamable $xmm0
+  ; CHECK-NEXT:   renamable $xmm1 = PUNPCKLBWrr killed renamable $xmm1, renamable $xmm0
   ; CHECK-NEXT:   TEST8ri renamable $dil, 1, implicit-def $eflags
   ; CHECK-NEXT:   JCC_1 %bb.3, 5, implicit killed $eflags
   ; CHECK-NEXT: {{  $}}

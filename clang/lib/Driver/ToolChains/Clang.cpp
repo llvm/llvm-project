@@ -1438,7 +1438,8 @@ static void CollectARMPACBTIOptions(const ToolChain &TC, const ArgList &Args,
       auto isPAuthLR = [](const char *member) {
         llvm::AArch64::ExtensionInfo pauthlr_extension =
             llvm::AArch64::getExtensionByID(llvm::AArch64::AEK_PAUTHLR);
-        return pauthlr_extension.PosTargetFeature == member;
+        return llvm::AArch64::StrTab[pauthlr_extension.PosTargetFeature] ==
+               member;
       };
 
       if (llvm::any_of(CmdArgs, isPAuthLR))
@@ -3642,6 +3643,12 @@ static void RenderSSPOptions(const Driver &D, const ToolChain &TC,
         !EffectiveTriple.isSystemZ())
       D.Diag(diag::err_drv_unsupported_opt_for_target)
           << A->getAsString(Args) << TripleStr;
+    // z/OS only supports the tls mode.
+    if (EffectiveTriple.isOSzOS() && GuardValue != "tls") {
+      D.Diag(diag::err_drv_invalid_value_with_suggestion)
+          << A->getOption().getName() << GuardValue << "tls";
+      return;
+    }
     if ((EffectiveTriple.isX86() || EffectiveTriple.isARM() ||
          EffectiveTriple.isThumb() || EffectiveTriple.isSystemZ()) &&
         GuardValue != "tls" && GuardValue != "global") {
@@ -9787,7 +9794,8 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       OPT_fsanitize_trap_EQ,
       OPT_fno_sanitize_trap_EQ,
       OPT_fslp_vectorize,
-      OPT_fno_slp_vectorize};
+      OPT_fno_slp_vectorize,
+      OPT_hipstdpar};
   const llvm::DenseSet<unsigned> LinkerOptions{OPT_mllvm, OPT_Zlinker_input};
   auto ToolChainHasRT = [&](const ToolChain &TC, StringRef Name) {
     return TC.getVFS().exists(

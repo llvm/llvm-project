@@ -2795,6 +2795,23 @@ class Ext32Pat <SDNode ext> : GCNPat <
 def : Ext32Pat <zext>;
 def : Ext32Pat <anyext>;
 
+// Uniform extensions from i1
+
+foreach ext = [sext, zext, anyext] in {
+  defvar extone = !switch(ext, sext: -1, 1);
+
+  foreach vt = [i16, i32] in
+    def : GCNPat <
+      (vt (UniformUnaryFrag<ext> SCC)),
+      (S_CSELECT_B32 (vt extone), (vt 0))
+    >;
+
+  def : GCNPat <
+    (i64 (UniformUnaryFrag<ext> SCC)),
+    (S_CSELECT_B64 (i64 extone), (i64 0))
+  >;
+}
+
 // The multiplication scales from [0,1) to the unsigned integer range,
 // rounding down a bit to avoid unwanted overflow.
 def : GCNPat <

@@ -207,12 +207,13 @@ protected:
         channel, args.GetArgumentArrayRef(), log_file, m_options.log_options,
         m_options.buffer_size.GetCurrentValue(), m_options.handler,
         error_stream);
-    result.GetErrorStream() << error;
 
     if (success)
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
-    else
+    else {
+      result.GetErrorStream() << error;
       result.SetStatus(eReturnStatusFailed);
+    }
   }
 
   CommandOptions m_options;
