@@ -265,26 +265,25 @@ namespace llvm {
       return MVT::getVectorVT(EltVT, EltCnt * 2);
     }
 
-    // Return a VT for an Integer type doubled in size
-    MVT widenIntegerElementType() const {
-      assert(isScalarInteger() && "Not an integer MVT!");
-      assert((SimpleTy != MVT::LAST_INTEGER_VALUETYPE) &&
-             "Widening of this Integer type not supported !");
-
-      unsigned NextSizeInBits = getScalarSizeInBits() * 2;
-      return getIntegerVT(NextSizeInBits);
+    MVT placeholder_206783(MVT EltVT) const {
+      EltVT = EltVT.getScalarType();
+      return isVector() ? changeVectorElementType(EltVT) : EltVT;
     }
 
-    // Return a VT for an integer vector type with the size of the
-    // elements doubled.
-    MVT widenIntegerVectorElementType() const {
-      assert(isVector() && "Not a vector MVT!");
+    // Return a VT for an Integer type doubled in size
+    MVT widenIntegerElementType() const {
+      const MVT BaseTy = getScalarType();
+      assert(BaseTy.isInteger() &&
+             "Not an integer or vector of integer MVT!");
+      assert((BaseTy != MVT::LAST_INTEGER_VALUETYPE) &&
+             "Widening of this Integer type not supported !");
 
-      MVT WideEltTy = getVectorElementType().widenIntegerElementType();
-      MVT VecTy = MVT::getVectorVT(WideEltTy, getVectorElementCount());
-      assert(VecTy.SimpleTy != MVT::INVALID_SIMPLE_VALUE_TYPE &&
-             "Widening of this Vector Integer type not supported !");
-      return VecTy;
+      MVT ResTy =
+          placeholder_206783(getIntegerVT(BaseTy.getScalarSizeInBits() * 2));
+      assert(ResTy != MVT::INVALID_SIMPLE_VALUE_TYPE &&
+             "Failed to widened to a valid MVT!");
+
+      return ResTy;
     }
 
     /// Returns true if the given vector is a power of 2.
