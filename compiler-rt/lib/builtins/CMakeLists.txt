@@ -264,7 +264,14 @@ if(COMPILER_RT_USE_LIBC_MATH)
   include_directories(SYSTEM ${_libc_include_dirs})
   add_definitions(-DCOMPILER_RT_USE_LIBC_MATH)
 
+  use_libc_builtin(GENERIC_SOURCES    adddf3)
   use_libc_builtin(GENERIC_TF_SOURCES addtf3)
+  use_libc_builtin(GENERIC_SOURCES    divdf3)
+  use_libc_builtin(GENERIC_TF_SOURCES divtf3)
+  use_libc_builtin(GENERIC_SOURCES    muldf3)
+  use_libc_builtin(GENERIC_TF_SOURCES multf3)
+  use_libc_builtin(GENERIC_SOURCES    subdf3)
+  use_libc_builtin(GENERIC_TF_SOURCES divtf3)
 endif()
 
 option(COMPILER_RT_EXCLUDE_ATOMIC_BUILTIN
