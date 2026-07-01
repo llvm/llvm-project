@@ -418,7 +418,7 @@ static void transformScalarShuffleIndiciesToVector(unsigned VecTyNumElements,
   Mask.swap(NewMask);
 }
 
-// Check if all the 0th/1st operand of all the shufflevector are identical
+// Check if all the 0th/1st operands of all the shufflevectors are identical
 // respectively. This corresponds to pattern B from the paper Revec: Program
 // Rejuvenation through Revectorization” by Charith Mendis et al.
 // e.g.
@@ -430,7 +430,7 @@ static void transformScalarShuffleIndiciesToVector(unsigned VecTyNumElements,
 //   <4 x i32> <i32 2, i32 3, i32 2, i32 0>
 // %3 = shufflevector <2 x i32> %1, <2 x i32> %2,
 //   <4 x i32> <i32 3, i32 0, i32 2, i32 2>
-// i.e. all the shuffles have the same 0th operand and have the same 1st
+// Here, all the shuffles have the same 0th operand and have the same 1st
 // operand.
 static bool isPermuteOfIdenticalShuffleOperands(ArrayRef<Value *> VL) {
   if (VL.empty())
@@ -18271,11 +18271,12 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
                 isPermuteOfIdenticalShuffleOperands(VL);
             unsigned ShufflevectorNumGroups =
                 IsIdenticalShuffleOpPermute ? 0 : getShufflevectorNumGroups(VL);
+            InstructionCost Cost = InstructionCost::getInvalid();
             if (IsIdenticalShuffleOpPermute) {
-              return ::getShuffleCost(*TTI,
-                                      TargetTransformInfo::SK_PermuteTwoSrc,
-                                      cast<VectorType>(VecTy),
-                                      calculateShufflevectorMask(E->Scalars));
+              Cost =
+                  ::getShuffleCost(*TTI, TargetTransformInfo::SK_PermuteTwoSrc,
+                                   cast<VectorType>(VecTy),
+                                   calculateShufflevectorMask(E->Scalars));
             } else if (ShufflevectorNumGroups) {
               assert(isa<ShuffleVectorInst>(VL.front()) &&
                      "Not supported shufflevector usage.");
@@ -18301,13 +18302,14 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
                       NextIndex += SV->getShuffleMask().size();
                       return true;
                     }))
-                  return ::getShuffleCost(
+                  Cost = ::getShuffleCost(
                       *TTI, TargetTransformInfo::SK_PermuteSingleSrc,
                       cast<VectorType>(VecTy),
                       calculateShufflevectorMask(E->Scalars));
               }
-              return TTI::TCC_Free;
+              Cost = TTI::TCC_Free;
             }
+            return Cost;
           });
     return GetCostDiff(GetScalarCost, GetVectorCost);
   }
@@ -24376,7 +24378,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       return V;
     }
     case Instruction::ShuffleVector: {
-      Value *V;
+      Value *V = nullptr;
       if (SLPReVec && !E->isAltShuffle()) {
         setInsertPointAfterBundle(E);
         SmallVector<int> ThisMask(calculateShufflevectorMask(E->Scalars));
