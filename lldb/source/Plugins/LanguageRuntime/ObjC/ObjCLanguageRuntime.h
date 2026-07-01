@@ -307,7 +307,7 @@ public:
 
   virtual ObjCISA GetParentClass(ObjCISA isa);
 
-  virtual ObjCISA GetPointerISA(ObjCISA isa) {return isa; };  
+  virtual ObjCISA GetPointerISA(ObjCISA isa) { return isa; };
 
   // Finds the byte offset of the child_type ivar in parent_type.  If it can't
   // find the offset, returns LLDB_INVALID_IVAR_OFFSET.
