@@ -399,6 +399,11 @@ static void checkOptions(Ctx &ctx) {
       ctx.arg.zCetReport != ReportPolicy::None)
     ErrAlways(ctx) << "-z cet-report only supported on X86 and X86_64";
 
+  if (ctx.arg.emachine == EM_CUDA && !ctx.arg.ltoEmitAsm && !ctx.arg.emitLLVM) {
+    ErrAlways(ctx) << "CUDA bitcode inputs are only supported with "
+                      "--lto-emit-asm or --lto-emit-llvm";
+  }
+
   if (ctx.arg.pie && ctx.arg.shared)
     ErrAlways(ctx) << "-shared and -pie may not be used together";
 
