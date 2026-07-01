@@ -1210,7 +1210,18 @@ void Darwin::ensureTargetInitialized() const {
   else if (getTriple().isMacCatalystEnvironment())
     Environment = MacCatalyst;
 
-  VersionTuple OsVer = getTriple().getOSVersion();
+  VersionTuple OsVer;
+  if (Platform == MacOS) {
+    // Convert a Darwin kernel version (e.g. darwin24.3.0) to the macOS product
+    // version (e.g. 15.0.0). The raw getOSVersion() returns the kernel version,
+    // which mismatches the macOS version that AddDeploymentTarget() later
+    // passes to setTarget(), tripping its "Target already initialized!"
+    // assertion on the HIP-SPIR-V offload path.
+    if (!getTriple().getMacOSXVersion(OsVer))
+      return;
+  } else {
+    OsVer = getTriple().getOSVersion();
+  }
   setTarget(Platform, Environment, OsVer.getMajor(),
             OsVer.getMinor().value_or(0), OsVer.getSubminor().value_or(0),
             VersionTuple());
