@@ -1919,7 +1919,7 @@ def int_experimental_gc_relocate : DefaultAttrsIntrinsic<
     [IntrNoMem, ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>]>;
 
 def int_experimental_gc_get_pointer_base : DefaultAttrsIntrinsic<
-    [llvm_anyptr_ty], [llvm_anyptr_ty],
+    [llvm_anyptr_ty], [LLVMMatchType<0>],
     [IntrNoMem, ReadNone<ArgIndex<0>>, NoCapture<ArgIndex<0>>]>;
 
 def int_experimental_gc_get_pointer_offset : DefaultAttrsIntrinsic<
