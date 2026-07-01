@@ -701,11 +701,24 @@ define <2 x float> @ret_ldexp_v2f32_known_pos_exp_noinf(<2 x float> nofpclass(in
   ret <2 x float> %call
 }
 
-define <2 x float> @ret_ldexp_v2f32_known_neg_exp_noinf(<2 x float> nofpclass(inf) %arg0, <2 x i32> %arg1) #0 {
-; CHECK-LABEL: define nofpclass(inf) <2 x float> @ret_ldexp_v2f32_known_neg_exp_noinf
+define <2 x float> @ret_ldexp_v2f32_known_neg_exp_noinf_splat(<2 x float> nofpclass(inf) %arg0, <2 x i32> %arg1) #0 {
+; CHECK-LABEL: define nofpclass(inf) <2 x float> @ret_ldexp_v2f32_known_neg_exp_noinf_splat
+; CHECK-SAME: (<2 x float> nofpclass(inf) [[ARG0:%.*]], <2 x i32> [[ARG1:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[OR_ARG1:%.*]] = or <2 x i32> [[ARG1]], splat (i32 -32)
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf) <2 x float> @llvm.ldexp.v2f32.v2i32(<2 x float> nofpclass(inf) [[ARG0]], <2 x i32> [[OR_ARG1]]) #[[ATTR10]]
+; CHECK-NEXT:    ret <2 x float> [[CALL]]
+;
+  %or.arg1 = or <2 x i32> %arg1, splat (i32 -32)
+  %call = call <2 x float> @llvm.ldexp.v2f32.v2i32(<2 x float> %arg0, <2 x i32> %or.arg1)
+  ret <2 x float> %call
+}
+
+; TODO: computeConstantRange does not handle non-splat operator constants.
+define <2 x float> @ret_ldexp_v2f32_known_neg_exp_noinf_nonsplat(<2 x float> nofpclass(inf) %arg0, <2 x i32> %arg1) #0 {
+; CHECK-LABEL: define <2 x float> @ret_ldexp_v2f32_known_neg_exp_noinf_nonsplat
 ; CHECK-SAME: (<2 x float> nofpclass(inf) [[ARG0:%.*]], <2 x i32> [[ARG1:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[OR_ARG1:%.*]] = or <2 x i32> [[ARG1]], <i32 -16, i32 -32>
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf) <2 x float> @llvm.ldexp.v2f32.v2i32(<2 x float> nofpclass(inf) [[ARG0]], <2 x i32> [[OR_ARG1]]) #[[ATTR10]]
+; CHECK-NEXT:    [[CALL:%.*]] = call <2 x float> @llvm.ldexp.v2f32.v2i32(<2 x float> nofpclass(inf) [[ARG0]], <2 x i32> [[OR_ARG1]]) #[[ATTR10]]
 ; CHECK-NEXT:    ret <2 x float> [[CALL]]
 ;
   %or.arg1 = or <2 x i32> %arg1, <i32 -16, i32 -32>
@@ -1032,6 +1045,16 @@ define float @ret_ldexp_f32_neg127(float %arg0) #0 {
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 -127)
+  ret float %call
+}
+
+define float @ret_ldexp_f32_noinf_exp_known_neg_or_0(float nofpclass(inf) %arg0, i32 range(i32 -256, 1) %arg1) #0 {
+; CHECK-LABEL: define nofpclass(inf) float @ret_ldexp_f32_noinf_exp_known_neg_or_0
+; CHECK-SAME: (float nofpclass(inf) [[ARG0:%.*]], i32 range(i32 -256, 1) [[ARG1:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf) float @llvm.ldexp.f32.i32(float nofpclass(inf) [[ARG0]], i32 [[ARG1]]) #[[ATTR10]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 %arg1)
   ret float %call
 }
 
