@@ -573,7 +573,7 @@ struct __specialized_algorithm<_Algorithm::__fill_n, __single_iterator<__bit_ite
   template <class _Size, class _Tp>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 static __bit_iterator<_Cp, false>
   operator()(__bit_iterator<_Cp, false> __first, _Size __n, const _Tp& __value) {
-    if (__n < 0) [[__unlikely__]]
+    if (__n <= 0) [[__unlikely__]]
       return __first;
 
     if (__value)
