@@ -168,7 +168,7 @@ void ArrayBoundChecker::handleAccessExpr(const Expr *E,
 
   BoundsCheckResult Res = checkBounds(State, SVB, ByteOffset, Extent, Flags);
 
-  std::string RN = getRegionName(Reg->getMemorySpace(C.getState()), Reg);
+  std::string RN = getRegionName(Space, Reg);
 
   switch (Res.getKind()) {
   case BoundsCheckResult::Kind::Paradox:
