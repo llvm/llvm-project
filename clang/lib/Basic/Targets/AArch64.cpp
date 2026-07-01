@@ -43,6 +43,26 @@ static_assert(NumBuiltins ==
                NumSVENeonBridgeBuiltins + NumSMEBuiltins + NumAArch64Builtins));
 
 namespace clang {
+namespace AArch64 {
+#define GET_BUILTIN_STR_TABLE
+#include "clang/Basic/BuiltinsAArch64.inc"
+#undef GET_BUILTIN_STR_TABLE
+
+static constexpr Builtin::Info BuiltinInfos[] = {
+#define GET_BUILTIN_INFOS
+#include "clang/Basic/BuiltinsAArch64.inc"
+#undef GET_BUILTIN_INFOS
+};
+
+static constexpr Builtin::Info PrefixedBuiltinInfos[] = {
+#define GET_BUILTIN_PREFIXED_INFOS
+#include "clang/Basic/BuiltinsAArch64.inc"
+#undef GET_BUILTIN_PREFIXED_INFOS
+};
+static_assert((std::size(BuiltinInfos) + std::size(PrefixedBuiltinInfos)) ==
+              NumAArch64Builtins);
+} // namespace AArch64
+
 namespace NEON {
 #define GET_NEON_BUILTIN_STR_TABLE
 #include "clang/Basic/arm_neon.inc"
@@ -100,13 +120,6 @@ static constexpr llvm::StringTable BuiltinSVENeonBridgeStrings =
 #undef GET_SVE_BUILTINS
 #undef TARGET_BUILTIN
     ;
-static constexpr llvm::StringTable BuiltinAArch64Strings =
-    CLANG_BUILTIN_STR_TABLE_START
-#define BUILTIN CLANG_BUILTIN_STR_TABLE
-#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_STR_TABLE
-#define TARGET_HEADER_BUILTIN CLANG_TARGET_HEADER_BUILTIN_STR_TABLE
-#include "clang/Basic/BuiltinsAArch64.def"
-    ;
 
 static constexpr auto BuiltinSVENeonBridgeInfos =
     Builtin::MakeInfos<NumSVENeonBridgeBuiltins>({
@@ -115,14 +128,6 @@ static constexpr auto BuiltinSVENeonBridgeInfos =
 #include "clang/Basic/BuiltinsAArch64NeonSVEBridge.def"
 #undef GET_SVE_BUILTINS
 #undef TARGET_BUILTIN
-    });
-static constexpr auto BuiltinAArch64Infos =
-    Builtin::MakeInfos<NumAArch64Builtins>({
-#define BUILTIN CLANG_BUILTIN_ENTRY
-#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_ENTRY
-#define LANGBUILTIN CLANG_LANGBUILTIN_ENTRY
-#define TARGET_HEADER_BUILTIN CLANG_TARGET_HEADER_BUILTIN_ENTRY
-#include "clang/Basic/BuiltinsAArch64.def"
     });
 
 AArch64TargetInfo::AArch64TargetInfo(const llvm::Triple &Triple,
@@ -280,9 +285,7 @@ bool AArch64TargetInfo::isValidCPUName(StringRef Name) const {
   return llvm::AArch64::parseCpu(Name).has_value();
 }
 
-bool AArch64TargetInfo::setCPU(const std::string &Name) {
-  return isValidCPUName(Name);
-}
+bool AArch64TargetInfo::setCPU(StringRef Name) { return isValidCPUName(Name); }
 
 void AArch64TargetInfo::fillValidCPUList(
     SmallVectorImpl<StringRef> &Values) const {
@@ -775,7 +778,9 @@ AArch64TargetInfo::getTargetBuiltins() const {
       {&SVE::BuiltinStrings, SVE::BuiltinInfos, "__builtin_sve_"},
       {&BuiltinSVENeonBridgeStrings, BuiltinSVENeonBridgeInfos},
       {&SME::BuiltinStrings, SME::BuiltinInfos, "__builtin_sme_"},
-      {&BuiltinAArch64Strings, BuiltinAArch64Infos},
+      {&AArch64::BuiltinStrings, AArch64::BuiltinInfos},
+      {&AArch64::BuiltinStrings, AArch64::PrefixedBuiltinInfos,
+       "__builtin_arm_"},
   };
 }
 
@@ -955,9 +960,9 @@ void AArch64TargetInfo::setFeatureEnabled(llvm::StringMap<bool> &Features,
   if (!Enabled)
     return;
 
-  for (const auto *OtherArch : llvm::AArch64::ArchInfos)
-    if (ArchInfo->implies(*OtherArch))
-      Features[OtherArch->getSubArch()] = true;
+  for (const auto &OtherArch : llvm::AArch64::ArchInfos)
+    if (ArchInfo->implies(OtherArch))
+      Features[OtherArch.getSubArch()] = true;
 
   // Set any features implied by the architecture
   std::vector<StringRef> CPUFeats;
@@ -1808,18 +1813,7 @@ unsigned MicrosoftARM64TargetInfo::getMinGlobalAlign(uint64_t TypeSize,
   unsigned Align =
       WindowsARM64TargetInfo::getMinGlobalAlign(TypeSize, HasNonWeakDef);
 
-  // MSVC does size based alignment for arm64 based on alignment section in
-  // below document, replicate that to keep alignment consistent with object
-  // files compiled by MSVC.
-  // https://docs.microsoft.com/en-us/cpp/build/arm64-windows-abi-conventions
-  if (TypeSize >= 512) {              // TypeSize >= 64 bytes
-    Align = std::max(Align, 128u);    // align type at least 16 bytes
-  } else if (TypeSize >= 64) {        // TypeSize >= 8 bytes
-    Align = std::max(Align, 64u);     // align type at least 8 butes
-  } else if (TypeSize >= 16) {        // TypeSize >= 2 bytes
-    Align = std::max(Align, 32u);     // align type at least 4 bytes
-  }
-  return Align;
+  return std::max(Align, Microsoft64BitMinGlobalAlign(TypeSize));
 }
 
 MinGWARM64TargetInfo::MinGWARM64TargetInfo(const llvm::Triple &Triple,

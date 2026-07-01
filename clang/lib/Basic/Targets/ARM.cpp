@@ -647,7 +647,7 @@ void ARMTargetInfo::fillValidCPUList(SmallVectorImpl<StringRef> &Values) const {
   llvm::ARM::fillValidCPUArchList(Values);
 }
 
-bool ARMTargetInfo::setCPU(const std::string &Name) {
+bool ARMTargetInfo::setCPU(StringRef Name) {
   if (Name != "generic")
     setArchInfo(llvm::ARM::parseCPUArch(Name));
 

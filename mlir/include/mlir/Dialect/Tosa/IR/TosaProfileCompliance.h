@@ -134,8 +134,8 @@ public:
   // Find the required profiles or extensions from the compliance info according
   // to the operand type combination.
   template <typename T>
-  OpComplianceInfo<T>
-  findMatchedEntry(Operation *op, SmallVector<OpComplianceInfo<T>> compInfo);
+  SmallVector<OpComplianceInfo<T>>
+  findMatchedEntries(Operation *op, SmallVector<OpComplianceInfo<T>> compInfo);
 
   // Debug utilites.
   template <typename T>
@@ -149,7 +149,8 @@ public:
 
 private:
   template <typename T>
-  FailureOr<OpComplianceInfo<T>> getOperatorDefinition(Operation *op);
+  FailureOr<SmallVector<OpComplianceInfo<T>>>
+  getOperatorMatchedEntries(Operation *op);
 
   OperationProfileComplianceMap profileComplianceMap;
   OperationExtensionComplianceMap extensionComplianceMap;

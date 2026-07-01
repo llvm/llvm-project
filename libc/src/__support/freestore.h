@@ -1,9 +1,14 @@
-//===-- Interface for freestore ------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Interface for freestore.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIBC_SRC___SUPPORT_FREESTORE_H
@@ -16,6 +21,8 @@ namespace LIBC_NAMESPACE_DECL {
 /// A best-fit store of variously-sized free blocks. Blocks can be inserted and
 /// removed in logarithmic time.
 class FreeStore {
+  friend class FreeListHeap;
+
 public:
   FreeStore() = default;
   FreeStore(const FreeStore &other) = delete;
@@ -29,39 +36,39 @@ public:
 
   /// Insert a free block. If the block is too small to be tracked, nothing
   /// happens.
-  void insert(Block *block);
+  void insert(BlockRef block);
 
   /// Remove a free block. If the block is too small to be tracked, nothing
   /// happens.
-  void remove(Block *block);
+  void remove(BlockRef block);
 
   /// Remove a best-fit free block that can contain the given size when
   /// allocated. Returns nullptr if there is no such block.
-  Block *remove_best_fit(size_t size);
+  BlockRef remove_best_fit(size_t size);
 
 private:
-  static constexpr size_t MIN_OUTER_SIZE =
-      align_up(sizeof(Block) + sizeof(FreeList::Node), Block::MIN_ALIGN);
-  static constexpr size_t MIN_LARGE_OUTER_SIZE =
-      align_up(sizeof(Block) + sizeof(FreeTrie::Node), Block::MIN_ALIGN);
+  static constexpr size_t MIN_OUTER_SIZE = align_up(
+      BlockRef::HEADER_SIZE + sizeof(FreeList::Node), BlockRef::MIN_ALIGN);
+  static constexpr size_t MIN_LARGE_OUTER_SIZE = align_up(
+      BlockRef::HEADER_SIZE + sizeof(FreeTrie::Node), BlockRef::MIN_ALIGN);
   static constexpr size_t NUM_SMALL_SIZES =
-      (MIN_LARGE_OUTER_SIZE - MIN_OUTER_SIZE) / Block::MIN_ALIGN;
+      (MIN_LARGE_OUTER_SIZE - MIN_OUTER_SIZE) / BlockRef::MIN_ALIGN;
 
-  LIBC_INLINE static bool too_small(Block *block) {
-    return block->outer_size() < MIN_OUTER_SIZE;
+  LIBC_INLINE static bool too_small(BlockRef block) {
+    return block.outer_size() < MIN_OUTER_SIZE;
   }
-  LIBC_INLINE static bool is_small(Block *block) {
-    return block->outer_size() < MIN_LARGE_OUTER_SIZE;
+  LIBC_INLINE static bool is_small(BlockRef block) {
+    return block.outer_size() < MIN_LARGE_OUTER_SIZE;
   }
 
-  FreeList &small_list(Block *block);
+  FreeList &small_list(BlockRef block);
   FreeList *find_best_small_fit(size_t size);
 
   cpp::array<FreeList, NUM_SMALL_SIZES> small_lists;
   FreeTrie large_trie;
 };
 
-LIBC_INLINE void FreeStore::insert(Block *block) {
+LIBC_INLINE void FreeStore::insert(BlockRef block) {
   if (too_small(block))
     return;
   if (is_small(block))
@@ -70,35 +77,35 @@ LIBC_INLINE void FreeStore::insert(Block *block) {
     large_trie.push(block);
 }
 
-LIBC_INLINE void FreeStore::remove(Block *block) {
+LIBC_INLINE void FreeStore::remove(BlockRef block) {
   if (too_small(block))
     return;
   if (is_small(block)) {
     small_list(block).remove(
-        reinterpret_cast<FreeList::Node *>(block->usable_space()));
+        reinterpret_cast<FreeList::Node *>(block.usable_space()));
   } else {
-    large_trie.remove(
-        reinterpret_cast<FreeTrie::Node *>(block->usable_space()));
+    large_trie.remove(reinterpret_cast<FreeTrie::Node *>(block.usable_space()));
   }
 }
 
-LIBC_INLINE Block *FreeStore::remove_best_fit(size_t size) {
+LIBC_INLINE BlockRef FreeStore::remove_best_fit(size_t size) {
   if (FreeList *list = find_best_small_fit(size)) {
-    Block *block = list->front();
+    BlockRef block = list->front();
     list->pop();
     return block;
   }
   if (FreeTrie::Node *best_fit = large_trie.find_best_fit(size)) {
-    Block *block = best_fit->block();
+    BlockRef block = best_fit->block();
     large_trie.remove(best_fit);
     return block;
   }
-  return nullptr;
+  return BlockRef();
 }
 
-LIBC_INLINE FreeList &FreeStore::small_list(Block *block) {
+LIBC_INLINE FreeList &FreeStore::small_list(BlockRef block) {
   LIBC_ASSERT(is_small(block) && "only legal for small blocks");
-  return small_lists[(block->outer_size() - MIN_OUTER_SIZE) / Block::MIN_ALIGN];
+  return small_lists[(block.outer_size() - MIN_OUTER_SIZE) /
+                     BlockRef::MIN_ALIGN];
 }
 
 LIBC_INLINE FreeList *FreeStore::find_best_small_fit(size_t size) {

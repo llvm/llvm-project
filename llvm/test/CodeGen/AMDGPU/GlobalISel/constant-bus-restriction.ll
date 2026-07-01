@@ -120,13 +120,17 @@ define amdgpu_ps float @fcmp_s_s(float inreg %src0, float inreg %src1) {
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s3
 ; GFX9-NEXT:    v_cmp_eq_f32_e32 vcc, s2, v0
-; GFX9-NEXT:    v_cndmask_b32_e64 v0, 0, 1.0, vcc
+; GFX9-NEXT:    s_cmp_lg_u64 vcc, 0
+; GFX9-NEXT:    s_cselect_b32 s0, 1.0, 0
+; GFX9-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX10PLUS-LABEL: fcmp_s_s:
 ; GFX10PLUS:       ; %bb.0:
 ; GFX10PLUS-NEXT:    v_cmp_eq_f32_e64 s0, s2, s3
-; GFX10PLUS-NEXT:    v_cndmask_b32_e64 v0, 0, 1.0, s0
+; GFX10PLUS-NEXT:    s_cmp_lg_u32 s0, 0
+; GFX10PLUS-NEXT:    s_cselect_b32 s0, 1.0, 0
+; GFX10PLUS-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX10PLUS-NEXT:    ; return to shader part epilog
   %cmp = fcmp oeq float %src0, %src1
   %result = select i1 %cmp, float 1.0, float 0.0
@@ -156,17 +160,17 @@ define amdgpu_ps float @select_vcc_s_s(float %cmp0, float %cmp1, float inreg %sr
 define amdgpu_ps float @select_vcc_fneg_s_s(float %cmp0, float %cmp1, float inreg %src0, float inreg %src1) {
 ; GFX9-LABEL: select_vcc_fneg_s_s:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    v_mov_b32_e32 v2, s3
-; GFX9-NEXT:    v_mov_b32_e32 v3, s2
+; GFX9-NEXT:    v_mov_b32_e32 v2, s2
+; GFX9-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX9-NEXT:    v_cmp_eq_f32_e32 vcc, v0, v1
-; GFX9-NEXT:    v_cndmask_b32_e64 v0, v2, -v3, vcc
+; GFX9-NEXT:    v_cndmask_b32_e64 v0, v3, -v2, vcc
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX10PLUS-LABEL: select_vcc_fneg_s_s:
 ; GFX10PLUS:       ; %bb.0:
-; GFX10PLUS-NEXT:    v_mov_b32_e32 v2, s2
+; GFX10PLUS-NEXT:    v_mov_b32_e32 v2, s3
 ; GFX10PLUS-NEXT:    v_cmp_eq_f32_e32 vcc_lo, v0, v1
-; GFX10PLUS-NEXT:    v_cndmask_b32_e64 v0, s3, -v2, vcc_lo
+; GFX10PLUS-NEXT:    v_cndmask_b32_e64 v0, v2, -s2, vcc_lo
 ; GFX10PLUS-NEXT:    ; return to shader part epilog
   %cmp = fcmp oeq float %cmp0, %cmp1
   %neg.src0 = fneg float %src0
@@ -199,13 +203,17 @@ define amdgpu_ps float @class_s_s(float inreg %src0, i32 inreg %src1) {
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s3
 ; GFX9-NEXT:    v_cmp_class_f32_e32 vcc, s2, v0
-; GFX9-NEXT:    v_cndmask_b32_e64 v0, 0, 1.0, vcc
+; GFX9-NEXT:    s_cmp_lg_u64 vcc, 0
+; GFX9-NEXT:    s_cselect_b32 s0, 1.0, 0
+; GFX9-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX10PLUS-LABEL: class_s_s:
 ; GFX10PLUS:       ; %bb.0:
 ; GFX10PLUS-NEXT:    v_cmp_class_f32_e64 s0, s2, s3
-; GFX10PLUS-NEXT:    v_cndmask_b32_e64 v0, 0, 1.0, s0
+; GFX10PLUS-NEXT:    s_cmp_lg_u32 s0, 0
+; GFX10PLUS-NEXT:    s_cselect_b32 s0, 1.0, 0
+; GFX10PLUS-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX10PLUS-NEXT:    ; return to shader part epilog
   %class = call i1 @llvm.amdgcn.class.f32(float %src0, i32 %src1)
   %result = select i1 %class, float 1.0, float 0.0

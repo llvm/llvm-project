@@ -30,7 +30,7 @@ namespace rootsig {
 class RootSignatureValidationError
     : public ErrorInfo<RootSignatureValidationError> {
 public:
-  static char ID;
+  LLVM_ABI static char ID;
   std::string Msg;
 
   RootSignatureValidationError(const Twine &Msg) : Msg(Msg.str()) {}

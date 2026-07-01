@@ -115,7 +115,7 @@ body:             |
 
     %1:b32 = LD_i32 0, 0, 1, 3, 32, -1, @gg, 0, debug-location !6 :: (dereferenceable load (s32) from @gg, addrspace 1); t2.cu:9:3 @[ t2.cu:18:3 ]
     %2:b1 = SETP_i32ri %1, 8, 2, debug-location !6; t2.cu:9:3 @[ t2.cu:18:3 ]
-    CBranch %2, %bb.2, debug-location !6; t2.cu:9:3 @[ t2.cu:18:3 ]
+    CBranch %2, %bb.2, 0, debug-location !6; t2.cu:9:3 @[ t2.cu:18:3 ]
 
   bb.1.if.then.i:
   ; predecessors: %bb.0

@@ -126,6 +126,7 @@ private:
   void processCompileUnit(DICompileUnit *CU);
   void processScope(DIScope *Scope);
   void processType(DIType *DT);
+  void processVariable(DIVariable *DV);
   void processImportedEntity(const DIImportedEntity *Import);
   void processMacroNode(DIMacroNode *Macro, DIMacroFile *CurrentMacroFile);
   bool addCompileUnit(DICompileUnit *CU);
@@ -259,16 +260,6 @@ struct VarRecord {
 } // namespace at
 
 template <> struct DenseMapInfo<at::VarRecord> {
-  static inline at::VarRecord getEmptyKey() {
-    return at::VarRecord(DenseMapInfo<DILocalVariable *>::getEmptyKey(),
-                         DenseMapInfo<DILocation *>::getEmptyKey());
-  }
-
-  static inline at::VarRecord getTombstoneKey() {
-    return at::VarRecord(DenseMapInfo<DILocalVariable *>::getTombstoneKey(),
-                         DenseMapInfo<DILocation *>::getTombstoneKey());
-  }
-
   static unsigned getHashValue(const at::VarRecord &Var) {
     return hash_combine(Var.Var, Var.DL);
   }
@@ -323,7 +314,8 @@ LLVM_ABI std::optional<AssignmentInfo> getAssignmentInfo(const DataLayout &DL,
 /// be left with their dbg.declare intrinsics.
 /// The pass sets the debug-info-assignment-tracking module flag to true to
 /// indicate assignment tracking has been enabled.
-class AssignmentTrackingPass : public PassInfoMixin<AssignmentTrackingPass> {
+class AssignmentTrackingPass
+    : public OptionalPassInfoMixin<AssignmentTrackingPass> {
   /// Note: this method does not set the debug-info-assignment-tracking module
   /// flag.
   bool runOnFunction(Function &F);

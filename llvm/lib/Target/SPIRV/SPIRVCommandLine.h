@@ -11,14 +11,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_SPIRV_COMMANDLINE_H
-#define LLVM_LIB_TARGET_SPIRV_COMMANDLINE_H
+#ifndef LLVM_LIB_TARGET_SPIRV_SPIRVCOMMANDLINE_H
+#define LLVM_LIB_TARGET_SPIRV_SPIRVCOMMANDLINE_H
 
 #include "MCTargetDesc/SPIRVBaseInfo.h"
 #include "llvm/Support/CommandLine.h"
 #include <string>
 
 namespace llvm {
+template <typename T> class ArrayRef;
 class StringRef;
 class Triple;
 
@@ -37,7 +38,7 @@ public:
   ///
   /// \return Returns a reference to the unknown SPIR-V extension name from the
   /// list if present, or an empty StringRef on success.
-  static StringRef checkExtensions(const std::vector<std::string> &ExtNames,
+  static StringRef checkExtensions(ArrayRef<std::string> ExtNames,
                                    ExtensionSet &AllowedExtensions);
 
   /// Returns the list of extensions that are valid for a particular
@@ -49,4 +50,4 @@ private:
 };
 
 } // namespace llvm
-#endif // LLVM_LIB_TARGET_SPIRV_COMMANDLINE_H
+#endif // LLVM_LIB_TARGET_SPIRV_SPIRVCOMMANDLINE_H

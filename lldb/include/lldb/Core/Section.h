@@ -79,8 +79,8 @@ public:
   // Get the number of sections in this list, and any contained child sections
   size_t GetNumSections(uint32_t depth) const;
 
-  bool ReplaceSection(lldb::user_id_t sect_id,
-                      const lldb::SectionSP &section_sp,
+  bool ReplaceSection(const lldb::SectionSP &remove_section_sp,
+                      const lldb::SectionSP &replace_section_sp,
                       uint32_t depth = UINT32_MAX);
 
   // Warning, this can be slow as it's removing items from a std::vector.

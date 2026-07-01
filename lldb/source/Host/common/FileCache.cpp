@@ -72,7 +72,7 @@ uint64_t FileCache::WriteFile(lldb::user_id_t fd, uint64_t offset,
   if (pos == m_cache.end()) {
     error = Status::FromErrorStringWithFormat(
         "invalid host file descriptor %" PRIu64, fd);
-    return false;
+    return UINT64_MAX;
   }
   FileUP &file_up = pos->second;
   if (!file_up) {
@@ -99,7 +99,7 @@ uint64_t FileCache::ReadFile(lldb::user_id_t fd, uint64_t offset, void *dst,
   if (pos == m_cache.end()) {
     error = Status::FromErrorStringWithFormat(
         "invalid host file descriptor %" PRIu64, fd);
-    return false;
+    return UINT64_MAX;
   }
   FileUP &file_up = pos->second;
   if (!file_up) {

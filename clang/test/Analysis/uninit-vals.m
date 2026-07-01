@@ -59,7 +59,7 @@ void test_uninit_neg(void) {
 
 extern void test_uninit_struct_arg_aux(struct TestUninit arg);
 void test_uninit_struct_arg(void) {
-  struct TestUninit x; // expected-note{{'x' initialized here}}
+  struct TestUninit x; // expected-note{{'x' declared without an initial value}}
   test_uninit_struct_arg_aux(x); // expected-warning{{Passed-by-value struct argument contains uninitialized data (e.g., field: 'x')}}
                                  // expected-note@-1{{Passed-by-value struct argument contains uninitialized data (e.g., field: 'x')}}
 }
@@ -68,7 +68,7 @@ void test_uninit_struct_arg(void) {
 - (void) passVal:(struct TestUninit)arg;
 @end
 void testFoo(Foo *o) {
-  struct TestUninit x; // expected-note{{'x' initialized here}}
+  struct TestUninit x; // expected-note{{'x' declared without an initial value}}
   [o passVal:x]; // expected-warning{{Passed-by-value struct argument contains uninitialized data (e.g., field: 'x')}}
                  // expected-note@-1{{Passed-by-value struct argument contains uninitialized data (e.g., field: 'x')}}
 }
@@ -402,7 +402,7 @@ void testSmallStructBitfieldsFirstUnnamed(void) {
   struct {
     int : 4;
     int y : 4;
-  } a, b, c; // expected-note{{'c' initialized here}}
+  } a, b, c; // expected-note{{'c' declared without an initial value}}
 
   a.y = 2;
 
@@ -419,7 +419,7 @@ void testSmallStructBitfieldsSecondUnnamed(void) {
   struct {
     int x : 4;
     int : 4;
-  } a, b, c; // expected-note{{'c' initialized here}}
+  } a, b, c; // expected-note{{'c' declared without an initial value}}
 
   a.x = 1;
 

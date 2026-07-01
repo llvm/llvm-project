@@ -162,27 +162,14 @@ define void @widen_fdiv_v2f32_v16f32(ptr %a0, ptr %b0, ptr %c0) {
 ; AVX512F-NEXT:    vdivps %xmm4, %xmm2, %xmm2
 ; AVX512F-NEXT:    vmovsd {{.*#+}} xmm4 = mem[0],zero
 ; AVX512F-NEXT:    vdivps %xmm4, %xmm3, %xmm3
-; AVX512F-NEXT:    vmovsd {{.*#+}} xmm4 = mem[0],zero
-; AVX512F-NEXT:    vmovsd {{.*#+}} xmm5 = mem[0],zero
-; AVX512F-NEXT:    vdivps %xmm5, %xmm4, %xmm4
-; AVX512F-NEXT:    vmovsd {{.*#+}} xmm5 = mem[0],zero
-; AVX512F-NEXT:    vmovsd {{.*#+}} xmm6 = mem[0],zero
-; AVX512F-NEXT:    vdivps %xmm6, %xmm5, %xmm5
-; AVX512F-NEXT:    vmovsd {{.*#+}} xmm6 = mem[0],zero
-; AVX512F-NEXT:    vmovsd {{.*#+}} xmm7 = mem[0],zero
-; AVX512F-NEXT:    vdivps %xmm7, %xmm6, %xmm6
-; AVX512F-NEXT:    vmovsd {{.*#+}} xmm7 = mem[0],zero
-; AVX512F-NEXT:    vmovsd {{.*#+}} xmm8 = mem[0],zero
-; AVX512F-NEXT:    vdivps %xmm8, %xmm7, %xmm7
-; AVX512F-NEXT:    vinsertf32x4 $1, %xmm7, %zmm6, %zmm6
-; AVX512F-NEXT:    vinsertf32x4 $1, %xmm5, %zmm4, %zmm4
-; AVX512F-NEXT:    vbroadcasti64x4 {{.*#+}} zmm5 = [0,2,8,10,0,2,8,10]
-; AVX512F-NEXT:    # zmm5 = mem[0,1,2,3,0,1,2,3]
-; AVX512F-NEXT:    vpermt2pd %zmm6, %zmm5, %zmm4
 ; AVX512F-NEXT:    vinsertf32x4 $1, %xmm3, %zmm2, %zmm2
 ; AVX512F-NEXT:    vinsertf32x4 $1, %xmm1, %zmm0, %zmm0
-; AVX512F-NEXT:    vpermt2pd %zmm2, %zmm5, %zmm0
-; AVX512F-NEXT:    vshuff64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm4[4,5,6,7]
+; AVX512F-NEXT:    vbroadcasti64x4 {{.*#+}} zmm1 = [0,2,8,10,0,2,8,10]
+; AVX512F-NEXT:    # zmm1 = mem[0,1,2,3,0,1,2,3]
+; AVX512F-NEXT:    vpermi2pd %zmm2, %zmm0, %zmm1
+; AVX512F-NEXT:    vmovups (%rdi), %ymm0
+; AVX512F-NEXT:    vdivps (%rsi), %ymm0, %ymm0
+; AVX512F-NEXT:    vinsertf64x4 $0, %ymm0, %zmm1, %zmm0
 ; AVX512F-NEXT:    vmovupd %zmm0, (%rdx)
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq

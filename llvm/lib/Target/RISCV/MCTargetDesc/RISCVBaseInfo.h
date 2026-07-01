@@ -18,12 +18,15 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/ADT/StringTable.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/TargetParser/RISCVTargetParser.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
 
 namespace llvm {
+
+class MCSubtargetInfo;
 
 namespace RISCVOp {
 enum OperandType : unsigned {
@@ -33,6 +36,7 @@ enum OperandType : unsigned {
   OPERAND_UIMM2_LSB0,
   OPERAND_UIMM3,
   OPERAND_UIMM4,
+  OPERAND_UIMM4_PLUS1,
   OPERAND_UIMM5,
   OPERAND_UIMM5_NONZERO,
   OPERAND_UIMM5_GT3,
@@ -41,16 +45,19 @@ enum OperandType : unsigned {
   OPERAND_UIMM5_LSB0,
   OPERAND_UIMM5_SLIST,
   OPERAND_UIMM6,
+  OPERAND_UIMM6_PLUS1,
   OPERAND_UIMM6_LSB0,
   OPERAND_UIMM7,
   OPERAND_UIMM7_LSB00,
   OPERAND_UIMM7_LSB000,
+  OPERAND_UIMM7_EQ_XLEN,
   OPERAND_UIMM8_LSB00,
   OPERAND_UIMM8,
   OPERAND_UIMM8_LSB000,
   OPERAND_UIMM8_GE32,
-  OPERAND_UIMM9_LSB000,
   OPERAND_UIMM9,
+  OPERAND_UIMM9_LSB000,
+  OPERAND_UIMM9_YBNDSWI,
   OPERAND_UIMM10,
   OPERAND_UIMM10_LSB00_NONZERO,
   OPERAND_UIMM11,
@@ -76,6 +83,7 @@ enum OperandType : unsigned {
   OPERAND_SIMM10_LSB0000_NONZERO,
   OPERAND_SIMM10_UNSIGNED,
   OPERAND_SIMM11,
+  OPERAND_SIMM12,
   OPERAND_SIMM12_LSB00000,
   OPERAND_SIMM16,
   OPERAND_SIMM16_NONZERO,
@@ -469,6 +477,7 @@ enum {
   MO_TLSDESC_LOAD_LO = 14,
   MO_TLSDESC_ADD_LO = 15,
   MO_TLSDESC_CALL = 16,
+  MO_QC_ACCESS = 17,
 
   // Used to differentiate between target-specific "direct" flags and "bitmask"
   // flags. A machine operand can only have one "direct" flag, but can have
@@ -616,7 +625,7 @@ int getLoadFPImm(APFloat FPImm);
 
 namespace RISCVSysReg {
 struct SysReg {
-  const char Name[32];
+  StringTable::Offset Name;
   unsigned Encoding;
   // FIXME: add these additional fields when needed.
   // Privilege Access: Read, Write, Read-Only.
@@ -650,7 +659,7 @@ struct SysReg {
 
 namespace RISCVInsnOpcode {
 struct RISCVOpcode {
-  char Name[10];
+  StringTable::Offset Name;
   uint8_t Value;
 };
 
@@ -665,17 +674,24 @@ enum ABI {
   ABI_ILP32F,
   ABI_ILP32D,
   ABI_ILP32E,
+  ABI_IL32PC64,
+  ABI_IL32PC64F,
+  ABI_IL32PC64D,
+  ABI_IL32PC64E,
   ABI_LP64,
   ABI_LP64F,
   ABI_LP64D,
   ABI_LP64E,
+  ABI_L64PC128,
+  ABI_L64PC128F,
+  ABI_L64PC128D,
+  ABI_CHERIOT,
   ABI_Unknown
 };
 
 // Returns the target ABI, or else a StringError if the requested ABIName is
-// not supported for the given TT and FeatureBits combination.
-ABI computeTargetABI(const Triple &TT, const FeatureBitset &FeatureBits,
-                     StringRef ABIName);
+// not supported for the subtargets triple and FeatureBits combination.
+ABI computeTargetABI(const MCSubtargetInfo &STI, StringRef ABIName);
 
 ABI getTargetABI(StringRef ABIName);
 
@@ -694,7 +710,7 @@ namespace RISCVFeatures {
 void validate(const Triple &TT, const FeatureBitset &FeatureBits);
 
 llvm::Expected<std::unique_ptr<RISCVISAInfo>>
-parseFeatureBits(bool IsRV64, const FeatureBitset &FeatureBits);
+parseFeatureBits(const MCSubtargetInfo &STI);
 
 } // namespace RISCVFeatures
 
@@ -879,6 +895,12 @@ struct NDSVLNPseudo {
 #define GET_RISCVVSXTable_DECL
 #define GET_RISCVNDSVLNTable_DECL
 #include "RISCVGenSearchableTables.inc"
+
+inline bool isValidYBNDSWImm(int64_t Imm) {
+  return (Imm >= 1 && Imm <= 255) ||
+         (Imm >= 256 && Imm <= 504 && (Imm % 8) == 0) ||
+         (Imm >= 512 && Imm <= 4096 && (Imm % 16) == 0);
+}
 } // namespace RISCV
 
 } // namespace llvm

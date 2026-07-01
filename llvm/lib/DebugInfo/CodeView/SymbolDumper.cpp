@@ -335,6 +335,22 @@ Error CVSymbolDumperImpl::visitKnownRecord(
 }
 
 Error CVSymbolDumperImpl::visitKnownRecord(
+    CVSymbol &CVR, DefRangeRegisterRelIndirSym &DefRangeRegisterRelIndir) {
+  W.printEnum("BaseRegister", uint16_t(DefRangeRegisterRelIndir.Hdr.Register),
+              getRegisterNames(CompilationCPUType));
+  W.printBoolean("HasSpilledUDTMember",
+                 DefRangeRegisterRelIndir.hasSpilledUDTMember());
+  W.printNumber("OffsetInParent", DefRangeRegisterRelIndir.offsetInParent());
+  W.printNumber("BasePointerOffset",
+                DefRangeRegisterRelIndir.Hdr.BasePointerOffset);
+  W.printNumber("OffsetInUDT", DefRangeRegisterRelIndir.Hdr.OffsetInUdt);
+  printLocalVariableAddrRange(DefRangeRegisterRelIndir.Range,
+                              DefRangeRegisterRelIndir.getRelocationOffset());
+  printLocalVariableAddrGap(DefRangeRegisterRelIndir.Gaps);
+  return Error::success();
+}
+
+Error CVSymbolDumperImpl::visitKnownRecord(
     CVSymbol &CVR, DefRangeRegisterSym &DefRangeRegister) {
   W.printEnum("Register", uint16_t(DefRangeRegister.Hdr.Register),
               getRegisterNames(CompilationCPUType));
@@ -617,6 +633,17 @@ Error CVSymbolDumperImpl::visitKnownRecord(CVSymbol &CVR,
   W.printEnum("Register", uint16_t(RegRel.Register),
               getRegisterNames(CompilationCPUType));
   W.printString("VarName", RegRel.Name);
+  return Error::success();
+}
+
+Error CVSymbolDumperImpl::visitKnownRecord(CVSymbol &CVR,
+                                           RegRelativeIndirSym &RegRelIndir) {
+  W.printHex("Offset", RegRelIndir.Offset);
+  printTypeIndex("Type", RegRelIndir.Type);
+  W.printEnum("Register", uint16_t(RegRelIndir.Register),
+              getRegisterNames(CompilationCPUType));
+  W.printHex("OffsetInUdt", RegRelIndir.OffsetInUdt);
+  W.printString("VarName", RegRelIndir.Name);
   return Error::success();
 }
 

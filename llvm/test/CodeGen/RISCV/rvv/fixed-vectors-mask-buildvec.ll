@@ -281,11 +281,11 @@ define <8 x i1> @buildvec_mask_nonconst_v8i1_2(i1 %x, i1 %y, i1 %z, i1 %w) {
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmv.v.x v8, a0
 ; CHECK-NEXT:    vslide1down.vx v9, v8, a3
-; CHECK-NEXT:    li a3, 1
-; CHECK-NEXT:    vmv.v.i v0, 15
 ; CHECK-NEXT:    vslide1down.vx v8, v8, a0
+; CHECK-NEXT:    vmv.v.i v0, 15
+; CHECK-NEXT:    li a0, 1
 ; CHECK-NEXT:    vslide1down.vx v9, v9, zero
-; CHECK-NEXT:    vslide1down.vx v8, v8, a3
+; CHECK-NEXT:    vslide1down.vx v8, v8, a0
 ; CHECK-NEXT:    vslide1down.vx v9, v9, a2
 ; CHECK-NEXT:    vslide1down.vx v8, v8, a1
 ; CHECK-NEXT:    vslidedown.vi v9, v8, 4, v0.t
@@ -298,11 +298,11 @@ define <8 x i1> @buildvec_mask_nonconst_v8i1_2(i1 %x, i1 %y, i1 %z, i1 %w) {
 ; ZVE32F-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; ZVE32F-NEXT:    vmv.v.x v8, a0
 ; ZVE32F-NEXT:    vslide1down.vx v9, v8, a3
-; ZVE32F-NEXT:    li a3, 1
-; ZVE32F-NEXT:    vmv.v.i v0, 15
 ; ZVE32F-NEXT:    vslide1down.vx v8, v8, a0
+; ZVE32F-NEXT:    vmv.v.i v0, 15
+; ZVE32F-NEXT:    li a0, 1
 ; ZVE32F-NEXT:    vslide1down.vx v9, v9, zero
-; ZVE32F-NEXT:    vslide1down.vx v8, v8, a3
+; ZVE32F-NEXT:    vslide1down.vx v8, v8, a0
 ; ZVE32F-NEXT:    vslide1down.vx v9, v9, a2
 ; ZVE32F-NEXT:    vslide1down.vx v8, v8, a1
 ; ZVE32F-NEXT:    vslidedown.vi v9, v8, 4, v0.t
@@ -326,11 +326,11 @@ define <8 x i1> @buildvec_mask_optsize_nonconst_v8i1_2(i1 %x, i1 %y, i1 %z, i1 %
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmv.v.x v8, a0
 ; CHECK-NEXT:    vslide1down.vx v9, v8, a3
-; CHECK-NEXT:    li a3, 1
-; CHECK-NEXT:    vmv.v.i v0, 15
 ; CHECK-NEXT:    vslide1down.vx v8, v8, a0
+; CHECK-NEXT:    vmv.v.i v0, 15
+; CHECK-NEXT:    li a0, 1
 ; CHECK-NEXT:    vslide1down.vx v9, v9, zero
-; CHECK-NEXT:    vslide1down.vx v8, v8, a3
+; CHECK-NEXT:    vslide1down.vx v8, v8, a0
 ; CHECK-NEXT:    vslide1down.vx v9, v9, a2
 ; CHECK-NEXT:    vslide1down.vx v8, v8, a1
 ; CHECK-NEXT:    vslidedown.vi v9, v8, 4, v0.t
@@ -343,11 +343,11 @@ define <8 x i1> @buildvec_mask_optsize_nonconst_v8i1_2(i1 %x, i1 %y, i1 %z, i1 %
 ; ZVE32F-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; ZVE32F-NEXT:    vmv.v.x v8, a0
 ; ZVE32F-NEXT:    vslide1down.vx v9, v8, a3
-; ZVE32F-NEXT:    li a3, 1
-; ZVE32F-NEXT:    vmv.v.i v0, 15
 ; ZVE32F-NEXT:    vslide1down.vx v8, v8, a0
+; ZVE32F-NEXT:    vmv.v.i v0, 15
+; ZVE32F-NEXT:    li a0, 1
 ; ZVE32F-NEXT:    vslide1down.vx v9, v9, zero
-; ZVE32F-NEXT:    vslide1down.vx v8, v8, a3
+; ZVE32F-NEXT:    vslide1down.vx v8, v8, a0
 ; ZVE32F-NEXT:    vslide1down.vx v9, v9, a2
 ; ZVE32F-NEXT:    vslide1down.vx v8, v8, a1
 ; ZVE32F-NEXT:    vslidedown.vi v9, v8, 4, v0.t
@@ -370,9 +370,9 @@ define <8 x i1> @buildvec_mask_optsize_nonconst_v8i1(i1 %x, i1 %y) optsize {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmv.v.x v8, a0
-; CHECK-NEXT:    vmv.v.i v0, 15
 ; CHECK-NEXT:    vslide1down.vx v9, v8, a1
 ; CHECK-NEXT:    vslide1down.vx v8, v8, a0
+; CHECK-NEXT:    vmv.v.i v0, 15
 ; CHECK-NEXT:    vslide1down.vx v9, v9, a1
 ; CHECK-NEXT:    vslide1down.vx v8, v8, a1
 ; CHECK-NEXT:    vslide1down.vx v9, v9, a1
@@ -386,9 +386,9 @@ define <8 x i1> @buildvec_mask_optsize_nonconst_v8i1(i1 %x, i1 %y) optsize {
 ; ZVE32F:       # %bb.0:
 ; ZVE32F-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; ZVE32F-NEXT:    vmv.v.x v8, a0
-; ZVE32F-NEXT:    vmv.v.i v0, 15
 ; ZVE32F-NEXT:    vslide1down.vx v9, v8, a1
 ; ZVE32F-NEXT:    vslide1down.vx v8, v8, a0
+; ZVE32F-NEXT:    vmv.v.i v0, 15
 ; ZVE32F-NEXT:    vslide1down.vx v9, v9, a1
 ; ZVE32F-NEXT:    vslide1down.vx v8, v8, a1
 ; ZVE32F-NEXT:    vslide1down.vx v9, v9, a1
@@ -529,11 +529,11 @@ define <128 x i1> @buildvec_mask_v128i1() {
 ; RV64-NEXT:    lui a0, %hi(.LCPI20_0)
 ; RV64-NEXT:    ld a0, %lo(.LCPI20_0)(a0)
 ; RV64-NEXT:    lui a1, %hi(.LCPI20_1)
-; RV64-NEXT:    ld a1, %lo(.LCPI20_1)(a1)
 ; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV64-NEXT:    vmv.v.x v0, a0
+; RV64-NEXT:    ld a0, %lo(.LCPI20_1)(a1)
 ; RV64-NEXT:    vsetvli zero, zero, e64, m1, tu, ma
-; RV64-NEXT:    vmv.s.x v0, a1
+; RV64-NEXT:    vmv.s.x v0, a0
 ; RV64-NEXT:    ret
 ;
 ; ZVE32F-LABEL: buildvec_mask_v128i1:

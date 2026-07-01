@@ -156,10 +156,10 @@ class CheckRunner:
         # implementations of relevant APIs.
         self.clang_extra_args.append("-nostdinc++")
 
-        # Include the clang-tidy test headers directory as a system include
+        # Include stub std headers directory as a system include
         # path so individual tests don't need to specify it.
         headers_dir = os.path.join(
-            os.path.dirname(__file__), "checkers", "Inputs", "Headers"
+            os.path.dirname(__file__), "checkers", "Inputs", "Headers", "std"
         )
         if os.path.isdir(headers_dir):
             self.clang_extra_args.extend(["-isystem", headers_dir])
@@ -460,7 +460,11 @@ C_STANDARDS = ["c99", ("c11", "c1x"), "c17", ("c23", "c2x"), "c2y"]
 
 
 def expand_std(std: str) -> List[str]:
-    split_std, or_later, _ = std.partition("-or-later")
+    split_std, or_later, suffix = std.partition("-or-later")
+
+    if or_later and suffix:
+        # Keep malformed -or-later spellings unchanged so clang diagnoses them.
+        return [std]
 
     if not or_later:
         return [split_std]

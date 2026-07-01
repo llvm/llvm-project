@@ -3208,8 +3208,8 @@ void TestNonADLCall3() {
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
-// CHECK-NEXT:          "offset": 1693,
-// CHECK-NEXT:          "col": 5,
+// CHECK-NEXT:          "offset": 1704,
+// CHECK-NEXT:          "col": 16,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },

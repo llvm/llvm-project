@@ -151,7 +151,8 @@ TEST(ToAPValue, FunctionPointers) {
     const ValueDecl *D = getDecl("nullp");
     ASSERT_NE(D, nullptr);
     const Pointer &GP = getGlobalPtr("nullp");
-    const auto &P = GP.deref<FunctionPointer>();
+    const auto &P = GP.deref<Pointer>();
+    ASSERT_TRUE(P.isZero());
     APValue A = P.toAPValue(ASTCtx);
     ASSERT_TRUE(A.isLValue());
     ASSERT_TRUE(A.getLValueBase().isNull());

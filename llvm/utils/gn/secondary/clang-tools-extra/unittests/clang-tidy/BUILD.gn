@@ -43,11 +43,11 @@ unittest("ClangTidyTests") {
     "LexerUtilsTest.cpp",
     "ModernizeModuleTest.cpp",
     "NamespaceAliaserTest.cpp",
-    "ObjCModuleTest.cpp",
     "OptionsProviderTest.cpp",
     "OverlappingReplacementsTest.cpp",
     "ReadabilityModuleTest.cpp",
     "TransformerClangTidyCheckTest.cpp",
+    "TypeTraitsTest.cpp",
     "UsingInserterTest.cpp",
   ]
 }

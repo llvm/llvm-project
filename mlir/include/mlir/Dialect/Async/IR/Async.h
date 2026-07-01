@@ -50,7 +50,7 @@ namespace async {
 
 /// Returns true if the type is reference counted at runtime.
 inline bool isRefCounted(Type type) {
-  return isa<TokenType, ValueType, GroupType>(type);
+  return isa<async::TokenType, ValueType, GroupType>(type);
 }
 
 } // namespace async
@@ -67,7 +67,7 @@ struct PointerLikeTypeTraits<mlir::async::FuncOp> {
   static inline mlir::async::FuncOp getFromVoidPointer(void *p) {
     return mlir::async::FuncOp::getFromOpaquePointer(p);
   }
-  static constexpr int numLowBitsAvailable = 3;
+  static constexpr int NumLowBitsAvailable = 3;
 };
 } // namespace llvm
 

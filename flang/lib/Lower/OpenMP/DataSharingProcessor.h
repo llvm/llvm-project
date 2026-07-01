@@ -96,8 +96,6 @@ private:
   // Symbols in private, firstprivate, and/or lastprivate clauses.
   llvm::SetVector<const semantics::Symbol *> explicitlyPrivatizedSymbols;
   llvm::SetVector<const semantics::Symbol *> defaultSymbols;
-  llvm::SetVector<const semantics::Symbol *> implicitSymbols;
-  llvm::SetVector<const semantics::Symbol *> preDeterminedSymbols;
   llvm::SetVector<const semantics::Symbol *> allPrivatizedSymbols;
 
   lower::AbstractConverter &converter;
@@ -107,14 +105,21 @@ private:
   lower::pft::Evaluation &eval;
   bool shouldCollectPreDeterminedSymbols;
   bool useDelayedPrivatization;
+  bool forceHeapAllocationForPrivateDynamicArrays = false;
   llvm::SmallPtrSet<const semantics::Symbol *, 16> mightHaveReadHostSym;
   lower::SymMap &symTable;
   bool isTargetPrivatization;
   OMPConstructSymbolVisitor visitor;
 
   bool needBarrier();
-  void collectSymbols(semantics::Symbol::Flag flag,
-                      llvm::SetVector<const semantics::Symbol *> &symbols);
+  void collectPrivatizedSymbols(
+      std::optional<semantics::Symbol::Flag> flag,
+      const llvm::SetVector<const semantics::Symbol *> &allSymbols,
+      const llvm::SetVector<const semantics::Symbol *> &symbolsInNestedRegions,
+      llvm::SetVector<const semantics::Symbol *> *symbols = nullptr);
+  void
+  collectSymbols(semantics::Symbol::Flag flag,
+                 llvm::SetVector<const semantics::Symbol *> *symbols = nullptr);
   void collectSymbolsInNestedRegions(
       lower::pft::Evaluation &eval, semantics::Symbol::Flag flag,
       llvm::SetVector<const semantics::Symbol *> &symbolsInNestedRegions);
@@ -126,6 +131,7 @@ private:
   void collectDefaultSymbols();
   void collectImplicitSymbols();
   void collectPreDeterminedSymbols();
+  void collectIndirectReferences();
   void privatize(mlir::omp::PrivateClauseOps *clauseOps,
                  std::optional<llvm::omp::Directive> dir = std::nullopt);
   void copyLastPrivatize(mlir::Operation *op);
@@ -173,6 +179,10 @@ public:
   void processStep2(mlir::Operation *op, bool isLoop);
 
   void pushLoopIV(mlir::Value iv) { loopIVs.push_back(iv); }
+
+  void setForceHeapAllocationForPrivateDynamicArrays(bool value = true) {
+    forceHeapAllocationForPrivateDynamicArrays = value;
+  }
 
   const llvm::SetVector<const semantics::Symbol *> &
   getAllSymbolsToPrivatize() const {

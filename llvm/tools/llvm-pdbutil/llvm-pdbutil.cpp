@@ -60,6 +60,7 @@
 #include "llvm/DebugInfo/PDB/Native/PDBStringTableBuilder.h"
 #include "llvm/DebugInfo/PDB/Native/RawConstants.h"
 #include "llvm/DebugInfo/PDB/Native/RawError.h"
+#include "llvm/DebugInfo/PDB/Native/TpiHashing.h"
 #include "llvm/DebugInfo/PDB/Native/TpiStream.h"
 #include "llvm/DebugInfo/PDB/Native/TpiStreamBuilder.h"
 #include "llvm/DebugInfo/PDB/PDB.h"
@@ -75,6 +76,7 @@
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeFunctionSig.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeTypedef.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeUDT.h"
+#include "llvm/ObjectYAML/yaml2obj.h"
 #include "llvm/Support/BinaryByteStream.h"
 #include "llvm/Support/COM.h"
 #include "llvm/Support/CommandLine.h"
@@ -641,6 +643,8 @@ cl::opt<bool> DumpSectionMap("section-map", cl::desc("dump section map"),
 cl::opt<bool> DumpSectionHeaders("section-headers",
                                  cl::desc("Dump image section headers"),
                                  cl::cat(MiscOptions), cl::sub(DumpSubcommand));
+cl::opt<bool> DumpDXContainer("dxcontainer", cl::desc("dump DXContainer"),
+                              cl::cat(MiscOptions), cl::sub(DumpSubcommand));
 
 cl::opt<bool> RawAll("all", cl::desc("Implies most other options."),
                      cl::cat(MiscOptions), cl::sub(DumpSubcommand));
@@ -698,6 +702,10 @@ cl::opt<bool> TpiStream("tpi-stream",
 cl::opt<bool> IpiStream("ipi-stream",
                         cl::desc("Dump the IPI Stream (Stream 5)"),
                         cl::sub(PdbToYamlSubcommand), cl::init(false));
+
+cl::opt<bool> DXContainerStream("dxcontainer",
+                                cl::desc("Dump the DXContainer Stream"),
+                                cl::sub(PdbToYamlSubcommand), cl::init(false));
 
 cl::opt<bool> PublicsStream("publics-stream",
                             cl::desc("Dump the Publics Stream"),
@@ -768,7 +776,7 @@ cl::opt<std::string> OutputFile("out",
                                 cl::desc("The file to write the stream to"),
                                 cl::Required, cl::sub(ExportSubcommand));
 cl::opt<std::string>
-    Stream("stream", cl::Required,
+    Stream("stream", cl::Optional,
            cl::desc("The index or name of the stream whose contents to export"),
            cl::sub(ExportSubcommand));
 cl::opt<bool> ForceName("name",
@@ -776,6 +784,10 @@ cl::opt<bool> ForceName("name",
                                  "string, even if it is a valid integer"),
                         cl::sub(ExportSubcommand), cl::Optional,
                         cl::init(false));
+cl::opt<bool> DXContainer("dxcontainer",
+                          cl::desc("Export DirectX Container, if present"),
+                          cl::sub(ExportSubcommand), cl::Optional,
+                          cl::init(false));
 } // namespace exportstream
 }
 
@@ -812,19 +824,13 @@ static void yamlToPdb(StringRef Path) {
   for (uint32_t I = 0; I < kSpecialStreamCount; ++I)
     ExitOnErr(Builder.getMsfBuilder().addStream(0));
 
-  StringsAndChecksums Strings;
-  Strings.setStrings(std::make_shared<DebugStringTableSubsection>());
-
-  if (YamlObj.StringTable) {
-    for (auto S : *YamlObj.StringTable)
-      Strings.strings()->insert(S);
+  auto &Dxc = YamlObj.DXContainerStream;
+  if (Dxc) {
+    // If there is a DXContainer, add add it as a stream #5.
+    ExitOnErr(Builder.getMsfBuilder().addStream(0));
   }
 
   pdb::yaml::PdbInfoStream DefaultInfoStream;
-  pdb::yaml::PdbDbiStream DefaultDbiStream;
-  pdb::yaml::PdbTpiStream DefaultTpiStream;
-  pdb::yaml::PdbTpiStream DefaultIpiStream;
-
   const auto &Info = YamlObj.PdbStream.value_or(DefaultInfoStream);
 
   auto &InfoBuilder = Builder.getInfoBuilder();
@@ -834,6 +840,36 @@ static void yamlToPdb(StringRef Path) {
   InfoBuilder.setVersion(Info.Version);
   for (auto F : Info.Features)
     InfoBuilder.addFeature(F);
+
+  if (Dxc) {
+    auto &Data = Builder.getDXContainerData();
+    llvm::raw_svector_ostream DataStream(*Data);
+    std::string ErrorMsg;
+    llvm::yaml::yaml2dxcontainer(
+        Dxc->DXC, DataStream, [&ErrorMsg](const Twine &Msg) {
+          ErrorMsg = (Twine("DXContainer error: ") + Msg).str();
+        });
+    if (!ErrorMsg.empty())
+      ExitOnErr(createStringError(ErrorMsg));
+
+    codeview::GUID IgnoredOutGuid;
+    ExitOnErr(
+        Builder.commit(opts::yaml2pdb::YamlPdbOutputFile, &IgnoredOutGuid));
+    // Leave all other streams empty if there is a DXContainer.
+    return;
+  }
+
+  StringsAndChecksums Strings;
+  Strings.setStrings(std::make_shared<DebugStringTableSubsection>());
+
+  if (YamlObj.StringTable) {
+    for (auto S : *YamlObj.StringTable)
+      Strings.strings()->insert(S);
+  }
+
+  pdb::yaml::PdbDbiStream DefaultDbiStream;
+  pdb::yaml::PdbTpiStream DefaultTpiStream;
+  pdb::yaml::PdbTpiStream DefaultIpiStream;
 
   const auto &Dbi = YamlObj.DbiStream.value_or(DefaultDbiStream);
   auto &DbiBuilder = Builder.getDbiBuilder();
@@ -889,7 +925,8 @@ static void yamlToPdb(StringRef Path) {
   AppendingTypeTableBuilder TS(Allocator);
   for (const auto &R : Tpi.Records) {
     CVType Type = R.toCodeViewRecord(TS);
-    TpiBuilder.addTypeRecord(Type.RecordData, std::nullopt);
+    uint32_t Hash = ExitOnErr(llvm::pdb::hashTypeRecord(Type));
+    TpiBuilder.addTypeRecord(Type.RecordData, Hash);
   }
 
   const auto &Ipi = YamlObj.IpiStream.value_or(DefaultIpiStream);
@@ -897,7 +934,8 @@ static void yamlToPdb(StringRef Path) {
   IpiBuilder.setVersionHeader(Ipi.Version);
   for (const auto &R : Ipi.Records) {
     CVType Type = R.toCodeViewRecord(TS);
-    IpiBuilder.addTypeRecord(Type.RecordData, std::nullopt);
+    uint32_t Hash = ExitOnErr(llvm::pdb::hashTypeRecord(Type));
+    IpiBuilder.addTypeRecord(Type.RecordData, Hash);
   }
 
   if (YamlObj.PublicsStream) {
@@ -1133,9 +1171,10 @@ static void dumpPretty(StringRef Path) {
     Session->setLoadAddress(opts::pretty::LoadAddress);
 
   auto &Stream = outs();
-  const bool UseColor = opts::pretty::ColorOutput == cl::BOU_UNSET
-                            ? Stream.has_colors()
-                            : opts::pretty::ColorOutput == cl::BOU_TRUE;
+  const bool UseColor =
+      opts::pretty::ColorOutput == cl::boolOrDefault::BOU_UNSET
+          ? Stream.has_colors()
+          : opts::pretty::ColorOutput == cl::boolOrDefault::BOU_TRUE;
   LinePrinter Printer(2, UseColor, Stream, opts::Filters);
 
   auto GlobalScope(Session->getGlobalScope());
@@ -1395,10 +1434,12 @@ static void mergePdbs() {
   auto &DestTpi = Builder.getTpiBuilder();
   auto &DestIpi = Builder.getIpiBuilder();
   MergedTpi.ForEachRecord([&DestTpi](TypeIndex TI, const CVType &Type) {
-    DestTpi.addTypeRecord(Type.RecordData, std::nullopt);
+    uint32_t Hash = ExitOnErr(llvm::pdb::hashTypeRecord(Type));
+    DestTpi.addTypeRecord(Type.RecordData, Hash);
   });
   MergedIpi.ForEachRecord([&DestIpi](TypeIndex TI, const CVType &Type) {
-    DestIpi.addTypeRecord(Type.RecordData, std::nullopt);
+    uint32_t Hash = ExitOnErr(llvm::pdb::hashTypeRecord(Type));
+    DestIpi.addTypeRecord(Type.RecordData, Hash);
   });
   Builder.getInfoBuilder().addFeature(PdbRaw_FeatureSig::VC140);
 
@@ -1432,25 +1473,46 @@ static void exportStream() {
   bool Success = false;
   std::string OutFileName = opts::exportstream::OutputFile;
 
-  if (!opts::exportstream::ForceName) {
-    // First try to parse it as an integer, if it fails fall back to treating it
-    // as a named stream.
-    if (to_integer(opts::exportstream::Stream, Index)) {
-      if (Index >= File.getNumStreams()) {
-        errs() << "Error: " << Index << " is not a valid stream index.\n";
-        exit(1);
-      }
-      Success = true;
-      outs() << "Dumping contents of stream index " << Index << " to file "
-             << OutFileName << ".\n";
+  if (opts::exportstream::DXContainer) {
+    auto Dxc = File.getDXContainerStream();
+    if (!Dxc) {
+      errs() << "Error: DirectX Container is not present.\n";
+      exit(1);
     }
-  }
+    if (!opts::exportstream::Stream.empty()) {
+      outs() << "Note: option --" << opts::exportstream::Stream.ArgStr
+             << " was ignored.\n";
+    }
+    Index = StreamDXContainer;
+    outs() << "Dumping contents of DirectX Container stream (index " << Index
+           << ") to file " << OutFileName << ".\n";
+  } else {
+    if (opts::exportstream::Stream.empty()) {
+      errs() << "llvm-pdbutil: either --" << opts::exportstream::Stream.ArgStr
+             << " or --" << opts::exportstream::DXContainer.ArgStr
+             << " must be specified!\n";
+      exit(1);
+    }
+    if (!opts::exportstream::ForceName) {
+      // First try to parse it as an integer, if it fails fall back to treating
+      // it as a named stream.
+      if (to_integer(opts::exportstream::Stream, Index)) {
+        if (Index >= File.getNumStreams()) {
+          errs() << "Error: " << Index << " is not a valid stream index.\n";
+          exit(1);
+        }
+        Success = true;
+        outs() << "Dumping contents of stream index " << Index << " to file "
+               << OutFileName << ".\n";
+      }
+    }
 
-  if (!Success) {
-    InfoStream &IS = cantFail(File.getPDBInfoStream());
-    Index = ExitOnErr(IS.getNamedStreamIndex(opts::exportstream::Stream));
-    outs() << "Dumping contents of stream '" << opts::exportstream::Stream
-           << "' (index " << Index << ") to file " << OutFileName << ".\n";
+    if (!Success) {
+      InfoStream &IS = cantFail(File.getPDBInfoStream());
+      Index = ExitOnErr(IS.getNamedStreamIndex(opts::exportstream::Stream));
+      outs() << "Dumping contents of stream '" << opts::exportstream::Stream
+             << "' (index " << Index << ") to file " << OutFileName << ".\n";
+    }
   }
 
   SourceStream = File.createIndexedStream(Index);
@@ -1520,6 +1582,7 @@ int main(int Argc, const char **Argv) {
 
   if (opts::DumpSubcommand) {
     if (opts::dump::RawAll) {
+      opts::dump::DumpDXContainer = true;
       opts::dump::DumpGlobals = true;
       opts::dump::DumpFpo = true;
       opts::dump::DumpInlineeLines = true;
@@ -1555,6 +1618,7 @@ int main(int Argc, const char **Argv) {
       opts::pdb2yaml::DbiStream = true;
       opts::pdb2yaml::TpiStream = true;
       opts::pdb2yaml::IpiStream = true;
+      opts::pdb2yaml::DXContainerStream = true;
       opts::pdb2yaml::PublicsStream = true;
       opts::pdb2yaml::DumpModules = true;
       opts::pdb2yaml::DumpModuleFiles = true;

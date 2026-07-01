@@ -7,8 +7,8 @@
 
 void foo(void) {
   // CIR-LABEL: cir.func no_inline dso_local @_Z3foov()
-  // CIR: %[[V0:.*]] = cir.alloca !cir.array<!cir.float x 4>, !cir.ptr<!cir.array<!cir.float x 4>>, ["f4"] {alignment = 16 : i64}
-  // CIR: %[[V1:.*]] = cir.alloca !cir.array<!cir.float x 8>, !cir.ptr<!cir.array<!cir.float x 8>>, ["f8"] {alignment = 16 : i64}
+  // CIR: %[[V0:.*]] = cir.alloca "f4" align(16) : !cir.ptr<!cir.array<!cir.float x 4>>
+  // CIR: %[[V1:.*]] = cir.alloca "f8" align(16) : !cir.ptr<!cir.array<!cir.float x 8>>
   // CIR: %[[V2:.*]] = cir.cast array_to_ptrdecay %[[V0]] : !cir.ptr<!cir.array<!cir.float x 4>> -> !cir.ptr<!cir.float>
   // CIR: %[[V3:.*]] = cir.cast bitcast %[[V2]] : !cir.ptr<!cir.float> -> !cir.ptr<!void>
   // CIR: %[[V4:.*]] = cir.cast array_to_ptrdecay %[[V1]] : !cir.ptr<!cir.array<!cir.float x 8>> -> !cir.ptr<!cir.float>
@@ -113,4 +113,22 @@ extern "C" void bcopy(const void *__src, void *__dest, size_t __n);
 // OGCG:    ret void
 void testbcopy(const void *src, void *dest, size_t n) {
   bcopy(src, dest, n);
+}
+
+// CIR-LABEL: @testaddressof(
+// CIR: %[[SRC:.*]] = cir.alloca "src" {{.*}} init : !cir.ptr<!cir.ptr<!s8i>>
+// CIR: %[[DEST:.*]] = cir.alloca "dest" {{.*}} init : !cir.ptr<!cir.ptr<!s8i>>
+// CIR: %[[SRC_TO_VOIDPTR:.*]] = cir.cast bitcast %[[SRC]] : !cir.ptr<!cir.ptr<!s8i>> -> !cir.ptr<!void>
+// CIR: %[[DEST_TO_VOIDPTR:.*]] = cir.cast bitcast %[[DEST]] : !cir.ptr<!cir.ptr<!s8i>> -> !cir.ptr<!void>
+// CIR: cir.libc.memmove {{.*}} bytes from %[[SRC_TO_VOIDPTR]] to %[[DEST_TO_VOIDPTR]]
+// LLVM-LABEL: @testaddressof(
+// LLVM: %[[SRC:.*]] = alloca ptr
+// LLVM: %[[DEST:.*]] = alloca ptr
+// LLVM: call void @llvm.memmove.p0.p0.i64(ptr %[[DEST]], ptr %[[SRC]], i64 {{.*}}, i1 false)
+// OGCG-LABEL: @testaddressof(
+// OGCG: %[[SRC:.*]] = alloca ptr
+// OGCG: %[[DEST:.*]] = alloca ptr
+// OGCG: call void @llvm.memmove.p0.p0.i64(ptr {{.*}}%[[DEST]], ptr {{.*}}%[[SRC]], i64 {{.*}}, i1 false)
+extern "C" void testaddressof(const char *src, const char *dest, size_t n) {
+  __builtin_bcopy(__builtin_addressof(src), __builtin_addressof(dest), n);
 }

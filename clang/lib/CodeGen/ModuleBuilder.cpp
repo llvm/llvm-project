@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/CodeGen/ModuleBuilder.h"
+#include "CGCXXABI.h"
 #include "CGDebugInfo.h"
 #include "CodeGenModule.h"
 #include "clang/AST/ASTContext.h"
@@ -131,6 +132,11 @@ namespace {
       return Builder->GetAddrOfGlobal(global, ForDefinition_t(isForDefinition));
     }
 
+    llvm::Constant *GetAddrOfVTable(BaseSubobject subobject,
+                                    const CXXRecordDecl *decl) {
+      return Builder->getCXXABI().getVTableAddressPoint(subobject, decl);
+    }
+
     llvm::Module *StartModule(llvm::StringRef ModuleName,
                               llvm::LLVMContext &C) {
       assert(!M && "Replacing existing Module?");
@@ -228,8 +234,9 @@ namespace {
 
       // Provide some coverage mapping even for methods that aren't emitted.
       // Don't do this for templated classes though, as they may not be
-      // instantiable.
-      if (!D->getLexicalDeclContext()->isDependentContext())
+      // instantiable. Also skip consteval methods as they are never emitted.
+      if (!D->getLexicalDeclContext()->isDependentContext() &&
+          !D->getAsFunction()->isImmediateFunction())
         Builder->AddDeferredUnusedCoverageMapping(D);
     }
 
@@ -375,6 +382,11 @@ llvm::Constant *CodeGenerator::GetAddrOfGlobal(GlobalDecl global,
                                                bool isForDefinition) {
   return static_cast<CodeGeneratorImpl*>(this)
            ->GetAddrOfGlobal(global, isForDefinition);
+}
+
+llvm::Constant *CodeGenerator::GetAddrOfVTable(BaseSubobject base,
+                                               const CXXRecordDecl *decl) {
+  return static_cast<CodeGeneratorImpl *>(this)->GetAddrOfVTable(base, decl);
 }
 
 llvm::Module *CodeGenerator::StartModule(llvm::StringRef ModuleName,

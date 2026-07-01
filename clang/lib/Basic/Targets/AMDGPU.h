@@ -19,7 +19,7 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/TargetParser/TargetParser.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
 #include "llvm/TargetParser/Triple.h"
 #include <optional>
 
@@ -30,8 +30,7 @@ class LLVM_LIBRARY_VISIBILITY AMDGPUTargetInfo final : public TargetInfo {
 
   static const char *const GCCRegNames[];
 
-  static const LangASMap AMDGPUDefIsGenMap;
-  static const LangASMap AMDGPUDefIsPrivMap;
+  static const LangASMap AMDGPUAddrSpaceMap;
 
   llvm::AMDGPU::GPUKind GPUKind;
   unsigned GPUFeatures;
@@ -78,8 +77,6 @@ class LLVM_LIBRARY_VISIBILITY AMDGPUTargetInfo final : public TargetInfo {
            !!(GPUFeatures & llvm::AMDGPU::FEATURE_LDEXP);
   }
 
-  static bool isAMDGCN(const llvm::Triple &TT) { return TT.isAMDGCN(); }
-
   static bool isR600(const llvm::Triple &TT) {
     return TT.getArch() == llvm::Triple::r600;
   }
@@ -98,8 +95,6 @@ class LLVM_LIBRARY_VISIBILITY AMDGPUTargetInfo final : public TargetInfo {
 
 public:
   AMDGPUTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts);
-
-  void setAddressSpaceMap(bool DefaultIsPrivate);
 
   void adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
               const TargetInfo *Aux) override;
@@ -137,7 +132,7 @@ public:
     return getTriple().isAMDGCN() ? 64 : 32;
   }
 
-  bool hasBFloat16Type() const override { return isAMDGCN(getTriple()); }
+  bool hasBFloat16Type() const override { return getTriple().isAMDGCN(); }
 
   std::string_view getClobbers() const override { return ""; }
 
@@ -285,7 +280,7 @@ public:
 
   void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
 
-  bool setCPU(const std::string &Name) override {
+  bool setCPU(StringRef Name) override {
     if (getTriple().isAMDGCN()) {
       GPUKind = llvm::AMDGPU::parseArchAMDGCN(Name);
       GPUFeatures = llvm::AMDGPU::getArchAttrAMDGCN(GPUKind);
@@ -306,7 +301,7 @@ public:
     Opts["__cl_clang_non_portable_kernel_param_types"] = true;
     Opts["__cl_clang_bitfields"] = true;
 
-    bool IsAMDGCN = isAMDGCN(getTriple());
+    bool IsAMDGCN = getTriple().isAMDGCN();
 
     Opts["cl_khr_fp64"] = hasFP64();
     Opts["__opencl_c_fp64"] = hasFP64();
@@ -345,6 +340,10 @@ public:
         Opts["__opencl_c_generic_address_space"] = true;
         Opts["__opencl_c_device_enqueue"] = true;
         Opts["__opencl_c_pipes"] = true;
+      }
+
+      if (getTriple().getEnvironment() == llvm::Triple::LLVM) {
+        Opts["cl_khr_subgroup_extended_types"] = true;
       }
     }
   }
@@ -486,15 +485,11 @@ public:
     return true;
   }
 
-  std::optional<std::string> getTargetID() const override {
-    if (!isAMDGCN(getTriple()))
-      return std::nullopt;
-    // When -target-cpu is not set, we assume generic code that it is valid
-    // for all GPU and use an empty string as target ID to represent that.
-    if (GPUKind == llvm::AMDGPU::GK_NONE)
-      return std::string("");
-    return getCanonicalTargetID(getArchNameAMDGCN(GPUKind),
-                                OffloadArchFeatures);
+  bool isProcessorName(StringRef Name) const override {
+    llvm::AMDGPU::GPUKind NameKind = getTriple().isAMDGCN()
+                                         ? llvm::AMDGPU::parseArchAMDGCN(Name)
+                                         : llvm::AMDGPU::parseArchR600(Name);
+    return NameKind == GPUKind;
   }
 
   bool hasHIPImageSupport() const override { return HasImage; }

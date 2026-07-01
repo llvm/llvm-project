@@ -10,7 +10,10 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test.lldbpexpect import PExpectTest
 
 
+@skipIfNoSignals  # no signal support
 class TestCase(PExpectTest):
+    SHARED_BUILD_TESTCASE = False
+
     @skipIf(macos_version=["<", "14.0"], asan=True)
     @skipIf(compiler="clang", compiler_version=["<", "11.0"])
     @skipIf(oslist=["linux"], archs=["arm$", "aarch64"])
@@ -40,4 +43,3 @@ class TestCase(PExpectTest):
         self.child.expect("Process .* exited")
         self.expect_prompt()
 
-        self.quit()

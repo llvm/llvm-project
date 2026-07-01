@@ -3,6 +3,7 @@ set(LLVM_LINK_COMPONENTS
   AllTargetsDescs
   AllTargetsDisassemblers
   AllTargetsInfos
+  BinaryFormat
   DebugInfoDWARF
   DebugInfoPDB
   Core

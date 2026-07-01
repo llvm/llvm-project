@@ -134,7 +134,8 @@ AbstractSparseForwardDataFlowAnalysis::visitOperation(Operation *op) {
   // The results of a region branch operation are determined by control-flow.
   if (auto branch = dyn_cast<RegionBranchOpInterface>(op)) {
     visitRegionSuccessors(getProgramPointAfter(branch), branch,
-                          RegionSuccessor::parent(), resultLattices);
+                          RegionSuccessor(branch.getOperation()),
+                          resultLattices);
     return success();
   }
 
@@ -316,11 +317,10 @@ void AbstractSparseForwardDataFlowAnalysis::visitRegionSuccessors(
         if (!inputs.empty())
           firstIndex = cast<OpResult>(inputs.front()).getResultNumber();
         SmallVector<Value> nonSuccessorInputs =
-            branch.getNonSuccessorInputs(RegionSuccessor::parent());
+            branch.getNonSuccessorInputs(successor);
         SmallVector<AbstractSparseLattice *> nonSuccessorInputLattices =
             llvm::map_to_vector(nonSuccessorInputs, valueToLattices);
-        visitNonControlFlowArgumentsImpl(branch, RegionSuccessor::parent(),
-                                         nonSuccessorInputs,
+        visitNonControlFlowArgumentsImpl(branch, successor, nonSuccessorInputs,
                                          nonSuccessorInputLattices);
       } else {
         if (!inputs.empty())
@@ -619,7 +619,7 @@ void AbstractSparseBackwardDataFlowAnalysis::visitRegionSuccessors(
   SmallVector<Attribute> operands(op->getNumOperands(), nullptr);
   branch.getEntrySuccessorRegions(operands, successors);
   for (RegionSuccessor &successor : successors) {
-    if (successor.isParent())
+    if (successor.isOperation())
       continue;
     auto valueToArgument = [](Value value) {
       return cast<BlockArgument>(value);

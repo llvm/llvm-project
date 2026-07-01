@@ -1441,12 +1441,16 @@ void OpEmitter::genPropertiesSupport() {
       {1};
 )decl";
   const char *attrGetNoDefaultFmt = R"decl(;
-      if (attr && ::mlir::failed(setFromAttr(prop.{0}, attr, emitError)))
+      if (attr && ::mlir::failed(setFromAttr(prop.{0}, attr, [&]() {{
+            return emitError() << "for `{0}`: ";
+          })))
         return ::mlir::failure();
 )decl";
   const char *attrGetDefaultFmt = R"decl(;
       if (attr) {{
-        if (::mlir::failed(setFromAttr(prop.{0}, attr, emitError)))
+        if (::mlir::failed(setFromAttr(prop.{0}, attr, [&]() {{
+              return emitError() << "for `{0}`: ";
+            })))
           return ::mlir::failure();
       } else {{
         prop.{0} = {1};
@@ -2852,8 +2856,8 @@ void OpEmitter::genInferredTypeCollectiveParamBuilder(
     // function.
     body << formatv(R"(
   if (!attributes.empty()) {
-    ::mlir::OpaqueProperties properties =
-      &{1}.getOrAddProperties<{0}::Properties>();
+    (void){1}.getOrAddProperties<{0}::Properties>();
+    ::mlir::PropertyRef properties = {1}.getRawProperties();
     std::optional<::mlir::RegisteredOperationName> info =
       {1}.name.getRegisteredInfo();
     if (failed(info->setOpPropertiesFromAttribute({1}.name, properties,
@@ -3145,8 +3149,8 @@ void OpEmitter::genCollectiveParamBuilder(CollectiveBuilderKind kind) {
     // function.
     body << formatv(R"(
   if (!attributes.empty()) {
-    ::mlir::OpaqueProperties properties =
-      &{1}.getOrAddProperties<{0}::Properties>();
+    (void){1}.getOrAddProperties<{0}::Properties>();
+    ::mlir::PropertyRef properties = {1}.getRawProperties();
     std::optional<::mlir::RegisteredOperationName> info =
       {1}.name.getRegisteredInfo();
     if (failed(info->setOpPropertiesFromAttribute({1}.name, properties,
@@ -3425,7 +3429,6 @@ void OpEmitter::genCodeForAddingArgAndRegionForBuilder(
     });
   };
   if (op.getTrait("::mlir::OpTrait::AttrSizedOperandSegments")) {
-    std::string sizes = op.getGetterName(operandSegmentAttrName);
     body << "  ::llvm::copy(::llvm::ArrayRef<int32_t>({";
     emitSegment();
     body << "}), " << builderOpStateProperties
@@ -4033,15 +4036,27 @@ void OpEmitter::genRegionVerifier(MethodBody &body) {
 }
 
 void OpEmitter::genSuccessorVerifier(MethodBody &body) {
-  const char *const verifySuccessor = R"(
-    for (auto *successor : {0})
+  // Code to verify a variadic successor.
+  //
+  // {0}: The name of the successor range accessor.
+  // {1}: The successor constraint.
+  // {2}: The successor's name.
+  const char *const verifyVariadicSuccessor = R"(
+    for (auto *successor : {0}())
       if (::mlir::failed({1}(*this, successor, "{2}", index++)))
         return ::mlir::failure();
 )";
-  /// Get a single successor.
-  ///
-  /// {0}: The successor's name.
-  const char *const getSingleSuccessor = "::llvm::MutableArrayRef({0}())";
+  // Code to verify a single successor. The accessor returns a `Block *` by
+  // value, which can't be wrapped in a `MutableArrayRef`, so verify it
+  // directly.
+  //
+  // {0}: The name of the successor accessor.
+  // {1}: The successor constraint.
+  // {2}: The successor's name.
+  const char *const verifySingleSuccessor = R"(
+    if (::mlir::failed({1}(*this, {0}(), "{2}", index++)))
+      return ::mlir::failure();
+)";
 
   // If we have no successors, there is nothing more to do.
   const auto canSkip = [](const NamedSuccessor &successor) {
@@ -4058,13 +4073,11 @@ void OpEmitter::genSuccessorVerifier(MethodBody &body) {
     if (canSkip(successor))
       continue;
 
-    auto getSuccessor =
-        formatv(successor.isVariadic() ? "{0}()" : getSingleSuccessor,
-                successor.name)
-            .str();
     auto constraintFn =
         staticVerifierEmitter.getSuccessorConstraintFn(successor.constraint);
-    body << formatv(verifySuccessor, getSuccessor, constraintFn,
+    body << formatv(successor.isVariadic() ? verifyVariadicSuccessor
+                                           : verifySingleSuccessor,
+                    op.getGetterName(successor.name), constraintFn,
                     successor.name);
   }
   body << "  }\n";
@@ -4150,6 +4163,19 @@ void OpEmitter::genTraits() {
       opClass.addTrait(opTrait->getFullyQualifiedTraitName());
     }
   }
+
+  // Auto-derive the builtin token producer/consumer traits whenever the op
+  // statically declares a Token operand or result.
+  constexpr llvm::StringLiteral kTokenCppType = "::mlir::TokenType";
+  auto hasStaticTokenType = [&](auto &&values) {
+    return llvm::any_of(values, [&](const tblgen::NamedTypeConstraint &v) {
+      return v.constraint.getCppType() == kTokenCppType;
+    });
+  };
+  if (hasStaticTokenType(op.getOperands()))
+    opClass.addTrait("::mlir::OpTrait::TokenConsumerTrait");
+  if (hasStaticTokenType(op.getResults()))
+    opClass.addTrait("::mlir::OpTrait::TokenProducerTrait");
 }
 
 void OpEmitter::genOpNameGetter() {
@@ -4430,22 +4456,22 @@ OpOperandAdaptorEmitter::OpOperandAdaptorEmitter(
     constructor->addMemberInitializer("Base", "attrs, properties, regions");
     constructor->addMemberInitializer("odsOperands", "values");
 
-    // Add a forwarding constructor to the previous one that accepts
-    // OpaqueProperties instead and check for null and perform the cast to the
-    // actual properties type.
+    // Add a forwarding constructor that accepts PropertyRef instead of a
+    // concrete properties struct. It checks for null and casts to the actual
+    // properties type.
     paramList[1] = MethodParameter("::mlir::DictionaryAttr", "attrs");
-    paramList[2] = MethodParameter("::mlir::OpaqueProperties", "properties");
-    auto *opaquePropertiesConstructor =
+    paramList[2] = MethodParameter("::mlir::PropertyRef", "properties");
+    auto *propertyRefConstructor =
         genericAdaptor.addConstructor(std::move(paramList));
     if (useProperties) {
-      opaquePropertiesConstructor->addMemberInitializer(
+      propertyRefConstructor->addMemberInitializer(
           genericAdaptor.getClassName(),
           "values, "
           "attrs, "
           "(properties ? *properties.as<Properties *>() : Properties{}), "
           "regions");
     } else {
-      opaquePropertiesConstructor->addMemberInitializer(
+      propertyRefConstructor->addMemberInitializer(
           genericAdaptor.getClassName(),
           "values, "
           "attrs, "
@@ -4702,6 +4728,7 @@ static void emitOpClasses(
 
   for (auto *def : defs) {
     Operator op(*def);
+    OpOrAdaptorHelper emitHelper(op, /*emitForOp=*/true);
     if (emitDecl) {
       {
         NamespaceEmitter emitter(os, op.getCppNamespace());
@@ -4711,9 +4738,15 @@ static void emitOpClasses(
         OpEmitter::emitDecl(op, os, staticVerifierEmitter);
       }
       // Emit the TypeID explicit specialization to have a single definition.
-      if (!op.getCppNamespace().empty())
+      if (!op.getCppNamespace().empty()) {
         os << "MLIR_DECLARE_EXPLICIT_TYPE_ID(" << op.getCppNamespace()
-           << "::" << op.getCppClassName() << ")\n\n";
+           << "::" << op.getCppClassName() << ")\n";
+        if (emitHelper.hasNonEmptyPropertiesStruct())
+          os << "MLIR_DECLARE_EXPLICIT_TYPE_ID(" << op.getCppNamespace()
+             << "::detail::" << op.getCppClassName()
+             << "GenericAdaptorBase::Properties)\n";
+        os << "\n";
+      }
     } else {
       {
         NamespaceEmitter emitter(os, op.getCppNamespace());
@@ -4722,9 +4755,15 @@ static void emitOpClasses(
         OpEmitter::emitDef(op, os, staticVerifierEmitter);
       }
       // Emit the TypeID explicit specialization to have a single definition.
-      if (!op.getCppNamespace().empty())
+      if (!op.getCppNamespace().empty()) {
         os << "MLIR_DEFINE_EXPLICIT_TYPE_ID(" << op.getCppNamespace()
-           << "::" << op.getCppClassName() << ")\n\n";
+           << "::" << op.getCppClassName() << ")\n";
+        if (emitHelper.hasNonEmptyPropertiesStruct())
+          os << "MLIR_DEFINE_EXPLICIT_TYPE_ID(" << op.getCppNamespace()
+             << "::detail::" << op.getCppClassName()
+             << "GenericAdaptorBase::Properties)\n";
+        os << "\n";
+      }
     }
   }
 }

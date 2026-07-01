@@ -10,10 +10,10 @@ class TestCase(TestBase):
         self.expect(
             "target stop-hook enable -1",
             error=True,
-            startstr='error: invalid stop hook id: "-1".',
+            startstr='error: invalid stop hook id: "-1"',
         )
         self.expect(
             "target stop-hook enable abcdfx",
             error=True,
-            startstr='error: invalid stop hook id: "abcdfx".',
+            startstr='error: invalid stop hook id: "abcdfx"',
         )

@@ -117,19 +117,42 @@ static bool isArithmeticCbzPair(const MachineInstr *FirstMI,
   return false;
 }
 
+// True unless the pair provably writes different physical registers. Pre-RA
+// the dests are still virtual, and post-RA it requires a genuine WAW (same dest
+// reg).
+static bool mayHaveWAWDependency(const MachineInstr &FirstMI,
+                                 const MachineInstr &SecondMI) {
+  Register DestFirst = FirstMI.getOperand(0).getReg();
+  Register DestSecond = SecondMI.getOperand(0).getReg();
+  if (!DestFirst.isPhysical() || !DestSecond.isPhysical())
+    return true;
+  return DestFirst == DestSecond;
+}
+
 /// AES crypto encoding or decoding.
 static bool isAESPair(const MachineInstr *FirstMI,
                       const MachineInstr &SecondMI) {
   // Assume the 1st instr to be a wildcard if it is unspecified.
-  switch (SecondMI.getOpcode()) {
+  unsigned SecondOpcode = SecondMI.getOpcode();
+  switch (SecondOpcode) {
   // AES encode.
   case AArch64::AESMCrr:
   case AArch64::AESMCrrTied:
-    return FirstMI == nullptr || FirstMI->getOpcode() == AArch64::AESErr;
+    if (FirstMI == nullptr)
+      return true;
+    if (FirstMI->getOpcode() != AArch64::AESErr)
+      return false;
+    return SecondOpcode == AArch64::AESMCrrTied ||
+           mayHaveWAWDependency(*FirstMI, SecondMI);
   // AES decode.
   case AArch64::AESIMCrr:
   case AArch64::AESIMCrrTied:
-    return FirstMI == nullptr || FirstMI->getOpcode() == AArch64::AESDrr;
+    if (FirstMI == nullptr)
+      return true;
+    if (FirstMI->getOpcode() != AArch64::AESDrr)
+      return false;
+    return SecondOpcode == AArch64::AESIMCrrTied ||
+           mayHaveWAWDependency(*FirstMI, SecondMI);
   }
 
   return false;
@@ -277,6 +300,35 @@ static bool isCmpCSelPair(const MachineInstr *FirstMI,
   }
 
   return false;
+}
+
+/// Floating-point compare and floating-point conditional select.
+static bool isFCmpFCSelPair(const MachineInstr *FirstMI,
+                            const MachineInstr &SecondMI) {
+  switch (SecondMI.getOpcode()) {
+  case AArch64::FCSELSrrr:
+  case AArch64::FCSELDrrr:
+  case AArch64::FCSELHrrr:
+    break;
+  default:
+    return false;
+  }
+
+  // Assume the 1st instr to be a wildcard if it is unspecified.
+  if (FirstMI == nullptr)
+    return true;
+
+  switch (FirstMI->getOpcode()) {
+  case AArch64::FCMPSrr:
+  case AArch64::FCMPDrr:
+  case AArch64::FCMPESrr:
+  case AArch64::FCMPEDrr:
+  case AArch64::FCMPHrr:
+  case AArch64::FCMPEHrr:
+    return true;
+  default:
+    return false;
+  }
 }
 
 /// Compare and cset.
@@ -500,6 +552,8 @@ static bool shouldScheduleAdjacent(const TargetInstrInfo &TII,
   if (ST.hasFuseAddress() && isAddressLdStPair(FirstMI, SecondMI))
     return true;
   if (ST.hasFuseCmpCSel() && isCmpCSelPair(FirstMI, SecondMI))
+    return true;
+  if (ST.hasFuseFCmpFCSel() && isFCmpFCSelPair(FirstMI, SecondMI))
     return true;
   if (ST.hasFuseCmpCSet() && isCmpCSetPair(FirstMI, SecondMI))
     return true;

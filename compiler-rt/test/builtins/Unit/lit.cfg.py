@@ -107,10 +107,23 @@ else:
     if config.target_os == "Haiku":
         config.substitutions.append(("%librt ", base_lib + " -lroot "))
     else:
-        config.substitutions.append(("%librt ", base_lib + " -lc -lm "))
+        linker_supports_start_group = get_required_attr(
+            config, "linker_supports_start_group"
+        )
+        # Check if the linker supports --start-group and --end-group
+        # For nvptx64 target, it falls back to the default.
+        if linker_supports_start_group and "nvptx" not in config.target_arch:
+            config.substitutions.append(
+                (
+                    "%librt ",
+                    "-lm -Wl,--start-group " + base_lib + " -lc -Wl,--end-group ",
+                )
+            )
+        else:
+            config.substitutions.append(("%librt ", "-lm " + base_lib + " -lc "))
 
-builtins_build_crt = get_required_attr(config, "builtins_build_crt")
-if builtins_build_crt:
+builtins_test_crt = get_required_attr(config, "builtins_test_crt")
+if builtins_test_crt:
     base_obj = os.path.join(
         config.compiler_rt_libdir, "clang_rt.%%s%s.o" % config.target_suffix
     )
@@ -158,7 +171,7 @@ clang_builtins_cxxflags = clang_builtins_static_cxxflags
 
 # FIXME: Right now we don't compile the C99 complex builtins when using
 # clang-cl. Fix that.
-if not is_msvc:
+if not is_msvc and config.target_arch not in ("amdgcn", "nvptx64"):
     config.available_features.add("c99-complex")
 
 builtins_is_msvc = get_required_attr(config, "builtins_is_msvc")

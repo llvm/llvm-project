@@ -7,10 +7,10 @@
 
 auto pack_indexing(auto... p) { return p...[0]; }
 
-// CIR: %[[P_0:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["p", init]
-// CIR: %[[P_1:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["p", init]
-// CIR: %[[P_2:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["p", init]
-// CIR: %[[RET_VAL:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
+// CIR: %[[P_0:.*]] = cir.alloca "p" {{.*}} init : !cir.ptr<!s32i>
+// CIR: %[[P_1:.*]] = cir.alloca "p" {{.*}} init : !cir.ptr<!s32i>
+// CIR: %[[P_2:.*]] = cir.alloca "p" {{.*}} init : !cir.ptr<!s32i>
+// CIR: %[[RET_VAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
 // CIR: %[[RESULT:.*]] = cir.load{{.*}} %[[P_0]] : !cir.ptr<!s32i>, !s32i
 // CIR: cir.store %[[RESULT]], %[[RET_VAL]] : !s32i, !cir.ptr<!s32i>
 // CIR: %[[TMP:.*]] = cir.load %[[RET_VAL]] : !cir.ptr<!s32i>, !s32i
@@ -33,7 +33,7 @@ auto pack_indexing(auto... p) { return p...[0]; }
 
 int pack_indexing_scalar() { return pack_indexing(1, 2, 3); }
 
-// CIR: %[[RET_VAL:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
+// CIR: %[[RET_VAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
 // CIR: %[[RESULT:.*]] = cir.call @_Z13pack_indexingIJiiiEEDaDpT_({{.*}}, {{.*}}, {{.*}}) : (!s32i {llvm.noundef}, !s32i {llvm.noundef}, !s32i {llvm.noundef}) -> (!s32i {llvm.noundef})
 // CIR: cir.store %[[RESULT]], %[[RET_VAL]] : !s32i, !cir.ptr<!s32i>
 // CIR: %[[TMP:.*]] = cir.load %[[RET_VAL]] : !cir.ptr<!s32i>, !s32i
@@ -54,9 +54,9 @@ float _Complex pack_indexing_complex() {
 }
 
 // CIR: cir.func {{.*}} @_Z21pack_indexing_complexv()
-// CIR:   %[[RET_VAL:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["__retval"]
-// CIR:   %[[COMPLEX_0:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["coerce"]
-// CIR:   %[[COMPLEX_1:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["coerce"]
+// CIR:   %[[RET_VAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.complex<!cir.float>>
+// CIR:   %[[COMPLEX_0:.*]] = cir.alloca "coerce" {{.*}} : !cir.ptr<!cir.complex<!cir.float>>
+// CIR:   %[[COMPLEX_1:.*]] = cir.alloca "coerce" {{.*}} : !cir.ptr<!cir.complex<!cir.float>>
 // CIR:   %[[CONST_COMPLEX_0:.*]] = cir.const #cir.const_complex<#cir.fp<1.000000e+00> : !cir.float, #cir.fp<2.000000e+00> : !cir.float> : !cir.complex<!cir.float>
 // CIR:   %[[CONST_COMPLEX_1:.*]] = cir.const #cir.const_complex<#cir.fp<3.000000e+00> : !cir.float, #cir.fp<4.000000e+00> : !cir.float> : !cir.complex<!cir.float>
 // CIR:   cir.store {{.*}} %[[CONST_COMPLEX_0]], %[[COMPLEX_0]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>

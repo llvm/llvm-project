@@ -1,13 +1,23 @@
 set(files
   AllocAction.cpp
+  BootstrapInfo.cpp
+  SimpleSymbolTable.cpp
   Error.cpp
-  QueueingTaskDispatcher.cpp
-  ResourceManager.cpp
+  ExecutorProcessInfo.cpp
+  InProcessControllerAccess.cpp
+  NativeDylibManager.cpp
   RTTI.cpp
+  Service.cpp
   Session.cpp
   SimpleNativeMemoryMap.cpp
-  TaskDispatcher.cpp
-  ThreadPoolTaskDispatcher.cpp
+  StandaloneMachOUnwindInfoRegistrar.cpp
+  ThreadPoolRunner.cpp
+  sps-ci/AllSPSCI.cpp
+  sps-ci/CallSPSCI.cpp
+  sps-ci/MemoryAccessSPSCI.cpp
+  sps-ci/NativeDylibManagerSPSCI.cpp
+  sps-ci/SimpleNativeMemoryMapSPSCI.cpp
+  sps-ci/StandaloneMachOUnwindInfoRegistrarSPSCI.cpp
   )
 
 add_library(orc-rt-executor STATIC ${files})
@@ -16,6 +26,7 @@ target_link_libraries(orc-rt-executor
   )
 
 # Apply RTTI and exceptions compile flags
+# TODO: Use common runtimes infrastructure for output and install paths
 target_compile_options(orc-rt-executor PRIVATE ${ORC_RT_COMPILE_FLAGS})
 install(TARGETS orc-rt-executor
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}

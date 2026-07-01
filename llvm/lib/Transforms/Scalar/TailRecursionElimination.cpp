@@ -442,7 +442,7 @@ class TailRecursionEliminator {
       : F(F), TTI(TTI), AA(AA), ORE(ORE), DTU(DTU), BFI(BFI),
         OrigEntryBBFreq(
             BFI ? BFI->getBlockFreq(&F.getEntryBlock()).getFrequency() : 0U),
-        OrigEntryCount(F.getEntryCount() ? F.getEntryCount()->getCount() : 0) {
+        OrigEntryCount(F.getEntryCount() ? *F.getEntryCount() : 0) {
     if (BFI) {
       // The assert is meant as API documentation for the caller.
       assert((OrigEntryCount != 0 && OrigEntryBBFreq != 0) &&
@@ -525,7 +525,7 @@ void TailRecursionEliminator::createTailRecurseLoopHeader(CallInst *CI) {
   BasicBlock *NewEntry = BasicBlock::Create(F.getContext(), "", &F, HeaderBB);
   NewEntry->takeName(HeaderBB);
   HeaderBB->setName("tailrecurse");
-  auto *BI = BranchInst::Create(HeaderBB, NewEntry);
+  auto *BI = UncondBrInst::Create(HeaderBB, NewEntry);
   BI->setDebugLoc(DebugLoc::getCompilerGenerated());
   // If the new branch preserves the debug location of CI, it could result in
   // misleading stepping, if CI is located in a conditional branch.
@@ -721,6 +721,10 @@ bool TailRecursionEliminator::eliminateCall(CallInst *CI) {
     // the result of the call anymore, instead, use the PHI node we just
     // inserted.
     AccRecInstr->setOperand(AccRecInstr->getOperand(0) != CI, AccPN);
+
+    // Reassociating into the loop reorders the operands, so flags from the
+    // original order (nsw/nuw/exact/...) may no longer hold.
+    AccRecInstr->dropPoisonGeneratingFlags();
   }
 
   // Update our return value tracking
@@ -749,7 +753,7 @@ bool TailRecursionEliminator::eliminateCall(CallInst *CI) {
 
   // Now that all of the PHI nodes are in place, remove the call and
   // ret instructions, replacing them with an unconditional branch.
-  BranchInst *NewBI = BranchInst::Create(HeaderBB, Ret->getIterator());
+  UncondBrInst *NewBI = UncondBrInst::Create(HeaderBB, Ret->getIterator());
   NewBI->setDebugLoc(CI->getDebugLoc());
 
   Ret->eraseFromParent();  // Remove return.
@@ -767,7 +771,7 @@ bool TailRecursionEliminator::eliminateCall(CallInst *CI) {
         static_cast<double>(OrigEntryBBFreq);
     auto ToSubtract =
         static_cast<uint64_t>(std::round(RelativeBBFreq * OrigEntryCount));
-    auto OldEntryCount = F.getEntryCount()->getCount();
+    auto OldEntryCount = *F.getEntryCount();
     if (OldEntryCount <= ToSubtract) {
       LLVM_DEBUG(
           errs() << "[TRE] The entrycount attributable to the recursive call, "
@@ -775,7 +779,7 @@ bool TailRecursionEliminator::eliminateCall(CallInst *CI) {
                  << ", should be strictly lower than the function entry count, "
                  << OldEntryCount << "\n");
     } else {
-      F.setEntryCount(OldEntryCount - ToSubtract, F.getEntryCount()->getType());
+      F.setEntryCount(OldEntryCount - ToSubtract);
     }
   }
   return true;
@@ -860,11 +864,8 @@ void TailRecursionEliminator::cleanupAndFinalize() {
 bool TailRecursionEliminator::processBlock(BasicBlock &BB) {
   Instruction *TI = BB.getTerminator();
 
-  if (BranchInst *BI = dyn_cast<BranchInst>(TI)) {
-    if (BI->isConditional())
-      return false;
-
-    BasicBlock *Succ = BI->getSuccessor(0);
+  if (UncondBrInst *BI = dyn_cast<UncondBrInst>(TI)) {
+    BasicBlock *Succ = BI->getSuccessor();
     ReturnInst *Ret = dyn_cast<ReturnInst>(Succ->getFirstNonPHIOrDbg(true));
 
     if (!Ret)
@@ -991,7 +992,7 @@ PreservedAnalyses TailCallElimPass::run(Function &F,
   // the lines asking for the cached result, should they be nullptr (which, in
   // the case of the PDT, is likely), updates to the trees would be missed.
   auto *BFI = (!ForceDisableBFI && UpdateFunctionEntryCount &&
-               F.getEntryCount().has_value() && F.getEntryCount()->getCount())
+               F.getEntryCount().has_value() && *F.getEntryCount())
                   ? &AM.getResult<BlockFrequencyAnalysis>(F)
                   : nullptr;
   auto &ORE = AM.getResult<OptimizationRemarkEmitterAnalysis>(F);

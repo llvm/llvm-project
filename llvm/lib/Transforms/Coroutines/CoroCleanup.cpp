@@ -108,6 +108,8 @@ bool Lowerer::lower(Function &F) {
       case Intrinsic::coro_free:
         II->replaceAllUsesWith(II->getArgOperand(1));
         break;
+      case Intrinsic::coro_dead:
+        break;
       case Intrinsic::coro_alloc:
         II->replaceAllUsesWith(ConstantInt::getTrue(Context));
         break;
@@ -138,10 +140,12 @@ bool Lowerer::lower(Function &F) {
         break;
       case Intrinsic::coro_async_size_replace:
         auto *Target = cast<ConstantStruct>(
-            cast<GlobalVariable>(II->getArgOperand(0)->stripPointerCasts())
+            cast<GlobalVariable>(
+                II->getArgOperand(0)->stripPointerCastsAndAliases())
                 ->getInitializer());
         auto *Source = cast<ConstantStruct>(
-            cast<GlobalVariable>(II->getArgOperand(1)->stripPointerCasts())
+            cast<GlobalVariable>(
+                II->getArgOperand(1)->stripPointerCastsAndAliases())
                 ->getInitializer());
         auto *TargetSize = Target->getOperand(1);
         auto *SourceSize = Source->getOperand(1);
@@ -181,7 +185,6 @@ void Lowerer::lowerCoroNoop(IntrinsicInst *II) {
         FnTy, GlobalValue::LinkageTypes::InternalLinkage,
         M.getDataLayout().getProgramAddressSpace(), "__NoopCoro_ResumeDestroy",
         &M);
-    NoopFn->setCallingConv(CallingConv::Fast);
     buildDebugInfoForNoopResumeDestroyFunc(NoopFn);
     auto *Entry = BasicBlock::Create(C, "entry", NoopFn);
     ReturnInst::Create(C, Entry);
@@ -258,12 +261,12 @@ void NoopCoroElider::eraseFromWorklist(Instruction *I) {
 
 static bool declaresCoroCleanupIntrinsics(const Module &M) {
   return coro::declaresIntrinsics(
-      M,
-      {Intrinsic::coro_alloc, Intrinsic::coro_begin, Intrinsic::coro_subfn_addr,
-       Intrinsic::coro_free, Intrinsic::coro_id, Intrinsic::coro_id_retcon,
-       Intrinsic::coro_id_async, Intrinsic::coro_id_retcon_once,
-       Intrinsic::coro_noop, Intrinsic::coro_async_size_replace,
-       Intrinsic::coro_async_resume, Intrinsic::coro_begin_custom_abi});
+      M, {Intrinsic::coro_alloc, Intrinsic::coro_begin,
+          Intrinsic::coro_subfn_addr, Intrinsic::coro_free,
+          Intrinsic::coro_dead, Intrinsic::coro_id, Intrinsic::coro_id_retcon,
+          Intrinsic::coro_id_async, Intrinsic::coro_id_retcon_once,
+          Intrinsic::coro_noop, Intrinsic::coro_async_size_replace,
+          Intrinsic::coro_async_resume, Intrinsic::coro_begin_custom_abi});
 }
 
 PreservedAnalyses CoroCleanupPass::run(Module &M,

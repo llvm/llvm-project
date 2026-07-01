@@ -51,7 +51,7 @@ EXPORT-DAG: {{"filename":"(/|\\\\)tmp(/|\\\\)sources_specified(/|\\\\)extra(/|\\
 Instructions for regenerating the test:
 
 # cd %S/Inputs/sources_specified
-cp -r . /tmp/sources_specified
+cp -R . /tmp/sources_specified
 
 clang -mllvm -enable-name-compression=false -fprofile-instr-generate \
     -fcoverage-mapping /tmp/sources_specified/main.cc -o main

@@ -46,6 +46,7 @@ static const unsigned WebAssemblyAddrSpaceMap[] = {
     0,  // hlsl_private
     0,  // hlsl_device
     0,  // hlsl_input
+    0,  // hlsl_output
     0,  // hlsl_push_constant
     20, // wasm_funcref
 };
@@ -62,11 +63,13 @@ class LLVM_LIBRARY_VISIBILITY WebAssemblyTargetInfo : public TargetInfo {
   bool HasBulkMemory = false;
   bool HasBulkMemoryOpt = false;
   bool HasCallIndirectOverlong = false;
+  bool HasCooperativeThreading = false;
   bool HasCompactImports = false;
   bool HasExceptionHandling = false;
   bool HasExtendedConst = false;
   bool HasFP16 = false;
   bool HasGC = false;
+  bool HasLibcallThreadContext = false;
   bool HasMultiMemory = false;
   bool HasMultivalue = false;
   bool HasMutableGlobals = false;
@@ -109,6 +112,10 @@ public:
       PtrDiffType = SignedLong;
       IntPtrType = SignedLong;
     }
+    if (T.getOS() == llvm::Triple::WASIp3) {
+      HasLibcallThreadContext = true;
+      HasCooperativeThreading = true;
+    }
   }
 
   StringRef getABI() const override;
@@ -138,7 +145,7 @@ private:
   bool isValidCPUName(StringRef Name) const final;
   void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const final;
 
-  bool setCPU(const std::string &Name) final { return isValidCPUName(Name); }
+  bool setCPU(StringRef Name) final { return isValidCPUName(Name); }
 
   llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const final;
 
@@ -182,7 +189,7 @@ private:
     case CC_Swift:
       return CCCR_OK;
     case CC_SwiftAsync:
-      return CCCR_Error;
+      return HasTailCall ? CCCR_OK : CCCR_Error;
     default:
       return CCCR_Warning;
     }

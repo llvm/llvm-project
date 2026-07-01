@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn < %s | FileCheck -enable-var-scope -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx600 < %s | FileCheck -enable-var-scope -check-prefix=SI -check-prefix=FUNC %s
 
 declare float @llvm.amdgcn.rcp.f32(float) #0
 declare double @llvm.amdgcn.rcp.f64(double) #0
@@ -141,8 +141,6 @@ define amdgpu_kernel void @rcp_pat_f64(ptr addrspace(1) %out, double %src) #1 {
 
 ; FUNC-LABEL: {{^}}unsafe_rcp_pat_f64:
 ; SI: v_rcp_f64
-; SI: v_fma_f64
-; SI: v_fma_f64
 ; SI: v_fma_f64
 ; SI: v_fma_f64
 ; SI: v_fma_f64

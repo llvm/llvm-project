@@ -344,8 +344,11 @@ void SparcAsmPrinter::emitInstruction(const MachineInstr *MI) {
   case SP::CASArr:
   case SP::SWAPrr:
   case SP::SWAPri:
+  case SP::LDSTUBrr:
+  case SP::LDSTUBri:
+  case SP::LDSTUBArr:
     if (MF->getSubtarget<SparcSubtarget>().fixTN0011())
-      OutStreamer->emitCodeAlignment(Align(16), &getSubtargetInfo());
+      OutStreamer->emitCodeAlignment(Align(16), getSubtargetInfo());
     break;
   case SP::GETPCX:
     LowerGETPCXAndEmitMCInsts(MI, getSubtargetInfo());

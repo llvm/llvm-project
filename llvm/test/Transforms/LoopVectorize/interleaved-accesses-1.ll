@@ -1,4 +1,4 @@
-; RUN: opt -S -passes=loop-vectorize,instcombine -force-vector-width=4 -force-vector-interleave=1 -enable-interleaved-mem-accesses=true < %s | FileCheck %s
+; RUN: opt -S -passes=loop-vectorize -force-vector-width=4 -force-vector-interleave=1 -enable-interleaved-mem-accesses=true < %s | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
@@ -42,7 +42,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 %class.Complex = type { float, float }
 
-define void @_Z4testP7ComplexS0_mm(ptr noalias nocapture %out, ptr noalias nocapture readonly %in, i64 %out_start, i64 %size) local_unnamed_addr {
+define void @_Z4testP7ComplexS0_mm(ptr noalias nocapture %out, ptr noalias nocapture readonly %in, i64 %out_start, i64 %size) {
 entry:
   %cmp9 = icmp eq i64 %size, 0
   br i1 %cmp9, label %for.cond.cleanup, label %for.body.preheader

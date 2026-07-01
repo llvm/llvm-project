@@ -327,7 +327,7 @@ bool LoopIdiomVectorize::recognizeByteCompare() {
   //   %cmp.not = icmp eq i32 %inc, %n
   //   br i1 %cmp.not, label %while.end, label %while.body
   //
-  if (LoopBlocks[0]->sizeWithoutDebug() > 4)
+  if (LoopBlocks[0]->size() > 4)
     return false;
 
   // The second block should contain 7 instructions, e.g.
@@ -341,7 +341,7 @@ bool LoopIdiomVectorize::recognizeByteCompare() {
   //   %cmp.not.ld = icmp eq i8 %load.a, %load.b
   //   br i1 %cmp.not.ld, label %while.cond, label %while.end
   //
-  if (LoopBlocks[1]->sizeWithoutDebug() > 7)
+  if (LoopBlocks[1]->size() > 7)
     return false;
 
   // The incoming value to the PHI node from the loop should be an add of 1.
@@ -499,8 +499,7 @@ Value *LoopIdiomVectorize::createMaskedFindMismatch(
   Value *PFalse = Builder.CreateVectorSplat(PredVTy->getElementCount(),
                                             Builder.getInt1(false));
 
-  BranchInst *JumpToVectorLoop = BranchInst::Create(VectorLoopStartBlock);
-  Builder.Insert(JumpToVectorLoop);
+  Builder.CreateBr(VectorLoopStartBlock);
 
   DTU.applyUpdates({{DominatorTree::Insert, VectorLoopPreheaderBlock,
                      VectorLoopStartBlock}});
@@ -529,9 +528,8 @@ Value *LoopIdiomVectorize::createMaskedFindMismatch(
   Value *VectorMatchCmp = Builder.CreateICmpNE(VectorLhsLoad, VectorRhsLoad);
   VectorMatchCmp = Builder.CreateSelect(LoopPred, VectorMatchCmp, PFalse);
   Value *VectorMatchHasActiveLanes = Builder.CreateOrReduce(VectorMatchCmp);
-  BranchInst *VectorEarlyExit = BranchInst::Create(
-      VectorLoopMismatchBlock, VectorLoopIncBlock, VectorMatchHasActiveLanes);
-  Builder.Insert(VectorEarlyExit);
+  Builder.CreateCondBr(VectorMatchHasActiveLanes, VectorLoopMismatchBlock,
+                       VectorLoopIncBlock);
 
   DTU.applyUpdates(
       {{DominatorTree::Insert, VectorLoopStartBlock, VectorLoopMismatchBlock},
@@ -552,9 +550,7 @@ Value *LoopIdiomVectorize::createMaskedFindMismatch(
 
   Value *PredHasActiveLanes =
       Builder.CreateExtractElement(NewPred, uint64_t(0));
-  BranchInst *VectorLoopBranchBack =
-      BranchInst::Create(VectorLoopStartBlock, EndBlock, PredHasActiveLanes);
-  Builder.Insert(VectorLoopBranchBack);
+  Builder.CreateCondBr(PredHasActiveLanes, VectorLoopStartBlock, EndBlock);
 
   DTU.applyUpdates(
       {{DominatorTree::Insert, VectorLoopIncBlock, VectorLoopStartBlock},
@@ -590,7 +586,7 @@ Value *LoopIdiomVectorize::createPredicatedFindMismatch(
   Value *PtrA = GEPA->getPointerOperand();
   Value *PtrB = GEPB->getPointerOperand();
 
-  auto *JumpToVectorLoop = BranchInst::Create(VectorLoopStartBlock);
+  auto *JumpToVectorLoop = UncondBrInst::Create(VectorLoopStartBlock);
   Builder.Insert(JumpToVectorLoop);
 
   DTU.applyUpdates({{DominatorTree::Insert, VectorLoopPreheaderBlock,
@@ -635,8 +631,8 @@ Value *LoopIdiomVectorize::createPredicatedFindMismatch(
       {VectorMatchCmp, /*ZeroIsPoison=*/Builder.getInt1(false), AllTrueMask,
        VL});
   Value *MismatchFound = Builder.CreateICmpNE(CTZ, VL);
-  auto *VectorEarlyExit = BranchInst::Create(VectorLoopMismatchBlock,
-                                             VectorLoopIncBlock, MismatchFound);
+  auto *VectorEarlyExit = CondBrInst::Create(
+      MismatchFound, VectorLoopMismatchBlock, VectorLoopIncBlock);
   Builder.Insert(VectorEarlyExit);
 
   DTU.applyUpdates(
@@ -654,7 +650,7 @@ Value *LoopIdiomVectorize::createPredicatedFindMismatch(
   VectorIndexPhi->addIncoming(NewVectorIndexPhi, VectorLoopIncBlock);
   Value *ExitCond = Builder.CreateICmpNE(NewVectorIndexPhi, ExtEnd);
   auto *VectorLoopBranchBack =
-      BranchInst::Create(VectorLoopStartBlock, EndBlock, ExitCond);
+      CondBrInst::Create(ExitCond, VectorLoopStartBlock, EndBlock);
   Builder.Insert(VectorLoopBranchBack);
 
   DTU.applyUpdates(
@@ -686,7 +682,7 @@ Value *LoopIdiomVectorize::expandFindMismatch(
 
   // Get the arguments and types for the intrinsic.
   BasicBlock *Preheader = CurLoop->getLoopPreheader();
-  BranchInst *PHBranch = cast<BranchInst>(Preheader->getTerminator());
+  Instruction *PHBranch = Preheader->getTerminator();
   LLVMContext &Ctx = PHBranch->getContext();
   Type *LoadType = Type::getInt8Ty(Ctx);
   Type *ResType = Builder.getInt32Ty();
@@ -775,8 +771,8 @@ Value *LoopIdiomVectorize::expandFindMismatch(
   // This check doesn't really cost us very much.
 
   Value *LimitCheck = Builder.CreateICmpULE(Start, MaxLen);
-  BranchInst *MinItCheckBr =
-      BranchInst::Create(MemCheckBlock, LoopPreHeaderBlock, LimitCheck);
+  CondBrInst *MinItCheckBr =
+      CondBrInst::Create(LimitCheck, MemCheckBlock, LoopPreHeaderBlock);
   MinItCheckBr->setMetadata(
       LLVMContext::MD_prof,
       MDBuilder(MinItCheckBr->getContext()).createBranchWeights(99, 1));
@@ -821,8 +817,8 @@ Value *LoopIdiomVectorize::expandFindMismatch(
   Value *RhsPageCmp = Builder.CreateICmpNE(RhsStartPage, RhsEndPage);
 
   Value *CombinedPageCmp = Builder.CreateOr(LhsPageCmp, RhsPageCmp);
-  BranchInst *CombinedPageCmpCmpBr = BranchInst::Create(
-      LoopPreHeaderBlock, VectorLoopPreheaderBlock, CombinedPageCmp);
+  CondBrInst *CombinedPageCmpCmpBr = CondBrInst::Create(
+      CombinedPageCmp, LoopPreHeaderBlock, VectorLoopPreheaderBlock);
   CombinedPageCmpCmpBr->setMetadata(
       LLVMContext::MD_prof, MDBuilder(CombinedPageCmpCmpBr->getContext())
                                 .createBranchWeights(10, 90));
@@ -854,14 +850,14 @@ Value *LoopIdiomVectorize::expandFindMismatch(
     break;
   }
 
-  Builder.Insert(BranchInst::Create(EndBlock));
+  Builder.CreateBr(EndBlock);
 
   DTU.applyUpdates(
       {{DominatorTree::Insert, VectorLoopMismatchBlock, EndBlock}});
 
   // Generate code for scalar loop.
   Builder.SetInsertPoint(LoopPreHeaderBlock);
-  Builder.Insert(BranchInst::Create(LoopStartBlock));
+  Builder.CreateBr(LoopStartBlock);
 
   DTU.applyUpdates(
       {{DominatorTree::Insert, LoopPreHeaderBlock, LoopStartBlock}});
@@ -884,8 +880,7 @@ Value *LoopIdiomVectorize::expandFindMismatch(
 
   Value *MatchCmp = Builder.CreateICmpEQ(LhsLoad, RhsLoad);
   // If we have a mismatch then exit the loop ...
-  BranchInst *MatchCmpBr = BranchInst::Create(LoopIncBlock, EndBlock, MatchCmp);
-  Builder.Insert(MatchCmpBr);
+  Builder.CreateCondBr(MatchCmp, LoopIncBlock, EndBlock);
 
   DTU.applyUpdates({{DominatorTree::Insert, LoopStartBlock, LoopIncBlock},
                     {DominatorTree::Insert, LoopStartBlock, EndBlock}});
@@ -897,8 +892,7 @@ Value *LoopIdiomVectorize::expandFindMismatch(
                                     /*HasNSW=*/Index->hasNoSignedWrap());
   IndexPhi->addIncoming(PhiInc, LoopIncBlock);
   Value *IVCmp = Builder.CreateICmpEQ(PhiInc, MaxLen);
-  BranchInst *IVCmpBr = BranchInst::Create(EndBlock, LoopStartBlock, IVCmp);
-  Builder.Insert(IVCmpBr);
+  Builder.CreateCondBr(IVCmp, EndBlock, LoopStartBlock);
 
   DTU.applyUpdates({{DominatorTree::Insert, LoopIncBlock, EndBlock},
                     {DominatorTree::Insert, LoopIncBlock, LoopStartBlock}});
@@ -941,7 +935,7 @@ void LoopIdiomVectorize::transformByteCompare(GetElementPtrInst *GEPA,
   // Insert the byte compare code at the end of the preheader block
   BasicBlock *Preheader = CurLoop->getLoopPreheader();
   BasicBlock *Header = CurLoop->getHeader();
-  BranchInst *PHBranch = cast<BranchInst>(Preheader->getTerminator());
+  UncondBrInst *PHBranch = cast<UncondBrInst>(Preheader->getTerminator());
   IRBuilder<> Builder(PHBranch);
   DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
   Builder.SetCurrentDebugLocation(PHBranch->getDebugLoc());
@@ -957,9 +951,6 @@ void LoopIdiomVectorize::transformByteCompare(GetElementPtrInst *GEPA,
   // checked that the the first instruction of Header is the Phi above).
   assert(IndPhi->hasOneUse() && "Index phi node has more than one use!");
   Index->replaceAllUsesWith(ByteCmpRes);
-
-  assert(PHBranch->isUnconditional() &&
-         "Expected preheader to terminate with an unconditional branch.");
 
   // If no mismatch was found, we can jump to the end block. Create a
   // new basic block for the compare instruction.
@@ -1052,10 +1043,8 @@ bool LoopIdiomVectorize::recognizeFindFirstByte() {
 
   // Check instruction counts.
   auto LoopBlocks = CurLoop->getBlocks();
-  if (LoopBlocks[0]->sizeWithoutDebug() > 3 ||
-      LoopBlocks[1]->sizeWithoutDebug() > 4 ||
-      LoopBlocks[2]->sizeWithoutDebug() > 3 ||
-      LoopBlocks[3]->sizeWithoutDebug() > 3)
+  if (LoopBlocks[0]->size() > 3 || LoopBlocks[1]->size() > 4 ||
+      LoopBlocks[2]->size() > 3 || LoopBlocks[3]->size() > 3)
     return false;
 
   // Check that no instruction other than IndPhi has outside uses.
@@ -1213,7 +1202,6 @@ Value *LoopIdiomVectorize::expandFindFirstByte(
     Value *SearchStart, Value *SearchEnd, Value *NeedleStart,
     Value *NeedleEnd) {
   // Set up some types and constants that we intend to reuse.
-  auto *PtrTy = Builder.getPtrTy();
   auto *I64Ty = Builder.getInt64Ty();
   auto *PredVTy = ScalableVectorType::get(Builder.getInt1Ty(), VF);
   auto *CharVTy = ScalableVectorType::get(CharTy, VF);
@@ -1330,7 +1318,7 @@ Value *LoopIdiomVectorize::expandFindFirstByte(
 
   Value *CombinedPageCmp =
       Builder.CreateOr(SearchPageCmp, NeedlePageCmp, "combined_page_cmp");
-  BranchInst *CombinedPageBr = Builder.CreateCondBr(CombinedPageCmp, SPH, BB1);
+  CondBrInst *CombinedPageBr = Builder.CreateCondBr(CombinedPageCmp, SPH, BB1);
   CombinedPageBr->setMetadata(LLVMContext::MD_prof,
                               MDBuilder(Ctx).createBranchWeights(10, 90));
   DTU.applyUpdates(
@@ -1396,7 +1384,8 @@ Value *LoopIdiomVectorize::expandFindFirstByte(
 
   // (4) We found a match. Compute the index of its location and exit.
   Builder.SetInsertPoint(BB4);
-  PHINode *MatchLCSSA = Builder.CreatePHI(PtrTy, 1, "match_start");
+  PHINode *MatchLCSSA =
+      Builder.CreatePHI(SearchStart->getType(), 1, "match_start");
   PHINode *MatchPredLCSSA = Builder.CreatePHI(PredVTy, 1, "match_vec");
   Value *MatchCnt = Builder.CreateIntrinsic(
       Intrinsic::experimental_cttz_elts, {I64Ty, PredVTy},
@@ -1450,16 +1439,13 @@ void LoopIdiomVectorize::transformFindFirstByte(
     Value *NeedleStart, Value *NeedleEnd) {
   // Insert the find first byte code at the end of the preheader block.
   BasicBlock *Preheader = CurLoop->getLoopPreheader();
-  BranchInst *PHBranch = cast<BranchInst>(Preheader->getTerminator());
+  UncondBrInst *PHBranch = cast<UncondBrInst>(Preheader->getTerminator());
   IRBuilder<> Builder(PHBranch);
   DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
   Builder.SetCurrentDebugLocation(PHBranch->getDebugLoc());
 
   expandFindFirstByte(Builder, DTU, VF, CharTy, IndPhi, ExitSucc, ExitFail,
                       SearchStart, SearchEnd, NeedleStart, NeedleEnd);
-
-  assert(PHBranch->isUnconditional() &&
-         "Expected preheader to terminate with an unconditional branch.");
 
   if (VerifyLoops && CurLoop->getParentLoop()) {
     CurLoop->getParentLoop()->verifyLoop();

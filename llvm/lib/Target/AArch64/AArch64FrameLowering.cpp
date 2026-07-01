@@ -384,7 +384,12 @@ static bool isLikelyToHaveSVEStack(const AArch64FrameLowering &AFL,
 }
 
 static bool isTargetWindows(const MachineFunction &MF) {
-  return MF.getTarget().getMCAsmInfo()->usesWindowsCFI();
+  // TODO: Should this include targets like UEFI (which use Windows CFI)?
+  // Note: Currently, there is not AArch64 support for UEFI. The value returned
+  // here must align with the predicate used for returning the list of callee
+  // saved regs in AArch64RegisterInfo::getCalleeSavedRegs(), so that we use
+  // invalidateWindowsRegisterPairing() where appropriate.
+  return MF.getSubtarget<AArch64Subtarget>().isTargetWindows();
 }
 
 bool AArch64FrameLowering::hasSVECalleeSavesAboveFrameRecord(
@@ -570,6 +575,16 @@ bool AArch64FrameLowering::hasFPImpl(const MachineFunction &MF) const {
   // funclets.
   if (MF.hasEHFunclets())
     return true;
+
+  // When the stack guard is mixed with the frame pointer, a dedicated FP is
+  // required so the guard value remains stable in the presence of dynamic
+  // stack allocations (e.g. _alloca on MSVCRT).
+  if (MFI.hasStackProtectorIndex()) {
+    const auto &Subtarget = MF.getSubtarget<AArch64Subtarget>();
+    if (Subtarget.getTargetLowering()->useStackGuardMixFP())
+      return true;
+  }
+
   // Retain behavior of always omitting the FP for leaf functions when possible.
   if (MF.getTarget().Options.DisableFramePointerElim(MF))
     return true;
@@ -728,9 +743,13 @@ void AArch64FrameLowering::resetCFIToInitialState(
   CFIBuilder.buildDefCFA(AArch64::SP, 0);
 
   // Flip the RA sign state.
-  if (MFI.shouldSignReturnAddress(MF))
-    MFI.branchProtectionPAuthLR() ? CFIBuilder.buildNegateRAStateWithPC()
-                                  : CFIBuilder.buildNegateRAState();
+  if (MFI.shouldSignReturnAddress(MF)) {
+    if (MFI.branchProtectionPAuthLR()) {
+      CFIBuilder.buildNegateRAStateWithPC();
+    } else if (!MF.getTarget().getTargetTriple().isOSBinFormatMachO()) {
+      CFIBuilder.buildNegateRAState();
+    }
+  }
 
   // Shadow call stack uses X18, reset it.
   if (MFI.needsShadowCallStackPrologueEpilogue(MF))
@@ -972,7 +991,7 @@ bool AArch64FrameLowering::canUseAsPrologue(
 
 bool AArch64FrameLowering::needsWinCFI(const MachineFunction &MF) const {
   const Function &F = MF.getFunction();
-  return MF.getTarget().getMCAsmInfo()->usesWindowsCFI() &&
+  return MF.getTarget().getMCAsmInfo().usesWindowsCFI() &&
          F.needsUnwindTableEntry();
 }
 
@@ -980,7 +999,7 @@ bool AArch64FrameLowering::shouldSignReturnAddressEverywhere(
     const MachineFunction &MF) const {
   // FIXME: With WinCFI, extra care should be taken to place SEH_PACSignLR
   //        and SEH_EpilogEnd instructions in the correct order.
-  if (MF.getTarget().getMCAsmInfo()->usesWindowsCFI())
+  if (MF.getTarget().getMCAsmInfo().usesWindowsCFI())
     return false;
   const AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
   return AFI->getSignReturnAddressCondition() == SignReturnAddress::All;
@@ -1197,8 +1216,7 @@ void AArch64FrameLowering::emitPacRetPlusLeafHardening(
     if (MBBI != MBB.end())
       DL = MBBI->getDebugLoc();
 
-    BuildMI(MBB, MBBI, DL, TII->get(AArch64::PAUTH_EPILOGUE))
-        .setMIFlag(MachineInstr::FrameDestroy);
+    TII->createPauthEpilogueInstr(MBB, DL);
   };
 
   // This should be in sync with PEIImpl::calculateSaveRestoreBlocks.
@@ -3367,6 +3385,21 @@ bool isMergeableStackTaggingInstruction(MachineInstr &MI, int64_t &Offset,
   return true;
 }
 
+static size_t countAvailableScavengerSlots(LivePhysRegs &LiveRegs,
+                                           MachineRegisterInfo &MRI,
+                                           RegScavenger *RS) {
+  auto FreeGPRs =
+      llvm::count_if(AArch64::GPR64RegClass, [&LiveRegs, &MRI](auto Reg) {
+        return LiveRegs.available(MRI, Reg);
+      });
+
+  size_t NumEmergencySlots = 0;
+  if (RS)
+    NumEmergencySlots = RS->getNumScavengingFrameIndices();
+
+  return FreeGPRs + NumEmergencySlots;
+}
+
 // Detect a run of memory tagging instructions for adjacent stack frame slots,
 // and replace them with a shorter instruction sequence:
 // * replace STG + STG with ST2G
@@ -3445,6 +3478,19 @@ MachineBasicBlock::iterator tryMergeAdjacentSTG(MachineBasicBlock::iterator II,
   InsertI++;
   if (LiveRegs.contains(AArch64::NZCV))
     return InsertI;
+
+  // Emitting an MTE loop requires two physical registers (BaseReg and
+  // SizeReg).  If the function is under register pressure, the register
+  // scavenger will crash trying to allocate them. If we don't have at least
+  // two free slots (free registers + emergency slots), bail out and fall back
+  // to the unrolled sequence.
+  if (countAvailableScavengerSlots(LiveRegs, MBB->getParent()->getRegInfo(),
+                                   RS) < 2) {
+    LLVM_DEBUG(
+        dbgs() << "Failed to merge MTE stack tagging instructions into loop "
+               << "due to high register pressure.\n");
+    return InsertI;
+  }
 
   llvm::stable_sort(Instrs,
                     [](const TagStoreInstr &Left, const TagStoreInstr &Right) {

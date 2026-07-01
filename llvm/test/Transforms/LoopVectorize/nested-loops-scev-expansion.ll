@@ -171,14 +171,14 @@ define void @pr49900(i32 %x, ptr %ptr) {
 entry:
   br label %loop.0
 
-loop.0:                                              ; preds = %bb2, %bb
+loop.0:
   %ec.0 = icmp slt i32 %x, 0
   br i1 %ec.0, label %loop.0, label %loop.1.ph
 
-loop.1.ph:                                              ; preds = %bb2
+loop.1.ph:
   br label %loop.1
 
-loop.1:                                             ; preds = %bb33, %bb5
+loop.1:
   %iv.1 = phi i32 [ 0, %loop.1.ph ], [ %iv.3.next, %loop.1.latch ]
   br label %loop.2
 
@@ -238,7 +238,7 @@ define void @pr52024(ptr %dst, i16 %N) {
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i16> poison, i16 [[TMP4]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i16> [[BROADCAST_SPLATINSERT]], <2 x i16> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul i16 24, [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = mul <2 x i16> splat (i16 2), [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[TMP6:%.*]] = shl <2 x i16> [[BROADCAST_SPLAT]], splat (i16 1)
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT5:%.*]] = insertelement <2 x i16> poison, i16 [[REM_TRUNC]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT6:%.*]] = shufflevector <2 x i16> [[BROADCAST_SPLATINSERT5]], <2 x i16> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP7:%.*]] = mul <2 x i16> <i16 0, i16 1>, [[BROADCAST_SPLAT]]

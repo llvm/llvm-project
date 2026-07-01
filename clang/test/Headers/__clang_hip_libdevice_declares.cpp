@@ -82,55 +82,6 @@ TEST_FUNC_ATTRS float test_ockl_acos_f32(float src) {
   return __ocml_acos_f32(src);
 }
 
-// CHECK-LABEL: define internal float @_ZL15test_ockl_fdot2Dv2_DF16_S_fbi
-// CHECK-SAME: (<2 x half> [[A:%.*]], <2 x half> [[B:%.*]], float [[C:%.*]], i1 zeroext [[S:%.*]], i32 [[S_INT:%.*]]) #[[ATTR2]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <2 x half>, align 4, addrspace(5)
-// CHECK-NEXT:    [[B_ADDR:%.*]] = alloca <2 x half>, align 4, addrspace(5)
-// CHECK-NEXT:    [[C_ADDR:%.*]] = alloca float, align 4, addrspace(5)
-// CHECK-NEXT:    [[S_ADDR:%.*]] = alloca i8, align 1, addrspace(5)
-// CHECK-NEXT:    [[S_INT_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
-// CHECK-NEXT:    [[X:%.*]] = alloca float, align 4, addrspace(5)
-// CHECK-NEXT:    [[Y:%.*]] = alloca float, align 4, addrspace(5)
-// CHECK-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[A_ADDR]] to ptr
-// CHECK-NEXT:    [[B_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[B_ADDR]] to ptr
-// CHECK-NEXT:    [[C_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[C_ADDR]] to ptr
-// CHECK-NEXT:    [[S_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[S_ADDR]] to ptr
-// CHECK-NEXT:    [[S_INT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[S_INT_ADDR]] to ptr
-// CHECK-NEXT:    [[X_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[X]] to ptr
-// CHECK-NEXT:    [[Y_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[Y]] to ptr
-// CHECK-NEXT:    store <2 x half> [[A]], ptr [[A_ADDR_ASCAST]], align 4
-// CHECK-NEXT:    store <2 x half> [[B]], ptr [[B_ADDR_ASCAST]], align 4
-// CHECK-NEXT:    store float [[C]], ptr [[C_ADDR_ASCAST]], align 4
-// CHECK-NEXT:    [[STOREDV:%.*]] = zext i1 [[S]] to i8
-// CHECK-NEXT:    store i8 [[STOREDV]], ptr [[S_ADDR_ASCAST]], align 1
-// CHECK-NEXT:    store i32 [[S_INT]], ptr [[S_INT_ADDR_ASCAST]], align 4
-// CHECK-NEXT:    [[TMP0:%.*]] = load <2 x half>, ptr [[A_ADDR_ASCAST]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr [[B_ADDR_ASCAST]], align 4
-// CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr [[C_ADDR_ASCAST]], align 4
-// CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr [[S_ADDR_ASCAST]], align 1
-// CHECK-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP3]] to i1
-// CHECK-NEXT:    [[CALL:%.*]] = call float @__ockl_fdot2(<2 x half> [[TMP0]], <2 x half> [[TMP1]], float [[TMP2]], i1 zeroext [[LOADEDV]]) #[[ATTR4]]
-// CHECK-NEXT:    store float [[CALL]], ptr [[X_ASCAST]], align 4
-// CHECK-NEXT:    [[TMP4:%.*]] = load <2 x half>, ptr [[A_ADDR_ASCAST]], align 4
-// CHECK-NEXT:    [[TMP5:%.*]] = load <2 x half>, ptr [[B_ADDR_ASCAST]], align 4
-// CHECK-NEXT:    [[TMP6:%.*]] = load float, ptr [[C_ADDR_ASCAST]], align 4
-// CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[S_INT_ADDR_ASCAST]], align 4
-// CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[TMP7]], 0
-// CHECK-NEXT:    [[CALL1:%.*]] = call float @__ockl_fdot2(<2 x half> [[TMP4]], <2 x half> [[TMP5]], float [[TMP6]], i1 zeroext [[TOBOOL]]) #[[ATTR4]]
-// CHECK-NEXT:    store float [[CALL1]], ptr [[Y_ASCAST]], align 4
-// CHECK-NEXT:    [[TMP8:%.*]] = load float, ptr [[X_ASCAST]], align 4
-// CHECK-NEXT:    [[TMP9:%.*]] = load float, ptr [[Y_ASCAST]], align 4
-// CHECK-NEXT:    [[ADD:%.*]] = fadd float [[TMP8]], [[TMP9]]
-// CHECK-NEXT:    ret float [[ADD]]
-//
-TEST_FUNC_ATTRS float test_ockl_fdot2(__2f16 a, __2f16 b, float c, bool s, int s_int) {
-  float x = __ockl_fdot2(a, b, c, s);
-  float y = __ockl_fdot2(a, b, c, s_int);
-  return x + y;
-}
-
-
 #ifdef _OPENMP
 #pragma omp end declare target
 #endif

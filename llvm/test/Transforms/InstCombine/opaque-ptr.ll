@@ -858,7 +858,7 @@ declare float @fmodf(float, float)
 
 define i32 @const_fold_call_with_func_type_mismatch() {
 ; CHECK-LABEL: @const_fold_call_with_func_type_mismatch(
-; CHECK-NEXT:    [[V:%.*]] = call i32 @fmodf(float 0x40091EB860000000, float 2.000000e+00)
+; CHECK-NEXT:    [[V:%.*]] = call i32 @fmodf(float 3.140000e+00, float 2.000000e+00)
 ; CHECK-NEXT:    ret i32 [[V]]
 ;
   %v = call i32 @fmodf(float 0x40091EB860000000, float 2.000000e+00)

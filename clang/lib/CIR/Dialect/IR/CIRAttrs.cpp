@@ -13,6 +13,7 @@
 #include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 
+#include "mlir/IR/Attributes.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "llvm/ADT/TypeSwitch.h"
 
@@ -68,6 +69,13 @@ static mlir::ParseResult parseConstPtr(mlir::AsmParser &parser,
                                        mlir::IntegerAttr &value);
 
 static void printConstPtr(mlir::AsmPrinter &p, mlir::IntegerAttr value);
+
+static mlir::ParseResult
+parseDataMemberPath(mlir::AsmParser &parser,
+                    mlir::DenseI32ArrayAttr &memberPath);
+
+static void printDataMemberPath(mlir::AsmPrinter &p,
+                                mlir::DenseI32ArrayAttr memberPath);
 
 #define GET_ATTRDEF_CLASSES
 #include "clang/CIR/Dialect/IR/CIROpsAttributes.cpp.inc"
@@ -204,7 +212,20 @@ ConstRecordAttr::verify(function_ref<InFlightDiagnostic()> emitError,
                         mlir::Type type, ArrayAttr members) {
   auto sTy = mlir::dyn_cast_if_present<cir::RecordType>(type);
   if (!sTy)
-    return emitError() << "expected !cir.record type";
+    return emitError() << "expected !cir.struct or !cir.union type";
+
+  // union record initializer is just a single element that has to match one of
+  // the fields in the union (the new active member).
+  if (sTy.isUnion()) {
+    if (members.size() != 1)
+      return emitError() << "union constant must have exactly one element, got "
+                         << members.size();
+    auto m = mlir::cast<mlir::TypedAttr>(members[0]);
+    if (!llvm::is_contained(sTy.getMembers(), m.getType()))
+      return emitError() << "union element type " << m.getType()
+                         << " is not a member of " << sTy;
+    return success();
+  }
 
   if (sTy.getMembers().size() != members.size())
     return emitError() << "number of elements must match";
@@ -259,6 +280,26 @@ static void printConstPtr(AsmPrinter &p, mlir::IntegerAttr value) {
     p << "null";
   else
     p << value;
+}
+
+static ParseResult parseDataMemberPath(AsmParser &parser,
+                                       mlir::DenseI32ArrayAttr &memberPath) {
+  if (parser.parseOptionalKeyword("null").succeeded())
+    return success();
+
+  auto parsed = mlir::FieldParser<mlir::DenseI32ArrayAttr>::parse(parser);
+  if (mlir::failed(parsed))
+    return failure();
+  memberPath = *parsed;
+  return success();
+}
+
+static void printDataMemberPath(AsmPrinter &p,
+                                mlir::DenseI32ArrayAttr memberPath) {
+  if (!memberPath)
+    p << "null";
+  else
+    p.printStrippedAttrOrType(memberPath);
 }
 
 //===----------------------------------------------------------------------===//
@@ -350,6 +391,66 @@ LogicalResult FPAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 }
 
 //===----------------------------------------------------------------------===//
+// CmpThreeWayInfoAttr definitions
+//===----------------------------------------------------------------------===//
+
+std::string CmpThreeWayInfoAttr::getAlias() const {
+  std::string alias = "cmpinfo";
+
+  switch (getOrdering()) {
+  case CmpOrdering::Strong:
+    alias.append("_strong_");
+    break;
+  case CmpOrdering::Weak:
+    alias.append("_weak_");
+    break;
+  case CmpOrdering::Partial:
+    alias.append("_partial_");
+    break;
+  }
+
+  auto appendInt = [&](int64_t value) {
+    if (value < 0) {
+      alias.push_back('n');
+      value = -value;
+    }
+    alias.append(std::to_string(value));
+  };
+
+  alias.append("lt");
+  appendInt(getLt());
+  alias.append("eq");
+  appendInt(getEq());
+  alias.append("gt");
+  appendInt(getGt());
+
+  if (std::optional<int> unordered = getUnordered()) {
+    alias.append("un");
+    appendInt(unordered.value());
+  }
+
+  return alias;
+}
+
+LogicalResult
+CmpThreeWayInfoAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                            CmpOrdering ordering, int64_t lt, int64_t eq,
+                            int64_t gt, std::optional<int64_t> unordered) {
+  // The presence of unordered must match the value of ordering.
+  if ((ordering == CmpOrdering::Strong || ordering == CmpOrdering::Weak) &&
+      unordered) {
+    emitError() << "strong and weak ordering do not include unordered";
+    return failure();
+  }
+  if (ordering == CmpOrdering::Partial && !unordered) {
+    emitError() << "partial ordering requires unordered value";
+    return failure();
+  }
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // ConstComplexAttr definitions
 //===----------------------------------------------------------------------===//
 
@@ -370,33 +471,112 @@ ConstComplexAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 }
 
 //===----------------------------------------------------------------------===//
+// CIR_CUDAVarRegistrationInfoAttr definitions
+//===----------------------------------------------------------------------===//
+
+void CUDAVarRegistrationInfoAttr::print(AsmPrinter &p) const {
+  p << "<" << getDeviceSideName();
+  p << ", " << stringifyEnum(getKind());
+  if (getIsExtern())
+    p << ", extern";
+  if (getIsConstant())
+    p << ", constant";
+  if (getIsManaged())
+    p << ", managed";
+  p << ">";
+}
+
+Attribute CUDAVarRegistrationInfoAttr::parse(AsmParser &parser, Type odsType) {
+  if (parser.parseLess())
+    return {};
+
+  std::string deviceSideName;
+  if (parser.parseKeywordOrString(&deviceSideName)) {
+    parser.emitError(parser.getCurrentLocation(),
+                     "expected device variable name");
+    return {};
+  }
+
+  if (parser.parseComma())
+    return {};
+
+  // Parse the device variable kind (Variable, Surface, Texture)
+  StringRef kindStr;
+  if (parser.parseKeyword(&kindStr))
+    return {};
+
+  std::optional<CUDADeviceVarKind> kind = symbolizeCUDADeviceVarKind(kindStr);
+  if (!kind) {
+    parser.emitError(parser.getCurrentLocation(),
+                     "unknown device variable kind: ")
+        << kindStr;
+    return {};
+  }
+
+  // Parse optional flags: extern, constant, managed
+  bool isExtern = false;
+  bool isConstant = false;
+  bool isManaged = false;
+
+  while (parser.parseOptionalGreater().failed()) {
+    if (parser.parseComma())
+      return {};
+
+    StringRef flag;
+    if (parser.parseKeyword(&flag))
+      return {};
+
+    if (flag == "extern")
+      isExtern = true;
+    else if (flag == "constant")
+      isConstant = true;
+    else if (flag == "managed")
+      isManaged = true;
+    else {
+      parser.emitError(parser.getCurrentLocation(), "unknown flag: ") << flag;
+      return {};
+    }
+  }
+
+  return get(parser.getContext(), deviceSideName, *kind, isExtern, isConstant,
+             isManaged);
+}
+
+//===----------------------------------------------------------------------===//
 // DataMemberAttr definitions
 //===----------------------------------------------------------------------===//
 
 LogicalResult
 DataMemberAttr::verify(function_ref<InFlightDiagnostic()> emitError,
                        cir::DataMemberType ty,
-                       std::optional<unsigned> memberIndex) {
-  // DataMemberAttr without a given index represents a null value.
-  if (!memberIndex.has_value())
-    return success();
+                       mlir::DenseI32ArrayAttr memberPath) {
+  if (!memberPath)
+    return success(); // null pointer — always valid
 
-  cir::RecordType recTy = ty.getClassTy();
-  if (recTy.isIncomplete())
-    return emitError()
-           << "incomplete 'cir.record' cannot be used to build a non-null "
-              "data member pointer";
+  if (memberPath.empty())
+    return emitError() << "#cir.data_member path must not be empty";
 
-  unsigned memberIndexValue = memberIndex.value();
-  if (memberIndexValue >= recTy.getNumElements())
-    return emitError()
-           << "member index of a #cir.data_member attribute is out of range";
+  mlir::Type currentTy = ty.getClassTy();
+  for (auto [step, idx] : llvm::enumerate(memberPath.asArrayRef())) {
+    auto recTy = mlir::dyn_cast<cir::RecordType>(currentTy);
+    if (!recTy)
+      return emitError() << "#cir.data_member path step " << step
+                         << " reaches a non-record type";
 
-  mlir::Type memberTy = recTy.getMembers()[memberIndexValue];
-  if (memberTy != ty.getMemberTy())
+    if (recTy.isIncomplete())
+      return success(); // cannot validate further; trust the builder
+
+    if (idx < 0 || static_cast<unsigned>(idx) >= recTy.getNumElements())
+      return emitError() << "#cir.data_member path index " << idx << " at step "
+                         << step << " is out of range";
+
+    currentTy = recTy.getMembers()[idx];
+  }
+
+  if (currentTy != ty.getMemberTy())
     return emitError()
-           << "member type of a #cir.data_member attribute must match the "
-              "attribute type";
+           << "member type of a #cir.data_member attribute must match "
+              "the attribute type";
 
   return success();
 }
@@ -556,13 +736,12 @@ Attribute ConstArrayAttr::parse(AsmParser &parser, Type type) {
   unsigned zeros = 0;
   if (parser.parseOptionalComma().succeeded()) {
     if (parser.parseOptionalKeyword("trailing_zeros").succeeded()) {
-      unsigned typeSize =
-          mlir::cast<cir::ArrayType>(resultTy.value()).getSize();
+      unsigned totalSize = mlir::cast<cir::ArrayType>(type).getSize();
       mlir::Attribute elts = resultVal.value();
       if (auto str = mlir::dyn_cast<mlir::StringAttr>(elts))
-        zeros = typeSize - str.size();
+        zeros = totalSize - str.size();
       else
-        zeros = typeSize - mlir::cast<mlir::ArrayAttr>(elts).size();
+        zeros = totalSize - mlir::cast<mlir::ArrayAttr>(elts).size();
     } else {
       return {};
     }
@@ -572,9 +751,9 @@ Attribute ConstArrayAttr::parse(AsmParser &parser, Type type) {
   if (parser.parseGreater())
     return {};
 
-  return parser.getChecked<ConstArrayAttr>(
-      parser.getCurrentLocation(), parser.getContext(), resultTy.value(),
-      resultVal.value(), zeros);
+  return parser.getChecked<ConstArrayAttr>(parser.getCurrentLocation(),
+                                           parser.getContext(), type,
+                                           resultVal.value(), zeros);
 }
 
 void ConstArrayAttr::print(AsmPrinter &printer) const {
@@ -633,7 +812,7 @@ LogicalResult cir::VTableAttr::verify(
     mlir::ArrayAttr data) {
   auto sTy = mlir::dyn_cast_if_present<cir::RecordType>(type);
   if (!sTy)
-    return emitError() << "expected !cir.record type result";
+    return emitError() << "expected !cir.struct or !cir.union type result";
   if (sTy.getMembers().empty() || data.empty())
     return emitError() << "expected record type with one or more subtype";
 
@@ -703,6 +882,20 @@ LogicalResult DynamicCastInfoAttr::verify(
     return emitError() << "destRtti must be an RTTI pointer";
 
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// RecordLayout lookup
+//===----------------------------------------------------------------------===//
+
+RecordLayoutAttr cir::getRecordLayout(mlir::ModuleOp module,
+                                      mlir::StringAttr name) {
+  auto dict = module->getAttrOfType<mlir::DictionaryAttr>(
+      CIRDialect::getRecordLayoutsAttrName());
+  assert(dict && "module missing cir.record_layouts attribute");
+  auto attr = dict.getAs<RecordLayoutAttr>(name);
+  assert(attr && "record layout entry missing for named record");
+  return attr;
 }
 
 //===----------------------------------------------------------------------===//

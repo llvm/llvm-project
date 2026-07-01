@@ -22,6 +22,7 @@
 
 #ifdef _WIN32
 #include "lldb/Host/windows/PseudoConsole.h"
+#include "lldb/Host/windows/WindowsFileAction.h"
 #else
 #include <climits>
 #endif
@@ -92,6 +93,17 @@ bool ProcessLaunchInfo::AppendDuplicateFileAction(int fd, int dup_fd) {
   return false;
 }
 
+#ifdef _WIN32
+bool ProcessLaunchInfo::AppendDuplicateFileAction(HANDLE fh, HANDLE dup_fh) {
+  WindowsFileAction file_action;
+  if (file_action.Duplicate(fh, dup_fh)) {
+    AppendFileAction(file_action);
+    return true;
+  }
+  return false;
+}
+#endif
+
 bool ProcessLaunchInfo::AppendOpenFileAction(int fd, const FileSpec &file_spec,
                                              bool read, bool write) {
   FileAction file_action;
@@ -124,6 +136,18 @@ const FileAction *ProcessLaunchInfo::GetFileActionForFD(int fd) const {
       return &m_file_actions[idx];
   }
   return nullptr;
+}
+
+bool ProcessLaunchInfo::IsFDRedirected(int fd) const {
+  if (GetFileActionForFD(fd))
+    return true;
+  for (size_t i = 0; i < GetNumFileActions(); ++i) {
+    const FileAction *act = GetFileActionAtIndex(i);
+    if (act->GetAction() == FileAction::eFileActionDuplicate &&
+        act->GetActionArgument() == fd)
+      return true;
+  }
+  return false;
 }
 
 const FileSpec &ProcessLaunchInfo::GetWorkingDirectory() const {
@@ -220,7 +244,8 @@ llvm::Error ProcessLaunchInfo::SetUpPtyRedirection() {
   LLDB_LOG(log, "Generating a pty to use for stdin/out/err");
 
 #ifdef _WIN32
-  if (llvm::Error Err = m_pty->OpenPseudoConsole())
+  if (llvm::Error Err = m_pty->OpenPseudoConsole(m_stdio_window_size.cols,
+                                                 m_stdio_window_size.rows))
     return Err;
   return llvm::Error::success();
 #else
@@ -241,6 +266,14 @@ llvm::Error ProcessLaunchInfo::SetUpPtyRedirection() {
   return llvm::Error::success();
 #endif
 }
+
+#ifdef _WIN32
+llvm::Error ProcessLaunchInfo::SetUpPipeRedirection() {
+  if (!m_pty)
+    m_pty = std::make_shared<PTY>();
+  return m_pty->OpenAnonymousPipes();
+}
+#endif
 
 bool ProcessLaunchInfo::ConvertArgumentsForLaunchingInShell(
     Status &error, bool will_debug, bool first_arg_is_full_shell_command,

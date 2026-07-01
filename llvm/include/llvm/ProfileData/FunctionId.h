@@ -178,14 +178,6 @@ inline uint64_t hash_value(const FunctionId &Obj) {
 /// containers.
 template <> struct DenseMapInfo<sampleprof::FunctionId, void> {
 
-  static inline sampleprof::FunctionId getEmptyKey() {
-    return sampleprof::FunctionId(~0ULL);
-  }
-
-  static inline sampleprof::FunctionId getTombstoneKey() {
-    return sampleprof::FunctionId(~1ULL);
-  }
-
   static unsigned getHashValue(const sampleprof::FunctionId &Val) {
     return Val.getHashCode();
   }

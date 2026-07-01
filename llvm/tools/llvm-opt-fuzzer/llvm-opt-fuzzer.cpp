@@ -126,8 +126,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
 
   M->setTargetTriple(TM->getTargetTriple());
   M->setDataLayout(TM->createDataLayout());
-  codegen::setFunctionAttributes(TM->getTargetCPU(),
-                                 TM->getTargetFeatureString(), *M);
+  codegen::setFunctionAttributes(*M, TM->getTargetCPU(),
+                                 TM->getTargetFeatureString());
 
   // Create pass pipeline
   //
@@ -199,8 +199,9 @@ extern "C" LLVM_ATTRIBUTE_USED int LLVMFuzzerInitialize(int *argc,
     exit(1);
   }
   ExitOnError ExitOnErr(std::string(ExecName) + ": error:");
-  TM = ExitOnErr(codegen::createTargetMachineForTriple(
-      Triple::normalize(TargetTripleStr)));
+
+  Triple TT(Triple::normalize(TargetTripleStr));
+  TM = ExitOnErr(codegen::createTargetMachineForTriple(TT));
 
   // Check that pass pipeline is specified and correct
   //

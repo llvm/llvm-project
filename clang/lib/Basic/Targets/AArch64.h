@@ -49,6 +49,7 @@ static const unsigned ARM64AddrSpaceMap[] = {
     0, // hlsl_private
     0, // hlsl_device
     0, // hlsl_input
+    0, // hlsl_output
     0, // hlsl_push_constant
     // Wasm address space values for this target are dummy values,
     // as it is only enabled for Wasm targets.
@@ -166,7 +167,7 @@ public:
 
   bool isValidCPUName(StringRef Name) const override;
   void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
-  bool setCPU(const std::string &Name) override;
+  bool setCPU(StringRef Name) override;
 
   llvm::APInt getFMVPriority(ArrayRef<StringRef> Features) const override;
 

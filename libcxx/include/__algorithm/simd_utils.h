@@ -124,15 +124,6 @@ template <class _VecT, size_t _Np, class _Iter>
     return _VecT{__iter[_LoadIndices]..., ((void)_ZeroIndices, 0)...};
   }(make_index_sequence<_Np>{}, make_index_sequence<__simd_vector_size_v<_VecT> - _Np>{});
 }
-
-// Create a vector where every elements is __val
-template <class _VecT>
-[[__nodiscard__]] _LIBCPP_ALWAYS_INLINE _LIBCPP_HIDE_FROM_ABI _VecT
-__broadcast(__simd_vector_underlying_type_t<_VecT> __val) {
-  return [&]<std::size_t... _Indices>(index_sequence<_Indices...>) {
-    return _VecT{((void)_Indices, __val)...};
-  }(make_index_sequence<__simd_vector_size_v<_VecT>>());
-}
 _LIBCPP_DIAGNOSTIC_POP
 
 template <class _Tp, size_t _Np>

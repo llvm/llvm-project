@@ -487,12 +487,11 @@ define <4 x float> @hoo_fmf(<4 x float> %a, <4 x float> %b) nounwind {
 ; CHECK-P8-LABEL: hoo_fmf:
 ; CHECK-P8:       # %bb.0:
 ; CHECK-P8-NEXT:    xvrsqrtesp vs0, v3
+; CHECK-P8-NEXT:    vspltisw v4, -3
 ; CHECK-P8-NEXT:    addis r3, r2, .LCPI12_0@toc@ha
 ; CHECK-P8-NEXT:    addi r3, r3, .LCPI12_0@toc@l
-; CHECK-P8-NEXT:    lxvd2x vs2, 0, r3
-; CHECK-P8-NEXT:    addis r3, r2, .LCPI12_1@toc@ha
+; CHECK-P8-NEXT:    xvcvsxwsp vs2, v4
 ; CHECK-P8-NEXT:    xvmulsp vs1, v3, vs0
-; CHECK-P8-NEXT:    addi r3, r3, .LCPI12_1@toc@l
 ; CHECK-P8-NEXT:    xvmaddasp vs2, vs1, vs0
 ; CHECK-P8-NEXT:    lxvd2x vs1, 0, r3
 ; CHECK-P8-NEXT:    xvmulsp vs0, vs0, vs1
@@ -505,10 +504,9 @@ define <4 x float> @hoo_fmf(<4 x float> %a, <4 x float> %b) nounwind {
 ; CHECK-P9-NEXT:    xvrsqrtesp vs0, v3
 ; CHECK-P9-NEXT:    addis r3, r2, .LCPI12_0@toc@ha
 ; CHECK-P9-NEXT:    addi r3, r3, .LCPI12_0@toc@l
-; CHECK-P9-NEXT:    lxv vs2, 0(r3)
-; CHECK-P9-NEXT:    addis r3, r2, .LCPI12_1@toc@ha
-; CHECK-P9-NEXT:    addi r3, r3, .LCPI12_1@toc@l
 ; CHECK-P9-NEXT:    xvmulsp vs1, v3, vs0
+; CHECK-P9-NEXT:    vspltisw v3, -3
+; CHECK-P9-NEXT:    xvcvsxwsp vs2, v3
 ; CHECK-P9-NEXT:    xvmaddasp vs2, vs1, vs0
 ; CHECK-P9-NEXT:    lxv vs1, 0(r3)
 ; CHECK-P9-NEXT:    xvmulsp vs0, vs0, vs1
@@ -1045,12 +1043,11 @@ define <4 x float> @hoo3_fmf(<4 x float> %a) #1 {
 ; CHECK-P8-NEXT:    bc 12, eq, .LBB25_2
 ; CHECK-P8-NEXT:  # %bb.1:
 ; CHECK-P8-NEXT:    xvrsqrtesp vs0, v2
+; CHECK-P8-NEXT:    vspltisw v3, -3
 ; CHECK-P8-NEXT:    addis r3, r2, .LCPI25_0@toc@ha
 ; CHECK-P8-NEXT:    addi r3, r3, .LCPI25_0@toc@l
-; CHECK-P8-NEXT:    lxvd2x vs2, 0, r3
-; CHECK-P8-NEXT:    addis r3, r2, .LCPI25_1@toc@ha
+; CHECK-P8-NEXT:    xvcvsxwsp vs2, v3
 ; CHECK-P8-NEXT:    xvmulsp vs1, v2, vs0
-; CHECK-P8-NEXT:    addi r3, r3, .LCPI25_1@toc@l
 ; CHECK-P8-NEXT:    xvmaddasp vs2, vs1, vs0
 ; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
 ; CHECK-P8-NEXT:    xvmulsp vs0, vs1, vs0
@@ -1068,10 +1065,9 @@ define <4 x float> @hoo3_fmf(<4 x float> %a) #1 {
 ; CHECK-P9-NEXT:    xvrsqrtesp vs0, v2
 ; CHECK-P9-NEXT:    addis r3, r2, .LCPI25_0@toc@ha
 ; CHECK-P9-NEXT:    addi r3, r3, .LCPI25_0@toc@l
-; CHECK-P9-NEXT:    lxv vs2, 0(r3)
-; CHECK-P9-NEXT:    addis r3, r2, .LCPI25_1@toc@ha
-; CHECK-P9-NEXT:    addi r3, r3, .LCPI25_1@toc@l
 ; CHECK-P9-NEXT:    xvmulsp vs1, v2, vs0
+; CHECK-P9-NEXT:    vspltisw v2, -3
+; CHECK-P9-NEXT:    xvcvsxwsp vs2, v2
 ; CHECK-P9-NEXT:    xvmaddasp vs2, vs1, vs0
 ; CHECK-P9-NEXT:    lxv vs0, 0(r3)
 ; CHECK-P9-NEXT:    xvmulsp vs0, vs1, vs0
@@ -1164,12 +1160,11 @@ define <2 x double> @hoo4_fmf(<2 x double> %a) #1 {
 ; CHECK-P8-NEXT:    bc 12, eq, .LBB27_2
 ; CHECK-P8-NEXT:  # %bb.1:
 ; CHECK-P8-NEXT:    xvrsqrtedp vs0, v2
+; CHECK-P8-NEXT:    vspltisw v3, -3
 ; CHECK-P8-NEXT:    addis r3, r2, .LCPI27_0@toc@ha
 ; CHECK-P8-NEXT:    addi r3, r3, .LCPI27_0@toc@l
-; CHECK-P8-NEXT:    lxvd2x vs2, 0, r3
-; CHECK-P8-NEXT:    addis r3, r2, .LCPI27_1@toc@ha
+; CHECK-P8-NEXT:    xvcvsxwdp vs2, v3
 ; CHECK-P8-NEXT:    xvmuldp vs1, v2, vs0
-; CHECK-P8-NEXT:    addi r3, r3, .LCPI27_1@toc@l
 ; CHECK-P8-NEXT:    xxlor vs3, vs2, vs2
 ; CHECK-P8-NEXT:    xvmaddadp vs3, vs1, vs0
 ; CHECK-P8-NEXT:    lxvd2x vs1, 0, r3
@@ -1190,11 +1185,10 @@ define <2 x double> @hoo4_fmf(<2 x double> %a) #1 {
 ; CHECK-P9-NEXT:    bc 12, eq, .LBB27_2
 ; CHECK-P9-NEXT:  # %bb.1:
 ; CHECK-P9-NEXT:    xvrsqrtedp vs0, v2
+; CHECK-P9-NEXT:    vspltisw v3, -3
 ; CHECK-P9-NEXT:    addis r3, r2, .LCPI27_0@toc@ha
 ; CHECK-P9-NEXT:    addi r3, r3, .LCPI27_0@toc@l
-; CHECK-P9-NEXT:    lxv vs2, 0(r3)
-; CHECK-P9-NEXT:    addis r3, r2, .LCPI27_1@toc@ha
-; CHECK-P9-NEXT:    addi r3, r3, .LCPI27_1@toc@l
+; CHECK-P9-NEXT:    xvcvsxwdp vs2, v3
 ; CHECK-P9-NEXT:    xvmuldp vs1, v2, vs0
 ; CHECK-P9-NEXT:    xxlor vs3, vs2, vs2
 ; CHECK-P9-NEXT:    xvmaddadp vs3, vs1, vs0

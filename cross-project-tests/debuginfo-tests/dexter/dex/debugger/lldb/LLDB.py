@@ -11,6 +11,7 @@ import os
 import shlex
 from subprocess import CalledProcessError, check_output, STDOUT
 import sys
+from typing import List, Optional
 
 from dex.debugger.DebuggerBase import DebuggerBase, watch_is_active
 from dex.debugger.DAP import DAP
@@ -32,6 +33,12 @@ class LLDB(DebuggerBase):
         # condition. See get_triggered_breakpoint_ids usage for more info.
         self._breakpoint_conditions = {}
         super(LLDB, self).__init__(context, *args)
+        if self.has_loaded:
+            self._interface.SBDebugger.Initialize()
+
+    def __del__(self):
+        if self.has_loaded:
+            self._interface.SBDebugger.Terminate()
 
     def _custom_init(self):
         self._debugger = self._interface.SBDebugger.Create()
@@ -49,8 +56,10 @@ class LLDB(DebuggerBase):
     def _custom_exit(self):
         if getattr(self, "_process", None):
             self._process.Kill()
-        if getattr(self, "_debugger", None) and getattr(self, "_target", None):
-            self._debugger.DeleteTarget(self._target)
+        if getattr(self, "_debugger", None):
+            if getattr(self, "_target", None):
+                self._debugger.DeleteTarget(self._target)
+            self._interface.SBDebugger.Destroy(self._debugger)
 
     def _translate_stop_reason(self, reason):
         if reason == self._interface.eStopReasonNone:
@@ -310,6 +319,14 @@ class LLDB(DebuggerBase):
             program_state=ProgramState(state_frames),
         )
 
+    def get_stack_frames(self, step_index: int) -> StepIR:
+        raise NotImplementedError("--use-script debugging not supported in lldb yet.")
+
+    def collect_watches(
+        self, step: StepIR, frame_idx: int, watches: List[str], scope_watches: List[str]
+    ):
+        raise NotImplementedError("--use-script debugging not supported in lldb yet.")
+
     @property
     def is_running(self):
         # We're not running in async mode so this is always False.
@@ -465,7 +482,7 @@ class LLDBDAP(DAP):
 
     @staticmethod
     def _evaluate_result_value(
-        expression: str, result_string: str, type_string
+        expression: str, result_string: str, type_string: Optional[str]
     ) -> ValueIR:
         could_evaluate = not any(
             s in result_string
@@ -495,6 +512,7 @@ class LLDBDAP(DAP):
                 "couldn't read from memory",
                 "Cannot access memory at address",
                 "invalid address (fault address:",
+                "error: parent is NULL",
             ]
         )
 

@@ -15,6 +15,7 @@
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCGOFFAttributes.h"
 #include "llvm/MC/MCGOFFObjectWriter.h"
+#include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSectionGOFF.h"
 #include "llvm/MC/MCSymbolGOFF.h"
 #include "llvm/MC/MCValue.h"
@@ -360,12 +361,22 @@ void GOFFWriter::defineLabel(const MCSymbolGOFF &Symbol) {
 }
 
 void GOFFWriter::defineExtern(const MCSymbolGOFF &Symbol) {
-  GOFFSymbol ER(Symbol.getExternalName(), Symbol.getIndex(),
-                RootSD->getOrdinal(),
-                GOFF::ERAttr{Symbol.isIndirect(), Symbol.getCodeData(),
-                             Symbol.getBindingStrength(), Symbol.getLinkage(),
-                             GOFF::ESD_AMODE_64, Symbol.getBindingScope()});
-  writeSymbol(ER);
+  if (Symbol.getCodeData() == GOFF::ESD_EXE_DATA) {
+    MCSectionGOFF *ED = Symbol.getADA()->getParent();
+    GOFFSymbol PR(Symbol.getExternalName(), Symbol.getIndex(), ED->getOrdinal(),
+                  ED->getEDAttributes(),
+                  GOFF::PRAttr{/*IsRenamable*/ false, Symbol.getCodeData(),
+                               Symbol.getLinkage(), Symbol.getBindingScope(),
+                               0});
+    writeSymbol(PR);
+  } else {
+    GOFFSymbol ER(Symbol.getExternalName(), Symbol.getIndex(),
+                  RootSD->getOrdinal(),
+                  GOFF::ERAttr{Symbol.isIndirect(), Symbol.getCodeData(),
+                               Symbol.getBindingStrength(), Symbol.getLinkage(),
+                               GOFF::ESD_AMODE_64, Symbol.getBindingScope()});
+    writeSymbol(ER);
+  }
 }
 
 void GOFFWriter::defineSymbols() {
@@ -677,6 +688,12 @@ GOFFObjectWriter::GOFFObjectWriter(
     : TargetObjectWriter(std::move(MOTW)), OS(OS) {}
 
 GOFFObjectWriter::~GOFFObjectWriter() = default;
+
+void GOFFObjectWriter::reset() {
+  Relocations.clear();
+  RootSD = nullptr;
+  MCObjectWriter::reset();
+}
 
 void GOFFObjectWriter::recordRelocation(const MCFragment &F,
                                         const MCFixup &Fixup, MCValue Target,

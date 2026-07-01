@@ -41,7 +41,6 @@
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
-#include <functional>
 #include <map>
 #include <memory>
 #include <mutex>
@@ -518,8 +517,7 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
 
   Opts.CodeComplete.EnableSnippets = Params.capabilities.CompletionSnippets;
   Opts.CodeComplete.IncludeFixIts = Params.capabilities.CompletionFixes;
-  if (!Opts.CodeComplete.BundleOverloads)
-    Opts.CodeComplete.BundleOverloads = Params.capabilities.HasSignatureHelp;
+  Opts.CodeComplete.EnableInsertReplace = Params.capabilities.InsertReplace;
   Opts.CodeComplete.DocumentationFormat =
       Params.capabilities.CompletionDocumentationFormat;
   Opts.SignatureHelpDocumentationFormat =
@@ -809,7 +807,7 @@ void ClangdLSPServer::onCommandApplyEdit(const WorkspaceEdit &WE,
 
 void ClangdLSPServer::onCommandApplyTweak(const TweakArgs &Args,
                                           Callback<llvm::json::Value> Reply) {
-  auto Action = [this, Reply = std::move(Reply)](
+  auto Action = [this, Reply = std::move(Reply), &ServerRef = *Server](
                     llvm::Expected<Tweak::Effect> R) mutable {
     if (!R)
       return Reply(R.takeError());
@@ -826,7 +824,7 @@ void ClangdLSPServer::onCommandApplyTweak(const TweakArgs &Args,
     if (R->ApplyEdits.empty())
       return Reply("Tweak applied.");
 
-    if (auto Err = validateEdits(*Server, R->ApplyEdits))
+    if (auto Err = validateEdits(ServerRef, R->ApplyEdits))
       return Reply(std::move(Err));
 
     WorkspaceEdit WE;
@@ -910,11 +908,11 @@ void ClangdLSPServer::onRename(const RenameParams &Params,
     return Reply(llvm::make_error<LSPError>(
         "onRename called for non-added file", ErrorCode::InvalidParams));
   Server->rename(File, Params.position, Params.newName, Opts.Rename,
-                 [File, Params, Reply = std::move(Reply),
-                  this](llvm::Expected<RenameResult> R) mutable {
+                 [File, Params, Reply = std::move(Reply), &ServerRef = *Server](
+                     llvm::Expected<RenameResult> R) mutable {
                    if (!R)
                      return Reply(R.takeError());
-                   if (auto Err = validateEdits(*Server, R->GlobalChanges))
+                   if (auto Err = validateEdits(ServerRef, R->GlobalChanges))
                      return Reply(std::move(Err));
                    WorkspaceEdit Result;
                    // FIXME: use documentChanges if SupportDocumentChanges is
@@ -1004,23 +1002,29 @@ static std::vector<SymbolInformation>
 flattenSymbolHierarchy(llvm::ArrayRef<DocumentSymbol> Symbols,
                        const URIForFile &FileURI) {
   std::vector<SymbolInformation> Results;
-  std::function<void(const DocumentSymbol &, llvm::StringRef)> Process =
-      [&](const DocumentSymbol &S, std::optional<llvm::StringRef> ParentName) {
-        SymbolInformation SI;
-        SI.containerName = std::string(ParentName ? "" : *ParentName);
-        SI.name = S.name;
-        SI.kind = S.kind;
-        SI.location.range = S.range;
-        SI.location.uri = FileURI;
+  struct SymbolHierarchyFlattener {
+    const URIForFile &FileURI;
+    std::vector<SymbolInformation> &Results;
 
-        Results.push_back(std::move(SI));
-        std::string FullName =
-            !ParentName ? S.name : (ParentName->str() + "::" + S.name);
-        for (auto &C : S.children)
-          Process(C, /*ParentName=*/FullName);
-      };
-  for (auto &S : Symbols)
-    Process(S, /*ParentName=*/"");
+    void append(const DocumentSymbol &S,
+                std::optional<llvm::StringRef> ParentName) {
+      SymbolInformation SI;
+      SI.containerName = std::string(ParentName ? "" : *ParentName);
+      SI.name = S.name;
+      SI.kind = S.kind;
+      SI.location.range = S.range;
+      SI.location.uri = FileURI;
+
+      Results.push_back(std::move(SI));
+      std::string FullName =
+          !ParentName ? S.name : (ParentName->str() + "::" + S.name);
+      for (const DocumentSymbol &C : S.children)
+        append(C, /*ParentName=*/FullName);
+    }
+  };
+  SymbolHierarchyFlattener Flattener{FileURI, Results};
+  for (const DocumentSymbol &S : Symbols)
+    Flattener.append(S, /*ParentName=*/"");
   return Results;
 }
 
@@ -1799,9 +1803,9 @@ bool ClangdLSPServer::shouldRunCompletion(
   auto Offset = positionToOffset(*Code, Params.position,
                                  /*AllowColumnsBeyondLineLength=*/false);
   if (!Offset) {
-    vlog("could not convert position '{0}' to offset for file '{1}'",
-         Params.position, Params.textDocument.uri.file());
-    return true;
+    elog("could not convert position '{0}' to offset for file '{1}': {2}",
+         Params.position, Params.textDocument.uri.file(), Offset.takeError());
+    return false;
   }
   return allowImplicitCompletion(*Code, *Offset);
 }

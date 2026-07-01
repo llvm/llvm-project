@@ -112,35 +112,9 @@ public:
 
 /// Common base class shared among various IRBuilders.
 class IRBuilderBase {
-  /// Pairs of (metadata kind, MDNode *) that should be added to all newly
-  /// created instructions, excluding !dbg metadata, which is stored in the
-  /// StoredDL field.
-  SmallVector<std::pair<unsigned, MDNode *>, 2> MetadataToCopy;
   /// The DebugLoc that will be applied to instructions inserted by this
   /// builder.
   DebugLoc StoredDL;
-
-  /// Add or update the an entry (Kind, MD) to MetadataToCopy, if \p MD is not
-  /// null. If \p MD is null, remove the entry with \p Kind.
-  void AddOrRemoveMetadataToCopy(unsigned Kind, MDNode *MD) {
-    assert(Kind != LLVMContext::MD_dbg &&
-           "MD_dbg metadata must be stored in StoredDL");
-
-    if (!MD) {
-      erase_if(MetadataToCopy, [Kind](const std::pair<unsigned, MDNode *> &KV) {
-        return KV.first == Kind;
-      });
-      return;
-    }
-
-    for (auto &KV : MetadataToCopy)
-      if (KV.first == Kind) {
-        KV.second = MD;
-        return;
-      }
-
-    MetadataToCopy.emplace_back(Kind, MD);
-  }
 
 protected:
   BasicBlock *BB;
@@ -171,7 +145,7 @@ public:
   template<typename InstTy>
   InstTy *Insert(InstTy *I, const Twine &Name = "") const {
     Inserter.InsertHelper(I, Name, InsertPt);
-    AddMetadataToInst(I);
+    SetInstDebugLocation(I);
     return I;
   }
 
@@ -244,29 +218,17 @@ public:
   }
 
   /// Set location information used by debugging information.
-  void SetCurrentDebugLocation(DebugLoc L) {
+  void SetCurrentDebugLocation(const DebugLoc &L) {
+    // For !dbg metadata attachments, we use DebugLoc instead of the raw MDNode
+    // to include optional introspection data for use in Debugify.
+    StoredDL = L;
+  }
+
+  /// Set location information used by debugging information.
+  void SetCurrentDebugLocation(DebugLoc &&L) {
     // For !dbg metadata attachments, we use DebugLoc instead of the raw MDNode
     // to include optional introspection data for use in Debugify.
     StoredDL = std::move(L);
-  }
-
-  /// Set nosanitize metadata.
-  void SetNoSanitizeMetadata() {
-    AddOrRemoveMetadataToCopy(llvm::LLVMContext::MD_nosanitize,
-                              llvm::MDNode::get(getContext(), {}));
-  }
-
-  /// Collect metadata with IDs \p MetadataKinds from \p Src which should be
-  /// added to all created instructions. Entries present in MedataDataToCopy but
-  /// not on \p Src will be dropped from MetadataToCopy.
-  void CollectMetadataToCopy(Instruction *Src,
-                             ArrayRef<unsigned> MetadataKinds) {
-    for (unsigned K : MetadataKinds) {
-      if (K == LLVMContext::MD_dbg)
-        SetCurrentDebugLocation(Src->getDebugLoc());
-      else
-        AddOrRemoveMetadataToCopy(K, Src->getMetadata(K));
-    }
   }
 
   /// Get location information used by debugging information.
@@ -275,13 +237,6 @@ public:
   /// If this builder has a current debug location, set it on the
   /// specified instruction.
   LLVM_ABI void SetInstDebugLocation(Instruction *I) const;
-
-  /// Add all entries in MetadataToCopy to \p I.
-  void AddMetadataToInst(Instruction *I) const {
-    for (const auto &KV : MetadataToCopy)
-      I->setMetadata(KV.first, KV.second);
-    SetInstDebugLocation(I);
-  }
 
   /// Get the return type of the current function that we're emitting
   /// into.
@@ -542,6 +497,24 @@ public:
   // Type creation methods
   //===--------------------------------------------------------------------===//
 
+  /// Fetch the type representing an 8-bit byte.
+  ByteType *getByte8Ty() { return Type::getByte8Ty(Context); }
+
+  /// Fetch the type representing a 16-bit byte.
+  ByteType *getByte16Ty() { return Type::getByte16Ty(Context); }
+
+  /// Fetch the type representing a 32-bit byte.
+  ByteType *getByte32Ty() { return Type::getByte32Ty(Context); }
+
+  /// Fetch the type representing a 64-bit byte.
+  ByteType *getByte64Ty() { return Type::getByte64Ty(Context); }
+
+  /// Fetch the type representing a 128-bit byte.
+  ByteType *getByte128Ty() { return Type::getByte128Ty(Context); }
+
+  /// Fetch the type representing an N-bit byte.
+  ByteType *getByteNTy(unsigned N) { return Type::getByteNTy(Context, N); }
+
   /// Fetch the type representing a single bit
   IntegerType *getInt1Ty() {
     return Type::getInt1Ty(Context);
@@ -603,6 +576,12 @@ public:
   /// Fetch the type representing a pointer.
   PointerType *getPtrTy(unsigned AddrSpace = 0) {
     return PointerType::get(Context, AddrSpace);
+  }
+
+  /// Fetch the type of a byte with size at least as big as that of a
+  /// pointer in the given address space.
+  ByteType *getBytePtrTy(const DataLayout &DL, unsigned AddrSpace = 0) {
+    return DL.getBytePtrType(Context, AddrSpace);
   }
 
   /// Fetch the type of an integer with size at least as big as that of a
@@ -754,61 +733,61 @@ public:
       uint32_t ElementSize, const AAMDNodes &AAInfo = AAMDNodes());
 
 private:
-  CallInst *getReductionIntrinsic(Intrinsic::ID ID, Value *Src);
+  Value *getReductionIntrinsic(Intrinsic::ID ID, Value *Src);
 
 public:
   /// Create a sequential vector fadd reduction intrinsic of the source vector.
   /// The first parameter is a scalar accumulator value. An unordered reduction
   /// can be created by adding the reassoc fast-math flag to the resulting
   /// sequential reduction.
-  LLVM_ABI CallInst *CreateFAddReduce(Value *Acc, Value *Src);
+  LLVM_ABI Value *CreateFAddReduce(Value *Acc, Value *Src);
 
   /// Create a sequential vector fmul reduction intrinsic of the source vector.
   /// The first parameter is a scalar accumulator value. An unordered reduction
   /// can be created by adding the reassoc fast-math flag to the resulting
   /// sequential reduction.
-  LLVM_ABI CallInst *CreateFMulReduce(Value *Acc, Value *Src);
+  LLVM_ABI Value *CreateFMulReduce(Value *Acc, Value *Src);
 
   /// Create a vector int add reduction intrinsic of the source vector.
-  LLVM_ABI CallInst *CreateAddReduce(Value *Src);
+  LLVM_ABI Value *CreateAddReduce(Value *Src);
 
   /// Create a vector int mul reduction intrinsic of the source vector.
-  LLVM_ABI CallInst *CreateMulReduce(Value *Src);
+  LLVM_ABI Value *CreateMulReduce(Value *Src);
 
   /// Create a vector int AND reduction intrinsic of the source vector.
-  LLVM_ABI CallInst *CreateAndReduce(Value *Src);
+  LLVM_ABI Value *CreateAndReduce(Value *Src);
 
   /// Create a vector int OR reduction intrinsic of the source vector.
-  LLVM_ABI CallInst *CreateOrReduce(Value *Src);
+  LLVM_ABI Value *CreateOrReduce(Value *Src);
 
   /// Create a vector int XOR reduction intrinsic of the source vector.
-  LLVM_ABI CallInst *CreateXorReduce(Value *Src);
+  LLVM_ABI Value *CreateXorReduce(Value *Src);
 
   /// Create a vector integer max reduction intrinsic of the source
   /// vector.
-  LLVM_ABI CallInst *CreateIntMaxReduce(Value *Src, bool IsSigned = false);
+  LLVM_ABI Value *CreateIntMaxReduce(Value *Src, bool IsSigned = false);
 
   /// Create a vector integer min reduction intrinsic of the source
   /// vector.
-  LLVM_ABI CallInst *CreateIntMinReduce(Value *Src, bool IsSigned = false);
+  LLVM_ABI Value *CreateIntMinReduce(Value *Src, bool IsSigned = false);
 
   /// Create a vector float max reduction intrinsic of the source
   /// vector.
-  LLVM_ABI CallInst *CreateFPMaxReduce(Value *Src);
+  LLVM_ABI Value *CreateFPMaxReduce(Value *Src);
 
   /// Create a vector float min reduction intrinsic of the source
   /// vector.
-  LLVM_ABI CallInst *CreateFPMinReduce(Value *Src);
+  LLVM_ABI Value *CreateFPMinReduce(Value *Src);
 
   /// Create a vector float maximum reduction intrinsic of the source
   /// vector. This variant follows the NaN and signed zero semantic of
   /// llvm.maximum intrinsic.
-  LLVM_ABI CallInst *CreateFPMaximumReduce(Value *Src);
+  LLVM_ABI Value *CreateFPMaximumReduce(Value *Src);
 
   /// Create a vector float minimum reduction intrinsic of the source
   /// vector. This variant follows the NaN and signed zero semantic of
   /// llvm.minimum intrinsic.
-  LLVM_ABI CallInst *CreateFPMinimumReduce(Value *Src);
+  LLVM_ABI Value *CreateFPMinimumReduce(Value *Src);
 
   /// Create a lifetime.start intrinsic.
   LLVM_ABI CallInst *CreateLifetimeStart(Value *Ptr);
@@ -865,11 +844,11 @@ public:
 
   /// Create an assume intrinsic call that allows the optimizer to
   /// assume that the provided condition will be true.
-  ///
-  /// The optional argument \p OpBundles specifies operand bundles that are
-  /// added to the call instruction.
-  LLVM_ABI CallInst *
-  CreateAssumption(Value *Cond, ArrayRef<OperandBundleDef> OpBundles = {});
+  LLVM_ABI CallInst *CreateAssumption(Value *Cond);
+
+  /// Create an assume intrinsic call that allows the optimizer to
+  /// assume that the provided operand bundles hold.
+  LLVM_ABI CallInst *CreateAssumption(ArrayRef<OperandBundleDef> OpBundles);
 
   /// Create a llvm.experimental.noalias.scope.decl intrinsic call.
   LLVM_ABI Instruction *CreateNoAliasScopeDeclaration(Value *Scope);
@@ -977,9 +956,9 @@ public:
 
   /// Create a call to intrinsic \p ID with 1 operand which is mangled on its
   /// type.
-  LLVM_ABI CallInst *CreateUnaryIntrinsic(Intrinsic::ID ID, Value *V,
-                                          FMFSource FMFSource = {},
-                                          const Twine &Name = "");
+  LLVM_ABI Value *CreateUnaryIntrinsic(Intrinsic::ID ID, Value *Op,
+                                       FMFSource FMFSource = {},
+                                       const Twine &Name = "");
 
   /// Create a call to intrinsic \p ID with 2 operands which is mangled on the
   /// first type.
@@ -987,28 +966,65 @@ public:
                                         Value *RHS, FMFSource FMFSource = {},
                                         const Twine &Name = "");
 
-  /// Create a call to intrinsic \p ID with \p Args, mangled using \p Types. If
-  /// \p FMFSource is provided, copy fast-math-flags from that instruction to
-  /// the intrinsic.
-  LLVM_ABI CallInst *CreateIntrinsic(Intrinsic::ID ID, ArrayRef<Type *> Types,
-                                     ArrayRef<Value *> Args,
-                                     FMFSource FMFSource = {},
-                                     const Twine &Name = "");
+  /// Create a call to intrinsic \p ID with \p Args, mangled using
+  /// \p OverloadTypes. If \p FMFSource is provided, copy fast-math-flags from
+  /// that instruction to the intrinsic. It is guaranteed not to fold.
+  LLVM_ABI CallInst *CreateIntrinsicWithoutFolding(
+      Intrinsic::ID ID, ArrayRef<Type *> OverloadTypes, ArrayRef<Value *> Args,
+      FMFSource FMFSource = {}, const Twine &Name = "",
+      ArrayRef<OperandBundleDef> OpBundles = {});
 
   /// Create a call to intrinsic \p ID with \p RetTy and \p Args. If
   /// \p FMFSource is provided, copy fast-math-flags from that instruction to
-  /// the intrinsic.
-  LLVM_ABI CallInst *CreateIntrinsic(Type *RetTy, Intrinsic::ID ID,
-                                     ArrayRef<Value *> Args,
-                                     FMFSource FMFSource = {},
-                                     const Twine &Name = "");
+  /// the intrinsic. It is guaranteed not to fold.
+  LLVM_ABI CallInst *CreateIntrinsicWithoutFolding(Type *RetTy,
+                                                   Intrinsic::ID ID,
+                                                   ArrayRef<Value *> Args,
+                                                   FMFSource FMFSource = {},
+                                                   const Twine &Name = "");
 
   /// Create a call to non-overloaded intrinsic \p ID with \p Args. If
   /// \p FMFSource is provided, copy fast-math-flags from that instruction to
-  /// the intrinsic.
-  CallInst *CreateIntrinsic(Intrinsic::ID ID, ArrayRef<Value *> Args,
-                            FMFSource FMFSource = {}, const Twine &Name = "") {
-    return CreateIntrinsic(ID, /*Types=*/{}, Args, FMFSource, Name);
+  /// the intrinsic. It is guranteed not to fold.
+  CallInst *CreateIntrinsicWithoutFolding(Intrinsic::ID ID,
+                                          ArrayRef<Value *> Args,
+                                          FMFSource FMFSource = {},
+                                          const Twine &Name = "") {
+    return CreateIntrinsicWithoutFolding(ID, /*Types=*/{}, Args, FMFSource,
+                                         Name);
+  }
+
+  /// Variant to create a possibly constant-folded intrinsic. An optional \p
+  /// SetFn is called if the intrinsic doesn't fold, and can be used to set
+  /// things like attributes.
+  LLVM_ABI Value *CreateIntrinsic(
+      Intrinsic::ID ID, ArrayRef<Type *> OverloadTypes, ArrayRef<Value *> Args,
+      FMFSource FMFSource = {}, const Twine &Name = "",
+      ArrayRef<OperandBundleDef> OpBundles = {},
+      function_ref<void(CallInst *)> SetFn = [](CallInst *) {});
+
+  /// Variant to create a possibly constant-folded intrinsic. An optional \p
+  /// SetFn is called if the intrinsic doesn't fold, and can be used to set
+  /// things like attributes.
+  LLVM_ABI Value *CreateIntrinsic(
+      Type *RetTy, Intrinsic::ID ID, ArrayRef<Value *> Args,
+      FMFSource FMFSource = {}, const Twine &Name = "",
+      function_ref<void(CallInst *)> SetFn = [](CallInst *) {});
+
+  /// Variant to create a possibly constant-folded intrinsic. An optional \p
+  /// SetFn is called if the intrinsic doesn't fold, and can be used to set
+  /// things like attributes.
+  Value *CreateIntrinsic(
+      Intrinsic::ID ID, ArrayRef<Value *> Args, FMFSource FMFSource = {},
+      const Twine &Name = "",
+      function_ref<void(CallInst *)> SetFn = [](CallInst *) {}) {
+    return CreateIntrinsic(ID, /*Types=*/{}, Args, FMFSource, Name, {}, SetFn);
+  }
+
+  /// Create call to the fabs intrinsic.
+  Value *CreateFAbs(Value *V, FMFSource FMFSource = {},
+                    const Twine &Name = "") {
+    return CreateUnaryIntrinsic(Intrinsic::fabs, V, FMFSource, Name);
   }
 
   /// Create call to the minnum intrinsic.
@@ -1086,51 +1102,52 @@ public:
   }
 
   /// Create a call to the arithmetic_fence intrinsic.
-  CallInst *CreateArithmeticFence(Value *Val, Type *DstType,
-                                  const Twine &Name = "") {
+  Value *CreateArithmeticFence(Value *Val, Type *DstType,
+                               const Twine &Name = "") {
     return CreateIntrinsic(Intrinsic::arithmetic_fence, DstType, Val, nullptr,
                            Name);
   }
 
   /// Create a call to the vector.extract intrinsic.
-  CallInst *CreateExtractVector(Type *DstType, Value *SrcVec, Value *Idx,
-                                const Twine &Name = "") {
+  Value *CreateExtractVector(Type *DstType, Value *SrcVec, Value *Idx,
+                             const Twine &Name = "") {
     return CreateIntrinsic(Intrinsic::vector_extract,
                            {DstType, SrcVec->getType()}, {SrcVec, Idx}, nullptr,
                            Name);
   }
 
   /// Create a call to the vector.extract intrinsic.
-  CallInst *CreateExtractVector(Type *DstType, Value *SrcVec, uint64_t Idx,
-                                const Twine &Name = "") {
+  Value *CreateExtractVector(Type *DstType, Value *SrcVec, uint64_t Idx,
+                             const Twine &Name = "") {
     return CreateExtractVector(DstType, SrcVec, getInt64(Idx), Name);
   }
 
   /// Create a call to the vector.insert intrinsic.
-  CallInst *CreateInsertVector(Type *DstType, Value *SrcVec, Value *SubVec,
-                               Value *Idx, const Twine &Name = "") {
+  Value *CreateInsertVector(Type *DstType, Value *SrcVec, Value *SubVec,
+                            Value *Idx, const Twine &Name = "") {
     return CreateIntrinsic(Intrinsic::vector_insert,
                            {DstType, SubVec->getType()}, {SrcVec, SubVec, Idx},
                            nullptr, Name);
   }
 
   /// Create a call to the vector.extract intrinsic.
-  CallInst *CreateInsertVector(Type *DstType, Value *SrcVec, Value *SubVec,
-                               uint64_t Idx, const Twine &Name = "") {
+  Value *CreateInsertVector(Type *DstType, Value *SrcVec, Value *SubVec,
+                            uint64_t Idx, const Twine &Name = "") {
     return CreateInsertVector(DstType, SrcVec, SubVec, getInt64(Idx), Name);
   }
 
   /// Create a call to llvm.stacksave
   CallInst *CreateStackSave(const Twine &Name = "") {
     const DataLayout &DL = BB->getDataLayout();
-    return CreateIntrinsic(Intrinsic::stacksave, {DL.getAllocaPtrType(Context)},
-                           {}, nullptr, Name);
+    return CreateIntrinsicWithoutFolding(Intrinsic::stacksave,
+                                         {DL.getAllocaPtrType(Context)}, {},
+                                         nullptr, Name);
   }
 
   /// Create a call to llvm.stackrestore
   CallInst *CreateStackRestore(Value *Ptr, const Twine &Name = "") {
-    return CreateIntrinsic(Intrinsic::stackrestore, {Ptr->getType()}, {Ptr},
-                           nullptr, Name);
+    return CreateIntrinsicWithoutFolding(
+        Intrinsic::stackrestore, {Ptr->getType()}, {Ptr}, nullptr, Name);
   }
 
   /// Create a call to llvm.experimental_cttz_elts
@@ -1176,39 +1193,38 @@ public:
     return Insert(ReturnInst::Create(Context, V));
   }
 
-  /// Create a sequence of N insertvalue instructions,
-  /// with one Value from the retVals array each, that build a aggregate
-  /// return value one value at a time, and a ret instruction to return
-  /// the resulting aggregate value.
+  /// Create a sequence of N insertvalue instructions, with one Value from the
+  /// RetVals array each, that build a aggregate return value one value at a
+  /// time, and a ret instruction to return the resulting aggregate value.
   ///
   /// This is a convenience function for code that uses aggregate return values
   /// as a vehicle for having multiple return values.
-  ReturnInst *CreateAggregateRet(Value *const *retVals, unsigned N) {
+  ReturnInst *CreateAggregateRet(ArrayRef<Value *> RetVals) {
     Value *V = PoisonValue::get(getCurrentFunctionReturnType());
-    for (unsigned i = 0; i != N; ++i)
-      V = CreateInsertValue(V, retVals[i], i, "mrv");
+    for (size_t i = 0, N = RetVals.size(); i != N; ++i)
+      V = CreateInsertValue(V, RetVals[i], i, "mrv");
     return Insert(ReturnInst::Create(Context, V));
   }
 
   /// Create an unconditional 'br label X' instruction.
-  BranchInst *CreateBr(BasicBlock *Dest) {
-    return Insert(BranchInst::Create(Dest));
+  UncondBrInst *CreateBr(BasicBlock *Dest) {
+    return Insert(UncondBrInst::Create(Dest));
   }
 
   /// Create a conditional 'br Cond, TrueDest, FalseDest'
   /// instruction.
-  BranchInst *CreateCondBr(Value *Cond, BasicBlock *True, BasicBlock *False,
+  CondBrInst *CreateCondBr(Value *Cond, BasicBlock *True, BasicBlock *False,
                            MDNode *BranchWeights = nullptr,
                            MDNode *Unpredictable = nullptr) {
-    return Insert(addBranchMetadata(BranchInst::Create(True, False, Cond),
+    return Insert(addBranchMetadata(CondBrInst::Create(Cond, True, False),
                                     BranchWeights, Unpredictable));
   }
 
   /// Create a conditional 'br Cond, TrueDest, FalseDest'
   /// instruction. Copy branch meta data if available.
-  BranchInst *CreateCondBr(Value *Cond, BasicBlock *True, BasicBlock *False,
+  CondBrInst *CreateCondBr(Value *Cond, BasicBlock *True, BasicBlock *False,
                            Instruction *MDSrc) {
-    BranchInst *Br = BranchInst::Create(True, False, Cond);
+    CondBrInst *Br = CondBrInst::Create(Cond, True, False);
     if (MDSrc) {
       unsigned WL[4] = {LLVMContext::MD_prof, LLVMContext::MD_unpredictable,
                         LLVMContext::MD_make_implicit, LLVMContext::MD_dbg};
@@ -1599,6 +1615,10 @@ public:
     return Accum;
   }
 
+  Value *CreateDisjointOr(Value *LHS, Value *RHS, const Twine &Name = "") {
+    return CreateOr(LHS, RHS, Name, true);
+  }
+
   Value *CreateXor(Value *LHS, Value *RHS, const Twine &Name = "") {
     if (Value *V = Folder.FoldBinOp(Instruction::Xor, LHS, RHS))
       return V;
@@ -1722,6 +1742,28 @@ public:
     Instruction *BinOp = BinaryOperator::Create(Opc, LHS, RHS);
     if (isa<FPMathOperator>(BinOp))
       setFPAttrs(BinOp, FPMathTag, FMFSource.get(FMF));
+    return Insert(BinOp, Name);
+  }
+
+  Value *CreateNoWrapBinOp(Instruction::BinaryOps Opc, Value *LHS, Value *RHS,
+                           bool IsNUW, bool IsNSW, const Twine &Name = "") {
+    if (Value *V = Folder.FoldNoWrapBinOp(Opc, LHS, RHS, IsNUW, IsNSW))
+      return V;
+    Instruction *BinOp = BinaryOperator::Create(Opc, LHS, RHS);
+    if (IsNUW)
+      BinOp->setHasNoUnsignedWrap(IsNUW);
+    if (IsNSW)
+      BinOp->setHasNoSignedWrap(IsNSW);
+    return Insert(BinOp, Name);
+  }
+
+  Value *CreateExactBinOp(Instruction::BinaryOps Opc, Value *LHS, Value *RHS,
+                          bool IsExact, const Twine &Name = "") {
+    if (Value *V = Folder.FoldExactBinOp(Opc, LHS, RHS, IsExact))
+      return V;
+    Instruction *BinOp = BinaryOperator::Create(Opc, LHS, RHS);
+    if (IsExact)
+      BinOp->setIsExact(IsExact);
     return Insert(BinOp, Name);
   }
 
@@ -1849,6 +1891,16 @@ public:
     return Insert(new AllocaInst(Ty, AddrSpace, ArraySize, AllocaAlign), Name);
   }
 
+  CallInst *CreateStructuredAlloca(Type *BaseType, const Twine &Name = "") {
+    const DataLayout &DL = BB->getDataLayout();
+    PointerType *PtrTy = DL.getAllocaPtrType(Context);
+    auto *Output = CreateIntrinsicWithoutFolding(Intrinsic::structured_alloca,
+                                                 {PtrTy}, {}, {}, Name);
+    Output->addRetAttr(
+        Attribute::get(getContext(), Attribute::ElementType, BaseType));
+    return Output;
+  }
+
   /// Provided to resolve 'CreateLoad(Ty, Ptr, "...")' correctly, instead of
   /// converting the string to 'bool' for the isVolatile parameter.
   LoadInst *CreateLoad(Type *Ty, Value *Ptr, const char *Name) {
@@ -1918,27 +1970,31 @@ public:
   AtomicRMWInst *CreateAtomicRMW(AtomicRMWInst::BinOp Op, Value *Ptr,
                                  Value *Val, MaybeAlign Align,
                                  AtomicOrdering Ordering,
-                                 SyncScope::ID SSID = SyncScope::System) {
+                                 SyncScope::ID SSID = SyncScope::System,
+                                 bool Elementwise = false) {
     if (!Align) {
       const DataLayout &DL = BB->getDataLayout();
       Align = llvm::Align(DL.getTypeStoreSize(Val->getType()));
     }
 
-    return Insert(new AtomicRMWInst(Op, Ptr, Val, *Align, Ordering, SSID));
+    return Insert(
+        new AtomicRMWInst(Op, Ptr, Val, *Align, Ordering, SSID, Elementwise));
   }
 
-  CallInst *CreateStructuredGEP(Type *BaseType, Value *PtrBase,
-                                ArrayRef<Value *> Indices,
-                                const Twine &Name = "") {
+  Value *CreateStructuredGEP(Type *BaseType, Value *PtrBase,
+                             ArrayRef<Value *> Indices,
+                             const Twine &Name = "") {
     SmallVector<Value *> Args;
     Args.push_back(PtrBase);
     llvm::append_range(Args, Indices);
 
-    CallInst *Output = CreateIntrinsic(Intrinsic::structured_gep,
-                                       {PtrBase->getType()}, Args, {}, Name);
-    Output->addParamAttr(
-        0, Attribute::get(getContext(), Attribute::ElementType, BaseType));
-    return Output;
+    return CreateIntrinsic(
+        Intrinsic::structured_gep, {PtrBase->getType()}, Args, {}, Name, {},
+        [&](CallInst *Output) {
+          Output->addParamAttr(
+              0,
+              Attribute::get(getContext(), Attribute::ElementType, BaseType));
+        });
   }
 
   Value *CreateGEP(Type *Ty, Value *Ptr, ArrayRef<Value *> IdxList,
@@ -2112,23 +2168,23 @@ public:
   }
 
   Value *CreateUIToFP(Value *V, Type *DestTy, const Twine &Name = "",
-                      bool IsNonNeg = false) {
+                      bool IsNonNeg = false, MDNode *FPMathTag = nullptr) {
     if (IsFPConstrained)
       return CreateConstrainedFPCast(Intrinsic::experimental_constrained_uitofp,
                                      V, DestTy, nullptr, Name);
-    if (Value *Folded = Folder.FoldCast(Instruction::UIToFP, V, DestTy))
-      return Folded;
-    Instruction *I = Insert(new UIToFPInst(V, DestTy), Name);
-    if (IsNonNeg)
-      I->setNonNeg();
-    return I;
+    Value *Val = CreateCast(Instruction::UIToFP, V, DestTy, Name, FPMathTag);
+    if (auto *I = dyn_cast<Instruction>(Val))
+      if (IsNonNeg)
+        I->setNonNeg();
+    return Val;
   }
 
-  Value *CreateSIToFP(Value *V, Type *DestTy, const Twine &Name = ""){
+  Value *CreateSIToFP(Value *V, Type *DestTy, const Twine &Name = "",
+                      MDNode *FPMathTag = nullptr) {
     if (IsFPConstrained)
       return CreateConstrainedFPCast(Intrinsic::experimental_constrained_sitofp,
                                      V, DestTy, nullptr, Name);
-    return CreateCast(Instruction::SIToFP, V, DestTy, Name);
+    return CreateCast(Instruction::SIToFP, V, DestTy, Name, FPMathTag);
   }
 
   Value *CreateFPTrunc(Value *V, Type *DestTy, const Twine &Name = "",
@@ -2746,7 +2802,7 @@ public:
   /// specified alignment.
   LLVM_ABI CallInst *CreateAlignmentAssumption(const DataLayout &DL,
                                                Value *PtrValue,
-                                               unsigned Alignment,
+                                               uint64_t Alignment,
                                                Value *OffsetValue = nullptr);
 
   /// Create an assume intrinsic call that represents an alignment
@@ -2763,10 +2819,14 @@ public:
                                                Value *Alignment,
                                                Value *OffsetValue = nullptr);
 
-  /// Create an assume intrinsic call that represents an dereferencable
+  /// Create an assume intrinsic call that represents a dereferencable
   /// assumption on the provided pointer.
   LLVM_ABI CallInst *CreateDereferenceableAssumption(Value *PtrValue,
                                                      Value *SizeValue);
+
+  /// Create an assume intrinsic call that represents a nonnull assumption on
+  /// the provided pointer.
+  LLVM_ABI CallInst *CreateNonnullAssumption(Value *PtrValue);
 };
 
 /// This provides a uniform API for creating instructions and inserting

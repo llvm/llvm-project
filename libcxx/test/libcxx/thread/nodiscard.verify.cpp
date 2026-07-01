@@ -16,6 +16,7 @@
 #include <latch>
 #include <mutex>
 #include <semaphore>
+#include <shared_mutex>
 #include <thread>
 
 #include "test_macros.h"
@@ -23,6 +24,9 @@
 const auto timePoint = std::chrono::steady_clock::now();
 
 void test() {
+  std::chrono::time_point<std::chrono::steady_clock> time_point;
+  std::chrono::milliseconds duration;
+
   // [futures]
   {
     {
@@ -155,8 +159,6 @@ void test() {
   {
     using M = std::timed_mutex; // necessary for the time_point and duration constructors
     M m;
-    std::chrono::time_point<std::chrono::steady_clock> time_point;
-    std::chrono::milliseconds duration;
     std::unique_lock<M> other;
 
     // clang-format off
@@ -169,6 +171,16 @@ void test() {
     std::unique_lock<M>(m, duration);             // expected-warning {{ignoring temporary created by a constructor declared with 'nodiscard' attribute}}
     std::unique_lock<M>(std::move(other));        // expected-warning {{ignoring temporary created by a constructor declared with 'nodiscard' attribute}}
     // clang-format on
+
+    std::unique_lock<M> lock;
+
+    lock.try_lock(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    lock.try_lock_for(duration);
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    lock.try_lock_until(time_point);
+    lock.owns_lock(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    lock.mutex();     // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   }
 
   // std::lock_guard
@@ -179,6 +191,67 @@ void test() {
     std::lock_guard<std::mutex>(m, std::adopt_lock_t()); // expected-warning {{ignoring temporary created by a constructor declared with 'nodiscard' attribute}}
     // clang-format on
   }
+
+#if TEST_STD_VER >= 17
+  // std::shared_mutex
+  {
+    std::shared_mutex m;
+
+    m.try_lock();        // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    m.try_lock_shared(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  }
+#endif
+
+#if TEST_STD_VER >= 14
+  // std::shared_timed_mutex
+  {
+    std::shared_timed_mutex m;
+
+    m.try_lock(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    m.try_lock_for(duration);
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    m.try_lock_until(time_point);
+    m.try_lock_shared(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    m.try_lock_shared_for(duration);
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    m.try_lock_shared_until(time_point);
+  }
+  // std::shared_lock
+  {
+    using M = std::shared_timed_mutex;
+    M m;
+    std::shared_lock<M> other;
+
+    // expected-warning@+1 {{ignoring temporary created by a constructor declared with 'nodiscard' attribute}}
+    std::shared_lock<M>{};
+    // expected-warning@+1 {{ignoring temporary created by a constructor declared with 'nodiscard' attribute}}
+    std::shared_lock<M>{m};
+    // expected-warning@+1 {{ignoring temporary created by a constructor declared with 'nodiscard' attribute}}
+    std::shared_lock<M>{m, std::defer_lock};
+    // expected-warning@+1 {{ignoring temporary created by a constructor declared with 'nodiscard' attribute}}
+    std::shared_lock<M>{m, std::try_to_lock};
+    // expected-warning@+1 {{ignoring temporary created by a constructor declared with 'nodiscard' attribute}}
+    std::shared_lock<M>{m, std::adopt_lock};
+    // expected-warning@+1 {{ignoring temporary created by a constructor declared with 'nodiscard' attribute}}
+    std::shared_lock<M>{m, time_point};
+    // expected-warning@+1 {{ignoring temporary created by a constructor declared with 'nodiscard' attribute}}
+    std::shared_lock<M>{m, duration};
+    // expected-warning@+1 {{ignoring temporary created by a constructor declared with 'nodiscard' attribute}}
+    std::shared_lock<M>{std::move(other)};
+
+    std::shared_lock<M> lock;
+
+    lock.try_lock(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    lock.try_lock_for(duration);
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    lock.try_lock_until(time_point);
+    lock.owns_lock(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    lock.mutex();     // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  }
+#endif
 
   // Threads
   {

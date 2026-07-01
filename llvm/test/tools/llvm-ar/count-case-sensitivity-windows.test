@@ -1,0 +1,50 @@
+# REQUIRES: system-windows
+
+## File instance counting should respect Windows case-insensitive name matching.
+## On Windows systems, `foo.txt` and `FOO.TXT` are considered equal (case-insensitive),
+## so `-N 2 foo.txt` should extract `FOO.TXT`.
+
+# RUN: rm -rf %t && mkdir %t && cd %t
+# RUN: mkdir a b
+# RUN: echo first > a/foo.txt
+# RUN: echo second > b/FOO.TXT
+# RUN: llvm-ar rc count-case.a a/foo.txt b/FOO.TXT
+
+# RUN: mkdir out1 out2
+# RUN: llvm-ar xN 1 --output out1 count-case.a Foo.txt
+# RUN: cat out1/foo.txt | FileCheck %s --check-prefix=EXTRACT-FIRST
+# RUN: llvm-ar xN 2 --output out2 count-case.a Foo.txt
+# RUN: cat out2/FOO.TXT | FileCheck %s --check-prefix=EXTRACT-SECOND
+# RUN: not llvm-ar xN 3 --output out2 count-case.a Foo.txt 2>&1 | FileCheck %s --check-prefix=EXTRACT-NOT-FOUND
+
+# EXTRACT-FIRST: first
+# EXTRACT-SECOND: second
+# EXTRACT-NOT-FOUND: error: 'Foo.txt' was not found
+
+# RUN: llvm-ar rc delete-count.a a/foo.txt b/FOO.TXT
+# RUN: llvm-ar dN 2 delete-count.a Foo.txt
+# RUN: llvm-ar t delete-count.a | FileCheck %s --check-prefix=DELETE-SECOND --implicit-check-not={{.}}
+# RUN: llvm-ar dN 1 delete-count.a Foo.txt
+# RUN: llvm-ar t delete-count.a | count 0
+
+# DELETE-SECOND: foo.txt
+
+## Test thin archive d option with P and N modifiers (full path matching).
+
+# RUN: echo one > a/file.txt
+# RUN: llvm-ar rc --thin archive-dPN.a a/file.txt a/FILE.txt
+# RUN: llvm-ar t archive-dPN.a | FileCheck %s --check-prefix=THIN-BEFORE --implicit-check-not={{.}}
+
+## Third does not exist; expect no-op.
+# RUN: llvm-ar dPN 3 --thin archive-dPN.a A/File.tXt
+# RUN: llvm-ar t archive-dPN.a | FileCheck %s --check-prefix=THIN-BEFORE --implicit-check-not={{.}}
+
+# RUN: llvm-ar dPN 2 --thin archive-dPN.a A/File.tXt
+# RUN: llvm-ar t archive-dPN.a | FileCheck %s --check-prefix=THIN-AFTER --implicit-check-not={{.}}
+# RUN: llvm-ar dPN 1 --thin archive-dPN.a A/File.tXt
+# RUN: llvm-ar t archive-dPN.a | count 0
+
+# THIN-BEFORE: a/file.txt
+# THIN-BEFORE: a/FILE.txt
+
+# THIN-AFTER: a/file.txt

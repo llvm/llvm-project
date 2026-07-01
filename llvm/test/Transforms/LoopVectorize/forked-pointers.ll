@@ -14,7 +14,7 @@ target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 ;;   }
 ;; }
 
-define dso_local void @forked_ptrs_different_base_same_offset(ptr nocapture readonly %Base1, ptr nocapture readonly %Base2, ptr nocapture %Dest, ptr nocapture readonly %Preds) {
+define void @forked_ptrs_different_base_same_offset(ptr nocapture readonly %Base1, ptr nocapture readonly %Base2, ptr nocapture %Dest, ptr nocapture readonly %Preds) {
 ; CHECK-LABEL: @forked_ptrs_different_base_same_offset(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[VECTOR_MEMCHECK:%.*]]
@@ -47,14 +47,14 @@ define dso_local void @forked_ptrs_different_base_same_offset(ptr nocapture read
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq <4 x i32> [[WIDE_LOAD]], zeroinitializer
 ; CHECK-NEXT:    [[TMP8:%.*]] = select <4 x i1> [[TMP7]], <4 x ptr> [[BROADCAST_SPLAT]], <4 x ptr> [[BROADCAST_SPLAT9]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x ptr> [[TMP8]], i64 0
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <4 x ptr> [[TMP8]], i64 1
-; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x ptr> [[TMP8]], i64 2
-; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <4 x ptr> [[TMP8]], i64 3
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [4 x i8], ptr [[TMP9]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <4 x ptr> [[TMP8]], i64 1
 ; CHECK-NEXT:    [[TMP29:%.*]] = getelementptr [4 x i8], ptr [[TMP11]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[TMP29]], i64 4
+; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x ptr> [[TMP8]], i64 2
 ; CHECK-NEXT:    [[TMP30:%.*]] = getelementptr [4 x i8], ptr [[TMP13]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[TMP30]], i64 8
+; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <4 x ptr> [[TMP8]], i64 3
 ; CHECK-NEXT:    [[TMP31:%.*]] = getelementptr [4 x i8], ptr [[TMP15]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[TMP31]], i64 12
 ; CHECK-NEXT:    [[TMP17:%.*]] = load float, ptr [[TMP10]], align 4
@@ -123,7 +123,7 @@ for.body:
 ;;   }
 ;; }
 
-define dso_local void @forked_ptrs_same_base_different_offset(ptr nocapture readonly %Base, ptr nocapture %Dest, ptr nocapture readonly %Preds) {
+define void @forked_ptrs_same_base_different_offset(ptr nocapture readonly %Base, ptr nocapture %Dest, ptr nocapture readonly %Preds) {
 ; CHECK-LABEL: @forked_ptrs_same_base_different_offset(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
@@ -150,10 +150,10 @@ define dso_local void @forked_ptrs_same_base_different_offset(ptr nocapture read
 entry:
   br label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body
+for.cond.cleanup:
   ret void
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %i.014 = phi i32 [ 0, %entry ], [ %add, %for.body ]
   %arrayidx = getelementptr inbounds i32, ptr %Preds, i64 %indvars.iv

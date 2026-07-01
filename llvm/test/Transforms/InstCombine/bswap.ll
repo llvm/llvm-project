@@ -685,6 +685,32 @@ define i32 @shuf_bitcast_twice_4bytes(i32 %x) {
   ret i32 %cast2
 }
 
+define i64 @shuf_reverse_of_op1_crash(i16 %call, ptr %coerce, <2 x i8> %vec) {
+; CHECK-LABEL: @shuf_reverse_of_op1_crash(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    store i16 [[CALL:%.*]], ptr [[COERCE:%.*]], align 2
+; CHECK-NEXT:    br label [[LBL_CONT1:%.*]]
+; CHECK:       lbl_cont1:
+; CHECK-NEXT:    store i16 poison, ptr null, align 2
+; CHECK-NEXT:    br label [[IF_THEN:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    br label [[LBL_CONT1]]
+;
+entry:
+  store i16 %call, ptr %coerce, align 2
+  %load = load <2 x i8>, ptr %coerce, align 2
+  store <2 x i8> %load, ptr null, align 2
+  br label %lbl_cont1
+
+lbl_cont1:                                        ; preds = %if.then, %entry
+  br label %if.then
+
+if.then:                                          ; preds = %lbl_cont1
+  %shuffle = shufflevector <2 x i8> %vec, <2 x i8> zeroinitializer, <2 x i32> <i32 3, i32 2>
+  store <2 x i8> %shuffle, ptr null, align 2
+  br label %lbl_cont1
+}
+
 ; Negative test - extra use
 declare void @use(<4 x i8>)
 

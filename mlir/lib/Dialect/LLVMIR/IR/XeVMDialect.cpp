@@ -9,6 +9,7 @@
 #include "mlir/Dialect/GPU/IR/CompilationInterfaces.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/DialectImplementation.h"
+#include "mlir/IR/TypeUtilities.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/FileSystem.h"
@@ -346,6 +347,40 @@ LogicalResult MMAOp::verify() {
     if (getResult().getType() != getC().getType())
       return emitOpError("type of C operand must match result type");
   }
+  return success();
+}
+
+LogicalResult MMAMxOp::verify() {
+  if (getC()) {
+    if (getResult().getType() != getC().getType())
+      return emitOpError("type of C operand must match result type");
+  }
+  return success();
+}
+
+LogicalResult TruncfOp::verify() {
+  Type srcTy = getSrc().getType();
+  Type dstTy = getDst().getType();
+  if (isa<VectorType>(srcTy) != isa<VectorType>(dstTy))
+    return emitOpError("both src and dst should be vector types or both should "
+                       "be scalar types");
+  if (getElementTypeOrSelf(srcTy).getIntOrFloatBitWidth() <=
+      getElementTypeOrSelf(dstTy).getIntOrFloatBitWidth())
+    return emitError(
+        "dst element bitwidth should be less than src element bitwidth");
+  return success();
+}
+
+LogicalResult ExtfOp::verify() {
+  Type srcTy = getSrc().getType();
+  Type dstTy = getDst().getType();
+  if (isa<VectorType>(srcTy) != isa<VectorType>(dstTy))
+    return emitOpError("both src and dst should be vector types or both should "
+                       "be scalar types");
+  if (getElementTypeOrSelf(srcTy).getIntOrFloatBitWidth() >=
+      getElementTypeOrSelf(dstTy).getIntOrFloatBitWidth())
+    return emitError(
+        "dst element bitwidth should be greater than src element bitwidth");
   return success();
 }
 

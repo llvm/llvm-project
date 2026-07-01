@@ -436,8 +436,8 @@ define void @scalable.scatter.nxv4f32(<vscale x 4 x float> %val, <vscale x 4 x p
   ret void
 }
 
-declare <vscale x 4 x float> @llvm.masked.expandload.nxv4f32(ptr, <vscale x 4 x i1>, <vscale x 4 x float>)
-declare void @llvm.masked.compressstore.nxv4f32(<vscale x 4 x float>, ptr, <vscale x 4 x i1>)
+declare <vscale x 4 x float> @llvm.masked.expandload.nxv4f32.p0(ptr, <vscale x 4 x i1>, <vscale x 4 x float>)
+declare void @llvm.masked.compressstore.nxv4f32.p0(<vscale x 4 x float>, ptr, <vscale x 4 x i1>)
 
 define <vscale x 4 x float> @scalable.expandload.nxv4f32(ptr align 4 %p, <vscale x 4 x i1> %mask) sanitize_address {
 ; CHECK-LABEL: @scalable.expandload.nxv4f32(
@@ -466,14 +466,14 @@ define <vscale x 4 x float> @scalable.expandload.nxv4f32(ptr align 4 %p, <vscale
 ; CHECK:       .split.split:
 ; CHECK-NEXT:    br label [[TMP13]]
 ; CHECK:       13:
-; CHECK-NEXT:    [[RES:%.*]] = tail call <vscale x 4 x float> @llvm.masked.expandload.nxv4f32(ptr [[P]], <vscale x 4 x i1> [[MASK]], <vscale x 4 x float> undef)
+; CHECK-NEXT:    [[RES:%.*]] = tail call <vscale x 4 x float> @llvm.masked.expandload.nxv4f32.p0(ptr [[P]], <vscale x 4 x i1> [[MASK]], <vscale x 4 x float> undef)
 ; CHECK-NEXT:    ret <vscale x 4 x float> [[RES]]
 ;
 ; DISABLED-LABEL: @scalable.expandload.nxv4f32(
-; DISABLED-NEXT:    [[RES:%.*]] = tail call <vscale x 4 x float> @llvm.masked.expandload.nxv4f32(ptr [[P:%.*]], <vscale x 4 x i1> [[MASK:%.*]], <vscale x 4 x float> undef)
+; DISABLED-NEXT:    [[RES:%.*]] = tail call <vscale x 4 x float> @llvm.masked.expandload.nxv4f32.p0(ptr [[P:%.*]], <vscale x 4 x i1> [[MASK:%.*]], <vscale x 4 x float> undef)
 ; DISABLED-NEXT:    ret <vscale x 4 x float> [[RES]]
 ;
-  %res = tail call <vscale x 4 x float> @llvm.masked.expandload.nxv4f32(ptr %p, <vscale x 4 x i1> %mask, <vscale x 4 x float> undef)
+  %res = tail call <vscale x 4 x float> @llvm.masked.expandload.nxv4f32.p0(ptr %p, <vscale x 4 x i1> %mask, <vscale x 4 x float> undef)
   ret <vscale x 4 x float> %res
 }
 
@@ -504,13 +504,13 @@ define void @scalable.compressstore.nxv4f32(ptr align 4 %p, <vscale x 4 x float>
 ; CHECK:       .split.split:
 ; CHECK-NEXT:    br label [[TMP13]]
 ; CHECK:       13:
-; CHECK-NEXT:    tail call void @llvm.masked.compressstore.nxv4f32(<vscale x 4 x float> [[ARG:%.*]], ptr [[P]], <vscale x 4 x i1> [[MASK]])
+; CHECK-NEXT:    tail call void @llvm.masked.compressstore.nxv4f32.p0(<vscale x 4 x float> [[ARG:%.*]], ptr [[P]], <vscale x 4 x i1> [[MASK]])
 ; CHECK-NEXT:    ret void
 ;
 ; DISABLED-LABEL: @scalable.compressstore.nxv4f32(
-; DISABLED-NEXT:    tail call void @llvm.masked.compressstore.nxv4f32(<vscale x 4 x float> [[ARG:%.*]], ptr [[P:%.*]], <vscale x 4 x i1> [[MASK:%.*]])
+; DISABLED-NEXT:    tail call void @llvm.masked.compressstore.nxv4f32.p0(<vscale x 4 x float> [[ARG:%.*]], ptr [[P:%.*]], <vscale x 4 x i1> [[MASK:%.*]])
 ; DISABLED-NEXT:    ret void
 ;
-  tail call void @llvm.masked.compressstore.nxv4f32(<vscale x 4 x float> %arg, ptr %p, <vscale x 4 x i1> %mask)
+  tail call void @llvm.masked.compressstore.nxv4f32.p0(<vscale x 4 x float> %arg, ptr %p, <vscale x 4 x i1> %mask)
   ret void
 }

@@ -405,7 +405,7 @@ ParseResult AllocaScopeOp::parse(OpAsmParser &parser, OperationState &result) {
 void AllocaScopeOp::getSuccessorRegions(
     RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
   if (!point.isParent()) {
-    regions.push_back(RegionSuccessor::parent());
+    regions.push_back(RegionSuccessor(getOperation()));
     return;
   }
 
@@ -413,7 +413,7 @@ void AllocaScopeOp::getSuccessorRegions(
 }
 
 ValueRange AllocaScopeOp::getSuccessorInputs(RegionSuccessor successor) {
-  return successor.isParent() ? ValueRange(getResults()) : ValueRange();
+  return successor.isOperation() ? ValueRange(getResults()) : ValueRange();
 }
 
 /// Given an operation, return whether this op is guaranteed to
@@ -634,7 +634,7 @@ LogicalResult DistinctObjectsOp::verify() {
 LogicalResult DistinctObjectsOp::inferReturnTypes(
     MLIRContext * /*context*/, std::optional<Location> /*location*/,
     ValueRange operands, DictionaryAttr /*attributes*/,
-    OpaqueProperties /*properties*/, RegionRange /*regions*/,
+    PropertyRef /*properties*/, RegionRange /*regions*/,
     SmallVectorImpl<Type> &inferredReturnTypes) {
   llvm::copy(operands.getTypes(), std::back_inserter(inferredReturnTypes));
   return success();
@@ -737,6 +737,8 @@ bool CastOp::canFoldIntoConsumerOp(CastOp castOp) {
 bool CastOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
   if (inputs.size() != 1 || outputs.size() != 1)
     return false;
+  if (inputs == outputs)
+    return true;
   Type a = inputs.front(), b = outputs.front();
   auto aT = llvm::dyn_cast<MemRefType>(a);
   auto bT = llvm::dyn_cast<MemRefType>(b);
@@ -1110,7 +1112,7 @@ llvm::SmallBitVector SubViewOp::getDroppedDims() {
 
 OpFoldResult DimOp::fold(FoldAdaptor adaptor) {
   // All forms of folding require a known index.
-  auto index = llvm::dyn_cast_if_present<IntegerAttr>(adaptor.getIndex());
+  std::optional<int64_t> index = getConstantIndex();
   if (!index)
     return {};
 
@@ -1121,40 +1123,38 @@ OpFoldResult DimOp::fold(FoldAdaptor adaptor) {
 
   // Out of bound indices produce undefined behavior but are still valid IR.
   // Don't choke on them.
-  int64_t indexVal = index.getInt();
+  int64_t indexVal = index.value();
   if (indexVal < 0 || indexVal >= memrefType.getRank())
     return {};
 
   // Fold if the shape extent along the given index is known.
-  if (!memrefType.isDynamicDim(index.getInt())) {
+  if (!memrefType.isDynamicDim(indexVal)) {
     Builder builder(getContext());
-    return builder.getIndexAttr(memrefType.getShape()[index.getInt()]);
+    return builder.getIndexAttr(memrefType.getShape()[indexVal]);
   }
 
   // The size at the given index is now known to be a dynamic size.
-  unsigned unsignedIndex = index.getValue().getZExtValue();
-
   // Fold dim to the size argument for an `AllocOp`, `ViewOp`, or `SubViewOp`.
   Operation *definingOp = getSource().getDefiningOp();
 
   if (auto alloc = dyn_cast_or_null<AllocOp>(definingOp))
     return *(alloc.getDynamicSizes().begin() +
-             memrefType.getDynamicDimIndex(unsignedIndex));
+             memrefType.getDynamicDimIndex(indexVal));
 
   if (auto alloca = dyn_cast_or_null<AllocaOp>(definingOp))
     return *(alloca.getDynamicSizes().begin() +
-             memrefType.getDynamicDimIndex(unsignedIndex));
+             memrefType.getDynamicDimIndex(indexVal));
 
   if (auto view = dyn_cast_or_null<ViewOp>(definingOp))
     return *(view.getDynamicSizes().begin() +
-             memrefType.getDynamicDimIndex(unsignedIndex));
+             memrefType.getDynamicDimIndex(indexVal));
 
   if (auto subview = dyn_cast_or_null<SubViewOp>(definingOp)) {
     // The result dim is dynamic (the static case was handled above). Dropped
     // dims always have static size 1, so dynamic source sizes are never
     // dropped and map in order to the dynamic result dims. Find the k-th
     // dynamic source size, where k is the dynamic dim index of the result dim.
-    unsigned dynamicResultDimIdx = memrefType.getDynamicDimIndex(unsignedIndex);
+    unsigned dynamicResultDimIdx = memrefType.getDynamicDimIndex(indexVal);
     unsigned dynamicIdx = 0;
     for (OpFoldResult size : subview.getMixedSizes()) {
       if (llvm::isa<Attribute>(size))
@@ -1407,6 +1407,26 @@ LogicalResult DmaStartOp::fold(FoldAdaptor adaptor,
   return foldMemRefCast(*this);
 }
 
+void DmaStartOp::setMemrefsAndIndices(RewriterBase &rewriter, Value newSrc,
+                                      ValueRange newSrcIndices, Value newDst,
+                                      ValueRange newDstIndices) {
+  /// dma_start has special handling for variadic rank
+  SmallVector<Value> newOperands;
+  newOperands.push_back(newSrc);
+  llvm::append_range(newOperands, newSrcIndices);
+  newOperands.push_back(newDst);
+  llvm::append_range(newOperands, newDstIndices);
+  newOperands.push_back(getNumElements());
+  newOperands.push_back(getTagMemRef());
+  llvm::append_range(newOperands, getTagIndices());
+  if (isStrided()) {
+    newOperands.push_back(getStride());
+    newOperands.push_back(getNumElementsPerStride());
+  }
+
+  rewriter.modifyOpInPlace(*this, [&]() { (*this)->setOperands(newOperands); });
+}
+
 // ---------------------------------------------------------------------------
 // DmaWaitOp
 // ---------------------------------------------------------------------------
@@ -1635,6 +1655,19 @@ void GenericAtomicRMWOp::print(OpAsmPrinter &p) {
   p.printOptionalAttrDict((*this)->getAttrs());
 }
 
+TypedValue<MemRefType> GenericAtomicRMWOp::getAccessedMemref() {
+  return getMemref();
+}
+
+std::optional<SmallVector<Value>> GenericAtomicRMWOp::updateMemrefAndIndices(
+    RewriterBase &rewriter, Value newMemref, ValueRange newIndices) {
+  rewriter.modifyOpInPlace(*this, [&]() {
+    getMemrefMutable().assign(newMemref);
+    getIndicesMutable().assign(newIndices);
+  });
+  return std::nullopt;
+}
+
 //===----------------------------------------------------------------------===//
 // AtomicYieldOp
 //===----------------------------------------------------------------------===//
@@ -1770,14 +1803,6 @@ GetGlobalOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 // LoadOp
 //===----------------------------------------------------------------------===//
 
-LogicalResult LoadOp::verify() {
-  if (static_cast<int64_t>(getIndices().size()) != getMemRefType().getRank()) {
-    return emitOpError("incorrect number of indices for load, expected ")
-           << getMemRefType().getRank() << " but got " << getIndices().size();
-  }
-  return success();
-}
-
 OpFoldResult LoadOp::fold(FoldAdaptor adaptor) {
   /// load(memrefcast) -> load
   if (succeeded(foldMemRefCast(*this)))
@@ -1800,6 +1825,18 @@ OpFoldResult LoadOp::fold(FoldAdaptor adaptor) {
     return {};
 
   return splatAttr.getSplatValue<Attribute>();
+}
+
+TypedValue<MemRefType> LoadOp::getAccessedMemref() { return getMemref(); }
+
+std::optional<SmallVector<Value>>
+LoadOp::updateMemrefAndIndices(RewriterBase &rewriter, Value newMemref,
+                               ValueRange newIndices) {
+  rewriter.modifyOpInPlace(*this, [&]() {
+    getMemrefMutable().assign(newMemref);
+    getIndicesMutable().assign(newIndices);
+  });
+  return std::nullopt;
 }
 
 FailureOr<std::optional<SmallVector<Value>>>
@@ -1943,6 +1980,18 @@ LogicalResult PrefetchOp::fold(FoldAdaptor adaptor,
                                SmallVectorImpl<OpFoldResult> &results) {
   // prefetch(memrefcast) -> prefetch
   return foldMemRefCast(*this);
+}
+
+TypedValue<MemRefType> PrefetchOp::getAccessedMemref() { return getMemref(); }
+
+std::optional<SmallVector<Value>>
+PrefetchOp::updateMemrefAndIndices(RewriterBase &rewriter, Value newMemref,
+                                   ValueRange newIndices) {
+  rewriter.modifyOpInPlace(*this, [&]() {
+    getMemrefMutable().assign(newMemref);
+    getIndicesMutable().assign(newIndices);
+  });
+  return std::nullopt;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2281,6 +2330,24 @@ public:
     SmallVector<OpFoldResult> offsets = {op.getConstifiedMixedOffset()};
     SmallVector<OpFoldResult> sizes = op.getConstifiedMixedSizes();
     SmallVector<OpFoldResult> strides = op.getConstifiedMixedStrides();
+
+    // If the offset is a negative constant, we can't fold it because the
+    // resulting memref type would be invalid. In that case, we keep the
+    // original offset.
+    if (auto cst = getConstantIntValue(offsets[0]))
+      if (*cst < 0)
+        offsets[0] = op.getMixedOffsets()[0];
+
+    // If the size is a negative constant, we can't fold it because the
+    // resulting memref type would be invalid. In that case, we keep the
+    // original size.
+    for (auto it : llvm::zip(op.getMixedSizes(), sizes)) {
+      auto &srcSizeOfr = std::get<0>(it);
+      auto &sizeOfr = std::get<1>(it);
+      if (auto cst = getConstantIntValue(sizeOfr))
+        if (*cst < 0)
+          sizeOfr = srcSizeOfr;
+    }
 
     // TODO: Using counting comparison instead of direct comparison because
     // getMixedValues (and therefore ReinterpretCastOp::getMixed...) returns
@@ -2970,17 +3037,22 @@ ReshapeOp::bubbleDownCasts(OpBuilder &builder) {
 // StoreOp
 //===----------------------------------------------------------------------===//
 
-LogicalResult StoreOp::verify() {
-  if (getNumOperands() != 2 + getMemRefType().getRank())
-    return emitOpError("store index operand count not equal to memref rank");
-
-  return success();
-}
-
 LogicalResult StoreOp::fold(FoldAdaptor adaptor,
                             SmallVectorImpl<OpFoldResult> &results) {
   /// store(memrefcast) -> store
   return foldMemRefCast(*this, getValueToStore());
+}
+
+TypedValue<MemRefType> StoreOp::getAccessedMemref() { return getMemref(); }
+
+std::optional<SmallVector<Value>>
+StoreOp::updateMemrefAndIndices(RewriterBase &rewriter, Value newMemref,
+                                ValueRange newIndices) {
+  rewriter.modifyOpInPlace(*this, [&]() {
+    getMemrefMutable().assign(newMemref);
+    getIndicesMutable().assign(newIndices);
+  });
+  return std::nullopt;
 }
 
 FailureOr<std::optional<SmallVector<Value>>>
@@ -3971,9 +4043,6 @@ ViewOp::bubbleDownCasts(OpBuilder &builder) {
 //===----------------------------------------------------------------------===//
 
 LogicalResult AtomicRMWOp::verify() {
-  if (getMemRefType().getRank() != getNumOperands() - 2)
-    return emitOpError(
-        "expects the number of subscripts to be equal to memref rank");
   switch (getKind()) {
   case arith::AtomicRMWKind::addf:
   case arith::AtomicRMWKind::maximumf:
@@ -4015,6 +4084,18 @@ FailureOr<std::optional<SmallVector<Value>>>
 AtomicRMWOp::bubbleDownCasts(OpBuilder &builder) {
   return mlir::detail::bubbleDownInPlaceMemorySpaceCastImpl(getMemrefMutable(),
                                                             getResult());
+}
+
+TypedValue<MemRefType> AtomicRMWOp::getAccessedMemref() { return getMemref(); }
+
+std::optional<SmallVector<Value>>
+AtomicRMWOp::updateMemrefAndIndices(RewriterBase &rewriter, Value newMemref,
+                                    ValueRange newIndices) {
+  rewriter.modifyOpInPlace(*this, [&]() {
+    getMemrefMutable().assign(newMemref);
+    getIndicesMutable().assign(newIndices);
+  });
+  return std::nullopt;
 }
 
 //===----------------------------------------------------------------------===//

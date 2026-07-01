@@ -42,11 +42,10 @@ public:
   lldb::VariableSP RemoveVariableAtIndex(size_t idx);
 
   lldb::VariableSP FindVariable(ConstString name,
-                                bool include_static_members = true);
+                                bool include_static_members = true) const;
 
-  lldb::VariableSP FindVariable(ConstString name,
-                                lldb::ValueType value_type,
-                                bool include_static_members = true);
+  lldb::VariableSP FindVariable(ConstString name, lldb::ValueType value_type,
+                                bool include_static_members = true) const;
 
   uint32_t FindVariableIndex(const lldb::VariableSP &var_sp);
 
@@ -64,8 +63,6 @@ public:
                                   bool if_unique = true);
 
   uint32_t FindIndexForVariable(Variable *variable);
-
-  size_t MemorySize() const;
 
   size_t GetSize() const;
   bool Empty() const { return m_variables.empty(); }

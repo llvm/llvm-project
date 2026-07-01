@@ -9,11 +9,23 @@ if(APPLE)
     )
   # Inline info plist in binary (use target_link_options for this as soon as CMake 3.13 is available)
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-sectcreate,__TEXT,__info_plist,${CMAKE_CURRENT_BINARY_DIR}/lldb-Info.plist")
+
+  if(LLDB_CODESIGN_IDENTITY)
+    set(LLVM_CODESIGNING_IDENTITY ${LLDB_CODESIGN_IDENTITY})
+  elseif(NOT LLVM_CODESIGNING_IDENTITY)
+    set(LLVM_CODESIGNING_IDENTITY "-")
+  endif()
+
+  # If we're building with assertions and LLDB_ENABLE_MTE is set to ON,
+  # build the driver to always run under MTE.
+  if (LLDB_ENABLE_MTE AND LLVM_ENABLE_ASSERTIONS)
+    set(ENTITLEMENTS ENTITLEMENTS ${CMAKE_CURRENT_SOURCE_DIR}/lldb-mte-entitlements.plist)
+  endif()
 endif()
 
 if (UNIX AND "${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
-  remove_definitions("-D_XOPEN_SOURCE=700")                                    
-  add_definitions("-D_ALL_SOURCE")                                             
+  remove_definitions("-D_XOPEN_SOURCE=700")
+  add_definitions("-D_ALL_SOURCE")
 endif()
 
 set(LLDB_DRIVER_LINK_LIBS
@@ -22,13 +34,11 @@ set(LLDB_DRIVER_LINK_LIBS
   lldbUtility
 )
 
-if(WIN32)
-  list(APPEND LLDB_DRIVER_LINK_LIBS lldbHostPythonPathSetup)
-endif()
-
 add_lldb_tool(lldb
   Driver.cpp
   Platform.cpp
+
+  ${ENTITLEMENTS}
 
   LINK_COMPONENTS
     Option
@@ -41,6 +51,17 @@ add_dependencies(lldb
   LLDBOptionsTableGen
   ${tablegen_deps}
 )
+
+# lldbHost and lldbUtility are also statically linked into liblldb.so, so any
+# state they carry exists in two independent copies. On ELF platforms this
+# creates an interposition hazard: when liblldb.so exports a symbol from those
+# archives (e.g. for dynamic plugin loading), the dynamic linker can resolve
+# it to lldb's copy instead of liblldb.so's, breaking shared-state assumptions.
+# --exclude-libs,ALL keeps archive symbols out of lldb's .dynsym, eliminating
+# the hazard without affecting the executable's own use of those symbols.
+if(UNIX AND NOT APPLE)
+  target_link_options(lldb PRIVATE "LINKER:--exclude-libs,ALL")
+endif()
 
 if(LLDB_BUILD_FRAMEWORK)
   # In the build-tree, we know the exact path to the framework directory.

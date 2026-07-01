@@ -24,7 +24,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
-LIBC_INLINE constexpr float expf(float x) {
+LIBC_INLINE float expf(float x) {
   using FPBits = typename fputil::FPBits<float>;
   FPBits xbits(x);
 
@@ -53,8 +53,10 @@ LIBC_INLINE constexpr float expf(float x) {
       // exp(nan) = nan
       if (xbits.is_nan())
         return x;
+#ifndef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
       if (fputil::fenv_is_round_up())
         return FPBits::min_subnormal().get_val();
+#endif
       fputil::set_errno_if_required(ERANGE);
       fputil::raise_except_if_required(FE_UNDERFLOW);
       return 0.0f;
@@ -63,9 +65,11 @@ LIBC_INLINE constexpr float expf(float x) {
     if (xbits.is_pos() && (xbits.uintval() >= 0x42b2'0000)) {
       // x is finite
       if (xbits.uintval() < 0x7f80'0000U) {
+#ifndef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
         int rounding = fputil::quick_get_round();
         if (rounding == FE_DOWNWARD || rounding == FE_TOWARDZERO)
           return FPBits::max_normal().get_val();
+#endif
 
         fputil::set_errno_if_required(ERANGE);
         fputil::raise_except_if_required(FE_OVERFLOW);

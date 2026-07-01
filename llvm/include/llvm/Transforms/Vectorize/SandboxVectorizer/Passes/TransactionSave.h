@@ -17,9 +17,11 @@
 
 namespace llvm::sandboxir {
 
-class TransactionSave : public RegionPass {
+class LLVM_ABI TransactionSave : public RegionPass {
 public:
-  TransactionSave() : RegionPass("tr-save") {}
+  TransactionSave(StringRef AuxArg) : RegionPass("tr-save") {
+    assert(AuxArg.empty() && "This pass ignores aux arg!");
+  }
   bool runOnRegion(Region &Rgn, const Analyses &A) final;
 };
 

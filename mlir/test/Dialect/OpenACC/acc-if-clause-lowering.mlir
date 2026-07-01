@@ -37,6 +37,42 @@ func.func @test_parallel_if(%arg0: memref<10xi32>, %cond: i1) {
 
 // -----
 
+// Test acc.parallel if lowering when host fallback region has multiple blocks.
+// CHECK-LABEL: func.func @test_parallel_if_multiblock
+func.func @test_parallel_if_multiblock(%cond: i1, %n: i32) {
+  %c0_i32 = arith.constant 0 : i32
+  %c1_i32 = arith.constant 1 : i32
+  %counter = memref.alloca() : memref<i32>
+  memref.store %n, %counter[] : memref<i32>
+
+  // CHECK-NOT: acc.parallel if
+  // CHECK: scf.if %{{.*}} {
+  // CHECK:   acc.parallel {
+  // CHECK: } else {
+  // CHECK:   scf.execute_region {
+  // CHECK:   ^bb
+  // CHECK:   cf.cond_br
+  // CHECK:   scf.yield
+  // CHECK:   }
+  // CHECK: }
+  acc.parallel if(%cond) {
+    cf.br ^bb1
+  ^bb1:
+    %v = memref.load %counter[] : memref<i32>
+    %pred = arith.cmpi sgt, %v, %c0_i32 : i32
+    cf.cond_br %pred, ^bb2, ^bb3
+  ^bb2:
+    %next = arith.subi %v, %c1_i32 : i32
+    memref.store %next, %counter[] : memref<i32>
+    cf.br ^bb1
+  ^bb3:
+    acc.yield
+  }
+  return
+}
+
+// -----
+
 // Test acc.kernels with if condition
 // CHECK-LABEL: func.func @test_kernels_if
 func.func @test_kernels_if(%arg0: memref<5xi32>, %cond: i1) {
@@ -334,6 +370,38 @@ func.func @test_acc_private(%arg0: memref<i32>, %cond: i1) {
 
   acc.parallel private(%private : memref<i32>) if(%cond) {
     memref.store %c0_i32, %private[] : memref<i32>
+    acc.yield
+  }
+  return
+}
+
+// -----
+
+// Test that an acc.parallel with an if clause whose body holds an
+// acc.atomic.capture lowers cleanly: the device path keeps the capture and the
+// host fallback inlines it.
+// CHECK-LABEL: func.func @test_parallel_if_atomic_capture
+func.func @test_parallel_if_atomic_capture(%x: memref<i32>, %v: memref<i32>, %cond: i1) {
+  %c1_i32 = arith.constant 1 : i32
+  // CHECK-NOT: acc.parallel if
+  // CHECK: scf.if %{{.*}} {
+  // CHECK:   acc.parallel {
+  // CHECK:     acc.atomic.capture {
+  // CHECK:   } else {
+  // CHECK-NOT: acc.atomic.capture
+  // CHECK:     memref.load
+  // CHECK:     arith.addi
+  // CHECK:     memref.store
+  // CHECK:   }
+  acc.parallel if(%cond) {
+    acc.atomic.capture {
+      acc.atomic.update %x : memref<i32> {
+      ^bb0(%arg: i32):
+        %r = arith.addi %arg, %c1_i32 : i32
+        acc.yield %r : i32
+      }
+      acc.atomic.read %v = %x : memref<i32>, memref<i32>, i32
+    }
     acc.yield
   }
   return

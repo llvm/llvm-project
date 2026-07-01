@@ -58,7 +58,7 @@ static bool pointedUnqualifiedTypesAreEqual(QualType T1, QualType T2) {
   return T1.getUnqualifiedType() == T2.getUnqualifiedType();
 }
 
-static clang::CharSourceRange getReplaceRange(const ExplicitCastExpr *Expr) {
+static CharSourceRange getReplaceRange(const ExplicitCastExpr *Expr) {
   if (const auto *CastExpr = dyn_cast<CStyleCastExpr>(Expr))
     return CharSourceRange::getCharRange(
         CastExpr->getLParenLoc(),
@@ -67,6 +67,28 @@ static clang::CharSourceRange getReplaceRange(const ExplicitCastExpr *Expr) {
     return CharSourceRange::getCharRange(CastExpr->getBeginLoc(),
                                          CastExpr->getLParenLoc());
   llvm_unreachable("Unsupported CastExpr");
+}
+
+static bool needsLeadingSpace(CharSourceRange Range, StringRef ReplacementText,
+                              const SourceManager &SM,
+                              const LangOptions &LangOpts) {
+  if (ReplacementText.empty())
+    return false;
+
+  const SourceLocation Begin = Range.getBegin();
+  if (Begin.isInvalid() || Begin.isMacroID())
+    return false;
+
+  auto BeginInfo = SM.getDecomposedLoc(Begin);
+  bool Invalid = false;
+  StringRef Buffer = SM.getBufferData(BeginInfo.first, &Invalid);
+  if (Invalid || BeginInfo.second == 0)
+    return false;
+
+  return Lexer::isAsciiIdentifierContinueChar(Buffer[BeginInfo.second - 1],
+                                              LangOpts) &&
+         Lexer::isAsciiIdentifierContinueChar(ReplacementText.front(),
+                                              LangOpts);
 }
 
 static StringRef getDestTypeString(const SourceManager &SM,
@@ -196,6 +218,8 @@ void AvoidCStyleCastCheck::check(const MatchFinder::MatchResult &Result) {
                                      getLangOpts()),
           ")");
     }
+    if (needsLeadingSpace(ReplaceRange, CastText, SM, getLangOpts()))
+      CastText.insert(CastText.begin(), ' ');
     Diag << FixItHint::CreateReplacement(ReplaceRange, CastText);
   };
   auto ReplaceWithNamedCast = [&](StringRef CastType) {
@@ -254,7 +278,7 @@ void AvoidCStyleCastCheck::check(const MatchFinder::MatchResult &Result) {
     }
 
     [[fallthrough]];
-  case clang::CK_IntegralCast:
+  case CK_IntegralCast:
     // Convert integral and no-op casts between builtin types and enums to
     // static_cast. A cast from enum to integer may be unnecessary, but it's
     // still retained.

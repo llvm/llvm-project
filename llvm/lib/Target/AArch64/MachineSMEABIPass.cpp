@@ -475,6 +475,9 @@ FunctionInfo MachineSMEABI::collectNeededZAStates(SMEAttrs SMEFnAttrs) {
     auto FirstTerminatorInsertPt = MBB.getFirstTerminator();
     auto FirstNonPhiInsertPt = MBB.getFirstNonPHI();
     for (MachineInstr &MI : reverse(MBB)) {
+      if (MI.isDebugInstr())
+        continue;
+
       MachineBasicBlock::iterator MBBI(MI);
       LiveUnits.stepBackward(MI);
       LiveRegs PhysLiveRegs = getPhysLiveRegs(LiveUnits);
@@ -490,7 +493,6 @@ FunctionInfo MachineSMEABI::collectNeededZAStates(SMEAttrs SMEFnAttrs) {
       auto [NeededState, InsertPt] = getInstNeededZAState(*TRI, MI, SMEFnAttrs);
       assert((InsertPt == MBBI || isCallStartOpcode(InsertPt->getOpcode())) &&
              "Unexpected state change insertion point!");
-      // TODO: Do something to avoid state changes where NZCV is live.
       if (MBBI == FirstTerminatorInsertPt)
         Block.PhysLiveRegsAtExit = PhysLiveRegs;
       if (MBBI == FirstNonPhiInsertPt)
@@ -583,6 +585,9 @@ MachineSMEABI::findStateChangeInsertionPoint(
   setPhysLiveRegs(LiveUnits, PhysLiveRegs);
   auto BestCandidate = std::make_pair(InsertPt, PhysLiveRegs);
   for (MachineBasicBlock::iterator I = InsertPt; I != PrevStateChangeI; --I) {
+    if (I->isDebugInstr())
+      continue;
+
     // Don't move before/into a call (which may have a state change before it).
     if (I->getOpcode() == TII->getCallFrameDestroyOpcode() || I->isCall())
       break;
@@ -1162,20 +1167,33 @@ void MachineSMEABI::emitStateChange(EmitContext &Context,
   }
 }
 
+/// Returns true if private ZA setup can be elided. This occurs when there is
+/// no instruction within the function that requires ZA to be active.
+static bool canElidePrivateZASetup(const FunctionInfo &FnInfo) {
+  for (const BlockInfo &BlockInfo : FnInfo.Blocks) {
+    for (const InstInfo &InstInfo : BlockInfo.Insts) {
+      if (InstInfo.NeededState == ZAState::ACTIVE ||
+          InstInfo.NeededState == ZAState::ACTIVE_ZT0_SAVED)
+        return false;
+    }
+  }
+  return true;
+}
+
 } // end anonymous namespace
 
 INITIALIZE_PASS(MachineSMEABI, "aarch64-machine-sme-abi", "Machine SME ABI",
                 false, false)
 
 bool MachineSMEABI::runOnMachineFunction(MachineFunction &MF) {
-  Subtarget = &MF.getSubtarget<AArch64Subtarget>();
-  if (!Subtarget->hasSME())
-    return false;
-
   AFI = MF.getInfo<AArch64FunctionInfo>();
   SMEAttrs SMEFnAttrs = AFI->getSMEFnAttrs();
   if (!SMEFnAttrs.hasZAState() && !SMEFnAttrs.hasZT0State() &&
       !SMEFnAttrs.hasAgnosticZAInterface())
+    return false;
+
+  Subtarget = &MF.getSubtarget<AArch64Subtarget>();
+  if (!Subtarget->hasSME() && !SMEFnAttrs.hasAgnosticZAInterface())
     return false;
 
   assert(MF.getRegInfo().isSSA() && "Expected to be run on SSA form!");
@@ -1192,6 +1210,9 @@ bool MachineSMEABI::runOnMachineFunction(MachineFunction &MF) {
       getAnalysis<EdgeBundlesWrapperLegacy>().getEdgeBundles();
 
   FunctionInfo FnInfo = collectNeededZAStates(SMEFnAttrs);
+
+  if (SMEFnAttrs.hasPrivateZAInterface() && canElidePrivateZASetup(FnInfo))
+    return false;
 
   SmallVector<ZAState> BundleStates = assignBundleZAStates(Bundles, FnInfo);
 

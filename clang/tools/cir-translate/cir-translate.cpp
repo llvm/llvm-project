@@ -32,6 +32,7 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/Passes.h"
+#include "clang/CIR/InitAllDialects.h"
 #include "clang/CIR/LowerToLLVM.h"
 #include "clang/CIR/MissingFeatures.h"
 
@@ -166,7 +167,8 @@ void registerToLLVMTranslation() {
         return mlir::success();
       },
       [](mlir::DialectRegistry &registry) {
-        registry.insert<mlir::DLTIDialect, mlir::func::FuncDialect>();
+        cir::registerAllDialects(registry);
+        registry.insert<mlir::func::FuncDialect>();
         mlir::registerAllToLLVMIRTranslations(registry);
         cir::direct::registerCIRDialectTranslation(registry);
       });

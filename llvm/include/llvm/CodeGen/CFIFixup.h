@@ -15,14 +15,15 @@
 #define LLVM_CODEGEN_CFIFIXUP_H
 
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/InitializePasses.h"
 
 namespace llvm {
-class CFIFixup : public MachineFunctionPass {
+class LLVM_ABI CFIFixupLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  CFIFixup() : MachineFunctionPass(ID) {}
+  CFIFixupLegacy() : MachineFunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
@@ -30,6 +31,12 @@ public:
   }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
+};
+
+class LLVM_ABI CFIFixupPass : public RequiredPassInfoMixin<CFIFixupPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
 };
 } // namespace llvm
 

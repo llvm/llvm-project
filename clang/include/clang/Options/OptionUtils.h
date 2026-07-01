@@ -77,6 +77,10 @@ std::string GetResourcesPath(StringRef BinaryPath);
 /// executable), for finding the builtin compiler path.
 std::string GetResourcesPath(const char *Argv0, void *MainAddr);
 
+/// Parse a space-separated command line with escaped spaces and backslashes.
+llvm::Expected<llvm::SmallVector<llvm::SmallString<8>>>
+parseEscapedCommandLine(const char *CommandLine);
+
 } // namespace clang
 
 #endif // LLVM_CLANG_OPTIONS_OPTIONUTILS_H

@@ -302,14 +302,16 @@ EntryPointGroupVec selectEntryPointGroups(
 
 } // namespace
 
-void llvm::splitModuleTransitiveFromEntryPoints(
+Error llvm::splitModuleTransitiveFromEntryPoints(
     std::unique_ptr<Module> M,
     function_ref<std::optional<int>(const Function &F)> EntryPointCategorizer,
-    function_ref<void(std::unique_ptr<Module> Part)> Callback) {
+    function_ref<Error(std::unique_ptr<Module> Part)> Callback) {
   EntryPointGroupVec Groups = selectEntryPointGroups(*M, EntryPointCategorizer);
   ModuleSplitter Splitter(std::move(M), std::move(Groups));
   while (Splitter.hasMoreSplits()) {
     ModuleDesc MD = Splitter.getNextSplit();
-    Callback(MD.releaseModule());
+    if (Error E = Callback(MD.releaseModule()))
+      return E;
   }
+  return Error::success();
 }

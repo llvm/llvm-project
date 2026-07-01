@@ -37,31 +37,30 @@ public:
 
   /// Get the libcall routine name for the specified libcall.
   // FIXME: This should be removed. Only LibcallImpl should have a name.
-  LLVM_ABI const char *getLibcallName(RTLIB::Libcall Call) const {
+  const char *getLibcallName(RTLIB::Libcall Call) const {
     // FIXME: Return StringRef
     return RTLIB::RuntimeLibcallsInfo::getLibcallImplName(LibcallImpls[Call])
         .data();
   }
 
   /// Return the lowering's selection of implementation call for \p Call
-  LLVM_ABI RTLIB::LibcallImpl getLibcallImpl(RTLIB::Libcall Call) const {
+  RTLIB::LibcallImpl getLibcallImpl(RTLIB::Libcall Call) const {
     return LibcallImpls[Call];
   }
 
   /// Rename the default libcall routine name for the specified libcall.
-  LLVM_ABI void setLibcallImpl(RTLIB::Libcall Call, RTLIB::LibcallImpl Impl) {
+  void setLibcallImpl(RTLIB::Libcall Call, RTLIB::LibcallImpl Impl) {
     LibcallImpls[Call] = Impl;
   }
 
   // FIXME: Remove this wrapper in favor of directly using
   // getLibcallImplCallingConv
-  LLVM_ABI CallingConv::ID getLibcallCallingConv(RTLIB::Libcall Call) const {
+  CallingConv::ID getLibcallCallingConv(RTLIB::Libcall Call) const {
     return RTLCI.LibcallImplCallingConvs[LibcallImpls[Call]];
   }
 
   /// Get the CallingConv that should be used for the specified libcall.
-  LLVM_ABI CallingConv::ID
-  getLibcallImplCallingConv(RTLIB::LibcallImpl Call) const {
+  CallingConv::ID getLibcallImplCallingConv(RTLIB::LibcallImpl Call) const {
     return RTLCI.LibcallImplCallingConvs[Call];
   }
 

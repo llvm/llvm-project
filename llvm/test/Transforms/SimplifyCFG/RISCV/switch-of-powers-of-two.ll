@@ -35,8 +35,9 @@ define i32 @switch_of_powers(i32 %x) {
 ; RV64ZBB-NEXT:  entry:
 ; RV64ZBB-NEXT:    [[TMP0:%.*]] = call i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 true)
 ; RV64ZBB-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[TMP0]] to i64
-; RV64ZBB-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [7 x i32], ptr @switch.table.switch_of_powers, i64 0, i64 [[TMP1]]
-; RV64ZBB-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, ptr [[SWITCH_GEP]], align 4
+; RV64ZBB-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [7 x i8], ptr @switch.table.switch_of_powers, i64 0, i64 [[TMP1]]
+; RV64ZBB-NEXT:    [[SWITCH_LOAD1:%.*]] = load i8, ptr [[SWITCH_GEP]], align 1
+; RV64ZBB-NEXT:    [[SWITCH_LOAD:%.*]] = zext i8 [[SWITCH_LOAD1]] to i32
 ; RV64ZBB-NEXT:    ret i32 [[SWITCH_LOAD]]
 ;
 entry:
@@ -180,8 +181,7 @@ define i32 @unable_to_create_dense_switch(i32 %x) {
 ; CHECK-NEXT:    switch i32 [[X:%.*]], label [[DEFAULT_CASE:%.*]] [
 ; CHECK-NEXT:      i32 1, label [[RETURN:%.*]]
 ; CHECK-NEXT:      i32 2, label [[BB3:%.*]]
-; CHECK-NEXT:      i32 4, label [[BB4:%.*]]
-; CHECK-NEXT:      i32 4096, label [[BB5:%.*]]
+; CHECK-NEXT:      i32 1073741824, label [[BB5:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       default_case:
 ; CHECK-NEXT:    unreachable
@@ -189,18 +189,15 @@ define i32 @unable_to_create_dense_switch(i32 %x) {
 ; CHECK-NEXT:    br label [[RETURN]]
 ; CHECK:       bb4:
 ; CHECK-NEXT:    br label [[RETURN]]
-; CHECK:       bb5:
-; CHECK-NEXT:    br label [[RETURN]]
 ; CHECK:       return:
-; CHECK-NEXT:    [[P:%.*]] = phi i32 [ 42, [[BB5]] ], [ 0, [[BB4]] ], [ 1, [[BB3]] ], [ 2, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[P:%.*]] = phi i32 [ 42, [[BB5]] ], [ 1, [[BB3]] ], [ 2, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret i32 [[P]]
 ;
 entry:
   switch i32 %x, label %default_case [
   i32 1,  label %bb2
   i32 2, label %bb3
-  i32 4, label %bb4
-  i32 4096, label %bb5
+  i32 1073741824, label %bb4
   ]
 
 
@@ -209,10 +206,9 @@ bb1: br label %return
 bb2: br label %return
 bb3: br label %return
 bb4: br label %return
-bb5: br label %return
 
 return:
-  %p = phi i32 [ 3, %bb1 ], [ 2, %bb2 ], [ 1, %bb3 ], [ 0, %bb4 ], [ 42, %bb5 ]
+  %p = phi i32 [ 3, %bb1 ], [ 2, %bb2 ], [ 1, %bb3 ], [ 42, %bb4 ]
   ret i32 %p
 }
 

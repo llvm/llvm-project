@@ -13,6 +13,7 @@
 #include "ProfiledBinary.h"
 #include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
 #include "llvm/ProfileData/ProfileCommon.h"
+#include "llvm/Support/Timer.h"
 #include <algorithm>
 #include <float.h>
 #include <unordered_set>
@@ -244,10 +245,10 @@ bool ProfileGeneratorBase::filterAmbiguousProfile(FunctionSamples &FS) {
 // from the profile map during the profile generation time. The profiles are all
 // cold functions, it won't have perf impact.
 void ProfileGeneratorBase::filterAmbiguousProfile(SampleProfileMap &Profiles) {
-  for (auto I = ProfileMap.begin(); I != ProfileMap.end();) {
+  for (auto I = Profiles.begin(); I != Profiles.end();) {
     auto FS = I++;
     if (filterAmbiguousProfile(FS->second))
-      ProfileMap.erase(FS);
+      Profiles.erase(FS);
   }
 }
 
@@ -433,7 +434,7 @@ void ProfileGeneratorBase::updateFunctionSamples() {
 }
 
 void ProfileGeneratorBase::collectProfiledFunctions() {
-  std::unordered_set<const BinaryFunction *> ProfiledFunctions;
+  SmallPtrSet<const BinaryFunction *, 0> ProfiledFunctions;
   if (collectFunctionsFromRawProfile(ProfiledFunctions))
     Binary->setProfiledFunctions(ProfiledFunctions);
   else if (collectFunctionsFromLLVMProfile(ProfiledFunctions))
@@ -443,7 +444,7 @@ void ProfileGeneratorBase::collectProfiledFunctions() {
 }
 
 bool ProfileGeneratorBase::collectFunctionsFromRawProfile(
-    std::unordered_set<const BinaryFunction *> &ProfiledFunctions) {
+    SmallPtrSetImpl<const BinaryFunction *> &ProfiledFunctions) {
   if (!SampleCounters)
     return false;
   // Go through all the stacks, ranges and branches in sample counters, use
@@ -476,7 +477,7 @@ bool ProfileGeneratorBase::collectFunctionsFromRawProfile(
 }
 
 bool ProfileGenerator::collectFunctionsFromLLVMProfile(
-    std::unordered_set<const BinaryFunction *> &ProfiledFunctions) {
+    SmallPtrSetImpl<const BinaryFunction *> &ProfiledFunctions) {
   for (const auto &FS : ProfileMap) {
     if (auto *Func = Binary->getBinaryFunction(FS.second.getFunction()))
       ProfiledFunctions.insert(Func);
@@ -485,7 +486,7 @@ bool ProfileGenerator::collectFunctionsFromLLVMProfile(
 }
 
 bool CSProfileGenerator::collectFunctionsFromLLVMProfile(
-    std::unordered_set<const BinaryFunction *> &ProfiledFunctions) {
+    SmallPtrSetImpl<const BinaryFunction *> &ProfiledFunctions) {
   for (auto *Node : ContextTracker) {
     if (!Node->getFuncName().empty())
       if (auto *Func = Binary->getBinaryFunction(Node->getFuncName()))
@@ -501,6 +502,8 @@ ProfileGenerator::getTopLevelFunctionProfile(FunctionId FuncName) {
 }
 
 void ProfileGenerator::generateProfile() {
+  NamedRegionTimer T("generate", "Generate profile", "profgen", "llvm-profgen",
+                     TimeProfGen);
   collectProfiledFunctions();
 
   if (Binary->usePseudoProbes()) {
@@ -529,15 +532,14 @@ void ProfileGeneratorBase::markAllContextPreinlined(
 
 void ProfileGenerator::postProcessProfiles() {
   computeSummaryAndThreshold(ProfileMap);
-  trimColdProfiles(ProfileMap, ColdCountThreshold);
+  trimColdProfiles(ColdCountThreshold);
   filterAmbiguousProfile(ProfileMap);
   if (MarkAllContextPreinlined)
     markAllContextPreinlined(ProfileMap);
   calculateAndShowDensity(ProfileMap);
 }
 
-void ProfileGenerator::trimColdProfiles(const SampleProfileMap &Profiles,
-                                        uint64_t ColdCntThreshold) {
+void ProfileGenerator::trimColdProfiles(uint64_t ColdCntThreshold) {
   if (!TrimColdProfile)
     return;
 
@@ -922,6 +924,8 @@ CSProfileGenerator::getOrCreateContextNode(const SampleContextFrames Context,
 }
 
 void CSProfileGenerator::generateProfile() {
+  NamedRegionTimer T("generate", "Generate CS profile", "profgen",
+                     "llvm-profgen", TimeProfGen);
   FunctionSamples::ProfileIsCS = true;
 
   collectProfiledFunctions();
@@ -1292,8 +1296,7 @@ void CSProfileGenerator::populateBodySamplesWithProbes(
   // Extract the top frame probes by looking up each address among the range in
   // the Address2ProbeMap
   extractProbesFromRange(RangeCounter, ProbeCounter);
-  std::unordered_map<MCDecodedPseudoProbeInlineTree *,
-                     std::unordered_set<FunctionSamples *>>
+  DenseMap<MCDecodedPseudoProbeInlineTree *, SmallPtrSet<FunctionSamples *, 0>>
       FrameSamples;
   for (const auto &PI : ProbeCounter) {
     const MCDecodedPseudoProbe *Probe = PI.first;

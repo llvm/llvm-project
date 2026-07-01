@@ -27,16 +27,16 @@ define void @important_func() personality ptr @__CxxFrameHandler3 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = cleanuppad within none []
 ; CHECK-NEXT:    unreachable
 ; CHECK:       labelE:
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> <float 0x7FF0000000000000, float 0x7FF0000000000000, float 0x7FF0000000000000, float 0xFFF0000000000000>, i64 1
-; CHECK-NEXT:    [[F:%.*]] = extractelement <4 x float> <float 0x7FF0000000000000, float 0x7FF0000000000000, float 0x7FF0000000000000, float 0xFFF0000000000000>, i64 2
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> <float +inf, float +inf, float +inf, float -inf>, i64 1
+; CHECK-NEXT:    [[F:%.*]] = extractelement <4 x float> <float +inf, float +inf, float +inf, float -inf>, i64 2
 ; CHECK-NEXT:    invoke void @funcA()
 ; CHECK-NEXT:    to label [[LABELG:%.*]] unwind label [[CATCH_DISPATCH:%.*]]
 ; CHECK:       labelF:
 ; CHECK-NEXT:    [[TMP2:%.*]] = cleanuppad within none []
 ; CHECK-NEXT:    cleanupret from [[TMP2]] unwind to caller
 ; CHECK:       labelG:
-; CHECK-NEXT:    [[G:%.*]] = extractelement <4 x float> <float 0x7FF0000000000000, float 0x7FF0000000000000, float 0x7FF0000000000000, float 0xFFF0000000000000>, i64 0
-; CHECK-NEXT:    [[H:%.*]] = extractelement <4 x float> <float 0x7FF0000000000000, float 0x7FF0000000000000, float 0x7FF0000000000000, float 0xFFF0000000000000>, i64 3
+; CHECK-NEXT:    [[G:%.*]] = extractelement <4 x float> <float +inf, float +inf, float +inf, float -inf>, i64 0
+; CHECK-NEXT:    [[H:%.*]] = extractelement <4 x float> <float +inf, float +inf, float +inf, float -inf>, i64 3
 ; CHECK-NEXT:    invoke void @funcA()
 ; CHECK-NEXT:    to label [[LABELH:%.*]] unwind label [[CATCH_DISPATCH]]
 ; CHECK:       labelH:

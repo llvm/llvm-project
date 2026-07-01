@@ -22,11 +22,15 @@ namespace cir {
 
 namespace direct {
 
+struct LLVMBlockAddressInfo;
+
 /// Convert a CIR attribute to an LLVM attribute. May use the datalayout for
-/// lowering attributes to-be-stored in memory.
+/// lowering attributes to-be-stored in memory. When the attribute may contain
+/// block address attributes, `blockInfoAddr` is used to resolve them.
 mlir::Value lowerCirAttrAsValue(mlir::Operation *parentOp, mlir::Attribute attr,
                                 mlir::ConversionPatternRewriter &rewriter,
-                                const mlir::TypeConverter *converter);
+                                const mlir::TypeConverter *converter,
+                                LLVMBlockAddressInfo *blockInfoAddr = nullptr);
 
 mlir::LLVM::Linkage convertLinkage(cir::GlobalLinkageKind linkage);
 
@@ -40,7 +44,7 @@ struct LLVMBlockAddressInfo {
   uint32_t getTagIndex() { return blockTagOpIndex++; }
 
   void mapBlockTag(cir::BlockAddrInfoAttr info, mlir::LLVM::BlockTagOp tagOp) {
-    auto result = blockInfoToTagOp.try_emplace(info, tagOp);
+    [[maybe_unused]] auto result = blockInfoToTagOp.try_emplace(info, tagOp);
     assert(result.second &&
            "attempting to map a BlockTag operation that is already mapped");
   }

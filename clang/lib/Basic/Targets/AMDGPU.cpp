@@ -17,6 +17,7 @@
 #include "clang/Basic/MacroBuilder.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
 using namespace clang;
 using namespace clang::targets;
 
@@ -26,7 +27,7 @@ namespace targets {
 // If you edit the description strings, make sure you update
 // getPointerWidthV().
 
-const LangASMap AMDGPUTargetInfo::AMDGPUDefIsGenMap = {
+const LangASMap AMDGPUTargetInfo::AMDGPUAddrSpaceMap = {
     llvm::AMDGPUAS::FLAT_ADDRESS,     // Default
     llvm::AMDGPUAS::GLOBAL_ADDRESS,   // opencl_global
     llvm::AMDGPUAS::LOCAL_ADDRESS,    // opencl_local
@@ -53,37 +54,10 @@ const LangASMap AMDGPUTargetInfo::AMDGPUDefIsGenMap = {
     llvm::AMDGPUAS::PRIVATE_ADDRESS, // hlsl_private
     llvm::AMDGPUAS::GLOBAL_ADDRESS,  // hlsl_device
     llvm::AMDGPUAS::PRIVATE_ADDRESS, // hlsl_input
+    llvm::AMDGPUAS::PRIVATE_ADDRESS, // hlsl_output
     llvm::AMDGPUAS::GLOBAL_ADDRESS,  // hlsl_push_constant
 };
 
-const LangASMap AMDGPUTargetInfo::AMDGPUDefIsPrivMap = {
-    llvm::AMDGPUAS::PRIVATE_ADDRESS,  // Default
-    llvm::AMDGPUAS::GLOBAL_ADDRESS,   // opencl_global
-    llvm::AMDGPUAS::LOCAL_ADDRESS,    // opencl_local
-    llvm::AMDGPUAS::CONSTANT_ADDRESS, // opencl_constant
-    llvm::AMDGPUAS::PRIVATE_ADDRESS,  // opencl_private
-    llvm::AMDGPUAS::FLAT_ADDRESS,     // opencl_generic
-    llvm::AMDGPUAS::GLOBAL_ADDRESS,   // opencl_global_device
-    llvm::AMDGPUAS::GLOBAL_ADDRESS,   // opencl_global_host
-    llvm::AMDGPUAS::GLOBAL_ADDRESS,   // cuda_device
-    llvm::AMDGPUAS::CONSTANT_ADDRESS, // cuda_constant
-    llvm::AMDGPUAS::LOCAL_ADDRESS,    // cuda_shared
-    // SYCL address space values for this map are dummy
-    llvm::AMDGPUAS::FLAT_ADDRESS,     // sycl_global
-    llvm::AMDGPUAS::FLAT_ADDRESS,     // sycl_global_device
-    llvm::AMDGPUAS::FLAT_ADDRESS,     // sycl_global_host
-    llvm::AMDGPUAS::FLAT_ADDRESS,     // sycl_local
-    llvm::AMDGPUAS::FLAT_ADDRESS,     // sycl_private
-    llvm::AMDGPUAS::FLAT_ADDRESS,     // ptr32_sptr
-    llvm::AMDGPUAS::FLAT_ADDRESS,     // ptr32_uptr
-    llvm::AMDGPUAS::FLAT_ADDRESS,     // ptr64
-    llvm::AMDGPUAS::FLAT_ADDRESS,     // hlsl_groupshared
-    llvm::AMDGPUAS::CONSTANT_ADDRESS, // hlsl_constant
-    llvm::AMDGPUAS::PRIVATE_ADDRESS,  // hlsl_private
-    llvm::AMDGPUAS::GLOBAL_ADDRESS,   // hlsl_device
-    llvm::AMDGPUAS::PRIVATE_ADDRESS,  // hlsl_input
-    llvm::AMDGPUAS::GLOBAL_ADDRESS,   // hlsl_push_constant
-};
 } // namespace targets
 } // namespace clang
 
@@ -208,37 +182,32 @@ bool AMDGPUTargetInfo::initFeatureMap(
 
 void AMDGPUTargetInfo::fillValidCPUList(
     SmallVectorImpl<StringRef> &Values) const {
-  if (isAMDGCN(getTriple()))
+  if (getTriple().isAMDGCN())
     llvm::AMDGPU::fillValidArchListAMDGCN(Values);
   else
     llvm::AMDGPU::fillValidArchListR600(Values);
 }
 
-void AMDGPUTargetInfo::setAddressSpaceMap(bool DefaultIsPrivate) {
-  AddrSpaceMap = DefaultIsPrivate ? &AMDGPUDefIsPrivMap : &AMDGPUDefIsGenMap;
-}
-
 AMDGPUTargetInfo::AMDGPUTargetInfo(const llvm::Triple &Triple,
                                    const TargetOptions &Opts)
     : TargetInfo(Triple),
-      GPUKind(isAMDGCN(Triple) ?
-              llvm::AMDGPU::parseArchAMDGCN(Opts.CPU) :
-              llvm::AMDGPU::parseArchR600(Opts.CPU)),
-      GPUFeatures(isAMDGCN(Triple) ?
-                  llvm::AMDGPU::getArchAttrAMDGCN(GPUKind) :
-                  llvm::AMDGPU::getArchAttrR600(GPUKind)) {
+      GPUKind(Triple.isAMDGCN() ? llvm::AMDGPU::parseArchAMDGCN(Opts.CPU)
+                                : llvm::AMDGPU::parseArchR600(Opts.CPU)),
+      GPUFeatures(Triple.isAMDGCN() ? llvm::AMDGPU::getArchAttrAMDGCN(GPUKind)
+                                    : llvm::AMDGPU::getArchAttrR600(GPUKind)) {
   resetDataLayout();
 
-  setAddressSpaceMap(Triple.getOS() == llvm::Triple::Mesa3D ||
-                     !isAMDGCN(Triple));
+  AddrSpaceMap = &AMDGPUAddrSpaceMap;
   UseAddrSpaceMapMangling = true;
 
-  if (isAMDGCN(Triple)) {
+  if (Triple.isAMDGCN()) {
     // __bf16 is always available as a load/store only type on AMDGCN.
     BFloat16Width = BFloat16Align = 16;
     BFloat16Format = &llvm::APFloat::BFloat();
   }
 
+  // TODO: This is not really true for targets without half support, but also
+  // should just be assumed true for the dummy target.
   HasFastHalfType = true;
   HasFloat16 = true;
   WavefrontSize = (GPUFeatures & llvm::AMDGPU::FEATURE_WAVE32) ? 32 : 64;
@@ -265,12 +234,6 @@ AMDGPUTargetInfo::AMDGPUTargetInfo(const llvm::Triple &Triple,
 void AMDGPUTargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
                               const TargetInfo *Aux) {
   TargetInfo::adjust(Diags, Opts, Aux);
-  // ToDo: There are still a few places using default address space as private
-  // address space in OpenCL, which needs to be cleaned up, then the references
-  // to OpenCL can be removed from the following line.
-  setAddressSpaceMap((Opts.OpenCL && !Opts.OpenCLGenericAddressSpace) ||
-                     !isAMDGCN(getTriple()));
-
   AtomicOpts = AtomicOptions(Opts);
 }
 
@@ -284,10 +247,27 @@ void AMDGPUTargetInfo::getTargetDefines(const LangOptions &Opts,
   Builder.defineMacro("__AMD__");
   Builder.defineMacro("__AMDGPU__");
 
-  if (isAMDGCN(getTriple()))
+  if (getTriple().isAMDGCN())
     Builder.defineMacro("__AMDGCN__");
   else
     Builder.defineMacro("__R600__");
+
+  // TODO: __HAS_FMAF__, __HAS_LDEXPF__, __HAS_FP64__ are deprecated and will be
+  // removed in the near future.
+  if (hasFMAF())
+    Builder.defineMacro("__HAS_FMAF__");
+  if (hasFastFMAF())
+    Builder.defineMacro("FP_FAST_FMAF");
+  if (hasLDEXPF())
+    Builder.defineMacro("__HAS_LDEXPF__");
+  if (hasFP64())
+    Builder.defineMacro("__HAS_FP64__");
+  if (hasFastFMA())
+    Builder.defineMacro("FP_FAST_FMA");
+  if (HasFastHalfType)
+    Builder.defineMacro("FP_FAST_FMA_HALF");
+
+  Builder.defineMacro("__AMDGCN_CUMODE__", Twine(CUMode));
 
   // Legacy HIP host code relies on these default attributes to be defined.
   bool IsHIPHost = Opts.HIP && !Opts.CUDAIsDevice;
@@ -295,8 +275,8 @@ void AMDGPUTargetInfo::getTargetDefines(const LangOptions &Opts,
     return;
 
   llvm::SmallString<16> CanonName =
-      (isAMDGCN(getTriple()) ? getArchNameAMDGCN(GPUKind)
-                             : getArchNameR600(GPUKind));
+      (getTriple().isAMDGCN() ? getArchNameAMDGCN(GPUKind)
+                              : getArchNameR600(GPUKind));
 
   // Sanitize the name of generic targets.
   // e.g. gfx10-1-generic -> gfx10_1_generic
@@ -307,7 +287,7 @@ void AMDGPUTargetInfo::getTargetDefines(const LangOptions &Opts,
 
   Builder.defineMacro(Twine("__") + Twine(CanonName) + Twine("__"));
   // Emit macros for gfx family e.g. gfx906 -> __GFX9__, gfx1030 -> __GFX10___
-  if (isAMDGCN(getTriple()) && !IsHIPHost) {
+  if (getTriple().isAMDGCN() && !IsHIPHost) {
     assert(StringRef(CanonName).starts_with("gfx") &&
            "Invalid amdgcn canonical name");
     StringRef CanonFamilyName = getArchFamilyNameAMDGCN(GPUKind);
@@ -315,8 +295,12 @@ void AMDGPUTargetInfo::getTargetDefines(const LangOptions &Opts,
                         Twine("__"));
     Builder.defineMacro("__amdgcn_processor__",
                         Twine("\"") + Twine(CanonName) + Twine("\""));
-    Builder.defineMacro("__amdgcn_target_id__",
-                        Twine("\"") + Twine(*getTargetID()) + Twine("\""));
+    Builder.defineMacro(
+        "__amdgcn_target_id__",
+        Twine("\"") +
+            Twine(getCanonicalTargetID(getArchNameAMDGCN(GPUKind),
+                                       OffloadArchFeatures)) +
+            Twine("\""));
     for (auto F : getAllPossibleTargetIDFeatures(getTriple(), CanonName)) {
       auto Loc = OffloadArchFeatures.find(F);
       if (Loc != OffloadArchFeatures.end()) {
@@ -331,21 +315,6 @@ void AMDGPUTargetInfo::getTargetDefines(const LangOptions &Opts,
 
   if (Opts.AtomicIgnoreDenormalMode)
     Builder.defineMacro("__AMDGCN_UNSAFE_FP_ATOMICS__");
-
-  // TODO: __HAS_FMAF__, __HAS_LDEXPF__, __HAS_FP64__ are deprecated and will be
-  // removed in the near future.
-  if (hasFMAF())
-    Builder.defineMacro("__HAS_FMAF__");
-  if (hasFastFMAF())
-    Builder.defineMacro("FP_FAST_FMAF");
-  if (hasLDEXPF())
-    Builder.defineMacro("__HAS_LDEXPF__");
-  if (hasFP64())
-    Builder.defineMacro("__HAS_FP64__");
-  if (hasFastFMA())
-    Builder.defineMacro("FP_FAST_FMA");
-
-  Builder.defineMacro("__AMDGCN_CUMODE__", Twine(CUMode));
 }
 
 void AMDGPUTargetInfo::setAuxTarget(const TargetInfo *Aux) {

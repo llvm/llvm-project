@@ -81,6 +81,20 @@ public:
       : MachOBuilderLoadCommandImplBase<LCType>(std::forward<ArgTs>(Args)...) {}
 };
 
+template <>
+struct MachOBuilderLoadCommand<MachO::LC_UUID>
+    : public MachOBuilderLoadCommandImplBase<MachO::LC_UUID> {
+  MachOBuilderLoadCommand(const uint8_t (&UUID)[16])
+      : MachOBuilderLoadCommandImplBase<MachO::LC_UUID>() {
+    memcpy(uuid, UUID, sizeof(uuid));
+  }
+
+  MachOBuilderLoadCommand(const std::array<uint8_t, 16> &UUID)
+      : MachOBuilderLoadCommandImplBase<MachO::LC_UUID>() {
+    memcpy(uuid, UUID.data(), sizeof(uuid));
+  }
+};
+
 template <MachO::LoadCommandType LCType>
 struct MachOBuilderDylibLoadCommand
     : public MachOBuilderLoadCommandImplBase<LCType> {

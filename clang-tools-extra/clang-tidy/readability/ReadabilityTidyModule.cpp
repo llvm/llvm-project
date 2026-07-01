@@ -46,9 +46,12 @@
 #include "RedundantDeclarationCheck.h"
 #include "RedundantFunctionPtrDereferenceCheck.h"
 #include "RedundantInlineSpecifierCheck.h"
+#include "RedundantLambdaParameterListCheck.h"
 #include "RedundantMemberInitCheck.h"
+#include "RedundantNestedIfCheck.h"
 #include "RedundantParenthesesCheck.h"
 #include "RedundantPreprocessorCheck.h"
+#include "RedundantQualifiedAliasCheck.h"
 #include "RedundantSmartptrGetCheck.h"
 #include "RedundantStringCStrCheck.h"
 #include "RedundantStringInitCheck.h"
@@ -61,6 +64,7 @@
 #include "StringCompareCheck.h"
 #include "SuspiciousCallArgumentCheck.h"
 #include "TrailingCommaCheck.h"
+#include "TrivialSwitchCheck.h"
 #include "UniqueptrDeleteReleaseCheck.h"
 #include "UppercaseLiteralSuffixCheck.h"
 #include "UseAnyOfAllOfCheck.h"
@@ -142,12 +146,18 @@ public:
         "readability-redundant-casting");
     CheckFactories.registerCheck<RedundantFunctionPtrDereferenceCheck>(
         "readability-redundant-function-ptr-dereference");
+    CheckFactories.registerCheck<RedundantLambdaParameterListCheck>(
+        "readability-redundant-lambda-parameter-list");
     CheckFactories.registerCheck<RedundantMemberInitCheck>(
         "readability-redundant-member-init");
+    CheckFactories.registerCheck<RedundantNestedIfCheck>(
+        "readability-redundant-nested-if");
     CheckFactories.registerCheck<RedundantParenthesesCheck>(
         "readability-redundant-parentheses");
     CheckFactories.registerCheck<RedundantPreprocessorCheck>(
         "readability-redundant-preprocessor");
+    CheckFactories.registerCheck<RedundantQualifiedAliasCheck>(
+        "readability-redundant-qualified-alias");
     CheckFactories.registerCheck<RedundantTypenameCheck>(
         "readability-redundant-typename");
     CheckFactories.registerCheck<ReferenceToConstructedTemporaryCheck>(
@@ -180,6 +190,8 @@ public:
         "readability-suspicious-call-argument");
     CheckFactories.registerCheck<TrailingCommaCheck>(
         "readability-trailing-comma");
+    CheckFactories.registerCheck<TrivialSwitchCheck>(
+        "readability-trivial-switch");
     CheckFactories.registerCheck<UniqueptrDeleteReleaseCheck>(
         "readability-uniqueptr-delete-release");
     CheckFactories.registerCheck<UppercaseLiteralSuffixCheck>(

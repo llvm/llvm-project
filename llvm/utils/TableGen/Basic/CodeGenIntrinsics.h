@@ -39,6 +39,7 @@ struct CodeGenIntrinsic {
   StringRef ClangBuiltinName; // Name of the corresponding GCC builtin, or "".
   StringRef MSBuiltinName;    // Name of the corresponding MS builtin, or "".
   StringRef TargetPrefix;     // Target prefix, e.g. "ppc" for t-s intrinsics.
+  StringRef TargetFeatures;   // Target feature expression required, or "".
 
   /// This structure holds the return values and parameter values of an
   /// intrinsic. If the number of return values is > 1, then the intrinsic
@@ -116,6 +117,9 @@ struct CodeGenIntrinsic {
 
   // True if the intrinsic is marked as IntrNoCreateUndefOrPoison.
   bool isNoCreateUndefOrPoison = false;
+
+  // True if the intrinsic is marked as IntrTriviallyScalarizable.
+  bool isTriviallyScalarizable = false;
 
   enum ArgAttrKind {
     NoCapture,

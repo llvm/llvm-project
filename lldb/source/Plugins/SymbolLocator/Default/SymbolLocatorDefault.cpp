@@ -77,14 +77,16 @@ std::optional<ModuleSpec> SymbolLocatorDefault::LocateExecutableObjectFile(
   const UUID *uuid = module_spec.GetUUIDPtr();
   LLDB_SCOPED_TIMERF(
       "LocateExecutableObjectFile (file = %s, arch = %s, uuid = %p)",
-      exec_fspec ? exec_fspec.GetFilename().AsCString("<NULL>") : "<NULL>",
+      exec_fspec ? exec_fspec.GetFilename().nonEmptyOr("<NULL>").str().c_str()
+                 : "<NULL>",
       arch ? arch->GetArchitectureName() : "<NULL>", (const void *)uuid);
 
-  ModuleSpecList module_specs;
   ModuleSpec matched_module_spec;
-  if (exec_fspec &&
-      ObjectFile::GetModuleSpecifications(exec_fspec, 0, 0, module_specs) &&
-      module_specs.FindMatchingModuleSpec(module_spec, matched_module_spec)) {
+  if (!exec_fspec)
+    return {};
+  ModuleSpecList module_specs =
+      ObjectFile::GetModuleSpecifications(exec_fspec, 0, 0);
+  if (module_specs.FindMatchingModuleSpec(module_spec, matched_module_spec)) {
     ModuleSpec result;
     result.GetFileSpec() = exec_fspec;
     return result;
@@ -104,7 +106,7 @@ std::optional<FileSpec> SymbolLocatorDefault::LocateExecutableSymbolFile(
 
   Progress progress(
       "Locating external symbol file",
-      module_spec.GetFileSpec().GetFilename().AsCString("<Unknown>"));
+      module_spec.GetFileSpec().GetFilename().nonEmptyOr("<Unknown>").str());
 
   FileSpecList debug_file_search_paths = default_search_paths;
 
@@ -114,9 +116,9 @@ std::optional<FileSpec> SymbolLocatorDefault::LocateExecutableSymbolFile(
   FileSystem::Instance().ResolveSymbolicLink(module_file_spec,
                                              module_file_spec);
 
-  ConstString file_dir = module_file_spec.GetDirectory();
+  llvm::StringRef file_dir = module_file_spec.GetDirectory();
   {
-    FileSpec file_spec(file_dir.AsCString("."));
+    FileSpec file_spec(file_dir.nonEmptyOr("."));
     FileSystem::Instance().Resolve(file_spec);
     debug_file_search_paths.AppendIfUnique(file_spec);
   }
@@ -191,17 +193,16 @@ std::optional<FileSpec> SymbolLocatorDefault::LocateExecutableSymbolFile(
 
     if (!uuid_str.empty())
       files.push_back(dirname + "/.build-id/" + uuid_str);
-    if (symbol_file_spec.GetFilename()) {
-      files.push_back(dirname + "/" +
-                      symbol_file_spec.GetFilename().GetCString());
+    if (!symbol_file_spec.GetFilename().empty()) {
+      files.push_back(dirname + "/" + symbol_file_spec.GetFilename().str());
       files.push_back(dirname + "/.debug/" +
-                      symbol_file_spec.GetFilename().GetCString());
+                      symbol_file_spec.GetFilename().str());
 
       // Some debug files may stored in the module directory like this:
       //   /usr/lib/debug/usr/lib/library.so.debug
-      if (!file_dir.IsEmpty())
-        files.push_back(dirname + file_dir.AsCString() + "/" +
-                        symbol_file_spec.GetFilename().GetCString());
+      if (!file_dir.empty())
+        files.push_back(dirname + file_dir.str() + "/" +
+                        symbol_file_spec.GetFilename().str());
     }
 
     const uint32_t num_files = files.size();
@@ -215,12 +216,11 @@ std::optional<FileSpec> SymbolLocatorDefault::LocateExecutableSymbolFile(
         continue;
 
       if (FileSystem::Instance().Exists(file_spec)) {
-        lldb_private::ModuleSpecList specs;
-        const size_t num_specs =
-            ObjectFile::GetModuleSpecifications(file_spec, 0, 0, specs);
+        lldb_private::ModuleSpecList specs =
+            ObjectFile::GetModuleSpecifications(file_spec, 0, 0);
         ModuleSpec mspec;
         bool valid_mspec = false;
-        if (num_specs == 2) {
+        if (specs.GetSize() == 2) {
           // Special case to handle both i386 and i686 from ObjectFilePECOFF
           ModuleSpec mspec2;
           if (specs.GetModuleSpecAtIndex(0, mspec) &&
@@ -231,9 +231,9 @@ std::optional<FileSpec> SymbolLocatorDefault::LocateExecutableSymbolFile(
           }
         }
         if (!valid_mspec) {
-          assert(num_specs <= 1 &&
+          assert(specs.GetSize() <= 1 &&
                  "Symbol Vendor supports only a single architecture");
-          if (num_specs == 1) {
+          if (specs.GetSize() == 1) {
             if (specs.GetModuleSpecAtIndex(0, mspec)) {
               valid_mspec = true;
             }

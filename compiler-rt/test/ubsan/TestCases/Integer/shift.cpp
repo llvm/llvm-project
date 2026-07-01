@@ -1,5 +1,5 @@
-// RUN: %clangxx -DLSH_OVERFLOW -DOP='<<' -fsanitize=shift-base -fno-sanitize-recover=shift %s -o %t1 && not %run %t1 2>&1 | FileCheck %s --check-prefix=CHECK-LSH_OVERFLOW
-// RUN: %clangxx -DLSH_OVERFLOW -DOP='<<=' -fsanitize=shift -fno-sanitize-recover=shift %s -o %t2 && not %run %t2 2>&1 | FileCheck %s --check-prefix=CHECK-LSH_OVERFLOW
+// RUN: %clangxx -DLSH_OVERFLOW -fno-wrapv -DOP='<<' -fsanitize=shift-base -fno-sanitize-recover=shift %s -o %t1 && not %run %t1 2>&1 | FileCheck %s --check-prefix=CHECK-LSH_OVERFLOW
+// RUN: %clangxx -DLSH_OVERFLOW -fno-wrapv -DOP='<<=' -fsanitize=shift -fno-sanitize-recover=shift %s -o %t2 && not %run %t2 2>&1 | FileCheck %s --check-prefix=CHECK-LSH_OVERFLOW
 // RUN: %clangxx -DTOO_LOW -DOP='<<' -fsanitize=shift-exponent -fno-sanitize-recover=shift %s -o %t3 && not %run %t3 2>&1 | FileCheck %s --check-prefix=CHECK-TOO_LOW
 // RUN: %clangxx -DTOO_LOW -DOP='>>' -fsanitize=shift -fno-sanitize-recover=shift %s -o %t4 && not %run %t4 2>&1 | FileCheck %s --check-prefix=CHECK-TOO_LOW
 // RUN: %clangxx -DTOO_LOW -DOP='<<=' -fsanitize=shift -fno-sanitize-recover=shift %s -o %t5 && not %run %t5 2>&1 | FileCheck %s --check-prefix=CHECK-TOO_LOW
@@ -9,8 +9,8 @@
 // RUN: %clangxx -DTOO_HIGH -DOP='<<=' -fsanitize=shift -fno-sanitize-recover=shift %s -o %t9 && not %run %t9 2>&1 | FileCheck %s --check-prefix=CHECK-TOO_HIGH
 // RUN: %clangxx -DTOO_HIGH -DOP='>>=' -fsanitize=shift -fno-sanitize-recover=shift %s -o %t10 && not %run %t10 2>&1 | FileCheck %s --check-prefix=CHECK-TOO_HIGH
 
-// RUN: %clangxx -DLSH_OVERFLOW -DOP='<<' -fsanitize=shift-exponent -fno-sanitize-recover=shift %s -o %t12 && %run %t12
-// RUN: %clangxx -DLSH_OVERFLOW -DOP='>>' -fsanitize=shift-exponent -fno-sanitize-recover=shift %s -o %t13 && %run %t13
+// RUN: %clangxx -DLSH_OVERFLOW -fno-wrapv -DOP='<<' -fsanitize=shift-exponent -fno-sanitize-recover=shift %s -o %t12 && %run %t12
+// RUN: %clangxx -DLSH_OVERFLOW -fno-wrapv -DOP='>>' -fsanitize=shift-exponent -fno-sanitize-recover=shift %s -o %t13 && %run %t13
 // RUN: %clangxx -DTOO_LOW -DOP='<<' -fsanitize=shift-base -fno-sanitize-recover=shift %s -o %t14 && %run %t14
 // RUN: %clangxx -DTOO_LOW -DOP='>>' -fsanitize=shift-base -fno-sanitize-recover=shift %s -o %t15 && %run %t15
 // RUN: %clangxx -DTOO_HIGH -DOP='<<' -fsanitize=shift-base -fno-sanitize-recover=shift %s -o %t16 && %run %t16

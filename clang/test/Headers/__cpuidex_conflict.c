@@ -8,7 +8,7 @@
 // RUN: %clang_cc1 -DIS_STATIC="" -triple nvptx64-nvidia-cuda -aux-triple x86_64-unknown-linux-gnu -aux-target-cpu x86-64 -fcuda-is-device -x cuda %s -o -
 // RUN: %clang_cc1 -DIS_STATIC="" -triple amdgcn-amd-amdhsa -aux-triple x86_64-unknown-linux-gnu -aux-target-cpu x86-64 -fcuda-is-device -x cuda %s -o -
 // RUN: %clang_cc1 -DIS_STATIC="" -triple spirv64 -aux-triple x86_64-unknown-linux-gnu -aux-target-cpu x86-64 -fcuda-is-device -x cuda %s -o -
-// RUN: %clang_cc1 -DIS_STATIC="" -triple spirv64 -aux-triple x86_64-unknown-linux-gnu -aux-target-cpu x86-64 -fsycl-is-device %s -o -
+// RUN: %clang_cc1 -DIS_STATIC="" -triple spirv64 -aux-triple x86_64-unknown-linux-gnu -aux-target-cpu x86-64 -fsycl-is-device -x c++ %s -o -
 
 typedef __SIZE_TYPE__ size_t;
 

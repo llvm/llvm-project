@@ -373,11 +373,12 @@ DenseMap<const InputSection *, int>
 macho::PriorityBuilder::buildInputSectionPriorities() {
   DenseMap<const InputSection *, int> sectionPriorities;
   if (config->bpStartupFunctionSort || config->bpFunctionOrderForCompression ||
-      config->bpDataOrderForCompression) {
+      config->bpDataOrderForCompression ||
+      !config->bpCompressionSortSpecs.empty()) {
     TimeTraceScope timeScope("Balanced Partitioning Section Orderer");
     sectionPriorities = runBalancedPartitioning(
         config->bpStartupFunctionSort ? config->irpgoProfilePath : "",
-        config->bpFunctionOrderForCompression,
+        config->bpCompressionSortSpecs, config->bpFunctionOrderForCompression,
         config->bpDataOrderForCompression,
         config->bpCompressionSortStartupFunctions,
         config->bpVerboseSectionOrderer);
@@ -399,8 +400,11 @@ macho::PriorityBuilder::buildInputSectionPriorities() {
     std::optional<int> symbolPriority = getSymbolPriority(sym);
     if (!symbolPriority)
       return;
-    int &priority = sectionPriorities[sym->isec()];
+    auto *isec = sym->isec();
+    int &priority = sectionPriorities[isec];
     priority = std::min(priority, *symbolPriority);
+    // Order file takes precedence over cold partitioning.
+    isec->isCold = false;
   };
 
   // TODO: Make sure this handles weak symbols correctly.

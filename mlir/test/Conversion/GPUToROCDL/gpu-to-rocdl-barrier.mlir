@@ -65,4 +65,34 @@ func.func @barrier_private_only() {
   gpu.barrier memfence [#gpu.address_space<private>]
   func.return
 }
+
+// GFX9-LABEL: func @barrier_constant_only
+// GFX12-LABEL: func @barrier_constant_only
+func.func @barrier_constant_only() {
+  // GFX9-NEXT: rocdl.s.barrier
+  // GFX12-NEXT: rocdl.s.barrier.signal id = -1
+  // GFX12-NEXT: rocdl.s.barrier.wait id = -1
+  // CHECK-NOT: llvm.fence
+  // Constant memory is read-only, no fencing needed
+  gpu.barrier memfence [#gpu.address_space<constant>]
+  func.return
+}
+
+// CHECK-LABEL: func @barrier_subgroup_scope
+func.func @barrier_subgroup_scope() {
+  // CHECK-NEXT: llvm.fence syncscope("wavefront") release
+  // CHECK-NEXT: rocdl.wave.barrier
+  // CHECK-NEXT: llvm.fence syncscope("wavefront") acquire
+  gpu.barrier scope <subgroup>
+  func.return
+}
+
+// CHECK-LABEL: func @barrier_subgroup_scope_no_fence
+func.func @barrier_subgroup_scope_no_fence() {
+  // CHECK-NEXT: rocdl.wave.barrier
+  // CHECK-NOT: llvm.fence
+  gpu.barrier scope <subgroup> memfence []
+  func.return
+}
+
 }

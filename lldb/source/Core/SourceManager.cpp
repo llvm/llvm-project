@@ -56,8 +56,9 @@ using namespace lldb_private;
 static inline bool is_newline_char(char ch) { return ch == '\n' || ch == '\r'; }
 
 static void resolve_tilde(FileSpec &file_spec) {
-  if (!FileSystem::Instance().Exists(file_spec) && file_spec.GetDirectory() &&
-      file_spec.GetDirectory().GetCString()[0] == '~') {
+  if (!FileSystem::Instance().Exists(file_spec) &&
+      !file_spec.GetDirectory().empty() &&
+      file_spec.GetDirectory().front() == '~') {
     FileSystem::Instance().Resolve(file_spec);
   }
 }
@@ -493,8 +494,8 @@ void SourceManager::File::CommonInitializer(SupportFileNSP support_file_nsp,
   if (future.wait_for(g_progress_delay) == std::future_status::timeout) {
     Debugger *debugger = target_sp ? &target_sp->GetDebugger() : nullptr;
     progress.emplace("Loading source file",
-                     support_file_nsp->GetSpecOnly().GetFilename().GetString(),
-                     1, debugger);
+                     support_file_nsp->GetSpecOnly().GetFilename().str(), 1,
+                     debugger);
   }
   future.wait();
 }
@@ -514,12 +515,14 @@ void SourceManager::File::CommonInitializerImpl(SupportFileNSP support_file_nsp,
       // If this is just a file name, try finding it in the target.
       {
         FileSpec file_spec = support_file_nsp->GetSpecOnly();
-        if (!file_spec.GetDirectory() && file_spec.GetFilename()) {
+        if (file_spec.GetDirectory().empty() &&
+            !file_spec.GetFilename().empty()) {
           bool check_inlines = false;
           SymbolContextList sc_list;
           size_t num_matches =
               target_sp->GetImages().ResolveSymbolContextForFilePath(
-                  file_spec.GetFilename().AsCString(), 0, check_inlines,
+                  ConstString(file_spec.GetFilename()).AsCString(nullptr), 0,
+                  check_inlines,
                   SymbolContextItem(eSymbolContextModule |
                                     eSymbolContextCompUnit),
                   sc_list);
@@ -582,7 +585,12 @@ void SourceManager::File::CommonInitializerImpl(SupportFileNSP support_file_nsp,
 }
 
 void SourceManager::File::SetSupportFile(SupportFileNSP support_file_nsp) {
-  FileSpec file_spec = support_file_nsp->GetSpecOnly();
+  // Use Materialize here to allow for the possibility of support files
+  // that may have special semantics for "generating" a file spec from
+  // a support file (e.g., DWARF with embedded source through
+  // DW_LNCT_LLVM_source).
+  FileSpec file_spec = support_file_nsp->Materialize();
+
   resolve_tilde(file_spec);
   m_support_file_nsp =
       std::make_shared<SupportFile>(file_spec, support_file_nsp->GetChecksum());

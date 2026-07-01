@@ -128,13 +128,13 @@ void transform::tune::AlternativesOp::getSuccessorRegions(
       for (Region &alternative : getAlternatives())
         regions.emplace_back(&alternative);
   else
-    regions.push_back(RegionSuccessor::parent());
+    regions.push_back(RegionSuccessor(getOperation()));
 }
 
 ValueRange
 transform::tune::AlternativesOp::getSuccessorInputs(RegionSuccessor successor) {
-  return successor.isParent() ? ValueRange(getOperation()->getResults())
-                              : ValueRange();
+  return successor.isOperation() ? ValueRange(getOperation()->getResults())
+                                 : ValueRange();
 }
 
 void transform::tune::AlternativesOp::getRegionInvocationBounds(

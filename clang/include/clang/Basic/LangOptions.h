@@ -512,6 +512,11 @@ public:
   CoreFoundationABI CFRuntime = CoreFoundationABI::Unspecified;
 
   std::string ObjCConstantStringClass;
+  std::string ObjCConstantArrayClass;
+  std::string ObjCConstantDictionaryClass;
+  std::string ObjCConstantIntegerNumberClass;
+  std::string ObjCConstantFloatNumberClass;
+  std::string ObjCConstantDoubleNumberClass;
 
   /// The name of the handler function to be called when -ftrapv is
   /// specified.
@@ -543,6 +548,9 @@ public:
 
   /// A prefix map for __FILE__, __BASE_FILE__ and __builtin_FILE().
   std::map<std::string, std::string, std::greater<std::string>> MacroPrefixMap;
+
+  /// Macro name to use in lifetimebound fix-it suggestions.
+  std::string LifetimeSafetyLifetimeBoundMacro;
 
   /// Triples of the OpenMP targets that the host code codegen should
   /// take into account in order to generate accurate offloading descriptors.
@@ -661,6 +669,10 @@ public:
   bool isSubscriptPointerArithmetic() const {
     return ObjCRuntime.isSubscriptPointerArithmetic() &&
            !ObjCSubscriptingLegacyRuntime;
+  }
+
+  bool isCompatibleWith(ClangABI Version) const {
+    return getClangABICompat() <= Version;
   }
 
   bool isCompatibleWithMSVC() const { return MSCompatibilityVersion > 0; }
