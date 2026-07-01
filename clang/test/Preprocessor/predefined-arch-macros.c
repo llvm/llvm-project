@@ -4792,6 +4792,15 @@
 // RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SPARC_LDBL
 // CHECK_SPARC_LDBL: #define __LONG_DOUBLE_128__ 1
 
+// RUN: %clang -E -dM %s -o - 2>&1 \
+// RUN:     -target sparc-unknown-none \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SPARC_LDBL64
+// RUN: %clang -E -dM %s -o - 2>&1 \
+// RUN:     -target sparc-unknown-rtems \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SPARC_LDBL64
+// CHECK_SPARC_LDBL64-NOT: #define __LONG_DOUBLE_128__ 1
+// CHECK_SPARC_LDBL64: #define __SIZEOF_LONG_DOUBLE__ 8
+
 // RUN: %clang -mcpu=v9 -E -dM %s -o - 2>&1 \
 // RUN:     -target sparc-unknown-linux \
 // RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SPARC-V9
