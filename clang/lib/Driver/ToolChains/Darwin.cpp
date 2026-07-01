@@ -312,10 +312,6 @@ void darwin::Linker::AddLinkArgs(Compilation &C, const ArgList &Args,
     // FIXME: Why do this only on this path?
     Args.AddLastArg(CmdArgs, options::OPT_force__cpusubtype__ALL);
 
-    Args.AddLastArg(CmdArgs, options::OPT_bundle);
-    Args.AddAllArgs(CmdArgs, options::OPT_bundle__loader);
-    Args.AddAllArgs(CmdArgs, options::OPT_client__name);
-
     Arg *A;
     if ((A = Args.getLastArg(options::OPT_compatibility__version)) ||
         (A = Args.getLastArg(options::OPT_current__version)) ||
@@ -323,14 +319,25 @@ void darwin::Linker::AddLinkArgs(Compilation &C, const ArgList &Args,
       D.Diag(diag::err_drv_argument_only_allowed_with) << A->getAsString(Args)
                                                        << "-dynamiclib";
 
-    Args.AddLastArg(CmdArgs, options::OPT_force__flat__namespace);
+    if ((A = Args.getLastArg(options::OPT_fapple_kext))) {
+      CmdArgs.push_back("-kext");
+      CmdArgs.push_back("-undefined");
+      CmdArgs.push_back("dynamic_lookup");
+    } else {
+      Args.AddLastArg(CmdArgs, options::OPT_bundle);
+      Args.AddAllArgs(CmdArgs, options::OPT_bundle__loader);
+      Args.AddLastArg(CmdArgs, options::OPT_force__flat__namespace);
+      Args.AddLastArg(CmdArgs, options::OPT_private__bundle);
+    }
+
+    Args.AddAllArgs(CmdArgs, options::OPT_client__name);
     Args.AddLastArg(CmdArgs, options::OPT_keep__private__externs);
-    Args.AddLastArg(CmdArgs, options::OPT_private__bundle);
   } else {
     CmdArgs.push_back("-dylib");
 
     Arg *A;
-    if ((A = Args.getLastArg(options::OPT_bundle)) ||
+    if ((A = Args.getLastArg(options::OPT_fapple_kext)) ||
+        (A = Args.getLastArg(options::OPT_bundle)) ||
         (A = Args.getLastArg(options::OPT_bundle__loader)) ||
         (A = Args.getLastArg(options::OPT_client__name)) ||
         (A = Args.getLastArg(options::OPT_force__flat__namespace)) ||
@@ -4012,6 +4019,8 @@ void Darwin::addStartObjectFileArgs(const ArgList &Args,
   // Derived from startfile spec.
   if (Args.hasArg(options::OPT_dynamiclib))
     addDynamicLibLinkArgs(*this, Args, CmdArgs);
+  else if (Args.hasArg(options::OPT_fapple_kext))
+    CmdArgs.push_back("-kext"); // TODO ?
   else if (Args.hasArg(options::OPT_bundle))
     addBundleLinkArgs(*this, Args, CmdArgs);
   else if (Args.hasArg(options::OPT_pg) && SupportsProfiling())

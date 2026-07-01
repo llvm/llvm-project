@@ -106,12 +106,14 @@ static uint32_t cpuSubtype() {
 
 static bool hasWeakBinding() {
   return config->emitChainedFixups ? in.chainedFixups->hasWeakBinding()
-                                   : in.weakBinding->hasEntry();
+                                   : config->outputType != MH_KEXT_BUNDLE &&
+                                         in.weakBinding->hasEntry();
 }
 
 static bool hasNonWeakDefinition() {
   return config->emitChainedFixups ? in.chainedFixups->hasNonWeakDefinition()
-                                   : in.weakBinding->hasNonWeakDefinition();
+                                   : config->outputType != MH_KEXT_BUNDLE &&
+                                         in.weakBinding->hasNonWeakDefinition();
 }
 
 void MachHeaderSection::writeTo(uint8_t *buf) const {
@@ -139,10 +141,10 @@ void MachHeaderSection::writeTo(uint8_t *buf) const {
   if (config->outputType == MH_DYLIB && config->applicationExtension)
     hdr->flags |= MH_APP_EXTENSION_SAFE;
 
-  if (in.exports->hasWeakSymbol || hasNonWeakDefinition())
+  if (in.exports && (in.exports->hasWeakSymbol || hasNonWeakDefinition()))
     hdr->flags |= MH_WEAK_DEFINES;
 
-  if (in.exports->hasWeakSymbol || hasWeakBinding())
+  if (in.exports && (in.exports->hasWeakSymbol || hasWeakBinding()))
     hdr->flags |= MH_BINDS_TO_WEAK;
 
   for (const OutputSegment *seg : outputSegments) {
@@ -312,6 +314,18 @@ void macho::addNonLazyBindingEntries(const Symbol *sym,
       in.chainedFixups->addBinding(sym, isec, offset, addend);
     else if (isa<Defined>(sym))
       in.chainedFixups->addRebase(isec, offset);
+    else
+      llvm_unreachable("cannot bind to an undefined symbol");
+    return;
+  }
+
+  if (config->outputType == MH_KEXT_BUNDLE) {
+    if (needsBinding(sym))
+      in.extRelocs->addEntry(sym, isec, offset, target->unsignedRelocType,
+                             /*pcrel=*/false, target->p2WordSize);
+    else if (isa<Defined>(sym))
+      in.localRelocs->addEntry(sym, isec, offset, target->unsignedRelocType,
+                               /*pcrel=*/false, target->p2WordSize);
     else
       llvm_unreachable("cannot bind to an undefined symbol");
     return;
@@ -758,7 +772,7 @@ void StubsSection::addEntry(Symbol *sym) {
   if (inserted) {
     sym->stubsIndex = entries.size() - 1;
 
-    if (config->emitChainedFixups)
+    if (config->emitChainedFixups || config->outputType == MH_KEXT_BUNDLE)
       in.got->addEntry(sym);
     else
       addBindingsForStub(sym);
@@ -815,6 +829,57 @@ void StubHelperSection::setUp() {
                     /*noDeadStrip=*/false);
   dyldPrivate->used = true;
 }
+
+RelocSection::RelocSection(const char *name)
+    : LinkEditSection(segment_names::linkEdit, name) {}
+
+void RelocSection::addEntry(const Symbol *sym, const InputSection *isec,
+                            uint32_t offset, uint8_t type, bool pcrel,
+                            uint8_t length) {
+  assert(!this->isFinal && "RelocSection entry added after finalizeContents");
+  this->entries.emplace_back(sym, isec, offset, type, pcrel, length);
+}
+
+void RelocSection::finalizeContents() {
+  assert(!this->isFinal && "RelocSection finalized twice");
+  this->isFinal = true;
+
+  const bool isExternal = this->isExternal();
+
+  raw_svector_ostream os{contents};
+  for (const Entry &e : entries) {
+    char buf[sizeof(uint32_t)];
+    write32le(buf, e.isec->getVA(e.offset));
+    os.write(buf, sizeof(buf));
+
+    uint32_t symOrSectNum;
+    if (isExternal)
+      symOrSectNum = e.sym->symtabIndex;
+    else {
+      const auto *def = dyn_cast_or_null<Defined>(e.sym);
+      const InputSection *targetIsec = def ? def->isec() : e.isec;
+      symOrSectNum = targetIsec->parent->index;
+    }
+
+    write32le(buf, (symOrSectNum & 0x00ffffffu) |
+                       (static_cast<uint32_t>(e.pcrel) << 24) |
+                       (static_cast<uint32_t>(e.length) << 25) |
+                       (static_cast<uint32_t>(isExternal) << 27) |
+                       (static_cast<uint32_t>(e.type) << 28));
+    os.write(buf, sizeof(buf));
+  }
+}
+
+void RelocSection::writeTo(uint8_t *buf) const {
+  assert(this->isFinal && "RelocSection contents written before finalization");
+  memcpy(buf, contents.data(), contents.size());
+}
+
+ExternalRelocSection::ExternalRelocSection()
+    : RelocSection(section_names::extRelocs) {}
+
+LocalRelocSection::LocalRelocSection()
+    : RelocSection(section_names::localRelocs) {}
 
 llvm::DenseMap<llvm::CachedHashStringRef, ConcatInputSection *>
     ObjCSelRefsHelper::methnameToSelref;
@@ -1479,28 +1544,31 @@ IndirectSymtabSection::IndirectSymtabSection()
                       section_names::indirectSymbolTable) {}
 
 uint32_t IndirectSymtabSection::getNumSymbols() const {
-  uint32_t size = in.got->getEntries().size() +
-                  in.tlvPointers->getEntries().size() +
-                  in.stubs->getEntries().size();
-  if (!config->emitChainedFixups)
-    size += in.stubs->getEntries().size();
+  uint32_t size = in.got->getEntries().size();
+  if (config->outputType != MH_KEXT_BUNDLE)
+    size += in.tlvPointers->getEntries().size() +
+            in.stubs->getEntries().size() * (config->emitChainedFixups ? 1 : 2);
   return size;
 }
 
 bool IndirectSymtabSection::isNeeded() const {
-  return in.got->isNeeded() || in.tlvPointers->isNeeded() ||
-         in.stubs->isNeeded();
+  return in.got->isNeeded() || (in.tlvPointers && in.tlvPointers->isNeeded()) ||
+         (in.stubs && in.stubs->isNeeded());
 }
 
 void IndirectSymtabSection::finalizeContents() {
   uint32_t off = 0;
   in.got->reserved1 = off;
   off += in.got->getEntries().size();
-  in.tlvPointers->reserved1 = off;
-  off += in.tlvPointers->getEntries().size();
-  in.stubs->reserved1 = off;
-  if (in.lazyPointers) {
+  if (in.tlvPointers) {
+    in.tlvPointers->reserved1 = off;
+    off += in.tlvPointers->getEntries().size();
+  }
+  if (in.stubs) {
+    in.stubs->reserved1 = off;
     off += in.stubs->getEntries().size();
+  }
+  if (in.lazyPointers) {
     in.lazyPointers->reserved1 = off;
   }
 }
@@ -1517,13 +1585,17 @@ void IndirectSymtabSection::writeTo(uint8_t *buf) const {
     write32le(buf + off * sizeof(uint32_t), indirectValue(sym));
     ++off;
   }
-  for (const Symbol *sym : in.tlvPointers->getEntries()) {
-    write32le(buf + off * sizeof(uint32_t), indirectValue(sym));
-    ++off;
+  if (in.tlvPointers) {
+    for (const Symbol *sym : in.tlvPointers->getEntries()) {
+      write32le(buf + off * sizeof(uint32_t), indirectValue(sym));
+      ++off;
+    }
   }
-  for (const Symbol *sym : in.stubs->getEntries()) {
-    write32le(buf + off * sizeof(uint32_t), indirectValue(sym));
-    ++off;
+  if (in.stubs) {
+    for (const Symbol *sym : in.stubs->getEntries()) {
+      write32le(buf + off * sizeof(uint32_t), indirectValue(sym));
+      ++off;
+    }
   }
 
   if (in.lazyPointers) {
@@ -2321,6 +2393,9 @@ void macho::createSyntheticSymbols() {
     // The following symbols are N_SECT symbols, even though the header is not
     // part of any section and that they are private to the bundle/dylib/object
     // they are part of.
+  case MH_KEXT_BUNDLE:
+    addHeaderSymbol("__mh_kext_bundle_header");
+    break;
   case MH_BUNDLE:
     addHeaderSymbol("__mh_bundle_header");
     break;

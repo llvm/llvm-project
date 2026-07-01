@@ -212,6 +212,16 @@ public:
 
     c->indirectsymoff = indirectSymtabSection->fileOff;
     c->nindirectsyms = indirectSymtabSection->getNumSymbols();
+
+    // For kext bundles
+    if (in.extRelocs && in.extRelocs->isNeeded()) {
+      c->extreloff = in.extRelocs->fileOff;
+      c->nextrel = in.extRelocs->entries.size();
+    }
+    if (in.localRelocs && in.localRelocs->isNeeded()) {
+      c->locreloff = in.localRelocs->fileOff;
+      c->nlocrel = in.localRelocs->entries.size();
+    }
   }
 
   SymtabSection *symtabSection;
@@ -678,12 +688,23 @@ static void prepareSymbolRelocation(Symbol *sym, const InputSection *isec,
   const RelocAttrs &relocAttrs = target->getRelocAttrs(r.type);
 
   if (relocAttrs.hasAttr(RelocAttrBits::BRANCH)) {
-    if (needsBinding(sym))
-      in.stubs->addEntry(sym);
+    if (needsBinding(sym)) {
+      if (config->outputType == MH_KEXT_BUNDLE) {
+        in.extRelocs->addEntry(sym, isec, r.offset, r.type, r.pcrel, r.length);
+      } else {
+        in.stubs->addEntry(sym);
+      }
+    }
   } else if (relocAttrs.hasAttr(RelocAttrBits::GOT)) {
     if (relocAttrs.hasAttr(RelocAttrBits::POINTER) || needsBinding(sym))
       in.got->addEntry(sym);
   } else if (relocAttrs.hasAttr(RelocAttrBits::TLV)) {
+    if (config->outputType == MH_KEXT_BUNDLE) {
+      fatal(isec->getLocation(r.offset) +
+            ": TLV reference to external symbol " + sym->getName() +
+            " is not supported in kext bundles");
+      return;
+    }
     if (needsBinding(sym))
       in.tlvPointers->addEntry(sym);
   } else if (relocAttrs.hasAttr(RelocAttrBits::UNSIGNED)) {
@@ -735,6 +756,9 @@ void Writer::scanRelocations() {
         if (!r.pcrel) {
           if (config->emitChainedFixups)
             in.chainedFixups->addRebase(isec, r.offset);
+          else if (config->outputType == MH_KEXT_BUNDLE)
+            in.localRelocs->addEntry(sym, isec, r.offset, r.type, false,
+                                     r.length);
           else
             in.rebase->addEntry(isec, r.offset);
         }
@@ -824,8 +848,9 @@ template <class LP> void Writer::createLoadCommands() {
 
   if (config->emitChainedFixups) {
     in.header->addLoadCommand(make<LCChainedFixups>(in.chainedFixups));
-    in.header->addLoadCommand(make<LCExportsTrie>(in.exports));
-  } else {
+    if (config->outputType != MH_KEXT_BUNDLE)
+      in.header->addLoadCommand(make<LCExportsTrie>(in.exports));
+  } else if (config->outputType != MH_KEXT_BUNDLE) {
     in.header->addLoadCommand(make<LCDyldInfo>(
         in.rebase, in.binding, in.weakBinding, in.lazyBinding, in.exports));
   }
@@ -851,6 +876,7 @@ template <class LP> void Writer::createLoadCommands() {
       in.header->addLoadCommand(make<LCSubClient>(client));
     break;
   case MH_BUNDLE:
+  case MH_KEXT_BUNDLE:
     break;
   default:
     llvm_unreachable("unhandled output file type");
@@ -1042,6 +1068,7 @@ template <class LP> void Writer::createOutputSections() {
     break;
   case MH_DYLIB:
   case MH_BUNDLE:
+  case MH_KEXT_BUNDLE:
     break;
   default:
     llvm_unreachable("unhandled output file type");
@@ -1160,6 +1187,11 @@ void Writer::finalizeLinkEditSegment() {
                     if (osec)
                       osec->finalizeContents();
                   });
+
+  if (in.extRelocs)
+    in.extRelocs->finalizeContents();
+  if (in.localRelocs)
+    in.localRelocs->finalizeContents();
 
   // Now that __LINKEDIT is filled out, do a proper calculation of its
   // addresses and offsets.
@@ -1387,9 +1419,9 @@ void macho::createSyntheticSections() {
       in.getOrCreateCStringSection(section_names::objcMethname,
                                    /*forceDedupStrings=*/true));
   in.wordLiteralSection = make<WordLiteralSection>();
-  if (config->emitChainedFixups) {
+  if (config->emitChainedFixups)
     in.chainedFixups = make<ChainedFixupsSection>();
-  } else {
+  else if (config->outputType != MH_KEXT_BUNDLE) {
     in.rebase = make<RebaseSection>();
     in.binding = make<BindingSection>();
     in.weakBinding = make<WeakBindingSection>();
@@ -1397,15 +1429,24 @@ void macho::createSyntheticSections() {
     in.lazyPointers = make<LazyPointerSection>();
     in.stubHelper = make<StubHelperSection>();
   }
-  in.exports = make<ExportSection>();
+  if (config->outputType == MH_KEXT_BUNDLE) {
+    if (!config->emitChainedFixups)
+      in.localRelocs = make<LocalRelocSection>();
+  } else {
+    in.exports = make<ExportSection>();
+  }
   in.got = make<GotSection>();
-  in.tlvPointers = make<TlvPointerSection>();
-  in.stubs = make<StubsSection>();
+  if (config->outputType != MH_KEXT_BUNDLE) {
+    in.tlvPointers = make<TlvPointerSection>();
+    in.stubs = make<StubsSection>();
+  }
   in.objcStubs = make<ObjCStubsSection>();
   in.unwindInfo = makeUnwindInfoSection();
   in.objCImageInfo = make<ObjCImageInfoSection>();
   in.initOffsets = make<InitOffsetsSection>();
   in.objcMethList = make<ObjCMethListSection>();
+  if (config->outputType == MH_KEXT_BUNDLE)
+    in.extRelocs = make<ExternalRelocSection>();
 
   // This section contains space for just a single word, and will be used by
   // dyld to cache an address to the image loader it uses.
