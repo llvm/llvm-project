@@ -4,15 +4,15 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-define void @h(i8 %x) !type !2 {
+define void @h(i8 %x) !type !2 !guid !{i64 8124147457056772133} {
   ret void
 }
 
 declare !type !8 void @f(i32 %x)
-define available_externally void @f2(i32 %x) !type !8 {
+define available_externally void @f2(i32 %x) !type !8 !guid !{i64 8471399308421654326} {
   ret void
 }
-define void @f3(i32 %x) !type !8 {
+define void @f3(i32 %x) !type !8 !guid !{i64 4197650231481825559} {
   ret void
 }
 
@@ -50,14 +50,21 @@ define void @f3(i32 %x) !type !8 {
 
 ; CHECK-DAG: @g                    = alias [8 x i8], ptr [[JT2]]
 
-; CHECK-DAG: define hidden void @h.cfi(i8 {{.*}}) !type !{{.*}}
-; CHECK-DAG: declare !type !{{.*}} void @external()
-; CHECK-DAG: declare !type !{{.*}} void @external_weak()
+; CHECK-DAG: define hidden void @h.cfi(i8 {{.*}}) !type !{{.*}} !guid ![[H_GUID:[0-9]+]] {
+; CHECK-DAG: declare !type !{{.*}} !guid ![[EXTERNAL_GUID:[0-9]+]] void @external()
+; CHECK-DAG: declare !type !{{.*}} !guid ![[EXTERNAL_WEAK_GUID:[0-9]+]] extern_weak void @external_weak()
 ; CHECK-DAG: declare !type !{{.*}} void @f.cfi(i32)
-; CHECK-DAG: declare !type !{{.*}} void @f2.cfi(i32)
-; CHECK-DAG: define void @f3(i32 {{.*}}) !type !3
-; CHECK-DAG: !3 = !{i64 0, !"typeid3"}
-; CHECK-DAG: declare !type !{{.*}} void @g.cfi()
+; CHECK-DAG: declare !type !{{.*}} !guid ![[F2_GUID:[0-9]+]] hidden void @f2.cfi(i32)
+; CHECK-DAG: define void @f3(i32 {{.*}}) !type ![[F3_TYPE:[0-9]+]] !guid ![[F3_GUID:[0-9]+]] {
+; CHECK-DAG: declare !type !{{.*}} !guid ![[G_GUID:[0-9]+]] hidden void @g.cfi()
+; CHECK-DAG: ![[F3_TYPE]] = !{i64 0, !"typeid3"}
+; CHECK-DAG: ![[H_GUID]] = !{i64 8124147457056772133}
+; CHECK-DAG: ![[F2_GUID]] = !{i64 8471399308421654326}
+; CHECK-DAG: ![[F3_GUID]] = !{i64 4197650231481825559}
+; CHECK-DAG: ![[EXTERNAL_GUID]] = !{i64 5224464028922159466}
+; CHECK-DAG: ![[EXTERNAL_WEAK_GUID]] = !{i64 5227079976482001346}
+; -5300342847281564238 is (int64_t)(13146401226427987378)
+; CHECK-DAG: ![[G_GUID]] = !{i64 -5300342847281564238}
 
 
 ; SUMMARY:      TypeIdMap:
