@@ -735,23 +735,14 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
     if (!SmallerValueMentioned && !FPTiedToInt && InputDomain != AD_Other &&
         OutputConstraintInfos[TiedTo].allowsRegister()) {
 
-      // FIXME: GCC supports the OutSize to be 128 at maximum. Currently codegen
-      // crash when the size larger than the register size. So we limit it here.
-      if (OutTy->isStructureType() &&
-          Context.getIntTypeForBitwidth(OutSize, /*Signed*/ false).isNull()) {
+      // FIXME: GCC supports some non-scalar register outputs. Currently
+      // codegen crashes when the size cannot be represented by an integer type
+      // that fits in a general-purpose register.
+      bool FitsInGeneralPurposeRegister =
+          OutSize <= Context.getTargetInfo().getRegisterWidth() &&
+          !Context.getIntTypeForBitwidth(OutSize, /*Signed*/ false).isNull();
+      if (OutputDomain == AD_Other && !FitsInGeneralPurposeRegister) {
         targetDiag(OutputExpr->getExprLoc(), diag::err_store_value_to_reg);
-        return NS;
-      }
-
-      // FIXME: GCC supports this, but codegen currently crashes when lowering
-      // a pointer input tied to a larger aggregate register output.
-      if (OutputDomain == AD_Other && InTy->isPointerType() &&
-          OutSize > InSize &&
-          !Context.getIntTypeForBitwidth(OutSize, /*Signed*/ false).isNull()) {
-        targetDiag(InputExpr->getBeginLoc(),
-                   diag::err_asm_tying_incompatible_types)
-            << InTy << OutTy << OutputExpr->getSourceRange()
-            << InputExpr->getSourceRange();
         return NS;
       }
 
