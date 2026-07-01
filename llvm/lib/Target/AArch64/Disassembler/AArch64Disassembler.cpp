@@ -261,6 +261,12 @@ static DecodeStatus DecodeMemExtend(MCInst &Inst, unsigned Imm,
 static DecodeStatus DecodeMRSSystemRegister(MCInst &Inst, unsigned Imm,
                                             uint64_t Address,
                                             const MCDisassembler *Decoder) {
+  // FEAT_HINTE occupies encodings that otherwise look like fallback MRS/MSR
+  // system-register accesses. Do not decode that space as a generic
+  // S<op0>_<op1>_<Cn>_<Cm>_<op2> register.
+  if (AArch64SysReg::isHINTESystemRegisterEncoding(Imm))
+    return Fail;
+
   Inst.addOperand(MCOperand::createImm(Imm));
 
   // Every system register in the encoding space is valid with the syntax
@@ -271,6 +277,9 @@ static DecodeStatus DecodeMRSSystemRegister(MCInst &Inst, unsigned Imm,
 static DecodeStatus DecodeMSRSystemRegister(MCInst &Inst, unsigned Imm,
                                             uint64_t Address,
                                             const MCDisassembler *Decoder) {
+  if (AArch64SysReg::isHINTESystemRegisterEncoding(Imm))
+    return Fail;
+
   Inst.addOperand(MCOperand::createImm(Imm));
 
   return Success;
@@ -1465,6 +1474,16 @@ static DecodeStatus DecodeImm8OptLsl(MCInst &Inst, unsigned Imm, uint64_t Addr,
     return Fail;
   Inst.addOperand(MCOperand::createImm(Val));
   Inst.addOperand(MCOperand::createImm(Shift));
+  return Success;
+}
+
+static DecodeStatus DecodeHinteUImm16(MCInst &Inst, unsigned Imm, uint64_t Addr,
+                                      const MCDisassembler *Decoder) {
+  if (Imm > 65535 ||
+      (Imm >= 12319 && Imm <= 16383 && ((Imm - 12319) % 32) == 0))
+    return Fail;
+
+  Inst.addOperand(MCOperand::createImm(Imm));
   return Success;
 }
 

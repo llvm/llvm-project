@@ -867,6 +867,7 @@ namespace AArch64SysReg {
 
   uint32_t parseGenericRegister(StringRef Name);
   std::string genericRegisterString(uint32_t Bits);
+  bool isHINTESystemRegisterEncoding(uint32_t Bits);
 }
 
 namespace AArch64TLBI {

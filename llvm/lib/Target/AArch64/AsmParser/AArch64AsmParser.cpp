@@ -990,6 +990,17 @@ public:
     return (Val >= N && Val <= M);
   }
 
+  bool isHinteUImm16() const {
+    if (!isImm())
+      return false;
+    const MCConstantExpr *MCE = dyn_cast<MCConstantExpr>(getImm());
+    if (!MCE)
+      return false;
+    int64_t Val = MCE->getValue();
+    return Val >= 0 && Val <= 65535 &&
+           !(Val >= 12319 && Val <= 16383 && ((Val - 12319) % 32) == 0);
+  }
+
   // NOTE: Also used for isLogicalImmNot as anything that can be represented as
   // a logical immediate can always be represented when inverted.
   template <typename T>
@@ -3953,6 +3964,7 @@ constexpr EnumStringDef<FeatureBitset> ExtensionDefs[] = {
     {{"poe2"}, {AArch64::FeatureS1POE2}},
     {{"tev"}, {AArch64::FeatureTEV}},
     {{"btie"}, {AArch64::FeatureBTIE}},
+    {{"hinte"}, {AArch64::FeatureHINTE}},
     {{"dit"}, {AArch64::FeatureDIT}},
     {{"brbe"}, {AArch64::FeatureBRBE}},
     {{"bti"}, {AArch64::FeatureBranchTargetId}},
@@ -4413,8 +4425,14 @@ ParseStatus AArch64AsmParser::tryParseSysReg(OperandVector &Operands) {
   if (SysReg && SysReg->haveFeatures(getSTI().getFeatureBits())) {
     MRSReg = SysReg->Readable ? SysReg->Encoding : -1;
     MSRReg = SysReg->Writeable ? SysReg->Encoding : -1;
-  } else
+  } else {
     MRSReg = MSRReg = AArch64SysReg::parseGenericRegister(Tok.getString());
+    const FeatureBitset &FeatureBits = getSTI().getFeatureBits();
+    if (MRSReg != -1 && AArch64SysReg::isHINTESystemRegisterEncoding(MRSReg) &&
+        !FeatureBits[AArch64::FeatureHINTE] &&
+        !FeatureBits[AArch64::FeatureAll])
+      MRSReg = MSRReg = -1;
+  }
 
   unsigned PStateImm = -1;
   auto PState15 = AArch64PState::lookupPStateImm0_15ByName(Tok.getString());
@@ -6309,6 +6327,11 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
     return Error(Loc, "immediate must be an integer in range [0, 255].");
   case Match_InvalidImm0_65535:
     return Error(Loc, "immediate must be an integer in range [0, 65535].");
+  case Match_InvalidHinteUImm16:
+    return Error(Loc,
+                 "immediate must be an integer in range [0, 65535], excluding "
+                 "values in range [12319, 16383] where (value - 12319) is a "
+                 "multiple of 32.");
   case Match_InvalidImm1_8:
     return Error(Loc, "immediate must be an integer in range [1, 8].");
   case Match_InvalidImm1_16:
@@ -7090,6 +7113,7 @@ bool AArch64AsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidImm0_127:
   case Match_InvalidImm0_255:
   case Match_InvalidImm0_65535:
+  case Match_InvalidHinteUImm16:
   case Match_InvalidImm1_8:
   case Match_InvalidImm1_16:
   case Match_InvalidImm1_32:
