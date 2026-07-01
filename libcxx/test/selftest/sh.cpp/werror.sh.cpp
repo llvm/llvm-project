@@ -11,9 +11,6 @@
 // Make sure that even a simple unused variable warning is treated as an
 // error in the test suite, including in .sh.cpp tests.
 
-// TODO: We don't enable -Werror on GCC right now, because too many tests fail.
-// UNSUPPORTED: gcc
-
 // RUN: %{build} -Wunused-variable
 // RUN: %{run}
 
