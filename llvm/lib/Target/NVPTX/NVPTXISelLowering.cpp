@@ -1320,7 +1320,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   //
   // After all vararg is processed, 'VAOffset' holds the size of the
   // vararg byte array.
-  assert((CLI.IsVarArg || CLI.Args.size() == CLI.NumFixedArgs) &&
+  assert((CLI.IsVarArg || CLI.Args.size() <= CLI.NumFixedArgs) &&
          "Non-VarArg function with extra arguments");
 
   const unsigned FirstVAArg = CLI.NumFixedArgs; // position of first variadic
@@ -3972,8 +3972,10 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
 
     Type *Ty = Arg.getType();
 
-    if (ArgIns.empty())
-      report_fatal_error("Empty parameter types are not supported");
+    if (ArgIns.empty()) {
+      assert(Ty->isEmptyTy() && "Only empty types produce no parameter values");
+      continue;
+    }
 
     if (Arg.use_empty()) {
       // argument is dead

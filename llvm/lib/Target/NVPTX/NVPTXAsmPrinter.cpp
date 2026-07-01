@@ -284,7 +284,9 @@ void NVPTXAsmPrinter::printReturnValStr(const Function *F, raw_ostream &O) {
   const auto *TLI = cast<NVPTXTargetLowering>(STI.getTargetLowering());
 
   Type *Ty = F->getReturnType();
-  if (Ty->getTypeID() == Type::VoidTyID)
+  // A void or zero-sized return type (e.g. an empty struct) produces no return
+  // parameter.
+  if (Ty->isVoidTy() || Ty->isEmptyTy())
     return;
   O << " (";
 
@@ -325,7 +327,7 @@ void NVPTXAsmPrinter::emitCallPrototype(const CallBase &CB,
 
   O << "prototype_" << UniqueCallSite << " : .callprototype ";
 
-  if (RetTy->isVoidTy()) {
+  if (RetTy->isVoidTy() || RetTy->isEmptyTy()) {
     O << "()";
   } else {
     O << "(";
@@ -403,10 +405,16 @@ void NVPTXAsmPrinter::emitCallPrototype(const CallBase &CB,
   const FunctionType *FTy = CB.getFunctionType();
   const unsigned NumArgs = FTy->getNumParams();
 
-  interleave(seq(NumArgs), O, MakeArg, ", ");
+  // Zero-sized arguments (e.g. empty structs) are not passed and so do not
+  // appear in the prototype.
+  auto LiveArgs = make_filter_range(seq(NumArgs), [&](unsigned I) {
+    return !CB.getArgOperand(I)->getType()->isEmptyTy();
+  });
+
+  interleave(LiveArgs, O, MakeArg, ", ");
 
   if (FTy->isVarArg() && CB.arg_size() > NumArgs)
-    O << (NumArgs ? "," : "") << " .param .align "
+    O << (LiveArgs.empty() ? "" : ",") << " .param .align "
       << STI.getMaxRequiredAlignment() << " .b8 _[]";
 
   O << ")";
@@ -1472,6 +1480,11 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
 
   for (const Argument &Arg : F->args()) {
     Type *Ty = Arg.getType();
+
+    // Skip zero-sized arguments; they are not passed as PTX parameters.
+    if (Ty->isEmptyTy())
+      continue;
+
     const std::string ParamSym = TLI->getParamName(F, Arg.getArgNo());
 
     if (!IsFirst)
