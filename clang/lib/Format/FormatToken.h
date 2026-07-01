@@ -331,9 +331,9 @@ struct FormatToken {
         EndsBinaryExpression(false), PartOfMultiVariableDeclStmt(false),
         ContinuesLineCommentSection(false), Finalized(false),
         ClosesRequiresClause(false), EndsCppAttributeGroup(false),
-        BlockKind(BK_Unknown), Decision(FD_Unformatted),
-        PackingKind(PPK_Inconclusive), TypeIsFinalized(false),
-        Type(TT_Unknown) {}
+        HasEnumTrailingCommaHandled(false), BlockKind(BK_Unknown),
+        Decision(FD_Unformatted), PackingKind(PPK_Inconclusive),
+        TypeIsFinalized(false), Type(TT_Unknown) {}
 
   /// The \c Token.
   Token Tok;
@@ -408,6 +408,9 @@ struct FormatToken {
 
   /// \c true if this token ends a group of C++ attributes.
   unsigned EndsCppAttributeGroup : 1;
+
+  /// \c true if a comma has been inserted or removed after the token.
+  unsigned HasEnumTrailingCommaHandled : 1;
 
 private:
   /// Contains the kind of block if this token is a brace.

@@ -128,7 +128,6 @@ public:
   void Enter(const parser::OpenMPCriticalConstruct &);
   void Enter(const parser::OpenMPAtomicConstruct &);
 
-  void Enter(const parser::OmpLocator &x);
   void Enter(const parser::OmpClauseList &);
   void Leave(const parser::OmpClauseList &);
   void Enter(const parser::OmpClause &);

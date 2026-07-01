@@ -912,6 +912,9 @@ void OMPClauseProfiler::VisitOMPAllocateClause(const OMPAllocateClause *C) {
   VisitOMPClauseList(C);
 }
 void OMPClauseProfiler::VisitOMPNumTeamsClause(const OMPNumTeamsClause *C) {
+  Profiler->VisitInteger(C->getModifier());
+  if (const Expr *Modifier = C->getModifierExpr())
+    Profiler->VisitStmt(Modifier);
   VisitOMPClauseList(C);
   VisitOMPClauseWithPreInit(C);
 }

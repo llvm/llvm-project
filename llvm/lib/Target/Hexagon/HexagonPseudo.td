@@ -335,6 +335,12 @@ let Defs = [R29], hasSideEffects = 1 in
 def PS_alloca: Pseudo <(outs IntRegs:$Rd),
                        (ins IntRegs:$Rs, u32_0Imm:$A), "", []>;
 
+// Probed stack allocation pseudo. Expanded in inlineStackProbe() into a
+// compare-and-branch loop that touches each page.
+let Defs = [R29, P0], Uses = [R29], hasSideEffects = 1, mayStore = 1,
+    isCodeGenOnly = 1 in
+def PS_probed_stackalloc : Pseudo<(outs), (ins IntRegs:$target), "", []>;
+
 // Load predicate.
 let isExtendable = 1, opExtendable = 2, isExtentSigned = 1, opExtentBits = 13,
     isCodeGenOnly = 1, isPseudo = 1, hasSideEffects = 0 in

@@ -18,9 +18,9 @@
 #  pragma GCC system_header
 #endif
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 20
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 struct compare_three_way {
   template <class _T1, class _T2>
@@ -33,8 +33,8 @@ struct compare_three_way {
   using is_transparent = void;
 };
 
-#endif // _LIBCPP_STD_VER >= 20
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 20
 
 #endif // _LIBCPP___COMPARE_COMPARE_THREE_WAY_H
