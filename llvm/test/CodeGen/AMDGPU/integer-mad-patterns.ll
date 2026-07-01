@@ -7852,13 +7852,13 @@ define <2 x i64> @clpeak_imad_pat_v2i64(<2 x i64> %x, <2 x i64> %y) {
 ; GFX1200-GISEL-NEXT:    v_mul_lo_u32 v7, v2, v7
 ; GFX1200-GISEL-NEXT:    v_mul_lo_u32 v3, v3, v6
 ; GFX1200-GISEL-NEXT:    v_mul_lo_u32 v0, v0, v4
-; GFX1200-GISEL-NEXT:    v_add_co_u32 v4, vcc_lo, v14, 1
 ; GFX1200-GISEL-NEXT:    v_mul_lo_u32 v2, v2, v6
+; GFX1200-GISEL-NEXT:    v_add_co_u32 v4, vcc_lo, v14, 1
 ; GFX1200-GISEL-NEXT:    v_add3_u32 v1, v5, v1, v10
 ; GFX1200-GISEL-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX1200-GISEL-NEXT:    v_add_co_ci_u32_e64 v5, null, 0, v8, vcc_lo
-; GFX1200-GISEL-NEXT:    v_add_co_u32 v6, vcc_lo, v15, 1
 ; GFX1200-GISEL-NEXT:    v_add3_u32 v3, v7, v3, v11
+; GFX1200-GISEL-NEXT:    v_add_co_u32 v6, vcc_lo, v15, 1
 ; GFX1200-GISEL-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX1200-GISEL-NEXT:    v_add_co_ci_u32_e64 v7, null, 0, v9, vcc_lo
 ; GFX1200-GISEL-NEXT:    v_mul_hi_u32 v8, v0, v4

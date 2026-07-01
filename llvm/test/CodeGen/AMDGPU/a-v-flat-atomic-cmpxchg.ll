@@ -527,11 +527,11 @@ define void @flat_atomic_cmpxchg_i64_ret_av_av__a(ptr %ptr) #0 {
 ; CHECK-NEXT:    v_accvgpr_write_b32 a0, v4
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_cmp_eq_u64_e32 vcc, v[4:5], v[2:3]
-; CHECK-NEXT:    v_cndmask_b32_e32 v1, v5, v1, vcc
-; CHECK-NEXT:    v_accvgpr_write_b32 a1, v5
 ; CHECK-NEXT:    v_cndmask_b32_e32 v0, v4, v0, vcc
-; CHECK-NEXT:    buffer_store_dword v1, v6, s[0:3], 0 offen offset:4
+; CHECK-NEXT:    v_accvgpr_write_b32 a1, v5
+; CHECK-NEXT:    v_cndmask_b32_e32 v1, v5, v1, vcc
 ; CHECK-NEXT:    buffer_store_dword v0, v6, s[0:3], 0 offen
+; CHECK-NEXT:    buffer_store_dword v1, v6, s[0:3], 0 offen offset:4
 ; CHECK-NEXT:  .LBB14_4: ; %atomicrmw.phi
 ; CHECK-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; CHECK-NEXT:    ;;#ASMSTART
@@ -558,13 +558,13 @@ define void @flat_atomic_cmpxchg_i64_ret_a_a__a(ptr %ptr) #0 {
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def a[2:3]
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    v_accvgpr_read_b32 v5, a3
+; CHECK-NEXT:    v_accvgpr_read_b32 v2, a2
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def a[4:5]
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    v_accvgpr_read_b32 v2, a4
-; CHECK-NEXT:    v_accvgpr_read_b32 v4, a2
-; CHECK-NEXT:    v_accvgpr_read_b32 v3, a5
+; CHECK-NEXT:    v_accvgpr_read_b32 v4, a4
+; CHECK-NEXT:    v_accvgpr_read_b32 v3, a3
+; CHECK-NEXT:    v_accvgpr_read_b32 v5, a5
 ; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v1
 ; CHECK-NEXT:    ; implicit-def: $agpr0_agpr1
 ; CHECK-NEXT:    s_and_saveexec_b64 s[4:5], vcc
@@ -581,8 +581,8 @@ define void @flat_atomic_cmpxchg_i64_ret_a_a__a(ptr %ptr) #0 {
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    buffer_invl2
 ; CHECK-NEXT:    buffer_wbinvl1_vol
-; CHECK-NEXT:    ; implicit-def: $vgpr4_vgpr5
 ; CHECK-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; CHECK-NEXT:    ; implicit-def: $vgpr4_vgpr5
 ; CHECK-NEXT:    v_accvgpr_write_b32 a0, v0
 ; CHECK-NEXT:    v_accvgpr_write_b32 a1, v1
 ; CHECK-NEXT:    ; implicit-def: $vgpr0_vgpr1
@@ -597,12 +597,12 @@ define void @flat_atomic_cmpxchg_i64_ret_a_a__a(ptr %ptr) #0 {
 ; CHECK-NEXT:    s_waitcnt vmcnt(1)
 ; CHECK-NEXT:    v_accvgpr_write_b32 a0, v0
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[4:5]
-; CHECK-NEXT:    v_cndmask_b32_e32 v3, v1, v3, vcc
+; CHECK-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[2:3]
+; CHECK-NEXT:    v_cndmask_b32_e32 v3, v0, v4, vcc
 ; CHECK-NEXT:    v_accvgpr_write_b32 a1, v1
-; CHECK-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc
-; CHECK-NEXT:    buffer_store_dword v3, v6, s[0:3], 0 offen offset:4
-; CHECK-NEXT:    buffer_store_dword v0, v6, s[0:3], 0 offen
+; CHECK-NEXT:    v_cndmask_b32_e32 v2, v1, v5, vcc
+; CHECK-NEXT:    buffer_store_dword v3, v6, s[0:3], 0 offen
+; CHECK-NEXT:    buffer_store_dword v2, v6, s[0:3], 0 offen offset:4
 ; CHECK-NEXT:  .LBB15_4: ; %atomicrmw.phi
 ; CHECK-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; CHECK-NEXT:    ;;#ASMSTART
@@ -850,11 +850,11 @@ define void @flat_atomic_cmpxchg_i64_ret_v_v__a(ptr %ptr) #0 {
 ; CHECK-NEXT:    v_accvgpr_write_b32 a0, v4
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_cmp_eq_u64_e32 vcc, v[4:5], v[2:3]
-; CHECK-NEXT:    v_cndmask_b32_e32 v1, v5, v1, vcc
-; CHECK-NEXT:    v_accvgpr_write_b32 a1, v5
 ; CHECK-NEXT:    v_cndmask_b32_e32 v0, v4, v0, vcc
-; CHECK-NEXT:    buffer_store_dword v1, v6, s[0:3], 0 offen offset:4
+; CHECK-NEXT:    v_accvgpr_write_b32 a1, v5
+; CHECK-NEXT:    v_cndmask_b32_e32 v1, v5, v1, vcc
 ; CHECK-NEXT:    buffer_store_dword v0, v6, s[0:3], 0 offen
+; CHECK-NEXT:    buffer_store_dword v1, v6, s[0:3], 0 offen offset:4
 ; CHECK-NEXT:  .LBB19_4: ; %atomicrmw.phi
 ; CHECK-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; CHECK-NEXT:    ;;#ASMSTART

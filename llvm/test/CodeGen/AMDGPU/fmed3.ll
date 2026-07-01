@@ -8984,11 +8984,11 @@ define <2 x half> @v_test_nnan_input_fmed3_r_i_i_v2f16_maximum_minimum(<2 x half
 ; SI-SDAG-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; SI-SDAG-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; SI-SDAG-NEXT:    v_min_f32_e32 v4, 4.0, v0
-; SI-SDAG-NEXT:    v_cmp_o_f32_e32 vcc, v0, v0
 ; SI-SDAG-NEXT:    v_min_f32_e32 v3, 4.0, v1
+; SI-SDAG-NEXT:    v_cmp_o_f32_e32 vcc, v0, v0
 ; SI-SDAG-NEXT:    v_cndmask_b32_e32 v0, v2, v4, vcc
-; SI-SDAG-NEXT:    v_cmp_o_f32_e32 vcc, v1, v1
 ; SI-SDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; SI-SDAG-NEXT:    v_cmp_o_f32_e32 vcc, v1, v1
 ; SI-SDAG-NEXT:    v_cndmask_b32_e32 v1, v2, v3, vcc
 ; SI-SDAG-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; SI-SDAG-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
@@ -9012,8 +9012,8 @@ define <2 x half> @v_test_nnan_input_fmed3_r_i_i_v2f16_maximum_minimum(<2 x half
 ; SI-GISEL-NEXT:    v_cmp_o_f32_e32 vcc, 2.0, v1
 ; SI-GISEL-NEXT:    v_cndmask_b32_e32 v1, v2, v3, vcc
 ; SI-GISEL-NEXT:    v_max_f32_e32 v3, 2.0, v0
-; SI-GISEL-NEXT:    v_cmp_o_f32_e32 vcc, 2.0, v0
 ; SI-GISEL-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; SI-GISEL-NEXT:    v_cmp_o_f32_e32 vcc, 2.0, v0
 ; SI-GISEL-NEXT:    v_cndmask_b32_e32 v0, v2, v3, vcc
 ; SI-GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; SI-GISEL-NEXT:    v_cvt_f32_f16_e32 v1, v1
@@ -9057,8 +9057,8 @@ define <2 x half> @v_test_nnan_input_fmed3_r_i_i_v2f16_maximum_minimum(<2 x half
 ; VI-GISEL-NEXT:    v_cmp_o_f32_e32 vcc, 2.0, v1
 ; VI-GISEL-NEXT:    v_cndmask_b32_e32 v1, v3, v2, vcc
 ; VI-GISEL-NEXT:    v_max_f32_e32 v2, 2.0, v0
-; VI-GISEL-NEXT:    v_cmp_o_f32_e32 vcc, 2.0, v0
 ; VI-GISEL-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; VI-GISEL-NEXT:    v_cmp_o_f32_e32 vcc, 2.0, v0
 ; VI-GISEL-NEXT:    v_cndmask_b32_e32 v0, v3, v2, vcc
 ; VI-GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; VI-GISEL-NEXT:    v_cvt_f32_f16_e32 v1, v1

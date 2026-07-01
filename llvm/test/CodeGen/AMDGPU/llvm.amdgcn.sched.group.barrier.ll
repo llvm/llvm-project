@@ -1992,9 +1992,9 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_interleave_EXP_MFMA
 ; SDAG-NEXT:    v_fma_f32 v4, s0, v3, -v4
 ; SDAG-NEXT:    v_fmac_f32_e32 v4, s0, v7
 ; SDAG-NEXT:    v_add_f32_e32 v4, v6, v4
+; SDAG-NEXT:    v_and_b32_e32 v0, 0x1ff80, v0
 ; SDAG-NEXT:    v_exp_f32_e32 v4, v4
 ; SDAG-NEXT:    v_cvt_i32_f32_e32 v5, v5
-; SDAG-NEXT:    v_and_b32_e32 v0, 0x1ff80, v0
 ; SDAG-NEXT:    v_add_u32_e32 v1, s6, v0
 ; SDAG-NEXT:    ds_read_b128 a[60:63], v1 offset:112
 ; SDAG-NEXT:    ds_read_b128 a[56:59], v1 offset:96
@@ -2005,17 +2005,17 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_interleave_EXP_MFMA
 ; SDAG-NEXT:    ds_read_b128 a[40:43], v1 offset:32
 ; SDAG-NEXT:    ds_read_b128 a[44:47], v1 offset:48
 ; SDAG-NEXT:    v_mov_b32_e32 v9, 1.0
+; SDAG-NEXT:    v_mul_f32_e32 v10, s1, v3
 ; SDAG-NEXT:    v_ldexp_f32 v4, v4, v5
 ; SDAG-NEXT:    v_mov_b32_e32 v5, 0xc2ce8ed0
-; SDAG-NEXT:    v_mul_f32_e32 v10, s1, v3
-; SDAG-NEXT:    v_cmp_nlt_f32_e32 vcc, s0, v5
-; SDAG-NEXT:    v_mov_b32_e32 v6, 0x42b17218
 ; SDAG-NEXT:    v_rndne_f32_e32 v11, v10
+; SDAG-NEXT:    v_cmp_nlt_f32_e32 vcc, s0, v5
 ; SDAG-NEXT:    v_cndmask_b32_e32 v4, 0, v4, vcc
-; SDAG-NEXT:    v_cmp_ngt_f32_e32 vcc, s0, v6
+; SDAG-NEXT:    v_mov_b32_e32 v6, 0x42b17218
 ; SDAG-NEXT:    v_mov_b32_e32 v8, 0x7f800000
 ; SDAG-NEXT:    v_sub_f32_e32 v12, v10, v11
 ; SDAG-NEXT:    v_fma_f32 v10, s1, v3, -v10
+; SDAG-NEXT:    v_cmp_ngt_f32_e32 vcc, s0, v6
 ; SDAG-NEXT:    v_cndmask_b32_e32 v4, v8, v4, vcc
 ; SDAG-NEXT:    v_fmac_f32_e32 v10, s1, v7
 ; SDAG-NEXT:    ds_read_b128 a[28:31], v1 offset:8304
@@ -2066,8 +2066,8 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_interleave_EXP_MFMA
 ; SDAG-NEXT:    v_ldexp_f32 v1, v4, v10
 ; SDAG-NEXT:    v_cmp_nlt_f32_e32 vcc, s2, v5
 ; SDAG-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; SDAG-NEXT:    v_cmp_ngt_f32_e32 vcc, s2, v6
 ; SDAG-NEXT:    v_mul_f32_e32 v4, s3, v3
+; SDAG-NEXT:    v_cmp_ngt_f32_e32 vcc, s2, v6
 ; SDAG-NEXT:    v_cndmask_b32_e32 v1, v8, v1, vcc
 ; SDAG-NEXT:    v_rndne_f32_e32 v10, v4
 ; SDAG-NEXT:    s_load_dword s8, s[4:5], 0x54
@@ -2542,9 +2542,9 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_interleave_EXP_MFMA
 ; EXACTCUTOFF-NEXT:    v_fma_f32 v4, s0, v3, -v4
 ; EXACTCUTOFF-NEXT:    v_fmac_f32_e32 v4, s0, v7
 ; EXACTCUTOFF-NEXT:    v_add_f32_e32 v4, v6, v4
+; EXACTCUTOFF-NEXT:    v_and_b32_e32 v0, 0x1ff80, v0
 ; EXACTCUTOFF-NEXT:    v_exp_f32_e32 v4, v4
 ; EXACTCUTOFF-NEXT:    v_cvt_i32_f32_e32 v5, v5
-; EXACTCUTOFF-NEXT:    v_and_b32_e32 v0, 0x1ff80, v0
 ; EXACTCUTOFF-NEXT:    v_add_u32_e32 v1, s6, v0
 ; EXACTCUTOFF-NEXT:    ds_read_b128 a[60:63], v1 offset:112
 ; EXACTCUTOFF-NEXT:    ds_read_b128 a[56:59], v1 offset:96
@@ -2555,17 +2555,17 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_interleave_EXP_MFMA
 ; EXACTCUTOFF-NEXT:    ds_read_b128 a[40:43], v1 offset:32
 ; EXACTCUTOFF-NEXT:    ds_read_b128 a[44:47], v1 offset:48
 ; EXACTCUTOFF-NEXT:    v_mov_b32_e32 v9, 1.0
+; EXACTCUTOFF-NEXT:    v_mul_f32_e32 v10, s1, v3
 ; EXACTCUTOFF-NEXT:    v_ldexp_f32 v4, v4, v5
 ; EXACTCUTOFF-NEXT:    v_mov_b32_e32 v5, 0xc2ce8ed0
-; EXACTCUTOFF-NEXT:    v_mul_f32_e32 v10, s1, v3
-; EXACTCUTOFF-NEXT:    v_cmp_nlt_f32_e32 vcc, s0, v5
-; EXACTCUTOFF-NEXT:    v_mov_b32_e32 v6, 0x42b17218
 ; EXACTCUTOFF-NEXT:    v_rndne_f32_e32 v11, v10
+; EXACTCUTOFF-NEXT:    v_cmp_nlt_f32_e32 vcc, s0, v5
 ; EXACTCUTOFF-NEXT:    v_cndmask_b32_e32 v4, 0, v4, vcc
-; EXACTCUTOFF-NEXT:    v_cmp_ngt_f32_e32 vcc, s0, v6
+; EXACTCUTOFF-NEXT:    v_mov_b32_e32 v6, 0x42b17218
 ; EXACTCUTOFF-NEXT:    v_mov_b32_e32 v8, 0x7f800000
 ; EXACTCUTOFF-NEXT:    v_sub_f32_e32 v12, v10, v11
 ; EXACTCUTOFF-NEXT:    v_fma_f32 v10, s1, v3, -v10
+; EXACTCUTOFF-NEXT:    v_cmp_ngt_f32_e32 vcc, s0, v6
 ; EXACTCUTOFF-NEXT:    v_cndmask_b32_e32 v4, v8, v4, vcc
 ; EXACTCUTOFF-NEXT:    v_fmac_f32_e32 v10, s1, v7
 ; EXACTCUTOFF-NEXT:    ds_read_b128 a[28:31], v1 offset:8304
@@ -2616,8 +2616,8 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_interleave_EXP_MFMA
 ; EXACTCUTOFF-NEXT:    v_ldexp_f32 v1, v4, v10
 ; EXACTCUTOFF-NEXT:    v_cmp_nlt_f32_e32 vcc, s2, v5
 ; EXACTCUTOFF-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; EXACTCUTOFF-NEXT:    v_cmp_ngt_f32_e32 vcc, s2, v6
 ; EXACTCUTOFF-NEXT:    v_mul_f32_e32 v4, s3, v3
+; EXACTCUTOFF-NEXT:    v_cmp_ngt_f32_e32 vcc, s2, v6
 ; EXACTCUTOFF-NEXT:    v_cndmask_b32_e32 v1, v8, v1, vcc
 ; EXACTCUTOFF-NEXT:    v_rndne_f32_e32 v10, v4
 ; EXACTCUTOFF-NEXT:    s_load_dword s8, s[4:5], 0x54

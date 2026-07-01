@@ -492,8 +492,8 @@ define amdgpu_kernel void @vadd64ri(ptr addrspace(1) %out) {
 ; GFX1030W32-LABEL: vadd64ri:
 ; GFX1030W32:       ; %bb.0: ; %entry
 ; GFX1030W32-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GFX1030W32-NEXT:    v_add_co_u32 v0, s2, 0x56789876, v0
 ; GFX1030W32-NEXT:    v_mov_b32_e32 v2, 0
+; GFX1030W32-NEXT:    v_add_co_u32 v0, s2, 0x56789876, v0
 ; GFX1030W32-NEXT:    v_add_co_ci_u32_e64 v1, null, 0x1234, 0, s2
 ; GFX1030W32-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1030W32-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
@@ -502,8 +502,8 @@ define amdgpu_kernel void @vadd64ri(ptr addrspace(1) %out) {
 ; GFX1030W64-LABEL: vadd64ri:
 ; GFX1030W64:       ; %bb.0: ; %entry
 ; GFX1030W64-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GFX1030W64-NEXT:    v_add_co_u32 v0, s[2:3], 0x56789876, v0
 ; GFX1030W64-NEXT:    v_mov_b32_e32 v2, 0
+; GFX1030W64-NEXT:    v_add_co_u32 v0, s[2:3], 0x56789876, v0
 ; GFX1030W64-NEXT:    v_add_co_ci_u32_e64 v1, null, 0x1234, 0, s[2:3]
 ; GFX1030W64-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1030W64-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
@@ -1142,10 +1142,10 @@ define amdgpu_kernel void @vuaddo64(ptr addrspace(1) %out, ptr addrspace(1) %car
 ; VI-NEXT:    v_mov_b32_e32 v1, s0
 ; VI-NEXT:    v_mov_b32_e32 v6, s5
 ; VI-NEXT:    v_add_u32_e32 v5, vcc, s4, v0
-; VI-NEXT:    v_addc_u32_e32 v6, vcc, 0, v6, vcc
 ; VI-NEXT:    v_mov_b32_e32 v2, s1
 ; VI-NEXT:    v_mov_b32_e32 v3, s2
 ; VI-NEXT:    v_mov_b32_e32 v4, s3
+; VI-NEXT:    v_addc_u32_e32 v6, vcc, 0, v6, vcc
 ; VI-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
 ; VI-NEXT:    flat_store_dwordx2 v[1:2], v[5:6]
 ; VI-NEXT:    flat_store_byte v[3:4], v0
@@ -1789,8 +1789,8 @@ define amdgpu_kernel void @vsub64ri(ptr addrspace(1) %out) {
 ; GFX1030W32-LABEL: vsub64ri:
 ; GFX1030W32:       ; %bb.0: ; %entry
 ; GFX1030W32-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GFX1030W32-NEXT:    v_sub_co_u32 v0, s2, 0x56789876, v0
 ; GFX1030W32-NEXT:    v_mov_b32_e32 v2, 0
+; GFX1030W32-NEXT:    v_sub_co_u32 v0, s2, 0x56789876, v0
 ; GFX1030W32-NEXT:    v_sub_co_ci_u32_e64 v1, null, 0x1234, 0, s2
 ; GFX1030W32-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1030W32-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
@@ -1799,8 +1799,8 @@ define amdgpu_kernel void @vsub64ri(ptr addrspace(1) %out) {
 ; GFX1030W64-LABEL: vsub64ri:
 ; GFX1030W64:       ; %bb.0: ; %entry
 ; GFX1030W64-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GFX1030W64-NEXT:    v_sub_co_u32 v0, s[2:3], 0x56789876, v0
 ; GFX1030W64-NEXT:    v_mov_b32_e32 v2, 0
+; GFX1030W64-NEXT:    v_sub_co_u32 v0, s[2:3], 0x56789876, v0
 ; GFX1030W64-NEXT:    v_sub_co_ci_u32_e64 v1, null, 0x1234, 0, s[2:3]
 ; GFX1030W64-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1030W64-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
@@ -2440,10 +2440,10 @@ define amdgpu_kernel void @vusubo64(ptr addrspace(1) %out, ptr addrspace(1) %car
 ; VI-NEXT:    v_mov_b32_e32 v1, s0
 ; VI-NEXT:    v_mov_b32_e32 v6, s5
 ; VI-NEXT:    v_sub_u32_e32 v5, vcc, s4, v0
-; VI-NEXT:    v_subbrev_u32_e32 v6, vcc, 0, v6, vcc
 ; VI-NEXT:    v_mov_b32_e32 v2, s1
 ; VI-NEXT:    v_mov_b32_e32 v3, s2
 ; VI-NEXT:    v_mov_b32_e32 v4, s3
+; VI-NEXT:    v_subbrev_u32_e32 v6, vcc, 0, v6, vcc
 ; VI-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
 ; VI-NEXT:    flat_store_dwordx2 v[1:2], v[5:6]
 ; VI-NEXT:    flat_store_byte v[3:4], v0

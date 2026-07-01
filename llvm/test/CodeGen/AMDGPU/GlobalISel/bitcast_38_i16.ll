@@ -10,7 +10,6 @@ define void @main(<19 x i32> %arg) {
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    s_mov_b32 s4, 0
 ; GCN-NEXT:    s_mov_b32 s12, s4
-; GCN-NEXT:    v_cmp_eq_u16_e32 vcc, 0, v0
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-NEXT:    s_mov_b32 s13, s4
 ; GCN-NEXT:    v_mov_b32_e32 v4, s12
@@ -21,6 +20,7 @@ define void @main(<19 x i32> %arg) {
 ; GCN-NEXT:    s_mov_b32 s9, s4
 ; GCN-NEXT:    s_mov_b32 s10, s4
 ; GCN-NEXT:    s_mov_b32 s11, s4
+; GCN-NEXT:    v_cmp_eq_u16_e32 vcc, 0, v0
 ; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
 ; GCN-NEXT:    v_mov_b32_e32 v2, v1
 ; GCN-NEXT:    v_mov_b32_e32 v3, v1
@@ -34,10 +34,10 @@ define void @main(<19 x i32> %arg) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX10-NEXT:    v_cmp_eq_u16_e32 vcc_lo, 0, v0
+; GFX10-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; GFX10-NEXT:    s_mov_b32 s4, 0
 ; GFX10-NEXT:    s_mov_b32 s5, s4
 ; GFX10-NEXT:    v_mov_b32_e32 v2, v1
-; GFX10-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; GFX10-NEXT:    v_mov_b32_e32 v3, v1
 ; GFX10-NEXT:    s_mov_b32 s6, s4
 ; GFX10-NEXT:    s_mov_b32 s7, s4
@@ -53,10 +53,10 @@ define void @main(<19 x i32> %arg) {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-NEXT:    v_cmp_eq_u16_e32 vcc_lo, 0, v0.l
+; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; GFX11-NEXT:    s_mov_b32 s0, 0
 ; GFX11-NEXT:    s_mov_b32 s1, s0
 ; GFX11-NEXT:    v_mov_b32_e32 v2, v1
-; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; GFX11-NEXT:    v_mov_b32_e32 v3, v1
 ; GFX11-NEXT:    s_mov_b32 s2, s0
 ; GFX11-NEXT:    s_mov_b32 s3, s0

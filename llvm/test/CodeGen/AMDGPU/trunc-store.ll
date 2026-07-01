@@ -441,43 +441,43 @@ define void @global_fp_truncstore_v6f32_to_v6bf16(ptr addrspace(1) %ptr, <6 x fl
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_bfe_u32 v9, v6, 16, 1
 ; VI-NEXT:    v_add_u32_e32 v9, vcc, v9, v6
-; VI-NEXT:    v_add_u32_e32 v9, vcc, 0x7fff, v9
 ; VI-NEXT:    v_or_b32_e32 v8, 0x400000, v6
+; VI-NEXT:    v_add_u32_e32 v9, vcc, 0x7fff, v9
 ; VI-NEXT:    v_cmp_u_f32_e32 vcc, v6, v6
 ; VI-NEXT:    v_cndmask_b32_e32 v6, v9, v8, vcc
 ; VI-NEXT:    v_bfe_u32 v9, v7, 16, 1
 ; VI-NEXT:    s_movk_i32 s4, 0x7fff
 ; VI-NEXT:    v_add_u32_e32 v9, vcc, v9, v7
-; VI-NEXT:    v_add_u32_e32 v9, vcc, s4, v9
 ; VI-NEXT:    v_or_b32_e32 v8, 0x400000, v7
+; VI-NEXT:    v_add_u32_e32 v9, vcc, s4, v9
 ; VI-NEXT:    v_cmp_u_f32_e32 vcc, v7, v7
 ; VI-NEXT:    v_cndmask_b32_e32 v7, v9, v8, vcc
 ; VI-NEXT:    v_bfe_u32 v8, v4, 16, 1
-; VI-NEXT:    v_add_u32_e32 v8, vcc, v8, v4
 ; VI-NEXT:    v_lshrrev_b32_e32 v7, 16, v7
-; VI-NEXT:    v_add_u32_e32 v8, vcc, s4, v8
+; VI-NEXT:    v_add_u32_e32 v8, vcc, v8, v4
 ; VI-NEXT:    v_alignbit_b32 v6, v7, v6, 16
 ; VI-NEXT:    v_or_b32_e32 v7, 0x400000, v4
+; VI-NEXT:    v_add_u32_e32 v8, vcc, s4, v8
 ; VI-NEXT:    v_cmp_u_f32_e32 vcc, v4, v4
 ; VI-NEXT:    v_cndmask_b32_e32 v4, v8, v7, vcc
 ; VI-NEXT:    v_bfe_u32 v8, v5, 16, 1
 ; VI-NEXT:    v_add_u32_e32 v8, vcc, v8, v5
-; VI-NEXT:    v_add_u32_e32 v8, vcc, s4, v8
 ; VI-NEXT:    v_or_b32_e32 v7, 0x400000, v5
+; VI-NEXT:    v_add_u32_e32 v8, vcc, s4, v8
 ; VI-NEXT:    v_cmp_u_f32_e32 vcc, v5, v5
 ; VI-NEXT:    v_cndmask_b32_e32 v5, v8, v7, vcc
 ; VI-NEXT:    v_bfe_u32 v7, v2, 16, 1
-; VI-NEXT:    v_add_u32_e32 v7, vcc, v7, v2
 ; VI-NEXT:    v_lshrrev_b32_e32 v5, 16, v5
-; VI-NEXT:    v_add_u32_e32 v7, vcc, 0x7fff, v7
+; VI-NEXT:    v_add_u32_e32 v7, vcc, v7, v2
 ; VI-NEXT:    v_alignbit_b32 v5, v5, v4, 16
 ; VI-NEXT:    v_or_b32_e32 v4, 0x400000, v2
+; VI-NEXT:    v_add_u32_e32 v7, vcc, 0x7fff, v7
 ; VI-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
 ; VI-NEXT:    v_cndmask_b32_e32 v2, v7, v4, vcc
 ; VI-NEXT:    v_bfe_u32 v7, v3, 16, 1
 ; VI-NEXT:    v_add_u32_e32 v7, vcc, v7, v3
-; VI-NEXT:    v_add_u32_e32 v7, vcc, 0x7fff, v7
 ; VI-NEXT:    v_or_b32_e32 v4, 0x400000, v3
+; VI-NEXT:    v_add_u32_e32 v7, vcc, 0x7fff, v7
 ; VI-NEXT:    v_cmp_u_f32_e32 vcc, v3, v3
 ; VI-NEXT:    v_cndmask_b32_e32 v3, v7, v4, vcc
 ; VI-NEXT:    v_lshrrev_b32_e32 v3, 16, v3

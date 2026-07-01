@@ -51,17 +51,17 @@ define void @interleaved_with_wave_barrier(ptr addrspace(1) %foo, ptr addrspace(
 ; GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GISEL-NEXT:    v_dual_mov_b32 v8, v3 :: v_dual_mov_b32 v9, v4
 ; GISEL-NEXT:    v_dual_mov_b32 v4, v5 :: v_dual_mov_b32 v5, v6
-; GISEL-NEXT:    v_add_co_u32 v6, vcc_lo, 0x54, v0
 ; GISEL-NEXT:    v_add_nc_u32_e32 v3, 0x54, v2
+; GISEL-NEXT:    v_add_co_u32 v6, vcc_lo, 0x54, v0
+; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_4) | instid1(VALU_DEP_1)
 ; GISEL-NEXT:    v_add_co_ci_u32_e64 v7, null, 0, v1, vcc_lo
 ; GISEL-NEXT:    global_load_b32 v10, v[8:9], off offset:44
 ; GISEL-NEXT:    global_load_b32 v11, v[0:1], off offset:4
 ; GISEL-NEXT:    ; wave barrier
 ; GISEL-NEXT:    global_load_async_to_lds_b32 v3, v[6:7], off offset:4 th:TH_LOAD_NT nv
-; GISEL-NEXT:    v_add_co_u32 v6, vcc_lo, 0x58, v8
 ; GISEL-NEXT:    ; wave barrier
 ; GISEL-NEXT:    ; asyncmark
-; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GISEL-NEXT:    v_add_co_u32 v6, vcc_lo, 0x58, v8
 ; GISEL-NEXT:    v_add_co_ci_u32_e64 v7, null, 0, v9, vcc_lo
 ; GISEL-NEXT:    v_add_nc_u32_e32 v3, 0x58, v2
 ; GISEL-NEXT:    global_load_b32 v0, v[0:1], off offset:8

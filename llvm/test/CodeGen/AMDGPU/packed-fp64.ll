@@ -2316,8 +2316,8 @@ define amdgpu_kernel void @fneg_v2f64_pkfma(ptr addrspace(1) %out) {
 ; GFX1251-SDAG-LABEL: fneg_v2f64_pkfma:
 ; GFX1251-SDAG:       ; %bb.0: ; %entry
 ; GFX1251-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1251-SDAG-NEXT:    v_and_b32_e32 v1, 0x3ff, v0
 ; GFX1251-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
+; GFX1251-SDAG-NEXT:    v_and_b32_e32 v1, 0x3ff, v0
 ; GFX1251-SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1251-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX1251-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v1
@@ -2336,11 +2336,11 @@ define amdgpu_kernel void @fneg_v2f64_pkfma(ptr addrspace(1) %out) {
 ; GFX1251-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
 ; GFX1251-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_2)
 ; GFX1251-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
-; GFX1251-GISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1251-GISEL-NEXT:    v_cndmask_b32_e64 v1, 0x3ff00000, 0, vcc_lo
-; GFX1251-GISEL-NEXT:    v_mov_b32_e32 v4, v0
-; GFX1251-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX1251-GISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1251-GISEL-NEXT:    v_xor_b32_e32 v5, 0x80000000, v1
+; GFX1251-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX1251-GISEL-NEXT:    v_mov_b32_e32 v4, v0
 ; GFX1251-GISEL-NEXT:    v_mov_b64_e32 v[2:3], v[0:1]
 ; GFX1251-GISEL-NEXT:    v_mov_b64_e32 v[6:7], v[4:5]
 ; GFX1251-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)

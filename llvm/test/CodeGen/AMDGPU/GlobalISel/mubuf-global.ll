@@ -1587,8 +1587,9 @@ define amdgpu_ps float @mubuf_cmpxchg_vgpr_ptr_offset4294967296(ptr addrspace(1)
 ;
 ; GFX12-LABEL: mubuf_cmpxchg_vgpr_ptr_offset4294967296:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 0
 ; GFX12-NEXT:    v_mov_b32_e32 v4, v2
+; GFX12-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 0
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_add_co_ci_u32_e64 v1, null, 4, v1, vcc_lo
 ; GFX12-NEXT:    global_atomic_cmpswap_b32 v0, v[0:1], v[3:4], off th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_loadcnt 0x0

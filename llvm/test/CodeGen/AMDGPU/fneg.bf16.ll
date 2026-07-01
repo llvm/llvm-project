@@ -271,8 +271,8 @@ define amdgpu_kernel void @v_fneg_fold_bf16(ptr addrspace(1) %out, ptr addrspace
 ; GFX8-NEXT:    v_mul_f32_e32 v2, v3, v2
 ; GFX8-NEXT:    v_bfe_u32 v3, v2, 16, 1
 ; GFX8-NEXT:    v_add_u32_e32 v3, vcc, v3, v2
-; GFX8-NEXT:    v_add_u32_e32 v3, vcc, 0x7fff, v3
 ; GFX8-NEXT:    v_or_b32_e32 v4, 0x400000, v2
+; GFX8-NEXT:    v_add_u32_e32 v3, vcc, 0x7fff, v3
 ; GFX8-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
 ; GFX8-NEXT:    v_cndmask_b32_e32 v2, v3, v4, vcc
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v2, 16, v2
@@ -668,8 +668,8 @@ define amdgpu_kernel void @v_fneg_fold_v2bf16(ptr addrspace(1) %out, ptr addrspa
 ; GFX8-NEXT:    v_add_u32_e32 v1, vcc, 0x7fff, v1
 ; GFX8-NEXT:    v_add_u32_e32 v5, vcc, 0x7fff, v5
 ; GFX8-NEXT:    v_or_b32_e32 v4, 0x400000, v2
-; GFX8-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
 ; GFX8-NEXT:    v_or_b32_e32 v6, 0x400000, v3
+; GFX8-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
 ; GFX8-NEXT:    v_cndmask_b32_e32 v1, v1, v4, vcc
 ; GFX8-NEXT:    v_cmp_u_f32_e32 vcc, v3, v3
 ; GFX8-NEXT:    v_cndmask_b32_e32 v2, v5, v6, vcc
@@ -697,12 +697,12 @@ define amdgpu_kernel void @v_fneg_fold_v2bf16(ptr addrspace(1) %out, ptr addrspa
 ; GFX9-NEXT:    v_bfe_u32 v4, v3, 16, 1
 ; GFX9-NEXT:    v_bfe_u32 v6, v1, 16, 1
 ; GFX9-NEXT:    v_add_u32_e32 v4, v4, v3
-; GFX9-NEXT:    v_or_b32_e32 v5, 0x400000, v3
 ; GFX9-NEXT:    v_add_u32_e32 v6, v6, v1
-; GFX9-NEXT:    v_add_u32_e32 v4, 0x7fff, v4
-; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v3, v3
+; GFX9-NEXT:    v_or_b32_e32 v5, 0x400000, v3
 ; GFX9-NEXT:    v_or_b32_e32 v7, 0x400000, v1
+; GFX9-NEXT:    v_add_u32_e32 v4, 0x7fff, v4
 ; GFX9-NEXT:    v_add_u32_e32 v6, 0x7fff, v6
+; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v3, v3
 ; GFX9-NEXT:    v_cndmask_b32_e32 v3, v4, v5, vcc
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v1, v1
 ; GFX9-NEXT:    v_cndmask_b32_e32 v1, v6, v7, vcc
@@ -847,8 +847,8 @@ define amdgpu_kernel void @v_extract_fneg_fold_v2bf16(ptr addrspace(1) %in) #0 {
 ; GFX8-NEXT:    v_add_u32_e32 v2, vcc, 0x7fff, v2
 ; GFX8-NEXT:    v_add_u32_e32 v4, vcc, 0x7fff, v4
 ; GFX8-NEXT:    v_or_b32_e32 v3, 0x400000, v1
-; GFX8-NEXT:    v_cmp_u_f32_e32 vcc, v1, v1
 ; GFX8-NEXT:    v_or_b32_e32 v5, 0x400000, v0
+; GFX8-NEXT:    v_cmp_u_f32_e32 vcc, v1, v1
 ; GFX8-NEXT:    v_cndmask_b32_e32 v1, v2, v3, vcc
 ; GFX8-NEXT:    v_cmp_u_f32_e32 vcc, v0, v0
 ; GFX8-NEXT:    v_cndmask_b32_e32 v0, v4, v5, vcc
@@ -874,12 +874,12 @@ define amdgpu_kernel void @v_extract_fneg_fold_v2bf16(ptr addrspace(1) %in) #0 {
 ; GFX9-NEXT:    v_bfe_u32 v2, v1, 16, 1
 ; GFX9-NEXT:    v_bfe_u32 v4, v0, 16, 1
 ; GFX9-NEXT:    v_add_u32_e32 v2, v2, v1
-; GFX9-NEXT:    v_or_b32_e32 v3, 0x400000, v1
 ; GFX9-NEXT:    v_add_u32_e32 v4, v4, v0
-; GFX9-NEXT:    v_add_u32_e32 v2, 0x7fff, v2
-; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v1, v1
+; GFX9-NEXT:    v_or_b32_e32 v3, 0x400000, v1
 ; GFX9-NEXT:    v_or_b32_e32 v5, 0x400000, v0
+; GFX9-NEXT:    v_add_u32_e32 v2, 0x7fff, v2
 ; GFX9-NEXT:    v_add_u32_e32 v4, 0x7fff, v4
+; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v1, v1
 ; GFX9-NEXT:    v_cndmask_b32_e32 v1, v2, v3, vcc
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v0, v0
 ; GFX9-NEXT:    v_cndmask_b32_e32 v0, v4, v5, vcc

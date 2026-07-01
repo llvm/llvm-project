@@ -33,14 +33,14 @@ define amdgpu_kernel void @straightline_kernel(ptr addrspace(1) noalias %in, ptr
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(VALU_DEP_4)
 ; GFX12-NEXT:    v_mov_b32_e32 v3, v1
 ; GFX12-NEXT:    v_mov_b32_e32 v5, v1
-; GFX12-NEXT:    v_lshlrev_b64_e32 v[8:9], 4, v[0:1]
 ; GFX12-NEXT:    v_mov_b32_e32 v7, v1
+; GFX12-NEXT:    v_lshlrev_b64_e32 v[8:9], 4, v[0:1]
 ; GFX12-NEXT:    v_lshlrev_b64_e32 v[10:11], 4, v[2:3]
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX12-NEXT:    v_lshlrev_b64_e32 v[12:13], 4, v[4:5]
-; GFX12-NEXT:    v_add_co_u32 v8, vcc_lo, s0, v8
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_4)
 ; GFX12-NEXT:    v_lshlrev_b64_e32 v[14:15], 4, v[6:7]
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX12-NEXT:    v_add_co_u32 v8, vcc_lo, s0, v8
 ; GFX12-NEXT:    v_add_co_ci_u32_e64 v9, null, s1, v9, vcc_lo
 ; GFX12-NEXT:    v_add_co_u32 v6, vcc_lo, s0, v10
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)

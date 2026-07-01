@@ -2861,9 +2861,9 @@ define i48 @v_usubsat_i48(i48 %lhs, i48 %rhs) {
 ; GFX6-NEXT:    v_sub_i32_e32 v0, vcc, v0, v2
 ; GFX6-NEXT:    v_subb_u32_e32 v1, vcc, v1, v3, vcc
 ; GFX6-NEXT:    v_lshrrev_b32_e32 v3, 16, v0
-; GFX6-NEXT:    v_and_b32_e32 v2, 0xffff, v1
 ; GFX6-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX6-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
+; GFX6-NEXT:    v_and_b32_e32 v2, 0xffff, v1
 ; GFX6-NEXT:    v_or_b32_e32 v0, v0, v3
 ; GFX6-NEXT:    v_cmp_ne_u32_e32 vcc, v1, v2
 ; GFX6-NEXT:    v_cndmask_b32_e64 v0, v0, 0, vcc
@@ -2966,14 +2966,14 @@ define amdgpu_ps <2 x float> @usubsat_i48_sv(i48 inreg %lhs, i48 %rhs) {
 ; GFX6-LABEL: usubsat_i48_sv:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_and_b32 s1, s1, 0xffff
+; GFX6-NEXT:    v_sub_i32_e32 v0, vcc, s0, v0
 ; GFX6-NEXT:    v_and_b32_e32 v1, 0xffff, v1
 ; GFX6-NEXT:    v_mov_b32_e32 v2, s1
-; GFX6-NEXT:    v_sub_i32_e32 v0, vcc, s0, v0
-; GFX6-NEXT:    v_subb_u32_e32 v1, vcc, v2, v1, vcc
 ; GFX6-NEXT:    v_lshrrev_b32_e32 v3, 16, v0
-; GFX6-NEXT:    v_and_b32_e32 v2, 0xffff, v1
+; GFX6-NEXT:    v_subb_u32_e32 v1, vcc, v2, v1, vcc
 ; GFX6-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX6-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
+; GFX6-NEXT:    v_and_b32_e32 v2, 0xffff, v1
 ; GFX6-NEXT:    v_or_b32_e32 v0, v0, v3
 ; GFX6-NEXT:    v_cmp_ne_u32_e32 vcc, v1, v2
 ; GFX6-NEXT:    v_cndmask_b32_e64 v0, v0, 0, vcc
@@ -3024,14 +3024,14 @@ define amdgpu_ps <2 x float> @usubsat_i48_vs(i48 %lhs, i48 inreg %rhs) {
 ; GFX6-LABEL: usubsat_i48_vs:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_and_b32 s1, s1, 0xffff
+; GFX6-NEXT:    v_subrev_i32_e32 v0, vcc, s0, v0
 ; GFX6-NEXT:    v_and_b32_e32 v1, 0xffff, v1
 ; GFX6-NEXT:    v_mov_b32_e32 v2, s1
-; GFX6-NEXT:    v_subrev_i32_e32 v0, vcc, s0, v0
-; GFX6-NEXT:    v_subb_u32_e32 v1, vcc, v1, v2, vcc
 ; GFX6-NEXT:    v_lshrrev_b32_e32 v3, 16, v0
-; GFX6-NEXT:    v_and_b32_e32 v2, 0xffff, v1
+; GFX6-NEXT:    v_subb_u32_e32 v1, vcc, v1, v2, vcc
 ; GFX6-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX6-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
+; GFX6-NEXT:    v_and_b32_e32 v2, 0xffff, v1
 ; GFX6-NEXT:    v_or_b32_e32 v0, v0, v3
 ; GFX6-NEXT:    v_cmp_ne_u32_e32 vcc, v1, v2
 ; GFX6-NEXT:    v_cndmask_b32_e64 v0, v0, 0, vcc

@@ -2062,54 +2062,55 @@ define void @divergent_value_dpp_i64(ptr addrspace(1) %out, i64 %in) #0 {
 ; GFX1164DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX1164DAGISEL-NEXT:    v_add_nc_u32_e32 v8, 32, v8
 ; GFX1164DAGISEL-NEXT:    v_add_co_u32 v4, vcc, v4, v6
-; GFX1164DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX1164DAGISEL-NEXT:    v_mul_lo_u32 v8, 4, v8
-; GFX1164DAGISEL-NEXT:    v_mov_b32_e32 v6, v4
+; GFX1164DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX1164DAGISEL-NEXT:    v_add_co_ci_u32_e64 v5, null, v5, v7, vcc
+; GFX1164DAGISEL-NEXT:    v_mul_lo_u32 v8, 4, v8
+; GFX1164DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX1164DAGISEL-NEXT:    v_mov_b32_e32 v6, v4
+; GFX1164DAGISEL-NEXT:    v_mov_b32_e32 v7, v5
 ; GFX1164DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1164DAGISEL-NEXT:    v_mov_b32_dpp v6, v6 row_shr:2 row_mask:0xf bank_mask:0xf
-; GFX1164DAGISEL-NEXT:    v_mov_b32_e32 v7, v5
+; GFX1164DAGISEL-NEXT:    v_mov_b32_dpp v7, v7 row_shr:2 row_mask:0xf bank_mask:0xf
 ; GFX1164DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX1164DAGISEL-NEXT:    v_add_co_u32 v4, vcc, v4, v6
 ; GFX1164DAGISEL-NEXT:    s_waitcnt_depctr depctr_va_vcc(0)
-; GFX1164DAGISEL-NEXT:    v_mov_b32_dpp v7, v7 row_shr:2 row_mask:0xf bank_mask:0xf
+; GFX1164DAGISEL-NEXT:    v_add_co_ci_u32_e64 v5, null, v5, v7, vcc
 ; GFX1164DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1164DAGISEL-NEXT:    v_mov_b32_e32 v6, v4
-; GFX1164DAGISEL-NEXT:    v_add_co_ci_u32_e64 v5, null, v5, v7, vcc
+; GFX1164DAGISEL-NEXT:    v_mov_b32_e32 v7, v5
 ; GFX1164DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1164DAGISEL-NEXT:    v_mov_b32_dpp v6, v6 row_shr:4 row_mask:0xf bank_mask:0xf
-; GFX1164DAGISEL-NEXT:    v_mov_b32_e32 v7, v5
+; GFX1164DAGISEL-NEXT:    v_mov_b32_dpp v7, v7 row_shr:4 row_mask:0xf bank_mask:0xf
 ; GFX1164DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX1164DAGISEL-NEXT:    v_add_co_u32 v4, vcc, v4, v6
 ; GFX1164DAGISEL-NEXT:    s_waitcnt_depctr depctr_va_vcc(0)
-; GFX1164DAGISEL-NEXT:    v_mov_b32_dpp v7, v7 row_shr:4 row_mask:0xf bank_mask:0xf
+; GFX1164DAGISEL-NEXT:    v_add_co_ci_u32_e64 v5, null, v5, v7, vcc
 ; GFX1164DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1164DAGISEL-NEXT:    v_mov_b32_e32 v6, v4
-; GFX1164DAGISEL-NEXT:    v_add_co_ci_u32_e64 v5, null, v5, v7, vcc
+; GFX1164DAGISEL-NEXT:    v_mov_b32_e32 v7, v5
 ; GFX1164DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1164DAGISEL-NEXT:    v_mov_b32_dpp v6, v6 row_shr:8 row_mask:0xf bank_mask:0xf
-; GFX1164DAGISEL-NEXT:    v_mov_b32_e32 v7, v5
+; GFX1164DAGISEL-NEXT:    v_mov_b32_dpp v7, v7 row_shr:8 row_mask:0xf bank_mask:0xf
 ; GFX1164DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX1164DAGISEL-NEXT:    v_add_co_u32 v4, vcc, v4, v6
 ; GFX1164DAGISEL-NEXT:    s_waitcnt_depctr depctr_va_vcc(0)
-; GFX1164DAGISEL-NEXT:    v_mov_b32_dpp v7, v7 row_shr:8 row_mask:0xf bank_mask:0xf
-; GFX1164DAGISEL-NEXT:    ds_swizzle_b32 v6, v4 offset:swizzle(BROADCAST,32,15)
 ; GFX1164DAGISEL-NEXT:    v_add_co_ci_u32_e64 v5, null, v5, v7, vcc
+; GFX1164DAGISEL-NEXT:    ds_swizzle_b32 v6, v4 offset:swizzle(BROADCAST,32,15)
 ; GFX1164DAGISEL-NEXT:    ds_swizzle_b32 v7, v5 offset:swizzle(BROADCAST,32,15)
 ; GFX1164DAGISEL-NEXT:    s_waitcnt lgkmcnt(1)
 ; GFX1164DAGISEL-NEXT:    v_add_co_u32 v4, vcc, v4, v6
 ; GFX1164DAGISEL-NEXT:    s_waitcnt_depctr depctr_va_vcc(0)
-; GFX1164DAGISEL-NEXT:    ds_permute_b32 v6, v8, v4
-; GFX1164DAGISEL-NEXT:    s_waitcnt lgkmcnt(1)
+; GFX1164DAGISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1164DAGISEL-NEXT:    v_add_co_ci_u32_e64 v5, null, v5, v7, vcc
+; GFX1164DAGISEL-NEXT:    ds_permute_b32 v6, v8, v4
 ; GFX1164DAGISEL-NEXT:    ds_permute_b32 v7, v8, v5
 ; GFX1164DAGISEL-NEXT:    s_waitcnt lgkmcnt(1)
 ; GFX1164DAGISEL-NEXT:    v_add_co_u32 v4, vcc, v4, v6
 ; GFX1164DAGISEL-NEXT:    s_waitcnt_depctr depctr_va_vcc(0)
-; GFX1164DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
-; GFX1164DAGISEL-NEXT:    v_readlane_b32 s2, v4, 63
 ; GFX1164DAGISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1164DAGISEL-NEXT:    v_add_co_ci_u32_e64 v5, null, v5, v7, vcc
+; GFX1164DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1164DAGISEL-NEXT:    v_readlane_b32 s2, v4, 63
 ; GFX1164DAGISEL-NEXT:    v_readlane_b32 s3, v5, 63
 ; GFX1164DAGISEL-NEXT:    s_mov_b64 exec, s[0:1]
 ; GFX1164DAGISEL-NEXT:    v_mov_b32_e32 v2, s2
@@ -2153,54 +2154,55 @@ define void @divergent_value_dpp_i64(ptr addrspace(1) %out, i64 %in) #0 {
 ; GFX1164GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX1164GISEL-NEXT:    v_add_nc_u32_e32 v8, 32, v8
 ; GFX1164GISEL-NEXT:    v_add_co_u32 v4, vcc, v4, v6
-; GFX1164GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX1164GISEL-NEXT:    v_mul_lo_u32 v8, 4, v8
-; GFX1164GISEL-NEXT:    v_mov_b32_e32 v6, v4
+; GFX1164GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX1164GISEL-NEXT:    v_add_co_ci_u32_e64 v5, null, v5, v7, vcc
+; GFX1164GISEL-NEXT:    v_mul_lo_u32 v8, 4, v8
+; GFX1164GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX1164GISEL-NEXT:    v_mov_b32_e32 v6, v4
+; GFX1164GISEL-NEXT:    v_mov_b32_e32 v7, v5
 ; GFX1164GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1164GISEL-NEXT:    v_mov_b32_dpp v6, v6 row_shr:2 row_mask:0xf bank_mask:0xf
-; GFX1164GISEL-NEXT:    v_mov_b32_e32 v7, v5
+; GFX1164GISEL-NEXT:    v_mov_b32_dpp v7, v7 row_shr:2 row_mask:0xf bank_mask:0xf
 ; GFX1164GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX1164GISEL-NEXT:    v_add_co_u32 v4, vcc, v4, v6
 ; GFX1164GISEL-NEXT:    s_waitcnt_depctr depctr_va_vcc(0)
-; GFX1164GISEL-NEXT:    v_mov_b32_dpp v7, v7 row_shr:2 row_mask:0xf bank_mask:0xf
+; GFX1164GISEL-NEXT:    v_add_co_ci_u32_e64 v5, null, v5, v7, vcc
 ; GFX1164GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1164GISEL-NEXT:    v_mov_b32_e32 v6, v4
-; GFX1164GISEL-NEXT:    v_add_co_ci_u32_e64 v5, null, v5, v7, vcc
+; GFX1164GISEL-NEXT:    v_mov_b32_e32 v7, v5
 ; GFX1164GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1164GISEL-NEXT:    v_mov_b32_dpp v6, v6 row_shr:4 row_mask:0xf bank_mask:0xf
-; GFX1164GISEL-NEXT:    v_mov_b32_e32 v7, v5
+; GFX1164GISEL-NEXT:    v_mov_b32_dpp v7, v7 row_shr:4 row_mask:0xf bank_mask:0xf
 ; GFX1164GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX1164GISEL-NEXT:    v_add_co_u32 v4, vcc, v4, v6
 ; GFX1164GISEL-NEXT:    s_waitcnt_depctr depctr_va_vcc(0)
-; GFX1164GISEL-NEXT:    v_mov_b32_dpp v7, v7 row_shr:4 row_mask:0xf bank_mask:0xf
+; GFX1164GISEL-NEXT:    v_add_co_ci_u32_e64 v5, null, v5, v7, vcc
 ; GFX1164GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1164GISEL-NEXT:    v_mov_b32_e32 v6, v4
-; GFX1164GISEL-NEXT:    v_add_co_ci_u32_e64 v5, null, v5, v7, vcc
+; GFX1164GISEL-NEXT:    v_mov_b32_e32 v7, v5
 ; GFX1164GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1164GISEL-NEXT:    v_mov_b32_dpp v6, v6 row_shr:8 row_mask:0xf bank_mask:0xf
-; GFX1164GISEL-NEXT:    v_mov_b32_e32 v7, v5
+; GFX1164GISEL-NEXT:    v_mov_b32_dpp v7, v7 row_shr:8 row_mask:0xf bank_mask:0xf
 ; GFX1164GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX1164GISEL-NEXT:    v_add_co_u32 v4, vcc, v4, v6
 ; GFX1164GISEL-NEXT:    s_waitcnt_depctr depctr_va_vcc(0)
-; GFX1164GISEL-NEXT:    v_mov_b32_dpp v7, v7 row_shr:8 row_mask:0xf bank_mask:0xf
-; GFX1164GISEL-NEXT:    ds_swizzle_b32 v6, v4 offset:swizzle(BROADCAST,32,15)
 ; GFX1164GISEL-NEXT:    v_add_co_ci_u32_e64 v5, null, v5, v7, vcc
+; GFX1164GISEL-NEXT:    ds_swizzle_b32 v6, v4 offset:swizzle(BROADCAST,32,15)
 ; GFX1164GISEL-NEXT:    ds_swizzle_b32 v7, v5 offset:swizzle(BROADCAST,32,15)
 ; GFX1164GISEL-NEXT:    s_waitcnt lgkmcnt(1)
 ; GFX1164GISEL-NEXT:    v_add_co_u32 v4, vcc, v4, v6
 ; GFX1164GISEL-NEXT:    s_waitcnt_depctr depctr_va_vcc(0)
-; GFX1164GISEL-NEXT:    ds_permute_b32 v6, v8, v4
-; GFX1164GISEL-NEXT:    s_waitcnt lgkmcnt(1)
+; GFX1164GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1164GISEL-NEXT:    v_add_co_ci_u32_e64 v5, null, v5, v7, vcc
+; GFX1164GISEL-NEXT:    ds_permute_b32 v6, v8, v4
 ; GFX1164GISEL-NEXT:    ds_permute_b32 v7, v8, v5
 ; GFX1164GISEL-NEXT:    s_waitcnt lgkmcnt(1)
 ; GFX1164GISEL-NEXT:    v_add_co_u32 v4, vcc, v4, v6
 ; GFX1164GISEL-NEXT:    s_waitcnt_depctr depctr_va_vcc(0)
-; GFX1164GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
-; GFX1164GISEL-NEXT:    v_readlane_b32 s2, v4, 63
 ; GFX1164GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1164GISEL-NEXT:    v_add_co_ci_u32_e64 v5, null, v5, v7, vcc
+; GFX1164GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1164GISEL-NEXT:    v_readlane_b32 s2, v4, 63
 ; GFX1164GISEL-NEXT:    v_readlane_b32 s3, v5, 63
 ; GFX1164GISEL-NEXT:    s_mov_b64 exec, s[0:1]
 ; GFX1164GISEL-NEXT:    v_mov_b32_e32 v2, s2

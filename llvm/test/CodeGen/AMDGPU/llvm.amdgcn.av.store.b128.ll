@@ -525,9 +525,10 @@ define void @global_store_v4i32_zext_vgpr_offset_neg128(ptr addrspace(1) %sbase,
 ; GFX1250-ISEL:       ; %bb.0:
 ; GFX1250-ISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-ISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-ISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v2
 ; GFX1250-ISEL-NEXT:    v_dual_mov_b32 v8, v3 :: v_dual_mov_b32 v9, v4
 ; GFX1250-ISEL-NEXT:    v_dual_mov_b32 v10, v5 :: v_dual_mov_b32 v11, v6
+; GFX1250-ISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v2
+; GFX1250-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-ISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX1250-ISEL-NEXT:    global_store_b128 v[0:1], v[8:11], off offset:-128
 ; GFX1250-ISEL-NEXT:    s_set_pc_i64 s[30:31]

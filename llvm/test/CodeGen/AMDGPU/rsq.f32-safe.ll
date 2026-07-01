@@ -363,8 +363,8 @@ define <2 x float> @v_neg_rsq_neg_v2f32(<2 x float> %val) {
 ; GCN-IEEE-NEXT:    s_mov_b32 s4, 0x80800000
 ; GCN-IEEE-NEXT:    v_cmp_lt_f32_e32 vcc, s4, v0
 ; GCN-IEEE-NEXT:    v_cndmask_b32_e64 v2, 0, 24, vcc
-; GCN-IEEE-NEXT:    v_cmp_lt_f32_e64 s[4:5], s4, v1
 ; GCN-IEEE-NEXT:    v_ldexp_f32_e64 v0, -v0, v2
+; GCN-IEEE-NEXT:    v_cmp_lt_f32_e64 s[4:5], s4, v1
 ; GCN-IEEE-NEXT:    v_cndmask_b32_e64 v2, 0, 24, s[4:5]
 ; GCN-IEEE-NEXT:    v_rsq_f32_e32 v0, v0
 ; GCN-IEEE-NEXT:    v_ldexp_f32_e64 v1, -v1, v2
@@ -423,8 +423,8 @@ define <2 x float> @v_neg_rsq_neg_v2f32_foldable_user(<2 x float> %val0, <2 x fl
 ; GCN-IEEE-NEXT:    s_mov_b32 s4, 0x80800000
 ; GCN-IEEE-NEXT:    v_cmp_lt_f32_e32 vcc, s4, v0
 ; GCN-IEEE-NEXT:    v_cndmask_b32_e64 v4, 0, 24, vcc
-; GCN-IEEE-NEXT:    v_cmp_lt_f32_e64 s[4:5], s4, v1
 ; GCN-IEEE-NEXT:    v_ldexp_f32_e64 v0, -v0, v4
+; GCN-IEEE-NEXT:    v_cmp_lt_f32_e64 s[4:5], s4, v1
 ; GCN-IEEE-NEXT:    v_cndmask_b32_e64 v4, 0, 24, s[4:5]
 ; GCN-IEEE-NEXT:    v_rsq_f32_e32 v0, v0
 ; GCN-IEEE-NEXT:    v_ldexp_f32_e64 v1, -v1, v4
@@ -483,8 +483,8 @@ define <2 x float> @v_neg_rsq_v2f32(<2 x float> %val) {
 ; GCN-IEEE-NEXT:    s_mov_b32 s4, 0x800000
 ; GCN-IEEE-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
 ; GCN-IEEE-NEXT:    v_cndmask_b32_e64 v2, 0, 24, vcc
-; GCN-IEEE-NEXT:    v_cmp_gt_f32_e64 s[4:5], s4, v1
 ; GCN-IEEE-NEXT:    v_ldexp_f32_e32 v0, v0, v2
+; GCN-IEEE-NEXT:    v_cmp_gt_f32_e64 s[4:5], s4, v1
 ; GCN-IEEE-NEXT:    v_cndmask_b32_e64 v2, 0, 24, s[4:5]
 ; GCN-IEEE-NEXT:    v_rsq_f32_e32 v0, v0
 ; GCN-IEEE-NEXT:    v_ldexp_f32_e32 v1, v1, v2
@@ -541,8 +541,8 @@ define <2 x float> @v_neg_rsq_v2f32_foldable_user(<2 x float> %val0, <2 x float>
 ; GCN-IEEE-NEXT:    s_mov_b32 s4, 0x800000
 ; GCN-IEEE-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
 ; GCN-IEEE-NEXT:    v_cndmask_b32_e64 v4, 0, 24, vcc
-; GCN-IEEE-NEXT:    v_cmp_gt_f32_e64 s[4:5], s4, v1
 ; GCN-IEEE-NEXT:    v_ldexp_f32_e32 v0, v0, v4
+; GCN-IEEE-NEXT:    v_cmp_gt_f32_e64 s[4:5], s4, v1
 ; GCN-IEEE-NEXT:    v_cndmask_b32_e64 v4, 0, 24, s[4:5]
 ; GCN-IEEE-NEXT:    v_rsq_f32_e32 v0, v0
 ; GCN-IEEE-NEXT:    v_ldexp_f32_e32 v1, v1, v4

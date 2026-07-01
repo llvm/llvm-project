@@ -35,8 +35,8 @@ define amdgpu_kernel void @s_log_f32(ptr addrspace(1) %out, float %in) {
 ; SI-SDAG-NEXT:    v_fma_f32 v3, v1, s4, -v2
 ; SI-SDAG-NEXT:    s_mov_b32 s4, 0x3377d1cf
 ; SI-SDAG-NEXT:    v_fma_f32 v3, v1, s4, v3
-; SI-SDAG-NEXT:    s_mov_b32 s4, 0x7f800000
 ; SI-SDAG-NEXT:    v_add_f32_e32 v2, v2, v3
+; SI-SDAG-NEXT:    s_mov_b32 s4, 0x7f800000
 ; SI-SDAG-NEXT:    v_cmp_lt_f32_e64 vcc, |v1|, s4
 ; SI-SDAG-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
 ; SI-SDAG-NEXT:    v_sub_f32_e32 v0, v1, v0
@@ -172,8 +172,8 @@ define amdgpu_kernel void @s_log_f32(ptr addrspace(1) %out, float %in) {
 ; GFX900-SDAG-NEXT:    v_mul_f32_e32 v3, 0x3f317217, v1
 ; GFX900-SDAG-NEXT:    v_fma_f32 v4, v1, s2, -v3
 ; GFX900-SDAG-NEXT:    v_fma_f32 v4, v1, s3, v4
-; GFX900-SDAG-NEXT:    s_mov_b32 s2, 0x7f800000
 ; GFX900-SDAG-NEXT:    v_add_f32_e32 v3, v3, v4
+; GFX900-SDAG-NEXT:    s_mov_b32 s2, 0x7f800000
 ; GFX900-SDAG-NEXT:    v_cmp_lt_f32_e64 vcc, |v1|, s2
 ; GFX900-SDAG-NEXT:    v_cndmask_b32_e32 v1, v1, v3, vcc
 ; GFX900-SDAG-NEXT:    v_sub_f32_e32 v0, v1, v0
@@ -368,8 +368,8 @@ define amdgpu_kernel void @s_log_contract_f32(ptr addrspace(1) %out, float %in) 
 ; SI-SDAG-NEXT:    v_fma_f32 v3, v1, s4, -v2
 ; SI-SDAG-NEXT:    s_mov_b32 s4, 0x3377d1cf
 ; SI-SDAG-NEXT:    v_fma_f32 v3, v1, s4, v3
-; SI-SDAG-NEXT:    s_mov_b32 s4, 0x7f800000
 ; SI-SDAG-NEXT:    v_add_f32_e32 v2, v2, v3
+; SI-SDAG-NEXT:    s_mov_b32 s4, 0x7f800000
 ; SI-SDAG-NEXT:    v_cmp_lt_f32_e64 vcc, |v1|, s4
 ; SI-SDAG-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
 ; SI-SDAG-NEXT:    v_sub_f32_e32 v0, v1, v0
@@ -505,8 +505,8 @@ define amdgpu_kernel void @s_log_contract_f32(ptr addrspace(1) %out, float %in) 
 ; GFX900-SDAG-NEXT:    v_mul_f32_e32 v3, 0x3f317217, v1
 ; GFX900-SDAG-NEXT:    v_fma_f32 v4, v1, s2, -v3
 ; GFX900-SDAG-NEXT:    v_fma_f32 v4, v1, s3, v4
-; GFX900-SDAG-NEXT:    s_mov_b32 s2, 0x7f800000
 ; GFX900-SDAG-NEXT:    v_add_f32_e32 v3, v3, v4
+; GFX900-SDAG-NEXT:    s_mov_b32 s2, 0x7f800000
 ; GFX900-SDAG-NEXT:    v_cmp_lt_f32_e64 vcc, |v1|, s2
 ; GFX900-SDAG-NEXT:    v_cndmask_b32_e32 v1, v1, v3, vcc
 ; GFX900-SDAG-NEXT:    v_sub_f32_e32 v0, v1, v0
@@ -996,33 +996,32 @@ define amdgpu_kernel void @s_log_v2f32(ptr addrspace(1) %out, <2 x float> %in) {
 ; GFX1100-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1100-SDAG-NEXT:    v_cmp_gt_f32_e64 s4, 0x800000, s3
 ; GFX1100-SDAG-NEXT:    v_cmp_gt_f32_e64 s5, 0x800000, s2
-; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1100-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 0x41b17218, s4
+; GFX1100-SDAG-NEXT:    v_cndmask_b32_e64 v2, 0, 0x41b17218, s5
 ; GFX1100-SDAG-NEXT:    s_and_b32 s4, s4, exec_lo
 ; GFX1100-SDAG-NEXT:    s_cselect_b32 s4, 32, 0
-; GFX1100-SDAG-NEXT:    v_cndmask_b32_e64 v2, 0, 0x41b17218, s5
-; GFX1100-SDAG-NEXT:    v_ldexp_f32 v1, s3, s4
 ; GFX1100-SDAG-NEXT:    s_and_b32 s5, s5, exec_lo
 ; GFX1100-SDAG-NEXT:    s_cselect_b32 s5, 32, 0
-; GFX1100-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1100-SDAG-NEXT:    v_ldexp_f32 v1, s3, s4
 ; GFX1100-SDAG-NEXT:    v_ldexp_f32 v3, s2, s5
+; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1100-SDAG-NEXT:    v_log_f32_e32 v1, v1
-; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_4) | instid1(VALU_DEP_3)
 ; GFX1100-SDAG-NEXT:    v_log_f32_e32 v3, v3
 ; GFX1100-SDAG-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
-; GFX1100-SDAG-NEXT:    v_mul_f32_e32 v4, 0x3f317217, v1
+; GFX1100-SDAG-NEXT:    v_dual_mul_f32 v4, 0x3f317217, v1 :: v_dual_mul_f32 v5, 0x3f317217, v3
 ; GFX1100-SDAG-NEXT:    v_cmp_gt_f32_e64 vcc_lo, 0x7f800000, |v1|
-; GFX1100-SDAG-NEXT:    v_mul_f32_e32 v5, 0x3f317217, v3
+; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX1100-SDAG-NEXT:    v_fma_f32 v6, 0x3f317217, v1, -v4
-; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1100-SDAG-NEXT:    v_fma_f32 v7, 0x3f317217, v3, -v5
-; GFX1100-SDAG-NEXT:    v_dual_fmac_f32 v6, 0x3377d1cf, v1 :: v_dual_fmac_f32 v7, 0x3377d1cf, v3
 ; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1100-SDAG-NEXT:    v_dual_fmac_f32 v6, 0x3377d1cf, v1 :: v_dual_fmac_f32 v7, 0x3377d1cf, v3
 ; GFX1100-SDAG-NEXT:    v_dual_add_f32 v4, v4, v6 :: v_dual_add_f32 v5, v5, v7
+; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_3)
 ; GFX1100-SDAG-NEXT:    v_dual_cndmask_b32 v1, v1, v4 :: v_dual_mov_b32 v4, 0
 ; GFX1100-SDAG-NEXT:    v_cmp_gt_f32_e64 vcc_lo, 0x7f800000, |v3|
-; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1100-SDAG-NEXT:    v_cndmask_b32_e32 v3, v3, v5, vcc_lo
+; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1100-SDAG-NEXT:    v_dual_sub_f32 v1, v1, v0 :: v_dual_sub_f32 v0, v3, v2
 ; GFX1100-SDAG-NEXT:    global_store_b64 v4, v[0:1], s[0:1]
 ; GFX1100-SDAG-NEXT:    s_endpgm
@@ -1357,8 +1356,8 @@ define amdgpu_kernel void @s_log_v3f32(ptr addrspace(1) %out, <3 x float> %in) {
 ; VI-SDAG-NEXT:    v_log_f32_e32 v6, v6
 ; VI-SDAG-NEXT:    v_mul_f32_e32 v4, 0x3f317000, v4
 ; VI-SDAG-NEXT:    v_add_f32_e32 v5, v7, v5
-; VI-SDAG-NEXT:    s_mov_b32 s6, 0x7f800000
 ; VI-SDAG-NEXT:    v_add_f32_e32 v4, v4, v5
+; VI-SDAG-NEXT:    s_mov_b32 s6, 0x7f800000
 ; VI-SDAG-NEXT:    v_cndmask_b32_e32 v5, 0, v1, vcc
 ; VI-SDAG-NEXT:    v_cmp_lt_f32_e64 vcc, |v3|, s6
 ; VI-SDAG-NEXT:    v_cndmask_b32_e32 v3, v3, v4, vcc
@@ -1632,11 +1631,11 @@ define amdgpu_kernel void @s_log_v3f32(ptr addrspace(1) %out, <3 x float> %in) {
 ; GFX1100-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1100-SDAG-NEXT:    v_cmp_gt_f32_e64 s3, 0x800000, s2
 ; GFX1100-SDAG-NEXT:    v_cmp_gt_f32_e64 s6, 0x800000, s1
-; GFX1100-SDAG-NEXT:    v_cmp_gt_f32_e64 s7, 0x800000, s0
-; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_3)
+; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1100-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 0x41b17218, s3
-; GFX1100-SDAG-NEXT:    s_and_b32 s3, s3, exec_lo
 ; GFX1100-SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, 0x41b17218, s6
+; GFX1100-SDAG-NEXT:    v_cmp_gt_f32_e64 s7, 0x800000, s0
+; GFX1100-SDAG-NEXT:    s_and_b32 s3, s3, exec_lo
 ; GFX1100-SDAG-NEXT:    s_cselect_b32 s3, 32, 0
 ; GFX1100-SDAG-NEXT:    s_and_b32 s6, s6, exec_lo
 ; GFX1100-SDAG-NEXT:    s_cselect_b32 s6, 32, 0
@@ -1662,17 +1661,18 @@ define amdgpu_kernel void @s_log_v3f32(ptr addrspace(1) %out, <3 x float> %in) {
 ; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1100-SDAG-NEXT:    v_dual_add_f32 v6, v6, v9 :: v_dual_add_f32 v7, v7, v10
 ; GFX1100-SDAG-NEXT:    v_fma_f32 v11, 0x3f317217, v5, -v8
-; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_3)
 ; GFX1100-SDAG-NEXT:    v_cndmask_b32_e32 v2, v2, v6, vcc_lo
 ; GFX1100-SDAG-NEXT:    v_cmp_gt_f32_e64 vcc_lo, 0x7f800000, |v4|
-; GFX1100-SDAG-NEXT:    v_dual_fmac_f32 v11, 0x3377d1cf, v5 :: v_dual_sub_f32 v2, v2, v0
-; GFX1100-SDAG-NEXT:    v_cndmask_b32_e32 v4, v4, v7, vcc_lo
-; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_3)
-; GFX1100-SDAG-NEXT:    v_add_f32_e32 v8, v8, v11
+; GFX1100-SDAG-NEXT:    v_dual_fmac_f32 v11, 0x3377d1cf, v5 :: v_dual_cndmask_b32 v4, v4, v7
 ; GFX1100-SDAG-NEXT:    v_cmp_gt_f32_e64 vcc_lo, 0x7f800000, |v5|
-; GFX1100-SDAG-NEXT:    v_dual_mov_b32 v6, 0 :: v_dual_sub_f32 v1, v4, v1
-; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1100-SDAG-NEXT:    v_mov_b32_e32 v6, 0
+; GFX1100-SDAG-NEXT:    v_sub_f32_e32 v2, v2, v0
+; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX1100-SDAG-NEXT:    v_add_f32_e32 v8, v8, v11
+; GFX1100-SDAG-NEXT:    v_sub_f32_e32 v1, v4, v1
 ; GFX1100-SDAG-NEXT:    v_cndmask_b32_e32 v5, v5, v8, vcc_lo
+; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1100-SDAG-NEXT:    v_sub_f32_e32 v0, v5, v3
 ; GFX1100-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1100-SDAG-NEXT:    global_store_b96 v6, v[0:2], s[0:1]
@@ -2467,13 +2467,13 @@ define amdgpu_kernel void @s_log_v4f32(ptr addrspace(1) %out, <4 x float> %in) {
 ; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_4)
 ; GFX1100-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 0x41b17218, s6
 ; GFX1100-SDAG-NEXT:    s_and_b32 s6, s6, exec_lo
-; GFX1100-SDAG-NEXT:    s_cselect_b32 s6, 32, 0
 ; GFX1100-SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, 0x41b17218, s7
+; GFX1100-SDAG-NEXT:    s_cselect_b32 s6, 32, 0
 ; GFX1100-SDAG-NEXT:    s_and_b32 s7, s7, exec_lo
-; GFX1100-SDAG-NEXT:    v_ldexp_f32 v2, s3, s6
 ; GFX1100-SDAG-NEXT:    v_cndmask_b32_e64 v4, 0, 0x41b17218, s8
 ; GFX1100-SDAG-NEXT:    s_cselect_b32 s7, 32, 0
 ; GFX1100-SDAG-NEXT:    s_and_b32 s8, s8, exec_lo
+; GFX1100-SDAG-NEXT:    v_ldexp_f32 v2, s3, s6
 ; GFX1100-SDAG-NEXT:    s_cselect_b32 s3, 32, 0
 ; GFX1100-SDAG-NEXT:    s_and_b32 s6, s9, exec_lo
 ; GFX1100-SDAG-NEXT:    v_ldexp_f32 v3, s2, s7
@@ -2816,8 +2816,8 @@ define float @v_log_f32(float %in) {
 ; SI-SDAG-NEXT:    v_fma_f32 v2, v0, s4, -v1
 ; SI-SDAG-NEXT:    s_mov_b32 s4, 0x3377d1cf
 ; SI-SDAG-NEXT:    v_fma_f32 v2, v0, s4, v2
-; SI-SDAG-NEXT:    s_mov_b32 s4, 0x7f800000
 ; SI-SDAG-NEXT:    v_add_f32_e32 v1, v1, v2
+; SI-SDAG-NEXT:    s_mov_b32 s4, 0x7f800000
 ; SI-SDAG-NEXT:    v_cmp_lt_f32_e64 s[4:5], |v0|, s4
 ; SI-SDAG-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[4:5]
 ; SI-SDAG-NEXT:    v_mov_b32_e32 v1, 0x41b17218
@@ -2912,8 +2912,8 @@ define float @v_log_f32(float %in) {
 ; GFX900-SDAG-NEXT:    v_fma_f32 v2, v0, s4, -v1
 ; GFX900-SDAG-NEXT:    s_mov_b32 s4, 0x3377d1cf
 ; GFX900-SDAG-NEXT:    v_fma_f32 v2, v0, s4, v2
-; GFX900-SDAG-NEXT:    s_mov_b32 s4, 0x7f800000
 ; GFX900-SDAG-NEXT:    v_add_f32_e32 v1, v1, v2
+; GFX900-SDAG-NEXT:    s_mov_b32 s4, 0x7f800000
 ; GFX900-SDAG-NEXT:    v_cmp_lt_f32_e64 s[4:5], |v0|, s4
 ; GFX900-SDAG-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[4:5]
 ; GFX900-SDAG-NEXT:    v_mov_b32_e32 v1, 0x41b17218
@@ -3016,8 +3016,8 @@ define float @v_log_fabs_f32(float %in) {
 ; SI-SDAG-NEXT:    v_fma_f32 v2, v0, s4, -v1
 ; SI-SDAG-NEXT:    s_mov_b32 s4, 0x3377d1cf
 ; SI-SDAG-NEXT:    v_fma_f32 v2, v0, s4, v2
-; SI-SDAG-NEXT:    s_mov_b32 s4, 0x7f800000
 ; SI-SDAG-NEXT:    v_add_f32_e32 v1, v1, v2
+; SI-SDAG-NEXT:    s_mov_b32 s4, 0x7f800000
 ; SI-SDAG-NEXT:    v_cmp_lt_f32_e64 s[4:5], |v0|, s4
 ; SI-SDAG-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[4:5]
 ; SI-SDAG-NEXT:    v_mov_b32_e32 v1, 0x41b17218
@@ -3112,8 +3112,8 @@ define float @v_log_fabs_f32(float %in) {
 ; GFX900-SDAG-NEXT:    v_fma_f32 v2, v0, s4, -v1
 ; GFX900-SDAG-NEXT:    s_mov_b32 s4, 0x3377d1cf
 ; GFX900-SDAG-NEXT:    v_fma_f32 v2, v0, s4, v2
-; GFX900-SDAG-NEXT:    s_mov_b32 s4, 0x7f800000
 ; GFX900-SDAG-NEXT:    v_add_f32_e32 v1, v1, v2
+; GFX900-SDAG-NEXT:    s_mov_b32 s4, 0x7f800000
 ; GFX900-SDAG-NEXT:    v_cmp_lt_f32_e64 s[4:5], |v0|, s4
 ; GFX900-SDAG-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[4:5]
 ; GFX900-SDAG-NEXT:    v_mov_b32_e32 v1, 0x41b17218
@@ -3218,8 +3218,8 @@ define float @v_log_fneg_fabs_f32(float %in) {
 ; SI-SDAG-NEXT:    v_fma_f32 v2, v0, s4, -v1
 ; SI-SDAG-NEXT:    s_mov_b32 s4, 0x3377d1cf
 ; SI-SDAG-NEXT:    v_fma_f32 v2, v0, s4, v2
-; SI-SDAG-NEXT:    s_mov_b32 s4, 0x7f800000
 ; SI-SDAG-NEXT:    v_add_f32_e32 v1, v1, v2
+; SI-SDAG-NEXT:    s_mov_b32 s4, 0x7f800000
 ; SI-SDAG-NEXT:    v_cmp_lt_f32_e64 s[4:5], |v0|, s4
 ; SI-SDAG-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[4:5]
 ; SI-SDAG-NEXT:    v_mov_b32_e32 v1, 0x41b17218
@@ -3314,8 +3314,8 @@ define float @v_log_fneg_fabs_f32(float %in) {
 ; GFX900-SDAG-NEXT:    v_fma_f32 v2, v0, s4, -v1
 ; GFX900-SDAG-NEXT:    s_mov_b32 s4, 0x3377d1cf
 ; GFX900-SDAG-NEXT:    v_fma_f32 v2, v0, s4, v2
-; GFX900-SDAG-NEXT:    s_mov_b32 s4, 0x7f800000
 ; GFX900-SDAG-NEXT:    v_add_f32_e32 v1, v1, v2
+; GFX900-SDAG-NEXT:    s_mov_b32 s4, 0x7f800000
 ; GFX900-SDAG-NEXT:    v_cmp_lt_f32_e64 s[4:5], |v0|, s4
 ; GFX900-SDAG-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[4:5]
 ; GFX900-SDAG-NEXT:    v_mov_b32_e32 v1, 0x41b17218
@@ -3421,8 +3421,8 @@ define float @v_log_fneg_f32(float %in) {
 ; SI-SDAG-NEXT:    v_fma_f32 v2, v0, s4, -v1
 ; SI-SDAG-NEXT:    s_mov_b32 s4, 0x3377d1cf
 ; SI-SDAG-NEXT:    v_fma_f32 v2, v0, s4, v2
-; SI-SDAG-NEXT:    s_mov_b32 s4, 0x7f800000
 ; SI-SDAG-NEXT:    v_add_f32_e32 v1, v1, v2
+; SI-SDAG-NEXT:    s_mov_b32 s4, 0x7f800000
 ; SI-SDAG-NEXT:    v_cmp_lt_f32_e64 s[4:5], |v0|, s4
 ; SI-SDAG-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[4:5]
 ; SI-SDAG-NEXT:    v_mov_b32_e32 v1, 0x41b17218
@@ -3517,8 +3517,8 @@ define float @v_log_fneg_f32(float %in) {
 ; GFX900-SDAG-NEXT:    v_fma_f32 v2, v0, s4, -v1
 ; GFX900-SDAG-NEXT:    s_mov_b32 s4, 0x3377d1cf
 ; GFX900-SDAG-NEXT:    v_fma_f32 v2, v0, s4, v2
-; GFX900-SDAG-NEXT:    s_mov_b32 s4, 0x7f800000
 ; GFX900-SDAG-NEXT:    v_add_f32_e32 v1, v1, v2
+; GFX900-SDAG-NEXT:    s_mov_b32 s4, 0x7f800000
 ; GFX900-SDAG-NEXT:    v_cmp_lt_f32_e64 s[4:5], |v0|, s4
 ; GFX900-SDAG-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[4:5]
 ; GFX900-SDAG-NEXT:    v_mov_b32_e32 v1, 0x41b17218
@@ -3738,8 +3738,8 @@ define float @v_log_f32_ninf(float %in) {
 ; SI-SDAG-NEXT:    v_fma_f32 v2, v0, s4, -v1
 ; SI-SDAG-NEXT:    s_mov_b32 s4, 0x3377d1cf
 ; SI-SDAG-NEXT:    v_fma_f32 v2, v0, s4, v2
-; SI-SDAG-NEXT:    s_mov_b32 s4, 0x7f800000
 ; SI-SDAG-NEXT:    v_add_f32_e32 v1, v1, v2
+; SI-SDAG-NEXT:    s_mov_b32 s4, 0x7f800000
 ; SI-SDAG-NEXT:    v_cmp_lt_f32_e64 s[4:5], |v0|, s4
 ; SI-SDAG-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[4:5]
 ; SI-SDAG-NEXT:    v_mov_b32_e32 v1, 0x41b17218
@@ -3834,8 +3834,8 @@ define float @v_log_f32_ninf(float %in) {
 ; GFX900-SDAG-NEXT:    v_fma_f32 v2, v0, s4, -v1
 ; GFX900-SDAG-NEXT:    s_mov_b32 s4, 0x3377d1cf
 ; GFX900-SDAG-NEXT:    v_fma_f32 v2, v0, s4, v2
-; GFX900-SDAG-NEXT:    s_mov_b32 s4, 0x7f800000
 ; GFX900-SDAG-NEXT:    v_add_f32_e32 v1, v1, v2
+; GFX900-SDAG-NEXT:    s_mov_b32 s4, 0x7f800000
 ; GFX900-SDAG-NEXT:    v_cmp_lt_f32_e64 s[4:5], |v0|, s4
 ; GFX900-SDAG-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[4:5]
 ; GFX900-SDAG-NEXT:    v_mov_b32_e32 v1, 0x41b17218
@@ -4455,8 +4455,8 @@ define float @v_log_f32_nnan(float %in) {
 ; SI-SDAG-NEXT:    v_fma_f32 v2, v0, s4, -v1
 ; SI-SDAG-NEXT:    s_mov_b32 s4, 0x3377d1cf
 ; SI-SDAG-NEXT:    v_fma_f32 v2, v0, s4, v2
-; SI-SDAG-NEXT:    s_mov_b32 s4, 0x7f800000
 ; SI-SDAG-NEXT:    v_add_f32_e32 v1, v1, v2
+; SI-SDAG-NEXT:    s_mov_b32 s4, 0x7f800000
 ; SI-SDAG-NEXT:    v_cmp_lt_f32_e64 s[4:5], |v0|, s4
 ; SI-SDAG-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[4:5]
 ; SI-SDAG-NEXT:    v_mov_b32_e32 v1, 0x41b17218
@@ -4551,8 +4551,8 @@ define float @v_log_f32_nnan(float %in) {
 ; GFX900-SDAG-NEXT:    v_fma_f32 v2, v0, s4, -v1
 ; GFX900-SDAG-NEXT:    s_mov_b32 s4, 0x3377d1cf
 ; GFX900-SDAG-NEXT:    v_fma_f32 v2, v0, s4, v2
-; GFX900-SDAG-NEXT:    s_mov_b32 s4, 0x7f800000
 ; GFX900-SDAG-NEXT:    v_add_f32_e32 v1, v1, v2
+; GFX900-SDAG-NEXT:    s_mov_b32 s4, 0x7f800000
 ; GFX900-SDAG-NEXT:    v_cmp_lt_f32_e64 s[4:5], |v0|, s4
 ; GFX900-SDAG-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[4:5]
 ; GFX900-SDAG-NEXT:    v_mov_b32_e32 v1, 0x41b17218
@@ -4795,8 +4795,8 @@ define float @v_log_f32_nnan_dynamic(float %in) #1 {
 ; SI-SDAG-NEXT:    v_fma_f32 v2, v0, s4, -v1
 ; SI-SDAG-NEXT:    s_mov_b32 s4, 0x3377d1cf
 ; SI-SDAG-NEXT:    v_fma_f32 v2, v0, s4, v2
-; SI-SDAG-NEXT:    s_mov_b32 s4, 0x7f800000
 ; SI-SDAG-NEXT:    v_add_f32_e32 v1, v1, v2
+; SI-SDAG-NEXT:    s_mov_b32 s4, 0x7f800000
 ; SI-SDAG-NEXT:    v_cmp_lt_f32_e64 s[4:5], |v0|, s4
 ; SI-SDAG-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[4:5]
 ; SI-SDAG-NEXT:    v_mov_b32_e32 v1, 0x41b17218
@@ -4891,8 +4891,8 @@ define float @v_log_f32_nnan_dynamic(float %in) #1 {
 ; GFX900-SDAG-NEXT:    v_fma_f32 v2, v0, s4, -v1
 ; GFX900-SDAG-NEXT:    s_mov_b32 s4, 0x3377d1cf
 ; GFX900-SDAG-NEXT:    v_fma_f32 v2, v0, s4, v2
-; GFX900-SDAG-NEXT:    s_mov_b32 s4, 0x7f800000
 ; GFX900-SDAG-NEXT:    v_add_f32_e32 v1, v1, v2
+; GFX900-SDAG-NEXT:    s_mov_b32 s4, 0x7f800000
 ; GFX900-SDAG-NEXT:    v_cmp_lt_f32_e64 s[4:5], |v0|, s4
 ; GFX900-SDAG-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[4:5]
 ; GFX900-SDAG-NEXT:    v_mov_b32_e32 v1, 0x41b17218
@@ -5135,8 +5135,8 @@ define float @v_log_f32_ninf_dynamic(float %in) #1 {
 ; SI-SDAG-NEXT:    v_fma_f32 v2, v0, s4, -v1
 ; SI-SDAG-NEXT:    s_mov_b32 s4, 0x3377d1cf
 ; SI-SDAG-NEXT:    v_fma_f32 v2, v0, s4, v2
-; SI-SDAG-NEXT:    s_mov_b32 s4, 0x7f800000
 ; SI-SDAG-NEXT:    v_add_f32_e32 v1, v1, v2
+; SI-SDAG-NEXT:    s_mov_b32 s4, 0x7f800000
 ; SI-SDAG-NEXT:    v_cmp_lt_f32_e64 s[4:5], |v0|, s4
 ; SI-SDAG-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[4:5]
 ; SI-SDAG-NEXT:    v_mov_b32_e32 v1, 0x41b17218
@@ -5231,8 +5231,8 @@ define float @v_log_f32_ninf_dynamic(float %in) #1 {
 ; GFX900-SDAG-NEXT:    v_fma_f32 v2, v0, s4, -v1
 ; GFX900-SDAG-NEXT:    s_mov_b32 s4, 0x3377d1cf
 ; GFX900-SDAG-NEXT:    v_fma_f32 v2, v0, s4, v2
-; GFX900-SDAG-NEXT:    s_mov_b32 s4, 0x7f800000
 ; GFX900-SDAG-NEXT:    v_add_f32_e32 v1, v1, v2
+; GFX900-SDAG-NEXT:    s_mov_b32 s4, 0x7f800000
 ; GFX900-SDAG-NEXT:    v_cmp_lt_f32_e64 s[4:5], |v0|, s4
 ; GFX900-SDAG-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[4:5]
 ; GFX900-SDAG-NEXT:    v_mov_b32_e32 v1, 0x41b17218
@@ -5821,8 +5821,8 @@ define float @v_log_f32_dynamic_mode(float %in) #1 {
 ; SI-SDAG-NEXT:    v_fma_f32 v2, v0, s4, -v1
 ; SI-SDAG-NEXT:    s_mov_b32 s4, 0x3377d1cf
 ; SI-SDAG-NEXT:    v_fma_f32 v2, v0, s4, v2
-; SI-SDAG-NEXT:    s_mov_b32 s4, 0x7f800000
 ; SI-SDAG-NEXT:    v_add_f32_e32 v1, v1, v2
+; SI-SDAG-NEXT:    s_mov_b32 s4, 0x7f800000
 ; SI-SDAG-NEXT:    v_cmp_lt_f32_e64 s[4:5], |v0|, s4
 ; SI-SDAG-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[4:5]
 ; SI-SDAG-NEXT:    v_mov_b32_e32 v1, 0x41b17218
@@ -5917,8 +5917,8 @@ define float @v_log_f32_dynamic_mode(float %in) #1 {
 ; GFX900-SDAG-NEXT:    v_fma_f32 v2, v0, s4, -v1
 ; GFX900-SDAG-NEXT:    s_mov_b32 s4, 0x3377d1cf
 ; GFX900-SDAG-NEXT:    v_fma_f32 v2, v0, s4, v2
-; GFX900-SDAG-NEXT:    s_mov_b32 s4, 0x7f800000
 ; GFX900-SDAG-NEXT:    v_add_f32_e32 v1, v1, v2
+; GFX900-SDAG-NEXT:    s_mov_b32 s4, 0x7f800000
 ; GFX900-SDAG-NEXT:    v_cmp_lt_f32_e64 s[4:5], |v0|, s4
 ; GFX900-SDAG-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[4:5]
 ; GFX900-SDAG-NEXT:    v_mov_b32_e32 v1, 0x41b17218
@@ -6462,8 +6462,8 @@ define float @v_log_f32_from_fpext_bf16(bfloat %src) {
 ; SI-NEXT:    v_fma_f32 v2, v0, s4, -v1
 ; SI-NEXT:    s_mov_b32 s4, 0x3377d1cf
 ; SI-NEXT:    v_fma_f32 v2, v0, s4, v2
-; SI-NEXT:    s_mov_b32 s4, 0x7f800000
 ; SI-NEXT:    v_add_f32_e32 v1, v1, v2
+; SI-NEXT:    s_mov_b32 s4, 0x7f800000
 ; SI-NEXT:    v_cmp_lt_f32_e64 s[4:5], |v0|, s4
 ; SI-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[4:5]
 ; SI-NEXT:    v_mov_b32_e32 v1, 0x41b17218
@@ -6511,8 +6511,8 @@ define float @v_log_f32_from_fpext_bf16(bfloat %src) {
 ; GFX900-NEXT:    v_fma_f32 v2, v0, s4, -v1
 ; GFX900-NEXT:    s_mov_b32 s4, 0x3377d1cf
 ; GFX900-NEXT:    v_fma_f32 v2, v0, s4, v2
-; GFX900-NEXT:    s_mov_b32 s4, 0x7f800000
 ; GFX900-NEXT:    v_add_f32_e32 v1, v1, v2
+; GFX900-NEXT:    s_mov_b32 s4, 0x7f800000
 ; GFX900-NEXT:    v_cmp_lt_f32_e64 s[4:5], |v0|, s4
 ; GFX900-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[4:5]
 ; GFX900-NEXT:    v_mov_b32_e32 v1, 0x41b17218
