@@ -1604,7 +1604,7 @@ bool LoopIdiomRecognize::optimizeCRCLoopUsingClmul(const PolynomialInfo &Info) {
                             : LoTCBits(Op, Name + ".le.mask");
   };
 
-  Value *LHS = Builder.CreateZExt(Info.LHS, ClmulTy, "crc.ext");
+  Value *LHS = Builder.CreateZExt(Info.LHS, ClmulTy, "crc.cast");
 
   // Based on the Intel white paper, in our case, we have
   // R(x) = (LHS*x^TC) xor (LHSAux ? getTCBits(LHSAux)*x^CRCBW : 0)
@@ -1615,42 +1615,38 @@ bool LoopIdiomRecognize::optimizeCRCLoopUsingClmul(const PolynomialInfo &Info) {
   // significant part is used in step 3 (R(x) mod x^CRCBW).
   // ClmulMuInput is an evolving variable that will eventually become the part
   // used in step 1, which can be simplified to
-  // (LHS*x^(TC-CRCBW)) xor (LHSAux ? getTCBits(LHSAux) : 0).
-  Value *ClmulMuInput =
-      Info.IsBigEndian ? ShiftNetAmt(LHS, CRCBW, TC, "crc.be.align.tc") : LHS;
+  // (LHS*x^(TC-CRCBW)) xor (LHSAux ? getTCBits(LHSAux) : 0). However, due to a
+  // quirk in HashRecognize, getTCBits(LHSAux) = LHSAux*x^(TC-CRCBW), so this
+  // can be further simplified to (LHS xor (LHSAux ? LHSAux : 0))*x^(TC-CRCBW).
+  Value *ClmulMuInput = LHS;
 
-  // If auxiliary data is present, XOR it in with the CRC. (This corresponds to
-  // the aforementioned getTCBits(LHSAux).)
+  // If auxiliary data is present, XOR it in with the CRC.
   if (Value *Data = Info.LHSAux) {
-    if (Info.IsBigEndian) {
-      // For big-endian CRC loops where auxiliary data is XORed with the CRC
-      // inside the loop, the bits won't be aligned properly if the bit widths
-      // don't match, and thus the CRC computation is incorrect, but
-      // HashRecognize will still detect the loop. So, to set up the data
-      // properly in the big-endian case, two shifts need to be done instead of
-      // just one:
-      // - Shift right by CRCBW - DataBW so that the (CRCBW-1) bit becomes the
-      //   (DataBW-1) bit to account for the aforementioned misalignment quirk.
-      // - Shift right by DataBW - TC so that only the most significant TC bits
-      //   are used in calculation.
-      // This ends up being a shift right by CRCBW and left by TC. However, just
-      // replace the data with zero instead if CRCBW > DataBW since that is the
-      // effective outcome, and doing a shift in this case could create poison.
-      Data = CRCBW > Data->getType()->getIntegerBitWidth()
-                 ? Constant::getNullValue(Data->getType())
-                 : ShiftNetAmt(Data, CRCBW, TC, "data.be.align.tc");
+    // The reason for the HashRecognize quirk mentioned above is that it detects
+    // (CastOrSelf LHS) xor (CastOrSelf LHSAux), which is incorrect for
+    // big-endian CRCs. This mostly allows us to handle LHS and LHSAux in the
+    // same way, regardless of bit widths, but there is an exception here.
+    // If DataBW < CRCBW, then LHSAux will always be zexted before being XORed,
+    // and the significant bit check extracts the (CRCBW-1) bit of LHSAux, which
+    // will always be zero. XORing in the data in this case gives an incorrect
+    // result, so just skip the step entirely since the XOR is with zero anyway.
+    if (!Info.IsBigEndian || Data->getType()->getIntegerBitWidth() >= CRCBW) {
+      // This is usually a zext, but DataBW may exceed ClmulBW if both CRCBW and
+      // TC are small enough.
+      Data = Builder.CreateZExtOrTrunc(Data, ClmulTy, "data.cast");
+
+      ClmulMuInput = Builder.CreateXor(ClmulMuInput, Data, "xor.crc.data");
     }
-
-    // Zero out any data bits above (TC-1) for calculation since the original
-    // loop doesn't use them.
-    Data = LoTCBits(Data, "data.tcbits");
-
-    // This is usually a zext, but DataBW may exceed ClmulBW if both CRCBW and
-    // TC are small enough.
-    Data = Builder.CreateZExtOrTrunc(Data, ClmulTy, "data.cast");
-
-    ClmulMuInput = Builder.CreateXor(ClmulMuInput, Data, "xor.crc.data");
   }
+
+  // Align the current CRC with TripCount (multiply by x^(TC-CRCBW)).
+  ClmulMuInput = Info.IsBigEndian
+                     ? ShiftNetAmt(ClmulMuInput, CRCBW, TC, "crc.align.tc")
+                     : ClmulMuInput;
+
+  // Zero out any data bits above (TC-1) for calculation since the original loop
+  // doesn't use them in the significant bit checks.
+  ClmulMuInput = LoTCBits(ClmulMuInput, "crc.tcbits");
 
   // Step 1: T1(x) = floor(R(x)/x^CRCBW) * mu
   // Input is TC bits and mu is TC+1 bits, so result will be 2*TC bits.
@@ -1674,10 +1670,10 @@ bool LoopIdiomRecognize::optimizeCRCLoopUsingClmul(const PolynomialInfo &Info) {
 
   // Step 3: C(x) = (R(x) xor T2(x)) mod x^CRCBW
   Value *CRCNext = Builder.CreateXor(CRCAlignClmul, ClmulGP, "xor.crc.mult");
+  CRCNext = Info.IsBigEndian ? CRCNext
+                             : Builder.CreateLShr(CRCNext, TC, "crc.le.lshr");
 
-  // For the little-endian case, the leftmost bits of the result are relevant.
-  if (!Info.IsBigEndian)
-    CRCNext = Builder.CreateLShr(CRCNext, TC, "crc.le.lshr");
+  // Bring the result back down the the CRC bit width.
   CRCNext = Builder.CreateTrunc(CRCNext, CRCTy, "crc.next");
 
   // Replace the result of the loop with the new computed CRC value.
