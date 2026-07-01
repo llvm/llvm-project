@@ -129,20 +129,16 @@ for.body:
 define ptr @test4() {
 ; POWEROF2-LABEL: @test4(
 ; POWEROF2-NEXT:    [[TMP1:%.*]] = fadd <8 x float> zeroinitializer, zeroinitializer
-; POWEROF2-NEXT:    [[TMP2:%.*]] = shufflevector <8 x float> [[TMP1]], <8 x float> poison, <2 x i32> <i32 1, i32 2>
-; POWEROF2-NEXT:    [[TMP3:%.*]] = shufflevector <8 x float> [[TMP1]], <8 x float> poison, <2 x i32> <i32 5, i32 6>
+; POWEROF2-NEXT:    [[TMP6:%.*]] = shufflevector <8 x float> [[TMP1]], <8 x float> poison, <4 x i32> <i32 1, i32 2, i32 5, i32 6>
 ; POWEROF2-NEXT:    [[TMP4:%.*]] = shufflevector <8 x float> [[TMP1]], <8 x float> poison, <2 x i32> <i32 0, i32 4>
-; POWEROF2-NEXT:    [[TMP5:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; POWEROF2-NEXT:    [[TMP16:%.*]] = shufflevector <2 x float> [[TMP3]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; POWEROF2-NEXT:    [[TMP6:%.*]] = shufflevector <4 x float> [[TMP5]], <4 x float> [[TMP16]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
 ; POWEROF2-NEXT:    br label [[TMP8:%.*]]
-; POWEROF2:       8:
+; POWEROF2:       4:
 ; POWEROF2-NEXT:    br label [[TMP8]]
-; POWEROF2:       9:
+; POWEROF2:       5:
 ; POWEROF2-NEXT:    [[TMP9:%.*]] = phi <2 x float> [ poison, [[TMP7:%.*]] ], [ [[TMP4]], [[TMP0:%.*]] ]
 ; POWEROF2-NEXT:    [[TMP10:%.*]] = phi <4 x float> [ poison, [[TMP7]] ], [ [[TMP6]], [[TMP0]] ]
 ; POWEROF2-NEXT:    br label [[TMP11:%.*]]
-; POWEROF2:       12:
+; POWEROF2:       8:
 ; POWEROF2-NEXT:    [[TMP12:%.*]] = shufflevector <4 x float> [[TMP10]], <4 x float> poison, <2 x i32> <i32 0, i32 1>
 ; POWEROF2-NEXT:    [[TMP13:%.*]] = fmul <2 x float> [[TMP12]], zeroinitializer
 ; POWEROF2-NEXT:    [[TMP14:%.*]] = shufflevector <4 x float> [[TMP10]], <4 x float> poison, <2 x i32> <i32 2, i32 3>
@@ -165,18 +161,14 @@ define ptr @test4() {
 ;
 ; NONPOWEROF2-LABEL: @test4(
 ; NONPOWEROF2-NEXT:    [[TMP1:%.*]] = fadd <8 x float> zeroinitializer, zeroinitializer
-; NONPOWEROF2-NEXT:    [[TMP2:%.*]] = shufflevector <8 x float> [[TMP1]], <8 x float> poison, <3 x i32> <i32 0, i32 1, i32 2>
-; NONPOWEROF2-NEXT:    [[TMP3:%.*]] = shufflevector <8 x float> [[TMP1]], <8 x float> poison, <3 x i32> <i32 4, i32 5, i32 6>
-; NONPOWEROF2-NEXT:    [[TMP4:%.*]] = shufflevector <3 x float> [[TMP2]], <3 x float> poison, <6 x i32> <i32 0, i32 1, i32 2, i32 poison, i32 poison, i32 poison>
-; NONPOWEROF2-NEXT:    [[TMP18:%.*]] = shufflevector <3 x float> [[TMP3]], <3 x float> poison, <6 x i32> <i32 0, i32 1, i32 2, i32 poison, i32 poison, i32 poison>
-; NONPOWEROF2-NEXT:    [[TMP5:%.*]] = shufflevector <6 x float> [[TMP4]], <6 x float> [[TMP18]], <6 x i32> <i32 0, i32 1, i32 2, i32 6, i32 7, i32 8>
+; NONPOWEROF2-NEXT:    [[TMP5:%.*]] = shufflevector <8 x float> [[TMP1]], <8 x float> poison, <6 x i32> <i32 0, i32 1, i32 2, i32 4, i32 5, i32 6>
 ; NONPOWEROF2-NEXT:    br label [[TMP7:%.*]]
-; NONPOWEROF2:       7:
+; NONPOWEROF2:       3:
 ; NONPOWEROF2-NEXT:    br label [[TMP7]]
-; NONPOWEROF2:       8:
+; NONPOWEROF2:       4:
 ; NONPOWEROF2-NEXT:    [[TMP8:%.*]] = phi <6 x float> [ poison, [[TMP6:%.*]] ], [ [[TMP5]], [[TMP0:%.*]] ]
 ; NONPOWEROF2-NEXT:    br label [[TMP9:%.*]]
-; NONPOWEROF2:       10:
+; NONPOWEROF2:       6:
 ; NONPOWEROF2-NEXT:    [[TMP12:%.*]] = fmul <6 x float> zeroinitializer, [[TMP8]]
 ; NONPOWEROF2-NEXT:    [[TMP11:%.*]] = shufflevector <6 x float> [[TMP12]], <6 x float> poison, <3 x i32> <i32 0, i32 1, i32 2>
 ; NONPOWEROF2-NEXT:    [[TMP14:%.*]] = call reassoc nsz float @llvm.vector.reduce.fadd.v3f32(float 0.000000e+00, <3 x float> [[TMP11]])
