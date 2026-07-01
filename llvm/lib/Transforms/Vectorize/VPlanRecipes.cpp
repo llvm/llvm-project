@@ -3826,9 +3826,6 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
   case Instruction::Xor:
   case Instruction::ICmp:
   case Instruction::FCmp:
-    return getCostForRecipeWithOpcode(getOpcode(), ElementCount::getFixed(1),
-                                      Ctx) *
-           (isSingleScalar() ? 1 : VF.getFixedValue());
   case Instruction::SDiv:
   case Instruction::UDiv:
   case Instruction::SRem:
