@@ -361,3 +361,23 @@ spirv.func @asin_acos_atan(%arg0: f32, %arg1: vector<3xf16>) "None" {
   %2 = spirv.GL.Atan %arg0 : f32
   spirv.Return
 }
+
+//===----------------------------------------------------------------------===//
+// spirv.GL.FMix
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @fmix_scalar
+spirv.func @fmix_scalar(%x: f32, %y: f32, %a: f32) "None" {
+  // CHECK: %[[DIFF:.*]] = llvm.fsub %{{.*}}, %{{.*}} : f32
+  // CHECK: llvm.intr.fma(%{{.*}}, %[[DIFF]], %{{.*}}) : (f32, f32, f32) -> f32
+  %0 = spirv.GL.FMix %x : f32, %y : f32, %a : f32 -> f32
+  spirv.Return
+}
+
+// CHECK-LABEL: @fmix_vector
+spirv.func @fmix_vector(%x: vector<4xf32>, %y: vector<4xf32>, %a: vector<4xf32>) "None" {
+  // CHECK: %[[DIFF:.*]] = llvm.fsub %{{.*}}, %{{.*}} : vector<4xf32>
+  // CHECK: llvm.intr.fma(%{{.*}}, %[[DIFF]], %{{.*}}) : (vector<4xf32>, vector<4xf32>, vector<4xf32>) -> vector<4xf32>
+  %0 = spirv.GL.FMix %x : vector<4xf32>, %y : vector<4xf32>, %a : vector<4xf32> -> vector<4xf32>
+  spirv.Return
+}
