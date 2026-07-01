@@ -35,11 +35,11 @@
 // RDCL: "{{.*clang.*}}" "-cc1as" {{.*}} "-o" "hip-save-temps-host-x86_64-unknown-linux-gnu.o"
 
 // device object paths
-// CHECK: {{".*clang.*"}} "-cc1" {{.*}} "-E" {{.*}} [[CPU:"-target-cpu" "gfx900"]] {{.*}}  "-o" "hip-save-temps-hip-amdgpu9.00-amd-amdhsa-gfx900.hipi"
-// NORDC: {{".*clang.*"}} "-cc1" {{.*}} "-emit-llvm-bc" {{.*}} [[CPU]] {{.*}} "-disable-llvm-passes" {{.*}} "-o" "hip-save-temps-hip-amdgpu9.00-amd-amdhsa-gfx900.bc"
-// RDC: {{".*clang.*"}} "-cc1" {{.*}} "-emit-llvm-bc" {{.*}} [[CPU]] {{.*}} "-disable-llvm-passes" {{.*}} "-o" "hip-save-temps-hip-amdgpu9.00-amd-amdhsa-gfx900.tmp.bc"
+// CHECK: {{".*clang.*"}} "-cc1" "-triple" "amdgpu9.00-amd-amdhsa" {{.*}} "-E" {{.*}} "-o" "hip-save-temps-hip-amdgpu9.00-amd-amdhsa-gfx900.hipi"
+// NORDC: {{".*clang.*"}} "-cc1" "-triple" "amdgpu9.00-amd-amdhsa" {{.*}} "-emit-llvm-bc" {{.*}} "-disable-llvm-passes" {{.*}} "-o" "hip-save-temps-hip-amdgpu9.00-amd-amdhsa-gfx900.bc"
+// RDC: {{".*clang.*"}} "-cc1" "-triple" "amdgpu9.00-amd-amdhsa" {{.*}} "-emit-llvm-bc" {{.*}} "-disable-llvm-passes" {{.*}} "-o" "hip-save-temps-hip-amdgpu9.00-amd-amdhsa-gfx900.tmp.bc"
 
-// RDC: {{".*clang.*"}} "-cc1" {{.*}} "-emit-llvm-bc" {{.*}} [[CPU]] {{.*}} "-o" "hip-save-temps-hip-amdgpu9.00-amd-amdhsa-gfx900.{{(bc|o)}}"
+// RDC: {{".*clang.*"}} "-cc1" "-triple" "amdgpu9.00-amd-amdhsa" {{.*}} "-emit-llvm-bc" {{.*}} "-o" "hip-save-temps-hip-amdgpu9.00-amd-amdhsa-gfx900.{{(bc|o)}}"
 // CHECK-NOT: "{{.*}}llvm-link"
 // CHECK-NOT: "{{.*}}opt"
 // CHECK-NOT: "{{.*}}llc"

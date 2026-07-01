@@ -360,15 +360,15 @@ static void renderRemarksHotnessOptions(const ArgList &Args,
 }
 
 static bool shouldIgnoreUnsupportedTargetFeature(const Arg &TargetFeatureArg,
-                                                 llvm::Triple T,
-                                                 StringRef Processor) {
+                                                 const llvm::Triple &T) {
   // Warn no-cumode for AMDGCN processors not supporing WGP mode.
-  if (!T.isAMDGPU())
+  if (!T.isAMDGCN())
     return false;
-  auto GPUKind = T.isAMDGCN() ? llvm::AMDGPU::parseArchAMDGCN(Processor)
-                              : llvm::AMDGPU::parseArchR600(Processor);
-  auto GPUFeatures = T.isAMDGCN() ? llvm::AMDGPU::getArchAttrAMDGCN(GPUKind)
-                                  : llvm::AMDGPU::getArchAttrR600(GPUKind);
+
+  llvm::AMDGPU::GPUKind GK =
+      llvm::AMDGPU::getGPUKindFromSubArch(T.getSubArch());
+  unsigned GPUFeatures = llvm::AMDGPU::getArchAttrAMDGCN(GK);
+
   if (GPUFeatures & llvm::AMDGPU::FEATURE_WGP)
     return false;
   return TargetFeatureArg.getOption().matches(options::OPT_mno_cumode);
@@ -394,12 +394,11 @@ void tools::handleTargetFeaturesGroup(const Driver &D,
     assert(Name.starts_with("m") && "Invalid feature name.");
     Name = Name.substr(1);
 
-    auto Proc = getCPUName(D, Args, Triple);
-    if (shouldIgnoreUnsupportedTargetFeature(*A, Triple, Proc)) {
+    if (shouldIgnoreUnsupportedTargetFeature(*A, Triple)) {
       if (Warned.count(Name) == 0) {
         D.getDiags().Report(
             clang::diag::warn_drv_unsupported_option_for_processor)
-            << A->getAsString(Args) << Proc;
+            << A->getAsString(Args) << Triple.getArchName();
         Warned.insert(Name);
       }
       continue;
@@ -683,6 +682,17 @@ void tools::AddTargetFeature(const ArgList &Args,
 /// Get the (LLVM) name of the AMDGPU gpu we are targeting.
 static std::string getAMDGPUTargetGPU(const llvm::Triple &T,
                                       const ArgList &Args) {
+  // When the triple already encodes a specific subarch (e.g.
+  // amdgpu9.0a-amd-amdhsa), the processor is implied by the triple and there is
+  // no need to additionally pass -target-cpu. A major-family subarch (e.g.
+  // amdgpu9) is not specific enough, so fall through to -mcpu in that case.
+  if (T.isAMDGCN()) {
+    llvm::Triple::SubArchType SubArch = T.getSubArch();
+    if (SubArch != llvm::Triple::NoSubArch &&
+        SubArch != llvm::AMDGPU::getMajorSubArch(SubArch))
+      return "";
+  }
+
   if (Arg *A = Args.getLastArg(options::OPT_mcpu_EQ)) {
     auto GPUName = getProcessorFromTargetID(T, A->getValue());
     return llvm::StringSwitch<std::string>(GPUName)
