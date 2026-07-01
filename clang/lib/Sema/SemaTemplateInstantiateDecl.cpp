@@ -2534,21 +2534,11 @@ Decl *TemplateDeclInstantiator::VisitVarTemplatePartialSpecializationDecl(
   VarTemplateDecl *VarTemplate = D->getSpecializedTemplate();
 
   // Lookup the already-instantiated declaration and return that.
-  //
-  // The primary member variable template is normally instantiated into Owner
-  // before its partial specializations, because it is declared first. That may
-  // not hold when the enclosing class template is deserialized from a PCH or
-  // module built with errors, so instantiate the primary on demand here.
-  if (Owner->lookup(VarTemplate->getDeclName()).empty())
-    Visit(VarTemplate);
-
   DeclContext::lookup_result Found = Owner->lookup(VarTemplate->getDeclName());
-  if (Found.empty())
-    return nullptr;
+  assert(!Found.empty() && "Instantiation found nothing?");
 
   VarTemplateDecl *InstVarTemplate = dyn_cast<VarTemplateDecl>(Found.front());
-  if (!InstVarTemplate)
-    return nullptr;
+  assert(InstVarTemplate && "Instantiation did not find a variable template?");
 
   if (VarTemplatePartialSpecializationDecl *Result =
           InstVarTemplate->findPartialSpecInstantiatedFromMember(D))

@@ -801,9 +801,8 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 - Fixed a missing vtable for `dynamic_cast<FinalClass *>(this)` in a function template. (#GH198511)
 - Fixed an assertion failure during init-list checking of an array whose element type is an incomplete class. (#GH140685)
 - Fixed a crash when instantiating a member variable template partial specialization
-  whose enclosing class template was deserialized from a precompiled header or module
-  built with errors, so that the primary member variable template had not yet been
-  instantiated. (#GH202956)
+  whose primary template was left invalid after deserializing the enclosing class
+  template from a precompiled header or module built with errors. (#GH202956)
 
 #### Bug Fixes to AST Handling
 
