@@ -9,6 +9,7 @@ define void @main() {
   %evl_zero = call i32 @llvm.experimental.get.vector.length.i32(i32 0, i32 4, i1 false)
   %evl_short = call i32 @llvm.experimental.get.vector.length.i32(i32 3, i32 4, i1 false)
   %evl_full = call i32 @llvm.experimental.get.vector.length.i32(i32 9, i32 4, i1 false)
+  %evl_scalable = call i32 @llvm.experimental.get.vector.length.i32(i32 20, i32 4, i1 true)
   %evl_poison = call i32 @llvm.experimental.get.vector.length.i64(i64 poison, i32 4, i1 false)
 
   %last = call i32 @llvm.experimental.vector.extract.last.active.v4i32(<4 x i32> <i32 10, i32 20, i32 30, i32 40>, <4 x i1> <i1 true, i1 false, i1 true, i1 false>, i32 99)
@@ -71,6 +72,7 @@ define void @main() {
 ; CHECK-NEXT:   %evl_zero = call i32 @llvm.experimental.get.vector.length.i32(i32 0, i32 4, i1 false) => i32 0
 ; CHECK-NEXT:   %evl_short = call i32 @llvm.experimental.get.vector.length.i32(i32 3, i32 4, i1 false) => i32 3
 ; CHECK-NEXT:   %evl_full = call i32 @llvm.experimental.get.vector.length.i32(i32 9, i32 4, i1 false) => i32 4
+; CHECK-NEXT:   %evl_scalable = call i32 @llvm.experimental.get.vector.length.i32(i32 20, i32 4, i1 true) => i32 16
 ; CHECK-NEXT:   %evl_poison = call i32 @llvm.experimental.get.vector.length.i64(i64 poison, i32 4, i1 false) => poison
 ; CHECK-NEXT:   %last = call i32 @llvm.experimental.vector.extract.last.active.v4i32(<4 x i32> <i32 10, i32 20, i32 30, i32 40>, <4 x i1> <i1 true, i1 false, i1 true, i1 false>, i32 99) => i32 30
 ; CHECK-NEXT:   %last_passthru = call i32 @llvm.experimental.vector.extract.last.active.v4i32(<4 x i32> <i32 10, i32 20, i32 30, i32 40>, <4 x i1> zeroinitializer, i32 99) => i32 99
@@ -79,7 +81,7 @@ define void @main() {
 ; CHECK-NEXT:   %compress_all_false = call <4 x i32> @llvm.experimental.vector.compress.v4i32(<4 x i32> <i32 10, i32 20, i32 30, i32 40>, <4 x i1> zeroinitializer, <4 x i32> <i32 101, i32 102, i32 103, i32 104>) => { i32 101, i32 102, i32 103, i32 104 }
 ; CHECK-NEXT:   %compress_poison = call <4 x i32> @llvm.experimental.vector.compress.v4i32(<4 x i32> <i32 10, i32 20, i32 30, i32 40>, <4 x i1> <i1 false, i1 poison, i1 false, i1 false>, <4 x i32> zeroinitializer) => { poison, poison, poison, poison }
 ; CHECK-NEXT:   %match = call <4 x i1> @llvm.experimental.vector.match.v4i8.v3i8(<4 x i8> <i8 1, i8 2, i8 3, i8 4>, <3 x i8> <i8 4, i8 2, i8 9>, <4 x i1> <i1 true, i1 true, i1 false, i1 true>) => { F, T, F, T }
-; CHECK-NEXT:   %match_poison_needles = call <4 x i1> @llvm.experimental.vector.match.v4i8.v3i8(<4 x i8> <i8 1, i8 2, i8 3, i8 4>, <3 x i8> <i8 poison, i8 3, i8 9>, <4 x i1> <i1 true, i1 true, i1 true, i1 false>) => { poison, poison, T, F }
+; CHECK-NEXT:   %match_poison_needles = call <4 x i1> @llvm.experimental.vector.match.v4i8.v3i8(<4 x i8> <i8 1, i8 2, i8 3, i8 4>, <3 x i8> <i8 poison, i8 3, i8 9>, <4 x i1> <i1 true, i1 true, i1 true, i1 false>) => { poison, poison, poison, F }
 ; CHECK-NEXT:   %buckets = alloca [8 x i32], align 4 => ptr 0x8 [buckets]
 ; CHECK-NEXT:   %b0 = getelementptr inbounds [8 x i32], ptr %buckets, i64 0, i64 0 => ptr 0x8 [buckets]
 ; CHECK-NEXT:   %b1 = getelementptr inbounds [8 x i32], ptr %buckets, i64 0, i64 1 => ptr 0xC [buckets + 4]

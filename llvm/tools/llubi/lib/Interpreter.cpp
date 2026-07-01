@@ -1732,10 +1732,8 @@ public:
       const auto &Vec = Args[0].asAggregate();
       const unsigned RetBW = RetTy->getIntegerBitWidth();
 
-      if (APInt::getMaxValue(RetBW).ult(Vec.size())) {
-        reportImmediateUB() << "experimental.cttz.elts return type too narrow.";
+      if (APInt::getMaxValue(RetBW).ult(Vec.size()))
         return AnyValue::poison();
-      }
 
       uint64_t Count = 0;
       for (const AnyValue &V : Vec) {
@@ -1846,20 +1844,17 @@ public:
         for (const AnyValue &Needle : Needles) {
           if (Needle.isPoison()) {
             SawPoison = true;
-            continue;
-          }
-          if (Search[I].asInteger() == Needle.asInteger()) {
-            Found = true;
             break;
           }
+          if (Search[I].asInteger() == Needle.asInteger())
+            Found = true;
         }
 
-        if (Found)
-          Res.push_back(AnyValue::boolean(true));
-        else if (SawPoison)
+        if (SawPoison)
           Res.push_back(AnyValue::poison());
         else
-          Res.push_back(AnyValue::boolean(false));
+          Res.push_back(Found ? AnyValue::boolean(true)
+                              : AnyValue::boolean(false));
       }
 
       return std::move(Res);
