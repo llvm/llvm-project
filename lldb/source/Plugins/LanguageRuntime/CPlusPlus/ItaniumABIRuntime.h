@@ -20,11 +20,11 @@ class ItaniumABIRuntime {
 public:
   ItaniumABIRuntime(Process *process);
 
-  llvm::Expected<LanguageRuntime::VTableInfo>
-  GetVTableInfo(ValueObject &in_value, bool check_type);
+  bool IsVTableSymbol(Mangled &manged) const;
 
   bool GetDynamicTypeAndAddress(ValueObject &in_value,
                                 lldb::DynamicValueType use_dynamic,
+                                const LanguageRuntime::VTableInfo &vtable_info,
                                 TypeAndOrName &class_type_or_name,
                                 Address &dynamic_address,
                                 Value::ValueType &value_type);
@@ -41,8 +41,6 @@ public:
 private:
   TypeAndOrName GetTypeInfo(ValueObject &in_value,
                             const LanguageRuntime::VTableInfo &vtable_info);
-
-  llvm::Error TypeHasVTable(CompilerType type);
 
   TypeAndOrName GetDynamicTypeInfo(const lldb_private::Address &vtable_addr);
 
