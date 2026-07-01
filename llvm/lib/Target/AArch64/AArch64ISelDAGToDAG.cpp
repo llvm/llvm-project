@@ -15,7 +15,6 @@
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/IR/Function.h" // To access function attributes.
 #include "llvm/IR/GlobalValue.h"
@@ -3529,8 +3528,8 @@ static bool isPackedBitfieldFixedStackLoad(SDValue Op) {
 }
 
 // A packed-bitfield source is a value cheap enough that inserting it with a BFM
-// is worthwhile: an incoming integer argument in W0-W7/X0-X7, or a narrow load
-// from a fixed stack slot, possibly behind extends or an INSERT_SUBREG.
+// is worthwhile: any register-passed value or a narrow load from a fixed stack
+// slot, possibly behind extends or an INSERT_SUBREG.
 static bool isPackedBitfieldSource(SelectionDAG *CurDAG, SDValue Src) {
   if (Src.getOpcode() == ISD::ANY_EXTEND || Src.getOpcode() == ISD::ZERO_EXTEND)
     return isPackedBitfieldSource(CurDAG, Src.getOperand(0));
@@ -3542,8 +3541,7 @@ static bool isPackedBitfieldSource(SelectionDAG *CurDAG, SDValue Src) {
   if (isPackedBitfieldFixedStackLoad(Src))
     return true;
 
-  // The only other accepted leaf is a CopyFromReg of a live-in argument
-  // register.
+  // The only other accepted leaf is a CopyFromReg of a live-in register.
   if (Src.getOpcode() != ISD::CopyFromReg || Src.getResNo() != 0 ||
       Src.getOperand(0).getOpcode() != ISD::EntryToken)
     return false;
@@ -3552,15 +3550,7 @@ static bool isPackedBitfieldSource(SelectionDAG *CurDAG, SDValue Src) {
   if (VT != MVT::i32 && VT != MVT::i64)
     return false;
 
-  auto *RegNode = dyn_cast<RegisterSDNode>(Src.getOperand(1));
-  if (!RegNode || !RegNode->getReg().isVirtual())
-    return false;
-
-  MCRegister PhysReg =
-      CurDAG->getMachineFunction().getRegInfo().getLiveInPhysReg(
-          RegNode->getReg());
-  return (AArch64::W0 <= PhysReg && PhysReg <= AArch64::W7) ||
-         (AArch64::X0 <= PhysReg && PhysReg <= AArch64::X7);
+  return true;
 }
 
 static SDValue widenPackedSource(SelectionDAG *CurDAG, SDValue Src, EVT VT,
