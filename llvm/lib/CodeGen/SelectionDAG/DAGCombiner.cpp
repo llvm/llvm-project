@@ -1410,9 +1410,8 @@ SDValue DAGCombiner::reassociateReduction(unsigned RedOpc, unsigned Opc,
   // arbitrarily long chain of reductions (such as the left-leaning chain SLP
   // emits) into a single reduction.
   auto FoldReductionChain = [&](SDValue Red0, SDValue Chain) -> SDValue {
-    SDValue X, Y, Z, RedX, RedY;
-    if (!sd_match(Red0, m_AllOf(m_OneUse(m_UnaryOp(RedOpc, m_Value(X))),
-                                m_Value(RedX))) ||
+    SDValue X, Y, Z, RedY;
+    if (!sd_match(Red0, m_OneUse(m_UnaryOp(RedOpc, m_Value(X)))) ||
         !sd_match(Chain, m_OneUse(m_c_BinOp(
                              Opc,
                              m_AllOf(m_OneUse(m_UnaryOp(RedOpc, m_Value(Y))),
@@ -1425,11 +1424,11 @@ SDValue DAGCombiner::reassociateReduction(unsigned RedOpc, unsigned Opc,
       return SDValue();
     if ((Opc == ISD::FADD || Opc == ISD::FMUL) &&
         (!Chain->getFlags().hasAllowReassociation() ||
-         !RedX->getFlags().hasAllowReassociation() ||
+         !Red0->getFlags().hasAllowReassociation() ||
          !RedY->getFlags().hasAllowReassociation()))
       return SDValue();
     SelectionDAG::FlagInserter FlagsInserter(
-        DAG, Flags & Chain->getFlags() & RedX->getFlags() & RedY->getFlags());
+        DAG, Flags & Chain->getFlags() & Red0->getFlags() & RedY->getFlags());
     SDValue Sum = DAG.getNode(Opc, DL, X.getValueType(), X, Y);
     SDValue Red = DAG.getNode(RedOpc, DL, VT, Sum);
     return DAG.getNode(Opc, DL, VT, Red, Z);
