@@ -1755,12 +1755,10 @@ void RISCVAsmParser::FilterNearMisses(
       Message.Loc = IDLoc;
       bool FirstFeature = true;
       Message.Message = "instruction requires the following:";
-      for (unsigned i = 0, e = MissingFeatures.size(); i != e; ++i) {
-        if (MissingFeatures[i]) {
-          Message.Message += FirstFeature ? " " : ", ";
-          Message.Message += getSubtargetFeatureName(i);
-          FirstFeature = false;
-        }
+      for (unsigned Feature : MissingFeatures) {
+        Message.Message += FirstFeature ? " " : ", ";
+        Message.Message += getSubtargetFeatureName(Feature);
+        FirstFeature = false;
       }
       NearMissesOut.emplace_back(Message);
       break;
