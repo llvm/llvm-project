@@ -19,6 +19,8 @@ from llvm_sphinx import *  # see llvm-project/utils/docs/README.md
 
 globals().update(common_conf(tags, markdown=Markdown.EXCEPT_MAN))
 
+myst_enable_extensions += ["deflist"]
+
 # -- General configuration -----------------------------------------------------
 
 # Add any Sphinx extension module names here, as strings. They can be extensions

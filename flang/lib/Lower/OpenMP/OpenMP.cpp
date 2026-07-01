@@ -304,17 +304,17 @@ private:
 ///
 /// The main entry point visit() will call visitDirective() for the OpenMP
 /// directive associated to the initial given evaluation based on whether it is
-/// part of the initialDirectives() set. A nested OpenMP evaluation might
-/// optionally be also visited by the pattern recursively if it meets all of the
-/// following conditions:
+/// part of the initial set of directives of interest. A nested OpenMP
+/// evaluation might optionally be also visited by the pattern recursively if it
+/// meets all of the following conditions:
 ///   - It is the only nested evaluation, apart from an optional END statement
 ///     associated to the same directive.
 ///   - The OpenMP directive is part of the directive set returned by the
 ///     `visitDirective` call for the parent.
 ///
-/// Subclasses define the expected pattern by implementing the
-/// initialDirectives() and visitDirective() methods, and users are expected to
-/// use visit() to trigger the complete pattern visit.
+/// Subclasses define the expected pattern by implementing the initialize() and
+/// visitDirective() methods, and users are expected to use visit() to trigger
+/// the complete pattern visit.
 class DirectivePatternVisitor {
 public:
   DirectivePatternVisitor(semantics::SemanticsContext &semaCtx)
@@ -323,13 +323,14 @@ public:
 
   /// Run the pattern from the given evaluation.
   void visit(lower::pft::Evaluation &eval) {
-    directivesOfInterest = initialDirectives();
+    directivesOfInterest = initialize();
     visitEval(eval);
   }
 
 protected:
-  /// Returns the set of directives of interest at the beginning of the pattern.
-  virtual OmpDirectiveSet initialDirectives() const = 0;
+  /// Initializes the visitor and returns the set of initial directives of
+  /// interest to be matched the beginning of the pattern.
+  virtual OmpDirectiveSet initialize() = 0;
 
   /// Visits a single directive and, based on it, returns the set of other
   /// directives of interest that would be part of the pattern if nested inside.
@@ -419,11 +420,12 @@ public:
   virtual ~TargetSPMDVisitor() = default;
 
 protected:
-  virtual OmpDirectiveSet initialDirectives() const override {
+  virtual OmpDirectiveSet initialize() override {
+    teamsVisited = false;
     return llvm::omp::allTargetSet;
   }
 
-  virtual OmpDirectiveSet visitDirective(lower::pft::Evaluation &,
+  virtual OmpDirectiveSet visitDirective(lower::pft::Evaluation &eval,
                                          llvm::omp::Directive dir) override {
     using namespace llvm::omp;
 
@@ -440,7 +442,12 @@ protected:
     case OMPD_target:
       return topTeamsSet | topParallelSet;
     case OMPD_target_teams:
+      // The 'bare' kernel type prevents the SPMD pattern from matching.
+      if (hasOmpxBareClause(eval))
+        return {};
+      [[fallthrough]];
     case OMPD_teams:
+      teamsVisited = true;
       return topDistributeSet | topLoopSet;
     case OMPD_target_parallel:
     case OMPD_parallel:
@@ -449,6 +456,19 @@ protected:
       return {};
     }
   }
+
+  bool hasOmpxBareClause(lower::pft::Evaluation &eval) {
+    List<lower::omp::Clause> clauses;
+    extractClauses(eval, clauses);
+
+    return llvm::find_if(clauses, [](const Clause &clause) {
+             return std::holds_alternative<clause::OmpxBare>(clause.u);
+           }) != clauses.end();
+  }
+
+protected:
+  /// Whether a `teams` construct has been visited by visitDirective().
+  bool teamsVisited;
 };
 
 /// Populates the given HostEvalInfo structure after processing clauses for
@@ -628,20 +648,31 @@ protected:
     case OMPD_target_teams_distribute_parallel_do:
     case OMPD_target_teams_distribute_parallel_do_simd:
     case OMPD_target_teams_loop:
-    case OMPD_target_parallel_do:
-    case OMPD_target_parallel_do_simd:
-    case OMPD_target_parallel_loop:
     case OMPD_teams_distribute_parallel_do:
     case OMPD_teams_distribute_parallel_do_simd:
     case OMPD_teams_loop:
     case OMPD_distribute_parallel_do:
     case OMPD_distribute_parallel_do_simd:
-    case OMPD_loop:
+      execMode = canPromoteSPMDToNoLoop(eval)
+                     ? mlir::omp::TargetExecMode::spmd_no_loop
+                     : mlir::omp::TargetExecMode::spmd;
+      return {};
+    case OMPD_target_parallel_do:
+    case OMPD_target_parallel_do_simd:
+    case OMPD_target_parallel_loop:
     case OMPD_parallel_do:
     case OMPD_parallel_do_simd:
+    case OMPD_parallel_loop:
     case OMPD_do:
     case OMPD_do_simd:
-      execMode = canPromoteSPMDToNoLoop(eval)
+      // SPMD kernels without a `teams` construct cannot be promoted to no-loop
+      // mode.
+      execMode = mlir::omp::TargetExecMode::spmd;
+      return {};
+    case OMPD_loop:
+      // Prevent `target parallel loop` or equivalent nests to be promoted to
+      // no-loop mode.
+      execMode = teamsVisited && canPromoteSPMDToNoLoop(eval)
                      ? mlir::omp::TargetExecMode::spmd_no_loop
                      : mlir::omp::TargetExecMode::spmd;
       return {};
@@ -672,15 +703,6 @@ private:
              return std::holds_alternative<clause::NumTeams>(clause.u) ||
                     std::holds_alternative<clause::Reduction>(clause.u);
            }) == clauses.end();
-  }
-
-  bool hasOmpxBareClause(lower::pft::Evaluation &eval) {
-    List<lower::omp::Clause> clauses;
-    extractClauses(eval, clauses);
-
-    return llvm::find_if(clauses, [](const Clause &clause) {
-             return std::holds_alternative<clause::OmpxBare>(clause.u);
-           }) != clauses.end();
   }
 
 private:

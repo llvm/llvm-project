@@ -13,6 +13,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown -mcpu=c86-4g-m4 | FileCheck %s --check-prefixes=FAST
 ; RUN: llc < %s -mtriple=x86_64-unknown -mcpu=c86-4g-m6 | FileCheck %s --check-prefixes=FAST
 ; RUN: llc < %s -mtriple=x86_64-unknown -mcpu=c86-4g-m7 | FileCheck %s --check-prefixes=FAST
+; RUN: llc < %s -mtriple=x86_64-unknown -mcpu=c86-4g-m8 | FileCheck %s --check-prefixes=FAST
 ; RUN: llc < %s -mtriple=x86_64-unknown -mcpu=haswell | FileCheck %s --check-prefixes=FAST
 ; RUN: llc < %s -mtriple=x86_64-unknown -mcpu=skx | FileCheck %s --check-prefixes=FAST
 

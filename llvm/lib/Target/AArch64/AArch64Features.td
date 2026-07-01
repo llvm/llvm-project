@@ -410,6 +410,9 @@ def FeatureRME : Extension<"rme", "RME", "FEAT_RME",
 
 def FeatureSME : ExtensionWithMArch<"sme", "SME", "FEAT_SME",
   "Enable Scalable Matrix Extension (SME)", [FeatureBF16, FeatureFullFP16]>;
+def FeatureMCAStreamingSched : SubtargetFeature<
+  "mca-streaming-sched", "MCAStreamingSched", "true",
+  "Enable streaming-SVE schedule predicates for MC analysis tools">;
 
 def FeatureSMEF64F64 : ExtensionWithMArch<"sme-f64f64", "SMEF64F64", "FEAT_SME_F64F64",
   "Enable Scalable Matrix Extension (SME) F64F64 instructions", [FeatureSME]>;
@@ -999,6 +1002,10 @@ def FeatureMaxInterleaveFactor4 : SubtargetFeature<
     "max-interleave-factor-4", "MaxInterleaveFactor", "4",
     "Set the MaxInterleaveFactor to 4 (from the default 2)",
     [], InlineIgnore>;
+
+def FeatureFixedLoadLatency4 : SubtargetFeature<
+    "fixed-load-latency-4", "FixedLoadLatency", "4",
+    "Use a fixed latency of 4 for loads instead of querying the scheduling model">;
 
 //===----------------------------------------------------------------------===//
 // Architectures.
