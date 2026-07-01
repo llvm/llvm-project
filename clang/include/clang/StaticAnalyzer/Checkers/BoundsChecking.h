@@ -54,10 +54,7 @@ public:
   /// least bad) option for the assumption messages that use this.
   static SizeUnit forExpr(const Expr *E, const CheckerContext &C) {
     const auto *ASE = getAsCleanArraySubscriptExpr(E, C);
-    if (!ASE)
-      return bytes();
-
-    return SizeUnit(ASE->getType(), C.getASTContext());
+    return ASE ? SizeUnit(ASE->getType(), C.getASTContext()) : bytes();
   }
 
   /// Return the element type that is "natural" for reporting out-of-bounds
@@ -90,15 +87,16 @@ public:
   }
 
   /// Try to divide `Val1` and `Val2` (in place) by `this->asCharUnits()` and
-  /// return true if it can be performed without remainder. The values `Val1`
-  /// and `Val2` may be nullopt and in that case the corresponding division is
+  /// return true if it can be performed without remainder. The values \p Val1
+  /// and \p Val2 may be nullopt and in that case the corresponding division is
   /// considered to be successful.
   bool tryConvertValuesFromBytes(std::optional<int64_t> &Val1,
                                  std::optional<int64_t> &Val2) const;
 };
 
 struct Messages {
-  std::string Short, Full;
+  std::string Short;
+  std::string Full;
 };
 
 enum class BadOffsetKind { Negative, Overflowing, Indeterminate };
@@ -116,9 +114,9 @@ inline StringRef asPreposition(BadOffsetKind Problem) {
 }
 
 struct CheckFlags {
-  bool CheckUnderflow;
-  bool OffsetObviouslyNonnegative;
-  bool AcceptPastTheEnd;
+  unsigned CheckUnderflow : 1;
+  unsigned OffsetObviouslyNonnegative : 1;
+  unsigned AcceptPastTheEnd : 1;
 };
 
 class BoundsCheckResult {
