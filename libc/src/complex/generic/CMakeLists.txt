@@ -8,6 +8,7 @@ add_entrypoint_object(
     libc.src.__support.CPP.bit
     libc.src.__support.common
     libc.src.__support.complex_type
+    libc.src.__support.macros.config
     libc.src.__support.math.hypot
 )
 
@@ -21,6 +22,7 @@ add_entrypoint_object(
     libc.src.__support.CPP.bit
     libc.src.__support.common
     libc.src.__support.complex_type
+    libc.src.__support.macros.config
     libc.src.__support.math.hypotf
 )
 
