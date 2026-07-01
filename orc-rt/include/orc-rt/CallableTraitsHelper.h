@@ -39,22 +39,22 @@ struct CallableTraitsHelper<ImplT, RetT(ArgTs...)>
 template <template <typename...> typename ImplT, typename RetT,
           typename... ArgTs>
 struct CallableTraitsHelper<ImplT, RetT (*)(ArgTs...)>
-    : public CallableTraitsHelper<ImplT, RetT(ArgTs...)> {};
+    : public ImplT<RetT, ArgTs...> {};
 
 template <template <typename...> typename ImplT, typename RetT,
           typename... ArgTs>
 struct CallableTraitsHelper<ImplT, RetT (&)(ArgTs...)>
-    : public CallableTraitsHelper<ImplT, RetT(ArgTs...)> {};
+    : public ImplT<RetT, ArgTs...> {};
 
 template <template <typename...> typename ImplT, typename ClassT, typename RetT,
           typename... ArgTs>
 struct CallableTraitsHelper<ImplT, RetT (ClassT::*)(ArgTs...)>
-    : public CallableTraitsHelper<ImplT, RetT(ArgTs...)> {};
+    : public ImplT<RetT, ArgTs...> {};
 
 template <template <typename...> typename ImplT, typename ClassT, typename RetT,
           typename... ArgTs>
 struct CallableTraitsHelper<ImplT, RetT (ClassT::*)(ArgTs...) const>
-    : public CallableTraitsHelper<ImplT, RetT(ArgTs...)> {};
+    : public ImplT<RetT, ArgTs...> {};
 
 namespace detail {
 template <typename RetT, typename... ArgTs> struct CallableArgInfoImpl {
