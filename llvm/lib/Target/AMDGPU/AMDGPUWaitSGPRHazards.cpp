@@ -456,7 +456,7 @@ public:
     const unsigned VccLoIdx = *sgprNumber(AMDGPU::VCC_LO, *TRI);
     const unsigned VccHiIdx = *sgprNumber(AMDGPU::VCC_HI, *TRI);
     bool Changed = false;
-    for (auto &MBB : MF) {
+    for (MachineBasicBlock &MBB : MF) {
       std::bitset<128> WriteSet, PendingSALUWriteSet, PendingVALUWriteSet;
       MachineInstr *PrevWait = nullptr;
 
