@@ -6746,6 +6746,138 @@ getRangeForUnknownRecurrence(const SCEVUnknown *U) {
   return FullSet;
 }
 
+static bool RangeRefPHIAllowedRecurrence(LoopInfo &LI, DominatorTree &DT,
+                                         AssumptionCache &AC, PHINode *PHI) {
+  // Check for a loop PHI where the incoming value from the backedge is
+  // a recurrence in the same loop which doesn't depend on this PHI node.
+  //
+  // Restrict to two incoming values for now for simplicity.  More incoming
+  // values would require a more complex analysis of which values come from
+  // outside the loop, and which come from different backedges inside the loop.
+  if (PHI->getNumIncomingValues() != 2)
+    return false;
+
+  // The PHI must be in a loop header.
+  const Loop *L = LI.getLoopFor(PHI->getParent());
+  if (!L || L->getHeader() != PHI->getParent())
+    return false;
+
+  // Get the loop-variant operand.  (The loop-invariant operand is irrelevant:
+  // it must dominate the PHI, so it's safe according to getRangeRef rules.)
+  Value *BackedgeVal;
+  BasicBlock *Backedge;
+  if (!DT.properlyDominates(PHI->getIncomingBlock(0), PHI->getParent())) {
+    Backedge = PHI->getIncomingBlock(0);
+    BackedgeVal = PHI->getIncomingValue(0);
+  } else {
+    Backedge = PHI->getIncomingBlock(1);
+    BackedgeVal = PHI->getIncomingValue(1);
+  }
+
+  auto IsSimpleRecurrencePHI = [&](PHINode *SubPHI) {
+    if (SubPHI == PHI)
+      return false;
+    Value *Recurrence = SubPHI->getIncomingValueForBlock(Backedge);
+
+    // Look for a single binary operation, where one operand is the sub-PHI,
+    // and the other is loop-invariant.
+    //
+    // We could generalize this to allow more general recurrences, as long as
+    // they don't depend on the original PHI.
+    auto BO = MatchBinaryOp(Recurrence, PHI->getDataLayout(), AC, DT,
+                            dyn_cast<Instruction>(Recurrence));
+    if (!BO)
+      return false;
+    return (BO->LHS == SubPHI && L->isLoopInvariant(BO->RHS)) ||
+           (BO->RHS == SubPHI && L->isLoopInvariant(BO->LHS));
+  };
+
+  assert(isa<Instruction>(BackedgeVal) &&
+         "Non-instructions should be handled by dominance check");
+  int WorkLimit = 20;
+  SmallVector<Instruction *> Worklist;
+  SmallPtrSet<Instruction *, 20> Visited;
+  Worklist.push_back(cast<Instruction>(BackedgeVal));
+  Visited.insert(cast<Instruction>(BackedgeVal));
+  do {
+    Instruction *I = Worklist.pop_back_val();
+    if (auto *SubPHI = dyn_cast<PHINode>(I)) {
+      // PHI nodes outside the loop header are complicated to analyze.
+      // (For example, if they match createNodeFromSelectLikePHI, we need
+      // to analyze the condition.)  Don't try for now.
+      if (SubPHI->getParent() != PHI->getParent())
+        return false;
+
+      // Check that the PHI node in the loop header is a simple recurrence.
+      //
+      // (We could potentially loosen this to recursively allow a PHI
+      // which is itself RangeRefPHIAllowedRecurrence.)
+      if (!IsSimpleRecurrencePHI(SubPHI))
+        return false;
+    } else if (DT.dominates(PHI, I)) {
+      // We have a value inside the loop; add its operands to the worklist.
+      for (Value *Operand : I->operands()) {
+        if (auto *OperandI = dyn_cast<Instruction>(Operand)) {
+          if (Visited.insert(OperandI).second)
+            Worklist.push_back(OperandI);
+        }
+      }
+    } else {
+      // Otherwise we have an instruction that dominates the loop or is
+      // unreachable; ignore it.
+      assert(DT.dominates(I->getParent(), PHI->getParent()) ||
+             !DT.isReachableFromEntry(I->getParent()));
+    }
+    if (!--WorkLimit)
+      return false;
+  } while (!Worklist.empty());
+  return true;
+}
+
+// Analyze a PHI node, and see if it's a "select recurrence", where all
+// possible input values come from outside the loop, and one is chosen
+// based on PHIs inside the loop.
+static std::optional<SmallVector<Value *>>
+getSelectRecurrencePHI(LoopInfo &LI, DominatorTree &DT, AssumptionCache &AC,
+                       PHINode *PHI) {
+  if (PHI->getNumIncomingValues() != 2)
+    return std::nullopt;
+
+  // The PHI must be in a loop header.
+  const Loop *L = LI.getLoopFor(PHI->getParent());
+  if (!L || L->getHeader() != PHI->getParent())
+    return std::nullopt;
+
+  SmallVector<Value *> Result;
+  // Get the loop-variant operand.  (The loop-invariant operand is irrelevant:
+  // it must dominate the PHI, so it's safe according to getRangeRef rules.)
+  Value *BackedgeVal;
+  if (!DT.properlyDominates(PHI->getIncomingBlock(0), PHI->getParent())) {
+    BackedgeVal = PHI->getIncomingValue(0);
+    Result.push_back(PHI->getIncomingValue(1));
+  } else {
+    BackedgeVal = PHI->getIncomingValue(1);
+    Result.push_back(PHI->getIncomingValue(0));
+  }
+
+  // Check for a PHI that is in the loop, but not in the loop header.
+  PHINode *BackedgePHI = dyn_cast<PHINode>(BackedgeVal);
+  if (!BackedgePHI || BackedgePHI->getParent() == PHI->getParent() ||
+      DT.dominates(BackedgePHI, PHI))
+    return std::nullopt;
+
+  // Check that all the operands of the PHI are either the recurrence itself,
+  // or values from outside the loop.
+  for (Value *Operand : BackedgePHI->operands()) {
+    if (DT.dominates(Operand, PHI))
+      Result.push_back(Operand);
+    else if (Operand != PHI)
+      return std::nullopt;
+  }
+
+  return Result;
+}
+
 // The goal of this function is to check if recursively visiting the operands
 // of this PHI might lead to an infinite loop. If we do see such a loop,
 // there's no good way to break it, so we avoid analyzing such cases.
@@ -6758,16 +6890,27 @@ getRangeForUnknownRecurrence(const SCEVUnknown *U) {
 // FIXME: The way this is implemented is overly conservative; this checks
 // for a few obviously safe patterns, but anything that doesn't lead to
 // recursion is fine.
-static bool RangeRefPHIAllowedOperands(DominatorTree &DT, PHINode *PHI) {
+static std::optional<SmallVector<Value *>>
+RangeRefPHIOperandsToAnalyze(LoopInfo &LI, DominatorTree &DT,
+                             AssumptionCache &AC, PHINode *PHI) {
   Value *Cond = nullptr, *LHS = nullptr, *RHS = nullptr;
-  if (getOperandsForSelectLikePHI(DT, PHI, Cond, LHS, RHS))
-    return true;
+  if (getOperandsForSelectLikePHI(DT, PHI, Cond, LHS, RHS)) {
+    // We don't care about the condition to compute the range; just return
+    // the possible values.
+    return SmallVector<Value *>{LHS, RHS};
+  }
 
   if (all_of(PHI->operands(),
              [&](Value *Operand) { return DT.dominates(Operand, PHI); }))
-    return true;
+    return SmallVector<Value *>{PHI->operands()};
 
-  return false;
+  if (RangeRefPHIAllowedRecurrence(LI, DT, AC, PHI))
+    return SmallVector<Value *>{PHI->operands()};
+
+  if (auto Operands = getSelectRecurrencePHI(LI, DT, AC, PHI))
+    return Operands;
+
+  return std::nullopt;
 }
 
 const ConstantRange &
@@ -6827,9 +6970,11 @@ ScalarEvolution::getRangeRefIter(const SCEV *S,
     }
     // `SCEVUnknown`'s require special treatment.
     if (PHINode *P = dyn_cast<PHINode>(UnknownS->getValue())) {
-      if (!RangeRefPHIAllowedOperands(DT, P))
+      std::optional<SmallVector<Value *>> Operands =
+          RangeRefPHIOperandsToAnalyze(LI, DT, AC, P);
+      if (!Operands)
         continue;
-      for (auto &Op : reverse(P->operands()))
+      for (auto &Op : reverse(*Operands))
         AddToWorklist(getSCEV(Op));
     }
   }
@@ -7165,11 +7310,12 @@ const ConstantRange &ScalarEvolution::getRangeRef(
       if (auto *AR = dyn_cast<SCEVAddRecExpr>(getSCEV(V)))
         return getRangeRef(AR, SignHint, Depth + 1);
 
-      // Make sure that we do not run over cycled Phis.
-      if (RangeRefPHIAllowedOperands(DT, Phi)) {
+      if (auto Operands = RangeRefPHIOperandsToAnalyze(LI, DT, AC, Phi)) {
+        // The PHI node matches a pattern where we know we won't cause
+        // a cycle; analyze the extracted operands.
         ConstantRange RangeFromOps(BitWidth, /*isFullSet=*/false);
 
-        for (const auto &Op : Phi->operands()) {
+        for (const auto &Op : *Operands) {
           auto OpRange = getRangeRef(getSCEV(Op), SignHint, Depth + 1);
           RangeFromOps = RangeFromOps.unionWith(OpRange);
           // No point to continue if we already have a full set.
@@ -7928,9 +8074,9 @@ ScalarEvolution::getOperandsToCreate(Value *V, SmallVectorImpl<Value *> &Ops) {
     //
     // In addition to getNodeForPHI, also construct nodes which might be needed
     // by getRangeRef.
-    if (RangeRefPHIAllowedOperands(DT, cast<PHINode>(U))) {
-      for (Value *V : cast<PHINode>(U)->operands())
-        Ops.push_back(V);
+    if (auto PHIOperands =
+            RangeRefPHIOperandsToAnalyze(LI, DT, AC, cast<PHINode>(U))) {
+      Ops.append(*PHIOperands);
       return nullptr;
     }
     return nullptr;
