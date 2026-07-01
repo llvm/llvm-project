@@ -2186,6 +2186,45 @@ static Value *foldSelectInstWithICmpConst(SelectInst &SI, ICmpInst *ICI,
   return nullptr;
 }
 
+// a > -1 ? 1 : ( a | (+ve)value) --> smin(1, a | (+ve)value)
+// a < -1 ? ( a | (+ve)value) : 1 --> smin(1, a | (+ve)value)
+// a < 0  ? ( a | (+ve)value) : 1 --> smin(1, a | (+ve)value)
+static Value *foldSelectInstWithICmpOr(SelectInst &SI, ICmpInst *ICI,
+                                       InstCombiner::BuilderTy &Builder,
+                                       const SimplifyQuery &SQ) {
+  Value *OrVal, *ConstVal, *Mask;
+  Value *A = ICI->getOperand(0);
+  Value *B = ICI->getOperand(1);
+  Value *TVal = SI.getTrueValue();
+  Value *FVal = SI.getFalseValue();
+  ICmpInst::Predicate Pred = ICI->getPredicate();
+
+  if ((Pred == ICmpInst::ICMP_SLT && match(B, m_Zero())) ||
+      (Pred == ICmpInst::ICMP_SLE && match(B, m_AllOnes()))) {
+    OrVal = TVal;
+    ConstVal = FVal;
+  } else if ((Pred == ICmpInst::ICMP_SGT &&
+              match(B, m_AllOnes())) ||
+             (Pred == ICmpInst::ICMP_SGE && match(B, m_Zero()))) {
+    OrVal = FVal;
+    ConstVal = TVal;
+  } else {
+    return nullptr;
+  }
+
+  if (!match(ConstVal, m_AllOnes()) && !match(ConstVal, m_Zero()) &&
+      !match(ConstVal, m_One()))
+    return nullptr;
+
+  if (!match(OrVal, m_c_Or(m_Specific(A), m_Value(Mask))))
+    return nullptr;
+
+  if (!isKnownPositive(Mask, SQ))
+    return nullptr;
+
+  return Builder.CreateBinaryIntrinsic(Intrinsic::smin, OrVal, ConstVal);
+}
+
 /// `A == MIN_INT ? B != MIN_INT : A < B` --> `A < B`
 /// `A == MAX_INT ? B != MAX_INT : A > B` --> `A > B`
 static Instruction *foldSelectWithExtremeEqCond(Value *CmpLHS, Value *CmpRHS,
@@ -2405,6 +2444,9 @@ Instruction *InstCombinerImpl::foldSelectInstWithICmp(SelectInst &SI,
     return replaceInstUsesWith(SI, V);
 
   if (Value *V = foldSelectInstWithICmpConst(SI, ICI, Builder))
+    return replaceInstUsesWith(SI, V);
+
+  if (Value *V = foldSelectInstWithICmpOr(SI, ICI, Builder, SQ))
     return replaceInstUsesWith(SI, V);
 
   if (Value *V = canonicalizeClampLike(SI, *ICI, Builder, *this))
