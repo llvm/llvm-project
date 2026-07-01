@@ -1041,7 +1041,7 @@ public:
     Stmt::StmtClass C = T->getStmtClass();
     return C == OMPTileDirectiveClass || C == OMPUnrollDirectiveClass ||
            C == OMPReverseDirectiveClass || C == OMPInterchangeDirectiveClass ||
-           C == OMPStripeDirectiveClass;
+           C == OMPStripeDirectiveClass || C == OMPFlattenDirectiveClass;
   }
 };
 
@@ -5956,6 +5956,79 @@ public:
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == OMPInterchangeDirectiveClass;
+  }
+};
+
+/// Represents the '#pragma omp flatten' loop transformation directive.
+///
+/// \code{c}
+///   #pragma omp flatten
+///   for (int i = 0; i < m; ++i)
+///     for (int j = 0; j < n; ++j)
+///       ..
+/// \endcode
+class OMPFlattenDirective final
+    : public OMPCanonicalLoopNestTransformationDirective {
+  friend class ASTStmtReader;
+  friend class OMPExecutableDirective;
+
+  /// Offsets of child members.
+  enum {
+    PreInitsOffset = 0,
+    TransformedStmtOffset,
+  };
+
+  explicit OMPFlattenDirective(SourceLocation StartLoc, SourceLocation EndLoc,
+                               unsigned NumLoops)
+      : OMPCanonicalLoopNestTransformationDirective(
+            OMPFlattenDirectiveClass, llvm::omp::OMPD_flatten, StartLoc, EndLoc,
+            NumLoops) {}
+
+  void setPreInits(Stmt *PreInits) {
+    Data->getChildren()[PreInitsOffset] = PreInits;
+  }
+
+  void setTransformedStmt(Stmt *S) {
+    Data->getChildren()[TransformedStmtOffset] = S;
+  }
+
+public:
+  /// Create a new AST node representation for '#pragma omp flatten'.
+  ///
+  /// \param C         Context of the AST.
+  /// \param StartLoc  Location of the introducer (e.g. the 'omp' token).
+  /// \param EndLoc    Location of the directive's end (e.g. the tok::eod).
+  /// \param Clauses   The directive's clauses.
+  /// \param NumLoops  Number of affected loops (the flatten depth, currently
+  ///                  always 2).
+  /// \param AssociatedStmt  The outermost associated loop.
+  /// \param TransformedStmt The flattened loop, or nullptr in dependent
+  ///                        contexts.
+  /// \param PreInits  Helper preinits statements for the loop nest.
+  static OMPFlattenDirective *
+  Create(const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
+         ArrayRef<OMPClause *> Clauses, unsigned NumLoops, Stmt *AssociatedStmt,
+         Stmt *TransformedStmt, Stmt *PreInits);
+
+  /// Build an empty '#pragma omp flatten' AST node for deserialization.
+  ///
+  /// \param C          Context of the AST.
+  /// \param NumClauses Number of clauses to allocate.
+  /// \param NumLoops   Number of associated loops to allocate.
+  static OMPFlattenDirective *
+  CreateEmpty(const ASTContext &C, unsigned NumClauses, unsigned NumLoops);
+
+  /// Gets the flattened loop after the transformation. This is the de-sugared
+  /// replacement or nullptr in dependent contexts.
+  Stmt *getTransformedStmt() const {
+    return Data->getChildren()[TransformedStmtOffset];
+  }
+
+  /// Return preinits statement.
+  Stmt *getPreInits() const { return Data->getChildren()[PreInitsOffset]; }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == OMPFlattenDirectiveClass;
   }
 };
 

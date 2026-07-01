@@ -800,6 +800,11 @@ void StmtPrinter::VisitOMPInterchangeDirective(OMPInterchangeDirective *Node) {
   PrintOMPExecutableDirective(Node);
 }
 
+void StmtPrinter::VisitOMPFlattenDirective(OMPFlattenDirective *Node) {
+  Indent() << "#pragma omp flatten";
+  PrintOMPExecutableDirective(Node);
+}
+
 void StmtPrinter::VisitOMPSplitDirective(OMPSplitDirective *Node) {
   Indent() << "#pragma omp split";
   PrintOMPExecutableDirective(Node);

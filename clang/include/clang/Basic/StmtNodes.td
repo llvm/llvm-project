@@ -247,6 +247,7 @@ def OMPReverseDirective : StmtNode<OMPCanonicalLoopNestTransformationDirective>;
 def OMPSplitDirective : StmtNode<OMPCanonicalLoopNestTransformationDirective>;
 def OMPInterchangeDirective
     : StmtNode<OMPCanonicalLoopNestTransformationDirective>;
+def OMPFlattenDirective : StmtNode<OMPCanonicalLoopNestTransformationDirective>;
 def OMPCanonicalLoopSequenceTransformationDirective
     : StmtNode<OMPExecutableDirective, 1>;
 def OMPFuseDirective
