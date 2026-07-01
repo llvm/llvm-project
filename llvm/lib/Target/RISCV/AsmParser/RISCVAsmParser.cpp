@@ -471,14 +471,14 @@ public:
   }
   bool isAnyReg() const {
     return Kind == KindTy::Register &&
-           (RISCVMCRegisterClasses[RISCV::GPRRegClassID].contains(Reg.Reg) ||
-            RISCVMCRegisterClasses[RISCV::FPR64RegClassID].contains(Reg.Reg) ||
-            RISCVMCRegisterClasses[RISCV::VRRegClassID].contains(Reg.Reg));
+           (getRISCVMCRegisterClass(RISCV::GPRRegClassID).contains(Reg.Reg) ||
+            getRISCVMCRegisterClass(RISCV::FPR64RegClassID).contains(Reg.Reg) ||
+            getRISCVMCRegisterClass(RISCV::VRRegClassID).contains(Reg.Reg));
   }
   bool isAnyRegC() const {
     return Kind == KindTy::Register &&
-           (RISCVMCRegisterClasses[RISCV::GPRCRegClassID].contains(Reg.Reg) ||
-            RISCVMCRegisterClasses[RISCV::FPR64CRegClassID].contains(Reg.Reg));
+           (getRISCVMCRegisterClass(RISCV::GPRCRegClassID).contains(Reg.Reg) ||
+            getRISCVMCRegisterClass(RISCV::FPR64CRegClassID).contains(Reg.Reg));
   }
   bool isImm() const override { return isExpr(); }
   bool isMem() const override { return false; }
@@ -492,38 +492,38 @@ public:
 
   bool isGPR() const {
     return Kind == KindTy::Register &&
-           RISCVMCRegisterClasses[RISCV::GPRRegClassID].contains(Reg.Reg);
+           getRISCVMCRegisterClass(RISCV::GPRRegClassID).contains(Reg.Reg);
   }
 
   bool isYGPR() const {
     return Kind == KindTy::Register &&
-           RISCVMCRegisterClasses[RISCV::YGPRRegClassID].contains(Reg.Reg);
+           getRISCVMCRegisterClass(RISCV::YGPRRegClassID).contains(Reg.Reg);
   }
 
   bool isGPRPair() const {
     return Kind == KindTy::Register &&
-           RISCVMCRegisterClasses[RISCV::GPRPairRegClassID].contains(Reg.Reg);
+           getRISCVMCRegisterClass(RISCV::GPRPairRegClassID).contains(Reg.Reg);
   }
 
   bool isGPRPairC() const {
     return Kind == KindTy::Register &&
-           RISCVMCRegisterClasses[RISCV::GPRPairCRegClassID].contains(Reg.Reg);
+           getRISCVMCRegisterClass(RISCV::GPRPairCRegClassID).contains(Reg.Reg);
   }
 
   bool isGPRPairNoX0() const {
     return Kind == KindTy::Register &&
-           RISCVMCRegisterClasses[RISCV::GPRPairNoX0RegClassID].contains(
-               Reg.Reg);
+           getRISCVMCRegisterClass(RISCV::GPRPairNoX0RegClassID)
+               .contains(Reg.Reg);
   }
 
   bool isGPRF16() const {
     return Kind == KindTy::Register &&
-           RISCVMCRegisterClasses[RISCV::GPRF16RegClassID].contains(Reg.Reg);
+           getRISCVMCRegisterClass(RISCV::GPRF16RegClassID).contains(Reg.Reg);
   }
 
   bool isGPRF32() const {
     return Kind == KindTy::Register &&
-           RISCVMCRegisterClasses[RISCV::GPRF32RegClassID].contains(Reg.Reg);
+           getRISCVMCRegisterClass(RISCV::GPRF32RegClassID).contains(Reg.Reg);
   }
 
   bool isGPRAsFPR() const { return isGPR() && Reg.IsGPRAsFPR; }
@@ -1373,7 +1373,7 @@ static MCRegister convertVRToVRMx(const MCRegisterInfo &RI, MCRegister Reg,
   else
     return MCRegister();
   return RI.getMatchingSuperReg(Reg, RISCV::sub_vrm1_0,
-                                &RISCVMCRegisterClasses[RegClassID]);
+                                &getRISCVMCRegisterClass(RegClassID));
 }
 
 static MCRegister convertFPR64ToFPR256(MCRegister Reg) {
@@ -1389,10 +1389,10 @@ unsigned RISCVAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
 
   MCRegister Reg = Op.getReg();
   bool IsRegFPR64 =
-      RISCVMCRegisterClasses[RISCV::FPR64RegClassID].contains(Reg);
+      getRISCVMCRegisterClass(RISCV::FPR64RegClassID).contains(Reg);
   bool IsRegFPR64C =
-      RISCVMCRegisterClasses[RISCV::FPR64CRegClassID].contains(Reg);
-  bool IsRegVR = RISCVMCRegisterClasses[RISCV::VRRegClassID].contains(Reg);
+      getRISCVMCRegisterClass(RISCV::FPR64CRegClassID).contains(Reg);
+  bool IsRegVR = getRISCVMCRegisterClass(RISCV::VRRegClassID).contains(Reg);
 
   if (Op.isGPR() && Kind == MCK_YGPR) {
     // GPR and capability GPR use the same register names, convert if required.
@@ -1433,7 +1433,7 @@ unsigned RISCVAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
   // reject them at parsing thinking we should match as GPRPairAsFPR for RV32.
   // So we explicitly accept them here for RV32 to allow the generic code to
   // report that the instruction requires RV64.
-  if (RISCVMCRegisterClasses[RISCV::GPRRegClassID].contains(Reg) &&
+  if (getRISCVMCRegisterClass(RISCV::GPRRegClassID).contains(Reg) &&
       Kind == MCK_GPRF64AsFPR && STI->hasFeature(RISCV::FeatureStdExtZdinx) &&
       !isRV64())
     return Match_Success;
@@ -2633,7 +2633,7 @@ ParseStatus RISCVAsmParser::parseGPRPairAsFPR64(OperandVector &Operands) {
   if (!Reg)
     return ParseStatus::NoMatch;
 
-  if (!RISCVMCRegisterClasses[RISCV::GPRRegClassID].contains(Reg))
+  if (!getRISCVMCRegisterClass(RISCV::GPRRegClassID).contains(Reg))
     return ParseStatus::NoMatch;
 
   if ((Reg - RISCV::X0) & 1) {
@@ -2652,7 +2652,7 @@ ParseStatus RISCVAsmParser::parseGPRPairAsFPR64(OperandVector &Operands) {
   const MCRegisterInfo *RI = getContext().getRegisterInfo();
   MCRegister Pair = RI->getMatchingSuperReg(
       Reg, RISCV::sub_gpr_even,
-      &RISCVMCRegisterClasses[RISCV::GPRPairRegClassID]);
+      &getRISCVMCRegisterClass(RISCV::GPRPairRegClassID));
   Operands.push_back(RISCVOperand::createReg(Pair, S, E, /*isGPRAsFPR=*/true));
   return ParseStatus::Success;
 }
@@ -2681,7 +2681,7 @@ ParseStatus RISCVAsmParser::parseGPRPair(OperandVector &Operands,
   if (!Reg)
     return ParseStatus::NoMatch;
 
-  if (!RISCVMCRegisterClasses[RISCV::GPRRegClassID].contains(Reg))
+  if (!getRISCVMCRegisterClass(RISCV::GPRRegClassID).contains(Reg))
     return ParseStatus::NoMatch;
 
   if ((Reg - RISCV::X0) & 1)
@@ -2694,7 +2694,7 @@ ParseStatus RISCVAsmParser::parseGPRPair(OperandVector &Operands,
   const MCRegisterInfo *RI = getContext().getRegisterInfo();
   MCRegister Pair = RI->getMatchingSuperReg(
       Reg, RISCV::sub_gpr_even,
-      &RISCVMCRegisterClasses[RISCV::GPRPairRegClassID]);
+      &getRISCVMCRegisterClass(RISCV::GPRPairRegClassID));
   Operands.push_back(RISCVOperand::createReg(Pair, S, E));
   return ParseStatus::Success;
 }
@@ -2859,7 +2859,7 @@ ParseStatus RISCVAsmParser::parseRegReg(OperandVector &Operands) {
   StringRef OffsetRegName = getLexer().getTok().getIdentifier();
   MCRegister OffsetReg = matchRegisterNameHelper(OffsetRegName);
   if (!OffsetReg ||
-      !RISCVMCRegisterClasses[RISCV::GPRRegClassID].contains(OffsetReg))
+      !getRISCVMCRegisterClass(RISCV::GPRRegClassID).contains(OffsetReg))
     return Error(getLoc(), "expected GPR register");
   getLexer().Lex();
 
@@ -2872,7 +2872,7 @@ ParseStatus RISCVAsmParser::parseRegReg(OperandVector &Operands) {
   StringRef BaseRegName = getLexer().getTok().getIdentifier();
   MCRegister BaseReg = matchRegisterNameHelper(BaseRegName);
   if (!BaseReg ||
-      !RISCVMCRegisterClasses[RISCV::GPRRegClassID].contains(BaseReg))
+      !getRISCVMCRegisterClass(RISCV::GPRRegClassID).contains(BaseReg))
     return Error(getLoc(), "expected GPR register");
   getLexer().Lex();
 
@@ -3733,7 +3733,7 @@ void RISCVAsmParser::emitLoadStoreSymbol(MCInst &Inst, unsigned Opcode,
   MCRegister TmpReg = Inst.getOperand(0).getReg();
 
   // If TmpReg is a GPR pair, get the even register.
-  if (RISCVMCRegisterClasses[RISCV::GPRPairRegClassID].contains(TmpReg)) {
+  if (getRISCVMCRegisterClass(RISCV::GPRPairRegClassID).contains(TmpReg)) {
     const MCRegisterInfo *RI = getContext().getRegisterInfo();
     TmpReg = RI->getSubReg(TmpReg, RISCV::sub_gpr_even);
   }
@@ -3801,11 +3801,11 @@ void RISCVAsmParser::emitQCELILoadStoreSymbol(MCInst &Inst, unsigned Opcode,
   // For stores, both the data register and the address register must be in
   // GPRC for the compressed form; for loads AddrReg serves as both.
   bool CanUseGPRC =
-      RISCVMCRegisterClasses[RISCV::GPRCRegClassID].contains(AddrReg);
+      getRISCVMCRegisterClass(RISCV::GPRCRegClassID).contains(AddrReg);
   if (HasTmpReg && CanUseGPRC) {
     MCRegister DataReg = Inst.getOperand(1).getReg();
     CanUseGPRC =
-        RISCVMCRegisterClasses[RISCV::GPRCRegClassID].contains(DataReg);
+        getRISCVMCRegisterClass(RISCV::GPRCRegClassID).contains(DataReg);
   }
 
   bool UseCompressed =
@@ -4057,11 +4057,11 @@ static unsigned getNFforLXSEG(unsigned Opcode) {
 }
 
 unsigned getLMULFromVectorRegister(MCRegister Reg) {
-  if (RISCVMCRegisterClasses[RISCV::VRM2RegClassID].contains(Reg))
+  if (getRISCVMCRegisterClass(RISCV::VRM2RegClassID).contains(Reg))
     return 2;
-  if (RISCVMCRegisterClasses[RISCV::VRM4RegClassID].contains(Reg))
+  if (getRISCVMCRegisterClass(RISCV::VRM4RegClassID).contains(Reg))
     return 4;
-  if (RISCVMCRegisterClasses[RISCV::VRM8RegClassID].contains(Reg))
+  if (getRISCVMCRegisterClass(RISCV::VRM8RegClassID).contains(Reg))
     return 8;
   return 1;
 }
