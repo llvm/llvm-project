@@ -163,12 +163,16 @@ def match_where_to_frame(
     we get a result that could change due to an increased hit count (i.e. if we get a match with a `for_hit_count`
     where, or if we get an "early" result), we increment `where`'s hit count and run the check again to check whether
     the result changes."""
-    result = _match_where_to_frame(where, frame_idx, step, labels, context, default_path)
+    result = _match_where_to_frame(
+        where, frame_idx, step, labels, context, default_path
+    )
     if result == WhereFrameMatchResult.EARLY or (
         result == WhereFrameMatchResult.TRUE and where.for_hit_count is not None
     ):
         if context.add_hit_if_where_hit_is_new(where, step):
-            result = _match_where_to_frame(where, frame_idx, step, labels, context, default_path)
+            result = _match_where_to_frame(
+                where, frame_idx, step, labels, context, default_path
+            )
     return result
 
 
@@ -250,7 +254,12 @@ def get_state_match(
         for frame_idx, frame in reversed(list(enumerate(step_info.frames))):
             labels = script.get_labels(expected_file or frame.loc.path)
             match_result = match_where_to_frame(
-                where, frame_idx, step_info, labels, match_context, script.root_scope.file
+                where,
+                frame_idx,
+                step_info,
+                labels,
+                match_context,
+                script.root_scope.file,
             )
             if match_result == WhereFrameMatchResult.TRUE:
                 active_where_expects[where] = WhereMatchResult(frame_idx)
