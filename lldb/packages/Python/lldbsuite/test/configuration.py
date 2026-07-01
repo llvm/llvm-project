@@ -69,6 +69,9 @@ filecheck = None
 # Path to the nm tool.
 nm: Optional[str] = None
 
+# Path to the objcopy tool
+objcopy: Optional[str] = None
+
 # Path to the yaml2obj tool. Not optional.
 yaml2obj = None
 
@@ -199,6 +202,14 @@ def get_nm_path():
     """
     if nm and os.path.lexists(nm):
         return nm
+
+
+def get_objcopy_path():
+    """
+    Get the path to the objcopy tool.
+    """
+    if objcopy and os.path.lexists(objcopy):
+        return objcopy
 
 
 def get_yaml2obj_path():
