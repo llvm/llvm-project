@@ -82,15 +82,27 @@ if (CMAKE_Fortran_COMPILER)
   # cannot use CMAKE_Fortran_COMPILER_ID.
   cmake_path(GET CMAKE_Fortran_COMPILER STEM _Fortran_COMPILER_STEM)
   if (_Fortran_COMPILER_STEM STREQUAL "flang-new" OR _Fortran_COMPILER_STEM STREQUAL "flang")
+    # Force the Fortran compiler identity instead of letting CMake detect it by
+    # executing the compiler. enable_language(Fortran) below would otherwise run
+    # `flang` for both compiler identification and ABI detection. In a
+    # bootstrapping runtimes build, the just-built `flang` and its shared
+    # libraries (e.g. libFortranLower.so) are produced by independent build
+    # steps, so executing `flang` during the (deliberately early, see #198205)
+    # runtimes configure step can race with the linking or relinking of those
+    # libraries -- "error while loading shared libraries: ...: file too short".
+    # Forcing the identity keeps the runtimes configure off flang's build
+    # critical path while avoiding that race (llvm-project#205360).
+    # CMAKE_Fortran_COMPILER_ID_RUN skips compiler identification and
+    # CMAKE_Fortran_COMPILER_FORCED skips the ABI/works probe, so neither
+    # executes flang.
+    set(CMAKE_Fortran_COMPILER_ID "LLVMFlang")
+    set(CMAKE_Fortran_COMPILER_ID_RUN TRUE)
+    set(CMAKE_Fortran_COMPILER_FORCED TRUE)
+    set(CMAKE_Fortran_COMPILER_VERSION "${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}")
+
     # CMake 3.24 is the first version of CMake that directly recognizes Flang.
     # LLVM's requirement is only CMake 3.20, teach CMake 3.20-3.23 how to use Flang, if used.
     if (CMAKE_VERSION VERSION_LESS "3.24")
-      include(CMakeForceCompiler)
-      CMAKE_FORCE_Fortran_COMPILER("${CMAKE_Fortran_COMPILER}" "LLVMFlang")
-
-      set(CMAKE_Fortran_COMPILER_ID "LLVMFlang")
-      set(CMAKE_Fortran_COMPILER_VERSION "${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}")
-
       set(CMAKE_Fortran_SUBMODULE_SEP "-")
       set(CMAKE_Fortran_SUBMODULE_EXT ".mod")
 
