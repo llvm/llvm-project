@@ -19932,7 +19932,7 @@ static SDValue combineADDToADDZE(SDNode *N, SelectionDAG &DAG,
   SDValue LHS = N->getOperand(0);
   SDValue RHS = N->getOperand(1);
 
-  auto isZextOfCompareWithConstant = [](SDValue Op) {
+  auto isZextOfCompare = [](SDValue Op) {
     if (Op.getOpcode() != ISD::ZERO_EXTEND || !Op.hasOneUse() ||
         Op.getValueType() != MVT::i64)
       return false;
@@ -19942,18 +19942,11 @@ static SDValue combineADDToADDZE(SDNode *N, SelectionDAG &DAG,
         Cmp.getOperand(0).getValueType() != MVT::i64)
       return false;
 
-    if (auto *Constant = dyn_cast<ConstantSDNode>(Cmp.getOperand(1))) {
-      int64_t NegConstant = 0 - Constant->getSExtValue();
-      // Due to the limitations of the addi instruction,
-      // -C is required to be [-32768, 32767].
-      return isInt<16>(NegConstant);
-    }
-
-    return false;
+    return true;
   };
 
-  bool LHSHasPattern = isZextOfCompareWithConstant(LHS);
-  bool RHSHasPattern = isZextOfCompareWithConstant(RHS);
+  bool LHSHasPattern = isZextOfCompare(LHS);
+  bool RHSHasPattern = isZextOfCompare(RHS);
 
   // If there is a pattern, canonicalize a zext operand to the RHS.
   if (LHSHasPattern && !RHSHasPattern)
@@ -19966,42 +19959,52 @@ static SDValue combineADDToADDZE(SDNode *N, SelectionDAG &DAG,
   SDVTList VTs = DAG.getVTList(MVT::i64, CarryType);
   SDValue Cmp = RHS.getOperand(0);
   SDValue Z = Cmp.getOperand(0);
-  auto *Constant = cast<ConstantSDNode>(Cmp.getOperand(1));
-  int64_t NegConstant = 0 - Constant->getSExtValue();
+  SDValue Y = Cmp.getOperand(1);
+
+  SDValue DiffOrZ;
+  if (auto *Constant = dyn_cast<ConstantSDNode>(Y)) {
+    int64_t NegConstant = 0 - Constant->getSExtValue();
+    if (NegConstant == 0)
+      DiffOrZ = Z;
+    else if (isInt<16>(NegConstant))
+      DiffOrZ = DAG.getNode(ISD::ADD, DL, MVT::i64, Z,
+                            DAG.getConstant(NegConstant, DL, MVT::i64));
+  }
+
+  if (!DiffOrZ)
+    DiffOrZ = DAG.getNode(ISD::XOR, DL, MVT::i64, Z, Y);
 
   switch(cast<CondCodeSDNode>(Cmp.getOperand(2))->get()) {
   default: break;
   case ISD::SETNE: {
-    //                                 when C == 0
+    //                                 when Y == 0
     //                             --> addze X, (addic Z, -1).carry
     //                            /
-    // add X, (zext(setne Z, C))--
-    //                            \    when -32768 <= -C <= 32767 && C != 0
-    //                             --> addze X, (addic (addi Z, -C), -1).carry
-    SDValue Add = DAG.getNode(ISD::ADD, DL, MVT::i64, Z,
-                              DAG.getConstant(NegConstant, DL, MVT::i64));
-    SDValue AddOrZ = NegConstant != 0 ? Add : Z;
+    // add X, (zext(setne Z, Y))--
+    //                            \    when Y != 0
+    //                             --> addze X, (addic (xor Z, Y), -1).carry
+    // (If Y is a constant C and -C fits in 16 bits, we use (addi Z, -C) instead
+    // of xor)
     SDValue Addc =
         DAG.getNode(ISD::UADDO_CARRY, DL, DAG.getVTList(MVT::i64, CarryType),
-                    AddOrZ, DAG.getAllOnesConstant(DL, MVT::i64),
+                    DiffOrZ, DAG.getAllOnesConstant(DL, MVT::i64),
                     DAG.getConstant(0, DL, CarryType));
     return DAG.getNode(ISD::UADDO_CARRY, DL, VTs, LHS,
                        DAG.getConstant(0, DL, MVT::i64),
                        SDValue(Addc.getNode(), 1));
   }
   case ISD::SETEQ: {
-    //                                 when C == 0
+    //                                 when Y == 0
     //                             --> addze X, (subfic Z, 0).carry
     //                            /
-    // add X, (zext(sete  Z, C))--
-    //                            \    when -32768 <= -C <= 32767 && C != 0
-    //                             --> addze X, (subfic (addi Z, -C), 0).carry
-    SDValue Add = DAG.getNode(ISD::ADD, DL, MVT::i64, Z,
-                              DAG.getConstant(NegConstant, DL, MVT::i64));
-    SDValue AddOrZ = NegConstant != 0 ? Add : Z;
+    // add X, (zext(sete  Z, Y))--
+    //                            \    when Y != 0
+    //                             --> addze X, (subfic (xor Z, Y), 0).carry
+    // (If Y is a constant C and -C fits in 16 bits, we use (addi Z, -C) instead
+    // of xor)
     SDValue Subc =
         DAG.getNode(ISD::USUBO_CARRY, DL, DAG.getVTList(MVT::i64, CarryType),
-                    DAG.getConstant(0, DL, MVT::i64), AddOrZ,
+                    DAG.getConstant(0, DL, MVT::i64), DiffOrZ,
                     DAG.getConstant(0, DL, CarryType));
     SDValue Invert = DAG.getNode(ISD::XOR, DL, CarryType, Subc.getValue(1),
                                  DAG.getConstant(1UL, DL, CarryType));
