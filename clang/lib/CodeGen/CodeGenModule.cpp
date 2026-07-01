@@ -1483,9 +1483,10 @@ void CodeGenModule::Release() {
                                 "sign-return-address-with-bkey", 2);
   }
   if (T.isAArch64()) {
-    getModule().addModuleFlag(
-        llvm::Module::Error, "ptrauth-elf-got",
-        static_cast<uint32_t>(LangOpts.PointerAuthELFGOT));
+    if (getTriple().isOSBinFormatELF())
+      getModule().addModuleFlag(
+          llvm::Module::Error, "ptrauth-elf-got",
+          static_cast<uint32_t>(LangOpts.PointerAuthELFGOT));
 
     if (getTriple().isOSLinux()) {
       getModule().addModuleFlag(
