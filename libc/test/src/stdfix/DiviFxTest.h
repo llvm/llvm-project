@@ -38,7 +38,7 @@ public:
     EXPECT_EQ(func(2, one_half), static_cast<IntType>(4));
     EXPECT_EQ(func(2, one_eighth), static_cast<IntType>(16));
 
-    // verify rounding towards 0
+    // Verify rounding towards 0.
     EXPECT_EQ(func(1, 3 * one_fourth), static_cast<IntType>(1));
     EXPECT_EQ(func(2, 3 * one_fourth), static_cast<IntType>(2));
 
@@ -49,7 +49,7 @@ public:
       EXPECT_EQ(func(-2, one_fourth), static_cast<IntType>(-8));
       EXPECT_EQ(func(2, -one_fourth), static_cast<IntType>(-8));
 
-      // verify rounding towards 0
+      // Verify rounding towards 0.
       EXPECT_EQ(func(-1, 3 * one_fourth), static_cast<IntType>(-1));
       EXPECT_EQ(func(1, -3 * one_fourth), static_cast<IntType>(-1));
       EXPECT_EQ(func(-2, 3 * one_fourth), static_cast<IntType>(-2));
@@ -60,11 +60,10 @@ public:
     }
 
     if constexpr (has_integral) {
-      // only run these tests for accum types that can represent the operands
-      // below
-      constexpr FXType largest_positive = static_cast<FXType>(4);
+      // Only run these tests for accum types that can represent these operands.
+      constexpr FXType max_test_operand = static_cast<FXType>(4);
 
-      if constexpr (max >= largest_positive) {
+      if constexpr (max >= max_test_operand) {
         EXPECT_EQ(func(3, 2.5), static_cast<IntType>(1));
         EXPECT_EQ(func(2, 3.5), static_cast<IntType>(0));
         EXPECT_EQ(func(3, 1.5), static_cast<IntType>(2));

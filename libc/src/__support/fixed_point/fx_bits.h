@@ -335,10 +335,9 @@ template <typename XType> LIBC_INLINE constexpr XType divi(int n, int d) {
   }
 }
 
-// divide an integer operand by a fixed-point operand and return the
-// mathematically exact result as an IntType rounded towards 0. assumes
-// signedness of IntType matches the signedness of FXType. all divifx variants
-// satisfy this requirement.
+// Divide an integer operand by a fixed-point operand and return the
+// mathematically exact result as an IntType rounded towards 0. Assumes
+// signedness of IntType matches the signedness of FXType.
 template <typename IntType, typename FXType>
 LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_fixed_point_v<FXType>, IntType>
 divifx(IntType n, FXType d) {
@@ -349,30 +348,25 @@ divifx(IntType n, FXType d) {
   static_assert(cpp::is_signed_v<IntType> == (FXRep::SIGN_LEN > 0),
                 "IntType and FXType must have matching signedness");
 
-  // UB if denominator is 0
+  // UB if denominator is 0.
   LIBC_CRASH_ON_VALUE(d, FXRep::ZERO());
 
   if (LIBC_UNLIKELY(n == 0)) {
     return static_cast<IntType>(0);
   }
 
-  // get integer representation of denominator
   CompType d_comp = static_cast<CompType>(FXBits(d).get_bits());
 
   constexpr int F = FXRep::FRACTION_LEN;
 
-  // calculating the required number of bits to represent n*2^F without
-  // overflowing
   constexpr int INTERMEDIATE_BITS =
       sizeof(IntType) * 8 - cpp::is_signed_v<IntType> + F;
 
-  // use 64 or 128 bit intermediates depending on INTERMEDIATE_BITS
   using WideType = cpp::conditional_t<
       cpp::is_signed_v<IntType>,
       cpp::conditional_t<INTERMEDIATE_BITS <= 64, int64_t, Int128>,
       cpp::conditional_t<INTERMEDIATE_BITS <= 64, uint64_t, UInt128>>;
 
-  // (n*2^F/d)
   WideType scaled_n = static_cast<WideType>(n) << F;
   WideType result = scaled_n / static_cast<WideType>(d_comp);
 
