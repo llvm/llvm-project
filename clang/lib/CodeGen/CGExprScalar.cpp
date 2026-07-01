@@ -2679,6 +2679,55 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
   case CK_BlockPointerToObjCPointerCast:
   case CK_AnyPointerToBlockPointerCast:
   case CK_BitCast: {
+    // For WebAssembly, intercept function pointer bitcasts to a type with a
+    // different number of arguments and generate a thunk instead.  This is
+    // necessary because WebAssembly enforces strict call-site/callee signature
+    // matching at runtime.  The fix is gated on -fwasm-fix-function-bitcasts
+    // and handles both compile-time (static) and runtime function pointer casts.
+    if (CGF.CGM.getTriple().isWasm() &&
+        CGF.CGM.getLangOpts().WasmFixFunctionBitcasts &&
+        DestTy->isFunctionPointerType() &&
+        CE->getSubExpr()->getType()->isFunctionPointerType()) {
+
+      // Try compile-time thunk first (for statically traceable function refs)
+      if (const DeclRefExpr *DRE =
+              CGF.CGM.getTargetCodeGenInfo().getWasmFunctionDeclRefExpr(
+                  E, CGF.CGM.getContext())) {
+        llvm::Value *V = EmitLValue(DRE).getPointer(CGF);
+        llvm::Function *Thunk =
+            CGF.CGM.getTargetCodeGenInfo().getOrCreateWasmFunctionPointerThunk(
+                CGF.CGM, V, DRE->getDecl()->getType(), DestTy);
+        if (Thunk)
+          return Thunk;
+      }
+
+      // If not statically traceable, use runtime binding for non-constant values
+      Value *Src = Visit(E);
+      if (!isa<llvm::Constant>(Src)) {
+        // Detect call-immediately vs store-for-later pattern.
+        // Call-immediately: the cast result is the callee of a CallExpr
+        //   -> use 1 TLS slot, no pool needed
+        // Store-for-later: the cast result is assigned/saved
+        //   -> use pool with 64 slots for closure support
+        bool IsImmediate = false;
+        auto parents = CGF.getContext().getParentMapContext().getParents(*E);
+        for (auto &parent : parents) {
+          if (auto *Call = parent.get<CallExpr>()) {
+            if (Call->getCallee()->IgnoreParens() == E) {
+              IsImmediate = true;
+              break;
+            }
+          }
+        }
+        llvm::Value *RuntimeThunk =
+            CGF.CGM.getTargetCodeGenInfo().emitWasmRuntimeFunctionPointerBinding(
+                CGF, Src, CE->getSubExpr()->getType(), DestTy, IsImmediate);
+        if (RuntimeThunk)
+          return RuntimeThunk;
+      }
+      // Fall through to normal bitcast if runtime binding returns nullptr
+    }
+
     Value *Src = Visit(E);
     llvm::Type *SrcTy = Src->getType();
     llvm::Type *DstTy = ConvertType(DestTy);

@@ -407,6 +407,26 @@ public:
   /// Return the WebAssembly funcref reference type.
   virtual llvm::Type *getWasmFuncrefReferenceType() const { return nullptr; }
 
+  virtual const DeclRefExpr *getWasmFunctionDeclRefExpr(const Expr *E,
+                                                        ASTContext &Ctx) const {
+    return nullptr;
+  }
+
+  virtual llvm::Function *getOrCreateWasmFunctionPointerThunk(
+      CodeGenModule &CGM, llvm::Value *OriginalFnPtr, QualType SrcType,
+      QualType DstType) const {
+    return nullptr;
+  }
+
+  /// Emit runtime binding for WebAssembly function pointer casts.
+  /// This handles runtime function pointer values (not compile-time constants)
+  /// that need signature adaptation.
+  virtual llvm::Value *emitWasmRuntimeFunctionPointerBinding(
+      CodeGenFunction &CGF, llvm::Value *FnPtr, QualType SrcType,
+      QualType DstType, bool IsImmediate) const {
+    return nullptr;
+  }
+
   /// Emit the device-side copy of the builtin surface type.
   virtual bool emitCUDADeviceBuiltinSurfaceDeviceCopy(CodeGenFunction &CGF,
                                                       LValue Dst,
