@@ -581,48 +581,24 @@ void OmpStructureChecker::CheckAssociatedLoopConstraints(
 
 void OmpStructureChecker::CheckDistLinear(
     const parser::OpenMPLoopConstruct &x) {
-  const parser::OmpClauseList &clauses{x.BeginDir().Clauses()};
-
+  unsigned version{context_.langOptions().OpenMPVersion};
   SymbolSourceMap indexVars;
 
   // Collect symbols of all the variables from linear clauses
-  for (auto &clause : clauses.v) {
+  for (auto &clause : x.BeginDir().Clauses().v) {
     if (std::get_if<parser::OmpClause::Linear>(&clause.u)) {
       GetSymbolsInObjectList(*parser::omp::GetOmpObjectList(clause), indexVars);
     }
   }
 
   if (!indexVars.empty()) {
-    // Get collapse level, if given, to find which loops are "associated."
-    std::int64_t collapseVal{GetOrdCollapseLevel(x)};
-    // Include the top loop if no collapse is specified
-    if (collapseVal == 0) {
-      collapseVal = 1;
-    }
-
-    // Match the loop index variables with the collected symbols from linear
-    // clauses.
-    for (auto &construct : std::get<parser::Block>(x.t)) {
-      std::int64_t curCollapseVal{collapseVal};
-      for (const parser::DoConstruct *loop{
-               parser::omp::GetDoConstruct(construct)};
-          loop;) {
-        if (loop->IsDoNormal()) {
-          const parser::Name &itrVal{GetLoopIndex(loop)};
-          if (itrVal.symbol) {
-            // Remove the symbol from the collected set
-            indexVars.erase(&itrVal.symbol->GetUltimate());
-          }
-          curCollapseVal--;
-          if (curCollapseVal == 0) {
-            break;
+    if (auto doLoops{CollectAffectedDoLoops(x, version, &context_)}) {
+      for (const parser::DoConstruct *loop : *doLoops) {
+        for (const omp::LoopControl &control : GetLoopControls(*loop)) {
+          if (control.iv.symbol) {
+            indexVars.erase(&control.iv.symbol->GetUltimate());
           }
         }
-        // Get the next DoConstruct if block is not empty.
-        const auto &block{std::get<parser::Block>(loop->t)};
-        const auto it{block.begin()};
-        loop = it != block.end() ? parser::Unwrap<parser::DoConstruct>(*it)
-                                 : nullptr;
       }
     }
 
