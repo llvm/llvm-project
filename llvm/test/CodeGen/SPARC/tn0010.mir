@@ -32,11 +32,11 @@ body:             |
     %0 = LDrr $g0, $o0
     %0 = SWAPri $o2, 10, %0
     %0 = LDrr $g0, $o0
-    %0 = LDSTUBrr $o2, 10, %0, 10
+    %0 = LDSTUBrr $o2, $o3
     %0 = LDrr $g0, $o0
-    %0 = LDSTUBri $o2, 10, %0, 10
+    %0 = LDSTUBri $o2, 10
     %0 = LDrr $g0, $o0
-    %0 = LDSTUBArr $o2, 10, %0, 10
+    %0 = LDSTUBArr $o2, $o3, 10
 
 ---
 # CHECK:      bb.2:
