@@ -605,11 +605,16 @@ static void dumpCOFFObject(COFFObjectFile *Obj, ScopedPrinter &Writer) {
   dumpObject(*Obj, Writer);
 
   // Dump a hybrid object when available.
-  std::unique_ptr<MemoryBuffer> HybridView = Obj->getHybridObjectView();
-  if (!HybridView)
+  MemoryBufferRef HybridView;
+  std::unique_ptr<MemoryBuffer> HybridViewBuf;
+  if (std::optional<MemoryBufferRef> HybridSec = Obj->findHybridObjectSection())
+    HybridView = *HybridSec;
+  else if ((HybridViewBuf = Obj->getHybridObjectView()))
+    HybridView = HybridViewBuf->getMemBufferRef();
+  else
     return;
   Expected<std::unique_ptr<COFFObjectFile>> HybridObjOrErr =
-      COFFObjectFile::create(*HybridView);
+      COFFObjectFile::create(HybridView);
   if (!HybridObjOrErr)
     reportError(HybridObjOrErr.takeError(), Obj->getFileName().str());
   DictScope D(Writer, "HybridObject");

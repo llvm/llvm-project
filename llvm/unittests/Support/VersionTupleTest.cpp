@@ -99,3 +99,22 @@ TEST(VersionTuple, withMajorReplaced) {
   EXPECT_TRUE(ReplacedVersion.getSubbuild().has_value());
   EXPECT_EQ(VersionTuple(7, 11, 12, 2, 8), ReplacedVersion);
 }
+
+TEST(VersionTuple, DenseMapInfo) {
+  VersionTuple VT16(16);
+  VersionTuple VT16_0(16, 0);
+
+  VersionTuple VT17(17);
+  VersionTuple VT17_0(17, 0);
+
+  // In C++, if two objects are equal, their hashes should be equal.
+  // DenseMapInfo relies on the same relation for comparing keys.
+  // If isEqual returns true, getHashValue should return the same value.
+  EXPECT_TRUE(DenseMapInfo<VersionTuple>::isEqual(VT16, VT16_0));
+  EXPECT_EQ(DenseMapInfo<VersionTuple>::getHashValue(VT16),
+            DenseMapInfo<VersionTuple>::getHashValue(VT16_0));
+
+  EXPECT_TRUE(DenseMapInfo<VersionTuple>::isEqual(VT17, VT17_0));
+  EXPECT_EQ(DenseMapInfo<VersionTuple>::getHashValue(VT17),
+            DenseMapInfo<VersionTuple>::getHashValue(VT17_0));
+}

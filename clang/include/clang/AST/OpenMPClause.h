@@ -6975,6 +6975,13 @@ public:
 /// In this example directive '#pragma omp teams' has clause 'num_teams'
 /// with single expression 'n'.
 ///
+/// \code
+/// #pragma omp teams num_teams(m:n)
+/// \endcode
+/// In this example directive '#pragma omp teams' has clause 'num_teams' with
+/// single expression 'n' as upper-bound and modifier expression 'm' as
+/// lower-bound.
+///
 /// When 'ompx_bare' clause exists on a 'target' directive, 'num_teams' clause
 /// can accept up to three expressions.
 ///
@@ -6988,8 +6995,11 @@ class OMPNumTeamsClause final
   friend OMPVarListClause;
   friend TrailingObjects;
 
-  /// Location of '('.
-  SourceLocation LParenLoc;
+  /// Modifier that was specified.
+  OpenMPNumTeamsClauseModifier Modifier = OMPC_NUMTEAMS_unknown;
+
+  /// Location of the modifier.
+  SourceLocation ModifierLoc;
 
   OMPNumTeamsClause(const ASTContext &C, SourceLocation StartLoc,
                     SourceLocation LParenLoc, SourceLocation EndLoc, unsigned N)
@@ -7011,23 +7021,22 @@ public:
   /// \param LParenLoc Location of '('.
   /// \param EndLoc Ending location of the clause.
   /// \param VL List of references to the variables.
+  /// \param Modifier The modifier specified in the clause.
+  /// \param ModifierExpr The expression of the modifier.
+  /// \param ModifierLoc Location of the modifier.
   /// \param PreInit
   static OMPNumTeamsClause *
   Create(const ASTContext &C, OpenMPDirectiveKind CaptureRegion,
          SourceLocation StartLoc, SourceLocation LParenLoc,
-         SourceLocation EndLoc, ArrayRef<Expr *> VL, Stmt *PreInit);
+         SourceLocation EndLoc, ArrayRef<Expr *> VL,
+         OpenMPNumTeamsClauseModifier Modifier, Expr *ModifierExpr,
+         SourceLocation ModifierLoc, Stmt *PreInit);
 
   /// Creates an empty clause with \a N variables.
   ///
   /// \param C AST context.
   /// \param N The number of variables.
   static OMPNumTeamsClause *CreateEmpty(const ASTContext &C, unsigned N);
-
-  /// Sets the location of '('.
-  void setLParenLoc(SourceLocation Loc) { LParenLoc = Loc; }
-
-  /// Returns the location of '('.
-  SourceLocation getLParenLoc() const { return LParenLoc; }
 
   /// Return NumTeams expressions.
   ArrayRef<Expr *> getNumTeams() { return getVarRefs(); }
@@ -7037,9 +7046,30 @@ public:
     return const_cast<OMPNumTeamsClause *>(this)->getNumTeams();
   }
 
+  /// Get the modifier.
+  OpenMPNumTeamsClauseModifier getModifier() const { return Modifier; }
+
+  /// Set the modifier.
+  void setModifier(OpenMPNumTeamsClauseModifier M) { Modifier = M; }
+
+  /// Get the expression of the modifier.
+  const Expr *getModifierExpr() const { return *varlist_end(); }
+
+  /// Get the expression of the modifier.
+  Expr *getModifierExpr() { return *varlist_end(); }
+
+  /// Set the expression of the modifier.
+  void setModifierExpr(Expr *E) { *varlist_end() = E; }
+
+  /// Get the location of the modifier.
+  SourceLocation getModifierLoc() const { return ModifierLoc; }
+
+  /// Set the location of the modifier.
+  void setModifierLoc(SourceLocation Loc) { ModifierLoc = Loc; }
+
   child_range children() {
     return child_range(reinterpret_cast<Stmt **>(varlist_begin()),
-                       reinterpret_cast<Stmt **>(varlist_end()));
+                       reinterpret_cast<Stmt **>(varlist_end()) + 1);
   }
 
   const_child_range children() const {
@@ -7080,9 +7110,6 @@ class OMPThreadLimitClause final
   friend OMPVarListClause;
   friend TrailingObjects;
 
-  /// Location of '('.
-  SourceLocation LParenLoc;
-
   OMPThreadLimitClause(const ASTContext &C, SourceLocation StartLoc,
                        SourceLocation LParenLoc, SourceLocation EndLoc,
                        unsigned N)
@@ -7115,12 +7142,6 @@ public:
   /// \param C AST context.
   /// \param N The number of variables.
   static OMPThreadLimitClause *CreateEmpty(const ASTContext &C, unsigned N);
-
-  /// Sets the location of '('.
-  void setLParenLoc(SourceLocation Loc) { LParenLoc = Loc; }
-
-  /// Returns the location of '('.
-  SourceLocation getLParenLoc() const { return LParenLoc; }
 
   /// Return ThreadLimit expressions.
   ArrayRef<Expr *> getThreadLimit() { return getVarRefs(); }

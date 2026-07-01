@@ -3,6 +3,7 @@ from lldbsuite.test import decorators
 
 decorators = [
     decorators.skipUnlessHasCallSiteInfo,
+    decorators.skipIfWasm,  # no unwinder support for tail-call frames
     decorators.skipIf(dwarf_version=["<", "4"]),
 ]
 lldbinline.MakeInlineTest(
