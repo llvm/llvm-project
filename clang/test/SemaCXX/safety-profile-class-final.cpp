@@ -218,6 +218,22 @@ class HasFriendDecl { // expected-error {{test profile fired on completion of cl
 };
 struct FriendedLater { int m; }; // expected-error {{test profile fired on completion of class 'FriendedLater' under profile 'test::class_final'}}
 
+// A suppress active only because an unrelated template instantiation is in
+// progress must not leak into a separate class's finalization (P3589R2 s2.4p3,
+// token-based dominion).
+template <typename T>
+struct LeakSeparateClass { // expected-error {{test profile fired on completion of class 'LeakSeparateClass<int>' under profile 'test::class_final'}}
+  T m;
+};
+
+template <typename T>
+// no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+[[profiles::suppress(test::class_final)]] void class_leak_user() {
+  LeakSeparateClass<T> v; // expected-note {{in instantiation of template class 'LeakSeparateClass<int>' requested here}}
+  (void)v;
+}
+template void class_leak_user<int>(); // expected-note {{in instantiation of function template specialization 'class_leak_user<int>' requested here}}
+
 // Without `-fprofiles`, the enforce attribute is `warn_attribute_ignored`
 // and the diagnostic never fires. This is exercised by the no-profiles RUN
 // line, which expects only the two attribute-ignored warnings above.

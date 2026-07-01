@@ -103,6 +103,18 @@ struct [[profiles::suppress(std::init)]] SuppressedClass {
   SuppressedClass() {}
 };
 
+// Constructor finalization ignores the parse-time suppress stack (it can fire
+// nested in an unrelated instantiation), so a [[profiles::suppress]] on a class
+// template must still reach the instantiated constructor through the decl-aware
+// walk on the lexical parent -- not the stack pushed while instantiating it.
+template <typename T>
+// no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+struct [[profiles::suppress(std::init)]] SuppressedTemplate {
+  T x;
+  SuppressedTemplate() {}
+};
+template struct SuppressedTemplate<int>;
+
 struct Base { int b; };
 
 struct UninitBase : Base { // expected-note {{base class 'Base' declared here}}
