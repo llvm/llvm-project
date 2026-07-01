@@ -2883,7 +2883,7 @@ bool IRTranslator::translateCall(const User &U, MachineIRBuilder &MIRBuilder) {
         MF->getSubtarget().getRequiredTargetFeaturesForIntrinsic(
             ID, CI.getFunctionType());
     Fn.getContext().diagnose(DiagnosticInfoUnsupportedTargetIntrinsic(
-        Fn, ID, CI.getDebugLoc(), RequiredFeatures));
+        Fn, ID, F->getName(), CI.getDebugLoc(), RequiredFeatures));
     return false;
   }
 
@@ -2905,8 +2905,11 @@ bool IRTranslator::translateIntrinsic(
     StringRef RequiredFeatures =
         MF->getSubtarget().getRequiredTargetFeaturesForIntrinsic(
             ID, CB.getFunctionType());
+    const Function *IntrinsicFn = CB.getCalledFunction();
+    StringRef IntrinsicName =
+        IntrinsicFn ? IntrinsicFn->getName() : Intrinsic::getBaseName(ID);
     F.getContext().diagnose(DiagnosticInfoUnsupportedTargetIntrinsic(
-        F, ID, CB.getDebugLoc(), RequiredFeatures));
+        F, ID, IntrinsicName, CB.getDebugLoc(), RequiredFeatures));
     return false;
   }
 

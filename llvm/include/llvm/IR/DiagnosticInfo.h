@@ -1133,11 +1133,13 @@ class LLVM_ABI DiagnosticInfoUnsupportedTargetIntrinsic
     : public DiagnosticInfoWithLocationBase {
 private:
   unsigned IntrinsicID;
+  std::string IntrinsicName;
   StringRef RequiredFeatures;
 
 public:
   DiagnosticInfoUnsupportedTargetIntrinsic(const Function &Fn,
                                            unsigned IntrinsicID,
+                                           StringRef IntrinsicName,
                                            const DiagnosticLocation &Loc,
                                            StringRef RequiredFeatures);
 
@@ -1146,6 +1148,7 @@ public:
   }
 
   unsigned getIntrinsicID() const { return IntrinsicID; }
+  StringRef getIntrinsicName() const { return IntrinsicName; }
   StringRef getRequiredFeatures() const { return RequiredFeatures; }
   std::string getMessage() const;
 
