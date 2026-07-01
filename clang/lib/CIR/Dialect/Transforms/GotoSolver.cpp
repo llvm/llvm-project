@@ -9,6 +9,8 @@
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/Passes.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/TimeProfiler.h"
 #include <memory>
 
@@ -27,7 +29,8 @@ struct GotoSolverPass : public impl::GotoSolverBase<GotoSolverPass> {
   void runOnOperation() override;
 };
 
-static void process(cir::FuncOp func) {
+static void process(cir::FuncOp func,
+                    const llvm::StringSet<> &globalBlockAddrLabel) {
   mlir::OpBuilder rewriter(func.getContext());
   llvm::StringMap<Block *> labels;
   llvm::SmallVector<cir::GotoOp, 4> gotos;
@@ -46,7 +49,11 @@ static void process(cir::FuncOp func) {
   for (auto &lab : labels) {
     StringRef labelName = lab.getKey();
     Block *block = lab.getValue();
-    if (!blockAddrLabel.contains(labelName)) {
+    // Keep labels whose address is taken either by a cir.block_address op in
+    // this function or by a block-address attribute used elsewhere (e.g. in a
+    // global initializer).
+    if (!blockAddrLabel.contains(labelName) &&
+        !globalBlockAddrLabel.contains(labelName)) {
       // erase the LabelOp inside the block if safe
       if (auto lab = dyn_cast<cir::LabelOp>(&block->front())) {
         lab.erase();
@@ -65,7 +72,25 @@ static void process(cir::FuncOp func) {
 
 void GotoSolverPass::runOnOperation() {
   llvm::TimeTraceScope scope("Goto Solver");
-  getOperation()->walk(&process);
+
+  // Block addresses can also appear in attributes outside of any function body,
+  // such as global variable initializers. Collect, per target function, the
+  // labels referenced this way so their LabelOps are not erased below.
+  llvm::StringMap<llvm::StringSet<>> globalBlockAddrLabels;
+  getOperation()->walk([&](mlir::Operation *op) {
+    for (const mlir::NamedAttribute &namedAttr : op->getAttrs()) {
+      namedAttr.getValue().walk([&](cir::BlockAddrInfoAttr info) {
+        globalBlockAddrLabels[info.getFunc().getValue()].insert(
+            info.getLabel());
+      });
+    }
+  });
+
+  static const llvm::StringSet<> emptySet;
+  getOperation()->walk([&](cir::FuncOp func) {
+    auto it = globalBlockAddrLabels.find(func.getSymName());
+    process(func, it == globalBlockAddrLabels.end() ? emptySet : it->second);
+  });
 }
 
 } // namespace

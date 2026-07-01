@@ -8,22 +8,16 @@ declare void @spam()
 define i32 @check_lr_liveness(ptr %arg) #1 {
   ; CHECK-LABEL: name: check_lr_liveness
   ; CHECK: bb.0.bb:
-  ; CHECK-NEXT:   successors: %bb.4(0x20000000), %bb.1(0x60000000)
+  ; CHECK-NEXT:   successors: %bb.1, %bb.2
   ; CHECK-NEXT:   liveins: $x0, $lr
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   renamable $x8 = COPY $x0
+  ; CHECK-NEXT:   CBNZX killed renamable $x0, %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   liveins: $lr
+  ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   renamable $w0 = MOVi32imm -536870206
-  ; CHECK-NEXT:   CBNZX killed renamable $x8, %bb.1
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.4:
-  ; CHECK-NEXT:   liveins: $w0, $lr
-  ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   B %bb.3
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.1.bb:
-  ; CHECK-NEXT:   liveins: $w0, $lr
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   B %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.bb1:
   ; CHECK-NEXT:   liveins: $lr

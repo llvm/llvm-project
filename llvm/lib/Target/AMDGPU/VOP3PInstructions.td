@@ -3243,3 +3243,50 @@ defm V_DOT8_U32_U4  : VOP3P_Real_gfx10_gfx11_gfx12_gfx13<0x19>;
 
 defm V_DOT4_I32_I8  : VOP3P_Real_gfx10 <0x16>;
 defm V_DOT8_I32_I4  : VOP3P_Real_gfx10 <0x18>;
+
+//===----------------------------------------------------------------------===//
+// GFX11+ Patterns
+//===----------------------------------------------------------------------===//
+
+multiclass FPToIntSatI16Pat<dag lhs, dag rhs> {
+  let True16Predicate = UseRealTrue16Insts in
+    def : GCNPat<lhs, (EXTRACT_SUBREG rhs, lo16)>;
+  let True16Predicate = NotUseRealTrue16Insts in
+    def : GCNPat<lhs, rhs>;
+}
+
+// Packed f32 -> i16 saturated conversion.
+multiclass CvtPkF32ToI16Pat<SDPatternOperator dagOp, Instruction inst> {
+  def : GCNPat<(v2i16 (dagOp (v2f32 VReg_64:$src), i16)),
+               (inst 0, (EXTRACT_SUBREG VReg_64:$src, sub0),
+                     0, (EXTRACT_SUBREG VReg_64:$src, sub1))>;
+  def : GCNPat<(v2i16 (dagOp (v2f32 SReg_64:$src), i16)),
+               (inst 0, (EXTRACT_SUBREG SReg_64:$src, sub0),
+                     0, (EXTRACT_SUBREG SReg_64:$src, sub1))>;
+  // Single value conversion: use a packed instruction with a dummy second input.
+  defm : FPToIntSatI16Pat<(i16 (dagOp (f32 (VOP3Mods f32:$src0, i32:$src0_modifiers)), i16)),
+                          (inst $src0_modifiers, $src0, 0, (f32 (IMPLICIT_DEF)))>;
+}
+
+multiclass FPToSSatI16Pat<dag lhs, int hi, int lo> {
+  defm : FPToIntSatI16Pat<lhs,
+      (V_MED3_I32_e64 (V_CVT_I32_F32_e64 $src0_modifiers, $src0),
+                      (V_MOV_B32_e32 (i32 lo)), (S_MOV_B32 (i32 hi)))>;
+}
+multiclass FPToUSatI16Pat<dag lhs, int hi> {
+  defm : FPToIntSatI16Pat<lhs,
+      (V_MIN_U32_e64 (V_CVT_U32_F32_e64 $src0_modifiers, $src0), (S_MOV_B32 (i32 hi)))>;
+}
+
+let SubtargetPredicate = isGFX11Plus in {
+  // f32 -> i16 saturated conversion (vector and scalar types).
+  defm : CvtPkF32ToI16Pat<fp_to_sint_sat, V_CVT_PK_I16_F32_e64>;
+  defm : CvtPkF32ToI16Pat<fp_to_uint_sat, V_CVT_PK_U16_F32_e64>;
+}
+
+// Fallback for f32 -> i16 saturated conversion on pre-GFX11. Required because
+// f32 -> i16 has to be legal so that the packed pattern above can match.
+let SubtargetPredicate = isGFX6GFX7GFX8GFX9GFX10 in {
+  defm : FPToSSatI16Pat<(i16 (fp_to_sint_sat (f32 (VOP3Mods f32:$src0, i32:$src0_modifiers)), i16)), 0x7fff, 0x8000>;
+  defm : FPToUSatI16Pat<(i16 (fp_to_uint_sat (f32 (VOP3Mods f32:$src0, i32:$src0_modifiers)), i16)), 0xffff>;
+}

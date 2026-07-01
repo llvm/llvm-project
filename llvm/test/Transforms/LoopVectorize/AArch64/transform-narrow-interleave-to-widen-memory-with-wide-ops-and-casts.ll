@@ -692,3 +692,179 @@ loop:
 exit:
   ret void
 }
+
+define void @test_2xdouble_mismatching_trunc_result_types(ptr noalias %dst, ptr noalias %src) {
+; VF2-LABEL: define void @test_2xdouble_mismatching_trunc_result_types(
+; VF2-SAME: ptr noalias [[DST:%.*]], ptr noalias [[SRC:%.*]]) {
+; VF2-NEXT:  [[ENTRY:.*:]]
+; VF2-NEXT:    br label %[[VECTOR_PH:.*]]
+; VF2:       [[VECTOR_PH]]:
+; VF2-NEXT:    br label %[[VECTOR_BODY:.*]]
+; VF2:       [[VECTOR_BODY]]:
+; VF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; VF2-NEXT:    [[TMP0:%.*]] = shl nsw i64 [[INDEX]], 1
+; VF2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 [[TMP0]]
+; VF2-NEXT:    [[WIDE_VEC:%.*]] = load <4 x i64>, ptr [[TMP1]], align 8
+; VF2-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <4 x i64> [[WIDE_VEC]], <4 x i64> poison, <2 x i32> <i32 0, i32 2>
+; VF2-NEXT:    [[STRIDED_VEC1:%.*]] = shufflevector <4 x i64> [[WIDE_VEC]], <4 x i64> poison, <2 x i32> <i32 1, i32 3>
+; VF2-NEXT:    [[TMP2:%.*]] = trunc <2 x i64> [[STRIDED_VEC]] to <2 x i32>
+; VF2-NEXT:    [[TMP3:%.*]] = sitofp <2 x i32> [[TMP2]] to <2 x double>
+; VF2-NEXT:    [[TMP4:%.*]] = getelementptr inbounds double, ptr [[DST]], i64 [[TMP0]]
+; VF2-NEXT:    [[TMP5:%.*]] = trunc <2 x i64> [[STRIDED_VEC1]] to <2 x i16>
+; VF2-NEXT:    [[TMP6:%.*]] = sitofp <2 x i16> [[TMP5]] to <2 x double>
+; VF2-NEXT:    [[TMP7:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> [[TMP6]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; VF2-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <4 x double> [[TMP7]], <4 x double> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
+; VF2-NEXT:    store <4 x double> [[INTERLEAVED_VEC]], ptr [[TMP4]], align 8
+; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; VF2-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
+; VF2-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
+; VF2:       [[MIDDLE_BLOCK]]:
+; VF2-NEXT:    br label %[[EXIT:.*]]
+; VF2:       [[EXIT]]:
+; VF2-NEXT:    ret void
+;
+; VF4-LABEL: define void @test_2xdouble_mismatching_trunc_result_types(
+; VF4-SAME: ptr noalias [[DST:%.*]], ptr noalias [[SRC:%.*]]) {
+; VF4-NEXT:  [[ENTRY:.*:]]
+; VF4-NEXT:    br label %[[VECTOR_PH:.*]]
+; VF4:       [[VECTOR_PH]]:
+; VF4-NEXT:    br label %[[VECTOR_BODY:.*]]
+; VF4:       [[VECTOR_BODY]]:
+; VF4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; VF4-NEXT:    [[TMP0:%.*]] = shl nsw i64 [[INDEX]], 1
+; VF4-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 [[TMP0]]
+; VF4-NEXT:    [[WIDE_VEC:%.*]] = load <8 x i64>, ptr [[TMP1]], align 8
+; VF4-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <8 x i64> [[WIDE_VEC]], <8 x i64> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; VF4-NEXT:    [[STRIDED_VEC1:%.*]] = shufflevector <8 x i64> [[WIDE_VEC]], <8 x i64> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+; VF4-NEXT:    [[TMP2:%.*]] = trunc <4 x i64> [[STRIDED_VEC]] to <4 x i32>
+; VF4-NEXT:    [[TMP3:%.*]] = sitofp <4 x i32> [[TMP2]] to <4 x double>
+; VF4-NEXT:    [[TMP4:%.*]] = getelementptr inbounds double, ptr [[DST]], i64 [[TMP0]]
+; VF4-NEXT:    [[TMP5:%.*]] = trunc <4 x i64> [[STRIDED_VEC1]] to <4 x i16>
+; VF4-NEXT:    [[TMP6:%.*]] = sitofp <4 x i16> [[TMP5]] to <4 x double>
+; VF4-NEXT:    [[TMP7:%.*]] = shufflevector <4 x double> [[TMP3]], <4 x double> [[TMP6]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; VF4-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <8 x double> [[TMP7]], <8 x double> poison, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
+; VF4-NEXT:    store <8 x double> [[INTERLEAVED_VEC]], ptr [[TMP4]], align 8
+; VF4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; VF4-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
+; VF4-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
+; VF4:       [[MIDDLE_BLOCK]]:
+; VF4-NEXT:    br label %[[EXIT:.*]]
+; VF4:       [[EXIT]]:
+; VF4-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %mul.2 = shl nsw i64 %iv, 1
+  %src.0 = getelementptr inbounds i64, ptr %src, i64 %mul.2
+  %l.0 = load i64, ptr %src.0, align 8
+  %t.0 = trunc i64 %l.0 to i32
+  %f.0 = sitofp i32 %t.0 to double
+  %dst.0 = getelementptr inbounds double, ptr %dst, i64 %mul.2
+  store double %f.0, ptr %dst.0, align 8
+  %idx.1 = or disjoint i64 %mul.2, 1
+  %src.1 = getelementptr inbounds i64, ptr %src, i64 %idx.1
+  %l.1 = load i64, ptr %src.1, align 8
+  %t.1 = trunc i64 %l.1 to i16
+  %f.1 = sitofp i16 %t.1 to double
+  %dst.1 = getelementptr inbounds double, ptr %dst, i64 %idx.1
+  store double %f.1, ptr %dst.1, align 8
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 100
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define void @test_2xdouble_mismatching_sitofp_operand_types(ptr noalias %dst, ptr noalias %src) {
+; VF2-LABEL: define void @test_2xdouble_mismatching_sitofp_operand_types(
+; VF2-SAME: ptr noalias [[DST:%.*]], ptr noalias [[SRC:%.*]]) {
+; VF2-NEXT:  [[ENTRY:.*:]]
+; VF2-NEXT:    br label %[[VECTOR_PH:.*]]
+; VF2:       [[VECTOR_PH]]:
+; VF2-NEXT:    br label %[[VECTOR_BODY:.*]]
+; VF2:       [[VECTOR_BODY]]:
+; VF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; VF2-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 1
+; VF2-NEXT:    [[TMP1:%.*]] = shl nsw i64 [[INDEX]], 1
+; VF2-NEXT:    [[TMP2:%.*]] = shl nsw i64 [[TMP0]], 1
+; VF2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[TMP1]]
+; VF2-NEXT:    [[WIDE_VEC:%.*]] = load <4 x i32>, ptr [[TMP3]], align 8
+; VF2-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <4 x i32> [[WIDE_VEC]], <4 x i32> poison, <2 x i32> <i32 0, i32 2>
+; VF2-NEXT:    [[TMP4:%.*]] = sitofp <2 x i32> [[STRIDED_VEC]] to <2 x double>
+; VF2-NEXT:    [[TMP5:%.*]] = getelementptr inbounds double, ptr [[DST]], i64 [[TMP1]]
+; VF2-NEXT:    [[TMP6:%.*]] = or disjoint i64 [[TMP1]], 1
+; VF2-NEXT:    [[TMP7:%.*]] = or disjoint i64 [[TMP2]], 1
+; VF2-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i16, ptr [[SRC]], i64 [[TMP6]]
+; VF2-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i16, ptr [[SRC]], i64 [[TMP7]]
+; VF2-NEXT:    [[TMP10:%.*]] = load i16, ptr [[TMP8]], align 8
+; VF2-NEXT:    [[TMP11:%.*]] = load i16, ptr [[TMP9]], align 8
+; VF2-NEXT:    [[TMP12:%.*]] = insertelement <2 x i16> poison, i16 [[TMP10]], i32 0
+; VF2-NEXT:    [[TMP13:%.*]] = insertelement <2 x i16> [[TMP12]], i16 [[TMP11]], i32 1
+; VF2-NEXT:    [[TMP14:%.*]] = sitofp <2 x i16> [[TMP13]] to <2 x double>
+; VF2-NEXT:    [[TMP15:%.*]] = shufflevector <2 x double> [[TMP4]], <2 x double> [[TMP14]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; VF2-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <4 x double> [[TMP15]], <4 x double> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
+; VF2-NEXT:    store <4 x double> [[INTERLEAVED_VEC]], ptr [[TMP5]], align 8
+; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; VF2-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT]], 98
+; VF2-NEXT:    br i1 [[TMP16]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
+; VF2:       [[MIDDLE_BLOCK]]:
+; VF2-NEXT:    br label %[[SCALAR_PH:.*]]
+; VF2:       [[SCALAR_PH]]:
+;
+; VF4-LABEL: define void @test_2xdouble_mismatching_sitofp_operand_types(
+; VF4-SAME: ptr noalias [[DST:%.*]], ptr noalias [[SRC:%.*]]) {
+; VF4-NEXT:  [[ENTRY:.*:]]
+; VF4-NEXT:    br label %[[VECTOR_PH:.*]]
+; VF4:       [[VECTOR_PH]]:
+; VF4-NEXT:    br label %[[VECTOR_BODY:.*]]
+; VF4:       [[VECTOR_BODY]]:
+; VF4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; VF4-NEXT:    [[TMP0:%.*]] = shl nsw i64 [[INDEX]], 1
+; VF4-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[TMP0]]
+; VF4-NEXT:    [[WIDE_VEC:%.*]] = load <8 x i32>, ptr [[TMP1]], align 8
+; VF4-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <8 x i32> [[WIDE_VEC]], <8 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; VF4-NEXT:    [[TMP2:%.*]] = sitofp <4 x i32> [[STRIDED_VEC]] to <4 x double>
+; VF4-NEXT:    [[TMP3:%.*]] = getelementptr inbounds double, ptr [[DST]], i64 [[TMP0]]
+; VF4-NEXT:    [[TMP4:%.*]] = or disjoint i64 [[TMP0]], 1
+; VF4-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i16, ptr [[SRC]], i64 [[TMP4]]
+; VF4-NEXT:    [[WIDE_VEC1:%.*]] = load <8 x i16>, ptr [[TMP5]], align 8
+; VF4-NEXT:    [[STRIDED_VEC2:%.*]] = shufflevector <8 x i16> [[WIDE_VEC1]], <8 x i16> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; VF4-NEXT:    [[TMP6:%.*]] = sitofp <4 x i16> [[STRIDED_VEC2]] to <4 x double>
+; VF4-NEXT:    [[TMP7:%.*]] = shufflevector <4 x double> [[TMP2]], <4 x double> [[TMP6]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; VF4-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <8 x double> [[TMP7]], <8 x double> poison, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
+; VF4-NEXT:    store <8 x double> [[INTERLEAVED_VEC]], ptr [[TMP3]], align 8
+; VF4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; VF4-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 96
+; VF4-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
+; VF4:       [[MIDDLE_BLOCK]]:
+; VF4-NEXT:    br label %[[SCALAR_PH:.*]]
+; VF4:       [[SCALAR_PH]]:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %mul.2 = shl nsw i64 %iv, 1
+  %src.0 = getelementptr inbounds i32, ptr %src, i64 %mul.2
+  %l.0 = load i32, ptr %src.0, align 8
+  %f.0 = sitofp i32 %l.0 to double
+  %dst.0 = getelementptr inbounds double, ptr %dst, i64 %mul.2
+  store double %f.0, ptr %dst.0, align 8
+  %idx.1 = or disjoint i64 %mul.2, 1
+  %src.1 = getelementptr inbounds i16, ptr %src, i64 %idx.1
+  %l.1 = load i16, ptr %src.1, align 8
+  %f.1 = sitofp i16 %l.1 to double
+  %dst.1 = getelementptr inbounds double, ptr %dst, i64 %idx.1
+  store double %f.1, ptr %dst.1, align 8
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 100
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}

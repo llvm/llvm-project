@@ -239,6 +239,39 @@ View return_view_with_latest_macro(View a) {
   return a;
 }
 
+#define REDEFINED_LIFETIMEBOUND_MACRO [[clang::lifetimebound]]
+
+View return_view_with_redefined_macro(View a) {
+  // CHECK: :[[@LINE-1]]:39: warning: parameter in intra-TU function should be marked
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:45-[[@LINE-2]]:45}:" REDEFINED_LIFETIMEBOUND_MACRO"
+  return a;
+}
+
+#undef REDEFINED_LIFETIMEBOUND_MACRO
+#define REDEFINED_LIFETIMEBOUND_MACRO [[maybe_unused]]
+
+View return_view_after_redefined_macro(View a) {
+  // CHECK: :[[@LINE-1]]:40: warning: parameter in intra-TU function should be marked
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:46-[[@LINE-2]]:46}:" SECOND_LIFETIMEBOUND_MACRO"
+  return a;
+}
+
+#define UNDEFINED_LIFETIMEBOUND_MACRO [[clang::lifetimebound]]
+
+View return_view_with_undefined_macro(View a) {
+  // CHECK: :[[@LINE-1]]:39: warning: parameter in intra-TU function should be marked
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:45-[[@LINE-2]]:45}:" UNDEFINED_LIFETIMEBOUND_MACRO"
+  return a;
+}
+
+#undef UNDEFINED_LIFETIMEBOUND_MACRO
+
+View return_view_after_undefined_macro(View a) {
+  // CHECK: :[[@LINE-1]]:40: warning: parameter in intra-TU function should be marked
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:46-[[@LINE-2]]:46}:" SECOND_LIFETIMEBOUND_MACRO"
+  return a;
+}
+
 struct MacroMember {
   MyObj data;
 

@@ -56,6 +56,7 @@ static cl::opt<unsigned> ObjectSizeOffsetVisitorMaxVisitInstructions(
              "look at"),
     cl::init(100));
 
+// clang-format off
 enum AllocType : uint8_t {
   OpNewLike          = 1<<0, // allocates; never returns null
   MallocLike         = 1<<1, // allocates; may return null
@@ -75,8 +76,9 @@ enum class MallocFamily {
   MSVCArrayNew,       // new[](unsigned int)
   VecMalloc,
 };
+// clang-format on
 
-StringRef mangledNameForMallocFamily(const MallocFamily &Family) {
+static StringRef mangledNameForMallocFamily(const MallocFamily &Family) {
   switch (Family) {
   case MallocFamily::Malloc:
     return "malloc";
@@ -113,42 +115,42 @@ struct AllocFnsTy {
 // FIXME: certain users need more information. E.g., SimplifyLibCalls needs to
 // know which functions are nounwind, noalias, nocapture parameters, etc.
 static const std::pair<LibFunc, AllocFnsTy> AllocationFnData[] = {
-    {LibFunc_Znwj,                              {OpNewLike,        1,  0, -1, -1, MallocFamily::CPPNew}},             // new(unsigned int)
-    {LibFunc_ZnwjRKSt9nothrow_t,                {MallocLike,       2,  0, -1, -1, MallocFamily::CPPNew}},             // new(unsigned int, nothrow)
-    {LibFunc_ZnwjSt11align_val_t,               {OpNewLike,        2,  0, -1,  1, MallocFamily::CPPNewAligned}},      // new(unsigned int, align_val_t)
-    {LibFunc_ZnwjSt11align_val_tRKSt9nothrow_t, {MallocLike,       3,  0, -1,  1, MallocFamily::CPPNewAligned}},      // new(unsigned int, align_val_t, nothrow)
-    {LibFunc_Znwm,                              {OpNewLike,        1,  0, -1, -1, MallocFamily::CPPNew}},             // new(unsigned long)
-    {LibFunc_Znwm12__hot_cold_t,                  {OpNewLike,        2, 0,  -1, -1, MallocFamily::CPPNew}},             // new(unsigned long, __hot_cold_t)
-    {LibFunc_ZnwmRKSt9nothrow_t,                {MallocLike,       2,  0, -1, -1, MallocFamily::CPPNew}},             // new(unsigned long, nothrow)
-    {LibFunc_ZnwmRKSt9nothrow_t12__hot_cold_t,      {MallocLike,       3, 0,  -1, -1, MallocFamily::CPPNew}},             // new(unsigned long, nothrow, __hot_cold_t)
-    {LibFunc_ZnwmSt11align_val_t,               {OpNewLike,        2,  0, -1,  1, MallocFamily::CPPNewAligned}},      // new(unsigned long, align_val_t)
-    {LibFunc_ZnwmSt11align_val_t12__hot_cold_t,   {OpNewLike,        3, 0,  -1, 1, MallocFamily::CPPNewAligned}},       // new(unsigned long, align_val_t, __hot_cold_t)
-    {LibFunc_ZnwmSt11align_val_tRKSt9nothrow_t, {MallocLike,       3,  0, -1,  1, MallocFamily::CPPNewAligned}},      // new(unsigned long, align_val_t, nothrow)
-    {LibFunc_ZnwmSt11align_val_tRKSt9nothrow_t12__hot_cold_t, {MallocLike,  4, 0,  -1, 1, MallocFamily::CPPNewAligned}},            // new(unsigned long, align_val_t, nothrow, __hot_cold_t)
-    {LibFunc_Znaj,                              {OpNewLike,        1,  0, -1, -1, MallocFamily::CPPNewArray}},        // new[](unsigned int)
-    {LibFunc_ZnajRKSt9nothrow_t,                {MallocLike,       2,  0, -1, -1, MallocFamily::CPPNewArray}},        // new[](unsigned int, nothrow)
-    {LibFunc_ZnajSt11align_val_t,               {OpNewLike,        2,  0, -1,  1, MallocFamily::CPPNewArrayAligned}}, // new[](unsigned int, align_val_t)
-    {LibFunc_ZnajSt11align_val_tRKSt9nothrow_t, {MallocLike,       3,  0, -1,  1, MallocFamily::CPPNewArrayAligned}}, // new[](unsigned int, align_val_t, nothrow)
-    {LibFunc_Znam,                              {OpNewLike,        1,  0, -1, -1, MallocFamily::CPPNewArray}},        // new[](unsigned long)
-    {LibFunc_Znam12__hot_cold_t,                  {OpNewLike,        2, 0,  -1, -1, MallocFamily::CPPNew}},             // new[](unsigned long, __hot_cold_t)
-    {LibFunc_ZnamRKSt9nothrow_t,                {MallocLike,       2,  0, -1, -1, MallocFamily::CPPNewArray}},        // new[](unsigned long, nothrow)
-    {LibFunc_ZnamRKSt9nothrow_t12__hot_cold_t,      {MallocLike,       3, 0,  -1, -1, MallocFamily::CPPNew}},             // new[](unsigned long, nothrow, __hot_cold_t)
-    {LibFunc_ZnamSt11align_val_t,               {OpNewLike,        2,  0, -1,  1, MallocFamily::CPPNewArrayAligned}}, // new[](unsigned long, align_val_t)
-    {LibFunc_ZnamSt11align_val_t12__hot_cold_t,   {OpNewLike,        3, 0,  -1, 1, MallocFamily::CPPNewAligned}},       // new[](unsigned long, align_val_t, __hot_cold_t)
-    {LibFunc_ZnamSt11align_val_tRKSt9nothrow_t, {MallocLike,       3,  0, -1,  1, MallocFamily::CPPNewArrayAligned}}, // new[](unsigned long, align_val_t, nothrow)
-    {LibFunc_ZnamSt11align_val_tRKSt9nothrow_t12__hot_cold_t, {MallocLike,  4, 0,  -1, 1, MallocFamily::CPPNewAligned}},            // new[](unsigned long, align_val_t, nothrow, __hot_cold_t)
-    {LibFunc_msvc_new_int,                      {OpNewLike,        1,  0, -1, -1, MallocFamily::MSVCNew}},            // new(unsigned int)
-    {LibFunc_msvc_new_int_nothrow,              {MallocLike,       2,  0, -1, -1, MallocFamily::MSVCNew}},            // new(unsigned int, nothrow)
-    {LibFunc_msvc_new_longlong,                 {OpNewLike,        1,  0, -1, -1, MallocFamily::MSVCNew}},            // new(unsigned long long)
-    {LibFunc_msvc_new_longlong_nothrow,         {MallocLike,       2,  0, -1, -1, MallocFamily::MSVCNew}},            // new(unsigned long long, nothrow)
-    {LibFunc_msvc_new_array_int,                {OpNewLike,        1,  0, -1, -1, MallocFamily::MSVCArrayNew}},       // new[](unsigned int)
-    {LibFunc_msvc_new_array_int_nothrow,        {MallocLike,       2,  0, -1, -1, MallocFamily::MSVCArrayNew}},       // new[](unsigned int, nothrow)
-    {LibFunc_msvc_new_array_longlong,           {OpNewLike,        1,  0, -1, -1, MallocFamily::MSVCArrayNew}},       // new[](unsigned long long)
-    {LibFunc_msvc_new_array_longlong_nothrow,   {MallocLike,       2,  0, -1, -1, MallocFamily::MSVCArrayNew}},       // new[](unsigned long long, nothrow)
-    {LibFunc_strdup,                            {StrDupLike,       1, -1, -1, -1, MallocFamily::Malloc}},
-    {LibFunc_dunder_strdup,                     {StrDupLike,       1, -1, -1, -1, MallocFamily::Malloc}},
-    {LibFunc_strndup,                           {StrDupLike,       2,  1, -1, -1, MallocFamily::Malloc}},
-    {LibFunc_dunder_strndup,                    {StrDupLike,       2,  1, -1, -1, MallocFamily::Malloc}},
+    {LibFunc_Znwj,                                            {OpNewLike,  1,  0, -1, -1, MallocFamily::CPPNew}},             // new(unsigned int)
+    {LibFunc_ZnwjRKSt9nothrow_t,                              {MallocLike, 2,  0, -1, -1, MallocFamily::CPPNew}},             // new(unsigned int, nothrow)
+    {LibFunc_ZnwjSt11align_val_t,                             {OpNewLike,  2,  0, -1,  1, MallocFamily::CPPNewAligned}},      // new(unsigned int, align_val_t)
+    {LibFunc_ZnwjSt11align_val_tRKSt9nothrow_t,               {MallocLike, 3,  0, -1,  1, MallocFamily::CPPNewAligned}},      // new(unsigned int, align_val_t, nothrow)
+    {LibFunc_Znwm,                                            {OpNewLike,  1,  0, -1, -1, MallocFamily::CPPNew}},             // new(unsigned long)
+    {LibFunc_Znwm12__hot_cold_t,                              {OpNewLike,  2,  0, -1, -1, MallocFamily::CPPNew}},             // new(unsigned long, __hot_cold_t)
+    {LibFunc_ZnwmRKSt9nothrow_t,                              {MallocLike, 2,  0, -1, -1, MallocFamily::CPPNew}},             // new(unsigned long, nothrow)
+    {LibFunc_ZnwmRKSt9nothrow_t12__hot_cold_t,                {MallocLike, 3,  0, -1, -1, MallocFamily::CPPNew}},             // new(unsigned long, nothrow, __hot_cold_t)
+    {LibFunc_ZnwmSt11align_val_t,                             {OpNewLike,  2,  0, -1,  1, MallocFamily::CPPNewAligned}},      // new(unsigned long, align_val_t)
+    {LibFunc_ZnwmSt11align_val_t12__hot_cold_t,               {OpNewLike,  3,  0, -1,  1, MallocFamily::CPPNewAligned}},      // new(unsigned long, align_val_t, __hot_cold_t)
+    {LibFunc_ZnwmSt11align_val_tRKSt9nothrow_t,               {MallocLike, 3,  0, -1,  1, MallocFamily::CPPNewAligned}},      // new(unsigned long, align_val_t, nothrow)
+    {LibFunc_ZnwmSt11align_val_tRKSt9nothrow_t12__hot_cold_t, {MallocLike, 4,  0, -1,  1, MallocFamily::CPPNewAligned}},      // new(unsigned long, align_val_t, nothrow, __hot_cold_t)
+    {LibFunc_Znaj,                                            {OpNewLike,  1,  0, -1, -1, MallocFamily::CPPNewArray}},        // new[](unsigned int)
+    {LibFunc_ZnajRKSt9nothrow_t,                              {MallocLike, 2,  0, -1, -1, MallocFamily::CPPNewArray}},        // new[](unsigned int, nothrow)
+    {LibFunc_ZnajSt11align_val_t,                             {OpNewLike,  2,  0, -1,  1, MallocFamily::CPPNewArrayAligned}}, // new[](unsigned int, align_val_t)
+    {LibFunc_ZnajSt11align_val_tRKSt9nothrow_t,               {MallocLike, 3,  0, -1,  1, MallocFamily::CPPNewArrayAligned}}, // new[](unsigned int, align_val_t, nothrow)
+    {LibFunc_Znam,                                            {OpNewLike,  1,  0, -1, -1, MallocFamily::CPPNewArray}},        // new[](unsigned long)
+    {LibFunc_Znam12__hot_cold_t,                              {OpNewLike,  2,  0, -1, -1, MallocFamily::CPPNew}},             // new[](unsigned long, __hot_cold_t)
+    {LibFunc_ZnamRKSt9nothrow_t,                              {MallocLike, 2,  0, -1, -1, MallocFamily::CPPNewArray}},        // new[](unsigned long, nothrow)
+    {LibFunc_ZnamRKSt9nothrow_t12__hot_cold_t,                {MallocLike, 3,  0, -1, -1, MallocFamily::CPPNew}},             // new[](unsigned long, nothrow, __hot_cold_t)
+    {LibFunc_ZnamSt11align_val_t,                             {OpNewLike,  2,  0, -1,  1, MallocFamily::CPPNewArrayAligned}}, // new[](unsigned long, align_val_t)
+    {LibFunc_ZnamSt11align_val_t12__hot_cold_t,               {OpNewLike,  3,  0, -1,  1, MallocFamily::CPPNewAligned}},      // new[](unsigned long, align_val_t, __hot_cold_t)
+    {LibFunc_ZnamSt11align_val_tRKSt9nothrow_t,               {MallocLike, 3,  0, -1,  1, MallocFamily::CPPNewArrayAligned}}, // new[](unsigned long, align_val_t, nothrow)
+    {LibFunc_ZnamSt11align_val_tRKSt9nothrow_t12__hot_cold_t, {MallocLike, 4,  0, -1,  1, MallocFamily::CPPNewAligned}},      // new[](unsigned long, align_val_t, nothrow, __hot_cold_t)
+    {LibFunc_msvc_new_int,                                    {OpNewLike,  1,  0, -1, -1, MallocFamily::MSVCNew}},            // new(unsigned int)
+    {LibFunc_msvc_new_int_nothrow,                            {MallocLike, 2,  0, -1, -1, MallocFamily::MSVCNew}},            // new(unsigned int, nothrow)
+    {LibFunc_msvc_new_longlong,                               {OpNewLike,  1,  0, -1, -1, MallocFamily::MSVCNew}},            // new(unsigned long long)
+    {LibFunc_msvc_new_longlong_nothrow,                       {MallocLike, 2,  0, -1, -1, MallocFamily::MSVCNew}},            // new(unsigned long long, nothrow)
+    {LibFunc_msvc_new_array_int,                              {OpNewLike,  1,  0, -1, -1, MallocFamily::MSVCArrayNew}},       // new[](unsigned int)
+    {LibFunc_msvc_new_array_int_nothrow,                      {MallocLike, 2,  0, -1, -1, MallocFamily::MSVCArrayNew}},       // new[](unsigned int, nothrow)
+    {LibFunc_msvc_new_array_longlong,                         {OpNewLike,  1,  0, -1, -1, MallocFamily::MSVCArrayNew}},       // new[](unsigned long long)
+    {LibFunc_msvc_new_array_longlong_nothrow,                 {MallocLike, 2,  0, -1, -1, MallocFamily::MSVCArrayNew}},       // new[](unsigned long long, nothrow)
+    {LibFunc_strdup,                                          {StrDupLike, 1, -1, -1, -1, MallocFamily::Malloc}},
+    {LibFunc_dunder_strdup,                                   {StrDupLike, 1, -1, -1, -1, MallocFamily::Malloc}},
+    {LibFunc_strndup,                                         {StrDupLike, 2,  1, -1, -1, MallocFamily::Malloc}},
+    {LibFunc_dunder_strndup,                                  {StrDupLike, 2,  1, -1, -1, MallocFamily::Malloc}},
 };
 // clang-format on
 
@@ -182,10 +184,10 @@ getAllocationDataForFunction(const Function *Callee, AllocType AllocTy,
   if (!TLI || !TLI->getLibFunc(*Callee, TLIFn) || !TLI->has(TLIFn))
     return std::nullopt;
 
-  const auto *Iter = find_if(
-      AllocationFnData, [TLIFn](const std::pair<LibFunc, AllocFnsTy> &P) {
-        return P.first == TLIFn;
-      });
+  const auto *Iter = find_if(AllocationFnData,
+                             [TLIFn](const std::pair<LibFunc, AllocFnsTy> &P) {
+                               return P.first == TLIFn;
+                             });
 
   if (Iter == std::end(AllocationFnData))
     return std::nullopt;
@@ -201,11 +203,9 @@ getAllocationDataForFunction(const Function *Callee, AllocType AllocTy,
 
   if (FTy->getReturnType()->isPointerTy() &&
       FTy->getNumParams() == FnData->NumParams &&
-      (FstParam < 0 ||
-       (FTy->getParamType(FstParam)->isIntegerTy(32) ||
-        FTy->getParamType(FstParam)->isIntegerTy(64))) &&
-      (SndParam < 0 ||
-       FTy->getParamType(SndParam)->isIntegerTy(32) ||
+      (FstParam < 0 || (FTy->getParamType(FstParam)->isIntegerTy(32) ||
+                        FTy->getParamType(FstParam)->isIntegerTy(64))) &&
+      (SndParam < 0 || FTy->getParamType(SndParam)->isIntegerTy(32) ||
        FTy->getParamType(SndParam)->isIntegerTy(64)))
     return *FnData;
   return std::nullopt;
@@ -293,7 +293,8 @@ bool llvm::isAllocationFn(
 
 /// Tests if a value is a call or invoke to a library function that
 /// allocates memory similar to malloc or calloc.
-bool llvm::isMallocOrCallocLikeFn(const Value *V, const TargetLibraryInfo *TLI) {
+bool llvm::isMallocOrCallocLikeFn(const Value *V,
+                                  const TargetLibraryInfo *TLI) {
   // TODO: Function behavior does not match name.
   return getAllocationData(V, MallocOrOpNewLike, TLI).has_value();
 }
@@ -342,7 +343,7 @@ Value *llvm::getAllocAlignment(const CallBase *V,
 /// trouble with APInt size issues. This function handles resizing + overflow
 /// checks for us. Check and zext or trunc \p I depending on IntTyBits and
 /// I's value.
-static bool CheckedZextOrTrunc(APInt &I, unsigned IntTyBits) {
+static bool checkedZextOrTrunc(APInt &I, unsigned IntTyBits) {
   // More bits than we can handle. Checking the bit width isn't necessary, but
   // it's faster than checking active bits, and should give `false` in the
   // vast majority of cases.
@@ -376,7 +377,7 @@ llvm::getAllocSize(const CallBase *CB, const TargetLibraryInfo *TLI,
     // Strndup limits strlen.
     if (FnData->FstParam > 0) {
       const ConstantInt *Arg =
-        dyn_cast<ConstantInt>(Mapper(CB->getArgOperand(FnData->FstParam)));
+          dyn_cast<ConstantInt>(Mapper(CB->getArgOperand(FnData->FstParam)));
       if (!Arg)
         return std::nullopt;
 
@@ -388,12 +389,12 @@ llvm::getAllocSize(const CallBase *CB, const TargetLibraryInfo *TLI,
   }
 
   const ConstantInt *Arg =
-    dyn_cast<ConstantInt>(Mapper(CB->getArgOperand(FnData->FstParam)));
+      dyn_cast<ConstantInt>(Mapper(CB->getArgOperand(FnData->FstParam)));
   if (!Arg)
     return std::nullopt;
 
   APInt Size = Arg->getValue();
-  if (!CheckedZextOrTrunc(Size, IntTyBits))
+  if (!checkedZextOrTrunc(Size, IntTyBits))
     return std::nullopt;
 
   // Size is determined by just 1 parameter.
@@ -405,7 +406,7 @@ llvm::getAllocSize(const CallBase *CB, const TargetLibraryInfo *TLI,
     return std::nullopt;
 
   APInt NumElems = Arg->getValue();
-  if (!CheckedZextOrTrunc(NumElems, IntTyBits))
+  if (!checkedZextOrTrunc(NumElems, IntTyBits))
     return std::nullopt;
 
   bool Overflow;
@@ -477,8 +478,8 @@ static const std::pair<LibFunc, FreeFnsTy> FreeFnData[] = {
 };
 // clang-format on
 
-std::optional<FreeFnsTy> getFreeFunctionDataForFunction(const Function *Callee,
-                                                        const LibFunc TLIFn) {
+static std::optional<FreeFnsTy>
+getFreeFunctionDataForFunction(const Function *Callee, const LibFunc TLIFn) {
   const auto *Iter =
       find_if(FreeFnData, [TLIFn](const std::pair<LibFunc, FreeFnsTy> &P) {
         return P.first == TLIFn;
@@ -664,10 +665,11 @@ Value *llvm::lowerObjectSizeCall(
   auto *ResultType = cast<IntegerType>(ObjectSize->getType());
   bool StaticOnly = cast<ConstantInt>(ObjectSize->getArgOperand(3))->isZero();
   if (StaticOnly) {
-    // FIXME: Does it make sense to just return a failure value if the size won't
-    // fit in the output and `!MustSucceed`?
+    // FIXME: Does it make sense to just return a failure value if the size
+    // won't fit in the output and `!MustSucceed`?
     uint64_t Size;
-    if (getObjectSize(ObjectSize->getArgOperand(0), Size, DL, TLI, EvalOptions) &&
+    if (getObjectSize(ObjectSize->getArgOperand(0), Size, DL, TLI,
+                      EvalOptions) &&
         isUIntN(ResultType->getBitWidth(), Size))
       return ConstantInt::get(ResultType, Size);
   } else {
@@ -723,15 +725,14 @@ combinePossibleConstantValues(std::optional<APInt> LHS,
     return std::nullopt;
   if (EvalMode == ObjectSizeOpts::Mode::Max)
     return LHS->sge(*RHS) ? *LHS : *RHS;
-  else
-    return LHS->sle(*RHS) ? *LHS : *RHS;
+  return LHS->sle(*RHS) ? *LHS : *RHS;
 }
 
 static std::optional<APInt> aggregatePossibleConstantValuesImpl(
     const Value *V, ObjectSizeOpts::Mode EvalMode, unsigned BitWidth,
-    unsigned recursionDepth) {
-  constexpr unsigned maxRecursionDepth = 4;
-  if (recursionDepth == maxRecursionDepth)
+    unsigned RecursionDepth) {
+  constexpr unsigned MaxRecursionDepth = 4;
+  if (RecursionDepth == MaxRecursionDepth)
     return std::nullopt;
 
   if (const auto *CI = dyn_cast<ConstantInt>(V)) {
@@ -739,19 +740,19 @@ static std::optional<APInt> aggregatePossibleConstantValuesImpl(
   } else if (const auto *SI = dyn_cast<SelectInst>(V)) {
     return combinePossibleConstantValues(
         aggregatePossibleConstantValuesImpl(SI->getTrueValue(), EvalMode,
-                                            BitWidth, recursionDepth + 1),
+                                            BitWidth, RecursionDepth + 1),
         aggregatePossibleConstantValuesImpl(SI->getFalseValue(), EvalMode,
-                                            BitWidth, recursionDepth + 1),
+                                            BitWidth, RecursionDepth + 1),
         EvalMode);
   } else if (const auto *PN = dyn_cast<PHINode>(V)) {
     unsigned Count = PN->getNumIncomingValues();
     if (Count == 0)
       return std::nullopt;
     auto Acc = aggregatePossibleConstantValuesImpl(
-        PN->getIncomingValue(0), EvalMode, BitWidth, recursionDepth + 1);
+        PN->getIncomingValue(0), EvalMode, BitWidth, RecursionDepth + 1);
     for (unsigned I = 1; Acc && I < Count; ++I) {
       auto Tmp = aggregatePossibleConstantValuesImpl(
-          PN->getIncomingValue(I), EvalMode, BitWidth, recursionDepth + 1);
+          PN->getIncomingValue(I), EvalMode, BitWidth, RecursionDepth + 1);
       Acc = combinePossibleConstantValues(Acc, Tmp, EvalMode);
     }
     return Acc;
@@ -869,9 +870,9 @@ OffsetSpan ObjectSizeOffsetVisitor::computeImpl(Value *V) {
   // the argument index type size and apply the offset, as required.
   if (IndexTypeSizeChanged) {
     if (ORT.knownBefore() &&
-        !::CheckedZextOrTrunc(ORT.Before, InitialIntTyBits))
+        !::checkedZextOrTrunc(ORT.Before, InitialIntTyBits))
       ORT.Before = APInt();
-    if (ORT.knownAfter() && !::CheckedZextOrTrunc(ORT.After, InitialIntTyBits))
+    if (ORT.knownAfter() && !::checkedZextOrTrunc(ORT.After, InitialIntTyBits))
       ORT.After = APInt();
   }
   // If the computed bound is "unknown" we cannot add the stripped offset.
@@ -936,8 +937,8 @@ OffsetSpan ObjectSizeOffsetVisitor::computeValue(Value *V) {
   return ObjectSizeOffsetVisitor::unknown();
 }
 
-bool ObjectSizeOffsetVisitor::CheckedZextOrTrunc(APInt &I) {
-  return ::CheckedZextOrTrunc(I, IntTyBits);
+bool ObjectSizeOffsetVisitor::checkedZextOrTrunc(APInt &I) {
+  return ::checkedZextOrTrunc(I, IntTyBits);
 }
 
 OffsetSpan ObjectSizeOffsetVisitor::visitAllocaInst(AllocaInst &I) {
@@ -956,7 +957,7 @@ OffsetSpan ObjectSizeOffsetVisitor::visitAllocaInst(AllocaInst &I) {
           ArraySize, Options.EvalMode,
           ArraySize->getType()->getScalarSizeInBits())) {
     APInt NumElems = *PossibleSize;
-    if (!CheckedZextOrTrunc(NumElems))
+    if (!checkedZextOrTrunc(NumElems))
       return ObjectSizeOffsetVisitor::unknown();
 
     bool Overflow;
@@ -971,7 +972,7 @@ OffsetSpan ObjectSizeOffsetVisitor::visitAllocaInst(AllocaInst &I) {
 OffsetSpan ObjectSizeOffsetVisitor::visitArgument(Argument &A) {
   Type *MemoryTy = A.getPointeeInMemoryValueType();
   // No interprocedural analysis is done at the moment.
-  if (!MemoryTy|| !MemoryTy->isSized()) {
+  if (!MemoryTy || !MemoryTy->isSized()) {
     ++ObjectVisitorArgument;
     return ObjectSizeOffsetVisitor::unknown();
   }
@@ -1310,8 +1311,7 @@ SizeOffsetValue ObjectSizeOffsetEvaluator::compute_(Value *V) {
   } else if (isa<Argument>(V) ||
              (isa<ConstantExpr>(V) &&
               cast<ConstantExpr>(V)->getOpcode() == Instruction::IntToPtr) ||
-             isa<GlobalAlias>(V) ||
-             isa<GlobalVariable>(V)) {
+             isa<GlobalAlias>(V) || isa<GlobalVariable>(V)) {
     // Ignore values where we cannot do more than ObjectSizeVisitor.
     Result = ObjectSizeOffsetEvaluator::unknown();
   } else {
@@ -1396,7 +1396,7 @@ SizeOffsetValue ObjectSizeOffsetEvaluator::visitLoadInst(LoadInst &LI) {
 
 SizeOffsetValue ObjectSizeOffsetEvaluator::visitPHINode(PHINode &PHI) {
   // Create 2 PHIs: one for size and another for offset.
-  PHINode *SizePHI   = Builder.CreatePHI(IntTy, PHI.getNumIncomingValues());
+  PHINode *SizePHI = Builder.CreatePHI(IntTy, PHI.getNumIncomingValues());
   PHINode *OffsetPHI = Builder.CreatePHI(IntTy, PHI.getNumIncomingValues());
 
   // Insert right away in the cache to handle recursive PHIs.

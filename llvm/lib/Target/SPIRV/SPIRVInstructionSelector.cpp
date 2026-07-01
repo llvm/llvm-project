@@ -203,8 +203,8 @@ private:
   bool selectBitreverse(Register ResVReg, SPIRVTypeInst ResType,
                         MachineInstr &I) const;
 
-  bool selectBitreverse16(Register ResVReg, SPIRVTypeInst ResType,
-                          MachineInstr &I, Register Op) const;
+  bool selectBitreverseViaI32(Register ResVReg, SPIRVTypeInst ResType,
+                              MachineInstr &I, Register Op) const;
 
   bool selectBitreverse64(Register ResVReg, SPIRVTypeInst ResType,
                           MachineInstr &I, Register SrcReg) const;
@@ -3773,12 +3773,14 @@ bool SPIRVInstructionSelector::selectQuadSwap(Register ResVReg,
   return true;
 }
 
-bool SPIRVInstructionSelector::selectBitreverse16(Register ResVReg,
-                                                  SPIRVTypeInst ResType,
-                                                  MachineInstr &I,
-                                                  Register Op) const {
+bool SPIRVInstructionSelector::selectBitreverseViaI32(Register ResVReg,
+                                                      SPIRVTypeInst ResType,
+                                                      MachineInstr &I,
+                                                      Register Op) const {
   SPIRVTypeInst Int32Type = GR.getOrCreateSPIRVIntegerType(32, I, TII);
-  Register ShiftConst = GR.getOrCreateConstInt(16, I, Int32Type, TII);
+  const unsigned BitWidth = GR.getScalarOrVectorBitWidth(ResType);
+  Register ShiftConst =
+      GR.getOrCreateConstInt(32 - BitWidth, I, Int32Type, TII);
   unsigned ShiftOp = SPIRV::OpShiftRightLogicalS;
 
   const unsigned N = GR.getScalarOrVectorComponentCount(ResType);
@@ -3804,7 +3806,7 @@ bool SPIRVInstructionSelector::selectBitreverse16(Register ResVReg,
     ShiftConst = CompositeReg;
   }
 
-  // Converts the i16 input to i32 (or vector of i32)
+  // Converts the input to i32 (or vector of i32)
   Register ExtReg = MRI->createVirtualRegister(GR.getRegClass(Int32Type));
   if (!selectOpWithSrcs(ExtReg, Int32Type, I, {Op}, ExtendOpcode))
     return false;
@@ -3820,7 +3822,7 @@ bool SPIRVInstructionSelector::selectBitreverse16(Register ResVReg,
                         ShiftOp))
     return false;
 
-  // Finally, convert the result back to i16 (or vector of i16).
+  // Finally, convert the result back.
   return selectOpWithSrcs(ResVReg, ResType, I, {ShiftReg}, ExtendOpcode);
 }
 
@@ -3966,7 +3968,8 @@ bool SPIRVInstructionSelector::selectBitreverse(Register ResVReg,
     switch (GR.getScalarOrVectorBitWidth(OpType)) {
     case 8:
     case 16:
-      return selectBitreverse16(ResVReg, ResType, I, OpReg);
+    case 24:
+      return selectBitreverseViaI32(ResVReg, ResType, I, OpReg);
     case 32:
       return selectBitreverseNative(ResVReg, ResType, I, OpReg);
     case 64:

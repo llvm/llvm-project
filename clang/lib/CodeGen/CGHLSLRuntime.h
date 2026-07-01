@@ -318,8 +318,8 @@ public:
   RawAddress createBufferMatrixTempAddress(const LValue &LV,
                                            CodeGenFunction &CGF);
 
-  bool emitBufferCopy(CodeGenFunction &CGF, Address DestPtr, Address SrcPtr,
-                      QualType CType);
+  bool emitBufferCopy(CodeGenFunction &CGF, const Expr *E, const LValue &SrcLV,
+                      AggValueSlot &DestSlot);
 
   LValue emitBufferMemberExpr(CodeGenFunction &CGF, const MemberExpr *E);
   std::optional<LValue> emitResourceMemberExpr(CodeGenFunction &CGF,

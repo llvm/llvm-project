@@ -800,26 +800,21 @@ Expr *SemaAMDGPU::ExpandAMDGPUPredicateBuiltIn(Expr *E) {
 
     StringRef N = GFX->getString();
     const TargetInfo &TI = Ctx.getTargetInfo();
-    const TargetInfo *AuxTI = Ctx.getAuxTargetInfo();
-    if (!TI.isValidCPUName(N) && (!AuxTI || !AuxTI->isValidCPUName(N))) {
+    if (llvm::AMDGPU::parseArchAMDGCN(N) == llvm::AMDGPU::GK_NONE) {
       Diag(Loc, diag::err_amdgcn_processor_is_arg_invalid_value) << N;
-      SmallVector<StringRef, 32> ValidList;
-      if (TI.getTriple().getVendor() == llvm::Triple::VendorType::AMD)
-        TI.fillValidCPUList(ValidList);
-      else if (AuxTI) // Since the BI is present it must be an AMDGPU triple.
-        AuxTI->fillValidCPUList(ValidList);
+      SmallVector<StringRef, 64> ValidList;
+      llvm::AMDGPU::fillValidArchListAMDGCN(ValidList);
       if (!ValidList.empty())
         Diag(Loc, diag::note_amdgcn_processor_is_valid_options)
             << llvm::join(ValidList, ", ");
       return nullptr;
     }
-    if (Ctx.getTargetInfo().getTriple().isSPIRV()) {
+    if (TI.getTriple().isSPIRV()) {
       CE->setType(BoolTy);
       return *ExpandedPredicates.insert(CE).first;
     }
 
-    if (auto TID = Ctx.getTargetInfo().getTargetID())
-      P = TID->find(N) == 0;
+    P = TI.isProcessorName(N);
   } else {
     Expr *Arg = CE->getArg(0);
     if (!Arg || Arg->getType() != Ctx.BuiltinFnTy) {

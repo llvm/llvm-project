@@ -94,7 +94,7 @@ thread_local T tls_templ = {get_i()};
 // CIR:     %[[DTOR_FPTR:.*]] = cir.cast bitcast %[[GET_DTOR]] : !cir.ptr<!cir.func<(!cir.ptr<!rec_CtorDtor>)>> -> !cir.ptr<!cir.func<(!cir.ptr<!void>)>>
 // CIR:     %[[GLOB_DECAY:.*]] = cir.cast bitcast %[[GET_GLOB:.*]] : !cir.ptr<!rec_CtorDtor> -> !cir.ptr<!void>
 // CIR:     %[[DSO_HANDLE:.*]] = cir.get_global @__dso_handle : !cir.ptr<i8>
-// CIR:     cir.call @__cxa_thread_atexit(%[[DTOR_FPTR]], %[[GLOB_DECAY]], %[[DSO_HANDLE]]) : (!cir.ptr<!cir.func<(!cir.ptr<!void>)>>, !cir.ptr<!void>, !cir.ptr<i8>) -> ()
+// CIR:     cir.call @__cxa_thread_atexit(%[[DTOR_FPTR]], %[[GLOB_DECAY]], %[[DSO_HANDLE]]) : (!cir.ptr<!cir.func<(!cir.ptr<!void>)>>, !cir.ptr<!void>, !cir.ptr<i8>) -> !s32i
 // CIR:   }
 // CIR:   cir.return
 // CIR: }
@@ -179,7 +179,7 @@ thread_local T tls_templ = {get_i()};
 // OGCG:   call void @_ZN8CtorDtorC1Ei(ptr {{.*}}@_Z9tls_templI8CtorDtorE, i32 {{.*}}%[[CALL]])
 //
 // LLVM:   %[[GET_GLOB:.*]] = call ptr @llvm.threadlocal.address.p0(ptr @_Z9tls_templI8CtorDtorE)
-// LLVM:   call void @__cxa_thread_atexit(ptr @_ZN8CtorDtorD1Ev, ptr %[[GET_GLOB]], ptr @__dso_handle)
+// LLVM:   call i32 @__cxa_thread_atexit(ptr @_ZN8CtorDtorD1Ev, ptr %[[GET_GLOB]], ptr @__dso_handle)
 // OGCG:   call i32 @__cxa_thread_atexit(ptr @_ZN8CtorDtorD1Ev, ptr @_Z9tls_templI8CtorDtorE, ptr @__dso_handle)
 
 // CIR-BEFORE-LPP-LABEL: cir.func{{.*}}@_Z4usesv

@@ -1,0 +1,7 @@
+; Regression test: calling `llvm-cov show` without `-instr-profile` or
+; `-empty-profile` triggered a UBSan error because `error()` reads `Colors` via
+; `colored_ostream()` before `Colors` was initialized.
+
+; RUN: not llvm-cov show 2>&1 | FileCheck %s
+
+; CHECK: error: exactly one of -instr-profile and -empty-profile must be specified

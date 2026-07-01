@@ -14,6 +14,7 @@
 ;CHECK-DAG: %[[#vec_int_64x4:]] = OpTypeVector %[[#int_64]] 4
 ;CHECK-DAG: %[[#vec_int_16:]] = OpTypeVector %[[#int_16]] 2
 
+;CHECK-DAG: %[[#const_24:]] = OpConstant %[[#int_32]] 24
 ;CHECK-DAG: %[[#const_16:]] = OpConstant %[[#int_32]] 16
 ;CHECK-DAG: %[[#const_two:]] = OpConstant %[[#int_64]] 2
 ;CHECK-DAG: %[[#composite:]] = OpConstantComposite %[[#vec_int_32]] %[[#const_16]] %[[#const_16]] 
@@ -33,7 +34,7 @@ entry:
 ; CHECK: %[[#param:]] = OpFunctionParameter %[[#int_8]]
 ; CHECK: %[[#conversion:]] = OpUConvert %[[#int_32]] %[[#param]]
 ; CHECK-NEXT: %[[#bitrev:]] = OpBitReverse %[[#int_32]] %[[#conversion]]
-; CHECK-NEXT: %[[#shift:]] = OpShiftRightLogical %[[#int_32]] %[[#bitrev]] %[[#const_16]]
+; CHECK-NEXT: %[[#shift:]] = OpShiftRightLogical %[[#int_32]] %[[#bitrev]] %[[#const_24]]
 ; CHECK-NEXT: %[[#]] = OpUConvert %[[#int_8]] %[[#shift]]
   %elt.bitreverse = call i8 @llvm.bitreverse.i8(i8 %a)
   ret i8 %elt.bitreverse

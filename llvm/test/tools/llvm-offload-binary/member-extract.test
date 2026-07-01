@@ -1,0 +1,22 @@
+# RUN: split-file %s %t
+
+# Two members with the same triple, arch, and kind but distinct contents.
+# RUN: llvm-offload-binary -o %t/a.o --image=file=%t/contentA,triple=x-y-z,arch=gfx90a,kind=openmp
+# RUN: llvm-offload-binary -o %t/b.o --image=file=%t/contentB,triple=x-y-z,arch=gfx90a,kind=openmp
+# RUN: llvm-ar rcs %t/lib.a %t/a.o %t/b.o
+
+# Each member can be extracted to a known file by its archive member name.
+# RUN: llvm-offload-binary %t/lib.a --image=member=a.o,triple=x-y-z,arch=gfx90a,kind=openmp,file=%t/outA
+# RUN: llvm-offload-binary %t/lib.a --image=member=b.o,triple=x-y-z,arch=gfx90a,kind=openmp,file=%t/outB
+# RUN: diff %t/contentA %t/outA
+# RUN: diff %t/contentB %t/outB
+
+# Without the 'member' selector the same filter matches both members.
+# RUN: llvm-offload-binary %t/lib.a --image=triple=x-y-z,arch=gfx90a,kind=openmp,file=%t/both 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=WARN
+# WARN: Multiple inputs match to a single file
+
+#--- contentA
+aaaa
+#--- contentB
+bbbb

@@ -4291,7 +4291,7 @@ struct AAIsDeadFloating : public AAIsDeadValueImpl {
         A.deleteAfterManifest(*FI);
         return ChangeStatus::CHANGED;
       }
-      if (isAssumedSideEffectFree(A, I) && !isa<InvokeInst>(I)) {
+      if (isAssumedSideEffectFree(A, I) && !I->isTerminator()) {
         A.deleteAfterManifest(*I);
         return ChangeStatus::CHANGED;
       }

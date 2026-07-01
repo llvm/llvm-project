@@ -198,16 +198,6 @@ public:
   }
   bool NameMatches(const RegularExpression &regex) const;
 
-  /// Get the memory cost of this object.
-  ///
-  /// Return the size in bytes that this object takes in memory. This returns
-  /// the size in bytes of this object, not any shared string values it may
-  /// refer to.
-  ///
-  /// \return
-  ///     The number of bytes that this object occupies in memory.
-  size_t MemorySize() const;
-
   /// Set the string value in this object.
   ///
   /// This version auto detects if the string is mangled by inspecting the

@@ -211,11 +211,11 @@ def int_spv_rsqrt : DefaultAttrsIntrinsic<[LLVMMatchType<0>], [llvm_anyfloat_ty]
   def int_spv_resource_counterhandlefromimplicitbinding
       : DefaultAttrsIntrinsic<[llvm_any_ty],
                               [llvm_any_ty, llvm_i32_ty, llvm_i32_ty],
-                              [IntrNoMem]>;
+                              [IntrNoMem, IntrConvergent]>;
   def int_spv_resource_counterhandlefrombinding
       : DefaultAttrsIntrinsic<[llvm_any_ty],
                               [llvm_any_ty, llvm_i32_ty, llvm_i32_ty],
-                              [IntrNoMem]>;
+                              [IntrNoMem, IntrConvergent]>;
 
   def int_spv_firstbituhigh : DefaultAttrsIntrinsic<[LLVMScalarOrSameVectorWidth<0, llvm_i32_ty>], [llvm_anyint_ty], [IntrNoMem]>;
   def int_spv_firstbitshigh : DefaultAttrsIntrinsic<[LLVMScalarOrSameVectorWidth<0, llvm_i32_ty>], [llvm_anyint_ty], [IntrNoMem]>;
@@ -332,11 +332,11 @@ def int_spv_rsqrt : DefaultAttrsIntrinsic<[LLVMMatchType<0>], [llvm_anyfloat_ty]
 
   def int_spv_resource_getpointer
       : DefaultAttrsIntrinsic<[llvm_anyptr_ty], [llvm_any_ty, llvm_any_ty],
-                              [IntrNoMem]>;
+                              [IntrNoMem, IntrConvergent]>;
 
   def int_spv_resource_getbasepointer
       : DefaultAttrsIntrinsic<[llvm_anyptr_ty], [llvm_any_ty],
-                              [IntrNoMem]>;
+                              [IntrNoMem, IntrConvergent]>;
 
   def int_spv_pushconstant_getpointer
       : DefaultAttrsIntrinsic<[llvm_anyptr_ty], [llvm_any_ty], [IntrNoMem]>;

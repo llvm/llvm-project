@@ -73,8 +73,6 @@ private:
   SDValue LowerImplicitParameter(SelectionDAG &DAG, EVT VT, const SDLoc &DL,
                                  unsigned DwordOffset) const;
 
-  void lowerImplicitParameter(MachineInstr *MI, MachineBasicBlock &BB,
-      MachineRegisterInfo & MRI, unsigned dword_offset) const;
   SDValue OptimizeSwizzle(SDValue BuildVector, SDValue Swz[],
                           SelectionDAG &DAG, const SDLoc &DL) const;
   SDValue vectorToVerticalVector(SelectionDAG &DAG, SDValue Vector) const;

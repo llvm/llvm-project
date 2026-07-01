@@ -547,6 +547,14 @@ bool Sema::LookupTemplateName(LookupResult &Found, Scope *S, CXXScopeSpec &SS,
         } else {
           diagnoseTypo(Corrected, PDiag(diag::err_no_template_suggest) << Name);
         }
+
+        if (Corrected.WillReplaceSpecifier()) {
+          NestedNameSpecifier NNS = Corrected.getCorrectionSpecifier();
+          // In order to be valid, a non-empty CXXScopeSpec needs a source
+          // range.
+          SS.MakeTrivial(Context, NNS,
+                         NNS ? Found.getNameLoc() : SourceRange());
+        }
       }
     }
   }
@@ -2196,13 +2204,12 @@ DeclResult Sema::CheckClassTemplate(
   if (SS.isSet()) {
     // If the name of the template was qualified, we must be defining the
     // template out-of-line.
-    if (!SS.isInvalid() && !Invalid && !PrevClassTemplate) {
-      Diag(NameLoc, TUK == TagUseKind::Friend
-                        ? diag::err_friend_decl_does_not_match
-                        : diag::err_member_decl_does_not_match)
-          << Name << SemanticContext << /*IsDefinition*/ true << SS.getRange();
-      Invalid = true;
-    }
+    if (!SS.isInvalid() && !Invalid && !PrevClassTemplate)
+      return Diag(NameLoc, TUK == TagUseKind::Friend
+                               ? diag::err_friend_decl_does_not_match
+                               : diag::err_member_decl_does_not_match)
+             << Name << SemanticContext << /*IsDefinition*/ true
+             << SS.getRange();
   }
 
   // If this is a templated friend in a dependent context we should not put it
