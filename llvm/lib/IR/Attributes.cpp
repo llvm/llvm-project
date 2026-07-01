@@ -842,6 +842,28 @@ bool Attribute::canUseAsRetAttr(AttrKind Kind) {
   return hasAttributeProperty(Kind, AttributeProperty::RetAttr);
 }
 
+bool Attribute::isABIAttr(AttrKind Kind) {
+  switch (Kind) {
+  case Attribute::ByRef:
+  case Attribute::ByVal:
+  case Attribute::InAlloca:
+  case Attribute::InReg:
+  case Attribute::Nest:
+  case Attribute::NoExt:
+  case Attribute::Preallocated:
+  case Attribute::SExt:
+  case Attribute::StackAlignment:
+  case Attribute::StructRet:
+  case Attribute::SwiftAsync:
+  case Attribute::SwiftError:
+  case Attribute::SwiftSelf:
+  case Attribute::ZExt:
+    return true;
+  default:
+    return false;
+  }
+}
+
 static bool hasIntersectProperty(Attribute::AttrKind Kind,
                                  AttributeProperty Prop) {
   assert((Prop == AttributeProperty::IntersectPreserve ||
