@@ -91,6 +91,7 @@ HipBinAmd::HipBinAmd() {
   constructRoccmPath();
   constructCompilerPath();
   readHipVersion();
+  constructHsaPath();
 }
 
 // returns the Rocclr Home path
