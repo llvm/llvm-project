@@ -22221,8 +22221,8 @@ Arguments:
 The first argument is the vector to be counted. This argument must be a vector
 with integer element type. The return type must also be an integer type which is
 wide enough to hold the maximum number of elements of the source vector. The
-behavior of this intrinsic is undefined if the return type is not wide enough
-for the number of elements in the input vector.
+result is poison if the return type is not wide enough for the number of
+elements in the input vector.
 
 The second argument is a constant flag that indicates whether the intrinsic
 returns a valid result if the first argument is all zero. If the first argument
@@ -27737,8 +27737,8 @@ Arguments:
 The first argument is the vector to be counted. This argument must be a vector
 with integer element type. The return type must also be an integer type which is
 wide enough to hold the maximum number of elements of the source vector. The
-behavior of this intrinsic is undefined if the return type is not wide enough
-for the number of elements in the input vector.
+result is poison if the return type is not wide enough for the number of
+elements in the input vector.
 
 The second argument is a constant flag that indicates whether the intrinsic
 returns a valid result if the first argument is all zero.
