@@ -279,8 +279,7 @@ TEST_F(IndexActionTest, DeclParamName) {
 
   IndexFileIn IndexFile = runIndexingAction(MainFilePath);
 
-  EXPECT_THAT(*IndexFile.Symbols,
-              ElementsAre(hasSignature("(int, int day)")));
+  EXPECT_THAT(*IndexFile.Symbols, ElementsAre(hasSignature("(int, int day)")));
 }
 
 TEST_F(IndexActionTest, SkipFiles) {
