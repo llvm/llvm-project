@@ -1139,7 +1139,9 @@ LIBC_INLINE int convert_float_decimal(Writer<write_mode> *writer,
 #endif // LIBC_INTERNAL_PRINTF_CONVERT_FLOAT128
 #ifndef LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
       if (to_conv.length_modifier == LengthModifier::L) {
-    fputil::FPBits<long double>::StorageType float_raw = to_conv.conv_val_raw;
+    fputil::FPBits<long double>::StorageType float_raw =
+        static_cast<fputil::FPBits<long double>::StorageType>(
+            to_conv.conv_val_raw);
     fputil::FPBits<long double> float_bits(float_raw);
     if (!float_bits.is_inf_or_nan()) {
       return convert_float_decimal_typed<long double>(writer, to_conv,
