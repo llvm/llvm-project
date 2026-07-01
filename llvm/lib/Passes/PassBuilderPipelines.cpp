@@ -984,7 +984,11 @@ PassBuilder::buildInlinerPipeline(OptimizationLevel Level,
   if (PGOOpt)
     IP.EnableDeferral = EnablePGOInlineDeferral;
 
-  ModuleInlinerWrapperPass MIWP(IP, PerformMandatoryInliningsFirst,
+  bool MandatoryFirst = PerformMandatoryInliningsFirst;
+  if (TM && TM->getTargetTriple().isBPF())
+    MandatoryFirst = true;
+
+  ModuleInlinerWrapperPass MIWP(IP, MandatoryFirst,
                                 InlineContext{Phase, InlinePass::CGSCCInliner},
                                 UseInlineAdvisor, MaxDevirtIterations);
 
@@ -1317,7 +1321,8 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
                  PGOOpt->Action == PGOOptions::SampleUse))
     MPM.addPass(PGOForceFunctionAttrsPass(PGOOpt->ColdOptType));
 
-  MPM.addPass(AlwaysInlinerPass(/*InsertLifetimeIntrinsics=*/true));
+  if (!(TM && TM->getTargetTriple().isBPF()))
+    MPM.addPass(AlwaysInlinerPass(/*InsertLifetimeIntrinsics=*/true));
 
   if (EnableModuleInliner)
     MPM.addPass(buildModuleInlinerPipeline(Level, Phase));
