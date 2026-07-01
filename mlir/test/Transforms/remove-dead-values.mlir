@@ -868,3 +868,26 @@ module @func_with_non_call_users {
   }
   spirv.EntryPoint "GLCompute" @callee
 }
+
+// -----
+
+// CHECK: pdl_interp.func private @matcher()
+// CHECK-LABEL: func.func private @callee()
+// CHECK: return
+module {
+  pdl_interp.func private @matcher(%arg0: !llvm.ptr) {
+    pdl_interp.finalize
+  }
+  module @rewriters {
+  }
+  func.func private @callee(%arg0: memref<f32>) -> memref<f32> {
+    %false = arith.constant false
+    %0 = scf.if %false -> (memref<f32>) {
+      scf.yield %arg0 : memref<f32>
+    } else {
+      %1 = bufferization.clone %arg0 : memref<f32> to memref<f32>
+      scf.yield %1 : memref<f32>
+    }
+    return %0 : memref<f32>
+  }
+}

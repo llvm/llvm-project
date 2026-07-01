@@ -522,12 +522,18 @@ static void processBranchOp(BranchOpInterface branchOp, RunLivenessAnalysis &la,
 
 /// Create ub.poison ops for the given values. If a value has no uses, return
 /// an "empty" value.
+static Value createPoisonedValue(OpBuilder &b, Value value) {
+  if (!value || value.use_empty())
+    return Value();
+  return ub::PoisonOp::create(b, value.getLoc(), value.getType()).getResult();
+}
+
+/// Create ub.poison ops for the given values. If a value has no uses, return
+/// an "empty" value.
 static SmallVector<Value> createPoisonedValues(OpBuilder &b,
                                                ValueRange values) {
-  return llvm::map_to_vector(values, [&](Value value) {
-    if (value.use_empty())
-      return Value();
-    return ub::PoisonOp::create(b, value.getLoc(), value.getType()).getResult();
+  return llvm::map_to_vector(values, [&](Value value) -> Value {
+    return createPoisonedValue(b, value);
   });
 }
 
@@ -689,9 +695,9 @@ static void cleanUpDeadVals(MLIRContext *ctx, RDVFinalCleanupList &list) {
       if (o.replaceWithPoison) {
         rewriter.setInsertionPoint(o.op);
         for (auto deadIdx : o.nonLive.set_bits()) {
-          o.op->setOperand(
-              deadIdx, createPoisonedValues(rewriter, o.op->getOperand(deadIdx))
-                           .front());
+          Value poisoned = createPoisonedValue(rewriter, o.op->getOperand(deadIdx));
+          if (poisoned)
+            o.op->setOperand(deadIdx, poisoned);
         }
       } else {
         o.op->eraseOperands(o.nonLive);
