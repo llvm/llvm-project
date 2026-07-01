@@ -446,9 +446,8 @@ private:
   _LIBCPP_NO_UNIQUE_ADDRESS __conditional_no_unique_address<__allow_reusing_expected_tail_padding, __repr> __repr_;
 };
 
-// Helper to handle cases for LWG4366 Heterogeneous comparison of ``expected`` may be ill-formed
-// Where the comparison may produce a value that is a type that is not bool, and is implicitly
-// convertible to bool, but not explicitly.
+// Helper to handle comparisons that produce a value whose type is not bool,
+// but allows only implicit (and not explicit) conversions to bool.
 constexpr bool __into_bool(bool __b) noexcept { return __b; }
 
 template <class _Tp, class _Err>
