@@ -6315,15 +6315,18 @@ SDValue DAGCombiner::visitIMINMAX(SDNode *N) {
   // AND with X yields 0 (non-negative) or X (negative)  = smin(X, 0).
   // Both reduce to two instructions vs. a compare+cmov on x86-64.
   // Only fold when the target has no native SMAX/SMIN instruction for this
-  // type (isOperationExpand), the type is legal (not needing splitting), and
+  // type (isOperationExpand), the type is legal (not needing splitting),
   // the operand is not a min/max chain (preserving target combine patterns
-  // that fold smax(smin(x,C),D) into a single saturation instruction).
+  // that fold smax(smin(x,C),D) into a single saturation instruction), and
+  // for smax(X,-1) the operand is not a sign extension (doubling its use
+  // count can cause the target to lower the extension less efficiently).
   APInt C;
   if (TLI.isTypeLegal(VT) &&
       !TLI.shouldAvoidTransformToShift(VT, VT.getScalarSizeInBits() - 1) &&
       sd_match(N1, m_ConstInt(C))) {
     if (Opcode == ISD::SMAX && TLI.isOperationExpand(ISD::SMAX, VT) &&
-        N0.getOpcode() != ISD::SMIN && C.isAllOnes()) {
+        N0.getOpcode() != ISD::SMIN &&
+        N0.getOpcode() != ISD::SIGN_EXTEND && C.isAllOnes()) {
       SDValue ShiftAmt =
           DAG.getShiftAmountConstant(VT.getScalarSizeInBits() - 1, VT, DL);
       SDValue Shift = DAG.getNode(ISD::SRA, DL, VT, N0, ShiftAmt);
