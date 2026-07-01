@@ -6951,9 +6951,14 @@ const ConstantRange &ScalarEvolution::getRangeRef(
   }
   case scMulExpr: {
     const SCEVMulExpr *Mul = cast<SCEVMulExpr>(S);
+    unsigned WrapType = OBO::AnyWrap;
+    if (Mul->hasNoSignedWrap())
+      WrapType |= OBO::NoSignedWrap;
+    if (Mul->hasNoUnsignedWrap())
+      WrapType |= OBO::NoUnsignedWrap;
     ConstantRange X = getRangeRef(Mul->getOperand(0), SignHint, Depth + 1);
     for (const SCEV *Op : drop_begin(Mul->operands()))
-      X = X.multiply(getRangeRef(Op, SignHint, Depth + 1));
+      X = X.multiplyWithNoWrap(getRangeRef(Op, SignHint, Depth + 1), WrapType);
     return setRange(Mul, SignHint,
                     ConservativeResult.intersectWith(X, RangeType));
   }
