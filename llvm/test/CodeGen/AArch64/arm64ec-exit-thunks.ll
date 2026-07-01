@@ -141,8 +141,8 @@ declare double @simple_floats(half, float, double) nounwind;
 ; CHECK-NEXT:     .seh_endproc
 
 declare bfloat @simple_bfloat(bfloat, bfloat) nounwind;
-; CHECK-LABEL:    .def    $iexit_thunk$cdecl$bf16$bf16bf16;
-; CHECK:          .section        .wowthk$aa,"xr",discard,$iexit_thunk$cdecl$bf16$bf16bf16
+; CHECK-LABEL:    .def    $iexit_thunk$cdecl$__llvm_bf16__$__llvm_bf16____llvm_bf16__;
+; CHECK:          .section        .wowthk$aa,"xr",discard,$iexit_thunk$cdecl$__llvm_bf16__$__llvm_bf16____llvm_bf16__
 ; CHECK:          // %bb.0:
 ; CHECK-NEXT:     sub     sp, sp, #48
 ; CHECK-NEXT:     .seh_stackalloc 48
@@ -175,8 +175,8 @@ declare bfloat @simple_bfloat(bfloat, bfloat) nounwind;
 ; CHECK-NEXT:     adrp    x11, simple_bfloat
 ; CHECK-NEXT:     add     x11, x11, :lo12:simple_bfloat
 ; CHECK-NEXT:     ldr     x8, [x8, :lo12:__os_arm64x_check_icall]
-; CHECK-NEXT:     adrp    x10, $iexit_thunk$cdecl$bf16$bf16bf16
-; CHECK-NEXT:     add     x10, x10, :lo12:$iexit_thunk$cdecl$bf16$bf16bf16
+; CHECK-NEXT:     adrp    x10, $iexit_thunk$cdecl$__llvm_bf16__$__llvm_bf16____llvm_bf16__
+; CHECK-NEXT:     add     x10, x10, :lo12:$iexit_thunk$cdecl$__llvm_bf16__$__llvm_bf16____llvm_bf16__
 ; CHECK-NEXT:     blr     x8
 ; CHECK-NEXT:     .seh_startepilogue
 ; CHECK-NEXT:     ldr     x30, [sp], #16                  // 8-byte Folded Reload
@@ -667,7 +667,7 @@ declare void @"??@md5mangleaaaaaaaaaaaaaaaaaaaaaaa@"()
 ; CHECK-NEXT:     .symidx simple_floats
 ; CHECK-NEXT:     .word   0
 ; CHECK-NEXT:     .symidx simple_bfloat
-; CHECK-NEXT:     .symidx $iexit_thunk$cdecl$bf16$bf16bf16
+; CHECK-NEXT:     .symidx $iexit_thunk$cdecl$__llvm_bf16__$__llvm_bf16____llvm_bf16__
 ; CHECK-NEXT:     .word   4
 ; CHECK-NEXT:     .symidx "#simple_bfloat$exit_thunk"
 ; CHECK-NEXT:     .symidx simple_bfloat

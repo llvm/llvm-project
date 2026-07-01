@@ -324,7 +324,8 @@ ThunkArgInfo AArch64Arm64ECCallLowering::canonicalizeThunkType(
   }
 
   if (T->isBFloatTy()) {
-    Out << "bf16";
+    // Prefix with `llvm` since MSVC doesn't specify `__bf16`
+    Out << "__llvm_bf16__";
     return direct(T);
   }
 
@@ -361,7 +362,8 @@ ThunkArgInfo AArch64Arm64ECCallLowering::canonicalizeThunkType(
         // Prefix with `llvm` since MSVC doesn't specify `_Float16`
         Out << "__llvm_H__";
       else if (ElementTy->isBFloatTy())
-        Out << "BF16";
+        // Prefix with `llvm` since MSVC doesn't specify `__bf16`
+        Out << "__llvm_BF16__";
       else if (ElementTy->isFloatTy())
         Out << "F";
       else if (ElementTy->isDoubleTy())
