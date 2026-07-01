@@ -121,6 +121,10 @@ void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.hasArg(options::OPT_s))
     CmdArgs.push_back("--strip-all");
 
+  // Default to static linking for WASI targets.
+  if (ToolChain.getTriple().isOSWASI())
+    CmdArgs.push_back("-Bstatic");
+
   // On `wasip2` the default linker is `wasm-component-ld` which wraps the
   // execution of `wasm-ld`. Find `wasm-ld` and pass it as an argument of where
   // to find it to avoid it needing to hunt and rediscover or search `PATH` for
