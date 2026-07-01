@@ -1058,6 +1058,10 @@ Error WasmObjectFile::parseRelocSection(StringRef Name, ReadContext &Ctx) {
                                             object_error::parse_failed);
 
     auto badReloc = [&](StringRef msg) {
+      if (Reloc.Index >= Symbols.size())
+        return make_error<GenericBinaryError>(
+            msg + ": index " + Twine(Reloc.Index) + " out of range",
+            object_error::parse_failed);
       return make_error<GenericBinaryError>(
           msg + ": " + Twine(Symbols[Reloc.Index].Info.Name),
           object_error::parse_failed);
