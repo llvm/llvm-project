@@ -13,7 +13,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/TableGen/Error.h"
@@ -52,6 +54,67 @@ static void checkFeatureTree(const Record *Root) {
                           " is implied (mandatory) as a SubtargetFeature, but "
                           "is not present in DefaultExts");
   }
+}
+
+static bool allowInAArch64AsmParserDirective(const Record *Rec) {
+  // The generated asm parser extension table is used for both directive lookup
+  // and required-feature diagnostics. Some extensions still need to appear in
+  // diagnostics, but must not be accepted by .arch/.arch_extension/.cpu.
+  static const SmallDenseSet<StringRef, 32> DisallowedExtensionNames = {
+      "FeatureAltFPCmp",
+      "FeatureAM",
+      "FeatureAMVS",
+      "FeatureCCIDX",
+      "FeatureCHK",
+      "FeatureCLRBHB",
+      "FeatureEnhancedCounterVirtualization",
+      "FeatureETE",
+      "FeatureFineGrainedTraps",
+      "FeatureFPAC",
+      "FeatureFRInt3264",
+      "FeatureHCX",
+      "FeatureLSE2",
+      "FeatureMPAM",
+      "FeatureNMI",
+      "FeatureNV",
+      "FeaturePerfMon",
+      "FeaturePRFM_SLC",
+      "FeaturePsUAO",
+      "FeatureRCPC_IMMO",
+      "FeatureSEL2",
+      "FeatureSPE_EEF",
+      "FeatureSpecRestrict",
+      "FeatureTRACEV8_4",
+      "FeatureTRBE",
+      "FeatureVH",
+  };
+  return !DisallowedExtensionNames.contains(Rec->getName());
+}
+
+static StringRef getAArch64AsmParserPrimaryName(const Record *Rec) {
+  // Preserve legacy GNU-style spellings where the asm parser intentionally
+  // differs from the target parser's user-visible extension name.
+  return StringSwitch<StringRef>(Rec->getName())
+      .Case("FeatureComplxNum", "compnum")
+      .Case("FeatureMTE", "mte")
+      .Default("");
+}
+
+static ArrayRef<StringRef> getAArch64AsmParserExtraFeatures(const Record *Rec) {
+  // These shorthands historically toggled extra feature bits in the
+  // hand-written asm parser extension table, so keep the same behavior here.
+  static constexpr StringRef SVE2AES[] = {"FeatureSVEAES"};
+  static constexpr StringRef SVE2SM4[] = {"FeatureSVESM4"};
+  static constexpr StringRef SVE2SHA3[] = {"FeatureSVESHA3"};
+  static constexpr StringRef SVE2BitPerm[] = {"FeatureSVEBitPerm",
+                                              "FeatureSVE2"};
+
+  return StringSwitch<ArrayRef<StringRef>>(Rec->getName())
+      .Case("FeatureAliasSVE2AES", ArrayRef(SVE2AES))
+      .Case("FeatureAliasSVE2SM4", ArrayRef(SVE2SM4))
+      .Case("FeatureAliasSVE2SHA3", ArrayRef(SVE2SHA3))
+      .Case("FeatureAliasSVE2BitPerm", ArrayRef(SVE2BitPerm))
+      .Default({});
 }
 
 static void emitARMTargetDef(const RecordKeeper &RK, raw_ostream &OS) {
@@ -159,6 +222,50 @@ static void emitARMTargetDef(const RecordKeeper &RK, raw_ostream &OS) {
   OS << "};\n";
   OS << "#undef EMIT_EXTENSIONS\n"
      << "#endif // EMIT_EXTENSIONS\n"
+     << "\n";
+
+  OS << "#ifdef EMIT_ASM_PARSER_EXTENSIONS\n"
+     << "static const struct Extension {\n"
+     << "  const char *Name;\n"
+     << "  const FeatureBitset Features;\n"
+     << "  bool AllowInDirective;\n"
+     << "} ExtensionMap[] = {\n";
+  for (const Record *Rec : SortedExtensions) {
+    bool AllowInDirective = allowInAArch64AsmParserDirective(Rec);
+    auto EmitEntry = [&](StringRef Name) {
+      if (Name.empty())
+        return;
+      OS << "  {\"" << Name << "\", {AArch64::" << Rec->getName();
+      for (StringRef Extra : getAArch64AsmParserExtraFeatures(Rec))
+        OS << ", AArch64::" << Extra;
+      OS << "}, " << (AllowInDirective ? "true" : "false") << "},\n";
+    };
+
+    // Emit entries as:
+    //   {"Name", {AArch64::Feature, ...}, AllowInDirective},
+    //
+    // The order is relevant for diagnostics: setRequiredFeatureString scans
+    // ExtensionMap in order and reports the first matching spellings first.
+    // Prefer the legacy asm parser spelling when one exists, then add the
+    // target parser's user-visible name/alias as accepted alternate spellings.
+    // If there is no public spelling, fall back to the raw TableGen name.
+    StringRef PrimaryName = getAArch64AsmParserPrimaryName(Rec);
+    if (PrimaryName.empty())
+      PrimaryName = Rec->getValueAsString("UserVisibleName");
+    if (PrimaryName.empty())
+      PrimaryName = Rec->getValueAsString("Name");
+    EmitEntry(PrimaryName);
+
+    if (auto Name = Rec->getValueAsString("UserVisibleName");
+        !Name.empty() && Name != PrimaryName)
+      EmitEntry(Name);
+    if (auto Alias = Rec->getValueAsString("UserVisibleAlias");
+        !Alias.empty() && Alias != PrimaryName)
+      EmitEntry(Alias);
+  }
+  OS << "};\n"
+     << "#undef EMIT_ASM_PARSER_EXTENSIONS\n"
+     << "#endif // EMIT_ASM_PARSER_EXTENSIONS\n"
      << "\n";
 
   // Emit FMV information
