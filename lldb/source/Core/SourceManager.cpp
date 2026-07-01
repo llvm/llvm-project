@@ -429,12 +429,15 @@ SourceManager::GetDefaultFileAndLine() {
         function_options.include_symbols =
             false; // Force it to be a debug symbol.
         function_options.include_inlines = true;
-        // The linkage name can differ from the source name, so match on the
-        // base name to find the function regardless of how it was mangled or
-        // renamed.
         executable_ptr->FindFunctions(main_name, CompilerDeclContext(),
-                                      lldb::eFunctionNameTypeBase,
+                                      lldb::eFunctionNameTypeFull,
                                       function_options, sc_list);
+        // The linkage name can differ from the source name, so match on the
+        // base name as a fallback.
+        if (sc_list.GetSize() == 0)
+          executable_ptr->FindFunctions(main_name, CompilerDeclContext(),
+                                        lldb::eFunctionNameTypeBase,
+                                        function_options, sc_list);
         for (const SymbolContext &sc : sc_list) {
           if (sc.function) {
             lldb_private::LineEntry line_entry;
