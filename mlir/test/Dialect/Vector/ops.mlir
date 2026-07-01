@@ -1158,6 +1158,12 @@ func.func @step() {
   %0 = vector.step : vector<2xindex>
   // CHECK: vector.step : vector<[4]xindex>
   %1 = vector.step : vector<[4]xindex>
+  // CHECK: vector.step : vector<2xi32>
+  %2 = vector.step : vector<2xi32>
+  // CHECK: vector.step : vector<8xi8>
+  %3 = vector.step : vector<8xi8>
+  // CHECK: vector.step : vector<[4]xi16>
+  %4 = vector.step : vector<[4]xi16>
   return
 }
 

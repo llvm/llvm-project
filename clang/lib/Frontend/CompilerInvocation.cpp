@@ -3192,6 +3192,9 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
 
   if (Args.hasArg(OPT_clangir_disable_verifier))
     Opts.ClangIRDisableCIRVerifier = true;
+
+  if (Args.hasArg(OPT_clangir_lib_opt) || Args.hasArg(OPT_clangir_lib_opt_EQ))
+    Opts.ClangIRLibOptEnabled = true;
 #endif // CLANG_ENABLE_CIR
 
   if (Args.hasArg(OPT_aux_target_cpu))
@@ -4133,6 +4136,11 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
   PARSE_OPTION_WITH_MARSHALLING(Args, Diags, __VA_ARGS__)
 #include "clang/Options/Options.inc"
 #undef LANG_OPTION_WITH_MARSHALLING
+
+  // "Modules semantics" (e.g. cross-translation-unit declaration merging) are
+  // needed for both Clang (header) modules and C++20 modules, so enable them
+  // for either.
+  Opts.Modules = Opts.ClangModules || Opts.CPlusPlusModules;
 
   if (const Arg *A = Args.getLastArg(OPT_fcf_protection_EQ)) {
     StringRef Name = A->getValue();

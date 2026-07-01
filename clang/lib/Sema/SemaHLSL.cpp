@@ -3279,8 +3279,8 @@ NamedDecl *SemaHLSL::getConstantBufferConversionFunction(QualType Type,
 }
 
 std::optional<ExprResult>
-SemaHLSL::tryPerformConstantBufferConversion(ExprResult &BaseExpr) {
-  QualType BaseType = BaseExpr.get()->getType();
+SemaHLSL::tryPerformConstantBufferConversion(Expr *BaseExpr) {
+  QualType BaseType = BaseExpr->getType();
   const HLSLAttributedResourceType *ResTy =
       HLSLAttributedResourceType::findHandleTypeOnResource(
           BaseType.getTypePtr());
@@ -3297,7 +3297,7 @@ SemaHLSL::tryPerformConstantBufferConversion(ExprResult &BaseExpr) {
   auto *ConversionDecl =
       cast<CXXConversionDecl>(NamedConversionDecl->getUnderlyingDecl());
 
-  return SemaRef.BuildCXXMemberCallExpr(BaseExpr.get(), NamedConversionDecl,
+  return SemaRef.BuildCXXMemberCallExpr(BaseExpr, NamedConversionDecl,
                                         ConversionDecl,
                                         /*HadMultipleCandidates=*/false);
 }
@@ -5152,7 +5152,7 @@ ExprResult SemaHLSL::ActOnOutParamExpr(ParmVarDecl *Param, Expr *Arg) {
 
   // Writebacks are performed with `=` binary operator, which allows for
   // overload resolution on writeback result expressions.
-  Res = SemaRef.ActOnBinOp(SemaRef.getCurScope(), Param->getBeginLoc(),
+  Res = SemaRef.ActOnBinOp(SemaRef.getCurScope(), Arg->getBeginLoc(),
                            tok::equal, ArgOpV, OpV);
 
   if (Res.isInvalid())

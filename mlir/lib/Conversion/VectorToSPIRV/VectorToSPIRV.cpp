@@ -1024,8 +1024,11 @@ struct VectorStepOpConvert final : OpConversionPattern<vector::StepOp> {
 
     Location loc = stepOp.getLoc();
     int64_t numElements = stepOp.getType().getNumElements();
-    auto intType =
-        rewriter.getIntegerType(typeConverter.getIndexTypeBitwidth());
+    // Use the element type; the type converter collapses size-1 vectors to
+    // scalars, so `dstType` may already be the scalar element type.
+    Type intType = isa<VectorType>(dstType)
+                       ? cast<VectorType>(dstType).getElementType()
+                       : dstType;
 
     // Input vectors of size 1 are converted to scalars by the type converter.
     // We just create a constant in this case.
