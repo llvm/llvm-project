@@ -10,12 +10,14 @@ set(files
   Service.cpp
   Session.cpp
   SimpleNativeMemoryMap.cpp
+  StandaloneMachOUnwindInfoRegistrar.cpp
   ThreadPoolRunner.cpp
   sps-ci/AllSPSCI.cpp
   sps-ci/CallSPSCI.cpp
   sps-ci/MemoryAccessSPSCI.cpp
   sps-ci/NativeDylibManagerSPSCI.cpp
   sps-ci/SimpleNativeMemoryMapSPSCI.cpp
+  sps-ci/StandaloneMachOUnwindInfoRegistrarSPSCI.cpp
   )
 
 add_library(orc-rt-executor STATIC ${files})

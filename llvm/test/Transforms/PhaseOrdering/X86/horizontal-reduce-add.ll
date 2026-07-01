@@ -102,3 +102,35 @@ define i32 @PR37890_v16i32(<16 x i32> %a)  {
   %e = extractelement <2 x i32> %sum3, i32 0
   ret i32 %e
 }
+
+; PR33758: https://bugs.llvm.org/show_bug.cgi?id=33758
+
+define i32 @partial_reduction_add_v8i32(<8 x i32> %x) {
+; CHECK-LABEL: define i32 @partial_reduction_add_v8i32(
+; CHECK-SAME: <8 x i32> [[X:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> [[X]], <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[R:%.*]] = tail call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP1]])
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %x23 = shufflevector <8 x i32> %x, <8 x i32> undef, <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %x0213 = add <8 x i32> %x, %x23
+  %x13 = shufflevector <8 x i32> %x0213, <8 x i32> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %x0123 = add <8 x i32> %x0213, %x13
+  %r = extractelement <8 x i32> %x0123, i32 0
+  ret i32 %r
+}
+
+define i32 @partial_reduction_add_v16i32(<16 x i32> %x) {
+; CHECK-LABEL: define i32 @partial_reduction_add_v16i32(
+; CHECK-SAME: <16 x i32> [[X:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i32> [[X]], <16 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[R:%.*]] = tail call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP1]])
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %x23 = shufflevector <16 x i32> %x, <16 x i32> undef, <16 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %x0213 = add <16 x i32> %x, %x23
+  %x13 = shufflevector <16 x i32> %x0213, <16 x i32> undef, <16 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %x0123 = add <16 x i32> %x0213, %x13
+  %r = extractelement <16 x i32> %x0123, i32 0
+  ret i32 %r
+}

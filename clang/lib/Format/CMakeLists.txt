@@ -41,9 +41,9 @@ file(GLOB_RECURSE files
   ${CLANG_SOURCE_DIR}/unittests/Format/*.h
   )
 
+set(check_format_depends clang-format)
 find_program(DIFF_EXE diff)
 if(DIFF_EXE)
-  set(check_format_depends)
   set(i 0)
   foreach(file IN LISTS files)
     add_custom_command(OUTPUT check_format_depend_${i}
@@ -55,13 +55,10 @@ if(DIFF_EXE)
               ${file}
       )
     list(APPEND check_format_depends check_format_depend_${i})
-    math(EXPR i ${i}+1)
+    math(EXPR i "${i} + 1")
   endforeach()
-  add_custom_target(clang-format-check-format DEPENDS ${check_format_depends})
-else()
-  add_custom_target(clang-format-check-format DEPENDS clang-format)
 endif()
-
+add_custom_target(clang-format-check-format DEPENDS ${check_format_depends})
 
 set(docs_tools_dir ${CLANG_SOURCE_DIR}/docs/tools)
 

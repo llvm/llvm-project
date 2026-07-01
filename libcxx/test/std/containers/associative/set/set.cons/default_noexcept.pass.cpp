@@ -8,7 +8,7 @@
 
 // <set>
 
-// set()
+// constexpr set() // constexpr since C++26
 //    noexcept(
 //        is_nothrow_default_constructible<allocator_type>::value &&
 //        is_nothrow_default_constructible<key_compare>::value &&
@@ -32,7 +32,7 @@ struct some_comp {
   bool operator()(const T&, const T&) const { return false; }
 };
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
 #if defined(_LIBCPP_VERSION)
   {
     typedef std::set<MoveOnly> C;
@@ -52,5 +52,12 @@ int main(int, char**) {
     static_assert(!std::is_nothrow_default_constructible<C>::value, "");
   }
 
+  return true;
+}
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }

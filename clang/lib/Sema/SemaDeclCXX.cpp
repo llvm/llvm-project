@@ -14407,6 +14407,10 @@ void Sema::DefineImplicitDefaultConstructor(SourceLocation CurrentLocation,
   }
 
   DiagnoseUninitializedFields(*this, Constructor);
+
+  // The synthesized body applies the class's NSDMIs and never reaches the
+  // normal IssueWarnings path, so run lifetime safety on it here.
+  AnalysisWarnings.IssueWarningsForImplicitFunction(Constructor);
 }
 
 void Sema::ActOnFinishDelayedMemberInitializers(Decl *D) {
@@ -14588,6 +14592,10 @@ void Sema::DefineInheritingConstructor(SourceLocation CurrentLocation,
   }
 
   DiagnoseUninitializedFields(*this, Constructor);
+
+  // The synthesized body applies the class's NSDMIs and never reaches the
+  // normal IssueWarnings path, so run lifetime safety on it here.
+  AnalysisWarnings.IssueWarningsForImplicitFunction(Constructor);
 }
 
 CXXDestructorDecl *Sema::DeclareImplicitDestructor(CXXRecordDecl *ClassDecl) {
