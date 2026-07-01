@@ -239,7 +239,11 @@ void addOpenMPDeviceRTL(const Driver &D, const llvm::opt::ArgList &DriverArgs,
                         StringRef BitcodeSuffix, const llvm::Triple &Triple,
                         const ToolChain &HostTC);
 
-void addOpenCLBuiltinsLib(const Driver &D, const llvm::Triple &TT,
+/// Try to link libclc, depending on the target ABI and command line
+/// arguments.
+///
+/// \return true if libclc should be linked for the compile.
+bool addOpenCLBuiltinsLib(const Driver &D, const llvm::Triple &TT,
                           const llvm::opt::ArgList &DriverArgs,
                           llvm::opt::ArgStringList &CC1Args);
 
