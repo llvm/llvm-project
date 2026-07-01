@@ -31,6 +31,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/KnownBits.h"
@@ -162,6 +163,7 @@ private:
   bool shrinkType(Instruction &I);
   bool shrinkLoadForShuffles(Instruction &I);
   bool shrinkPhiOfShuffles(Instruction &I);
+  bool foldContiguousLoads(Instruction &I);
 
   void replaceValue(Instruction &Old, Value &New, bool Erase = true) {
     LLVM_DEBUG(dbgs() << "VC: Replacing: " << Old << '\n');
@@ -6263,6 +6265,200 @@ bool VectorCombine::shrinkPhiOfShuffles(Instruction &I) {
   return true;
 }
 
+static GEPNoWrapFlags getConstantGEPNoWrapFlagsToBase(Value *Ptr, Value *Base,
+                                                      const DataLayout &DL) {
+  std::optional<GEPNoWrapFlags> Flags;
+  while (Ptr != Base) {
+    auto *GEP = dyn_cast<GEPOperator>(Ptr);
+    if (!GEP)
+      return GEPNoWrapFlags::none();
+
+    APInt Offset(DL.getIndexTypeSizeInBits(GEP->getType()), 0);
+    if (!GEP->accumulateConstantOffset(DL, Offset))
+      return GEPNoWrapFlags::none();
+
+    Flags = Flags ? Flags->intersectForOffsetAdd(GEP->getNoWrapFlags())
+                  : GEP->getNoWrapFlags();
+    Ptr = GEP->getPointerOperand();
+  }
+
+  return Flags.value_or(GEPNoWrapFlags::none());
+}
+
+/// Try to fold lanes assembled from contiguous vector-load elements into one
+/// load of the result type.
+///
+///   1. Trace lanes:
+///      result lane 0   result lane 1   ...   result lane N
+///           |               |                       |
+///           +------- look through shuffles ---------+
+///                           |
+///                 source load + source lane
+///
+///   2. Check layout:
+///                 same base pointer and contiguous offsets?
+///
+///   3. Model old cost:
+///                 current op + unique loads + original GEPs
+///
+///   4. Model new cost:
+///                 ptradd(base, start byte offset) + one vector load
+///
+///   5. Replace:
+///                 if NewCost is cheaper
+///
+/// For example:
+///
+///   %p = getelementptr float, ptr %base, i64 4
+///   %v = load <4 x float>, ptr %p
+///          base+16   base+20   base+24   base+28
+///          lane 0    lane 1    lane 2    lane 3
+///                              |         |
+///                              +---------+  contiguous
+///                                  |
+///   %r = shufflevector %v, poison, <2, 3>
+///                                  |
+///                                  v
+///   %q = getelementptr i8, ptr %base, i64 24
+///   %r = load <2 x float>, ptr %q
+bool VectorCombine::foldContiguousLoads(Instruction &I) {
+  auto *VT = dyn_cast<FixedVectorType>(I.getType());
+  if (!VT || I.use_empty())
+    return false;
+
+  Type *EltTy = VT->getElementType();
+  if (!DL->typeSizeEqualsStoreSize(EltTy))
+    return false;
+
+  uint64_t ElementSizeBytes = DL->getTypeStoreSize(EltTy);
+  unsigned NumElts = VT->getNumElements();
+  Value *CommonBase = nullptr;
+  APInt StartByteOffset(1, 0), FirstLoadByteOffset(1, 0);
+  LoadInst *FirstLI = nullptr;
+  GEPNoWrapFlags NewGEPFlags = GEPNoWrapFlags::none();
+  auto GetLaneByteOffset = [ElementSizeBytes](uint64_t Lane,
+                                              unsigned IndexBits) {
+    return APInt(IndexBits, Lane, /*isSigned=*/false,
+                 /*implicitTrunc=*/true) *
+           APInt(IndexBits, ElementSizeBytes, /*isSigned=*/false,
+                 /*implicitTrunc=*/true);
+  };
+  SmallPtrSet<LoadInst *, 4> Loads;
+  for (unsigned Lane = 0; Lane < NumElts; ++Lane) {
+    // Step 1: Trace this result lane through shuffle users to find the source
+    // instruction and the lane selected from it.
+    InstLane IL = lookThroughShuffles(&I, Lane);
+    if (!IL.first)
+      return false;
+
+    auto *LI = dyn_cast<LoadInst>(IL.first);
+    if (!LI)
+      return false;
+
+    if (!LI->isSimple() || !LI->hasOneUse())
+      return false;
+
+    auto *LIVTy = dyn_cast<FixedVectorType>(LI->getType());
+    if (!LIVTy || LIVTy->getElementType() != EltTy)
+      return false;
+
+    if (LI->getParent() != I.getParent())
+      return false;
+
+    if (isMemModifiedBetween(std::next(LI->getIterator()), I.getIterator(),
+                             MemoryLocation::get(LI), AA))
+      return false;
+
+    // Step 2: Convert the load pointer and selected source lane into a byte
+    // offset in the pointer index type.
+    int64_t LoadByteOffset = 0;
+    Value *Base = GetPointerBaseWithConstantOffset(LI->getPointerOperand(),
+                                                   LoadByteOffset, *DL);
+    unsigned IndexBits = DL->getIndexTypeSizeInBits(Base->getType());
+    APInt LoadByteOffsetAP(IndexBits, LoadByteOffset, /*isSigned=*/true);
+    APInt SourceByteOffset =
+        LoadByteOffsetAP +
+        GetLaneByteOffset(static_cast<uint64_t>(IL.second), IndexBits);
+    if (Lane == 0) {
+      CommonBase = Base;
+      StartByteOffset = SourceByteOffset;
+      FirstLI = LI;
+      FirstLoadByteOffset = LoadByteOffsetAP;
+      NewGEPFlags = getConstantGEPNoWrapFlagsToBase(LI->getPointerOperand(),
+                                                    CommonBase, *DL);
+      // The selected lane is inside the original vector load's memory range.
+      if (IL.second != 0)
+        NewGEPFlags =
+            NewGEPFlags.intersectForOffsetAdd(GEPNoWrapFlags::inBounds());
+    } else {
+      // Step 2: All later result lanes must use the same underlying base
+      // pointer and appear at the element-stride offset expected from the first
+      // result lane.
+      if (Base != CommonBase)
+        return false;
+      if (IndexBits != StartByteOffset.getBitWidth())
+        return false;
+
+      APInt ExpectedByteOffset =
+          StartByteOffset + GetLaneByteOffset(Lane, IndexBits);
+      if (SourceByteOffset != ExpectedByteOffset)
+        return false;
+    }
+
+    Loads.insert(LI);
+  }
+
+  // Step 3: Model the current form: the shuffle-like instruction, each unique
+  // source load, and any GEP used to compute those load addresses.
+  InstructionCost OldCost = TTI.getInstructionCost(&I, CostKind);
+  for (LoadInst *LI : Loads) {
+    OldCost += TTI.getInstructionCost(LI, CostKind);
+    if (auto *GEP = dyn_cast<GetElementPtrInst>(LI->getPointerOperand());
+        GEP && GEP->hasOneUse()) {
+      SmallVector<const Value *> Indices(GEP->indices());
+      OldCost +=
+          TTI.getGEPCost(GEP->getSourceElementType(), GEP->getPointerOperand(),
+                         Indices, LI->getType(), CostKind);
+    }
+  }
+
+  Type *IndexTy = DL->getIndexType(CommonBase->getType());
+  auto *StartByteOffsetValue = ConstantInt::get(IndexTy, StartByteOffset);
+  APInt ByteOffsetFromFirstLoad = StartByteOffset - FirstLoadByteOffset;
+  unsigned AlignOffsetBits =
+      std::min<unsigned>(ByteOffsetFromFirstLoad.getBitWidth(), 64);
+  uint64_t ByteOffsetFromFirstLoadForAlign =
+      ByteOffsetFromFirstLoad.getLoBits(AlignOffsetBits).getZExtValue();
+  Align NewAlign =
+      commonAlignment(FirstLI->getAlign(), ByteOffsetFromFirstLoadForAlign);
+  // Step 4: Model the replacement: one vector load from the adjusted alignment
+  // and the byte-offset GEP that CreatePtrAdd will emit.
+  InstructionCost NewCost =
+      TTI.getMemoryOpCost(Instruction::Load, VT, NewAlign,
+                          FirstLI->getPointerAddressSpace(), CostKind);
+  SmallVector<const Value *> NewIndices = {StartByteOffsetValue};
+  NewCost +=
+      TTI.getGEPCost(Builder.getInt8Ty(), CommonBase, NewIndices, VT, CostKind);
+
+  LLVM_DEBUG(dbgs() << "Found contiguous loads to fold: " << I
+                    << "\n  OldCost: " << OldCost << " vs NewCost: " << NewCost
+                    << "\n");
+
+  if (OldCost <= NewCost)
+    return false;
+
+  // Step 5: Emit the same byte-offset GEP modeled above, then load the
+  // contiguous result vector from it.
+  Value *NewBasePtr =
+      Builder.CreatePtrAdd(CommonBase, StartByteOffsetValue, "", NewGEPFlags);
+  LoadInst *NewLoad = Builder.CreateAlignedLoad(VT, NewBasePtr, NewAlign);
+  if (Loads.size() == 1)
+    copyMetadataForLoad(*NewLoad, *FirstLI);
+
+  replaceValue(I, *NewLoad);
+  return true;
+}
+
 /// This is the entry point for all transforms. Pass manager differences are
 /// handled in the callers of this function.
 bool VectorCombine::run() {
@@ -6368,6 +6564,8 @@ bool VectorCombine::run() {
         if (foldSelectShuffle(I))
           return true;
         if (foldShuffleToIdentity(I))
+          return true;
+        if (foldContiguousLoads(I))
           return true;
         break;
       case Instruction::Load:
