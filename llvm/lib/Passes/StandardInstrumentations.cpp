@@ -42,6 +42,7 @@
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/xxhash.h"
+#include "llvm/Transforms/Utils/Cloning.h"
 #include <utility>
 #include <vector>
 
@@ -328,6 +329,52 @@ void unwrapAndPrint(raw_ostream &OS, Any IR) {
     printIR(OS, MF);
     return;
   }
+  llvm_unreachable("Unknown wrapped IR type");
+}
+
+std::optional<std::pair<std::unique_ptr<Module>, std::vector<Function *>>>
+unwrapAndSaveClone(Any IR) {
+  std::vector<Function *> ValuesToSave;
+
+  if (!shouldPrintIR(IR))
+    return std::nullopt;
+
+  auto *OrigM = unwrapModule(IR);
+  auto M = CloneModule(*OrigM);
+
+  if (forcePrintModuleIR()) {
+    return {{std::move(M), ValuesToSave}};
+  }
+
+  if (const auto *_ = unwrapIR<Module>(IR)) {
+    return {{std::move(M), ValuesToSave}};
+  }
+
+  if (const auto *F = unwrapIR<Function>(IR)) {
+    auto *SaveF = M->getFunction(F->getName());
+    ValuesToSave.push_back(SaveF);
+    return {{std::move(M), ValuesToSave}};
+  }
+
+  if (auto *C = unwrapIR<LazyCallGraph::SCC>(IR)) {
+    for (LazyCallGraph::Node &N : *C) {
+      Function &F = N.getFunction();
+      if (!F.isDeclaration() && isFunctionInPrintList(F.getName())) {
+        auto *SaveF = M->getFunction(F.getName());
+        ValuesToSave.push_back(SaveF);
+      }
+    }
+    return {{std::move(M), ValuesToSave}};
+  }
+
+  if (const auto *_ = unwrapIR<Loop>(IR)) {
+    return std::nullopt;
+  }
+
+  if (const auto *_ = unwrapIR<MachineFunction>(IR)) {
+    return std::nullopt;
+  }
+
   llvm_unreachable("Unknown wrapped IR type");
 }
 
@@ -2452,15 +2499,34 @@ StandardInstrumentations::StandardInstrumentations(
 PrintCrashIRInstrumentation *PrintCrashIRInstrumentation::CrashReporter =
     nullptr;
 
+void PrintCrashIRInstrumentation::printToStream(raw_ostream &OS) {
+  // We always print SavedString.
+  OS << SavedString;
+
+  if (SavedModule) {
+    // We avoid pushing all functions to ValuesToSave
+    // to avoid unnecessary memory pressure. We treat
+    // empty to mean all functions.
+    if (SavedFunctions.empty()) {
+      printIR(OS, SavedModule.get());
+    } else {
+      for (auto *GV : SavedFunctions) {
+        printIR(OS, cast<Function>(GV));
+      }
+    }
+  }
+}
+
 void PrintCrashIRInstrumentation::reportCrashIR() {
   if (!PrintOnCrashPath.empty()) {
     std::error_code EC;
     raw_fd_ostream Out(PrintOnCrashPath, EC);
     if (EC)
       report_fatal_error(errorCodeToError(EC));
-    Out << SavedIR;
+
+    printToStream(Out);
   } else {
-    dbgs() << SavedIR;
+    printToStream(dbgs());
   }
 }
 
@@ -2494,8 +2560,11 @@ void PrintCrashIRInstrumentation::registerCallbacks(
 
   PIC.registerBeforeNonSkippedPassCallback(
       [&PIC, this](StringRef PassID, Any IR) {
-        SavedIR.clear();
-        raw_string_ostream OS(SavedIR);
+        SavedString.clear();
+        SavedModule.reset();
+        SavedFunctions.clear();
+        raw_string_ostream OS(SavedString);
+
         OS << formatv("; *** Dump of {0}IR Before Last Pass {1}",
                       llvm::forcePrintModuleIR() ? "Module " : "", PassID);
         if (!isInteresting(IR, PassID, PIC.getPassNameForClassName(PassID))) {
@@ -2503,7 +2572,18 @@ void PrintCrashIRInstrumentation::registerCallbacks(
           return;
         }
         OS << " Started ***\n";
-        unwrapAndPrint(OS, IR);
+
+        // Cloning a Module is significantly faster than serializing to a string
+        // in most situations.
+        auto UseClonePair = unwrapAndSaveClone(IR);
+
+        if (UseClonePair.has_value()) {
+          SavedModule = std::move(UseClonePair->first);
+          SavedFunctions = UseClonePair->second;
+        } else {
+          // We only rely on SavedString for MachineFunctions & Loops
+          unwrapAndPrint(OS, IR);
+        }
       });
 }
 

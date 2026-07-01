@@ -579,13 +579,17 @@ protected:
 class PrintCrashIRInstrumentation {
 public:
   PrintCrashIRInstrumentation()
-      : SavedIR("*** Dump of IR Before Last Pass Unknown ***") {}
+      : SavedString("*** Dump of IR Before Last Pass Unknown ***") {}
   LLVM_ABI ~PrintCrashIRInstrumentation();
   LLVM_ABI void registerCallbacks(PassInstrumentationCallbacks &PIC);
   LLVM_ABI void reportCrashIR();
+  LLVM_ABI void printToStream(raw_ostream &OS);
 
 protected:
-  std::string SavedIR;
+  std::string SavedString;
+
+  std::unique_ptr<Module> SavedModule;
+  std::vector<llvm::Function *> SavedFunctions;
 
 private:
   // The crash reporter that will report on a crash.
