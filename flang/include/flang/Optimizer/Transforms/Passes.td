@@ -492,13 +492,13 @@ def AssumedRankOpConversion : Pass<"fir-assumed-rank-op", "mlir::ModuleOp"> {
   ];
 }
 
-def CUFAllocSinking : Pass<"cuf-alloc-sinking", "::mlir::func::FuncOp"> {
-  let summary = "Sink cuf.alloc of descriptor types to just before first use";
+def CUFAllocDelay : Pass<"cuf-alloc-delay", "::mlir::func::FuncOp"> {
+  let summary = "Delay cuf.alloc of descriptor types to just before first use";
   let description = [{
     Moves cuf.alloc operations for allocatable/pointer descriptors (box types)
     from function entry to just before their first use. This defers
-    cudaMallocManaged calls so that users can call cudaSetDevice or
-    nvshmemx_init_attr before any CUDA context is created.
+    cudaMallocManaged calls so that users can call cudaSetDevice before any
+    CUDA context is created.
   }];
   let dependentDialects = ["fir::FIROpsDialect", "cuf::CUFDialect"];
 }

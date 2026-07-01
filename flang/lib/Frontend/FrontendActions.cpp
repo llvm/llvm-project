@@ -636,9 +636,6 @@ void CodeGenAction::lowerHLFIRToFIR() {
   if (ci.getInvocation().getLangOpts().OpenMPIsTargetDevice)
     config.EnableOpenMPIsTargetDevice = true;
   // Create the pass pipeline
-  if (ci.getInvocation().getFortranOpts().features.IsEnabled(
-          Fortran::common::LanguageFeature::CUDA))
-    pm.addNestedPass<mlir::func::FuncOp>(fir::createCUFAllocSinking());
   fir::createHLFIRToFIRPassPipeline(pm, enableOpenMP, config);
   (void)mlir::applyPassManagerCLOptions(pm);
 

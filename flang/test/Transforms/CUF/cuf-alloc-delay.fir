@@ -1,4 +1,4 @@
-// RUN: fir-opt -cuf-alloc-sinking --split-input-file %s | FileCheck %s
+// RUN: fir-opt -cuf-alloc-delay --split-input-file %s | FileCheck %s
 
 // Test 1: Basic sinking — cuf.alloc of box type is sunk to just before
 // the first use (AllocatableSetBounds).

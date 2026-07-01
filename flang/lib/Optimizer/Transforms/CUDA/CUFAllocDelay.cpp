@@ -1,4 +1,4 @@
-//===-- CUFAllocSinking.cpp -----------------------------------------------===//
+//===-- CUFAllocDelay.cpp -------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Sink cuf.alloc of descriptor (box) types from function entry to just before
+// Delay cuf.alloc of descriptor (box) types from function entry to just before
 // their first use. This defers cudaMallocManaged calls so that users can call
-// cudaSetDevice or nvshmemx_init_attr before any CUDA context is created.
+// cudaSetDevice before any CUDA context is created.
 //
 //===----------------------------------------------------------------------===//
 
@@ -22,7 +22,7 @@
 #include "llvm/ADT/SmallVector.h"
 
 namespace fir {
-#define GEN_PASS_DEF_CUFALLOCSINKING
+#define GEN_PASS_DEF_CUFALLOCDELAY
 #include "flang/Optimizer/Transforms/Passes.h.inc"
 } // namespace fir
 
@@ -41,8 +41,8 @@ namespace {
 /// skipped as "uses" and collected in \p hostAssocStores so the caller can
 /// move them along with the sunk group.
 static mlir::Operation *
-findSinkTarget(hlfir::DeclareOp declareOp, mlir::Block *entryBlock,
-               llvm::SmallVectorImpl<fir::StoreOp> &hostAssocStores) {
+findDelayTarget(hlfir::DeclareOp declareOp, mlir::Block *entryBlock,
+                llvm::SmallVectorImpl<fir::StoreOp> &hostAssocStores) {
   mlir::Operation *earliest = nullptr;
   mlir::Region *funcRegion = entryBlock->getParent();
 
@@ -84,7 +84,7 @@ findSinkTarget(hlfir::DeclareOp declareOp, mlir::Block *entryBlock,
     return earliest;
 
   // No entry-block uses.  If all successor uses are in a single block,
-  // sink directly into that block (before the earliest use there).
+  // delay directly into that block (before the earliest use there).
   // Otherwise fall back to the entry block's terminator.
   if (successorEarliest.size() == 1)
     return successorEarliest.begin()->second;
@@ -93,8 +93,8 @@ findSinkTarget(hlfir::DeclareOp declareOp, mlir::Block *entryBlock,
   return nullptr;
 }
 
-struct CUFAllocSinking
-    : public fir::impl::CUFAllocSinkingBase<CUFAllocSinking> {
+struct CUFAllocDelay
+    : public fir::impl::CUFAllocDelayBase<CUFAllocDelay> {
 
   void runOnOperation() override {
     mlir::func::FuncOp func = getOperation();
@@ -129,23 +129,23 @@ struct CUFAllocSinking
         continue;
 
       llvm::SmallVector<fir::StoreOp> hostAssocStores;
-      mlir::Operation *sinkTarget =
-          findSinkTarget(declareOp, &entryBlock, hostAssocStores);
-      if (!sinkTarget)
+      mlir::Operation *delayTarget =
+          findDelayTarget(declareOp, &entryBlock, hostAssocStores);
+      if (!delayTarget)
         continue;
 
       // Don't move if target is in the same block and at or before current pos.
-      if (sinkTarget->getBlock() == allocOp->getBlock() &&
-          (sinkTarget->isBeforeInBlock(allocOp) || sinkTarget == allocOp))
+      if (delayTarget->getBlock() == allocOp->getBlock() &&
+          (delayTarget->isBeforeInBlock(allocOp) || delayTarget == allocOp))
         continue;
-      // Don't sink to the declare itself.
-      if (sinkTarget == declareOp)
+      // Don't move to the declare itself.
+      if (delayTarget == declareOp)
         continue;
 
-      // Move {cuf.alloc, fir.store, hlfir.declare} before the sink target.
+      // Move {cuf.alloc, fir.store, hlfir.declare} before the delay target.
       // The embox/zero_bits/shape/constants stay at their original positions
       // since they still dominate the new locations.
-      allocOp->moveBefore(sinkTarget);
+      allocOp->moveBefore(delayTarget);
       if (storeOp)
         storeOp->moveAfter(allocOp);
       if (storeOp)
