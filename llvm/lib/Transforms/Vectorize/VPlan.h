@@ -1507,7 +1507,7 @@ public:
 
   /// Returns true if the recipe only uses scalars of operand \p Op.
   bool usesScalars(const VPValue *Op) const override {
-    return Instruction::isCast(getOpcode()) || usesFirstLaneOnly(Op);
+    return isSingleScalar() || usesFirstLaneOnly(Op);
   }
 
   /// Returns true if the recipe only uses the first part of operand \p Op.
