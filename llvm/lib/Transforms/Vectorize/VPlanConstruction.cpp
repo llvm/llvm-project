@@ -2268,7 +2268,11 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
     auto *FinalMinOrMaxCmp =
         (RecurrenceDescriptor::isIntegerRecurrenceKind(RdxKind))
             ? B.createICmp(CmpInst::ICMP_EQ, MinOrMaxExiting, MinOrMaxResult)
-            : B.createFCmp(CmpInst::FCMP_OEQ, MinOrMaxExiting, MinOrMaxResult);
+            : B.createFCmp((RdxKind == RecurKind::FMaximum ||
+                            RdxKind == RecurKind::FMinimum)
+                               ? CmpInst::FCMP_UEQ
+                               : CmpInst::FCMP_OEQ,
+                           MinOrMaxExiting, MinOrMaxResult);
     VPValue *Sentinel = FindIVCmp->getOperand(1);
     VPValue *LastIVExiting = FindIVRdxResult->getOperand(0);
     auto *FinalIVSelect =
