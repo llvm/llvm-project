@@ -46,6 +46,7 @@
 #if SANITIZER_LINUX
 #include <sys/eventfd.h>
 #include <sys/inotify.h>
+#include <sys/signalfd.h>
 #include <sys/timerfd.h>
 #endif
 #include <sys/ioctl.h>
@@ -883,6 +884,16 @@ TEST(TestRtsanInterceptors, ProcessVmWritevDiesWhenRealtime) {
   iovec rmt{&stack, sizeof(stack)};
   auto Func = [&lcl, &rmt]() { process_vm_writev(0, &lcl, 1, &rmt, 1, 0); };
   ExpectRealtimeDeath(Func, "process_vm_writev");
+  ExpectNonRealtimeSurvival(Func);
+}
+#endif
+
+#if SANITIZER_LINUX
+TEST(TestRtsanInterceptors, SignalfdDiesWhenRealtime) {
+  sigset_t set;
+  sigemptyset(&set);
+  auto Func = [&set]() { signalfd(-1, &set, 0); };
+  ExpectRealtimeDeath(Func, "signalfd");
   ExpectNonRealtimeSurvival(Func);
 }
 #endif
