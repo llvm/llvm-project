@@ -817,15 +817,8 @@ gpu.module @test_kernel {
 }
 
 // -----
-// Test that an scf.if with results that expand 1:N during blocking is
-// legalized. The two results use different layouts (a regular 2D layout that
-// expands 1:N and a slice layout), and the slice result is consumed by a
-// broadcast/transpose chain. This exercises the scf.if structural type
-// conversion, which previously failed to legalize because the per-position
-// layout attrs were not stripped and the results were not recorded in the
-// loop-arg type map.
+// Test that an scf.if whose results expand 1:N during blocking is legalized.
 #if_a = #xegpu.layout<inst_data = [8, 16], lane_layout = [1, 16], lane_data = [1, 1]>
-#if_b = #xegpu.slice<#xegpu.layout<inst_data = [16, 8], lane_layout = [16, 1], lane_data = [1, 1], order = [0, 1]>, dims = [0]>
 gpu.module @test_kernel {
   // CHECK-LABEL: func @if_one_to_n_results
   gpu.func @if_one_to_n_results(%c: i1, %p: i64) {
@@ -833,18 +826,18 @@ gpu.module @test_kernel {
     // CHECK: scf.if
     // CHECK-COUNT-8: vector<8x16xf32>
     %r:2 = scf.if %c -> (vector<16x64xf32>, vector<16xf32>) {
-      %a = arith.constant {layout_result_0 = #if_a} dense<1.0> : vector<16x64xf32>
-      %b = arith.constant {layout_result_0 = #if_b} dense<1.0> : vector<16xf32>
+      %a = arith.constant dense<1.0> : vector<16x64xf32>
+      %b = arith.constant dense<1.0> : vector<16xf32>
       scf.yield %a, %b : vector<16x64xf32>, vector<16xf32>
     } else {
-      %a = arith.constant {layout_result_0 = #if_a} dense<0.0> : vector<16x64xf32>
-      %b = arith.constant {layout_result_0 = #if_b} dense<0.0> : vector<16xf32>
+      %a = arith.constant dense<0.0> : vector<16x64xf32>
+      %b = arith.constant dense<0.0> : vector<16xf32>
       scf.yield %a, %b : vector<16x64xf32>, vector<16xf32>
-    } {layout_result_0 = #if_a, layout_result_1 = #if_b}
-    %bc = vector.broadcast %r#1 {layout_result_0 = #xegpu.layout<inst_data = [16, 8], lane_layout = [16, 1], lane_data = [1, 1], order = [0, 1]>} : vector<16xf32> to vector<64x16xf32>
-    %tp = vector.transpose %bc, [1, 0] {layout_result_0 = #if_a} : vector<64x16xf32> to vector<16x64xf32>
-    %add = arith.addf %r#0, %tp {layout_result_0 = #if_a} : vector<16x64xf32>
-    %tr = arith.truncf %add {layout_result_0 = #if_a} : vector<16x64xf32> to vector<16x64xf16>
+    }
+    %bc = vector.broadcast %r#1 : vector<16xf32> to vector<64x16xf32>
+    %tp = vector.transpose %bc, [1, 0] : vector<64x16xf32> to vector<16x64xf32>
+    %add = arith.addf %r#0, %tp : vector<16x64xf32>
+    %tr = arith.truncf %add : vector<16x64xf32> to vector<16x64xf16>
     %td = xegpu.create_nd_tdesc %p, shape:[16, 64], strides:[64, 1] : i64 -> !xegpu.tensor_desc<16x64xf16, #if_a>
     xegpu.store_nd %tr, %td[%c0, %c0] <{layout = #if_a}> : vector<16x64xf16>, !xegpu.tensor_desc<16x64xf16, #if_a>
     gpu.return

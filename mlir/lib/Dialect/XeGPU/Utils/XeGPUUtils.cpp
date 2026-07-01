@@ -925,11 +925,9 @@ xegpu::precomputeLoopBlockArgTypes(Operation *topLevelOp,
       return;
     }
     if (auto ifOp = dyn_cast<scf::IfOp>(op)) {
-      // scf.if is not loop-carried, but its results still expand 1:N during
-      // blocking. Record each result together with the then/else yield operands
-      // that feed it so they all convert to the same distributed type by Value
-      // identity. The yield operand's layout is the authoritative source (the
-      // result's own per-position layout attr is stripped before conversion).
+      // scf.if results expand 1:N during blocking. Record each result with the
+      // then/else yield operands that feed it so they convert to the same
+      // distributed type by Value identity, using the yield operand's layout.
       scf::YieldOp thenYield = ifOp.thenYield();
       scf::YieldOp elseYield = ifOp.elseBlock() ? ifOp.elseYield() : nullptr;
       for (auto [idx, res] : llvm::enumerate(ifOp.getResults())) {
