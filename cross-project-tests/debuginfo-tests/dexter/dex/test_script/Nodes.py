@@ -52,6 +52,19 @@ class FileLabels:
 class Where:
     """One or more instances of this class define a range of steps in a debugging session. Any expects in the script
     within scope of a "Where" will only be evaluated for the steps where the Where applies.
+
+    Supports a set of attributes to specify the state of a stack frame that this node matches against:
+    - file: The path (absolute or relative) of the frame source location.
+    - line: The line number of the frame source location.
+    - function: The function name (exactly matching the name shown by the debugger) of the frame.
+    - at_frame_idx: Only specifiable for !and nodes; changes the frame that this node matches against from its parent
+                    frame to the frame at the specified index.
+    - after_hit_count: Requires that this node must become "active" a specified number of times before it will be
+                       considered as active. If for_hit_count is also specified, the "for" hit count will only begin
+                       accumulating after the "after" hit count.
+    - for_hit_count: Limits this node to becoming active a specified number of times, after which it will not become
+                     active again. If after_hit_count is also specified, the "for" hit count will only begin
+                     accumulating after the "after" hit count.
     """
 
     def __init__(self, attributes: dict, is_and: bool):
@@ -69,14 +82,6 @@ class Where:
         if attributes:
             raise DexterNodeError(
                 self, f"unexpected attributes {', '.join(attributes)}"
-            )
-        if (
-            not self.function
-            and not self.lines
-            and (self.for_hit_count or self.after_hit_count)
-        ):
-            raise DexterNodeError(
-                self, "can't check hit counts without an explicit lines or function arg"
             )
         if self.at_frame_idx is not None and not self.is_and:
             raise DexterNodeError(self, "at_frame_idx can only be used with !and nodes")
