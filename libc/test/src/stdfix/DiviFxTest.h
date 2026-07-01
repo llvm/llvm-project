@@ -22,6 +22,7 @@ class DiviFxTest : public LIBC_NAMESPACE::testing::Test {
   static constexpr FXType max = FXRep::MAX();
   static constexpr FXType one_half = FXRep::ONE_HALF();
   static constexpr FXType one_fourth = FXRep::ONE_FOURTH();
+  static constexpr FXType one_eighth = FXRep::ONE_EIGHTH();
 
 public:
   typedef IntType (*DiviFxFunc)(IntType, FXType);
@@ -32,10 +33,10 @@ public:
 
     EXPECT_EQ(func(1, one_fourth), static_cast<IntType>(4));
     EXPECT_EQ(func(1, one_half), static_cast<IntType>(2));
-    EXPECT_EQ(func(1, 0.125r), static_cast<IntType>(8));
+    EXPECT_EQ(func(1, one_eighth), static_cast<IntType>(8));
     EXPECT_EQ(func(2, one_fourth), static_cast<IntType>(8));
     EXPECT_EQ(func(2, one_half), static_cast<IntType>(4));
-    EXPECT_EQ(func(2, 0.125r), static_cast<IntType>(16));
+    EXPECT_EQ(func(2, one_eighth), static_cast<IntType>(16));
 
     // verify rounding towards 0
     EXPECT_EQ(func(1, 3 * one_fourth), static_cast<IntType>(1));
