@@ -40,6 +40,7 @@
 #include "lldb/Target/ExecutionContextScope.h"
 #include "lldb/Target/InstrumentationRuntime.h"
 #include "lldb/Target/Memory.h"
+#include "lldb/Target/MemoryRegionInfoCache.h"
 #include "lldb/Target/MemoryTagManager.h"
 #include "lldb/Target/QueueList.h"
 #include "lldb/Target/ThreadList.h"
@@ -1421,7 +1422,18 @@ public:
 
   virtual bool GetProcessInfo(ProcessInstanceInfo &info);
 
-  virtual lldb_private::UUID FindModuleUUID(const llvm::StringRef path);
+  /// Given a module spec, try to find the UUID information.
+  ///
+  /// \param [in,out] spec
+  ///     A module specification with as much detail as possible about the
+  ///     module for which we are trying to find a UUID. The
+  ///     ModuleSpec.m_file should be filled in. If a dynamic loader is
+  ///     calling this, the load address of the module can be filled in as
+  ///     well. Sometimes the file path for a library can be a symlink and
+  ///     the load address can help resolve the module.
+  ///
+  /// \return True if the UUID was added, false otherwise.
+  virtual bool FindModuleUUID(ModuleSpec &spec);
 
   /// Get the exit status for a process.
   ///
@@ -3538,6 +3550,7 @@ protected:
   std::vector<std::string> m_profile_data;
   Predicate<uint32_t> m_iohandler_sync;
   MemoryCache m_memory_cache;
+  MemoryRegionInfoCache m_memory_region_infos_cache;
   AllocatedMemoryCache m_allocated_memory_cache;
   bool m_should_detach; /// Should we detach if the process object goes away
                         /// with an explicit call to Kill or Detach?
