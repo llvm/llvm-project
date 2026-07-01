@@ -9,7 +9,7 @@
 
 declare i32 @llvm.amdgcn.workitem.id.x()
 
-@local_var32 = addrspace(3) global i32 undef, align 4
+@local_var32 = addrspace(3) global i32 poison, align 4
 
 ; Few expected active lanes (<= 5) on a divergent LDS atomic: DPP is skipped,
 ; so a plain per-lane ds_add is emitted with no DPP scan.
