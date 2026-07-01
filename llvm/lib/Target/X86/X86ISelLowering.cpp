@@ -3682,10 +3682,6 @@ bool X86TargetLowering::canMergeStoresTo(unsigned AddressSpace, EVT MemVT,
   return true;
 }
 
-bool X86TargetLowering::isCtlzFast() const {
-  return Subtarget.hasFastLZCNT();
-}
-
 bool X86TargetLowering::isMaskAndCmp0FoldingBeneficial(
     const Instruction &AndI) const {
   return true;
@@ -53358,7 +53354,7 @@ static SDValue lowerX86CmpEqZeroToCtlzSrl(SDValue Op, SelectionDAG &DAG) {
 static SDValue combineOrCmpEqZeroToCtlzSrl(SDNode *N, SelectionDAG &DAG,
                                            TargetLowering::DAGCombinerInfo &DCI,
                                            const X86Subtarget &Subtarget) {
-  if (DCI.isBeforeLegalize() || !Subtarget.getTargetLowering()->isCtlzFast())
+  if (DCI.isBeforeLegalize() || !Subtarget.hasFastLZCNT())
     return SDValue();
 
   auto isORCandidate = [](SDValue N) {

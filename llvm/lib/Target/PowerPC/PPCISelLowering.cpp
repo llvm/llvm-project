@@ -3663,11 +3663,23 @@ SDValue PPCTargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
   // If we're comparing for equality to zero, expose the fact that this is
   // implemented as a ctlz/srl pair on ppc, so that the dag combiner can
   // fold the new nodes.
-  if (SDValue V = lowerCmpEqZeroToCtlzSrl(Op, DAG))
-    return V;
+  if (isNullConstant(RHS) && CC == ISD::SETEQ) {
+    EVT VT = LHS.getValueType();
+    SDValue Zext = LHS;
+    if (VT.bitsLT(MVT::i32)) {
+      VT = MVT::i32;
+      Zext = DAG.getNode(ISD::ZERO_EXTEND, dl, VT, LHS);
+    }
+    unsigned Log2b = Log2_32(VT.getSizeInBits());
+    SDValue Clz = DAG.getNode(ISD::CTLZ, dl, VT, Zext);
+    SDValue Scc = DAG.getNode(ISD::SRL, dl, VT, Clz,
+                              DAG.getConstant(Log2b, dl, MVT::i32));
+    return DAG.getNode(ISD::TRUNCATE, dl, MVT::i32, Scc);
+  }
 
   if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(RHS)) {
-    // Leave comparisons against 0 and -1 alone for now, since they're usually
+    // Leave comparisons against -1 and comparisons against 0 (other than SETEQ
+    // against 0, which is handled above) alone for now, since they're usually
     // optimized.  FIXME: revisit this when we can custom lower all setcc
     // optimizations.
     if (C->isAllOnes() || C->isZero())

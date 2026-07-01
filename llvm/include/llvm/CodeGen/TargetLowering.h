@@ -726,11 +726,6 @@ public:
     return false;
   }
 
-  /// Return true if ctlz instruction is fast.
-  virtual bool isCtlzFast() const {
-    return false;
-  }
-
   /// Return true if ctpop instruction is fast.
   virtual bool isCtpopFast(EVT VT) const {
     return isOperationLegal(ISD::CTPOP, VT);
@@ -6002,12 +5997,6 @@ public:
   virtual SDValue expandIndirectJTBranch(const SDLoc &dl, SDValue Value,
                                          SDValue Addr, int JTI,
                                          SelectionDAG &DAG) const;
-
-  // seteq(x, 0) -> truncate(srl(ctlz(zext(x)), log2(#bits)))
-  // If we're comparing for equality to zero and isCtlzFast is true, expose the
-  // fact that this can be implemented as a ctlz/srl pair, so that the dag
-  // combiner can fold the new nodes.
-  SDValue lowerCmpEqZeroToCtlzSrl(SDValue Op, SelectionDAG &DAG) const;
 
   // Return true if `X & Y eq/ne 0` is preferable to `X & Y ne/eq Y`
   virtual bool isXAndYEqZeroPreferableToXAndYEqY(ISD::CondCode, EVT) const {

@@ -171,11 +171,7 @@ namespace llvm {
     bool isFPImmLegal(const APFloat &Imm, EVT VT,
                       bool ForCodeSize) const override;
 
-    bool isCtlzFast() const override;
-
-    bool isCheapToSpeculateCtlz(Type *Ty) const override {
-      return isCtlzFast();
-    }
+    bool isCheapToSpeculateCtlz(Type *Ty) const override;
 
     bool isCheapToSpeculateCttz(Type *Ty) const override;
 
