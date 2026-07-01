@@ -390,16 +390,19 @@ multiclass FLAT_Global_Store_Pseudo_t16<string opName> {
 
 // Async loads, introduced in gfx1250, will store directly
 // to a DS address in vdst (they will not use M0 for DS addess).
-class FLAT_Global_Load_LDS_Pseudo <string opName, bit EnableSaddr = 0, bit IsAsync = 0, bit IsLegacyLDSDMA = 0> : FLAT_Pseudo<
+class FLAT_Global_Load_LDS_PseudoImpl <string opName, bit EnableSaddr = 0, bit IsAsync = 0, bit IsPreGFX12Async = 0> : FLAT_Pseudo<
   opName,
   (outs ),
   !con(
        !if(IsAsync, (ins VGPROp_32:$vdst), (ins)),
        !if(EnableSaddr, (ins SReg_64:$saddr, VGPROp_32:$vaddr), (ins VGPROp_64:$vaddr)),
-       (ins flat_offset:$offset, CPol_0:$cpol),
-       !if(IsLegacyLDSDMA, (ins i1imm_0:$IsAsync), (ins))),
+       (ins flat_offset:$offset, CPol_0:$cpol)),
   !if(IsAsync, " $vdst,", "")#" $vaddr"#!if(EnableSaddr, ", $saddr", ", off")#"$offset$cpol"> {
   let LGKM_CNT = 0;
+  // IsPreGFX12Async is a pure modeling fiction: keep VM_CNT/ASYNC_CNT TSFlags
+  // unchanged so SIInsertWaitcnts treats the pseudo like a normal gfx9/gfx10
+  // load-to-LDS instruction (and never tries to emit S_WAIT_ASYNCCNT,
+  // gfx12+ only).
   let VM_CNT = !not(IsAsync);
   let ASYNC_CNT = IsAsync;
   let is_flat_global = 1;
@@ -412,16 +415,30 @@ class FLAT_Global_Load_LDS_Pseudo <string opName, bit EnableSaddr = 0, bit IsAsy
   let enabled_saddr = EnableSaddr;
   let VALU = 1;
   let PseudoInstr = opName#!if(EnableSaddr, "_SADDR", "");
-  let Uses = !if(IsAsync, [EXEC, ASYNCcnt], [M0, EXEC]);
+  let Uses = !if(IsPreGFX12Async, [M0, EXEC, AsyncMarker],
+                  !if(IsAsync, [EXEC, ASYNCcnt], [M0, EXEC]));
   let Defs = !if(IsAsync, [ASYNCcnt], []);
   let SchedRW = [WriteVMEM, WriteLDS];
 }
 
-multiclass FLAT_Global_Load_LDS_Pseudo<string opName, bit IsAsync = 0, bit IsLegacyLDSDMA = 0> {
-  def ""     : FLAT_Global_Load_LDS_Pseudo<opName, 0, IsAsync, IsLegacyLDSDMA>,
-    GlobalSaddrTable<0, opName>;
-  def _SADDR : FLAT_Global_Load_LDS_Pseudo<opName, 1, IsAsync, IsLegacyLDSDMA>,
-    GlobalSaddrTable<1, opName>;
+// Emits the non-async pseudo pair and, when IsPreGFX12Async, its async pair.
+multiclass FLAT_Global_Load_LDS_Pseudo<string opName, bit IsAsync = 0, bit IsPreGFX12Async = 0> {
+  def ""     : FLAT_Global_Load_LDS_PseudoImpl<opName, 0, IsAsync, 0>,
+    GlobalSaddrTable<0, opName>,
+    PreGFX12AsyncTable<opName, 0>;
+  def _SADDR : FLAT_Global_Load_LDS_PseudoImpl<opName, 1, IsAsync, 0>,
+    GlobalSaddrTable<1, opName>,
+    PreGFX12AsyncTable<opName # "_SADDR", 0>;
+
+  if IsPreGFX12Async then {
+    // Fake-async siblings don't participate in getGlobalSaddrOp pairing
+    // (no codegen path queries them by SADDR/non-SADDR), so skip
+    // GlobalSaddrTable attachment to avoid OpName-row collisions.
+    def _ASYNC       : FLAT_Global_Load_LDS_PseudoImpl<opName, 0, IsAsync, /*IsPreGFX12Async=*/1>,
+      PreGFX12AsyncTable<opName, 1>;
+    def _ASYNC_SADDR : FLAT_Global_Load_LDS_PseudoImpl<opName, 1, IsAsync, /*IsPreGFX12Async=*/1>,
+      PreGFX12AsyncTable<opName # "_SADDR", 1>;
+  }
 }
 
 class FLAT_Global_STORE_LDS_Pseudo <string opName, bit EnableSaddr = 0> : FLAT_Pseudo<
@@ -1214,15 +1231,15 @@ let SubtargetPredicate = HasGFX10_BEncoding in {
                                 VGPROp_32, i32>;
 }
 
-defm GLOBAL_LOAD_LDS_UBYTE  : FLAT_Global_Load_LDS_Pseudo <"global_load_lds_ubyte", 0, 1>;
-defm GLOBAL_LOAD_LDS_SBYTE  : FLAT_Global_Load_LDS_Pseudo <"global_load_lds_sbyte", 0, 1>;
-defm GLOBAL_LOAD_LDS_USHORT : FLAT_Global_Load_LDS_Pseudo <"global_load_lds_ushort", 0, 1>;
-defm GLOBAL_LOAD_LDS_SSHORT : FLAT_Global_Load_LDS_Pseudo <"global_load_lds_sshort", 0, 1>;
-defm GLOBAL_LOAD_LDS_DWORD  : FLAT_Global_Load_LDS_Pseudo <"global_load_lds_dword", 0, 1>;
+defm GLOBAL_LOAD_LDS_UBYTE  : FLAT_Global_Load_LDS_Pseudo <"global_load_lds_ubyte",  0, /*IsPreGFX12Async=*/1>;
+defm GLOBAL_LOAD_LDS_SBYTE  : FLAT_Global_Load_LDS_Pseudo <"global_load_lds_sbyte",  0, /*IsPreGFX12Async=*/1>;
+defm GLOBAL_LOAD_LDS_USHORT : FLAT_Global_Load_LDS_Pseudo <"global_load_lds_ushort", 0, /*IsPreGFX12Async=*/1>;
+defm GLOBAL_LOAD_LDS_SSHORT : FLAT_Global_Load_LDS_Pseudo <"global_load_lds_sshort", 0, /*IsPreGFX12Async=*/1>;
+defm GLOBAL_LOAD_LDS_DWORD  : FLAT_Global_Load_LDS_Pseudo <"global_load_lds_dword",  0, /*IsPreGFX12Async=*/1>;
 
 let SubtargetPredicate = HasGFX950Insts in {
-defm GLOBAL_LOAD_LDS_DWORDX3 : FLAT_Global_Load_LDS_Pseudo <"global_load_lds_dwordx3", 0, 1>;
-defm GLOBAL_LOAD_LDS_DWORDX4 : FLAT_Global_Load_LDS_Pseudo <"global_load_lds_dwordx4", 0, 1>;
+defm GLOBAL_LOAD_LDS_DWORDX3 : FLAT_Global_Load_LDS_Pseudo <"global_load_lds_dwordx3", 0, /*IsPreGFX12Async=*/1>;
+defm GLOBAL_LOAD_LDS_DWORDX4 : FLAT_Global_Load_LDS_Pseudo <"global_load_lds_dwordx4", 0, /*IsPreGFX12Async=*/1>;
 }
 
 let SubtargetPredicate = isGFX12PlusNot12_50 in

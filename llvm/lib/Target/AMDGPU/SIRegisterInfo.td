@@ -277,6 +277,9 @@ def MODE : SIReg <"mode", 0>;
 def ASYNCcnt : SIReg <"ASYNCcnt", 0>;
 def TENSORcnt : SIReg <"TENSORcnt", 0>;
 
+// Not addressable. Models asyncmark/wait_asyncmark ordering (not a HW counter).
+def AsyncMarker : SIReg <"AsyncMarker", 0>;
+
 def LDS_DIRECT : SIReg <"src_lds_direct", 254> {
   // There is no physical register corresponding to this. This is an
   // encoding value in a source field, which will ultimately trigger a
