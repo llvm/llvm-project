@@ -388,9 +388,15 @@ define i32 @get_grid_dims_i32() #2 {
   ret i32 %grid.dims
 }
 
+; hidden_grid_dims is the AQL dispatch packet setup.DIMENSIONS field -- a
+; runtime value that must not be replaced by a constant derived from
+; reqd_work_group_size.  Only range metadata [1,4) is valid here.
 define i16 @get_grid_dims_reqd_work_group_size_1d() #3 !reqd_work_group_size !2 {
 ; GCN-LABEL: @get_grid_dims_reqd_work_group_size_1d(
-; GCN-NEXT:    ret i16 1
+; GCN-NEXT:    [[IMPLICITARG_PTR:%.*]] = tail call dereferenceable(256) ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+; GCN-NEXT:    [[GEP_GRID_DIMS:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[IMPLICITARG_PTR]], i64 64
+; GCN-NEXT:    [[GRID_DIMS:%.*]] = load i16, ptr addrspace(4) [[GEP_GRID_DIMS]], align 4, !range [[RNG5]]
+; GCN-NEXT:    ret i16 [[GRID_DIMS]]
 ;
   %implicitarg.ptr = tail call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
   %gep.grid.dims = getelementptr inbounds i8, ptr addrspace(4) %implicitarg.ptr, i64 64
@@ -400,7 +406,10 @@ define i16 @get_grid_dims_reqd_work_group_size_1d() #3 !reqd_work_group_size !2 
 
 define i16 @get_grid_dims_reqd_work_group_size_2d() #4 !reqd_work_group_size !3 {
 ; GCN-LABEL: @get_grid_dims_reqd_work_group_size_2d(
-; GCN-NEXT:    ret i16 2
+; GCN-NEXT:    [[IMPLICITARG_PTR:%.*]] = tail call dereferenceable(256) ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+; GCN-NEXT:    [[GEP_GRID_DIMS:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[IMPLICITARG_PTR]], i64 64
+; GCN-NEXT:    [[GRID_DIMS:%.*]] = load i16, ptr addrspace(4) [[GEP_GRID_DIMS]], align 4, !range [[RNG5]]
+; GCN-NEXT:    ret i16 [[GRID_DIMS]]
 ;
   %implicitarg.ptr = tail call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
   %gep.grid.dims = getelementptr inbounds i8, ptr addrspace(4) %implicitarg.ptr, i64 64
@@ -410,7 +419,10 @@ define i16 @get_grid_dims_reqd_work_group_size_2d() #4 !reqd_work_group_size !3 
 
 define i16 @get_grid_dims_reqd_work_group_size_2d_weird() #5 !reqd_work_group_size !5 {
 ; GCN-LABEL: @get_grid_dims_reqd_work_group_size_2d_weird(
-; GCN-NEXT:    ret i16 2
+; GCN-NEXT:    [[IMPLICITARG_PTR:%.*]] = tail call dereferenceable(256) ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+; GCN-NEXT:    [[GEP_GRID_DIMS:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[IMPLICITARG_PTR]], i64 64
+; GCN-NEXT:    [[GRID_DIMS:%.*]] = load i16, ptr addrspace(4) [[GEP_GRID_DIMS]], align 4, !range [[RNG5]]
+; GCN-NEXT:    ret i16 [[GRID_DIMS]]
 ;
   %implicitarg.ptr = tail call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
   %gep.grid.dims = getelementptr inbounds i8, ptr addrspace(4) %implicitarg.ptr, i64 64
@@ -420,7 +432,10 @@ define i16 @get_grid_dims_reqd_work_group_size_2d_weird() #5 !reqd_work_group_si
 
 define i16 @get_grid_dims_reqd_work_group_size_3d() #6 !reqd_work_group_size !0 {
 ; GCN-LABEL: @get_grid_dims_reqd_work_group_size_3d(
-; GCN-NEXT:    ret i16 3
+; GCN-NEXT:    [[IMPLICITARG_PTR:%.*]] = tail call dereferenceable(256) ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+; GCN-NEXT:    [[GEP_GRID_DIMS:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[IMPLICITARG_PTR]], i64 64
+; GCN-NEXT:    [[GRID_DIMS:%.*]] = load i16, ptr addrspace(4) [[GEP_GRID_DIMS]], align 4, !range [[RNG5]]
+; GCN-NEXT:    ret i16 [[GRID_DIMS]]
 ;
   %implicitarg.ptr = tail call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
   %gep.grid.dims = getelementptr inbounds i8, ptr addrspace(4) %implicitarg.ptr, i64 64
@@ -430,7 +445,10 @@ define i16 @get_grid_dims_reqd_work_group_size_3d() #6 !reqd_work_group_size !0 
 
 define i16 @get_grid_dims_reqd_work_group_size_3d_weird() #3 !reqd_work_group_size !4 {
 ; GCN-LABEL: @get_grid_dims_reqd_work_group_size_3d_weird(
-; GCN-NEXT:    ret i16 3
+; GCN-NEXT:    [[IMPLICITARG_PTR:%.*]] = tail call dereferenceable(256) ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+; GCN-NEXT:    [[GEP_GRID_DIMS:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[IMPLICITARG_PTR]], i64 64
+; GCN-NEXT:    [[GRID_DIMS:%.*]] = load i16, ptr addrspace(4) [[GEP_GRID_DIMS]], align 4, !range [[RNG5]]
+; GCN-NEXT:    ret i16 [[GRID_DIMS]]
 ;
   %implicitarg.ptr = tail call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
   %gep.grid.dims = getelementptr inbounds i8, ptr addrspace(4) %implicitarg.ptr, i64 64
