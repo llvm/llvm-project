@@ -1148,4 +1148,36 @@ exit:
   ret i32 %iv
 }
 
+define i64 @combined_bridge() {
+; CHECK-LABEL: @combined_bridge(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[INNER1_PH_I:%.*]]
+; CHECK:       inner1.ph.i:
+; CHECK-NEXT:    br i1 false, label [[INNER2_PH_I_PREHEADER:%.*]], label [[INNER1_PH_I]]
+; CHECK:       inner2.ph.i.preheader:
+; CHECK-NEXT:    br label [[INNER2_PH_I:%.*]]
+; CHECK:       inner2.ph.i:
+; CHECK-NEXT:    br i1 false, label [[OUTER2_EXIT_I:%.*]], label [[INNER2_PH_I]]
+; CHECK:       outer2.exit.i:
+; CHECK-NEXT:    ret i64 0
+;
+entry:
+  br label %inner1.ph.i
+
+inner1.ph.i:                                      ; preds = %inner1.ph.i, %entry
+  %iv74.i = phi i64 [ 0, %entry ], [ %iv.next75.i, %inner1.ph.i ]
+  %iv.next75.i = add nsw i64 %iv74.i, 1
+  %exitcond77.i = icmp eq i64 %iv.next75.i, 0
+  br i1 %exitcond77.i, label %inner2.ph.i, label %inner1.ph.i
+
+inner2.ph.i:                                      ; preds = %inner2.ph.i, %inner1.ph.i
+  %iv66.i = phi i64 [ %iv.next67.i, %inner2.ph.i ], [ 0, %inner1.ph.i ]
+  %iv.next67.i = add nsw i64 %iv66.i, 1
+  %exitcond69.i = icmp eq i64 %iv.next67.i, 0
+  br i1 %exitcond69.i, label %outer2.exit.i, label %inner2.ph.i
+
+outer2.exit.i:                                    ; preds = %inner2.ph.i
+  ret i64 0
+}
+
 !0 = !{i32 0, i32 2147483647}
