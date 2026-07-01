@@ -904,12 +904,11 @@ static void yamlToPdb(StringRef Path) {
   }
 
   if (Dbi.SectionContribs) {
+    // DbiStreamBuilder only supports writing Ver60 section contribs.
     if (Dbi.SectionContribs->Version !=
-        PdbRaw_DbiSecContribVer::DbiSecContribVer60) {
-      errs() << "Only DBI section contrib Version Ver60 is supported\n";
-      errs().flush();
-      exit(1);
-    }
+        PdbRaw_DbiSecContribVer::DbiSecContribVer60)
+      ExitOnErr(createStringError(
+          "Only DBI section contrib Version Ver60 is supported"));
 
     for (const auto &Contrib : Dbi.SectionContribs->Items) {
       SectionContrib SC;
@@ -1633,13 +1632,8 @@ int main(int Argc, const char **Argv) {
     if (opts::pdb2yaml::DumpModuleSyms || opts::pdb2yaml::DumpModuleFiles)
       opts::pdb2yaml::DumpModules = true;
 
-    if (opts::pdb2yaml::DumpModules)
-      opts::pdb2yaml::DbiStream = true;
-
-    if (opts::pdb2yaml::DumpSectionHeaders)
-      opts::pdb2yaml::DbiStream = true;
-
-    if (opts::pdb2yaml::DumpSectionContribs)
+    if (opts::pdb2yaml::DumpModules || opts::pdb2yaml::DumpSectionHeaders ||
+        opts::pdb2yaml::DumpSectionContribs)
       opts::pdb2yaml::DbiStream = true;
   }
 
