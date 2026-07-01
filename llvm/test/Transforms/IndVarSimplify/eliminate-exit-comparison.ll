@@ -2,13 +2,12 @@
 ; RUN: opt -passes='loop(indvars),print<scalar-evolution>' -S -disable-output < %s 2>&1 | FileCheck %s
 
 ; CHECK:  Determining loop execution counts for: @combined_bridge
-; CHECK-NEXT:  Loop %inner2.ph.i: backedge-taken count is i64 -1
-; CHECK-NEXT:  Loop %inner2.ph.i: constant max backedge-taken count is i64 -1
-; CHECK-NEXT:  Loop %inner2.ph.i: symbolic max backedge-taken count is i64 -1
-; CHECK-NEXT:  Loop %inner2.ph.i: Trip multiple is 2147483648
-; CHECK-NEXT:  Loop %inner1.ph.i: backedge-taken count is i64 -1
-; CHECK-NEXT:  Loop %inner1.ph.i: constant max backedge-taken count is i64 -1
-; CHECK-NEXT:  Loop %inner1.ph.i: symbolic max backedge-taken count is i64 -1
+; CHECK-NEXT:  Loop %inner2.ph.i: Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %inner2.ph.i: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %inner2.ph.i: Unpredictable symbolic max backedge-taken count.
+; CHECK-NEXT:  Loop %inner1.ph.i: Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %inner1.ph.i: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %inner1.ph.i: Unpredictable symbolic max backedge-taken count.
 
 define i64 @combined_bridge() {
 
