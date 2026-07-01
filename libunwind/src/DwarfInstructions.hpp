@@ -330,7 +330,7 @@ int DwarfInstructions<A, R>::stepWithDwarf(
         // FEAT_PAuth/FEAT_PAuth_LR support.
         if (RAState == RASignedWithPC) {
           register unsigned long long x15 __asm("x15") =
-                prolog.ptrAuthDiversifier;
+              prolog.ptrAuthDiversifier;
           if (cieInfo.addressesSignedWithBKey) {
             asm("hint 0x27\n\t" // pacm
                 "hint 0xe"
