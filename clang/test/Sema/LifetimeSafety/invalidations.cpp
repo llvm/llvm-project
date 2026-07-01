@@ -402,10 +402,20 @@ void SelfInvalidatingMap() {
   // Therefore the following is safe in practice.
   // On the other hand, std::flat_map (since C++23) does not provide pointer stability on
   // insertion and following is unsafe for this container.
-  mp[1] = "42";
-  mp[2]     // expected-note {{local variable 'mp' is invalidated here}}
-    =
-    mp[1];  // expected-warning {{local variable 'mp' is later invalidated}} expected-note {{later used here}}
+  // FIXME: The warnings below are false positives (self-invalidation of the Owner).
+  // Modifying a container should not invalidate the container object itself.
+  // To resolve this, we need to:
+  // 1. Distinguish owner-borrow (borrowing the container object) from content-borrow (borrowing elements inside the container).
+  // 2. Make AccessPaths more precise to reason at element/field granularity rather than treating the whole container as a single storage location.
+  mp[1] = "42"; // expected-warning {{local variable 'mp' is later invalidated}} \
+                // expected-note {{local variable 'mp' is invalidated here}} \
+                // expected-note {{later used here}}
+  mp[2] = mp[1]; // expected-warning {{local variable 'mp' is later invalidated}} \
+                 // expected-warning {{local variable 'mp' is later invalidated}} \
+                 // expected-note {{local variable 'mp' is invalidated here}} \
+                 // expected-note {{later used here}} \
+                 // expected-note {{local variable 'mp' is invalidated here}} \
+                 // expected-note {{later used here}}
 }
 
 void InvalidateErase() {
@@ -740,9 +750,16 @@ void MapSubscriptMultipleCallsDoesNotInvalidate(std::map<int, int> mp, int a, in
 }
 
 void FlatMapSubscriptMultipleCallsInvalidate(std::flat_map<int, int> mp, int a, int b) {
+    // FIXME: The duplicate warning below is a false positive caused by self-invalidation of the Owner 'mp'.
+    // While the warning on the temporary reference returned by mp[a] is a true positive (it dangles),
+    // the second warning on 'mp' itself is redundant and incorrect.
+    // Resolving this requires distinguishing owner-borrow from content-borrow.
     PrintMax(mp[a], mp[b]); // expected-warning {{parameter 'mp' is later invalidated}} \
-                                 // expected-note {{parameter 'mp' is invalidated here}} \
-                                 // expected-note {{later used here}}
+                            // expected-warning {{parameter 'mp' is later invalidated}} \
+                            // expected-note {{parameter 'mp' is invalidated here}} \
+                            // expected-note {{later used here}} \
+                            // expected-note {{parameter 'mp' is invalidated here}} \
+                            // expected-note {{later used here}}
 }
 
 } // namespace AssociativeContainers

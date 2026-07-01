@@ -45,8 +45,8 @@ program m
   allocate(actual_host(10))
 
   call host_and_device(actual_host)     ! Should resolve to sub_device
-  call all(actual_host)                 ! Should resolved to unified
-  call all_without_managed(actual_host) ! Should resolved to managed
+  call all(actual_host)                 ! Should resolve to managed
+  call all_without_managed(actual_host) ! Should resolve to unified
 end
 
 ! CHECK: fir.call @_QMmatchingPsub_device

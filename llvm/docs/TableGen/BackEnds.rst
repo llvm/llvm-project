@@ -702,7 +702,7 @@ TableGen produces C++ code to define the table entries and also produces
 the declaration and definition of a function to search the table based on a
 primary key. To define the table, define a record whose parent class is
 ``GenericTable`` and whose name is the name of the global table of entries.
-This class provides six fields.
+This class provides the following fields.
 
 * ``string FilterClass``. The table will have one entry for each record
   that derives from this class.
@@ -734,6 +734,11 @@ This class provides six fields.
   object. This feature proves useful when multiple objects meet the criteria
   specified by the lookup function. Currently, it is supported only for primary
   lookup functions. Refer to the second example below for further details.
+
+* ``bit DisallowSparseTable``. When set to 1 (the default), prevents the
+  emitter from generating a sparse direct-lookup array for this table. Set to
+  0 to allow the emitter to emit a sparse directly-indexed array when the
+  primary key qualifies (see below).
 
 TableGen attempts to deduce the type of each of the table fields so that it
 can format the C++ initializers in the emitted table. It can deduce ``bit``,
@@ -835,9 +840,24 @@ The table entries in ``ATable`` are sorted in order by ``Val1``, and within
 each of those values, by ``Val2``. This allows a binary search of the table,
 which is performed in the lookup function by ``std::lower_bound``. The
 lookup function returns a reference to the found table entry, or the null
-pointer if no entry is found. If the table has a single primary key field
-which is integral and densely numbered, a direct lookup is generated rather
-than a binary search.
+pointer if no entry is found.
+
+The emitter selects the lookup strategy automatically based on the primary key:
+
+* **Dense direct lookup**: used when the primary key is a single integral field
+  whose values form a contiguous range. A compact array is emitted and the
+  lookup function indexes into it directly.
+
+* **Sparse direct lookup**: used when ``DisallowSparseTable = 0``, the primary
+  key is a single ``bits<N>`` field with N ≤ 12, ``PrimaryKeyReturnRange`` is
+  false, and the table has no secondary search indexes. The emitter allocates a
+  directly-indexed array of ``2^N`` entries. Empty slots are filled with a
+  sentinel value in the key field such that the in-place key comparison in the
+  lookup function returns ``nullptr`` for them. This trades memory for
+  O(1) lookup.
+
+* **Binary search**: the default for all other cases. Entries are sorted by the
+  primary key and ``std::lower_bound`` is used in the lookup function.
 
 This example includes a field whose type TableGen cannot deduce. The ``Kind``
 field uses the enumerated type ``CEnum`` defined above. To inform TableGen
@@ -1067,6 +1087,62 @@ The generated tables are:
     { 0x7 }, // 3
     { 0x9 }, // 4
   };
+
+Here is an example of a sparse direct-lookup table. ``FTable`` uses a 4-bit
+primary key (``bits<4>``), so the emitter allocates an array of
+``2^4 = 16`` entries.
+
+.. code-block:: text
+
+  def FTable : GenericTable {
+    let FilterClass = "FEntry";
+    let Fields = ["Key", "Val"];
+    let PrimaryKey = ["Key"];
+    let PrimaryKeyName = "lookupFTableByKey";
+    let DisallowSparseTable = false;
+  }
+
+Here is the generated C++ code. The declaration of ``lookupFTableByKey`` is
+guarded by ``GET_FTable_DECL``, while the definitions are guarded by
+``GET_FTable_IMPL``.
+
+.. code-block:: text
+
+  #ifdef GET_FTable_DECL
+  const FEntry *lookupFTableByKey(uint8_t Key);
+  #endif
+
+  #ifdef GET_FTable_IMPL
+  constexpr FEntry FTable[] = {
+    { 0xF, 0x0 }, // 0
+    { 0xE, 0x0 }, // 1
+    { 0x2, 0xA }, // 2
+    { 0xC, 0x0 }, // 3
+    { 0xB, 0x0 }, // 4
+    { 0x5, 0x14 }, // 5
+    { 0x9, 0x0 }, // 6
+    { 0x8, 0x0 }, // 7
+    { 0x7, 0x0 }, // 8
+    { 0x6, 0x0 }, // 9
+    { 0x5, 0x0 }, // 10
+    { 0x4, 0x0 }, // 11
+    { 0x3, 0x0 }, // 12
+    { 0xD, 0x1E }, // 13
+    { 0x1, 0x0 }, // 14
+    { 0x0, 0x0 }, // 15
+  };
+
+  const FEntry *lookupFTableByKey(uint8_t Key) {
+    if (Key >= 16)
+      return nullptr;
+    const auto *Entry = &FTable[Key];
+    return Entry->Key == Key ? Entry : nullptr;
+  }
+  #endif
+
+Empty slots are filled with a sentinel value in the ``Key`` field
+(``(15 ^ Idx)``) so that the in-place comparison ``Entry->Key == Key``
+returns ``nullptr`` for them without a separate presence array.
 
 Search Indexes
 ~~~~~~~~~~~~~~

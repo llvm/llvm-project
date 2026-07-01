@@ -5,14 +5,12 @@ constexpr int f() {
   throw 1;
   return 0;
 }
-
-// CHECK: constexpr-source-ranges.cpp:5:3:{5:3-5:10}
-
+// CHECK: :[[@LINE-3]]:3:{[[@LINE-3]]:3-[[@LINE-3]]:10}
 
 constexpr int I = 12;
 constexpr const int *P = &I;
 constexpr long L = (long)P;
-// CHECK: constexpr-source-ranges.cpp:14:20:{14:20-14:27}
+// CHECK: :[[@LINE-1]]:20:{[[@LINE-1]]:20-[[@LINE-1]]:27}
 
 constexpr int zero() {
   return 0;
@@ -23,8 +21,8 @@ constexpr int divByZero() {
 static_assert(divByZero() == 0, "");
 /// We see this twice. Once from sema and once when
 /// evaluating the static_assert above.
-// CHECK: constexpr-source-ranges.cpp:23:15:{23:15-23:31}
-// CHECK: constexpr-source-ranges.cpp:21:12:{21:14-21:20}
+// CHECK: :[[@LINE-5]]:12:{[[@LINE-5]]:14-[[@LINE-5]]:20}
+// CHECK: :[[@LINE-4]]:15:{[[@LINE-4]]:15-[[@LINE-4]]:31}
 
 constexpr int div(bool a, bool b) {
   return 1 / (int)b;
@@ -33,7 +31,7 @@ constexpr int ints(int a, int b, int c, int d) {
   return 1;
 }
 static_assert(ints(1, div(true, false), 2, div(false, true)) == 1, "");
-// CHECK: constexpr-source-ranges.cpp:35:23:{35:23-35:39}
+// CHECK: :[[@LINE-1]]:23:{[[@LINE-1]]:23-[[@LINE-1]]:39}
 
 namespace overflow {
 // CHECK:      :{[[@LINE+1]]:9-[[@LINE+1]]:29}:
@@ -53,3 +51,13 @@ static_assert(uninit() == 0, "");
 
 constexpr void neverValid() { throw; }
 // CHECK: :{[[@LINE-1]]:16-[[@LINE-1]]:26}:
+
+struct B1  {};
+struct C  {};
+constexpr C c;
+// CHECK: :[[@LINE+1]]:15:{[[@LINE+1]]:15-[[@LINE+1]]:18}
+constexpr int foo() {
+  auto p = (B1&)c;
+  return 1;
+}
+// CHECK: :[[@LINE-3]]:12:{[[@LINE-3]]:12-[[@LINE-3]]:18}

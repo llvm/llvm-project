@@ -209,16 +209,16 @@ define fp128 @f13(fp128 %a, float %b) {
 ;
 ; Z16-LABEL: f13:
 ; Z16:       # %bb.0:
+; Z16-NEXT:    vl %v1, 0(%r3), 3
 ; Z16-NEXT:    vlgvf %r0, %v0, 0
-; Z16-NEXT:    vl %v0, 0(%r3), 3
 ; Z16-NEXT:    tmlh %r0, 32768
 ; Z16-NEXT:    je .LBB13_2
 ; Z16-NEXT:  # %bb.1:
-; Z16-NEXT:    wflnxb %v0, %v0
+; Z16-NEXT:    wflnxb %v0, %v1
 ; Z16-NEXT:    vst %v0, 0(%r2), 3
 ; Z16-NEXT:    br %r14
 ; Z16-NEXT:  .LBB13_2:
-; Z16-NEXT:    wflpxb %v0, %v0
+; Z16-NEXT:    wflpxb %v0, %v1
 ; Z16-NEXT:    vst %v0, 0(%r2), 3
 ; Z16-NEXT:    br %r14
   %b128 = fpext float %b to fp128
@@ -239,16 +239,16 @@ define fp128 @f14(fp128 %a, double %b) {
 ;
 ; Z16-LABEL: f14:
 ; Z16:       # %bb.0:
+; Z16-NEXT:    vl %v1, 0(%r3), 3
 ; Z16-NEXT:    lgdr %r0, %f0
-; Z16-NEXT:    vl %v0, 0(%r3), 3
 ; Z16-NEXT:    tmhh %r0, 32768
 ; Z16-NEXT:    je .LBB14_2
 ; Z16-NEXT:  # %bb.1:
-; Z16-NEXT:    wflnxb %v0, %v0
+; Z16-NEXT:    wflnxb %v0, %v1
 ; Z16-NEXT:    vst %v0, 0(%r2), 3
 ; Z16-NEXT:    br %r14
 ; Z16-NEXT:  .LBB14_2:
-; Z16-NEXT:    wflpxb %v0, %v0
+; Z16-NEXT:    wflpxb %v0, %v1
 ; Z16-NEXT:    vst %v0, 0(%r2), 3
 ; Z16-NEXT:    br %r14
   %b128 = fpext double %b to fp128

@@ -2625,9 +2625,11 @@ AddOrdinaryNameResults(SemaCodeCompletion::ParserCompletionContext CCC,
 
     // "return expression ;" or "return ;", depending on the return type.
     QualType ReturnType;
-    if (const auto *Function = dyn_cast<FunctionDecl>(SemaRef.CurContext))
-      ReturnType = Function->getReturnType();
-    else if (const auto *Method = dyn_cast<ObjCMethodDecl>(SemaRef.CurContext))
+    if (const auto *Function = dyn_cast<FunctionDecl>(SemaRef.CurContext)) {
+      if (!Function->getType().isNull())
+        ReturnType = Function->getReturnType();
+    } else if (const auto *Method =
+                   dyn_cast<ObjCMethodDecl>(SemaRef.CurContext))
       ReturnType = Method->getReturnType();
     else if (SemaRef.getCurBlock() &&
              !SemaRef.getCurBlock()->ReturnType.isNull())
