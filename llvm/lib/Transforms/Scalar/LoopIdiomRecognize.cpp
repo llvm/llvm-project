@@ -1606,13 +1606,21 @@ bool LoopIdiomRecognize::optimizeCRCLoopUsingClmul(const PolynomialInfo &Info) {
 
   Value *LHS = Builder.CreateZExt(Info.LHS, ClmulTy, "crc.ext");
 
-  // For the big-endian case, align the leftmost bit of the CRC with the
-  // leftmost bit of the data which is used. For the little-endian case, align
-  // the rightmost bits (nothing to do).
+  // Based on the Intel white paper, in our case, we have
+  // R(x) = (LHS*x^TC) xor (LHSAux ? getTCBits(LHSAux)*x^CRCBW : 0)
+  // since the CRC loop multiplies LHS by x each iteration, and the x^CRCBW term
+  // of getTCBits(LHSAux) is XORed in for the significant bit check.
+  // Rather than compute the full R(x), we can split it in two where the most
+  // significant part is used in step 1 (floor(R(x)/x^CRCBW)) and the least
+  // significant part is used in step 3 (R(x) mod x^CRCBW).
+  // ClmulMuInput is an evolving variable that will eventually become the part
+  // used in step 1, which can be simplified to
+  // (LHS*x^(TC-CRCBW)) xor (LHSAux ? getTCBits(LHSAux) : 0).
   Value *ClmulMuInput =
       Info.IsBigEndian ? ShiftNetAmt(LHS, CRCBW, TC, "crc.be.align.tc") : LHS;
 
-  // If auxiliary data is present, XOR it in with the CRC.
+  // If auxiliary data is present, XOR it in with the CRC. (This corresponds to
+  // the aforementioned getTCBits(LHSAux).)
   if (Value *Data = Info.LHSAux) {
     if (Info.IsBigEndian) {
       // For big-endian CRC loops where auxiliary data is XORed with the CRC
@@ -1644,31 +1652,30 @@ bool LoopIdiomRecognize::optimizeCRCLoopUsingClmul(const PolynomialInfo &Info) {
     ClmulMuInput = Builder.CreateXor(ClmulMuInput, Data, "xor.crc.data");
   }
 
-  // Perform the first clmul operation with the mu constant. Input is TC bits
-  // and mu is TC+1 bits, so the result will be 2*TC bits.
+  // Step 1: T1(x) = floor(R(x)/x^CRCBW) * mu
+  // Input is TC bits and mu is TC+1 bits, so result will be 2*TC bits.
   Value *ClmulMu = Builder.CreateBinaryIntrinsic(
       Intrinsic::clmul, ClmulMuInput, MuConst, /*FMFSource=*/{}, "clmul.mu");
 
-  // Extract the relevant bits from the result.
+  // Calculate floor(T1(x)/x^TC) for step 2.
   Value *ClmulGPInput = MostSignificantTCBits(ClmulMu, 2 * TC, "quot");
 
-  // Perform the second clmul operation with the P(x) constant. Input is TC bits
-  // and P(x) is CRCBW+1 bits, so the result will be CRCBW+TC bits.
+  // Step 2: T2(x) = floor(T1(x)/x^TC) * P(x)
+  // Input is TC bits and P(x) is CRCBW+1 bits, so result will be CRCBW+TC bits.
   Value *ClmulGP = Builder.CreateBinaryIntrinsic(Intrinsic::clmul, ClmulGPInput,
                                                  GenPolyConst,
                                                  /*FMFSource=*/{}, "clmul.gp");
 
-  // For the big-endian case, align the leftmost bit of the CRC with the
-  // leftmost bit of the clmul result. For the little-endian case, align the
-  // rightmost bits (nothing to do).
+  // Calculate the least significant part of R(x) for step 3 as specified above.
+  // R(x) mod x^CRCBW = LHS*x^TC mod x^CRCBW, though the (mod x^CRCBW) is
+  // handled later on when truncating back to CRCBW for ComputedValue.
   Value *CRCAlignClmul =
       Info.IsBigEndian ? Builder.CreateShl(LHS, TC, "crc.be.shl") : LHS;
 
-  // Get the remainder by subtracting (XORing) the calculated multiple of
-  // GenPoly from the CRC.
+  // Step 3: C(x) = (R(x) xor T2(x)) mod x^CRCBW
   Value *CRCNext = Builder.CreateXor(CRCAlignClmul, ClmulGP, "xor.crc.mult");
 
-  // For the little-endian case, the leftmost bits of the XOR are relevant.
+  // For the little-endian case, the leftmost bits of the result are relevant.
   if (!Info.IsBigEndian)
     CRCNext = Builder.CreateLShr(CRCNext, TC, "crc.le.lshr");
   CRCNext = Builder.CreateTrunc(CRCNext, CRCTy, "crc.next");
