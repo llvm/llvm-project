@@ -1103,8 +1103,8 @@ DynamicLoaderDarwin::GetStepThroughTrampolinePlan(Thread &thread,
     if (!thread_plan_sp && is_branch_island) {
       thread_plan_sp = std::make_shared<ThreadPlanStepInstruction>(
           thread,
-          /* step_over= */ false, /* stop_others */ false, eVoteNoOpinion,
-          eVoteNoOpinion);
+          /* step_over= */ false, eRunForward, /* stop_others */ false,
+          eVoteNoOpinion, eVoteNoOpinion);
       LLDB_LOG(log, "Stepping one instruction over branch island: '{0}'.",
                current_name);
     }

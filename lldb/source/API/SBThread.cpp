@@ -507,7 +507,8 @@ void SBThread::StepOver(lldb::RunMode stop_other_threads, SBError &error) {
           new_plan_status, avoid_no_debug);
     } else {
       new_plan_sp = thread->QueueThreadPlanForStepSingleInstruction(
-          true, abort_other_plans, stop_other_threads, new_plan_status);
+          true, eRunForward, abort_other_plans, stop_other_threads,
+          new_plan_status);
     }
   }
   error = ResumeNewPlan(std::move(*exe_ctx), new_plan_sp.get());
@@ -573,7 +574,8 @@ void SBThread::StepInto(const char *target_name, uint32_t end_line,
         step_out_avoids_code_without_debug_info);
   } else {
     new_plan_sp = thread->QueueThreadPlanForStepSingleInstruction(
-        false, abort_other_plans, stop_other_threads, new_plan_status);
+        false, eRunForward, abort_other_plans, stop_other_threads,
+        new_plan_status);
   }
 
   if (new_plan_status.Success())
@@ -694,7 +696,7 @@ void SBThread::StepInstruction(bool step_over, SBError &error) {
   Thread *thread = exe_ctx->GetThreadPtr();
   Status new_plan_status;
   ThreadPlanSP new_plan_sp(thread->QueueThreadPlanForStepSingleInstruction(
-      step_over, false, true, new_plan_status));
+      step_over, eRunForward, false, true, new_plan_status));
 
   if (new_plan_status.Success())
     error = ResumeNewPlan(std::move(*exe_ctx), new_plan_sp.get());

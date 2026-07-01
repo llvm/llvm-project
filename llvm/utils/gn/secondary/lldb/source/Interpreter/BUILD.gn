@@ -39,6 +39,7 @@ static_library("Interpreter") {
     "OptionArgParser.cpp",
     "OptionGroupArchitecture.cpp",
     "OptionGroupBoolean.cpp",
+    "OptionGroupDirection.cpp"
     "OptionGroupFile.cpp",
     "OptionGroupFormat.cpp",
     "OptionGroupMemoryTag.cpp",

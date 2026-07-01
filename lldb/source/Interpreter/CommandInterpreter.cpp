@@ -328,6 +328,8 @@ void CommandInterpreter::Initialize() {
   if (cmd_obj_sp) {
     AddAlias("stepi", cmd_obj_sp);
     AddAlias("si", cmd_obj_sp);
+    AddAlias("stepbi", cmd_obj_sp, "--reverse");
+    AddAlias("sbi", cmd_obj_sp, "--reverse");
   }
 
   cmd_obj_sp = GetCommandSPExact("thread step-inst-over");

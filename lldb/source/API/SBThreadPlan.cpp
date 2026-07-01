@@ -344,7 +344,7 @@ SBThreadPlan::QueueThreadPlanForStepSingleInstruction(bool step_over,
     Status plan_status;
     SBThreadPlan plan(
         thread_plan_sp->GetThread().QueueThreadPlanForStepSingleInstruction(
-            step_over, false, false, plan_status));
+            step_over, eRunForward, false, false, plan_status));
 
     if (plan_status.Fail())
       error.SetErrorString(plan_status.AsCString());

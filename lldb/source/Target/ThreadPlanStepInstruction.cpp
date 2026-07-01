@@ -20,16 +20,14 @@ using namespace lldb_private;
 
 // ThreadPlanStepInstruction: Step over the current instruction
 
-ThreadPlanStepInstruction::ThreadPlanStepInstruction(Thread &thread,
-                                                     bool step_over,
-                                                     bool stop_other_threads,
-                                                     Vote report_stop_vote,
-                                                     Vote report_run_vote)
+ThreadPlanStepInstruction::ThreadPlanStepInstruction(
+    Thread &thread, bool step_over, lldb::RunDirection direction,
+    bool stop_other_threads, Vote report_stop_vote, Vote report_run_vote)
     : ThreadPlan(ThreadPlan::eKindStepInstruction,
                  "Step over single instruction", thread, report_stop_vote,
                  report_run_vote),
       m_instruction_addr(0), m_stop_other_threads(stop_other_threads),
-      m_step_over(step_over) {
+      m_step_over(step_over), m_direction(direction) {
   m_takes_iteration_count = true;
   SetUpState();
 }
@@ -76,13 +74,19 @@ void ThreadPlanStepInstruction::GetDescription(Stream *s,
     else
       s->Printf(" stepping into calls");
 
+    if (m_direction == eRunReverse)
+      s->Printf(" (direction = reverse)");
+
     PrintFailureIfAny();
   }
 }
 
 bool ThreadPlanStepInstruction::ValidatePlan(Stream *error) {
-  // Since we read the instruction we're stepping over from the thread, this
-  // plan will always work.
+  if (m_direction == eRunReverse && m_step_over) {
+    error->PutCString("Step over not supported when reverse executing");
+    return false;
+  }
+
   return true;
 }
 
@@ -213,6 +217,13 @@ bool ThreadPlanStepInstruction::ShouldStop(Event *event_ptr) {
     }
   } else {
     lldb::addr_t pc_addr = thread.GetRegisterContext()->GetPC(0);
+
+    if (m_direction == eRunReverse &&
+        eStopReasonHistoryBoundary == thread.GetStopReason()) {
+      SetPlanComplete();
+      return true;
+    }
+
     if (pc_addr != m_instruction_addr) {
       if (--m_iteration_count <= 0) {
         SetPlanComplete();
@@ -245,4 +256,8 @@ bool ThreadPlanStepInstruction::MischiefManaged() {
   } else {
     return false;
   }
+}
+
+lldb::RunDirection ThreadPlanStepInstruction::GetDirection() const {
+  return m_direction;
 }

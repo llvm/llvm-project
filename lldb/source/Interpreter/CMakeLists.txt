@@ -22,6 +22,7 @@ add_lldb_library(lldbInterpreter NO_PLUGIN_DEPENDENCIES
   OptionArgParser.cpp
   OptionGroupArchitecture.cpp
   OptionGroupBoolean.cpp
+  OptionGroupDirection.cpp
   OptionGroupFile.cpp
   OptionGroupFormat.cpp
   OptionGroupMemoryTag.cpp

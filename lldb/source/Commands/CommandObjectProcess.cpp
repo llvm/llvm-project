@@ -23,6 +23,7 @@
 #include "lldb/Interpreter/CommandOptionArgumentTable.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/OptionArgParser.h"
+#include "lldb/Interpreter/OptionGroupDirection.h"
 #include "lldb/Interpreter/OptionGroupPythonClassWithDict.h"
 #include "lldb/Interpreter/Options.h"
 #include "lldb/Symbol/SaveCoreOptions.h"
@@ -439,12 +440,19 @@ public:
             "Continue execution of all threads in the current process.",
             "process continue",
             eCommandRequiresProcess | eCommandTryTargetAPILock |
-                eCommandProcessMustBeLaunched | eCommandProcessMustBePaused) {}
+                eCommandProcessMustBeLaunched | eCommandProcessMustBePaused) {
+    m_all_options.Append(&m_options);
+    m_all_options.Append(&m_direction_options, LLDB_OPT_SET_1,
+                         LLDB_OPT_SET_1 | LLDB_OPT_SET_3);
+    m_all_options.Append(&m_direction_options, LLDB_OPT_SET_2,
+                         LLDB_OPT_SET_2 | LLDB_OPT_SET_4);
+    m_all_options.Finalize();
+  }
 
   ~CommandObjectProcessContinue() override = default;
 
 protected:
-  class CommandOptions : public Options {
+  class CommandOptions : public OptionGroup {
   public:
     CommandOptions() {
       // Keep default values of all options in one place: OptionParsingStarting
@@ -457,7 +465,8 @@ protected:
     Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
                           ExecutionContext *exe_ctx) override {
       Status error;
-      const int short_option = m_getopt_table[option_idx].val;
+      const int short_option =
+          g_process_continue_options[option_idx].short_option;
       switch (short_option) {
       case 'i':
         if (option_arg.getAsInteger(0, m_ignore))
@@ -469,12 +478,6 @@ protected:
         m_run_to_bkpt_args.AppendArgument(option_arg);
         m_any_bkpts_specified = true;
         break;
-      case 'F':
-        m_base_direction = lldb::RunDirection::eRunForward;
-        break;
-      case 'R':
-        m_base_direction = lldb::RunDirection::eRunReverse;
-        break;
       default:
         llvm_unreachable("Unimplemented option");
       }
@@ -485,7 +488,6 @@ protected:
       m_ignore = 0;
       m_run_to_bkpt_args.Clear();
       m_any_bkpts_specified = false;
-      m_base_direction = std::nullopt;
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
@@ -495,7 +497,6 @@ protected:
     uint32_t m_ignore = 0;
     Args m_run_to_bkpt_args;
     bool m_any_bkpts_specified = false;
-    std::optional<lldb::RunDirection> m_base_direction;
   };
 
   void DoExecute(Args &command, CommandReturnObject &result) override {
@@ -667,8 +668,8 @@ protected:
         }
       }
 
-      if (m_options.m_base_direction.has_value())
-        process->SetBaseDirection(*m_options.m_base_direction);
+      if (m_direction_options.GetDirection())
+        process->SetBaseDirection(*m_direction_options.GetDirection());
 
       const uint32_t iohandler_id = process->GetIOHandlerID();
 
@@ -742,9 +743,11 @@ protected:
     }
   }
 
-  Options *GetOptions() override { return &m_options; }
+  Options *GetOptions() override { return &m_all_options; }
 
   CommandOptions m_options;
+  OptionGroupDirection m_direction_options;
+  OptionGroupOptions m_all_options;
 };
 
 // CommandObjectProcessDetach

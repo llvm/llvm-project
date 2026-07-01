@@ -17,7 +17,8 @@ namespace lldb_private {
 
 class ThreadPlanStepInstruction : public ThreadPlan {
 public:
-  ThreadPlanStepInstruction(Thread &thread, bool step_over, bool stop_others,
+  ThreadPlanStepInstruction(Thread &thread, bool step_over,
+                            lldb::RunDirection direction, bool stop_others,
                             Vote report_stop_vote, Vote report_run_vote);
 
   ~ThreadPlanStepInstruction() override;
@@ -30,6 +31,7 @@ public:
   bool WillStop() override;
   bool MischiefManaged() override;
   bool IsPlanStale() override;
+  lldb::RunDirection GetDirection() const override;
 
 protected:
   bool DoPlanExplainsStop(Event *event_ptr) override;
@@ -38,12 +40,13 @@ protected:
 
 private:
   friend lldb::ThreadPlanSP Thread::QueueThreadPlanForStepSingleInstruction(
-      bool step_over, bool abort_other_plans, bool stop_other_threads,
-      Status &status);
+      bool step_over, lldb::RunDirection direction, bool abort_other_plans,
+      bool stop_other_threads, Status &status);
 
   lldb::addr_t m_instruction_addr;
   bool m_stop_other_threads;
   bool m_step_over;
+  lldb::RunDirection m_direction;
   // These two are used only for the step over case.
   bool m_start_has_symbol;
   StackID m_stack_id;

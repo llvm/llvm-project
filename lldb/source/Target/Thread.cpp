@@ -1304,10 +1304,11 @@ ThreadPlanSP Thread::QueueBasePlan(bool abort_other_plans) {
 }
 
 ThreadPlanSP Thread::QueueThreadPlanForStepSingleInstruction(
-    bool step_over, bool abort_other_plans, bool stop_other_threads,
-    Status &status) {
+    bool step_over, lldb::RunDirection direction, bool abort_other_plans,
+    bool stop_other_threads, Status &status) {
   ThreadPlanSP thread_plan_sp(new ThreadPlanStepInstruction(
-      *this, step_over, stop_other_threads, eVoteNoOpinion, eVoteNoOpinion));
+      *this, step_over, direction, stop_other_threads, eVoteNoOpinion,
+      eVoteNoOpinion));
   status = QueueThreadPlan(thread_plan_sp, abort_other_plans);
   return thread_plan_sp;
 }
@@ -2303,7 +2304,7 @@ Status Thread::StepIn(bool source_step,
           step_out_avoids_code_without_debug_info);
     } else {
       new_plan_sp = QueueThreadPlanForStepSingleInstruction(
-          false, abort_other_plans, run_mode, error);
+          false, eRunForward, abort_other_plans, run_mode, error);
     }
 
     new_plan_sp->SetIsControllingPlan(true);
@@ -2336,7 +2337,7 @@ Status Thread::StepOver(bool source_step,
           step_out_avoids_code_without_debug_info);
     } else {
       new_plan_sp = QueueThreadPlanForStepSingleInstruction(
-          true, abort_other_plans, run_mode, error);
+          true, eRunForward, abort_other_plans, run_mode, error);
     }
 
     new_plan_sp->SetIsControllingPlan(true);
@@ -2373,6 +2374,30 @@ Status Thread::StepOut(uint32_t frame_idx) {
     error = Status::FromErrorString("process not stopped");
   }
   return error;
+}
+
+Status Thread::StepBackInstruction() {
+  Process *process = GetProcess().get();
+  if (!StateIsStoppedState(process->GetState(), true)) {
+    return Status::FromErrorString("process not stopped");
+  }
+
+  if (!process->SupportsReverseDirection()) {
+    return Status::FromErrorString(
+        "process does not support reverse execution");
+  }
+
+  Status error;
+  ThreadPlanSP thread_plan_sp(QueueThreadPlanForStepSingleInstruction(
+      false, eRunReverse, false, true, error));
+  QueueThreadPlan(thread_plan_sp, false);
+
+  thread_plan_sp->SetIsControllingPlan(true);
+  thread_plan_sp->SetOkayToDiscard(false);
+
+  // Why do we need to set the current thread by ID here???
+  process->GetThreadList().SetSelectedThreadByID(GetID());
+  return process->Resume();
 }
 
 ValueObjectSP Thread::GetCurrentException() {

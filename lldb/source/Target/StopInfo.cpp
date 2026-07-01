@@ -832,11 +832,11 @@ protected:
   // them and they won't behave correctly.
   class ThreadPlanStepOverWatchpoint : public ThreadPlanStepInstruction {
   public:
-    ThreadPlanStepOverWatchpoint(Thread &thread, 
+    ThreadPlanStepOverWatchpoint(Thread &thread,
                                  StopInfoWatchpointSP stop_info_sp,
                                  WatchpointSP watch_sp)
-        : ThreadPlanStepInstruction(thread, false, true, eVoteNoOpinion,
-                                    eVoteNoOpinion),
+        : ThreadPlanStepInstruction(thread, false, eRunForward, true,
+                                    eVoteNoOpinion, eVoteNoOpinion),
           m_stop_info_sp(stop_info_sp), m_watch_sp(watch_sp) {
       assert(watch_sp);
     }
