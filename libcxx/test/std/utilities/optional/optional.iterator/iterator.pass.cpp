@@ -8,8 +8,6 @@
 
 // REQUIRES: std-at-least-c++26
 
-// UNSUPPORTED: libcpp-has-no-experimental-optional-iterator
-
 // <optional>
 
 // template <class T> class optional::iterator;

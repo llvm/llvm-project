@@ -69,6 +69,7 @@ Improvements and New Features
   ``"std::visit: variant is valueless"``, ``"std::get: variant is valueless"``, or
   ``"std::get: wrong alternative for variant"``. The standard only requires ``what()`` to return an
   unspecified non-null string, so user code that does not match on the exact message remains correct.
+- ``optional::iterator`` is no longer experimental.
 
 Deprecations and Removals
 -------------------------
