@@ -295,6 +295,12 @@ New checks
   Suggests insertion of ``std::move(...)`` to turn copy assignment operator
   calls into move assignment ones, when deemed valid and profitable.
 
+- New :doc:`portability-deprecated-posix-functions
+  <clang-tidy/checks/portability/deprecated-posix-functions>` check.
+
+  Finds uses of deprecated or obsolete POSIX functions and suggests modern
+  replacements.
+
 - New :doc:`readability-redundant-lambda-parameter-list
   <clang-tidy/checks/readability/redundant-lambda-parameter-list>` check.
 
