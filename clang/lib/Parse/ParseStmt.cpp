@@ -1741,7 +1741,8 @@ StmtResult Parser::ParseWhileStatement(SourceLocation *TrailingElseLoc,
   // while, for, and switch statements are local to the if, while, for, or
   // switch statement (including the controlled statement).
   //
-  unsigned ScopeFlags = Scope::ControlScope | (C99orCXX ? Scope::DeclScope : 0);
+  unsigned ScopeFlags =
+      Scope::ControlScope | (C99orCXX ? Scope::DeclScope : Scope::NoScope);
   ParseScope WhileScope(this, ScopeFlags);
 
   // Parse the condition.
