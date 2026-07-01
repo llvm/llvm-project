@@ -149,28 +149,39 @@ void HIPSPV::Linker::constructLinkAndEmitSpirvCommand(
       return;
     }
 
-    // Fallback: compile processed bitcode to SPIR-V using the in-tree backend.
-    ArgStringList ClangArgs;
-    ClangArgs.push_back("--no-default-config");
-    ClangArgs.push_back("-c");
-    ClangArgs.push_back(C.getArgs().MakeArgString("--target=" + T.getTriple()));
+    // Fallback: compile the lowered bitcode to SPIR-V with the in-tree backend.
+    // Invoke `clang -cc1` directly rather than the clang driver: the driver
+    // would re-run config-file loading, toolchain detection and argument
+    // translation over an input that is already device-compiled and lowered,
+    // which is both wasteful and fragile. This mirrors how HIPAMD drives its
+    // SPIR-V backend emission (see HIPAMD::constructLinkAndEmitSpirvCommand).
+    // Keep the default -O0 backend pipeline (i.e. no -disable-llvm-optzns) so
+    // the mandatory lowering passes still run, matching the previously
+    // validated driver `-c` behavior.
+    ArgStringList Cc1Args;
+    Cc1Args.push_back("-cc1");
+    Cc1Args.push_back("-triple");
+    Cc1Args.push_back(C.getArgs().MakeArgString(T.getTriple()));
+    Cc1Args.push_back("-emit-obj");
 
-    ClangArgs.push_back("-mllvm");
-    ClangArgs.push_back("-spirv-ext=+SPV_INTEL_function_pointers"
-                        ",+SPV_INTEL_subgroups"
-                        ",+SPV_EXT_relaxed_printf_string_address_space"
-                        ",+SPV_KHR_bit_instructions"
-                        ",+SPV_EXT_shader_atomic_float_add");
+    // SPIR-V extensions the chipStar runtime relies on. Keep in sync with the
+    // llvm-spirv translator path above and the clang-linker-wrapper fallback.
+    Cc1Args.push_back("-mllvm");
+    Cc1Args.push_back("-spirv-ext=+SPV_INTEL_function_pointers"
+                      ",+SPV_INTEL_subgroups"
+                      ",+SPV_EXT_relaxed_printf_string_address_space"
+                      ",+SPV_KHR_bit_instructions"
+                      ",+SPV_EXT_shader_atomic_float_add");
 
-    ClangArgs.push_back(TempFile);
-    ClangArgs.push_back("-o");
-    ClangArgs.push_back(Output.getFilename());
+    Cc1Args.push_back(TempFile);
+    Cc1Args.push_back("-o");
+    Cc1Args.push_back(Output.getFilename());
 
-    const char *Clang =
-        C.getArgs().MakeArgString(C.getDriver().getDriverProgramPath());
-    C.addCommand(std::make_unique<Command>(JA, *this,
-                                           ResponseFileSupport::None(), Clang,
-                                           ClangArgs, Inputs, Output));
+    const Driver &Drv = C.getDriver();
+    const char *Clang = Drv.getDriverProgramPath();
+    C.addCommand(std::make_unique<Command>(
+        JA, *this, ResponseFileSupport::None(), Clang, Cc1Args, Inputs, Output,
+        Drv.getPrependArg()));
     return;
   }
 
