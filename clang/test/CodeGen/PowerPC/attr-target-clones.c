@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -triple powerpc-ibm-aix-xcoff -target-cpu pwr7 -emit-llvm %s -o - | FileCheck %s
 // RUN: %clang_cc1 -triple powerpc64-ibm-aix-xcoff -target-cpu pwr7 -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple powerpc64-ibm-aix-xcoff -target-cpu pwr10 -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK-P10
 
 // CHECK: @internal = internal ifunc i32 (), ptr @internal.resolver
 // CHECK: @foo = ifunc i32 (), ptr @foo.resolver
@@ -168,7 +169,18 @@ foo_htm(void) { return 0; }
 // CHECK: ret ptr @foo_htm.htm
 // CHECK: ret ptr @foo_htm.default
 
-
+#ifdef _ARCH_PWR10
+int __attribute__((target_clones("mma", "default")))
+foo_mma(void) { return 0; }
+#endif
+// CHECK-P10: define internal {{.*}}i32 @foo_mma.mma()
+// CHECK-P10: define internal {{.*}}i32 @foo_mma.default()
+// CHECK-P10: define internal ptr @foo_mma.resolver()
+//   if (__builtin_cpu_supports("mma")) return &foo_mma.mma;
+// CHECK-P10: %[[#MMA:]] = call i64 @getsystemcfg(i32 62)
+// CHECK-P10-NEXT: icmp ugt i64 %[[#MMA]], 0
+// CHECK-P10: ret ptr @foo_mma.mma
+// CHECK-P10: ret ptr @foo_mma.default
 
 // Test multiple features with priority ordering (random source order)
 // Source order: altivec, power8-vector, cpu=pwr11, vsx, power9-vector, default
