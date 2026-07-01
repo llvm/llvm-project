@@ -235,6 +235,7 @@ Status PlatformRemoteGDBServer::ConnectRemote(Args &args) {
       (protocol_and_mode->first == Socket::ProtocolUnixDomain ||
        protocol_and_mode->first == Socket::ProtocolUnixAbstract)) {
     m_platform_scheme = scheme.str();
+    // The URI contains a filepath, the hostname is empty.
     m_platform_hostname = "";
   } else {
     std::optional<URI> parsed_url = URI::Parse(url);
