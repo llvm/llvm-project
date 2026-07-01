@@ -10,7 +10,7 @@ from collections import defaultdict
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 from dex.dextIR import DextIR, StepIR, ValueIR
-from dex.evaluation.StateMatch import StateMatchContext, get_active_where_matches
+from dex.evaluation.StateMatch import StateMatchContext, get_state_match
 from dex.test_script.Nodes import (
     DexRange,
     Expect,
@@ -189,10 +189,10 @@ class StepExpectRewriter:
     ):
         self.step = step
         self.script = script
-        self.state_match = get_active_where_matches(script, step, state_match_context)
+        self.state_match = get_state_match(script, step, state_match_context)
         active_expects = {
             expect: where_match.frame_idx
-            for where_match in self.state_match.values()
+            for where_match in self.state_match.where_match_results.values()
             for expect in where_match.active_expects
         }
         self.expect_value_matches: Dict[Expect, ExpectedValueRewriter] = {}
