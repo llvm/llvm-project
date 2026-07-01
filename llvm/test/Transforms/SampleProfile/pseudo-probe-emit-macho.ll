@@ -83,7 +83,7 @@ entry:
 ; CHECK-IL: ![[#SCOPE1]] = !DILexicalBlockFile(scope: ![[#]], file: ![[#]], discriminator: 455082015)
 
 ; Check the generation of pseudo_probe_desc section for MachO
-; CHECK-ASM-MACHO:      .section	__PSEUDO_PROBE,__probe_descs,regular,no_dead_strip+debug
+; CHECK-ASM-MACHO:      .section	__LLVM,__probe_descs,regular,no_dead_strip+debug
 ; CHECK-ASM-MACHO-NEXT: .quad	[[#GUID]]
 ; CHECK-ASM-MACHO-NEXT: .quad	[[#HASH:]]
 ; CHECK-ASM-MACHO-NEXT: .byte	3
@@ -95,24 +95,24 @@ entry:
 
 ; CHECK-SEC-MACHO-LABEL: Sections [
 ; CHECK-SEC-MACHO:       Name: __probe_descs
-; CHECK-SEC-MACHO-NEXT:  Segment: __PSEUDO_PROBE
+; CHECK-SEC-MACHO-NEXT:  Segment: __LLVM
 ; CHECK-SEC-MACHO:       Attributes [ (0x120000)
 ; CHECK-SEC-MACHO-NEXT:    Debug (0x20000)
 ; CHECK-SEC-MACHO-NEXT:    NoDeadStrip (0x100000)
 ; CHECK-SEC-MACHO:       Name: __probes
-; CHECK-SEC-MACHO-NEXT:  Segment: __PSEUDO_PROBE
+; CHECK-SEC-MACHO-NEXT:  Segment: __LLVM
 ; CHECK-SEC-MACHO:       Attributes [ (0x120000)
 ; CHECK-SEC-MACHO-NEXT:    Debug (0x20000)
 ; CHECK-SEC-MACHO-NEXT:    NoDeadStrip (0x100000)
 
 ; CHECK-SEC-MACHO-MC-LABEL: Sections [
 ; CHECK-SEC-MACHO-MC:       Name: __probe_descs
-; CHECK-SEC-MACHO-MC-NEXT:  Segment: __PSEUDO_PROBE
+; CHECK-SEC-MACHO-MC-NEXT:  Segment: __LLVM
 ; CHECK-SEC-MACHO-MC:       Attributes [ (0x120000)
 ; CHECK-SEC-MACHO-MC-NEXT:    Debug (0x20000)
 ; CHECK-SEC-MACHO-MC-NEXT:    NoDeadStrip (0x100000)
 ; CHECK-SEC-MACHO-MC:       Name: __probes
-; CHECK-SEC-MACHO-MC-NEXT:  Segment: __PSEUDO_PROBE
+; CHECK-SEC-MACHO-MC-NEXT:  Segment: __LLVM
 ; CHECK-SEC-MACHO-MC:       Attributes [ (0x120000)
 ; CHECK-SEC-MACHO-MC-NEXT:    Debug (0x20000)
 ; CHECK-SEC-MACHO-MC-NEXT:    NoDeadStrip (0x100000)
