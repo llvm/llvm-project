@@ -500,6 +500,11 @@ if (DEFINED CLANG_ENABLE_ARCMT)
   message(DEPRECATION "'CLANG_ENABLE_ARCMT' is deprecated as ARCMigrate has been removed from Clang. Please use 'CLANG_ENABLE_OBJC_REWRITER' instead to enable or disable the Objective-C rewriter.")
 endif()
 
+if (DEFINED CLANG_DEFAULT_PIE_ON_LINUX)
+  set(CLANG_DEFAULT_PIE ${CLANG_DEFAULT_PIE_ON_LINUX})
+  message(DEPRECATION "'CLANG_DEFAULT_PIE_ON_LINUX' is deprecated and has been renamed to the platform-independent option 'CLANG_DEFAULT_PIE'. Please use 'CLANG_DEFAULT_PIE' instead to enable or disable PIE on Linux.")
+endif()
+
 # This option is a stop-gap, we should commit to removing this as
 # soon as possible. See discussion:
 # https://discourse.llvm.org/t/rationale-for-removing-versioned-libclang-middle-ground-to-keep-it-behind-option/
