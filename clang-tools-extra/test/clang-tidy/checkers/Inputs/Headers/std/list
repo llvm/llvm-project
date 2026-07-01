@@ -54,6 +54,16 @@ public:
   template <typename... Args>
   void emplace_front(Args &&...args) {}
 
+  iterator insert(const_iterator position, const value_type& x);
+  iterator insert(const_iterator position, value_type&& x);
+  iterator insert(const_iterator position, size_t n, const value_type& x);
+  template <class Iter>
+      iterator insert(const_iterator position, Iter first, Iter last);
+  iterator insert(const_iterator position, initializer_list<value_type> il);
+
+  iterator erase(const_iterator position);
+  iterator erase(const_iterator position, const_iterator last);
+
   void assign(size_t count, const T &value);
 
   void clear();

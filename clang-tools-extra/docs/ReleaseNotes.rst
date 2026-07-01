@@ -271,6 +271,12 @@ New checks
   Finds common idioms which can be replaced by standard functions from the
   ``<bit>`` C++20 header.
 
+- New :doc:`modernize-use-std-erase
+  <clang-tidy/checks/modernize/use-std-erase>` check.
+
+  Replaces erase-remove idiom with C++20's ``std::erase`` and ``std::erase_if``
+  for improved readability.
+
 - New :doc:`modernize-use-string-view
   <clang-tidy/checks/modernize/use-string-view>` check.
 

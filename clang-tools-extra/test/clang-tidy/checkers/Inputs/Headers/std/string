@@ -28,6 +28,29 @@ struct basic_string {
   basic_string(size_t, C);
   operator basic_string_view<C, T>() const;
 
+  class iterator {
+  public:
+    iterator &operator++();
+    iterator operator++(int);
+    bool operator!=(const iterator &other) const;
+    bool operator==(const iterator &other) const;
+    _Type &operator*();
+    _Type *operator->();
+  };
+
+  class const_iterator {
+  public:
+    const_iterator() = default;
+    const_iterator(const iterator &) {}
+    const_iterator(decltype(nullptr)) {}
+    const_iterator &operator++();
+    const_iterator operator++(int);
+    bool operator!=(const const_iterator &other) const;
+    bool operator==(const const_iterator &other) const;
+    const _Type &operator*() const;
+    const _Type *operator->() const;
+  };
+
   ~basic_string();
 
   const C *c_str() const;
@@ -75,6 +98,10 @@ struct basic_string {
   _Type& insert(size_type pos, const C* s);
   _Type& insert(size_type pos, const C* s, size_type n);
 
+  basic_string& erase(size_type pos = 0, size_type n = npos);
+  iterator erase(const_iterator position);
+  iterator erase(const_iterator first, const_iterator last);
+
   _Type substr(size_type pos = 0, size_type count = npos) const;
 
   constexpr bool starts_with(std::basic_string_view<C, T> sv) const noexcept;
@@ -94,6 +121,10 @@ struct basic_string {
   _Type& operator=(const _Type& str);
   _Type& operator=(const C* s);
   _Type& operator=(C ch);
+    iterator       begin() noexcept;                                                            // constexpr since C++20
+    const_iterator begin() const noexcept;                                                      // constexpr since C++20
+    iterator       end() noexcept;                                                              // constexpr since C++20
+    const_iterator end() const noexcept;                                                        // constexpr since C++20
 
   static constexpr size_t npos = -1;
 };
