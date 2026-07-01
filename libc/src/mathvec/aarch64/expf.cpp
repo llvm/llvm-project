@@ -29,18 +29,18 @@ static constexpr struct expf_data {
   uint64x2_t idx_mask;
   const uint64_t *mantissa;
 } expf_data = {
-    .shift = V2(0x1.800000000ffc0p+46),
-    .inv_ln2 = V2(0x1.71547652b82fep+0),
-    .ln2_hi = 0x1.62e42fefa39efp-1,
-    .ln2_lo = 0x1.abc9e3b39803fp-56,
-    .c0 = V2(0x1.fffffffffdbcep-2),
-    .c1 = 0x1.55555555543c2p-3,
-    .c2 = V2(0x1.555573c64f2e3p-5),
-    .c3 = 0x1.111126b4eff73p-7,
-    .range_val = V4(0x1p+9),
-    .inf = V4(0x7f800000),
-    .idx_mask = V2(0x3f),
-    .mantissa = mathvec::EXP_MANTISSA,
+    V2(0x1.800000000ffc0p+46), // shift
+    V2(0x1.71547652b82fep+0),  // inv_ln2
+    0x1.62e42fefa39efp-1,      // ln2_hi
+    0x1.abc9e3b39803fp-56,     // ln2_lo
+    0x1.55555555543c2p-3,      // c1
+    0x1.111126b4eff73p-7,      // c3
+    V2(0x1.fffffffffdbcep-2),  // c0
+    V2(0x1.555573c64f2e3p-5),  // c2
+    V4(0x1p+9),                // range_val
+    V4(0x7f800000),            // inf
+    V2(0x3f),                  // idx_mask
+    mathvec::EXP_MANTISSA,     // mantissa
 };
 
 LIBC_INLINE static float64x2_t exp_lookup(uint64x2_t u,
