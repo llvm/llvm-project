@@ -7164,13 +7164,7 @@ void Verifier::visitVPIntrinsic(VPIntrinsic &VPI) {
           *VPCast);
 
     switch (VPCast->getIntrinsicID()) {
-    default:
-      llvm_unreachable("Unknown VP cast intrinsic");
     case Intrinsic::vp_trunc:
-      Check(RetTy->isIntOrIntVectorTy() && ValTy->isIntOrIntVectorTy(),
-            "llvm.vp.trunc intrinsic first argument and result element type "
-            "must be integer",
-            *VPCast);
       Check(RetTy->getScalarSizeInBits() < ValTy->getScalarSizeInBits(),
             "llvm.vp.trunc intrinsic the bit size of first argument must be "
             "larger than the bit size of the return type",
@@ -7178,64 +7172,24 @@ void Verifier::visitVPIntrinsic(VPIntrinsic &VPI) {
       break;
     case Intrinsic::vp_zext:
     case Intrinsic::vp_sext:
-      Check(RetTy->isIntOrIntVectorTy() && ValTy->isIntOrIntVectorTy(),
-            "llvm.vp.zext or llvm.vp.sext intrinsic first argument and result "
-            "element type must be integer",
-            *VPCast);
       Check(RetTy->getScalarSizeInBits() > ValTy->getScalarSizeInBits(),
             "llvm.vp.zext or llvm.vp.sext intrinsic the bit size of first "
             "argument must be smaller than the bit size of the return type",
             *VPCast);
       break;
-    case Intrinsic::vp_fptoui:
-    case Intrinsic::vp_fptosi:
-    case Intrinsic::vp_lrint:
-    case Intrinsic::vp_llrint:
-      Check(
-          RetTy->isIntOrIntVectorTy() && ValTy->isFPOrFPVectorTy(),
-          "llvm.vp.fptoui, llvm.vp.fptosi, llvm.vp.lrint or llvm.vp.llrint" "intrinsic first argument element "
-          "type must be floating-point and result element type must be integer",
-          *VPCast);
-      break;
-    case Intrinsic::vp_uitofp:
-    case Intrinsic::vp_sitofp:
-      Check(
-          RetTy->isFPOrFPVectorTy() && ValTy->isIntOrIntVectorTy(),
-          "llvm.vp.uitofp or llvm.vp.sitofp intrinsic first argument element "
-          "type must be integer and result element type must be floating-point",
-          *VPCast);
-      break;
     case Intrinsic::vp_fptrunc:
-      Check(RetTy->isFPOrFPVectorTy() && ValTy->isFPOrFPVectorTy(),
-            "llvm.vp.fptrunc intrinsic first argument and result element type "
-            "must be floating-point",
-            *VPCast);
       Check(RetTy->getScalarSizeInBits() < ValTy->getScalarSizeInBits(),
             "llvm.vp.fptrunc intrinsic the bit size of first argument must be "
             "larger than the bit size of the return type",
             *VPCast);
       break;
     case Intrinsic::vp_fpext:
-      Check(RetTy->isFPOrFPVectorTy() && ValTy->isFPOrFPVectorTy(),
-            "llvm.vp.fpext intrinsic first argument and result element type "
-            "must be floating-point",
-            *VPCast);
       Check(RetTy->getScalarSizeInBits() > ValTy->getScalarSizeInBits(),
             "llvm.vp.fpext intrinsic the bit size of first argument must be "
             "smaller than the bit size of the return type",
             *VPCast);
       break;
-    case Intrinsic::vp_ptrtoint:
-      Check(RetTy->isIntOrIntVectorTy() && ValTy->isPtrOrPtrVectorTy(),
-            "llvm.vp.ptrtoint intrinsic first argument element type must be "
-            "pointer and result element type must be integer",
-            *VPCast);
-      break;
-    case Intrinsic::vp_inttoptr:
-      Check(RetTy->isPtrOrPtrVectorTy() && ValTy->isIntOrIntVectorTy(),
-            "llvm.vp.inttoptr intrinsic first argument element type must be "
-            "integer and result element type must be pointer",
-            *VPCast);
+    default:
       break;
     }
   }
