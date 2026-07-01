@@ -31,10 +31,10 @@ struct Stats {
   double mean;
 };
 
-// The innermost frame, where we stop.  It carries every kind of local: a
-// scalar, aggregates (struct + array), and pointers (including one into heap
-// memory).  Examining this single frame on a stop reads both stack and
-// heap memory.
+// The innermost frame, where we stop.  It carries several kind of local: a
+// scalar, aggregates (struct + array), pointers (including one into heap
+// memory) and a variable-length array.  Examining this single frame on a stop
+// reads both stack and heap memory.
 static int func_e(int depth) {
   int i = depth + 1;
   long l = (long)depth * 1000;
