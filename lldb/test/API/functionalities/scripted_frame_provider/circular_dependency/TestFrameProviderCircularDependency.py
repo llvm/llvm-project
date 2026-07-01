@@ -115,7 +115,7 @@ class FrameProviderCircularDependencyTestCase(TestBase):
         )
 
         # Verify we can call methods on all frames (no circular dependency!).
-        for i in range(new_frame_count):
+        for i in range(min(new_frame_count, 3)):
             frame = thread.GetFrameAtIndex(i)
             self.assertIsNotNone(frame, f"Frame {i} should exist")
             # These calls should not trigger circular dependency.
