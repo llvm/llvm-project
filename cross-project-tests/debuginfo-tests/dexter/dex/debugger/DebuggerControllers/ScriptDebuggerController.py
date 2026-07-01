@@ -137,19 +137,24 @@ class ScriptDebuggerController(DebuggerControllerBase):
                 script, step_info, state_match_context
             )
 
-            watches = [
-                watch
-                for where_match in active_where_matches.values()
-                for expect in where_match.active_expects
-                if (watch := expect.get_watched_expr())
-            ]
-            scope_watches = [
-                scope_watch
-                for where_match in active_where_matches.values()
-                for expect in where_match.active_expects
-                if (scope_watch := expect.get_watched_scope())
-            ]
-            self.debugger.collect_watches(step_info, watches, scope_watches)
+            watches = defaultdict(list)
+            scope_watches = defaultdict(list)
+            for where, where_match in active_where_matches.items():
+                watches[where_match.frame_idx].extend(
+                    watch
+                    for expect in where_match.active_expects
+                    if (watch := expect.get_watched_expr())
+                )
+                scope_watches[where_match.frame_idx].extend(
+                    watch
+                    for expect in where_match.active_expects
+                    if (watch := expect.get_watched_scope())
+                )
+
+            for frame_idx in watches:
+                self.debugger.collect_watches(
+                    step_info, frame_idx, watches[frame_idx], scope_watches[frame_idx]
+                )
 
             active_thens = [
                 then

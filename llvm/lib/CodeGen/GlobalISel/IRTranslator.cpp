@@ -4102,11 +4102,6 @@ bool IRTranslator::emitSPDescriptorParent(StackProtectorDescriptor &SPD,
                       MachineMemOperand::MOLoad | MachineMemOperand::MOVolatile)
           .getReg(0);
 
-  if (TLI->useStackGuardXorFP()) {
-    LLVM_DEBUG(dbgs() << "Stack protector xor'ing with FP not yet implemented");
-    return false;
-  }
-
   // Retrieve guard check function, nullptr if instrumentation is inlined.
   if (const Function *GuardCheckFn = TLI->getSSPStackGuardCheck(M, *Libcalls)) {
     // This path is currently untestable on GlobalISel, since the only platform

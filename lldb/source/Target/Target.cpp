@@ -917,8 +917,8 @@ void Target::DeleteBreakpointName(ConstString name) {
 }
 
 void Target::RemoveNameFromBreakpoint(lldb::BreakpointSP &bp_sp,
-                                      ConstString name) {
-  bp_sp->RemoveName(name.AsCString(nullptr));
+                                      llvm::StringRef name) {
+  bp_sp->RemoveName(name);
 }
 
 void Target::ConfigureBreakpointName(
