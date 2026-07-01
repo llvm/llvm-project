@@ -1069,12 +1069,11 @@ private:
                                const UnwindInfoSections &sects,
                                uint32_t fdeSectionOffsetHint = 0);
   int stepWithDwarfFDE(bool stage2) {
-#if defined(_LIBUNWIND_TARGET_AARCH64_AUTHENTICATED_UNWINDING)
-    typename R::reg_t rawPC = this->getReg(UNW_REG_IP);
     typename R::link_reg_t pc;
-    _registers.loadAndAuthenticateLinkRegister(rawPC, &pc);
+#if defined(_LIBUNWIND_TARGET_AARCH64_AUTHENTICATED_UNWINDING)
+    _registers.loadAndResignIP(&pc);
 #else
-    typename R::link_reg_t pc = this->getReg(UNW_REG_IP);
+    pc = this->getReg(UNW_REG_IP);
 #endif
     return DwarfInstructions<A, R>::stepWithDwarf(
         _addressSpace, pc, (pint_t)_info.unwind_info, _registers,
@@ -2729,19 +2728,16 @@ void UnwindCursor<A, R>::setInfoBasedOnIPRegister(bool isReturnAddress) {
   _isSigReturn = false;
 #endif
 
-  typename R::reg_t rawPC = this->getReg(UNW_REG_IP);
-
-#if defined(_LIBUNWIND_ARM_EHABI)
-  // Remove the thumb bit so the IP represents the actual instruction address.
-  // This matches the behaviour of _Unwind_GetIP on arm.
-  rawPC &= (pint_t)~0x1;
-#endif
-
   typename R::link_reg_t pc;
 #if defined(_LIBUNWIND_TARGET_AARCH64_AUTHENTICATED_UNWINDING)
-  _registers.loadAndAuthenticateLinkRegister(rawPC, &pc);
+  _registers.loadAndResignIP(&pc);
+#elif defined(_LIBUNWIND_ARM_EHABI)
+  pc = this->getReg(UNW_REG_IP);
+  // Remove the thumb bit so the IP represents the actual instruction address.
+  // This matches the behaviour of _Unwind_GetIP on arm.
+  pc &= (pint_t)~0x1;
 #else
-  pc = rawPC;
+  pc = this->getReg(UNW_REG_IP);
 #endif
 
   // Exit early if at the top of the stack.
@@ -3308,12 +3304,11 @@ void UnwindCursor<A, R>::getInfo(unw_proc_info_t *info) {
 template <typename A, typename R>
 bool UnwindCursor<A, R>::getFunctionName(char *buf, size_t bufLen,
                                          unw_word_t *offset) {
-#if defined(_LIBUNWIND_TARGET_AARCH64_AUTHENTICATED_UNWINDING)
-  typename R::reg_t rawPC = this->getReg(UNW_REG_IP);
   typename R::link_reg_t pc;
-  _registers.loadAndAuthenticateLinkRegister(rawPC, &pc);
+#if defined(_LIBUNWIND_TARGET_AARCH64_AUTHENTICATED_UNWINDING)
+  _registers.loadAndResignIP(&pc);
 #else
-  typename R::link_reg_t pc = this->getReg(UNW_REG_IP);
+  pc = this->getReg(UNW_REG_IP);
 #endif
   return _addressSpace.template findFunctionName<R>(pc, buf, bufLen, offset);
 }

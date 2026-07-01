@@ -1921,15 +1921,30 @@ public:
   void setFP(uint64_t value) { _registers.__fp = value; }
 
 #if defined(_LIBUNWIND_TARGET_AARCH64_AUTHENTICATED_UNWINDING)
-  void
-  loadAndAuthenticateLinkRegister(reg_t inplaceAuthedLinkRegister,
-                                  link_reg_t *referenceAuthedLinkRegister) {
-    // If we are in an arm64/arm64e frame, then the PC should have been signed
-    // with the SP
-    *referenceAuthedLinkRegister =
-      (uint64_t)ptrauth_auth_data((void *)inplaceAuthedLinkRegister,
-                                  ptrauth_key_return_address,
-                                  _registers.__sp);
+  void loadAndResignIP(link_reg_t *output) {
+    // Make sure that zero result is written as all zero bits, as implicitly
+    // assumed for __ptrauth-qualified types.
+    // FIXME Drop this hack when options support for __ptrauth qualifier
+    //       will be implemented.
+    if (0 == ptrauth_auth_data((void *)_registers.__pc,
+                               ptrauth_key_return_address, &_registers.__pc)) {
+      memset((void *)output, 0, sizeof(*output));
+      return;
+    }
+
+    // _registers.__pc is signed with its storage address as the discriminator,
+    // with zero values signed as any other values.
+    //
+    // Call the resign builtin explicitly instead of relying on implicit signing
+    // of the authenticated value on assignment to *referenceAuthedLinkRegister,
+    // as the latter results in comparison against 0 between auth and sign
+    // operations.
+    const auto newDiscriminator = ptrauth_blend_discriminator(
+        output, __ptrauth_unwind_registers_arm64_link_reg_disc);
+    reg_t resigned = (reg_t)ptrauth_auth_and_resign(
+        (void *)_registers.__pc, ptrauth_key_return_address, &_registers.__pc,
+        ptrauth_key_return_address, newDiscriminator);
+    memcpy((void *)output, &resigned, sizeof(resigned));
   }
 #endif
 
@@ -1976,7 +1991,10 @@ private:
     uint64_t __fp = 0;            // Frame pointer x29
     uint64_t __lr = 0;            // Link register x30
     uint64_t __sp = 0;            // Stack pointer x31
-    uint64_t __pc = 0;            // Program counter
+    // Program counter.
+    // When PtrAuth-protected, uses ptrauth_key_return_address with address
+    // discrimination. Zero value must be signed to be valid (see getIP/setIP).
+    uint64_t __pc = 0;
     uint64_t __ra_sign_state = 0; // RA sign state register
   };
 
@@ -2068,8 +2086,12 @@ inline uint64_t Registers_arm64::lazyGetVG() const {
 }
 
 inline uint64_t Registers_arm64::getRegister(int regNum) const {
+  // When _LIBUNWIND_TARGET_AARCH64_AUTHENTICATED_UNWINDING is in effect, the
+  // return value is signed with (ptrauth_key_return_address, getSP()) schema
+  // with 0 value signed as any other value.
   if (regNum == UNW_REG_IP || regNum == UNW_AARCH64_PC)
     return getIP();
+
   if (regNum == UNW_REG_SP || regNum == UNW_AARCH64_SP)
     return _registers.__sp;
   if (regNum == UNW_AARCH64_RA_SIGN_STATE)
@@ -2086,8 +2108,12 @@ inline uint64_t Registers_arm64::getRegister(int regNum) const {
 }
 
 inline void Registers_arm64::setRegister(int regNum, uint64_t value) {
+  // When _LIBUNWIND_TARGET_AARCH64_AUTHENTICATED_UNWINDING is in effect,
+  // `value` must be signed with (ptrauth_key_return_address, getSP()) schema
+  // with 0 value signed as any other value.
   if (regNum == UNW_REG_IP || regNum == UNW_AARCH64_PC)
     setIP(value);
+
   else if (regNum == UNW_REG_SP || regNum == UNW_AARCH64_SP)
     _registers.__sp = value;
   else if (regNum == UNW_AARCH64_RA_SIGN_STATE)
