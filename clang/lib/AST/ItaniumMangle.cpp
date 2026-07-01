@@ -3513,6 +3513,11 @@ void CXXNameMangler::mangleType(const BuiltinType *T) {
     mangleVendorType(#Name);                                                   \
     break;
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define SPIRV_TYPE(Name, Id, SingletonId)                                      \
+  case BuiltinType::Id:                                                        \
+    mangleVendorType(Name);                                                    \
+    break;
+#include "clang/Basic/SPIRVTypes.def"
   }
 }
 

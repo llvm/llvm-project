@@ -580,6 +580,14 @@ void Sema::Initialize() {
 #include "clang/Basic/AMDGPUTypes.def"
   }
 
+  if (Context.getTargetInfo().getTriple().isSPIRV() ||
+      (Context.getAuxTargetInfo() &&
+       Context.getAuxTargetInfo()->getTriple().isSPIRV())) {
+#define SPIRV_TYPE(Name, Id, SingletonId)                                      \
+  addImplicitTypedef(Name, Context.SingletonId);
+#include "clang/Basic/SPIRVTypes.def"
+  }
+
   if (Context.getTargetInfo().hasBuiltinMSVaList()) {
     DeclarationName MSVaList = &Context.Idents.get("__builtin_ms_va_list");
     if (IdResolver.begin(MSVaList) == IdResolver.end())

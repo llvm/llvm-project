@@ -1,0 +1,22 @@
+//===-- SPIRVTypes.def - Metadata about SPIRV types -------------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+//  This file defines various SPIRV builtin types.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef SPIRV_OPAQUE_TYPE
+#define SPIRV_OPAQUE_TYPE(Name, MangledName, Id, SingletonId) \
+  SPIRV_TYPE(Name, Id, SingletonId)
+#endif
+
+SPIRV_OPAQUE_TYPE("__spirv_event_t", "__spirv_event_t", SPIRVEvent, SPIRVEventTy)
+
+#undef SPIRV_TYPE
+#undef SPIRV_OPAQUE_TYPE
+

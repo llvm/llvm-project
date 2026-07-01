@@ -3250,6 +3250,9 @@ public:
 // HLSL intangible Types
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) Id,
 #include "clang/Basic/HLSLIntangibleTypes.def"
+// SPIRV types
+#define SPIRV_TYPE(Name, Id, SingletonId) Id,
+#include "clang/Basic/SPIRVTypes.def"
 // All other builtin types
 #define BUILTIN_TYPE(Id, SingletonId) Id,
 #define LAST_BUILTIN_TYPE(Id) LastKind = Id
