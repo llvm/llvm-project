@@ -50,7 +50,7 @@ define void @deinterleave4_nxv8i16_uitofp_f64(<vscale x 8 x i16> %wide.vec, <vsc
 ; CHECK-NEXT:    ret
   %d = call { <vscale x 2 x i16>, <vscale x 2 x i16>,
               <vscale x 2 x i16>, <vscale x 2 x i16> }
-       @llvm.vector.deinterleave4.nxv8i16(<vscale x 8 x i16> %wide.vec)
+       @llvm.vector.deinterleave4(<vscale x 8 x i16> %wide.vec)
   %b = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>,
                       <vscale x 2 x i16>, <vscale x 2 x i16> } %d, 0
   %g = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>,
@@ -110,7 +110,7 @@ define void @deinterleave4_nxv8i16_zext_i64(<vscale x 8 x i16> %wide.vec, ptr %o
 ; CHECK-NEXT:    ret
   %d = call { <vscale x 2 x i16>, <vscale x 2 x i16>,
               <vscale x 2 x i16>, <vscale x 2 x i16> }
-       @llvm.vector.deinterleave4.nxv8i16(<vscale x 8 x i16> %wide.vec)
+       @llvm.vector.deinterleave4(<vscale x 8 x i16> %wide.vec)
   %b = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>,
                       <vscale x 2 x i16>, <vscale x 2 x i16> } %d, 0
   %g = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>,
@@ -189,7 +189,7 @@ loop:
   %wide.vec = load <vscale x 8 x i16>, ptr %gep, align 2
   %d = call { <vscale x 2 x i16>, <vscale x 2 x i16>,
               <vscale x 2 x i16>, <vscale x 2 x i16> }
-       @llvm.vector.deinterleave4.nxv8i16(<vscale x 8 x i16> %wide.vec)
+       @llvm.vector.deinterleave4(<vscale x 8 x i16> %wide.vec)
   %b = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>,
                       <vscale x 2 x i16>, <vscale x 2 x i16> } %d, 0
   %g = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>,
@@ -224,8 +224,3 @@ exit:
 }
 
 attributes #0 = { "target-features"="+sve" }
-
-declare { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> }
-    @llvm.vector.deinterleave4.nxv8i16(<vscale x 8 x i16>)
-declare double @llvm.vector.reduce.fadd.nxv2f64(double, <vscale x 2 x double>)
-declare i64 @llvm.vscale.i64()
