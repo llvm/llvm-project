@@ -208,16 +208,12 @@ FunctionPass *llvm::createInterleavedAccessPass() {
 ///     <0, 2, 4, 6>    (mask of index 0 to extract even elements)
 ///     <1, 3, 5, 7>    (mask of index 1 to extract odd elements)
 static bool isDeInterleaveMask(ArrayRef<int> Mask, unsigned &Factor,
-                               unsigned &Index, unsigned MaxFactor,
-                               unsigned NumLoadElements) {
+                               unsigned &Index, unsigned MaxFactor) {
   if (Mask.size() < 2)
     return false;
 
   // Check potential Factors.
   for (Factor = 2; Factor <= MaxFactor; Factor++) {
-    // Make sure we don't produce a load wider than the input load.
-    if (Mask.size() * Factor > NumLoadElements)
-      return false;
     if (ShuffleVectorInst::isDeInterleaveMaskOfFactor(Mask, Factor, Index))
       return true;
   }
@@ -327,18 +323,15 @@ bool InterleavedAccessImpl::lowerInterleavedLoad(
     return false;
 
   unsigned Factor, Index;
-
-  unsigned NumLoadElements =
-      cast<FixedVectorType>(Load->getType())->getNumElements();
   auto *FirstSVI = Shuffles.size() > 0 ? Shuffles[0] : BinOpShuffles[0];
   // Check if the first shufflevector is DE-interleave shuffle.
-  if (!isDeInterleaveMask(FirstSVI->getShuffleMask(), Factor, Index, MaxFactor,
-                          NumLoadElements))
+  if (!isDeInterleaveMask(FirstSVI->getShuffleMask(), Factor, Index, MaxFactor))
     return false;
 
   // Holds the corresponding index for each DE-interleave shuffle.
   SmallVector<unsigned, 4> Indices;
-
+  unsigned NumLoadElements =
+      cast<FixedVectorType>(Load->getType())->getNumElements();
   VectorType *VecTy = cast<VectorType>(FirstSVI->getType());
 
   // Check if other shufflevectors are also DE-interleaved of the same type
@@ -350,7 +343,12 @@ bool InterleavedAccessImpl::lowerInterleavedLoad(
             Shuffle->getShuffleMask(), Factor, Index))
       return false;
 
-    assert(Shuffle->getShuffleMask().size() <= NumLoadElements);
+    ArrayRef<int> Mask = Shuffle->getShuffleMask();
+    if (Mask.size() * Factor > NumLoadElements) {
+      if (!ShuffleVectorInst::isSingleSourceMask(Mask, NumLoadElements))
+        return false;
+    }
+
     Indices.push_back(Index);
   }
   for (auto *Shuffle : BinOpShuffles) {
@@ -360,7 +358,11 @@ bool InterleavedAccessImpl::lowerInterleavedLoad(
             Shuffle->getShuffleMask(), Factor, Index))
       return false;
 
-    assert(Shuffle->getShuffleMask().size() <= NumLoadElements);
+    ArrayRef<int> Mask = Shuffle->getShuffleMask();
+    if (Mask.size() * Factor > NumLoadElements) {
+      if (!ShuffleVectorInst::isSingleSourceMask(Mask, NumLoadElements))
+        return false;
+    }
 
     if (cast<Instruction>(Shuffle->getOperand(0))->getOperand(0) == Load)
       Indices.push_back(Index);
@@ -571,10 +573,14 @@ static void getGapMask(const Constant &MaskConst, unsigned Factor,
   for (unsigned F = 0U; F < Factor; ++F) {
     bool AllZero = true;
     for (unsigned Idx = 0U; Idx < LeafMaskLen; ++Idx) {
-      Constant *C = MaskConst.getAggregateElement(F + Idx * Factor);
-      if (!C->isNullValue()) {
-        AllZero = false;
-        break;
+      unsigned NumMaskElements =
+          cast<FixedVectorType>(MaskConst.getType())->getNumElements();
+      if (F + Idx * Factor < NumMaskElements) {
+        Constant *C = MaskConst.getAggregateElement(F + Idx * Factor);
+        if (!C->isNullValue()) {
+          AllZero = false;
+          break;
+        }
       }
     }
     // All mask bits on this field are zero, skipping it.

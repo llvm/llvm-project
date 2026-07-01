@@ -196,7 +196,10 @@ define <2 x i64> @inserti64_first(ptr %p) {
 define <2 x i64> @inserti64_last(ptr %p) {
 ; CHECK-LABEL: inserti64_last:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldur q0, [x0, #8]
+; CHECK-NEXT:    ld2 { v31.2d, v0.2d }, [x0]
+; CHECK-NEXT:    add x8, x0, #16
+; CHECK-NEXT:    ld1 { v0.d }[1], [x8]
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $q31_q0
 ; CHECK-NEXT:    ret
   %q = getelementptr inbounds i8, ptr %p, i32 16
   %l1 = load <2 x i64>, ptr %p
@@ -222,7 +225,10 @@ define <8 x i8> @inserti8_first_undef(ptr %p) {
 define <8 x i8> @inserti8_last_undef(ptr %p) {
 ; CHECK-LABEL: inserti8_last_undef:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldur d0, [x0, #1]
+; CHECK-NEXT:    ld2 { v31.8b, v0.8b }, [x0]
+; CHECK-NEXT:    add x8, x0, #8
+; CHECK-NEXT:    ld1 { v0.b }[7], [x8]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q31_q0
 ; CHECK-NEXT:    ret
   %q = getelementptr inbounds i8, ptr %p, i32 8
   %l1 = load <8 x i8>, ptr %p
