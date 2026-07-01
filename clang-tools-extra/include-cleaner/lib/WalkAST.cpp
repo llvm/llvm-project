@@ -234,6 +234,15 @@ public:
       // But for record decls, spelling of the type always refers to primary
       // decl non-ambiguously. Hence spelling is already a use.
       auto IsUsed = TD->isUsed() || TD->isReferenced() || !TD->getAsFunction();
+      // A call to a function template named through the using-decl marks the
+      // (implicitly instantiated) specialization as used, not the primary
+      // FunctionTemplateDecl. Consult the specializations so a used function
+      // template isn't mistaken for an unused transitively-visible overload.
+      if (!IsUsed)
+        if (const auto *FTD = llvm::dyn_cast<FunctionTemplateDecl>(TD))
+          IsUsed = llvm::any_of(FTD->specializations(), [](const auto *Spec) {
+            return Spec->isUsed() || Spec->isReferenced();
+          });
       report(UD->getLocation(), TD,
              IsUsed ? RefType::Explicit : RefType::Ambiguous);
 
