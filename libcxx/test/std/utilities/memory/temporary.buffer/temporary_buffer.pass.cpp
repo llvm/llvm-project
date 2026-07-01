@@ -21,6 +21,7 @@
 
 #include <cassert>
 #include <cstddef>
+#include <limits>
 #include <memory>
 #include <utility>
 
@@ -44,8 +45,17 @@ int main(int, char**)
     {
       TEST_DIAGNOSTIC_PUSH
       // This warning is coupled with completeness of control flow analysis which is affected by optimizations.
-      TEST_GCC_DIAGNOSTIC_IGNORED("-Wno-alloc-size-larger-than")
+      TEST_GCC_DIAGNOSTIC_IGNORED("-Walloc-size-larger-than=")
       std::pair<int*, std::ptrdiff_t> ret = std::get_temporary_buffer<int>(-5);
+      TEST_DIAGNOSTIC_POP
+      assert(ret.first == NULL);
+      assert(ret.second == 0);
+    }
+    {
+      TEST_DIAGNOSTIC_PUSH
+      // This warning is coupled with completeness of control flow analysis which is affected by optimizations.
+      TEST_GCC_DIAGNOSTIC_IGNORED("-Walloc-size-larger-than=")
+      std::pair<int*, std::ptrdiff_t> ret = std::get_temporary_buffer<int>(std::numeric_limits<std::ptrdiff_t>::min());
       TEST_DIAGNOSTIC_POP
       assert(ret.first == NULL);
       assert(ret.second == 0);
