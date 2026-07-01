@@ -26832,6 +26832,10 @@ static SDValue performCTTZCombine(SDNode *N,
     }
   }
 
+  // Cur has been narrowed to CompressedBits.
+  assert(Cur.getValueType().getSizeInBits() == CompressedBits &&
+         "Unexpected mask width!");
+
   SDValue Ctz = CompressedCttz(Cur);
   unsigned LaneIndexShift = Log2_32(CompressedBits / NumLanes);
   if (LaneIndexShift)
