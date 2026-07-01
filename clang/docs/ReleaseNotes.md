@@ -384,6 +384,8 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 - New option `-f[no-]strict-bool` added to control whether Clang can assume
   that `bool` values loaded from memory cannot have a bit pattern other
   than 0 or 1.
+- New option `-fstable-pointer-subtraction` added to preserve stable semantics
+  when subtracting pointers to unrelated objects.
 - New option `-fcrash-diagnostics-tar` added to create an archive of crash
   reproducer files for easier bug filing.
 - There are a new pair of flags for riscv32 called `-mzilsd-word-align` and
