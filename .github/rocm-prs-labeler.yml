@@ -1,0 +1,32 @@
+comgr:
+  - changed-files:
+    - any-glob-to-any-file:
+      - amd/comgr/**
+
+hotswap:
+  - changed-files:
+    - any-glob-to-any-file:
+      - amd/comgr/src/hotswap/**
+      - amd/comgr/test-lit/hotswap/**
+      - amd/comgr/src/comgr-hotswap*
+
+device-libs:
+  - changed-files:
+    - any-glob-to-any-file:
+      - amd/device-libs/**
+
+hipcc:
+  - changed-files:
+    - any-glob-to-any-file:
+      - amd/hipcc/**
+
+flang:
+  - changed-files:
+    - any-glob-to-any-file:
+      - flang/**
+      - flang-rt/**
+
+openmp:
+  - changed-files:
+    - any-glob-to-any-file:
+      - openmp/**

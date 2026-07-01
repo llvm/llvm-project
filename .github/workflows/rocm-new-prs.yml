@@ -1,0 +1,35 @@
+name: "Labelling new pull requests"
+
+permissions:
+  contents: read
+
+on:
+  # It's safe to use pull_request_target here, because we aren't checking out
+  # code from the pull request branch.
+  # See https://securitylab.github.com/research/github-actions-preventing-pwn-requests/
+  pull_request_target:
+    types:
+      - opened
+      - reopened
+      - ready_for_review
+      - synchronize
+
+jobs:
+  automate-prs-labels:
+    permissions:
+      contents: read
+      pull-requests: write
+    runs-on: ubuntu-24.04
+    # Ignore PRs with more than 10 commits.  Pull requests with a lot of
+    # commits tend to be accidents usually when someone made a mistake while trying
+    # to rebase.  We want to ignore these pull requests to avoid excessive
+    # notifications.
+    if: >
+      github.repository == 'ROCm/llvm-project' &&
+      github.event.pull_request.draft == false &&
+      github.event.pull_request.commits < 10
+    steps:
+      - uses: actions/labeler@634933edcd8ababfe52f92936142cc22ac488b1b # v6.0.1
+        with:
+          configuration-path: .github/rocm-prs-labeler.yml
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
