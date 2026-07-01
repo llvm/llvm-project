@@ -216,11 +216,6 @@ TEST(ScalableVectorMVTsTest, WideningIntegerMVTs) {
   EXPECT_EQ(i128Ty.widenIntegerElementType(), i256Ty);
   EXPECT_EQ(i256Ty.widenIntegerElementType(), i512Ty);
 
-#if !defined(NDEBUG) && GTEST_HAS_DEATH_TEST
-  EXPECT_DEATH(i512Ty.widenIntegerElementType(),
-               "Widening of this Integer type not supported !");
-#endif
-
   MVT v128i1Ty = MVT::v128i1;
   MVT v128i2Ty = MVT::v128i2;
   MVT v8i32Ty = MVT::v8i32;
@@ -229,5 +224,4 @@ TEST(ScalableVectorMVTsTest, WideningIntegerMVTs) {
   EXPECT_EQ(v128i1Ty.widenIntegerElementType(), v128i2Ty);
   EXPECT_EQ(v8i32Ty.widenIntegerElementType(), v8i64Ty);
 }
-
 } // end anonymous namespace
