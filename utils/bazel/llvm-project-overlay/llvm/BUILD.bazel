@@ -653,18 +653,23 @@ cc_library(
         "include/llvm/DebugInfo/LogicalView/**/*.h",
     ]),
     copts = llvm_copts,
+    features = ["-parse_headers"],
     deps = [
         ":BinaryFormat",
+        ":CodeGen",
+        ":Core",
         ":DebugInfo",
         ":DebugInfoCodeView",
         ":DebugInfoDWARF",
         ":DebugInfoDWARFLowLevel",
         ":DebugInfoPDB",
         ":Demangle",
+        ":IRReader",
         ":MC",
         ":MCDisassembler",
         ":Object",
         ":Support",
+        ":TransformUtils",
     ],
 )
 
