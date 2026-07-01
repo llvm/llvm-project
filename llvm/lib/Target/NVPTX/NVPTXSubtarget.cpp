@@ -222,6 +222,7 @@ bool NVPTXSubtarget::hasNativeBF16Support(int Opcode) const {
   case ISD::FRINT:
   case ISD::FROUNDEVEN:
   case ISD::FTRUNC:
+  case ISD::FTANH:
     return getSmVersion() >= 90 && getPTXVersion() >= 78;
   // Several BF16 instructions are available on sm_80 only.
   case ISD::FMINNUM:
