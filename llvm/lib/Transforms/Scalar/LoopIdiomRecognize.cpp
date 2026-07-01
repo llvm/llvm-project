@@ -1558,9 +1558,9 @@ bool LoopIdiomRecognize::optimizeCRCLoopUsingClmul(const PolynomialInfo &Info) {
   Type *CRCTy = Info.LHS->getType();
   LLVMContext &Ctx = CRCTy->getContext();
   unsigned CRCBW = CRCTy->getIntegerBitWidth();
-  // The TripCount determines how many bits of data are processed, regardless of
-  // whether the actual data bit width matches (if auxiliary data is even used
-  // at all).
+  // The loop's TripCount determines how many bits of the data are processed,
+  // regardless of whether the actual data bit width matches (if auxiliary data
+  // is even used at all).
   unsigned TC = Info.TripCount;
   // The first clmul uses 2*TC bits, and the second clmul uses CRCBW+TC bits.
   // For simplicity, have both operate on the same bit width.
@@ -1613,6 +1613,7 @@ bool LoopIdiomRecognize::optimizeCRCLoopUsingClmul(const PolynomialInfo &Info) {
   // Rather than compute the full R(x), we can split it in two where the most
   // significant part is used in step 1 (floor(R(x)/x^CRCBW)) and the least
   // significant part is used in step 3 (R(x) mod x^CRCBW).
+  //
   // ClmulMuInput is an evolving variable that will eventually become the part
   // used in step 1, which can be simplified to
   // (LHS*x^(TC-CRCBW)) xor (LHSAux ? getTCBits(LHSAux) : 0). However, due to a
@@ -1625,8 +1626,8 @@ bool LoopIdiomRecognize::optimizeCRCLoopUsingClmul(const PolynomialInfo &Info) {
     // The reason for the HashRecognize quirk mentioned above is that it detects
     // (CastOrSelf LHS) xor (CastOrSelf LHSAux), which is incorrect for
     // big-endian CRCs. This mostly allows us to handle LHS and LHSAux in the
-    // same way, regardless of bit widths, but there is an exception here.
-    // If DataBW < CRCBW, then LHSAux will always be zexted before being XORed,
+    // same way, regardless of bit widths, but there is an exception here:
+    // if DataBW < CRCBW, then LHSAux will always be zexted before being XORed,
     // and the significant bit check extracts the (CRCBW-1) bit of LHSAux, which
     // will always be zero. XORing in the data in this case gives an incorrect
     // result, so just skip the step entirely since the XOR is with zero anyway.
@@ -1644,7 +1645,7 @@ bool LoopIdiomRecognize::optimizeCRCLoopUsingClmul(const PolynomialInfo &Info) {
                      ? ShiftNetAmt(ClmulMuInput, CRCBW, TC, "crc.align.tc")
                      : ClmulMuInput;
 
-  // Zero out any data bits above (TC-1) for calculation since the original loop
+  // Zero out any bits above (TC-1) for calculation since the original loop
   // doesn't use them in the significant bit checks.
   ClmulMuInput = LoTCBits(ClmulMuInput, "crc.tcbits");
 
