@@ -41,6 +41,7 @@ add_llvm_unittest(CodeGenTests
   RegAllocBasicTest.cpp
   RegAllocScoreTest.cpp
   RegisterTest.cpp
+  RenameIndependentSubregsTest.cpp
   PassManagerTest.cpp
   RematerializerTest.cpp
   ScalableVectorMVTsTest.cpp
