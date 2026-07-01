@@ -518,12 +518,13 @@ project needs is people willing to review other people's work and vouch for its
 quality, so this is what we try to select for when granting commit access. Once
 you can point to 3 or more separate pull requests, issues, or Discourse threads
 where your comments provided useful feedback demonstrating good technical
-judgement, you may use [this
-link](https://github.com/llvm/llvm-project/issues/new?title=Request%20Commit%20Access%20For%20%3Cuser%3E&body=%23%23%23%20Why%20Are%20you%20requesting%20commit%20access%20?)
-to file an issue and request commit access. Replace the \<user\> string in the
-title with your github username, link to the three examples of helpful
-feedback, and explain why you are requesting commit access in the issue
+judgement, you may file an issue using [this
+template][commit-access-issue] to request commit access. Replace the \<user\>
+string in the title with your github username, link to the three examples of
+helpful feedback, and explain why you are requesting commit access in the issue
 description.
+
+[commit-access-issue]: https://github.com/llvm/llvm-project/issues/new?template=commit-access-request.yml
 
 Once the issue is created, you will need to get two current committers to vouch
 for you. The application reviewers must vouch that the linked comments
