@@ -38,6 +38,8 @@ private:
 
   llvm::Type *detectVLSCCEligibleStruct(QualType Ty, unsigned ABIVLen) const;
 
+  llvm::Type *detectHomogeneousRVVFixedLengthStruct(QualType Ty) const;
+
 public:
   RISCVABIInfo(CodeGen::CodeGenTypes &CGT, unsigned XLen, unsigned FLen,
                bool EABI)
@@ -525,6 +527,104 @@ llvm::Type *RISCVABIInfo::detectVLSCCEligibleStruct(QualType Ty,
       NumElts);
 }
 
+llvm::Type *
+RISCVABIInfo::detectHomogeneousRVVFixedLengthStruct(QualType Ty) const {
+  const auto *RT = Ty->getAsCanonical<RecordType>();
+  if (!RT)
+    return nullptr;
+
+  const RecordDecl *RD = RT->getDecl()->getDefinitionOrSelf();
+  if (RD->isUnion())
+    return nullptr;
+  if (getRecordArgABI(Ty, getCXXABI()))
+    return nullptr;
+
+  // Reject C++ types with base classes.
+  if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(RD))
+    if (CXXRD->getNumBases() != 0)
+      return nullptr;
+
+  SmallVector<const FieldDecl *, 8> Fields(RD->fields());
+
+  if (Fields.empty())
+    return nullptr;
+
+  auto IsFixedLengthRVVVector = [](const VectorType *VT) {
+    switch (VT->getVectorKind()) {
+    case VectorKind::RVVFixedLengthData:
+    case VectorKind::RVVFixedLengthMask:
+    case VectorKind::RVVFixedLengthMask_1:
+    case VectorKind::RVVFixedLengthMask_2:
+    case VectorKind::RVVFixedLengthMask_4:
+      return true;
+    default:
+      return false;
+    }
+  };
+
+  QualType CommonTy;
+  unsigned Count = 0;
+
+  // Single array field: struct { fixed-length RVV T a[N]; }
+  if (Fields.size() == 1) {
+    QualType FieldTy = Fields[0]->getType().getCanonicalType();
+    if (const ConstantArrayType *AT =
+            getContext().getAsConstantArrayType(FieldTy)) {
+      QualType EltTy = AT->getElementType().getCanonicalType();
+      if (const auto *VT = EltTy->getAs<VectorType>();
+          VT && IsFixedLengthRVVVector(VT)) {
+        CommonTy = EltTy;
+        Count = AT->getZExtSize();
+      }
+    }
+  }
+
+  // All fields are the same fixed-length RVV vector type (data or mask).
+  if (CommonTy.isNull()) {
+    if (Fields.size() > 8)
+      return nullptr;
+    for (const FieldDecl *FD : Fields) {
+      QualType FieldTy = FD->getType().getCanonicalType();
+      const auto *VT = FieldTy->getAs<VectorType>();
+      if (!VT || !IsFixedLengthRVVVector(VT))
+        return nullptr;
+      if (CommonTy.isNull())
+        CommonTy = FieldTy;
+      else if (!getContext().hasSameType(CommonTy, FieldTy))
+        return nullptr;
+    }
+    Count = Fields.size();
+  }
+
+  if (Count == 0 || Count > 8)
+    return nullptr;
+
+  const auto *VT = CommonTy->castAs<VectorType>();
+  llvm::Type *EltType = CGT.ConvertType(VT->getElementType());
+  auto VScale = getContext().getTargetInfo().getVScaleRange(
+      getContext().getLangOpts(), TargetInfo::ArmStreamingKind::NotStreaming);
+
+  // Ensure total register usage does not exceed 8.
+  if (Count > 1 &&
+      Count * llvm::divideCeil((uint64_t)VT->getNumElements() *
+                                   EltType->getScalarSizeInBits(),
+                               VScale->first * llvm::RISCV::RVVBitsPerBlock) >
+          8)
+    return nullptr;
+
+  unsigned MinElts = llvm::divideCeil(VT->getNumElements(), VScale->first);
+  if (Count == 1)
+    return llvm::ScalableVectorType::get(EltType, MinElts);
+
+  unsigned I8EltCount = llvm::divideCeil((uint64_t)VT->getNumElements() *
+                                             EltType->getScalarSizeInBits(),
+                                         VScale->first * 8);
+  auto *I8Vec = llvm::ScalableVectorType::get(
+      llvm::Type::getInt8Ty(getVMContext()), I8EltCount);
+  return llvm::TargetExtType::get(getVMContext(), "riscv.vector.tuple", I8Vec,
+                                  Count);
+}
+
 llvm::FixedVectorType *
 RISCVABIInfo::getVLSCCCompatibleType(llvm::FixedVectorType *FixedVecTy) const {
   llvm::Type *EltType = FixedVecTy->getElementType();
@@ -663,6 +763,9 @@ ABIArgInfo RISCVABIInfo::classifyArgumentType(QualType Ty, bool IsFixed,
   }
 
   if (IsFixed && Ty->isStructureOrClassType()) {
+    if (llvm::Type *CoerceTy = detectHomogeneousRVVFixedLengthStruct(Ty))
+      return ABIArgInfo::getTargetSpecific(CoerceTy);
+
     if (llvm::Type *VLSType = detectVLSCCEligibleStruct(Ty, ABIVLen))
       return ABIArgInfo::getTargetSpecific(VLSType);
   }
