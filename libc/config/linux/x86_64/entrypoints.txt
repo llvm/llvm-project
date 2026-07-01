@@ -219,6 +219,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.mkstemp
     libc.src.stdlib.qsort
     libc.src.stdlib.qsort_r
+    libc.src.stdlib.qsort_s
     libc.src.stdlib.rand
     libc.src.stdlib.srand
     libc.src.stdlib.strfromd
