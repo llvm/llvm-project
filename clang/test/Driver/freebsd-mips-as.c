@@ -1,7 +1,7 @@
 // Check passing options to the assembler for MIPS targets.
 //
 // RUN: %clang --target=mips-unknown-freebsd -### \
-// RUN:   -no-integrated-as -c %s 2>&1 \
+// RUN:   -no-integrated-as -fno-pic -c %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=MIPS32-EB-AS %s
 // MIPS32-EB-AS: as{{(.exe)?}}" "-march" "mips2" "-mabi" "32" "-EB"
 // MIPS32-EB-AS-NOT: "-KPIC"
@@ -86,7 +86,7 @@
 // MIPS-ALIAS-64R2: as{{(.exe)?}}" "-march" "mips64r2" "-mabi" "64" "-EB"
 //
 // RUN: %clang --target=mips-unknown-freebsd -### \
-// RUN:   -no-integrated-as -G0 -c %s 2>&1 \
+// RUN:   -no-integrated-as -fno-pic -G0 -c %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=MIPS32-EB-AS-G0 %s
 // MIPS32-EB-AS-G0: as{{(.exe)?}}" "-march" "mips2" "-mabi" "32" "-EB" "-G0"
 // MIPS32-EB-AS-G0-NOT: "-KPIC"
