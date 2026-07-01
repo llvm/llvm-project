@@ -1217,6 +1217,11 @@ defm FlatSignedOffset : AMDGPUSubtargetFeature<"flat-signed-offset",
   "Immediate offset of FLAT instructions are always signed"
 >;
 
+defm SlowMaxMinMulI64Insts : AMDGPUSubtargetFeature<"slow-max-min-mul-i64-insts",
+  "64-bit integer max/min/mul VALU instructions are slower than expanding to an equivalent code sequence",
+  GenPredicate=false
+>;
+
 //===------------------------------------------------------------===//
 // Subtarget Features (options and debugging)
 //===------------------------------------------------------------===//
@@ -2253,7 +2258,9 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureSWMMACGfx1200Insts,
    FeatureSWMMACGfx1250Insts,
    FeatureTransCoexecutionHazard,
-   FeatureWMMACoexecutionHazards])>;
+   FeatureWMMACoexecutionHazards,
+   FeatureSlowMaxMinMulI64Insts,
+])>;
 
 def FeatureISAVersion12_51 : FeatureSet<
   !listconcat(FeatureISAVersion12_50_Common.Features,

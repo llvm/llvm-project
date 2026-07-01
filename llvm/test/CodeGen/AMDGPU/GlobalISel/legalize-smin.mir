@@ -87,8 +87,9 @@ body: |
     ; GFX1250-NEXT: {{  $}}
     ; GFX1250-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
     ; GFX1250-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $vgpr2_vgpr3
-    ; GFX1250-NEXT: [[SMIN:%[0-9]+]]:_(s64) = G_SMIN [[COPY]], [[COPY1]]
-    ; GFX1250-NEXT: $vgpr0_vgpr1 = COPY [[SMIN]](s64)
+    ; GFX1250-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(slt), [[COPY]](s64), [[COPY1]]
+    ; GFX1250-NEXT: [[SELECT:%[0-9]+]]:_(s64) = G_SELECT [[ICMP]](s1), [[COPY]], [[COPY1]]
+    ; GFX1250-NEXT: $vgpr0_vgpr1 = COPY [[SELECT]](s64)
     %0:_(s64) = COPY $vgpr0_vgpr1
     %1:_(s64) = COPY $vgpr2_vgpr3
     %2:_(s64) = G_SMIN %0, %1

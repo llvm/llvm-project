@@ -17,7 +17,8 @@ define i64 @test_umin_i64(i64 %a, i64 %b) {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
-; CHECK-NEXT:    v_min_u64 v[0:1], v[0:1], v[2:3]
+; CHECK-NEXT:    v_cmp_lt_u64_e32 vcc_lo, v[0:1], v[2:3]
+; CHECK-NEXT:    v_dual_cndmask_b32 v0, v2, v0 :: v_dual_cndmask_b32 v1, v3, v1
 ; CHECK-NEXT:    s_set_pc_i64 s[30:31]
   %r = call i64 @llvm.umin.i64(i64 %a, i64 %b)
   ret i64 %r
@@ -28,7 +29,8 @@ define i64 @test_umax_i64(i64 %a, i64 %b) {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
-; CHECK-NEXT:    v_max_u64 v[0:1], v[0:1], v[2:3]
+; CHECK-NEXT:    v_cmp_gt_u64_e32 vcc_lo, v[0:1], v[2:3]
+; CHECK-NEXT:    v_dual_cndmask_b32 v0, v2, v0 :: v_dual_cndmask_b32 v1, v3, v1
 ; CHECK-NEXT:    s_set_pc_i64 s[30:31]
   %r = call i64 @llvm.umax.i64(i64 %a, i64 %b)
   ret i64 %r
@@ -39,7 +41,8 @@ define i64 @test_smin_i64(i64 %a, i64 %b) {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
-; CHECK-NEXT:    v_min_i64 v[0:1], v[0:1], v[2:3]
+; CHECK-NEXT:    v_cmp_lt_i64_e32 vcc_lo, v[0:1], v[2:3]
+; CHECK-NEXT:    v_dual_cndmask_b32 v0, v2, v0 :: v_dual_cndmask_b32 v1, v3, v1
 ; CHECK-NEXT:    s_set_pc_i64 s[30:31]
   %r = call i64 @llvm.smin.i64(i64 %a, i64 %b)
   ret i64 %r
@@ -50,7 +53,8 @@ define i64 @test_smax_i64(i64 %a, i64 %b) {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
-; CHECK-NEXT:    v_max_i64 v[0:1], v[0:1], v[2:3]
+; CHECK-NEXT:    v_cmp_gt_i64_e32 vcc_lo, v[0:1], v[2:3]
+; CHECK-NEXT:    v_dual_cndmask_b32 v0, v2, v0 :: v_dual_cndmask_b32 v1, v3, v1
 ; CHECK-NEXT:    s_set_pc_i64 s[30:31]
   %r = call i64 @llvm.smax.i64(i64 %a, i64 %b)
   ret i64 %r
@@ -61,10 +65,15 @@ define <4 x i64> @test_umin_v4i64(<4 x i64> %a, <4 x i64> %b) {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
-; CHECK-NEXT:    v_min_u64 v[0:1], v[0:1], v[8:9]
-; CHECK-NEXT:    v_min_u64 v[2:3], v[2:3], v[10:11]
-; CHECK-NEXT:    v_min_u64 v[4:5], v[4:5], v[12:13]
-; CHECK-NEXT:    v_min_u64 v[6:7], v[6:7], v[14:15]
+; CHECK-NEXT:    v_cmp_lt_u64_e32 vcc_lo, v[0:1], v[8:9]
+; CHECK-NEXT:    v_cmp_lt_u64_e64 s0, v[2:3], v[10:11]
+; CHECK-NEXT:    v_cmp_lt_u64_e64 s1, v[4:5], v[12:13]
+; CHECK-NEXT:    v_dual_cndmask_b32 v0, v8, v0 :: v_dual_cndmask_b32 v1, v9, v1
+; CHECK-NEXT:    v_cmp_lt_u64_e32 vcc_lo, v[6:7], v[14:15]
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
+; CHECK-NEXT:    v_dual_cndmask_b32 v2, v10, v2, s0 :: v_dual_cndmask_b32 v3, v11, v3, s0
+; CHECK-NEXT:    v_dual_cndmask_b32 v4, v12, v4, s1 :: v_dual_cndmask_b32 v5, v13, v5, s1
+; CHECK-NEXT:    v_dual_cndmask_b32 v6, v14, v6 :: v_dual_cndmask_b32 v7, v15, v7
 ; CHECK-NEXT:    s_set_pc_i64 s[30:31]
   %r = call <4 x i64> @llvm.umin.v4i64(<4 x i64> %a, <4 x i64> %b)
   ret <4 x i64> %r
@@ -75,10 +84,15 @@ define <4 x i64> @test_umax_v4i64(<4 x i64> %a, <4 x i64> %b) {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
-; CHECK-NEXT:    v_max_u64 v[0:1], v[0:1], v[8:9]
-; CHECK-NEXT:    v_max_u64 v[2:3], v[2:3], v[10:11]
-; CHECK-NEXT:    v_max_u64 v[4:5], v[4:5], v[12:13]
-; CHECK-NEXT:    v_max_u64 v[6:7], v[6:7], v[14:15]
+; CHECK-NEXT:    v_cmp_gt_u64_e32 vcc_lo, v[0:1], v[8:9]
+; CHECK-NEXT:    v_cmp_gt_u64_e64 s0, v[2:3], v[10:11]
+; CHECK-NEXT:    v_cmp_gt_u64_e64 s1, v[4:5], v[12:13]
+; CHECK-NEXT:    v_dual_cndmask_b32 v0, v8, v0 :: v_dual_cndmask_b32 v1, v9, v1
+; CHECK-NEXT:    v_cmp_gt_u64_e32 vcc_lo, v[6:7], v[14:15]
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
+; CHECK-NEXT:    v_dual_cndmask_b32 v2, v10, v2, s0 :: v_dual_cndmask_b32 v3, v11, v3, s0
+; CHECK-NEXT:    v_dual_cndmask_b32 v4, v12, v4, s1 :: v_dual_cndmask_b32 v5, v13, v5, s1
+; CHECK-NEXT:    v_dual_cndmask_b32 v6, v14, v6 :: v_dual_cndmask_b32 v7, v15, v7
 ; CHECK-NEXT:    s_set_pc_i64 s[30:31]
   %r = call <4 x i64> @llvm.umax.v4i64(<4 x i64> %a, <4 x i64> %b)
   ret <4 x i64> %r
@@ -89,10 +103,15 @@ define <4 x i64> @test_smin_v4i64(<4 x i64> %a, <4 x i64> %b) {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
-; CHECK-NEXT:    v_min_i64 v[0:1], v[0:1], v[8:9]
-; CHECK-NEXT:    v_min_i64 v[2:3], v[2:3], v[10:11]
-; CHECK-NEXT:    v_min_i64 v[4:5], v[4:5], v[12:13]
-; CHECK-NEXT:    v_min_i64 v[6:7], v[6:7], v[14:15]
+; CHECK-NEXT:    v_cmp_lt_i64_e32 vcc_lo, v[0:1], v[8:9]
+; CHECK-NEXT:    v_cmp_lt_i64_e64 s0, v[2:3], v[10:11]
+; CHECK-NEXT:    v_cmp_lt_i64_e64 s1, v[4:5], v[12:13]
+; CHECK-NEXT:    v_dual_cndmask_b32 v0, v8, v0 :: v_dual_cndmask_b32 v1, v9, v1
+; CHECK-NEXT:    v_cmp_lt_i64_e32 vcc_lo, v[6:7], v[14:15]
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
+; CHECK-NEXT:    v_dual_cndmask_b32 v2, v10, v2, s0 :: v_dual_cndmask_b32 v3, v11, v3, s0
+; CHECK-NEXT:    v_dual_cndmask_b32 v4, v12, v4, s1 :: v_dual_cndmask_b32 v5, v13, v5, s1
+; CHECK-NEXT:    v_dual_cndmask_b32 v6, v14, v6 :: v_dual_cndmask_b32 v7, v15, v7
 ; CHECK-NEXT:    s_set_pc_i64 s[30:31]
   %r = call <4 x i64> @llvm.smin.v4i64(<4 x i64> %a, <4 x i64> %b)
   ret <4 x i64> %r
@@ -103,10 +122,15 @@ define <4 x i64> @test_smax_v4i64(<4 x i64> %a, <4 x i64> %b) {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
-; CHECK-NEXT:    v_max_i64 v[0:1], v[0:1], v[8:9]
-; CHECK-NEXT:    v_max_i64 v[2:3], v[2:3], v[10:11]
-; CHECK-NEXT:    v_max_i64 v[4:5], v[4:5], v[12:13]
-; CHECK-NEXT:    v_max_i64 v[6:7], v[6:7], v[14:15]
+; CHECK-NEXT:    v_cmp_gt_i64_e32 vcc_lo, v[0:1], v[8:9]
+; CHECK-NEXT:    v_cmp_gt_i64_e64 s0, v[2:3], v[10:11]
+; CHECK-NEXT:    v_cmp_gt_i64_e64 s1, v[4:5], v[12:13]
+; CHECK-NEXT:    v_dual_cndmask_b32 v0, v8, v0 :: v_dual_cndmask_b32 v1, v9, v1
+; CHECK-NEXT:    v_cmp_gt_i64_e32 vcc_lo, v[6:7], v[14:15]
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
+; CHECK-NEXT:    v_dual_cndmask_b32 v2, v10, v2, s0 :: v_dual_cndmask_b32 v3, v11, v3, s0
+; CHECK-NEXT:    v_dual_cndmask_b32 v4, v12, v4, s1 :: v_dual_cndmask_b32 v5, v13, v5, s1
+; CHECK-NEXT:    v_dual_cndmask_b32 v6, v14, v6 :: v_dual_cndmask_b32 v7, v15, v7
 ; CHECK-NEXT:    s_set_pc_i64 s[30:31]
   %r = call <4 x i64> @llvm.smax.v4i64(<4 x i64> %a, <4 x i64> %b)
   ret <4 x i64> %r
@@ -133,10 +157,9 @@ define amdgpu_ps i64 @test_umin_i64_s(i64 inreg %a, i64 inreg %b) {
 ; CHECK-LABEL: test_umin_i64_s:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; CHECK-NEXT:    v_min_u64 v[0:1], s[0:1], s[2:3]
-; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
-; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
-; CHECK-NEXT:    v_readfirstlane_b32 s1, v1
+; CHECK-NEXT:    v_cmp_lt_u64_e64 s4, s[0:1], s[2:3]
+; CHECK-NEXT:    s_cmp_lg_u32 s4, 0
+; CHECK-NEXT:    s_cselect_b64 s[0:1], s[0:1], s[2:3]
 ; CHECK-NEXT:    ; return to shader part epilog
   %r = call i64 @llvm.umin.i64(i64 %a, i64 %b)
   ret i64 %r
@@ -146,10 +169,9 @@ define amdgpu_ps i64 @test_umax_i64_s(i64 inreg %a, i64 inreg %b) {
 ; CHECK-LABEL: test_umax_i64_s:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; CHECK-NEXT:    v_max_u64 v[0:1], s[0:1], s[2:3]
-; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
-; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
-; CHECK-NEXT:    v_readfirstlane_b32 s1, v1
+; CHECK-NEXT:    v_cmp_gt_u64_e64 s4, s[0:1], s[2:3]
+; CHECK-NEXT:    s_cmp_lg_u32 s4, 0
+; CHECK-NEXT:    s_cselect_b64 s[0:1], s[0:1], s[2:3]
 ; CHECK-NEXT:    ; return to shader part epilog
   %r = call i64 @llvm.umax.i64(i64 %a, i64 %b)
   ret i64 %r
@@ -159,10 +181,9 @@ define amdgpu_ps i64 @test_smin_i64_s(i64 inreg %a, i64 inreg %b) {
 ; CHECK-LABEL: test_smin_i64_s:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; CHECK-NEXT:    v_min_i64 v[0:1], s[0:1], s[2:3]
-; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
-; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
-; CHECK-NEXT:    v_readfirstlane_b32 s1, v1
+; CHECK-NEXT:    v_cmp_lt_i64_e64 s4, s[0:1], s[2:3]
+; CHECK-NEXT:    s_cmp_lg_u32 s4, 0
+; CHECK-NEXT:    s_cselect_b64 s[0:1], s[0:1], s[2:3]
 ; CHECK-NEXT:    ; return to shader part epilog
   %r = call i64 @llvm.smin.i64(i64 %a, i64 %b)
   ret i64 %r
@@ -172,10 +193,9 @@ define amdgpu_ps i64 @test_smax_i64_s(i64 inreg %a, i64 inreg %b) {
 ; CHECK-LABEL: test_smax_i64_s:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; CHECK-NEXT:    v_max_i64 v[0:1], s[0:1], s[2:3]
-; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
-; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
-; CHECK-NEXT:    v_readfirstlane_b32 s1, v1
+; CHECK-NEXT:    v_cmp_gt_i64_e64 s4, s[0:1], s[2:3]
+; CHECK-NEXT:    s_cmp_lg_u32 s4, 0
+; CHECK-NEXT:    s_cselect_b64 s[0:1], s[0:1], s[2:3]
 ; CHECK-NEXT:    ; return to shader part epilog
   %r = call i64 @llvm.smax.i64(i64 %a, i64 %b)
   ret i64 %r

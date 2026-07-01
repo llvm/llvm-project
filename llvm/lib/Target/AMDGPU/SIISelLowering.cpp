@@ -950,7 +950,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
   setOperationAction({ISD::SMULO, ISD::UMULO}, MVT::i64, Custom);
 
-  if (Subtarget->hasVMulU64Inst())
+  if (Subtarget->useVMulU64Inst())
     setOperationAction(ISD::MUL, MVT::i64, Legal);
   else if (Subtarget->hasScalarSMulU64())
     setOperationAction(ISD::MUL, MVT::i64, Custom);
@@ -985,7 +985,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                        Custom);
   }
 
-  if (Subtarget->hasMinMaxI64Insts())
+  if (Subtarget->useMinMaxI64Insts())
     setOperationAction({ISD::SMIN, ISD::UMIN, ISD::SMAX, ISD::UMAX}, MVT::i64,
                        Legal);
 

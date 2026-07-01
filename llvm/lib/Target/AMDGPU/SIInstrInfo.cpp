@@ -7995,7 +7995,7 @@ void SIInstrInfo::moveToVALUImpl(
   }
 
   case AMDGPU::S_MUL_U64:
-    if (ST.hasVMulU64Inst()) {
+    if (ST.useVMulU64Inst()) {
       NewOpcode = AMDGPU::V_MUL_U64_e64;
       break;
     }
