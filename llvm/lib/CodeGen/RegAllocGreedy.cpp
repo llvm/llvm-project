@@ -1267,10 +1267,17 @@ unsigned RAGreedy::calculateRegionSplitCostAroundReg(MCRegister PhysReg,
   BlockFrequency Cost;
   if (!addSplitConstraints(Cand.Intf, Cost)) {
     LLVM_DEBUG(dbgs() << printReg(PhysReg, TRI) << "\tno positive bundles\n");
+    DEBUG_WITH_TYPE("csr-cost", dbgs()
+                                    << "  [regionSplit] cand=" << printReg(PhysReg, TRI)
+                                    << " -> no positive bundles\n");
     return BestCand;
   }
   LLVM_DEBUG(dbgs() << printReg(PhysReg, TRI)
                     << "\tstatic = " << printBlockFreq(*MBFI, Cost));
+  DEBUG_WITH_TYPE("csr-cost", dbgs()
+                                  << "  [regionSplit] cand=" << printReg(PhysReg, TRI)
+                                  << " staticCost=" << Cost.getFrequency()
+                                  << " BestCost=" << BestCost.getFrequency() << '\n');
   if (Cost >= BestCost) {
     LLVM_DEBUG({
       if (BestCand == NoCand)
@@ -1279,6 +1286,8 @@ unsigned RAGreedy::calculateRegionSplitCostAroundReg(MCRegister PhysReg,
         dbgs() << " worse than "
                << printReg(GlobalCand[BestCand].PhysReg, TRI) << '\n';
     });
+    DEBUG_WITH_TYPE("csr-cost", dbgs()
+                                    << "    -> staticCost >= BestCost, reject cand\n");
     return BestCand;
   }
   if (!growRegion(Cand)) {
@@ -1301,6 +1310,11 @@ unsigned RAGreedy::calculateRegionSplitCostAroundReg(MCRegister PhysReg,
       dbgs() << " EB#" << I;
     dbgs() << ".\n";
   });
+  DEBUG_WITH_TYPE("csr-cost", dbgs()
+                                  << "    totalCost=" << Cost.getFrequency()
+                                  << " BestCost=" << BestCost.getFrequency()
+                                  << " -> " << (Cost < BestCost ? "ACCEPT" : "reject")
+                                  << '\n');
   if (Cost < BestCost) {
     BestCand = NumCands;
     BestCost = Cost;
@@ -2354,6 +2368,15 @@ BlockFrequency RAGreedy::calcSpillCost(const LiveInterval &LI) {
   uint64_t SpillCost = 0;
   SmallPtrSet<MachineInstr *, 8> Visited;
 
+  // [csr-cost instrumentation] Is the whole interval rematerializable, and is
+  // the defining instruction trivially rematerializable? calcSpillCost ignores
+  // both today; this logs what it *would* matter.
+  bool WholeRemat = VirtRegAuxInfo::isRematerializable(LI, *LIS, *VRM, *MRI, *TII);
+  DEBUG_WITH_TYPE("csr-cost",
+                  dbgs() << "[calcSpillCost] " << MF->getName() << " "
+                         << printReg(LI.reg(), TRI)
+                         << " wholeRematerializable=" << WholeRemat << '\n');
+
   for (MachineRegisterInfo::reg_instr_nodbg_iterator
            I = MRI->reg_instr_nodbg_begin(LI.reg()),
            E = MRI->reg_instr_nodbg_end();
@@ -2366,9 +2389,22 @@ BlockFrequency RAGreedy::calcSpillCost(const LiveInterval &LI) {
 
     auto [Reads, Writes] = MI->readsWritesVirtualRegister(LI.reg());
     auto MBBFreq = SpillPlacer->getBlockFrequency(MI->getParent()->getNumber());
-    SpillCost += (Reads + Writes) * MBBFreq.getFrequency();
+    uint64_t Contribution = (Reads + Writes) * MBBFreq.getFrequency();
+    SpillCost += Contribution;
+
+    DEBUG_WITH_TYPE(
+        "csr-cost",
+        dbgs() << "    bb." << MI->getParent()->getNumber()
+               << " reads=" << Reads << " writes=" << Writes
+               << " freq=" << MBBFreq.getFrequency()
+               << " isDef=" << MI->definesRegister(LI.reg(), TRI)
+               << " triviallyRemat=" << TII->isTriviallyReMaterializable(*MI)
+               << " contribution=" << Contribution << "  | " << *MI);
   }
 
+  DEBUG_WITH_TYPE("csr-cost", dbgs()
+                                  << "  => total SpillCost=" << SpillCost
+                                  << '\n');
   return BlockFrequency(SpillCost);
 }
 
@@ -2381,11 +2417,25 @@ BlockFrequency RAGreedy::calcSpillCost(const LiveInterval &LI) {
 MCRegister RAGreedy::tryAssignCSRFirstTime(
     const LiveInterval &VirtReg, AllocationOrder &Order, MCRegister PhysReg,
     uint8_t &CostPerUseLimit, SmallVectorImpl<Register> &NewVRegs) {
+  bool TR = VirtRegAuxInfo::isRematerializable(VirtReg, *LIS, *VRM, *MRI, *TII);
+  DEBUG_WITH_TYPE("csr-cost",
+                  dbgs() << "[tryAssignCSRFirstTime] " << MF->getName() << " "
+                         << printReg(VirtReg.reg(), TRI) << " phys="
+                         << printReg(PhysReg, TRI)
+                         << " stage=" << (unsigned)ExtraInfo->getStage(VirtReg)
+                         << " wholeRematerializable=" << TR
+                         << " CSRCost=" << CSRCost.getFrequency() << '\n');
   if (ExtraInfo->getStage(VirtReg) == RS_Spill && VirtReg.isSpillable()) {
     // We choose spill over using the CSR for the first time if the spill cost
     // is lower than CSRCost.
     SA->analyze(&VirtReg);
-    if (calcSpillCost(VirtReg) >= CSRCost)
+    BlockFrequency SC = calcSpillCost(VirtReg);
+    DEBUG_WITH_TYPE("csr-cost",
+                    dbgs() << "  RS_Spill branch: spillCost=" << SC.getFrequency()
+                           << " CSRCost=" << CSRCost.getFrequency()
+                           << " decision=" << (SC >= CSRCost ? "USE_CSR" : "SPILL")
+                           << '\n');
+    if (SC >= CSRCost)
       return PhysReg;
 
     // We are going to spill, set CostPerUseLimit to 1 to make sure that
@@ -2401,14 +2451,45 @@ MCRegister RAGreedy::tryAssignCSRFirstTime(
     BlockFrequency BestCost = CSRCost; // Don't modify CSRCost.
     unsigned BestCand = calculateRegionSplitCost(VirtReg, Order, BestCost,
                                                  NumCands, true /*IgnoreCSR*/);
-    if (BestCand == NoCand)
+    DEBUG_WITH_TYPE("csr-cost",
+                    dbgs() << "  RS_Split branch: bestCand=" << BestCand
+                           << " bestSplitCost=" << BestCost.getFrequency()
+                           << " CSRCost=" << CSRCost.getFrequency()
+                           << " decision="
+                           << (BestCand == NoCand ? "USE_CSR" : "SPLIT") << '\n');
+    if (BestCand == NoCand) {
+      // Region splitting found nothing cheaper than the CSR. However, if the
+      // value is rematerializable (e.g. an AArch64 LOADgot / MOVaddr address
+      // materialization), re-creating it after the call is cheaper than paying
+      // the prologue/epilogue push/pop of a callee-saved register. Decline the
+      // CSR and let the value be spilled; the spiller will rematerialize it.
+      if (VirtRegAuxInfo::isRematerializable(VirtReg, *LIS, *VRM, *MRI, *TII)) {
+        DEBUG_WITH_TYPE("csr-cost", dbgs()
+                                        << "  NoCand but rematerializable: "
+                                           "declining CSR, force spill/remat\n");
+        CostPerUseLimit = 1;
+        return MCRegister();
+      }
       // Use the CSR if we can't find a region split below CSRCost.
       return PhysReg;
+    }
 
     // Perform the actual pre-splitting.
     doRegionSplit(VirtReg, BestCand, false/*HasCompact*/, NewVRegs);
     return MCRegister();
   }
+  // Stage >= RS_Split (RS_Split / RS_Split2): the value has already been
+  // through pre-splitting. If it is rematerializable, still decline the
+  // first-use CSR so it goes on to be spilled (which becomes a cheap remat)
+  // rather than paying prologue/epilogue push/pop.
+  if (VirtRegAuxInfo::isRematerializable(VirtReg, *LIS, *VRM, *MRI, *TII)) {
+    DEBUG_WITH_TYPE("csr-cost", dbgs()
+                                    << "  fallthrough but rematerializable: "
+                                       "declining CSR, force spill/remat\n");
+    CostPerUseLimit = 1;
+    return MCRegister();
+  }
+  DEBUG_WITH_TYPE("csr-cost", dbgs() << "  fallthrough: USE_CSR (stage>=RS_Split)\n");
   return PhysReg;
 }
 
