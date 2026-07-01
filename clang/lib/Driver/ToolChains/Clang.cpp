@@ -9877,15 +9877,18 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
         LinkerArgs.emplace_back("--create-library");
       }
 
-      // Translate the SYCL device code split mode into the corresponding
-      // clang-sycl-linker `--module-split-mode` value.
+      // Translate the SYCL device image split granularity into the
+      // corresponding clang-sycl-linker `--module-split-mode` value.
       if (Kind == Action::OFK_SYCL) {
-        if (Arg *A = ToolChainArgs.getLastArg(OPT_fsycl_device_code_split_EQ)) {
+        if (Arg *A =
+                ToolChainArgs.getLastArg(OPT_fsycl_device_image_split_EQ)) {
           StringRef Mode = A->getValue();
           StringRef SplitMode = llvm::StringSwitch<StringRef>(Mode)
                                     .Case("per_kernel", "kernel")
-                                    .Case("per_source", "source")
-                                    .Case("off", "none")
+                                    .Case("per_translation_unit", "source")
+                                    .Case("per_tu", "source")
+                                    .Case("per_link_unit", "none")
+                                    .Case("per_lu", "none")
                                     .Default("");
           if (SplitMode.empty())
             C.getDriver().Diag(clang::diag::err_drv_invalid_value)

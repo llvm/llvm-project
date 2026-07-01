@@ -7572,15 +7572,17 @@ def fsycl_host_only : Flag<["-"], "fsycl-host-only">,
 def sycl_link : Flag<["--"], "sycl-link">, Flags<[HelpHidden]>,
   HelpText<"Perform link through clang-sycl-linker via the target "
   "offloading toolchain.">;
-def fsycl_device_code_split_EQ : Joined<["-"], "fsycl-device-code-split=">,
-  HelpText<"Perform SYCL device code split: per_kernel (device code module is "
-           "created for each SYCL kernel) | per_source (device code module is "
-           "created for each source (translation unit)) | off (no device code "
-           "split). Default is 'per_source'.">,
-  Values<"per_kernel,per_source,off">;
-def fsycl_device_code_split : Flag<["-"], "fsycl-device-code-split">,
-  Alias<fsycl_device_code_split_EQ>, AliasArgs<["per_source"]>,
-  HelpText<"Perform SYCL device code split in the 'per_source' mode.">;
+def fsycl_device_image_split_EQ : Joined<["-"], "fsycl-device-image-split=">,
+  HelpText<"Select the granularity at which SYCL device code is grouped into "
+           "device images: per_kernel (one device image per kernel) | "
+           "per_translation_unit / per_tu (one device image per translation "
+           "unit) | per_link_unit / per_lu (one device image per linking unit)."
+           "Default is 'per_translation_unit'.">,
+  Values<"per_kernel,per_translation_unit,per_tu,per_link_unit,per_lu">;
+def fsycl_device_image_split : Flag<["-"], "fsycl-device-image-split">,
+  Alias<fsycl_device_image_split_EQ>, AliasArgs<["per_translation_unit"]>,
+  HelpText<"Group SYCL device code into device images at 'per_translation_unit' "
+           "granularity.">;
 } // let Group = sycl_Group
 
 // OS-specific options
