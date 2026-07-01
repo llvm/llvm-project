@@ -180,6 +180,21 @@ std::string getQualification(ASTContext &Context,
 
 } // namespace
 
+bool isTemplateInstantiationScope(const NamedDecl *D) {
+  // Fields and Methods don't know about template instantiations, so we have to
+  // ask their parent.
+  if (auto *FD = dyn_cast<FieldDecl>(D))
+    if (auto *RD = FD->getParent())
+      D = RD;
+  if (auto *MD = dyn_cast<CXXMethodDecl>(D))
+    if (auto *RD = MD->getParent())
+      D = RD;
+  return isTemplateSpecializationKind(D,
+                                      TSK_ExplicitInstantiationDeclaration) ||
+         isTemplateSpecializationKind(D, TSK_ExplicitInstantiationDefinition) ||
+         isTemplateSpecializationKind(D, TSK_ImplicitInstantiation);
+}
+
 bool isImplicitTemplateInstantiation(const NamedDecl *D) {
   return isTemplateSpecializationKind(D, TSK_ImplicitInstantiation);
 }

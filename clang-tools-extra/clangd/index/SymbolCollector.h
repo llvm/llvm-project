@@ -169,7 +169,7 @@ private:
                                bool IsMainFileSymbol);
   void addDefinition(const NamedDecl &, const Symbol &DeclSymbol,
                      bool SkipDocCheck);
-  void processRelations(const NamedDecl &ND, const SymbolID &ID,
+  void processRelations(const SymbolID &ID, const Decl &OrigD,
                         ArrayRef<index::SymbolRelation> Relations);
 
   std::optional<SymbolLocation> getTokenLocation(SourceLocation TokLoc);

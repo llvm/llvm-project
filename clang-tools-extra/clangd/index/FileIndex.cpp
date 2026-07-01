@@ -65,6 +65,7 @@ SlabTuple indexSymbols(ASTContext &AST, Preprocessor &PP,
       index::IndexingOptions::SystemSymbolFilterKind::DeclarationsOnly;
   // We index function-local classes and its member functions only.
   IndexOpts.IndexFunctionLocals = true;
+  IndexOpts.IndexImplicitInstantiation = true;
   if (IsIndexMainAST) {
     // We only collect refs when indexing main AST.
     CollectorOpts.RefFilter = RefKind::All;
