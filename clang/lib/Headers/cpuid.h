@@ -222,6 +222,9 @@
 #define bit_AVX10         0x00080000
 #define bit_APXF          0x00200000
 
+/* Features in %ecx for leaf 24 sub-leaf 1 */
+#define bit_AVX10_V2_AUX 0x00000008
+
 /* Features in %eax for leaf 13 sub-leaf 1 */
 #define bit_XSAVEOPT    0x00000001
 #define bit_XSAVEC      0x00000002
