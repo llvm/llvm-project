@@ -48,6 +48,7 @@ TEST_F(ObjectFileMachOTest, ModuleFromSharedCacheInfo) {
   ModuleSpec spec(FileSpec(), UUID(), image_info.GetExtractor());
   lldb::ModuleSP module = std::make_shared<Module>(spec);
   ObjectFile *OF = module->GetObjectFile();
+  ASSERT_TRUE(OF->IsSystem());
   ASSERT_TRUE(llvm::isa<ObjectFileMachO>(OF));
   EXPECT_TRUE(
       OF->GetArchitecture().IsCompatibleMatch(HostInfo::GetArchitecture()));
@@ -96,6 +97,7 @@ TEST_F(ObjectFileMachOTest, IndirectSymbolsInTheSharedCache) {
   lldb::ModuleSP module = std::make_shared<Module>(spec);
 
   ObjectFile *OF = module->GetObjectFile();
+  ASSERT_TRUE(OF->IsSystem());
   ASSERT_TRUE(llvm::isa<ObjectFileMachO>(OF));
   EXPECT_TRUE(
       OF->GetArchitecture().IsCompatibleMatch(HostInfo::GetArchitecture()));
