@@ -470,31 +470,75 @@ What are the expectations around a revert?
 (obtaining_commit_access)=
 ### Obtaining Commit Access
 
-Once you have 3 or more merged pull requests, you may use [this
+LLVM grants contributor permissions liberally. We believe that empowering new
+contributors is part of what makes LLVM a successful project. The first step on
+your journey to becoming an LLVM contributor is to apply to join the "LLVM
+triagers" team.
+
+The triage team role grants write access to the issue tracker and pull request
+systems. It grants github repository write access so you can push branches with
+the `users/` prefix, but most other branches are protected. To merge changes
+into `main`, you need to make a pull request and get approved by a member of
+the LLVM committers team. Once a PR is approved by a committer, a triager can
+push the merge button to land any PR, whether it is their own, or someone
+else's.
+
+To apply to be a triager, read the following developer policy docs, and file an
+issue using [this template][triager-issue], stating that you've read the
+policies and agree to abide by them:
+
+* {ref}`LLVM Community Code of Conduct` -- 
+* {ref}`LLVM AI Tool Use Policy` -- Write your own designs and PR descriptions.
+  Don't generate them.
+* {ref}`Developer Policy` -- This document.
+
+Failing to follow the policies will result in moderation action and loss of the
+triager role.
+
+Once approved, a GitHub invitation will be sent to your GitHub account. In case
+you don't get notification from GitHub, go to [Invitation
+Link](https://github.com/orgs/llvm/invitation) directly. Once you accept the
+invitation, you'll be granted LLVM github org affiliation and LLVM triager team
+membership.
+
+[triager-issue]: TODO: create template
+
+### Obtaining Code Ownership
+
+The next step in contributing to LLVM is joining the LLVM committers team,
+which grants rights to self-approve PRs or approve other contributor PRs.
+
+Commit access is granted to contributors who have provided helpful feedback
+that demonstrates good technical judgement. The most important resource the
+project needs is people willing to review other people's work and vouch for its
+quality, so this is what we try to select for when granting commit access. Once
+you can point to 3 or more separate pull requests, issues, or Discourse threads
+where your comments provided useful feedback demonstrating good technical
+judgement, you may use [this
 link](https://github.com/llvm/llvm-project/issues/new?title=Request%20Commit%20Access%20For%20%3Cuser%3E&body=%23%23%23%20Why%20Are%20you%20requesting%20commit%20access%20?)
-to file an issue and request commit access. Replace the \<user\> string in the title
-with your github username, and explain why you are requesting commit access in
-the issue description. Once the issue is created, you will need to get two
-current contributors to support your request before commit access will be granted.
+to file an issue and request commit access. Replace the \<user\> string in the
+title with your github username, link to the three examples of helpful
+feedback, and explain why you are requesting commit access in the issue
+description.
 
-Reviewers of your committed patches will automatically be CCed upon creating the issue.
-Most commonly these reviewers will provide the necessary approval, but approvals
-from other LLVM committers are also acceptable. Those reviewing the application are
-confirming that you have indeed had three patches committed, and that based on interactions
-on those reviews and elsewhere in the LLVM community they have no concern about you
-adhering to our Developer Policy and Code of Conduct. Reviewers should clearly state their
-reasoning for accepting or rejecting the request, and finish with a clear statement such
-as "I approve of this request", "LGTM", or "I do not approve of this request".
-
-If approved, a GitHub invitation will be sent to your
-GitHub account. In case you don't get notification from GitHub, go to
-[Invitation Link](https://github.com/orgs/llvm/invitation) directly. Once
-you accept the invitation, you'll get commit access.
+Once the issue is created, you will need to get two current committers to vouch
+for you. The application reviewers must vouch that the linked comments
+demonstrate good technical judgement, and that based on those interactions and
+others elsewhere in the LLVM community they have no concern about you adhering
+to our Developer Policy and Code of Conduct. In straightforward cases,
+reviewers can use the thumbs-up emoji to indicate approval, but simple
+statements of approval, e.g. I approve, looks good to me, are also acceptable.
+At least one reviewer needs to make a statement like "We don't share an
+organizational affiliation." We trust existing committers to be honest about
+their affiliations, and not rubber stamp the work of team mates as a favor to
+expedite this process.
 
 Prior to obtaining commit access, it is common practice to request that
 someone with commit access commits on your behalf. When doing so, please
 provide the name and email address you would like to use in the Author
-property of the commit.
+property of the commit. Once your pull request has been approved by a
+committer, any committer or member of the triage team can merge it for you
+(see {ref}`merging pull requests <merging_pull_requests>`).
 
 For external tracking purposes, committed changes are automatically reflected on
 a commits mailing list soon after the commit lands (e.g.
@@ -508,8 +552,9 @@ If you have recently been granted commit access, these policies apply:
 1. You are granted *commit-after-approval* to all parts of LLVM. For
    information on how to get approval for a patch, please see
    {doc}`CodeReview`. When approved, you may commit it yourself.
-2. You are allowed to commit patches without approval which you think are
-   obvious. This is clearly a subjective decision \-\-- we simply expect you to
+2. You are allowed to self-approve PRs to land changes without waiting for
+   approval when appropriate. This is clearly a subjective decision \-\-- we
+   simply expect you to
    use good judgement. Examples include: fixing build breakage, reverting
    obviously broken patches, documentation/comment changes, any other minor
    changes. Avoid committing formatting- or whitespace-only changes outside of
@@ -532,15 +577,33 @@ In any case, your changes are still subject to {ref}`code review <code review>`
 change). You are encouraged to review other peoples' patches as well, but you
 aren't required to do so.
 
-### Obtaining Other Access or Permissions
+(merging_pull_requests)=
+### Merging Pull Requests
 
-To obtain access other than commit access, you can raise an issue like the one
-for obtaining commit access. However, instead of including PRs you have authored,
-include evidence of your need for the type of access you want.
+All changes to the `main` branch must land through a pull request. GitHub
+permits a pull request to be merged once it has been approved by a member of
+the committer team. This is enforced with GitHub's branch protection feature
+with the "require review from code owners" branch rule and a `CODEOWNERS`
+configuration that assigns ownership of all paths to the committer team.
 
-For example, if you are helping to triage issues and want the ability to add
-labels, include links to issues you have triaged previously and explain how
-having this ability would help that work.
+- Committers may merge their own pull requests without waiting for an approval
+  by using GitHub's option to merge without meeting the review requirement (a
+  rule "bypass" that is restricted to pull requests, and never permits pushing
+  directly to the branch). This mechanism implements the
+  commit-without-approval policies described above (obvious changes and code
+  you maintain), as well as the normal pre-commit review flow, where the
+  author chooses when to merge after receiving approval. Using the bypass to
+  merge a change that required approval but did not receive it is a violation
+  of this policy.
+- Members of the triage team have sufficient repository access to merge pull
+  requests, but may only merge a pull request after it has been approved by a
+  committer. A triage team member's own approval does not satisfy the review
+  requirement. This allows triagers to help land approved changes on behalf of
+  contributors who do not have commit access, without waiting for a committer
+  to become available to push the merge button.
+- Any pull request author may enable GitHub's auto-merge ("merge when ready")
+  feature on their pull request to record their intent that the change should
+  land as soon as it has been approved and premerge checks pass.
 
 (discuss the change/gather consensus)=
 ### Proposing Major Changes (RFCs)
