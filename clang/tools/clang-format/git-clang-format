@@ -191,11 +191,6 @@ def main():
         help="format lines in the stage instead of the working dir",
     )
     p.add_argument(
-        "--whole-file",
-        action="store_true",
-        help="format whole file instead of only modified lines",
-    )
-    p.add_argument(
         "--style",
         default=config.get("clangformat.style", None),
         help="passed to clang-format",
@@ -206,6 +201,11 @@ def main():
         action="count",
         default=0,
         help="print extra information",
+    )
+    p.add_argument(
+        "--whole-file",
+        action="store_true",
+        help="format whole file instead of only modified lines",
     )
     p.add_argument(
         "--diff_from_common_commit",
@@ -468,7 +468,7 @@ def extract_lines(patch_file, whole_file):
         match = re.search(r"^\+\+\+\ [^/]+/(.*)", line)
         if match:
             filename = match.group(1).rstrip("\r\n\t")
-            if whole_file and filename not in matches:
+            if whole_file:
                 # Initialize the key for filename but ensure ranges is an empty
                 # list. This will prevent any filtering in clang_format_to_blob().
                 matches[filename] = []
