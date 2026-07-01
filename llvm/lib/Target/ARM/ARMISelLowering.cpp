@@ -14071,6 +14071,7 @@ static SDValue PerformSUBCombine(SDNode *N,
                                  const ARMSubtarget *Subtarget) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
+  SDLoc DL(N);
 
   // fold (sub x, (select cc, 0, c)) -> (select cc, x, (sub, x, c))
   if (N1.getNode()->hasOneUse())
@@ -14082,6 +14083,24 @@ static SDValue PerformSUBCombine(SDNode *N,
 
   if (SDValue Val = performNegCMovCombine(N, DCI.DAG))
     return Val;
+
+  // On Thumb1, materializing the mask for (sub 0, (and x, 1)) is expensive.
+  // Convert it to sign extraction via shifts:
+  //   (sub 0, (and x, 1)) -> (sra (shl x, 31), 31)
+  if (Subtarget->isThumb1Only() && N->getValueType(0) == MVT::i32 &&
+      N1->hasOneUse() && isNullConstant(N0) && N1.getOpcode() == ISD::AND &&
+      isa<ConstantSDNode>(N1.getOperand(1)) &&
+      N1.getConstantOperandVal(1) == 1) {
+    SDValue X = N1.getOperand(0);
+    // If X is already known to be 0/1, we can usually lower to a single
+    // negate on Thumb1; avoid turning that into two shifts.
+    if (DCI.DAG.computeKnownBits(X).getMaxValue().ule(1))
+      return SDValue();
+    SDValue ShiftAmt = DCI.DAG.getConstant(31, DL, MVT::i32);
+    return DCI.DAG.getNode(ISD::SRA, DL, MVT::i32,
+                           DCI.DAG.getNode(ISD::SHL, DL, MVT::i32, X, ShiftAmt),
+                           ShiftAmt);
+  }
 
   if (!Subtarget->hasMVEIntegerOps() || !N->getValueType(0).isVector())
     return SDValue();
@@ -14100,11 +14119,10 @@ static SDValue PerformSUBCombine(SDNode *N,
   if (VMov->getOpcode() != ARMISD::VMOVIMM || !isZeroVector(VMov))
     return SDValue();
 
-  SDLoc dl(N);
-  SDValue Negate = DCI.DAG.getNode(ISD::SUB, dl, MVT::i32,
-                                   DCI.DAG.getConstant(0, dl, MVT::i32),
+  SDValue Negate = DCI.DAG.getNode(ISD::SUB, DL, MVT::i32,
+                                   DCI.DAG.getConstant(0, DL, MVT::i32),
                                    VDup->getOperand(0));
-  return DCI.DAG.getNode(ARMISD::VDUP, dl, N->getValueType(0), Negate);
+  return DCI.DAG.getNode(ARMISD::VDUP, DL, N->getValueType(0), Negate);
 }
 
 /// PerformVMULCombine
