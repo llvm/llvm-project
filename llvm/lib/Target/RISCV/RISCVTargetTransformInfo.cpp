@@ -2780,9 +2780,26 @@ InstructionCost RISCVTTIImpl::getArithmeticInstrCost(
         {ISD::UREM, MVT::i64, TTI::TCC_Expensive},
         {ISD::SREM, MVT::i32, TTI::TCC_Expensive},
         {ISD::SREM, MVT::i64, TTI::TCC_Expensive}};
-    if (TLI->isOperationLegalOrPromote(ISDOpcode, LT.second))
+    if (TLI->isOperationLegalOrPromote(ISDOpcode, LT.second)) {
       if (const auto *Entry = CostTableLookup(DivTbl, ISDOpcode, LT.second))
         return Entry->Cost * LT.first;
+
+      if (LT.second.isInteger() && LT.first == 1) {
+        switch (ISDOpcode) {
+        case ISD::ADD:
+        case ISD::SUB:
+        case ISD::SHL:
+        case ISD::SRL:
+        case ISD::SRA:
+        case ISD::AND:
+        case ISD::OR:
+        case ISD::XOR:
+          return LT.first / 2;
+        default:
+          break;
+        }
+      }
+    }
 
     return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
                                          Args, CxtI);
