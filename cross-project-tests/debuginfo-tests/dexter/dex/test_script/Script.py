@@ -188,9 +188,7 @@ class DexterScript:
                 raise DexterScriptError(
                     f"!expect/all node {expect} should not have an expected value."
                 )
-            if isinstance(expect, Step):
-                if expected_value is None:
-                    raise DexterScriptError(f"rewriting !step nodes not yet supported.")
+            if isinstance(expect, Step) and expected_value is not None:
                 if not (
                     isinstance(expected_value, list)
                     and all(isinstance(l, (int, Label)) for l in expected_value)
