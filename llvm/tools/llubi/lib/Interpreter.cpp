@@ -855,7 +855,7 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
                           /*IsStore=*/true);
       if (!MO)
         return AnyValue();
- 
+
       auto *It =
           find_if(Buckets, [&, MO = MO, Offset = Offset](const Bucket &B) {
             return B.MO == MO && B.Offset == Offset;
