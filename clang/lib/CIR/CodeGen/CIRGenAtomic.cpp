@@ -112,8 +112,8 @@ public:
   Address convertToAtomicIntPointer(Address addr) const;
 
   /// Turn an atomic-layout object into an r-value.
-  RValue convertAtomicTempToRValue(Address addr, SourceLocation loc,
-                                   bool asValue) const;
+  RValue convertAtomicTempToRValue(Address addr, AggValueSlot resultSlot,
+                                   SourceLocation loc, bool asValue) const;
 
   /// Converts a rvalue to integer value.
   mlir::Value convertRValueToInt(RValue rvalue, mlir::Location loc,
@@ -211,15 +211,13 @@ Address AtomicInfo::convertToAtomicIntPointer(Address addr) const {
   return castToAtomicIntPointer(addr);
 }
 
-RValue AtomicInfo::convertAtomicTempToRValue(Address addr, SourceLocation loc,
+RValue AtomicInfo::convertAtomicTempToRValue(Address addr,
+                                             AggValueSlot resultSlot,
+                                             SourceLocation loc,
                                              bool asValue) const {
   if (lvalue.isSimple()) {
-    if (evaluationKind == TEK_Aggregate) {
-      cgf.cgm.errorNYI(
-          loc,
-          "AtomicInfo::convertAtomicTempToRValue: evaluationKind is aggregate");
-      return RValue::get(nullptr);
-    }
+    if (evaluationKind == TEK_Aggregate)
+      return resultSlot.asRValue();
 
     // Drill into the padding structure if we have one.
     if (hasPadding()) {
@@ -384,17 +382,20 @@ RValue AtomicInfo::convertToValueOrAtomic(mlir::Value intVal,
   // Create a temporary.  This needs to be big enough to hold the
   // atomic integer.
   Address temp = Address::invalid();
+  bool tempIsVolatile = false;
   if (asValue && getEvaluationKind() == TEK_Aggregate) {
-    cgf.cgm.errorNYI("convertToValueOrAtomic: temporary aggregate");
-    return RValue::get(nullptr);
+    assert(!resultSlot.isIgnored());
+    temp = resultSlot.getAddress();
+    tempIsVolatile = resultSlot.isVolatile();
   } else {
     temp = createTempAlloca();
   }
 
   // Slam the integer into the temporary.
   Address castTemp = castToAtomicIntPointer(temp);
-  cgf.getBuilder().createStore(cgf.getLoc(loc), intVal, castTemp);
-  return convertAtomicTempToRValue(temp, loc, asValue);
+  cgf.getBuilder().createStore(cgf.getLoc(loc), intVal, castTemp,
+                               tempIsVolatile);
+  return convertAtomicTempToRValue(temp, resultSlot, loc, asValue);
 }
 
 /// Copy an r-value into memory as part of storing to an atomic type.
@@ -862,6 +863,16 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
 
   case AtomicExpr::AO__hip_atomic_fetch_xor:
   case AtomicExpr::AO__opencl_atomic_fetch_xor:
+
+  case AtomicExpr::AO__atomic_fetch_fmaximum:
+  case AtomicExpr::AO__atomic_fetch_fmaximum_num:
+  case AtomicExpr::AO__atomic_fetch_fminimum:
+  case AtomicExpr::AO__atomic_fetch_fminimum_num:
+  case AtomicExpr::AO__scoped_atomic_fetch_fmaximum:
+  case AtomicExpr::AO__scoped_atomic_fetch_fmaximum_num:
+  case AtomicExpr::AO__scoped_atomic_fetch_fminimum:
+  case AtomicExpr::AO__scoped_atomic_fetch_fminimum_num:
+
     cgf.cgm.errorNYI(expr->getSourceRange(), "emitAtomicOp: expr op NYI");
     return;
   }
@@ -1231,6 +1242,18 @@ static RValue emitLibCallForAtomicExpr(CIRGenFunction &cgf, AtomicExpr *e,
   case AtomicExpr::AO__opencl_atomic_load:
     cgf.cgm.errorNYI(loc,
                      "emitLibCallForAtomicExpr: atomic load for hip/opencl");
+    return RValue::get(nullptr);
+
+  case AtomicExpr::AO__atomic_fetch_fmaximum:
+  case AtomicExpr::AO__atomic_fetch_fmaximum_num:
+  case AtomicExpr::AO__atomic_fetch_fminimum:
+  case AtomicExpr::AO__atomic_fetch_fminimum_num:
+  case AtomicExpr::AO__scoped_atomic_fetch_fmaximum:
+  case AtomicExpr::AO__scoped_atomic_fetch_fmaximum_num:
+  case AtomicExpr::AO__scoped_atomic_fetch_fminimum:
+  case AtomicExpr::AO__scoped_atomic_fetch_fminimum_num:
+    cgf.cgm.errorNYI(
+        loc, "emitLibCallForAtomicExpr: atomic fetch fmaximum/fminimum");
     return RValue::get(nullptr);
 
   case AtomicExpr::AO__atomic_add_fetch:

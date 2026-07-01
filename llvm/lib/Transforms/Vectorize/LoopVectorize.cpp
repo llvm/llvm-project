@@ -469,20 +469,20 @@ static unsigned getMaxTCFromNonZeroRange(PredicatedScalarEvolution &PSE,
 /// following procedure:
 ///   1) Returns exact trip count if it is known.
 ///   2) Returns expected trip count according to profile data if any.
-///   3) Returns upper bound estimate if known, and if \p CanUseConstantMax.
+///   3) Returns upper bound estimate if known, if \p CanUseConstantMax, and
+///      if \p ComputeUpperBoundOnly is false.
 ///   4) Returns the maximum trip count from the SCEV range excluding zero,
 ///      if \p CanUseConstantMax and \p CanExcludeZeroTrips.
 ///   5) Returns std::nullopt if all of the above failed.
-static std::optional<ElementCount>
-getSmallBestKnownTC(PredicatedScalarEvolution &PSE, Loop *L,
-                    bool CanUseConstantMax = true,
-                    bool CanExcludeZeroTrips = false) {
+static std::optional<ElementCount> getSmallBestKnownTC(
+    PredicatedScalarEvolution &PSE, Loop *L, bool CanUseConstantMax = true,
+    bool CanExcludeZeroTrips = false, bool ComputeUpperBoundOnly = false) {
   // Check if exact trip count is known.
   if (auto ExpectedTC = getSmallConstantTripCount(PSE.getSE(), L))
     return ExpectedTC;
 
   // Check if there is an expected trip count available from profile data.
-  if (LoopVectorizeWithBlockFrequency)
+  if (LoopVectorizeWithBlockFrequency && !ComputeUpperBoundOnly)
     if (auto EstimatedTC = getLoopEstimatedTripCount(L))
       return ElementCount::getFixed(*EstimatedTC);
 
@@ -1934,7 +1934,9 @@ static bool isIndvarOverflowCheckKnownFalse(
     const LoopVectorizationCostModel *Cost,
     ElementCount VF, std::optional<unsigned> UF = std::nullopt) {
   // Always be conservative if we don't know the exact unroll factor.
-  unsigned MaxUF = UF ? *UF : Cost->TTI.getMaxInterleaveFactor(VF);
+  unsigned MaxUF = UF ? *UF
+                      : std::max(Cost->TTI.getMaxInterleaveFactor(VF, false),
+                                 Cost->TTI.getMaxInterleaveFactor(VF, true));
 
   IntegerType *IdxTy = Cost->Legal->getWidestInductionType();
   APInt MaxUIntTripCount = IdxTy->getMask();
@@ -1942,17 +1944,28 @@ static bool isIndvarOverflowCheckKnownFalse(
   // We know the runtime overflow check is known false iff the (max) trip-count
   // is known and (max) trip-count + (VF * UF) does not overflow in the type of
   // the vector loop induction variable.
-  if (unsigned TC = Cost->PSE.getSmallConstantMaxTripCount()) {
-    uint64_t MaxVF = VF.getKnownMinValue();
-    if (VF.isScalable()) {
+  if (std::optional<ElementCount> TC = getSmallBestKnownTC(
+          Cost->PSE, Cost->TheLoop,
+          /*CanUseConstantMax=*/true, /*CanExcludeZeroTrips=*/false,
+          /*ComputeUpperBoundOnly=*/true)) {
+    unsigned MaxVF = VF.getKnownMinValue();
+    unsigned MaxTC = TC->getKnownMinValue();
+    if (VF.isScalable() || TC->isScalable()) {
       std::optional<unsigned> MaxVScale =
           getMaxVScale(*Cost->TheFunction, Cost->TTI);
       if (!MaxVScale)
         return false;
-      MaxVF *= *MaxVScale;
+      if (VF.isScalable())
+        MaxVF *= *MaxVScale;
+      if (TC->isScalable()) {
+        bool Overflow;
+        MaxTC = SaturatingMultiply(MaxTC, *MaxVScale, &Overflow);
+        if (Overflow)
+          return false;
+      }
     }
 
-    return (MaxUIntTripCount - TC).ugt(MaxVF * MaxUF);
+    return (MaxUIntTripCount - MaxTC).ugt(MaxVF * MaxUF);
   }
 
   return false;
@@ -3729,7 +3742,15 @@ LoopVectorizationPlanner::selectInterleaveCount(VPlan &Plan, ElementCount VF,
   }
 
   // Clamp the interleave ranges to reasonable counts.
-  unsigned MaxInterleaveCount = TTI.getMaxInterleaveFactor(VF);
+  bool HasUnorderedReductions =
+      HasReductions &&
+      !any_of(Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis(),
+              [](VPRecipeBase &R) {
+                auto *RedR = dyn_cast<VPReductionPHIRecipe>(&R);
+                return RedR && RedR->isOrdered();
+              });
+  unsigned MaxInterleaveCount =
+      TTI.getMaxInterleaveFactor(VF, HasUnorderedReductions);
   LLVM_DEBUG(dbgs() << "LV: MaxInterleaveFactor for the target is "
                     << MaxInterleaveCount << "\n");
 
@@ -6551,6 +6572,8 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan1() {
                       OptForSize, SCEVCheckThreshold, ORE, OrigLoop))
     return nullptr;
 
+  RUN_VPLAN_PASS(VPlanTransforms::addMiddleCheck, *VPlan0);
+
   // If we're vectorizing a loop with an uncountable exit, make sure that the
   // recipes are safe to handle.
   // TODO: Remove this once we can properly check the VPlan itself for both
@@ -6567,11 +6590,6 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan1() {
     return nullptr;
   }
 
-  // If we're handling uncountable exits in the scalar tail after a vector
-  // loop with an in-loop mask, then the middle check has already been
-  // created to compare against the actual number of lanes executed.
-  if (EEStyle != UncountableExitStyle::MaskedHandleExitInScalarLoop)
-    RUN_VPLAN_PASS(VPlanTransforms::addMiddleCheck, *VPlan0);
   RUN_VPLAN_PASS(VPlanTransforms::createLoopRegions, *VPlan0,
                  getDebugLocFromInstOrOperands(Legal->getPrimaryInduction()));
   if (CM.foldTailByMasking())
@@ -6728,7 +6746,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
                         OrigLoop);
 
   RUN_VPLAN_PASS(VPlanTransforms::makeMemOpWideningDecisions, *Plan, Range,
-                 RecipeBuilder, CM.PSE, OrigLoop);
+                 RecipeBuilder, CostCtx);
 
   RUN_VPLAN_PASS(VPlanTransforms::makeScalarizationDecisions, *Plan, Range);
 
@@ -7931,7 +7949,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     }
   }
 
-  InterleavedAccessInfo IAI(PSE, L, DT, LI, LVL.getLAI());
+  InterleavedAccessInfo IAI(PSE, L, DT, LI, LVL.getLAI(), OptForSize);
   bool UseInterleaved =
       IsInnerLoop && TTI->enableInterleavedAccessVectorization();
 
@@ -8363,7 +8381,8 @@ LoopVectorizeResult LoopVectorizePass::runImpl(Function &F) {
   // vector registers, loop vectorization may still enable scalar
   // interleaving.
   if (!TTI->getNumberOfRegisters(TTI->getRegisterClassForType(true)) &&
-      TTI->getMaxInterleaveFactor(ElementCount::getFixed(1)) < 2)
+      (TTI->getMaxInterleaveFactor(ElementCount::getFixed(1), false) < 2 ||
+       TTI->getMaxInterleaveFactor(ElementCount::getFixed(1), true) < 2))
     return LoopVectorizeResult(false, false);
 
   bool Changed = false, CFGChanged = false;

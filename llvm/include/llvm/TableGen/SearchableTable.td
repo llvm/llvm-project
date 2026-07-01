@@ -125,6 +125,13 @@ class GenericTable {
   // iterator range of pointers giving the starting and end value of the range.
   // e.g. lookupSysRegByEncoding returns multiple CSRs for same encoding.
   bit PrimaryKeyReturnRange = false;
+
+  // Opt out of emitting the primary table as a direct-lookup sparse array
+  // indexed by the primary key value.
+  // TODO: Eventually this should default to `false`, so it is up to heuristics
+  // in the emitter to pick the best lookup scheme. It will then be used to
+  // override that logic and force an emission of non-sparse array.
+  bit DisallowSparseTable = true;
 }
 
 // Define a record derived from this class to generate an additional search

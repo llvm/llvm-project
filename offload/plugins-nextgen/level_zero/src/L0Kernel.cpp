@@ -163,13 +163,12 @@ Error L0KernelTy::launchImpl(GenericDeviceTy &GenericDevice,
   auto *Queue = *QueueOrErr;
   auto &KernelPR = getProperties();
 
-  L0LaunchEnvTy KEnv(KernelPR, KernelArgs);
+  L0LaunchEnvTy KEnv(KernelPR, KernelArgs, LaunchParams);
 
   // Protect from kernel preparation to submission as kernels are shared.
   KEnv.Lock.lock();
 
-  ze_group_size_t GroupSizes =
-      createKernelGroups(l0Device, KEnv, NumThreads, NumBlocks);
+  createKernelGroups(l0Device, KEnv, NumThreads, NumBlocks);
 
   // Validate cooperative kernel launch constraints
   if (IsCooperative) {
@@ -197,41 +196,12 @@ Error L0KernelTy::launchImpl(GenericDeviceTy &GenericDevice,
 
   // With pointer-array arguments, zeCommandListAppendLaunchKernelWithArguments
   // folds group-size, per-argument set, and launch into a single call.
-  const bool IsPtrArgs = KernelArgs.Flags.IsPtrArgs;
-  if (IsPtrArgs) {
-    if (KernelArgs.NumArgs != KernelPR.NumKernelArgs)
-      return Plugin::error(
-          ErrorCode::INVALID_ARGUMENT,
-          "Number of arguments (%u) does not match the number of arguments "
-          "expected by the kernel (%u)",
-          KernelArgs.NumArgs, KernelPR.NumKernelArgs);
-  } else {
-    CALL_ZE_RET_ERROR(zeKernelSetGroupSize, zeKernel, GroupSizes.groupSizeX,
-                      GroupSizes.groupSizeY, GroupSizes.groupSizeZ);
-
-    // Set kernel arguments.
-    uint32_t NumKernelArgs = KernelPR.NumKernelArgs;
-    if (NumKernelArgs > 0) {
-      if (!KernelPR.ArgSizes)
-        return Plugin::error(
-            ErrorCode::INVALID_ARGUMENT,
-            "level zero plugin requires kernel argument sizes.");
-      // Use sizes from kernel properties.
-      // TODO: This is temporary workaround it will not work if there is
-      // padding/alignment between arguments.
-      char *Arg = static_cast<char *>(LaunchParams.Data);
-      for (uint32_t I = 0; I < NumKernelArgs; I++) {
-        uint32_t ArgSize = KernelPR.ArgSizes[I];
-        CALL_ZE_RET_ERROR(zeKernelSetArgumentValue, zeKernel, I, ArgSize, Arg);
-
-        INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
-             "Kernel Pointer argument %" PRIu32 " (value: " DPxMOD
-             ") was set successfully for device %s.\n",
-             I, DPxPTR(Arg), IdStr);
-        Arg += ArgSize;
-      }
-    }
-  }
+  if (LaunchParams.NumArgs != KernelPR.NumKernelArgs)
+    return Plugin::error(
+        ErrorCode::INVALID_ARGUMENT,
+        "Number of arguments (%u) does not match the number of arguments "
+        "expected by the kernel (%u)",
+        LaunchParams.NumArgs, KernelPR.NumKernelArgs);
 
   if (auto Err = setIndirectFlags(l0Device, KEnv))
     return Err;

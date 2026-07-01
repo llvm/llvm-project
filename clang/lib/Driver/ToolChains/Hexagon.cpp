@@ -106,14 +106,14 @@ static void handleHVXTargetFeatures(const Driver &D, const ArgList &Args,
 
   // Handle HVX floating point flags.
   auto checkFlagHvxVersion =
-      [&](auto FlagOn, auto FlagOff,
+      [&](auto FlagOn, auto FlagOnWithModes, auto FlagOff, bool CheckMode,
           unsigned MinVerNum) -> std::optional<StringRef> {
     // Return an std::optional<StringRef>:
     // - std::nullopt indicates a verification failure, or that the flag was not
     //   present in Args.
     // - Otherwise the returned value is that name of the feature to add
     //   to Features.
-    Arg *A = Args.getLastArg(FlagOn, FlagOff);
+    Arg *A = Args.getLastArg(FlagOn, FlagOnWithModes, FlagOff);
     if (!A)
       return std::nullopt;
 
@@ -130,17 +130,34 @@ static void handleHVXTargetFeatures(const Driver &D, const ArgList &Args,
           << withMinus(OptName) << ("v" + std::to_string(HvxVerNum));
       return std::nullopt;
     }
+
+    if (CheckMode && A->getOption().matches(FlagOnWithModes)) {
+      bool ValidMode =
+          llvm::StringSwitch<bool>(StringRef(A->getValue()).lower())
+              .Cases({"strict-ieee", "ieee", "lossy", "legacy"}, true)
+              .Default(false);
+      if (!ValidMode)
+        D.Diag(diag::err_drv_invalid_value)
+            << A->getAsString(Args) << A->getValue();
+    }
     return makeFeature(OptName, true);
   };
 
-  if (auto F = checkFlagHvxVersion(options::OPT_mhexagon_hvx_qfloat,
-                                   options::OPT_mno_hexagon_hvx_qfloat, 68)) {
+  if (auto F = checkFlagHvxVersion(
+          options::OPT_mhexagon_hvx_qfloat, options::OPT_mhexagon_hvx_qfloat_EQ,
+          options::OPT_mno_hexagon_hvx_qfloat, /*CheckMode=*/true, 68)) {
     Features.push_back(*F);
   }
-  if (auto F = checkFlagHvxVersion(options::OPT_mhexagon_hvx_ieee_fp,
-                                   options::OPT_mno_hexagon_hvx_ieee_fp, 68)) {
+  if (auto F = checkFlagHvxVersion(
+          options::OPT_mhexagon_hvx_ieee_fp, options::OPT_mhexagon_hvx_ieee_fp,
+          options::OPT_mno_hexagon_hvx_ieee_fp, /*CheckMode=*/false, 68)) {
     Features.push_back(*F);
   }
+
+  // On v79 and above, there is no IEEE hardware. Treat -mhvx-ieee-fp
+  // as "qfloat mode ieee".
+  if (HvxVerNum >= 79 && Args.getLastArg(options::OPT_mhexagon_hvx_ieee_fp))
+    Features.push_back("+hvx-qfloat");
 }
 
 // Hexagon target features.

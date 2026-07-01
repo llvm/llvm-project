@@ -10,8 +10,12 @@
 #define LLVM_CLANG_LIB_APINOTES_APINOTESFORMAT_H
 
 #include "clang/APINotes/Types.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/PointerEmbeddedInt.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Bitcode/BitcodeConvenience.h"
+
+#include <optional>
 
 namespace clang {
 namespace api_notes {
@@ -24,8 +28,9 @@ const uint16_t VERSION_MAJOR = 0;
 /// API notes file minor version number.
 ///
 /// When the format changes IN ANY WAY, this number should be incremented.
-const uint16_t VERSION_MINOR = 40; // 39 for BoundsSafety;
+const uint16_t VERSION_MINOR = 41; // 39 for BoundsSafety;
                                    // 40 for UnsafeBufferUsageAttr
+                                   // 41 for FunctionTableKey parameters
 
 const uint8_t kSwiftConforms = 1;
 const uint8_t kSwiftDoesNotConform = 2;
@@ -354,6 +359,91 @@ inline bool operator==(const SingleDeclTableKey &lhs,
   return lhs.parentContextID == rhs.parentContextID && lhs.nameID == rhs.nameID;
 }
 
+/// A stored C or C++ function declaration, represented by the ID of its parent
+/// context, the name of the declaration, and optional exact parameter types.
+constexpr uint8_t FunctionKeyHasParameterSelector = 0x01;
+constexpr unsigned FunctionTableKeyBaseLength =
+    sizeof(uint32_t) + sizeof(uint32_t) + sizeof(uint8_t) + sizeof(uint16_t);
+
+struct FunctionTableKey {
+  uint32_t parentContextID;
+  uint32_t nameID;
+  std::optional<llvm::SmallVector<IdentifierID, 2>> parameterTypeIDs;
+
+  FunctionTableKey() : parentContextID(-1), nameID(-1) {}
+
+  FunctionTableKey(uint32_t ParentContextID, uint32_t NameID)
+      : parentContextID(ParentContextID), nameID(NameID) {}
+
+  FunctionTableKey(uint32_t ParentContextID, uint32_t NameID,
+                   const llvm::SmallVectorImpl<IdentifierID> &ParameterTypeIDs)
+      : parentContextID(ParentContextID), nameID(NameID) {
+    parameterTypeIDs.emplace(ParameterTypeIDs.begin(), ParameterTypeIDs.end());
+  }
+
+  FunctionTableKey(std::optional<Context> ParentCtx, IdentifierID NameID)
+      : parentContextID(ParentCtx ? ParentCtx->id.Value
+                                  : static_cast<uint32_t>(-1)),
+        nameID(NameID) {}
+
+  FunctionTableKey(std::optional<Context> ParentCtx, IdentifierID NameID,
+                   const llvm::SmallVectorImpl<IdentifierID> &ParameterTypeIDs)
+      : parentContextID(ParentCtx ? ParentCtx->id.Value
+                                  : static_cast<uint32_t>(-1)),
+        nameID(NameID) {
+    parameterTypeIDs.emplace(ParameterTypeIDs.begin(), ParameterTypeIDs.end());
+  }
+
+  llvm::hash_code hashValue() const {
+    auto Hash = llvm::hash_combine(parentContextID, nameID,
+                                   static_cast<bool>(parameterTypeIDs));
+    if (parameterTypeIDs) {
+      Hash = llvm::hash_combine(Hash, parameterTypeIDs->size());
+      for (IdentifierID TypeID : *parameterTypeIDs)
+        Hash = llvm::hash_combine(Hash, static_cast<unsigned>(TypeID));
+    }
+    return Hash;
+  }
+};
+
+template <typename GetIdentifierFn>
+std::optional<FunctionTableKey>
+getFunctionKeyImpl(uint32_t ParentContextID, llvm::StringRef Name,
+                   GetIdentifierFn GetIdentifier) {
+  std::optional<IdentifierID> NameID = GetIdentifier(Name);
+  if (!NameID)
+    return std::nullopt;
+
+  return FunctionTableKey(ParentContextID, *NameID);
+}
+
+template <typename GetIdentifierFn>
+std::optional<FunctionTableKey>
+getFunctionKeyImpl(uint32_t ParentContextID, llvm::StringRef Name,
+                   llvm::ArrayRef<llvm::StringRef> Parameters,
+                   GetIdentifierFn GetIdentifier) {
+  std::optional<IdentifierID> NameID = GetIdentifier(Name);
+  if (!NameID)
+    return std::nullopt;
+
+  llvm::SmallVector<IdentifierID, 2> ParameterTypeIDs;
+  ParameterTypeIDs.reserve(Parameters.size());
+  for (llvm::StringRef Parameter : Parameters) {
+    std::optional<IdentifierID> ParameterID = GetIdentifier(Parameter);
+    if (!ParameterID)
+      return std::nullopt;
+    ParameterTypeIDs.push_back(*ParameterID);
+  }
+  return FunctionTableKey(ParentContextID, *NameID, ParameterTypeIDs);
+}
+
+inline bool operator==(const FunctionTableKey &lhs,
+                       const FunctionTableKey &rhs) {
+  return lhs.parentContextID == rhs.parentContextID &&
+         lhs.nameID == rhs.nameID &&
+         lhs.parameterTypeIDs == rhs.parameterTypeIDs;
+}
+
 } // namespace api_notes
 } // namespace clang
 
@@ -397,6 +487,18 @@ template <> struct DenseMapInfo<clang::api_notes::SingleDeclTableKey> {
 
   static bool isEqual(const clang::api_notes::SingleDeclTableKey &lhs,
                       const clang::api_notes::SingleDeclTableKey &rhs) {
+    return lhs == rhs;
+  }
+};
+
+template <> struct DenseMapInfo<clang::api_notes::FunctionTableKey> {
+  static unsigned
+  getHashValue(const clang::api_notes::FunctionTableKey &value) {
+    return value.hashValue();
+  }
+
+  static bool isEqual(const clang::api_notes::FunctionTableKey &lhs,
+                      const clang::api_notes::FunctionTableKey &rhs) {
     return lhs == rhs;
   }
 };

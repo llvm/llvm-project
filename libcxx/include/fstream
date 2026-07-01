@@ -600,6 +600,17 @@ inline bool basic_filebuf<_CharT, _Traits>::is_open() const {
   return __file_ != nullptr;
 }
 
+// Configures the fopen close-on-exec mode character, if any. This string will
+// be appended to any mode string used by fstream for fopen/fdopen.
+//
+// Not all platforms support this, but it helps avoid fd-leaks on platforms that
+// do.
+#    if defined(__BIONIC__)
+#      define _LIBCPP_FOPEN_CLOEXEC_MODE "e"
+#    else
+#      define _LIBCPP_FOPEN_CLOEXEC_MODE
+#    endif
+
 template <class _CharT, class _Traits>
 const char* basic_filebuf<_CharT, _Traits>::__make_mdstring(ios_base::openmode __mode) _NOEXCEPT {
   switch (__mode & ~ios_base::ate) {

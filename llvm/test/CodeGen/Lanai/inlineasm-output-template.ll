@@ -1,4 +1,5 @@
 ; RUN: llc -mtriple=lanai-linux-gnueabi < %s | FileCheck %s
+; RUN: llc -enable-new-pm -mtriple=lanai-linux-gnueabi < %s | FileCheck %s
 
 ; Test that %c works with immediates
 ; CHECK-LABEL: test_inlineasm_c_output_template0

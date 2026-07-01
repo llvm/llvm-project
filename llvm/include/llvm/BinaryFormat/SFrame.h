@@ -23,7 +23,7 @@
 
 namespace llvm {
 
-template <typename T> struct EnumEntry;
+template <typename, unsigned> class EnumStrings;
 
 namespace sframe {
 
@@ -168,14 +168,14 @@ template <endianness E> using FrameRowEntryAddr1 = FrameRowEntry<uint8_t, E>;
 template <endianness E> using FrameRowEntryAddr2 = FrameRowEntry<uint16_t, E>;
 template <endianness E> using FrameRowEntryAddr4 = FrameRowEntry<uint32_t, E>;
 
-LLVM_ABI ArrayRef<EnumEntry<Version>> getVersions();
-LLVM_ABI ArrayRef<EnumEntry<Flags>> getFlags();
-LLVM_ABI ArrayRef<EnumEntry<ABI>> getABIs();
-LLVM_ABI ArrayRef<EnumEntry<FREType>> getFRETypes();
-LLVM_ABI ArrayRef<EnumEntry<FDEType>> getFDETypes();
-LLVM_ABI ArrayRef<EnumEntry<AArch64PAuthKey>> getAArch64PAuthKeys();
-LLVM_ABI ArrayRef<EnumEntry<FREOffset>> getFREOffsets();
-LLVM_ABI ArrayRef<EnumEntry<BaseReg>> getBaseRegisters();
+LLVM_ABI EnumStrings<Version, 1> getVersions();
+LLVM_ABI EnumStrings<Flags, 1> getFlags();
+LLVM_ABI EnumStrings<ABI, 1> getABIs();
+LLVM_ABI EnumStrings<FREType, 1> getFRETypes();
+LLVM_ABI EnumStrings<FDEType, 1> getFDETypes();
+LLVM_ABI EnumStrings<AArch64PAuthKey, 1> getAArch64PAuthKeys();
+LLVM_ABI EnumStrings<FREOffset, 1> getFREOffsets();
+LLVM_ABI EnumStrings<BaseReg, 1> getBaseRegisters();
 
 } // namespace sframe
 } // namespace llvm

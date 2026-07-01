@@ -13714,19 +13714,24 @@ SDValue DAGCombiner::visitPARTIAL_REDUCE_MLA(SDNode *N) {
 //
 // partial_reduce_*mla(acc, sel(p, mul(*ext(a), splat(C)), splat(0)), splat(1))
 // -> partial_reduce_*mla(acc, sel(p, a, splat(0)), splat(C))
+//
+// `sel` could either be VSELECT or VP_MERGE.
 SDValue DAGCombiner::foldPartialReduceMLAMulOp(SDNode *N) {
   SDLoc DL(N);
   auto *Context = DAG.getContext();
   SDValue Tmp;
   SDValue Acc = N->getOperand(0);
   SDValue Op1 = N->getOperand(1);
+  SDValue OrigOp1 = Op1;
   SDValue Op2 = N->getOperand(2);
   unsigned Opc = Op1->getOpcode();
 
-  // Handle predication by moving the SELECT into the operand of the MUL.
+  // Handle predication by moving the VSELECT / VP_MERGE into the operand of the
+  // MUL.
   SDValue Pred;
-  if (Opc == ISD::VSELECT && (isZeroOrZeroSplat(Op1->getOperand(2)) ||
-                              isZeroOrZeroSplatFP(Op1->getOperand(2)))) {
+  if ((Opc == ISD::VSELECT || Opc == ISD::VP_MERGE) &&
+      (isZeroOrZeroSplat(Op1->getOperand(2)) ||
+       isZeroOrZeroSplatFP(Op1->getOperand(2)))) {
     Pred = Op1->getOperand(0);
     Op1 = Op1->getOperand(1);
     Opc = Op1->getOpcode();
@@ -13790,7 +13795,11 @@ SDValue DAGCombiner::foldPartialReduceMLAMulOp(SDNode *N) {
       EVT OpVT = Op.getValueType();
       SDValue Zero = OpVT.isFloatingPoint() ? DAG.getConstantFP(0.0, DL, OpVT)
                                             : DAG.getConstant(0, DL, OpVT);
-      Op = DAG.getSelect(DL, OpVT, Pred, Op, Zero);
+      if (OrigOp1.getOpcode() == ISD::VP_MERGE)
+        Op = DAG.getNode(ISD::VP_MERGE, DL, OpVT, Pred, Op, Zero,
+                         OrigOp1.getOperand(3));
+      else
+        Op = DAG.getSelect(DL, OpVT, Pred, Op, Zero);
       OtherOp = DAG.getFreeze(OtherOp);
     }
   };
@@ -24646,10 +24655,12 @@ SDValue DAGCombiner::combineInsertEltToShuffle(SDNode *N, unsigned InsIndex) {
       Mask[i] = i;
   }
 
-  // Bail out if the target can not handle the shuffle we want to create.
+  // Bail out if the target can not handle the shuffle we want to create, or
+  // would create an illegal-typed shuffle after type legalization.
   EVT SubVecEltVT = SubVecVT.getVectorElementType();
   EVT ShufVT = EVT::getVectorVT(*DAG.getContext(), SubVecEltVT, NumMaskVals);
-  if (!TLI.isShuffleMaskLegal(Mask, ShufVT))
+  if ((LegalTypes && !TLI.isTypeLegal(ShufVT)) ||
+      !TLI.isShuffleMaskLegal(Mask, ShufVT))
     return SDValue();
 
   // Step 2: Create a wide vector from the inserted source vector by appending

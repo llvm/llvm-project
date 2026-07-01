@@ -522,7 +522,7 @@ S forward(const MyObj &obj) { // expected-warning {{parameter in intra-TU functi
 namespace capturing_constructor {
 struct CaptureRefToView {
   View v; // expected-note {{escapes to this field}}
-  CaptureRefToView(const MyObj& obj) : v(obj) {} // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
+  CaptureRefToView(const MyObj& obj) : v(obj) {} // expected-warning {{parameter in intra-TU constructor should be marked [[clang::lifetimebound]]}}
 };
 
 CaptureRefToView test_ref_to_view() {
@@ -533,7 +533,7 @@ CaptureRefToView test_ref_to_view() {
 
 struct CaptureRefToPtr {
   const MyObj* p; // expected-note {{escapes to this field}}
-  CaptureRefToPtr(const MyObj& obj) : p(&obj) {} // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
+  CaptureRefToPtr(const MyObj& obj) : p(&obj) {} // expected-warning {{parameter in intra-TU constructor should be marked [[clang::lifetimebound]]}}
 };
 
 CaptureRefToPtr test_ref_to_ptr() {
@@ -544,7 +544,7 @@ CaptureRefToPtr test_ref_to_ptr() {
 
 struct CaptureViewToView {
   View v; // expected-note {{escapes to this field}}
-  CaptureViewToView(View v_param) : v(v_param) {} // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
+  CaptureViewToView(View v_param) : v(v_param) {} // expected-warning {{parameter in intra-TU constructor should be marked [[clang::lifetimebound]]}}
 };
 
 CaptureViewToView test_view_to_view() {
@@ -556,7 +556,7 @@ CaptureViewToView test_view_to_view() {
 
 struct CapturePtrToPtr {
   const MyObj* p; // expected-note {{escapes to this field}}
-  CapturePtrToPtr(const MyObj* p_param) : p(p_param) {} // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
+  CapturePtrToPtr(const MyObj* p_param) : p(p_param) {} // expected-warning {{parameter in intra-TU constructor should be marked [[clang::lifetimebound]]}}
 };
 
 CapturePtrToPtr test_ptr_to_ptr() {
@@ -567,7 +567,7 @@ CapturePtrToPtr test_ptr_to_ptr() {
 
 struct CaptureRefToRef {
   const MyObj& r; // expected-note {{escapes to this field}}
-  CaptureRefToRef(const MyObj& obj) : r(obj) {} // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
+  CaptureRefToRef(const MyObj& obj) : r(obj) {} // expected-warning {{parameter in intra-TU constructor should be marked [[clang::lifetimebound]]}}
 };
 
 CaptureRefToRef test_ref_to_ref() {
@@ -580,7 +580,7 @@ struct BaseWithView {
   View v; // expected-note {{escapes to this field}}
 };
 struct CaptureRefToBaseView : BaseWithView {
-  CaptureRefToBaseView(const MyObj& obj) { // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
+  CaptureRefToBaseView(const MyObj& obj) { // expected-warning {{parameter in intra-TU constructor should be marked [[clang::lifetimebound]]}}
     v = obj;
   }
 };
@@ -654,7 +654,7 @@ struct LifetimeBoundCtor {
 
 struct HasCtorField {
   LifetimeBoundCtor* field;                                             // expected-note {{escapes to this field}}
-  HasCtorField(const MyObj& obj) : field(new LifetimeBoundCtor(obj)) {} // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
+  HasCtorField(const MyObj& obj) : field(new LifetimeBoundCtor(obj)) {} // expected-warning {{parameter in intra-TU constructor should be marked [[clang::lifetimebound]]}}
 };
 
 HasCtorField test_dangling_field_ctor() {

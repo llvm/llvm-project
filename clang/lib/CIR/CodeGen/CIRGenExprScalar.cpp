@@ -211,16 +211,7 @@ public:
     cir::BlockAddressOp blockAddressOp = cir::BlockAddressOp::create(
         builder, cgf.getLoc(e->getSourceRange()), cgf.convertType(e->getType()),
         blockInfoAttr);
-    cir::LabelOp resolvedLabel = cgf.cgm.lookupBlockAddressInfo(blockInfoAttr);
-    if (!resolvedLabel) {
-      cgf.cgm.mapUnresolvedBlockAddress(blockAddressOp);
-      // Still add the op to maintain insertion order it will be resolved in
-      // resolveBlockAddresses
-      cgf.cgm.mapResolvedBlockAddress(blockAddressOp, nullptr);
-    } else {
-      cgf.cgm.mapResolvedBlockAddress(blockAddressOp, resolvedLabel);
-    }
-    cgf.instantiateIndirectGotoBlock();
+    cgf.indirectGotoTargets.push_back(blockInfoAttr);
     return blockAddressOp;
   }
 
@@ -451,6 +442,12 @@ public:
   }
 
   mlir::Value emitIntToBoolConversion(mlir::Value srcVal, mlir::Location loc) {
+    // The enumerator of an enum with an integral underlying type is lowered to
+    // that type, which can be bool.  In that case the operand is already a
+    // !cir.bool, so return it -- int_to_bool requires a !cir.int source.
+    if (mlir::isa<cir::BoolType>(srcVal.getType()))
+      return srcVal;
+
     // Because of the type rules of C, we often end up computing a
     // logical value, then zero extending it to int, then wanting it
     // as a logical value again.

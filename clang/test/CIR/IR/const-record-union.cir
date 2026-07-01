@@ -1,0 +1,15 @@
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+!u8i = !cir.int<u, 8>
+!rec_U = !cir.union<"U" {!s32i, !u8i}, padding = {!cir.array<!u8i x 3>}>
+
+// A union ConstRecordAttr has exactly one element, whose type must be one of
+// the union's member types (the active member). The active member may be any
+// of the union's members, not just the first.
+
+// CHECK: cir.global external @u_s32 = #cir.const_record<{#cir.int<5> : !s32i}> : !rec_U
+cir.global external @u_s32 = #cir.const_record<{#cir.int<5> : !s32i}> : !rec_U
+
+// CHECK: cir.global external @u_u8 = #cir.const_record<{#cir.int<7> : !u8i}> : !rec_U
+cir.global external @u_u8 = #cir.const_record<{#cir.int<7> : !u8i}> : !rec_U

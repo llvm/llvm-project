@@ -27,3 +27,63 @@ define void @uitofp_v2i64_v2f64(ptr %res, ptr %in){
   store <2 x double> %v1, ptr %res
   ret void
 }
+
+define <2 x double> @uitofp_v2i8_v2f64(<16 x i8> %a) {
+; CHECK-LABEL: uitofp_v2i8_v2f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vrepli.b $vr1, 0
+; CHECK-NEXT:    vilvl.b $vr0, $vr1, $vr0
+; CHECK-NEXT:    vilvl.h $vr0, $vr1, $vr0
+; CHECK-NEXT:    vilvl.w $vr0, $vr1, $vr0
+; CHECK-NEXT:    vffint.d.lu $vr0, $vr0
+; CHECK-NEXT:    ret
+  %shuf = shufflevector <16 x i8> %a, <16 x i8> poison, <2 x i32> <i32 0, i32 1>
+  %cvt = uitofp <2 x i8> %shuf to <2 x double>
+  ret <2 x double> %cvt
+}
+
+define <2 x double> @uitofp_v16i8_v2f64(<16 x i8> %a) {
+; CHECK-LABEL: uitofp_v16i8_v2f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vrepli.b $vr1, 0
+; CHECK-NEXT:    vilvl.b $vr0, $vr1, $vr0
+; CHECK-NEXT:    vilvl.h $vr0, $vr1, $vr0
+; CHECK-NEXT:    vilvl.w $vr0, $vr1, $vr0
+; CHECK-NEXT:    vffint.d.lu $vr0, $vr0
+; CHECK-NEXT:    ret
+  %cvt = uitofp <16 x i8> %a to <16 x double>
+  %shuf = shufflevector <16 x double> %cvt, <16 x double> poison, <2 x i32> <i32 0, i32 1>
+  ret <2 x double> %shuf
+}
+
+define <4 x double> @uitofp_v4i8_v4f64(<16 x i8> %a) {
+; CHECK-LABEL: uitofp_v4i8_v4f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vrepli.b $vr1, 0
+; CHECK-NEXT:    vilvl.b $vr0, $vr1, $vr0
+; CHECK-NEXT:    vilvl.h $vr2, $vr1, $vr0
+; CHECK-NEXT:    vilvl.w $vr0, $vr1, $vr2
+; CHECK-NEXT:    vffint.d.lu $vr0, $vr0
+; CHECK-NEXT:    vilvh.w $vr1, $vr1, $vr2
+; CHECK-NEXT:    vffint.d.lu $vr1, $vr1
+; CHECK-NEXT:    ret
+  %shuf = shufflevector <16 x i8> %a, <16 x i8> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %cvt = uitofp <4 x i8> %shuf to <4 x double>
+  ret <4 x double> %cvt
+}
+
+define <4 x double> @uitofp_v16i8_v4f64(<16 x i8> %a) {
+; CHECK-LABEL: uitofp_v16i8_v4f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vrepli.b $vr1, 0
+; CHECK-NEXT:    vilvl.b $vr0, $vr1, $vr0
+; CHECK-NEXT:    vilvl.h $vr2, $vr1, $vr0
+; CHECK-NEXT:    vilvl.w $vr0, $vr1, $vr2
+; CHECK-NEXT:    vffint.d.lu $vr0, $vr0
+; CHECK-NEXT:    vilvh.w $vr1, $vr1, $vr2
+; CHECK-NEXT:    vffint.d.lu $vr1, $vr1
+; CHECK-NEXT:    ret
+  %cvt = uitofp <16 x i8> %a to <16 x double>
+  %shuf = shufflevector <16 x double> %cvt, <16 x double> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  ret <4 x double> %shuf
+}

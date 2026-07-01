@@ -660,16 +660,7 @@ bool CheckMutable(InterpState &S, CodePtr OpPC, PtrView Ptr, AccessKinds AK) {
 
   if (S.checkingConstantDestruction()) {
     // Never allowed when checking for constant destruction.
-    // Find the reason this pointer is mutable.
-    PtrView MutablePtr = Ptr;
-    while (!MutablePtr.isRoot() && MutablePtr.getBase().isMutable())
-      MutablePtr = MutablePtr.getBase();
-
-    const FieldDecl *Field = MutablePtr.getField();
-    S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_access_mutable, 1)
-        << AK << Field;
-    S.Note(Field->getLocation(), diag::note_declared_at);
-    return false;
+    // Diagnose below.
   } else if (S.getLangOpts().CPlusPlus14 &&
              S.lifetimeStartedInEvaluation(Ptr.block())) {
     // In C++14 onwards, it is permitted to read a mutable member whose
@@ -677,8 +668,13 @@ bool CheckMutable(InterpState &S, CodePtr OpPC, PtrView Ptr, AccessKinds AK) {
     return true;
   }
 
+  // Find the reason this pointer is mutable.
+  PtrView MutablePtr = Ptr;
+  while (!MutablePtr.isRoot() && MutablePtr.getBase().isMutable())
+    MutablePtr = MutablePtr.getBase();
+
   const SourceInfo &Loc = S.Current->getSource(OpPC);
-  const FieldDecl *Field = Ptr.getField();
+  const FieldDecl *Field = MutablePtr.getField();
   S.FFDiag(Loc, diag::note_constexpr_access_mutable, 1) << AK << Field;
   S.Note(Field->getLocation(), diag::note_declared_at);
   return false;
@@ -1024,8 +1020,6 @@ static bool CheckInvoke(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
     if (!CheckRange(S, OpPC, Ptr, AK_MemberCall))
       return false;
     if (!(IsCtor || IsDtor) && !CheckLifetime(S, OpPC, Ptr, AK_MemberCall))
-      return false;
-    if (!IsDtor && !CheckMutable(S, OpPC, Ptr))
       return false;
   }
   return true;
@@ -1491,7 +1485,7 @@ bool Free(InterpState &S, CodePtr OpPC, bool DeleteIsArrayForm,
   if (!RunDestructors(S, OpPC, BlockToDelete))
     return false;
 
-  if (!Allocator.deallocate(Source, BlockToDelete, S)) {
+  if (!Allocator.deallocate(Source, BlockToDelete)) {
     // Nothing has been deallocated, this must be a double-delete.
     const SourceInfo &Loc = S.Current->getSource(OpPC);
     S.FFDiag(Loc, diag::note_constexpr_double_delete);
@@ -2064,10 +2058,10 @@ bool DynamicCast(InterpState &S, CodePtr OpPC, const Type *DestTypePtr,
   // Our given pointer, limited by the base that's currently being initialized,
   // if any.
   PtrView LimitedPtr;
-  if (S.InitializingPtrs.empty()) {
+  if (S.InitializingPtrs.empty() ||
+      S.InitializingPtrs.back().block() != Ptr.block()) {
     LimitedPtr = Ptr.stripBaseCasts().view();
   } else {
-    // FIXME: Is this always the correct block?
     LimitedPtr = S.InitializingPtrs.back();
     assert(LimitedPtr.block() == Ptr.block());
   }
@@ -2145,14 +2139,15 @@ bool DynamicCast(InterpState &S, CodePtr OpPC, const Type *DestTypePtr,
   std::optional<PtrView> Result;
   // First, check simple downcasts without ambiguities.
   for (PtrView Iter = Ptr.view();;) {
+    if (Iter.isRoot() || !Iter.isBaseClass())
+      break;
+
     if (typesMatch(TargetType, Iter.getType())) {
       Result = Iter;
       break;
     }
     // Moving DOWN the type hierarchy.
     Iter = Iter.getBase();
-    if (Iter.isRoot() || !Iter.isBaseClass())
-      break;
   }
 
   // Simply walking down the type hierarchy has produced a valid result, use
