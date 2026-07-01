@@ -296,10 +296,10 @@ namespace greatergreater {
   void g() {
     int p = 0;
     (void)(t<int>==p); // expected-error {{use '> ='}}
-    (void)(t<int>>=p); // expected-error {{use '> >'}}
+    (void)(t<int>>=p); // expected-warning {{consecutive right angle brackets}}
 #if __cplusplus < 201103L
-    (void)(t<S<int>>>=p); // expected-error {{use '> >'}}
-    (Shr)t<S<int>>>>=p; // expected-error {{use '> >'}}
+    (void)(t<S<int>>>=p); // expected-warning {{consecutive right angle brackets}}
+    (Shr)t<S<int>>>>=p; // expected-warning {{consecutive right angle brackets}}
 #endif
 
     // FIXME: We correct this to 't<int> > >= p;' not 't<int> >>= p;'
