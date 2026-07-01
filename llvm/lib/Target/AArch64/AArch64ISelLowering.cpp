@@ -564,6 +564,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::STRICT_FSETCC, MVT::f16, Custom);
   setOperationAction(ISD::STRICT_FSETCC, MVT::f32, Custom);
   setOperationAction(ISD::STRICT_FSETCC, MVT::f64, Custom);
+  setOperationAction(ISD::STRICT_FSETCCS, MVT::bf16, Custom);
   setOperationAction(ISD::STRICT_FSETCCS, MVT::f16, Custom);
   setOperationAction(ISD::STRICT_FSETCCS, MVT::f32, Custom);
   setOperationAction(ISD::STRICT_FSETCCS, MVT::f64, Custom);
