@@ -231,9 +231,10 @@ class ScriptExpectRewriter:
                 assert expected_value is None
                 self.scope_expect_rewrites[expect] = []
                 return
+            if expected_value is not None:
+                return
             assert isinstance(expect, Value), "Non-Value expects currently unsupported"
-            if expected_value is None:
-                self.unknown_expect_rewrites[expect] = []
+            self.unknown_expect_rewrites[expect] = []
 
         script.visit_script(visit_expect=collect_expects_to_rewrite)
 
