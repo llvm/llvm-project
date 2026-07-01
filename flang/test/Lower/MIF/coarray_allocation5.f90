@@ -10,7 +10,7 @@ program test
   use m_coarray_test
 end program
 
-! LLVM: llvm.global_ctors = appending global [2 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 0, ptr @__mif_initialization, ptr null }, { i32, ptr, ptr } { i32 1, ptr @__mif_save_coarrays_allocate, ptr null }]
+! LLVM: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 0, ptr @__mif_save_coarrays_allocate, ptr null }]
 
 ! CHECK-LABEL: func.func @__mif_save_coarrays_allocate()
 ! CHECK:  %[[VAL_0:.*]] = fir.alloca !fir.array<0xi64>
