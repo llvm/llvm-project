@@ -26,6 +26,7 @@ def C1NanoModel : SchedMachineModel {
   let CompleteModel = 1;      // Covers instructions applicable to C1-Nano.
 
   list<Predicate> UnsupportedFeatures = !listconcat(SMEUnsupported.F,
+                                                    SVE2p1Unsupported.F,
                                                     [HasSVE2p1, HasSVEB16B16,
                                                      HasCPA, HasCSSC]);
 }

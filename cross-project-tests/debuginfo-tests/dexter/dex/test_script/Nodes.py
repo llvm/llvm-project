@@ -18,13 +18,7 @@ from dex.utils.Exceptions import Error
 
 
 def setup_yaml_parser(loader):
-    reg_classes = [
-        Where,
-        Value,
-        DexRange,
-        Label,
-        Then,
-    ]
+    reg_classes = [Where, Value, DexRange, Label, Then, Address, ValueAll]
     for c in reg_classes:
         c.register_yaml(loader)
 
@@ -67,6 +61,7 @@ class Where:
         if isinstance(lines, (int, Label)):
             lines = Line(lines)
         self.lines: Union[Line, DexRange, None] = lines
+        self.at_frame_idx: Optional[int] = attributes.pop("at_frame_idx", None)
         self.after_hit_count: Optional[int] = attributes.pop("after_hit_count", None)
         self.for_hit_count: Optional[int] = attributes.pop("for_hit_count", None)
         self.conditions: dict = attributes.pop("conditions", None)
@@ -83,6 +78,8 @@ class Where:
             raise DexterNodeError(
                 self, "can't check hit counts without an explicit lines or function arg"
             )
+        if self.at_frame_idx is not None and not self.is_and:
+            raise DexterNodeError(self, "at_frame_idx can only be used with !and nodes")
 
     def __repr__(self):
         elts = [
@@ -98,6 +95,7 @@ class Where:
             "file": self.file,
             "function": self.function,
             "lines": self.lines.value if isinstance(self.lines, Line) else self.lines,
+            "at_frame_idx": self.at_frame_idx,
             "for_hit_count": self.for_hit_count,
             "after_hit_count": self.after_hit_count,
             "conditions": self.conditions,
@@ -155,9 +153,13 @@ class Expect:
         excluding any subvalues (i.e. struct members), or None if there is no valid result for this ValueIR.
         """
 
-    @abc.abstractmethod
-    def get_watched_expr(self) -> str:
-        """Returns the list of expressions that this Expect wants to evaluate."""
+    def get_watched_expr(self) -> Optional[str]:
+        """Returns the expression that this Expect wants to evaluate."""
+        return None
+
+    def get_watched_scope(self) -> Optional[str]:
+        """Returns the scope that this Expect wants to evaluate."""
+        return None
 
 
 class Value(Expect):
@@ -191,6 +193,42 @@ class Value(Expect):
     def register_yaml(loader):
         yaml.add_constructor("!value", Value.constructor, loader)
         yaml.add_representer(Value, Value.representer)
+
+
+class ValueAll(Expect):
+    """Expect node used to write values for all variables within a particular debugger scope, as defined by the DAP
+    specification; see: https://microsoft.github.io/debug-adapter-protocol/specification#Requests_Scopes.
+
+    This node is not directly evaluated; it must have no expected values, and when Dexter rewrites the original script,
+    this node will be replaced with !value nodes for each variable that was seen in its scope inserted under !and nodes
+    that cover that variable's live range(s).
+    """
+
+    def __init__(self, scope_name: str):
+        self.scope_name = scope_name
+
+    def __repr__(self):
+        return f"ValueAll({self.scope_name})"
+
+    @staticmethod
+    def get_variable_result(value: ValueIR) -> Optional[str]:
+        return Value.get_variable_result(value)
+
+    def get_watched_scope(self) -> Optional[str]:
+        return self.scope_name
+
+    @staticmethod
+    def constructor(loader, node):
+        return ValueAll(loader.construct_scalar(node))
+
+    @staticmethod
+    def representer(dumper, data):
+        return dumper.represent_scalar("!value/all", data.scope_name)
+
+    @staticmethod
+    def register_yaml(loader):
+        yaml.add_constructor("!value/all", ValueAll.constructor, loader)
+        yaml.add_representer(ValueAll, ValueAll.representer)
 
 
 ##############
@@ -234,6 +272,51 @@ class Then:
 
 ##############
 ## Utility Nodes: Can be used anywhere in a script as a form of syntactic sugar.
+
+
+class Address:
+    """Named label for an address, which may resolve to different values with each test run, but will resolve
+    consistently within a test run."""
+
+    def __init__(self, name: str, offset: int):
+        self.name = name
+        self.offset = offset
+        if not re.match(r"^([a-zA-Z_]\w*)$", name):
+            raise DexterNodeError(self, f'Invalid !address identifier "{name}"')
+
+    def __repr__(self):
+        if not self.offset:
+            offset_str = ""
+        elif self.offset > 0:
+            offset_str = f" + {self.offset}"
+        else:
+            offset_str = f" - {-self.offset}"
+        return f"Address({self.name}{offset_str})"
+
+    @staticmethod
+    def constructor(loader, node):
+        address_str = str(loader.construct_scalar(node)).strip()
+        offset = 0
+        if match := re.match(r"^([a-zA-Z_]\w*)\s*([+-])\s*(\d+)$", address_str):
+            identifier, sign, number = match.groups()
+            offset = int(number) if sign == "+" else -int(number)
+            address_str = identifier
+        return Address(address_str, offset)
+
+    @staticmethod
+    def representer(dumper, data: "Address"):
+        if not data.offset:
+            offset_str = ""
+        elif data.offset > 0:
+            offset_str = f"+{data.offset}"
+        else:
+            offset_str = f"-{-data.offset}"
+        return dumper.represent_scalar("!address", data.name + offset_str)
+
+    @staticmethod
+    def register_yaml(loader):
+        yaml.add_constructor("!address", Address.constructor, loader)
+        yaml.add_representer(Address, Address.representer)
 
 
 @dataclass(frozen=True)

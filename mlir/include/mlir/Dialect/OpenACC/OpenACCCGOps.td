@@ -407,6 +407,106 @@ def OpenACC_ParWidthOp
 }
 
 //===----------------------------------------------------------------------===//
+// acc.gpu_shared_memory
+//===----------------------------------------------------------------------===//
+
+def OpenACC_GPUSharedMemoryOp : OpenACC_Op<"gpu_shared_memory"> {
+  let summary = "GPU workgroup (shared) memory allocation in a compute region";
+  let description = [{
+    Represents a GPU workgroup-memory allocation in a compute region.
+    The result is a typed `memref` view into a byte slab which is later
+    replaced by `memref.view` into a dynamic shared-memory blob at the
+    byte offset within the workgroup allocation.
+
+    Each operation occupies a distinct slot in that collective allocation.
+    `static_upper_bound_bytes` is the conservative byte-size upper bound for
+    the slot. `dynamic_sizes` supply values for dynamic memref result
+    dimensions. The in-kernel layout of the slot is given by
+    `static_upper_bound_bytes` and `dynamic_sizes`.
+
+    Optional `dynamic_shared_memory_scaling_bytes` and
+    `dynamic_shared_memory_fixed_bytes` parameterize
+    `dynamic_shared_memory_size` when the slot footprint depends on launch
+    geometry. They must be specified together. When present:
+
+      dynamic_shared_memory_size =
+          dynamic_shared_memory_scaling_bytes * W
+          + dynamic_shared_memory_fixed_bytes
+
+    where `W` is the launch width that scales the allocation.
+
+    This linear model arises for `acc.cache` regions with dynamic bounds: one
+    cache dimension grows with the thread-parallel launch width, while
+    `dynamic_shared_memory_fixed_bytes` covers bytes that do not scale (for
+    example overlap cells at cache tile boundaries so threads can read
+    neighboring source elements without extra global memory traffic).
+    For a 1D dynamic cache with stencil extent `E`:
+
+      dynamic_shared_memory_fixed_bytes =
+          (E - 1) * dynamic_shared_memory_scaling_bytes
+
+    ```
+    Global array:  ... | a | b | c | d | e | f | ...
+                          [---- cached tile ----]
+    Thread 0 primary:     a       (reads neighbor b)
+    Thread 1 primary:         b   (reads neighbors a, c)
+    ...
+    Scaling portion:  dynamic_shared_memory_scaling_bytes * W
+    Fixed portion:    dynamic_shared_memory_fixed_bytes  ((E - 1) cells)
+    ```
+
+    The scaling attributes affect only `dynamic_shared_memory_size`, not
+    the slot layout. For purely static allocations both are omitted and
+    `dynamic_shared_memory_size` is the sum of aligned
+    `static_upper_bound_bytes` across all slots.
+
+    Example:
+
+    ```mlir
+    %sz = arith.constant 128 : index
+    %cache = acc.gpu_shared_memory(%sz)
+        {num_copies = 1 : i64,
+         static_upper_bound_bytes = 1560 : i64,
+         dynamic_shared_memory_scaling_bytes = 12 : i64,
+         dynamic_shared_memory_fixed_bytes = 24 : i64}
+        : (index) -> memref<?xf32, #gpu.address_space<workgroup>>
+    ```
+  }];
+  let arguments = (ins
+    I64Attr:$num_copies,
+    I64Attr:$static_upper_bound_bytes,
+    Variadic<Index>:$dynamic_sizes,
+    OptionalAttr<I64Attr>:$dynamic_shared_memory_scaling_bytes,
+    OptionalAttr<I64Attr>:$dynamic_shared_memory_fixed_bytes
+  );
+  let results = (outs Res<AnyMemRef, "", [MemAlloc<DefaultResource, 0,
+                                           FullEffect>]>:$result);
+  let assemblyFormat = [{
+    (`(` $dynamic_sizes^ `)`)? attr-dict `:` functional-type(operands, results)
+  }];
+  let builders = [
+    OpBuilder<(ins "::mlir::Type":$resultType,
+                   "::mlir::IntegerAttr":$numCopies,
+                   "::mlir::IntegerAttr":$staticUpperBoundBytes,
+                   CArg<"::mlir::ValueRange", "{}">:$dynamicSizes,
+                   CArg<"::mlir::IntegerAttr", "{}">:$dynamicSharedMemoryScalingBytes,
+                   CArg<"::mlir::IntegerAttr", "{}">:$dynamicSharedMemoryFixedBytes), [{
+      $_state.addAttribute("num_copies", numCopies);
+      $_state.addAttribute("static_upper_bound_bytes", staticUpperBoundBytes);
+      $_state.addOperands(dynamicSizes);
+      if (dynamicSharedMemoryScalingBytes)
+        $_state.addAttribute("dynamic_shared_memory_scaling_bytes",
+                            dynamicSharedMemoryScalingBytes);
+      if (dynamicSharedMemoryFixedBytes)
+        $_state.addAttribute("dynamic_shared_memory_fixed_bytes",
+                            dynamicSharedMemoryFixedBytes);
+      $_state.addTypes(resultType);
+    }]>
+  ];
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // acc.compute_region
 //===----------------------------------------------------------------------===//
 

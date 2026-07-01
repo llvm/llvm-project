@@ -606,7 +606,7 @@ LLVM_ABI ModulePass *
 createStripDebugMachineModuleLegacyPass(bool OnlyDebugified);
 
 /// Creates MIR Check Debug pass. \see MachineCheckDebugify.cpp
-LLVM_ABI ModulePass *createCheckDebugMachineModulePass();
+LLVM_ABI ModulePass *createCheckDebugMachineModuleLegacyPass();
 
 /// The pass fixups statepoint machine instruction to replace usage of
 /// caller saved registers with stack slots.

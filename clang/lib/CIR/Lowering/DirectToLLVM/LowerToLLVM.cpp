@@ -3044,12 +3044,17 @@ lowerBinOpOverflow(OpTy op, typename OpTy::Adaptor adaptor,
                    llvm::StringRef opStr) {
   mlir::Location loc = op.getLoc();
   cir::IntType operandTy = op.getLhs().getType();
-  cir::IntType resultTy = op.getResult().getType();
+  // The result type may be a `cir.bool`, which behaves as a 1-bit unsigned
+  // integer for the purposes of the checked arithmetic.
+  mlir::Type resultTy = op.getResult().getType();
+  auto resultIntTy = mlir::dyn_cast<cir::IntType>(resultTy);
+  unsigned resultWidth = resultIntTy ? resultIntTy.getWidth() : 1;
+  bool resultSigned = resultIntTy && resultIntTy.getIsSigned();
 
-  bool sign = operandTy.getIsSigned() || resultTy.getIsSigned();
+  bool sign = operandTy.getIsSigned() || resultSigned;
   unsigned width =
       std::max(operandTy.getWidth() + (sign && operandTy.isUnsigned()),
-               resultTy.getWidth() + (sign && resultTy.isUnsigned()));
+               resultWidth + (sign && !resultSigned));
 
   mlir::IntegerType encompassedLLVMTy = rewriter.getIntegerType(width);
 
@@ -3086,7 +3091,7 @@ lowerBinOpOverflow(OpTy op, typename OpTy::Adaptor adaptor,
                              rewriter, loc, intrinRet, ArrayRef<int64_t>{1})
                              .getResult();
 
-  if (resultTy.getWidth() < width) {
+  if (resultWidth < width) {
     mlir::Type resultLLVMTy = typeConverter->convertType(resultTy);
     auto truncResult =
         mlir::LLVM::TruncOp::create(rewriter, loc, resultLLVMTy, result);
@@ -3094,7 +3099,7 @@ lowerBinOpOverflow(OpTy op, typename OpTy::Adaptor adaptor,
     // Extend the truncated result back to the encompassing type to check for
     // any overflows during the truncation.
     mlir::Value truncResultExt;
-    if (resultTy.isSigned())
+    if (resultSigned)
       truncResultExt = mlir::LLVM::SExtOp::create(
           rewriter, loc, encompassedLLVMTy, truncResult);
     else

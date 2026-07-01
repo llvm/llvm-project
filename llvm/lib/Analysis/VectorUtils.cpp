@@ -1265,22 +1265,9 @@ bool llvm::maskContainsAllOneOrUndef(Value *Mask) {
              1 &&
          "Mask must be a vector of i1");
 
-  auto *ConstMask = dyn_cast<Constant>(Mask);
-  if (!ConstMask)
-    return false;
-  if (ConstMask->isAllOnesValue() || isa<UndefValue>(ConstMask))
-    return true;
-  if (isa<ScalableVectorType>(ConstMask->getType()))
-    return false;
-  for (unsigned
-           I = 0,
-           E = cast<FixedVectorType>(ConstMask->getType())->getNumElements();
-       I != E; ++I) {
-    if (auto *MaskElt = ConstMask->getAggregateElement(I))
-      if (MaskElt->isAllOnesValue() || isa<UndefValue>(MaskElt))
-        return true;
-  }
-  return false;
+  auto AllOneOrUndef = m_CombineOr(m_AllOnes(), m_UndefValue());
+  return match(Mask, m_CombineOr(AllOneOrUndef, m_ContainsMatchingVectorElement(
+                                                    AllOneOrUndef)));
 }
 
 /// TODO: This is a lot like known bits, but for

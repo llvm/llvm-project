@@ -50,7 +50,7 @@ config("cxx_config") {
     "-Wno-nullability-completeness",
   ]
   cflags_cc = [
-    "-std=c++23",
+    "-std=c++26",
     "-nostdinc++",
   ]
   defines = [

@@ -1528,7 +1528,17 @@ class LinuxCoreTestCase(TestBase):
         self.yaml2obj(yaml_path, core_path)
         target = self.dbg.CreateTarget(None)
         self.runCmd(f"log enable lldb process -f '{log_path}'")
-        self.addTearDownHook(lambda: self.runCmd("log disable lldb process"))
+        # Disable parallel module loading as it can deadlock as there are
+        # issues with this feature that are not resolved.
+        self.runCmd(f"settings set target.parallel-module-load false")
+
+        def cleanup():
+            self.runCmd("log disable lldb process")
+            self.runCmd("settings set target.parallel-module-load true")
+
+        # Execute the cleanup function during test case tear down.
+        self.addTearDownHook(cleanup)
+
         process = target.LoadCore(core_path)
         prefix = "ProcessElfCore::FindModuleUUID() found UUID for "
         with open(log_path, "r") as f:

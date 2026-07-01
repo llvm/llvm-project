@@ -145,11 +145,11 @@ define void @store4(ptr %ptr, <4 x i8> %val) {
 define <16 x i16> @load_256(ptr %ptr) {
 ; CHECK: function 'load_256'
 ; CHECK-NEON-LABEL: 'load_256'
-; CHECK-NEON-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:4 SizeLat:2 for: %out = load <16 x i16>, ptr %ptr, align 32
+; CHECK-NEON-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:5 SizeLat:2 for: %out = load <16 x i16>, ptr %ptr, align 32
 ; CHECK-NEON-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <16 x i16> %out
 ;
 ; CHECK-SVE-128-LABEL: 'load_256'
-; CHECK-SVE-128-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:4 SizeLat:2 for: %out = load <16 x i16>, ptr %ptr, align 32
+; CHECK-SVE-128-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:5 SizeLat:2 for: %out = load <16 x i16>, ptr %ptr, align 32
 ; CHECK-SVE-128-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <16 x i16> %out
 ;
 ; CHECK-SVE-256-LABEL: 'load_256'
@@ -167,15 +167,15 @@ define <16 x i16> @load_256(ptr %ptr) {
 define <8 x i64> @load_512(ptr %ptr) {
 ; CHECK: function 'load_512'
 ; CHECK-NEON-LABEL: 'load_512'
-; CHECK-NEON-NEXT:  Cost Model: Found costs of 4 for: %out = load <8 x i64>, ptr %ptr, align 64
+; CHECK-NEON-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:7 SizeLat:4 for: %out = load <8 x i64>, ptr %ptr, align 64
 ; CHECK-NEON-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <8 x i64> %out
 ;
 ; CHECK-SVE-128-LABEL: 'load_512'
-; CHECK-SVE-128-NEXT:  Cost Model: Found costs of 4 for: %out = load <8 x i64>, ptr %ptr, align 64
+; CHECK-SVE-128-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:7 SizeLat:4 for: %out = load <8 x i64>, ptr %ptr, align 64
 ; CHECK-SVE-128-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <8 x i64> %out
 ;
 ; CHECK-SVE-256-LABEL: 'load_512'
-; CHECK-SVE-256-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:4 SizeLat:2 for: %out = load <8 x i64>, ptr %ptr, align 64
+; CHECK-SVE-256-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:5 SizeLat:2 for: %out = load <8 x i64>, ptr %ptr, align 64
 ; CHECK-SVE-256-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <8 x i64> %out
 ;
 ; CHECK-SVE-512-LABEL: 'load_512'
