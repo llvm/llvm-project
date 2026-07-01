@@ -2862,6 +2862,61 @@ static bool CheckCompatibleArgument(bool isElemental,
                 return actualTypeAndShape->type().IsTkCompatibleWith(
                     dummyTypeAndShape->type());
               }
+              if (dummyTypeAndShape && !actualTypeAndShape) {
+                std::optional<DynamicType> actualType;
+                const Symbol *symbol{nullptr};
+                if (const auto *designator{
+                        std::get_if<ProcedureDesignator>(&expr->u)}) {
+                  symbol = designator->GetSymbol();
+                } else {
+                  symbol = GetLastSymbol(*expr);
+                }
+                if (symbol) {
+                  const Symbol &ultimate{
+                      ResolveAssociations(*symbol).GetUltimate()};
+                  const Symbol *def{&ultimate};
+                  if (const Symbol *global{semantics::FindGlobal(ultimate)}) {
+                    def = &global->GetUltimate();
+                    if (!IsFunction(*def)) {
+                      return false;
+                    }
+                  }
+                  if (!actualType) {
+                    if (std::optional<characteristics::Procedure> proc{
+                            characteristics::Procedure::Characterize(
+                                *def, foldingContext)}) {
+                      if (proc->functionResult) {
+                        if (const auto *typeAndShape{
+                                proc->functionResult->GetTypeAndShape()}) {
+                          actualType = typeAndShape->type();
+                        }
+                      }
+                    }
+                  }
+                  if (!actualType && IsExternal(ultimate) &&
+                      ultimate.has<semantics::ProcEntityDetails>() &&
+                      !foldingContext.languageFeatures().IsEnabled(
+                          LanguageFeature::ImplicitNoneTypeAlways)) {
+                    const std::string &name{ultimate.name().ToString()};
+                    if (!name.empty()) {
+                      const char ch{name[0]};
+                      const auto &defaults{foldingContext.defaults()};
+                      if (ch >= 'i' && ch <= 'n') {
+                        actualType = DynamicType(TypeCategory::Integer,
+                            defaults.GetDefaultKind(TypeCategory::Integer));
+                      } else if (ch >= 'a' && ch <= 'z') {
+                        actualType = DynamicType(TypeCategory::Real,
+                            defaults.GetDefaultKind(TypeCategory::Real));
+                      }
+                    }
+                  }
+                }
+                if (actualType) {
+                  return actualType->IsTkCompatibleWith(
+                      dummyTypeAndShape->type());
+                }
+                return false;
+              }
             }
             return true;
           },
