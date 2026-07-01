@@ -189,7 +189,7 @@ Platform::LocateExecutableScriptingResourcesFromSafePaths(
       target.GetDebugger()
           .GetScriptInterpreter()
           ->GetSanitizedScriptingModuleName(
-              module_spec.GetFileNameStrippingExtension().GetStringRef());
+              module_spec.GetFileNameStrippingExtension());
 
   FileSpecList paths = target.GetSafeAutoLoadPaths();
 

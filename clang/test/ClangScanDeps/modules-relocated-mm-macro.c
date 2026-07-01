@@ -11,7 +11,7 @@
 // RUN:   -F %t/frameworks1 -F %t/frameworks2 \
 // RUN:   -c %t/tu1.m -o %t/tu1.o
 
-// RUN: cp -r %t/frameworks2/A.framework %t/frameworks1
+// RUN: cp -R %t/frameworks2/A.framework %t/frameworks1
 
 // RUN: clang-scan-deps -format experimental-full -o %t/deps2.json 2>&1 -- \
 // RUN:   %clang -fmodules -fmodules-cache-path=%t/cache \

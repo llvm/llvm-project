@@ -621,11 +621,11 @@ bool PlatformDarwinKernel::KextHasdSYMSibling(
   // CFBundleCopyExecutableURL
 
   // Look for a deep bundle foramt
-  ConstString executable_name =
+  llvm::StringRef executable_name =
       kext_bundle_filepath.GetFileNameStrippingExtension();
   std::string deep_bundle_str =
       kext_bundle_filepath.GetPath() + "/Contents/MacOS/";
-  deep_bundle_str += executable_name.GetStringRef();
+  deep_bundle_str += executable_name;
   deep_bundle_str += ".dSYM";
   dsym_fspec.SetFile(deep_bundle_str, FileSpec::Style::native);
   FileSystem::Instance().Resolve(dsym_fspec);
@@ -636,7 +636,7 @@ bool PlatformDarwinKernel::KextHasdSYMSibling(
   // look for a shallow bundle format
   //
   std::string shallow_bundle_str = kext_bundle_filepath.GetPath() + "/";
-  shallow_bundle_str += executable_name.GetStringRef();
+  shallow_bundle_str += executable_name;
   shallow_bundle_str += ".dSYM";
   dsym_fspec.SetFile(shallow_bundle_str, FileSpec::Style::native);
   FileSystem::Instance().Resolve(dsym_fspec);
@@ -696,8 +696,7 @@ PlatformDarwinKernel::GetDWARFBinaryInDSYMBundle(const FileSpec &dsym_bundle) {
     return results;
   }
   // Drop the '.dSYM' from the filename
-  std::string filename =
-      dsym_bundle.GetFileNameStrippingExtension().GetCString();
+  llvm::StringRef filename = dsym_bundle.GetFileNameStrippingExtension();
   std::string dirname = dsym_bundle.GetDirectory().GetCString();
 
   std::string binary_filepath = dsym_bundle.GetPath();

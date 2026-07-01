@@ -116,17 +116,33 @@ FunctionType *getOriginalFunctionType(const Function &F) {
       F.getName());
 }
 
+// Keyed via instruction metadata, not a name.
+static std::optional<StringRef> getMutatedCallsiteKey(const CallBase &CB) {
+  if (MDNode *MD = CB.getMetadata("spv.mutated_callsite"))
+    if (MD->getNumOperands() > 0)
+      if (auto *MDS = dyn_cast<MDString>(MD->getOperand(0)))
+        return MDS->getString();
+  return std::nullopt;
+}
+
 FunctionType *getOriginalFunctionType(const CallBase &CB) {
+  std::optional<StringRef> Key = getMutatedCallsiteKey(CB);
+  if (!Key)
+    return CB.getFunctionType();
   return extractFunctionTypeFromMetadata(
       CB.getModule()->getNamedMetadata("spv.mutated_callsites"),
-      CB.getFunctionType(), CB.getName());
+      CB.getFunctionType(), *Key);
 }
 
 StringRef getOriginalAsmConstraints(const CallBase &CB) {
+  StringRef Constraints =
+      cast<InlineAsm>(CB.getCalledOperand())->getConstraintString();
+  std::optional<StringRef> Key = getMutatedCallsiteKey(CB);
+  if (!Key)
+    return Constraints;
   return extractAsmConstraintsFromMetadata(
-      CB.getModule()->getNamedMetadata("spv.mutated_callsites"),
-      cast<InlineAsm>(CB.getCalledOperand())->getConstraintString(),
-      CB.getName());
+      CB.getModule()->getNamedMetadata("spv.mutated_callsites"), Constraints,
+      *Key);
 }
 } // Namespace SPIRV
 
@@ -676,12 +692,12 @@ Type *parseBasicTypeName(StringRef &TypeName, LLVMContext &Ctx) {
   return nullptr;
 }
 
-std::unordered_set<BasicBlock *>
+SmallPtrSet<BasicBlock *, 0>
 PartialOrderingVisitor::getReachableFrom(BasicBlock *Start) {
   std::queue<BasicBlock *> ToVisit;
   ToVisit.push(Start);
 
-  std::unordered_set<BasicBlock *> Output;
+  SmallPtrSet<BasicBlock *, 0> Output;
   while (ToVisit.size() != 0) {
     BasicBlock *BB = ToVisit.front();
     ToVisit.pop();
@@ -790,7 +806,7 @@ size_t PartialOrderingVisitor::visit(BasicBlock *BB, size_t Unused) {
     QueueIndex = 0;
     size_t Rank = GetNodeRank(BB);
     OrderInfo Info = {Rank, BlockToOrder.size()};
-    BlockToOrder.emplace(BB, Info);
+    BlockToOrder.try_emplace(BB, Info);
 
     for (BasicBlock *S : successors(BB)) {
       if (Queued.count(S) != 0)
@@ -829,7 +845,7 @@ bool PartialOrderingVisitor::compare(const BasicBlock *LHS,
 
 void PartialOrderingVisitor::partialOrderVisit(
     BasicBlock &Start, std::function<bool(BasicBlock *)> Op) {
-  std::unordered_set<BasicBlock *> Reachable = getReachableFrom(&Start);
+  SmallPtrSet<BasicBlock *, 0> Reachable = getReachableFrom(&Start);
   assert(BlockToOrder.count(&Start) != 0);
 
   // Skipping blocks with a rank inferior to |Start|'s rank.
@@ -995,7 +1011,7 @@ CallInst *buildIntrWithMD(Intrinsic::ID IntrID, ArrayRef<Type *> Types,
   Args.push_back(Arg2);
   Args.push_back(buildMD(Arg));
   llvm::append_range(Args, Imms);
-  return B.CreateIntrinsic(IntrID, {Types}, Args);
+  return B.CreateIntrinsicWithoutFolding(IntrID, {Types}, Args);
 }
 
 // Return true if there is an opaque pointer type nested in the argument.

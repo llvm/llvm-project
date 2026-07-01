@@ -166,3 +166,17 @@ func.func @first(%arg0: i32) -> (i32, i32) {
 func.func @second(%arg0: i32) -> (i32, i32) {
   return %arg0, %arg0 : i32, i32
 }
+
+// -----
+
+// CHECK-LABEL: emitc.func private @memref_callee(!emitc.array<4x8xf32>)
+func.func private @memref_callee(%buff : memref<4x8xf32>)
+
+// CHECK-LABEL: emitc.func @memref_call(
+// CHECK-SAME:                          %[[ARG0:.*]]: !emitc.array<4x8xf32>)
+// CHECK-NEXT: call @memref_callee(%[[ARG0]]) : (!emitc.array<4x8xf32>) -> ()
+// CHECK-NEXT: return
+func.func @memref_call(%buff : memref<4x8xf32>) {
+  func.call @memref_callee(%buff) : (memref<4x8xf32>) -> ()
+  return
+}

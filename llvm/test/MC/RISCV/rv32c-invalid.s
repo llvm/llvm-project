@@ -6,29 +6,29 @@
 ## GPRC
 .LBB:
 c.lw  ra, 4(sp)
-# CHECK: :[[#@LINE-1]]:7: error: invalid operand for instruction
+# CHECK: :[[#@LINE-1]]:7: error: register must be a GPR from x8 to x15
 c.sw  sp, 4(sp)
-# CHECK: :[[#@LINE-1]]:7: error: invalid operand for instruction
+# CHECK: :[[#@LINE-1]]:7: error: register must be a GPR from x8 to x15
 c.beqz  t0, .LBB
-# CHECK: :[[#@LINE-1]]:9: error: invalid operand for instruction
+# CHECK: :[[#@LINE-1]]:9: error: register must be a GPR from x8 to x15
 c.bnez  s8, .LBB
-# CHECK: :[[#@LINE-1]]:9: error: invalid operand for instruction
+# CHECK: :[[#@LINE-1]]:9: error: register must be a GPR from x8 to x15
 c.addi4spn  s4, sp, 12
-# CHECK: :[[#@LINE-1]]:13: error: invalid operand for instruction
+# CHECK: :[[#@LINE-1]]:13: error: register must be a GPR from x8 to x15
 c.srli  s7, 12
-# CHECK: :[[#@LINE-1]]:9: error: invalid operand for instruction
+# CHECK: :[[#@LINE-1]]:9: error: register must be a GPR from x8 to x15
 c.srai  t0, 12
-# CHECK: :[[#@LINE-1]]:9: error: invalid operand for instruction
+# CHECK: :[[#@LINE-1]]:9: error: register must be a GPR from x8 to x15
 c.andi  t1, 12
-# CHECK: :[[#@LINE-1]]:9: error: invalid operand for instruction
+# CHECK: :[[#@LINE-1]]:9: error: register must be a GPR from x8 to x15
 c.and  t1, a0
-# CHECK: :[[#@LINE-1]]:8: error: invalid operand for instruction
+# CHECK: :[[#@LINE-1]]:8: error: register must be a GPR from x8 to x15
 c.or   a0, s8
-# CHECK: :[[#@LINE-1]]:12: error: invalid operand for instruction
+# CHECK: :[[#@LINE-1]]:12: error: register must be a GPR from x8 to x15
 c.xor  t2, a0
-# CHECK: :[[#@LINE-1]]:8: error: invalid operand for instruction
+# CHECK: :[[#@LINE-1]]:8: error: register must be a GPR from x8 to x15
 c.sub  a0, s8
-# CHECK: :[[#@LINE-1]]:12: error: invalid operand for instruction
+# CHECK: :[[#@LINE-1]]:12: error: register must be a GPR from x8 to x15
 
 ## GPRNoX0
 c.lwsp  x0, 4(sp)

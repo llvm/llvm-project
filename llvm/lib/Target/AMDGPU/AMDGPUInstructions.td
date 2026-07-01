@@ -766,7 +766,7 @@ int BF16_NEG_ONE = 0xBF80;
 def CONST : Constants;
 
 def fpimm_zero : FPImmLeaf<fAny, [{ return Imm.isZero(); }]> ;
-def fpimm_one : FPImmLeaf<fAny, [{ return Imm.isExactlyValue(+1.0); }]> ;
+def fpimm_one : FPImmLeaf<fAny, [{ return Imm.isOne(); }]> ;
 def fpimm_half : FPImmLeaf<fAny, [{ return Imm.isExactlyValue(+0.5); }]> ;
 
 /* Generic helper patterns for intrinsics */

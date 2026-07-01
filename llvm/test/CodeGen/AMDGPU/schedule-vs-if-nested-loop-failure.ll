@@ -1,4 +1,4 @@
-; RUN: llc -O0 -mtriple=amdgcn < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -O0 -mtriple=amdgcn -mcpu=gfx600 < %s | FileCheck -check-prefix=GCN %s
 ; RUN: llc -O0 -mtriple=amdgcn -mcpu=tonga < %s | FileCheck -check-prefix=GCN %s
 
 declare void @llvm.amdgcn.s.barrier() nounwind convergent

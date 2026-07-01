@@ -678,7 +678,6 @@ int main() {
     std::vector<int> ints {};
 })cpp";
 
-  auto InsertedCode = insert(Code, "<vector>");
   EXPECT_EQ(Expected, insert(Code, "<vector>"));
 }
 

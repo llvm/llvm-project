@@ -916,11 +916,11 @@ define void @hoist_predicated_load_with_chained_geps1(ptr %dst, ptr %src, i1 %co
 ; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr [11 x i16], ptr [[SRC]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr i8, ptr [[TMP20]], i64 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i16, ptr [[TMP21]], align 2, !alias.scope [[META68:![0-9]+]]
-; CHECK-NEXT:    store i16 [[TMP3]], ptr [[DST]], align 2, !alias.scope [[META71:![0-9]+]], !noalias [[META68]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP26:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
-; CHECK-NEXT:    br i1 [[TMP26]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP73:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP26]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP71:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    store i16 [[TMP3]], ptr [[DST]], align 2, !alias.scope [[META72:![0-9]+]], !noalias [[META68]]
 ; CHECK-NEXT:    br label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
 ;
@@ -975,11 +975,11 @@ define void @hoist_predicated_load_with_chained_geps2(ptr %dst, ptr %src, i1 %co
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr [11 x i16], ptr [[SRC]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr i8, ptr [[TMP4]], i64 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i16, ptr [[TMP21]], align 2, !alias.scope [[META75:![0-9]+]]
-; CHECK-NEXT:    store i16 [[TMP3]], ptr [[DST]], align 2, !alias.scope [[META78:![0-9]+]], !noalias [[META75]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP26:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
-; CHECK-NEXT:    br i1 [[TMP26]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP80:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP26]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP78:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    store i16 [[TMP3]], ptr [[DST]], align 2, !alias.scope [[META79:![0-9]+]], !noalias [[META75]]
 ; CHECK-NEXT:    br label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
 ;

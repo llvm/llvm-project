@@ -42,11 +42,7 @@ void ProcessInfo::Clear() {
   m_scripted_metadata_sp.reset();
 }
 
-const char *ProcessInfo::GetName() const {
-  return m_executable.GetFilename().GetCString();
-}
-
-llvm::StringRef ProcessInfo::GetNameAsStringRef() const {
+llvm::StringRef ProcessInfo::GetName() const {
   return m_executable.GetFilename().GetStringRef();
 }
 
@@ -256,11 +252,11 @@ bool ProcessInstanceInfoMatch::ArchitectureMatches(
          m_match_info.GetArchitecture().IsCompatibleMatch(arch_spec);
 }
 
-bool ProcessInstanceInfoMatch::NameMatches(const char *process_name) const {
+bool ProcessInstanceInfoMatch::NameMatches(llvm::StringRef process_name) const {
   if (m_name_match_type == NameMatch::Ignore)
     return true;
-  const char *match_name = m_match_info.GetName();
-  if (!match_name)
+  llvm::StringRef match_name = m_match_info.GetName();
+  if (match_name.empty())
     return true;
 
   return lldb_private::NameMatches(process_name, m_name_match_type, match_name);

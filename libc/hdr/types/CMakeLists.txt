@@ -168,6 +168,14 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  struct_winsize
+  HDRS
+    struct_winsize.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_winsize
+)
+
+add_proxy_header_library(
   ssize_t
   HDRS
     ssize_t.h
@@ -444,6 +452,51 @@ add_proxy_header_library(
     struct_in6_addr.h
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.struct_in6_addr
+    libc.include.netinet_in
+)
+
+add_proxy_header_library(
+  struct_ip_mreq
+  HDRS
+    struct_ip_mreq.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_ip_mreq
+    libc.include.netinet_in
+)
+
+add_proxy_header_library(
+  struct_ip_mreq_source
+  HDRS
+    struct_ip_mreq_source.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_ip_mreq_source
+    libc.include.netinet_in
+)
+
+add_proxy_header_library(
+  struct_ip_mreqn
+  HDRS
+    struct_ip_mreqn.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_ip_mreqn
+    libc.include.netinet_in
+)
+
+add_proxy_header_library(
+  struct_ip_msfilter
+  HDRS
+    struct_ip_msfilter.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_ip_msfilter
+    libc.include.netinet_in
+)
+
+add_proxy_header_library(
+  struct_ip_opts
+  HDRS
+    struct_ip_opts.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_ip_opts
     libc.include.netinet_in
 )
 

@@ -128,6 +128,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   initializeRISCVDeadRegisterDefinitionsPass(*PR);
   initializeRISCVLateBranchOptPass(*PR);
   initializeRISCVMakeCompressibleOptPass(*PR);
+  initializeRISCVQCRelaxMarkingPass(*PR);
   initializeRISCVGatherScatterLoweringPass(*PR);
   initializeRISCVCodeGenPrepareLegacyPassPass(*PR);
   initializeRISCVPostRAExpandPseudoPass(*PR);
@@ -504,8 +505,8 @@ bool RISCVPassConfig::addPreISel() {
   }
 
   if ((TM->getOptLevel() != CodeGenOptLevel::None &&
-       EnableGlobalMerge == cl::BOU_UNSET) ||
-      EnableGlobalMerge == cl::BOU_TRUE) {
+       EnableGlobalMerge == cl::boolOrDefault::BOU_UNSET) ||
+      EnableGlobalMerge == cl::boolOrDefault::BOU_TRUE) {
     // FIXME: Like AArch64, we disable extern global merging by default due to
     // concerns it might regress some workloads. Unlike AArch64, we don't
     // currently support enabling the pass in an "OnlyOptimizeForSize" mode.
@@ -599,6 +600,11 @@ void RISCVPassConfig::addPreEmitPass2() {
     addPass(createRISCVPushPopOptimizationPass());
   }
   addPass(createRISCVExpandPseudoPass());
+
+  // Add QC Relaxation Markers as late as possible, and only for RV32
+  if (TM->getOptLevel() != CodeGenOptLevel::None &&
+      TM->getTargetTriple().isRISCV32())
+    addPass(createRISCVQCRelaxMarkingPass());
 
   // Schedule the expansion of AMOs at the last possible moment, avoiding the
   // possibility for other passes to break the requirements for forward

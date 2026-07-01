@@ -300,8 +300,9 @@ getHostCPUNameForARMFromComponents(StringRef Implementer, StringRef Hardware,
     // values correspond to the "Part number" in the CP15/c0 register. The
     // contents are specified in the various processor manuals.
     return StringSwitch<const char *>(Part)
-      .Case("0xd01", "tsv110")
-      .Default("generic");
+        .Case("0xd01", "tsv110")
+        .Case("0xd06", "hip12")
+        .Default("generic");
 
   if (Implementer == "0x51") // Qualcomm Technologies, Inc.
     // The CPU part is a 3 digit hexadecimal number with a 0x prefix. The
@@ -1384,6 +1385,11 @@ static StringRef getHygonProcessorTypeAndSubtype(unsigned Family,
       *Type = X86::HYGONFAM18H;
       *Subtype = X86::HYGONFAM18H_C86_4G_M7;
       break; // c86-4g-m7
+    case 8:
+      CPU = "c86-4g-m8";
+      *Type = X86::HYGONFAM18H;
+      *Subtype = X86::HYGONFAM18H_C86_4G_M8;
+      break; // c86-4g-m8
     }
     break; // Hygon Family 18H
   default:
@@ -2507,7 +2513,8 @@ StringMap<bool> sys::getHostCPUFeatures() {
 StringMap<bool> sys::getHostCPUFeatures() {
   RISCVHwProbe Query[]{{/*RISCV_HWPROBE_KEY_BASE_BEHAVIOR=*/3, 0},
                        {/*RISCV_HWPROBE_KEY_IMA_EXT_0=*/4, 0},
-                       {/*RISCV_HWPROBE_KEY_MISALIGNED_SCALAR_PERF=*/9, 0}};
+                       {/*RISCV_HWPROBE_KEY_MISALIGNED_SCALAR_PERF=*/9, 0},
+                       {/*RISCV_HWPROBE_KEY_IMA_EXT_1=*/16, 0}};
   int Ret = syscall(/*__NR_riscv_hwprobe=*/258, /*pairs=*/Query,
                     /*pair_count=*/std::size(Query), /*cpu_count=*/0,
                     /*cpus=*/0, /*flags=*/0);
@@ -2589,6 +2596,9 @@ StringMap<bool> sys::getHostCPUFeatures() {
   Features["zicbop"] = ExtMask & (1ULL << 60);   // RISCV_HWPROBE_EXT_ZICBOP
   Features["zilsd"] = ExtMask & (1ULL << 61);    // RISCV_HWPROBE_EXT_ZILSD
   Features["zclsd"] = ExtMask & (1ULL << 62);    // RISCV_HWPROBE_EXT_ZCLSD
+
+  uint64_t Ext1Mask = Query[3].Value;
+  Features["zicfiss"] = Ext1Mask & (1ULL << 0); // RISCV_HWPROBE_EXT_ZICFISS
 
   // Check whether the processor supports fast misaligned scalar memory access.
   // NOTE: RISCV_HWPROBE_KEY_MISALIGNED_SCALAR_PERF is only available on

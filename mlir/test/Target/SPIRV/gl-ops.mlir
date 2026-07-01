@@ -55,6 +55,10 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage], []> {
     %21 = spirv.GL.Tanh %arg0 : f32
     // CHECK: {{%.*}} = spirv.GL.Exp2 {{%.*}} : f32
     %22 = spirv.GL.Exp2 %arg0 : f32
+    // CHECK: {{%.*}} = spirv.GL.Radians {{%.*}} : f32
+    %23 = spirv.GL.Radians %arg0 : f32
+    // CHECK: {{%.*}} = spirv.GL.Degrees {{%.*}} : f32
+    %24 = spirv.GL.Degrees %arg0 : f32
     spirv.Return
   }
 
@@ -72,12 +76,23 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage], []> {
     %5 = spirv.GL.SMin %arg2, %arg3 : i32
     // CHECK: {{%.*}} = spirv.GL.UMin {{%.*}}, {{%.*}} : i32
     %6 = spirv.GL.UMin %arg2, %arg3 : i32
+
+    // CHECK: {{%.*}} = spirv.GL.NMax {{%.*}}, {{%.*}} : f32
+    %7 = spirv.GL.NMax %arg0, %arg1 : f32
+    // CHECK: {{%.*}} = spirv.GL.NMin {{%.*}}, {{%.*}} : f32
+    %8 = spirv.GL.NMin %arg0, %arg1 : f32
     spirv.Return
   }
 
   spirv.func @fclamp(%arg0 : f32, %arg1 : f32, %arg2 : f32) "None" {
     // CHECK: spirv.GL.FClamp {{%[^,]*}}, {{%[^,]*}}, {{%[^,]*}} : f32
     %13 = spirv.GL.FClamp %arg0, %arg1, %arg2 : f32
+    spirv.Return
+  }
+
+  spirv.func @nclamp(%arg0 : f32, %arg1 : f32, %arg2 : f32) "None" {
+    // CHECK: spirv.GL.NClamp {{%[^,]*}}, {{%[^,]*}}, {{%[^,]*}} : f32
+    %13 = spirv.GL.NClamp %arg0, %arg1, %arg2 : f32
     spirv.Return
   }
 

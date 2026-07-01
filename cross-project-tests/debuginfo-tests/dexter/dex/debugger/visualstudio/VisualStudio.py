@@ -398,7 +398,9 @@ class VisualStudio(
             "--use-script debugging not supported in visual studio yet."
         )
 
-    def collect_watches(self, step: StepIR, watches: List[str]):
+    def collect_watches(
+        self, step: StepIR, watches: List[str], scope_watches: List[str]
+    ):
         raise NotImplementedError(
             "--use-script debugging not supported in visual studio yet."
         )

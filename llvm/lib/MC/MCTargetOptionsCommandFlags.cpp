@@ -102,6 +102,8 @@ llvm::mc::RegisterMCTargetOptionsFlags::RegisterMCTargetOptionsFlags() {
                             "no-compact-unwind",
                             "Only emit EH frame entries when compact unwind is "
                             "not available"),
+                 clEnumValN(EmitDwarfUnwindType::DwarfOnly, "dwarf-only",
+                            "Force compact unwind to reference DWARF"),
                  clEnumValN(EmitDwarfUnwindType::Default, "default",
                             "Use target platform default")));
   MCBINDOPT(EmitDwarfUnwind);

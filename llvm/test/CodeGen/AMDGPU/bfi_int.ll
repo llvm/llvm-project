@@ -2,8 +2,8 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=tahiti < %s | FileCheck -enable-var-scope -check-prefix=GFX7 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga < %s | FileCheck -enable-var-scope -check-prefix=GFX8 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1031 < %s | FileCheck -enable-var-scope -check-prefix=GFX10 %s
-; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=tonga < %s | FileCheck -enable-var-scope -check-prefix=GFX8-GISEL %s
-; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1031 < %s | FileCheck -enable-var-scope -check-prefix=GFX10-GISEL %s
+; RUN: llc -global-isel -mtriple=amdgcn -mcpu=tonga < %s | FileCheck -enable-var-scope -check-prefix=GFX8-GISEL %s
+; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1031 < %s | FileCheck -enable-var-scope -check-prefix=GFX10-GISEL %s
 
 ; BFI_INT Definition pattern from ISA docs
 ; (y & x) | (z & ~x)

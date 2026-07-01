@@ -27,7 +27,7 @@
 
 #include "test_macros.h"
 
-#if TEST_HAS_EXTENSION(bit_int)
+#if TEST_HAS_BITINT
 
 template <class IndexType>
 constexpr bool test_extents_with_index_type() {
@@ -72,10 +72,10 @@ constexpr bool test() {
   return true;
 }
 
-#endif // TEST_HAS_EXTENSION(bit_int)
+#endif // TEST_HAS_BITINT
 
 int main(int, char**) {
-#if TEST_HAS_EXTENSION(bit_int)
+#if TEST_HAS_BITINT
   test();
   static_assert(test());
 #endif

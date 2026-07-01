@@ -23,10 +23,8 @@ StringRef LVSourceLanguage::getName() const {
   switch (getTag()) {
   case LVSourceLanguage::TagDwarf:
     return llvm::dwarf::LanguageString(getLang());
-  case LVSourceLanguage::TagCodeView: {
-    static auto LangNames = llvm::codeview::getSourceLanguageNames();
-    return LangNames[getLang()].Name;
-  }
+  case LVSourceLanguage::TagCodeView:
+    return llvm::codeview::getSourceLanguageNames().toString(getLang());
   default:
     llvm_unreachable("Unsupported language");
   }

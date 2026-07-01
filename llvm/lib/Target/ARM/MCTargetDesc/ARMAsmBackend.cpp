@@ -1185,6 +1185,9 @@ uint64_t ARMAsmBackendDarwin::generateCompactUnwindEncoding(
   if (Subtype != MachO::CPU_SUBTYPE_ARM_V7K)
     return 0;
 
+  if (Ctxt->emitDwarfUnwindInfo() == EmitDwarfUnwindType::DwarfOnly)
+    return CU::UNWIND_ARM_MODE_DWARF;
+
   // Signal frames cannot be encoded in compact unwind.
   if (FI->IsSignalFrame)
     return CU::UNWIND_ARM_MODE_DWARF;

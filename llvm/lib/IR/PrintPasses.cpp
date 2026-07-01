@@ -8,6 +8,7 @@
 
 #include "llvm/IR/PrintPasses.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Errc.h"
@@ -17,7 +18,6 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/raw_ostream.h"
-#include <unordered_set>
 
 using namespace llvm;
 
@@ -155,18 +155,15 @@ bool llvm::forcePrintModuleIR() { return PrintModuleScope; }
 bool llvm::forcePrintFuncIR() { return LoopPrintFuncScope; }
 
 bool llvm::isPassInPrintList(StringRef PassName) {
-  static std::unordered_set<std::string> Set(FilterPasses.begin(),
-                                             FilterPasses.end());
-  return Set.empty() || Set.count(std::string(PassName));
+  static const StringSet<> Set(llvm::from_range, FilterPasses);
+  return Set.empty() || Set.contains(PassName);
 }
 
 bool llvm::isFilterPassesEmpty() { return FilterPasses.empty(); }
 
 bool llvm::isFunctionInPrintList(StringRef FunctionName) {
-  static std::unordered_set<std::string> PrintFuncNames(PrintFuncsList.begin(),
-                                                        PrintFuncsList.end());
-  return PrintFuncNames.empty() ||
-         PrintFuncNames.count(std::string(FunctionName));
+  static const StringSet<> PrintFuncNames(llvm::from_range, PrintFuncsList);
+  return PrintFuncNames.empty() || PrintFuncNames.contains(FunctionName);
 }
 
 std::error_code cleanUpTempFilesImpl(ArrayRef<std::string> FileName,

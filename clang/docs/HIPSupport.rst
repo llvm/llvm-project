@@ -951,6 +951,131 @@ Open Questions / Future Developments
 4. Offload support might be extended to cases where the ``parallel_policy`` is
    used for some or all targets.
 
+Profile-Guided Optimization for Device Code
+===========================================
+
+Clang supports IR-level profile-guided optimization (PGO) for HIP device
+code on AMD GPUs. ``-fprofile-generate`` instruments both host and
+device code; running the instrumented binary writes separate host and
+device raw profiles, which are merged independently and consumed by a
+second build that passes the appropriate profile to each side.
+
+Prerequisites
+-------------
+
+The toolchain must be built with the AMDGPU profile runtime enabled,
+which requires building ``compiler-rt`` for the ``amdgcn-amd-amdhsa``
+target via the runtimes build. A minimal CMake configuration is:
+
+.. code-block:: console
+
+   $ cmake <llvm-project>/llvm \
+       -DLLVM_ENABLE_PROJECTS='clang;lld' \
+       -DLLVM_ENABLE_RUNTIMES=compiler-rt \
+       -DLLVM_RUNTIME_TARGETS='default;amdgcn-amd-amdhsa' \
+       -DRUNTIMES_amdgcn-amd-amdhsa_CACHE_FILES=<llvm-project>/compiler-rt/cmake/caches/AMDGPU.cmake \
+       -DRUNTIMES_amdgcn-amd-amdhsa_LLVM_ENABLE_RUNTIMES='compiler-rt;libc' \
+       -DRUNTIMES_amdgcn-amd-amdhsa_RUNTIMES_USE_LIBC=llvm-libc
+
+``COMPILER_RT_BUILD_PROFILE_ROCM`` controls building the host-side
+ROCm/HIP device profile collection runtime, ``clang_rt.profile_rocm``.
+It is on by default for normal Linux and Windows compiler-rt builds,
+and off for bare-metal profile builds; leave it enabled.
+``RUNTIMES_USE_LIBC=llvm-libc`` is required so the amdgcn profile
+compile picks up LLVM-libc's ``-isystem`` / ``-nostdlibinc`` headers.
+
+Generate phase
+--------------
+
+The driver forwards ``-fprofile-generate`` to the device compiler and
+links the device profile runtime into the embedded device image.
+
+.. code-block:: console
+
+   $ clang++ -x hip demo.hip \
+       --offload-arch=gfx1100 --offload-arch=gfx1101 \
+       -fprofile-generate=pgo_data \
+       -o demo.instr
+
+   $ ./demo.instr
+
+When the instrumented binary exits, the runtime writes raw profile
+files into ``pgo_data/``. Host profiles use the standard LLVM profile
+filename; device profiles use the same filename with the GPU
+architecture name prepended to the basename, so each
+``--offload-arch=`` value produces its own set of device files. The
+usual ``LLVM_PROFILE_FILE`` substitutions (``%p`` for process ID,
+``%m`` for binary signature, etc.) apply to both, so multi-process
+runs do not need a separate device-side naming scheme.
+
+Merge the host profile and each device architecture's profile
+separately:
+
+.. code-block:: console
+
+   $ llvm-profdata merge -o host.profdata           pgo_data/default_*.profraw
+   $ llvm-profdata merge -o device.gfx1100.profdata pgo_data/gfx1100*.profraw
+   $ llvm-profdata merge -o device.gfx1101.profdata pgo_data/gfx1101*.profraw
+
+Use phase
+---------
+
+Host and device compilations consume different profiles, and each GPU
+architecture consumes its own. ``-Xarch_host`` selects the host
+profile and ``-Xarch_<gpu-arch>`` selects the per-architecture device
+profile:
+
+.. code-block:: console
+
+   $ clang++ -x hip demo.hip \
+       --offload-arch=gfx1100 --offload-arch=gfx1101 \
+       -Xarch_host    -fprofile-use=host.profdata \
+       -Xarch_gfx1100 -fprofile-use=device.gfx1100.profdata \
+       -Xarch_gfx1101 -fprofile-use=device.gfx1101.profdata \
+       -o demo
+
+For a single-arch build, ``-Xarch_device`` is a convenient shorthand
+that applies the same profile to every offload architecture:
+
+.. code-block:: console
+
+   $ clang++ -x hip demo.hip --offload-arch=gfx1101 \
+       -Xarch_host   -fprofile-use=host.profdata \
+       -Xarch_device -fprofile-use=device.gfx1101.profdata \
+       -o demo
+
+Block uniformity profiles
+-------------------------
+
+On AMDGPU targets, device PGO also records a per-block uniformity
+signal. For each instrumented block, the profile records whether the
+block is usually entered with all lanes in the wave active. During the
+use phase, Clang attaches this information to the corresponding IR
+terminators as ``!block.uniformity.profile`` metadata, which lets later
+AMDGPU code generation distinguish blocks that are usually uniform from
+blocks that are divergent.
+
+No extra driver option is needed; use the same generate, merge, and use
+commands shown above. ``llvm-profdata show --counts`` prints the
+uniformity information when it is present:
+
+.. code-block:: text
+
+   Block uniformity: [U, U, D, U]
+
+``U`` means the block was classified as uniform, and ``D`` means it was
+classified as divergent. Profiles produced by older toolchains or by
+targets that do not emit this data can still be used for ordinary PGO,
+but they do not provide block-uniformity guidance.
+
+Notes
+-----
+
+- The instrumented build is slower than a normal build; only the use
+  phase produces the optimized binary intended for deployment.
+- Set ``LLVM_PROFILE_VERBOSE=1`` to print runtime diagnostics for
+  profile file creation and device profile collection.
+
 SPIR-V Support on HIPAMD ToolChain
 ==================================
 

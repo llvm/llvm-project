@@ -80,8 +80,11 @@ protected:
   /// Whether a memory snapshot should be recorded a kernel execution.
   bool SaveOutput;
 
-  /// Whether a report should be emitted afther the recording.
+  /// Whether a report should be emitted after the recording.
   bool EmitReport;
+
+  /// The name of the file where to emit the record report.
+  std::string ReportFilename;
 
   /// Reference to the corresponding device.
   GenericDeviceTy &Device;
@@ -157,13 +160,15 @@ protected:
 
   /// Tracker of record replay instances.
   std::unordered_set<InstanceTy, InstanceHasher> Instances;
+  SmallVector<const InstanceTy *> OrderedInstances;
   std::mutex InstancesLock;
 
 public:
   RecordReplayTy(StatusTy Status, StringRef OutputDirectoryStr, bool SaveOutput,
-                 bool EmitReport, GenericDeviceTy &Device)
+                 bool EmitReport, StringRef ReportFilename,
+                 GenericDeviceTy &Device)
       : Status(Status), SaveOutput(SaveOutput), EmitReport(EmitReport),
-        Device(Device) {
+        ReportFilename(ReportFilename.str()), Device(Device) {
     if (OutputDirectoryStr == "")
       OutputDirectory = std::filesystem::current_path();
     else
@@ -261,9 +266,9 @@ private:
 struct NativeRecordReplayTy : public RecordReplayTy {
   NativeRecordReplayTy(StatusTy Status, StringRef OutputDirectoryStr,
                        bool SaveOutput, bool EmitReport,
-                       GenericDeviceTy &Device)
+                       StringRef ReportFilename, GenericDeviceTy &Device)
       : RecordReplayTy(Status, OutputDirectoryStr, SaveOutput, EmitReport,
-                       Device) {}
+                       ReportFilename, Device) {}
 
 private:
   Error recordPrologueImpl(const GenericKernelTy &Kernel,

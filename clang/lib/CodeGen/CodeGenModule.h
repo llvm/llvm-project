@@ -619,6 +619,9 @@ private:
   /// A vector of metadata strings for dependent libraries for ELF.
   SmallVector<llvm::MDNode *, 16> ELFDependentLibraries;
 
+  /// Global variable for copyright pragma comment (if present).
+  llvm::GlobalVariable *LoadTimeCommentGlobal = nullptr;
+
   /// @name Cache for Objective-C runtime types
   /// @{
 
@@ -640,7 +643,6 @@ private:
   void createCUDARuntime();
   void createHLSLRuntime();
 
-  bool isTriviallyRecursive(const FunctionDecl *F);
   bool shouldEmitFunction(GlobalDecl GD);
   // Whether a global variable should be emitted by CUDA/HIP host/device
   // related attributes.
@@ -1544,7 +1546,6 @@ public:
   /// Appends a dependent lib to the appropriate metadata value.
   void AddDependentLib(StringRef Lib);
 
-
   llvm::GlobalVariable::LinkageTypes getFunctionLinkage(GlobalDecl GD);
 
   void setFunctionLinkage(GlobalDecl GD, llvm::Function *F) {
@@ -1952,6 +1953,9 @@ private:
   /// experimental ABI lowering path.
   ABIArgInfo convertABIArgInfo(const llvm::abi::ArgInfo &AbiInfo,
                                QualType Type);
+
+  /// Process #pragma comment(copyright, ...).
+  void ProcessPragmaCommentCopyright(StringRef Comment, bool isFromASTFile);
 
   bool shouldDropDLLAttribute(const Decl *D, const llvm::GlobalValue *GV) const;
 

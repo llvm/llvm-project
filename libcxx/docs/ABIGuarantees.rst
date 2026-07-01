@@ -67,7 +67,7 @@ removes these workarounds for platforms that don't care about ABI compatibility.
 
 ``_LIBCPP_ABI_NO_COMPRESSED_PAIR_PADDING``
 ------------------------------------------
-This removes artificial padding from ``_LIBCPP_COMPRESSED_PAIR`` and ``_LIBCPP_COMPRESSED_TRIPLE``.
+This removes artificial padding from ``_LIBCPP_COMPRESSED_PAIR``.
 
 These macros are used inside the associative and unordered containers, ``deque``, ``forward_list``, ``future``,
 ``list``, ``basic_string``, ``function``, ``shared_ptr``, ``unique_ptr``, and ``vector`` to stay ABI compatible with the
@@ -144,6 +144,10 @@ This flag adds ``[[clang::trivial_abi]]`` to ``shared_ptr``, which makes it triv
 -----------------------------------------------
 This flag makes ``__bit_iterator`` (a.k.a. ``vector<bool>::iterator``) trivially copyable as well as trivial for the
 purpose of calls, since the copy constructor is made trivial.
+
+``_LIBCPP_ABI_USE_SMALL_DEQUE_BLOCK_SIZE``
+------------------------------------------
+This flag sets the default block size of ``deque`` to 512 bytes and the minimum number of elements per block to 4.
 
 Types that public aliases reference
 ===================================

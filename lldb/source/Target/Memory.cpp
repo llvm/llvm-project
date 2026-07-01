@@ -42,8 +42,7 @@ void MemoryCache::Clear(bool clear_invalid_ranges) {
 
 void MemoryCache::AddL1CacheData(lldb::addr_t addr, const void *src,
                                  size_t src_len) {
-  AddL1CacheData(
-      addr, DataBufferSP(new DataBufferHeap(DataBufferHeap(src, src_len))));
+  AddL1CacheData(addr, std::make_shared<DataBufferHeap>(src, src_len));
 }
 
 void MemoryCache::AddL1CacheData(lldb::addr_t addr,

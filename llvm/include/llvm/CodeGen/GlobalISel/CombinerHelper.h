@@ -358,6 +358,12 @@ public:
   ///     $whatever = COPY $addr
   LLVM_ABI bool tryCombineMemCpyFamily(MachineInstr &MI,
                                        unsigned MaxLen = 0) const;
+  LLVM_ABI bool matchCombineMemCpyFamily(MachineInstr &MI,
+                                         MemCpyFamilyLoweringInfo &MatchInfo,
+                                         unsigned MaxLen = 0) const;
+  LLVM_ABI void
+  applyCombineMemCpyFamily(MachineInstr &MI,
+                           MemCpyFamilyLoweringInfo &MatchInfo) const;
 
   LLVM_ABI bool matchPtrAddImmedChain(MachineInstr &MI,
                                       PtrAddChain &MatchInfo) const;
@@ -859,12 +865,6 @@ public:
   /// Try to transform \p MI by using all of the above
   /// combine functions. Returns true if changed.
   LLVM_ABI bool tryCombine(MachineInstr &MI) const;
-
-  /// Emit loads and stores that perform the given memcpy.
-  /// Assumes \p MI is a G_MEMCPY_INLINE
-  /// TODO: implement dynamically sized inline memcpy,
-  ///       and rename: s/bool tryEmit/void emit/
-  LLVM_ABI bool tryEmitMemcpyInline(MachineInstr &MI) const;
 
   /// Match:
   ///   (G_UMULO x, 2) -> (G_UADDO x, x)

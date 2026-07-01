@@ -643,6 +643,8 @@ cl::opt<bool> DumpSectionMap("section-map", cl::desc("dump section map"),
 cl::opt<bool> DumpSectionHeaders("section-headers",
                                  cl::desc("Dump image section headers"),
                                  cl::cat(MiscOptions), cl::sub(DumpSubcommand));
+cl::opt<bool> DumpDXContainer("dxcontainer", cl::desc("dump DXContainer"),
+                              cl::cat(MiscOptions), cl::sub(DumpSubcommand));
 
 cl::opt<bool> RawAll("all", cl::desc("Implies most other options."),
                      cl::cat(MiscOptions), cl::sub(DumpSubcommand));
@@ -774,7 +776,7 @@ cl::opt<std::string> OutputFile("out",
                                 cl::desc("The file to write the stream to"),
                                 cl::Required, cl::sub(ExportSubcommand));
 cl::opt<std::string>
-    Stream("stream", cl::Required,
+    Stream("stream", cl::Optional,
            cl::desc("The index or name of the stream whose contents to export"),
            cl::sub(ExportSubcommand));
 cl::opt<bool> ForceName("name",
@@ -782,6 +784,10 @@ cl::opt<bool> ForceName("name",
                                  "string, even if it is a valid integer"),
                         cl::sub(ExportSubcommand), cl::Optional,
                         cl::init(false));
+cl::opt<bool> DXContainer("dxcontainer",
+                          cl::desc("Export DirectX Container, if present"),
+                          cl::sub(ExportSubcommand), cl::Optional,
+                          cl::init(false));
 } // namespace exportstream
 }
 
@@ -1165,9 +1171,10 @@ static void dumpPretty(StringRef Path) {
     Session->setLoadAddress(opts::pretty::LoadAddress);
 
   auto &Stream = outs();
-  const bool UseColor = opts::pretty::ColorOutput == cl::BOU_UNSET
-                            ? Stream.has_colors()
-                            : opts::pretty::ColorOutput == cl::BOU_TRUE;
+  const bool UseColor =
+      opts::pretty::ColorOutput == cl::boolOrDefault::BOU_UNSET
+          ? Stream.has_colors()
+          : opts::pretty::ColorOutput == cl::boolOrDefault::BOU_TRUE;
   LinePrinter Printer(2, UseColor, Stream, opts::Filters);
 
   auto GlobalScope(Session->getGlobalScope());
@@ -1466,25 +1473,46 @@ static void exportStream() {
   bool Success = false;
   std::string OutFileName = opts::exportstream::OutputFile;
 
-  if (!opts::exportstream::ForceName) {
-    // First try to parse it as an integer, if it fails fall back to treating it
-    // as a named stream.
-    if (to_integer(opts::exportstream::Stream, Index)) {
-      if (Index >= File.getNumStreams()) {
-        errs() << "Error: " << Index << " is not a valid stream index.\n";
-        exit(1);
-      }
-      Success = true;
-      outs() << "Dumping contents of stream index " << Index << " to file "
-             << OutFileName << ".\n";
+  if (opts::exportstream::DXContainer) {
+    auto Dxc = File.getDXContainerStream();
+    if (!Dxc) {
+      errs() << "Error: DirectX Container is not present.\n";
+      exit(1);
     }
-  }
+    if (!opts::exportstream::Stream.empty()) {
+      outs() << "Note: option --" << opts::exportstream::Stream.ArgStr
+             << " was ignored.\n";
+    }
+    Index = StreamDXContainer;
+    outs() << "Dumping contents of DirectX Container stream (index " << Index
+           << ") to file " << OutFileName << ".\n";
+  } else {
+    if (opts::exportstream::Stream.empty()) {
+      errs() << "llvm-pdbutil: either --" << opts::exportstream::Stream.ArgStr
+             << " or --" << opts::exportstream::DXContainer.ArgStr
+             << " must be specified!\n";
+      exit(1);
+    }
+    if (!opts::exportstream::ForceName) {
+      // First try to parse it as an integer, if it fails fall back to treating
+      // it as a named stream.
+      if (to_integer(opts::exportstream::Stream, Index)) {
+        if (Index >= File.getNumStreams()) {
+          errs() << "Error: " << Index << " is not a valid stream index.\n";
+          exit(1);
+        }
+        Success = true;
+        outs() << "Dumping contents of stream index " << Index << " to file "
+               << OutFileName << ".\n";
+      }
+    }
 
-  if (!Success) {
-    InfoStream &IS = cantFail(File.getPDBInfoStream());
-    Index = ExitOnErr(IS.getNamedStreamIndex(opts::exportstream::Stream));
-    outs() << "Dumping contents of stream '" << opts::exportstream::Stream
-           << "' (index " << Index << ") to file " << OutFileName << ".\n";
+    if (!Success) {
+      InfoStream &IS = cantFail(File.getPDBInfoStream());
+      Index = ExitOnErr(IS.getNamedStreamIndex(opts::exportstream::Stream));
+      outs() << "Dumping contents of stream '" << opts::exportstream::Stream
+             << "' (index " << Index << ") to file " << OutFileName << ".\n";
+    }
   }
 
   SourceStream = File.createIndexedStream(Index);
@@ -1554,6 +1582,7 @@ int main(int Argc, const char **Argv) {
 
   if (opts::DumpSubcommand) {
     if (opts::dump::RawAll) {
+      opts::dump::DumpDXContainer = true;
       opts::dump::DumpGlobals = true;
       opts::dump::DumpFpo = true;
       opts::dump::DumpInlineeLines = true;

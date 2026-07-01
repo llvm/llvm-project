@@ -46,6 +46,7 @@ public:
 
 private:
   bool selectImpl(MachineInstr &I, CodeGenCoverage &CoverageInfo) const;
+  bool selectCopy(MachineInstr &I, MachineRegisterInfo &MRI) const;
 
   const WebAssemblyTargetMachine &TM;
   // const WebAssemblySubtarget &STI;
@@ -83,13 +84,68 @@ WebAssemblyInstructionSelector::WebAssemblyInstructionSelector(
 {
 }
 
+bool WebAssemblyInstructionSelector::selectCopy(
+    MachineInstr &I, MachineRegisterInfo &MRI) const {
+  const TargetRegisterClass *DstRC =
+      TRI.getConstrainedRegClassForOperand(I.getOperand(0), MRI);
+  if (!DstRC)
+    return false;
+
+  const TargetRegisterClass *SrcRC =
+      TRI.getConstrainedRegClassForOperand(I.getOperand(1), MRI);
+  if (!SrcRC)
+    return false;
+
+  Register DstReg = I.getOperand(0).getReg();
+  Register SrcReg = I.getOperand(1).getReg();
+
+  if (DstReg.isVirtual())
+    RBI.constrainGenericRegister(DstReg, *DstRC, MRI);
+  if (SrcReg.isVirtual())
+    RBI.constrainGenericRegister(SrcReg, *SrcRC, MRI);
+
+  if (DstRC != SrcRC) {
+    if (DstReg.isPhysical() || SrcReg.isPhysical())
+      llvm_unreachable("COPY to/from SP[32/64] or FP[32/64] with mismatching "
+                       "classes not currently supported");
+
+    if (DstRC == &WebAssembly::I32RegClass &&
+        SrcRC == &WebAssembly::F32RegClass) {
+      I.setDesc(TII.get(WebAssembly::I32_REINTERPRET_F32));
+      return true;
+    }
+    if (DstRC == &WebAssembly::F32RegClass &&
+        SrcRC == &WebAssembly::I32RegClass) {
+      I.setDesc(TII.get(WebAssembly::F32_REINTERPRET_I32));
+      return true;
+    }
+    if (DstRC == &WebAssembly::I64RegClass &&
+        SrcRC == &WebAssembly::F64RegClass) {
+      I.setDesc(TII.get(WebAssembly::I64_REINTERPRET_F64));
+      return true;
+    }
+    if (DstRC == &WebAssembly::F64RegClass &&
+        SrcRC == &WebAssembly::I64RegClass) {
+      I.setDesc(TII.get(WebAssembly::F64_REINTERPRET_I64));
+      return true;
+    }
+
+    llvm_unreachable("COPY between unsupported reg classes.");
+  }
+
+  return true;
+}
+
 bool WebAssemblyInstructionSelector::select(MachineInstr &I) {
   MachineBasicBlock &MBB = *I.getParent();
   MachineFunction &MF = *MBB.getParent();
   MachineRegisterInfo &MRI = MF.getRegInfo();
 
-  if (!I.isPreISelOpcode())
+  if (!I.isPreISelOpcode()) {
+    if (I.isCopy())
+      return selectCopy(I, MRI);
     return true;
+  }
 
   if (selectImpl(I, *CoverageInfo))
     return true;

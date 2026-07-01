@@ -1619,14 +1619,14 @@ MachineCopyPropagationPass::run(MachineFunction &MF,
 bool MachineCopyPropagation::run(MachineFunction &MF) {
   bool IsSpillageCopyElimEnabled = false;
   switch (EnableSpillageCopyElimination) {
-  case cl::BOU_UNSET:
+  case cl::boolOrDefault::BOU_UNSET:
     IsSpillageCopyElimEnabled =
         MF.getSubtarget().enableSpillageCopyElimination();
     break;
-  case cl::BOU_TRUE:
+  case cl::boolOrDefault::BOU_TRUE:
     IsSpillageCopyElimEnabled = true;
     break;
-  case cl::BOU_FALSE:
+  case cl::boolOrDefault::BOU_FALSE:
     IsSpillageCopyElimEnabled = false;
     break;
   }

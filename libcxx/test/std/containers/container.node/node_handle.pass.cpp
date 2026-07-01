@@ -149,10 +149,10 @@ TEST_CONSTEXPR_CXX26 bool test_insert_return_type() {
 
 TEST_CONSTEXPR_CXX26 bool test() {
   test_node_handle_operations<std::map<int, int>>();
+  test_node_handle_operations_multi<std::multimap<int, int>>();
 
   // FIXME: update when other containers are made constexpr
   if (!TEST_IS_CONSTANT_EVALUATED) {
-    test_node_handle_operations_multi<std::multimap<int, int>>();
     test_node_handle_operations<std::set<int>>();
     test_node_handle_operations_multi<std::multiset<int>>();
     test_node_handle_operations<std::unordered_map<int, int>>();

@@ -9,6 +9,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfWasm  # setjmp/longjmp on wasm requires exception-handling support
 class LongjmpTestCase(TestBase):
     @skipIfDarwin  # llvm.org/pr16769: LLDB on Mac OS X dies in function ReadRegisterBytes in GDBRemoteRegisterContext.cpp
     @skipIfWindows # Test is flaky on Windows

@@ -666,6 +666,7 @@ def LifetimeSafetyStrict : DiagGroup<"lifetime-safety-strict",
                                     LifetimeSafetyUseAfterScopeMoved,
                                     LifetimeSafetyReturnStackAddrMoved,
                                     LifetimeSafetyDanglingFieldMoved,
+                                    LifetimeSafetyDanglingGlobalMoved,
                                     LifetimeSafetyInvalidation]>;
 
 def LifetimeSafety : DiagGroup<"lifetime-safety",
@@ -675,10 +676,17 @@ Warnings to detect use-after-free and related temporal safety bugs based on life
   }];
 }
 
+def LifetimeSafetyCrossTUConstructorSuggestions
+    : DiagGroup<"lifetime-safety-cross-tu-constructor-suggestions">;
+def LifetimeSafetyIntraTUConstructorSuggestions
+    : DiagGroup<"lifetime-safety-intra-tu-constructor-suggestions">;
+
 def LifetimeSafetyCrossTUSuggestions
-    : DiagGroup<"lifetime-safety-cross-tu-suggestions">;
+    : DiagGroup<"lifetime-safety-cross-tu-suggestions",
+                [LifetimeSafetyCrossTUConstructorSuggestions]>;
 def LifetimeSafetyIntraTUSuggestions
-    : DiagGroup<"lifetime-safety-intra-tu-suggestions">;
+    : DiagGroup<"lifetime-safety-intra-tu-suggestions",
+                [LifetimeSafetyIntraTUConstructorSuggestions]>;
 def LifetimeSafetySuggestions
     : DiagGroup<"lifetime-safety-suggestions",
                 [LifetimeSafetyCrossTUSuggestions,
@@ -1978,7 +1986,7 @@ def BitIntExtension : DiagGroup<"bit-int-extension">;
 def ExtractAPIMisuse : DiagGroup<"extractapi-misuse">;
 
 // Warnings related to the "Scalable Static Analysis Framework" - SSAF.
-def ScalableStaticAnalysisFramework : DiagGroup<"scalable-static-analysis-framework">;
+def ScalableStaticAnalysis : DiagGroup<"scalable-static-analysis-framework">;
 
 // Warnings about using the non-standard extension having an explicit specialization
 // with a storage class specifier.

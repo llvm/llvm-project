@@ -843,8 +843,12 @@ Status ProcessGDBRemote::DoLaunch(lldb_private::Module *exe_module,
     if (stderr_file_spec)
       m_gdb_comm.SetSTDERR(stderr_file_spec);
 
-    auto [terminal_cols, terminal_rows] = GetClientTerminalSize();
-    m_gdb_comm.SetSTDIOWindowSize(terminal_cols, terminal_rows);
+    if (launch_flags & eLaunchFlagUsePipes) {
+      m_gdb_comm.SetSTDIOWindowSize(0, 0);
+    } else {
+      auto [terminal_cols, terminal_rows] = GetClientTerminalSize();
+      m_gdb_comm.SetSTDIOWindowSize(terminal_cols, terminal_rows);
+    }
 
     m_gdb_comm.SetDisableASLR(launch_flags & eLaunchFlagDisableASLR);
     m_gdb_comm.SetDetachOnError(launch_flags & eLaunchFlagDetachOnError);
@@ -871,8 +875,19 @@ Status ProcessGDBRemote::DoLaunch(lldb_private::Module *exe_module,
       // Since we can't send argv0 separate from the executable path, we need to
       // make sure to use the actual executable path found in the launch_info...
       Args args = launch_info.GetArguments();
-      if (FileSpec exe_file = launch_info.GetExecutableFile())
-        args.ReplaceArgumentAtIndex(0, exe_file.GetPath(/*denormalize=*/true));
+      if (FileSpec exe_file = launch_info.GetExecutableFile()) {
+        const llvm::Triple &remote_triple =
+            GetTarget().GetArchitecture().GetTriple();
+        if (remote_triple.getOS() != llvm::Triple::UnknownOS) {
+          FileSpec remote_exe_file(exe_file.GetPath(/*denormalize=*/false),
+                                   remote_triple);
+          args.ReplaceArgumentAtIndex(
+              0, remote_exe_file.GetPath(/*denormalize=*/true));
+        } else {
+          args.ReplaceArgumentAtIndex(0,
+                                      exe_file.GetPath(/*denormalize=*/true));
+        }
+      }
       if (llvm::Error err = m_gdb_comm.LaunchProcess(args)) {
         error = Status::FromErrorStringWithFormatv(
             "Cannot launch '{0}': {1}", args.GetArgumentAtIndex(0),

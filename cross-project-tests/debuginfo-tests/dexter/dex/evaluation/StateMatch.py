@@ -9,11 +9,11 @@ hitcounts) to descriptions of expected state in a DexterScript."""
 
 from dataclasses import dataclass, field
 import os
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from dex.dextIR import FrameIR, StepIR
 from dex.test_script import DexterScript, Scope
-from dex.test_script.Nodes import Expect, Value, Where
+from dex.test_script.Nodes import Expect, FileLabels, Where, Then
 
 
 def is_subpath(subpath: str, superpath: str) -> bool:
@@ -28,9 +28,14 @@ def is_subpath(subpath: str, superpath: str) -> bool:
 def match_where_to_frame(
     where: Where,
     frame: FrameIR,
+    labels: FileLabels,
+    default_path: Optional[str] = None,
 ) -> bool:
     """A very simple matcher, returns True iff `where` matches `frame`."""
-    if where.file is not None and not is_subpath(where.file, frame.loc.path):
+    file = where.file
+    if not file and where.lines and not where.function:
+        file = default_path
+    if file is not None and not is_subpath(file, frame.loc.path):
         return False
     if where.function is not None:
         fn = frame.function
@@ -39,7 +44,7 @@ def match_where_to_frame(
         if where.function != fn:
             return False
     if where.lines is not None:
-        if frame.loc.lineno not in where.get_lines():
+        if frame.loc.lineno not in where.get_lines(labels):
             return False
     if (
         where.for_hit_count is not None
@@ -59,7 +64,8 @@ class WhereMatchResult:
     """
 
     frame_idx: int
-    active_expects: List[Value] = field(default_factory=list)
+    active_expects: List[Expect] = field(default_factory=list)
+    active_thens: List[Then] = field(default_factory=list)
     pending_wheres: List[Where] = field(default_factory=list)
 
 
@@ -74,6 +80,7 @@ def get_active_where_matches(
 
     def get_active_wheres(where: Where, scope: Scope):
         # For nested !wheres, we must match a specific frame relative to the parent !where.
+        expected_file = scope.get_known_file_for_where(where)
         if scope.where:
             if scope.where not in active_where_expects:
                 # If the parent !where doesn't match any frame, then this !where cannot match any either.
@@ -87,33 +94,43 @@ def get_active_where_matches(
                 # If the target frame is -1, we can't match the !where yet, but we should prepare to step into it.
                 active_where_expects[scope.where].pending_wheres.append(where)
                 return
-            if match_where_to_frame(where, step_info.frames[target_frame_idx]):
+            labels = script.get_labels(
+                expected_file or step_info.frames[target_frame_idx].loc.path
+            )
+            if match_where_to_frame(where, step_info.frames[target_frame_idx], labels):
                 active_where_expects[where] = WhereMatchResult(target_frame_idx)
             return
         # For this !where, search for the rootmost stack frame that matches it.
-        matching_frame_idx = next(
-            (
-                frame_idx
-                for frame_idx, frame in reversed(list(enumerate(step_info.frames)))
-                if match_where_to_frame(where, frame)
-            ),
-            None,
-        )
+        matching_frame_idx = None
+        for frame_idx, frame in reversed(list(enumerate(step_info.frames))):
+            labels = script.get_labels(expected_file or frame.loc.path)
+            if match_where_to_frame(where, frame, labels, script.root_scope.file):
+                matching_frame_idx = frame_idx
+                break
+
         if matching_frame_idx is not None:
             active_where_expects[where] = WhereMatchResult(matching_frame_idx)
 
     # As we visit the script nodes in pre-order traversal, we can always assume that an expect's parent !where
     # has already been visited, and thus should have an entry in active_where_expects if it is active.
     def get_active_expects(expect: Expect, expected_value, scope: Scope):
-        assert isinstance(
-            expect, Value
-        ), "Values should be the only type of expect possible!"
         if (
             scope.where in active_where_expects
             and active_where_expects[scope.where].frame_idx == 0
         ):
             active_where_expects[scope.where].active_expects.append(expect)
 
-    script.visit_script(visit_where=get_active_wheres, visit_expect=get_active_expects)
+    def get_active_thens(then: Then, scope: Scope):
+        if (
+            scope.where in active_where_expects
+            and active_where_expects[scope.where].frame_idx == 0
+        ):
+            active_where_expects[scope.where].active_thens.append(then)
+
+    script.visit_script(
+        visit_where=get_active_wheres,
+        visit_expect=get_active_expects,
+        visit_then=get_active_thens,
+    )
 
     return active_where_expects

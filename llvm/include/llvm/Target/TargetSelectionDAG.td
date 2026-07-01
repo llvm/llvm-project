@@ -346,7 +346,7 @@ def SDTFPAtomic2 : SDTypeProfile<1, 2, [
 ]>;
 
 def SDTAtomicStore : SDTypeProfile<0, 2, [
-  SDTCisInt<0>, SDTCisPtrTy<1>
+  SDTCisPtrTy<1>
 ]>;
 def SDTAtomicLoad : SDTypeProfile<1, 1, [
   SDTCisPtrTy<1>
@@ -480,6 +480,8 @@ def clmul      : SDNode<"ISD::CLMUL"     , SDTIntBinOp,
                         [SDNPCommutative, SDNPAssociative]>;
 def clmulr     : SDNode<"ISD::CLMULR"    , SDTIntBinOp, [SDNPCommutative]>;
 def clmulh     : SDNode<"ISD::CLMULH"    , SDTIntBinOp, [SDNPCommutative]>;
+def pext       : SDNode<"ISD::PEXT"      , SDTIntBinOp>;
+def pdep       : SDNode<"ISD::PDEP"      , SDTIntBinOp>;
 def and        : SDNode<"ISD::AND"       , SDTIntBinOp,
                         [SDNPCommutative, SDNPAssociative]>;
 def or         : SDNode<"ISD::OR"        , SDTIntBinOp,

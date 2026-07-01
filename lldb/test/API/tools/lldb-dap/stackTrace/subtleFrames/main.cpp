@@ -1,9 +1,8 @@
 #include <functional>
-#include <iostream>
 
+int g = 0;
 void greet() {
-  // BREAK HERE
-  std::cout << "Hello\n";
+  g++; // BREAK HERE
 }
 
 int main() {

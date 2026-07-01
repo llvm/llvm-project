@@ -254,13 +254,37 @@ void mock::MockLiboffload::initDefault() {
         return OL_SUCCESS;
       });
 
+  ON_CALL(*this, olLaunchKernel)
+      .WillByDefault([this](ol_queue_handle_t Queue, ol_device_handle_t Device,
+                            ol_symbol_handle_t Kernel,
+                            const ol_kernel_launch_size_args_t *LaunchSizeArgs,
+                            const ol_kernel_launch_prop_t *Properties,
+                            size_t NumArgs, void **ArgPtrs,
+                            const size_t *ArgSizes) -> ol_result_t {
+        if (!Device || !Kernel || !Queue)
+          return makeEmptyStrError(OL_ERRC_INVALID_NULL_HANDLE);
+        if (!LaunchSizeArgs)
+          return makeEmptyStrError(OL_ERRC_INVALID_NULL_POINTER);
+        std::ignore = Properties;
+        if ((ArgPtrs == nullptr) != (ArgSizes == nullptr))
+          return makeEmptyStrError(OL_ERRC_INVALID_ARGUMENT);
+        if (NumArgs > 0 && (!ArgPtrs || !ArgSizes))
+          return makeEmptyStrError(OL_ERRC_INVALID_ARGUMENT);
+        for (size_t I = 0; I < NumArgs; ++I) {
+          if (ArgSizes[I] > 0 && !ArgPtrs[I])
+            return makeEmptyStrError(OL_ERRC_INVALID_ARGUMENT);
+        }
+        return OL_SUCCESS;
+      });
+
   ON_CALL(*this, olCreateEvent)
-      .WillByDefault([this](ol_queue_handle_t Queue,
+      .WillByDefault([this](ol_queue_handle_t Queue, ol_event_flags_t Flags,
                             ol_event_handle_t *Event) -> ol_result_t {
         if (!Queue)
           return makeEmptyStrError(OL_ERRC_INVALID_NULL_HANDLE);
         if (!Event)
           return makeEmptyStrError(OL_ERRC_INVALID_NULL_POINTER);
+        std::ignore = Flags;
         *Event = mock::createDummyHandleWithData<ol_event_handle_t>(
             reinterpret_cast<unsigned char *>(&Queue), sizeof(Queue));
         return OL_SUCCESS;

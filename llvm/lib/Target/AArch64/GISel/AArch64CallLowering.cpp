@@ -601,7 +601,8 @@ bool AArch64CallLowering::fallBackToDAGISel(const MachineFunction &MF) const {
 
   auto OptLevel = MF.getTarget().getOptLevel();
   bool IsGlobalISelPreferred =
-      getCGPassBuilderOption().EnableGlobalISelOption.value_or(false) ||
+      getCGPassBuilderOption().EnableGlobalISelOption ==
+          cl::boolOrDefault::BOU_TRUE ||
       static_cast<unsigned>(OptLevel) <= TM.getEnableGlobalISelAtO() ||
       F.hasOptNone();
   return !IsGlobalISelPreferred;

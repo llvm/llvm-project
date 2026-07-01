@@ -186,6 +186,14 @@ LogicalResult ProfileInfoDepot::populateProfileInfo(tosa::GatherOp op) {
 }
 
 template <>
+LogicalResult ProfileInfoDepot::populateProfileInfo(tosa::RowGatherOp op) {
+  addValue(op.getValues());
+  addValue(op.getIndices());
+  addValue(op.getOutput());
+  return success();
+}
+
+template <>
 LogicalResult
 ProfileInfoDepot::populateProfileInfo(tosa::RowGatherBlockScaledOp op) {
   for (Value value : op.getValues())
@@ -249,6 +257,14 @@ LogicalResult ProfileInfoDepot::populateProfileInfo(tosa::MatMulOp op) {
 }
 
 template <>
+LogicalResult ProfileInfoDepot::populateProfileInfo(tosa::MatMulTOp op) {
+  addValue(op.getA());
+  addValue(op.getB());
+  addValue(op.getOutput());
+  return success();
+}
+
+template <>
 LogicalResult ProfileInfoDepot::populateProfileInfo(tosa::VariableOp op) {
   addType(op.getType());
   return success();
@@ -300,12 +316,14 @@ LogicalResult ProfileInfoDepot::populatationDispatch(Operation *op) {
   POPULATE_PROFILE_INFO_CUSTOM(Tile)
   POPULATE_PROFILE_INFO_CUSTOM(Transpose)
   POPULATE_PROFILE_INFO_CUSTOM(Gather)
+  POPULATE_PROFILE_INFO_CUSTOM(RowGather)
   POPULATE_PROFILE_INFO_CUSTOM(RowGatherBlockScaled)
   POPULATE_PROFILE_INFO_CUSTOM(Scatter)
   POPULATE_PROFILE_INFO_CUSTOM(Resize)
   POPULATE_PROFILE_INFO_CUSTOM(Select)
   POPULATE_PROFILE_INFO_CUSTOM(Rescale)
   POPULATE_PROFILE_INFO_CUSTOM(MatMul)
+  POPULATE_PROFILE_INFO_CUSTOM(MatMulT)
   POPULATE_PROFILE_INFO_CUSTOM(Variable)
   POPULATE_PROFILE_INFO_CUSTOM(VariableWrite)
   POPULATE_PROFILE_INFO_CUSTOM(Dim)

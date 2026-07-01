@@ -144,7 +144,7 @@ bool rewritePHIs(Function &F, UniformityInfo &UA, DominatorTree *DT) {
       // TODO: We should still be able to replace undef value if the unique
       // value is a Constant.
       if (!UniqueDefinedIncoming || Undefs.empty() ||
-          UA.isUniformAtDef(DominateBB->getTerminator()))
+          UA.isUniformTerminator(DominateBB->getTerminator()))
         continue;
 
       // We only replace the undef when DominateBB truly dominates all the

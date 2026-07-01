@@ -10,7 +10,6 @@
 
 ; AMDGPU is used because its i32 mul has a cost of 4,
 ; making the over-counting observable against the default budget of 4.
-target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-p7:160:256:256:32-p8:128:128-p9:192:256:256:32-ni:7:8:9"
 target triple = "amdgcn-amd-amdhsa"
 
 ; CHECK-LABEL: @offset_start_loop

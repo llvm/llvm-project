@@ -1257,7 +1257,7 @@ public:
 
   template <class _Key>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 iterator find(const _Key& __key) {
-    auto [__, __match] = __find_equal(__key);
+    auto [__dummy, __match] = __find_equal(__key);
     if (__match == nullptr)
       return end();
     return iterator(std::__static_fancy_pointer_cast<__node_pointer>(__match));
@@ -1265,7 +1265,7 @@ public:
 
   template <class _Key>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 const_iterator find(const _Key& __key) const {
-    auto [__, __match] = __find_equal(__key);
+    auto [__dummy, __match] = __find_equal(__key);
     if (__match == nullptr)
       return end();
     return const_iterator(std::__static_fancy_pointer_cast<__node_pointer>(__match));

@@ -306,7 +306,7 @@ subroutine declare_mapper_nested_parent
 
   ! Check implicit maps for deep nested allocatable payloads not covered by mapper
   ! CHECK-DAG: omp.map.info {{.*}} {name = "r.deep_arr.implicit_map"}
-  ! CHECK: omp.target
+  ! CHECK: omp.target kernel_type(generic)
   !$omp target map(mapper(custommapper), tofrom: r)
     r%real_arr = r%base_arr(1) + r%inner%deep_arr(1)
   !$omp end target
