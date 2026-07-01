@@ -293,8 +293,7 @@ void NVPTXAsmPrinter::printReturnValStr(const Function *F, raw_ostream &O) {
   };
   if (shouldPassAsArray(Ty)) {
     const unsigned TotalSize = DL.getTypeAllocSize(Ty);
-    const Align RetAlignment =
-        getPTXParamAlign(F, Ty, AttributeList::ReturnIndex, DL);
+    const Align RetAlignment = getPTXReturnAlign(F, Ty, DL);
     O << ".param .align " << RetAlignment.value() << " .b8 func_retval0["
       << TotalSize << "]";
   } else if (Ty->isFloatingPointTy()) {
@@ -330,8 +329,7 @@ void NVPTXAsmPrinter::emitCallPrototype(const CallBase &CB,
   } else {
     O << "(";
     if (shouldPassAsArray(RetTy)) {
-      const Align RetAlign =
-          getPTXParamAlign(&CB, RetTy, AttributeList::ReturnIndex, DL);
+      const Align RetAlign = getPTXReturnAlign(&CB, RetTy, DL);
       O << ".param .align " << RetAlign.value() << " .b8 _["
         << DL.getTypeAllocSize(RetTy) << "]";
     } else if (RetTy->isFloatingPointTy() || RetTy->isIntegerTy()) {
@@ -361,31 +359,13 @@ void NVPTXAsmPrinter::emitCallPrototype(const CallBase &CB,
   auto MakeArg = [&](const unsigned I) {
     Type *Ty = CB.getArgOperand(I)->getType();
 
-    if (CB.paramHasAttr(I, Attribute::ByVal)) {
-      // Indirect calls need strict ABI alignment so we disable optimizations by
-      // not providing a function to optimize.
-      Type *ETy = CB.getParamByValType(I);
-      // Mirror the byval alignment computed by SelectionDAGBuilder: prefer an
-      // explicit stack/param alignment, otherwise fall back to the byval type
-      // alignment.
-      MaybeAlign InitialAlign = CB.getParamStackAlign(I);
-      if (!InitialAlign)
-        InitialAlign = CB.getParamAlign(I);
-      Align ByValAlign =
-          InitialAlign.value_or(TLI->getByValTypeAlignment(ETy, DL));
-      Align ParamByValAlign =
-          getDeviceByValParamAlign(/*F=*/nullptr, ETy, ByValAlign, DL);
+    const bool IsByVal = CB.paramHasAttr(I, Attribute::ByVal);
+    if (IsByVal || shouldPassAsArray(Ty)) {
+      Type *ETy = IsByVal ? CB.getParamByValType(I) : Ty;
+      Align ParamAlign = getPTXArgAlign(&CB, I, ETy, DL);
 
-      O << ".param .align " << ParamByValAlign.value() << " .b8 _["
-        << DL.getTypeAllocSize(ETy) << "]";
-      return;
-    }
-
-    if (shouldPassAsArray(Ty)) {
-      Align ParamAlign =
-          getPTXParamAlign(&CB, Ty, I + AttributeList::FirstArgIndex, DL);
       O << ".param .align " << ParamAlign.value() << " .b8 _["
-        << DL.getTypeAllocSize(Ty) << "]";
+        << DL.getTypeAllocSize(ETy) << "]";
       return;
     }
     // scalar type
@@ -1506,38 +1486,15 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
       }
     }
 
-    if (Arg.hasByValAttr()) {
-      // param has byVal attribute.
-      Type *ETy = Arg.getParamByValType();
+    const bool IsByVal = Arg.hasByValAttr();
+    if (IsByVal || shouldPassAsArray(Ty)) {
+      Type *ETy = IsByVal ? Arg.getParamByValType() : Ty;
       assert(ETy && "Param should have byval type");
 
-      // Print .param .align <a> .b8 .param[size];
-      // <a>  = optimal alignment for the element type; always multiple of
-      //        PAL.getParamAlignment
-      // size = typeallocsize of element type
-      const Align OptimalAlign =
-          IsKernelFunc
-              ? getPTXParamAlign(
-                    F, ETy, Arg.getArgNo() + AttributeList::FirstArgIndex, DL)
-              : getDeviceByValParamAlign(F, ETy,
-                                         Arg.getParamAlign().valueOrOne(), DL);
+      const Align OptimalAlign = getPTXArgAlign(F, Arg, DL);
 
       O << "\t.param .align " << OptimalAlign.value() << " .b8 " << ParamSym
         << "[" << DL.getTypeAllocSize(ETy) << "]";
-      continue;
-    }
-
-    if (shouldPassAsArray(Ty)) {
-      // Just print .param .align <a> .b8 .param[size];
-      // <a>  = optimal alignment for the element type; always multiple of
-      //        PAL.getParamAlignment
-      // size = typeallocsize of element type
-      Align OptimalAlign = getPTXParamAlign(
-          F, Ty, Arg.getArgNo() + AttributeList::FirstArgIndex, DL);
-
-      O << "\t.param .align " << OptimalAlign.value() << " .b8 " << ParamSym
-        << "[" << DL.getTypeAllocSize(Ty) << "]";
-
       continue;
     }
     // Just a scalar

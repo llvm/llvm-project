@@ -1366,18 +1366,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
            "byval arg must have indirect type");
     Type *ETy = (IsByVal ? Arg.IndirectType : Arg.Ty);
 
-    const Align ArgAlign = [&]() {
-      if (IsByVal) {
-        // The ByValAlign in the Outs[OIdx].Flags is always set at this point,
-        // so we don't need to worry whether it's naturally aligned or not.
-        // See TargetLowering::LowerCallTo().
-        const Align InitialAlign = ArgOuts[0].Flags.getNonZeroByValAlign();
-        return getDeviceByValParamAlign(CB->getCalledFunction(), ETy,
-                                        InitialAlign, DL);
-      }
-      return getPTXParamAlign(CB, Arg.Ty, ArgI + AttributeList::FirstArgIndex,
-                              DL);
-    }();
+    const Align ArgAlign = getPTXArgAlign(CB, ArgI, ETy, DL);
 
     const unsigned TySize = DL.getTypeAllocSize(ETy);
     assert((!IsByVal || TySize == ArgOuts[0].Flags.getByValSize()) &&
@@ -1510,8 +1499,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     const SDValue RetSymbol = DAG.getExternalSymbol("retval0", MVT::i32);
     const unsigned ResultSize = DL.getTypeAllocSize(RetTy);
     if (shouldPassAsArray(RetTy)) {
-      const Align RetAlign =
-          getPTXParamAlign(CB, RetTy, AttributeList::ReturnIndex, DL);
+      const Align RetAlign = getPTXReturnAlign(CB, RetTy, DL);
       MakeDeclareArrayParam(RetSymbol, RetAlign, ResultSize);
     } else {
       MakeDeclareScalarParam(RetSymbol, ResultSize);
@@ -1594,8 +1582,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     ComputePTXValueVTs(*this, DL, Ctx, CLI.CallConv, RetTy, VTs, Offsets);
     assert(VTs.size() == Ins.size() && "Bad value decomposition");
 
-    const Align RetAlign =
-        getPTXParamAlign(CB, RetTy, AttributeList::ReturnIndex, DL);
+    const Align RetAlign = getPTXReturnAlign(CB, RetTy, DL);
     const SDValue RetSymbol = DAG.getExternalSymbol("retval0", MVT::i32);
 
     // PTX Interoperability Guide 3.3(A): [Integer] Values shorter than
@@ -4026,8 +4013,7 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
       assert(VTs.size() == ArgIns.size() && "Size mismatch");
       assert(VTs.size() == Offsets.size() && "Size mismatch");
 
-      const Align ArgAlign = getPTXParamAlign(
-          &F, Ty, Arg.getArgNo() + AttributeList::FirstArgIndex, DL);
+      const Align ArgAlign = getPTXArgAlign(&F, Arg, DL);
 
       unsigned I = 0;
       const auto VI = VectorizePTXValueVTs(VTs, Offsets, ArgAlign);
@@ -4083,8 +4069,7 @@ NVPTXTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   LLVMContext &Ctx = *DAG.getContext();
 
   const SDValue RetSymbol = DAG.getExternalSymbol("func_retval0", MVT::i32);
-  const auto RetAlign =
-      getPTXParamAlign(&F, RetTy, AttributeList::ReturnIndex, DL);
+  const auto RetAlign = getPTXReturnAlign(&F, RetTy, DL);
 
   // PTX Interoperability Guide 3.3(A): [Integer] Values shorter than
   // 32-bits are sign extended or zero extended, depending on whether
