@@ -307,8 +307,7 @@ else:
 define i1 @add_nuw_decomp_recursive() {
 ; CHECK-LABEL: @add_nuw_decomp_recursive(
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i64 -9223372036854775808, 10
-; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i64 [[ADD]], 10
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %add = add nuw nsw i64 -9223372036854775808, 10
   %cmp = icmp uge i64 %add, 10
