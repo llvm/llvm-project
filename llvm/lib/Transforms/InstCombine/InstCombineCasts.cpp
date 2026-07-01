@@ -2207,10 +2207,14 @@ Instruction *InstCombinerImpl::visitFPTrunc(FPTruncInst &FPT) {
     unsigned SrcWidth = std::max(LHSWidth, RHSWidth);
     unsigned DstWidth = Ty->getFPMantissaWidth();
 
-    // Narrowing recomputes the binop in a smaller type, which can overflow to
-    // inf where the wide op was finite. Therefore we have to drop ninf.
+    // The narrowed binop keeps ninf only if both the binop and the fptrunc
+    // have it. ninf constrains both operands and result: the binop's ninf
+    // covers the (bit-identical) narrow operands but not the result, since
+    // narrowing can overflow to inf where the wide op was finite; the
+    // fptrunc's ninf covers the result (whose value the narrowed binop
+    // takes over) but not the operands.
     FastMathFlags NarrowFMF = BO->getFastMathFlags();
-    NarrowFMF.setNoInfs(false);
+    NarrowFMF.setNoInfs(NarrowFMF.noInfs() && FPT.hasNoInfs());
 
     switch (BO->getOpcode()) {
       default: break;
