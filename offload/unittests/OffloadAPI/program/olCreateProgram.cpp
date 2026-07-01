@@ -14,7 +14,6 @@ using olCreateProgramTest = OffloadDeviceTest;
 OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(olCreateProgramTest);
 
 TEST_P(olCreateProgramTest, Success) {
-
   std::unique_ptr<llvm::MemoryBuffer> DeviceBin;
   ASSERT_TRUE(TestEnvironment::loadDeviceBinary("foo", Device, DeviceBin));
   ASSERT_GE(DeviceBin->getBufferSize(), 0lu);
@@ -28,7 +27,6 @@ TEST_P(olCreateProgramTest, Success) {
 }
 
 TEST_P(olCreateProgramTest, NullDeviceHandle) {
-
   std::unique_ptr<llvm::MemoryBuffer> DeviceBin;
   ASSERT_TRUE(TestEnvironment::loadDeviceBinary("foo", Device, DeviceBin));
   ASSERT_GE(DeviceBin->getBufferSize(), 0lu);
@@ -40,7 +38,6 @@ TEST_P(olCreateProgramTest, NullDeviceHandle) {
 }
 
 TEST_P(olCreateProgramTest, NullProgData) {
-
   std::unique_ptr<llvm::MemoryBuffer> DeviceBin;
   ASSERT_TRUE(TestEnvironment::loadDeviceBinary("foo", Device, DeviceBin));
   ASSERT_GE(DeviceBin->getBufferSize(), 0lu);
@@ -52,7 +49,6 @@ TEST_P(olCreateProgramTest, NullProgData) {
 }
 
 TEST_P(olCreateProgramTest, NullOutputProgram) {
-
   std::unique_ptr<llvm::MemoryBuffer> DeviceBin;
   ASSERT_TRUE(TestEnvironment::loadDeviceBinary("foo", Device, DeviceBin));
   ASSERT_GE(DeviceBin->getBufferSize(), 0lu);
