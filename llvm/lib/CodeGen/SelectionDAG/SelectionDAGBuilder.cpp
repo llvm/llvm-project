@@ -5527,6 +5527,31 @@ SDValue SelectionDAGBuilder::handleTargetIntrinsicRet(const CallBase &I,
 void SelectionDAGBuilder::visitTargetIntrinsic(const CallInst &I,
                                                unsigned Intrinsic) {
   auto [HasChain, OnlyLoad] = getTargetIntrinsicCallProperties(I);
+  Intrinsic::ID IntrinsicID = static_cast<Intrinsic::ID>(Intrinsic);
+
+  if (!DAG.getMachineFunction().getSubtarget().isIntrinsicSupported(
+          Intrinsic)) {
+    SDLoc DL = getCurSDLoc();
+    DAG.getContext()->diagnose(DiagnosticInfoUnsupportedTargetIntrinsic(
+        *I.getFunction(), IntrinsicID, DL.getDebugLoc()));
+
+    // The intrinsic is not available on this subtarget. Preserve the chain for
+    // side-effecting intrinsics and lower any result to poison so that
+    // compilation can continue and collect further diagnostics.
+    if (HasChain && !OnlyLoad)
+      DAG.setRoot(getRoot());
+
+    if (!I.getType()->isVoidTy()) {
+      SmallVector<EVT, 4> ValueVTs;
+      ComputeValueVTs(DAG.getTargetLoweringInfo(), DAG.getDataLayout(),
+                      I.getType(), ValueVTs);
+      SmallVector<SDValue, 4> Results;
+      for (EVT VT : ValueVTs)
+        Results.push_back(DAG.getPOISON(VT));
+      setValue(&I, DAG.getMergeValues(Results, DL));
+    }
+    return;
+  }
 
   // Infos is set by getTgtMemIntrinsic.
   SmallVector<TargetLowering::IntrinsicInfo> Infos;

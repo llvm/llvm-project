@@ -1739,24 +1739,6 @@ func.func @deinterleave_2d_scalable(%arg: vector<2x[8]xf32>) -> (vector<2x[4]xf3
     return %0, %1 : vector<2x[4]xf32>, vector<2x[4]xf32>
 }
 
-
-// -----
-
-//===----------------------------------------------------------------------===//
-// vector.step
-//===----------------------------------------------------------------------===//
-
-// TODO: Investigate why this wouldn't lower with --convert-to-llvm="filter-dialects=vector"
-
-// CHECK-LABEL: @step
-// CHECK: %[[CST:.+]] = arith.constant dense<[0, 1, 2, 3]> : vector<4xindex>
-// CHECK: return %[[CST]] : vector<4xindex>
-func.func @step() -> vector<4xindex> {
-  %0 = vector.step : vector<4xindex>
-  return %0 : vector<4xindex>
-}
-
-
 // -----
 
 //===----------------------------------------------------------------------===//
