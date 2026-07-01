@@ -168,10 +168,6 @@ struct CpuInfo {
   unsigned ArchIdx;
   AArch64::ExtensionBitset
       DefaultExtensions; // Default extensions for this CPU.
-
-  AArch64::ExtensionBitset getImpliedExtensions() const {
-    return DefaultExtensions;
-  }
 };
 
 #define EMIT_CPU_INFO

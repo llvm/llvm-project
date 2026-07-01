@@ -110,6 +110,16 @@ void UnwindInfoManager::addBootstrapSymbols(StringMap<ExecutorAddr> &M) {
       ExecutorAddr::fromPtr(llvm_orc_rt_alt_UnwindInfoManager_register);
   M[rt_alt::UnwindInfoManagerDeregisterActionName] =
       ExecutorAddr::fromPtr(llvm_orc_rt_alt_UnwindInfoManager_deregister);
+
+  {
+    // Also provide symbols defined by StandaloneMachOUnwindInfoRegistrar
+    // in the new ORC runtime.
+    const auto &SNs = rt::orc_rt_MachOUnwindInfoRegistrarSPSSymbols;
+    M[SNs.RegisterSectionsName] =
+        ExecutorAddr::fromPtr(llvm_orc_rt_alt_UnwindInfoManager_register);
+    M[SNs.DeregisterSectionsName] =
+        ExecutorAddr::fromPtr(llvm_orc_rt_alt_UnwindInfoManager_deregister);
+  }
 }
 
 Error UnwindInfoManager::registerSections(

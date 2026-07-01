@@ -2144,12 +2144,13 @@ public:
   ///
   /// By default, performs semantic analysis to build the new statement.
   /// Subclasses may override this routine to provide different behavior.
-  OMPClause *RebuildOMPNumTeamsClause(ArrayRef<Expr *> VarList,
-                                      SourceLocation StartLoc,
-                                      SourceLocation LParenLoc,
-                                      SourceLocation EndLoc) {
-    return getSema().OpenMP().ActOnOpenMPNumTeamsClause(VarList, StartLoc,
-                                                        LParenLoc, EndLoc);
+  OMPClause *RebuildOMPNumTeamsClause(
+      ArrayRef<Expr *> VarList, OpenMPNumTeamsClauseModifier Modifier,
+      Expr *ModifierExpr, SourceLocation ModifierLoc, SourceLocation StartLoc,
+      SourceLocation LParenLoc, SourceLocation EndLoc) {
+    return getSema().OpenMP().ActOnOpenMPNumTeamsClause(
+        VarList, Modifier, ModifierExpr, ModifierLoc, StartLoc, LParenLoc,
+        EndLoc);
   }
 
   /// Build a new OpenMP 'thread_limit' clause.
@@ -11601,8 +11602,16 @@ TreeTransform<Derived>::TransformOMPNumTeamsClause(OMPNumTeamsClause *C) {
       return nullptr;
     Vars.push_back(EVar.get());
   }
+  Expr *ModifierExpr = C->getModifierExpr();
+  if (ModifierExpr) {
+    ExprResult EVar = getDerived().TransformExpr(cast<Expr>(ModifierExpr));
+    if (EVar.isInvalid())
+      return nullptr;
+    ModifierExpr = EVar.get();
+  }
   return getDerived().RebuildOMPNumTeamsClause(
-      Vars, C->getBeginLoc(), C->getLParenLoc(), C->getEndLoc());
+      Vars, C->getModifier(), ModifierExpr, C->getModifierLoc(),
+      C->getBeginLoc(), C->getLParenLoc(), C->getEndLoc());
 }
 
 template <typename Derived>

@@ -608,7 +608,7 @@ void BreakpointLocation::GetDescription(Stream *s,
       if (sc.comp_unit != nullptr) {
         s->EOL();
         s->Indent("compile unit = ");
-        sc.comp_unit->GetPrimaryFile().GetFilename().Dump(s);
+        s->PutCString(sc.comp_unit->GetPrimaryFile().GetFilename());
 
         if (sc.function != nullptr) {
           s->EOL();

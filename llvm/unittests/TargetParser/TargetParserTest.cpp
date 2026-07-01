@@ -17,6 +17,7 @@
 #include "llvm/TargetParser/AArch64TargetParser.h"
 #include "llvm/TargetParser/ARMTargetParser.h"
 #include "llvm/TargetParser/ARMTargetParserCommon.h"
+#include "llvm/TargetParser/SubtargetFeature.h"
 #include "llvm/TargetParser/Triple.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -534,6 +535,36 @@ INSTANTIATE_TEST_SUITE_P(
     ARMCPUTestParams<uint64_t>::PrintToStringParamName);
 
 static constexpr unsigned NumARMCPUArchs = 95;
+
+TEST(FeatureBitsetTest, Iterator) {
+  // Empty bitset yields nothing.
+  FeatureBitset Empty;
+  EXPECT_EQ(Empty.begin(), Empty.end());
+  for (unsigned Index : Empty) {
+    (void)Index;
+    FAIL() << "empty bitset should yield no set bits";
+  }
+
+  // Yields the set indices in order, crossing the 63/64 word boundary.
+  FeatureBitset Bits;
+  Bits.set(0).set(5).set(63).set(64).set(200);
+  std::vector<unsigned> SetIndices;
+  for (unsigned Index : Bits)
+    SetIndices.push_back(Index);
+  EXPECT_EQ(SetIndices, (std::vector<unsigned>{0, 5, 63, 64, 200}));
+
+  // Every yielded index is set, and the count matches.
+  for (unsigned Index : Bits)
+    EXPECT_TRUE(Bits[Index]);
+  EXPECT_EQ(SetIndices.size(), Bits.count());
+
+  // The final position is reached.
+  FeatureBitset Last;
+  unsigned LastIndex = Last.size() - 1;
+  Last.set(LastIndex);
+  SetIndices.assign(Last.begin(), Last.end());
+  EXPECT_EQ(SetIndices, (std::vector<unsigned>{LastIndex}));
+}
 
 TEST(TargetParserTest, testARMCPUArchList) {
   SmallVector<StringRef, NumARMCPUArchs> List;
@@ -1228,7 +1259,7 @@ TEST_P(AArch64CPUAliasTestFixture, testCPUAlias) {
   StringRef MainName = params.Aliases[0];
   const std::optional<AArch64::CpuInfo> Cpu = AArch64::parseCpu(MainName);
   const AArch64::ArchInfo &MainAI = AArch64::ArchInfos[Cpu->ArchIdx];
-  AArch64::ExtensionBitset MainFlags = Cpu->getImpliedExtensions();
+  AArch64::ExtensionBitset MainFlags = Cpu->DefaultExtensions;
 
   for (size_t I = 1, E = params.Aliases.size(); I != E; ++I) {
     StringRef OtherName = params.Aliases[I];
@@ -1245,7 +1276,7 @@ TEST_P(AArch64CPUAliasTestFixture, testCPUAlias) {
         << MainName << " vs " << OtherName;
     EXPECT_EQ(MainAI, OtherAI) << MainName << " vs " << OtherName;
 
-    AArch64::ExtensionBitset OtherFlags = OtherCpu->getImpliedExtensions();
+    AArch64::ExtensionBitset OtherFlags = OtherCpu->DefaultExtensions;
 
     EXPECT_EQ(MainFlags, OtherFlags) << MainName << " vs " << OtherName;
 
@@ -1320,7 +1351,7 @@ bool testAArch64Extension(StringRef CPUName, StringRef ArchExt) {
   if (!Extension)
     return false;
   std::optional<AArch64::CpuInfo> CpuInfo = AArch64::parseCpu(CPUName);
-  return CpuInfo->getImpliedExtensions().test(Extension->ID);
+  return CpuInfo->DefaultExtensions.test(Extension->ID);
 }
 
 bool testAArch64Extension(const AArch64::ArchInfo &AI, StringRef ArchExt) {

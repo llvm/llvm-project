@@ -155,8 +155,6 @@ cl::opt<bool> EnableSVEGISel(
     cl::desc("Enable / disable SVE scalable vectors in Global ISel"),
     cl::init(false));
 
-// TODO: This option should be removed once we switch to always using PTRADD in
-// the SelectionDAG.
 static cl::opt<int> BrMergingBaseCostThresh(
     "aarch64-br-merging-base-cost", cl::init(2),
     cl::desc(
@@ -195,6 +193,8 @@ static cl::opt<int> BrMergingUnlikelyBias(
         "merge unlikely branches."),
     cl::Hidden);
 
+// TODO: This option should be removed once we switch to always using PTRADD in
+// the SelectionDAG.
 static cl::opt<bool> UseFEATCPACodegen(
     "aarch64-use-featcpa-codegen", cl::Hidden,
     cl::desc("Generate ISD::PTRADD nodes for pointer arithmetic in "
