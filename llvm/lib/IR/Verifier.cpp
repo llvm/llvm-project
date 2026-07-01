@@ -2637,7 +2637,9 @@ void Verifier::verifyFunctionMetadata(
       if (MD->getNumOperands() != 3)
         continue;
 
-      uint64_t Product = 1;
+      unsigned SizeTBits = DL.getIndexSizeInBits(DL.getProgramAddressSpace());
+      APInt Product(SizeTBits, 1);
+      bool Overflow = false;
       for (unsigned I = 0; I != 3; ++I) {
         ConstantInt *C = mdconst::dyn_extract<ConstantInt>(MD->getOperand(I));
         Check(C, "reqd_work_group_size operands must be integer constants", MD);
@@ -2645,17 +2647,17 @@ void Verifier::verifyFunctionMetadata(
           break;
 
         const APInt &Value = C->getValue();
-        Check(Value.getActiveBits() <= 64,
-              "reqd_work_group_size operands must fit in 64 bits", MD);
-        if (Value.getActiveBits() > 64)
+        Check(Value.getActiveBits() <= SizeTBits,
+              "reqd_work_group_size operands must fit in size_t", MD);
+        if (Value.getActiveBits() > SizeTBits)
           break;
 
-        uint64_t Dim = Value.getZExtValue();
-        Check(Dim == 0 || Product <= std::numeric_limits<uint64_t>::max() / Dim,
-              "reqd_work_group_size product must fit in 64 bits", MD);
-        if (Dim != 0 && Product > std::numeric_limits<uint64_t>::max() / Dim)
-          break;
-        Product *= Dim;
+        APInt Dim = Value.zextOrTrunc(SizeTBits);
+        if (!Dim.isZero() && !Overflow) {
+          Product = Product.umul_ov(Dim, Overflow);
+          Check(!Overflow, "reqd_work_group_size product must fit in size_t",
+                MD);
+        }
       }
     }
   }
