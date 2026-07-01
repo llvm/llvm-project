@@ -114,6 +114,8 @@ llvm::Expected<std::unique_ptr<InstrProfCorrelator>>
 InstrProfCorrelator::get(StringRef Filename, ProfCorrelatorKind FileKind,
                          const object::BuildIDFetcher *BIDFetcher,
                          const ArrayRef<object::BuildID> BIs) {
+  // Might be overwritten from BuildIDFetcher.
+  std::string EffectiveFilename = Filename.str();
   if (BIDFetcher) {
     if (BIs.empty())
       return make_error<InstrProfError>(
@@ -135,12 +137,12 @@ InstrProfCorrelator::get(StringRef Filename, ProfCorrelatorKind FileKind,
           "Missing build ID: " + llvm::toHex(BIs.front(),
                                              /*LowerCase=*/true));
     }
-    Filename = *Path;
+    EffectiveFilename = *Path;
   }
 
   if (FileKind == DEBUG_INFO) {
     auto DsymObjectsOrErr =
-        object::MachOObjectFile::findDsymObjectMembers(Filename);
+        object::MachOObjectFile::findDsymObjectMembers(EffectiveFilename);
     if (auto Err = DsymObjectsOrErr.takeError())
       return std::move(Err);
     if (!DsymObjectsOrErr->empty()) {
@@ -150,16 +152,18 @@ InstrProfCorrelator::get(StringRef Filename, ProfCorrelatorKind FileKind,
         return make_error<InstrProfError>(
             instrprof_error::unable_to_correlate_profile,
             "using multiple objects is not yet supported");
-      Filename = *DsymObjectsOrErr->begin();
+      EffectiveFilename = *DsymObjectsOrErr->begin();
     }
-    auto BufferOrErr = errorOrToExpected(MemoryBuffer::getFile(Filename));
+    auto BufferOrErr =
+        errorOrToExpected(MemoryBuffer::getFile(EffectiveFilename));
     if (auto Err = BufferOrErr.takeError())
       return std::move(Err);
 
     return get(std::move(*BufferOrErr), FileKind);
   }
   if (FileKind == BINARY) {
-    auto BufferOrErr = errorOrToExpected(MemoryBuffer::getFile(Filename));
+    auto BufferOrErr =
+        errorOrToExpected(MemoryBuffer::getFile(EffectiveFilename));
     if (auto Err = BufferOrErr.takeError())
       return std::move(Err);
 
