@@ -57,19 +57,18 @@ func.func @acceptable_ir_has_cleanable_loop_of_conditional_and_branch_op(%arg0: 
   %non_live = arith.constant 0 : i32
   // CHECK-NOT: arith.constant
   cf.br ^bb1(%non_live : i32)
-  // CHECK: cf.br ^[[BB1:bb[0-9]+]]
+  // CHECK: cf.br ^[[BB1:bb[0-9]+]](%{{.*}} : i32)
 ^bb1(%non_live_1 : i32):
-  // CHECK: ^[[BB1]]:
+  // CHECK: ^[[BB1]](%{{.*}}: i32):
   %non_live_5 = arith.constant 1 : i32
   cf.br ^bb3(%non_live_1, %non_live_5 : i32, i32)
-  // CHECK: cf.br ^[[BB3:bb[0-9]+]]
-  // CHECK-NOT: i32
+  // CHECK: cf.br ^[[BB3:bb[0-9]+]](%{{.*}}, %{{.*}} : i32, i32)
 ^bb3(%non_live_2 : i32, %non_live_6 : i32):
-  // CHECK: ^[[BB3]]:
+  // CHECK: ^[[BB3]](%{{.*}}: i32, %{{.*}}: i32):
   cf.cond_br %arg0, ^bb1(%non_live_2 : i32), ^bb4(%non_live_2 : i32)
-  // CHECK: cf.cond_br %arg0, ^[[BB1]], ^[[BB4:bb[0-9]+]]
+  // CHECK: cf.cond_br %arg0, ^[[BB1]](%{{.*}} : i32), ^[[BB4:bb[0-9]+]](%{{.*}} : i32)
 ^bb4(%non_live_4 : i32):
-  // CHECK: ^[[BB4]]:
+  // CHECK: ^[[BB4]](%{{.*}}: i32):
   return
 }
 
@@ -497,6 +496,52 @@ func.func @kernel(%arg0: memref<18xf32>) {
 
 // -----
 
+// Test that RemoveDeadValues does not crash when gpu.launch appears in a block
+// with multiple predecessors. The dead branch operand (%c20) must be replaced
+// with ub.poison, gpu.launch and its grid/block size operands must be
+// preserved, and the live block argument must remain intact.
+//
+// CHECK-LABEL: func.func @gpu_launch_in_multi_predecessor_block
+// CHECK: arith.constant true
+// CHECK: cf.cond_br
+// CHECK: arith.constant 10
+// CHECK: cf.br ^[[BB3:bb[0-9]+]](%{{.*}} : i64)
+// CHECK: ub.poison
+// CHECK: cf.br ^[[BB3]](%{{.*}} : i64)
+// CHECK: ^[[BB3]](%{{.*}}: i64):
+// CHECK: return
+// CHECK-NOT: arith.constant 20
+//
+// CHECK-CANONICALIZE-LABEL: func.func @gpu_launch_in_multi_predecessor_block
+// CHECK-CANONICALIZE:         %[[c10:.*]] = arith.constant 10 : i64
+// CHECK-CANONICALIZE:         cf.br ^[[BB2:bb[0-9]+]](%[[c10]] : i64)
+// CHECK-CANONICALIZE:       ^[[BB1:bb[0-9]+]]: // no predecessors
+// CHECK-CANONICALIZE:         %[[p:.*]] = ub.poison : i64
+// CHECK-CANONICALIZE:         cf.br ^[[BB2]](%[[p]] : i64)
+// CHECK-CANONICALIZE:       ^[[BB2]](%{{.*}}: i64):
+// CHECK-CANONICALIZE:         return %{{.*}} : i64
+func.func @gpu_launch_in_multi_predecessor_block() -> i64 {
+  %cond = arith.constant true
+  cf.cond_br %cond, ^bb1, ^bb2
+^bb1:
+  %c10 = arith.constant 10 : i64
+  cf.br ^bb3(%c10 : i64)
+^bb2:
+  %c20 = arith.constant 20 : i64
+  cf.br ^bb3(%c20 : i64)
+^bb3(%arg0: i64):
+  %c1 = arith.constant 1 : index
+  gpu.launch
+    blocks(%bx, %by, %bz) in (%gx = %c1, %gy = %c1, %gz = %c1)
+    threads(%tx, %ty, %tz) in (%bsx = %c1, %bsy = %c1, %bsz = %c1) {
+    %blk_x = gpu.block_id x
+    %thr_x = gpu.thread_id x
+    gpu.terminator
+  }
+  func.return %arg0 : i64
+}
+
+// -----
 
 // CHECK-LABEL: llvm_unreachable
 // CHECK-LABEL: @fn_with_llvm_unreachable
