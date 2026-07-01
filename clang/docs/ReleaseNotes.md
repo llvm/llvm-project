@@ -1040,6 +1040,7 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 - Fixed a crash in code completion when using a C-Style cast with a parenthesized
   operand in Objective-C++ mode. (#GH180125)
+- Fixed a crash when code completion is triggered inside an ill-formed lambda's trailing requires-clause. (#GH201632)  
 
 ### Static Analyzer
 
