@@ -2377,6 +2377,8 @@ BlockFrequency RAGreedy::calcSpillCost(const LiveInterval &LI) {
                          << printReg(LI.reg(), TRI)
                          << " wholeRematerializable=" << WholeRemat << '\n');
 
+  uint64_t RematCost = 0; // [instrumentation] what SpillCost would be if we
+                          // accounted for rematerialization.
   for (MachineRegisterInfo::reg_instr_nodbg_iterator
            I = MRI->reg_instr_nodbg_begin(LI.reg()),
            E = MRI->reg_instr_nodbg_end();
@@ -2392,19 +2394,34 @@ BlockFrequency RAGreedy::calcSpillCost(const LiveInterval &LI) {
     uint64_t Contribution = (Reads + Writes) * MBBFreq.getFrequency();
     SpillCost += Contribution;
 
+    // Remat-aware model: if the interval is rematerializable, a def is free
+    // (the value is re-created, not stored) and each use costs one remat
+    // instruction (modeled as a single reference at the use's frequency, same
+    // as a reload). So only the *reads* contribute.
+    bool DefinesReg = MI->definesRegister(LI.reg(), TRI);
+    unsigned RematRefs = WholeRemat ? Reads : (Reads + Writes);
+    RematCost += RematRefs * MBBFreq.getFrequency();
+
     DEBUG_WITH_TYPE(
         "csr-cost",
         dbgs() << "    bb." << MI->getParent()->getNumber()
                << " reads=" << Reads << " writes=" << Writes
                << " freq=" << MBBFreq.getFrequency()
-               << " isDef=" << MI->definesRegister(LI.reg(), TRI)
+               << " isDef=" << DefinesReg
                << " triviallyRemat=" << TII->isTriviallyReMaterializable(*MI)
                << " contribution=" << Contribution << "  | " << *MI);
   }
 
   DEBUG_WITH_TYPE("csr-cost", dbgs()
                                   << "  => total SpillCost=" << SpillCost
-                                  << '\n');
+                                  << " rematAdjustedCost=" << RematCost
+                                  << " (WholeRemat=" << WholeRemat << ")\n");
+  // If the whole interval is rematerializable, spilling it does not require a
+  // store at the def and each use is re-created cheaply rather than reloaded
+  // from a stack slot. Reflect that lower cost so the CSR-vs-spill comparison
+  // in tryAssignCSRFirstTime is not fooled into keeping a callee-saved register.
+  if (WholeRemat)
+    return BlockFrequency(RematCost);
   return BlockFrequency(SpillCost);
 }
 
@@ -2458,11 +2475,10 @@ MCRegister RAGreedy::tryAssignCSRFirstTime(
                            << " decision="
                            << (BestCand == NoCand ? "USE_CSR" : "SPLIT") << '\n');
     if (BestCand == NoCand) {
-      // Region splitting found nothing cheaper than the CSR. However, if the
-      // value is rematerializable (e.g. an AArch64 LOADgot / MOVaddr address
-      // materialization), re-creating it after the call is cheaper than paying
-      // the prologue/epilogue push/pop of a callee-saved register. Decline the
-      // CSR and let the value be spilled; the spiller will rematerialize it.
+      // Region splitting found nothing cheaper than the CSR. If the value is
+      // rematerializable, decline the CSR and route it to the spill path, where
+      // calcSpillCost (remat-aware) will re-create it cheaply instead of paying
+      // a prologue/epilogue push/pop.
       if (VirtRegAuxInfo::isRematerializable(VirtReg, *LIS, *VRM, *MRI, *TII)) {
         DEBUG_WITH_TYPE("csr-cost", dbgs()
                                         << "  NoCand but rematerializable: "
@@ -2478,10 +2494,8 @@ MCRegister RAGreedy::tryAssignCSRFirstTime(
     doRegionSplit(VirtReg, BestCand, false/*HasCompact*/, NewVRegs);
     return MCRegister();
   }
-  // Stage >= RS_Split (RS_Split / RS_Split2): the value has already been
-  // through pre-splitting. If it is rematerializable, still decline the
-  // first-use CSR so it goes on to be spilled (which becomes a cheap remat)
-  // rather than paying prologue/epilogue push/pop.
+  // Stage >= RS_Split: value already pre-split. If rematerializable, decline the
+  // first-use CSR so it proceeds to spill (a cheap remat) rather than push/pop.
   if (VirtRegAuxInfo::isRematerializable(VirtReg, *LIS, *VRM, *MRI, *TII)) {
     DEBUG_WITH_TYPE("csr-cost", dbgs()
                                     << "  fallthrough but rematerializable: "
