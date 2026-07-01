@@ -52,9 +52,8 @@ public:
     int64_t srcRank = srcType.getRank();
     int64_t dstRank = dstType.getRank();
 
-    // Here we are broadcasting to a rank-1 vector. Ensure that the source is a
-    // scalar.
-    if (srcRank <= 1 && dstRank == 1) {
+    // Single-element fixed-size source: extract the scalar and broadcast it.
+    if (srcType.getNumElements() == 1 && !srcType.isScalable()) {
       SmallVector<int64_t> fullRankPosition(srcRank, 0);
       Value ext = vector::ExtractOp::create(rewriter, loc, op.getSource(),
                                             fullRankPosition);

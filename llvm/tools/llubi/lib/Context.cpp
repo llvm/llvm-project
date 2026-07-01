@@ -368,9 +368,8 @@ const MaterializedConstant *Context::getConstantValue(Constant *C) {
   if (Val.isNone())
     return nullptr;
   if (!Val.isCacheable()) {
-    assert(NoncacheableConstBuffer.getBytesAllocated() <=
-               1024 * sizeof(MaterializedConstant) &&
-           "Unbounded temporary buffer.");
+    assert(NoncacheableConstCount <= 1024 && "Unbounded temporary buffer.");
+    ++NoncacheableConstCount;
     return new (NoncacheableConstBuffer.Allocate())
         MaterializedConstant(std::move(Val));
   }
@@ -380,6 +379,7 @@ const MaterializedConstant *Context::getConstantValue(Constant *C) {
 
 void Context::resetNoncacheableConstantBuffer() {
   NoncacheableConstBuffer.DestroyAll();
+  NoncacheableConstCount = 0;
 }
 
 APInt Context::getTag(uint32_t BitWidth, Provenance &Prov) {

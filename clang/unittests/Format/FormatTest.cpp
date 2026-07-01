@@ -22558,7 +22558,7 @@ TEST_F(FormatTest, DoNotCrashOnInvalidInput) {
                 "LY52:                   ! [internal]");
   verifyNoCrash("operator foo *;");
   verifyNoCrash(
-      "  #xxxx??x<xxxxxxx||??x<xxxxxxx and xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
+      "#xxxx??x<xxxxxxx||??x<xxxxxxx and xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
 }
 
 TEST_F(FormatTest, FormatsTableGenCode) {
