@@ -33,7 +33,7 @@ LIBC_INLINE ErrorOr<unsigned int> alarm(unsigned int seconds) {
   struct itimerval old_itv;
   struct itimerval itv = {};
   itv.it_value.tv_sec = seconds;
-  ErrorOr<int> ret = setitimer(ITIMER_REAL, &itv, &old_itv);
+  ErrorOr<int> ret = linux_syscalls::setitimer(ITIMER_REAL, &itv, &old_itv);
   if (!ret)
     return Error(ret.error());
   return static_cast<unsigned int>(old_itv.it_value.tv_sec +
