@@ -9,7 +9,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define void @load_int_stride2() {
 ;CHECK-LABEL: load_int_stride2
-;CHECK: Found an estimated cost of 1 for VF 1 For instruction:   %1 = load
+;CHECK: Cost of 1 for VF 1: EMIT-SCALAR ir<%1> = load
 ;CHECK: Cost of 1 for VF 2: INTERLEAVE-GROUP with factor 2,
 ;CHECK: Cost of 1 for VF 4: INTERLEAVE-GROUP with factor 2,
 ;CHECK: Cost of 1 for VF 8: INTERLEAVE-GROUP with factor 2,
@@ -34,7 +34,7 @@ for.end:
 
 define void @load_int_stride3() {
 ;CHECK-LABEL: load_int_stride3
-;CHECK: Found an estimated cost of 1 for VF 1 For instruction:   %1 = load
+;CHECK: Cost of 1 for VF 1: EMIT-SCALAR ir<%1> = load
 ;CHECK: Cost of 1 for VF 2: INTERLEAVE-GROUP with factor 3,
 ;CHECK: Cost of 1 for VF 4: INTERLEAVE-GROUP with factor 3,
 ;CHECK: Cost of 3 for VF 8: INTERLEAVE-GROUP with factor 3,
@@ -59,7 +59,7 @@ for.end:
 
 define void @load_int_stride4() {
 ;CHECK-LABEL: load_int_stride4
-;CHECK: Found an estimated cost of 1 for VF 1 For instruction:   %1 = load
+;CHECK: Cost of 1 for VF 1: EMIT-SCALAR ir<%1> = load
 ;CHECK: Cost of 1 for VF 2: INTERLEAVE-GROUP with factor 4,
 ;CHECK: Cost of 1 for VF 4: INTERLEAVE-GROUP with factor 4,
 ;CHECK: Cost of 3 for VF 8: INTERLEAVE-GROUP with factor 4,
@@ -84,7 +84,7 @@ for.end:
 
 define void @load_int_stride5() {
 ;CHECK-LABEL: load_int_stride5
-;CHECK: Found an estimated cost of 1 for VF 1 For instruction:   %1 = load
+;CHECK: Cost of 1 for VF 1: EMIT-SCALAR ir<%1> = load
 ;CHECK: Cost of 1 for VF 2: INTERLEAVE-GROUP with factor 5,
 ;CHECK: Cost of 3 for VF 4: INTERLEAVE-GROUP with factor 5,
 ;CHECK: Cost of 5 for VF 8: INTERLEAVE-GROUP with factor 5,

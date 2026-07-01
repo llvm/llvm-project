@@ -1581,7 +1581,7 @@ public:
 
   void execute(VPTransformState &State) override;
 
-  /// Return the cost of this VPInstruction.
+  /// Return the cost of this VPInstructionWithType.
   InstructionCost computeCost(ElementCount VF,
                               VPCostContext &Ctx) const override;
 

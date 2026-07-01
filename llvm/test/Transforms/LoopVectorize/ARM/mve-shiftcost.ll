@@ -6,8 +6,8 @@ target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
 target triple = "thumbv8.1m.main-none-none-eabi"
 
 ; CHECK-LABEL: test
-; CHECK-COST: LV: Found an estimated cost of 0 for VF 1 For instruction:   %and515 = shl i32 %l41, 3
-; CHECK-COST: LV: Found an estimated cost of 1 for VF 1 For instruction:   %l45 = and i32 %and515, 131072
+; CHECK-COST: Cost of 0 for VF 1: EMIT ir<%and515> = shl ir<%l41>, ir<3>
+; CHECK-COST: Cost of 1 for VF 1: EMIT ir<%l45> = and ir<%and515>, ir<131072>
 ; CHECK-COST: Cost of 2 for VF 4: WIDEN ir<%and515> = shl ir<%l41>, ir<3>
 ; CHECK-COST: Cost of 2 for VF 4: WIDEN ir<%l45> = and ir<%and515>, ir<131072>
 ; CHECK-NOT: vector.body
