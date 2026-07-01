@@ -39,6 +39,7 @@ class MachineRegisterInfo;
 class MachineInstr;
 class MachineOperand;
 class GISelValueTracking;
+struct KnownBits;
 class MachineDominatorTree;
 class LegalizerInfo;
 struct LegalityQuery;
@@ -1177,7 +1178,55 @@ public:
   LLVM_ABI bool matchAVG(MachineInstr &MI, MachineRegisterInfo &MRI, Register X,
                          Register Y, unsigned TargetOpc) const;
 
+  /// Simplify operand \p OpNo of \p MI given that only \p DemandedBits of the
+  /// operand's value are observed, and return the known bits discovered
+  /// during the same recursive walk in \p Known. If the operand's defining
+  /// value has one non-debug use, the defining instruction may be rewritten
+  /// or erased. If the defining value has multiple uses, only this operand
+  /// use may be replaced.
+  LLVM_ABI bool simplifyDemandedBits(MachineInstr &MI, unsigned OpNo,
+                                     const APInt &DemandedBits,
+                                     KnownBits &Known,
+                                     unsigned Depth = 0) const;
+
+  /// Look through \p R's def for an existing register that computes the same
+  /// \p DemandedBits more cheaply, without modifying any instruction
+  /// (GlobalISel counterpart of SDAG's SimplifyMultipleUseDemandedBits).
+  /// Because nothing is rewritten, this may walk through defs with multiple
+  /// uses. Returns the empty Register when no simpler value exists.
+  LLVM_ABI Register simplifyMultipleUseDemandedBits(Register R,
+                                                    const APInt &DemandedBits,
+                                                    unsigned Depth = 0) const;
+
+  /// Demand transfer for a shift by constant \p ShAmt: which source bits can
+  /// influence the demanded result bits. For G_ASHR the source sign bit is
+  /// demanded whenever any of the top ShAmt result bits (copies of it) are.
+  LLVM_ABI static APInt
+  getDemandedSrcBitsForShiftConst(unsigned Opcode, const APInt &DemandedBits,
+                                  unsigned ShAmt);
+
+  /// Match per-instruction demanded-bits simplification in the current combine
+  /// context. The matcher may simplify a use operand of \p MI; it does not
+  /// compute a union of demands from all users of \p MI's def.
+  LLVM_ABI bool matchSimplifyDemandedBits(MachineInstr &MI,
+                                          BuildFnTy &MatchInfo) const;
+
+  /// Match (G_TRUNC (G_LSHR/G_ASHR X, K-const)) when X's bits beyond DstBW
+  /// (zero for LSHR, sign-bit replicated for ASHR) are provably idle. Rewrites
+  /// to (G_LSHR/G_ASHR (G_TRUNC X), K-trunc), eliminating the outer trunc.
+  LLVM_ABI bool matchNarrowTruncShrConst(MachineInstr &MI,
+                                         BuildFnTy &MatchInfo) const;
+
 private:
+  /// Recursive demanded-bits walk on use operand \p OpNo of \p MI.
+  /// \p DoRewrite false = pure analysis (match phase): reports whether a
+  /// rewrite would happen without touching MIR. \p DoRewrite true = apply
+  /// rewrites at whatever depth they are found (single-use defs may be
+  /// erased; multi-use defs only have this use's operand rerouted).
+  bool simplifyDemandedBitsImpl(MachineInstr &MI, unsigned OpNo,
+                                const APInt &DemandedBits, KnownBits &Known,
+                                unsigned Depth, bool DoRewrite) const;
+
   /// Checks for legality of an indexed variant of \p LdSt.
   bool isIndexedLoadStoreLegal(GLoadStore &LdSt) const;
 

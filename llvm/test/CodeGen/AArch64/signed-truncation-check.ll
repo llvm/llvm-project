@@ -31,8 +31,8 @@ define i1 @shifts_eqcmp_i16_i8(i16 %x) nounwind {
 ; CHECK-GI-LABEL: shifts_eqcmp_i16_i8:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    lsl w8, w0, #8
-; CHECK-GI-NEXT:    sbfx w8, w8, #8, #8
-; CHECK-GI-NEXT:    and w8, w8, #0xffff
+; CHECK-GI-NEXT:    sxth w8, w8
+; CHECK-GI-NEXT:    ubfx w8, w8, #8, #16
 ; CHECK-GI-NEXT:    cmp w8, w0, uxth
 ; CHECK-GI-NEXT:    cset w0, eq
 ; CHECK-GI-NEXT:    ret

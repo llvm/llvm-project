@@ -1751,13 +1751,13 @@ define <16 x i8> @andmask2v16i8(<16 x i16> %src1, <16 x i16> %src2) {
 ; CHECK-GI-NEXT:    movi.8h v4, #7
 ; CHECK-GI-NEXT:    movi.8h v5, #3
 ; CHECK-GI-NEXT:    and.16b v0, v0, v4
-; CHECK-GI-NEXT:    and.16b v2, v2, v5
 ; CHECK-GI-NEXT:    and.16b v1, v1, v4
+; CHECK-GI-NEXT:    and.16b v2, v2, v5
 ; CHECK-GI-NEXT:    and.16b v3, v3, v5
 ; CHECK-GI-NEXT:    add.8h v0, v0, v2
 ; CHECK-GI-NEXT:    add.8h v1, v1, v3
-; CHECK-GI-NEXT:    shrn.8b v0, v0, #1
-; CHECK-GI-NEXT:    shrn2.16b v0, v1, #1
+; CHECK-GI-NEXT:    uzp1.16b v0, v0, v1
+; CHECK-GI-NEXT:    ushr.16b v0, v0, #1
 ; CHECK-GI-NEXT:    ret
   %zextsrc1 = and <16 x i16> %src1, <i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7>
   %zextsrc2 = and <16 x i16> %src2, <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>

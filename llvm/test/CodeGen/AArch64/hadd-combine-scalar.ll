@@ -57,12 +57,17 @@ define i32 @haddu_const_lhs(i32 %src1) {
 }
 
 define i32 @haddu_const_zero(i32 %src1) {
-; CHECK-LABEL: haddu_const_zero:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, w0
-; CHECK-NEXT:    lsr x0, x8, #1
-; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: haddu_const_zero:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    mov w8, w0
+; CHECK-SD-NEXT:    lsr x0, x8, #1
+; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 killed $x0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: haddu_const_zero:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    lsr w0, w0, #1
+; CHECK-GI-NEXT:    ret
   %zextsrc1 = zext i32 %src1 to i64
   %add = add i64 0, %zextsrc1
   %resulti32 = lshr i64 %add, 1
@@ -179,9 +184,7 @@ define i32 @hadds_const_zero(i32 %src1) {
 ;
 ; CHECK-GI-LABEL: hadds_const_zero:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    // kill: def $w0 killed $w0 def $x0
-; CHECK-GI-NEXT:    sbfx x0, x0, #1, #31
-; CHECK-GI-NEXT:    // kill: def $w0 killed $w0 killed $x0
+; CHECK-GI-NEXT:    asr w0, w0, #1
 ; CHECK-GI-NEXT:    ret
   %zextsrc1 = sext i32 %src1 to i64
   %add = add i64 0, %zextsrc1
