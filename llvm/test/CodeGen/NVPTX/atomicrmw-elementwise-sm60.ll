@@ -9919,88 +9919,88 @@ define <8 x i64> @usub_sat_acq_rel_v8i64_global_cta(ptr addrspace(1) %addr, <8 x
         ret <8 x i64> %retval
 }
 
-define <1 x float> @fadd_acq_rel_v1f32_global_cta(ptr addrspace(1) %addr, <1 x float> %val) {
-; SM60-LABEL: fadd_acq_rel_v1f32_global_cta(
+define <1 x float> @fadd_acq_rel_v1f32_shared_cta(ptr addrspace(3) %addr, <1 x float> %val) {
+; SM60-LABEL: fadd_acq_rel_v1f32_shared_cta(
 ; SM60:       {
 ; SM60-NEXT:    .reg .b32 %r<3>;
 ; SM60-NEXT:    .reg .b64 %rd<2>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
-; SM60-NEXT:    ld.param.b64 %rd1, [fadd_acq_rel_v1f32_global_cta_param_0];
+; SM60-NEXT:    ld.param.b64 %rd1, [fadd_acq_rel_v1f32_shared_cta_param_0];
 ; SM60-NEXT:    membar.cta;
-; SM60-NEXT:    ld.param.b32 %r1, [fadd_acq_rel_v1f32_global_cta_param_1];
-; SM60-NEXT:    atom.cta.global.add.f32 %r2, [%rd1], %r1;
+; SM60-NEXT:    ld.param.b32 %r1, [fadd_acq_rel_v1f32_shared_cta_param_1];
+; SM60-NEXT:    atom.cta.shared.add.f32 %r2, [%rd1], %r1;
 ; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM60-NEXT:    ret;
-        %retval = atomicrmw elementwise fadd ptr  addrspace(1) %addr, <1 x float> %val syncscope("block") acq_rel
+        %retval = atomicrmw elementwise fadd ptr  addrspace(3) %addr, <1 x float> %val syncscope("block") acq_rel
         ret <1 x float> %retval
 }
 
-define <2 x float> @fadd_acq_rel_v2f32_global_cta(ptr addrspace(1) %addr, <2 x float> %val) {
-; SM60-LABEL: fadd_acq_rel_v2f32_global_cta(
+define <2 x float> @fadd_acq_rel_v2f32_shared_cta(ptr addrspace(3) %addr, <2 x float> %val) {
+; SM60-LABEL: fadd_acq_rel_v2f32_shared_cta(
 ; SM60:       {
 ; SM60-NEXT:    .reg .b32 %r<5>;
 ; SM60-NEXT:    .reg .b64 %rd<2>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
-; SM60-NEXT:    ld.param.b64 %rd1, [fadd_acq_rel_v2f32_global_cta_param_0];
+; SM60-NEXT:    ld.param.b64 %rd1, [fadd_acq_rel_v2f32_shared_cta_param_0];
 ; SM60-NEXT:    membar.cta;
-; SM60-NEXT:    ld.param.v2.b32 {%r1, %r2}, [fadd_acq_rel_v2f32_global_cta_param_1];
-; SM60-NEXT:    atom.cta.global.add.f32 %r3, [%rd1], %r1;
-; SM60-NEXT:    atom.cta.global.add.f32 %r4, [%rd1+4], %r2;
+; SM60-NEXT:    ld.param.v2.b32 {%r1, %r2}, [fadd_acq_rel_v2f32_shared_cta_param_1];
+; SM60-NEXT:    atom.cta.shared.add.f32 %r3, [%rd1], %r1;
+; SM60-NEXT:    atom.cta.shared.add.f32 %r4, [%rd1+4], %r2;
 ; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    st.param.v2.b32 [func_retval0], {%r3, %r4};
 ; SM60-NEXT:    ret;
-        %retval = atomicrmw elementwise fadd ptr  addrspace(1) %addr, <2 x float> %val syncscope("block") acq_rel
+        %retval = atomicrmw elementwise fadd ptr  addrspace(3) %addr, <2 x float> %val syncscope("block") acq_rel
         ret <2 x float> %retval
 }
 
-define <4 x float> @fadd_acq_rel_v4f32_global_cta(ptr addrspace(1) %addr, <4 x float> %val) {
-; SM60-LABEL: fadd_acq_rel_v4f32_global_cta(
+define <4 x float> @fadd_acq_rel_v4f32_shared_cta(ptr addrspace(3) %addr, <4 x float> %val) {
+; SM60-LABEL: fadd_acq_rel_v4f32_shared_cta(
 ; SM60:       {
 ; SM60-NEXT:    .reg .b32 %r<9>;
 ; SM60-NEXT:    .reg .b64 %rd<2>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
-; SM60-NEXT:    ld.param.b64 %rd1, [fadd_acq_rel_v4f32_global_cta_param_0];
+; SM60-NEXT:    ld.param.b64 %rd1, [fadd_acq_rel_v4f32_shared_cta_param_0];
 ; SM60-NEXT:    membar.cta;
-; SM60-NEXT:    ld.param.v4.b32 {%r1, %r2, %r3, %r4}, [fadd_acq_rel_v4f32_global_cta_param_1];
-; SM60-NEXT:    atom.cta.global.add.f32 %r5, [%rd1], %r1;
-; SM60-NEXT:    atom.cta.global.add.f32 %r6, [%rd1+4], %r2;
-; SM60-NEXT:    atom.cta.global.add.f32 %r7, [%rd1+8], %r3;
-; SM60-NEXT:    atom.cta.global.add.f32 %r8, [%rd1+12], %r4;
+; SM60-NEXT:    ld.param.v4.b32 {%r1, %r2, %r3, %r4}, [fadd_acq_rel_v4f32_shared_cta_param_1];
+; SM60-NEXT:    atom.cta.shared.add.f32 %r5, [%rd1], %r1;
+; SM60-NEXT:    atom.cta.shared.add.f32 %r6, [%rd1+4], %r2;
+; SM60-NEXT:    atom.cta.shared.add.f32 %r7, [%rd1+8], %r3;
+; SM60-NEXT:    atom.cta.shared.add.f32 %r8, [%rd1+12], %r4;
 ; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    st.param.v4.b32 [func_retval0], {%r5, %r6, %r7, %r8};
 ; SM60-NEXT:    ret;
-        %retval = atomicrmw elementwise fadd ptr  addrspace(1) %addr, <4 x float> %val syncscope("block") acq_rel
+        %retval = atomicrmw elementwise fadd ptr  addrspace(3) %addr, <4 x float> %val syncscope("block") acq_rel
         ret <4 x float> %retval
 }
 
-define <8 x float> @fadd_acq_rel_v8f32_global_cta(ptr addrspace(1) %addr, <8 x float> %val) {
-; SM60-LABEL: fadd_acq_rel_v8f32_global_cta(
+define <8 x float> @fadd_acq_rel_v8f32_shared_cta(ptr addrspace(3) %addr, <8 x float> %val) {
+; SM60-LABEL: fadd_acq_rel_v8f32_shared_cta(
 ; SM60:       {
 ; SM60-NEXT:    .reg .b32 %r<17>;
 ; SM60-NEXT:    .reg .b64 %rd<2>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
-; SM60-NEXT:    ld.param.b64 %rd1, [fadd_acq_rel_v8f32_global_cta_param_0];
+; SM60-NEXT:    ld.param.b64 %rd1, [fadd_acq_rel_v8f32_shared_cta_param_0];
 ; SM60-NEXT:    membar.cta;
-; SM60-NEXT:    ld.param.v4.b32 {%r1, %r2, %r3, %r4}, [fadd_acq_rel_v8f32_global_cta_param_1+16];
-; SM60-NEXT:    ld.param.v4.b32 {%r5, %r6, %r7, %r8}, [fadd_acq_rel_v8f32_global_cta_param_1];
-; SM60-NEXT:    atom.cta.global.add.f32 %r9, [%rd1], %r5;
-; SM60-NEXT:    atom.cta.global.add.f32 %r10, [%rd1+4], %r6;
-; SM60-NEXT:    atom.cta.global.add.f32 %r11, [%rd1+8], %r7;
-; SM60-NEXT:    atom.cta.global.add.f32 %r12, [%rd1+12], %r8;
-; SM60-NEXT:    atom.cta.global.add.f32 %r13, [%rd1+16], %r1;
-; SM60-NEXT:    atom.cta.global.add.f32 %r14, [%rd1+20], %r2;
-; SM60-NEXT:    atom.cta.global.add.f32 %r15, [%rd1+24], %r3;
-; SM60-NEXT:    atom.cta.global.add.f32 %r16, [%rd1+28], %r4;
+; SM60-NEXT:    ld.param.v4.b32 {%r1, %r2, %r3, %r4}, [fadd_acq_rel_v8f32_shared_cta_param_1+16];
+; SM60-NEXT:    ld.param.v4.b32 {%r5, %r6, %r7, %r8}, [fadd_acq_rel_v8f32_shared_cta_param_1];
+; SM60-NEXT:    atom.cta.shared.add.f32 %r9, [%rd1], %r5;
+; SM60-NEXT:    atom.cta.shared.add.f32 %r10, [%rd1+4], %r6;
+; SM60-NEXT:    atom.cta.shared.add.f32 %r11, [%rd1+8], %r7;
+; SM60-NEXT:    atom.cta.shared.add.f32 %r12, [%rd1+12], %r8;
+; SM60-NEXT:    atom.cta.shared.add.f32 %r13, [%rd1+16], %r1;
+; SM60-NEXT:    atom.cta.shared.add.f32 %r14, [%rd1+20], %r2;
+; SM60-NEXT:    atom.cta.shared.add.f32 %r15, [%rd1+24], %r3;
+; SM60-NEXT:    atom.cta.shared.add.f32 %r16, [%rd1+28], %r4;
 ; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    st.param.v4.b32 [func_retval0+16], {%r13, %r14, %r15, %r16};
 ; SM60-NEXT:    st.param.v4.b32 [func_retval0], {%r9, %r10, %r11, %r12};
 ; SM60-NEXT:    ret;
-        %retval = atomicrmw elementwise fadd ptr  addrspace(1) %addr, <8 x float> %val syncscope("block") acq_rel
+        %retval = atomicrmw elementwise fadd ptr  addrspace(3) %addr, <8 x float> %val syncscope("block") acq_rel
         ret <8 x float> %retval
 }
 
@@ -10697,30 +10697,28 @@ define <8 x float> @fmax_acq_rel_v8f32_global_cta(ptr addrspace(1) %addr, <8 x f
 define <1 x float> @fminimum_acq_rel_v1f32_global_cta(ptr addrspace(1) %addr, <1 x float> %val) {
 ; SM60-LABEL: fminimum_acq_rel_v1f32_global_cta(
 ; SM60:       {
-; SM60-NEXT:    .reg .pred %p<6>;
-; SM60-NEXT:    .reg .b32 %r<9>;
+; SM60-NEXT:    .reg .pred %p<5>;
+; SM60-NEXT:    .reg .b32 %r<8>;
 ; SM60-NEXT:    .reg .b64 %rd<2>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
 ; SM60-NEXT:    ld.param.b64 %rd1, [fminimum_acq_rel_v1f32_global_cta_param_0];
 ; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    ld.param.b32 %r1, [fminimum_acq_rel_v1f32_global_cta_param_1];
-; SM60-NEXT:    ld.volatile.global.b32 %r8, [%rd1];
-; SM60-NEXT:    setp.eq.b32 %p3, %r1, -2147483648;
+; SM60-NEXT:    ld.volatile.global.b32 %r7, [%rd1];
 ; SM60-NEXT:  $L__BB256_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM60-NEXT:    setp.nan.f32 %p1, %r8, %r1;
-; SM60-NEXT:    min.f32 %r3, %r8, %r1;
-; SM60-NEXT:    selp.f32 %r4, 0f7FC00000, %r3, %p1;
-; SM60-NEXT:    setp.eq.b32 %p2, %r8, -2147483648;
-; SM60-NEXT:    selp.f32 %r5, %r8, %r4, %p2;
-; SM60-NEXT:    selp.f32 %r6, %r1, %r5, %p3;
-; SM60-NEXT:    setp.eq.f32 %p4, %r4, 0f00000000;
-; SM60-NEXT:    selp.f32 %r7, %r6, %r4, %p4;
-; SM60-NEXT:    atom.cta.global.cas.b32 %r2, [%rd1], %r8, %r7;
-; SM60-NEXT:    setp.ne.b32 %p5, %r2, %r8;
-; SM60-NEXT:    mov.b32 %r8, %r2;
-; SM60-NEXT:    @%p5 bra $L__BB256_1;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, -2147483648;
+; SM60-NEXT:    selp.f32 %r3, %r7, %r1, %p1;
+; SM60-NEXT:    setp.nan.f32 %p2, %r7, %r1;
+; SM60-NEXT:    min.f32 %r4, %r7, %r1;
+; SM60-NEXT:    selp.f32 %r5, 0f7FC00000, %r4, %p2;
+; SM60-NEXT:    setp.eq.f32 %p3, %r7, %r1;
+; SM60-NEXT:    selp.f32 %r6, %r3, %r5, %p3;
+; SM60-NEXT:    atom.cta.global.cas.b32 %r2, [%rd1], %r7, %r6;
+; SM60-NEXT:    setp.ne.b32 %p4, %r2, %r7;
+; SM60-NEXT:    mov.b32 %r7, %r2;
+; SM60-NEXT:    @%p4 bra $L__BB256_1;
 ; SM60-NEXT:  // %bb.2: // %atomicrmw.end
 ; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    st.param.b32 [func_retval0], %r2;
@@ -10732,8 +10730,8 @@ define <1 x float> @fminimum_acq_rel_v1f32_global_cta(ptr addrspace(1) %addr, <1
 define <2 x float> @fminimum_acq_rel_v2f32_global_cta(ptr addrspace(1) %addr, <2 x float> %val) {
 ; SM60-LABEL: fminimum_acq_rel_v2f32_global_cta(
 ; SM60:       {
-; SM60-NEXT:    .reg .pred %p<10>;
-; SM60-NEXT:    .reg .b32 %r<15>;
+; SM60-NEXT:    .reg .pred %p<8>;
+; SM60-NEXT:    .reg .b32 %r<13>;
 ; SM60-NEXT:    .reg .b64 %rd<12>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
@@ -10741,44 +10739,40 @@ define <2 x float> @fminimum_acq_rel_v2f32_global_cta(ptr addrspace(1) %addr, <2
 ; SM60-NEXT:    ld.param.b64 %rd1, [fminimum_acq_rel_v2f32_global_cta_param_0];
 ; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    ld.volatile.global.b64 %rd2, [%rd1];
-; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r14}, %rd2; }
-; SM60-NEXT:    cvt.u32.u64 %r13, %rd2;
-; SM60-NEXT:    setp.eq.b32 %p3, %r1, -2147483648;
-; SM60-NEXT:    setp.eq.b32 %p7, %r2, -2147483648;
+; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r12}, %rd2; }
+; SM60-NEXT:    cvt.u32.u64 %r11, %rd2;
 ; SM60-NEXT:  $L__BB257_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM60-NEXT:    setp.nan.f32 %p1, %r13, %r1;
-; SM60-NEXT:    min.f32 %r3, %r13, %r1;
-; SM60-NEXT:    selp.f32 %r4, 0f7FC00000, %r3, %p1;
-; SM60-NEXT:    setp.eq.b32 %p2, %r13, -2147483648;
-; SM60-NEXT:    selp.f32 %r5, %r13, %r4, %p2;
-; SM60-NEXT:    selp.f32 %r6, %r1, %r5, %p3;
-; SM60-NEXT:    setp.eq.f32 %p4, %r4, 0f00000000;
-; SM60-NEXT:    selp.f32 %r7, %r6, %r4, %p4;
-; SM60-NEXT:    cvt.u64.u32 %rd3, %r7;
-; SM60-NEXT:    setp.nan.f32 %p5, %r14, %r2;
-; SM60-NEXT:    min.f32 %r8, %r14, %r2;
+; SM60-NEXT:    setp.eq.b32 %p1, %r11, -2147483648;
+; SM60-NEXT:    selp.f32 %r3, %r11, %r1, %p1;
+; SM60-NEXT:    setp.nan.f32 %p2, %r11, %r1;
+; SM60-NEXT:    min.f32 %r4, %r11, %r1;
+; SM60-NEXT:    selp.f32 %r5, 0f7FC00000, %r4, %p2;
+; SM60-NEXT:    setp.eq.f32 %p3, %r11, %r1;
+; SM60-NEXT:    selp.f32 %r6, %r3, %r5, %p3;
+; SM60-NEXT:    cvt.u64.u32 %rd3, %r6;
+; SM60-NEXT:    setp.eq.b32 %p4, %r12, -2147483648;
+; SM60-NEXT:    selp.f32 %r7, %r12, %r2, %p4;
+; SM60-NEXT:    setp.nan.f32 %p5, %r12, %r2;
+; SM60-NEXT:    min.f32 %r8, %r12, %r2;
 ; SM60-NEXT:    selp.f32 %r9, 0f7FC00000, %r8, %p5;
-; SM60-NEXT:    setp.eq.b32 %p6, %r14, -2147483648;
-; SM60-NEXT:    selp.f32 %r10, %r14, %r9, %p6;
-; SM60-NEXT:    selp.f32 %r11, %r2, %r10, %p7;
-; SM60-NEXT:    setp.eq.f32 %p8, %r9, 0f00000000;
-; SM60-NEXT:    selp.f32 %r12, %r11, %r9, %p8;
-; SM60-NEXT:    cvt.u64.u32 %rd4, %r12;
+; SM60-NEXT:    setp.eq.f32 %p6, %r12, %r2;
+; SM60-NEXT:    selp.f32 %r10, %r7, %r9, %p6;
+; SM60-NEXT:    cvt.u64.u32 %rd4, %r10;
 ; SM60-NEXT:    shl.b64 %rd5, %rd4, 32;
 ; SM60-NEXT:    or.b64 %rd6, %rd3, %rd5;
-; SM60-NEXT:    cvt.u64.u32 %rd7, %r13;
-; SM60-NEXT:    cvt.u64.u32 %rd8, %r14;
+; SM60-NEXT:    cvt.u64.u32 %rd7, %r11;
+; SM60-NEXT:    cvt.u64.u32 %rd8, %r12;
 ; SM60-NEXT:    shl.b64 %rd9, %rd8, 32;
 ; SM60-NEXT:    or.b64 %rd10, %rd7, %rd9;
 ; SM60-NEXT:    atom.cta.global.cas.b64 %rd11, [%rd1], %rd10, %rd6;
-; SM60-NEXT:    setp.ne.b64 %p9, %rd11, %rd10;
-; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r14}, %rd11; }
-; SM60-NEXT:    cvt.u32.u64 %r13, %rd11;
-; SM60-NEXT:    @%p9 bra $L__BB257_1;
+; SM60-NEXT:    setp.ne.b64 %p7, %rd11, %rd10;
+; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r12}, %rd11; }
+; SM60-NEXT:    cvt.u32.u64 %r11, %rd11;
+; SM60-NEXT:    @%p7 bra $L__BB257_1;
 ; SM60-NEXT:  // %bb.2: // %atomicrmw.end
 ; SM60-NEXT:    membar.cta;
-; SM60-NEXT:    st.param.v2.b32 [func_retval0], {%r13, %r14};
+; SM60-NEXT:    st.param.v2.b32 [func_retval0], {%r11, %r12};
 ; SM60-NEXT:    ret;
         %retval = atomicrmw elementwise fminimum ptr  addrspace(1) %addr, <2 x float> %val syncscope("block") acq_rel
         ret <2 x float> %retval
@@ -10787,8 +10781,8 @@ define <2 x float> @fminimum_acq_rel_v2f32_global_cta(ptr addrspace(1) %addr, <2
 define <4 x float> @fminimum_acq_rel_v4f32_global_cta(ptr addrspace(1) %addr, <4 x float> %val) {
 ; SM60-LABEL: fminimum_acq_rel_v4f32_global_cta(
 ; SM60:       {
-; SM60-NEXT:    .reg .pred %p<19>;
-; SM60-NEXT:    .reg .b32 %r<29>;
+; SM60-NEXT:    .reg .pred %p<15>;
+; SM60-NEXT:    .reg .b32 %r<25>;
 ; SM60-NEXT:    .reg .b64 %rd<22>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
@@ -10796,81 +10790,73 @@ define <4 x float> @fminimum_acq_rel_v4f32_global_cta(ptr addrspace(1) %addr, <4
 ; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    ld.param.v4.b32 {%r1, %r2, %r3, %r4}, [fminimum_acq_rel_v4f32_global_cta_param_1];
 ; SM60-NEXT:    ld.volatile.global.b64 %rd2, [%rd1];
-; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r26}, %rd2; }
-; SM60-NEXT:    cvt.u32.u64 %r25, %rd2;
-; SM60-NEXT:    setp.eq.b32 %p3, %r1, -2147483648;
-; SM60-NEXT:    setp.eq.b32 %p7, %r2, -2147483648;
+; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r22}, %rd2; }
+; SM60-NEXT:    cvt.u32.u64 %r21, %rd2;
 ; SM60-NEXT:  $L__BB258_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM60-NEXT:    setp.nan.f32 %p1, %r25, %r1;
-; SM60-NEXT:    min.f32 %r5, %r25, %r1;
-; SM60-NEXT:    selp.f32 %r6, 0f7FC00000, %r5, %p1;
-; SM60-NEXT:    setp.eq.b32 %p2, %r25, -2147483648;
-; SM60-NEXT:    selp.f32 %r7, %r25, %r6, %p2;
-; SM60-NEXT:    selp.f32 %r8, %r1, %r7, %p3;
-; SM60-NEXT:    setp.eq.f32 %p4, %r6, 0f00000000;
-; SM60-NEXT:    selp.f32 %r9, %r8, %r6, %p4;
-; SM60-NEXT:    cvt.u64.u32 %rd3, %r9;
-; SM60-NEXT:    setp.nan.f32 %p5, %r26, %r2;
-; SM60-NEXT:    min.f32 %r10, %r26, %r2;
+; SM60-NEXT:    setp.eq.b32 %p1, %r21, -2147483648;
+; SM60-NEXT:    selp.f32 %r5, %r21, %r1, %p1;
+; SM60-NEXT:    setp.nan.f32 %p2, %r21, %r1;
+; SM60-NEXT:    min.f32 %r6, %r21, %r1;
+; SM60-NEXT:    selp.f32 %r7, 0f7FC00000, %r6, %p2;
+; SM60-NEXT:    setp.eq.f32 %p3, %r21, %r1;
+; SM60-NEXT:    selp.f32 %r8, %r5, %r7, %p3;
+; SM60-NEXT:    cvt.u64.u32 %rd3, %r8;
+; SM60-NEXT:    setp.eq.b32 %p4, %r22, -2147483648;
+; SM60-NEXT:    selp.f32 %r9, %r22, %r2, %p4;
+; SM60-NEXT:    setp.nan.f32 %p5, %r22, %r2;
+; SM60-NEXT:    min.f32 %r10, %r22, %r2;
 ; SM60-NEXT:    selp.f32 %r11, 0f7FC00000, %r10, %p5;
-; SM60-NEXT:    setp.eq.b32 %p6, %r26, -2147483648;
-; SM60-NEXT:    selp.f32 %r12, %r26, %r11, %p6;
-; SM60-NEXT:    selp.f32 %r13, %r2, %r12, %p7;
-; SM60-NEXT:    setp.eq.f32 %p8, %r11, 0f00000000;
-; SM60-NEXT:    selp.f32 %r14, %r13, %r11, %p8;
-; SM60-NEXT:    cvt.u64.u32 %rd4, %r14;
+; SM60-NEXT:    setp.eq.f32 %p6, %r22, %r2;
+; SM60-NEXT:    selp.f32 %r12, %r9, %r11, %p6;
+; SM60-NEXT:    cvt.u64.u32 %rd4, %r12;
 ; SM60-NEXT:    shl.b64 %rd5, %rd4, 32;
 ; SM60-NEXT:    or.b64 %rd6, %rd3, %rd5;
-; SM60-NEXT:    cvt.u64.u32 %rd7, %r25;
-; SM60-NEXT:    cvt.u64.u32 %rd8, %r26;
+; SM60-NEXT:    cvt.u64.u32 %rd7, %r21;
+; SM60-NEXT:    cvt.u64.u32 %rd8, %r22;
 ; SM60-NEXT:    shl.b64 %rd9, %rd8, 32;
 ; SM60-NEXT:    or.b64 %rd10, %rd7, %rd9;
 ; SM60-NEXT:    atom.cta.global.cas.b64 %rd11, [%rd1], %rd10, %rd6;
-; SM60-NEXT:    setp.ne.b64 %p9, %rd11, %rd10;
-; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r26}, %rd11; }
-; SM60-NEXT:    cvt.u32.u64 %r25, %rd11;
-; SM60-NEXT:    @%p9 bra $L__BB258_1;
+; SM60-NEXT:    setp.ne.b64 %p7, %rd11, %rd10;
+; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r22}, %rd11; }
+; SM60-NEXT:    cvt.u32.u64 %r21, %rd11;
+; SM60-NEXT:    @%p7 bra $L__BB258_1;
 ; SM60-NEXT:  // %bb.2: // %atomicrmw.end
 ; SM60-NEXT:    ld.volatile.global.b64 %rd12, [%rd1+8];
-; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r28}, %rd12; }
-; SM60-NEXT:    cvt.u32.u64 %r27, %rd12;
-; SM60-NEXT:    setp.eq.b32 %p12, %r3, -2147483648;
-; SM60-NEXT:    setp.eq.b32 %p16, %r4, -2147483648;
+; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r24}, %rd12; }
+; SM60-NEXT:    cvt.u32.u64 %r23, %rd12;
 ; SM60-NEXT:  $L__BB258_3: // %atomicrmw.start2
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM60-NEXT:    setp.nan.f32 %p10, %r27, %r3;
-; SM60-NEXT:    min.f32 %r15, %r27, %r3;
-; SM60-NEXT:    selp.f32 %r16, 0f7FC00000, %r15, %p10;
-; SM60-NEXT:    setp.eq.b32 %p11, %r27, -2147483648;
-; SM60-NEXT:    selp.f32 %r17, %r27, %r16, %p11;
-; SM60-NEXT:    selp.f32 %r18, %r3, %r17, %p12;
-; SM60-NEXT:    setp.eq.f32 %p13, %r16, 0f00000000;
-; SM60-NEXT:    selp.f32 %r19, %r18, %r16, %p13;
-; SM60-NEXT:    cvt.u64.u32 %rd13, %r19;
-; SM60-NEXT:    setp.nan.f32 %p14, %r28, %r4;
-; SM60-NEXT:    min.f32 %r20, %r28, %r4;
-; SM60-NEXT:    selp.f32 %r21, 0f7FC00000, %r20, %p14;
-; SM60-NEXT:    setp.eq.b32 %p15, %r28, -2147483648;
-; SM60-NEXT:    selp.f32 %r22, %r28, %r21, %p15;
-; SM60-NEXT:    selp.f32 %r23, %r4, %r22, %p16;
-; SM60-NEXT:    setp.eq.f32 %p17, %r21, 0f00000000;
-; SM60-NEXT:    selp.f32 %r24, %r23, %r21, %p17;
-; SM60-NEXT:    cvt.u64.u32 %rd14, %r24;
+; SM60-NEXT:    setp.eq.b32 %p8, %r23, -2147483648;
+; SM60-NEXT:    selp.f32 %r13, %r23, %r3, %p8;
+; SM60-NEXT:    setp.nan.f32 %p9, %r23, %r3;
+; SM60-NEXT:    min.f32 %r14, %r23, %r3;
+; SM60-NEXT:    selp.f32 %r15, 0f7FC00000, %r14, %p9;
+; SM60-NEXT:    setp.eq.f32 %p10, %r23, %r3;
+; SM60-NEXT:    selp.f32 %r16, %r13, %r15, %p10;
+; SM60-NEXT:    cvt.u64.u32 %rd13, %r16;
+; SM60-NEXT:    setp.eq.b32 %p11, %r24, -2147483648;
+; SM60-NEXT:    selp.f32 %r17, %r24, %r4, %p11;
+; SM60-NEXT:    setp.nan.f32 %p12, %r24, %r4;
+; SM60-NEXT:    min.f32 %r18, %r24, %r4;
+; SM60-NEXT:    selp.f32 %r19, 0f7FC00000, %r18, %p12;
+; SM60-NEXT:    setp.eq.f32 %p13, %r24, %r4;
+; SM60-NEXT:    selp.f32 %r20, %r17, %r19, %p13;
+; SM60-NEXT:    cvt.u64.u32 %rd14, %r20;
 ; SM60-NEXT:    shl.b64 %rd15, %rd14, 32;
 ; SM60-NEXT:    or.b64 %rd16, %rd13, %rd15;
-; SM60-NEXT:    cvt.u64.u32 %rd17, %r27;
-; SM60-NEXT:    cvt.u64.u32 %rd18, %r28;
+; SM60-NEXT:    cvt.u64.u32 %rd17, %r23;
+; SM60-NEXT:    cvt.u64.u32 %rd18, %r24;
 ; SM60-NEXT:    shl.b64 %rd19, %rd18, 32;
 ; SM60-NEXT:    or.b64 %rd20, %rd17, %rd19;
 ; SM60-NEXT:    atom.cta.global.cas.b64 %rd21, [%rd1+8], %rd20, %rd16;
-; SM60-NEXT:    setp.ne.b64 %p18, %rd21, %rd20;
-; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r28}, %rd21; }
-; SM60-NEXT:    cvt.u32.u64 %r27, %rd21;
-; SM60-NEXT:    @%p18 bra $L__BB258_3;
+; SM60-NEXT:    setp.ne.b64 %p14, %rd21, %rd20;
+; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r24}, %rd21; }
+; SM60-NEXT:    cvt.u32.u64 %r23, %rd21;
+; SM60-NEXT:    @%p14 bra $L__BB258_3;
 ; SM60-NEXT:  // %bb.4: // %atomicrmw.end1
 ; SM60-NEXT:    membar.cta;
-; SM60-NEXT:    st.param.v4.b32 [func_retval0], {%r25, %r26, %r27, %r28};
+; SM60-NEXT:    st.param.v4.b32 [func_retval0], {%r21, %r22, %r23, %r24};
 ; SM60-NEXT:    ret;
         %retval = atomicrmw elementwise fminimum ptr  addrspace(1) %addr, <4 x float> %val syncscope("block") acq_rel
         ret <4 x float> %retval
@@ -10879,8 +10865,8 @@ define <4 x float> @fminimum_acq_rel_v4f32_global_cta(ptr addrspace(1) %addr, <4
 define <8 x float> @fminimum_acq_rel_v8f32_global_cta(ptr addrspace(1) %addr, <8 x float> %val) {
 ; SM60-LABEL: fminimum_acq_rel_v8f32_global_cta(
 ; SM60:       {
-; SM60-NEXT:    .reg .pred %p<37>;
-; SM60-NEXT:    .reg .b32 %r<57>;
+; SM60-NEXT:    .reg .pred %p<29>;
+; SM60-NEXT:    .reg .b32 %r<49>;
 ; SM60-NEXT:    .reg .b64 %rd<42>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
@@ -10889,156 +10875,140 @@ define <8 x float> @fminimum_acq_rel_v8f32_global_cta(ptr addrspace(1) %addr, <8
 ; SM60-NEXT:    ld.param.v4.b32 {%r1, %r2, %r3, %r4}, [fminimum_acq_rel_v8f32_global_cta_param_1+16];
 ; SM60-NEXT:    ld.param.v4.b32 {%r5, %r6, %r7, %r8}, [fminimum_acq_rel_v8f32_global_cta_param_1];
 ; SM60-NEXT:    ld.volatile.global.b64 %rd2, [%rd1];
-; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r50}, %rd2; }
-; SM60-NEXT:    cvt.u32.u64 %r49, %rd2;
-; SM60-NEXT:    setp.eq.b32 %p3, %r5, -2147483648;
-; SM60-NEXT:    setp.eq.b32 %p7, %r6, -2147483648;
+; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r42}, %rd2; }
+; SM60-NEXT:    cvt.u32.u64 %r41, %rd2;
 ; SM60-NEXT:  $L__BB259_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM60-NEXT:    setp.nan.f32 %p1, %r49, %r5;
-; SM60-NEXT:    min.f32 %r9, %r49, %r5;
-; SM60-NEXT:    selp.f32 %r10, 0f7FC00000, %r9, %p1;
-; SM60-NEXT:    setp.eq.b32 %p2, %r49, -2147483648;
-; SM60-NEXT:    selp.f32 %r11, %r49, %r10, %p2;
-; SM60-NEXT:    selp.f32 %r12, %r5, %r11, %p3;
-; SM60-NEXT:    setp.eq.f32 %p4, %r10, 0f00000000;
-; SM60-NEXT:    selp.f32 %r13, %r12, %r10, %p4;
-; SM60-NEXT:    cvt.u64.u32 %rd3, %r13;
-; SM60-NEXT:    setp.nan.f32 %p5, %r50, %r6;
-; SM60-NEXT:    min.f32 %r14, %r50, %r6;
+; SM60-NEXT:    setp.eq.b32 %p1, %r41, -2147483648;
+; SM60-NEXT:    selp.f32 %r9, %r41, %r5, %p1;
+; SM60-NEXT:    setp.nan.f32 %p2, %r41, %r5;
+; SM60-NEXT:    min.f32 %r10, %r41, %r5;
+; SM60-NEXT:    selp.f32 %r11, 0f7FC00000, %r10, %p2;
+; SM60-NEXT:    setp.eq.f32 %p3, %r41, %r5;
+; SM60-NEXT:    selp.f32 %r12, %r9, %r11, %p3;
+; SM60-NEXT:    cvt.u64.u32 %rd3, %r12;
+; SM60-NEXT:    setp.eq.b32 %p4, %r42, -2147483648;
+; SM60-NEXT:    selp.f32 %r13, %r42, %r6, %p4;
+; SM60-NEXT:    setp.nan.f32 %p5, %r42, %r6;
+; SM60-NEXT:    min.f32 %r14, %r42, %r6;
 ; SM60-NEXT:    selp.f32 %r15, 0f7FC00000, %r14, %p5;
-; SM60-NEXT:    setp.eq.b32 %p6, %r50, -2147483648;
-; SM60-NEXT:    selp.f32 %r16, %r50, %r15, %p6;
-; SM60-NEXT:    selp.f32 %r17, %r6, %r16, %p7;
-; SM60-NEXT:    setp.eq.f32 %p8, %r15, 0f00000000;
-; SM60-NEXT:    selp.f32 %r18, %r17, %r15, %p8;
-; SM60-NEXT:    cvt.u64.u32 %rd4, %r18;
+; SM60-NEXT:    setp.eq.f32 %p6, %r42, %r6;
+; SM60-NEXT:    selp.f32 %r16, %r13, %r15, %p6;
+; SM60-NEXT:    cvt.u64.u32 %rd4, %r16;
 ; SM60-NEXT:    shl.b64 %rd5, %rd4, 32;
 ; SM60-NEXT:    or.b64 %rd6, %rd3, %rd5;
-; SM60-NEXT:    cvt.u64.u32 %rd7, %r49;
-; SM60-NEXT:    cvt.u64.u32 %rd8, %r50;
+; SM60-NEXT:    cvt.u64.u32 %rd7, %r41;
+; SM60-NEXT:    cvt.u64.u32 %rd8, %r42;
 ; SM60-NEXT:    shl.b64 %rd9, %rd8, 32;
 ; SM60-NEXT:    or.b64 %rd10, %rd7, %rd9;
 ; SM60-NEXT:    atom.cta.global.cas.b64 %rd11, [%rd1], %rd10, %rd6;
-; SM60-NEXT:    setp.ne.b64 %p9, %rd11, %rd10;
-; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r50}, %rd11; }
-; SM60-NEXT:    cvt.u32.u64 %r49, %rd11;
-; SM60-NEXT:    @%p9 bra $L__BB259_1;
+; SM60-NEXT:    setp.ne.b64 %p7, %rd11, %rd10;
+; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r42}, %rd11; }
+; SM60-NEXT:    cvt.u32.u64 %r41, %rd11;
+; SM60-NEXT:    @%p7 bra $L__BB259_1;
 ; SM60-NEXT:  // %bb.2: // %atomicrmw.end
 ; SM60-NEXT:    ld.volatile.global.b64 %rd12, [%rd1+8];
-; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r52}, %rd12; }
-; SM60-NEXT:    cvt.u32.u64 %r51, %rd12;
-; SM60-NEXT:    setp.eq.b32 %p12, %r7, -2147483648;
-; SM60-NEXT:    setp.eq.b32 %p16, %r8, -2147483648;
+; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r44}, %rd12; }
+; SM60-NEXT:    cvt.u32.u64 %r43, %rd12;
 ; SM60-NEXT:  $L__BB259_3: // %atomicrmw.start6
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM60-NEXT:    setp.nan.f32 %p10, %r51, %r7;
-; SM60-NEXT:    min.f32 %r19, %r51, %r7;
-; SM60-NEXT:    selp.f32 %r20, 0f7FC00000, %r19, %p10;
-; SM60-NEXT:    setp.eq.b32 %p11, %r51, -2147483648;
-; SM60-NEXT:    selp.f32 %r21, %r51, %r20, %p11;
-; SM60-NEXT:    selp.f32 %r22, %r7, %r21, %p12;
-; SM60-NEXT:    setp.eq.f32 %p13, %r20, 0f00000000;
-; SM60-NEXT:    selp.f32 %r23, %r22, %r20, %p13;
-; SM60-NEXT:    cvt.u64.u32 %rd13, %r23;
-; SM60-NEXT:    setp.nan.f32 %p14, %r52, %r8;
-; SM60-NEXT:    min.f32 %r24, %r52, %r8;
-; SM60-NEXT:    selp.f32 %r25, 0f7FC00000, %r24, %p14;
-; SM60-NEXT:    setp.eq.b32 %p15, %r52, -2147483648;
-; SM60-NEXT:    selp.f32 %r26, %r52, %r25, %p15;
-; SM60-NEXT:    selp.f32 %r27, %r8, %r26, %p16;
-; SM60-NEXT:    setp.eq.f32 %p17, %r25, 0f00000000;
-; SM60-NEXT:    selp.f32 %r28, %r27, %r25, %p17;
-; SM60-NEXT:    cvt.u64.u32 %rd14, %r28;
+; SM60-NEXT:    setp.eq.b32 %p8, %r43, -2147483648;
+; SM60-NEXT:    selp.f32 %r17, %r43, %r7, %p8;
+; SM60-NEXT:    setp.nan.f32 %p9, %r43, %r7;
+; SM60-NEXT:    min.f32 %r18, %r43, %r7;
+; SM60-NEXT:    selp.f32 %r19, 0f7FC00000, %r18, %p9;
+; SM60-NEXT:    setp.eq.f32 %p10, %r43, %r7;
+; SM60-NEXT:    selp.f32 %r20, %r17, %r19, %p10;
+; SM60-NEXT:    cvt.u64.u32 %rd13, %r20;
+; SM60-NEXT:    setp.eq.b32 %p11, %r44, -2147483648;
+; SM60-NEXT:    selp.f32 %r21, %r44, %r8, %p11;
+; SM60-NEXT:    setp.nan.f32 %p12, %r44, %r8;
+; SM60-NEXT:    min.f32 %r22, %r44, %r8;
+; SM60-NEXT:    selp.f32 %r23, 0f7FC00000, %r22, %p12;
+; SM60-NEXT:    setp.eq.f32 %p13, %r44, %r8;
+; SM60-NEXT:    selp.f32 %r24, %r21, %r23, %p13;
+; SM60-NEXT:    cvt.u64.u32 %rd14, %r24;
 ; SM60-NEXT:    shl.b64 %rd15, %rd14, 32;
 ; SM60-NEXT:    or.b64 %rd16, %rd13, %rd15;
-; SM60-NEXT:    cvt.u64.u32 %rd17, %r51;
-; SM60-NEXT:    cvt.u64.u32 %rd18, %r52;
+; SM60-NEXT:    cvt.u64.u32 %rd17, %r43;
+; SM60-NEXT:    cvt.u64.u32 %rd18, %r44;
 ; SM60-NEXT:    shl.b64 %rd19, %rd18, 32;
 ; SM60-NEXT:    or.b64 %rd20, %rd17, %rd19;
 ; SM60-NEXT:    atom.cta.global.cas.b64 %rd21, [%rd1+8], %rd20, %rd16;
-; SM60-NEXT:    setp.ne.b64 %p18, %rd21, %rd20;
-; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r52}, %rd21; }
-; SM60-NEXT:    cvt.u32.u64 %r51, %rd21;
-; SM60-NEXT:    @%p18 bra $L__BB259_3;
+; SM60-NEXT:    setp.ne.b64 %p14, %rd21, %rd20;
+; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r44}, %rd21; }
+; SM60-NEXT:    cvt.u32.u64 %r43, %rd21;
+; SM60-NEXT:    @%p14 bra $L__BB259_3;
 ; SM60-NEXT:  // %bb.4: // %atomicrmw.end5
 ; SM60-NEXT:    ld.volatile.global.b64 %rd22, [%rd1+16];
-; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r54}, %rd22; }
-; SM60-NEXT:    cvt.u32.u64 %r53, %rd22;
-; SM60-NEXT:    setp.eq.b32 %p21, %r1, -2147483648;
-; SM60-NEXT:    setp.eq.b32 %p25, %r2, -2147483648;
+; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r46}, %rd22; }
+; SM60-NEXT:    cvt.u32.u64 %r45, %rd22;
 ; SM60-NEXT:  $L__BB259_5: // %atomicrmw.start15
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM60-NEXT:    setp.nan.f32 %p19, %r53, %r1;
-; SM60-NEXT:    min.f32 %r29, %r53, %r1;
-; SM60-NEXT:    selp.f32 %r30, 0f7FC00000, %r29, %p19;
-; SM60-NEXT:    setp.eq.b32 %p20, %r53, -2147483648;
-; SM60-NEXT:    selp.f32 %r31, %r53, %r30, %p20;
-; SM60-NEXT:    selp.f32 %r32, %r1, %r31, %p21;
-; SM60-NEXT:    setp.eq.f32 %p22, %r30, 0f00000000;
-; SM60-NEXT:    selp.f32 %r33, %r32, %r30, %p22;
-; SM60-NEXT:    cvt.u64.u32 %rd23, %r33;
-; SM60-NEXT:    setp.nan.f32 %p23, %r54, %r2;
-; SM60-NEXT:    min.f32 %r34, %r54, %r2;
-; SM60-NEXT:    selp.f32 %r35, 0f7FC00000, %r34, %p23;
-; SM60-NEXT:    setp.eq.b32 %p24, %r54, -2147483648;
-; SM60-NEXT:    selp.f32 %r36, %r54, %r35, %p24;
-; SM60-NEXT:    selp.f32 %r37, %r2, %r36, %p25;
-; SM60-NEXT:    setp.eq.f32 %p26, %r35, 0f00000000;
-; SM60-NEXT:    selp.f32 %r38, %r37, %r35, %p26;
-; SM60-NEXT:    cvt.u64.u32 %rd24, %r38;
+; SM60-NEXT:    setp.eq.b32 %p15, %r45, -2147483648;
+; SM60-NEXT:    selp.f32 %r25, %r45, %r1, %p15;
+; SM60-NEXT:    setp.nan.f32 %p16, %r45, %r1;
+; SM60-NEXT:    min.f32 %r26, %r45, %r1;
+; SM60-NEXT:    selp.f32 %r27, 0f7FC00000, %r26, %p16;
+; SM60-NEXT:    setp.eq.f32 %p17, %r45, %r1;
+; SM60-NEXT:    selp.f32 %r28, %r25, %r27, %p17;
+; SM60-NEXT:    cvt.u64.u32 %rd23, %r28;
+; SM60-NEXT:    setp.eq.b32 %p18, %r46, -2147483648;
+; SM60-NEXT:    selp.f32 %r29, %r46, %r2, %p18;
+; SM60-NEXT:    setp.nan.f32 %p19, %r46, %r2;
+; SM60-NEXT:    min.f32 %r30, %r46, %r2;
+; SM60-NEXT:    selp.f32 %r31, 0f7FC00000, %r30, %p19;
+; SM60-NEXT:    setp.eq.f32 %p20, %r46, %r2;
+; SM60-NEXT:    selp.f32 %r32, %r29, %r31, %p20;
+; SM60-NEXT:    cvt.u64.u32 %rd24, %r32;
 ; SM60-NEXT:    shl.b64 %rd25, %rd24, 32;
 ; SM60-NEXT:    or.b64 %rd26, %rd23, %rd25;
-; SM60-NEXT:    cvt.u64.u32 %rd27, %r53;
-; SM60-NEXT:    cvt.u64.u32 %rd28, %r54;
+; SM60-NEXT:    cvt.u64.u32 %rd27, %r45;
+; SM60-NEXT:    cvt.u64.u32 %rd28, %r46;
 ; SM60-NEXT:    shl.b64 %rd29, %rd28, 32;
 ; SM60-NEXT:    or.b64 %rd30, %rd27, %rd29;
 ; SM60-NEXT:    atom.cta.global.cas.b64 %rd31, [%rd1+16], %rd30, %rd26;
-; SM60-NEXT:    setp.ne.b64 %p27, %rd31, %rd30;
-; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r54}, %rd31; }
-; SM60-NEXT:    cvt.u32.u64 %r53, %rd31;
-; SM60-NEXT:    @%p27 bra $L__BB259_5;
+; SM60-NEXT:    setp.ne.b64 %p21, %rd31, %rd30;
+; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r46}, %rd31; }
+; SM60-NEXT:    cvt.u32.u64 %r45, %rd31;
+; SM60-NEXT:    @%p21 bra $L__BB259_5;
 ; SM60-NEXT:  // %bb.6: // %atomicrmw.end14
 ; SM60-NEXT:    ld.volatile.global.b64 %rd32, [%rd1+24];
-; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r56}, %rd32; }
-; SM60-NEXT:    cvt.u32.u64 %r55, %rd32;
-; SM60-NEXT:    setp.eq.b32 %p30, %r3, -2147483648;
-; SM60-NEXT:    setp.eq.b32 %p34, %r4, -2147483648;
+; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r48}, %rd32; }
+; SM60-NEXT:    cvt.u32.u64 %r47, %rd32;
 ; SM60-NEXT:  $L__BB259_7: // %atomicrmw.start20
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM60-NEXT:    setp.nan.f32 %p28, %r55, %r3;
-; SM60-NEXT:    min.f32 %r39, %r55, %r3;
-; SM60-NEXT:    selp.f32 %r40, 0f7FC00000, %r39, %p28;
-; SM60-NEXT:    setp.eq.b32 %p29, %r55, -2147483648;
-; SM60-NEXT:    selp.f32 %r41, %r55, %r40, %p29;
-; SM60-NEXT:    selp.f32 %r42, %r3, %r41, %p30;
-; SM60-NEXT:    setp.eq.f32 %p31, %r40, 0f00000000;
-; SM60-NEXT:    selp.f32 %r43, %r42, %r40, %p31;
-; SM60-NEXT:    cvt.u64.u32 %rd33, %r43;
-; SM60-NEXT:    setp.nan.f32 %p32, %r56, %r4;
-; SM60-NEXT:    min.f32 %r44, %r56, %r4;
-; SM60-NEXT:    selp.f32 %r45, 0f7FC00000, %r44, %p32;
-; SM60-NEXT:    setp.eq.b32 %p33, %r56, -2147483648;
-; SM60-NEXT:    selp.f32 %r46, %r56, %r45, %p33;
-; SM60-NEXT:    selp.f32 %r47, %r4, %r46, %p34;
-; SM60-NEXT:    setp.eq.f32 %p35, %r45, 0f00000000;
-; SM60-NEXT:    selp.f32 %r48, %r47, %r45, %p35;
-; SM60-NEXT:    cvt.u64.u32 %rd34, %r48;
+; SM60-NEXT:    setp.eq.b32 %p22, %r47, -2147483648;
+; SM60-NEXT:    selp.f32 %r33, %r47, %r3, %p22;
+; SM60-NEXT:    setp.nan.f32 %p23, %r47, %r3;
+; SM60-NEXT:    min.f32 %r34, %r47, %r3;
+; SM60-NEXT:    selp.f32 %r35, 0f7FC00000, %r34, %p23;
+; SM60-NEXT:    setp.eq.f32 %p24, %r47, %r3;
+; SM60-NEXT:    selp.f32 %r36, %r33, %r35, %p24;
+; SM60-NEXT:    cvt.u64.u32 %rd33, %r36;
+; SM60-NEXT:    setp.eq.b32 %p25, %r48, -2147483648;
+; SM60-NEXT:    selp.f32 %r37, %r48, %r4, %p25;
+; SM60-NEXT:    setp.nan.f32 %p26, %r48, %r4;
+; SM60-NEXT:    min.f32 %r38, %r48, %r4;
+; SM60-NEXT:    selp.f32 %r39, 0f7FC00000, %r38, %p26;
+; SM60-NEXT:    setp.eq.f32 %p27, %r48, %r4;
+; SM60-NEXT:    selp.f32 %r40, %r37, %r39, %p27;
+; SM60-NEXT:    cvt.u64.u32 %rd34, %r40;
 ; SM60-NEXT:    shl.b64 %rd35, %rd34, 32;
 ; SM60-NEXT:    or.b64 %rd36, %rd33, %rd35;
-; SM60-NEXT:    cvt.u64.u32 %rd37, %r55;
-; SM60-NEXT:    cvt.u64.u32 %rd38, %r56;
+; SM60-NEXT:    cvt.u64.u32 %rd37, %r47;
+; SM60-NEXT:    cvt.u64.u32 %rd38, %r48;
 ; SM60-NEXT:    shl.b64 %rd39, %rd38, 32;
 ; SM60-NEXT:    or.b64 %rd40, %rd37, %rd39;
 ; SM60-NEXT:    atom.cta.global.cas.b64 %rd41, [%rd1+24], %rd40, %rd36;
-; SM60-NEXT:    setp.ne.b64 %p36, %rd41, %rd40;
-; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r56}, %rd41; }
-; SM60-NEXT:    cvt.u32.u64 %r55, %rd41;
-; SM60-NEXT:    @%p36 bra $L__BB259_7;
+; SM60-NEXT:    setp.ne.b64 %p28, %rd41, %rd40;
+; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r48}, %rd41; }
+; SM60-NEXT:    cvt.u32.u64 %r47, %rd41;
+; SM60-NEXT:    @%p28 bra $L__BB259_7;
 ; SM60-NEXT:  // %bb.8: // %atomicrmw.end19
 ; SM60-NEXT:    membar.cta;
-; SM60-NEXT:    st.param.v4.b32 [func_retval0+16], {%r53, %r54, %r55, %r56};
-; SM60-NEXT:    st.param.v4.b32 [func_retval0], {%r49, %r50, %r51, %r52};
+; SM60-NEXT:    st.param.v4.b32 [func_retval0+16], {%r45, %r46, %r47, %r48};
+; SM60-NEXT:    st.param.v4.b32 [func_retval0], {%r41, %r42, %r43, %r44};
 ; SM60-NEXT:    ret;
         %retval = atomicrmw elementwise fminimum ptr  addrspace(1) %addr, <8 x float> %val syncscope("block") acq_rel
         ret <8 x float> %retval
@@ -11047,30 +11017,28 @@ define <8 x float> @fminimum_acq_rel_v8f32_global_cta(ptr addrspace(1) %addr, <8
 define <1 x float> @fmaximum_acq_rel_v1f32_global_cta(ptr addrspace(1) %addr, <1 x float> %val) {
 ; SM60-LABEL: fmaximum_acq_rel_v1f32_global_cta(
 ; SM60:       {
-; SM60-NEXT:    .reg .pred %p<6>;
-; SM60-NEXT:    .reg .b32 %r<9>;
+; SM60-NEXT:    .reg .pred %p<5>;
+; SM60-NEXT:    .reg .b32 %r<8>;
 ; SM60-NEXT:    .reg .b64 %rd<2>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
 ; SM60-NEXT:    ld.param.b64 %rd1, [fmaximum_acq_rel_v1f32_global_cta_param_0];
 ; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    ld.param.b32 %r1, [fmaximum_acq_rel_v1f32_global_cta_param_1];
-; SM60-NEXT:    ld.volatile.global.b32 %r8, [%rd1];
-; SM60-NEXT:    setp.eq.b32 %p3, %r1, 0;
+; SM60-NEXT:    ld.volatile.global.b32 %r7, [%rd1];
 ; SM60-NEXT:  $L__BB260_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM60-NEXT:    setp.nan.f32 %p1, %r8, %r1;
-; SM60-NEXT:    max.f32 %r3, %r8, %r1;
-; SM60-NEXT:    selp.f32 %r4, 0f7FC00000, %r3, %p1;
-; SM60-NEXT:    setp.eq.b32 %p2, %r8, 0;
-; SM60-NEXT:    selp.f32 %r5, %r8, %r4, %p2;
-; SM60-NEXT:    selp.f32 %r6, %r1, %r5, %p3;
-; SM60-NEXT:    setp.eq.f32 %p4, %r4, 0f00000000;
-; SM60-NEXT:    selp.f32 %r7, %r6, %r4, %p4;
-; SM60-NEXT:    atom.cta.global.cas.b32 %r2, [%rd1], %r8, %r7;
-; SM60-NEXT:    setp.ne.b32 %p5, %r2, %r8;
-; SM60-NEXT:    mov.b32 %r8, %r2;
-; SM60-NEXT:    @%p5 bra $L__BB260_1;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, 0;
+; SM60-NEXT:    selp.f32 %r3, %r7, %r1, %p1;
+; SM60-NEXT:    setp.nan.f32 %p2, %r7, %r1;
+; SM60-NEXT:    max.f32 %r4, %r7, %r1;
+; SM60-NEXT:    selp.f32 %r5, 0f7FC00000, %r4, %p2;
+; SM60-NEXT:    setp.eq.f32 %p3, %r7, %r1;
+; SM60-NEXT:    selp.f32 %r6, %r3, %r5, %p3;
+; SM60-NEXT:    atom.cta.global.cas.b32 %r2, [%rd1], %r7, %r6;
+; SM60-NEXT:    setp.ne.b32 %p4, %r2, %r7;
+; SM60-NEXT:    mov.b32 %r7, %r2;
+; SM60-NEXT:    @%p4 bra $L__BB260_1;
 ; SM60-NEXT:  // %bb.2: // %atomicrmw.end
 ; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    st.param.b32 [func_retval0], %r2;
@@ -11082,8 +11050,8 @@ define <1 x float> @fmaximum_acq_rel_v1f32_global_cta(ptr addrspace(1) %addr, <1
 define <2 x float> @fmaximum_acq_rel_v2f32_global_cta(ptr addrspace(1) %addr, <2 x float> %val) {
 ; SM60-LABEL: fmaximum_acq_rel_v2f32_global_cta(
 ; SM60:       {
-; SM60-NEXT:    .reg .pred %p<10>;
-; SM60-NEXT:    .reg .b32 %r<15>;
+; SM60-NEXT:    .reg .pred %p<8>;
+; SM60-NEXT:    .reg .b32 %r<13>;
 ; SM60-NEXT:    .reg .b64 %rd<12>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
@@ -11091,44 +11059,40 @@ define <2 x float> @fmaximum_acq_rel_v2f32_global_cta(ptr addrspace(1) %addr, <2
 ; SM60-NEXT:    ld.param.b64 %rd1, [fmaximum_acq_rel_v2f32_global_cta_param_0];
 ; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    ld.volatile.global.b64 %rd2, [%rd1];
-; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r14}, %rd2; }
-; SM60-NEXT:    cvt.u32.u64 %r13, %rd2;
-; SM60-NEXT:    setp.eq.b32 %p3, %r1, 0;
-; SM60-NEXT:    setp.eq.b32 %p7, %r2, 0;
+; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r12}, %rd2; }
+; SM60-NEXT:    cvt.u32.u64 %r11, %rd2;
 ; SM60-NEXT:  $L__BB261_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM60-NEXT:    setp.nan.f32 %p1, %r13, %r1;
-; SM60-NEXT:    max.f32 %r3, %r13, %r1;
-; SM60-NEXT:    selp.f32 %r4, 0f7FC00000, %r3, %p1;
-; SM60-NEXT:    setp.eq.b32 %p2, %r13, 0;
-; SM60-NEXT:    selp.f32 %r5, %r13, %r4, %p2;
-; SM60-NEXT:    selp.f32 %r6, %r1, %r5, %p3;
-; SM60-NEXT:    setp.eq.f32 %p4, %r4, 0f00000000;
-; SM60-NEXT:    selp.f32 %r7, %r6, %r4, %p4;
-; SM60-NEXT:    cvt.u64.u32 %rd3, %r7;
-; SM60-NEXT:    setp.nan.f32 %p5, %r14, %r2;
-; SM60-NEXT:    max.f32 %r8, %r14, %r2;
+; SM60-NEXT:    setp.eq.b32 %p1, %r11, 0;
+; SM60-NEXT:    selp.f32 %r3, %r11, %r1, %p1;
+; SM60-NEXT:    setp.nan.f32 %p2, %r11, %r1;
+; SM60-NEXT:    max.f32 %r4, %r11, %r1;
+; SM60-NEXT:    selp.f32 %r5, 0f7FC00000, %r4, %p2;
+; SM60-NEXT:    setp.eq.f32 %p3, %r11, %r1;
+; SM60-NEXT:    selp.f32 %r6, %r3, %r5, %p3;
+; SM60-NEXT:    cvt.u64.u32 %rd3, %r6;
+; SM60-NEXT:    setp.eq.b32 %p4, %r12, 0;
+; SM60-NEXT:    selp.f32 %r7, %r12, %r2, %p4;
+; SM60-NEXT:    setp.nan.f32 %p5, %r12, %r2;
+; SM60-NEXT:    max.f32 %r8, %r12, %r2;
 ; SM60-NEXT:    selp.f32 %r9, 0f7FC00000, %r8, %p5;
-; SM60-NEXT:    setp.eq.b32 %p6, %r14, 0;
-; SM60-NEXT:    selp.f32 %r10, %r14, %r9, %p6;
-; SM60-NEXT:    selp.f32 %r11, %r2, %r10, %p7;
-; SM60-NEXT:    setp.eq.f32 %p8, %r9, 0f00000000;
-; SM60-NEXT:    selp.f32 %r12, %r11, %r9, %p8;
-; SM60-NEXT:    cvt.u64.u32 %rd4, %r12;
+; SM60-NEXT:    setp.eq.f32 %p6, %r12, %r2;
+; SM60-NEXT:    selp.f32 %r10, %r7, %r9, %p6;
+; SM60-NEXT:    cvt.u64.u32 %rd4, %r10;
 ; SM60-NEXT:    shl.b64 %rd5, %rd4, 32;
 ; SM60-NEXT:    or.b64 %rd6, %rd3, %rd5;
-; SM60-NEXT:    cvt.u64.u32 %rd7, %r13;
-; SM60-NEXT:    cvt.u64.u32 %rd8, %r14;
+; SM60-NEXT:    cvt.u64.u32 %rd7, %r11;
+; SM60-NEXT:    cvt.u64.u32 %rd8, %r12;
 ; SM60-NEXT:    shl.b64 %rd9, %rd8, 32;
 ; SM60-NEXT:    or.b64 %rd10, %rd7, %rd9;
 ; SM60-NEXT:    atom.cta.global.cas.b64 %rd11, [%rd1], %rd10, %rd6;
-; SM60-NEXT:    setp.ne.b64 %p9, %rd11, %rd10;
-; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r14}, %rd11; }
-; SM60-NEXT:    cvt.u32.u64 %r13, %rd11;
-; SM60-NEXT:    @%p9 bra $L__BB261_1;
+; SM60-NEXT:    setp.ne.b64 %p7, %rd11, %rd10;
+; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r12}, %rd11; }
+; SM60-NEXT:    cvt.u32.u64 %r11, %rd11;
+; SM60-NEXT:    @%p7 bra $L__BB261_1;
 ; SM60-NEXT:  // %bb.2: // %atomicrmw.end
 ; SM60-NEXT:    membar.cta;
-; SM60-NEXT:    st.param.v2.b32 [func_retval0], {%r13, %r14};
+; SM60-NEXT:    st.param.v2.b32 [func_retval0], {%r11, %r12};
 ; SM60-NEXT:    ret;
         %retval = atomicrmw elementwise fmaximum ptr  addrspace(1) %addr, <2 x float> %val syncscope("block") acq_rel
         ret <2 x float> %retval
@@ -11137,8 +11101,8 @@ define <2 x float> @fmaximum_acq_rel_v2f32_global_cta(ptr addrspace(1) %addr, <2
 define <4 x float> @fmaximum_acq_rel_v4f32_global_cta(ptr addrspace(1) %addr, <4 x float> %val) {
 ; SM60-LABEL: fmaximum_acq_rel_v4f32_global_cta(
 ; SM60:       {
-; SM60-NEXT:    .reg .pred %p<19>;
-; SM60-NEXT:    .reg .b32 %r<29>;
+; SM60-NEXT:    .reg .pred %p<15>;
+; SM60-NEXT:    .reg .b32 %r<25>;
 ; SM60-NEXT:    .reg .b64 %rd<22>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
@@ -11146,81 +11110,73 @@ define <4 x float> @fmaximum_acq_rel_v4f32_global_cta(ptr addrspace(1) %addr, <4
 ; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    ld.param.v4.b32 {%r1, %r2, %r3, %r4}, [fmaximum_acq_rel_v4f32_global_cta_param_1];
 ; SM60-NEXT:    ld.volatile.global.b64 %rd2, [%rd1];
-; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r26}, %rd2; }
-; SM60-NEXT:    cvt.u32.u64 %r25, %rd2;
-; SM60-NEXT:    setp.eq.b32 %p3, %r1, 0;
-; SM60-NEXT:    setp.eq.b32 %p7, %r2, 0;
+; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r22}, %rd2; }
+; SM60-NEXT:    cvt.u32.u64 %r21, %rd2;
 ; SM60-NEXT:  $L__BB262_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM60-NEXT:    setp.nan.f32 %p1, %r25, %r1;
-; SM60-NEXT:    max.f32 %r5, %r25, %r1;
-; SM60-NEXT:    selp.f32 %r6, 0f7FC00000, %r5, %p1;
-; SM60-NEXT:    setp.eq.b32 %p2, %r25, 0;
-; SM60-NEXT:    selp.f32 %r7, %r25, %r6, %p2;
-; SM60-NEXT:    selp.f32 %r8, %r1, %r7, %p3;
-; SM60-NEXT:    setp.eq.f32 %p4, %r6, 0f00000000;
-; SM60-NEXT:    selp.f32 %r9, %r8, %r6, %p4;
-; SM60-NEXT:    cvt.u64.u32 %rd3, %r9;
-; SM60-NEXT:    setp.nan.f32 %p5, %r26, %r2;
-; SM60-NEXT:    max.f32 %r10, %r26, %r2;
+; SM60-NEXT:    setp.eq.b32 %p1, %r21, 0;
+; SM60-NEXT:    selp.f32 %r5, %r21, %r1, %p1;
+; SM60-NEXT:    setp.nan.f32 %p2, %r21, %r1;
+; SM60-NEXT:    max.f32 %r6, %r21, %r1;
+; SM60-NEXT:    selp.f32 %r7, 0f7FC00000, %r6, %p2;
+; SM60-NEXT:    setp.eq.f32 %p3, %r21, %r1;
+; SM60-NEXT:    selp.f32 %r8, %r5, %r7, %p3;
+; SM60-NEXT:    cvt.u64.u32 %rd3, %r8;
+; SM60-NEXT:    setp.eq.b32 %p4, %r22, 0;
+; SM60-NEXT:    selp.f32 %r9, %r22, %r2, %p4;
+; SM60-NEXT:    setp.nan.f32 %p5, %r22, %r2;
+; SM60-NEXT:    max.f32 %r10, %r22, %r2;
 ; SM60-NEXT:    selp.f32 %r11, 0f7FC00000, %r10, %p5;
-; SM60-NEXT:    setp.eq.b32 %p6, %r26, 0;
-; SM60-NEXT:    selp.f32 %r12, %r26, %r11, %p6;
-; SM60-NEXT:    selp.f32 %r13, %r2, %r12, %p7;
-; SM60-NEXT:    setp.eq.f32 %p8, %r11, 0f00000000;
-; SM60-NEXT:    selp.f32 %r14, %r13, %r11, %p8;
-; SM60-NEXT:    cvt.u64.u32 %rd4, %r14;
+; SM60-NEXT:    setp.eq.f32 %p6, %r22, %r2;
+; SM60-NEXT:    selp.f32 %r12, %r9, %r11, %p6;
+; SM60-NEXT:    cvt.u64.u32 %rd4, %r12;
 ; SM60-NEXT:    shl.b64 %rd5, %rd4, 32;
 ; SM60-NEXT:    or.b64 %rd6, %rd3, %rd5;
-; SM60-NEXT:    cvt.u64.u32 %rd7, %r25;
-; SM60-NEXT:    cvt.u64.u32 %rd8, %r26;
+; SM60-NEXT:    cvt.u64.u32 %rd7, %r21;
+; SM60-NEXT:    cvt.u64.u32 %rd8, %r22;
 ; SM60-NEXT:    shl.b64 %rd9, %rd8, 32;
 ; SM60-NEXT:    or.b64 %rd10, %rd7, %rd9;
 ; SM60-NEXT:    atom.cta.global.cas.b64 %rd11, [%rd1], %rd10, %rd6;
-; SM60-NEXT:    setp.ne.b64 %p9, %rd11, %rd10;
-; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r26}, %rd11; }
-; SM60-NEXT:    cvt.u32.u64 %r25, %rd11;
-; SM60-NEXT:    @%p9 bra $L__BB262_1;
+; SM60-NEXT:    setp.ne.b64 %p7, %rd11, %rd10;
+; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r22}, %rd11; }
+; SM60-NEXT:    cvt.u32.u64 %r21, %rd11;
+; SM60-NEXT:    @%p7 bra $L__BB262_1;
 ; SM60-NEXT:  // %bb.2: // %atomicrmw.end
 ; SM60-NEXT:    ld.volatile.global.b64 %rd12, [%rd1+8];
-; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r28}, %rd12; }
-; SM60-NEXT:    cvt.u32.u64 %r27, %rd12;
-; SM60-NEXT:    setp.eq.b32 %p12, %r3, 0;
-; SM60-NEXT:    setp.eq.b32 %p16, %r4, 0;
+; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r24}, %rd12; }
+; SM60-NEXT:    cvt.u32.u64 %r23, %rd12;
 ; SM60-NEXT:  $L__BB262_3: // %atomicrmw.start2
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM60-NEXT:    setp.nan.f32 %p10, %r27, %r3;
-; SM60-NEXT:    max.f32 %r15, %r27, %r3;
-; SM60-NEXT:    selp.f32 %r16, 0f7FC00000, %r15, %p10;
-; SM60-NEXT:    setp.eq.b32 %p11, %r27, 0;
-; SM60-NEXT:    selp.f32 %r17, %r27, %r16, %p11;
-; SM60-NEXT:    selp.f32 %r18, %r3, %r17, %p12;
-; SM60-NEXT:    setp.eq.f32 %p13, %r16, 0f00000000;
-; SM60-NEXT:    selp.f32 %r19, %r18, %r16, %p13;
-; SM60-NEXT:    cvt.u64.u32 %rd13, %r19;
-; SM60-NEXT:    setp.nan.f32 %p14, %r28, %r4;
-; SM60-NEXT:    max.f32 %r20, %r28, %r4;
-; SM60-NEXT:    selp.f32 %r21, 0f7FC00000, %r20, %p14;
-; SM60-NEXT:    setp.eq.b32 %p15, %r28, 0;
-; SM60-NEXT:    selp.f32 %r22, %r28, %r21, %p15;
-; SM60-NEXT:    selp.f32 %r23, %r4, %r22, %p16;
-; SM60-NEXT:    setp.eq.f32 %p17, %r21, 0f00000000;
-; SM60-NEXT:    selp.f32 %r24, %r23, %r21, %p17;
-; SM60-NEXT:    cvt.u64.u32 %rd14, %r24;
+; SM60-NEXT:    setp.eq.b32 %p8, %r23, 0;
+; SM60-NEXT:    selp.f32 %r13, %r23, %r3, %p8;
+; SM60-NEXT:    setp.nan.f32 %p9, %r23, %r3;
+; SM60-NEXT:    max.f32 %r14, %r23, %r3;
+; SM60-NEXT:    selp.f32 %r15, 0f7FC00000, %r14, %p9;
+; SM60-NEXT:    setp.eq.f32 %p10, %r23, %r3;
+; SM60-NEXT:    selp.f32 %r16, %r13, %r15, %p10;
+; SM60-NEXT:    cvt.u64.u32 %rd13, %r16;
+; SM60-NEXT:    setp.eq.b32 %p11, %r24, 0;
+; SM60-NEXT:    selp.f32 %r17, %r24, %r4, %p11;
+; SM60-NEXT:    setp.nan.f32 %p12, %r24, %r4;
+; SM60-NEXT:    max.f32 %r18, %r24, %r4;
+; SM60-NEXT:    selp.f32 %r19, 0f7FC00000, %r18, %p12;
+; SM60-NEXT:    setp.eq.f32 %p13, %r24, %r4;
+; SM60-NEXT:    selp.f32 %r20, %r17, %r19, %p13;
+; SM60-NEXT:    cvt.u64.u32 %rd14, %r20;
 ; SM60-NEXT:    shl.b64 %rd15, %rd14, 32;
 ; SM60-NEXT:    or.b64 %rd16, %rd13, %rd15;
-; SM60-NEXT:    cvt.u64.u32 %rd17, %r27;
-; SM60-NEXT:    cvt.u64.u32 %rd18, %r28;
+; SM60-NEXT:    cvt.u64.u32 %rd17, %r23;
+; SM60-NEXT:    cvt.u64.u32 %rd18, %r24;
 ; SM60-NEXT:    shl.b64 %rd19, %rd18, 32;
 ; SM60-NEXT:    or.b64 %rd20, %rd17, %rd19;
 ; SM60-NEXT:    atom.cta.global.cas.b64 %rd21, [%rd1+8], %rd20, %rd16;
-; SM60-NEXT:    setp.ne.b64 %p18, %rd21, %rd20;
-; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r28}, %rd21; }
-; SM60-NEXT:    cvt.u32.u64 %r27, %rd21;
-; SM60-NEXT:    @%p18 bra $L__BB262_3;
+; SM60-NEXT:    setp.ne.b64 %p14, %rd21, %rd20;
+; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r24}, %rd21; }
+; SM60-NEXT:    cvt.u32.u64 %r23, %rd21;
+; SM60-NEXT:    @%p14 bra $L__BB262_3;
 ; SM60-NEXT:  // %bb.4: // %atomicrmw.end1
 ; SM60-NEXT:    membar.cta;
-; SM60-NEXT:    st.param.v4.b32 [func_retval0], {%r25, %r26, %r27, %r28};
+; SM60-NEXT:    st.param.v4.b32 [func_retval0], {%r21, %r22, %r23, %r24};
 ; SM60-NEXT:    ret;
         %retval = atomicrmw elementwise fmaximum ptr  addrspace(1) %addr, <4 x float> %val syncscope("block") acq_rel
         ret <4 x float> %retval
@@ -11229,8 +11185,8 @@ define <4 x float> @fmaximum_acq_rel_v4f32_global_cta(ptr addrspace(1) %addr, <4
 define <8 x float> @fmaximum_acq_rel_v8f32_global_cta(ptr addrspace(1) %addr, <8 x float> %val) {
 ; SM60-LABEL: fmaximum_acq_rel_v8f32_global_cta(
 ; SM60:       {
-; SM60-NEXT:    .reg .pred %p<37>;
-; SM60-NEXT:    .reg .b32 %r<57>;
+; SM60-NEXT:    .reg .pred %p<29>;
+; SM60-NEXT:    .reg .b32 %r<49>;
 ; SM60-NEXT:    .reg .b64 %rd<42>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
@@ -11239,156 +11195,140 @@ define <8 x float> @fmaximum_acq_rel_v8f32_global_cta(ptr addrspace(1) %addr, <8
 ; SM60-NEXT:    ld.param.v4.b32 {%r1, %r2, %r3, %r4}, [fmaximum_acq_rel_v8f32_global_cta_param_1+16];
 ; SM60-NEXT:    ld.param.v4.b32 {%r5, %r6, %r7, %r8}, [fmaximum_acq_rel_v8f32_global_cta_param_1];
 ; SM60-NEXT:    ld.volatile.global.b64 %rd2, [%rd1];
-; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r50}, %rd2; }
-; SM60-NEXT:    cvt.u32.u64 %r49, %rd2;
-; SM60-NEXT:    setp.eq.b32 %p3, %r5, 0;
-; SM60-NEXT:    setp.eq.b32 %p7, %r6, 0;
+; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r42}, %rd2; }
+; SM60-NEXT:    cvt.u32.u64 %r41, %rd2;
 ; SM60-NEXT:  $L__BB263_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM60-NEXT:    setp.nan.f32 %p1, %r49, %r5;
-; SM60-NEXT:    max.f32 %r9, %r49, %r5;
-; SM60-NEXT:    selp.f32 %r10, 0f7FC00000, %r9, %p1;
-; SM60-NEXT:    setp.eq.b32 %p2, %r49, 0;
-; SM60-NEXT:    selp.f32 %r11, %r49, %r10, %p2;
-; SM60-NEXT:    selp.f32 %r12, %r5, %r11, %p3;
-; SM60-NEXT:    setp.eq.f32 %p4, %r10, 0f00000000;
-; SM60-NEXT:    selp.f32 %r13, %r12, %r10, %p4;
-; SM60-NEXT:    cvt.u64.u32 %rd3, %r13;
-; SM60-NEXT:    setp.nan.f32 %p5, %r50, %r6;
-; SM60-NEXT:    max.f32 %r14, %r50, %r6;
+; SM60-NEXT:    setp.eq.b32 %p1, %r41, 0;
+; SM60-NEXT:    selp.f32 %r9, %r41, %r5, %p1;
+; SM60-NEXT:    setp.nan.f32 %p2, %r41, %r5;
+; SM60-NEXT:    max.f32 %r10, %r41, %r5;
+; SM60-NEXT:    selp.f32 %r11, 0f7FC00000, %r10, %p2;
+; SM60-NEXT:    setp.eq.f32 %p3, %r41, %r5;
+; SM60-NEXT:    selp.f32 %r12, %r9, %r11, %p3;
+; SM60-NEXT:    cvt.u64.u32 %rd3, %r12;
+; SM60-NEXT:    setp.eq.b32 %p4, %r42, 0;
+; SM60-NEXT:    selp.f32 %r13, %r42, %r6, %p4;
+; SM60-NEXT:    setp.nan.f32 %p5, %r42, %r6;
+; SM60-NEXT:    max.f32 %r14, %r42, %r6;
 ; SM60-NEXT:    selp.f32 %r15, 0f7FC00000, %r14, %p5;
-; SM60-NEXT:    setp.eq.b32 %p6, %r50, 0;
-; SM60-NEXT:    selp.f32 %r16, %r50, %r15, %p6;
-; SM60-NEXT:    selp.f32 %r17, %r6, %r16, %p7;
-; SM60-NEXT:    setp.eq.f32 %p8, %r15, 0f00000000;
-; SM60-NEXT:    selp.f32 %r18, %r17, %r15, %p8;
-; SM60-NEXT:    cvt.u64.u32 %rd4, %r18;
+; SM60-NEXT:    setp.eq.f32 %p6, %r42, %r6;
+; SM60-NEXT:    selp.f32 %r16, %r13, %r15, %p6;
+; SM60-NEXT:    cvt.u64.u32 %rd4, %r16;
 ; SM60-NEXT:    shl.b64 %rd5, %rd4, 32;
 ; SM60-NEXT:    or.b64 %rd6, %rd3, %rd5;
-; SM60-NEXT:    cvt.u64.u32 %rd7, %r49;
-; SM60-NEXT:    cvt.u64.u32 %rd8, %r50;
+; SM60-NEXT:    cvt.u64.u32 %rd7, %r41;
+; SM60-NEXT:    cvt.u64.u32 %rd8, %r42;
 ; SM60-NEXT:    shl.b64 %rd9, %rd8, 32;
 ; SM60-NEXT:    or.b64 %rd10, %rd7, %rd9;
 ; SM60-NEXT:    atom.cta.global.cas.b64 %rd11, [%rd1], %rd10, %rd6;
-; SM60-NEXT:    setp.ne.b64 %p9, %rd11, %rd10;
-; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r50}, %rd11; }
-; SM60-NEXT:    cvt.u32.u64 %r49, %rd11;
-; SM60-NEXT:    @%p9 bra $L__BB263_1;
+; SM60-NEXT:    setp.ne.b64 %p7, %rd11, %rd10;
+; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r42}, %rd11; }
+; SM60-NEXT:    cvt.u32.u64 %r41, %rd11;
+; SM60-NEXT:    @%p7 bra $L__BB263_1;
 ; SM60-NEXT:  // %bb.2: // %atomicrmw.end
 ; SM60-NEXT:    ld.volatile.global.b64 %rd12, [%rd1+8];
-; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r52}, %rd12; }
-; SM60-NEXT:    cvt.u32.u64 %r51, %rd12;
-; SM60-NEXT:    setp.eq.b32 %p12, %r7, 0;
-; SM60-NEXT:    setp.eq.b32 %p16, %r8, 0;
+; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r44}, %rd12; }
+; SM60-NEXT:    cvt.u32.u64 %r43, %rd12;
 ; SM60-NEXT:  $L__BB263_3: // %atomicrmw.start6
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM60-NEXT:    setp.nan.f32 %p10, %r51, %r7;
-; SM60-NEXT:    max.f32 %r19, %r51, %r7;
-; SM60-NEXT:    selp.f32 %r20, 0f7FC00000, %r19, %p10;
-; SM60-NEXT:    setp.eq.b32 %p11, %r51, 0;
-; SM60-NEXT:    selp.f32 %r21, %r51, %r20, %p11;
-; SM60-NEXT:    selp.f32 %r22, %r7, %r21, %p12;
-; SM60-NEXT:    setp.eq.f32 %p13, %r20, 0f00000000;
-; SM60-NEXT:    selp.f32 %r23, %r22, %r20, %p13;
-; SM60-NEXT:    cvt.u64.u32 %rd13, %r23;
-; SM60-NEXT:    setp.nan.f32 %p14, %r52, %r8;
-; SM60-NEXT:    max.f32 %r24, %r52, %r8;
-; SM60-NEXT:    selp.f32 %r25, 0f7FC00000, %r24, %p14;
-; SM60-NEXT:    setp.eq.b32 %p15, %r52, 0;
-; SM60-NEXT:    selp.f32 %r26, %r52, %r25, %p15;
-; SM60-NEXT:    selp.f32 %r27, %r8, %r26, %p16;
-; SM60-NEXT:    setp.eq.f32 %p17, %r25, 0f00000000;
-; SM60-NEXT:    selp.f32 %r28, %r27, %r25, %p17;
-; SM60-NEXT:    cvt.u64.u32 %rd14, %r28;
+; SM60-NEXT:    setp.eq.b32 %p8, %r43, 0;
+; SM60-NEXT:    selp.f32 %r17, %r43, %r7, %p8;
+; SM60-NEXT:    setp.nan.f32 %p9, %r43, %r7;
+; SM60-NEXT:    max.f32 %r18, %r43, %r7;
+; SM60-NEXT:    selp.f32 %r19, 0f7FC00000, %r18, %p9;
+; SM60-NEXT:    setp.eq.f32 %p10, %r43, %r7;
+; SM60-NEXT:    selp.f32 %r20, %r17, %r19, %p10;
+; SM60-NEXT:    cvt.u64.u32 %rd13, %r20;
+; SM60-NEXT:    setp.eq.b32 %p11, %r44, 0;
+; SM60-NEXT:    selp.f32 %r21, %r44, %r8, %p11;
+; SM60-NEXT:    setp.nan.f32 %p12, %r44, %r8;
+; SM60-NEXT:    max.f32 %r22, %r44, %r8;
+; SM60-NEXT:    selp.f32 %r23, 0f7FC00000, %r22, %p12;
+; SM60-NEXT:    setp.eq.f32 %p13, %r44, %r8;
+; SM60-NEXT:    selp.f32 %r24, %r21, %r23, %p13;
+; SM60-NEXT:    cvt.u64.u32 %rd14, %r24;
 ; SM60-NEXT:    shl.b64 %rd15, %rd14, 32;
 ; SM60-NEXT:    or.b64 %rd16, %rd13, %rd15;
-; SM60-NEXT:    cvt.u64.u32 %rd17, %r51;
-; SM60-NEXT:    cvt.u64.u32 %rd18, %r52;
+; SM60-NEXT:    cvt.u64.u32 %rd17, %r43;
+; SM60-NEXT:    cvt.u64.u32 %rd18, %r44;
 ; SM60-NEXT:    shl.b64 %rd19, %rd18, 32;
 ; SM60-NEXT:    or.b64 %rd20, %rd17, %rd19;
 ; SM60-NEXT:    atom.cta.global.cas.b64 %rd21, [%rd1+8], %rd20, %rd16;
-; SM60-NEXT:    setp.ne.b64 %p18, %rd21, %rd20;
-; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r52}, %rd21; }
-; SM60-NEXT:    cvt.u32.u64 %r51, %rd21;
-; SM60-NEXT:    @%p18 bra $L__BB263_3;
+; SM60-NEXT:    setp.ne.b64 %p14, %rd21, %rd20;
+; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r44}, %rd21; }
+; SM60-NEXT:    cvt.u32.u64 %r43, %rd21;
+; SM60-NEXT:    @%p14 bra $L__BB263_3;
 ; SM60-NEXT:  // %bb.4: // %atomicrmw.end5
 ; SM60-NEXT:    ld.volatile.global.b64 %rd22, [%rd1+16];
-; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r54}, %rd22; }
-; SM60-NEXT:    cvt.u32.u64 %r53, %rd22;
-; SM60-NEXT:    setp.eq.b32 %p21, %r1, 0;
-; SM60-NEXT:    setp.eq.b32 %p25, %r2, 0;
+; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r46}, %rd22; }
+; SM60-NEXT:    cvt.u32.u64 %r45, %rd22;
 ; SM60-NEXT:  $L__BB263_5: // %atomicrmw.start15
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM60-NEXT:    setp.nan.f32 %p19, %r53, %r1;
-; SM60-NEXT:    max.f32 %r29, %r53, %r1;
-; SM60-NEXT:    selp.f32 %r30, 0f7FC00000, %r29, %p19;
-; SM60-NEXT:    setp.eq.b32 %p20, %r53, 0;
-; SM60-NEXT:    selp.f32 %r31, %r53, %r30, %p20;
-; SM60-NEXT:    selp.f32 %r32, %r1, %r31, %p21;
-; SM60-NEXT:    setp.eq.f32 %p22, %r30, 0f00000000;
-; SM60-NEXT:    selp.f32 %r33, %r32, %r30, %p22;
-; SM60-NEXT:    cvt.u64.u32 %rd23, %r33;
-; SM60-NEXT:    setp.nan.f32 %p23, %r54, %r2;
-; SM60-NEXT:    max.f32 %r34, %r54, %r2;
-; SM60-NEXT:    selp.f32 %r35, 0f7FC00000, %r34, %p23;
-; SM60-NEXT:    setp.eq.b32 %p24, %r54, 0;
-; SM60-NEXT:    selp.f32 %r36, %r54, %r35, %p24;
-; SM60-NEXT:    selp.f32 %r37, %r2, %r36, %p25;
-; SM60-NEXT:    setp.eq.f32 %p26, %r35, 0f00000000;
-; SM60-NEXT:    selp.f32 %r38, %r37, %r35, %p26;
-; SM60-NEXT:    cvt.u64.u32 %rd24, %r38;
+; SM60-NEXT:    setp.eq.b32 %p15, %r45, 0;
+; SM60-NEXT:    selp.f32 %r25, %r45, %r1, %p15;
+; SM60-NEXT:    setp.nan.f32 %p16, %r45, %r1;
+; SM60-NEXT:    max.f32 %r26, %r45, %r1;
+; SM60-NEXT:    selp.f32 %r27, 0f7FC00000, %r26, %p16;
+; SM60-NEXT:    setp.eq.f32 %p17, %r45, %r1;
+; SM60-NEXT:    selp.f32 %r28, %r25, %r27, %p17;
+; SM60-NEXT:    cvt.u64.u32 %rd23, %r28;
+; SM60-NEXT:    setp.eq.b32 %p18, %r46, 0;
+; SM60-NEXT:    selp.f32 %r29, %r46, %r2, %p18;
+; SM60-NEXT:    setp.nan.f32 %p19, %r46, %r2;
+; SM60-NEXT:    max.f32 %r30, %r46, %r2;
+; SM60-NEXT:    selp.f32 %r31, 0f7FC00000, %r30, %p19;
+; SM60-NEXT:    setp.eq.f32 %p20, %r46, %r2;
+; SM60-NEXT:    selp.f32 %r32, %r29, %r31, %p20;
+; SM60-NEXT:    cvt.u64.u32 %rd24, %r32;
 ; SM60-NEXT:    shl.b64 %rd25, %rd24, 32;
 ; SM60-NEXT:    or.b64 %rd26, %rd23, %rd25;
-; SM60-NEXT:    cvt.u64.u32 %rd27, %r53;
-; SM60-NEXT:    cvt.u64.u32 %rd28, %r54;
+; SM60-NEXT:    cvt.u64.u32 %rd27, %r45;
+; SM60-NEXT:    cvt.u64.u32 %rd28, %r46;
 ; SM60-NEXT:    shl.b64 %rd29, %rd28, 32;
 ; SM60-NEXT:    or.b64 %rd30, %rd27, %rd29;
 ; SM60-NEXT:    atom.cta.global.cas.b64 %rd31, [%rd1+16], %rd30, %rd26;
-; SM60-NEXT:    setp.ne.b64 %p27, %rd31, %rd30;
-; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r54}, %rd31; }
-; SM60-NEXT:    cvt.u32.u64 %r53, %rd31;
-; SM60-NEXT:    @%p27 bra $L__BB263_5;
+; SM60-NEXT:    setp.ne.b64 %p21, %rd31, %rd30;
+; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r46}, %rd31; }
+; SM60-NEXT:    cvt.u32.u64 %r45, %rd31;
+; SM60-NEXT:    @%p21 bra $L__BB263_5;
 ; SM60-NEXT:  // %bb.6: // %atomicrmw.end14
 ; SM60-NEXT:    ld.volatile.global.b64 %rd32, [%rd1+24];
-; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r56}, %rd32; }
-; SM60-NEXT:    cvt.u32.u64 %r55, %rd32;
-; SM60-NEXT:    setp.eq.b32 %p30, %r3, 0;
-; SM60-NEXT:    setp.eq.b32 %p34, %r4, 0;
+; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r48}, %rd32; }
+; SM60-NEXT:    cvt.u32.u64 %r47, %rd32;
 ; SM60-NEXT:  $L__BB263_7: // %atomicrmw.start20
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM60-NEXT:    setp.nan.f32 %p28, %r55, %r3;
-; SM60-NEXT:    max.f32 %r39, %r55, %r3;
-; SM60-NEXT:    selp.f32 %r40, 0f7FC00000, %r39, %p28;
-; SM60-NEXT:    setp.eq.b32 %p29, %r55, 0;
-; SM60-NEXT:    selp.f32 %r41, %r55, %r40, %p29;
-; SM60-NEXT:    selp.f32 %r42, %r3, %r41, %p30;
-; SM60-NEXT:    setp.eq.f32 %p31, %r40, 0f00000000;
-; SM60-NEXT:    selp.f32 %r43, %r42, %r40, %p31;
-; SM60-NEXT:    cvt.u64.u32 %rd33, %r43;
-; SM60-NEXT:    setp.nan.f32 %p32, %r56, %r4;
-; SM60-NEXT:    max.f32 %r44, %r56, %r4;
-; SM60-NEXT:    selp.f32 %r45, 0f7FC00000, %r44, %p32;
-; SM60-NEXT:    setp.eq.b32 %p33, %r56, 0;
-; SM60-NEXT:    selp.f32 %r46, %r56, %r45, %p33;
-; SM60-NEXT:    selp.f32 %r47, %r4, %r46, %p34;
-; SM60-NEXT:    setp.eq.f32 %p35, %r45, 0f00000000;
-; SM60-NEXT:    selp.f32 %r48, %r47, %r45, %p35;
-; SM60-NEXT:    cvt.u64.u32 %rd34, %r48;
+; SM60-NEXT:    setp.eq.b32 %p22, %r47, 0;
+; SM60-NEXT:    selp.f32 %r33, %r47, %r3, %p22;
+; SM60-NEXT:    setp.nan.f32 %p23, %r47, %r3;
+; SM60-NEXT:    max.f32 %r34, %r47, %r3;
+; SM60-NEXT:    selp.f32 %r35, 0f7FC00000, %r34, %p23;
+; SM60-NEXT:    setp.eq.f32 %p24, %r47, %r3;
+; SM60-NEXT:    selp.f32 %r36, %r33, %r35, %p24;
+; SM60-NEXT:    cvt.u64.u32 %rd33, %r36;
+; SM60-NEXT:    setp.eq.b32 %p25, %r48, 0;
+; SM60-NEXT:    selp.f32 %r37, %r48, %r4, %p25;
+; SM60-NEXT:    setp.nan.f32 %p26, %r48, %r4;
+; SM60-NEXT:    max.f32 %r38, %r48, %r4;
+; SM60-NEXT:    selp.f32 %r39, 0f7FC00000, %r38, %p26;
+; SM60-NEXT:    setp.eq.f32 %p27, %r48, %r4;
+; SM60-NEXT:    selp.f32 %r40, %r37, %r39, %p27;
+; SM60-NEXT:    cvt.u64.u32 %rd34, %r40;
 ; SM60-NEXT:    shl.b64 %rd35, %rd34, 32;
 ; SM60-NEXT:    or.b64 %rd36, %rd33, %rd35;
-; SM60-NEXT:    cvt.u64.u32 %rd37, %r55;
-; SM60-NEXT:    cvt.u64.u32 %rd38, %r56;
+; SM60-NEXT:    cvt.u64.u32 %rd37, %r47;
+; SM60-NEXT:    cvt.u64.u32 %rd38, %r48;
 ; SM60-NEXT:    shl.b64 %rd39, %rd38, 32;
 ; SM60-NEXT:    or.b64 %rd40, %rd37, %rd39;
 ; SM60-NEXT:    atom.cta.global.cas.b64 %rd41, [%rd1+24], %rd40, %rd36;
-; SM60-NEXT:    setp.ne.b64 %p36, %rd41, %rd40;
-; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r56}, %rd41; }
-; SM60-NEXT:    cvt.u32.u64 %r55, %rd41;
-; SM60-NEXT:    @%p36 bra $L__BB263_7;
+; SM60-NEXT:    setp.ne.b64 %p28, %rd41, %rd40;
+; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r48}, %rd41; }
+; SM60-NEXT:    cvt.u32.u64 %r47, %rd41;
+; SM60-NEXT:    @%p28 bra $L__BB263_7;
 ; SM60-NEXT:  // %bb.8: // %atomicrmw.end19
 ; SM60-NEXT:    membar.cta;
-; SM60-NEXT:    st.param.v4.b32 [func_retval0+16], {%r53, %r54, %r55, %r56};
-; SM60-NEXT:    st.param.v4.b32 [func_retval0], {%r49, %r50, %r51, %r52};
+; SM60-NEXT:    st.param.v4.b32 [func_retval0+16], {%r45, %r46, %r47, %r48};
+; SM60-NEXT:    st.param.v4.b32 [func_retval0], {%r41, %r42, %r43, %r44};
 ; SM60-NEXT:    ret;
         %retval = atomicrmw elementwise fmaximum ptr  addrspace(1) %addr, <8 x float> %val syncscope("block") acq_rel
         ret <8 x float> %retval
@@ -12117,29 +12057,27 @@ define <8 x double> @fmax_acq_rel_v8f64_global_cta(ptr addrspace(1) %addr, <8 x 
 define <1 x double> @fminimum_acq_rel_v1f64_global_cta(ptr addrspace(1) %addr, <1 x double> %val) {
 ; SM60-LABEL: fminimum_acq_rel_v1f64_global_cta(
 ; SM60:       {
-; SM60-NEXT:    .reg .pred %p<6>;
-; SM60-NEXT:    .reg .b64 %rd<10>;
+; SM60-NEXT:    .reg .pred %p<5>;
+; SM60-NEXT:    .reg .b64 %rd<9>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
 ; SM60-NEXT:    ld.param.b64 %rd3, [fminimum_acq_rel_v1f64_global_cta_param_0];
 ; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    ld.param.b64 %rd1, [fminimum_acq_rel_v1f64_global_cta_param_1];
-; SM60-NEXT:    ld.volatile.global.b64 %rd9, [%rd3];
-; SM60-NEXT:    setp.eq.b64 %p3, %rd1, -9223372036854775808;
+; SM60-NEXT:    ld.volatile.global.b64 %rd8, [%rd3];
 ; SM60-NEXT:  $L__BB280_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM60-NEXT:    setp.nan.f64 %p1, %rd9, %rd1;
-; SM60-NEXT:    min.f64 %rd4, %rd9, %rd1;
-; SM60-NEXT:    selp.f64 %rd5, 0d7FF8000000000000, %rd4, %p1;
-; SM60-NEXT:    setp.eq.b64 %p2, %rd9, -9223372036854775808;
-; SM60-NEXT:    selp.f64 %rd6, %rd9, %rd5, %p2;
-; SM60-NEXT:    selp.f64 %rd7, %rd1, %rd6, %p3;
-; SM60-NEXT:    setp.eq.f64 %p4, %rd5, 0d0000000000000000;
-; SM60-NEXT:    selp.f64 %rd8, %rd7, %rd5, %p4;
-; SM60-NEXT:    atom.cta.global.cas.b64 %rd2, [%rd3], %rd9, %rd8;
-; SM60-NEXT:    setp.ne.b64 %p5, %rd2, %rd9;
-; SM60-NEXT:    mov.b64 %rd9, %rd2;
-; SM60-NEXT:    @%p5 bra $L__BB280_1;
+; SM60-NEXT:    setp.eq.b64 %p1, %rd8, -9223372036854775808;
+; SM60-NEXT:    selp.f64 %rd4, %rd8, %rd1, %p1;
+; SM60-NEXT:    setp.nan.f64 %p2, %rd8, %rd1;
+; SM60-NEXT:    min.f64 %rd5, %rd8, %rd1;
+; SM60-NEXT:    selp.f64 %rd6, 0d7FF8000000000000, %rd5, %p2;
+; SM60-NEXT:    setp.eq.f64 %p3, %rd8, %rd1;
+; SM60-NEXT:    selp.f64 %rd7, %rd4, %rd6, %p3;
+; SM60-NEXT:    atom.cta.global.cas.b64 %rd2, [%rd3], %rd8, %rd7;
+; SM60-NEXT:    setp.ne.b64 %p4, %rd2, %rd8;
+; SM60-NEXT:    mov.b64 %rd8, %rd2;
+; SM60-NEXT:    @%p4 bra $L__BB280_1;
 ; SM60-NEXT:  // %bb.2: // %atomicrmw.end
 ; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    st.param.b64 [func_retval0], %rd2;
@@ -12151,46 +12089,42 @@ define <1 x double> @fminimum_acq_rel_v1f64_global_cta(ptr addrspace(1) %addr, <
 define <2 x double> @fminimum_acq_rel_v2f64_global_cta(ptr addrspace(1) %addr, <2 x double> %val) {
 ; SM60-LABEL: fminimum_acq_rel_v2f64_global_cta(
 ; SM60:       {
-; SM60-NEXT:    .reg .pred %p<11>;
-; SM60-NEXT:    .reg .b64 %rd<18>;
+; SM60-NEXT:    .reg .pred %p<9>;
+; SM60-NEXT:    .reg .b64 %rd<16>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
 ; SM60-NEXT:    ld.param.b64 %rd5, [fminimum_acq_rel_v2f64_global_cta_param_0];
 ; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [fminimum_acq_rel_v2f64_global_cta_param_1];
-; SM60-NEXT:    ld.volatile.global.b64 %rd16, [%rd5];
-; SM60-NEXT:    setp.eq.b64 %p3, %rd1, -9223372036854775808;
+; SM60-NEXT:    ld.volatile.global.b64 %rd14, [%rd5];
 ; SM60-NEXT:  $L__BB281_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM60-NEXT:    setp.nan.f64 %p1, %rd16, %rd1;
-; SM60-NEXT:    min.f64 %rd6, %rd16, %rd1;
-; SM60-NEXT:    selp.f64 %rd7, 0d7FF8000000000000, %rd6, %p1;
-; SM60-NEXT:    setp.eq.b64 %p2, %rd16, -9223372036854775808;
-; SM60-NEXT:    selp.f64 %rd8, %rd16, %rd7, %p2;
-; SM60-NEXT:    selp.f64 %rd9, %rd1, %rd8, %p3;
-; SM60-NEXT:    setp.eq.f64 %p4, %rd7, 0d0000000000000000;
-; SM60-NEXT:    selp.f64 %rd10, %rd9, %rd7, %p4;
-; SM60-NEXT:    atom.cta.global.cas.b64 %rd3, [%rd5], %rd16, %rd10;
-; SM60-NEXT:    setp.ne.b64 %p5, %rd3, %rd16;
-; SM60-NEXT:    mov.b64 %rd16, %rd3;
-; SM60-NEXT:    @%p5 bra $L__BB281_1;
+; SM60-NEXT:    setp.eq.b64 %p1, %rd14, -9223372036854775808;
+; SM60-NEXT:    selp.f64 %rd6, %rd14, %rd1, %p1;
+; SM60-NEXT:    setp.nan.f64 %p2, %rd14, %rd1;
+; SM60-NEXT:    min.f64 %rd7, %rd14, %rd1;
+; SM60-NEXT:    selp.f64 %rd8, 0d7FF8000000000000, %rd7, %p2;
+; SM60-NEXT:    setp.eq.f64 %p3, %rd14, %rd1;
+; SM60-NEXT:    selp.f64 %rd9, %rd6, %rd8, %p3;
+; SM60-NEXT:    atom.cta.global.cas.b64 %rd3, [%rd5], %rd14, %rd9;
+; SM60-NEXT:    setp.ne.b64 %p4, %rd3, %rd14;
+; SM60-NEXT:    mov.b64 %rd14, %rd3;
+; SM60-NEXT:    @%p4 bra $L__BB281_1;
 ; SM60-NEXT:  // %bb.2: // %atomicrmw.end
-; SM60-NEXT:    ld.volatile.global.b64 %rd17, [%rd5+8];
-; SM60-NEXT:    setp.eq.b64 %p8, %rd2, -9223372036854775808;
+; SM60-NEXT:    ld.volatile.global.b64 %rd15, [%rd5+8];
 ; SM60-NEXT:  $L__BB281_3: // %atomicrmw.start2
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM60-NEXT:    setp.nan.f64 %p6, %rd17, %rd2;
-; SM60-NEXT:    min.f64 %rd11, %rd17, %rd2;
+; SM60-NEXT:    setp.eq.b64 %p5, %rd15, -9223372036854775808;
+; SM60-NEXT:    selp.f64 %rd10, %rd15, %rd2, %p5;
+; SM60-NEXT:    setp.nan.f64 %p6, %rd15, %rd2;
+; SM60-NEXT:    min.f64 %rd11, %rd15, %rd2;
 ; SM60-NEXT:    selp.f64 %rd12, 0d7FF8000000000000, %rd11, %p6;
-; SM60-NEXT:    setp.eq.b64 %p7, %rd17, -9223372036854775808;
-; SM60-NEXT:    selp.f64 %rd13, %rd17, %rd12, %p7;
-; SM60-NEXT:    selp.f64 %rd14, %rd2, %rd13, %p8;
-; SM60-NEXT:    setp.eq.f64 %p9, %rd12, 0d0000000000000000;
-; SM60-NEXT:    selp.f64 %rd15, %rd14, %rd12, %p9;
-; SM60-NEXT:    atom.cta.global.cas.b64 %rd4, [%rd5+8], %rd17, %rd15;
-; SM60-NEXT:    setp.ne.b64 %p10, %rd4, %rd17;
-; SM60-NEXT:    mov.b64 %rd17, %rd4;
-; SM60-NEXT:    @%p10 bra $L__BB281_3;
+; SM60-NEXT:    setp.eq.f64 %p7, %rd15, %rd2;
+; SM60-NEXT:    selp.f64 %rd13, %rd10, %rd12, %p7;
+; SM60-NEXT:    atom.cta.global.cas.b64 %rd4, [%rd5+8], %rd15, %rd13;
+; SM60-NEXT:    setp.ne.b64 %p8, %rd4, %rd15;
+; SM60-NEXT:    mov.b64 %rd15, %rd4;
+; SM60-NEXT:    @%p8 bra $L__BB281_3;
 ; SM60-NEXT:  // %bb.4: // %atomicrmw.end1
 ; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
@@ -12202,85 +12136,77 @@ define <2 x double> @fminimum_acq_rel_v2f64_global_cta(ptr addrspace(1) %addr, <
 define <4 x double> @fminimum_acq_rel_v4f64_global_cta(ptr addrspace(1) %addr, <4 x double> %val) {
 ; SM60-LABEL: fminimum_acq_rel_v4f64_global_cta(
 ; SM60:       {
-; SM60-NEXT:    .reg .pred %p<21>;
-; SM60-NEXT:    .reg .b64 %rd<34>;
+; SM60-NEXT:    .reg .pred %p<17>;
+; SM60-NEXT:    .reg .b64 %rd<30>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
 ; SM60-NEXT:    ld.param.b64 %rd9, [fminimum_acq_rel_v4f64_global_cta_param_0];
 ; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [fminimum_acq_rel_v4f64_global_cta_param_1+16];
 ; SM60-NEXT:    ld.param.v2.b64 {%rd3, %rd4}, [fminimum_acq_rel_v4f64_global_cta_param_1];
-; SM60-NEXT:    ld.volatile.global.b64 %rd30, [%rd9];
-; SM60-NEXT:    setp.eq.b64 %p3, %rd3, -9223372036854775808;
+; SM60-NEXT:    ld.volatile.global.b64 %rd26, [%rd9];
 ; SM60-NEXT:  $L__BB282_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM60-NEXT:    mov.b64 %rd5, %rd30;
-; SM60-NEXT:    setp.nan.f64 %p1, %rd5, %rd3;
-; SM60-NEXT:    min.f64 %rd10, %rd5, %rd3;
-; SM60-NEXT:    selp.f64 %rd11, 0d7FF8000000000000, %rd10, %p1;
-; SM60-NEXT:    setp.eq.b64 %p2, %rd5, -9223372036854775808;
-; SM60-NEXT:    selp.f64 %rd12, %rd5, %rd11, %p2;
-; SM60-NEXT:    selp.f64 %rd13, %rd3, %rd12, %p3;
-; SM60-NEXT:    setp.eq.f64 %p4, %rd11, 0d0000000000000000;
-; SM60-NEXT:    selp.f64 %rd14, %rd13, %rd11, %p4;
-; SM60-NEXT:    atom.cta.global.cas.b64 %rd30, [%rd9], %rd5, %rd14;
-; SM60-NEXT:    setp.ne.b64 %p5, %rd30, %rd5;
-; SM60-NEXT:    @%p5 bra $L__BB282_1;
+; SM60-NEXT:    mov.b64 %rd5, %rd26;
+; SM60-NEXT:    setp.eq.b64 %p1, %rd5, -9223372036854775808;
+; SM60-NEXT:    selp.f64 %rd10, %rd5, %rd3, %p1;
+; SM60-NEXT:    setp.nan.f64 %p2, %rd5, %rd3;
+; SM60-NEXT:    min.f64 %rd11, %rd5, %rd3;
+; SM60-NEXT:    selp.f64 %rd12, 0d7FF8000000000000, %rd11, %p2;
+; SM60-NEXT:    setp.eq.f64 %p3, %rd5, %rd3;
+; SM60-NEXT:    selp.f64 %rd13, %rd10, %rd12, %p3;
+; SM60-NEXT:    atom.cta.global.cas.b64 %rd26, [%rd9], %rd5, %rd13;
+; SM60-NEXT:    setp.ne.b64 %p4, %rd26, %rd5;
+; SM60-NEXT:    @%p4 bra $L__BB282_1;
 ; SM60-NEXT:  // %bb.2: // %atomicrmw.end
-; SM60-NEXT:    ld.volatile.global.b64 %rd31, [%rd9+8];
-; SM60-NEXT:    setp.eq.b64 %p8, %rd4, -9223372036854775808;
+; SM60-NEXT:    ld.volatile.global.b64 %rd27, [%rd9+8];
 ; SM60-NEXT:  $L__BB282_3: // %atomicrmw.start5
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM60-NEXT:    mov.b64 %rd6, %rd31;
+; SM60-NEXT:    mov.b64 %rd6, %rd27;
+; SM60-NEXT:    setp.eq.b64 %p5, %rd6, -9223372036854775808;
+; SM60-NEXT:    selp.f64 %rd14, %rd6, %rd4, %p5;
 ; SM60-NEXT:    setp.nan.f64 %p6, %rd6, %rd4;
 ; SM60-NEXT:    min.f64 %rd15, %rd6, %rd4;
 ; SM60-NEXT:    selp.f64 %rd16, 0d7FF8000000000000, %rd15, %p6;
-; SM60-NEXT:    setp.eq.b64 %p7, %rd6, -9223372036854775808;
-; SM60-NEXT:    selp.f64 %rd17, %rd6, %rd16, %p7;
-; SM60-NEXT:    selp.f64 %rd18, %rd4, %rd17, %p8;
-; SM60-NEXT:    setp.eq.f64 %p9, %rd16, 0d0000000000000000;
-; SM60-NEXT:    selp.f64 %rd19, %rd18, %rd16, %p9;
-; SM60-NEXT:    atom.cta.global.cas.b64 %rd31, [%rd9+8], %rd6, %rd19;
-; SM60-NEXT:    setp.ne.b64 %p10, %rd31, %rd6;
-; SM60-NEXT:    @%p10 bra $L__BB282_3;
+; SM60-NEXT:    setp.eq.f64 %p7, %rd6, %rd4;
+; SM60-NEXT:    selp.f64 %rd17, %rd14, %rd16, %p7;
+; SM60-NEXT:    atom.cta.global.cas.b64 %rd27, [%rd9+8], %rd6, %rd17;
+; SM60-NEXT:    setp.ne.b64 %p8, %rd27, %rd6;
+; SM60-NEXT:    @%p8 bra $L__BB282_3;
 ; SM60-NEXT:  // %bb.4: // %atomicrmw.end4
-; SM60-NEXT:    ld.volatile.global.b64 %rd32, [%rd9+16];
-; SM60-NEXT:    setp.eq.b64 %p13, %rd1, -9223372036854775808;
+; SM60-NEXT:    ld.volatile.global.b64 %rd28, [%rd9+16];
 ; SM60-NEXT:  $L__BB282_5: // %atomicrmw.start15
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM60-NEXT:    setp.nan.f64 %p11, %rd32, %rd1;
-; SM60-NEXT:    min.f64 %rd20, %rd32, %rd1;
-; SM60-NEXT:    selp.f64 %rd21, 0d7FF8000000000000, %rd20, %p11;
-; SM60-NEXT:    setp.eq.b64 %p12, %rd32, -9223372036854775808;
-; SM60-NEXT:    selp.f64 %rd22, %rd32, %rd21, %p12;
-; SM60-NEXT:    selp.f64 %rd23, %rd1, %rd22, %p13;
-; SM60-NEXT:    setp.eq.f64 %p14, %rd21, 0d0000000000000000;
-; SM60-NEXT:    selp.f64 %rd24, %rd23, %rd21, %p14;
-; SM60-NEXT:    atom.cta.global.cas.b64 %rd7, [%rd9+16], %rd32, %rd24;
-; SM60-NEXT:    setp.ne.b64 %p15, %rd7, %rd32;
-; SM60-NEXT:    mov.b64 %rd32, %rd7;
-; SM60-NEXT:    @%p15 bra $L__BB282_5;
+; SM60-NEXT:    setp.eq.b64 %p9, %rd28, -9223372036854775808;
+; SM60-NEXT:    selp.f64 %rd18, %rd28, %rd1, %p9;
+; SM60-NEXT:    setp.nan.f64 %p10, %rd28, %rd1;
+; SM60-NEXT:    min.f64 %rd19, %rd28, %rd1;
+; SM60-NEXT:    selp.f64 %rd20, 0d7FF8000000000000, %rd19, %p10;
+; SM60-NEXT:    setp.eq.f64 %p11, %rd28, %rd1;
+; SM60-NEXT:    selp.f64 %rd21, %rd18, %rd20, %p11;
+; SM60-NEXT:    atom.cta.global.cas.b64 %rd7, [%rd9+16], %rd28, %rd21;
+; SM60-NEXT:    setp.ne.b64 %p12, %rd7, %rd28;
+; SM60-NEXT:    mov.b64 %rd28, %rd7;
+; SM60-NEXT:    @%p12 bra $L__BB282_5;
 ; SM60-NEXT:  // %bb.6: // %atomicrmw.end14
-; SM60-NEXT:    ld.volatile.global.b64 %rd33, [%rd9+24];
-; SM60-NEXT:    setp.eq.b64 %p18, %rd2, -9223372036854775808;
+; SM60-NEXT:    ld.volatile.global.b64 %rd29, [%rd9+24];
 ; SM60-NEXT:  $L__BB282_7: // %atomicrmw.start20
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM60-NEXT:    setp.nan.f64 %p16, %rd33, %rd2;
-; SM60-NEXT:    min.f64 %rd25, %rd33, %rd2;
-; SM60-NEXT:    selp.f64 %rd26, 0d7FF8000000000000, %rd25, %p16;
-; SM60-NEXT:    setp.eq.b64 %p17, %rd33, -9223372036854775808;
-; SM60-NEXT:    selp.f64 %rd27, %rd33, %rd26, %p17;
-; SM60-NEXT:    selp.f64 %rd28, %rd2, %rd27, %p18;
-; SM60-NEXT:    setp.eq.f64 %p19, %rd26, 0d0000000000000000;
-; SM60-NEXT:    selp.f64 %rd29, %rd28, %rd26, %p19;
-; SM60-NEXT:    atom.cta.global.cas.b64 %rd8, [%rd9+24], %rd33, %rd29;
-; SM60-NEXT:    setp.ne.b64 %p20, %rd8, %rd33;
-; SM60-NEXT:    mov.b64 %rd33, %rd8;
-; SM60-NEXT:    @%p20 bra $L__BB282_7;
+; SM60-NEXT:    setp.eq.b64 %p13, %rd29, -9223372036854775808;
+; SM60-NEXT:    selp.f64 %rd22, %rd29, %rd2, %p13;
+; SM60-NEXT:    setp.nan.f64 %p14, %rd29, %rd2;
+; SM60-NEXT:    min.f64 %rd23, %rd29, %rd2;
+; SM60-NEXT:    selp.f64 %rd24, 0d7FF8000000000000, %rd23, %p14;
+; SM60-NEXT:    setp.eq.f64 %p15, %rd29, %rd2;
+; SM60-NEXT:    selp.f64 %rd25, %rd22, %rd24, %p15;
+; SM60-NEXT:    atom.cta.global.cas.b64 %rd8, [%rd9+24], %rd29, %rd25;
+; SM60-NEXT:    setp.ne.b64 %p16, %rd8, %rd29;
+; SM60-NEXT:    mov.b64 %rd29, %rd8;
+; SM60-NEXT:    @%p16 bra $L__BB282_7;
 ; SM60-NEXT:  // %bb.8: // %atomicrmw.end19
 ; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    st.param.v2.b64 [func_retval0+16], {%rd7, %rd8};
-; SM60-NEXT:    st.param.v2.b64 [func_retval0], {%rd30, %rd31};
+; SM60-NEXT:    st.param.v2.b64 [func_retval0], {%rd26, %rd27};
 ; SM60-NEXT:    ret;
         %retval = atomicrmw elementwise fminimum ptr  addrspace(1) %addr, <4 x double> %val syncscope("block") acq_rel
         ret <4 x double> %retval
@@ -12289,8 +12215,8 @@ define <4 x double> @fminimum_acq_rel_v4f64_global_cta(ptr addrspace(1) %addr, <
 define <8 x double> @fminimum_acq_rel_v8f64_global_cta(ptr addrspace(1) %addr, <8 x double> %val) {
 ; SM60-LABEL: fminimum_acq_rel_v8f64_global_cta(
 ; SM60:       {
-; SM60-NEXT:    .reg .pred %p<41>;
-; SM60-NEXT:    .reg .b64 %rd<66>;
+; SM60-NEXT:    .reg .pred %p<33>;
+; SM60-NEXT:    .reg .b64 %rd<58>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
 ; SM60-NEXT:    ld.param.b64 %rd17, [fminimum_acq_rel_v8f64_global_cta_param_0];
@@ -12299,147 +12225,131 @@ define <8 x double> @fminimum_acq_rel_v8f64_global_cta(ptr addrspace(1) %addr, <
 ; SM60-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [fminimum_acq_rel_v8f64_global_cta_param_1+32];
 ; SM60-NEXT:    ld.param.v2.b64 {%rd3, %rd4}, [fminimum_acq_rel_v8f64_global_cta_param_1+16];
 ; SM60-NEXT:    ld.param.v2.b64 {%rd5, %rd6}, [fminimum_acq_rel_v8f64_global_cta_param_1];
-; SM60-NEXT:    ld.volatile.global.b64 %rd58, [%rd17];
-; SM60-NEXT:    setp.eq.b64 %p3, %rd5, -9223372036854775808;
+; SM60-NEXT:    ld.volatile.global.b64 %rd50, [%rd17];
 ; SM60-NEXT:  $L__BB283_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM60-NEXT:    mov.b64 %rd7, %rd58;
-; SM60-NEXT:    setp.nan.f64 %p1, %rd7, %rd5;
-; SM60-NEXT:    min.f64 %rd18, %rd7, %rd5;
-; SM60-NEXT:    selp.f64 %rd19, 0d7FF8000000000000, %rd18, %p1;
-; SM60-NEXT:    setp.eq.b64 %p2, %rd7, -9223372036854775808;
-; SM60-NEXT:    selp.f64 %rd20, %rd7, %rd19, %p2;
-; SM60-NEXT:    selp.f64 %rd21, %rd5, %rd20, %p3;
-; SM60-NEXT:    setp.eq.f64 %p4, %rd19, 0d0000000000000000;
-; SM60-NEXT:    selp.f64 %rd22, %rd21, %rd19, %p4;
-; SM60-NEXT:    atom.cta.global.cas.b64 %rd58, [%rd17], %rd7, %rd22;
-; SM60-NEXT:    setp.ne.b64 %p5, %rd58, %rd7;
-; SM60-NEXT:    @%p5 bra $L__BB283_1;
+; SM60-NEXT:    mov.b64 %rd7, %rd50;
+; SM60-NEXT:    setp.eq.b64 %p1, %rd7, -9223372036854775808;
+; SM60-NEXT:    selp.f64 %rd18, %rd7, %rd5, %p1;
+; SM60-NEXT:    setp.nan.f64 %p2, %rd7, %rd5;
+; SM60-NEXT:    min.f64 %rd19, %rd7, %rd5;
+; SM60-NEXT:    selp.f64 %rd20, 0d7FF8000000000000, %rd19, %p2;
+; SM60-NEXT:    setp.eq.f64 %p3, %rd7, %rd5;
+; SM60-NEXT:    selp.f64 %rd21, %rd18, %rd20, %p3;
+; SM60-NEXT:    atom.cta.global.cas.b64 %rd50, [%rd17], %rd7, %rd21;
+; SM60-NEXT:    setp.ne.b64 %p4, %rd50, %rd7;
+; SM60-NEXT:    @%p4 bra $L__BB283_1;
 ; SM60-NEXT:  // %bb.2: // %atomicrmw.end
-; SM60-NEXT:    ld.volatile.global.b64 %rd59, [%rd17+8];
-; SM60-NEXT:    setp.eq.b64 %p8, %rd6, -9223372036854775808;
+; SM60-NEXT:    ld.volatile.global.b64 %rd51, [%rd17+8];
 ; SM60-NEXT:  $L__BB283_3: // %atomicrmw.start9
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM60-NEXT:    mov.b64 %rd8, %rd59;
+; SM60-NEXT:    mov.b64 %rd8, %rd51;
+; SM60-NEXT:    setp.eq.b64 %p5, %rd8, -9223372036854775808;
+; SM60-NEXT:    selp.f64 %rd22, %rd8, %rd6, %p5;
 ; SM60-NEXT:    setp.nan.f64 %p6, %rd8, %rd6;
 ; SM60-NEXT:    min.f64 %rd23, %rd8, %rd6;
 ; SM60-NEXT:    selp.f64 %rd24, 0d7FF8000000000000, %rd23, %p6;
-; SM60-NEXT:    setp.eq.b64 %p7, %rd8, -9223372036854775808;
-; SM60-NEXT:    selp.f64 %rd25, %rd8, %rd24, %p7;
-; SM60-NEXT:    selp.f64 %rd26, %rd6, %rd25, %p8;
-; SM60-NEXT:    setp.eq.f64 %p9, %rd24, 0d0000000000000000;
-; SM60-NEXT:    selp.f64 %rd27, %rd26, %rd24, %p9;
-; SM60-NEXT:    atom.cta.global.cas.b64 %rd59, [%rd17+8], %rd8, %rd27;
-; SM60-NEXT:    setp.ne.b64 %p10, %rd59, %rd8;
-; SM60-NEXT:    @%p10 bra $L__BB283_3;
+; SM60-NEXT:    setp.eq.f64 %p7, %rd8, %rd6;
+; SM60-NEXT:    selp.f64 %rd25, %rd22, %rd24, %p7;
+; SM60-NEXT:    atom.cta.global.cas.b64 %rd51, [%rd17+8], %rd8, %rd25;
+; SM60-NEXT:    setp.ne.b64 %p8, %rd51, %rd8;
+; SM60-NEXT:    @%p8 bra $L__BB283_3;
 ; SM60-NEXT:  // %bb.4: // %atomicrmw.end8
-; SM60-NEXT:    ld.volatile.global.b64 %rd60, [%rd17+16];
-; SM60-NEXT:    setp.eq.b64 %p13, %rd3, -9223372036854775808;
+; SM60-NEXT:    ld.volatile.global.b64 %rd52, [%rd17+16];
 ; SM60-NEXT:  $L__BB283_5: // %atomicrmw.start19
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM60-NEXT:    mov.b64 %rd9, %rd60;
-; SM60-NEXT:    setp.nan.f64 %p11, %rd9, %rd3;
-; SM60-NEXT:    min.f64 %rd28, %rd9, %rd3;
-; SM60-NEXT:    selp.f64 %rd29, 0d7FF8000000000000, %rd28, %p11;
-; SM60-NEXT:    setp.eq.b64 %p12, %rd9, -9223372036854775808;
-; SM60-NEXT:    selp.f64 %rd30, %rd9, %rd29, %p12;
-; SM60-NEXT:    selp.f64 %rd31, %rd3, %rd30, %p13;
-; SM60-NEXT:    setp.eq.f64 %p14, %rd29, 0d0000000000000000;
-; SM60-NEXT:    selp.f64 %rd32, %rd31, %rd29, %p14;
-; SM60-NEXT:    atom.cta.global.cas.b64 %rd60, [%rd17+16], %rd9, %rd32;
-; SM60-NEXT:    setp.ne.b64 %p15, %rd60, %rd9;
-; SM60-NEXT:    @%p15 bra $L__BB283_5;
+; SM60-NEXT:    mov.b64 %rd9, %rd52;
+; SM60-NEXT:    setp.eq.b64 %p9, %rd9, -9223372036854775808;
+; SM60-NEXT:    selp.f64 %rd26, %rd9, %rd3, %p9;
+; SM60-NEXT:    setp.nan.f64 %p10, %rd9, %rd3;
+; SM60-NEXT:    min.f64 %rd27, %rd9, %rd3;
+; SM60-NEXT:    selp.f64 %rd28, 0d7FF8000000000000, %rd27, %p10;
+; SM60-NEXT:    setp.eq.f64 %p11, %rd9, %rd3;
+; SM60-NEXT:    selp.f64 %rd29, %rd26, %rd28, %p11;
+; SM60-NEXT:    atom.cta.global.cas.b64 %rd52, [%rd17+16], %rd9, %rd29;
+; SM60-NEXT:    setp.ne.b64 %p12, %rd52, %rd9;
+; SM60-NEXT:    @%p12 bra $L__BB283_5;
 ; SM60-NEXT:  // %bb.6: // %atomicrmw.end18
-; SM60-NEXT:    ld.volatile.global.b64 %rd61, [%rd17+24];
-; SM60-NEXT:    setp.eq.b64 %p18, %rd4, -9223372036854775808;
+; SM60-NEXT:    ld.volatile.global.b64 %rd53, [%rd17+24];
 ; SM60-NEXT:  $L__BB283_7: // %atomicrmw.start24
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM60-NEXT:    mov.b64 %rd10, %rd61;
-; SM60-NEXT:    setp.nan.f64 %p16, %rd10, %rd4;
-; SM60-NEXT:    min.f64 %rd33, %rd10, %rd4;
-; SM60-NEXT:    selp.f64 %rd34, 0d7FF8000000000000, %rd33, %p16;
-; SM60-NEXT:    setp.eq.b64 %p17, %rd10, -9223372036854775808;
-; SM60-NEXT:    selp.f64 %rd35, %rd10, %rd34, %p17;
-; SM60-NEXT:    selp.f64 %rd36, %rd4, %rd35, %p18;
-; SM60-NEXT:    setp.eq.f64 %p19, %rd34, 0d0000000000000000;
-; SM60-NEXT:    selp.f64 %rd37, %rd36, %rd34, %p19;
-; SM60-NEXT:    atom.cta.global.cas.b64 %rd61, [%rd17+24], %rd10, %rd37;
-; SM60-NEXT:    setp.ne.b64 %p20, %rd61, %rd10;
-; SM60-NEXT:    @%p20 bra $L__BB283_7;
+; SM60-NEXT:    mov.b64 %rd10, %rd53;
+; SM60-NEXT:    setp.eq.b64 %p13, %rd10, -9223372036854775808;
+; SM60-NEXT:    selp.f64 %rd30, %rd10, %rd4, %p13;
+; SM60-NEXT:    setp.nan.f64 %p14, %rd10, %rd4;
+; SM60-NEXT:    min.f64 %rd31, %rd10, %rd4;
+; SM60-NEXT:    selp.f64 %rd32, 0d7FF8000000000000, %rd31, %p14;
+; SM60-NEXT:    setp.eq.f64 %p15, %rd10, %rd4;
+; SM60-NEXT:    selp.f64 %rd33, %rd30, %rd32, %p15;
+; SM60-NEXT:    atom.cta.global.cas.b64 %rd53, [%rd17+24], %rd10, %rd33;
+; SM60-NEXT:    setp.ne.b64 %p16, %rd53, %rd10;
+; SM60-NEXT:    @%p16 bra $L__BB283_7;
 ; SM60-NEXT:  // %bb.8: // %atomicrmw.end23
-; SM60-NEXT:    ld.volatile.global.b64 %rd62, [%rd17+32];
-; SM60-NEXT:    setp.eq.b64 %p23, %rd1, -9223372036854775808;
+; SM60-NEXT:    ld.volatile.global.b64 %rd54, [%rd17+32];
 ; SM60-NEXT:  $L__BB283_9: // %atomicrmw.start38
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM60-NEXT:    mov.b64 %rd13, %rd62;
-; SM60-NEXT:    setp.nan.f64 %p21, %rd13, %rd1;
-; SM60-NEXT:    min.f64 %rd38, %rd13, %rd1;
-; SM60-NEXT:    selp.f64 %rd39, 0d7FF8000000000000, %rd38, %p21;
-; SM60-NEXT:    setp.eq.b64 %p22, %rd13, -9223372036854775808;
-; SM60-NEXT:    selp.f64 %rd40, %rd13, %rd39, %p22;
-; SM60-NEXT:    selp.f64 %rd41, %rd1, %rd40, %p23;
-; SM60-NEXT:    setp.eq.f64 %p24, %rd39, 0d0000000000000000;
-; SM60-NEXT:    selp.f64 %rd42, %rd41, %rd39, %p24;
-; SM60-NEXT:    atom.cta.global.cas.b64 %rd62, [%rd17+32], %rd13, %rd42;
-; SM60-NEXT:    setp.ne.b64 %p25, %rd62, %rd13;
-; SM60-NEXT:    @%p25 bra $L__BB283_9;
+; SM60-NEXT:    mov.b64 %rd13, %rd54;
+; SM60-NEXT:    setp.eq.b64 %p17, %rd13, -9223372036854775808;
+; SM60-NEXT:    selp.f64 %rd34, %rd13, %rd1, %p17;
+; SM60-NEXT:    setp.nan.f64 %p18, %rd13, %rd1;
+; SM60-NEXT:    min.f64 %rd35, %rd13, %rd1;
+; SM60-NEXT:    selp.f64 %rd36, 0d7FF8000000000000, %rd35, %p18;
+; SM60-NEXT:    setp.eq.f64 %p19, %rd13, %rd1;
+; SM60-NEXT:    selp.f64 %rd37, %rd34, %rd36, %p19;
+; SM60-NEXT:    atom.cta.global.cas.b64 %rd54, [%rd17+32], %rd13, %rd37;
+; SM60-NEXT:    setp.ne.b64 %p20, %rd54, %rd13;
+; SM60-NEXT:    @%p20 bra $L__BB283_9;
 ; SM60-NEXT:  // %bb.10: // %atomicrmw.end37
-; SM60-NEXT:    ld.volatile.global.b64 %rd63, [%rd17+40];
-; SM60-NEXT:    setp.eq.b64 %p28, %rd2, -9223372036854775808;
+; SM60-NEXT:    ld.volatile.global.b64 %rd55, [%rd17+40];
 ; SM60-NEXT:  $L__BB283_11: // %atomicrmw.start43
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM60-NEXT:    mov.b64 %rd14, %rd63;
-; SM60-NEXT:    setp.nan.f64 %p26, %rd14, %rd2;
-; SM60-NEXT:    min.f64 %rd43, %rd14, %rd2;
-; SM60-NEXT:    selp.f64 %rd44, 0d7FF8000000000000, %rd43, %p26;
-; SM60-NEXT:    setp.eq.b64 %p27, %rd14, -9223372036854775808;
-; SM60-NEXT:    selp.f64 %rd45, %rd14, %rd44, %p27;
-; SM60-NEXT:    selp.f64 %rd46, %rd2, %rd45, %p28;
-; SM60-NEXT:    setp.eq.f64 %p29, %rd44, 0d0000000000000000;
-; SM60-NEXT:    selp.f64 %rd47, %rd46, %rd44, %p29;
-; SM60-NEXT:    atom.cta.global.cas.b64 %rd63, [%rd17+40], %rd14, %rd47;
-; SM60-NEXT:    setp.ne.b64 %p30, %rd63, %rd14;
-; SM60-NEXT:    @%p30 bra $L__BB283_11;
+; SM60-NEXT:    mov.b64 %rd14, %rd55;
+; SM60-NEXT:    setp.eq.b64 %p21, %rd14, -9223372036854775808;
+; SM60-NEXT:    selp.f64 %rd38, %rd14, %rd2, %p21;
+; SM60-NEXT:    setp.nan.f64 %p22, %rd14, %rd2;
+; SM60-NEXT:    min.f64 %rd39, %rd14, %rd2;
+; SM60-NEXT:    selp.f64 %rd40, 0d7FF8000000000000, %rd39, %p22;
+; SM60-NEXT:    setp.eq.f64 %p23, %rd14, %rd2;
+; SM60-NEXT:    selp.f64 %rd41, %rd38, %rd40, %p23;
+; SM60-NEXT:    atom.cta.global.cas.b64 %rd55, [%rd17+40], %rd14, %rd41;
+; SM60-NEXT:    setp.ne.b64 %p24, %rd55, %rd14;
+; SM60-NEXT:    @%p24 bra $L__BB283_11;
 ; SM60-NEXT:  // %bb.12: // %atomicrmw.end42
-; SM60-NEXT:    ld.volatile.global.b64 %rd64, [%rd17+48];
-; SM60-NEXT:    setp.eq.b64 %p33, %rd11, -9223372036854775808;
+; SM60-NEXT:    ld.volatile.global.b64 %rd56, [%rd17+48];
 ; SM60-NEXT:  $L__BB283_13: // %atomicrmw.start53
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM60-NEXT:    setp.nan.f64 %p31, %rd64, %rd11;
-; SM60-NEXT:    min.f64 %rd48, %rd64, %rd11;
-; SM60-NEXT:    selp.f64 %rd49, 0d7FF8000000000000, %rd48, %p31;
-; SM60-NEXT:    setp.eq.b64 %p32, %rd64, -9223372036854775808;
-; SM60-NEXT:    selp.f64 %rd50, %rd64, %rd49, %p32;
-; SM60-NEXT:    selp.f64 %rd51, %rd11, %rd50, %p33;
-; SM60-NEXT:    setp.eq.f64 %p34, %rd49, 0d0000000000000000;
-; SM60-NEXT:    selp.f64 %rd52, %rd51, %rd49, %p34;
-; SM60-NEXT:    atom.cta.global.cas.b64 %rd15, [%rd17+48], %rd64, %rd52;
-; SM60-NEXT:    setp.ne.b64 %p35, %rd15, %rd64;
-; SM60-NEXT:    mov.b64 %rd64, %rd15;
-; SM60-NEXT:    @%p35 bra $L__BB283_13;
+; SM60-NEXT:    setp.eq.b64 %p25, %rd56, -9223372036854775808;
+; SM60-NEXT:    selp.f64 %rd42, %rd56, %rd11, %p25;
+; SM60-NEXT:    setp.nan.f64 %p26, %rd56, %rd11;
+; SM60-NEXT:    min.f64 %rd43, %rd56, %rd11;
+; SM60-NEXT:    selp.f64 %rd44, 0d7FF8000000000000, %rd43, %p26;
+; SM60-NEXT:    setp.eq.f64 %p27, %rd56, %rd11;
+; SM60-NEXT:    selp.f64 %rd45, %rd42, %rd44, %p27;
+; SM60-NEXT:    atom.cta.global.cas.b64 %rd15, [%rd17+48], %rd56, %rd45;
+; SM60-NEXT:    setp.ne.b64 %p28, %rd15, %rd56;
+; SM60-NEXT:    mov.b64 %rd56, %rd15;
+; SM60-NEXT:    @%p28 bra $L__BB283_13;
 ; SM60-NEXT:  // %bb.14: // %atomicrmw.end52
-; SM60-NEXT:    ld.volatile.global.b64 %rd65, [%rd17+56];
-; SM60-NEXT:    setp.eq.b64 %p38, %rd12, -9223372036854775808;
+; SM60-NEXT:    ld.volatile.global.b64 %rd57, [%rd17+56];
 ; SM60-NEXT:  $L__BB283_15: // %atomicrmw.start58
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM60-NEXT:    setp.nan.f64 %p36, %rd65, %rd12;
-; SM60-NEXT:    min.f64 %rd53, %rd65, %rd12;
-; SM60-NEXT:    selp.f64 %rd54, 0d7FF8000000000000, %rd53, %p36;
-; SM60-NEXT:    setp.eq.b64 %p37, %rd65, -9223372036854775808;
-; SM60-NEXT:    selp.f64 %rd55, %rd65, %rd54, %p37;
-; SM60-NEXT:    selp.f64 %rd56, %rd12, %rd55, %p38;
-; SM60-NEXT:    setp.eq.f64 %p39, %rd54, 0d0000000000000000;
-; SM60-NEXT:    selp.f64 %rd57, %rd56, %rd54, %p39;
-; SM60-NEXT:    atom.cta.global.cas.b64 %rd16, [%rd17+56], %rd65, %rd57;
-; SM60-NEXT:    setp.ne.b64 %p40, %rd16, %rd65;
-; SM60-NEXT:    mov.b64 %rd65, %rd16;
-; SM60-NEXT:    @%p40 bra $L__BB283_15;
+; SM60-NEXT:    setp.eq.b64 %p29, %rd57, -9223372036854775808;
+; SM60-NEXT:    selp.f64 %rd46, %rd57, %rd12, %p29;
+; SM60-NEXT:    setp.nan.f64 %p30, %rd57, %rd12;
+; SM60-NEXT:    min.f64 %rd47, %rd57, %rd12;
+; SM60-NEXT:    selp.f64 %rd48, 0d7FF8000000000000, %rd47, %p30;
+; SM60-NEXT:    setp.eq.f64 %p31, %rd57, %rd12;
+; SM60-NEXT:    selp.f64 %rd49, %rd46, %rd48, %p31;
+; SM60-NEXT:    atom.cta.global.cas.b64 %rd16, [%rd17+56], %rd57, %rd49;
+; SM60-NEXT:    setp.ne.b64 %p32, %rd16, %rd57;
+; SM60-NEXT:    mov.b64 %rd57, %rd16;
+; SM60-NEXT:    @%p32 bra $L__BB283_15;
 ; SM60-NEXT:  // %bb.16: // %atomicrmw.end57
 ; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    st.param.v2.b64 [func_retval0+48], {%rd15, %rd16};
-; SM60-NEXT:    st.param.v2.b64 [func_retval0+32], {%rd62, %rd63};
-; SM60-NEXT:    st.param.v2.b64 [func_retval0], {%rd58, %rd59};
-; SM60-NEXT:    st.param.v2.b64 [func_retval0+16], {%rd60, %rd61};
+; SM60-NEXT:    st.param.v2.b64 [func_retval0+32], {%rd54, %rd55};
+; SM60-NEXT:    st.param.v2.b64 [func_retval0], {%rd50, %rd51};
+; SM60-NEXT:    st.param.v2.b64 [func_retval0+16], {%rd52, %rd53};
 ; SM60-NEXT:    ret;
         %retval = atomicrmw elementwise fminimum ptr  addrspace(1) %addr, <8 x double> %val syncscope("block") acq_rel
         ret <8 x double> %retval
@@ -12448,29 +12358,27 @@ define <8 x double> @fminimum_acq_rel_v8f64_global_cta(ptr addrspace(1) %addr, <
 define <1 x double> @fmaximum_acq_rel_v1f64_global_cta(ptr addrspace(1) %addr, <1 x double> %val) {
 ; SM60-LABEL: fmaximum_acq_rel_v1f64_global_cta(
 ; SM60:       {
-; SM60-NEXT:    .reg .pred %p<6>;
-; SM60-NEXT:    .reg .b64 %rd<10>;
+; SM60-NEXT:    .reg .pred %p<5>;
+; SM60-NEXT:    .reg .b64 %rd<9>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
 ; SM60-NEXT:    ld.param.b64 %rd3, [fmaximum_acq_rel_v1f64_global_cta_param_0];
 ; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    ld.param.b64 %rd1, [fmaximum_acq_rel_v1f64_global_cta_param_1];
-; SM60-NEXT:    ld.volatile.global.b64 %rd9, [%rd3];
-; SM60-NEXT:    setp.eq.b64 %p3, %rd1, 0;
+; SM60-NEXT:    ld.volatile.global.b64 %rd8, [%rd3];
 ; SM60-NEXT:  $L__BB284_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM60-NEXT:    setp.nan.f64 %p1, %rd9, %rd1;
-; SM60-NEXT:    max.f64 %rd4, %rd9, %rd1;
-; SM60-NEXT:    selp.f64 %rd5, 0d7FF8000000000000, %rd4, %p1;
-; SM60-NEXT:    setp.eq.b64 %p2, %rd9, 0;
-; SM60-NEXT:    selp.f64 %rd6, %rd9, %rd5, %p2;
-; SM60-NEXT:    selp.f64 %rd7, %rd1, %rd6, %p3;
-; SM60-NEXT:    setp.eq.f64 %p4, %rd5, 0d0000000000000000;
-; SM60-NEXT:    selp.f64 %rd8, %rd7, %rd5, %p4;
-; SM60-NEXT:    atom.cta.global.cas.b64 %rd2, [%rd3], %rd9, %rd8;
-; SM60-NEXT:    setp.ne.b64 %p5, %rd2, %rd9;
-; SM60-NEXT:    mov.b64 %rd9, %rd2;
-; SM60-NEXT:    @%p5 bra $L__BB284_1;
+; SM60-NEXT:    setp.eq.b64 %p1, %rd8, 0;
+; SM60-NEXT:    selp.f64 %rd4, %rd8, %rd1, %p1;
+; SM60-NEXT:    setp.nan.f64 %p2, %rd8, %rd1;
+; SM60-NEXT:    max.f64 %rd5, %rd8, %rd1;
+; SM60-NEXT:    selp.f64 %rd6, 0d7FF8000000000000, %rd5, %p2;
+; SM60-NEXT:    setp.eq.f64 %p3, %rd8, %rd1;
+; SM60-NEXT:    selp.f64 %rd7, %rd4, %rd6, %p3;
+; SM60-NEXT:    atom.cta.global.cas.b64 %rd2, [%rd3], %rd8, %rd7;
+; SM60-NEXT:    setp.ne.b64 %p4, %rd2, %rd8;
+; SM60-NEXT:    mov.b64 %rd8, %rd2;
+; SM60-NEXT:    @%p4 bra $L__BB284_1;
 ; SM60-NEXT:  // %bb.2: // %atomicrmw.end
 ; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    st.param.b64 [func_retval0], %rd2;
@@ -12482,46 +12390,42 @@ define <1 x double> @fmaximum_acq_rel_v1f64_global_cta(ptr addrspace(1) %addr, <
 define <2 x double> @fmaximum_acq_rel_v2f64_global_cta(ptr addrspace(1) %addr, <2 x double> %val) {
 ; SM60-LABEL: fmaximum_acq_rel_v2f64_global_cta(
 ; SM60:       {
-; SM60-NEXT:    .reg .pred %p<11>;
-; SM60-NEXT:    .reg .b64 %rd<18>;
+; SM60-NEXT:    .reg .pred %p<9>;
+; SM60-NEXT:    .reg .b64 %rd<16>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
 ; SM60-NEXT:    ld.param.b64 %rd5, [fmaximum_acq_rel_v2f64_global_cta_param_0];
 ; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [fmaximum_acq_rel_v2f64_global_cta_param_1];
-; SM60-NEXT:    ld.volatile.global.b64 %rd16, [%rd5];
-; SM60-NEXT:    setp.eq.b64 %p3, %rd1, 0;
+; SM60-NEXT:    ld.volatile.global.b64 %rd14, [%rd5];
 ; SM60-NEXT:  $L__BB285_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM60-NEXT:    setp.nan.f64 %p1, %rd16, %rd1;
-; SM60-NEXT:    max.f64 %rd6, %rd16, %rd1;
-; SM60-NEXT:    selp.f64 %rd7, 0d7FF8000000000000, %rd6, %p1;
-; SM60-NEXT:    setp.eq.b64 %p2, %rd16, 0;
-; SM60-NEXT:    selp.f64 %rd8, %rd16, %rd7, %p2;
-; SM60-NEXT:    selp.f64 %rd9, %rd1, %rd8, %p3;
-; SM60-NEXT:    setp.eq.f64 %p4, %rd7, 0d0000000000000000;
-; SM60-NEXT:    selp.f64 %rd10, %rd9, %rd7, %p4;
-; SM60-NEXT:    atom.cta.global.cas.b64 %rd3, [%rd5], %rd16, %rd10;
-; SM60-NEXT:    setp.ne.b64 %p5, %rd3, %rd16;
-; SM60-NEXT:    mov.b64 %rd16, %rd3;
-; SM60-NEXT:    @%p5 bra $L__BB285_1;
+; SM60-NEXT:    setp.eq.b64 %p1, %rd14, 0;
+; SM60-NEXT:    selp.f64 %rd6, %rd14, %rd1, %p1;
+; SM60-NEXT:    setp.nan.f64 %p2, %rd14, %rd1;
+; SM60-NEXT:    max.f64 %rd7, %rd14, %rd1;
+; SM60-NEXT:    selp.f64 %rd8, 0d7FF8000000000000, %rd7, %p2;
+; SM60-NEXT:    setp.eq.f64 %p3, %rd14, %rd1;
+; SM60-NEXT:    selp.f64 %rd9, %rd6, %rd8, %p3;
+; SM60-NEXT:    atom.cta.global.cas.b64 %rd3, [%rd5], %rd14, %rd9;
+; SM60-NEXT:    setp.ne.b64 %p4, %rd3, %rd14;
+; SM60-NEXT:    mov.b64 %rd14, %rd3;
+; SM60-NEXT:    @%p4 bra $L__BB285_1;
 ; SM60-NEXT:  // %bb.2: // %atomicrmw.end
-; SM60-NEXT:    ld.volatile.global.b64 %rd17, [%rd5+8];
-; SM60-NEXT:    setp.eq.b64 %p8, %rd2, 0;
+; SM60-NEXT:    ld.volatile.global.b64 %rd15, [%rd5+8];
 ; SM60-NEXT:  $L__BB285_3: // %atomicrmw.start2
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM60-NEXT:    setp.nan.f64 %p6, %rd17, %rd2;
-; SM60-NEXT:    max.f64 %rd11, %rd17, %rd2;
+; SM60-NEXT:    setp.eq.b64 %p5, %rd15, 0;
+; SM60-NEXT:    selp.f64 %rd10, %rd15, %rd2, %p5;
+; SM60-NEXT:    setp.nan.f64 %p6, %rd15, %rd2;
+; SM60-NEXT:    max.f64 %rd11, %rd15, %rd2;
 ; SM60-NEXT:    selp.f64 %rd12, 0d7FF8000000000000, %rd11, %p6;
-; SM60-NEXT:    setp.eq.b64 %p7, %rd17, 0;
-; SM60-NEXT:    selp.f64 %rd13, %rd17, %rd12, %p7;
-; SM60-NEXT:    selp.f64 %rd14, %rd2, %rd13, %p8;
-; SM60-NEXT:    setp.eq.f64 %p9, %rd12, 0d0000000000000000;
-; SM60-NEXT:    selp.f64 %rd15, %rd14, %rd12, %p9;
-; SM60-NEXT:    atom.cta.global.cas.b64 %rd4, [%rd5+8], %rd17, %rd15;
-; SM60-NEXT:    setp.ne.b64 %p10, %rd4, %rd17;
-; SM60-NEXT:    mov.b64 %rd17, %rd4;
-; SM60-NEXT:    @%p10 bra $L__BB285_3;
+; SM60-NEXT:    setp.eq.f64 %p7, %rd15, %rd2;
+; SM60-NEXT:    selp.f64 %rd13, %rd10, %rd12, %p7;
+; SM60-NEXT:    atom.cta.global.cas.b64 %rd4, [%rd5+8], %rd15, %rd13;
+; SM60-NEXT:    setp.ne.b64 %p8, %rd4, %rd15;
+; SM60-NEXT:    mov.b64 %rd15, %rd4;
+; SM60-NEXT:    @%p8 bra $L__BB285_3;
 ; SM60-NEXT:  // %bb.4: // %atomicrmw.end1
 ; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
@@ -12533,85 +12437,77 @@ define <2 x double> @fmaximum_acq_rel_v2f64_global_cta(ptr addrspace(1) %addr, <
 define <4 x double> @fmaximum_acq_rel_v4f64_global_cta(ptr addrspace(1) %addr, <4 x double> %val) {
 ; SM60-LABEL: fmaximum_acq_rel_v4f64_global_cta(
 ; SM60:       {
-; SM60-NEXT:    .reg .pred %p<21>;
-; SM60-NEXT:    .reg .b64 %rd<34>;
+; SM60-NEXT:    .reg .pred %p<17>;
+; SM60-NEXT:    .reg .b64 %rd<30>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
 ; SM60-NEXT:    ld.param.b64 %rd9, [fmaximum_acq_rel_v4f64_global_cta_param_0];
 ; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [fmaximum_acq_rel_v4f64_global_cta_param_1+16];
 ; SM60-NEXT:    ld.param.v2.b64 {%rd3, %rd4}, [fmaximum_acq_rel_v4f64_global_cta_param_1];
-; SM60-NEXT:    ld.volatile.global.b64 %rd30, [%rd9];
-; SM60-NEXT:    setp.eq.b64 %p3, %rd3, 0;
+; SM60-NEXT:    ld.volatile.global.b64 %rd26, [%rd9];
 ; SM60-NEXT:  $L__BB286_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM60-NEXT:    mov.b64 %rd5, %rd30;
-; SM60-NEXT:    setp.nan.f64 %p1, %rd5, %rd3;
-; SM60-NEXT:    max.f64 %rd10, %rd5, %rd3;
-; SM60-NEXT:    selp.f64 %rd11, 0d7FF8000000000000, %rd10, %p1;
-; SM60-NEXT:    setp.eq.b64 %p2, %rd5, 0;
-; SM60-NEXT:    selp.f64 %rd12, %rd5, %rd11, %p2;
-; SM60-NEXT:    selp.f64 %rd13, %rd3, %rd12, %p3;
-; SM60-NEXT:    setp.eq.f64 %p4, %rd11, 0d0000000000000000;
-; SM60-NEXT:    selp.f64 %rd14, %rd13, %rd11, %p4;
-; SM60-NEXT:    atom.cta.global.cas.b64 %rd30, [%rd9], %rd5, %rd14;
-; SM60-NEXT:    setp.ne.b64 %p5, %rd30, %rd5;
-; SM60-NEXT:    @%p5 bra $L__BB286_1;
+; SM60-NEXT:    mov.b64 %rd5, %rd26;
+; SM60-NEXT:    setp.eq.b64 %p1, %rd5, 0;
+; SM60-NEXT:    selp.f64 %rd10, %rd5, %rd3, %p1;
+; SM60-NEXT:    setp.nan.f64 %p2, %rd5, %rd3;
+; SM60-NEXT:    max.f64 %rd11, %rd5, %rd3;
+; SM60-NEXT:    selp.f64 %rd12, 0d7FF8000000000000, %rd11, %p2;
+; SM60-NEXT:    setp.eq.f64 %p3, %rd5, %rd3;
+; SM60-NEXT:    selp.f64 %rd13, %rd10, %rd12, %p3;
+; SM60-NEXT:    atom.cta.global.cas.b64 %rd26, [%rd9], %rd5, %rd13;
+; SM60-NEXT:    setp.ne.b64 %p4, %rd26, %rd5;
+; SM60-NEXT:    @%p4 bra $L__BB286_1;
 ; SM60-NEXT:  // %bb.2: // %atomicrmw.end
-; SM60-NEXT:    ld.volatile.global.b64 %rd31, [%rd9+8];
-; SM60-NEXT:    setp.eq.b64 %p8, %rd4, 0;
+; SM60-NEXT:    ld.volatile.global.b64 %rd27, [%rd9+8];
 ; SM60-NEXT:  $L__BB286_3: // %atomicrmw.start5
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM60-NEXT:    mov.b64 %rd6, %rd31;
+; SM60-NEXT:    mov.b64 %rd6, %rd27;
+; SM60-NEXT:    setp.eq.b64 %p5, %rd6, 0;
+; SM60-NEXT:    selp.f64 %rd14, %rd6, %rd4, %p5;
 ; SM60-NEXT:    setp.nan.f64 %p6, %rd6, %rd4;
 ; SM60-NEXT:    max.f64 %rd15, %rd6, %rd4;
 ; SM60-NEXT:    selp.f64 %rd16, 0d7FF8000000000000, %rd15, %p6;
-; SM60-NEXT:    setp.eq.b64 %p7, %rd6, 0;
-; SM60-NEXT:    selp.f64 %rd17, %rd6, %rd16, %p7;
-; SM60-NEXT:    selp.f64 %rd18, %rd4, %rd17, %p8;
-; SM60-NEXT:    setp.eq.f64 %p9, %rd16, 0d0000000000000000;
-; SM60-NEXT:    selp.f64 %rd19, %rd18, %rd16, %p9;
-; SM60-NEXT:    atom.cta.global.cas.b64 %rd31, [%rd9+8], %rd6, %rd19;
-; SM60-NEXT:    setp.ne.b64 %p10, %rd31, %rd6;
-; SM60-NEXT:    @%p10 bra $L__BB286_3;
+; SM60-NEXT:    setp.eq.f64 %p7, %rd6, %rd4;
+; SM60-NEXT:    selp.f64 %rd17, %rd14, %rd16, %p7;
+; SM60-NEXT:    atom.cta.global.cas.b64 %rd27, [%rd9+8], %rd6, %rd17;
+; SM60-NEXT:    setp.ne.b64 %p8, %rd27, %rd6;
+; SM60-NEXT:    @%p8 bra $L__BB286_3;
 ; SM60-NEXT:  // %bb.4: // %atomicrmw.end4
-; SM60-NEXT:    ld.volatile.global.b64 %rd32, [%rd9+16];
-; SM60-NEXT:    setp.eq.b64 %p13, %rd1, 0;
+; SM60-NEXT:    ld.volatile.global.b64 %rd28, [%rd9+16];
 ; SM60-NEXT:  $L__BB286_5: // %atomicrmw.start15
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM60-NEXT:    setp.nan.f64 %p11, %rd32, %rd1;
-; SM60-NEXT:    max.f64 %rd20, %rd32, %rd1;
-; SM60-NEXT:    selp.f64 %rd21, 0d7FF8000000000000, %rd20, %p11;
-; SM60-NEXT:    setp.eq.b64 %p12, %rd32, 0;
-; SM60-NEXT:    selp.f64 %rd22, %rd32, %rd21, %p12;
-; SM60-NEXT:    selp.f64 %rd23, %rd1, %rd22, %p13;
-; SM60-NEXT:    setp.eq.f64 %p14, %rd21, 0d0000000000000000;
-; SM60-NEXT:    selp.f64 %rd24, %rd23, %rd21, %p14;
-; SM60-NEXT:    atom.cta.global.cas.b64 %rd7, [%rd9+16], %rd32, %rd24;
-; SM60-NEXT:    setp.ne.b64 %p15, %rd7, %rd32;
-; SM60-NEXT:    mov.b64 %rd32, %rd7;
-; SM60-NEXT:    @%p15 bra $L__BB286_5;
+; SM60-NEXT:    setp.eq.b64 %p9, %rd28, 0;
+; SM60-NEXT:    selp.f64 %rd18, %rd28, %rd1, %p9;
+; SM60-NEXT:    setp.nan.f64 %p10, %rd28, %rd1;
+; SM60-NEXT:    max.f64 %rd19, %rd28, %rd1;
+; SM60-NEXT:    selp.f64 %rd20, 0d7FF8000000000000, %rd19, %p10;
+; SM60-NEXT:    setp.eq.f64 %p11, %rd28, %rd1;
+; SM60-NEXT:    selp.f64 %rd21, %rd18, %rd20, %p11;
+; SM60-NEXT:    atom.cta.global.cas.b64 %rd7, [%rd9+16], %rd28, %rd21;
+; SM60-NEXT:    setp.ne.b64 %p12, %rd7, %rd28;
+; SM60-NEXT:    mov.b64 %rd28, %rd7;
+; SM60-NEXT:    @%p12 bra $L__BB286_5;
 ; SM60-NEXT:  // %bb.6: // %atomicrmw.end14
-; SM60-NEXT:    ld.volatile.global.b64 %rd33, [%rd9+24];
-; SM60-NEXT:    setp.eq.b64 %p18, %rd2, 0;
+; SM60-NEXT:    ld.volatile.global.b64 %rd29, [%rd9+24];
 ; SM60-NEXT:  $L__BB286_7: // %atomicrmw.start20
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM60-NEXT:    setp.nan.f64 %p16, %rd33, %rd2;
-; SM60-NEXT:    max.f64 %rd25, %rd33, %rd2;
-; SM60-NEXT:    selp.f64 %rd26, 0d7FF8000000000000, %rd25, %p16;
-; SM60-NEXT:    setp.eq.b64 %p17, %rd33, 0;
-; SM60-NEXT:    selp.f64 %rd27, %rd33, %rd26, %p17;
-; SM60-NEXT:    selp.f64 %rd28, %rd2, %rd27, %p18;
-; SM60-NEXT:    setp.eq.f64 %p19, %rd26, 0d0000000000000000;
-; SM60-NEXT:    selp.f64 %rd29, %rd28, %rd26, %p19;
-; SM60-NEXT:    atom.cta.global.cas.b64 %rd8, [%rd9+24], %rd33, %rd29;
-; SM60-NEXT:    setp.ne.b64 %p20, %rd8, %rd33;
-; SM60-NEXT:    mov.b64 %rd33, %rd8;
-; SM60-NEXT:    @%p20 bra $L__BB286_7;
+; SM60-NEXT:    setp.eq.b64 %p13, %rd29, 0;
+; SM60-NEXT:    selp.f64 %rd22, %rd29, %rd2, %p13;
+; SM60-NEXT:    setp.nan.f64 %p14, %rd29, %rd2;
+; SM60-NEXT:    max.f64 %rd23, %rd29, %rd2;
+; SM60-NEXT:    selp.f64 %rd24, 0d7FF8000000000000, %rd23, %p14;
+; SM60-NEXT:    setp.eq.f64 %p15, %rd29, %rd2;
+; SM60-NEXT:    selp.f64 %rd25, %rd22, %rd24, %p15;
+; SM60-NEXT:    atom.cta.global.cas.b64 %rd8, [%rd9+24], %rd29, %rd25;
+; SM60-NEXT:    setp.ne.b64 %p16, %rd8, %rd29;
+; SM60-NEXT:    mov.b64 %rd29, %rd8;
+; SM60-NEXT:    @%p16 bra $L__BB286_7;
 ; SM60-NEXT:  // %bb.8: // %atomicrmw.end19
 ; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    st.param.v2.b64 [func_retval0+16], {%rd7, %rd8};
-; SM60-NEXT:    st.param.v2.b64 [func_retval0], {%rd30, %rd31};
+; SM60-NEXT:    st.param.v2.b64 [func_retval0], {%rd26, %rd27};
 ; SM60-NEXT:    ret;
         %retval = atomicrmw elementwise fmaximum ptr  addrspace(1) %addr, <4 x double> %val syncscope("block") acq_rel
         ret <4 x double> %retval
@@ -12620,8 +12516,8 @@ define <4 x double> @fmaximum_acq_rel_v4f64_global_cta(ptr addrspace(1) %addr, <
 define <8 x double> @fmaximum_acq_rel_v8f64_global_cta(ptr addrspace(1) %addr, <8 x double> %val) {
 ; SM60-LABEL: fmaximum_acq_rel_v8f64_global_cta(
 ; SM60:       {
-; SM60-NEXT:    .reg .pred %p<41>;
-; SM60-NEXT:    .reg .b64 %rd<66>;
+; SM60-NEXT:    .reg .pred %p<33>;
+; SM60-NEXT:    .reg .b64 %rd<58>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
 ; SM60-NEXT:    ld.param.b64 %rd17, [fmaximum_acq_rel_v8f64_global_cta_param_0];
@@ -12630,147 +12526,131 @@ define <8 x double> @fmaximum_acq_rel_v8f64_global_cta(ptr addrspace(1) %addr, <
 ; SM60-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [fmaximum_acq_rel_v8f64_global_cta_param_1+32];
 ; SM60-NEXT:    ld.param.v2.b64 {%rd3, %rd4}, [fmaximum_acq_rel_v8f64_global_cta_param_1+16];
 ; SM60-NEXT:    ld.param.v2.b64 {%rd5, %rd6}, [fmaximum_acq_rel_v8f64_global_cta_param_1];
-; SM60-NEXT:    ld.volatile.global.b64 %rd58, [%rd17];
-; SM60-NEXT:    setp.eq.b64 %p3, %rd5, 0;
+; SM60-NEXT:    ld.volatile.global.b64 %rd50, [%rd17];
 ; SM60-NEXT:  $L__BB287_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM60-NEXT:    mov.b64 %rd7, %rd58;
-; SM60-NEXT:    setp.nan.f64 %p1, %rd7, %rd5;
-; SM60-NEXT:    max.f64 %rd18, %rd7, %rd5;
-; SM60-NEXT:    selp.f64 %rd19, 0d7FF8000000000000, %rd18, %p1;
-; SM60-NEXT:    setp.eq.b64 %p2, %rd7, 0;
-; SM60-NEXT:    selp.f64 %rd20, %rd7, %rd19, %p2;
-; SM60-NEXT:    selp.f64 %rd21, %rd5, %rd20, %p3;
-; SM60-NEXT:    setp.eq.f64 %p4, %rd19, 0d0000000000000000;
-; SM60-NEXT:    selp.f64 %rd22, %rd21, %rd19, %p4;
-; SM60-NEXT:    atom.cta.global.cas.b64 %rd58, [%rd17], %rd7, %rd22;
-; SM60-NEXT:    setp.ne.b64 %p5, %rd58, %rd7;
-; SM60-NEXT:    @%p5 bra $L__BB287_1;
+; SM60-NEXT:    mov.b64 %rd7, %rd50;
+; SM60-NEXT:    setp.eq.b64 %p1, %rd7, 0;
+; SM60-NEXT:    selp.f64 %rd18, %rd7, %rd5, %p1;
+; SM60-NEXT:    setp.nan.f64 %p2, %rd7, %rd5;
+; SM60-NEXT:    max.f64 %rd19, %rd7, %rd5;
+; SM60-NEXT:    selp.f64 %rd20, 0d7FF8000000000000, %rd19, %p2;
+; SM60-NEXT:    setp.eq.f64 %p3, %rd7, %rd5;
+; SM60-NEXT:    selp.f64 %rd21, %rd18, %rd20, %p3;
+; SM60-NEXT:    atom.cta.global.cas.b64 %rd50, [%rd17], %rd7, %rd21;
+; SM60-NEXT:    setp.ne.b64 %p4, %rd50, %rd7;
+; SM60-NEXT:    @%p4 bra $L__BB287_1;
 ; SM60-NEXT:  // %bb.2: // %atomicrmw.end
-; SM60-NEXT:    ld.volatile.global.b64 %rd59, [%rd17+8];
-; SM60-NEXT:    setp.eq.b64 %p8, %rd6, 0;
+; SM60-NEXT:    ld.volatile.global.b64 %rd51, [%rd17+8];
 ; SM60-NEXT:  $L__BB287_3: // %atomicrmw.start9
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM60-NEXT:    mov.b64 %rd8, %rd59;
+; SM60-NEXT:    mov.b64 %rd8, %rd51;
+; SM60-NEXT:    setp.eq.b64 %p5, %rd8, 0;
+; SM60-NEXT:    selp.f64 %rd22, %rd8, %rd6, %p5;
 ; SM60-NEXT:    setp.nan.f64 %p6, %rd8, %rd6;
 ; SM60-NEXT:    max.f64 %rd23, %rd8, %rd6;
 ; SM60-NEXT:    selp.f64 %rd24, 0d7FF8000000000000, %rd23, %p6;
-; SM60-NEXT:    setp.eq.b64 %p7, %rd8, 0;
-; SM60-NEXT:    selp.f64 %rd25, %rd8, %rd24, %p7;
-; SM60-NEXT:    selp.f64 %rd26, %rd6, %rd25, %p8;
-; SM60-NEXT:    setp.eq.f64 %p9, %rd24, 0d0000000000000000;
-; SM60-NEXT:    selp.f64 %rd27, %rd26, %rd24, %p9;
-; SM60-NEXT:    atom.cta.global.cas.b64 %rd59, [%rd17+8], %rd8, %rd27;
-; SM60-NEXT:    setp.ne.b64 %p10, %rd59, %rd8;
-; SM60-NEXT:    @%p10 bra $L__BB287_3;
+; SM60-NEXT:    setp.eq.f64 %p7, %rd8, %rd6;
+; SM60-NEXT:    selp.f64 %rd25, %rd22, %rd24, %p7;
+; SM60-NEXT:    atom.cta.global.cas.b64 %rd51, [%rd17+8], %rd8, %rd25;
+; SM60-NEXT:    setp.ne.b64 %p8, %rd51, %rd8;
+; SM60-NEXT:    @%p8 bra $L__BB287_3;
 ; SM60-NEXT:  // %bb.4: // %atomicrmw.end8
-; SM60-NEXT:    ld.volatile.global.b64 %rd60, [%rd17+16];
-; SM60-NEXT:    setp.eq.b64 %p13, %rd3, 0;
+; SM60-NEXT:    ld.volatile.global.b64 %rd52, [%rd17+16];
 ; SM60-NEXT:  $L__BB287_5: // %atomicrmw.start19
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM60-NEXT:    mov.b64 %rd9, %rd60;
-; SM60-NEXT:    setp.nan.f64 %p11, %rd9, %rd3;
-; SM60-NEXT:    max.f64 %rd28, %rd9, %rd3;
-; SM60-NEXT:    selp.f64 %rd29, 0d7FF8000000000000, %rd28, %p11;
-; SM60-NEXT:    setp.eq.b64 %p12, %rd9, 0;
-; SM60-NEXT:    selp.f64 %rd30, %rd9, %rd29, %p12;
-; SM60-NEXT:    selp.f64 %rd31, %rd3, %rd30, %p13;
-; SM60-NEXT:    setp.eq.f64 %p14, %rd29, 0d0000000000000000;
-; SM60-NEXT:    selp.f64 %rd32, %rd31, %rd29, %p14;
-; SM60-NEXT:    atom.cta.global.cas.b64 %rd60, [%rd17+16], %rd9, %rd32;
-; SM60-NEXT:    setp.ne.b64 %p15, %rd60, %rd9;
-; SM60-NEXT:    @%p15 bra $L__BB287_5;
+; SM60-NEXT:    mov.b64 %rd9, %rd52;
+; SM60-NEXT:    setp.eq.b64 %p9, %rd9, 0;
+; SM60-NEXT:    selp.f64 %rd26, %rd9, %rd3, %p9;
+; SM60-NEXT:    setp.nan.f64 %p10, %rd9, %rd3;
+; SM60-NEXT:    max.f64 %rd27, %rd9, %rd3;
+; SM60-NEXT:    selp.f64 %rd28, 0d7FF8000000000000, %rd27, %p10;
+; SM60-NEXT:    setp.eq.f64 %p11, %rd9, %rd3;
+; SM60-NEXT:    selp.f64 %rd29, %rd26, %rd28, %p11;
+; SM60-NEXT:    atom.cta.global.cas.b64 %rd52, [%rd17+16], %rd9, %rd29;
+; SM60-NEXT:    setp.ne.b64 %p12, %rd52, %rd9;
+; SM60-NEXT:    @%p12 bra $L__BB287_5;
 ; SM60-NEXT:  // %bb.6: // %atomicrmw.end18
-; SM60-NEXT:    ld.volatile.global.b64 %rd61, [%rd17+24];
-; SM60-NEXT:    setp.eq.b64 %p18, %rd4, 0;
+; SM60-NEXT:    ld.volatile.global.b64 %rd53, [%rd17+24];
 ; SM60-NEXT:  $L__BB287_7: // %atomicrmw.start24
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM60-NEXT:    mov.b64 %rd10, %rd61;
-; SM60-NEXT:    setp.nan.f64 %p16, %rd10, %rd4;
-; SM60-NEXT:    max.f64 %rd33, %rd10, %rd4;
-; SM60-NEXT:    selp.f64 %rd34, 0d7FF8000000000000, %rd33, %p16;
-; SM60-NEXT:    setp.eq.b64 %p17, %rd10, 0;
-; SM60-NEXT:    selp.f64 %rd35, %rd10, %rd34, %p17;
-; SM60-NEXT:    selp.f64 %rd36, %rd4, %rd35, %p18;
-; SM60-NEXT:    setp.eq.f64 %p19, %rd34, 0d0000000000000000;
-; SM60-NEXT:    selp.f64 %rd37, %rd36, %rd34, %p19;
-; SM60-NEXT:    atom.cta.global.cas.b64 %rd61, [%rd17+24], %rd10, %rd37;
-; SM60-NEXT:    setp.ne.b64 %p20, %rd61, %rd10;
-; SM60-NEXT:    @%p20 bra $L__BB287_7;
+; SM60-NEXT:    mov.b64 %rd10, %rd53;
+; SM60-NEXT:    setp.eq.b64 %p13, %rd10, 0;
+; SM60-NEXT:    selp.f64 %rd30, %rd10, %rd4, %p13;
+; SM60-NEXT:    setp.nan.f64 %p14, %rd10, %rd4;
+; SM60-NEXT:    max.f64 %rd31, %rd10, %rd4;
+; SM60-NEXT:    selp.f64 %rd32, 0d7FF8000000000000, %rd31, %p14;
+; SM60-NEXT:    setp.eq.f64 %p15, %rd10, %rd4;
+; SM60-NEXT:    selp.f64 %rd33, %rd30, %rd32, %p15;
+; SM60-NEXT:    atom.cta.global.cas.b64 %rd53, [%rd17+24], %rd10, %rd33;
+; SM60-NEXT:    setp.ne.b64 %p16, %rd53, %rd10;
+; SM60-NEXT:    @%p16 bra $L__BB287_7;
 ; SM60-NEXT:  // %bb.8: // %atomicrmw.end23
-; SM60-NEXT:    ld.volatile.global.b64 %rd62, [%rd17+32];
-; SM60-NEXT:    setp.eq.b64 %p23, %rd1, 0;
+; SM60-NEXT:    ld.volatile.global.b64 %rd54, [%rd17+32];
 ; SM60-NEXT:  $L__BB287_9: // %atomicrmw.start38
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM60-NEXT:    mov.b64 %rd13, %rd62;
-; SM60-NEXT:    setp.nan.f64 %p21, %rd13, %rd1;
-; SM60-NEXT:    max.f64 %rd38, %rd13, %rd1;
-; SM60-NEXT:    selp.f64 %rd39, 0d7FF8000000000000, %rd38, %p21;
-; SM60-NEXT:    setp.eq.b64 %p22, %rd13, 0;
-; SM60-NEXT:    selp.f64 %rd40, %rd13, %rd39, %p22;
-; SM60-NEXT:    selp.f64 %rd41, %rd1, %rd40, %p23;
-; SM60-NEXT:    setp.eq.f64 %p24, %rd39, 0d0000000000000000;
-; SM60-NEXT:    selp.f64 %rd42, %rd41, %rd39, %p24;
-; SM60-NEXT:    atom.cta.global.cas.b64 %rd62, [%rd17+32], %rd13, %rd42;
-; SM60-NEXT:    setp.ne.b64 %p25, %rd62, %rd13;
-; SM60-NEXT:    @%p25 bra $L__BB287_9;
+; SM60-NEXT:    mov.b64 %rd13, %rd54;
+; SM60-NEXT:    setp.eq.b64 %p17, %rd13, 0;
+; SM60-NEXT:    selp.f64 %rd34, %rd13, %rd1, %p17;
+; SM60-NEXT:    setp.nan.f64 %p18, %rd13, %rd1;
+; SM60-NEXT:    max.f64 %rd35, %rd13, %rd1;
+; SM60-NEXT:    selp.f64 %rd36, 0d7FF8000000000000, %rd35, %p18;
+; SM60-NEXT:    setp.eq.f64 %p19, %rd13, %rd1;
+; SM60-NEXT:    selp.f64 %rd37, %rd34, %rd36, %p19;
+; SM60-NEXT:    atom.cta.global.cas.b64 %rd54, [%rd17+32], %rd13, %rd37;
+; SM60-NEXT:    setp.ne.b64 %p20, %rd54, %rd13;
+; SM60-NEXT:    @%p20 bra $L__BB287_9;
 ; SM60-NEXT:  // %bb.10: // %atomicrmw.end37
-; SM60-NEXT:    ld.volatile.global.b64 %rd63, [%rd17+40];
-; SM60-NEXT:    setp.eq.b64 %p28, %rd2, 0;
+; SM60-NEXT:    ld.volatile.global.b64 %rd55, [%rd17+40];
 ; SM60-NEXT:  $L__BB287_11: // %atomicrmw.start43
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM60-NEXT:    mov.b64 %rd14, %rd63;
-; SM60-NEXT:    setp.nan.f64 %p26, %rd14, %rd2;
-; SM60-NEXT:    max.f64 %rd43, %rd14, %rd2;
-; SM60-NEXT:    selp.f64 %rd44, 0d7FF8000000000000, %rd43, %p26;
-; SM60-NEXT:    setp.eq.b64 %p27, %rd14, 0;
-; SM60-NEXT:    selp.f64 %rd45, %rd14, %rd44, %p27;
-; SM60-NEXT:    selp.f64 %rd46, %rd2, %rd45, %p28;
-; SM60-NEXT:    setp.eq.f64 %p29, %rd44, 0d0000000000000000;
-; SM60-NEXT:    selp.f64 %rd47, %rd46, %rd44, %p29;
-; SM60-NEXT:    atom.cta.global.cas.b64 %rd63, [%rd17+40], %rd14, %rd47;
-; SM60-NEXT:    setp.ne.b64 %p30, %rd63, %rd14;
-; SM60-NEXT:    @%p30 bra $L__BB287_11;
+; SM60-NEXT:    mov.b64 %rd14, %rd55;
+; SM60-NEXT:    setp.eq.b64 %p21, %rd14, 0;
+; SM60-NEXT:    selp.f64 %rd38, %rd14, %rd2, %p21;
+; SM60-NEXT:    setp.nan.f64 %p22, %rd14, %rd2;
+; SM60-NEXT:    max.f64 %rd39, %rd14, %rd2;
+; SM60-NEXT:    selp.f64 %rd40, 0d7FF8000000000000, %rd39, %p22;
+; SM60-NEXT:    setp.eq.f64 %p23, %rd14, %rd2;
+; SM60-NEXT:    selp.f64 %rd41, %rd38, %rd40, %p23;
+; SM60-NEXT:    atom.cta.global.cas.b64 %rd55, [%rd17+40], %rd14, %rd41;
+; SM60-NEXT:    setp.ne.b64 %p24, %rd55, %rd14;
+; SM60-NEXT:    @%p24 bra $L__BB287_11;
 ; SM60-NEXT:  // %bb.12: // %atomicrmw.end42
-; SM60-NEXT:    ld.volatile.global.b64 %rd64, [%rd17+48];
-; SM60-NEXT:    setp.eq.b64 %p33, %rd11, 0;
+; SM60-NEXT:    ld.volatile.global.b64 %rd56, [%rd17+48];
 ; SM60-NEXT:  $L__BB287_13: // %atomicrmw.start53
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM60-NEXT:    setp.nan.f64 %p31, %rd64, %rd11;
-; SM60-NEXT:    max.f64 %rd48, %rd64, %rd11;
-; SM60-NEXT:    selp.f64 %rd49, 0d7FF8000000000000, %rd48, %p31;
-; SM60-NEXT:    setp.eq.b64 %p32, %rd64, 0;
-; SM60-NEXT:    selp.f64 %rd50, %rd64, %rd49, %p32;
-; SM60-NEXT:    selp.f64 %rd51, %rd11, %rd50, %p33;
-; SM60-NEXT:    setp.eq.f64 %p34, %rd49, 0d0000000000000000;
-; SM60-NEXT:    selp.f64 %rd52, %rd51, %rd49, %p34;
-; SM60-NEXT:    atom.cta.global.cas.b64 %rd15, [%rd17+48], %rd64, %rd52;
-; SM60-NEXT:    setp.ne.b64 %p35, %rd15, %rd64;
-; SM60-NEXT:    mov.b64 %rd64, %rd15;
-; SM60-NEXT:    @%p35 bra $L__BB287_13;
+; SM60-NEXT:    setp.eq.b64 %p25, %rd56, 0;
+; SM60-NEXT:    selp.f64 %rd42, %rd56, %rd11, %p25;
+; SM60-NEXT:    setp.nan.f64 %p26, %rd56, %rd11;
+; SM60-NEXT:    max.f64 %rd43, %rd56, %rd11;
+; SM60-NEXT:    selp.f64 %rd44, 0d7FF8000000000000, %rd43, %p26;
+; SM60-NEXT:    setp.eq.f64 %p27, %rd56, %rd11;
+; SM60-NEXT:    selp.f64 %rd45, %rd42, %rd44, %p27;
+; SM60-NEXT:    atom.cta.global.cas.b64 %rd15, [%rd17+48], %rd56, %rd45;
+; SM60-NEXT:    setp.ne.b64 %p28, %rd15, %rd56;
+; SM60-NEXT:    mov.b64 %rd56, %rd15;
+; SM60-NEXT:    @%p28 bra $L__BB287_13;
 ; SM60-NEXT:  // %bb.14: // %atomicrmw.end52
-; SM60-NEXT:    ld.volatile.global.b64 %rd65, [%rd17+56];
-; SM60-NEXT:    setp.eq.b64 %p38, %rd12, 0;
+; SM60-NEXT:    ld.volatile.global.b64 %rd57, [%rd17+56];
 ; SM60-NEXT:  $L__BB287_15: // %atomicrmw.start58
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM60-NEXT:    setp.nan.f64 %p36, %rd65, %rd12;
-; SM60-NEXT:    max.f64 %rd53, %rd65, %rd12;
-; SM60-NEXT:    selp.f64 %rd54, 0d7FF8000000000000, %rd53, %p36;
-; SM60-NEXT:    setp.eq.b64 %p37, %rd65, 0;
-; SM60-NEXT:    selp.f64 %rd55, %rd65, %rd54, %p37;
-; SM60-NEXT:    selp.f64 %rd56, %rd12, %rd55, %p38;
-; SM60-NEXT:    setp.eq.f64 %p39, %rd54, 0d0000000000000000;
-; SM60-NEXT:    selp.f64 %rd57, %rd56, %rd54, %p39;
-; SM60-NEXT:    atom.cta.global.cas.b64 %rd16, [%rd17+56], %rd65, %rd57;
-; SM60-NEXT:    setp.ne.b64 %p40, %rd16, %rd65;
-; SM60-NEXT:    mov.b64 %rd65, %rd16;
-; SM60-NEXT:    @%p40 bra $L__BB287_15;
+; SM60-NEXT:    setp.eq.b64 %p29, %rd57, 0;
+; SM60-NEXT:    selp.f64 %rd46, %rd57, %rd12, %p29;
+; SM60-NEXT:    setp.nan.f64 %p30, %rd57, %rd12;
+; SM60-NEXT:    max.f64 %rd47, %rd57, %rd12;
+; SM60-NEXT:    selp.f64 %rd48, 0d7FF8000000000000, %rd47, %p30;
+; SM60-NEXT:    setp.eq.f64 %p31, %rd57, %rd12;
+; SM60-NEXT:    selp.f64 %rd49, %rd46, %rd48, %p31;
+; SM60-NEXT:    atom.cta.global.cas.b64 %rd16, [%rd17+56], %rd57, %rd49;
+; SM60-NEXT:    setp.ne.b64 %p32, %rd16, %rd57;
+; SM60-NEXT:    mov.b64 %rd57, %rd16;
+; SM60-NEXT:    @%p32 bra $L__BB287_15;
 ; SM60-NEXT:  // %bb.16: // %atomicrmw.end57
 ; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    st.param.v2.b64 [func_retval0+48], {%rd15, %rd16};
-; SM60-NEXT:    st.param.v2.b64 [func_retval0+32], {%rd62, %rd63};
-; SM60-NEXT:    st.param.v2.b64 [func_retval0], {%rd58, %rd59};
-; SM60-NEXT:    st.param.v2.b64 [func_retval0+16], {%rd60, %rd61};
+; SM60-NEXT:    st.param.v2.b64 [func_retval0+32], {%rd54, %rd55};
+; SM60-NEXT:    st.param.v2.b64 [func_retval0], {%rd50, %rd51};
+; SM60-NEXT:    st.param.v2.b64 [func_retval0+16], {%rd52, %rd53};
 ; SM60-NEXT:    ret;
         %retval = atomicrmw elementwise fmaximum ptr  addrspace(1) %addr, <8 x double> %val syncscope("block") acq_rel
         ret <8 x double> %retval
@@ -13603,8 +13483,8 @@ define <8 x half> @fmax_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 x ha
 define <1 x half> @fminimum_acq_rel_v1f16_global_cta(ptr addrspace(1) %addr, <1 x half> %val) {
 ; SM60-LABEL: fminimum_acq_rel_v1f16_global_cta(
 ; SM60:       {
-; SM60-NEXT:    .reg .pred %p<7>;
-; SM60-NEXT:    .reg .b16 %rs<9>;
+; SM60-NEXT:    .reg .pred %p<6>;
+; SM60-NEXT:    .reg .b16 %rs<7>;
 ; SM60-NEXT:    .reg .b32 %r<15>;
 ; SM60-NEXT:    .reg .b64 %rd<3>;
 ; SM60-EMPTY:
@@ -13620,29 +13500,26 @@ define <1 x half> @fminimum_acq_rel_v1f16_global_cta(ptr addrspace(1) %addr, <1 
 ; SM60-NEXT:    shl.b32 %r7, %r6, %r1;
 ; SM60-NEXT:    not.b32 %r2, %r7;
 ; SM60-NEXT:    ld.volatile.global.b32 %r14, [%rd1];
-; SM60-NEXT:    setp.eq.b16 %p4, %rs1, -32768;
 ; SM60-NEXT:  $L__BB304_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    shr.u32 %r8, %r14, %r1;
 ; SM60-NEXT:    cvt.u16.u32 %rs2, %r8;
-; SM60-NEXT:    setp.lt.f16 %p1, %rs2, %rs1;
+; SM60-NEXT:    setp.eq.b16 %p1, %rs2, -32768;
 ; SM60-NEXT:    selp.b16 %rs3, %rs2, %rs1, %p1;
-; SM60-NEXT:    setp.nan.f16 %p2, %rs2, %rs1;
-; SM60-NEXT:    selp.b16 %rs4, 0x7E00, %rs3, %p2;
-; SM60-NEXT:    setp.eq.b16 %p3, %rs2, -32768;
-; SM60-NEXT:    selp.b16 %rs5, %rs2, %rs4, %p3;
-; SM60-NEXT:    selp.b16 %rs6, %rs1, %rs5, %p4;
-; SM60-NEXT:    mov.b16 %rs7, 0x0000;
-; SM60-NEXT:    setp.eq.f16 %p5, %rs4, %rs7;
-; SM60-NEXT:    selp.b16 %rs8, %rs6, %rs4, %p5;
-; SM60-NEXT:    cvt.u32.u16 %r9, %rs8;
+; SM60-NEXT:    setp.lt.f16 %p2, %rs2, %rs1;
+; SM60-NEXT:    selp.b16 %rs4, %rs2, %rs1, %p2;
+; SM60-NEXT:    setp.nan.f16 %p3, %rs2, %rs1;
+; SM60-NEXT:    selp.b16 %rs5, 0x7E00, %rs4, %p3;
+; SM60-NEXT:    setp.eq.f16 %p4, %rs2, %rs1;
+; SM60-NEXT:    selp.b16 %rs6, %rs3, %rs5, %p4;
+; SM60-NEXT:    cvt.u32.u16 %r9, %rs6;
 ; SM60-NEXT:    shl.b32 %r10, %r9, %r1;
 ; SM60-NEXT:    and.b32 %r11, %r14, %r2;
 ; SM60-NEXT:    or.b32 %r12, %r11, %r10;
 ; SM60-NEXT:    atom.cta.global.cas.b32 %r3, [%rd1], %r14, %r12;
-; SM60-NEXT:    setp.ne.b32 %p6, %r3, %r14;
+; SM60-NEXT:    setp.ne.b32 %p5, %r3, %r14;
 ; SM60-NEXT:    mov.b32 %r14, %r3;
-; SM60-NEXT:    @%p6 bra $L__BB304_1;
+; SM60-NEXT:    @%p5 bra $L__BB304_1;
 ; SM60-NEXT:  // %bb.2: // %atomicrmw.end
 ; SM60-NEXT:    shr.u32 %r13, %r3, %r1;
 ; SM60-NEXT:    membar.cta;
@@ -13655,8 +13532,8 @@ define <1 x half> @fminimum_acq_rel_v1f16_global_cta(ptr addrspace(1) %addr, <1 
 define <2 x half> @fminimum_acq_rel_v2f16_global_cta(ptr addrspace(1) %addr, <2 x half> %val) {
 ; SM60-LABEL: fminimum_acq_rel_v2f16_global_cta(
 ; SM60:       {
-; SM60-NEXT:    .reg .pred %p<12>;
-; SM60-NEXT:    .reg .b16 %rs<16>;
+; SM60-NEXT:    .reg .pred %p<10>;
+; SM60-NEXT:    .reg .b16 %rs<13>;
 ; SM60-NEXT:    .reg .b32 %r<5>;
 ; SM60-NEXT:    .reg .b64 %rd<2>;
 ; SM60-EMPTY:
@@ -13666,35 +13543,30 @@ define <2 x half> @fminimum_acq_rel_v2f16_global_cta(ptr addrspace(1) %addr, <2 
 ; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    ld.volatile.global.b32 %r4, [%rd1];
 ; SM60-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
-; SM60-NEXT:    setp.eq.b16 %p4, %rs2, -32768;
-; SM60-NEXT:    setp.eq.b16 %p9, %rs1, -32768;
 ; SM60-NEXT:  $L__BB305_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    mov.b32 {%rs3, %rs4}, %r4;
-; SM60-NEXT:    setp.lt.f16 %p1, %rs4, %rs2;
+; SM60-NEXT:    setp.eq.b16 %p1, %rs4, -32768;
 ; SM60-NEXT:    selp.b16 %rs5, %rs4, %rs2, %p1;
-; SM60-NEXT:    setp.nan.f16 %p2, %rs4, %rs2;
-; SM60-NEXT:    selp.b16 %rs6, 0x7E00, %rs5, %p2;
-; SM60-NEXT:    setp.eq.b16 %p3, %rs4, -32768;
-; SM60-NEXT:    selp.b16 %rs7, %rs4, %rs6, %p3;
-; SM60-NEXT:    selp.b16 %rs8, %rs2, %rs7, %p4;
-; SM60-NEXT:    mov.b16 %rs9, 0x0000;
-; SM60-NEXT:    setp.eq.f16 %p5, %rs6, %rs9;
-; SM60-NEXT:    selp.b16 %rs10, %rs8, %rs6, %p5;
+; SM60-NEXT:    setp.lt.f16 %p2, %rs4, %rs2;
+; SM60-NEXT:    selp.b16 %rs6, %rs4, %rs2, %p2;
+; SM60-NEXT:    setp.nan.f16 %p3, %rs4, %rs2;
+; SM60-NEXT:    selp.b16 %rs7, 0x7E00, %rs6, %p3;
+; SM60-NEXT:    setp.eq.f16 %p4, %rs4, %rs2;
+; SM60-NEXT:    selp.b16 %rs8, %rs5, %rs7, %p4;
+; SM60-NEXT:    setp.eq.b16 %p5, %rs3, -32768;
+; SM60-NEXT:    selp.b16 %rs9, %rs3, %rs1, %p5;
 ; SM60-NEXT:    setp.lt.f16 %p6, %rs3, %rs1;
-; SM60-NEXT:    selp.b16 %rs11, %rs3, %rs1, %p6;
+; SM60-NEXT:    selp.b16 %rs10, %rs3, %rs1, %p6;
 ; SM60-NEXT:    setp.nan.f16 %p7, %rs3, %rs1;
-; SM60-NEXT:    selp.b16 %rs12, 0x7E00, %rs11, %p7;
-; SM60-NEXT:    setp.eq.b16 %p8, %rs3, -32768;
-; SM60-NEXT:    selp.b16 %rs13, %rs3, %rs12, %p8;
-; SM60-NEXT:    selp.b16 %rs14, %rs1, %rs13, %p9;
-; SM60-NEXT:    setp.eq.f16 %p10, %rs12, %rs9;
-; SM60-NEXT:    selp.b16 %rs15, %rs14, %rs12, %p10;
-; SM60-NEXT:    mov.b32 %r3, {%rs15, %rs10};
+; SM60-NEXT:    selp.b16 %rs11, 0x7E00, %rs10, %p7;
+; SM60-NEXT:    setp.eq.f16 %p8, %rs3, %rs1;
+; SM60-NEXT:    selp.b16 %rs12, %rs9, %rs11, %p8;
+; SM60-NEXT:    mov.b32 %r3, {%rs12, %rs8};
 ; SM60-NEXT:    atom.cta.global.cas.b32 %r1, [%rd1], %r4, %r3;
-; SM60-NEXT:    setp.ne.b32 %p11, %r1, %r4;
+; SM60-NEXT:    setp.ne.b32 %p9, %r1, %r4;
 ; SM60-NEXT:    mov.b32 %r4, %r1;
-; SM60-NEXT:    @%p11 bra $L__BB305_1;
+; SM60-NEXT:    @%p9 bra $L__BB305_1;
 ; SM60-NEXT:  // %bb.2: // %atomicrmw.end
 ; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    st.param.b32 [func_retval0], %r1;
@@ -13706,8 +13578,8 @@ define <2 x half> @fminimum_acq_rel_v2f16_global_cta(ptr addrspace(1) %addr, <2 
 define <4 x half> @fminimum_acq_rel_v4f16_global_cta(ptr addrspace(1) %addr, <4 x half> %val) {
 ; SM60-LABEL: fminimum_acq_rel_v4f16_global_cta(
 ; SM60:       {
-; SM60-NEXT:    .reg .pred %p<22>;
-; SM60-NEXT:    .reg .b16 %rs<30>;
+; SM60-NEXT:    .reg .pred %p<18>;
+; SM60-NEXT:    .reg .b16 %rs<25>;
 ; SM60-NEXT:    .reg .b32 %r<7>;
 ; SM60-NEXT:    .reg .b64 %rd<12>;
 ; SM60-EMPTY:
@@ -13719,55 +13591,46 @@ define <4 x half> @fminimum_acq_rel_v4f16_global_cta(ptr addrspace(1) %addr, <4 
 ; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r6}, %rd2; }
 ; SM60-NEXT:    cvt.u32.u64 %r5, %rd2;
 ; SM60-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-NEXT:    setp.eq.b16 %p4, %rs2, -32768;
-; SM60-NEXT:    setp.eq.b16 %p9, %rs1, -32768;
-; SM60-NEXT:    mov.b32 {%rs16, %rs17}, %r2;
-; SM60-NEXT:    setp.eq.b16 %p14, %rs17, -32768;
-; SM60-NEXT:    setp.eq.b16 %p19, %rs16, -32768;
+; SM60-NEXT:    mov.b32 {%rs13, %rs14}, %r2;
 ; SM60-NEXT:  $L__BB306_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    mov.b32 {%rs3, %rs4}, %r5;
-; SM60-NEXT:    setp.lt.f16 %p1, %rs4, %rs2;
+; SM60-NEXT:    setp.eq.b16 %p1, %rs4, -32768;
 ; SM60-NEXT:    selp.b16 %rs5, %rs4, %rs2, %p1;
-; SM60-NEXT:    setp.nan.f16 %p2, %rs4, %rs2;
-; SM60-NEXT:    selp.b16 %rs6, 0x7E00, %rs5, %p2;
-; SM60-NEXT:    setp.eq.b16 %p3, %rs4, -32768;
-; SM60-NEXT:    selp.b16 %rs7, %rs4, %rs6, %p3;
-; SM60-NEXT:    selp.b16 %rs8, %rs2, %rs7, %p4;
-; SM60-NEXT:    mov.b16 %rs9, 0x0000;
-; SM60-NEXT:    setp.eq.f16 %p5, %rs6, %rs9;
-; SM60-NEXT:    selp.b16 %rs10, %rs8, %rs6, %p5;
+; SM60-NEXT:    setp.lt.f16 %p2, %rs4, %rs2;
+; SM60-NEXT:    selp.b16 %rs6, %rs4, %rs2, %p2;
+; SM60-NEXT:    setp.nan.f16 %p3, %rs4, %rs2;
+; SM60-NEXT:    selp.b16 %rs7, 0x7E00, %rs6, %p3;
+; SM60-NEXT:    setp.eq.f16 %p4, %rs4, %rs2;
+; SM60-NEXT:    selp.b16 %rs8, %rs5, %rs7, %p4;
+; SM60-NEXT:    setp.eq.b16 %p5, %rs3, -32768;
+; SM60-NEXT:    selp.b16 %rs9, %rs3, %rs1, %p5;
 ; SM60-NEXT:    setp.lt.f16 %p6, %rs3, %rs1;
-; SM60-NEXT:    selp.b16 %rs11, %rs3, %rs1, %p6;
+; SM60-NEXT:    selp.b16 %rs10, %rs3, %rs1, %p6;
 ; SM60-NEXT:    setp.nan.f16 %p7, %rs3, %rs1;
-; SM60-NEXT:    selp.b16 %rs12, 0x7E00, %rs11, %p7;
-; SM60-NEXT:    setp.eq.b16 %p8, %rs3, -32768;
-; SM60-NEXT:    selp.b16 %rs13, %rs3, %rs12, %p8;
-; SM60-NEXT:    selp.b16 %rs14, %rs1, %rs13, %p9;
-; SM60-NEXT:    setp.eq.f16 %p10, %rs12, %rs9;
-; SM60-NEXT:    selp.b16 %rs15, %rs14, %rs12, %p10;
-; SM60-NEXT:    mov.b32 %r3, {%rs15, %rs10};
+; SM60-NEXT:    selp.b16 %rs11, 0x7E00, %rs10, %p7;
+; SM60-NEXT:    setp.eq.f16 %p8, %rs3, %rs1;
+; SM60-NEXT:    selp.b16 %rs12, %rs9, %rs11, %p8;
+; SM60-NEXT:    mov.b32 %r3, {%rs12, %rs8};
 ; SM60-NEXT:    cvt.u64.u32 %rd3, %r3;
-; SM60-NEXT:    mov.b32 {%rs18, %rs19}, %r6;
-; SM60-NEXT:    setp.lt.f16 %p11, %rs19, %rs17;
-; SM60-NEXT:    selp.b16 %rs20, %rs19, %rs17, %p11;
-; SM60-NEXT:    setp.nan.f16 %p12, %rs19, %rs17;
-; SM60-NEXT:    selp.b16 %rs21, 0x7E00, %rs20, %p12;
-; SM60-NEXT:    setp.eq.b16 %p13, %rs19, -32768;
-; SM60-NEXT:    selp.b16 %rs22, %rs19, %rs21, %p13;
-; SM60-NEXT:    selp.b16 %rs23, %rs17, %rs22, %p14;
-; SM60-NEXT:    setp.eq.f16 %p15, %rs21, %rs9;
-; SM60-NEXT:    selp.b16 %rs24, %rs23, %rs21, %p15;
-; SM60-NEXT:    setp.lt.f16 %p16, %rs18, %rs16;
-; SM60-NEXT:    selp.b16 %rs25, %rs18, %rs16, %p16;
-; SM60-NEXT:    setp.nan.f16 %p17, %rs18, %rs16;
-; SM60-NEXT:    selp.b16 %rs26, 0x7E00, %rs25, %p17;
-; SM60-NEXT:    setp.eq.b16 %p18, %rs18, -32768;
-; SM60-NEXT:    selp.b16 %rs27, %rs18, %rs26, %p18;
-; SM60-NEXT:    selp.b16 %rs28, %rs16, %rs27, %p19;
-; SM60-NEXT:    setp.eq.f16 %p20, %rs26, %rs9;
-; SM60-NEXT:    selp.b16 %rs29, %rs28, %rs26, %p20;
-; SM60-NEXT:    mov.b32 %r4, {%rs29, %rs24};
+; SM60-NEXT:    mov.b32 {%rs15, %rs16}, %r6;
+; SM60-NEXT:    setp.eq.b16 %p9, %rs16, -32768;
+; SM60-NEXT:    selp.b16 %rs17, %rs16, %rs14, %p9;
+; SM60-NEXT:    setp.lt.f16 %p10, %rs16, %rs14;
+; SM60-NEXT:    selp.b16 %rs18, %rs16, %rs14, %p10;
+; SM60-NEXT:    setp.nan.f16 %p11, %rs16, %rs14;
+; SM60-NEXT:    selp.b16 %rs19, 0x7E00, %rs18, %p11;
+; SM60-NEXT:    setp.eq.f16 %p12, %rs16, %rs14;
+; SM60-NEXT:    selp.b16 %rs20, %rs17, %rs19, %p12;
+; SM60-NEXT:    setp.eq.b16 %p13, %rs15, -32768;
+; SM60-NEXT:    selp.b16 %rs21, %rs15, %rs13, %p13;
+; SM60-NEXT:    setp.lt.f16 %p14, %rs15, %rs13;
+; SM60-NEXT:    selp.b16 %rs22, %rs15, %rs13, %p14;
+; SM60-NEXT:    setp.nan.f16 %p15, %rs15, %rs13;
+; SM60-NEXT:    selp.b16 %rs23, 0x7E00, %rs22, %p15;
+; SM60-NEXT:    setp.eq.f16 %p16, %rs15, %rs13;
+; SM60-NEXT:    selp.b16 %rs24, %rs21, %rs23, %p16;
+; SM60-NEXT:    mov.b32 %r4, {%rs24, %rs20};
 ; SM60-NEXT:    cvt.u64.u32 %rd4, %r4;
 ; SM60-NEXT:    shl.b64 %rd5, %rd4, 32;
 ; SM60-NEXT:    or.b64 %rd6, %rd3, %rd5;
@@ -13776,10 +13639,10 @@ define <4 x half> @fminimum_acq_rel_v4f16_global_cta(ptr addrspace(1) %addr, <4 
 ; SM60-NEXT:    shl.b64 %rd9, %rd8, 32;
 ; SM60-NEXT:    or.b64 %rd10, %rd7, %rd9;
 ; SM60-NEXT:    atom.cta.global.cas.b64 %rd11, [%rd1], %rd10, %rd6;
-; SM60-NEXT:    setp.ne.b64 %p21, %rd11, %rd10;
+; SM60-NEXT:    setp.ne.b64 %p17, %rd11, %rd10;
 ; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r6}, %rd11; }
 ; SM60-NEXT:    cvt.u32.u64 %r5, %rd11;
-; SM60-NEXT:    @%p21 bra $L__BB306_1;
+; SM60-NEXT:    @%p17 bra $L__BB306_1;
 ; SM60-NEXT:  // %bb.2: // %atomicrmw.end
 ; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    st.param.v2.b32 [func_retval0], {%r5, %r6};
@@ -13791,8 +13654,8 @@ define <4 x half> @fminimum_acq_rel_v4f16_global_cta(ptr addrspace(1) %addr, <4 
 define <8 x half> @fminimum_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 x half> %val) {
 ; SM60-LABEL: fminimum_acq_rel_v8f16_global_cta(
 ; SM60:       {
-; SM60-NEXT:    .reg .pred %p<43>;
-; SM60-NEXT:    .reg .b16 %rs<59>;
+; SM60-NEXT:    .reg .pred %p<35>;
+; SM60-NEXT:    .reg .b16 %rs<49>;
 ; SM60-NEXT:    .reg .b32 %r<13>;
 ; SM60-NEXT:    .reg .b64 %rd<22>;
 ; SM60-EMPTY:
@@ -13804,55 +13667,46 @@ define <8 x half> @fminimum_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 
 ; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r10}, %rd2; }
 ; SM60-NEXT:    cvt.u32.u64 %r9, %rd2;
 ; SM60-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-NEXT:    setp.eq.b16 %p4, %rs2, -32768;
-; SM60-NEXT:    setp.eq.b16 %p9, %rs1, -32768;
-; SM60-NEXT:    mov.b32 {%rs16, %rs17}, %r2;
-; SM60-NEXT:    setp.eq.b16 %p14, %rs17, -32768;
-; SM60-NEXT:    setp.eq.b16 %p19, %rs16, -32768;
+; SM60-NEXT:    mov.b32 {%rs13, %rs14}, %r2;
 ; SM60-NEXT:  $L__BB307_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    mov.b32 {%rs3, %rs4}, %r9;
-; SM60-NEXT:    setp.lt.f16 %p1, %rs4, %rs2;
+; SM60-NEXT:    setp.eq.b16 %p1, %rs4, -32768;
 ; SM60-NEXT:    selp.b16 %rs5, %rs4, %rs2, %p1;
-; SM60-NEXT:    setp.nan.f16 %p2, %rs4, %rs2;
-; SM60-NEXT:    selp.b16 %rs6, 0x7E00, %rs5, %p2;
-; SM60-NEXT:    setp.eq.b16 %p3, %rs4, -32768;
-; SM60-NEXT:    selp.b16 %rs7, %rs4, %rs6, %p3;
-; SM60-NEXT:    selp.b16 %rs8, %rs2, %rs7, %p4;
-; SM60-NEXT:    mov.b16 %rs9, 0x0000;
-; SM60-NEXT:    setp.eq.f16 %p5, %rs6, %rs9;
-; SM60-NEXT:    selp.b16 %rs10, %rs8, %rs6, %p5;
+; SM60-NEXT:    setp.lt.f16 %p2, %rs4, %rs2;
+; SM60-NEXT:    selp.b16 %rs6, %rs4, %rs2, %p2;
+; SM60-NEXT:    setp.nan.f16 %p3, %rs4, %rs2;
+; SM60-NEXT:    selp.b16 %rs7, 0x7E00, %rs6, %p3;
+; SM60-NEXT:    setp.eq.f16 %p4, %rs4, %rs2;
+; SM60-NEXT:    selp.b16 %rs8, %rs5, %rs7, %p4;
+; SM60-NEXT:    setp.eq.b16 %p5, %rs3, -32768;
+; SM60-NEXT:    selp.b16 %rs9, %rs3, %rs1, %p5;
 ; SM60-NEXT:    setp.lt.f16 %p6, %rs3, %rs1;
-; SM60-NEXT:    selp.b16 %rs11, %rs3, %rs1, %p6;
+; SM60-NEXT:    selp.b16 %rs10, %rs3, %rs1, %p6;
 ; SM60-NEXT:    setp.nan.f16 %p7, %rs3, %rs1;
-; SM60-NEXT:    selp.b16 %rs12, 0x7E00, %rs11, %p7;
-; SM60-NEXT:    setp.eq.b16 %p8, %rs3, -32768;
-; SM60-NEXT:    selp.b16 %rs13, %rs3, %rs12, %p8;
-; SM60-NEXT:    selp.b16 %rs14, %rs1, %rs13, %p9;
-; SM60-NEXT:    setp.eq.f16 %p10, %rs12, %rs9;
-; SM60-NEXT:    selp.b16 %rs15, %rs14, %rs12, %p10;
-; SM60-NEXT:    mov.b32 %r5, {%rs15, %rs10};
+; SM60-NEXT:    selp.b16 %rs11, 0x7E00, %rs10, %p7;
+; SM60-NEXT:    setp.eq.f16 %p8, %rs3, %rs1;
+; SM60-NEXT:    selp.b16 %rs12, %rs9, %rs11, %p8;
+; SM60-NEXT:    mov.b32 %r5, {%rs12, %rs8};
 ; SM60-NEXT:    cvt.u64.u32 %rd3, %r5;
-; SM60-NEXT:    mov.b32 {%rs18, %rs19}, %r10;
-; SM60-NEXT:    setp.lt.f16 %p11, %rs19, %rs17;
-; SM60-NEXT:    selp.b16 %rs20, %rs19, %rs17, %p11;
-; SM60-NEXT:    setp.nan.f16 %p12, %rs19, %rs17;
-; SM60-NEXT:    selp.b16 %rs21, 0x7E00, %rs20, %p12;
-; SM60-NEXT:    setp.eq.b16 %p13, %rs19, -32768;
-; SM60-NEXT:    selp.b16 %rs22, %rs19, %rs21, %p13;
-; SM60-NEXT:    selp.b16 %rs23, %rs17, %rs22, %p14;
-; SM60-NEXT:    setp.eq.f16 %p15, %rs21, %rs9;
-; SM60-NEXT:    selp.b16 %rs24, %rs23, %rs21, %p15;
-; SM60-NEXT:    setp.lt.f16 %p16, %rs18, %rs16;
-; SM60-NEXT:    selp.b16 %rs25, %rs18, %rs16, %p16;
-; SM60-NEXT:    setp.nan.f16 %p17, %rs18, %rs16;
-; SM60-NEXT:    selp.b16 %rs26, 0x7E00, %rs25, %p17;
-; SM60-NEXT:    setp.eq.b16 %p18, %rs18, -32768;
-; SM60-NEXT:    selp.b16 %rs27, %rs18, %rs26, %p18;
-; SM60-NEXT:    selp.b16 %rs28, %rs16, %rs27, %p19;
-; SM60-NEXT:    setp.eq.f16 %p20, %rs26, %rs9;
-; SM60-NEXT:    selp.b16 %rs29, %rs28, %rs26, %p20;
-; SM60-NEXT:    mov.b32 %r6, {%rs29, %rs24};
+; SM60-NEXT:    mov.b32 {%rs15, %rs16}, %r10;
+; SM60-NEXT:    setp.eq.b16 %p9, %rs16, -32768;
+; SM60-NEXT:    selp.b16 %rs17, %rs16, %rs14, %p9;
+; SM60-NEXT:    setp.lt.f16 %p10, %rs16, %rs14;
+; SM60-NEXT:    selp.b16 %rs18, %rs16, %rs14, %p10;
+; SM60-NEXT:    setp.nan.f16 %p11, %rs16, %rs14;
+; SM60-NEXT:    selp.b16 %rs19, 0x7E00, %rs18, %p11;
+; SM60-NEXT:    setp.eq.f16 %p12, %rs16, %rs14;
+; SM60-NEXT:    selp.b16 %rs20, %rs17, %rs19, %p12;
+; SM60-NEXT:    setp.eq.b16 %p13, %rs15, -32768;
+; SM60-NEXT:    selp.b16 %rs21, %rs15, %rs13, %p13;
+; SM60-NEXT:    setp.lt.f16 %p14, %rs15, %rs13;
+; SM60-NEXT:    selp.b16 %rs22, %rs15, %rs13, %p14;
+; SM60-NEXT:    setp.nan.f16 %p15, %rs15, %rs13;
+; SM60-NEXT:    selp.b16 %rs23, 0x7E00, %rs22, %p15;
+; SM60-NEXT:    setp.eq.f16 %p16, %rs15, %rs13;
+; SM60-NEXT:    selp.b16 %rs24, %rs21, %rs23, %p16;
+; SM60-NEXT:    mov.b32 %r6, {%rs24, %rs20};
 ; SM60-NEXT:    cvt.u64.u32 %rd4, %r6;
 ; SM60-NEXT:    shl.b64 %rd5, %rd4, 32;
 ; SM60-NEXT:    or.b64 %rd6, %rd3, %rd5;
@@ -13861,64 +13715,55 @@ define <8 x half> @fminimum_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 
 ; SM60-NEXT:    shl.b64 %rd9, %rd8, 32;
 ; SM60-NEXT:    or.b64 %rd10, %rd7, %rd9;
 ; SM60-NEXT:    atom.cta.global.cas.b64 %rd11, [%rd1], %rd10, %rd6;
-; SM60-NEXT:    setp.ne.b64 %p21, %rd11, %rd10;
+; SM60-NEXT:    setp.ne.b64 %p17, %rd11, %rd10;
 ; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r10}, %rd11; }
 ; SM60-NEXT:    cvt.u32.u64 %r9, %rd11;
-; SM60-NEXT:    @%p21 bra $L__BB307_1;
+; SM60-NEXT:    @%p17 bra $L__BB307_1;
 ; SM60-NEXT:  // %bb.2: // %atomicrmw.end
 ; SM60-NEXT:    ld.volatile.global.b64 %rd12, [%rd1+8];
 ; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r12}, %rd12; }
 ; SM60-NEXT:    cvt.u32.u64 %r11, %rd12;
 ; SM60-NEXT:  $L__BB307_3: // %atomicrmw.start2
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM60-NEXT:    mov.b32 {%rs30, %rs31}, %r3;
-; SM60-NEXT:    mov.b32 {%rs32, %rs33}, %r11;
-; SM60-NEXT:    setp.lt.f16 %p22, %rs33, %rs31;
-; SM60-NEXT:    selp.b16 %rs34, %rs33, %rs31, %p22;
-; SM60-NEXT:    setp.nan.f16 %p23, %rs33, %rs31;
-; SM60-NEXT:    selp.b16 %rs35, 0x7E00, %rs34, %p23;
-; SM60-NEXT:    setp.eq.b16 %p24, %rs33, -32768;
-; SM60-NEXT:    selp.b16 %rs36, %rs33, %rs35, %p24;
-; SM60-NEXT:    setp.eq.b16 %p25, %rs31, -32768;
-; SM60-NEXT:    selp.b16 %rs37, %rs31, %rs36, %p25;
-; SM60-NEXT:    mov.b16 %rs38, 0x0000;
-; SM60-NEXT:    setp.eq.f16 %p26, %rs35, %rs38;
-; SM60-NEXT:    selp.b16 %rs39, %rs37, %rs35, %p26;
-; SM60-NEXT:    setp.lt.f16 %p27, %rs32, %rs30;
-; SM60-NEXT:    selp.b16 %rs40, %rs32, %rs30, %p27;
-; SM60-NEXT:    setp.nan.f16 %p28, %rs32, %rs30;
-; SM60-NEXT:    selp.b16 %rs41, 0x7E00, %rs40, %p28;
-; SM60-NEXT:    setp.eq.b16 %p29, %rs32, -32768;
-; SM60-NEXT:    selp.b16 %rs42, %rs32, %rs41, %p29;
-; SM60-NEXT:    setp.eq.b16 %p30, %rs30, -32768;
-; SM60-NEXT:    selp.b16 %rs43, %rs30, %rs42, %p30;
-; SM60-NEXT:    setp.eq.f16 %p31, %rs41, %rs38;
-; SM60-NEXT:    selp.b16 %rs44, %rs43, %rs41, %p31;
-; SM60-NEXT:    mov.b32 %r7, {%rs44, %rs39};
+; SM60-NEXT:    mov.b32 {%rs25, %rs26}, %r3;
+; SM60-NEXT:    mov.b32 {%rs27, %rs28}, %r11;
+; SM60-NEXT:    setp.eq.b16 %p18, %rs28, -32768;
+; SM60-NEXT:    selp.b16 %rs29, %rs28, %rs26, %p18;
+; SM60-NEXT:    setp.lt.f16 %p19, %rs28, %rs26;
+; SM60-NEXT:    selp.b16 %rs30, %rs28, %rs26, %p19;
+; SM60-NEXT:    setp.nan.f16 %p20, %rs28, %rs26;
+; SM60-NEXT:    selp.b16 %rs31, 0x7E00, %rs30, %p20;
+; SM60-NEXT:    setp.eq.f16 %p21, %rs28, %rs26;
+; SM60-NEXT:    selp.b16 %rs32, %rs29, %rs31, %p21;
+; SM60-NEXT:    setp.eq.b16 %p22, %rs27, -32768;
+; SM60-NEXT:    selp.b16 %rs33, %rs27, %rs25, %p22;
+; SM60-NEXT:    setp.lt.f16 %p23, %rs27, %rs25;
+; SM60-NEXT:    selp.b16 %rs34, %rs27, %rs25, %p23;
+; SM60-NEXT:    setp.nan.f16 %p24, %rs27, %rs25;
+; SM60-NEXT:    selp.b16 %rs35, 0x7E00, %rs34, %p24;
+; SM60-NEXT:    setp.eq.f16 %p25, %rs27, %rs25;
+; SM60-NEXT:    selp.b16 %rs36, %rs33, %rs35, %p25;
+; SM60-NEXT:    mov.b32 %r7, {%rs36, %rs32};
 ; SM60-NEXT:    cvt.u64.u32 %rd13, %r7;
-; SM60-NEXT:    mov.b32 {%rs45, %rs46}, %r4;
-; SM60-NEXT:    mov.b32 {%rs47, %rs48}, %r12;
-; SM60-NEXT:    setp.lt.f16 %p32, %rs48, %rs46;
-; SM60-NEXT:    selp.b16 %rs49, %rs48, %rs46, %p32;
-; SM60-NEXT:    setp.nan.f16 %p33, %rs48, %rs46;
-; SM60-NEXT:    selp.b16 %rs50, 0x7E00, %rs49, %p33;
-; SM60-NEXT:    setp.eq.b16 %p34, %rs48, -32768;
-; SM60-NEXT:    selp.b16 %rs51, %rs48, %rs50, %p34;
-; SM60-NEXT:    setp.eq.b16 %p35, %rs46, -32768;
-; SM60-NEXT:    selp.b16 %rs52, %rs46, %rs51, %p35;
-; SM60-NEXT:    setp.eq.f16 %p36, %rs50, %rs38;
-; SM60-NEXT:    selp.b16 %rs53, %rs52, %rs50, %p36;
-; SM60-NEXT:    setp.lt.f16 %p37, %rs47, %rs45;
-; SM60-NEXT:    selp.b16 %rs54, %rs47, %rs45, %p37;
-; SM60-NEXT:    setp.nan.f16 %p38, %rs47, %rs45;
-; SM60-NEXT:    selp.b16 %rs55, 0x7E00, %rs54, %p38;
-; SM60-NEXT:    setp.eq.b16 %p39, %rs47, -32768;
-; SM60-NEXT:    selp.b16 %rs56, %rs47, %rs55, %p39;
-; SM60-NEXT:    setp.eq.b16 %p40, %rs45, -32768;
-; SM60-NEXT:    selp.b16 %rs57, %rs45, %rs56, %p40;
-; SM60-NEXT:    setp.eq.f16 %p41, %rs55, %rs38;
-; SM60-NEXT:    selp.b16 %rs58, %rs57, %rs55, %p41;
-; SM60-NEXT:    mov.b32 %r8, {%rs58, %rs53};
+; SM60-NEXT:    mov.b32 {%rs37, %rs38}, %r4;
+; SM60-NEXT:    mov.b32 {%rs39, %rs40}, %r12;
+; SM60-NEXT:    setp.eq.b16 %p26, %rs40, -32768;
+; SM60-NEXT:    selp.b16 %rs41, %rs40, %rs38, %p26;
+; SM60-NEXT:    setp.lt.f16 %p27, %rs40, %rs38;
+; SM60-NEXT:    selp.b16 %rs42, %rs40, %rs38, %p27;
+; SM60-NEXT:    setp.nan.f16 %p28, %rs40, %rs38;
+; SM60-NEXT:    selp.b16 %rs43, 0x7E00, %rs42, %p28;
+; SM60-NEXT:    setp.eq.f16 %p29, %rs40, %rs38;
+; SM60-NEXT:    selp.b16 %rs44, %rs41, %rs43, %p29;
+; SM60-NEXT:    setp.eq.b16 %p30, %rs39, -32768;
+; SM60-NEXT:    selp.b16 %rs45, %rs39, %rs37, %p30;
+; SM60-NEXT:    setp.lt.f16 %p31, %rs39, %rs37;
+; SM60-NEXT:    selp.b16 %rs46, %rs39, %rs37, %p31;
+; SM60-NEXT:    setp.nan.f16 %p32, %rs39, %rs37;
+; SM60-NEXT:    selp.b16 %rs47, 0x7E00, %rs46, %p32;
+; SM60-NEXT:    setp.eq.f16 %p33, %rs39, %rs37;
+; SM60-NEXT:    selp.b16 %rs48, %rs45, %rs47, %p33;
+; SM60-NEXT:    mov.b32 %r8, {%rs48, %rs44};
 ; SM60-NEXT:    cvt.u64.u32 %rd14, %r8;
 ; SM60-NEXT:    shl.b64 %rd15, %rd14, 32;
 ; SM60-NEXT:    or.b64 %rd16, %rd13, %rd15;
@@ -13927,10 +13772,10 @@ define <8 x half> @fminimum_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 
 ; SM60-NEXT:    shl.b64 %rd19, %rd18, 32;
 ; SM60-NEXT:    or.b64 %rd20, %rd17, %rd19;
 ; SM60-NEXT:    atom.cta.global.cas.b64 %rd21, [%rd1+8], %rd20, %rd16;
-; SM60-NEXT:    setp.ne.b64 %p42, %rd21, %rd20;
+; SM60-NEXT:    setp.ne.b64 %p34, %rd21, %rd20;
 ; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r12}, %rd21; }
 ; SM60-NEXT:    cvt.u32.u64 %r11, %rd21;
-; SM60-NEXT:    @%p42 bra $L__BB307_3;
+; SM60-NEXT:    @%p34 bra $L__BB307_3;
 ; SM60-NEXT:  // %bb.4: // %atomicrmw.end1
 ; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    st.param.v4.b32 [func_retval0], {%r9, %r10, %r11, %r12};
@@ -13942,8 +13787,8 @@ define <8 x half> @fminimum_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 
 define <1 x half> @fmaximum_acq_rel_v1f16_global_cta(ptr addrspace(1) %addr, <1 x half> %val) {
 ; SM60-LABEL: fmaximum_acq_rel_v1f16_global_cta(
 ; SM60:       {
-; SM60-NEXT:    .reg .pred %p<7>;
-; SM60-NEXT:    .reg .b16 %rs<9>;
+; SM60-NEXT:    .reg .pred %p<6>;
+; SM60-NEXT:    .reg .b16 %rs<7>;
 ; SM60-NEXT:    .reg .b32 %r<15>;
 ; SM60-NEXT:    .reg .b64 %rd<3>;
 ; SM60-EMPTY:
@@ -13959,29 +13804,26 @@ define <1 x half> @fmaximum_acq_rel_v1f16_global_cta(ptr addrspace(1) %addr, <1 
 ; SM60-NEXT:    shl.b32 %r7, %r6, %r1;
 ; SM60-NEXT:    not.b32 %r2, %r7;
 ; SM60-NEXT:    ld.volatile.global.b32 %r14, [%rd1];
-; SM60-NEXT:    setp.eq.b16 %p4, %rs1, 0;
 ; SM60-NEXT:  $L__BB308_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    shr.u32 %r8, %r14, %r1;
 ; SM60-NEXT:    cvt.u16.u32 %rs2, %r8;
-; SM60-NEXT:    setp.gt.f16 %p1, %rs2, %rs1;
+; SM60-NEXT:    setp.eq.b16 %p1, %rs2, 0;
 ; SM60-NEXT:    selp.b16 %rs3, %rs2, %rs1, %p1;
-; SM60-NEXT:    setp.nan.f16 %p2, %rs2, %rs1;
-; SM60-NEXT:    selp.b16 %rs4, 0x7E00, %rs3, %p2;
-; SM60-NEXT:    setp.eq.b16 %p3, %rs2, 0;
-; SM60-NEXT:    selp.b16 %rs5, %rs2, %rs4, %p3;
-; SM60-NEXT:    selp.b16 %rs6, %rs1, %rs5, %p4;
-; SM60-NEXT:    mov.b16 %rs7, 0x0000;
-; SM60-NEXT:    setp.eq.f16 %p5, %rs4, %rs7;
-; SM60-NEXT:    selp.b16 %rs8, %rs6, %rs4, %p5;
-; SM60-NEXT:    cvt.u32.u16 %r9, %rs8;
+; SM60-NEXT:    setp.gt.f16 %p2, %rs2, %rs1;
+; SM60-NEXT:    selp.b16 %rs4, %rs2, %rs1, %p2;
+; SM60-NEXT:    setp.nan.f16 %p3, %rs2, %rs1;
+; SM60-NEXT:    selp.b16 %rs5, 0x7E00, %rs4, %p3;
+; SM60-NEXT:    setp.eq.f16 %p4, %rs2, %rs1;
+; SM60-NEXT:    selp.b16 %rs6, %rs3, %rs5, %p4;
+; SM60-NEXT:    cvt.u32.u16 %r9, %rs6;
 ; SM60-NEXT:    shl.b32 %r10, %r9, %r1;
 ; SM60-NEXT:    and.b32 %r11, %r14, %r2;
 ; SM60-NEXT:    or.b32 %r12, %r11, %r10;
 ; SM60-NEXT:    atom.cta.global.cas.b32 %r3, [%rd1], %r14, %r12;
-; SM60-NEXT:    setp.ne.b32 %p6, %r3, %r14;
+; SM60-NEXT:    setp.ne.b32 %p5, %r3, %r14;
 ; SM60-NEXT:    mov.b32 %r14, %r3;
-; SM60-NEXT:    @%p6 bra $L__BB308_1;
+; SM60-NEXT:    @%p5 bra $L__BB308_1;
 ; SM60-NEXT:  // %bb.2: // %atomicrmw.end
 ; SM60-NEXT:    shr.u32 %r13, %r3, %r1;
 ; SM60-NEXT:    membar.cta;
@@ -13994,8 +13836,8 @@ define <1 x half> @fmaximum_acq_rel_v1f16_global_cta(ptr addrspace(1) %addr, <1 
 define <2 x half> @fmaximum_acq_rel_v2f16_global_cta(ptr addrspace(1) %addr, <2 x half> %val) {
 ; SM60-LABEL: fmaximum_acq_rel_v2f16_global_cta(
 ; SM60:       {
-; SM60-NEXT:    .reg .pred %p<12>;
-; SM60-NEXT:    .reg .b16 %rs<16>;
+; SM60-NEXT:    .reg .pred %p<10>;
+; SM60-NEXT:    .reg .b16 %rs<13>;
 ; SM60-NEXT:    .reg .b32 %r<5>;
 ; SM60-NEXT:    .reg .b64 %rd<2>;
 ; SM60-EMPTY:
@@ -14005,35 +13847,30 @@ define <2 x half> @fmaximum_acq_rel_v2f16_global_cta(ptr addrspace(1) %addr, <2 
 ; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    ld.volatile.global.b32 %r4, [%rd1];
 ; SM60-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
-; SM60-NEXT:    setp.eq.b16 %p4, %rs2, 0;
-; SM60-NEXT:    setp.eq.b16 %p9, %rs1, 0;
 ; SM60-NEXT:  $L__BB309_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    mov.b32 {%rs3, %rs4}, %r4;
-; SM60-NEXT:    setp.gt.f16 %p1, %rs4, %rs2;
+; SM60-NEXT:    setp.eq.b16 %p1, %rs4, 0;
 ; SM60-NEXT:    selp.b16 %rs5, %rs4, %rs2, %p1;
-; SM60-NEXT:    setp.nan.f16 %p2, %rs4, %rs2;
-; SM60-NEXT:    selp.b16 %rs6, 0x7E00, %rs5, %p2;
-; SM60-NEXT:    setp.eq.b16 %p3, %rs4, 0;
-; SM60-NEXT:    selp.b16 %rs7, %rs4, %rs6, %p3;
-; SM60-NEXT:    selp.b16 %rs8, %rs2, %rs7, %p4;
-; SM60-NEXT:    mov.b16 %rs9, 0x0000;
-; SM60-NEXT:    setp.eq.f16 %p5, %rs6, %rs9;
-; SM60-NEXT:    selp.b16 %rs10, %rs8, %rs6, %p5;
+; SM60-NEXT:    setp.gt.f16 %p2, %rs4, %rs2;
+; SM60-NEXT:    selp.b16 %rs6, %rs4, %rs2, %p2;
+; SM60-NEXT:    setp.nan.f16 %p3, %rs4, %rs2;
+; SM60-NEXT:    selp.b16 %rs7, 0x7E00, %rs6, %p3;
+; SM60-NEXT:    setp.eq.f16 %p4, %rs4, %rs2;
+; SM60-NEXT:    selp.b16 %rs8, %rs5, %rs7, %p4;
+; SM60-NEXT:    setp.eq.b16 %p5, %rs3, 0;
+; SM60-NEXT:    selp.b16 %rs9, %rs3, %rs1, %p5;
 ; SM60-NEXT:    setp.gt.f16 %p6, %rs3, %rs1;
-; SM60-NEXT:    selp.b16 %rs11, %rs3, %rs1, %p6;
+; SM60-NEXT:    selp.b16 %rs10, %rs3, %rs1, %p6;
 ; SM60-NEXT:    setp.nan.f16 %p7, %rs3, %rs1;
-; SM60-NEXT:    selp.b16 %rs12, 0x7E00, %rs11, %p7;
-; SM60-NEXT:    setp.eq.b16 %p8, %rs3, 0;
-; SM60-NEXT:    selp.b16 %rs13, %rs3, %rs12, %p8;
-; SM60-NEXT:    selp.b16 %rs14, %rs1, %rs13, %p9;
-; SM60-NEXT:    setp.eq.f16 %p10, %rs12, %rs9;
-; SM60-NEXT:    selp.b16 %rs15, %rs14, %rs12, %p10;
-; SM60-NEXT:    mov.b32 %r3, {%rs15, %rs10};
+; SM60-NEXT:    selp.b16 %rs11, 0x7E00, %rs10, %p7;
+; SM60-NEXT:    setp.eq.f16 %p8, %rs3, %rs1;
+; SM60-NEXT:    selp.b16 %rs12, %rs9, %rs11, %p8;
+; SM60-NEXT:    mov.b32 %r3, {%rs12, %rs8};
 ; SM60-NEXT:    atom.cta.global.cas.b32 %r1, [%rd1], %r4, %r3;
-; SM60-NEXT:    setp.ne.b32 %p11, %r1, %r4;
+; SM60-NEXT:    setp.ne.b32 %p9, %r1, %r4;
 ; SM60-NEXT:    mov.b32 %r4, %r1;
-; SM60-NEXT:    @%p11 bra $L__BB309_1;
+; SM60-NEXT:    @%p9 bra $L__BB309_1;
 ; SM60-NEXT:  // %bb.2: // %atomicrmw.end
 ; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    st.param.b32 [func_retval0], %r1;
@@ -14045,8 +13882,8 @@ define <2 x half> @fmaximum_acq_rel_v2f16_global_cta(ptr addrspace(1) %addr, <2 
 define <4 x half> @fmaximum_acq_rel_v4f16_global_cta(ptr addrspace(1) %addr, <4 x half> %val) {
 ; SM60-LABEL: fmaximum_acq_rel_v4f16_global_cta(
 ; SM60:       {
-; SM60-NEXT:    .reg .pred %p<22>;
-; SM60-NEXT:    .reg .b16 %rs<30>;
+; SM60-NEXT:    .reg .pred %p<18>;
+; SM60-NEXT:    .reg .b16 %rs<25>;
 ; SM60-NEXT:    .reg .b32 %r<7>;
 ; SM60-NEXT:    .reg .b64 %rd<12>;
 ; SM60-EMPTY:
@@ -14058,55 +13895,46 @@ define <4 x half> @fmaximum_acq_rel_v4f16_global_cta(ptr addrspace(1) %addr, <4 
 ; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r6}, %rd2; }
 ; SM60-NEXT:    cvt.u32.u64 %r5, %rd2;
 ; SM60-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-NEXT:    setp.eq.b16 %p4, %rs2, 0;
-; SM60-NEXT:    setp.eq.b16 %p9, %rs1, 0;
-; SM60-NEXT:    mov.b32 {%rs16, %rs17}, %r2;
-; SM60-NEXT:    setp.eq.b16 %p14, %rs17, 0;
-; SM60-NEXT:    setp.eq.b16 %p19, %rs16, 0;
+; SM60-NEXT:    mov.b32 {%rs13, %rs14}, %r2;
 ; SM60-NEXT:  $L__BB310_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    mov.b32 {%rs3, %rs4}, %r5;
-; SM60-NEXT:    setp.gt.f16 %p1, %rs4, %rs2;
+; SM60-NEXT:    setp.eq.b16 %p1, %rs4, 0;
 ; SM60-NEXT:    selp.b16 %rs5, %rs4, %rs2, %p1;
-; SM60-NEXT:    setp.nan.f16 %p2, %rs4, %rs2;
-; SM60-NEXT:    selp.b16 %rs6, 0x7E00, %rs5, %p2;
-; SM60-NEXT:    setp.eq.b16 %p3, %rs4, 0;
-; SM60-NEXT:    selp.b16 %rs7, %rs4, %rs6, %p3;
-; SM60-NEXT:    selp.b16 %rs8, %rs2, %rs7, %p4;
-; SM60-NEXT:    mov.b16 %rs9, 0x0000;
-; SM60-NEXT:    setp.eq.f16 %p5, %rs6, %rs9;
-; SM60-NEXT:    selp.b16 %rs10, %rs8, %rs6, %p5;
+; SM60-NEXT:    setp.gt.f16 %p2, %rs4, %rs2;
+; SM60-NEXT:    selp.b16 %rs6, %rs4, %rs2, %p2;
+; SM60-NEXT:    setp.nan.f16 %p3, %rs4, %rs2;
+; SM60-NEXT:    selp.b16 %rs7, 0x7E00, %rs6, %p3;
+; SM60-NEXT:    setp.eq.f16 %p4, %rs4, %rs2;
+; SM60-NEXT:    selp.b16 %rs8, %rs5, %rs7, %p4;
+; SM60-NEXT:    setp.eq.b16 %p5, %rs3, 0;
+; SM60-NEXT:    selp.b16 %rs9, %rs3, %rs1, %p5;
 ; SM60-NEXT:    setp.gt.f16 %p6, %rs3, %rs1;
-; SM60-NEXT:    selp.b16 %rs11, %rs3, %rs1, %p6;
+; SM60-NEXT:    selp.b16 %rs10, %rs3, %rs1, %p6;
 ; SM60-NEXT:    setp.nan.f16 %p7, %rs3, %rs1;
-; SM60-NEXT:    selp.b16 %rs12, 0x7E00, %rs11, %p7;
-; SM60-NEXT:    setp.eq.b16 %p8, %rs3, 0;
-; SM60-NEXT:    selp.b16 %rs13, %rs3, %rs12, %p8;
-; SM60-NEXT:    selp.b16 %rs14, %rs1, %rs13, %p9;
-; SM60-NEXT:    setp.eq.f16 %p10, %rs12, %rs9;
-; SM60-NEXT:    selp.b16 %rs15, %rs14, %rs12, %p10;
-; SM60-NEXT:    mov.b32 %r3, {%rs15, %rs10};
+; SM60-NEXT:    selp.b16 %rs11, 0x7E00, %rs10, %p7;
+; SM60-NEXT:    setp.eq.f16 %p8, %rs3, %rs1;
+; SM60-NEXT:    selp.b16 %rs12, %rs9, %rs11, %p8;
+; SM60-NEXT:    mov.b32 %r3, {%rs12, %rs8};
 ; SM60-NEXT:    cvt.u64.u32 %rd3, %r3;
-; SM60-NEXT:    mov.b32 {%rs18, %rs19}, %r6;
-; SM60-NEXT:    setp.gt.f16 %p11, %rs19, %rs17;
-; SM60-NEXT:    selp.b16 %rs20, %rs19, %rs17, %p11;
-; SM60-NEXT:    setp.nan.f16 %p12, %rs19, %rs17;
-; SM60-NEXT:    selp.b16 %rs21, 0x7E00, %rs20, %p12;
-; SM60-NEXT:    setp.eq.b16 %p13, %rs19, 0;
-; SM60-NEXT:    selp.b16 %rs22, %rs19, %rs21, %p13;
-; SM60-NEXT:    selp.b16 %rs23, %rs17, %rs22, %p14;
-; SM60-NEXT:    setp.eq.f16 %p15, %rs21, %rs9;
-; SM60-NEXT:    selp.b16 %rs24, %rs23, %rs21, %p15;
-; SM60-NEXT:    setp.gt.f16 %p16, %rs18, %rs16;
-; SM60-NEXT:    selp.b16 %rs25, %rs18, %rs16, %p16;
-; SM60-NEXT:    setp.nan.f16 %p17, %rs18, %rs16;
-; SM60-NEXT:    selp.b16 %rs26, 0x7E00, %rs25, %p17;
-; SM60-NEXT:    setp.eq.b16 %p18, %rs18, 0;
-; SM60-NEXT:    selp.b16 %rs27, %rs18, %rs26, %p18;
-; SM60-NEXT:    selp.b16 %rs28, %rs16, %rs27, %p19;
-; SM60-NEXT:    setp.eq.f16 %p20, %rs26, %rs9;
-; SM60-NEXT:    selp.b16 %rs29, %rs28, %rs26, %p20;
-; SM60-NEXT:    mov.b32 %r4, {%rs29, %rs24};
+; SM60-NEXT:    mov.b32 {%rs15, %rs16}, %r6;
+; SM60-NEXT:    setp.eq.b16 %p9, %rs16, 0;
+; SM60-NEXT:    selp.b16 %rs17, %rs16, %rs14, %p9;
+; SM60-NEXT:    setp.gt.f16 %p10, %rs16, %rs14;
+; SM60-NEXT:    selp.b16 %rs18, %rs16, %rs14, %p10;
+; SM60-NEXT:    setp.nan.f16 %p11, %rs16, %rs14;
+; SM60-NEXT:    selp.b16 %rs19, 0x7E00, %rs18, %p11;
+; SM60-NEXT:    setp.eq.f16 %p12, %rs16, %rs14;
+; SM60-NEXT:    selp.b16 %rs20, %rs17, %rs19, %p12;
+; SM60-NEXT:    setp.eq.b16 %p13, %rs15, 0;
+; SM60-NEXT:    selp.b16 %rs21, %rs15, %rs13, %p13;
+; SM60-NEXT:    setp.gt.f16 %p14, %rs15, %rs13;
+; SM60-NEXT:    selp.b16 %rs22, %rs15, %rs13, %p14;
+; SM60-NEXT:    setp.nan.f16 %p15, %rs15, %rs13;
+; SM60-NEXT:    selp.b16 %rs23, 0x7E00, %rs22, %p15;
+; SM60-NEXT:    setp.eq.f16 %p16, %rs15, %rs13;
+; SM60-NEXT:    selp.b16 %rs24, %rs21, %rs23, %p16;
+; SM60-NEXT:    mov.b32 %r4, {%rs24, %rs20};
 ; SM60-NEXT:    cvt.u64.u32 %rd4, %r4;
 ; SM60-NEXT:    shl.b64 %rd5, %rd4, 32;
 ; SM60-NEXT:    or.b64 %rd6, %rd3, %rd5;
@@ -14115,10 +13943,10 @@ define <4 x half> @fmaximum_acq_rel_v4f16_global_cta(ptr addrspace(1) %addr, <4 
 ; SM60-NEXT:    shl.b64 %rd9, %rd8, 32;
 ; SM60-NEXT:    or.b64 %rd10, %rd7, %rd9;
 ; SM60-NEXT:    atom.cta.global.cas.b64 %rd11, [%rd1], %rd10, %rd6;
-; SM60-NEXT:    setp.ne.b64 %p21, %rd11, %rd10;
+; SM60-NEXT:    setp.ne.b64 %p17, %rd11, %rd10;
 ; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r6}, %rd11; }
 ; SM60-NEXT:    cvt.u32.u64 %r5, %rd11;
-; SM60-NEXT:    @%p21 bra $L__BB310_1;
+; SM60-NEXT:    @%p17 bra $L__BB310_1;
 ; SM60-NEXT:  // %bb.2: // %atomicrmw.end
 ; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    st.param.v2.b32 [func_retval0], {%r5, %r6};
@@ -14130,8 +13958,8 @@ define <4 x half> @fmaximum_acq_rel_v4f16_global_cta(ptr addrspace(1) %addr, <4 
 define <8 x half> @fmaximum_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 x half> %val) {
 ; SM60-LABEL: fmaximum_acq_rel_v8f16_global_cta(
 ; SM60:       {
-; SM60-NEXT:    .reg .pred %p<43>;
-; SM60-NEXT:    .reg .b16 %rs<59>;
+; SM60-NEXT:    .reg .pred %p<35>;
+; SM60-NEXT:    .reg .b16 %rs<49>;
 ; SM60-NEXT:    .reg .b32 %r<13>;
 ; SM60-NEXT:    .reg .b64 %rd<22>;
 ; SM60-EMPTY:
@@ -14143,55 +13971,46 @@ define <8 x half> @fmaximum_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 
 ; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r10}, %rd2; }
 ; SM60-NEXT:    cvt.u32.u64 %r9, %rd2;
 ; SM60-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-NEXT:    setp.eq.b16 %p4, %rs2, 0;
-; SM60-NEXT:    setp.eq.b16 %p9, %rs1, 0;
-; SM60-NEXT:    mov.b32 {%rs16, %rs17}, %r2;
-; SM60-NEXT:    setp.eq.b16 %p14, %rs17, 0;
-; SM60-NEXT:    setp.eq.b16 %p19, %rs16, 0;
+; SM60-NEXT:    mov.b32 {%rs13, %rs14}, %r2;
 ; SM60-NEXT:  $L__BB311_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    mov.b32 {%rs3, %rs4}, %r9;
-; SM60-NEXT:    setp.gt.f16 %p1, %rs4, %rs2;
+; SM60-NEXT:    setp.eq.b16 %p1, %rs4, 0;
 ; SM60-NEXT:    selp.b16 %rs5, %rs4, %rs2, %p1;
-; SM60-NEXT:    setp.nan.f16 %p2, %rs4, %rs2;
-; SM60-NEXT:    selp.b16 %rs6, 0x7E00, %rs5, %p2;
-; SM60-NEXT:    setp.eq.b16 %p3, %rs4, 0;
-; SM60-NEXT:    selp.b16 %rs7, %rs4, %rs6, %p3;
-; SM60-NEXT:    selp.b16 %rs8, %rs2, %rs7, %p4;
-; SM60-NEXT:    mov.b16 %rs9, 0x0000;
-; SM60-NEXT:    setp.eq.f16 %p5, %rs6, %rs9;
-; SM60-NEXT:    selp.b16 %rs10, %rs8, %rs6, %p5;
+; SM60-NEXT:    setp.gt.f16 %p2, %rs4, %rs2;
+; SM60-NEXT:    selp.b16 %rs6, %rs4, %rs2, %p2;
+; SM60-NEXT:    setp.nan.f16 %p3, %rs4, %rs2;
+; SM60-NEXT:    selp.b16 %rs7, 0x7E00, %rs6, %p3;
+; SM60-NEXT:    setp.eq.f16 %p4, %rs4, %rs2;
+; SM60-NEXT:    selp.b16 %rs8, %rs5, %rs7, %p4;
+; SM60-NEXT:    setp.eq.b16 %p5, %rs3, 0;
+; SM60-NEXT:    selp.b16 %rs9, %rs3, %rs1, %p5;
 ; SM60-NEXT:    setp.gt.f16 %p6, %rs3, %rs1;
-; SM60-NEXT:    selp.b16 %rs11, %rs3, %rs1, %p6;
+; SM60-NEXT:    selp.b16 %rs10, %rs3, %rs1, %p6;
 ; SM60-NEXT:    setp.nan.f16 %p7, %rs3, %rs1;
-; SM60-NEXT:    selp.b16 %rs12, 0x7E00, %rs11, %p7;
-; SM60-NEXT:    setp.eq.b16 %p8, %rs3, 0;
-; SM60-NEXT:    selp.b16 %rs13, %rs3, %rs12, %p8;
-; SM60-NEXT:    selp.b16 %rs14, %rs1, %rs13, %p9;
-; SM60-NEXT:    setp.eq.f16 %p10, %rs12, %rs9;
-; SM60-NEXT:    selp.b16 %rs15, %rs14, %rs12, %p10;
-; SM60-NEXT:    mov.b32 %r5, {%rs15, %rs10};
+; SM60-NEXT:    selp.b16 %rs11, 0x7E00, %rs10, %p7;
+; SM60-NEXT:    setp.eq.f16 %p8, %rs3, %rs1;
+; SM60-NEXT:    selp.b16 %rs12, %rs9, %rs11, %p8;
+; SM60-NEXT:    mov.b32 %r5, {%rs12, %rs8};
 ; SM60-NEXT:    cvt.u64.u32 %rd3, %r5;
-; SM60-NEXT:    mov.b32 {%rs18, %rs19}, %r10;
-; SM60-NEXT:    setp.gt.f16 %p11, %rs19, %rs17;
-; SM60-NEXT:    selp.b16 %rs20, %rs19, %rs17, %p11;
-; SM60-NEXT:    setp.nan.f16 %p12, %rs19, %rs17;
-; SM60-NEXT:    selp.b16 %rs21, 0x7E00, %rs20, %p12;
-; SM60-NEXT:    setp.eq.b16 %p13, %rs19, 0;
-; SM60-NEXT:    selp.b16 %rs22, %rs19, %rs21, %p13;
-; SM60-NEXT:    selp.b16 %rs23, %rs17, %rs22, %p14;
-; SM60-NEXT:    setp.eq.f16 %p15, %rs21, %rs9;
-; SM60-NEXT:    selp.b16 %rs24, %rs23, %rs21, %p15;
-; SM60-NEXT:    setp.gt.f16 %p16, %rs18, %rs16;
-; SM60-NEXT:    selp.b16 %rs25, %rs18, %rs16, %p16;
-; SM60-NEXT:    setp.nan.f16 %p17, %rs18, %rs16;
-; SM60-NEXT:    selp.b16 %rs26, 0x7E00, %rs25, %p17;
-; SM60-NEXT:    setp.eq.b16 %p18, %rs18, 0;
-; SM60-NEXT:    selp.b16 %rs27, %rs18, %rs26, %p18;
-; SM60-NEXT:    selp.b16 %rs28, %rs16, %rs27, %p19;
-; SM60-NEXT:    setp.eq.f16 %p20, %rs26, %rs9;
-; SM60-NEXT:    selp.b16 %rs29, %rs28, %rs26, %p20;
-; SM60-NEXT:    mov.b32 %r6, {%rs29, %rs24};
+; SM60-NEXT:    mov.b32 {%rs15, %rs16}, %r10;
+; SM60-NEXT:    setp.eq.b16 %p9, %rs16, 0;
+; SM60-NEXT:    selp.b16 %rs17, %rs16, %rs14, %p9;
+; SM60-NEXT:    setp.gt.f16 %p10, %rs16, %rs14;
+; SM60-NEXT:    selp.b16 %rs18, %rs16, %rs14, %p10;
+; SM60-NEXT:    setp.nan.f16 %p11, %rs16, %rs14;
+; SM60-NEXT:    selp.b16 %rs19, 0x7E00, %rs18, %p11;
+; SM60-NEXT:    setp.eq.f16 %p12, %rs16, %rs14;
+; SM60-NEXT:    selp.b16 %rs20, %rs17, %rs19, %p12;
+; SM60-NEXT:    setp.eq.b16 %p13, %rs15, 0;
+; SM60-NEXT:    selp.b16 %rs21, %rs15, %rs13, %p13;
+; SM60-NEXT:    setp.gt.f16 %p14, %rs15, %rs13;
+; SM60-NEXT:    selp.b16 %rs22, %rs15, %rs13, %p14;
+; SM60-NEXT:    setp.nan.f16 %p15, %rs15, %rs13;
+; SM60-NEXT:    selp.b16 %rs23, 0x7E00, %rs22, %p15;
+; SM60-NEXT:    setp.eq.f16 %p16, %rs15, %rs13;
+; SM60-NEXT:    selp.b16 %rs24, %rs21, %rs23, %p16;
+; SM60-NEXT:    mov.b32 %r6, {%rs24, %rs20};
 ; SM60-NEXT:    cvt.u64.u32 %rd4, %r6;
 ; SM60-NEXT:    shl.b64 %rd5, %rd4, 32;
 ; SM60-NEXT:    or.b64 %rd6, %rd3, %rd5;
@@ -14200,64 +14019,55 @@ define <8 x half> @fmaximum_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 
 ; SM60-NEXT:    shl.b64 %rd9, %rd8, 32;
 ; SM60-NEXT:    or.b64 %rd10, %rd7, %rd9;
 ; SM60-NEXT:    atom.cta.global.cas.b64 %rd11, [%rd1], %rd10, %rd6;
-; SM60-NEXT:    setp.ne.b64 %p21, %rd11, %rd10;
+; SM60-NEXT:    setp.ne.b64 %p17, %rd11, %rd10;
 ; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r10}, %rd11; }
 ; SM60-NEXT:    cvt.u32.u64 %r9, %rd11;
-; SM60-NEXT:    @%p21 bra $L__BB311_1;
+; SM60-NEXT:    @%p17 bra $L__BB311_1;
 ; SM60-NEXT:  // %bb.2: // %atomicrmw.end
 ; SM60-NEXT:    ld.volatile.global.b64 %rd12, [%rd1+8];
 ; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r12}, %rd12; }
 ; SM60-NEXT:    cvt.u32.u64 %r11, %rd12;
 ; SM60-NEXT:  $L__BB311_3: // %atomicrmw.start2
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM60-NEXT:    mov.b32 {%rs30, %rs31}, %r3;
-; SM60-NEXT:    mov.b32 {%rs32, %rs33}, %r11;
-; SM60-NEXT:    setp.gt.f16 %p22, %rs33, %rs31;
-; SM60-NEXT:    selp.b16 %rs34, %rs33, %rs31, %p22;
-; SM60-NEXT:    setp.nan.f16 %p23, %rs33, %rs31;
-; SM60-NEXT:    selp.b16 %rs35, 0x7E00, %rs34, %p23;
-; SM60-NEXT:    setp.eq.b16 %p24, %rs33, 0;
-; SM60-NEXT:    selp.b16 %rs36, %rs33, %rs35, %p24;
-; SM60-NEXT:    setp.eq.b16 %p25, %rs31, 0;
-; SM60-NEXT:    selp.b16 %rs37, %rs31, %rs36, %p25;
-; SM60-NEXT:    mov.b16 %rs38, 0x0000;
-; SM60-NEXT:    setp.eq.f16 %p26, %rs35, %rs38;
-; SM60-NEXT:    selp.b16 %rs39, %rs37, %rs35, %p26;
-; SM60-NEXT:    setp.gt.f16 %p27, %rs32, %rs30;
-; SM60-NEXT:    selp.b16 %rs40, %rs32, %rs30, %p27;
-; SM60-NEXT:    setp.nan.f16 %p28, %rs32, %rs30;
-; SM60-NEXT:    selp.b16 %rs41, 0x7E00, %rs40, %p28;
-; SM60-NEXT:    setp.eq.b16 %p29, %rs32, 0;
-; SM60-NEXT:    selp.b16 %rs42, %rs32, %rs41, %p29;
-; SM60-NEXT:    setp.eq.b16 %p30, %rs30, 0;
-; SM60-NEXT:    selp.b16 %rs43, %rs30, %rs42, %p30;
-; SM60-NEXT:    setp.eq.f16 %p31, %rs41, %rs38;
-; SM60-NEXT:    selp.b16 %rs44, %rs43, %rs41, %p31;
-; SM60-NEXT:    mov.b32 %r7, {%rs44, %rs39};
+; SM60-NEXT:    mov.b32 {%rs25, %rs26}, %r3;
+; SM60-NEXT:    mov.b32 {%rs27, %rs28}, %r11;
+; SM60-NEXT:    setp.eq.b16 %p18, %rs28, 0;
+; SM60-NEXT:    selp.b16 %rs29, %rs28, %rs26, %p18;
+; SM60-NEXT:    setp.gt.f16 %p19, %rs28, %rs26;
+; SM60-NEXT:    selp.b16 %rs30, %rs28, %rs26, %p19;
+; SM60-NEXT:    setp.nan.f16 %p20, %rs28, %rs26;
+; SM60-NEXT:    selp.b16 %rs31, 0x7E00, %rs30, %p20;
+; SM60-NEXT:    setp.eq.f16 %p21, %rs28, %rs26;
+; SM60-NEXT:    selp.b16 %rs32, %rs29, %rs31, %p21;
+; SM60-NEXT:    setp.eq.b16 %p22, %rs27, 0;
+; SM60-NEXT:    selp.b16 %rs33, %rs27, %rs25, %p22;
+; SM60-NEXT:    setp.gt.f16 %p23, %rs27, %rs25;
+; SM60-NEXT:    selp.b16 %rs34, %rs27, %rs25, %p23;
+; SM60-NEXT:    setp.nan.f16 %p24, %rs27, %rs25;
+; SM60-NEXT:    selp.b16 %rs35, 0x7E00, %rs34, %p24;
+; SM60-NEXT:    setp.eq.f16 %p25, %rs27, %rs25;
+; SM60-NEXT:    selp.b16 %rs36, %rs33, %rs35, %p25;
+; SM60-NEXT:    mov.b32 %r7, {%rs36, %rs32};
 ; SM60-NEXT:    cvt.u64.u32 %rd13, %r7;
-; SM60-NEXT:    mov.b32 {%rs45, %rs46}, %r4;
-; SM60-NEXT:    mov.b32 {%rs47, %rs48}, %r12;
-; SM60-NEXT:    setp.gt.f16 %p32, %rs48, %rs46;
-; SM60-NEXT:    selp.b16 %rs49, %rs48, %rs46, %p32;
-; SM60-NEXT:    setp.nan.f16 %p33, %rs48, %rs46;
-; SM60-NEXT:    selp.b16 %rs50, 0x7E00, %rs49, %p33;
-; SM60-NEXT:    setp.eq.b16 %p34, %rs48, 0;
-; SM60-NEXT:    selp.b16 %rs51, %rs48, %rs50, %p34;
-; SM60-NEXT:    setp.eq.b16 %p35, %rs46, 0;
-; SM60-NEXT:    selp.b16 %rs52, %rs46, %rs51, %p35;
-; SM60-NEXT:    setp.eq.f16 %p36, %rs50, %rs38;
-; SM60-NEXT:    selp.b16 %rs53, %rs52, %rs50, %p36;
-; SM60-NEXT:    setp.gt.f16 %p37, %rs47, %rs45;
-; SM60-NEXT:    selp.b16 %rs54, %rs47, %rs45, %p37;
-; SM60-NEXT:    setp.nan.f16 %p38, %rs47, %rs45;
-; SM60-NEXT:    selp.b16 %rs55, 0x7E00, %rs54, %p38;
-; SM60-NEXT:    setp.eq.b16 %p39, %rs47, 0;
-; SM60-NEXT:    selp.b16 %rs56, %rs47, %rs55, %p39;
-; SM60-NEXT:    setp.eq.b16 %p40, %rs45, 0;
-; SM60-NEXT:    selp.b16 %rs57, %rs45, %rs56, %p40;
-; SM60-NEXT:    setp.eq.f16 %p41, %rs55, %rs38;
-; SM60-NEXT:    selp.b16 %rs58, %rs57, %rs55, %p41;
-; SM60-NEXT:    mov.b32 %r8, {%rs58, %rs53};
+; SM60-NEXT:    mov.b32 {%rs37, %rs38}, %r4;
+; SM60-NEXT:    mov.b32 {%rs39, %rs40}, %r12;
+; SM60-NEXT:    setp.eq.b16 %p26, %rs40, 0;
+; SM60-NEXT:    selp.b16 %rs41, %rs40, %rs38, %p26;
+; SM60-NEXT:    setp.gt.f16 %p27, %rs40, %rs38;
+; SM60-NEXT:    selp.b16 %rs42, %rs40, %rs38, %p27;
+; SM60-NEXT:    setp.nan.f16 %p28, %rs40, %rs38;
+; SM60-NEXT:    selp.b16 %rs43, 0x7E00, %rs42, %p28;
+; SM60-NEXT:    setp.eq.f16 %p29, %rs40, %rs38;
+; SM60-NEXT:    selp.b16 %rs44, %rs41, %rs43, %p29;
+; SM60-NEXT:    setp.eq.b16 %p30, %rs39, 0;
+; SM60-NEXT:    selp.b16 %rs45, %rs39, %rs37, %p30;
+; SM60-NEXT:    setp.gt.f16 %p31, %rs39, %rs37;
+; SM60-NEXT:    selp.b16 %rs46, %rs39, %rs37, %p31;
+; SM60-NEXT:    setp.nan.f16 %p32, %rs39, %rs37;
+; SM60-NEXT:    selp.b16 %rs47, 0x7E00, %rs46, %p32;
+; SM60-NEXT:    setp.eq.f16 %p33, %rs39, %rs37;
+; SM60-NEXT:    selp.b16 %rs48, %rs45, %rs47, %p33;
+; SM60-NEXT:    mov.b32 %r8, {%rs48, %rs44};
 ; SM60-NEXT:    cvt.u64.u32 %rd14, %r8;
 ; SM60-NEXT:    shl.b64 %rd15, %rd14, 32;
 ; SM60-NEXT:    or.b64 %rd16, %rd13, %rd15;
@@ -14266,10 +14076,10 @@ define <8 x half> @fmaximum_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 
 ; SM60-NEXT:    shl.b64 %rd19, %rd18, 32;
 ; SM60-NEXT:    or.b64 %rd20, %rd17, %rd19;
 ; SM60-NEXT:    atom.cta.global.cas.b64 %rd21, [%rd1+8], %rd20, %rd16;
-; SM60-NEXT:    setp.ne.b64 %p42, %rd21, %rd20;
+; SM60-NEXT:    setp.ne.b64 %p34, %rd21, %rd20;
 ; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r12}, %rd21; }
 ; SM60-NEXT:    cvt.u32.u64 %r11, %rd21;
-; SM60-NEXT:    @%p42 bra $L__BB311_3;
+; SM60-NEXT:    @%p34 bra $L__BB311_3;
 ; SM60-NEXT:  // %bb.4: // %atomicrmw.end1
 ; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    st.param.v4.b32 [func_retval0], {%r9, %r10, %r11, %r12};
@@ -15669,9 +15479,9 @@ define <8 x bfloat> @fmax_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, <8 x
 define <1 x bfloat> @fminimum_acq_rel_v1bf16_global_cta(ptr addrspace(1) %addr, <1 x bfloat> %val) {
 ; SM60-LABEL: fminimum_acq_rel_v1bf16_global_cta(
 ; SM60:       {
-; SM60-NEXT:    .reg .pred %p<7>;
-; SM60-NEXT:    .reg .b16 %rs<8>;
-; SM60-NEXT:    .reg .b32 %r<20>;
+; SM60-NEXT:    .reg .pred %p<6>;
+; SM60-NEXT:    .reg .b16 %rs<7>;
+; SM60-NEXT:    .reg .b32 %r<18>;
 ; SM60-NEXT:    .reg .b64 %rd<3>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
@@ -15685,38 +15495,34 @@ define <1 x bfloat> @fminimum_acq_rel_v1bf16_global_cta(ptr addrspace(1) %addr, 
 ; SM60-NEXT:    mov.b32 %r6, 65535;
 ; SM60-NEXT:    shl.b32 %r7, %r6, %r1;
 ; SM60-NEXT:    not.b32 %r2, %r7;
-; SM60-NEXT:    ld.volatile.global.b32 %r19, [%rd1];
+; SM60-NEXT:    ld.volatile.global.b32 %r17, [%rd1];
 ; SM60-NEXT:    cvt.u32.u16 %r10, %rs1;
 ; SM60-NEXT:    shl.b32 %r11, %r10, 16;
-; SM60-NEXT:    setp.eq.b16 %p4, %rs1, -32768;
 ; SM60-NEXT:  $L__BB328_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM60-NEXT:    shr.u32 %r8, %r19, %r1;
+; SM60-NEXT:    shr.u32 %r8, %r17, %r1;
 ; SM60-NEXT:    cvt.u16.u32 %rs2, %r8;
-; SM60-NEXT:    shl.b32 %r9, %r8, 16;
-; SM60-NEXT:    setp.lt.f32 %p1, %r9, %r11;
+; SM60-NEXT:    setp.eq.b16 %p1, %rs2, -32768;
 ; SM60-NEXT:    selp.b16 %rs3, %rs2, %rs1, %p1;
-; SM60-NEXT:    setp.nan.f32 %p2, %r9, %r11;
-; SM60-NEXT:    selp.b16 %rs4, 0x7FC0, %rs3, %p2;
-; SM60-NEXT:    setp.eq.b16 %p3, %rs2, -32768;
-; SM60-NEXT:    selp.b16 %rs5, %rs2, %rs4, %p3;
-; SM60-NEXT:    selp.b16 %rs6, %rs1, %rs5, %p4;
-; SM60-NEXT:    cvt.u32.u16 %r12, %rs4;
-; SM60-NEXT:    shl.b32 %r13, %r12, 16;
-; SM60-NEXT:    setp.eq.f32 %p5, %r13, 0f00000000;
-; SM60-NEXT:    selp.b16 %rs7, %rs6, %rs4, %p5;
-; SM60-NEXT:    cvt.u32.u16 %r14, %rs7;
-; SM60-NEXT:    shl.b32 %r15, %r14, %r1;
-; SM60-NEXT:    and.b32 %r16, %r19, %r2;
-; SM60-NEXT:    or.b32 %r17, %r16, %r15;
-; SM60-NEXT:    atom.cta.global.cas.b32 %r3, [%rd1], %r19, %r17;
-; SM60-NEXT:    setp.ne.b32 %p6, %r3, %r19;
-; SM60-NEXT:    mov.b32 %r19, %r3;
-; SM60-NEXT:    @%p6 bra $L__BB328_1;
+; SM60-NEXT:    shl.b32 %r9, %r8, 16;
+; SM60-NEXT:    setp.lt.f32 %p2, %r9, %r11;
+; SM60-NEXT:    selp.b16 %rs4, %rs2, %rs1, %p2;
+; SM60-NEXT:    setp.nan.f32 %p3, %r9, %r11;
+; SM60-NEXT:    selp.b16 %rs5, 0x7FC0, %rs4, %p3;
+; SM60-NEXT:    setp.eq.f32 %p4, %r9, %r11;
+; SM60-NEXT:    selp.b16 %rs6, %rs3, %rs5, %p4;
+; SM60-NEXT:    cvt.u32.u16 %r12, %rs6;
+; SM60-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM60-NEXT:    and.b32 %r14, %r17, %r2;
+; SM60-NEXT:    or.b32 %r15, %r14, %r13;
+; SM60-NEXT:    atom.cta.global.cas.b32 %r3, [%rd1], %r17, %r15;
+; SM60-NEXT:    setp.ne.b32 %p5, %r3, %r17;
+; SM60-NEXT:    mov.b32 %r17, %r3;
+; SM60-NEXT:    @%p5 bra $L__BB328_1;
 ; SM60-NEXT:  // %bb.2: // %atomicrmw.end
-; SM60-NEXT:    shr.u32 %r18, %r3, %r1;
+; SM60-NEXT:    shr.u32 %r16, %r3, %r1;
 ; SM60-NEXT:    membar.cta;
-; SM60-NEXT:    st.param.b16 [func_retval0], %r18;
+; SM60-NEXT:    st.param.b16 [func_retval0], %r16;
 ; SM60-NEXT:    ret;
         %retval = atomicrmw elementwise fminimum ptr  addrspace(1) %addr, <1 x bfloat> %val syncscope("block") acq_rel
         ret <1 x bfloat> %retval
@@ -15725,57 +15531,49 @@ define <1 x bfloat> @fminimum_acq_rel_v1bf16_global_cta(ptr addrspace(1) %addr, 
 define <2 x bfloat> @fminimum_acq_rel_v2bf16_global_cta(ptr addrspace(1) %addr, <2 x bfloat> %val) {
 ; SM60-LABEL: fminimum_acq_rel_v2bf16_global_cta(
 ; SM60:       {
-; SM60-NEXT:    .reg .pred %p<12>;
-; SM60-NEXT:    .reg .b16 %rs<15>;
-; SM60-NEXT:    .reg .b32 %r<17>;
+; SM60-NEXT:    .reg .pred %p<10>;
+; SM60-NEXT:    .reg .b16 %rs<13>;
+; SM60-NEXT:    .reg .b32 %r<13>;
 ; SM60-NEXT:    .reg .b64 %rd<2>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
 ; SM60-NEXT:    ld.param.b32 %r2, [fminimum_acq_rel_v2bf16_global_cta_param_1];
 ; SM60-NEXT:    ld.param.b64 %rd1, [fminimum_acq_rel_v2bf16_global_cta_param_0];
 ; SM60-NEXT:    membar.cta;
-; SM60-NEXT:    ld.volatile.global.b32 %r16, [%rd1];
+; SM60-NEXT:    ld.volatile.global.b32 %r12, [%rd1];
 ; SM60-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
 ; SM60-NEXT:    cvt.u32.u16 %r3, %rs2;
 ; SM60-NEXT:    shl.b32 %r4, %r3, 16;
-; SM60-NEXT:    setp.eq.b16 %p4, %rs2, -32768;
-; SM60-NEXT:    cvt.u32.u16 %r9, %rs1;
-; SM60-NEXT:    shl.b32 %r10, %r9, 16;
-; SM60-NEXT:    setp.eq.b16 %p9, %rs1, -32768;
+; SM60-NEXT:    cvt.u32.u16 %r7, %rs1;
+; SM60-NEXT:    shl.b32 %r8, %r7, 16;
 ; SM60-NEXT:  $L__BB329_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM60-NEXT:    mov.b32 {%rs3, %rs4}, %r16;
+; SM60-NEXT:    mov.b32 {%rs3, %rs4}, %r12;
+; SM60-NEXT:    setp.eq.b16 %p1, %rs4, -32768;
+; SM60-NEXT:    selp.b16 %rs5, %rs4, %rs2, %p1;
 ; SM60-NEXT:    cvt.u32.u16 %r5, %rs4;
 ; SM60-NEXT:    shl.b32 %r6, %r5, 16;
-; SM60-NEXT:    setp.lt.f32 %p1, %r6, %r4;
-; SM60-NEXT:    selp.b16 %rs5, %rs4, %rs2, %p1;
-; SM60-NEXT:    setp.nan.f32 %p2, %r6, %r4;
-; SM60-NEXT:    selp.b16 %rs6, 0x7FC0, %rs5, %p2;
-; SM60-NEXT:    setp.eq.b16 %p3, %rs4, -32768;
-; SM60-NEXT:    selp.b16 %rs7, %rs4, %rs6, %p3;
-; SM60-NEXT:    selp.b16 %rs8, %rs2, %rs7, %p4;
-; SM60-NEXT:    cvt.u32.u16 %r7, %rs6;
-; SM60-NEXT:    shl.b32 %r8, %r7, 16;
-; SM60-NEXT:    setp.eq.f32 %p5, %r8, 0f00000000;
-; SM60-NEXT:    selp.b16 %rs9, %rs8, %rs6, %p5;
-; SM60-NEXT:    cvt.u32.u16 %r11, %rs3;
-; SM60-NEXT:    shl.b32 %r12, %r11, 16;
-; SM60-NEXT:    setp.lt.f32 %p6, %r12, %r10;
+; SM60-NEXT:    setp.lt.f32 %p2, %r6, %r4;
+; SM60-NEXT:    selp.b16 %rs6, %rs4, %rs2, %p2;
+; SM60-NEXT:    setp.nan.f32 %p3, %r6, %r4;
+; SM60-NEXT:    selp.b16 %rs7, 0x7FC0, %rs6, %p3;
+; SM60-NEXT:    setp.eq.f32 %p4, %r6, %r4;
+; SM60-NEXT:    selp.b16 %rs8, %rs5, %rs7, %p4;
+; SM60-NEXT:    setp.eq.b16 %p5, %rs3, -32768;
+; SM60-NEXT:    selp.b16 %rs9, %rs3, %rs1, %p5;
+; SM60-NEXT:    cvt.u32.u16 %r9, %rs3;
+; SM60-NEXT:    shl.b32 %r10, %r9, 16;
+; SM60-NEXT:    setp.lt.f32 %p6, %r10, %r8;
 ; SM60-NEXT:    selp.b16 %rs10, %rs3, %rs1, %p6;
-; SM60-NEXT:    setp.nan.f32 %p7, %r12, %r10;
+; SM60-NEXT:    setp.nan.f32 %p7, %r10, %r8;
 ; SM60-NEXT:    selp.b16 %rs11, 0x7FC0, %rs10, %p7;
-; SM60-NEXT:    setp.eq.b16 %p8, %rs3, -32768;
-; SM60-NEXT:    selp.b16 %rs12, %rs3, %rs11, %p8;
-; SM60-NEXT:    selp.b16 %rs13, %rs1, %rs12, %p9;
-; SM60-NEXT:    cvt.u32.u16 %r13, %rs11;
-; SM60-NEXT:    shl.b32 %r14, %r13, 16;
-; SM60-NEXT:    setp.eq.f32 %p10, %r14, 0f00000000;
-; SM60-NEXT:    selp.b16 %rs14, %rs13, %rs11, %p10;
-; SM60-NEXT:    mov.b32 %r15, {%rs14, %rs9};
-; SM60-NEXT:    atom.cta.global.cas.b32 %r1, [%rd1], %r16, %r15;
-; SM60-NEXT:    setp.ne.b32 %p11, %r1, %r16;
-; SM60-NEXT:    mov.b32 %r16, %r1;
-; SM60-NEXT:    @%p11 bra $L__BB329_1;
+; SM60-NEXT:    setp.eq.f32 %p8, %r10, %r8;
+; SM60-NEXT:    selp.b16 %rs12, %rs9, %rs11, %p8;
+; SM60-NEXT:    mov.b32 %r11, {%rs12, %rs8};
+; SM60-NEXT:    atom.cta.global.cas.b32 %r1, [%rd1], %r12, %r11;
+; SM60-NEXT:    setp.ne.b32 %p9, %r1, %r12;
+; SM60-NEXT:    mov.b32 %r12, %r1;
+; SM60-NEXT:    @%p9 bra $L__BB329_1;
 ; SM60-NEXT:  // %bb.2: // %atomicrmw.end
 ; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    st.param.b32 [func_retval0], %r1;
@@ -15787,9 +15585,9 @@ define <2 x bfloat> @fminimum_acq_rel_v2bf16_global_cta(ptr addrspace(1) %addr, 
 define <4 x bfloat> @fminimum_acq_rel_v4bf16_global_cta(ptr addrspace(1) %addr, <4 x bfloat> %val) {
 ; SM60-LABEL: fminimum_acq_rel_v4bf16_global_cta(
 ; SM60:       {
-; SM60-NEXT:    .reg .pred %p<22>;
-; SM60-NEXT:    .reg .b16 %rs<29>;
-; SM60-NEXT:    .reg .b32 %r<31>;
+; SM60-NEXT:    .reg .pred %p<18>;
+; SM60-NEXT:    .reg .b16 %rs<25>;
+; SM60-NEXT:    .reg .b32 %r<23>;
 ; SM60-NEXT:    .reg .b64 %rd<12>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
@@ -15797,96 +15595,80 @@ define <4 x bfloat> @fminimum_acq_rel_v4bf16_global_cta(ptr addrspace(1) %addr, 
 ; SM60-NEXT:    ld.param.b64 %rd1, [fminimum_acq_rel_v4bf16_global_cta_param_0];
 ; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    ld.volatile.global.b64 %rd2, [%rd1];
-; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r30}, %rd2; }
-; SM60-NEXT:    cvt.u32.u64 %r29, %rd2;
+; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r22}, %rd2; }
+; SM60-NEXT:    cvt.u32.u64 %r21, %rd2;
 ; SM60-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
 ; SM60-NEXT:    cvt.u32.u16 %r3, %rs2;
 ; SM60-NEXT:    shl.b32 %r4, %r3, 16;
-; SM60-NEXT:    setp.eq.b16 %p4, %rs2, -32768;
-; SM60-NEXT:    cvt.u32.u16 %r9, %rs1;
-; SM60-NEXT:    shl.b32 %r10, %r9, 16;
-; SM60-NEXT:    setp.eq.b16 %p9, %rs1, -32768;
-; SM60-NEXT:    mov.b32 {%rs15, %rs16}, %r2;
-; SM60-NEXT:    cvt.u32.u16 %r16, %rs16;
+; SM60-NEXT:    cvt.u32.u16 %r7, %rs1;
+; SM60-NEXT:    shl.b32 %r8, %r7, 16;
+; SM60-NEXT:    mov.b32 {%rs13, %rs14}, %r2;
+; SM60-NEXT:    cvt.u32.u16 %r12, %rs14;
+; SM60-NEXT:    shl.b32 %r13, %r12, 16;
+; SM60-NEXT:    cvt.u32.u16 %r16, %rs13;
 ; SM60-NEXT:    shl.b32 %r17, %r16, 16;
-; SM60-NEXT:    setp.eq.b16 %p14, %rs16, -32768;
-; SM60-NEXT:    cvt.u32.u16 %r22, %rs15;
-; SM60-NEXT:    shl.b32 %r23, %r22, 16;
-; SM60-NEXT:    setp.eq.b16 %p19, %rs15, -32768;
 ; SM60-NEXT:  $L__BB330_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM60-NEXT:    mov.b32 {%rs3, %rs4}, %r29;
+; SM60-NEXT:    mov.b32 {%rs3, %rs4}, %r21;
+; SM60-NEXT:    setp.eq.b16 %p1, %rs4, -32768;
+; SM60-NEXT:    selp.b16 %rs5, %rs4, %rs2, %p1;
 ; SM60-NEXT:    cvt.u32.u16 %r5, %rs4;
 ; SM60-NEXT:    shl.b32 %r6, %r5, 16;
-; SM60-NEXT:    setp.lt.f32 %p1, %r6, %r4;
-; SM60-NEXT:    selp.b16 %rs5, %rs4, %rs2, %p1;
-; SM60-NEXT:    setp.nan.f32 %p2, %r6, %r4;
-; SM60-NEXT:    selp.b16 %rs6, 0x7FC0, %rs5, %p2;
-; SM60-NEXT:    setp.eq.b16 %p3, %rs4, -32768;
-; SM60-NEXT:    selp.b16 %rs7, %rs4, %rs6, %p3;
-; SM60-NEXT:    selp.b16 %rs8, %rs2, %rs7, %p4;
-; SM60-NEXT:    cvt.u32.u16 %r7, %rs6;
-; SM60-NEXT:    shl.b32 %r8, %r7, 16;
-; SM60-NEXT:    setp.eq.f32 %p5, %r8, 0f00000000;
-; SM60-NEXT:    selp.b16 %rs9, %rs8, %rs6, %p5;
-; SM60-NEXT:    cvt.u32.u16 %r11, %rs3;
-; SM60-NEXT:    shl.b32 %r12, %r11, 16;
-; SM60-NEXT:    setp.lt.f32 %p6, %r12, %r10;
+; SM60-NEXT:    setp.lt.f32 %p2, %r6, %r4;
+; SM60-NEXT:    selp.b16 %rs6, %rs4, %rs2, %p2;
+; SM60-NEXT:    setp.nan.f32 %p3, %r6, %r4;
+; SM60-NEXT:    selp.b16 %rs7, 0x7FC0, %rs6, %p3;
+; SM60-NEXT:    setp.eq.f32 %p4, %r6, %r4;
+; SM60-NEXT:    selp.b16 %rs8, %rs5, %rs7, %p4;
+; SM60-NEXT:    setp.eq.b16 %p5, %rs3, -32768;
+; SM60-NEXT:    selp.b16 %rs9, %rs3, %rs1, %p5;
+; SM60-NEXT:    cvt.u32.u16 %r9, %rs3;
+; SM60-NEXT:    shl.b32 %r10, %r9, 16;
+; SM60-NEXT:    setp.lt.f32 %p6, %r10, %r8;
 ; SM60-NEXT:    selp.b16 %rs10, %rs3, %rs1, %p6;
-; SM60-NEXT:    setp.nan.f32 %p7, %r12, %r10;
+; SM60-NEXT:    setp.nan.f32 %p7, %r10, %r8;
 ; SM60-NEXT:    selp.b16 %rs11, 0x7FC0, %rs10, %p7;
-; SM60-NEXT:    setp.eq.b16 %p8, %rs3, -32768;
-; SM60-NEXT:    selp.b16 %rs12, %rs3, %rs11, %p8;
-; SM60-NEXT:    selp.b16 %rs13, %rs1, %rs12, %p9;
-; SM60-NEXT:    cvt.u32.u16 %r13, %rs11;
-; SM60-NEXT:    shl.b32 %r14, %r13, 16;
-; SM60-NEXT:    setp.eq.f32 %p10, %r14, 0f00000000;
-; SM60-NEXT:    selp.b16 %rs14, %rs13, %rs11, %p10;
-; SM60-NEXT:    mov.b32 %r15, {%rs14, %rs9};
-; SM60-NEXT:    cvt.u64.u32 %rd3, %r15;
-; SM60-NEXT:    mov.b32 {%rs17, %rs18}, %r30;
-; SM60-NEXT:    cvt.u32.u16 %r18, %rs18;
+; SM60-NEXT:    setp.eq.f32 %p8, %r10, %r8;
+; SM60-NEXT:    selp.b16 %rs12, %rs9, %rs11, %p8;
+; SM60-NEXT:    mov.b32 %r11, {%rs12, %rs8};
+; SM60-NEXT:    cvt.u64.u32 %rd3, %r11;
+; SM60-NEXT:    mov.b32 {%rs15, %rs16}, %r22;
+; SM60-NEXT:    setp.eq.b16 %p9, %rs16, -32768;
+; SM60-NEXT:    selp.b16 %rs17, %rs16, %rs14, %p9;
+; SM60-NEXT:    cvt.u32.u16 %r14, %rs16;
+; SM60-NEXT:    shl.b32 %r15, %r14, 16;
+; SM60-NEXT:    setp.lt.f32 %p10, %r15, %r13;
+; SM60-NEXT:    selp.b16 %rs18, %rs16, %rs14, %p10;
+; SM60-NEXT:    setp.nan.f32 %p11, %r15, %r13;
+; SM60-NEXT:    selp.b16 %rs19, 0x7FC0, %rs18, %p11;
+; SM60-NEXT:    setp.eq.f32 %p12, %r15, %r13;
+; SM60-NEXT:    selp.b16 %rs20, %rs17, %rs19, %p12;
+; SM60-NEXT:    setp.eq.b16 %p13, %rs15, -32768;
+; SM60-NEXT:    selp.b16 %rs21, %rs15, %rs13, %p13;
+; SM60-NEXT:    cvt.u32.u16 %r18, %rs15;
 ; SM60-NEXT:    shl.b32 %r19, %r18, 16;
-; SM60-NEXT:    setp.lt.f32 %p11, %r19, %r17;
-; SM60-NEXT:    selp.b16 %rs19, %rs18, %rs16, %p11;
-; SM60-NEXT:    setp.nan.f32 %p12, %r19, %r17;
-; SM60-NEXT:    selp.b16 %rs20, 0x7FC0, %rs19, %p12;
-; SM60-NEXT:    setp.eq.b16 %p13, %rs18, -32768;
-; SM60-NEXT:    selp.b16 %rs21, %rs18, %rs20, %p13;
-; SM60-NEXT:    selp.b16 %rs22, %rs16, %rs21, %p14;
-; SM60-NEXT:    cvt.u32.u16 %r20, %rs20;
-; SM60-NEXT:    shl.b32 %r21, %r20, 16;
-; SM60-NEXT:    setp.eq.f32 %p15, %r21, 0f00000000;
-; SM60-NEXT:    selp.b16 %rs23, %rs22, %rs20, %p15;
-; SM60-NEXT:    cvt.u32.u16 %r24, %rs17;
-; SM60-NEXT:    shl.b32 %r25, %r24, 16;
-; SM60-NEXT:    setp.lt.f32 %p16, %r25, %r23;
-; SM60-NEXT:    selp.b16 %rs24, %rs17, %rs15, %p16;
-; SM60-NEXT:    setp.nan.f32 %p17, %r25, %r23;
-; SM60-NEXT:    selp.b16 %rs25, 0x7FC0, %rs24, %p17;
-; SM60-NEXT:    setp.eq.b16 %p18, %rs17, -32768;
-; SM60-NEXT:    selp.b16 %rs26, %rs17, %rs25, %p18;
-; SM60-NEXT:    selp.b16 %rs27, %rs15, %rs26, %p19;
-; SM60-NEXT:    cvt.u32.u16 %r26, %rs25;
-; SM60-NEXT:    shl.b32 %r27, %r26, 16;
-; SM60-NEXT:    setp.eq.f32 %p20, %r27, 0f00000000;
-; SM60-NEXT:    selp.b16 %rs28, %rs27, %rs25, %p20;
-; SM60-NEXT:    mov.b32 %r28, {%rs28, %rs23};
-; SM60-NEXT:    cvt.u64.u32 %rd4, %r28;
+; SM60-NEXT:    setp.lt.f32 %p14, %r19, %r17;
+; SM60-NEXT:    selp.b16 %rs22, %rs15, %rs13, %p14;
+; SM60-NEXT:    setp.nan.f32 %p15, %r19, %r17;
+; SM60-NEXT:    selp.b16 %rs23, 0x7FC0, %rs22, %p15;
+; SM60-NEXT:    setp.eq.f32 %p16, %r19, %r17;
+; SM60-NEXT:    selp.b16 %rs24, %rs21, %rs23, %p16;
+; SM60-NEXT:    mov.b32 %r20, {%rs24, %rs20};
+; SM60-NEXT:    cvt.u64.u32 %rd4, %r20;
 ; SM60-NEXT:    shl.b64 %rd5, %rd4, 32;
 ; SM60-NEXT:    or.b64 %rd6, %rd3, %rd5;
-; SM60-NEXT:    cvt.u64.u32 %rd7, %r29;
-; SM60-NEXT:    cvt.u64.u32 %rd8, %r30;
+; SM60-NEXT:    cvt.u64.u32 %rd7, %r21;
+; SM60-NEXT:    cvt.u64.u32 %rd8, %r22;
 ; SM60-NEXT:    shl.b64 %rd9, %rd8, 32;
 ; SM60-NEXT:    or.b64 %rd10, %rd7, %rd9;
 ; SM60-NEXT:    atom.cta.global.cas.b64 %rd11, [%rd1], %rd10, %rd6;
-; SM60-NEXT:    setp.ne.b64 %p21, %rd11, %rd10;
-; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r30}, %rd11; }
-; SM60-NEXT:    cvt.u32.u64 %r29, %rd11;
-; SM60-NEXT:    @%p21 bra $L__BB330_1;
+; SM60-NEXT:    setp.ne.b64 %p17, %rd11, %rd10;
+; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r22}, %rd11; }
+; SM60-NEXT:    cvt.u32.u64 %r21, %rd11;
+; SM60-NEXT:    @%p17 bra $L__BB330_1;
 ; SM60-NEXT:  // %bb.2: // %atomicrmw.end
 ; SM60-NEXT:    membar.cta;
-; SM60-NEXT:    st.param.v2.b32 [func_retval0], {%r29, %r30};
+; SM60-NEXT:    st.param.v2.b32 [func_retval0], {%r21, %r22};
 ; SM60-NEXT:    ret;
         %retval = atomicrmw elementwise fminimum ptr  addrspace(1) %addr, <4 x bfloat> %val syncscope("block") acq_rel
         ret <4 x bfloat> %retval
@@ -15895,9 +15677,9 @@ define <4 x bfloat> @fminimum_acq_rel_v4bf16_global_cta(ptr addrspace(1) %addr, 
 define <8 x bfloat> @fminimum_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, <8 x bfloat> %val) {
 ; SM60-LABEL: fminimum_acq_rel_v8bf16_global_cta(
 ; SM60:       {
-; SM60-NEXT:    .reg .pred %p<43>;
-; SM60-NEXT:    .reg .b16 %rs<57>;
-; SM60-NEXT:    .reg .b32 %r<61>;
+; SM60-NEXT:    .reg .pred %p<35>;
+; SM60-NEXT:    .reg .b16 %rs<49>;
+; SM60-NEXT:    .reg .b32 %r<45>;
 ; SM60-NEXT:    .reg .b64 %rd<22>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
@@ -15905,185 +15687,153 @@ define <8 x bfloat> @fminimum_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, 
 ; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    ld.param.v4.b32 {%r1, %r2, %r3, %r4}, [fminimum_acq_rel_v8bf16_global_cta_param_1];
 ; SM60-NEXT:    ld.volatile.global.b64 %rd2, [%rd1];
-; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r58}, %rd2; }
-; SM60-NEXT:    cvt.u32.u64 %r57, %rd2;
+; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r42}, %rd2; }
+; SM60-NEXT:    cvt.u32.u64 %r41, %rd2;
 ; SM60-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
 ; SM60-NEXT:    cvt.u32.u16 %r5, %rs2;
 ; SM60-NEXT:    shl.b32 %r6, %r5, 16;
-; SM60-NEXT:    setp.eq.b16 %p4, %rs2, -32768;
-; SM60-NEXT:    setp.eq.b16 %p9, %rs1, -32768;
-; SM60-NEXT:    mov.b32 {%rs15, %rs16}, %r2;
-; SM60-NEXT:    cvt.u32.u16 %r18, %rs16;
-; SM60-NEXT:    shl.b32 %r19, %r18, 16;
-; SM60-NEXT:    setp.eq.b16 %p14, %rs16, -32768;
-; SM60-NEXT:    setp.eq.b16 %p19, %rs15, -32768;
+; SM60-NEXT:    mov.b32 {%rs13, %rs14}, %r2;
+; SM60-NEXT:    cvt.u32.u16 %r14, %rs14;
+; SM60-NEXT:    shl.b32 %r15, %r14, 16;
 ; SM60-NEXT:  $L__BB331_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM60-NEXT:    mov.b32 {%rs3, %rs4}, %r57;
+; SM60-NEXT:    mov.b32 {%rs3, %rs4}, %r41;
+; SM60-NEXT:    setp.eq.b16 %p1, %rs4, -32768;
+; SM60-NEXT:    selp.b16 %rs5, %rs4, %rs2, %p1;
 ; SM60-NEXT:    cvt.u32.u16 %r7, %rs4;
 ; SM60-NEXT:    shl.b32 %r8, %r7, 16;
-; SM60-NEXT:    setp.lt.f32 %p1, %r8, %r6;
-; SM60-NEXT:    selp.b16 %rs5, %rs4, %rs2, %p1;
-; SM60-NEXT:    setp.nan.f32 %p2, %r8, %r6;
-; SM60-NEXT:    selp.b16 %rs6, 0x7FC0, %rs5, %p2;
-; SM60-NEXT:    setp.eq.b16 %p3, %rs4, -32768;
-; SM60-NEXT:    selp.b16 %rs7, %rs4, %rs6, %p3;
-; SM60-NEXT:    selp.b16 %rs8, %rs2, %rs7, %p4;
-; SM60-NEXT:    cvt.u32.u16 %r9, %rs6;
+; SM60-NEXT:    setp.lt.f32 %p2, %r8, %r6;
+; SM60-NEXT:    selp.b16 %rs6, %rs4, %rs2, %p2;
+; SM60-NEXT:    setp.nan.f32 %p3, %r8, %r6;
+; SM60-NEXT:    selp.b16 %rs7, 0x7FC0, %rs6, %p3;
+; SM60-NEXT:    setp.eq.f32 %p4, %r8, %r6;
+; SM60-NEXT:    selp.b16 %rs8, %rs5, %rs7, %p4;
+; SM60-NEXT:    setp.eq.b16 %p5, %rs3, -32768;
+; SM60-NEXT:    selp.b16 %rs9, %rs3, %rs1, %p5;
+; SM60-NEXT:    cvt.u32.u16 %r9, %rs1;
 ; SM60-NEXT:    shl.b32 %r10, %r9, 16;
-; SM60-NEXT:    setp.eq.f32 %p5, %r10, 0f00000000;
-; SM60-NEXT:    selp.b16 %rs9, %rs8, %rs6, %p5;
-; SM60-NEXT:    cvt.u32.u16 %r11, %rs1;
+; SM60-NEXT:    cvt.u32.u16 %r11, %rs3;
 ; SM60-NEXT:    shl.b32 %r12, %r11, 16;
-; SM60-NEXT:    cvt.u32.u16 %r13, %rs3;
-; SM60-NEXT:    shl.b32 %r14, %r13, 16;
-; SM60-NEXT:    setp.lt.f32 %p6, %r14, %r12;
+; SM60-NEXT:    setp.lt.f32 %p6, %r12, %r10;
 ; SM60-NEXT:    selp.b16 %rs10, %rs3, %rs1, %p6;
-; SM60-NEXT:    setp.nan.f32 %p7, %r14, %r12;
+; SM60-NEXT:    setp.nan.f32 %p7, %r12, %r10;
 ; SM60-NEXT:    selp.b16 %rs11, 0x7FC0, %rs10, %p7;
-; SM60-NEXT:    setp.eq.b16 %p8, %rs3, -32768;
-; SM60-NEXT:    selp.b16 %rs12, %rs3, %rs11, %p8;
-; SM60-NEXT:    selp.b16 %rs13, %rs1, %rs12, %p9;
-; SM60-NEXT:    cvt.u32.u16 %r15, %rs11;
-; SM60-NEXT:    shl.b32 %r16, %r15, 16;
-; SM60-NEXT:    setp.eq.f32 %p10, %r16, 0f00000000;
-; SM60-NEXT:    selp.b16 %rs14, %rs13, %rs11, %p10;
-; SM60-NEXT:    mov.b32 %r17, {%rs14, %rs9};
-; SM60-NEXT:    cvt.u64.u32 %rd3, %r17;
-; SM60-NEXT:    mov.b32 {%rs17, %rs18}, %r58;
-; SM60-NEXT:    cvt.u32.u16 %r20, %rs18;
+; SM60-NEXT:    setp.eq.f32 %p8, %r12, %r10;
+; SM60-NEXT:    selp.b16 %rs12, %rs9, %rs11, %p8;
+; SM60-NEXT:    mov.b32 %r13, {%rs12, %rs8};
+; SM60-NEXT:    cvt.u64.u32 %rd3, %r13;
+; SM60-NEXT:    mov.b32 {%rs15, %rs16}, %r42;
+; SM60-NEXT:    setp.eq.b16 %p9, %rs16, -32768;
+; SM60-NEXT:    selp.b16 %rs17, %rs16, %rs14, %p9;
+; SM60-NEXT:    cvt.u32.u16 %r16, %rs16;
+; SM60-NEXT:    shl.b32 %r17, %r16, 16;
+; SM60-NEXT:    setp.lt.f32 %p10, %r17, %r15;
+; SM60-NEXT:    selp.b16 %rs18, %rs16, %rs14, %p10;
+; SM60-NEXT:    setp.nan.f32 %p11, %r17, %r15;
+; SM60-NEXT:    selp.b16 %rs19, 0x7FC0, %rs18, %p11;
+; SM60-NEXT:    setp.eq.f32 %p12, %r17, %r15;
+; SM60-NEXT:    selp.b16 %rs20, %rs17, %rs19, %p12;
+; SM60-NEXT:    setp.eq.b16 %p13, %rs15, -32768;
+; SM60-NEXT:    selp.b16 %rs21, %rs15, %rs13, %p13;
+; SM60-NEXT:    cvt.u32.u16 %r18, %rs13;
+; SM60-NEXT:    shl.b32 %r19, %r18, 16;
+; SM60-NEXT:    cvt.u32.u16 %r20, %rs15;
 ; SM60-NEXT:    shl.b32 %r21, %r20, 16;
-; SM60-NEXT:    setp.lt.f32 %p11, %r21, %r19;
-; SM60-NEXT:    selp.b16 %rs19, %rs18, %rs16, %p11;
-; SM60-NEXT:    setp.nan.f32 %p12, %r21, %r19;
-; SM60-NEXT:    selp.b16 %rs20, 0x7FC0, %rs19, %p12;
-; SM60-NEXT:    setp.eq.b16 %p13, %rs18, -32768;
-; SM60-NEXT:    selp.b16 %rs21, %rs18, %rs20, %p13;
-; SM60-NEXT:    selp.b16 %rs22, %rs16, %rs21, %p14;
-; SM60-NEXT:    cvt.u32.u16 %r22, %rs20;
-; SM60-NEXT:    shl.b32 %r23, %r22, 16;
-; SM60-NEXT:    setp.eq.f32 %p15, %r23, 0f00000000;
-; SM60-NEXT:    selp.b16 %rs23, %rs22, %rs20, %p15;
-; SM60-NEXT:    cvt.u32.u16 %r24, %rs15;
-; SM60-NEXT:    shl.b32 %r25, %r24, 16;
-; SM60-NEXT:    cvt.u32.u16 %r26, %rs17;
-; SM60-NEXT:    shl.b32 %r27, %r26, 16;
-; SM60-NEXT:    setp.lt.f32 %p16, %r27, %r25;
-; SM60-NEXT:    selp.b16 %rs24, %rs17, %rs15, %p16;
-; SM60-NEXT:    setp.nan.f32 %p17, %r27, %r25;
-; SM60-NEXT:    selp.b16 %rs25, 0x7FC0, %rs24, %p17;
-; SM60-NEXT:    setp.eq.b16 %p18, %rs17, -32768;
-; SM60-NEXT:    selp.b16 %rs26, %rs17, %rs25, %p18;
-; SM60-NEXT:    selp.b16 %rs27, %rs15, %rs26, %p19;
-; SM60-NEXT:    cvt.u32.u16 %r28, %rs25;
-; SM60-NEXT:    shl.b32 %r29, %r28, 16;
-; SM60-NEXT:    setp.eq.f32 %p20, %r29, 0f00000000;
-; SM60-NEXT:    selp.b16 %rs28, %rs27, %rs25, %p20;
-; SM60-NEXT:    mov.b32 %r30, {%rs28, %rs23};
-; SM60-NEXT:    cvt.u64.u32 %rd4, %r30;
+; SM60-NEXT:    setp.lt.f32 %p14, %r21, %r19;
+; SM60-NEXT:    selp.b16 %rs22, %rs15, %rs13, %p14;
+; SM60-NEXT:    setp.nan.f32 %p15, %r21, %r19;
+; SM60-NEXT:    selp.b16 %rs23, 0x7FC0, %rs22, %p15;
+; SM60-NEXT:    setp.eq.f32 %p16, %r21, %r19;
+; SM60-NEXT:    selp.b16 %rs24, %rs21, %rs23, %p16;
+; SM60-NEXT:    mov.b32 %r22, {%rs24, %rs20};
+; SM60-NEXT:    cvt.u64.u32 %rd4, %r22;
 ; SM60-NEXT:    shl.b64 %rd5, %rd4, 32;
 ; SM60-NEXT:    or.b64 %rd6, %rd3, %rd5;
-; SM60-NEXT:    cvt.u64.u32 %rd7, %r57;
-; SM60-NEXT:    cvt.u64.u32 %rd8, %r58;
+; SM60-NEXT:    cvt.u64.u32 %rd7, %r41;
+; SM60-NEXT:    cvt.u64.u32 %rd8, %r42;
 ; SM60-NEXT:    shl.b64 %rd9, %rd8, 32;
 ; SM60-NEXT:    or.b64 %rd10, %rd7, %rd9;
 ; SM60-NEXT:    atom.cta.global.cas.b64 %rd11, [%rd1], %rd10, %rd6;
-; SM60-NEXT:    setp.ne.b64 %p21, %rd11, %rd10;
-; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r58}, %rd11; }
-; SM60-NEXT:    cvt.u32.u64 %r57, %rd11;
-; SM60-NEXT:    @%p21 bra $L__BB331_1;
+; SM60-NEXT:    setp.ne.b64 %p17, %rd11, %rd10;
+; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r42}, %rd11; }
+; SM60-NEXT:    cvt.u32.u64 %r41, %rd11;
+; SM60-NEXT:    @%p17 bra $L__BB331_1;
 ; SM60-NEXT:  // %bb.2: // %atomicrmw.end
 ; SM60-NEXT:    ld.volatile.global.b64 %rd12, [%rd1+8];
-; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r60}, %rd12; }
-; SM60-NEXT:    cvt.u32.u64 %r59, %rd12;
+; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r44}, %rd12; }
+; SM60-NEXT:    cvt.u32.u64 %r43, %rd12;
 ; SM60-NEXT:  $L__BB331_3: // %atomicrmw.start2
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM60-NEXT:    mov.b32 {%rs29, %rs30}, %r3;
-; SM60-NEXT:    cvt.u32.u16 %r31, %rs30;
-; SM60-NEXT:    shl.b32 %r32, %r31, 16;
-; SM60-NEXT:    mov.b32 {%rs31, %rs32}, %r59;
-; SM60-NEXT:    cvt.u32.u16 %r33, %rs32;
-; SM60-NEXT:    shl.b32 %r34, %r33, 16;
-; SM60-NEXT:    setp.lt.f32 %p22, %r34, %r32;
-; SM60-NEXT:    selp.b16 %rs33, %rs32, %rs30, %p22;
-; SM60-NEXT:    setp.nan.f32 %p23, %r34, %r32;
-; SM60-NEXT:    selp.b16 %rs34, 0x7FC0, %rs33, %p23;
-; SM60-NEXT:    setp.eq.b16 %p24, %rs32, -32768;
-; SM60-NEXT:    selp.b16 %rs35, %rs32, %rs34, %p24;
-; SM60-NEXT:    setp.eq.b16 %p25, %rs30, -32768;
-; SM60-NEXT:    selp.b16 %rs36, %rs30, %rs35, %p25;
-; SM60-NEXT:    cvt.u32.u16 %r35, %rs34;
-; SM60-NEXT:    shl.b32 %r36, %r35, 16;
-; SM60-NEXT:    setp.eq.f32 %p26, %r36, 0f00000000;
-; SM60-NEXT:    selp.b16 %rs37, %rs36, %rs34, %p26;
-; SM60-NEXT:    cvt.u32.u16 %r37, %rs29;
-; SM60-NEXT:    shl.b32 %r38, %r37, 16;
-; SM60-NEXT:    cvt.u32.u16 %r39, %rs31;
-; SM60-NEXT:    shl.b32 %r40, %r39, 16;
-; SM60-NEXT:    setp.lt.f32 %p27, %r40, %r38;
-; SM60-NEXT:    selp.b16 %rs38, %rs31, %rs29, %p27;
-; SM60-NEXT:    setp.nan.f32 %p28, %r40, %r38;
-; SM60-NEXT:    selp.b16 %rs39, 0x7FC0, %rs38, %p28;
-; SM60-NEXT:    setp.eq.b16 %p29, %rs31, -32768;
-; SM60-NEXT:    selp.b16 %rs40, %rs31, %rs39, %p29;
-; SM60-NEXT:    setp.eq.b16 %p30, %rs29, -32768;
-; SM60-NEXT:    selp.b16 %rs41, %rs29, %rs40, %p30;
-; SM60-NEXT:    cvt.u32.u16 %r41, %rs39;
-; SM60-NEXT:    shl.b32 %r42, %r41, 16;
-; SM60-NEXT:    setp.eq.f32 %p31, %r42, 0f00000000;
-; SM60-NEXT:    selp.b16 %rs42, %rs41, %rs39, %p31;
-; SM60-NEXT:    mov.b32 %r43, {%rs42, %rs37};
-; SM60-NEXT:    cvt.u64.u32 %rd13, %r43;
-; SM60-NEXT:    mov.b32 {%rs43, %rs44}, %r4;
-; SM60-NEXT:    cvt.u32.u16 %r44, %rs44;
-; SM60-NEXT:    shl.b32 %r45, %r44, 16;
-; SM60-NEXT:    mov.b32 {%rs45, %rs46}, %r60;
-; SM60-NEXT:    cvt.u32.u16 %r46, %rs46;
-; SM60-NEXT:    shl.b32 %r47, %r46, 16;
-; SM60-NEXT:    setp.lt.f32 %p32, %r47, %r45;
-; SM60-NEXT:    selp.b16 %rs47, %rs46, %rs44, %p32;
-; SM60-NEXT:    setp.nan.f32 %p33, %r47, %r45;
-; SM60-NEXT:    selp.b16 %rs48, 0x7FC0, %rs47, %p33;
-; SM60-NEXT:    setp.eq.b16 %p34, %rs46, -32768;
-; SM60-NEXT:    selp.b16 %rs49, %rs46, %rs48, %p34;
-; SM60-NEXT:    setp.eq.b16 %p35, %rs44, -32768;
-; SM60-NEXT:    selp.b16 %rs50, %rs44, %rs49, %p35;
-; SM60-NEXT:    cvt.u32.u16 %r48, %rs48;
-; SM60-NEXT:    shl.b32 %r49, %r48, 16;
-; SM60-NEXT:    setp.eq.f32 %p36, %r49, 0f00000000;
-; SM60-NEXT:    selp.b16 %rs51, %rs50, %rs48, %p36;
-; SM60-NEXT:    cvt.u32.u16 %r50, %rs43;
-; SM60-NEXT:    shl.b32 %r51, %r50, 16;
-; SM60-NEXT:    cvt.u32.u16 %r52, %rs45;
-; SM60-NEXT:    shl.b32 %r53, %r52, 16;
-; SM60-NEXT:    setp.lt.f32 %p37, %r53, %r51;
-; SM60-NEXT:    selp.b16 %rs52, %rs45, %rs43, %p37;
-; SM60-NEXT:    setp.nan.f32 %p38, %r53, %r51;
-; SM60-NEXT:    selp.b16 %rs53, 0x7FC0, %rs52, %p38;
-; SM60-NEXT:    setp.eq.b16 %p39, %rs45, -32768;
-; SM60-NEXT:    selp.b16 %rs54, %rs45, %rs53, %p39;
-; SM60-NEXT:    setp.eq.b16 %p40, %rs43, -32768;
-; SM60-NEXT:    selp.b16 %rs55, %rs43, %rs54, %p40;
-; SM60-NEXT:    cvt.u32.u16 %r54, %rs53;
-; SM60-NEXT:    shl.b32 %r55, %r54, 16;
-; SM60-NEXT:    setp.eq.f32 %p41, %r55, 0f00000000;
-; SM60-NEXT:    selp.b16 %rs56, %rs55, %rs53, %p41;
-; SM60-NEXT:    mov.b32 %r56, {%rs56, %rs51};
-; SM60-NEXT:    cvt.u64.u32 %rd14, %r56;
+; SM60-NEXT:    mov.b32 {%rs25, %rs26}, %r3;
+; SM60-NEXT:    mov.b32 {%rs27, %rs28}, %r43;
+; SM60-NEXT:    setp.eq.b16 %p18, %rs28, -32768;
+; SM60-NEXT:    selp.b16 %rs29, %rs28, %rs26, %p18;
+; SM60-NEXT:    cvt.u32.u16 %r23, %rs26;
+; SM60-NEXT:    shl.b32 %r24, %r23, 16;
+; SM60-NEXT:    cvt.u32.u16 %r25, %rs28;
+; SM60-NEXT:    shl.b32 %r26, %r25, 16;
+; SM60-NEXT:    setp.lt.f32 %p19, %r26, %r24;
+; SM60-NEXT:    selp.b16 %rs30, %rs28, %rs26, %p19;
+; SM60-NEXT:    setp.nan.f32 %p20, %r26, %r24;
+; SM60-NEXT:    selp.b16 %rs31, 0x7FC0, %rs30, %p20;
+; SM60-NEXT:    setp.eq.f32 %p21, %r26, %r24;
+; SM60-NEXT:    selp.b16 %rs32, %rs29, %rs31, %p21;
+; SM60-NEXT:    setp.eq.b16 %p22, %rs27, -32768;
+; SM60-NEXT:    selp.b16 %rs33, %rs27, %rs25, %p22;
+; SM60-NEXT:    cvt.u32.u16 %r27, %rs25;
+; SM60-NEXT:    shl.b32 %r28, %r27, 16;
+; SM60-NEXT:    cvt.u32.u16 %r29, %rs27;
+; SM60-NEXT:    shl.b32 %r30, %r29, 16;
+; SM60-NEXT:    setp.lt.f32 %p23, %r30, %r28;
+; SM60-NEXT:    selp.b16 %rs34, %rs27, %rs25, %p23;
+; SM60-NEXT:    setp.nan.f32 %p24, %r30, %r28;
+; SM60-NEXT:    selp.b16 %rs35, 0x7FC0, %rs34, %p24;
+; SM60-NEXT:    setp.eq.f32 %p25, %r30, %r28;
+; SM60-NEXT:    selp.b16 %rs36, %rs33, %rs35, %p25;
+; SM60-NEXT:    mov.b32 %r31, {%rs36, %rs32};
+; SM60-NEXT:    cvt.u64.u32 %rd13, %r31;
+; SM60-NEXT:    mov.b32 {%rs37, %rs38}, %r4;
+; SM60-NEXT:    mov.b32 {%rs39, %rs40}, %r44;
+; SM60-NEXT:    setp.eq.b16 %p26, %rs40, -32768;
+; SM60-NEXT:    selp.b16 %rs41, %rs40, %rs38, %p26;
+; SM60-NEXT:    cvt.u32.u16 %r32, %rs38;
+; SM60-NEXT:    shl.b32 %r33, %r32, 16;
+; SM60-NEXT:    cvt.u32.u16 %r34, %rs40;
+; SM60-NEXT:    shl.b32 %r35, %r34, 16;
+; SM60-NEXT:    setp.lt.f32 %p27, %r35, %r33;
+; SM60-NEXT:    selp.b16 %rs42, %rs40, %rs38, %p27;
+; SM60-NEXT:    setp.nan.f32 %p28, %r35, %r33;
+; SM60-NEXT:    selp.b16 %rs43, 0x7FC0, %rs42, %p28;
+; SM60-NEXT:    setp.eq.f32 %p29, %r35, %r33;
+; SM60-NEXT:    selp.b16 %rs44, %rs41, %rs43, %p29;
+; SM60-NEXT:    setp.eq.b16 %p30, %rs39, -32768;
+; SM60-NEXT:    selp.b16 %rs45, %rs39, %rs37, %p30;
+; SM60-NEXT:    cvt.u32.u16 %r36, %rs37;
+; SM60-NEXT:    shl.b32 %r37, %r36, 16;
+; SM60-NEXT:    cvt.u32.u16 %r38, %rs39;
+; SM60-NEXT:    shl.b32 %r39, %r38, 16;
+; SM60-NEXT:    setp.lt.f32 %p31, %r39, %r37;
+; SM60-NEXT:    selp.b16 %rs46, %rs39, %rs37, %p31;
+; SM60-NEXT:    setp.nan.f32 %p32, %r39, %r37;
+; SM60-NEXT:    selp.b16 %rs47, 0x7FC0, %rs46, %p32;
+; SM60-NEXT:    setp.eq.f32 %p33, %r39, %r37;
+; SM60-NEXT:    selp.b16 %rs48, %rs45, %rs47, %p33;
+; SM60-NEXT:    mov.b32 %r40, {%rs48, %rs44};
+; SM60-NEXT:    cvt.u64.u32 %rd14, %r40;
 ; SM60-NEXT:    shl.b64 %rd15, %rd14, 32;
 ; SM60-NEXT:    or.b64 %rd16, %rd13, %rd15;
-; SM60-NEXT:    cvt.u64.u32 %rd17, %r59;
-; SM60-NEXT:    cvt.u64.u32 %rd18, %r60;
+; SM60-NEXT:    cvt.u64.u32 %rd17, %r43;
+; SM60-NEXT:    cvt.u64.u32 %rd18, %r44;
 ; SM60-NEXT:    shl.b64 %rd19, %rd18, 32;
 ; SM60-NEXT:    or.b64 %rd20, %rd17, %rd19;
 ; SM60-NEXT:    atom.cta.global.cas.b64 %rd21, [%rd1+8], %rd20, %rd16;
-; SM60-NEXT:    setp.ne.b64 %p42, %rd21, %rd20;
-; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r60}, %rd21; }
-; SM60-NEXT:    cvt.u32.u64 %r59, %rd21;
-; SM60-NEXT:    @%p42 bra $L__BB331_3;
+; SM60-NEXT:    setp.ne.b64 %p34, %rd21, %rd20;
+; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r44}, %rd21; }
+; SM60-NEXT:    cvt.u32.u64 %r43, %rd21;
+; SM60-NEXT:    @%p34 bra $L__BB331_3;
 ; SM60-NEXT:  // %bb.4: // %atomicrmw.end1
 ; SM60-NEXT:    membar.cta;
-; SM60-NEXT:    st.param.v4.b32 [func_retval0], {%r57, %r58, %r59, %r60};
+; SM60-NEXT:    st.param.v4.b32 [func_retval0], {%r41, %r42, %r43, %r44};
 ; SM60-NEXT:    ret;
         %retval = atomicrmw elementwise fminimum ptr  addrspace(1) %addr, <8 x bfloat> %val syncscope("block") acq_rel
         ret <8 x bfloat> %retval
@@ -16092,9 +15842,9 @@ define <8 x bfloat> @fminimum_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, 
 define <1 x bfloat> @fmaximum_acq_rel_v1bf16_global_cta(ptr addrspace(1) %addr, <1 x bfloat> %val) {
 ; SM60-LABEL: fmaximum_acq_rel_v1bf16_global_cta(
 ; SM60:       {
-; SM60-NEXT:    .reg .pred %p<7>;
-; SM60-NEXT:    .reg .b16 %rs<8>;
-; SM60-NEXT:    .reg .b32 %r<20>;
+; SM60-NEXT:    .reg .pred %p<6>;
+; SM60-NEXT:    .reg .b16 %rs<7>;
+; SM60-NEXT:    .reg .b32 %r<18>;
 ; SM60-NEXT:    .reg .b64 %rd<3>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
@@ -16108,38 +15858,34 @@ define <1 x bfloat> @fmaximum_acq_rel_v1bf16_global_cta(ptr addrspace(1) %addr, 
 ; SM60-NEXT:    mov.b32 %r6, 65535;
 ; SM60-NEXT:    shl.b32 %r7, %r6, %r1;
 ; SM60-NEXT:    not.b32 %r2, %r7;
-; SM60-NEXT:    ld.volatile.global.b32 %r19, [%rd1];
+; SM60-NEXT:    ld.volatile.global.b32 %r17, [%rd1];
 ; SM60-NEXT:    cvt.u32.u16 %r10, %rs1;
 ; SM60-NEXT:    shl.b32 %r11, %r10, 16;
-; SM60-NEXT:    setp.eq.b16 %p4, %rs1, 0;
 ; SM60-NEXT:  $L__BB332_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM60-NEXT:    shr.u32 %r8, %r19, %r1;
+; SM60-NEXT:    shr.u32 %r8, %r17, %r1;
 ; SM60-NEXT:    cvt.u16.u32 %rs2, %r8;
-; SM60-NEXT:    shl.b32 %r9, %r8, 16;
-; SM60-NEXT:    setp.gt.f32 %p1, %r9, %r11;
+; SM60-NEXT:    setp.eq.b16 %p1, %rs2, 0;
 ; SM60-NEXT:    selp.b16 %rs3, %rs2, %rs1, %p1;
-; SM60-NEXT:    setp.nan.f32 %p2, %r9, %r11;
-; SM60-NEXT:    selp.b16 %rs4, 0x7FC0, %rs3, %p2;
-; SM60-NEXT:    setp.eq.b16 %p3, %rs2, 0;
-; SM60-NEXT:    selp.b16 %rs5, %rs2, %rs4, %p3;
-; SM60-NEXT:    selp.b16 %rs6, %rs1, %rs5, %p4;
-; SM60-NEXT:    cvt.u32.u16 %r12, %rs4;
-; SM60-NEXT:    shl.b32 %r13, %r12, 16;
-; SM60-NEXT:    setp.eq.f32 %p5, %r13, 0f00000000;
-; SM60-NEXT:    selp.b16 %rs7, %rs6, %rs4, %p5;
-; SM60-NEXT:    cvt.u32.u16 %r14, %rs7;
-; SM60-NEXT:    shl.b32 %r15, %r14, %r1;
-; SM60-NEXT:    and.b32 %r16, %r19, %r2;
-; SM60-NEXT:    or.b32 %r17, %r16, %r15;
-; SM60-NEXT:    atom.cta.global.cas.b32 %r3, [%rd1], %r19, %r17;
-; SM60-NEXT:    setp.ne.b32 %p6, %r3, %r19;
-; SM60-NEXT:    mov.b32 %r19, %r3;
-; SM60-NEXT:    @%p6 bra $L__BB332_1;
+; SM60-NEXT:    shl.b32 %r9, %r8, 16;
+; SM60-NEXT:    setp.gt.f32 %p2, %r9, %r11;
+; SM60-NEXT:    selp.b16 %rs4, %rs2, %rs1, %p2;
+; SM60-NEXT:    setp.nan.f32 %p3, %r9, %r11;
+; SM60-NEXT:    selp.b16 %rs5, 0x7FC0, %rs4, %p3;
+; SM60-NEXT:    setp.eq.f32 %p4, %r9, %r11;
+; SM60-NEXT:    selp.b16 %rs6, %rs3, %rs5, %p4;
+; SM60-NEXT:    cvt.u32.u16 %r12, %rs6;
+; SM60-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM60-NEXT:    and.b32 %r14, %r17, %r2;
+; SM60-NEXT:    or.b32 %r15, %r14, %r13;
+; SM60-NEXT:    atom.cta.global.cas.b32 %r3, [%rd1], %r17, %r15;
+; SM60-NEXT:    setp.ne.b32 %p5, %r3, %r17;
+; SM60-NEXT:    mov.b32 %r17, %r3;
+; SM60-NEXT:    @%p5 bra $L__BB332_1;
 ; SM60-NEXT:  // %bb.2: // %atomicrmw.end
-; SM60-NEXT:    shr.u32 %r18, %r3, %r1;
+; SM60-NEXT:    shr.u32 %r16, %r3, %r1;
 ; SM60-NEXT:    membar.cta;
-; SM60-NEXT:    st.param.b16 [func_retval0], %r18;
+; SM60-NEXT:    st.param.b16 [func_retval0], %r16;
 ; SM60-NEXT:    ret;
         %retval = atomicrmw elementwise fmaximum ptr  addrspace(1) %addr, <1 x bfloat> %val syncscope("block") acq_rel
         ret <1 x bfloat> %retval
@@ -16148,57 +15894,49 @@ define <1 x bfloat> @fmaximum_acq_rel_v1bf16_global_cta(ptr addrspace(1) %addr, 
 define <2 x bfloat> @fmaximum_acq_rel_v2bf16_global_cta(ptr addrspace(1) %addr, <2 x bfloat> %val) {
 ; SM60-LABEL: fmaximum_acq_rel_v2bf16_global_cta(
 ; SM60:       {
-; SM60-NEXT:    .reg .pred %p<12>;
-; SM60-NEXT:    .reg .b16 %rs<15>;
-; SM60-NEXT:    .reg .b32 %r<17>;
+; SM60-NEXT:    .reg .pred %p<10>;
+; SM60-NEXT:    .reg .b16 %rs<13>;
+; SM60-NEXT:    .reg .b32 %r<13>;
 ; SM60-NEXT:    .reg .b64 %rd<2>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
 ; SM60-NEXT:    ld.param.b32 %r2, [fmaximum_acq_rel_v2bf16_global_cta_param_1];
 ; SM60-NEXT:    ld.param.b64 %rd1, [fmaximum_acq_rel_v2bf16_global_cta_param_0];
 ; SM60-NEXT:    membar.cta;
-; SM60-NEXT:    ld.volatile.global.b32 %r16, [%rd1];
+; SM60-NEXT:    ld.volatile.global.b32 %r12, [%rd1];
 ; SM60-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
 ; SM60-NEXT:    cvt.u32.u16 %r3, %rs2;
 ; SM60-NEXT:    shl.b32 %r4, %r3, 16;
-; SM60-NEXT:    setp.eq.b16 %p4, %rs2, 0;
-; SM60-NEXT:    cvt.u32.u16 %r9, %rs1;
-; SM60-NEXT:    shl.b32 %r10, %r9, 16;
-; SM60-NEXT:    setp.eq.b16 %p9, %rs1, 0;
+; SM60-NEXT:    cvt.u32.u16 %r7, %rs1;
+; SM60-NEXT:    shl.b32 %r8, %r7, 16;
 ; SM60-NEXT:  $L__BB333_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM60-NEXT:    mov.b32 {%rs3, %rs4}, %r16;
+; SM60-NEXT:    mov.b32 {%rs3, %rs4}, %r12;
+; SM60-NEXT:    setp.eq.b16 %p1, %rs4, 0;
+; SM60-NEXT:    selp.b16 %rs5, %rs4, %rs2, %p1;
 ; SM60-NEXT:    cvt.u32.u16 %r5, %rs4;
 ; SM60-NEXT:    shl.b32 %r6, %r5, 16;
-; SM60-NEXT:    setp.gt.f32 %p1, %r6, %r4;
-; SM60-NEXT:    selp.b16 %rs5, %rs4, %rs2, %p1;
-; SM60-NEXT:    setp.nan.f32 %p2, %r6, %r4;
-; SM60-NEXT:    selp.b16 %rs6, 0x7FC0, %rs5, %p2;
-; SM60-NEXT:    setp.eq.b16 %p3, %rs4, 0;
-; SM60-NEXT:    selp.b16 %rs7, %rs4, %rs6, %p3;
-; SM60-NEXT:    selp.b16 %rs8, %rs2, %rs7, %p4;
-; SM60-NEXT:    cvt.u32.u16 %r7, %rs6;
-; SM60-NEXT:    shl.b32 %r8, %r7, 16;
-; SM60-NEXT:    setp.eq.f32 %p5, %r8, 0f00000000;
-; SM60-NEXT:    selp.b16 %rs9, %rs8, %rs6, %p5;
-; SM60-NEXT:    cvt.u32.u16 %r11, %rs3;
-; SM60-NEXT:    shl.b32 %r12, %r11, 16;
-; SM60-NEXT:    setp.gt.f32 %p6, %r12, %r10;
+; SM60-NEXT:    setp.gt.f32 %p2, %r6, %r4;
+; SM60-NEXT:    selp.b16 %rs6, %rs4, %rs2, %p2;
+; SM60-NEXT:    setp.nan.f32 %p3, %r6, %r4;
+; SM60-NEXT:    selp.b16 %rs7, 0x7FC0, %rs6, %p3;
+; SM60-NEXT:    setp.eq.f32 %p4, %r6, %r4;
+; SM60-NEXT:    selp.b16 %rs8, %rs5, %rs7, %p4;
+; SM60-NEXT:    setp.eq.b16 %p5, %rs3, 0;
+; SM60-NEXT:    selp.b16 %rs9, %rs3, %rs1, %p5;
+; SM60-NEXT:    cvt.u32.u16 %r9, %rs3;
+; SM60-NEXT:    shl.b32 %r10, %r9, 16;
+; SM60-NEXT:    setp.gt.f32 %p6, %r10, %r8;
 ; SM60-NEXT:    selp.b16 %rs10, %rs3, %rs1, %p6;
-; SM60-NEXT:    setp.nan.f32 %p7, %r12, %r10;
+; SM60-NEXT:    setp.nan.f32 %p7, %r10, %r8;
 ; SM60-NEXT:    selp.b16 %rs11, 0x7FC0, %rs10, %p7;
-; SM60-NEXT:    setp.eq.b16 %p8, %rs3, 0;
-; SM60-NEXT:    selp.b16 %rs12, %rs3, %rs11, %p8;
-; SM60-NEXT:    selp.b16 %rs13, %rs1, %rs12, %p9;
-; SM60-NEXT:    cvt.u32.u16 %r13, %rs11;
-; SM60-NEXT:    shl.b32 %r14, %r13, 16;
-; SM60-NEXT:    setp.eq.f32 %p10, %r14, 0f00000000;
-; SM60-NEXT:    selp.b16 %rs14, %rs13, %rs11, %p10;
-; SM60-NEXT:    mov.b32 %r15, {%rs14, %rs9};
-; SM60-NEXT:    atom.cta.global.cas.b32 %r1, [%rd1], %r16, %r15;
-; SM60-NEXT:    setp.ne.b32 %p11, %r1, %r16;
-; SM60-NEXT:    mov.b32 %r16, %r1;
-; SM60-NEXT:    @%p11 bra $L__BB333_1;
+; SM60-NEXT:    setp.eq.f32 %p8, %r10, %r8;
+; SM60-NEXT:    selp.b16 %rs12, %rs9, %rs11, %p8;
+; SM60-NEXT:    mov.b32 %r11, {%rs12, %rs8};
+; SM60-NEXT:    atom.cta.global.cas.b32 %r1, [%rd1], %r12, %r11;
+; SM60-NEXT:    setp.ne.b32 %p9, %r1, %r12;
+; SM60-NEXT:    mov.b32 %r12, %r1;
+; SM60-NEXT:    @%p9 bra $L__BB333_1;
 ; SM60-NEXT:  // %bb.2: // %atomicrmw.end
 ; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    st.param.b32 [func_retval0], %r1;
@@ -16210,9 +15948,9 @@ define <2 x bfloat> @fmaximum_acq_rel_v2bf16_global_cta(ptr addrspace(1) %addr, 
 define <4 x bfloat> @fmaximum_acq_rel_v4bf16_global_cta(ptr addrspace(1) %addr, <4 x bfloat> %val) {
 ; SM60-LABEL: fmaximum_acq_rel_v4bf16_global_cta(
 ; SM60:       {
-; SM60-NEXT:    .reg .pred %p<22>;
-; SM60-NEXT:    .reg .b16 %rs<29>;
-; SM60-NEXT:    .reg .b32 %r<31>;
+; SM60-NEXT:    .reg .pred %p<18>;
+; SM60-NEXT:    .reg .b16 %rs<25>;
+; SM60-NEXT:    .reg .b32 %r<23>;
 ; SM60-NEXT:    .reg .b64 %rd<12>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
@@ -16220,96 +15958,80 @@ define <4 x bfloat> @fmaximum_acq_rel_v4bf16_global_cta(ptr addrspace(1) %addr, 
 ; SM60-NEXT:    ld.param.b64 %rd1, [fmaximum_acq_rel_v4bf16_global_cta_param_0];
 ; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    ld.volatile.global.b64 %rd2, [%rd1];
-; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r30}, %rd2; }
-; SM60-NEXT:    cvt.u32.u64 %r29, %rd2;
+; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r22}, %rd2; }
+; SM60-NEXT:    cvt.u32.u64 %r21, %rd2;
 ; SM60-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
 ; SM60-NEXT:    cvt.u32.u16 %r3, %rs2;
 ; SM60-NEXT:    shl.b32 %r4, %r3, 16;
-; SM60-NEXT:    setp.eq.b16 %p4, %rs2, 0;
-; SM60-NEXT:    cvt.u32.u16 %r9, %rs1;
-; SM60-NEXT:    shl.b32 %r10, %r9, 16;
-; SM60-NEXT:    setp.eq.b16 %p9, %rs1, 0;
-; SM60-NEXT:    mov.b32 {%rs15, %rs16}, %r2;
-; SM60-NEXT:    cvt.u32.u16 %r16, %rs16;
+; SM60-NEXT:    cvt.u32.u16 %r7, %rs1;
+; SM60-NEXT:    shl.b32 %r8, %r7, 16;
+; SM60-NEXT:    mov.b32 {%rs13, %rs14}, %r2;
+; SM60-NEXT:    cvt.u32.u16 %r12, %rs14;
+; SM60-NEXT:    shl.b32 %r13, %r12, 16;
+; SM60-NEXT:    cvt.u32.u16 %r16, %rs13;
 ; SM60-NEXT:    shl.b32 %r17, %r16, 16;
-; SM60-NEXT:    setp.eq.b16 %p14, %rs16, 0;
-; SM60-NEXT:    cvt.u32.u16 %r22, %rs15;
-; SM60-NEXT:    shl.b32 %r23, %r22, 16;
-; SM60-NEXT:    setp.eq.b16 %p19, %rs15, 0;
 ; SM60-NEXT:  $L__BB334_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM60-NEXT:    mov.b32 {%rs3, %rs4}, %r29;
+; SM60-NEXT:    mov.b32 {%rs3, %rs4}, %r21;
+; SM60-NEXT:    setp.eq.b16 %p1, %rs4, 0;
+; SM60-NEXT:    selp.b16 %rs5, %rs4, %rs2, %p1;
 ; SM60-NEXT:    cvt.u32.u16 %r5, %rs4;
 ; SM60-NEXT:    shl.b32 %r6, %r5, 16;
-; SM60-NEXT:    setp.gt.f32 %p1, %r6, %r4;
-; SM60-NEXT:    selp.b16 %rs5, %rs4, %rs2, %p1;
-; SM60-NEXT:    setp.nan.f32 %p2, %r6, %r4;
-; SM60-NEXT:    selp.b16 %rs6, 0x7FC0, %rs5, %p2;
-; SM60-NEXT:    setp.eq.b16 %p3, %rs4, 0;
-; SM60-NEXT:    selp.b16 %rs7, %rs4, %rs6, %p3;
-; SM60-NEXT:    selp.b16 %rs8, %rs2, %rs7, %p4;
-; SM60-NEXT:    cvt.u32.u16 %r7, %rs6;
-; SM60-NEXT:    shl.b32 %r8, %r7, 16;
-; SM60-NEXT:    setp.eq.f32 %p5, %r8, 0f00000000;
-; SM60-NEXT:    selp.b16 %rs9, %rs8, %rs6, %p5;
-; SM60-NEXT:    cvt.u32.u16 %r11, %rs3;
-; SM60-NEXT:    shl.b32 %r12, %r11, 16;
-; SM60-NEXT:    setp.gt.f32 %p6, %r12, %r10;
+; SM60-NEXT:    setp.gt.f32 %p2, %r6, %r4;
+; SM60-NEXT:    selp.b16 %rs6, %rs4, %rs2, %p2;
+; SM60-NEXT:    setp.nan.f32 %p3, %r6, %r4;
+; SM60-NEXT:    selp.b16 %rs7, 0x7FC0, %rs6, %p3;
+; SM60-NEXT:    setp.eq.f32 %p4, %r6, %r4;
+; SM60-NEXT:    selp.b16 %rs8, %rs5, %rs7, %p4;
+; SM60-NEXT:    setp.eq.b16 %p5, %rs3, 0;
+; SM60-NEXT:    selp.b16 %rs9, %rs3, %rs1, %p5;
+; SM60-NEXT:    cvt.u32.u16 %r9, %rs3;
+; SM60-NEXT:    shl.b32 %r10, %r9, 16;
+; SM60-NEXT:    setp.gt.f32 %p6, %r10, %r8;
 ; SM60-NEXT:    selp.b16 %rs10, %rs3, %rs1, %p6;
-; SM60-NEXT:    setp.nan.f32 %p7, %r12, %r10;
+; SM60-NEXT:    setp.nan.f32 %p7, %r10, %r8;
 ; SM60-NEXT:    selp.b16 %rs11, 0x7FC0, %rs10, %p7;
-; SM60-NEXT:    setp.eq.b16 %p8, %rs3, 0;
-; SM60-NEXT:    selp.b16 %rs12, %rs3, %rs11, %p8;
-; SM60-NEXT:    selp.b16 %rs13, %rs1, %rs12, %p9;
-; SM60-NEXT:    cvt.u32.u16 %r13, %rs11;
-; SM60-NEXT:    shl.b32 %r14, %r13, 16;
-; SM60-NEXT:    setp.eq.f32 %p10, %r14, 0f00000000;
-; SM60-NEXT:    selp.b16 %rs14, %rs13, %rs11, %p10;
-; SM60-NEXT:    mov.b32 %r15, {%rs14, %rs9};
-; SM60-NEXT:    cvt.u64.u32 %rd3, %r15;
-; SM60-NEXT:    mov.b32 {%rs17, %rs18}, %r30;
-; SM60-NEXT:    cvt.u32.u16 %r18, %rs18;
+; SM60-NEXT:    setp.eq.f32 %p8, %r10, %r8;
+; SM60-NEXT:    selp.b16 %rs12, %rs9, %rs11, %p8;
+; SM60-NEXT:    mov.b32 %r11, {%rs12, %rs8};
+; SM60-NEXT:    cvt.u64.u32 %rd3, %r11;
+; SM60-NEXT:    mov.b32 {%rs15, %rs16}, %r22;
+; SM60-NEXT:    setp.eq.b16 %p9, %rs16, 0;
+; SM60-NEXT:    selp.b16 %rs17, %rs16, %rs14, %p9;
+; SM60-NEXT:    cvt.u32.u16 %r14, %rs16;
+; SM60-NEXT:    shl.b32 %r15, %r14, 16;
+; SM60-NEXT:    setp.gt.f32 %p10, %r15, %r13;
+; SM60-NEXT:    selp.b16 %rs18, %rs16, %rs14, %p10;
+; SM60-NEXT:    setp.nan.f32 %p11, %r15, %r13;
+; SM60-NEXT:    selp.b16 %rs19, 0x7FC0, %rs18, %p11;
+; SM60-NEXT:    setp.eq.f32 %p12, %r15, %r13;
+; SM60-NEXT:    selp.b16 %rs20, %rs17, %rs19, %p12;
+; SM60-NEXT:    setp.eq.b16 %p13, %rs15, 0;
+; SM60-NEXT:    selp.b16 %rs21, %rs15, %rs13, %p13;
+; SM60-NEXT:    cvt.u32.u16 %r18, %rs15;
 ; SM60-NEXT:    shl.b32 %r19, %r18, 16;
-; SM60-NEXT:    setp.gt.f32 %p11, %r19, %r17;
-; SM60-NEXT:    selp.b16 %rs19, %rs18, %rs16, %p11;
-; SM60-NEXT:    setp.nan.f32 %p12, %r19, %r17;
-; SM60-NEXT:    selp.b16 %rs20, 0x7FC0, %rs19, %p12;
-; SM60-NEXT:    setp.eq.b16 %p13, %rs18, 0;
-; SM60-NEXT:    selp.b16 %rs21, %rs18, %rs20, %p13;
-; SM60-NEXT:    selp.b16 %rs22, %rs16, %rs21, %p14;
-; SM60-NEXT:    cvt.u32.u16 %r20, %rs20;
-; SM60-NEXT:    shl.b32 %r21, %r20, 16;
-; SM60-NEXT:    setp.eq.f32 %p15, %r21, 0f00000000;
-; SM60-NEXT:    selp.b16 %rs23, %rs22, %rs20, %p15;
-; SM60-NEXT:    cvt.u32.u16 %r24, %rs17;
-; SM60-NEXT:    shl.b32 %r25, %r24, 16;
-; SM60-NEXT:    setp.gt.f32 %p16, %r25, %r23;
-; SM60-NEXT:    selp.b16 %rs24, %rs17, %rs15, %p16;
-; SM60-NEXT:    setp.nan.f32 %p17, %r25, %r23;
-; SM60-NEXT:    selp.b16 %rs25, 0x7FC0, %rs24, %p17;
-; SM60-NEXT:    setp.eq.b16 %p18, %rs17, 0;
-; SM60-NEXT:    selp.b16 %rs26, %rs17, %rs25, %p18;
-; SM60-NEXT:    selp.b16 %rs27, %rs15, %rs26, %p19;
-; SM60-NEXT:    cvt.u32.u16 %r26, %rs25;
-; SM60-NEXT:    shl.b32 %r27, %r26, 16;
-; SM60-NEXT:    setp.eq.f32 %p20, %r27, 0f00000000;
-; SM60-NEXT:    selp.b16 %rs28, %rs27, %rs25, %p20;
-; SM60-NEXT:    mov.b32 %r28, {%rs28, %rs23};
-; SM60-NEXT:    cvt.u64.u32 %rd4, %r28;
+; SM60-NEXT:    setp.gt.f32 %p14, %r19, %r17;
+; SM60-NEXT:    selp.b16 %rs22, %rs15, %rs13, %p14;
+; SM60-NEXT:    setp.nan.f32 %p15, %r19, %r17;
+; SM60-NEXT:    selp.b16 %rs23, 0x7FC0, %rs22, %p15;
+; SM60-NEXT:    setp.eq.f32 %p16, %r19, %r17;
+; SM60-NEXT:    selp.b16 %rs24, %rs21, %rs23, %p16;
+; SM60-NEXT:    mov.b32 %r20, {%rs24, %rs20};
+; SM60-NEXT:    cvt.u64.u32 %rd4, %r20;
 ; SM60-NEXT:    shl.b64 %rd5, %rd4, 32;
 ; SM60-NEXT:    or.b64 %rd6, %rd3, %rd5;
-; SM60-NEXT:    cvt.u64.u32 %rd7, %r29;
-; SM60-NEXT:    cvt.u64.u32 %rd8, %r30;
+; SM60-NEXT:    cvt.u64.u32 %rd7, %r21;
+; SM60-NEXT:    cvt.u64.u32 %rd8, %r22;
 ; SM60-NEXT:    shl.b64 %rd9, %rd8, 32;
 ; SM60-NEXT:    or.b64 %rd10, %rd7, %rd9;
 ; SM60-NEXT:    atom.cta.global.cas.b64 %rd11, [%rd1], %rd10, %rd6;
-; SM60-NEXT:    setp.ne.b64 %p21, %rd11, %rd10;
-; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r30}, %rd11; }
-; SM60-NEXT:    cvt.u32.u64 %r29, %rd11;
-; SM60-NEXT:    @%p21 bra $L__BB334_1;
+; SM60-NEXT:    setp.ne.b64 %p17, %rd11, %rd10;
+; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r22}, %rd11; }
+; SM60-NEXT:    cvt.u32.u64 %r21, %rd11;
+; SM60-NEXT:    @%p17 bra $L__BB334_1;
 ; SM60-NEXT:  // %bb.2: // %atomicrmw.end
 ; SM60-NEXT:    membar.cta;
-; SM60-NEXT:    st.param.v2.b32 [func_retval0], {%r29, %r30};
+; SM60-NEXT:    st.param.v2.b32 [func_retval0], {%r21, %r22};
 ; SM60-NEXT:    ret;
         %retval = atomicrmw elementwise fmaximum ptr  addrspace(1) %addr, <4 x bfloat> %val syncscope("block") acq_rel
         ret <4 x bfloat> %retval
@@ -16318,9 +16040,9 @@ define <4 x bfloat> @fmaximum_acq_rel_v4bf16_global_cta(ptr addrspace(1) %addr, 
 define <8 x bfloat> @fmaximum_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, <8 x bfloat> %val) {
 ; SM60-LABEL: fmaximum_acq_rel_v8bf16_global_cta(
 ; SM60:       {
-; SM60-NEXT:    .reg .pred %p<43>;
-; SM60-NEXT:    .reg .b16 %rs<57>;
-; SM60-NEXT:    .reg .b32 %r<61>;
+; SM60-NEXT:    .reg .pred %p<35>;
+; SM60-NEXT:    .reg .b16 %rs<49>;
+; SM60-NEXT:    .reg .b32 %r<45>;
 ; SM60-NEXT:    .reg .b64 %rd<22>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
@@ -16328,185 +16050,153 @@ define <8 x bfloat> @fmaximum_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, 
 ; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    ld.param.v4.b32 {%r1, %r2, %r3, %r4}, [fmaximum_acq_rel_v8bf16_global_cta_param_1];
 ; SM60-NEXT:    ld.volatile.global.b64 %rd2, [%rd1];
-; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r58}, %rd2; }
-; SM60-NEXT:    cvt.u32.u64 %r57, %rd2;
+; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r42}, %rd2; }
+; SM60-NEXT:    cvt.u32.u64 %r41, %rd2;
 ; SM60-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
 ; SM60-NEXT:    cvt.u32.u16 %r5, %rs2;
 ; SM60-NEXT:    shl.b32 %r6, %r5, 16;
-; SM60-NEXT:    setp.eq.b16 %p4, %rs2, 0;
-; SM60-NEXT:    setp.eq.b16 %p9, %rs1, 0;
-; SM60-NEXT:    mov.b32 {%rs15, %rs16}, %r2;
-; SM60-NEXT:    cvt.u32.u16 %r18, %rs16;
-; SM60-NEXT:    shl.b32 %r19, %r18, 16;
-; SM60-NEXT:    setp.eq.b16 %p14, %rs16, 0;
-; SM60-NEXT:    setp.eq.b16 %p19, %rs15, 0;
+; SM60-NEXT:    mov.b32 {%rs13, %rs14}, %r2;
+; SM60-NEXT:    cvt.u32.u16 %r14, %rs14;
+; SM60-NEXT:    shl.b32 %r15, %r14, 16;
 ; SM60-NEXT:  $L__BB335_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM60-NEXT:    mov.b32 {%rs3, %rs4}, %r57;
+; SM60-NEXT:    mov.b32 {%rs3, %rs4}, %r41;
+; SM60-NEXT:    setp.eq.b16 %p1, %rs4, 0;
+; SM60-NEXT:    selp.b16 %rs5, %rs4, %rs2, %p1;
 ; SM60-NEXT:    cvt.u32.u16 %r7, %rs4;
 ; SM60-NEXT:    shl.b32 %r8, %r7, 16;
-; SM60-NEXT:    setp.gt.f32 %p1, %r8, %r6;
-; SM60-NEXT:    selp.b16 %rs5, %rs4, %rs2, %p1;
-; SM60-NEXT:    setp.nan.f32 %p2, %r8, %r6;
-; SM60-NEXT:    selp.b16 %rs6, 0x7FC0, %rs5, %p2;
-; SM60-NEXT:    setp.eq.b16 %p3, %rs4, 0;
-; SM60-NEXT:    selp.b16 %rs7, %rs4, %rs6, %p3;
-; SM60-NEXT:    selp.b16 %rs8, %rs2, %rs7, %p4;
-; SM60-NEXT:    cvt.u32.u16 %r9, %rs6;
+; SM60-NEXT:    setp.gt.f32 %p2, %r8, %r6;
+; SM60-NEXT:    selp.b16 %rs6, %rs4, %rs2, %p2;
+; SM60-NEXT:    setp.nan.f32 %p3, %r8, %r6;
+; SM60-NEXT:    selp.b16 %rs7, 0x7FC0, %rs6, %p3;
+; SM60-NEXT:    setp.eq.f32 %p4, %r8, %r6;
+; SM60-NEXT:    selp.b16 %rs8, %rs5, %rs7, %p4;
+; SM60-NEXT:    setp.eq.b16 %p5, %rs3, 0;
+; SM60-NEXT:    selp.b16 %rs9, %rs3, %rs1, %p5;
+; SM60-NEXT:    cvt.u32.u16 %r9, %rs1;
 ; SM60-NEXT:    shl.b32 %r10, %r9, 16;
-; SM60-NEXT:    setp.eq.f32 %p5, %r10, 0f00000000;
-; SM60-NEXT:    selp.b16 %rs9, %rs8, %rs6, %p5;
-; SM60-NEXT:    cvt.u32.u16 %r11, %rs1;
+; SM60-NEXT:    cvt.u32.u16 %r11, %rs3;
 ; SM60-NEXT:    shl.b32 %r12, %r11, 16;
-; SM60-NEXT:    cvt.u32.u16 %r13, %rs3;
-; SM60-NEXT:    shl.b32 %r14, %r13, 16;
-; SM60-NEXT:    setp.gt.f32 %p6, %r14, %r12;
+; SM60-NEXT:    setp.gt.f32 %p6, %r12, %r10;
 ; SM60-NEXT:    selp.b16 %rs10, %rs3, %rs1, %p6;
-; SM60-NEXT:    setp.nan.f32 %p7, %r14, %r12;
+; SM60-NEXT:    setp.nan.f32 %p7, %r12, %r10;
 ; SM60-NEXT:    selp.b16 %rs11, 0x7FC0, %rs10, %p7;
-; SM60-NEXT:    setp.eq.b16 %p8, %rs3, 0;
-; SM60-NEXT:    selp.b16 %rs12, %rs3, %rs11, %p8;
-; SM60-NEXT:    selp.b16 %rs13, %rs1, %rs12, %p9;
-; SM60-NEXT:    cvt.u32.u16 %r15, %rs11;
-; SM60-NEXT:    shl.b32 %r16, %r15, 16;
-; SM60-NEXT:    setp.eq.f32 %p10, %r16, 0f00000000;
-; SM60-NEXT:    selp.b16 %rs14, %rs13, %rs11, %p10;
-; SM60-NEXT:    mov.b32 %r17, {%rs14, %rs9};
-; SM60-NEXT:    cvt.u64.u32 %rd3, %r17;
-; SM60-NEXT:    mov.b32 {%rs17, %rs18}, %r58;
-; SM60-NEXT:    cvt.u32.u16 %r20, %rs18;
+; SM60-NEXT:    setp.eq.f32 %p8, %r12, %r10;
+; SM60-NEXT:    selp.b16 %rs12, %rs9, %rs11, %p8;
+; SM60-NEXT:    mov.b32 %r13, {%rs12, %rs8};
+; SM60-NEXT:    cvt.u64.u32 %rd3, %r13;
+; SM60-NEXT:    mov.b32 {%rs15, %rs16}, %r42;
+; SM60-NEXT:    setp.eq.b16 %p9, %rs16, 0;
+; SM60-NEXT:    selp.b16 %rs17, %rs16, %rs14, %p9;
+; SM60-NEXT:    cvt.u32.u16 %r16, %rs16;
+; SM60-NEXT:    shl.b32 %r17, %r16, 16;
+; SM60-NEXT:    setp.gt.f32 %p10, %r17, %r15;
+; SM60-NEXT:    selp.b16 %rs18, %rs16, %rs14, %p10;
+; SM60-NEXT:    setp.nan.f32 %p11, %r17, %r15;
+; SM60-NEXT:    selp.b16 %rs19, 0x7FC0, %rs18, %p11;
+; SM60-NEXT:    setp.eq.f32 %p12, %r17, %r15;
+; SM60-NEXT:    selp.b16 %rs20, %rs17, %rs19, %p12;
+; SM60-NEXT:    setp.eq.b16 %p13, %rs15, 0;
+; SM60-NEXT:    selp.b16 %rs21, %rs15, %rs13, %p13;
+; SM60-NEXT:    cvt.u32.u16 %r18, %rs13;
+; SM60-NEXT:    shl.b32 %r19, %r18, 16;
+; SM60-NEXT:    cvt.u32.u16 %r20, %rs15;
 ; SM60-NEXT:    shl.b32 %r21, %r20, 16;
-; SM60-NEXT:    setp.gt.f32 %p11, %r21, %r19;
-; SM60-NEXT:    selp.b16 %rs19, %rs18, %rs16, %p11;
-; SM60-NEXT:    setp.nan.f32 %p12, %r21, %r19;
-; SM60-NEXT:    selp.b16 %rs20, 0x7FC0, %rs19, %p12;
-; SM60-NEXT:    setp.eq.b16 %p13, %rs18, 0;
-; SM60-NEXT:    selp.b16 %rs21, %rs18, %rs20, %p13;
-; SM60-NEXT:    selp.b16 %rs22, %rs16, %rs21, %p14;
-; SM60-NEXT:    cvt.u32.u16 %r22, %rs20;
-; SM60-NEXT:    shl.b32 %r23, %r22, 16;
-; SM60-NEXT:    setp.eq.f32 %p15, %r23, 0f00000000;
-; SM60-NEXT:    selp.b16 %rs23, %rs22, %rs20, %p15;
-; SM60-NEXT:    cvt.u32.u16 %r24, %rs15;
-; SM60-NEXT:    shl.b32 %r25, %r24, 16;
-; SM60-NEXT:    cvt.u32.u16 %r26, %rs17;
-; SM60-NEXT:    shl.b32 %r27, %r26, 16;
-; SM60-NEXT:    setp.gt.f32 %p16, %r27, %r25;
-; SM60-NEXT:    selp.b16 %rs24, %rs17, %rs15, %p16;
-; SM60-NEXT:    setp.nan.f32 %p17, %r27, %r25;
-; SM60-NEXT:    selp.b16 %rs25, 0x7FC0, %rs24, %p17;
-; SM60-NEXT:    setp.eq.b16 %p18, %rs17, 0;
-; SM60-NEXT:    selp.b16 %rs26, %rs17, %rs25, %p18;
-; SM60-NEXT:    selp.b16 %rs27, %rs15, %rs26, %p19;
-; SM60-NEXT:    cvt.u32.u16 %r28, %rs25;
-; SM60-NEXT:    shl.b32 %r29, %r28, 16;
-; SM60-NEXT:    setp.eq.f32 %p20, %r29, 0f00000000;
-; SM60-NEXT:    selp.b16 %rs28, %rs27, %rs25, %p20;
-; SM60-NEXT:    mov.b32 %r30, {%rs28, %rs23};
-; SM60-NEXT:    cvt.u64.u32 %rd4, %r30;
+; SM60-NEXT:    setp.gt.f32 %p14, %r21, %r19;
+; SM60-NEXT:    selp.b16 %rs22, %rs15, %rs13, %p14;
+; SM60-NEXT:    setp.nan.f32 %p15, %r21, %r19;
+; SM60-NEXT:    selp.b16 %rs23, 0x7FC0, %rs22, %p15;
+; SM60-NEXT:    setp.eq.f32 %p16, %r21, %r19;
+; SM60-NEXT:    selp.b16 %rs24, %rs21, %rs23, %p16;
+; SM60-NEXT:    mov.b32 %r22, {%rs24, %rs20};
+; SM60-NEXT:    cvt.u64.u32 %rd4, %r22;
 ; SM60-NEXT:    shl.b64 %rd5, %rd4, 32;
 ; SM60-NEXT:    or.b64 %rd6, %rd3, %rd5;
-; SM60-NEXT:    cvt.u64.u32 %rd7, %r57;
-; SM60-NEXT:    cvt.u64.u32 %rd8, %r58;
+; SM60-NEXT:    cvt.u64.u32 %rd7, %r41;
+; SM60-NEXT:    cvt.u64.u32 %rd8, %r42;
 ; SM60-NEXT:    shl.b64 %rd9, %rd8, 32;
 ; SM60-NEXT:    or.b64 %rd10, %rd7, %rd9;
 ; SM60-NEXT:    atom.cta.global.cas.b64 %rd11, [%rd1], %rd10, %rd6;
-; SM60-NEXT:    setp.ne.b64 %p21, %rd11, %rd10;
-; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r58}, %rd11; }
-; SM60-NEXT:    cvt.u32.u64 %r57, %rd11;
-; SM60-NEXT:    @%p21 bra $L__BB335_1;
+; SM60-NEXT:    setp.ne.b64 %p17, %rd11, %rd10;
+; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r42}, %rd11; }
+; SM60-NEXT:    cvt.u32.u64 %r41, %rd11;
+; SM60-NEXT:    @%p17 bra $L__BB335_1;
 ; SM60-NEXT:  // %bb.2: // %atomicrmw.end
 ; SM60-NEXT:    ld.volatile.global.b64 %rd12, [%rd1+8];
-; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r60}, %rd12; }
-; SM60-NEXT:    cvt.u32.u64 %r59, %rd12;
+; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r44}, %rd12; }
+; SM60-NEXT:    cvt.u32.u64 %r43, %rd12;
 ; SM60-NEXT:  $L__BB335_3: // %atomicrmw.start2
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM60-NEXT:    mov.b32 {%rs29, %rs30}, %r3;
-; SM60-NEXT:    cvt.u32.u16 %r31, %rs30;
-; SM60-NEXT:    shl.b32 %r32, %r31, 16;
-; SM60-NEXT:    mov.b32 {%rs31, %rs32}, %r59;
-; SM60-NEXT:    cvt.u32.u16 %r33, %rs32;
-; SM60-NEXT:    shl.b32 %r34, %r33, 16;
-; SM60-NEXT:    setp.gt.f32 %p22, %r34, %r32;
-; SM60-NEXT:    selp.b16 %rs33, %rs32, %rs30, %p22;
-; SM60-NEXT:    setp.nan.f32 %p23, %r34, %r32;
-; SM60-NEXT:    selp.b16 %rs34, 0x7FC0, %rs33, %p23;
-; SM60-NEXT:    setp.eq.b16 %p24, %rs32, 0;
-; SM60-NEXT:    selp.b16 %rs35, %rs32, %rs34, %p24;
-; SM60-NEXT:    setp.eq.b16 %p25, %rs30, 0;
-; SM60-NEXT:    selp.b16 %rs36, %rs30, %rs35, %p25;
-; SM60-NEXT:    cvt.u32.u16 %r35, %rs34;
-; SM60-NEXT:    shl.b32 %r36, %r35, 16;
-; SM60-NEXT:    setp.eq.f32 %p26, %r36, 0f00000000;
-; SM60-NEXT:    selp.b16 %rs37, %rs36, %rs34, %p26;
-; SM60-NEXT:    cvt.u32.u16 %r37, %rs29;
-; SM60-NEXT:    shl.b32 %r38, %r37, 16;
-; SM60-NEXT:    cvt.u32.u16 %r39, %rs31;
-; SM60-NEXT:    shl.b32 %r40, %r39, 16;
-; SM60-NEXT:    setp.gt.f32 %p27, %r40, %r38;
-; SM60-NEXT:    selp.b16 %rs38, %rs31, %rs29, %p27;
-; SM60-NEXT:    setp.nan.f32 %p28, %r40, %r38;
-; SM60-NEXT:    selp.b16 %rs39, 0x7FC0, %rs38, %p28;
-; SM60-NEXT:    setp.eq.b16 %p29, %rs31, 0;
-; SM60-NEXT:    selp.b16 %rs40, %rs31, %rs39, %p29;
-; SM60-NEXT:    setp.eq.b16 %p30, %rs29, 0;
-; SM60-NEXT:    selp.b16 %rs41, %rs29, %rs40, %p30;
-; SM60-NEXT:    cvt.u32.u16 %r41, %rs39;
-; SM60-NEXT:    shl.b32 %r42, %r41, 16;
-; SM60-NEXT:    setp.eq.f32 %p31, %r42, 0f00000000;
-; SM60-NEXT:    selp.b16 %rs42, %rs41, %rs39, %p31;
-; SM60-NEXT:    mov.b32 %r43, {%rs42, %rs37};
-; SM60-NEXT:    cvt.u64.u32 %rd13, %r43;
-; SM60-NEXT:    mov.b32 {%rs43, %rs44}, %r4;
-; SM60-NEXT:    cvt.u32.u16 %r44, %rs44;
-; SM60-NEXT:    shl.b32 %r45, %r44, 16;
-; SM60-NEXT:    mov.b32 {%rs45, %rs46}, %r60;
-; SM60-NEXT:    cvt.u32.u16 %r46, %rs46;
-; SM60-NEXT:    shl.b32 %r47, %r46, 16;
-; SM60-NEXT:    setp.gt.f32 %p32, %r47, %r45;
-; SM60-NEXT:    selp.b16 %rs47, %rs46, %rs44, %p32;
-; SM60-NEXT:    setp.nan.f32 %p33, %r47, %r45;
-; SM60-NEXT:    selp.b16 %rs48, 0x7FC0, %rs47, %p33;
-; SM60-NEXT:    setp.eq.b16 %p34, %rs46, 0;
-; SM60-NEXT:    selp.b16 %rs49, %rs46, %rs48, %p34;
-; SM60-NEXT:    setp.eq.b16 %p35, %rs44, 0;
-; SM60-NEXT:    selp.b16 %rs50, %rs44, %rs49, %p35;
-; SM60-NEXT:    cvt.u32.u16 %r48, %rs48;
-; SM60-NEXT:    shl.b32 %r49, %r48, 16;
-; SM60-NEXT:    setp.eq.f32 %p36, %r49, 0f00000000;
-; SM60-NEXT:    selp.b16 %rs51, %rs50, %rs48, %p36;
-; SM60-NEXT:    cvt.u32.u16 %r50, %rs43;
-; SM60-NEXT:    shl.b32 %r51, %r50, 16;
-; SM60-NEXT:    cvt.u32.u16 %r52, %rs45;
-; SM60-NEXT:    shl.b32 %r53, %r52, 16;
-; SM60-NEXT:    setp.gt.f32 %p37, %r53, %r51;
-; SM60-NEXT:    selp.b16 %rs52, %rs45, %rs43, %p37;
-; SM60-NEXT:    setp.nan.f32 %p38, %r53, %r51;
-; SM60-NEXT:    selp.b16 %rs53, 0x7FC0, %rs52, %p38;
-; SM60-NEXT:    setp.eq.b16 %p39, %rs45, 0;
-; SM60-NEXT:    selp.b16 %rs54, %rs45, %rs53, %p39;
-; SM60-NEXT:    setp.eq.b16 %p40, %rs43, 0;
-; SM60-NEXT:    selp.b16 %rs55, %rs43, %rs54, %p40;
-; SM60-NEXT:    cvt.u32.u16 %r54, %rs53;
-; SM60-NEXT:    shl.b32 %r55, %r54, 16;
-; SM60-NEXT:    setp.eq.f32 %p41, %r55, 0f00000000;
-; SM60-NEXT:    selp.b16 %rs56, %rs55, %rs53, %p41;
-; SM60-NEXT:    mov.b32 %r56, {%rs56, %rs51};
-; SM60-NEXT:    cvt.u64.u32 %rd14, %r56;
+; SM60-NEXT:    mov.b32 {%rs25, %rs26}, %r3;
+; SM60-NEXT:    mov.b32 {%rs27, %rs28}, %r43;
+; SM60-NEXT:    setp.eq.b16 %p18, %rs28, 0;
+; SM60-NEXT:    selp.b16 %rs29, %rs28, %rs26, %p18;
+; SM60-NEXT:    cvt.u32.u16 %r23, %rs26;
+; SM60-NEXT:    shl.b32 %r24, %r23, 16;
+; SM60-NEXT:    cvt.u32.u16 %r25, %rs28;
+; SM60-NEXT:    shl.b32 %r26, %r25, 16;
+; SM60-NEXT:    setp.gt.f32 %p19, %r26, %r24;
+; SM60-NEXT:    selp.b16 %rs30, %rs28, %rs26, %p19;
+; SM60-NEXT:    setp.nan.f32 %p20, %r26, %r24;
+; SM60-NEXT:    selp.b16 %rs31, 0x7FC0, %rs30, %p20;
+; SM60-NEXT:    setp.eq.f32 %p21, %r26, %r24;
+; SM60-NEXT:    selp.b16 %rs32, %rs29, %rs31, %p21;
+; SM60-NEXT:    setp.eq.b16 %p22, %rs27, 0;
+; SM60-NEXT:    selp.b16 %rs33, %rs27, %rs25, %p22;
+; SM60-NEXT:    cvt.u32.u16 %r27, %rs25;
+; SM60-NEXT:    shl.b32 %r28, %r27, 16;
+; SM60-NEXT:    cvt.u32.u16 %r29, %rs27;
+; SM60-NEXT:    shl.b32 %r30, %r29, 16;
+; SM60-NEXT:    setp.gt.f32 %p23, %r30, %r28;
+; SM60-NEXT:    selp.b16 %rs34, %rs27, %rs25, %p23;
+; SM60-NEXT:    setp.nan.f32 %p24, %r30, %r28;
+; SM60-NEXT:    selp.b16 %rs35, 0x7FC0, %rs34, %p24;
+; SM60-NEXT:    setp.eq.f32 %p25, %r30, %r28;
+; SM60-NEXT:    selp.b16 %rs36, %rs33, %rs35, %p25;
+; SM60-NEXT:    mov.b32 %r31, {%rs36, %rs32};
+; SM60-NEXT:    cvt.u64.u32 %rd13, %r31;
+; SM60-NEXT:    mov.b32 {%rs37, %rs38}, %r4;
+; SM60-NEXT:    mov.b32 {%rs39, %rs40}, %r44;
+; SM60-NEXT:    setp.eq.b16 %p26, %rs40, 0;
+; SM60-NEXT:    selp.b16 %rs41, %rs40, %rs38, %p26;
+; SM60-NEXT:    cvt.u32.u16 %r32, %rs38;
+; SM60-NEXT:    shl.b32 %r33, %r32, 16;
+; SM60-NEXT:    cvt.u32.u16 %r34, %rs40;
+; SM60-NEXT:    shl.b32 %r35, %r34, 16;
+; SM60-NEXT:    setp.gt.f32 %p27, %r35, %r33;
+; SM60-NEXT:    selp.b16 %rs42, %rs40, %rs38, %p27;
+; SM60-NEXT:    setp.nan.f32 %p28, %r35, %r33;
+; SM60-NEXT:    selp.b16 %rs43, 0x7FC0, %rs42, %p28;
+; SM60-NEXT:    setp.eq.f32 %p29, %r35, %r33;
+; SM60-NEXT:    selp.b16 %rs44, %rs41, %rs43, %p29;
+; SM60-NEXT:    setp.eq.b16 %p30, %rs39, 0;
+; SM60-NEXT:    selp.b16 %rs45, %rs39, %rs37, %p30;
+; SM60-NEXT:    cvt.u32.u16 %r36, %rs37;
+; SM60-NEXT:    shl.b32 %r37, %r36, 16;
+; SM60-NEXT:    cvt.u32.u16 %r38, %rs39;
+; SM60-NEXT:    shl.b32 %r39, %r38, 16;
+; SM60-NEXT:    setp.gt.f32 %p31, %r39, %r37;
+; SM60-NEXT:    selp.b16 %rs46, %rs39, %rs37, %p31;
+; SM60-NEXT:    setp.nan.f32 %p32, %r39, %r37;
+; SM60-NEXT:    selp.b16 %rs47, 0x7FC0, %rs46, %p32;
+; SM60-NEXT:    setp.eq.f32 %p33, %r39, %r37;
+; SM60-NEXT:    selp.b16 %rs48, %rs45, %rs47, %p33;
+; SM60-NEXT:    mov.b32 %r40, {%rs48, %rs44};
+; SM60-NEXT:    cvt.u64.u32 %rd14, %r40;
 ; SM60-NEXT:    shl.b64 %rd15, %rd14, 32;
 ; SM60-NEXT:    or.b64 %rd16, %rd13, %rd15;
-; SM60-NEXT:    cvt.u64.u32 %rd17, %r59;
-; SM60-NEXT:    cvt.u64.u32 %rd18, %r60;
+; SM60-NEXT:    cvt.u64.u32 %rd17, %r43;
+; SM60-NEXT:    cvt.u64.u32 %rd18, %r44;
 ; SM60-NEXT:    shl.b64 %rd19, %rd18, 32;
 ; SM60-NEXT:    or.b64 %rd20, %rd17, %rd19;
 ; SM60-NEXT:    atom.cta.global.cas.b64 %rd21, [%rd1+8], %rd20, %rd16;
-; SM60-NEXT:    setp.ne.b64 %p42, %rd21, %rd20;
-; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r60}, %rd21; }
-; SM60-NEXT:    cvt.u32.u64 %r59, %rd21;
-; SM60-NEXT:    @%p42 bra $L__BB335_3;
+; SM60-NEXT:    setp.ne.b64 %p34, %rd21, %rd20;
+; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r44}, %rd21; }
+; SM60-NEXT:    cvt.u32.u64 %r43, %rd21;
+; SM60-NEXT:    @%p34 bra $L__BB335_3;
 ; SM60-NEXT:  // %bb.4: // %atomicrmw.end1
 ; SM60-NEXT:    membar.cta;
-; SM60-NEXT:    st.param.v4.b32 [func_retval0], {%r57, %r58, %r59, %r60};
+; SM60-NEXT:    st.param.v4.b32 [func_retval0], {%r41, %r42, %r43, %r44};
 ; SM60-NEXT:    ret;
         %retval = atomicrmw elementwise fmaximum ptr  addrspace(1) %addr, <8 x bfloat> %val syncscope("block") acq_rel
         ret <8 x bfloat> %retval

@@ -3,37 +3,36 @@
 
 target triple = "nvptx64-nvidia-cuda"
 
-; A <1 x T> elementwise atomicrmw collapses directly to a scalar RMW and wraps
-; the old value back into a single-lane vector.
-define <1 x float> @fadd_v1f32_elementwise(ptr %addr, <1 x float> %val) {
+; A <1 x T> elementwise atomicrmw collapses directly to a scalar RMW.
+; Shared-memory f32 atom.add preserves denormals, matching the default mode.
+define <1 x float> @fadd_v1f32_elementwise(ptr addrspace(3) %addr, <1 x float> %val) {
 ; CHECK-LABEL: @fadd_v1f32_elementwise(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[LANE_VAL:%.*]] = extractelement <1 x float> [[VAL:%.*]], i64 0
-; CHECK-NEXT:    [[TMP0:%.*]] = atomicrmw fadd ptr [[ADDR:%.*]], float [[LANE_VAL]] monotonic, align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = atomicrmw fadd ptr addrspace(3) [[ADDR:%.*]], float [[LANE_VAL]] monotonic, align 4
 ; CHECK-NEXT:    [[LANE_OLD:%.*]] = insertelement <1 x float> poison, float [[TMP0]], i64 0
 ; CHECK-NEXT:    ret <1 x float> [[LANE_OLD]]
 ;
 entry:
-  %old = atomicrmw elementwise fadd ptr %addr, <1 x float> %val monotonic
+  %old = atomicrmw elementwise fadd ptr addrspace(3) %addr, <1 x float> %val monotonic
   ret <1 x float> %old
 }
 
-; Elementwise expansion: scalar f32 atomics are legal, so the vector is split
-; into scalar atomicrmw instructions.
-define <2 x float> @fadd_v2f32_elementwise(ptr %addr, <2 x float> %val) {
+; A <2 x float> elementwise fadd in shared memory splits into native scalar atomics.
+define <2 x float> @fadd_v2f32_elementwise(ptr addrspace(3) %addr, <2 x float> %val) {
 ; CHECK-LABEL: @fadd_v2f32_elementwise(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[LO_VAL:%.*]] = extractelement <2 x float> [[VAL:%.*]], i64 0
 ; CHECK-NEXT:    [[HI_VAL:%.*]] = extractelement <2 x float> [[VAL]], i64 1
-; CHECK-NEXT:    [[HI_PTR:%.*]] = getelementptr inbounds float, ptr [[ADDR:%.*]], i64 1
-; CHECK-NEXT:    [[TMP0:%.*]] = atomicrmw fadd ptr [[ADDR]], float [[LO_VAL]] monotonic, align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw fadd ptr [[HI_PTR]], float [[HI_VAL]] monotonic, align 4
+; CHECK-NEXT:    [[HI_PTR:%.*]] = getelementptr inbounds float, ptr addrspace(3) [[ADDR:%.*]], i64 1
+; CHECK-NEXT:    [[TMP0:%.*]] = atomicrmw fadd ptr addrspace(3) [[ADDR]], float [[LO_VAL]] monotonic, align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw fadd ptr addrspace(3) [[HI_PTR]], float [[HI_VAL]] monotonic, align 4
 ; CHECK-NEXT:    [[LO_OLD:%.*]] = insertelement <2 x float> poison, float [[TMP0]], i64 0
 ; CHECK-NEXT:    [[HI_OLD:%.*]] = insertelement <2 x float> [[LO_OLD]], float [[TMP1]], i64 1
 ; CHECK-NEXT:    ret <2 x float> [[HI_OLD]]
 ;
 entry:
-  %old = atomicrmw elementwise fadd ptr %addr, <2 x float> %val monotonic
+  %old = atomicrmw elementwise fadd ptr addrspace(3) %addr, <2 x float> %val monotonic
   ret <2 x float> %old
 }
 
@@ -56,20 +55,20 @@ entry:
 }
 
 ; Volatile is preserved while splitting elementwise operations.
-define <2 x float> @fadd_volatile_v2f32_elementwise(ptr %addr, <2 x float> %val) {
+define <2 x float> @fadd_volatile_v2f32_elementwise(ptr addrspace(3) %addr, <2 x float> %val) {
 ; CHECK-LABEL: @fadd_volatile_v2f32_elementwise(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[LO_VAL:%.*]] = extractelement <2 x float> [[VAL:%.*]], i64 0
 ; CHECK-NEXT:    [[HI_VAL:%.*]] = extractelement <2 x float> [[VAL]], i64 1
-; CHECK-NEXT:    [[HI_PTR:%.*]] = getelementptr inbounds float, ptr [[ADDR:%.*]], i64 1
-; CHECK-NEXT:    [[TMP0:%.*]] = atomicrmw volatile fadd ptr [[ADDR]], float [[LO_VAL]] monotonic, align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw volatile fadd ptr [[HI_PTR]], float [[HI_VAL]] monotonic, align 4
+; CHECK-NEXT:    [[HI_PTR:%.*]] = getelementptr inbounds float, ptr addrspace(3) [[ADDR:%.*]], i64 1
+; CHECK-NEXT:    [[TMP0:%.*]] = atomicrmw volatile fadd ptr addrspace(3) [[ADDR]], float [[LO_VAL]] monotonic, align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw volatile fadd ptr addrspace(3) [[HI_PTR]], float [[HI_VAL]] monotonic, align 4
 ; CHECK-NEXT:    [[LO_OLD:%.*]] = insertelement <2 x float> poison, float [[TMP0]], i64 0
 ; CHECK-NEXT:    [[HI_OLD:%.*]] = insertelement <2 x float> [[LO_OLD]], float [[TMP1]], i64 1
 ; CHECK-NEXT:    ret <2 x float> [[HI_OLD]]
 ;
 entry:
-  %old = atomicrmw volatile elementwise fadd ptr %addr, <2 x float> %val monotonic
+  %old = atomicrmw volatile elementwise fadd ptr addrspace(3) %addr, <2 x float> %val monotonic
   ret <2 x float> %old
 }
 
