@@ -236,8 +236,8 @@ def main():
     # When no commits are given explicitly and the pre-commit CI framework's
     # environment variables are set, use them to define the diff range.
     if not opts.args and not dash_dash:
-        from_ref = os.environ.get('PRE_COMMIT_FROM_REF')
-        to_ref = os.environ.get('PRE_COMMIT_TO_REF')
+        from_ref = os.environ.get("PRE_COMMIT_FROM_REF")
+        to_ref = os.environ.get("PRE_COMMIT_TO_REF")
         if from_ref and to_ref:
             opts.args = [from_ref, to_ref]
             if not opts.diff and not opts.diffstat:
