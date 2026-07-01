@@ -191,7 +191,7 @@ bool HostInfoMacOSX::ComputeSupportExeDirectory(FileSpec &file_spec) {
   }
 
   file_spec.SetDirectory(raw_path);
-  return (bool)file_spec.GetDirectory();
+  return !file_spec.GetDirectory().empty();
 }
 
 bool HostInfoMacOSX::ComputeHeaderDirectory(FileSpec &file_spec) {

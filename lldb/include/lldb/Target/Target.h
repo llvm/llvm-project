@@ -961,7 +961,8 @@ public:
   void AddNameToBreakpoint(lldb::BreakpointSP &bp_sp, llvm::StringRef name,
                            Status &error);
 
-  void RemoveNameFromBreakpoint(lldb::BreakpointSP &bp_sp, ConstString name);
+  void RemoveNameFromBreakpoint(lldb::BreakpointSP &bp_sp,
+                                llvm::StringRef name);
 
   BreakpointName *FindBreakpointName(ConstString name, bool can_create,
                                      Status &error);

@@ -8,13 +8,15 @@
 
 // <set>
 
-// key_compare key_comp() const;
-// value_compare value_comp() const;
+// constexpr key_compare key_comp() const; // constexpr since C++26
+// constexpr value_compare value_comp() const; // constexpr since C++26
 
 #include <set>
 #include <cassert>
 
-int main(int, char**) {
+#include "test_macros.h"
+
+TEST_CONSTEXPR_CXX26 bool test() {
   typedef std::set<int> set_type;
 
   set_type s;
@@ -29,5 +31,12 @@ int main(int, char**) {
   assert(cs.value_comp()(*p1.first, *p2.first));
   assert(!cs.value_comp()(*p2.first, *p1.first));
 
+  return true;
+}
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }

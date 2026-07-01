@@ -150,10 +150,10 @@ TEST_CONSTEXPR_CXX26 bool test_insert_return_type() {
 TEST_CONSTEXPR_CXX26 bool test() {
   test_node_handle_operations<std::map<int, int>>();
   test_node_handle_operations_multi<std::multimap<int, int>>();
+  test_node_handle_operations<std::set<int>>();
 
   // FIXME: update when other containers are made constexpr
   if (!TEST_IS_CONSTANT_EVALUATED) {
-    test_node_handle_operations<std::set<int>>();
     test_node_handle_operations_multi<std::multiset<int>>();
     test_node_handle_operations<std::unordered_map<int, int>>();
     test_node_handle_operations_multi<std::unordered_multimap<int, int>>();
@@ -162,10 +162,10 @@ TEST_CONSTEXPR_CXX26 bool test() {
   }
 
   test_insert_return_type<std::map<int, int>>();
+  test_insert_return_type<std::set<int>>();
 
   // FIXME: update when other containers are made constexpr
   if (!TEST_IS_CONSTANT_EVALUATED) {
-    test_insert_return_type<std::set<int>>();
     test_insert_return_type<std::unordered_map<int, int>>();
     test_insert_return_type<std::unordered_set<int>>();
   }
