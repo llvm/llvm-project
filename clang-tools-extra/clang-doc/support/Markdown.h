@@ -46,9 +46,6 @@ enum class NodeKind {
   NK_Document,
 };
 
-class InlineNode;
-class BlockNode;
-
 /// Base class for all inline nodes. Inline nodes represent span-level content
 /// such as text, emphasis, and inline code.
 class InlineNode : public llvm::ilist_node<InlineNode> {

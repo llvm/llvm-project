@@ -10,6 +10,10 @@
 
 namespace clang::doc::markdown {
 
+// TODO: print() currently outputs nodes flat with no indentation. Add
+// S-expression style formatting (as used by the Swift AST printer) to make
+// dumped trees easier to read.
+
 LLVM_DUMP_METHOD void InlineNode::dump() const { print(llvm::errs()); }
 
 void TextNode::print(llvm::raw_ostream &OS) const {
