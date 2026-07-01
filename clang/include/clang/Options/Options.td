@@ -3006,7 +3006,7 @@ defm finite_math_only : BoolOptionWithoutMarshalling<"f", "finite-math-only",
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
           "Allow floating-point optimizations that "
           "assume arguments and results are not NaNs or +-inf. This defines "
-          "the \\_\\_FINITE\\_MATH\\_ONLY\\_\\_ preprocessor macro.",
+          "the __FINITE_MATH_ONLY__ preprocessor macro.",
           [ffast_math.KeyPath]>,
   NegFlag<SetFalse>>;
 defm signed_zeros : BoolFOption<"signed-zeros",
