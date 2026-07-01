@@ -178,7 +178,7 @@ static Attribute convertMetadataToAttrImpl(
     auto *fn = dyn_cast<llvm::Function>(vam->getValue());
     if (!fn)
       return {};
-    return MDFuncAttr::get(ctx, FlatSymbolRefAttr::get(ctx, fn->getName()));
+    return MDValueAttr::get(ctx, FlatSymbolRefAttr::get(ctx, fn->getName()));
   }
   if (auto *node = dyn_cast<llvm::MDNode>(md)) {
     if (Attribute cached = attrMap.lookup(node))

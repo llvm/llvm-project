@@ -510,18 +510,18 @@ MLIR_CAPI_EXPORTED MlirTypeID mlirLLVMMDConstantAttrGetTypeID(void);
 MLIR_CAPI_EXPORTED MlirAttribute
 mlirLLVMMDConstantAttrGetValue(MlirAttribute attr);
 
-/// Creates an LLVM MDFuncAttr referencing a function symbol.
-MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMMDFuncAttrGet(MlirContext ctx,
-                                                       MlirAttribute name);
+/// Creates an LLVM MDValueAttr referencing a symbol-backed value.
+MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMMDValueAttrGet(MlirContext ctx,
+                                                        MlirAttribute name);
 
-/// Returns `true` if the attribute is an LLVM MDFuncAttr.
-MLIR_CAPI_EXPORTED bool mlirLLVMAttrIsAMDFuncAttr(MlirAttribute attr);
+/// Returns `true` if the attribute is an LLVM MDValueAttr.
+MLIR_CAPI_EXPORTED bool mlirLLVMAttrIsAMDValueAttr(MlirAttribute attr);
 
-/// Returns the TypeID of MDFuncAttr.
-MLIR_CAPI_EXPORTED MlirTypeID mlirLLVMMDFuncAttrGetTypeID(void);
+/// Returns the TypeID of MDValueAttr.
+MLIR_CAPI_EXPORTED MlirTypeID mlirLLVMMDValueAttrGetTypeID(void);
 
-/// Returns the symbol name of an LLVM MDFuncAttr.
-MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMMDFuncAttrGetName(MlirAttribute attr);
+/// Returns the symbol name of an LLVM MDValueAttr.
+MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMMDValueAttrGetName(MlirAttribute attr);
 
 /// Creates an LLVM MDNodeAttr.
 MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMMDNodeAttrGet(
