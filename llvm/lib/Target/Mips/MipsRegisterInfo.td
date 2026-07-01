@@ -813,11 +813,13 @@ def GPRNM32Opnd : RegisterOperand<GPR32> {
 def GPRNM4Opnd : RegisterOperand<GPRNM4> {
   let ParserMatchClass = GPRNMAsmOperandClass<"16Reg4x4", "GPRNM4RegClassID",
                                               [GPRNM32Opnd.ParserMatchClass]>;
+  let EncoderMethod = "getGPRNM4x4Reg";
 }
 
 def GPRNM4ZOpnd : RegisterOperand<GPRNM4Z> {
   let ParserMatchClass = GPRNMAsmOperandClass<"16Reg4x4Z", "GPRNM4ZRegClassID",
                                               [GPRNM32Opnd.ParserMatchClass]>;
+  let EncoderMethod = "getGPRNM4x4ZeroReg";
 }
 
 def GPRNM16R5Opnd : RegisterOperand<GPR32> {

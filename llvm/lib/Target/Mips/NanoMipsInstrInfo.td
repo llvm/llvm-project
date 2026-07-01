@@ -23,8 +23,15 @@
 def uimm2_nm : Operand<i32>;
 def uimm2code_nm : Operand<i32>;
 def uimm3_nm : Operand<i32>;
-def uimm3shift_nm : Operand<i32>;
-def uimm4mask_nm : Operand<i32>;
+
+def uimm3shift_nm : Operand<i32> {
+  let EncoderMethod = "getUImm3ShiftEncoding";
+}
+
+def uimm4mask_nm : Operand<i32> {
+  let EncoderMethod = "getUImm4MaskEncoding";
+}
+
 def uimm3plus1_nm : Operand<i32>;
 def uimm5s2_nm : Operand<i32>;
 def uimm6_nm : Operand<i32>;
@@ -37,11 +44,24 @@ def uimm16_nm : Operand<i32>;
 def uimm18_nm : Operand<i32>;
 def uimm19_nm : Operand<i32>;
 def uimm5s1_nm : Operand<i32>;
-def simm22s1_nm : Operand<i32>;
-def simm32_nm : Operand<i32>;
+
+// ADDIUPC's immediate is relative to the start of the instruction, while the
+// encoded field is relative to the next instruction, so the offset is the
+// instruction length: 4 for ADDIUPC[32], 6 for ADDIUPC[48].
+def simm22s1_nm : Operand<i32> {
+  let EncoderMethod = "getSImmWithOffsetEncoding<22, 4>";
+}
+
+def simm32_nm : Operand<i32> {
+  let EncoderMethod = "getSImmWithOffsetEncoding<32, 6>";
+}
+
 def simm32s12_nm : Operand<i32>;
 def simm32s12_pcrel_nm : Operand<i32>;
-def nimm12_nm : Operand<i32>;
+
+def nimm12_nm : Operand<i32> {
+  let EncoderMethod = "getNegImm12Encoding";
+}
 
 def mem_nm_sp5s2 : Operand<iPTR>;
 def mem_nm_gp7s2 : Operand<iPTR>;
@@ -56,8 +76,13 @@ def mem_nm_s9 : Operand<iPTR>;
 def mem_nm_4s2 : Operand<iPTR>;
 def mem_nm_7s2 : Operand<iPTR>;
 
-def reglist16_nm : Operand<OtherVT>;
-def reglist_nm : Operand<OtherVT>;
+def reglist16_nm : Operand<OtherVT> {
+  let EncoderMethod = "getNMRegList16Encoding";
+}
+
+def reglist_nm : Operand<OtherVT> {
+  let EncoderMethod = "getNMRegListEncoding";
+}
 
 foreach I = {7, 10, 11, 14, 25} in
   def brtarget # I # _nm : Operand<OtherVT>;

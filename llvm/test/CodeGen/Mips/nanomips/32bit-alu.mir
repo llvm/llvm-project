@@ -502,12 +502,12 @@ body: |
 ...
 ---
 # CHECK-LABEL: addiupc:
-# CHECK: addiupc $a0, 0 # encoding: [0x80,0x04,0x00,0x00]
+# CHECK: addiupc $a0, 4 # encoding: [0x80,0x04,0x00,0x00]
 name: addiupc
 tracksRegLiveness: false
 body: |
   bb.0:
-    $r4 = ADDIUPC_NM 0
+    $r4 = ADDIUPC_NM 4
 ...
 ---
 # CHECK-LABEL: aluipc:

@@ -880,6 +880,17 @@ MipsMCCodeEmitter::getUImmWithOffsetEncoding(const MCInst &MI, unsigned OpNo,
   return Value;
 }
 
+template <unsigned Bits, int Offset>
+int64_t
+MipsMCCodeEmitter::getSImmWithOffsetEncoding(const MCInst &MI, unsigned OpNo,
+                                             SmallVectorImpl<MCFixup> &Fixups,
+                                             const MCSubtargetInfo &STI) const {
+  assert(MI.getOperand(OpNo).isImm());
+  int64_t Value = getMachineOpValue(MI, MI.getOperand(OpNo), Fixups, STI);
+  Value -= Offset;
+  return Value;
+}
+
 unsigned
 MipsMCCodeEmitter::getSimm19Lsl2Encoding(const MCInst &MI, unsigned OpNo,
                                          SmallVectorImpl<MCFixup> &Fixups,
@@ -958,6 +969,24 @@ MipsMCCodeEmitter::getUImm4AndValue(const MCInst &MI, unsigned OpNo,
     case 32768: return 0xe;
     case 65535: return 0xf;
   }
+  llvm_unreachable("Unexpected value");
+}
+
+unsigned
+MipsMCCodeEmitter::getUImm4MaskEncoding(const MCInst &MI, unsigned OpNo,
+                                        SmallVectorImpl<MCFixup> &Fixups,
+                                        const MCSubtargetInfo &STI) const {
+  assert(MI.getOperand(OpNo).isImm());
+  const MCOperand &MO = MI.getOperand(OpNo);
+  unsigned Value = MO.getImm();
+  switch (Value) {
+  case 0xff:
+    return 12;
+  case 0xffff:
+    return 13;
+  }
+  if (Value <= 11 || Value == 14 || Value == 15)
+    return Value;
   llvm_unreachable("Unexpected value");
 }
 
@@ -1063,6 +1092,98 @@ MipsMCCodeEmitter::getSimm23Lsl2Encoding(const MCInst &MI, unsigned OpNo,
   unsigned Res = static_cast<unsigned>(MO.getImm());
   assert((Res & 3) == 0);
   return Res >> 2;
+}
+
+unsigned
+MipsMCCodeEmitter::getGPRNM4x4ZeroReg(const MCInst &MI, unsigned OpNo,
+                                      SmallVectorImpl<MCFixup> &Fixups,
+                                      const MCSubtargetInfo &STI) const {
+  const MCOperand &MO = MI.getOperand(OpNo);
+  assert(MO.isReg() && "Operand of instruction is not a register!");
+  unsigned RegNo = Ctx.getRegisterInfo()->getEncodingValue(MO.getReg());
+  switch (MO.getReg()) {
+  default:
+    return RegNo;
+  case Mips::R0:
+    return 11;
+  case Mips::R8:
+  case Mips::R9:
+  case Mips::R10:
+    return RegNo - 8;
+  }
+}
+
+unsigned MipsMCCodeEmitter::getGPRNM4x4Reg(const MCInst &MI, unsigned OpNo,
+                                           SmallVectorImpl<MCFixup> &Fixups,
+                                           const MCSubtargetInfo &STI) const {
+  const MCOperand &MO = MI.getOperand(OpNo);
+  assert(MO.isReg() && "Operand of instruction is not a register!");
+  unsigned RegNo = Ctx.getRegisterInfo()->getEncodingValue(MO.getReg());
+  switch (MO.getReg()) {
+  default:
+    return RegNo;
+  case Mips::R8:
+  case Mips::R9:
+  case Mips::R10:
+  case Mips::R11:
+    return RegNo - 8;
+  }
+}
+
+unsigned
+MipsMCCodeEmitter::getUImm3ShiftEncoding(const MCInst &MI, unsigned OpNo,
+                                         SmallVectorImpl<MCFixup> &Fixups,
+                                         const MCSubtargetInfo &STI) const {
+  const MCOperand &MO = MI.getOperand(OpNo);
+  assert(MO.isImm());
+  unsigned Res = MO.getImm();
+  return Res == 8 ? 0 : Res;
+}
+
+unsigned
+MipsMCCodeEmitter::getNMRegListEncoding(const MCInst &MI, unsigned OpNo,
+                                        SmallVectorImpl<MCFixup> &Fixups,
+                                        const MCSubtargetInfo &STI) const {
+  unsigned Res = 0;
+  unsigned Gp = 0;
+  if (OpNo < MI.getNumOperands() &&
+      (!MI.getOperand(OpNo).isImm() || MI.getOperand(OpNo).getImm() != 0))
+    for (unsigned I = OpNo; I < MI.getNumOperands(); I++) {
+      MCRegister Reg = MI.getOperand(I).getReg();
+      unsigned RegNo = Ctx.getRegisterInfo()->getEncodingValue(Reg);
+      if (Res == 0)
+        Res |= (RegNo << 4);
+      if (RegNo == 28)
+        Gp = 1;
+      Res++;
+    }
+  return (Res << 1 | Gp);
+}
+
+unsigned
+MipsMCCodeEmitter::getNMRegList16Encoding(const MCInst &MI, unsigned OpNo,
+                                          SmallVectorImpl<MCFixup> &Fixups,
+                                          const MCSubtargetInfo &STI) const {
+  unsigned Res = 0;
+  if (OpNo < MI.getNumOperands() &&
+      (!MI.getOperand(OpNo).isImm() || MI.getOperand(OpNo).getImm() != 0)) {
+    Res = 0x10;
+    for (unsigned I = OpNo; I < MI.getNumOperands(); I++) {
+      MCRegister Reg = MI.getOperand(I).getReg();
+      unsigned RegNo = Ctx.getRegisterInfo()->getEncodingValue(Reg);
+      if (RegNo == 30)
+        Res &= 0xf;
+      Res++;
+    }
+  }
+  return Res;
+}
+
+unsigned
+MipsMCCodeEmitter::getNegImm12Encoding(const MCInst &MI, unsigned OpNo,
+                                       SmallVectorImpl<MCFixup> &Fixups,
+                                       const MCSubtargetInfo &STI) const {
+  return static_cast<unsigned>(-MI.getOperand(OpNo).getImm());
 }
 
 #include "MipsGenMCCodeEmitter.inc"
