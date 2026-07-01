@@ -951,8 +951,8 @@ define amdgpu_kernel void @preload_block_count_xyz(ptr addrspace(1) inreg %out) 
 ; GFX90a-GISEL-NEXT:  ; %bb.2:
 ; GFX90a-GISEL-NEXT:  .LBB11_0:
 ; GFX90a-GISEL-NEXT:    s_mov_b32 s0, s10
-; GFX90a-GISEL-NEXT:    s_mov_b32 s2, s12
 ; GFX90a-GISEL-NEXT:    s_mov_b32 s1, s11
+; GFX90a-GISEL-NEXT:    s_mov_b32 s2, s12
 ; GFX90a-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX90a-GISEL-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX90a-GISEL-NEXT:    v_mov_b32_e32 v2, s2
@@ -1699,12 +1699,12 @@ define amdgpu_kernel void @preloadremainder_xyz(ptr addrspace(1) inreg %out) #0 
 ; GFX90a-GISEL-NEXT:    .p2align 8
 ; GFX90a-GISEL-NEXT:  ; %bb.2:
 ; GFX90a-GISEL-NEXT:  .LBB19_0:
-; GFX90a-GISEL-NEXT:    s_lshr_b32 s0, s14, 16
-; GFX90a-GISEL-NEXT:    s_lshr_b32 s2, s15, 16
-; GFX90a-GISEL-NEXT:    s_and_b32 s1, s15, 0xffff
-; GFX90a-GISEL-NEXT:    v_mov_b32_e32 v0, s0
-; GFX90a-GISEL-NEXT:    v_mov_b32_e32 v1, s1
-; GFX90a-GISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX90a-GISEL-NEXT:    s_lshr_b32 s4, s14, 16
+; GFX90a-GISEL-NEXT:    s_lshr_b32 s6, s15, 16
+; GFX90a-GISEL-NEXT:    s_and_b32 s5, s15, 0xffff
+; GFX90a-GISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX90a-GISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX90a-GISEL-NEXT:    v_mov_b32_e32 v2, s6
 ; GFX90a-GISEL-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX90a-GISEL-NEXT:    global_store_dwordx3 v3, v[0:2], s[8:9]
 ; GFX90a-GISEL-NEXT:    s_endpgm
