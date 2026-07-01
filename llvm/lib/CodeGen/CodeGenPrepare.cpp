@@ -7585,23 +7585,69 @@ bool CodeGenPrepare::optimizeLoadExt(LoadInst *Load) {
   return true;
 }
 
-/// Check if V (an operand of a select instruction) is an expensive instruction
-/// that is only used once.
-static bool sinkSelectOperand(const TargetTransformInfo *TTI, Value *V) {
+/// Recursively check if V or any instruction in its sinkable chain is
+/// expensive. Instructions are sinkable when all of their uses are accounted
+/// for on one side (true/false) of the select group. RemainingUses tracks
+/// unaccounted uses for multi-use instructions on that side. When Chain is
+/// non-null, sinkable instructions are collected in pre-order (users before
+/// operands); the caller must reverse the chain to get the correct sinking
+/// order.
+static bool sinkSelectOperand1(const TargetTransformInfo *TTI, Value *V,
+                               DenseMap<Instruction *, unsigned> &RemainingUses,
+                               SmallVectorImpl<Instruction *> *Chain = nullptr,
+                               unsigned Depth = 4) {
   auto *I = dyn_cast<Instruction>(V);
-  // If it's safe to speculatively execute, then it should not have side
-  // effects; therefore, it's safe to sink and possibly *not* execute.
-  return I && I->hasOneUse() && isSafeToSpeculativelyExecute(I) &&
-         TTI->isExpensiveToSpeculativelyExecute(I);
+  if (!I || Depth == 0)
+    return false;
+  if (!isSafeToSpeculativelyExecute(I))
+    return false;
+
+  if (!I->hasOneUse()) {
+    auto [It, _] = RemainingUses.try_emplace(I, I->getNumUses());
+    assert(It->second > 0 && "this operand has atleast one use.");
+    --It->second;
+    if (It->second != 0)
+      return false;
+  }
+
+  if (Chain)
+    Chain->push_back(I);
+
+  bool HasExpensive = TTI->isExpensiveToSpeculativelyExecute(I);
+  // Integer div/rem by a constant will be lowered to mul+shift by ISel,
+  // not an actual idiv. Don't treat it as expensive to speculatively execute.
+  if (HasExpensive) {
+    unsigned Op = I->getOpcode();
+    if ((Op == Instruction::SDiv || Op == Instruction::UDiv ||
+         Op == Instruction::SRem || Op == Instruction::URem) &&
+        isa<ConstantInt>(I->getOperand(1)))
+      HasExpensive = false;
+  }
+  if (HasExpensive) {
+    LLVM_DEBUG(dbgs() << "CGP: Found expensive instruction to sink: " << *I
+                      << "\n");
+    if (!Chain)
+      return true;
+  }
+  for (Value *Op : I->operands()) {
+    if (sinkSelectOperand1(TTI, Op, RemainingUses, Chain, Depth - 1)) {
+      HasExpensive = true;
+      if (!Chain)
+        return true;
+    }
+  }
+  return HasExpensive;
 }
 
 /// Returns true if a SelectInst should be turned into an explicit branch.
 static bool isFormingBranchFromSelectProfitable(const TargetTransformInfo *TTI,
                                                 const TargetLowering *TLI,
-                                                SelectInst *SI) {
+                                                ArrayRef<SelectInst *> ASI) {
   // If even a predictable select is cheap, then a branch can't be cheaper.
   if (!TLI->isPredictableSelectExpensive())
     return false;
+
+  SelectInst *SI = ASI.front();
 
   // FIXME: This should use the same heuristics as IfConversion to determine
   // whether a select is better represented as a branch.
@@ -7614,8 +7660,12 @@ static bool isFormingBranchFromSelectProfitable(const TargetTransformInfo *TTI,
     uint64_t Sum = TrueWeight + FalseWeight;
     if (Sum != 0) {
       auto Probability = BranchProbability::getBranchProbability(Max, Sum);
-      if (Probability > TTI->getPredictableBranchThreshold())
+      if (Probability > TTI->getPredictableBranchThreshold()) {
+        LLVM_DEBUG(dbgs() << "CGP: Forming branch from select due to profile "
+                             "data: "
+                          << *SI << " (probability " << Probability << ")\n");
         return true;
+      }
     }
   }
 
@@ -7624,14 +7674,23 @@ static bool isFormingBranchFromSelectProfitable(const TargetTransformInfo *TTI,
   // If a branch is predictable, an out-of-order CPU can avoid blocking on its
   // comparison condition. If the compare has more than one use, there's
   // probably another cmov or setcc around, so it's not worth emitting a branch.
-  if (!Cmp || !Cmp->hasOneUse())
+  // For grouped selects, allow exactly one use per select.
+  if (!Cmp || !Cmp->hasNUses(ASI.size()))
     return false;
 
-  // If either operand of the select is expensive and only needed on one side
-  // of the select, we should form a branch.
-  if (sinkSelectOperand(TTI, SI->getTrueValue()) ||
-      sinkSelectOperand(TTI, SI->getFalseValue()))
-    return true;
+  // If any operand in the select group is expensive and only needed on one
+  // side, we should form a branch. Check recursively through each select's
+  // operand chains, using per-side use tracking for multi-use instructions.
+  DenseMap<Instruction *, unsigned> TrueRemainingUses, FalseRemainingUses;
+  for (SelectInst *SI : ASI) {
+    if (sinkSelectOperand1(TTI, SI->getTrueValue(), TrueRemainingUses) ||
+        sinkSelectOperand1(TTI, SI->getFalseValue(), FalseRemainingUses)) {
+      LLVM_DEBUG(dbgs() << "CGP: Forming branch from select due to expensive "
+                           "operand: "
+                        << *SI << "\n");
+      return true;
+    }
+  }
 
   return false;
 }
@@ -7770,7 +7829,7 @@ bool CodeGenPrepare::optimizeSelectInst(SelectInst *SI) {
     SelectKind = TargetLowering::ScalarValSelect;
 
   if (TLI->isSelectSupported(SelectKind) &&
-      (!isFormingBranchFromSelectProfitable(TTI, TLI, SI) ||
+      (!isFormingBranchFromSelectProfitable(TTI, TLI, ASI) ||
        llvm::shouldOptimizeForSize(SI->getParent(), PSI, BFI)))
     return false;
 
@@ -7805,11 +7864,11 @@ bool CodeGenPrepare::optimizeSelectInst(SelectInst *SI) {
   // Collect values that go on the true side and the values that go on the false
   // side.
   SmallVector<Instruction *> TrueInstrs, FalseInstrs;
+  DenseMap<Instruction *, unsigned> TrueRemainingUses, FalseRemainingUses;
   for (SelectInst *SI : ASI) {
-    if (Value *V = SI->getTrueValue(); sinkSelectOperand(TTI, V))
-      TrueInstrs.push_back(cast<Instruction>(V));
-    if (Value *V = SI->getFalseValue(); sinkSelectOperand(TTI, V))
-      FalseInstrs.push_back(cast<Instruction>(V));
+    sinkSelectOperand1(TTI, SI->getTrueValue(), TrueRemainingUses, &TrueInstrs);
+    sinkSelectOperand1(TTI, SI->getFalseValue(), FalseRemainingUses,
+                       &FalseInstrs);
   }
 
   // Split the select block, according to how many (if any) values go on each
@@ -7873,9 +7932,9 @@ bool CodeGenPrepare::optimizeSelectInst(SelectInst *SI) {
 
   // Sink expensive instructions into the conditional blocks to avoid executing
   // them speculatively.
-  for (Instruction *I : TrueInstrs)
+  for (Instruction *I : llvm::reverse(TrueInstrs))
     I->moveBefore(TrueBranch->getIterator());
-  for (Instruction *I : FalseInstrs)
+  for (Instruction *I : llvm::reverse(FalseInstrs))
     I->moveBefore(FalseBranch->getIterator());
 
   // If we did not create a new block for one of the 'true' or 'false' paths
