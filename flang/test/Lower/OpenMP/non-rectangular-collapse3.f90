@@ -5,8 +5,8 @@
 
 ! CHECK: not yet implemented: Non-rectangular loop nests with COLLAPSE are not yet supported
 
-! Non-rectangular: upper bound of inner loop depends on outer IV
-subroutine non_rect_ub(N)
+! Non-rectangular: step of inner loop depends on outer IV
+subroutine non_rect_step(N)
   implicit none
   integer, intent(in) :: N
   integer :: arr(N,N)
@@ -14,10 +14,9 @@ subroutine non_rect_ub(N)
 
   !$omp parallel do collapse(2)
   do i = 1, N
-    do j = 1, i
+    do j = 1, N, i
       arr(j,i) = 1
     end do
   end do
 end subroutine
-
 
