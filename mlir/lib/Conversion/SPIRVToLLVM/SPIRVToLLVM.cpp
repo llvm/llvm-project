@@ -921,6 +921,31 @@ public:
   }
 };
 
+/// Converts `spirv.VectorTimesScalar` to a broadcast of the scalar followed by
+/// an `llvm.fmul`.
+class VectorTimesScalarPattern
+    : public SPIRVToLLVMConversion<spirv::VectorTimesScalarOp> {
+public:
+  using SPIRVToLLVMConversion<
+      spirv::VectorTimesScalarOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(spirv::VectorTimesScalarOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto srcType = op.getType();
+    auto dstType = getTypeConverter()->convertType(srcType);
+    if (!dstType)
+      return rewriter.notifyMatchFailure(op, "type conversion failed");
+
+    unsigned numElements = op.getVector().getType().getNumElements();
+    Value broadcasted = broadcast(op.getLoc(), adaptor.getScalar(), numElements,
+                                  *getTypeConverter(), rewriter);
+    rewriter.replaceOpWithNewOp<LLVM::FMulOp>(op, dstType, adaptor.getVector(),
+                                              broadcasted);
+    return success();
+  }
+};
+
 /// Converts `spirv.Load` and `spirv.Store` to LLVM dialect.
 template <typename SPIRVOp>
 class LoadStorePattern : public SPIRVToLLVMConversion<SPIRVOp> {
@@ -1825,6 +1850,7 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       DirectConversionPattern<spirv::SRemOp, LLVM::SRemOp>,
       DirectConversionPattern<spirv::UDivOp, LLVM::UDivOp>,
       DirectConversionPattern<spirv::UModOp, LLVM::URemOp>,
+      VectorTimesScalarPattern,
 
       // Bitwise ops
       BitFieldInsertPattern, BitFieldUExtractPattern, BitFieldSExtractPattern,
