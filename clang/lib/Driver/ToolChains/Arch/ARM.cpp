@@ -792,10 +792,9 @@ fp16_fml_fallthrough:
   const auto ItSimd =
       llvm::find_if(llvm::reverse(Features),
                     [](const StringRef F) { return F.contains("neon"); });
-  const bool FPUSupportsNeon = (llvm::ARM::FPUNames[FPUKind].NeonSupport ==
-                                llvm::ARM::NeonSupportLevel::Neon) ||
-                               (llvm::ARM::FPUNames[FPUKind].NeonSupport ==
-                                llvm::ARM::NeonSupportLevel::Crypto);
+  auto NeonSupport = llvm::ARM::getFPUNeonSupportLevel(FPUKind);
+  bool FPUSupportsNeon = NeonSupport == llvm::ARM::NeonSupportLevel::Neon ||
+                         NeonSupport == llvm::ARM::NeonSupportLevel::Crypto;
   if (ItSimd != Features.rend())
     HasSimd = ItSimd->starts_with("+");
   if (!HasSimd && FPUSupportsNeon)

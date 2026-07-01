@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/TargetParser/TargetParser.h"
+#include "llvm/ADT/Enum.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
@@ -787,31 +788,31 @@ TEST(TargetParserTest, ARMFPURestriction) {
 }
 
 TEST(TargetParserTest, ARMExtensionFeatures) {
-  std::map<uint64_t, std::vector<StringRef>> Extensions;
+  std::vector<std::tuple<ARM::ArchExtKind, StringRef, StringRef>> Extensions;
 
-  for (auto &Ext : ARM::ARCHExtNames) {
-    if (!Ext.Feature.empty() && !Ext.NegFeature.empty())
-      Extensions[Ext.ID] = {Ext.Feature, Ext.NegFeature};
+  for (auto &Ext : ARM::getArchExts()) {
+    if (!Ext.name(1).empty() && !Ext.name(2).empty())
+      Extensions.emplace_back(Ext.value(), Ext.name(1), Ext.name(2));
   }
 
-  Extensions[ARM::AEK_HWDIVARM] = {"+hwdiv-arm", "-hwdiv-arm"};
-  Extensions[ARM::AEK_HWDIVTHUMB] = {"+hwdiv", "-hwdiv"};
+  Extensions.emplace_back(ARM::AEK_HWDIVARM, "+hwdiv-arm", "-hwdiv-arm");
+  Extensions.emplace_back(ARM::AEK_HWDIVTHUMB, "+hwdiv", "-hwdiv");
 
   std::vector<StringRef> Features;
 
   EXPECT_FALSE(ARM::getExtensionFeatures(ARM::AEK_INVALID, Features));
 
-  for (auto &E : Extensions) {
+  for (auto &[ExtID, PosFeature, NegFeature] : Extensions) {
     // test +extension
     Features.clear();
-    ARM::getExtensionFeatures(E.first, Features);
-    EXPECT_TRUE(llvm::is_contained(Features, E.second.at(0)));
+    ARM::getExtensionFeatures(ExtID, Features);
+    EXPECT_TRUE(llvm::is_contained(Features, PosFeature));
     EXPECT_EQ(Extensions.size(), Features.size());
 
     // test -extension
     Features.clear();
-    ARM::getExtensionFeatures(~E.first, Features);
-    EXPECT_TRUE(llvm::is_contained(Features, E.second.at(1)));
+    ARM::getExtensionFeatures(~ExtID, Features);
+    EXPECT_TRUE(llvm::is_contained(Features, NegFeature));
     EXPECT_EQ(Extensions.size(), Features.size());
   }
 }

@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/TargetParser/ARMTargetParser.h"
+#include "llvm/ADT/Enum.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
@@ -20,6 +21,79 @@
 #include <cctype>
 
 using namespace llvm;
+
+namespace {
+using namespace llvm::ARM;
+
+// List of Arch Extension names.
+constexpr EnumStringDef<uint64_t, 3> ExtNameDefs[] = {
+#define ARM_ARCH_EXT_NAME(NAME, ID, FEATURE, NEGFEATURE)                       \
+  {{NAME, FEATURE, NEGFEATURE}, ID},
+#include "llvm/TargetParser/ARMTargetParser.def"
+};
+static constexpr auto ExtNames = BUILD_ENUM_STRINGS(ExtNameDefs);
+
+// List of CPU names and their arches.
+// The same CPU can have multiple arches and can be default on multiple arches.
+// When finding the Arch for a CPU, first-found prevails. Sort them accordingly.
+// When this becomes table-generated, we'd probably need two tables.
+struct CpuName {
+  ArchKind ArchID;
+  FPUKind DefaultFPU;
+  bool Default; // is $Name the default CPU for $ArchID ?
+  uint64_t DefaultExtensions;
+};
+
+constexpr EnumStringDef<CpuName> CPUNameDefs[] = {
+#define ARM_CPU_NAME(NAME, ID, DEFAULT_FPU, IS_DEFAULT, DEFAULT_EXT)           \
+  {{NAME}, {ARM::ArchKind::ID, DEFAULT_FPU, IS_DEFAULT, DEFAULT_EXT}},
+#include "llvm/TargetParser/ARMTargetParser.def"
+};
+static constexpr auto CPUNames = BUILD_ENUM_STRINGS(CPUNameDefs);
+
+// List of canonical FPU names (use getFPUSynonym) and which architectural
+// features they correspond to (use getFPUFeatures).
+// The entries must appear in the order listed in ARM::FPUKind for correct
+// indexing.
+struct FPUName {
+  FPUKind ID;
+  FPUVersion FPUVer;
+  NeonSupportLevel NeonSupport;
+  FPURestriction Restriction;
+};
+
+constexpr EnumStringDef<FPUName> FPUNameDefs[] = {
+#define ARM_FPU(NAME, KIND, VERSION, NEON_SUPPORT, RESTRICTION)                \
+  {{NAME}, {KIND, VERSION, NEON_SUPPORT, RESTRICTION}},
+#include "llvm/TargetParser/ARMTargetParser.def"
+};
+static constexpr auto FPUNames = BUILD_ENUM_STRINGS(FPUNameDefs);
+
+// List of canonical arch names (use getArchSynonym).
+// This table also provides the build attribute fields for CPU arch
+// and Arch ID, according to the Addenda to the ARM ABI, chapters
+// 2.4 and 2.3.5.2 respectively.
+// FIXME: SubArch values were simplified to fit into the expectations
+// of the triples and are not conforming with their official names.
+// Check to see if the expectation should be changed.
+struct ArchName {
+  FPUKind DefaultFPU;
+  uint64_t ArchBaseExtensions;
+  ArchKind ID;
+  ARMBuildAttrs::CPUArch ArchAttr; // Arch ID in build attributes.
+};
+
+// Enum string indices: 0 = Name, 1 = CPUAttr, 2 = ArchFeature (incl. "+").
+constexpr EnumStringDef<ArchName, 3> ArchNameDefs[] = {
+#define ARM_ARCH(NAME, ID, CPU_ATTR, ARCH_FEATURE, ARCH_ATTR, ARCH_FPU,        \
+                 ARCH_BASE_EXT)                                                \
+  {{NAME, CPU_ATTR, ARCH_FEATURE},                                             \
+   {ARCH_FPU, ARCH_BASE_EXT, ArchKind::ID, ARCH_ATTR}},
+#include "llvm/TargetParser/ARMTargetParser.def"
+};
+static constexpr auto ArchNames = BUILD_ENUM_STRINGS(ArchNameDefs);
+
+} // end anonymous namespace
 
 static StringRef getHWDivSynonym(StringRef HWDiv) {
   return StringSwitch<StringRef>(HWDiv)
@@ -31,9 +105,9 @@ static StringRef getHWDivSynonym(StringRef HWDiv) {
 ARM::ArchKind ARM::parseArch(StringRef Arch) {
   Arch = getCanonicalArchName(Arch);
   StringRef Syn = getArchSynonym(Arch);
-  for (const auto &A : ARMArchNames) {
-    if (A.Name.ends_with(Syn))
-      return A.ID;
+  for (const auto &A : ArchNames) {
+    if (A.name(0).ends_with(Syn))
+      return A.value().ID;
   }
   return ArchKind::INVALID;
 }
@@ -194,8 +268,8 @@ bool ARM::getFPUFeatures(ARM::FPUKind FPUKind,
   };
 
   for (const auto &Info: FPUFeatureInfoList) {
-    if (FPUNames[FPUKind].FPUVer >= Info.MinVersion &&
-        FPUNames[FPUKind].Restriction <= Info.MaxRestriction)
+    if (FPUNames[FPUKind].value().FPUVer >= Info.MinVersion &&
+        FPUNames[FPUKind].value().Restriction <= Info.MaxRestriction)
       Features.push_back(Info.PlusName);
     else
       Features.push_back(Info.MinusName);
@@ -211,7 +285,7 @@ bool ARM::getFPUFeatures(ARM::FPUKind FPUKind,
   };
 
   for (const auto &Info: NeonFeatureInfoList) {
-    if (FPUNames[FPUKind].NeonSupport >= Info.MinSupportLevel)
+    if (FPUNames[FPUKind].value().NeonSupport >= Info.MinSupportLevel)
       Features.push_back(Info.PlusName);
     else
       Features.push_back(Info.MinusName);
@@ -223,8 +297,8 @@ bool ARM::getFPUFeatures(ARM::FPUKind FPUKind,
 ARM::FPUKind ARM::parseFPU(StringRef FPU) {
   StringRef Syn = getFPUSynonym(FPU);
   for (const auto &F : FPUNames) {
-    if (Syn == F.Name)
-      return F.ID;
+    if (Syn == F.name())
+      return F.value().ID;
   }
   return FK_INVALID;
 }
@@ -232,7 +306,7 @@ ARM::FPUKind ARM::parseFPU(StringRef FPU) {
 ARM::NeonSupportLevel ARM::getFPUNeonSupportLevel(ARM::FPUKind FPUKind) {
   if (FPUKind >= FK_LAST)
     return NeonSupportLevel::None;
-  return FPUNames[FPUKind].NeonSupport;
+  return FPUNames[FPUKind].value().NeonSupport;
 }
 
 StringRef ARM::getFPUSynonym(StringRef FPU) {
@@ -255,43 +329,42 @@ StringRef ARM::getFPUSynonym(StringRef FPU) {
 StringRef ARM::getFPUName(ARM::FPUKind FPUKind) {
   if (FPUKind >= FK_LAST)
     return StringRef();
-  return FPUNames[FPUKind].Name;
+  return FPUNames[FPUKind].name();
 }
 
 ARM::FPUVersion ARM::getFPUVersion(ARM::FPUKind FPUKind) {
   if (FPUKind >= FK_LAST)
     return FPUVersion::NONE;
-  return FPUNames[FPUKind].FPUVer;
+  return FPUNames[FPUKind].value().FPUVer;
 }
 
 ARM::FPURestriction ARM::getFPURestriction(ARM::FPUKind FPUKind) {
   if (FPUKind >= FK_LAST)
     return FPURestriction::None;
-  return FPUNames[FPUKind].Restriction;
+  return FPUNames[FPUKind].value().Restriction;
 }
 
 ARM::FPUKind ARM::getDefaultFPU(StringRef CPU, ARM::ArchKind AK) {
   if (CPU == "generic")
-    return ARM::ARMArchNames[static_cast<unsigned>(AK)].DefaultFPU;
-
-  return StringSwitch<ARM::FPUKind>(CPU)
-#define ARM_CPU_NAME(NAME, ID, DEFAULT_FPU, IS_DEFAULT, DEFAULT_EXT)           \
-  .Case(NAME, DEFAULT_FPU)
-#include "llvm/TargetParser/ARMTargetParser.def"
-      .Default(ARM::FK_INVALID);
+    return ArchNames[static_cast<unsigned>(AK)].value().DefaultFPU;
+  for (const auto &C : CPUNames) {
+    if (C.name() == CPU)
+      return C.value().DefaultFPU;
+  }
+  return ARM::FK_INVALID;
 }
 
 uint64_t ARM::getDefaultExtensions(StringRef CPU, ARM::ArchKind AK) {
   if (CPU == "generic")
-    return ARM::ARMArchNames[static_cast<unsigned>(AK)].ArchBaseExtensions;
-
-  return StringSwitch<uint64_t>(CPU)
-#define ARM_CPU_NAME(NAME, ID, DEFAULT_FPU, IS_DEFAULT, DEFAULT_EXT)           \
-  .Case(NAME,                                                                  \
-        ARMArchNames[static_cast<unsigned>(ArchKind::ID)].ArchBaseExtensions | \
-            DEFAULT_EXT)
-#include "llvm/TargetParser/ARMTargetParser.def"
-  .Default(ARM::AEK_INVALID);
+    return ArchNames[static_cast<unsigned>(AK)].value().ArchBaseExtensions;
+  for (const auto &C : CPUNames) {
+    if (C.name() == CPU)
+      return ArchNames[static_cast<unsigned>(C.value().ArchID)]
+                 .value()
+                 .ArchBaseExtensions |
+             C.value().DefaultExtensions;
+  }
+  return ARM::AEK_INVALID;
 }
 
 bool ARM::getHWDivFeatures(uint64_t HWDivKind,
@@ -319,38 +392,37 @@ bool ARM::getExtensionFeatures(uint64_t Extensions,
   if (Extensions == AEK_INVALID)
     return false;
 
-  for (const auto &AE : ARCHExtNames) {
-    if ((Extensions & AE.ID) == AE.ID && !AE.Feature.empty())
-      Features.push_back(AE.Feature);
-    else if (!AE.NegFeature.empty())
-      Features.push_back(AE.NegFeature);
+  for (const auto &AE : ExtNames) {
+    if ((Extensions & AE.value()) == AE.value() && !AE.name(1).empty())
+      Features.push_back(AE.name(1));
+    else if (!AE.name(2).empty())
+      Features.push_back(AE.name(2));
   }
 
   return getHWDivFeatures(Extensions, Features);
 }
 
 StringRef ARM::getArchName(ARM::ArchKind AK) {
-  return ARMArchNames[static_cast<unsigned>(AK)].Name;
+  return ArchNames[static_cast<unsigned>(AK)].name(0);
 }
 
 StringRef ARM::getCPUAttr(ARM::ArchKind AK) {
-  return ARMArchNames[static_cast<unsigned>(AK)].CPUAttr;
+  return ArchNames[static_cast<unsigned>(AK)].name(1);
 }
 
 StringRef ARM::getSubArch(ARM::ArchKind AK) {
-  return ARMArchNames[static_cast<unsigned>(AK)].getSubArch();
+  // Return ArchFeature without the leading "+".
+  return ArchNames[static_cast<unsigned>(AK)].name(2).substr(1);
 }
 
 unsigned ARM::getArchAttr(ARM::ArchKind AK) {
-  return ARMArchNames[static_cast<unsigned>(AK)].ArchAttr;
+  return ArchNames[static_cast<unsigned>(AK)].value().ArchAttr;
 }
 
+EnumStrings<uint64_t, 3> ARM::getArchExts() { return EnumStrings(ExtNames); }
+
 StringRef ARM::getArchExtName(uint64_t ArchExtKind) {
-  for (const auto &AE : ARCHExtNames) {
-    if (ArchExtKind == AE.ID)
-      return AE.Name;
-  }
-  return StringRef();
+  return EnumStrings(ExtNames).toString(ArchExtKind);
 }
 
 static bool stripNegationPrefix(StringRef &Name) {
@@ -359,9 +431,9 @@ static bool stripNegationPrefix(StringRef &Name) {
 
 StringRef ARM::getArchExtFeature(StringRef ArchExt) {
   bool Negated = stripNegationPrefix(ArchExt);
-  for (const auto &AE : ARCHExtNames) {
-    if (!AE.Feature.empty() && ArchExt == AE.Name)
-      return StringRef(Negated ? AE.NegFeature : AE.Feature);
+  for (const auto &AE : ExtNames) {
+    if (!AE.name(1).empty() && ArchExt == AE.name())
+      return AE.name(Negated ? 2 : 1);
   }
 
   return StringRef();
@@ -371,7 +443,7 @@ static ARM::FPUKind findDoublePrecisionFPU(ARM::FPUKind InputFPUKind) {
   if (InputFPUKind == ARM::FK_INVALID || InputFPUKind == ARM::FK_NONE)
     return ARM::FK_INVALID;
 
-  const ARM::FPUName &InputFPU = ARM::FPUNames[InputFPUKind];
+  const FPUName &InputFPU = FPUNames[InputFPUKind].value();
 
   // If the input FPU already supports double-precision, then there
   // isn't any different FPU we can return here.
@@ -380,7 +452,8 @@ static ARM::FPUKind findDoublePrecisionFPU(ARM::FPUKind InputFPUKind) {
 
   // Otherwise, look for an FPU entry with all the same fields, except
   // that it supports double precision.
-  for (const ARM::FPUName &CandidateFPU : ARM::FPUNames) {
+  for (const auto &CandidateFPUEntry : FPUNames) {
+    const FPUName &CandidateFPU = CandidateFPUEntry.value();
     if (CandidateFPU.FPUVer == InputFPU.FPUVer &&
         CandidateFPU.NeonSupport == InputFPU.NeonSupport &&
         ARM::has32Regs(CandidateFPU.Restriction) ==
@@ -398,7 +471,7 @@ static ARM::FPUKind findSinglePrecisionFPU(ARM::FPUKind InputFPUKind) {
   if (InputFPUKind == ARM::FK_INVALID || InputFPUKind == ARM::FK_NONE)
     return ARM::FK_INVALID;
 
-  const ARM::FPUName &InputFPU = ARM::FPUNames[InputFPUKind];
+  const FPUName &InputFPU = FPUNames[InputFPUKind].value();
 
   // If the input FPU already is single-precision only, then there
   // isn't any different FPU we can return here.
@@ -409,10 +482,10 @@ static ARM::FPUKind findSinglePrecisionFPU(ARM::FPUKind InputFPUKind) {
   // and is not Double Precision. We want to allow for changing of
   // NEON Support and Restrictions so CPU's such as Cortex-R52 can
   // select between SP Only and Full DP modes.
-  for (const ARM::FPUName &CandidateFPU : ARM::FPUNames) {
-    if (CandidateFPU.FPUVer == InputFPU.FPUVer &&
-        !ARM::isDoublePrecision(CandidateFPU.Restriction)) {
-      return CandidateFPU.ID;
+  for (const auto &CandidateFPU : FPUNames) {
+    if (CandidateFPU.value().FPUVer == InputFPU.FPUVer &&
+        !ARM::isDoublePrecision(CandidateFPU.value().Restriction)) {
+      return CandidateFPU.value().ID;
     }
   }
 
@@ -432,13 +505,13 @@ bool ARM::appendArchExtFeatures(StringRef CPU, ARM::ArchKind AK,
   if (ID == AEK_INVALID)
     return false;
 
-  for (const auto &AE : ARCHExtNames) {
+  for (const auto &AE : ExtNames) {
     if (Negated) {
-      if ((AE.ID & ID) == ID && !AE.NegFeature.empty())
-        Features.push_back(AE.NegFeature);
+      if ((AE.value() & ID) == ID && !AE.name(2).empty())
+        Features.push_back(AE.name(2));
     } else {
-      if ((AE.ID & ID) == AE.ID && !AE.Feature.empty())
-        Features.push_back(AE.Feature);
+      if ((AE.value() & ID) == AE.value() && !AE.name(1).empty())
+        Features.push_back(AE.name(1));
     }
   }
 
@@ -497,8 +570,8 @@ StringRef ARM::getDefaultCPU(StringRef Arch) {
 
   // Look for multiple AKs to find the default for pair AK+Name.
   for (const auto &CPU : CPUNames) {
-    if (CPU.ArchID == AK && CPU.Default)
-      return CPU.Name;
+    if (CPU.value().ArchID == AK && CPU.value().Default)
+      return CPU.name();
   }
 
   // If we can't find a default then target the architecture instead
@@ -506,34 +579,42 @@ StringRef ARM::getDefaultCPU(StringRef Arch) {
 }
 
 uint64_t ARM::parseHWDiv(StringRef HWDiv) {
+  // List of HWDiv names (use getHWDivSynonym) and which architectural
+  // features they correspond to (use getHWDivFeatures).
+  constexpr EnumStringDef<uint64_t> HWDivNameDefs[] = {
+#define ARM_HW_DIV_NAME(NAME, ID) {{NAME}, ID},
+#include "llvm/TargetParser/ARMTargetParser.def"
+  };
+  static constexpr auto HWDivNames = BUILD_ENUM_STRINGS(HWDivNameDefs);
+
   StringRef Syn = getHWDivSynonym(HWDiv);
   for (const auto &D : HWDivNames) {
-    if (Syn == D.Name)
-      return D.ID;
+    if (Syn == D.name())
+      return D.value();
   }
   return AEK_INVALID;
 }
 
 uint64_t ARM::parseArchExt(StringRef ArchExt) {
-  for (const auto &A : ARCHExtNames) {
-    if (ArchExt == A.Name)
-      return A.ID;
+  for (const auto &A : ExtNames) {
+    if (ArchExt == A.name(0))
+      return A.value();
   }
   return AEK_INVALID;
 }
 
 ARM::ArchKind ARM::parseCPUArch(StringRef CPU) {
   for (const auto &C : CPUNames) {
-    if (CPU == C.Name)
-      return C.ArchID;
+    if (CPU == C.name())
+      return C.value().ArchID;
   }
   return ArchKind::INVALID;
 }
 
 void ARM::fillValidCPUArchList(SmallVectorImpl<StringRef> &Values) {
-  for (const auto &Arch : CPUNames) {
-    if (Arch.ArchID != ArchKind::INVALID)
-      Values.push_back(Arch.Name);
+  for (const auto &CPU : CPUNames) {
+    if (CPU.value().ArchID != ArchKind::INVALID)
+      Values.push_back(CPU.name());
   }
 }
 
@@ -671,17 +752,17 @@ void ARM::PrintSupportedExtensions(StringMap<StringRef> DescMap) {
   outs() << "All available -march extensions for ARM\n\n"
          << "    " << left_justify("Name", 20)
          << (DescMap.empty() ? "\n" : "Description\n");
-  for (const auto &Ext : ARCHExtNames) {
+  for (const auto &Ext : ExtNames) {
     // Extensions without a feature cannot be used with -march.
-    if (!Ext.Feature.empty()) {
-      std::string Description = DescMap[Ext.Name].str();
+    if (!Ext.name(1).empty()) {
+      std::string Description = DescMap[Ext.name(0)].str();
       // With SIMD, this links to the NEON feature, so the description should be
       // taken from here, as SIMD does not exist in TableGen.
-      if (Ext.Name == "simd")
+      if (Ext.name(0) == "simd")
         Description = DescMap["neon"].str();
       outs() << "    "
              << format(Description.empty() ? "%s\n" : "%-20s%s\n",
-                       Ext.Name.str().c_str(), Description.c_str());
+                       Ext.name().str().c_str(), Description.c_str());
     }
   }
 }

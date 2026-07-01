@@ -23,6 +23,7 @@
 
 namespace llvm {
 
+template <typename, unsigned> class EnumStrings;
 class Triple;
 
 namespace ARM {
@@ -78,52 +79,11 @@ enum ArchExtKind : uint64_t {
   AEK_XSCALE = 1ULL << 63,
 };
 
-// List of Arch Extension names.
-struct ExtName {
-  StringRef Name;
-  uint64_t ID;
-  StringRef Feature;
-  StringRef NegFeature;
-};
-
-constexpr ExtName ARCHExtNames[] = {
-#define ARM_ARCH_EXT_NAME(NAME, ID, FEATURE, NEGFEATURE)                       \
-  {NAME, ID, FEATURE, NEGFEATURE},
-#include "ARMTargetParser.def"
-};
-
-// List of HWDiv names (use getHWDivSynonym) and which architectural
-// features they correspond to (use getHWDivFeatures).
-constexpr struct {
-  StringRef Name;
-  uint64_t ID;
-} HWDivNames[] = {
-#define ARM_HW_DIV_NAME(NAME, ID) {NAME, ID},
-#include "ARMTargetParser.def"
-};
-
 // Arch names.
 enum class ArchKind {
 #define ARM_ARCH(NAME, ID, CPU_ATTR, ARCH_FEATURE, ARCH_ATTR, ARCH_FPU,        \
                  ARCH_BASE_EXT)                                                \
   ID,
-#include "ARMTargetParser.def"
-};
-
-// List of CPU names and their arches.
-// The same CPU can have multiple arches and can be default on multiple arches.
-// When finding the Arch for a CPU, first-found prevails. Sort them accordingly.
-// When this becomes table-generated, we'd probably need two tables.
-struct CpuNames {
-  StringRef Name;
-  ArchKind ArchID;
-  bool Default; // is $Name the default CPU for $ArchID ?
-  uint64_t DefaultExtensions;
-};
-
-constexpr CpuNames CPUNames[] = {
-#define ARM_CPU_NAME(NAME, ID, DEFAULT_FPU, IS_DEFAULT, DEFAULT_EXT)           \
-  {NAME, ARM::ArchKind::ID, IS_DEFAULT, DEFAULT_EXT},
 #include "ARMTargetParser.def"
 };
 
@@ -170,52 +130,6 @@ enum class NeonSupportLevel {
 // v6/v7/v8 Profile
 enum class ProfileKind { INVALID = 0, A, R, M };
 
-// List of canonical FPU names (use getFPUSynonym) and which architectural
-// features they correspond to (use getFPUFeatures).
-// The entries must appear in the order listed in ARM::FPUKind for correct
-// indexing
-struct FPUName {
-  StringRef Name;
-  FPUKind ID;
-  FPUVersion FPUVer;
-  NeonSupportLevel NeonSupport;
-  FPURestriction Restriction;
-};
-
-static constexpr FPUName FPUNames[] = {
-#define ARM_FPU(NAME, KIND, VERSION, NEON_SUPPORT, RESTRICTION)                \
-  {NAME, KIND, VERSION, NEON_SUPPORT, RESTRICTION},
-#include "llvm/TargetParser/ARMTargetParser.def"
-};
-
-// List of canonical arch names (use getArchSynonym).
-// This table also provides the build attribute fields for CPU arch
-// and Arch ID, according to the Addenda to the ARM ABI, chapters
-// 2.4 and 2.3.5.2 respectively.
-// FIXME: SubArch values were simplified to fit into the expectations
-// of the triples and are not conforming with their official names.
-// Check to see if the expectation should be changed.
-struct ArchNames {
-  StringRef Name;
-  StringRef CPUAttr; // CPU class in build attributes.
-  StringRef ArchFeature;
-  FPUKind DefaultFPU;
-  uint64_t ArchBaseExtensions;
-  ArchKind ID;
-  ARMBuildAttrs::CPUArch ArchAttr; // Arch ID in build attributes.
-
-  // Return ArchFeature without the leading "+".
-  StringRef getSubArch() const { return ArchFeature.substr(1); }
-};
-
-static constexpr ArchNames ARMArchNames[] = {
-#define ARM_ARCH(NAME, ID, CPU_ATTR, ARCH_FEATURE, ARCH_ATTR, ARCH_FPU,        \
-                 ARCH_BASE_EXT)                                                \
-  {NAME,          CPU_ATTR,     ARCH_FEATURE, ARCH_FPU,                        \
-   ARCH_BASE_EXT, ArchKind::ID, ARCH_ATTR},
-#include "llvm/TargetParser/ARMTargetParser.def"
-};
-
 inline ArchKind &operator--(ArchKind &Kind) {
   assert((Kind >= ArchKind::ARMV8A && Kind <= ArchKind::ARMV9_3A) &&
          "We only expect operator-- to be called with ARMV8/V9");
@@ -246,6 +160,9 @@ LLVM_ABI StringRef getArchName(ArchKind AK);
 LLVM_ABI unsigned getArchAttr(ArchKind AK);
 LLVM_ABI StringRef getCPUAttr(ArchKind AK);
 LLVM_ABI StringRef getSubArch(ArchKind AK);
+/// Get list of architecture extensions. The name strings are: 0=Name,
+/// 1=PosFeature (incl. "+"), 2=NegFeature (incl. "-").
+LLVM_ABI EnumStrings<uint64_t, 3> getArchExts();
 LLVM_ABI StringRef getArchExtName(uint64_t ArchExtKind);
 LLVM_ABI StringRef getArchExtFeature(StringRef ArchExt);
 LLVM_ABI bool appendArchExtFeatures(StringRef CPU, ARM::ArchKind AK,

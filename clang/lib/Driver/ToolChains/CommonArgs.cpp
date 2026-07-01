@@ -927,7 +927,8 @@ void tools::getTargetFeatures(const Driver &D, const llvm::Triple &Triple,
 
   for (auto Feature : unifyTargetFeatures(Features)) {
     CmdArgs.push_back(IsAux ? "-aux-target-feature" : "-target-feature");
-    CmdArgs.push_back(Feature.data());
+    // Feature strings may not be null-terminated.
+    CmdArgs.push_back(Args.MakeArgString(Feature));
   }
 }
 
