@@ -1,5 +1,5 @@
-// RUN: mlir-opt -convert-memref-to-emitc="lower-to-cpp=true" %s | FileCheck %s --check-prefixes=CPP,CHECK
-// RUN: mlir-opt -convert-memref-to-emitc="lower-to-cpp=false" %s | FileCheck %s --check-prefixes=NOCPP,CHECK
+// RUN: mlir-opt -convert-memref-to-emitc="lower-to-cpp=true" %s -split-input-file | FileCheck %s --check-prefixes=CPP,CHECK
+// RUN: mlir-opt -convert-memref-to-emitc="lower-to-cpp=false" %s -split-input-file | FileCheck %s --check-prefixes=NOCPP,CHECK
 
 func.func @copying(%arg0 : memref<9x4x5x7xf32>, %arg1 : memref<9x4x5x7xf32>) {
   memref.copy %arg0, %arg1 : memref<9x4x5x7xf32> to memref<9x4x5x7xf32>
@@ -28,10 +28,14 @@ func.func @copying(%arg0 : memref<9x4x5x7xf32>, %arg1 : memref<9x4x5x7xf32>) {
 // CHECK:           return
 // CHECK:         }
 
+// -----
+
 func.func @copying_rank0(%arg0 : memref<i32>, %arg1 : memref<i32>) {
   memref.copy %arg0, %arg1 : memref<i32> to memref<i32>
   return
 }
+
+// CHECK: module {
 
 // CHECK-LABEL:   func.func @copying_rank0(
 // CHECK-SAME:      %[[ARG0:.*]]: memref<i32>,

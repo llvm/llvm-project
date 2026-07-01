@@ -61,11 +61,10 @@ void mlir::registerConvertMemRefToEmitCInterface(DialectRegistry &registry) {
 
 Type convertMemRefType(MemRefType opTy, const TypeConverter *typeConverter) {
   Type resultTy;
-  if (opTy.getRank() == 0) {
+  if (opTy.getRank() == 0)
     resultTy = typeConverter->convertType(mlir::getElementTypeOrSelf(opTy));
-  } else {
+  else
     resultTy = typeConverter->convertType(opTy);
-  }
   return resultTy;
 }
 
@@ -180,7 +179,7 @@ static Value computeRowMajorLinearIndex(ImplicitLocOpBuilder &builder,
           ? emitc::ConstantOp::create(builder, idxType, builder.getIndexAttr(0))
           : indices[0];
 
-  if (shape.empty())
+  if (indices.empty())
     return linearIndex;
 
   for (auto [dim, idx] : llvm::zip(shape.drop_front(), indices.drop_front())) {
