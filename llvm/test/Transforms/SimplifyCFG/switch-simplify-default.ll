@@ -123,5 +123,51 @@ return:
   ret i32 %retval
 }
 
+define i32 @default_branch_proves_operand_value_but_has_existing_case(i8 %x) {
+; CHECK-LABEL: @default_branch_proves_operand_value_but_has_existing_case(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    switch i8 [[X:%.*]], label [[DEFAULT:%.*]] [
+; CHECK-NEXT:      i8 -1, label [[RETURN:%.*]]
+; CHECK-NEXT:      i8 0, label [[CASE_ZERO:%.*]]
+; CHECK-NEXT:      i8 1, label [[CASE_ONE:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       default:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i8 [[X]], 10
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    br label [[RETURN]]
+; CHECK:       case_zero:
+; CHECK-NEXT:    br label [[RETURN]]
+; CHECK:       case_one:
+; CHECK-NEXT:    br label [[RETURN]]
+; CHECK:       return:
+; CHECK-NEXT:    [[RETVAL:%.*]] = phi i32 [ 1, [[DEFAULT]] ], [ 1, [[CASE_ONE]] ], [ 0, [[CASE_ZERO]] ], [ -1, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret i32 [[RETVAL]]
+;
+entry:
+  switch i8 %x, label %default [
+  i8 -1, label %case_neg_one
+  i8 0, label %case_zero
+  i8 1, label %case_one
+  ]
+
+default:
+  %cmp = icmp ule i8 %x, 10
+  call void @llvm.assume(i1 %cmp)
+  br label %return
+
+case_neg_one:
+  br label %return
+
+case_zero:
+  br label %return
+
+case_one:
+  br label %return
+
+return:
+  %retval = phi i32 [ 1, %default ], [ -1, %case_neg_one ], [ 0, %case_zero ], [1, %case_one ]
+  ret i32 %retval
+}
+
 ; CHECK: [[PROF0]] = !{!"branch_weights", i32 0, i32 4, i32 2, i32 8}
 !0 = !{!"branch_weights", i32 8, i32 4, i32 2}

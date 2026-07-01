@@ -7838,9 +7838,15 @@ static bool simplifySwitchDefaultBranch(SwitchInst *SI, DomTreeUpdater *DTU,
   if (!Known.isConstant())
     return false;
 
-  SwitchInstProfUpdateWrapper SIW(*SI);
+  // Make sure we don't create invalid IR if the switch already
+  // has an explicit case for this constant.
   ConstantInt *CaseVal =
       ConstantInt::get(SI->getContext(), Known.getConstant());
+  const llvm::SwitchInst::CaseIt CaseIt = SI->findCaseValue(CaseVal);
+  if (CaseIt != SI->case_default())
+    return false;
+
+  SwitchInstProfUpdateWrapper SIW(*SI);
   SIW.addCase(CaseVal, Default, SIW.getSuccessorWeight(0));
   SIW.setSuccessorWeight(0, 0);
   createUnreachableSwitchDefault(SI, DTU,
