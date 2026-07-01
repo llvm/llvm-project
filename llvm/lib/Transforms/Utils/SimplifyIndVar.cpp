@@ -2186,6 +2186,25 @@ void WidenIV::calculatePostIncRange(Instruction *NarrowDef,
       !NarrowDefRHS->isNonNegative())
     return;
 
+  for (User *U : NarrowDefLHS->users()) {
+    // We can use some simple heuristics to infer NarrowDef's range. For
+    // instance, if the LHS (of ADD) is used by `zext nneg` and that usage
+    // guarantees to trigger UB on the path to NarrowUser when the said zext
+    // yields poison, then the LHS value can be considered non-negative.
+    // In other words, we're using `zext nneg` to "assert" that NarrowDef is
+    // non-negative.
+    if (match(U, m_NNegZExt(m_Value()))) {
+      if (!mustExecuteUBIfPoisonOnPathTo(cast<Instruction>(U), NarrowUser, DT))
+        continue;
+
+      auto NewRange = ConstantRange::makeExactICmpRegion(
+          CmpInst::ICMP_SGE, APInt::getZero(NarrowDefRHS->getBitWidth()));
+      NewRange = NewRange.addWithNoWrap(
+          *NarrowDefRHS, OverflowingBinaryOperator::NoSignedWrap);
+      updatePostIncRangeInfo(NarrowDef, NarrowUser, NewRange);
+    }
+  }
+
   auto UpdateRangeFromCondition = [&](Value *Condition, bool TrueDest) {
     CmpPredicate Pred;
     Value *CmpRHS;
