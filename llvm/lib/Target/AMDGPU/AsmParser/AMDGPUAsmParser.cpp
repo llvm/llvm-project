@@ -9964,6 +9964,11 @@ void AMDGPUAsmParser::cvtVOP3P(MCInst &Inst, const OperandVector &Operands,
     if (ModIdx == -1)
       continue;
 
+    // For MAC instructions, src2 is tied to vdst and its op_sel bit
+    // is not encoded.
+    if (AMDGPU::isMAC(Opc) && ModOps[J] == AMDGPU::OpName::src2_modifiers)
+      continue;
+
     uint32_t ModVal = 0;
 
     const MCOperand &SrcOp = Inst.getOperand(OpIdx);
