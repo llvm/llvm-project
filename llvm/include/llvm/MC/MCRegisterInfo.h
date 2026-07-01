@@ -39,8 +39,8 @@ public:
   using iterator = const MCPhysReg*;
   using const_iterator = const MCPhysReg*;
 
-  const iterator RegsBegin;
-  const uint8_t *const RegSet;
+  const uint32_t RegsOff;   ///< Relative offset to MCPhysReg array.
+  const uint32_t RegSetOff; ///< Relative offset to uint8_t array.
   const uint32_t NameIdx;
   const uint32_t RegSizeInBits;
   const uint16_t RegsSize;
@@ -56,8 +56,11 @@ public:
 
   /// begin/end - Return all of the registers in this class.
   ///
-  iterator       begin() const { return RegsBegin; }
-  iterator         end() const { return RegsBegin + RegsSize; }
+  iterator begin() const {
+    return reinterpret_cast<iterator>(reinterpret_cast<const char *>(this) +
+                                      RegsOff);
+  }
+  iterator end() const { return begin() + RegsSize; }
 
   /// getNumRegs - Return the number of registers in this class.
   ///
@@ -67,7 +70,7 @@ public:
   ///
   MCRegister getRegister(unsigned i) const {
     assert(i < getNumRegs() && "Register number out of range!");
-    return RegsBegin[i];
+    return begin()[i];
   }
 
   /// contains - Return true if the specified register is included in this
@@ -78,6 +81,7 @@ public:
     unsigned Byte = RegNo / 8;
     if (Byte >= RegSetSize)
       return false;
+    const uint8_t *RegSet = reinterpret_cast<const uint8_t *>(this) + RegSetOff;
     return (RegSet[Byte] & (1 << InByte)) != 0;
   }
 
@@ -103,6 +107,13 @@ public:
 
   /// Return true if this register class has a defined BaseClassOrder.
   bool isBaseClass() const { return BaseClass; }
+};
+
+template <unsigned RegClassCount, unsigned RegCount, unsigned BitSetSize>
+struct MCRegisterClassStorage {
+  MCRegisterClass Classes[RegClassCount];
+  MCPhysReg Regs[RegCount];
+  uint8_t BitSets[BitSetSize];
 };
 
 /// MCRegisterDesc - This record contains information about a particular

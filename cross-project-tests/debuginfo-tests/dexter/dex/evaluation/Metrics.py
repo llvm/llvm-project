@@ -7,14 +7,14 @@
 """Produce metric results from the results of a comparison of a DexterScript and debugger output.
 """
 
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Optional, Union
 
 from dex.evaluation.ExpectMatch import (
     DebuggerExpectMatch,
     MatchResult,
     get_expected_value_set,
 )
-from dex.test_script.Nodes import Expect, Value
+from dex.test_script.Nodes import Expect, Step, Value
 
 
 class Metric:
@@ -155,4 +155,79 @@ def get_variable_metrics(
         # The number of expected values that were not observed.
         "missing_values": ScalarMetric(num_missing_values, improves_asc=False),
     }
+    return metrics
+
+
+def lcs_len(a: List[int], b: List[int]) -> int:
+    """Returns the length of the longest common subsequence between a and b."""
+    lcs_table: List[List[int]] = [
+        [0 for _ in range(len(b) + 1)] for _ in range(len(a) + 1)
+    ]
+    for a_idx in range(len(a)):
+        for b_idx in range(len(b)):
+            if a[a_idx] == b[b_idx]:
+                lcs_table[a_idx + 1][b_idx + 1] = 1 + lcs_table[a_idx][b_idx]
+            else:
+                lcs_table[a_idx + 1][b_idx + 1] = max(
+                    lcs_table[a_idx + 1][b_idx], lcs_table[a_idx][b_idx + 1]
+                )
+    return lcs_table[-1][-1]
+
+
+def get_step_metrics(
+    expect: Step, expected_lines: List[int], step_lines: List[int]
+) -> Dict[str, Metric]:
+    """Given an Expect node with its expected values and a list of all matches for that Expect in a debugger session,
+    returns the computed metrics for that Expect node."""
+
+    expected_line_set = set(expected_lines)
+    actual_line_set = set(step_lines)
+
+    total_line_steps = len(step_lines)
+    if expect.kind == "exactly" or expect.kind == "at_least":
+        num_matching_steps = lcs_len(expected_lines, step_lines)
+        # Inefficient, but not to the point that we care!
+        num_matching_steps_ignoring_order = lcs_len(
+            sorted(expected_lines), sorted(step_lines)
+        )
+
+        max_possible_correct_line_steps = len(expected_lines)
+        correct_line_steps = num_matching_steps
+        misordered_line_steps = num_matching_steps_ignoring_order - num_matching_steps
+        missing_lines = len(expected_line_set - actual_line_set)
+        if expect.kind == "exactly":
+            incorrect_line_steps = total_line_steps - correct_line_steps
+            unexpected_lines = len(actual_line_set - expected_line_set)
+        else:
+            # For `!step at_least` there are no "incorrect" or "unexpected" lines, since we explicitly ignore seen lines
+            # outside of the expected lines.
+            incorrect_line_steps = 0
+            unexpected_lines = 0
+    else:
+        assert expect.kind == "never"
+        max_possible_correct_line_steps = total_line_steps
+        correct_line_steps = sum(
+            1 for line in step_lines if line not in expected_line_set
+        )
+        incorrect_line_steps = total_line_steps - correct_line_steps
+        unexpected_lines = len(actual_line_set.intersection(expected_line_set))
+        # For `!step never` there are no "missing" or "misordered" lines, since we only declare lines we *don't* want to
+        # see.
+        missing_lines = 0
+        misordered_line_steps = 0
+
+    metrics: Dict[str, Metric] = {
+        "total_line_steps": ScalarMetric(total_line_steps),
+        "correct_line_steps": ScalarMetric(correct_line_steps),
+        "correct_line_score": FractionMetric(
+            correct_line_steps, max_possible_correct_line_steps
+        ),
+        "misordered_line_steps": ScalarMetric(
+            misordered_line_steps, improves_asc=False
+        ),
+        "missing_lines": ScalarMetric(missing_lines, improves_asc=False),
+        "incorrect_line_steps": ScalarMetric(incorrect_line_steps, improves_asc=False),
+        "unexpected_lines": ScalarMetric(unexpected_lines, improves_asc=False),
+    }
+
     return metrics

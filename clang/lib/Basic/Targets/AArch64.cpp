@@ -960,9 +960,9 @@ void AArch64TargetInfo::setFeatureEnabled(llvm::StringMap<bool> &Features,
   if (!Enabled)
     return;
 
-  for (const auto *OtherArch : llvm::AArch64::ArchInfos)
-    if (ArchInfo->implies(*OtherArch))
-      Features[OtherArch->getSubArch()] = true;
+  for (const auto &OtherArch : llvm::AArch64::ArchInfos)
+    if (ArchInfo->implies(OtherArch))
+      Features[OtherArch.getSubArch()] = true;
 
   // Set any features implied by the architecture
   std::vector<StringRef> CPUFeats;
