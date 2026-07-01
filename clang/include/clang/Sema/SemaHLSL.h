@@ -148,8 +148,7 @@ public:
   // Returns the result of converting ConstantBuffer<T> to
   // `const hlsl_constant T&`. If `BaseExpr`'s type is not ConstantBuffer<T>
   // then the return value is `std::nullopt`.
-  std::optional<ExprResult>
-  tryPerformConstantBufferConversion(ExprResult &BaseExpr);
+  std::optional<ExprResult> tryPerformConstantBufferConversion(Expr *BaseExpr);
 
   // Returns the conversion operator to convert `RD` to `const hlsl_constant
   // Type&`. Returns `nullptr` if it could not be found.

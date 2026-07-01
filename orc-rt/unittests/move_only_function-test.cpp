@@ -199,13 +199,12 @@ TEST(MoveOnlyFunctionTest, Constness) {
   }
 
   {
-    // const move-only-function, non-const callable.
-    size_t NonConst = 0;
-    size_t Const = 0;
-    const move_only_function<void()> F(ConstCallCounter(NonConst, Const));
-    F();
-    EXPECT_EQ(NonConst, 1U);
-    EXPECT_EQ(Const, 0U);
+    // const move-only-function of a non-const signature is not invocable:
+    // operator() on move_only_function<void()> is non-const, so calling it on
+    // a const instance is ill-formed.
+    static_assert(!std::is_invocable_v<const move_only_function<void()>>,
+                  "const move_only_function<Sig> where Sig is non-const must "
+                  "not be invocable");
   }
 
   {
@@ -245,4 +244,65 @@ TEST(MoveOnlyFunctionTest, ShouldCopyInitialize) {
   ShouldCopy SC(DidMove);
   move_only_function<void()> F(SC);
   EXPECT_FALSE(DidMove);
+}
+
+TEST(MoveOnlyFunctionTest, NoexceptSignature) {
+  move_only_function<int(int) noexcept> Inc = [](int X) noexcept {
+    return X + 1;
+  };
+  EXPECT_EQ(Inc(41), 42);
+
+  static_assert(noexcept(Inc(0)),
+                "operator() on a noexcept-qualified move_only_function must "
+                "itself be noexcept");
+}
+
+TEST(MoveOnlyFunctionTest, ConstNoexceptSignature) {
+  const move_only_function<int(int) const noexcept> Inc = [](int X) noexcept {
+    return X + 1;
+  };
+  EXPECT_EQ(Inc(41), 42);
+
+  static_assert(noexcept(Inc(0)));
+}
+
+TEST(MoveOnlyFunctionTest, NonNoexceptSignatureIsNotNoexcept) {
+  move_only_function<void()> F = []() {};
+  move_only_function<void() const> FC = []() {};
+  static_assert(!noexcept(F()));
+  static_assert(!noexcept(FC()));
+}
+
+TEST(MoveOnlyFunctionTest, InvocabilityMatrix) {
+  // Non-const signatures: not invocable on a const instance.
+  static_assert(std::is_invocable_v<move_only_function<void()> &>);
+  static_assert(!std::is_invocable_v<const move_only_function<void()> &>);
+
+  static_assert(std::is_invocable_v<move_only_function<void() noexcept> &>);
+  static_assert(
+      !std::is_invocable_v<const move_only_function<void() noexcept> &>);
+
+  // Const signatures: invocable on both const and non-const instances.
+  static_assert(std::is_invocable_v<move_only_function<void() const> &>);
+  static_assert(std::is_invocable_v<const move_only_function<void() const> &>);
+
+  static_assert(
+      std::is_invocable_v<move_only_function<void() const noexcept> &>);
+  static_assert(
+      std::is_invocable_v<const move_only_function<void() const noexcept> &>);
+}
+
+TEST(MoveOnlyFunctionTest, MovePreservesWrappedCallableForNoexceptSigs) {
+  {
+    move_only_function<int() noexcept> F1 = []() noexcept { return 1; };
+    move_only_function<int() noexcept> F2 = std::move(F1);
+    EXPECT_EQ(F2(), 1);
+    EXPECT_FALSE(F1);
+  }
+  {
+    move_only_function<int() const noexcept> F1 = []() noexcept { return 2; };
+    move_only_function<int() const noexcept> F2 = std::move(F1);
+    EXPECT_EQ(F2(), 2);
+    EXPECT_FALSE(F1);
+  }
 }

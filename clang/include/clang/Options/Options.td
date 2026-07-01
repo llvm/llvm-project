@@ -3770,7 +3770,7 @@ defm modulemap_allow_subdirectory_search : BoolFOption <"modulemap-allow-subdire
   PosFlag<SetTrue, [], [], "Allow to search for module maps in subdirectories of search paths">,
   NegFlag<SetFalse>, BothFlags<[NoXarchOption], [ClangOption, CC1Option]>>;
 defm modules : BoolFOption<"modules",
-  LangOpts<"Modules">, Default<fcxx_modules.KeyPath>,
+  LangOpts<"ClangModules">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
           "Enable the 'modules' language feature">,
   NegFlag<SetFalse>, BothFlags<

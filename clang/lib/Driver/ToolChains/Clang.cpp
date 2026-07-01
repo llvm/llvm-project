@@ -1438,7 +1438,8 @@ static void CollectARMPACBTIOptions(const ToolChain &TC, const ArgList &Args,
       auto isPAuthLR = [](const char *member) {
         llvm::AArch64::ExtensionInfo pauthlr_extension =
             llvm::AArch64::getExtensionByID(llvm::AArch64::AEK_PAUTHLR);
-        return pauthlr_extension.PosTargetFeature == member;
+        return llvm::AArch64::StrTab[pauthlr_extension.PosTargetFeature] ==
+               member;
       };
 
       if (llvm::any_of(CmdArgs, isPAuthLR))
@@ -9793,7 +9794,8 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       OPT_fsanitize_trap_EQ,
       OPT_fno_sanitize_trap_EQ,
       OPT_fslp_vectorize,
-      OPT_fno_slp_vectorize};
+      OPT_fno_slp_vectorize,
+      OPT_hipstdpar};
   const llvm::DenseSet<unsigned> LinkerOptions{OPT_mllvm, OPT_Zlinker_input};
   auto ToolChainHasRT = [&](const ToolChain &TC, StringRef Name) {
     return TC.getVFS().exists(
@@ -9907,19 +9909,6 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
                                    "=-plugin-opt=-amdgpu-internalize-symbols"));
           }
         }
-      }
-
-      if (JA.getType() == types::TY_HIP_FATBIN && Kind == Action::OFK_HIP) {
-        // Non-RDC HIP uses the conventional non-LTO pipeline unless the user
-        // opts into offload LTO.
-        bool UsesProfileGenerate = Args.hasArg(
-            options::OPT_fprofile_generate, options::OPT_fprofile_generate_EQ,
-            options::OPT_fprofile_instr_generate,
-            options::OPT_fprofile_instr_generate_EQ);
-        if (!Args.hasArg(options::OPT_foffload_lto_EQ,
-                         options::OPT_fno_offload_lto) &&
-            !UsesProfileGenerate && !TC->getTriple().isSPIRV())
-          CmdArgs.push_back("--no-lto");
       }
     }
   }

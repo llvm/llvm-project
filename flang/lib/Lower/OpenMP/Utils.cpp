@@ -800,6 +800,38 @@ void collectLoopRelatedInfo(
     const parser::LoopControl::Bounds *bounds =
         std::get_if<parser::LoopControl::Bounds>(&loopControl->u);
     assert(bounds && "Expected bounds for worksharing do loop");
+    // Check for non-rectangular loops: if any bound of this loop references
+    // an iteration variable from an enclosing collapsed loop, this is a
+    // non-rectangular loop nest which is not yet supported by the
+    // OpenMPIRBuilder's collapseLoops.
+    if (!iv.empty()) {
+      auto referencesOuterIV = [&iv](const semantics::SomeExpr &expr) -> bool {
+        for (const semantics::SymbolRef &sym :
+             evaluate::GetSymbolVector(expr)) {
+          for (const semantics::Symbol *outerIV : iv) {
+            if (&sym->GetUltimate() == &outerIV->GetUltimate())
+              return true;
+          }
+        }
+        return false;
+      };
+      if (const auto *lowerExpr = semantics::GetExpr(bounds->Lower()))
+        if (referencesOuterIV(*lowerExpr))
+          TODO(currentLocation,
+               "Non-rectangular loop nests with COLLAPSE are not yet "
+               "supported");
+      if (const auto *upperExpr = semantics::GetExpr(bounds->Upper()))
+        if (referencesOuterIV(*upperExpr))
+          TODO(currentLocation,
+               "Non-rectangular loop nests with COLLAPSE are not yet "
+               "supported");
+      if (auto &step = bounds->Step())
+        if (const auto *stepExpr = semantics::GetExpr(step))
+          if (referencesOuterIV(*stepExpr))
+            TODO(currentLocation,
+                 "Non-rectangular loop nests with COLLAPSE are not yet "
+                 "supported");
+    }
     lower::StatementContext stmtCtx;
     result.loopLowerBounds.push_back(fir::getBase(
         converter.genExprValue(*semantics::GetExpr(bounds->Lower()), stmtCtx)));

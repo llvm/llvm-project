@@ -196,7 +196,8 @@ public:
   // calling __inc_reference.
   //
   // pre: __ptr is in __lut_
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI lock_guard<mutex> __get_lock([[maybe_unused]] void* __ptr) noexcept {
+  _LIBCPP_NO_THREAD_SAFETY_ANALYSIS [[nodiscard]] _LIBCPP_HIDE_FROM_ABI lock_guard<mutex>
+  __get_lock([[maybe_unused]] void* __ptr) noexcept {
     shared_lock __lock{__mutex_};
     return lock_guard{__get_it(__ptr)->second.__mutex};
   }

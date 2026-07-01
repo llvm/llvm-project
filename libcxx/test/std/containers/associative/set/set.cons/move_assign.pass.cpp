@@ -12,7 +12,7 @@
 
 // class set
 
-// set& operator=(set&& s);
+// constexpr set& operator=(set&& s); // constexpr since C++26
 
 #include <set>
 #include <cassert>
@@ -23,7 +23,7 @@
 #include "test_allocator.h"
 #include "min_allocator.h"
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   {
     typedef MoveOnly V;
     typedef test_less<MoveOnly> C;
@@ -93,5 +93,12 @@ int main(int, char**) {
     assert(m1.empty());
   }
 
+  return true;
+}
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }

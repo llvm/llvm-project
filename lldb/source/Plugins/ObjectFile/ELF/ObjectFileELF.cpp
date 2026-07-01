@@ -683,7 +683,7 @@ ModuleSpecList ObjectFileELF::GetModuleSpecifications(
           if (!gnu_debuglink_crc) {
             LLDB_SCOPED_TIMERF("Calculating module crc32 %s with size %" PRIu64
                                " KiB",
-                               file.GetFilename().AsCString(""),
+                               file.GetFilename().str().c_str(),
                                (length - file_offset) / 1024);
 
             // For core files - which usually don't happen to have a
@@ -3212,7 +3212,7 @@ void ObjectFileELF::ParseSymtab(Symtab &lldb_symtab) {
     return;
 
   Progress progress("Parsing symbol table",
-                    m_file.GetFilename().AsCString("<Unknown>"));
+                    m_file.GetFilename().nonEmptyOr("<Unknown>").str());
   ElapsedTime elapsed(module_sp->GetSymtabParseTime());
 
   // We always want to use the main object file so we (hopefully) only have one
@@ -3741,7 +3741,7 @@ void ObjectFileELF::DumpDependentModules(lldb_private::Stream *s) {
     s->PutCString("Dependent Modules:\n");
     for (unsigned i = 0; i < num_modules; ++i) {
       const FileSpec &spec = m_filespec_up->GetFileSpecAtIndex(i);
-      s->Printf("   %s\n", spec.GetFilename().GetCString());
+      s->Format("   {0}\n", spec.GetFilename());
     }
   }
 }

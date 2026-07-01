@@ -15,6 +15,7 @@
 #include "AMDGPU.h"
 #include "AMDGPUInstrInfo.h"
 #include "AMDGPULaneMaskUtils.h"
+#include "AMDGPUMemoryUtils.h"
 #include "AMDGPUSelectionDAGInfo.h"
 #include "AMDGPUTargetMachine.h"
 #include "GCNSubtarget.h"
@@ -9862,6 +9863,13 @@ SDValue SITargetLowering::lowerBUILD_VECTOR(SDValue Op,
 
 bool SITargetLowering::isOffsetFoldingLegal(
     const GlobalAddressSDNode *GA) const {
+  // Named barriers have fixed, non-relocated LDS addresses, so a constant
+  // offset into an array of them can be folded into the address.
+  if (GA->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS) {
+    const auto *GV = dyn_cast<GlobalVariable>(GA->getGlobal());
+    return GV && AMDGPU::isNamedBarrier(*GV);
+  }
+
   // OSes that use ELF REL relocations (instead of RELA) can only store a
   // 32-bit addend in the instruction, so it is not safe to allow offset folding
   // which can create arbitrary 64-bit addends. (This is only a problem for

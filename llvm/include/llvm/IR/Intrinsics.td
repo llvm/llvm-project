@@ -136,9 +136,23 @@ class Returned<ArgIndex idx> : IntrinsicProperty {
   int ArgNo = idx.Value;
 }
 
-// ImmArg - The specified argument must be an immediate.
-class ImmArg<ArgIndex idx> : IntrinsicProperty {
+// DefaultValue - A value carrier paired with ImmArg to declare a default for
+// a missing trailing argument. AutoUpgrade fills the default when an old
+// .bc / .ll file is loaded.
+class DefaultValue<int val> {
+  int Value = val;
+}
+
+// Sentinel — used as the default for ImmArg's optional DefaultValue parameter.
+def NoDefault : DefaultValue<0> {
+  let Value = ?;
+}
+
+// ImmArg - The specified argument must be an immediate. The optional
+// second template parameter specifies a default value for AutoUpgrade.
+class ImmArg<ArgIndex idx, DefaultValue val = NoDefault> : IntrinsicProperty {
   int ArgNo = idx.Value;
+  DefaultValue Default = val;
 }
 
 // ReadOnly - The specified argument pointer is not written to through the
@@ -577,17 +591,25 @@ def llvm_any_vector_float_ty : LLVMAnyType<iAny,
 def llvm_any_scalar_float_ty : LLVMAnyType<iAny,
                                      AnyKindVectorConstraint.Scalar,
                                      AnyKindElementConstraint.Float>;
-// Other overloaded types.
-def llvm_anyvector_ty  : LLVMAnyType<vAny,
-                                     AnyKindVectorConstraint.Vector,
-                                     AnyKindElementConstraint.None>;
 
+// Pointer overload types.
 // Note: CodeGenIntrinsics.cpp seems to check this class to check pointers.
 class LLVMAnyPointerType : LLVMAnyType<pAny,
                                        AnyKindVectorConstraint.Scalar,
                                        AnyKindElementConstraint.Pointer>;
 
+// Any scalar pointer type.
 def llvm_anyptr_ty     : LLVMAnyPointerType;      // ptr addrspace(N)
+
+// Any vector of pointers.
+def llvm_any_vector_ptr_ty : LLVMAnyType<pAny,
+                                       AnyKindVectorConstraint.Vector,
+                                       AnyKindElementConstraint.Pointer>;
+
+// Other overloaded types.
+def llvm_anyvector_ty  : LLVMAnyType<vAny,
+                                     AnyKindVectorConstraint.Vector,
+                                     AnyKindElementConstraint.None>;
 
 def llvm_i1_ty         : LLVMType<i1>;
 def llvm_i8_ty         : LLVMType<i8>;
@@ -1911,7 +1933,7 @@ def int_experimental_gc_relocate : DefaultAttrsIntrinsic<
     [IntrNoMem, ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>]>;
 
 def int_experimental_gc_get_pointer_base : DefaultAttrsIntrinsic<
-    [llvm_anyptr_ty], [llvm_anyptr_ty],
+    [llvm_anyptr_ty], [LLVMMatchType<0>],
     [IntrNoMem, ReadNone<ArgIndex<0>>, NoCapture<ArgIndex<0>>]>;
 
 def int_experimental_gc_get_pointer_offset : DefaultAttrsIntrinsic<
@@ -2440,58 +2462,58 @@ let IntrProperties = [IntrNoMem, IntrSpeculatable] in {
                              [ LLVMMatchType<0>,
                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                llvm_i32_ty]>;
-  def int_vp_lrint : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
-                             [ llvm_anyvector_ty,
+  def int_vp_lrint : DefaultAttrsIntrinsic<[ llvm_any_vector_int_ty ],
+                             [ llvm_any_vector_float_ty,
                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                llvm_i32_ty]>;
-  def int_vp_llrint : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
-                             [ llvm_anyvector_ty,
+  def int_vp_llrint : DefaultAttrsIntrinsic<[ llvm_any_vector_int_ty ],
+                             [ llvm_any_vector_float_ty,
                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                llvm_i32_ty]>;
 
   // Casts
-  def int_vp_trunc : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
-                             [ llvm_anyvector_ty,
+  def int_vp_trunc : DefaultAttrsIntrinsic<[ llvm_any_vector_int_ty ],
+                             [ llvm_any_vector_int_ty,
                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                llvm_i32_ty]>;
-  def int_vp_zext : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
-                             [ llvm_anyvector_ty,
+  def int_vp_zext : DefaultAttrsIntrinsic<[ llvm_any_vector_int_ty ],
+                             [ llvm_any_vector_int_ty,
                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                llvm_i32_ty]>;
-  def int_vp_sext : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
-                             [ llvm_anyvector_ty,
+  def int_vp_sext : DefaultAttrsIntrinsic<[ llvm_any_vector_int_ty ],
+                             [ llvm_any_vector_int_ty,
                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                llvm_i32_ty]>;
-  def int_vp_fptrunc : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
-                             [ llvm_anyvector_ty,
+  def int_vp_fptrunc : DefaultAttrsIntrinsic<[ llvm_any_vector_float_ty ],
+                             [ llvm_any_vector_float_ty,
                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                llvm_i32_ty]>;
-  def int_vp_fpext : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
-                             [ llvm_anyvector_ty,
+  def int_vp_fpext : DefaultAttrsIntrinsic<[ llvm_any_vector_float_ty ],
+                             [ llvm_any_vector_float_ty,
                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                llvm_i32_ty]>;
-  def int_vp_fptoui : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
-                             [ llvm_anyvector_ty,
+  def int_vp_fptoui : DefaultAttrsIntrinsic<[ llvm_any_vector_int_ty ],
+                             [ llvm_any_vector_float_ty,
                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                llvm_i32_ty]>;
-  def int_vp_fptosi : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
-                             [ llvm_anyvector_ty,
+  def int_vp_fptosi : DefaultAttrsIntrinsic<[ llvm_any_vector_int_ty ],
+                             [ llvm_any_vector_float_ty,
                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                llvm_i32_ty]>;
-  def int_vp_uitofp : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
-                             [ llvm_anyvector_ty,
+  def int_vp_uitofp : DefaultAttrsIntrinsic<[ llvm_any_vector_float_ty ],
+                             [ llvm_any_vector_int_ty,
                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                llvm_i32_ty]>;
-  def int_vp_sitofp : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
-                             [ llvm_anyvector_ty,
+  def int_vp_sitofp : DefaultAttrsIntrinsic<[ llvm_any_vector_float_ty ],
+                             [ llvm_any_vector_int_ty,
                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                llvm_i32_ty]>;
-  def int_vp_ptrtoint : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
-                             [ llvm_anyvector_ty,
+  def int_vp_ptrtoint : DefaultAttrsIntrinsic<[ llvm_any_vector_int_ty ],
+                             [ llvm_any_vector_ptr_ty,
                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                llvm_i32_ty]>;
-  def int_vp_inttoptr : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
-                             [ llvm_anyvector_ty,
+  def int_vp_inttoptr : DefaultAttrsIntrinsic<[ llvm_any_vector_ptr_ty ],
+                             [ llvm_any_vector_int_ty,
                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                llvm_i32_ty]>;
   // Shuffles

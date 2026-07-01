@@ -10,7 +10,7 @@
 
 // class set
 
-// size_type max_size() const;
+// constexpr size_type max_size() const; // constexpr since C++26
 
 #include <cassert>
 #include <limits>
@@ -20,7 +20,7 @@
 #include "test_allocator.h"
 #include "test_macros.h"
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   {
     typedef limited_allocator<int, 10> A;
     typedef std::set<int, std::less<int>, A> C;
@@ -44,5 +44,12 @@ int main(int, char**) {
     assert(c.max_size() <= alloc_max_size(c.get_allocator()));
   }
 
+  return true;
+}
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }

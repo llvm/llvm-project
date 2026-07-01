@@ -283,11 +283,15 @@ struct ErrorHandlerTraitsImpl<void, std::unique_ptr<ErrT>> {
   }
 };
 
+template <bool /* is_const */, bool /* is_noexcept */, typename RetT,
+          typename ArgT>
+struct ErrorHandlerTraitsImplAdapter : ErrorHandlerTraitsImpl<RetT, ArgT> {};
+
 } // namespace detail.
 
 template <typename C>
 struct ErrorHandlerTraits
-    : public CallableTraitsHelper<detail::ErrorHandlerTraitsImpl, C> {};
+    : public CallableTraitsHelper<detail::ErrorHandlerTraitsImplAdapter, C> {};
 
 inline Error handleErrorsImpl(std::unique_ptr<ErrorInfoBase> Payload) {
   return make_error(std::move(Payload));
@@ -649,9 +653,12 @@ template <> struct ErrorWrapImpl<void> {
   }
 };
 
+template <bool /* is_const */, bool /* is_noexcept */, typename RetT>
+struct ErrorWrapImplAdapter : ErrorWrapImpl<RetT> {};
+
 template <typename Callable>
 struct ErrorWrap
-    : public CallableTraitsHelper<detail::ErrorWrapImpl, Callable> {};
+    : public CallableTraitsHelper<detail::ErrorWrapImplAdapter, Callable> {};
 
 } // namespace detail
 

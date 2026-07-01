@@ -1085,6 +1085,26 @@ void clang::EscapeStringForDiagnostic(StringRef Str,
   }
 }
 
+/// Displays a single Unicode codepoint in U+NNNN notation, optionally
+/// prepending the quoted codepoint itself if printable.
+llvm::SmallString<16>
+clang::DisplayCodePointForDiagnostic(llvm::UTF32 CodePoint) {
+  llvm::SmallString<16> Result;
+  if (llvm::sys::unicode::isPrintable(CodePoint)) {
+    std::string CharUTF8;
+    llvm::convertUTF32ToUTF8String(llvm::ArrayRef<llvm::UTF32>(&CodePoint, 1),
+                                   CharUTF8);
+    Result.append("'");
+    Result.append(CharUTF8);
+    Result.append("' U+");
+  } else {
+    Result.append("U+");
+  }
+  llvm::raw_svector_ostream OS(Result);
+  llvm::write_hex(OS, CodePoint, llvm::HexPrintStyle::Upper, 4);
+  return Result;
+}
+
 void Diagnostic::FormatDiagnostic(const char *DiagStr, const char *DiagEnd,
                                   SmallVectorImpl<char> &OutStr) const {
   // When the diagnostic string is only "%0", the entire string is being given

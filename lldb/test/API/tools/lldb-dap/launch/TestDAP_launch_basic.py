@@ -2,11 +2,11 @@
 Test lldb-dap launch request.
 """
 
-from lldbsuite.test.decorators import expectedFailureWindows
-import lldbdap_testcase
+from lldbsuite.test.tools.lldb_dap import lldb_dap_testcase
+from lldbsuite.test.tools.lldb_dap.dap_types import LaunchArgs
 
 
-class TestDAP_launch_basic(lldbdap_testcase.DAPTestCaseBase):
+class TestDAP_launch_basic(lldb_dap_testcase.DAPTestCaseBase):
     """
     Tests the default launch of a simple program. No arguments,
     environment, or anything else is specified.
@@ -14,10 +14,12 @@ class TestDAP_launch_basic(lldbdap_testcase.DAPTestCaseBase):
 
     def test(self):
         program = self.getBuildArtifact("a.out")
-        self.build_and_launch(program)
-        self.continue_to_exit()
-        # Now get the STDOUT and verify our program argument is correct
-        output = self.get_stdout()
+        session = self.build_and_create_session()
+        session.launch(LaunchArgs(program=program))
+        session.verify_process_exited()
+
+        # Now get the STDOUT and verify our program argument is correct.
+        output = session.get_stdout()
         self.assertTrue(output and len(output) > 0, "expect program output")
         lines = output.splitlines()
         self.assertIn(program, lines[0], "make sure program path is in first argument")

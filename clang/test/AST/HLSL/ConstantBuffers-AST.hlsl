@@ -116,5 +116,36 @@ float main() {
   // CHECK-NEXT: HLSLOutArgExpr {{.*}} 'ConstantBuffer<S>':'hlsl::ConstantBuffer<S>' lvalue inout
   takes_inout_cb(cb);
 
+  // CHECK: DeclStmt
+  // CHECK-NEXT: VarDecl {{.*}} s2 'S' cinit
+  // CHECK-NEXT: ImplicitCastExpr {{.*}} 'S' <LValueToRValue>
+  // CHECK-NEXT: ImplicitCastExpr {{.*}} 'const hlsl_constant S' lvalue <UserDefinedConversion>
+  // CHECK-NEXT: CXXMemberCallExpr {{.*}} 'const hlsl_constant S' lvalue
+  // CHECK-NEXT: MemberExpr {{.*}} '<bound member function type>' .operator const hlsl_constant S & {{.*}}
+  // CHECK-NEXT: ImplicitCastExpr {{.*}} 'const hlsl::ConstantBuffer<S>' lvalue <NoOp>
+  // CHECK-NEXT: DeclRefExpr {{.*}} 'ConstantBuffer<S>':'hlsl::ConstantBuffer<S>' lvalue Var {{.*}} 'cb' 'ConstantBuffer<S>':'hlsl::ConstantBuffer<S>'
+  S s2 = cb;
+
+  // CHECK: BinaryOperator {{.*}} 'S' lvalue '='
+  // CHECK-NEXT: DeclRefExpr {{.*}} 'S' lvalue Var {{.*}} 's' 'S'
+  // CHECK-NEXT: ImplicitCastExpr {{.*}} 'S' <LValueToRValue>
+  // CHECK-NEXT: CXXMemberCallExpr {{.*}} 'const hlsl_constant S' lvalue
+  // CHECK-NEXT: MemberExpr {{.*}} '<bound member function type>' .operator const hlsl_constant S & {{.*}}
+  // CHECK-NEXT: ImplicitCastExpr {{.*}} 'const hlsl::ConstantBuffer<S>' lvalue <NoOp>
+  // CHECK-NEXT: DeclRefExpr {{.*}} 'ConstantBuffer<S>':'hlsl::ConstantBuffer<S>' lvalue Var {{.*}} 'cb' 'ConstantBuffer<S>':'hlsl::ConstantBuffer<S>'
+  S s;
+  s = cb;
+
+  // CHECK: CallExpr {{.*}} 'void'
+  // CHECK-NEXT: ImplicitCastExpr {{.*}} 'void (*)(S)' <FunctionToPointerDecay>
+  // CHECK-NEXT: DeclRefExpr {{.*}} 'void (S)' lvalue Function {{.*}} 'takes_s' 'void (S)'
+  // CHECK-NEXT: ImplicitCastExpr {{.*}} 'S' <LValueToRValue>
+  // CHECK-NEXT: ImplicitCastExpr {{.*}} 'const hlsl_constant S' lvalue <UserDefinedConversion>
+  // CHECK-NEXT: CXXMemberCallExpr {{.*}} 'const hlsl_constant S' lvalue
+  // CHECK-NEXT: MemberExpr {{.*}} '<bound member function type>' .operator const hlsl_constant S & {{.*}}
+  // CHECK-NEXT: ImplicitCastExpr {{.*}} 'const hlsl::ConstantBuffer<S>' lvalue <NoOp>
+  // CHECK-NEXT: DeclRefExpr {{.*}} 'ConstantBuffer<S>':'hlsl::ConstantBuffer<S>' lvalue Var {{.*}} 'cb' 'ConstantBuffer<S>':'hlsl::ConstantBuffer<S>'
+  takes_s(cb);
+
   return f1 + f2 + f3;
 }

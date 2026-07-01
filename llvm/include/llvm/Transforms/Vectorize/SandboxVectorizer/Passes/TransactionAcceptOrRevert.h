@@ -21,7 +21,10 @@ namespace llvm::sandboxir {
 
 class LLVM_ABI TransactionAcceptOrRevert : public RegionPass {
 public:
-  TransactionAcceptOrRevert() : RegionPass("tr-accept-or-revert") {}
+  TransactionAcceptOrRevert(StringRef AuxArg)
+      : RegionPass("tr-accept-or-revert") {
+    assert(AuxArg.empty() && "This pass ignores aux arg!");
+  }
   bool runOnRegion(Region &Rgn, const Analyses &A) final;
 };
 

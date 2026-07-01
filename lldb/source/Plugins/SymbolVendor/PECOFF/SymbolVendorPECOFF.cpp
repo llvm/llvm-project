@@ -79,7 +79,8 @@ SymbolVendorPECOFF::CreateInstance(const lldb::ModuleSP &module_sp,
   if (!fspec) {
     if (auto pdb_spec = obj_file->GetPDBPath()) {
       fspec = *pdb_spec;
-      if (ConstString dir = obj_file->GetFileSpec().GetDirectory())
+      if (llvm::StringRef dir = obj_file->GetFileSpec().GetDirectory();
+          !dir.empty())
         search_paths.Insert(0, FileSpec(dir));
     }
   }

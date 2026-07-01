@@ -2343,17 +2343,16 @@ bool ScriptInterpreterPythonImpl::LoadScriptingModule(
       // Not a filename, probably a package of some sort, let it go through.
       possible_package = true;
     } else if (is_directory(st) || is_regular_file(st)) {
-      if (module_file.GetDirectory().IsEmpty()) {
+      if (module_file.GetDirectory().empty()) {
         error = Status::FromErrorStringWithFormatv(
             "invalid directory name '{0}'", pathname);
         return false;
       }
-      if (llvm::Error e =
-              ExtendSysPath(module_file.GetDirectory().GetCString())) {
+      if (llvm::Error e = ExtendSysPath(module_file.GetDirectory().str())) {
         error = Status::FromError(std::move(e));
         return false;
       }
-      module_name = module_file.GetFilename().GetCString();
+      module_name = module_file.GetFilename().str();
     } else {
       error = Status::FromErrorString(
           "no known way to import this module specification");

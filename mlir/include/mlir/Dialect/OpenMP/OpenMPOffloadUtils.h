@@ -70,14 +70,13 @@ setOffloadModuleInterfaceAttributes(ModuleOp module, OffloadModuleOpts opts) {
     offloadMod.setIsGPU(opts.OpenMPIsGPU);
     if (opts.OpenMPForceUSM)
       offloadMod.setRequires(ClauseRequires::unified_shared_memory);
-    if (opts.OpenMPIsTargetDevice) {
-      offloadMod.setFlags(
-          opts.OpenMPTargetDebug, opts.OpenMPTeamSubscription,
-          opts.OpenMPThreadSubscription, opts.OpenMPNoThreadState,
-          opts.OpenMPNoNestedParallelism, opts.OpenMPVersion, opts.NoGPULib);
-      if (!opts.OMPHostIRFile.empty())
-        offloadMod.setHostIRFilePath(opts.OMPHostIRFile);
-    }
+    offloadMod.setFlags(opts.OpenMPTargetDebug, opts.OpenMPTeamSubscription,
+                        opts.OpenMPThreadSubscription, opts.OpenMPNoThreadState,
+                        opts.OpenMPNoNestedParallelism, opts.OpenMPVersion,
+                        opts.NoGPULib);
+    if (opts.OpenMPIsTargetDevice && !opts.OMPHostIRFile.empty())
+      offloadMod.setHostIRFilePath(opts.OMPHostIRFile);
+
     auto strTriples = llvm::to_vector(
         llvm::map_range(opts.OMPTargetTriples, [](llvm::Triple triple) {
           return triple.normalize();

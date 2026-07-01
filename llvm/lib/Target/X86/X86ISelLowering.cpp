@@ -2868,12 +2868,12 @@ bool X86TargetLowering::useLoadStackGuardNode(const Module &M) const {
   return Subtarget.isTargetMachO() && Subtarget.is64Bit();
 }
 
-bool X86TargetLowering::useStackGuardXorFP() const {
-  // Currently only MSVC CRTs XOR the frame pointer into the stack guard value.
+bool X86TargetLowering::useStackGuardMixFP() const {
+  // Currently only MSVC CRTs mix the frame pointer into the stack guard value.
   return Subtarget.getTargetTriple().isOSMSVCRT() && !Subtarget.isTargetMachO();
 }
 
-SDValue X86TargetLowering::emitStackGuardXorFP(SelectionDAG &DAG, SDValue Val,
+SDValue X86TargetLowering::emitStackGuardMixFP(SelectionDAG &DAG, SDValue Val,
                                                const SDLoc &DL) const {
   EVT PtrTy = getPointerTy(DAG.getDataLayout());
   unsigned XorOp = Subtarget.is64Bit() ? X86::XOR64_FP : X86::XOR32_FP;
@@ -24973,6 +24973,12 @@ static SDValue LowerVSETCC(SDValue Op, const X86Subtarget &Subtarget,
     SDValue Cmp;
     bool IsAlwaysSignaling;
     unsigned SSECC = translateX86FSETCC(Cond, Op0, Op1, IsAlwaysSignaling);
+    if ((Cond == ISD::SETO || Cond == ISD::SETUO) && Op0 != Op1) {
+      if (DAG.isKnownNeverNaN(Op1))
+        Op1 = Op0;
+      else if (DAG.isKnownNeverNaN(Op0))
+        Op0 = Op1;
+    }
     if (!Subtarget.hasAVX()) {
       // TODO: We could use following steps to handle a quiet compare with
       // signaling encodings.

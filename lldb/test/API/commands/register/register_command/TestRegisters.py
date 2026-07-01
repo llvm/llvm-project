@@ -126,7 +126,7 @@ class RegisterCommandsTestCase(TestBase):
 
     @skipIfiOSSimulator
     @skipIf(archs=no_match(["amd64", "x86_64"]))
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr37683")
+    @expectedFailureWindowsAndNoLLDBServer(bugnumber="llvm.org/pr37683")
     def test_convenience_registers(self):
         """Test convenience registers."""
         self.build()

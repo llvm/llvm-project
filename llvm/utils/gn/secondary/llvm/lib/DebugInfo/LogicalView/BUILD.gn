@@ -32,5 +32,6 @@ static_library("LogicalView") {
     "Readers/LVCodeViewReader.cpp",
     "Readers/LVCodeViewVisitor.cpp",
     "Readers/LVDWARFReader.cpp",
+    "Readers/LVIRReader.cpp",
   ]
 }

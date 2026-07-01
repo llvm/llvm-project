@@ -1940,6 +1940,127 @@ TEST_F(ScalarEvolutionsTest, SimplifyICmpOperands) {
       EXPECT_FALSE(SE.SimplifyICmpOperands(NewPred, NewLHS, NewRHS));
     }
   });
+
+  // Cancel common constant addend: (K + A) pred (K + B) --> A pred B
+  runWithSE(*M, "foo", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+    const SCEV *A = SE.getSCEV(getArgByName(F, "a"));
+    const SCEV *B = SE.getSCEV(getArgByName(F, "b"));
+    const SCEV *K1 = SE.getConstant(A->getType(), 42);
+    const SCEV *K2 = SE.getConstant(A->getType(), 99);
+
+    // (42 + %a)<nsw> slt (42 + %b)<nsw>  -->  %a slt %b
+    {
+      const SCEV *K1pA = SE.getAddExpr(K1, A, SCEV::FlagNSW);
+      const SCEV *K1pB = SE.getAddExpr(K1, B, SCEV::FlagNSW);
+      CmpPredicate NewPred = ICmpInst::ICMP_SLT;
+      SCEVUse NewLHS = K1pA;
+      SCEVUse NewRHS = K1pB;
+      EXPECT_TRUE(SE.SimplifyICmpOperands(NewPred, NewLHS, NewRHS));
+      EXPECT_EQ(NewPred, ICmpInst::ICMP_SLT);
+      EXPECT_EQ(NewLHS, A);
+      EXPECT_EQ(NewRHS, B);
+    }
+
+    // (42 + %a)<nuw> ult (42 + %b)<nuw>  -->  %a ult %b
+    {
+      const SCEV *K1pA = SE.getAddExpr(K1, A, SCEV::FlagNUW);
+      const SCEV *K1pB = SE.getAddExpr(K1, B, SCEV::FlagNUW);
+      CmpPredicate NewPred = ICmpInst::ICMP_ULT;
+      SCEVUse NewLHS = K1pA;
+      SCEVUse NewRHS = K1pB;
+      EXPECT_TRUE(SE.SimplifyICmpOperands(NewPred, NewLHS, NewRHS));
+      EXPECT_EQ(NewPred, ICmpInst::ICMP_ULT);
+      EXPECT_EQ(NewLHS, A);
+      EXPECT_EQ(NewRHS, B);
+    }
+
+    // (42 + %a)<nsw> slt (99 + %b)<nsw>  -->  no simplification (K mismatch)
+    {
+      const SCEV *K1pA = SE.getAddExpr(K1, A, SCEV::FlagNSW);
+      const SCEV *K2pB = SE.getAddExpr(K2, B, SCEV::FlagNSW);
+      CmpPredicate NewPred = ICmpInst::ICMP_SLT;
+      SCEVUse NewLHS = K1pA;
+      SCEVUse NewRHS = K2pB;
+      EXPECT_FALSE(SE.SimplifyICmpOperands(NewPred, NewLHS, NewRHS));
+    }
+  });
+
+  // Cancel common constant multiplier: (C * A) pred (C * B) --> A pred B
+  runWithSE(*M, "foo", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+    const SCEV *A = SE.getSCEV(getArgByName(F, "a"));
+    const SCEV *B = SE.getSCEV(getArgByName(F, "b"));
+    const SCEV *PosC = SE.getConstant(A->getType(), 3);
+    const SCEV *NegC = SE.getConstant(A->getType(), -3, /*isSigned=*/true);
+
+    // (3 * %a)<nsw> slt (3 * %b)<nsw>  -->  %a slt %b  (C > 0)
+    {
+      const SCEV *PosCA = SE.getMulExpr(PosC, A, SCEV::FlagNSW);
+      const SCEV *PosCB = SE.getMulExpr(PosC, B, SCEV::FlagNSW);
+      CmpPredicate NewPred = ICmpInst::ICMP_SLT;
+      SCEVUse NewLHS = PosCA;
+      SCEVUse NewRHS = PosCB;
+      EXPECT_TRUE(SE.SimplifyICmpOperands(NewPred, NewLHS, NewRHS));
+      EXPECT_EQ(NewPred, ICmpInst::ICMP_SLT);
+      EXPECT_EQ(NewLHS, A);
+      EXPECT_EQ(NewRHS, B);
+    }
+
+    // (3 * %a)<nuw> ult (3 * %b)<nuw>  -->  %a ult %b  (C != 0)
+    {
+      const SCEV *PosCA = SE.getMulExpr(PosC, A, SCEV::FlagNUW);
+      const SCEV *PosCB = SE.getMulExpr(PosC, B, SCEV::FlagNUW);
+      CmpPredicate NewPred = ICmpInst::ICMP_ULT;
+      SCEVUse NewLHS = PosCA;
+      SCEVUse NewRHS = PosCB;
+      EXPECT_TRUE(SE.SimplifyICmpOperands(NewPred, NewLHS, NewRHS));
+      EXPECT_EQ(NewPred, ICmpInst::ICMP_ULT);
+      EXPECT_EQ(NewLHS, A);
+      EXPECT_EQ(NewRHS, B);
+    }
+
+    // (-3 * %a)<nsw> slt (-3 * %b)<nsw>  -->  no simplification (C < 0)
+    {
+      const SCEV *NegCA = SE.getMulExpr(NegC, A, SCEV::FlagNSW);
+      const SCEV *NegCB = SE.getMulExpr(NegC, B, SCEV::FlagNSW);
+      CmpPredicate NewPred = ICmpInst::ICMP_SLT;
+      SCEVUse NewLHS = NegCA;
+      SCEVUse NewRHS = NegCB;
+      EXPECT_FALSE(SE.SimplifyICmpOperands(NewPred, NewLHS, NewRHS));
+    }
+  });
+
+  // Equality: cancel common constant addend without no-wrap flags.
+  // (K + A) eq/ne (K + B) --> A eq/ne B
+  runWithSE(*M, "foo", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+    const SCEV *A = SE.getSCEV(getArgByName(F, "a"));
+    const SCEV *B = SE.getSCEV(getArgByName(F, "b"));
+    const SCEV *K = SE.getConstant(A->getType(), 42);
+
+    const SCEV *KpA = SE.getAddExpr(K, A);
+    const SCEV *KpB = SE.getAddExpr(K, B);
+
+    // (42 + %a) eq (42 + %b)  -->  %a eq %b
+    {
+      CmpPredicate NewPred = ICmpInst::ICMP_EQ;
+      SCEVUse NewLHS = KpA;
+      SCEVUse NewRHS = KpB;
+      EXPECT_TRUE(SE.SimplifyICmpOperands(NewPred, NewLHS, NewRHS));
+      EXPECT_EQ(NewPred, ICmpInst::ICMP_EQ);
+      EXPECT_EQ(NewLHS, A);
+      EXPECT_EQ(NewRHS, B);
+    }
+
+    // (42 + %a) ne (42 + %b)  -->  %a ne %b
+    {
+      CmpPredicate NewPred = ICmpInst::ICMP_NE;
+      SCEVUse NewLHS = KpA;
+      SCEVUse NewRHS = KpB;
+      EXPECT_TRUE(SE.SimplifyICmpOperands(NewPred, NewLHS, NewRHS));
+      EXPECT_EQ(NewPred, ICmpInst::ICMP_NE);
+      EXPECT_EQ(NewLHS, A);
+      EXPECT_EQ(NewRHS, B);
+    }
+  });
 }
 
 }  // end namespace llvm

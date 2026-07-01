@@ -55,15 +55,3 @@ __attribute__((visibility("protected"), used)) int x;
 // RUN: test -s %t.gfx9-4-generic-xnack+.co
 // RUN: test -f %t.gfx1200.co
 // RUN: test -s %t.gfx1200.co
-
-// Without --no-lto the AMDGPU device compilation uses the LTO pipeline
-// (-flto).
-// RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --wrapper-verbose --dry-run --emit-fatbin-only --linker-path=/usr/bin/ld %t.out -o %t.lto.hipfb 2>&1 | FileCheck %s --check-prefix=LTO
-// LTO: clang{{.*}} -mcpu=gfx1200
-
-// With --no-lto the AMDGPU device compilation uses the conventional non-LTO
-// pipeline: -flto must not be passed, and '-x ir' must be passed so Clang
-// compiles the bitcode (stored in an object-extension file) instead of
-// handing it to the LTO link.
-// RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --wrapper-verbose --dry-run --no-lto --emit-fatbin-only --linker-path=/usr/bin/ld %t.out -o %t.nolto.hipfb 2>&1 | FileCheck %s --check-prefix=NO-LTO
-// NO-LTO: clang{{.*}} -mcpu=gfx1200{{.*}} -x ir {{.*}}-flto=none

@@ -21,6 +21,7 @@
 #include "SPIRVRegisterInfo.h"
 #include "SPIRVSubtarget.h"
 #include "SPIRVUtils.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
@@ -103,14 +104,10 @@ static FunctionType *
 fixFunctionTypeIfPtrArgs(SPIRVGlobalRegistry *GR, const Function &F,
                          FunctionType *FTy, SPIRVTypeInst SRetTy,
                          const SmallVector<SPIRVTypeInst, 4> &SArgTys) {
-  bool hasArgPtrs = false;
-  for (auto &Arg : F.args()) {
+  bool hasArgPtrs = any_of(F.args(), [](const Argument &Arg) {
     // check if it's an instance of a non-typed PointerType
-    if (Arg.getType()->isPointerTy()) {
-      hasArgPtrs = true;
-      break;
-    }
-  }
+    return Arg.getType()->isPointerTy();
+  });
   if (!hasArgPtrs) {
     Type *RetTy = FTy->getReturnType();
     // check if it's an instance of a non-typed PointerType

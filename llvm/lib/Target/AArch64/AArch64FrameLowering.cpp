@@ -575,6 +575,16 @@ bool AArch64FrameLowering::hasFPImpl(const MachineFunction &MF) const {
   // funclets.
   if (MF.hasEHFunclets())
     return true;
+
+  // When the stack guard is mixed with the frame pointer, a dedicated FP is
+  // required so the guard value remains stable in the presence of dynamic
+  // stack allocations (e.g. _alloca on MSVCRT).
+  if (MFI.hasStackProtectorIndex()) {
+    const auto &Subtarget = MF.getSubtarget<AArch64Subtarget>();
+    if (Subtarget.getTargetLowering()->useStackGuardMixFP())
+      return true;
+  }
+
   // Retain behavior of always omitting the FP for leaf functions when possible.
   if (MF.getTarget().Options.DisableFramePointerElim(MF))
     return true;

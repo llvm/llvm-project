@@ -37,6 +37,7 @@ static_library("Orc") {
     "IRCompileLayer.cpp",
     "IRPartitionLayer.cpp",
     "IRTransformLayer.cpp",
+    "InProcessEPC.cpp",
     "InProcessMemoryAccess.cpp",
     "IndirectionUtils.cpp",
     "JITLinkRedirectableSymbolManager.cpp",

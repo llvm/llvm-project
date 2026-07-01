@@ -444,8 +444,7 @@ std::optional<FileSpec> SymbolLocatorSymStore::LocateExecutableSymbolFile(
     return {};
 
   Log *log = GetLog(LLDBLog::Symbols);
-  std::string pdb_name =
-      module_spec.GetSymbolFileSpec().GetFilename().GetStringRef().str();
+  std::string pdb_name = module_spec.GetSymbolFileSpec().GetFilename().str();
   if (pdb_name.empty()) {
     LLDB_LOG(log, "Failed to resolve symbol PDB module: PDB name empty");
     return {};

@@ -758,7 +758,7 @@ MachineFunction::CallSiteInfo::CallSiteInfo(const CallBase &CB) {
 
   for (const MDOperand &Op : CalleeTypeList->operands()) {
     MDNode *TypeMD = cast<MDNode>(Op);
-    MDString *TypeIdStr = cast<MDString>(TypeMD->getOperand(1));
+    MDString *TypeIdStr = cast<MDString>(TypeMD->getOperand(0));
     // Compute numeric type id from generalized type id string
     uint64_t TypeIdVal = MD5Hash(TypeIdStr->getString());
     IntegerType *Int64Ty = Type::getInt64Ty(CB.getContext());

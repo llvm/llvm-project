@@ -576,7 +576,7 @@ subroutine sub29()
 end subroutine
 
 ! CHECK-LABEL:  func.func @_QPsub29()
-! CHECK: %[[TMP:.*]] = fir.allocmem !fir.array<?xf16>, %24#1 {bindc_name = ".tmp", uniq_name = ""}
+! CHECK: %[[TMP:.*]] = fir.allocmem !fir.array<?xf16>, %{{.*}}#1 {bindc_name = ".tmp", uniq_name = ""}
 ! CHECK: %[[TMP_BUFFER:.*]]:2 = hlfir.declare %[[TMP]](%{{.*}}) {uniq_name = ".tmp"} : (!fir.heap<!fir.array<?xf16>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xf16>>, !fir.heap<!fir.array<?xf16>>)
 ! CHECK: cuf.data_transfer %{{.*}} to %[[TMP_BUFFER]]#0 {transfer_kind = #cuf.cuda_transfer<device_host>} : !fir.box<!fir.heap<!fir.array<?xf16>>>, !fir.box<!fir.array<?xf16>>
 ! CHECK: hlfir.elemental 

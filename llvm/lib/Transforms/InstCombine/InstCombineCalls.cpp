@@ -3890,30 +3890,22 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     }
 
     // Convert alignment assume like:
-    // %B = ptrtoint i32* %A to i64
+    // %B = ptrtoint ptr %A to i64
     // %C = and i64 %B, Constant
     // %D = icmp eq i64 %C, 0
     // call void @llvm.assume(i1 %D)
     // into
-    // call void @llvm.assume(i1 true) [ "align"(i32* [[A]], i64  Constant + 1)]
+    // call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i64  Constant + 1)]
     uint64_t AlignMask = 1;
     if ((match(IIOperand, m_Not(m_Trunc(m_Value(A)))) ||
          match(IIOperand,
                m_SpecificICmp(ICmpInst::ICMP_EQ,
                               m_And(m_Value(A), m_ConstantInt(AlignMask)),
                               m_Zero())))) {
-      if (isPowerOf2_64(AlignMask + 1)) {
-        uint64_t Offset = 0;
-        match(A, m_Add(m_Value(A), m_ConstantInt(Offset)));
-        if (match(A, m_PtrToIntOrAddr(m_Value(A)))) {
-          /// Note: this doesn't preserve the offset information but merges
-          /// offset and alignment.
-          /// TODO: we can generate a GEP instead of merging the alignment with
-          /// the offset.
-          Builder.CreateAlignmentAssumption(getDataLayout(), A,
-                                            MinAlign(Offset, AlignMask + 1));
-          return eraseInstFromFunction(*II);
-        }
+      if (isPowerOf2_64(AlignMask + 1) &&
+          match(A, m_PtrToIntOrAddr(m_Value(A)))) {
+        Builder.CreateAlignmentAssumption(getDataLayout(), A, AlignMask + 1);
+        return eraseInstFromFunction(*II);
       }
     }
 

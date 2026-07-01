@@ -419,6 +419,11 @@ macro(construct_compiler_rt_default_triple)
     set(COMPILER_RT_DEFAULT_TARGET_ARCH "i386")
   endif()
 
+  if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "^thumb")
+    string(REPLACE "thumb" "arm" COMPILER_RT_DEFAULT_TARGET_ARCH "${COMPILER_RT_DEFAULT_TARGET_ARCH}")
+    set(COMPILER_RT_ARM_THUMB ON)
+  endif()
+
   if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "amdgpu|amdgcn")
     set(COMPILER_RT_TARGET_AMDGPU TRUE)
   else()

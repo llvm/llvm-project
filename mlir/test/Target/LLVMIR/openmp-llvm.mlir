@@ -3547,7 +3547,7 @@ llvm.func @omp_opaque_pointers(%arg0 : !llvm.ptr, %arg1: !llvm.ptr, %expr: i32) 
 // CHECK: @__omp_rtl_assume_no_nested_parallelism = weak_odr hidden constant i32 1
 module attributes {omp.flags = #omp.flags<debug_kind = 1, assume_teams_oversubscription = true, 
                                           assume_threads_oversubscription = true, assume_no_thread_state = true, 
-                                          assume_no_nested_parallelism = true>} {}
+                                          assume_no_nested_parallelism = true>, omp.is_gpu = true} {}
 // -----
 
 // CHECK: @__omp_rtl_debug_kind = weak_odr hidden constant i32 0
@@ -3556,7 +3556,7 @@ module attributes {omp.flags = #omp.flags<debug_kind = 1, assume_teams_oversubsc
 // CHECK: @__omp_rtl_assume_no_thread_state = weak_odr hidden constant i32 0
 // CHECK: @__omp_rtl_assume_no_nested_parallelism = weak_odr hidden constant i32 0
 // CHECK: [[META0:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}
-module attributes {omp.flags = #omp.flags<>} {}
+module attributes {omp.flags = #omp.flags<>, omp.is_gpu = true} {}
 
 // -----
 
@@ -3566,7 +3566,7 @@ module attributes {omp.flags = #omp.flags<>} {}
 // CHECK: @__omp_rtl_assume_no_thread_state = weak_odr hidden constant i32 0
 // CHECK: @__omp_rtl_assume_no_nested_parallelism = weak_odr hidden constant i32 0
 // CHECK: [[META0:![0-9]+]] = !{i32 7, !"openmp-device", i32 51}
-module attributes {omp.flags = #omp.flags<openmp_device_version = 51>} {}
+module attributes {omp.flags = #omp.flags<openmp_device_version = 51>, omp.is_gpu = true} {}
 
 // -----
 
@@ -3577,7 +3577,7 @@ module attributes {omp.flags = #omp.flags<openmp_device_version = 51>} {}
 // CHECK: @__omp_rtl_assume_no_nested_parallelism = weak_odr hidden constant i32 0
 // CHECK: [[META0:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}
 // CHECK: [[META0:![0-9]+]] = !{i32 7, !"openmp", i32 50}
-module attributes {omp.version = #omp.version<version = 50>, omp.flags = #omp.flags<>} {}
+module attributes {omp.version = #omp.version<version = 50>, omp.flags = #omp.flags<>, omp.is_gpu = true} {}
 
 // -----
 
@@ -3593,7 +3593,7 @@ module attributes {omp.version = #omp.version<version = 51>} {}
 // CHECK: @__omp_rtl_assume_no_nested_parallelism = weak_odr hidden constant i32 0
 module attributes {omp.flags = #omp.flags<debug_kind = 0, assume_teams_oversubscription = false, 
                                           assume_threads_oversubscription = false, assume_no_thread_state = false, 
-                                          assume_no_nested_parallelism = false>} {}
+                                          assume_no_nested_parallelism = false>, omp.is_gpu = true} {}
 
 // -----
 
@@ -3602,7 +3602,7 @@ module attributes {omp.flags = #omp.flags<debug_kind = 0, assume_teams_oversubsc
 // CHECK: @__omp_rtl_assume_threads_oversubscription = weak_odr hidden constant i32 0
 // CHECK: @__omp_rtl_assume_no_thread_state = weak_odr hidden constant i32 1
 // CHECK: @__omp_rtl_assume_no_nested_parallelism = weak_odr hidden constant i32 0
-module attributes {omp.flags = #omp.flags<assume_teams_oversubscription = true, assume_no_thread_state = true>} {}
+module attributes {omp.flags = #omp.flags<assume_teams_oversubscription = true, assume_no_thread_state = true>, omp.is_gpu = true} {}
 
 // -----
 
@@ -3612,7 +3612,7 @@ module attributes {omp.flags = #omp.flags<assume_teams_oversubscription = true, 
 // CHECK-NOT: @__omp_rtl_assume_no_thread_state = weak_odr hidden constant i32 1
 // CHECK-NOT: @__omp_rtl_assume_no_nested_parallelism = weak_odr hidden constant i32 0
 module attributes {omp.flags = #omp.flags<assume_teams_oversubscription = true, assume_no_thread_state = true,
-                                          no_gpu_lib=true>} {}
+                                          no_gpu_lib=true>, omp.is_gpu = true} {}
 
 // -----
 

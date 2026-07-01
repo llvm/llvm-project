@@ -449,4 +449,24 @@ TEST_F(SuppressionMappingTest, CanonicalizesSlashesOnWindows) {
 }
 #endif
 
+TEST(DisplayCodePointForDiagnosticTest, printableDisplaysQuoted) {
+  EXPECT_EQ(DisplayCodePointForDiagnostic(U'A'), "'A' U+0041");
+  EXPECT_EQ(DisplayCodePointForDiagnostic(U'🤡'), "'🤡' U+1F921");
+  EXPECT_EQ(DisplayCodePointForDiagnostic(U' '), "' ' U+0020");
+}
+
+TEST(DisplayCodePointForDiagnosticTest, nonPrintableDisplaysNoQuoted) {
+  EXPECT_EQ(DisplayCodePointForDiagnostic(U'\n'), "U+000A");
+  EXPECT_EQ(DisplayCodePointForDiagnostic(U'\0'), "U+0000");
+  EXPECT_EQ(DisplayCodePointForDiagnostic(U'\x1B'), "U+001B");
+}
+
+TEST(DisplayCodePointForDiagnosticTest, nonScalarValues) {
+  // Low and high surrogates:
+  EXPECT_EQ(DisplayCodePointForDiagnostic(0xD800), "U+D800");
+  EXPECT_EQ(DisplayCodePointForDiagnostic(0xDFFF), "U+DFFF");
+  // Overly large values:
+  EXPECT_EQ(DisplayCodePointForDiagnostic(0x110000), "U+110000");
+}
+
 } // namespace
