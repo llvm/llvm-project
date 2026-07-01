@@ -1079,7 +1079,7 @@ def FeatureStdExtSmepmp
     : RISCVExtension<1, 0, "Enhanced Physical Memory Protection">;
 
 def FeatureStdExtSmpmpmt
-    : RISCVExperimentalExtension<0, 6, "PMP-based Memory Types Extension">;
+    : RISCVExtension<1, 0, "PMP-based Memory Types Extension">;
 
 def FeatureStdExtSmrnmi
     : RISCVExtension<1, 0, "Resumable Non-Maskable Interrupts">;
