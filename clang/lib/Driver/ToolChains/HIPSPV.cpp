@@ -141,8 +141,9 @@ void HIPSPV::Linker::constructLinkAndEmitSpirvCommand(
       // it llvm-spirv aborts with exit code 18.
       TrArgs.push_back(
           "--spirv-ext=-all,+SPV_INTEL_function_pointers,+SPV_INTEL_subgroups"
-          ",+SPV_EXT_shader_atomic_float_add"
-          ",+SPV_EXT_relaxed_printf_string_address_space");
+          ",+SPV_EXT_relaxed_printf_string_address_space"
+          ",+SPV_KHR_bit_instructions"
+          ",+SPV_EXT_shader_atomic_float_add");
 
       InputInfo TrInput = InputInfo(types::TY_LLVM_BC, TempFile, "");
       SPIRV::constructTranslateCommand(C, *this, JA, Output, TrInput, TrArgs);
@@ -165,7 +166,7 @@ void HIPSPV::Linker::constructLinkAndEmitSpirvCommand(
     Cc1Args.push_back("-emit-obj");
 
     // SPIR-V extensions the chipStar runtime relies on. Keep in sync with the
-    // llvm-spirv translator path above and the clang-linker-wrapper fallback.
+    // llvm-spirv translator path above.
     Cc1Args.push_back("-mllvm");
     Cc1Args.push_back("-spirv-ext=+SPV_INTEL_function_pointers"
                       ",+SPV_INTEL_subgroups"
