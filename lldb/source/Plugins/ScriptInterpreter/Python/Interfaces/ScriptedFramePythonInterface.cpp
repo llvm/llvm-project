@@ -11,6 +11,7 @@
 #include "lldb/Host/Config.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/ValueObject/ValueObject.h"
 #include "lldb/lldb-enumerations.h"
 
 #include "../SWIGPythonBridge.h"
@@ -161,6 +162,21 @@ lldb::ValueObjectListSP ScriptedFramePythonInterface::GetVariables() {
   }
 
   return vals;
+}
+
+std::optional<lldb::ValueType>
+ScriptedFramePythonInterface::GetValueTypeForVariable(
+    lldb::ValueObjectSP value) {
+  Status error;
+  auto val = Dispatch<std::optional<lldb::ValueType>>(
+      "get_value_type_for_variable", error, std::move(value));
+
+  if (error.Fail()) {
+    return ErrorWithMessage<std::optional<lldb::ValueType>>(
+        LLVM_PRETTY_FUNCTION, error.AsCString(), error);
+  }
+
+  return val;
 }
 
 lldb::ValueObjectSP

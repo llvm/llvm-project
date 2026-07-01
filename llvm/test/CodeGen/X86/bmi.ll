@@ -2174,3 +2174,52 @@ define i16 @blsi16_trunc(i32 %x) {
   %and = and i16 %t, %neg
   ret i16 %and
 }
+
+define i8 @blsmsk8(i8 %x) nounwind {
+; X86-LABEL: blsmsk8:
+; X86:       # %bb.0:
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    blsmskl %eax, %eax
+; X86-NEXT:    # kill: def $al killed $al killed $eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: blsmsk8:
+; X64:       # %bb.0:
+; X64-NEXT:    blsmskl %edi, %eax
+; X64-NEXT:    # kill: def $al killed $al killed $eax
+; X64-NEXT:    retq
+;
+; EGPR-LABEL: blsmsk8:
+; EGPR:       # %bb.0:
+; EGPR-NEXT:    blsmskl %edi, %eax # encoding: [0xc4,0xe2,0x78,0xf3,0xd7]
+; EGPR-NEXT:    # kill: def $al killed $al killed $eax
+; EGPR-NEXT:    retq # encoding: [0xc3]
+  %y = add i8 %x, -1
+  %z = xor i8 %x, %y
+  ret i8 %z
+}
+
+define i8 @blsmsk8_trunc(i32 %x) nounwind {
+; X86-LABEL: blsmsk8_trunc:
+; X86:       # %bb.0:
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    blsmskl %eax, %eax
+; X86-NEXT:    # kill: def $al killed $al killed $eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: blsmsk8_trunc:
+; X64:       # %bb.0:
+; X64-NEXT:    blsmskl %edi, %eax
+; X64-NEXT:    # kill: def $al killed $al killed $eax
+; X64-NEXT:    retq
+;
+; EGPR-LABEL: blsmsk8_trunc:
+; EGPR:       # %bb.0:
+; EGPR-NEXT:    blsmskl %edi, %eax # encoding: [0xc4,0xe2,0x78,0xf3,0xd7]
+; EGPR-NEXT:    # kill: def $al killed $al killed $eax
+; EGPR-NEXT:    retq # encoding: [0xc3]
+  %t = trunc i32 %x to i8
+  %y = add i8 %t, -1
+  %z = xor i8 %t, %y
+  ret i8 %z
+}

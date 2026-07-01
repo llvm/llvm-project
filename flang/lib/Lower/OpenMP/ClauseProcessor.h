@@ -60,7 +60,6 @@ public:
   bool processAlign(mlir::omp::AlignClauseOps &result) const;
   bool processAllocator(lower::StatementContext &stmtCtx,
                         mlir::omp::AllocatorClauseOps &result) const;
-  bool processBare(mlir::omp::BareClauseOps &result) const;
   bool processBind(mlir::omp::BindClauseOps &result) const;
   bool processCancelDirectiveName(
       mlir::omp::CancelDirectiveNameClauseOps &result) const;

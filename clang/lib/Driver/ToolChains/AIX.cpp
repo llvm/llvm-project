@@ -556,7 +556,7 @@ static void addTocDataOptions(const llvm::opt::ArgList &Args,
 
 void AIX::addClangTargetOptions(
     const llvm::opt::ArgList &Args, llvm::opt::ArgStringList &CC1Args,
-    StringRef BoundArch, Action::OffloadKind DeviceOffloadingKind) const {
+    BoundArch BA, Action::OffloadKind DeviceOffloadingKind) const {
   Args.AddLastArg(CC1Args, options::OPT_mignore_xcoff_visibility);
   Args.AddLastArg(CC1Args, options::OPT_mdefault_visibility_export_mapping_EQ);
   Args.addOptInFlag(CC1Args, options::OPT_mxcoff_roptr, options::OPT_mno_xcoff_roptr);

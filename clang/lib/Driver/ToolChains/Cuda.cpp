@@ -397,16 +397,16 @@ void NVPTX::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
       static_cast<const toolchains::NVPTXToolChain &>(getToolChain());
   assert(TC.getTriple().isNVPTX() && "Wrong platform");
 
-  StringRef GPUArchName;
+  BoundArch GPUArch;
   // If this is a CUDA action we need to extract the device architecture
   // from the Job's associated architecture, otherwise use the -march=arch
   // option. This option may come from -Xopenmp-target flag or the default
   // value.
   if (JA.isDeviceOffloading(Action::OFK_Cuda)) {
-    GPUArchName = JA.getOffloadingArch();
+    GPUArch = JA.getOffloadingArch();
   } else {
-    GPUArchName = Args.getLastArgValue(options::OPT_march_EQ);
-    if (GPUArchName.empty()) {
+    GPUArch = BoundArch(Args.getLastArgValue(options::OPT_march_EQ));
+    if (GPUArch.empty()) {
       C.getDriver().Diag(diag::err_drv_offload_missing_gpu_arch)
           << getToolChain().getArchName() << getShortName();
       return;
@@ -414,13 +414,12 @@ void NVPTX::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   // Obtain architecture from the action.
-  OffloadArch gpu_arch = StringToOffloadArch(GPUArchName);
-  assert(gpu_arch != OffloadArch::Unknown &&
+  assert(GPUArch.Arch != OffloadArch::Unknown &&
          "Device action expected to have an architecture.");
 
   // Check that our installation's ptxas supports gpu_arch.
   if (!Args.hasArg(options::OPT_no_cuda_version_check)) {
-    TC.CudaInstallation.CheckCudaVersionSupportsArch(gpu_arch);
+    TC.CudaInstallation.CheckCudaVersionSupportsArch(GPUArch.Arch);
   }
 
   ArgStringList CmdArgs;
@@ -470,7 +469,7 @@ void NVPTX::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-v");
 
   CmdArgs.push_back("--gpu-name");
-  CmdArgs.push_back(Args.MakeArgString(OffloadArchToString(gpu_arch)));
+  CmdArgs.push_back(Args.MakeArgString(GPUArch.ArchName));
   CmdArgs.push_back("--output-file");
   std::string OutputFileName = TC.getInputFilename(Output);
 
@@ -556,15 +555,16 @@ void NVPTX::FatBinary::ConstructJob(Compilation &C, const JobAction &JA,
     auto *A = II.getAction();
     assert(A->getInputs().size() == 1 &&
            "Device offload action is expected to have a single input");
-    StringRef GpuArch = A->getOffloadingArch();
+    BoundArch GpuArch = A->getOffloadingArch();
     assert(!GpuArch.empty() &&
            "Device action expected to have associated a GPU architecture!");
 
-    if (II.getType() == types::TY_PP_Asm && !shouldIncludePTX(Args, GpuArch))
+    if (II.getType() == types::TY_PP_Asm &&
+        !shouldIncludePTX(Args, GpuArch.ArchName))
       continue;
     StringRef Kind = (II.getType() == types::TY_PP_Asm) ? "ptx" : "elf";
     CmdArgs.push_back(Args.MakeArgString(
-        "--image3=kind=" + Kind + ",sm=" + GpuArch.drop_front(3) +
+        "--image3=kind=" + Kind + ",sm=" + GpuArch.ArchName.drop_front(3) +
         ",file=" + getToolChain().getInputFilename(II)));
   }
 
@@ -758,9 +758,9 @@ NVPTXToolChain::NVPTXToolChain(const Driver &D, const llvm::Triple &Triple,
 
 llvm::opt::DerivedArgList *
 NVPTXToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
-                              StringRef BoundArch,
+                              BoundArch BA,
                               Action::OffloadKind OffloadKind) const {
-  DerivedArgList *DAL = ToolChain::TranslateArgs(Args, BoundArch, OffloadKind);
+  DerivedArgList *DAL = ToolChain::TranslateArgs(Args, BA, OffloadKind);
   if (!DAL)
     DAL = new DerivedArgList(Args.getBaseArgs());
 
@@ -796,8 +796,7 @@ NVPTXToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
 
 void NVPTXToolChain::addClangTargetOptions(
     const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
-    llvm::StringRef BoundArch, Action::OffloadKind DeviceOffloadingKind) const {
-}
+    BoundArch BA, Action::OffloadKind DeviceOffloadingKind) const {}
 
 void NVPTXToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
                                                ArgStringList &CC1Args) const {
@@ -884,9 +883,8 @@ CudaToolChain::CudaToolChain(const Driver &D, const llvm::Triple &Triple,
 
 void CudaToolChain::addClangTargetOptions(
     const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
-    llvm::StringRef BoundArch, Action::OffloadKind DeviceOffloadingKind) const {
-  HostTC.addClangTargetOptions(DriverArgs, CC1Args, BoundArch,
-                               DeviceOffloadingKind);
+    BoundArch BA, Action::OffloadKind DeviceOffloadingKind) const {
+  HostTC.addClangTargetOptions(DriverArgs, CC1Args, BA, DeviceOffloadingKind);
 
   StringRef GpuArch = DriverArgs.getLastArgValue(options::OPT_march_EQ);
   assert((DeviceOffloadingKind == Action::OFK_OpenMP ||
@@ -987,10 +985,9 @@ std::string CudaToolChain::getInputFilename(const InputInfo &Input) const {
 
 llvm::opt::DerivedArgList *
 CudaToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
-                             StringRef BoundArch,
+                             BoundArch BA,
                              Action::OffloadKind DeviceOffloadKind) const {
-  DerivedArgList *DAL =
-      HostTC.TranslateArgs(Args, BoundArch, DeviceOffloadKind);
+  DerivedArgList *DAL = HostTC.TranslateArgs(Args, BA, DeviceOffloadKind);
   if (!DAL)
     DAL = new DerivedArgList(Args.getBaseArgs());
 
@@ -1003,10 +1000,10 @@ CudaToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
     }
   }
 
-  if (!BoundArch.empty()) {
+  if (BA) {
     DAL->eraseArg(options::OPT_march_EQ);
     DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_march_EQ),
-                      BoundArch);
+                      BA.ArchName);
   }
   return DAL;
 }
@@ -1059,7 +1056,7 @@ void CudaToolChain::AddIAMCUIncludeArgs(const ArgList &Args,
 }
 
 SanitizerMask CudaToolChain::getSupportedSanitizers(
-    StringRef BoundArch, Action::OffloadKind DeviceOffloadKind) const {
+    BoundArch BA, Action::OffloadKind DeviceOffloadKind) const {
   // The CudaToolChain only supports sanitizers in the sense that it allows
   // sanitizer arguments on the command line if they are supported by the host
   // toolchain. The CudaToolChain will actually ignore any command line
@@ -1071,7 +1068,7 @@ SanitizerMask CudaToolChain::getSupportedSanitizers(
   // tolerate flags meant only for the host toolchain.
 
   // FIXME: Be accurate and use DeviceOffloadKind.
-  return HostTC.getSupportedSanitizers(BoundArch, DeviceOffloadKind);
+  return HostTC.getSupportedSanitizers(BA, DeviceOffloadKind);
 }
 
 VersionTuple CudaToolChain::computeMSVCVersion(const Driver *D,

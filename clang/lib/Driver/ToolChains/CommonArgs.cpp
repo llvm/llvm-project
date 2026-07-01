@@ -1894,7 +1894,7 @@ const char *tools::SplitDebugName(const JobAction &JA, const ArgList &Args,
                                   const InputInfo &Output) {
   auto AddPostfix = [JA](auto &F) {
     if (JA.getOffloadingDeviceKind() == Action::OFK_HIP)
-      F += (Twine("_") + JA.getOffloadingArch()).str();
+      F += (Twine("_") + JA.getOffloadingArch().ArchName).str();
     F += ".dwo";
   };
   if (Arg *A = Args.getLastArg(options::OPT_gsplit_dwarf_EQ))
@@ -2800,8 +2800,9 @@ static void GetSDLFromOffloadArchive(
   SmallString<128> DeviceTriple;
   DeviceTriple += Action::GetOffloadKindName(JA.getOffloadingDeviceKind());
   DeviceTriple += '-';
-  std::string NormalizedTriple = T.getToolChain().getTriple().normalize(
-      llvm::Triple::CanonicalForm::FOUR_IDENT);
+  std::string NormalizedTriple =
+      T.getToolChain().getEffectiveTriple().normalize(
+          llvm::Triple::CanonicalForm::FOUR_IDENT);
   DeviceTriple += NormalizedTriple;
   if (!Target.empty()) {
     DeviceTriple += '-';
@@ -3316,8 +3317,16 @@ void tools::handleColorDiagnosticsArgs(const Driver &D, const ArgList &Args,
           << Value << A->getOption().getName();
   }
 
-  if (D.getDiags().getDiagnosticOptions().ShowColors)
+  switch (D.getDiags().getDiagnosticOptions().getShowColors()) {
+  case ShowColorsKind::On:
     CmdArgs.push_back("-fcolor-diagnostics");
+    break;
+  case ShowColorsKind::Off:
+    CmdArgs.push_back("-fno-color-diagnostics");
+    break;
+  case ShowColorsKind::Auto:
+    break;
+  }
 }
 
 void tools::escapeSpacesAndBackslashes(const char *Arg,

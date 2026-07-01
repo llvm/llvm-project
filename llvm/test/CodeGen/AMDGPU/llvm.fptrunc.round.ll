@@ -2,10 +2,10 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1030 < %s | FileCheck -check-prefixes=CHECK,SDAG %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1010 < %s | FileCheck -check-prefixes=CHECK,SDAG %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1100 -mattr=+real-true16 < %s | FileCheck -check-prefixes=CHECK,GFX11-SDAG %s
-; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1100 < %s | FileCheck -check-prefixes=CHECK,GFX11-GISEL %s
-; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1030 < %s | FileCheck -check-prefixes=CHECK,GISEL %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1100 < %s | FileCheck -check-prefixes=CHECK,GFX11-GISEL %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1030 < %s | FileCheck -check-prefixes=CHECK,GISEL %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1200 < %s | FileCheck -check-prefixes=GFX12,GFX12-SDAG %s
-; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1200 < %s | FileCheck -check-prefixes=GFX12,GFX12-GISEL %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1200 < %s | FileCheck -check-prefixes=GFX12,GFX12-GISEL %s
 
 define amdgpu_gs half @v_fptrunc_round_f32_to_f16_tonearest(float %a) {
 ; SDAG-LABEL: v_fptrunc_round_f32_to_f16_tonearest:

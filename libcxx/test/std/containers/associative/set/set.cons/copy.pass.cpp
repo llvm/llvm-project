@@ -10,7 +10,7 @@
 
 // class set
 
-// set(const set& m);
+// constexpr set(const set& m); // constexpr since C++26
 
 #include <cassert>
 #include <set>
@@ -20,7 +20,7 @@
 #include "test_allocator.h"
 
 template <template <class> class Alloc>
-void test_alloc() {
+TEST_CONSTEXPR_CXX26 void test_alloc() {
   { // Simple check
     using Set = std::set<int, std::less<int>, Alloc<int> >;
 
@@ -79,7 +79,7 @@ void test_alloc() {
   }
 }
 
-void test() {
+TEST_CONSTEXPR_CXX26 bool test() {
   test_alloc<std::allocator>();
   test_alloc<min_allocator>(); // Make sure that fancy pointers work
 
@@ -125,10 +125,13 @@ void test() {
     assert(orig.size() == 3);
     assert(orig.get_allocator() == other_allocator<int>(10));
   }
-}
 
+  return true;
+}
 int main(int, char**) {
   test();
-
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }

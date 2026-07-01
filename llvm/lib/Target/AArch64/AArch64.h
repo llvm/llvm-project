@@ -77,7 +77,7 @@ FunctionPass *createAArch64CleanupLocalDynamicTLSPass();
 FunctionPass *createAArch64CollectLOHPass();
 FunctionPass *createSMEPeepholeOptPass();
 FunctionPass *createMachineSMEABIPass(CodeGenOptLevel);
-FunctionPass *createAArch64SRLTDefineSuperRegsPass();
+FunctionPass *createAArch64SRLTDefineSuperRegsLegacyPass();
 ModulePass *createSVEIntrinsicOptsPass();
 Pass *createSVEShuffleOptsPass();
 InstructionSelector *
@@ -201,7 +201,7 @@ void initializeFalkorMarkStridedAccessesLegacyPass(PassRegistry&);
 void initializeLDTLSCleanupPass(PassRegistry &);
 void initializeSMEPeepholeOptPass(PassRegistry &);
 void initializeMachineSMEABIPass(PassRegistry &);
-void initializeAArch64SRLTDefineSuperRegsPass(PassRegistry &);
+void initializeAArch64SRLTDefineSuperRegsLegacyPass(PassRegistry &);
 void initializeSVEIntrinsicOptsPass(PassRegistry &);
 void initializeSVEShuffleOptsPass(PassRegistry &);
 void initializeAArch64Arm64ECCallLoweringPass(PassRegistry &);
@@ -352,6 +352,13 @@ public:
 
 class AArch64ConditionalComparesPass
     : public OptionalPassInfoMixin<AArch64ConditionalComparesPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+class AArch64SRLTDefineSuperRegsPass
+    : public OptionalPassInfoMixin<AArch64SRLTDefineSuperRegsPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);

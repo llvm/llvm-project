@@ -95,3 +95,22 @@ subroutine test_begin_construct_selected_parent()
     !$omp end metadirective
   !$omp end target
 end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_construct_combined_directive(
+! CHECK:         omp.target
+! CHECK:           omp.parallel
+! CHECK-NOT:         omp.taskyield
+! CHECK:             omp.barrier
+! CHECK:             omp.terminator
+! CHECK:           omp.terminator
+! CHECK:         return
+subroutine test_construct_combined_directive()
+  !$omp target
+    !$omp parallel
+      !$omp metadirective &
+      !$omp & when(construct={parallel}: taskyield) &
+      !$omp & when(construct={target parallel}: barrier) &
+      !$omp & default(nothing)
+    !$omp end parallel
+  !$omp end target
+end subroutine

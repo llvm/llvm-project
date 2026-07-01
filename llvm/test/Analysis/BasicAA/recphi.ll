@@ -242,11 +242,10 @@ exit:
   ret ptr %result
 }
 
-; FIXME: %a and %p.inner do not alias.
 ; CHECK-LABEL: Function: nested_loop
 ; CHECK: NoAlias:  i8* %a, i8* %p.base
 ; CHECK: NoAlias:  i8* %a, i8* %p.outer
-; CHECK: MayAlias: i8* %a, i8* %p.inner
+; CHECK: NoAlias:  i8* %a, i8* %p.inner
 ; CHECK: NoAlias:  i8* %a, i8* %p.inner.next
 ; CHECK: NoAlias:  i8* %a, i8* %p.outer.next
 define void @nested_loop(i1 %c, i1 %c2, ptr noalias %p.base) {
@@ -282,9 +281,8 @@ exit:
 ; CHECK: NoAlias:  i8* %a, i8* %p.base
 ; CHECK: NoAlias:  i8* %a, i8* %p.outer
 ; CHECK: NoAlias:  i8* %a, i8* %p.outer.next
-; CHECK: MayAlias: i8* %a, i8* %p.inner
+; CHECK: NoAlias:  i8* %a, i8* %p.inner
 ; CHECK: NoAlias:  i8* %a, i8* %p.inner.next
-; TODO: (a, p.inner) could be NoAlias
 define void @nested_loop2(i1 %c, i1 %c2, ptr noalias %p.base) {
 entry:
   %a = alloca i8
@@ -314,11 +312,10 @@ exit:
 }
 
 ; Same as nested_loop, but with a plain pointer argument (no noalias).
-; TODO: %a and %p.inner do not alias.
 ; CHECK-LABEL: Function: nested_loop_plain_arg
 ; CHECK: NoAlias:  i8* %a, i8* %p.base
 ; CHECK: NoAlias:  i8* %a, i8* %p.outer
-; CHECK: MayAlias: i8* %a, i8* %p.inner
+; CHECK: NoAlias:  i8* %a, i8* %p.inner
 ; CHECK: NoAlias:  i8* %a, i8* %p.inner.next
 ; CHECK: NoAlias:  i8* %a, i8* %p.outer.next
 define void @nested_loop_plain_arg(i1 %c, i1 %c2, ptr %p.base) {
@@ -387,9 +384,8 @@ exit:
 ; CHECK: NoAlias:	i8* %a, i8* %p.base
 ; CHECK: NoAlias:	i8* %a, i8* %p1
 ; CHECK: NoAlias:	i8* %a, i8* %p1.next
-; CHECK: MayAlias:	i8* %a, i8* %p2
+; CHECK: NoAlias:	i8* %a, i8* %p2
 ; CHECK: NoAlias:	i8* %a, i8* %p2.next
-; TODO: %p2 does not alias %a
 define void @sibling_loop(i1 %c, i1 %c2, ptr noalias %p.base) {
 entry:
   %a = alloca i8
@@ -473,10 +469,11 @@ exit:
   ret void
 }
 
-; TODO: %other and %p.inner do not alias.
+; aliasGEP must leave the underlying-object check for a phi step GEP to
+; aliasPHI, to avoid an overlapping walk that risks compile-time blow-up.
 ; CHECK-LABEL: Function: rec_phi_gep_guard
 ; CHECK: NoAlias:	i8* %other, i8* %p.outer
-; CHECK: MayAlias:	i8* %other, i8* %p.inner
+; CHECK: NoAlias:	i8* %other, i8* %p.inner
 define void @rec_phi_gep_guard(i1 %c, i1 %c2, ptr noalias %base, ptr noalias %other) {
 entry:
   load i8, ptr %other

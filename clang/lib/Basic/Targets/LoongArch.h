@@ -65,7 +65,7 @@ public:
     BitIntMaxAlign = 128;
   }
 
-  bool setCPU(const std::string &Name) override {
+  bool setCPU(StringRef Name) override {
     if (!isValidCPUName(Name))
       return false;
     CPU = Name;

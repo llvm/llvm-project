@@ -3,7 +3,7 @@
 ; not error out.
 ; RUN: llc < %s --mtriple=wasm32-unknown-unknown -asm-verbose=false -mattr=+reference-types -print-after=finalize-isel | FileCheck %s
 
-%externref = type ptr addrspace(10) ;; addrspace 10 is nonintegral
+%externref = type target("wasm.externref")
 
 @externref_global = local_unnamed_addr addrspace(1) global %externref undef
 

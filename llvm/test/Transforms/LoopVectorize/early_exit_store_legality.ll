@@ -54,6 +54,31 @@ exit:
   ret void
 }
 
+;; Exit-condition load on the RHS of the icmp must still be accepted.
+define void @swapped_cmp_operands(ptr noalias %array, ptr %pred) {
+; CHECK-LABEL: LV: Checking a loop in 'swapped_cmp_operands'
+; CHECK:       LV: We can vectorize this loop!
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %latch ]
+  %st.addr = getelementptr i16, ptr %array, i64 %iv
+  store i16 0, ptr %st.addr, align 2
+  %ee.addr = getelementptr i16, ptr %pred, i64 %iv
+  %ee.val = load i16, ptr %ee.addr, align 2
+  %ee.cond = icmp slt i16 500, %ee.val
+  br i1 %ee.cond, label %exit, label %latch
+
+latch:
+  %iv.next = add i64 %iv, 1
+  %latch.cond = icmp eq i64 %iv.next, 20
+  br i1 %latch.cond, label %exit, label %loop
+
+exit:
+  ret void
+}
+
 ;; Avoid vectorization because we will either exit on the first iteration, or
 ;; never exit early.
 ;; We shouldn't see IR like this if LV-LICM has done its job.

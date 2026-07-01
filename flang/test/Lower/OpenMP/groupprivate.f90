@@ -14,7 +14,7 @@ module m
 end module
 
 ! CHECK-LABEL: func.func @_QPtest_groupprivate
-! CHECK:         omp.target {
+! CHECK:         omp.target kernel_type(generic) {
 ! CHECK:           omp.teams {
 ! CHECK:             %[[GP:.*]] = omp.groupprivate @_QMmEx device_type (any) : !fir.ref<i32>
 ! CHECK:             %[[DECL:.*]]:2 = hlfir.declare %[[GP]] {uniq_name = "_QMmEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
@@ -40,7 +40,7 @@ module m2
 end module
 
 ! CHECK-LABEL: func.func @_QPtest_common_block_groupprivate
-! CHECK:         omp.target {
+! CHECK:         omp.target kernel_type(generic) {
 ! CHECK:           omp.teams {
 ! CHECK:             %[[GP:.*]] = omp.groupprivate @blk_ device_type (any) : !fir.ref<!fir.array<12xi8>>
 ! CHECK:             %[[DECL_X:.*]]:2 = hlfir.declare %{{.*}} storage(%[[GP]][0]) {uniq_name = "_QMm2Ecb_x"}
@@ -87,7 +87,7 @@ module m_multi
 end module
 
 ! CHECK-LABEL: func.func @_QPtest_multiple_groupprivate
-! CHECK:         omp.target {
+! CHECK:         omp.target kernel_type(generic) {
 ! CHECK:           omp.teams {
 ! CHECK:             %[[GP_A:.*]] = omp.groupprivate @_QMm_multiEgp_a device_type (any) : !fir.ref<i32>
 ! CHECK:             %[[DECL_A:.*]]:2 = hlfir.declare %[[GP_A]] {uniq_name = "_QMm_multiEgp_a"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
@@ -156,7 +156,7 @@ end subroutine
 ! result rather than the original host global.
 ! CHECK-LABEL: func.func @_QPtest_target_skip_map_groupprivate
 ! CHECK-NOT:     omp.map.info
-! CHECK:         omp.target {
+! CHECK:         omp.target kernel_type(generic) {
 ! CHECK:           omp.teams {
 ! CHECK:             %[[GP:.*]] = omp.groupprivate @_QMmEx device_type (any) : !fir.ref<i32>
 ! CHECK:             %[[DECL:.*]]:2 = hlfir.declare %[[GP]] {uniq_name = "_QMmEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)

@@ -75,7 +75,10 @@ define i1 @max1(i32 %x, i32 %y) {
 
 define i1 @max2(i32 %x, i32 %y) {
 ; CHECK-LABEL: @max2(
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[C:%.*]] = icmp sge i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[M:%.*]] = select i1 [[C]], i32 [[X]], i32 [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = icmp sge i32 [[M]], [[X]]
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %c = icmp sge i32 %x, %y
   %m = select i1 %c, i32 %x, i32 %y
@@ -95,7 +98,10 @@ define i1 @max3(i32 %x, i32 %y) {
 
 define i1 @max4(i32 %x, i32 %y) {
 ; CHECK-LABEL: @max4(
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[C:%.*]] = icmp uge i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[M:%.*]] = select i1 [[C]], i32 [[X]], i32 [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = icmp uge i32 [[M]], [[X]]
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %c = icmp uge i32 %x, %y
   %m = select i1 %c, i32 %x, i32 %y
@@ -115,7 +121,10 @@ define i1 @max5(i32 %x, i32 %y) {
 
 define i1 @max6(i32 %x, i32 %y) {
 ; CHECK-LABEL: @max6(
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[C:%.*]] = icmp sge i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[M:%.*]] = select i1 [[C]], i32 [[X]], i32 [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = icmp sle i32 [[X]], [[M]]
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %c = icmp sge i32 %x, %y
   %m = select i1 %c, i32 %x, i32 %y
@@ -135,7 +144,10 @@ define i1 @max7(i32 %x, i32 %y) {
 
 define i1 @max8(i32 %x, i32 %y) {
 ; CHECK-LABEL: @max8(
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[C:%.*]] = icmp uge i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[M:%.*]] = select i1 [[C]], i32 [[X]], i32 [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ule i32 [[X]], [[M]]
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %c = icmp uge i32 %x, %y
   %m = select i1 %c, i32 %x, i32 %y
@@ -145,7 +157,10 @@ define i1 @max8(i32 %x, i32 %y) {
 
 define i1 @min1(i32 %x, i32 %y) {
 ; CHECK-LABEL: @min1(
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[C:%.*]] = icmp sgt i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[M:%.*]] = select i1 [[C]], i32 [[Y]], i32 [[X]]
+; CHECK-NEXT:    [[R:%.*]] = icmp sgt i32 [[M]], [[X]]
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %c = icmp sgt i32 %x, %y
   %m = select i1 %c, i32 %y, i32 %x
@@ -165,7 +180,10 @@ define i1 @min2(i32 %x, i32 %y) {
 
 define i1 @min3(i32 %x, i32 %y) {
 ; CHECK-LABEL: @min3(
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[C:%.*]] = icmp ugt i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[M:%.*]] = select i1 [[C]], i32 [[Y]], i32 [[X]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ugt i32 [[M]], [[X]]
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %c = icmp ugt i32 %x, %y
   %m = select i1 %c, i32 %y, i32 %x
@@ -185,7 +203,10 @@ define i1 @min4(i32 %x, i32 %y) {
 
 define i1 @min5(i32 %x, i32 %y) {
 ; CHECK-LABEL: @min5(
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[C:%.*]] = icmp sgt i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[M:%.*]] = select i1 [[C]], i32 [[Y]], i32 [[X]]
+; CHECK-NEXT:    [[R:%.*]] = icmp slt i32 [[X]], [[M]]
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %c = icmp sgt i32 %x, %y
   %m = select i1 %c, i32 %y, i32 %x
@@ -205,7 +226,10 @@ define i1 @min6(i32 %x, i32 %y) {
 
 define i1 @min7(i32 %x, i32 %y) {
 ; CHECK-LABEL: @min7(
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[C:%.*]] = icmp ugt i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[M:%.*]] = select i1 [[C]], i32 [[Y]], i32 [[X]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ult i32 [[X]], [[M]]
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %c = icmp ugt i32 %x, %y
   %m = select i1 %c, i32 %y, i32 %x
@@ -225,7 +249,12 @@ define i1 @min8(i32 %x, i32 %y) {
 
 define i1 @maxmin1(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @maxmin1(
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[C1:%.*]] = icmp sge i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[MAX:%.*]] = select i1 [[C1]], i32 [[X]], i32 [[Y]]
+; CHECK-NEXT:    [[C2:%.*]] = icmp sge i32 [[X]], [[Z:%.*]]
+; CHECK-NEXT:    [[MIN:%.*]] = select i1 [[C2]], i32 [[Z]], i32 [[X]]
+; CHECK-NEXT:    [[C:%.*]] = icmp sge i32 [[MAX]], [[MIN]]
+; CHECK-NEXT:    ret i1 [[C]]
 ;
   %c1 = icmp sge i32 %x, %y
   %max = select i1 %c1, i32 %x, i32 %y
@@ -237,7 +266,12 @@ define i1 @maxmin1(i32 %x, i32 %y, i32 %z) {
 
 define i1 @maxmin2(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @maxmin2(
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[C1:%.*]] = icmp sge i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[MAX:%.*]] = select i1 [[C1]], i32 [[X]], i32 [[Y]]
+; CHECK-NEXT:    [[C2:%.*]] = icmp sge i32 [[X]], [[Z:%.*]]
+; CHECK-NEXT:    [[MIN:%.*]] = select i1 [[C2]], i32 [[Z]], i32 [[X]]
+; CHECK-NEXT:    [[C:%.*]] = icmp sgt i32 [[MIN]], [[MAX]]
+; CHECK-NEXT:    ret i1 [[C]]
 ;
   %c1 = icmp sge i32 %x, %y
   %max = select i1 %c1, i32 %x, i32 %y
@@ -249,7 +283,12 @@ define i1 @maxmin2(i32 %x, i32 %y, i32 %z) {
 
 define i1 @maxmin3(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @maxmin3(
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[C1:%.*]] = icmp sge i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[MAX:%.*]] = select i1 [[C1]], i32 [[X]], i32 [[Y]]
+; CHECK-NEXT:    [[C2:%.*]] = icmp sge i32 [[X]], [[Z:%.*]]
+; CHECK-NEXT:    [[MIN:%.*]] = select i1 [[C2]], i32 [[Z]], i32 [[X]]
+; CHECK-NEXT:    [[C:%.*]] = icmp sle i32 [[MIN]], [[MAX]]
+; CHECK-NEXT:    ret i1 [[C]]
 ;
   %c1 = icmp sge i32 %x, %y
   %max = select i1 %c1, i32 %x, i32 %y
@@ -261,7 +300,12 @@ define i1 @maxmin3(i32 %x, i32 %y, i32 %z) {
 
 define i1 @maxmin4(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @maxmin4(
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[C1:%.*]] = icmp sge i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[MAX:%.*]] = select i1 [[C1]], i32 [[X]], i32 [[Y]]
+; CHECK-NEXT:    [[C2:%.*]] = icmp sge i32 [[X]], [[Z:%.*]]
+; CHECK-NEXT:    [[MIN:%.*]] = select i1 [[C2]], i32 [[Z]], i32 [[X]]
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i32 [[MAX]], [[MIN]]
+; CHECK-NEXT:    ret i1 [[C]]
 ;
   %c1 = icmp sge i32 %x, %y
   %max = select i1 %c1, i32 %x, i32 %y
@@ -273,7 +317,12 @@ define i1 @maxmin4(i32 %x, i32 %y, i32 %z) {
 
 define i1 @maxmin5(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @maxmin5(
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[C1:%.*]] = icmp uge i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[MAX:%.*]] = select i1 [[C1]], i32 [[X]], i32 [[Y]]
+; CHECK-NEXT:    [[C2:%.*]] = icmp uge i32 [[X]], [[Z:%.*]]
+; CHECK-NEXT:    [[MIN:%.*]] = select i1 [[C2]], i32 [[Z]], i32 [[X]]
+; CHECK-NEXT:    [[C:%.*]] = icmp uge i32 [[MAX]], [[MIN]]
+; CHECK-NEXT:    ret i1 [[C]]
 ;
   %c1 = icmp uge i32 %x, %y
   %max = select i1 %c1, i32 %x, i32 %y
@@ -285,7 +334,12 @@ define i1 @maxmin5(i32 %x, i32 %y, i32 %z) {
 
 define i1 @maxmin6(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @maxmin6(
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[C1:%.*]] = icmp uge i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[MAX:%.*]] = select i1 [[C1]], i32 [[X]], i32 [[Y]]
+; CHECK-NEXT:    [[C2:%.*]] = icmp uge i32 [[X]], [[Z:%.*]]
+; CHECK-NEXT:    [[MIN:%.*]] = select i1 [[C2]], i32 [[Z]], i32 [[X]]
+; CHECK-NEXT:    [[C:%.*]] = icmp ugt i32 [[MIN]], [[MAX]]
+; CHECK-NEXT:    ret i1 [[C]]
 ;
   %c1 = icmp uge i32 %x, %y
   %max = select i1 %c1, i32 %x, i32 %y
@@ -297,7 +351,12 @@ define i1 @maxmin6(i32 %x, i32 %y, i32 %z) {
 
 define i1 @maxmin7(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @maxmin7(
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[C1:%.*]] = icmp uge i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[MAX:%.*]] = select i1 [[C1]], i32 [[X]], i32 [[Y]]
+; CHECK-NEXT:    [[C2:%.*]] = icmp uge i32 [[X]], [[Z:%.*]]
+; CHECK-NEXT:    [[MIN:%.*]] = select i1 [[C2]], i32 [[Z]], i32 [[X]]
+; CHECK-NEXT:    [[C:%.*]] = icmp ule i32 [[MIN]], [[MAX]]
+; CHECK-NEXT:    ret i1 [[C]]
 ;
   %c1 = icmp uge i32 %x, %y
   %max = select i1 %c1, i32 %x, i32 %y
@@ -309,7 +368,12 @@ define i1 @maxmin7(i32 %x, i32 %y, i32 %z) {
 
 define i1 @maxmin8(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @maxmin8(
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[C1:%.*]] = icmp uge i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[MAX:%.*]] = select i1 [[C1]], i32 [[X]], i32 [[Y]]
+; CHECK-NEXT:    [[C2:%.*]] = icmp uge i32 [[X]], [[Z:%.*]]
+; CHECK-NEXT:    [[MIN:%.*]] = select i1 [[C2]], i32 [[Z]], i32 [[X]]
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[MAX]], [[MIN]]
+; CHECK-NEXT:    ret i1 [[C]]
 ;
   %c1 = icmp uge i32 %x, %y
   %max = select i1 %c1, i32 %x, i32 %y
@@ -322,7 +386,9 @@ define i1 @maxmin8(i32 %x, i32 %y, i32 %z) {
 define i1 @eqcmp1(i32 %x, i32 %y) {
 ; CHECK-LABEL: @eqcmp1(
 ; CHECK-NEXT:    [[C:%.*]] = icmp sge i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    [[MAX:%.*]] = select i1 [[C]], i32 [[X]], i32 [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[MAX]], [[X]]
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %c = icmp sge i32 %x, %y
   %max = select i1 %c, i32 %x, i32 %y
@@ -333,7 +399,9 @@ define i1 @eqcmp1(i32 %x, i32 %y) {
 define i1 @eqcmp2(i32 %x, i32 %y) {
 ; CHECK-LABEL: @eqcmp2(
 ; CHECK-NEXT:    [[C:%.*]] = icmp sge i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    [[MAX:%.*]] = select i1 [[C]], i32 [[X]], i32 [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[X]], [[MAX]]
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %c = icmp sge i32 %x, %y
   %max = select i1 %c, i32 %x, i32 %y
@@ -344,7 +412,9 @@ define i1 @eqcmp2(i32 %x, i32 %y) {
 define i1 @eqcmp3(i32 %x, i32 %y) {
 ; CHECK-LABEL: @eqcmp3(
 ; CHECK-NEXT:    [[C:%.*]] = icmp uge i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    [[MAX:%.*]] = select i1 [[C]], i32 [[X]], i32 [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[MAX]], [[X]]
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %c = icmp uge i32 %x, %y
   %max = select i1 %c, i32 %x, i32 %y
@@ -355,7 +425,9 @@ define i1 @eqcmp3(i32 %x, i32 %y) {
 define i1 @eqcmp4(i32 %x, i32 %y) {
 ; CHECK-LABEL: @eqcmp4(
 ; CHECK-NEXT:    [[C:%.*]] = icmp uge i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    [[MAX:%.*]] = select i1 [[C]], i32 [[X]], i32 [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[X]], [[MAX]]
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %c = icmp uge i32 %x, %y
   %max = select i1 %c, i32 %x, i32 %y

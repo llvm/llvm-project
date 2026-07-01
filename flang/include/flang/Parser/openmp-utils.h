@@ -38,6 +38,9 @@ template <typename T> constexpr auto addr_if(const std::optional<T> &x) {
 
 const parser::Designator *GetDesignatorFromObj(const parser::OmpObject &object);
 const parser::DataRef *GetDataRefFromObj(const parser::OmpObject &object);
+const parser::OmpLocator *GetLocatorFromObj(const parser::OmpObject &object);
+const parser::Name *GetCommonBlockFromObj(const parser::OmpObject &object);
+
 const parser::ArrayElement *GetArrayElementFromObj(
     const parser::OmpObject &object);
 std::optional<parser::CharBlock> GetObjectSource(

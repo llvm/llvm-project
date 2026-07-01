@@ -166,8 +166,7 @@ int main(int, char**)
     test<std::size_t>();
 
     // _BitInt tests. Width tiers follow C23 7.18.2.5.
-    // rotl uses numeric_limits::digits internally, so only byte-aligned
-    // widths are safe (where digits matches the actual bit width).
+    // rotl depends on numeric_limits::digits, so only byte-aligned widths.
 #if TEST_HAS_BITINT
     {
       using T32 = unsigned _BitInt(32);

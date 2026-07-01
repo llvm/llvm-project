@@ -67,7 +67,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
     %25 = omp.map.info var_ptr(%3 : !llvm.ptr, !llvm.struct<(ptr, i64)>) map_clauses(implicit, to) capture(ByRef) var_ptr_ptr(%24 : !llvm.ptr, i8) bounds(%23) -> !llvm.ptr
     %26 = omp.map.info var_ptr(%3 : !llvm.ptr, !llvm.struct<(ptr, i64)>) map_clauses(to) capture(ByRef) members(%25 : [0] : !llvm.ptr) -> !llvm.ptr
     %27 = omp.map.info var_ptr(%1 : !llvm.ptr, i32) map_clauses(to) capture(ByCopy) -> !llvm.ptr
-    omp.target nowait map_entries(%26 -> %arg1, %27 -> %arg2, %25 -> %arg3 : !llvm.ptr, !llvm.ptr, !llvm.ptr) private(@boxchar_firstprivate %18 -> %arg4 [map_idx=0], @private_eye %1 -> %arg5 [map_idx=1] : !llvm.struct<(ptr, i64)>, !llvm.ptr) {
+    omp.target kernel_type(generic) nowait map_entries(%26 -> %arg1, %27 -> %arg2, %25 -> %arg3 : !llvm.ptr, !llvm.ptr, !llvm.ptr) private(@boxchar_firstprivate %18 -> %arg4 [map_idx=0], @private_eye %1 -> %arg5 [map_idx=1] : !llvm.struct<(ptr, i64)>, !llvm.ptr) {
       omp.terminator
     }
     llvm.return
@@ -112,7 +112,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
 // CHECK: %[[VAL_32:.*]] = omp.map.info var_ptr(%[[HEAP0]] : !llvm.ptr, !llvm.struct<(ptr, i64)>) map_clauses(implicit, to) capture(ByRef) var_ptr_ptr(%[[VAL_31]] : !llvm.ptr, i8) bounds(%[[VAL_25]]) -> !llvm.ptr
 // CHECK: %[[VAL_33:.*]] = omp.map.info var_ptr(%[[HEAP0]] : !llvm.ptr, !llvm.struct<(ptr, i64)>) map_clauses(to) capture(ByRef) members(%[[VAL_32]] : [0] : !llvm.ptr) -> !llvm.ptr
 // CHECK: %[[VAL_34:.*]] = llvm.load %[[HEAP0]] : !llvm.ptr -> !llvm.struct<(ptr, i64)>
-// CHECK: omp.target depend(taskdependout -> %[[HEAP0]] : !llvm.ptr) nowait map_entries(%[[VAL_33]] -> %[[VAL_35:.*]], %[[VAL_30]] -> %[[VAL_36:.*]], %[[VAL_32]] -> %[[VAL_37:.*]] : !llvm.ptr, !llvm.ptr, !llvm.ptr) private(@boxchar_firstprivate %[[VAL_34]] -> %[[VAL_38:.*]] [map_idx=0], @private_eye %[[VAL_1]] -> %[[VAL_39:.*]] [map_idx=1] : !llvm.struct<(ptr, i64)>, !llvm.ptr) {
+// CHECK: omp.target kernel_type(generic) depend(taskdependout -> %[[HEAP0]] : !llvm.ptr) nowait map_entries(%[[VAL_33]] -> %[[VAL_35:.*]], %[[VAL_30]] -> %[[VAL_36:.*]], %[[VAL_32]] -> %[[VAL_37:.*]] : !llvm.ptr, !llvm.ptr, !llvm.ptr) private(@boxchar_firstprivate %[[VAL_34]] -> %[[VAL_38:.*]] [map_idx=0], @private_eye %[[VAL_1]] -> %[[VAL_39:.*]] [map_idx=1] : !llvm.struct<(ptr, i64)>, !llvm.ptr) {
 // CHECK: omp.terminator
 // CHECK: }
 // CHECK: omp.task depend(taskdependin -> %[[HEAP0]] : !llvm.ptr) {

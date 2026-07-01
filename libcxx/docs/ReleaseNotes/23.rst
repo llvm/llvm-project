@@ -39,7 +39,9 @@ Implemented Papers
 ------------------
 
 - P2440R1: ``ranges::iota``, ``ranges::shift_left`` and ``ranges::shift_right`` (`Github <https://llvm.org/PR105184>`__)
+- P1885R12: Naming Text Encodings to Demystify Them (`Github <https://llvm.org/PR105373>`__)
 - P1899R3: ``stride_view`` (`Github <https://llvm.org/PR105198>`__)
+- P2862R1: ``text_encoding::name()`` should never return null values (`Github <https://llvm.org/PR118371>`__)
 - P3936R1: Safer ``atomic_ref::address`` (`Github <https://llvm.org/PR189594>`__)
 - P3953R3: Rename ``std::runtime_format`` (`Github <https://llvm.org/PR189624>`__)
 - P4052R0: Renaming saturation arithmetic functions (`Github <https://llvm.org/PR189589>`__)
@@ -52,6 +54,7 @@ Implemented Papers
 - P3383R3: ``mdspan.at()`` (`Github <https://llvm.org/PR175213>`__)
 - P3369R0: constexpr for ``uninitialized_default_construct`` (`Github <https://llvm.org/PR118380>`__)
 - P3508R0: Wording for "constexpr for specialized memory algorithms" (`Github <https://llvm.org/PR118379>`__)
+- P4206R0: Revert string support in ``std::constant_wrapper`` (`Github <https://llvm.org/PR203338>`__)
 
 Improvements and New Features
 -----------------------------
