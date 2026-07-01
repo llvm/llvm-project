@@ -3588,6 +3588,53 @@ func.func @to_elements_from_elements_no_op(%a: f32, %b: f32) -> (f32, f32) {
 
 // -----
 
+// CHECK-LABEL: func @to_elements_of_constant(
+func.func @to_elements_of_constant() -> (i32, i32, i32) {
+  // CHECK-NOT: vector.to_elements
+  // CHECK-DAG: %[[C1:.*]] = arith.constant 1 : i32
+  // CHECK-DAG: %[[C2:.*]] = arith.constant 2 : i32
+  // CHECK-DAG: %[[C3:.*]] = arith.constant 3 : i32
+  %0 = arith.constant dense<[1, 2, 3]> : vector<3xi32>
+  %1:3 = vector.to_elements %0 : vector<3xi32>
+  // CHECK: return %[[C1]], %[[C2]], %[[C3]]
+  return %1#0, %1#1, %1#2 : i32, i32, i32
+}
+
+// -----
+
+// Rebuilding a wider constant from the elements of a constant (e.g. leftover
+// from mask broadcast lowering) must fold to a single constant.
+// CHECK-LABEL: func @from_elements_of_constant_elements(
+func.func @from_elements_of_constant_elements() -> vector<2x3xi1> {
+  // CHECK-NOT: vector.to_elements
+  // CHECK-NOT: vector.from_elements
+  // CHECK: %[[RES:.*]] = arith.constant dense<{{\[}}[true, true, false], [true, true, false]]> : vector<2x3xi1>
+  %0 = arith.constant dense<[true, true, false]> : vector<3xi1>
+  %1:3 = vector.to_elements %0 : vector<3xi1>
+  %2 = vector.from_elements %1#0, %1#1, %1#2, %1#0, %1#1, %1#2 : vector<2x3xi1>
+  // CHECK: return %[[RES]]
+  return %2 : vector<2x3xi1>
+}
+
+// -----
+
+// Rebuilding into a different shape with a permutation (a transpose written
+// via to_elements/from_elements) checks that the folds agree on row-major
+// element order.
+// CHECK-LABEL: func @from_elements_of_constant_elements_permuted(
+func.func @from_elements_of_constant_elements_permuted() -> vector<3x2xi32> {
+  // CHECK-NOT: vector.to_elements
+  // CHECK-NOT: vector.from_elements
+  // CHECK: %[[RES:.*]] = arith.constant dense<{{\[}}[1, 4], [2, 5], [3, 6]]> : vector<3x2xi32>
+  %0 = arith.constant dense<[[1, 2, 3], [4, 5, 6]]> : vector<2x3xi32>
+  %1:6 = vector.to_elements %0 : vector<2x3xi32>
+  %2 = vector.from_elements %1#0, %1#3, %1#1, %1#4, %1#2, %1#5 : vector<3x2xi32>
+  // CHECK: return %[[RES]]
+  return %2 : vector<3x2xi32>
+}
+
+// -----
+
 // CHECK-LABEL: func @from_elements_to_elements_no_op(
 // CHECK-SAME:     %[[A:.*]]: vector<4x2xf32>
 func.func @from_elements_to_elements_no_op(%a: vector<4x2xf32>) -> vector<4x2xf32> {

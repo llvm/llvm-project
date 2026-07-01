@@ -2621,9 +2621,29 @@ foldToElementsOfBroadcast(ToElementsOp toElementsOp,
   return success();
 }
 
+/// Folds vector.to_elements(arith.constant) into per-element constants:
+///
+///  %v = arith.constant dense<[1, 2]> : vector<2xi32>
+///  %e:2 = vector.to_elements %v : vector<2xi32>
+/// becomes:
+///  %e0 = arith.constant 1 : i32
+///  %e1 = arith.constant 2 : i32
+static LogicalResult
+foldToElementsOfConstant(ToElementsOp toElementsOp, Attribute source,
+                         SmallVectorImpl<OpFoldResult> &results) {
+  auto denseAttr = dyn_cast_if_present<DenseElementsAttr>(source);
+  if (!denseAttr)
+    return failure();
+  llvm::append_range(results, denseAttr.getValues<Attribute>());
+  return success();
+}
+
 LogicalResult ToElementsOp::fold(FoldAdaptor adaptor,
                                  SmallVectorImpl<OpFoldResult> &results) {
   if (succeeded(foldToElementsFromElements(*this, results)))
+    return success();
+
+  if (succeeded(foldToElementsOfConstant(*this, adaptor.getSource(), results)))
     return success();
 
   // Y = ToElements(ShapeCast(X)) -> Y = ToElements(X)
