@@ -24,6 +24,11 @@
 #include <memory>
 #include <utility>
 
+#include "test_macros.h"
+
+// This warning is coupled with completeness of control flow analysis which is affected by optimizations.
+TEST_GCC_DIAGNOSTIC_IGNORED("-Wno-alloc-size-larger-than")
+
 int main(int, char**)
 {
     std::pair<int*, std::ptrdiff_t> ip = std::get_temporary_buffer<int>(5);

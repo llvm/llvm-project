@@ -27,6 +27,11 @@
 #include <memory>
 #include <utility>
 
+#include "test_macros.h"
+
+// This warning is coupled with completeness of control flow analysis which is affected by optimizations.
+TEST_GCC_DIAGNOSTIC_IGNORED("-Wno-alloc-size-larger-than")
+
 struct alignas(32) A {
     int field;
 };
