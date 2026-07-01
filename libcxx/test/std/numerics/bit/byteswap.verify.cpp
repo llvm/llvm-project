@@ -103,8 +103,7 @@ void test_unsigned_56() {
 
 // Same dispatch-availability guard as test_unsigned_65 above.
 #  if TEST_HAS_BUILTIN(__builtin_bswapg) || !defined(TEST_HAS_NO_INT128)
-// 72 value bits leave padding on every ABI, unlike _BitInt(96), which is
-// exactly 12 bytes with no padding on 32-bit x86 (#205295).
+// 72 value bits leave padding on every ABI.
 #    if __BITINT_MAXWIDTH__ >= 72
 void test_unsigned_72() {
   unsigned _BitInt(72) v = 0;
