@@ -369,7 +369,7 @@ def parseOptionsAndInitTestdirs():
             swift_bin_dir = os.path.dirname(
                 os.path.abspath(configuration.swiftCompiler)
             )
-            path = f"{swift_bin_dir};{os.environ['PATH']}".replace('"', '\\"')
+            path = f"{os.environ['PATH']};{swift_bin_dir}".replace('"', '\\"')
             path_entry = f'PATH="{path}"'
 
             if lldbtest_config.inferior_env is None:
