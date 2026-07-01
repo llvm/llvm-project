@@ -17,6 +17,27 @@ using namespace lldb_private;
 
 CommonABIRuntime::CommonABIRuntime(Process *process) : m_process(process) {}
 
+bool CommonABIRuntime::IsVTableSymbol(Mangled &mangled) const { return false; }
+
+bool CommonABIRuntime::GetDynamicTypeAndAddress(
+    ValueObject &in_value, lldb::DynamicValueType use_dynamic,
+    const LanguageRuntime::VTableInfo &vtable_info,
+    TypeAndOrName &class_type_or_name, Address &dynamic_address) {
+  return false;
+}
+
+void CommonABIRuntime::AppendExceptionBreakpointFunctions(
+    std::vector<const char *> &names, bool catch_bp, bool throw_bp,
+    bool for_expressions) {}
+
+void CommonABIRuntime::AppendExceptionBreakpointFilterModules(
+    FileSpecList &list, const Target &target) {}
+
+lldb::ValueObjectSP
+CommonABIRuntime::GetExceptionObjectForThread(lldb::ThreadSP thread_sp) {
+  return {};
+}
+
 lldb::TypeSP
 CommonABIRuntime::LookupTypeByName(llvm::StringRef type_name,
                                    lldb::ModuleSP preferred_module) const {
