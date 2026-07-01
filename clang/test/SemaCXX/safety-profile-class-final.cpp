@@ -234,6 +234,22 @@ template <typename T>
 }
 template void class_leak_user<int>(); // expected-note {{in instantiation of function template specialization 'class_leak_user<int>' requested here}}
 
+// The same leak reaches a *member* (nested) class: a member class template is
+// completed synchronously when instantiated inside the unrelated suppressed
+// function template, so its finalization must not honor that suppress either.
+struct LeakNestedEnclosing { // expected-error {{test profile fired on completion of class 'LeakNestedEnclosing' under profile 'test::class_final'}}
+  template <typename T>
+  struct LeakInner { T m; }; // expected-error {{test profile fired on completion of class 'LeakInner<int>' under profile 'test::class_final'}}
+};
+
+template <typename T>
+// no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+[[profiles::suppress(test::class_final)]] void nested_leak_user() {
+  LeakNestedEnclosing::LeakInner<T> v; // expected-note {{in instantiation of template class 'LeakNestedEnclosing::LeakInner<int>' requested here}}
+  (void)v;
+}
+template void nested_leak_user<int>(); // expected-note {{in instantiation of function template specialization 'nested_leak_user<int>' requested here}}
+
 // Without `-fprofiles`, the enforce attribute is `warn_attribute_ignored`
 // and the diagnostic never fires. This is exercised by the no-profiles RUN
 // line, which expects only the two attribute-ignored warnings above.
