@@ -91,6 +91,14 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     setOperationAction(ISD::LOAD, T, Custom);
     setOperationAction(ISD::STORE, T, Custom);
   }
+
+  // Likewise, transform zext/sext/anyext extending loads from address space 1
+  // (WASM globals)
+  setLoadExtAction({ISD::EXTLOAD, ISD::ZEXTLOAD, ISD::SEXTLOAD}, MVT::i32,
+                   {MVT::i8, MVT::i16}, Custom);
+  setLoadExtAction({ISD::EXTLOAD, ISD::ZEXTLOAD, ISD::SEXTLOAD}, MVT::i64,
+                   {MVT::i8, MVT::i16, MVT::i32}, Custom);
+
   if (Subtarget->hasSIMD128()) {
     for (auto T : {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v4f32, MVT::v2i64,
                    MVT::v2f64}) {
@@ -1025,6 +1033,22 @@ bool WebAssemblyTargetLowering::allowsMisalignedMemoryAccesses(
   return true;
 }
 
+TargetLoweringBase::LegalizeAction
+WebAssemblyTargetLowering::getCustomLoadAction(EVT ValVT, EVT MemVT,
+                                               Align Alignment,
+                                               unsigned AddrSpace,
+                                               unsigned ExtType,
+                                               bool Atomic) const {
+  if (AddrSpace == WebAssembly::WASM_ADDRESS_SPACE_DEFAULT)
+    return Legal;
+
+  if (AddrSpace == WebAssembly::WASM_ADDRESS_SPACE_VAR &&
+      (ExtType == ISD::SEXTLOAD || ExtType == ISD::ZEXTLOAD))
+    return Expand;
+
+  return Custom;
+}
+
 bool WebAssemblyTargetLowering::isIntDivCheap(EVT VT,
                                               AttributeList Attr) const {
   // The current thinking is that wasm engines will perform this optimization,
@@ -1813,6 +1837,9 @@ SDValue WebAssemblyTargetLowering::LowerOperation(SDValue Op,
 }
 
 static bool IsWebAssemblyGlobal(SDValue Op) {
+  if (Op->getOpcode() == WebAssemblyISD::Wrapper)
+    Op = Op->getOperand(0);
+
   if (const GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(Op))
     return WebAssembly::isWasmVarAddressSpace(GA->getAddressSpace());
 
@@ -1873,16 +1900,102 @@ SDValue WebAssemblyTargetLowering::LowerLoad(SDValue Op,
   LoadSDNode *LN = cast<LoadSDNode>(Op.getNode());
   const SDValue &Base = LN->getBasePtr();
   const SDValue &Offset = LN->getOffset();
+  ISD::LoadExtType ExtType = LN->getExtensionType();
+  EVT ResultType = LN->getValueType(0);
 
   if (IsWebAssemblyGlobal(Base)) {
     if (!Offset->isUndef())
       report_fatal_error(
           "unexpected offset when loading from webassembly global", false);
 
-    SDVTList Tys = DAG.getVTList(LN->getValueType(0), MVT::Other);
-    SDValue Ops[] = {LN->getChain(), Base};
-    return DAG.getMemIntrinsicNode(WebAssemblyISD::GLOBAL_GET, DL, Tys, Ops,
-                                   LN->getMemoryVT(), LN->getMemOperand());
+    if (!ResultType.isInteger() && !ResultType.isFloatingPoint()) {
+      SDVTList Tys = DAG.getVTList(ResultType, MVT::Other);
+      SDValue Ops[] = {LN->getChain(), Base};
+      SDValue GlobalGetNode =
+          DAG.getMemIntrinsicNode(WebAssemblyISD::GLOBAL_GET, DL, Tys, Ops,
+                                  LN->getMemoryVT(), LN->getMemOperand());
+      return GlobalGetNode;
+    }
+
+    EVT GT = MVT::INVALID_SIMPLE_VALUE_TYPE;
+
+    if (auto *GA = dyn_cast<GlobalAddressSDNode>(
+            Base->getOpcode() == WebAssemblyISD::Wrapper ? Base->getOperand(0)
+                                                         : Base))
+      GT = EVT::getEVT(GA->getGlobal()->getValueType());
+
+    if (GT != MVT::i8 && GT != MVT::i16 && GT != MVT::i32 && GT != MVT::i64 &&
+        GT != MVT::f32 && GT != MVT::f64)
+      report_fatal_error("encountered unexpected global type for Base when "
+                         "loading from webassembly global",
+                         false);
+
+    EVT PromotedGT = getTypeToTransformTo(*DAG.getContext(), GT);
+
+    switch (ExtType) {
+    case ISD::NON_EXTLOAD: {
+      // A normal, non-extending load may try to load more or less than the
+      // underlying global, which is invalid. Or it may try to load floats from
+      // integers or vice verse. We lower this to a load of the underylying
+      // global (i32, i64, f32, or f64), and then some combination of a
+      // reinterpret cast from float to integer, a truncate or extension, and a
+      // cast from integer to float as needed.
+
+      // Modify the MMO to load the full global
+      // This is assumed to be safe without copy/dup, as the original load will
+      // be removed
+      MachineMemOperand *MMO = LN->getMemOperand();
+      MMO->setType(LLT(PromotedGT.getSimpleVT()));
+
+      SDVTList Tys = DAG.getVTList(PromotedGT, MVT::Other);
+      SDValue Ops[] = {LN->getChain(), Base};
+      SDValue GlobalGetNode = DAG.getMemIntrinsicNode(
+          WebAssemblyISD::GLOBAL_GET, DL, Tys, Ops, PromotedGT, MMO);
+
+      SDValue ValRes = GlobalGetNode;
+
+      if (ResultType.bitsEq(PromotedGT) &&
+          ResultType.isFloatingPoint() == PromotedGT.isFloatingPoint())
+        return ValRes;
+
+      if (PromotedGT.isFloatingPoint())
+        ValRes = DAG.getBitcast(PromotedGT.changeTypeToInteger(), ValRes);
+
+      ValRes =
+          DAG.getAnyExtOrTrunc(ValRes, DL, ResultType.changeTypeToInteger());
+
+      if (ResultType.isFloatingPoint())
+        ValRes = DAG.getBitcast(ResultType, ValRes);
+
+      return DAG.getMergeValues({ValRes, GlobalGetNode.getValue(1)}, DL);
+    }
+    case ISD::EXTLOAD: {
+      // Expand the EXTLOAD into a regular LOAD of the global, and if
+      // needed, a zero-extension
+
+      EVT OldLoadType = LN->getMemoryVT();
+      EVT NewLoadType = getTypeToTransformTo(*DAG.getContext(), OldLoadType);
+
+      // Modify the MMO to load a whole WASM "register"'s worth
+      // This is assumed to be safe without copy/dup, as the original load will
+      // be removed
+      MachineMemOperand *MMO = LN->getMemOperand();
+      MMO->setType(LLT(NewLoadType.getSimpleVT()));
+
+      SDValue Result = DAG.getLoad(NewLoadType, DL, LN->getChain(), Base, MMO);
+
+      if (NewLoadType != ResultType) {
+        SDValue ValRes = DAG.getNode(ISD::ANY_EXTEND, DL, ResultType, Result);
+        return DAG.getMergeValues({ValRes, Result.getValue(1)}, DL);
+      }
+
+      return Result;
+    }
+    default:
+      report_fatal_error(
+          "encountered unexpected ExtType when loading from webassembly global",
+          false);
+    }
   }
 
   if (std::optional<unsigned> Local = IsWebAssemblyLocal(Base, DAG)) {
