@@ -51,9 +51,9 @@ struct AssocMapAndOffsetsForRC {
   std::optional<SmallVector<int64_t>> delinearizedOffsets;
 };
 
-/// Maps each non-unit result dimension to a source dimension. Returns false if
-/// a stride of a non-unit dimension in the rc result is dynamic or no distinct
-/// source dimension matches.
+/// Maps each non-unit result dimension to a source dimension by stride. Returns
+/// false if a stride of a non-unit dimension in the rc result is dynamic or rc
+/// result strides are not equivalent to rc source strides.
 static bool findSourceDimForResultDim(memref::ReinterpretCastOp rc,
                                       AssocMapAndOffsetsForRC &mapAndOffs) {
   MemRefType resType = dyn_cast<MemRefType>(rc.getType());
@@ -62,40 +62,34 @@ static bool findSourceDimForResultDim(memref::ReinterpretCastOp rc,
          "Expecting identity source layout.");
 
   SmallVector<int64_t> srcIdentityStrides = computeStrides(srcType.getShape());
+  ArrayRef<int64_t> rcResultStrides = rc.getStaticStrides();
 
-  // Each non-unit result dimension needs one source dimension to receive its
-  // loop IV. Combining multiple IVs into one source index would require
-  // linearizing the result position which is TODO.
-  SmallVector<bool> usedSrcDims(srcType.getRank(), false);
+  assert(srcType.getRank() == resType.getRank() &&
+         "Expecting rank-preserving reinterpret_casts");
 
   for (auto [resultDim, resultSize] : llvm::enumerate(resType.getShape())) {
     if (resultSize == 1)
       continue;
 
-    // TODO: Support dynamic strides on non-unit result dimensions.
-    if (ShapedType::isDynamic(rc.getStaticStrides()[resultDim]))
+    int64_t resultStride = rcResultStrides[resultDim];
+
+    if (ShapedType::isDynamic(resultStride))
       return false;
 
-    int64_t resultStride = rc.getStaticStrides()[resultDim];
-    std::optional<unsigned> srcDim;
-    // Pick the first unused source dimension with the same stride.
-    for (auto [idx, stride] : llvm::enumerate(srcIdentityStrides)) {
-      if (usedSrcDims[idx] || stride != resultStride)
-        continue;
-
-      assert(srcType.getDimSize(idx) >= resultSize &&
-             "reinterpret_cast result dimension does not fit in the matching "
-             "source dimension");
-      srcDim = idx;
-      break;
-    }
-    if (!srcDim)
+    // For non-scalar strided memrefs, only support result strides identical to
+    // the identity strides of the source. This enables direct indexing into the
+    // same source dimensions, without linearization.
+    if (resultStride != srcIdentityStrides[resultDim])
       return false;
 
-    usedSrcDims[*srcDim] = true;
-    mapAndOffs.assocMap.push_back(
-        NonUnitDimAssocMapForRC{static_cast<unsigned>(resultDim), *srcDim});
+    assert(srcType.getDimSize(resultDim) >= resultSize &&
+           "reinterpret_cast result dimension does not fit in the matching "
+           "source dimension");
+
+    mapAndOffs.assocMap.push_back(NonUnitDimAssocMapForRC{
+        static_cast<unsigned>(resultDim), static_cast<unsigned>(resultDim)});
   }
+
   return true;
 }
 
@@ -164,29 +158,28 @@ static std::optional<unsigned> getSingleNonUnitDim(MemRefType type) {
 /// Examples that return rewrite info:
 ///
 ///   // Scalar-shaped copy into a source with at most one non-unit dimension.
-///   There are
-///   // no non-unit result dimensions, so dynamic strides in the strided memref
-///   // do not affect index mapping.
+///   // There are no non-unit result dimensions, so strides in the strided
+///   // memref do not affect index mapping.
 ///   copy memref<1 x ... x 1 x f32>
 ///     to reinterpret_cast memref<source-shape>
 ///       to memref<1 x ... x 1 x f32, strided<[?, ..., ?], offset: ?>>
 ///
 ///   // Effectively-1D copy. The single non-unit strided memref dimension is
-///   // mapped to an identity-layout source dimension by its static stride.
+///   // mapped to its matching identity-layout stride source dimension.
 ///   copy memref<1 x ... x N x ... x 1 x f32>
 ///     to reinterpret_cast memref<source-shape>
 ///       to memref<1 x ... x N x ... x 1 x f32, strided<[..., S, ...]>>
 ///
 ///   // Multidimensional copy with static offset. Each non-unit strided memref
-///   // dimension is mapped independently by its static stride.
-///   copy memref<1 x ... x N_0 x ... x N_K x ... x 1 x f32>
+///   // dimension is mapped in order, checking for matching source static
+///   stride. copy memref<1 x ... x N_0 x ... x N_K x ... x 1 x f32>
 ///     to reinterpret_cast memref<source-shape>
 ///       to memref<1 x ... x N_0 x ... x N_K x ... x 1 x f32,
 ///                 strided<[..., S_0, ..., S_1, ...], offset: O>>
 ///
 /// Examples that return no info:
 ///
-///   // Dynamic stride on a non-unit strided memref dimension.
+///   // Non-scalar copies: dynamic strides in strided memref.
 ///   copy memref<1xNxf32>
 ///     to reinterpret_cast memref<1xNxMxf32>
 ///       to memref<1xNxf32, strided<[?, ?]>>
@@ -220,24 +213,31 @@ getAssocMapAndOffsetsForRC(memref::ReinterpretCastOp rc) {
 
   AssocMapAndOffsetsForRC mapAndOffs;
 
-  // reinterpret_cast result dimensions must map to distinct source dimensions.
-  if (!findSourceDimForResultDim(rc, mapAndOffs))
+  assert(resType.hasStaticShape() && "expected static shape");
+  // For scalar copies, result strides are irrelevant, including dynamic ones.
+  // For non-scalar copies, require static result strides identical to the
+  // identity strides of the reinterpret_cast source.
+  if (!llvm::all_of(resType.getShape(),
+                    [](int64_t size) { return size == 1; }) &&
+      !findSourceDimForResultDim(rc, mapAndOffs))
     return std::nullopt;
 
   ArrayRef<int64_t> rcOffsets = rc.getStaticOffsets();
   // FIXME: Despite what `getStaticOffsets` implies, `reinterpret_cast` takes
   // only a single offset. That should be fixed at the op definition level.
   assert(rcOffsets.size() == 1 && "Expecting single offset");
-  // Static ReinterpretCast offset
+
+  // CASE 1: Static ReinterpretCast offset
   if (ShapedType::isStatic(rcOffsets[0])) {
     // Delinearize static ReinterpretCast offset as in-bounds indices (one for
     // every source dimension).
     mapAndOffs.delinearizedOffsets = delinearizeStaticRCOffset(rc);
-    assert(
-        mapAndOffs.delinearizedOffsets &&
-        "static reinterpret_cast offset must delinearize to in-bounds source "
-        "indices");
+    assert(mapAndOffs.delinearizedOffsets &&
+           "static reinterpret_cast offset must delinearize to in-bounds "
+           "reinterpret_cast source indices");
 
+    // Relevant for non-scalar copies: assert that the rectangular
+    // copied slice is in bounds.
     assert(
         llvm::all_of(
             mapAndOffs.assocMap,
@@ -250,16 +250,20 @@ getAssocMapAndOffsetsForRC(memref::ReinterpretCastOp rc) {
     return mapAndOffs;
   }
 
-  // Dynamic ReinterpretCast offset.
+  // CASE 2: Dynamic ReinterpretCast offset.
   // TODO: Support dynamic offsets into sources with multiple non-unit
   // dimensions by delinearizing the offset into source start indices at runtime
   // before adding loop IVs.
-  if (mapAndOffs.assocMap.size() > 1)
-    return std::nullopt;
-  // Only sources with a single non-unit dimension can receive a dynamic offset
-  // directly.
+
+  // With an effectively-1D source, a dynamic linear offset can be used directly
+  // as the index of the unique non-unit source dimension.
   if (!getSingleNonUnitDim(srcType))
     return std::nullopt;
+
+  // Non-scalar copies require identical strides and no rank-changing,
+  // so there can be at most one non-unit result dimension in this case.
+  assert(mapAndOffs.assocMap.size() <= 1 &&
+         "effectively-1D source cannot have multiple mapped non-unit dims");
 
   return mapAndOffs;
 }
