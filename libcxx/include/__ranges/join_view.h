@@ -276,7 +276,7 @@ public:
     requires _Const && convertible_to<iterator_t<_View>, _Outer> && convertible_to<iterator_t<_InnerRange>, _Inner>
       : __outer_(std::move(__i.__outer_)), __inner_(std::move(__i.__inner_)), __parent_(__i.__parent_) {}
 
-  _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator*() const { return **__inner_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator*() const { return **__inner_; }
 
   _LIBCPP_HIDE_FROM_ABI constexpr _Inner operator->() const
     requires __has_arrow<_Inner> && copyable<_Inner>
@@ -340,7 +340,7 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI friend constexpr decltype(auto)
-  iter_move(const __iterator& __i) noexcept(noexcept(ranges::iter_move(*__i.__inner_))) {
+  [[nodiscard]] iter_move(const __iterator& __i) noexcept(noexcept(ranges::iter_move(*__i.__inner_))) {
     return ranges::iter_move(*__i.__inner_);
   }
 
