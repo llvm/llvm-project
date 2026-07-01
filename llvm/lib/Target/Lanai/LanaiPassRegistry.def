@@ -1,0 +1,22 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file is used as the registry of passes that are part of the Lanai
+// backend.
+//
+//===----------------------------------------------------------------------===//
+
+// NOTE: NO INCLUDE GUARD DESIRED!
+
+#ifndef MACHINE_FUNCTION_PASS
+#define MACHINE_FUNCTION_PASS(NAME, CREATE_PASS)
+#endif
+MACHINE_FUNCTION_PASS("lanai-delay-slot-fillter", LanaiDelaySlotFillerPass())
+MACHINE_FUNCTION_PASS("lanai-isel", LanaiISelDAGToDAGPass(*this))
+MACHINE_FUNCTION_PASS("lanai-mem-alu-combiner", LanaiMemAluCombinerPass())
+#undef MACHINE_FUNCTION_PASS

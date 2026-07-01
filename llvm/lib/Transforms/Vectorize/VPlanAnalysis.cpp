@@ -124,7 +124,7 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
   // the loop (not including non-recipe values such as arguments and
   // constants).
   SmallSetVector<VPValue *, 8> LoopInvariants;
-  if (Plan.getVectorTripCount().getNumUsers() > 0)
+  if (!Plan.getVectorTripCount().user_empty())
     LoopInvariants.insert(&Plan.getVectorTripCount());
 
   // We scan the loop in a topological order in order and assign a number to
@@ -198,7 +198,7 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
 
   VPValue *CanIV = LoopRegion->getCanonicalIV();
   // Note: canonical IVs are retained even if they have no users.
-  if (CanIV->getNumUsers() != 0)
+  if (!CanIV->user_empty())
     OpenIntervals.insert(CanIV);
 
   // We scan the instructions linearly and record each time that a new interval

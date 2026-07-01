@@ -716,11 +716,8 @@ void DynamicLoaderFreeBSDKernel::LoadKernelModules() {
     llvm::StringRef kernel_name("freebsd_kernel");
     module_sp = m_kernel_image_info.GetModule();
     if (module_sp.get() && module_sp->GetObjectFile() &&
-        !module_sp->GetObjectFile()->GetFileSpec().GetFilename().IsEmpty())
-      kernel_name = module_sp->GetObjectFile()
-                        ->GetFileSpec()
-                        .GetFilename()
-                        .GetStringRef();
+        !module_sp->GetObjectFile()->GetFileSpec().GetFilename().empty())
+      kernel_name = module_sp->GetObjectFile()->GetFileSpec().GetFilename();
     m_kernel_image_info.SetName(kernel_name.data());
 
     if (m_kernel_image_info.GetLoadAddress() == LLDB_INVALID_ADDRESS) {

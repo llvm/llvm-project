@@ -670,7 +670,7 @@ def OptimizeArrayRepacking
 def MIFOpConversion : Pass<"mif-convert", "mlir::ModuleOp"> {
   let summary = "Convert some MIF operations to runtime calls";
   let dependentDialects = ["fir::FIROpsDialect", "mlir::LLVM::LLVMDialect",
-                           "mlir::cf::ControlFlowDialect"];
+                           "mlir::cf::ControlFlowDialect", "mlir::DLTIDialect"];
 }
 
 def LoopInvariantCodeMotion : Pass<"flang-licm", "::mlir::func::FuncOp"> {

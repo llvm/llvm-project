@@ -991,3 +991,252 @@ void testAttributedLongDoubleType(LongDouble3Vec *v) {
   // long double elements occupy [0-9], [16-25], [32-41] on x86.
   __builtin_clear_padding(v);
 }
+
+struct UnnamedBitfieldSingleBit {
+  unsigned char a : 3;
+  unsigned char   : 1;
+  unsigned char b : 4;
+};
+
+// LINUX-LABEL: define dso_local void @testUnnamedBitfieldSingleBit(
+// LINUX-SAME: ptr noundef [[S:%.*]]) #[[ATTR0]] {
+// LINUX-NEXT:  [[ENTRY:.*:]]
+// LINUX-NEXT:    [[S_ADDR:%.*]] = alloca ptr, align 8
+// LINUX-NEXT:    store ptr [[S]], ptr [[S_ADDR]], align 8
+// LINUX-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ADDR]], align 8
+// LINUX-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 0
+// LINUX-NEXT:    [[TMP2:%.*]] = load i8, ptr [[TMP1]], align 1
+// LINUX-NEXT:    [[TMP3:%.*]] = and i8 [[TMP2]], -9
+// LINUX-NEXT:    store i8 [[TMP3]], ptr [[TMP1]], align 1
+// LINUX-NEXT:    ret void
+//
+// WINDOWS-LABEL: define dso_local void @testUnnamedBitfieldSingleBit(
+// WINDOWS-SAME: ptr noundef [[S:%.*]]) #[[ATTR0]] {
+// WINDOWS-NEXT:  [[ENTRY:.*:]]
+// WINDOWS-NEXT:    [[S_ADDR:%.*]] = alloca ptr, align 8
+// WINDOWS-NEXT:    store ptr [[S]], ptr [[S_ADDR]], align 8
+// WINDOWS-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ADDR]], align 8
+// WINDOWS-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 0
+// WINDOWS-NEXT:    [[TMP2:%.*]] = load i8, ptr [[TMP1]], align 1
+// WINDOWS-NEXT:    [[TMP3:%.*]] = and i8 [[TMP2]], -9
+// WINDOWS-NEXT:    store i8 [[TMP3]], ptr [[TMP1]], align 1
+// WINDOWS-NEXT:    ret void
+//
+void testUnnamedBitfieldSingleBit(struct UnnamedBitfieldSingleBit *s) {
+  // byte 0: a[bits 0-2], unnamed[bit 3], b[bits 4-7]
+  // bit 3 must be cleared
+  // Mask: 0b11110111 == -9
+  __builtin_clear_padding(s);
+}
+
+struct UnnamedBitfieldMiddle {
+  unsigned char a : 3;
+  unsigned char   : 2;
+  unsigned char b : 3;
+};
+
+// LINUX-LABEL: define dso_local void @testUnnamedBitfieldMiddle(
+// LINUX-SAME: ptr noundef [[S:%.*]]) #[[ATTR0]] {
+// LINUX-NEXT:  [[ENTRY:.*:]]
+// LINUX-NEXT:    [[S_ADDR:%.*]] = alloca ptr, align 8
+// LINUX-NEXT:    store ptr [[S]], ptr [[S_ADDR]], align 8
+// LINUX-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ADDR]], align 8
+// LINUX-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 0
+// LINUX-NEXT:    [[TMP2:%.*]] = load i8, ptr [[TMP1]], align 1
+// LINUX-NEXT:    [[TMP3:%.*]] = and i8 [[TMP2]], -25
+// LINUX-NEXT:    store i8 [[TMP3]], ptr [[TMP1]], align 1
+// LINUX-NEXT:    ret void
+//
+// WINDOWS-LABEL: define dso_local void @testUnnamedBitfieldMiddle(
+// WINDOWS-SAME: ptr noundef [[S:%.*]]) #[[ATTR0]] {
+// WINDOWS-NEXT:  [[ENTRY:.*:]]
+// WINDOWS-NEXT:    [[S_ADDR:%.*]] = alloca ptr, align 8
+// WINDOWS-NEXT:    store ptr [[S]], ptr [[S_ADDR]], align 8
+// WINDOWS-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ADDR]], align 8
+// WINDOWS-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 0
+// WINDOWS-NEXT:    [[TMP2:%.*]] = load i8, ptr [[TMP1]], align 1
+// WINDOWS-NEXT:    [[TMP3:%.*]] = and i8 [[TMP2]], -25
+// WINDOWS-NEXT:    store i8 [[TMP3]], ptr [[TMP1]], align 1
+// WINDOWS-NEXT:    ret void
+//
+void testUnnamedBitfieldMiddle(struct UnnamedBitfieldMiddle *s) {
+  // byte 0: a[0-2], unnamed[3-4], b[5-7]
+  // bits 3-4 must be cleared
+  // Mask: 0b11100111 == -25
+  __builtin_clear_padding(s);
+}
+
+struct UnnamedBitfieldSurrounding {
+  unsigned char   : 2;
+  unsigned char a : 4;
+  unsigned char   : 2;
+};
+
+// LINUX-LABEL: define dso_local void @testUnnamedBitfieldSurrounding(
+// LINUX-SAME: ptr noundef [[S:%.*]]) #[[ATTR0]] {
+// LINUX-NEXT:  [[ENTRY:.*:]]
+// LINUX-NEXT:    [[S_ADDR:%.*]] = alloca ptr, align 8
+// LINUX-NEXT:    store ptr [[S]], ptr [[S_ADDR]], align 8
+// LINUX-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ADDR]], align 8
+// LINUX-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 0
+// LINUX-NEXT:    [[TMP2:%.*]] = load i8, ptr [[TMP1]], align 1
+// LINUX-NEXT:    [[TMP3:%.*]] = and i8 [[TMP2]], -4
+// LINUX-NEXT:    store i8 [[TMP3]], ptr [[TMP1]], align 1
+// LINUX-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP0]], i32 0
+// LINUX-NEXT:    [[TMP5:%.*]] = load i8, ptr [[TMP4]], align 1
+// LINUX-NEXT:    [[TMP6:%.*]] = and i8 [[TMP5]], 63
+// LINUX-NEXT:    store i8 [[TMP6]], ptr [[TMP4]], align 1
+// LINUX-NEXT:    ret void
+//
+// WINDOWS-LABEL: define dso_local void @testUnnamedBitfieldSurrounding(
+// WINDOWS-SAME: ptr noundef [[S:%.*]]) #[[ATTR0]] {
+// WINDOWS-NEXT:  [[ENTRY:.*:]]
+// WINDOWS-NEXT:    [[S_ADDR:%.*]] = alloca ptr, align 8
+// WINDOWS-NEXT:    store ptr [[S]], ptr [[S_ADDR]], align 8
+// WINDOWS-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ADDR]], align 8
+// WINDOWS-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 0
+// WINDOWS-NEXT:    [[TMP2:%.*]] = load i8, ptr [[TMP1]], align 1
+// WINDOWS-NEXT:    [[TMP3:%.*]] = and i8 [[TMP2]], -4
+// WINDOWS-NEXT:    store i8 [[TMP3]], ptr [[TMP1]], align 1
+// WINDOWS-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP0]], i32 0
+// WINDOWS-NEXT:    [[TMP5:%.*]] = load i8, ptr [[TMP4]], align 1
+// WINDOWS-NEXT:    [[TMP6:%.*]] = and i8 [[TMP5]], 63
+// WINDOWS-NEXT:    store i8 [[TMP6]], ptr [[TMP4]], align 1
+// WINDOWS-NEXT:    ret void
+//
+void testUnnamedBitfieldSurrounding(struct UnnamedBitfieldSurrounding *s) {
+  // byte 0: unnamed[0-1], a[2-5], unnamed[6-7]
+  // bits 0-1 and 6-7 must be cleared
+  // Masks:
+  //   0b11111100 == -4
+  //   0b00111111 == 63
+  __builtin_clear_padding(s);
+}
+
+struct UnnamedZeroWidthBitfield {
+  unsigned char a : 4;
+  unsigned int  : 0;
+  unsigned int b : 4;
+};
+
+// LINUX-LABEL: define dso_local void @testUnnamedZeroWidthBitfield(
+// LINUX-SAME: ptr noundef [[S:%.*]]) #[[ATTR0]] {
+// LINUX-NEXT:  [[ENTRY:.*:]]
+// LINUX-NEXT:    [[S_ADDR:%.*]] = alloca ptr, align 8
+// LINUX-NEXT:    store ptr [[S]], ptr [[S_ADDR]], align 8
+// LINUX-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ADDR]], align 8
+// LINUX-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 0
+// LINUX-NEXT:    [[TMP2:%.*]] = load i8, ptr [[TMP1]], align 4
+// LINUX-NEXT:    [[TMP3:%.*]] = and i8 [[TMP2]], 15
+// LINUX-NEXT:    store i8 [[TMP3]], ptr [[TMP1]], align 4
+// LINUX-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP0]], i32 1
+// LINUX-NEXT:    store i8 0, ptr [[TMP4]], align 1
+// LINUX-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP0]], i32 2
+// LINUX-NEXT:    store i8 0, ptr [[TMP5]], align 2
+// LINUX-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[TMP0]], i32 3
+// LINUX-NEXT:    store i8 0, ptr [[TMP6]], align 1
+// LINUX-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP0]], i32 4
+// LINUX-NEXT:    [[TMP8:%.*]] = load i8, ptr [[TMP7]], align 4
+// LINUX-NEXT:    [[TMP9:%.*]] = and i8 [[TMP8]], 15
+// LINUX-NEXT:    store i8 [[TMP9]], ptr [[TMP7]], align 4
+// LINUX-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[TMP0]], i32 5
+// LINUX-NEXT:    store i8 0, ptr [[TMP10]], align 1
+// LINUX-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[TMP0]], i32 6
+// LINUX-NEXT:    store i8 0, ptr [[TMP11]], align 2
+// LINUX-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[TMP0]], i32 7
+// LINUX-NEXT:    store i8 0, ptr [[TMP12]], align 1
+// LINUX-NEXT:    ret void
+//
+// WINDOWS-LABEL: define dso_local void @testUnnamedZeroWidthBitfield(
+// WINDOWS-SAME: ptr noundef [[S:%.*]]) #[[ATTR0]] {
+// WINDOWS-NEXT:  [[ENTRY:.*:]]
+// WINDOWS-NEXT:    [[S_ADDR:%.*]] = alloca ptr, align 8
+// WINDOWS-NEXT:    store ptr [[S]], ptr [[S_ADDR]], align 8
+// WINDOWS-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ADDR]], align 8
+// WINDOWS-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 0
+// WINDOWS-NEXT:    [[TMP2:%.*]] = load i8, ptr [[TMP1]], align 4
+// WINDOWS-NEXT:    [[TMP3:%.*]] = and i8 [[TMP2]], 15
+// WINDOWS-NEXT:    store i8 [[TMP3]], ptr [[TMP1]], align 4
+// WINDOWS-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP0]], i32 1
+// WINDOWS-NEXT:    store i8 0, ptr [[TMP4]], align 1
+// WINDOWS-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP0]], i32 2
+// WINDOWS-NEXT:    store i8 0, ptr [[TMP5]], align 2
+// WINDOWS-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[TMP0]], i32 3
+// WINDOWS-NEXT:    store i8 0, ptr [[TMP6]], align 1
+// WINDOWS-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP0]], i32 4
+// WINDOWS-NEXT:    [[TMP8:%.*]] = load i8, ptr [[TMP7]], align 4
+// WINDOWS-NEXT:    [[TMP9:%.*]] = and i8 [[TMP8]], 15
+// WINDOWS-NEXT:    store i8 [[TMP9]], ptr [[TMP7]], align 4
+// WINDOWS-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[TMP0]], i32 5
+// WINDOWS-NEXT:    store i8 0, ptr [[TMP10]], align 1
+// WINDOWS-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[TMP0]], i32 6
+// WINDOWS-NEXT:    store i8 0, ptr [[TMP11]], align 2
+// WINDOWS-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[TMP0]], i32 7
+// WINDOWS-NEXT:    store i8 0, ptr [[TMP12]], align 1
+// WINDOWS-NEXT:    ret void
+//
+void testUnnamedZeroWidthBitfield(struct UnnamedZeroWidthBitfield *s) {
+  // byte 0: a[0-3], unnamed[4-7]
+  // bytes 1-3: struct padding
+  // bytes 4-7: b[bits 0-3], tail padding[bits 4-31]
+  //
+  // byte 0:   clear bits 4-7
+  //           mask: 0b00001111 == 15
+  //
+  // byte 1-3: clear all bits
+  //           3 x store i8 0
+  //
+  // byte 4-7: clear bits 4-31
+  //           mask: 0b00001111 == 15
+  //           3 x store i8 0
+  __builtin_clear_padding(s);
+}
+
+struct UnnamedBitfieldMultiByte {
+  unsigned short a : 4;
+  unsigned short   : 8;
+  unsigned short b : 4;
+};
+
+// LINUX-LABEL: define dso_local void @testUnnamedBitfieldMultiByte(
+// LINUX-SAME: ptr noundef [[S:%.*]]) #[[ATTR0]] {
+// LINUX-NEXT:  [[ENTRY:.*:]]
+// LINUX-NEXT:    [[S_ADDR:%.*]] = alloca ptr, align 8
+// LINUX-NEXT:    store ptr [[S]], ptr [[S_ADDR]], align 8
+// LINUX-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ADDR]], align 8
+// LINUX-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 0
+// LINUX-NEXT:    [[TMP2:%.*]] = load i8, ptr [[TMP1]], align 2
+// LINUX-NEXT:    [[TMP3:%.*]] = and i8 [[TMP2]], 15
+// LINUX-NEXT:    store i8 [[TMP3]], ptr [[TMP1]], align 2
+// LINUX-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP0]], i32 1
+// LINUX-NEXT:    [[TMP5:%.*]] = load i8, ptr [[TMP4]], align 1
+// LINUX-NEXT:    [[TMP6:%.*]] = and i8 [[TMP5]], -16
+// LINUX-NEXT:    store i8 [[TMP6]], ptr [[TMP4]], align 1
+// LINUX-NEXT:    ret void
+//
+// WINDOWS-LABEL: define dso_local void @testUnnamedBitfieldMultiByte(
+// WINDOWS-SAME: ptr noundef [[S:%.*]]) #[[ATTR0]] {
+// WINDOWS-NEXT:  [[ENTRY:.*:]]
+// WINDOWS-NEXT:    [[S_ADDR:%.*]] = alloca ptr, align 8
+// WINDOWS-NEXT:    store ptr [[S]], ptr [[S_ADDR]], align 8
+// WINDOWS-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ADDR]], align 8
+// WINDOWS-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 0
+// WINDOWS-NEXT:    [[TMP2:%.*]] = load i8, ptr [[TMP1]], align 2
+// WINDOWS-NEXT:    [[TMP3:%.*]] = and i8 [[TMP2]], 15
+// WINDOWS-NEXT:    store i8 [[TMP3]], ptr [[TMP1]], align 2
+// WINDOWS-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP0]], i32 1
+// WINDOWS-NEXT:    [[TMP5:%.*]] = load i8, ptr [[TMP4]], align 1
+// WINDOWS-NEXT:    [[TMP6:%.*]] = and i8 [[TMP5]], -16
+// WINDOWS-NEXT:    store i8 [[TMP6]], ptr [[TMP4]], align 1
+// WINDOWS-NEXT:    ret void
+//
+void testUnnamedBitfieldMultiByte(struct UnnamedBitfieldMultiByte *s) {
+  // 2 bytes: a[0-3], unnamed[4-11], b[12-15]
+  // byte 0: clear bits 4-7
+  // byte 1: clear bits 0-3
+  //
+  // Masks:
+  //   0b00001111 ==  15
+  //   0b11110000 == -16
+  __builtin_clear_padding(s);
+}

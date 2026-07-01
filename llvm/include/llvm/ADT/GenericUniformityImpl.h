@@ -968,8 +968,7 @@ void GenericUniformityAnalysisImpl<ContextT>::taintAndPushPhiNodes(
 ///
 /// \return true iff \p Candidate was added to \p Cycles.
 template <typename CycleT>
-static bool insertIfNotContained(SmallVector<CycleT *> &Cycles,
-                                 CycleT *Candidate) {
+bool insertIfNotContained(SmallVector<CycleT *> &Cycles, CycleT *Candidate) {
   if (llvm::any_of(Cycles,
                    [Candidate](CycleT *C) { return C->contains(Candidate); }))
     return false;
@@ -983,9 +982,8 @@ static bool insertIfNotContained(SmallVector<CycleT *> &Cycles,
 /// inside that cycle, then that whole cycle is assumed to be
 /// divergent. This does not apply if the cycle is reducible.
 template <typename CycleT, typename BlockT>
-static const CycleT *getExtDivCycle(const CycleT *Cycle,
-                                    const BlockT *DivTermBlock,
-                                    const BlockT *JoinBlock) {
+const CycleT *getExtDivCycle(const CycleT *Cycle, const BlockT *DivTermBlock,
+                             const BlockT *JoinBlock) {
   assert(Cycle);
   assert(Cycle->contains(JoinBlock));
 
@@ -1020,10 +1018,9 @@ static const CycleT *getExtDivCycle(const CycleT *Cycle,
 /// docs/ConvergenceAnalysis.html.
 template <typename ContextT, typename CycleT, typename BlockT,
           typename DominatorTreeT>
-static const CycleT *
-getIntDivCycle(const CycleT *Cycle, const BlockT *DivTermBlock,
-               const BlockT *JoinBlock, const DominatorTreeT &DT,
-               ContextT &Context) {
+const CycleT *getIntDivCycle(const CycleT *Cycle, const BlockT *DivTermBlock,
+                             const BlockT *JoinBlock, const DominatorTreeT &DT,
+                             ContextT &Context) {
   LLVM_DEBUG(dbgs() << "examine join " << Context.print(JoinBlock)
                     << " for internal branch " << Context.print(DivTermBlock)
                     << "\n");
@@ -1058,7 +1055,7 @@ getIntDivCycle(const CycleT *Cycle, const BlockT *DivTermBlock,
 
 template <typename ContextT, typename CycleT, typename BlockT,
           typename DominatorTreeT>
-static const CycleT *
+const CycleT *
 getOutermostDivergentCycle(const CycleT *Cycle, const BlockT *DivTermBlock,
                            const BlockT *JoinBlock, const DominatorTreeT &DT,
                            ContextT &Context) {

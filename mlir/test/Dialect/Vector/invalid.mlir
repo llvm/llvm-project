@@ -2056,7 +2056,7 @@ func.func @invalid_from_elements_scalable(%a: f32, %b: i32) {
 // -----
 
 func.func @invalid_step_0d() {
-  // expected-error @+1 {{vector.step' op result #0 must be vector of index values of ranks 1, but got 'vector<f32>'}}
+  // expected-error @+1 {{vector.step' op result #0 must be vector of index or signless integer of at least 8 bits values of ranks 1, but got 'vector<f32>'}}
   vector.step : vector<f32>
   return
 }
@@ -2064,8 +2064,40 @@ func.func @invalid_step_0d() {
 // -----
 
 func.func @invalid_step_2d() {
-  // expected-error @+1 {{vector.step' op result #0 must be vector of index values of ranks 1, but got 'vector<2x4xf32>'}}
+  // expected-error @+1 {{vector.step' op result #0 must be vector of index or signless integer of at least 8 bits values of ranks 1, but got 'vector<2x4xf32>'}}
   vector.step : vector<2x4xf32>
+  return
+}
+
+// -----
+
+func.func @invalid_step_float_element() {
+  // expected-error @+1 {{vector.step' op result #0 must be vector of index or signless integer of at least 8 bits values of ranks 1, but got 'vector<4xf32>'}}
+  vector.step : vector<4xf32>
+  return
+}
+
+// -----
+
+func.func @invalid_step_narrow_integer() {
+  // expected-error @+1 {{vector.step' op result #0 must be vector of index or signless integer of at least 8 bits values of ranks 1, but got 'vector<4xi4>'}}
+  vector.step : vector<4xi4>
+  return
+}
+
+// -----
+
+func.func @invalid_step_i1_element() {
+  // expected-error @+1 {{vector.step' op result #0 must be vector of index or signless integer of at least 8 bits values of ranks 1, but got 'vector<4xi1>'}}
+  vector.step : vector<4xi1>
+  return
+}
+
+// -----
+
+func.func @invalid_step_unsigned_integer() {
+  // expected-error @+1 {{vector.step' op result #0 must be vector of index or signless integer of at least 8 bits values of ranks 1, but got 'vector<4xui8>'}}
+  vector.step : vector<4xui8>
   return
 }
 
@@ -2145,6 +2177,15 @@ func.func @store_non_unit_stride(%src : memref<?xi8, strided<[2], offset:?>>,%va
 
 // -----
 
+func.func @store_negative_stride(%src: memref<100x100xf32, strided<[-100, 1]>>, %val: vector<4xf32>) {
+  // expected-error @+2 {{'vector.store' op memref strides must be non-negative}}
+  %c0 = arith.constant 0 : index
+  vector.store %val, %src[%c0, %c0] : memref<100x100xf32, strided<[-100, 1]>>, vector<4xf32>
+  return
+}
+
+// -----
+
 // Verify that vector.bitcast rejects vectors with i0 (zero-bitwidth) element type.
 func.func @bitcast_i0(%a: vector<4xi0>) -> vector<4xi0> {
   // expected-error @+1 {{'vector.bitcast' op operand #0 must be vector of non-zero-bitwidth type values, but got 'vector<4xi0>'}}
@@ -2197,4 +2238,13 @@ func.func @scan_i0(%a: vector<4xi0>, %init: vector<1xi0>) -> (vector<4xi0>, vect
   %0:2 = vector.scan <add>, %a, %init {inclusive = true, reduction_dim = 0 : i64} :
     vector<4xi0>, vector<1xi0>
   return %0#0, %0#1 : vector<4xi0>, vector<1xi0>
+}
+
+// -----
+
+func.func @load_negative_stride(%src: memref<100x100xf32, strided<[-100, 1]>>) -> vector<8xf32> {
+  // expected-error @+2 {{'vector.load' op memref strides must be non-negative}}
+  %c0 = arith.constant 0 : index
+  %v = vector.load %src[%c0, %c0] : memref<100x100xf32, strided<[-100, 1]>>, vector<8xf32>
+  return %v : vector<8xf32>
 }

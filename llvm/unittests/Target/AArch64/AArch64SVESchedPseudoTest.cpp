@@ -87,6 +87,13 @@ void runSVEPseudoTestForCPU(const std::string &CPU) {
     int Latency = 0;
     int LatencyOrig = 0;
 
+    ASSERT_TRUE(SCDesc->isValid());
+    ASSERT_TRUE(SCDescOrig->isValid());
+    // We need to handle the variant if this becomes true
+    ASSERT_FALSE(SCDesc->isVariant());
+    ASSERT_FALSE(SCDescOrig->isVariant());
+    ASSERT_EQ(SCDesc->NumWriteLatencyEntries,
+              SCDescOrig->NumWriteLatencyEntries);
     for (unsigned DefIdx = 0, DefEnd = SCDesc->NumWriteLatencyEntries;
          DefIdx != DefEnd; ++DefIdx) {
       const MCWriteLatencyEntry *WLEntry =
@@ -94,11 +101,11 @@ void runSVEPseudoTestForCPU(const std::string &CPU) {
       const MCWriteLatencyEntry *WLEntryOrig =
           STI.getWriteLatencyEntry(SCDescOrig, DefIdx);
       Latency = std::max(Latency, static_cast<int>(WLEntry->Cycles));
-      LatencyOrig = std::max(Latency, static_cast<int>(WLEntryOrig->Cycles));
+      LatencyOrig =
+          std::max(LatencyOrig, static_cast<int>(WLEntryOrig->Cycles));
     }
 
     ASSERT_EQ(Latency, LatencyOrig);
-    ASSERT_TRUE(SCDesc->isValid());
   }
 }
 

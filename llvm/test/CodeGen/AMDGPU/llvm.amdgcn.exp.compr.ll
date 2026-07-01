@@ -1,4 +1,4 @@
-; RUN: llc -global-isel=0 -mtriple=amdgcn < %s | FileCheck -strict-whitespace -check-prefix=GCN %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx600 < %s | FileCheck -strict-whitespace -check-prefix=GCN %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=tonga < %s | FileCheck -strict-whitespace -check-prefix=GCN %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck -strict-whitespace -check-prefix=GCN %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck -strict-whitespace -check-prefix=GCN %s

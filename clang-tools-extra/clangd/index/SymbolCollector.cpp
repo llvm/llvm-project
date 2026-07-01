@@ -573,23 +573,12 @@ SymbolCollector::getRefContainer(const Decl *Enclosing,
   return Enclosing;
 }
 
-SmallVector<const CXXConstructorDecl *, 1>
+ArrayRef<const CXXConstructorDecl *>
 SymbolCollector::findIndirectConstructors(const Decl *D) {
-  auto *FD = llvm::dyn_cast<clang::FunctionDecl>(D);
-  if (FD == nullptr || !FD->isTemplateInstantiation())
+  const auto *FD = llvm::dyn_cast<clang::FunctionDecl>(D);
+  if (!FD)
     return {};
-  if (auto Entry = ForwardingToConstructorCache.find(FD);
-      Entry != ForwardingToConstructorCache.end())
-    return Entry->getSecond();
-  if (auto *PT = FD->getPrimaryTemplate();
-      PT == nullptr || !isLikelyForwardingFunction(PT))
-    return {};
-
-  SmallVector<const CXXConstructorDecl *, 1> FoundConstructors =
-      searchConstructorsInForwardingFunction(FD);
-  auto Iter = ForwardingToConstructorCache.try_emplace(
-      FD, std::move(FoundConstructors));
-  return Iter.first->getSecond();
+  return getForwardedConstructors(FD, ForwardingToConstructorCache);
 }
 
 // Always return true to continue indexing.

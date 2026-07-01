@@ -637,6 +637,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
           {ISD::UADDSAT, ISD::SADDSAT, ISD::USUBSAT, ISD::SSUBSAT}, P64VecVTs,
           Legal);
       setOperationAction(ISD::INTRINSIC_WO_CHAIN, P64VecVTs, Legal);
+      setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::i64, Custom);
       setOperationAction({ISD::AVGFLOORS, ISD::AVGFLOORU}, P64VecVTs, Legal);
       setOperationAction({ISD::SMIN, ISD::UMIN, ISD::SMAX, ISD::UMAX},
                          P64VecVTs, Legal);
@@ -2463,9 +2464,15 @@ bool RISCVTargetLowering::isLegalAddressingMode(const DataLayout &DL,
   if (Subtarget.hasVInstructions() && isa<VectorType>(Ty))
     return AM.HasBaseReg && AM.Scale == 0 && !AM.BaseOffs;
 
-  // Require a 12-bit signed offset.
-  if (!isInt<12>(AM.BaseOffs))
+  // The Xqcilo extension provides load/store instructions with a 26-bit signed
+  // offset.
+  if (Subtarget.hasVendorXqcilo()) {
+    if (!isInt<26>(AM.BaseOffs))
+      return false;
+  } else if (!isInt<12>(AM.BaseOffs)) {
+    // Otherwise require a 12-bit signed offset.
     return false;
+  }
 
   switch (AM.Scale) {
   case 0: // "r+i" or just "i", depending on HasBaseReg.
@@ -2486,6 +2493,10 @@ bool RISCVTargetLowering::isLegalICmpImmediate(int64_t Imm) const {
 }
 
 bool RISCVTargetLowering::isLegalAddImmediate(int64_t Imm) const {
+  // The Xqcilia extension provides add-immediate instructions with a 26-bit
+  // signed immediate.
+  if (Subtarget.hasVendorXqcilia())
+    return isInt<26>(Imm);
   return isInt<12>(Imm);
 }
 
@@ -10251,9 +10262,9 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
   const ConstantFPSDNode *FPTV = dyn_cast<ConstantFPSDNode>(TrueV);
   const ConstantFPSDNode *FPFV = dyn_cast<ConstantFPSDNode>(FalseV);
   if (FPTV && FPFV) {
-    if (FPTV->isExactlyValue(1.0) && FPFV->isPosZero())
+    if (FPTV->isOne() && FPFV->isPosZero())
       return DAG.getNode(ISD::SINT_TO_FP, DL, VT, CondV);
-    if (FPTV->isPosZero() && FPFV->isExactlyValue(1.0)) {
+    if (FPTV->isPosZero() && FPFV->isOne()) {
       SDValue XOR = DAG.getNode(ISD::XOR, DL, XLenVT, CondV,
                                 DAG.getConstant(1, DL, XLenVT));
       return DAG.getNode(ISD::SINT_TO_FP, DL, VT, XOR);
@@ -15804,6 +15815,60 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
                                     DAG.getVectorIdxConstant(0, DL)));
       return;
     }
+    case Intrinsic::riscv_predsum:
+    case Intrinsic::riscv_predsumu: {
+      bool IsSigned = IntNo == Intrinsic::riscv_predsum;
+      SDValue Vec = N->getOperand(1);
+      MVT VecVT = Vec.getSimpleValueType();
+      auto Ext = [&](SDValue V) {
+        return DAG.getNode(IsSigned ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND, DL,
+                           MVT::i64, V);
+      };
+      auto RedSum = [&](MVT VT, SDValue V, SDValue Acc) {
+        return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, VT, N->getOperand(0), V,
+                           Acc);
+      };
+
+      // RV32: i64 accumulator. Reduce to a 32-bit partial sum, then
+      // widening-accumulate into i64 via wadda/waddau (v2i32 uses wadda alone).
+      if (!Subtarget.is64Bit() && N->getValueType(0) == MVT::i64) {
+        SDValue Acc = N->getOperand(2);
+        SDValue Res;
+        if (VecVT == MVT::v2i32) {
+          Res = DAG.getNode(ISD::ADD, DL, MVT::i64, Acc,
+                            Ext(DAG.getExtractVectorElt(DL, MVT::i32, Vec, 0)));
+          Res = DAG.getNode(ISD::ADD, DL, MVT::i64, Res,
+                            Ext(DAG.getExtractVectorElt(DL, MVT::i32, Vec, 1)));
+        } else {
+          // The paired predsum.dbs/dhs computes the 32-bit element sum.
+          SDValue Partial =
+              RedSum(MVT::i32, Vec, DAG.getConstant(0, DL, MVT::i32));
+          Res = DAG.getNode(ISD::ADD, DL, MVT::i64, Acc, Ext(Partial));
+        }
+        Results.push_back(Res);
+        return;
+      }
+
+      // RV64: i32 accumulator. Reduce at i64 (XLEN), then truncate.
+      if (!Subtarget.is64Bit() || N->getValueType(0) != MVT::i32)
+        return;
+
+      // Zero the upper lanes (zext.w) so they don't contribute to the sum.
+      if (VecVT == MVT::v4i8 || VecVT == MVT::v2i16) {
+        MVT WideVT = VecVT == MVT::v4i8 ? MVT::v8i8 : MVT::v4i16;
+        SDValue Wide = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64,
+                                   DAG.getBitcast(MVT::i32, Vec));
+        Vec = DAG.getBitcast(WideVT, Wide);
+      }
+
+      // The result is truncated to i32, so the accumulator's upper bits are
+      // unused and need no sign/zero extension.
+      SDValue Acc =
+          DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(2));
+      SDValue Res = RedSum(MVT::i64, Vec, Acc);
+      Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res));
+      return;
+    }
     case Intrinsic::riscv_orc_b:
     case Intrinsic::riscv_brev8:
     case Intrinsic::riscv_sha256sig0:
@@ -16450,7 +16515,13 @@ static SDValue transformAddImmMulImm(SDNode *N, SelectionDAG &DAG,
   int64_t C0 = N0C->getSExtValue();
   int64_t C1 = N1C->getSExtValue();
   int64_t CA, CB;
-  if (C0 == -1 || C0 == 0 || C0 == 1 || isInt<12>(C1))
+  // If C1 already fits in an add immediate, there is nothing to split out: the
+  // (add (mul x, c0), c1) form is already canonical/cheap. Splitting it would
+  // fight the generic DAGCombiner fold add(mul(add(A, CA), CM), CB) ->
+  // add(mul(A, CM), CM*CA+CB) (which is gated on isLegalAddImmediate) and cause
+  // an infinite loop.
+  if (C0 == -1 || C0 == 0 || C0 == 1 ||
+      Subtarget.getTargetLowering()->isLegalAddImmediate(C1))
     return SDValue();
   // Search for proper CA (non-zero) and CB that both are simm12.
   if ((C1 / C0) != 0 && isInt<12>(C1 / C0) && isInt<12>(C1 % C0) &&
@@ -17908,7 +17979,7 @@ combineVectorSizedSetCCEquality(EVT VT, SDValue X, SDValue Y, ISD::CondCode CC,
                                 const RISCVSubtarget &Subtarget) {
   assert(ISD::isIntEqualitySetCC(CC) && "Bad comparison predicate");
 
-  if (!Subtarget.hasVInstructions())
+  if (!Subtarget.useRVVForFixedLengthVectors())
     return SDValue();
 
   MVT XLenVT = Subtarget.getXLenVT();
@@ -21550,6 +21621,15 @@ static SDValue combineMinMaxToSat(SDNode *N,
   return SDValue();
 }
 
+// Returns true if the i32 pair (Lo, Hi) is the 64-bit sign-extension of the
+// i32 value Lo, i.e. Hi == (sra Lo, 31). Used to fold ADDD/SUBD of a
+// sign-extended operand into the WADDA/WSUBA widening accumulate nodes.
+static bool isI32SignExtended(SDValue Lo, SDValue Hi) {
+  return Hi.getOpcode() == ISD::SRA && Hi.getOperand(0) == Lo &&
+         isa<ConstantSDNode>(Hi.getOperand(1)) &&
+         Hi.getConstantOperandVal(1) == 31;
+}
+
 SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
                                                DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -21736,6 +21816,21 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
                       Op1Lo, Op1Hi, Op0Lo, DAG.getConstant(0, DL, MVT::i32));
       return DCI.CombineTo(N, Result.getValue(0), Result.getValue(1));
     }
+
+    // (ADDD lo, hi, x, sra(x, 31)) -> (WADDA lo, hi, x, 0)
+    if (isI32SignExtended(Op1Lo, Op1Hi)) {
+      SDValue Result =
+          DAG.getNode(RISCVISD::WADDA, DL, DAG.getVTList(MVT::i32, MVT::i32),
+                      Op0Lo, Op0Hi, Op1Lo, DAG.getConstant(0, DL, MVT::i32));
+      return DCI.CombineTo(N, Result.getValue(0), Result.getValue(1));
+    }
+    // (ADDD x, sra(x, 31), lo, hi) -> (WADDA lo, hi, x, 0)
+    if (isI32SignExtended(Op0Lo, Op0Hi)) {
+      SDValue Result =
+          DAG.getNode(RISCVISD::WADDA, DL, DAG.getVTList(MVT::i32, MVT::i32),
+                      Op1Lo, Op1Hi, Op0Lo, DAG.getConstant(0, DL, MVT::i32));
+      return DCI.CombineTo(N, Result.getValue(0), Result.getValue(1));
+    }
     break;
   }
   case RISCVISD::SUBD: {
@@ -21752,6 +21847,15 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     if (isNullConstant(Op1Hi)) {
       SDValue Result =
           DAG.getNode(RISCVISD::WSUBAU, DL, DAG.getVTList(MVT::i32, MVT::i32),
+                      Op0Lo, Op0Hi, DAG.getConstant(0, DL, MVT::i32), Op1Lo);
+      return DCI.CombineTo(N, Result.getValue(0), Result.getValue(1));
+    }
+
+    // (SUBD lo, hi, x, sra(x, 31)) -> (WSUBA lo, hi, 0, x)
+    // WSUBA semantics: rd = rd + sext(rs1) - sext(rs2)
+    if (isI32SignExtended(Op1Lo, Op1Hi)) {
+      SDValue Result =
+          DAG.getNode(RISCVISD::WSUBA, DL, DAG.getVTList(MVT::i32, MVT::i32),
                       Op0Lo, Op0Hi, DAG.getConstant(0, DL, MVT::i32), Op1Lo);
       return DCI.CombineTo(N, Result.getValue(0), Result.getValue(1));
     }
@@ -21831,6 +21935,57 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
         isNullConstant(Op0Lo.getOperand(3))) {
       SDValue Result = DAG.getNode(
           RISCVISD::WSUBAU, DL, DAG.getVTList(MVT::i32, MVT::i32),
+          Op0Lo.getOperand(0), Op0Lo.getOperand(1), Op0Lo.getOperand(2), Op2);
+      return DCI.CombineTo(N, Result.getValue(0), Result.getValue(1));
+    }
+    break;
+  }
+  case RISCVISD::WADDA: {
+    assert(!Subtarget.is64Bit() && Subtarget.hasStdExtP() &&
+           "WADDA is only for RV32 with P extension");
+    SDValue Op0Lo = N->getOperand(0);
+    SDValue Op0Hi = N->getOperand(1);
+    SDValue Op1 = N->getOperand(2);
+    SDValue Op2 = N->getOperand(3);
+
+    // Fold a chained accumulate into the free second source slot.
+    if (isNullConstant(Op2) && Op0Lo.getNode() == Op0Hi.getNode() &&
+        Op0Lo.getResNo() == 0 && Op0Hi.getResNo() == 1 && Op0Lo.hasOneUse() &&
+        Op0Hi.hasOneUse()) {
+      // (WADDA (WADDA lo, hi, x, 0), y, 0) -> (WADDA lo, hi, x, y)
+      if (Op0Lo.getOpcode() == RISCVISD::WADDA &&
+          isNullConstant(Op0Lo.getOperand(3))) {
+        SDValue Result = DAG.getNode(
+            RISCVISD::WADDA, DL, DAG.getVTList(MVT::i32, MVT::i32),
+            Op0Lo.getOperand(0), Op0Lo.getOperand(1), Op0Lo.getOperand(2), Op1);
+        return DCI.CombineTo(N, Result.getValue(0), Result.getValue(1));
+      }
+      // (WADDA (WSUBA lo, hi, 0, a), b, 0) -> (WSUBA lo, hi, b, a)
+      if (Op0Lo.getOpcode() == RISCVISD::WSUBA &&
+          isNullConstant(Op0Lo.getOperand(2))) {
+        SDValue Result = DAG.getNode(
+            RISCVISD::WSUBA, DL, DAG.getVTList(MVT::i32, MVT::i32),
+            Op0Lo.getOperand(0), Op0Lo.getOperand(1), Op1, Op0Lo.getOperand(3));
+        return DCI.CombineTo(N, Result.getValue(0), Result.getValue(1));
+      }
+    }
+    break;
+  }
+  case RISCVISD::WSUBA: {
+    assert(!Subtarget.is64Bit() && Subtarget.hasStdExtP() &&
+           "WSUBA is only for RV32 with P extension");
+    SDValue Op0Lo = N->getOperand(0);
+    SDValue Op0Hi = N->getOperand(1);
+    SDValue Op1 = N->getOperand(2);
+    SDValue Op2 = N->getOperand(3);
+
+    // (WSUBA (WADDA lo, hi, a, 0), 0, b) -> (WSUBA lo, hi, a, b)
+    if (isNullConstant(Op1) && Op0Lo.getOpcode() == RISCVISD::WADDA &&
+        Op0Lo.getNode() == Op0Hi.getNode() && Op0Lo.getResNo() == 0 &&
+        Op0Hi.getResNo() == 1 && Op0Lo.hasOneUse() && Op0Hi.hasOneUse() &&
+        isNullConstant(Op0Lo.getOperand(3))) {
+      SDValue Result = DAG.getNode(
+          RISCVISD::WSUBA, DL, DAG.getVTList(MVT::i32, MVT::i32),
           Op0Lo.getOperand(0), Op0Lo.getOperand(1), Op0Lo.getOperand(2), Op2);
       return DCI.CombineTo(N, Result.getValue(0), Result.getValue(1));
     }
@@ -21967,7 +22122,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     if (N0->getOpcode() != ISD::FCOPYSIGN)
       return SDValue();
     ConstantFPSDNode *C = dyn_cast<ConstantFPSDNode>(N0->getOperand(0));
-    if (!C || !C->getValueAPF().isExactlyValue(+1.0))
+    if (!C || !C->getValueAPF().isOne())
       return SDValue();
     if (VT.isVector() || !isOperationLegal(ISD::FCOPYSIGN, VT))
       return SDValue();
@@ -24901,7 +25056,7 @@ SDValue RISCVTargetLowering::LowerFormalArguments(
     MF.getInfo<RISCVMachineFunctionInfo>()->setIsVectorCall();
 
   if (IsVarArg) {
-    ArrayRef<MCPhysReg> ArgRegs = RISCV::getArgGPRs(Subtarget.getTargetABI());
+    ArrayRef<MCPhysReg> ArgRegs = RISCV::getArgGPRs(Subtarget);
     unsigned Idx = CCInfo.getFirstUnallocated(ArgRegs);
     const TargetRegisterClass *RC = &RISCV::GPRRegClass;
     MachineFrameInfo &MFI = MF.getFrameInfo();

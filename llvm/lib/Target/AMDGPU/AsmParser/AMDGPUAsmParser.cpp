@@ -2997,7 +2997,7 @@ MCRegister AMDGPUAsmParser::getRegularReg(RegisterKind RegKind, unsigned RegNum,
   }
 
   const MCRegisterInfo *TRI = getContext().getRegisterInfo();
-  const MCRegisterClass RC = TRI->getRegClass(RCID);
+  const MCRegisterClass &RC = TRI->getRegClass(RCID);
   if (RegIdx >= RC.getNumRegs() || (RegKind == IS_VGPR && RegIdx > 255)) {
     Error(Loc, "register index is out of range");
     return AMDGPU::NoRegister;
@@ -5980,13 +5980,13 @@ bool AMDGPUAsmParser::ParseDirectiveAMDGCNTarget() {
   if (getParser().parseEscapedString(TargetIDDirective))
     return true;
 
-  std::optional<AMDGPU::IsaInfo::AMDGPUTargetID> MaybeParsed =
-      AMDGPU::IsaInfo::AMDGPUTargetID::parseTargetIDString(TargetIDDirective);
+  std::optional<AMDGPU::TargetID> MaybeParsed =
+      AMDGPU::TargetID::parseTargetIDString(TargetIDDirective);
   if (!MaybeParsed)
     return getParser().Error(TargetStart, "malformed target ID");
 
-  const AMDGPU::IsaInfo::AMDGPUTargetID &ParsedTargetID = *MaybeParsed;
-  const std::optional<AMDGPU::IsaInfo::AMDGPUTargetID> &CurrentTargetID =
+  const AMDGPU::TargetID &ParsedTargetID = *MaybeParsed;
+  const std::optional<AMDGPU::TargetID> &CurrentTargetID =
       getTargetStreamer().getTargetID();
 
   if (*CurrentTargetID != ParsedTargetID) {
@@ -6692,13 +6692,13 @@ bool AMDGPUAsmParser::ParseDirectiveISAVersion() {
 
   StringRef TargetIDDirective = getLexer().getTok().getStringContents();
 
-  std::optional<AMDGPU::IsaInfo::AMDGPUTargetID> MaybeParsed =
-      AMDGPU::IsaInfo::AMDGPUTargetID::parseTargetIDString(TargetIDDirective);
+  std::optional<AMDGPU::TargetID> MaybeParsed =
+      AMDGPU::TargetID::parseTargetIDString(TargetIDDirective);
   if (!MaybeParsed)
     return Error(getParser().getTok().getLoc(), "malformed target id");
 
-  const AMDGPU::IsaInfo::AMDGPUTargetID &ParsedTargetID = *MaybeParsed;
-  const std::optional<AMDGPU::IsaInfo::AMDGPUTargetID> &CurrentTargetID =
+  const AMDGPU::TargetID &ParsedTargetID = *MaybeParsed;
+  const std::optional<AMDGPU::TargetID> &CurrentTargetID =
       getTargetStreamer().getTargetID();
 
   if (*CurrentTargetID != ParsedTargetID) {
