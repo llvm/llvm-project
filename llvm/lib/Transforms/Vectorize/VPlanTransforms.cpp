@@ -7481,7 +7481,10 @@ void VPlanTransforms::simplifyReductionInitValue(VPlan &Plan,
       continue;
 
     RecurKind RK = PhiR->getRecurrenceKind();
-    if (is_contained({RecurKind::Add, RecurKind::Sub, RecurKind::And, RecurKind::Or, RecurKind::Xor, RecurKind::AddChainWithSubs}, RK)) {
+    if (is_contained({RecurKind::Add, RecurKind::Sub, RecurKind::And,
+                      RecurKind::Or, RecurKind::Xor,
+                      RecurKind::AddChainWithSubs},
+                     RK)) {
       VPValue *Init, *Iden;
       VPRecipeBase *Start = PhiR->getStartValue()->getDefiningRecipe();
       if (Start &&
