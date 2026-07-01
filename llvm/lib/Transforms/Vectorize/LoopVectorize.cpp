@@ -3147,6 +3147,8 @@ void LoopVectorizationPlanner::emitInvalidCostRemarks(
   using RecipeVFPair = std::pair<VPRecipeBase *, ElementCount>;
   SmallVector<RecipeVFPair> InvalidCosts;
   for (const auto &Plan : VPlans) {
+    if (!Plan->isCompatibleWithTF(CM.foldTailByMasking()))
+      continue;
     for (ElementCount VF : Plan->vectorFactors()) {
       // The VPlan-based cost model is designed for computing vector cost.
       // Querying VPlan-based cost model with a scarlar VF will cause some
@@ -3490,8 +3492,9 @@ std::unique_ptr<VPlan> LoopVectorizationPlanner::selectBestEpiloguePlan(
 
     LLVM_DEBUG(dbgs() << "LEV: Epilogue vectorization factor is forced.\n");
     ElementCount ForcedEC = ElementCount::getFixed(EpilogueVectorizationForceVF);
-    if (hasPlanWithVF(ForcedEC)) {
-      std::unique_ptr<VPlan> Clone(getPlanFor(ForcedEC).duplicate());
+    if (hasPlanWithVF(ForcedEC, CM.foldTailByMasking())) {
+      std::unique_ptr<VPlan> Clone(
+          getPlanFor(ForcedEC, CM.foldTailByMasking()).duplicate());
       Clone->setVF(ForcedEC);
       return Clone;
     }
@@ -3582,10 +3585,10 @@ std::unique_ptr<VPlan> LoopVectorizationPlanner::selectBestEpiloguePlan(
   VPlan *BestPlan = nullptr;
   for (auto &NextVF : ProfitableVFs) {
     // Skip candidate VFs without a corresponding VPlan.
-    if (!hasPlanWithVF(NextVF.Width))
+    if (!hasPlanWithVF(NextVF.Width, CM.foldTailByMasking()))
       continue;
 
-    VPlan &CurrentPlan = getPlanFor(NextVF.Width);
+    VPlan &CurrentPlan = getPlanFor(NextVF.Width, CM.foldTailByMasking());
     ElementCount EffectiveVF = GetEffectiveVF(CurrentPlan, NextVF.Width);
     // Skip candidate VFs with widths >= the (estimated) runtime VF (scalable
     // vectors) or > the VF of the main loop (fixed vectors).
@@ -5835,13 +5838,15 @@ std::pair<VectorizationFactor, VPlan *> LoopVectorizationPlanner::computeBestVF(
   if (VPlans.size() == 1) {
     // For outer loops, the plan has a single vector VF determined by the
     // heuristic.
-    assert((FirstPlan.hasScalarVFOnly() || hasPlanWithVF(UserVF) ||
+    assert((FirstPlan.hasScalarVFOnly() ||
+            hasPlanWithVF(UserVF, CM.foldTailByMasking()) ||
             FirstPlan.isOuterLoop()) &&
            "must have a single scalar VF, UserVF or an outer loop");
     return {VectorizationFactor(FirstPlan.getSingleVF(), 0, 0), &FirstPlan};
   }
 
-  if (hasPlanWithVF(UserVF) && EpilogueVectorizationForceVF > 1) {
+  if (hasPlanWithVF(UserVF, CM.foldTailByMasking()) &&
+      EpilogueVectorizationForceVF > 1) {
     assert(VPlans.size() == 2 && "Must have exactly 2 VPlans built");
     assert(VPlans[0]->getSingleVF() ==
                ElementCount::getFixed(EpilogueVectorizationForceVF) &&
@@ -5912,6 +5917,8 @@ std::pair<VectorizationFactor, VPlan *> LoopVectorizationPlanner::computeBestVF(
         continue;
       }
 
+      assert(P->isCompatibleWithTF(CM.foldTailByMasking()) &&
+             "All vplans must be compatible with the CM");
       InstructionCost Cost =
           cost(*P, VF, ConsiderRegPressure ? &RUs[I] : nullptr, CM);
       VectorizationFactor CurrentFactor(VF, Cost, ScalarCost);
@@ -5925,8 +5932,8 @@ std::pair<VectorizationFactor, VPlan *> LoopVectorizationPlanner::computeBestVF(
       if (isMoreProfitable(CurrentFactor, ScalarFactor, P->hasScalarTail()))
         ProfitableVFs.push_back(CurrentFactor);
 
-      // Get the costs for the EpilogueTailFoldingCM:
       if (EpilogueTailFoldingCM) {
+        // Get the costs for the EpilogueTailFoldingCM:
         LLVM_DEBUG(dbgs() << "LV: Predicated CM, calculate costs for VF: " << VF
                           << "\n");
         cost(*P, VF, ConsiderRegPressure ? &RUs[I] : nullptr,
@@ -8158,7 +8165,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
 
   GeneratedRTChecks Checks(PSE, DT, LI, TTI, Config.CostKind,
                            CM.maskPartialAliasing());
-  if (IsInnerLoop && LVP.hasPlanWithVF(VF.Width)) {
+  if (IsInnerLoop && LVP.hasPlanWithVF(VF.Width, CM.foldTailByMasking())) {
     // Select the interleave count.
     IC = LVP.selectInterleaveCount(*BestPlanPtr, VF.Width, VF.Cost, CM);
 
@@ -8220,7 +8227,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
                   "Ignoring user-specified interleave count due to possibly "
                   "unsafe dependencies in the loop."};
     InterleaveLoop = false;
-  } else if (!LVP.hasPlanWithVF(VF.Width) && UserIC > 1) {
+  } else if (!LVP.hasPlanWithVF(VF.Width, CM.foldTailByMasking()) &&
+             UserIC > 1) {
     // Tell the user interleaving was avoided up-front, despite being explicitly
     // requested.
     LLVM_DEBUG(dbgs() << "LV: Ignoring UserIC, because vectorization and "

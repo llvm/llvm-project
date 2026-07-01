@@ -872,7 +872,7 @@ public:
 
   /// Return the VPlan for \p VF. At the moment, there is always a single VPlan
   /// for each VF.
-  VPlan &getPlanFor(ElementCount VF) const;
+  VPlan &getPlanFor(ElementCount VF, bool TF) const;
 
   /// Compute and return the most profitable vectorization factor and the
   /// corresponding best VPlan. Also collect all profitable VFs in
@@ -916,10 +916,7 @@ public:
 
   /// Look through the existing plans and return true if we have one with
   /// vectorization factor \p VF.
-  bool hasPlanWithVF(ElementCount VF) const {
-    return any_of(VPlans,
-                  [&](const VPlanPtr &Plan) { return Plan->hasVF(VF); });
-  }
+  bool hasPlanWithVF(ElementCount VF, bool TF) const;
 
   /// Test a \p Predicate on a \p Range of VF's. Return the value of applying
   /// \p Predicate on Range.Start, possibly decreasing Range.End such that the
