@@ -1504,6 +1504,10 @@ public:
   LLVM_ABI unsigned getMaxInterleaveFactor(ElementCount VF,
                                            bool HasUnorderedReductions) const;
 
+  /// \return True if the loop vectorizer should interleave in order to reduce
+  /// the number of stall cycles due to long latency instructions.
+  LLVM_ABI bool shouldInterleaveToReduceStalls() const;
+
   /// Collect properties of V used in cost analysis, e.g. OP_PowerOf2.
   LLVM_ABI static OperandValueInfo getOperandInfo(const Value *V);
 

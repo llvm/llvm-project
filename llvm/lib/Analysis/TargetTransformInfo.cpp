@@ -932,6 +932,10 @@ TargetTransformInfo::getMaxInterleaveFactor(ElementCount VF,
   return TTIImpl->getMaxInterleaveFactor(VF, HasUnorderedReductions);
 }
 
+bool TargetTransformInfo::shouldInterleaveToReduceStalls() const {
+  return TTIImpl->shouldInterleaveToReduceStalls();
+}
+
 TargetTransformInfo::OperandValueInfo
 TargetTransformInfo::getOperandInfo(const Value *V) {
   OperandValueKind OpInfo = OK_AnyValue;

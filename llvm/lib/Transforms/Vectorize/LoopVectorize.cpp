@@ -287,11 +287,21 @@ static cl::opt<unsigned> ForceTargetMaxVectorInterleaveFactor(
     cl::desc("A flag that overrides the target's max interleave factor for "
              "vectorized loops."));
 
+static cl::opt<bool> EnableInterleaveToReduceStalls(
+    "enable-interleave-to-reduce-stalls", cl::init(false), cl::Hidden,
+    cl::desc("When interleaving choose the interleave count that will reduce "
+             "the stall cycles due to instruction latency to zero."));
+
 cl::opt<unsigned> llvm::ForceTargetInstructionCost(
     "force-target-instruction-cost", cl::init(0), cl::Hidden,
     cl::desc("A flag that overrides the target's expected cost for "
              "an instruction to a single constant value. Mostly "
              "useful for getting consistent testing."));
+
+static cl::opt<unsigned>
+    ForceTargetLoadLatency("force-target-load-latency", cl::init(0), cl::Hidden,
+                           cl::desc("A flag that overrides the target's "
+                                    "expected latency for load instructions."));
 
 static cl::opt<unsigned> SmallLoopCost(
     "small-loop-cost", cl::init(20), cl::Hidden,
@@ -3839,6 +3849,44 @@ LoopVectorizationPlanner::selectInterleaveCount(VPlan &Plan, ElementCount VF,
     IC = std::max(1u, IC);
 
   assert(IC > 0 && "Interleave count must be greater than 0.");
+
+  if (TTI.shouldInterleaveToReduceStalls() || EnableInterleaveToReduceStalls) {
+    LLVM_DEBUG(dbgs() << "LV: Interleaving to reduce stall cycles due to "
+                         "instruction latency.\n");
+    VPCostContext LatencyCtx(CM.TTI, *CM.TLI, Plan, CM, TTI::TCK_Latency, PSE,
+                             OrigLoop);
+    VPCostContext ThroughputCtx(CM.TTI, *CM.TLI, Plan, CM,
+                                TTI::TCK_RecipThroughput, PSE, OrigLoop);
+    // Find the largets interleave count that will help with reducing stalls.
+    unsigned StallsIC = 1;
+    for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+             vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
+      for (VPRecipeBase &R : *VPBB) {
+        // Assuming that each value will be needed as soon as it's generated the
+        // number of stall cycles is one less than the latency.
+        InstructionCost Stalls = R.cost(VF, LatencyCtx) - 1;
+        if (ForceTargetLoadLatency.getNumOccurrences() > 0 &&
+            R.mayReadFromMemory())
+          Stalls = ForceTargetLoadLatency - 1;
+        // Each interleaving above 1 will reduce the stalls by RecipThroughput,
+        // so pick the interleaving that will reduce stalls to zero.
+        InstructionCost RecipThroughput = R.cost(VF, ThroughputCtx);
+        if (Stalls.isValid() && RecipThroughput.isValid() && Stalls > 0 &&
+            RecipThroughput > 0) {
+          unsigned ThisIC =
+              bit_floor<uint64_t>(1 + (Stalls / RecipThroughput).getValue());
+          StallsIC = std::max(StallsIC, ThisIC);
+        }
+      }
+    }
+    if (StallsIC <= 1) {
+      LLVM_DEBUG(
+          dbgs() << "LV: Not interleaving as it wouldn't reduce stalls.\n");
+      return 1;
+    }
+    IC = std::min(IC, StallsIC);
+    return IC;
+  }
 
   // Interleave if we vectorized this loop and there is a reduction that could
   // benefit from interleaving.
