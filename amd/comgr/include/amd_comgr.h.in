@@ -249,6 +249,12 @@ extern "C" {
  */
 #define AMD_COMGR_VERSION_3_3
 
+/**
+ * The function was introduced or changed in version 3.4 of the interface
+ * and has the symbol version string of ``"@amd_comgr_NAME@_3.4"``.
+ */
+#define AMD_COMGR_VERSION_3_4
+
 /** @} */
 
 /**
@@ -2919,7 +2925,7 @@ amd_comgr_hotswap_rewrite_with_options(
     const char *source_isa_name,
     const char *target_isa_name,
     const amd_comgr_hotswap_rewrite_options_t *rewrite_options,
-    amd_comgr_data_t *output) AMD_COMGR_VERSION_3_3;
+    amd_comgr_data_t *output) AMD_COMGR_VERSION_3_4;
 
 /** @} */
 

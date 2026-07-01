@@ -104,5 +104,8 @@ global: amd_comgr_hotswap_rewrite;
 global: amd_comgr_action_info_set_block_sizes;
         amd_comgr_action_info_get_block_sizes_count;
         amd_comgr_action_info_get_block_sizes;
-        amd_comgr_hotswap_rewrite_with_options;
 } @amd_comgr_NAME@_3.2;
+
+@amd_comgr_NAME@_3.4 {
+global: amd_comgr_hotswap_rewrite_with_options;
+} @amd_comgr_NAME@_3.3;
