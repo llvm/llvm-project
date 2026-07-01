@@ -522,15 +522,15 @@ def redirect_stream(
     Returns a thread that redirects the stream.
     """
 
-    def read_loop(in_stream: IO[bytes], out_stream: OutputBuffer):
+    def read_loop(in_stream: IO[bytes], out_buffer: OutputBuffer):
         with contextlib.suppress(OSError, ValueError):  # Nothing to report.
             while True:
                 chunk = in_stream.read(4096)
                 if not chunk:
                     break
 
-                out_stream.write(chunk.decode(errors="replace"))
-                out_stream.flush()
+                out_buffer.write(chunk.decode(errors="replace"))
+                out_buffer.flush()
 
     thread_name = f"redirect_{thread_name}"
     redirect_thread = threading.Thread(
