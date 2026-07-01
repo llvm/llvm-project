@@ -7,7 +7,10 @@ define i32 @default_branch_proves_operand_value(i8 %x) {
 ; CHECK-NEXT:    switch i8 [[X:%.*]], label [[ENTRY_UNREACHABLEDEFAULT:%.*]] [
 ; CHECK-NEXT:      i8 -1, label [[RETURN:%.*]]
 ; CHECK-NEXT:      i8 0, label [[CASE_ZERO:%.*]]
+; CHECK-NEXT:      i8 1, label [[DEFAULT:%.*]]
 ; CHECK-NEXT:    ]
+; CHECK:       entry.unreachabledefault:
+; CHECK-NEXT:    unreachable
 ; CHECK:       default:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X]], 1
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
@@ -15,7 +18,7 @@ define i32 @default_branch_proves_operand_value(i8 %x) {
 ; CHECK:       case_zero:
 ; CHECK-NEXT:    br label [[RETURN]]
 ; CHECK:       return:
-; CHECK-NEXT:    [[RETVAL:%.*]] = phi i32 [ 1, [[ENTRY_UNREACHABLEDEFAULT]] ], [ 0, [[CASE_ZERO]] ], [ -1, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[RETVAL:%.*]] = phi i32 [ 1, [[DEFAULT]] ], [ 0, [[CASE_ZERO]] ], [ -1, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret i32 [[RETVAL]]
 ;
 entry:
@@ -45,7 +48,10 @@ define i32 @default_branch_with_weight_proves_operand_value(i8 %x) {
 ; CHECK-NEXT:    switch i8 [[X:%.*]], label [[ENTRY_UNREACHABLEDEFAULT:%.*]] [
 ; CHECK-NEXT:      i8 -1, label [[RETURN:%.*]]
 ; CHECK-NEXT:      i8 0, label [[CASE_ZERO:%.*]]
+; CHECK-NEXT:      i8 1, label [[DEFAULT:%.*]]
 ; CHECK-NEXT:    ], !prof [[PROF0:![0-9]+]]
+; CHECK:       entry.unreachabledefault:
+; CHECK-NEXT:    unreachable
 ; CHECK:       default:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X]], 1
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
@@ -53,7 +59,7 @@ define i32 @default_branch_with_weight_proves_operand_value(i8 %x) {
 ; CHECK:       case_zero:
 ; CHECK-NEXT:    br label [[RETURN]]
 ; CHECK:       return:
-; CHECK-NEXT:    [[RETVAL:%.*]] = phi i32 [ 1, [[ENTRY_UNREACHABLEDEFAULT]] ], [ 0, [[CASE_ZERO]] ], [ -1, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[RETVAL:%.*]] = phi i32 [ 1, [[DEFAULT]] ], [ 0, [[CASE_ZERO]] ], [ -1, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret i32 [[RETVAL]]
 ;
 entry:
@@ -117,4 +123,5 @@ return:
   ret i32 %retval
 }
 
+; CHECK: [[PROF0]] = !{!"branch_weights", i32 0, i32 4, i32 2, i32 8}
 !0 = !{!"branch_weights", i32 8, i32 4, i32 2}

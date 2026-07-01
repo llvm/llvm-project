@@ -7813,6 +7813,41 @@ static bool simplifySwitchWhenUMin(SwitchInst *SI, DomTreeUpdater *DTU) {
   return true;
 }
 
+static bool simplifySwitchDefaultBranch(SwitchInst *SI, DomTreeUpdater *DTU,
+                                        const DataLayout &DL,
+                                        AssumptionCache *AC) {
+  if (SI->defaultDestUnreachable())
+    return false;
+
+  // If the switch condition is guaranteed to take some concrete value
+  // in the default block, we can create a new case based on that concrete
+  // value and make the default block unreachable. For example, we can
+  // move the default branch into an explicit case here:
+  //
+  // switch_bb:
+  //   switch i8 %x, label %default_bb [...]
+  //
+  // default_bb:
+  //   %cmp = icmp eq i8 %x, 1
+  //   call void llvm.assume(i1 %cmp) ; Implies %x must be 1
+  //   ...
+  //
+  BasicBlock *Default = SI->getDefaultDest();
+  const Instruction *CxtI = Default->getTerminator();
+  const KnownBits Known = computeKnownBits(SI->getOperand(0), DL, AC, CxtI);
+  if (!Known.isConstant())
+    return false;
+
+  SwitchInstProfUpdateWrapper SIW(*SI);
+  ConstantInt *CaseVal =
+      ConstantInt::get(SI->getContext(), Known.getConstant());
+  SIW.addCase(CaseVal, Default, SIW.getSuccessorWeight(0));
+  SIW.setSuccessorWeight(0, 0);
+  createUnreachableSwitchDefault(SI, DTU,
+                                 /*RemoveOrigDefaultBlock*/ false);
+  return true;
+}
+
 /// Tries to transform switch of powers of two to reduce switch range.
 /// For example, switch like:
 /// switch (C) { case 1: case 2: case 64: case 128: }
@@ -8351,6 +8386,9 @@ bool SimplifyCFGOpt::simplifySwitch(SwitchInst *SI, IRBuilder<> &Builder) {
     return requestResimplify();
 
   if (simplifySwitchWhenUMin(SI, DTU))
+    return requestResimplify();
+
+  if (simplifySwitchDefaultBranch(SI, DTU, DL, Options.AC))
     return requestResimplify();
 
   return false;
