@@ -20480,11 +20480,40 @@ static SDValue performBICiCombine(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+static SDValue performPredicateSetCCNotCombine(SDNode *N, SelectionDAG &DAG) {
+  assert(N->getOpcode() == ISD::XOR && "Unexpected opcode!");
+
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+  if (N1->getOpcode() == AArch64ISD::SETCC_MERGE_ZERO)
+    std::swap(N0, N1);
+
+  if (N0->getOpcode() != AArch64ISD::SETCC_MERGE_ZERO || !N0.hasOneUse())
+    return SDValue();
+
+  SDValue Pred = N0->getOperand(0);
+  if (N1 != Pred)
+    return SDValue();
+
+  SDLoc DL(N);
+  SDValue LHS = N0->getOperand(1);
+  SDValue RHS = N0->getOperand(2);
+  ISD::CondCode CC = cast<CondCodeSDNode>(N0->getOperand(3))->get();
+  if (CC != ISD::CondCode::SETNE && CC != ISD::CondCode::SETEQ)
+    return SDValue();
+  ISD::CondCode InvCC = ISD::getSetCCInverse(CC, LHS.getValueType());
+  return DAG.getNode(AArch64ISD::SETCC_MERGE_ZERO, DL, N->getValueType(0), Pred,
+                     LHS, RHS, DAG.getCondCode(InvCC));
+}
+
 static SDValue performXorCombine(SDNode *N, SelectionDAG &DAG,
                                  TargetLowering::DAGCombinerInfo &DCI,
                                  const AArch64Subtarget *Subtarget) {
   if (DCI.isBeforeLegalizeOps())
     return SDValue();
+
+  if (SDValue V = performPredicateSetCCNotCombine(N, DAG))
+    return V;
 
   return foldVectorXorShiftIntoCmp(N, DAG, Subtarget);
 }

@@ -116,6 +116,50 @@ define <vscale x 16 x i1> @sve_cmpne_setcc_different_pred(<vscale x 16 x i8> %ve
   ret <vscale x 16 x i1> %cmp2
 }
 
+define <vscale x 16 x i1> @sve_not_cmpne_setcc(<vscale x 16 x i8> %vec, <vscale x 16 x i1> %pg) {
+; CHECK-LABEL: sve_not_cmpne_setcc:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmpeq p0.b, p0/z, z0.b, #0
+; CHECK-NEXT:    ret
+  %cmp = call <vscale x 16 x i1> @llvm.aarch64.sve.cmpne.nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %vec, <vscale x 16 x i8> zeroinitializer)
+  %not = xor <vscale x 16 x i1> %cmp, %pg
+  ret <vscale x 16 x i1> %not
+}
+
+define <vscale x 16 x i1> @sve_not_cmpne_setcc_true(<vscale x 16 x i8> %vec) {
+; CHECK-LABEL: sve_not_cmpne_setcc_true:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    cmpeq p0.b, p0/z, z0.b, #0
+; CHECK-NEXT:    ret
+  %cmp = call <vscale x 16 x i1> @llvm.aarch64.sve.cmpne.nxv16i8(<vscale x 16 x i1> splat (i1 true), <vscale x 16 x i8> %vec, <vscale x 16 x i8> zeroinitializer)
+  %not = xor <vscale x 16 x i1> %cmp, splat (i1 true)
+  ret <vscale x 16 x i1> %not
+}
+
+define <vscale x 16 x i1> @sve_not_cmpeq_setcc(<vscale x 16 x i8> %vec, <vscale x 16 x i1> %pg) {
+; CHECK-LABEL: sve_not_cmpeq_setcc:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmpne p0.b, p0/z, z0.b, #0
+; CHECK-NEXT:    ret
+  %cmp = call <vscale x 16 x i1> @llvm.aarch64.sve.cmpeq.nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %vec, <vscale x 16 x i8> zeroinitializer)
+  %not = xor <vscale x 16 x i1> %cmp, %pg
+  ret <vscale x 16 x i1> %not
+}
+
+define <vscale x 16 x i1> @sve_not_cmpeq_setcc_true(<vscale x 16 x i8> %vec) {
+; CHECK-LABEL: sve_not_cmpeq_setcc_true:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    cmpne p0.b, p0/z, z0.b, #0
+; CHECK-NEXT:    ret
+  %cmp = call <vscale x 16 x i1> @llvm.aarch64.sve.cmpeq.nxv16i8(<vscale x 16 x i1> splat (i1 true), <vscale x 16 x i8> %vec, <vscale x 16 x i8> zeroinitializer)
+  %not = xor <vscale x 16 x i1> %cmp, splat (i1 true)
+  ret <vscale x 16 x i1> %not
+}
+
+
+
 declare <vscale x 16 x i1> @llvm.aarch64.sve.cmpne.nxv16i8(<vscale x 16 x i1>, <vscale x 16 x i8>, <vscale x 16 x i8>)
 
 declare i1 @llvm.aarch64.sve.ptest.any.nxv8i1(<vscale x 8 x i1>, <vscale x 8 x i1>)
