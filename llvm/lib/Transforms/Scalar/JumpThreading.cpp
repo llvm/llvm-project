@@ -43,6 +43,7 @@
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
@@ -943,6 +944,116 @@ static bool hasAddressTakenAndUsed(BasicBlock *BB) {
   return !BA->use_empty();
 }
 
+static BasicBlock *splitEdge(BasicBlock *BB, BasicBlock *Succ,
+                             std::vector<DominatorTree::UpdateType> &Updates) {
+  BasicBlock *NewBB = SplitEdge(BB, Succ);
+  Updates.push_back({DominatorTree::Insert, BB, NewBB});
+  Updates.push_back({DominatorTree::Insert, NewBB, Succ});
+  Updates.push_back({DominatorTree::Delete, BB, Succ});
+  return NewBB;
+}
+
+// If the only user of the phi authenticates it, adjust the phi to carry the
+// unsigned pointer by moving the auth operations into the predecessors when
+// safe to do so. This allows InstCombine to remove repeated sign/auth
+// operations in loops by optimizing auth(sign(ptr)) -> ptr.
+static bool hoistPtrAuth(PHINode *PN, DomTreeUpdater *DTU) {
+  // Don't transform LCSSA PHIs. It's not beneficial and can lead to an infinite
+  // loop.
+  if (PN->getNumIncomingValues() == 1)
+    return false;
+
+  Instruction *ToReplace;
+
+  Instruction *P2I = dyn_cast_or_null<PtrToIntInst>(PN->getUniqueUser());
+  auto *II = dyn_cast_or_null<IntrinsicInst>((P2I ? P2I : PN)->getUniqueUser());
+  if (!II || II->getIntrinsicID() != Intrinsic::ptrauth_auth)
+    return false;
+
+  // The discriminator value must dominate PN in order for it to be valid to
+  // reference it from the predecessors.
+  if (auto *Disc = dyn_cast<Instruction>(II->getArgOperand(2));
+      Disc && !DTU->getDomTree().dominates(Disc, PN->getParent()))
+    return false;
+
+  if (P2I) {
+    auto *I2P = dyn_cast_or_null<IntToPtrInst>(II->getUniqueUser());
+    if (!I2P)
+      return false;
+    ToReplace = I2P;
+  } else {
+    ToReplace = II;
+  }
+
+  // If all incoming values are llvm.ptrauth.sign calls, the transformation is
+  // simpler and more applicable (don't need to split edges or restrict to cases
+  // where the auth happens unconditionally, because we know that all incoming
+  // values are correctly signed).
+  if (llvm::all_of(PN->incoming_values(), [&](Value *V) {
+        auto *SignII = dyn_cast<IntrinsicInst>(V);
+        return SignII && SignII->getIntrinsicID() == Intrinsic::ptrauth_sign &&
+               SignII->getArgOperand(1) == II->getArgOperand(1) &&
+               SignII->getArgOperand(2) == II->getArgOperand(2);
+      })) {
+    for (int i = 0, e = PN->getNumIncomingValues(); i != e; ++i)
+      PN->setIncomingValue(
+          i, cast<IntrinsicInst>(PN->getIncomingValue(i))->getArgOperand(0));
+    ToReplace->replaceAllUsesWith(PN);
+    ToReplace->eraseFromParent();
+    return true;
+  }
+
+  if (II->getParent() != PN->getParent())
+    return false;
+
+  // If the auth is not guaranteed to execute (e.g. because a function called
+  // before the auth may terminate the program), we cannot move it to the
+  // predecessor.
+  if (!isGuaranteedToTransferExecutionToSuccessor(II->getParent()->begin(),
+                                                  BasicBlock::iterator(II)))
+    return false;
+
+  std::vector<DominatorTree::UpdateType> Updates;
+
+  // Because SplitEdge may change the number of successors for the phi, keep
+  // trying until we run through the incoming blocks with a unique successor
+  // for each.
+  bool UniqueSuccForEachPred = false;
+  while (!UniqueSuccForEachPred) {
+    UniqueSuccForEachPred = true;
+    for (int i = 0, e = PN->getNumIncomingValues(); i != e; ++i) {
+      BasicBlock *Pred = PN->getIncomingBlock(i);
+      if (!Pred->getUniqueSuccessor()) {
+        splitEdge(Pred, PN->getParent(), Updates);
+        UniqueSuccForEachPred = false;
+        break;
+      }
+    }
+  }
+
+  for (int i = 0, e = PN->getNumIncomingValues(); i != e; ++i) {
+    BasicBlock *Pred = PN->getIncomingBlock(i);
+    IRBuilder<> Builder(Pred->getTerminator());
+    Value *V = PN->getIncomingValue(i);
+    auto *Auth = V;
+    if (P2I)
+      Auth = Builder.CreatePtrToInt(Auth, Builder.getInt64Ty());
+    Auth = Builder.CreateIntrinsic(
+        Intrinsic::ptrauth_auth,
+        {Auth, II->getArgOperand(1), II->getArgOperand(2)});
+    if (P2I)
+      Auth = Builder.CreateIntToPtr(Auth, V->getType());
+    PN->setIncomingValue(i, Auth);
+  }
+
+  ToReplace->replaceAllUsesWith(PN);
+  ToReplace->eraseFromParent();
+  if (II != ToReplace)
+    II->eraseFromParent();
+  DTU->applyUpdates(Updates);
+  return true;
+}
+
 /// processBlock - If there are any predecessors whose control can be threaded
 /// through to a successor, transform them now.
 bool JumpThreadingPass::processBlock(BasicBlock *BB) {
@@ -961,6 +1072,10 @@ bool JumpThreadingPass::processBlock(BasicBlock *BB) {
 
   if (tryToUnfoldSelectInCurrBB(BB))
     return true;
+
+  for (PHINode &PN : BB->phis())
+    if (hoistPtrAuth(&PN, DTU.get()))
+      return true;
 
   // Look if we can propagate guards to predecessors.
   if (HasGuards && processGuards(BB))
@@ -2695,11 +2810,7 @@ bool JumpThreadingPass::duplicateCondBranchOnPHIIntoPred(
   UncondBrInst *OldPredBranch = dyn_cast<UncondBrInst>(PredBB->getTerminator());
 
   if (!OldPredBranch) {
-    BasicBlock *OldPredBB = PredBB;
-    PredBB = SplitEdge(OldPredBB, BB);
-    Updates.push_back({DominatorTree::Insert, OldPredBB, PredBB});
-    Updates.push_back({DominatorTree::Insert, PredBB, BB});
-    Updates.push_back({DominatorTree::Delete, OldPredBB, BB});
+    PredBB = splitEdge(PredBB, BB, Updates);
     OldPredBranch = cast<UncondBrInst>(PredBB->getTerminator());
   }
 

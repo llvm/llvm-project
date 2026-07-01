@@ -456,6 +456,11 @@ public:
   /// in the worst case, the whole use list of a value.
   LLVM_ABI bool hasOneUser() const;
 
+  LLVM_ABI User *getUniqueUser();
+  LLVM_ABI const User *getUniqueUser() const {
+    return const_cast<Value *>(this)->getUniqueUser();
+  }
+
   /// Return true if there is exactly one use of this value that cannot be
   /// dropped.
   LLVM_ABI Use *getSingleUndroppableUse();
