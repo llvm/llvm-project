@@ -3129,41 +3129,53 @@ static std::string formatBlockPlaceholder(
     bool SuppressBlockName = false, bool SuppressBlock = false,
     std::optional<ArrayRef<QualType>> ObjCSubsts = std::nullopt);
 
-static std::string FormatFunctionParameter(
+// First return value in the tuple is the fully qualified parameter while the
+// remaining values are offset and lenth into the std::string respectively.
+// They define a substring of the view representing the parameter name.
+static std::tuple<std::string, size_t, size_t> FormatFunctionParameter(
     const PrintingPolicy &Policy, const DeclaratorDecl *Param,
     bool SuppressName = false, bool SuppressBlock = false,
     std::optional<ArrayRef<QualType>> ObjCSubsts = std::nullopt) {
   // Params are unavailable in FunctionTypeLoc if the FunctionType is invalid.
   // It would be better to pass in the param Type, which is usually available.
   // But this case is rare, so just pretend we fell back to int as elsewhere.
-  if (!Param)
-    return "int";
+  if (!Param) {
+    std::string Result = "int";
+    return std::tuple(Result, 3, 0);
+  }
+
   Decl::ObjCDeclQualifier ObjCQual = Decl::OBJC_TQ_None;
   if (const auto *PVD = dyn_cast<ParmVarDecl>(Param))
     ObjCQual = PVD->getObjCDeclQualifier();
   bool ObjCMethodParam = isa<ObjCMethodDecl>(Param->getDeclContext());
+
+  // Format the param placeholder for a dependent or non-block pointer type
   if (Param->getType()->isDependentType() ||
       !Param->getType()->isBlockPointerType()) {
-    // The argument for a dependent or non-block parameter is a placeholder
-    // containing that parameter's type.
+    std::string Name;
+    if (Param->getIdentifier() && !SuppressName) // TODO: remove SuppressName?
+      Name = std::string(Param->getIdentifier()->deuglifiedName());
+
     std::string Result;
-
-    if (Param->getIdentifier() && !ObjCMethodParam && !SuppressName)
-      Result = std::string(Param->getIdentifier()->deuglifiedName());
-
     QualType Type = Param->getType();
-    if (ObjCSubsts)
-      Type = Type.substObjCTypeArgs(Param->getASTContext(), *ObjCSubsts,
-                                    ObjCSubstitutionContext::Parameter);
+
+    // Special case ObjC
     if (ObjCMethodParam) {
+      if (ObjCSubsts)
+        Type = Type.substObjCTypeArgs(Param->getASTContext(), *ObjCSubsts,
+                                      ObjCSubstitutionContext::Parameter);
+
       Result = "(" + formatObjCParamQualifiers(ObjCQual, Type);
       Result += Type.getAsString(Policy) + ")";
-      if (Param->getIdentifier() && !SuppressName)
-        Result += Param->getIdentifier()->deuglifiedName();
-    } else {
-      Type.getAsStringInternal(Result, Policy);
+      size_t NamePos = Result.length();
+      Result += Name;
+      return std::tuple(Result, NamePos, Name.length());
     }
-    return Result;
+
+    Result = Name;
+    Type.getAsStringInternal(Result, Policy);
+    size_t NamePos = Result.find(Name);
+    return std::tuple(Result, NamePos, Name.length());
   }
 
   // The argument for a block pointer parameter is a block literal with
@@ -3185,12 +3197,14 @@ static std::string FormatFunctionParameter(
   if (!Block) {
     // We were unable to find a FunctionProtoTypeLoc with parameter names
     // for the block; just use the parameter type as a placeholder.
-    std::string Result;
-    if (!ObjCMethodParam && Param->getIdentifier())
-      Result = std::string(Param->getIdentifier()->deuglifiedName());
+    std::string Name;
+    if (Param->getIdentifier())
+      Name = std::string(Param->getIdentifier()->deuglifiedName());
 
+    std::string Result;
     QualType Type = Param->getType().getUnqualifiedType();
 
+    // Special case ObjC
     if (ObjCMethodParam) {
       Result = Type.getAsString(Policy);
       std::string Quals = formatObjCParamQualifiers(ObjCQual, Type);
@@ -3198,20 +3212,23 @@ static std::string FormatFunctionParameter(
         Result = "(" + Quals + " " + Result + ")";
       if (Result.back() != ')')
         Result += " ";
-      if (Param->getIdentifier())
-        Result += Param->getIdentifier()->deuglifiedName();
-    } else {
-      Type.getAsStringInternal(Result, Policy);
+      size_t NamePos = Result.length();
+      Result += Name;
+      return std::tuple(Result, NamePos, Name.length());
     }
 
-    return Result;
+    Result = Name;
+    Type.getAsStringInternal(Result, Policy);
+    size_t NamePos = Result.find(Name);
+    return std::tuple(Result, NamePos, Name.length());
   }
 
   // We have the function prototype behind the block pointer type, as it was
   // written in the source.
-  return formatBlockPlaceholder(Policy, Param, Block, BlockProto,
-                                /*SuppressBlockName=*/false, SuppressBlock,
-                                ObjCSubsts);
+  std::string Result = formatBlockPlaceholder(Policy, Param, Block, BlockProto,
+                                              /*SuppressBlockName=*/false,
+                                              SuppressBlock, ObjCSubsts);
+  return std::tuple(Result, 0, Result.size());
 }
 
 /// Returns a placeholder string that corresponds to an Objective-C block
@@ -3249,9 +3266,10 @@ formatBlockPlaceholder(const PrintingPolicy &Policy, const NamedDecl *BlockDecl,
     for (unsigned I = 0, N = Block.getNumParams(); I != N; ++I) {
       if (I)
         Params += ", ";
-      Params += FormatFunctionParameter(Policy, Block.getParam(I),
-                                        /*SuppressName=*/false,
-                                        /*SuppressBlock=*/true, ObjCSubsts);
+      Params += std::get<0>(FormatFunctionParameter(Policy, Block.getParam(I),
+                                                    /*SuppressName=*/false,
+                                                    /*SuppressBlock=*/true,
+                                                    ObjCSubsts));
 
       if (I == N - 1 && BlockProto.getTypePtr()->isVariadic())
         Params += ", ...";
@@ -3353,7 +3371,9 @@ static void AddFunctionParameterChunks(
     InOptional = false;
 
     // Format the placeholder string.
-    std::string PlaceholderStr = FormatFunctionParameter(Policy, Param);
+    std::tuple<std::string, size_t, size_t> ParamPlaceholder =
+        FormatFunctionParameter(Policy, Param);
+    std::string PlaceholderStr = std::get<0>(ParamPlaceholder);
     std::string DefaultValue;
     if (Param->hasDefaultArg()) {
       if (IsInDeclarationContext)
@@ -3364,6 +3384,7 @@ static void AddFunctionParameterChunks(
                                                 PP.getLangOpts());
     }
 
+    // TODO: This should really be its own placeholder chunk
     if (Function->isVariadic() && P == N - 1)
       PlaceholderStr += ", ...";
 
@@ -3378,7 +3399,8 @@ static void AddFunctionParameterChunks(
             Result.getAllocator().CopyString(DefaultValue));
     } else
       Result.AddPlaceholderChunk(
-          Result.getAllocator().CopyString(PlaceholderStr));
+          Result.getAllocator().CopyString(PlaceholderStr),
+          std::get<1>(ParamPlaceholder), std::get<2>(ParamPlaceholder));
   }
 
   if (const auto *Proto = Function->getType()->getAs<FunctionProtoType>())
@@ -4027,7 +4049,7 @@ CodeCompletionString *CodeCompletionResult::createCodeCompletionStringForDecl(
       if (Idx < StartParameter)
         continue;
 
-      std::string Arg;
+      std::tuple<std::string, size_t, size_t> Arg;
       QualType ParamType = (*P)->getType();
       std::optional<ArrayRef<QualType>> ObjCSubsts;
       if (!CCContext.getBaseType().isNull())
@@ -4040,23 +4062,26 @@ CodeCompletionString *CodeCompletionResult::createCodeCompletionStringForDecl(
         if (ObjCSubsts)
           ParamType = ParamType.substObjCTypeArgs(
               Ctx, *ObjCSubsts, ObjCSubstitutionContext::Parameter);
-        Arg = "(" + formatObjCParamQualifiers((*P)->getObjCDeclQualifier(),
-                                              ParamType);
-        Arg += ParamType.getAsString(Policy) + ")";
+        std::string ArgStr = "(" + formatObjCParamQualifiers(
+                                       (*P)->getObjCDeclQualifier(), ParamType);
+        ArgStr += ParamType.getAsString(Policy) + ")";
         if (const IdentifierInfo *II = (*P)->getIdentifier())
           if (DeclaringEntity || AllParametersAreInformative)
-            Arg += II->getName();
+            ArgStr += II->getName();
+        Arg = {ArgStr, 0, ArgStr.length()};
       }
 
+      std::string ArgStr = std::get<0>(Arg);
       if (Method->isVariadic() && (P + 1) == PEnd)
-        Arg += ", ...";
+        ArgStr += ", ...";
 
       if (DeclaringEntity)
-        Result.AddTextChunk(Result.getAllocator().CopyString(Arg));
+        Result.AddTextChunk(Result.getAllocator().CopyString(ArgStr));
       else if (AllParametersAreInformative)
-        Result.AddInformativeChunk(Result.getAllocator().CopyString(Arg));
+        Result.AddInformativeChunk(Result.getAllocator().CopyString(ArgStr));
       else
-        Result.AddPlaceholderChunk(Result.getAllocator().CopyString(Arg));
+        Result.AddPlaceholderChunk(Result.getAllocator().CopyString(ArgStr),
+                                   std::get<1>(Arg), std::get<2>(Arg));
     }
 
     if (Method->isVariadic()) {
@@ -4141,24 +4166,34 @@ static void AddOverloadAggregateChunks(const RecordDecl *RD,
                                        CodeCompletionBuilder &Result,
                                        unsigned CurrentArg) {
   unsigned ChunkIndex = 0;
-  auto AddChunk = [&](llvm::StringRef Placeholder) {
+  auto AddChunkTerse = [&](llvm::StringRef Placeholder, size_t Start,
+                           size_t Len) {
     if (ChunkIndex > 0)
       Result.AddChunk(CodeCompletionString::CK_Comma);
     const char *Copy = Result.getAllocator().CopyString(Placeholder);
     if (ChunkIndex == CurrentArg)
       Result.AddCurrentParameterChunk(Copy);
     else
-      Result.AddPlaceholderChunk(Copy);
+      Result.AddPlaceholderChunk(Copy, Start, Len);
     ++ChunkIndex;
   };
+
+  auto AddChunk = [&](llvm::StringRef Placeholder) {
+    AddChunkTerse(Placeholder, 0, Placeholder.size());
+  };
+
   // Aggregate initialization has all bases followed by all fields.
   // (Bases are not legal in C++11 but in that case we never get here).
   if (auto *CRD = llvm::dyn_cast<CXXRecordDecl>(RD)) {
     for (const auto &Base : CRD->bases())
       AddChunk(Base.getType().getAsString(Policy));
   }
-  for (const auto &Field : RD->fields())
-    AddChunk(FormatFunctionParameter(Policy, Field));
+
+  for (const auto &Field : RD->fields()) {
+    std::tuple<std::string, size_t, size_t> F =
+        FormatFunctionParameter(Policy, Field);
+    AddChunkTerse(std::get<0>(F), std::get<1>(F), std::get<2>(F));
+  }
 }
 
 /// Add function overload parameter chunks to the given code completion
@@ -4210,23 +4245,29 @@ static void AddOverloadParameterChunks(
 
     // Format the placeholder string.
     std::string Placeholder;
+    size_t PlaceholderTerseStart;
+    size_t PlaceholderTerseLen;
     assert(P < Prototype->getNumParams());
     if (Function || PrototypeLoc) {
       const ParmVarDecl *Param =
           Function ? Function->getParamDecl(P) : PrototypeLoc.getParam(P);
-      Placeholder = FormatFunctionParameter(Policy, Param);
+      std::tie(Placeholder, PlaceholderTerseStart, PlaceholderTerseLen) =
+          FormatFunctionParameter(Policy, Param);
       if (Param->hasDefaultArg())
         Placeholder += GetDefaultValueString(Param, Context.getSourceManager(),
                                              Context.getLangOpts());
     } else {
       Placeholder = Prototype->getParamType(P).getAsString(Policy);
+      PlaceholderTerseStart = Placeholder.size();
+      PlaceholderTerseLen = 0;
     }
 
     if (P == CurrentArg)
       Result.AddCurrentParameterChunk(
           Result.getAllocator().CopyString(Placeholder));
     else
-      Result.AddPlaceholderChunk(Result.getAllocator().CopyString(Placeholder));
+      Result.AddPlaceholderChunk(Result.getAllocator().CopyString(Placeholder),
+                                 PlaceholderTerseStart, PlaceholderTerseLen);
   }
 
   if (Prototype && Prototype->isVariadic()) {
@@ -4300,10 +4341,13 @@ static CodeCompletionString *createTemplateSignatureString(
       Current = &OptionalBuilder;
     if (I > 0)
       Current->AddChunk(CodeCompletionString::CK_Comma);
-    Current->AddChunk(I == CurrentArg
-                          ? CodeCompletionString::CK_CurrentParameter
-                          : CodeCompletionString::CK_Placeholder,
-                      Current->getAllocator().CopyString(Placeholder));
+
+    const char *OwnedPlaceholder =
+        Current->getAllocator().CopyString(Placeholder);
+    if (I == CurrentArg)
+      Current->AddCurrentParameterChunk(OwnedPlaceholder);
+    else
+      Current->AddPlaceholderChunk(OwnedPlaceholder);
   }
   // Add the optional chunk to the main string if we ever used it.
   if (Current == &OptionalBuilder)
@@ -5312,8 +5356,9 @@ static void AddObjCBlockCall(ASTContext &Context, const PrintingPolicy &Policy,
         Builder.AddChunk(CodeCompletionString::CK_Comma);
 
       // Format the placeholder string.
-      std::string PlaceholderStr =
+      std::tuple<std::string, size_t, size_t> Placeholder =
           FormatFunctionParameter(Policy, BlockLoc.getParam(I));
+      std::string PlaceholderStr = std::get<0>(Placeholder);
 
       if (I == N - 1 && BlockProtoLoc &&
           BlockProtoLoc.getTypePtr()->isVariadic())
@@ -5321,7 +5366,8 @@ static void AddObjCBlockCall(ASTContext &Context, const PrintingPolicy &Policy,
 
       // Add the placeholder string.
       Builder.AddPlaceholderChunk(
-          Builder.getAllocator().CopyString(PlaceholderStr));
+          Builder.getAllocator().CopyString(PlaceholderStr),
+          std::get<1>(Placeholder), std::get<2>(Placeholder));
     }
   }
 

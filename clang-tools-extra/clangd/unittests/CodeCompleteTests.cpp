@@ -2991,6 +2991,39 @@ TEST(CompletionTest, ArgumentListsPolicy) {
     EXPECT_THAT(Results.Completions,
                 UnorderedElementsAre(AllOf(named("xfoo"), snippetSuffix("("))));
   }
+  {
+    Opts.ArgumentLists = Config::ArgumentListsPolicy::Delimiters;
+    auto Results = completions(
+        R"cpp(
+      void xfoo(int x, int y);
+      void f() { xfo^ })cpp",
+        {}, Opts);
+    EXPECT_THAT(
+        Results.Completions,
+        UnorderedElementsAre(AllOf(named("xfoo"), snippetSuffix("($0)"))));
+  }
+  {
+    Opts.ArgumentLists = Config::ArgumentListsPolicy::NamePlaceholders;
+    auto Results = completions(
+        R"cpp(
+      void xfoo(int x, int y);
+      void f() { xfo^ })cpp",
+        {}, Opts);
+    EXPECT_THAT(Results.Completions,
+                UnorderedElementsAre(
+                    AllOf(named("xfoo"), snippetSuffix("(${1:x}, ${2:y})"))));
+  }
+  {
+    Opts.ArgumentLists = Config::ArgumentListsPolicy::FullPlaceholders;
+    auto Results = completions(
+        R"cpp(
+      void xfoo(int x, int y);
+      void f() { xfo^ })cpp",
+        {}, Opts);
+    EXPECT_THAT(Results.Completions,
+                UnorderedElementsAre(AllOf(
+                    named("xfoo"), snippetSuffix("(${1:int x}, ${2:int y})"))));
+  }
 }
 
 TEST(CompletionTest, SuggestOverrides) {

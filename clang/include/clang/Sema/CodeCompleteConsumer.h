@@ -467,7 +467,8 @@ public:
     CK_Optional,
 
     /// A string that acts as a placeholder for, e.g., a function
-    /// call argument.
+    /// call argument. Tracks a substring in the string representing
+    /// terser version of the content.
     CK_Placeholder,
 
     /// A piece of text that describes something about the result but
@@ -533,8 +534,8 @@ public:
     ChunkKind Kind = CK_Text;
 
     union {
-      /// The text string associated with a CK_Text, CK_Placeholder,
-      /// CK_Informative, or CK_Comma chunk.
+      /// The text string associated with a CK_Text, CK_Informative,
+      /// or CK_Comma chunk.
       /// The string is owned by the chunk and will be deallocated
       /// (with delete[]) when the chunk is destroyed.
       const char *Text;
@@ -543,6 +544,17 @@ public:
       /// The optional code completion string is owned by the chunk, and will
       /// be deallocated (with delete) when the chunk is destroyed.
       CodeCompletionString *Optional;
+
+      /// The text string associated with a CK_Placeholder.
+      /// TerseStart + TerseLen may be used to calculate a potentially
+      /// shorter substring of the placeholder.
+      /// The string is owned by the chunk and will be deallocated
+      /// (with delete[]) when the chunk is destroyed.
+      struct {
+        const char *Full;
+        size_t TerseStart;
+        size_t TerseLen;
+      } Placeholder;
     };
 
     Chunk() : Text(nullptr) {}
@@ -556,7 +568,8 @@ public:
     static Chunk CreateOptional(CodeCompletionString *Optional);
 
     /// Create a new placeholder chunk.
-    static Chunk CreatePlaceholder(const char *Placeholder);
+    static Chunk CreatePlaceholder(const char *Placeholder, size_t TerseStart,
+                                   size_t TerseLen);
 
     /// Create a new informative chunk.
     static Chunk CreateInformative(const char *Informative);
@@ -733,6 +746,10 @@ public:
 
   /// Add a new placeholder chunk.
   void AddPlaceholderChunk(const char *Placeholder);
+
+  /// Add a new placeholder chunk with a terser substring.
+  void AddPlaceholderChunk(const char *Placeholder, size_t TerseStart,
+                           size_t TerseLen);
 
   /// Add a new informative chunk.
   void AddInformativeChunk(const char *Text);

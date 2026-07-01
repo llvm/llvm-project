@@ -49,11 +49,15 @@ std::string getDeclComment(const ASTContext &Ctx, const NamedDecl &D);
 /// indicating the cursor should stay there.
 /// Note that for certain \p CursorKind like \p CXCursor_Constructor, $0 won't
 /// be emitted in order to avoid overlapping normal parameters.
+///
+/// If \p TersePlaceholder is enabled, then placeholders will only render the
+/// "terse" version of the Chunk. Typically that is the parameters name.
 void getSignature(const CodeCompletionString &CCS, std::string *Signature,
                   std::string *Snippet,
                   CodeCompletionResult::ResultKind ResultKind,
                   CXCursorKind CursorKind, bool IncludeFunctionArguments = true,
-                  std::string *RequiredQualifiers = nullptr);
+                  std::string *RequiredQualifiers = nullptr,
+                  bool TersePlaceholder = false);
 
 /// Assembles formatted documentation for a completion result. This includes
 /// documentation comments and other relevant information like annotations.

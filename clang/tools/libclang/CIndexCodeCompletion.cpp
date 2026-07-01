@@ -117,7 +117,6 @@ CXString clang_getCompletionChunkText(CXCompletionString completion_string,
   switch ((*CCStr)[chunk_number].Kind) {
   case CodeCompletionString::CK_TypedText:
   case CodeCompletionString::CK_Text:
-  case CodeCompletionString::CK_Placeholder:
   case CodeCompletionString::CK_CurrentParameter:
   case CodeCompletionString::CK_Informative:
   case CodeCompletionString::CK_LeftParen:
@@ -136,7 +135,8 @@ CXString clang_getCompletionChunkText(CXCompletionString completion_string,
   case CodeCompletionString::CK_HorizontalSpace:
   case CodeCompletionString::CK_VerticalSpace:
     return cxstring::createRef((*CCStr)[chunk_number].Text);
-      
+  case CodeCompletionString::CK_Placeholder:
+    return cxstring::createRef((*CCStr)[chunk_number].Placeholder.Full);
   case CodeCompletionString::CK_Optional:
     // Note: treated as an empty text block.
     return cxstring::createEmpty();
