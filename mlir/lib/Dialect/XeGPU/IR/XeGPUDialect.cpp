@@ -704,40 +704,23 @@ DistributeLayoutAttr LayoutAttr::collapseDims(SmallVector<int64_t> dimGroup) {
 // Derive a new layout by expanding a single dimension `dim` into multiple
 // adjacent dimensions whose extents are given by `targetShape`.
 //
-// Distribution is always outer-to-inner to make sure larger contiguous
-// chunks are given to each compute unit first. Concretely: sg_layout and
-// lane_layout walk the new dims outer-to-inner so each compute unit owns a
-// contiguous run after collapse; sg_data / lane_data / inst_data fill
-// innermost-first so the per-unit data tile is contiguous in the
-// fastest-varying expanded dim. The expanded dims are assumed to be in
-// row-major (FCD-first) order, which is intrinsic to `vector.shape_cast`'s
-// linear-order-preserving semantics.
-//
-// Distribution policy on the expanded src dims (replacing `dim`):
-//   - sg_layout / lane_layout: spread outer-to-inner; each dim takes
-//     min(remaining, targetShape[i]); leftover spills into the next inner
-//     dim.
-//   - sg_data: fill innermost-first, capped per dim by
-//     targetShape[i] / sgLayout[i] (the per-sg share of the extent),
-//     or targetShape[i] (if sg_data is replicated across all subgroups).
-//   - lane_data: fill innermost-first, capped per dim by
-//     (targetShape[i] / sgLayout[i]) / laneLayout[i] (the per-lane share of
-//     the per-sg extent).
-//   - inst_data: seeded from laneLayout[i] * laneData[i] per dim, then the
-//     remaining factor is distributed innermost-first (capped per dim by
-//     the per-sg extent).
-//   - order: the original dim index is replaced by the expanded dim indices
-//     in innermost-fastest order; entries past `dim` shift up by
-//     `targetShape.size() - 1`.
+// The expanded dims are row-major (innermost is fastest-varying), so every
+// field is spread innermost-first. For sg and lane levels the data component
+// (sg_data / lane_data) is distributed first and the layout component
+// (sg_layout / lane_layout) then strides over the per-dim leftover; this
+// shared inner-first sweep is what makes "wrap-around" distributions correct.
+// When the data component spans the full extent (replicated/broadcast across
+// subgroups or lanes), the layout component is capped by the full extent
+// instead of the leftover. order entries past `dim` shift up by
+// `targetShape.size() - 1`.
 //
 // Examples (only the affected dim shown; assume rank-1 input):
-//   layout<sg_layout=[8], sg_data=[512]>, expandDim(0, [8, 16, 32])
-//     -> sg_layout=[8, 1, 1], sg_data=[1, 16, 32]
-//   layout<sg_layout=[16], sg_data=[32]>, expandDim(0, [2, 8, 32])
-//     -> sg_layout=[2, 8, 1], sg_data=[1, 1, 32]   (sg_layout spills inward)
-//   layout<inst_data=[32], lane_layout=[16], lane_data=[1]>,
-//     expandDim(0, [8, 16, 32])
-//     -> inst_data=[8, 2, 2], lane_layout=[8, 2, 1], lane_data=[1, 1, 1]
+//   sg_layout=[8], sg_data=[512],   expandDim(0, [8,16,32])
+//     -> sg_layout=[8,1,1],   sg_data=[1,16,32]
+//   sg_layout=[4], sg_data=[4],     expandDim(0, [2,16])
+//     -> sg_layout=[1,4],     sg_data=[1,4]      (wrap-around)
+//   inst_data=[32], lane_layout=[16], lane_data=[1], expandDim(0, [8,16,32])
+//     -> inst_data=[1,1,32], lane_layout=[1,1,16], lane_data=[1,1,1]
 DistributeLayoutAttr LayoutAttr::expandDim(int64_t dim,
                                            ArrayRef<int64_t> targetShape) {
   SmallVector<int64_t> sgLayout = getEffectiveSgLayoutAsInt();
@@ -761,29 +744,22 @@ DistributeLayoutAttr LayoutAttr::expandDim(int64_t dim,
   int64_t origLaneDataDim = laneData.empty() ? 1 : laneData[dim];
   int64_t origInstDataDim = instData.empty() ? 1 : instData[dim];
 
-  // Spread `total` across the new dims (length expCount), capped per dim by
-  // `dimSizeCap[i]`. `outerToInner` selects iteration direction
-  // (true = i=0..n-1).
-  auto spread = [&](int64_t total, ArrayRef<int64_t> dimSizeCap,
-                    bool outerToInner) -> SmallVector<int64_t> {
+  // Spread `total` across the new dims (length expCount), innermost-first,
+  // capped per dim by `dimSizeCap[i]`.
+  auto spread = [&](int64_t total,
+                    ArrayRef<int64_t> dimSizeCap) -> SmallVector<int64_t> {
     SmallVector<int64_t> out(expCount, 1);
     int64_t remaining = total;
-    auto step = [&](int64_t i) {
+    for (int64_t i = expCount - 1; i >= 0; --i) {
       if (remaining == 1)
-        return;
+        break;
       int64_t take = std::min(remaining, dimSizeCap[i]);
       assert(take > 0 && "expandDim distribution must not be zero");
       assert(remaining % take == 0 &&
              "expandDims must divide evenly across dims");
       out[i] = take;
       remaining /= take;
-    };
-    if (outerToInner)
-      for (int64_t i = 0; i < expCount; ++i)
-        step(i);
-    else
-      for (int64_t i = expCount - 1; i >= 0; --i)
-        step(i);
+    }
     assert(remaining == 1 && "expandDims total must fit within target shape");
     return out;
   };
@@ -803,60 +779,61 @@ DistributeLayoutAttr LayoutAttr::expandDim(int64_t dim,
   bool hasLaneData = !laneData.empty();
   bool hasInstData = !instData.empty();
 
-  // sg_layout / sg_data
-  SmallVector<int64_t> expSgLayout(expCount, 1);
-  if (hasSgLayout) {
-    expSgLayout = spread(origSgLayoutDim, targetShape, /*outerToInner=*/true);
-    splice(sgLayout, expSgLayout);
-  }
+  // sg_data first, then sg_layout into the per-dim leftover. When sg_data is
+  // replicated across subgroups it spans the full extent, so sg_layout is
+  // capped by targetShape itself instead of the leftover.
   bool sgDataReplicated =
       hasSgData && origSgDataDim == computeProduct(targetShape);
+  SmallVector<int64_t> expSgData(expCount, 1);
   if (hasSgData) {
-    SmallVector<int64_t> dimSizeCap(targetShape.begin(), targetShape.end());
-    if (hasSgLayout && !sgDataReplicated)
-      for (int64_t i = 0; i < expCount; ++i)
-        dimSizeCap[i] /= expSgLayout[i];
-    SmallVector<int64_t> expSgData =
-        spread(origSgDataDim, dimSizeCap, /*outerToInner=*/false);
+    expSgData = spread(origSgDataDim, targetShape);
     splice(sgData, expSgData);
   }
+  SmallVector<int64_t> expSgLayout(expCount, 1);
+  if (hasSgLayout) {
+    SmallVector<int64_t> dimSizeCap(targetShape.begin(), targetShape.end());
+    if (hasSgData && !sgDataReplicated)
+      for (int64_t i = 0; i < expCount; ++i)
+        dimSizeCap[i] /= expSgData[i];
+    expSgLayout = spread(origSgLayoutDim, dimSizeCap);
+    splice(sgLayout, expSgLayout);
+  }
 
-  // Per-sg view used as the base for lane_layout / lane_data / inst_data:
-  // targetShape[i] / sg_layout[i] when sg_layout is present (and not
-  // replicated), else targetShape itself.
+  // Per-sg extent feeding lane_layout / lane_data / inst_data.
   SmallVector<int64_t> perSgShape(targetShape.begin(), targetShape.end());
   if (hasSgLayout && !sgDataReplicated)
     for (int64_t i = 0; i < expCount; ++i)
       perSgShape[i] /= expSgLayout[i];
 
-  // lane_layout / lane_data
+  // lane_data first, then lane_layout into the per-dim leftover. When lane_data
+  // is replicated across lanes it spans the full per-sg extent, so lane_layout
+  // is capped by perSgShape itself instead of the leftover.
+  bool laneDataReplicated =
+      hasLaneData && origLaneDataDim == computeProduct(perSgShape);
   SmallVector<int64_t> expLaneLayout(expCount, 1);
   SmallVector<int64_t> expLaneData(expCount, 1);
+  if (hasLaneData)
+    expLaneData = spread(origLaneDataDim, perSgShape);
   if (hasLaneLayout) {
-    expLaneLayout = spread(origLaneLayoutDim, perSgShape,
-                           /*outerToInner=*/true);
-    splice(laneLayout, expLaneLayout);
-  }
-  if (hasLaneData) {
     SmallVector<int64_t> dimSizeCap(perSgShape.begin(), perSgShape.end());
-    if (hasLaneLayout)
+    if (hasLaneData && !laneDataReplicated)
       for (int64_t i = 0; i < expCount; ++i)
-        dimSizeCap[i] /= expLaneLayout[i];
-    expLaneData = spread(origLaneDataDim, dimSizeCap, /*outerToInner=*/false);
-    splice(laneData, expLaneData);
+        dimSizeCap[i] /= expLaneData[i];
+    expLaneLayout = spread(origLaneLayoutDim, dimSizeCap);
   }
+  if (hasLaneData)
+    splice(laneData, expLaneData);
+  if (hasLaneLayout)
+    splice(laneLayout, expLaneLayout);
 
-  // inst_data: when lane info is present, the per-lane atom
-  // `laneLayout[i] * laneData[i]` is the minimum granularity each new dim must
-  // hold to keep the lane-level distribution unit aligned with inst_data; the
-  // remaining factor `inst_data / laneAtom` is then spread innermost-first
-  // (capped by `perSgShape[i] / atom[i]`) and multiplied back onto the atom.
-  // Without lane info, fall back to a plain innermost-first spread over
-  // perSgShape.
+  // inst_data: seed each dim from the per-lane atom
+  // `laneLayout[i]*laneData[i]`, spread the remaining factor over the leftover,
+  // then scale back by the atom. Without lane info, spread inst_data directly
+  // over the per-sg extent.
   if (hasInstData) {
     SmallVector<int64_t> expInstData;
     if (!hasLaneLayout || !hasLaneData) {
-      expInstData = spread(origInstDataDim, perSgShape, /*outerToInner=*/false);
+      expInstData = spread(origInstDataDim, perSgShape);
     } else {
       int64_t laneAtom = origLaneLayoutDim * origLaneDataDim;
       SmallVector<int64_t> atom(expCount, 1);
@@ -865,8 +842,7 @@ DistributeLayoutAttr LayoutAttr::expandDim(int64_t dim,
         atom[i] = expLaneLayout[i] * expLaneData[i];
         dimSizeCap[i] = perSgShape[i] / atom[i];
       }
-      expInstData = spread(origInstDataDim / laneAtom, dimSizeCap,
-                           /*outerToInner=*/false);
+      expInstData = spread(origInstDataDim / laneAtom, dimSizeCap);
       for (int64_t i = 0; i < expCount; ++i)
         expInstData[i] *= atom[i];
     }

@@ -242,7 +242,7 @@ gpu.module @test {
 // CHECK: %[[CST:.*]] = arith.constant {layout_result_0 = #xegpu.layout<inst_data = [32], lane_layout = [16], lane_data = [2]>} dense<true> : vector<256xi1>
 // CHECK: %[[STEP:.*]] = vector.step {layout_result_0 = #xegpu.layout<inst_data = [32], lane_layout = [16], lane_data = [2]>} : vector<256xindex>
 // CHECK: %[[LOAD:.*]] = xegpu.load %arg0[%[[STEP]]], %[[CST]] <{layout = #xegpu.layout<inst_data = [32], lane_layout = [16], lane_data = [2]>}> : memref<256xf16>, vector<256xindex>, vector<256xi1> -> vector<256xf16>
-// CHECK: %[[CAST_0:.*]] = vector.shape_cast %[[LOAD]] {layout_result_0 = #xegpu.layout<inst_data = [2, 4, 4], lane_layout = [2, 4, 2], lane_data = [1, 1, 2]>} : vector<256xf16> to vector<2x4x32xf16>
+// CHECK: %[[CAST_0:.*]] = vector.shape_cast %[[LOAD]] {layout_result_0 = #xegpu.layout<inst_data = [1, 1, 32], lane_layout = [1, 1, 16], lane_data = [1, 1, 2]>} : vector<256xf16> to vector<2x4x32xf16>
 // CHECK: %[[CAST_1:.*]] = vector.shape_cast %[[CAST_0]] {layout_result_0 = #xegpu.layout<inst_data = [1, 32], lane_layout = [1, 16], lane_data = [1, 2]>} : vector<2x4x32xf16> to vector<1x256xf16>
 // CHECK: %[[CAST_2:.*]] = vector.shape_cast %[[CAST_1]] {layout_result_0 = #xegpu.layout<inst_data = [32], lane_layout = [16], lane_data = [2]>} : vector<1x256xf16> to vector<256xf16>
 // CHECK: xegpu.store %[[CAST_2]], %arg1[%[[STEP]]], %[[CST]] <{layout = #xegpu.layout<inst_data = [32], lane_layout = [16], lane_data = [2]>}> : vector<256xf16>, memref<256xf16>, vector<256xindex>, vector<256xi1>
@@ -453,21 +453,11 @@ func.func @dpas_mx_f4e2m1(%arg0: memref<16x1024xf4E2M1FN>, %arg1: memref<1024x32
 }
 
 // -----
-// shape_cast that collapses all src dims into a single innermost dst dim.
-// Consumer carries inst_data + lane_layout=[..,subgroupSize] + lane_data=[..,1]
-// (the canonical inst-level anchor for this code path).
-// Distribution is always outer-to-inner to make sure larger contiguous chunks
-// are given to each compute unit first.
-// srcShape=[8, 16, 32], resShape=[4096], consumer inst_data=[32],
-// lane_layout=[16], lane_data=[1]
-// lane_layout outer-to-inner: dim0 take=min(16,8)=8 (rem=2);
-//   dim1 take=min(2,16)=2 (rem=1) -> [8, 2, 1].
-// lane_data innermost-first: total=1 -> [1, 1, 1].
-// inst_data: laneAtom=16, seed [8, 2, 1]; remaining=32/16=2 spreads
-//   innermost-first: dim2 cap=32/1=32, take=2 -> inst_data[2]=2 -> [8, 2, 2].
+// shape_cast collapse [8, 16, 32] -> [4096]: lane/inst factors fill the fast
+// innermost dim first.
 gpu.module @test {
 // CHECK-LABEL: func.func @vector_shape_cast_collapse_innermost(
-// CHECK: %[[CST:.*]] = arith.constant {layout_result_0 = #xegpu.layout<inst_data = [8, 2, 2], lane_layout = [8, 2, 1], lane_data = [1, 1, 1]>} dense<0.000000e+00> : vector<8x16x32xf16>
+// CHECK: %[[CST:.*]] = arith.constant {layout_result_0 = #xegpu.layout<inst_data = [1, 1, 32], lane_layout = [1, 1, 16], lane_data = [1, 1, 1]>} dense<0.000000e+00> : vector<8x16x32xf16>
 // CHECK: %[[CAST:.*]] = vector.shape_cast %[[CST]] {layout_result_0 = #xegpu.layout<inst_data = [32], lane_layout = [16], lane_data = [1]>} : vector<8x16x32xf16> to vector<4096xf16>
 func.func @vector_shape_cast_collapse_innermost(%arg0: memref<4096xf16>) {
     %cst_v = arith.constant dense<0.000000e+00> : vector<8x16x32xf16>
@@ -480,19 +470,11 @@ func.func @vector_shape_cast_collapse_innermost(%arg0: memref<4096xf16>) {
 }
 
 // -----
-// shape_cast collapse where the outermost src dim is too small to absorb the
-// full lane_layout, so it spills inward across multiple src dims.
-// srcShape=[2, 8, 32], resShape=[512], consumer inst_data=[64],
-// lane_layout=[16], lane_data=[2]
-// lane_layout outer-to-inner: dim0 take=min(16,2)=2 (rem=8);
-//   dim1 take=min(8,8)=8 (rem=1) -> [2, 8, 1].
-// lane_data innermost-first: total=2; dim2 cap=32/1=32, take=2 -> [1, 1, 2].
-// inst_data: laneAtom=16*2=32, seed [2*1, 8*1, 1*2] = [2, 8, 2];
-//   remaining=64/32=2 spreads innermost-first: dim2 cap=32/2=16, take=2
-//   -> inst_data[2] *= 2 -> [2, 8, 4].
+// shape_cast collapse [2, 8, 32] -> [512]: the innermost src dim absorbs the
+// full lane distribution, leaving the remaining inst_data factor for dim 1.
 gpu.module @test {
 // CHECK-LABEL: func.func @vector_shape_cast_collapse_lane_layout_spill_inward(
-// CHECK: %[[CST:.*]] = arith.constant {layout_result_0 = #xegpu.layout<inst_data = [2, 8, 4], lane_layout = [2, 8, 1], lane_data = [1, 1, 2]>} dense<0.000000e+00> : vector<2x8x32xf16>
+// CHECK: %[[CST:.*]] = arith.constant {layout_result_0 = #xegpu.layout<inst_data = [1, 2, 32], lane_layout = [1, 1, 16], lane_data = [1, 1, 2]>} dense<0.000000e+00> : vector<2x8x32xf16>
 // CHECK: %[[CAST:.*]] = vector.shape_cast %[[CST]] {layout_result_0 = #xegpu.layout<inst_data = [64], lane_layout = [16], lane_data = [2]>} : vector<2x8x32xf16> to vector<512xf16>
 func.func @vector_shape_cast_collapse_lane_layout_spill_inward(%arg0: memref<512xf16>) {
     %cst_v = arith.constant dense<0.000000e+00> : vector<2x8x32xf16>
@@ -505,20 +487,11 @@ func.func @vector_shape_cast_collapse_lane_layout_spill_inward(%arg0: memref<512
 }
 
 // -----
-// shape_cast collapse with multiple non-trivial groups: every dst dim
-// collapses >=2 src dims, exercising the general matchDimCollapse path.
-// srcShape=[2, 4, 8, 16], resShape=[8, 128], consumer inst_data=[1, 16],
-// lane_layout=[1, 16], lane_data=[1, 1]
-//  - dst[0]=8 collapses src[0, 1]: lane_layout=1, lane_data=1, inst_data=1
-//      -> [1, 1, _, _] for all three.
-//  - dst[1]=128 collapses src[2, 3]: lane_layout outer-to-inner over [2, 3]:
-//      dim2 take=min(16, 8)=8 (rem=2); dim3 take=min(2, 16)=2 (rem=1)
-//      -> [_, _, 8, 2]; lane_data=1 -> [_, _, 1, 1]; inst_data laneAtom=16,
-//      seed [_, _, 8*1, 2*1] = [_, _, 8, 2]; remaining=16/16=1 -> done
-//      -> inst_data=[_, _, 8, 2].
+// shape_cast collapse [2, 4, 8, 16] -> [8, 128]: multiple non-trivial groups,
+// exercising the general matchDimCollapse path.
 gpu.module @test {
 // CHECK-LABEL: func.func @vector_shape_cast_collapse_multi_groups(
-// CHECK: %[[CST:.*]] = arith.constant {layout_result_0 = #xegpu.layout<inst_data = [1, 1, 8, 2], lane_layout = [1, 1, 8, 2], lane_data = [1, 1, 1, 1]>} dense<0.000000e+00> : vector<2x4x8x16xf16>
+// CHECK: %[[CST:.*]] = arith.constant {layout_result_0 = #xegpu.layout<inst_data = [1, 1, 1, 16], lane_layout = [1, 1, 1, 16], lane_data = [1, 1, 1, 1]>} dense<0.000000e+00> : vector<2x4x8x16xf16>
 // CHECK: %[[CAST:.*]] = vector.shape_cast %[[CST]] {layout_result_0 = #xegpu.layout<inst_data = [1, 16], lane_layout = [1, 16], lane_data = [1, 1]>} : vector<2x4x8x16xf16> to vector<8x128xf16>
 func.func @vector_shape_cast_collapse_multi_groups(%arg0: memref<8x128xf16>) {
     %cst_v = arith.constant dense<0.000000e+00> : vector<2x4x8x16xf16>
@@ -526,6 +499,24 @@ func.func @vector_shape_cast_collapse_multi_groups(%arg0: memref<8x128xf16>) {
     %tdesc = xegpu.create_nd_tdesc %arg0 : memref<8x128xf16> -> !xegpu.tensor_desc<8x128xf16>
     xegpu.store_nd %0, %tdesc[0, 0] <{layout = #xegpu.layout<inst_data = [1, 16], lane_layout = [1, 16], lane_data = [1, 1]>}> : vector<8x128xf16>, !xegpu.tensor_desc<8x128xf16>
     return
+  }
+}
+
+// -----
+// broadcast feeding a shape_cast collapse [8, 32, 32] -> [256, 32]: lanes and
+// lane_data of the collapsed dim wrap around onto the fast innermost dim.
+gpu.module @test {
+// CHECK-LABEL: gpu.func @shape_cast_collapse_lane_layout(
+// CHECK: %[[CST:.*]] = arith.constant {layout_result_0 = #xegpu.layout<inst_data = [1, 1, 4], lane_layout = [1, 8, 4], lane_data = [1, 1, 1], order = [1, 0, 2]>} {{.*}} : vector<8x1x32xf8E8M0FNU>
+// CHECK: %[[BC:.*]] = vector.broadcast %[[CST]] {layout_result_0 = #xegpu.layout<inst_data = [1, 16, 4], lane_layout = [1, 8, 4], lane_data = [1, 2, 1], order = [1, 0, 2]>} : vector<8x1x32xf8E8M0FNU> to vector<8x32x32xf8E8M0FNU>
+// CHECK: %[[CAST:.*]] = vector.shape_cast %[[BC]] {layout_result_0 = #xegpu.layout<inst_data = [16, 4], lane_layout = [8, 4], lane_data = [2, 1], order = [0, 1]>} : vector<8x32x32xf8E8M0FNU> to vector<256x32xf8E8M0FNU>
+  gpu.func @shape_cast_collapse_lane_layout(%dst: memref<256x32xf8E8M0FNU>) kernel {
+    %cst = arith.constant dense<0.000000e+00> : vector<8x1x32xf8E8M0FNU>
+    %bc = vector.broadcast %cst : vector<8x1x32xf8E8M0FNU> to vector<8x32x32xf8E8M0FNU>
+    %sc = vector.shape_cast %bc : vector<8x32x32xf8E8M0FNU> to vector<256x32xf8E8M0FNU>
+    %tdesc = xegpu.create_nd_tdesc %dst : memref<256x32xf8E8M0FNU> -> !xegpu.tensor_desc<256x32xf8E8M0FNU>
+    xegpu.store_nd %sc, %tdesc[0, 0] <{layout = #xegpu.layout<inst_data = [16, 4], lane_layout = [8, 4], lane_data = [2, 1], order = [0, 1]>}> : vector<256x32xf8E8M0FNU>, !xegpu.tensor_desc<256x32xf8E8M0FNU>
+    gpu.return
   }
 }
 

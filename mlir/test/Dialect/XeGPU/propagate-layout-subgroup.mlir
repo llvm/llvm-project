@@ -579,13 +579,30 @@ gpu.module @test {
 // -----
 gpu.module @test {
 // CHECK-LABEL: gpu.func @shape_cast_collapse_replicated(
-// CHECK: %[[CST:.*]] = arith.constant {layout_result_0 = #xegpu.layout<sg_layout = [2, 2, 1], sg_data = [8, 8, 8]>} dense<0.000000e+00> : vector<16x8x8xf16>
+// CHECK: %[[CST:.*]] = arith.constant {layout_result_0 = #xegpu.layout<sg_layout = [2, 1, 2], sg_data = [8, 8, 8]>} dense<0.000000e+00> : vector<16x8x8xf16>
 // CHECK: %[[CAST:.*]] = vector.shape_cast %[[CST]] {layout_result_0 = #xegpu.layout<sg_layout = [2, 2], sg_data = [8, 64]>} : vector<16x8x8xf16> to vector<16x64xf16>
   gpu.func @shape_cast_collapse_replicated(%dst: memref<16x64xf16>) kernel {
     %cst = arith.constant dense<0.000000e+00> : vector<16x8x8xf16>
     %0 = vector.shape_cast %cst : vector<16x8x8xf16> to vector<16x64xf16>
     %tdesc = xegpu.create_nd_tdesc %dst : memref<16x64xf16> -> !xegpu.tensor_desc<16x64xf16>
     xegpu.store_nd %0, %tdesc[0, 0] <{layout = #xegpu.layout<sg_layout = [2, 2], sg_data = [8, 64]>}> : vector<16x64xf16>, !xegpu.tensor_desc<16x64xf16>
+    gpu.return
+  }
+}
+
+// -----
+// shape_cast collapse [2, 16] -> [32] with sg_layout=[4], sg_data=[4]:
+// the 4 subgroups wrap around onto the fast innermost dim.
+gpu.module @test {
+// CHECK-LABEL: gpu.func @shape_cast_collapse_sg_wraparound(
+// CHECK: %[[CST:.*]] = arith.constant {layout_result_0 = #xegpu.layout<sg_layout = [1, 4], sg_data = [1, 4]>} dense<0.000000e+00> : vector<2x16xf16>
+// CHECK: %[[CAST:.*]] = vector.shape_cast %[[CST]] {layout_result_0 = #xegpu.layout<sg_layout = [4], sg_data = [4]>} : vector<2x16xf16> to vector<32xf16>
+  gpu.func @shape_cast_collapse_sg_wraparound(%dst: memref<32xf16>) kernel {
+    %cst = arith.constant dense<0.000000e+00> : vector<2x16xf16>
+    %0 = vector.shape_cast %cst : vector<2x16xf16> to vector<32xf16>
+    %mask = arith.constant dense<true> : vector<32xi1>
+    %offsets = vector.step : vector<32xindex>
+    xegpu.store %0, %dst[%offsets], %mask <{layout = #xegpu.layout<sg_layout = [4], sg_data = [4]>}> : vector<32xf16>, memref<32xf16>, vector<32xindex>, vector<32xi1>
     gpu.return
   }
 }
