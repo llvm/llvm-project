@@ -48,8 +48,23 @@ using namespace llvm;
 using namespace VPlanPatternMatch;
 using namespace SCEVPatternMatch;
 
+/// Check if the pointer operand \p Addr of a memory access is consecutive
+/// w.r.t. \p OuterLoop, i.e. it is an affine AddRec with unit stride in units
+/// of \p ElemTy.
+static bool isStride1Access(VPValue *Addr, Type *ElemTy,
+                            PredicatedScalarEvolution &PSE, Loop *OuterLoop) {
+  const SCEV *AddrSCEV = vputils::getSCEVExprForVPValue(Addr, PSE, OuterLoop);
+  auto *AddRec = dyn_cast<SCEVAddRecExpr>(AddrSCEV);
+  if (!AddRec)
+    return false;
+
+  return getStrideFromAddRec(AddRec, OuterLoop, ElemTy, /*Ptr=*/nullptr, PSE) ==
+         1;
+}
+
 bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
-    VPlan &Plan, const TargetLibraryInfo &TLI) {
+    VPlan &Plan, const TargetLibraryInfo &TLI, PredicatedScalarEvolution &PSE,
+    Loop *OuterLoop) {
 
   ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> RPOT(
       Plan.getVectorLoopRegion());
@@ -78,14 +93,18 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
         assert(!isa<PHINode>(Inst) && "phis should be handled above");
         // Create VPWidenMemoryRecipe for loads and stores.
         if (LoadInst *Load = dyn_cast<LoadInst>(Inst)) {
-          NewRecipe = new VPWidenLoadRecipe(
-              *Load, Ingredient.getOperand(0), nullptr /*Mask*/,
-              false /*Consecutive*/, *VPI, Ingredient.getDebugLoc());
+          bool IsConsecutive = isStride1Access(
+              VPI->getOperand(0), VPI->getScalarType(), PSE, OuterLoop);
+          NewRecipe = new VPWidenLoadRecipe(*Load, Ingredient.getOperand(0),
+                                            nullptr /*Mask*/, IsConsecutive,
+                                            *VPI, Ingredient.getDebugLoc());
         } else if (StoreInst *Store = dyn_cast<StoreInst>(Inst)) {
+          bool IsConsecutive = isStride1Access(
+              VPI->getOperand(1), VPI->getOperand(0)->getScalarType(), PSE,
+              OuterLoop);
           NewRecipe = new VPWidenStoreRecipe(
               *Store, Ingredient.getOperand(1), Ingredient.getOperand(0),
-              nullptr /*Mask*/, false /*Consecutive*/, *VPI,
-              Ingredient.getDebugLoc());
+              nullptr /*Mask*/, IsConsecutive, *VPI, Ingredient.getDebugLoc());
         } else if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(Inst)) {
           NewRecipe = new VPWidenGEPRecipe(GEP->getSourceElementType(),
                                            Ingredient.operands(), *VPI,
