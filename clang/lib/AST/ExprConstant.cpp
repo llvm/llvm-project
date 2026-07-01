@@ -5173,9 +5173,9 @@ private:
   Kind TheKind = Kind::StringLiteral;
   const ConstantArrayType *ArrayType = nullptr;
   ArraySubobjectLocation Loc;
-  const Expr *StringExpr = nullptr;        // Kind::StringLiteral
-  const APValue *ArrayValue = nullptr;     // Kind::InitializerList (borrowed)
-  std::optional<APValue> OwnedArrayValue;  // Kind::TemplateParamObject (owned)
+  const Expr *StringExpr = nullptr;       // Kind::StringLiteral
+  const APValue *ArrayValue = nullptr;    // Kind::InitializerList (borrowed)
+  std::optional<APValue> OwnedArrayValue; // Kind::TemplateParamObject (owned)
 };
 } // namespace
 
@@ -5329,7 +5329,8 @@ bool NonUniqueObject::recognize(const LValue &LV) {
   }
 
   if (isInitializerListBackingArray(LV)) {
-    std::optional<ArraySubobjectLocation> EltLoc = getArraySubobjectLocation(LV);
+    std::optional<ArraySubobjectLocation> EltLoc =
+        getArraySubobjectLocation(LV);
     const auto *CAT = Ctx.getAsConstantArrayType(getType(LV.Base));
     const APValue *ArrVal = getCompleteObjectValue(LV);
     if (!EltLoc || !CAT || !ArrVal || !ArrVal->isArray())
@@ -5346,7 +5347,8 @@ bool NonUniqueObject::recognize(const LValue &LV) {
   if (!TPO)
     return false;
 
-  std::optional<ArraySubobjectPathInfo> PathInfo = getArraySubobjectPathInfo(LV);
+  std::optional<ArraySubobjectPathInfo> PathInfo =
+      getArraySubobjectPathInfo(LV);
   if (!PathInfo)
     return false;
 
