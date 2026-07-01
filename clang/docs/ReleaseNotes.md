@@ -754,6 +754,7 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   calling `__builtin_bit_cast`. (#GH200112)
 - Clang now SFINAE friendly when the ``__reference_meows_from_temporary`` builtins
   should SFINAE friendly when the 1st type is not a reference type. (#GH206524)
+- Fixed an assertion failure when calling a member function on an `_Atomic`-qualified struct. (#GH206860)
 
 
 #### Bug Fixes to Attribute Support

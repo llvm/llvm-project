@@ -6122,6 +6122,11 @@ static ImplicitConversionSequence TryObjectArgumentInitialization(
     assert(FromClassification.isLValue());
   }
 
+  // Strip atomic qualifier - accessing members of _Atomic structs
+  // is undefined behavior but shouldn't crash the compiler.
+  if (const auto *AT = FromType->getAs<AtomicType>())
+    FromType = AT->getValueType();
+
   auto ValueKindFromClassification = [](Expr::Classification C) {
     if (C.isPRValue())
       return clang::VK_PRValue;
