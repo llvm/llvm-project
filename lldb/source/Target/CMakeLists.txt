@@ -40,7 +40,6 @@ add_lldb_library(lldbTarget
   QueueList.cpp
   RegisterContext.cpp
   RegisterContextUnwind.cpp
-  RegisterFlags.cpp
   RegisterNumber.cpp
   RemoteAwarePlatform.cpp
   ScriptedThreadPlan.cpp
