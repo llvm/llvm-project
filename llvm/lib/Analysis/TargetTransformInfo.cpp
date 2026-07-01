@@ -1333,6 +1333,17 @@ InstructionCost TargetTransformInfo::getMinMaxReductionCost(
   return Cost;
 }
 
+InstructionCost TargetTransformInfo::getActiveLaneMaskCost(
+    Type *ResTy, Type *ArgTy, FastMathFlags FMF, TTI::TargetCostKind CostKind,
+    unsigned NumResults) const {
+  assert(NumResults == 1 && "NumResults > 1 is not yet supported.");
+
+  InstructionCost Cost =
+      TTIImpl->getActiveLaneMaskCost(ResTy, ArgTy, FMF, CostKind, NumResults);
+  assert(Cost >= 0 && "TTI should not produce negative costs!");
+  return Cost;
+}
+
 InstructionCost TargetTransformInfo::getExtendedReductionCost(
     unsigned Opcode, bool IsUnsigned, Type *ResTy, VectorType *Ty,
     std::optional<FastMathFlags> FMF, TTI::TargetCostKind CostKind) const {

@@ -1663,21 +1663,6 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   case Intrinsic::masked_srem:
     return getArithmeticInstrCost(Instruction::SRem, ICA.getReturnType(),
                                   CostKind);
-  case Intrinsic::get_active_lane_mask: {
-    if (ST->hasVInstructions()) {
-      Type *ExpRetTy = VectorType::get(
-          ICA.getArgTypes()[0], cast<VectorType>(RetTy)->getElementCount());
-      auto LT = getTypeLegalizationCost(ExpRetTy);
-
-      // vid.v   v8  // considered hoisted
-      // vsaddu.vx   v8, v8, a0
-      // vmsltu.vx   v0, v8, a1
-      return LT.first *
-             getRISCVInstructionCost({RISCV::VSADDU_VX, RISCV::VMSLTU_VX},
-                                     LT.second, CostKind);
-    }
-    break;
-  }
   // TODO: add more intrinsic
   case Intrinsic::stepvector: {
     auto LT = getTypeLegalizationCost(RetTy);
@@ -2156,6 +2141,27 @@ RISCVTTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
                            getRISCVInstructionCost(SplitOp, LT.second, CostKind)
                      : 0;
   return SplitCost + getRISCVInstructionCost(Opcodes, LT.second, CostKind);
+}
+
+InstructionCost
+RISCVTTIImpl::getActiveLaneMaskCost(Type *RetTy, Type *ArgTy, FastMathFlags FMF,
+                                    TTI::TargetCostKind CostKind,
+                                    unsigned NumResults) const {
+  if (!ST->hasVInstructions())
+    return BaseT::getActiveLaneMaskCost(RetTy, ArgTy, FMF, CostKind,
+                                        NumResults);
+
+  Type *ExpRetTy =
+      VectorType::get(ArgTy, cast<VectorType>(RetTy)->getElementCount());
+  auto LT = getTypeLegalizationCost(ExpRetTy);
+
+  // vid.v   v8  // considered hoisted
+  // vsaddu.vx   v8, v8, a0
+  // vmsltu.vx   v0, v8, a1
+  return LT.first *
+         getRISCVInstructionCost({RISCV::VSADDU_VX, RISCV::VMSLTU_VX},
+                                 LT.second, CostKind) *
+         NumResults;
 }
 
 InstructionCost
