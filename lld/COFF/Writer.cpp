@@ -82,7 +82,6 @@ static_assert((sizeof(dos_header) + sizeof(dosProgram)) % 8 == 0,
 static const int numberOfDataDirectory = 16;
 
 namespace {
-
 class DebugDirectoryChunk : public NonSectionChunk {
 public:
   DebugDirectoryChunk(const COFFLinkerContext &c,
@@ -303,6 +302,7 @@ private:
 
   DebugDirectoryChunk *debugDirectory = nullptr;
   std::vector<std::pair<COFF::DebugType, Chunk *>> debugRecords;
+  COFFDebugRecordChunk *coffDebugRecord = nullptr;
   CVDebugRecordChunk *buildId = nullptr;
   ArrayRef<uint8_t> sectionTable;
 
@@ -1247,7 +1247,8 @@ void Writer::createMiscChunks() {
   if (config->buildIDHash != BuildIDHash::None || config->debug ||
       config->repro || config->cetCompat || config->cetCompatStrict ||
       config->cetCompatIpValidationRelaxed ||
-      config->cetCompatDynamicApisInProcOnly || config->hotpatchCompat) {
+      config->cetCompatDynamicApisInProcOnly || config->hotpatchCompat ||
+      config->emitCoffDebugRecord) {
     debugDirectory =
         make<DebugDirectoryChunk>(ctx, debugRecords, config->repro);
     debugDirectory->setAlignment(4);
@@ -1266,6 +1267,12 @@ void Writer::createMiscChunks() {
         replaceSymbol<DefinedSynthetic>(buildidSym, buildidSym->getName(),
                                         buildId, 4);
     });
+  }
+
+  // Create COFF group table when ever debug directory table is created
+  if (config->emitCoffDebugRecord) {
+    coffDebugRecord = make<COFFDebugRecordChunk>(ctx);
+    debugRecords.push_back({COFF::IMAGE_DEBUG_TYPE_POGO, coffDebugRecord});
   }
 
   uint16_t ex_characteristics_flags = 0;
@@ -1774,6 +1781,9 @@ void Writer::assignAddresses() {
 
   // The first page is kept unmapped.
   uint64_t rva = alignTo(sizeOfHeaders, config->align);
+
+  if (coffDebugRecord)
+    coffDebugRecord->computeRecords();
 
   for (OutputSection *sec : ctx.outputSections) {
     llvm::TimeTraceScope timeScope("Section: ", sec->name);
@@ -3129,4 +3139,65 @@ void Writer::printSummary() {
     stream << ctx.pdbStats->largeInputTypeRecs;
 
   Msg(ctx) << buffer;
+}
+
+size_t COFFDebugRecordChunk::getSize() const {
+  size_t size = sizeof(uint32_t);
+  llvm::for_each(records, [&](auto &r) { size += r.size(); });
+  return size;
+}
+
+void COFFDebugRecordChunk::computeRecords() {
+  records.clear();
+  auto addRange = [](const auto &range, Chunk *end, StringRef name) {
+    bool hasData = false;
+    Chunk *last = nullptr;
+    for (auto *c : range) {
+      if (c == end)
+        break;
+      hasData |= c->getSize();
+      last = c;
+    }
+    return hasData ? COFFGrpRecord{*range.begin(), last, name}
+                   : COFFGrpRecord{nullptr, nullptr, ""};
+  };
+
+  for (OutputSection *os : ctx.outputSections) {
+    for (auto *sec : os->contribSections) {
+      COFFGrpRecord rec = addRange(sec->chunks, nullptr, sec->name);
+      if (!rec.first)
+        continue;
+      records.push_back(rec);
+    }
+    Chunk *lastChunk = records.empty() ? nullptr : records.back().last;
+    COFFGrpRecord lastRec =
+        addRange(llvm::reverse(os->chunks), lastChunk, os->name);
+    if (lastRec.first) {
+      std::swap(lastRec.first, lastRec.last);
+      records.push_back(lastRec);
+    }
+  }
+}
+
+void COFFDebugRecordChunk::writeTo(uint8_t *b) const {
+  bool is_pgo = llvm::any_of(records, [](auto &r) {
+    return llvm::is_contained(pgoSectionNames, r.name);
+  });
+  // ASCII code of "PGO\0" or zero
+  uint8_t *start = b;
+  write32le(b, is_pgo ? 0x50474F00 : 0);
+  uint32_t sig = read32be(b);
+  Log(ctx) << "coffgrp signature: '" << reinterpret_cast<char *>(&sig) << "'";
+  b += sizeof(uint32_t);
+  for (auto &rec : records) {
+    rec.dump(ctx);
+    write32le(b, rec.first->getRVA());
+    b += sizeof(uint32_t);
+    write32le(b, rec.getRecSize());
+    b += sizeof(uint32_t);
+    memset(b, 0, rec.nameSize());
+    memcpy(b, rec.name.data(), rec.name.size());
+    b += rec.nameSize();
+  }
+  assert(static_cast<size_t>(b - start) == getSize());
 }

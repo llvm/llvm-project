@@ -34,6 +34,7 @@ class StringChunk;
 class Symbol;
 class InputFile;
 class SectionChunk;
+class COFFDebugRecordChunk;
 
 // Short aliases.
 static const auto AMD64 = llvm::COFF::IMAGE_FILE_MACHINE_AMD64;
@@ -133,6 +134,7 @@ struct Configuration {
   bool forceMultiple = false;
   bool forceMultipleRes = false;
   bool forceUnresolved = false;
+  bool emitCoffDebugRecord = true;
   bool debug = false;
   bool includeDwarfChunks = false;
   bool debugGHashes = false;
