@@ -13,6 +13,7 @@
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/InputInfo.h"
 #include "clang/Options/Options.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
@@ -113,17 +114,27 @@ void HIPSPV::Linker::constructLinkAndEmitSpirvCommand(
                                Args, Name, TempFile);
 
     // Prefer the external llvm-spirv translator when it is available next to
-    // the toolchain - required when LLVM is built without the in-tree SPIR-V
-    // target. Use findProgramByName (not GetProgramPath) so a missing binary
-    // is reported as not-found rather than being silently substituted.
+    // the toolchain (or on PATH) - required when LLVM is built without the
+    // in-tree SPIR-V target. Mirror SPIRV::constructTranslateCommand, which
+    // prefers the versioned "llvm-spirv-<major>" over the plain name, so the
+    // translator-vs-backend choice matches the binary that will actually run.
+    // Use findProgramByName (not GetProgramPath) so a missing binary is
+    // reported as not-found rather than being silently substituted by its name.
     std::string LLVMSpirvPath;
     {
-      llvm::ErrorOr<std::string> P = llvm::sys::findProgramByName(
-          "llvm-spirv", {llvm::StringRef(C.getDriver().Dir)});
-      if (!P)
-        P = llvm::sys::findProgramByName("llvm-spirv");
-      if (P)
-        LLVMSpirvPath = *P;
+      StringRef DriverDir(C.getDriver().Dir);
+      std::string Versioned =
+          "llvm-spirv-" + std::to_string(LLVM_VERSION_MAJOR);
+      for (StringRef Name : {StringRef(Versioned), StringRef("llvm-spirv")}) {
+        llvm::ErrorOr<std::string> P =
+            llvm::sys::findProgramByName(Name, {DriverDir});
+        if (!P)
+          P = llvm::sys::findProgramByName(Name);
+        if (P) {
+          LLVMSpirvPath = *P;
+          break;
+        }
+      }
     }
 
     if (!LLVMSpirvPath.empty()) {
