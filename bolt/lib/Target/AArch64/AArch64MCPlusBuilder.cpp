@@ -747,7 +747,7 @@ public:
   }
 
   InstructionListType createAdrpLdr(const MCInst &LDRInst, MCContext *Ctx,
-                                    MCPhysReg Reg) const override {
+                                    const MCPhysReg Reg) const override {
     assert(LDRInst.getOperand(0).isReg() &&
            "unexpected operand in LDR instruction");
     const MCPhysReg DataReg = LDRInst.getOperand(0).getReg();

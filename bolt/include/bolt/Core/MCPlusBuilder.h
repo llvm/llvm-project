@@ -1869,7 +1869,7 @@ public:
   /// where Reg is provided by the 3rd argument.
   virtual InstructionListType
   createAdrpLdr(const MCInst &LDRInst, MCContext *Ctx,
-                MCPhysReg Reg = MCRegister::NoRegister) const {
+                const MCPhysReg Reg = MCRegister::NoRegister) const {
     llvm_unreachable("not implemented");
   }
 
