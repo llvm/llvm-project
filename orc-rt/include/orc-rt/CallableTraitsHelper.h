@@ -24,7 +24,8 @@ namespace orc_rt {
 ///
 /// This can be used to simplify the implementation of classes that need to
 /// operate on callable types.
-template <template <bool /* is_const */, typename...> typename ImplT,
+template <template <bool /* is_const */, bool /* is_noexcept */,
+                    typename...> typename ImplT,
           typename C>
 struct CallableTraitsHelper
     : CallableTraitsHelper<
@@ -32,40 +33,93 @@ struct CallableTraitsHelper
           decltype(&std::remove_cv_t<std::remove_reference_t<C>>::operator())> {
 };
 
-template <template <bool /* is_const */, typename...> typename ImplT,
+template <template <bool /* is_const */, bool /* is_noexcept */,
+                    typename...> typename ImplT,
           typename RetT, typename... ArgTs>
 struct CallableTraitsHelper<ImplT, RetT(ArgTs...)>
-    : ImplT</* is_const = */ false, RetT, ArgTs...> {};
+    : ImplT</* is_const = */ false, /* is_noexcept = */ false, RetT, ArgTs...> {
+};
 
-template <template <bool /* is_const */, typename...> typename ImplT,
+template <template <bool /* is_const */, bool /* is_noexcept */,
+                    typename...> typename ImplT,
+          typename RetT, typename... ArgTs>
+struct CallableTraitsHelper<ImplT, RetT(ArgTs...) noexcept>
+    : ImplT</* is_const = */ false, /* is_noexcept = */ true, RetT, ArgTs...> {
+};
+
+template <template <bool /* is_const */, bool /* is_noexcept */,
+                    typename...> typename ImplT,
           typename RetT, typename... ArgTs>
 struct CallableTraitsHelper<ImplT, RetT(ArgTs...) const>
-    : ImplT</* is_const = */ true, RetT, ArgTs...> {};
+    : ImplT</* is_const = */ true, /* is_noexcept = */ false, RetT, ArgTs...> {
+};
 
-template <template <bool /* is_const */, typename...> typename ImplT,
+template <template <bool /* is_const */, bool /* is_noexcept */,
+                    typename...> typename ImplT,
+          typename RetT, typename... ArgTs>
+struct CallableTraitsHelper<ImplT, RetT(ArgTs...) const noexcept>
+    : ImplT</* is_const = */ true, /* is_noexcept = */ true, RetT, ArgTs...> {};
+
+template <template <bool /* is_const */, bool /* is_noexcept */,
+                    typename...> typename ImplT,
           typename RetT, typename... ArgTs>
 struct CallableTraitsHelper<ImplT, RetT (*)(ArgTs...)>
-    : ImplT</* is_const = */ false, RetT, ArgTs...> {};
+    : ImplT</* is_const = */ false, /* is_noexcept = */ false, RetT, ArgTs...> {
+};
 
-template <template <bool /* is_const */, typename...> typename ImplT,
+template <template <bool /* is_const */, bool /* is_noexcept */,
+                    typename...> typename ImplT,
+          typename RetT, typename... ArgTs>
+struct CallableTraitsHelper<ImplT, RetT (*)(ArgTs...) noexcept>
+    : ImplT</* is_const = */ false, /* is_noexcept = */ true, RetT, ArgTs...> {
+};
+
+template <template <bool /* is_const */, bool /* is_noexcept */,
+                    typename...> typename ImplT,
           typename RetT, typename... ArgTs>
 struct CallableTraitsHelper<ImplT, RetT (&)(ArgTs...)>
-    : ImplT</* is_const = */ false, RetT, ArgTs...> {};
+    : ImplT</* is_const = */ false, /* is_noexcept = */ false, RetT, ArgTs...> {
+};
 
-template <template <bool /* is_const */, typename...> typename ImplT,
+template <template <bool /* is_const */, bool /* is_noexcept */,
+                    typename...> typename ImplT,
+          typename RetT, typename... ArgTs>
+struct CallableTraitsHelper<ImplT, RetT (&)(ArgTs...) noexcept>
+    : ImplT</* is_const = */ false, /* is_noexcept = */ true, RetT, ArgTs...> {
+};
+
+template <template <bool /* is_const */, bool /* is_noexcept */,
+                    typename...> typename ImplT,
           typename ClassT, typename RetT, typename... ArgTs>
 struct CallableTraitsHelper<ImplT, RetT (ClassT::*)(ArgTs...)>
-    : ImplT</* is_const = */ false, RetT, ArgTs...> {};
+    : ImplT</* is_const = */ false, /* is_noexcept = */ false, RetT, ArgTs...> {
+};
 
-template <template <bool /* is_const */, typename...> typename ImplT,
+template <template <bool /* is_const */, bool /* is_noexcept */,
+                    typename...> typename ImplT,
+          typename ClassT, typename RetT, typename... ArgTs>
+struct CallableTraitsHelper<ImplT, RetT (ClassT::*)(ArgTs...) noexcept>
+    : ImplT</* is_const = */ false, /* is_noexcept = */ true, RetT, ArgTs...> {
+};
+
+template <template <bool /* is_const */, bool /* is_noexcept */,
+                    typename...> typename ImplT,
           typename ClassT, typename RetT, typename... ArgTs>
 struct CallableTraitsHelper<ImplT, RetT (ClassT::*)(ArgTs...) const>
-    : ImplT</* is_const = */ true, RetT, ArgTs...> {};
+    : ImplT</* is_const = */ true, /* is_noexcept = */ false, RetT, ArgTs...> {
+};
+
+template <template <bool /* is_const */, bool /* is_noexcept */,
+                    typename...> typename ImplT,
+          typename ClassT, typename RetT, typename... ArgTs>
+struct CallableTraitsHelper<ImplT, RetT (ClassT::*)(ArgTs...) const noexcept>
+    : ImplT</* is_const = */ true, /* is_noexcept = */ true, RetT, ArgTs...> {};
 
 namespace detail {
-template <bool IsConst, typename RetT, typename... ArgTs>
+template <bool IsConst, bool IsNoexcept, typename RetT, typename... ArgTs>
 struct CallableArgInfoImpl {
   static constexpr bool is_const = IsConst;
+  static constexpr bool is_noexcept = IsNoexcept;
   typedef RetT return_type;
   typedef std::tuple<ArgTs...> args_tuple_type;
 };

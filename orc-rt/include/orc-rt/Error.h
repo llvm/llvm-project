@@ -283,7 +283,8 @@ struct ErrorHandlerTraitsImpl<void, std::unique_ptr<ErrT>> {
   }
 };
 
-template <bool /* const */, typename RetT, typename ArgT>
+template <bool /* is_const */, bool /* is_noexcept */, typename RetT,
+          typename ArgT>
 struct ErrorHandlerTraitsImplAdapter : ErrorHandlerTraitsImpl<RetT, ArgT> {};
 
 } // namespace detail.
@@ -652,7 +653,7 @@ template <> struct ErrorWrapImpl<void> {
   }
 };
 
-template <bool /* const */, typename RetT>
+template <bool /* is_const */, bool /* is_noexcept */, typename RetT>
 struct ErrorWrapImplAdapter : ErrorWrapImpl<RetT> {};
 
 template <typename Callable>
