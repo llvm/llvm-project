@@ -1038,3 +1038,34 @@ declare void @inalloca_i64(ptr inalloca(i64))
 declare void @inalloca_i32(ptr inalloca(i32))
 declare ptr @llvm.stacksave()
 declare void @llvm.stackrestore(ptr)
+
+declare ptr @callee(ptr, i32)
+
+define ptr @dont_hoist_musttail_past_skip(ptr %a, i32 %b) {
+; CHECK-LABEL: @dont_hoist_musttail_past_skip(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[B:%.*]], 0
+; CHECK-NEXT:    br i1 [[C]], label [[T:%.*]], label [[E:%.*]]
+; CHECK:       t:
+; CHECK-NEXT:    [[X:%.*]] = add i32 [[B]], 1
+; CHECK-NEXT:    [[CALL:%.*]] = musttail call ptr @callee(ptr [[A:%.*]], i32 [[B]])
+; CHECK-NEXT:    ret ptr [[CALL]]
+; CHECK:       e:
+; CHECK-NEXT:    [[Y:%.*]] = add i32 [[B]], 2
+; CHECK-NEXT:    [[CALL2:%.*]] = musttail call ptr @callee(ptr [[A]], i32 [[B]])
+; CHECK-NEXT:    ret ptr [[CALL2]]
+;
+entry:
+  %c = icmp eq i32 %b, 0
+  br i1 %c, label %t, label %e
+
+t:
+  %x = add i32 %b, 1
+  %call = musttail call ptr @callee(ptr %a, i32 %b)
+  ret ptr %call
+
+e:
+  %y = add i32 %b, 2
+  %call2 = musttail call ptr @callee(ptr %a, i32 %b)
+  ret ptr %call2
+}
