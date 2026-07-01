@@ -7,14 +7,14 @@
 #include <vector>
 
 namespace clang::ento::lifetime_modeling {
-/// Returns true if the lifetime of a region has ended.
-bool isDeallocated(ProgramStateRef State, const MemRegion *Region);
 
 /// Returns the set of lifetime sources bound to \p Source that are dangling
 /// stack regions.
 const std::vector<const MemRegion *>
 checkReturnedBorrower(SVal Source, ProgramStateRef State, CheckerContext &C);
 
+/// Returns true if the SVal key is present in the map.
+bool isBoundToLifetimeSource(SVal Val, ProgramStateRef State);
 } // namespace clang::ento::lifetime_modeling
 
 #endif // LLVM_CLANG_INCLUDE_STATICANALYZER_CHECKERS_LIFETIMEMODELING_H

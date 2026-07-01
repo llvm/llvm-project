@@ -56,6 +56,11 @@ lifetime_modeling::checkReturnedBorrower(SVal Val, ProgramStateRef State,
   return Regions;
 }
 
+bool lifetime_modeling::isBoundToLifetimeSource(SVal Val,
+                                                ProgramStateRef State) {
+  return State->get<LifetimeBoundMap>(Val) != nullptr;
+}
+
 static ProgramStateRef bindValues(ProgramStateRef State, SVal RetVal,
                                   const MemRegion *Source) {
   LifetimeSourceSet::Factory &F = State->get_context<LifetimeSourceSet>();
