@@ -2,9 +2,9 @@
 
 declare i8 @func()
 
-define void @test(ptr %x) {
+define void @test(ptr %x, i32 %i) {
 entry:
-  ; CHECK: Ranges are only for loads, calls and invokes!
+  ; CHECK: Ranges are only for loads, calls, invokes and phi nodes!
   store i8 0, ptr %x, align 1, !range !{i8 0, i8 1}
 
   ; CHECK: It should have at least one range!
@@ -63,6 +63,15 @@ entry:
 
   ; CHECK: The upper and lower limits cannot be the same value{{$}}
   load i32, ptr %x, !range !{i32 123, i32 123}
+
+  ret void
+
+bb:
+  ; This one is valid
+  phi i32 [%i, %entry], !range !{i32 0, i32 1}
+
+  ; CHECK: It should have at least one range!
+  phi i32 [%i, %entry], !range !{}
 
   ret void
 }
