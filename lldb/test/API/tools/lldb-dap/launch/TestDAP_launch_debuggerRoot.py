@@ -2,13 +2,14 @@
 Test lldb-dap launch request.
 """
 
-from lldbsuite.test.decorators import expectedFailureWindows
-from lldbsuite.test import lldbplatformutil
-import lldbdap_testcase
 import os
 
+from lldbsuite.test import lldbplatformutil
+from lldbsuite.test.tools.lldb_dap.dap_types import LaunchArgs
+from lldbsuite.test.tools.lldb_dap.lldb_dap_testcase import DAPTestCaseBase
 
-class TestDAP_launch_debuggerRoot(lldbdap_testcase.DAPTestCaseBase):
+
+class TestDAP_launch_debuggerRoot(DAPTestCaseBase):
     """
     Tests the "debuggerRoot" will change the working directory of
     the lldb-dap debug adapter.
@@ -19,24 +20,29 @@ class TestDAP_launch_debuggerRoot(lldbdap_testcase.DAPTestCaseBase):
         program_parent_dir = os.path.realpath(os.path.dirname(os.path.dirname(program)))
 
         var = "%cd%" if lldbplatformutil.getHostPlatform() == "windows" else "$PWD"
-        commands = [f"platform shell echo cwd = {var}"]
+        init_commands = [f"platform shell echo cwd = {var}"]
 
-        self.build_and_launch(
-            program, debuggerRoot=program_parent_dir, initCommands=commands
+        session = self.build_and_create_session()
+        process_event = session.launch(
+            LaunchArgs(
+                program=program,
+                debuggerRoot=program_parent_dir,
+                initCommands=init_commands,
+            )
         )
-        self.continue_to_exit()
-        output = self.get_console()
+        session.verify_process_exited(after=process_event)
+
+        output = session.get_console()
         self.assertTrue(output and len(output) > 0, "expect console output")
-        lines = output.splitlines()
+
         prefix = "cwd = "
-        found = False
-        for line in lines:
-            if line.startswith(prefix):
-                found = True
-                self.assertEqual(
-                    program_parent_dir,
-                    line.strip()[len(prefix) :],
-                    "lldb-dap working dir '%s' == '%s'"
-                    % (program_parent_dir, line[len(prefix) :]),
-                )
-        self.assertTrue(found, "verified lldb-dap working directory")
+        cwd_lines = [line for line in output.splitlines() if line.startswith(prefix)]
+        self.assertEqual(
+            len(cwd_lines), 1, "expected exactly one cwd line in console output"
+        )
+        self.assertEqual(
+            cwd_lines[0].strip()[len(prefix) :],
+            program_parent_dir,
+            f"lldb-dap working dir mismatch: expected '{program_parent_dir}', "
+            f"got '{cwd_lines[0]}'",
+        )
