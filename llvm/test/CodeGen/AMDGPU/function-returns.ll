@@ -999,7 +999,7 @@ define <5 x i16> @v5i16_func_void() #0 {
 ; GFX89-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX89-NEXT:    s_mov_b32 s6, -1
 ; GFX89-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX89-NEXT:    buffer_load_dwordx4 v[0:3], off, s[4:7], 0
+; GFX89-NEXT:    buffer_load_dwordx3 v[0:2], off, s[4:7], 0
 ; GFX89-NEXT:    s_waitcnt vmcnt(0)
 ; GFX89-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1010,7 +1010,7 @@ define <5 x i16> @v5i16_func_void() #0 {
 ; GFX11-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX11-NEXT:    s_mov_b32 s2, -1
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    buffer_load_b128 v[0:3], off, s[0:3], 0
+; GFX11-NEXT:    buffer_load_b96 v[0:2], off, s[0:3], 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %ptr = load volatile ptr addrspace(1), ptr addrspace(4) poison

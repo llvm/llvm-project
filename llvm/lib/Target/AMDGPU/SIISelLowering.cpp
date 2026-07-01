@@ -16581,6 +16581,171 @@ bool SITargetLowering::shouldExpandVectorDynExt(SDNode *N) const {
       EltSize, NumElem, Idx->isDivergent(), getSubtarget());
 }
 
+// Return true if this load may select to an SMRD instruction.
+static bool maySelectSMRD(const LoadSDNode *Ld, const GCNSubtarget *Subtarget,
+                          const SITargetLowering *TLI) {
+  const MachineMemOperand *MMO = Ld->getMemOperand();
+  if (!MMO->getSize().hasValue())
+    return false;
+
+  Align MinScalarAlign(
+      std::min(MMO->getSize().getValue().getKnownMinValue(), uint64_t(4)));
+  if (Ld->getAlign() < MinScalarAlign)
+    return false;
+
+  if (Ld->isDivergent() && !AMDGPU::isUniformMMO(MMO))
+    return false;
+
+  switch (Ld->getAddressSpace()) {
+  case AMDGPUAS::CONSTANT_ADDRESS:
+  case AMDGPUAS::CONSTANT_ADDRESS_32BIT:
+    return true;
+  case AMDGPUAS::GLOBAL_ADDRESS:
+    return Ld->getMemOperand()->isInvariant() ||
+           (Subtarget->getScalarizeGlobalBehavior() &&
+            TLI->isMemOpHasNoClobberedMemOperand(Ld));
+  default:
+    return false;
+  }
+}
+
+static bool canShrinkDwordVectorLoad(const LoadSDNode *Ld,
+                                     const GCNSubtarget *Subtarget,
+                                     const SITargetLowering *TLI,
+                                     unsigned NewNumDwords,
+                                     uint64_t ByteOffset) {
+  // Keep this as one vector load: no scalar load and no wider-than-128-bit
+  // load.
+  if (NewNumDwords < 2 || NewNumDwords > 4)
+    return false;
+
+  // Avoid blocking later SMRD merging into wider x8/x16 loads.
+  if (maySelectSMRD(Ld, Subtarget, TLI))
+    return false;
+
+  if (NewNumDwords == 3 && !Subtarget->hasDwordx3LoadStores())
+    return false;
+
+  unsigned AS = Ld->getAddressSpace();
+  Align NewAlign = commonAlignment(Ld->getAlign(), ByteOffset);
+  switch (AS) {
+  case AMDGPUAS::CONSTANT_ADDRESS:
+  case AMDGPUAS::CONSTANT_ADDRESS_32BIT:
+  case AMDGPUAS::GLOBAL_ADDRESS:
+  case AMDGPUAS::FLAT_ADDRESS:
+    return true;
+  case AMDGPUAS::LOCAL_ADDRESS: {
+    unsigned Fast = 0;
+    return TLI->allowsMisalignedMemoryAccessesImpl(
+               NewNumDwords * 32, AS, NewAlign,
+               Ld->getMemOperand()->getFlags(), &Fast) &&
+           Fast > 1;
+  }
+  case AMDGPUAS::PRIVATE_ADDRESS:
+    if (Subtarget->getMaxPrivateElementSize() < NewNumDwords * 4)
+      return false;
+
+    return TLI->allowsMisalignedMemoryAccessesImpl(
+        NewNumDwords * 32, AS, NewAlign,
+        Ld->getMemOperand()->getFlags());
+  default:
+    return false;
+  }
+}
+
+// Shrink a dword vector load when the used lanes form a contiguous range.
+static SDValue shrinkExtractedDwordLoad(SDNode *N,
+                                        TargetLowering::DAGCombinerInfo &DCI,
+                                        const GCNSubtarget *Subtarget,
+                                        const SITargetLowering *TLI) {
+  if (!DCI.isAfterLegalizeDAG())
+    return SDValue();
+
+  SDValue Vec = N->getOperand(0);
+  auto *Ld = dyn_cast<LoadSDNode>(Vec);
+  MVT OldVT = Vec.getSimpleValueType();
+  if (!Ld || !OldVT.isVector() || OldVT.getVectorElementType() != MVT::i32 ||
+      !Ld->isSimple() || !ISD::isNormalLoad(Ld))
+    return SDValue();
+
+  unsigned OldNumLanes = OldVT.getVectorNumElements();
+  APInt UsedLanes = APInt::getZero(OldNumLanes);
+  SmallVector<SDNode *, 4> Extracts;
+  for (SDUse &Use : Ld->uses()) {
+    if (Use.getResNo() != 0)
+      continue;
+
+    SDNode *User = Use.getUser();
+    if (User->getOpcode() != ISD::EXTRACT_VECTOR_ELT)
+      return SDValue();
+
+    auto *Idx = dyn_cast<ConstantSDNode>(User->getOperand(1));
+    if (!Idx)
+      return SDValue();
+
+    uint64_t Lane = Idx->getZExtValue();
+    if (Lane >= OldNumLanes)
+      return SDValue();
+
+    UsedLanes.setBit(Lane);
+    Extracts.push_back(User);
+  }
+
+  if (Extracts.empty())
+    return SDValue();
+
+  // The used lane mask must be one contiguous run. This also returns the start
+  // lane and run length for the replacement load.
+  unsigned FirstLane = 0;
+  unsigned NewNumLanes = 0;
+  if (!UsedLanes.isShiftedMask(FirstLane, NewNumLanes))
+    return SDValue();
+
+  if (NewNumLanes >= OldNumLanes)
+    return SDValue();
+
+  uint64_t ByteOffset = FirstLane * 4;
+  if (!canShrinkDwordVectorLoad(Ld, Subtarget, TLI, NewNumLanes, ByteOffset))
+    return SDValue();
+
+  SDLoc SL(Ld);
+  SelectionDAG &DAG = DCI.DAG;
+  MachineFunction &MF = DAG.getMachineFunction();
+  MVT NewVT = MVT::getVectorVT(MVT::i32, NewNumLanes);
+  MachineMemOperand *MMO = MF.getMachineMemOperand(
+      Ld->getMemOperand(), ByteOffset, NewVT.getStoreSize());
+  SDValue NewBase =
+      ByteOffset == 0
+          ? Ld->getBasePtr()
+          : DAG.getMemBasePlusOffset(Ld->getBasePtr(),
+                                     TypeSize::getFixed(ByteOffset), SL);
+  SDValue NewLoad = DAG.getLoad(NewVT, SL, Ld->getChain(), NewBase, MMO);
+  DAG.makeEquivalentMemoryOrdering(Ld, NewLoad);
+  DCI.AddToWorklist(NewLoad.getNode());
+
+  for (SDNode *Extract : Extracts) {
+    if (Extract == N)
+      continue;
+
+    unsigned Lane =
+        cast<ConstantSDNode>(Extract->getOperand(1))->getZExtValue();
+    SDValue NewIdx =
+        DAG.getVectorIdxConstant(Lane - FirstLane, SDLoc(Extract));
+    SDNode *NewExtract = DAG.UpdateNodeOperands(Extract, NewLoad, NewIdx);
+    DCI.AddToWorklist(NewExtract);
+    if (NewExtract != Extract) {
+      DAG.ReplaceAllUsesWith(SDValue(Extract, 0), SDValue(NewExtract, 0));
+      DAG.RemoveDeadNode(Extract);
+    }
+  }
+
+  auto *Idx = cast<ConstantSDNode>(N->getOperand(1));
+  SDValue NewIdx =
+      DAG.getVectorIdxConstant(Idx->getZExtValue() - FirstLane, SDLoc(N));
+  return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SDLoc(N), N->getValueType(0),
+                     NewLoad, NewIdx);
+}
+
 SDValue
 SITargetLowering::performExtractVectorEltCombine(SDNode *N,
                                                  DAGCombinerInfo &DCI) const {
@@ -16704,8 +16869,11 @@ SITargetLowering::performExtractVectorEltCombine(SDNode *N,
     }
   }
 
-  if (!DCI.isBeforeLegalize())
+  if (!DCI.isBeforeLegalize()) {
+    if (SDValue Shrunk = shrinkExtractedDwordLoad(N, DCI, Subtarget, this))
+      return Shrunk;
     return SDValue();
+  }
 
   // Try to turn sub-dword accesses of vectors into accesses of the same 32-bit
   // elements. This exposes more load reduction opportunities by replacing
