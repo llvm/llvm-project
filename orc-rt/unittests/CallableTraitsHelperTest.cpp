@@ -136,6 +136,7 @@ TEST(CallableTraitsHelperTest, AbominableFunctionTypeIsConst) {
 static void freeVoidVoidNoexcept() noexcept {}
 
 TEST(CallableTraitsHelperTest, FreeFunctionNoexcept) {
+  (void)freeVoidVoidNoexcept;
   static_assert(!CallableArgInfo<decltype(freeVoidVoid)>::is_noexcept);
   static_assert(CallableArgInfo<decltype(freeVoidVoidNoexcept)>::is_noexcept);
 }
