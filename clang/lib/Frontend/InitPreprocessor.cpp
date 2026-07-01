@@ -1541,6 +1541,17 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
 
   // Get other target #defines.
   TI.getTargetDefines(LangOpts, Builder);
+
+  // Defines for the LFI subtarget specifying enabled subtarget features.
+  if (TI.getTriple().isLFI()) {
+    Builder.defineMacro("__LFI__");
+    for (StringRef Feature : TI.getTargetOpts().Features) {
+      if (Feature == "+no-lfi-loads")
+        Builder.defineMacro("__LFI_NO_LOADS__");
+      else if (Feature == "+no-lfi-stores")
+        Builder.defineMacro("__LFI_NO_STORES__");
+    }
+  }
 }
 
 static void InitializePGOProfileMacros(const CodeGenOptions &CodeGenOpts,
