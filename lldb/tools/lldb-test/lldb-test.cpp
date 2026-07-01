@@ -665,8 +665,7 @@ Error opts::symbols::findVariables(lldb_private::Module &Module) {
     CompUnitSP CU;
     for (size_t Ind = 0; !CU && Ind < Module.GetNumCompileUnits(); ++Ind) {
       CompUnitSP Candidate = Module.GetCompileUnitAtIndex(Ind);
-      if (!Candidate ||
-          Candidate->GetPrimaryFile().GetFilename().GetStringRef() != File)
+      if (!Candidate || Candidate->GetPrimaryFile().GetFilename() != File)
         continue;
       if (CU)
         return make_string_error("Multiple compile units for file `{0}` found.",

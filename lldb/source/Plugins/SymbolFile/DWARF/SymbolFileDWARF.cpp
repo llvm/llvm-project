@@ -269,7 +269,7 @@ static void ParseSupportFilesFromPrologue(
                 return tmp_file;
               llvm::SmallString<0> name;
               int fd;
-              auto orig_name = m_file_spec.GetFilename().GetStringRef();
+              auto orig_name = m_file_spec.GetFilename();
               auto ec = llvm::sys::fs::createTemporaryFile(
                   "", llvm::sys::path::filename(orig_name, style), fd, name);
               if (ec || fd <= 0) {
@@ -653,8 +653,7 @@ uint32_t SymbolFileDWARF::CalculateAbilities() {
       if (section)
         debug_line_file_size = section->GetFileSize();
     } else {
-      llvm::StringRef symfile_dir =
-          m_objfile_sp->GetFileSpec().GetDirectory().GetStringRef();
+      llvm::StringRef symfile_dir = m_objfile_sp->GetFileSpec().GetDirectory();
       if (symfile_dir.contains_insensitive(".dsym")) {
         if (m_objfile_sp->GetType() == ObjectFile::eTypeDebugInfo) {
           // We have a dSYM file that didn't have a any debug info. If the
@@ -1845,7 +1844,7 @@ SymbolFileDWARF::GetDwoSymbolFileForCompileUnit(
         // launched.
         FileSpec relative_to_binary = dwo_file;
         relative_to_binary.PrependPathComponent(
-            m_objfile_sp->GetFileSpec().GetDirectory().GetStringRef());
+            m_objfile_sp->GetFileSpec().GetDirectory());
         FileSystem::Instance().Resolve(relative_to_binary);
         relative_to_binary.AppendPathComponent(dwo_name);
         dwo_paths.Append(relative_to_binary);
@@ -1894,8 +1893,7 @@ SymbolFileDWARF::GetDwoSymbolFileForCompileUnit(
     FileSpec dwo_name_spec(dwo_name);
     llvm::StringRef filename_only = dwo_name_spec.GetFilename();
 
-    FileSpec binary_directory(
-        m_objfile_sp->GetFileSpec().GetDirectory().GetStringRef());
+    FileSpec binary_directory(m_objfile_sp->GetFileSpec().GetDirectory());
     FileSystem::Instance().Resolve(binary_directory);
 
     if (dwo_name_spec.IsRelative()) {
@@ -3223,9 +3221,9 @@ SymbolFileDWARF::FindDefinitionDIE(const DWARFDIE &die) {
   if (!die.GetAttributeValueAsUnsigned(DW_AT_declaration, 0))
     return die;
 
-  Progress progress(llvm::formatv(
-      "Searching definition DIE in {0}: '{1}'",
-      GetObjectFile()->GetFileSpec().GetFilename().GetString(), name));
+  Progress progress(llvm::formatv("Searching definition DIE in {0}: '{1}'",
+                                  GetObjectFile()->GetFileSpec().GetFilename(),
+                                  name));
 
   const dw_tag_t tag = die.Tag();
 
