@@ -2398,8 +2398,8 @@ class PPCEmitTimePseudo<dag OOL, dag IOL, string asmstr, list<dag> pattern>
 
 // Instruction that require custom insertion support
 // a.k.a. ISelPseudos, however, these won't have isPseudo set
-class PPCCustomInserterPseudo<dag OOL, dag IOL, string asmstr,
-                              list<dag> pattern>
+class PPCCustomInserterPseudo<dag OOL, dag IOL, list<dag> pattern = [],
+                         string asmstr = "#" # NAME>
     : PPCEmitTimePseudo<OOL, IOL, asmstr, pattern> {
   let usesCustomInserter = 1;
 }

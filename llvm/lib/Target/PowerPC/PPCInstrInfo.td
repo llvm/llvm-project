@@ -1504,7 +1504,7 @@ def DYNAREAOFFSET : PPCEmitTimePseudo<(outs i32imm:$result), (ins memri:$fpsi), 
 // Probed alloca to support stack clash protection.
 let Defs = [R1], Uses = [R1], hasNoSchedulingInfo = 1 in {
 def PROBED_ALLOCA_32 : PPCCustomInserterPseudo<(outs gprc:$result),
-                         (ins gprc:$negsize, memri:$fpsi), "#PROBED_ALLOCA_32",
+                         (ins gprc:$negsize, memri:$fpsi),
                            [(set i32:$result,
                              (PPCprobedalloca i32:$negsize, iaddr:$fpsi))]>;
 def PREPARE_PROBED_ALLOCA_32 : PPCEmitTimePseudo<(outs
@@ -1528,46 +1528,40 @@ let PPC970_Single = 1 in {
   // that operand cannot be r0.
   def SELECT_CC_I4 : PPCCustomInserterPseudo<(outs gprc:$dst), (ins crrc:$cond,
                               gprc_nor0:$T, gprc_nor0:$F,
-                              i32imm:$BROPC), "#SELECT_CC_I4",
-                              []>;
+                              i32imm:$BROPC)>;
   def SELECT_CC_I8 : PPCCustomInserterPseudo<(outs g8rc:$dst), (ins crrc:$cond,
                               g8rc_nox0:$T, g8rc_nox0:$F,
-                              i32imm:$BROPC), "#SELECT_CC_I8",
-                              []>;
+                              i32imm:$BROPC)>;
   def SELECT_CC_F4  : PPCCustomInserterPseudo<(outs f4rc:$dst), (ins crrc:$cond, f4rc:$T, f4rc:$F,
-                              i32imm:$BROPC), "#SELECT_CC_F4",
-                              []>;
+                              i32imm:$BROPC)>;
   def SELECT_CC_F8  : PPCCustomInserterPseudo<(outs f8rc:$dst), (ins crrc:$cond, f8rc:$T, f8rc:$F,
-                              i32imm:$BROPC), "#SELECT_CC_F8",
-                              []>;
+                              i32imm:$BROPC)>;
   def SELECT_CC_F16  : PPCCustomInserterPseudo<(outs vrrc:$dst), (ins crrc:$cond, vrrc:$T, vrrc:$F,
-                              i32imm:$BROPC), "#SELECT_CC_F16",
-                              []>;
+                              i32imm:$BROPC)>;
   def SELECT_CC_VRRC: PPCCustomInserterPseudo<(outs vrrc:$dst), (ins crrc:$cond, vrrc:$T, vrrc:$F,
-                              i32imm:$BROPC), "#SELECT_CC_VRRC",
-                              []>;
+                              i32imm:$BROPC)>;
 
   // SELECT_* pseudo instructions, like SELECT_CC_* but taking condition
   // register bit directly.
   def SELECT_I4 : PPCCustomInserterPseudo<(outs gprc:$dst), (ins crbitrc:$cond,
-                          gprc_nor0:$T, gprc_nor0:$F), "#SELECT_I4",
+                          gprc_nor0:$T, gprc_nor0:$F),
                           [(set i32:$dst, (select i1:$cond, i32:$T, i32:$F))]>;
   def SELECT_I8 : PPCCustomInserterPseudo<(outs g8rc:$dst), (ins crbitrc:$cond,
-                          g8rc_nox0:$T, g8rc_nox0:$F), "#SELECT_I8",
+                          g8rc_nox0:$T, g8rc_nox0:$F),
                           [(set i64:$dst, (select i1:$cond, i64:$T, i64:$F))]>;
 let Predicates = [HasFPU] in {
   def SELECT_F4  : PPCCustomInserterPseudo<(outs f4rc:$dst), (ins crbitrc:$cond,
-                          f4rc:$T, f4rc:$F), "#SELECT_F4",
+                          f4rc:$T, f4rc:$F),
                           [(set f32:$dst, (select i1:$cond, f32:$T, f32:$F))]>;
   def SELECT_F8  : PPCCustomInserterPseudo<(outs f8rc:$dst), (ins crbitrc:$cond,
-                          f8rc:$T, f8rc:$F), "#SELECT_F8",
+                          f8rc:$T, f8rc:$F),
                           [(set f64:$dst, (select i1:$cond, f64:$T, f64:$F))]>;
   def SELECT_F16  : PPCCustomInserterPseudo<(outs vrrc:$dst), (ins crbitrc:$cond,
-                          vrrc:$T, vrrc:$F), "#SELECT_F16",
+                          vrrc:$T, vrrc:$F),
                           [(set f128:$dst, (select i1:$cond, f128:$T, f128:$F))]>;
 }
   def SELECT_VRRC: PPCCustomInserterPseudo<(outs vrrc:$dst), (ins crbitrc:$cond,
-                          vrrc:$T, vrrc:$F), "#SELECT_VRRC",
+                          vrrc:$T, vrrc:$F),
                           [(set v4i32:$dst,
                                 (select i1:$cond, v4i32:$T, v4i32:$F))]>;
 }
@@ -1615,13 +1609,13 @@ let isTerminator = 1, isBarrier = 1, PPC970_Unit = 7, hasSideEffects = 0 in {
 // Set the float rounding mode.
 let Uses = [RM], Defs = [RM] in {
 def SETRNDi : PPCCustomInserterPseudo<(outs f8rc:$FRT), (ins u2imm:$RND),
-                    "#SETRNDi", [(set f64:$FRT, (int_ppc_setrnd (i32 imm:$RND)))]>;
+                    [(set f64:$FRT, (int_ppc_setrnd (i32 imm:$RND)))]>;
 
 def SETRND : PPCCustomInserterPseudo<(outs f8rc:$FRT), (ins gprc:$in),
-                    "#SETRND", [(set f64:$FRT, (int_ppc_setrnd gprc :$in))]>;
+                    [(set f64:$FRT, (int_ppc_setrnd gprc :$in))]>;
 
 def SETFLM : PPCCustomInserterPseudo<(outs f8rc:$FRT), (ins f8rc:$FLM),
-                    "#SETFLM", [(set f64:$FRT, (int_ppc_setflm f8rc:$FLM))]>;
+                    [(set f64:$FRT, (int_ppc_setflm f8rc:$FLM))]>;
 }
 
 let isBarrier = 1, hasSideEffects = 1, Defs = [RM] in
@@ -1936,16 +1930,16 @@ def TAILBA   : IForm<18, 0, 0, (outs), (ins abscalltarget:$LI),
 let hasSideEffects = 1 in {
   let Defs = [CTR] in
   def EH_SjLj_SetJmp32  : PPCCustomInserterPseudo<(outs gprc:$dst), (ins memr:$buf),
-                            "#EH_SJLJ_SETJMP32",
-                            [(set i32:$dst, (PPCeh_sjlj_setjmp addr:$buf))]>,
+                            [(set i32:$dst, (PPCeh_sjlj_setjmp addr:$buf))],
+                            "#EH_SJLJ_SETJMP32">,
                           Requires<[IsPPC32]>;
 }
 
 let hasSideEffects = 1, isBarrier = 1 in {
   let isTerminator = 1 in
   def EH_SjLj_LongJmp32 : PPCCustomInserterPseudo<(outs), (ins memr:$buf),
-                            "#EH_SJLJ_LONGJMP32",
-                            [(PPCeh_sjlj_longjmp addr:$buf)]>,
+                            [(PPCeh_sjlj_longjmp addr:$buf)],
+                            "#EH_SJLJ_LONGJMP32">,
                           Requires<[IsPPC32]>;
 }
 
@@ -2063,11 +2057,9 @@ foreach op = ["load_add", "load_sub", "load_and", "load_or", "load_xor",
   defvar atomic_load_nowp = "ATOMIC_"#!toupper(op)#"_NOWP";
   let Defs = [CR0] in {
     def atomic_load : PPCCustomInserterPseudo<
-        (outs gprc:$dst), (ins memrr:$ptr, i32imm:$sz, gprc:$incr),
-        "#" # NAME,[]>;
+        (outs gprc:$dst), (ins memrr:$ptr, i32imm:$sz, gprc:$incr)>;
     def atomic_load_nowp : PPCCustomInserterPseudo<
-        (outs gprc:$dst), (ins memrr:$ptr, i32imm:$sz, gprc:$incr),
-        "#" # NAME,[]>;
+        (outs gprc:$dst), (ins memrr:$ptr, i32imm:$sz, gprc:$incr)>;
   }
 
   foreach bitsz = [8, 16] in {
@@ -2088,8 +2080,7 @@ foreach bitsz = [8, 16, 32] in {
   defvar pat = !cast<PatFrag>(!tolower(pseudo));
   let Defs = [CR0] in
     def pseudo : PPCCustomInserterPseudo<
-      (outs gprc:$dst), (ins memrr:$ptr, gprc:$old, gprc:$new),
-      "#" # NAME,[]>;
+      (outs gprc:$dst), (ins memrr:$ptr, gprc:$old, gprc:$new)>;
   def : Pat<(i32 (pat ForceXForm:$ptr, gprc:$old, gprc:$new)),
           (!cast<Instruction>(pseudo) memrr:$ptr, gprc:$old, gprc:$new)>;
 }
@@ -2941,8 +2932,7 @@ def MTPMR : XFXForm_1<31, 462, (outs), (ins i32imm:$SPR, gprc:$RST),
 // A pseudo-instruction used to implement the read of the 64-bit cycle counter
 // on a 32-bit target.
 let hasSideEffects = 1 in
-def ReadTB : PPCCustomInserterPseudo<(outs gprc:$lo, gprc:$hi), (ins),
-                    "#ReadTB", []>;
+def ReadTB : PPCCustomInserterPseudo<(outs gprc:$lo, gprc:$hi), (ins)>;
 
 let Uses = [CTR] in {
 def MFCTR : XFXForm_1_ext<31, 339, 9, (outs gprc:$RST), (ins),
@@ -3059,8 +3049,8 @@ def : InstAlias<"mtcr $rA", (MTCRF 255, gprc:$rA)>;
 let Predicates = [HasFPU] in {
 // Custom inserter instruction to perform FADD in round-to-zero mode.
 let Uses = [RM], mayRaiseFPException = 1 in {
-  def FADDrtz: PPCCustomInserterPseudo<(outs f8rc:$FRT), (ins f8rc:$FRA, f8rc:$FRB), "",
-                      [(set f64:$FRT, (PPCany_faddrtz f64:$FRA, f64:$FRB))]>;
+  def FADDrtz: PPCCustomInserterPseudo<(outs f8rc:$FRT), (ins f8rc:$FRA, f8rc:$FRB),
+                      [(set f64:$FRT, (PPCany_faddrtz f64:$FRA, f64:$FRB))], "">;
 }
 
 // The above pseudo gets expanded to make use of the following instructions
@@ -4468,17 +4458,13 @@ def : Pat<(v4i32 (selectcc i1:$lhs, i1:$rhs, v4i32:$tval, v4i32:$fval, SETNE)),
 
 let Defs = [CR0] in {
 def ANDI_rec_1_EQ_BIT : PPCCustomInserterPseudo<(outs crbitrc:$dst), (ins gprc:$in),
-                             "#ANDI_rec_1_EQ_BIT",
                              [(set i1:$dst, (trunc (not i32:$in)))]>;
 def ANDI_rec_1_GT_BIT : PPCCustomInserterPseudo<(outs crbitrc:$dst), (ins gprc:$in),
-                             "#ANDI_rec_1_GT_BIT",
                              [(set i1:$dst, (trunc i32:$in))]>;
 
 def ANDI_rec_1_EQ_BIT8 : PPCCustomInserterPseudo<(outs crbitrc:$dst), (ins g8rc:$in),
-                              "#ANDI_rec_1_EQ_BIT8",
                               [(set i1:$dst, (trunc (not i64:$in)))]>;
 def ANDI_rec_1_GT_BIT8 : PPCCustomInserterPseudo<(outs crbitrc:$dst), (ins g8rc:$in),
-                              "#ANDI_rec_1_GT_BIT8",
                               [(set i1:$dst, (trunc i64:$in))]>;
 }
 
