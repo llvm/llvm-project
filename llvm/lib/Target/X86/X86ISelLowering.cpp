@@ -24973,6 +24973,12 @@ static SDValue LowerVSETCC(SDValue Op, const X86Subtarget &Subtarget,
     SDValue Cmp;
     bool IsAlwaysSignaling;
     unsigned SSECC = translateX86FSETCC(Cond, Op0, Op1, IsAlwaysSignaling);
+    if ((Cond == ISD::SETO || Cond == ISD::SETUO) && Op0 != Op1) {
+      if (DAG.isKnownNeverNaN(Op1))
+        Op1 = Op0;
+      else if (DAG.isKnownNeverNaN(Op0))
+        Op0 = Op1;
+    }
     if (!Subtarget.hasAVX()) {
       // TODO: We could use following steps to handle a quiet compare with
       // signaling encodings.
