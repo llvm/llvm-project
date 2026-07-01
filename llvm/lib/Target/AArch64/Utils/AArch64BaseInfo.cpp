@@ -192,13 +192,6 @@ std::string AArch64SysReg::genericRegisterString(uint32_t Bits) {
          utostr(CRm) + "_" + utostr(Op2);
 }
 
-bool AArch64SysReg::isHINTESystemRegisterEncoding(uint32_t Bits) {
-  assert(Bits < 0x10000);
-  uint32_t Op0 = (Bits >> 14) & 0x3;
-  uint32_t CRn = (Bits >> 7) & 0xf;
-  return Op0 == 0 && CRn == 2;
-}
-
 namespace llvm {
 namespace AArch64TLBI {
 #define GET_TLBITable_IMPL

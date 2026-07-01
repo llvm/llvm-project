@@ -4425,14 +4425,8 @@ ParseStatus AArch64AsmParser::tryParseSysReg(OperandVector &Operands) {
   if (SysReg && SysReg->haveFeatures(getSTI().getFeatureBits())) {
     MRSReg = SysReg->Readable ? SysReg->Encoding : -1;
     MSRReg = SysReg->Writeable ? SysReg->Encoding : -1;
-  } else {
+  } else
     MRSReg = MSRReg = AArch64SysReg::parseGenericRegister(Tok.getString());
-    const FeatureBitset &FeatureBits = getSTI().getFeatureBits();
-    if (MRSReg != -1 && AArch64SysReg::isHINTESystemRegisterEncoding(MRSReg) &&
-        !FeatureBits[AArch64::FeatureHINTE] &&
-        !FeatureBits[AArch64::FeatureAll])
-      MRSReg = MSRReg = -1;
-  }
 
   unsigned PStateImm = -1;
   auto PState15 = AArch64PState::lookupPStateImm0_15ByName(Tok.getString());
