@@ -1456,10 +1456,24 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &value,
                                       cir::FPAttr::get(complexElemTy, imag));
   }
   case APValue::FixedPoint:
-  case APValue::AddrLabelDiff:
-    cgm.errorNYI(
-        "ConstExprEmitter::tryEmitPrivate fixed point, addr label diff");
+    cgm.errorNYI("ConstExprEmitter::tryEmitPrivate fixed point");
     return {};
+  case APValue::AddrLabelDiff: {
+    const AddrLabelExpr *lhsExpr = value.getAddrLabelDiffLHS();
+    const AddrLabelExpr *rhsExpr = value.getAddrLabelDiffRHS();
+
+    // Both labels belong to the function currently being emitted. The actual
+    // subtraction (ptrtoint of each block address, subtract, then truncate to
+    // the result type) is deferred to the LowerToLLVM pass, which is where
+    // block addresses are resolved to concrete basic blocks.
+    mlir::Type resultType = cgm.getTypes().convertType(destType);
+    auto intResultType = mlir::cast<cir::IntType>(resultType);
+    auto func = cast<cir::FuncOp>(cgf->curFn);
+    return cir::BlockAddrDiffAttr::get(
+        builder.getContext(), intResultType, func.getSymName(),
+        lhsExpr->getLabel()->getName(), rhsExpr->getLabel()->getName());
+  }
+
   case APValue::Matrix:
     cgm.errorNYI("ConstExprEmitter::tryEmitPrivate matrix");
     return {};
