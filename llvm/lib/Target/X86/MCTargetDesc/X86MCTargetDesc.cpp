@@ -80,7 +80,7 @@ bool X86_MC::hasLockPrefix(const MCInst &MI) {
 static bool isMemOperand(const MCInst &MI, unsigned Op, unsigned RegClassID) {
   const MCOperand &Base = MI.getOperand(Op + X86::AddrBaseReg);
   const MCOperand &Index = MI.getOperand(Op + X86::AddrIndexReg);
-  const MCRegisterClass &RC = X86MCRegisterClasses[RegClassID];
+  const MCRegisterClass &RC = getX86MCRegisterClass(RegClassID);
 
   return (Base.isReg() && Base.getReg() && RC.contains(Base.getReg())) ||
          (Index.isReg() && Index.getReg() && RC.contains(Index.getReg()));
@@ -624,7 +624,7 @@ bool X86MCInstrAnalysis::clearsSuperRegisters(const MCRegisterInfo &MRI,
   const MCRegisterClass &VR128XRC = MRI.getRegClass(X86::VR128XRegClassID);
   const MCRegisterClass &VR256XRC = MRI.getRegClass(X86::VR256XRegClassID);
 
-  auto ClearsSuperReg = [=](MCRegister RegID) {
+  auto ClearsSuperReg = [&](MCRegister RegID) {
     // On X86-64, a general purpose integer register is viewed as a 64-bit
     // register internal to the processor.
     // An update to the lower 32 bits of a 64 bit integer register is
