@@ -16,7 +16,6 @@ integer ifun
 real rfun
 complex zfun
 external ifun, rfun, zfun, xfun
-!WARNING: Actual procedure argument has an implicit interface which is not known to be compatible with dummy argument 'ifun=' which has an explicit interface [-Wimplicit-interface-actual]
 call sub(ifun)
 call sub(rfun)
 !ERROR: No specific subroutine of generic 'sub' matches the actual arguments

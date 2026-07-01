@@ -83,13 +83,13 @@ void CheckImplicitInterfaceArg(evaluate::ActualArgument &arg,
       if (symbol.attrs().test(Attr::ASYNCHRONOUS)) {
         messages.Warn(/*inModuleFile=*/false, context.languageFeatures(),
             common::UsageWarning::ImplicitInterfaceActual,
-            "Procedure with ASYNCHRONOUS argument '%s' should have an explicit interface"_warn_en_US,
+            "ASYNCHRONOUS actual argument '%s' should be passed via an explicit interface"_warn_en_US,
             expr->AsFortran());
       }
       if (symbol.attrs().test(Attr::VOLATILE)) {
         messages.Warn(/*inModuleFile=*/false, context.languageFeatures(),
             common::UsageWarning::ImplicitInterfaceActual,
-            "Procedure with VOLATILE argument '%s' should have an explicit interface"_warn_en_US,
+            "VOLATILE actual argument '%s' should be passed via an explicit interface"_warn_en_US,
             expr->AsFortran());
       }
       if (const auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
