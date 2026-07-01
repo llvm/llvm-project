@@ -343,7 +343,7 @@ class DbgValueRangeTable {
   DenseMap<DebugVariableAggregate, DbgValueDef> OrigSingleLocVariableValueTable;
 
 public:
-  LLVM_ABI_FOR_TEST void addVariable(Function *F, DebugVariableAggregate DVA);
+  LLVM_ABI void addVariable(Function *F, DebugVariableAggregate DVA);
   bool hasVariableEntry(DebugVariableAggregate DVA) const {
     return OrigVariableValueRangeTable.contains(DVA) ||
            OrigSingleLocVariableValueTable.contains(DVA);

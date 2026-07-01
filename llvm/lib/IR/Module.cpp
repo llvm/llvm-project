@@ -957,11 +957,18 @@ StringRef Module::getTargetABIFromMD() {
   return TargetABI;
 }
 
-WinX64EHUnwindV2Mode Module::getWinX64EHUnwindV2Mode() const {
-  Metadata *MD = getModuleFlag("winx64-eh-unwindv2");
-  if (auto *CI = mdconst::dyn_extract_or_null<ConstantInt>(MD))
-    return static_cast<WinX64EHUnwindV2Mode>(CI->getZExtValue());
-  return WinX64EHUnwindV2Mode::Disabled;
+WinX64EHUnwindMode Module::getWinX64EHUnwindMode() const {
+  // Check the new unified flag first.
+  if (Metadata *MD = getModuleFlag("winx64-eh-unwind")) {
+    if (auto *CI = mdconst::dyn_extract_or_null<ConstantInt>(MD))
+      return static_cast<WinX64EHUnwindMode>(CI->getZExtValue());
+  }
+  // Fall back to the legacy V2 flag.
+  if (Metadata *MD = getModuleFlag("winx64-eh-unwindv2")) {
+    if (auto *CI = mdconst::dyn_extract_or_null<ConstantInt>(MD))
+      return static_cast<WinX64EHUnwindMode>(CI->getZExtValue());
+  }
+  return WinX64EHUnwindMode::V1;
 }
 
 ControlFlowGuardMode Module::getControlFlowGuardMode() const {

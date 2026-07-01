@@ -789,44 +789,10 @@ exit:
 define void @switch4_default_common_dest_with_case(ptr %start, ptr %end) {
 ; COST-LABEL: define void @switch4_default_common_dest_with_case(
 ; COST-SAME: ptr [[START:%.*]], ptr [[END:%.*]]) #[[ATTR0]] {
-; COST-NEXT:  [[ENTRY:.*]]:
-; COST-NEXT:    [[START2:%.*]] = ptrtoint ptr [[START]] to i64
-; COST-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END]] to i64
-; COST-NEXT:    [[TMP0:%.*]] = add i64 [[END1]], -8
-; COST-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[START2]]
-; COST-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 3
-; COST-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
-; COST-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 4
-; COST-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
-; COST:       [[VECTOR_PH]]:
-; COST-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 4
-; COST-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
-; COST-NEXT:    [[TMP4:%.*]] = shl i64 [[N_VEC]], 3
-; COST-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP4]]
-; COST-NEXT:    br label %[[VECTOR_BODY:.*]]
-; COST:       [[VECTOR_BODY]]:
-; COST-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; COST-NEXT:    [[TMP6:%.*]] = shl i64 [[INDEX]], 3
-; COST-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP6]]
-; COST-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[NEXT_GEP]], align 1
-; COST-NEXT:    [[TMP7:%.*]] = icmp eq <4 x i64> [[WIDE_LOAD]], splat (i64 -12)
-; COST-NEXT:    [[TMP8:%.*]] = icmp eq <4 x i64> [[WIDE_LOAD]], splat (i64 13)
-; COST-NEXT:    [[TMP9:%.*]] = or <4 x i1> [[TMP7]], [[TMP8]]
-; COST-NEXT:    [[TMP10:%.*]] = xor <4 x i1> [[TMP9]], splat (i1 true)
-; COST-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> zeroinitializer, ptr align 1 [[NEXT_GEP]], <4 x i1> [[TMP8]])
-; COST-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 42), ptr align 1 [[NEXT_GEP]], <4 x i1> [[TMP7]])
-; COST-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 2), ptr align 1 [[NEXT_GEP]], <4 x i1> [[TMP10]])
-; COST-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; COST-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; COST-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
-; COST:       [[MIDDLE_BLOCK]]:
-; COST-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC]]
-; COST-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
-; COST:       [[SCALAR_PH]]:
-; COST-NEXT:    [[BC_RESUME_VAL:%.*]] = phi ptr [ [[TMP5]], %[[MIDDLE_BLOCK]] ], [ [[START]], %[[ENTRY]] ]
+; COST-NEXT:  [[SCALAR_PH:.*]]:
 ; COST-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; COST:       [[LOOP_HEADER]]:
-; COST-NEXT:    [[PTR_IV:%.*]] = phi ptr [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[PTR_IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; COST-NEXT:    [[PTR_IV:%.*]] = phi ptr [ [[START]], %[[SCALAR_PH]] ], [ [[PTR_IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
 ; COST-NEXT:    [[L:%.*]] = load i64, ptr [[PTR_IV]], align 1
 ; COST-NEXT:    switch i64 [[L]], label %[[DEFAULT:.*]] [
 ; COST-NEXT:      i64 -12, label %[[IF_THEN_1:.*]]
@@ -845,7 +811,7 @@ define void @switch4_default_common_dest_with_case(ptr %start, ptr %end) {
 ; COST:       [[LOOP_LATCH]]:
 ; COST-NEXT:    [[PTR_IV_NEXT]] = getelementptr inbounds i64, ptr [[PTR_IV]], i64 1
 ; COST-NEXT:    [[EC:%.*]] = icmp eq ptr [[PTR_IV_NEXT]], [[END]]
-; COST-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP9:![0-9]+]]
+; COST-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP_HEADER]]
 ; COST:       [[EXIT]]:
 ; COST-NEXT:    ret void
 ;
@@ -956,50 +922,10 @@ exit:
 define void @switch_under_br_default_common_dest_with_case(ptr %start, ptr %end, i64 %x) {
 ; COST-LABEL: define void @switch_under_br_default_common_dest_with_case(
 ; COST-SAME: ptr [[START:%.*]], ptr [[END:%.*]], i64 [[X:%.*]]) #[[ATTR0]] {
-; COST-NEXT:  [[ENTRY:.*]]:
-; COST-NEXT:    [[START2:%.*]] = ptrtoint ptr [[START]] to i64
-; COST-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END]] to i64
-; COST-NEXT:    [[TMP0:%.*]] = add i64 [[END1]], -8
-; COST-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[START2]]
-; COST-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 3
-; COST-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
-; COST-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 4
-; COST-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
-; COST:       [[VECTOR_PH]]:
-; COST-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 4
-; COST-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
-; COST-NEXT:    [[TMP4:%.*]] = shl i64 [[N_VEC]], 3
-; COST-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP4]]
-; COST-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[X]], i64 0
-; COST-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
-; COST-NEXT:    br label %[[VECTOR_BODY:.*]]
-; COST:       [[VECTOR_BODY]]:
-; COST-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; COST-NEXT:    [[TMP6:%.*]] = shl i64 [[INDEX]], 3
-; COST-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP6]]
-; COST-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[NEXT_GEP]], align 1
-; COST-NEXT:    [[TMP7:%.*]] = icmp ule <4 x i64> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
-; COST-NEXT:    [[TMP8:%.*]] = icmp eq <4 x i64> [[WIDE_LOAD]], splat (i64 -12)
-; COST-NEXT:    [[TMP9:%.*]] = icmp eq <4 x i64> [[WIDE_LOAD]], splat (i64 13)
-; COST-NEXT:    [[TMP10:%.*]] = select <4 x i1> [[TMP7]], <4 x i1> [[TMP8]], <4 x i1> zeroinitializer
-; COST-NEXT:    [[TMP11:%.*]] = select <4 x i1> [[TMP7]], <4 x i1> [[TMP9]], <4 x i1> zeroinitializer
-; COST-NEXT:    [[TMP12:%.*]] = or <4 x i1> [[TMP10]], [[TMP11]]
-; COST-NEXT:    [[TMP13:%.*]] = xor <4 x i1> [[TMP12]], splat (i1 true)
-; COST-NEXT:    [[TMP14:%.*]] = select <4 x i1> [[TMP7]], <4 x i1> [[TMP13]], <4 x i1> zeroinitializer
-; COST-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> zeroinitializer, ptr align 1 [[NEXT_GEP]], <4 x i1> [[TMP11]])
-; COST-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 42), ptr align 1 [[NEXT_GEP]], <4 x i1> [[TMP10]])
-; COST-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 2), ptr align 1 [[NEXT_GEP]], <4 x i1> [[TMP14]])
-; COST-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; COST-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; COST-NEXT:    br i1 [[TMP15]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
-; COST:       [[MIDDLE_BLOCK]]:
-; COST-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC]]
-; COST-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
-; COST:       [[SCALAR_PH]]:
-; COST-NEXT:    [[BC_RESUME_VAL:%.*]] = phi ptr [ [[TMP5]], %[[MIDDLE_BLOCK]] ], [ [[START]], %[[ENTRY]] ]
+; COST-NEXT:  [[SCALAR_PH:.*]]:
 ; COST-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; COST:       [[LOOP_HEADER]]:
-; COST-NEXT:    [[PTR_IV:%.*]] = phi ptr [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[PTR_IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; COST-NEXT:    [[PTR_IV:%.*]] = phi ptr [ [[START]], %[[SCALAR_PH]] ], [ [[PTR_IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
 ; COST-NEXT:    [[L:%.*]] = load i64, ptr [[PTR_IV]], align 1
 ; COST-NEXT:    [[C:%.*]] = icmp ule i64 [[L]], [[X]]
 ; COST-NEXT:    br i1 [[C]], label %[[THEN:.*]], label %[[LOOP_LATCH]]
@@ -1021,7 +947,7 @@ define void @switch_under_br_default_common_dest_with_case(ptr %start, ptr %end,
 ; COST:       [[LOOP_LATCH]]:
 ; COST-NEXT:    [[PTR_IV_NEXT]] = getelementptr inbounds i64, ptr [[PTR_IV]], i64 1
 ; COST-NEXT:    [[EC:%.*]] = icmp eq ptr [[PTR_IV_NEXT]], [[END]]
-; COST-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP11:![0-9]+]]
+; COST-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP_HEADER]]
 ; COST:       [[EXIT]]:
 ; COST-NEXT:    ret void
 ;
@@ -1149,10 +1075,10 @@ exit:
 define void @br_under_switch_default_common_dest_with_case(ptr %start, ptr %end, i64 %x) {
 ; COST-LABEL: define void @br_under_switch_default_common_dest_with_case(
 ; COST-SAME: ptr [[START:%.*]], ptr [[END:%.*]], i64 [[X:%.*]]) #[[ATTR0]] {
-; COST-NEXT:  [[SCALAR_PH:.*]]:
-; COST-NEXT:    br label %[[LOOP_HEADER1:.*]]
-; COST:       [[LOOP_HEADER1]]:
-; COST-NEXT:    [[PTR_IV:%.*]] = phi ptr [ [[START]], %[[SCALAR_PH]] ], [ [[PTR_IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; COST-NEXT:  [[ENTRY:.*]]:
+; COST-NEXT:    br label %[[LOOP_HEADER:.*]]
+; COST:       [[LOOP_HEADER]]:
+; COST-NEXT:    [[PTR_IV:%.*]] = phi ptr [ [[START]], %[[ENTRY]] ], [ [[PTR_IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
 ; COST-NEXT:    [[L:%.*]] = load i64, ptr [[PTR_IV]], align 1
 ; COST-NEXT:    switch i64 [[L]], label %[[DEFAULT:.*]] [
 ; COST-NEXT:      i64 -12, label %[[IF_THEN_1:.*]]
@@ -1174,7 +1100,7 @@ define void @br_under_switch_default_common_dest_with_case(ptr %start, ptr %end,
 ; COST:       [[LOOP_LATCH]]:
 ; COST-NEXT:    [[PTR_IV_NEXT]] = getelementptr inbounds i64, ptr [[PTR_IV]], i64 1
 ; COST-NEXT:    [[EC:%.*]] = icmp eq ptr [[PTR_IV_NEXT]], [[END]]
-; COST-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP_HEADER1]]
+; COST-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP_HEADER]]
 ; COST:       [[EXIT]]:
 ; COST-NEXT:    ret void
 ;
@@ -1455,4 +1381,3 @@ loop.latch:
 exit:
   ret void
 }
-

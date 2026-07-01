@@ -344,10 +344,6 @@ using SPSExecutorAddrRangeSequence = SPSSequence<SPSExecutorAddrRange>;
 
 // Provide DenseMapInfo for ExecutorAddrs.
 template <> struct DenseMapInfo<orc::ExecutorAddr> {
-  static inline orc::ExecutorAddr getEmptyKey() {
-    return orc::ExecutorAddr(DenseMapInfo<uint64_t>::getEmptyKey());
-  }
-
   static unsigned getHashValue(const orc::ExecutorAddr &Addr) {
     return DenseMapInfo<uint64_t>::getHashValue(Addr.getValue());
   }

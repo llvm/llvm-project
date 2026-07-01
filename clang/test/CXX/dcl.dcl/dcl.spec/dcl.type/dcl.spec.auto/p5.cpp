@@ -19,17 +19,17 @@ typedef auto *AutoPtr; // expected-error{{'auto' not allowed in typedef}}
 typedef auto (*PFun)(int a); // expected-error{{'auto' not allowed in typedef}}
 typedef auto Fun(int a) -> decltype(a + a);
 
-void g(auto a) { // expected-error{{'auto' not allowed in function prototype}}
+void g(auto a) { // expected-warning{{'auto' parameters are a C++20 extension}}
   try { }
   catch (auto &a) { } // expected-error{{'auto' not allowed in exception declaration}}
   catch (const auto a) { } // expected-error{{'auto' not allowed in exception declaration}}
   try { } catch (auto a) { } // expected-error{{'auto' not allowed in exception declaration}}
 }
 
-void h(auto a[10]) { // expected-error{{'auto' not allowed in function prototype}}
+void h(auto a[10]) { // expected-warning{{'auto' parameters are a C++20 extension}}
 }
 
-void i(const auto a) { // expected-error{{'auto' not allowed in function prototype}}
+void i(const auto a) { // expected-warning{{'auto' parameters are a C++20 extension}}
 }
 
 namespace std {

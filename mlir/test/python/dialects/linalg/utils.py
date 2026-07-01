@@ -248,3 +248,54 @@ def test_infer_contraction_dimensions_from_maps():
             assert len(elementwise_dims.n) == 0
             assert len(elementwise_dims.k) == 0
             assert list(elementwise_dims.batch) == [0, 1]
+
+
+@run
+def test_infer_convolution_dimensions_from_maps():
+    with Context(), Location.unknown():
+        module = Module.create()
+        with InsertionPoint(module.body):
+            # === NHWC/HWCF convolution ===
+            # Loop order: (n=d0, oh=d1, ow=d2, f=d3, kh=d4, kw=d5, c=d6).
+            d0 = AffineDimExpr.get(0)
+            d1 = AffineDimExpr.get(1)
+            d2 = AffineDimExpr.get(2)
+            d3 = AffineDimExpr.get(3)
+            d4 = AffineDimExpr.get(4)
+            d5 = AffineDimExpr.get(5)
+            d6 = AffineDimExpr.get(6)
+
+            input_map = AffineMap.get(7, 0, [d0, d1 + d4, d2 + d5, d6])
+            filter_map = AffineMap.get(7, 0, [d4, d5, d6, d3])
+            output_map = AffineMap.get(7, 0, [d0, d1, d2, d3])
+
+            dims = linalg.infer_convolution_dimensions_from_maps(
+                [input_map, filter_map, output_map]
+            )
+            assert dims is not None
+            assert list(dims.batch) == [0]
+            assert list(dims.output_image) == [1, 2]
+            assert list(dims.output_channel) == [3]
+            assert list(dims.filter_loop) == [4, 5]
+            assert list(dims.input_channel) == [6]
+            assert list(dims.depth) == []
+            assert list(dims.strides) == [1, 1]
+            assert list(dims.dilations) == [1, 1]
+
+            # === Invalid input (wrong number of maps) ===
+            invalid_dims = linalg.infer_convolution_dimensions_from_maps(
+                [input_map, filter_map]
+            )
+            assert invalid_dims is None
+
+            # === Non-convolution (matmul-like) returns None ===
+            dim_m = AffineDimExpr.get(0)
+            dim_n = AffineDimExpr.get(1)
+            dim_k = AffineDimExpr.get(2)
+            a_map = AffineMap.get(3, 0, [dim_m, dim_k])
+            b_map = AffineMap.get(3, 0, [dim_k, dim_n])
+            c_map = AffineMap.get(3, 0, [dim_m, dim_n])
+            non_conv = linalg.infer_convolution_dimensions_from_maps(
+                [a_map, b_map, c_map]
+            )
+            assert non_conv is None

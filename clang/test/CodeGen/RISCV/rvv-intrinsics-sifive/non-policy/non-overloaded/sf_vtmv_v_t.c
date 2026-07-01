@@ -2,7 +2,7 @@
 // REQUIRES: riscv-registered-target
 // RUN: %clang_cc1 -triple riscv64 -target-feature +xsfmmbase \
 // RUN:   -target-feature +zvfhmin -target-feature +zvfbfmin \
-// RUN:   -target-feature +zve64d \
+// RUN:   -target-feature +experimental-zvfofp8min -target-feature +zve64d \
 // RUN:   -disable-O0-optnone -emit-llvm %s -o - | \
 // RUN:   opt -S -passes=mem2reg | FileCheck --check-prefix=CHECK-RV64 %s
 
@@ -126,5 +126,25 @@ vuint32m8_t test_sf_vtmv_v_t_u32m8(size_t tss, size_t vl) {
 //
 vuint64m8_t test_sf_vtmv_v_t_u64m8(size_t tss, size_t vl) {
   return __riscv_sf_vtmv_v_t_u64m8(tss, vl);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 64 x i8> @test_sf_vtmv_v_t_f8e4m3m8(
+// CHECK-RV64-SAME: i64 noundef [[TSS:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 64 x i8> @llvm.riscv.sf.vtmv.v.t.nxv64i8.i64(i64 [[TSS]], i64 [[VL]])
+// CHECK-RV64-NEXT:    ret <vscale x 64 x i8> [[TMP0]]
+//
+vfloat8e4m3m8_t test_sf_vtmv_v_t_f8e4m3m8(size_t tss, size_t vl) {
+  return __riscv_sf_vtmv_v_t_f8e4m3m8(tss, vl);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 64 x i8> @test_sf_vtmv_v_t_f8e5m2m8(
+// CHECK-RV64-SAME: i64 noundef [[TSS:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 64 x i8> @llvm.riscv.sf.vtmv.v.t.nxv64i8.i64(i64 [[TSS]], i64 [[VL]])
+// CHECK-RV64-NEXT:    ret <vscale x 64 x i8> [[TMP0]]
+//
+vfloat8e5m2m8_t test_sf_vtmv_v_t_f8e5m2m8(size_t tss, size_t vl) {
+  return __riscv_sf_vtmv_v_t_f8e5m2m8(tss, vl);
 }
 

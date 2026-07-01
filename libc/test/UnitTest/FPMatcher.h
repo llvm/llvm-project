@@ -196,6 +196,12 @@ template <typename T> struct FPTest : public ErrnoCheckingTest {
   static constexpr T min_denormal = FPBits::min_subnormal().get_val();
   static constexpr T max_denormal = FPBits::max_subnormal().get_val();
 
+#ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+  static constexpr int N_ROUNDING_MODES = 1;
+  static constexpr fputil::testing::RoundingMode ROUNDING_MODES[1] = {
+      fputil::testing::RoundingMode::Nearest,
+  };
+#else
   static constexpr int N_ROUNDING_MODES = 4;
   static constexpr fputil::testing::RoundingMode ROUNDING_MODES[4] = {
       fputil::testing::RoundingMode::Nearest,
@@ -203,6 +209,7 @@ template <typename T> struct FPTest : public ErrnoCheckingTest {
       fputil::testing::RoundingMode::Downward,
       fputil::testing::RoundingMode::TowardZero,
   };
+#endif // LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
 
   void TearDown() override {
     // TODO (PR 135320): Remove this override once all FPTest instances are
@@ -395,6 +402,20 @@ private:
 #define EXPECT_FP_EQ_ROUNDING_NEAREST(expected, actual)                        \
   EXPECT_FP_EQ_ROUNDING_MODE((expected), (actual), RoundingMode::Nearest)
 
+#ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+
+#define EXPECT_FP_EQ_ROUNDING_UPWARD(expected, actual)                         \
+  do {                                                                         \
+  } while (0)
+#define EXPECT_FP_EQ_ROUNDING_DOWNWARD(expected, actual)                       \
+  do {                                                                         \
+  } while (0)
+#define EXPECT_FP_EQ_ROUNDING_TOWARD_ZERO(expected, actual)                    \
+  do {                                                                         \
+  } while (0)
+
+#else // !LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+
 #define EXPECT_FP_EQ_ROUNDING_UPWARD(expected, actual)                         \
   EXPECT_FP_EQ_ROUNDING_MODE((expected), (actual), RoundingMode::Upward)
 
@@ -403,6 +424,8 @@ private:
 
 #define EXPECT_FP_EQ_ROUNDING_TOWARD_ZERO(expected, actual)                    \
   EXPECT_FP_EQ_ROUNDING_MODE((expected), (actual), RoundingMode::TowardZero)
+
+#endif // LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
 
 #define EXPECT_FP_EQ_ALL_ROUNDING_1(expected, actual)                          \
   do {                                                                         \
@@ -450,6 +473,19 @@ private:
 #define ASSERT_FP_EQ_ROUNDING_NEAREST(expected, actual)                        \
   ASSERT_FP_EQ_ROUNDING_MODE((expected), (actual), RoundingMode::Nearest)
 
+#ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+#define ASSERT_FP_EQ_ROUNDING_UPWARD(expected, actual)                         \
+  do {                                                                         \
+  } while (0)
+#define ASSERT_FP_EQ_ROUNDING_DOWNWARD(expected, actual)                       \
+  do {                                                                         \
+  } while (0)
+#define ASSERT_FP_EQ_ROUNDING_TOWARD_ZERO(expected, actual)                    \
+  do {                                                                         \
+  } while (0)
+
+#else // !LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+
 #define ASSERT_FP_EQ_ROUNDING_UPWARD(expected, actual)                         \
   ASSERT_FP_EQ_ROUNDING_MODE((expected), (actual), RoundingMode::Upward)
 
@@ -458,6 +494,8 @@ private:
 
 #define ASSERT_FP_EQ_ROUNDING_TOWARD_ZERO(expected, actual)                    \
   ASSERT_FP_EQ_ROUNDING_MODE((expected), (actual), RoundingMode::TowardZero)
+
+#endif // LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
 
 #define EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_MODE(                             \
     expected, actual, expected_except, rounding_mode)                          \
@@ -476,6 +514,127 @@ private:
   EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_MODE(                                   \
       (expected), (actual), (expected_except), RoundingMode::Nearest)
 
+#define ASSERT_FP_EQ_WITH_EXCEPTION_ROUNDING_MODE(                             \
+    expected, actual, expected_except, rounding_mode)                          \
+  do {                                                                         \
+    using namespace LIBC_NAMESPACE::fputil::testing;                           \
+    ForceRoundingMode __r((rounding_mode));                                    \
+    if (__r.success) {                                                         \
+      LIBC_NAMESPACE::fputil::clear_except(static_cast<int>(FE_ALL_EXCEPT));   \
+      ASSERT_FP_EQ((expected), (actual));                                      \
+      ASSERT_FP_EXCEPTION(expected_except);                                    \
+    }                                                                          \
+  } while (0)
+
+#define ASSERT_FP_EQ_ALL_ROUNDING_1(expected, actual)                          \
+  do {                                                                         \
+    ASSERT_FP_EQ_ROUNDING_NEAREST((expected), (actual));                       \
+    ASSERT_FP_EQ_ROUNDING_UPWARD((expected), (actual));                        \
+    ASSERT_FP_EQ_ROUNDING_DOWNWARD((expected), (actual));                      \
+    ASSERT_FP_EQ_ROUNDING_TOWARD_ZERO((expected), (actual));                   \
+  } while (0)
+
+#define ASSERT_FP_EQ_ALL_ROUNDING_4(expected_nearest, expected_upward,         \
+                                    expected_downward, expected_toward_zero,   \
+                                    actual)                                    \
+  do {                                                                         \
+    ASSERT_FP_EQ_ROUNDING_NEAREST((expected_nearest), (actual));               \
+    ASSERT_FP_EQ_ROUNDING_UPWARD((expected_upward), (actual));                 \
+    ASSERT_FP_EQ_ROUNDING_DOWNWARD((expected_downward), (actual));             \
+    ASSERT_FP_EQ_ROUNDING_TOWARD_ZERO((expected_toward_zero), (actual));       \
+  } while (0)
+
+#define ASSERT_FP_EQ_ALL_ROUNDING_UNSUPPORTED(...)                             \
+  static_assert(false, "Unsupported number of arguments")
+
+#define ASSERT_FP_EQ_ALL_ROUNDING_GET_6TH_ARG(ARG1, ARG2, ARG3, ARG4, ARG5,    \
+                                              ARG6, ...)                       \
+  ARG6
+
+#define ASSERT_FP_EQ_ALL_ROUNDING_SELECTION(...)                               \
+  ASSERT_FP_EQ_ALL_ROUNDING_GET_6TH_ARG(                                       \
+      __VA_ARGS__, ASSERT_FP_EQ_ALL_ROUNDING_4,                                \
+      ASSERT_FP_EQ_ALL_ROUNDING_UNSUPPORTED,                                   \
+      ASSERT_FP_EQ_ALL_ROUNDING_UNSUPPORTED, ASSERT_FP_EQ_ALL_ROUNDING_1)
+
+#define ASSERT_FP_EQ_ALL_ROUNDING(...)                                         \
+  ASSERT_FP_EQ_ALL_ROUNDING_SELECTION(__VA_ARGS__)(__VA_ARGS__)
+
+#define ASSERT_FP_EQ_WITH_EXCEPTION_ROUNDING_NEAREST(expected, actual,         \
+                                                     expected_except)          \
+  ASSERT_FP_EQ_WITH_EXCEPTION_ROUNDING_MODE(                                   \
+      (expected), (actual), (expected_except), RoundingMode::Nearest)
+
+#define ASSERT_FP_EQ_WITH_EXCEPTION_ROUNDING_MODE(                             \
+    expected, actual, expected_except, rounding_mode)                          \
+  do {                                                                         \
+    using namespace LIBC_NAMESPACE::fputil::testing;                           \
+    ForceRoundingMode __r((rounding_mode));                                    \
+    if (__r.success) {                                                         \
+      LIBC_NAMESPACE::fputil::clear_except(static_cast<int>(FE_ALL_EXCEPT));   \
+      ASSERT_FP_EQ((expected), (actual));                                      \
+      ASSERT_FP_EXCEPTION(expected_except);                                    \
+    }                                                                          \
+  } while (0)
+
+#define ASSERT_FP_EQ_ALL_ROUNDING_1(expected, actual)                          \
+  do {                                                                         \
+    ASSERT_FP_EQ_ROUNDING_NEAREST((expected), (actual));                       \
+    ASSERT_FP_EQ_ROUNDING_UPWARD((expected), (actual));                        \
+    ASSERT_FP_EQ_ROUNDING_DOWNWARD((expected), (actual));                      \
+    ASSERT_FP_EQ_ROUNDING_TOWARD_ZERO((expected), (actual));                   \
+  } while (0)
+
+#define ASSERT_FP_EQ_ALL_ROUNDING_4(expected_nearest, expected_upward,         \
+                                    expected_downward, expected_toward_zero,   \
+                                    actual)                                    \
+  do {                                                                         \
+    ASSERT_FP_EQ_ROUNDING_NEAREST((expected_nearest), (actual));               \
+    ASSERT_FP_EQ_ROUNDING_UPWARD((expected_upward), (actual));                 \
+    ASSERT_FP_EQ_ROUNDING_DOWNWARD((expected_downward), (actual));             \
+    ASSERT_FP_EQ_ROUNDING_TOWARD_ZERO((expected_toward_zero), (actual));       \
+  } while (0)
+
+#define ASSERT_FP_EQ_ALL_ROUNDING_UNSUPPORTED(...)                             \
+  static_assert(false, "Unsupported number of arguments")
+
+#define ASSERT_FP_EQ_ALL_ROUNDING_GET_6TH_ARG(ARG1, ARG2, ARG3, ARG4, ARG5,    \
+                                              ARG6, ...)                       \
+  ARG6
+
+#define ASSERT_FP_EQ_ALL_ROUNDING_SELECTION(...)                               \
+  ASSERT_FP_EQ_ALL_ROUNDING_GET_6TH_ARG(                                       \
+      __VA_ARGS__, ASSERT_FP_EQ_ALL_ROUNDING_4,                                \
+      ASSERT_FP_EQ_ALL_ROUNDING_UNSUPPORTED,                                   \
+      ASSERT_FP_EQ_ALL_ROUNDING_UNSUPPORTED, ASSERT_FP_EQ_ALL_ROUNDING_1)
+
+#define ASSERT_FP_EQ_ALL_ROUNDING(...)                                         \
+  ASSERT_FP_EQ_ALL_ROUNDING_SELECTION(__VA_ARGS__)(__VA_ARGS__)
+
+#define ASSERT_FP_EQ_WITH_EXCEPTION_ROUNDING_NEAREST(expected, actual,         \
+                                                     expected_except)          \
+  ASSERT_FP_EQ_WITH_EXCEPTION_ROUNDING_MODE(                                   \
+      (expected), (actual), (expected_except), RoundingMode::Nearest)
+
+#ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+
+#define EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_UPWARD(expected, actual,          \
+                                                    expected_except)           \
+  do {                                                                         \
+  } while (0)
+
+#define EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_DOWNWARD(expected, actual,        \
+                                                      expected_except)         \
+  do {                                                                         \
+  } while (0)
+
+#define EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_TOWARD_ZERO(expected, actual,     \
+                                                         expected_except)      \
+  do {                                                                         \
+  } while (0)
+
+#else // !LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+
 #define EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_UPWARD(expected, actual,          \
                                                     expected_except)           \
   EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_MODE(                                   \
@@ -491,6 +650,8 @@ private:
   EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_MODE(                                   \
       (expected), (actual), (expected_except), RoundingMode::TowardZero)
 
+#endif // LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+
 #define EXPECT_FP_EQ_WITH_EXCEPTION_ALL_ROUNDING(expected, actual,             \
                                                  expected_except)              \
   do {                                                                         \
@@ -503,5 +664,139 @@ private:
     EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_TOWARD_ZERO((expected), (actual),     \
                                                      (expected_except));       \
   } while (0)
+
+#define ASSERT_EQ_ROUNDING_MODE(expected, actual, rounding_mode)               \
+  do {                                                                         \
+    using namespace LIBC_NAMESPACE::fputil::testing;                           \
+    ForceRoundingMode __r((rounding_mode));                                    \
+    if (__r.success) {                                                         \
+      ASSERT_EQ((expected), (actual));                                         \
+    }                                                                          \
+  } while (0)
+
+#define ASSERT_EQ_ROUNDING_NEAREST(expected, actual)                           \
+  ASSERT_EQ_ROUNDING_MODE((expected), (actual), RoundingMode::Nearest)
+
+#ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+#define ASSERT_EQ_ROUNDING_UPWARD(expected, actual)                            \
+  do {                                                                         \
+  } while (0)
+#define ASSERT_EQ_ROUNDING_DOWNWARD(expected, actual)                          \
+  do {                                                                         \
+  } while (0)
+#define ASSERT_EQ_ROUNDING_TOWARD_ZERO(expected, actual)                       \
+  do {                                                                         \
+  } while (0)
+#else // !LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+#define ASSERT_EQ_ROUNDING_UPWARD(expected, actual)                            \
+  ASSERT_EQ_ROUNDING_MODE((expected), (actual), RoundingMode::Upward)
+
+#define ASSERT_EQ_ROUNDING_DOWNWARD(expected, actual)                          \
+  ASSERT_EQ_ROUNDING_MODE((expected), (actual), RoundingMode::Downward)
+
+#define ASSERT_EQ_ROUNDING_TOWARD_ZERO(expected, actual)                       \
+  ASSERT_EQ_ROUNDING_MODE((expected), (actual), RoundingMode::TowardZero)
+#endif // LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+
+#define ASSERT_EQ_ALL_ROUNDING_1(expected, actual)                             \
+  do {                                                                         \
+    ASSERT_EQ_ROUNDING_NEAREST((expected), (actual));                          \
+    ASSERT_EQ_ROUNDING_UPWARD((expected), (actual));                           \
+    ASSERT_EQ_ROUNDING_DOWNWARD((expected), (actual));                         \
+    ASSERT_EQ_ROUNDING_TOWARD_ZERO((expected), (actual));                      \
+  } while (0)
+
+#define ASSERT_EQ_ALL_ROUNDING_4(expected_nearest, expected_upward,            \
+                                 expected_downward, expected_toward_zero,      \
+                                 actual)                                       \
+  do {                                                                         \
+    ASSERT_EQ_ROUNDING_NEAREST((expected_nearest), (actual));                  \
+    ASSERT_EQ_ROUNDING_UPWARD((expected_upward), (actual));                    \
+    ASSERT_EQ_ROUNDING_DOWNWARD((expected_downward), (actual));                \
+    ASSERT_EQ_ROUNDING_TOWARD_ZERO((expected_toward_zero), (actual));          \
+  } while (0)
+
+#define ASSERT_EQ_ALL_ROUNDING_UNSUPPORTED(...)                                \
+  static_assert(false, "Unsupported number of arguments")
+
+#define ASSERT_EQ_ALL_ROUNDING_GET_6TH_ARG(ARG1, ARG2, ARG3, ARG4, ARG5, ARG6, \
+                                           ...)                                \
+  ARG6
+
+#define ASSERT_EQ_ALL_ROUNDING_SELECTION(...)                                  \
+  ASSERT_EQ_ALL_ROUNDING_GET_6TH_ARG(__VA_ARGS__, ASSERT_EQ_ALL_ROUNDING_4,    \
+                                     ASSERT_EQ_ALL_ROUNDING_UNSUPPORTED,       \
+                                     ASSERT_EQ_ALL_ROUNDING_UNSUPPORTED,       \
+                                     ASSERT_EQ_ALL_ROUNDING_1)
+
+#define ASSERT_EQ_ALL_ROUNDING(...)                                            \
+  ASSERT_EQ_ALL_ROUNDING_SELECTION(__VA_ARGS__)(__VA_ARGS__)
+
+#define EXPECT_EQ_ROUNDING_MODE(expected, actual, rounding_mode)               \
+  do {                                                                         \
+    using namespace LIBC_NAMESPACE::fputil::testing;                           \
+    ForceRoundingMode __r((rounding_mode));                                    \
+    if (__r.success) {                                                         \
+      EXPECT_EQ((expected), (actual));                                         \
+    }                                                                          \
+  } while (0)
+
+#define EXPECT_EQ_ROUNDING_NEAREST(expected, actual)                           \
+  EXPECT_EQ_ROUNDING_MODE((expected), (actual), RoundingMode::Nearest)
+
+#ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+#define EXPECT_EQ_ROUNDING_UPWARD(expected, actual)                            \
+  do {                                                                         \
+  } while (0)
+#define EXPECT_EQ_ROUNDING_DOWNWARD(expected, actual)                          \
+  do {                                                                         \
+  } while (0)
+#define EXPECT_EQ_ROUNDING_TOWARD_ZERO(expected, actual)                       \
+  do {                                                                         \
+  } while (0)
+#else // !LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+#define EXPECT_EQ_ROUNDING_UPWARD(expected, actual)                            \
+  EXPECT_EQ_ROUNDING_MODE((expected), (actual), RoundingMode::Upward)
+
+#define EXPECT_EQ_ROUNDING_DOWNWARD(expected, actual)                          \
+  EXPECT_EQ_ROUNDING_MODE((expected), (actual), RoundingMode::Downward)
+
+#define EXPECT_EQ_ROUNDING_TOWARD_ZERO(expected, actual)                       \
+  EXPECT_EQ_ROUNDING_MODE((expected), (actual), RoundingMode::TowardZero)
+#endif // LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+
+#define EXPECT_EQ_ALL_ROUNDING_1(expected, actual)                             \
+  do {                                                                         \
+    EXPECT_EQ_ROUNDING_NEAREST((expected), (actual));                          \
+    EXPECT_EQ_ROUNDING_UPWARD((expected), (actual));                           \
+    EXPECT_EQ_ROUNDING_DOWNWARD((expected), (actual));                         \
+    EXPECT_EQ_ROUNDING_TOWARD_ZERO((expected), (actual));                      \
+  } while (0)
+
+#define EXPECT_EQ_ALL_ROUNDING_4(expected_nearest, expected_upward,            \
+                                 expected_downward, expected_toward_zero,      \
+                                 actual)                                       \
+  do {                                                                         \
+    EXPECT_EQ_ROUNDING_NEAREST((expected_nearest), (actual));                  \
+    EXPECT_EQ_ROUNDING_UPWARD((expected_upward), (actual));                    \
+    EXPECT_EQ_ROUNDING_DOWNWARD((expected_downward), (actual));                \
+    EXPECT_EQ_ROUNDING_TOWARD_ZERO((expected_toward_zero), (actual));          \
+  } while (0)
+
+#define EXPECT_EQ_ALL_ROUNDING_UNSUPPORTED(...)                                \
+  static_assert(false, "Unsupported number of arguments")
+
+#define EXPECT_EQ_ALL_ROUNDING_GET_6TH_ARG(ARG1, ARG2, ARG3, ARG4, ARG5, ARG6, \
+                                           ...)                                \
+  ARG6
+
+#define EXPECT_EQ_ALL_ROUNDING_SELECTION(...)                                  \
+  EXPECT_EQ_ALL_ROUNDING_GET_6TH_ARG(__VA_ARGS__, EXPECT_EQ_ALL_ROUNDING_4,    \
+                                     EXPECT_EQ_ALL_ROUNDING_UNSUPPORTED,       \
+                                     EXPECT_EQ_ALL_ROUNDING_UNSUPPORTED,       \
+                                     EXPECT_EQ_ALL_ROUNDING_1)
+
+#define EXPECT_EQ_ALL_ROUNDING(...)                                            \
+  EXPECT_EQ_ALL_ROUNDING_SELECTION(__VA_ARGS__)(__VA_ARGS__)
 
 #endif // LLVM_LIBC_TEST_UNITTEST_FPMATCHER_H

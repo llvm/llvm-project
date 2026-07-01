@@ -62,33 +62,32 @@ objdump::createCOFFDumper(const object::COFFObjectFile &Obj) {
   return std::make_unique<COFFDumper>(Obj);
 }
 
-constexpr EnumEntry<uint16_t> PEHeaderMagic[] = {
-    {"PE32", uint16_t(COFF::PE32Header::PE32)},
-    {"PE32+", uint16_t(COFF::PE32Header::PE32_PLUS)},
+constexpr EnumStringDef<uint16_t> PEHeaderMagicDefs[] = {
+    {{"PE32"}, uint16_t(COFF::PE32Header::PE32)},
+    {{"PE32+"}, uint16_t(COFF::PE32Header::PE32_PLUS)},
 };
+constexpr auto PEHeaderMagic = BUILD_ENUM_STRINGS(PEHeaderMagicDefs);
 
-constexpr EnumEntry<COFF::WindowsSubsystem> PEWindowsSubsystem[] = {
-    {"unspecified", COFF::IMAGE_SUBSYSTEM_UNKNOWN},
-    {"NT native", COFF::IMAGE_SUBSYSTEM_NATIVE},
-    {"Windows GUI", COFF::IMAGE_SUBSYSTEM_WINDOWS_GUI},
-    {"Windows CUI", COFF::IMAGE_SUBSYSTEM_WINDOWS_CUI},
-    {"POSIX CUI", COFF::IMAGE_SUBSYSTEM_POSIX_CUI},
-    {"Wince CUI", COFF::IMAGE_SUBSYSTEM_WINDOWS_CE_GUI},
-    {"EFI application", COFF::IMAGE_SUBSYSTEM_EFI_APPLICATION},
-    {"EFI boot service driver", COFF::IMAGE_SUBSYSTEM_EFI_BOOT_SERVICE_DRIVER},
-    {"EFI runtime driver", COFF::IMAGE_SUBSYSTEM_EFI_RUNTIME_DRIVER},
-    {"SAL runtime driver", COFF::IMAGE_SUBSYSTEM_EFI_ROM},
-    {"XBOX", COFF::IMAGE_SUBSYSTEM_XBOX},
+constexpr EnumStringDef<COFF::WindowsSubsystem> PEWindowsSubsystemDefs[] = {
+    {{"unspecified"}, COFF::IMAGE_SUBSYSTEM_UNKNOWN},
+    {{"NT native"}, COFF::IMAGE_SUBSYSTEM_NATIVE},
+    {{"Windows GUI"}, COFF::IMAGE_SUBSYSTEM_WINDOWS_GUI},
+    {{"Windows CUI"}, COFF::IMAGE_SUBSYSTEM_WINDOWS_CUI},
+    {{"POSIX CUI"}, COFF::IMAGE_SUBSYSTEM_POSIX_CUI},
+    {{"Wince CUI"}, COFF::IMAGE_SUBSYSTEM_WINDOWS_CE_GUI},
+    {{"EFI application"}, COFF::IMAGE_SUBSYSTEM_EFI_APPLICATION},
+    {{"EFI boot service driver"},
+     COFF::IMAGE_SUBSYSTEM_EFI_BOOT_SERVICE_DRIVER},
+    {{"EFI runtime driver"}, COFF::IMAGE_SUBSYSTEM_EFI_RUNTIME_DRIVER},
+    {{"SAL runtime driver"}, COFF::IMAGE_SUBSYSTEM_EFI_ROM},
+    {{"XBOX"}, COFF::IMAGE_SUBSYSTEM_XBOX},
 };
+constexpr auto PEWindowsSubsystem = BUILD_ENUM_STRINGS(PEWindowsSubsystemDefs);
 
 template <typename T, typename TEnum>
-static void printOptionalEnumName(T Value,
-                                  ArrayRef<EnumEntry<TEnum>> EnumValues) {
-  for (const EnumEntry<TEnum> &I : EnumValues)
-    if (I.Value == Value) {
-      outs() << "\t(" << I.Name << ')';
-      return;
-    }
+static void printOptionalEnumName(T Value, EnumStrings<TEnum> EnumValues) {
+  if (StringRef Name = EnumValues.toString(Value); !Name.empty())
+    outs() << "\t(" << Name << ')';
 }
 
 template <class PEHeader>
@@ -105,7 +104,7 @@ void COFFDumper::printPEHeader(const PEHeader &Hdr) const {
   };
 
   printU16("Magic", Hdr.Magic, "%04x");
-  printOptionalEnumName(Hdr.Magic, ArrayRef(PEHeaderMagic));
+  printOptionalEnumName(Hdr.Magic, EnumStrings(PEHeaderMagic));
   outs() << '\n';
   print("MajorLinkerVersion", Hdr.MajorLinkerVersion);
   print("MinorLinkerVersion", Hdr.MinorLinkerVersion);
@@ -130,7 +129,7 @@ void COFFDumper::printPEHeader(const PEHeader &Hdr) const {
   printU32("SizeOfHeaders", Hdr.SizeOfHeaders, "%08x\n");
   printU32("CheckSum", Hdr.CheckSum, "%08x\n");
   printU16("Subsystem", Hdr.Subsystem, "%08x");
-  printOptionalEnumName(Hdr.Subsystem, ArrayRef(PEWindowsSubsystem));
+  printOptionalEnumName(Hdr.Subsystem, EnumStrings(PEWindowsSubsystem));
   outs() << '\n';
 
   printU16("DllCharacteristics", Hdr.DLLCharacteristics, "%08x\n");
@@ -805,6 +804,8 @@ static void printWin64EHUnwindInfoV3(ArrayRef<uint8_t> Data) {
                    Info.NumberOfOps, "      ");
 
   // Epilog descriptors
+  uint8_t BaseEpilogFlags = 0;
+  bool HaveBaseEpilog = false;
   for (unsigned I = 0; I < Info.NumberOfEpilogs; ++I) {
     const DecodedEpilogV3 &Epi = Info.Epilogs[I];
 
@@ -836,9 +837,17 @@ static void printWin64EHUnwindInfoV3(ArrayRef<uint8_t> Data) {
         WithColor::warning(errs())
             << "first epilog cannot inherit (NumberOfOps=0)\n";
       } else {
-        // Surface the values inherited from the previous epilog so a
+        // Per the V3 spec, Flags bits 0 and 1 are producer-replicated into an
+        // inherited descriptor, so they must match the base epilog. Warn if a
+        // non-compliant producer left them inconsistent.
+        if (HaveBaseEpilog && (Epi.Flags & 0x03) != (BaseEpilogFlags & 0x03))
+          WithColor::warning(errs())
+              << format("inherited epilog flags (0x%X) do not match base "
+                        "epilog flags (0x%X)\n",
+                        Epi.Flags & 0x03, BaseEpilogFlags & 0x03);
+        // Surface the values inherited from the base epilog so a
         // reader can see what the unwinder will actually execute.
-        outs() << format("      (inherits from previous epilog: FirstOp=0x%X, "
+        outs() << format("      (inherits from base epilog: FirstOp=0x%X, "
                          "IpOfLast=+0x%X, %u ops)\n",
                          Epi.FirstOp,
                          static_cast<unsigned>(Epi.IpOffsetOfLastInstruction),
@@ -853,6 +862,10 @@ static void printWin64EHUnwindInfoV3(ArrayRef<uint8_t> Data) {
           Epi.FirstOp);
       printWODSequence(Info.WODPool, Epi.FirstOp, ArrayRef(Epi.IpOffsets),
                        Epi.NumberOfOps, "      ");
+      // This is a full descriptor; it becomes the base that subsequent
+      // inherited descriptors replicate their flags from.
+      BaseEpilogFlags = Epi.Flags;
+      HaveBaseEpilog = true;
     }
   }
 

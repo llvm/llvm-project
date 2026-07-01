@@ -143,6 +143,61 @@ set(ASAN_DYNAMIC_CFLAGS ${ASAN_CFLAGS})
 append_list_if(COMPILER_RT_HAS_FTLS_MODEL_INITIAL_EXEC
   -ftls-model=initial-exec ASAN_DYNAMIC_CFLAGS)
 
+# We need to detect if the C++ library we are linking against supports exceptions.
+# If we are building libcxx in the same runtimes build, we can check LIBCXX_ENABLE_EXCEPTIONS.
+# Otherwise, we default to ON if the compiler supports it.
+if(DEFINED LIBCXX_ENABLE_EXCEPTIONS)
+  set(ASAN_ENABLE_EXCEPTIONS_DEFAULT ${LIBCXX_ENABLE_EXCEPTIONS})
+elseif(DEFINED LIBCXXABI_ENABLE_EXCEPTIONS)
+  set(ASAN_ENABLE_EXCEPTIONS_DEFAULT ${LIBCXXABI_ENABLE_EXCEPTIONS})
+else()
+  set(ASAN_ENABLE_EXCEPTIONS_DEFAULT ON)
+endif()
+
+option(COMPILER_RT_ASAN_ENABLE_EXCEPTIONS
+  "Enable exceptions in ASan C++ runtime" ${ASAN_ENABLE_EXCEPTIONS_DEFAULT})
+
+# Flags for the C++ slice (asan_new_delete.cpp). When exceptions are enabled
+# it throws std::bad_alloc, so the TU needs -fexceptions and access to <new>.
+
+# COMPILER_RT_CXX_LIBRARY=none opts out of CXX library support. Reject its
+# combination with enabled exception handling at configure time rather than
+# silently leaking host C++ headers into the build.
+if(COMPILER_RT_ASAN_ENABLE_EXCEPTIONS AND
+   COMPILER_RT_CXX_LIBRARY STREQUAL "none")
+  message(FATAL_ERROR
+    "COMPILER_RT_ASAN_ENABLE_EXCEPTIONS=ON requires a C++ standard "
+    "library (for <new> and std::bad_alloc), but "
+    "COMPILER_RT_CXX_LIBRARY=none. Set "
+    "-DCOMPILER_RT_ASAN_ENABLE_EXCEPTIONS=OFF or pick a different "
+    "COMPILER_RT_CXX_LIBRARY.")
+endif()
+
+# Two paths for resolving <new>:
+#   * in-tree libc++ available (e.g. runtimes build, cross toolchain): keep
+#     -nostdinc++ so host headers stay out, route <new> through the prepared
+#     libc++ via COMPILER_RT_CXX_CFLAGS, and add cxx-headers to DEPS so the
+#     header tree is staged first.
+#   * Otherwise (standalone build using the host toolchain): drop
+#     -nostdinc++ for this TU only so the host C++ headers can supply <new>.
+set(ASAN_CXX_CFLAGS ${ASAN_CFLAGS})
+set(ASAN_DYNAMIC_CXX_CFLAGS ${ASAN_DYNAMIC_CFLAGS})
+set(ASAN_CXX_DEPS "")
+if(COMPILER_RT_ASAN_ENABLE_EXCEPTIONS AND COMPILER_RT_HAS_FEXCEPTIONS_FLAG)
+  list(REMOVE_ITEM ASAN_CXX_CFLAGS -fno-exceptions)
+  list(APPEND ASAN_CXX_CFLAGS -fexceptions)
+  list(REMOVE_ITEM ASAN_DYNAMIC_CXX_CFLAGS -fno-exceptions)
+  list(APPEND ASAN_DYNAMIC_CXX_CFLAGS -fexceptions)
+  if(TARGET cxx-headers OR HAVE_LIBCXX)
+    list(APPEND ASAN_CXX_CFLAGS ${COMPILER_RT_CXX_CFLAGS})
+    list(APPEND ASAN_DYNAMIC_CXX_CFLAGS ${COMPILER_RT_CXX_CFLAGS})
+    set(ASAN_CXX_DEPS cxx-headers)
+  else()
+    list(REMOVE_ITEM ASAN_CXX_CFLAGS -nostdinc++)
+    list(REMOVE_ITEM ASAN_DYNAMIC_CXX_CFLAGS -nostdinc++)
+  endif()
+endif()
+
 # LLVM turns /OPT:ICF back on when LLVM_ENABLE_PDBs is set
 # we _REALLY_ need to turn it back off for ASAN, because the way
 # asan emulates weak functions from DLLs requires NOICF
@@ -165,10 +220,20 @@ append_list_if(MINGW "${MINGW_LIBRARIES}" ASAN_DYNAMIC_LIBS)
 add_compiler_rt_object_libraries(RTAsan_dynamic
   OS ${SANITIZER_COMMON_SUPPORTED_OS}
   ARCHS ${ASAN_SUPPORTED_ARCH}
-  SOURCES ${ASAN_SOURCES} ${ASAN_CXX_SOURCES}
+  SOURCES ${ASAN_SOURCES}
   ADDITIONAL_HEADERS ${ASAN_HEADERS}
   CFLAGS ${ASAN_DYNAMIC_CFLAGS}
   DEFS ${ASAN_DYNAMIC_DEFINITIONS})
+
+# Separate object library for the dynamic build's C++ slice.
+add_compiler_rt_object_libraries(RTAsan_dynamic_cxx
+  OS ${SANITIZER_COMMON_SUPPORTED_OS}
+  ARCHS ${ASAN_SUPPORTED_ARCH}
+  SOURCES ${ASAN_CXX_SOURCES}
+  ADDITIONAL_HEADERS ${ASAN_HEADERS}
+  CFLAGS ${ASAN_DYNAMIC_CXX_CFLAGS}
+  DEFS ${ASAN_DYNAMIC_DEFINITIONS}
+  DEPS ${ASAN_CXX_DEPS})
 
 if(NOT APPLE)
   add_compiler_rt_object_libraries(RTAsan
@@ -181,8 +246,9 @@ if(NOT APPLE)
     ARCHS ${ASAN_SUPPORTED_ARCH}
     SOURCES ${ASAN_CXX_SOURCES}
     ADDITIONAL_HEADERS ${ASAN_HEADERS}
-    CFLAGS ${ASAN_CFLAGS}
-    DEFS ${ASAN_COMMON_DEFINITIONS})
+    CFLAGS ${ASAN_CXX_CFLAGS}
+    DEFS ${ASAN_COMMON_DEFINITIONS}
+    DEPS ${ASAN_CXX_DEPS})
   add_compiler_rt_object_libraries(RTAsan_static
     ARCHS ${ASAN_SUPPORTED_ARCH}
     SOURCES ${ASAN_STATIC_SOURCES}
@@ -219,6 +285,7 @@ if(APPLE)
     OS ${SANITIZER_COMMON_SUPPORTED_OS}
     ARCHS ${ASAN_SUPPORTED_ARCH}
     OBJECT_LIBS RTAsan_dynamic
+                RTAsan_dynamic_cxx
                 RTInterception
                 RTSanitizerCommon
                 RTSanitizerCommonLibc
@@ -319,6 +386,7 @@ else()
       ARCHS ${arch}
       OBJECT_LIBS ${ASAN_COMMON_RUNTIME_OBJECT_LIBS}
               RTAsan_dynamic
+              RTAsan_dynamic_cxx
               # The only purpose of RTAsan_dynamic_version_script_dummy is to
               # carry a dependency of the shared runtime on the version script.
               # Replacing it with a straightforward
@@ -394,7 +462,7 @@ endif()
 
 add_compiler_rt_resource_file(asan_ignorelist asan_ignorelist.txt asan)
 
-# On AIX, static sanitizer libraries are not added to the DSO, so we need to put 
+# On AIX, static sanitizer libraries are not added to the DSO, so we need to put
 # asan.link_with_main_exec.txt and asan_cxx.link_with_main_exec.txt to the build
 # and install dir for use in resolving undefined sanitizer symbols at runtime.
 if ("${CMAKE_SYSTEM_NAME}" MATCHES "AIX")

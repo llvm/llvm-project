@@ -271,6 +271,48 @@ struct AvgPool2dAdaptiveToAvgPool2d
   }
 };
 
+struct AvgPool2dIsNoOp : public OpRewritePattern<tosa::AvgPool2dOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tosa::AvgPool2dOp op,
+                                PatternRewriter &rewriter) const override {
+    // Prevent canonicalization if input/output shapes don't align
+    if (op.getInput().getType() != op.getOutput().getType())
+      return rewriter.notifyMatchFailure(
+          op, "expected input and output types to match");
+
+    const auto inputType = llvm::cast<ShapedType>(op.getInput().getType());
+    if (!llvm::isa<FloatType>(inputType.getElementType()))
+      return rewriter.notifyMatchFailure(op,
+                                         "expected floating-point input type");
+
+    // For statically known zero points, the verifier ensures zero points are
+    // zero for floating-point types
+    if (!matchPattern(op.getInputZp(), m_Constant()) ||
+        !matchPattern(op.getOutputZp(), m_Constant()))
+      return rewriter.notifyMatchFailure(
+          op,
+          "expected input and output zero points to be statically verifiable");
+
+    if (!llvm::all_of(op.getKernel(), [](int64_t val) { return val == 1; }))
+      return rewriter.notifyMatchFailure(op, "expected unit kernel");
+
+    if (!llvm::all_of(op.getStride(), [](int64_t val) { return val == 1; }))
+      return rewriter.notifyMatchFailure(op, "expected unit stride");
+
+    if (!llvm::all_of(op.getPad(), [](int64_t val) { return val == 0; }))
+      return rewriter.notifyMatchFailure(op, "expected zero padding");
+
+    rewriter.replaceOp(op, op.getInput());
+    return success();
+  }
+};
+
+void AvgPool2dOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                              MLIRContext *context) {
+  results.add<AvgPool2dIsNoOp>(context);
+}
+
 void AvgPool2dAdaptiveOp::getCanonicalizationPatterns(
     RewritePatternSet &results, MLIRContext *context) {
   results.add<AvgPool2dAdaptiveToAvgPool2d>(context);
@@ -285,6 +327,15 @@ struct MaxPool2dIsNoOp : public OpRewritePattern<tosa::MaxPool2dOp> {
     Value output = op.getOutput();
     ShapedType inputType = llvm::cast<ShapedType>(input.getType());
     ShapedType outputType = llvm::cast<ShapedType>(output.getType());
+
+    if (input.getType() == output.getType() &&
+        llvm::all_of(op.getKernel(), [](int64_t val) { return val == 1; }) &&
+        llvm::all_of(op.getStride(), [](int64_t val) { return val == 1; }) &&
+        llvm::all_of(op.getPad(), [](int64_t val) { return val == 0; }) &&
+        op.getNanMode() == tosa::NanPropagationMode::PROPAGATE) {
+      rewriter.replaceOp(op, input);
+      return success();
+    }
 
     if (!inputType.hasStaticShape() || !outputType.hasStaticShape()) {
       return failure();
@@ -1238,6 +1289,27 @@ void CastToBlockScaledOp::getCanonicalizationPatterns(
   results.add<CancellingBlockScaledCastsOptimization>(context);
 }
 
+struct RowGatherToGather : public OpRewritePattern<tosa::RowGatherOp> {
+  using OpRewritePattern<tosa::RowGatherOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tosa::RowGatherOp op,
+                                PatternRewriter &rewriter) const override {
+    const FailureOr<int32_t> rowCount =
+        mlir::tosa::getConstantScalarIntValue<int32_t>(op.getRowCount());
+    if (failed(rowCount) || rowCount.value() != 1)
+      return failure();
+
+    rewriter.replaceOpWithNewOp<tosa::GatherOp>(
+        op, op.getOutput().getType(), op.getValues(), op.getIndices());
+    return success();
+  }
+};
+
+void RowGatherOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                              MLIRContext *context) {
+  results.add<RowGatherToGather>(context);
+}
+
 //===----------------------------------------------------------------------===//
 // Operator Folders.
 //===----------------------------------------------------------------------===//
@@ -1515,6 +1587,24 @@ struct Exp2FoldAdaptor {
   }
 };
 
+// The specification requires shape div operations to have non-negative lhs and
+// strictly positive rhs so we can only fold when these conditions are met.
+template <bool Ceil>
+struct ShapeDivFoldAdaptor {
+  static FailureOr<APInt> fold(const APInt &lhs, const APInt &rhs,
+                               bool isUnsigned) {
+    assert(!isUnsigned &&
+           "unsigned values are not supported for shape div folders");
+    if (lhs.isNegative() || !rhs.isStrictlyPositive())
+      return failure();
+    return DivFoldAdaptor<Ceil>::fold(lhs, rhs, isUnsigned);
+  }
+
+  static FailureOr<APFloat> fold(const APFloat &lhs, const APFloat &rhs) {
+    return failure();
+  }
+};
+
 struct Log2CeilFoldAdaptor {
   static FailureOr<APInt> fold(const APInt &value, bool isUnsigned) {
     if (!value.isStrictlyPositive())
@@ -1648,10 +1738,12 @@ OpFoldResult IntDivOp::fold(FoldAdaptor adaptor) {
       llvm::dyn_cast_if_present<DenseElementsAttr>(adaptor.getInput1());
   auto rhsAttr =
       llvm::dyn_cast_if_present<DenseElementsAttr>(adaptor.getInput2());
-  if (lhsAttr && lhsAttr.isSplat()) {
+  if (lhsAttr && lhsAttr.isSplat() && rhsAttr && rhsAttr.isSplat()) {
     if (llvm::isa<IntegerType>(resultETy) && resultTy.hasStaticShape() &&
-        lhsAttr.getSplatValue<APInt>().isZero())
+        lhsAttr.getSplatValue<APInt>().isZero() &&
+        !rhsAttr.getSplatValue<APInt>().isZero()) {
       return lhsAttr.resizeSplat(resultTy);
+    }
   }
 
   if (rhsAttr && rhsAttr.isSplat()) {
@@ -2430,11 +2522,11 @@ OpFoldResult tosa::MulShapeOp::fold(FoldAdaptor adaptor) {
 }
 
 OpFoldResult tosa::DivCeilShapeOp::fold(FoldAdaptor adaptor) {
-  return binaryFold<DivCeilShapeOp, DivFoldAdaptor</*Ceil*/ true>>(this);
+  return binaryFold<DivCeilShapeOp, ShapeDivFoldAdaptor</*Ceil*/ true>>(this);
 }
 
 OpFoldResult tosa::DivFloorShapeOp::fold(FoldAdaptor adaptor) {
-  return binaryFold<DivFloorShapeOp, DivFoldAdaptor</*Ceil*/ false>>(this);
+  return binaryFold<DivFloorShapeOp, ShapeDivFoldAdaptor</*Ceil*/ false>>(this);
 }
 
 OpFoldResult tosa::ModShapeOp::fold(FoldAdaptor adaptor) {

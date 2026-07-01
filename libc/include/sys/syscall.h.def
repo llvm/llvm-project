@@ -1637,6 +1637,10 @@
 #define SYS_recvmmsg __NR_recvmmsg
 #endif
 
+#ifdef __NR_recvmmsg_time64
+#define SYS_recvmmsg_time64 __NR_recvmmsg_time64
+#endif
+
 #ifdef __NR_recvmsg
 #define SYS_recvmsg __NR_recvmsg
 #endif

@@ -66,7 +66,7 @@ let SchedModel = MipsI6400Model in {
                                           CACHE_R6, SC64_R6)>;
   def : InstRW<[I6400WriteLSULoad],
                (instrs LB, LBu, LBu64, LD, LH, LHu, LHu64, LW, LWu, LDC1,
-		   LDC164, LWC1, LD_F16, ST_F16, LDC2_R6, LDC3, LWC2_R6,
+		   LDC164, LWC1, LDC2_R6, LDC3, LWC2_R6,
                    LLD_R6, LL_R6, LWPC, LWUPC, LDPC, ST_B, ST_H, ST_W, ST_D,
 		   LB64, LH64, LW64, LWL64, LWR64, SB64, SH64, SW64, SWL64,
 		   SWR64, LL64_R6)>;

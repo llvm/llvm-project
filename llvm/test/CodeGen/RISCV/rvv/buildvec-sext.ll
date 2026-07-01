@@ -59,18 +59,18 @@ define <4 x i32> @buildvec_mixed_sext_zext_v4(<8 x i16> %x) {
 ; CHECK-NEXT:    vslidedown.vi v9, v8, 1
 ; CHECK-NEXT:    vmv.x.s a1, v9
 ; CHECK-NEXT:    vslidedown.vi v9, v8, 2
+; CHECK-NEXT:    vmv.x.s a2, v9
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 3
-; CHECK-NEXT:    lui a2, 16
-; CHECK-NEXT:    vmv.x.s a3, v9
-; CHECK-NEXT:    vmv.x.s a4, v8
-; CHECK-NEXT:    addi a2, a2, -1
-; CHECK-NEXT:    and a1, a1, a2
-; CHECK-NEXT:    and a2, a4, a2
+; CHECK-NEXT:    vmv.x.s a3, v8
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.x v8, a0
+; CHECK-NEXT:    lui a0, 16
+; CHECK-NEXT:    addi a0, a0, -1
+; CHECK-NEXT:    and a1, a1, a0
 ; CHECK-NEXT:    vslide1down.vx v8, v8, a1
-; CHECK-NEXT:    vslide1down.vx v8, v8, a3
 ; CHECK-NEXT:    vslide1down.vx v8, v8, a2
+; CHECK-NEXT:    and a0, a3, a0
+; CHECK-NEXT:    vslide1down.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %e0 = extractelement <8 x i16> %x, i32 0
   %e1 = extractelement <8 x i16> %x, i32 1

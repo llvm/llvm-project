@@ -1280,6 +1280,48 @@ define void @fastmathflags_fptrunc(float %op1) {
   ret void
 }
 
+; CHECK-LABEL: fastmathflags_uitofp(
+define void @fastmathflags_uitofp(i32 %op1) {
+  %f.nnan = uitofp nnan i32 %op1 to float
+  ; CHECK: %f.nnan = uitofp nnan i32 %op1 to float
+  %f.ninf = uitofp nnan i32 %op1 to float
+  ; CHECK: %f.ninf = uitofp nnan i32 %op1 to float
+  %f.nsz = uitofp nnan i32 %op1 to float
+  ; CHECK: %f.nsz = uitofp nnan i32 %op1 to float
+  %f.arcp = uitofp nnan i32 %op1 to float
+  ; CHECK: %f.arcp = uitofp nnan i32 %op1 to float
+  %f.contract = uitofp contract i32 %op1 to float
+  ; CHECK: %f.contract = uitofp contract i32 %op1 to float
+  %f.afn = uitofp afn i32 %op1 to float
+  ; CHECK: %f.afn = uitofp afn i32 %op1 to float
+  %f.reassoc = uitofp reassoc i32 %op1 to float
+  ; CHECK: %f.reassoc = uitofp reassoc i32 %op1 to float
+  %f.fast = uitofp fast i32 %op1 to float
+  ; CHECK: %f.fast = uitofp fast i32 %op1 to float
+  ret void
+}
+
+; CHECK-LABEL: fastmathflags_sitofp(
+define void @fastmathflags_sitofp(i32 %op1) {
+  %f.nnan = sitofp nnan i32 %op1 to float
+  ; CHECK: %f.nnan = sitofp nnan i32 %op1 to float
+  %f.ninf = sitofp nnan i32 %op1 to float
+  ; CHECK: %f.ninf = sitofp nnan i32 %op1 to float
+  %f.nsz = sitofp nnan i32 %op1 to float
+  ; CHECK: %f.nsz = sitofp nnan i32 %op1 to float
+  %f.arcp = sitofp nnan i32 %op1 to float
+  ; CHECK: %f.arcp = sitofp nnan i32 %op1 to float
+  %f.contract = sitofp contract i32 %op1 to float
+  ; CHECK: %f.contract = sitofp contract i32 %op1 to float
+  %f.afn = sitofp afn i32 %op1 to float
+  ; CHECK: %f.afn = sitofp afn i32 %op1 to float
+  %f.reassoc = sitofp reassoc i32 %op1 to float
+  ; CHECK: %f.reassoc = sitofp reassoc i32 %op1 to float
+  %f.fast = sitofp fast i32 %op1 to float
+  ; CHECK: %f.fast = sitofp fast i32 %op1 to float
+  ret void
+}
+
 ;; Type System
 %opaquety = type opaque
 define void @typesystem() {

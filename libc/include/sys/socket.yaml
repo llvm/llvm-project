@@ -11,6 +11,7 @@ types:
   - type_name: sa_family_t
   - type_name: struct_cmsghdr
   - type_name: struct_mmsghdr
+  - type_name: struct_timespec
   - type_name: struct_msghdr
   - type_name: struct_iovec
   - type_name: struct_linger
@@ -105,6 +106,16 @@ functions:
       - type: int
       - type: struct sockaddr *__restrict
       - type: socklen_t *__restrict
+  - name: recvmmsg
+    standards:
+      - linux
+    return_type: int
+    arguments:
+      - type: int
+      - type: struct mmsghdr *
+      - type: unsigned int
+      - type: int
+      - type: struct timespec *
   - name: recvmsg
     standards:
       - posix

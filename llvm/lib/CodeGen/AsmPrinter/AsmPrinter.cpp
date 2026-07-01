@@ -1608,8 +1608,7 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
     if (Features.FuncEntryCount) {
       OutStreamer->AddComment("function entry count");
       auto MaybeEntryCount = MF.getFunction().getEntryCount();
-      OutStreamer->emitULEB128IntValue(
-          MaybeEntryCount ? MaybeEntryCount->getCount() : 0);
+      OutStreamer->emitULEB128IntValue(MaybeEntryCount ? *MaybeEntryCount : 0);
     }
     const MachineBlockFrequencyInfo *MBFI =
         Features.BBFreq
@@ -1753,16 +1752,18 @@ void AsmPrinter::emitStackUsage(const MachineFunction &MF) {
 }
 
 /// Extracts a generalized numeric type identifier of a Function's type from
-/// type metadata. Returns null if metadata cannot be found.
+/// callgraph metadata. Returns null if metadata cannot be found.
 static ConstantInt *extractNumericCGTypeId(const Function &F) {
   SmallVector<MDNode *, 2> Types;
-  F.getMetadata(LLVMContext::MD_type, Types);
+  F.getMetadata(LLVMContext::MD_callgraph, Types);
   for (const auto &Type : Types) {
-    if (Type->hasGeneralizedMDString()) {
-      MDString *MDGeneralizedTypeId = cast<MDString>(Type->getOperand(1));
-      uint64_t TypeIdVal = llvm::MD5Hash(MDGeneralizedTypeId->getString());
-      IntegerType *Int64Ty = Type::getInt64Ty(F.getContext());
-      return ConstantInt::get(Int64Ty, TypeIdVal);
+    if (Type->getNumOperands() == 1 && isa<MDString>(Type->getOperand(0))) {
+      MDString *MDGeneralizedTypeId = cast<MDString>(Type->getOperand(0));
+      if (MDGeneralizedTypeId->getString().ends_with(".generalized")) {
+        uint64_t TypeIdVal = llvm::MD5Hash(MDGeneralizedTypeId->getString());
+        IntegerType *Int64Ty = Type::getInt64Ty(F.getContext());
+        return ConstantInt::get(Int64Ty, TypeIdVal);
+      }
     }
   }
   return nullptr;
@@ -2754,12 +2755,12 @@ void AsmPrinter::emitGlobalIFunc(Module &M, const GlobalIFunc &GI) {
 
   MCSymbol *Stub = getSymbol(&GI);
   EmitLinkage(Stub);
-  OutStreamer->emitCodeAlignment(TextAlign, getIFuncMCSubtargetInfo());
+  OutStreamer->emitCodeAlignment(TextAlign, *getIFuncMCSubtargetInfo());
   OutStreamer->emitLabel(Stub);
   emitVisibility(Stub, GI.getVisibility());
   emitMachOIFuncStubBody(M, GI, LazyPointer);
 
-  OutStreamer->emitCodeAlignment(TextAlign, getIFuncMCSubtargetInfo());
+  OutStreamer->emitCodeAlignment(TextAlign, *getIFuncMCSubtargetInfo());
   OutStreamer->emitLabel(StubHelper);
   emitVisibility(StubHelper, GI.getVisibility());
   emitMachOIFuncStubHelperBody(M, GI, LazyPointer);
@@ -3833,7 +3834,7 @@ Align AsmPrinter::emitAlignment(Align Alignment, const GlobalObject *GV,
       STI = &getSubtargetInfo();
     else
       STI = &TM.getMCSubtargetInfo();
-    OutStreamer->emitCodeAlignment(Alignment, STI, MaxBytesToEmit);
+    OutStreamer->emitCodeAlignment(Alignment, *STI, MaxBytesToEmit);
   } else
     OutStreamer->emitValueToAlignment(Alignment, 0, 1, MaxBytesToEmit);
   return Alignment;
@@ -4163,6 +4164,11 @@ static void emitGlobalConstantLargeInt(const ConstantInt *CI, AsmPrinter &AP);
 static void emitGlobalConstantVector(const DataLayout &DL, const Constant *CV,
                                      AsmPrinter &AP,
                                      AsmPrinter::AliasMapTy *AliasList) {
+  uint64_t AllocSize = DL.getTypeAllocSize(CV->getType());
+
+  if (CV->isNullValue())
+    return AP.OutStreamer->emitZeros(AllocSize);
+
   auto *VTy = cast<FixedVectorType>(CV->getType());
   Type *ElementType = VTy->getElementType();
   uint64_t ElementSizeInBits = DL.getTypeSizeInBits(ElementType);
@@ -4187,14 +4193,13 @@ static void emitGlobalConstantVector(const DataLayout &DL, const Constant *CV,
     EmittedSize = DL.getTypeStoreSize(CV->getType());
   } else {
     for (unsigned I = 0, E = VTy->getNumElements(); I != E; ++I) {
-      emitGlobalAliasInline(AP, DL.getTypeAllocSize(CV->getType()) * I, AliasList);
+      emitGlobalAliasInline(AP, AllocSize * I, AliasList);
       emitGlobalConstantImpl(DL, CV->getAggregateElement(I), AP);
     }
     EmittedSize = DL.getTypeAllocSize(ElementType) * VTy->getNumElements();
   }
 
-  unsigned Size = DL.getTypeAllocSize(CV->getType());
-  if (unsigned Padding = Size - EmittedSize)
+  if (unsigned Padding = AllocSize - EmittedSize)
     AP.OutStreamer->emitZeros(Padding);
 }
 

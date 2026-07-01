@@ -99,12 +99,9 @@ struct PointerLikeTypeTraits<PointerEmbeddedInt<IntT, Bits>> {
 template <typename IntT, int Bits>
 struct DenseMapInfo<PointerEmbeddedInt<IntT, Bits>> {
   using T = PointerEmbeddedInt<IntT, Bits>;
-  using IntInfo = DenseMapInfo<IntT>;
-
-  static inline T getEmptyKey() { return IntInfo::getEmptyKey(); }
 
   static unsigned getHashValue(const T &Arg) {
-    return IntInfo::getHashValue(Arg);
+    return DenseMapInfo<IntT>::getHashValue(Arg);
   }
 
   static bool isEqual(const T &LHS, const T &RHS) { return LHS == RHS; }

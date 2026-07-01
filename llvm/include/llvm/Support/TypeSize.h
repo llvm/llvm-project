@@ -431,9 +431,6 @@ operator<<(raw_ostream &OS,
 }
 
 template <> struct DenseMapInfo<ElementCount, void> {
-  static inline ElementCount getEmptyKey() {
-    return ElementCount::getScalable(~0U);
-  }
   static unsigned getHashValue(const ElementCount &EltCnt) {
     unsigned HashVal = EltCnt.getKnownMinValue() * 37U;
     if (EltCnt.isScalable())

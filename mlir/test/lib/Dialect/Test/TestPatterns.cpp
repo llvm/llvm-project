@@ -1531,7 +1531,7 @@ struct TestTypeConverter : public TypeConverter {
 
     // Split F32 into F16,F16.
     if (t.isF32()) {
-      results.assign(2, Float16Type::get(t.getContext()));
+      results.append(2, Float16Type::get(t.getContext()));
       return success();
     }
 

@@ -17,6 +17,21 @@ add_header_library(
 )
 
 add_header_library(
+  acosbf16
+  HDRS
+    acosbf16.h
+  DEPENDS
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.cast
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.sqrt
+    libc.src.__support.macros.optimization
+    libc.src.__support.math.inv_trigf_utils
+)
+
+add_header_library(
   acosf
   HDRS
     acosf.h
@@ -742,6 +757,20 @@ add_header_library(
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
+  cbrtf16
+  HDRS
+    cbrtf16.h
+  DEPENDS
+    libc.src.__support.FPUtil.cast
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.macros.config
     libc.src.__support.macros.optimization
 )
 
@@ -1691,6 +1720,16 @@ add_header_library(
   HDRS
     isnanf.h
   DEPENDS
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  isnanf128
+  HDRS
+    isnanf128.h
+  DEPENDS
+    libc.include.llvm-libc-types.float128
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.macros.config
 )
@@ -3087,6 +3126,28 @@ add_header_library(
 )
 
 add_header_library(
+  expbf16
+  HDRS
+    expbf16.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
+    libc.src.__support.CPP.array
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.cast
+    libc.src.__support.FPUtil.except_value_utils
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.nearest_integer
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.macros.config
+    libc.src.__support.macros.properties.types
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
   f16add
   HDRS
     f16add.h
@@ -4269,9 +4330,15 @@ add_header_library(
   HDRS
     hypot.h
   DEPENDS
+    libc.src.__support.FPUtil.double_double
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.hypot
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.sqrt
     libc.src.__support.common
     libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
 )
 
 add_header_library(
@@ -4582,8 +4649,10 @@ add_header_library(
     libc.src.__support.FPUtil.cast
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
     libc.src.__support.FPUtil.sqrt
     libc.src.__support.macros.optimization
+    libc.src.__support.macros.properties.types
 )
 
 add_header_library(
@@ -4593,11 +4662,15 @@ add_header_library(
   DEPENDS
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
+    libc.include.llvm-libc-macros.float16_macros
+    libc.src.__support.CPP.bit
     libc.src.__support.FPUtil.cast
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
     libc.src.__support.FPUtil.sqrt
     libc.src.__support.macros.optimization
+    libc.src.__support.macros.properties.types
 )
 
 add_header_library(
@@ -5323,6 +5396,7 @@ add_header_library(
     libc.src.__support.uint128
     libc.include.llvm-libc-types.float128
 )
+
 add_header_library(
   sqrtl
   HDRS
@@ -5346,6 +5420,22 @@ add_header_library(
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.multiply_add
     libc.src.__support.macros.optimization
+)
+
+add_header_library(
+  tanbf16
+  HDRS
+    tanbf16.h
+  DEPENDS
+    .sincosf_utils
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
+    libc.src.__support.FPUtil.cast
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.macros.optimization
+    libc.src.__support.FPUtil.bfloat16
 )
 
 add_header_library(

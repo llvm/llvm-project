@@ -1,4 +1,4 @@
-; RUN: opt < %s -passes='default<O2>' -S | FileCheck --check-prefixes=CHECK %s
+; RUN: opt < %s -passes='default<O2>' -S | FileCheck %s
 ; RUN: opt < %s -O0 -S | FileCheck --check-prefixes=CHECK-O0 %s
 target datalayout = "p:64:64:64"
 
@@ -143,7 +143,7 @@ define void @my_async_function_pa(ptr %ctxt, ptr %task, ptr %actor) {
 ; CHECK:   ret void
 ; CHECK: }
 
-; CHECK-LABEL: define internal swiftcc void @my_async_functionTQ0_(ptr readonly swiftasync captures(none) %0, ptr %1, ptr readnone captures(none) %2)
+; CHECK-LABEL: define internal swiftcc void @my_async_functionTQ0_(ptr nofree readonly swiftasync captures(none) %0, ptr %1, ptr nofree readnone captures(none) %2)
 ; CHECK-O0-LABEL: define internal swiftcc void @my_async_functionTQ0_(ptr swiftasync %0, ptr %1, ptr %2)
 ; CHECK-SAME: !dbg ![[SP2:[0-9]+]] {
 ; CHECK: entryresume.0:
@@ -228,7 +228,7 @@ entry:
 ; CHECK: tail call swiftcc void @asyncSuspend(ptr nonnull [[CALLEE_CTXT]], ptr %task, ptr %actor)
 ; CHECK: ret void
 
-; CHECK-LABEL: define internal swiftcc void @my_async_function2.resume.0(ptr %0, ptr readnone captures(none) %1, ptr readonly captures(none) %2)
+; CHECK-LABEL: define internal swiftcc void @my_async_function2.resume.0(ptr %0, ptr nofree readnone captures(none) %1, ptr nofree readonly captures(none) %2)
 ; CHECK-SAME: #[[FRAMEPOINTER]]
 ; CHECK-SAME: !dbg ![[SP4:[0-9]+]]
 ; CHECK: [[CALLEE_CTXT:%.*]] = load ptr, ptr %2
@@ -238,7 +238,7 @@ entry:
 ; CHECK: tail call swiftcc void @asyncSuspend(ptr [[CALLEE_CTXT_RELOAD]]
 ; CHECK: ret void
 
-; CHECK-LABEL: define internal swiftcc void @my_async_function2.resume.1(ptr readonly captures(none) %0, ptr %1, ptr readnone captures(none) %2)
+; CHECK-LABEL: define internal swiftcc void @my_async_function2.resume.1(ptr nofree readonly captures(none) %0, ptr %1, ptr nofree readnone captures(none) %2)
 ; CHECK-SAME: #[[FRAMEPOINTER]]
 ; CHECK: tail call swiftcc void @asyncReturn({{.*}}%1)
 ; CHECK: ret void

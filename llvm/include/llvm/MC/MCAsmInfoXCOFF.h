@@ -13,7 +13,7 @@
 
 namespace llvm {
 
-class MCAsmInfoXCOFF : public MCAsmInfo {
+class LLVM_ABI MCAsmInfoXCOFF : public MCAsmInfo {
 protected:
   MCAsmInfoXCOFF(const MCTargetOptions &Options);
   void printSwitchToSection(const MCSection &, uint32_t, const Triple &,

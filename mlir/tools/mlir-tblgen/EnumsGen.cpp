@@ -313,10 +313,6 @@ namespace llvm {
 template<> struct DenseMapInfo<{0}> {{
   using StorageInfo = ::llvm::DenseMapInfo<{1}>;
 
-  static inline {0} getEmptyKey() {{
-    return static_cast<{0}>(StorageInfo::getEmptyKey());
-  }
-
   static unsigned getHashValue(const {0} &val) {{
     return StorageInfo::getHashValue(static_cast<{1}>(val));
   }

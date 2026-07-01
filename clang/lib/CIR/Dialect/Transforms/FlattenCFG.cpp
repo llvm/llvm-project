@@ -653,7 +653,7 @@ static cir::AllocaOp getOrCreateCleanupDestSlot(cir::FuncOp funcOp,
   cir::CIRDataLayout dataLayout(funcOp->getParentOfType<mlir::ModuleOp>());
   uint64_t alignment = dataLayout.getAlignment(s32Type, true).value();
   auto allocaOp = cir::AllocaOp::create(
-      rewriter, loc, ptrToS32Type, s32Type, "__cleanup_dest_slot",
+      rewriter, loc, ptrToS32Type, "__cleanup_dest_slot",
       /*alignment=*/rewriter.getI64IntegerAttr(alignment));
   allocaOp.setCleanupDestSlot(true);
   return allocaOp;
@@ -960,9 +960,9 @@ public:
           uint64_t alignment =
               dataLayout.getAlignment(operand.getType(), true).value();
           cir::PointerType ptrType = cir::PointerType::get(operand.getType());
-          alloca = cir::AllocaOp::create(rewriter, loc, ptrType,
-                                         operand.getType(), "__ret_operand_tmp",
-                                         rewriter.getI64IntegerAttr(alignment));
+          alloca =
+              cir::AllocaOp::create(rewriter, loc, ptrType, "__ret_operand_tmp",
+                                    rewriter.getI64IntegerAttr(alignment));
         }
 
         // Store the operand value at the original return location.
@@ -971,16 +971,19 @@ public:
           rewriter.setInsertionPoint(exitOp);
           cir::StoreOp::create(rewriter, loc, operand, alloca,
                                /*isVolatile=*/false,
+                               /*isNontemporal=*/false,
                                /*alignment=*/mlir::IntegerAttr(),
                                cir::SyncScopeKindAttr(), cir::MemOrderAttr());
         }
 
         // Reload the value from the temporary alloca in the destination block.
         rewriter.setInsertionPointToEnd(destBlock);
-        auto loaded = cir::LoadOp::create(
-            rewriter, loc, alloca, /*isDeref=*/false,
-            /*isVolatile=*/false, /*alignment=*/mlir::IntegerAttr(),
-            cir::SyncScopeKindAttr(), cir::MemOrderAttr());
+        auto loaded =
+            cir::LoadOp::create(rewriter, loc, alloca, /*isDeref=*/false,
+                                /*isVolatile=*/false, /*isNontemporal=*/false,
+                                /*alignment=*/mlir::IntegerAttr(),
+                                cir::SyncScopeKindAttr(), cir::MemOrderAttr(),
+                                /*invariant=*/false);
         returnValues.push_back(loaded);
       }
     }
@@ -1290,10 +1293,12 @@ public:
         rewriter.setInsertionPointToEnd(exitBlock);
 
         // Load the destination slot value.
-        auto slotValue = cir::LoadOp::create(
-            rewriter, loc, destSlot, /*isDeref=*/false,
-            /*isVolatile=*/false, /*alignment=*/mlir::IntegerAttr(),
-            cir::SyncScopeKindAttr(), cir::MemOrderAttr());
+        auto slotValue =
+            cir::LoadOp::create(rewriter, loc, destSlot, /*isDeref=*/false,
+                                /*isVolatile=*/false, /*isNontemporal=*/false,
+                                /*alignment=*/mlir::IntegerAttr(),
+                                cir::SyncScopeKindAttr(), cir::MemOrderAttr(),
+                                /*invariant=*/false);
 
         // Create destination blocks for each exit and collect switch case info.
         llvm::SmallVector<mlir::APInt, 8> caseValues;
@@ -1322,6 +1327,7 @@ public:
               rewriter, loc, cir::IntAttr::get(s32Type, exit.destinationId));
           cir::StoreOp::create(rewriter, loc, destIdConst, destSlot,
                                /*isVolatile=*/false,
+                               /*isNontemporal=*/false,
                                /*alignment=*/mlir::IntegerAttr(),
                                cir::SyncScopeKindAttr(), cir::MemOrderAttr());
           rewriter.replaceOpWithNewOp<cir::BrOp>(exit.exitOp, cleanupEntry);

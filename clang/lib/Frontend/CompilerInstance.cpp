@@ -287,9 +287,15 @@ static void collectVFSEntries(CompilerInstance &CI,
 
 void CompilerInstance::createVirtualFileSystem(
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS, DiagnosticConsumer *DC) {
+  bool ShouldOwnClient = false;
+  if (!DC) {
+    DC = new DiagnosticConsumer;
+    ShouldOwnClient = true;
+  }
+
   DiagnosticOptions DiagOpts;
   DiagnosticsEngine Diags(DiagnosticIDs::create(), DiagOpts, DC,
-                          /*ShouldOwnClient=*/false);
+                          ShouldOwnClient);
 
   VFS = createVFSFromCompilerInvocation(getInvocation(), Diags,
                                         std::move(BaseFS));

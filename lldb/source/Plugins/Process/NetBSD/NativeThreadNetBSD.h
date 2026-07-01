@@ -71,9 +71,7 @@ private:
 
   // Member Variables
   lldb::StateType m_state;
-  ThreadStopInfo m_stop_info;
   std::unique_ptr<NativeRegisterContextNetBSD> m_reg_context_up;
-  std::string m_stop_description;
   using WatchpointIndexMap = std::map<lldb::addr_t, uint32_t>;
   WatchpointIndexMap m_watchpoint_index_map;
   WatchpointIndexMap m_hw_break_index_map;

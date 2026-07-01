@@ -215,8 +215,7 @@ private:
       FuncToCtxtProfiles;
 
   // Map from current FunctionSample to the belonged context trie.
-  std::unordered_map<const FunctionSamples *, ContextTrieNode *>
-      ProfileToNodeMap;
+  DenseMap<const FunctionSamples *, ContextTrieNode *> ProfileToNodeMap;
 
   // Map from function guid to real function names. Only used in md5 mode.
   const DenseMap<uint64_t, StringRef> *GUIDToFuncNameMap;

@@ -12,6 +12,7 @@
 
 #include "L0Device.h"
 #include "L0Defs.h"
+#include "L0Event.h"
 #include "L0Interop.h"
 #include "L0Plugin.h"
 #include "L0Program.h"
@@ -333,8 +334,8 @@ Error L0DeviceTy::queryAsyncImpl(__tgt_async_info &AsyncInfo, bool ReleaseQueue,
 }
 
 Expected<void *> L0DeviceTy::allocate(size_t Size, void *HstPtr,
-                                      TargetAllocTy Kind) {
-  return dataAlloc(Size, /*Align=*/0, Kind,
+                                      TargetAllocTy Kind, size_t Alignment) {
+  return dataAlloc(Size, Alignment, Kind,
                    /*Offset=*/0, /*UserAlloc=*/HstPtr == nullptr,
                    /*DevMalloc=*/false);
 }
@@ -384,6 +385,15 @@ Error L0DeviceTy::dataRetrieveImpl(void *HstPtr, const void *TgtPtr,
                           << " bytes from device to host (tgt:" << TgtPtr
                           << ") -> (hst:" << HstPtr << ").";
   return Plugin::success();
+}
+
+Error L0DeviceTy::enqueueHostCallImpl(void (*Callback)(void *), void *UserData,
+                                      AsyncInfoWrapperTy &AsyncInfoWrapper) {
+  __tgt_async_info *AsyncInfo = AsyncInfoWrapper;
+  auto QueueOrErr = getOrCreateQueue(AsyncInfo);
+  if (!QueueOrErr)
+    return QueueOrErr.takeError();
+  return (*QueueOrErr)->hostCall(Callback, UserData);
 }
 
 Error L0DeviceTy::dataExchangeImpl(const void *SrcPtr, GenericDeviceTy &DstDev,
@@ -713,11 +723,14 @@ Error L0DeviceTy::makeMemoryResident(void *Mem, size_t Size) {
 Expected<ze_command_list_handle_t>
 L0DeviceTy::createImmCmdList(uint32_t Ordinal, uint32_t Index, bool InOrder) {
   ze_command_queue_flags_t Flags = InOrder ? ZE_COMMAND_QUEUE_FLAG_IN_ORDER : 0;
+  if (getPlugin().getOptions().Flags.UseCopyOffloadHint)
+    Flags |= ZE_COMMAND_QUEUE_FLAG_COPY_OFFLOAD_HINT;
+
   ze_command_queue_desc_t Desc{ZE_STRUCTURE_TYPE_COMMAND_QUEUE_DESC,
                                nullptr,
                                Ordinal,
                                Index,
-                               Flags | ZE_COMMAND_QUEUE_FLAG_COPY_OFFLOAD_HINT,
+                               Flags,
                                ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
                                ZE_COMMAND_QUEUE_PRIORITY_NORMAL};
   ze_command_list_handle_t CmdList = nullptr;
@@ -743,6 +756,65 @@ Expected<bool> L0DeviceTy::isAccessiblePtrImpl(const void *Ptr, size_t Size) {
                          "Invalid input to %s (Ptr = %p, Size = %zu)", __func__,
                          Ptr, Size);
   return getMemAllocator(Ptr).contains(Ptr, Size);
+}
+
+Error L0DeviceTy::createEventImpl(void **EventPtrStorage,
+                                  bool EnableProfiling) {
+  auto EventOrErr = getEventObject();
+  if (!EventOrErr)
+    return EventOrErr.takeError();
+  *EventPtrStorage = *EventOrErr;
+  return Plugin::success();
+}
+
+Error L0DeviceTy::destroyEventImpl(void *EventPtr, bool EnableProfiling) {
+  L0EventTy *Event = static_cast<L0EventTy *>(EventPtr);
+  return releaseEventObject(Event);
+}
+
+Error L0DeviceTy::recordEventImpl(void *EventPtr,
+                                  AsyncInfoWrapperTy &AsyncInfoWrapper,
+                                  bool EnableProfiling) {
+  auto QueueOrErr = getOrCreateQueue(AsyncInfoWrapper);
+  if (!QueueOrErr)
+    return QueueOrErr.takeError();
+  L0QueueTy *Queue = *QueueOrErr;
+  L0EventTy *Event = static_cast<L0EventTy *>(EventPtr);
+  Event->setQueue(*Queue);
+  return Queue->appendSignalEvent(Event);
+}
+
+Error L0DeviceTy::waitEventImpl(void *EventPtr,
+                                AsyncInfoWrapperTy &AsyncInfoWrapper) {
+  auto QueueOrErr = getOrCreateQueue(AsyncInfoWrapper);
+  if (!QueueOrErr)
+    return QueueOrErr.takeError();
+  L0QueueTy *Queue = *QueueOrErr;
+  L0EventTy *Event = static_cast<L0EventTy *>(EventPtr);
+  return Queue->appendWaitOnEvent(Event);
+}
+
+Error L0DeviceTy::syncEventImpl(void *EventPtr) {
+  L0EventTy *Event = static_cast<L0EventTy *>(EventPtr);
+  if (!Event->getQueue())
+    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                         "event does not have any associated queue");
+  return Event->getQueue()->synchronizeEvent(Event);
+}
+
+Expected<bool> L0DeviceTy::isEventCompleteImpl(void *EventPtr,
+                                               AsyncInfoWrapperTy &) {
+  L0EventTy *Event = static_cast<L0EventTy *>(EventPtr);
+  if (!Event->getQueue())
+    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                         "event does not have any associated queue");
+  return Event->getQueue()->isEventComplete(Event);
+}
+
+Expected<float> L0DeviceTy::getEventElapsedTimeImpl(void *StartEventPtr,
+                                                    void *EndEventPtr) {
+  return Plugin::error(error::ErrorCode::UNSUPPORTED,
+                       "%s not implemented yet\n", __func__);
 }
 
 Error L0DeviceTy::callGlobalConstructors(GenericPluginTy &Plugin,
@@ -816,8 +888,9 @@ Error L0DeviceTy::callGlobalCtorDtorCommon(GenericPluginTy &Plugin,
   llvm::sort(Funcs,
              [](const auto &X, const auto &Y) { return X.second < Y.second; });
 
-  auto BufferOrErr = allocate(Funcs.size() * sizeof(void *),
-                              /*HostPtr=*/nullptr, TARGET_ALLOC_DEVICE);
+  auto BufferOrErr =
+      allocate(Funcs.size() * sizeof(void *),
+               /*HostPtr=*/nullptr, TARGET_ALLOC_DEVICE, /*Alignment=*/0);
   if (!BufferOrErr)
     return HandleErr(BufferOrErr.takeError());
 

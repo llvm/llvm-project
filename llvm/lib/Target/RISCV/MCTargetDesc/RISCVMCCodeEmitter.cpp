@@ -76,6 +76,10 @@ public:
                              SmallVectorImpl<MCFixup> &Fixups,
                              const MCSubtargetInfo &STI, unsigned Size) const;
 
+  void expandPseudoQCAccess(const MCInst &MI, SmallVectorImpl<char> &CB,
+                            SmallVectorImpl<MCFixup> &Fixups,
+                            const MCSubtargetInfo &STI) const;
+
   /// TableGen'erated function for getting the binary encoding for an
   /// instruction.
   uint64_t getBinaryCodeForInstr(const MCInst &MI,
@@ -361,6 +365,10 @@ static unsigned getInvertedBranchOp(unsigned BrOp) {
     return RISCV::QC_E_BGEUI;
   case RISCV::PseudoLongQC_E_BGEUI:
     return RISCV::QC_E_BLTUI;
+  case RISCV::PseudoLongCV_BEQIMM:
+    return RISCV::CV_BNEIMM;
+  case RISCV::PseudoLongCV_BNEIMM:
+    return RISCV::CV_BEQIMM;
   }
 }
 
@@ -477,6 +485,77 @@ void RISCVMCCodeEmitter::expandQCLongCondBrImm(const MCInst &MI,
   }
 }
 
+void RISCVMCCodeEmitter::expandPseudoQCAccess(
+    const MCInst &MI, SmallVectorImpl<char> &CB,
+    SmallVectorImpl<MCFixup> &Fixups, const MCSubtargetInfo &STI) const {
+  unsigned AccessOpc;
+
+  switch (MI.getOpcode()) {
+#define QC_ACCESS_CASE(_Suffix)                                                \
+  case RISCV::PseudoQCAccess##_Suffix:                                         \
+    AccessOpc = RISCV::_Suffix;                                                \
+    break;
+    // clang-format off
+  QC_ACCESS_CASE(LB)
+  QC_ACCESS_CASE(LBU)
+  QC_ACCESS_CASE(LH)
+  QC_ACCESS_CASE(LHU)
+  QC_ACCESS_CASE(LW)
+  QC_ACCESS_CASE(SB)
+  QC_ACCESS_CASE(SH)
+  QC_ACCESS_CASE(SW)
+  QC_ACCESS_CASE(C_LBU)
+  QC_ACCESS_CASE(C_LH)
+  QC_ACCESS_CASE(C_LHU)
+  QC_ACCESS_CASE(C_LW)
+  QC_ACCESS_CASE(C_SB)
+  QC_ACCESS_CASE(C_SH)
+  QC_ACCESS_CASE(C_SW)
+  // clang-format on
+  default:
+    llvm_unreachable("Unhandled QC Access Opcode");
+  };
+
+  MCInst TmpAccess = MCInstBuilder(AccessOpc)
+                         .addOperand(MI.getOperand(0))
+                         .addOperand(MI.getOperand(1))
+                         .addOperand(MI.getOperand(2));
+  unsigned Size = MCII.get(AccessOpc).getSize();
+  uint16_t FixupKind;
+  switch (Size) {
+  default:
+    llvm_unreachable("Unhandled QC Access Instruction Size");
+  case 2: {
+    uint16_t AccessBinary = getBinaryCodeForInstr(TmpAccess, Fixups, STI);
+    support::endian::write(CB, AccessBinary, llvm::endianness::little);
+    FixupKind = RISCV::fixup_qc_access_16;
+    break;
+  }
+  case 4: {
+    uint32_t AccessBinary = getBinaryCodeForInstr(TmpAccess, Fixups, STI);
+    support::endian::write(CB, AccessBinary, llvm::endianness::little);
+    FixupKind = RISCV::fixup_qc_access_32;
+    break;
+  }
+  }
+  // Only emit the qc.access fixup if linker relaxation is enabled. The pass has
+  // already checked for this before using the Pseudos, but the user may have
+  // written the instructions directly in assembly.
+  if (!STI.hasFeature(RISCV::FeatureRelax))
+    return;
+
+  const MCOperand &AccessSymbol = MI.getOperand(3);
+  assert(AccessSymbol.isExpr() && "Expected expression in PseudoQCAccess");
+
+  const auto *AccessExpr = cast<MCSpecifierExpr>(AccessSymbol.getExpr());
+  assert(AccessExpr->getSpecifier() == RISCV::S_QC_ACCESS &&
+         "Expected qc.access specifier on symbol");
+
+  addFixup(Fixups, /*Offset=*/0, AccessExpr, FixupKind);
+  // The added fixup is always linker relaxable.
+  Fixups.back().setLinkerRelaxable();
+}
+
 void RISCVMCCodeEmitter::encodeInstruction(const MCInst &MI,
                                            SmallVectorImpl<char> &CB,
                                            SmallVectorImpl<MCFixup> &Fixups,
@@ -527,6 +606,8 @@ void RISCVMCCodeEmitter::encodeInstruction(const MCInst &MI,
   case RISCV::PseudoLongQC_BGEI:
   case RISCV::PseudoLongQC_BLTUI:
   case RISCV::PseudoLongQC_BGEUI:
+  case RISCV::PseudoLongCV_BEQIMM:
+  case RISCV::PseudoLongCV_BNEIMM:
     expandQCLongCondBrImm(MI, CB, Fixups, STI, 4);
     MCNumEmitted += 2;
     return;
@@ -541,6 +622,24 @@ void RISCVMCCodeEmitter::encodeInstruction(const MCInst &MI,
     return;
   case RISCV::PseudoTLSDESCCall:
     expandTLSDESCCall(MI, CB, Fixups, STI);
+    MCNumEmitted += 1;
+    return;
+  case RISCV::PseudoQCAccessLB:
+  case RISCV::PseudoQCAccessLBU:
+  case RISCV::PseudoQCAccessLH:
+  case RISCV::PseudoQCAccessLHU:
+  case RISCV::PseudoQCAccessLW:
+  case RISCV::PseudoQCAccessSB:
+  case RISCV::PseudoQCAccessSH:
+  case RISCV::PseudoQCAccessSW:
+  case RISCV::PseudoQCAccessC_LBU:
+  case RISCV::PseudoQCAccessC_LH:
+  case RISCV::PseudoQCAccessC_LHU:
+  case RISCV::PseudoQCAccessC_LW:
+  case RISCV::PseudoQCAccessC_SB:
+  case RISCV::PseudoQCAccessC_SH:
+  case RISCV::PseudoQCAccessC_SW:
+    expandPseudoQCAccess(MI, CB, Fixups, STI);
     MCNumEmitted += 1;
     return;
   }
@@ -714,6 +813,12 @@ uint64_t RISCVMCCodeEmitter::getImmOpValue(const MCInst &MI, unsigned OpNo,
       // encounter it here is an error.
       llvm_unreachable(
           "ELF::R_RISCV_TPREL_ADD should not represent an instruction operand");
+    case RISCV::S_QC_ACCESS:
+      // The same logic for tprel_add applies to S_QC_ACCESS, for similar
+      // reasons, but we use a specifier becuase %qc.access() gets expanded
+      // differently depending on the underlying instruction.
+      llvm_unreachable(
+          "S_QC_ACCESS should not represent an instruction operand");
     case RISCV::S_LO:
       if (MIFrm == RISCVII::InstFormatI)
         FixupKind = RISCV::fixup_riscv_lo12_i;

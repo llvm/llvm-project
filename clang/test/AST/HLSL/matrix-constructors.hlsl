@@ -335,6 +335,7 @@ float2x3 G = float2x3(float2x2(1,2,3,4), 5, 6);
 
 // CHECK: VarDecl 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}, col:{{[0-9]+}}> col:{{[0-9]+}} N 'float4x4':'matrix<float, 4, 4>' cinit
 // CHECK-NEXT: CXXFunctionalCastExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}, col:{{[0-9]+}}> 'float4x4':'matrix<float, 4, 4>' functional cast to float4x4 <HLSLElementwiseCast>
+// CHECK-NEXT: ImplicitCastExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'sF' <LValueToRValue> part_of_explicit_cast
 // CHECK-NEXT: DeclRefExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'sF' lvalue Var 0x{{[0-9a-fA-F]+}} 'f' 'sF'
 struct sF {
     float f[16];
@@ -385,6 +386,7 @@ float2x2 GettingStrange2 = float2x2(s3, s3);
 
 // CHECK: VarDecl 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}, col:{{[0-9]+}}> col:{{[0-9]+}} GettingStrange3 'float2x2':'matrix<float, 2, 2>' cinit
 // CHECK-NEXT: CXXFunctionalCastExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}, col:{{[0-9]+}}> 'float2x2':'matrix<float, 2, 2>' functional cast to float2x2 <HLSLElementwiseCast>
+// CHECK-NEXT: ImplicitCastExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'S4' <LValueToRValue> part_of_explicit_cast
 // CHECK-NEXT: DeclRefExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'S4' lvalue Var 0x{{[0-9a-fA-F]+}} 's4' 'S4'
 struct S4 { float4 f;};
 S4 s4;

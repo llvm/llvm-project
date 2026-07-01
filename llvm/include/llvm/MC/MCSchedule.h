@@ -36,7 +36,7 @@ namespace cl {
 class OptionCategory;
 }
 
-extern cl::OptionCategory MCScheduleOptions;
+extern LLVM_ABI cl::OptionCategory MCScheduleOptions;
 
 /// Define a kind of processor resource that will be modeled by the scheduler.
 struct MCProcResourceDesc {

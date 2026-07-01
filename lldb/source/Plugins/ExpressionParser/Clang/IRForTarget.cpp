@@ -544,6 +544,9 @@ bool IRForTarget::RewriteObjCConstStrings() {
 
   ValueSymbolTable &value_symbol_table = m_module->getValueSymbolTable();
 
+  std::vector<std::pair<GlobalVariable *, GlobalVariable *>>
+      nsstring_to_cstr_list;
+
   for (StringMapEntry<llvm::Value *> &value_symbol : value_symbol_table) {
     llvm::StringRef value_name = value_symbol.first();
 
@@ -684,14 +687,16 @@ bool IRForTarget::RewriteObjCConstStrings() {
       if (!cstr_array)
         cstr_global = nullptr;
 
-      if (!RewriteObjCConstString(nsstring_global, cstr_global)) {
-        LLDB_LOG(log, "Error rewriting the constant string");
+      // Queue up replacing the string as we are currently iterating
+      // over the module.
+      nsstring_to_cstr_list.emplace_back(nsstring_global, cstr_global);
+    }
+  }
 
-        // We don't print an error message here because RewriteObjCConstString
-        // has done so for us.
-
-        return false;
-      }
+  for (auto [nsstring_global, cstr_global] : nsstring_to_cstr_list) {
+    if (!RewriteObjCConstString(nsstring_global, cstr_global)) {
+      LLDB_LOG(log, "Error rewriting the constant string");
+      return false;
     }
   }
 

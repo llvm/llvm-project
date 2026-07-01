@@ -359,9 +359,6 @@ unsigned IRInstructionMapper::mapToLegalUnsigned(
   assert(LegalInstrNumber < IllegalInstrNumber &&
          "Instruction mapping overflow!");
 
-  assert(LegalInstrNumber != DenseMapInfo<unsigned>::getEmptyKey() &&
-         "Tried to assign DenseMap empty key to instruction.");
-
   return INumber;
 }
 
@@ -407,9 +404,6 @@ unsigned IRInstructionMapper::mapToIllegalUnsigned(
 
   assert(LegalInstrNumber < IllegalInstrNumber &&
          "Instruction mapping overflow!");
-
-  assert(IllegalInstrNumber != DenseMapInfo<unsigned>::getEmptyKey() &&
-         "IllegalInstrNumber cannot be DenseMap empty key!");
 
   return INumber;
 }

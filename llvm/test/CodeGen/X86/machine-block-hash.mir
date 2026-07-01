@@ -1,10 +1,19 @@
 # RUN: llc -mtriple=x86_64-pc-linux -passes="print<machine-block-hash>" -filetype=null %s 2>&1 | FileCheck %s --check-prefix=HASH
 
+# The 64-bit hash printed for each MBB is laid out as:
+# [NeighborHash:16][InstrHash:16][OpcodeHash:16][Offset:16]
+# Test asserts structural relationships between the components (same opcodes -> 
+# same OpcodeHash, no neighbors -> NeighborHash equals OpcodeHash).
+
 name:            foo
 body:             |
+  ; Two single-instruction blocks with no successors/predecessors. Both have
+  ; the same opcode (RET/terminator excluded), so OpcodeHash should be same
+  ; with no neighbors, NeighborHash equals OpcodeHash for each block.
+  ; Only the operand differs, so InstrHash differs across the two blocks.
   ; HASH-LABEL: Machine Block Hash Info for function: foo
-  ; HASH-NEXT:   BB#0: 0x8c4d521d8c4d0000
-  ; HASH-NEXT:   BB#1: 0x8c4d59e38c4d0002
+  ; HASH-NEXT:    BB#0: 0x[[FOO_OP:[0-9a-f]{4}]][[FOO_INSTR0:[0-9a-f]{4}]][[FOO_OP]]0000
+  ; HASH-NEXT:    BB#1: 0x[[FOO_OP]][[FOO_INSTR1:[0-9a-f]{4}]][[FOO_OP]]0002
   bb.0:
     $eax = MOV32ri 1
     RET 0
@@ -17,8 +26,8 @@ body:             |
 name:            func_mbb
 body:             |
   ; HASH-LABEL: Machine Block Hash Info for function: func_mbb
-  ; HASH-NEXT:   BB#0: 0xc4ae521d8c4d0000
-  ; HASH-NEXT:   BB#1: 0xc4ae59e38c4d0002
+  ; HASH-NEXT:    BB#0: 0x[[MBB_NEIGH:[0-9a-f]{4}]][[MBB_INSTR0:[0-9a-f]{4}]][[MBB_OP:[0-9a-f]{4}]]0000
+  ; HASH-NEXT:    BB#1: 0x[[MBB_NEIGH]][[MBB_INSTR1:[0-9a-f]{4}]][[MBB_OP]]0002
   bb.0:
     successors: %bb.1
     $eax = MOV32ri 1
@@ -31,8 +40,9 @@ body:             |
 ---
 name:            func_global
 body:             |
+  ; Single block with no neighbors: NeighborHash == OpcodeHash and Offset == 0.
   ; HASH-LABEL: Machine Block Hash Info for function: func_global
-  ; HASH-NEXT:   BB#0: 0xf9df68eef9df0000
+  ; HASH-NEXT:    BB#0: 0x[[GLOBAL_OP:[0-9a-f]{4}]][[GLOBAL_INSTR:[0-9a-f]{4}]][[GLOBAL_OP]]0000
   bb.0:
     $rax = MOV64rm $rip, 1, $noreg, @foo, $noreg
     RET 0
@@ -41,7 +51,7 @@ body:             |
 name:            func_fp
 body:             |
   ; HASH-LABEL: Machine Block Hash Info for function: func_fp
-  ; HASH-NEXT:   BB#0: 0x0b1816af0b180000
+  ; HASH-NEXT:    BB#0: 0x[[FP_OP:[0-9a-f]{4}]][[FP_INSTR:[0-9a-f]{4}]][[FP_OP]]0000
   bb.0:
     $xmm0 = MOVSSrm $rip, 1, $noreg, %const.0, $noreg
     RET 0

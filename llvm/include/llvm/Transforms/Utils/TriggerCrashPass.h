@@ -23,16 +23,16 @@ namespace llvm {
 class TriggerCrashModulePass
     : public OptionalPassInfoMixin<TriggerCrashModulePass> {
 public:
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
 class TriggerCrashFunctionPass
     : public OptionalPassInfoMixin<TriggerCrashFunctionPass> {
 public:
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
-FunctionPass *createTriggerCrashFunctionPass();
+LLVM_ABI FunctionPass *createTriggerCrashFunctionPass();
 
 } // namespace llvm
 

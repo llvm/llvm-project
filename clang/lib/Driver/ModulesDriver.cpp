@@ -1294,7 +1294,7 @@ createClangModulePrecompileJob(Compilation &C, const Command &ImportingJob,
   const auto &D = C.getDriver();
   return std::make_unique<Command>(
       *PA, ImportingJob.getCreator(), ResponseFileSupport::AtFileUTF8(),
-      D.getClangProgramPath(), JobArgs,
+      D.getDriverProgramPath(), JobArgs,
       /*Inputs=*/ArrayRef<InputInfo>{},
       /*Outputs=*/ArrayRef<InputInfo>{}, D.getPrependArg());
 }

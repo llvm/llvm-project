@@ -125,6 +125,32 @@ define <vscale x 8 x i64> @to_bitcast_deinterleave(ptr %p) {
   ret <vscale x 8 x i64> %r
 }
 
+; Regression test for a crash: https://github.com/llvm/llvm-project/pull/195330#issuecomment-4635245035
+define <16 x i16> @zext_shufflevector_correct_insertpoint(<16 x i8> %load) {
+; CHECK-LABEL: define <16 x i16> @zext_shufflevector_correct_insertpoint(
+; CHECK-SAME: <16 x i8> [[LOAD:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = freeze <16 x i8> [[LOAD]]
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <16 x i8> [[TMP1]] to <8 x i16>
+; CHECK-NEXT:    [[ZEXT:%.*]] = and <8 x i16> [[TMP2]], splat (i16 255)
+; CHECK-NEXT:    [[ZEXT9:%.*]] = lshr <8 x i16> [[TMP2]], splat (i16 8)
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw <8 x i16> [[ZEXT]], splat (i16 1)
+; CHECK-NEXT:    [[TMP3:%.*]] = or <8 x i16> [[ADD]], [[ZEXT9]]
+; CHECK-NEXT:    [[OR:%.*]] = shufflevector <8 x i16> [[TMP3]], <8 x i16> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; CHECK-NEXT:    ret <16 x i16> [[OR]]
+;
+  %shufflevector4 = shufflevector <16 x i8> %load, <16 x i8> zeroinitializer, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
+  %shufflevector = shufflevector <16 x i8> %load, <16 x i8> zeroinitializer, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
+  %zext = zext <8 x i8> %shufflevector to <8 x i16>
+  %shufflevector7 = shufflevector <8 x i8> %shufflevector4, <8 x i8> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+  %shufflevector8 = shufflevector <16 x i8> %shufflevector7, <16 x i8> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %add = add <8 x i16> %zext, splat (i16 1)
+  %shufflevector6 = shufflevector <8 x i16> %add, <8 x i16> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %zext9 = zext <8 x i8> %shufflevector8 to <8 x i16>
+  %shufflevector10 = shufflevector <8 x i16> %zext9, <8 x i16> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %or = or <16 x i16> %shufflevector6, %shufflevector10
+  ret <16 x i16> %or
+}
+
 define <8 x i64> @negative_zext_shufflevector_not_zext(<16 x i32> %v) {
 ; CHECK-LABEL: define <8 x i64> @negative_zext_shufflevector_not_zext(
 ; CHECK-SAME: <16 x i32> [[V:%.*]]) {

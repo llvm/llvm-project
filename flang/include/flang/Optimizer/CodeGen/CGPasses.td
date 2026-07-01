@@ -91,6 +91,8 @@ def TargetRewritePass : Pass<"target-rewrite", "mlir::ModuleOp"> {
            "Override module's tune CPU.">,
     Option<"forcedTargetFeatures", "target-features", "std::string",
            /*default=*/"", "Override module's target features.">,
+    Option<"forcedTargetABI", "target-abi", "std::string", /*default=*/"",
+           "Override module's target ABI.">,
     Option<"noCharacterConversion", "no-character-conversion",
            "bool", /*default=*/"false",
            "Disable target-specific conversion of CHARACTER.">,

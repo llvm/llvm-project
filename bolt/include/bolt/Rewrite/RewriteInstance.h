@@ -231,6 +231,11 @@ private:
   /// Used by non-relocation mode and for patched functions.
   void rewriteFunctionsInPlace(raw_fd_ostream &OS);
 
+  /// When --use-old-text reuses input file regions, zero the alignment
+  /// padding after BOLT-written text sections so the output does not retain
+  /// stale bytes from the input binary.
+  void zeroPaddingForReusedSections(raw_fd_ostream &OS);
+
   /// Return address of a function in the new binary corresponding to
   /// \p OldAddress address in the original binary.
   uint64_t getNewFunctionAddress(uint64_t OldAddress);

@@ -101,6 +101,16 @@ public:
 
   const TargetRegisterInfo *getRegisterInfo() const override { return &TRI; }
 
+  const FeatureBitset &getInlineIgnoreFeatures() const override {
+    static constexpr FeatureBitset Features;
+    return Features;
+  }
+
+  const FeatureBitset &getInlineInverseFeatures() const override {
+    static constexpr FeatureBitset Features;
+    return Features;
+  }
+
 private:
   BogusFrameLowering FL;
   BogusRegisterInfo TRI;

@@ -564,21 +564,11 @@ inline XXH128_hash_t xxh3_128bits(ArrayRef<uint8_t> data) {
 
 // Provide DenseMapInfo for ArrayRefs.
 template <typename T> struct DenseMapInfo<ArrayRef<T>, void> {
-  static inline ArrayRef<T> getEmptyKey() {
-    return ArrayRef<T>(reinterpret_cast<const T *>(~static_cast<uintptr_t>(0)),
-                       size_t(0));
-  }
-
   static unsigned getHashValue(ArrayRef<T> Val) {
-    assert(Val.data() != getEmptyKey().data() && "Cannot hash the empty key!");
     return (unsigned)(hash_value(Val));
   }
 
-  static bool isEqual(ArrayRef<T> LHS, ArrayRef<T> RHS) {
-    if (RHS.data() == getEmptyKey().data())
-      return LHS.data() == getEmptyKey().data();
-    return LHS == RHS;
-  }
+  static bool isEqual(ArrayRef<T> LHS, ArrayRef<T> RHS) { return LHS == RHS; }
 };
 
 } // end namespace llvm

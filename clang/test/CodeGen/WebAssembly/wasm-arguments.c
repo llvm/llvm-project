@@ -138,3 +138,13 @@ bitfield1 bitfield_ret(void) {
   bitfield1 baz;
   return baz;
 }
+
+// Complex numbers are expanded in parameter position for the multivalue
+// experimental ABI.
+
+// WEBASSEMBLY32: define void @complex_double(ptr
+// WEBASSEMBLY64: define void @complex_double(ptr
+// EXPERIMENTAL-MV: define void @complex_double(double {{.*}}, double {{.*}})
+void complex_double(_Complex double a) {
+  // ..
+}

@@ -849,7 +849,7 @@ public:
   SMLoc getLoc() const { return Loc; }
 
   /// Replaces in place all references to FromReg with ToReg.
-  void replaceRegister(unsigned FromReg, unsigned ToReg);
+  LLVM_ABI void replaceRegister(unsigned FromReg, unsigned ToReg);
 };
 
 struct MCDwarfFrameInfo {

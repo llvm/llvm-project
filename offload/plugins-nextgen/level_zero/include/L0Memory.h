@@ -422,58 +422,6 @@ public:
   }
 }; /// MemAllocatorTy
 
-/// Common event pool used in the plugin. This event pool assumes all events
-/// from the pool are host-visible and use the same event pool flag.
-class EventPoolTy {
-  /// Size of L0 event pool created on demand.
-  size_t PoolSize = 64;
-
-  /// Context of the events.
-  ze_context_handle_t Context = nullptr;
-
-  /// Additional event pool flags common to this pull.
-  uint32_t Flags = 0;
-
-  /// Protection.
-  std::unique_ptr<std::mutex> Mtx;
-
-  /// List of created L0 event pools.
-  std::list<ze_event_pool_handle_t> Pools;
-
-  /// List of free L0 events.
-  std::list<ze_event_handle_t> Events;
-
-#ifdef OMPT_SUPPORT
-  /// Event to OMPT record map. The timestamp information is recorded to the
-  /// OMPT record before the event is recycled.
-  std::unordered_map<ze_event_handle_t, ompt_record_ompt_t *> EventToRecord;
-#endif // OMPT_SUPPORT
-
-public:
-  /// Initialize context, flags, and mutex.
-  Error init(ze_context_handle_t ContextIn, uint32_t FlagsIn) {
-    Context = ContextIn;
-    Flags = FlagsIn;
-    Mtx.reset(new std::mutex);
-    return Plugin::success();
-  }
-
-  /// Destroys L0 resources.
-  Error deinit() {
-    for (auto E : Events)
-      CALL_ZE_RET_ERROR(zeEventDestroy, E);
-    for (auto P : Pools)
-      CALL_ZE_RET_ERROR(zeEventPoolDestroy, P);
-    return Plugin::success();
-  }
-
-  /// Get a free event from the pool.
-  Expected<ze_event_handle_t> getEvent();
-
-  /// Return an event to the pool.
-  Error releaseEvent(ze_event_handle_t Event, L0DeviceTy &Device);
-};
-
 /// Staging buffer.
 /// A single staging buffer is not enough when batching is enabled since there
 /// can be multiple pending copy operations.

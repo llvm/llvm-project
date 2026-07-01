@@ -1,10 +1,14 @@
 // RUN: mlir-translate --no-implicit-module --split-input-file --test-spirv-roundtrip %s | FileCheck %s
+// RUN: %if spirv-tools %{ rm -rf %t %}
+// RUN: %if spirv-tools %{ mkdir %t %}
+// RUN: %if spirv-tools %{ mlir-translate --no-implicit-module --serialize-spirv --split-input-file --spirv-save-validation-files-with-prefix=%t/module %s %}
+// RUN: %if spirv-tools %{ spirv-val %t %}
 
 // Round-trip tests for decorations whose operand is a SPIR-V <id>
 // (serialized as OpDecorateId, opcode 332).
 
 // AlignmentId references a specialization constant that supplies the alignment.
-spirv.module Logical OpenCL requires #spirv.vce<v1.0, [Kernel, Addresses, Linkage], []> {
+spirv.module Logical OpenCL requires #spirv.vce<v1.2, [Kernel, Addresses, Linkage], []> {
   // CHECK: spirv.SpecConstant @sc_align = 16
   // CHECK: alignment_id = @sc_align
   spirv.SpecConstant @sc_align = 16 : i32
@@ -14,7 +18,7 @@ spirv.module Logical OpenCL requires #spirv.vce<v1.0, [Kernel, Addresses, Linkag
 // -----
 
 // MaxByteOffsetId references a specialization constant.
-spirv.module Logical OpenCL requires #spirv.vce<v1.0, [Kernel, Addresses, Linkage], []> {
+spirv.module Logical OpenCL requires #spirv.vce<v1.2, [Kernel, Addresses, Linkage], []> {
   // CHECK: spirv.SpecConstant @sc_offset = 1024
   // CHECK: max_byte_offset_id = @sc_offset
   spirv.SpecConstant @sc_offset = 1024 : i32
@@ -24,7 +28,7 @@ spirv.module Logical OpenCL requires #spirv.vce<v1.0, [Kernel, Addresses, Linkag
 // -----
 
 // CounterBuffer references another global variable.
-spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage], []> {
+spirv.module Logical GLSL450 requires #spirv.vce<v1.4, [Shader, Linkage], [SPV_GOOGLE_hlsl_functionality1]> {
   // CHECK: spirv.GlobalVariable @counter
   // CHECK: counter_buffer = @counter
   spirv.GlobalVariable @counter bind(0, 1) : !spirv.ptr<!spirv.struct<(!spirv.array<1 x i32, stride=4>[0])>, StorageBuffer>

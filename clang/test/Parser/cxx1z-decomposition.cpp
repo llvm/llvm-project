@@ -32,7 +32,7 @@ namespace ForRangeDecl {
 namespace OtherDecl {
   // A parameter-declaration is not a simple-declaration.
   // This parses as an array declaration.
-  void f(auto [a, b, c]); // cxx17-error {{'auto' not allowed in function prototype}} expected-error 1+{{'a'}}
+  void f(auto [a, b, c]); // cxx17-warning {{'auto' parameters are a C++20 extension}} expected-error 1+{{'a'}}
 
   void g() {
     // A condition is allowed as a Clang extension.

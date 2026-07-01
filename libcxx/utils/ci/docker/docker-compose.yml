@@ -24,7 +24,7 @@ services:
       dockerfile: libcxx/utils/ci/docker/linux-builder.dockerfile
       args:
         BASE_IMAGE_VERSION: 5a616ce490abe551ffc7a7714c28e90c483f5b39
-        GITHUB_RUNNER_VERSION: 2.334.0
+        GITHUB_RUNNER_VERSION: 2.335.0
 
   libcxx-android-builder:
     image: ghcr.io/llvm/libcxx-android-builder:${TAG:-latest}

@@ -4,11 +4,13 @@
 
 // RUN: %clang_cc1 -fsyntax-only %t/caller.cpp \
 // RUN:   --ssaf-extract-summaries=CallGraph \
+// RUN:   --ssaf-compilation-unit-id=test-cu-caller \
 // RUN:   --ssaf-tu-summary-file=%t/caller.summary.json
 // RUN: FileCheck --match-full-lines --check-prefix=CALLER %t/caller.cpp --input-file=%t/caller.summary.json
 
 // RUN: %clang_cc1 -fsyntax-only %t/polymorphic.cpp \
 // RUN:   --ssaf-extract-summaries=CallGraph \
+// RUN:   --ssaf-compilation-unit-id=test-cu-polymorphic \
 // RUN:   --ssaf-tu-summary-file=%t/polymorphic.summary.json
 // RUN: FileCheck --match-full-lines --check-prefix=POLYMORPHIC %t/polymorphic.cpp --input-file=%t/polymorphic.summary.json
 

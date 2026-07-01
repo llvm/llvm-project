@@ -33,6 +33,7 @@ using namespace llvm;
 #define DEBUG_TYPE "x86-domain-reassignment"
 
 STATISTIC(NumClosuresConverted, "Number of closures converted by the pass");
+STATISTIC(NumClosuresBuilt, "Number of closures built by the pass");
 
 static cl::opt<bool> DisableX86DomainReassignment(
     "disable-x86-domain-reassignment", cl::Hidden,
@@ -553,7 +554,7 @@ void X86DomainReassignmentImpl::buildClosure(Closure &C, Register Reg) {
     // Register already in this closure.
     if (!C.insertEdge(CurReg))
       continue;
-    EnclosedEdges[Reg] = C.getID();
+    EnclosedEdges[CurReg] = C.getID();
 
     MachineInstr *DefMI = MRI->getVRegDef(CurReg);
     if (!encloseInstr(C, DefMI))
@@ -812,6 +813,7 @@ bool X86DomainReassignmentImpl::runOnMachineFunction(MachineFunction &MF) {
     // Calculate closure starting with Reg.
     Closure C(ClosureID++, {MaskDomain});
     buildClosure(C, Reg);
+    ++NumClosuresBuilt;
 
     // Collect all closures that can potentially be converted.
     if (!C.empty() && C.isLegal(MaskDomain))

@@ -384,6 +384,23 @@ static void emitTypeDoc(const Type &type, raw_ostream &os) {
 // TypeDef Documentation
 //===----------------------------------------------------------------------===//
 
+/// If `param` is an EnumParameter, return a string listing the enum's keyword
+/// alternatives (e.g. "`read` | `read_write`"). Otherwise return std::nullopt.
+static std::optional<std::string>
+getEnumParameterDocSyntax(const AttrOrTypeParameter &param) {
+  const auto *paramDef = dyn_cast<DefInit>(param.getDef());
+  if (!paramDef || !paramDef->getDef()->isSubClassOf("EnumParameter"))
+    return std::nullopt;
+  const Record *enumRec = paramDef->getDef()->getValueAsDef("enum");
+  EnumInfo enumInfo(enumRec);
+  std::vector<EnumCase> cases = enumInfo.getAllCases();
+  std::string result;
+  llvm::interleave(
+      cases, [&](const EnumCase &c) { result += "`" + c.getStr().str() + "`"; },
+      [&] { result += " | "; });
+  return result;
+}
+
 static void emitAttrOrTypeDefAssemblyFormat(const AttrOrTypeDef &def,
                                             raw_ostream &os) {
   ArrayRef<AttrOrTypeParameter> parameters = def.getParameters();
@@ -399,7 +416,10 @@ static void emitAttrOrTypeDefAssemblyFormat(const AttrOrTypeDef &def,
      << "<\n";
   for (const auto &it : llvm::enumerate(parameters)) {
     const AttrOrTypeParameter &param = it.value();
-    os << "  " << param.getSyntax();
+    if (auto enumSyntax = getEnumParameterDocSyntax(param))
+      os << "  " << *enumSyntax;
+    else
+      os << "  " << param.getSyntax();
     if (it.index() < (parameters.size() - 1))
       os << ",";
     os << "   # " << param.getName() << "\n";

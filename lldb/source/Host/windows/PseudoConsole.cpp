@@ -93,7 +93,8 @@ llvm::Error PseudoConsole::CreateOverlappedPipePair(HANDLE &out_read,
 
 PseudoConsole::~PseudoConsole() { Reset(); }
 
-llvm::Error PseudoConsole::OpenPseudoConsole() {
+llvm::Error PseudoConsole::OpenPseudoConsole(uint16_t req_cols,
+                                             uint16_t req_rows) {
   Reset();
 
   if (!kernel32.IsConPTYAvailable())
@@ -124,13 +125,19 @@ llvm::Error PseudoConsole::OpenPseudoConsole() {
   // if we can't query the real console.
   int cursorRow = consoleSize.Y;
   int cursorCol = 1;
-  CONSOLE_SCREEN_BUFFER_INFO csbi;
-  if (GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi)) {
-    consoleSize = {
-        static_cast<SHORT>(csbi.srWindow.Right - csbi.srWindow.Left + 1),
-        static_cast<SHORT>(csbi.srWindow.Bottom - csbi.srWindow.Top + 1)};
-    cursorRow = csbi.dwCursorPosition.Y - csbi.srWindow.Top + 1;
-    cursorCol = csbi.dwCursorPosition.X + 1;
+  if (req_cols != 0 && req_rows != 0) {
+    consoleSize = {static_cast<SHORT>(req_cols), static_cast<SHORT>(req_rows)};
+    cursorRow = consoleSize.Y;
+    cursorCol = 1;
+  } else {
+    CONSOLE_SCREEN_BUFFER_INFO csbi;
+    if (GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi)) {
+      consoleSize = {
+          static_cast<SHORT>(csbi.srWindow.Right - csbi.srWindow.Left + 1),
+          static_cast<SHORT>(csbi.srWindow.Bottom - csbi.srWindow.Top + 1)};
+      cursorRow = csbi.dwCursorPosition.Y - csbi.srWindow.Top + 1;
+      cursorCol = csbi.dwCursorPosition.X + 1;
+    }
   }
   HPCON hPC = INVALID_HANDLE_VALUE;
   HRESULT hr =
@@ -181,6 +188,8 @@ void PseudoConsole::Close() {
   std::unique_lock<std::mutex> guard(m_mutex);
   if (m_conpty_handle != INVALID_HANDLE_VALUE)
     kernel32.ClosePseudoConsole(m_conpty_handle);
+  if (m_mode == Mode::Pipe && m_conpty_output != INVALID_HANDLE_VALUE)
+    CancelIoEx(m_conpty_output, nullptr);
   m_conpty_handle = INVALID_HANDLE_VALUE;
   SetStopping(false);
   m_cv.notify_all();

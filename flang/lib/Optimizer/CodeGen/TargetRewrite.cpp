@@ -104,6 +104,9 @@ public:
     if (!forcedTargetFeatures.empty())
       fir::setTargetFeatures(mod, forcedTargetFeatures);
 
+    if (!forcedTargetABI.empty())
+      fir::setTargetABI(mod, forcedTargetABI);
+
     // TargetRewrite will require querying the type storage sizes, if it was
     // not set already, create a DataLayoutSpec for the ModuleOp now.
     std::optional<mlir::DataLayout> dl =
@@ -118,8 +121,8 @@ public:
 
     auto specifics = fir::CodeGenSpecifics::get(
         mod.getContext(), fir::getTargetTriple(mod), fir::getKindMapping(mod),
-        fir::getTargetCPU(mod), fir::getTargetFeatures(mod), *dl,
-        fir::getTuneCPU(mod));
+        fir::getTargetCPU(mod), fir::getTargetFeatures(mod),
+        fir::getTargetABI(mod), *dl, fir::getTuneCPU(mod));
 
     setMembers(specifics.get(), &rewriter, &*dl);
 

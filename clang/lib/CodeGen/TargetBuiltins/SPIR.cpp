@@ -103,7 +103,7 @@ Value *CodeGenFunction::EmitSPIRVBuiltinExpr(unsigned BuiltinID,
     llvm::Type *Res = getTypes().ConvertType(E->getType());
     assert(Res->isPointerTy() &&
            "GenericCastToPtrExplicit doesn't return a pointer");
-    llvm::CallInst *Call = Builder.CreateIntrinsic(
+    llvm::CallInst *Call = Builder.CreateIntrinsicWithoutFolding(
         /*ReturnType=*/Res, Intrinsic::spv_generic_cast_to_ptr_explicit,
         ArrayRef<Value *>{Ptr}, nullptr, "spv.generic_cast");
     Call->addRetAttr(llvm::Attribute::AttrKind::NoUndef);

@@ -193,8 +193,8 @@
 
 // RUN:   %clang -### -nogpulib -nogpuinc -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target -march=sm_60 %s -fopenmp-cuda-teams-reduction-recs-num=2048 2>&1 \
 // RUN:   | FileCheck -check-prefix=CUDA_RED_RECS %s
-// CUDA_RED_RECS: "-cc1"{{.*}}"-triple" "nvptx64-nvidia-cuda"
-// CUDA_RED_RECS-SAME: "-fopenmp-cuda-teams-reduction-recs-num=2048"
+// CUDA_RED_RECS: warning: argument '-fopenmp-cuda-teams-reduction-recs-num=2048' is deprecated, the value is ignored; the teams reduction buffer is sized automatically at kernel launch
+// CUDA_RED_RECS-NOT: "-fopenmp-cuda-teams-reduction-recs-num=2048"
 
 // RUN:   %clang -### -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda --cuda-path=%S/Inputs/CUDA_102/usr/local/cuda \
 // RUN:          --offload-arch=sm_52 --libomptarget-nvptx-bc-path=%S/Inputs/libomptarget/libomptarget-nvptx-test.bc %s 2>&1 \
@@ -297,7 +297,7 @@
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -emit-llvm -S -fopenmp=libomp \
 // RUN:     -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target=nvptx64-nvidia-cuda -march=sm_52 -nogpulib %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-EMIT-LLVM-IR-BC
-// CHECK-EMIT-LLVM-IR-BC: "-cc1"{{.*}}"-triple" "nvptx64-nvidia-cuda"{{.*}}"-emit-llvm-bc"
+// CHECK-EMIT-LLVM-IR-BC: "-cc1"{{.*}}"-triple" "nvptx64-nvidia-cuda"{{.*}}"-emit-llvm"
 
 // RUN:   %clang -### -fopenmp=libomp --offload-arch=sm_89 \
 // RUN:          --no-cuda-version-check \

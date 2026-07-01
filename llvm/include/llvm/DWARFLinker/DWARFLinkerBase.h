@@ -21,6 +21,7 @@
 #include <map>
 namespace llvm {
 class DWARFUnit;
+class ThreadPoolInterface;
 
 namespace dwarf_linker {
 
@@ -138,6 +139,8 @@ public:
   virtual void setObjectPrefixMap(ObjectPrefixMapTy *Map) = 0;
   /// Set target DWARF version.
   virtual Error setTargetDWARFVersion(uint16_t TargetDWARFVersion) = 0;
+  /// Set the thread pool used to link the object files.
+  virtual void setThreadPool(ThreadPoolInterface *Pool) = 0;
 };
 } // end namespace dwarf_linker
 } // end namespace llvm

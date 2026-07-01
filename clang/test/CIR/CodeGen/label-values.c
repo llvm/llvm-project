@@ -12,7 +12,7 @@ LABEL_A:
   return;
 }
 // CIR:  cir.func {{.*}} @A
-// CIR:    [[PTR:%.*]] = cir.alloca !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>, ["ptr", init] {alignment = 8 : i64}
+// CIR:    [[PTR:%.*]] = cir.alloca "ptr" align(8) init : !cir.ptr<!cir.ptr<!void>>
 // CIR:    [[BLOCK:%.*]] = cir.block_address <@A, "LABEL_A"> : !cir.ptr<!void>
 // CIR:    cir.store align(8) [[BLOCK]], [[PTR]] : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>
 // CIR:    [[BLOCKADD:%.*]] = cir.load align(8) [[PTR]] : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
@@ -54,7 +54,7 @@ LABEL_B:
 }
 
 // CIR:  cir.func {{.*}} @B()
-// CIR:    [[PTR:%.*]] = cir.alloca !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>, ["ptr", init] {alignment = 8 : i64}
+// CIR:    [[PTR:%.*]] = cir.alloca "ptr" align(8) init : !cir.ptr<!cir.ptr<!void>>
 // CIR:    cir.br ^bb1
 // CIR:   ^bb1: // 2 preds: ^bb0, ^bb2
 // CIR:    cir.label "LABEL_B"
@@ -155,9 +155,9 @@ LABEL_A:
 }
 
 // CIR:  cir.func {{.*}} @D
-// CIR:    %[[PTR:.*]] = cir.alloca !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>, ["ptr", init]
-// CIR:    %[[PTR2:.*]] = cir.alloca !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>, ["ptr2", init]
-// CIR:    %[[PTR3:.*]] = cir.alloca !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>, ["ptr3", init]
+// CIR:    %[[PTR:.*]] = cir.alloca "ptr" {{.*}} init : !cir.ptr<!cir.ptr<!void>>
+// CIR:    %[[PTR2:.*]] = cir.alloca "ptr2" {{.*}} init : !cir.ptr<!cir.ptr<!void>>
+// CIR:    %[[PTR3:.*]] = cir.alloca "ptr3" {{.*}} init : !cir.ptr<!cir.ptr<!void>>
 // CIR:    %[[BLK1:.*]] = cir.block_address <@D, "LABEL_A"> : !cir.ptr<!void>
 // CIR:    cir.store align(8) %[[BLK1]], %[[PTR]] : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>
 // CIR:    %[[BLK2:.*]] = cir.block_address <@D, "LABEL_A"> : !cir.ptr<!void>
@@ -165,11 +165,9 @@ LABEL_A:
 // CIR:    cir.br ^bb1
 // CIR:  ^bb1([[PHI:%*.]]: !cir.ptr<!void> {{.*}}):  // pred: ^bb0
 // CIR:    cir.indirect_br [[PHI]] : !cir.ptr<!void>, [
-// CIR-DAG:    ^bb2,
-// CIR-DAG:    ^bb2,
-// CIR-DAG:    ^bb2
+// CIR-NEXT:    ^bb2
 // CIR:    ]
-// CIR:  ^bb2:  // 3 preds: ^bb1, ^bb1, ^bb1
+// CIR:  ^bb2:  // pred: ^bb1
 // CIR:    cir.label "LABEL_A"
 // CIR:    %[[BLK3:.*]] = cir.block_address <@D, "LABEL_A"> : !cir.ptr<!void>
 // CIR:    cir.store align(8) %[[BLK3]], %[[PTR3]] : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>
@@ -185,7 +183,7 @@ LABEL_A:
 // LLVM:   br label %[[indirectgoto:.*]]
 // LLVM: [[indirectgoto]]:
 // LLVM:   [[PHI:%.*]] = phi ptr [ %[[BLOCKADD]], %[[ENTRY:.*]] ]
-// LLVM:   indirectbr ptr [[PHI]], [label %[[LABEL_A]], label %[[LABEL_A]], label %[[LABEL_A]]]
+// LLVM:   indirectbr ptr [[PHI]], [label %[[LABEL_A]]]
 // LLVM: [[LABEL_A]]:
 // LLVM:   store ptr blockaddress(@D, %[[LABEL_A]]), ptr %[[PTR3]], align 8
 // LLVM:   ret void
@@ -205,8 +203,8 @@ LABEL_A:
 // OGCG:   %indirect.goto.dest = phi ptr [ %[[BLOCKADD]], %entry ]
 // OGCG:   indirectbr ptr %indirect.goto.dest, [label %LABEL_A, label %LABEL_A, label %LABEL_A]
 
-// This test checks that CIR preserves insertion order of blockaddresses
-// for indirectbr, even if some were resolved immediately and others later.
+// E takes label addresses but never executes a `goto *`, so CIR emits no
+// indirect branch (classic still emits a dead poisoned indirectbr, see OGCG).
 void E(void) {
   void *ptr = &&LABEL_D;
   void *ptr2 = &&LABEL_C;
@@ -219,38 +217,11 @@ LABEL_D:
   return;
 }
 
-//CIR:  cir.func {{.*}} @E()
-//CIR:  ^bb1({{.*}}: !cir.ptr<!void> {{.*}}):  // no predecessors
-//CIR:    cir.indirect_br {{.*}} poison : !cir.ptr<!void>, [
-//CIR-NEXT:    ^bb5,
-//CIR-NEXT:    ^bb4,
-//CIR-NEXT:    ^bb3,
-//CIR-NEXT:    ^bb2
-//CIR:    ]
-//CIR:  ^bb2:  // 2 preds: ^bb0, ^bb1
-//CIR:    cir.label "LABEL_A"
-//CIR:  ^bb3:  // 2 preds: ^bb1, ^bb2
-//CIR:    cir.label "LABEL_B"
-//CIR:  ^bb4:  // 2 preds: ^bb1, ^bb3
-//CIR:    cir.label "LABEL_C"
-//CIR:  ^bb5:  // 2 preds: ^bb1, ^bb4
-//CIR:    cir.label "LABEL_D"
+// CIR-LABEL: cir.func {{.*}} @E()
+// CIR-NOT:   cir.indirect_br
 
-// LLVM: define dso_local void @E()
-// LLVM:   store ptr blockaddress(@E, %[[LABEL_D:.*]])
-// LLVM:   store ptr blockaddress(@E, %[[LABEL_C:.*]])
-// LLVM:   br label %[[LABEL_A:.*]]
-// LLVM: [[indirectgoto:.*]]:                                                ; No predecessors!
-// LLVM:   indirectbr ptr poison, [label %[[LABEL_D]], label %[[LABEL_C]], label %[[LABEL_B:.*]], label %[[LABEL_A]]]
-// LLVM: [[LABEL_A]]:
-// LLVM:   br label %[[LABEL_B]]
-// LLVM: [[LABEL_B]]:
-// LLVM:   store ptr blockaddress(@E, %[[LABEL_B]])
-// LLVM:   store ptr blockaddress(@E, %[[LABEL_A]])
-// LLVM:   br label %[[LABEL_C]]
-// LLVM: [[LABEL_C]]:
-// LLVM:   br label %[[LABEL_D]]
-// LLVM: [[LABEL_D]]:
+// LLVM-LABEL: define dso_local void @E()
+// LLVM-NOT:   indirectbr
 
 // OGCG: define dso_local void @E() #0 {
 // OGCG:   store ptr blockaddress(@E, %LABEL_D), ptr %ptr, align 8

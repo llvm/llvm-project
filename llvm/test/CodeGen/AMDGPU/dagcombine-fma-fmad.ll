@@ -109,27 +109,25 @@ define amdgpu_ps float @_amdgpu_ps_main() #0 {
 ; GFX11-NEXT:    v_sub_f32_e32 v8, s0, v1
 ; GFX11-NEXT:    v_fma_f32 v7, -s2, v6, s6
 ; GFX11-NEXT:    v_fma_f32 v10, s2, v6, v2
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_4)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_2) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_fma_f32 v5, v6, v5, 1.0
 ; GFX11-NEXT:    s_mov_b32 s0, 0x3c23d70a
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    v_mul_f32_e32 v9, s10, v0
+; GFX11-NEXT:    v_dual_fmac_f32 v10, v7, v6 :: v_dual_mul_f32 v9, s10, v0
 ; GFX11-NEXT:    v_fma_f32 v0, -v0, s10, s14
-; GFX11-NEXT:    v_mul_f32_e32 v3, s22, v3
 ; GFX11-NEXT:    v_dual_fmac_f32 v1, v6, v8 :: v_dual_mul_f32 v8, s18, v2
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX11-NEXT:    v_fmac_f32_e32 v9, v0, v6
-; GFX11-NEXT:    v_dual_fmac_f32 v10, v7, v6 :: v_dual_mul_f32 v7, v6, v3
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX11-NEXT:    v_sub_f32_e32 v0, v1, v5
+; GFX11-NEXT:    v_mul_f32_e32 v3, s22, v3
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-NEXT:    v_dual_fmac_f32 v9, v0, v6 :: v_dual_sub_f32 v0, v1, v5
+; GFX11-NEXT:    v_mul_f32_e32 v7, v6, v3
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_fma_f32 v3, -v6, v3, v9
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    v_add_f32_e32 v4, v4, v10
 ; GFX11-NEXT:    v_fmac_f32_e32 v7, v3, v6
 ; GFX11-NEXT:    v_fmac_f32_e32 v5, v0, v6
 ; GFX11-NEXT:    v_mul_f32_e32 v1, v8, v6
-; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_add_f32_e32 v4, v4, v10
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_dual_mul_f32 v3, v4, v6 :: v_dual_fmaak_f32 v4, s0, v5, 0x3ca3d70a
 ; GFX11-NEXT:    v_fma_f32 v0, v2, s26, -v1
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_4)

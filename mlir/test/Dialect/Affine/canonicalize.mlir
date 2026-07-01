@@ -1861,6 +1861,24 @@ func.func @dont_split_delinearize_undershooting_target(%arg0: index, %arg1: inde
 
 // -----
 
+// Regression test: canonicalization can produce a linearize with no inputs
+// (empty basis), which must not be treated as splittable. This previously
+// Canonicalization can produce a linearize with no inputs (empty basis),
+// which must not be treated as splittable.
+// CHECK-LABEL: func @split_delinearize_empty_linearize_basis
+//  CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: index)
+//       CHECK-DAG:   %[[C0:.+]] = arith.constant 0 : index
+//           CHECK:   return %[[C0]], %[[C0]], %[[ARG0]], %[[C0]]
+func.func @split_delinearize_empty_linearize_basis(%arg0: index) -> (index, index, index, index) {
+  %c0 = arith.constant 0 : index
+  %0 = affine.linearize_index disjoint [%c0, %arg0, %c0] by (4, 2, 2) : index
+  %1:4 = affine.delinearize_index %0 into (2, 2, 2, 2)
+      : index, index, index, index
+  return %1#0, %1#1, %1#2, %1#3 : index, index, index, index
+}
+
+// -----
+
 // CHECK-LABEL: @linearize_unit_basis_disjoint
 // CHECK-SAME: (%[[arg0:.+]]: index, %[[arg1:.+]]: index, %[[arg2:.+]]: index, %[[arg3:.+]]: index)
 // CHECK: %[[ret:.+]] = affine.linearize_index disjoint [%[[arg0]], %[[arg2]]] by (3, %[[arg3]]) : index

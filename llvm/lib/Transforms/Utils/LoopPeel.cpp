@@ -464,7 +464,8 @@ static unsigned peelToTurnInvariantLoadsDereferenceable(Loop &L,
       if (auto *LI = dyn_cast<LoadInst>(&I)) {
         Value *Ptr = LI->getPointerOperand();
         if (DT.dominates(BB, Latch) && L.isLoopInvariant(Ptr) &&
-            !isDereferenceablePointer(Ptr, LI->getType(), DL, LI, AC, &DT))
+            !isDereferenceablePointer(Ptr, LI->getType(),
+                                      SimplifyQuery(DL, &DT, AC, LI)))
           LoadUsers.insert_range(I.users());
       }
     }

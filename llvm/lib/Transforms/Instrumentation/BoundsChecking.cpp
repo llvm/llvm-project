@@ -41,13 +41,22 @@ STATISTIC(ChecksAdded, "Bounds checks added");
 STATISTIC(ChecksSkipped, "Bounds checks skipped");
 STATISTIC(ChecksUnable, "Bounds checks unable to add");
 
-class BuilderTy : public IRBuilder<TargetFolder> {
+class NoSanitizeInserter final : public IRBuilderDefaultInserter {
+  mutable MDNode *NoSanitizeMD = nullptr;
+
 public:
-  BuilderTy(BasicBlock *TheBB, BasicBlock::iterator IP, TargetFolder Folder)
-      : IRBuilder<TargetFolder>(TheBB, IP, Folder) {
-    SetNoSanitizeMetadata();
+  NoSanitizeInserter() = default;
+
+  void InsertHelper(Instruction *I, const Twine &Name,
+                    BasicBlock::iterator InsertPt) const override {
+    IRBuilderDefaultInserter::InsertHelper(I, Name, InsertPt);
+    if (!NoSanitizeMD)
+      NoSanitizeMD = MDNode::get(I->getContext(), {});
+    I->setMetadata(LLVMContext::MD_nosanitize, NoSanitizeMD);
   }
 };
+
+using BuilderTy = IRBuilder<TargetFolder, NoSanitizeInserter>;
 
 /// Gets the conditions under which memory accessing instructions will overflow.
 ///
@@ -111,7 +120,7 @@ static Value *getBoundsCheckCond(Value *Ptr, Value *InstVal,
 static CallInst *InsertTrap(BuilderTy &IRB, bool DebugTrapBB,
                             std::optional<int8_t> GuardKind) {
   if (!DebugTrapBB)
-    return IRB.CreateIntrinsic(Intrinsic::trap, {});
+    return IRB.CreateIntrinsicWithoutFolding(Intrinsic::trap, {});
 
   uint64_t ImmArg = GuardKind.has_value()
                         ? GuardKind.value()
@@ -121,8 +130,8 @@ static CallInst *InsertTrap(BuilderTy &IRB, bool DebugTrapBB,
   if (ImmArg > 255)
     ImmArg = 255;
 
-  return IRB.CreateIntrinsic(Intrinsic::ubsantrap,
-                             ConstantInt::get(IRB.getInt8Ty(), ImmArg));
+  return IRB.CreateIntrinsicWithoutFolding(
+      Intrinsic::ubsantrap, ConstantInt::get(IRB.getInt8Ty(), ImmArg));
 }
 
 static CallInst *InsertCall(BuilderTy &IRB, bool MayReturn, StringRef Name) {

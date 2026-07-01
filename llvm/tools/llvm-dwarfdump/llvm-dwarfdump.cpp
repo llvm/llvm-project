@@ -723,7 +723,7 @@ static bool dumpObjectFile(ObjectFile &Obj, DWARFContext &DICtx,
   if (!MCRegInfo)
     logAllUnhandledErrors(createStringError(inconvertibleErrorCode(),
                                             "Error in creating MCRegInfo"),
-                          errs(), Filename.str() + ": ");
+                          errs(), Filename + ": ");
 
   auto GetRegName = [&MCRegInfo](uint64_t DwarfRegNum, bool IsEH) -> StringRef {
     if (!MCRegInfo)

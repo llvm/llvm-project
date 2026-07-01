@@ -122,3 +122,27 @@ llvm.func @intrinsic_element_type(%arg0: !llvm.ptr) {
   %0 = llvm.call_intrinsic "llvm.aarch64.ldxr.p0"(%arg0) : (!llvm.ptr {llvm.elementtype = i8}) -> i64
   llvm.return
 }
+
+// -----
+
+// CHECK-LABEL: define float @constrained_sqrt(float %0)
+// CHECK: call float @llvm.experimental.constrained.sqrt.f32(float %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
+llvm.func @constrained_sqrt(%a: f32) -> f32 {
+  %rm = llvm.mlir.metadata_as_value #llvm.md_string<"round.tonearest">
+  %eb = llvm.mlir.metadata_as_value #llvm.md_string<"fpexcept.strict">
+  %r = llvm.call_intrinsic "llvm.experimental.constrained.sqrt.f32"(%a, %rm, %eb)
+      : (f32, !llvm.metadata, !llvm.metadata) -> f32
+  llvm.return %r : f32
+}
+
+// -----
+
+// CHECK-LABEL: define i32 @read_named_register()
+// CHECK: call i32 @llvm.read_register.i32(metadata !{{[0-9]+}})
+// CHECK: !{{[0-9]+}} = !{!"sp"}
+llvm.func @read_named_register() -> i32 {
+  %md = llvm.mlir.metadata_as_value #llvm.md_node<#llvm.md_string<"sp">>
+  %r = llvm.call_intrinsic "llvm.read_register.i32"(%md)
+      : (!llvm.metadata) -> i32
+  llvm.return %r : i32
+}

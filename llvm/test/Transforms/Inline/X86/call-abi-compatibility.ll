@@ -143,5 +143,158 @@ define internal <8 x i64> @callee_inline_asm(ptr %p0, i64 %k, ptr %p1, ptr %p2) 
   ret <8 x i64> %3
 }
 
+declare void @callee_128bit(<4 x float>)
+declare void @callee_256bit(<8 x float>)
+declare void @callee_512bit(<16 x float>)
+
+define void @callee_calls_128bit_baseline() {
+; CHECK-LABEL: define {{[^@]+}}@callee_calls_128bit_baseline() {
+; CHECK-NEXT:    call void @callee_128bit(<4 x float> zeroinitializer)
+; CHECK-NEXT:    ret void
+;
+  call void @callee_128bit(<4 x float> zeroinitializer)
+  ret void
+}
+
+; Okay to inline as +sse3 does not change the ABI of 128 bit vectors relative
+; to x86-64 baseline.
+define void @caller_calls_128bit_sse3() "target-features"="+sse3" {
+; CHECK-LABEL: define {{[^@]+}}@caller_calls_128bit_sse3
+; CHECK-SAME: () #[[ATTR3:[0-9]+]] {
+; CHECK-NEXT:    call void @callee_128bit(<4 x float> zeroinitializer)
+; CHECK-NEXT:    ret void
+;
+  call void @callee_calls_128bit_baseline()
+  ret void
+}
+
+define void @callee_calls_256bit_baseline() {
+; CHECK-LABEL: define {{[^@]+}}@callee_calls_256bit_baseline() {
+; CHECK-NEXT:    call void @callee_256bit(<8 x float> zeroinitializer)
+; CHECK-NEXT:    ret void
+;
+  call void @callee_256bit(<8 x float> zeroinitializer)
+  ret void
+}
+
+; Okay to inline as +sse3 does not change the ABI of 256 bit vectors relative
+; to x86-64 baseline.
+define void @caller_calls_256bit_sse3() "target-features"="+sse3" {
+; CHECK-LABEL: define {{[^@]+}}@caller_calls_256bit_sse3
+; CHECK-SAME: () #[[ATTR3]] {
+; CHECK-NEXT:    call void @callee_256bit(<8 x float> zeroinitializer)
+; CHECK-NEXT:    ret void
+;
+  call void @callee_calls_256bit_baseline()
+  ret void
+}
+
+; Can NOT inline as +avx changes the ABI of 256 bit vectors.
+define void @caller_calls_256bit_avx() "target-features"="+avx" {
+; CHECK-LABEL: define {{[^@]+}}@caller_calls_256bit_avx
+; CHECK-SAME: () #[[ATTR0]] {
+; CHECK-NEXT:    call void @callee_calls_256bit_baseline()
+; CHECK-NEXT:    ret void
+;
+  call void @callee_calls_256bit_baseline()
+  ret void
+}
+
+define void @callee_calls_256bit_avx() "target-features"="+avx" {
+; CHECK-LABEL: define {{[^@]+}}@callee_calls_256bit_avx
+; CHECK-SAME: () #[[ATTR0]] {
+; CHECK-NEXT:    call void @callee_256bit(<8 x float> zeroinitializer)
+; CHECK-NEXT:    ret void
+;
+  call void @callee_256bit(<8 x float> zeroinitializer)
+  ret void
+}
+
+; Okay to inline as +avx2 does not change the ABI of 256 bit vectors relative
+; to +avx.
+define void @caller_calls_256bit_avx2() "target-features"="+avx2" {
+; CHECK-LABEL: define {{[^@]+}}@caller_calls_256bit_avx2
+; CHECK-SAME: () #[[ATTR4:[0-9]+]] {
+; CHECK-NEXT:    call void @callee_256bit(<8 x float> zeroinitializer)
+; CHECK-NEXT:    ret void
+;
+  call void @callee_calls_256bit_avx()
+  ret void
+}
+
+define void @callee_calls_512bit_baseline() {
+; CHECK-LABEL: define {{[^@]+}}@callee_calls_512bit_baseline() {
+; CHECK-NEXT:    call void @callee_512bit(<16 x float> zeroinitializer)
+; CHECK-NEXT:    ret void
+;
+  call void @callee_512bit(<16 x float> zeroinitializer)
+  ret void
+}
+
+; Okay to inline as +sse3 does not change the ABI of 512 bit vectors relative
+; to x86-64 baseline.
+define void @caller_calls_512bit_sse3() "target-features"="+sse3" {
+; CHECK-LABEL: define {{[^@]+}}@caller_calls_512bit_sse3
+; CHECK-SAME: () #[[ATTR3]] {
+; CHECK-NEXT:    call void @callee_512bit(<16 x float> zeroinitializer)
+; CHECK-NEXT:    ret void
+;
+  call void @callee_calls_512bit_baseline()
+  ret void
+}
+
+; Can NOT inline as +avx changes the ABI of 512 bit vectors.
+define void @caller_calls_512bit_avx() "target-features"="+avx" {
+; CHECK-LABEL: define {{[^@]+}}@caller_calls_512bit_avx
+; CHECK-SAME: () #[[ATTR0]] {
+; CHECK-NEXT:    call void @callee_calls_512bit_baseline()
+; CHECK-NEXT:    ret void
+;
+  call void @callee_calls_512bit_baseline()
+  ret void
+}
+
+define void @callee_calls_512bit_avx512f() "target-features"="+avx512f" {
+; CHECK-LABEL: define {{[^@]+}}@callee_calls_512bit_avx512f
+; CHECK-SAME: () #[[ATTR5:[0-9]+]] {
+; CHECK-NEXT:    call void @callee_512bit(<16 x float> zeroinitializer)
+; CHECK-NEXT:    ret void
+;
+  call void @callee_512bit(<16 x float> zeroinitializer)
+  ret void
+}
+
+; Okay to inline as +avx512bw does not change the ABI of 512 bit vectors
+; relative to +avx512f.
+define void @caller_calls_512bit_avx512bw() "target-features"="+avx512bw" {
+; CHECK-LABEL: define {{[^@]+}}@caller_calls_512bit_avx512bw
+; CHECK-SAME: () #[[ATTR6:[0-9]+]] {
+; CHECK-NEXT:    call void @callee_512bit(<16 x float> zeroinitializer)
+; CHECK-NEXT:    ret void
+;
+  call void @callee_calls_512bit_avx512f()
+  ret void
+}
+
+define void @callee_calls_512bit_vector_width_256() "target-features"="+avx512vl" "min-legal-vector-width"="256" "prefer-vector-width"="256" {
+; CHECK-LABEL: define {{[^@]+}}@callee_calls_512bit_vector_width_256
+; CHECK-SAME: () #[[ATTR7:[0-9]+]] {
+; CHECK-NEXT:    call void @callee_512bit(<16 x float> zeroinitializer)
+; CHECK-NEXT:    ret void
+;
+  call void @callee_512bit(<16 x float> zeroinitializer)
+  ret void
+}
+
+define void @caller_calls_512bit_vector_width_512() "target-features"="+avx512vl" "min-legal-vector-width"="512" "prefer-vector-width"="512" {
+; CHECK-LABEL: define {{[^@]+}}@caller_calls_512bit_vector_width_512
+; CHECK-SAME: () #[[ATTR8:[0-9]+]] {
+; CHECK-NEXT:    call void @callee_calls_512bit_vector_width_256()
+; CHECK-NEXT:    ret void
+;
+  call void @callee_calls_512bit_vector_width_256()
+  ret void
+}
+
 attributes #0 = { "min-legal-vector-width"="512" "target-features"="+avx,+avx2,+avx512bw,+avx512dq,+avx512f,+cmov,+crc32,+cx8,+evex512,+f16c,+fma,+fxsr,+mmx,+popcnt,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87,+xsave" "tune-cpu"="generic" }
 attributes #1 = { "min-legal-vector-width"="512" "target-features"="+avx,+avx2,+avx512bw,+avx512f,+cmov,+crc32,+cx8,+evex512,+f16c,+fma,+fxsr,+mmx,+popcnt,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87,+xsave" "tune-cpu"="generic" }

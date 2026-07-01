@@ -252,6 +252,17 @@ func.func @out_of_bound_memref.dim(%arg : memref<?xi8>, %size: index) -> index {
 
 // -----
 
+// CHECK-LABEL: func @negative_memref_dim
+//  CHECK:   %[[MEMREF:.*]] = memref.dim
+//  CHECK:   return %[[MEMREF]] : index
+func.func @negative_memref_dim(%arg: memref<?xi8>) -> index {
+  %c-2 = arith.constant -2 : index
+  %1 = memref.dim %arg, %c-2 : memref<?xi8>
+  return %1 : index
+}
+
+// -----
+
 // CHECK-LABEL: func @simplify_gpu_launch
 func.func @simplify_gpu_launch() attributes {llvm.emit_c_interface} {
   %cst = arith.constant 0.000000e+00 : f32

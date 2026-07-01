@@ -163,9 +163,6 @@ public:
 
 // Provide DenseMapInfo for Register
 template <> struct DenseMapInfo<Register> {
-  static inline Register getEmptyKey() {
-    return DenseMapInfo<unsigned>::getEmptyKey();
-  }
   static unsigned getHashValue(const Register &Val) {
     return DenseMapInfo<unsigned>::getHashValue(Val.id());
   }

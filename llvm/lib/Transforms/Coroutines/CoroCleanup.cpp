@@ -140,10 +140,12 @@ bool Lowerer::lower(Function &F) {
         break;
       case Intrinsic::coro_async_size_replace:
         auto *Target = cast<ConstantStruct>(
-            cast<GlobalVariable>(II->getArgOperand(0)->stripPointerCasts())
+            cast<GlobalVariable>(
+                II->getArgOperand(0)->stripPointerCastsAndAliases())
                 ->getInitializer());
         auto *Source = cast<ConstantStruct>(
-            cast<GlobalVariable>(II->getArgOperand(1)->stripPointerCasts())
+            cast<GlobalVariable>(
+                II->getArgOperand(1)->stripPointerCastsAndAliases())
                 ->getInitializer());
         auto *TargetSize = Target->getOperand(1);
         auto *SourceSize = Source->getOperand(1);

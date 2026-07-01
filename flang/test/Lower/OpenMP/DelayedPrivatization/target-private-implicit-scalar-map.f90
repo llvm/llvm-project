@@ -25,7 +25,7 @@
 ! CHECK:  %[[VAL_4:.*]] = omp.map.info var_ptr(%[[VAL_3]] : !fir.ref<i32>, i32) map_clauses(to) capture(ByCopy) -> !fir.ref<i32>
 ! CHECK:  %[[VAL_5:.*]] = omp.map.info var_ptr(%[[VAL_1]] : !fir.ref<i32>, i32) map_clauses(to) capture(ByCopy) -> !fir.ref<i32>
 
-! CHECK:  omp.target map_entries(%[[VAL_4]] -> %{{.*}}, %[[VAL_5]] -> %{{.*}} : !fir.ref<i32>, !fir.ref<i32>) private(@_QFExfpvx_firstprivate_i32 %[[VAL_3]] -> %[[VAL_6:.*]] [map_idx=0], @_QFExdgfx_firstprivate_i32 %[[VAL_1]] -> %[[VAL_7:.*]] [map_idx=1] : !fir.ref<i32>, !fir.ref<i32>) {
+! CHECK:  omp.target kernel_type(generic) map_entries(%[[VAL_4]] -> %{{.*}}, %[[VAL_5]] -> %{{.*}} : !fir.ref<i32>, !fir.ref<i32>) private(@_QFExfpvx_firstprivate_i32 %[[VAL_3]] -> %[[VAL_6:.*]] [map_idx=0], @_QFExdgfx_firstprivate_i32 %[[VAL_1]] -> %[[VAL_7:.*]] [map_idx=1] : !fir.ref<i32>, !fir.ref<i32>) {
 ! CHECK:  %{{.*}} = fir.declare %[[VAL_6]] {uniq_name = "_QFExfpvx"} : (!fir.ref<i32>) -> !fir.ref<i32>
 ! CHECK:  %{{.*}} = fir.declare %[[VAL_7]] {uniq_name = "_QFExdgfx"} : (!fir.ref<i32>) -> !fir.ref<i32>
 

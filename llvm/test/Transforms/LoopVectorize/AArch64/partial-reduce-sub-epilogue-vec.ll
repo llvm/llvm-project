@@ -470,31 +470,9 @@ define float @fsub_reduction_nsz(ptr %a, ptr %b, ptr %c, i64 %n) #1{
 ; CHECK-PARTIAL-RED-EPI:       [[MIDDLE_BLOCK]]:
 ; CHECK-PARTIAL-RED-EPI-NEXT:    [[TMP9:%.*]] = call reassoc nsz contract float @llvm.vector.reduce.fadd.nxv4f32(float 0.000000e+00, <vscale x 4 x float> [[PARTIAL_REDUCE3]])
 ; CHECK-PARTIAL-RED-EPI-NEXT:    [[TMP10:%.*]] = fsub float 0.000000e+00, [[TMP9]]
-; CHECK-PARTIAL-RED-EPI-NEXT:    br i1 true, label %[[FOR_EXIT1:.*]], label %[[SCALAR_PH:.*]]
-; CHECK-PARTIAL-RED-EPI:       [[SCALAR_PH]]:
 ; CHECK-PARTIAL-RED-EPI-NEXT:    br label %[[FOR_EXIT:.*]]
 ; CHECK-PARTIAL-RED-EPI:       [[FOR_EXIT]]:
-; CHECK-PARTIAL-RED-EPI-NEXT:    [[IV:%.*]] = phi i64 [ 1024, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_EXIT]] ]
-; CHECK-PARTIAL-RED-EPI-NEXT:    [[ACCUM:%.*]] = phi float [ [[TMP10]], %[[SCALAR_PH]] ], [ [[SUB:%.*]], %[[FOR_EXIT]] ]
-; CHECK-PARTIAL-RED-EPI-NEXT:    [[GEP_A:%.*]] = getelementptr half, ptr [[A]], i64 [[IV]]
-; CHECK-PARTIAL-RED-EPI-NEXT:    [[LOAD_A:%.*]] = load half, ptr [[GEP_A]], align 2
-; CHECK-PARTIAL-RED-EPI-NEXT:    [[EXT_A:%.*]] = fpext half [[LOAD_A]] to float
-; CHECK-PARTIAL-RED-EPI-NEXT:    [[GEP_B:%.*]] = getelementptr half, ptr [[B]], i64 [[IV]]
-; CHECK-PARTIAL-RED-EPI-NEXT:    [[LOAD_B:%.*]] = load half, ptr [[GEP_B]], align 2
-; CHECK-PARTIAL-RED-EPI-NEXT:    [[EXT_B:%.*]] = fpext half [[LOAD_B]] to float
-; CHECK-PARTIAL-RED-EPI-NEXT:    [[GEP_C:%.*]] = getelementptr half, ptr [[C]], i64 [[IV]]
-; CHECK-PARTIAL-RED-EPI-NEXT:    [[LOAD_C:%.*]] = load half, ptr [[GEP_C]], align 2
-; CHECK-PARTIAL-RED-EPI-NEXT:    [[EXT_C:%.*]] = fpext half [[LOAD_C]] to float
-; CHECK-PARTIAL-RED-EPI-NEXT:    [[MUL_AB:%.*]] = fmul reassoc nsz contract float [[EXT_B]], [[EXT_A]]
-; CHECK-PARTIAL-RED-EPI-NEXT:    [[MUL_AC:%.*]] = fmul reassoc nsz contract float [[EXT_C]], [[EXT_A]]
-; CHECK-PARTIAL-RED-EPI-NEXT:    [[SUB_AB:%.*]] = fsub reassoc nsz contract float [[ACCUM]], [[MUL_AB]]
-; CHECK-PARTIAL-RED-EPI-NEXT:    [[SUB]] = fsub reassoc nsz contract float [[SUB_AB]], [[MUL_AC]]
-; CHECK-PARTIAL-RED-EPI-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
-; CHECK-PARTIAL-RED-EPI-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 1024
-; CHECK-PARTIAL-RED-EPI-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_EXIT1]], label %[[FOR_EXIT]], !llvm.loop [[LOOP10:![0-9]+]]
-; CHECK-PARTIAL-RED-EPI:       [[FOR_EXIT1]]:
-; CHECK-PARTIAL-RED-EPI-NEXT:    [[SUB_LCSSA:%.*]] = phi float [ [[SUB]], %[[FOR_EXIT]] ], [ [[TMP10]], %[[MIDDLE_BLOCK]] ]
-; CHECK-PARTIAL-RED-EPI-NEXT:    ret float [[SUB_LCSSA]]
+; CHECK-PARTIAL-RED-EPI-NEXT:    ret float [[TMP10]]
 ;
 entry:
   br label %for.body

@@ -2964,7 +2964,7 @@ public:
     if (!module_sp->IsExecutable())
       return "";
 
-    return module_sp->GetFileSpec().GetFilename().GetString();
+    return module_sp->GetFileSpec().GetFilename().str();
   }
 
   bool StopRunningProcess() {
@@ -5396,8 +5396,8 @@ public:
     if (symbol_context.comp_unit != nullptr) {
       StreamString compile_unit_stream;
       compile_unit_stream.PutCString("compile unit = ");
-      symbol_context.comp_unit->GetPrimaryFile().GetFilename().Dump(
-          &compile_unit_stream);
+      compile_unit_stream.PutCString(
+          symbol_context.comp_unit->GetPrimaryFile().GetFilename());
       details.AppendString(compile_unit_stream.GetString());
 
       if (symbol_context.function != nullptr) {
@@ -6926,8 +6926,7 @@ public:
       if (frame_sp) {
         m_sc = frame_sp->GetSymbolContext(eSymbolContextEverything);
         if (m_sc.module_sp) {
-          m_title.Printf(
-              "%s", m_sc.module_sp->GetFileSpec().GetFilename().GetCString());
+          m_title.Format("{0}", m_sc.module_sp->GetFileSpec().GetFilename());
           ConstString func_name = m_sc.GetFunctionName();
           if (func_name)
             m_title.Printf("`%s", func_name.GetCString());

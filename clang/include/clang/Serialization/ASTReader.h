@@ -246,7 +246,7 @@ public:
     return true;
   }
 
-  /// Similiar to member function of \c visitInputFile but should
+  /// Similar to member function of \c visitInputFile but should
   /// be defined when there is a distinction between the file name
   /// and the name-as-requested. For example, when deserializing input
   /// files from precompiled AST files.

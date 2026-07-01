@@ -26,12 +26,14 @@ add_lldb_library(lldbTarget
   Memory.cpp
   MemoryHistory.cpp
   MemoryRegionInfo.cpp
+  MemoryRegionInfoCache.cpp
   MemoryTagMap.cpp
   ModuleCache.cpp
   OperatingSystem.cpp
   PathMappingList.cpp
   Platform.cpp
   Process.cpp
+  ProcessIOHandler.cpp
   ProcessTrace.cpp
   Queue.cpp
   QueueItem.cpp

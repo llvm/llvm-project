@@ -65,6 +65,18 @@ LIBC_INLINE static bool is_hex_start(const CharType *__restrict src,
          b36_char_to_int(src[2]) < 16;
 }
 
+// checks if the next 3 characters of the string pointer are the start of a
+// binary number. Does not advance the string pointer.
+template <typename CharType>
+LIBC_INLINE static bool is_binary_start(const CharType *__restrict src,
+                                        size_t src_len) {
+  if (src_len < 3)
+    return false;
+  return is_char_or_wchar(src[0], '0', L'0') &&
+         is_char_or_wchar(tolower(src[1]), 'b', L'b') && isalnum(src[2]) &&
+         b36_char_to_int(src[2]) < 2;
+}
+
 // Takes the address of the string pointer and parses the base from the start of
 // it.
 template <typename CharType>
@@ -75,6 +87,10 @@ LIBC_INLINE static int infer_base(const CharType *__restrict src,
   // with values 10 through 15 respectively." (C standard 6.4.4.1)
   if (is_hex_start(src, src_len))
     return 16;
+  // A binary number is defined as "the prefix 0b or 0B optionally followed
+  // by a sequence of letters and digits." (C standard 7.24.1.7)
+  if (is_binary_start(src, src_len))
+    return 2;
   // An octal number is defined as "the prefix 0 optionally followed by a
   // sequence of the digits 0 through 7 only" (C standard 6.4.4.1) and so any
   // number that starts with 0, including just 0, is an octal number.
@@ -118,6 +134,9 @@ strtointeger(const CharType *__restrict src, int base,
     base = infer_base(src + src_cur, src_len - src_cur);
 
   if (base == 16 && is_hex_start(src + src_cur, src_len - src_cur))
+    src_cur = src_cur + 2;
+
+  if (base == 2 && is_binary_start(src + src_cur, src_len - src_cur))
     src_cur = src_cur + 2;
 
   constexpr bool IS_UNSIGNED = cpp::is_unsigned_v<T>;

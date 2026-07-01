@@ -37,7 +37,7 @@ void f(void) {
 }
 
 // CIR:      cir.func{{.*}} @_Z1fv()
-// CIR-NEXT:   cir.alloca !cir.ptr<!rec_IncompleteS>, !cir.ptr<!cir.ptr<!rec_IncompleteS>>, ["p"]
+// CIR-NEXT:   cir.alloca "p" {{.*}} : !cir.ptr<!cir.ptr<!rec_IncompleteS>>
 // CIR-NEXT:   cir.return
 
 // LLVM:      define{{.*}} void @_Z1fv()
@@ -54,7 +54,7 @@ char f2(CompleteS &s) {
 }
 
 // CIR: cir.func{{.*}} @_Z2f2R9CompleteS(%[[ARG_S:.*]]: !cir.ptr<!rec_CompleteS>{{.*}})
-// CIR:   %[[S_ADDR:.*]] = cir.alloca !cir.ptr<!rec_CompleteS>, !cir.ptr<!cir.ptr<!rec_CompleteS>>, ["s", init, const]
+// CIR:   %[[S_ADDR:.*]] = cir.alloca "s" {{.*}} init const : !cir.ptr<!cir.ptr<!rec_CompleteS>>
 // CIR:   cir.store %[[ARG_S]], %[[S_ADDR]]
 // CIR:   %[[S_REF:.*]] = cir.load{{.*}} %[[S_ADDR]]
 // CIR:   %[[S_ADDR2:.*]] = cir.get_member %[[S_REF]][1] {name = "b"}
@@ -89,7 +89,7 @@ void f3() {
 }
 
 // CIR: cir.func{{.*}} @_Z2f3v()
-// CIR:   %[[O:.*]] = cir.alloca !rec_Outer, !cir.ptr<!rec_Outer>, ["o"]
+// CIR:   %[[O:.*]] = cir.alloca "o" {{.*}} : !cir.ptr<!rec_Outer>
 // CIR:   %[[O_I:.*]] = cir.get_member %[[O]][0] {name = "i"}
 // CIR:   %[[O_I_N:.*]] = cir.get_member %[[O_I]][0] {name = "n"}
 
@@ -114,8 +114,8 @@ void paren_expr() {
 }
 
 // CIR: cir.func{{.*}} @_Z10paren_exprv()
-// CIR:   %[[A_ADDR:.*]] = cir.alloca !rec_Point, !cir.ptr<!rec_Point>, ["a", init]
-// CIR:   %[[B_ADDR:.*]] = cir.alloca !rec_Point, !cir.ptr<!rec_Point>, ["b", init]
+// CIR:   %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!rec_Point>
+// CIR:   %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!rec_Point>
 // CIR:   %[[CONST:.*]] = cir.get_global @[[PAREN_A]] : !cir.ptr<!rec_Point>
 // CIR:   cir.copy %[[CONST]] to %[[A_ADDR]] : !cir.ptr<!rec_Point>
 // CIR:   cir.copy %[[A_ADDR]] to %[[B_ADDR]] : !cir.ptr<!rec_Point>
@@ -139,9 +139,9 @@ void choose_expr() {
 }
 
 // CIR: cir.func{{.*}} @_Z11choose_exprv()
-// CIR:   %[[A_ADDR:.*]] = cir.alloca !rec_CompleteS, !cir.ptr<!rec_CompleteS>, ["a"]
-// CIR:   %[[B_ADDR:.*]] = cir.alloca !rec_CompleteS, !cir.ptr<!rec_CompleteS>, ["b"]
-// CIR:   %[[C_ADDR:.*]] = cir.alloca !rec_CompleteS, !cir.ptr<!rec_CompleteS>, ["c", init]
+// CIR:   %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!rec_CompleteS>
+// CIR:   %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} : !cir.ptr<!rec_CompleteS>
+// CIR:   %[[C_ADDR:.*]] = cir.alloca "c" {{.*}} init : !cir.ptr<!rec_CompleteS>
 // CIR:   cir.copy %[[A_ADDR]] to %[[C_ADDR]] : !cir.ptr<!rec_CompleteS>
 
 // LLVM: define{{.*}} void @_Z11choose_exprv()
@@ -164,10 +164,10 @@ void generic_selection() {
 }
 
 // CIR: cir.func{{.*}} @_Z17generic_selectionv()
-// CIR:   %[[A_ADDR:.*]] = cir.alloca !rec_CompleteS, !cir.ptr<!rec_CompleteS>, ["a"]
-// CIR:   %[[B_ADDR:.*]] = cir.alloca !rec_CompleteS, !cir.ptr<!rec_CompleteS>, ["b"]
-// CIR:   %[[C_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["c"]
-// CIR:   %[[D_ADDR:.*]] = cir.alloca !rec_CompleteS, !cir.ptr<!rec_CompleteS>, ["d", init]
+// CIR:   %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!rec_CompleteS>
+// CIR:   %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} : !cir.ptr<!rec_CompleteS>
+// CIR:   %[[C_ADDR:.*]] = cir.alloca "c" {{.*}} : !cir.ptr<!s32i>
+// CIR:   %[[D_ADDR:.*]] = cir.alloca "d" {{.*}} init : !cir.ptr<!rec_CompleteS>
 // CIR:   cir.copy %[[A_ADDR]] to %[[D_ADDR]] : !cir.ptr<!rec_CompleteS>
 
 // LLVM: define{{.*}} void @_Z17generic_selectionv()
@@ -192,8 +192,8 @@ void designated_init_update_expr() {
   } b = {a, .c.a = 1};
 }
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca !rec_CompleteS, !cir.ptr<!rec_CompleteS>, ["a"]
-// CIR: %[[B_ADDR:.*]] = cir.alloca !rec_Container, !cir.ptr<!rec_Container>, ["b", init]
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!rec_CompleteS>
+// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!rec_Container>
 // CIR: %[[C_ADDR:.*]] = cir.get_member %[[B_ADDR]][0] {name = "c"} : !cir.ptr<!rec_Container> -> !cir.ptr<!rec_CompleteS>
 // CIR: cir.copy %[[A_ADDR]] to %[[C_ADDR]] : !cir.ptr<!rec_CompleteS>
 // CIR: %[[ELEM_0_PTR:.*]] = cir.get_member %[[C_ADDR]][0] {name = "a"} : !cir.ptr<!rec_CompleteS> -> !cir.ptr<!s32i>
@@ -223,7 +223,7 @@ void atomic_init() {
 }
 
 // CIR: cir.func{{.*}} @_Z11atomic_initv()
-// CIR:   %[[A_ADDR:.*]] = cir.alloca !rec_CompleteS, !cir.ptr<!rec_CompleteS>, ["a"]
+// CIR:   %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!rec_CompleteS>
 // CIR:   %[[ELEM_0_PTR:.*]] = cir.get_member %[[A_ADDR]][0] {name = "a"} : !cir.ptr<!rec_CompleteS> -> !cir.ptr<!s32i>
 // CIR:   %[[CONST_0:.*]] = cir.const #cir.int<0> : !s32i
 // CIR:   cir.store{{.*}} %[[CONST_0]], %[[ELEM_0_PTR]] : !s32i, !cir.ptr<!s32i>
@@ -249,7 +249,7 @@ void unary_extension() {
   CompleteS a = __extension__ CompleteS();
 }
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca !rec_CompleteS, !cir.ptr<!rec_CompleteS>, ["a", init]
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!rec_CompleteS>
 // CIR: %[[ZERO_INIT:.*]] = cir.get_global @[[UNARY_A:.*]] : !cir.ptr<!rec_CompleteS>
 // CIR: cir.copy %[[ZERO_INIT]] to %[[A_ADDR]] : !cir.ptr<!rec_CompleteS>
 
@@ -264,7 +264,7 @@ void bin_comma() {
 }
 
 // CIR: cir.func{{.*}} @_Z9bin_commav()
-// CIR:   %[[A_ADDR:.*]] = cir.alloca !rec_CompleteS, !cir.ptr<!rec_CompleteS>, ["a", init]
+// CIR:   %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!rec_CompleteS>
 // CIR:   %[[CONST:.*]] = cir.get_global @[[COMMA_A:.*]] : !cir.ptr<!rec_CompleteS>
 // CIR:   cir.copy %[[CONST]] to %[[A_ADDR]] : !cir.ptr<!rec_CompleteS>
 
@@ -278,7 +278,7 @@ void bin_comma() {
 
 void compound_literal_expr() { CompleteS a = (CompleteS){}; }
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca !rec_CompleteS, !cir.ptr<!rec_CompleteS>, ["a", init]
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!rec_CompleteS>
 // CIR: %[[CONST:.*]] = cir.get_global @[[COMPLIT_A:.*]] : !cir.ptr<!rec_CompleteS>
 // CIR: cir.copy %[[CONST]] to %[[A_ADDR]] : !cir.ptr<!rec_CompleteS>
 
@@ -298,8 +298,8 @@ void struct_with_const_member_expr() {
   int a = (StructWithConstMember){}.a;
 }
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init]
-// CIR: %[[REF_ADDR:.*]] = cir.alloca !rec_StructWithConstMember, !cir.ptr<!rec_StructWithConstMember>, ["ref.tmp0"]
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!s32i>
+// CIR: %[[REF_ADDR:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!rec_StructWithConstMember>
 // CIR: %[[ELEM_0_PTR:.*]] = cir.get_member %[[REF_ADDR]][0] {name = "a"} : !cir.ptr<!rec_StructWithConstMember> -> !cir.ptr<!u8i>
 // CIR: %[[CONST_0:.*]] = cir.const #cir.int<0> : !s32i
 // CIR: %[[SET_BF:.*]] = cir.set_bitfield{{.*}} (#bfi_a, %[[ELEM_0_PTR]] : !cir.ptr<!u8i>, %[[CONST_0]] : !s32i) -> !s32i
@@ -327,7 +327,7 @@ void struct_with_const_member_expr() {
 
 void function_arg_with_default_value(CompleteS a = {1, 2}) {}
 
-// CIR: %[[ARG_ADDR:.*]] = cir.alloca !rec_CompleteS, !cir.ptr<!rec_CompleteS>, ["a", init]
+// CIR: %[[ARG_ADDR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!rec_CompleteS>
 // CIR: cir.store %{{.*}}, %[[ARG_ADDR]] : !rec_CompleteS, !cir.ptr<!rec_CompleteS>
 
 // LLVM: %[[ARG_ADDR:.*]] = alloca %struct.CompleteS, i64 1, align 4
@@ -340,7 +340,7 @@ void calling_function_with_default_values() {
   function_arg_with_default_value();
 }
 
-// CIR: %[[AGG_ADDR:.*]] = cir.alloca !rec_CompleteS, !cir.ptr<!rec_CompleteS>, ["agg.tmp0"]
+// CIR: %[[AGG_ADDR:.*]] = cir.alloca "agg.tmp0" {{.*}} : !cir.ptr<!rec_CompleteS>
 // CIR: %[[ELEM_0_PTR:.*]] = cir.get_member %[[AGG_ADDR]][0] {name = "a"} : !cir.ptr<!rec_CompleteS> -> !cir.ptr<!s32i>
 // CIR: %[[CONST_1:.*]] = cir.const #cir.int<1> : !s32i
 // CIR: cir.store{{.*}} %[[CONST_1]], %[[ELEM_0_PTR]] : !s32i, !cir.ptr<!s32i>

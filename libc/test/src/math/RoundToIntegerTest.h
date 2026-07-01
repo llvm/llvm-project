@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_TEST_SRC_MATH_ROUNDTOINTEGERTEST_H
 #define LLVM_LIBC_TEST_SRC_MATH_ROUNDTOINTEGERTEST_H
 
+#include "test/UnitTest/RoundingModeUtils.h"
 #undef LIBC_MATH_USE_SYSTEM_FENV
 
 #include "src/__support/CPP/algorithm.h"
@@ -25,9 +26,6 @@
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 using LIBC_NAMESPACE::Sign;
 
-static constexpr int ROUNDING_MODES[4] = {FE_UPWARD, FE_DOWNWARD, FE_TOWARDZERO,
-                                          FE_TONEAREST};
-
 template <typename FloatType, typename IntType, bool TestModes = false>
 class RoundToIntegerTestTemplate
     : public LIBC_NAMESPACE::testing::FEnvSafeTest {
@@ -36,6 +34,8 @@ public:
 
 private:
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<FloatType>;
+  using FPTest = LIBC_NAMESPACE::testing::FPTest<FloatType>;
+  using RoundingMode = LIBC_NAMESPACE::fputil::testing::RoundingMode;
   using StorageType = typename FPBits::StorageType;
 
   const FloatType zero = FPBits::zero().get_val();
@@ -59,9 +59,7 @@ private:
                       IntType expected, bool expectError) {
     libc_errno = 0;
     LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
-
     ASSERT_EQ(func(input), expected);
-
     // TODO: Handle the !expectError case. It used to expect
     // 0 for errno and exceptions, but this doesn't hold for
     // all math functions using RoundToInteger test:
@@ -69,21 +67,6 @@ private:
     if (expectError) {
       ASSERT_FP_EXCEPTION(FE_INVALID);
       ASSERT_MATH_ERRNO(EDOM);
-    }
-  }
-
-  static inline mpfr::RoundingMode to_mpfr_rounding_mode(int mode) {
-    switch (mode) {
-    case FE_UPWARD:
-      return mpfr::RoundingMode::Upward;
-    case FE_DOWNWARD:
-      return mpfr::RoundingMode::Downward;
-    case FE_TOWARDZERO:
-      return mpfr::RoundingMode::TowardZero;
-    case FE_TONEAREST:
-      return mpfr::RoundingMode::Nearest;
-    default:
-      __builtin_unreachable();
     }
   }
 
@@ -99,9 +82,13 @@ public:
     }
   }
 
-  void do_infinity_and_na_n_test(RoundToIntegerFunc func) {
-    test_one_input(func, inf, INTEGER_MAX, true);
-    test_one_input(func, neg_inf, INTEGER_MIN, true);
+  void testInfinityAndNaN(RoundToIntegerFunc func) {
+    libc_errno = 0;
+    LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
+    ASSERT_EQ_ALL_ROUNDING(INTEGER_MAX, func(inf));
+    ASSERT_EQ_ALL_ROUNDING(INTEGER_MIN, func(neg_inf));
+    ASSERT_FP_EXCEPTION(FE_INVALID);
+    ASSERT_MATH_ERRNO(EDOM);
     // This is currently never enabled, the
     // LLVM_LIBC_IMPLEMENTATION_DEFINED_TEST_BEHAVIOR CMake option in
     // libc/CMakeLists.txt is not forwarded to C++.
@@ -111,26 +98,15 @@ public:
 #endif // LIBC_COPT_IMPLEMENTATION_DEFINED_TEST_BEHAVIOR
   }
 
-  void testInfinityAndNaN(RoundToIntegerFunc func) {
-    if (TestModes) {
-      for (int mode : ROUNDING_MODES) {
-        LIBC_NAMESPACE::fputil::set_round(mode);
-        do_infinity_and_na_n_test(func);
-      }
-    } else {
-      do_infinity_and_na_n_test(func);
-    }
-  }
-
-  void do_round_numbers_test(RoundToIntegerFunc func) {
-    test_one_input(func, zero, IntType(0), false);
-    test_one_input(func, neg_zero, IntType(0), false);
-    test_one_input(func, FloatType(1.0), IntType(1), false);
-    test_one_input(func, FloatType(-1.0), IntType(-1), false);
-    test_one_input(func, FloatType(10.0), IntType(10), false);
-    test_one_input(func, FloatType(-10.0), IntType(-10), false);
-    test_one_input(func, FloatType(1232.0), IntType(1232), false);
-    test_one_input(func, FloatType(-1232.0), IntType(-1232), false);
+  void testRoundNumbers(RoundToIntegerFunc func) {
+    ASSERT_EQ_ALL_ROUNDING(IntType(0), func(zero));
+    ASSERT_EQ_ALL_ROUNDING(IntType(0), func(neg_zero));
+    ASSERT_EQ_ALL_ROUNDING(IntType(1), func(FloatType(1.0)));
+    ASSERT_EQ_ALL_ROUNDING(IntType(-1), func(FloatType(-1.0)));
+    ASSERT_EQ_ALL_ROUNDING(IntType(10), func(FloatType(10.0)));
+    ASSERT_EQ_ALL_ROUNDING(IntType(-10), func(FloatType(-10.0)));
+    ASSERT_EQ_ALL_ROUNDING(IntType(1232), func(FloatType(1232.0)));
+    ASSERT_EQ_ALL_ROUNDING(IntType(-1232), func(FloatType(-1232.0)));
 
     // The rest of this function compares with an equivalent MPFR function
     // which rounds floating point numbers to long values. There is no MPFR
@@ -155,49 +131,31 @@ public:
     long mpfr_result;
     bool erangeflag = mpfr::round_to_long(x, mpfr_result);
     ASSERT_FALSE(erangeflag);
-    test_one_input(func, x, mpfr_result, false);
+    ASSERT_EQ_ALL_ROUNDING(IntType(mpfr_result), func(x));
   }
 
-  void testRoundNumbers(RoundToIntegerFunc func) {
-    if (TestModes) {
-      for (int mode : ROUNDING_MODES) {
-        LIBC_NAMESPACE::fputil::set_round(mode);
-        do_round_numbers_test(func);
-      }
-    } else {
-      do_round_numbers_test(func);
-    }
-  }
-
-  void do_fractions_test(RoundToIntegerFunc func, int mode) {
+  void testFractions(RoundToIntegerFunc func) {
     constexpr FloatType FRACTIONS[] = {
         FloatType(0.5),    FloatType(-0.5),  FloatType(0.115),
         FloatType(-0.115), FloatType(0.715), FloatType(-0.715),
     };
-    for (FloatType x : FRACTIONS) {
-      long mpfr_long_result;
-      bool erangeflag;
-      if (TestModes)
-        erangeflag = mpfr::round_to_long(x, to_mpfr_rounding_mode(mode),
-                                         mpfr_long_result);
-      else
-        erangeflag = mpfr::round_to_long(x, mpfr_long_result);
-      ASSERT_FALSE(erangeflag);
-      IntType mpfr_result = mpfr_long_result;
-      test_one_input(func, x, mpfr_result, false);
-    }
-  }
-
-  void testFractions(RoundToIntegerFunc func) {
     if (TestModes) {
-      for (int mode : ROUNDING_MODES) {
-        LIBC_NAMESPACE::fputil::set_round(mode);
-        do_fractions_test(func, mode);
+      for (auto mpfr_mode : FPTest::ROUNDING_MODES) {
+        for (FloatType x : FRACTIONS) {
+          long mpfr_long_result;
+          bool erangeflag = mpfr::round_to_long(x, mpfr_mode, mpfr_long_result);
+          ASSERT_FALSE(erangeflag);
+          ASSERT_EQ_ROUNDING_MODE(IntType(mpfr_long_result), func(x),
+                                  mpfr_mode);
+        }
       }
     } else {
-      // Passing 0 for mode has no effect as it is not used in doFractionsTest
-      // when `TestModes` is false;
-      do_fractions_test(func, 0);
+      for (FloatType x : FRACTIONS) {
+        long mpfr_long_result;
+        bool erangeflag = mpfr::round_to_long(x, mpfr_long_result);
+        ASSERT_FALSE(erangeflag);
+        test_one_input(func, x, IntType(mpfr_long_result), false);
+      }
     }
   }
 
@@ -223,18 +181,12 @@ public:
 
     FloatType x = bits.get_val();
     if (TestModes) {
-      for (int m : ROUNDING_MODES) {
-        LIBC_NAMESPACE::fputil::set_round(m);
-        long mpfr_long_result;
-        bool erangeflag =
-            mpfr::round_to_long(x, to_mpfr_rounding_mode(m), mpfr_long_result);
-        ASSERT_TRUE(erangeflag);
-        test_one_input(func, x, INTEGER_MIN, true);
+      for (auto m : FPTest::ROUNDING_MODES) {
+        LIBC_NAMESPACE::fputil::testing::ForceRoundingMode _r(m);
+        if (_r.success)
+          test_one_input(func, x, INTEGER_MIN, true);
       }
     } else {
-      long mpfr_long_result;
-      bool erangeflag = mpfr::round_to_long(x, mpfr_long_result);
-      ASSERT_TRUE(erangeflag);
       test_one_input(func, x, INTEGER_MIN, true);
     }
   }
@@ -251,26 +203,18 @@ public:
       // All subnormal numbers should round to zero.
       if (TestModes) {
         if (x > 0) {
-          LIBC_NAMESPACE::fputil::set_round(FE_UPWARD);
-          test_one_input(func, x, IntType(1), false);
-          LIBC_NAMESPACE::fputil::set_round(FE_DOWNWARD);
-          test_one_input(func, x, IntType(0), false);
-          LIBC_NAMESPACE::fputil::set_round(FE_TOWARDZERO);
-          test_one_input(func, x, IntType(0), false);
-          LIBC_NAMESPACE::fputil::set_round(FE_TONEAREST);
-          test_one_input(func, x, IntType(0), false);
+          ASSERT_EQ_ROUNDING_UPWARD(IntType(1), func(x));
+          ASSERT_EQ_ROUNDING_DOWNWARD(IntType(0), func(x));
+          ASSERT_EQ_ROUNDING_TOWARD_ZERO(IntType(0), func(x));
+          ASSERT_EQ_ROUNDING_NEAREST(IntType(0), func(x));
         } else {
-          LIBC_NAMESPACE::fputil::set_round(FE_UPWARD);
-          test_one_input(func, x, IntType(0), false);
-          LIBC_NAMESPACE::fputil::set_round(FE_DOWNWARD);
-          test_one_input(func, x, IntType(-1), false);
-          LIBC_NAMESPACE::fputil::set_round(FE_TOWARDZERO);
-          test_one_input(func, x, IntType(0), false);
-          LIBC_NAMESPACE::fputil::set_round(FE_TONEAREST);
-          test_one_input(func, x, IntType(0), false);
+          ASSERT_EQ_ROUNDING_UPWARD(IntType(0), func(x));
+          ASSERT_EQ_ROUNDING_DOWNWARD(IntType(-1), func(x));
+          ASSERT_EQ_ROUNDING_TOWARD_ZERO(IntType(0), func(x));
+          ASSERT_EQ_ROUNDING_NEAREST(IntType(0), func(x));
         }
       } else {
-        test_one_input(func, x, 0L, false);
+        test_one_input(func, x, IntType(0), false);
       }
     }
   }
@@ -297,25 +241,24 @@ public:
         continue;
 
       if (TestModes) {
-        for (int m : ROUNDING_MODES) {
+        for (auto m : FPTest::ROUNDING_MODES) {
           long mpfr_long_result;
-          bool erangeflag = mpfr::round_to_long(x, to_mpfr_rounding_mode(m),
-                                                mpfr_long_result);
-          IntType mpfr_result = mpfr_long_result;
-          LIBC_NAMESPACE::fputil::set_round(m);
-          if (erangeflag)
-            test_one_input(func, x, x > 0 ? INTEGER_MAX : INTEGER_MIN, true);
-          else
-            test_one_input(func, x, mpfr_result, false);
+          bool erangeflag = mpfr::round_to_long(x, m, mpfr_long_result);
+          LIBC_NAMESPACE::fputil::testing::ForceRoundingMode _r(m);
+          if (_r.success) {
+            if (erangeflag)
+              test_one_input(func, x, x > 0 ? INTEGER_MAX : INTEGER_MIN, true);
+            else
+              test_one_input(func, x, IntType(mpfr_long_result), false);
+          }
         }
       } else {
         long mpfr_long_result;
         bool erangeflag = mpfr::round_to_long(x, mpfr_long_result);
-        IntType mpfr_result = mpfr_long_result;
         if (erangeflag)
           test_one_input(func, x, x > 0 ? INTEGER_MAX : INTEGER_MIN, true);
         else
-          test_one_input(func, x, mpfr_result, false);
+          test_one_input(func, x, IntType(mpfr_long_result), false);
       }
     }
   }

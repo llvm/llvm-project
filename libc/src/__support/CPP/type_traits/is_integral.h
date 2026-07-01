@@ -34,7 +34,7 @@ public:
 #ifdef __cpp_char8_t
                               char8_t,
 #endif
-                              char16_t, char32_t, char, signed char,
+                              char16_t, char32_t, wchar_t, char, signed char,
                               unsigned char, short, unsigned short, int,
                               unsigned int, long, unsigned long, long long,
                               unsigned long long, bool>();

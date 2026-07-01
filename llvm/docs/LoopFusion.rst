@@ -88,8 +88,9 @@ fusion.
 Each loop is first scanned for disqualifying properties. A loop is
 rejected immediately if any of its blocks has its address taken, if
 any instruction in the loop may throw, or if the loop contains a
-volatile memory access. The pass cannot reason about exception-based
-control flow or volatile ordering, so these are hard blockers.
+volatile or atomic memory access. The pass cannot reason about
+exception-based control flow, volatile ordering, or the
+synchronization semantics of atomics, so these are hard blockers.
 
 Surviving loops must additionally satisfy four structural
 requirements:
@@ -424,19 +425,22 @@ following properties holds:
 - A block in the loop has its address taken (for example, used as a
   ``blockaddress`` operand).
 - Any instruction in the loop may throw.
-- The loop contains a volatile ``load`` or ``store``.
+- The loop contains a volatile memory access.
+- The loop contains an atomic memory access.
 
 These conditions are hard blockers, not soft preferences: the pass
 never attempts to work around them.
 
-**Atomic operations are not reasoned about.** Atomic loads, stores,
-``atomicrmw``, ``cmpxchg``, and ``fence`` instructions inside the
-loop body are tracked only as ordinary memory reads or writes. The
-pass does not inspect their memory ordering (``unordered``,
-``monotonic``, ``acquire``, ``release``, ``seq_cst``), and the
-underlying dependence analysis reasons about address-based data
-dependence rather than inter-thread synchronization. Fusing two
-loops that contain non-``unordered`` atomics can therefore change
-observable multi-threaded behavior even when the dependence check
-reports no conflict.
+**Atomic accesses are rejected conservatively.** Any atomic
+instruction -- atomic ``load`` and ``store``, ``atomicrmw``,
+``cmpxchg``, and ``fence`` -- disqualifies the loop, mirroring the
+volatile blocker. The underlying dependence analysis reasons about
+address-based data dependence rather than inter-thread
+synchronization (the synchronizes-with / fence semantics of the
+memory model), so fusing two loops interleaves their bodies and
+could reorder atomics in ways that change observable multi-threaded
+behavior even when the dependence check reports no conflict. The
+rejection covers the ``unordered`` ordering and higher, so even
+``unordered`` atomics (which carry no cross-thread ordering) are
+rejected. 
 

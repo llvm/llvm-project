@@ -54,7 +54,7 @@ ORC_RT_SPS_WRAPPER(
 
 ORC_RT_SPS_WRAPPER(
     orc_rt_ci_sps_NativeDylibManager_lookup,
-    SPSExpected<SPSSequence<SPSExecutorAddr>>(
+    SPSExpected<SPSSequence<SPSOptional<SPSExecutorAddr>>>(
         SPSExecutorAddr, SPSExecutorAddr,
         SPSSequence<SPSTuple<SPSString, bool>>),
     WrapperFunction::handleWithAsyncMethod(&NativeDylibManager::lookup))

@@ -352,6 +352,7 @@ bool ValuePointsToCode(lldb::SBValue v) {
 
   lldb::SBError error;
   lldb::addr_t addr = v.GetData().GetAddress(error, 0);
+  addr = v.GetProcess().FixAddress(addr);
   lldb::SBLineEntry line_entry =
       v.GetTarget().ResolveLoadAddress(addr).GetLineEntry();
 

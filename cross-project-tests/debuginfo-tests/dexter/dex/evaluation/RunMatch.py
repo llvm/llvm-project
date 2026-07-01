@@ -14,30 +14,41 @@ from collections import defaultdict
 from typing import Any, Dict, List, Tuple
 
 from dex.dextIR import DextIR, StepIR
-from dex.evaluation.ExpectMatch import DebuggerExpectMatch, get_expect_match
+from dex.evaluation.ExpectMatch import (
+    DebuggerExpectMatch,
+    ExpectMatchContext,
+    MatchResult,
+    get_expect_match,
+)
 from dex.evaluation.Metrics import (
     Metric,
     get_variable_metrics,
     serialize_metric_to_json,
 )
-from dex.evaluation.StateMatch import get_active_where_expects
+from dex.evaluation.StateMatch import StateMatchContext, get_active_where_matches
 from dex.test_script import DexterScript, Scope
 from dex.test_script.Nodes import Expect, Value
-
 
 class DebuggerStepMatch:
     """Class used to record the match between a DexterScript and a StepIR, including the state match, determining which
     script nodes are "active", and the expect matches, which compare the debugger's output to the DexterScript's
     expected output."""
 
-    def __init__(self, step: StepIR, script: DexterScript):
+    def __init__(
+        self,
+        step: StepIR,
+        script: DexterScript,
+        match_context: ExpectMatchContext,
+        state_match_context: StateMatchContext,
+    ):
         self.step = step
         self.script = script
-        self.state_match = get_active_where_expects(script, step)
+        self.match_context = match_context
+        self.state_match = get_active_where_matches(script, step, state_match_context)
         expects_to_match = {
             expect
-            for frame_idx, expects in self.state_match.values()
-            for expect in expects
+            for where_match in self.state_match.values()
+            for expect in where_match.active_expects
         }
         self.expect_matches: Dict[Expect, DebuggerExpectMatch] = {}
 
@@ -45,7 +56,10 @@ class DebuggerStepMatch:
             assert isinstance(expect, Value), "Non-Value expects currently unsupported"
             if expect in expects_to_match:
                 self.expect_matches[expect] = get_expect_match(
-                    expect, expected_value, step.watches[expect.get_watched_expr()]
+                    expect,
+                    expected_value,
+                    step.watches[expect.get_watched_expr()],
+                    self.match_context,
                 )
 
         script.visit_script(visit_expect=add_expected_values)
@@ -58,8 +72,9 @@ class DebuggerRunMatch(object):
     affect the match of another variable at step N+1, thus we go one step at a time.
     """
 
-    def __init__(self, context, dext_ir: DextIR):
-        self.context = context
+    def __init__(self, dex_context, dext_ir: DextIR):
+        self.dex_context = dex_context
+        self.match_context = ExpectMatchContext()
         self.dext_ir = dext_ir
         self.metrics: Dict[str, Metric] = {}
         self.step_matches: List[DebuggerStepMatch] = []
@@ -81,8 +96,11 @@ class DebuggerRunMatch(object):
         script.visit_script(visit_expect=add_expected_values)
 
         # Then produce all of our step matches.
+        state_match_context = StateMatchContext()
         for step in self.dext_ir.steps:
-            self.step_matches.append(DebuggerStepMatch(step, script))
+            self.step_matches.append(
+                DebuggerStepMatch(step, script, self.match_context, state_match_context)
+            )
 
         # Then, for each expect, produce the list of results for just that variable.
         for step_match in self.step_matches:
@@ -111,8 +129,8 @@ class DebuggerRunMatch(object):
             result += f"Step {step_match.step.step_index}:\n"
             result += f"  {step_match.step.current_location}\n"
             frame_active_wheres = defaultdict(list)
-            for where, (frame_idx, expects) in step_match.state_match.items():
-                frame_active_wheres[frame_idx].append(str(where))
+            for where, where_match in step_match.state_match.items():
+                frame_active_wheres[where_match.frame_idx].append(str(where))
             if not frame_active_wheres:
                 result += f"  No active !where nodes.\n"
                 continue
@@ -132,17 +150,17 @@ class DebuggerRunMatch(object):
             matching_expects = [
                 (expect, match)
                 for expect, match in step_match.expect_matches.items()
-                if match.match_result
+                if match.match_result == MatchResult.TRUE
             ]
             non_matching_expects = [
                 (expect, match)
                 for expect, match in step_match.expect_matches.items()
-                if not match.match_result
+                if match.match_result != MatchResult.TRUE
             ]
             if matching_expects:
-                result += f"    Matching nodes:     [{', '.join(f'{expect}={match.actual_result}' for expect, match in matching_expects)}]\n"
+                result += f"    Matching nodes:     [{', '.join(f'{expect}={match.short_str()}' for expect, match in matching_expects)}]\n"
             if non_matching_expects:
-                result += f"    Non-matching nodes: [{', '.join(f'{expect}={match.actual_result}' for expect, match in non_matching_expects)}]\n"
+                result += f"    Non-matching nodes: [{', '.join(f'{expect}={match.short_str()}' for expect, match in non_matching_expects)}]\n"
         return result
 
     def get_metric_output(self):

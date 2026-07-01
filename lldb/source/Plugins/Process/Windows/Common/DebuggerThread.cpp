@@ -187,10 +187,10 @@ Status DebuggerThread::StopDebugging(bool terminate) {
       // Initiate the termination before continuing the exception, so that the
       // next debug event we get is the exit process event, and not some other
       // event.
-      BOOL terminate_suceeded = TerminateProcess(handle, 0);
+      BOOL terminate_succeeded = TerminateProcess(handle, 0);
       LLDB_LOG(log,
                "calling TerminateProcess({0}, 0) (inferior={1}), success={2}",
-               handle, pid, terminate_suceeded);
+               handle, pid, terminate_succeeded);
     } else {
       LLDB_LOG(log,
                "NOT calling TerminateProcess because the inferior is not valid "
@@ -207,6 +207,8 @@ Status DebuggerThread::StopDebugging(bool terminate) {
     LLDB_LOG(log, "masking active exception");
     ContinueAsyncException(ExceptionResult::MaskException);
   }
+
+  ContinueAsyncDllEvent();
 
   if (!terminate) {
     // Indicate that we want to detach.
@@ -249,6 +251,10 @@ void DebuggerThread::ContinueAsyncException(ExceptionResult result) {
   m_exception_pred.SetValue(result, eBroadcastAlways);
 }
 
+void DebuggerThread::ContinueAsyncDllEvent() {
+  m_dll_event_pred.SetValue(true, eBroadcastAlways);
+}
+
 void DebuggerThread::FreeProcessHandles() {
   m_process = HostProcess();
   m_main_thread = HostThread();
@@ -271,7 +277,7 @@ void DebuggerThread::DebugLoop() {
       bool shutting_down = m_is_shutting_down;
       switch (dbe.dwDebugEventCode) {
       default:
-        llvm_unreachable("Unhandle debug event code!");
+        llvm_unreachable("Unhandled debug event code!");
       case EXCEPTION_DEBUG_EVENT: {
         ExceptionResult status = HandleExceptionEvent(
             dbe.u.Exception, dbe.dwThreadId, shutting_down);
@@ -362,9 +368,8 @@ void DebuggerThread::DebugLoop() {
         }
       }
 
-      if (m_detached) {
+      if (m_detached)
         should_debug = false;
-      }
     } else {
       LLDB_LOG(log, "returned FALSE from WaitForDebugEventEx.  Error = {0}",
                ::GetLastError());
@@ -442,7 +447,8 @@ DebuggerThread::HandleCreateProcessEvent(const CREATE_PROCESS_DEBUG_INFO &info,
   // info.hProcess and info.hThread are closed automatically by Windows when
   // EXIT_PROCESS_DEBUG_EVENT is received.
   m_process = HostProcess(info.hProcess);
-  ((HostProcessWindows &)m_process.GetNativeProcess()).SetOwnsHandle(false);
+  static_cast<HostProcessWindows &>(m_process.GetNativeProcess())
+      .SetOwnsHandle(false);
   m_main_thread = HostThread(info.hThread);
   m_main_thread.GetNativeThread().SetOwnsHandle(false);
   m_image_file = info.hFile;
@@ -539,13 +545,32 @@ ConvertNtDevicePathToDosPath(llvm::ArrayRef<wchar_t> nt_path) {
     dos_wide.append(nt_path.begin() + dev_len, nt_path.end());
 
     std::string result;
-    llvm::convertWideToUTF8(std::wstring(dos_wide.begin(), dos_wide.end()),
+    llvm::convertWideToUTF8(std::wstring_view(dos_wide.data(), dos_wide.size()),
                             result);
     return result;
   } while (::FindNextVolumeW(vol_iter, vol_name.data(), vol_name.size()));
 
   LLDB_LOG(log, "ConvertNtDevicePathToDosPath: no matching volume found");
   return std::nullopt;
+}
+
+// Query the file name backing the mapping at `addr` in `process` and convert
+// the resulting NT device path to a DOS path.
+static std::optional<std::string> GetMappedFileDosPath(HANDLE process,
+                                                       LPVOID addr) {
+  std::vector<wchar_t> mapped_filename(MAX_PATH + 1);
+  DWORD mapped_len = 0;
+  while (mapped_filename.size() <= PATHCCH_MAX_CCH) {
+    mapped_len = ::GetMappedFileNameW(process, addr, mapped_filename.data(),
+                                      mapped_filename.size());
+    if (mapped_len == 0)
+      return std::nullopt;
+    if (mapped_len < mapped_filename.size())
+      break;
+    mapped_filename.resize(mapped_filename.size() * 2);
+  }
+  return ConvertNtDevicePathToDosPath(
+      llvm::ArrayRef<wchar_t>(mapped_filename.data(), mapped_len + 1));
 }
 
 static std::optional<std::string> GetFileNameFromHandleFallback(HANDLE hFile) {
@@ -567,42 +592,29 @@ static std::optional<std::string> GetFileNameFromHandleFallback(HANDLE hFile) {
   if (!pMem)
     return std::nullopt;
 
-  std::array<wchar_t, MAX_PATH + 1> mapped_filename;
-  if (!::GetMappedFileNameW(::GetCurrentProcess(), pMem.get(),
-                            mapped_filename.data(), mapped_filename.size()))
-    return std::nullopt;
-
-  return ConvertNtDevicePathToDosPath(mapped_filename);
+  return GetMappedFileDosPath(::GetCurrentProcess(), pMem.get());
 }
 
 static std::optional<std::string> GetFileNameByLoadAddress(HANDLE process,
                                                            LPVOID base_addr) {
-  std::array<wchar_t, MAX_PATH + 1> module_filename;
-  DWORD len =
-      ::GetModuleFileNameExW(process, reinterpret_cast<HMODULE>(base_addr),
-                             module_filename.data(), module_filename.size());
-  if (len > 0 && len < module_filename.size()) {
-    std::string path_utf8;
-    llvm::convertWideToUTF8(std::wstring(module_filename.data(), len),
-                            path_utf8);
-    return path_utf8;
+  std::vector<wchar_t> module_filename(MAX_PATH + 1);
+  while (module_filename.size() <= PATHCCH_MAX_CCH) {
+    DWORD len =
+        ::GetModuleFileNameExW(process, reinterpret_cast<HMODULE>(base_addr),
+                               module_filename.data(), module_filename.size());
+    if (len == 0)
+      break; // Not loaded as a module; fall back to the mapped-file query.
+    if (len < module_filename.size()) {
+      std::string path_utf8;
+      llvm::convertWideToUTF8(std::wstring_view(module_filename.data(), len),
+                              path_utf8);
+      return path_utf8;
+    }
+    module_filename.resize(module_filename.size() * 2);
   }
 
   // Fallback: ask the kernel for the file backing the mapping at this address.
-  std::vector<wchar_t> mapped_filename(MAX_PATH + 1);
-  DWORD mapped_len = 0;
-  while (mapped_filename.size() <= PATHCCH_MAX_CCH) {
-    mapped_len = ::GetMappedFileNameW(
-        process, base_addr, mapped_filename.data(), mapped_filename.size());
-    if (mapped_len < mapped_filename.size())
-      break;
-    if (::GetLastError() != ERROR_INSUFFICIENT_BUFFER)
-      return std::nullopt;
-    mapped_filename.resize(mapped_filename.size() * 2);
-  }
-  std::optional<std::string> dos_path = ConvertNtDevicePathToDosPath(
-      llvm::ArrayRef<wchar_t>(mapped_filename.data(), mapped_len + 1));
-  return dos_path;
+  return GetMappedFileDosPath(process, base_addr);
 }
 
 // Determine how many bytes can be read at `addr` in `process` before crossing
@@ -623,48 +635,58 @@ static SIZE_T BytesReadableAt(HANDLE process, LPCVOID addr) {
 
 static std::optional<std::string> ReadRemotePathStringW(HANDLE process,
                                                         LPCVOID addr) {
-  SIZE_T to_read = std::min<SIZE_T>((MAX_PATH + 1) * sizeof(wchar_t),
-                                    BytesReadableAt(process, addr));
-  to_read &= ~SIZE_T(1); // round down to a wchar_t boundary
-  if (to_read < sizeof(wchar_t))
-    return std::nullopt;
+  SIZE_T limit = std::min<SIZE_T>(PATHCCH_MAX_CCH * sizeof(wchar_t),
+                                  BytesReadableAt(process, addr));
+  std::vector<wchar_t> buf;
+  for (SIZE_T capacity = MAX_PATH * sizeof(wchar_t);; capacity *= 2) {
+    SIZE_T to_read = std::min<SIZE_T>(capacity, limit);
+    to_read &= ~SIZE_T(1); // round down to a wchar_t boundary
+    if (to_read < sizeof(wchar_t))
+      return std::nullopt;
 
-  std::array<wchar_t, MAX_PATH + 1> buf{};
-  SIZE_T bytes_read = 0;
-  if (!::ReadProcessMemory(process, addr, buf.data(), to_read, &bytes_read))
-    return std::nullopt;
+    buf.resize(to_read / sizeof(wchar_t));
+    SIZE_T bytes_read = 0;
+    if (!::ReadProcessMemory(process, addr, buf.data(), to_read, &bytes_read))
+      return std::nullopt;
 
-  size_t max_chars = bytes_read / sizeof(wchar_t);
-  size_t len = ::wcsnlen(buf.data(), max_chars);
-  if (len == max_chars) // no null terminator found
-    return std::nullopt;
-  if (len == 0) // empty string
-    return std::nullopt;
-
-  std::string result;
-  llvm::convertWideToUTF8(std::wstring(buf.data(), len), result);
-  return result;
+    size_t max_chars = bytes_read / sizeof(wchar_t);
+    size_t len = ::wcsnlen(buf.data(), max_chars);
+    if (len < max_chars) { // found the null terminator
+      if (len == 0)        // empty string
+        return std::nullopt;
+      std::string result;
+      llvm::convertWideToUTF8(std::wstring_view(buf.data(), len), result);
+      return result;
+    }
+    if (to_read >= limit) // read everything available without a terminator
+      return std::nullopt;
+  }
 }
 
 static std::optional<std::string> ReadRemotePathStringA(HANDLE process,
                                                         LPCVOID addr) {
-  SIZE_T to_read =
-      std::min<SIZE_T>(MAX_PATH + 1, BytesReadableAt(process, addr));
-  if (to_read == 0)
-    return std::nullopt;
+  SIZE_T limit =
+      std::min<SIZE_T>(PATHCCH_MAX_CCH, BytesReadableAt(process, addr));
+  std::vector<char> buf;
+  for (SIZE_T capacity = MAX_PATH;; capacity *= 2) {
+    SIZE_T to_read = std::min<SIZE_T>(capacity, limit);
+    if (to_read == 0)
+      return std::nullopt;
 
-  std::array<char, MAX_PATH + 1> buf{};
-  SIZE_T bytes_read = 0;
-  if (!::ReadProcessMemory(process, addr, buf.data(), to_read, &bytes_read))
-    return std::nullopt;
+    buf.resize(to_read);
+    SIZE_T bytes_read = 0;
+    if (!::ReadProcessMemory(process, addr, buf.data(), to_read, &bytes_read))
+      return std::nullopt;
 
-  size_t len = ::strnlen(buf.data(), bytes_read);
-  if (len == bytes_read) // no null terminator found
-    return std::nullopt;
-  if (len == 0) // empty string
-    return std::nullopt;
-
-  return std::string(buf.data(), len);
+    size_t len = ::strnlen(buf.data(), bytes_read);
+    if (len < bytes_read) { // found the null terminator
+      if (len == 0)         // empty string
+        return std::nullopt;
+      return std::string(buf.data(), len);
+    }
+    if (to_read >= limit) // read everything available without a terminator
+      return std::nullopt;
+  }
 }
 
 // Resolve the LOAD_DLL_DEBUG_INFO::lpImageName field.
@@ -690,6 +712,7 @@ DebuggerThread::HandleLoadDllEvent(const LOAD_DLL_DEBUG_INFO &info,
                                    DWORD thread_id) {
   Log *log = GetLog(WindowsLog::Event);
 
+  DllEventAction action = DllEventAction::ContinueDebugLoop;
   auto on_load_dll = [&](llvm::StringRef path) {
     FileSpec file_spec(path);
     ModuleSpec module_spec(file_spec);
@@ -698,7 +721,8 @@ DebuggerThread::HandleLoadDllEvent(const LOAD_DLL_DEBUG_INFO &info,
     LLDB_LOG(log, "Inferior {0} - DLL '{1}' loaded at address {2:x}...",
              m_process.GetProcessId(), path, info.lpBaseOfDll);
 
-    m_debug_delegate->OnLoadDll(module_spec, load_addr);
+    m_dll_event_pred.SetValue(false, eBroadcastNever);
+    action = m_debug_delegate->OnLoadDll(module_spec, load_addr, thread_id);
   };
 
   std::optional<std::string> resolved_path;
@@ -738,6 +762,9 @@ DebuggerThread::HandleLoadDllEvent(const LOAD_DLL_DEBUG_INFO &info,
   // Windows does not automatically close info.hFile, so we need to do it.
   if (info.hFile != nullptr)
     ::CloseHandle(info.hFile);
+
+  if (action == DllEventAction::ParkDebugLoop && !m_is_shutting_down.load())
+    m_dll_event_pred.WaitForValueEqualTo(true);
   return DBG_CONTINUE;
 }
 
@@ -748,8 +775,11 @@ DebuggerThread::HandleUnloadDllEvent(const UNLOAD_DLL_DEBUG_INFO &info,
   LLDB_LOG(log, "process {0} unloading DLL at addr {1:x}.",
            m_process.GetProcessId(), info.lpBaseOfDll);
 
-  m_debug_delegate->OnUnloadDll(
-      reinterpret_cast<lldb::addr_t>(info.lpBaseOfDll));
+  m_dll_event_pred.SetValue(false, eBroadcastNever);
+  DllEventAction action = m_debug_delegate->OnUnloadDll(
+      reinterpret_cast<lldb::addr_t>(info.lpBaseOfDll), thread_id);
+  if (action == DllEventAction::ParkDebugLoop && !m_is_shutting_down.load())
+    m_dll_event_pred.WaitForValueEqualTo(true);
   return DBG_CONTINUE;
 }
 

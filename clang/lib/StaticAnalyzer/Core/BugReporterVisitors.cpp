@@ -1273,27 +1273,15 @@ static void showBRDiagnostics(llvm::raw_svector_ostream &OS, StoreInfo SI) {
     SI.Origin->printPretty(OS);
 
   } else if (SI.StoreKind == StoreInfo::Initialization) {
-    // We don't need to check here, all these conditions were
-    // checked by StoreSiteFinder, when it figured out that it is
-    // initialization.
-    const auto *DS =
-        cast<DeclStmt>(SI.StoreSite->getLocationAs<PostStmt>()->getStmt());
-
-    if (SI.Value.isUndef()) {
-      if (isa<VarRegion>(SI.Dest)) {
-        const auto *VD = cast<VarDecl>(DS->getSingleDecl());
-
-        if (VD->getInit()) {
-          OS << (HasPrefix ? "initialized" : "Initializing")
-             << " to a garbage value";
-        } else {
-          OS << (HasPrefix ? "declared" : "Declaring")
-             << " without an initial value";
-        }
+    if (const auto *VR = dyn_cast<VarRegion>(SI.Dest)) {
+      const VarDecl *VD = VR->getDecl();
+      if (!VD->getInit() && !VD->hasGlobalStorage()) {
+        OS << (HasPrefix ? "declared" : "Declared")
+           << " without an initial value";
+        return;
       }
-    } else {
-      OS << (HasPrefix ? "initialized" : "Initialized") << " here";
     }
+    OS << (HasPrefix ? "initialized" : "Initialized") << " here";
   }
 }
 

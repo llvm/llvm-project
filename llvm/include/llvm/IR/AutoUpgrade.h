@@ -63,6 +63,10 @@ namespace llvm {
   /// module is modified.
   LLVM_ABI bool UpgradeModuleFlags(Module &M);
 
+  /// Upgrade the cfi.functions metadata node by calculating and inserting
+  /// the GUID for each function entry if it's missing.
+  LLVM_ABI bool UpgradeCFIFunctionsMetadata(Module &M);
+
   /// Convert legacy nvvm.annotations metadata to appropriate function
   /// attributes.
   LLVM_ABI void UpgradeNVVMAnnotations(Module &M);
@@ -104,7 +108,7 @@ namespace llvm {
   ///  - guarded-control-stack
   ///  - sign-return-address
   ///  - sign-return-address-with-bkey
-  void copyModuleAttrToFunctions(Module &M);
+  LLVM_ABI void copyModuleAttrToFunctions(Module &M);
 
   /// Check whether a string looks like an old loop attachment tag.
   inline bool mayBeOldLoopAttachmentTag(StringRef Name) {

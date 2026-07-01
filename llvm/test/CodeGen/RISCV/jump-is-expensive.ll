@@ -6,8 +6,8 @@
 define void @foo(i32 %X, i32 %Y, i32 %Z) nounwind {
 ; CHEAP-LABEL: foo:
 ; CHEAP:       # %bb.0: # %entry
-; CHEAP-NEXT:    sext.w a1, a1
 ; CHEAP-NEXT:    li a2, 5
+; CHEAP-NEXT:    sext.w a1, a1
 ; CHEAP-NEXT:    blt a1, a2, .LBB0_3
 ; CHEAP-NEXT:  # %bb.1: # %entry
 ; CHEAP-NEXT:    sext.w a0, a0

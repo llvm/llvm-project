@@ -12,8 +12,12 @@
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpDefinition.h"
+#include "llvm/ADT/SetVector.h"
+#include <functional>
+
 namespace mlir {
 
+class UnrealizedConversionCastOp;
 class VectorType;
 class OpOperand;
 class OpResult;
@@ -93,17 +97,6 @@ SmallVector<Value> extractVectorsWithShapeFromValue(OpBuilder &builder,
 Value createVectorWithShapeFromValues(OpBuilder &builder, Location loc,
                                       ValueRange values,
                                       ArrayRef<int64_t> shape);
-
-/// Do type conversion for SCF structural ops, e.g., scf.for using SCF structure
-/// type convertion patterns. Since VectorType cannot carry the layout
-/// attribute, which is needed to guide the type conversion for XeGPU, they are
-/// first converted into RankedTensorType, where the layout attribute can be
-/// attached. And then upstream SCF structural type conversion patterns are
-/// applied with the provided converter.
-/// TODO: This is a temporary solution. We should refactor it when context-aware
-/// type conversion is available.
-void doSCFStructuralTypeConversionWithTensorType(Operation *op,
-                                                 TypeConverter converter);
 
 /// Retrieves the chip string from the XeVM target attribute of the parent
 /// GPU module operation. Returns the chip identifier if found, or nullopt
@@ -233,6 +226,59 @@ bool matchUnitDimExpansion(ArrayRef<int64_t> src, ArrayRef<int64_t> dst,
 // is split into one or more consecutive dimensions in dst
 bool matchSplitDimExpansion(ArrayRef<int64_t> src, ArrayRef<int64_t> dst,
                             SmallVector<SmallVector<int64_t>> &splitDimGroups);
+
+/// Callback type for computing sub-shape and count for 1:N (or 1:1
+/// shape-changing) VectorType conversion. Given a VectorType and its
+/// DistributeLayoutAttr, returns (subShape, count). A count <= 0 signals
+/// "no conversion needed"; count == 1 is a 1:1 shape-changing conversion;
+/// count > 1 produces `count` copies of `subShape`.
+using SubShapeAndCountFn = std::function<std::pair<SmallVector<int64_t>, int>(
+    VectorType, DistributeLayoutAttr)>;
+
+/// Pre-computes distributed VectorType mappings for every value carried
+/// through an SCF loop under `topLevelOp` (1:1 shape-changing or 1:N): the
+/// region block args (`scf.while` before/after args, `scf.for` iter_args), the
+/// loop results, and the terminator operands feeding them. Each is derived from
+/// a single source -- the layout of the feeding value (loop init or
+/// `scf.condition` operand) -- and keyed by `Value`, because the SCF converters
+/// detach/replace the loop body mid-conversion, after which a layout query on a
+/// block arg returns null. Recording results and terminator operands lets a 1:N
+/// pass resolve them from the map after stripping the loop op's transient
+/// layout attrs. `scf.if` has no loop-carried block args and needs no entry.
+DenseMap<Value, SmallVector<Type>>
+precomputeLoopBlockArgTypes(Operation *topLevelOp,
+                            SubShapeAndCountFn getSubShapeAndCount);
+
+/// Adds a context-aware VectorType conversion to `converter` (1:1
+/// shape-changing or 1:N, depending on `getSubShapeAndCount`'s returned
+/// count). `getSubShapeAndCount` computes (subShape, count) for a VectorType
+/// and its layout; count <= 0 means no conversion needed. `loopArgTypes`
+/// (typically obtained from `precomputeLoopBlockArgTypes`) provides the
+/// pre-computed types for SCF loop block arguments (`scf.while`,
+/// `scf.for`); pass an empty map if the IR has no such loops.
+void addVectorTypeConversion(TypeConverter &converter,
+                             SubShapeAndCountFn getSubShapeAndCount,
+                             DenseMap<Value, SmallVector<Type>> loopArgTypes);
+
+/// Cleans up UnrealizedConversionCastOps inserted during SCF structural type
+/// conversion and/or XeGPU unrolling. Folds cancelling N:1->1:N and 1:N->N:1
+/// cast chains (inserting vector.shape_cast when shapes differ but element
+/// counts match). Unpaired pack (1:N) and unpack (N:1) casts between a single
+/// large VectorType and N identically-typed smaller VectorTypes are lowered
+/// to vector.extract_strided_slice / vector.insert_strided_slice. Dead casts
+/// are erased. Casts in `existingCasts` are preserved.
+void cleanupUnrealizedConversionCasts(
+    Operation *root,
+    const llvm::SmallSetVector<UnrealizedConversionCastOp, 8> &existingCasts);
+
+// Checks if dst shape is a collapse of src shape where each dimension in dst is
+// produced by one or more consecutive dimensions in src whose product equals
+// the dst dimension. Populates collapseDims with groups of src indices that are
+// collapsed into each dst dimension. Leading or trailing unit dst dimensions
+// (with no backing src dim) result in empty groups. Example: src=[8,16,32],
+// dst=[1,4096] -> true, collapseDims=[[],[0,1,2]].
+bool matchDimCollapse(ArrayRef<int64_t> src, ArrayRef<int64_t> dst,
+                      SmallVector<SmallVector<int64_t>> &collapseDims);
 
 } // namespace xegpu
 

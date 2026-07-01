@@ -294,9 +294,6 @@ bool isEqual(const ExplicitSpaceArrayBases &x,
 namespace llvm {
 template <>
 struct DenseMapInfo<Fortran::lower::ExplicitSpaceArrayBases> {
-  static inline Fortran::lower::ExplicitSpaceArrayBases getEmptyKey() {
-    return reinterpret_cast<Fortran::lower::FrontEndSymbol>(~0);
-  }
   static unsigned
   getHashValue(const Fortran::lower::ExplicitSpaceArrayBases &v) {
     return Fortran::lower::getHashValue(v);

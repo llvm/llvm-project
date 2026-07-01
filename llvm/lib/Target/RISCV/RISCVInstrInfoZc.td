@@ -93,7 +93,7 @@ def negstackadj : RISCVOp<OtherVT> {
 let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
 class CLoadB_ri<bits<6> funct6, string OpcodeStr>
     : RVInst16CLB<funct6, OPC_C0, (outs GPRC:$rd),
-                  (ins GPRCMem:$rs1, uimm2:$imm),
+                  (ins BasePtrC:$rs1, uimm2:$imm),
                   OpcodeStr, "$rd, ${imm}(${rs1})"> {
   bits<2> imm;
 
@@ -104,7 +104,7 @@ let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
 class CLoadH_ri<bits<6> funct6, bit funct1, string OpcodeStr,
                 DAGOperand rty = GPRC>
     : RVInst16CLH<funct6, funct1, OPC_C0, (outs rty:$rd),
-                  (ins GPRCMem:$rs1, uimm2_lsb0:$imm),
+                  (ins BasePtrC:$rs1, uimm2_lsb0:$imm),
                   OpcodeStr, "$rd, ${imm}(${rs1})"> {
   bits<2> imm;
 
@@ -114,7 +114,7 @@ class CLoadH_ri<bits<6> funct6, bit funct1, string OpcodeStr,
 let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in
 class CStoreB_rri<bits<6> funct6, string OpcodeStr>
     : RVInst16CSB<funct6, OPC_C0, (outs),
-                  (ins GPRC:$rs2, GPRCMem:$rs1, uimm2:$imm),
+                  (ins GPRC:$rs2, BasePtrC:$rs1, uimm2:$imm),
                   OpcodeStr, "$rs2, ${imm}(${rs1})"> {
   bits<2> imm;
 
@@ -125,7 +125,7 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in
 class CStoreH_rri<bits<6> funct6, bit funct1, string OpcodeStr,
                   DAGOperand rty = GPRC>
     : RVInst16CSH<funct6, funct1, OPC_C0, (outs),
-                  (ins rty:$rs2, GPRCMem:$rs1, uimm2_lsb0:$imm),
+                  (ins rty:$rs2, BasePtrC:$rs1, uimm2_lsb0:$imm),
                   OpcodeStr, "$rs2, ${imm}(${rs1})"> {
   bits<2> imm;
 
@@ -307,22 +307,22 @@ def : CompressPat<(XORI GPRC:$rs1, GPRC:$rs1, -1),
 }
 
 let Predicates = [HasStdExtZcb] in{
-def : CompressPat<(LBU GPRC:$rd, GPRCMem:$rs1, uimm2:$imm),
-                  (C_LBU GPRC:$rd, GPRCMem:$rs1, uimm2:$imm)>;
-def : CompressPat<(LHU GPRC:$rd, GPRCMem:$rs1, uimm2_lsb0:$imm),
-                  (C_LHU GPRC:$rd, GPRCMem:$rs1, uimm2_lsb0:$imm)>;
-def : CompressPat<(LH GPRC:$rd, GPRCMem:$rs1, uimm2_lsb0:$imm),
-                  (C_LH GPRC:$rd, GPRCMem:$rs1, uimm2_lsb0:$imm)>;
-def : CompressPat<(SB GPRC:$rs2, GPRCMem:$rs1, uimm2:$imm),
-                  (C_SB GPRC:$rs2, GPRCMem:$rs1, uimm2:$imm)>;
-def : CompressPat<(SH GPRC:$rs2, GPRCMem:$rs1, uimm2_lsb0:$imm),
-                  (C_SH GPRC:$rs2, GPRCMem:$rs1, uimm2_lsb0:$imm)>;
+def : CompressPat<(LBU GPRC:$rd, BasePtrC:$rs1, uimm2:$imm),
+                  (C_LBU GPRC:$rd, BasePtrC:$rs1, uimm2:$imm)>;
+def : CompressPat<(LHU GPRC:$rd, BasePtrC:$rs1, uimm2_lsb0:$imm),
+                  (C_LHU GPRC:$rd, BasePtrC:$rs1, uimm2_lsb0:$imm)>;
+def : CompressPat<(LH GPRC:$rd, BasePtrC:$rs1, uimm2_lsb0:$imm),
+                  (C_LH GPRC:$rd, BasePtrC:$rs1, uimm2_lsb0:$imm)>;
+def : CompressPat<(SB GPRC:$rs2, BasePtrC:$rs1, uimm2:$imm),
+                  (C_SB GPRC:$rs2, BasePtrC:$rs1, uimm2:$imm)>;
+def : CompressPat<(SH GPRC:$rs2, BasePtrC:$rs1, uimm2_lsb0:$imm),
+                  (C_SH GPRC:$rs2, BasePtrC:$rs1, uimm2_lsb0:$imm)>;
 
 let isCompressOnly = true in {
-def : CompressPat<(LH_INX GPRF16C:$rd, GPRCMem:$rs1, uimm2_lsb0:$imm),
-                  (C_LH_INX GPRF16C:$rd, GPRCMem:$rs1, uimm2_lsb0:$imm)>;
-def : CompressPat<(SH_INX GPRF16C:$rs2, GPRCMem:$rs1, uimm2_lsb0:$imm),
-                  (C_SH_INX GPRF16C:$rs2, GPRCMem:$rs1, uimm2_lsb0:$imm)>;
+def : CompressPat<(LH_INX GPRF16C:$rd, BasePtrC:$rs1, uimm2_lsb0:$imm),
+                  (C_LH_INX GPRF16C:$rd, BasePtrC:$rs1, uimm2_lsb0:$imm)>;
+def : CompressPat<(SH_INX GPRF16C:$rs2, BasePtrC:$rs1, uimm2_lsb0:$imm),
+                  (C_SH_INX GPRF16C:$rs2, BasePtrC:$rs1, uimm2_lsb0:$imm)>;
 }
 }// Predicates = [HasStdExtZcb]
 

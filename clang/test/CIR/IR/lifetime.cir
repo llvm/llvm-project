@@ -5,7 +5,7 @@
 !s32i = !cir.int<s, 32>
 
 cir.func @lifetime_start_end() {
-  %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["x"] {alignment = 4 : i64}
+  %0 = cir.alloca "x" align(4) : !cir.ptr<!s32i>
   // CHECK: cir.lifetime.start %0 : !cir.ptr<!s32i>
   cir.lifetime.start %0 : !cir.ptr<!s32i>
   // CHECK: cir.lifetime.end %0 : !cir.ptr<!s32i>

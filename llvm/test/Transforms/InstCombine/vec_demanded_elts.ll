@@ -1021,12 +1021,12 @@ define float @common_binop_demand_via_extelt_op1(<2 x float> %p, <2 x float> %y)
 
 define float @common_binop_demand_via_extelt_op0_commute(<2 x float> %p, <2 x float> %q) {
 ; CHECK-LABEL: @common_binop_demand_via_extelt_op0_commute(
-; CHECK-NEXT:    [[X:%.*]] = fsub nnan <2 x float> <float 0.000000e+00, float poison>, [[P:%.*]]
-; CHECK-NEXT:    [[Y:%.*]] = fsub nnan <2 x float> <float 3.000000e+00, float 2.000000e+00>, [[Q:%.*]]
+; CHECK-NEXT:    [[X:%.*]] = fsub <2 x float> <float 0.000000e+00, float poison>, [[P:%.*]]
+; CHECK-NEXT:    [[Y:%.*]] = fsub <2 x float> <float 3.000000e+00, float 2.000000e+00>, [[Q:%.*]]
 ; CHECK-NEXT:    [[XSHUF:%.*]] = shufflevector <2 x float> [[X]], <2 x float> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[B_Y_XSHUF:%.*]] = fmul nnan <2 x float> [[Y]], [[XSHUF]]
-; CHECK-NEXT:    [[B_XY0:%.*]] = extractelement <2 x float> [[B_Y_XSHUF]], i64 0
-; CHECK-NEXT:    call void @use_fp(<2 x float> [[B_Y_XSHUF]])
+; CHECK-NEXT:    [[B_XY:%.*]] = fmul <2 x float> [[Y]], [[XSHUF]]
+; CHECK-NEXT:    [[B_XY0:%.*]] = extractelement <2 x float> [[B_XY]], i64 0
+; CHECK-NEXT:    call void @use_fp(<2 x float> [[B_XY]])
 ; CHECK-NEXT:    ret float [[B_XY0]]
 ;
   %x = fsub <2 x float> <float 0.0, float 1.0>, %p ; thwart complexity-based canonicalization
@@ -1057,6 +1057,54 @@ define i4 @common_binop_demand_via_extelt_op1_commute(<2 x i4> %p, <2 x i4> %q) 
   %b_xy0 = extractelement <2 x i4> %b_xy, i32 0
   call void @use(<2 x i4> %b_y_xshuf)
   ret i4 %b_xy0
+}
+
+define i4 @common_binop_demand_via_extelt_nuw_nsw_sibling_nsw_extracted(<2 x i4> %x, <2 x i4> %y) {
+; CHECK-LABEL: @common_binop_demand_via_extelt_nuw_nsw_sibling_nsw_extracted(
+; CHECK-NEXT:    [[XSHUF:%.*]] = shufflevector <2 x i4> [[X:%.*]], <2 x i4> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[SIB:%.*]] = sub nsw <2 x i4> [[XSHUF]], [[Y:%.*]]
+; CHECK-NEXT:    [[E:%.*]] = extractelement <2 x i4> [[SIB]], i64 0
+; CHECK-NEXT:    call void @use(<2 x i4> [[SIB]])
+; CHECK-NEXT:    ret i4 [[E]]
+;
+  %xshuf = shufflevector <2 x i4> %x, <2 x i4> poison, <2 x i32> zeroinitializer
+  %sib = sub nuw nsw <2 x i4> %xshuf, %y
+  %bo = sub nsw <2 x i4> %x, %y
+  %e = extractelement <2 x i4> %bo, i32 0
+  call void @use(<2 x i4> %sib)
+  ret i4 %e
+}
+
+define float @common_binop_demand_via_extelt_nsz_extracted(<2 x float> %x, <2 x float> %y) {
+; CHECK-LABEL: @common_binop_demand_via_extelt_nsz_extracted(
+; CHECK-NEXT:    [[XSHUF:%.*]] = shufflevector <2 x float> [[X:%.*]], <2 x float> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[SIB:%.*]] = fadd <2 x float> [[XSHUF]], [[Y:%.*]]
+; CHECK-NEXT:    [[E:%.*]] = extractelement <2 x float> [[SIB]], i64 0
+; CHECK-NEXT:    call void @use_fp(<2 x float> [[SIB]])
+; CHECK-NEXT:    ret float [[E]]
+;
+  %xshuf = shufflevector <2 x float> %x, <2 x float> poison, <2 x i32> zeroinitializer
+  %sib = fadd <2 x float> %xshuf, %y
+  %bo = fadd nsz <2 x float> %x, %y
+  %e = extractelement <2 x float> %bo, i32 0
+  call void @use_fp(<2 x float> %sib)
+  ret float %e
+}
+
+define float @common_binop_demand_via_extelt_contract_reassoc_sibling_reassoc_extracted(<2 x float> %x, <2 x float> %y) {
+; CHECK-LABEL: @common_binop_demand_via_extelt_contract_reassoc_sibling_reassoc_extracted(
+; CHECK-NEXT:    [[XSHUF:%.*]] = shufflevector <2 x float> [[X:%.*]], <2 x float> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[SIB:%.*]] = fmul reassoc <2 x float> [[XSHUF]], [[Y:%.*]]
+; CHECK-NEXT:    [[E:%.*]] = extractelement <2 x float> [[SIB]], i64 0
+; CHECK-NEXT:    call void @use_fp(<2 x float> [[SIB]])
+; CHECK-NEXT:    ret float [[E]]
+;
+  %xshuf = shufflevector <2 x float> %x, <2 x float> poison, <2 x i32> zeroinitializer
+  %sib = fmul contract reassoc <2 x float> %xshuf, %y
+  %bo = fmul reassoc <2 x float> %x, %y
+  %e = extractelement <2 x float> %bo, i32 0
+  call void @use_fp(<2 x float> %sib)
+  ret float %e
 }
 
 ; negative test - wrong operands for sub

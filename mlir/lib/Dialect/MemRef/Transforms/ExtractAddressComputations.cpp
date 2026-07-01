@@ -6,275 +6,242 @@
 //
 //===----------------------------------------------------------------------===//
 //
-/// This transformation pass rewrites loading/storing from/to a memref with
-/// offsets into loading/storing from/to a subview and without any offset on
-/// the instruction itself.
+/// This transformation pass rewrites memory access operations with offsets into
+/// accesses through a subview and without any offset on the access operation
+/// itself.
 //
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/MemRef/IR/MemoryAccessOpInterfaces.h"
 #include "mlir/Dialect/MemRef/Transforms/Transforms.h"
-#include "mlir/Dialect/NVGPU/IR/NVGPUDialect.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/PatternMatch.h"
-#include "llvm/ADT/Repeated.h"
 
 using namespace mlir;
 
 namespace {
 
 //===----------------------------------------------------------------------===//
-// Helper functions for the `load base[off0...]`
-//  => `load (subview base[off0...])[0...]` pattern.
+// Helper functions for the `access base[off0...]`
+//  => `access (subview base[off0...])[0...]` pattern.
 //===----------------------------------------------------------------------===//
 
-// Matches getFailureOrSrcMemRef specs for LoadOp.
-// \see LoadStoreLikeOpRewriter.
-static FailureOr<Value> getLoadOpSrcMemRef(memref::LoadOp loadOp) {
-  return loadOp.getMemRef();
+/// Returns true if every index is zero.
+static bool hasAllZeroIndices(ValueRange indices) {
+  return llvm::all_of(getAsOpFoldResult(indices), isZeroInteger);
 }
 
-// Matches rebuildOpFromAddressAndIndices specs for LoadOp.
-// \see LoadStoreLikeOpRewriter.
-static memref::LoadOp rebuildLoadOp(RewriterBase &rewriter,
-                                    memref::LoadOp loadOp, Value srcMemRef,
-                                    ValueRange indices) {
-  Location loc = loadOp.getLoc();
-  return memref::LoadOp::create(rewriter, loc, srcMemRef, indices,
-                                loadOp.getNontemporal());
-}
-
-// Matches getViewSizeForEachDim specs for LoadOp.
-// \see LoadStoreLikeOpRewriter.
-static SmallVector<OpFoldResult>
-getLoadOpViewSizeForEachDim(RewriterBase &rewriter, memref::LoadOp loadOp) {
-  MemRefType ldTy = loadOp.getMemRefType();
-  unsigned loadRank = ldTy.getRank();
-  return SmallVector<OpFoldResult>(loadRank, rewriter.getIndexAttr(1));
-}
-
-//===----------------------------------------------------------------------===//
-// Helper functions for the `store val, base[off0...]`
-//  => `store val, (subview base[off0...])[0...]` pattern.
-//===----------------------------------------------------------------------===//
-
-// Matches getFailureOrSrcMemRef specs for StoreOp.
-// \see LoadStoreLikeOpRewriter.
-static FailureOr<Value> getStoreOpSrcMemRef(memref::StoreOp storeOp) {
-  return storeOp.getMemRef();
-}
-
-// Matches rebuildOpFromAddressAndIndices specs for StoreOp.
-// \see LoadStoreLikeOpRewriter.
-static memref::StoreOp rebuildStoreOp(RewriterBase &rewriter,
-                                      memref::StoreOp storeOp, Value srcMemRef,
-                                      ValueRange indices) {
-  Location loc = storeOp.getLoc();
-  return memref::StoreOp::create(rewriter, loc, storeOp.getValueToStore(),
-                                 srcMemRef, indices, storeOp.getNontemporal());
-}
-
-// Matches getViewSizeForEachDim specs for StoreOp.
-// \see LoadStoreLikeOpRewriter.
-static SmallVector<OpFoldResult>
-getStoreOpViewSizeForEachDim(RewriterBase &rewriter, memref::StoreOp storeOp) {
-  MemRefType ldTy = storeOp.getMemRefType();
-  unsigned loadRank = ldTy.getRank();
-  return SmallVector<OpFoldResult>(loadRank, rewriter.getIndexAttr(1));
-}
-
-//===----------------------------------------------------------------------===//
-// Helper functions for the `ldmatrix base[off0...]`
-//  => `ldmatrix (subview base[off0...])[0...]` pattern.
-//===----------------------------------------------------------------------===//
-
-// Matches getFailureOrSrcMemRef specs for LdMatrixOp.
-// \see LoadStoreLikeOpRewriter.
-static FailureOr<Value> getLdMatrixOpSrcMemRef(nvgpu::LdMatrixOp ldMatrixOp) {
-  return ldMatrixOp.getSrcMemref();
-}
-
-// Matches rebuildOpFromAddressAndIndices specs for LdMatrixOp.
-// \see LoadStoreLikeOpRewriter.
-static nvgpu::LdMatrixOp rebuildLdMatrixOp(RewriterBase &rewriter,
-                                           nvgpu::LdMatrixOp ldMatrixOp,
-                                           Value srcMemRef,
-                                           ValueRange indices) {
-  Location loc = ldMatrixOp.getLoc();
-  return nvgpu::LdMatrixOp::create(
-      rewriter, loc, ldMatrixOp.getResult().getType(), srcMemRef, indices,
-      ldMatrixOp.getTranspose(), ldMatrixOp.getNumTiles());
-}
-
-//===----------------------------------------------------------------------===//
-// Helper functions for the `transfer_read base[off0...]`
-//  => `transfer_read (subview base[off0...])[0...]` pattern.
-//===----------------------------------------------------------------------===//
-
-// Matches getFailureOrSrcMemRef specs for TransferReadOp.
-// \see LoadStoreLikeOpRewriter.
-template <typename TransferLikeOp>
-static FailureOr<Value>
-getTransferLikeOpSrcMemRef(TransferLikeOp transferLikeOp) {
-  Value src = transferLikeOp.getBase();
-  if (isa<MemRefType>(src.getType()))
-    return src;
-  return failure();
-}
-
-// Matches rebuildOpFromAddressAndIndices specs for TransferReadOp.
-// \see LoadStoreLikeOpRewriter.
-static vector::TransferReadOp
-rebuildTransferReadOp(RewriterBase &rewriter,
-                      vector::TransferReadOp transferReadOp, Value srcMemRef,
-                      ValueRange indices) {
-  Location loc = transferReadOp.getLoc();
-  return vector::TransferReadOp::create(
-      rewriter, loc, transferReadOp.getResult().getType(), srcMemRef, indices,
-      transferReadOp.getPermutationMap(), transferReadOp.getPadding(),
-      transferReadOp.getMask(), transferReadOp.getInBoundsAttr());
-}
-
-//===----------------------------------------------------------------------===//
-// Helper functions for the `transfer_write base[off0...]`
-//  => `transfer_write (subview base[off0...])[0...]` pattern.
-//===----------------------------------------------------------------------===//
-
-// Matches rebuildOpFromAddressAndIndices specs for TransferWriteOp.
-// \see LoadStoreLikeOpRewriter.
-static vector::TransferWriteOp
-rebuildTransferWriteOp(RewriterBase &rewriter,
-                       vector::TransferWriteOp transferWriteOp, Value srcMemRef,
-                       ValueRange indices) {
-  Location loc = transferWriteOp.getLoc();
-  return vector::TransferWriteOp::create(
-      rewriter, loc, transferWriteOp.getValue(), srcMemRef, indices,
-      transferWriteOp.getPermutationMapAttr(), transferWriteOp.getMask(),
-      transferWriteOp.getInBoundsAttr());
-}
-
-//===----------------------------------------------------------------------===//
-// Generic helper functions used as default implementation in
-// LoadStoreLikeOpRewriter.
-//===----------------------------------------------------------------------===//
-
-/// Helper function to get the src memref.
-/// It uses the already defined getFailureOrSrcMemRef but asserts
-/// that the source is a memref.
-template <typename LoadStoreLikeOp,
-          FailureOr<Value> (*getFailureOrSrcMemRef)(LoadStoreLikeOp)>
-static Value getSrcMemRef(LoadStoreLikeOp loadStoreLikeOp) {
-  FailureOr<Value> failureOrSrcMemRef = getFailureOrSrcMemRef(loadStoreLikeOp);
-  assert(!failed(failureOrSrcMemRef) && "Generic getSrcMemRef cannot be used");
-  return *failureOrSrcMemRef;
-}
-
-/// Helper function to get the sizes of the resulting view.
-/// This function gets the sizes of the source memref then substracts the
-/// offsets used within \p loadStoreLikeOp. This gives the maximal (for
-/// inbound) sizes for the view.
-/// The source memref is retrieved using getSrcMemRef on \p loadStoreLikeOp.
-template <typename LoadStoreLikeOp, Value (*getSrcMemRef)(LoadStoreLikeOp)>
-static SmallVector<OpFoldResult>
-getGenericOpViewSizeForEachDim(RewriterBase &rewriter,
-                               LoadStoreLikeOp loadStoreLikeOp) {
-  Location loc = loadStoreLikeOp.getLoc();
-  auto extractStridedMetadataOp = memref::ExtractStridedMetadataOp::create(
-      rewriter, loc, getSrcMemRef(loadStoreLikeOp));
+/// Get the remaining size in each dimension - that is, the size of the memref
+/// dimension minus the index. Used to preserve in_bounds behavior for
+/// transfer_read/write.
+static SmallVector<OpFoldResult> getRemainingSizes(RewriterBase &rewriter,
+                                                   Location loc,
+                                                   Value srcMemRef,
+                                                   ValueRange indices) {
+  auto extractStridedMetadataOp =
+      memref::ExtractStridedMetadataOp::create(rewriter, loc, srcMemRef);
   SmallVector<OpFoldResult> srcSizes =
       extractStridedMetadataOp.getConstifiedMixedSizes();
-  SmallVector<OpFoldResult> indices =
-      getAsOpFoldResult(loadStoreLikeOp.getIndices());
+  SmallVector<OpFoldResult> mixedIndices = getAsOpFoldResult(indices);
   SmallVector<OpFoldResult> finalSizes;
 
   AffineExpr s0 = rewriter.getAffineSymbolExpr(0);
   AffineExpr s1 = rewriter.getAffineSymbolExpr(1);
 
-  for (auto [srcSize, indice] : llvm::zip(srcSizes, indices)) {
+  for (auto [srcSize, index] : llvm::zip_equal(srcSizes, mixedIndices)) {
     finalSizes.push_back(affine::makeComposedFoldedAffineApply(
-        rewriter, loc, s0 - s1, {srcSize, indice}));
+        rewriter, loc, s0 - s1, {srcSize, index}));
   }
   return finalSizes;
 }
 
-/// Rewrite a store/load-like op so that all its indices are zeros.
-/// E.g., %ld = memref.load %base[%off0]...[%offN]
+/// Get the sizes needed to create a valid subview for an indexed access.
+/// The trailing dimensions are sized using the accessed shape, taking
+/// the minimum of that shape's size and what's available along the relevant
+/// memref dimension as a dynamic value if the memref is dynamically shaped
+/// (so as to avoid subviews that exceed the bounds of the relevant memref
+/// dimension). If the operation accesses a dynamic number of elements along
+/// the dimension, the size of the subview will always be the remaining element
+/// count along the dimension.
+static SmallVector<OpFoldResult>
+getIndexedAccessViewSizes(RewriterBase &rewriter,
+                          memref::IndexedAccessOpInterface op) {
+  TypedValue<MemRefType> srcMemRef = op.getAccessedMemref();
+  assert(srcMemRef && "expected indexed access with a memref");
+
+  MemRefType srcType = srcMemRef.getType();
+  int64_t srcRank = srcType.getRank();
+  SmallVector<int64_t> accessedShape = op.getAccessedShape();
+  int64_t accessedRank = static_cast<int64_t>(accessedShape.size());
+  assert(accessedRank <= srcRank &&
+         "can't access more dimensions than a memref has");
+
+  SmallVector<OpFoldResult> indices = getAsOpFoldResult(op.getIndices());
+  int64_t firstAccessedDim = srcRank - accessedRank;
+
+  Location loc = op.getLoc();
+  SmallVector<OpFoldResult> viewSizes(srcRank, rewriter.getIndexAttr(1));
+  SmallVector<OpFoldResult> srcSizes;
+  AffineExpr s0 = rewriter.getAffineSymbolExpr(0);
+  AffineExpr s1 = rewriter.getAffineSymbolExpr(1);
+  AffineExpr cst = rewriter.getAffineSymbolExpr(2);
+
+  auto ensureSrcSizes = [&]() {
+    if (srcSizes.empty()) {
+      auto extractStridedMetadataOp =
+          memref::ExtractStridedMetadataOp::create(rewriter, loc, srcMemRef);
+      srcSizes = extractStridedMetadataOp.getConstifiedMixedSizes();
+    }
+  };
+
+  for (int64_t accessedDim : llvm::seq<int64_t>(0, accessedRank)) {
+    int64_t accessedSize = accessedShape[accessedDim];
+    int64_t dim = firstAccessedDim + accessedDim;
+    if (!ShapedType::isDynamic(accessedSize)) {
+      int64_t srcDimSize = srcType.getDimSize(dim);
+      if (!ShapedType::isDynamic(srcDimSize) || accessedSize == 1) {
+        viewSizes[dim] = rewriter.getIndexAttr(accessedSize);
+        continue;
+      }
+      ensureSrcSizes();
+      viewSizes[dim] = affine::makeComposedFoldedAffineMin(
+          rewriter, loc,
+          AffineMap::get(/*dimCount=*/0, /*symbolCount=*/3, {s0 - s1, cst},
+                         rewriter.getContext()),
+          {srcSizes[dim], indices[dim], rewriter.getIndexAttr(accessedSize)});
+    } else {
+      ensureSrcSizes();
+      viewSizes[dim] = affine::makeComposedFoldedAffineApply(
+          rewriter, loc, s0 - s1, {srcSizes[dim], indices[dim]});
+    }
+  }
+  return viewSizes;
+}
+
+static memref::SubViewOp createSubviewForAccess(RewriterBase &rewriter,
+                                                Location loc, Value srcMemRef,
+                                                ValueRange indices,
+                                                ArrayRef<OpFoldResult> sizes) {
+  int64_t rank = cast<MemRefType>(srcMemRef.getType()).getRank();
+  SmallVector<OpFoldResult> mixedIndices = getAsOpFoldResult(indices);
+  SmallVector<OpFoldResult> ones(rank, rewriter.getIndexAttr(1));
+
+  return memref::SubViewOp::create(rewriter, loc, /*source=*/srcMemRef,
+                                   /*offsets=*/mixedIndices,
+                                   /*sizes=*/sizes, /*strides=*/ones);
+}
+
+static SmallVector<Value> getZeroIndices(RewriterBase &rewriter, Location loc,
+                                         int64_t rank) {
+  if (rank == 0)
+    return {};
+  Value zero = arith::ConstantIndexOp::create(rewriter, loc, 0);
+  return SmallVector<Value>(rank, zero);
+}
+
+/// Rewrite an indexed access op so that all its indices are zeros.
+/// E.g., %res = indexed_access %base[%off0]...[%offN]
 /// =>
 /// %new_base = subview %base[%off0,.., %offN][1,..,1][1,..,1]
-/// %ld = memref.load %new_base[0,..,0] :
+/// %res = indexed_access %new_base[0,..,0] :
 ///    memref<1x..x1xTy, strided<[1,..,1], offset: ?>>
-///
-/// `getSrcMemRef` returns the source memref for the given load-like operation.
-///
-/// `getViewSizeForEachDim` returns the sizes of view that is going to feed
-/// new operation. This must return one size per dimension of the view.
-/// The sizes of the view needs to be at least as big as what is actually
-/// going to be accessed. Use the provided `loadStoreOp` to get the right
-/// sizes.
-///
-/// Using the given rewriter, `rebuildOpFromAddressAndIndices` creates a new
-/// LoadStoreLikeOp that reads from srcMemRef[indices].
-/// The returned operation will be used to replace loadStoreOp.
-template <typename LoadStoreLikeOp,
-          FailureOr<Value> (*getFailureOrSrcMemRef)(LoadStoreLikeOp),
-          LoadStoreLikeOp (*rebuildOpFromAddressAndIndices)(
-              RewriterBase & /*rewriter*/, LoadStoreLikeOp /*loadStoreOp*/,
-              Value /*srcMemRef*/, ValueRange /*indices*/),
-          SmallVector<OpFoldResult> (*getViewSizeForEachDim)(
-              RewriterBase & /*rewriter*/, LoadStoreLikeOp /*loadStoreOp*/) =
-              getGenericOpViewSizeForEachDim<
-                  LoadStoreLikeOp,
-                  getSrcMemRef<LoadStoreLikeOp, getFailureOrSrcMemRef>>>
-struct LoadStoreLikeOpRewriter : public OpRewritePattern<LoadStoreLikeOp> {
-  using OpRewritePattern<LoadStoreLikeOp>::OpRewritePattern;
+struct IndexedAccessOpRewriter final
+    : OpInterfaceRewritePattern<memref::IndexedAccessOpInterface> {
+  using Base::Base;
 
-  LogicalResult matchAndRewrite(LoadStoreLikeOp loadStoreLikeOp,
+  LogicalResult matchAndRewrite(memref::IndexedAccessOpInterface op,
                                 PatternRewriter &rewriter) const override {
-    FailureOr<Value> failureOrSrcMemRef =
-        getFailureOrSrcMemRef(loadStoreLikeOp);
-    if (failed(failureOrSrcMemRef))
-      return rewriter.notifyMatchFailure(loadStoreLikeOp,
-                                         "source is not a memref");
-    Value srcMemRef = *failureOrSrcMemRef;
-    auto ldStTy = cast<MemRefType>(srcMemRef.getType());
-    unsigned loadStoreRank = ldStTy.getRank();
-    // Don't waste compile time if there is nothing to rewrite.
-    if (loadStoreRank == 0)
-      return rewriter.notifyMatchFailure(loadStoreLikeOp,
+    TypedValue<MemRefType> srcMemRef = op.getAccessedMemref();
+    if (!srcMemRef)
+      return rewriter.notifyMatchFailure(op, "source is not a memref");
+
+    int64_t rank = srcMemRef.getType().getRank();
+    if (rank == 0)
+      return rewriter.notifyMatchFailure(op,
                                          "0-D accesses don't need rewriting");
 
-    // If our load already has only zeros as indices there is nothing
-    // to do.
-    SmallVector<OpFoldResult> indices =
-        getAsOpFoldResult(loadStoreLikeOp.getIndices());
-    if (llvm::all_of(indices, isZeroInteger)) {
+    if (static_cast<int64_t>(op.getAccessedShape().size()) > rank)
       return rewriter.notifyMatchFailure(
-          loadStoreLikeOp, "no computation to extract: offsets are 0s");
-    }
+          op, "can't access more dimensions than a memref has");
 
-    // Create the array of ones of the right size.
-    SmallVector<OpFoldResult> ones(loadStoreRank, rewriter.getIndexAttr(1));
+    if (!op.hasInboundsIndices())
+      return rewriter.notifyMatchFailure(op, "indices may be out of bounds");
+
+    // If the access already has only zeros as indices there is nothing
+    // to do.
+    if (hasAllZeroIndices(op.getIndices()))
+      return rewriter.notifyMatchFailure(
+          op, "no computation to extract: offsets are 0s");
+
+    SmallVector<OpFoldResult> subviewSizes =
+        getIndexedAccessViewSizes(rewriter, op);
+
+    Location loc = op.getLoc();
+    auto subview = createSubviewForAccess(rewriter, loc, srcMemRef,
+                                          op.getIndices(), subviewSizes);
+    SmallVector<Value> zeros = getZeroIndices(rewriter, loc, rank);
+
+    std::optional<SmallVector<Value>> newValues =
+        op.updateMemrefAndIndices(rewriter, subview.getResult(), zeros);
+    if (newValues)
+      rewriter.replaceOp(op, *newValues);
+    return success();
+  }
+};
+
+/// Rewrite a vector transfer op so that all its indices are zeros.
+struct TransferOpRewriter final
+    : OpInterfaceRewritePattern<VectorTransferOpInterface> {
+  using Base::Base;
+
+  LogicalResult matchAndRewrite(VectorTransferOpInterface op,
+                                PatternRewriter &rewriter) const override {
+    Value srcMemRef = op.getBase();
+    auto srcType = dyn_cast<MemRefType>(srcMemRef.getType());
+    if (!srcType)
+      return rewriter.notifyMatchFailure(op, "source is not a memref");
+
+    int64_t rank = srcType.getRank();
+
+    if (rank == 0)
+      return rewriter.notifyMatchFailure(op,
+                                         "0-D accesses don't need rewriting");
+
+    if (hasAllZeroIndices(op.getIndices()))
+      return rewriter.notifyMatchFailure(
+          op, "no computation to extract: offsets are 0s");
+
+    Location loc = op.getLoc();
+    SmallVector<OpFoldResult> offsets = getAsOpFoldResult(op.getIndices());
+    SmallVector<OpFoldResult> strides(rank, rewriter.getIndexAttr(1));
+    // Approximate sizes needed so we can test the general case of the
+    // replacement we're planning to do - this can be tightened up later when
+    // this pattern is extended to reason about in_bounds, which dimensions are
+    // accessed, etc.
+    SmallVector<OpFoldResult> approximateSizes(
+        rank, rewriter.getIndexAttr(ShapedType::kDynamic));
+    MemRefType subviewType = memref::SubViewOp::inferResultType(
+        srcType, offsets, approximateSizes, strides);
+    if (!subviewType)
+      return rewriter.notifyMatchFailure(op, "failed to infer subview type");
+
+    AffineMap permutationMap = op.getPermutationMap();
+    if (failed(op.mayUpdateStartingPosition(subviewType, permutationMap)))
+      return rewriter.notifyMatchFailure(op,
+                                         "failed op-specific preconditions");
+
     SmallVector<OpFoldResult> sizes =
-        getViewSizeForEachDim(rewriter, loadStoreLikeOp);
-    assert(sizes.size() == loadStoreRank &&
-           "Expected one size per load dimension");
-    Location loc = loadStoreLikeOp.getLoc();
-    // The subview inherits its strides from the original memref and will
-    // apply them properly to the input indices.
-    // Therefore the strides multipliers are simply ones.
-    auto subview =
-        memref::SubViewOp::create(rewriter, loc, /*source=*/srcMemRef,
-                                  /*offsets=*/indices,
-                                  /*sizes=*/sizes, /*strides=*/ones);
-    // Rewrite the load/store with the subview as the base pointer.
-    Repeated<Value> zeros(loadStoreRank,
-                          arith::ConstantIndexOp::create(rewriter, loc, 0));
-    LoadStoreLikeOp newLoadStore = rebuildOpFromAddressAndIndices(
-        rewriter, loadStoreLikeOp, subview.getResult(), zeros);
-    rewriter.replaceOp(loadStoreLikeOp, newLoadStore->getResults());
+        getRemainingSizes(rewriter, loc, srcMemRef, op.getIndices());
+    auto subview = createSubviewForAccess(rewriter, loc, srcMemRef,
+                                          op.getIndices(), sizes);
+    SmallVector<Value> zeros = getZeroIndices(rewriter, loc, rank);
+
+    op.updateStartingPosition(rewriter, subview.getResult(), zeros,
+                              AffineMapAttr::get(permutationMap));
     return success();
   }
 };
@@ -282,28 +249,6 @@ struct LoadStoreLikeOpRewriter : public OpRewritePattern<LoadStoreLikeOp> {
 
 void memref::populateExtractAddressComputationsPatterns(
     RewritePatternSet &patterns) {
-  patterns.add<
-      LoadStoreLikeOpRewriter<
-          memref::LoadOp,
-          /*getSrcMemRef=*/getLoadOpSrcMemRef,
-          /*rebuildOpFromAddressAndIndices=*/rebuildLoadOp,
-          /*getViewSizeForEachDim=*/getLoadOpViewSizeForEachDim>,
-      LoadStoreLikeOpRewriter<
-          memref::StoreOp,
-          /*getSrcMemRef=*/getStoreOpSrcMemRef,
-          /*rebuildOpFromAddressAndIndices=*/rebuildStoreOp,
-          /*getViewSizeForEachDim=*/getStoreOpViewSizeForEachDim>,
-      LoadStoreLikeOpRewriter<
-          nvgpu::LdMatrixOp,
-          /*getSrcMemRef=*/getLdMatrixOpSrcMemRef,
-          /*rebuildOpFromAddressAndIndices=*/rebuildLdMatrixOp>,
-      LoadStoreLikeOpRewriter<
-          vector::TransferReadOp,
-          /*getSrcMemRef=*/getTransferLikeOpSrcMemRef<vector::TransferReadOp>,
-          /*rebuildOpFromAddressAndIndices=*/rebuildTransferReadOp>,
-      LoadStoreLikeOpRewriter<
-          vector::TransferWriteOp,
-          /*getSrcMemRef=*/getTransferLikeOpSrcMemRef<vector::TransferWriteOp>,
-          /*rebuildOpFromAddressAndIndices=*/rebuildTransferWriteOp>>(
+  patterns.add<IndexedAccessOpRewriter, TransferOpRewriter>(
       patterns.getContext());
 }

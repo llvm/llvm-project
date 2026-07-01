@@ -62,12 +62,22 @@ if (LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS)
     target_link_options(lldbPluginScriptInterpreterPython PRIVATE
       "LINKER:--unresolved-symbols=ignore-all")
   else()
-    # Windows continues to use delay-load + import lib.
-    target_link_libraries(lldbPluginScriptInterpreterPython PRIVATE
-      ${Python3_LIBRARIES})
+    # For the limited API, rely on #pragma comment(lib, "python3.lib")
+    # emitted by SWIG. For the full API, link the version-specific import lib.
+    if (NOT LLDB_ENABLE_PYTHON_LIMITED_API)
+      target_link_libraries(lldbPluginScriptInterpreterPython PRIVATE
+        ${Python3_LIBRARIES})
+    endif()
     target_link_directories(lldbPluginScriptInterpreterPython PRIVATE
       ${PYTHON_SABI_LIBRARY_DIRS})
   endif()
+
+  if (NOT CMAKE_SYSTEM_NAME MATCHES "Windows")
+    lldb_record_dynamic_script_interpreter_exports(
+      lldbPluginScriptInterpreterPython)
+  endif()
+
+  lldb_add_scriptinterpreter_plugin_to_framework(lldbPluginScriptInterpreterPython)
 
   # Static variant linked directly by unit tests. Separate compilation is
   # required so llvm::Error RTTI (ErrorInfoBase::ID) has a single address
@@ -89,9 +99,15 @@ if (LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS)
   )
   target_include_directories(lldbStaticScriptInterpreterPython
     PUBLIC ${Python3_INCLUDE_DIRS})
-
-  target_link_directories(lldbStaticScriptInterpreterPython PUBLIC ${PYTHON_SABI_LIBRARY_DIRS})
+  target_link_directories(lldbStaticScriptInterpreterPython
+    PUBLIC ${PYTHON_SABI_LIBRARY_DIRS})
 else()
+  # On Windows with the limited API, the Python import library is selected via
+  # #pragma comment(lib, ...) in pyconfig.h based on Py_LIMITED_API.
+  # On all other platforms, always link Python3_LIBRARIES explicitly.
+  if (NOT (WIN32 AND LLDB_ENABLE_PYTHON_LIMITED_API))
+    set(python_link_libs ${Python3_LIBRARIES})
+  endif()
   add_lldb_library(lldbPluginScriptInterpreterPython PLUGIN
     ${python_plugin_sources}
     LINK_COMPONENTS
@@ -104,7 +120,7 @@ else()
       lldbInterpreter
       lldbTarget
       lldbValueObject
-      ${Python3_LIBRARIES}
+      ${python_link_libs}
       ${LLDB_LIBEDIT_LIBS}
   )
   target_link_directories(lldbPluginScriptInterpreterPython PUBLIC ${PYTHON_SABI_LIBRARY_DIRS})

@@ -4847,19 +4847,6 @@ void Parser::ParseStructDeclaration(
   }
 }
 
-// TODO: All callers of this function should be moved to
-// `Parser::ParseLexedAttributeList`.
-void Parser::ParseLexedCAttributeList(LateParsedAttrList &LAs,
-                                      ParsedAttributes *OutAttrs) {
-  assert(LAs.parseSoon() &&
-         "Attribute list should be marked for immediate parsing.");
-  for (auto *LA : LAs) {
-    ParseLexedCAttribute(*LA, OutAttrs);
-    delete LA;
-  }
-  LAs.clear();
-}
-
 ParsedAttributes Parser::ParseLexedCAttributeTokens(LateParsedAttribute &LA) {
   // Create a fake EOF so that attribute parsing won't go off the end of the
   // attribute.
@@ -4898,17 +4885,6 @@ ParsedAttributes Parser::ParseLexedCAttributeTokens(LateParsedAttribute &LA) {
     ConsumeAnyToken();
 
   return Attrs;
-}
-
-void Parser::ParseLexedCAttribute(LateParsedAttribute &LA,
-                                  ParsedAttributes *OutAttrs) {
-  ParsedAttributes Attrs = ParseLexedCAttributeTokens(LA);
-
-  for (Decl *D : LA.Decls)
-    Actions.ActOnFinishDelayedAttribute(getCurScope(), D, Attrs);
-
-  if (OutAttrs)
-    OutAttrs->takeAllAppendingFrom(Attrs);
 }
 
 void Parser::ParseLexedTypeAttribute(LateParsedTypeAttribute &LA,
@@ -5066,7 +5042,8 @@ void Parser::ParseStructUnionBody(SourceLocation RecordLoc,
                       T.getOpenLocation(), T.getCloseLocation(), attrs);
 
   // Late parse field attributes if necessary.
-  ParseLexedCAttributeList(LateFieldAttrs);
+  ParseLexedAttributeList(LateFieldAttrs, /*D=*/nullptr, /*EnterScope=*/false,
+                          /*OnDefinition=*/false);
   StructScope.Exit();
   Actions.ActOnTagFinishDefinition(getCurScope(), TagDecl, T.getRange());
 }

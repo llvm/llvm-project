@@ -27,6 +27,15 @@ constexpr auto Req = NativeDylibManager::RequiredSymbol;
 constexpr auto Weak = NativeDylibManager::WeaklyReferencedSymbol;
 } // namespace
 
+// Wrap a symbol-name string literal in the platform's linker-mangling.
+// NativeDylibManager::lookup takes linker-mangled names; on Darwin the
+// linker prefixes C names with '_'.
+#if defined(__APPLE__)
+#define MANGLED(name) "_" name
+#else
+#define MANGLED(name) name
+#endif
+
 #ifndef NDM_TEST_LIB_PATH
 #error                                                                         \
     "NDM_TEST_LIB_PATH must be defined to the path of the test shared library"
@@ -40,26 +49,27 @@ static Expected<void *> syncLoad(NativeDylibManager &NDM, std::string Path) {
 }
 
 // Helper: synchronously run lookup and return results.
-static Expected<std::vector<void *>>
+static Expected<std::vector<std::optional<void *>>>
 syncLookup(NativeDylibManager &NDM, void *Handle,
            NativeDylibManager::SymbolLookupSet Symbols) {
-  std::optional<Expected<std::vector<void *>>> Result;
-  NDM.lookup([&](Expected<std::vector<void *>> R) { Result = std::move(R); },
-             Handle, std::move(Symbols));
+  std::optional<Expected<std::vector<std::optional<void *>>>> Result;
+  NDM.lookup(
+      [&](Expected<std::vector<std::optional<void *>>> R) {
+        Result = std::move(R);
+      },
+      Handle, std::move(Symbols));
   return std::move(*Result);
 }
 
 TEST(NativeDylibManagerTest, Create) {
-  Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
-            noErrors);
+  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
   SimpleSymbolTable ST;
   auto NDM = NativeDylibManager::Create(S, ST);
   ASSERT_TRUE(!!NDM) << toString(NDM.takeError());
 }
 
 TEST(NativeDylibManagerTest, Load) {
-  Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
-            noErrors);
+  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
   SimpleSymbolTable ST;
   auto NDM = cantFail(NativeDylibManager::Create(S, ST));
 
@@ -69,8 +79,7 @@ TEST(NativeDylibManagerTest, Load) {
 }
 
 TEST(NativeDylibManagerTest, LoadNonExistent) {
-  Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
-            noErrors);
+  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
   SimpleSymbolTable ST;
   auto NDM = cantFail(NativeDylibManager::Create(S, ST));
 
@@ -79,88 +88,111 @@ TEST(NativeDylibManagerTest, LoadNonExistent) {
   consumeError(LoadResult.takeError());
 }
 
+TEST(NativeDylibManagerTest, LoadEmptyPathReturnsGlobalHandle) {
+  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
+  SimpleSymbolTable ST;
+  auto NDM = cantFail(NativeDylibManager::Create(S, ST));
+
+  // The global handle's value is implementation-defined, so verify by looking
+  // up through it.
+  auto LoadResult = syncLoad(*NDM, "");
+  ASSERT_TRUE(!!LoadResult) << toString(LoadResult.takeError());
+  void *Handle = *LoadResult;
+
+  auto Result = syncLookup(*NDM, Handle, {{MANGLED("malloc"), Req}});
+  ASSERT_TRUE(!!Result) << toString(Result.takeError());
+  ASSERT_EQ(Result->size(), 1U);
+  ASSERT_TRUE((*Result)[0].has_value())
+      << "malloc should be findable via the process's global lookup handle";
+  EXPECT_NE(*(*Result)[0], nullptr);
+}
+
 TEST(NativeDylibManagerTest, LookupSingleSymbol) {
-  Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
-            noErrors);
+  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
   SimpleSymbolTable ST;
   auto NDM = cantFail(NativeDylibManager::Create(S, ST));
 
   void *Handle = cantFail(syncLoad(*NDM, NDM_TEST_LIB_PATH));
 
-  auto Result = syncLookup(*NDM, Handle, {{"NativeDylibManagerTestFunc", Req}});
+  auto Result =
+      syncLookup(*NDM, Handle, {{MANGLED("NativeDylibManagerTestFunc"), Req}});
   ASSERT_TRUE(!!Result) << toString(Result.takeError());
   ASSERT_EQ(Result->size(), 1U);
-  EXPECT_NE((*Result)[0], nullptr);
+  ASSERT_TRUE((*Result)[0].has_value());
+  EXPECT_NE(*(*Result)[0], nullptr);
 
   // Verify the symbol points to the right function.
-  auto *Func = reinterpret_cast<int (*)()>((*Result)[0]);
+  auto *Func = reinterpret_cast<int (*)()>(*(*Result)[0]);
   EXPECT_EQ(Func(), 42);
 }
 
 TEST(NativeDylibManagerTest, LookupMultipleSymbols) {
-  Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
-            noErrors);
+  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
   SimpleSymbolTable ST;
   auto NDM = cantFail(NativeDylibManager::Create(S, ST));
 
   void *Handle = cantFail(syncLoad(*NDM, NDM_TEST_LIB_PATH));
 
   auto Result = syncLookup(*NDM, Handle,
-                           {{"NativeDylibManagerTestFunc", Req},
-                            {"NativeDylibManagerTestFunc2", Req}});
+                           {{MANGLED("NativeDylibManagerTestFunc"), Req},
+                            {MANGLED("NativeDylibManagerTestFunc2"), Req}});
   ASSERT_TRUE(!!Result) << toString(Result.takeError());
   ASSERT_EQ(Result->size(), 2U);
-  EXPECT_NE((*Result)[0], nullptr);
-  EXPECT_NE((*Result)[1], nullptr);
+  ASSERT_TRUE((*Result)[0].has_value());
+  ASSERT_TRUE((*Result)[1].has_value());
+  EXPECT_NE(*(*Result)[0], nullptr);
+  EXPECT_NE(*(*Result)[1], nullptr);
 
-  auto *Func1 = reinterpret_cast<int (*)()>((*Result)[0]);
-  auto *Func2 = reinterpret_cast<int (*)()>((*Result)[1]);
+  auto *Func1 = reinterpret_cast<int (*)()>(*(*Result)[0]);
+  auto *Func2 = reinterpret_cast<int (*)()>(*(*Result)[1]);
   EXPECT_EQ(Func1(), 42);
   EXPECT_EQ(Func2(), 7);
 }
 
 TEST(NativeDylibManagerTest, LookupWeakMissingSymbol) {
-  Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
-            noErrors);
+  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
   SimpleSymbolTable ST;
   auto NDM = cantFail(NativeDylibManager::Create(S, ST));
 
   void *Handle = cantFail(syncLoad(*NDM, NDM_TEST_LIB_PATH));
 
-  auto Result = syncLookup(*NDM, Handle, {{"no_such_symbol", Weak}});
+  auto Result = syncLookup(*NDM, Handle, {{MANGLED("no_such_symbol"), Weak}});
   ASSERT_TRUE(!!Result) << toString(Result.takeError());
   ASSERT_EQ(Result->size(), 1U);
-  EXPECT_EQ((*Result)[0], nullptr);
+  ASSERT_TRUE((*Result)[0].has_value())
+      << "weak-missing symbol should be reported as a present optional";
+  EXPECT_EQ(*(*Result)[0], nullptr);
 }
 
 TEST(NativeDylibManagerTest, LookupRequiredMissingSymbol) {
-  Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
-            noErrors);
+  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
   SimpleSymbolTable ST;
   auto NDM = cantFail(NativeDylibManager::Create(S, ST));
 
   void *Handle = cantFail(syncLoad(*NDM, NDM_TEST_LIB_PATH));
 
-  auto Result = syncLookup(*NDM, Handle, {{"no_such_symbol", Req}});
-  EXPECT_FALSE(!!Result);
-  auto Msg = toString(Result.takeError());
-  EXPECT_NE(Msg.find("no_such_symbol"), std::string::npos)
-      << "error message should mention the missing symbol; got: " << Msg;
+  auto Result = syncLookup(*NDM, Handle, {{MANGLED("no_such_symbol"), Req}});
+  ASSERT_TRUE(!!Result) << toString(Result.takeError());
+  ASSERT_EQ(Result->size(), 1U);
+  EXPECT_FALSE((*Result)[0].has_value())
+      << "required-missing symbol should be reported as an empty optional";
 }
 
 TEST(NativeDylibManagerTest, LookupMixedRequiredAndWeak) {
-  Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
-            noErrors);
+  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
   SimpleSymbolTable ST;
   auto NDM = cantFail(NativeDylibManager::Create(S, ST));
 
   void *Handle = cantFail(syncLoad(*NDM, NDM_TEST_LIB_PATH));
 
-  auto Result = syncLookup(
-      *NDM, Handle,
-      {{"NativeDylibManagerTestFunc", Req}, {"no_such_symbol", Weak}});
+  auto Result = syncLookup(*NDM, Handle,
+                           {{MANGLED("NativeDylibManagerTestFunc"), Req},
+                            {MANGLED("no_such_symbol"), Weak}});
   ASSERT_TRUE(!!Result) << toString(Result.takeError());
   ASSERT_EQ(Result->size(), 2U);
-  EXPECT_NE((*Result)[0], nullptr);
-  EXPECT_EQ((*Result)[1], nullptr);
+  ASSERT_TRUE((*Result)[0].has_value());
+  EXPECT_NE(*(*Result)[0], nullptr);
+  ASSERT_TRUE((*Result)[1].has_value())
+      << "weak-missing symbol should be reported as a present optional";
+  EXPECT_EQ(*(*Result)[1], nullptr);
 }

@@ -19,6 +19,7 @@
 #include "MCTargetDesc/HexagonMCInstrInfo.h"
 #include "TargetInfo/HexagonTargetInfo.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCAsmBackend.h"
@@ -43,7 +44,6 @@
 #include <mutex>
 #include <new>
 #include <string>
-#include <unordered_map>
 
 using namespace llvm;
 
@@ -527,14 +527,13 @@ std::pair<std::string, std::string> selectCPUAndFS(StringRef CPU,
   return Result;
 }
 std::mutex ArchSubtargetMutex;
-std::unordered_map<std::string, std::unique_ptr<MCSubtargetInfo const>>
-    ArchSubtarget;
+StringMap<std::unique_ptr<MCSubtargetInfo const>> ArchSubtarget;
 } // namespace
 
 MCSubtargetInfo const *
 Hexagon_MC::getArchSubtarget(MCSubtargetInfo const *STI) {
   std::lock_guard<std::mutex> Lock(ArchSubtargetMutex);
-  auto Existing = ArchSubtarget.find(std::string(STI->getCPU()));
+  auto Existing = ArchSubtarget.find(STI->getCPU());
   if (Existing == ArchSubtarget.end())
     return nullptr;
   return Existing->second.get();
@@ -673,7 +672,7 @@ void Hexagon_MC::addArchSubtarget(MCSubtargetInfo const *STI, StringRef FS) {
     auto ArchSTI = createHexagonMCSubtargetInfo(STI->getTargetTriple(),
                                                 STI->getCPU().drop_back(), FS);
     std::lock_guard<std::mutex> Lock(ArchSubtargetMutex);
-    ArchSubtarget[std::string(STI->getCPU())] =
+    ArchSubtarget[STI->getCPU()] =
         std::unique_ptr<MCSubtargetInfo const>(ArchSTI);
   }
 }

@@ -116,25 +116,25 @@ define <64 x i16> @pmaddubsw_512(ptr %Aptr, ptr %Bptr) {
 ;
 ; AVX1-LABEL: pmaddubsw_512:
 ; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovdqa 112(%rsi), %xmm0
+; AVX1-NEXT:    vpmaddubsw 112(%rdi), %xmm0, %xmm3
+; AVX1-NEXT:    vmovdqa 96(%rsi), %xmm0
+; AVX1-NEXT:    vpmaddubsw 96(%rdi), %xmm0, %xmm4
+; AVX1-NEXT:    vmovdqa 80(%rsi), %xmm0
+; AVX1-NEXT:    vpmaddubsw 80(%rdi), %xmm0, %xmm2
+; AVX1-NEXT:    vmovdqa 64(%rsi), %xmm0
+; AVX1-NEXT:    vpmaddubsw 64(%rdi), %xmm0, %xmm5
 ; AVX1-NEXT:    vmovdqa (%rsi), %xmm0
 ; AVX1-NEXT:    vmovdqa 16(%rsi), %xmm1
-; AVX1-NEXT:    vmovdqa 32(%rsi), %xmm2
-; AVX1-NEXT:    vmovdqa 48(%rsi), %xmm3
+; AVX1-NEXT:    vmovdqa 32(%rsi), %xmm6
+; AVX1-NEXT:    vmovdqa 48(%rsi), %xmm7
+; AVX1-NEXT:    vpmaddubsw 48(%rdi), %xmm7, %xmm7
+; AVX1-NEXT:    vpmaddubsw 32(%rdi), %xmm6, %xmm6
 ; AVX1-NEXT:    vpmaddubsw 16(%rdi), %xmm1, %xmm1
 ; AVX1-NEXT:    vpmaddubsw (%rdi), %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; AVX1-NEXT:    vpmaddubsw 48(%rdi), %xmm3, %xmm1
-; AVX1-NEXT:    vpmaddubsw 32(%rdi), %xmm2, %xmm2
-; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm2, %ymm1
-; AVX1-NEXT:    vmovdqa 80(%rsi), %xmm2
-; AVX1-NEXT:    vpmaddubsw 80(%rdi), %xmm2, %xmm2
-; AVX1-NEXT:    vmovdqa 64(%rsi), %xmm3
-; AVX1-NEXT:    vpmaddubsw 64(%rdi), %xmm3, %xmm3
-; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm3, %ymm2
-; AVX1-NEXT:    vmovdqa 112(%rsi), %xmm3
-; AVX1-NEXT:    vpmaddubsw 112(%rdi), %xmm3, %xmm3
-; AVX1-NEXT:    vmovdqa 96(%rsi), %xmm4
-; AVX1-NEXT:    vpmaddubsw 96(%rdi), %xmm4, %xmm4
+; AVX1-NEXT:    vinsertf128 $1, %xmm7, %ymm6, %ymm1
+; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm5, %ymm2
 ; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm4, %ymm3
 ; AVX1-NEXT:    retq
 ;
@@ -156,12 +156,12 @@ define <64 x i16> @pmaddubsw_512(ptr %Aptr, ptr %Bptr) {
 ; AVX512F-NEXT:    vmovdqa 32(%rsi), %ymm1
 ; AVX512F-NEXT:    vmovdqa 64(%rsi), %ymm2
 ; AVX512F-NEXT:    vmovdqa 96(%rsi), %ymm3
+; AVX512F-NEXT:    vpmaddubsw 96(%rdi), %ymm3, %ymm3
+; AVX512F-NEXT:    vpmaddubsw 64(%rdi), %ymm2, %ymm2
 ; AVX512F-NEXT:    vpmaddubsw 32(%rdi), %ymm1, %ymm1
 ; AVX512F-NEXT:    vpmaddubsw (%rdi), %ymm0, %ymm0
 ; AVX512F-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
-; AVX512F-NEXT:    vpmaddubsw 96(%rdi), %ymm3, %ymm1
-; AVX512F-NEXT:    vpmaddubsw 64(%rdi), %ymm2, %ymm2
-; AVX512F-NEXT:    vinserti64x4 $1, %ymm1, %zmm2, %zmm1
+; AVX512F-NEXT:    vinserti64x4 $1, %ymm3, %zmm2, %zmm1
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: pmaddubsw_512:

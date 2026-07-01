@@ -38,14 +38,14 @@ cl::opt<cl::boolOrDefault> UseLEB128Directives(
     "use-leb128-directives", cl::Hidden,
     cl::desc(
         "Disable the usage of LEB128 directives, and generate .byte instead."),
-    cl::init(cl::BOU_UNSET));
+    cl::init(cl::boolOrDefault::BOU_UNSET));
 }
 
 MCAsmInfo::MCAsmInfo(const MCTargetOptions &Options) : TargetOptions(Options) {
   if (DwarfExtendedLoc != Default)
     SupportsExtendedDwarfLocDirective = DwarfExtendedLoc == Enable;
-  if (UseLEB128Directives != cl::BOU_UNSET)
-    HasLEB128Directives = UseLEB128Directives == cl::BOU_TRUE;
+  if (UseLEB128Directives != cl::boolOrDefault::BOU_UNSET)
+    HasLEB128Directives = UseLEB128Directives == cl::boolOrDefault::BOU_TRUE;
 }
 
 MCAsmInfo::~MCAsmInfo() = default;

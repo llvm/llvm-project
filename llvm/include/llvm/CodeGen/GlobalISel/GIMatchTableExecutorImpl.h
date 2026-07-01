@@ -51,7 +51,7 @@ bool GIMatchTableExecutor::executeMatchTable(
     CodeGenCoverage *CoverageInfo) const {
 
   uint64_t CurrentIdx = 0;
-  SmallVector<uint64_t, 4> OnFailResumeAt;
+  SmallVector<uint64_t, 8> OnFailResumeAt;
   NewMIVector OutMIs;
 
   GISelChangeObserver *Observer = Builder.getObserver();

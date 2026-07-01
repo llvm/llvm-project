@@ -491,6 +491,7 @@ static_assert(float128(0.0) ==
                                                     float128(0.0)));
 static_assert(float128(0.0) == LIBC_NAMESPACE::shared::rintf128(float128(0.0)));
 static_assert(1 == LIBC_NAMESPACE::shared::iscanonicalf128(float128(0.0)));
+static_assert(0 == LIBC_NAMESPACE::shared::isnanf128(float128(0.0)));
 static_assert(0.0 == LIBC_NAMESPACE::shared::issignalingf128(float128(0.0)));
 static_assert(1 == [] {
   const char arg{};

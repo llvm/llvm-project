@@ -236,7 +236,10 @@ void M68kMCCodeEmitter::encodeIndexSuppress(const MCInst &MI, unsigned OpIdx,
   // We suppress the index (i.e. IS = 1) if the index register is NoReg.
   const MCOperand &Op = MI.getOperand(OpIdx);
   MCRegister IndexReg = Op.getReg();
-  Value.setBitVal(/*Pos=*/0, !IndexReg.isValid());
+  // We use a special 5-bit "register" binary for index register: the [0, 3]
+  // bits carry the actual index register encoding, while bit 4 goes to the
+  // index suppress bit in the instruction.
+  Value.setBitVal(/*Pos=*/4, !IndexReg.isValid());
 }
 
 void M68kMCCodeEmitter::getMachineOpValue(const MCInst &MI, const MCOperand &Op,

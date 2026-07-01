@@ -66,7 +66,6 @@ define void @test_tc_less_than_16(ptr %A, i64 %N) {
 ;
 ; FINAL-LABEL: VPlan for loop in 'test_tc_less_than_16'
 ; FINAL:  VPlan 'Final VPlan for VF={8},UF={2}' {
-; FINAL-NEXT:  Live-in ir<16> = original trip-count
 ; FINAL-EMPTY:
 ; FINAL-NEXT:  ir-bb<entry>:
 ; FINAL-NEXT:  Successor(s): vector.ph

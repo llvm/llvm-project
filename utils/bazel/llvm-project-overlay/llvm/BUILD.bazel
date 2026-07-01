@@ -2,7 +2,7 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
+load("@bazel_skylib//rules:common_settings.bzl", "bool_flag", "string_flag")
 load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
 load("@bazel_skylib//rules:write_file.bzl", "write_file")
 load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
@@ -12,7 +12,7 @@ load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 load("//mlir:tblgen.bzl", "gentbl_cc_library", "gentbl_filegroup", "td_library")
 load(":binary_alias.bzl", "binary_alias")
 load(":config.bzl", "llvm_config_defines")
-load(":driver.bzl", "generate_driver_selects", "generate_driver_tools_def", "llvm_driver_cc_binary", "select_driver_tools")
+load(":driver.bzl", "generate_driver_selects", "generate_driver_tools_def", "llvm_driver_cc_binary")
 load(":enum_targets_gen.bzl", "enum_targets_gen")
 load(":targets.bzl", "llvm_targets")
 
@@ -25,6 +25,20 @@ package(
 )
 
 licenses(["notice"])
+
+# Enable checks that alter LLVM's C++ ABI. Usage:
+#   bazel build --@llvm-project//llvm:enable_abi_breaking_checks=true @llvm-project//llvm:llvm
+bool_flag(
+    name = "enable_abi_breaking_checks",
+    build_setting_default = False,
+)
+
+config_setting(
+    name = "abi_breaking_checks_enabled",
+    flag_values = {
+        ":enable_abi_breaking_checks": "true",
+    },
+)
 
 exports_files([
     "LICENSE.TXT",
@@ -205,12 +219,16 @@ expand_template(
     name = "abi_breaking_h_gen",
     out = "include/llvm/Config/abi-breaking.h",
     substitutions = {
-        # Define to enable checks that alter the LLVM C++ ABI
-        "#cmakedefine01 LLVM_ENABLE_ABI_BREAKING_CHECKS": "#define LLVM_ENABLE_ABI_BREAKING_CHECKS 0",
-
         # Define to enable reverse iteration of unordered llvm containers
         "#cmakedefine01 LLVM_ENABLE_REVERSE_ITERATION": "#define LLVM_ENABLE_REVERSE_ITERATION 0",
-    },
+    } | select({
+        ":abi_breaking_checks_enabled": {
+            "#cmakedefine01 LLVM_ENABLE_ABI_BREAKING_CHECKS": "#define LLVM_ENABLE_ABI_BREAKING_CHECKS 1",
+        },
+        "//conditions:default": {
+            "#cmakedefine01 LLVM_ENABLE_ABI_BREAKING_CHECKS": "#define LLVM_ENABLE_ABI_BREAKING_CHECKS 0",
+        },
+    }),
     template = "include/llvm/Config/abi-breaking.h.cmake",
 )
 
@@ -803,13 +821,13 @@ cc_library(
 )
 
 # Command line flag to control which tools get included in the llvm driver binary.
-# The macro also generates config_setting targets used by select_driver_tools().
-generate_driver_selects(name = "driver-tools")
+# The macro also returns the selected tool dependencies.
+driver_tool_deps = generate_driver_selects(name = "driver-tools")
 
 generate_driver_tools_def(
     name = "gen_llvm_driver_tools_def",
     out = "LLVMDriverTools.def",
-    driver_tools = select_driver_tools(":driver-tools"),
+    driver_tools = ":driver-tools",
 )
 
 # Workaround inability to put `.def` files into `srcs` with a library
@@ -825,7 +843,7 @@ cc_binary(
     deps = [
         ":Support",
         ":llvm_driver_tools_def_lib",
-    ] + select_driver_tools(":driver-tools"),
+    ] + driver_tool_deps,
 )
 
 cc_binary(
@@ -982,6 +1000,10 @@ llvm_target_intrinsics_list = [
     {
         "name": "ARM",
         "intrinsic_prefix": "arm",
+    },
+    {
+        "name": "AVR",
+        "intrinsic_prefix": "avr",
     },
     {
         "name": "BPF",
@@ -1423,6 +1445,7 @@ cc_library(
         ":BinaryFormat",
         ":Core",
         ":FrontendHLSL",
+        ":MC",
         ":Object",
         ":ProfileData",
         ":Support",
@@ -1876,7 +1899,9 @@ cc_library(
     name = "FrontendHLSL",
     srcs = glob([
         "lib/Frontend/HLSL/*.cpp",
-    ]),
+    ]) + [
+        "include/llvm/Transforms/Utils/ModuleUtils.h",
+    ],
     hdrs = glob([
         "include/llvm/Frontend/HLSL/*.h",
     ]),
@@ -2214,6 +2239,7 @@ cc_library(
         ":InstCombine",
         ":Instrumentation",
         ":ObjCARC",
+        ":Plugins",
         ":Scalar",
         ":Vectorize",
     ],
@@ -4140,6 +4166,7 @@ cc_library(
         ":Instrumentation",
         ":MC",
         ":ObjCARC",
+        ":Plugins",
         ":Scalar",
         ":Support",
         ":Target",
@@ -4704,6 +4731,16 @@ config_setting(
 )
 
 cc_library(
+    name = "libpfm_system",
+    linkopts = ["-lpfm"],
+    tags = ["manual"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+)
+
+cc_library(
     name = "maybe_pfm",
     # We want dependencies of this library to have -DHAVE_LIBPFM conditionally
     # defined, so we set `defines` instead of `copts`.
@@ -4713,8 +4750,8 @@ cc_library(
         "//conditions:default": [],
     }),
     deps = select({
-        ":pfm_external": ["@pfm//:pfm_external"],
-        ":pfm_system": ["@pfm//:pfm_system"],
+        ":pfm_external": ["@pfm"],
+        ":pfm_system": [":libpfm_system"],
         "//conditions:default": [],
     }),
 )
@@ -5611,6 +5648,9 @@ cc_binary(
         "tools/llvm-lto2/*.cpp",
     ]),
     copts = llvm_copts,
+    defines = [
+        "LLVM_BUILD_STATIC",  # Provided by add_llvm_tool
+    ],
     stamp = 0,
     deps = [
         ":AllTargetsAsmParsers",
@@ -6829,15 +6869,13 @@ gentbl_cc_library(
     deps = [":OptParserTdFiles"],
 )
 
-cc_binary(
-    name = "llvm-readtapi",
-    testonly = True,
+cc_library(
+    name = "llvm-readtapi-lib",
     srcs = glob([
         "tools/llvm-readtapi/*.cpp",
         "tools/llvm-readtapi/*.h",
     ]),
     copts = llvm_copts,
-    stamp = 0,
     deps = [
         ":BinaryFormat",
         ":Object",
@@ -6847,6 +6885,13 @@ cc_binary(
         ":TextAPI",
         ":TextAPIBinaryReader",
     ],
+)
+
+llvm_driver_cc_binary(
+    name = "llvm-readtapi",
+    testonly = True,
+    stamp = 0,
+    deps = [":llvm-readtapi-lib"],
 )
 
 gentbl_cc_library(

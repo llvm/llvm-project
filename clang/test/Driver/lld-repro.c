@@ -15,7 +15,7 @@
 // check that we still get lld's output
 // CHECK: error: undefined symbol: {{_?}}a
 
-// CHECK: Preprocessed source(s) and associated run script(s) are located at:
+// CHECK: PLEASE ATTACH THE FOLLOWING CRASH REPRODUCER FILES TO THE BUG REPORT:
 // CHECK-NEXT: note: diagnostic msg: {{.*}}linker-crash-{{.*}}.tar
 // CHECK-NEXT: note: diagnostic msg:
 // CHECK: ********************
@@ -25,7 +25,7 @@
 // RUN: not %clang %s @%t.rsp -o /dev/null 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=NO-LINKER
 
-// NO-LINKER-NOT: Preprocessed source(s) and associated run script(s) are located at:
+// NO-LINKER-NOT: PLEASE ATTACH THE FOLLOWING CRASH REPRODUCER FILES TO THE BUG REPORT:
 
 extern int a;
 int main() {

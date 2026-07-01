@@ -44,6 +44,8 @@ func.func @float32_unary_scalar(%arg0: f32) {
   %15 = math.floor %arg0 : f32
   // CHECK: spirv.CL.erf %{{.*}}: f32
   %16 = math.erf %arg0 : f32
+  // CHECK: spirv.CL.erfc %{{.*}}: f32
+  %erfc = math.erfc %arg0 : f32
   // CHECK: spirv.CL.round %{{.*}}: f32
   %17 = math.round %arg0 : f32
   // CHECK: spirv.CL.tan %{{.*}}: f32
@@ -64,6 +66,8 @@ func.func @float32_unary_scalar(%arg0: f32) {
   %25 = math.atanh %arg0 : f32
   // CHECK: spirv.CL.trunc %{{.*}}: f32
   %26 = math.trunc %arg0 : f32
+  // CHECK: spirv.CL.cbrt %{{.*}}: f32
+  %27 = math.cbrt %arg0 : f32
   return
 }
 
@@ -234,6 +238,28 @@ func.func @tensor_1d(%arg0: tensor<2xf32>) {
   // CHECK-NEXT: math.powf {{.+}}, {{%.+}} : tensor<2xf32>
   %6 = math.powf %arg0, %arg0 : tensor<2xf32>
   // CHECK-NEXT: return
+  return
+}
+
+} // end module
+
+// -----
+
+module attributes { spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [Kernel], []>, #spirv.resource_limits<>> } {
+
+// CHECK-LABEL: @sincos_scalar
+func.func @sincos_scalar(%arg0: f32) {
+  // CHECK: %[[SIN:.+]] = spirv.CL.sin %{{.*}}: f32
+  // CHECK: %[[COS:.+]] = spirv.CL.cos %{{.*}}: f32
+  %sin, %cos = math.sincos %arg0 : f32
+  return
+}
+
+// CHECK-LABEL: @sincos_vector
+func.func @sincos_vector(%arg0: vector<3xf32>) {
+  // CHECK: %[[SIN:.+]] = spirv.CL.sin %{{.*}}: vector<3xf32>
+  // CHECK: %[[COS:.+]] = spirv.CL.cos %{{.*}}: vector<3xf32>
+  %sin, %cos = math.sincos %arg0 : vector<3xf32>
   return
 }
 

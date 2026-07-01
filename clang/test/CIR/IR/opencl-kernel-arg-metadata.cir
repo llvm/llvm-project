@@ -1,0 +1,71 @@
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
+
+!u32i = !cir.int<u, 32>
+!s32i = !cir.int<s, 32>
+
+module {
+  cir.func @without_names(%arg0: !cir.ptr<!u32i, lang_address_space(offload_global)>, %arg1: !s32i) attributes {
+    cir.cl.kernel_arg_metadata = #cir.cl.kernel_arg_metadata<
+      addr_space = [#cir<lang_address_space(offload_global)>, #cir<lang_address_space(default)>],
+      access_qual = ["none", "none"],
+      type = ["uint*", "int"],
+      base_type = ["uint*", "int"],
+      type_qual = ["restrict", ""]
+    >
+  } {
+    cir.return
+  }
+
+  cir.func @with_names(%data: !cir.ptr<!u32i, lang_address_space(offload_global)>, %count: !s32i) attributes {
+    cir.cl.kernel_arg_metadata = #cir.cl.kernel_arg_metadata<
+      addr_space = [#cir<lang_address_space(offload_global)>, #cir<lang_address_space(default)>],
+      access_qual = ["none", "none"],
+      type = ["uint*", "int"],
+      base_type = ["uint*", "int"],
+      type_qual = ["restrict", ""],
+      name = ["data", "count"]
+    >
+  } {
+    cir.return
+  }
+
+  cir.func @no_args() attributes {
+    cir.cl.kernel_arg_metadata = #cir.cl.kernel_arg_metadata<
+      addr_space = [],
+      access_qual = [],
+      type = [],
+      base_type = [],
+      type_qual = []
+    >
+  } {
+    cir.return
+  }
+}
+
+// CHECK-LABEL: cir.func @without_names
+// CHECK-SAME: %{{.*}}: !cir.ptr<!u32i, lang_address_space(offload_global)>
+// CHECK-SAME: %{{.*}}: !s32i
+// CHECK-SAME: cir.cl.kernel_arg_metadata = #cir.cl.kernel_arg_metadata
+// CHECK-SAME: addr_space = [#cir<lang_address_space(offload_global)>, #cir<lang_address_space(default)>]
+// CHECK-SAME: type = ["uint*", "int"]
+// CHECK-SAME: base_type = ["uint*", "int"]
+// CHECK-SAME: type_qual = ["restrict", ""]
+// CHECK-NOT: name =
+
+// CHECK-LABEL: cir.func @with_names
+// CHECK-SAME: %{{.*}}: !cir.ptr<!u32i, lang_address_space(offload_global)>
+// CHECK-SAME: %{{.*}}: !s32i
+// CHECK-SAME: cir.cl.kernel_arg_metadata = #cir.cl.kernel_arg_metadata
+// CHECK-SAME: addr_space = [#cir<lang_address_space(offload_global)>, #cir<lang_address_space(default)>]
+// CHECK-SAME: type = ["uint*", "int"]
+// CHECK-SAME: base_type = ["uint*", "int"]
+// CHECK-SAME: type_qual = ["restrict", ""]
+// CHECK-SAME: name = ["data", "count"]
+
+// CHECK-LABEL: cir.func @no_args()
+// CHECK-SAME: cir.cl.kernel_arg_metadata = #cir.cl.kernel_arg_metadata
+// CHECK-SAME: addr_space = []
+// CHECK-SAME: access_qual = []
+// CHECK-SAME: type = []
+// CHECK-SAME: base_type = []
+// CHECK-SAME: type_qual = []
