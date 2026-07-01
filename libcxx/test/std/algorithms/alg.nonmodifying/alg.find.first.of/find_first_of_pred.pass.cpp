@@ -34,17 +34,22 @@ constexpr bool test_constexpr() {
   int ia[] = {1, 2, 3};
   int ib[] = {7, 8, 9};
   int ic[] = {0, 1, 2, 3, 4, 5, 0, 1, 2, 3};
-    typedef forward_iterator<int*>       FI;
+  typedef forward_iterator<int*> FI;
   typedef bidirectional_iterator<int*> BI;
   typedef random_access_iterator<int*> RI;
   std::equal_to<int> eq{};
-    return    (std::find_first_of(FI(std::begin(ic)), FI(std::end(ic)), FI(std::begin(ia)), FI(std::end(ia)), eq) == FI(ic+1))
-           && (std::find_first_of(FI(std::begin(ic)), FI(std::end(ic)), FI(std::begin(ib)), FI(std::end(ib)), eq) == FI(std::end(ic)))
-           && (std::find_first_of(BI(std::begin(ic)), BI(std::end(ic)), BI(std::begin(ia)), BI(std::end(ia)), eq) == BI(ic+1))
-           && (std::find_first_of(BI(std::begin(ic)), BI(std::end(ic)), BI(std::begin(ib)), BI(std::end(ib)), eq) == BI(std::end(ic)))
-           && (std::find_first_of(RI(std::begin(ic)), RI(std::end(ic)), RI(std::begin(ia)), RI(std::end(ia)), eq) == RI(ic+1))
-           && (std::find_first_of(RI(std::begin(ic)), RI(std::end(ic)), RI(std::begin(ib)), RI(std::end(ib)), eq) == RI(std::end(ic)))
-           ;
+  return (std::find_first_of(FI(std::begin(ic)), FI(std::end(ic)), FI(std::begin(ia)), FI(std::end(ia)), eq) ==
+          FI(ic + 1)) &&
+         (std::find_first_of(FI(std::begin(ic)), FI(std::end(ic)), FI(std::begin(ib)), FI(std::end(ib)), eq) ==
+          FI(std::end(ic))) &&
+         (std::find_first_of(BI(std::begin(ic)), BI(std::end(ic)), BI(std::begin(ia)), BI(std::end(ia)), eq) ==
+          BI(ic + 1)) &&
+         (std::find_first_of(BI(std::begin(ic)), BI(std::end(ic)), BI(std::begin(ib)), BI(std::end(ib)), eq) ==
+          BI(std::end(ic))) &&
+         (std::find_first_of(RI(std::begin(ic)), RI(std::end(ic)), RI(std::begin(ia)), RI(std::end(ia)), eq) ==
+          RI(ic + 1)) &&
+         (std::find_first_of(RI(std::begin(ic)), RI(std::end(ic)), RI(std::begin(ib)), RI(std::end(ib)), eq) ==
+          RI(std::end(ic)));
 }
 #endif
 
