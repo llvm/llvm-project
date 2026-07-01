@@ -950,7 +950,7 @@ TYPE_PARSER(parenthesized(construct<DataImpliedDo>(
 
 // R841 data-i-do-object ->
 //        array-element | scalar-structure-component | data-implied-do
-TYPE_PARSER(construct<DataIDoObject>(scalar(indirect(designator))) ||
+TYPE_PARSER(construct<DataIDoObject>(indirect(designator)) ||
     construct<DataIDoObject>(indirect(dataImpliedDo)))
 
 // R843 data-stmt-value -> [data-stmt-repeat *] data-stmt-constant

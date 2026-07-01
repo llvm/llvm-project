@@ -8528,8 +8528,8 @@ bool ConstructVisitor::Pre(const parser::DataImpliedDo &x) {
 bool ConstructVisitor::Pre(const parser::DataIDoObject &x) {
   common::visit(
       common::visitors{
-          [&](const parser::Scalar<Indirection<parser::Designator>> &y) {
-            const auto &designator{parser::UnwrapRef<parser::Designator>(y)};
+          [&](const Indirection<parser::Designator> &y) {
+            const auto &designator{y.value()};
             Walk(designator);
             const parser::Name &first{parser::GetFirstName(designator)};
             if (first.symbol) {
