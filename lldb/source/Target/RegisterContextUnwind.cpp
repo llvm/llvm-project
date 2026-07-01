@@ -68,7 +68,7 @@ static bool CallFrameAddressIsValid(ABISP abi_sp, lldb::addr_t cfa) {
 /// instruction-emulation or compiler-sourced unwind plans for these
 /// functions, and fall back to an ABI default unwindplan.
 static bool IsClangOutlinedFunction(const SymbolContext &sym_ctx) {
-  llvm::StringRef name = GetSymbolOrFunctionName(sym_ctx).StringRef();
+  llvm::StringRef name = GetSymbolOrFunctionName(sym_ctx).GetStringRef();
   if (name.starts_with("OUTLINED_FUNCTION_"))
     return true;
   return false;
@@ -895,11 +895,11 @@ RegisterContextUnwind::GetFullUnwindPlanForFrame() {
   // CFI may be absent or incorrect; instruction emulation may be incorrect
   // because it assumes a normal ABI call was made.
   if (m_sym_ctx_valid && arch_default_unwind_plan_sp) {
-    if (IsClangOutlinedFunction(m_sym_ctx) {
+    if (IsClangOutlinedFunction(m_sym_ctx)) {
       UNWIND_LOG(log,
                  "Overriding full unwind plan, using architectural default for "
                  "function {0}",
-                 name);
+                 GetSymbolOrFunctionName(m_sym_ctx));
       return arch_default_unwind_plan_sp;
     }
   }
