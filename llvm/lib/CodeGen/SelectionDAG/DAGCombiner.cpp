@@ -6325,8 +6325,8 @@ SDValue DAGCombiner::visitIMINMAX(SDNode *N) {
       !TLI.shouldAvoidTransformToShift(VT, VT.getScalarSizeInBits() - 1) &&
       sd_match(N1, m_ConstInt(C))) {
     if (Opcode == ISD::SMAX && TLI.isOperationExpand(ISD::SMAX, VT) &&
-        N0.getOpcode() != ISD::SMIN &&
-        N0.getOpcode() != ISD::SIGN_EXTEND && C.isAllOnes()) {
+        N0.getOpcode() != ISD::SMIN && N0.getOpcode() != ISD::SIGN_EXTEND &&
+        C.isAllOnes()) {
       SDValue ShiftAmt =
           DAG.getShiftAmountConstant(VT.getScalarSizeInBits() - 1, VT, DL);
       SDValue Shift = DAG.getNode(ISD::SRA, DL, VT, N0, ShiftAmt);
