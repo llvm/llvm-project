@@ -3380,7 +3380,7 @@ void X86TargetLowering::getTgtMemIntrinsic(
     else if (IntrData->Type == TRUNCATE_TO_MEM_VI32)
       ScalarVT = MVT::i32;
 
-    Info.memVT = MVT::getVectorVT(ScalarVT, VT.getVectorNumElements());
+    Info.memVT = VT.changeElementType(ScalarVT);
     Info.align = Align(1);
     Info.flags |= MachineMemOperand::MOStore;
     Infos.push_back(Info);
@@ -20892,7 +20892,7 @@ static SDValue promoteXINT_TO_FP(SDValue Op, const SDLoc &dl,
   SDValue Src = Op.getOperand(IsStrict ? 1 : 0);
   SDValue Chain = IsStrict ? Op->getOperand(0) : DAG.getEntryNode();
   MVT VT = Op.getSimpleValueType();
-  MVT NVT = VT.isVector() ? VT.changeVectorElementType(MVT::f32) : MVT::f32;
+  MVT NVT = VT.changeElementType(MVT::f32);
 
   SDValue Rnd = DAG.getIntPtrConstant(0, dl, /*isTarget=*/true);
   if (IsStrict)
@@ -22468,7 +22468,7 @@ SDValue X86TargetLowering::LowerFP_TO_INT(SDValue Op, SelectionDAG &DAG) const {
 
   SDValue Res;
   if (isBF16orSoftF16(SrcVT, Subtarget)) {
-    MVT NVT = VT.isVector() ? VT.changeVectorElementType(MVT::f32) : MVT::f32;
+    MVT NVT = VT.changeElementType(MVT::f32);
     if (IsStrict)
       return DAG.getNode(Op.getOpcode(), dl, {VT, MVT::Other},
                          {Chain, DAG.getNode(ISD::STRICT_FP_EXTEND, dl,
@@ -27707,7 +27707,7 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
         return DAG.getNode(IntrData->Opc0, dl, Op.getValueType(), Src);
 
       MVT SrcVT = Src.getSimpleValueType();
-      MVT MaskVT = MVT::getVectorVT(MVT::i1, SrcVT.getVectorNumElements());
+      MVT MaskVT = SrcVT.changeElementType(MVT::i1);
       Mask = getMaskNode(Mask, MaskVT, Subtarget, DAG, dl);
       return DAG.getNode(IntrData->Opc1, dl, Op.getValueType(),
                          {Src, PassThru, Mask});
@@ -29652,7 +29652,7 @@ static SDValue LowerVectorCTLZInRegLUT(SDValue Op, const SDLoc &DL,
   SDValue Hi = DAG.getNode(ISD::SRL, DL, CurrVT, Op0, NibbleShift);
   SDValue HiZ;
   if (CurrVT.is512BitVector()) {
-    MVT MaskVT = MVT::getVectorVT(MVT::i1, CurrVT.getVectorNumElements());
+    MVT MaskVT = CurrVT.changeElementType(MVT::i1);
     HiZ = DAG.getSetCC(DL, MaskVT, Hi, Zero, ISD::SETEQ);
     HiZ = DAG.getNode(ISD::SIGN_EXTEND, DL, CurrVT, HiZ);
   } else {
@@ -29678,7 +29678,7 @@ static SDValue LowerVectorCTLZInRegLUT(SDValue Op, const SDLoc &DL,
 
     // Check if the upper half of the input element is zero.
     if (CurrVT.is512BitVector()) {
-      MVT MaskVT = MVT::getVectorVT(MVT::i1, CurrVT.getVectorNumElements());
+      MVT MaskVT = CurrVT.changeElementType(MVT::i1);
       HiZ = DAG.getSetCC(DL, MaskVT, DAG.getBitcast(CurrVT, Op0),
                          DAG.getBitcast(CurrVT, Zero), ISD::SETEQ);
       HiZ = DAG.getNode(ISD::SIGN_EXTEND, DL, CurrVT, HiZ);
