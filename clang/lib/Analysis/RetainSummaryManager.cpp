@@ -655,11 +655,9 @@ void RetainSummaryManager::updateSummaryForArgumentTypes(
   }
 }
 
-const RetainSummary *
-RetainSummaryManager::getSummary(AnyCall C,
-                                 bool HasNonZeroCallbackArg,
-                                 bool IsReceiverUnconsumedSelf,
-                                 QualType ReceiverType) {
+const RetainSummary *RetainSummaryManager::getSummary(
+    AnyCall C, bool HasNonZeroCallbackArg, bool IsReceiverUnconsumedSelf,
+    QualType ReceiverType, bool ReceiverIsClassObj) {
   const RetainSummary *Summ;
   switch (C.getKind()) {
   case AnyCall::Function:
@@ -678,7 +676,7 @@ RetainSummaryManager::getSummary(AnyCall C,
     if (!ME) {
       Summ = getMethodSummary(cast<ObjCMethodDecl>(C.getDecl()));
     } else if (ME->isInstanceMessage()) {
-      Summ = getInstanceMethodSummary(ME, ReceiverType);
+      Summ = getInstanceMethodSummary(ME, ReceiverType, ReceiverIsClassObj);
     } else {
       Summ = getClassMethodSummary(ME);
     }
@@ -697,7 +695,6 @@ RetainSummaryManager::getSummary(AnyCall C,
   assert(Summ && "Unknown call type?");
   return Summ;
 }
-
 
 const RetainSummary *
 RetainSummaryManager::getCFCreateGetRuleSummary(const FunctionDecl *FD) {
@@ -1122,8 +1119,7 @@ RetainSummaryManager::getClassMethodSummary(const ObjCMessageExpr *ME) {
 }
 
 const RetainSummary *RetainSummaryManager::getInstanceMethodSummary(
-    const ObjCMessageExpr *ME,
-    QualType ReceiverType) {
+    const ObjCMessageExpr *ME, QualType ReceiverType, bool ReceiverIsClassObj) {
   const ObjCInterfaceDecl *ReceiverClass = nullptr;
 
   // We do better tracking of the type of the object than the core ExprEngine.
@@ -1133,17 +1129,26 @@ const RetainSummary *RetainSummaryManager::getInstanceMethodSummary(
       ReceiverClass = PT->getInterfaceDecl();
 
   // If we don't know what kind of object this is, fall back to its static type.
-  if (!ReceiverClass)
+  if (!ReceiverClass) {
     ReceiverClass = ME->getReceiverInterface();
+    if (ME->getReceiverType()->isObjCClassType())
+      ReceiverIsClassObj = true;
+  }
 
-  // FIXME: The receiver could be a reference to a class, meaning that
-  //  we should use the class method.
-  // id x = [NSObject class];
-  // [x performSelector:... withObject:... afterDelay:...];
   Selector S = ME->getSelector();
   const ObjCMethodDecl *Method = ME->getMethodDecl();
-  if (!Method && ReceiverClass)
+  if (ReceiverIsClassObj) {
+    if (ReceiverClass)
+      Method = ReceiverClass->getClassMethod(S);
+    else if (Method && Method->isInstanceMethod())
+      Method = nullptr;
+  } else if (!Method && ReceiverClass) {
     Method = ReceiverClass->getInstanceMethod(S);
+  }
+
+  if (ReceiverIsClassObj)
+    return getMethodSummary(S, ReceiverClass, Method, ME->getType(),
+                            ObjCClassMethodSummaries);
 
   return getMethodSummary(S, ReceiverClass, Method, ME->getType(),
                           ObjCMethodSummaries);

@@ -649,10 +649,10 @@ public:
 
   bool isTrustedReferenceCountImplementation(const Decl *FD);
 
-  const RetainSummary *getSummary(AnyCall C,
-                                  bool HasNonZeroCallbackArg=false,
-                                  bool IsReceiverUnconsumedSelf=false,
-                                  QualType ReceiverType={});
+  const RetainSummary *getSummary(AnyCall C, bool HasNonZeroCallbackArg = false,
+                                  bool IsReceiverUnconsumedSelf = false,
+                                  QualType ReceiverType = {},
+                                  bool ReceiverIsClassObj = false);
 
   RetEffect getObjAllocRetEffect() const { return ObjCAllocRetE; }
 
@@ -670,7 +670,8 @@ private:
                                         ObjCMethodSummariesTy &CachedSummaries);
 
   const RetainSummary *
-  getInstanceMethodSummary(const ObjCMessageExpr *ME, QualType ReceiverType);
+  getInstanceMethodSummary(const ObjCMessageExpr *ME, QualType ReceiverType,
+                           bool ReceiverIsClassObj = false);
 
   const RetainSummary *getClassMethodSummary(const ObjCMessageExpr *ME);
 
