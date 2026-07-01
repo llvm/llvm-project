@@ -83,7 +83,8 @@ class VPPredicator {
 
   using EdgeTy = std::pair<const VPBasicBlock *, const VPBasicBlock *>;
 
-  /// Compute the "furthest up" set of edges for each incoming value of \Phi.
+  /// Compute the set of edges that are "furthest up" in the CFG for each
+  /// incoming value of \Phi.
   MapVector<EdgeTy, VPValue *> computeBlendEdges(VPPhi *Phi);
 
   /// Given a set of \p Edges that each can reach \p VPBB, return the OR of all
@@ -320,9 +321,9 @@ VPValue *VPPredicator::createBlendMaskForEdges(ArrayRef<EdgeTy> Edges,
   // If the edges are A->D and B->C, PostDom will be D. We can reuse Ds block
   // in-mask.
   const VPBasicBlock *PostDom = Edges[0].second;
-  for (auto [_, VPBB] : drop_begin(Edges))
+  for (auto [_, DstVPBB] : drop_begin(Edges))
     PostDom =
-        cast<VPBasicBlock>(VPPDT.findNearestCommonDominator(PostDom, VPBB));
+        cast<VPBasicBlock>(VPPDT.findNearestCommonDominator(PostDom, DstVPBB));
   assert(VPPDT.dominates(VPBB, PostDom) && "VPBB doesn't postdominate edges");
   if (PostDom != VPBB)
     return getBlockInMask(PostDom);
