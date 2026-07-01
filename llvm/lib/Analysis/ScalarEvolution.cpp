@@ -11156,10 +11156,8 @@ bool ScalarEvolution::SimplifyICmpOperands(CmpPredicate &Pred, SCEVUse &LHS,
         match(RHS, m_scev_Mul(m_scev_Specific(C), m_SCEV(NewRHS)))) {
       const auto *LMul = cast<SCEVMulExpr>(LHS);
       const auto *RMul = cast<SCEVMulExpr>(RHS);
-      bool BothNUW =
-          LMul->hasNoUnsignedWrap() && RMul->hasNoUnsignedWrap();
-      bool BothNSW =
-          LMul->hasNoSignedWrap() && RMul->hasNoSignedWrap();
+      bool BothNUW = LMul->hasNoUnsignedWrap() && RMul->hasNoUnsignedWrap();
+      bool BothNSW = LMul->hasNoSignedWrap() && RMul->hasNoSignedWrap();
       if ((ICmpInst::isEquality(Pred) && (BothNUW || BothNSW)) ||
           (ICmpInst::isSigned(Pred) && BothNSW &&
            C->getAPInt().isStrictlyPositive()) ||
