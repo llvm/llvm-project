@@ -557,8 +557,11 @@ vadd.vi v0, v2, 1, v0.t
 # CHECK-ERROR-LABEL: vadd.vi v0, v2, 1, v0.t
 
 vmsge.vx v0, v4, a0, v0.t
-# CHECK-ERROR: too few operands for instruction
+# CHECK-ERROR: invalid instruction, any one of the following would fix this:
 # CHECK-ERROR-LABEL: vmsge.vx v0, v4, a0, v0.t
+# CHECK-ERROR: note: invalid operand for instruction
+# CHECK-ERROR: note: invalid operand for instruction
+# CHECK-ERROR: note: too few operands for instruction
 
 vmerge.vim v0, v1, 1, v0
 # CHECK-ERROR: the destination vector register group cannot be V0
