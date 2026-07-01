@@ -77,6 +77,10 @@ struct ThunkInfo {
   Defined *sym = nullptr;             // private-extern symbol for active thunk
   ConcatInputSection *isec = nullptr; // input section for active thunk
 
+  /// Before this thunk is created, this contains the set of branches with the
+  /// same target that could trigger this thunk's creation.
+  llvm::DenseSet<const Relocation *> pendingBranches;
+
   // The following value is cumulative across all thunks on this function
   uint8_t sequence = 0; // how many thunks created so-far?
 };
@@ -122,8 +126,14 @@ private:
   bool isTargetStubsAndInRange(const ConcatInputSection &isec,
                                const Relocation &r,
                                std::optional<uint64_t> estimatedStubsEnd) const;
+  /// Mark the branch at \p r as resolved and possibly decrement
+  /// numPendingThunkTargets.
+  void markBranchAsResolved(const Relocation *r, ThunkInfo &thunkInfo);
   /// The number of relocations updated to point to thunks.
   size_t thunkCallCount = 0;
+  /// The number of new thunks that could be created from our current list of
+  /// pending branches.
+  unsigned numPendingThunkTargets = 0;
 };
 
 NamePair maybeRenameSection(NamePair key);

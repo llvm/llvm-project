@@ -154,13 +154,13 @@ void TextOutputSection::createThunk(const ConcatInputSection &isec,
   assert(isec.isFinal);
   uint64_t highVA = isec.getVA() + r.offset + target->forwardBranchRange;
   if (addr + size > highVA) {
-    // There were too many consecutive branch instructions for `slop`
-    // below. If you hit this: For the current algorithm, just bumping up
-    // slop below and trying again is probably simplest. (See also PR51578
-    // comment 5).
-    fatal(Twine(__FUNCTION__) +
-          ": FIXME: thunk range overrun. Consider increasing the "
-          "slop-scale with `--slop-scale=<unsigned_int>`.");
+    // We can only encounter this if we have a massive function
+    // (> ~128MB on arm64) or an enormous number of branch instructions within a
+    // single function (> ~16M on arm64), neither of which is feasible in
+    // practice. To fix we could implement branch islands when the available
+    // space for thunks become too small.
+    fatal("encountered a branch whose target is out of range, but there is "
+          "no more space for a new thunk");
   }
   thunkInfo.isec = makeSyntheticInputSection(isec.getSegName(), isec.getName());
   thunkInfo.isec->parent = this;
@@ -245,6 +245,16 @@ bool TextOutputSection::isTargetStubsAndInRange(
   return *estimatedStubsEnd <= highVA;
 }
 
+void TextOutputSection::markBranchAsResolved(const Relocation *r,
+                                             ThunkInfo &thunkInfo) {
+  if (!thunkInfo.pendingBranches.erase(r))
+    return;
+  if (!thunkInfo.pendingBranches.empty())
+    return;
+  assert(numPendingThunkTargets);
+  --numPendingThunkTargets;
+}
+
 void TextOutputSection::finalize() {
   if (!needsThunks()) {
     for (ConcatInputSection *isec : inputs)
@@ -261,13 +271,13 @@ void TextOutputSection::finalize() {
   SmallVector<std::tuple<ConcatInputSection *, Relocation *, Defined *>>
       deferredBranchRedirects;
 
-  const uint64_t slop = config->slopScale * target->thunkSize;
   for (auto *isec : inputs) {
     while (!branchesToProcess.empty()) {
       auto [callerIsec, r] = branchesToProcess.front();
       assert(callerIsec->isFinal);
       auto &thunkInfo = thunkMap[*r];
       if (isTargetKnownInRange(*callerIsec, *r)) {
+        markBranchAsResolved(r, thunkInfo);
         branchesToProcess.pop_front();
         continue;
       }
@@ -284,9 +294,13 @@ void TextOutputSection::finalize() {
       // thunks? If we do, then we can delay processing this thunk so we may
       // finalize more potencial target sections. Otherwise we must emit thunks
       // until we have enough space.
-      if (nextEnd + slop <= highVA)
+      if (nextEnd + numPendingThunkTargets * target->thunkSize <= highVA)
         break;
 
+      assert(thunkInfo.pendingBranches.contains(r));
+      thunkInfo.pendingBranches.clear();
+      assert(numPendingThunkTargets);
+      --numPendingThunkTargets;
       createThunk(*callerIsec, *r, thunkInfo);
       branchesToProcess.pop_front();
     }
@@ -316,14 +330,21 @@ void TextOutputSection::finalize() {
         deferredBranchRedirects.emplace_back(isec, &r, thunk);
         continue;
       }
+      if (thunkInfo.pendingBranches.empty())
+        ++numPendingThunkTargets;
+      thunkInfo.pendingBranches.insert(&r);
       branchesToProcess.emplace_back(isec, &r);
     }
   }
 
   llvm::erase_if(branchesToProcess, [&](auto &pair) {
     auto [callerIsec, r] = pair;
-    return isTargetKnownInRange(*callerIsec, *r);
+    if (!isTargetKnownInRange(*callerIsec, *r))
+      return false;
+    markBranchAsResolved(r, thunkMap[*r]);
+    return true;
   });
+#ifndef NDEBUG
   // Count distinct unresolved branch targets that still lack an in-range thunk.
   // We use this as an upper bound on the number of thunks we may still create
   // when estimating where __stubs / __objc_stubs could end up.
@@ -334,8 +355,10 @@ void TextOutputSection::finalize() {
     if (!getThunkInRange(*callerIsec, *r, thunkInfo))
       branchTargets.insert(thunkKey);
   }
+  assert(numPendingThunkTargets == branchTargets.size());
+#endif
 
-  auto estimatedStubsEnd = estimateStubsEndVA(branchTargets.size());
+  auto estimatedStubsEnd = estimateStubsEndVA(numPendingThunkTargets);
   for (auto [isec, r, thunk] : deferredBranchRedirects) {
     if (isTargetKnownInRange(*isec, *r))
       continue;
@@ -345,15 +368,19 @@ void TextOutputSection::finalize() {
   }
 
   for (auto [isec, r] : branchesToProcess) {
+    auto &thunkInfo = thunkMap[*r];
+#ifndef NDEBUG
+    markBranchAsResolved(r, thunkInfo);
+#endif
     if (isTargetStubsAndInRange(*isec, *r, estimatedStubsEnd))
       continue;
-    auto &thunkInfo = thunkMap[*r];
     if (auto *thunk = getThunkInRange(*isec, *r, thunkInfo)) {
       updateBranchTargetToThunk(*r, thunk);
       continue;
     }
     createThunk(*isec, *r, thunkInfo);
   }
+  assert(numPendingThunkTargets == 0);
 
   if (!thunks.empty())
     log(name + ": Created " + Twine(thunks.size()) + " (" +
