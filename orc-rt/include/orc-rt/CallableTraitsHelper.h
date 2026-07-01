@@ -26,35 +26,34 @@ namespace orc_rt {
 /// operate on callable types.
 template <template <typename...> typename ImplT, typename C>
 struct CallableTraitsHelper
-    : public CallableTraitsHelper<
+    : CallableTraitsHelper<
           ImplT,
           decltype(&std::remove_cv_t<std::remove_reference_t<C>>::operator())> {
 };
 
 template <template <typename...> typename ImplT, typename RetT,
           typename... ArgTs>
-struct CallableTraitsHelper<ImplT, RetT(ArgTs...)>
-    : public ImplT<RetT, ArgTs...> {};
+struct CallableTraitsHelper<ImplT, RetT(ArgTs...)> : ImplT<RetT, ArgTs...> {};
 
 template <template <typename...> typename ImplT, typename RetT,
           typename... ArgTs>
-struct CallableTraitsHelper<ImplT, RetT (*)(ArgTs...)>
-    : public ImplT<RetT, ArgTs...> {};
+struct CallableTraitsHelper<ImplT, RetT (*)(ArgTs...)> : ImplT<RetT, ArgTs...> {
+};
 
 template <template <typename...> typename ImplT, typename RetT,
           typename... ArgTs>
-struct CallableTraitsHelper<ImplT, RetT (&)(ArgTs...)>
-    : public ImplT<RetT, ArgTs...> {};
+struct CallableTraitsHelper<ImplT, RetT (&)(ArgTs...)> : ImplT<RetT, ArgTs...> {
+};
 
 template <template <typename...> typename ImplT, typename ClassT, typename RetT,
           typename... ArgTs>
 struct CallableTraitsHelper<ImplT, RetT (ClassT::*)(ArgTs...)>
-    : public ImplT<RetT, ArgTs...> {};
+    : ImplT<RetT, ArgTs...> {};
 
 template <template <typename...> typename ImplT, typename ClassT, typename RetT,
           typename... ArgTs>
 struct CallableTraitsHelper<ImplT, RetT (ClassT::*)(ArgTs...) const>
-    : public ImplT<RetT, ArgTs...> {};
+    : ImplT<RetT, ArgTs...> {};
 
 namespace detail {
 template <typename RetT, typename... ArgTs> struct CallableArgInfoImpl {
@@ -67,7 +66,7 @@ template <typename RetT, typename... ArgTs> struct CallableArgInfoImpl {
 /// (as a tuple) of the given callable type.
 template <typename Callable>
 struct CallableArgInfo
-    : public CallableTraitsHelper<detail::CallableArgInfoImpl, Callable> {};
+    : CallableTraitsHelper<detail::CallableArgInfoImpl, Callable> {};
 
 } // namespace orc_rt
 
