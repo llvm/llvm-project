@@ -921,6 +921,35 @@ public:
   }
 };
 
+/// Converts `spirv.SNegate` to `0 - x`.
+class SNegatePattern : public SPIRVToLLVMConversion<spirv::SNegateOp> {
+public:
+  using SPIRVToLLVMConversion<spirv::SNegateOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(spirv::SNegateOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto srcType = op.getType();
+    auto dstType = getTypeConverter()->convertType(srcType);
+    if (!dstType)
+      return rewriter.notifyMatchFailure(op, "type conversion failed");
+
+    Location loc = op.getLoc();
+    auto vecSrcType = dyn_cast<VectorType>(srcType);
+    IntegerAttr zeroAttr = rewriter.getIntegerAttr(
+        cast<IntegerType>(getElementTypeOrSelf(srcType)), 0);
+    Value zero;
+    if (vecSrcType)
+      zero = LLVM::ConstantOp::create(
+          rewriter, loc, dstType, SplatElementsAttr::get(vecSrcType, zeroAttr));
+    else
+      zero = LLVM::ConstantOp::create(rewriter, loc, dstType, zeroAttr);
+    rewriter.replaceOpWithNewOp<LLVM::SubOp>(op, dstType, zero,
+                                             adaptor.getOperand());
+    return success();
+  }
+};
+
 /// Converts `spirv.Load` and `spirv.Store` to LLVM dialect.
 template <typename SPIRVOp>
 class LoadStorePattern : public SPIRVToLLVMConversion<SPIRVOp> {
@@ -1824,7 +1853,7 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       DirectConversionPattern<spirv::SDivOp, LLVM::SDivOp>,
       DirectConversionPattern<spirv::SRemOp, LLVM::SRemOp>,
       DirectConversionPattern<spirv::UDivOp, LLVM::UDivOp>,
-      DirectConversionPattern<spirv::UModOp, LLVM::URemOp>,
+      DirectConversionPattern<spirv::UModOp, LLVM::URemOp>, SNegatePattern,
 
       // Bitwise ops
       BitFieldInsertPattern, BitFieldUExtractPattern, BitFieldSExtractPattern,
