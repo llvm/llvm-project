@@ -370,3 +370,61 @@ void test_file_fd_at_functions() {
   (void)readlinkat(AT_FDCWD, "newpath", Buf, 10);
   (void)renameat(AT_FDCWD, "oldpath", AT_FDCWD, "newpath");
 }
+
+#define SSIZE_MAX_PLUS_ONE ((size_t)1 << (sizeof(size_t) * __CHAR_BIT__ - 1))
+
+void test_read_ssize_max_io_size(int fd, char *Buf) {
+  read(fd, Buf, SSIZE_MAX_PLUS_ONE);
+  // report-warning@-1{{The 3rd argument to 'read' is 9223372036854775808 but should be a value not greater than SSIZE_MAX}}
+  // bugpath-warning@-2{{The 3rd argument to 'read' is 9223372036854775808 but should be a value not greater than SSIZE_MAX}}
+  // bugpath-note@-3{{The 3rd argument to 'read' is 9223372036854775808 but should be a value not greater than SSIZE_MAX}}
+}
+
+void test_write_ssize_max_io_size(int fd, char *Buf) {
+  write(fd, Buf, SSIZE_MAX_PLUS_ONE);
+  // report-warning@-1{{The 3rd argument to 'write' is 9223372036854775808 but should be a value not greater than SSIZE_MAX}}
+  // bugpath-warning@-2{{The 3rd argument to 'write' is 9223372036854775808 but should be a value not greater than SSIZE_MAX}}
+  // bugpath-note@-3{{The 3rd argument to 'write' is 9223372036854775808 but should be a value not greater than SSIZE_MAX}}
+}
+
+void test_pread_ssize_max_io_size(int fd, char *Buf) {
+  pread(fd, Buf, SSIZE_MAX_PLUS_ONE, 0);
+  // report-warning@-1{{The 3rd argument to 'pread' is 9223372036854775808 but should be a value not greater than SSIZE_MAX}}
+  // bugpath-warning@-2{{The 3rd argument to 'pread' is 9223372036854775808 but should be a value not greater than SSIZE_MAX}}
+  // bugpath-note@-3{{The 3rd argument to 'pread' is 9223372036854775808 but should be a value not greater than SSIZE_MAX}}
+}
+
+void test_pread64_ssize_max_io_size(int fd, char *Buf) {
+  pread64(fd, Buf, SSIZE_MAX_PLUS_ONE, 0);
+  // report-warning@-1{{The 3rd argument to 'pread64' is 9223372036854775808 but should be a value not greater than SSIZE_MAX}}
+  // bugpath-warning@-2{{The 3rd argument to 'pread64' is 9223372036854775808 but should be a value not greater than SSIZE_MAX}}
+  // bugpath-note@-3{{The 3rd argument to 'pread64' is 9223372036854775808 but should be a value not greater than SSIZE_MAX}}
+}
+
+void test_pwrite_ssize_max_io_size(int fd, char *Buf) {
+  pwrite(fd, Buf, SSIZE_MAX_PLUS_ONE, 0);
+  // report-warning@-1{{The 3rd argument to 'pwrite' is 9223372036854775808 but should be a value not greater than SSIZE_MAX}}
+  // bugpath-warning@-2{{The 3rd argument to 'pwrite' is 9223372036854775808 but should be a value not greater than SSIZE_MAX}}
+  // bugpath-note@-3{{The 3rd argument to 'pwrite' is 9223372036854775808 but should be a value not greater than SSIZE_MAX}}
+}
+
+void test_pwrite64_ssize_max_io_size(int fd, char *Buf) {
+  pwrite64(fd, Buf, SSIZE_MAX_PLUS_ONE, 0);
+  // report-warning@-1{{The 3rd argument to 'pwrite64' is 9223372036854775808 but should be a value not greater than SSIZE_MAX}}
+  // bugpath-warning@-2{{The 3rd argument to 'pwrite64' is 9223372036854775808 but should be a value not greater than SSIZE_MAX}}
+  // bugpath-note@-3{{The 3rd argument to 'pwrite64' is 9223372036854775808 but should be a value not greater than SSIZE_MAX}}
+}
+
+void test_readlink_ssize_max_io_size(char *Buf) {
+  readlink("path", Buf, SSIZE_MAX_PLUS_ONE);
+  // report-warning@-1{{The 3rd argument to 'readlink' is 9223372036854775808 but should be a value not greater than SSIZE_MAX}}
+  // bugpath-warning@-2{{The 3rd argument to 'readlink' is 9223372036854775808 but should be a value not greater than SSIZE_MAX}}
+  // bugpath-note@-3{{The 3rd argument to 'readlink' is 9223372036854775808 but should be a value not greater than SSIZE_MAX}}
+}
+
+void test_readlinkat_ssize_max_io_size(char *Buf) {
+  readlinkat(AT_FDCWD, "path", Buf, SSIZE_MAX_PLUS_ONE);
+  // report-warning@-1{{The 4th argument to 'readlinkat' is 9223372036854775808 but should be a value not greater than SSIZE_MAX}}
+  // bugpath-warning@-2{{The 4th argument to 'readlinkat' is 9223372036854775808 but should be a value not greater than SSIZE_MAX}}
+  // bugpath-note@-3{{The 4th argument to 'readlinkat' is 9223372036854775808 but should be a value not greater than SSIZE_MAX}}
+}
