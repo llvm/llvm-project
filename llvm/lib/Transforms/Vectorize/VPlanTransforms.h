@@ -357,14 +357,26 @@ struct VPlanTransforms {
   /// Remove dead recipes from \p Plan.
   static void removeDeadRecipes(VPlan &Plan);
 
+  /// Check if all loads in the loop are dereferenceable. Iterates over the
+  /// loop body blocks reachable from \p HeaderVPBB. Returns false if any
+  /// non-dereferenceable load is found.
+  static bool areAllLoadsDereferenceable(VPBasicBlock *HeaderVPBB,
+                                         Loop *TheLoop,
+                                         PredicatedScalarEvolution &PSE,
+                                         DominatorTree &DT,
+                                         AssumptionCache *AC);
+
   /// Update \p Plan to account for uncountable early exits by introducing
   /// appropriate branching logic in the latch that handles early exits and the
   /// latch exit condition. Multiple exits are handled with a dispatch block
   /// that determines which exit to take based on lane-by-lane semantics.
-  static bool handleUncountableEarlyExits(
-      VPlan &Plan, VPBasicBlock *HeaderVPBB, VPBasicBlock *LatchVPBB,
-      VPBasicBlock *MiddleVPBB, Loop *TheLoop, PredicatedScalarEvolution &PSE,
-      DominatorTree &DT, AssumptionCache *AC, UncountableExitStyle Style);
+  static bool handleUncountableEarlyExits(VPlan &Plan, Loop *TheLoop,
+                                          PredicatedScalarEvolution &PSE,
+                                          DominatorTree &DT,
+                                          AssumptionCache *AC);
+
+  /// Disconnect countable early exits from the loop.
+  static void handleCountableEarlyExits(VPlan &Plan);
 
   /// Replaces the exit condition from
   ///   (branch-on-cond eq CanonicalIVInc, VectorTripCount)
