@@ -47,9 +47,6 @@ getLeafClauses(CIRGenFunction &cgf, const OMPExecutableDirective &s,
   return result;
 }
 
-/// Create an omp.parallel op for the parallel leaf of \p s and emit \p emitBody
-/// inside its region. Works for both the standalone 'parallel' directive and
-/// combined directives that contain a parallel leaf (e.g. 'target parallel').
 template <typename DirectiveTy>
 static mlir::LogicalResult
 emitParallelOp(CIRGenFunction &cgf, const DirectiveTy &s, mlir::Location begin,
@@ -281,10 +278,6 @@ emitOMPTargetImplicitCaptures(CIRGenFunction &cgf,
   }
 }
 
-/// Create an omp.target op for the target leaf of \p s and emit \p emitBody
-/// inside its region, remapping mapped variables to the target op's block
-/// arguments. Works for both the standalone 'target' directive and combined
-/// directives that contain a target leaf (e.g. 'target parallel').
 template <typename DirectiveTy>
 static mlir::LogicalResult
 emitTargetOp(CIRGenFunction &cgf, const DirectiveTy &s, mlir::Location begin,
