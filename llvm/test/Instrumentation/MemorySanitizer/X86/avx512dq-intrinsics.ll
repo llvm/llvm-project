@@ -4,28 +4,30 @@
 ; Forked from llvm/test/CodeGen/X86/avx512dq-intrinsics.ll
 
 ; Strictly handled:
+; - <8 x double> @llvm.x86.avx512.mask.range.pd.512
+;                    (<8 x double>, <8 x double>, i32, <8 x double>, i8, i32)
 ; - <16 x float> @llvm.x86.avx512.mask.range.ps.512
 ;                    (<16 x float>, <16 x float>, i32, <16 x float>, i16, i32)
-; - <16 x float> @llvm.x86.avx512.mask.reduce.ps.512
-;                    (<16 x float>, i32, <16 x float>, i16, i32)
-; - <16 x i1> @llvm.x86.avx512.fpclass.ps.512(<16 x float>, i32)
 ; - <2 x double> @llvm.x86.avx512.mask.range.sd
-;                    (<2 x double>, <2 x double>, <2 x double>, i8, i32, i32)
-; - <2 x double> @llvm.x86.avx512.mask.reduce.sd
 ;                    (<2 x double>, <2 x double>, <2 x double>, i8, i32, i32)
 ; - <4 x float> @llvm.x86.avx512.mask.range.ss
 ;                    (<4 x float>, <4 x float>, <4 x float>, i8, i32, i32)
-; - <4 x float> @llvm.x86.avx512.mask.reduce.ss
-;                    (<4 x float>, <4 x float>, <4 x float>, i8, i32, i32)
-; - <8 x double> @llvm.x86.avx512.mask.range.pd.512
-;                    (<8 x double>, <8 x double>, i32, <8 x double>, i8, i32)
 ; - <8 x double> @llvm.x86.avx512.mask.reduce.pd.512
 ;                    (<8 x double>, i32, <8 x double>, i8, i32)
+; - <16 x float> @llvm.x86.avx512.mask.reduce.ps.512
+;                    (<16 x float>, i32, <16 x float>, i16, i32)
+; - <2 x double> @llvm.x86.avx512.mask.reduce.sd
+;                    (<2 x double>, <2 x double>, <2 x double>, i8, i32, i32)
+; - <4 x float> @llvm.x86.avx512.mask.reduce.ss
+;                    (<4 x float>, <4 x float>, <4 x float>, i8, i32, i32)
+; - <8 x i1> @llvm.x86.avx512.fpclass.pd.512(<8 x double>, i32)
+; - <16 x i1> @llvm.x86.avx512.fpclass.ps.512(<16 x float>, i32)
+; - i8 @llvm.x86.avx512.mask.fpclass.sd(<2 x double>, i32, i8)
+; - i8 @llvm.x86.avx512.mask.fpclass.ss(<4 x float>, i32, i8)
 ; - <8 x double> @llvm.x86.avx512.sitofp.round(<8 x i64>, i32)
 ; - <8 x double> @llvm.x86.avx512.uitofp.round(<8 x i64>, i32)
 ; - <8 x float> @llvm.x86.avx512.sitofp.round(<8 x i64>, i32)
 ; - <8 x float> @llvm.x86.avx512.uitofp.round(<8 x i64>, i32)
-; - <8 x i1> @llvm.x86.avx512.fpclass.pd.512(<8 x double>, i32)
 ; - <8 x i64> @llvm.x86.avx512.mask.cvtpd2qq.512(<8 x double>, <8 x i64>, i8, i32)
 ; - <8 x i64> @llvm.x86.avx512.mask.cvtpd2uqq.512(<8 x double>, <8 x i64>, i8, i32)
 ; - <8 x i64> @llvm.x86.avx512.mask.cvtps2qq.512(<8 x float>, <8 x i64>, i8, i32)
@@ -38,8 +40,6 @@
 ; - i32 @llvm.x86.avx512.ktestc.w(<16 x i1>, <16 x i1>)
 ; - i32 @llvm.x86.avx512.ktestz.b(<8 x i1>, <8 x i1>)
 ; - i32 @llvm.x86.avx512.ktestz.w(<16 x i1>, <16 x i1>)
-; - i8 @llvm.x86.avx512.mask.fpclass.sd(<2 x double>, i32, i8)
-; - i8 @llvm.x86.avx512.mask.fpclass.ss(<4 x float>, i32, i8)
 ;
 ; Heuristically handled: (none)
 
