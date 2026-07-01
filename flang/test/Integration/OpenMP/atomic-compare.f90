@@ -394,3 +394,30 @@ subroutine atomic_compare_capture_logical(x, e, d, v)
   !$omp end atomic
 end
 
+! Logical compare+capture inside a parallel region.
+!CHECK-LABEL: define void @atomic_compare_capture_logical_parallel_(
+!CHECK-SAME: ptr noalias %[[X:.*]])
+!CHECK: %[[CGEP:.*]] = getelementptr { ptr }, ptr %structArg, i32 0, i32 0
+!CHECK: store ptr %[[X]], ptr %[[CGEP]]
+!CHECK: call void {{.*}}@__kmpc_fork_call{{.*}}@atomic_compare_capture_logical_parallel_..omp_par
+!CHECK-LABEL: define internal void @atomic_compare_capture_logical_parallel_..omp_par(
+!CHECK-SAME: ptr noalias %{{.*}}, ptr noalias %{{.*}}, ptr %[[STRUCTARG:.*]])
+!CHECK: %[[GEP:.*]] = getelementptr { ptr }, ptr %[[STRUCTARG]], i32 0, i32 0
+!CHECK: %[[SHARED:.*]] = load ptr, ptr %[[GEP]]
+!CHECK: %[[RES:.*]] = cmpxchg ptr %[[SHARED]], i32 %{{.*}}, i32 %{{.*}} monotonic monotonic{{.*}}
+!CHECK: %[[OLD:.*]] = extractvalue { i32, i1 } %[[RES]], 0
+!CHECK: store i32 %[[OLD]], ptr %{{.*}}
+subroutine atomic_compare_capture_logical_parallel(x)
+  logical :: x, expected, desired, old_value
+  !$omp parallel private(old_value, expected, desired)
+    expected = .true.
+    desired  = .false.
+    !$omp atomic compare capture
+      old_value = x
+      if (x .eqv. expected) then
+        x = desired
+      end if
+    !$omp end atomic
+  !$omp end parallel
+end
+
