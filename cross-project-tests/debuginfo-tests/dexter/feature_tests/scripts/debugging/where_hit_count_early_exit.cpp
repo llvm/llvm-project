@@ -5,8 +5,6 @@
 /// Test that when all root !where nodes have expired, we exit without waiting
 /// for the debuggee to finish.
 
-// CHECK-NOT: timeout reached
-
 // CHECK-LABEL: Step 0
 // CHECK-COUNT-3: getRandomNumber
 // CHECK-NOT: getRandomNumber

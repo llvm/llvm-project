@@ -3,7 +3,7 @@
 // RUN:   -- %s | FileCheck %s
 
 /// Test !then finish with !and{after_hit_count}.
-/// The infinite loop will be exited when we hit the `!then finish` command,
+/// The long loop will be exited when we hit the `!then finish` command,
 /// which we will see after 101 hits of main: 50 hits on the loop line before
 /// after_hit_count is reached, 50 hits from stepping off of the loop line, and
 /// 1 hit from the step where we trigger the !then node.
