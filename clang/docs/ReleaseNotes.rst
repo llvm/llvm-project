@@ -340,6 +340,12 @@ Non-comprehensive list of changes in this release
   and ``__builtin___get_unsafe_stack_start`` are now deprecated. Use the
   corresponding functions from ``<sanitizer/safestack_interface.h>`` instead.
 
+- Clang no longer retains source comments in the AST when nothing will read them
+  back. Comments are now collected only when they may be consumed (e.g. with
+  ``-fparse-all-comments``, when ``-Wdocumentation`` is enabled, when emitting a
+  PCH/module, or during code completion), reducing memory overhead for typical
+  compilations.
+
 New Compiler Flags
 ------------------
 - New option ``-fms-anonymous-structs`` / ``-fno-ms-anonymous-structs`` added
