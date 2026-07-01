@@ -180,6 +180,9 @@ jobs:
   upload-man-pages:
     name: "Upload Man Pages"
     runs-on: ubuntu-24.04
+    environment:
+      deployment: false
+      name: release
     needs:
       - release-documentation
     if: >-
