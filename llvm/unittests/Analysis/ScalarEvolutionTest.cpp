@@ -2028,6 +2028,39 @@ TEST_F(ScalarEvolutionsTest, SimplifyICmpOperands) {
       EXPECT_FALSE(SE.SimplifyICmpOperands(NewPred, NewLHS, NewRHS));
     }
   });
+
+  // Equality: cancel common constant addend without no-wrap flags.
+  // (K + A) eq/ne (K + B) --> A eq/ne B
+  runWithSE(*M, "foo", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+    const SCEV *A = SE.getSCEV(getArgByName(F, "a"));
+    const SCEV *B = SE.getSCEV(getArgByName(F, "b"));
+    const SCEV *K = SE.getConstant(A->getType(), 42);
+
+    const SCEV *KpA = SE.getAddExpr(K, A);
+    const SCEV *KpB = SE.getAddExpr(K, B);
+
+    // (42 + %a) eq (42 + %b)  -->  %a eq %b
+    {
+      CmpPredicate NewPred = ICmpInst::ICMP_EQ;
+      SCEVUse NewLHS = KpA;
+      SCEVUse NewRHS = KpB;
+      EXPECT_TRUE(SE.SimplifyICmpOperands(NewPred, NewLHS, NewRHS));
+      EXPECT_EQ(NewPred, ICmpInst::ICMP_EQ);
+      EXPECT_EQ(NewLHS, A);
+      EXPECT_EQ(NewRHS, B);
+    }
+
+    // (42 + %a) ne (42 + %b)  -->  %a ne %b
+    {
+      CmpPredicate NewPred = ICmpInst::ICMP_NE;
+      SCEVUse NewLHS = KpA;
+      SCEVUse NewRHS = KpB;
+      EXPECT_TRUE(SE.SimplifyICmpOperands(NewPred, NewLHS, NewRHS));
+      EXPECT_EQ(NewPred, ICmpInst::ICMP_NE);
+      EXPECT_EQ(NewLHS, A);
+      EXPECT_EQ(NewRHS, B);
+    }
+  });
 }
 
 }  // end namespace llvm

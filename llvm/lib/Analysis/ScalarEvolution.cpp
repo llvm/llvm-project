@@ -11124,10 +11124,14 @@ bool ScalarEvolution::SimplifyICmpOperands(CmpPredicate &Pred, SCEVUse &LHS,
   }
 
   // (K + A) pred (K + B) --> A pred B
-  // when both adds have the appropriate no-wrap flag.
+  // For equality, no flags are needed.
+  // For signed, both adds must be NSW. For unsigned, both must be NUW.
   {
     const SCEVConstant *C = nullptr;
-    if ((ICmpInst::isSigned(Pred) &&
+    if ((ICmpInst::isEquality(Pred) &&
+         match(LHS, m_scev_c_Add(m_SCEVConstant(C), m_SCEV(NewLHS))) &&
+         match(RHS, m_scev_c_Add(m_scev_Specific(C), m_SCEV(NewRHS)))) ||
+        (ICmpInst::isSigned(Pred) &&
          match(LHS, m_scev_c_NSWAdd(m_SCEVConstant(C), m_SCEV(NewLHS))) &&
          match(RHS, m_scev_c_NSWAdd(m_scev_Specific(C), m_SCEV(NewRHS)))) ||
         (ICmpInst::isUnsigned(Pred) &&
