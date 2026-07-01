@@ -740,8 +740,6 @@ define i4 @convert_to_bitmask_float(<4 x float> %vec) {
 define i8 @convert_large_vector(<8 x i32> %vec) {
 ; CHECK-SD-LABEL: convert_large_vector:
 ; CHECK-SD:       ; %bb.0:
-; CHECK-SD-NEXT:    sub sp, sp, #16
-; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-SD-NEXT:    cmeq.4s v1, v1, #0
 ; CHECK-SD-NEXT:    cmeq.4s v0, v0, #0
 ; CHECK-SD-NEXT:    adrp x8, lCPI15_0@PAGE
@@ -749,9 +747,7 @@ define i8 @convert_large_vector(<8 x i32> %vec) {
 ; CHECK-SD-NEXT:    ldr q1, [x8, lCPI15_0@PAGEOFF]
 ; CHECK-SD-NEXT:    bic.16b v0, v1, v0
 ; CHECK-SD-NEXT:    addv.8h h0, v0
-; CHECK-SD-NEXT:    fmov w8, s0
-; CHECK-SD-NEXT:    and w0, w8, #0xff
-; CHECK-SD-NEXT:    add sp, sp, #16
+; CHECK-SD-NEXT:    fmov w0, s0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: convert_large_vector:
