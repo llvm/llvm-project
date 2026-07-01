@@ -16,6 +16,7 @@
 
 #include "clang/ScalableStaticAnalysis/Core/EntityLinker/LUSummary.h"
 #include "clang/ScalableStaticAnalysis/Core/EntityLinker/LUSummaryEncoding.h"
+#include "clang/ScalableStaticAnalysis/Core/EntityLinker/StaticLibrary.h"
 #include "clang/ScalableStaticAnalysis/Core/EntityLinker/TUSummaryEncoding.h"
 #include "clang/ScalableStaticAnalysis/Core/Model/BuildNamespace.h"
 #include "clang/ScalableStaticAnalysis/Core/Model/SummaryName.h"
@@ -40,7 +41,12 @@ using Artifact = std::variant<TUSummary, LUSummary, WPASuite>;
 /// Lazily-deserialized counterpart of \c Artifact: the same on-disk
 /// artifacts but with their per-entity summary payloads left as opaque
 /// format-specific encodings rather than fully resolved analysis results.
-using ArtifactEncoding = std::variant<TUSummaryEncoding, LUSummaryEncoding>;
+///
+/// \c StaticLibrary appears only in this variant: the archiver tool and
+/// the linker pass member payloads through without decoding them, so a
+/// fully decoded static-library shape would have no consumer.
+using ArtifactEncoding =
+    std::variant<TUSummaryEncoding, LUSummaryEncoding, StaticLibrary>;
 
 /// Abstract base class for serialization formats.
 class SerializationFormat {
@@ -93,6 +99,12 @@ public:
   virtual llvm::Error
   writeLUSummaryEncoding(const LUSummaryEncoding &SummaryEncoding,
                          llvm::StringRef Path) = 0;
+
+  virtual llvm::Expected<StaticLibrary>
+  readStaticLibrary(llvm::StringRef Path) = 0;
+
+  virtual llvm::Error writeStaticLibrary(const StaticLibrary &S,
+                                         llvm::StringRef Path) = 0;
 
   virtual llvm::Expected<WPASuite> readWPASuite(llvm::StringRef Path) = 0;
 

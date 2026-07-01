@@ -195,6 +195,18 @@ def IdiomRecognizer : Pass<"cir-idiom-recognizer", "mlir::ModuleOp"> {
   let dependentDialects = ["cir::CIRDialect"];
 }
 
+def LibOpt : Pass<"cir-lib-opt"> {
+  let summary = "Optimize C/C++ library calls";
+  let description = [{
+    This pass applies transformations on C/C++ standard library idioms,
+    such as library function calls and structs raised to CIR operations
+     using the `cir-idiom-recognize` pass.
+  }];
+
+  let constructor = "mlir::createLibOptPass()";
+  let dependentDialects = ["cir::CIRDialect"];
+}
+
 def CallConvLowering : Pass<"cir-call-conv-lowering", "mlir::ModuleOp"> {
   let summary = "Lower CIR function signatures and call sites to match target ABI";
   let description = [{

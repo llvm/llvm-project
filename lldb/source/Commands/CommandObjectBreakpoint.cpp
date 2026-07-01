@@ -3109,7 +3109,7 @@ protected:
         result.AppendError("no breakpoints specified, cannot delete names");
         return;
       }
-      ConstString bp_name(m_name_options.m_name.GetCurrentValue());
+      llvm::StringRef bp_name(m_name_options.m_name.GetCurrentValueAsRef());
       size_t num_valid_ids = valid_bp_ids.GetSize();
       for (size_t index = 0; index < num_valid_ids; index++) {
         lldb::break_id_t bp_id =

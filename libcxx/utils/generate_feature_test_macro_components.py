@@ -433,6 +433,11 @@ feature_test_macros = [
             "headers": ["queue"],
         },
         {
+            "name": "__cpp_lib_constexpr_set",
+            "values": {"c++26": 202502},
+            "headers": ["set"],
+        },
+        {
             "name": "__cpp_lib_constexpr_string",
             "values": {"c++20": 201907},
             "headers": ["string"],
