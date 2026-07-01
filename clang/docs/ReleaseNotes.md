@@ -656,6 +656,11 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 - Diagnostics for the C++11 range-based for statement now report the correct
   iterator type in notes for invalid iterator types.
 
+- `-Wfortify-source` now warns when the constant-evaluated argument to
+  `umask` has bits set outside `0777`. Those bits are silently discarded
+  by the kernel, so setting them is almost always a typo (matching the
+  bionic libc `diagnose_if` check).
+
 ### Improvements to Clang's time-trace
 
 ### Improvements to Coverage Mapping
@@ -976,6 +981,8 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 ### AST Matchers
 
+- Fixed `nullPointerConstant` matcher falsely matching integer literal `0`
+  in non-null-pointer contexts such as array subscripts and pointer arithmetic.
 - Add `functionTypeLoc` matcher for matching `FunctionTypeLoc`.
 - Add missing support for `TraversalKind` in some `addMatcher()` overloads.
 

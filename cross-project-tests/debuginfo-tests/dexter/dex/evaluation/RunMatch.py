@@ -25,7 +25,7 @@ from dex.evaluation.Metrics import (
     get_variable_metrics,
     serialize_metric_to_json,
 )
-from dex.evaluation.StateMatch import get_active_where_matches
+from dex.evaluation.StateMatch import StateMatchContext, get_active_where_matches
 from dex.test_script import DexterScript, Scope
 from dex.test_script.Nodes import Expect, Value
 
@@ -35,12 +35,16 @@ class DebuggerStepMatch:
     expected output."""
 
     def __init__(
-        self, step: StepIR, script: DexterScript, match_context: ExpectMatchContext
+        self,
+        step: StepIR,
+        script: DexterScript,
+        match_context: ExpectMatchContext,
+        state_match_context: StateMatchContext,
     ):
         self.step = step
         self.script = script
         self.match_context = match_context
-        self.state_match = get_active_where_matches(script, step)
+        self.state_match = get_active_where_matches(script, step, state_match_context)
         expects_to_match = {
             expect
             for where_match in self.state_match.values()
@@ -92,9 +96,10 @@ class DebuggerRunMatch(object):
         script.visit_script(visit_expect=add_expected_values)
 
         # Then produce all of our step matches.
+        state_match_context = StateMatchContext()
         for step in self.dext_ir.steps:
             self.step_matches.append(
-                DebuggerStepMatch(step, script, self.match_context)
+                DebuggerStepMatch(step, script, self.match_context, state_match_context)
             )
 
         # Then, for each expect, produce the list of results for just that variable.

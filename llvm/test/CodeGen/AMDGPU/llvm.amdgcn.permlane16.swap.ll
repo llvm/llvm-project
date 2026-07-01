@@ -13,11 +13,6 @@
 declare { i32, i32 } @llvm.amdgcn.permlane16.swap(i32, i32, i1 immarg, i1 immarg)
 
 define { i32, i32 } @v_permlane16_swap_b32_vv(i32 %vdst_old, i32 %src0_old) {
-; GCN-LABEL: v_permlane16_swap_b32_vv:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_permlane16_swap_b32_e32 v0, v1
-; GCN-NEXT:    s_setpc_b64 s[30:31]
 ; GFX950-LABEL: v_permlane16_swap_b32_vv:
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -35,13 +30,6 @@ define { i32, i32 } @v_permlane16_swap_b32_vv(i32 %vdst_old, i32 %src0_old) {
 }
 
 define { i32, i32 } @v_permlane16_swap_b32_vi(i32 %vdst_old) {
-; GCN-LABEL: v_permlane16_swap_b32_vi:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_mov_b32_e32 v1, 1
-; GCN-NEXT:    s_nop 1
-; GCN-NEXT:    v_permlane16_swap_b32_e32 v0, v1
-; GCN-NEXT:    s_setpc_b64 s[30:31]
 ; GFX950-LABEL: v_permlane16_swap_b32_vi:
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -63,13 +51,6 @@ define { i32, i32 } @v_permlane16_swap_b32_vi(i32 %vdst_old) {
 }
 
 define { i32, i32 } @v_permlane16_swap_b32_vl(i32 %vdst_old) {
-; GCN-LABEL: v_permlane16_swap_b32_vl:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_mov_b32_e32 v1, 0xc1d1
-; GCN-NEXT:    s_nop 1
-; GCN-NEXT:    v_permlane16_swap_b32_e32 v0, v1
-; GCN-NEXT:    s_setpc_b64 s[30:31]
 ; GFX950-LABEL: v_permlane16_swap_b32_vl:
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -91,14 +72,6 @@ define { i32, i32 } @v_permlane16_swap_b32_vl(i32 %vdst_old) {
 }
 
 define { i32, i32 } @v_permlane16_swap_b32_iv(i32 %src0_old) {
-; GCN-LABEL: v_permlane16_swap_b32_iv:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_mov_b32_e32 v1, v0
-; GCN-NEXT:    v_mov_b32_e32 v0, 1
-; GCN-NEXT:    s_nop 1
-; GCN-NEXT:    v_permlane16_swap_b32_e32 v0, v1
-; GCN-NEXT:    s_setpc_b64 s[30:31]
 ; GFX950-LABEL: v_permlane16_swap_b32_iv:
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -121,14 +94,6 @@ define { i32, i32 } @v_permlane16_swap_b32_iv(i32 %src0_old) {
 }
 
 define { i32, i32 } @v_permlane16_swap_b32_ss(i32 inreg %vdst_old, i32 inreg %src0_old) {
-; GCN-LABEL: v_permlane16_swap_b32_ss:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_mov_b32_e32 v0, s0
-; GCN-NEXT:    v_mov_b32_e32 v1, s1
-; GCN-NEXT:    s_nop 1
-; GCN-NEXT:    v_permlane16_swap_b32_e32 v0, v1
-; GCN-NEXT:    s_setpc_b64 s[30:31]
 ; GFX950-LABEL: v_permlane16_swap_b32_ss:
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -151,14 +116,6 @@ define { i32, i32 } @v_permlane16_swap_b32_ss(i32 inreg %vdst_old, i32 inreg %sr
 }
 
 define { i32, i32 } @v_permlane16_swap_b32_sv(i32 inreg %vdst_old, i32 %src0_old) {
-; GCN-LABEL: v_permlane16_swap_b32_sv:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_mov_b32_e32 v1, v0
-; GCN-NEXT:    v_mov_b32_e32 v0, s0
-; GCN-NEXT:    s_nop 1
-; GCN-NEXT:    v_permlane16_swap_b32_e32 v0, v1
-; GCN-NEXT:    s_setpc_b64 s[30:31]
 ; GFX950-LABEL: v_permlane16_swap_b32_sv:
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -181,13 +138,6 @@ define { i32, i32 } @v_permlane16_swap_b32_sv(i32 inreg %vdst_old, i32 %src0_old
 }
 
 define { i32, i32 } @v_permlane16_swap_b32_vs(i32 %vdst_old, i32 inreg %src0_old) {
-; GCN-LABEL: v_permlane16_swap_b32_vs:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_mov_b32_e32 v1, s0
-; GCN-NEXT:    s_nop 1
-; GCN-NEXT:    v_permlane16_swap_b32_e32 v0, v1
-; GCN-NEXT:    s_setpc_b64 s[30:31]
 ; GFX950-LABEL: v_permlane16_swap_b32_vs:
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -209,11 +159,6 @@ define { i32, i32 } @v_permlane16_swap_b32_vs(i32 %vdst_old, i32 inreg %src0_old
 }
 
 define { i32, i32 } @v_permlane16_swap_b32_vv_fi(i32 %vdst_old, i32 %src0_old) {
-; GCN-LABEL: v_permlane16_swap_b32_vv_fi:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_permlane16_swap_b32_e64 v0, v1 fi:1
-; GCN-NEXT:    s_setpc_b64 s[30:31]
 ; GFX950-LABEL: v_permlane16_swap_b32_vv_fi:
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -231,11 +176,6 @@ define { i32, i32 } @v_permlane16_swap_b32_vv_fi(i32 %vdst_old, i32 %src0_old) {
 }
 
 define { i32, i32 } @v_permlane16_swap_b32_vv_bc(i32 %vdst_old, i32 %src0_old) {
-; GCN-LABEL: v_permlane16_swap_b32_vv_bc:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_permlane16_swap_b32_e64 v0, v1 bound_ctrl:1
-; GCN-NEXT:    s_setpc_b64 s[30:31]
 ; GFX950-LABEL: v_permlane16_swap_b32_vv_bc:
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -253,11 +193,6 @@ define { i32, i32 } @v_permlane16_swap_b32_vv_bc(i32 %vdst_old, i32 %src0_old) {
 }
 
 define { i32, i32 } @v_permlane16_swap_b32_vv_fi_bc(i32 %vdst_old, i32 %src0_old) {
-; GCN-LABEL: v_permlane16_swap_b32_vv_fi_bc:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_permlane16_swap_b32_e64 v0, v1 bound_ctrl:1 fi:1
-; GCN-NEXT:    s_setpc_b64 s[30:31]
 ; GFX950-LABEL: v_permlane16_swap_b32_vv_fi_bc:
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)

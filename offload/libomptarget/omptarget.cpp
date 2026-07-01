@@ -190,7 +190,7 @@ void *targetAllocExplicit(size_t Size, int DeviceNum, int Kind,
 
   void *Rc = NULL;
 
-  if (DeviceNum == omp_get_initial_device()) {
+  if (isInitialDevice(DeviceNum)) {
     Rc = malloc(Size);
     ODBG(ODT_Interface) << Name << " returns host ptr " << Rc;
     return Rc;
@@ -215,7 +215,7 @@ void targetFreeExplicit(void *DevicePtr, int DeviceNum, int Kind,
     return;
   }
 
-  if (DeviceNum == omp_get_initial_device()) {
+  if (isInitialDevice(DeviceNum)) {
     free(DevicePtr);
     ODBG(ODT_Interface) << Name << " deallocated host ptr";
     return;
