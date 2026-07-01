@@ -6,7 +6,7 @@ Every sphinx `conf.py` in llvm-project is intended to use `common_conf` as a
 baseline configuration. The sphinx module-as-conf model means the easiest
 way to achieve this is by updating `globals()` directly, as in:
 
-    from llvm_sphinx import * # see llvm-project/utils/docs/README.md
+    from llvm_sphinx import *  # see llvm-project/utils/docs/README.md
 
     globals().update(common_conf(tags))
 
@@ -43,13 +43,12 @@ def common_conf(tags: Tags, markdown=Markdown.ALWAYS) -> Dict[str, Any]:
         # Doing so reduces dependencies of some packaged llvm distributions.
         try:
             import myst_parser
-
-            extensions.append("myst_parser")
         except ImportError as err:
             if markdown == Markdown.ALWAYS or not tags.has("builder-man"):
                 print(venv_help(err), file=sys.stderr)
                 raise
         else:
+            extensions.append("myst_parser")
             source_suffix[".md"] = "markdown"
     myst_enable_extensions = ["substitution"]
     myst_heading_anchors = 6
