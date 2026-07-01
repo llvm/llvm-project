@@ -66,7 +66,7 @@ func.func @main() {
 }
 
 module attributes {transform.with_named_sequence} {
-  transform.named_sequence @__transform_main(%module : !transform.any_op {transform.consumed}) {
+  transform.named_sequence @__transform_main(%module : !transform.any_op {transform.readonly}) {
     %matmul = transform.structured.match ops{["linalg.matmul"]} in %module
       : (!transform.any_op) -> !transform.any_op
     %func = transform.structured.match ops{["func.func"]} in %module
@@ -79,7 +79,7 @@ module attributes {transform.with_named_sequence} {
       : (!transform.any_op) -> (!transform.any_op, !transform.op<"scf.for">, !transform.op<"scf.for">, !transform.op<"scf.for">)
 
     // Step 2: Vectorize.
-    transform.structured.vectorize %tiled_linalg_op vector_sizes [[8], [8], 4]
+    transform.structured.vectorize %tiled_linalg_op vector_sizes [[8], [8], 4] {create_named_contraction}
       : !transform.any_op
 
     // Step 3: Lower vector.mask %mask { vector.transfer_* } to vector.transfer_* %mask
@@ -96,7 +96,6 @@ module attributes {transform.with_named_sequence} {
     // Step 5: Lower to vector.outerproduct.
     transform.apply_patterns to %func {
       transform.apply_patterns.vector.transfer_permutation_patterns
-      transform.apply_patterns.vector.reduction_to_contract
       transform.apply_patterns.vector.lower_contraction lowering_strategy = "outerproduct"
     } : !transform.any_op
 
