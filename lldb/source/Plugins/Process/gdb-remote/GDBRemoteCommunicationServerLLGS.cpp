@@ -4561,8 +4561,7 @@ std::string
 lldb_private::process_gdb_remote::LLGSArgToURL(llvm::StringRef url_arg,
                                                bool reverse_connect) {
   // Parse the scheme manually because URI::parse does not handle Windows paths.
-  constexpr llvm::StringRef kSchemeSep = "://";
-  if (size_t pos = url_arg.find(kSchemeSep); pos != llvm::StringRef::npos) {
+  if (size_t pos = url_arg.find("://"); pos != llvm::StringRef::npos) {
     if (reverse_connect)
       return url_arg.str();
 
