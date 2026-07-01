@@ -246,14 +246,16 @@ EXECUTION OPTIONS
  setting a unique value to LLVM_PROFILE_FILE for each RUN). The coverage
  data files will be emitted in the directory specified by ``config.test_exec_root``.
 
-.. option:: --per-process-output-dir
+.. option:: --per-test-output-subdir ID
 
- Isolate each lit process's writable output by appending a unique per-process
- subdirectory (``pid-<pid>``) to each test suite's ``config.test_exec_root``.
- This causes ``%t``, ``%T`` and the per-test ``Output`` directory to resolve
- under a per-process path, so multiple lit processes can run the same tests
- concurrently against a single build tree (for example, test stress runs)
- without clobbering each other's temporary files. Off by default.
+ Isolate this run's writable output by appending ``ID`` as a subdirectory to
+ each test suite's ``config.test_exec_root``. This causes ``%t``, ``%T`` and the
+ per-test ``Output`` directory to resolve under ``test_exec_root/<ID>``, so
+ multiple lit runs can use the same tests concurrently against a single build
+ tree (for example, test stress runs) without clobbering each other's temporary
+ files. Give each concurrent run a distinct ``ID`` (a process id, CI job id,
+ etc.); reusing an ``ID`` reuses that output tree, preserving artifacts such as
+ ``.lit_test_times.txt`` across runs. Disabled by default.
 
 .. option:: --ignore-fail
 
