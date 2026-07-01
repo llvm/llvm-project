@@ -391,7 +391,7 @@ LIBC_INLINE uint32_t mul_shift_mod_1e9(const FPBits::StorageType mantissa,
 #define LIBC_INTERNAL_FLOAT_TO_STR_LD_USE_RYU_IMPL
 #endif
 
-template <typename T, typename U = void> class FloatToString {};
+template <typename T, typename U = void> class FloatToString;
 
 // Convert floating point values to their string representation.
 // Because the result may not fit in a reasonably sized array, the caller must
@@ -413,7 +413,7 @@ template <typename T>
 class FloatToString<
     T, cpp::enable_if_t<cpp::is_same_v<T, float> || cpp::is_same_v<T, double>
 #if defined(LIBC_INTERNAL_FLOAT_TO_STR_LD_USE_RYU_IMPL)
-                        || cpp_is_same_v<T, long double>
+                        || cpp::is_same_v<T, long double>
 #endif // LIBC_INTERNAL_FLOAT_TO_STR_LD_USE_RYU_IMPL
                         >> {
   fputil::FPBits<T> float_bits;

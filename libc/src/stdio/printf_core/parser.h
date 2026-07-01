@@ -692,18 +692,20 @@ private:
         case ('A'):
         case ('g'):
         case ('G'):
+          switch (lm) {
 #if defined(LIBC_INTERNAL_PRINTF_CONVERT_FLOAT128)
-          if (lm == LengthModifier::Q) {
+          case LengthModifier::Q:
             conv_size = type_desc_from_type<float128>();
-          } else
+            break;
 #endif // LIBC_INTERNAL_PRINTF_CONVERT_FLOAT128
 #ifndef LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
-              if (lm == LengthModifier::L) {
+          case LengthModifier::L:
             conv_size = type_desc_from_type<long double>();
-          } else
+            break;
 #endif // !LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
-          {
+          default:
             conv_size = type_desc_from_type<double>();
+            break;
           }
           break;
 #endif // LIBC_COPT_PRINTF_DISABLE_FLOAT
