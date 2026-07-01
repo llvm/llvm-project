@@ -7,6 +7,9 @@ Converts standard library type traits of the form ``traits<...>::type`` and
 ``traits<...>::value`` into ``traits_t<...>`` and
 ``traits_v<...>`` respectively.
 
+Also suggests converting ``std::remove_cv_t<std::remove_reference_t<...>`` into
+``std::remove_cvref_t<...>`` when targeting C++20 or above.
+
 For example:
 
 .. code-block:: c++
@@ -16,6 +19,8 @@ For example:
   typename std::add_const<T>::type
   std::make_signed<unsigned>::type
 
+  std::remove_cv_t<std::remove_reference_t<int>>
+
 Would be converted into:
 
 .. code-block:: c++
@@ -24,6 +29,9 @@ Would be converted into:
   std::is_same_v<int, float>
   std::add_const_t<T>
   std::make_signed_t<unsigned>
+
+  std::remove_cvref_t<int>
+
 
 Options
 -------

@@ -1,4 +1,4 @@
-# REQUIRES: aarch64
+# REQUIRES: aarch64 && thread_support
 # RUN: rm -rf %t; split-file %s %t
 # RUN: llvm-mc -filetype=obj -triple=arm64-apple-macos11.0 %t/archive.s -o %t/archive.o
 # RUN: llvm-mc -filetype=obj -triple=arm64-apple-macos11.0 %t/dylib.s -o %t/dylib.o

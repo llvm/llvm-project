@@ -1,5 +1,4 @@
 #include <stdint.h>
-#include <stdio.h>
 
 extern int foo();
 extern int bar();
@@ -13,9 +12,7 @@ int main()
 
   index = 512;
 
-  if (bar())
-  {
-    printf("COMPILER PLEASE STOP HERE\n");
+  if (bar()) {
     index = 256;
   }
 

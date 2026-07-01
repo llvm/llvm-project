@@ -36,82 +36,6 @@ class X86TTIImpl final : public BasicTTIImplBase<X86TTIImpl> {
   const X86Subtarget *getST() const { return ST; }
   const X86TargetLowering *getTLI() const { return TLI; }
 
-  const FeatureBitset InlineFeatureIgnoreList = {
-      // clang-format off
-      // This indicates the CPU is 64 bit capable not that we are in 64-bit
-      // mode.
-      X86::FeatureX86_64,
-
-      // These features don't have any intrinsics or ABI effect.
-      X86::FeatureNOPL,
-      X86::FeatureCX16,
-      X86::FeatureLAHFSAHF64,
-
-      // Some older targets can be setup to fold unaligned loads.
-      X86::FeatureSSEUnalignedMem,
-
-      // Codegen control options.
-      X86::TuningFast11ByteNOP,
-      X86::TuningFast15ByteNOP,
-      X86::TuningFastBEXTR,
-      X86::TuningFastHorizontalOps,
-      X86::TuningFastLZCNT,
-      X86::TuningFastScalarFSQRT,
-      X86::TuningFastSHLDRotate,
-      X86::TuningFastScalarShiftMasks,
-      X86::TuningFastVectorShiftMasks,
-      X86::TuningFastVariableCrossLaneShuffle,
-      X86::TuningFastVariablePerLaneShuffle,
-      X86::TuningFastVectorFSQRT,
-      X86::TuningLEAForSP,
-      X86::TuningLEAUsesAG,
-      X86::TuningLZCNTFalseDeps,
-      X86::TuningBranchFusion,
-      X86::TuningMacroFusion,
-      X86::TuningPadShortFunctions,
-      X86::TuningPOPCNTFalseDeps,
-      X86::TuningMULCFalseDeps,
-      X86::TuningPERMFalseDeps,
-      X86::TuningRANGEFalseDeps,
-      X86::TuningGETMANTFalseDeps,
-      X86::TuningMULLQFalseDeps,
-      X86::TuningSlow3OpsLEA,
-      X86::TuningSlowDivide32,
-      X86::TuningSlowDivide64,
-      X86::TuningSlowIncDec,
-      X86::TuningSlowIndirectCall,
-      X86::TuningSlowLEA,
-      X86::TuningSlowPMADDWD,
-      X86::TuningSlowPMULLD,
-      X86::TuningSlowSHLD,
-      X86::TuningSlowTwoMemOps,
-      X86::TuningSlowUAMem16,
-      X86::TuningPreferMaskRegisters,
-      X86::TuningInsertVZEROUPPER,
-      X86::TuningUseSLMArithCosts,
-      X86::TuningUseGLMDivSqrtCosts,
-      X86::TuningNoDomainDelay,
-      X86::TuningNoDomainDelayMov,
-      X86::TuningNoDomainDelayShuffle,
-      X86::TuningNoDomainDelayBlend,
-      X86::TuningPreferShiftShuffle,
-      X86::TuningFastImmVectorShift,
-      X86::TuningFastDPWSSD,
-
-      // Perf-tuning flags.
-      X86::TuningFastGather,
-      X86::TuningSlowUAMem32,
-      X86::TuningAllowLight256Bit,
-
-      // Based on whether user set the -mprefer-vector-width command line.
-      X86::TuningPrefer128Bit,
-      X86::TuningPrefer256Bit,
-
-      // CPU name enums. These just follow CPU string.
-      X86::ProcIntelAtom
-      // clang-format on
-  };
-
 public:
   explicit X86TTIImpl(const X86TargetMachine *TM, const Function &F)
       : BaseT(TM, F.getDataLayout()), ST(TM->getSubtargetImpl(F)),
@@ -140,7 +64,8 @@ public:
   TypeSize
   getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const override;
   unsigned getLoadStoreVecRegBitWidth(unsigned AS) const override;
-  unsigned getMaxInterleaveFactor(ElementCount VF) const override;
+  unsigned getMaxInterleaveFactor(ElementCount VF,
+                                  bool HasUnorderedReductions) const override;
   InstructionCost getArithmeticInstrCost(
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
       TTI::OperandValueInfo Op1Info = {TTI::OK_AnyValue, TTI::OP_None},

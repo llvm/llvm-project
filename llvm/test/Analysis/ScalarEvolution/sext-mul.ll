@@ -11,17 +11,17 @@ define void @foo(ptr nocapture %arg, i32 %arg1, i32 %arg2) {
 ; CHECK-NEXT:    %tmp9 = shl i64 %tmp8, 33
 ; CHECK-NEXT:    --> {0,+,8589934592}<nuw><%bb7> U: [0,-17179869183) S: [-9223372036854775808,9223372028264841217) Exits: (-8589934592 + (8589934592 * (zext i32 %arg2 to i64))) LoopDispositions: { %bb7: Computable }
 ; CHECK-NEXT:    %tmp10 = ashr exact i64 %tmp9, 32
-; CHECK-NEXT:    --> (sext i32 {0,+,2}<%bb7> to i64) U: [0,-1) S: [-2147483648,2147483647) Exits: (sext i32 (-2 + (2 * %arg2)) to i64) LoopDispositions: { %bb7: Computable }
+; CHECK-NEXT:    --> (sext i32 {0,+,2}<nuw><%bb7> to i64) U: [0,-1) S: [-2147483648,2147483647) Exits: (sext i32 (-2 + (2 * %arg2)) to i64) LoopDispositions: { %bb7: Computable }
 ; CHECK-NEXT:    %tmp11 = getelementptr inbounds i32, ptr %arg, i64 %tmp10
-; CHECK-NEXT:    --> ((4 * (sext i32 {0,+,2}<%bb7> to i64))<nsw> + %arg) U: full-set S: full-set Exits: ((4 * (sext i32 (-2 + (2 * %arg2)) to i64))<nsw> + %arg) LoopDispositions: { %bb7: Computable }
+; CHECK-NEXT:    --> ((4 * (sext i32 {0,+,2}<nuw><%bb7> to i64))<nsw> + %arg) U: full-set S: full-set Exits: ((4 * (sext i32 (-2 + (2 * %arg2)) to i64))<nsw> + %arg) LoopDispositions: { %bb7: Computable }
 ; CHECK-NEXT:    %tmp12 = load i32, ptr %tmp11, align 4
 ; CHECK-NEXT:    --> %tmp12 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb7: Variant }
 ; CHECK-NEXT:    %tmp13 = sub nsw i32 %tmp12, %arg1
 ; CHECK-NEXT:    --> ((-1 * %arg1) + %tmp12) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb7: Variant }
 ; CHECK-NEXT:    %tmp14 = or disjoint i64 %tmp10, 1
-; CHECK-NEXT:    --> (1 + (sext i32 {0,+,2}<%bb7> to i64))<nuw><nsw> U: [1,0) S: [-2147483647,2147483648) Exits: (1 + (sext i32 (-2 + (2 * %arg2)) to i64))<nuw><nsw> LoopDispositions: { %bb7: Computable }
+; CHECK-NEXT:    --> (1 + (sext i32 {0,+,2}<nuw><%bb7> to i64))<nuw><nsw> U: [1,0) S: [-2147483647,2147483648) Exits: (1 + (sext i32 (-2 + (2 * %arg2)) to i64))<nuw><nsw> LoopDispositions: { %bb7: Computable }
 ; CHECK-NEXT:    %tmp15 = getelementptr inbounds i32, ptr %arg, i64 %tmp14
-; CHECK-NEXT:    --> (4 + (4 * (sext i32 {0,+,2}<%bb7> to i64))<nsw> + %arg) U: full-set S: full-set Exits: (4 + (4 * (sext i32 (-2 + (2 * %arg2)) to i64))<nsw> + %arg) LoopDispositions: { %bb7: Computable }
+; CHECK-NEXT:    --> (4 + (4 * (sext i32 {0,+,2}<nuw><%bb7> to i64))<nsw> + %arg) U: full-set S: full-set Exits: (4 + (4 * (sext i32 (-2 + (2 * %arg2)) to i64))<nsw> + %arg) LoopDispositions: { %bb7: Computable }
 ; CHECK-NEXT:    %tmp16 = load i32, ptr %tmp15, align 4
 ; CHECK-NEXT:    --> %tmp16 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb7: Variant }
 ; CHECK-NEXT:    %tmp17 = mul nsw i32 %tmp16, %arg1

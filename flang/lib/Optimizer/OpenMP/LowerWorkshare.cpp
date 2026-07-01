@@ -612,6 +612,13 @@ LogicalResult lowerWorkshare(mlir::omp::WorkshareOp wsOp, DominanceInfo &di) {
     term->erase();
     newOp->erase();
     wsOp->erase();
+
+    // If this was part of a combined construct (e.g. 'parallel workshare'), the
+    // changes we just made to the region can be incompatible with a combined
+    // construct, such as containing multiple block-associated constructs in it.
+    if (auto parentOp =
+            dyn_cast<omp::ComposableOpInterface>(parentBlock->getParentOp()))
+      parentOp.setCombined(false);
   } else {
     // Otherwise just change the operation to an omp.single.
 

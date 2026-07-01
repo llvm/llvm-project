@@ -120,7 +120,6 @@ void detail::RecordKeeperImpl::dumpAllocationStats(raw_ostream &OS) const {
   OS << "TheVarBitInitPool size = " << TheVarBitInitPool.size() << '\n';
   OS << "TheVarDefInitPool size = " << TheVarDefInitPool.size() << '\n';
   OS << "TheFieldInitPool size = " << TheFieldInitPool.size() << '\n';
-  OS << "Bytes allocated = " << Allocator.getBytesAllocated() << '\n';
   OS << "Total allocator memory = " << Allocator.getTotalMemory() << "\n\n";
 
   OS << "Number of records instantiated = " << LastRecordID << '\n';

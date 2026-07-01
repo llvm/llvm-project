@@ -27,9 +27,9 @@ define void @accsum(ptr noundef %vals, i64 noundef %num) #0 {
 ; CHECK-NEXT:    [[STORE_FORWARDED:%.*]] = phi i8 [ [[LOAD_INITIAL]], [[FOR_BODY_PREHEADER]] ], [ [[ADD_I:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[I_02:%.*]] = phi i64 [ 1, [[FOR_BODY_PREHEADER]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[VALS]], i64 [[I_02]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[ARRAYIDX]], align 1, !alias.scope [[META0:![0-9]+]], !noalias [[META3:![0-9]+]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[ARRAYIDX]], align 1, !alias.scope [[META0:![0-9]+]]
 ; CHECK-NEXT:    [[ADD_I]] = add i8 [[TMP0]], [[STORE_FORWARDED]]
-; CHECK-NEXT:    store i8 [[ADD_I]], ptr [[ARRAYIDX]], align 1, !alias.scope [[META0]], !noalias [[META3]]
+; CHECK-NEXT:    store i8 [[ADD_I]], ptr [[ARRAYIDX]], align 1, !alias.scope [[META0]]
 ; CHECK-NEXT:    [[INC]] = add nuw i64 [[I_02]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INC]], [[NUM]]
 ; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]]
@@ -73,6 +73,4 @@ attributes #0 = { "target-features"="+cmov,+cx8,+fxsr,+mmx,+sse,+sse2,+x87"}
 ; CHECK: [[META0]] = !{[[META1:![0-9]+]]}
 ; CHECK: [[META1]] = distinct !{[[META1]], [[META2:![0-9]+]], !"acc: %val"}
 ; CHECK: [[META2]] = distinct !{[[META2]], !"acc"}
-; CHECK: [[META3]] = !{[[META4:![0-9]+]]}
-; CHECK: [[META4]] = distinct !{[[META4]], [[META2]], !"acc: %prev"}
 ;.

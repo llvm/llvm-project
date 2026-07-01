@@ -116,17 +116,33 @@ FunctionType *getOriginalFunctionType(const Function &F) {
       F.getName());
 }
 
+// Keyed via instruction metadata, not a name.
+static std::optional<StringRef> getMutatedCallsiteKey(const CallBase &CB) {
+  if (MDNode *MD = CB.getMetadata("spv.mutated_callsite"))
+    if (MD->getNumOperands() > 0)
+      if (auto *MDS = dyn_cast<MDString>(MD->getOperand(0)))
+        return MDS->getString();
+  return std::nullopt;
+}
+
 FunctionType *getOriginalFunctionType(const CallBase &CB) {
+  std::optional<StringRef> Key = getMutatedCallsiteKey(CB);
+  if (!Key)
+    return CB.getFunctionType();
   return extractFunctionTypeFromMetadata(
       CB.getModule()->getNamedMetadata("spv.mutated_callsites"),
-      CB.getFunctionType(), CB.getName());
+      CB.getFunctionType(), *Key);
 }
 
 StringRef getOriginalAsmConstraints(const CallBase &CB) {
+  StringRef Constraints =
+      cast<InlineAsm>(CB.getCalledOperand())->getConstraintString();
+  std::optional<StringRef> Key = getMutatedCallsiteKey(CB);
+  if (!Key)
+    return Constraints;
   return extractAsmConstraintsFromMetadata(
-      CB.getModule()->getNamedMetadata("spv.mutated_callsites"),
-      cast<InlineAsm>(CB.getCalledOperand())->getConstraintString(),
-      CB.getName());
+      CB.getModule()->getNamedMetadata("spv.mutated_callsites"), Constraints,
+      *Key);
 }
 } // Namespace SPIRV
 
@@ -995,7 +1011,7 @@ CallInst *buildIntrWithMD(Intrinsic::ID IntrID, ArrayRef<Type *> Types,
   Args.push_back(Arg2);
   Args.push_back(buildMD(Arg));
   llvm::append_range(Args, Imms);
-  return B.CreateIntrinsic(IntrID, {Types}, Args);
+  return B.CreateIntrinsicWithoutFolding(IntrID, {Types}, Args);
 }
 
 // Return true if there is an opaque pointer type nested in the argument.

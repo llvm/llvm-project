@@ -1262,8 +1262,11 @@ bool LoopInterchangeLegality::checkInductionsAndReductions(Loop *OuterLoop) {
 
       if (CurLoop == OuterLoop) {
         // PHIs in inner loops need to be part of a reduction in the outer loop,
-        assert(PHI.getNumIncomingValues() == 2 &&
-               "Phis in loop header should have exactly 2 incoming values");
+        if (PHI.getNumIncomingValues() != 2) {
+          LLVM_DEBUG(dbgs() << "Only PHI nodes in the outer loop header with 2 "
+                               "incoming values are supported.\n");
+          return false;
+        }
         // Check if we have a PHI node in the outer loop that has a reduction
         // result from the inner loop as an incoming value.
         Value *V = followLCSSA(
@@ -1396,6 +1399,13 @@ bool LoopInterchangeLegality::currentLimitations() {
       }
     }
   }
+
+  // Currently, we do not support loops where the inner loop header has
+  // duplicate successors.
+  SmallPtrSet<BasicBlock *, 2> InnerLoopHeaderSuccs;
+  for (BasicBlock *Succ : successors(InnerLoop->getHeader()))
+    if (!InnerLoopHeaderSuccs.insert(Succ).second)
+      return true;
 
   return false;
 }
@@ -2105,10 +2115,8 @@ bool LoopInterchangeTransform::transform(
 
   LLVM_DEBUG(dbgs() << "Splitting the inner loop latch\n");
   auto &InductionPHIs = LIL.getInnerLoopInductions();
-  if (InductionPHIs.empty()) {
-    LLVM_DEBUG(dbgs() << "Failed to find the point to split loop latch \n");
-    return false;
-  }
+  assert(!InductionPHIs.empty() &&
+         "Expected at least one induction variable in the inner loop");
 
   SmallVector<Instruction *, 8> InnerIndexVarList;
   for (PHINode *CurInductionPHI : InductionPHIs) {
@@ -2469,20 +2477,23 @@ bool LoopInterchangeTransform::adjustLoopBranches() {
   Instruction *OuterLoopHeaderBI = OuterLoopHeader->getTerminator();
   Instruction *InnerLoopHeaderBI = InnerLoopHeader->getTerminator();
 
-  if (!OuterLoopPredecessor || !InnerLoopLatchPredecessor ||
-      !OuterLoopLatchBI || !InnerLoopLatchBI || !OuterLoopHeaderBI ||
-      !InnerLoopHeaderBI)
-    return false;
+  assert(OuterLoopPredecessor && InnerLoopLatchPredecessor &&
+         "Failed to find a unique predecessor");
+  assert(OuterLoopLatchBI && InnerLoopLatchBI &&
+         "Failed to find a conditional branch");
 
   Instruction *InnerLoopLatchPredecessorBI =
       InnerLoopLatchPredecessor->getTerminator();
   Instruction *OuterLoopPredecessorBI = OuterLoopPredecessor->getTerminator();
 
-  if (!OuterLoopPredecessorBI || !InnerLoopLatchPredecessorBI)
-    return false;
   BasicBlock *InnerLoopHeaderSuccessor = InnerLoopHeader->getUniqueSuccessor();
-  if (!InnerLoopHeaderSuccessor)
+
+  // FIXME: IR modification should not stop partway through.
+  if (!InnerLoopHeaderSuccessor) {
+    LLVM_DEBUG(
+        dbgs() << "Inner loop header does not have a unique successor\n");
     return false;
+  }
 
   // Adjust Loop Preheader and headers.
   // The branches in the outer loop predecessor and the outer loop header can

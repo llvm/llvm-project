@@ -77,6 +77,59 @@ void AMDGPUDisassembler::setABIVersion(unsigned Version) {
   CodeObjectVersion = AMDGPU::getAMDHSACodeObjectVersion(Version);
 }
 
+void AMDGPUDisassembler::emitTargetIDIfSupported(raw_ostream &OS,
+                                                 unsigned EFlags) const {
+  OS << "\t.amdgcn_target \""
+     << STI.getTargetTriple().normalize(Triple::CanonicalForm::FOUR_IDENT)
+     << '-';
+
+  // Get CPU name from ELF e_flags MACH field
+  unsigned MACH = EFlags & ELF::EF_AMDGPU_MACH;
+
+#define X(NUM, ENUM, NAME)                                                     \
+  case ELF::ENUM:                                                              \
+    OS << NAME;                                                                \
+    break;
+  switch (MACH) {
+    AMDGPU_MACH_LIST(X)
+  default:
+    OS << "unknown";
+    break;
+  }
+#undef X
+
+  // Add xnack and sramecc from ELF flags (v4 format)
+  if (CodeObjectVersion >= AMDGPU::AMDHSA_COV4) {
+    unsigned SrameccSetting = EFlags & ELF::EF_AMDGPU_FEATURE_SRAMECC_V4;
+    switch (SrameccSetting) {
+    case ELF::EF_AMDGPU_FEATURE_SRAMECC_UNSUPPORTED_V4:
+    case ELF::EF_AMDGPU_FEATURE_SRAMECC_ANY_V4:
+      break;
+    case ELF::EF_AMDGPU_FEATURE_SRAMECC_OFF_V4:
+      OS << ":sramecc-";
+      break;
+    case ELF::EF_AMDGPU_FEATURE_SRAMECC_ON_V4:
+      OS << ":sramecc+";
+      break;
+    }
+
+    unsigned XnackSetting = EFlags & ELF::EF_AMDGPU_FEATURE_XNACK_V4;
+    switch (XnackSetting) {
+    case ELF::EF_AMDGPU_FEATURE_XNACK_UNSUPPORTED_V4:
+    case ELF::EF_AMDGPU_FEATURE_XNACK_ANY_V4:
+      break;
+    case ELF::EF_AMDGPU_FEATURE_XNACK_OFF_V4:
+      OS << ":xnack-";
+      break;
+    case ELF::EF_AMDGPU_FEATURE_XNACK_ON_V4:
+      OS << ":xnack+";
+      break;
+    }
+  }
+
+  OS << "\"\n";
+}
+
 inline static MCDisassembler::DecodeStatus
 addOperand(MCInst &Inst, const MCOperand& Opnd) {
   Inst.addOperand(Opnd);
@@ -1499,8 +1552,8 @@ void AMDGPUDisassembler::convertFMAanyK(MCInst &MI) const {
 }
 
 const char* AMDGPUDisassembler::getRegClassName(unsigned RegClassID) const {
-  return getContext().getRegisterInfo()->
-    getRegClassName(&AMDGPUMCRegisterClasses[RegClassID]);
+  return getContext().getRegisterInfo()->getRegClassName(
+      &getAMDGPUMCRegisterClass(RegClassID));
 }
 
 inline
@@ -1520,7 +1573,7 @@ inline MCOperand AMDGPUDisassembler::createRegOperand(MCRegister Reg) const {
 inline
 MCOperand AMDGPUDisassembler::createRegOperand(unsigned RegClassID,
                                                unsigned Val) const {
-  const auto& RegCl = AMDGPUMCRegisterClasses[RegClassID];
+  const auto &RegCl = getAMDGPUMCRegisterClass(RegClassID);
   if (Val >= RegCl.getNumRegs())
     return errOperand(Val, Twine(getRegClassName(RegClassID)) +
                            ": unknown register " + Twine(Val));

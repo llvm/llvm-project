@@ -1,0 +1,8 @@
+---
+Name: WhereParametersMapElement
+Functions:
+- Name: makeWidget
+  Where:
+    Parameters:
+      - Type: int
+  SwiftName: makeWidget(_:)

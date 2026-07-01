@@ -3356,8 +3356,9 @@ multiclass avx512_load_vl<bits<8> opc, string OpcodeStr,
 }
 
 multiclass avx512_store<bits<8> opc, string OpcodeStr, string BaseName,
-                        X86VectorVTInfo _, PatFrag st_frag, PatFrag mstore,
-                        X86SchedWriteMoveLS Sched, bit NoMRPattern = 0> {
+                        X86VectorVTInfo _, SDPatternOperator st_frag,
+                        PatFrag mstore, X86SchedWriteMoveLS Sched,
+                        bit NoMRPattern = 0> {
   let hasSideEffects = 0, isCodeGenOnly = 1, ForceDisassemble = 1 in {
   let isMoveReg = 1 in
   def rr_REV  : AVX512PI<opc, MRMDestReg, (outs _.RC:$dst), (ins _.RC:$src),
@@ -4318,12 +4319,12 @@ def : Pat<(f32 (X86selects VK1WM:$mask, (f32 FR32X:$src1), fp32imm0)),
           (COPY_TO_REGCLASS (v4f32 (VMOVSSZrrkz VK1WM:$mask, (v4f32 (IMPLICIT_DEF)),
            (v4f32 (COPY_TO_REGCLASS FR32X:$src1, VR128X)))), FR32X)>;
 
-def : Pat<(f32 (X86selects VK1WM:$mask, (loadf32 addr:$src), (f32 FR32X:$src0))),
+def : Pat<(f32 (X86selects VK1WM:$mask, (f32 (simple_load addr:$src)), (f32 FR32X:$src0))),
           (COPY_TO_REGCLASS
            (v4f32 (VMOVSSZrmk (v4f32 (COPY_TO_REGCLASS FR32X:$src0, VR128X)),
                                                        VK1WM:$mask, addr:$src)),
            FR32X)>;
-def : Pat<(f32 (X86selects VK1WM:$mask, (loadf32 addr:$src), fp32imm0)),
+def : Pat<(f32 (X86selects VK1WM:$mask, (f32 (simple_load addr:$src)), fp32imm0)),
           (COPY_TO_REGCLASS (v4f32 (VMOVSSZrmkz VK1WM:$mask, addr:$src)), FR32X)>;
 
 def : Pat<(f64 (X86selects VK1WM:$mask, (f64 FR64X:$src1), (f64 FR64X:$src2))),
@@ -4336,12 +4337,12 @@ def : Pat<(f64 (X86selects VK1WM:$mask, (f64 FR64X:$src1), fp64imm0)),
           (COPY_TO_REGCLASS (v2f64 (VMOVSDZrrkz VK1WM:$mask, (v2f64 (IMPLICIT_DEF)),
            (v2f64 (COPY_TO_REGCLASS FR64X:$src1, VR128X)))), FR64X)>;
 
-def : Pat<(f64 (X86selects VK1WM:$mask, (loadf64 addr:$src), (f64 FR64X:$src0))),
+def : Pat<(f64 (X86selects VK1WM:$mask, (f64 (simple_load addr:$src)), (f64 FR64X:$src0))),
           (COPY_TO_REGCLASS
            (v2f64 (VMOVSDZrmk (v2f64 (COPY_TO_REGCLASS FR64X:$src0, VR128X)),
                                                        VK1WM:$mask, addr:$src)),
            FR64X)>;
-def : Pat<(f64 (X86selects VK1WM:$mask, (loadf64 addr:$src), fp64imm0)),
+def : Pat<(f64 (X86selects VK1WM:$mask, (f64 (simple_load addr:$src)), fp64imm0)),
           (COPY_TO_REGCLASS (v2f64 (VMOVSDZrmkz VK1WM:$mask, addr:$src)), FR64X)>;
 
 

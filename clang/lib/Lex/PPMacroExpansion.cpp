@@ -324,8 +324,15 @@ void Preprocessor::dumpMacroInfo(const IdentifierInfo *II) {
 void Preprocessor::RegisterBuiltinMacros() {
   Ident__LINE__ = RegisterBuiltinMacro("__LINE__");
   Ident__FILE__ = RegisterBuiltinMacro("__FILE__");
-  Ident__DATE__ = RegisterBuiltinMacro("__DATE__");
-  Ident__TIME__ = RegisterBuiltinMacro("__TIME__");
+  // Keep __DATE__, __TIME__ and __TIMESTAMP__ undefined if it was requested.
+  // Those macros still be able defined from the command line.
+  if (getPreprocessorOpts().InitDateTimeMacros != DateTimeInitKind::Undefined) {
+    Ident__DATE__ = RegisterBuiltinMacro("__DATE__");
+    Ident__TIME__ = RegisterBuiltinMacro("__TIME__");
+  } else {
+    Ident__DATE__ = nullptr;
+    Ident__TIME__ = nullptr;
+  }
   Ident__COUNTER__ = RegisterBuiltinMacro("__COUNTER__");
   Ident_Pragma = RegisterBuiltinMacro("_Pragma");
   Ident__FLT_EVAL_METHOD__ = RegisterBuiltinMacro("__FLT_EVAL_METHOD__");
@@ -339,7 +346,10 @@ void Preprocessor::RegisterBuiltinMacros() {
   // GCC Extensions.
   Ident__BASE_FILE__ = RegisterBuiltinMacro("__BASE_FILE__");
   Ident__INCLUDE_LEVEL__ = RegisterBuiltinMacro("__INCLUDE_LEVEL__");
-  Ident__TIMESTAMP__ = RegisterBuiltinMacro("__TIMESTAMP__");
+  if (getPreprocessorOpts().InitDateTimeMacros != DateTimeInitKind::Undefined)
+    Ident__TIMESTAMP__ = RegisterBuiltinMacro("__TIMESTAMP__");
+  else
+    Ident__TIMESTAMP__ = nullptr;
 
   // Microsoft Extensions.
   if (getLangOpts().MicrosoftExt) {
@@ -1040,8 +1050,32 @@ void Preprocessor::removeCachedMacroExpandedTokensOfLastLexer() {
 /// ComputeDATE_TIME - Compute the current time, enter it into the specified
 /// scratch buffer, then return DATELoc/TIMELoc locations with the position of
 /// the identifier tokens inserted.
-static void ComputeDATE_TIME(SourceLocation &DATELoc, SourceLocation &TIMELoc,
+static void ComputeDATE_TIME(SourceLocation &DATELoc, size_t &DATETokLen,
+                             SourceLocation &TIMELoc, size_t &TIMETokLen,
                              Preprocessor &PP) {
+
+  if (PP.getPreprocessorOpts().InitDateTimeMacros ==
+      DateTimeInitKind::LiteralOne) {
+    if (!DATELoc.isValid()) {
+      Token TmpTok;
+      TmpTok.startToken();
+      PP.CreateString("\"1\"", TmpTok);
+      DATELoc = TmpTok.getLocation();
+    }
+    // Always set up and return a token length for both - DATE and TIME.
+    DATETokLen = strlen("\"1\"");
+
+    if (!TIMELoc.isValid()) {
+      Token TmpTok;
+      TmpTok.startToken();
+      PP.CreateString("\"1\"", TmpTok);
+      TIMELoc = TmpTok.getLocation();
+    }
+    TIMETokLen = strlen("\"1\"");
+
+    return;
+  }
+
   time_t TT;
   std::tm *TM;
   if (PP.getPreprocessorOpts().SourceDateEpoch) {
@@ -1056,7 +1090,7 @@ static void ComputeDATE_TIME(SourceLocation &DATELoc, SourceLocation &TIMELoc,
     "Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"
   };
 
-  {
+  if (!DATELoc.isValid()) {
     SmallString<32> TmpBuffer;
     llvm::raw_svector_ostream TmpStream(TmpBuffer);
     if (TM)
@@ -1069,8 +1103,9 @@ static void ComputeDATE_TIME(SourceLocation &DATELoc, SourceLocation &TIMELoc,
     PP.CreateString(TmpStream.str(), TmpTok);
     DATELoc = TmpTok.getLocation();
   }
+  DATETokLen = strlen("\"Mmm dd yyyy\"");
 
-  {
+  if (!TIMELoc.isValid()) {
     SmallString<32> TmpBuffer;
     llvm::raw_svector_ostream TmpStream(TmpBuffer);
     if (TM)
@@ -1083,6 +1118,7 @@ static void ComputeDATE_TIME(SourceLocation &DATELoc, SourceLocation &TIMELoc,
     PP.CreateString(TmpStream.str(), TmpTok);
     TIMELoc = TmpTok.getLocation();
   }
+  TIMETokLen = strlen("\"hh:mm:ss\"");
 }
 
 /// HasFeature - Return true if we recognize and implement the feature
@@ -1659,20 +1695,22 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
     Tok.setKind(tok::string_literal);
   } else if (II == Ident__DATE__) {
     Diag(Tok.getLocation(), diag::warn_pp_date_time);
-    if (!DATELoc.isValid())
-      ComputeDATE_TIME(DATELoc, TIMELoc, *this);
+
+    size_t TIMETokLen = 0, DATETokLen = 0;
+    ComputeDATE_TIME(DATELoc, DATETokLen, TIMELoc, TIMETokLen, *this);
     Tok.setKind(tok::string_literal);
-    Tok.setLength(strlen("\"Mmm dd yyyy\""));
+    Tok.setLength(DATETokLen);
     Tok.setLocation(SourceMgr.createExpansionLoc(DATELoc, Tok.getLocation(),
                                                  Tok.getLocation(),
                                                  Tok.getLength()));
     return;
   } else if (II == Ident__TIME__) {
     Diag(Tok.getLocation(), diag::warn_pp_date_time);
-    if (!TIMELoc.isValid())
-      ComputeDATE_TIME(DATELoc, TIMELoc, *this);
+
+    size_t TIMETokLen = 0, DATETokLen = 0;
+    ComputeDATE_TIME(DATELoc, DATETokLen, TIMELoc, TIMETokLen, *this);
     Tok.setKind(tok::string_literal);
-    Tok.setLength(strlen("\"hh:mm:ss\""));
+    Tok.setLength(TIMETokLen);
     Tok.setLocation(SourceMgr.createExpansionLoc(TIMELoc, Tok.getLocation(),
                                                  Tok.getLocation(),
                                                  Tok.getLength()));
@@ -1696,28 +1734,32 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
     Diag(Tok.getLocation(), diag::warn_pp_date_time);
     // MSVC, ICC, GCC, VisualAge C++ extension.  The generated string should be
     // of the form "Ddd Mmm dd hh::mm::ss yyyy", which is returned by asctime.
-    std::string Result;
+    std::string Result = "1"; // DateTimeInitKind::LiteralOne by default.
     std::stringstream TmpStream;
-    TmpStream.imbue(std::locale("C"));
-    if (getPreprocessorOpts().SourceDateEpoch) {
-      time_t TT = *getPreprocessorOpts().SourceDateEpoch;
-      std::tm *TM = std::gmtime(&TT);
-      TmpStream << std::put_time(TM, "%a %b %e %T %Y");
-    } else {
-      // Get the file that we are lexing out of.  If we're currently lexing from
-      // a macro, dig into the include stack.
-      const FileEntry *CurFile = nullptr;
-      if (PreprocessorLexer *TheLexer = getCurrentFileLexer())
-        CurFile = SourceMgr.getFileEntryForID(TheLexer->getFileID());
-      if (CurFile) {
-        time_t TT = CurFile->getModificationTime();
-        struct tm *TM = localtime(&TT);
+
+    // Requested regular __TIMESTAMP__ initialization.
+    if (getPreprocessorOpts().InitDateTimeMacros == DateTimeInitKind::Default) {
+      TmpStream.imbue(std::locale("C"));
+      if (getPreprocessorOpts().SourceDateEpoch) {
+        time_t TT = *getPreprocessorOpts().SourceDateEpoch;
+        std::tm *TM = std::gmtime(&TT);
         TmpStream << std::put_time(TM, "%a %b %e %T %Y");
+      } else {
+        // Get the file that we are lexing out of.  If we're currently lexing
+        // from a macro, dig into the include stack.
+        const FileEntry *CurFile = nullptr;
+        if (PreprocessorLexer *TheLexer = getCurrentFileLexer())
+          CurFile = SourceMgr.getFileEntryForID(TheLexer->getFileID());
+        if (CurFile) {
+          time_t TT = CurFile->getModificationTime();
+          struct tm *TM = localtime(&TT);
+          TmpStream << std::put_time(TM, "%a %b %e %T %Y");
+        }
       }
+      Result = TmpStream.str();
+      if (Result.empty())
+        Result = "??? ??? ?? ??:??:?? ????";
     }
-    Result = TmpStream.str();
-    if (Result.empty())
-      Result = "??? ??? ?? ??:??:?? ????";
     OS << '"' << Result << '"';
     Tok.setKind(tok::string_literal);
   } else if (II == Ident__FLT_EVAL_METHOD__) {

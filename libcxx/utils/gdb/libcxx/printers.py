@@ -182,6 +182,20 @@ class StdTuplePrinter(object):
             return iter(())
         return self._Children(self.val)
 
+
+class StdPairPrinter(object):
+    """Print a std::pair.
+
+    Note that we don't rely on GDB's default struct formatting so that we can
+    provide a stable output for std::pair regardless of libc++'s ABI configuration.
+    """
+
+    def __init__(self, val):
+        self.val = val
+
+    def children(self):
+        return iter([("first", self.val["first"]), ("second", self.val["second"])])
+
 class StdStringPrinter(object):
     """Print a std::string."""
 
@@ -901,6 +915,7 @@ class LibcxxPrettyPrinter(object):
             "basic_string": StdStringPrinter,
             "string": StdStringPrinter,
             "string_view": StdStringViewPrinter,
+            "pair": StdPairPrinter,
             "tuple": StdTuplePrinter,
             "unique_ptr": StdUniquePtrPrinter,
             "shared_ptr": StdSharedPointerPrinter,

@@ -131,8 +131,7 @@ define void @explicit_p0(ptr %p) {
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr64common = COPY [[COPY]]
   ; CHECK-NEXT:   INLINEASM &"ld4w { z0.s, z1.s, z2.s, z3.s }, $1/z, [$0]", sideeffect attdialect, regdef:GPR64common, def %1, reguse, $p0, reguse tiedto:$0, [[COPY1]](tied-def 3)
   ; CHECK-NEXT:   RET_ReallyLR
-  %1 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.b8(i32 31)
-  %2 = tail call i64 asm sideeffect "ld4w { z0.s, z1.s, z2.s, z3.s }, $1/z, [$0]", "=r,{p0},0"(<vscale x 16 x i1> %1, ptr %p)
+  %2 = tail call i64 asm sideeffect "ld4w { z0.s, z1.s, z2.s, z3.s }, $1/z, [$0]", "=r,{p0},0"(<vscale x 16 x i1> splat (i1 true), ptr %p)
   ret void
 }
 
@@ -147,8 +146,7 @@ define void @explicit_p8_invalid(ptr %p) {
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr64common = COPY [[COPY]]
   ; CHECK-NEXT:   INLINEASM &"ld4w { z0.s, z1.s, z2.s, z3.s }, $1/z, [$0]", sideeffect attdialect, regdef:GPR64common, def %1, reguse, $p8, reguse tiedto:$0, [[COPY1]](tied-def 3)
   ; CHECK-NEXT:   RET_ReallyLR
-  %1 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.b8(i32 31)
-  %2 = tail call i64 asm sideeffect "ld4w { z0.s, z1.s, z2.s, z3.s }, $1/z, [$0]", "=r,{p8},0"(<vscale x 16 x i1> %1, ptr %p)
+  %2 = tail call i64 asm sideeffect "ld4w { z0.s, z1.s, z2.s, z3.s }, $1/z, [$0]", "=r,{p8},0"(<vscale x 16 x i1> splat (i1 true), ptr %p)
   ret void
 }
 

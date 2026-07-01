@@ -1145,12 +1145,15 @@ this packet specifies the initial terminal dimensions:
 ```
 QSetSTDIOWindowSize:cols=<N>;rows=<N>
 ```
-Both `cols` and `rows` must be non-zero unsigned 16-bit integers. If sent,
-this packet must be sent _prior_ to the launch args (`A`) packet; sending it
-after the inferior has been launched has no effect. On the server side, the
-dimensions are stored and later applied to the PTY when the inferior is
-launched, via `TIOCSWINSZ` (POSIX) or the equivalent platform mechanism (e.g.
-`ConPTY` resize on Windows).
+Both `cols` and `rows` must be unsigned 16-bit integers. They must either both
+be non-zero, or both be zero. Any other combination (e.g. `cols=80;rows=0`) is
+treated as a malformed packet. This packet must be sent _prior_ to the launch
+args (`A`) packet; sending it after the inferior has been launched has no
+effect.
+
+On the server side, the dimensions are stored and applied to the PTY at launch
+time. On POSIX this is done via `TIOCSWINSZ`; on Windows via `ConPTY` resize.
+If both dimensions are zero, the server uses pipes instead of a PTY on all platforms.
 
 The response is either:
 * `OK`: dimensions accepted; they will be applied to the PTY when the
@@ -1440,13 +1443,13 @@ Key value pairs are one of:
 * `ostype`: a string for the OS being debugged (macosx, linux, freebsd, ios, watchos), not needed if "triple" is specified
 * `endian`: is one of "little", "big", or "pdp"
 * `ptrsize`: an unsigned number that represents how big pointers are in bytes on the debug target
-* `hostname`: the hostname of the host that is running the GDB server if available
-* `os_build`: a string for the OS build for the remote host as a string value
-* `os_kernel`: a string describing the kernel version
+* `hostname`: optional, a hex encoded string of the hostname of the host that is running the GDB server
+* `os_build`: a hex encoded string for the OS build for the remote host as a string value
+* `os_kernel`: a hex encoded string describing the kernel version
 * `os_version`: a version string that represents the current OS version (10.8.2)
 * `watchpoint_exceptions_received`: one of "before" or "after" to specify if a watchpoint is triggered before or after the pc when it stops
 * `default_packet_timeout`: an unsigned number that specifies the default timeout in seconds
-* `distribution_id`: optional. For linux, specifies distribution id (e.g. ubuntu, fedora, etc.)
+* `distribution_id`: optional hex encoded string. For linux, specifies distribution id (e.g. ubuntu, fedora, etc.)
 * `osmajor`: optional, specifies the major version number of the OS (e.g. for macOS 10.12.2, it would be 10)
 * `osminor`: optional, specifies the minor version number of the OS (e.g. for macOS 10.12.2, it would be 12)
 * `ospatch`: optional, specifies the patch level number of the OS (e.g. for macOS 10.12.2, it would be 2)
@@ -2811,9 +2814,18 @@ packet when one is hit. Each breakpoint object has the following fields:
 Exactly one of `by_name` or `by_address` must be provided for each
 breakpoint.
 
-In future patches, each `accelerator_action` will include additional fields
-such as connection info for secondary debug sessions and synchronization
-options.
+An `accelerator_action` may also include a `connect_info` object asking the
+client to create a new target and connect to a separate GDB server that
+serves the accelerator's state (for example a GPU debug stub). It has the
+following fields:
+
+| Key             | Type   | Description |
+|-----------------|--------|-------------|
+| `connect_url`   | string | Connection URL to connect to, as used by `process connect <url>`. |
+| `platform_name` | string | Name of the platform to select when creating the accelerator target. The platform must be able to handle `triple` and is used to connect to the accelerator's GDB server. |
+| `triple`        | string | Target triple for the accelerator target, used to ensure the architecture is compatible with `platform_name`. |
+| `exe_path`      | string | Optional path to the executable to use when creating the accelerator target. If omitted, an empty target is created. |
+| `synchronous`   | bool   | If true, connect synchronously: the client blocks until the accelerator process is connected and stopped before continuing. If false, the connection is made asynchronously. |
 
 **Priority To Implement:** Required for hardware accelerator debugging
 support. Not needed for non-hardware-accelerator debugging.

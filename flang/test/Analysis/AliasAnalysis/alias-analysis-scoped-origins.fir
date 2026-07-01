@@ -131,11 +131,17 @@ func.func @_QPtest_two_dummies_fir(
 // SourceKind::Unknown and the underlying alias() reports MayAlias
 // ("indirect access"). The ONLY way to disambiguate is via the
 // ScopedOrigin snapshots taken at the inner-frame declares (which share
-// one fir.dummy_scope). This is a regression for buildSourceAtDeclare:
-// it must classify each rebuilt Source AT the captured declare's own
-// scope (getLastInstantiationPoint=true, yielding SourceKind::Argument)
-// rather than walking past the declare back into the fir.if and
-// collapsing to Unknown.
+// one fir.dummy_scope).
+//
+// This models REAL two-level inlining: the caller is itself a procedure
+// with its own dummy arguments, so it has its own fir.dummy_scope
+// (%outer) in addition to the inlined callee's (%inner). With two
+// dummy_scope ops, functionHasMultipleScopes() is true and the
+// scope-aware refinement is enabled. buildSourceAtDeclare must classify
+// each rebuilt Source AT the captured declare's own scope
+// (getLastInstantiationPoint=true, yielding SourceKind::Argument) rather
+// than walking past the declare back into the fir.if and collapsing to
+// Unknown.
 //
 // CHECK-LABEL: Testing : "_QPtest_nested_inline_region_branch"
 // CHECK-DAG: field#0 <-> value#0: NoAlias
@@ -143,17 +149,28 @@ func.func @_QPtest_nested_inline_region_branch(
     %arg0: !fir.ref<f32> {fir.bindc_name = "field"},
     %arg1: !fir.ref<f32> {fir.bindc_name = "value", fir.optional},
     %cond: i1) {
-  // field: contiguity copy-in select -> original actual or a local temp.
+  // Outer (caller) frame: the caller has its own dummy arguments, hence
+  // its own fir.dummy_scope.
+  %outer = fir.dummy_scope : !fir.dscope
+  %f_outer = fir.declare %arg0 dummy_scope %outer
+      {fortran_attrs = #fir.var_attrs<intent_inout>,
+       uniq_name = "_QFcallerEfield"}
+      : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32>
+  %v_outer = fir.declare %arg1 dummy_scope %outer
+      {fortran_attrs = #fir.var_attrs<intent_in, optional>,
+       uniq_name = "_QFcallerEvalue"}
+      : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32>
+  // field: contiguity copy-in select -> caller actual or a local temp.
   %ftmp = fir.alloca f32
   %f_sel = fir.if %cond -> (!fir.ref<f32>) {
-    fir.result %arg0 : !fir.ref<f32>
+    fir.result %f_outer : !fir.ref<f32>
   } else {
     fir.result %ftmp : !fir.ref<f32>
   }
-  // value: OPTIONAL presence select -> actual or absent.
-  %present = fir.is_present %arg1 : (!fir.ref<f32>) -> i1
+  // value: OPTIONAL presence select -> caller actual or absent.
+  %present = fir.is_present %v_outer : (!fir.ref<f32>) -> i1
   %v_sel = fir.if %present -> (!fir.ref<f32>) {
-    fir.result %arg1 : !fir.ref<f32>
+    fir.result %v_outer : !fir.ref<f32>
   } else {
     %absent = fir.absent !fir.ref<f32>
     fir.result %absent : !fir.ref<f32>

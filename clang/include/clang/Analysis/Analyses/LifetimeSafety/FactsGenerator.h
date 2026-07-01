@@ -29,7 +29,9 @@ class FactsGenerator : public ConstStmtVisitor<FactsGenerator> {
 
 public:
   FactsGenerator(FactManager &FactMgr, AnalysisDeclContext &AC)
-      : FactMgr(FactMgr), AC(AC) {}
+      : FactMgr(FactMgr), AC(AC),
+        IsCMode(!AC.getASTContext().getLangOpts().CPlusPlus &&
+                !AC.getASTContext().getLangOpts().ObjC) {}
 
   void run();
 
@@ -45,7 +47,7 @@ public:
   void VisitUnaryOperator(const UnaryOperator *UO);
   void VisitReturnStmt(const ReturnStmt *RS);
   void VisitBinaryOperator(const BinaryOperator *BO);
-  void VisitConditionalOperator(const ConditionalOperator *CO);
+  void VisitAbstractConditionalOperator(const AbstractConditionalOperator *CO);
   void VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *OCE);
   void VisitCXXFunctionalCastExpr(const CXXFunctionalCastExpr *FCE);
   void VisitInitListExpr(const InitListExpr *ILE);
@@ -55,6 +57,7 @@ public:
   void VisitArraySubscriptExpr(const ArraySubscriptExpr *ASE);
   void VisitCXXNewExpr(const CXXNewExpr *NE);
   void VisitCXXDeleteExpr(const CXXDeleteExpr *DE);
+  void VisitStmtExpr(const StmtExpr *SE);
 
 private:
   OriginList *getOriginsList(const ValueDecl &D);
@@ -63,7 +66,8 @@ private:
   bool hasOrigins(QualType QT) const;
   bool hasOrigins(const Expr *E) const;
 
-  void flow(OriginList *Dst, OriginList *Src, bool Kill);
+  void flow(OriginList *Dst, OriginList *Src, bool Kill,
+            const CFGBlock *Block = nullptr);
 
   /// Handles assignment for both BinaryOperator and CXXOperatorCallExpr.
   ///
@@ -160,6 +164,7 @@ private:
   // exempting it from the check.
   llvm::DenseMap<const Expr *, UseFact *> UseFacts;
   const CFGBlock *CurrentBlock;
+  bool IsCMode = false;
 };
 
 } // namespace clang::lifetimes::internal

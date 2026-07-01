@@ -25,7 +25,7 @@ c.slli x0, 32
 # CHECK-RV32: :[[#@LINE-1]]:12: error: immediate must be an integer in the range [0, 31]
 
 c.srli64 x30
-# CHECK: :[[#@LINE-1]]:10: error: invalid operand for instruction
+# CHECK: :[[#@LINE-1]]:10: error: register must be a GPR from x8 to x15
 
 c.srai64 x31
-# CHECK: :[[#@LINE-1]]:10: error: invalid operand for instruction
+# CHECK: :[[#@LINE-1]]:10: error: register must be a GPR from x8 to x15

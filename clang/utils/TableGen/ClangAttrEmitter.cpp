@@ -3275,8 +3275,8 @@ static void emitAttributes(const RecordKeeper &Records, raw_ostream &OS,
       OS << "}\n\n";
     }
 
-    std::string ProfileSig = "Profile(llvm::FoldingSetNodeID &ID, "
-                             "const ASTContext &Ctx) const";
+    StringRef ProfileSig = "Profile(llvm::FoldingSetNodeID &ID, "
+                           "const ASTContext &Ctx) const";
     if (Header) {
       OS << "  void " << ProfileSig << ";\n";
     } else {

@@ -240,6 +240,7 @@ if(FUCHSIA_SDK)
     set(RUNTIMES_${target}_COMPILER_RT_CXX_LIBRARY "libcxx" CACHE STRING "")
     set(RUNTIMES_${target}_COMPILER_RT_USE_BUILTINS_LIBRARY ON CACHE BOOL "")
     set(RUNTIMES_${target}_COMPILER_RT_USE_LLVM_UNWINDER ON CACHE BOOL "")
+    set(RUNTIMES_${target}_COMPILER_RT_ASAN_ENABLE_EXCEPTIONS OFF CACHE BOOL "")
     set(RUNTIMES_${target}_LIBUNWIND_USE_COMPILER_RT ON CACHE BOOL "")
     set(RUNTIMES_${target}_LIBUNWIND_HIDE_SYMBOLS ON CACHE BOOL "")
     set(RUNTIMES_${target}_LIBCXXABI_USE_COMPILER_RT ON CACHE BOOL "")
@@ -473,6 +474,7 @@ set(LLVM_TOOLCHAIN_TOOLS
   llvm-otool
   llvm-pdbutil
   llvm-profdata
+  llvm-profgen
   llvm-rc
   llvm-ranlib
   llvm-readelf

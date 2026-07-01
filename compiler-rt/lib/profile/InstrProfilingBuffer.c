@@ -147,10 +147,12 @@ static int needsCounterPadding(void) {
 COMPILER_RT_VISIBILITY
 int __llvm_profile_get_padding_sizes_for_counters(
     uint64_t DataSize, uint64_t CountersSize, uint64_t NumBitmapBytes,
-    uint64_t NamesSize, uint64_t VTableSize, uint64_t VNameSize,
-    uint64_t *PaddingBytesBeforeCounters, uint64_t *PaddingBytesAfterCounters,
-    uint64_t *PaddingBytesAfterBitmapBytes, uint64_t *PaddingBytesAfterNames,
-    uint64_t *PaddingBytesAfterVTable, uint64_t *PaddingBytesAfterVName) {
+    uint64_t NumUniformCounters, uint64_t NamesSize, uint64_t VTableSize,
+    uint64_t VNameSize, uint64_t *PaddingBytesBeforeCounters,
+    uint64_t *PaddingBytesAfterCounters, uint64_t *PaddingBytesAfterBitmapBytes,
+    uint64_t *PaddingBytesAfterUniformCounters,
+    uint64_t *PaddingBytesAfterNames, uint64_t *PaddingBytesAfterVTable,
+    uint64_t *PaddingBytesAfterVName) {
   // Counter padding is needed only if continuous mode is enabled.
   if (!needsCounterPadding()) {
     *PaddingBytesBeforeCounters = 0;
@@ -158,6 +160,9 @@ int __llvm_profile_get_padding_sizes_for_counters(
         __llvm_profile_get_num_padding_bytes(CountersSize);
     *PaddingBytesAfterBitmapBytes =
         __llvm_profile_get_num_padding_bytes(NumBitmapBytes);
+    if (PaddingBytesAfterUniformCounters != NULL)
+      *PaddingBytesAfterUniformCounters = __llvm_profile_get_num_padding_bytes(
+          NumUniformCounters * sizeof(uint64_t));
     *PaddingBytesAfterNames = __llvm_profile_get_num_padding_bytes(NamesSize);
     if (PaddingBytesAfterVTable != NULL)
       *PaddingBytesAfterVTable =
@@ -179,6 +184,8 @@ int __llvm_profile_get_padding_sizes_for_counters(
   *PaddingBytesAfterCounters = calculateBytesNeededToPageAlign(CountersSize);
   *PaddingBytesAfterBitmapBytes =
       calculateBytesNeededToPageAlign(NumBitmapBytes);
+  if (PaddingBytesAfterUniformCounters != NULL)
+    *PaddingBytesAfterUniformCounters = 0;
   *PaddingBytesAfterNames = calculateBytesNeededToPageAlign(NamesSize);
   // Set these two variables to zero to avoid uninitialized variables
   // even if VTableSize and VNameSize are known to be zero.
@@ -212,20 +219,22 @@ uint64_t __llvm_profile_get_size_for_buffer_internal(
    * the names. */
   uint64_t PaddingBytesBeforeCounters, PaddingBytesAfterCounters,
       PaddingBytesAfterNames, PaddingBytesAfterBitmapBytes,
-      PaddingBytesAfterVTable, PaddingBytesAfterVNames;
+      PaddingBytesAfterUniformCounters, PaddingBytesAfterVTable,
+      PaddingBytesAfterVNames;
   __llvm_profile_get_padding_sizes_for_counters(
-      DataSize, CountersSize, NumBitmapBytes, NamesSize, 0 /* VTableSize */,
-      0 /* VNameSize */, &PaddingBytesBeforeCounters,
-      &PaddingBytesAfterCounters, &PaddingBytesAfterBitmapBytes,
+      DataSize, CountersSize, NumBitmapBytes, 0 /* NumUniformCounters */,
+      NamesSize, 0 /* VTableSize */, 0 /* VNameSize */,
+      &PaddingBytesBeforeCounters, &PaddingBytesAfterCounters,
+      &PaddingBytesAfterBitmapBytes, &PaddingBytesAfterUniformCounters,
       &PaddingBytesAfterNames, &PaddingBytesAfterVTable,
       &PaddingBytesAfterVNames);
 
   return sizeof(__llvm_profile_header) + __llvm_write_binary_ids(NULL) +
          DataSize + PaddingBytesBeforeCounters + CountersSize +
          PaddingBytesAfterCounters + NumBitmapBytes +
-         PaddingBytesAfterBitmapBytes + NamesSize + PaddingBytesAfterNames +
-         VTableSize + PaddingBytesAfterVTable + VNameSize +
-         PaddingBytesAfterVNames;
+         PaddingBytesAfterBitmapBytes + PaddingBytesAfterUniformCounters +
+         NamesSize + PaddingBytesAfterNames + VTableSize +
+         PaddingBytesAfterVTable + VNameSize + PaddingBytesAfterVNames;
 }
 
 COMPILER_RT_VISIBILITY
@@ -250,7 +259,8 @@ COMPILER_RT_VISIBILITY int __llvm_profile_write_buffer_internal(
   // Set virtual table arguments to NULL since they are not supported yet.
   return lprofWriteDataImpl(
       &BufferWriter, DataBegin, DataEnd, CountersBegin, CountersEnd,
-      BitmapBegin, BitmapEnd, /*VPDataReader=*/0, NamesBegin, NamesEnd,
+      BitmapBegin, BitmapEnd, /*UniformCountersBegin=*/NULL,
+      /*UniformCountersEnd=*/NULL, /*VPDataReader=*/0, NamesBegin, NamesEnd,
       /*VTableBegin=*/NULL, /*VTableEnd=*/NULL, /*VNamesBegin=*/NULL,
       /*VNamesEnd=*/NULL, /*SkipNameDataWrite=*/0,
       __llvm_profile_get_version());

@@ -91,13 +91,11 @@ private:
                           const DisplacementSizeMap &BlockingStoresDispSizeMap);
   /// Break a copy of size Size to smaller copies.
   void buildCopies(int Size, MachineInstr *LoadInst, int64_t LdDispImm,
-                   MachineInstr *StoreInst, int64_t StDispImm,
-                   int64_t LMMOffset, int64_t SMMOffset);
+                   MachineInstr *StoreInst, int64_t StDispImm, int64_t Offset);
 
   void buildCopy(MachineInstr *LoadInst, unsigned NLoadOpcode, int64_t LoadDisp,
                  MachineInstr *StoreInst, unsigned NStoreOpcode,
-                 int64_t StoreDisp, unsigned Size, int64_t LMMOffset,
-                 int64_t SMMOffset);
+                 int64_t StoreDisp, unsigned Size, int64_t Offset);
 
   bool alias(const MachineMemOperand &Op1, const MachineMemOperand &Op2) const;
 
@@ -385,8 +383,7 @@ findPotentialBlockers(MachineInstr *LoadInst) {
 void X86AvoidSFBImpl::buildCopy(MachineInstr *LoadInst, unsigned NLoadOpcode,
                                 int64_t LoadDisp, MachineInstr *StoreInst,
                                 unsigned NStoreOpcode, int64_t StoreDisp,
-                                unsigned Size, int64_t LMMOffset,
-                                int64_t SMMOffset) {
+                                unsigned Size, int64_t Offset) {
   MachineOperand &LoadBase = getBaseOperand(LoadInst);
   MachineOperand &StoreBase = getBaseOperand(StoreInst);
   MachineBasicBlock *MBB = LoadInst->getParent();
@@ -404,7 +401,7 @@ void X86AvoidSFBImpl::buildCopy(MachineInstr *LoadInst, unsigned NLoadOpcode,
           .addImm(LoadDisp)
           .addReg(X86::NoRegister)
           .addMemOperand(
-              MBB->getParent()->getMachineMemOperand(LMMO, LMMOffset, Size));
+              MBB->getParent()->getMachineMemOperand(LMMO, Offset, Size));
   if (LoadBase.isReg())
     getBaseOperand(NewLoad).setIsKill(false);
   LLVM_DEBUG(NewLoad->dump());
@@ -424,7 +421,7 @@ void X86AvoidSFBImpl::buildCopy(MachineInstr *LoadInst, unsigned NLoadOpcode,
           .addReg(X86::NoRegister)
           .addReg(Reg1)
           .addMemOperand(
-              MBB->getParent()->getMachineMemOperand(SMMO, SMMOffset, Size));
+              MBB->getParent()->getMachineMemOperand(SMMO, Offset, Size));
   if (StoreBase.isReg())
     getBaseOperand(NewStore).setIsKill(false);
   MachineOperand &StoreSrcVReg = StoreInst->getOperand(X86::AddrNumOperands);
@@ -435,8 +432,7 @@ void X86AvoidSFBImpl::buildCopy(MachineInstr *LoadInst, unsigned NLoadOpcode,
 
 void X86AvoidSFBImpl::buildCopies(int Size, MachineInstr *LoadInst,
                                   int64_t LdDispImm, MachineInstr *StoreInst,
-                                  int64_t StDispImm, int64_t LMMOffset,
-                                  int64_t SMMOffset) {
+                                  int64_t StDispImm, int64_t Offset) {
   int LdDisp = LdDispImm;
   int StDisp = StDispImm;
   while (Size > 0) {
@@ -444,51 +440,46 @@ void X86AvoidSFBImpl::buildCopies(int Size, MachineInstr *LoadInst,
       Size = Size - MOV128SZ;
       buildCopy(LoadInst, getYMMtoXMMLoadOpcode(LoadInst->getOpcode()), LdDisp,
                 StoreInst, getYMMtoXMMStoreOpcode(StoreInst->getOpcode()),
-                StDisp, MOV128SZ, LMMOffset, SMMOffset);
+                StDisp, MOV128SZ, Offset);
       LdDisp += MOV128SZ;
       StDisp += MOV128SZ;
-      LMMOffset += MOV128SZ;
-      SMMOffset += MOV128SZ;
+      Offset += MOV128SZ;
       continue;
     }
     if (Size - MOV64SZ >= 0) {
       Size = Size - MOV64SZ;
       buildCopy(LoadInst, X86::MOV64rm, LdDisp, StoreInst, X86::MOV64mr, StDisp,
-                MOV64SZ, LMMOffset, SMMOffset);
+                MOV64SZ, Offset);
       LdDisp += MOV64SZ;
       StDisp += MOV64SZ;
-      LMMOffset += MOV64SZ;
-      SMMOffset += MOV64SZ;
+      Offset += MOV64SZ;
       continue;
     }
     if (Size - MOV32SZ >= 0) {
       Size = Size - MOV32SZ;
       buildCopy(LoadInst, X86::MOV32rm, LdDisp, StoreInst, X86::MOV32mr, StDisp,
-                MOV32SZ, LMMOffset, SMMOffset);
+                MOV32SZ, Offset);
       LdDisp += MOV32SZ;
       StDisp += MOV32SZ;
-      LMMOffset += MOV32SZ;
-      SMMOffset += MOV32SZ;
+      Offset += MOV32SZ;
       continue;
     }
     if (Size - MOV16SZ >= 0) {
       Size = Size - MOV16SZ;
       buildCopy(LoadInst, X86::MOV16rm, LdDisp, StoreInst, X86::MOV16mr, StDisp,
-                MOV16SZ, LMMOffset, SMMOffset);
+                MOV16SZ, Offset);
       LdDisp += MOV16SZ;
       StDisp += MOV16SZ;
-      LMMOffset += MOV16SZ;
-      SMMOffset += MOV16SZ;
+      Offset += MOV16SZ;
       continue;
     }
     if (Size - MOV8SZ >= 0) {
       Size = Size - MOV8SZ;
       buildCopy(LoadInst, X86::MOV8rm, LdDisp, StoreInst, X86::MOV8mr, StDisp,
-                MOV8SZ, LMMOffset, SMMOffset);
+                MOV8SZ, Offset);
       LdDisp += MOV8SZ;
       StDisp += MOV8SZ;
-      LMMOffset += MOV8SZ;
-      SMMOffset += MOV8SZ;
+      Offset += MOV8SZ;
       continue;
     }
   }
@@ -574,8 +565,7 @@ void X86AvoidSFBImpl::breakBlockedCopies(
     const DisplacementSizeMap &BlockingStoresDispSizeMap) {
   int64_t LdDispImm = getDispOperand(LoadInst).getImm();
   int64_t StDispImm = getDispOperand(StoreInst).getImm();
-  int64_t LMMOffset = 0;
-  int64_t SMMOffset = 0;
+  int64_t Offset = 0;
 
   int64_t LdDisp1 = LdDispImm;
   int64_t LdDisp2 = 0;
@@ -600,19 +590,15 @@ void X86AvoidSFBImpl::breakBlockedCopies(
 
     // Build a copy for the point until the current blocking store's
     // displacement.
-    buildCopies(Size1, LoadInst, LdDisp1, StoreInst, StDisp1, LMMOffset,
-                SMMOffset);
+    buildCopies(Size1, LoadInst, LdDisp1, StoreInst, StDisp1, Offset);
     // Build a copy for the current blocking store.
-    buildCopies(Size2, LoadInst, LdDisp2, StoreInst, StDisp2, LMMOffset + Size1,
-                SMMOffset + Size1);
+    buildCopies(Size2, LoadInst, LdDisp2, StoreInst, StDisp2, Offset + Size1);
     LdDisp1 = LdDisp2 + Size2;
     StDisp1 = StDisp2 + Size2;
-    LMMOffset += Size1 + Size2;
-    SMMOffset += Size1 + Size2;
+    Offset += Size1 + Size2;
   }
   unsigned Size3 = (LdDispImm + getRegSizeInBytes(LoadInst)) - LdDisp1;
-  buildCopies(Size3, LoadInst, LdDisp1, StoreInst, StDisp1, LMMOffset,
-              LMMOffset);
+  buildCopies(Size3, LoadInst, LdDisp1, StoreInst, StDisp1, Offset);
 }
 
 static bool hasSameBaseOpValue(MachineInstr *LoadInst,

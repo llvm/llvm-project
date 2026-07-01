@@ -226,6 +226,11 @@ public:
         process.GetLanguageRuntime(lldb::eLanguageTypeObjC));
   }
 
+  /// Returns whether the architecture's object file format supports
+  /// Objective-C code generation. Generating Objective-C for a format that
+  /// does not aborts the compiler.
+  static bool IsSupportedForArchitecture(const ArchSpec &arch);
+
   virtual TaggedPointerVendor *GetTaggedPointerVendor() { return nullptr; }
 
   typedef std::shared_ptr<EncodingToType> EncodingToTypeSP;

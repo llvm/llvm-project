@@ -297,7 +297,7 @@ bool AMDGPURegBankCombinerImpl::matchFPMinMaxToClamp(MachineInstr &MI,
   if (!matchMed<GFCstOrSplatGFCstMatch>(MI, MRI, OpcodeTriple, Val, K0, K1))
     return false;
 
-  if (!K0->Value.isPosZero() || !K1->Value.isExactlyValue(1.0))
+  if (!K0->Value.isPosZero() || !K1->Value.isOne())
     return false;
 
   // For IEEE=false perform combine only when it's safe to assume that there are
@@ -596,8 +596,8 @@ bool AMDGPURegBankCombinerImpl::isClampZeroToOne(MachineInstr *K0,
   if (isFCst(K0) && isFCst(K1)) {
     const ConstantFP *KO_FPImm = K0->getOperand(1).getFPImm();
     const ConstantFP *K1_FPImm = K1->getOperand(1).getFPImm();
-    return (KO_FPImm->isPosZero() && K1_FPImm->isExactlyValue(1.0)) ||
-           (KO_FPImm->isExactlyValue(1.0) && K1_FPImm->isPosZero());
+    return (KO_FPImm->isPosZero() && K1_FPImm->isOne()) ||
+           (KO_FPImm->isOne() && K1_FPImm->isPosZero());
   }
   return false;
 }
