@@ -21,6 +21,7 @@ void rightscope() {
 // CHECK-NEXT: entry:
 // CHECK-NEXT: %p = alloca i32
 // CHECK-NEXT: store i32 0, ptr %p
+// CHECK-NEXT: ret void
 
 
 /// In the if expression below, the read from s.i should fail.
