@@ -2627,34 +2627,26 @@ void OmpStructureChecker::Enter(const parser::OpenMPDispatchConstruct &x) {
 }
 
 void OmpStructureChecker::Enter(const parser::OmpErrorDirective &x) {
-  // Defaults per spec: AT(compilation), SEVERITY(fatal)
-  auto atKind{parser::OmpAtClause::ActionTime::Compilation};
-  auto sevKind{parser::OmpSeverityClause::SevLevel::Fatal};
-  std::optional<std::string> message;
+  const OmpErrorArgs args{GetErrorDirectiveArgs(x)};
 
-  for (const parser::OmpClause &clause : x.v.Clauses().v) {
-    if (const auto *at{std::get_if<parser::OmpClause::At>(&clause.u)}) {
-      atKind = at->v.v;
-    } else if (const auto *sev{
-                   std::get_if<parser::OmpClause::Severity>(&clause.u)}) {
-      sevKind = sev->v.v;
-    } else if (const auto *msg{
-                   std::get_if<parser::OmpClause::Message>(&clause.u)}) {
-      if (auto expr{GetEvaluateExpr(msg->v.v)}) {
-        if (auto val{
-                evaluate::GetScalarConstantValue<evaluate::Ascii>(*expr)}) {
-          message = *val;
-        }
+  // The AT(execution) form (non-default) is handled at run time.
+  if (args.at != parser::OmpAtClause::ActionTime::Compilation) {
+    return;
+  }
+
+  std::optional<std::string> message;
+  if (args.message) {
+    if (auto expr{GetEvaluateExpr(*args.message)}) {
+      if (auto val{evaluate::GetScalarConstantValue<evaluate::Ascii>(*expr)}) {
+        message = *val;
       }
     }
   }
 
-  if (atKind == parser::OmpAtClause::ActionTime::Compilation) {
-    if (sevKind == parser::OmpSeverityClause::SevLevel::Warning) {
-      context_.Say(x.v.source, "%s"_warn_en_US, message.value_or("WARNING"));
-    } else {
-      context_.Say(x.v.source, "%s"_err_en_US, message.value_or("ERROR"));
-    }
+  if (args.severity == parser::OmpSeverityClause::SevLevel::Warning) {
+    context_.Say(x.v.source, "%s"_warn_en_US, message.value_or("WARNING"));
+  } else {
+    context_.Say(x.v.source, "%s"_err_en_US, message.value_or("ERROR"));
   }
 }
 

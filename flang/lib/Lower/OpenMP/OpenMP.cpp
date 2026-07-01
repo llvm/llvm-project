@@ -5699,35 +5699,28 @@ static mlir::Value genNullTerminatedString(fir::FirOpBuilder &builder,
 static void genErrorDirective(lower::AbstractConverter &converter,
                               semantics::SemanticsContext &semaCtx,
                               const parser::OmpErrorDirective &errDir) {
-  auto atKind = parser::OmpAtClause::ActionTime::Compilation;
-  auto sevKind = parser::OmpSeverityClause::SevLevel::Fatal;
-  std::optional<std::string> message;
-  MaybeExpr messageExpr;
-  for (const parser::OmpClause &clause : errDir.v.Clauses().v) {
-    if (const auto *at = std::get_if<parser::OmpClause::At>(&clause.u)) {
-      atKind = at->v.v;
-    } else if (const auto *sev =
-                   std::get_if<parser::OmpClause::Severity>(&clause.u)) {
-      sevKind = sev->v.v;
-    } else if (const auto *msg =
-                   std::get_if<parser::OmpClause::Message>(&clause.u)) {
-      if (auto expr = semantics::omp::GetEvaluateExpr(msg->v.v)) {
-        if (auto val = evaluate::GetScalarConstantValue<evaluate::Ascii>(*expr))
-          message = *val;
-        else
-          messageExpr = expr;
-      }
-    }
-  }
+  const semantics::omp::OmpErrorArgs args{
+      semantics::omp::GetErrorDirectiveArgs(errDir)};
 
-  if (atKind != parser::OmpAtClause::ActionTime::Execution ||
+  if (args.at != parser::OmpAtClause::ActionTime::Execution ||
       semaCtx.langOptions().OpenMPSimd)
     return;
+
+  std::optional<std::string> message;
+  MaybeExpr messageExpr;
+  if (args.message) {
+    if (auto expr = semantics::omp::GetEvaluateExpr(*args.message)) {
+      if (auto val = evaluate::GetScalarConstantValue<evaluate::Ascii>(*expr))
+        message = *val;
+      else
+        messageExpr = expr;
+    }
+  }
 
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   const mlir::Location loc = converter.getCurrentLocation();
   const mlir::omp::ClauseSeverity sev =
-      sevKind == parser::OmpSeverityClause::SevLevel::Warning
+      args.severity == parser::OmpSeverityClause::SevLevel::Warning
           ? mlir::omp::ClauseSeverity::warning
           : mlir::omp::ClauseSeverity::fatal;
 
