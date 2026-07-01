@@ -514,7 +514,7 @@ nearestMatchesForCodepointName(StringRef Pattern, std::size_t MaxMatchesCount) {
         const int Replace =
             Get(I - 1, Row - 1) + (NormalizedName[I - 1] != N.Name[J] ? 1 : 0);
 
-        Get(I, Row) = std::min(Insert, std::min(Delete, Replace));
+        Get(I, Row) = std::min({Insert, Delete, Replace});
       }
 
       Row++;

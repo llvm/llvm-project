@@ -1109,7 +1109,8 @@ TEST_P(AArch64CPUTestFixture, testAArch64CPU) {
 
   const std::optional<AArch64::CpuInfo> Cpu = AArch64::parseCpu(params.CPUName);
   EXPECT_TRUE(Cpu);
-  EXPECT_EQ(params.ExpectedArch, Cpu->Arch.Name);
+  EXPECT_EQ(params.ExpectedArch,
+            AArch64::StrTab[AArch64::ArchInfos[Cpu->ArchIdx].Name]);
 }
 
 INSTANTIATE_TEST_SUITE_P(
@@ -1257,14 +1258,14 @@ TEST_P(AArch64CPUAliasTestFixture, testCPUAlias) {
 
   StringRef MainName = params.Aliases[0];
   const std::optional<AArch64::CpuInfo> Cpu = AArch64::parseCpu(MainName);
-  const AArch64::ArchInfo &MainAI = Cpu->Arch;
+  const AArch64::ArchInfo &MainAI = AArch64::ArchInfos[Cpu->ArchIdx];
   AArch64::ExtensionBitset MainFlags = Cpu->DefaultExtensions;
 
   for (size_t I = 1, E = params.Aliases.size(); I != E; ++I) {
     StringRef OtherName = params.Aliases[I];
     const std::optional<AArch64::CpuInfo> OtherCpu =
         AArch64::parseCpu(OtherName);
-    const AArch64::ArchInfo &OtherAI = OtherCpu->Arch;
+    const AArch64::ArchInfo &OtherAI = AArch64::ArchInfos[OtherCpu->ArchIdx];
 
     EXPECT_EQ(MainAI.Version, OtherAI.Version)
         << MainName << " vs " << OtherName;
@@ -1625,35 +1626,35 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
 }
 
 TEST(TargetParserTest, AArch64ArchFeatures) {
-  EXPECT_EQ(AArch64::ARMV8A.ArchFeature, "+v8a");
-  EXPECT_EQ(AArch64::ARMV8_1A.ArchFeature, "+v8.1a");
-  EXPECT_EQ(AArch64::ARMV8_2A.ArchFeature, "+v8.2a");
-  EXPECT_EQ(AArch64::ARMV8_3A.ArchFeature, "+v8.3a");
-  EXPECT_EQ(AArch64::ARMV8_4A.ArchFeature, "+v8.4a");
-  EXPECT_EQ(AArch64::ARMV8_5A.ArchFeature, "+v8.5a");
-  EXPECT_EQ(AArch64::ARMV8_6A.ArchFeature, "+v8.6a");
-  EXPECT_EQ(AArch64::ARMV8_7A.ArchFeature, "+v8.7a");
-  EXPECT_EQ(AArch64::ARMV8_8A.ArchFeature, "+v8.8a");
-  EXPECT_EQ(AArch64::ARMV8_9A.ArchFeature, "+v8.9a");
-  EXPECT_EQ(AArch64::ARMV9A.ArchFeature, "+v9a");
-  EXPECT_EQ(AArch64::ARMV9_1A.ArchFeature, "+v9.1a");
-  EXPECT_EQ(AArch64::ARMV9_2A.ArchFeature, "+v9.2a");
-  EXPECT_EQ(AArch64::ARMV9_3A.ArchFeature, "+v9.3a");
-  EXPECT_EQ(AArch64::ARMV9_4A.ArchFeature, "+v9.4a");
-  EXPECT_EQ(AArch64::ARMV9_5A.ArchFeature, "+v9.5a");
-  EXPECT_EQ(AArch64::ARMV9_6A.ArchFeature, "+v9.6a");
-  EXPECT_EQ(AArch64::ARMV9_7A.ArchFeature, "+v9.7a");
-  EXPECT_EQ(AArch64::ARMV8R.ArchFeature, "+v8r");
+  EXPECT_EQ(AArch64::StrTab[AArch64::ARMV8A.ArchFeature], "+v8a");
+  EXPECT_EQ(AArch64::StrTab[AArch64::ARMV8_1A.ArchFeature], "+v8.1a");
+  EXPECT_EQ(AArch64::StrTab[AArch64::ARMV8_2A.ArchFeature], "+v8.2a");
+  EXPECT_EQ(AArch64::StrTab[AArch64::ARMV8_3A.ArchFeature], "+v8.3a");
+  EXPECT_EQ(AArch64::StrTab[AArch64::ARMV8_4A.ArchFeature], "+v8.4a");
+  EXPECT_EQ(AArch64::StrTab[AArch64::ARMV8_5A.ArchFeature], "+v8.5a");
+  EXPECT_EQ(AArch64::StrTab[AArch64::ARMV8_6A.ArchFeature], "+v8.6a");
+  EXPECT_EQ(AArch64::StrTab[AArch64::ARMV8_7A.ArchFeature], "+v8.7a");
+  EXPECT_EQ(AArch64::StrTab[AArch64::ARMV8_8A.ArchFeature], "+v8.8a");
+  EXPECT_EQ(AArch64::StrTab[AArch64::ARMV8_9A.ArchFeature], "+v8.9a");
+  EXPECT_EQ(AArch64::StrTab[AArch64::ARMV9A.ArchFeature], "+v9a");
+  EXPECT_EQ(AArch64::StrTab[AArch64::ARMV9_1A.ArchFeature], "+v9.1a");
+  EXPECT_EQ(AArch64::StrTab[AArch64::ARMV9_2A.ArchFeature], "+v9.2a");
+  EXPECT_EQ(AArch64::StrTab[AArch64::ARMV9_3A.ArchFeature], "+v9.3a");
+  EXPECT_EQ(AArch64::StrTab[AArch64::ARMV9_4A.ArchFeature], "+v9.4a");
+  EXPECT_EQ(AArch64::StrTab[AArch64::ARMV9_5A.ArchFeature], "+v9.5a");
+  EXPECT_EQ(AArch64::StrTab[AArch64::ARMV9_6A.ArchFeature], "+v9.6a");
+  EXPECT_EQ(AArch64::StrTab[AArch64::ARMV9_7A.ArchFeature], "+v9.7a");
+  EXPECT_EQ(AArch64::StrTab[AArch64::ARMV8R.ArchFeature], "+v8r");
 }
 
 TEST(TargetParserTest, AArch64ArchPartialOrder) {
-  for (const auto *A : AArch64::ArchInfos) {
-    EXPECT_EQ(*A, *A);
+  for (const auto &A : AArch64::ArchInfos) {
+    EXPECT_EQ(A, A);
 
     // v8r has no relation to other valid architectures
-    if (*A != AArch64::ARMV8R) {
-      EXPECT_FALSE(A->implies(AArch64::ARMV8R));
-      EXPECT_FALSE(AArch64::ARMV8R.implies(*A));
+    if (A != AArch64::ARMV8R) {
+      EXPECT_FALSE(A.implies(AArch64::ARMV8R));
+      EXPECT_FALSE(AArch64::ARMV8R.implies(A));
     }
   }
 

@@ -1642,11 +1642,12 @@ bool SBDebugger::EnableLog(const char *channel, const char **categories) {
   if (m_opaque_sp) {
     uint32_t log_options =
         LLDB_LOG_OPTION_PREPEND_TIMESTAMP | LLDB_LOG_OPTION_PREPEND_THREAD_NAME;
-    std::string error;
-    llvm::raw_string_ostream error_stream(error);
-    return m_opaque_sp->EnableLog(channel, GetCategoryArray(categories), "",
-                                  log_options, /*buffer_size=*/0,
-                                  eLogHandlerStream, error_stream);
+    llvm::Error err = m_opaque_sp->EnableLog(
+        channel, GetCategoryArray(categories), "", log_options,
+        /*buffer_size=*/0, eLogHandlerStream);
+    bool succeeded = !bool(err);
+    llvm::consumeError(std::move(err));
+    return succeeded;
   } else
     return false;
 }

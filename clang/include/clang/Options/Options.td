@@ -7572,6 +7572,16 @@ def fsycl_host_only : Flag<["-"], "fsycl-host-only">,
 def sycl_link : Flag<["--"], "sycl-link">, Flags<[HelpHidden]>,
   HelpText<"Perform link through clang-sycl-linker via the target "
   "offloading toolchain.">;
+def fsycl_device_image_split_EQ : Joined<["-"], "fsycl-device-image-split=">,
+  HelpText<"Select the granularity at which SYCL device code is grouped into "
+           "device images: kernel (one device image per kernel) | "
+           "translation_unit (one device image per translation unit) | "
+           "link_unit (one device image per linking unit). "
+           "Default is 'translation_unit'.">,
+  Values<"kernel,translation_unit,link_unit">;
+def fsycl_device_image_split : Flag<["-"], "fsycl-device-image-split">,
+  Alias<fsycl_device_image_split_EQ>, AliasArgs<["translation_unit"]>,
+  HelpText<"Group SYCL device code into device images: one per 'translation_unit'.">;
 } // let Group = sycl_Group
 
 // OS-specific options
