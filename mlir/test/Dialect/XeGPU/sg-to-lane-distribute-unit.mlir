@@ -160,6 +160,47 @@ gpu.func @arith_constant() {
   gpu.return
 }
 
+// Non-splat constant: each lane extracts the element it owns from the full
+// constant.
+// CHECK-LABEL: gpu.func @arith_constant_non_splat
+// CHECK: %[[CST:.*]] = arith.constant dense<[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]> : vector<16xindex>
+// CHECK: %[[LANE:.*]] = gpu.lane_id
+// CHECK: %[[ELEM:.*]] = vector.extract %[[CST]][%{{.*}}] : index from vector<16xindex>
+// CHECK: %[[BCAST:.*]] = vector.broadcast %[[ELEM]] : index to vector<1xindex>
+// CHECK: gpu.return
+gpu.func @arith_constant_non_splat() {
+  %0 = arith.constant
+    {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0]>}
+    dense<[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]> : vector<16xindex>
+  %cl0 = xegpu.convert_layout %0
+    <{
+      input_layout = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0]>,
+      target_layout = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0]>
+    }> : vector<16xindex>
+  gpu.return
+}
+
+// With lane_data > 1 each lane owns a lane_data-sized block, so multiple
+// elements are extracted and assembled with vector.from_elements.
+// CHECK-LABEL: gpu.func @arith_constant_non_splat_lane_data
+// CHECK: %[[CST:.*]] = arith.constant dense<[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31]> : vector<32xindex>
+// CHECK: %[[LANE:.*]] = gpu.lane_id
+// CHECK: %[[ELEM0:.*]] = vector.extract %[[CST]][%{{.*}}] : index from vector<32xindex>
+// CHECK: %[[ELEM1:.*]] = vector.extract %[[CST]][%{{.*}}] : index from vector<32xindex>
+// CHECK: %[[RES:.*]] = vector.from_elements %[[ELEM0]], %[[ELEM1]] : vector<2xindex>
+// CHECK: gpu.return
+gpu.func @arith_constant_non_splat_lane_data() {
+  %0 = arith.constant
+    {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 2]>, dims = [0]>}
+    dense<[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31]> : vector<32xindex>
+  %cl0 = xegpu.convert_layout %0
+    <{
+      input_layout = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 2]>, dims = [0]>,
+      target_layout = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 2]>, dims = [0]>
+    }> : vector<32xindex>
+  gpu.return
+}
+
 // CHECK-LABEL: gpu.func @prefetch_nd
 // CHECK: %[[C0:.*]] = arith.constant 0 : index
 // CHECK: xegpu.prefetch_nd %{{.*}}[%[[C0]], %[[C0]]] : !xegpu.tensor_desc<16x16xf16>
