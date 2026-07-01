@@ -25904,7 +25904,10 @@ SDValue DAGCombiner::visitEXTRACT_VECTOR_ELT(SDNode *N) {
   SDValue Index = N->getOperand(1);
   EVT ScalarVT = N->getValueType(0);
   EVT VecVT = VecOp.getValueType();
-  if (VecOp.isUndef())
+  if (VecOp.getOpcode() == ISD::POISON)
+    return DAG.getPOISON(ScalarVT);
+
+  if (VecOp.getOpcode() == ISD::UNDEF)
     return DAG.getUNDEF(ScalarVT);
 
   // extract_vector_elt (insert_vector_elt vec, val, idx), idx) -> val
@@ -26053,9 +26056,9 @@ SDValue DAGCombiner::visitEXTRACT_VECTOR_ELT(SDNode *N) {
     // Find the new index to extract from.
     int OrigElt = Shuf->getMaskElt(IndexC->getZExtValue());
 
-    // Extracting an undef index is undef.
+    // Extracting an undef index is poison.
     if (OrigElt == -1)
-      return DAG.getUNDEF(ScalarVT);
+      return DAG.getPOISON(ScalarVT);
 
     // Select the right vector half to extract from.
     SDValue SVInVec;
@@ -26252,7 +26255,7 @@ SDValue DAGCombiner::visitEXTRACT_VECTOR_ELT(SDNode *N) {
 
   // If Idx was -1 above, Elt is going to be -1, so just return undef.
   if (Elt == -1)
-    return DAG.getUNDEF(LVT);
+    return DAG.getPOISON(LVT);
 
   if (SDValue Scalarized =
           TLI.scalarizeExtractedVectorLoad(LVT, DL, VecVT, Index, LN0, DAG)) {
