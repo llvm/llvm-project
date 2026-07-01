@@ -16,6 +16,7 @@
 #include "SPIRVGlobalRegistry.h"
 #include "SPIRVInstrInfo.h"
 #include "SPIRVSubtarget.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
@@ -829,7 +830,7 @@ PartialOrderingVisitor::PartialOrderingVisitor(Function &F) {
   for (auto &[BB, Info] : BlockToOrder)
     Order.emplace_back(BB);
 
-  std::sort(Order.begin(), Order.end(), [&](const auto &LHS, const auto &RHS) {
+  llvm::sort(Order, [&](const auto &LHS, const auto &RHS) {
     return compare(LHS, RHS);
   });
 }
