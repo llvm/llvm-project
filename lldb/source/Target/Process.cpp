@@ -343,6 +343,18 @@ bool ProcessProperties::GetUseDelayedBreakpoints() const {
       idx, g_process_properties[idx].default_uint_value != 0);
 }
 
+bool ProcessProperties::GetStopOnFork() const {
+  const uint32_t idx = ePropertyStopOnFork;
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_process_properties[idx].default_uint_value != 0);
+}
+
+bool ProcessProperties::GetStopOnVFork() const {
+  const uint32_t idx = ePropertyStopOnVFork;
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_process_properties[idx].default_uint_value != 0);
+}
+
 std::chrono::seconds ProcessProperties::GetUtilityExpressionTimeout() const {
   const uint32_t idx = ePropertyUtilityExpressionTimeout;
   uint64_t value = GetPropertyAtIndexAs<uint64_t>(
