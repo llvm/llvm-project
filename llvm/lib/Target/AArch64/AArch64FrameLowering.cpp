@@ -2643,22 +2643,21 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
   unsigned ZPRCSStackSize = 0;
   unsigned PPRCSStackSize = 0;
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
-  // A register and its super-register can both appear in SavedRegs (e.g. for
-  // preserve_all, AAPCS contributes D8-D15 while the extended convention
-  // contributes the enclosing Q8-Q31). Only the widest register is actually
-  // spilled, skip such sub-registers here to avoid double-counting the overlap.
-  BitVector CSMask(SavedRegs.size());
-  for (unsigned i = 0; CSRegs[i]; ++i)
-    CSMask.set(CSRegs[i]);
   for (unsigned Reg : SavedRegs.set_bits()) {
     auto *RC = TRI->getMinimalPhysRegClass(MCRegister(Reg));
     assert(RC && "expected register class!");
     auto SpillSize = TRI->getSpillSize(*RC);
     bool IsZPR = AArch64::ZPRRegClass.contains(Reg);
     bool IsPPR = !IsZPR && AArch64::PPRRegClass.contains(Reg);
+
+    // A register and its super-register can both appear in SavedRegs (e.g. for
+    // preserve_all, AAPCS contributes D8-D15 while the extended convention
+    // contributes the enclosing Q8-Q31). Only the widest register is actually
+    // spilled, skip such sub-registers here to avoid double-counting the
+    // overlap.
     bool SavedSuper = false;
     for (MCPhysReg SuperReg : TRI->superregs(MCRegister(Reg)))
-      if (SavedRegs.test(SuperReg) && CSMask.test(SuperReg)) {
+      if (SavedRegs.test(SuperReg)) {
         SavedSuper = true;
         break;
       }
