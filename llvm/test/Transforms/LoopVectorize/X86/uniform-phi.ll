@@ -74,8 +74,12 @@ for.end:
 }
 
 ; CHECK-LABEL: PR38786
-; Check that first order recurrence phis (%phi32 and %phi64) are not uniform.
-; CHECK-NOT: LV: Found uniform instruction:   %phi
+; For %phi64, either a first-order recurrence or a versioned induction could
+; be used. As it is used in pointer computations, LAA will already generate
+; SCEV checks to ensure it is an AddRec, so there is no extra cost of using a
+; versioned induction. Using an induction results in better codegen.
+; CHECK: LV: Found uniform instruction:   %phi
+; CHECK-NOT: VPFirstOrderRecurrence
 define void @PR38786(ptr %y, ptr %x, i64 %n) {
 entry:
   br label %for.body
