@@ -292,8 +292,10 @@ private:
 
 } // namespace clang::ssaf
 
-LLVM_DECLARE_REGISTRY(llvm::Registry<clang::ssaf::JSONFormat::FormatInfo>)
-LLVM_DECLARE_REGISTRY(
+LLVM_DECLARE_REGISTRY_EX(CLANG_ABI_EXPORT,
+                         llvm::Registry<clang::ssaf::JSONFormat::FormatInfo>)
+LLVM_DECLARE_REGISTRY_EX(
+    CLANG_ABI_EXPORT,
     llvm::Registry<clang::ssaf::JSONFormat::AnalysisResultRegistry::Codec>)
 
 #endif // LLVM_CLANG_SCALABLESTATICANALYSIS_CORE_SERIALIZATION_JSONFORMAT_H
