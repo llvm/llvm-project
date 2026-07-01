@@ -401,12 +401,19 @@ public:
     const TargetSubtargetInfo *CalleeSTI = TM.getSubtargetImpl(*Callee);
     FeatureBitset InlineIgnoreFeatures = CallerSTI->getInlineIgnoreFeatures();
     FeatureBitset InlineInverseFeatures = CallerSTI->getInlineInverseFeatures();
+    FeatureBitset InlineMustMatchFeatures =
+        CallerSTI->getInlineMustMatchFeatures();
+
     FeatureBitset CallerBits =
         (CallerSTI->getFeatureBits() ^ InlineInverseFeatures) &
         ~InlineIgnoreFeatures;
     FeatureBitset CalleeBits =
         (CalleeSTI->getFeatureBits() ^ InlineInverseFeatures) &
         ~InlineIgnoreFeatures;
+
+    if ((CallerBits & InlineMustMatchFeatures) !=
+        (CalleeBits & InlineMustMatchFeatures))
+      return false;
 
     // Inline a callee if its target-features are a subset of the callers
     // target-features.
@@ -1050,7 +1057,10 @@ public:
     }
   }
 
-  unsigned getMaxInterleaveFactor(ElementCount VF) const override { return 1; }
+  unsigned getMaxInterleaveFactor(ElementCount VF,
+                                  bool HasUnorderedReductions) const override {
+    return 1;
+  }
 
   InstructionCost getArithmeticInstrCost(
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
