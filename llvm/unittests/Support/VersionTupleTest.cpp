@@ -108,7 +108,7 @@ TEST(VersionTuple, DenseMapInfo) {
   VersionTuple VT17_0(17, 0);
 
   // In C++, if two objects are equal, their hashes should be equal.
-  // DenseMapInfo relies in the same relation for comparing keys.
+  // DenseMapInfo relies on the same relation for comparing keys.
   // If isEqual returns true, getHashValue should return the same value.
   EXPECT_TRUE(DenseMapInfo<VersionTuple>::isEqual(VT16, VT16_0));
   EXPECT_EQ(DenseMapInfo<VersionTuple>::getHashValue(VT16),
