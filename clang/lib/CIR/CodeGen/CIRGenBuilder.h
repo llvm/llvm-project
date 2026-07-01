@@ -561,6 +561,13 @@ public:
   //===--------------------------------------------------------------------===//
   cir::IsFPClassOp createIsFPClass(mlir::Location loc, mlir::Value src,
                                    cir::FPClassTest flags) {
+    // FPClassTest occupies bits 0-9 (fcAllFlags).  Sema rejects an
+    // out-of-range __builtin_isfpclass mask, so any extra bit here is an
+    // internal error; assert and mask it off so lowering stays well-formed.
+    uint32_t raw = static_cast<uint32_t>(flags);
+    uint32_t all = static_cast<uint32_t>(cir::FPClassTest::All);
+    assert((raw & ~all) == 0 && "FPClassTest mask has bits outside 0-9");
+    flags = static_cast<cir::FPClassTest>(raw & all);
     return cir::IsFPClassOp::create(*this, loc, src, flags);
   }
 
@@ -583,7 +590,8 @@ public:
                                isVolatile, isNontemporal,
                                /*alignment=*/align,
                                /*sync_scope=*/cir::SyncScopeKindAttr{},
-                               /*mem_order=*/cir::MemOrderAttr{});
+                               /*mem_order=*/cir::MemOrderAttr{},
+                               /*invariant=*/false);
   }
 
   cir::LoadOp createAlignedLoad(mlir::Location loc, mlir::Type ty,
@@ -596,7 +604,8 @@ public:
                                /*isVolatile=*/false, /*isNontemporal=*/false,
                                alignAttr,
                                /*sync_scope=*/cir::SyncScopeKindAttr{},
-                               /*mem_order=*/cir::MemOrderAttr{});
+                               /*mem_order=*/cir::MemOrderAttr{},
+                               /*invariant=*/false);
   }
 
   cir::LoadOp

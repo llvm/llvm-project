@@ -233,7 +233,8 @@ unsigned X86TTIImpl::getLoadStoreVecRegBitWidth(unsigned) const {
       .getFixedValue();
 }
 
-unsigned X86TTIImpl::getMaxInterleaveFactor(ElementCount VF) const {
+unsigned X86TTIImpl::getMaxInterleaveFactor(ElementCount VF,
+                                            bool HasUnorderedReductions) const {
   // If the loop will not be vectorized, don't interleave the loop.
   // Let regular unroll to unroll the loop, which saves the overflow
   // check and memory check cost.
@@ -5670,6 +5671,18 @@ X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
     { ISD::ADD,   MVT::v32i8,   4 },
   };
 
+  static const CostTblEntry AVX512FCostTbl[] = {
+    { ISD::FADD,  MVT::v8f64,   4 },
+    { ISD::FADD,  MVT::v16f32,  5 },
+    { ISD::ADD,   MVT::v8i64,   4 },
+    { ISD::ADD,   MVT::v16i32,  6 },
+  };
+
+  static const CostTblEntry AVX512BWCostTbl[] = {
+    { ISD::ADD,   MVT::v32i16,  7 },
+    { ISD::ADD,   MVT::v64i8,   4 },
+  };
+
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
   assert(ISD && "Invalid opcode");
 
@@ -5681,6 +5694,14 @@ X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
     MVT MTy = VT.getSimpleVT();
     if (ST->useSLMArithCosts())
       if (const auto *Entry = CostTableLookup(SLMCostTbl, ISD, MTy))
+        return Entry->Cost;
+
+    if (ST->hasBWI())
+      if (const auto *Entry = CostTableLookup(AVX512BWCostTbl, ISD, MTy))
+        return Entry->Cost;
+
+    if (ST->hasAVX512())
+      if (const auto *Entry = CostTableLookup(AVX512FCostTbl, ISD, MTy))
         return Entry->Cost;
 
     if (ST->hasAVX())
@@ -6727,8 +6748,10 @@ bool X86TTIImpl::areInlineCompatible(const Function *Caller,
 
   // Check whether callee features are a subset of caller features
   // (apart from the ignore list).
-  FeatureBitset RealCallerBits = CallerBits & ~InlineFeatureIgnoreList;
-  FeatureBitset RealCalleeBits = CalleeBits & ~InlineFeatureIgnoreList;
+  const FeatureBitset &InlineIgnoreFeatures =
+      CallerSubtarget.getInlineIgnoreFeatures();
+  FeatureBitset RealCallerBits = CallerBits & ~InlineIgnoreFeatures;
+  FeatureBitset RealCalleeBits = CalleeBits & ~InlineIgnoreFeatures;
   if ((RealCallerBits & RealCalleeBits) != RealCalleeBits)
     return false;
 

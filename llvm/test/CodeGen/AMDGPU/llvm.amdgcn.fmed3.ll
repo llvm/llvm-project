@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx600 < %s | FileCheck -check-prefix=GCN %s
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga < %s | FileCheck -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}test_fmed3:
@@ -21,10 +21,20 @@ define amdgpu_kernel void @test_fmed3_srcmods(ptr addrspace(1) %out, float %src0
   ret void
 }
 
+; GCN-LABEL: {{^}}test_fneg_fmed3_no_nnan:
+; GCN: v_med3_f32 [[MED3:v[0-9]+]], s{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+; GCN: v_xor_b32_e32 v{{[0-9]+}}, 0x80000000, [[MED3]]
+define amdgpu_kernel void @test_fneg_fmed3_no_nnan(ptr addrspace(1) %out, float %src0, float %src1, float %src2) #1 {
+  %med3 = call float @llvm.amdgcn.fmed3.f32(float %src0, float %src1, float %src2)
+  %neg.med3 = fneg float %med3
+  store float %neg.med3, ptr addrspace(1) %out
+  ret void
+}
+
 ; GCN-LABEL: {{^}}test_fneg_fmed3:
 ; GCN: v_med3_f32 v{{[0-9]+}}, -s{{[0-9]+}}, -v{{[0-9]+}}, -v{{[0-9]+}}
 define amdgpu_kernel void @test_fneg_fmed3(ptr addrspace(1) %out, float %src0, float %src1, float %src2) #1 {
-  %med3 = call float @llvm.amdgcn.fmed3.f32(float %src0, float %src1, float %src2)
+  %med3 = call nnan float @llvm.amdgcn.fmed3.f32(float %src0, float %src1, float %src2)
   %neg.med3 = fsub float -0.0, %med3
   store float %neg.med3, ptr addrspace(1) %out
   ret void
@@ -34,7 +44,7 @@ define amdgpu_kernel void @test_fneg_fmed3(ptr addrspace(1) %out, float %src0, f
 ; GCN: v_med3_f32 [[MED3:v[0-9]+]], -s{{[0-9]+}}, -v{{[0-9]+}}, -v{{[0-9]+}}
 ; GCN: v_mul_f32_e32 v{{[0-9]+}}, -4.0, [[MED3]]
 define amdgpu_kernel void @test_fneg_fmed3_multi_use(ptr addrspace(1) %out, float %src0, float %src1, float %src2) #1 {
-  %med3 = call float @llvm.amdgcn.fmed3.f32(float %src0, float %src1, float %src2)
+  %med3 = call nnan float @llvm.amdgcn.fmed3.f32(float %src0, float %src1, float %src2)
   %neg.med3 = fsub float -0.0, %med3
   %med3.user = fmul float %med3, 4.0
   store volatile float %med3.user, ptr addrspace(1) %out
@@ -56,7 +66,7 @@ define amdgpu_kernel void @test_fabs_fmed3(ptr addrspace(1) %out, float %src0, f
 ; GCN: v_bfrev_b32_e32 [[NEG0:v[0-9]+]], 1
 ; GCN: v_med3_f32 v{{[0-9]+}}, -s{{[0-9]+}}, -v{{[0-9]+}}, [[NEG0]]
 define amdgpu_kernel void @test_fneg_fmed3_rr_0(ptr addrspace(1) %out, float %src0, float %src1) #1 {
-  %med3 = call float @llvm.amdgcn.fmed3.f32(float %src0, float %src1, float 0.0)
+  %med3 = call nnan float @llvm.amdgcn.fmed3.f32(float %src0, float %src1, float 0.0)
   %neg.med3 = fsub float -0.0, %med3
   store float %neg.med3, ptr addrspace(1) %out
   ret void
@@ -68,7 +78,7 @@ define amdgpu_kernel void @test_fneg_fmed3_rr_0(ptr addrspace(1) %out, float %sr
 ; GCN: v_med3_f32 [[MED3:v[0-9]+]], -s{{[0-9]+}}, -v{{[0-9]+}}, [[NEG0]]
 ; GCN: v_mul_f32_e32 v{{[0-9]+}}, s{{[0-9]+}}, [[MED3]]
 define amdgpu_kernel void @test_fneg_fmed3_rr_0_foldable_user(ptr addrspace(1) %out, float %src0, float %src1, float %mul.arg) #1 {
-  %med3 = call float @llvm.amdgcn.fmed3.f32(float %src0, float %src1, float 0.0)
+  %med3 = call nnan float @llvm.amdgcn.fmed3.f32(float %src0, float %src1, float 0.0)
   %neg.med3 = fsub float -0.0, %med3
   %mul = fmul float %neg.med3, %mul.arg
   store float %mul, ptr addrspace(1) %out
@@ -80,7 +90,7 @@ define amdgpu_kernel void @test_fneg_fmed3_rr_0_foldable_user(ptr addrspace(1) %
 ; GCN-DAG: v_mov_b32_e32 [[NEG_INV:v[0-9]+]], 0xbe22f983
 ; GCN: v_med3_f32 v{{[0-9]+}}, -s{{[0-9]+}}, [[NEG_INV]], [[NEG0]]
 define amdgpu_kernel void @test_fneg_fmed3_r_inv2pi_0(ptr addrspace(1) %out, float %src0) #1 {
-  %med3 = call float @llvm.amdgcn.fmed3.f32(float %src0, float 0x3FC45F3060000000, float 0.0)
+  %med3 = call nnan float @llvm.amdgcn.fmed3.f32(float %src0, float 0x3FC45F3060000000, float 0.0)
   %neg.med3 = fsub float -0.0, %med3
   store float %neg.med3, ptr addrspace(1) %out
   ret void
@@ -92,7 +102,7 @@ define amdgpu_kernel void @test_fneg_fmed3_r_inv2pi_0(ptr addrspace(1) %out, flo
 ; GCN: v_med3_f32 [[MED3:v[0-9]+]], -s{{[0-9]+}}, [[NEG_INV]], [[NEG0]]
 ; GCN: v_mul_f32_e32 v{{[0-9]+}}, s{{[0-9]+}}, [[MED3]]
 define amdgpu_kernel void @test_fneg_fmed3_r_inv2pi_0_foldable_user(ptr addrspace(1) %out, float %src0, float %mul.arg) #1 {
-  %med3 = call float @llvm.amdgcn.fmed3.f32(float %src0, float 0x3FC45F3060000000, float 0.0)
+  %med3 = call nnan float @llvm.amdgcn.fmed3.f32(float %src0, float 0x3FC45F3060000000, float 0.0)
   %neg.med3 = fsub float -0.0, %med3
   %mul = fmul float %neg.med3, %mul.arg
   store float %mul, ptr addrspace(1) %out

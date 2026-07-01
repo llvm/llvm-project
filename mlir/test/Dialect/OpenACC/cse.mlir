@@ -16,3 +16,18 @@ func.func @cse_across_acc_set(%a: memref<10xf32>, %i: index) -> (f32, f32) {
   // CHECK: return %[[V]], %[[V]] : f32, f32
   return %v1, %v2 : f32, f32
 }
+
+// -----
+
+// Two identical acc.gpu_shared_memory ops must not be CSE'd: each reserves a
+// distinct workgroup-memory slot.
+// CHECK-LABEL: @cse_gpu_shared_memory_not_merged
+func.func @cse_gpu_shared_memory_not_merged() -> (memref<8xf32, #gpu.address_space<workgroup>>, memref<8xf32, #gpu.address_space<workgroup>>) {
+  %0 = acc.gpu_shared_memory {num_copies = 1 : i64, static_upper_bound_bytes = 256 : i64}
+      : () -> memref<8xf32, #gpu.address_space<workgroup>>
+  %1 = acc.gpu_shared_memory {num_copies = 1 : i64, static_upper_bound_bytes = 256 : i64}
+      : () -> memref<8xf32, #gpu.address_space<workgroup>>
+  // CHECK: acc.gpu_shared_memory
+  // CHECK: acc.gpu_shared_memory
+  return %0, %1 : memref<8xf32, #gpu.address_space<workgroup>>, memref<8xf32, #gpu.address_space<workgroup>>
+}

@@ -144,19 +144,19 @@ void AMDGPUAsmPrinter::initTargetStreamer(Module &M) {
   if (getTargetStreamer() && !getTargetStreamer()->getTargetID())
     initializeTargetID(M);
 
-  if (TM.getTargetTriple().getOS() != Triple::AMDHSA &&
-      TM.getTargetTriple().getOS() != Triple::AMDPAL)
+  const Triple &TT = M.getTargetTriple();
+  if (TT.getOS() != Triple::AMDHSA && TT.getOS() != Triple::AMDPAL)
     return;
 
   getTargetStreamer()->EmitDirectiveAMDGCNTarget();
 
-  if (TM.getTargetTriple().getOS() == Triple::AMDHSA) {
+  if (TT.getOS() == Triple::AMDHSA) {
     getTargetStreamer()->EmitDirectiveAMDHSACodeObjectVersion(
         CodeObjectVersion);
     HSAMetadataStream->begin(M, *getTargetStreamer()->getTargetID());
   }
 
-  if (TM.getTargetTriple().getOS() == Triple::AMDPAL)
+  if (TT.getOS() == Triple::AMDPAL)
     getTargetStreamer()->getPALMetadata()->readFromIR(M);
 }
 
@@ -165,12 +165,13 @@ void AMDGPUAsmPrinter::emitEndOfAsmFile(Module &M) {
   if (!IsTargetStreamerInitialized)
     initTargetStreamer(M);
 
-  if (TM.getTargetTriple().getOS() != Triple::AMDHSA)
+  const Triple &TT = M.getTargetTriple();
+  if (TT.getOS() != Triple::AMDHSA)
     getTargetStreamer()->EmitISAVersion();
 
   // Emit HSA Metadata (NT_AMD_AMDGPU_HSA_METADATA).
   // Emit HSA Metadata (NT_AMD_HSA_METADATA).
-  if (TM.getTargetTriple().getOS() == Triple::AMDHSA) {
+  if (TT.getOS() == Triple::AMDHSA) {
     HSAMetadataStream->end();
     bool Success = HSAMetadataStream->emitTo(*getTargetStreamer());
     (void)Success;
@@ -399,9 +400,10 @@ void AMDGPUAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
 }
 
 bool AMDGPUAsmPrinter::doInitialization(Module &M) {
+  const llvm::Triple &TT = M.getTargetTriple();
   CodeObjectVersion = AMDGPU::getAMDHSACodeObjectVersion(M);
 
-  if (TM.getTargetTriple().getOS() == Triple::AMDHSA) {
+  if (TT.getOS() == Triple::AMDHSA) {
     switch (CodeObjectVersion) {
     case AMDGPU::AMDHSA_COV4:
       HSAMetadataStream = std::make_unique<HSAMD::MetadataStreamerMsgPackV4>();
@@ -713,14 +715,15 @@ void AMDGPUAsmPrinter::emitAMDGPUInfo(Module &M) {
 }
 
 bool AMDGPUAsmPrinter::doFinalization(Module &M) {
+  const Triple &TT = M.getTargetTriple();
+
   // Pad with s_code_end to help tools and guard against instruction prefetch
   // causing stale data in caches. Arguably this should be done by the linker,
   // which is why this isn't done for Mesa.
   // Don't do it if there is no code.
   const MCSubtargetInfo &STI = *getGlobalSTI();
   if ((AMDGPU::isGFX10Plus(STI) || AMDGPU::isGFX90A(STI)) &&
-      (STI.getTargetTriple().getOS() == Triple::AMDHSA ||
-       STI.getTargetTriple().getOS() == Triple::AMDPAL)) {
+      (TT.getOS() == Triple::AMDHSA || TT.getOS() == Triple::AMDPAL)) {
     MCSection *TextSect = getObjFileLowering().getTextSection();
     if (TextSect->hasInstructions()) {
       OutStreamer->switchSection(TextSect);

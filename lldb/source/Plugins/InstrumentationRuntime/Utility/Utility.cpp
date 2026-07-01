@@ -23,7 +23,7 @@ GetPreferredAsanModule(const Target &target) {
   lldb::ModuleSP module;
   llvm::Regex pattern(R"(libclang_rt\.asan_.*_dynamic\.dylib)");
   target.GetImages().ForEach([&](const lldb::ModuleSP &m) {
-    if (pattern.match(m->GetFileSpec().GetFilename().GetStringRef())) {
+    if (pattern.match(m->GetFileSpec().GetFilename())) {
       module = m;
       return IterationAction::Stop;
     }

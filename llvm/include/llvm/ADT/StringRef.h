@@ -575,6 +575,12 @@ public:
   /// Convert the given ASCII string to uppercase.
   [[nodiscard]] LLVM_ABI std::string upper() const;
 
+  /// Returns this StringRef or a default value if this StringRef is empty.
+  [[nodiscard]] constexpr StringRef nonEmptyOr(llvm::StringRef Str) const {
+    assert(!Str.empty() && "nonEmptyOr should not have an empty default!");
+    return empty() ? Str : *this;
+  }
+
   /// @}
   /// @name Substring Operations
   /// @{

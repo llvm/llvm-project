@@ -18,6 +18,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringTable.h"
 #include "llvm/Support/VersionTuple.h"
 #include <string>
 
@@ -239,7 +240,7 @@ namespace FPEncoding {
 } // namespace FPEncoding
 
 struct ExtendedBuiltin {
-  StringRef Name;
+  StringTable::Offset Name;
   InstructionSet::InstructionSet Set;
   uint32_t Number;
 };

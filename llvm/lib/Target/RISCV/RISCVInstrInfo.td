@@ -1956,7 +1956,9 @@ def PseudoLA_TLS_GD : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
                              "la.tls.gd", "$dst, $src">;
 
 let hasSideEffects = 0, mayLoad = 1, mayStore = 0, Size = 32 in
-def PseudoLA_TLSDESC : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), []>;
+def PseudoLA_TLSDESC : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), []> {
+  let Defs = [X5, X10];
+}
 
 def TLSDESCCallSymbol : AsmOperandClass {
   let Name = "TLSDESCCallSymbol";

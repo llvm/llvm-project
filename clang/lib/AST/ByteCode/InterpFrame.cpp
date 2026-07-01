@@ -287,6 +287,7 @@ SourceInfo InterpFrame::getSource(CodePtr PC) const {
   SourceInfo Result = S.getSource(Func, PC);
   if (Result.getLoc().isInvalid() && Caller)
     return Caller->getSource(RetPC);
+
   return Result;
 }
 

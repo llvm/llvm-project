@@ -414,4 +414,39 @@ TEST_F(SuppressionMappingTest, ParsingRespectsOtherWarningOpts) {
   clang::ProcessWarningOptions(Diags, Diags.getDiagnosticOptions(), *FS);
   EXPECT_THAT(diags(), IsEmpty());
 }
+
+#ifdef _WIN32
+TEST_F(SuppressionMappingTest, CanonicalizesSlashesOnWindows) {
+  llvm::StringLiteral SuppressionMappingFile = R"(#!special-case-list-v4
+  [unused]
+  src:*clang/*
+  src:*clang/lib/Sema/*=emit
+  src:*clang/lib\\Sema/foo*
+  fun:suppress/me)";
+  Diags.getDiagnosticOptions().DiagnosticSuppressionMappingsFile = "foo.txt";
+  FS->addFile("foo.txt", /*ModificationTime=*/{},
+              llvm::MemoryBuffer::getMemBuffer(SuppressionMappingFile));
+  clang::ProcessWarningOptions(Diags, Diags.getDiagnosticOptions(), *FS);
+  EXPECT_THAT(diags(), IsEmpty());
+
+  EXPECT_TRUE(Diags.isSuppressedViaMapping(
+      diag::warn_unused_function, locForFile(R"(clang/lib/Basic/bar.h)")));
+  EXPECT_TRUE(Diags.isSuppressedViaMapping(
+      diag::warn_unused_function, locForFile(R"(clang/lib/Basic\bar.h)")));
+  EXPECT_TRUE(Diags.isSuppressedViaMapping(
+      diag::warn_unused_function, locForFile(R"(clang\lib/Basic/bar.h)")));
+  EXPECT_FALSE(Diags.isSuppressedViaMapping(
+      diag::warn_unused_function, locForFile(R"(clang/lib/Sema/baz.h)")));
+  EXPECT_FALSE(Diags.isSuppressedViaMapping(
+      diag::warn_unused_function, locForFile(R"(clang/lib/Sema\baz.h)")));
+
+  // Under slash-agnostic matching, backslashes and forward slashes match each
+  // other, so we match the third pattern.
+  EXPECT_TRUE(Diags.isSuppressedViaMapping(
+      diag::warn_unused_function, locForFile(R"(clang\lib\Sema/foo.h)")));
+  EXPECT_TRUE(Diags.isSuppressedViaMapping(
+      diag::warn_unused_function, locForFile(R"(clang/lib/Sema/foo.h)")));
+}
+#endif
+
 } // namespace

@@ -32,6 +32,32 @@ __attribute__((noinline)) void scs_fputs_stdout(const char *p) {
       : "x0", "x1", "x2", "x8");
 }
 
+#elif defined(__hexagon__)
+#  ifndef __linux__
+#    error Unsupported platform
+#  endif
+
+size_t scs_strlen(const char *p) {
+  size_t retval = 0;
+  while (*p++)
+    retval++;
+  return retval;
+}
+
+__attribute__((noinline)) void scs_fputs_stdout(const char *p) {
+  size_t len = scs_strlen(p);
+  __asm__ __volatile__("{\n\t"
+                       "  r0 = #1\n\t" // fd = stdout
+                       "  r1 = %[buf]\n\t"
+                       "  r2 = %[count]\n\t"
+                       "  r6 = #64\n\t" // __NR_write
+                       "}\n\t"
+                       "trap0(#1)\n\t"
+                       :
+                       : [buf] "r"(p), [count] "r"(len)
+                       : "r0", "r1", "r2", "r6", "memory");
+}
+
 #else
 #error Unsupported platform
 #endif

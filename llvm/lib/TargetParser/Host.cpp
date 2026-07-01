@@ -1385,6 +1385,11 @@ static StringRef getHygonProcessorTypeAndSubtype(unsigned Family,
       *Type = X86::HYGONFAM18H;
       *Subtype = X86::HYGONFAM18H_C86_4G_M7;
       break; // c86-4g-m7
+    case 8:
+      CPU = "c86-4g-m8";
+      *Type = X86::HYGONFAM18H;
+      *Subtype = X86::HYGONFAM18H_C86_4G_M8;
+      break; // c86-4g-m8
     }
     break; // Hygon Family 18H
   default:

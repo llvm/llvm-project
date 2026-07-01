@@ -9,6 +9,7 @@
 ! This module contains CUDA Fortran interfaces used in cudadevice.f90.
 
 module __cuda_device
+  use __cuda_builtins ! implicit dependency, made explicit for CMake
 implicit none
 
 end module

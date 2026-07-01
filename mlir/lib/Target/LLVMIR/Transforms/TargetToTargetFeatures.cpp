@@ -56,12 +56,12 @@ struct TargetToTargetFeaturesPass
     llvm::MCSubtargetInfo const &subTargetInfo =
         (*targetMachine)->getMCSubtargetInfo();
 
-    const std::vector<llvm::SubtargetFeatureKV> enabledFeatures =
+    const std::vector<const llvm::SubtargetFeatureKV *> enabledFeatures =
         subTargetInfo.getEnabledProcessorFeatures();
 
     auto plussedFeatures = llvm::map_to_vector(
-        enabledFeatures, [](llvm::SubtargetFeatureKV feature) {
-          return std::string("+") + feature.Key;
+        enabledFeatures, [](const llvm::SubtargetFeatureKV *feature) {
+          return std::string("+") + feature->key();
         });
 
     auto plussedFeaturesRefs = llvm::map_to_vector(
