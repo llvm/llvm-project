@@ -24,39 +24,48 @@ namespace orc_rt {
 ///
 /// This can be used to simplify the implementation of classes that need to
 /// operate on callable types.
-template <template <typename...> typename ImplT, typename C>
+template <template <bool /* is_const */, typename...> typename ImplT,
+          typename C>
 struct CallableTraitsHelper
     : CallableTraitsHelper<
           ImplT,
           decltype(&std::remove_cv_t<std::remove_reference_t<C>>::operator())> {
 };
 
-template <template <typename...> typename ImplT, typename RetT,
-          typename... ArgTs>
-struct CallableTraitsHelper<ImplT, RetT(ArgTs...)> : ImplT<RetT, ArgTs...> {};
+template <template <bool /* is_const */, typename...> typename ImplT,
+          typename RetT, typename... ArgTs>
+struct CallableTraitsHelper<ImplT, RetT(ArgTs...)>
+    : ImplT</* is_const = */ false, RetT, ArgTs...> {};
 
-template <template <typename...> typename ImplT, typename RetT,
-          typename... ArgTs>
-struct CallableTraitsHelper<ImplT, RetT (*)(ArgTs...)> : ImplT<RetT, ArgTs...> {
-};
+template <template <bool /* is_const */, typename...> typename ImplT,
+          typename RetT, typename... ArgTs>
+struct CallableTraitsHelper<ImplT, RetT(ArgTs...) const>
+    : ImplT</* is_const = */ true, RetT, ArgTs...> {};
 
-template <template <typename...> typename ImplT, typename RetT,
-          typename... ArgTs>
-struct CallableTraitsHelper<ImplT, RetT (&)(ArgTs...)> : ImplT<RetT, ArgTs...> {
-};
+template <template <bool /* is_const */, typename...> typename ImplT,
+          typename RetT, typename... ArgTs>
+struct CallableTraitsHelper<ImplT, RetT (*)(ArgTs...)>
+    : ImplT</* is_const = */ false, RetT, ArgTs...> {};
 
-template <template <typename...> typename ImplT, typename ClassT, typename RetT,
-          typename... ArgTs>
+template <template <bool /* is_const */, typename...> typename ImplT,
+          typename RetT, typename... ArgTs>
+struct CallableTraitsHelper<ImplT, RetT (&)(ArgTs...)>
+    : ImplT</* is_const = */ false, RetT, ArgTs...> {};
+
+template <template <bool /* is_const */, typename...> typename ImplT,
+          typename ClassT, typename RetT, typename... ArgTs>
 struct CallableTraitsHelper<ImplT, RetT (ClassT::*)(ArgTs...)>
-    : ImplT<RetT, ArgTs...> {};
+    : ImplT</* is_const = */ false, RetT, ArgTs...> {};
 
-template <template <typename...> typename ImplT, typename ClassT, typename RetT,
-          typename... ArgTs>
+template <template <bool /* is_const */, typename...> typename ImplT,
+          typename ClassT, typename RetT, typename... ArgTs>
 struct CallableTraitsHelper<ImplT, RetT (ClassT::*)(ArgTs...) const>
-    : ImplT<RetT, ArgTs...> {};
+    : ImplT</* is_const = */ true, RetT, ArgTs...> {};
 
 namespace detail {
-template <typename RetT, typename... ArgTs> struct CallableArgInfoImpl {
+template <bool IsConst, typename RetT, typename... ArgTs>
+struct CallableArgInfoImpl {
+  static constexpr bool is_const = IsConst;
   typedef RetT return_type;
   typedef std::tuple<ArgTs...> args_tuple_type;
 };
