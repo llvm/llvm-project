@@ -52,6 +52,13 @@ public:
   /// @param VRM Rename virtual registers according to map.
   LLVM_ABI void emitDebugValues(VirtRegMap *VRM);
 
+  /// In multi-stage register allocation pipelines (e.g. AMDGPU's
+  /// SGPR → WWM → VGPR), VRM is re-initialized between stages, losing
+  /// mappings from earlier stages. This method captures those mappings into
+  /// the internal UserValue data before VRM is cleared, so that the final
+  /// emitDebugValues only needs to resolve remaining (later-stage) vregs.
+  void resolveAssignedLocations(VirtRegMap *VRM);
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// dump - Print data structures to dbgs().
   void dump() const;

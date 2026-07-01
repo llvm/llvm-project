@@ -1879,7 +1879,10 @@ bool GCNPassConfig::addRegAssignAndRewriteOptimized() {
   // For allocating other whole wave mode registers.
   addPass(createWWMRegAllocPass(true));
   addPass(&SILowerWWMCopiesLegacyID);
-  addPass(createVirtRegRewriter(false));
+  // Skip the LDV resolution as no source-level debug variables reference WWM
+  // vregs.
+  addPass(createVirtRegRewriter(/*ClearVirtRegs=*/false,
+                                /*ResolveDebugLocs=*/false));
   addPass(&AMDGPUReserveWWMRegsLegacyID);
 
   // For allocating per-thread VGPRs.
