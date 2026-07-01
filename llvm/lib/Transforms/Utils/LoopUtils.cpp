@@ -1135,9 +1135,9 @@ constexpr Intrinsic::ID llvm::getReductionIntrinsicID(RecurKind RK) {
   case RecurKind::FMinimum:
     return Intrinsic::vector_reduce_fminimum;
   case RecurKind::FMaximumNum:
-    return Intrinsic::vector_reduce_fmax;
+    return Intrinsic::vector_reduce_fmaximumnum;
   case RecurKind::FMinimumNum:
-    return Intrinsic::vector_reduce_fmin;
+    return Intrinsic::vector_reduce_fminimumnum;
   }
 }
 
@@ -1229,6 +1229,10 @@ Intrinsic::ID llvm::getMinMaxReductionIntrinsicOp(Intrinsic::ID RdxID) {
     return Intrinsic::minimum;
   case Intrinsic::vector_reduce_fmaximum:
     return Intrinsic::maximum;
+  case Intrinsic::vector_reduce_fminimumnum:
+    return Intrinsic::minimumnum;
+  case Intrinsic::vector_reduce_fmaximumnum:
+    return Intrinsic::maximumnum;
   }
 }
 
@@ -1524,10 +1528,12 @@ Value *llvm::getReductionIdentity(Intrinsic::ID RdxID, Type *Ty,
   }
   case Intrinsic::vector_reduce_fmax:
   case Intrinsic::vector_reduce_fmaximum:
+  case Intrinsic::vector_reduce_fmaximumnum:
     Negative = true;
     [[fallthrough]];
   case Intrinsic::vector_reduce_fmin:
-  case Intrinsic::vector_reduce_fminimum: {
+  case Intrinsic::vector_reduce_fminimum:
+  case Intrinsic::vector_reduce_fminimumnum: {
     bool PropagatesNaN = RdxID == Intrinsic::vector_reduce_fminimum ||
                          RdxID == Intrinsic::vector_reduce_fmaximum;
     const fltSemantics &Semantics = Ty->getFltSemantics();

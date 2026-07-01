@@ -522,8 +522,10 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::VECREDUCE_FADD:
   case ISD::VECREDUCE_FMAX:
   case ISD::VECREDUCE_FMAXIMUM:
+  case ISD::VECREDUCE_FMAXIMUMNUM:
   case ISD::VECREDUCE_FMIN:
   case ISD::VECREDUCE_FMINIMUM:
+  case ISD::VECREDUCE_FMINIMUMNUM:
   case ISD::VECREDUCE_FMUL:
   case ISD::CTTZ_ELTS:
   case ISD::CTTZ_ELTS_ZERO_POISON:
@@ -790,8 +792,10 @@ void VectorLegalizer::Promote(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
     return;
   case ISD::VECREDUCE_FMAX:
   case ISD::VECREDUCE_FMAXIMUM:
+  case ISD::VECREDUCE_FMAXIMUMNUM:
   case ISD::VECREDUCE_FMIN:
   case ISD::VECREDUCE_FMINIMUM:
+  case ISD::VECREDUCE_FMINIMUMNUM:
     PromoteFloatVECREDUCE(Node, Results, /*NonArithmetic=*/true);
     return;
   case ISD::VECTOR_COMPRESS:
@@ -1317,6 +1321,8 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
   case ISD::VECREDUCE_FMIN:
   case ISD::VECREDUCE_FMAXIMUM:
   case ISD::VECREDUCE_FMINIMUM:
+  case ISD::VECREDUCE_FMAXIMUMNUM:
+  case ISD::VECREDUCE_FMINIMUMNUM:
     Results.push_back(TLI.expandVecReduce(Node, DAG));
     return;
   case ISD::PARTIAL_REDUCE_UMLA:

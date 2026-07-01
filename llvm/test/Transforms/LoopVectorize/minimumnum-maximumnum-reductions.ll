@@ -24,7 +24,7 @@ define float @maximumnum_intrinsic(ptr readonly %x) {
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[RDX_MINMAX:%.*]] = call <2 x float> @llvm.maximumnum.v2f32(<2 x float> [[TMP3]], <2 x float> [[TMP4]])
-; CHECK-NEXT:    [[TMP6:%.*]] = call float @llvm.vector.reduce.fmax.v2f32(<2 x float> [[RDX_MINMAX]])
+; CHECK-NEXT:    [[TMP6:%.*]] = call float @llvm.vector.reduce.fmaximumnum.v2f32(<2 x float> [[RDX_MINMAX]])
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret float [[TMP6]]
@@ -68,7 +68,7 @@ define float @maximumnum_intrinsic_fast(ptr readonly %x) {
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[RDX_MINMAX:%.*]] = call fast <2 x float> @llvm.maximumnum.v2f32(<2 x float> [[TMP3]], <2 x float> [[TMP4]])
-; CHECK-NEXT:    [[TMP6:%.*]] = call fast float @llvm.vector.reduce.fmax.v2f32(<2 x float> [[RDX_MINMAX]])
+; CHECK-NEXT:    [[TMP6:%.*]] = call fast float @llvm.vector.reduce.fmaximumnum.v2f32(<2 x float> [[RDX_MINMAX]])
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret float [[TMP6]]
@@ -112,7 +112,7 @@ define float @minimumnum_intrinsic(ptr readonly %x) {
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[RDX_MINMAX:%.*]] = call <2 x float> @llvm.minimumnum.v2f32(<2 x float> [[TMP3]], <2 x float> [[TMP4]])
-; CHECK-NEXT:    [[TMP6:%.*]] = call float @llvm.vector.reduce.fmin.v2f32(<2 x float> [[RDX_MINMAX]])
+; CHECK-NEXT:    [[TMP6:%.*]] = call float @llvm.vector.reduce.fminimumnum.v2f32(<2 x float> [[RDX_MINMAX]])
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret float [[TMP6]]
@@ -156,7 +156,7 @@ define float @minimumnum_intrinsic_fast(ptr readonly %x) {
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[RDX_MINMAX:%.*]] = call fast <2 x float> @llvm.minimumnum.v2f32(<2 x float> [[TMP3]], <2 x float> [[TMP4]])
-; CHECK-NEXT:    [[TMP6:%.*]] = call fast float @llvm.vector.reduce.fmin.v2f32(<2 x float> [[RDX_MINMAX]])
+; CHECK-NEXT:    [[TMP6:%.*]] = call fast float @llvm.vector.reduce.fminimumnum.v2f32(<2 x float> [[RDX_MINMAX]])
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret float [[TMP6]]

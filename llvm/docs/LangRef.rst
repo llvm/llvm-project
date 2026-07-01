@@ -21542,6 +21542,62 @@ Arguments:
 """"""""""
 The argument to this intrinsic must be a vector of floating-point values.
 
+.. _int_vector_reduce_fmaximumnum:
+
+'``llvm.vector.reduce.fmaximumnum.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare float @llvm.vector.reduce.fmaximumnum.v4f32(<4 x float> %a)
+      declare double @llvm.vector.reduce.fmaximumnum.v2f64(<2 x double> %a)
+
+Overview:
+"""""""""
+
+The '``llvm.vector.reduce.fmaximumnum.*``' intrinsics do a floating-point
+``MAX`` reduction of a vector, returning the result as a scalar. The return type
+matches the element-type of the vector input.
+
+This instruction has the same comparison and ``nsz`` semantics as the
+'``llvm.maximumnum.*``' intrinsic.
+
+Arguments:
+""""""""""
+The argument to this intrinsic must be a vector of floating-point values.
+
+.. _int_vector_reduce_fminimumnum:
+
+'``llvm.vector.reduce.fminimumnum.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare float @llvm.vector.reduce.fminimumnum.v4f32(<4 x float> %a)
+      declare double @llvm.vector.reduce.fminimumnum.v2f64(<2 x double> %a)
+
+Overview:
+"""""""""
+
+The '``llvm.vector.reduce.fminimumnum.*``' intrinsics do a floating-point
+``MIN`` reduction of a vector, returning the result as a scalar. The return type
+matches the element-type of the vector input.
+
+This instruction has the same comparison and ``nsz`` semantics as the
+'``llvm.minimumnum.*``' intrinsic.
+
+Arguments:
+""""""""""
+The argument to this intrinsic must be a vector of floating-point values.
+
 Vector Partial Reduction Intrinsics
 -----------------------------------
 

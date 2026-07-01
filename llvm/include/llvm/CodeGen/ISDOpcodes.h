@@ -1526,6 +1526,9 @@ enum NodeType {
   /// llvm.minimum and llvm.maximum semantics.
   VECREDUCE_FMAXIMUM,
   VECREDUCE_FMINIMUM,
+  /// Reduction using FMINIMUMNUM/FMAXIMUMNUM.
+  VECREDUCE_FMAXIMUMNUM,
+  VECREDUCE_FMINIMUMNUM,
   /// Integer reductions may have a result type larger than the vector element
   /// type. However, the reduction is performed using the vector element type
   /// and the value in the top bits is unspecified.
