@@ -141,7 +141,7 @@ static lldb::offset_t DumpInstructions(const DataExtractor &DE, Stream *s,
       } else {
         if (!target_sp->HasLoadedSections() ||
             !target_sp->GetImages().ResolveFileAddress(addr, so_addr))
-          so_addr.SetRawAddress(addr);
+          so_addr = Address(addr);
       }
 
       size_t bytes_consumed = disassembler_sp->DecodeInstructions(

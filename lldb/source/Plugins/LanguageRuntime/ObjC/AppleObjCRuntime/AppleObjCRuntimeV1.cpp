@@ -56,7 +56,7 @@ bool AppleObjCRuntimeV1::GetDynamicTypeAndAddress(
     if (class_descriptor && class_descriptor->IsValid() &&
         class_descriptor->GetClassName()) {
       const addr_t object_ptr = in_value.GetPointerValue().address;
-      address.SetRawAddress(object_ptr);
+      address = Address(object_ptr);
       class_type_or_name.SetName(class_descriptor->GetClassName());
     }
   }
