@@ -71,7 +71,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/TargetParser/AArch64TargetParser.h"
 #include "llvm/TargetParser/RISCVISAInfo.h"
@@ -7728,27 +7727,11 @@ CodeGenModule::EmitStaticInitListBackingArray(llvm::Constant *Init,
                                               CharUnits Align) {
   LangAS AddrSpace = GetGlobalConstantAddressSpace();
   auto TargetAS = getContext().getTargetAddressSpace(AddrSpace);
-  llvm::Constant *StoredInit = Init;
-  const llvm::DataLayout &DL = getModule().getDataLayout();
-  uint64_t Size = DL.getTypeAllocSize(Init->getType());
-  uint64_t MergeableSize = llvm::PowerOf2Ceil(std::max<uint64_t>(Size, 4));
-  if (!Init->needsRelocation() && Size > 0 && Size <= 32 &&
-      MergeableSize >= 4 && MergeableSize != Size) {
-    uint64_t PaddingSize = MergeableSize - Size;
-    auto *PaddingTy =
-        llvm::ArrayType::get(llvm::Type::getInt8Ty(getLLVMContext()),
-                             PaddingSize);
-    auto *PaddedTy = llvm::StructType::get(
-        getLLVMContext(), {Init->getType(), PaddingTy}, /*isPacked=*/true);
-    StoredInit = llvm::ConstantStruct::get(
-        PaddedTy, {Init, llvm::ConstantAggregateZero::get(PaddingTy)});
-  }
-
   llvm::GlobalVariable *&Entry = StaticInitListBackingArrayMap[Init];
   if (!Entry) {
     Entry = new llvm::GlobalVariable(
-        getModule(), StoredInit->getType(), /*isConstant=*/true,
-        llvm::GlobalValue::PrivateLinkage, StoredInit, ".init.list",
+        getModule(), Init->getType(), /*isConstant=*/true,
+        llvm::GlobalValue::PrivateLinkage, Init, ".init.list",
         /*InsertBefore=*/nullptr, llvm::GlobalValue::NotThreadLocal, TargetAS);
     Entry->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
   }
