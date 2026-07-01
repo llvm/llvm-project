@@ -38,8 +38,9 @@ define void @test_atomic_load_128_acquire(ptr %addr) {
 define void @test_atomic_load_128_seq_cst(ptr %addr) {
 ; CHECK-LABEL: test_atomic_load_128_seq_cst:
 
-; CHECK: dmb ish
+; CHECK: ldar {{x[0-9]+|xzr}}, [x0]
 ; CHECK: ldp [[LO:x[0-9]+]], [[HI:x[0-9]+]], [x0]
+; CHECK: dmb ish
 ; CHECK: stp [[LO]], [[HI]], [x0]
   %res.3 = load atomic i128, ptr %addr seq_cst, align 16
   store i128 %res.3, ptr %addr
