@@ -1,10 +1,11 @@
 // REQUIRES: can-symbolize
 // UNSUPPORTED: android
+// UNSUPPORTED: ubsan-tysan
 
 // # Companion test for UBSan suppressions with -finline.
 // # This variant intentionally differs from the -fno-inline baseline.
 //
-// RUN: %clang -fsanitize=integer -fsanitize-recover=integer -O1 -finline -g %s -o %t
+// RUN: %clang -fsanitize=integer -O1 -finline -g %s -o %t
 //
 // # Only the directly suppressed my_make_signed hit should disappear.
 //

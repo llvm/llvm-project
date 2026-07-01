@@ -3,7 +3,7 @@
 
 // # Baseline test for UBSan suppressions with -fno-inline.
 //
-// RUN: %clang -fsanitize=integer -fsanitize-recover=integer -O1 -fno-inline -g %s -o %t
+// RUN: %clang -fsanitize=integer -O1 -fno-inline -g %s -o %t
 //
 // # Only the directly suppressed my_make_signed hit should disappear.
 //
