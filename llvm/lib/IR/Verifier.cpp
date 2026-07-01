@@ -99,6 +99,7 @@
 #include "llvm/IR/IntrinsicsARM.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
 #include "llvm/IR/IntrinsicsWebAssembly.h"
+#include "llvm/IR/IntrinsicsX86.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MemoryModelRelaxationAnnotations.h"
 #include "llvm/IR/Metadata.h"
@@ -6834,6 +6835,29 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     Check(cast<ConstantInt>(Call.getArgOperand(2))->getZExtValue() < 2,
           "stream argument to llvm.aarch64.range.prefetch must be 0 or 1",
           Call);
+    break;
+  }
+  case Intrinsic::x86_tilezero:
+  case Intrinsic::x86_tileloadd64:
+  case Intrinsic::x86_tileloaddt164:
+  case Intrinsic::x86_tilestored64: {
+    // AMX provides 8 physical tile registers, TMM0-TMM7; the leading immediate
+    // operand is a tile-register index and so must name one of them.
+    Check(cast<ConstantInt>(Call.getArgOperand(0))->getZExtValue() < 8,
+          "AMX tile register index must be in the range [0, 8)", Call);
+    break;
+  }
+  case Intrinsic::x86_tdpbssd:
+  case Intrinsic::x86_tdpbsud:
+  case Intrinsic::x86_tdpbusd:
+  case Intrinsic::x86_tdpbuud:
+  case Intrinsic::x86_tdpbf16ps:
+  case Intrinsic::x86_tdpfp16ps: {
+    // The destination and two source operands are each a tile-register index
+    // (TMM0-TMM7).
+    for (unsigned I : {0, 1, 2})
+      Check(cast<ConstantInt>(Call.getArgOperand(I))->getZExtValue() < 8,
+            "AMX tile register index must be in the range [0, 8)", Call);
     break;
   }
   case Intrinsic::callbr_landingpad: {
