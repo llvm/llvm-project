@@ -1,1 +1,0 @@
-zsh: command not found: -std=c++20

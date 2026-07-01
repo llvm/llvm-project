@@ -2399,10 +2399,9 @@ public:
   llvm::Expected<SourceLocation::UIntTy> readSLocOffset(ModuleFile *F,
                                                         unsigned Index);
 
-  /// Walk module \p F's SLoc entry records (read-only). Fills \p Offsets[i]
+  /// Walk module F's SLoc entry records (read-only). Fills Offsets[i]
   /// with each entry's local offset and \p Files[i] with its FileEntry (null
   /// for non-file entries). Returns false if the records couldn't be read.
-  /// Shared scaffolding for source-location de-duplication.
   bool scanLoadedSLocEntries(ModuleFile &F,
                              SmallVectorImpl<uint32_t> &Offsets,
                              SmallVectorImpl<const FileEntry *> &Files);
