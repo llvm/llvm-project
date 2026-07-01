@@ -292,6 +292,9 @@ llvm::Expected<size_t> PipeWindows::Read(void *buf, size_t size,
 
   DWORD failure_error = ::GetLastError();
   switch (failure_error) {
+  // A closed write end is EOF, not an error. POSIX read() returns 0
+  // in this case. Mirror that so cross-platform callers can detect EOF
+  // uniformly.
   case ERROR_BROKEN_PIPE:
   case ERROR_HANDLE_EOF:
     return 0;
@@ -328,6 +331,7 @@ llvm::Expected<size_t> PipeWindows::Read(void *buf, size_t size,
   // already waited as long as we're willing to.
   if (!::GetOverlappedResult(m_read, &m_read_overlapped, &bytes_read, FALSE)) {
     DWORD overlapped_error = ::GetLastError();
+    // See above: a closed write end is end-of-file, not an error.
     if (overlapped_error == ERROR_BROKEN_PIPE ||
         overlapped_error == ERROR_HANDLE_EOF)
       return 0;
