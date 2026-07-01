@@ -110,10 +110,6 @@ InstructionSelector::ComplexRendererFns
 WebAssemblyInstructionSelector::selectAddrOperands(LLT AddrType,
                                                    unsigned int ConstOpc,
                                                    MachineOperand &Root) const {
-
-  if (!Root.isReg())
-    return std::nullopt;
-
   return {{
       [=](MachineInstrBuilder &MIB) { MIB.addImm(0); },
       [=](MachineInstrBuilder &MIB) { MIB.addReg(Root.getReg()); },
@@ -201,9 +197,6 @@ bool WebAssemblyInstructionSelector::select(MachineInstr &I) {
 
   using namespace TargetOpcode;
 
-  auto PointerWidth = MF.getDataLayout().getPointerSizeInBits();
-  auto PtrIsI64 = PointerWidth == 64;
-
   switch (I.getOpcode()) {
   case G_IMPLICIT_DEF: {
     const Register DefReg = I.getOperand(0).getReg();
@@ -218,43 +211,36 @@ bool WebAssemblyInstructionSelector::select(MachineInstr &I) {
     return RBI.constrainGenericRegister(DefReg, *DefRC, MRI) != nullptr;
   }
   case G_PTRTOINT: {
-    assert(MRI.getType(I.getOperand(1).getReg()).isPointer() &&
-           "G_PTRTOINT selection with non-pointer?");
+    bool PtrIsI64 = MRI.getType(I.getOperand(1).getReg()).getSizeInBits() == 64;
 
     I.setDesc(
         TII.get(PtrIsI64 ? WebAssembly::COPY_I64 : WebAssembly::COPY_I32));
     constrainSelectedInstRegOperands(I, TII, TRI, RBI);
-
     return true;
   }
   case G_INTTOPTR: {
-    assert(MRI.getType(I.getOperand(0).getReg()).isPointer() &&
-           "G_INTTOPTR selection with non-pointer?");
+    bool PtrIsI64 = MRI.getType(I.getOperand(0).getReg()).getSizeInBits() == 64;
 
     I.setDesc(
         TII.get(PtrIsI64 ? WebAssembly::COPY_I64 : WebAssembly::COPY_I32));
     constrainSelectedInstRegOperands(I, TII, TRI, RBI);
-
     return true;
   }
   case G_PTRMASK: {
-    assert(MRI.getType(I.getOperand(0).getReg()).isPointer() &&
-           "G_PTRMASK selection with non-pointer?");
+    bool PtrIsI64 = MRI.getType(I.getOperand(0).getReg()).getSizeInBits() == 64;
 
     I.setDesc(TII.get(PtrIsI64 ? WebAssembly::AND_I64 : WebAssembly::AND_I32));
     constrainSelectedInstRegOperands(I, TII, TRI, RBI);
-
     return true;
   }
   case G_GLOBAL_VALUE: {
     assert(I.getOperand(1).getTargetFlags() == 0 &&
            "Unexpected target flags on generic G_GLOBAL_VALUE instruction");
-    assert(WebAssembly::isValidAddressSpace(
-               MRI.getType(I.getOperand(0).getReg()).getAddressSpace()) &&
-           "Invalid address space for WebAssembly target");
 
     unsigned OperandFlags = 0;
     const llvm::GlobalValue *GV = I.getOperand(1).getGlobal();
+    LLT PtrTy = MRI.getType(I.getOperand(0).getReg());
+    bool PtrIsI64 = PtrTy.getSizeInBits() == 64;
 
     if (TLI.isPositionIndependent()) {
       if (TM.shouldAssumeDSOLocal(GV)) {
@@ -268,14 +254,13 @@ bool WebAssemblyInstructionSelector::select(MachineInstr &I) {
         }
         MachineIRBuilder B(I);
 
-        auto MemBase =
-            MRI.createGenericVirtualRegister(LLT::pointer(0, PointerWidth));
-        MRI.setRegClass(MemBase, PtrIsI64 ? &WebAssembly::I64RegClass
-                                          : &WebAssembly::I32RegClass);
-        auto Offset =
-            MRI.createGenericVirtualRegister(LLT::pointer(0, PointerWidth));
-        MRI.setRegClass(Offset, PtrIsI64 ? &WebAssembly::I64RegClass
-                                         : &WebAssembly::I32RegClass);
+        Register MemBase = MRI.createVirtualRegister(
+            PtrIsI64 ? &WebAssembly::I64RegClass : &WebAssembly::I32RegClass);
+        MRI.setType(MemBase, PtrTy);
+
+        Register Offset = MRI.createVirtualRegister(
+            PtrIsI64 ? &WebAssembly::I64RegClass : &WebAssembly::I32RegClass);
+        MRI.setType(Offset, PtrTy);
 
         B.buildInstr(PtrIsI64 ? WebAssembly::GLOBAL_GET_I64
                               : WebAssembly::GLOBAL_GET_I32)
@@ -299,7 +284,8 @@ bool WebAssemblyInstructionSelector::select(MachineInstr &I) {
       OperandFlags = WebAssemblyII::MO_GOT;
     }
 
-    auto NewOpc = PtrIsI64 ? WebAssembly::CONST_I64 : WebAssembly::CONST_I32;
+    unsigned NewOpc =
+        PtrIsI64 ? WebAssembly::CONST_I64 : WebAssembly::CONST_I32;
 
     if (OperandFlags & WebAssemblyII::MO_GOT) {
       NewOpc =
