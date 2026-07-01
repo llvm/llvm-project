@@ -2900,6 +2900,74 @@ int testDominanceInfo(MlirContext ctx) {
   return 0;
 }
 
+int testOperationEquivalence(MlirContext ctx) {
+  fprintf(stderr, "@testOperationEquivalence\n");
+  // CHECK-LABEL: @testOperationEquivalence
+
+  mlirContextGetOrLoadDialect(ctx, mlirStringRefCreateFromCString("arith"));
+
+  const char *moduleStr = "func.func @f(%arg0: i32) -> i32 {\n"
+                          "  %0 = arith.constant 42 : i32\n"
+                          "  %1 = arith.constant 42 : i32\n"
+                          "  %2 = arith.constant 7 : i32\n"
+                          "  %3 = arith.subi %0, %2 : i32\n"
+                          "  %4 = arith.subi %0, %2 : i32\n"
+                          "  %5 = arith.subi %2, %0 : i32\n"
+                          "  return %0 : i32\n"
+                          "}\n";
+  MlirModule module =
+      mlirModuleCreateParse(ctx, mlirStringRefCreateFromCString(moduleStr));
+
+  MlirBlock moduleBody = mlirModuleGetBody(module);
+  MlirOperation funcOp = mlirBlockGetFirstOperation(moduleBody);
+  MlirRegion funcRegion = mlirOperationGetRegion(funcOp, 0);
+  MlirBlock funcBody = mlirRegionGetFirstBlock(funcRegion);
+
+  MlirOperation c42a = mlirBlockGetFirstOperation(funcBody);
+  MlirOperation c42b = mlirOperationGetNextInBlock(c42a);
+  MlirOperation c7 = mlirOperationGetNextInBlock(c42b);
+  MlirOperation sub3 = mlirOperationGetNextInBlock(c7);
+  MlirOperation sub4 = mlirOperationGetNextInBlock(sub3);
+  MlirOperation sub5 = mlirOperationGetNextInBlock(sub4);
+
+  // Two identical constants are structurally equivalent when locations are
+  // ignored, even though their result SSA values and source locations differ.
+  assert(mlirOperationIsStructurallyEquivalent(
+      c42a, c42b, MLIR_OPERATION_EQUIVALENCE_IGNORE_LOCATIONS));
+
+  // Without ignoring locations they differ, since they sit on distinct lines.
+  assert(!mlirOperationIsStructurallyEquivalent(
+      c42a, c42b, MLIR_OPERATION_EQUIVALENCE_NONE));
+
+  // A constant with a different value is not equivalent.
+  assert(!mlirOperationIsStructurallyEquivalent(
+      c42a, c7, MLIR_OPERATION_EQUIVALENCE_IGNORE_LOCATIONS));
+
+  // Equivalence is reflexive.
+  assert(mlirOperationIsStructurallyEquivalent(
+      c42a, c42a, MLIR_OPERATION_EQUIVALENCE_IGNORE_LOCATIONS));
+
+  // `%3 = subi %0, %2` and `%4 = subi %0, %2` use the exact same operands, so
+  // they are equivalent.
+  assert(mlirOperationIsStructurallyEquivalent(
+      sub3, sub4, MLIR_OPERATION_EQUIVALENCE_IGNORE_LOCATIONS));
+
+  // `%5 = subi %2, %0` swaps the operands; since subi is not commutative this
+  // is not equivalent to `%3 = subi %0, %2`.
+  assert(!mlirOperationIsStructurallyEquivalent(
+      sub3, sub5, MLIR_OPERATION_EQUIVALENCE_IGNORE_LOCATIONS));
+
+  // A constant and a subtraction are different operations.
+  assert(!mlirOperationIsStructurallyEquivalent(
+      c42a, sub3, MLIR_OPERATION_EQUIVALENCE_IGNORE_LOCATIONS));
+
+  mlirModuleDestroy(module);
+
+  // CHECK: testOperationEquivalence: PASSED
+  fprintf(stderr, "testOperationEquivalence: PASSED\n");
+  return 0;
+}
+
 int main(void) {
   MlirContext ctx = mlirContextCreate();
   registerAllUpstreamDialects(ctx);
@@ -2955,6 +3023,8 @@ int main(void) {
     return 19;
   if (testDominanceInfo(ctx))
     return 20;
+  if (testOperationEquivalence(ctx))
+    return 21;
 
   // CHECK: DESTROY MAIN CONTEXT
   // CHECK: reportResourceDelete: resource_i64_blob
