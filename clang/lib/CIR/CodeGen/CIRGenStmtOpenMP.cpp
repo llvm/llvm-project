@@ -22,7 +22,16 @@
 using namespace clang;
 using namespace clang::CIRGen;
 
-namespace {
+mlir::LogicalResult
+CIRGenFunction::emitOMPScopeDirective(const OMPScopeDirective &s) {
+  getCIRGenModule().errorNYI(s.getSourceRange(), "OpenMP OMPScopeDirective");
+  return mlir::failure();
+}
+mlir::LogicalResult
+CIRGenFunction::emitOMPErrorDirective(const OMPErrorDirective &s) {
+  getCIRGenModule().errorNYI(s.getSourceRange(), "OpenMP OMPErrorDirective");
+  return mlir::failure();
+}
 
 /// Returns the subset of \p s's clauses that are allowed on the given leaf
 /// directive.
@@ -36,40 +45,6 @@ getLeafClauses(CIRGenFunction &cgf, const OMPExecutableDirective &s,
                                                version))
       result.push_back(c);
   return result;
-}
-
-/// Check for unsupported implicit captures in a target region.
-static void
-emitOMPTargetImplicitCaptures(CIRGenFunction &cgf,
-                              const OMPExecutableDirective &s,
-                              llvm::ArrayRef<const VarDecl *> mapSyms) {
-  const CapturedStmt *cs = s.getCapturedStmt(llvm::omp::OMPD_target);
-  for (const auto &capture : cs->captures()) {
-    if (capture.capturesThis()) {
-      cgf.getCIRGenModule().errorNYI(s.getBeginLoc(),
-                                     "OpenMP target capture of 'this' pointer");
-      continue;
-    }
-    if (capture.capturesVariableByCopy()) {
-      cgf.getCIRGenModule().errorNYI(s.getBeginLoc(),
-                                     "OpenMP target capture by copy");
-      continue;
-    }
-    if (capture.capturesVariableArrayType()) {
-      cgf.getCIRGenModule().errorNYI(
-          s.getBeginLoc(),
-          "OpenMP target capture of variable-length array type");
-      continue;
-    }
-    if (capture.capturesVariable()) {
-      const VarDecl *vd = capture.getCapturedVar();
-      if (llvm::is_contained(mapSyms, vd))
-        continue;
-
-      cgf.getCIRGenModule().errorNYI(s.getBeginLoc(),
-                                     "OpenMP target implicit by-ref capture");
-    }
-  }
 }
 
 /// Create an omp.parallel op for the parallel leaf of \p s and emit \p emitBody
@@ -114,81 +89,6 @@ emitParallelOp(CIRGenFunction &cgf, const DirectiveTy &s, mlir::Location begin,
   return res;
 }
 
-/// Create an omp.target op for the target leaf of \p s and emit \p emitBody
-/// inside its region, remapping mapped variables to the target op's block
-/// arguments. Works for both the standalone 'target' directive and combined
-/// directives that contain a target leaf (e.g. 'target parallel').
-template <typename DirectiveTy>
-static mlir::LogicalResult
-emitTargetOp(CIRGenFunction &cgf, const DirectiveTy &s, mlir::Location begin,
-             mlir::Location end,
-             llvm::function_ref<mlir::LogicalResult()> emitBody) {
-  CIRGenBuilderTy &builder = cgf.getBuilder();
-  CIRGenModule &cgm = cgf.getCIRGenModule();
-
-  llvm::SmallVector<const OMPClause *> clauses =
-      getLeafClauses(cgf, s, llvm::omp::OMPD_target);
-
-  mlir::omp::TargetExtOperands clauseOps;
-  llvm::SmallVector<const VarDecl *> mapSyms;
-
-  OpenMPClauseEmitter ce(cgf, cgm, builder, begin, clauses);
-  ce.emitMap(clauseOps, &mapSyms);
-  ce.emitNYI</*supported=*/OMPMapClause>(
-      /*nyi=*/OpenMPNYIClauseList<
-          OMPAllocateClause, OMPDefaultClause, OMPDefaultmapClause,
-          OMPDependClause, OMPDeviceClause, OMPFirstprivateClause,
-          OMPHasDeviceAddrClause, OMPIfClause, OMPInReductionClause,
-          OMPIsDevicePtrClause, OMPNowaitClause, OMPPrivateClause,
-          OMPThreadLimitClause, OMPUsesAllocatorsClause, OMPXBareClause>{},
-      llvm::omp::Directive::OMPD_target);
-
-  emitOMPTargetImplicitCaptures(cgf, s, mapSyms);
-
-  // Use generic for now.
-  clauseOps.kernelType = mlir::omp::TargetExecModeAttr::get(
-      &cgf.getMLIRContext(), mlir::omp::TargetExecMode::generic);
-
-  auto targetOp = mlir::omp::TargetOp::create(builder, begin, clauseOps);
-
-  mlir::Block &block = targetOp.getRegion().emplaceBlock();
-  for (mlir::Value mapVar : clauseOps.mapVars)
-    block.addArgument(mapVar.getType(), begin);
-
-  mlir::OpBuilder::InsertionGuard guard(builder);
-  builder.setInsertionPointToEnd(&block);
-
-  CIRGenFunction::LexicalScope ls{cgf, begin, builder.getInsertionBlock()};
-
-  llvm::SmallVector<std::pair<const VarDecl *, Address>> savedAddrs;
-  for (auto [idx, vd] : llvm::enumerate(mapSyms)) {
-    Address origAddr = cgf.getAddrOfLocalVar(vd);
-    savedAddrs.push_back({vd, origAddr});
-    mlir::Value blockArg = block.getArgument(idx);
-    cgf.replaceAddrOfLocalVar(vd, Address(blockArg, origAddr.getAlignment()));
-  }
-
-  mlir::LogicalResult res = emitBody();
-  mlir::omp::TerminatorOp::create(builder, end);
-
-  for (auto &[vd, addr] : savedAddrs)
-    cgf.replaceAddrOfLocalVar(vd, addr);
-
-  return res;
-}
-
-} // anonymous namespace
-
-mlir::LogicalResult
-CIRGenFunction::emitOMPScopeDirective(const OMPScopeDirective &s) {
-  getCIRGenModule().errorNYI(s.getSourceRange(), "OpenMP OMPScopeDirective");
-  return mlir::failure();
-}
-mlir::LogicalResult
-CIRGenFunction::emitOMPErrorDirective(const OMPErrorDirective &s) {
-  getCIRGenModule().errorNYI(s.getSourceRange(), "OpenMP OMPErrorDirective");
-  return mlir::failure();
-}
 mlir::LogicalResult
 CIRGenFunction::emitOMPParallelDirective(const OMPParallelDirective &s) {
   mlir::Location begin = getLoc(s.getBeginLoc());
@@ -345,6 +245,103 @@ mlir::LogicalResult
 CIRGenFunction::emitOMPAtomicDirective(const OMPAtomicDirective &s) {
   getCIRGenModule().errorNYI(s.getSourceRange(), "OpenMP OMPAtomicDirective");
   return mlir::failure();
+}
+
+/// Check for unsupported implicit captures in a target region.
+static void
+emitOMPTargetImplicitCaptures(CIRGenFunction &cgf,
+                              const OMPExecutableDirective &s,
+                              llvm::ArrayRef<const VarDecl *> mapSyms) {
+  const CapturedStmt *cs = s.getCapturedStmt(llvm::omp::OMPD_target);
+  for (const auto &capture : cs->captures()) {
+    if (capture.capturesThis()) {
+      cgf.getCIRGenModule().errorNYI(s.getBeginLoc(),
+                                     "OpenMP target capture of 'this' pointer");
+      continue;
+    }
+    if (capture.capturesVariableByCopy()) {
+      cgf.getCIRGenModule().errorNYI(s.getBeginLoc(),
+                                     "OpenMP target capture by copy");
+      continue;
+    }
+    if (capture.capturesVariableArrayType()) {
+      cgf.getCIRGenModule().errorNYI(
+          s.getBeginLoc(),
+          "OpenMP target capture of variable-length array type");
+      continue;
+    }
+    if (capture.capturesVariable()) {
+      const VarDecl *vd = capture.getCapturedVar();
+      if (llvm::is_contained(mapSyms, vd))
+        continue;
+
+      cgf.getCIRGenModule().errorNYI(s.getBeginLoc(),
+                                     "OpenMP target implicit by-ref capture");
+    }
+  }
+}
+
+/// Create an omp.target op for the target leaf of \p s and emit \p emitBody
+/// inside its region, remapping mapped variables to the target op's block
+/// arguments. Works for both the standalone 'target' directive and combined
+/// directives that contain a target leaf (e.g. 'target parallel').
+template <typename DirectiveTy>
+static mlir::LogicalResult
+emitTargetOp(CIRGenFunction &cgf, const DirectiveTy &s, mlir::Location begin,
+             mlir::Location end,
+             llvm::function_ref<mlir::LogicalResult()> emitBody) {
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+  CIRGenModule &cgm = cgf.getCIRGenModule();
+
+  llvm::SmallVector<const OMPClause *> clauses =
+      getLeafClauses(cgf, s, llvm::omp::OMPD_target);
+
+  mlir::omp::TargetExtOperands clauseOps;
+  llvm::SmallVector<const VarDecl *> mapSyms;
+
+  OpenMPClauseEmitter ce(cgf, cgm, builder, begin, clauses);
+  ce.emitMap(clauseOps, &mapSyms);
+  ce.emitNYI</*supported=*/OMPMapClause>(
+      /*nyi=*/OpenMPNYIClauseList<
+          OMPAllocateClause, OMPDefaultClause, OMPDefaultmapClause,
+          OMPDependClause, OMPDeviceClause, OMPFirstprivateClause,
+          OMPHasDeviceAddrClause, OMPIfClause, OMPInReductionClause,
+          OMPIsDevicePtrClause, OMPNowaitClause, OMPPrivateClause,
+          OMPThreadLimitClause, OMPUsesAllocatorsClause, OMPXBareClause>{},
+      llvm::omp::Directive::OMPD_target);
+
+  emitOMPTargetImplicitCaptures(cgf, s, mapSyms);
+
+  // Use generic for now.
+  clauseOps.kernelType = mlir::omp::TargetExecModeAttr::get(
+      &cgf.getMLIRContext(), mlir::omp::TargetExecMode::generic);
+
+  auto targetOp = mlir::omp::TargetOp::create(builder, begin, clauseOps);
+
+  mlir::Block &block = targetOp.getRegion().emplaceBlock();
+  for (mlir::Value mapVar : clauseOps.mapVars)
+    block.addArgument(mapVar.getType(), begin);
+
+  mlir::OpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPointToEnd(&block);
+
+  CIRGenFunction::LexicalScope ls{cgf, begin, builder.getInsertionBlock()};
+
+  llvm::SmallVector<std::pair<const VarDecl *, Address>> savedAddrs;
+  for (auto [idx, vd] : llvm::enumerate(mapSyms)) {
+    Address origAddr = cgf.getAddrOfLocalVar(vd);
+    savedAddrs.push_back({vd, origAddr});
+    mlir::Value blockArg = block.getArgument(idx);
+    cgf.replaceAddrOfLocalVar(vd, Address(blockArg, origAddr.getAlignment()));
+  }
+
+  mlir::LogicalResult res = emitBody();
+  mlir::omp::TerminatorOp::create(builder, end);
+
+  for (auto &[vd, addr] : savedAddrs)
+    cgf.replaceAddrOfLocalVar(vd, addr);
+
+  return res;
 }
 
 mlir::LogicalResult
