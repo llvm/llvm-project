@@ -2692,6 +2692,9 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     break;
   }
   case Intrinsic::pext: {
+    if (SimplifyDemandedInstructionBits(*II))
+      return II;
+
     const APInt *MaskC;
     if (match(II->getArgOperand(1), m_APInt(MaskC))) {
       unsigned MaskIdx, MaskLen;

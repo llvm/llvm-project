@@ -1104,6 +1104,35 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
         break;
       }
 
+      case Intrinsic::pext: {
+        APInt DemandedMaskRHS(APInt::getAllOnes(BitWidth));
+        if (SimplifyDemandedBits(I, 1, DemandedMaskRHS, RHSKnown, Q, Depth + 1))
+          return I;
+
+        APInt DemandedMaskLHS(BitWidth, 0);
+        unsigned M0 = 0, M1 = 0;
+        for (unsigned I = 0; I != BitWidth; ++I) {
+          if (!RHSKnown.Zero[I]) {
+            APInt Range = APInt::getBitsSet(BitWidth, M0, M1 + 1);
+            if (DemandedMask.intersects(Range))
+              DemandedMaskLHS.setBit(I);
+          }
+
+          if (RHSKnown.One[I])
+            ++M0, ++M1;
+          else if (!RHSKnown.Zero[I])
+            ++M1;
+        }
+
+        if (SimplifyDemandedBits(I, 0, DemandedMaskLHS, LHSKnown, Q, Depth + 1))
+          return I;
+
+        Known = KnownBits::pext(LHSKnown, RHSKnown);
+        KnownBitsComputed = true;
+
+        break;
+      }
+
       case Intrinsic::fshr:
       case Intrinsic::fshl: {
         const APInt *SA;
