@@ -15,7 +15,7 @@ flq ft1, 100(a10) # CHECK: :[[@LINE]]:14: error: expected register
 fsgnjn.q fa100, fa2, fa3 # CHECK: :[[@LINE]]:10: error: invalid operand for instruction
 
 # Integer registers where FP regs are expected
-fadd.q a2, a1, a0 # CHECK: :[[@LINE]]:1: error: invalid instruction
+fadd.q a2, a1, a0 # CHECK: :[[@LINE]]:8: error: invalid operand for instruction
 
 # FP registers where integer regs are expected
-fcvt.wu.q ft2, a1 # CHECK: :[[@LINE]]:1: error: invalid instruction
+fcvt.wu.q ft2, a1 # CHECK: :[[@LINE]]:11: error: invalid operand for instruction

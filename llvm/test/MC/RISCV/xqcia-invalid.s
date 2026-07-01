@@ -161,8 +161,8 @@ qc.wrap x3, x30, x0
 qc.wrap x3, x30, x23
 
 
-# CHECK-PLUS: :[[@LINE+2]]:1: error: invalid instruction
-# CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
+# CHECK-PLUS: :[[@LINE+2]]:10: error: register must be a GPR excluding zero (x0)
+# CHECK-MINUS: :[[@LINE+1]]:10: error: register must be a GPR excluding zero (x0)
 qc.wrapi x0, 12, 2047
 
 # CHECK-PLUS: :[[@LINE+2]]:10: error: register must be a GPR excluding zero (x0)

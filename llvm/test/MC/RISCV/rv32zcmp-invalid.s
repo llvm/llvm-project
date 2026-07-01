@@ -1,13 +1,13 @@
 # RUN: not llvm-mc -triple=riscv32 -mattr=zcmp -M no-aliases -show-encoding < %s 2>&1 \
 # RUN:     | FileCheck -check-prefixes=CHECK-ERROR %s
 
-# CHECK-ERROR: :[[@LINE+1]]:1: error: invalid instruction
+# CHECK-ERROR: :[[@LINE+1]]:11: error: invalid operand for instruction
 cm.mvsa01 a1, a2
 
 # CHECK-ERROR: :[[@LINE+1]]:11: error: rs1 and rs2 must be different
 cm.mvsa01 s0, s0
 
-# CHECK-ERROR: :[[@LINE+1]]:1: error: invalid instruction
+# CHECK-ERROR: :[[@LINE+1]]:11: error: invalid operand for instruction
 cm.mva01s a1, a2
 
 # CHECK-ERROR: :[[@LINE+1]]:12: error: invalid register list, '{ra, s0-s10}' or '{x1, x8-x9, x18-x26}' is not supported
@@ -46,7 +46,7 @@ cm.pop {x1, x8-x9, x18-x17}, -40
 # CHECK-ERROR: :[[@LINE+1]]:16: error: register must be 'x9'
 cm.pop {x1, x8-f8, x18-x17}, -40
 
-# CHECK-ERROR: :[[@LINE+1]]:1: error: invalid instruction
+# CHECK-ERROR: :[[@LINE+1]]:9: error: operand must be {ra [, s0[-sN]]} or {x1 [, x8[-x9][, x18[-xN]]]}
 cm.push x1, -16
 
 # CHECK-ERROR: :[[@LINE+1]]:16: error: register must be in the range 's1' to 's11'

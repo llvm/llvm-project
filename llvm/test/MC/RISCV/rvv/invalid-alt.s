@@ -4,7 +4,7 @@
 # RUN:        | FileCheck %s --check-prefix=CHECK-ERROR
 
 vsetvli a2, a0, e32alt, m1, ta, ma
-# CHECK-ERROR: invalid instruction
+# CHECK-ERROR: operand must be e[8|8alt|16|16alt|32|64],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
 
 vsetvli a2, a0, e64alt, m1, ta, ma
-# CHECK-ERROR: invalid instruction
+# CHECK-ERROR: operand must be e[8|8alt|16|16alt|32|64],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]

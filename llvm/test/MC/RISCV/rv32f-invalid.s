@@ -15,10 +15,10 @@ flw ft1, 100(a10) # CHECK: :[[@LINE]]:14: error: expected register
 fsgnjn.s fa100, fa2, fa3 # CHECK: :[[@LINE]]:10: error: invalid operand for instruction
 
 # Integer registers where FP regs are expected
-fmv.x.w fs7, a2 # CHECK: :[[@LINE]]:1: error: invalid instruction
+fmv.x.w fs7, a2 # CHECK: :[[@LINE]]:9: error: invalid operand for instruction
 
 # FP registers where integer regs are expected
-fmv.w.x a8, ft2 # CHECK: :[[@LINE]]:1: error: invalid instruction
+fmv.w.x a8, ft2 # CHECK: :[[@LINE]]:9: error: invalid operand for instruction
 
 # Rounding mode when a register is expected
 fmadd.s f10, f11, f12, ree # CHECK: :[[@LINE]]:24: error: invalid operand for instruction

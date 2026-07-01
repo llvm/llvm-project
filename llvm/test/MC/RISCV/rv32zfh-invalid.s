@@ -16,10 +16,10 @@ flh ft1, 100(a10) # CHECK: :[[@LINE]]:14: error: expected register
 fsgnjn.h fa100, fa2, fa3 # CHECK: :[[@LINE]]:10: error: invalid operand for instruction
 
 # Integer registers where FP regs are expected
-fmv.x.h fs7, a2 # CHECK: :[[@LINE]]:1: error: invalid instruction
+fmv.x.h fs7, a2 # CHECK: :[[@LINE]]:9: error: invalid operand for instruction
 
 # FP registers where integer regs are expected
-fmv.h.x a8, ft2 # CHECK: :[[@LINE]]:1: error: invalid instruction
+fmv.h.x a8, ft2 # CHECK: :[[@LINE]]:9: error: invalid operand for instruction
 
 # Rounding mode when a register is expected
 fmadd.h f10, f11, f12, ree # CHECK: :[[@LINE]]:24: error: invalid operand for instruction
@@ -30,7 +30,7 @@ fmsub.h f14, f15, f16, f17, 0 # CHECK: :[[@LINE]]:29: error: operand must be a v
 fnmsub.h f18, f19, f20, f21, 0b111 # CHECK: :[[@LINE]]:30: error: operand must be a valid floating point rounding mode mnemonic
 
 # Integer registers where FP regs are expected
-fadd.h a2, a1, a0 # CHECK: :[[@LINE]]:1: error: invalid instruction
+fadd.h a2, a1, a0 # CHECK: :[[@LINE]]:8: error: invalid operand for instruction
 
 # FP registers where integer regs are expected
-fcvt.wu.h ft2, a1 # CHECK: :[[@LINE]]:1: error: invalid instruction
+fcvt.wu.h ft2, a1 # CHECK: :[[@LINE]]:11: error: invalid operand for instruction

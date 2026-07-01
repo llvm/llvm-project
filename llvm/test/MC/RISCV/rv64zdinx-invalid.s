@@ -5,7 +5,7 @@ fld fa4, 12(sp) # CHECK: :[[@LINE]]:1: error: instruction requires the following
 ld a0, -2049(a1) # CHECK: :[[@LINE]]:8: error: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo specifier or an integer in the range [-2048, 2047]
 
 # Invalid instructions
-fsd a5, 12(sp) # CHECK: :[[@LINE]]:1: error: invalid instruction
+fsd a5, 12(sp) # CHECK: :[[@LINE]]:5: error: invalid operand for instruction
 sd fa4, 64(sp) # CHECK: :[[@LINE]]:4: error: invalid operand for instruction
 fmv.x.d t2, a2 # CHECK: :[[@LINE]]:1: error: invalid instruction
 fmv.d.x a5, t5 # CHECK: :[[@LINE]]:1: error: invalid instruction

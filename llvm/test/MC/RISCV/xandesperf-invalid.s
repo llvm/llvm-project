@@ -8,8 +8,8 @@ nds.bbc t0, 33, 256 # CHECK: :[[@LINE]]:13: error: immediate must be an integer 
 nds.bbs t1, 33, 256 # CHECK: :[[@LINE]]:13: error: immediate must be an integer in the range [0, 31]
 
 ## uimm7
-nds.beqc t0, 1024, 13 # CHECK: :[[@LINE]]:1: error: invalid instruction
-nds.bnec t1, -1, -13 # CHECK: :[[@LINE]]:1: error: invalid instruction
+nds.beqc t0, 1024, 13 # CHECK: :[[@LINE]]:14: error: immediate must be an integer in the range [0, 127]
+nds.bnec t1, -1, -13 # CHECK: :[[@LINE]]:14: error: immediate must be an integer in the range [0, 127]
 
 ## simm11_lsb0
 nds.bbc t0, 7, 1024 # CHECK: :[[@LINE]]:16: error: immediate must be a multiple of 2 bytes in the range [-1024, 1022]

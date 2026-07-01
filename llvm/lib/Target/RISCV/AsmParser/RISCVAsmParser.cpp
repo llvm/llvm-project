@@ -1626,7 +1626,7 @@ std::string RISCVAsmParser::getCustomOperandDiag(unsigned MatchError) {
   case Match_InvalidSImm20LI:
     return Range(-(1 << 19), (1 << 19) - 1,
                  "operand must be a symbol with a %qc.abs20 specifier or an "
-                 "integer  in the range");
+                 "integer in the range");
   case Match_InvalidUImm20LUI:
     return Range(0, (1 << 20) - 1,
                  "operand must be a symbol with %hi/%tprel_hi specifier or an "

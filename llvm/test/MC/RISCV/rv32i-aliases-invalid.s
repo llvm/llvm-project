@@ -24,6 +24,7 @@ la x0, 4294967296
 # CHECK: :[[@LINE-1]]:1: error: invalid instruction, any one of the following would fix this:
 # CHECK: :[[@LINE-2]]:8: note: operand must be a bare symbol name
 # CHECK: :[[@LINE-3]]:8: note: operand either must be a bare symbol name or an immediate integer in the range [-2147483648, 4294967295]
+
 la x0, -2147483649
 # CHECK: :[[@LINE-1]]:1: error: invalid instruction, any one of the following would fix this:
 # CHECK: :[[@LINE-2]]:8: note: operand must be a bare symbol name
@@ -169,7 +170,7 @@ sra x2, x3, -3
 # CHECK: :[[@LINE-2]]:13: note: invalid operand for instruction
 # CHECK: :[[@LINE-3]]:13: note: immediate must be an integer in the range [0, 31]
 
-addi x1, .      # CHECK: :[[@LINE]]:1: error: invalid instruction
+addi x1, .      # CHECK: :[[@LINE]]:10: error: invalid operand for instruction
 
 foo:
   .space 4

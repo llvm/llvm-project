@@ -16,10 +16,10 @@ flh ft15, 100(a0) # CHECK: :[[@LINE]]:5: error: invalid operand for instruction
 flh ft1, 100(a10) # CHECK: :[[@LINE]]:14: error: expected register
 
 # Integer registers where FP regs are expected
-fmv.x.h fs7, a2 # CHECK: :[[@LINE]]:1: error: invalid instruction
+fmv.x.h fs7, a2 # CHECK: :[[@LINE]]:9: error: invalid operand for instruction
 
 # FP registers where integer regs are expected
-fmv.h.x a8, ft2 # CHECK: :[[@LINE]]:1: error: invalid instruction
+fmv.h.x a8, ft2 # CHECK: :[[@LINE]]:9: error: invalid operand for instruction
 
 # Attempting to use fcvt instructions from zfhmin
 fcvt.s.h fa0, ft0 # CHECK: [[@LINE]]:1: error: instruction requires the following: 'Zfh' (Half-Precision Floating-Point) or 'Zfhmin' (Half-Precision Floating-Point Minimal)

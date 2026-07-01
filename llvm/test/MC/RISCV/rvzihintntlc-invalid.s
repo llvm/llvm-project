@@ -6,8 +6,8 @@ c.ntl.pall 2 # CHECK: :[[@LINE]]:12: error: invalid operand for instruction
 c.ntl.s1 3 # CHECK: :[[@LINE]]:10: error: invalid operand for instruction
 c.ntl.all 4 # CHECK: :[[@LINE]]:11: error: invalid operand for instruction
 
-c.ntl.p1 t0, t1 # CHECK: :[[@LINE]]:1: error: invalid instruction
-c.ntl.pall t0, t1 # CHECK: :[[@LINE]]:1: error: invalid instruction
-c.ntl.s1 t0, t1 # CHECK: :[[@LINE]]:1: error: invalid instruction
-c.ntl.all t0, t1 # CHECK: :[[@LINE]]:1: error: invalid instruction
+c.ntl.p1 t0, t1 # CHECK: :[[@LINE]]:10: error: invalid operand for instruction
+c.ntl.pall t0, t1 # CHECK: :[[@LINE]]:12: error: invalid operand for instruction
+c.ntl.s1 t0, t1 # CHECK: :[[@LINE]]:10: error: invalid operand for instruction
+c.ntl.all t0, t1 # CHECK: :[[@LINE]]:11: error: invalid operand for instruction
 

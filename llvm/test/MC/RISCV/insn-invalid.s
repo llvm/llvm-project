@@ -8,7 +8,7 @@
 .insn r  0x33,  0,  0, a0, a1 # CHECK: :[[@LINE]]:30: error: too few operands for instruction
 .insn i  0x13,  0,  a0, a1 # CHECK: :[[@LINE]]:27: error: too few operands for instruction
 
-.insn r  0x33,  0,  0, a0, 13 # CHECK: :[[@LINE]]:1: error: invalid instruction
+.insn r  0x33,  0,  0, a0, 13 # CHECK: :[[@LINE]]:28: error: invalid operand for instruction
 .insn i  0x13,  0, a0, a1, a2 # CHECK: :[[@LINE]]:28: error: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo specifier or an integer in the range [-2048, 2047]
 
 .insn q  0x13,  0,  a0, a1, 13, 14 # CHECK: :[[@LINE]]:7: error: invalid instruction format

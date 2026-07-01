@@ -5,7 +5,7 @@ flw fa4, 12(sp) # CHECK: :[[@LINE]]:1: error: instruction requires the following
 fadd.h fa0, fa1, fa2 # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zfh' (Half-Precision Floating-Point){{$}}
 
 # Invalid instructions
-fsw a5, 12(sp) # CHECK: :[[@LINE]]:1: error: invalid instruction
+fsw a5, 12(sp) # CHECK: :[[@LINE]]:5: error: invalid operand for instruction
 fmv.x.h s0, s1 # CHECK: :[[@LINE]]:1: error: invalid instruction
 
 # Invalid register names
