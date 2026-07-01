@@ -54,6 +54,32 @@
 // CHECK-NO-SPIRVLINK-FLAGS-NOT: --device-linker=spirv64-unknown-unknown=--allow-partial-linkage
 // CHECK-NO-SPIRVLINK-FLAGS-NOT: --device-linker=spirv64-unknown-unknown=--create-library
 
+/// Check -fsycl-device-code-split= is translated to the corresponding
+/// clang-sycl-linker --module-split-mode= value.
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl -fsycl-device-code-split=per_kernel %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHK-SPLIT-KERNEL %s
+// CHK-SPLIT-KERNEL: clang-linker-wrapper{{.*}}"--device-linker=spirv64-unknown-unknown=--module-split-mode=kernel"
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl -fsycl-device-code-split=per_source %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHK-SPLIT-SOURCE %s
+// CHK-SPLIT-SOURCE: clang-linker-wrapper{{.*}}"--device-linker=spirv64-unknown-unknown=--module-split-mode=source"
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl -fsycl-device-code-split=off %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHK-SPLIT-OFF %s
+// CHK-SPLIT-OFF: clang-linker-wrapper{{.*}}"--device-linker=spirv64-unknown-unknown=--module-split-mode=none"
+
+/// Check the bare -fsycl-device-code-split flag aliases to 'per_source'.
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl -fsycl-device-code-split %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHK-SPLIT-SOURCE %s
+
+/// Check that without -fsycl-device-code-split, no --module-split-mode= is passed.
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHK-NO-SPLIT %s
+// CHK-NO-SPLIT-NOT: --module-split-mode=
+
+/// Check an invalid -fsycl-device-code-split= value is diagnosed.
+// RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl -fsycl-device-code-split=bogus %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHK-SPLIT-INVALID %s
+// CHK-SPLIT-INVALID: error: invalid value 'bogus' in '-fsycl-device-code-split='
+
 /// Check for option incompatibility with -fsycl
 // RUN: not %clang -### -fsycl -ffreestanding %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHK-INCOMPATIBILITY %s -DINCOMPATOPT=-ffreestanding

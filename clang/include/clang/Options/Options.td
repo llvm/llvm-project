@@ -7572,6 +7572,15 @@ def fsycl_host_only : Flag<["-"], "fsycl-host-only">,
 def sycl_link : Flag<["--"], "sycl-link">, Flags<[HelpHidden]>,
   HelpText<"Perform link through clang-sycl-linker via the target "
   "offloading toolchain.">;
+def fsycl_device_code_split_EQ : Joined<["-"], "fsycl-device-code-split=">,
+  HelpText<"Perform SYCL device code split: per_kernel (device code module is "
+           "created for each SYCL kernel) | per_source (device code module is "
+           "created for each source (translation unit)) | off (no device code "
+           "split). Default is 'per_source'.">,
+  Values<"per_kernel,per_source,off">;
+def fsycl_device_code_split : Flag<["-"], "fsycl-device-code-split">,
+  Alias<fsycl_device_code_split_EQ>, AliasArgs<["per_source"]>,
+  HelpText<"Perform SYCL device code split in the 'per_source' mode.">;
 } // let Group = sycl_Group
 
 // OS-specific options

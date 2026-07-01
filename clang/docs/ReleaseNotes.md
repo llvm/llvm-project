@@ -1136,6 +1136,11 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 - Fixed `-nolibsycl` being silently ignored on Linux: the SYCL runtime
   library was unconditionally added to the link line even when the flag was
   passed.
+- Added the `-fsycl-device-code-split=` option to control SYCL device code
+  splitting. Supported values are `per_kernel` (one device image per kernel),
+  `per_source` (one device image per translation unit), and `off` (no split).
+  The bare `-fsycl-device-code-split` flag is an alias for
+  `-fsycl-device-code-split=per_source`, which is also the default.
 
 #### Improvements
 
