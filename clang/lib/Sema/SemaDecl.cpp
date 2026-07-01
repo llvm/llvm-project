@@ -15232,11 +15232,16 @@ void Sema::checkRefToUninitInit(SourceLocation Loc, bool TargetIsRefToUninit,
   static constexpr StringRef Rule = "ref_to_uninit";
   if (!shouldEmitProfileViolation(Profile, Rule, Loc, D))
     return;
-  bool SrcUninit = refersToUninitializedMemory(Src, IsReference);
+  UninitStorage SrcState = classifyUninitSource(Context, Src, IsReference);
   unsigned IsRef = IsReference ? 1 : 0;
-  if (TargetIsRefToUninit && !SrcUninit)
+  // A marked target is a violation only against an affirmatively Initialized
+  // source: an Unknown one (pointer arithmetic, an integer-to-pointer cast, a
+  // call through a function pointer) cannot be proven initialized, so rejecting
+  // it would be a false positive. An unmarked target is diagnosed only against
+  // an affirmatively Uninitialized source (Unknown stays a missed diagnostic).
+  if (TargetIsRefToUninit && SrcState == UninitStorage::Initialized)
     Diag(Loc, diag::err_init_ref_to_uninit_requires_uninit) << Profile << IsRef;
-  else if (!TargetIsRefToUninit && SrcUninit)
+  else if (!TargetIsRefToUninit && SrcState == UninitStorage::Uninitialized)
     Diag(Loc, diag::err_init_uninit_requires_ref_to_uninit) << Profile << IsRef;
 }
 

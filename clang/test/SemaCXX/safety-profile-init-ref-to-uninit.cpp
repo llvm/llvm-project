@@ -795,3 +795,76 @@ void test_variable_braced_once() {
   int *p{&g_uninit}; // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
   (void)p;
 }
+
+// std::init / ref_to_uninit (paper §5): a source whose syntactic form the
+// recognizer does not model -- pointer arithmetic, an integer-to-pointer cast,
+// or a call through a function pointer -- is unknown, not initialized. A marked
+// target binds from such a source without error (it cannot be proven
+// initialized, so rejecting it would be a false positive); an unmarked target
+// also binds without error (a documented missed diagnostic). Neither run
+// diagnoses these.
+void test_unknown_pointer_arithmetic() {
+  int *base [[ref_to_uninit]] = &g_uninit;
+  int *p1 [[ref_to_uninit]] = base + 1; // OK
+  int *p2 = base + 1;                    // OK
+  (void)p1; (void)p2;
+}
+
+void test_unknown_int_to_ptr(long n) {
+  int *p1 [[ref_to_uninit]] = reinterpret_cast<int *>(n); // OK
+  int *p2 = reinterpret_cast<int *>(n);                    // OK
+  (void)p1; (void)p2;
+}
+
+void test_unknown_fnptr_call(int *(*fp)()) {
+  int *p1 [[ref_to_uninit]] = fp(); // OK
+  int *p2 = fp();                    // OK
+  (void)p1; (void)p2;
+}
+
+// The unknown classification propagates through the pass-through forms.
+void test_unknown_passthrough(bool c) {
+  int *base [[ref_to_uninit]] = &g_uninit;
+  int *p1 [[ref_to_uninit]] = c ? base + 1 : &g_init; // OK: an unknown arm keeps the whole unknown
+  int *p2 [[ref_to_uninit]] = (h(), base + 1);        // OK
+  int *p3 [[ref_to_uninit]] = {base + 1};             // OK
+  (void)p1; (void)p2; (void)p3;
+}
+
+// The unknown classification reaches the assignment, call-argument, and return
+// sites unchanged.
+void test_unknown_assignment(long n) {
+  int *base [[ref_to_uninit]] = &g_uninit;
+  int *p [[ref_to_uninit]] = &g_uninit;
+  p = base + 1;                   // OK
+  p = reinterpret_cast<int *>(n); // OK
+  int *q = &g_init;
+  q = base + 1;                   // OK
+  (void)p; (void)q;
+}
+
+void test_unknown_call_argument(long n) {
+  int *base [[ref_to_uninit]] = &g_uninit;
+  take_uninit_ptr(base + 1);                   // OK
+  take_uninit_ptr(reinterpret_cast<int *>(n)); // OK
+  take_ptr(base + 1);                          // OK
+}
+
+[[ref_to_uninit]] int *ret_unknown_marked() {
+  int *base [[ref_to_uninit]] = &g_uninit;
+  return base + 1; // OK
+}
+int *ret_unknown_unmarked() {
+  int *base [[ref_to_uninit]] = &g_uninit;
+  return base + 1; // OK
+}
+
+// Regression guard: the fix narrows only the unknown case. A marked target
+// bound from an affirmatively initialized source is still rejected, and an
+// unmarked target from an affirmatively uninitialized source is still rejected.
+void test_unknown_regression_guard() {
+  int *m1 [[ref_to_uninit]] = &g_init;    // expected-error {{pointer marked '[[ref_to_uninit]]' must refer to uninitialized memory under profile 'std::init'}}
+  int *m2 [[ref_to_uninit]] = new int(5); // expected-error {{pointer marked '[[ref_to_uninit]]' must refer to uninitialized memory under profile 'std::init'}}
+  int *u1 = &g_uninit;                    // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  (void)m1; (void)m2; (void)u1;
+}

@@ -1124,17 +1124,17 @@ public:
   bool defaultInitLeavesScalarIndeterminate(QualType T,
                                             bool HonorUninitMarkers = false);
 
-  /// std::init / ref_to_uninit (paper §5): true if \p E refers to (for a
-  /// pointer source) or, when \p IsReference, denotes (for a glvalue source)
-  /// uninitialized storage. Recognized purely locally from the expression's
-  /// syntactic form -- the address of, or a subobject of, a [[uninit]]
-  /// entity; a value of a [[ref_to_uninit]] pointer/reference or array; a
-  /// dereference of such a pointer; a cast of such a pointer to another pointer
-  /// type, or of such a glvalue to another reference; a call to a
-  /// [[ref_to_uninit]]-returning function; or a new-expression whose
-  /// default-initialization leaves the allocated object indeterminate (e.g.
-  /// new int). Anything else is treated as initialized (the trust model; no
-  /// flow analysis).
+  /// std::init / ref_to_uninit (paper §5): true only if \p E is affirmatively
+  /// recognized as referring to (for a pointer source) or, when \p IsReference,
+  /// denoting (for a glvalue source) uninitialized storage. Recognized purely
+  /// locally from the expression's syntactic form -- the address of, or a
+  /// subobject of, a [[uninit]] entity; a value of a [[ref_to_uninit]]
+  /// pointer/reference or array; a dereference of such a pointer; a cast of such
+  /// a pointer to another pointer type, or of such a glvalue to another
+  /// reference; a call to a [[ref_to_uninit]]-returning function; or a
+  /// new-expression whose default-initialization leaves the allocated object
+  /// indeterminate (e.g. new int). A trusted-initialized source and an
+  /// unrecognized (unknown) source both return false (no flow analysis).
   bool refersToUninitializedMemory(const Expr *E, bool IsReference) const;
 
   /// std::init / ref_to_uninit (paper §5): check that the initialization of a

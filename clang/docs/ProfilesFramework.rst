@@ -966,7 +966,10 @@ Pass-through forms are transparent to the operand they forward: a single-element
 braced initializer (``{e}``) is looked through to its element, a conditional
 (``c ? a : b``) is uninitialized if either arm is, and a comma (``(a, b)``)
 takes its right operand -- so each is handled like the direct binding it
-forwards.  Anything else is treated as initialized (the trust model).  The
+forwards.  A source whose form is recognized as neither uninitialized nor
+trusted-initialized is classified as *unknown* rather than assumed initialized,
+so it is diagnosed for neither a marked target (avoiding a false rejection) nor
+an unmarked one (leaving a possible missed diagnostic).  The
 reference cast and the ``[[ref_to_uninit]]``-returning reference call are not
 spelled out by the paper but follow from the profile's guarantee that
 uninitialized objects are not used, and keep the pointer and reference
@@ -1031,11 +1034,13 @@ recognizers symmetric.
 - Known gaps: recognition is purely of the source's syntactic form, so a
   binding whose underlying operand is unrecognized -- pointer arithmetic, an
   integer-to-pointer cast, a call through a function pointer (no
-  ``FunctionDecl``), or a variadic (``...``) argument -- is treated as
-  initialized: a missed diagnostic for an unmarked target, and a *false
-  positive* for a ``[[ref_to_uninit]]`` target.  The pass-through forms above
-  forward to such an operand without laundering it, so they inherit this gap
-  rather than introducing one.  Only plain ``=`` pointer assignment is covered;
+  ``FunctionDecl``), or a variadic (``...``) argument -- is classified as
+  *unknown* and diagnosed for neither direction.  A ``[[ref_to_uninit]]`` target
+  therefore accepts it (rather than the earlier *false positive*), while an
+  unmarked target also accepts it (a remaining missed diagnostic).  The
+  pass-through forms above forward to such an operand without laundering it, so
+  they inherit this gap rather than introducing one.  Only plain ``=`` pointer
+  assignment is covered;
   compound assignment is not a binding and is skipped.  Aggregate field
   initialization is checked per scalar field, so an array-of-pointer (or
   array-of-reference) member is out of scope -- its elements are
