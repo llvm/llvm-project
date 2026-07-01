@@ -11,11 +11,9 @@
 ///
 //===----------------------------------------------------------------------===//
 
-// For RSIZE_MAX
 #define __STDC_WANT_LIB_EXT1__ 1
 #include "hdr/stdint_proxy.h"
 #undef __STDC_WANT_LIB_EXT1__
-
 #include "hdr/types/constraint_handler_t.h"
 #include "hdr/types/errno_t.h"
 #include "hdr/types/rsize_t.h"
@@ -55,7 +53,10 @@ LLVM_LIBC_FUNCTION(errno_t, strcpy_s,
   // Use s1max for the destination's length, not count + 1, because the
   // standard allows for overwriting the entire destination region, even if
   // s2's length is smaller than s1max.
-  else if (s2 < (s1 + s1max) && s1 < (s2 + count + 1)) {
+  else if (const uintptr_t s1_addr = reinterpret_cast<uintptr_t>(s1),
+           s2_addr = reinterpret_cast<uintptr_t>(s2);
+           s1_addr < s2_addr ? s2_addr - s1_addr < s1max
+                             : s1_addr - s2_addr < count + 1) {
     constraint_violation_msg = "strcpy_s: s1 and s2 cannot overlap";
   }
 
