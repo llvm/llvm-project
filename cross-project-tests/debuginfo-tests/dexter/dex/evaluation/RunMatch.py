@@ -109,7 +109,12 @@ class DebuggerRunMatch(object):
         script.visit_script(visit_expect=add_expected_values)
 
         # Then produce all of our step matches.
-        state_match_context = StateMatchContext()
+        def check_condition(step: StepIR, frame_idx: int, condition: str):
+            cond_value = step.frames[frame_idx].watches[condition]
+            result = cond_value.could_evaluate and cond_value.value.lower() == "true"
+            return result
+
+        state_match_context = StateMatchContext(check_condition=check_condition)
         for step in self.dext_ir.steps:
             self.step_matches.append(
                 DebuggerStepMatch(step, script, self.match_context, state_match_context)

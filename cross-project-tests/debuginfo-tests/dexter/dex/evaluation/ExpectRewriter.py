@@ -276,14 +276,18 @@ class ScriptExpectRewriter:
         ):
             return
 
-        state_match_context = StateMatchContext()
+        def check_condition(step: StepIR, frame_idx: int, condition: str):
+            cond_value = step.frames[frame_idx].watches[condition]
+            result = cond_value.could_evaluate and cond_value.value.lower() == "true"
+            return result
 
-        # Populate the `unknown_expect_rewrites` dict, mapping each expect with an unknown value to its list of observed
-        # during this run, along with the corresponding step indices.
+        state_match_context = StateMatchContext(check_condition=check_condition)
         self.step_rewriters = [
             StepExpectRewriter(step, script, state_match_context)
             for step in dext_ir.steps
         ]
+        # Populate the expect_rewrites dicts, mapping each expect with an unknown value to its list of observed values
+        # during this run, along with the corresponding step indices.
         for step_rewriter in self.step_rewriters:
             step_idx = step_rewriter.step.step_index
             for (

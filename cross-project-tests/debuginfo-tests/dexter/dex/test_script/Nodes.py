@@ -77,7 +77,7 @@ class Where:
         self.at_frame_idx: Optional[int] = attributes.pop("at_frame_idx", None)
         self.after_hit_count: Optional[int] = attributes.pop("after_hit_count", None)
         self.for_hit_count: Optional[int] = attributes.pop("for_hit_count", None)
-        self.conditions: dict = attributes.pop("conditions", None)
+        self.conditions: Optional[str] = attributes.pop("conditions", None)
         self.is_and = is_and
         if attributes:
             raise DexterNodeError(
