@@ -11128,8 +11128,8 @@ bool ScalarEvolution::SimplifyICmpOperands(CmpPredicate &Pred, SCEVUse &LHS,
   // For signed, both adds must be NSW. For unsigned, both must be NUW.
   {
     const SCEVConstant *C = nullptr;
-    if (match(LHS, m_scev_c_Add(m_SCEVConstant(C), m_SCEV(NewLHS))) &&
-        match(RHS, m_scev_c_Add(m_scev_Specific(C), m_SCEV(NewRHS)))) {
+    if (match(LHS, m_scev_Add(m_SCEVConstant(C), m_SCEV(NewLHS))) &&
+        match(RHS, m_scev_Add(m_scev_Specific(C), m_SCEV(NewRHS)))) {
       const auto *LAdd = cast<SCEVAddExpr>(LHS);
       const auto *RAdd = cast<SCEVAddExpr>(RHS);
       if (ICmpInst::isEquality(Pred) ||
@@ -11145,19 +11145,25 @@ bool ScalarEvolution::SimplifyICmpOperands(CmpPredicate &Pred, SCEVUse &LHS,
   }
 
   // (C * A) pred (C * B) --> A pred B
-  // For signed predicates, C must be positive and both muls must be NSW.
-  // For unsigned predicates, both muls must be NUW. C == 0 is impossible
-  // because SCEV would fold 0 * X to 0.
+  // For equality predicates, both muls must be NUW or both must be NSW
+  // (either suffices to make multiplication by C injective; C == 0 is
+  // impossible because SCEV folds 0 * X to 0).
+  // For signed ordering, C must be positive and both muls must be NSW.
+  // For unsigned ordering, both muls must be NUW.
   {
     const SCEVConstant *C = nullptr;
-    if (match(LHS, m_scev_c_Mul(m_SCEVConstant(C), m_SCEV(NewLHS))) &&
-        match(RHS, m_scev_c_Mul(m_scev_Specific(C), m_SCEV(NewRHS)))) {
+    if (match(LHS, m_scev_Mul(m_SCEVConstant(C), m_SCEV(NewLHS))) &&
+        match(RHS, m_scev_Mul(m_scev_Specific(C), m_SCEV(NewRHS)))) {
       const auto *LMul = cast<SCEVMulExpr>(LHS);
       const auto *RMul = cast<SCEVMulExpr>(RHS);
-      if ((ICmpInst::isSigned(Pred) && LMul->hasNoSignedWrap() &&
-           RMul->hasNoSignedWrap() && C->getAPInt().isStrictlyPositive()) ||
-          (ICmpInst::isUnsigned(Pred) && LMul->hasNoUnsignedWrap() &&
-           RMul->hasNoUnsignedWrap())) {
+      bool BothNUW =
+          LMul->hasNoUnsignedWrap() && RMul->hasNoUnsignedWrap();
+      bool BothNSW =
+          LMul->hasNoSignedWrap() && RMul->hasNoSignedWrap();
+      if ((ICmpInst::isEquality(Pred) && (BothNUW || BothNSW)) ||
+          (ICmpInst::isSigned(Pred) && BothNSW &&
+           C->getAPInt().isStrictlyPositive()) ||
+          (ICmpInst::isUnsigned(Pred) && BothNUW)) {
         LHS = NewLHS;
         RHS = NewRHS;
         Changed = true;
