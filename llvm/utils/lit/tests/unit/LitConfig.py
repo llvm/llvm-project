@@ -4,6 +4,7 @@
 
 import contextlib
 import io
+import os
 import platform
 import unittest
 
@@ -54,9 +55,13 @@ class TestWriteMessage(unittest.TestCase):
             exec(code, {"lit_config": lit_config})
 
         # The message is still emitted, tagged with the frame's co_filename.
+        # Compare on the basename only: _write_message runs the path through
+        # os.path.abspath(), which on Windows rewrites separators and prepends a
+        # drive, so the original string is not preserved verbatim.
         output = captured.getvalue()
-        self.assertIn(fake_filename, output)
+        self.assertIn(os.path.basename(fake_filename), output)
         self.assertIn("note:", output)
+        self.assertIn("a note from a frame with no source file", output)
 
 
 if __name__ == "__main__":
