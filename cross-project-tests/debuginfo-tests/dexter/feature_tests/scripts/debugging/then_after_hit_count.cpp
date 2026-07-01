@@ -1,6 +1,6 @@
 // RUN: %dexter_regression_test_cxx_build %s -o %t
 // RUN: %dexter_regression_test_run --use-script --skip-evaluate --binary %t \
-// RUN:   --timeout-total 10 -- %s | FileCheck %s
+// RUN:   -- %s | FileCheck %s
 
 /// Test !then finish with !and{after_hit_count}.
 /// The infinite loop will be exited when we hit the `!then finish` command,
@@ -12,7 +12,8 @@
 // CHECK-COUNT-101:   main
 // CHECK-NOT: Step
 
-bool checkCows() { return false; }
+int Until = 1000;
+bool checkCows() { return --Until < 0; }
 
 int main() {
   bool AreCowsHomeYet = false;
