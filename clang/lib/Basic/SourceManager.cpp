@@ -2154,9 +2154,9 @@ void SourceManager::PrintStats() const {
                << "B of SLoc address space used.\n";
   if (NumDuplicateLoadedFiles)
     llvm::errs() << NumDuplicateLoadedFiles
-                 << " duplicate loaded file SLocEntries detected ("
+                 << " duplicate loaded file SLocEntries de-duplicated ("
                  << DuplicateLoadedBytes
-                 << "B of SLoc address space reusable).\n";
+                 << "B of SLoc address space reused).\n";
 
   unsigned NumLineNumsComputed = 0;
   unsigned NumFileBytesMapped = 0;

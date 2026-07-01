@@ -362,6 +362,17 @@ public:
   /// Stage 2b adds redirect/shift segments for de-duplicated files.
   llvm::SmallVector<SLocRemapSegment, 4> SLocRemap;
 
+  /// Maps a local SLoc entry index -> its resulting global SLoc entry ID.
+  /// Kept entries map to their own newly-allocated ID; de-duplicated entries
+  /// map to the ID of the canonical copy in an earlier module. Empty => no
+  /// de-duplication for this module (global ID is SLocEntryBaseID + index).
+  std::vector<int> LocalToGlobalID;
+
+  /// For each kept global slot j (0-based, relative to SLocEntryBaseID), the
+  /// original local entry index in this module (index into SLocEntryOffsets).
+  /// Empty => no de-duplication (kept slot j == local index j).
+  std::vector<unsigned> KeptSLocLocalIndex;
+
   // === Identifiers ===
 
   /// The number of identifiers in this AST file.

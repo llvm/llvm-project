@@ -1853,6 +1853,21 @@ bool ASTReader::scanLoadedSLocEntries(
   return true;
 }
 
+SourceLocation::UIntTy
+ASTReader::remapSLocEntryOffset(ModuleFile &F, uint32_t LocalOffset) const {
+  // The entry's local raw start location is LocalOffset + 2 (offsets 0 and 1
+  // are reserved). Find the segment covering it and apply that segment's delta.
+  if (!F.SLocRemap.empty()) {
+    SourceLocation::UIntTy Low = LocalOffset + 2;
+    for (const auto &Seg : F.SLocRemap)
+      if (Low >= Seg.LocalBegin && Low < Seg.LocalEnd)
+        return static_cast<SourceLocation::UIntTy>(static_cast<int64_t>(Low) +
+                                                   Seg.Delta);
+  }
+  // No remap (or no segment matched): original flat shift.
+  return F.SLocEntryBaseOffset + LocalOffset;
+}
+
 llvm::Expected<SourceLocation::UIntTy>
 ASTReader::readSLocOffset(ModuleFile *F, unsigned Index) {
   BitstreamCursor &Cursor = F->SLocEntryCursor;
@@ -1885,7 +1900,7 @@ ASTReader::readSLocOffset(ModuleFile *F, unsigned Index) {
   case SM_SLOC_FILE_ENTRY:
   case SM_SLOC_BUFFER_ENTRY:
   case SM_SLOC_EXPANSION_ENTRY:
-    return F->SLocEntryBaseOffset + Record[0];
+    return remapSLocEntryOffset(*F, Record[0]);
   }
 }
 
@@ -1898,13 +1913,21 @@ int ASTReader::getSLocEntryID(SourceLocation::UIntTy SLocOffset) {
 
   bool Invalid = false;
 
+  // De-duplication (Stage 2b): the global table holds only this module's kept
+  // entries, so search over kept slots and translate each slot to its on-disk
+  // local entry index when reading the offset.
+  bool Dedup = !F->KeptSLocLocalIndex.empty();
+  unsigned NumSlots =
+      Dedup ? F->KeptSLocLocalIndex.size() : F->LocalNumSLocEntries;
+
   auto It = llvm::upper_bound(
-      llvm::index_range(0, F->LocalNumSLocEntries), SLocOffset,
-      [&](SourceLocation::UIntTy Offset, std::size_t LocalIndex) {
-        int ID = F->SLocEntryBaseID + LocalIndex;
+      llvm::index_range(0, NumSlots), SLocOffset,
+      [&](SourceLocation::UIntTy Offset, std::size_t Slot) {
+        int ID = F->SLocEntryBaseID + Slot;
         std::size_t Index = -ID - 2;
         if (!SourceMgr.SLocEntryOffsetLoaded[Index]) {
           assert(!SourceMgr.SLocEntryLoaded[Index]);
+          unsigned LocalIndex = Dedup ? F->KeptSLocLocalIndex[Slot] : Slot;
           auto MaybeEntryOffset = readSLocOffset(F, LocalIndex);
           if (!MaybeEntryOffset) {
             Error(MaybeEntryOffset.takeError());
@@ -1986,15 +2009,23 @@ bool ASTReader::ReadSLocEntry(int ID) {
   };
 
   ModuleFile *F = GlobalSLocEntryMap.find(-ID)->second;
+  // De-duplication (Stage 2b): with entries skipped, the global slot
+  // (ID - SLocEntryBaseID) is no longer the on-disk local index, so translate
+  // it through the kept-index table when present.
+  unsigned LocalIndex = ID - F->SLocEntryBaseID;
+  if (!F->KeptSLocLocalIndex.empty()) {
+    assert(LocalIndex < F->KeptSLocLocalIndex.size() && "kept slot out of range");
+    LocalIndex = F->KeptSLocLocalIndex[LocalIndex];
+  }
   if (llvm::Error Err = F->SLocEntryCursor.JumpToBit(
-          F->SLocEntryOffsetsBase +
-          F->SLocEntryOffsets[ID - F->SLocEntryBaseID])) {
+          F->SLocEntryOffsetsBase + F->SLocEntryOffsets[LocalIndex])) {
     Error(std::move(Err));
     return true;
   }
 
   BitstreamCursor &SLocEntryCursor = F->SLocEntryCursor;
   SourceLocation::UIntTy BaseOffset = F->SLocEntryBaseOffset;
+  (void)BaseOffset;
 
   ++NumSLocEntriesRead;
   Expected<llvm::BitstreamEntry> MaybeEntry = SLocEntryCursor.advance();
@@ -2044,7 +2075,7 @@ bool ASTReader::ReadSLocEntry(int ID) {
     SrcMgr::CharacteristicKind
       FileCharacter = (SrcMgr::CharacteristicKind)Record[2];
     FileID FID = SourceMgr.createFileID(*File, IncludeLoc, FileCharacter, ID,
-                                        BaseOffset + Record[0]);
+                                        remapSLocEntryOffset(*F, Record[0]));
     SrcMgr::FileInfo &FileInfo = SourceMgr.getSLocEntry(FID).getFile();
     FileInfo.NumCreatedFIDs = Record[5];
     if (Record[3])
@@ -2086,7 +2117,8 @@ bool ASTReader::ReadSLocEntry(int ID) {
     if (!Buffer)
       return true;
     FileID FID = SourceMgr.createFileID(std::move(Buffer), FileCharacter, ID,
-                                        BaseOffset + Offset, IncludeLoc);
+                                        remapSLocEntryOffset(*F, Offset),
+                                        IncludeLoc);
     if (Record[3]) {
       auto &FileInfo = SourceMgr.getSLocEntry(FID).getFile();
       FileInfo.setHasLineDirectives();
@@ -2100,7 +2132,7 @@ bool ASTReader::ReadSLocEntry(int ID) {
     SourceLocation ExpansionEnd = ReadSourceLocation(*F, Record[3]);
     SourceMgr.createExpansionLoc(SpellingLoc, ExpansionBegin, ExpansionEnd,
                                  Record[5], Record[4], ID,
-                                 BaseOffset + Record[0]);
+                                 remapSLocEntryOffset(*F, Record[0]));
     break;
   }
   }
@@ -4273,9 +4305,36 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
       F.LocalNumSLocEntries = Record[0];
       SourceLocation::UIntTy SLocSpaceSize = Record[1];
       F.SLocEntryOffsetsBase = Record[2] + F.SourceManagerBlockStartOffset;
+      unsigned N = F.LocalNumSLocEntries;
+
+      // De-duplication (Stage 2b): scan this module's SLoc entries *before*
+      // allocating, so we can recognize files already loaded by an earlier
+      // module and reserve less address space for them.
+      SmallVector<uint32_t, 64> Offsets;
+      SmallVector<const FileEntry *, 64> Files;
+      bool Scanned = scanLoadedSLocEntries(F, Offsets, Files);
+
+      // Classify duplicates and compute the reduced allocation request.
+      auto entrySize = [&](unsigned I) -> uint64_t {
+        return (I + 1 < N ? Offsets[I + 1] : SLocSpaceSize) - Offsets[I];
+      };
+      unsigned NumDupEntries = 0;
+      uint64_t DupBytes = 0;
+      if (Scanned)
+        for (unsigned I = 0; I != N; ++I)
+          if (SourceMgr.isLoadedFileDuplicate(Files[I])) {
+            uint64_t Size = entrySize(I);
+            SourceMgr.noteDuplicateLoadedFile(Size);
+            DupBytes += Size;
+            ++NumDupEntries;
+          }
+      unsigned ReducedNumEntries = N - NumDupEntries;
+      SourceLocation::UIntTy ReducedSize = SLocSpaceSize - DupBytes;
+
+      // Reserve the reduced amount (equals the full amount when nothing is
+      // de-duplicated).
       std::tie(F.SLocEntryBaseID, F.SLocEntryBaseOffset) =
-          SourceMgr.AllocateLoadedSLocEntries(F.LocalNumSLocEntries,
-                                              SLocSpaceSize);
+          SourceMgr.AllocateLoadedSLocEntries(ReducedNumEntries, ReducedSize);
       if (!F.SLocEntryBaseID) {
         Diags.Report(SourceLocation(), diag::remark_sloc_usage);
         SourceMgr.noteSLocAddressSpaceUsage(Diags);
@@ -4283,49 +4342,81 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
                                        "ran out of source locations");
       }
 
-      // De-duplication (Stage 2a): seed the piecewise offset map with a single
-      // identity segment spanning the whole value range, equivalent to the flat
-      // shift by (BaseOffset - 2). This routes translation through the segment
-      // list with no behavior change; Stage 2b adds redirect/shift segments for
-      // duplicated files.
-      F.SLocRemap.push_back(
-          {/*LocalBegin=*/0, /*LocalEnd=*/~SourceLocation::UIntTy(0),
-           /*Delta=*/static_cast<int64_t>(F.SLocEntryBaseOffset) - 2});
+      if (NumDupEntries == 0) {
+        // No de-duplication: one identity segment (== flat shift) and a linear
+        // local->global ID mapping. Register each file as the canonical copy so
+        // later modules can reuse it.
+        F.SLocRemap.push_back(
+            {/*LocalBegin=*/0, /*LocalEnd=*/~SourceLocation::UIntTy(0),
+             /*Delta=*/static_cast<int64_t>(F.SLocEntryBaseOffset) - 2});
+        if (Scanned)
+          for (unsigned I = 0; I != N; ++I)
+            if (Files[I])
+              SourceMgr.registerCanonicalLoadedFile(
+                  Files[I], F.SLocEntryBaseOffset + Offsets[I],
+                  F.SLocEntryBaseID + (int)I);
+      } else {
+        // De-duplication: build keep/redirect offset segments and the
+        // local->global ID map. Skipped (duplicate) entries get no slot and no
+        // address space; their references are redirected to the canonical copy.
+        F.LocalToGlobalID.assign(N, 0);
+        F.KeptSLocLocalIndex.reserve(ReducedNumEntries);
+        uint64_t DupBefore = 0;
+        unsigned KeptCount = 0;
+        for (unsigned I = 0; I != N; ++I) {
+          SourceLocation::UIntTy LowStart = Offsets[I] + 2;
+          SourceLocation::UIntTy LowEnd =
+              (I + 1 < N ? Offsets[I + 1] : SLocSpaceSize) + 2;
+          const FileEntry *FE = Files[I];
+          if (FE && SourceMgr.isLoadedFileDuplicate(FE)) {
+            // Redirect this file's locations into the module that first loaded
+            // it; reserve nothing here.
+            const SourceManager::LoadedFileLoc *Canon =
+                SourceMgr.getCanonicalLoadedFile(FE);
+            F.SLocRemap.push_back({LowStart, LowEnd,
+                                   static_cast<int64_t>(Canon->Offset) -
+                                       static_cast<int64_t>(LowStart)});
+            F.LocalToGlobalID[I] = Canon->ID;
+            DupBefore += LowEnd - LowStart;
+          } else {
+            // Keep: lands in this module's block, shifted down to close gaps
+            // left by skipped duplicates before it.
+            int GlobalID = F.SLocEntryBaseID + (int)KeptCount;
+            SourceLocation::UIntTy GlobalStart =
+                static_cast<SourceLocation::UIntTy>(F.SLocEntryBaseOffset +
+                                                    Offsets[I] - DupBefore);
+            F.SLocRemap.push_back({LowStart, LowEnd,
+                                   static_cast<int64_t>(GlobalStart) -
+                                       static_cast<int64_t>(LowStart)});
+            F.LocalToGlobalID[I] = GlobalID;
+            F.KeptSLocLocalIndex.push_back(I);
+            if (FE)
+              SourceMgr.registerCanonicalLoadedFile(FE, GlobalStart, GlobalID);
+            ++KeptCount;
+          }
+        }
+        // Extend the first/last segments to cover the whole value range so
+        // every translated location matches a segment.
+        F.SLocRemap.front().LocalBegin = 0;
+        F.SLocRemap.back().LocalEnd = ~SourceLocation::UIntTy(0);
+        assert(KeptCount == ReducedNumEntries && "kept count mismatch");
+      }
+
       // Make our entry in the range map. BaseID is negative and growing, so
       // we invert it. Because we invert it, though, we need the other end of
       // the range.
       unsigned RangeStart =
-          unsigned(-F.SLocEntryBaseID) - F.LocalNumSLocEntries + 1;
+          unsigned(-F.SLocEntryBaseID) - ReducedNumEntries + 1;
       GlobalSLocEntryMap.insert(std::make_pair(RangeStart, &F));
       F.FirstLoc = SourceLocation::getFromRawEncoding(F.SLocEntryBaseOffset);
 
       // SLocEntryBaseOffset is lower than MaxLoadedOffset and decreasing.
       assert((F.SLocEntryBaseOffset & SourceLocation::MacroIDBit) == 0);
-      GlobalSLocOffsetMap.insert(
-          std::make_pair(SourceManager::MaxLoadedOffset - F.SLocEntryBaseOffset
-                           - SLocSpaceSize,&F));
+      GlobalSLocOffsetMap.insert(std::make_pair(
+          SourceManager::MaxLoadedOffset - F.SLocEntryBaseOffset - ReducedSize,
+          &F));
 
-      TotalNumSLocEntries += F.LocalNumSLocEntries;
-
-      // De-duplication detection (prototype, Stage 1). Walk this module's SLoc
-      // file entries and recognize when the same file was already loaded by an
-      // earlier module, measuring the address space a future reuse (Stage 2)
-      // could reclaim. Detection only: no allocation/translation change here.
-      {
-        SmallVector<uint32_t, 64> Offsets;
-        SmallVector<const FileEntry *, 64> Files;
-        if (scanLoadedSLocEntries(F, Offsets, Files)) {
-          unsigned N = Offsets.size();
-          for (unsigned I = 0; I != N; ++I) {
-            if (!Files[I])
-              continue;
-            uint64_t Size =
-                (I + 1 < N ? Offsets[I + 1] : SLocSpaceSize) - Offsets[I];
-            SourceMgr.noteLoadedFileSLocEntry(
-                Files[I], F.SLocEntryBaseOffset + Offsets[I], Size);
-          }
-        }
-      }
+      TotalNumSLocEntries += ReducedNumEntries;
       break;
     }
 

@@ -2407,6 +2407,13 @@ public:
                              SmallVectorImpl<uint32_t> &Offsets,
                              SmallVectorImpl<const FileEntry *> &Files);
 
+  /// Map a module-local SLoc entry offset (the value stored in an entry record,
+  /// i.e. Record[0]) to its global raw start offset, applying the
+  /// de-duplication remap. Equals (SLocEntryBaseOffset + LocalOffset) when the
+  /// module is not de-duplicated.
+  SourceLocation::UIntTy remapSLocEntryOffset(ModuleFile &F,
+                                              uint32_t LocalOffset) const;
+
   /// Retrieve the module import location and module name for the
   /// given source manager entry ID.
   std::pair<SourceLocation, StringRef> getModuleImportLoc(int ID) override;
@@ -2506,13 +2513,20 @@ public:
     // covers this location. The seeded identity segment makes this identical to
     // the flat shift below; redirect segments (Stage 2b) send a duplicated
     // file's locations into the module that first loaded it.
+    //
+    // Segments are keyed by the *file-offset* part of the location, so strip
+    // the macro bit before matching and re-apply it to the result (a macro
+    // location encodes its position in the low bits with the high bit set).
     if (!ModuleFile.SLocRemap.empty()) {
       SourceLocation::UIntTy Raw = Loc.getRawEncoding();
+      SourceLocation::UIntTy MacroBit = Raw & SourceLocation::MacroIDBit;
+      SourceLocation::UIntTy Low = Raw & ~SourceLocation::MacroIDBit;
       for (const auto &Seg : ModuleFile.SLocRemap)
-        if (Raw >= Seg.LocalBegin && Raw < Seg.LocalEnd)
+        if (Low >= Seg.LocalBegin && Low < Seg.LocalEnd)
           return SourceLocation::getFromRawEncoding(
-              static_cast<SourceLocation::UIntTy>(
-                  static_cast<int64_t>(Raw) + Seg.Delta));
+              (static_cast<SourceLocation::UIntTy>(static_cast<int64_t>(Low) +
+                                                   Seg.Delta)) |
+              MacroBit);
       // No segment matched (shouldn't happen): fall through to the flat shift.
     }
 
@@ -2537,6 +2551,14 @@ public:
     assert(FID.ID >= 0 && "Reading non-local FileID.");
     if (FID.isInvalid())
       return FID;
+    // De-duplication (Stage 2b): a local FileID may map to the canonical copy
+    // in an earlier module, so consult the explicit map when present. Local
+    // FileID N corresponds to local entry index N-1.
+    if (!F.LocalToGlobalID.empty()) {
+      assert((unsigned)(FID.ID - 1) < F.LocalToGlobalID.size() &&
+             "local FileID out of range");
+      return FileID::get(F.LocalToGlobalID[FID.ID - 1]);
+    }
     return FileID::get(F.SLocEntryBaseID + FID.ID - 1);
   }
 
