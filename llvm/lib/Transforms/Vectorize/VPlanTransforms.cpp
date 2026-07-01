@@ -3105,6 +3105,18 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
                                      SpliceR, EVL, Mask);
   }
 
+  if (match(&CurRecipe, m_Intrinsic<Intrinsic::experimental_vp_strided_store>(
+                            m_VPValue(StoredVal), m_VPValue(Addr),
+                            m_VPValue(Stride), m_RemoveMask(HeaderMask, Mask),
+                            m_TruncOrSelf(m_Specific(&Plan->getVF()))))) {
+    if (!Mask)
+      Mask = Plan->getTrue();
+    auto *NewStore = cast<VPWidenMemIntrinsicRecipe>(&CurRecipe)->clone();
+    NewStore->setOperand(3, Mask);
+    NewStore->setOperand(4, &EVL);
+    return NewStore;
+  }
+
   if (auto *Rdx = dyn_cast<VPReductionRecipe>(&CurRecipe))
     if (Rdx->isConditional() &&
         match(Rdx->getCondOp(), m_RemoveMask(HeaderMask, Mask)))
@@ -7525,16 +7537,15 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_shallow(VectorLoop->getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
-      auto *LoadR = dyn_cast<VPWidenLoadRecipe>(&R);
-      // TODO: Support strided store.
+      auto *MemR = dyn_cast<VPWidenMemoryRecipe>(&R);
       // TODO: Transform reverse access into strided access with -1 stride.
       // TODO: Transform gather/scatter with uniform address into strided access
       // with 0 stride.
       // TODO: Transform interleave access into multiple strided accesses.
-      if (!LoadR || LoadR->isConsecutive())
+      if (!MemR || MemR->isConsecutive())
         continue;
 
-      auto *Ptr = dyn_cast<VPWidenGEPRecipe>(LoadR->getAddr());
+      auto *Ptr = dyn_cast<VPWidenGEPRecipe>(MemR->getAddr());
       if (!Ptr)
         continue;
 
@@ -7549,17 +7560,30 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
                                      m_SpecificLoop(&L))))
         continue;
 
-      Type *LoadTy = LoadR->getScalarType();
-      Align Alignment = LoadR->getAlign();
+      VPValue *StoredValue = nullptr;
+      Type *DataTy = nullptr;
+      if (auto *StoreR = dyn_cast<VPWidenStoreRecipe>(&R)) {
+        StoredValue = StoreR->getStoredValue();
+        DataTy = StoredValue->getScalarType();
+      } else if (auto *LoadR = dyn_cast<VPWidenLoadRecipe>(&R)) {
+        DataTy = LoadR->getScalarType();
+      } else {
+        continue;
+      }
+
+      Intrinsic::ID IntrinID = StoredValue
+                                   ? Intrinsic::experimental_vp_strided_store
+                                   : Intrinsic::experimental_vp_strided_load;
+
+      Align Alignment = MemR->getAlign();
       auto IsProfitable = [&](ElementCount VF) {
-        Type *DataTy = toVectorTy(LoadTy, VF);
-        if (!Ctx.TTI.isLegalStridedLoadStore(DataTy, Alignment))
+        Type *VectorTy = toVectorTy(DataTy, VF);
+        if (!Ctx.TTI.isLegalStridedLoadStore(VectorTy, Alignment))
           return false;
-        const InstructionCost CurrentCost = LoadR->computeCost(VF, Ctx);
+        const InstructionCost CurrentCost = MemR->computeCost(VF, Ctx);
         const InstructionCost StridedLoadStoreCost =
             VPWidenMemIntrinsicRecipe::computeMemIntrinsicCost(
-                Intrinsic::experimental_vp_strided_load, DataTy,
-                LoadR->isMasked(), Alignment, Ctx);
+                IntrinID, VectorTy, MemR->isMasked(), Alignment, Ctx);
         return StridedLoadStoreCost < CurrentCost;
       };
 
@@ -7571,7 +7595,7 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
       // not counted during precomputeCosts.
       // TODO: Remove once the legacy exit cost computation is retired.
       for (ElementCount VF : Range)
-        Ctx.invalidateWideningDecision(&LoadR->getIngredient(), VF);
+        Ctx.invalidateWideningDecision(&MemR->getIngredient(), VF);
 
       // Get VF as i32 for the vector length operand.
       if (!I32VF) {
@@ -7581,7 +7605,7 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
             Plan.getVF().getScalarType(), DebugLoc::getUnknown());
       }
 
-      VPBuilder Builder(LoadR);
+      VPBuilder Builder(&R);
       // Create the base pointer of strided access.
       // TODO: reuse VPDerivedIVRecipe for base pointer computation when it
       // supports a general VPValue as the start value.
@@ -7607,14 +7631,21 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
           BasePtr, Type::getInt8Ty(Plan.getContext()), StrideInBytes,
           Ptr->getGEPNoWrapFlags(), Ptr->getDebugLoc());
 
-      VPValue *Mask = LoadR->getMask();
+      VPValue *Mask = MemR->getMask();
       if (!Mask)
         Mask = Plan.getTrue();
-      auto *StridedLoad = Builder.createWidenMemIntrinsic(
-          Intrinsic::experimental_vp_strided_load,
-          {NewPtr, StrideInBytes, Mask, I32VF}, LoadTy, Alignment, *LoadR,
-          LoadR->getDebugLoc());
-      LoadR->replaceAllUsesWith(StridedLoad);
+      SmallVector<VPValue *, 4> Ops;
+      if (StoredValue)
+        Ops.push_back(StoredValue);
+      Ops.append({NewPtr, StrideInBytes, Mask, I32VF});
+
+      auto *StridedR = Builder.createWidenMemIntrinsic(
+          IntrinID, Ops,
+          StoredValue ? Type::getVoidTy(Plan.getContext()) : DataTy, Alignment,
+          *MemR, R.getDebugLoc());
+      if (!StoredValue)
+        cast<VPWidenLoadRecipe>(&R)->replaceAllUsesWith(StridedR);
+      R.eraseFromParent();
     }
   }
 }
