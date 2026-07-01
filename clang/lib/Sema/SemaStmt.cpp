@@ -528,6 +528,25 @@ Sema::ActOnCaseExpr(SourceLocation CaseLoc, ExprResult Val) {
   return CheckAndFinish(Val.get());
 }
 
+static bool DiagnoseSwitchCaseInExpansionStmt(Sema &S, SourceLocation KwLoc,
+                                              bool IsDefault) {
+  // C++26 [stmt.expand] The compound-statement of an expansion-statement is a
+  // control-flow-limited statement.
+  //
+  // We diagnose this here rather than in JumpDiagnostics because those run
+  // after the expansion statement is instantiated, at which point we will have
+  // have already complained about duplicate case labels, which is not exactly
+  // great QOI.
+  if (S.CurContext->isExpansionStmt() &&
+      S.getCurFunction()->SwitchStack.back().EnclosingDC != S.CurContext) {
+    S.Diag(KwLoc, diag::err_expansion_stmt_case) << IsDefault;
+    S.Diag(S.getCurFunction()->SwitchStack.back().getPointer()->getSwitchLoc(),
+           diag::note_enclosing_switch_statement_here);
+    return true;
+  }
+  return false;
+}
+
 StmtResult
 Sema::ActOnCaseStmt(SourceLocation CaseLoc, ExprResult LHSVal,
                     SourceLocation DotDotDotLoc, ExprResult RHSVal,
@@ -546,6 +565,9 @@ Sema::ActOnCaseStmt(SourceLocation CaseLoc, ExprResult LHSVal,
     getCurFunction()->SwitchStack.back().setInt(true);
     return StmtError();
   }
+
+  if (DiagnoseSwitchCaseInExpansionStmt(*this, CaseLoc, false))
+    return StmtError();
 
   if (LangOpts.OpenACC &&
       getCurScope()->isInOpenACCComputeConstructScope(Scope::SwitchScope)) {
@@ -571,6 +593,9 @@ Sema::ActOnDefaultStmt(SourceLocation DefaultLoc, SourceLocation ColonLoc,
     Diag(DefaultLoc, diag::err_default_not_in_switch);
     return SubStmt;
   }
+
+  if (DiagnoseSwitchCaseInExpansionStmt(*this, DefaultLoc, true))
+    return StmtError();
 
   if (LangOpts.OpenACC &&
       getCurScope()->isInOpenACCComputeConstructScope(Scope::SwitchScope)) {
@@ -1196,8 +1221,9 @@ StmtResult Sema::ActOnStartOfSwitchStmt(SourceLocation SwitchLoc,
 
   auto *SS = SwitchStmt::Create(Context, InitStmt, Cond.get().first, CondExpr,
                                 LParenLoc, RParenLoc);
+  SS->setSwitchLoc(SwitchLoc);
   getCurFunction()->SwitchStack.push_back(
-      FunctionScopeInfo::SwitchInfo(SS, false));
+      FunctionScopeInfo::SwitchInfo(SS, CurContext));
   return SS;
 }
 
@@ -1313,7 +1339,7 @@ Sema::ActOnFinishSwitchStmt(SourceLocation SwitchLoc, Stmt *Switch,
     BodyStmt = new (Context) NullStmt(BodyStmt->getBeginLoc());
   }
 
-  SS->setBody(BodyStmt, SwitchLoc);
+  SS->setBody(BodyStmt);
 
   Expr *CondExpr = SS->getCond();
   if (!CondExpr) return StmtError();

@@ -9610,9 +9610,11 @@ public:
   /// LookupOrCreateLabel - Do a name lookup of a label with the specified name.
   /// If GnuLabelLoc is a valid source location, then this is a definition
   /// of an __label__ label name, otherwise it is a normal label definition
-  /// or use.
+  /// or use. If IsLabelStmt is true, then this is the label of a
+  /// labeled-statement.
   LabelDecl *LookupOrCreateLabel(IdentifierInfo *II, SourceLocation IdentLoc,
-                                 SourceLocation GnuLabelLoc = SourceLocation());
+                                 SourceLocation GnuLabelLoc = SourceLocation(),
+                                 bool IsLabelStmt = false);
 
   /// Perform a name lookup for a label with the specified name; this does not
   /// create a new label if the lookup fails.
