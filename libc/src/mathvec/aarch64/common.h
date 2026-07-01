@@ -27,7 +27,5 @@ using AdvSIMDFP64Vector = LIBC_NAMESPACE::cpp::simd<double, 2>;
   })
 
 // Helpers for declaring vector constants.
-#define V2(X)                                                                  \
-  { X, X }
-#define V4(X)                                                                  \
-  { X, X, X, X }
+#define V2(X) {X, X}
+#define V4(X) {X, X, X, X}
