@@ -61,9 +61,8 @@ public:
   /// FIXME: It is unfortunate that this heuristic differs from the heuristic
   /// used for reporting assumption (`SizeUnit::forExpr`).
   static SizeUnit forSVal(SVal Location, const ASTContext &ACtx) {
-    const auto *EReg = Location.getAsRegion()->getAs<ElementRegion>();
-    assert(EReg && "this checker only handles element access");
-    return SizeUnit(EReg->getElementType(), ACtx);
+    const auto *TVR = Location.getAsRegion()->getAs<TypedValueRegion>();
+    return TVR ? SizeUnit(TVR->getValueType(), ACtx) : bytes();
   }
 
   int64_t asCharUnits() const { return AsCharUnits; }
