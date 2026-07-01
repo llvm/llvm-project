@@ -16,6 +16,14 @@
 
 #include <stddef.h>
 
+#ifndef GPR_OFFSET
+#error GPR_OFFSET must be defined before including this header file
+#endif
+
+#ifndef FPR_OFFSET
+#error FPR_OFFSET must be defined before including this header file
+#endif
+
 using namespace riscv_dwarf;
 
 // Assuming register numbers seen in eh_frame and DWARF to be the same.
@@ -39,12 +47,11 @@ using namespace riscv_dwarf;
 #define DEFINE_GPR32(reg, generic_kind) DEFINE_GPR32_ALT(reg, reg, generic_kind)
 
 // Defines a 32-bit GPR.
-// The byte offset of 0 is a placeholder and should be corrected at runtime.
 #define DEFINE_GPR32_ALT(reg, alt, generic_kind)                               \
   {#reg,                                                                       \
    #alt,                                                                       \
    4,                                                                          \
-   0,                                                                          \
+   GPR_OFFSET(gpr_##reg##_riscv - gpr_first_riscv),                            \
    lldb::eEncodingUint,                                                        \
    lldb::eFormatHex,                                                           \
    GPR32_KIND(gpr_##reg, generic_kind),                                        \
@@ -57,12 +64,11 @@ using namespace riscv_dwarf;
   DEFINE_FPR_ALT(reg, alt, 8, generic_kind)
 
 // Defines a 32-bit FPR.
-// The byte offset of 0 is a placeholder and should be corrected at runtime.
 #define DEFINE_FPR_ALT(reg, alt, size, generic_kind)                           \
   {#reg,                                                                       \
    #alt,                                                                       \
    size,                                                                       \
-   0,                                                                          \
+   FPR_OFFSET(fpr_##reg##_riscv - fpr_first_riscv),                            \
    lldb::eEncodingIEEE754,                                                     \
    lldb::eFormatHex,                                                           \
    FPR32_KIND(fpr_##reg, generic_kind),                                        \
@@ -674,9 +680,5 @@ static lldb_private::RegisterInfo g_register_infos_riscv32_csr_patch[] = {
     DEFINE_CSR32_ALT(mhartid, csr_0xf14, LLDB_INVALID_REGNUM),
     DEFINE_CSR32_ALT(mconfigptr, csr_0xf15, LLDB_INVALID_REGNUM),
 };
-
-static const llvm::StringMap<llvm::ArrayRef<lldb_private::RegisterInfo>>
-    g_register_infos_riscv32_csr_patches = {
-        {"default", llvm::ArrayRef(g_register_infos_riscv32_csr_patch)}};
 
 #endif // DECLARE_REGISTER_INFOS_RISCV32_STRUCT

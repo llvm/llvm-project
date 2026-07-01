@@ -16,9 +16,16 @@
 #include <sstream>
 #include <stddef.h>
 
+#define GPR_OFFSET(idx) ((idx) * sizeof(uint32_t))
+#define FPR_OFFSET(idx) ((idx) * sizeof(uint32_t))
+
 #define DECLARE_REGISTER_INFOS_RISCV32_STRUCT
 #include "Plugins/Process/Utility/RegisterInfos_riscv32.h"
 #undef DECLARE_REGISTER_INFOS_RISCV32_STRUCT
+
+static const llvm::StringMap<llvm::ArrayRef<lldb_private::RegisterInfo>>
+    g_register_infos_riscv32_csr_patches = {
+        {"default", llvm::ArrayRef(g_register_infos_riscv32_csr_patch)}};
 
 RegisterInfoPOSIXDynamic_riscv32::RegisterInfoPOSIXDynamic_riscv32(
     const lldb_private::ArchSpec &target_arch)
@@ -92,22 +99,20 @@ RegisterInfoPOSIXDynamic_riscv32::GetRegisterInfo(
   return m_dyn_reg_infos.GetRegisterInfo(reg_name);
 }
 
-std::vector<lldb_private::RegisterInfo>
-RegisterInfoPOSIXDynamic_riscv32::GetCSRegisterInfos(
-    const std::vector<std::string> &features) {
+void RegisterInfoPOSIXDynamic_riscv32::GetCSRegInfos(
+    llvm::ArrayRef<llvm::StringRef> features,
+    llvm::SmallVectorImpl<lldb_private::RegisterInfo> &cs_reg_infos) {
+  cs_reg_infos.clear();
+
   // Sort and deduplicate the feature list to make the resulting CSR metadata
   // independent of caller ordering.
-  llvm::SmallVector<llvm::StringRef, 32> normalized_features;
-  normalized_features.reserve(features.size());
-  for (const std::string &feature : features)
-    normalized_features.push_back(feature);
-  std::sort(normalized_features.begin(), normalized_features.end());
-  normalized_features.erase(
-      std::unique(normalized_features.begin(), normalized_features.end()),
-      normalized_features.end());
+  llvm::SmallVector<llvm::StringRef> normalized_features(features.begin(),
+                                                         features.end());
+  llvm::sort(normalized_features);
+  normalized_features.erase(llvm::unique(normalized_features),
+                            normalized_features.end());
 
   const uint32_t k_num_csr_registers = csr_last_riscv - csr_first_riscv + 1;
-  std::vector<lldb_private::RegisterInfo> cs_reg_infos;
   cs_reg_infos.reserve(k_num_csr_registers);
 
   // Construct default CS register information.
@@ -116,10 +121,7 @@ RegisterInfoPOSIXDynamic_riscv32::GetCSRegisterInfos(
     for (auto &kind : csr.kinds)
       kind = LLDB_INVALID_REGNUM;
 
-    std::stringstream reg_hex;
-    reg_hex << "0x" << std::hex << reg;
-    lldb_private::ConstString name(std::string("csr_") + reg_hex.str());
-
+    lldb_private::ConstString name(llvm::formatv("csr_{0:x}", reg).str());
     csr.name = name.GetCString();
     csr.alt_name = csr.name;
     csr.byte_size = 4;
@@ -140,17 +142,15 @@ RegisterInfoPOSIXDynamic_riscv32::GetCSRegisterInfos(
 
   // Patch application is order-dependent; later patches override earlier ones
   // for the same CSR address.
-  ConfigureCSRegInfos(cs_reg_infos, "default");
+  ConfigureCSRegInfos("default", cs_reg_infos);
 
   for (const auto &feature : normalized_features)
-    ConfigureCSRegInfos(cs_reg_infos, feature);
-
-  return cs_reg_infos;
+    ConfigureCSRegInfos(feature, cs_reg_infos);
 }
 
 void RegisterInfoPOSIXDynamic_riscv32::ConfigureCSRegInfos(
-    std::vector<lldb_private::RegisterInfo> &cs_reg_infos,
-    llvm::StringRef feature) {
+    llvm::StringRef feature,
+    llvm::SmallVectorImpl<lldb_private::RegisterInfo> &cs_reg_infos) {
   auto it = g_register_infos_riscv32_csr_patches.find(feature);
   if (it == g_register_infos_riscv32_csr_patches.end())
     return;

@@ -8,13 +8,17 @@
 
 #include "RegisterContextPOSIXCore_riscv32.h"
 
+#include "Plugins/Process/elf-core/ProcessElfCore.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Utility/DataBufferHeap.h"
-
-#include "Plugins/Process/elf-core/ProcessElfCore.h"
-
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
+
+#define GPR_OFFSET(idx) ((idx) * sizeof(uint32_t))
+#define FPR_OFFSET(idx) ((idx) * sizeof(uint32_t))
 
 #define DECLARE_REGISTER_INFOS_RISCV32_STRUCT
 #include "Plugins/Process/Utility/RegisterInfos_riscv32.h"
@@ -53,8 +57,12 @@ RegisterContextCorePOSIX_riscv32::RegisterContextCorePOSIX_riscv32(
       std::size(g_register_infos_riscv32_gpr);
   constexpr uint32_t k_num_fpr_registers =
       std::size(g_register_infos_riscv32_fpr);
-  std::vector<lldb_private::RegisterInfo> reg_infos_riscv32_csr =
-      m_reg_infos_up->GetCSRegisterInfos(GetFeatures());
+  llvm::SmallVector<std::string> features;
+  GetFeatures(features);
+  llvm::SmallVector<llvm::StringRef> feature_refs(features.begin(),
+                                                  features.end());
+  llvm::SmallVector<lldb_private::RegisterInfo> reg_infos_riscv32_csr;
+  m_reg_infos_up->GetCSRegInfos(feature_refs, reg_infos_riscv32_csr);
   uint32_t k_num_csr_registers = reg_infos_riscv32_csr.size();
   const ArchSpec &target_arch = m_reg_infos_up->GetTargetArchitecture();
   const llvm::Triple triple = target_arch.GetTriple();
@@ -342,47 +350,40 @@ RegisterContextCorePOSIX_riscv32::BuildDynamicRegister(
       reg_info.flags_type};
 }
 
-std::vector<std::string> RegisterContextCorePOSIX_riscv32::GetFeatures() {
+void RegisterContextCorePOSIX_riscv32::GetFeatures(
+    llvm::SmallVectorImpl<std::string> &features) const {
   Log *log = GetLog(LLDBLog::Process);
+  features.clear();
 
-  if (!m_thread.IsValid()) {
-    LLDB_LOG(log, "invalid thread");
-    return {};
-  }
+  if (!m_thread.IsValid())
+    return;
 
   auto process_sp = m_thread.GetProcess();
-  if (!process_sp) {
-    LLDB_LOG(log, "invalid process");
-    return {};
-  }
+  if (!process_sp)
+    return;
 
-  auto target = process_sp->GetTarget().shared_from_this();
-  if (!target) {
-    LLDB_LOG(log, "invalid target");
-    return {};
-  }
+  auto target = process_sp->CalculateTarget();
+  if (!target)
+    return;
 
   auto module_sp = target->GetExecutableModule();
-  if (!module_sp) {
-    LLDB_LOG(log, "invalid module");
-    return {};
-  }
+  if (!module_sp)
+    return;
 
   // ObjectFileELF::ParseRISCVAttributes should've already parsed features and
   // stored them in the module's ArchSpec via ArchSpec::SetSubtargetFeatures.
-  std::vector<std::string> features =
+  std::vector<std::string> raw_features =
       module_sp->GetArchitecture().GetSubtargetFeatures().getFeatures();
 
-  if (features.empty()) {
+  if (raw_features.empty()) {
     LLDB_LOG(log, "no RISC-V subtarget feature found in module ArchSpec");
-    return {};
+    return;
   }
 
-  for (auto &feature : features) {
-    feature = llvm::SubtargetFeatures::StripFlag(feature);
-  }
+  features.reserve(raw_features.size());
+  for (const auto &feature : raw_features)
+    features.emplace_back(llvm::SubtargetFeatures::StripFlag(feature));
+
   features.erase(std::remove(features.begin(), features.end(), ""),
                  features.end());
-
-  return features;
 }

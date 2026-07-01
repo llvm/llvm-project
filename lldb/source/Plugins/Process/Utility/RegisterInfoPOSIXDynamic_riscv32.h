@@ -13,6 +13,9 @@
 #include "lldb/Target/DynamicRegisterInfo.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/lldb-private.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 
 class RegisterInfoPOSIXDynamic_riscv32
     : public lldb_private::RegisterInfoAndSetInterface {
@@ -40,7 +43,7 @@ public:
   const lldb_private::RegisterInfo *
   GetRegisterInfo(llvm::StringRef reg_name) const;
 
-  /// @brief Builds CS register information entries for 32-bit RISC-V debug
+  /// \brief Builds CS register information entries for 32-bit RISC-V debug
   ///        targets on the basis of the enabled ISA extensions.
   ///
   /// Custom and vendor RISC-V extensions can define CSRs that overlap
@@ -49,31 +52,33 @@ public:
   /// metadata depends only on the feature set and conflict resolution is
   /// predictable.
   ///
-  /// @param[in] features ISA extension feature names.
+  /// \param[in]     features     ISA extension feature names.
   ///
-  /// @return Vector of CS register information entries for the 32-bit RISC-V
-  ///         debug target configuration.
-  std::vector<lldb_private::RegisterInfo>
-  GetCSRegisterInfos(const std::vector<std::string> &features);
+  /// \param[in,out] cs_reg_infos Container to populate with CS register
+  ///                             information entries for the 32-bit RISC-V
+  ///                             debug target configuration.
+  static void GetCSRegInfos(
+      llvm::ArrayRef<llvm::StringRef> features,
+      llvm::SmallVectorImpl<lldb_private::RegisterInfo> &cs_reg_infos);
 
 private:
   lldb_private::DynamicRegisterInfo m_dyn_reg_infos;
   const lldb_private::ArchSpec m_target_arch;
 
-  /// @brief Applies the CS register information patch set for a given feature.
+  /// \brief Applies the CS register information patch set for a given feature.
   ///
   /// CSR metadata is constructed from a baseline container and then selectively
   /// overridden by feature-specific definitions. This helper performs the
   /// override by looking up the patch list for the feature and updating only
   /// the affected CSR entries in-place.
   ///
-  /// @param[in,out] cs_reg_infos CS register information vector to update
-  ///                             in-place.
-  /// @param[in]     feature      Feature name used to select a patch set
+  /// \param[in]     feature      Feature name used to select a patch set
   ///                             (e.g., "default").
-  void
-  ConfigureCSRegInfos(std::vector<lldb_private::RegisterInfo> &cs_reg_infos,
-                      llvm::StringRef feature);
+  /// \param[in,out] cs_reg_infos Container of CS register information entries
+  ///                             to update in-place.
+  static void ConfigureCSRegInfos(
+      llvm::StringRef feature,
+      llvm::SmallVectorImpl<lldb_private::RegisterInfo> &cs_reg_infos);
 };
 
 #endif // LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERINFOPOSIXDYNAMIC_RISCV32_H
