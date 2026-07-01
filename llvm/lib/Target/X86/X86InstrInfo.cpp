@@ -7444,6 +7444,8 @@ MachineInstr *X86InstrInfo::foldMemoryOperandCustom(
                        InsertPt, MI))
       return NewMI;
     break;
+  case X86::PEXTRQrri:
+  case X86::VPEXTRQrri:
   case X86::VPEXTRQZrri:
     // Fold: extractelt(v2i64 vector, 1) where vector is a spilled stack slot.
     // Instead of reloading the full vector and extracting with vpextrq, load
