@@ -33,6 +33,7 @@ namespace clang::ssaf {
 /// entity linker and contains deduplicated and patched entity summaries.
 class LUSummaryEncoding {
   friend class EntityLinker;
+  friend class MultiArchSharedLibrary;
   friend class SerializationFormat;
   friend class TestFixture;
 

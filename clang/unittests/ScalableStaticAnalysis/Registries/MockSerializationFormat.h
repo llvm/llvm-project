@@ -56,6 +56,12 @@ public:
   llvm::Error writeMultiArchStaticLibrary(const MultiArchStaticLibrary &M,
                                           llvm::StringRef Path) override;
 
+  llvm::Expected<MultiArchSharedLibrary>
+  readMultiArchSharedLibrary(llvm::StringRef Path) override;
+
+  llvm::Error writeMultiArchSharedLibrary(const MultiArchSharedLibrary &M,
+                                          llvm::StringRef Path) override;
+
   llvm::Expected<Artifact> readArtifact(llvm::StringRef Path) override;
 
   llvm::Error writeArtifact(const Artifact &A, llvm::StringRef Path) override;
