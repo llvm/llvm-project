@@ -1173,7 +1173,8 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
                                 ReturnValueSlot returnValue,
                                 const CallArgList &args,
                                 cir::CIRCallOpInterface *callOp,
-                                mlir::Location loc) {
+                                mlir::Location loc,
+                                const clang::CallExpr *astCallExpr) {
   QualType retTy = funcInfo.getReturnType();
   cir::FuncType cirFuncTy = getTypes().getFunctionType(funcInfo);
 
@@ -1346,6 +1347,12 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
   cir::CIRCallOpInterface theCall =
       emitCallLikeOp(*this, loc, indirectFuncTy, indirectFuncVal, directFuncOp,
                      cirCallArgs, isInvoke, attrs, argAttrs, retAttrs);
+
+  // Attach the AST call expression so later passes can reason about the
+  // original source call.
+  if (astCallExpr)
+    theCall->setAttr(cir::CIRDialect::getAstAttrName(),
+                     cir::ASTCallExprAttr::get(&getMLIRContext(), astCallExpr));
 
   if (callOp)
     *callOp = theCall;

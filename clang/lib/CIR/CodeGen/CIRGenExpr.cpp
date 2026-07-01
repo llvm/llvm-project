@@ -2423,7 +2423,7 @@ RValue CIRGenFunction::emitCall(clang::QualType calleeTy,
 
   cir::CIRCallOpInterface callOp;
   RValue callResult = emitCall(funcInfo, callee, returnValue, args, &callOp,
-                               getLoc(e->getExprLoc()));
+                               getLoc(e->getExprLoc()), e);
 
   assert(!cir::MissingFeatures::generateDebugInfo());
 

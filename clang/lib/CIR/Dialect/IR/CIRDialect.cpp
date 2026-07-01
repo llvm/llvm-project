@@ -1228,7 +1228,8 @@ printCallCommon(mlir::Operation *op, mlir::FlatSymbolRefAttr calleeSym,
       CIRDialect::getSideEffectAttrName(),
       CIRDialect::getOperandSegmentSizesAttrName(),
       llvm::StringRef("res_attrs"),
-      llvm::StringRef("arg_attrs")};
+      llvm::StringRef("arg_attrs"),
+      CIRDialect::getAstAttrName()};
   printer.printOptionalAttrDict(op->getAttrs(), elidedAttrs);
   printer << " : ";
   if (calleeSym || !argAttrs) {

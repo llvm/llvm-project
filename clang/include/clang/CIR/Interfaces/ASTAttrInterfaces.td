@@ -34,6 +34,10 @@ let cppNamespace = "::cir" in {
       }]>
     ];
   }
+
+  // Query methods are added together with their consumers in the
+  // IdiomRecognizer pass.
+  def ASTCallExprInterface : AttrInterface<"ASTCallExprInterface"> {}
 } // namespace cir
 
 #endif // MLIR_CIR_INTERFACES_ASTATTRINTERFACES_TD
