@@ -444,7 +444,8 @@ void Prescanner::LabelField(TokenSequence &token) {
 
   // Skip C-style comments.
   const char *p{SkipWhiteSpace(start)};
-  long spaces{HasTabInLabelField(start - colOffset) ? 6 : p - start};
+  int spaces{
+      HasTabInLabelField(start - colOffset) ? 6 : static_cast<int>(p - start)};
   if (spaces < 6 && IsCComment(p)) {
     at_ += spaces;
     column_ += spaces;
