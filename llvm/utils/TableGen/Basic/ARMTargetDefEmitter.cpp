@@ -221,6 +221,10 @@ static void emitARMTargetDef(const RecordKeeper &RK, raw_ostream &OS) {
   };
 
   auto Architectures = RK.getAllDerivedDefinitionsIfDefined("Architecture64");
+  OS << "\n"
+     << "/// The set of all architectures\n"
+     << "inline constexpr std::array<ArchInfo, " << Architectures.size()
+     << "> ArchInfos = {{\n";
   std::vector<std::string> CppSpellings;
   for (const Record *Rec : Architectures) {
     const int Major = Rec->getValueAsInt("Major");
@@ -235,11 +239,11 @@ static void emitARMTargetDef(const RecordKeeper &RK, raw_ostream &OS) {
 
     // Name of the object in C++
     std::string CppSpelling = ArchInfoName(Major, Minor, ProfileUpper);
-    OS << "inline constexpr ArchInfo " << CppSpelling << " = {\n";
+    OS << "  {\n";
     CppSpellings.push_back(std::move(CppSpelling));
 
-    OS << llvm::format("  VersionTuple{%d, %d},\n", Major, Minor);
-    OS << llvm::format("  %sProfile,\n", ProfileUpper.c_str());
+    OS << llvm::format("    VersionTuple{%d, %d},\n", Major, Minor);
+    OS << llvm::format("    %sProfile,\n", ProfileUpper.c_str());
 
     // Name as spelled for -march.
     std::string ArchStr;
@@ -248,31 +252,28 @@ static void emitARMTargetDef(const RecordKeeper &RK, raw_ostream &OS) {
       AS << llvm::format("armv%d-%s", Major, ProfileLower.c_str());
     else
       AS << llvm::format("armv%d.%d-%s", Major, Minor, ProfileLower.c_str());
-    OS << "  " << StrTab.GetOrAddStringOffset(ArchStr) << ",\n";
+    OS << "    " << StrTab.GetOrAddStringOffset(ArchStr) << ",\n";
 
     // SubtargetFeature::Name, used for -target-feature. Here the "+" is added.
     std::string TargetFeatureName =
         (Twine("+") + Rec->getValueAsString("Name")).str();
-    OS << "  " << StrTab.GetOrAddStringOffset(TargetFeatureName) << ",\n";
+    OS << "    " << StrTab.GetOrAddStringOffset(TargetFeatureName) << ",\n";
 
     // Construct the list of default extensions
-    OS << "  (AArch64::ExtensionBitset({";
+    OS << "    (AArch64::ExtensionBitset({";
     for (auto *E : Rec->getValueAsListOfDefs("DefaultExts")) {
       OS << "AArch64::" << E->getValueAsString("ArchExtKindSpelling").upper()
          << ", ";
     }
     OS << "}))\n";
 
-    OS << "};\n";
+    OS << "  },\n";
   }
+  OS << "}};\n";
 
-  OS << "\n"
-     << "/// The set of all architectures\n"
-     << "static constexpr std::array<const ArchInfo *, " << CppSpellings.size()
-     << "> ArchInfos = {\n";
-  for (StringRef CppSpelling : CppSpellings)
-    OS << "  &" << CppSpelling << ",\n";
-  OS << "};\n";
+  for (auto [Idx, CppSpelling] : enumerate(CppSpellings))
+    OS << "static constexpr const ArchInfo &" << CppSpelling << " = ArchInfos["
+       << Idx << "];\n";
 
   OS << "#undef EMIT_ARCHITECTURES\n"
      << "#endif // EMIT_ARCHITECTURES\n"
@@ -346,12 +347,14 @@ static void emitARMTargetDef(const RecordKeeper &RK, raw_ostream &OS) {
     auto Minor = Arch->getValueAsInt("Minor");
     auto Profile = Arch->getValueAsString("Profile");
     auto ArchInfo = ArchInfoName(Major, Minor, Profile);
+    unsigned ArchIdx =
+        llvm::find(CppSpellings, ArchInfo) - CppSpellings.begin();
 
     checkFeatureTree(Arch);
 
     OS << "  {\n"
        << "    " << StrTab.GetOrAddStringOffset(Name) << ",\n"
-       << "    " << ArchInfo << ",\n"
+       << "    " << ArchIdx << " /* " << ArchInfo << " */,\n"
        << "    AArch64::ExtensionBitset({\n";
 
     // Keep track of extensions we have seen
