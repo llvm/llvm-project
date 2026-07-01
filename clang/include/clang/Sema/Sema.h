@@ -11210,6 +11210,11 @@ public:
   VarDecl *BuildForRangeVarDecl(SourceLocation Loc, QualType Type,
                                 IdentifierInfo *Name, bool Constexpr);
 
+  /// Helper used by the expansion statements and for-range code to build
+  /// a variable declaration for e.g. 'begin' and 'end'.
+  VarDecl *BuildForRangeVarDecl(SourceLocation Loc, QualType Type,
+                                StringRef Name, bool Constexpr);
+
   /// Build the range variable of a range-based for loop or iterating
   /// expansion statement and return its DeclStmt.
   StmtResult BuildCXXForRangeRangeVar(Scope *S, Expr *Range, QualType Type,
@@ -15880,6 +15885,12 @@ public:
                                                      SourceLocation LParenLoc,
                                                      SourceLocation ColonLoc,
                                                      SourceLocation RParenLoc);
+
+  StmtResult BuildNonEnumeratingCXXExpansionStmtPattern(
+      CXXExpansionStmtDecl *ESD, Stmt *Init, DeclStmt *ExpansionVarStmt,
+      Expr *ExpansionInitializer, SourceLocation LParenLoc,
+      SourceLocation ColonLoc, SourceLocation RParenLoc,
+      ArrayRef<MaterializeTemporaryExpr *> LifetimeExtendTemps = {});
 
   ExprResult BuildCXXExpansionSelectExpr(InitListExpr *Range, Expr *Idx);
 
