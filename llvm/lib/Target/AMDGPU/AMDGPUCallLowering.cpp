@@ -20,7 +20,6 @@
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
-#include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/PseudoSourceValueManager.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
@@ -298,67 +297,38 @@ struct AMDGPUOutgoingArgHandler : public AMDGPUOutgoingValueHandler {
   }
 };
 
-// Return the virtual register and type for a preloaded physical SGPR live-in.
-static std::pair<Register, LLT> getPreloadedLiveIn(MachineIRBuilder &B,
-                                                   MCRegister PhysReg,
-                                                   const SIRegisterInfo &TRI) {
-  MachineFunction &MF = B.getMF();
-  const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
-  const TargetRegisterClass *RC = TRI.getPhysRegBaseClass(PhysReg);
-  assert(RC && "expected a register class for preload SGPR");
-  LLT RegTy = LLT::scalar(TRI.getRegSizeInBits(*RC).getFixedValue());
-  return {getFunctionLiveInPhysReg(MF, *TII, PhysReg, *RC, B.getDL(), RegTy),
-          RegTy};
-}
-
-// Convert raw SGPR preload bits to the type expected by the formal argument.
-static Register adjustPreloadedArgType(MachineIRBuilder &B, Register Src,
-                                       LLT SrcTy, LLT DstTy) {
-  if (SrcTy == DstTy)
-    return Src;
-
-  LLT IntDstTy = (DstTy.isPointer() || DstTy.isVector())
-                     ? LLT::scalar(DstTy.getSizeInBits())
-                     : DstTy;
-  if (SrcTy.getSizeInBits() != IntDstTy.getSizeInBits())
-    Src = B.buildAnyExtOrTrunc(IntDstTy, Src).getReg(0);
-
-  if (DstTy.isPointer())
-    return B.buildIntToPtr(DstTy, Src).getReg(0);
-
-  if (DstTy.isVector())
-    return B.buildBitcast(DstTy, Src).getReg(0);
-
-  return Src;
-}
-
 // Materialize a preloaded kernarg from its assigned SGPRs into DstReg.
 static void lowerPreloadedKernArg(MachineIRBuilder &B, Register DstReg,
                                   LLT DstTy, uint64_t Offset, Align Alignment,
-                                  ArrayRef<MCRegister> PreloadRegs,
-                                  const SIRegisterInfo &TRI) {
+                                  ArrayRef<MCRegister> PreloadRegs) {
   assert(!PreloadRegs.empty());
 
   // Kernarg preloads are assigned in 32-bit SGPR units.
   const LLT S32 = LLT::scalar(32);
+  LLT IntDstTy = (DstTy.isPointer() || DstTy.isVector())
+                     ? LLT::scalar(DstTy.getSizeInBits())
+                     : DstTy;
+  auto BuildCopyFromPreload = [&B](LLT Ty, MCRegister Reg) {
+    B.getMBB().addLiveIn(Reg);
+    return B.buildCopy(Ty, Register(Reg)).getReg(0);
+  };
 
   Register Value;
   LLT ValueTy;
   const bool IsPackedSubDword = DstTy.getSizeInBits() < 32 && Alignment < 4;
 
   if (PreloadRegs.size() == 1) {
-    auto [LiveIn, LiveInTy] = getPreloadedLiveIn(B, PreloadRegs[0], TRI);
     if (IsPackedSubDword) {
       // Extract sub-dword preloads from their containing 32-bit SGPR word.
-      Register Raw = B.buildCopy(S32, LiveIn).getReg(0);
+      Register Raw = BuildCopyFromPreload(S32, PreloadRegs[0]);
       uint64_t OffsetDiff = Offset - alignDown(Offset, 4);
       Register ShiftAmt = B.buildConstant(S32, OffsetDiff * 8).getReg(0);
       Value = B.buildLShr(S32, Raw, ShiftAmt).getReg(0);
       ValueTy = S32;
     } else {
-      // A single preload entry may be a 32-bit SGPR or a wider SGPR tuple.
-      ValueTy = LiveInTy;
-      Value = B.buildCopy(ValueTy, LiveIn).getReg(0);
+      // Copy the physical preload storage width, then narrow to the IR size.
+      ValueTy = LLT::scalar(alignTo(IntDstTy.getSizeInBits(), 32));
+      Value = BuildCopyFromPreload(ValueTy, PreloadRegs[0]);
     }
   } else {
     assert(!IsPackedSubDword && "packed sub-dword preload should use one SGPR");
@@ -366,34 +336,22 @@ static void lowerPreloadedKernArg(MachineIRBuilder &B, Register DstReg,
     SmallVector<Register, 4> Regs;
     Regs.reserve(PreloadRegs.size());
     for (MCRegister Reg : PreloadRegs) {
-      Register LiveIn = getPreloadedLiveIn(B, Reg, TRI).first;
-      Regs.push_back(B.buildCopy(S32, LiveIn).getReg(0));
+      Regs.push_back(BuildCopyFromPreload(S32, Reg));
     }
 
     ValueTy = LLT::scalar(PreloadRegs.size() * 32);
     Value = B.buildMergeLikeInstr(ValueTy, Regs).getReg(0);
   }
 
-  Register Adjusted = adjustPreloadedArgType(B, Value, ValueTy, DstTy);
-  B.buildCopy(DstReg, Adjusted);
-}
+  if (ValueTy.getSizeInBits() != IntDstTy.getSizeInBits())
+    Value = B.buildAnyExtOrTrunc(IntDstTy, Value).getReg(0);
 
-// CCValAssign records an MVT, so round odd-sized split argument parts to the
-// simple memory type used for kernarg layout.
-static MVT getLocVTForSplitArg(const TargetLowering &TLI, const DataLayout &DL,
-                               Type *Ty, LLVMContext &Ctx) {
-  EVT LocVT = TLI.getValueType(DL, Ty, true);
+  if (DstTy.isPointer())
+    Value = B.buildIntToPtr(DstTy, Value).getReg(0);
+  else if (DstTy.isVector())
+    Value = B.buildBitcast(DstTy, Value).getReg(0);
 
-  if (LocVT.isVector() && LocVT.getVectorNumElements() == 1)
-    LocVT = LocVT.getScalarType();
-
-  if (LocVT.isVector() && !LocVT.isPow2VectorType())
-    LocVT = LocVT.getPow2VectorType(Ctx);
-  else if (!LocVT.isSimple() && !LocVT.isVector())
-    LocVT = LocVT.getRoundIntegerType(Ctx);
-
-  assert(LocVT.isSimple());
-  return LocVT.getSimpleVT();
+  B.buildCopy(DstReg, Value);
 }
 
 // Assign SGPRs for the contiguous sequence of kernel argument parts marked for
@@ -657,8 +615,6 @@ bool AMDGPUCallLowering::lowerParameter(MachineIRBuilder &B, ArgInfo &Arg,
   const bool IsHiddenArg =
       IRArg && IRArg->hasAttribute("amdgpu-hidden-argument");
   const SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
-  const GCNSubtarget &Subtarget = MF.getSubtarget<GCNSubtarget>();
-  const SIRegisterInfo *TRI = Subtarget.getRegisterInfo();
   const SITargetLowering &TLI = *getTLI<SITargetLowering>();
   MachinePointerInfo PtrInfo = TLI.getKernargSegmentPtrInfo(MF);
 
@@ -678,7 +634,7 @@ bool AMDGPUCallLowering::lowerParameter(MachineIRBuilder &B, ArgInfo &Arg,
   auto PreloadArg = Info->getArgInfo().PreloadKernArgs.find(InputArgIndex);
   if (PreloadArg != Info->getArgInfo().PreloadKernArgs.end()) {
     lowerPreloadedKernArg(B, Arg.Regs[0], ArgTy, Offset, Alignment,
-                          PreloadArg->getSecond().Regs, *TRI);
+                          PreloadArg->getSecond().Regs);
     return true;
   }
 
@@ -810,12 +766,17 @@ bool AMDGPUCallLowering::lowerFormalArgumentsKernel(
          SplitIdx != NumSplitArgs; ++SplitIdx) {
       unsigned InputArgIndex = SplitArgs.size();
       ArgSplitArgs[SplitIdx].OrigValue = &Arg;
-      MVT LocVT = getLocVTForSplitArg(TLI, DL, ArgSplitArgs[SplitIdx].Ty,
-                                      F.getContext());
+      EVT LocVT = TLI.getValueType(DL, ArgSplitArgs[SplitIdx].Ty, true);
+      if (LocVT.isVector() && LocVT.getVectorNumElements() == 1)
+        LocVT = LocVT.getScalarType();
+      if (LocVT.isVector() && !LocVT.isPow2VectorType())
+        LocVT = LocVT.getPow2VectorType(F.getContext());
+      else if (!LocVT.isSimple() && !LocVT.isVector())
+        LocVT = LocVT.getRoundIntegerType(F.getContext());
       CCInfo.addLoc(CCValAssign::getCustomMem(
-          InputArgIndex, LocVT,
-          ArgOffset + FieldOffsets[SplitIdx].getFixedValue(), LocVT,
-          CCValAssign::Full));
+          InputArgIndex, LocVT.getSimpleVT(),
+          ArgOffset + FieldOffsets[SplitIdx].getFixedValue(),
+          LocVT.getSimpleVT(), CCValAssign::Full));
       SplitArgAlignments.push_back(
           commonAlignment(ArgBaseAlign, FieldOffsets[SplitIdx]));
       SplitArgs.push_back(ArgSplitArgs[SplitIdx]);

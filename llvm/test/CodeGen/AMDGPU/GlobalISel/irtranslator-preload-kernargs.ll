@@ -6,15 +6,14 @@ define amdgpu_kernel void @preload_i32_inreg(i32 inreg %x, ptr addrspace(1) %out
   ; GFX90A: bb.1 (%ir-block.0):
   ; GFX90A-NEXT:   liveins: $sgpr6, $sgpr4_sgpr5
   ; GFX90A-NEXT: {{  $}}
-  ; GFX90A-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr6
-  ; GFX90A-NEXT:   [[COPY1:%[0-9]+]]:_(p4) = COPY $sgpr4_sgpr5
-  ; GFX90A-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY [[COPY]]
-  ; GFX90A-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
+  ; GFX90A-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr4_sgpr5
+  ; GFX90A-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX90A-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
   ; GFX90A-NEXT:   [[INT:%[0-9]+]]:_(p4) = G_INTRINSIC intrinsic(@llvm.amdgcn.kernarg.segment.ptr)
   ; GFX90A-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
   ; GFX90A-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p4) = nuw nusw inbounds G_PTR_ADD [[INT]], [[C]](s64)
   ; GFX90A-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[PTR_ADD]](p4) :: (dereferenceable invariant load (p1) from %ir.out.kernarg.offset, addrspace 4)
-  ; GFX90A-NEXT:   G_STORE [[COPY3]](s32), [[LOAD]](p1) :: (store (s32) into %ir.out.load, addrspace 1)
+  ; GFX90A-NEXT:   G_STORE [[COPY2]](s32), [[LOAD]](p1) :: (store (s32) into %ir.out.load, addrspace 1)
   ; GFX90A-NEXT:   S_ENDPGM 0
   store i32 %x, ptr addrspace(1) %out, align 4
   ret void
@@ -25,15 +24,14 @@ define amdgpu_kernel void @preload_i64_inreg(i64 inreg %x, ptr addrspace(1) %out
   ; GFX90A: bb.1 (%ir-block.0):
   ; GFX90A-NEXT:   liveins: $sgpr4_sgpr5, $sgpr6_sgpr7
   ; GFX90A-NEXT: {{  $}}
-  ; GFX90A-NEXT:   [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr6_sgpr7
-  ; GFX90A-NEXT:   [[COPY1:%[0-9]+]]:_(p4) = COPY $sgpr4_sgpr5
-  ; GFX90A-NEXT:   [[COPY2:%[0-9]+]]:_(s64) = COPY [[COPY]]
-  ; GFX90A-NEXT:   [[COPY3:%[0-9]+]]:_(s64) = COPY [[COPY2]](s64)
+  ; GFX90A-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr4_sgpr5
+  ; GFX90A-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $sgpr6_sgpr7
+  ; GFX90A-NEXT:   [[COPY2:%[0-9]+]]:_(s64) = COPY [[COPY1]](s64)
   ; GFX90A-NEXT:   [[INT:%[0-9]+]]:_(p4) = G_INTRINSIC intrinsic(@llvm.amdgcn.kernarg.segment.ptr)
   ; GFX90A-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
   ; GFX90A-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p4) = nuw nusw inbounds G_PTR_ADD [[INT]], [[C]](s64)
   ; GFX90A-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[PTR_ADD]](p4) :: (dereferenceable invariant load (p1) from %ir.out.kernarg.offset, addrspace 4)
-  ; GFX90A-NEXT:   G_STORE [[COPY3]](s64), [[LOAD]](p1) :: (store (s64) into %ir.out.load, addrspace 1)
+  ; GFX90A-NEXT:   G_STORE [[COPY2]](s64), [[LOAD]](p1) :: (store (s64) into %ir.out.load, addrspace 1)
   ; GFX90A-NEXT:   S_ENDPGM 0
   store i64 %x, ptr addrspace(1) %out, align 8
   ret void
@@ -44,18 +42,36 @@ define amdgpu_kernel void @preload_ptr_inreg(ptr addrspace(1) inreg %p, ptr addr
   ; GFX90A: bb.1 (%ir-block.0):
   ; GFX90A-NEXT:   liveins: $sgpr4_sgpr5, $sgpr6_sgpr7
   ; GFX90A-NEXT: {{  $}}
-  ; GFX90A-NEXT:   [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr6_sgpr7
-  ; GFX90A-NEXT:   [[COPY1:%[0-9]+]]:_(p4) = COPY $sgpr4_sgpr5
-  ; GFX90A-NEXT:   [[COPY2:%[0-9]+]]:_(s64) = COPY [[COPY]]
-  ; GFX90A-NEXT:   [[INTTOPTR:%[0-9]+]]:_(p1) = G_INTTOPTR [[COPY2]](s64)
-  ; GFX90A-NEXT:   [[COPY3:%[0-9]+]]:_(p1) = COPY [[INTTOPTR]](p1)
+  ; GFX90A-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr4_sgpr5
+  ; GFX90A-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $sgpr6_sgpr7
+  ; GFX90A-NEXT:   [[INTTOPTR:%[0-9]+]]:_(p1) = G_INTTOPTR [[COPY1]](s64)
+  ; GFX90A-NEXT:   [[COPY2:%[0-9]+]]:_(p1) = COPY [[INTTOPTR]](p1)
   ; GFX90A-NEXT:   [[INT:%[0-9]+]]:_(p4) = G_INTRINSIC intrinsic(@llvm.amdgcn.kernarg.segment.ptr)
   ; GFX90A-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
   ; GFX90A-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p4) = nuw nusw inbounds G_PTR_ADD [[INT]], [[C]](s64)
   ; GFX90A-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[PTR_ADD]](p4) :: (dereferenceable invariant load (p1) from %ir.out.kernarg.offset, addrspace 4)
-  ; GFX90A-NEXT:   G_STORE [[COPY3]](p1), [[LOAD]](p1) :: (store (p1) into %ir.out.load, addrspace 1)
+  ; GFX90A-NEXT:   G_STORE [[COPY2]](p1), [[LOAD]](p1) :: (store (p1) into %ir.out.load, addrspace 1)
   ; GFX90A-NEXT:   S_ENDPGM 0
   store ptr addrspace(1) %p, ptr addrspace(1) %out, align 8
+  ret void
+}
+
+define amdgpu_kernel void @preload_lds_ptr_inreg(ptr addrspace(3) inreg %p, ptr addrspace(1) %out) #0 {
+  ; GFX90A-LABEL: name: preload_lds_ptr_inreg
+  ; GFX90A: bb.1 (%ir-block.0):
+  ; GFX90A-NEXT:   liveins: $sgpr6, $sgpr4_sgpr5
+  ; GFX90A-NEXT: {{  $}}
+  ; GFX90A-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr4_sgpr5
+  ; GFX90A-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX90A-NEXT:   [[INTTOPTR:%[0-9]+]]:_(p3) = G_INTTOPTR [[COPY1]](s32)
+  ; GFX90A-NEXT:   [[COPY2:%[0-9]+]]:_(p3) = COPY [[INTTOPTR]](p3)
+  ; GFX90A-NEXT:   [[INT:%[0-9]+]]:_(p4) = G_INTRINSIC intrinsic(@llvm.amdgcn.kernarg.segment.ptr)
+  ; GFX90A-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
+  ; GFX90A-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p4) = nuw nusw inbounds G_PTR_ADD [[INT]], [[C]](s64)
+  ; GFX90A-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[PTR_ADD]](p4) :: (dereferenceable invariant load (p1) from %ir.out.kernarg.offset, addrspace 4)
+  ; GFX90A-NEXT:   G_STORE [[COPY2]](p3), [[LOAD]](p1) :: (store (p3) into %ir.out.load, addrspace 1)
+  ; GFX90A-NEXT:   S_ENDPGM 0
+  store ptr addrspace(3) %p, ptr addrspace(1) %out, align 4
   ret void
 }
 
@@ -64,18 +80,17 @@ define amdgpu_kernel void @preload_packed_i16_inreg(i16 inreg %a, i16 inreg %b, 
   ; GFX90A: bb.1 (%ir-block.0):
   ; GFX90A-NEXT:   liveins: $sgpr6, $sgpr4_sgpr5
   ; GFX90A-NEXT: {{  $}}
-  ; GFX90A-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr6
-  ; GFX90A-NEXT:   [[COPY1:%[0-9]+]]:_(p4) = COPY $sgpr4_sgpr5
-  ; GFX90A-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY [[COPY]]
+  ; GFX90A-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr4_sgpr5
+  ; GFX90A-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr6
   ; GFX90A-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-  ; GFX90A-NEXT:   [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY2]], [[C]](s32)
+  ; GFX90A-NEXT:   [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY1]], [[C]](s32)
   ; GFX90A-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
-  ; GFX90A-NEXT:   [[COPY3:%[0-9]+]]:_(s16) = COPY [[TRUNC]](s16)
+  ; GFX90A-NEXT:   [[COPY2:%[0-9]+]]:_(s16) = COPY [[TRUNC]](s16)
   ; GFX90A-NEXT:   [[INT:%[0-9]+]]:_(p4) = G_INTRINSIC intrinsic(@llvm.amdgcn.kernarg.segment.ptr)
   ; GFX90A-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
   ; GFX90A-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p4) = nuw nusw inbounds G_PTR_ADD [[INT]], [[C1]](s64)
   ; GFX90A-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[PTR_ADD]](p4) :: (dereferenceable invariant load (p1) from %ir.out.kernarg.offset, addrspace 4)
-  ; GFX90A-NEXT:   G_STORE [[COPY3]](s16), [[LOAD]](p1) :: (store (s16) into %ir.out.load, addrspace 1)
+  ; GFX90A-NEXT:   G_STORE [[COPY2]](s16), [[LOAD]](p1) :: (store (s16) into %ir.out.load, addrspace 1)
   ; GFX90A-NEXT:   S_ENDPGM 0
   store i16 %b, ptr addrspace(1) %out, align 2
   ret void
@@ -86,16 +101,14 @@ define amdgpu_kernel void @preload_hidden_block_count_x(ptr addrspace(1) inreg %
   ; GFX90A: bb.1 (%ir-block.0):
   ; GFX90A-NEXT:   liveins: $sgpr8, $sgpr4_sgpr5, $sgpr6_sgpr7
   ; GFX90A-NEXT: {{  $}}
-  ; GFX90A-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr8
-  ; GFX90A-NEXT:   [[COPY1:%[0-9]+]]:sreg_64 = COPY $sgpr6_sgpr7
-  ; GFX90A-NEXT:   [[COPY2:%[0-9]+]]:_(p4) = COPY $sgpr4_sgpr5
-  ; GFX90A-NEXT:   [[COPY3:%[0-9]+]]:_(s64) = COPY [[COPY1]]
-  ; GFX90A-NEXT:   [[INTTOPTR:%[0-9]+]]:_(p1) = G_INTTOPTR [[COPY3]](s64)
-  ; GFX90A-NEXT:   [[COPY4:%[0-9]+]]:_(p1) = COPY [[INTTOPTR]](p1)
-  ; GFX90A-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY [[COPY]]
-  ; GFX90A-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY [[COPY5]](s32)
+  ; GFX90A-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr4_sgpr5
+  ; GFX90A-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $sgpr6_sgpr7
+  ; GFX90A-NEXT:   [[INTTOPTR:%[0-9]+]]:_(p1) = G_INTTOPTR [[COPY1]](s64)
+  ; GFX90A-NEXT:   [[COPY2:%[0-9]+]]:_(p1) = COPY [[INTTOPTR]](p1)
+  ; GFX90A-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX90A-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY [[COPY3]](s32)
   ; GFX90A-NEXT:   [[INT:%[0-9]+]]:_(p4) = G_INTRINSIC intrinsic(@llvm.amdgcn.kernarg.segment.ptr)
-  ; GFX90A-NEXT:   G_STORE [[COPY6]](s32), [[COPY4]](p1) :: (store (s32) into %ir.out, addrspace 1)
+  ; GFX90A-NEXT:   G_STORE [[COPY4]](s32), [[COPY2]](p1) :: (store (s32) into %ir.out, addrspace 1)
   ; GFX90A-NEXT:   S_ENDPGM 0
   store i32 %_hidden_block_count_x, ptr addrspace(1) %out, align 4
   ret void
@@ -106,15 +119,14 @@ define amdgpu_kernel void @preload_v1i32_inreg(<1 x i32> inreg %x, ptr addrspace
   ; GFX90A: bb.1 (%ir-block.0):
   ; GFX90A-NEXT:   liveins: $sgpr6, $sgpr4_sgpr5
   ; GFX90A-NEXT: {{  $}}
-  ; GFX90A-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr6
-  ; GFX90A-NEXT:   [[COPY1:%[0-9]+]]:_(p4) = COPY $sgpr4_sgpr5
-  ; GFX90A-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY [[COPY]]
-  ; GFX90A-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
+  ; GFX90A-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr4_sgpr5
+  ; GFX90A-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX90A-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
   ; GFX90A-NEXT:   [[INT:%[0-9]+]]:_(p4) = G_INTRINSIC intrinsic(@llvm.amdgcn.kernarg.segment.ptr)
   ; GFX90A-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
   ; GFX90A-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p4) = nuw nusw inbounds G_PTR_ADD [[INT]], [[C]](s64)
   ; GFX90A-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[PTR_ADD]](p4) :: (dereferenceable invariant load (p1) from %ir.out.kernarg.offset, addrspace 4)
-  ; GFX90A-NEXT:   G_STORE [[COPY3]](s32), [[LOAD]](p1) :: (store (s32) into %ir.out.load, addrspace 1)
+  ; GFX90A-NEXT:   G_STORE [[COPY2]](s32), [[LOAD]](p1) :: (store (s32) into %ir.out.load, addrspace 1)
   ; GFX90A-NEXT:   S_ENDPGM 0
   store <1 x i32> %x, ptr addrspace(1) %out, align 4
   ret void
@@ -125,15 +137,14 @@ define amdgpu_kernel void @preload_skip_empty_struct_inreg({} inreg %empty, i32 
   ; GFX90A: bb.1 (%ir-block.0):
   ; GFX90A-NEXT:   liveins: $sgpr6, $sgpr4_sgpr5
   ; GFX90A-NEXT: {{  $}}
-  ; GFX90A-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr6
-  ; GFX90A-NEXT:   [[COPY1:%[0-9]+]]:_(p4) = COPY $sgpr4_sgpr5
-  ; GFX90A-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY [[COPY]]
-  ; GFX90A-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
+  ; GFX90A-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr4_sgpr5
+  ; GFX90A-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX90A-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
   ; GFX90A-NEXT:   [[INT:%[0-9]+]]:_(p4) = G_INTRINSIC intrinsic(@llvm.amdgcn.kernarg.segment.ptr)
   ; GFX90A-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
   ; GFX90A-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p4) = nuw nusw inbounds G_PTR_ADD [[INT]], [[C]](s64)
   ; GFX90A-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[PTR_ADD]](p4) :: (dereferenceable invariant load (p1) from %ir.out.kernarg.offset, addrspace 4)
-  ; GFX90A-NEXT:   G_STORE [[COPY3]](s32), [[LOAD]](p1) :: (store (s32) into %ir.out.load, addrspace 1)
+  ; GFX90A-NEXT:   G_STORE [[COPY2]](s32), [[LOAD]](p1) :: (store (s32) into %ir.out.load, addrspace 1)
   ; GFX90A-NEXT:   S_ENDPGM 0
   store i32 %x, ptr addrspace(1) %out, align 4
   ret void
