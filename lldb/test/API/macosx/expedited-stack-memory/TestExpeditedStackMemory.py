@@ -20,23 +20,19 @@ those bytes into its memory cache.  Consequences exercised here:
 """
 
 import os
-import re
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+from lldbsuite.test.gdbclientutils import (
+    PacketDirection,
+    parse_memory_read_packet,
+    parse_packet_log,
+)
 
 
 class TestExpeditedStackMemory(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
-
-    # A gdb-remote memory read is "$x<addr>,<len>" or "$m<addr>,<len>"; the comma
-    # after the hex address distinguishes them from other packets.
-    MEM_READ_RE = re.compile(r"send packet: \$[xm][0-9a-fA-F]+,[0-9a-fA-F]+")
-    READ_RANGE_RE = re.compile(r"send packet: \$[xm]([0-9a-fA-F]+),([0-9a-fA-F]+)")
-
-    # Must match HEAP_COUNT in main.c.
-    HEAP_COUNT = 8
 
     @skipUnlessDarwin
     def test_no_packets_during_backtrace(self):
@@ -73,36 +69,50 @@ class TestExpeditedStackMemory(TestBase):
         not, so both stack-resident locals and heap buffers behind pointers are
         read from the stub today.
 
-        We know from main.c which storage is stack and which is heap, so we
-        classify each read by the variables' own addresses."""
-        stack_addrs = []
-        heap_ranges = []
+        We have two regions and ask the process which one each read falls in:
+          * the stack region: whichever region the stack pointer points into.
+          * the heap region: whichever region func_e's `heap` local points
+            into."""
 
         def per_frame(idx, frame):
             # An IDE always walks the full stack for the backtrace, but only
             # examines the locals of the selected frame (frame 0) unless the user
             # asks to view all frames.
             if examine_all_frames or idx == 0:
-                self.examine_locals(frame, stack_addrs, heap_ranges)
+                self.examine_locals(frame)
 
         sent = self.walk_stack(per_frame, disable_memory_cache=False)
 
-        self.assertTrue(stack_addrs, "expected to find stack-resident locals")
-        self.assertTrue(heap_ranges, "expected to find the 'heap' pointer local")
+        # The process is still stopped after the walk; consult its memory map to
+        # classify the reads we just provoked.  Frame 0 is func_e (where we
+        # stopped), so both the stack pointer and the `heap` local live there.
+        process = self.dbg.GetSelectedTarget().GetProcess()
+        frame0 = process.GetSelectedThread().GetFrameAtIndex(0)
+
+        stack_region = lldb.SBMemoryRegionInfo()
+        self.assertTrue(
+            process.GetMemoryRegionInfo(frame0.GetSP(), stack_region).Success(),
+            "could not locate the stack memory region",
+        )
+
+        heap_ptr = frame0.FindVariable("heap").GetValueAsUnsigned(0)
+        self.assertNotEqual(heap_ptr, 0, "could not read func_e's 'heap' pointer")
+        heap_region = lldb.SBMemoryRegionInfo()
+        self.assertTrue(
+            process.GetMemoryRegionInfo(heap_ptr, heap_region).Success(),
+            "could not locate the heap memory region",
+        )
 
         reads = self.read_ranges(sent)
-        heap_reads = [r for r in reads if any(self.overlaps(r, h) for h in heap_ranges)]
-        stack_reads = [
-            r
-            for r in reads
-            if r not in heap_reads and any(self.contains(r, a) for a in stack_addrs)
-        ]
-        other_reads = [r for r in reads if r not in heap_reads and r not in stack_reads]
+        stack_reads = [r for r in reads if self.in_region(r, stack_region)]
+        heap_reads = [r for r in reads if self.in_region(r, heap_region)]
+        other_reads = [r for r in reads if r not in stack_reads and r not in heap_reads]
 
         breakdown = (
             "memory reads while examining locals: "
             "stack=%d heap=%d other=%d (total=%d)\n"
-            "  heap ranges:  %s\n"
+            "  stack region: [0x%x,0x%x)\n"
+            "  heap region:  [0x%x,0x%x)\n"
             "  stack reads:  %s\n"
             "  heap reads:   %s\n"
             "  other reads:  %s"
@@ -111,7 +121,10 @@ class TestExpeditedStackMemory(TestBase):
                 len(heap_reads),
                 len(other_reads),
                 len(reads),
-                ", ".join("[0x%x,0x%x)" % h for h in heap_ranges),
+                stack_region.GetRegionBase(),
+                stack_region.GetRegionEnd(),
+                heap_region.GetRegionBase(),
+                heap_region.GetRegionEnd(),
                 ", ".join("[0x%x,0x%x)" % r for r in stack_reads),
                 ", ".join("[0x%x,0x%x)" % r for r in heap_reads),
                 ", ".join("[0x%x,0x%x)" % r for r in other_reads),
@@ -138,8 +151,9 @@ class TestExpeditedStackMemory(TestBase):
 
     def walk_stack(self, per_frame_fn, disable_memory_cache):
         """Stop at the breakpoint, then walk every frame calling
-        per_frame_fn(index, frame) on each.  Returns the list of 'send packet:'
-        log lines emitted during the walk (the backtrace window)."""
+        per_frame_fn(index, frame) on each.  Returns the unframed contents of
+        every packet lldb sent to the stub during the walk (the backtrace
+        window)."""
         self.build()
         logfile = os.path.join(
             self.getBuildDir(),
@@ -187,7 +201,11 @@ class TestExpeditedStackMemory(TestBase):
             f.seek(pos_before)
             window = f.read(pos_after - pos_before)
 
-        return [line.strip() for line in window.splitlines() if "send packet:" in line]
+        return [
+            body
+            for direction, body in parse_packet_log(window.splitlines())
+            if direction == PacketDirection.SEND
+        ]
 
     def check_packets_during_backtrace(self, disable_memory_cache):
         # An IDE-style backtrace: force a full unwind and resolve each frame's
@@ -198,7 +216,7 @@ class TestExpeditedStackMemory(TestBase):
             frame.GetModule()
 
         sent = self.walk_stack(resolve_only, disable_memory_cache)
-        mem_reads = [line for line in sent if self.MEM_READ_RE.search(line)]
+        mem_reads = [p for p in sent if parse_memory_read_packet(p) is not None]
 
         if disable_memory_cache:
             # The unwinder must fetch the backchain from the stub frame by frame.
@@ -218,16 +236,13 @@ class TestExpeditedStackMemory(TestBase):
                 "unexpected packets during the walk:\n  %s" % "\n  ".join(sent),
             )
 
-    def examine_locals(self, frame, stack_addrs, heap_ranges):
-        """Read a frame's locals/arguments: GetVariables() then
-        per value GetValue()/GetSummary()/GetValueDidChange(), disclosing one
-        level of children for aggregates and pointers.
+    def examine_locals(self, frame):
+        """Read a frame's locals/arguments the way an IDE does: GetVariables()
+        then per value GetValue()/GetSummary()/GetValueDidChange(), disclosing
+        one level of children for aggregates and pointers.
 
-        Records, for classifying the resulting memory reads:
-          * stack_addrs: the load address of each local (its stack storage), so a
-            read covering one of these addresses is a stack read.
-          * heap_ranges: the address range of the 'heap' pointer's buffer, so a
-            read overlapping it is a heap read."""
+        This only provokes the memory reads (stack-resident values and the heap
+        buffers behind pointers); the caller classifies the resulting reads."""
         values = frame.GetVariables(
             True, True, False, True, lldb.eDynamicCanRunTarget
         )  # arguments, locals, statics, in_scope_only, use_dynamic (as an IDE does)
@@ -235,11 +250,6 @@ class TestExpeditedStackMemory(TestBase):
             v = values.GetValueAtIndex(i)
             if not v.IsValid():
                 continue
-
-            # The variable's own storage is on the stack (we wrote main.c).
-            addr = v.GetLoadAddress()
-            if addr != lldb.LLDB_INVALID_ADDRESS:
-                stack_addrs.append(addr)
 
             v.GetValue()
             v.GetSummary()
@@ -252,30 +262,18 @@ class TestExpeditedStackMemory(TestBase):
                     if child.IsValid():
                         child.GetValue()
 
-            # Remember the heap buffer's range so the caller can classify reads
-            # that hit heap (vs stack) memory.
-            if v.GetName() == "heap" and v.GetType().IsPointerType():
-                err = lldb.SBError()
-                ptr = v.GetValueAsUnsigned(err, 0)
-                if err.Success() and ptr != 0:
-                    heap_ranges.append((ptr, ptr + self.HEAP_COUNT * 8))
-
-    @classmethod
-    def read_ranges(cls, sent):
-        """Parse [addr, addr+len) ranges out of the memory-read packet lines."""
+    @staticmethod
+    def read_ranges(sent):
+        """Parse [addr, addr+len) ranges out of the memory-read packets."""
         ranges = []
-        for line in sent:
-            m = cls.READ_RANGE_RE.search(line)
-            if m:
-                addr = int(m.group(1), 16)
-                length = int(m.group(2), 16)
+        for packet in sent:
+            parsed = parse_memory_read_packet(packet)
+            if parsed:
+                addr, length = parsed
                 ranges.append((addr, addr + length))
         return ranges
 
     @staticmethod
-    def overlaps(a, b):
-        return a[0] < b[1] and b[0] < a[1]
-
-    @staticmethod
-    def contains(read_range, addr):
-        return read_range[0] <= addr < read_range[1]
+    def in_region(read_range, region):
+        """True if the read starts inside the given memory region."""
+        return region.GetRegionBase() <= read_range[0] < region.GetRegionEnd()

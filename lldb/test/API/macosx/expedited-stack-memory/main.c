@@ -8,6 +8,7 @@
 // exercises the various memory-read paths in one frame:
 //   - scalar locals (int / long / double)
 //   - aggregate locals (a struct and a fixed stack array)
+//   - a variable-length array (dynamically sized stack storage, like alloca)
 //   - pointer locals, including a pointer to heap memory
 //
 // The outer frames (func_d / func_c) also carry locals of these kinds, so that
@@ -17,9 +18,6 @@
 // The frame-pointer backchain is expedited at the public stop, so the backtrace
 // itself is packet-free; reading the *values* of these locals is not expedited
 // and must read memory from the stub.
-//
-// noinline + a real use of every value keeps every frame and local live (no
-// inlining, no tail-call folding, nothing optimized away).
 
 #define HEAP_COUNT 8
 
@@ -37,27 +35,31 @@ struct Stats {
 // scalar, aggregates (struct + array), and pointers (including one into heap
 // memory).  Examining this single frame on a stop reads both stack and
 // heap memory.
-static int __attribute__((noinline)) func_e(int depth) {
+static int func_e(int depth) {
   int i = depth + 1;
   long l = (long)depth * 1000;
   double d = depth + 0.5;
   struct Stats stats = {.sum = i, .min = i - 1, .max = i + 1, .mean = d};
   long arr[4] = {i, i + 1, i + 2, i + 3};
+  int n = i + 4; // a runtime bound, so vla is a true variable-length array
+  long vla[n];   // dynamically sized stack storage (like alloca)
+  for (int k = 0; k < n; ++k)
+    vla[k] = (long)i - k;
   long *heap = (long *)malloc(sizeof(long) * HEAP_COUNT);
   for (int k = 0; k < HEAP_COUNT; ++k)
     heap[k] = (long)i + k;
   const char *str = "hello from func_e";
   int *self = &i;
-  g_sink = i + l + (long)d + stats.sum + arr[3] + heap[HEAP_COUNT - 1] +
-           str[0] + *self; // break here
-  int r = i + (int)l + (int)d + (int)stats.sum + (int)arr[3] +
+  g_sink = i + l + (long)d + stats.sum + arr[3] + vla[n - 1] +
+           heap[HEAP_COUNT - 1] + str[0] + *self; // break here
+  int r = i + (int)l + (int)d + (int)stats.sum + (int)arr[3] + (int)vla[n - 1] +
           (int)heap[HEAP_COUNT - 1] + str[0] + *self;
   free(heap);
   return r;
 }
 
 // Aggregate locals: a struct and a fixed-size stack array.
-static int __attribute__((noinline)) func_d(int x) {
+static int func_d(int x) {
   struct Stats stats = {.sum = x, .min = x - 1, .max = x + 1, .mean = x + 0.5};
   long arr[4] = {x, x + 1, x + 2, x + 3};
   int r = func_e(x);
@@ -65,7 +67,7 @@ static int __attribute__((noinline)) func_d(int x) {
 }
 
 // Pointer locals, including a pointer into heap memory.
-static int __attribute__((noinline)) func_c(int x) {
+static int func_c(int x) {
   long *heap = (long *)malloc(sizeof(long) * HEAP_COUNT);
   for (int i = 0; i < HEAP_COUNT; ++i)
     heap[i] = (long)x + i;
@@ -77,8 +79,8 @@ static int __attribute__((noinline)) func_c(int x) {
   return r;
 }
 
-static int __attribute__((noinline)) func_b(int x) { return func_c(x) + 1; }
-static int __attribute__((noinline)) func_a(int x) { return func_b(x) + 1; }
+static int func_b(int x) { return func_c(x) + 1; }
+static int func_a(int x) { return func_b(x) + 1; }
 
 int main() {
   g_sink = func_a(0);
