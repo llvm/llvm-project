@@ -129,7 +129,7 @@ Variable expect nodes test the debugger output for a specific variable. This tak
 Step expect nodes test the stepping behaviour of the debugger. A step node can only have, as its expected value, a list of non-negative integers. During evaluation, Dexter will compare all of the line numbers stepped on while the step expect was active to the expected steps, according to one of 3 rules:
 
 - `!step exactly`: while this !expect is active, we expect see exactly the expected lines in-order as many times as they appear in the expected lines list.
-- `!step order`: while this !expect is active, we expect to see each of the expected lines in-order at least as many times as they appear in the expected list, ignoring excess lines and lines not in the expected lines list.
+- `!step at_least`: while this !expect is active, we expect to see each of the expected lines in-order at least as many times as they appear in the expected list, ignoring excess lines and lines not in the expected lines list.
 - `!step never`: while this !expect is active, we expect to not see any of the lines in the expected lines list. 
 
 ### Rewriting Expect Nodes
