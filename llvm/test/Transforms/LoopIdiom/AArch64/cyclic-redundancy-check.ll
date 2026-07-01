@@ -50,16 +50,16 @@ define i16 @crc16.le.tc8(i8 %msg, i16 %checksum) {
 ; AES-NEXT:    [[XOR_CRC_DATA:%.*]] = xor i24 [[CRC_CAST]], [[DATA_CAST]]
 ; AES-NEXT:    [[CRC_TCBITS:%.*]] = and i24 [[XOR_CRC_DATA]], 255
 ; AES-NEXT:    [[CLMUL_MU:%.*]] = call i24 @llvm.clmul.i24(i24 [[CRC_TCBITS]], i24 511)
-; AES-NEXT:    [[QUOT_LE_MASK:%.*]] = and i24 [[CLMUL_MU]], 255
-; AES-NEXT:    [[CLMUL_GP:%.*]] = call i24 @llvm.clmul.i24(i24 [[QUOT_LE_MASK]], i24 81923)
+; AES-NEXT:    [[QUOT_MASK:%.*]] = and i24 [[CLMUL_MU]], 255
+; AES-NEXT:    [[CLMUL_GP:%.*]] = call i24 @llvm.clmul.i24(i24 [[QUOT_MASK]], i24 81923)
 ; AES-NEXT:    [[XOR_CRC_MULT:%.*]] = xor i24 [[CRC_CAST]], [[CLMUL_GP]]
-; AES-NEXT:    [[CRC_LE_LSHR:%.*]] = lshr i24 [[XOR_CRC_MULT]], 8
-; AES-NEXT:    [[CRC_NEXT1:%.*]] = trunc i24 [[CRC_LE_LSHR]] to i16
+; AES-NEXT:    [[CRC_LSHR1:%.*]] = lshr i24 [[XOR_CRC_MULT]], 8
+; AES-NEXT:    [[CRC_NEXT2:%.*]] = trunc i24 [[CRC_LSHR1]] to i16
 ; AES-NEXT:    br label %[[LOOP:.*]]
 ; AES:       [[LOOP]]:
 ; AES-NEXT:    br i1 false, label %[[LOOP]], label %[[EXIT:.*]]
 ; AES:       [[EXIT]]:
-; AES-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i16 [ [[CRC_NEXT1]], %[[LOOP]] ]
+; AES-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i16 [ [[CRC_NEXT2]], %[[LOOP]] ]
 ; AES-NEXT:    ret i16 [[CRC_NEXT_LCSSA]]
 ;
 entry:
@@ -117,16 +117,16 @@ define i16 @crc16.le.tc8.udiv(i8 %msg, i16 %checksum) {
 ; AES-NEXT:    [[XOR_CRC_DATA:%.*]] = xor i24 [[CRC_CAST]], [[DATA_CAST]]
 ; AES-NEXT:    [[CRC_TCBITS:%.*]] = and i24 [[XOR_CRC_DATA]], 255
 ; AES-NEXT:    [[CLMUL_MU:%.*]] = call i24 @llvm.clmul.i24(i24 [[CRC_TCBITS]], i24 511)
-; AES-NEXT:    [[QUOT_LE_MASK:%.*]] = and i24 [[CLMUL_MU]], 255
-; AES-NEXT:    [[CLMUL_GP:%.*]] = call i24 @llvm.clmul.i24(i24 [[QUOT_LE_MASK]], i24 81923)
+; AES-NEXT:    [[QUOT_MASK:%.*]] = and i24 [[CLMUL_MU]], 255
+; AES-NEXT:    [[CLMUL_GP:%.*]] = call i24 @llvm.clmul.i24(i24 [[QUOT_MASK]], i24 81923)
 ; AES-NEXT:    [[XOR_CRC_MULT:%.*]] = xor i24 [[CRC_CAST]], [[CLMUL_GP]]
-; AES-NEXT:    [[CRC_LE_LSHR:%.*]] = lshr i24 [[XOR_CRC_MULT]], 8
-; AES-NEXT:    [[CRC_NEXT1:%.*]] = trunc i24 [[CRC_LE_LSHR]] to i16
+; AES-NEXT:    [[CRC_LSHR1:%.*]] = lshr i24 [[XOR_CRC_MULT]], 8
+; AES-NEXT:    [[CRC_NEXT2:%.*]] = trunc i24 [[CRC_LSHR1]] to i16
 ; AES-NEXT:    br label %[[LOOP:.*]]
 ; AES:       [[LOOP]]:
 ; AES-NEXT:    br i1 false, label %[[LOOP]], label %[[EXIT:.*]]
 ; AES:       [[EXIT]]:
-; AES-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i16 [ [[CRC_NEXT1]], %[[LOOP]] ]
+; AES-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i16 [ [[CRC_NEXT2]], %[[LOOP]] ]
 ; AES-NEXT:    ret i16 [[CRC_NEXT_LCSSA]]
 ;
 entry:
@@ -185,16 +185,16 @@ define i16 @crc16.le.tc16(i16 %msg, i16 %checksum) {
 ; AES-NEXT:    [[XOR_CRC_DATA1:%.*]] = xor i32 [[CRC_CAST]], [[DATA_CAST]]
 ; AES-NEXT:    [[CRC_TCBITS:%.*]] = and i32 [[XOR_CRC_DATA1]], 65535
 ; AES-NEXT:    [[CLMUL_MU:%.*]] = call i32 @llvm.clmul.i32(i32 [[CRC_TCBITS]], i32 114687)
-; AES-NEXT:    [[QUOT_LE_MASK:%.*]] = and i32 [[CLMUL_MU]], 65535
-; AES-NEXT:    [[CLMUL_GP:%.*]] = call i32 @llvm.clmul.i32(i32 [[QUOT_LE_MASK]], i32 81923)
+; AES-NEXT:    [[QUOT_MASK:%.*]] = and i32 [[CLMUL_MU]], 65535
+; AES-NEXT:    [[CLMUL_GP:%.*]] = call i32 @llvm.clmul.i32(i32 [[QUOT_MASK]], i32 81923)
 ; AES-NEXT:    [[XOR_CRC_MULT:%.*]] = xor i32 [[CRC_CAST]], [[CLMUL_GP]]
-; AES-NEXT:    [[CRC_LE_LSHR:%.*]] = lshr i32 [[XOR_CRC_MULT]], 16
-; AES-NEXT:    [[CRC_NEXT2:%.*]] = trunc i32 [[CRC_LE_LSHR]] to i16
+; AES-NEXT:    [[CRC_LSHR2:%.*]] = lshr i32 [[XOR_CRC_MULT]], 16
+; AES-NEXT:    [[CRC_NEXT3:%.*]] = trunc i32 [[CRC_LSHR2]] to i16
 ; AES-NEXT:    br label %[[LOOP:.*]]
 ; AES:       [[LOOP]]:
 ; AES-NEXT:    br i1 false, label %[[LOOP]], label %[[EXIT:.*]]
 ; AES:       [[EXIT]]:
-; AES-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i16 [ [[CRC_NEXT2]], %[[LOOP]] ]
+; AES-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i16 [ [[CRC_NEXT3]], %[[LOOP]] ]
 ; AES-NEXT:    ret i16 [[CRC_NEXT_LCSSA]]
 ;
 entry:
@@ -251,16 +251,16 @@ define i8 @crc8.le.tc16(i16 %msg, i8 %checksum) {
 ; AES-NEXT:    [[XOR_CRC_DATA1:%.*]] = xor i32 [[CRC_CAST]], [[DATA_CAST]]
 ; AES-NEXT:    [[CRC_TCBITS:%.*]] = and i32 [[XOR_CRC_DATA1]], 65535
 ; AES-NEXT:    [[CLMUL_MU:%.*]] = call i32 @llvm.clmul.i32(i32 [[CRC_TCBITS]], i32 24423)
-; AES-NEXT:    [[QUOT_LE_MASK:%.*]] = and i32 [[CLMUL_MU]], 65535
-; AES-NEXT:    [[CLMUL_GP:%.*]] = call i32 @llvm.clmul.i32(i32 [[QUOT_LE_MASK]], i32 59)
+; AES-NEXT:    [[QUOT_MASK:%.*]] = and i32 [[CLMUL_MU]], 65535
+; AES-NEXT:    [[CLMUL_GP:%.*]] = call i32 @llvm.clmul.i32(i32 [[QUOT_MASK]], i32 59)
 ; AES-NEXT:    [[XOR_CRC_MULT:%.*]] = xor i32 [[CRC_CAST]], [[CLMUL_GP]]
-; AES-NEXT:    [[CRC_LE_LSHR:%.*]] = lshr i32 [[XOR_CRC_MULT]], 16
-; AES-NEXT:    [[CRC_NEXT2:%.*]] = trunc i32 [[CRC_LE_LSHR]] to i8
+; AES-NEXT:    [[CRC_LSHR2:%.*]] = lshr i32 [[XOR_CRC_MULT]], 16
+; AES-NEXT:    [[CRC_NEXT3:%.*]] = trunc i32 [[CRC_LSHR2]] to i8
 ; AES-NEXT:    br label %[[LOOP:.*]]
 ; AES:       [[LOOP]]:
 ; AES-NEXT:    br i1 false, label %[[LOOP]], label %[[EXIT:.*]]
 ; AES:       [[EXIT]]:
-; AES-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i8 [ [[CRC_NEXT2]], %[[LOOP]] ]
+; AES-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i8 [ [[CRC_NEXT3]], %[[LOOP]] ]
 ; AES-NEXT:    ret i8 [[CRC_NEXT_LCSSA]]
 ;
 entry:
@@ -321,16 +321,16 @@ define i16 @crc16.be.tc8.crc.init.li(i16 %checksum, i8 %msg) {
 ; AES-NEXT:    [[CRC_ALIGN_TC:%.*]] = lshr i24 [[CRC_CAST]], 8
 ; AES-NEXT:    [[CRC_TCBITS:%.*]] = and i24 [[CRC_ALIGN_TC]], 255
 ; AES-NEXT:    [[CLMUL_MU:%.*]] = call i24 @llvm.clmul.i24(i24 [[CRC_TCBITS]], i24 273)
-; AES-NEXT:    [[QUOT_BE_LSHR:%.*]] = lshr i24 [[CLMUL_MU]], 8
-; AES-NEXT:    [[CLMUL_GP:%.*]] = call i24 @llvm.clmul.i24(i24 [[QUOT_BE_LSHR]], i24 69665)
-; AES-NEXT:    [[CRC_BE_SHL:%.*]] = shl i24 [[CRC_CAST]], 8
-; AES-NEXT:    [[XOR_CRC_MULT:%.*]] = xor i24 [[CRC_BE_SHL]], [[CLMUL_GP]]
-; AES-NEXT:    [[CRC_NEXT1:%.*]] = trunc i24 [[XOR_CRC_MULT]] to i16
+; AES-NEXT:    [[QUOT_LSHR:%.*]] = lshr i24 [[CLMUL_MU]], 8
+; AES-NEXT:    [[CLMUL_GP:%.*]] = call i24 @llvm.clmul.i24(i24 [[QUOT_LSHR]], i24 69665)
+; AES-NEXT:    [[CRC_SHL1:%.*]] = shl i24 [[CRC_CAST]], 8
+; AES-NEXT:    [[XOR_CRC_MULT:%.*]] = xor i24 [[CRC_SHL1]], [[CLMUL_GP]]
+; AES-NEXT:    [[CRC_NEXT2:%.*]] = trunc i24 [[XOR_CRC_MULT]] to i16
 ; AES-NEXT:    br label %[[LOOP:.*]]
 ; AES:       [[LOOP]]:
 ; AES-NEXT:    br i1 false, label %[[LOOP]], label %[[EXIT:.*]]
 ; AES:       [[EXIT]]:
-; AES-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i16 [ [[CRC_NEXT1]], %[[LOOP]] ]
+; AES-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i16 [ [[CRC_NEXT2]], %[[LOOP]] ]
 ; AES-NEXT:    ret i16 [[CRC_NEXT_LCSSA]]
 ;
 entry:
@@ -383,16 +383,16 @@ define i16 @crc16.be.tc8.crc.init.arg(i16 %crc.init) {
 ; AES-NEXT:    [[CRC_ALIGN_TC:%.*]] = lshr i24 [[CRC_CAST]], 8
 ; AES-NEXT:    [[CRC_TCBITS:%.*]] = and i24 [[CRC_ALIGN_TC]], 255
 ; AES-NEXT:    [[CLMUL_MU:%.*]] = call i24 @llvm.clmul.i24(i24 [[CRC_TCBITS]], i24 273)
-; AES-NEXT:    [[QUOT_BE_LSHR:%.*]] = lshr i24 [[CLMUL_MU]], 8
-; AES-NEXT:    [[CLMUL_GP:%.*]] = call i24 @llvm.clmul.i24(i24 [[QUOT_BE_LSHR]], i24 69665)
-; AES-NEXT:    [[CRC_BE_SHL:%.*]] = shl i24 [[CRC_CAST]], 8
-; AES-NEXT:    [[XOR_CRC_MULT:%.*]] = xor i24 [[CRC_BE_SHL]], [[CLMUL_GP]]
-; AES-NEXT:    [[CRC_NEXT1:%.*]] = trunc i24 [[XOR_CRC_MULT]] to i16
+; AES-NEXT:    [[QUOT_LSHR:%.*]] = lshr i24 [[CLMUL_MU]], 8
+; AES-NEXT:    [[CLMUL_GP:%.*]] = call i24 @llvm.clmul.i24(i24 [[QUOT_LSHR]], i24 69665)
+; AES-NEXT:    [[CRC_SHL1:%.*]] = shl i24 [[CRC_CAST]], 8
+; AES-NEXT:    [[XOR_CRC_MULT:%.*]] = xor i24 [[CRC_SHL1]], [[CLMUL_GP]]
+; AES-NEXT:    [[CRC_NEXT2:%.*]] = trunc i24 [[XOR_CRC_MULT]] to i16
 ; AES-NEXT:    br label %[[LOOP:.*]]
 ; AES:       [[LOOP]]:
 ; AES-NEXT:    br i1 false, label %[[LOOP]], label %[[EXIT:.*]]
 ; AES:       [[EXIT]]:
-; AES-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i16 [ [[CRC_NEXT1]], %[[LOOP]] ]
+; AES-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i16 [ [[CRC_NEXT2]], %[[LOOP]] ]
 ; AES-NEXT:    ret i16 [[CRC_NEXT_LCSSA]]
 ;
 entry:
@@ -442,16 +442,16 @@ define i16 @crc16.be.tc8.crc.init.arg.flipped.sb.check(i16 %crc.init) {
 ; AES-NEXT:    [[CRC_ALIGN_TC:%.*]] = lshr i24 [[CRC_CAST]], 8
 ; AES-NEXT:    [[CRC_TCBITS:%.*]] = and i24 [[CRC_ALIGN_TC]], 255
 ; AES-NEXT:    [[CLMUL_MU:%.*]] = call i24 @llvm.clmul.i24(i24 [[CRC_TCBITS]], i24 273)
-; AES-NEXT:    [[QUOT_BE_LSHR:%.*]] = lshr i24 [[CLMUL_MU]], 8
-; AES-NEXT:    [[CLMUL_GP:%.*]] = call i24 @llvm.clmul.i24(i24 [[QUOT_BE_LSHR]], i24 69665)
-; AES-NEXT:    [[CRC_BE_SHL:%.*]] = shl i24 [[CRC_CAST]], 8
-; AES-NEXT:    [[XOR_CRC_MULT:%.*]] = xor i24 [[CRC_BE_SHL]], [[CLMUL_GP]]
-; AES-NEXT:    [[CRC_NEXT1:%.*]] = trunc i24 [[XOR_CRC_MULT]] to i16
+; AES-NEXT:    [[QUOT_LSHR:%.*]] = lshr i24 [[CLMUL_MU]], 8
+; AES-NEXT:    [[CLMUL_GP:%.*]] = call i24 @llvm.clmul.i24(i24 [[QUOT_LSHR]], i24 69665)
+; AES-NEXT:    [[CRC_SHL1:%.*]] = shl i24 [[CRC_CAST]], 8
+; AES-NEXT:    [[XOR_CRC_MULT:%.*]] = xor i24 [[CRC_SHL1]], [[CLMUL_GP]]
+; AES-NEXT:    [[CRC_NEXT2:%.*]] = trunc i24 [[XOR_CRC_MULT]] to i16
 ; AES-NEXT:    br label %[[LOOP:.*]]
 ; AES:       [[LOOP]]:
 ; AES-NEXT:    br i1 false, label %[[LOOP]], label %[[EXIT:.*]]
 ; AES:       [[EXIT]]:
-; AES-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i16 [ [[CRC_NEXT1]], %[[LOOP]] ]
+; AES-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i16 [ [[CRC_NEXT2]], %[[LOOP]] ]
 ; AES-NEXT:    ret i16 [[CRC_NEXT_LCSSA]]
 ;
 entry:
@@ -522,16 +522,16 @@ define i8 @crc8.be.tc8.ptr.nested.loop(ptr %msg, i32 %loop.limit) {
 ; AES-NEXT:    [[CRC_CAST:%.*]] = zext i8 [[CRC_INIT]] to i16
 ; AES-NEXT:    [[CRC_TCBITS:%.*]] = and i16 [[CRC_CAST]], 255
 ; AES-NEXT:    [[CLMUL_MU:%.*]] = call i16 @llvm.clmul.i16(i16 [[CRC_TCBITS]], i16 284)
-; AES-NEXT:    [[QUOT_BE_LSHR:%.*]] = lshr i16 [[CLMUL_MU]], 8
-; AES-NEXT:    [[CLMUL_GP:%.*]] = call i16 @llvm.clmul.i16(i16 [[QUOT_BE_LSHR]], i16 285)
-; AES-NEXT:    [[CRC_BE_SHL:%.*]] = shl i16 [[CRC_CAST]], 8
-; AES-NEXT:    [[XOR_CRC_MULT:%.*]] = xor i16 [[CRC_BE_SHL]], [[CLMUL_GP]]
-; AES-NEXT:    [[CRC_NEXT1:%.*]] = trunc i16 [[XOR_CRC_MULT]] to i8
+; AES-NEXT:    [[QUOT_LSHR:%.*]] = lshr i16 [[CLMUL_MU]], 8
+; AES-NEXT:    [[CLMUL_GP:%.*]] = call i16 @llvm.clmul.i16(i16 [[QUOT_LSHR]], i16 285)
+; AES-NEXT:    [[CRC_SHL1:%.*]] = shl i16 [[CRC_CAST]], 8
+; AES-NEXT:    [[XOR_CRC_MULT:%.*]] = xor i16 [[CRC_SHL1]], [[CLMUL_GP]]
+; AES-NEXT:    [[CRC_NEXT2:%.*]] = trunc i16 [[XOR_CRC_MULT]] to i8
 ; AES-NEXT:    br label %[[INNER_LOOP:.*]]
 ; AES:       [[INNER_LOOP]]:
 ; AES-NEXT:    br i1 false, label %[[INNER_LOOP]], label %[[INNER_EXIT]]
 ; AES:       [[INNER_EXIT]]:
-; AES-NEXT:    [[CRC_NEXT_LCSSA]] = phi i8 [ [[CRC_NEXT1]], %[[INNER_LOOP]] ]
+; AES-NEXT:    [[CRC_NEXT_LCSSA]] = phi i8 [ [[CRC_NEXT2]], %[[INNER_LOOP]] ]
 ; AES-NEXT:    [[OUTER_IV_NEXT]] = add i32 [[OUTER_IV]], 1
 ; AES-NEXT:    br label %[[OUTER_LOOP]]
 ; AES:       [[EXIT]]:
@@ -607,16 +607,16 @@ define i16 @crc16.be.tc16(i16 %msg, i16 %checksum) {
 ; AES-NEXT:    [[XOR_CRC_DATA1:%.*]] = xor i32 [[CRC_CAST]], [[DATA_CAST]]
 ; AES-NEXT:    [[CRC_TCBITS:%.*]] = and i32 [[XOR_CRC_DATA1]], 65535
 ; AES-NEXT:    [[CLMUL_MU:%.*]] = call i32 @llvm.clmul.i32(i32 [[CRC_TCBITS]], i32 69936)
-; AES-NEXT:    [[QUOT_BE_LSHR:%.*]] = lshr i32 [[CLMUL_MU]], 16
-; AES-NEXT:    [[CLMUL_GP:%.*]] = call i32 @llvm.clmul.i32(i32 [[QUOT_BE_LSHR]], i32 69665)
-; AES-NEXT:    [[CRC_BE_SHL:%.*]] = shl i32 [[CRC_CAST]], 16
-; AES-NEXT:    [[XOR_CRC_MULT:%.*]] = xor i32 [[CRC_BE_SHL]], [[CLMUL_GP]]
-; AES-NEXT:    [[CRC_NEXT2:%.*]] = trunc i32 [[XOR_CRC_MULT]] to i16
+; AES-NEXT:    [[QUOT_LSHR:%.*]] = lshr i32 [[CLMUL_MU]], 16
+; AES-NEXT:    [[CLMUL_GP:%.*]] = call i32 @llvm.clmul.i32(i32 [[QUOT_LSHR]], i32 69665)
+; AES-NEXT:    [[CRC_SHL2:%.*]] = shl i32 [[CRC_CAST]], 16
+; AES-NEXT:    [[XOR_CRC_MULT:%.*]] = xor i32 [[CRC_SHL2]], [[CLMUL_GP]]
+; AES-NEXT:    [[CRC_NEXT3:%.*]] = trunc i32 [[XOR_CRC_MULT]] to i16
 ; AES-NEXT:    br label %[[LOOP:.*]]
 ; AES:       [[LOOP]]:
 ; AES-NEXT:    br i1 false, label %[[LOOP]], label %[[EXIT:.*]]
 ; AES:       [[EXIT]]:
-; AES-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i16 [ [[CRC_NEXT2]], %[[LOOP]] ]
+; AES-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i16 [ [[CRC_NEXT3]], %[[LOOP]] ]
 ; AES-NEXT:    ret i16 [[CRC_NEXT_LCSSA]]
 ;
 entry:
@@ -672,16 +672,16 @@ define i16 @crc16.be.tc8.misalign(i8 %msg, i16 %checksum) {
 ; AES-NEXT:    [[CRC_ALIGN_TC:%.*]] = lshr i24 [[CRC_CAST]], 8
 ; AES-NEXT:    [[CRC_TCBITS:%.*]] = and i24 [[CRC_ALIGN_TC]], 255
 ; AES-NEXT:    [[CLMUL_MU:%.*]] = call i24 @llvm.clmul.i24(i24 [[CRC_TCBITS]], i24 273)
-; AES-NEXT:    [[QUOT_BE_LSHR:%.*]] = lshr i24 [[CLMUL_MU]], 8
-; AES-NEXT:    [[CLMUL_GP:%.*]] = call i24 @llvm.clmul.i24(i24 [[QUOT_BE_LSHR]], i24 69665)
-; AES-NEXT:    [[CRC_BE_SHL:%.*]] = shl i24 [[CRC_CAST]], 8
-; AES-NEXT:    [[XOR_CRC_MULT:%.*]] = xor i24 [[CRC_BE_SHL]], [[CLMUL_GP]]
-; AES-NEXT:    [[CRC_NEXT1:%.*]] = trunc i24 [[XOR_CRC_MULT]] to i16
+; AES-NEXT:    [[QUOT_LSHR:%.*]] = lshr i24 [[CLMUL_MU]], 8
+; AES-NEXT:    [[CLMUL_GP:%.*]] = call i24 @llvm.clmul.i24(i24 [[QUOT_LSHR]], i24 69665)
+; AES-NEXT:    [[CRC_SHL1:%.*]] = shl i24 [[CRC_CAST]], 8
+; AES-NEXT:    [[XOR_CRC_MULT:%.*]] = xor i24 [[CRC_SHL1]], [[CLMUL_GP]]
+; AES-NEXT:    [[CRC_NEXT2:%.*]] = trunc i24 [[XOR_CRC_MULT]] to i16
 ; AES-NEXT:    br label %[[LOOP:.*]]
 ; AES:       [[LOOP]]:
 ; AES-NEXT:    br i1 false, label %[[LOOP]], label %[[EXIT:.*]]
 ; AES:       [[EXIT]]:
-; AES-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i16 [ [[CRC_NEXT1]], %[[LOOP]] ]
+; AES-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i16 [ [[CRC_NEXT2]], %[[LOOP]] ]
 ; AES-NEXT:    ret i16 [[CRC_NEXT_LCSSA]]
 ;
 entry:
@@ -739,16 +739,16 @@ define i8 @crc8.be.tc16.misalign(i16 %msg, i8 %checksum) {
 ; AES-NEXT:    [[CRC_ALIGN_TC:%.*]] = shl i32 [[XOR_CRC_DATA1]], 8
 ; AES-NEXT:    [[CRC_TCBITS:%.*]] = and i32 [[CRC_ALIGN_TC]], 65535
 ; AES-NEXT:    [[CLMUL_MU:%.*]] = call i32 @llvm.clmul.i32(i32 [[CRC_TCBITS]], i32 72779)
-; AES-NEXT:    [[QUOT_BE_LSHR:%.*]] = lshr i32 [[CLMUL_MU]], 16
-; AES-NEXT:    [[CLMUL_GP:%.*]] = call i32 @llvm.clmul.i32(i32 [[QUOT_BE_LSHR]], i32 285)
-; AES-NEXT:    [[CRC_BE_SHL:%.*]] = shl i32 [[CRC_CAST]], 16
-; AES-NEXT:    [[XOR_CRC_MULT:%.*]] = xor i32 [[CRC_BE_SHL]], [[CLMUL_GP]]
-; AES-NEXT:    [[CRC_NEXT2:%.*]] = trunc i32 [[XOR_CRC_MULT]] to i8
+; AES-NEXT:    [[QUOT_LSHR:%.*]] = lshr i32 [[CLMUL_MU]], 16
+; AES-NEXT:    [[CLMUL_GP:%.*]] = call i32 @llvm.clmul.i32(i32 [[QUOT_LSHR]], i32 285)
+; AES-NEXT:    [[CRC_SHL2:%.*]] = shl i32 [[CRC_CAST]], 16
+; AES-NEXT:    [[XOR_CRC_MULT:%.*]] = xor i32 [[CRC_SHL2]], [[CLMUL_GP]]
+; AES-NEXT:    [[CRC_NEXT3:%.*]] = trunc i32 [[XOR_CRC_MULT]] to i8
 ; AES-NEXT:    br label %[[LOOP:.*]]
 ; AES:       [[LOOP]]:
 ; AES-NEXT:    br i1 false, label %[[LOOP]], label %[[EXIT:.*]]
 ; AES:       [[EXIT]]:
-; AES-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i8 [ [[CRC_NEXT2]], %[[LOOP]] ]
+; AES-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i8 [ [[CRC_NEXT3]], %[[LOOP]] ]
 ; AES-NEXT:    ret i8 [[CRC_NEXT_LCSSA]]
 ;
 entry:
@@ -804,16 +804,16 @@ define i8 @crc8.be.tc8.data16.misalign(i16 %msg, i8 %checksum) {
 ; AES-NEXT:    [[XOR_CRC_DATA1:%.*]] = xor i16 [[CRC_CAST]], [[MSG]]
 ; AES-NEXT:    [[CRC_TCBITS:%.*]] = and i16 [[XOR_CRC_DATA1]], 255
 ; AES-NEXT:    [[CLMUL_MU:%.*]] = call i16 @llvm.clmul.i16(i16 [[CRC_TCBITS]], i16 284)
-; AES-NEXT:    [[QUOT_BE_LSHR:%.*]] = lshr i16 [[CLMUL_MU]], 8
-; AES-NEXT:    [[CLMUL_GP:%.*]] = call i16 @llvm.clmul.i16(i16 [[QUOT_BE_LSHR]], i16 285)
-; AES-NEXT:    [[CRC_BE_SHL:%.*]] = shl i16 [[CRC_CAST]], 8
-; AES-NEXT:    [[XOR_CRC_MULT:%.*]] = xor i16 [[CRC_BE_SHL]], [[CLMUL_GP]]
-; AES-NEXT:    [[CRC_NEXT2:%.*]] = trunc i16 [[XOR_CRC_MULT]] to i8
+; AES-NEXT:    [[QUOT_LSHR:%.*]] = lshr i16 [[CLMUL_MU]], 8
+; AES-NEXT:    [[CLMUL_GP:%.*]] = call i16 @llvm.clmul.i16(i16 [[QUOT_LSHR]], i16 285)
+; AES-NEXT:    [[CRC_SHL2:%.*]] = shl i16 [[CRC_CAST]], 8
+; AES-NEXT:    [[XOR_CRC_MULT:%.*]] = xor i16 [[CRC_SHL2]], [[CLMUL_GP]]
+; AES-NEXT:    [[CRC_NEXT3:%.*]] = trunc i16 [[XOR_CRC_MULT]] to i8
 ; AES-NEXT:    br label %[[LOOP:.*]]
 ; AES:       [[LOOP]]:
 ; AES-NEXT:    br i1 false, label %[[LOOP]], label %[[EXIT:.*]]
 ; AES:       [[EXIT]]:
-; AES-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i8 [ [[CRC_NEXT2]], %[[LOOP]] ]
+; AES-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i8 [ [[CRC_NEXT3]], %[[LOOP]] ]
 ; AES-NEXT:    ret i8 [[CRC_NEXT_LCSSA]]
 ;
 entry:
@@ -871,16 +871,16 @@ define i32 @crc32.le.tc8.data32(i32 %checksum, i32 %msg) {
 ; AES-NEXT:    [[XOR_CRC_DATA1:%.*]] = xor i40 [[CRC_CAST]], [[DATA_CAST]]
 ; AES-NEXT:    [[CRC_TCBITS:%.*]] = and i40 [[XOR_CRC_DATA1]], 255
 ; AES-NEXT:    [[CLMUL_MU:%.*]] = call i40 @llvm.clmul.i40(i40 [[CRC_TCBITS]], i40 273)
-; AES-NEXT:    [[QUOT_LE_MASK:%.*]] = and i40 [[CLMUL_MU]], 255
-; AES-NEXT:    [[CLMUL_GP:%.*]] = call i40 @llvm.clmul.i40(i40 [[QUOT_LE_MASK]], i40 67601)
+; AES-NEXT:    [[QUOT_MASK:%.*]] = and i40 [[CLMUL_MU]], 255
+; AES-NEXT:    [[CLMUL_GP:%.*]] = call i40 @llvm.clmul.i40(i40 [[QUOT_MASK]], i40 67601)
 ; AES-NEXT:    [[XOR_CRC_MULT:%.*]] = xor i40 [[CRC_CAST]], [[CLMUL_GP]]
-; AES-NEXT:    [[CRC_LE_LSHR:%.*]] = lshr i40 [[XOR_CRC_MULT]], 8
-; AES-NEXT:    [[CRC_NEXT2:%.*]] = trunc i40 [[CRC_LE_LSHR]] to i32
+; AES-NEXT:    [[CRC_LSHR2:%.*]] = lshr i40 [[XOR_CRC_MULT]], 8
+; AES-NEXT:    [[CRC_NEXT3:%.*]] = trunc i40 [[CRC_LSHR2]] to i32
 ; AES-NEXT:    br label %[[LOOP:.*]]
 ; AES:       [[LOOP]]:
 ; AES-NEXT:    br i1 false, label %[[LOOP]], label %[[EXIT:.*]]
 ; AES:       [[EXIT]]:
-; AES-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i32 [ [[CRC_NEXT2]], %[[LOOP]] ]
+; AES-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i32 [ [[CRC_NEXT3]], %[[LOOP]] ]
 ; AES-NEXT:    ret i32 [[CRC_NEXT_LCSSA]]
 ;
 entry:
@@ -937,16 +937,16 @@ define i8 @crc8.le.tc8.data32(i8 %checksum, i32 %msg) {
 ; AES-NEXT:    [[XOR_CRC_DATA1:%.*]] = xor i16 [[CRC_CAST]], [[DATA_CAST]]
 ; AES-NEXT:    [[CRC_TCBITS:%.*]] = and i16 [[XOR_CRC_DATA1]], 255
 ; AES-NEXT:    [[CLMUL_MU:%.*]] = call i16 @llvm.clmul.i16(i16 [[CRC_TCBITS]], i16 107)
-; AES-NEXT:    [[QUOT_LE_MASK:%.*]] = and i16 [[CLMUL_MU]], 255
-; AES-NEXT:    [[CLMUL_GP:%.*]] = call i16 @llvm.clmul.i16(i16 [[QUOT_LE_MASK]], i16 119)
+; AES-NEXT:    [[QUOT_MASK:%.*]] = and i16 [[CLMUL_MU]], 255
+; AES-NEXT:    [[CLMUL_GP:%.*]] = call i16 @llvm.clmul.i16(i16 [[QUOT_MASK]], i16 119)
 ; AES-NEXT:    [[XOR_CRC_MULT:%.*]] = xor i16 [[CRC_CAST]], [[CLMUL_GP]]
-; AES-NEXT:    [[CRC_LE_LSHR:%.*]] = lshr i16 [[XOR_CRC_MULT]], 8
-; AES-NEXT:    [[CRC_NEXT2:%.*]] = trunc i16 [[CRC_LE_LSHR]] to i8
+; AES-NEXT:    [[CRC_LSHR2:%.*]] = lshr i16 [[XOR_CRC_MULT]], 8
+; AES-NEXT:    [[CRC_NEXT3:%.*]] = trunc i16 [[CRC_LSHR2]] to i8
 ; AES-NEXT:    br label %[[LOOP:.*]]
 ; AES:       [[LOOP]]:
 ; AES-NEXT:    br i1 false, label %[[LOOP]], label %[[EXIT:.*]]
 ; AES:       [[EXIT]]:
-; AES-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i8 [ [[CRC_NEXT2]], %[[LOOP]] ]
+; AES-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i8 [ [[CRC_NEXT3]], %[[LOOP]] ]
 ; AES-NEXT:    ret i8 [[CRC_NEXT_LCSSA]]
 ;
 entry:
@@ -1003,16 +1003,16 @@ define i32 @crc.disabled.optsize(i32 %checksum, i32 %msg) optsize {
 ; AES-NEXT:    [[XOR_CRC_DATA1:%.*]] = xor i40 [[CRC_CAST]], [[DATA_CAST]]
 ; AES-NEXT:    [[CRC_TCBITS:%.*]] = and i40 [[XOR_CRC_DATA1]], 255
 ; AES-NEXT:    [[CLMUL_MU:%.*]] = call i40 @llvm.clmul.i40(i40 [[CRC_TCBITS]], i40 273)
-; AES-NEXT:    [[QUOT_LE_MASK:%.*]] = and i40 [[CLMUL_MU]], 255
-; AES-NEXT:    [[CLMUL_GP:%.*]] = call i40 @llvm.clmul.i40(i40 [[QUOT_LE_MASK]], i40 67601)
+; AES-NEXT:    [[QUOT_MASK:%.*]] = and i40 [[CLMUL_MU]], 255
+; AES-NEXT:    [[CLMUL_GP:%.*]] = call i40 @llvm.clmul.i40(i40 [[QUOT_MASK]], i40 67601)
 ; AES-NEXT:    [[XOR_CRC_MULT:%.*]] = xor i40 [[CRC_CAST]], [[CLMUL_GP]]
-; AES-NEXT:    [[CRC_LE_LSHR:%.*]] = lshr i40 [[XOR_CRC_MULT]], 8
-; AES-NEXT:    [[CRC_NEXT2:%.*]] = trunc i40 [[CRC_LE_LSHR]] to i32
+; AES-NEXT:    [[CRC_LSHR2:%.*]] = lshr i40 [[XOR_CRC_MULT]], 8
+; AES-NEXT:    [[CRC_NEXT3:%.*]] = trunc i40 [[CRC_LSHR2]] to i32
 ; AES-NEXT:    br label %[[LOOP:.*]]
 ; AES:       [[LOOP]]:
 ; AES-NEXT:    br i1 false, label %[[LOOP]], label %[[EXIT:.*]]
 ; AES:       [[EXIT]]:
-; AES-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i32 [ [[CRC_NEXT2]], %[[LOOP]] ]
+; AES-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i32 [ [[CRC_NEXT3]], %[[LOOP]] ]
 ; AES-NEXT:    ret i32 [[CRC_NEXT_LCSSA]]
 ;
 entry:

@@ -1554,6 +1554,9 @@ bool LoopIdiomRecognize::avoidLIRForMultiBlockLoop(bool IsMemset,
   return false;
 }
 
+// The algorithm used in this optimization is a Polynomial (GF(2)) Barrett
+// Reduction based on Intel's "Fast CRC Computation for Generic Polynomials
+// Using PCLMULQDQ Instruction" white paper (December 2009).
 bool LoopIdiomRecognize::optimizeCRCLoopUsingClmul(const PolynomialInfo &Info) {
   Type *CRCTy = Info.LHS->getType();
   LLVMContext &Ctx = CRCTy->getContext();
@@ -1569,8 +1572,8 @@ bool LoopIdiomRecognize::optimizeCRCLoopUsingClmul(const PolynomialInfo &Info) {
 
   // This optimization should only be applied if clmul for the required width is
   // a fast operation on the target.
-  // TODO: If TC > CRCBW, then the data could probably be split into multiple
-  // chunks and processed in a loop.
+  // TODO: If clmul exists on the target but not for the required width, it
+  // might be possible to split into multiple iterations of this.
   if (!TTI->haveFastClmul(ClmulTy))
     return false;
 
@@ -1600,8 +1603,8 @@ bool LoopIdiomRecognize::optimizeCRCLoopUsingClmul(const PolynomialInfo &Info) {
 
   auto MostSignificantTCBits = [&](Value *Op, unsigned BW, const Twine &Name) {
     assert(BW >= TC && "Bit width should be at least TripCount");
-    return Info.IsBigEndian ? Builder.CreateLShr(Op, BW - TC, Name + ".be.lshr")
-                            : LoTCBits(Op, Name + ".le.mask");
+    return Info.IsBigEndian ? Builder.CreateLShr(Op, BW - TC, Name + ".lshr")
+                            : LoTCBits(Op, Name + ".mask");
   };
 
   Value *LHS = Builder.CreateZExt(Info.LHS, ClmulTy, "crc.cast");
@@ -1667,12 +1670,12 @@ bool LoopIdiomRecognize::optimizeCRCLoopUsingClmul(const PolynomialInfo &Info) {
   // R(x) mod x^CRCBW = LHS*x^TC mod x^CRCBW, though the (mod x^CRCBW) is
   // handled later on when truncating back to CRCBW for ComputedValue.
   Value *CRCAlignClmul =
-      Info.IsBigEndian ? Builder.CreateShl(LHS, TC, "crc.be.shl") : LHS;
+      Info.IsBigEndian ? Builder.CreateShl(LHS, TC, "crc.shl") : LHS;
 
   // Step 3: C(x) = (R(x) xor T2(x)) mod x^CRCBW
   Value *CRCNext = Builder.CreateXor(CRCAlignClmul, ClmulGP, "xor.crc.mult");
-  CRCNext = Info.IsBigEndian ? CRCNext
-                             : Builder.CreateLShr(CRCNext, TC, "crc.le.lshr");
+  CRCNext =
+      Info.IsBigEndian ? CRCNext : Builder.CreateLShr(CRCNext, TC, "crc.lshr");
 
   // Bring the result back down the the CRC bit width.
   CRCNext = Builder.CreateTrunc(CRCNext, CRCTy, "crc.next");

@@ -409,7 +409,6 @@ static APInt floorDivideGF2(APInt Dividend, APInt Divisor) {
 
 // Generate the constants for performing a Polynomial (GF(2)) Barrett Reduction
 // according to Intel's Fast CRC Computation white paper
-// (https://web.archive.org/web/20131224125630/https://www.intel.com/content/dam/www/public/us/en/documents/white-papers/fast-crc-computation-generic-polynomials-pclmulqdq-paper.pdf),
 // with some adjustments to account for the fact that bit width and trip count
 // can vary.
 std::pair<APInt, APInt> HashRecognize::genBarrettConstants(const APInt &GenPoly,
