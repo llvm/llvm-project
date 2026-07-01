@@ -2093,7 +2093,7 @@ def fcolor_diagnostics : Flag<["-"], "fcolor-diagnostics">, Group<f_Group>,
   Visibility<[ClangOption, CLOption, DXCOption, CC1Option, FlangOption, FC1Option]>,
   HelpText<"Enable colors in diagnostics">;
 def fno_color_diagnostics : Flag<["-"], "fno-color-diagnostics">, Group<f_Group>,
-  Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>,
+  Visibility<[ClangOption, CLOption, DXCOption, CC1Option, FlangOption, FC1Option]>,
   HelpText<"Disable colors in diagnostics">;
 def : Flag<["-"], "fdiagnostics-color">, Group<f_Group>,
   Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>,
@@ -3405,6 +3405,16 @@ def clangir_enable_idiom_recognizer : Flag<["-"], "clangir-enable-idiom-recogniz
   HelpText<"ClangIR: Enable Idiom Recognizer pass">,
   MarshallingInfoFlag<FrontendOpts<"ClangIREnableIdiomRecognizer">>;
 
+def clangir_lib_opt_EQ : Joined<["-"], "clangir-lib-opt=">,
+  Visibility<[ClangOption, CC1Option]>, Group<f_Group>, Values<"all">,
+  HelpText<"Enable C/C++ library based optimizations (with options)">,
+  MarshallingInfoString<FrontendOpts<"ClangIRLibOptOptions">>;
+
+def clangir_lib_opt : Flag<["-"], "clangir-lib-opt">,
+  Visibility<[ClangOption, CC1Option]>, Group<f_Group>,
+  Alias<clangir_lib_opt_EQ>, AliasArgs<["all"]>,
+  HelpText<"Enable C/C++ library based optimizations">;
+
 defm clangir : BoolFOption<"clangir",
   FrontendOpts<"UseClangIRPipeline">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option], "Use the ClangIR pipeline to compile">,
@@ -3760,7 +3770,7 @@ defm modulemap_allow_subdirectory_search : BoolFOption <"modulemap-allow-subdire
   PosFlag<SetTrue, [], [], "Allow to search for module maps in subdirectories of search paths">,
   NegFlag<SetFalse>, BothFlags<[NoXarchOption], [ClangOption, CC1Option]>>;
 defm modules : BoolFOption<"modules",
-  LangOpts<"Modules">, Default<fcxx_modules.KeyPath>,
+  LangOpts<"ClangModules">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
           "Enable the 'modules' language feature">,
   NegFlag<SetFalse>, BothFlags<

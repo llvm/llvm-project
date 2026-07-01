@@ -877,6 +877,8 @@ struct coff_dynamic_relocation64_v2 {
   support::ulittle32_t Flags;
 };
 
+static constexpr StringLiteral kArm64ECSectionName = ".obj.arm64ec";
+
 class LLVM_ABI COFFObjectFile : public ObjectFile {
 private:
   COFFObjectFile(MemoryBufferRef Object);
@@ -1100,6 +1102,7 @@ public:
     return SubtargetFeatures();
   }
   std::unique_ptr<MemoryBuffer> getHybridObjectView() const;
+  std::optional<MemoryBufferRef> findHybridObjectSection() const;
 
   import_directory_iterator import_directory_begin() const;
   import_directory_iterator import_directory_end() const;

@@ -14,6 +14,7 @@
 #define LLVM_CODEGEN_TARGETSUBTARGETINFO_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/MacroFusion.h"
@@ -86,6 +87,10 @@ public:
   ~TargetSubtargetInfo() override;
 
   virtual bool isXRaySupported() const { return false; }
+
+  /// \returns true if the target intrinsic \p IntrinsicID is supported by this
+  /// subtarget.
+  bool isIntrinsicSupported(unsigned IntrinsicID) const;
 
   // Interfaces to the major aspects of target machine information:
   //
@@ -173,7 +178,7 @@ public:
   ///
   /// Similar in behavior to `isZeroIdiom`. However, it knows how to identify
   /// all dependency breaking instructions (i.e. not just zero-idioms).
-  /// 
+  ///
   /// As for `isZeroIdiom`, this method returns a mask of "broken" dependencies.
   /// (See method `isZeroIdiom` for a detailed description of Mask).
   virtual bool isDependencyBreaking(const MachineInstr *MI, APInt &Mask) const {
@@ -370,6 +375,12 @@ public:
   /// Target features where the callee may have an additional feature,
   /// instead of the caller.
   virtual const FeatureBitset &getInlineInverseFeatures() const = 0;
+  /// Target features where all mismatches prevent inlining.
+  virtual const FeatureBitset &getInlineMustMatchFeatures() const = 0;
+
+private:
+  /// Lazy, incrementally-populated cache for isIntrinsicSupported().
+  mutable DenseMap<unsigned, bool> IntrinsicSupportCache;
 };
 } // end namespace llvm
 

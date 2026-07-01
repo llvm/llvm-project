@@ -2868,12 +2868,12 @@ bool X86TargetLowering::useLoadStackGuardNode(const Module &M) const {
   return Subtarget.isTargetMachO() && Subtarget.is64Bit();
 }
 
-bool X86TargetLowering::useStackGuardXorFP() const {
-  // Currently only MSVC CRTs XOR the frame pointer into the stack guard value.
+bool X86TargetLowering::useStackGuardMixFP() const {
+  // Currently only MSVC CRTs mix the frame pointer into the stack guard value.
   return Subtarget.getTargetTriple().isOSMSVCRT() && !Subtarget.isTargetMachO();
 }
 
-SDValue X86TargetLowering::emitStackGuardXorFP(SelectionDAG &DAG, SDValue Val,
+SDValue X86TargetLowering::emitStackGuardMixFP(SelectionDAG &DAG, SDValue Val,
                                                const SDLoc &DL) const {
   EVT PtrTy = getPointerTy(DAG.getDataLayout());
   unsigned XorOp = Subtarget.is64Bit() ? X86::XOR64_FP : X86::XOR32_FP;
@@ -32405,6 +32405,15 @@ static SDValue LowerRotate(SDValue Op, const X86Subtarget &Subtarget,
     return DAG.getNode(ISD::AVGCEILU, DL, VT, R, Neg);
   }
 
+  // rotl(x,1) -> sub(add(x, x), icmp_slt(x, 0))
+  if (IsROTL && EltSizeInBits == 8 && IsCstSplat &&
+      CstSplatValue.urem(EltSizeInBits) == 1 && !Subtarget.hasAVX512()) {
+    SDValue Double = DAG.getNode(ISD::ADD, DL, VT, R, R);
+    SDValue Zero = DAG.getConstant(0, DL, VT);
+    SDValue CmpNeg = DAG.getSetCC(DL, VT, R, Zero, ISD::SETLT);
+    return DAG.getNode(ISD::SUB, DL, VT, Double, CmpNeg);
+  }
+
   // Rotate by an uniform constant - expand back to shifts.
   // TODO: Can't use generic expansion as UNDEF amt elements can be converted
   // to other values when folded to shift amounts, losing the splat.
@@ -43287,6 +43296,22 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
             Src.getOperand(0).getValueType().getScalarType() &&
         TLI.isTypeLegal(Src.getOperand(0).getValueType()))
       return DAG.getNode(X86ISD::VBROADCAST, DL, VT, Src.getOperand(0));
+
+    // broadcast(truncate(extract_vector_elt(x, 0))) -> bitcast(broadcast(x)).
+    if (Src.getOpcode() == ISD::TRUNCATE &&
+        Src.getOperand(0).getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
+        isNullConstant(Src.getOperand(0).getOperand(1))) {
+      SDValue NewSrc = Src.getOperand(0).getOperand(0);
+      if (Src.getOperand(0).getValueType() ==
+              NewSrc.getValueType().getScalarType() &&
+          TLI.isTypeLegal(NewSrc.getValueType())) {
+        MVT VecVT = MVT::getVectorVT(Src.getSimpleValueType(),
+                                     NewSrc.getValueSizeInBits() /
+                                         Src.getValueSizeInBits());
+        return DAG.getNode(X86ISD::VBROADCAST, DL, VT,
+                           DAG.getBitcast(VecVT, NewSrc));
+      }
+    }
 
     // Share broadcast with the longest vector and extract low subvector (free).
     // Ensure the same SDValue from the SDNode use is being used.
@@ -59681,9 +59706,9 @@ static SDValue matchPMADDWD(SelectionDAG &DAG, SDNode *N,
     if (N0.getValueType().getScalarType() != MVT::i16)
       return SDValue();
 
-    // A shift by more than 15 would overflow an i16.
+    // A shift by more 15 or more would overflow a signed i16.
     if (!ISD::matchUnaryPredicate(Mul.getOperand(1), [](ConstantSDNode *C) {
-          return C->getAPIntValue().ule(15);
+          return C->getAPIntValue().ult(15);
         }))
       return SDValue();
 
@@ -64812,7 +64837,7 @@ bool X86TargetLowering::hasStackProbeSymbol(const MachineFunction &MF) const {
 bool X86TargetLowering::hasInlineStackProbe(const MachineFunction &MF) const {
 
   // No inline stack probe for Windows, they have their own mechanism.
-  if (Subtarget.isOSWindows() || Subtarget.isUEFI() ||
+  if (Subtarget.isOSWindowsOrUEFI() ||
       MF.getFunction().hasFnAttribute("no-stack-arg-probe"))
     return false;
 
@@ -64838,8 +64863,7 @@ X86TargetLowering::getStackProbeSymbolName(const MachineFunction &MF) const {
 
   // Generally, if we aren't on Windows, the platform ABI does not include
   // support for stack probes, so don't emit them.
-  if ((!Subtarget.isOSWindows() && !Subtarget.isUEFI()) ||
-      Subtarget.isTargetMachO() ||
+  if (!Subtarget.isOSWindowsOrUEFI() || Subtarget.isTargetMachO() ||
       MF.getFunction().hasFnAttribute("no-stack-arg-probe"))
     return "";
 

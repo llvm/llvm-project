@@ -252,6 +252,8 @@ void CombinerHelper::applyCombineCopy(MachineInstr &MI) const {
 
 bool CombinerHelper::matchFreezeOfSingleMaybePoisonOperand(
     MachineInstr &MI, BuildFnTy &MatchInfo) const {
+  assert(MI.getOpcode() == TargetOpcode::G_FREEZE && "Invalid instruction");
+
   // Ported from InstCombinerImpl::pushFreezeToPreventPoisonFromPropagating.
   Register DstOp = MI.getOperand(0).getReg();
   Register OrigOp = MI.getOperand(1).getReg();
@@ -305,6 +307,10 @@ bool CombinerHelper::matchFreezeOfSingleMaybePoisonOperand(
 
   Register MaybePoisonOperandReg = MaybePoisonOperand->getReg();
   LLT MaybePoisonOperandRegTy = MRI.getType(MaybePoisonOperandReg);
+
+  if (!isLegalOrBeforeLegalizer(
+          {TargetOpcode::G_FREEZE, {MaybePoisonOperandRegTy}}))
+    return false;
 
   MatchInfo = [=](MachineIRBuilder &B) mutable {
     Observer.changingInstr(*OrigDef);

@@ -119,6 +119,10 @@ public:
   PacketType CheckForPacket(const uint8_t *src, size_t src_len,
                             StringExtractorGDBRemote &packet);
 
+  PacketType
+  CheckForPacketIgnoreNotifications(const uint8_t *src, size_t src_len,
+                                    StringExtractorGDBRemote &packet);
+
   bool GetSendAcks() { return m_send_acks; }
 
   // Set the global packet timeout.

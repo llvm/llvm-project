@@ -20,11 +20,13 @@ void main(unsigned GI : SV_GroupIndex) {
 
   // CHECK: %[[TMP:.*]] = alloca %struct.S, align 1
 
-  // DXIL: %[[INPTR:.*]] = call noundef nonnull align 4 dereferenceable(4) ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_i32_0_0t.i32(target("dx.RawBuffer", i32, 0, 0) %{{.*}}, i32 %{{.*}})
-  // SPV: %[[INPTR:.*]] = call noundef align 4 dereferenceable(4) ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.VulkanBuffer_a0i32_12_0t.i32(target("spirv.VulkanBuffer", [0 x i32], 12, 0) %{{.*}}, i32 %{{.*}})
+  // CHECK: %[[CONVTOK:.*]] = call token @llvm.experimental.convergence.entry()
+
+  // DXIL: %[[INPTR:.*]] = call noundef nonnull align 4 dereferenceable(4) ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_i32_0_0t.i32(target("dx.RawBuffer", i32, 0, 0) %{{.*}}, i32 %{{.*}}) [ "convergencectrl"(token %[[CONVTOK]]) ]
+  // SPV: %[[INPTR:.*]] = call noundef align 4 dereferenceable(4) ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.VulkanBuffer_a0i32_12_0t.i32(target("spirv.VulkanBuffer", [0 x i32], 12, 0) %{{.*}}, i32 %{{.*}}) [ "convergencectrl"(token %[[CONVTOK]]) ]
   // CHECK: %[[LOAD:.*]] = load i32, ptr {{.*}}%[[INPTR]]
-  // DXIL: %[[OUT1PTR:.*]] = call noundef nonnull align 4 dereferenceable(4) ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_i32_1_0t.i32(target("dx.RawBuffer", i32, 1, 0) %{{.*}}, i32 %{{.*}})
-  // SPV: %[[OUT1PTR:.*]] =  call noundef align 4 dereferenceable(4) ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.VulkanBuffer_a0i32_12_1t.i32(target("spirv.VulkanBuffer", [0 x i32], 12, 1) %{{.*}}, i32 %{{.*}})
+  // DXIL: %[[OUT1PTR:.*]] = call noundef nonnull align 4 dereferenceable(4) ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_i32_1_0t.i32(target("dx.RawBuffer", i32, 1, 0) %{{.*}}, i32 %{{.*}}) [ "convergencectrl"(token %[[CONVTOK]]) ]
+  // SPV: %[[OUT1PTR:.*]] =  call noundef align 4 dereferenceable(4) ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.VulkanBuffer_a0i32_12_1t.i32(target("spirv.VulkanBuffer", [0 x i32], 12, 1) %{{.*}}, i32 %{{.*}}) [ "convergencectrl"(token %[[CONVTOK]]) ]
   // CHECK: store i32 %[[LOAD]], ptr {{.*}}%[[OUT1PTR]]
   Out1[GI] = In[GI];
 
