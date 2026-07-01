@@ -1003,9 +1003,7 @@ bool RISCVInsertVSETVLI::canMutatePriorConfigWithTWiden(
   // The PrevMI's LMUL should be at least 8/KMAX; otherwise, converting it to a
   // tail-widening version would result in a VLMAX smaller than what AVLRegDefMI
   // expects, causing the LMUL information from PrevMI to be lost.
-  unsigned LMul;
-  bool Fractional;
-  std::tie(LMul, Fractional) = decodeVLMUL(PrevInfo.getVLMUL());
+  auto [LMul, Fractional] = decodeVLMUL(PrevInfo.getVLMUL());
   unsigned KMAX = (CurrInfo.getSEW() >= 32) ? 1 : (32 / CurrInfo.getSEW());
 
   if (Fractional || LMul < (8 / KMAX))
