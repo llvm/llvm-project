@@ -1564,6 +1564,68 @@ public:
   }
 };
 
+/// Converts `spirv.GL.FSign`/`spirv.GL.SSign` to a sign(x) sequence that maps
+/// the operand to -1/0/1 using two comparisons and two selects. The `isFloat`
+/// flag selects between floating-point and integer comparisons/constants.
+template <typename SPIRVOp, bool isFloat>
+class SignPattern : public SPIRVToLLVMConversion<SPIRVOp> {
+public:
+  using SPIRVToLLVMConversion<SPIRVOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(SPIRVOp op, typename SPIRVOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto srcType = op.getType();
+    auto dstType = this->getTypeConverter()->convertType(srcType);
+    if (!dstType)
+      return rewriter.notifyMatchFailure(op, "type conversion failed");
+
+    Location loc = op.getLoc();
+    Value operand = adaptor.getOperand();
+    auto vecSrcType = dyn_cast<VectorType>(srcType);
+    Type i1Type = rewriter.getI1Type();
+    Type cmpType =
+        vecSrcType ? VectorType::get(vecSrcType.getShape(), i1Type) : i1Type;
+
+    Value zero, one, minusOne, gt, lt;
+    if constexpr (isFloat) {
+      zero = createFPConstant(loc, srcType, dstType, rewriter, 0.0);
+      one = createFPConstant(loc, srcType, dstType, rewriter, 1.0);
+      minusOne = createFPConstant(loc, srcType, dstType, rewriter, -1.0);
+      gt = LLVM::FCmpOp::create(rewriter, loc, cmpType,
+                                LLVM::FCmpPredicate::ogt, operand, zero);
+      lt = LLVM::FCmpOp::create(rewriter, loc, cmpType,
+                                LLVM::FCmpPredicate::olt, operand, zero);
+    } else {
+      auto intElemType = cast<IntegerType>(getElementTypeOrSelf(srcType));
+      IntegerAttr zeroAttr = rewriter.getIntegerAttr(intElemType, 0);
+      IntegerAttr oneAttr = rewriter.getIntegerAttr(intElemType, 1);
+      if (vecSrcType) {
+        zero = LLVM::ConstantOp::create(
+            rewriter, loc, dstType,
+            SplatElementsAttr::get(vecSrcType, zeroAttr));
+        one = LLVM::ConstantOp::create(
+            rewriter, loc, dstType,
+            SplatElementsAttr::get(vecSrcType, oneAttr));
+      } else {
+        zero = LLVM::ConstantOp::create(rewriter, loc, dstType, zeroAttr);
+        one = LLVM::ConstantOp::create(rewriter, loc, dstType, oneAttr);
+      }
+      minusOne = createConstantAllBitsSet(loc, srcType, dstType, rewriter);
+      gt = LLVM::ICmpOp::create(rewriter, loc, cmpType,
+                                LLVM::ICmpPredicate::sgt, operand, zero);
+      lt = LLVM::ICmpOp::create(rewriter, loc, cmpType,
+                                LLVM::ICmpPredicate::slt, operand, zero);
+    }
+
+    Value negOrZero =
+        LLVM::SelectOp::create(rewriter, loc, dstType, lt, minusOne, zero);
+    rewriter.replaceOpWithNewOp<LLVM::SelectOp>(op, dstType, gt, one,
+                                                negOrZero);
+    return success();
+  }
+};
+
 class VariablePattern : public SPIRVToLLVMConversion<spirv::VariableOp> {
 public:
   using SPIRVToLLVMConversion<spirv::VariableOp>::SPIRVToLLVMConversion;
@@ -1917,6 +1979,8 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       DirectConversionPattern<spirv::GLAcosOp, LLVM::ACosOp>,
       DirectConversionPattern<spirv::GLAtanOp, LLVM::ATanOp>,
       InverseSqrtPattern, SAbsPattern, TanPattern, TanhPattern,
+      SignPattern<spirv::GLFSignOp, /*isFloat=*/true>,
+      SignPattern<spirv::GLSSignOp, /*isFloat=*/false>,
 
       // OpenCL extended instruction set ops
       DirectConversionPattern<spirv::CLCeilOp, LLVM::FCeilOp>,
