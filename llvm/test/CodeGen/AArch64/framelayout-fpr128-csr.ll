@@ -31,3 +31,31 @@ entry:
   tail call void asm sideeffect "", "~{x10},~{q8}"()
   ret void
 }
+
+; A GPR pair (x10, x11) plus q8 fills the frame exactly (16 + 8 + 8 = 32) with
+; no padding. q8 must still be assigned a 16-byte aligned offset, and the
+; d8/q8 sub/super-register overlap must not inflate the callee-save size.
+define preserve_allcc void @e(ptr %ptr) nounwind {
+; CHECK-LABEL: e:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    str q8, [sp, #-32]! // 16-byte Folded Spill
+; CHECK-NEXT:    stp x11, x10, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    //APP
+; CHECK-NEXT:    //NO_APP
+; CHECK-NEXT:    ldp x11, x10, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q8, [sp], #32 // 16-byte Folded Reload
+; CHECK-NEXT:    ret
+;
+; CHECK-WINDOWS-LABEL: e:
+; CHECK-WINDOWS:       // %bb.0: // %entry
+; CHECK-WINDOWS-NEXT:    stp x10, x11, [sp, #-32]! // 16-byte Folded Spill
+; CHECK-WINDOWS-NEXT:    str q8, [sp, #16] // 16-byte Spill
+; CHECK-WINDOWS-NEXT:    //APP
+; CHECK-WINDOWS-NEXT:    //NO_APP
+; CHECK-WINDOWS-NEXT:    ldr q8, [sp, #16] // 16-byte Reload
+; CHECK-WINDOWS-NEXT:    ldp x10, x11, [sp], #32 // 16-byte Folded Reload
+; CHECK-WINDOWS-NEXT:    ret
+entry:
+  tail call void asm sideeffect "", "~{x10},~{x11},~{q8}"()
+  ret void
+}
