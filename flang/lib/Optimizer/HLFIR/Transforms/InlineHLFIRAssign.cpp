@@ -58,6 +58,7 @@ std::optional<mlir::Value> genConformingAddressBasedDisjointnessCheck(
   struct BoxRange {
     mlir::Value start;
     mlir::Value end;
+    mlir::Value nonEmpty;
     llvm::SmallVector<mlir::Value> extents;
   };
 
@@ -72,6 +73,7 @@ std::optional<mlir::Value> genConformingAddressBasedDisjointnessCheck(
 
     mlir::Value least = zero;
     mlir::Value most = zero;
+    mlir::Value nonEmpty = builder.createBool(loc, true);
 
     auto boxTy = mlir::cast<fir::BaseBoxType>(box.getType());
     unsigned rank = 0;
@@ -91,8 +93,14 @@ std::optional<mlir::Value> genConformingAddressBasedDisjointnessCheck(
       mlir::Value stride = dims.getByteStride();
       extents.push_back(extent);
 
+      mlir::Value isExtentPositive = mlir::arith::CmpIOp::create(
+          builder, loc, mlir::arith::CmpIPredicate::sgt, extent, zero);
+      nonEmpty =
+          mlir::arith::AndIOp::create(builder, loc, nonEmpty, isExtentPositive);
+      mlir::Value rangeExtent = mlir::arith::SelectOp::create(
+          builder, loc, isExtentPositive, extent, one);
       mlir::Value extentM1 =
-          mlir::arith::SubIOp::create(builder, loc, extent, one);
+          mlir::arith::SubIOp::create(builder, loc, rangeExtent, one);
       mlir::Value dimOffset =
           mlir::arith::MulIOp::create(builder, loc, extentM1, stride);
 
@@ -117,7 +125,7 @@ std::optional<mlir::Value> genConformingAddressBasedDisjointnessCheck(
         mlir::arith::AddIOp::create(builder, loc, baseInt, leastInt);
     mlir::Value rangeEnd =
         mlir::arith::AddIOp::create(builder, loc, baseInt, mostInt);
-    return {rangeStart, rangeEnd, extents};
+    return {rangeStart, rangeEnd, nonEmpty, extents};
   };
 
   BoxRange lhsRange = computeRange(lhsRef);
@@ -142,7 +150,12 @@ std::optional<mlir::Value> genConformingAddressBasedDisjointnessCheck(
     sameShape =
         mlir::arith::AndIOp::create(builder, loc, sameShape, sameExtent);
   }
-  return mlir::arith::AndIOp::create(builder, loc, sameShape, disjoint);
+  mlir::Value nonEmpty = mlir::arith::AndIOp::create(
+      builder, loc, lhsRange.nonEmpty, rhsRange.nonEmpty);
+  mlir::Value conformingAndNonEmpty =
+      mlir::arith::AndIOp::create(builder, loc, sameShape, nonEmpty);
+  return mlir::arith::AndIOp::create(builder, loc, conformingAndNonEmpty,
+                                     disjoint);
 }
 
 /// Expand hlfir.assign of array RHS to array LHS into a loop nest

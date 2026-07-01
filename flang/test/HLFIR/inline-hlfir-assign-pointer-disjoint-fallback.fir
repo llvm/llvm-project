@@ -14,13 +14,15 @@
 //  end subroutine
 
 // CHECK-LABEL: func.func @_QPassign_pointers
-// CHECK: %[[LHS_ADDR:.*]] = fir.box_addr %{{.*}} : (!fir.box<!fir.ptr<!fir.array<?xi32>>>) -> !fir.ptr<!fir.array<?xi32>>
-// CHECK: %[[LHS_BASE:.*]] = fir.convert %[[LHS_ADDR]] : (!fir.ptr<!fir.array<?xi32>>) -> i64
-// CHECK: %[[RHS_ADDR:.*]] = fir.box_addr %{{.*}} : (!fir.box<!fir.ptr<!fir.array<?xi32>>>) -> !fir.ptr<!fir.array<?xi32>>
-// CHECK: %[[RHS_BASE:.*]] = fir.convert %[[RHS_ADDR]] : (!fir.ptr<!fir.array<?xi32>>) -> i64
+// CHECK-DAG: %[[LHS_ADDR:.*]] = fir.box_addr %{{.*}} : (!fir.box<!fir.ptr<!fir.array<?xi32>>>) -> !fir.ptr<!fir.array<?xi32>>
+// CHECK-DAG: %[[LHS_BASE:.*]] = fir.convert %[[LHS_ADDR]] : (!fir.ptr<!fir.array<?xi32>>) -> i64
+// CHECK-DAG: %[[RHS_ADDR:.*]] = fir.box_addr %{{.*}} : (!fir.box<!fir.ptr<!fir.array<?xi32>>>) -> !fir.ptr<!fir.array<?xi32>>
+// CHECK-DAG: %[[RHS_BASE:.*]] = fir.convert %[[RHS_ADDR]] : (!fir.ptr<!fir.array<?xi32>>) -> i64
 // CHECK: %[[DISJOINT:.*]] = arith.ori %{{.*}}, %{{.*}} : i1
 // CHECK: %[[SAME_EXTENT:.*]] = arith.cmpi eq, %{{.*}}, %{{.*}} : index
-// CHECK: %[[GUARD:.*]] = arith.andi %[[SAME_EXTENT]], %[[DISJOINT]] : i1
+// CHECK: %[[NON_EMPTY:.*]] = arith.andi %{{.*}}, %{{.*}} : i1
+// CHECK: %[[CONFORMING:.*]] = arith.andi %[[SAME_EXTENT]], %[[NON_EMPTY]] : i1
+// CHECK: %[[GUARD:.*]] = arith.andi %[[CONFORMING]], %[[DISJOINT]] : i1
 // CHECK: fir.if %[[GUARD]] {
 // CHECK:   fir.do_loop
 // CHECK:     hlfir.assign %{{.*}} to %{{.*}} : i32, !fir.ref<i32>
@@ -32,6 +34,7 @@
 // CONVERT-LABEL: func.func @_QPassign_pointers
 // CONVERT: fir.if %{{.*}} {
 // CONVERT:   fir.do_loop
+// CONVERT-NOT: fir.call @_FortranAAssign
 // CONVERT: } else {
 // CONVERT:   fir.call @_FortranAAssign
 // CONVERT: }
