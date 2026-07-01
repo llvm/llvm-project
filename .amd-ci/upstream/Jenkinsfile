@@ -607,7 +607,6 @@ try {
             // ----------------------------------------------------------------
             Boolean shouldCloneSpecConfigs = (
                 params.USE_SPEC_CONFIGS_REPO &&
-                    !postsub &&
                     (params.ENABLE_CPU2017 || params.ENABLE_CPU2026)
             )
             if (shouldCloneSpecConfigs) {
@@ -629,7 +628,6 @@ try {
             // to inject into).
             Boolean shouldDownloadSpecLibs = (
                 !params.USE_PREBUILT_CUT &&
-                    !postsub &&
                     (params.ENABLE_CPU2017 || params.ENABLE_CPU2026)
             )
             if (shouldDownloadSpecLibs) {
@@ -779,10 +777,10 @@ try {
             // ================================================================
             // Two-Stage Parallel SPEC Testing
             // Stage Build (build-only) -> Stage 1 (basic) -> Stage 2 (full).
-            // Skipped on postsub branches; gated on compilerTar / USE_PREBUILT_CUT.
+            // Runs for presub and postsub; gated on compilerTar / USE_PREBUILT_CUT.
             // ================================================================
             Boolean canRunSpec = (compilerTar != null) || params.USE_PREBUILT_CUT || params.FORCE_SPEC
-            if (!postsub && canRunSpec) {
+            if (canRunSpec) {
                 downstreamParallel['SPEC'] = {
                 Boolean stage1Passed = true
                 Boolean stageBuildPassed = false
@@ -854,8 +852,6 @@ try {
                     echo "Stage 2 result: ${stage2Passed ? 'PASSED' : 'FAILED'}"
                 }
                 } // end downstreamParallel['SPEC'] closure
-            } else if (postsub) {
-                echo 'Skipping Parallel SPEC Testing on postsub branch.'
             } else {
                 echo 'Skipping Parallel SPEC Testing: no compiler tar and USE_PREBUILT_CUT/FORCE_SPEC not set.'
             }
@@ -1137,8 +1133,7 @@ echo "[sanitize] scanned=$scanned modified=$modified (pre-LLVM21 flags stripped)
 //
 // Stash the resulting URL in env.SPEC_CONFIGS_ARTIFACT_URL for
 // getSpecCfgDirValue() to forward downstream as SPECCPU_CFGDIR. No-op if
-// the spec-configs clone never happened (USE_SPEC_CONFIGS_REPO=false or
-// postsub run).
+// the spec-configs clone never happened (USE_SPEC_CONFIGS_REPO=false).
 void archiveSpecConfigsIfPresent() {
     if (!fileExists('spec-configs')) {
         return
