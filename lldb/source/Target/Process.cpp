@@ -2800,8 +2800,8 @@ Process::ReadModuleFromMemory(const FileSpec &file_spec,
   // only print a progress update if we're reading from a
   // live session which might go over gdb remote serial protocol.
   if (IsLiveDebugSession())
-    progress_up = std::make_unique<Progress>(
-        "Reading binary from memory", file_spec.GetFilename().GetString());
+    progress_up = std::make_unique<Progress>("Reading binary from memory",
+                                             file_spec.GetFilename().str());
 
   if (ObjectFile *_ = module_sp->GetMemoryObjectFile(
           shared_from_this(), header_addr, error, size_to_read))

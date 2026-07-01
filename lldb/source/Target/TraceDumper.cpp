@@ -30,7 +30,7 @@ static std::optional<llvm::StringRef> ToOptionalString(llvm::StringRef s) {
 static llvm::StringRef GetModuleName(const SymbolContext &sc) {
   if (!sc.module_sp)
     return {};
-  return sc.module_sp->GetFileSpec().GetFilename().GetStringRef();
+  return sc.module_sp->GetFileSpec().GetFilename();
 }
 
 /// \return
