@@ -43,4 +43,5 @@
 // NO-PLUGIN-NOT: {{".*opt"}} {{".*.bc"}} "-load-pass-plugin"
 // NO-PLUGIN-NOT: {{".*/Inputs/hipspv/lib/libLLVMHipSpvPasses.so"}}
 // ALL: {{".*llvm-spirv[^ ]*"}}
-// CHIPSTAR: {{".*clang.*"}} "--no-default-config" "-c"
+// CHIPSTAR: {{".*clang.*"}} "-cc1"
+// CHIPSTAR-SAME: "-emit-obj"
