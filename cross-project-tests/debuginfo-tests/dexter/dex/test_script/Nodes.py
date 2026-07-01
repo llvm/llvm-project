@@ -18,7 +18,7 @@ from dex.utils.Exceptions import Error
 
 
 def setup_yaml_parser(loader):
-    reg_classes = [Where, Value, DexRange, Label, Then, Address, ValueAll]
+    reg_classes = [Where, Value, DexRange, Label, Then, Address, ValueAll, Step]
     for c in reg_classes:
         c.register_yaml(loader)
 
@@ -229,6 +229,37 @@ class ValueAll(Expect):
     def register_yaml(loader):
         yaml.add_constructor("!value/all", ValueAll.constructor, loader)
         yaml.add_representer(ValueAll, ValueAll.representer)
+
+
+class Step(Expect):
+    """Sets an expectation for stepping behaviour, with the expected value being a list of integer lines:
+    - !step exactly: while this !expect is active, we expect see exactly the expected lines in-order as many times as
+      they appear in the expected lines list.
+    - !step at_least: while this !expect is active, we expect to see each of the expected lines in-order at least as many
+      times as they appear in the expected list, ignoring excess lines and lines not in the expected lines list.
+    - !step never: while this !expect is active, we expect to not see any of the lines in the expected lines list.
+    """
+
+    def __init__(self, kind: str):
+        self.kind = kind
+        if kind not in ["exactly", "at_least", "never"]:
+            raise DexterNodeError(self, f'invalid !step kind "{self.kind}"')
+
+    def __repr__(self):
+        return f"Step({self.kind})"
+
+    @staticmethod
+    def constructor(loader: yaml.Loader, node):
+        return Step(loader.construct_scalar(node))
+
+    @staticmethod
+    def representer(dumper, data):
+        return dumper.represent_scalar("!step", data.kind)
+
+    @staticmethod
+    def register_yaml(loader):
+        yaml.add_constructor("!step", Step.constructor, loader)
+        yaml.add_representer(Step, Step.representer)
 
 
 ##############
