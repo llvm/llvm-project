@@ -1860,7 +1860,7 @@ FindCASConfigurations(const ModuleSP &module_sp) {
   // generates .cas-config files.
   unique_paths.insert(get_dir(module_sp->GetFileSpec()));
   for (auto &path : unique_paths) {
-    llvm::StringRef parent = path.GetDirectory().GetStringRef();
+    llvm::StringRef parent = path.GetDirectory();
     while (!parent.empty() &&
            llvm::sys::path::filename(parent) != "DerivedData")
       parent = llvm::sys::path::parent_path(parent);
