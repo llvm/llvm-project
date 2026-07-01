@@ -375,7 +375,7 @@ inline Tp const& DoNotOptimize(Tp const& value) {
 #define TEST_NOT_WIN32(...) __VA_ARGS__
 #endif
 
-#if defined(TEST_WINDOWS_DLL) ||defined(__MVS__) || defined(_AIX)
+#if defined(TEST_WINDOWS_DLL) || defined(__MVS__) || defined(_AIX) || defined(TEST_HAS_NO_RELIABLE_LIBRARY_INTERNAL_ALLOCATIONS)
 // Macros for waiving cases when we can't count allocations done within
 // the library implementation.
 //
@@ -386,6 +386,8 @@ inline Tp const& DoNotOptimize(Tp const& value) {
 //
 // The same goes on IBM zOS.
 // The same goes on AIX.
+// Some target test configurations can define
+// TEST_HAS_NO_RELIABLE_LIBRARY_INTERNAL_ALLOCATIONS for the same reason.
 #define ASSERT_WITH_LIBRARY_INTERNAL_ALLOCATIONS(...) ((void)(__VA_ARGS__))
 #define TEST_SUPPORTS_LIBRARY_INTERNAL_ALLOCATIONS 0
 #else

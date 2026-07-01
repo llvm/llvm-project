@@ -26,7 +26,7 @@ namespace fs = std::filesystem;
 int main(int, char**) {
   using namespace fs;
   static_assert(std::is_nothrow_move_assignable<path>::value, "");
-  assert(globalMemCounter.checkOutstandingNewEq(0));
+  ASSERT_WITH_LIBRARY_INTERNAL_ALLOCATIONS(globalMemCounter.checkOutstandingNewEq(0));
   const std::string s("we really really really really really really really "
                       "really really long string so that we allocate");
   ASSERT_WITH_LIBRARY_INTERNAL_ALLOCATIONS(

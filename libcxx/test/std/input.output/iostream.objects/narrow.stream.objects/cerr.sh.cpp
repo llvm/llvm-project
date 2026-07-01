@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // XFAIL: LIBCXX-PICOLIBC-FIXME
+// UNSUPPORTED: executor-merges-stderr-into-stdout
 
 // <iostream>
 

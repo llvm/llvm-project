@@ -10,6 +10,7 @@
 // XFAIL: netbsd
 
 // XFAIL: LIBCXX-FREEBSD-FIXME
+// UNSUPPORTED: platform-has-nonportable-locales
 
 // REQUIRES: locale.zh_CN.UTF-8
 

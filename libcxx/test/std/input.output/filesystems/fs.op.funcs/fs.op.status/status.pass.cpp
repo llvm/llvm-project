@@ -9,6 +9,7 @@
 // REQUIRES: can-create-symlinks
 // UNSUPPORTED: c++03, c++11, c++14
 // UNSUPPORTED: no-filesystem
+// UNSUPPORTED: executor-runs-as-root
 
 // Starting in Android N (API 24), SELinux policy prevents the shell user from
 // creating a FIFO file.

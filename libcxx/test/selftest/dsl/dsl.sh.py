@@ -9,6 +9,11 @@
 # With picolibc, test_program_stderr_is_not_conflated_with_stdout fails
 # because stdout & stderr are treated as the same.
 # XFAIL: LIBCXX-PICOLIBC-FIXME
+#
+# The OHOS HDC executor currently merges remote stderr into host stdout, and
+# OHOS locale probing accepts some intentionally bogus locale names.
+# UNSUPPORTED: executor-merges-stderr-into-stdout
+# UNSUPPORTED: platform-has-nonportable-locales
 
 # Investigate why this is failing with LLVM libc.
 # XFAIL: LLVM-LIBC-FIXME

@@ -18,6 +18,7 @@
 // XFAIL: target=armv{{7|8}}{{l?}}{{.*}}-linux-gnueabihf && libcpp-abi-version=1
 // XFAIL: target=aarch64{{.*}}-linux-gnu && libcpp-abi-version=1
 // XFAIL: target=aarch64{{.*}}-amazon-linux && libcpp-abi-version=1
+// XFAIL: target={{.*}}-linux-ohos && libcpp-abi-version=1
 
 #include <iomanip>
 #include <ostream>

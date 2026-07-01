@@ -7,7 +7,8 @@ config.substitutions.append(('%{flags}',
     ('--sysroot @CMAKE_SYSROOT@ ' if '@CMAKE_SYSROOT@' else '') + '-pthread'
 ))
 config.substitutions.append(('%{compile_flags}',
-    '-nostdinc++ -I %{target-include-dir} -I %{include-dir} -I %{libcxx-dir}/test/support'
+    '-nostdinc++ -I %{target-include-dir} -I %{include-dir} -I %{libcxx-dir}/test/support '
+    '-DTEST_HAS_NO_RELIABLE_LIBRARY_INTERNAL_ALLOCATIONS'
 ))
 config.substitutions.append(('%{link_flags}',
     # Link libc++abi/libunwind directly: lld won't resolve libc++'s transitive
@@ -24,6 +25,12 @@ import libcxx.test.params, libcxx.test.config
 
 config.available_features.add('LIBCXX-OHOS-FIXME')
 config.available_features.add('ohos-hdc')
+config.available_features.add('executor-has-no-stdin')
+config.available_features.add('executor-merges-stderr-into-stdout')
+config.available_features.add('executor-runs-as-root')
+config.available_features.add('platform-has-nonportable-locales')
+config.available_features.add('platform-has-unreliable-new-delete-interposition')
+config.available_features.add('pthread-join-self-deadlocks')
 
 libcxx.test.config.configure(
     libcxx.test.params.DEFAULT_PARAMETERS,

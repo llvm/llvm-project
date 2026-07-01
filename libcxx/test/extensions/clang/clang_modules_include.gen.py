@@ -24,6 +24,9 @@
 # The Android headers don't appear to be compatible with modules yet
 # UNSUPPORTED: LIBCXX-ANDROID-FIXME
 
+# The OHOS headers don't appear to be compatible with modules yet
+# UNSUPPORTED: LIBCXX-OHOS-FIXME
+
 # TODO: Investigate this failure
 # UNSUPPORTED: LIBCXX-FREEBSD-FIXME
 

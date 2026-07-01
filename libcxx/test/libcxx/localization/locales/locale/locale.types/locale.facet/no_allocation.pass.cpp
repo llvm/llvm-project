@@ -12,6 +12,7 @@
 // for facets, as it uses __sso_allocator<facet*, N>. It would fail if new
 // facets have been added (using install()) but N hasn't been adjusted to
 // account for them.
+// UNSUPPORTED: platform-has-unreliable-new-delete-interposition
 
 #include <cassert>
 

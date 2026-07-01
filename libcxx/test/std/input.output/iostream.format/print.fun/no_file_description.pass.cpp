@@ -17,6 +17,9 @@
 // fmemopen is available starting in Android M (API 23)
 // XFAIL: target={{.+}}-android{{(eabi)?(21|22)}}
 
+// OHOS fmemopen/FILE behavior does not currently match the expectation tested here.
+// XFAIL: LIBCXX-OHOS-FIXME
+
 // <print>
 
 // The FILE returned by fmemopen does not have file descriptor.

@@ -8,6 +8,7 @@
 
 // REQUIRES: locale.en_US.UTF-8
 // XFAIL: no-wide-characters
+// UNSUPPORTED: platform-has-nonportable-locales
 
 // <locale>
 

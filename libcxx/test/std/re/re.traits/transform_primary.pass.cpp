@@ -11,6 +11,7 @@
 
 // XFAIL: LIBCXX-AIX-FIXME
 // XFAIL: LIBCXX-FREEBSD-FIXME
+// UNSUPPORTED: platform-has-nonportable-locales
 
 // REQUIRES: locale.cs_CZ.ISO8859-2
 

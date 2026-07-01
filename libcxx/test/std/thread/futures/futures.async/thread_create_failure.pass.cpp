@@ -15,6 +15,7 @@
 
 // There is no way to limit the number of threads on windows
 // UNSUPPORTED: windows
+// UNSUPPORTED: executor-runs-as-root
 
 // macOS and FreeBSD seem to limit the number of processes, not threads via RLIMIT_NPROC.
 // XFAIL: target={{.+}}-apple-{{.*}}

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // Make sure that the executor pipes standard input to the test-executable being run.
+// UNSUPPORTED: executor-has-no-stdin
 
 // RUN: %{build}
 // RUN: echo "abc" | %{exec} %t.exe

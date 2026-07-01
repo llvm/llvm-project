@@ -9,6 +9,7 @@
 // REQUIRES: can-create-symlinks
 // UNSUPPORTED: c++03, c++11, c++14
 // UNSUPPORTED: no-filesystem
+// UNSUPPORTED: executor-runs-as-root
 
 // The string reported on errors changed, which makes those tests fail when run
 // against a built library that doesn't contain 0aa637b2037d.

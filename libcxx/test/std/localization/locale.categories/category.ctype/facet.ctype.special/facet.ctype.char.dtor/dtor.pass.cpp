@@ -11,6 +11,7 @@
 // template <> class ctype<char>
 
 // ~ctype();
+// UNSUPPORTED: platform-has-unreliable-new-delete-interposition
 
 #include <locale>
 #include <cassert>

@@ -9,6 +9,7 @@
 // REQUIRES: can-create-symlinks
 // UNSUPPORTED: c++03, c++11, c++14
 // UNSUPPORTED: no-filesystem
+// UNSUPPORTED: executor-runs-as-root
 
 // On Android L, ~scoped_test_env() is unable to delete the temp dir using
 // chmod+rm because chmod is too broken.

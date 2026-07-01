@@ -17,6 +17,7 @@
 
 // Bionic has minimal locale support, investigate this later.
 // XFAIL: LIBCXX-ANDROID-FIXME
+// UNSUPPORTED: platform-has-nonportable-locales
 
 #include <locale>
 #include <type_traits>

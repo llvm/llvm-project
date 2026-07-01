@@ -415,6 +415,13 @@ void operator delete(void* p, std::nothrow_t const&) TEST_NOEXCEPT {
   std::free(p);
 }
 
+#  if defined(__cpp_sized_deallocation) && __cpp_sized_deallocation >= 201309L
+void operator delete(void* p, std::size_t) TEST_NOEXCEPT {
+  getGlobalMemCounter()->deleteCalled(p);
+  std::free(p);
+}
+#  endif
+
 // operator new[](size_t[, nothrow_t]) and operator delete[](size_t[, nothrow_t])
 void* operator new[](std::size_t s) TEST_THROW_SPEC(std::bad_alloc) {
   getGlobalMemCounter()->newArrayCalled(s);
@@ -448,6 +455,13 @@ void operator delete[](void* p, std::nothrow_t const&) TEST_NOEXCEPT {
   getGlobalMemCounter()->deleteArrayCalled(p);
   std::free(p);
 }
+
+#  if defined(__cpp_sized_deallocation) && __cpp_sized_deallocation >= 201309L
+void operator delete[](void* p, std::size_t) TEST_NOEXCEPT {
+  getGlobalMemCounter()->deleteArrayCalled(p);
+  std::free(p);
+}
+#  endif
 
 #  ifndef TEST_HAS_NO_ALIGNED_ALLOCATION
 #    if defined(_LIBCPP_MSVCRT_LIKE) || (!defined(_LIBCPP_VERSION) && defined(_WIN32))
@@ -519,6 +533,13 @@ void operator delete(void* p, std::align_val_t av, std::nothrow_t const&) TEST_N
   free_aligned_impl(p, av);
 }
 
+#    if defined(__cpp_sized_deallocation) && __cpp_sized_deallocation >= 201309L
+void operator delete(void* p, std::size_t, std::align_val_t av) TEST_NOEXCEPT {
+  getGlobalMemCounter()->alignedDeleteCalled(p, static_cast<std::size_t>(av));
+  free_aligned_impl(p, av);
+}
+#    endif
+
 // operator new[](size_t, align_val_t[, nothrow_t]) and operator delete[](size_t, align_val_t[, nothrow_t])
 void* operator new[](std::size_t s, std::align_val_t av) TEST_THROW_SPEC(std::bad_alloc) {
   getGlobalMemCounter()->alignedNewArrayCalled(s, static_cast<std::size_t>(av));
@@ -550,6 +571,13 @@ void operator delete[](void* p, std::align_val_t av, std::nothrow_t const&) TEST
   getGlobalMemCounter()->alignedDeleteArrayCalled(p, static_cast<std::size_t>(av));
   free_aligned_impl(p, av);
 }
+
+#    if defined(__cpp_sized_deallocation) && __cpp_sized_deallocation >= 201309L
+void operator delete[](void* p, std::size_t, std::align_val_t av) TEST_NOEXCEPT {
+  getGlobalMemCounter()->alignedDeleteArrayCalled(p, static_cast<std::size_t>(av));
+  free_aligned_impl(p, av);
+}
+#    endif
 
 #  endif // TEST_HAS_NO_ALIGNED_ALLOCATION
 

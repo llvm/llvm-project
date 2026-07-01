@@ -11,6 +11,7 @@
 // operator delete is called directly.
 
 // UNSUPPORTED: sanitizer-new-delete
+// UNSUPPORTED: platform-has-unreliable-new-delete-interposition
 
 #include <new>
 #include <cstddef>

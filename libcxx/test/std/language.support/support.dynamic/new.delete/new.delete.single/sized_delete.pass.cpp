@@ -20,6 +20,7 @@
 // ADDITIONAL_COMPILE_FLAGS(target=powerpc-ibm-aix): -fsized-deallocation
 // ADDITIONAL_COMPILE_FLAGS(target=powerpc64-ibm-aix): -fsized-deallocation
 // UNSUPPORTED: sanitizer-new-delete
+// UNSUPPORTED: platform-has-unreliable-new-delete-interposition
 
 // AIX, and z/OS default to -fno-sized-deallocation.
 // XFAIL: target={{.+}}-zos{{.*}}

@@ -11,6 +11,7 @@
 // wostream wcerr;
 
 // UNSUPPORTED: no-wide-characters
+// UNSUPPORTED: executor-merges-stderr-into-stdout
 
 // RUN: %{build}
 // RUN: %{exec} %t.exe 2> %t.actual

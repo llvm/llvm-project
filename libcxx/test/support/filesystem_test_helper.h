@@ -182,7 +182,7 @@ struct scoped_test_env
         std::string cmd = "chmod -R 777 " + test_root.string();
 #endif // defined(__MVS__)
         int ret = std::system(cmd.c_str());
-#  if !defined(_AIX) && !defined(__ANDROID__)
+#  if !defined(_AIX) && !defined(__ANDROID__) && !defined(__OHOS__)
         // On AIX the chmod command will return non-zero when trying to set
         // the permissions on a directory that contains a bad symlink. This triggers
         // the assert, despite being able to delete everything with the following
@@ -196,6 +196,8 @@ struct scoped_test_env
         // LIBCXX-ANDROID-FIXME: Other fixes to consider: place a toybox chmod
         // onto old devices, re-enable this assert for devices running Android N
         // and up, rewrite this chmod+rm in C or C++.
+        //
+        // OHOS has the same chmod -R behavior for bad symlinks.
         assert(ret == 0);
 #  endif
 

@@ -9,6 +9,7 @@
 // Windows cannot detect the deadlock. Instead of throwing system_error,
 // it would dead lock the test
 // UNSUPPORTED: windows
+// UNSUPPORTED: pthread-join-self-deadlocks
 
 // TSAN bug: https://llvm.org/PR66537
 // UNSUPPORTED: tsan
