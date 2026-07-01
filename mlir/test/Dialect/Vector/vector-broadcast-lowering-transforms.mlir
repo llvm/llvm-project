@@ -117,7 +117,7 @@ func.func @broadcast_vec2d_from_vec2d_single_element(%arg0: vector<1x1xf32>) -> 
   return %0 : vector<4x3xf32>
 }
 
-// CHECK-LABEL: func @broadcast_single_elem_scalable_src
+// CHECK-LABEL: func @broadcast_vec2d_from_vec1d_unit_scalable_dim
 // CHECK-SAME: %[[A:.*0]]: vector<[1]xf32>
 // CHECK:      %[[U0:.*]] = ub.poison : vector<4x[1]xf32>
 // CHECK:      %[[T0:.*]] = vector.insert %[[A]], %[[U0]] [0] : vector<[1]xf32> into vector<4x[1]xf32>
@@ -126,7 +126,7 @@ func.func @broadcast_vec2d_from_vec2d_single_element(%arg0: vector<1x1xf32>) -> 
 // CHECK:      %[[T3:.*]] = vector.insert %[[A]], %[[T2]] [3] : vector<[1]xf32> into vector<4x[1]xf32>
 // CHECK:      return %[[T3]] : vector<4x[1]xf32>
 
-func.func @broadcast_single_elem_scalable_src(%arg0: vector<[1]xf32>) -> vector<4x[1]xf32> {
+func.func @broadcast_vec2d_from_vec1d_unit_scalable_dim(%arg0: vector<[1]xf32>) -> vector<4x[1]xf32> {
   %0 = vector.broadcast %arg0 : vector<[1]xf32> to vector<4x[1]xf32>
   return %0 : vector<4x[1]xf32>
 }
