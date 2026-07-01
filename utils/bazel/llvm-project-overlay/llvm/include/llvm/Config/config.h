@@ -118,7 +118,11 @@
 #define HAVE_LIBPTHREAD 1
 
 /* Define to 1 if you have the `pthread_getname_np' function. */
+/* Android bionic added pthread_getname_np in API 26; guard so the Android
+   cross-build at lower API levels takes llvm's fallback path. */
+#if !defined(__ANDROID__) || __ANDROID_API__ >= 26
 #define HAVE_PTHREAD_GETNAME_NP 1
+#endif
 
 /* Define to 1 if you have the `pthread_setname_np' function. */
 #define HAVE_PTHREAD_SETNAME_NP 1
@@ -139,7 +143,11 @@
 /* HAVE_MALLOC_ZONE_STATISTICS defined in Bazel */
 
 /* Define to 1 if you have the `posix_spawn' function. */
+/* Android bionic added posix_spawn in API 28; guard so the Android cross-build at
+   lower API levels takes llvm's fork/exec fallback path. */
+#if !defined(__ANDROID__) || __ANDROID_API__ >= 28
 #define HAVE_POSIX_SPAWN 1
+#endif
 
 /* Define to 1 if you have the `pread' function. */
 #define HAVE_PREAD 1
