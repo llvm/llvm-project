@@ -165,7 +165,7 @@ struct ArchInfo {
 // Details of a specific CPU.
 struct CpuInfo {
   StringTable::Offset Name; // Name, as written for -mcpu.
-  const ArchInfo &Arch;
+  unsigned ArchIdx;
   AArch64::ExtensionBitset
       DefaultExtensions; // Default extensions for this CPU.
 };

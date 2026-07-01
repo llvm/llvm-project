@@ -38,13 +38,13 @@ const AArch64::ArchInfo *AArch64::getArchForCpu(StringRef CPU) {
   std::optional<CpuInfo> Cpu = parseCpu(CPU);
   if (!Cpu)
     return nullptr;
-  return &Cpu->Arch;
+  return &ArchInfos[Cpu->ArchIdx];
 }
 
 std::optional<AArch64::ArchInfo> AArch64::ArchInfo::findBySubArch(StringRef SubArch) {
-  for (const auto *A : AArch64::ArchInfos)
-    if (A->getSubArch() == SubArch)
-      return *A;
+  for (const auto &A : AArch64::ArchInfos)
+    if (A.getSubArch() == SubArch)
+      return A;
   return {};
 }
 
@@ -154,9 +154,9 @@ const AArch64::ArchInfo *AArch64::parseArch(StringRef Arch) {
     return {};
 
   StringRef Syn = llvm::ARM::getArchSynonym(Arch);
-  for (const auto *A : ArchInfos) {
-    if (StrTab[A->Name].ends_with(Syn))
-      return A;
+  for (const auto &A : ArchInfos) {
+    if (StrTab[A.Name].ends_with(Syn))
+      return &A;
   }
   return {};
 }
@@ -347,7 +347,7 @@ void AArch64::ExtensionSet::disable(ArchExtKind E) {
 
 void AArch64::ExtensionSet::addCPUDefaults(const CpuInfo &CPU) {
   LLVM_DEBUG(llvm::dbgs() << "addCPUDefaults(" << StrTab[CPU.Name] << ")\n");
-  BaseArch = &CPU.Arch;
+  BaseArch = &ArchInfos[CPU.ArchIdx];
 
   for (const auto &E : Extensions)
     if (CPU.DefaultExtensions.test(E.ID))
