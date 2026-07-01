@@ -24,6 +24,7 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/FPTransformChecker.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -4028,7 +4029,7 @@ Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
   const Module *M = CI->getModule();
 
   // Don't optimize calls that require strict floating point semantics.
-  if (CI->isStrictFP())
+  if (FPTransformChecker(CI).isStrictFP())
     return nullptr;
 
   if (Value *V = optimizeSymmetric(CI, Func, Builder))

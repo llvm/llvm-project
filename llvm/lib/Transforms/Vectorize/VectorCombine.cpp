@@ -1397,13 +1397,13 @@ bool VectorCombine::scalarizeOpOrCmp(Instruction &I) {
   // Fold the vector constants in the original vectors into a new base vector to
   // get more accurate cost modelling.
   Value *NewVecC = nullptr;
+  FPTransformChecker Checker(&I);
   if (CI)
     NewVecC = simplifyCmpInst(CI->getPredicate(), VecCs[0], VecCs[1], SQ);
   else if (UO)
-    NewVecC =
-        simplifyUnOp(UO->getOpcode(), VecCs[0], UO->getFastMathFlags(), SQ);
+    NewVecC = simplifyUnOp(UO->getOpcode(), VecCs[0], Checker, SQ);
   else if (BO)
-    NewVecC = simplifyBinOp(BO->getOpcode(), VecCs[0], VecCs[1], SQ);
+    NewVecC = simplifyBinOp(BO->getOpcode(), VecCs[0], VecCs[1], Checker, SQ);
   else if (II)
     NewVecC = simplifyCall(II, II->getCalledOperand(), VecCs, SQ);
 

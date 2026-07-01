@@ -3093,7 +3093,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     // Try to simplify the underlying FMul.
     if (Value *V =
             simplifyFMulInst(II->getArgOperand(0), II->getArgOperand(1),
-                             II->getFastMathFlags(), SQ.getWithInstruction(II)))
+                             FPTransformChecker(II), SQ.getWithInstruction(II)))
       return BinaryOperator::CreateFAddFMF(V, II->getArgOperand(2),
                                            II->getFastMathFlags());
 
@@ -3116,7 +3116,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
     // Try to simplify the underlying FMul. We can only apply simplifications
     // that do not require rounding.
-    if (Value *V = simplifyFMAFMul(Src0, Src1, II->getFastMathFlags(),
+    if (Value *V = simplifyFMAFMul(Src0, Src1, FPTransformChecker(II),
                                    SQ.getWithInstruction(II)))
       return BinaryOperator::CreateFAddFMF(V, Src2, II->getFastMathFlags());
 

@@ -1912,11 +1912,7 @@ simplifySVEIntrinsicBinOp(InstCombiner &IC, IntrinsicInst &II,
   Op1 = stripInactiveLanes(Op1, Pg);
   Op2 = stripInactiveLanes(Op2, Pg);
 
-  Value *SimpleII;
-  if (auto FII = dyn_cast<FPMathOperator>(&II))
-    SimpleII = simplifyBinOp(Opc, Op1, Op2, FII->getFastMathFlags(), DL);
-  else
-    SimpleII = simplifyBinOp(Opc, Op1, Op2, DL);
+  Value *SimpleII = simplifyBinOp(Opc, Op1, Op2, FPTransformChecker(&II), DL);
 
   // An SVE intrinsic's result is always defined. However, this is not the case
   // for its equivalent IR instruction (e.g. when shifting by an amount more

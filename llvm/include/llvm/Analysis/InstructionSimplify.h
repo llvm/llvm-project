@@ -33,6 +33,7 @@
 
 #include "llvm/Analysis/SimplifyQuery.h"
 #include "llvm/IR/FPEnv.h"
+#include "llvm/IR/FPTransformChecker.h"
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {
@@ -87,53 +88,40 @@ LLVM_ABI Value *simplifyURemInst(Value *LHS, Value *RHS,
                                  const SimplifyQuery &Q);
 
 /// Given operand for an FNeg, fold the result or return null.
-LLVM_ABI Value *simplifyFNegInst(Value *Op, FastMathFlags FMF,
-                                 const SimplifyQuery &Q);
+LLVM_ABI Value *simplifyFNegInst(Value *Op, const SimplifyQuery &Q);
 
 /// Given operands for an FAdd, fold the result or return null.
-LLVM_ABI Value *
-simplifyFAddInst(Value *LHS, Value *RHS, FastMathFlags FMF,
-                 const SimplifyQuery &Q,
-                 fp::ExceptionBehavior ExBehavior = fp::ebIgnore,
-                 RoundingMode Rounding = RoundingMode::NearestTiesToEven);
+LLVM_ABI Value *simplifyFAddInst(Value *LHS, Value *RHS,
+                                 FPTransformChecker Checker,
+                                 const SimplifyQuery &Q);
 
 /// Given operands for an FSub, fold the result or return null.
-LLVM_ABI Value *
-simplifyFSubInst(Value *LHS, Value *RHS, FastMathFlags FMF,
-                 const SimplifyQuery &Q,
-                 fp::ExceptionBehavior ExBehavior = fp::ebIgnore,
-                 RoundingMode Rounding = RoundingMode::NearestTiesToEven);
+LLVM_ABI Value *simplifyFSubInst(Value *LHS, Value *RHS,
+                                 FPTransformChecker Checker,
+                                 const SimplifyQuery &Q);
 
 /// Given operands for an FMul, fold the result or return null.
-LLVM_ABI Value *
-simplifyFMulInst(Value *LHS, Value *RHS, FastMathFlags FMF,
-                 const SimplifyQuery &Q,
-                 fp::ExceptionBehavior ExBehavior = fp::ebIgnore,
-                 RoundingMode Rounding = RoundingMode::NearestTiesToEven);
+LLVM_ABI Value *simplifyFMulInst(Value *LHS, Value *RHS,
+                                 FPTransformChecker Checker,
+                                 const SimplifyQuery &Q);
 
 /// Given operands for the multiplication of a FMA, fold the result or return
 /// null. In contrast to simplifyFMulInst, this function will not perform
 /// simplifications whose unrounded results differ when rounded to the argument
 /// type.
-LLVM_ABI Value *
-simplifyFMAFMul(Value *LHS, Value *RHS, FastMathFlags FMF,
-                const SimplifyQuery &Q,
-                fp::ExceptionBehavior ExBehavior = fp::ebIgnore,
-                RoundingMode Rounding = RoundingMode::NearestTiesToEven);
+LLVM_ABI Value *simplifyFMAFMul(Value *LHS, Value *RHS,
+                                FPTransformChecker Checker,
+                                const SimplifyQuery &Q);
 
 /// Given operands for an FDiv, fold the result or return null.
-LLVM_ABI Value *
-simplifyFDivInst(Value *LHS, Value *RHS, FastMathFlags FMF,
-                 const SimplifyQuery &Q,
-                 fp::ExceptionBehavior ExBehavior = fp::ebIgnore,
-                 RoundingMode Rounding = RoundingMode::NearestTiesToEven);
+LLVM_ABI Value *simplifyFDivInst(Value *LHS, Value *RHS,
+                                 FPTransformChecker Checker,
+                                 const SimplifyQuery &Q);
 
 /// Given operands for an FRem, fold the result or return null.
-LLVM_ABI Value *
-simplifyFRemInst(Value *LHS, Value *RHS, FastMathFlags FMF,
-                 const SimplifyQuery &Q,
-                 fp::ExceptionBehavior ExBehavior = fp::ebIgnore,
-                 RoundingMode Rounding = RoundingMode::NearestTiesToEven);
+LLVM_ABI Value *simplifyFRemInst(Value *LHS, Value *RHS,
+                                 FPTransformChecker Checker,
+                                 const SimplifyQuery &Q);
 
 /// Given operands for a Shl, fold the result or return null.
 LLVM_ABI Value *simplifyShlInst(Value *Op0, Value *Op1, bool IsNSW, bool IsNUW,
@@ -197,12 +185,11 @@ LLVM_ABI Value *simplifyCastInst(unsigned CastOpc, Value *Op, Type *Ty,
 /// Given operands for an intrinsic, fold the result or return null. Context
 /// Function is passed as \p CxtF. \p ExBehavior and \p Rounding only apply to
 /// constrained FP intrinsics.
-LLVM_ABI Value *
-simplifyIntrinsic(Intrinsic::ID IID, Type *ReturnType, ArrayRef<Value *> Args,
-                  FastMathFlags FMF, const SimplifyQuery &Q,
-                  Function *CxtF = nullptr,
-                  fp::ExceptionBehavior ExBehavior = fp::ebIgnore,
-                  RoundingMode Rounding = RoundingMode::NearestTiesToEven);
+LLVM_ABI Value *simplifyIntrinsic(Intrinsic::ID IID, Type *ReturnType,
+                                  ArrayRef<Value *> Args,
+                                  FPTransformChecker Checker,
+                                  const SimplifyQuery &Q,
+                                  Function *CxtF = nullptr);
 
 /// Given operands for a ShuffleVectorInst, fold the result or return null.
 /// See class ShuffleVectorInst for a description of the mask representation.
@@ -222,7 +209,8 @@ LLVM_ABI Value *simplifyUnOp(unsigned Opcode, Value *Op,
 
 /// Given operand for a UnaryOperator, fold the result or return null.
 /// Try to use FastMathFlags when folding the result.
-LLVM_ABI Value *simplifyUnOp(unsigned Opcode, Value *Op, FastMathFlags FMF,
+LLVM_ABI Value *simplifyUnOp(unsigned Opcode, Value *Op,
+                             FPTransformChecker Checker,
                              const SimplifyQuery &Q);
 
 /// Given operands for a BinaryOperator, fold the result or return null.
@@ -232,7 +220,8 @@ LLVM_ABI Value *simplifyBinOp(unsigned Opcode, Value *LHS, Value *RHS,
 /// Given operands for a BinaryOperator, fold the result or return null.
 /// Try to use FastMathFlags when folding the result.
 LLVM_ABI Value *simplifyBinOp(unsigned Opcode, Value *LHS, Value *RHS,
-                              FastMathFlags FMF, const SimplifyQuery &Q);
+                              FPTransformChecker Checker,
+                              const SimplifyQuery &Q);
 
 /// Given a callsite, callee, and arguments, fold the result or return null.
 LLVM_ABI Value *simplifyCall(CallBase *Call, Value *Callee,

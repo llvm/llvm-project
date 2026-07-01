@@ -39,6 +39,7 @@
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/IR/FPTransformChecker.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
@@ -62,11 +63,11 @@ STATISTIC(NumReassoc, "Number of reassociations");
 static Value *simplifyAndInst(Value *, Value *, const SimplifyQuery &,
                               unsigned);
 static Value *simplifyUnOp(unsigned, Value *, const SimplifyQuery &, unsigned);
-static Value *simplifyFPUnOp(unsigned, Value *, const FastMathFlags &,
+static Value *simplifyFPUnOp(unsigned, Value *, FPTransformChecker,
                              const SimplifyQuery &, unsigned);
 static Value *simplifyBinOp(unsigned, Value *, Value *, const SimplifyQuery &,
                             unsigned);
-static Value *simplifyBinOp(unsigned, Value *, Value *, const FastMathFlags &,
+static Value *simplifyBinOp(unsigned, Value *, Value *, FPTransformChecker,
                             const SimplifyQuery &, unsigned);
 static Value *simplifyCmpInst(CmpPredicate, Value *, Value *,
                               const SimplifyQuery &, unsigned);
@@ -5855,8 +5856,8 @@ static Constant *foldConstant(Instruction::UnaryOps Opcode, Value *&Op,
 
 /// Given the operand for an FNeg, see if we can fold the result.  If not, this
 /// returns null.
-static Value *simplifyFNegInst(Value *Op, FastMathFlags FMF,
-                               const SimplifyQuery &Q, unsigned MaxRecurse) {
+static Value *simplifyFNegInst(Value *Op, const SimplifyQuery &Q,
+                               unsigned MaxRecurse) {
   if (Constant *C = foldConstant(Instruction::FNeg, Op, Q))
     return C;
 
@@ -5868,9 +5869,8 @@ static Value *simplifyFNegInst(Value *Op, FastMathFlags FMF,
   return nullptr;
 }
 
-Value *llvm::simplifyFNegInst(Value *Op, FastMathFlags FMF,
-                              const SimplifyQuery &Q) {
-  return ::simplifyFNegInst(Op, FMF, Q, RecursionLimit);
+Value *llvm::simplifyFNegInst(Value *Op, const SimplifyQuery &Q) {
+  return ::simplifyFNegInst(Op, Q, RecursionLimit);
 }
 
 /// Try to propagate existing NaN values when possible. If not, replace the
@@ -5917,10 +5917,8 @@ static Constant *propagateNaN(Constant *In) {
 /// Perform folds that are common to any floating-point operation. This implies
 /// transforms based on poison/undef/NaN because the operation itself makes no
 /// difference to the result.
-static Constant *simplifyFPOp(ArrayRef<Value *> Ops, FastMathFlags FMF,
-                              const SimplifyQuery &Q,
-                              fp::ExceptionBehavior ExBehavior,
-                              RoundingMode Rounding) {
+static Constant *simplifyFPOp(ArrayRef<Value *> Ops, FPTransformChecker Checker,
+                              const SimplifyQuery &Q) {
   // Poison is independent of anything else. It always propagates from an
   // operand to a math result.
   if (any_of(Ops, IsaPred<PoisonValue>))
@@ -5934,12 +5932,12 @@ static Constant *simplifyFPOp(ArrayRef<Value *> Ops, FastMathFlags FMF,
     // If this operation has 'nnan' or 'ninf' and at least 1 disallowed operand
     // (an undef operand can be chosen to be Nan/Inf), then the result of
     // this operation is poison.
-    if (FMF.noNaNs() && (IsNan || IsUndef))
+    if (Checker.noNaNs() && (IsNan || IsUndef))
       return PoisonValue::get(V->getType());
-    if (FMF.noInfs() && (IsInf || IsUndef))
+    if (Checker.noInfs() && (IsInf || IsUndef))
       return PoisonValue::get(V->getType());
 
-    if (isDefaultFPEnvironment(ExBehavior, Rounding)) {
+    if (Checker.isDefaultFPEnvironment()) {
       // Undef does not propagate because undef means that all bits can take on
       // any value. If this is undef * NaN for example, then the result values
       // (at least the exponent bits) are limited. Assume the undef is a
@@ -5948,7 +5946,7 @@ static Constant *simplifyFPOp(ArrayRef<Value *> Ops, FastMathFlags FMF,
         return ConstantFP::getNaN(V->getType());
       if (IsNan)
         return propagateNaN(cast<Constant>(V));
-    } else if (ExBehavior != fp::ebStrict) {
+    } else if (Checker.getExceptionBehavior() != fp::ebStrict) {
       if (IsNan)
         return propagateNaN(cast<Constant>(V));
     }
@@ -5958,16 +5956,14 @@ static Constant *simplifyFPOp(ArrayRef<Value *> Ops, FastMathFlags FMF,
 
 /// Given operands for an FAdd, see if we can fold the result.  If not, this
 /// returns null.
-static Value *
-simplifyFAddInst(Value *Op0, Value *Op1, FastMathFlags FMF,
-                 const SimplifyQuery &Q, unsigned MaxRecurse,
-                 fp::ExceptionBehavior ExBehavior = fp::ebIgnore,
-                 RoundingMode Rounding = RoundingMode::NearestTiesToEven) {
-  if (isDefaultFPEnvironment(ExBehavior, Rounding))
+static Value *simplifyFAddInst(Value *Op0, Value *Op1,
+                               FPTransformChecker Checker,
+                               const SimplifyQuery &Q, unsigned MaxRecurse) {
+  if (Checker.isDefaultFPEnvironment())
     if (Constant *C = foldOrCommuteConstant(Instruction::FAdd, Op0, Op1, Q))
       return C;
 
-  if (Constant *C = simplifyFPOp({Op0, Op1}, FMF, Q, ExBehavior, Rounding))
+  if (Constant *C = simplifyFPOp({Op0, Op1}, Checker, Q))
     return C;
 
   // fadd X, -0 ==> X
@@ -5975,22 +5971,20 @@ simplifyFAddInst(Value *Op0, Value *Op1, FastMathFlags FMF,
   // not simplify to Op0:
   // fadd SNaN, -0.0 --> QNaN
   // fadd +0.0, -0.0 --> -0.0 (but only with round toward negative)
-  if (canIgnoreSNaN(ExBehavior, FMF) &&
-      (!canRoundingModeBe(Rounding, RoundingMode::TowardNegative) ||
-       FMF.noSignedZeros()))
+  if (Checker.canIgnoreSNaN() && !Checker.canDiffWithItselfBeNegative())
     if (match(Op1, m_NegZeroFP()))
       return Op0;
 
   // fadd X, 0 ==> X, when we know X is not -0
-  if (canIgnoreSNaN(ExBehavior, FMF))
+  if (Checker.canIgnoreSNaN())
     if (match(Op1, m_PosZeroFP()) &&
-        (FMF.noSignedZeros() || cannotBeNegativeZero(Op0, Q)))
+        (Checker.noSignedZeros() || cannotBeNegativeZero(Op0, Q)))
       return Op0;
 
-  if (!isDefaultFPEnvironment(ExBehavior, Rounding))
+  if (!Checker.isDefaultFPEnvironment())
     return nullptr;
 
-  if (FMF.noNaNs()) {
+  if (Checker.noNaNs()) {
     // With nnan: X + {+/-}Inf --> {+/-}Inf
     if (match(Op1, m_Inf()))
       return Op1;
@@ -6014,7 +6008,7 @@ simplifyFAddInst(Value *Op0, Value *Op1, FastMathFlags FMF,
   // (X - Y) + Y --> X
   // Y + (X - Y) --> X
   Value *X;
-  if (FMF.noSignedZeros() && FMF.allowReassoc() &&
+  if (Checker.noSignedZeros() && Checker.allowReassoc() &&
       (match(Op0, m_FSub(m_Value(X), m_Specific(Op1))) ||
        match(Op1, m_FSub(m_Value(X), m_Specific(Op0)))))
     return X;
@@ -6024,50 +6018,46 @@ simplifyFAddInst(Value *Op0, Value *Op1, FastMathFlags FMF,
 
 /// Given operands for an FSub, see if we can fold the result.  If not, this
 /// returns null.
-static Value *
-simplifyFSubInst(Value *Op0, Value *Op1, FastMathFlags FMF,
-                 const SimplifyQuery &Q, unsigned MaxRecurse,
-                 fp::ExceptionBehavior ExBehavior = fp::ebIgnore,
-                 RoundingMode Rounding = RoundingMode::NearestTiesToEven) {
-  if (isDefaultFPEnvironment(ExBehavior, Rounding))
+static Value *simplifyFSubInst(Value *Op0, Value *Op1,
+                               FPTransformChecker Checker,
+                               const SimplifyQuery &Q, unsigned MaxRecurse) {
+  if (Checker.isDefaultFPEnvironment())
     if (Constant *C = foldOrCommuteConstant(Instruction::FSub, Op0, Op1, Q))
       return C;
 
-  if (Constant *C = simplifyFPOp({Op0, Op1}, FMF, Q, ExBehavior, Rounding))
+  if (Constant *C = simplifyFPOp({Op0, Op1}, Checker, Q))
     return C;
 
   // fsub X, +0 ==> X
-  if (canIgnoreSNaN(ExBehavior, FMF) &&
-      (!canRoundingModeBe(Rounding, RoundingMode::TowardNegative) ||
-       FMF.noSignedZeros()))
+  if (Checker.canIgnoreSNaN() && !Checker.canDiffWithItselfBeNegative())
     if (match(Op1, m_PosZeroFP()))
       return Op0;
 
   // fsub X, -0 ==> X, when we know X is not -0
-  if (canIgnoreSNaN(ExBehavior, FMF))
+  if (Checker.canIgnoreSNaN())
     if (match(Op1, m_NegZeroFP()) &&
-        (FMF.noSignedZeros() || cannotBeNegativeZero(Op0, Q)))
+        (Checker.noSignedZeros() || cannotBeNegativeZero(Op0, Q)))
       return Op0;
 
   // fsub -0.0, (fsub -0.0, X) ==> X
   // fsub -0.0, (fneg X) ==> X
   Value *X;
-  if (canIgnoreSNaN(ExBehavior, FMF))
+  if (Checker.canIgnoreSNaN())
     if (match(Op0, m_NegZeroFP()) && match(Op1, m_FNeg(m_Value(X))))
       return X;
 
   // fsub 0.0, (fsub 0.0, X) ==> X if signed zeros are ignored.
   // fsub 0.0, (fneg X) ==> X if signed zeros are ignored.
-  if (canIgnoreSNaN(ExBehavior, FMF))
-    if (FMF.noSignedZeros() && match(Op0, m_AnyZeroFP()) &&
+  if (Checker.canIgnoreSNaN())
+    if (Checker.noSignedZeros() && match(Op0, m_AnyZeroFP()) &&
         (match(Op1, m_FSub(m_AnyZeroFP(), m_Value(X))) ||
          match(Op1, m_FNeg(m_Value(X)))))
       return X;
 
-  if (!isDefaultFPEnvironment(ExBehavior, Rounding))
+  if (!Checker.isDefaultFPEnvironment())
     return nullptr;
 
-  if (FMF.noNaNs()) {
+  if (Checker.noNaNs()) {
     // fsub nnan x, x ==> 0.0
     if (Op0 == Op1)
       return Constant::getNullValue(Op0->getType());
@@ -6083,7 +6073,7 @@ simplifyFSubInst(Value *Op0, Value *Op1, FastMathFlags FMF,
 
   // Y - (Y - X) --> X
   // (X + Y) - Y --> X
-  if (FMF.noSignedZeros() && FMF.allowReassoc() &&
+  if (Checker.noSignedZeros() && Checker.allowReassoc() &&
       (match(Op1, m_FSub(m_Specific(Op0), m_Value(X))) ||
        match(Op0, m_c_FAdd(m_Specific(Op1), m_Value(X)))))
     return X;
@@ -6091,14 +6081,13 @@ simplifyFSubInst(Value *Op0, Value *Op1, FastMathFlags FMF,
   return nullptr;
 }
 
-static Value *simplifyFMAFMul(Value *Op0, Value *Op1, FastMathFlags FMF,
-                              const SimplifyQuery &Q, unsigned MaxRecurse,
-                              fp::ExceptionBehavior ExBehavior,
-                              RoundingMode Rounding) {
-  if (Constant *C = simplifyFPOp({Op0, Op1}, FMF, Q, ExBehavior, Rounding))
+static Value *simplifyFMAFMul(Value *Op0, Value *Op1,
+                              FPTransformChecker Checker,
+                              const SimplifyQuery &Q, unsigned MaxRecurse) {
+  if (Constant *C = simplifyFPOp({Op0, Op1}, Checker, Q))
     return C;
 
-  if (!isDefaultFPEnvironment(ExBehavior, Rounding))
+  if (!Checker.isDefaultFPEnvironment())
     return nullptr;
 
   // Canonicalize special constants as operand 1.
@@ -6111,13 +6100,14 @@ static Value *simplifyFMAFMul(Value *Op0, Value *Op1, FastMathFlags FMF,
 
   if (match(Op1, m_AnyZeroFP())) {
     // X * 0.0 --> 0.0 (with nnan and nsz)
-    if (FMF.noNaNs() && FMF.noSignedZeros())
+    if (Checker.noNaNs() && Checker.noSignedZeros())
       return ConstantFP::getZero(Op0->getType());
 
-    KnownFPClass Known = computeKnownFPClass(Op0, FMF, fcInf | fcNan, Q);
+    KnownFPClass Known =
+        computeKnownFPClass(Op0, Checker.getFMF(), fcInf | fcNan, Q);
     if (Known.isKnownNever(fcInf | fcNan)) {
       // if nsz is set, return 0.0
-      if (FMF.noSignedZeros())
+      if (Checker.noSignedZeros())
         return ConstantFP::getZero(Op0->getType());
       // +normal number * (-)0.0 --> (-)0.0
       if (Known.SignBit == false)
@@ -6133,72 +6123,59 @@ static Value *simplifyFMAFMul(Value *Op0, Value *Op1, FastMathFlags FMF,
   // 2. Ignore non-zero negative numbers because sqrt would produce NAN.
   // 3. Ignore -0.0 because sqrt(-0.0) == -0.0, but -0.0 * -0.0 == 0.0.
   Value *X;
-  if (Op0 == Op1 && match(Op0, m_Sqrt(m_Value(X))) && FMF.allowReassoc() &&
-      FMF.noNaNs() && FMF.noSignedZeros())
+  if (Op0 == Op1 && match(Op0, m_Sqrt(m_Value(X))) && Checker.allowReassoc() &&
+      Checker.noNaNs() && Checker.noSignedZeros())
     return X;
 
   return nullptr;
 }
 
 /// Given the operands for an FMul, see if we can fold the result
-static Value *
-simplifyFMulInst(Value *Op0, Value *Op1, FastMathFlags FMF,
-                 const SimplifyQuery &Q, unsigned MaxRecurse,
-                 fp::ExceptionBehavior ExBehavior = fp::ebIgnore,
-                 RoundingMode Rounding = RoundingMode::NearestTiesToEven) {
-  if (isDefaultFPEnvironment(ExBehavior, Rounding))
+static Value *simplifyFMulInst(Value *Op0, Value *Op1,
+                               FPTransformChecker Checker,
+                               const SimplifyQuery &Q, unsigned MaxRecurse) {
+  if (Checker.isDefaultFPEnvironment())
     if (Constant *C = foldOrCommuteConstant(Instruction::FMul, Op0, Op1, Q))
       return C;
 
   // Now apply simplifications that do not require rounding.
-  return simplifyFMAFMul(Op0, Op1, FMF, Q, MaxRecurse, ExBehavior, Rounding);
+  return simplifyFMAFMul(Op0, Op1, Checker, Q, MaxRecurse);
 }
 
-Value *llvm::simplifyFAddInst(Value *Op0, Value *Op1, FastMathFlags FMF,
-                              const SimplifyQuery &Q,
-                              fp::ExceptionBehavior ExBehavior,
-                              RoundingMode Rounding) {
-  return ::simplifyFAddInst(Op0, Op1, FMF, Q, RecursionLimit, ExBehavior,
-                            Rounding);
+Value *llvm::simplifyFAddInst(Value *Op0, Value *Op1,
+                              FPTransformChecker Checker,
+                              const SimplifyQuery &Q) {
+  return ::simplifyFAddInst(Op0, Op1, Checker, Q, RecursionLimit);
 }
 
-Value *llvm::simplifyFSubInst(Value *Op0, Value *Op1, FastMathFlags FMF,
-                              const SimplifyQuery &Q,
-                              fp::ExceptionBehavior ExBehavior,
-                              RoundingMode Rounding) {
-  return ::simplifyFSubInst(Op0, Op1, FMF, Q, RecursionLimit, ExBehavior,
-                            Rounding);
+Value *llvm::simplifyFSubInst(Value *Op0, Value *Op1,
+                              FPTransformChecker Checker,
+                              const SimplifyQuery &Q) {
+  return ::simplifyFSubInst(Op0, Op1, Checker, Q, RecursionLimit);
 }
 
-Value *llvm::simplifyFMulInst(Value *Op0, Value *Op1, FastMathFlags FMF,
-                              const SimplifyQuery &Q,
-                              fp::ExceptionBehavior ExBehavior,
-                              RoundingMode Rounding) {
-  return ::simplifyFMulInst(Op0, Op1, FMF, Q, RecursionLimit, ExBehavior,
-                            Rounding);
+Value *llvm::simplifyFMulInst(Value *Op0, Value *Op1,
+                              FPTransformChecker Checker,
+                              const SimplifyQuery &Q) {
+  return ::simplifyFMulInst(Op0, Op1, Checker, Q, RecursionLimit);
 }
 
-Value *llvm::simplifyFMAFMul(Value *Op0, Value *Op1, FastMathFlags FMF,
-                             const SimplifyQuery &Q,
-                             fp::ExceptionBehavior ExBehavior,
-                             RoundingMode Rounding) {
-  return ::simplifyFMAFMul(Op0, Op1, FMF, Q, RecursionLimit, ExBehavior,
-                           Rounding);
+Value *llvm::simplifyFMAFMul(Value *Op0, Value *Op1, FPTransformChecker Checker,
+                             const SimplifyQuery &Q) {
+  return ::simplifyFMAFMul(Op0, Op1, Checker, Q, RecursionLimit);
 }
 
-static Value *
-simplifyFDivInst(Value *Op0, Value *Op1, FastMathFlags FMF,
-                 const SimplifyQuery &Q, unsigned,
-                 fp::ExceptionBehavior ExBehavior = fp::ebIgnore,
-                 RoundingMode Rounding = RoundingMode::NearestTiesToEven) {
-  if (isDefaultFPEnvironment(ExBehavior, Rounding))
+static Value *simplifyFDivInst(Value *Op0, Value *Op1,
+                               FPTransformChecker Checker,
+                               const SimplifyQuery &Q, unsigned) {
+  if (Checker.isDefaultFPEnvironment())
     if (Constant *C = foldOrCommuteConstant(Instruction::FDiv, Op0, Op1, Q))
       return C;
 
-  if (Constant *C = simplifyFPOp({Op0, Op1}, FMF, Q, ExBehavior, Rounding))
+  if (Constant *C = simplifyFPOp({Op0, Op1}, Checker, Q))
     return C;
 
-  if (!isDefaultFPEnvironment(ExBehavior, Rounding))
+  if (!Checker.isDefaultFPEnvironment())
     return nullptr;
 
   // X / 1.0 -> X
@@ -6208,10 +6185,10 @@ simplifyFDivInst(Value *Op0, Value *Op1, FastMathFlags FMF,
   // 0 / X -> 0
   // Requires that NaNs are off (X could be zero) and signed zeroes are
   // ignored (X could be positive or negative, so the output sign is unknown).
-  if (FMF.noNaNs() && FMF.noSignedZeros() && match(Op0, m_AnyZeroFP()))
+  if (Checker.noNaNs() && Checker.noSignedZeros() && match(Op0, m_AnyZeroFP()))
     return ConstantFP::getZero(Op0->getType());
 
-  if (FMF.noNaNs()) {
+  if (Checker.noNaNs()) {
     // X / X -> 1.0 is legal when NaNs are ignored.
     // We can ignore infinities because INF/INF is NaN.
     if (Op0 == Op1)
@@ -6219,7 +6196,8 @@ simplifyFDivInst(Value *Op0, Value *Op1, FastMathFlags FMF,
 
     // (X * Y) / Y --> X if we can reassociate to the above form.
     Value *X;
-    if (FMF.allowReassoc() && match(Op0, m_c_FMul(m_Value(X), m_Specific(Op1))))
+    if (Checker.allowReassoc() &&
+        match(Op0, m_c_FMul(m_Value(X), m_Specific(Op1))))
       return X;
 
     // -X /  X -> -1.0 and
@@ -6230,40 +6208,36 @@ simplifyFDivInst(Value *Op0, Value *Op1, FastMathFlags FMF,
       return ConstantFP::get(Op0->getType(), -1.0);
 
     // nnan ninf X / [-]0.0 -> poison
-    if (FMF.noInfs() && match(Op1, m_AnyZeroFP()))
+    if (Checker.noInfs() && match(Op1, m_AnyZeroFP()))
       return PoisonValue::get(Op1->getType());
   }
 
   return nullptr;
 }
 
-Value *llvm::simplifyFDivInst(Value *Op0, Value *Op1, FastMathFlags FMF,
-                              const SimplifyQuery &Q,
-                              fp::ExceptionBehavior ExBehavior,
-                              RoundingMode Rounding) {
-  return ::simplifyFDivInst(Op0, Op1, FMF, Q, RecursionLimit, ExBehavior,
-                            Rounding);
+Value *llvm::simplifyFDivInst(Value *Op0, Value *Op1,
+                              FPTransformChecker Checker,
+                              const SimplifyQuery &Q) {
+  return ::simplifyFDivInst(Op0, Op1, Checker, Q, RecursionLimit);
 }
 
-static Value *
-simplifyFRemInst(Value *Op0, Value *Op1, FastMathFlags FMF,
-                 const SimplifyQuery &Q, unsigned,
-                 fp::ExceptionBehavior ExBehavior = fp::ebIgnore,
-                 RoundingMode Rounding = RoundingMode::NearestTiesToEven) {
-  if (isDefaultFPEnvironment(ExBehavior, Rounding))
+static Value *simplifyFRemInst(Value *Op0, Value *Op1,
+                               FPTransformChecker Checker,
+                               const SimplifyQuery &Q, unsigned) {
+  if (Checker.isDefaultFPEnvironment())
     if (Constant *C = foldOrCommuteConstant(Instruction::FRem, Op0, Op1, Q))
       return C;
 
-  if (Constant *C = simplifyFPOp({Op0, Op1}, FMF, Q, ExBehavior, Rounding))
+  if (Constant *C = simplifyFPOp({Op0, Op1}, Checker, Q))
     return C;
 
-  if (!isDefaultFPEnvironment(ExBehavior, Rounding))
+  if (!Checker.isDefaultFPEnvironment())
     return nullptr;
 
   // Unlike fdiv, the result of frem always matches the sign of the dividend.
   // The constant match may include undef elements in a vector, so return a full
   // zero constant as the result.
-  if (FMF.noNaNs()) {
+  if (Checker.noNaNs()) {
     // +0 % X -> 0
     if (match(Op0, m_PosZeroFP()))
       return ConstantFP::getZero(Op0->getType());
@@ -6275,12 +6249,10 @@ simplifyFRemInst(Value *Op0, Value *Op1, FastMathFlags FMF,
   return nullptr;
 }
 
-Value *llvm::simplifyFRemInst(Value *Op0, Value *Op1, FastMathFlags FMF,
-                              const SimplifyQuery &Q,
-                              fp::ExceptionBehavior ExBehavior,
-                              RoundingMode Rounding) {
-  return ::simplifyFRemInst(Op0, Op1, FMF, Q, RecursionLimit, ExBehavior,
-                            Rounding);
+Value *llvm::simplifyFRemInst(Value *Op0, Value *Op1,
+                              FPTransformChecker Checker,
+                              const SimplifyQuery &Q) {
+  return ::simplifyFRemInst(Op0, Op1, Checker, Q, RecursionLimit);
 }
 
 //=== Helper functions for higher up the class hierarchy.
@@ -6291,7 +6263,7 @@ static Value *simplifyUnOp(unsigned Opcode, Value *Op, const SimplifyQuery &Q,
                            unsigned MaxRecurse) {
   switch (Opcode) {
   case Instruction::FNeg:
-    return simplifyFNegInst(Op, FastMathFlags(), Q, MaxRecurse);
+    return simplifyFNegInst(Op, Q, MaxRecurse);
   default:
     llvm_unreachable("Unexpected opcode");
   }
@@ -6301,11 +6273,11 @@ static Value *simplifyUnOp(unsigned Opcode, Value *Op, const SimplifyQuery &Q,
 /// If not, this returns null.
 /// Try to use FastMathFlags when folding the result.
 static Value *simplifyFPUnOp(unsigned Opcode, Value *Op,
-                             const FastMathFlags &FMF, const SimplifyQuery &Q,
+                             FPTransformChecker Checker, const SimplifyQuery &Q,
                              unsigned MaxRecurse) {
   switch (Opcode) {
   case Instruction::FNeg:
-    return simplifyFNegInst(Op, FMF, Q, MaxRecurse);
+    return simplifyFNegInst(Op, Q, MaxRecurse);
   default:
     return simplifyUnOp(Opcode, Op, Q, MaxRecurse);
   }
@@ -6315,9 +6287,9 @@ Value *llvm::simplifyUnOp(unsigned Opcode, Value *Op, const SimplifyQuery &Q) {
   return ::simplifyUnOp(Opcode, Op, Q, RecursionLimit);
 }
 
-Value *llvm::simplifyUnOp(unsigned Opcode, Value *Op, FastMathFlags FMF,
-                          const SimplifyQuery &Q) {
-  return ::simplifyFPUnOp(Opcode, Op, FMF, Q, RecursionLimit);
+Value *llvm::simplifyUnOp(unsigned Opcode, Value *Op,
+                          FPTransformChecker Checker, const SimplifyQuery &Q) {
+  return ::simplifyFPUnOp(Opcode, Op, Checker, Q, RecursionLimit);
 }
 
 /// Given operands for a BinaryOperator, see if we can fold the result.
@@ -6356,15 +6328,15 @@ static Value *simplifyBinOp(unsigned Opcode, Value *LHS, Value *RHS,
   case Instruction::Xor:
     return simplifyXorInst(LHS, RHS, Q, MaxRecurse);
   case Instruction::FAdd:
-    return simplifyFAddInst(LHS, RHS, FastMathFlags(), Q, MaxRecurse);
+    return simplifyFAddInst(LHS, RHS, FPTransformChecker(Q), Q, MaxRecurse);
   case Instruction::FSub:
-    return simplifyFSubInst(LHS, RHS, FastMathFlags(), Q, MaxRecurse);
+    return simplifyFSubInst(LHS, RHS, FPTransformChecker(Q), Q, MaxRecurse);
   case Instruction::FMul:
-    return simplifyFMulInst(LHS, RHS, FastMathFlags(), Q, MaxRecurse);
+    return simplifyFMulInst(LHS, RHS, FPTransformChecker(Q), Q, MaxRecurse);
   case Instruction::FDiv:
-    return simplifyFDivInst(LHS, RHS, FastMathFlags(), Q, MaxRecurse);
+    return simplifyFDivInst(LHS, RHS, FPTransformChecker(Q), Q, MaxRecurse);
   case Instruction::FRem:
-    return simplifyFRemInst(LHS, RHS, FastMathFlags(), Q, MaxRecurse);
+    return simplifyFRemInst(LHS, RHS, FPTransformChecker(Q), Q, MaxRecurse);
   default:
     llvm_unreachable("Unexpected opcode");
   }
@@ -6374,17 +6346,19 @@ static Value *simplifyBinOp(unsigned Opcode, Value *LHS, Value *RHS,
 /// If not, this returns null.
 /// Try to use FastMathFlags when folding the result.
 static Value *simplifyBinOp(unsigned Opcode, Value *LHS, Value *RHS,
-                            const FastMathFlags &FMF, const SimplifyQuery &Q,
+                            FPTransformChecker Checker, const SimplifyQuery &Q,
                             unsigned MaxRecurse) {
   switch (Opcode) {
   case Instruction::FAdd:
-    return simplifyFAddInst(LHS, RHS, FMF, Q, MaxRecurse);
+    return simplifyFAddInst(LHS, RHS, Checker, Q, MaxRecurse);
   case Instruction::FSub:
-    return simplifyFSubInst(LHS, RHS, FMF, Q, MaxRecurse);
+    return simplifyFSubInst(LHS, RHS, Checker, Q, MaxRecurse);
   case Instruction::FMul:
-    return simplifyFMulInst(LHS, RHS, FMF, Q, MaxRecurse);
+    return simplifyFMulInst(LHS, RHS, Checker, Q, MaxRecurse);
   case Instruction::FDiv:
-    return simplifyFDivInst(LHS, RHS, FMF, Q, MaxRecurse);
+    return simplifyFDivInst(LHS, RHS, Checker, Q, MaxRecurse);
+  case Instruction::FRem:
+    return simplifyFRemInst(LHS, RHS, Checker, Q, MaxRecurse);
   default:
     return simplifyBinOp(Opcode, LHS, RHS, Q, MaxRecurse);
   }
@@ -6396,8 +6370,8 @@ Value *llvm::simplifyBinOp(unsigned Opcode, Value *LHS, Value *RHS,
 }
 
 Value *llvm::simplifyBinOp(unsigned Opcode, Value *LHS, Value *RHS,
-                           FastMathFlags FMF, const SimplifyQuery &Q) {
-  return ::simplifyBinOp(Opcode, LHS, RHS, FMF, Q, RecursionLimit);
+                           FPTransformChecker Checker, const SimplifyQuery &Q) {
+  return ::simplifyBinOp(Opcode, LHS, RHS, Checker, Q, RecursionLimit);
 }
 
 /// Given operands for a CmpInst, see if we can fold the result.
@@ -6554,7 +6528,7 @@ static Value *simplifyLdexp(Value *Op0, Value *Op1, const SimplifyQuery &Q,
 }
 
 static Value *simplifyUnaryIntrinsic(Intrinsic::ID IID, Value *Op0,
-                                     FastMathFlags FMF,
+                                     FPTransformChecker Checker,
                                      const SimplifyQuery &Q) {
   // Idempotent functions return the same result when called repeatedly.
   if (isIdempotent(IID))
@@ -6582,7 +6556,7 @@ static Value *simplifyUnaryIntrinsic(Intrinsic::ID IID, Value *Op0,
       return Op0;
 
     if (KnownClass.cannotBeOrderedLessThanZero() &&
-        KnownClass.isKnownNeverNaN() && FMF.noSignedZeros())
+        KnownClass.isKnownNeverNaN() && Checker.noSignedZeros())
       return Op0;
 
     break;
@@ -6611,31 +6585,31 @@ static Value *simplifyUnaryIntrinsic(Intrinsic::ID IID, Value *Op0,
   }
   case Intrinsic::exp:
     // exp(log(x)) -> x
-    if (FMF.allowReassoc() &&
+    if (Checker.mayCombineCalls() &&
         match(Op0, m_Intrinsic<Intrinsic::log>(m_Value(X))))
       return X;
     break;
   case Intrinsic::exp2:
     // exp2(log2(x)) -> x
-    if (FMF.allowReassoc() &&
+    if (Checker.mayCombineCalls() &&
         match(Op0, m_Intrinsic<Intrinsic::log2>(m_Value(X))))
       return X;
     break;
   case Intrinsic::exp10:
     // exp10(log10(x)) -> x
-    if (FMF.allowReassoc() &&
+    if (Checker.mayCombineCalls() &&
         match(Op0, m_Intrinsic<Intrinsic::log10>(m_Value(X))))
       return X;
     break;
   case Intrinsic::log:
     // log(exp(x)) -> x
-    if (FMF.allowReassoc() &&
+    if (Checker.mayCombineCalls() &&
         match(Op0, m_Intrinsic<Intrinsic::exp>(m_Value(X))))
       return X;
     break;
   case Intrinsic::log2:
     // log2(exp2(x)) -> x
-    if (FMF.allowReassoc() &&
+    if (Checker.mayCombineCalls() &&
         (match(Op0, m_Intrinsic<Intrinsic::exp2>(m_Value(X))) ||
          match(Op0,
                m_Intrinsic<Intrinsic::pow>(m_SpecificFP(2.0), m_Value(X)))))
@@ -6644,7 +6618,7 @@ static Value *simplifyUnaryIntrinsic(Intrinsic::ID IID, Value *Op0,
   case Intrinsic::log10:
     // log10(pow(10.0, x)) -> x
     // log10(exp10(x)) -> x
-    if (FMF.allowReassoc() &&
+    if (Checker.mayCombineCalls() &&
         (match(Op0, m_Intrinsic<Intrinsic::exp10>(m_Value(X))) ||
          match(Op0,
                m_Intrinsic<Intrinsic::pow>(m_SpecificFP(10.0), m_Value(X)))))
@@ -6881,7 +6855,8 @@ static Value *simplifySVEIntReduction(Intrinsic::ID IID, Type *ReturnType,
 }
 
 static Value *simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
-                                      Value *Op0, Value *Op1, FastMathFlags FMF,
+                                      Value *Op0, Value *Op1,
+                                      FPTransformChecker Checker,
                                       const SimplifyQuery &Q) {
   unsigned BitWidth = ReturnType->getScalarSizeInBits();
   switch (IID) {
@@ -7195,7 +7170,8 @@ static Value *simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
 
         if (Constant *SplatVal = C->getSplatValue()) {
           // Handle splat vectors (including scalable vectors)
-          OptResult = OptimizeConstMinMax(SplatVal, IID, FMF, &NewConst);
+          OptResult =
+              OptimizeConstMinMax(SplatVal, IID, Checker.getFMF(), &NewConst);
           if (OptResult == MinMaxOptResult::UseNewConstVal)
             NewConst = ConstantVector::getSplat(ElemCount, NewConst);
 
@@ -7214,7 +7190,8 @@ static Value *simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
               OptResult = MinMaxOptResult::CannotOptimize;
               break;
             }
-            auto ElemResult = OptimizeConstMinMax(Elt, IID, FMF, &NewConst);
+            auto ElemResult =
+                OptimizeConstMinMax(Elt, IID, Checker.getFMF(), &NewConst);
             if (ElemResult == MinMaxOptResult::CannotOptimize ||
                 (ElemResult != OptResult &&
                  OptResult != MinMaxOptResult::UseEither &&
@@ -7231,7 +7208,7 @@ static Value *simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
         }
       } else {
         // Handle scalar inputs
-        OptResult = OptimizeConstMinMax(C, IID, FMF, &NewConst);
+        OptResult = OptimizeConstMinMax(C, IID, Checker.getFMF(), &NewConst);
       }
 
       if (OptResult == MinMaxOptResult::UseOtherVal ||
@@ -7280,10 +7257,9 @@ static Value *simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
 }
 
 Value *llvm::simplifyIntrinsic(Intrinsic::ID IID, Type *ReturnType,
-                               ArrayRef<Value *> Args, FastMathFlags FMF,
-                               const SimplifyQuery &Q, Function *CxtF,
-                               fp::ExceptionBehavior ExBehavior,
-                               RoundingMode Rounding) {
+                               ArrayRef<Value *> Args,
+                               FPTransformChecker Checker,
+                               const SimplifyQuery &Q, Function *CxtF) {
   unsigned NumOperands = Args.size();
   if (IID != Intrinsic::not_intrinsic && intrinsicPropagatesPoison(IID) &&
       any_of(Args, IsaPred<PoisonValue>))
@@ -7307,10 +7283,11 @@ Value *llvm::simplifyIntrinsic(Intrinsic::ID IID, Type *ReturnType,
   }
 
   if (NumOperands == 1)
-    return simplifyUnaryIntrinsic(IID, Args[0], FMF, Q);
+    return simplifyUnaryIntrinsic(IID, Args[0], Checker, Q);
 
   if (NumOperands == 2)
-    return simplifyBinaryIntrinsic(IID, ReturnType, Args[0], Args[1], FMF, Q);
+    return simplifyBinaryIntrinsic(IID, ReturnType, Args[0], Args[1], Checker,
+                                   Q);
 
   // Handle intrinsics with 3 or more arguments.
   switch (IID) {
@@ -7365,11 +7342,10 @@ Value *llvm::simplifyIntrinsic(Intrinsic::ID IID, Type *ReturnType,
     return nullptr;
   }
   case Intrinsic::experimental_constrained_fma:
-    return simplifyFPOp(Args, {}, Q, ExBehavior, Rounding);
+    return simplifyFPOp(Args, Checker, Q);
   case Intrinsic::fma:
   case Intrinsic::fmuladd:
-    return simplifyFPOp(Args, {}, Q, fp::ebIgnore,
-                        RoundingMode::NearestTiesToEven);
+    return simplifyFPOp(Args, Checker, Q);
   case Intrinsic::smul_fix:
   case Intrinsic::smul_fix_sat: {
     Value *Op0 = Args[0];
@@ -7450,15 +7426,15 @@ Value *llvm::simplifyIntrinsic(Intrinsic::ID IID, Type *ReturnType,
     return nullptr;
   }
   case Intrinsic::experimental_constrained_fadd:
-    return simplifyFAddInst(Args[0], Args[1], FMF, Q, ExBehavior, Rounding);
+    return simplifyFAddInst(Args[0], Args[1], Checker, Q);
   case Intrinsic::experimental_constrained_fsub:
-    return simplifyFSubInst(Args[0], Args[1], FMF, Q, ExBehavior, Rounding);
+    return simplifyFSubInst(Args[0], Args[1], Checker, Q);
   case Intrinsic::experimental_constrained_fmul:
-    return simplifyFMulInst(Args[0], Args[1], FMF, Q, ExBehavior, Rounding);
+    return simplifyFMulInst(Args[0], Args[1], Checker, Q);
   case Intrinsic::experimental_constrained_fdiv:
-    return simplifyFDivInst(Args[0], Args[1], FMF, Q, ExBehavior, Rounding);
+    return simplifyFDivInst(Args[0], Args[1], Checker, Q);
   case Intrinsic::experimental_constrained_frem:
-    return simplifyFRemInst(Args[0], Args[1], FMF, Q, ExBehavior, Rounding);
+    return simplifyFRemInst(Args[0], Args[1], Checker, Q);
   case Intrinsic::experimental_constrained_ldexp:
     return simplifyLdexp(Args[0], Args[1], Q, true);
   case Intrinsic::experimental_vp_reverse: {
@@ -7510,18 +7486,9 @@ static Value *simplifyIntrinsic(CallBase *Call, ArrayRef<Value *> Args,
     }
     return nullptr;
   }
-  default: {
-    // Use the default FP environment if none is found.
-    fp::ExceptionBehavior ExBehavior = fp::ebIgnore;
-    RoundingMode Rounding = RoundingMode::NearestTiesToEven;
-    if (auto *Constrained = dyn_cast<ConstrainedFPIntrinsic>(Call)) {
-      ExBehavior = Constrained->getExceptionBehavior().value_or(ExBehavior);
-      Rounding = Constrained->getRoundingMode().value_or(Rounding);
-    }
-    return simplifyIntrinsic(IID, ReturnType, Args,
-                             Call->getFastMathFlagsOrNone(), Q,
-                             Call->getFunction(), ExBehavior, Rounding);
-  }
+  default:
+    return simplifyIntrinsic(IID, ReturnType, Args, FPTransformChecker(Call), Q,
+                             Call->getFunction());
   }
 }
 
@@ -7654,23 +7621,23 @@ static Value *simplifyInstructionWithOperands(Instruction *I,
     }
     return nullptr;
   case Instruction::FNeg:
-    return simplifyFNegInst(NewOps[0], I->getFastMathFlags(), Q, MaxRecurse);
+    return simplifyFNegInst(NewOps[0], Q, MaxRecurse);
   case Instruction::FAdd:
-    return simplifyFAddInst(NewOps[0], NewOps[1], I->getFastMathFlags(), Q,
+    return simplifyFAddInst(NewOps[0], NewOps[1], FPTransformChecker(I), Q,
                             MaxRecurse);
   case Instruction::Add:
     return simplifyAddInst(
         NewOps[0], NewOps[1], Q.IIQ.hasNoSignedWrap(cast<BinaryOperator>(I)),
         Q.IIQ.hasNoUnsignedWrap(cast<BinaryOperator>(I)), Q, MaxRecurse);
   case Instruction::FSub:
-    return simplifyFSubInst(NewOps[0], NewOps[1], I->getFastMathFlags(), Q,
+    return simplifyFSubInst(NewOps[0], NewOps[1], FPTransformChecker(I), Q,
                             MaxRecurse);
   case Instruction::Sub:
     return simplifySubInst(
         NewOps[0], NewOps[1], Q.IIQ.hasNoSignedWrap(cast<BinaryOperator>(I)),
         Q.IIQ.hasNoUnsignedWrap(cast<BinaryOperator>(I)), Q, MaxRecurse);
   case Instruction::FMul:
-    return simplifyFMulInst(NewOps[0], NewOps[1], I->getFastMathFlags(), Q,
+    return simplifyFMulInst(NewOps[0], NewOps[1], FPTransformChecker(I), Q,
                             MaxRecurse);
   case Instruction::Mul:
     return simplifyMulInst(
@@ -7685,14 +7652,14 @@ static Value *simplifyInstructionWithOperands(Instruction *I,
                             Q.IIQ.isExact(cast<BinaryOperator>(I)), Q,
                             MaxRecurse);
   case Instruction::FDiv:
-    return simplifyFDivInst(NewOps[0], NewOps[1], I->getFastMathFlags(), Q,
+    return simplifyFDivInst(NewOps[0], NewOps[1], FPTransformChecker(I), Q,
                             MaxRecurse);
   case Instruction::SRem:
     return simplifySRemInst(NewOps[0], NewOps[1], Q, MaxRecurse);
   case Instruction::URem:
     return simplifyURemInst(NewOps[0], NewOps[1], Q, MaxRecurse);
   case Instruction::FRem:
-    return simplifyFRemInst(NewOps[0], NewOps[1], I->getFastMathFlags(), Q,
+    return simplifyFRemInst(NewOps[0], NewOps[1], FPTransformChecker(I), Q,
                             MaxRecurse);
   case Instruction::Shl:
     return simplifyShlInst(

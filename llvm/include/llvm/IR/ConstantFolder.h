@@ -183,7 +183,8 @@ public:
   }
 
   Value *FoldIntrinsic(Intrinsic::ID ID, ArrayRef<Value *> Ops, Type *Ty,
-                       FastMathFlags FMF, Function *CtxF) const override {
+                       FPTransformChecker Checker,
+                       Function *CtxF) const override {
     // Use TargetFolder or InstSimplifyFolder instead.
     return nullptr;
   }
