@@ -122,6 +122,9 @@ DEBUGOPT(CodeViewGHash, 1, 0, Compatible)
 /// Whether to emit the compiler path and command line into the CodeView debug information.
 DEBUGOPT(CodeViewCommandLine, 1, 0, Compatible)
 
+/// Whether to emit the current working directory into the CodeView debug information.
+DEBUGOPT(CodeViewEmitCurrentWorkdir, 1, 0, Compatible)
+
 /// Whether emit extra debug info for sample pgo profile collection.
 DEBUGOPT(DebugInfoForProfiling, 1, 0, Compatible)
 

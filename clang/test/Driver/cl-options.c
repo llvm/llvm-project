@@ -584,6 +584,8 @@
 
 // RUN: %clang_cl /Brepro- /Brepro /c '-###' -- %s 2>&1 | FileCheck -check-prefix=Brepro %s
 // Brepro: "-mno-incremental-linker-compatible"
+// Brepro: "-gno-codeview-command-line"
+// Brepro: "-gno-codeview-cwd"
 
 // RUN: %clang_cl /Brepro /Brepro- /c '-###' -- %s 2>&1 | FileCheck -check-prefix=Brepro_ %s
 // Brepro_: "-mincremental-linker-compatible"
