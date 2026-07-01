@@ -754,7 +754,6 @@ llvm::APInt PPCTargetInfo::getFMVPriority(ArrayRef<StringRef> Features) const {
                        // POWER10 features (between pwr10=400 and pwr11=500)
                        .Case("mma", 419)
                        .Case("paired-vector-memops", 418)
-                       .Case("pcrel", 417)
                        .Case("power10-vector", 416)
                        .Case("prefixed", 415)
                        // POWER9 features (between pwr9=300 and pwr10=400)
@@ -868,9 +867,9 @@ void PPCTargetInfo::fillValidCPUList(SmallVectorImpl<StringRef> &Values) const {
 }
 
 bool PPCTargetInfo::isValidFeatureName(StringRef Name) const {
-  // All 28 PPC features valid for target attribute
+  if (!getTriple().isOSAIX())
+    return TargetInfo::isValidFeatureName(Name);
   return llvm::StringSwitch<bool>(Name)
-      // Features with runtime detection (valid for target_clones)
       .Case("altivec", true)
       .Case("htm", true)
       .Case("mma", true)
@@ -879,13 +878,11 @@ bool PPCTargetInfo::isValidFeatureName(StringRef Name) const {
       .Case("direct-move", true)
       .Case("float128", true)
       .Case("paired-vector-memops", true)
-      .Case("pcrel", true)
       .Case("popcntd", true)
       .Case("power8-vector", true)
       .Case("power9-vector", true)
       .Case("power10-vector", true)
       .Case("prefixed", true)
-      // Features without runtime checks (NOT valid for target_clones)
       .Case("aix-shared-lib-tls-model-opt", true)
       .Case("aix-small-local-dynamic-tls", true)
       .Case("aix-small-local-exec-tls", true)
@@ -916,7 +913,6 @@ bool PPCTargetInfo::isValidClonesFeatureName(StringRef Name) const {
       .Case("direct-move", true)
       .Case("float128", true)
       .Case("paired-vector-memops", true)
-      .Case("pcrel", true)
       .Case("popcntd", true)
       .Case("power8-vector", true)
       .Case("power9-vector", true)
@@ -943,7 +939,6 @@ PPCTargetInfo::getBuiltinCpuSupportsName(StringRef FeatureName) const {
       .Case("float128", "arch_3_00")
       .Case("power9-vector", "arch_3_00")
       .Case("paired-vector-memops", "arch_3_1")
-      .Case("pcrel", "arch_3_1")
       .Case("power10-vector", "arch_3_1")
       .Case("prefixed", "arch_3_1")
       // Features without runtime checks return empty string
