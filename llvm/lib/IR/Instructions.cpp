@@ -415,6 +415,7 @@ Value *CallBase::getArgOperandWithAttribute(Attribute::AttrKind Kind) const {
 /// Determine whether the argument or parameter has the given attribute.
 bool CallBase::paramHasAttr(unsigned ArgNo, Attribute::AttrKind Kind) const {
   assert(ArgNo < arg_size() && "Param index out of bounds!");
+  assert(!Attribute::isABIAttr(Kind) && "Use hasABIParamAttr() instead");
 
   if (Attrs.hasParamAttr(ArgNo, Kind))
     return true;

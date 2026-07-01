@@ -56,7 +56,7 @@ entry:
 ; This shouldn't be required
 ; CHECKT2D: mov r0, [[SAVEX]]
 
-  %call = tail call i16 @retzext16(i16 returned %x)
+  %call = tail call zeroext i16 @retzext16(i16 returned %x)
   %b = zext i16 %call to i32
   %call2 = tail call i32 @identity32(i32 returned %b)
   ret i16 %x
@@ -149,7 +149,7 @@ entry:
 ; FIXME: Tail call should be OK here
 ; CHECKT2D: bl _identity32
 
-  %call = tail call i16 @bothzext16(i16 zeroext returned %x)
+  %call = tail call zeroext i16 @bothzext16(i16 zeroext returned %x)
   %b = zext i16 %x to i32
   %call2 = tail call i32 @identity32(i32 returned %b)
   ret i16 %call

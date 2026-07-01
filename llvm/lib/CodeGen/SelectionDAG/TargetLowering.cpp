@@ -119,19 +119,19 @@ bool TargetLowering::parametersInCSRMatch(const MachineRegisterInfo &MRI,
 /// and called function attributes.
 void TargetLoweringBase::ArgListEntry::setAttributes(const CallBase *Call,
                                                      unsigned ArgIdx) {
-  IsSExt = Call->paramHasAttr(ArgIdx, Attribute::SExt);
-  IsZExt = Call->paramHasAttr(ArgIdx, Attribute::ZExt);
-  IsNoExt = Call->paramHasAttr(ArgIdx, Attribute::NoExt);
-  IsInReg = Call->paramHasAttr(ArgIdx, Attribute::InReg);
-  IsSRet = Call->paramHasAttr(ArgIdx, Attribute::StructRet);
-  IsNest = Call->paramHasAttr(ArgIdx, Attribute::Nest);
-  IsByVal = Call->paramHasAttr(ArgIdx, Attribute::ByVal);
-  IsPreallocated = Call->paramHasAttr(ArgIdx, Attribute::Preallocated);
-  IsInAlloca = Call->paramHasAttr(ArgIdx, Attribute::InAlloca);
+  IsSExt = Call->hasABIParamAttr(ArgIdx, Attribute::SExt);
+  IsZExt = Call->hasABIParamAttr(ArgIdx, Attribute::ZExt);
+  IsNoExt = Call->hasABIParamAttr(ArgIdx, Attribute::NoExt);
+  IsInReg = Call->hasABIParamAttr(ArgIdx, Attribute::InReg);
+  IsSRet = Call->hasABIParamAttr(ArgIdx, Attribute::StructRet);
+  IsNest = Call->hasABIParamAttr(ArgIdx, Attribute::Nest);
+  IsByVal = Call->hasABIParamAttr(ArgIdx, Attribute::ByVal);
+  IsPreallocated = Call->hasABIParamAttr(ArgIdx, Attribute::Preallocated);
+  IsInAlloca = Call->hasABIParamAttr(ArgIdx, Attribute::InAlloca);
   IsReturned = Call->paramHasAttr(ArgIdx, Attribute::Returned);
-  IsSwiftSelf = Call->paramHasAttr(ArgIdx, Attribute::SwiftSelf);
-  IsSwiftAsync = Call->paramHasAttr(ArgIdx, Attribute::SwiftAsync);
-  IsSwiftError = Call->paramHasAttr(ArgIdx, Attribute::SwiftError);
+  IsSwiftSelf = Call->hasABIParamAttr(ArgIdx, Attribute::SwiftSelf);
+  IsSwiftAsync = Call->hasABIParamAttr(ArgIdx, Attribute::SwiftAsync);
+  IsSwiftError = Call->hasABIParamAttr(ArgIdx, Attribute::SwiftError);
   Alignment = Call->getParamStackAlign(ArgIdx);
   IndirectType = nullptr;
   assert(IsByVal + IsPreallocated + IsInAlloca + IsSRet <= 1 &&

@@ -4931,14 +4931,14 @@ public:
                                 const CallBase &Call) {
       RetTy = OrigRetTy = ResultType;
 
-      IsInReg = Call.hasRetAttr(Attribute::InReg);
+      IsInReg = Call.hasABIRetAttr(Attribute::InReg);
       DoesNotReturn =
           Call.doesNotReturn() ||
           (!isa<InvokeInst>(Call) && isa<UnreachableInst>(Call.getNextNode()));
       IsVarArg = FTy->isVarArg();
       IsReturnValueUsed = !Call.use_empty();
-      RetSExt = Call.hasRetAttr(Attribute::SExt);
-      RetZExt = Call.hasRetAttr(Attribute::ZExt);
+      RetSExt = Call.hasABIRetAttr(Attribute::SExt);
+      RetZExt = Call.hasABIRetAttr(Attribute::ZExt);
       NoMerge = Call.hasFnAttr(Attribute::NoMerge);
 
       Callee = Target;

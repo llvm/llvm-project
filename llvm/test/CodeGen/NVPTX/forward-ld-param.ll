@@ -69,7 +69,7 @@ define void @test_ld_param_byval(ptr byval(i32) %a) {
 ; CHECK-NEXT:    call.uni byval_user, (param0);
 ; CHECK-NEXT:    } // callseq 1
 ; CHECK-NEXT:    ret;
-  call void @byval_user(ptr %a)
+  call void @byval_user(ptr byval(i32) %a)
   ret void
 }
 

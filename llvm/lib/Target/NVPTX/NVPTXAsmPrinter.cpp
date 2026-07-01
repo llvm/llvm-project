@@ -361,7 +361,7 @@ void NVPTXAsmPrinter::emitCallPrototype(const CallBase &CB,
   auto MakeArg = [&](const unsigned I) {
     Type *Ty = CB.getArgOperand(I)->getType();
 
-    if (CB.paramHasAttr(I, Attribute::ByVal)) {
+    if (CB.isByValArgument(I)) {
       // Indirect calls need strict ABI alignment so we disable optimizations by
       // not providing a function to optimize.
       Type *ETy = CB.getParamByValType(I);

@@ -470,7 +470,7 @@ bool llvm::isLegalToPromote(const CallBase &CB, Function *Callee,
   for (; I < NumArgs; I++) {
     // Vararg functions can have more arguments than parameters.
     assert(Callee->isVarArg());
-    if (CB.paramHasAttr(I, Attribute::StructRet)) {
+    if (CB.hasABIParamAttr(I, Attribute::StructRet)) {
       if (FailureReason)
         *FailureReason = "SRet arg to vararg function";
       return false;

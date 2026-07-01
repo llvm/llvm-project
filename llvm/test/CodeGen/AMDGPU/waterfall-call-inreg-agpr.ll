@@ -60,6 +60,6 @@ define amdgpu_cs_chain_preserve void @caller() {
 ; CHECK-NEXT:  ; %bb.2:
 ; CHECK-NEXT:    s_endpgm
   %p = load ptr addrspace(3), ptr @G, align 4
-  call void @callee(ptr addrspace(3) %p, ptr addrspace(3) poison)
+  call void @callee(ptr addrspace(3) inreg %p, ptr addrspace(3) poison)
   ret void
 }

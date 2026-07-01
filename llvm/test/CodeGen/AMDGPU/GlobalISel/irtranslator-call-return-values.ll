@@ -286,7 +286,7 @@ define amdgpu_kernel void @test_call_external_i1_zeroext_func_void() #0 {
   ; GCN-NEXT:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[TRUNC]](s1)
   ; GCN-NEXT:   G_STORE [[ZEXT]](s32), [[DEF]](p1) :: (volatile store (s32) into `ptr addrspace(1) poison`, addrspace 1)
   ; GCN-NEXT:   S_ENDPGM 0
-  %val = call i1 @external_i1_zeroext_func_void()
+  %val = call zeroext i1 @external_i1_zeroext_func_void()
   %val.ext = zext i1 %val to i32
   store volatile i32 %val.ext, ptr addrspace(1) poison
   ret void
@@ -348,7 +348,7 @@ define amdgpu_kernel void @test_call_external_i1_signext_func_void() #0 {
   ; GCN-NEXT:   [[SEXT:%[0-9]+]]:_(s32) = G_SEXT [[TRUNC]](s1)
   ; GCN-NEXT:   G_STORE [[SEXT]](s32), [[DEF]](p1) :: (volatile store (s32) into `ptr addrspace(1) poison`, addrspace 1)
   ; GCN-NEXT:   S_ENDPGM 0
-  %val = call i1 @external_i1_signext_func_void()
+  %val = call signext i1 @external_i1_signext_func_void()
   %val.ext = sext i1 %val to i32
   store volatile i32 %val.ext, ptr addrspace(1) poison
   ret void
@@ -490,7 +490,7 @@ define amdgpu_kernel void @test_call_external_i8_zeroext_func_void() #0 {
   ; GCN-NEXT:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[TRUNC]](s8)
   ; GCN-NEXT:   G_STORE [[ZEXT]](s32), [[DEF]](p1) :: (volatile store (s32) into `ptr addrspace(1) poison`, addrspace 1)
   ; GCN-NEXT:   S_ENDPGM 0
-  %val = call i8 @external_i8_zeroext_func_void()
+  %val = call zeroext i8 @external_i8_zeroext_func_void()
   %val.ext = zext i8 %val to i32
   store volatile i32 %val.ext, ptr addrspace(1) poison
   ret void
@@ -552,7 +552,7 @@ define amdgpu_kernel void @test_call_external_i8_signext_func_void() #0 {
   ; GCN-NEXT:   [[SEXT:%[0-9]+]]:_(s32) = G_SEXT [[TRUNC]](s8)
   ; GCN-NEXT:   G_STORE [[SEXT]](s32), [[DEF]](p1) :: (volatile store (s32) into `ptr addrspace(1) poison`, addrspace 1)
   ; GCN-NEXT:   S_ENDPGM 0
-  %val = call i8 @external_i8_signext_func_void()
+  %val = call signext i8 @external_i8_signext_func_void()
   %val.ext = sext i8 %val to i32
   store volatile i32 %val.ext, ptr addrspace(1) poison
   ret void
@@ -673,7 +673,7 @@ define amdgpu_kernel void @test_call_external_i16_zeroext_func_void() #0 {
   ; GCN-NEXT:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[TRUNC]](s16)
   ; GCN-NEXT:   G_STORE [[ZEXT]](s32), [[DEF]](p1) :: (volatile store (s32) into `ptr addrspace(1) poison`, addrspace 1)
   ; GCN-NEXT:   S_ENDPGM 0
-  %val = call i16 @external_i16_zeroext_func_void()
+  %val = call zeroext i16 @external_i16_zeroext_func_void()
   %val.ext = zext i16 %val to i32
   store volatile i32 %val.ext, ptr addrspace(1) poison
   ret void
@@ -735,7 +735,7 @@ define amdgpu_kernel void @test_call_external_i16_signext_func_void() #0 {
   ; GCN-NEXT:   [[SEXT:%[0-9]+]]:_(s32) = G_SEXT [[TRUNC]](s16)
   ; GCN-NEXT:   G_STORE [[SEXT]](s32), [[DEF]](p1) :: (volatile store (s32) into `ptr addrspace(1) poison`, addrspace 1)
   ; GCN-NEXT:   S_ENDPGM 0
-  %val = call i16 @external_i16_signext_func_void()
+  %val = call signext i16 @external_i16_signext_func_void()
   %val.ext = sext i16 %val to i32
   store volatile i32 %val.ext, ptr addrspace(1) poison
   ret void

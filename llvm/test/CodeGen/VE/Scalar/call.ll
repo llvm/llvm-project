@@ -64,7 +64,7 @@ define i32 @stack_call_int_szext() {
 ; CHECK-NEXT:    st %s34, 240(, %s11)
 ; CHECK-NEXT:    bsic %s10, (, %s12)
 ; CHECK-NEXT:    or %s11, 0, %s9
-  %r = tail call i32 @stack_callee_int_szext(i1 -1, i8 -1, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i16 -1, i8 -1)
+  %r = tail call i32 @stack_callee_int_szext(i1 signext -1, i8 zeroext -1, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i16 zeroext -1, i8 signext -1)
   ret i32 %r
 }
 
