@@ -25,6 +25,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/Analysis/UniformityAnalysis.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/ValueHandle.h"
@@ -95,9 +96,17 @@ protected:
   DenseMap<std::pair<Value *, Value *>, PairMapValue> PairMap[NumBinaryOps];
 
   bool MadeChange;
+  UniformityInfo *UA = nullptr;
+
+  // When set, UniformityInfo is not fetched in run(). This is used by the
+  // legacy pass manager, which cannot provide the required analyses.
+  bool SkipUniformityAnalysis;
 
 public:
-  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &);
+  ReassociatePass(bool SkipUniformityAnalysis = false)
+      : SkipUniformityAnalysis(SkipUniformityAnalysis) {}
+
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 
 private:
   void BuildRankMap(Function &F, ReversePostOrderTraversal<Function *> &RPOT);
