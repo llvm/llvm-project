@@ -193,7 +193,7 @@ MemDepResult MemoryDependenceResults::getCallDependencyFrom(
     CallBase *Call, bool isReadOnlyCall, BasicBlock::iterator ScanIt,
     BasicBlock *BB) {
   unsigned Limit = getDefaultBlockScanLimit();
-  bool IsInvariantLoad = isInvariantLoadLike(*Call);
+  bool IsInvariantLoad = Call->hasMetadata(LLVMContext::MD_invariant_load);
 
   // Walk backwards through the block, looking for dependencies.
   while (ScanIt != BB->begin()) {
@@ -432,7 +432,7 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
   // forwarding, but any mayalias write can be assumed to be noalias.
   // Arguably, this logic should be pushed inside AliasAnalysis itself.
   if (isLoad && QueryInst) {
-    isInvariantLoad = isInvariantLoadLike(*QueryInst);
+    isInvariantLoad = QueryInst->hasMetadata(LLVMContext::MD_invariant_load);
     if (LoadInst *LI = dyn_cast<LoadInst>(QueryInst))
       MemLocAlign = LI->getAlign();
   }
@@ -926,7 +926,7 @@ MemDepResult MemoryDependenceResults::getNonLocalInfoForBlock(
   bool isInvariantLoad = false;
 
   if (QueryInst)
-    isInvariantLoad = isInvariantLoadLike(*QueryInst);
+    isInvariantLoad = QueryInst->hasMetadata(LLVMContext::MD_invariant_load);
 
   // Do a binary search to see if we already have an entry for this block in
   // the cache set.  If so, find it.
@@ -1090,7 +1090,7 @@ bool MemoryDependenceResults::getNonLocalPointerDepFromBB(
 
   bool isInvariantLoad = false;
   if (QueryInst)
-    isInvariantLoad = isInvariantLoadLike(*QueryInst);
+    isInvariantLoad = QueryInst->hasMetadata(LLVMContext::MD_invariant_load);
 
   // Get the NLPI for CacheKey, inserting one into the map if it doesn't
   // already have one.

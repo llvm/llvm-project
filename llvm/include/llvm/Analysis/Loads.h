@@ -127,11 +127,6 @@ LLVM_ABI bool isSafeToLoadUnconditionally(
 /// (isSafeToSpeculativelyExecute), this is handled internally.
 LLVM_ABI bool mustSuppressSpeculation(const LoadInst &LI);
 
-/// Return true if \p I is an operation tagged with ``!invariant.load``
-/// metadata. In addition to load instructions, this includes intrinsics that
-/// read memory without writing memory.
-LLVM_ABI bool isInvariantLoadLike(const Instruction &I);
-
 /// The default number of maximum instructions to scan in the block, used by
 /// FindAvailableLoadedValue().
 LLVM_ABI extern cl::opt<unsigned> DefMaxInstsToScan;

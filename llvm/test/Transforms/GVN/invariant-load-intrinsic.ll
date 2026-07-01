@@ -2,11 +2,6 @@
 ; RUN: opt -passes=gvn -S < %s | FileCheck %s
 
 declare void @clobber(ptr)
-declare ptr @readonly_call(ptr, i32) memory(read)
-declare <4 x i32> @llvm.masked.load.v4i32.p0(ptr, <4 x i1>, <4 x i32>)
-declare ptr @llvm.load.relative.i32(ptr, i32)
-declare i32 @llvm.read_register.i32(metadata)
-declare <4 x i32> @llvm.vp.gather.v4i32.v4p0(<4 x ptr>, <4 x i1>, i32)
 
 define <4 x i32> @masked_load_invariant(ptr %p, <4 x i1> %mask, <4 x i32> %passthru) {
 ; CHECK-LABEL: define <4 x i32> @masked_load_invariant(
@@ -73,20 +68,6 @@ define <4 x i32> @vp_gather_invariant(ptr %p, <4 x ptr> %ptrs, <4 x i1> %mask, i
   call void @clobber(ptr %p)
   %b = call <4 x i32> @llvm.vp.gather.v4i32.v4p0(<4 x ptr> %ptrs, <4 x i1> %mask, i32 %vl), !invariant.load !0
   ret <4 x i32> %b
-}
-
-define ptr @ordinary_readonly_call_with_metadata(ptr %p, i32 %off) {
-; CHECK-LABEL: define ptr @ordinary_readonly_call_with_metadata(
-; CHECK-SAME: ptr [[P:%.*]], i32 [[OFF:%.*]]) {
-; CHECK-NEXT:    [[A:%.*]] = call ptr @readonly_call(ptr [[P]], i32 [[OFF]]), !invariant.load [[META0]]
-; CHECK-NEXT:    call void @clobber(ptr [[P]])
-; CHECK-NEXT:    [[B:%.*]] = call ptr @readonly_call(ptr [[P]], i32 [[OFF]]), !invariant.load [[META0]]
-; CHECK-NEXT:    ret ptr [[B]]
-;
-  %a = call ptr @readonly_call(ptr %p, i32 %off), !invariant.load !0
-  call void @clobber(ptr %p)
-  %b = call ptr @readonly_call(ptr %p, i32 %off), !invariant.load !0
-  ret ptr %b
 }
 
 define i32 @read_register_with_metadata(ptr %p) {

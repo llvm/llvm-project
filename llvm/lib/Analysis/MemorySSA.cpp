@@ -365,7 +365,7 @@ static bool isUseTriviallyOptimizableToLiveOnEntry(AliasAnalysisType &AA,
                                                    const Instruction *I) {
   // If the memory can't be changed, then loads of the memory can't be
   // clobbered.
-  if (isInvariantLoadLike(*I))
+  if (I->hasMetadata(LLVMContext::MD_invariant_load))
     return true;
   if (auto *LI = dyn_cast<LoadInst>(I))
     return !isModSet(AA.getModRefInfoMask(MemoryLocation::get(LI)));
