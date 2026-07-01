@@ -125,7 +125,6 @@ template <class _VecT, size_t _Np, class _Iter>
     return _VecT{__iter[_LoadIndices]..., ((void)_ZeroIndices, 0)...};
   }(make_index_sequence<_Np>{}, make_index_sequence<__simd_vector_size_v<_VecT> - _Np>{});
 }
-_LIBCPP_DIAGNOSTIC_POP
 
 template <class _Tp, size_t _Np>
 [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool __any_of(__simd_vector<_Tp, _Np> __vec) noexcept {
