@@ -129,4 +129,12 @@
 // RUN:   | FileCheck -DVERSION=%llvm-version-major \
 // RUN:   --check-prefix=VERSIONED %s
 
+// The chipStar path must make the same choice: a versioned llvm-spirv on PATH
+// is preferred over the in-tree backend (detection mirrors the translator
+// lookup in SPIRV::constructTranslateCommand).
+// RUN: env "PATH=%t/versioned" %clang -### --no-default-config \
+// RUN:   -o %t.dummy.img --target=spirv64-unknown-chipstar %t.dummy.o \
+// RUN:   --hip-path="%S/Inputs/hipspv" 2>&1 \
+// RUN:   | FileCheck -DVERSION=%llvm-version-major --check-prefix=VERSIONED %s
+
 // VERSIONED: {{.*}}llvm-spirv-[[VERSION]]
