@@ -10,10 +10,12 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
@@ -115,16 +117,23 @@ static DebugLoc getDebugLoc(MachineBasicBlock::instr_iterator FirstMI,
 }
 
 /// Check if target reg is contained in given lists, which are:
-/// LocalDefsV as given list for virtual regs
-/// LocalDefsP as given list for physical regs, in BitVector[RegUnit] form
+/// LocalDefsV as given list for virtual regs.
+/// LocalDefsP as given list for physical regs, in BitVector[RegUnit] form.
+/// This uses the ExternDefs to see if the reg is "partially defined"
+/// within the bundle. i.e a subreg of Reg is defined within the bundle
+/// while the remianing part is undef.
 static bool containsReg(SmallSetVector<Register, 32> LocalDefsV,
-                        const BitVector &LocalDefsP, Register Reg,
-                        const TargetRegisterInfo *TRI) {
+                        const BitVector &LocalDefsP,
+                        const BitVector &ExternDefs,
+                        const TargetRegisterInfo *TRI, Register Reg,
+                        bool TracksLiveness, bool IsUndefUse) {
   if (Reg.isPhysical()) {
-    for (MCRegUnit Unit : TRI->regunits(Reg.asMCReg()))
-      if (!LocalDefsP[static_cast<unsigned>(Unit)])
-        return false;
-
+    for (MCRegUnit Unit : TRI->regunits(Reg.asMCReg())) {
+      unsigned U = static_cast<unsigned>(Unit);
+      if (LocalDefsP[U] || (TracksLiveness && !IsUndefUse && !ExternDefs[U]))
+        continue;
+      return false;
+    }
     return true;
   }
   return LocalDefsV.contains(Reg);
@@ -150,6 +159,30 @@ void llvm::finalizeBundle(MachineBasicBlock &MBB,
       BuildMI(MF, getDebugLoc(FirstMI, LastMI), TII->get(TargetOpcode::BUNDLE));
   Bundle.prepend(MIB);
 
+  // Compute the regunits whose definitions reach the bundle from outside,
+  // we use this to mark a partial-def + full-reg-uses as IsInternalRead.
+  bool TracksLiveness = MF.getRegInfo().tracksLiveness();
+  LiveRegUnits ExternDefs(*TRI);
+  if (TracksLiveness) {
+    if (MF.getRegInfo().reservedRegsFrozen()) {
+      const BitVector &Reserved = MF.getRegInfo().getReservedRegs();
+      for (int RegIdx = Reserved.find_first(); RegIdx >= 0;
+           RegIdx = Reserved.find_next(RegIdx))
+        ExternDefs.addReg(MCRegister(RegIdx));
+    }
+    ExternDefs.addLiveIns(MBB);
+    for (auto It = MBB.instr_begin(); It != FirstMI; ++It) {
+      if (It->isDebugInstr())
+        continue;
+      for (const MachineOperand &MO : It->operands()) {
+        if (!MO.isReg() || !MO.isDef() || MO.isDead() ||
+            !MO.getReg().isPhysical())
+          continue;
+        ExternDefs.addReg(MO.getReg().asMCReg());
+      }
+    }
+  }
+
   SmallSetVector<Register, 32> LocalDefs;
   BitVector LocalDefsP(TRI->getNumRegUnits());
   SmallSet<Register, 8> DeadDefSet;
@@ -168,7 +201,8 @@ void llvm::finalizeBundle(MachineBasicBlock &MBB,
       if (!Reg)
         continue;
 
-      if (containsReg(LocalDefs, LocalDefsP, Reg, TRI)) {
+      if (containsReg(LocalDefs, LocalDefsP, ExternDefs.getBitVector(), TRI,
+                      Reg, TracksLiveness, MO.isUndef())) {
         MO.setIsInternalRead();
         if (MO.isKill()) {
           // Internal def is now killed.

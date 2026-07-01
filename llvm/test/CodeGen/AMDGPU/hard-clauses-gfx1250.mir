@@ -635,3 +635,45 @@ body: |
     $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
     $vgpr3 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 4, 24, implicit $exec, implicit $flat_scr
 ...
+
+---
+name: global_load_dword_short_partial_def_1
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1, $vgpr3
+    ; GFX12-LABEL: name: global_load_dword_short_partial_def_1
+    ; GFX12: liveins: $sgpr0_sgpr1, $vgpr3
+    ; GFX12-NEXT: {{  $}}
+    ; GFX12-NEXT: $vgpr1 = COPY $vgpr3
+    ; GFX12-NEXT: BUNDLE implicit-def $vgpr0_lo16, implicit-def dead $vgpr0, implicit $sgpr0_sgpr1, implicit $vgpr1, implicit $exec {
+    ; GFX12-NEXT:   S_CLAUSE 1
+    ; GFX12-NEXT:   $vgpr0_lo16 = GLOBAL_LOAD_SHORT_D16_SADDR_t16 $sgpr0_sgpr1, $vgpr1, 0, 0, implicit $exec
+    ; GFX12-NEXT:   $vgpr0 = GLOBAL_LOAD_SHORT_D16_HI_SADDR $sgpr0_sgpr1, $vgpr1, 512, 0, internal killed $vgpr0, implicit $exec
+    ; GFX12-NEXT: }
+    $vgpr1 = COPY $vgpr3
+    $vgpr0_lo16 = GLOBAL_LOAD_SHORT_D16_SADDR_t16 $sgpr0_sgpr1, $vgpr1, 0, 0, implicit $exec
+    $vgpr0 = GLOBAL_LOAD_SHORT_D16_HI_SADDR $sgpr0_sgpr1, $vgpr1, 512, 0, killed $vgpr0, implicit $exec
+...
+
+---
+name: global_load_dword_short_partial_def_2
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1, $vgpr3
+    ; GFX12-LABEL: name: global_load_dword_short_partial_def_2
+    ; GFX12: liveins: $sgpr0_sgpr1, $vgpr3
+    ; GFX12-NEXT: {{  $}}
+    ; GFX12-NEXT: $vgpr1 = COPY $vgpr3
+    ; GFX12-NEXT: $vgpr0_hi16 = COPY $vgpr1_hi16
+    ; GFX12-NEXT: BUNDLE implicit-def $vgpr0_lo16, implicit-def $vgpr0, implicit $sgpr0_sgpr1, implicit $vgpr1, implicit $exec, implicit killed $vgpr0 {
+    ; GFX12-NEXT:   S_CLAUSE 1
+    ; GFX12-NEXT:   $vgpr0_lo16 = GLOBAL_LOAD_SHORT_D16_SADDR_t16 $sgpr0_sgpr1, $vgpr1, 0, 0, implicit $exec
+    ; GFX12-NEXT:   $vgpr0 = GLOBAL_LOAD_SHORT_D16_HI_SADDR $sgpr0_sgpr1, $vgpr1, 512, 0, killed $vgpr0, implicit $exec
+    ; GFX12-NEXT: }
+    $vgpr1 = COPY $vgpr3
+    $vgpr0_hi16 = COPY $vgpr1_hi16
+    $vgpr0_lo16 = GLOBAL_LOAD_SHORT_D16_SADDR_t16 $sgpr0_sgpr1, $vgpr1, 0, 0, implicit $exec
+    $vgpr0 = GLOBAL_LOAD_SHORT_D16_HI_SADDR $sgpr0_sgpr1, $vgpr1, 512, 0, killed $vgpr0, implicit $exec
+...
