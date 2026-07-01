@@ -26,9 +26,6 @@
 
 #include "test_macros.h"
 
-// This warning is coupled with completeness of control flow analysis which is affected by optimizations.
-TEST_GCC_DIAGNOSTIC_IGNORED("-Wno-alloc-size-larger-than")
-
 int main(int, char**)
 {
     std::pair<int*, std::ptrdiff_t> ip = std::get_temporary_buffer<int>(5);
@@ -45,7 +42,11 @@ int main(int, char**)
       assert(ret.second == 0);
     }
     {
+      TEST_DIAGNOSTIC_PUSH
+      // This warning is coupled with completeness of control flow analysis which is affected by optimizations.
+      TEST_GCC_DIAGNOSTIC_IGNORED("-Wno-alloc-size-larger-than")
       std::pair<int*, std::ptrdiff_t> ret = std::get_temporary_buffer<int>(-5);
+      TEST_DIAGNOSTIC_POP
       assert(ret.first == NULL);
       assert(ret.second == 0);
     }
