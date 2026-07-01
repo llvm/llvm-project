@@ -334,6 +334,8 @@ public:
 #    endif // defined(__BIONIC__)
 #  elif defined(__GLIBC__)
   typedef unsigned short mask;
+  _LIBCPP_DIAGNOSTIC_PUSH
+  _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wmodules-ambiguous-internal-linkage")
   static const mask space  = _ISspace;
   static const mask print  = _ISprint;
   static const mask cntrl  = _IScntrl;
@@ -344,6 +346,7 @@ public:
   static const mask punct  = _ISpunct;
   static const mask xdigit = _ISxdigit;
   static const mask blank  = _ISblank;
+  _LIBCPP_DIAGNOSTIC_POP
 #    if defined(__mips__) || (BYTE_ORDER == BIG_ENDIAN)
   static const mask __regex_word = static_cast<mask>(_ISbit(15));
 #    else

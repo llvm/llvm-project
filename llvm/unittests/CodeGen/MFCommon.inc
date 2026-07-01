@@ -111,6 +111,11 @@ public:
     return Features;
   }
 
+  const FeatureBitset &getInlineMustMatchFeatures() const override {
+    static constexpr FeatureBitset Features;
+    return Features;
+  }
+
 private:
   BogusFrameLowering FL;
   BogusRegisterInfo TRI;

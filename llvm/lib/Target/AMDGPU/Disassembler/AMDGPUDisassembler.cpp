@@ -1545,8 +1545,8 @@ void AMDGPUDisassembler::convertFMAanyK(MCInst &MI) const {
 }
 
 const char* AMDGPUDisassembler::getRegClassName(unsigned RegClassID) const {
-  return getContext().getRegisterInfo()->
-    getRegClassName(&AMDGPUMCRegisterClasses[RegClassID]);
+  return getContext().getRegisterInfo()->getRegClassName(
+      &getAMDGPUMCRegisterClass(RegClassID));
 }
 
 inline
@@ -1566,7 +1566,7 @@ inline MCOperand AMDGPUDisassembler::createRegOperand(MCRegister Reg) const {
 inline
 MCOperand AMDGPUDisassembler::createRegOperand(unsigned RegClassID,
                                                unsigned Val) const {
-  const auto& RegCl = AMDGPUMCRegisterClasses[RegClassID];
+  const auto &RegCl = getAMDGPUMCRegisterClass(RegClassID);
   if (Val >= RegCl.getNumRegs())
     return errOperand(Val, Twine(getRegClassName(RegClassID)) +
                            ": unknown register " + Twine(Val));

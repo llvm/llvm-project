@@ -18,14 +18,7 @@ from dex.utils.Exceptions import Error
 
 
 def setup_yaml_parser(loader):
-    reg_classes = [
-        Where,
-        Value,
-        DexRange,
-        Label,
-        Then,
-        Address,
-    ]
+    reg_classes = [Where, Value, DexRange, Label, Then, Address, ValueAll, Step]
     for c in reg_classes:
         c.register_yaml(loader)
 
@@ -68,6 +61,7 @@ class Where:
         if isinstance(lines, (int, Label)):
             lines = Line(lines)
         self.lines: Union[Line, DexRange, None] = lines
+        self.at_frame_idx: Optional[int] = attributes.pop("at_frame_idx", None)
         self.after_hit_count: Optional[int] = attributes.pop("after_hit_count", None)
         self.for_hit_count: Optional[int] = attributes.pop("for_hit_count", None)
         self.conditions: dict = attributes.pop("conditions", None)
@@ -84,6 +78,8 @@ class Where:
             raise DexterNodeError(
                 self, "can't check hit counts without an explicit lines or function arg"
             )
+        if self.at_frame_idx is not None and not self.is_and:
+            raise DexterNodeError(self, "at_frame_idx can only be used with !and nodes")
 
     def __repr__(self):
         elts = [
@@ -99,6 +95,7 @@ class Where:
             "file": self.file,
             "function": self.function,
             "lines": self.lines.value if isinstance(self.lines, Line) else self.lines,
+            "at_frame_idx": self.at_frame_idx,
             "for_hit_count": self.for_hit_count,
             "after_hit_count": self.after_hit_count,
             "conditions": self.conditions,
@@ -156,9 +153,13 @@ class Expect:
         excluding any subvalues (i.e. struct members), or None if there is no valid result for this ValueIR.
         """
 
-    @abc.abstractmethod
-    def get_watched_expr(self) -> str:
-        """Returns the list of expressions that this Expect wants to evaluate."""
+    def get_watched_expr(self) -> Optional[str]:
+        """Returns the expression that this Expect wants to evaluate."""
+        return None
+
+    def get_watched_scope(self) -> Optional[str]:
+        """Returns the scope that this Expect wants to evaluate."""
+        return None
 
 
 class Value(Expect):
@@ -192,6 +193,73 @@ class Value(Expect):
     def register_yaml(loader):
         yaml.add_constructor("!value", Value.constructor, loader)
         yaml.add_representer(Value, Value.representer)
+
+
+class ValueAll(Expect):
+    """Expect node used to write values for all variables within a particular debugger scope, as defined by the DAP
+    specification; see: https://microsoft.github.io/debug-adapter-protocol/specification#Requests_Scopes.
+
+    This node is not directly evaluated; it must have no expected values, and when Dexter rewrites the original script,
+    this node will be replaced with !value nodes for each variable that was seen in its scope inserted under !and nodes
+    that cover that variable's live range(s).
+    """
+
+    def __init__(self, scope_name: str):
+        self.scope_name = scope_name
+
+    def __repr__(self):
+        return f"ValueAll({self.scope_name})"
+
+    @staticmethod
+    def get_variable_result(value: ValueIR) -> Optional[str]:
+        return Value.get_variable_result(value)
+
+    def get_watched_scope(self) -> Optional[str]:
+        return self.scope_name
+
+    @staticmethod
+    def constructor(loader, node):
+        return ValueAll(loader.construct_scalar(node))
+
+    @staticmethod
+    def representer(dumper, data):
+        return dumper.represent_scalar("!value/all", data.scope_name)
+
+    @staticmethod
+    def register_yaml(loader):
+        yaml.add_constructor("!value/all", ValueAll.constructor, loader)
+        yaml.add_representer(ValueAll, ValueAll.representer)
+
+
+class Step(Expect):
+    """Sets an expectation for stepping behaviour, with the expected value being a list of integer lines:
+    - !step exactly: while this !expect is active, we expect see exactly the expected lines in-order as many times as
+      they appear in the expected lines list.
+    - !step at_least: while this !expect is active, we expect to see each of the expected lines in-order at least as many
+      times as they appear in the expected list, ignoring excess lines and lines not in the expected lines list.
+    - !step never: while this !expect is active, we expect to not see any of the lines in the expected lines list.
+    """
+
+    def __init__(self, kind: str):
+        self.kind = kind
+        if kind not in ["exactly", "at_least", "never"]:
+            raise DexterNodeError(self, f'invalid !step kind "{self.kind}"')
+
+    def __repr__(self):
+        return f"Step({self.kind})"
+
+    @staticmethod
+    def constructor(loader: yaml.Loader, node):
+        return Step(loader.construct_scalar(node))
+
+    @staticmethod
+    def representer(dumper, data):
+        return dumper.represent_scalar("!step", data.kind)
+
+    @staticmethod
+    def register_yaml(loader):
+        yaml.add_constructor("!step", Step.constructor, loader)
+        yaml.add_representer(Step, Step.representer)
 
 
 ##############
