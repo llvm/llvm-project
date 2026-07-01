@@ -7104,9 +7104,7 @@ void VPlanTransforms::simplifyReductionInitValue(VPlan &Plan,
       continue;
 
     RecurKind RK = PhiR->getRecurrenceKind();
-    if (RK == RecurKind::Add || RK == RecurKind::Sub || RK == RecurKind::And ||
-        RK == RecurKind::Or || RK == RecurKind::Xor ||
-        RK == RecurKind::AddChainWithSubs) {
+    if (is_contained({RecurKind::Add, RecurKind::Sub, RecurKind::And, RecurKind::Or, RecurKind::Xor, RecurKind::AddChainWithSubs}, RK)) {
       VPValue *Init, *Iden;
       VPRecipeBase *Start = PhiR->getStartValue()->getDefiningRecipe();
       if (Start &&
@@ -7124,7 +7122,7 @@ void VPlanTransforms::simplifyReductionInitValue(VPlan &Plan,
                     Ctx.TTI.getVectorInstrCost(Instruction::InsertElement,
                                                VecTy, TTI::TCK_RecipThroughput);
                 const InstructionCost ScalarCost =
-                    Ctx.TTI.getArithmeticInstrCost(Instruction::Xor, ScalarTy,
+                    Ctx.TTI.getArithmeticInstrCost(ScalarOp, ScalarTy,
                                                    TTI::TCK_RecipThroughput);
                 return ScalarCost < CurrentCost;
               },
