@@ -106,6 +106,7 @@ class MipsInst<dag outs, dag ins, string asmstr, list<dag> pattern,
   let TSFlags{5}     = hasForbiddenSlot;
   let TSFlags{6}     = hasFCCRegOperand;
 
+  let AsmVariantName = MipsAsmVariants.Mips;
   let DecoderNamespace = "Mips";
 }
 

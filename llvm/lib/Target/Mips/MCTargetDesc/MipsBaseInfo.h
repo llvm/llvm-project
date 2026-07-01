@@ -166,6 +166,11 @@ inline static MCRegister getMSARegFromFReg(MCRegister Reg) {
     return MCRegister();
 }
 
+// Values must match MipsAsmVariants in Mips.td.
+namespace MipsAsmVariants {
+enum : unsigned { Mips = 0 };
+} // namespace MipsAsmVariants
+
 } // namespace llvm
 
 #endif

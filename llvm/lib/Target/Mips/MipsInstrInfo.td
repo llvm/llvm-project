@@ -552,7 +552,9 @@ class ABI_NOT_N64 {
 class MipsPat<dag pattern, dag result> : Pat<pattern, result>, PredicateControl;
 
 class MipsInstAlias<string Asm, dag Result, bit Emit = 0b1> :
-  InstAlias<Asm, Result, Emit>, PredicateControl;
+  InstAlias<Asm, Result, Emit>, PredicateControl {
+  let AsmVariantName = MipsAsmVariants.Mips;
+}
 
 class IsCommutable {
   bit isCommutable = 1;
