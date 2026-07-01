@@ -1,7 +1,12 @@
 import collections
 import os
+import platform
 import re
 import operator
+import shutil
+import signal
+import subprocess
+import threading
 
 import lit.Test
 import lit.TestRunner
@@ -9,9 +14,109 @@ import lit.util
 from lit.formats.base import TestFormat
 
 
+def _sample_hung_process_tree(pid: int) -> str:
+    """Capture of all-thread backtraces for the process ``pid`` and
+    all of its descendants, returned as a single string. Return an empty string
+    if we cannot capture a backtrace.
+    """
+    # The `sample` tool is macOS-only and is the only sampling approach we
+    # current support.
+    if platform.system() != "Darwin":
+        return ""
+
+    sampler = shutil.which("sample")
+    if not sampler:
+        return ""
+
+    try:
+        import psutil
+    except ImportError:
+        return ""
+
+    try:
+        root = psutil.Process(pid)
+        procs = [root] + root.children(recursive=True)
+    except psutil.NoSuchProcess:
+        return ""
+
+    chunks = []
+    for proc in procs:
+        try:
+            proc_pid, proc_name = proc.pid, proc.name()
+        except psutil.NoSuchProcess:
+            continue
+        try:
+            # "sample <pid> <duration_secs>" takes a quick snapshot of every
+            # thread. -mayDie in the unlikely case the process actually finished
+            # while sampling.
+            result = subprocess.run(
+                [sampler, str(proc_pid), "1", "-mayDie"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                timeout=60,
+            )
+            text = result.stdout.decode("utf-8", errors="replace")
+        except Exception as e:
+            text = "<failed to sample: {}>".format(e)
+        chunks.append(
+            "===== Backtrace of hung process {} ({}) =====\n{}".format(
+                proc_pid, proc_name, text
+            )
+        )
+    return "\n".join(chunks)
+
+
 class LLDBTest(TestFormat):
     def __init__(self, dotest_cmd):
         self.dotest_cmd = dotest_cmd
+
+    def executeCommand(self, command, env, timeout):
+        """Like lit.util.executeCommand, but when ``timeout`` is hit it captures
+        backtraces of the (hung) process tree before killing it.
+
+        Returns (out, err, exitCode, timed_out, sample_output).
+        """
+        p = subprocess.Popen(
+            command,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            env=env,
+            close_fds=lit.util.kUseCloseFDs,
+        )
+
+        # Arrays so we can modify them by reference from on_timeout.
+        timed_out = [False]
+        sample_output = [""]
+        timer = None
+
+        if timeout and timeout > 0:
+
+            def on_timeout():
+                timed_out[0] = True
+                # Snapshot the stacks of the hung process tree, then kill it
+                # (process and all children, matching lit's behavior).
+                sample_output[0] = _sample_hung_process_tree(p.pid)
+                lit.util.killProcessAndChildren(p.pid)
+
+            timer = threading.Timer(timeout, on_timeout)
+            timer.start()
+
+        try:
+            out, err = p.communicate()
+            exitCode = p.wait()
+        finally:
+            if timer is not None:
+                timer.cancel()
+
+        out = out.decode("utf-8", errors="replace")
+        err = err.decode("utf-8", errors="replace")
+
+        # Detect Ctrl-C in the subprocess.
+        if not timed_out[0] and exitCode == -signal.SIGINT:
+            raise KeyboardInterrupt
+
+        return out, err, exitCode, timed_out[0], sample_output[0]
 
     def getTestsInDirectory(self, testSuite, path_in_suite, litConfig, localConfig):
         source_path = testSuite.getSourcePath(path_in_suite)
@@ -64,16 +169,12 @@ class LLDBTest(TestFormat):
             cmd.extend(["--env", "LLDB_LUA_CPATH=%s" % test.config.lldb_lua_cpath])
 
         timeoutInfo = None
-        try:
-            out, err, exitCode = lit.util.executeCommand(
-                cmd,
-                env=test.config.environment,
-                timeout=test.config.maxIndividualTestTime,
-            )
-        except lit.util.ExecuteCommandTimeoutException as e:
-            out = e.out
-            err = e.err
-            exitCode = e.exitCode
+        out, err, exitCode, timedOut, sampleOutput = self.executeCommand(
+            cmd,
+            env=test.config.environment,
+            timeout=test.config.maxIndividualTestTime,
+        )
+        if timedOut:
             timeoutInfo = "Reached timeout of {} seconds".format(
                 test.config.maxIndividualTestTime
             )
@@ -87,6 +188,11 @@ class LLDBTest(TestFormat):
             output += """Command Output (stdout):\n--\n%s\n--\n""" % (out,)
         if err:
             output += """Command Output (stderr):\n--\n%s\n--\n""" % (err,)
+        if sampleOutput:
+            output += (
+                """Backtraces of hung process tree (captured on timeout):\n"""
+                """--\n%s\n--\n""" % (sampleOutput,)
+            )
 
         if timeoutInfo:
             return lit.Test.TIMEOUT, output
