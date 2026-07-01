@@ -2687,14 +2687,15 @@ Value *SPIRVEmitIntrinsics::buildSpvUndefComposite(Type *AggrTy,
 // lowering produces a valid OpReturnValue.
 void SPIRVEmitIntrinsics::reconstructAggregateReturns(Function &Func,
                                                       IRBuilder<> &B) {
+  Type *OrigRetTy = GR->findMutated(&Func);
+  if (!OrigRetTy || !OrigRetTy->isAggregateType())
+    return;
   for (BasicBlock &BB : Func) {
     auto *RI = dyn_cast<ReturnInst>(BB.getTerminator());
     if (!RI)
       continue;
     Value *RetVal = RI->getReturnValue();
-    if (!RetVal || !RetVal->getType()->isAggregateType())
-      continue;
-    if (!isa<CallBase>(RetVal))
+    if (!RetVal || RetVal->getType() != OrigRetTy || !isa<CallBase>(RetVal))
       continue;
     Type *AggrTy = RetVal->getType();
     uint64_t NumElts = isa<StructType>(AggrTy)
