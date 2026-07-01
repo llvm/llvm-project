@@ -862,10 +862,8 @@ private:
         printAttribute(attr.getValue());
       return;
     }
-    llvm::SmallDenseSet<StringRef> elidedAttrsSet(elidedAttrs.begin(),
-                                                  elidedAttrs.end());
     for (const NamedAttribute &attr : attrs)
-      if (!elidedAttrsSet.contains(attr.getName().strref()))
+      if (!llvm::is_contained(elidedAttrs, attr.getName().strref()))
         printAttribute(attr.getValue());
   }
   void printOptionalAttrDictWithKeyword(
@@ -2949,10 +2947,8 @@ void AsmPrinter::Impl::printOptionalAttrDict(ArrayRef<NamedAttribute> attrs,
     return printFilteredAttributesFn(attrs);
 
   // Otherwise, filter out any attributes that shouldn't be included.
-  llvm::SmallDenseSet<StringRef> elidedAttrsSet(elidedAttrs.begin(),
-                                                elidedAttrs.end());
   auto filteredAttrs = llvm::make_filter_range(attrs, [&](NamedAttribute attr) {
-    return !elidedAttrsSet.contains(attr.getName().strref());
+    return !llvm::is_contained(elidedAttrs, attr.getName().strref());
   });
   if (!filteredAttrs.empty())
     printFilteredAttributesFn(filteredAttrs);
