@@ -76,13 +76,34 @@ entry:
 }
 
 define amdgpu_cs void @test_s_bitreplicate_vgpr_store(i32 %mask, ptr addrspace(1) %out) {
-; GFX11-LABEL: test_s_bitreplicate_vgpr_store:
-; GFX11:       ; %bb.0: ; %entry
-; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX11-NEXT:    s_bitreplicate_b64_b32 s[0:1], s0
-; GFX11-NEXT:    v_dual_mov_b32 v4, s1 :: v_dual_mov_b32 v3, s0
-; GFX11-NEXT:    global_store_b64 v[1:2], v[3:4], off
-; GFX11-NEXT:    s_endpgm
+; GFX11-GISEL-LABEL: test_s_bitreplicate_vgpr_store:
+; GFX11-GISEL:       ; %bb.0: ; %entry
+; GFX11-GISEL-NEXT:    v_perm_b32 v3, 0, v0, 0xc010c00
+; GFX11-GISEL-NEXT:    v_perm_b32 v0, 0, v0, 0xc030c02
+; GFX11-GISEL-NEXT:    v_lshl_or_b32 v3, v3, 4, v3
+; GFX11-GISEL-NEXT:    v_lshl_or_b32 v0, v0, 4, v0
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v3, 0xf0f0f0f, v3
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v0, 0xf0f0f0f, v0
+; GFX11-GISEL-NEXT:    v_lshl_or_b32 v3, v3, 2, v3
+; GFX11-GISEL-NEXT:    v_lshl_or_b32 v0, v0, 2, v0
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v3, 0x33333333, v3
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v0, 0x33333333, v0
+; GFX11-GISEL-NEXT:    v_lshl_or_b32 v3, v3, 1, v3
+; GFX11-GISEL-NEXT:    v_lshl_or_b32 v0, v0, 1, v0
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v3, 0x55555555, v3
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v0, 0x55555555, v0
+; GFX11-GISEL-NEXT:    v_lshl_or_b32 v3, v3, 1, v3
+; GFX11-GISEL-NEXT:    v_lshl_or_b32 v4, v0, 1, v0
+; GFX11-GISEL-NEXT:    global_store_b64 v[1:2], v[3:4], off
+; GFX11-GISEL-NEXT:    s_endpgm
+;
+; GFX11-SDAG-LABEL: test_s_bitreplicate_vgpr_store:
+; GFX11-SDAG:       ; %bb.0: ; %entry
+; GFX11-SDAG-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX11-SDAG-NEXT:    s_bitreplicate_b64_b32 s[0:1], s0
+; GFX11-SDAG-NEXT:    v_dual_mov_b32 v4, s1 :: v_dual_mov_b32 v3, s0
+; GFX11-SDAG-NEXT:    global_store_b64 v[1:2], v[3:4], off
+; GFX11-SDAG-NEXT:    s_endpgm
 entry:
   %br = call i64 @llvm.amdgcn.s.bitreplicate(i32 %mask)
   store i64 %br, ptr addrspace(1) %out
@@ -93,11 +114,23 @@ define i64 @test_s_bitreplicate_vgpr_multi_use(i32 %mask) {
 ; GFX11-GISEL-LABEL: test_s_bitreplicate_vgpr_multi_use:
 ; GFX11-GISEL:       ; %bb.0: ; %entry
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX11-GISEL-NEXT:    s_bitreplicate_b64_b32 s[0:1], s0
-; GFX11-GISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
-; GFX11-GISEL-NEXT:    v_add_nc_u32_e32 v0, v0, v1
-; GFX11-GISEL-NEXT:    v_mov_b32_e32 v1, 0
+; GFX11-GISEL-NEXT:    v_perm_b32 v1, 0, v0, 0xc010c00
+; GFX11-GISEL-NEXT:    v_perm_b32 v0, 0, v0, 0xc030c02
+; GFX11-GISEL-NEXT:    v_lshl_or_b32 v1, v1, 4, v1
+; GFX11-GISEL-NEXT:    v_lshl_or_b32 v0, v0, 4, v0
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v1, 0xf0f0f0f, v1
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v0, 0xf0f0f0f, v0
+; GFX11-GISEL-NEXT:    v_lshl_or_b32 v1, v1, 2, v1
+; GFX11-GISEL-NEXT:    v_lshl_or_b32 v0, v0, 2, v0
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v1, 0x33333333, v1
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v0, 0x33333333, v0
+; GFX11-GISEL-NEXT:    v_lshl_or_b32 v1, v1, 1, v1
+; GFX11-GISEL-NEXT:    v_lshl_or_b32 v0, v0, 1, v0
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v1, 0x55555555, v1
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v0, 0x55555555, v0
+; GFX11-GISEL-NEXT:    v_lshl_or_b32 v1, v1, 1, v1
+; GFX11-GISEL-NEXT:    v_lshl_or_b32 v0, v0, 1, v0
+; GFX11-GISEL-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_add_nc_u32 v0, v1, v0
 ; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-SDAG-LABEL: test_s_bitreplicate_vgpr_multi_use:
@@ -119,13 +152,34 @@ entry:
 }
 
 define i64 @test_s_bitreplicate_vgpr(i32 %mask) {
-; GFX11-LABEL: test_s_bitreplicate_vgpr:
-; GFX11:       ; %bb.0: ; %entry
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX11-NEXT:    s_bitreplicate_b64_b32 s[0:1], s0
-; GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-GISEL-LABEL: test_s_bitreplicate_vgpr:
+; GFX11-GISEL:       ; %bb.0: ; %entry
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-GISEL-NEXT:    v_perm_b32 v1, 0, v0, 0xc010c00
+; GFX11-GISEL-NEXT:    v_perm_b32 v0, 0, v0, 0xc030c02
+; GFX11-GISEL-NEXT:    v_lshl_or_b32 v1, v1, 4, v1
+; GFX11-GISEL-NEXT:    v_lshl_or_b32 v0, v0, 4, v0
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v1, 0xf0f0f0f, v1
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v0, 0xf0f0f0f, v0
+; GFX11-GISEL-NEXT:    v_lshl_or_b32 v1, v1, 2, v1
+; GFX11-GISEL-NEXT:    v_lshl_or_b32 v0, v0, 2, v0
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v1, 0x33333333, v1
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v0, 0x33333333, v0
+; GFX11-GISEL-NEXT:    v_lshl_or_b32 v1, v1, 1, v1
+; GFX11-GISEL-NEXT:    v_lshl_or_b32 v0, v0, 1, v0
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v1, 0x55555555, v1
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v2, 0x55555555, v0
+; GFX11-GISEL-NEXT:    v_lshl_or_b32 v0, v1, 1, v1
+; GFX11-GISEL-NEXT:    v_lshl_or_b32 v1, v2, 1, v2
+; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-SDAG-LABEL: test_s_bitreplicate_vgpr:
+; GFX11-SDAG:       ; %bb.0: ; %entry
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX11-SDAG-NEXT:    s_bitreplicate_b64_b32 s[0:1], s0
+; GFX11-SDAG-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %br = call i64 @llvm.amdgcn.s.bitreplicate(i32 %mask)
   ret i64 %br
