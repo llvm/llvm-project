@@ -4384,6 +4384,19 @@ public:
     return true;
   }
 
+  /// If only low elements of a vector are demanded, shrink the operation to the
+  /// returned size in bits by converting
+  /// (op x) to insert_subvector (op (extract_subvector x)).
+  ///
+  /// The returned size must be a multiple of the element size, greater than or
+  /// equal to the demanded part of the vector and less than the original
+  /// vector size. Return 0 to disable shrinking.
+  virtual unsigned
+  getPreferredShrunkVectorSizeInBits(SDValue Op,
+                                     const APInt &DemandedElts) const {
+    return 0;
+  }
+
   /// Determine which of the bits specified in Mask are known to be either zero
   /// or one and return them in the KnownZero/KnownOne bitsets. The DemandedElts
   /// argument allows us to only collect the known bits that are shared by the

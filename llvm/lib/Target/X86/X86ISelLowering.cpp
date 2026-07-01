@@ -45488,6 +45488,32 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
   return false;
 }
 
+unsigned X86TargetLowering::getPreferredShrunkVectorSizeInBits(
+    SDValue Op, const APInt &DemandedElts) const {
+  EVT VT = Op.getValueType();
+  unsigned SizeInBits = VT.getSizeInBits();
+  unsigned NumElts = VT.getVectorNumElements();
+
+  switch (Op.getOpcode()) {
+  case ISD::FSUB:
+  case ISD::FMUL:
+    break;
+  default:
+    return 0;
+  }
+
+  // For 256/512-bit ops that are 128/256-bit ops glued together, if we do not
+  // demand any of the high elements, then narrow the op to 128/256-bits: e.g.
+  // (op ymm0, ymm1) --> insert undef, (op xmm0, xmm1), 0
+  if (SizeInBits == 512 && DemandedElts.lshr(NumElts / 4) == 0)
+    return SizeInBits / 4;
+  if ((SizeInBits == 256 || SizeInBits == 512) &&
+      DemandedElts.lshr(NumElts / 2) == 0)
+    return SizeInBits / 2;
+
+  return 0;
+}
+
 bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
     SDValue Op, const APInt &OriginalDemandedBits,
     const APInt &OriginalDemandedElts, KnownBits &Known, TargetLoweringOpt &TLO,

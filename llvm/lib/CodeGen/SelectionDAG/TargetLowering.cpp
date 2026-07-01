@@ -3285,6 +3285,29 @@ bool TargetLowering::SimplifyDemandedVectorElts(
   unsigned EltSizeInBits = VT.getScalarSizeInBits();
   bool IsLE = TLO.DAG.getDataLayout().isLittleEndian();
 
+  auto TryShrinkBinOp = [&](SDValue Op0, SDValue Op1) {
+    unsigned ShrunkSize = getPreferredShrunkVectorSizeInBits(Op, DemandedElts);
+    if (!ShrunkSize)
+      return false;
+
+    assert(ShrunkSize % EltSizeInBits == 0 &&
+           "Shrunk size not a multiple of element size");
+    assert(ShrunkSize < VT.getSizeInBits() &&
+           "Shrunk size must be < original vector size");
+    assert(ShrunkSize >= EltSizeInBits * DemandedElts.getActiveBits() &&
+           "Shrunk size must be >= demanded size");
+
+    EVT ShrunkVT = VT.changeVectorElementCount(
+        *TLO.DAG.getContext(),
+        ElementCount::getFixed(ShrunkSize / EltSizeInBits));
+    Op0 = TLO.DAG.getExtractSubvector(DL, ShrunkVT, Op0, 0);
+    Op1 = TLO.DAG.getExtractSubvector(DL, ShrunkVT, Op1, 0);
+    SDValue NewOp =
+        TLO.DAG.getNode(Opcode, DL, ShrunkVT, Op0, Op1, Op->getFlags());
+    return TLO.CombineTo(
+        Op, TLO.DAG.getInsertSubvector(DL, TLO.DAG.getUNDEF(VT), NewOp, 0));
+  };
+
   // Helper for demanding the specified elements and all the bits of both binary
   // operands.
   auto SimplifyDemandedVectorEltsBinOp = [&](SDValue Op0, SDValue Op1) {
@@ -3298,6 +3321,10 @@ bool TargetLowering::SimplifyDemandedVectorElts(
                           NewOp1 ? NewOp1 : Op1, Op->getFlags());
       return TLO.CombineTo(Op, NewOp);
     }
+
+    if (TryShrinkBinOp(Op0, Op1))
+      return true;
+
     return false;
   };
 
