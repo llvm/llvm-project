@@ -3166,7 +3166,14 @@ bool Sema::shouldEmitProfileViolation(StringRef ProfileName, StringRef RuleName,
   // available, from the declaration and its lexical parents. The latter does
   // not depend on a parse-time scope still being active, so finalization checks
   // that run after the parse scope is torn down still respect suppression.
-  if (isProfileSuppressed(ProfileName, RuleName) ||
+  //
+  // Finalization callbacks skip the parse-time stack: they can fire while an
+  // unrelated entity's instantiation ProfileSuppressScope is still active, and
+  // that scope does not lexically enclose the finalized declaration (token-
+  // based dominion, P3589R2 s2.4p3). Their decl-aware walk already covers a
+  // suppression on the declaration or a lexical parent.
+  if ((!InProfileFinalizationCheck &&
+       isProfileSuppressed(ProfileName, RuleName)) ||
       isProfileSuppressed(ProfileName, RuleName, D))
     return false;
   // P3589R2 Section 1.1: "its static semantic effects are as-if applied only

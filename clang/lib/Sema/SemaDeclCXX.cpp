@@ -7192,6 +7192,11 @@ void dispatchFinalizationProfiles(Sema &S, Node *D,
                                   const FinalizationProfile<Node> (&Table)[N]) {
   if (!S.anyProfileEnforced(Table))
     return;
+  // Finalization can run nested in an unrelated instantiation whose
+  // [[profiles::suppress]] scope is still on the parse-time stack; the callbacks
+  // must resolve suppression only from D and its lexical parents, not that
+  // transient stack (P3589R2 s2.4p3).
+  llvm::SaveAndRestore<bool> InFinalization(S.InProfileFinalizationCheck, true);
   for (const auto &E : Table)
     if (S.isProfileEnforced(E.Name))
       E.Callback(S, D);
