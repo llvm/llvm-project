@@ -4929,36 +4929,37 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
     }
   }
   case G_EXTRACT_SUBVECTOR: {
-    // Check that subvector is half size of main vector
     Register Subvector = MI.getOperand(0).getReg();
     Register Vector = MI.getOperand(1).getReg();
-    auto ExtractionPointImm = MI.getOperand(2).getImm();
+    uint64_t ExtractionPointImm = MI.getOperand(2).getImm();
 
     LLT VectorTy = MRI.getType(Vector);
     LLT SubvectorTy = MRI.getType(Subvector);
 
-    if (VectorTy.isScalable() ||
-        SubvectorTy.isScalable())
+    if (VectorTy.isScalable() || SubvectorTy.isScalable())
       return UnableToLegalize;
 
     if (VectorTy.getScalarType() != SubvectorTy.getScalarType())
-	return UnableToLegalize;
+      return UnableToLegalize;
 
-    // X = extract(Y, 0) -> X = Y, iff Type(x) == Type(Y)
-    if (VectorTy == SubvectorTy && ExtractionPointImm == 0)
+    if (VectorTy.getNumElements() <= SubvectorTy.getNumElements())
+      return UnableToLegalize;
+
+    // extract_subvector = build_vector(extract_element, extract_element, ...)
+    SmallVector<Register> ExtractedElements;
+    for (uint64_t i = 0; i < SubvectorTy.getNumElements(); i++)
     {
-	// Some sort of copy here
-        MIRBuilder.buildCopy(Subvector, Vector);
-	MI.eraseFromParent();
-	return Legalized;
+      dbgs() << Vector << "\n" << ExtractionPointImm << "\n";
+      ExtractedElements.push_back(
+          MIRBuilder
+              .buildExtractVectorElement(VectorTy.getScalarType(), Vector,
+                                         ExtractionPointImm + i)
+              .getReg(0));
     }
-    // Else, if V is 2x size of S, then lower (idk why this works?)
-    else if (VectorTy.getNumElements() == SubvectorTy.getNumElements() * 2)
-    {
-	return Legalized;
-    }
-    // Else else.. return unable to legalize
-    return UnableToLegalize;
+
+    MIRBuilder.buildBuildVector(Subvector, ExtractedElements);
+    MI.eraseFromParent();
+    return Legalized;
   }
   case G_STACKSAVE:
     return lowerStackSave(MI);
