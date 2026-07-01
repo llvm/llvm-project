@@ -591,7 +591,7 @@ template <class _Value, class _Hash, class _Pred, class _Alloc>
 class unordered_multiset;
 
 template <class _Value, class _Hash = hash<_Value>, class _Pred = equal_to<_Value>, class _Alloc = allocator<_Value> >
-class unordered_set {
+class [[__gnu__::__warn_unused__]] unordered_set {
 public:
   // types
   typedef _Value key_type;
@@ -1207,7 +1207,7 @@ struct __container_traits<unordered_set<_Value, _Hash, _Pred, _Alloc> > {
 };
 
 template <class _Value, class _Hash = hash<_Value>, class _Pred = equal_to<_Value>, class _Alloc = allocator<_Value> >
-class unordered_multiset {
+class [[__gnu__::__warn_unused__]] unordered_multiset {
 public:
   // types
   typedef _Value key_type;

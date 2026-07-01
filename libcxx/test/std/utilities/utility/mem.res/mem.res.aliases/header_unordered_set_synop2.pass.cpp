@@ -23,8 +23,8 @@
 int main(int, char**) {
   {
     // Check that std::pmr::unordered_set is usable without <memory_resource>.
-    std::pmr::unordered_set<int> s;
-    std::pmr::unordered_multiset<int> ms;
+    [[maybe_unused]] std::pmr::unordered_set<int> s;
+    [[maybe_unused]] std::pmr::unordered_multiset<int> ms;
   }
 
   return 0;

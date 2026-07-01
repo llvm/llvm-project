@@ -289,7 +289,7 @@ private:
 };
 
 template <class _NodePtr>
-class __hash_const_iterator {
+class [[__gnu__::__warn_unused__]] __hash_const_iterator {
   static_assert(!is_const<typename pointer_traits<_NodePtr>::element_type>::value, "");
   typedef __hash_node_types<_NodePtr> _NodeTypes;
   typedef _NodePtr __node_pointer;

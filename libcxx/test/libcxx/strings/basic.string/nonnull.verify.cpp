@@ -23,8 +23,8 @@ void func() {
   const char* const np = nullptr;
   std::string str1(np);                         // expected-warning {{null passed}}
   std::string str2(np, std::allocator<char>{}); // expected-warning {{null passed}}
-  str2 = np;                                    // expected-warning {{null passed}}
-  str2 += np;                                   // expected-warning {{null passed}}
+  str1 = np;                                    // expected-warning {{null passed}}
+  str1 += np;                                   // expected-warning {{null passed}}
   str2.assign(np);                              // expected-warning {{null passed}}
   str2.append(np);                              // expected-warning {{null passed}}
   str2.insert(0, np);                           // expected-warning {{null passed}}
@@ -51,7 +51,7 @@ void func() {
   // These diagnostics are issued via diagnose_if, so we want to check the full description
   std::string str3(nullptr, 1); // expected-warning {{null passed to callee that requires a non-null argument if n is not zero}}
   std::string str4(nullptr, 1, std::allocator<char>{}); // expected-warning {{null passed to callee that requires a non-null argument if n is not zero}}
-  str4.find(nullptr, 0, 1); // expected-warning {{null passed to callee that requires a non-null argument if n is not zero}}
+  str3.find(nullptr, 0, 1); // expected-warning {{null passed to callee that requires a non-null argument if n is not zero}}
   str4.rfind(nullptr, 0, 1); // expected-warning {{null passed to callee that requires a non-null argument if n is not zero}}
   str4.find_first_of(nullptr, 0, 1); // expected-warning {{null passed to callee that requires a non-null argument if n is not zero}}
   str4.find_last_of(nullptr, 0, 1); // expected-warning {{null passed to callee that requires a non-null argument if n is not zero}}

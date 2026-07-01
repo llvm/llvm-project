@@ -24,10 +24,12 @@ void test() {
     std::map<int, operator_hijacker> mo;
     std::map<int, operator_hijacker> m;
     m = mo;
+    (void)m;
   }
   {
     std::map<operator_hijacker, int> mo;
     std::map<operator_hijacker, int> m;
     m = mo;
+    (void)m;
   }
 }

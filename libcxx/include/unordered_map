@@ -769,7 +769,7 @@ template <class _Key, class _Tp>
 struct __hash_value_type;
 
 template <class _HashIterator>
-class __hash_map_iterator {
+class [[__gnu__::__warn_unused__]] __hash_map_iterator {
   _HashIterator __i_;
 
   typedef __hash_node_types_from_iterator<_HashIterator> _NodeTypes;
@@ -820,7 +820,7 @@ public:
 };
 
 template <class _HashIterator>
-class __hash_map_const_iterator {
+class [[__gnu__::__warn_unused__]] __hash_map_const_iterator {
   _HashIterator __i_;
 
   typedef __hash_node_types_from_iterator<_HashIterator> _NodeTypes;
@@ -881,7 +881,7 @@ template <class _Key,
           class _Hash  = hash<_Key>,
           class _Pred  = equal_to<_Key>,
           class _Alloc = allocator<pair<const _Key, _Tp> > >
-class unordered_map {
+class [[__gnu__::__warn_unused__]] unordered_map {
 public:
   // types
   typedef _Key key_type;
@@ -1678,7 +1678,7 @@ template <class _Key,
           class _Hash  = hash<_Key>,
           class _Pred  = equal_to<_Key>,
           class _Alloc = allocator<pair<const _Key, _Tp> > >
-class unordered_multimap {
+class [[__gnu__::__warn_unused__]] unordered_multimap {
 public:
   // types
   typedef _Key key_type;

@@ -23,8 +23,8 @@
 int main(int, char**) {
   {
     // Check that std::pmr::map is usable without <memory_resource>.
-    std::pmr::map<int, int> m;
-    std::pmr::multimap<int, int> mm;
+    [[maybe_unused]] std::pmr::map<int, int> m;
+    [[maybe_unused]] std::pmr::multimap<int, int> mm;
   }
 
   return 0;

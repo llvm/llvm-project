@@ -23,4 +23,5 @@ void test() {
   std::set<operator_hijacker> so;
   std::set<operator_hijacker> s;
   s = so;
+  (void)s;
 }

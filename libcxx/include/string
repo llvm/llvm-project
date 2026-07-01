@@ -730,7 +730,7 @@ template <>
 struct __padding<0> {};
 
 template <class _CharT, class _Traits, class _Allocator>
-class basic_string {
+class [[__gnu__::__warn_unused__]] basic_string {
 public:
   using __self _LIBCPP_NODEBUG         = basic_string;
   using __self_view _LIBCPP_NODEBUG    = basic_string_view<_CharT, _Traits>;
