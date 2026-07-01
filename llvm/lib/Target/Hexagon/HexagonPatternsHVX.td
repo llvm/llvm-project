@@ -596,7 +596,7 @@ let Predicates = [UseHVXV68, UseHVXIEEEFP] in {
            (V6_vmpy_sf_sf HVF32:$Rs, HVF32:$Rt)>;
 
   def: Pat<(VecF16 (pf1<fpround> HWF32:$Vuu)),
-           (V6_vdealh (V6_vcvt_hf_sf (HiVec HvxWR:$Vuu), (LoVec HvxWR:$Vuu)))>;
+           (V6_vdealh (V6_vcvt_hf_sf (LoVec HvxWR:$Vuu), (HiVec HvxWR:$Vuu)))>;
   def: Pat<(VecPF32 (pf1<fpextend> HVF16:$Vu)),
            (V6_vcvt_sf_hf (V6_vshuffh HvxVR:$Vu))>;
 
