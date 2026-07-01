@@ -586,7 +586,7 @@ SDValue DAGTypeLegalizer::ScalarizeVecRes_LOAD(LoadSDNode *N) {
   SDValue Result = DAG.getLoad(
       ISD::UNINDEXED, N->getExtensionType(),
       N->getValueType(0).getVectorElementType(), SDLoc(N), N->getChain(),
-      N->getBasePtr(), DAG.getUNDEF(N->getBasePtr().getValueType()),
+      N->getBasePtr(), DAG.getPOISON(N->getBasePtr().getValueType()),
       N->getPointerInfo(), N->getMemoryVT().getVectorElementType(),
       N->getBaseAlign(), N->getMemOperand()->getFlags(), N->getAAInfo());
 
@@ -2439,7 +2439,7 @@ void DAGTypeLegalizer::SplitVecRes_LOAD(LoadSDNode *LD, SDValue &Lo,
   ISD::LoadExtType ExtType = LD->getExtensionType();
   SDValue Ch = LD->getChain();
   SDValue Ptr = LD->getBasePtr();
-  SDValue Offset = DAG.getUNDEF(Ptr.getValueType());
+  SDValue Offset = DAG.getPOISON(Ptr.getValueType());
   EVT MemoryVT = LD->getMemoryVT();
   MachineMemOperand::Flags MMOFlags = LD->getMemOperand()->getFlags();
   AAMDNodes AAInfo = LD->getAAInfo();
@@ -3658,6 +3658,8 @@ void DAGTypeLegalizer::SplitVecRes_VP_SPLICE(SDNode *N, SDValue &Lo,
   SDValue VTBytes = DAG.getTypeSize(DL, PtrVT, VT.getStoreSize());
   EVL1Bytes = DAG.getNode(ISD::UMIN, DL, PtrVT, EVL1Bytes, VTBytes);
   SDValue StackPtr2 = DAG.getMemBasePlusOffset(StackPtr, EVL1Bytes, DL);
+  SDValue PoisonPtr = DAG.getPOISON(PtrVT);
+
   SDValue PoisonPtr = DAG.getPOISON(PtrVT);
 
   SDValue TrueMask = DAG.getBoolConstant(true, DL, Mask.getValueType(), VT);
