@@ -9,9 +9,11 @@
 #include "InputFiles.h"
 #include "OutputSections.h"
 #include "RelocScan.h"
+#include "SymbolTable.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/Support/ELFAttributes.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/RISCVAttributeParser.h"
@@ -32,6 +34,7 @@ class RISCV final : public TargetInfo {
 public:
   RISCV(Ctx &);
   uint32_t calcEFlags() const override;
+  void initTargetSpecificSections() override;
   int64_t getImplicitAddend(const uint8_t *buf, RelType type) const override;
   void writeGotHeader(uint8_t *buf) const override;
   void writeGotPlt(uint8_t *buf, const Symbol &s) const override;
@@ -66,6 +69,34 @@ public:
   SmallVector<std::pair<uint64_t, uint64_t>, 0> synthesizedAligns;
 };
 
+struct TableJumpEntry {
+  int saved;
+  int index;
+};
+
+// Used by RISC-V Zcmt table jump relaxation.
+class TableJumpSection final : public SyntheticSection {
+public:
+  TableJumpSection(Ctx &);
+  size_t getSize() const override;
+  void writeTo(uint8_t *buf) override;
+
+  void finalizeContents() override;
+  int getCMJTEntryIndex(const Symbol *sym) const;
+  int getCMJALTEntryIndex(const Symbol *sym) const;
+  void addEntry(const Symbol *sym, int saved, bool isCMJT);
+
+private:
+  // Zcmt spec: cm.jt uses indices 0..31, cm.jalt uses indices 32..255.
+  static constexpr size_t maxCMJTEntrySize = 32;
+  static constexpr size_t maxCMJALTEntrySize = 224;
+  static constexpr size_t startCMJALTEntryIdx = 32;
+
+  // Candidate maps: symbol -> (total code size reduction, table index).
+  llvm::MapVector<const Symbol *, TableJumpEntry> cmjtCandidates;
+  llvm::MapVector<const Symbol *, TableJumpEntry> cmjaltCandidates;
+};
+
 } // end anonymous namespace
 
 // These are internal relocation numbers for GP/X0 relaxation. They aren't part
@@ -74,6 +105,7 @@ public:
 #define INTERNAL_R_RISCV_GPREL_S 257
 #define INTERNAL_R_RISCV_X0REL_I 258
 #define INTERNAL_R_RISCV_X0REL_S 259
+#define INTERNAL_R_RISCV_TBJAL 260
 
 const uint64_t dtpOffset = 0x800;
 
@@ -187,6 +219,19 @@ uint32_t RISCV::calcEFlags() const {
   }
 
   return target;
+}
+
+void RISCV::initTargetSpecificSections() {
+  if (ctx.arg.relax && ctx.arg.relaxTbljal && !ctx.arg.shared &&
+      ctx.sharedFiles.empty()) {
+    ctx.in.riscvTableJump = std::make_unique<TableJumpSection>(ctx);
+    ctx.inputSections.push_back(ctx.in.riscvTableJump.get());
+
+    Symbol *s = ctx.symtab->addSymbol(Defined{
+        ctx, /*file=*/ctx.internalFile, "__jvt_base$", STB_GLOBAL, STV_HIDDEN,
+        STT_NOTYPE, /*value=*/0, /*size=*/0, ctx.in.riscvTableJump.get()});
+    s->isUsedInRegularObj = true;
+  }
 }
 
 int64_t RISCV::getImplicitAddend(const uint8_t *buf, RelType type) const {
@@ -628,6 +673,9 @@ void RISCV::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     return;
   }
 
+  case INTERNAL_R_RISCV_TBJAL:
+    return;
+
   case R_RISCV_ADD8:
     *loc += val;
     return;
@@ -890,16 +938,44 @@ void elf::initSymbolAnchors(Ctx &ctx) {
   }
 }
 
+static bool relaxTableJump(Ctx &ctx, const InputSection &sec, size_t i,
+                           uint64_t loc, Relocation &r, uint32_t &remove) {
+  if (!ctx.in.riscvTableJump)
+    return false;
+
+  uint32_t insn = read32le(sec.content().data() + r.offset +
+                           (r.type == R_RISCV_JAL ? 0 : 4));
+  uint8_t rd = extractBits(insn, 11, 7);
+  int tblEntryIndex = -1;
+  auto &tableJump = static_cast<TableJumpSection &>(*ctx.in.riscvTableJump);
+  if (rd == X_X0)
+    tblEntryIndex = tableJump.getCMJTEntryIndex(r.sym);
+  else if (rd == X_RA)
+    tblEntryIndex = tableJump.getCMJALTEntryIndex(r.sym);
+
+  if (tblEntryIndex < 0)
+    return false;
+  sec.relaxAux->relocTypes[i] = INTERNAL_R_RISCV_TBJAL;
+  sec.relaxAux->writes.push_back(0xA002 |
+                                 (tblEntryIndex << 2)); // cm.jt or cm.jalt
+  remove = r.type == R_RISCV_JAL ? 2 : 6;
+  return true;
+}
+
+static int64_t getCallDisplace(Ctx &ctx, const Relocation &r, uint64_t loc) {
+  const Symbol &sym = *r.sym;
+  const uint64_t dest =
+      (r.expr == R_PLT_PC ? sym.getPltVA(ctx) : sym.getVA(ctx)) + r.addend;
+  return dest - loc;
+}
+
 // Relax R_RISCV_CALL/R_RISCV_CALL_PLT auipc+jalr to c.j, c.jal, or jal.
 static void relaxCall(Ctx &ctx, const InputSection &sec, size_t i, uint64_t loc,
                       Relocation &r, uint32_t &remove) {
   const bool rvc = getEFlags(ctx, sec.file) & EF_RISCV_RVC;
-  const Symbol &sym = *r.sym;
   const uint64_t insnPair = read64le(sec.content().data() + r.offset);
   const uint32_t rd = extractBits(insnPair, 32 + 11, 32 + 7);
-  const uint64_t dest =
-      (r.expr == R_PLT_PC ? sym.getPltVA(ctx) : sym.getVA(ctx)) + r.addend;
-  const int64_t displace = dest - loc;
+  const int64_t displace = getCallDisplace(ctx, r, loc);
 
   // When the caller specifies the old value of `remove`, disallow its
   // increment.
@@ -912,6 +988,8 @@ static void relaxCall(Ctx &ctx, const InputSection &sec, size_t i, uint64_t loc,
     sec.relaxAux->relocTypes[i] = R_RISCV_RVC_JUMP;
     sec.relaxAux->writes.push_back(0x2001); // c.jal
     remove = 6;
+  } else if (remove >= 6 && relaxTableJump(ctx, sec, i, loc, r, remove)) {
+    // relaxTableJump sets remove
   } else if (remove >= 4 && isInt<21>(displace)) {
     sec.relaxAux->relocTypes[i] = R_RISCV_JAL;
     sec.relaxAux->writes.push_back(0x6f | rd << 7); // jal
@@ -1035,6 +1113,10 @@ static bool relax(Ctx &ctx, int pass, InputSection &sec) {
         relaxCall(ctx, sec, i, loc, r, remove);
       }
       break;
+    case R_RISCV_JAL:
+      if (relaxable(relocs, i))
+        relaxTableJump(ctx, sec, i, loc, r, remove);
+      break;
     case R_RISCV_TPREL_HI20:
     case R_RISCV_TPREL_ADD:
     case R_RISCV_TPREL_LO12_I:
@@ -1094,6 +1176,44 @@ static bool relax(Ctx &ctx, int pass, InputSection &sec) {
   return changed;
 }
 
+static void scanTableJumpEntries(Ctx &ctx, const InputSection &sec) {
+  for (auto [i, r] : llvm::enumerate(sec.relocations)) {
+    if (!r.sym->isDefined())
+      continue;
+    if (i + 1 == sec.relocs().size() ||
+        sec.relocs()[i + 1].type != R_RISCV_RELAX)
+      continue;
+    switch (r.type) {
+    case R_RISCV_JAL:
+    case R_RISCV_CALL:
+    case R_RISCV_CALL_PLT: {
+      uint32_t insn = read32le(sec.content().data() + r.offset +
+                               (r.type == R_RISCV_JAL ? 0 : 4));
+      uint8_t rd = extractBits(insn, 11, 7);
+      if (rd != X_X0 && rd != X_RA)
+        break;
+      // Skip candidates that relaxCall will rewrite to c.j or c.jal. Pre-relax
+      // displacement is an upper bound (relaxation only shrinks code), so a
+      // nearby symbol now is still nearby post-relax.
+      const bool rvc = getEFlags(ctx, sec.file) & EF_RISCV_RVC;
+      const int64_t displace = getCallDisplace(ctx, r, sec.getVA() + r.offset);
+      if (rvc && isInt<12>(displace) &&
+          (rd == X_X0 || (rd == X_RA && !ctx.arg.is64)))
+        break;
+      // Use the input instruction size to estimate savings. R_RISCV_JAL is
+      // already 4 bytes (saving 2 bytes to cm.jt). R_RISCV_CALL/CALL_PLT
+      // are 8-byte auipc+jalr sequences, but if the displacement fits in
+      // 21 bits, relaxCall will first shrink them to jal (4 bytes), so the
+      // actual saving is only 2 bytes (4->2), not 6 bytes (8->2).
+      int saved = (r.type != R_RISCV_JAL && !isInt<21>(displace)) ? 6 : 2;
+      static_cast<TableJumpSection &>(*ctx.in.riscvTableJump)
+          .addEntry(r.sym, saved, /*isCMJT=*/rd == X_X0);
+      break;
+    }
+    }
+  }
+}
+
 // When relaxing just R_RISCV_ALIGN, relocDeltas is usually changed only once in
 // the absence of a linker script. For call and load/store R_RISCV_RELAX, code
 // shrinkage may reduce displacement and make more relocations eligible for
@@ -1103,10 +1223,22 @@ static bool relax(Ctx &ctx, int pass, InputSection &sec) {
 // relaxation pass.
 bool RISCV::relaxOnce(int pass) const {
   llvm::TimeTraceScope timeScope("RISC-V relaxOnce");
-  if (pass == 0)
+  SmallVector<InputSection *, 0> storage;
+  if (pass == 0) {
     initSymbolAnchors(ctx);
 
-  SmallVector<InputSection *, 0> storage;
+    // Scan relocations and build the Zcmt jump table before relaxation.
+    if (ctx.in.riscvTableJump) {
+      for (OutputSection *osec : ctx.outputSections) {
+        if (!(osec->flags & SHF_EXECINSTR))
+          continue;
+        for (InputSection *sec : getInputSections(*osec, storage))
+          scanTableJumpEntries(ctx, *sec);
+      }
+      ctx.in.riscvTableJump->finalizeContents();
+    }
+  }
+
   bool changed = false;
   for (OutputSection *osec : ctx.outputSections) {
     if (!(osec->flags & SHF_EXECINSTR))
@@ -1298,6 +1430,14 @@ void RISCV::finalizeRelax(int passes) const {
           case INTERNAL_R_RISCV_GPREL_S:
           case INTERNAL_R_RISCV_X0REL_I:
           case INTERNAL_R_RISCV_X0REL_S:
+            break;
+          case INTERNAL_R_RISCV_TBJAL:
+            assert(ctx.arg.relaxTbljal &&
+                   "TBJAL relocation without --relax-tbljal");
+            assert((aux.writes[writesIdx] & 0xfc03) == 0xA002 &&
+                   "malformed cm.jt/cm.jalt encoding");
+            skip = 2;
+            write16le(p, aux.writes[writesIdx++]);
             break;
           case R_RISCV_RELAX:
             // Used by relaxTlsLe to indicate the relocation is ignored.
@@ -1637,3 +1777,89 @@ void elf::mergeRISCVAttributesSections(Ctx &ctx) {
 }
 
 void elf::setRISCVTargetInfo(Ctx &ctx) { ctx.target.reset(new RISCV(ctx)); }
+
+TableJumpSection::TableJumpSection(Ctx &ctx)
+    : SyntheticSection(ctx, ".riscv.jvt", SHT_PROGBITS, SHF_ALLOC,
+                       /*alignment=*/64) {}
+
+int TableJumpSection::getCMJTEntryIndex(const Symbol *sym) const {
+  auto it = cmjtCandidates.find(sym);
+  return it != cmjtCandidates.end() ? it->second.index : -1;
+}
+
+int TableJumpSection::getCMJALTEntryIndex(const Symbol *sym) const {
+  auto it = cmjaltCandidates.find(sym);
+  return it != cmjaltCandidates.end() ? it->second.index : -1;
+}
+
+void TableJumpSection::addEntry(const Symbol *sym, int saved, bool isCMJT) {
+  auto &candidates = isCMJT ? cmjtCandidates : cmjaltCandidates;
+  candidates.try_emplace(sym, TableJumpEntry{0, -1}).first->second.saved +=
+      saved;
+}
+
+// Sort candidates by code size reduction (descending), truncate to maxSize,
+// drop entries whose reduction doesn't cover a table entry, and assign each
+// survivor a table index starting at baseIdx.
+static void
+selectEntries(Ctx &ctx,
+              llvm::MapVector<const Symbol *, TableJumpEntry> &candidates,
+              uint32_t maxSize, uint32_t baseIdx) {
+  SmallVector<std::pair<const Symbol *, TableJumpEntry>, 0> entries(
+      candidates.begin(), candidates.end());
+  // MapVector iteration is in insertion order, so stable_sort gives a
+  // deterministic ordering keyed on saved bytes descending.
+  llvm::stable_sort(entries, [](const auto &a, const auto &b) {
+    return a.second.saved > b.second.saved;
+  });
+  if (entries.size() > maxSize)
+    entries.resize(maxSize);
+  while (!entries.empty() &&
+         entries.back().second.saved < (int)ctx.arg.wordsize)
+    entries.pop_back();
+
+  candidates.clear();
+  for (auto [i, entry] : llvm::enumerate(entries))
+    candidates[entry.first] = {entry.second.saved, (int)(baseIdx + i)};
+}
+
+void TableJumpSection::finalizeContents() {
+  selectEntries(ctx, cmjtCandidates, maxCMJTEntrySize, /*baseIdx=*/0);
+  selectEntries(ctx, cmjaltCandidates, maxCMJALTEntrySize, startCMJALTEntryIdx);
+
+  int cmjtBenefit = 0, cmjaltBenefit = 0;
+  for (auto &[_, e] : cmjtCandidates)
+    cmjtBenefit += e.saved;
+  for (auto &[_, e] : cmjaltCandidates)
+    cmjaltBenefit += e.saved;
+
+  // cm.jalt forces padding the cm.jt region to startCMJALTEntryIdx entries.
+  // Drop cm.jalt if its benefit doesn't cover the padding plus its own entries.
+  size_t pad = startCMJALTEntryIdx - cmjtCandidates.size();
+  if (cmjaltBenefit < (int)((pad + cmjaltCandidates.size()) * ctx.arg.wordsize))
+    cmjaltCandidates.clear();
+
+  // Give up entirely if cm.jt doesn't reduce code size.
+  if (cmjtBenefit <= (int)(cmjtCandidates.size() * ctx.arg.wordsize)) {
+    Log(ctx) << "table jump relaxation didn't reduce code size";
+    cmjtCandidates.clear();
+    cmjaltCandidates.clear();
+  }
+}
+
+size_t TableJumpSection::getSize() const {
+  if (!cmjaltCandidates.empty())
+    return (startCMJALTEntryIdx + cmjaltCandidates.size()) * ctx.arg.wordsize;
+  return cmjtCandidates.size() * ctx.arg.wordsize;
+}
+
+void TableJumpSection::writeTo(uint8_t *buf) {
+  for (auto *cands : {&cmjtCandidates, &cmjaltCandidates})
+    for (auto &[sym, entry] : *cands) {
+      uint8_t *p = buf + entry.index * ctx.arg.wordsize;
+      if (ctx.arg.is64)
+        write64le(p, sym->getVA(ctx));
+      else
+        write32le(p, sym->getVA(ctx));
+    }
+}
