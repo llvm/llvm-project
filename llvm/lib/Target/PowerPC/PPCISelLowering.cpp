@@ -1475,7 +1475,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   setTargetDAGCombine({ISD::TRUNCATE, ISD::VECTOR_SHUFFLE});
 
   if (Subtarget.useCRBits()) {
-    setTargetDAGCombine({ISD::TRUNCATE, ISD::SETCC, ISD::SELECT_CC});
+    setTargetDAGCombine({ISD::SETCC, ISD::SELECT_CC});
   }
 
   if (Subtarget.hasP8Vector())
