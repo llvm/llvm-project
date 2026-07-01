@@ -7379,8 +7379,6 @@ static Function *findVectorVariant(CallInst *CI, ArrayRef<VPValue *> Args,
                                    ElementCount VF, bool MaskRequired,
                                    PredicatedScalarEvolution &PSE,
                                    const Loop *L) {
-  if (CI->isNoBuiltin())
-    return nullptr;
   auto Mappings = VFDatabase::getMappings(*CI);
   const auto *It = find_if(Mappings, [&](const VFInfo &Info) {
     return Info.Shape.VF == VF && (!MaskRequired || Info.isMasked()) &&
