@@ -2690,16 +2690,16 @@ bool JumpThreadingPass::duplicateCondBranchOnPHIIntoPred(
                     << "' to eliminate branch on phi.  Cost: "
                     << DuplicationCost << " block is:" << *BB << "\n");
 
-  // Unless PredBB ends with an unconditional branch, split the edge so that we
-  // can just clone the bits from BB into the end of the new PredBB.
+  // When BB contains PHIs, we need a dedicated PredBB to clone these PHIs into,
+  // so split the PredBB -> BB edge to create one. Otherwise fall back to
+  // cloning into PredBB directly, splitting only when it lacks an unconditional
+  // branch.
+  BasicBlock *OldPredBB = PredBB;
   UncondBrInst *OldPredBranch = dyn_cast<UncondBrInst>(PredBB->getTerminator());
-
-  if (!OldPredBranch) {
-    BasicBlock *OldPredBB = PredBB;
+  if (isa<PHINode>(BB->front()) || !OldPredBranch) {
     PredBB = SplitEdge(OldPredBB, BB);
     Updates.push_back({DominatorTree::Insert, OldPredBB, PredBB});
     Updates.push_back({DominatorTree::Insert, PredBB, BB});
-    Updates.push_back({DominatorTree::Delete, OldPredBB, BB});
     OldPredBranch = cast<UncondBrInst>(PredBB->getTerminator());
   }
 
@@ -2711,8 +2711,12 @@ bool JumpThreadingPass::duplicateCondBranchOnPHIIntoPred(
   auto RItBeforeInsertPt = std::next(OldPredBranch->getReverseIterator());
 
   BasicBlock::iterator BI = BB->begin();
-  for (; PHINode *PN = dyn_cast<PHINode>(BI); ++BI)
-    ValueMapping[PN] = PN->getIncomingValueForBlock(PredBB);
+  for (; PHINode *PN = dyn_cast<PHINode>(BI); ++BI) {
+    PHINode *NewPN = PHINode::Create(PN->getType(), 1, PN->getName() + ".dup");
+    NewPN->insertBefore(OldPredBranch->getIterator());
+    NewPN->addIncoming(PN->getIncomingValueForBlock(PredBB), OldPredBB);
+    ValueMapping[PN] = NewPN;
+  }
 
   // Clone noalias scope declarations in the duplicated instructions. Otherwise
   // the duplicate would share the original block's scopes, and alias analysis
@@ -2792,9 +2796,14 @@ bool JumpThreadingPass::duplicateCondBranchOnPHIIntoPred(
 
   // Remove the unconditional branch at the end of the PredBB block.
   OldPredBranch->eraseFromParent();
-  if (auto *BPI = getBPI())
-    BPI->copyEdgeProbabilities(BB, PredBB);
   DTU->applyUpdatesPermissive(Updates);
+
+  BasicBlock *ThreadBB = PredBB;
+  if (PredBB != OldPredBB && MergeBlockIntoPredecessor(PredBB, DTU.get()))
+    ThreadBB = OldPredBB;
+
+  if (auto *BPI = getBPI())
+    BPI->copyEdgeProbabilities(BB, ThreadBB);
 
   ++NumDupes;
   return true;
