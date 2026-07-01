@@ -18,8 +18,8 @@
 #include "mlir/Dialect/XeGPU/Transforms/Transforms.h"
 #include "mlir/Dialect/XeGPU/Transforms/XeGPULayoutImpl.h"
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
-#include "mlir/Dialect/XeGPU/uArch/IntelGpuXe2.h"
 #include "mlir/Dialect/XeGPU/uArch/uArchBase.h"
+#include "mlir/Dialect/XeGPU/uArch/uArchCommon.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/Types.h"
@@ -106,8 +106,9 @@ static bool canBeOptimizedForTranspose(xegpu::TensorDescType tdescType) {
 
 /// Check if a tensor desc type can be optimized for transpose, if so return the
 /// new optimized tensor desc type with a valid transpose layout.
-static xegpu::TensorDescType tryOptimize(xegpu::TensorDescType tdescType,
-                                         const uArch *targetuArch) {
+static xegpu::TensorDescType
+tryOptimize(xegpu::TensorDescType tdescType,
+            const xegpu::uArch::uArch *targetuArch) {
   if (!canBeOptimizedForTranspose(tdescType))
     return tdescType;
   auto laneData = getMaybeLaneData(tdescType)
@@ -124,8 +125,10 @@ static xegpu::TensorDescType tryOptimize(xegpu::TensorDescType tdescType,
   Type newElemTy = IntegerType::get(tdescType.getContext(), newBitWidth);
   // Supported shape is the max transpose shape that can be supported by
   // hardware that is less than or equal to required shape.
-  auto *blockLoadTarget = dyn_cast<Subgroup2DBlockLoadInstruction>(
-      targetuArch->getInstruction(InstructionKind::Subgroup2DBlockLoad));
+  auto *blockLoadTarget =
+      dyn_cast<xegpu::uArch::Subgroup2DBlockLoadInstruction>(
+          targetuArch->getInstruction(
+              xegpu::uArch::InstructionKind::Subgroup2DBlockLoad));
   auto maybeHWParams = blockLoadTarget->getBlockWidthHeightCount(
       newElemTy, /** has transform */ false, /** has transpose */ true);
   // If no HW params found, return the original type.
@@ -256,9 +259,12 @@ public:
     // Get the target uArch info.
     auto chipStr = xegpu::getChipStr(createNdOp);
     // Check if the chip is supported.
-    assert(chipStr && (chipStr.value() == "pvc" || chipStr.value() == "bmg") &&
-           "Expecting target chip to be pvc, bmg for transpose optimization.");
-    const uArch *targetuArch = xegpu::uArch::getUArch(chipStr.value());
+    assert(chipStr &&
+           (chipStr.value() == "pvc" || chipStr.value() == "bmg" ||
+            chipStr.value() == "cri") &&
+           "Expecting target chip to be pvc, bmg or cri for transpose "
+           "optimization.");
+    const auto *targetuArch = xegpu::uArch::getUArch(chipStr.value());
 
     auto convertType = tryOptimize(tdescTy, targetuArch);
     if (convertType == tdescTy)
@@ -566,12 +572,13 @@ struct XeGPUPeepHoleOptimizerPass final
     RewritePatternSet patterns(&context);
     ConversionTarget target(context);
 
-    // This pass is only meant for PVC and BMG targets. If unsupported target
-    // is found, exit early.
+    // This pass is only meant for PVC, BMG or CRI targets. If unsupported
+    // target is found, exit early.
     bool isTargetSupported = false;
     getOperation()->walk([&](gpu::GPUFuncOp funcOp) {
       auto chipStr = xegpu::getChipStr(funcOp);
-      if (chipStr && (chipStr.value() == "pvc" || chipStr.value() == "bmg"))
+      if (chipStr && (chipStr.value() == "pvc" || chipStr.value() == "bmg" ||
+                      chipStr.value() == "cri"))
         isTargetSupported = true;
     });
 

@@ -27,11 +27,10 @@ constexpr bool test() {
   {
     // int conversion
     std::constant_wrapper<6> cw6;
-    const int& result = cw6;
+    int result = cw6;
     assert(result == 6);
-    assert(&result == &cw6.value);
 
-    static_assert(noexcept(static_cast<const int&>(cw6)));
+    static_assert(noexcept(static_cast<int>(cw6)));
   }
 
   {
@@ -43,19 +42,6 @@ constexpr bool test() {
     assert(&result == &cws.value);
 
     static_assert(noexcept(static_cast<const S&>(cws)));
-  }
-
-  {
-    // array conversion
-    constexpr int arr[] = {1, 2, 3};
-    std::constant_wrapper<arr> cwArr;
-    const int (&result)[3] = cwArr;
-    assert(result[0] == 1);
-    assert(result[1] == 2);
-    assert(result[2] == 3);
-    assert(&result == &cwArr.value);
-
-    static_assert(noexcept(static_cast<const int (&)[3]>(cwArr)));
   }
 
   {

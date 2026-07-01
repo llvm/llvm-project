@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mod-file.h"
+#include "resolve-names-utils.h"
 #include "resolve-names.h"
 #include "flang/Common/restorer.h"
 #include "flang/Evaluate/tools.h"
@@ -17,6 +18,8 @@
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Frontend/OpenMP/OMP.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -362,37 +365,68 @@ void ModFileWriter::PrepareRenamings(const Scope &scope) {
   }
 }
 
-static void PutOpenMPRequirements(llvm::raw_ostream &os, const Symbol &symbol) {
-  using RequiresClauses = WithOmpDeclarative::RequiresClauses;
-  using OmpMemoryOrderType = common::OmpMemoryOrderType;
-
-  const auto [reqs, order]{common::visit(
-      [&](auto &&details)
-          -> std::pair<const RequiresClauses *, const OmpMemoryOrderType *> {
-        if constexpr (std::is_convertible_v<decltype(details),
-                          const WithOmpDeclarative &>) {
-          return {details.ompRequires(), details.ompAtomicDefaultMemOrder()};
+static const WithOmpDeclarative *GetOmpDeclarative(const Symbol &symbol) {
+  return common::visit(
+      [&](auto &&details) -> const WithOmpDeclarative * {
+        using TypeD = llvm::remove_cvref_t<decltype(details)>;
+        if constexpr (std::is_base_of_v<WithOmpDeclarative, TypeD>) {
+          return &static_cast<const WithOmpDeclarative &>(details);
         } else {
-          return {nullptr, nullptr};
+          return nullptr;
         }
       },
-      symbol.details())};
+      symbol.details());
+}
 
-  if (order) {
-    llvm::omp::Clause admo{llvm::omp::Clause::OMPC_atomic_default_mem_order};
-    os << "!$omp requires "
-       << parser::ToLowerCaseLetters(llvm::omp::getOpenMPClauseName(admo))
-       << '(' << parser::ToLowerCaseLetters(EnumToString(*order)) << ")\n";
+static void PutOpenMPRequirements(
+    llvm::raw_ostream &os, const Symbol &symbol, SemanticsContext &semaCtx) {
+  using OmpClauseSet = WithOmpDeclarative::OmpClauseSet;
+  unsigned version{semaCtx.langOptions().OpenMPVersion};
+
+  if (const auto *decls{GetOmpDeclarative(symbol)}) {
+    if (const OmpClauseSet &reqs{decls->ompRequires()}; reqs.count()) {
+      os << "!$omp "
+         << parser::ToLowerCaseLetters(llvm::omp::getOpenMPDirectiveName(
+                llvm::omp::Directive::OMPD_requires, version));
+      decls->printClauseSet(os, reqs, llvm::omp::Directive::OMPD_requires);
+      os << "\n";
+    }
   }
-  if (reqs) {
-    os << "!$omp requires";
-    reqs->IterateOverMembers([&](llvm::omp::Clause f) {
-      if (f != llvm::omp::Clause::OMPC_atomic_default_mem_order) {
-        os << ' '
-           << parser::ToLowerCaseLetters(llvm::omp::getOpenMPClauseName(f));
+}
+
+static void PutOpenMPDeclarativeDirectives(llvm::raw_ostream &os,
+    const SymbolVector &symbols, SemanticsContext &semaCtx) {
+  using OmpClauseSet = WithOmpDeclarative::OmpClauseSet;
+  unsigned version{semaCtx.langOptions().OpenMPVersion};
+
+  for (const Symbol &symbol : symbols) {
+    if (const auto *decls{GetOmpDeclarative(symbol)}) {
+      if (const OmpClauseSet &dtgt{decls->ompDeclTarget()}; dtgt.count()) {
+        os << "!$omp "
+           << parser::ToLowerCaseLetters(llvm::omp::getOpenMPDirectiveName(
+                  llvm::omp::Directive::OMPD_declare_target, version))
+           << " ";
+        decls->printClauseSet(
+            os, dtgt, llvm::omp::Directive::OMPD_declare_target, symbol.name());
+        os << "\n";
       }
-    });
-    os << "\n";
+      // Re-emit `!$omp groupprivate` (and its device_type) so a TU that `use`s
+      // this module recovers the directive from the .mod file. Common-block
+      // names must be wrapped in slashes when reparsed.
+      if (const OmpClauseSet &gp{decls->ompGroupprivate()}; gp.count()) {
+        os << "!$omp "
+           << parser::ToLowerCaseLetters(llvm::omp::getOpenMPDirectiveName(
+                  llvm::omp::Directive::OMPD_groupprivate, version))
+           << "(";
+        if (symbol.detailsIf<CommonBlockDetails>())
+          os << '/' << symbol.name() << '/';
+        else
+          os << symbol.name();
+        os << ") ";
+        decls->printClauseSet(os, gp, llvm::omp::Directive::OMPD_groupprivate);
+        os << "\n";
+      }
+    }
   }
 }
 
@@ -433,7 +467,9 @@ void ModFileWriter::PutSymbols(
   for (const Symbol &symbol : uses) {
     PutUse(symbol);
   }
-  PutOpenMPRequirements(decls_, DEREF(scope.symbol()));
+  PutOpenMPRequirements(decls_, DEREF(scope.symbol()), context_);
+  PutOpenMPDeclarativeDirectives(decls_, sorted, context_);
+
   for (const auto &set : scope.equivalenceSets()) {
     if (!set.empty() &&
         !set.front().symbol.test(Symbol::Flag::CompilerCreated)) {
@@ -1119,6 +1155,25 @@ void ModFileWriter::PutUserReduction(
   for (const auto *decl : details.GetDeclList()) {
     Unparse(os, *decl, context_.langOptions());
   }
+  // Emit a Fortran accessibility statement for the reduction identifier
+  // so that PRIVATE survives module file round-trips.  Only needed when
+  // there is no corresponding generic interface that already carries
+  // PRIVATE (PutGeneric handles that case).
+  if (!isSubmodule_ && symbol.attrs().test(Attr::PRIVATE)) {
+    std::string fortranId{GetReductionFortranId(symbol.name())};
+    if (!fortranId.empty()) {
+      bool alreadyEmitted{false};
+      parser::CharBlock cb{fortranId};
+      auto it{symbol.owner().find(cb)};
+      if (it != symbol.owner().end() &&
+          it->second->detailsIf<GenericDetails>()) {
+        alreadyEmitted = it->second->attrs().test(Attr::PRIVATE);
+      }
+      if (!alreadyEmitted) {
+        os << "private::" << fortranId << '\n';
+      }
+    }
+  }
 }
 
 static void PutMapper(
@@ -1451,8 +1506,19 @@ Scope *ModFileReader::Read(SourceName name, std::optional<bool> isIntrinsic,
     }
     ancestorName = ancestor->GetName().value().ToString();
   }
-  auto requiredHash{context_.moduleDependences().GetRequiredHash(
-      name.ToString(), isIntrinsic.value_or(false))};
+
+  // When offloading modules files are created for the host, but when compiling
+  // device-side code the builtin modules are exchanged with device-specific
+  // versions. They contain matching declarations, but have different checksums.
+  bool ignoreChecksumMismatch{
+      context_.langOptions().OffloadDevice && isIntrinsic.value_or(false)};
+
+  std::optional<size_t> requiredHash;
+  if (!ignoreChecksumMismatch) {
+    requiredHash = context_.moduleDependences().GetRequiredHash(
+        name.ToString(), isIntrinsic.value_or(false));
+  }
+
   if (!isIntrinsic.value_or(false) && !ancestor) {
     // Already present in the symbol table as a usable non-intrinsic module?
     if (Scope * hermeticScope{context_.currentHermeticModuleFileScope()}) {
@@ -1536,7 +1602,7 @@ Scope *ModFileReader::Read(SourceName name, std::optional<bool> isIntrinsic,
     for (const auto &dir : context_.intrinsicModuleDirectories()) {
       options.searchDirectories.push_back(dir);
     }
-    if (!requiredHash) {
+    if (!requiredHash && !ignoreChecksumMismatch) {
       requiredHash =
           context_.moduleDependences().GetRequiredHash(name.ToString(), true);
     }

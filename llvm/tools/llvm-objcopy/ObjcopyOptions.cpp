@@ -945,6 +945,11 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> ArgsArr,
           "invalid or unsupported --compress-sections format: %s",
           A->getValue());
     }
+    if (Type != DebugCompressionType::None) {
+      if (const char *Reason =
+              compression::getReasonIfUnsupported(compression::formatFor(Type)))
+        return createStringError(errc::invalid_argument, Reason);
+    }
 
     auto &P = Config.compressSections.emplace_back();
     P.second = Type;
@@ -1148,6 +1153,7 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> ArgsArr,
   Config.ExtractMainPartition =
       InputArgs.hasArg(OBJCOPY_extract_main_partition);
   ELFConfig.LocalizeHidden = InputArgs.hasArg(OBJCOPY_localize_hidden);
+  Config.Verbose = InputArgs.hasArg(OBJCOPY_verbose);
   Config.Weaken = InputArgs.hasArg(OBJCOPY_weaken);
   if (auto *Arg =
           InputArgs.getLastArg(OBJCOPY_discard_all, OBJCOPY_discard_locals)) {
@@ -1481,7 +1487,8 @@ objcopy::parseInstallNameToolOptions(ArrayRef<const char *> ArgsArr) {
         errc::invalid_argument,
         "llvm-install-name-tool expects a single input file");
   Config.InputFilename = Positional[0];
-  Config.OutputFilename = Positional[0];
+  Config.OutputFilename =
+      InputArgs.getLastArgValue(INSTALL_NAME_TOOL_output, Positional[0]);
 
   Expected<OwningBinary<Binary>> BinaryOrErr =
       createBinary(Config.InputFilename);
@@ -1682,6 +1689,7 @@ objcopy::parseStripOptions(ArrayRef<const char *> RawArgsArr,
                         STRIP_disable_deterministic_archives, /*default=*/true);
 
   Config.PreserveDates = InputArgs.hasArg(STRIP_preserve_dates);
+  Config.Verbose = InputArgs.hasArg(STRIP_verbose);
   Config.InputFormat = FileFormat::Unspecified;
   Config.OutputFormat = FileFormat::Unspecified;
 

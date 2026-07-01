@@ -13,6 +13,7 @@
 
 #include "RISCVBaseInfo.h"
 #include "RISCVInstrInfo.h"
+#include "RISCVMCAsmInfo.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
@@ -21,8 +22,6 @@
 #include "llvm/TargetParser/Triple.h"
 
 namespace llvm {
-
-extern const SubtargetFeatureKV RISCVFeatureKV[RISCV::NumSubtargetFeatures];
 
 namespace RISCVSysReg {
 #define GET_SysRegsList_IMPL
@@ -54,11 +53,13 @@ namespace RISCV {
 } // namespace RISCV
 
 namespace RISCVABI {
-ABI computeTargetABI(const Triple &TT, const FeatureBitset &FeatureBits,
-                     StringRef ABIName) {
+ABI computeTargetABI(const MCSubtargetInfo &STI, StringRef ABIName) {
+  const Triple &TT = STI.getTargetTriple();
+  const FeatureBitset &FeatureBits = STI.getFeatureBits();
   auto TargetABI = getTargetABI(ABIName);
   bool IsRV64 = TT.isArch64Bit();
   bool IsRVE = FeatureBits[RISCV::FeatureStdExtE];
+  bool IsXCheriot = FeatureBits[RISCV::FeatureVendorXCheriot];
 
   if (!ABIName.empty() && TargetABI == ABI_Unknown) {
     errs()
@@ -72,11 +73,16 @@ ABI computeTargetABI(const Triple &TT, const FeatureBitset &FeatureBits,
     errs() << "64-bit ABIs are not supported for 32-bit targets (ignoring "
               "target-abi)\n";
     TargetABI = ABI_Unknown;
-  } else if (!IsRV64 && IsRVE && TargetABI != ABI_ILP32E &&
+  } else if (!IsRV64 && IsRVE && !IsXCheriot && TargetABI != ABI_ILP32E &&
              TargetABI != ABI_Unknown) {
     // TODO: move this checking to RISCVTargetLowering and RISCVAsmParser
     errs()
         << "Only the ilp32e ABI is supported for RV32E (ignoring target-abi)\n";
+    TargetABI = ABI_Unknown;
+  } else if (!IsRV64 && IsRVE && IsXCheriot && TargetABI != ABI_CHERIOT &&
+             TargetABI != ABI_Unknown) {
+    errs() << "Only the cheriot ABI is supported for XCheriot (ignoring "
+              "target-abi)\n";
     TargetABI = ABI_Unknown;
   } else if (IsRV64 && IsRVE && TargetABI != ABI_LP64E &&
              TargetABI != ABI_Unknown) {
@@ -95,7 +101,7 @@ ABI computeTargetABI(const Triple &TT, const FeatureBitset &FeatureBits,
     return TargetABI;
 
   // If no explicit ABI is given, try to compute the default ABI.
-  auto ISAInfo = RISCVFeatures::parseFeatureBits(IsRV64, FeatureBits);
+  auto ISAInfo = RISCVFeatures::parseFeatureBits(STI);
   if (!ISAInfo)
     reportFatalUsageError(ISAInfo.takeError());
   return getTargetABI((*ISAInfo)->computeDefaultABI());
@@ -118,6 +124,7 @@ ABI getTargetABI(StringRef ABIName) {
                        .Case("l64pc128", ABI_L64PC128)
                        .Case("l64pc128f", ABI_L64PC128F)
                        .Case("l64pc128d", ABI_L64PC128D)
+                       .Case("cheriot", ABI_CHERIOT)
                        .Default(ABI_Unknown);
   return TargetABI;
 }
@@ -145,14 +152,15 @@ void validate(const Triple &TT, const FeatureBitset &FeatureBits) {
 }
 
 llvm::Expected<std::unique_ptr<RISCVISAInfo>>
-parseFeatureBits(bool IsRV64, const FeatureBitset &FeatureBits) {
-  unsigned XLen = IsRV64 ? 64 : 32;
+parseFeatureBits(const MCSubtargetInfo &STI) {
+  const FeatureBitset &FeatureBits = STI.getFeatureBits();
+  unsigned XLen = FeatureBits[RISCV::Feature64Bit] ? 64 : 32;
   std::vector<std::string> FeatureVector;
   // Convert FeatureBitset to FeatureVector.
-  for (auto Feature : RISCVFeatureKV) {
+  for (const auto &Feature : STI.getAllProcessorFeatures()) {
     if (FeatureBits[Feature.Value] &&
-        llvm::RISCVISAInfo::isSupportedExtensionFeature(Feature.Key))
-      FeatureVector.push_back(std::string("+") + Feature.Key);
+        llvm::RISCVISAInfo::isSupportedExtensionFeature(Feature.key()))
+      FeatureVector.push_back(std::string("+") + Feature.key());
   }
   return llvm::RISCVISAInfo::parseFeatures(XLen, FeatureVector);
 }

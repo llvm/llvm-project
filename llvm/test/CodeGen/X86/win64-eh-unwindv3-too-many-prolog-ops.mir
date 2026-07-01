@@ -1,0 +1,59 @@
+# RUN: not llc -mtriple=x86_64-pc-windows-msvc -o /dev/null %s \
+# RUN:    -run-pass=x86-wineh-unwindv3 2>&1 | FileCheck %s
+
+# Exceeding the V3 prolog op limit (31) is a recoverable diagnostic - llc
+# exits non-zero but does not crash or produce a stack trace.
+
+# CHECK: error: {{.*}}: number of unwind v3 prolog operations required ({{[0-9]+}}) exceeds limit (31) in function 'too_many_prolog_ops'
+# CHECK: note: {{.*}}: sub-fragment splitting for prolog overflow is not yet implemented
+
+--- |
+  define dso_local void @too_many_prolog_ops() local_unnamed_addr uwtable {
+  entry:
+    ret void
+  }
+
+  !llvm.module.flags = !{!0}
+  !0 = !{i32 1, !"winx64-eh-unwind", i32 3}
+...
+---
+name:            too_many_prolog_ops
+body:             |
+  bb.0.entry:
+    frame-setup SEH_PushReg 51
+    frame-setup SEH_PushReg 52
+    frame-setup SEH_PushReg 53
+    frame-setup SEH_PushReg 54
+    frame-setup SEH_PushReg 55
+    frame-setup SEH_PushReg 56
+    frame-setup SEH_PushReg 57
+    frame-setup SEH_PushReg 58
+    frame-setup SEH_PushReg 109
+    frame-setup SEH_PushReg 110
+    frame-setup SEH_PushReg 111
+    frame-setup SEH_PushReg 112
+    frame-setup SEH_StackAlloc 8
+    frame-setup SEH_StackAlloc 8
+    frame-setup SEH_StackAlloc 8
+    frame-setup SEH_StackAlloc 8
+    frame-setup SEH_StackAlloc 8
+    frame-setup SEH_StackAlloc 8
+    frame-setup SEH_StackAlloc 8
+    frame-setup SEH_StackAlloc 8
+    frame-setup SEH_StackAlloc 8
+    frame-setup SEH_StackAlloc 8
+    frame-setup SEH_StackAlloc 8
+    frame-setup SEH_StackAlloc 8
+    frame-setup SEH_StackAlloc 8
+    frame-setup SEH_StackAlloc 8
+    frame-setup SEH_StackAlloc 8
+    frame-setup SEH_StackAlloc 8
+    frame-setup SEH_StackAlloc 8
+    frame-setup SEH_StackAlloc 8
+    frame-setup SEH_StackAlloc 8
+    frame-setup SEH_StackAlloc 8
+    frame-setup SEH_EndPrologue
+    SEH_BeginEpilogue
+    SEH_EndEpilogue
+    RET64
+...

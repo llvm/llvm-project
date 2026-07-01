@@ -387,8 +387,6 @@ def TuneOlympus : SubtargetFeature<"olympus", "ARMProcFamily", "Olympus",
                                    FeatureUseFixedOverScalableIfEqualCost,
                                    FeatureMaxInterleaveFactor4]>;
 
-// Note that cyclone does not fuse AES instructions, but newer apple chips do
-// perform the fusion and cyclone is used by default when targeting apple OSes.
 def TuneAppleA7  : SubtargetFeature<"apple-a7", "ARMProcFamily", "AppleA7",
                                     "Apple A7 (the CPU formerly known as Cyclone)",
                                     [FeatureAlternateSExtLoadCVTF32Pattern,
@@ -604,7 +602,7 @@ def TuneNeoverseV3 : SubtargetFeature<"neoversev3", "ARMProcFamily", "NeoverseV3
                                       FeaturePredictableSelectIsExpensive,
                                       FeatureMaxInterleaveFactor4]>;
 
-def TuneNeoverseV3AE : SubtargetFeature<"neoversev3AE", "ARMProcFamily", "NeoverseV3",
+def TuneNeoverseV3AE : SubtargetFeature<"neoversev3AE", "ARMProcFamily", "NeoverseV3AE",
                                       "Neoverse V3AE ARM processors", [
                                       FeatureFuseAES,
                                       FeatureALULSLFast,
@@ -615,8 +613,7 @@ def TuneNeoverseV3AE : SubtargetFeature<"neoversev3AE", "ARMProcFamily", "Neover
                                       FeatureEnableSelectOptimize,
                                       FeatureUseFixedOverScalableIfEqualCost,
                                       FeatureAvoidLDAPUR,
-                                      FeaturePredictableSelectIsExpensive,
-                                      FeatureMaxInterleaveFactor4]>;
+                                      FeaturePredictableSelectIsExpensive]>;
 
 def TuneSaphira  : SubtargetFeature<"saphira", "ARMProcFamily", "Saphira",
                                    "Qualcomm Saphira processors", [
@@ -681,6 +678,15 @@ def TuneTSV110 : SubtargetFeature<"tsv110", "ARMProcFamily", "TSV110",
                                   FeatureFuseAES,
                                   FeatureStorePairSuppress,
                                   FeaturePostRAScheduler]>;
+
+def TuneHIP12 : SubtargetFeature<"hip12", "ARMProcFamily", "HIP12",
+                                 "HiSilicon HIP12 processors", [
+                                 FeatureCmpBccFusion,
+                                 FeatureFuseAES,
+                                 FeatureAddrLSLSlow14,
+                                 FeatureALULSLFast,
+                                 FeatureStorePairSuppress,
+                                 FeaturePostRAScheduler]>;
 
 def TuneAmpere1 : SubtargetFeature<"ampere1", "ARMProcFamily", "Ampere1",
                                    "Ampere Computing Ampere-1 processors", [
@@ -1203,6 +1209,22 @@ def ProcessorFeatures {
                                    FeatureFullFP16, FeatureFP16FML, FeatureDotProd,
                                    FeatureJS, FeatureComplxNum, FeatureCRC, FeatureLSE,
                                    FeatureRAS, FeatureRDM];
+  list<SubtargetFeature> HIP12 = [HasV8_7aOps, FeatureSVE, FeatureSVE2,
+                                  FeatureSVEBitPerm, FeatureSVEAES,
+                                  FeatureSVESM4, FeatureSVESHA3,
+                                  FeatureFullFP16, FeatureFP16FML, FeaturePerfMon,
+                                  FeatureFlagM, FeaturePredRes, FeatureSB, FeatureSSBS,
+                                  FeatureCCIDX, FeatureRandGen,
+                                  FeatureETE, FeatureTRBE, FeatureSPE,
+                                  FeatureSPE_EEF, FeatureNMI,
+                                  FeatureHBC, FeatureRCPC3, FeatureBF16,
+                                  FeatureComplxNum, FeatureCRC,
+                                  FeatureDotProd, FeatureFPARMv8,
+                                  FeatureMatMulInt8, FeatureJS,
+                                  FeatureLSE, FeatureNEON, FeaturePAuth,
+                                  FeatureRAS, FeatureRCPC, FeatureRDM,
+                                  FeatureFPAC, FeatureLS64, FeatureRME,
+                                  FeatureBRBE];
   list<SubtargetFeature> Ampere1 = [HasV8_6aOps, FeatureNEON, FeaturePerfMon,
                                     FeatureSSBS, FeatureRandGen, FeatureSB,
                                     FeatureSHA2, FeatureSHA3, FeatureAES,
@@ -1259,10 +1281,12 @@ class ProcessorAlias<string n, string alias> {
 }
 
 // FeatureFuseAdrpAdd is enabled under Generic to allow linker merging
-// optimizations.
+// optimizations. We use a fixed load latency of 4 as the a510 scheduling model
+// has a latency of 2 for most loads which is disproportionately low for many
+// cpus.
 def : ProcessorModel<"generic", CortexA510Model, ProcessorFeatures.Generic,
                      [FeatureFuseAES, FeatureFuseAdrpAdd, FeaturePostRAScheduler,
-                      FeatureEnableSelectOptimize]>;
+                      FeatureEnableSelectOptimize, FeatureFixedLoadLatency4]>;
 def : ProcessorModel<"cortex-a34", CortexA53Model, ProcessorFeatures.A53,
                      [TuneA35]>;
 def : ProcessorModel<"cortex-a35", CortexA53Model, ProcessorFeatures.A53,
@@ -1360,6 +1384,7 @@ def : ProcessorModel<"neoverse-v3", NeoverseV3Model,
                      ProcessorFeatures.NeoverseV3, [TuneNeoverseV3]>;
 def : ProcessorModel<"neoverse-v3ae", NeoverseV3AEModel,
                      ProcessorFeatures.NeoverseV3AE, [TuneNeoverseV3AE]>;
+def : ProcessorAlias<"armagicpu", "neoverse-v3ae">;
 def : ProcessorModel<"exynos-m3", ExynosM3Model, ProcessorFeatures.ExynosM3,
                      [TuneExynosM3]>;
 def : ProcessorModel<"exynos-m4", ExynosM4Model, ProcessorFeatures.ExynosM4,
@@ -1387,9 +1412,13 @@ def : ProcessorModel<"thunderx2t99", ThunderX2T99Model,
 // Marvell ThunderX3T110 Processors.
 def : ProcessorModel<"thunderx3t110", ThunderX3T110Model,
                      ProcessorFeatures.ThunderX3T110, [TuneThunderX3T110]>;
+
+// HiSilicon Processors.
 def : ProcessorModel<"tsv110", TSV110Model, ProcessorFeatures.TSV110,
                      [TuneTSV110]>;
-
+// TODO: Support hip12 model.
+def : ProcessorModel<"hip12", NeoverseV2Model, ProcessorFeatures.HIP12,
+                     [TuneHIP12]>;
 
 // Apple CPUs
 

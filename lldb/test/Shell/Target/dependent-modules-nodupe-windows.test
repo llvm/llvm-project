@@ -9,7 +9,7 @@
 # RUN: %clang_host -g0 -O0 %S/Inputs/main.c %t.shlib.lib -o %t.main.exe \
 # RUN:             %if windows-msvc %{-Wl,-debug:none%}
 # RUN: %lldb -b -o "#before" -o "target modules list" -o "b main" -o run \
-# RUN:       -o "#after" -o "target modules list" %t.main.exe | FileCheck %s
+# RUN:       -o "#after" -o "target modules list" %t.main.exe | FileCheck --ignore-case %s
 
 # CHECK-LABEL: #before
 # CHECK-NEXT: target modules list
@@ -18,8 +18,8 @@
 
 # CHECK-LABEL: #after
 # CHECK-NEXT: target modules list
-# CHECK-NEXT: .main.exe
-# CHECK-NEXT: ntdll.dll
-# CHECK-NEXT: kernel32.dll
-# CHECK:      .shlib.dll
+# CHECK-DAG: .main.exe
+# CHECK-DAG: ntdll.dll
+# CHECK-DAG: kernel32.dll
+# CHECK-DAG: .shlib.dll
 # CHECK-NOT:  .shlib.dll

@@ -8397,12 +8397,15 @@ NamedDecl *Sema::ActOnVariableDeclarator(
                   ? TPC_ClassTemplateMember
                   : TPC_Other))
         NewVD->setInvalidDecl();
+    }
+  }
 
-      // If we are providing an explicit specialization of a static variable
-      // template, make a note of that.
-      if (PrevVarTemplate &&
-          PrevVarTemplate->getInstantiatedFromMemberTemplate())
-        PrevVarTemplate->setMemberSpecialization();
+  if (IsMemberSpecialization) {
+    if (NewTemplate && NewVD->getPreviousDecl()) {
+      NewTemplate->setMemberSpecialization();
+    } else if (IsPartialSpecialization) {
+      cast<VarTemplatePartialSpecializationDecl>(NewVD)
+          ->setMemberSpecialization();
     }
   }
 
@@ -9265,12 +9268,9 @@ bool Sema::AddOverriddenMethods(CXXRecordDecl *DC, CXXMethodDecl *MD) {
         continue;
       if (Overridden.insert(BaseMD).second) {
         MD->addOverriddenMethod(BaseMD);
-        bool Invalid = false;
-        Invalid |= CheckOverridingFunctionReturnType(MD, BaseMD);
-        Invalid |= CheckOverridingFunctionAttributes(MD, BaseMD);
-        Invalid |= CheckOverridingFunctionExceptionSpec(MD, BaseMD);
-        if (Invalid)
-          MD->setInvalidDecl();
+        CheckOverridingFunctionReturnType(MD, BaseMD);
+        CheckOverridingFunctionAttributes(MD, BaseMD);
+        CheckOverridingFunctionExceptionSpec(MD, BaseMD);
         CheckIfOverriddenFunctionIsMarkedFinal(MD, BaseMD);
       }
 
@@ -11418,7 +11418,7 @@ static bool CheckMultiVersionValue(Sema &S, const FunctionDecl *FD) {
       auto BareFeat = StringRef{Feat}.substr(1);
       if (Feat[0] == '-') {
         S.Diag(FD->getLocation(), diag::err_bad_multiversion_option)
-            << Feature << ("no-" + BareFeat).str();
+            << Feature << ("no-" + BareFeat);
         return true;
       }
 
@@ -16474,7 +16474,7 @@ Decl *Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Decl *D,
 
   maybeAddDeclWithEffects(FD);
 
-  if (FD && !FD->isInvalidDecl() && FD->hasAttr<SYCLKernelEntryPointAttr>() &&
+  if (!FD->isInvalidDecl() && FD->hasAttr<SYCLKernelEntryPointAttr>() &&
       FnBodyScope) {
     // An implicit call expression is synthesized for functions declared with
     // the sycl_kernel_entry_point attribute. The call may resolve to a
@@ -18019,7 +18019,7 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
             S, TagSpec, TUK, KWLoc, SS, Name, NameLoc, Attrs, TemplateParams,
             AS, ModulePrivateLoc,
             /*FriendLoc*/ SourceLocation(), TemplateParameterLists.size() - 1,
-            TemplateParameterLists.data(), SkipBody);
+            TemplateParameterLists.data(), isMemberSpecialization, SkipBody);
         return Result.get();
       } else {
         // The "template<>" header is extraneous.
@@ -21297,21 +21297,6 @@ Sema::FunctionEmissionStatus Sema::getEmissionStatus(const FunctionDecl *FD,
 
     if (IsEmittedForExternalSymbol())
       return FunctionEmissionStatus::Emitted;
-
-    // If FD is a virtual destructor of an explicit instantiation
-    // of a template class, return Emitted.
-    if (auto *Destructor = dyn_cast<CXXDestructorDecl>(FD)) {
-      if (Destructor->isVirtual()) {
-        if (auto *Spec = dyn_cast<ClassTemplateSpecializationDecl>(
-                Destructor->getParent())) {
-          TemplateSpecializationKind TSK =
-              Spec->getTemplateSpecializationKind();
-          if (TSK == TSK_ExplicitInstantiationDeclaration ||
-              TSK == TSK_ExplicitInstantiationDefinition)
-            return FunctionEmissionStatus::Emitted;
-        }
-      }
-    }
   }
 
   // Otherwise, the function is known-emitted if it's in our set of

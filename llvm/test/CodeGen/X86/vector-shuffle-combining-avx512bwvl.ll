@@ -171,10 +171,9 @@ define <8 x i32> @concat_vrotli_v4i32(<4 x i32> %a0, <4 x i32> %a1) {
 define <8 x i32> @concat_vrotlv_v4i32(<4 x i32> %a0, <4 x i32> %a1, <8 x i32> %a2) {
 ; CHECK-LABEL: concat_vrotlv_v4i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vextracti128 $1, %ymm2, %xmm3
-; CHECK-NEXT:    vprolvd %xmm2, %xmm0, %xmm0
-; CHECK-NEXT:    vprolvd %xmm3, %xmm1, %xmm1
+; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
 ; CHECK-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; CHECK-NEXT:    vprolvd %ymm2, %ymm0, %ymm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %lo = shufflevector <8 x i32> %a2, <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %hi = shufflevector <8 x i32> %a2, <8 x i32> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
@@ -303,3 +302,48 @@ exit:
 declare <2 x i64> @llvm.x86.sse2.psad.bw(<16 x i8>, <16 x i8>)
 declare <16 x i8> @llvm.x86.sse2.packuswb.128(<8 x i16>, <8 x i16>)
 declare <8 x i16> @llvm.x86.sse41.packusdw(<4 x i32>, <4 x i32>)
+
+
+define <32 x i16> @insert_concat_select(i1 %cond, <16 x i16> %a, <16 x i16> %b, <4 x i16> %sub, <32 x i16> %alt) {
+; X86-LABEL: insert_concat_select:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %ebp
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    .cfi_offset %ebp, -8
+; X86-NEXT:    movl %esp, %ebp
+; X86-NEXT:    .cfi_def_cfa_register %ebp
+; X86-NEXT:    andl $-64, %esp
+; X86-NEXT:    subl $64, %esp
+; X86-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; X86-NEXT:    testb $1, 8(%ebp)
+; X86-NEXT:    jne .LBB16_1
+; X86-NEXT:  # %bb.2:
+; X86-NEXT:    vmovaps 72(%ebp), %zmm0
+; X86-NEXT:    jmp .LBB16_3
+; X86-NEXT:  .LBB16_1:
+; X86-NEXT:    vblendps {{.*#+}} xmm2 = xmm2[0,1],xmm1[2,3]
+; X86-NEXT:    vblendps {{.*#+}} ymm1 = ymm2[0,1,2,3],ymm1[4,5,6,7]
+; X86-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0
+; X86-NEXT:  .LBB16_3:
+; X86-NEXT:    movl %ebp, %esp
+; X86-NEXT:    popl %ebp
+; X86-NEXT:    .cfi_def_cfa %esp, 4
+; X86-NEXT:    retl
+;
+; X64-LABEL: insert_concat_select:
+; X64:       # %bb.0:
+; X64-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; X64-NEXT:    testb $1, %dil
+; X64-NEXT:    je .LBB16_2
+; X64-NEXT:  # %bb.1:
+; X64-NEXT:    vblendps {{.*#+}} xmm2 = xmm2[0,1],xmm1[2,3]
+; X64-NEXT:    vblendps {{.*#+}} ymm1 = ymm2[0,1,2,3],ymm1[4,5,6,7]
+; X64-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm3
+; X64-NEXT:  .LBB16_2:
+; X64-NEXT:    vmovaps %zmm3, %zmm0
+; X64-NEXT:    retq
+  %wide = shufflevector <16 x i16> %a, <16 x i16> %b, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+  %ins = call <32 x i16> @llvm.vector.insert.v32i16.v4i16(<32 x i16> %wide, <4 x i16> %sub, i64 16)
+  %sel = select i1 %cond, <32 x i16> %ins, <32 x i16> %alt
+  ret <32 x i16> %sel
+}

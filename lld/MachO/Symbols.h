@@ -118,7 +118,7 @@ public:
           uint64_t size, bool isWeakDef, bool isExternal, bool isPrivateExtern,
           bool includeInSymtab, bool isReferencedDynamically, bool noDeadStrip,
           bool canOverrideWeakDef = false, bool isWeakDefCanBeHidden = false,
-          bool interposable = false);
+          bool interposable = false, bool cold = false);
 
   bool isWeakDef() const override { return weakDef; }
   bool isExternalWeakDef() const {
@@ -128,6 +128,7 @@ public:
 
   bool isExternal() const { return external; }
   bool isAbsolute() const { return originalIsec == nullptr; }
+  bool isCold() const { return cold; }
 
   uint64_t getVA() const override;
 
@@ -177,6 +178,10 @@ public:
   bool interposable : 1;
 
   bool weakDefCanBeHidden : 1;
+
+  // Whether this symbol has the N_COLD_FUNC nlist flag set. Populated from the
+  // symbol table of input object files.
+  bool cold : 1;
 
 private:
   const bool weakDef : 1;

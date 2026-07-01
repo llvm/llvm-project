@@ -1329,8 +1329,8 @@ class X86_64ABIInfo : public ABIInfo {
   /// classify it as INTEGER (for compatibility with older clang compilers).
   bool classifyIntegerMMXAsSSE() const {
     // Clang <= 3.8 did not do this.
-    if (getContext().getLangOpts().getClangABICompat() <=
-        LangOptions::ClangABI::Ver3_8)
+    if (getContext().getLangOpts().isCompatibleWith(
+            LangOptions::ClangABI::Ver3_8))
       return false;
 
     const llvm::Triple &Triple = getTarget().getTriple();
@@ -1342,8 +1342,8 @@ class X86_64ABIInfo : public ABIInfo {
   // GCC classifies vectors of __int128 as memory.
   bool passInt128VectorsInMem() const {
     // Clang <= 9.0 did not do this.
-    if (getContext().getLangOpts().getClangABICompat() <=
-        LangOptions::ClangABI::Ver9)
+    if (getContext().getLangOpts().isCompatibleWith(
+            LangOptions::ClangABI::Ver9))
       return false;
 
     const llvm::Triple &T = getTarget().getTriple();
@@ -1352,8 +1352,8 @@ class X86_64ABIInfo : public ABIInfo {
 
   bool returnCXXRecordGreaterThan128InMem() const {
     // Clang <= 20.0 did not do this, and PlayStation does not do this.
-    if (getContext().getLangOpts().getClangABICompat() <=
-            LangOptions::ClangABI::Ver20 ||
+    if (getContext().getLangOpts().isCompatibleWith(
+            LangOptions::ClangABI::Ver20) ||
         getTarget().getTriple().isPS())
       return false;
 
@@ -1421,12 +1421,12 @@ public:
   ABIArgInfo classifyArgForArm64ECVarArg(QualType Ty) const override {
     unsigned FreeSSERegs = 0;
     return classify(Ty, FreeSSERegs, /*IsReturnType=*/false,
-                    /*IsVectorCall=*/false, /*IsRegCall=*/false);
+                    llvm::CallingConv::C);
   }
 
 private:
   ABIArgInfo classify(QualType Ty, unsigned &FreeSSERegs, bool IsReturnType,
-                      bool IsVectorCall, bool IsRegCall) const;
+                      unsigned CC) const;
   ABIArgInfo reclassifyHvaArgForVectorCall(QualType Ty, unsigned &FreeSSERegs,
                                            const ABIArgInfo &current) const;
 
@@ -2085,6 +2085,7 @@ void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase, Class &Lo,
         Lo = merge(Lo, FieldLo);
         Hi = merge(Hi, FieldHi);
         if (returnCXXRecordGreaterThan128InMem() &&
+            !isEmptyRecord(getContext(), I.getType(), true) &&
             (Size > 128 && (Size != getContext().getTypeSize(I.getType()) ||
                             Size > getNativeVectorSizeForAVXABI(AVXLevel)))) {
           // The only case a 256(or 512)-bit wide vector could be used to return
@@ -2100,8 +2101,8 @@ void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase, Class &Lo,
 
     // Classify the fields one at a time, merging the results.
     unsigned idx = 0;
-    bool UseClang11Compat = getContext().getLangOpts().getClangABICompat() <=
-                                LangOptions::ClangABI::Ver11 ||
+    bool UseClang11Compat = getContext().getLangOpts().isCompatibleWith(
+                                LangOptions::ClangABI::Ver11) ||
                             getContext().getTargetInfo().getTriple().isPS();
     bool IsUnion = RT->isUnionType() && !UseClang11Compat;
 
@@ -3338,8 +3339,9 @@ ABIArgInfo WinX86_64ABIInfo::reclassifyHvaArgForVectorCall(
 }
 
 ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
-                                      bool IsReturnType, bool IsVectorCall,
-                                      bool IsRegCall) const {
+                                      bool IsReturnType, unsigned CC) const {
+  bool IsVectorCall = CC == llvm::CallingConv::X86_VectorCall;
+  bool IsRegCall = CC == llvm::CallingConv::X86_RegCall;
 
   if (Ty->isVoidType())
     return ABIArgInfo::getIgnore();
@@ -3437,8 +3439,6 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
     case BuiltinType::Int128:
     case BuiltinType::UInt128:
     case BuiltinType::Float128:
-      // 128-bit float and integer types share the same ABI.
-
       // If it's a parameter type, the normal ABI rule is that arguments larger
       // than 8 bytes are passed indirectly. GCC follows it. We follow it too,
       // even though it isn't particularly efficient.
@@ -3449,10 +3449,30 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
 
       // Mingw64 GCC returns i128 in XMM0. Coerce to v2i64 to handle that.
       // Clang matches them for compatibility.
-      // NOTE: GCC actually returns f128 indirectly but will hopefully change.
-      // See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=115054#c8.
-      return ABIArgInfo::getDirect(llvm::FixedVectorType::get(
-          llvm::Type::getInt64Ty(getVMContext()), 2));
+      if (BT->getKind() == BuiltinType::Int128 ||
+          BT->getKind() == BuiltinType::UInt128)
+        return ABIArgInfo::getDirect(llvm::FixedVectorType::get(
+            llvm::Type::getInt64Ty(getVMContext()), 2));
+
+      // Mingw64 GCC returns f128 via sret, and Clang matches that for
+      // compatibility. This mirrors the X86 backend's CanLowerReturn logic.
+      if (BT->getKind() == BuiltinType::Float128) {
+        auto IsWin64F128StackCC = [this](unsigned CC) -> bool {
+          switch (CC) {
+          case llvm::CallingConv::Win64:
+            return true;
+          case llvm::CallingConv::C:
+            return getTarget().getTriple().isOSWindowsOrUEFI();
+          default:
+            return false;
+          }
+        };
+
+        if (IsWin64F128StackCC(CC))
+          return getNaturalAlignIndirect(
+              Ty, getDataLayout().getAllocaAddrSpace(), /*ByVal=*/false);
+      }
+      break;
 
     default:
       break;
@@ -3498,8 +3518,7 @@ void WinX86_64ABIInfo::computeInfo(CGFunctionInfo &FI) const {
   }
 
   if (!getCXXABI().classifyReturnType(FI))
-    FI.getReturnInfo() = classify(FI.getReturnType(), FreeSSERegs, true,
-                                  IsVectorCall, IsRegCall);
+    FI.getReturnInfo() = classify(FI.getReturnType(), FreeSSERegs, true, CC);
 
   if (IsVectorCall) {
     // We can use up to 6 SSE register parameters with vectorcall.
@@ -3517,8 +3536,7 @@ void WinX86_64ABIInfo::computeInfo(CGFunctionInfo &FI) const {
     // registers are left.
     unsigned *MaybeFreeSSERegs =
         (IsVectorCall && ArgNum >= 6) ? &ZeroSSERegs : &FreeSSERegs;
-    I.info =
-        classify(I.type, *MaybeFreeSSERegs, false, IsVectorCall, IsRegCall);
+    I.info = classify(I.type, *MaybeFreeSSERegs, false, CC);
     ++ArgNum;
   }
 

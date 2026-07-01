@@ -41,6 +41,7 @@
 #include <__type_traits/is_swappable.h>
 #include <__type_traits/remove_const.h>
 #include <__type_traits/remove_cvref.h>
+#include <__utility/exception_guard.h>
 #include <__utility/exchange.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
@@ -697,6 +698,17 @@ private:
 
   _LIBCPP_HIDE_FROM_ABI void __copy_construct(__next_pointer __other_iter) {
     __next_pointer __own_iter = __first_node_.__ptr();
+    // If copying a node throws, the nodes that have already been constructed and linked into the
+    // list have to be deallocated. When this is called from the copy constructor the enclosing
+    // __hash_table is not fully constructed yet, so its destructor would not run to release them.
+    // This is also reached from operator= when assigning into an empty table; there the table
+    // stays alive, so we must leave it in a valid empty state: besides releasing the nodes we
+    // clear the bucket pointers, which were made to point into the now-deallocated node list.
+    auto __guard = std::__make_exception_guard([&] {
+      __deallocate_node_list(__first_node_.__next_);
+      __first_node_.__next_ = nullptr;
+      std::fill_n(__bucket_list_.get(), bucket_count(), nullptr);
+    });
     {
       __node_holder __new_node = __construct_node_hash(__other_iter->__hash(), __other_iter->__upcast()->__get_value());
       __own_iter->__next_      = static_cast<__next_pointer>(__new_node.release());
@@ -707,6 +719,7 @@ private:
     __other_iter                    = __other_iter->__next_;
     __own_iter                      = __own_iter->__next_;
     __copy_construct(__other_iter, __own_iter, __current_chash);
+    __guard.__complete();
   }
 
 public:

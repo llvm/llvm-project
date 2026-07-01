@@ -135,7 +135,7 @@ class D {
 D::~D() = default;
 
 // CIR: cir.func{{.*}} @_ZN1DD2Ev
-// CIR: %[[THIS:.*]] = cir.alloca !cir.ptr<!rec_D>, !cir.ptr<!cir.ptr<!rec_D>>, ["this", init] {alignment = 8 : i64}
+// CIR: %[[THIS:.*]] = cir.alloca "this" align(8) init : !cir.ptr<!cir.ptr<!rec_D>>
 // CIR: cir.store %[[ARG0:.*]], %[[THIS]] : !cir.ptr<!rec_D>, !cir.ptr<!cir.ptr<!rec_D>>
 // CIR: %[[THIS1:.*]] = cir.load %[[THIS]] : !cir.ptr<!cir.ptr<!rec_D>>, !cir.ptr<!rec_D>
 // CIR: cir.return
@@ -155,7 +155,7 @@ D::~D() = default;
 // CIR: cir.func {{.*}} @_ZN1DD1Ev(!cir.ptr<!rec_D>) alias(@_ZN1DD2Ev)
 
 // CIR: cir.func{{.*}} @_ZN1DD0Ev
-// CIR: %[[THIS:.*]] = cir.alloca !cir.ptr<!rec_D>, !cir.ptr<!cir.ptr<!rec_D>>, ["this", init] {alignment = 8 : i64}
+// CIR: %[[THIS:.*]] = cir.alloca "this" align(8) init : !cir.ptr<!cir.ptr<!rec_D>>
 // CIR: cir.store %[[ARG0:.*]], %[[THIS]] : !cir.ptr<!rec_D>, !cir.ptr<!cir.ptr<!rec_D>>
 // CIR: %[[THIS1:.*]] = cir.load %[[THIS]] : !cir.ptr<!cir.ptr<!rec_D>>, !cir.ptr<!rec_D>
 // CIR: cir.trap

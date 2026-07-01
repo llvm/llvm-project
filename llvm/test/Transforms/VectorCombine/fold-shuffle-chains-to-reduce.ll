@@ -47,11 +47,18 @@ define i16 @test_reduce_v3i16_and(<3 x i16> %a0) {
   ret i16 %5
 }
 
-define i16 @test_reduce_v6i16_xor(<6 x i16> %a0) {
-; CHECK-LABEL: define i16 @test_reduce_v6i16_xor(
+; v6i16 xor chain duplicates lanes, xor is non-idempotent, so folding would miscompile.
+define i16 @test_no_reduce_v6i16_xor(<6 x i16> %a0) {
+; CHECK-LABEL: define i16 @test_no_reduce_v6i16_xor(
 ; CHECK-SAME: <6 x i16> [[A0:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i16 @llvm.vector.reduce.xor.v6i16(<6 x i16> [[A0]])
-; CHECK-NEXT:    ret i16 [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <6 x i16> [[A0]], <6 x i16> poison, <6 x i32> <i32 3, i32 4, i32 5, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP2:%.*]] = xor <6 x i16> [[A0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <6 x i16> [[TMP2]], <6 x i16> poison, <6 x i32> <i32 1, i32 2, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP4:%.*]] = xor <6 x i16> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <6 x i16> [[TMP4]], <6 x i16> poison, <6 x i32> <i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP6:%.*]] = xor <6 x i16> [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <6 x i16> [[TMP6]], i64 0
+; CHECK-NEXT:    ret i16 [[TMP7]]
 ;
   %1 = shufflevector <6 x i16> %a0, <6 x i16> poison, <6 x i32> <i32 3, i32 4, i32 5, i32 poison, i32 poison, i32 poison>
   %2 = xor <6 x i16> %a0, %1
@@ -63,23 +70,45 @@ define i16 @test_reduce_v6i16_xor(<6 x i16> %a0) {
   ret i16 %7
 }
 
+; Non-idempotent op (add) on a non-power-of-2 vector: can't fold into reduction.
+define i32 @test_no_reduce_v3i32_add(<3 x i32> %a0) {
+; CHECK-LABEL: define i32 @test_no_reduce_v3i32_add(
+; CHECK-SAME: <3 x i32> [[A0:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <3 x i32> [[A0]], <3 x i32> poison, <3 x i32> <i32 1, i32 2, i32 poison>
+; CHECK-NEXT:    [[TMP2:%.*]] = add <3 x i32> [[A0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <3 x i32> [[TMP2]], <3 x i32> poison, <3 x i32> <i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP4:%.*]] = add <3 x i32> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <3 x i32> [[TMP4]], i64 0
+; CHECK-NEXT:    ret i32 [[TMP5]]
+;
+  %1 = shufflevector <3 x i32> %a0, <3 x i32> poison, <3 x i32> <i32 1, i32 2, i32 poison>
+  %2 = add <3 x i32> %a0, %1
+  %3 = shufflevector <3 x i32> %2, <3 x i32> poison, <3 x i32> <i32 1, i32 poison, i32 poison>
+  %4 = add <3 x i32> %2, %3
+  %5 = extractelement <3 x i32> %4, i64 0
+  ret i32 %5
+}
+
+; Idempotent op (smax) on a non-power-of-2 vector: lane duplication is harmless
+define i16 @test_reduce_v3i16_smax(<3 x i16> %a0) {
+; CHECK-LABEL: define i16 @test_reduce_v3i16_smax(
+; CHECK-SAME: <3 x i16> [[A0:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call i16 @llvm.vector.reduce.smax.v3i16(<3 x i16> [[A0]])
+; CHECK-NEXT:    ret i16 [[TMP1]]
+;
+  %1 = shufflevector <3 x i16> %a0, <3 x i16> poison, <3 x i32> <i32 1, i32 2, i32 poison>
+  %2 = tail call <3 x i16> @llvm.smax.v3i16(<3 x i16> %a0, <3 x i16> %1)
+  %3 = shufflevector <3 x i16> %2, <3 x i16> poison, <3 x i32> <i32 1, i32 poison, i32 poison>
+  %4 = tail call <3 x i16> @llvm.smax.v3i16(<3 x i16> %2, <3 x i16> %3)
+  %5 = extractelement <3 x i16> %4, i64 0
+  ret i16 %5
+}
+
 define i16 @test_reduce_v8i16_2(<8 x i16> %a0) {
 ; CHECK-LABEL: define i16 @test_reduce_v8i16_2(
 ; CHECK-SAME: <8 x i16> [[A0:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i16> [[A0]], <8 x i16> poison, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call <8 x i16> @llvm.umin.v8i16(<8 x i16> [[A0]], <8 x i16> [[TMP1]])
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i16> [[TMP2]], <8 x i16> poison, <8 x i32> <i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call <8 x i16> @llvm.umin.v8i16(<8 x i16> [[TMP2]], <8 x i16> [[TMP3]])
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <8 x i16> [[TMP4]], <8 x i16> poison, <8 x i32> <i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP6:%.*]] = tail call <8 x i16> @llvm.umin.v8i16(<8 x i16> [[TMP4]], <8 x i16> [[TMP5]])
 ; CHECK-NEXT:    [[TMP13:%.*]] = call i16 @llvm.vector.reduce.umin.v8i16(<8 x i16> [[A0]])
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <8 x i16> [[TMP6]], <8 x i16> poison, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP9:%.*]] = tail call <8 x i16> @llvm.umin.v8i16(<8 x i16> [[A0]], <8 x i16> [[TMP8]])
-; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <8 x i16> [[TMP9]], <8 x i16> poison, <8 x i32> <i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP11:%.*]] = tail call <8 x i16> @llvm.umin.v8i16(<8 x i16> [[TMP9]], <8 x i16> [[TMP10]])
-; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <8 x i16> [[TMP11]], <8 x i16> poison, <8 x i32> <i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP16:%.*]] = tail call <8 x i16> @llvm.umin.v8i16(<8 x i16> [[TMP11]], <8 x i16> [[TMP12]])
-; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <8 x i16> [[TMP16]], i64 0
+; CHECK-NEXT:    [[TMP14:%.*]] = call i16 @llvm.vector.reduce.umin.v8i16(<8 x i16> [[A0]])
 ; CHECK-NEXT:    [[TMP15:%.*]] = tail call i16 @llvm.umin.i16(i16 [[TMP13]], i16 [[TMP14]])
 ; CHECK-NEXT:    ret i16 [[TMP15]]
 ;
@@ -104,16 +133,11 @@ define i16 @test_reduce_v8i16_2(<8 x i16> %a0) {
   ret i16 %15
 }
 
-define i16 @test_reduce_v8i16_neg1(<8 x i16> %a0) {
-; CHECK-LABEL: define i16 @test_reduce_v8i16_neg1(
+define i16 @test_reduce_v8i16_skip_lane7(<8 x i16> %a0) {
+; CHECK-LABEL: define i16 @test_reduce_v8i16_skip_lane7(
 ; CHECK-SAME: <8 x i16> [[A0:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i16> [[A0]], <8 x i16> poison, <8 x i32> <i32 4, i32 5, i32 6, i32 1, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call <8 x i16> @llvm.umin.v8i16(<8 x i16> [[A0]], <8 x i16> [[TMP1]])
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i16> [[TMP2]], <8 x i16> poison, <8 x i32> <i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call <8 x i16> @llvm.umin.v8i16(<8 x i16> [[TMP2]], <8 x i16> [[TMP3]])
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <8 x i16> [[TMP4]], <8 x i16> poison, <8 x i32> <i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP6:%.*]] = tail call <8 x i16> @llvm.umin.v8i16(<8 x i16> [[TMP4]], <8 x i16> [[TMP5]])
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <8 x i16> [[TMP6]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i16> [[A0]], <8 x i16> poison, <7 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6>
+; CHECK-NEXT:    [[TMP7:%.*]] = call i16 @llvm.vector.reduce.umin.v7i16(<7 x i16> [[TMP1]])
 ; CHECK-NEXT:    ret i16 [[TMP7]]
 ;
   %1 = shufflevector <8 x i16> %a0, <8 x i16> poison, <8 x i32> <i32 4, i32 5, i32 6, i32 1, i32 poison, i32 poison, i32 poison, i32 poison>
@@ -126,16 +150,15 @@ define i16 @test_reduce_v8i16_neg1(<8 x i16> %a0) {
   ret i16 %7
 }
 
-define i16 @test_reduce_v8i16_neg2(<8 x i16> %a0) {
-; CHECK-LABEL: define i16 @test_reduce_v8i16_neg2(
+define i16 @test_reduce_v8i16_mixed_ops_tail(<8 x i16> %a0) {
+; CHECK-LABEL: define i16 @test_reduce_v8i16_mixed_ops_tail(
 ; CHECK-SAME: <8 x i16> [[A0:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i16> [[A0]], <8 x i16> poison, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP2:%.*]] = tail call <8 x i16> @llvm.umin.v8i16(<8 x i16> [[A0]], <8 x i16> [[TMP1]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i16> [[TMP2]], <8 x i16> poison, <8 x i32> <i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP4:%.*]] = tail call <8 x i16> @llvm.umin.v8i16(<8 x i16> [[TMP2]], <8 x i16> [[TMP3]])
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <8 x i16> [[TMP4]], <8 x i16> poison, <8 x i32> <i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP6:%.*]] = tail call <8 x i16> @llvm.umax.v8i16(<8 x i16> [[TMP4]], <8 x i16> [[TMP5]])
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <8 x i16> [[TMP6]], i64 0
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <8 x i16> [[TMP4]], <8 x i16> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP7:%.*]] = call i16 @llvm.vector.reduce.umax.v2i16(<2 x i16> [[TMP5]])
 ; CHECK-NEXT:    ret i16 [[TMP7]]
 ;
   %1 = shufflevector <8 x i16> %a0, <8 x i16> poison, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison>
@@ -148,17 +171,10 @@ define i16 @test_reduce_v8i16_neg2(<8 x i16> %a0) {
   ret i16 %7
 }
 
-define i16 @test_reduce_v8i16_neg3(<8 x i16> %a0) {
-; CHECK-LABEL: define i16 @test_reduce_v8i16_neg3(
+define i16 @test_reduce_v8i16_ssa_aliased(<8 x i16> %a0) {
+; CHECK-LABEL: define i16 @test_reduce_v8i16_ssa_aliased(
 ; CHECK-SAME: <8 x i16> [[A0:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i16> [[A0]], <8 x i16> poison, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call <8 x i16> @llvm.umin.v8i16(<8 x i16> [[A0]], <8 x i16> [[TMP1]])
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i16> [[TMP2]], <8 x i16> poison, <8 x i32> <i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call <8 x i16> @llvm.umin.v8i16(<8 x i16> [[TMP2]], <8 x i16> [[TMP3]])
-; CHECK-NEXT:    [[TMP5:%.*]] = tail call <8 x i16> @llvm.umin.v8i16(<8 x i16> [[TMP2]], <8 x i16> [[TMP3]])
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <8 x i16> [[TMP4]], <8 x i16> poison, <8 x i32> <i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP7:%.*]] = tail call <8 x i16> @llvm.umin.v8i16(<8 x i16> [[TMP5]], <8 x i16> [[TMP6]])
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <8 x i16> [[TMP7]], i64 0
+; CHECK-NEXT:    [[TMP8:%.*]] = call i16 @llvm.vector.reduce.umin.v8i16(<8 x i16> [[A0]])
 ; CHECK-NEXT:    ret i16 [[TMP8]]
 ;
   %1 = shufflevector <8 x i16> %a0, <8 x i16> poison, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison>
@@ -172,8 +188,8 @@ define i16 @test_reduce_v8i16_neg3(<8 x i16> %a0) {
   ret i16 %8
 }
 
-define i16 @test_reduce_v6i16_xor_neg(<6 x i16> %a0) {
-; CHECK-LABEL: define i16 @test_reduce_v6i16_xor_neg(
+define i16 @test_no_reduce_v6i16_xor_poison(<6 x i16> %a0) {
+; CHECK-LABEL: define i16 @test_no_reduce_v6i16_xor_poison(
 ; CHECK-SAME: <6 x i16> [[A0:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <6 x i16> [[A0]], <6 x i16> poison, <6 x i32> <i32 3, i32 4, i32 5, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP2:%.*]] = xor <6 x i16> [[A0]], [[TMP1]]
@@ -244,8 +260,7 @@ define i16 @test_partial_reduce_v16i16_v4i16_umin(<16 x i16> %a0) {
   ret i16 %5
 }
 
-; Negative test: partial reduction on non-power-of-2 vectors is rejected because
-; parity-based shuffle masks cause lane duplication in the reduction tree.
+; Negative: chain duplicates lane in the result (e.g. lane 0 = a[0]+2*a[1]+a[2]). Add is non-idempotent, so folding would miscompile.
 define i32 @test_no_partial_reduce_v6i32_add(<6 x i32> %a) {
 ; CHECK-LABEL: define i32 @test_no_partial_reduce_v6i32_add(
 ; CHECK-SAME: <6 x i32> [[A:%.*]]) {
@@ -262,4 +277,161 @@ define i32 @test_no_partial_reduce_v6i32_add(<6 x i32> %a) {
   %a2 = add <6 x i32> %a1, %s2
   %r = extractelement <6 x i32> %a2, i64 0
   ret i32 %r
+}
+
+; FADD with reassoc - should fold to vector.reduce.fadd
+define float @test_reduce_v8f32_fadd(<8 x float> %a0) {
+; CHECK-LABEL: define float @test_reduce_v8f32_fadd(
+; CHECK-SAME: <8 x float> [[A0:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call reassoc float @llvm.vector.reduce.fadd.v8f32(float -0.000000e+00, <8 x float> [[A0]])
+; CHECK-NEXT:    ret float [[TMP1]]
+;
+  %1 = shufflevector <8 x float> %a0, <8 x float> poison, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison>
+  %2 = fadd reassoc <8 x float> %a0, %1
+  %3 = shufflevector <8 x float> %2, <8 x float> poison, <8 x i32> <i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+  %4 = fadd reassoc <8 x float> %2, %3
+  %5 = shufflevector <8 x float> %4, <8 x float> poison, <8 x i32> <i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+  %6 = fadd reassoc <8 x float> %4, %5
+  %7 = extractelement <8 x float> %6, i64 0
+  ret float %7
+}
+
+; FADD with reassoc+nsz+nnan - should fold preserving flags
+define float @test_reduce_v4f32_fadd_flags(<4 x float> %a0) {
+; CHECK-LABEL: define float @test_reduce_v4f32_fadd_flags(
+; CHECK-SAME: <4 x float> [[A0:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call reassoc nnan nsz float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[A0]])
+; CHECK-NEXT:    ret float [[TMP1]]
+;
+  %1 = shufflevector <4 x float> %a0, <4 x float> poison, <4 x i32> <i32 2, i32 3, i32 poison, i32 poison>
+  %2 = fadd reassoc nnan nsz <4 x float> %a0, %1
+  %3 = shufflevector <4 x float> %2, <4 x float> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
+  %4 = fadd reassoc nnan nsz <4 x float> %2, %3
+  %5 = extractelement <4 x float> %4, i64 0
+  ret float %5
+}
+
+; FMUL with reassoc - should fold to vector.reduce.fmul
+define float @test_reduce_v4f32_fmul(<4 x float> %a0) {
+; CHECK-LABEL: define float @test_reduce_v4f32_fmul(
+; CHECK-SAME: <4 x float> [[A0:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call reassoc float @llvm.vector.reduce.fmul.v4f32(float 1.000000e+00, <4 x float> [[A0]])
+; CHECK-NEXT:    ret float [[TMP1]]
+;
+  %1 = shufflevector <4 x float> %a0, <4 x float> poison, <4 x i32> <i32 2, i32 3, i32 poison, i32 poison>
+  %2 = fmul reassoc <4 x float> %a0, %1
+  %3 = shufflevector <4 x float> %2, <4 x float> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
+  %4 = fmul reassoc <4 x float> %2, %3
+  %5 = extractelement <4 x float> %4, i64 0
+  ret float %5
+}
+
+; Double type FADD with reassoc
+define double @test_reduce_v4f64_fadd(<4 x double> %a0) {
+; CHECK-LABEL: define double @test_reduce_v4f64_fadd(
+; CHECK-SAME: <4 x double> [[A0:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call reassoc double @llvm.vector.reduce.fadd.v4f64(double -0.000000e+00, <4 x double> [[A0]])
+; CHECK-NEXT:    ret double [[TMP1]]
+;
+  %1 = shufflevector <4 x double> %a0, <4 x double> poison, <4 x i32> <i32 2, i32 3, i32 poison, i32 poison>
+  %2 = fadd reassoc <4 x double> %a0, %1
+  %3 = shufflevector <4 x double> %2, <4 x double> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
+  %4 = fadd reassoc <4 x double> %2, %3
+  %5 = extractelement <4 x double> %4, i64 0
+  ret double %5
+}
+
+; Negative test: FADD without reassoc - should NOT fold
+define float @test_no_reduce_v4f32_fadd_no_reassoc(<4 x float> %a0) {
+; CHECK-LABEL: define float @test_no_reduce_v4f32_fadd_no_reassoc(
+; CHECK-SAME: <4 x float> [[A0:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[A0]], <4 x float> poison, <4 x i32> <i32 2, i32 3, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP2:%.*]] = fadd <4 x float> [[A0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[TMP2]], <4 x float> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP4:%.*]] = fadd <4 x float> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x float> [[TMP4]], i64 0
+; CHECK-NEXT:    ret float [[TMP5]]
+;
+  %1 = shufflevector <4 x float> %a0, <4 x float> poison, <4 x i32> <i32 2, i32 3, i32 poison, i32 poison>
+  %2 = fadd <4 x float> %a0, %1
+  %3 = shufflevector <4 x float> %2, <4 x float> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
+  %4 = fadd <4 x float> %2, %3
+  %5 = extractelement <4 x float> %4, i64 0
+  ret float %5
+}
+
+; Negative test: FMUL without reassoc - should NOT fold
+define float @test_no_reduce_v4f32_fmul_no_reassoc(<4 x float> %a0) {
+; CHECK-LABEL: define float @test_no_reduce_v4f32_fmul_no_reassoc(
+; CHECK-SAME: <4 x float> [[A0:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[A0]], <4 x float> poison, <4 x i32> <i32 2, i32 3, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP2:%.*]] = fmul <4 x float> [[A0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[TMP2]], <4 x float> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP4:%.*]] = fmul <4 x float> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x float> [[TMP4]], i64 0
+; CHECK-NEXT:    ret float [[TMP5]]
+;
+  %1 = shufflevector <4 x float> %a0, <4 x float> poison, <4 x i32> <i32 2, i32 3, i32 poison, i32 poison>
+  %2 = fmul <4 x float> %a0, %1
+  %3 = shufflevector <4 x float> %2, <4 x float> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
+  %4 = fmul <4 x float> %2, %3
+  %5 = extractelement <4 x float> %4, i64 0
+  ret float %5
+}
+
+; Negative test: FADD with partial reassoc (only on one binop) - should NOT fold
+define float @test_no_reduce_v4f32_fadd_partial_reassoc(<4 x float> %a0) {
+; CHECK-LABEL: define float @test_no_reduce_v4f32_fadd_partial_reassoc(
+; CHECK-SAME: <4 x float> [[A0:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[A0]], <4 x float> poison, <4 x i32> <i32 2, i32 3, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP2:%.*]] = fadd <4 x float> [[A0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[TMP2]], <4 x float> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP4:%.*]] = fadd reassoc <4 x float> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x float> [[TMP4]], i64 0
+; CHECK-NEXT:    ret float [[TMP5]]
+;
+  %1 = shufflevector <4 x float> %a0, <4 x float> poison, <4 x i32> <i32 2, i32 3, i32 poison, i32 poison>
+  %2 = fadd <4 x float> %a0, %1
+  %3 = shufflevector <4 x float> %2, <4 x float> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
+  %4 = fadd reassoc <4 x float> %2, %3
+  %5 = extractelement <4 x float> %4, i64 0
+  ret float %5
+}
+
+; FADD with different FMF on each binop - output should have intersection
+define float @test_reduce_v4f32_fadd_fmf_intersect(<4 x float> %a0) {
+; CHECK-LABEL: define float @test_reduce_v4f32_fadd_fmf_intersect(
+; CHECK-SAME: <4 x float> [[A0:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call reassoc nnan float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[A0]])
+; CHECK-NEXT:    ret float [[TMP1]]
+;
+  %1 = shufflevector <4 x float> %a0, <4 x float> poison, <4 x i32> <i32 2, i32 3, i32 poison, i32 poison>
+  %2 = fadd reassoc nnan nsz <4 x float> %a0, %1
+  %3 = shufflevector <4 x float> %2, <4 x float> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
+  %4 = fadd reassoc nnan <4 x float> %2, %3
+  %5 = extractelement <4 x float> %4, i64 0
+  ret float %5
+}
+
+; Reconvergent chain (lane 0 = 2*(a[0]+a[1]+a[2])). An inner sub-sum is cleanly demanded but does not cover the full reduction so the fold must reduce the covering intermediate.
+define i32 @test_reduce_reconvergent_intermediate_v4i32(<4 x i32> %a) {
+; CHECK-LABEL: define i32 @test_reduce_reconvergent_intermediate_v4i32(
+; CHECK-SAME: <4 x i32> [[A:%.*]]) {
+; CHECK-NEXT:    [[SH1:%.*]] = shufflevector <4 x i32> [[A]], <4 x i32> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[SH2:%.*]] = shufflevector <4 x i32> [[A]], <4 x i32> poison, <2 x i32> <i32 1, i32 2>
+; CHECK-NEXT:    [[SH3:%.*]] = shufflevector <4 x i32> [[A]], <4 x i32> poison, <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:    [[B1:%.*]] = add <2 x i32> [[SH1]], [[SH2]]
+; CHECK-NEXT:    [[B2:%.*]] = add <2 x i32> [[SH3]], [[B1]]
+; CHECK-NEXT:    [[E:%.*]] = call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> [[B2]])
+; CHECK-NEXT:    ret i32 [[E]]
+;
+  %sh1 = shufflevector <4 x i32> %a, <4 x i32> poison, <2 x i32> <i32 0, i32 1>
+  %sh2 = shufflevector <4 x i32> %a, <4 x i32> poison, <2 x i32> <i32 1, i32 2>
+  %sh3 = shufflevector <4 x i32> %a, <4 x i32> poison, <2 x i32> <i32 0, i32 2>
+  %b1 = add <2 x i32> %sh1, %sh2
+  %b2 = add <2 x i32> %sh3, %b1
+  %sh4 = shufflevector <2 x i32> %b2, <2 x i32> poison, <2 x i32> <i32 1, i32 0>
+  %c = add <2 x i32> %b2, %sh4
+  %e = extractelement <2 x i32> %c, i64 0
+  ret i32 %e
 }

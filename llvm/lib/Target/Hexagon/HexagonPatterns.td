@@ -530,17 +530,22 @@ def: Pat<(i64 (bitconvert F64:$v)), (I64:$v)>;
 def: Pat<(f64 (bitconvert I64:$v)), (F64:$v)>;
 
 // Bit convert 32- and 64-bit types.
-// All of these are bitcastable to one another: i32, v2i16, v4i8.
+// All of these are bitcastable to one another: i32, f32, v2i16, v4i8.
 defm: NopCast_pat<i32,   v2i16, IntRegs>;
 defm: NopCast_pat<i32,    v4i8, IntRegs>;
 defm: NopCast_pat<v2i16,  v4i8, IntRegs>;
-// All of these are bitcastable to one another: i64, v2i32, v4i16, v8i8.
+defm: NopCast_pat<f32,   v2i16, IntRegs>;
+defm: NopCast_pat<f32,    v4i8, IntRegs>;
+// All of these are bitcastable to one another: i64, f64, v2i32, v4i16, v8i8.
 defm: NopCast_pat<i64,   v2i32, DoubleRegs>;
 defm: NopCast_pat<i64,   v4i16, DoubleRegs>;
 defm: NopCast_pat<i64,    v8i8, DoubleRegs>;
 defm: NopCast_pat<v2i32, v4i16, DoubleRegs>;
 defm: NopCast_pat<v2i32,  v8i8, DoubleRegs>;
 defm: NopCast_pat<v4i16,  v8i8, DoubleRegs>;
+defm: NopCast_pat<f64,   v2i32, DoubleRegs>;
+defm: NopCast_pat<f64,   v4i16, DoubleRegs>;
+defm: NopCast_pat<f64,    v8i8, DoubleRegs>;
 
 
 // --(3) Extend/truncate/saturate ----------------------------------------

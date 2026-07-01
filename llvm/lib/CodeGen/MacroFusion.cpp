@@ -204,8 +204,8 @@ bool MacroFusion::scheduleAdjacentImpl(ScheduleDAGInstrs &DAG, SUnit &AnchorSU) 
 
   // Explorer for fusion candidates among the dependencies of the anchor instr.
   for (SDep &Dep : AnchorSU.Preds) {
-    // Ignore dependencies other than data or strong ordering.
-    if (Dep.isWeak() || isHazard(Dep))
+    // Ignore dependencies other than data
+    if (Dep.getKind() != SDep::Data)
       continue;
 
     SUnit &DepSU = *Dep.getSUnit();

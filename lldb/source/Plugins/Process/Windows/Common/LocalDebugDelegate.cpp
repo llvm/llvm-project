@@ -45,20 +45,26 @@ void LocalDebugDelegate::OnExitThread(lldb::tid_t thread_id,
     process->OnExitThread(thread_id, exit_code);
 }
 
-void LocalDebugDelegate::OnLoadDll(const lldb_private::ModuleSpec &module_spec,
-                                   lldb::addr_t module_addr) {
+DllEventAction
+LocalDebugDelegate::OnLoadDll(const lldb_private::ModuleSpec &module_spec,
+                              lldb::addr_t module_addr, lldb::tid_t thread_id) {
   if (ProcessWindowsSP process = GetProcessPointer())
-    process->OnLoadDll(module_spec, module_addr);
+    return process->OnLoadDll(module_spec, module_addr, thread_id);
+  return DllEventAction::ContinueDebugLoop;
 }
 
-void LocalDebugDelegate::OnUnloadDll(lldb::addr_t module_addr) {
+DllEventAction LocalDebugDelegate::OnUnloadDll(lldb::addr_t module_addr,
+                                               lldb::tid_t thread_id) {
   if (ProcessWindowsSP process = GetProcessPointer())
-    process->OnUnloadDll(module_addr);
+    return process->OnUnloadDll(module_addr, thread_id);
+  return DllEventAction::ContinueDebugLoop;
 }
 
-void LocalDebugDelegate::OnDebugString(const std::string &string) {
+void LocalDebugDelegate::OnDebugString(lldb::addr_t debug_string_addr,
+                                       bool is_unicode,
+                                       uint16_t length_lower_word) {
   if (ProcessWindowsSP process = GetProcessPointer())
-    process->OnDebugString(string);
+    process->OnDebugString(debug_string_addr, is_unicode, length_lower_word);
 }
 
 void LocalDebugDelegate::OnDebuggerError(const Status &error, uint32_t type) {

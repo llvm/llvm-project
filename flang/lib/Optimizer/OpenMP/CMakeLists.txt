@@ -5,6 +5,7 @@ add_flang_library(FlangOpenMPTransforms
   DoConcurrentConversion.cpp
   FunctionFiltering.cpp
   GenericLoopConversion.cpp
+  HostOpFiltering.cpp
   MapsForPrivatizedSymbols.cpp
   MapInfoFinalization.cpp
   DeleteUnreachableTargets.cpp
@@ -28,7 +29,6 @@ add_flang_library(FlangOpenMPTransforms
   FortranSupport
   HLFIRDialect
   FortranUtils
-  FortranEvaluate
 
   MLIR_DEPS
   ${dialect_libs}

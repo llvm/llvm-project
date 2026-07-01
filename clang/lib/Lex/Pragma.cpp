@@ -779,7 +779,7 @@ static bool LexModuleNameComponent(Preprocessor &PP, Token &Tok,
                                    bool First) {
   PP.LexUnexpandedToken(Tok);
   if (Tok.is(tok::string_literal) && !Tok.hasUDSuffix()) {
-    StringLiteralParser Literal(Tok, PP);
+    StringLiteralParser Literal(Tok, PP, StringLiteralEvalMethod::Unevaluated);
     if (Literal.hadError)
       return true;
     ModuleNameComponent = IdentifierLoc(

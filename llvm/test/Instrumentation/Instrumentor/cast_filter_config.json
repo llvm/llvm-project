@@ -1,0 +1,35 @@
+{
+  "configuration": {
+    "runtime_prefix": "__instrumentor_",
+    "runtime_prefix.description": "The runtime API prefix.",
+    "runtime_stubs_file": "",
+    "runtime_stubs_file.description": "The file into which runtime stubs should be written.",
+    "demangle_function_names": true,
+    "demangle_function_names.description": "Demangle functions names passed to the runtime."
+  },
+  "instruction_pre": {
+    "cast": {
+      "enabled": true,
+      "filter": "opcode==48",
+      "filter.description": "Only instrument PtrToInt (opcode 48) casts.",
+      "input": true,
+      "input.description": "The input value of the cast.",
+      "opcode": true,
+      "opcode.description": "The opcode of the cast instruction."
+    }
+  },
+  "instruction_post": {
+    "cast": {
+      "enabled": true,
+      "filter": "opcode==48",
+      "filter.description": "Only instrument PtrToInt (opcode 48) casts.",
+      "input": true,
+      "input.description": "The input value of the cast.",
+      "result": true,
+      "result.replace": true,
+      "result.description": "The result of the cast.",
+      "opcode": true,
+      "opcode.description": "The opcode of the cast instruction."
+    }
+  }
+}

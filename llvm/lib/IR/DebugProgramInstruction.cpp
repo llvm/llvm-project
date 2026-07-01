@@ -145,8 +145,8 @@ DbgRecord::createDebugIntrinsic(Module *M, Instruction *InsertBefore) const {
   llvm_unreachable("unsupported DbgRecord kind");
 }
 
-DbgLabelRecord::DbgLabelRecord(MDNode *Label, MDNode *DL)
-    : DbgRecord(LabelKind, DebugLoc(DL)), Label(Label) {
+DbgLabelRecord::DbgLabelRecord(MDNode *Label)
+    : DbgRecord(LabelKind, DebugLoc()), Label(Label) {
   assert(Label && "Unexpected nullptr");
   assert((isa<DILabel>(Label) || Label->isTemporary()) &&
          "Label type must be or resolve to a DILabel");
@@ -156,26 +156,25 @@ DbgLabelRecord::DbgLabelRecord(DILabel *Label, DebugLoc DL)
   assert(Label && "Unexpected nullptr");
 }
 
-DbgLabelRecord *DbgLabelRecord::createUnresolvedDbgLabelRecord(MDNode *Label,
-                                                               MDNode *DL) {
-  return new DbgLabelRecord(Label, DL);
+DbgLabelRecord *DbgLabelRecord::createUnresolvedDbgLabelRecord(MDNode *Label) {
+  return new DbgLabelRecord(Label);
 }
 
 DbgVariableRecord::DbgVariableRecord(DbgVariableRecord::LocationType Type,
                                      Metadata *Val, MDNode *Variable,
                                      MDNode *Expression, MDNode *AssignID,
                                      Metadata *Address,
-                                     MDNode *AddressExpression, MDNode *DI)
-    : DbgRecord(ValueKind, DebugLoc(DI)),
+                                     MDNode *AddressExpression)
+    : DbgRecord(ValueKind, DebugLoc()),
       DebugValueUser({Val, Address, AssignID}), Type(Type), Variable(Variable),
       Expression(Expression), AddressExpression(AddressExpression) {}
 
 DbgVariableRecord *DbgVariableRecord::createUnresolvedDbgVariableRecord(
     DbgVariableRecord::LocationType Type, Metadata *Val, MDNode *Variable,
     MDNode *Expression, MDNode *AssignID, Metadata *Address,
-    MDNode *AddressExpression, MDNode *DI) {
+    MDNode *AddressExpression) {
   return new DbgVariableRecord(Type, Val, Variable, Expression, AssignID,
-                               Address, AddressExpression, DI);
+                               Address, AddressExpression);
 }
 
 DbgVariableRecord *
@@ -526,6 +525,8 @@ bool DbgVariableRecord::isKillAddress() const {
 const Instruction *DbgRecord::getInstruction() const {
   return Marker->MarkedInstr;
 }
+
+Instruction *DbgRecord::getInstruction() { return Marker->MarkedInstr; }
 
 const BasicBlock *DbgRecord::getParent() const {
   return Marker->MarkedInstr->getParent();

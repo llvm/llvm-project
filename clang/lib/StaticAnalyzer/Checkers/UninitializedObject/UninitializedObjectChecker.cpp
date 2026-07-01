@@ -133,8 +133,8 @@ static bool hasUnguardedAccess(const FieldDecl *FD, ProgramStateRef State);
 void UninitializedObjectChecker::checkEndFunction(
     const ReturnStmt *RS, CheckerContext &Context) const {
 
-  const auto *CtorDecl = dyn_cast_or_null<CXXConstructorDecl>(
-      Context.getLocationContext()->getDecl());
+  const auto *CtorDecl =
+      dyn_cast_or_null<CXXConstructorDecl>(Context.getStackFrame()->getDecl());
   if (!CtorDecl)
     return;
 
@@ -175,7 +175,7 @@ void UninitializedObjectChecker::checkEndFunction(
   const Expr *CallSite = Context.getStackFrame()->getCallSite();
   if (CallSite)
     LocUsedForUniqueing = PathDiagnosticLocation::createBegin(
-        CallSite, Context.getSourceManager(), Node->getLocationContext());
+        CallSite, Context.getSourceManager(), Node->getStackFrame());
 
   // For Plist consumers that don't support notes just yet, we'll convert notes
   // to warnings.
@@ -184,7 +184,7 @@ void UninitializedObjectChecker::checkEndFunction(
 
       auto Report = std::make_unique<PathSensitiveBugReport>(
           BT_uninitField, Pair.second, Node, LocUsedForUniqueing,
-          Node->getLocationContext()->getDecl());
+          Node->getStackFrame()->getDecl());
       Context.emitReport(std::move(Report));
     }
     return;
@@ -198,7 +198,7 @@ void UninitializedObjectChecker::checkEndFunction(
 
   auto Report = std::make_unique<PathSensitiveBugReport>(
       BT_uninitField, WarningOS.str(), Node, LocUsedForUniqueing,
-      Node->getLocationContext()->getDecl());
+      Node->getStackFrame()->getDecl());
 
   for (const auto &Pair : UninitFields) {
     Report->addNote(Pair.second,
@@ -492,11 +492,11 @@ static bool willObjectBeAnalyzedLater(const CXXConstructorDecl *Ctor,
   if (!CurrRegion)
     return false;
 
-  const LocationContext *LC = Context.getLocationContext();
-  while ((LC = LC->getParent())) {
+  const StackFrame *SF = Context.getStackFrame();
+  while ((SF = SF->getParent())) {
 
     // If \p Ctor was called by another constructor.
-    const auto *OtherCtor = dyn_cast<CXXConstructorDecl>(LC->getDecl());
+    const auto *OtherCtor = dyn_cast<CXXConstructorDecl>(SF->getDecl());
     if (!OtherCtor)
       continue;
 

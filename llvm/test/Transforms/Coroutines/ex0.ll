@@ -1,4 +1,4 @@
-; First example from Doc/Coroutines.rst (two block loop)
+; First example from Doc/Coroutines.md (two block loop)
 ; RUN: opt < %s -aa-pipeline=basic-aa -passes='default<O2>' -preserve-alignment-assumptions-during-inlining=false -S | FileCheck %s
 
 define ptr @f(i32 %n) presplitcoroutine {
@@ -44,7 +44,6 @@ entry:
 }
 
 declare token @llvm.coro.id(i32, ptr, ptr, ptr)
-declare ptr @llvm.coro.alloc(token)
 declare ptr @llvm.coro.free(token, ptr)
 declare i32 @llvm.coro.size.i32()
 declare i8  @llvm.coro.suspend(token, i1)

@@ -16,6 +16,8 @@
 #include <memory>
 #include <cassert>
 
+#include "algorithms.h"
+#include "copy_move_types.h"
 #include "test_macros.h"
 
 struct B
@@ -46,6 +48,22 @@ struct Nasty
 };
 
 int Nasty::counter_ = 0;
+
+TEST_CONSTEXPR_CXX26 bool test() {
+  int n = 3;
+  ConstCopy value(42);
+  std::allocator<ConstCopy> alloc;
+  ConstCopy* out = alloc.allocate(n);
+
+  std::uninitialized_fill(out, out + n, value);
+  for (int i = 0; i != n; ++i)
+    assert(out[i].val == value.val);
+
+  util::destroy(out, out + n);
+  alloc.deallocate(out, n);
+
+  return true;
+}
 
 int main(int, char**)
 {
@@ -82,5 +100,10 @@ int main(int, char**)
         assert(bp[i].i_ == 23);
     }
 
-  return 0;
+    test();
+#if TEST_STD_VER >= 26
+    static_assert(test());
+#endif
+
+    return 0;
 }

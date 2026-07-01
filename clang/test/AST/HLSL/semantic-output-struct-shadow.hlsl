@@ -3,9 +3,9 @@
 
 
 // CHECK: CXXRecordDecl {{.*}} referenced struct S definition
-// CHECK: FieldDecl {{.*}} referenced field1 'int'
+// CHECK: FieldDecl {{.*}} field1 'int'
 // CHECK-NEXT: HLSLParsedSemanticAttr {{.*}} "A" 0
-// CHECK: FieldDecl {{.*}} referenced field2 'int'
+// CHECK: FieldDecl {{.*}} field2 'int'
 // CHECK-NEXT: HLSLParsedSemanticAttr {{.*}} "B" 4
 
 struct S {

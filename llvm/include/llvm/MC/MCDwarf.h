@@ -847,6 +847,9 @@ public:
     return std::get<EscapeFields>(ExtraFields).Comment;
   }
   SMLoc getLoc() const { return Loc; }
+
+  /// Replaces in place all references to FromReg with ToReg.
+  LLVM_ABI void replaceRegister(unsigned FromReg, unsigned ToReg);
 };
 
 struct MCDwarfFrameInfo {

@@ -565,10 +565,21 @@ protected:
     return this->back();
   }
 
+  // Out-of-line slow path so the inline push_back needs no callee-saved
+  // registers or stack frame on its hot path.
+  LLVM_ATTRIBUTE_NOINLINE void growAndPushBack(ValueParamT Elt) {
+    // Copy in case Elt is an internal reference invalidated by grow.
+    T Tmp = Elt;
+    this->grow(this->size() + 1);
+    std::memcpy(reinterpret_cast<void *>(this->end()), &Tmp, sizeof(T));
+    this->set_size(this->size() + 1);
+  }
+
 public:
   void push_back(ValueParamT Elt) {
-    const T *EltPtr = reserveForParamAndGetAddress(Elt);
-    std::memcpy(reinterpret_cast<void *>(this->end()), EltPtr, sizeof(T));
+    if (LLVM_UNLIKELY(this->size() >= this->capacity()))
+      return growAndPushBack(Elt);
+    std::memcpy(reinterpret_cast<void *>(this->end()), &Elt, sizeof(T));
     this->set_size(this->size() + 1);
   }
 
@@ -1349,14 +1360,6 @@ extern template class llvm::SmallVectorBase<uint64_t>;
 
 // Provide DenseMapInfo for SmallVector of a type which has info.
 template <typename T, unsigned N> struct DenseMapInfo<llvm::SmallVector<T, N>> {
-  static SmallVector<T, N> getEmptyKey() {
-    return {DenseMapInfo<T>::getEmptyKey()};
-  }
-
-  static SmallVector<T, N> getTombstoneKey() {
-    return {DenseMapInfo<T>::getTombstoneKey()};
-  }
-
   static unsigned getHashValue(const SmallVector<T, N> &V) {
     return static_cast<unsigned>(hash_combine_range(V));
   }

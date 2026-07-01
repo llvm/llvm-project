@@ -37,6 +37,7 @@
 #include "clang/CIR/Dialect/Transforms/CIRTransformUtils.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/TargetParser/Triple.h"
 
@@ -125,6 +126,8 @@ private:
   cir::FuncOp endCatchFunc;
   cir::FuncOp getExceptionPtrFunc;
   cir::FuncOp clangCallTerminateFunc;
+  cir::FuncOp cxaThrowFunc;
+  cir::FuncOp cxaRethrowFunc;
 
   DenseMap<mlir::StringAttr, cir::FuncOp> catchCopyThunks;
 
@@ -133,19 +136,22 @@ private:
 
   void ensureRuntimeDecls(mlir::Location loc);
   void ensureClangCallTerminate(mlir::Location loc);
+  void ensureCxaThrowDecl(mlir::Location loc);
+  void ensureCxaRethrowDecl(mlir::Location loc);
   mlir::Block *buildTerminateBlock(cir::FuncOp funcOp, mlir::Location loc);
   mlir::FailureOr<cir::FuncOp>
   resolveCatchCopyThunk(cir::ConstructCatchParamOp op);
   mlir::LogicalResult lowerFunc(cir::FuncOp funcOp);
   mlir::LogicalResult
-  lowerEhInitiate(cir::EhInitiateOp initiateOp, EhTokenMap &ehTokenMap,
-                  SmallVectorImpl<mlir::Operation *> &deadOps);
+  lowerEhInitiate(cir::EhInitiateOp initiateOp,
+                  llvm::ArrayRef<cir::EhDispatchOp> reachedDispatches,
+                  bool reachesCleanup, EhTokenMap &ehTokenMap);
   void lowerDispatch(cir::EhDispatchOp dispatch, mlir::Value exnPtr,
-                     mlir::Value typeId,
-                     SmallVectorImpl<mlir::Operation *> &deadOps);
+                     mlir::Value typeId);
   mlir::LogicalResult lowerConstructCatchParam(cir::ConstructCatchParamOp op,
                                                mlir::Value exnPtr);
   void lowerInitCatchParam(cir::InitCatchParamOp op);
+  mlir::LogicalResult lowerTryThrow(cir::TryThrowOp op);
 };
 
 /// Lower all EH operations in the module to the Itanium-specific form.
@@ -253,6 +259,29 @@ void ItaniumEHLowering::ensureClangCallTerminate(mlir::Location loc) {
   clangCallTerminateFunc = funcOp;
 }
 
+/// Ensure the __cxa_throw runtime function is declared in the module.
+///
+///   void __cxa_throw(void *exception, void *type_info, void *dtor);
+void ItaniumEHLowering::ensureCxaThrowDecl(mlir::Location loc) {
+  if (cxaThrowFunc)
+    return;
+  auto throwFuncTy = cir::FuncType::get({voidPtrType, voidPtrType, voidPtrType},
+                                        voidType, /*isVarArg=*/false);
+  cxaThrowFunc =
+      getOrCreateRuntimeFuncDecl(mod, loc, "__cxa_throw", throwFuncTy);
+}
+
+/// Ensure the __cxa_rethrow runtime function is declared in the module.
+///
+///   void __cxa_rethrow();
+void ItaniumEHLowering::ensureCxaRethrowDecl(mlir::Location loc) {
+  if (cxaRethrowFunc)
+    return;
+  auto rethrowFuncTy = cir::FuncType::get({}, voidType, /*isVarArg=*/false);
+  cxaRethrowFunc =
+      getOrCreateRuntimeFuncDecl(mod, loc, "__cxa_rethrow", rethrowFuncTy);
+}
+
 /// Create a terminate landing pad block at the end of the specified function.
 mlir::Block *ItaniumEHLowering::buildTerminateBlock(cir::FuncOp funcOp,
                                                     mlir::Location loc) {
@@ -271,6 +300,52 @@ mlir::Block *ItaniumEHLowering::buildTerminateBlock(cir::FuncOp funcOp,
                          builder.getUnitAttr());
   cir::UnreachableOp::create(builder, loc);
   return terminateBlock;
+}
+
+/// Read-only walk of the eh_token graph from an initiate's root token,
+/// collecting every cir.eh.dispatch its exception can reach, innermost first.
+/// The token flows through cleanups to the innermost dispatch and then, via
+/// that dispatch's continue-unwind edge, on to each enclosing dispatch (nested
+/// try/catch).  The walk follows the token into catch-handler blocks too, but
+/// it dead-ends there because cir.begin_catch consumes the eh_token (producing
+/// a catch_token), so only the unwind chain yields further dispatches.
+///
+/// This is computed before any destructive lowering so a landing pad's catch
+/// types -- which are a property of the EH graph -- do not depend on the order
+/// in which the destructive per-initiate traversal tears down shared
+/// token-graph edges.  \p dispatches is left empty for a cleanup-only initiate
+/// that reaches no dispatch (e.g. a path that only resumes).
+static void collectReachableDispatches(
+    mlir::Value rootToken,
+    llvm::SmallSetVector<cir::EhDispatchOp, 4> &dispatches,
+    bool &reachesCleanup) {
+  llvm::SmallVector<mlir::Value> worklist;
+  llvm::SmallPtrSet<mlir::Value, 8> visited;
+  worklist.push_back(rootToken);
+  // Breadth-first (process in insertion order) so dispatches are discovered
+  // innermost first, matching the order catch clauses must appear in the
+  // landing pad.
+  for (unsigned i = 0; i < worklist.size(); ++i) {
+    mlir::Value current = worklist[i];
+    if (!visited.insert(current).second)
+      continue;
+    for (mlir::OpOperand &use : current.getUses()) {
+      mlir::Operation *user = use.getOwner();
+      // A cleanup anywhere on the unwind path (this initiate's own cleanup or
+      // an enclosing scope's) means the landing pad must carry the cleanup
+      // clause so destructors still run when a foreign exception unwinds
+      // through this frame.
+      if (mlir::isa<cir::BeginCleanupOp>(user))
+        reachesCleanup = true;
+      if (auto dispatch = mlir::dyn_cast<cir::EhDispatchOp>(user))
+        dispatches.insert(dispatch);
+      // Follow the token into eh_token block arguments of successor blocks.
+      for (unsigned s = 0, e = user->getNumSuccessors(); s < e; ++s)
+        for (mlir::BlockArgument arg : user->getSuccessor(s)->getArguments())
+          if (mlir::isa<cir::EhTokenType>(arg.getType()))
+            worklist.push_back(arg);
+    }
+  }
 }
 
 /// Lower all EH operations in a single function.
@@ -297,21 +372,51 @@ mlir::LogicalResult ItaniumEHLowering::lowerFunc(cir::FuncOp funcOp) {
   if (!funcOp.getPersonality())
     funcOp.setPersonality(kGxxPersonality);
 
-  // Lower each initiate and all EH ops connected to it. The token map is
-  // shared across all initiate operations. Multiple initiates may flow into the
-  // same dispatch block, and the map ensures the arguments are registered
-  // only once. Dispatch ops are scheduled for deferred removal so that sibling
-  // initiates can still read catch types from a shared dispatch.
-  EhTokenMap ehTokenMap;
-  SmallVector<mlir::Operation *> deadOps;
-  for (cir::EhInitiateOp initiateOp : initiateOps)
-    if (mlir::failed(lowerEhInitiate(initiateOp, ehTokenMap, deadOps)))
-      return mlir::failure();
+  // Compute, read-only and before any destructive lowering, the dispatches each
+  // initiate's exception can reach (innermost first; more than one for nested
+  // try/catch).  A landing pad's catch types are a property of the EH graph, so
+  // deriving them here keeps them independent of the order in which the
+  // destructive per-initiate traversal in lowerEhInitiate tears down shared
+  // token-graph edges.  Otherwise a sibling or outer dispatch could be missed,
+  // leaving a landing pad without its catch clause (it would resume past the
+  // handler to std::terminate) or an un-lowered leftover dispatch.
+  // Per initiate: the dispatches its exception can reach (innermost first) and
+  // whether a cleanup lies on its unwind path.  Both are properties of the EH
+  // graph and are always consumed together for the same initiate, so they live
+  // in one map keyed by the initiate op.
+  struct InitiateEHInfo {
+    llvm::SmallSetVector<cir::EhDispatchOp, 4> reachedDispatches;
+    bool reachesCleanup = false;
+  };
+  llvm::DenseMap<mlir::Operation *, InitiateEHInfo> initiateInfo;
+  llvm::SmallSetVector<cir::EhDispatchOp, 4> dispatchesToLower;
+  for (cir::EhInitiateOp initiateOp : initiateOps) {
+    InitiateEHInfo &info = initiateInfo[initiateOp.getOperation()];
+    collectReachableDispatches(initiateOp.getEhToken(), info.reachedDispatches,
+                               info.reachesCleanup);
+    dispatchesToLower.insert(info.reachedDispatches.begin(),
+                             info.reachedDispatches.end());
+  }
 
-  // Erase operations that were deferred during per-initiate processing
-  // (dispatch ops whose catch types were read by multiple initiates).
-  for (mlir::Operation *op : deadOps)
-    op->erase();
+  EhTokenMap ehTokenMap;
+  for (cir::EhInitiateOp initiateOp : initiateOps) {
+    const InitiateEHInfo &info = initiateInfo[initiateOp.getOperation()];
+    if (mlir::failed(lowerEhInitiate(initiateOp,
+                                     info.reachedDispatches.getArrayRef(),
+                                     info.reachesCleanup, ehTokenMap)))
+      return mlir::failure();
+  }
+
+  // Lower each dispatch exactly once.  Every initiate's token block-argument
+  // (ptr, u32) replacements are registered in ehTokenMap by now, so each
+  // dispatch's own (exnPtr, typeId) pair is available.  lowerDispatch erases
+  // the dispatch after building its comparison chain.
+  for (cir::EhDispatchOp dispatch : dispatchesToLower) {
+    auto [exnPtr, typeId] = ehTokenMap.lookup(dispatch.getEhToken());
+    assert(exnPtr && typeId &&
+           "dispatch eh_token must be registered in ehTokenMap");
+    lowerDispatch(dispatch, exnPtr, typeId);
+  }
 
   // Remove the !cir.eh_token block arguments that were replaced by (ptr, u32)
   // pairs. Iterate in reverse to preserve argument indices during removal.
@@ -329,6 +434,15 @@ mlir::LogicalResult ItaniumEHLowering::lowerFunc(cir::FuncOp funcOp) {
   funcOp.walk([&](cir::InitCatchParamOp op) { initCatchOps.push_back(op); });
   for (cir::InitCatchParamOp op : initCatchOps)
     lowerInitCatchParam(op);
+
+  // Lower any cir.try_throw ops in this function to cir.try_call of
+  // __cxa_throw / __cxa_rethrow. These are produced by FlattenCFG when a
+  // cir.throw appears inside a cleanup scope or try region.
+  SmallVector<cir::TryThrowOp> tryThrowOps;
+  funcOp.walk([&](cir::TryThrowOp op) { tryThrowOps.push_back(op); });
+  for (cir::TryThrowOp op : tryThrowOps)
+    if (mlir::failed(lowerTryThrow(op)))
+      return mlir::failure();
 
   return mlir::success();
 }
@@ -352,25 +466,53 @@ mlir::LogicalResult ItaniumEHLowering::lowerFunc(cir::FuncOp funcOp) {
 /// a catch_type_list; when the dispatch is encountered during traversal,
 /// the catch types are read and set on the inflight op.
 ///
-/// Dispatch ops are not erased during per-initiate processing because they may
-/// be used by other initiate ops that haven't yet been lowered. Instead they
-/// are added to \p deadOps and erased by the caller after all initiates have
-/// been lowered.
+/// Dispatch ops are not lowered here; they are lowered once by the caller after
+/// every initiate has been processed (a dispatch can be shared by sibling
+/// initiates), so this traversal only registers the catch-handler block
+/// arguments reachable through them.
 ///
 /// \p ehTokenMap is shared across all initiates in the function so that block
 /// arguments reachable from multiple sibling initiates are registered once.
 mlir::LogicalResult ItaniumEHLowering::lowerEhInitiate(
-    cir::EhInitiateOp initiateOp, EhTokenMap &ehTokenMap,
-    SmallVectorImpl<mlir::Operation *> &deadOps) {
+    cir::EhInitiateOp initiateOp,
+    llvm::ArrayRef<cir::EhDispatchOp> reachedDispatches, bool reachesCleanup,
+    EhTokenMap &ehTokenMap) {
   mlir::Value rootToken = initiateOp.getEhToken();
 
-  // Create the inflight_exception without a catch_type_list. The catch types
-  // will be set once we encounter the dispatch during the traversal below.
+  // The catch clauses for this landing pad come from the dispatches its
+  // exception reaches (computed read-only by the caller before any destructive
+  // lowering).  For nested try/catch the exception can reach several dispatches
+  // innermost first, so the landing pad lists their catch types in that order
+  // (matching classic CodeGen), stopping at a catch-all since nothing escapes
+  // it.  Deriving this from the original EH graph -- rather than during the
+  // destructive token-graph traversal below -- keeps it correct regardless of
+  // the order in which sibling/nested initiates are lowered.
+  mlir::ArrayAttr catchTypeList;
+  bool catchAll = false;
+  SmallVector<mlir::Attribute> typeSymbols;
+  for (cir::EhDispatchOp dispatch : reachedDispatches) {
+    if (mlir::ArrayAttr catchTypes = dispatch.getCatchTypesAttr())
+      for (mlir::Attribute attr : catchTypes)
+        typeSymbols.push_back(
+            mlir::cast<cir::GlobalViewAttr>(attr).getSymbol());
+    if (dispatch.getDefaultIsCatchAll()) {
+      catchAll = true;
+      // A catch-all handles every exception, so it stops the unwind: no
+      // enclosing dispatch is reachable past it, and the collector therefore
+      // never records one after it.  Drop the rest of the clauses here.
+      assert(dispatch == reachedDispatches.back() &&
+             "catch-all must be the last reachable dispatch");
+      break;
+    }
+  }
+  if (!typeSymbols.empty())
+    catchTypeList = builder.getArrayAttr(typeSymbols);
+
   builder.setInsertionPoint(initiateOp);
   auto inflightOp = cir::EhInflightOp::create(
-      builder, initiateOp.getLoc(), /*cleanup=*/initiateOp.getCleanup(),
-      /*catch_all=*/false,
-      /*catch_type_list=*/mlir::ArrayAttr{});
+      builder, initiateOp.getLoc(),
+      /*cleanup=*/initiateOp.getCleanup() || reachesCleanup,
+      /*catch_all=*/catchAll, catchTypeList);
 
   ehTokenMap[rootToken] = {inflightOp.getExceptionPtr(),
                            inflightOp.getTypeId()};
@@ -458,25 +600,12 @@ mlir::LogicalResult ItaniumEHLowering::lowerEhInitiate(
         auto [exnPtr, typeId] = ehTokenMap.lookup(op.getEhToken());
         if (mlir::failed(lowerConstructCatchParam(op, exnPtr)))
           return mlir::failure();
-      } else if (auto op = mlir::dyn_cast<cir::EhDispatchOp>(user)) {
-        // Read catch types from the dispatch and set them on the inflight op.
-        mlir::ArrayAttr catchTypes = op.getCatchTypesAttr();
-        if (catchTypes && catchTypes.size() > 0) {
-          SmallVector<mlir::Attribute> typeSymbols;
-          for (mlir::Attribute attr : catchTypes)
-            typeSymbols.push_back(
-                mlir::cast<cir::GlobalViewAttr>(attr).getSymbol());
-          inflightOp.setCatchTypeListAttr(builder.getArrayAttr(typeSymbols));
-        }
-        if (op.getDefaultIsCatchAll())
-          inflightOp.setCatchAllAttr(builder.getUnitAttr());
-        // Only lower the dispatch once. A sibling initiate sharing the same
-        // dispatch will still read its catch types (above), but the comparison
-        // chain and branch replacement are only created the first time.
-        if (!llvm::is_contained(deadOps, op.getOperation())) {
-          auto [exnPtr, typeId] = ehTokenMap.lookup(op.getEhToken());
-          lowerDispatch(op, exnPtr, typeId, deadOps);
-        }
+      } else if (mlir::isa<cir::EhDispatchOp>(user)) {
+        // The dispatch's catch types were already read into every reaching
+        // landing pad (read-only, before this traversal).  The dispatch op
+        // itself is lowered once by the caller after all initiates are
+        // processed, so nothing is done here; the successor catch-handler
+        // blocks are still reached via the block-argument registration above.
       } else if (auto op = mlir::dyn_cast<cir::EhTerminateOp>(user)) {
         auto [exnPtr, typeId] = ehTokenMap.lookup(op.getEhToken());
         ensureClangCallTerminate(op.getLoc());
@@ -524,10 +653,9 @@ mlir::LogicalResult ItaniumEHLowering::lowerEhInitiate(
 
 /// Lower a cir.eh.dispatch by creating a comparison chain in new blocks.
 /// The dispatch itself is replaced with a branch to the first comparison
-/// block and added to deadOps for deferred removal.
-void ItaniumEHLowering::lowerDispatch(
-    cir::EhDispatchOp dispatch, mlir::Value exnPtr, mlir::Value typeId,
-    SmallVectorImpl<mlir::Operation *> &deadOps) {
+/// block and then erased.
+void ItaniumEHLowering::lowerDispatch(cir::EhDispatchOp dispatch,
+                                      mlir::Value exnPtr, mlir::Value typeId) {
   mlir::Location dispLoc = dispatch.getLoc();
   mlir::Block *defaultDest = dispatch.getDefaultDestination();
   mlir::ArrayAttr catchTypes = dispatch.getCatchTypesAttr();
@@ -536,7 +664,7 @@ void ItaniumEHLowering::lowerDispatch(
 
   // Build the comparison chain in new blocks inserted after the dispatch's
   // block. The dispatch itself is replaced with a branch to the first
-  // comparison block and scheduled for deferred removal.
+  // comparison block and erased below.
   if (!catchTypes || catchTypes.empty()) {
     // No typed catches: replace dispatch with a direct branch.
     builder.setInsertionPoint(dispatch);
@@ -580,10 +708,9 @@ void ItaniumEHLowering::lowerDispatch(
                       mlir::ValueRange{exnPtr, typeId});
   }
 
-  // Schedule the dispatch for deferred removal. We cannot erase it now because
-  // a sibling initiate that shares this dispatch may still need to read its
-  // catch types.
-  deadOps.push_back(dispatch);
+  // The caller lowers each dispatch exactly once after every initiate has been
+  // processed, so no sibling still needs it; erase it now.
+  dispatch.erase();
 }
 
 mlir::FailureOr<cir::FuncOp>
@@ -641,7 +768,7 @@ ItaniumEHLowering::lowerConstructCatchParam(cir::ConstructCatchParamOp op,
     mlir::Value casted =
         cir::CastOp::create(builder, loc, paramAddrType.getPointee(),
                             cir::CastKind::bitcast, exnObj);
-    cir::StoreOp::create(builder, loc, casted, paramAddr, {}, {}, {}, {});
+    cir::StoreOp::create(builder, loc, casted, paramAddr, {}, {}, {}, {}, {});
     op.erase();
     return success();
   }
@@ -704,6 +831,72 @@ ItaniumEHLowering::lowerConstructCatchParam(cir::ConstructCatchParamOp op,
   return mlir::success();
 }
 
+/// Lower a cir.try_throw to a cir.try_call of __cxa_throw (or
+/// __cxa_rethrow for the no-operand rethrow form). Materializes the
+/// type_info and dtor pointers from their symbol attributes, bitcasting
+/// each to !cir.ptr<!void> as required by the runtime function signature.
+mlir::LogicalResult ItaniumEHLowering::lowerTryThrow(cir::TryThrowOp op) {
+  mlir::Location loc = op.getLoc();
+  mlir::Block *normalDest = op.getNormalDest();
+  mlir::Block *unwindDest = op.getUnwindDest();
+  builder.setInsertionPoint(op);
+
+  if (op.rethrows()) {
+    ensureCxaRethrowDecl(loc);
+    cir::TryCallOp::create(
+        builder, loc, mlir::FlatSymbolRefAttr::get(cxaRethrowFunc), voidType,
+        normalDest, unwindDest, mlir::ValueRange{});
+    op.erase();
+    return mlir::success();
+  }
+
+  ensureCxaThrowDecl(loc);
+
+  // Bitcast the exception pointer to void* if necessary.
+  mlir::Value exnPtr = op.getExceptionPtr();
+  if (exnPtr.getType() != voidPtrType)
+    exnPtr = cir::CastOp::create(builder, loc, voidPtrType,
+                                 cir::CastKind::bitcast, exnPtr);
+
+  // Materialize the type_info pointer, looking up the typed symbol in the
+  // module so we get the correct pointer type for cir.get_global, then
+  // bitcasting to void* to match the runtime signature.
+  mlir::FlatSymbolRefAttr typeInfoAttr = op.getTypeInfoAttr();
+  auto typeInfoGlobal = mod.lookupSymbol<cir::GlobalOp>(typeInfoAttr);
+  if (!typeInfoGlobal)
+    return op.emitError("type_info symbol not found in module");
+  auto typeInfoPtrTy = cir::PointerType::get(typeInfoGlobal.getSymType());
+  mlir::Value typeInfo = cir::GetGlobalOp::create(builder, loc, typeInfoPtrTy,
+                                                  typeInfoAttr.getValue());
+  if (typeInfo.getType() != voidPtrType)
+    typeInfo = cir::CastOp::create(builder, loc, voidPtrType,
+                                   cir::CastKind::bitcast, typeInfo);
+
+  // Materialize the dtor pointer (or null if no dtor).
+  mlir::Value dtor;
+  if (mlir::FlatSymbolRefAttr dtorAttr = op.getDtorAttr()) {
+    auto dtorFunc = mod.lookupSymbol<cir::FuncOp>(dtorAttr);
+    if (!dtorFunc)
+      return op.emitError("dtor symbol not found in module");
+    auto dtorPtrTy = cir::PointerType::get(dtorFunc.getFunctionType());
+    dtor =
+        cir::GetGlobalOp::create(builder, loc, dtorPtrTy, dtorAttr.getValue());
+    if (dtor.getType() != voidPtrType)
+      dtor = cir::CastOp::create(builder, loc, voidPtrType,
+                                 cir::CastKind::bitcast, dtor);
+  } else {
+    dtor = cir::ConstantOp::create(
+        builder, loc,
+        cir::ConstPtrAttr::get(voidPtrType, builder.getI64IntegerAttr(0)));
+  }
+
+  cir::TryCallOp::create(
+      builder, loc, mlir::FlatSymbolRefAttr::get(cxaThrowFunc), voidType,
+      normalDest, unwindDest, mlir::ValueRange{exnPtr, typeInfo, dtor});
+  op.erase();
+  return mlir::success();
+}
+
 /// Lower a cir.init_catch_param into the Itanium-specific sequence that
 /// materializes the catch parameter's local variable from the exception
 /// pointer returned by __cxa_begin_catch. The shape of the lowering
@@ -750,7 +943,7 @@ void ItaniumEHLowering::lowerInitCatchParam(cir::InitCatchParamOp op) {
 
     mlir::Value casted = cir::CastOp::create(builder, loc, elementType,
                                              cir::CastKind::bitcast, exnPtr);
-    cir::StoreOp::create(builder, loc, casted, paramAddr, {}, {}, {}, {});
+    cir::StoreOp::create(builder, loc, casted, paramAddr, {}, {}, {}, {}, {});
     break;
   }
   case InitCatchKind::TrivialCopy: {
@@ -771,13 +964,13 @@ void ItaniumEHLowering::lowerInitCatchParam(cir::InitCatchParamOp op) {
                                              cir::CastKind::bitcast, exnPtr);
     auto loadOp = cir::LoadOp::create(builder, loc, elementType, srcPtr);
     cir::StoreOp::create(builder, loc, loadOp.getResult(), paramAddr, {}, {},
-                         {}, {});
+                         {}, {}, {});
     break;
   }
   case InitCatchKind::Pointer: {
     mlir::Value casted = cir::CastOp::create(builder, loc, elementType,
                                              cir::CastKind::bitcast, exnPtr);
-    cir::StoreOp::create(builder, loc, casted, paramAddr, {}, {}, {}, {});
+    cir::StoreOp::create(builder, loc, casted, paramAddr, {}, {}, {}, {}, {});
     break;
   }
   case InitCatchKind::Objc:

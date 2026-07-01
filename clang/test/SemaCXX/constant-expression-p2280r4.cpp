@@ -205,8 +205,8 @@ int f() {
 namespace uninit_reference_used {
   int y;
   constexpr int &r = r; // expected-error {{must be initialized by a constant expression}} \
-  // expected-note {{initializer of 'r' is not a constant expression}} \
-  // expected-note {{declared here}}
+                        // expected-note {{initializer of 'r' is not a constant expression}} \
+                        // expected-note {{declared here}}
   constexpr int &rr = (rr, y);
   constexpr int &g() {
     int &x = x; // expected-warning {{reference 'x' is not yet bound to a value when used within its own initialization}} \
@@ -224,12 +224,12 @@ namespace uninit_reference_used {
   // expected-note {{in call to 'g2()'}}
   constexpr int &g3() {
     int &x = (x,y); // expected-warning{{left operand of comma operator has no effect}} \
-    // expected-warning {{reference 'x' is not yet bound to a value when used within its own initialization}} \
-    // nointerpreter-note {{use of reference outside its lifetime is not allowed in a constant expression}}
+                    // expected-warning {{reference 'x' is not yet bound to a value when used within its own initialization}} \
+                    // expected-note {{use of reference outside its lifetime is not allowed in a constant expression}}
     return x;
   }
-  constexpr int &gg3 = g3(); // nointerpreter-error {{must be initialized by a constant expression}} \
-  // nointerpreter-note {{in call to 'g3()'}}
+  constexpr int &gg3 = g3(); // expected-error {{must be initialized by a constant expression}} \
+                             // expected-note {{in call to 'g3()'}}
   typedef decltype(sizeof(1)) uintptr_t;
   constexpr uintptr_t g4() {
     uintptr_t * &x = x; // expected-warning {{reference 'x' is not yet bound to a value when used within its own initialization}} \
@@ -273,13 +273,11 @@ namespace dropped_note {
 namespace dynamic {
   struct A {virtual ~A();};
   struct B : A {};
-  void f(A& a) { // interpreter-note 2{{declared here}}
+  void f(A& a) {
     constexpr B* b = dynamic_cast<B*>(&a); // expected-error {{must be initialized by a constant expression}} \
-                                           // nointerpreter-note {{dynamic_cast applied to object 'a' whose dynamic type is not constant}} \
-                                           // interpreter-note {{pointer to 'a' is not a constant expression}}
+                                           // expected-note {{dynamic_cast applied to object 'a' whose dynamic type is not constant}}
     constexpr void* b2 = dynamic_cast<void*>(&a); // expected-error {{must be initialized by a constant expression}} \
-                                                  // nointerpreter-note {{dynamic_cast applied to object 'a' whose dynamic type is not constant}} \
-                                                  // interpreter-note {{pointer to 'a' is not a constant expression}}
+                                                  // expected-note {{dynamic_cast applied to object 'a' whose dynamic type is not constant}}
   }
 }
 
@@ -287,11 +285,9 @@ namespace unsized_array {
   void f(int (&a)[], int (&b)[], int (&c)[4]) {
     constexpr int t1 = a - a;
     constexpr int t2 = a - b; // expected-error {{constexpr variable 't2' must be initialized by a constant expression}} \
-                              // nointerpreter-note {{arithmetic involving unrelated objects '&a[0]' and '&b[0]' has unspecified value}} \
-                              // interpreter-note {{arithmetic involving unrelated objects '&a' and '&b' has unspecified value}}
+                              // expected-note {{arithmetic involving unrelated objects '&a[0]' and '&b[0]' has unspecified value}}
     constexpr int t3 = a - &c[2];  // expected-error {{constexpr variable 't3' must be initialized by a constant expression}} \
-                                   // nointerpreter-note {{arithmetic involving unrelated objects '&a[0]' and '&c[2]' has unspecified value}} \
-                                   // interpreter-note {{arithmetic involving unrelated objects '&a' and '&c[2]' has unspecified value}}
+                                   // expected-note {{arithmetic involving unrelated objects '&a[0]' and '&c[2]' has unspecified value}}
   }
 }
 
@@ -300,14 +296,14 @@ namespace casting {
   struct B : A {};
   struct C : A {};
   extern A &a;
-  extern B &b; // nointerpreter-note {{declared here}}
+  extern B &b; // expected-note {{declared here}}
   constexpr B &t1 = (B&)a; // expected-error {{must be initialized by a constant expression}} \
-                           // nointerpreter-note {{cannot cast object of dynamic type 'A' to type 'B'}}
+                           // expected-note {{cannot cast object of dynamic type 'A' to type 'B'}}
   constexpr B &t2 = (B&)(A&)b; // expected-error {{must be initialized by a constant expression}} \
-                               // nointerpreter-note {{initializer of 'b' is not a constant expression}}
-  constexpr bool t3 = &b + 1 == &(B&)(A&)b; // interpreter-error {{constexpr variable 't3' must be initialized by a constant expression}}
+                               // expected-note {{initializer of 'b' is not a constant expression}}
+  constexpr bool t3 = &b + 1 == &(B&)(A&)b;
   constexpr C &t4 = (C&)(A&)b; // expected-error {{must be initialized by a constant expression}} \
-                               // nointerpreter-note {{cannot cast object of dynamic type 'B' to type 'C'}}
+                               // expected-note {{cannot cast object of dynamic type 'B' to type 'C'}}
 }
 
 namespace pointer_comparisons {
@@ -373,15 +369,14 @@ namespace enable_if_2 {
 
 namespace GH150015 {
   extern int (& c)[8];
-  constexpr int x = c <= c+8; // interpreter-error {{constexpr variable 'x' must be initialized by a constant expression}} \
-                              // interpreter-note {{cannot refer to element 8 of non-array object in a constant expression}}
+  constexpr int x = c <= c+8;
 
   struct X {};
   struct Y {};
   struct Z : X, Y {};
   extern Z &z;
-  constexpr int bases = (void*)(X*)&z <= (Y*)&z; // nointerpreter-error {{constexpr variable 'bases' must be initialized by a constant expression}} \
-                                                 // nointerpreter-note {{comparison of addresses of subobjects of different base classes has unspecified value}}
+  constexpr int bases = (void*)(X*)&z <= (Y*)&z; // expected-error {{constexpr variable 'bases' must be initialized by a constant expression}} \
+                                                 // expected-note {{comparison of addresses of subobjects of different base classes has unspecified value}}
 }
 
 namespace InvalidConstexprFn {

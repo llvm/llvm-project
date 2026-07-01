@@ -146,6 +146,12 @@ public:
                                      const APInt &DemandedElts,
                                      const SelectionDAG &DAG,
                                      unsigned Depth) const override;
+
+  void computeKnownBitsForTargetInstr(GISelValueTracking &Analysis, Register R,
+                                      KnownBits &Known,
+                                      const APInt &DemandedElts,
+                                      const MachineRegisterInfo &MRI,
+                                      unsigned Depth = 0) const override;
   unsigned ComputeNumSignBitsForTargetNode(SDValue Op,
                                            const APInt &DemandedElts,
                                            const SelectionDAG &DAG,
@@ -604,7 +610,7 @@ private:
   /// select(N0&N1, X, Y) => select(N0, select(N1, X, Y), Y) and
   /// select(N0|N1, X, Y) => select(N0, select(N1, X, Y, Y))
   /// RISC-V doesn't have flags so it's better to perform the and/or in a GPR.
-  bool shouldNormalizeToSelectSequence(LLVMContext &, EVT) const override {
+  bool shouldNormalizeToSelectSequence(LLVMContext &, EVT, EVT) const override {
     return false;
   }
 

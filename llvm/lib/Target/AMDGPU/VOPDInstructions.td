@@ -103,6 +103,7 @@ class GFXGenD<GFXGen Gen, list<string> DXPseudos, list<string> DYPseudos,
   list<string> VOPDXPseudos = DXPseudos;
   list<string> VOPDYPseudos = DYPseudos;
   Predicate SubtargetPredicate = subtargetPred;
+  bit IsVOPD3 = 0;
 }
 
 class VOPD_Base<dag outs, dag ins, string asm, VOP_Pseudo VDX, VOP_Pseudo VDY,
@@ -262,9 +263,13 @@ defvar VOPD3YPseudosGFX1250 = !listconcat(
                                                                      !eq(!find(x, "FMAMK"), -1))),
                                 VOPD3YPseudosExtra);
 
-def GFX1250GenD3 : GFXGenD<GFX1250Gen, VOPD3XPseudosGFX1250, VOPD3YPseudosGFX1250>;
+def GFX1250GenD3 : GFXGenD<GFX1250Gen, VOPD3XPseudosGFX1250, VOPD3YPseudosGFX1250> {
+  let IsVOPD3 = 1;
+}
 
-def GFX13GenD3 : GFXGenD<GFX13Gen, VOPD3XPseudosGFX13, VOPD3YPseudosGFX1250>;
+def GFX13GenD3 : GFXGenD<GFX13Gen, VOPD3XPseudosGFX13, VOPD3YPseudosGFX1250> {
+  let IsVOPD3 = 1;
+}
 
 class getOpcMap<string OPName> {
   defvar BaseName = !substr(OPName,2);
@@ -288,4 +293,28 @@ foreach Gen = [GFX1250GenD3, GFX13GenD3] in {
       def OpName : VOPD3<outs, ins, asm, xInst, yInst, XasVC, YasVC, Gen>;
     }
   }
+}
+
+class VOPDXY<bits<6> Op, bits<4> Sub, bit IsVOPD3, bit X, bit Y> {
+  bits<11> VOPDXYKey = {Op, Sub, IsVOPD3};
+  bit IsX = X;
+  bit IsY = Y;
+}
+
+foreach Gen = [GFX11GenD, GFX1170GenD, GFX12GenD, GFX1250GenD, GFX13GenD,
+               GFX1250GenD3, GFX13GenD3] in {
+  defvar Prefix = !if(Gen.IsVOPD3, "VOPDXY_VOPD3_", "VOPDXY_");
+  defvar XOnly = !listremove(Gen.VOPDXPseudos, Gen.VOPDYPseudos);
+  defvar YOnly = !listremove(Gen.VOPDYPseudos, Gen.VOPDXPseudos);
+  defvar XAndY = !listremove(Gen.VOPDXPseudos, XOnly);
+
+  foreach p = XOnly in
+    def Prefix # p # Gen.Suffix :
+        VOPDXY<!cast<VOPD_Component>(p).VOPDOp, Gen.Subtarget, Gen.IsVOPD3, 1, 0>;
+  foreach p = YOnly in
+    def Prefix # p # Gen.Suffix :
+        VOPDXY<!cast<VOPD_Component>(p).VOPDOp, Gen.Subtarget, Gen.IsVOPD3, 0, 1>;
+  foreach p = XAndY in
+    def Prefix # p # Gen.Suffix :
+        VOPDXY<!cast<VOPD_Component>(p).VOPDOp, Gen.Subtarget, Gen.IsVOPD3, 1, 1>;
 }

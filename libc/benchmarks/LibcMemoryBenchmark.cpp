@@ -8,10 +8,18 @@
 
 #include "LibcMemoryBenchmark.h"
 #include "llvm/ADT/SmallVector.h"
+#include <iostream>
+#ifdef LIBC_BENCHMARKS_HAS_LLVM_SUPPORT
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/ErrorHandling.h"
+#endif
 #include "llvm/Support/MathExtras.h"
 #include <algorithm>
+#include <optional>
+
+#if !defined(LIBC_BENCHMARKS_HAS_LLVM_SUPPORT) && __has_include(<unistd.h>)
+#include <unistd.h>
+#endif
 
 namespace llvm {
 namespace libc_benchmarks {
@@ -62,13 +70,19 @@ MismatchOffsetDistribution::MismatchOffsetDistribution(size_t BufferSize,
 }
 
 static size_t getL1DataCacheSize() {
-  const std::vector<CacheInfo> &CacheInfos = HostState::get().Caches;
-  const auto IsL1DataCache = [](const CacheInfo &CI) {
-    return CI.Type == "Data" && CI.Level == 1;
+#ifdef LIBC_BENCHMARKS_HAS_LLVM_SUPPORT
+  const std::vector<CacheInfo> &cache_infos = HostState::get().caches;
+  const auto is_l1_data_cache = [](const CacheInfo &ci) {
+    return ci.type == "Data" && ci.level == 1;
   };
-  const auto CacheIt = find_if(CacheInfos, IsL1DataCache);
-  if (CacheIt != CacheInfos.end())
-    return CacheIt->Size;
+  const auto cache_it = find_if(cache_infos, is_l1_data_cache);
+  if (cache_it != cache_infos.end())
+    return cache_it->size;
+#elif defined(_SC_LEVEL1_DCACHE_SIZE)
+  long res = sysconf(_SC_LEVEL1_DCACHE_SIZE);
+  if (res > 0)
+    return static_cast<size_t>(res);
+#endif
   report_fatal_error("Unable to read L1 Cache Data Size");
 }
 
@@ -81,55 +95,64 @@ static size_t getAvailableBufferSize() {
 }
 
 ParameterBatch::ParameterBatch(size_t BufferCount)
-    : BufferSize(getAvailableBufferSize() / BufferCount),
-      BatchSize(ParameterStorageBytes / sizeof(ParameterType)),
-      Parameters(BatchSize) {
-  if (BufferSize <= 0 || BatchSize < 100)
+    : buffer_size(getAvailableBufferSize() / BufferCount),
+      batch_size(ParameterStorageBytes / sizeof(ParameterType)),
+      parameters(batch_size) {
+  if (buffer_size <= 0 || batch_size < 100)
     report_fatal_error("Not enough L1 cache");
-  const size_t ParameterBytes = Parameters.size() * sizeof(ParameterType);
-  const size_t BufferBytes = BufferSize * BufferCount;
-  if (ParameterBytes + BufferBytes + L1LeftAsideBytes > getL1DataCacheSize())
+  const size_t parameter_bytes = parameters.size() * sizeof(ParameterType);
+  const size_t buffer_bytes = buffer_size * BufferCount;
+  if (parameter_bytes + buffer_bytes + L1LeftAsideBytes > getL1DataCacheSize())
     report_fatal_error(
         "We're splitting a buffer of the size of the L1 cache between a data "
         "buffer and a benchmark parameters buffer, so by construction the "
         "total should not exceed the size of the L1 cache");
 }
 
-size_t ParameterBatch::getBatchBytes() const {
-  size_t BatchBytes = 0;
-  for (auto &P : Parameters)
-    BatchBytes += P.SizeBytes;
-  return BatchBytes;
+size_t ParameterBatch::get_batch_bytes() const {
+  size_t batch_bytes = 0;
+  for (auto &p : parameters)
+    batch_bytes += p.size_bytes;
+  return batch_bytes;
 }
 
-void ParameterBatch::checkValid(const ParameterType &P) const {
-  if (P.OffsetBytes + P.SizeBytes >= BufferSize)
+void ParameterBatch::check_valid(const ParameterType &p) const {
+  if (p.offset_bytes + p.size_bytes >= buffer_size) {
+#ifdef LIBC_BENCHMARKS_HAS_LLVM_SUPPORT
     report_fatal_error(
         llvm::Twine("Call would result in buffer overflow: Offset=")
-            .concat(llvm::Twine(P.OffsetBytes))
+            .concat(llvm::Twine(p.offset_bytes))
             .concat(", Size=")
-            .concat(llvm::Twine(P.SizeBytes))
+            .concat(llvm::Twine(p.size_bytes))
             .concat(", BufferSize=")
-            .concat(llvm::Twine(BufferSize)));
+            .concat(llvm::Twine(buffer_size)));
+#else
+    std::string message = "Call would result in buffer overflow: Offset=" +
+                          std::to_string(p.offset_bytes) +
+                          ", Size=" + std::to_string(p.size_bytes) +
+                          ", BufferSize=" + std::to_string(buffer_size);
+    report_fatal_error(message.c_str());
+#endif
+  }
 }
 
 CopySetup::CopySetup()
-    : ParameterBatch(2), SrcBuffer(ParameterBatch::BufferSize),
-      DstBuffer(ParameterBatch::BufferSize) {}
+    : ParameterBatch(2), src_buffer(ParameterBatch::buffer_size),
+      dst_buffer(ParameterBatch::buffer_size) {}
 
 MoveSetup::MoveSetup()
-    : ParameterBatch(3), Buffer(ParameterBatch::BufferSize * 3) {}
+    : ParameterBatch(3), buffer(ParameterBatch::buffer_size * 3) {}
 
 ComparisonSetup::ComparisonSetup()
-    : ParameterBatch(2), LhsBuffer(ParameterBatch::BufferSize),
-      RhsBuffer(ParameterBatch::BufferSize) {
+    : ParameterBatch(2), lhs_buffer(ParameterBatch::buffer_size),
+      rhs_buffer(ParameterBatch::buffer_size) {
   // The memcmp buffers always compare equal.
-  memset(LhsBuffer.begin(), 0xF, BufferSize);
-  memset(RhsBuffer.begin(), 0xF, BufferSize);
+  memset(lhs_buffer.begin(), 0xF, buffer_size);
+  memset(rhs_buffer.begin(), 0xF, buffer_size);
 }
 
 SetSetup::SetSetup()
-    : ParameterBatch(1), DstBuffer(ParameterBatch::BufferSize) {}
+    : ParameterBatch(1), dst_buffer(ParameterBatch::buffer_size) {}
 
 } // namespace libc_benchmarks
 } // namespace llvm

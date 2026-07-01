@@ -185,11 +185,32 @@ static void insertParDim(SmallVectorImpl<GPUParallelDimAttr> &parDims,
     parDims.insert(lb, parDim);
 }
 
+/// Return the device type from which gang/worker/vector clauses should be read.
+/// If the requested device type has any such clauses, use that exclusively;
+/// otherwise fall back to the default (DeviceType::None).
+static DeviceType getGangWorkerVectorDeviceType(LoopOp loopOp,
+                                                DeviceType deviceType) {
+  if (deviceType != DeviceType::None &&
+      loopOp.hasAnyGangWorkerVector(deviceType))
+    return deviceType;
+  return DeviceType::None;
+}
+
+template <typename ComputeConstructT>
+static DeviceType getParDimsDeviceType(ComputeConstructT computeOp,
+                                       DeviceType deviceType) {
+  if (deviceType != DeviceType::None &&
+      computeOp.hasAnyGangWorkerVector(deviceType))
+    return deviceType;
+  return DeviceType::None;
+}
+
 /// Map loop parallelism clauses (gang/worker/vector) to GPU parallel
 /// dimensions using the given mapping policy.
 static SmallVector<GPUParallelDimAttr>
 getParallelDimensions(LoopOp loopOp, const ACCToGPUMappingPolicy &policy,
                       DeviceType deviceType) {
+  deviceType = getGangWorkerVectorDeviceType(loopOp, deviceType);
   SmallVector<GPUParallelDimAttr> parDims;
   auto *ctx = loopOp->getContext();
 
@@ -229,12 +250,12 @@ assignKnownLaunchArgs(ComputeConstructT computeOp, DeviceType deviceType,
     if (isEffectivelySerial(computeOp))
       return {ParWidthOp::create(rewriter, loc, Value(), policy.seqDim(ctx))};
 
+    deviceType = getParDimsDeviceType(computeOp, deviceType);
+
     SmallVector<Value> values;
     auto indexTy = rewriter.getIndexType();
 
     auto numGangs = computeOp.getNumGangsValues(deviceType);
-    if (numGangs.empty())
-      numGangs = computeOp.getNumGangsValues();
     for (auto [gangDimIdx, gangSize] : llvm::enumerate(numGangs)) {
       auto gangLevel = getGangParLevel(gangDimIdx + 1);
       values.push_back(ParWidthOp::create(
@@ -245,8 +266,6 @@ assignKnownLaunchArgs(ComputeConstructT computeOp, DeviceType deviceType,
     }
 
     Value numWorkers = computeOp.getNumWorkersValue(deviceType);
-    if (!numWorkers)
-      numWorkers = computeOp.getNumWorkersValue();
     if (numWorkers) {
       values.push_back(ParWidthOp::create(
           rewriter, loc,
@@ -256,8 +275,6 @@ assignKnownLaunchArgs(ComputeConstructT computeOp, DeviceType deviceType,
     }
 
     Value vectorLength = computeOp.getVectorLengthValue(deviceType);
-    if (!vectorLength)
-      vectorLength = computeOp.getVectorLengthValue();
     if (vectorLength) {
       values.push_back(ParWidthOp::create(
           rewriter, loc,
@@ -296,15 +313,14 @@ public:
     LoopParMode parMode = loopOp.getDefaultOrDeviceTypeParallelism(deviceType);
 
     if (parMode == LoopParMode::loop_seq || isOpInSerialRegion(loopOp)) {
-      // Although it might seem unintuitive, scf.parallel is used here because
-      // the parallelism of the loop is already predetermined (as sequential).
-      // scf.for will become a candidate for auto-parallelization analysis.
-      auto parallelOp = convertACCLoopToSCFParallel(loopOp, rewriter);
-      if (!parallelOp)
+      // Use scf.for with sequential loops, because the loop's parallelism is
+      // already determined.
+      auto forOp =
+          convertACCLoopToSCFFor(loopOp, rewriter, /*enableCollapse=*/true);
+      if (!forOp)
         return failure();
-      setParDimsAttr(parallelOp,
-                     GPUParallelDimsAttr::seq(loopOp->getContext()));
-      rewriter.replaceOp(loopOp, parallelOp);
+      setParDimsAttr(forOp, GPUParallelDimsAttr::seq(loopOp->getContext()));
+      rewriter.replaceOp(loopOp, forOp);
     } else if (parMode == LoopParMode::loop_auto) {
       // All loops in serial regions should have already been handled.
       assert(!isOpInSerialRegion(loopOp) &&
@@ -314,6 +330,13 @@ public:
           convertACCLoopToSCFFor(loopOp, rewriter, /*enableCollapse=*/true);
       if (!forOp)
         return failure();
+      SmallVector<GPUParallelDimAttr> parDims =
+          getParallelDimensions(loopOp, policy, deviceType);
+      if (!parDims.empty()) {
+        auto parDimsAttr =
+            GPUParallelDimsAttr::get(loopOp->getContext(), parDims);
+        setParDimsAttr(forOp, parDimsAttr);
+      }
       rewriter.replaceOp(loopOp, forOp);
     } else if (!isOpInComputeRegion(loopOp) &&
                !isSpecializedAccRoutine(
@@ -366,7 +389,7 @@ public:
                                 PatternRewriter &rewriter) const override {
     rewriter.setInsertionPoint(computeOp);
     auto kernelEnv =
-        KernelEnvironmentOp::createAndPopulate(computeOp, rewriter);
+        KernelEnvironmentOp::createAndPopulate(computeOp, deviceType, rewriter);
     auto launchArgs =
         assignKnownLaunchArgs(computeOp, deviceType, rewriter, policy);
     Region &region = computeOp.getRegion();

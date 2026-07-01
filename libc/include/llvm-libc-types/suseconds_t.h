@@ -19,7 +19,7 @@
 // to ensure type compatibility and avoid redefinition errors.
 #include <sys/_types/_suseconds_t.h>
 #else
-typedef long suseconds_t;
+typedef __INT64_TYPE__ suseconds_t;
 #endif // __APPLE__
 
 #endif // LLVM_LIBC_TYPES_SUSECONDS_T_H

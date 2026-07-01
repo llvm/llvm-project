@@ -20,7 +20,6 @@
 #include "VPlanPatternMatch.h"
 #include "VPlanUtils.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/TypeSwitch.h"
 
 #define DEBUG_TYPE "loop-vectorize"
 
@@ -30,7 +29,6 @@ using namespace VPlanPatternMatch;
 namespace {
 class VPlanVerifier {
   const VPDominatorTree &VPDT;
-  VPTypeAnalysis &TypeInfo;
 
   SmallPtrSet<BasicBlock *, 8> WrappedIRBBs;
 
@@ -61,8 +59,7 @@ class VPlanVerifier {
   bool verifyRegionRec(const VPRegionBlock *Region);
 
 public:
-  VPlanVerifier(VPDominatorTree &VPDT, VPTypeAnalysis &TypeInfo)
-      : VPDT(VPDT), TypeInfo(TypeInfo) {}
+  VPlanVerifier(VPDominatorTree &VPDT) : VPDT(VPDT) {}
 
   bool verify(const VPlan &Plan);
 };
@@ -96,9 +93,14 @@ bool VPlanVerifier::verifyPhiRecipes(const VPBasicBlock *VPBB) {
       return false;
     }
 
+    // In region form, VPCurrentIterationPHIRecipe must be the first header phi
+    // recipe. In a plain CFG VPlan, it must either be the first or second.
     if (isa<VPCurrentIterationPHIRecipe>(RecipeI) &&
-        RecipeI->getIterator() != VPBB->begin()) {
-      errs() << "CurrentIteration PHI is not the first recipe\n";
+        (VPBB->getPlan()->getVectorLoopRegion()
+             ? RecipeI->getIterator() != VPBB->begin()
+             : RecipeI->getIterator() != VPBB->begin() &&
+                   RecipeI->getIterator() != std::next(VPBB->begin()))) {
+      errs() << "CurrentIteration PHI is not the first/second recipe\n";
       return false;
     }
 
@@ -174,12 +176,30 @@ bool VPlanVerifier::verifyLastActiveLaneRecipe(
   // All operands must be prefix-mask. This means an icmp ult/ule LHS, RHS where
   // the LHS is monotonically increasing and RHS is uniform across VFs and UF.
   for (VPValue *Op : LastActiveLane.operands()) {
-    if (vputils::isHeaderMask(Op, Plan))
+    VPValue *Mask = Op;
+    VPValue *HeaderMask;
+
+    // Look through any `and`s with a loop_dependence_war_mask, which is always
+    // a prefix mask. TODO: Verify the full loop.dependence.mask chain.
+    if (match(Op,
+              m_c_BinaryAnd(
+                  m_VPValue(HeaderMask),
+                  m_CombineOr(
+                      m_c_BinaryAnd(
+                          m_Intrinsic<Intrinsic::loop_dependence_war_mask>(),
+                          m_VPValue()),
+                      m_Intrinsic<Intrinsic::loop_dependence_war_mask>()))))
+      Mask = HeaderMask;
+
+    if (vputils::isHeaderMask(Mask, Plan))
+      continue;
+
+    if (match(Mask, m_ActiveLaneMask(m_VPValue(), m_VPValue(), m_VPValue())))
       continue;
 
     CmpPredicate Pred;
     VPValue *LHS, *RHS;
-    if (match(Op, m_ICmp(Pred, m_VPValue(LHS), m_VPValue(RHS))) &&
+    if (match(Mask, m_ICmp(Pred, m_VPValue(LHS), m_VPValue(RHS))) &&
         (Pred == CmpInst::ICMP_ULE || Pred == CmpInst::ICMP_ULT) &&
         isKnownMonotonic(LHS) &&
         (vputils::isUniformAcrossVFsAndUFs(RHS) ||
@@ -220,11 +240,9 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
       return false;
     }
     for (const VPValue *V : R.definedValues()) {
-      // Verify that we can infer a scalar type for each defined value. With
-      // assertions enabled, inferScalarType will perform some consistency
-      // checks during type inference.
-      if (!TypeInfo.inferScalarType(V)) {
-        errs() << "Failed to infer scalar type!\n";
+      // Verify that each defined value has a scalar type.
+      if (!V->getScalarType()) {
+        errs() << "VPValue without scalar type!\n";
         return false;
       }
 
@@ -501,7 +519,6 @@ bool VPlanVerifier::verify(const VPlan &Plan) {
 
 bool llvm::verifyVPlanIsValid(const VPlan &Plan) {
   VPDominatorTree VPDT(const_cast<VPlan &>(Plan));
-  VPTypeAnalysis TypeInfo(Plan);
-  VPlanVerifier Verifier(VPDT, TypeInfo);
+  VPlanVerifier Verifier(VPDT);
   return Verifier.verify(Plan);
 }

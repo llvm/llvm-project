@@ -22,12 +22,6 @@
 namespace llvm {
 /// Traits for DenseMap.
 template <> struct DenseMapInfo<SmallVector<sandboxir::Value *>> {
-  static inline SmallVector<sandboxir::Value *> getEmptyKey() {
-    return SmallVector<sandboxir::Value *>({(sandboxir::Value *)-1});
-  }
-  static inline SmallVector<sandboxir::Value *> getTombstoneKey() {
-    return SmallVector<sandboxir::Value *>({(sandboxir::Value *)-2});
-  }
   static unsigned getHashValue(const SmallVector<sandboxir::Value *> &Vec) {
     return hash_combine_range(Vec);
   }
@@ -151,6 +145,16 @@ public:
         LowestI = I;
     }
     return LowestI;
+  }
+  /// \Returns the instruction in \p Instrs that is highest in the BB. Expects
+  /// that all instructions are in the same BB.
+  static Instruction *getHighest(ArrayRef<Instruction *> Instrs) {
+    Instruction *HighestI = Instrs.front();
+    for (auto *I : drop_begin(Instrs)) {
+      if (I->comesBefore(HighestI))
+        HighestI = I;
+    }
+    return HighestI;
   }
   /// \Returns the lowest instruction in \p Vals, or nullptr if no instructions
   /// are found. Skips instructions not in \p BB.

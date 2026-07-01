@@ -62,7 +62,8 @@ bool implicitObjectParamIsLifetimeBound(const FunctionDecl *FD);
 // container iterators (begin, end), data accessors (c_str, data, get),
 // element accessors (operator[], operator*, front, back, at), or propagating
 // operations (operator+, operator-, operator++, operator--).
-bool shouldTrackImplicitObjectArg(const CXXMethodDecl *Callee,
+bool shouldTrackImplicitObjectArg(const Expr &ImplicitObjectArgument,
+                                  const CXXMethodDecl *Callee,
                                   bool RunningUnderLifetimeSafety);
 
 // Returns true if the first argument of a free function should be tracked for
@@ -81,6 +82,7 @@ bool shouldTrackSecondArgument(const FunctionDecl *FD);
 bool isGslPointerType(QualType QT);
 // Tells whether the type is annotated with [[gsl::Owner]].
 bool isGslOwnerType(QualType QT);
+bool isGslOwnerType(const CXXRecordDecl *RD);
 
 // Returns true if the given method is std::unique_ptr::release().
 // This is treated as a move in lifetime analysis to avoid false-positives
@@ -103,6 +105,11 @@ bool destructsFirstArg(const FunctionDecl &FD);
 /// Returns true for standard library callable wrappers (e.g., std::function)
 /// that can propagate the stored lambda's origins.
 bool isStdCallableWrapperType(const CXXRecordDecl *RD);
+
+/// Returns true for std reference-cast builtins (e.g., std::move). Their result
+/// refers to the same object as the argument, so all origins propagate from
+/// argument to result.
+bool isStdReferenceCast(const FunctionDecl *FD);
 
 } // namespace clang::lifetimes
 

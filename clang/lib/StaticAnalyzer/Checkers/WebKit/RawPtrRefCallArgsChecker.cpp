@@ -120,6 +120,14 @@ public:
       if (auto *MemberCallExpr = dyn_cast<CXXMemberCallExpr>(CE))
         checkThisArg(MemberCallExpr, D);
 
+      if (ArgIdx) {
+        auto *Arg = CE->getArg(0);
+        QualType ArgType = Arg->getType().getCanonicalType();
+        std::optional<bool> IsUnsafe = isUnsafeType(ArgType);
+        if (IsUnsafe && *IsUnsafe && !isPtrOriginSafe(Arg))
+          reportBugOnThis(Arg, D);
+      }
+
       for (auto P = F->param_begin();
            P < F->param_end() && ArgIdx < CE->getNumArgs(); ++P, ++ArgIdx) {
         // TODO: attributes.
@@ -176,6 +184,9 @@ public:
       std::optional<bool> IsUnsafe = isUnsafePtr(E->getReceiverType());
       if (IsUnsafe && *IsUnsafe && !isPtrOriginSafe(Receiver)) {
         if (isAllocInit(E))
+          return;
+        auto SelectorName = E->getSelector().getNameForSlot(0);
+        if (SelectorName == "isEqual" || SelectorName == "isEqualToString")
           return;
         reportBugOnReceiver(Receiver, D);
       }
@@ -259,8 +270,12 @@ public:
             return true;
           if (isASafeCallArg(ArgOrigin))
             return true;
-          if (EFA.isACallToEnsureFn(ArgOrigin))
-            return true;
+          if (EFA.isACallToEnsureFn(ArgOrigin)) {
+            auto *MCE = dyn_cast<CXXMemberCallExpr>(ArgOrigin);
+            assert(MCE);
+            if (isPtrOriginSafe(MCE->getImplicitObjectArgument()))
+              return true;
+          }
           if (isSafeExpr(ArgOrigin))
             return true;
           return false;
@@ -501,11 +516,6 @@ public:
 
   bool isSafePtrType(const QualType type) const final {
     return isRetainPtrOrOSPtrType(type);
-  }
-
-  bool isSafeExpr(const Expr *E) const final {
-    return ento::cocoa::isCocoaObjectRef(E->getType()) &&
-           isa<ObjCMessageExpr>(E);
   }
 
   bool isSafeDecl(const Decl *D) const final {

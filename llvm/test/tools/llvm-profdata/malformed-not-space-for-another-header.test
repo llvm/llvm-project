@@ -16,13 +16,19 @@
 
 // gnuwin32 printf does not work for this test because it will print \15 (CR)
 // whenever \12 (LF) is in the input string.
-UNSUPPORTED: system-windows
+// On z/OS, ebcdic output from printf is converted into utf-8 as
+// the output being redirected, causing the magic bytes to be incorrect.
+// TODO: use a builtin version of printf
+UNSUPPORTED: system-windows, system-zos
 RUN: printf '\201rforpl\377' > %t.profraw
-RUN: printf '\12\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\13\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\1\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\1\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
@@ -46,6 +52,7 @@ RUN: printf '\254\275\030\333\114\302\370\134' >> %t.profraw
 RUN: printf '\1\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\0\0\4\0\1\0\0\0' >> %t.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\0\0\4\0\3\0\0\0' >> %t.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\1\0\0\0\0\0\0\0' >> %t.profraw

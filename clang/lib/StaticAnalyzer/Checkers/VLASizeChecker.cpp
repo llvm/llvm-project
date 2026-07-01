@@ -21,7 +21,6 @@
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/DynamicExtent.h"
-#include "llvm/Support/raw_ostream.h"
 #include <optional>
 
 using namespace clang;
@@ -213,12 +212,11 @@ void VLASizeChecker::reportTaintBug(const Expr *SizeE, ProgramStateRef State,
   if (!N)
     return;
 
-  SmallString<256> buf;
-  llvm::raw_svector_ostream os(buf);
-  os << "Declared variable-length array (VLA) ";
-  os << "has tainted (attacker controlled) size that can be 0 or negative";
-
-  auto report = std::make_unique<PathSensitiveBugReport>(TaintBT, os.str(), N);
+  auto report = std::make_unique<PathSensitiveBugReport>(
+      TaintBT,
+      "Declared variable-length array (VLA) has tainted (attacker controlled) "
+      "size that can be 0 or negative",
+      N);
   report->addRange(SizeE->getSourceRange());
   bugreporter::trackExpressionValue(N, SizeE, *report);
   // The vla size may be a complex expression where multiple memory locations
@@ -296,9 +294,8 @@ void VLASizeChecker::checkPreStmt(const DeclStmt *DS, CheckerContext &C) const {
 
   // VLASizeChecker is responsible for defining the extent of the array.
   if (VD) {
-    State =
-        setDynamicExtent(State, State->getRegion(VD, C.getLocationContext()),
-                         ArraySize.castAs<NonLoc>());
+    State = setDynamicExtent(State, State->getRegion(VD, C.getStackFrame()),
+                             ArraySize.castAs<NonLoc>());
   }
 
   // Remember our assumptions!

@@ -17,14 +17,9 @@ if.else:
   ret void
 }
 
-; CHECK: define {{.*}} @foo{{.*}}#[[outlined_func_attr:[0-9]+]]
-define void @foo() cold {
-  ret void
-}
-
 declare void @sink() cold
 
-; CHECK: define {{.*}} @fun.cold.1{{.*}}#[[outlined_func_attr]]
+; CHECK: define {{.*}} @fun.cold.1{{.*}}#[[outlined_func_attr:[0-9]+]]
 
 ; CHECK: attributes #[[outlined_func_attr]] = {
 ; CHECK-SAME: cold

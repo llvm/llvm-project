@@ -2860,8 +2860,7 @@ TemplateDeductionResult Sema::DeduceTemplateArguments(
 
 TemplateArgumentLoc
 Sema::getTrivialTemplateArgumentLoc(const TemplateArgument &Arg,
-                                    QualType NTTPType, SourceLocation Loc,
-                                    NamedDecl *TemplateParam) {
+                                    QualType NTTPType, SourceLocation Loc) {
   switch (Arg.getKind()) {
   case TemplateArgument::Null:
     llvm_unreachable("Can't get a NULL template argument here");
@@ -2873,8 +2872,7 @@ Sema::getTrivialTemplateArgumentLoc(const TemplateArgument &Arg,
   case TemplateArgument::Declaration: {
     if (NTTPType.isNull())
       NTTPType = Arg.getParamTypeForDecl();
-    Expr *E = BuildExpressionFromDeclTemplateArgument(Arg, NTTPType, Loc,
-                                                      TemplateParam)
+    Expr *E = BuildExpressionFromDeclTemplateArgument(Arg, NTTPType, Loc)
                   .getAs<Expr>();
     return TemplateArgumentLoc(TemplateArgument(E, /*IsCanonical=*/false), E);
   }
@@ -2935,8 +2933,8 @@ ConvertDeducedTemplateArgument(Sema &S, NamedDecl *Param,
     // Convert the deduced template argument into a template
     // argument that we can check, almost as if the user had written
     // the template argument explicitly.
-    TemplateArgumentLoc ArgLoc = S.getTrivialTemplateArgumentLoc(
-        Arg, QualType(), Info.getLocation(), Param);
+    TemplateArgumentLoc ArgLoc =
+        S.getTrivialTemplateArgumentLoc(Arg, QualType(), Info.getLocation());
 
     SaveAndRestore _1(CTAI.MatchingTTP, false);
     SaveAndRestore _2(CTAI.StrictPackMatch, false);
@@ -3743,8 +3741,10 @@ CheckOriginalCallArgDeduction(Sema &S, TemplateDeductionInfo &Info,
   QualType A = OriginalArg.OriginalArgType;
   QualType OriginalParamType = OriginalArg.OriginalParamType;
 
-  // Check for type equality (top-level cv-qualifiers are ignored).
-  if (Context.hasSameUnqualifiedType(A, DeducedA))
+  // Check for type equality (top-level cv-qualifiers and _Atomic are ignored,
+  // since _Atomic is treated as a qualifier).
+  if (Context.hasSameType(A.getAtomicUnqualifiedType(),
+                          DeducedA.getAtomicUnqualifiedType()))
     return TemplateDeductionResult::Success;
 
   // Strip off references on the argument types; they aren't needed for
@@ -5114,6 +5114,25 @@ namespace {
       return Result;
     }
 
+    QualType TransformAtomicType(TypeLocBuilder &TLB, AtomicTypeLoc TL) {
+      // When building the function parameter for placeholder type deduction
+      // (Replacement is the invented template parameter), dig through _Atomic
+      // around an auto placeholder so deduction matches the non-atomic
+      // argument. The _Atomic wrapper is re-applied by the final substitution
+      // pass, which uses a concrete Replacement and falls through to the
+      // default transform.
+      //
+      // This handles only the simple case where _Atomic wraps auto directly
+      // (e.g. _Atomic(auto)), which is what the C standard currently permits.
+      // If more complex forms such as _Atomic(auto*) are ever allowed, the
+      // correct fix would be to treat _Atomic as a qualifier inside
+      // DeduceTemplateArgumentsByTypeMatch instead.
+      if (isa_and_nonnull<TemplateTypeParmType>(Replacement) &&
+          TL.getValueLoc().getType()->getContainedAutoType())
+        return getDerived().TransformType(TLB, TL.getValueLoc());
+      return inherited::TransformAtomicType(TLB, TL);
+    }
+
     ExprResult TransformLambdaExpr(LambdaExpr *E) {
       // Lambdas never need to be transformed.
       return E;
@@ -5161,6 +5180,20 @@ static bool CheckDeducedPlaceholderConstraints(Sema &S, const AutoType &Type,
     return true;
   MultiLevelTemplateArgumentList MLTAL(Concept, CTAI.SugaredConverted,
                                        /*Final=*/true);
+  // Build up an EvaluationContext with an ImplicitConceptSpecializationDecl so
+  // that the template arguments of the constraint can be preserved. For
+  // example:
+  //
+  //  template <class T>
+  //  concept C = []<D U = void>() { return true; }();
+  //
+  // We need the argument for T while evaluating type constraint D in
+  // building the CallExpr to the lambda.
+  EnterExpressionEvaluationContext EECtx(
+      S, Sema::ExpressionEvaluationContext::Unevaluated,
+      ImplicitConceptSpecializationDecl::Create(
+          S.getASTContext(), Concept->getDeclContext(), Concept->getLocation(),
+          CTAI.SugaredConverted));
   if (S.CheckConstraintSatisfaction(
           Concept, AssociatedConstraint(Concept->getConstraintExpr()), MLTAL,
           TypeLoc.getLocalSourceRange(), Satisfaction))

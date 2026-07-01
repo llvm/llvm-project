@@ -232,6 +232,10 @@
 #    error "__cpp_lib_constexpr_list should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_constexpr_map
+#    error "__cpp_lib_constexpr_map should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_constexpr_memory
 #    error "__cpp_lib_constexpr_memory should not be defined before c++20"
 #  endif
@@ -246,6 +250,10 @@
 
 #  ifdef __cpp_lib_constexpr_queue
 #    error "__cpp_lib_constexpr_queue should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_constexpr_set
+#    error "__cpp_lib_constexpr_set should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_constexpr_string
@@ -1164,6 +1172,10 @@
 #    error "__cpp_lib_constexpr_list should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_constexpr_map
+#    error "__cpp_lib_constexpr_map should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_constexpr_memory
 #    error "__cpp_lib_constexpr_memory should not be defined before c++20"
 #  endif
@@ -1178,6 +1190,10 @@
 
 #  ifdef __cpp_lib_constexpr_queue
 #    error "__cpp_lib_constexpr_queue should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_constexpr_set
+#    error "__cpp_lib_constexpr_set should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_constexpr_string
@@ -2198,6 +2214,10 @@
 #    error "__cpp_lib_constexpr_list should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_constexpr_map
+#    error "__cpp_lib_constexpr_map should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_constexpr_memory
 #    error "__cpp_lib_constexpr_memory should not be defined before c++20"
 #  endif
@@ -2212,6 +2232,10 @@
 
 #  ifdef __cpp_lib_constexpr_queue
 #    error "__cpp_lib_constexpr_queue should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_constexpr_set
+#    error "__cpp_lib_constexpr_set should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_constexpr_string
@@ -3472,6 +3496,10 @@
 #    error "__cpp_lib_constexpr_list should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_constexpr_map
+#    error "__cpp_lib_constexpr_map should not be defined before c++26"
+#  endif
+
 #  ifndef __cpp_lib_constexpr_memory
 #    error "__cpp_lib_constexpr_memory should be defined in c++20"
 #  endif
@@ -3492,6 +3520,10 @@
 
 #  ifdef __cpp_lib_constexpr_queue
 #    error "__cpp_lib_constexpr_queue should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_constexpr_set
+#    error "__cpp_lib_constexpr_set should not be defined before c++26"
 #  endif
 
 #  ifndef __cpp_lib_constexpr_string
@@ -4962,6 +4994,10 @@
 #    error "__cpp_lib_constexpr_list should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_constexpr_map
+#    error "__cpp_lib_constexpr_map should not be defined before c++26"
+#  endif
+
 #  ifndef __cpp_lib_constexpr_memory
 #    error "__cpp_lib_constexpr_memory should be defined in c++23"
 #  endif
@@ -4982,6 +5018,10 @@
 
 #  ifdef __cpp_lib_constexpr_queue
 #    error "__cpp_lib_constexpr_queue should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_constexpr_set
+#    error "__cpp_lib_constexpr_set should not be defined before c++26"
 #  endif
 
 #  ifndef __cpp_lib_constexpr_string
@@ -6589,8 +6629,8 @@
 #  ifndef __cpp_lib_constant_wrapper
 #    error "__cpp_lib_constant_wrapper should be defined in c++26"
 #  endif
-#  if __cpp_lib_constant_wrapper != 202603L
-#    error "__cpp_lib_constant_wrapper should have the value 202603L in c++26"
+#  if __cpp_lib_constant_wrapper != 202606L
+#    error "__cpp_lib_constant_wrapper should have the value 202606L in c++26"
 #  endif
 
 #  ifndef __cpp_lib_constexpr_algorithms
@@ -6683,6 +6723,13 @@
 #    error "__cpp_lib_constexpr_list should have the value 202502L in c++26"
 #  endif
 
+#  ifndef __cpp_lib_constexpr_map
+#    error "__cpp_lib_constexpr_map should be defined in c++26"
+#  endif
+#  if __cpp_lib_constexpr_map != 202502L
+#    error "__cpp_lib_constexpr_map should have the value 202502L in c++26"
+#  endif
+
 #  ifndef __cpp_lib_constexpr_memory
 #    error "__cpp_lib_constexpr_memory should be defined in c++26"
 #  endif
@@ -6715,6 +6762,13 @@
 #  endif
 #  if __cpp_lib_constexpr_queue != 202502L
 #    error "__cpp_lib_constexpr_queue should have the value 202502L in c++26"
+#  endif
+
+#  ifndef __cpp_lib_constexpr_set
+#    error "__cpp_lib_constexpr_set should be defined in c++26"
+#  endif
+#  if __cpp_lib_constexpr_set != 202502L
+#    error "__cpp_lib_constexpr_set should have the value 202502L in c++26"
 #  endif
 
 #  ifndef __cpp_lib_constexpr_string
@@ -7691,17 +7745,11 @@
 #    error "__cpp_lib_ranges_chunk_by should have the value 202202L in c++26"
 #  endif
 
-#  if !defined(_LIBCPP_VERSION)
-#    ifndef __cpp_lib_ranges_concat
-#      error "__cpp_lib_ranges_concat should be defined in c++26"
-#    endif
-#    if __cpp_lib_ranges_concat != 202403L
-#      error "__cpp_lib_ranges_concat should have the value 202403L in c++26"
-#    endif
-#  else
-#    ifdef __cpp_lib_ranges_concat
-#      error "__cpp_lib_ranges_concat should not be defined because it is unimplemented in libc++!"
-#    endif
+#  ifndef __cpp_lib_ranges_concat
+#    error "__cpp_lib_ranges_concat should be defined in c++26"
+#  endif
+#  if __cpp_lib_ranges_concat != 202403L
+#    error "__cpp_lib_ranges_concat should have the value 202403L in c++26"
 #  endif
 
 #  ifndef __cpp_lib_ranges_contains
@@ -7811,8 +7859,8 @@
 #  ifndef __cpp_lib_raw_memory_algorithms
 #    error "__cpp_lib_raw_memory_algorithms should be defined in c++26"
 #  endif
-#  if __cpp_lib_raw_memory_algorithms != 201606L
-#    error "__cpp_lib_raw_memory_algorithms should have the value 201606L in c++26"
+#  if __cpp_lib_raw_memory_algorithms != 202411L
+#    error "__cpp_lib_raw_memory_algorithms should have the value 202411L in c++26"
 #  endif
 
 #  if !defined(_LIBCPP_VERSION)
@@ -8125,17 +8173,11 @@
 #    endif
 #  endif
 
-#  if !defined(_LIBCPP_VERSION)
-#    ifndef __cpp_lib_text_encoding
-#      error "__cpp_lib_text_encoding should be defined in c++26"
-#    endif
-#    if __cpp_lib_text_encoding != 202306L
-#      error "__cpp_lib_text_encoding should have the value 202306L in c++26"
-#    endif
-#  else
-#    ifdef __cpp_lib_text_encoding
-#      error "__cpp_lib_text_encoding should not be defined because it is unimplemented in libc++!"
-#    endif
+#  ifndef __cpp_lib_text_encoding
+#    error "__cpp_lib_text_encoding should be defined in c++26"
+#  endif
+#  if __cpp_lib_text_encoding != 202306L
+#    error "__cpp_lib_text_encoding should have the value 202306L in c++26"
 #  endif
 
 #  ifndef __cpp_lib_three_way_comparison

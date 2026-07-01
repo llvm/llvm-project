@@ -56,9 +56,8 @@ std::optional<Loc> getErrnoLoc(ProgramStateRef State);
 
 /// Set value of 'errno' to any SVal, if possible.
 /// The errno check state is set always when the 'errno' value is set.
-ProgramStateRef setErrnoValue(ProgramStateRef State,
-                              const LocationContext *LCtx, SVal Value,
-                              ErrnoCheckState EState);
+ProgramStateRef setErrnoValue(ProgramStateRef State, const StackFrame *SF,
+                              SVal Value, ErrnoCheckState EState);
 
 /// Set value of 'errno' to a concrete (signed) integer, if possible.
 /// The errno check state is set always when the 'errno' value is set.

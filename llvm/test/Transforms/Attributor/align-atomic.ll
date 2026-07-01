@@ -26,7 +26,7 @@ define i32 @atomicrmw_add_propagate(ptr align 8 %ptr, i32 %val) {
 ; Should increase alignment to 8, not 16.
 define ptr @atomicrmw_non_ptr_op_no_propagate(ptr %ptr, ptr align 16 %val) {
 ; CHECK-LABEL: define ptr @atomicrmw_non_ptr_op_no_propagate(
-; CHECK-SAME: ptr nofree noundef nonnull align 2 captures(none) dereferenceable(8) [[PTR:%.*]], ptr nofree align 16 [[VAL:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr nofree noundef nonnull align 2 captures(none) dereferenceable(8) [[PTR:%.*]], ptr align 16 [[VAL:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[RESULT:%.*]] = atomicrmw xchg ptr [[PTR]], ptr [[VAL]] seq_cst, align 2
 ; CHECK-NEXT:    ret ptr [[RESULT]]
 ;
@@ -49,7 +49,7 @@ define i32 @cmpxchg_propagate(ptr align 8 %ptr, i32 %cmp, i32 %val) {
 ; Should not increase alignment
 define ptr @cmpxchg_no_propagate(ptr %ptr, ptr align 16 %cmp, ptr align 32 %val) {
 ; CHECK-LABEL: define ptr @cmpxchg_no_propagate(
-; CHECK-SAME: ptr nofree noundef nonnull align 2 captures(none) dereferenceable(8) [[PTR:%.*]], ptr nofree align 16 [[CMP:%.*]], ptr nofree align 32 [[VAL:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr nofree noundef nonnull align 2 captures(none) dereferenceable(8) [[PTR:%.*]], ptr align 16 [[CMP:%.*]], ptr align 32 [[VAL:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[PAIR:%.*]] = cmpxchg ptr [[PTR]], ptr [[CMP]], ptr [[VAL]] seq_cst monotonic, align 2
 ; CHECK-NEXT:    [[RESULT:%.*]] = extractvalue { ptr, i1 } [[PAIR]], 0
 ; CHECK-NEXT:    ret ptr [[RESULT]]

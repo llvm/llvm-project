@@ -287,6 +287,10 @@ namespace {
       std::string S = std::string("get") + std::string(getUpperName()) + "()";
       return getArgEqualityFn().str() + "(" + S + ", Other." + S + ", Context)";
     }
+
+    virtual std::string emitAttrArgProfileCall() const {
+      return "profileAttrArg(ID, Ctx, get" + getUpperName().str() + "())";
+    }
   };
 
   class SimpleArgument : public Argument {
@@ -866,6 +870,11 @@ namespace {
       return getArgEqualityFn().str() + "(" + GenIter(false, "begin") + ", " +
              GenIter(false, "end") + ", " + GenIter(true, "begin") + ", " +
              GenIter(true, "end") + ", Context)";
+    }
+
+    std::string emitAttrArgProfileCall() const override {
+      std::string LN = getLowerName().str();
+      return "profileAttrArg(ID, Ctx, " + LN + "_begin(), " + LN + "_end())";
     }
   };
 
@@ -3266,6 +3275,22 @@ static void emitAttributes(const RecordKeeper &Records, raw_ostream &OS,
       OS << "}\n\n";
     }
 
+    StringRef ProfileSig = "Profile(llvm::FoldingSetNodeID &ID, "
+                           "const ASTContext &Ctx) const";
+    if (Header) {
+      OS << "  void " << ProfileSig << ";\n";
+    } else {
+      OS << "void " << R.getName() << "Attr::" << ProfileSig << " {\n";
+      std::string CustomFn = R.getValueAsString("profileFn").str();
+      if (CustomFn.empty()) {
+        for (const auto &ai : Args)
+          OS << "  " << ai->emitAttrArgProfileCall() << ";\n";
+      } else {
+        OS << "  " << CustomFn << "(*this, ID, Ctx);\n";
+      }
+      OS << "}\n\n";
+    }
+
     if (Header) {
       if (DelayedArgs) {
         DelayedArgs->writeAccessors(OS);
@@ -3338,6 +3363,23 @@ static void emitEquivalenceFunction(const RecordKeeper &Records,
   OS << "}\n\n";
 }
 
+static void emitProfileFunction(const RecordKeeper &Records, raw_ostream &OS) {
+  OS << "void Attr::Profile(llvm::FoldingSetNodeID &ID, "
+        "const ASTContext &Ctx) const {\n";
+  OS << "  switch (getKind()) {\n";
+  for (const auto *Attr : Records.getAllDerivedDefinitions("Attr")) {
+    const Record &R = *Attr;
+    if (!R.getValueAsBit("ASTNode"))
+      continue;
+    OS << "  case attr::" << R.getName() << ":\n";
+    OS << "    return cast<" << R.getName()
+       << "Attr>(this)->Profile(ID, Ctx);\n";
+  }
+  OS << "  }\n";
+  OS << "  llvm_unreachable(\"Unexpected attribute kind!\");\n";
+  OS << "}\n\n";
+}
+
 // Emits the class method definitions for attributes.
 void clang::EmitClangAttrImpl(const RecordKeeper &Records, raw_ostream &OS) {
   emitSourceFileHeader("Attribute classes' member function definitions", OS,
@@ -3374,6 +3416,7 @@ void clang::EmitClangAttrImpl(const RecordKeeper &Records, raw_ostream &OS) {
   EmitFunc("printPretty(OS, Policy)");
 
   emitEquivalenceFunction(Records, OS);
+  emitProfileFunction(Records, OS);
 }
 
 static void emitAttrList(raw_ostream &OS, StringRef Class,
@@ -5523,6 +5566,49 @@ static void WriteDocumentation(const RecordKeeper &Records,
   OS << ContentStr.trim();
 
   OS << "\n\n\n";
+}
+
+void GetListOfUndocumentedAttributes(
+    const RecordKeeper &Records,
+    std::vector<const Record *> &UndocumentedAttrs) {
+  const Record *Documentation = Records.getDef("GlobalDocumentation");
+  if (!Documentation) {
+    PrintFatalError("The Documentation top-level definition is missing.");
+    return;
+  }
+
+  for (const auto *A : Records.getAllDerivedDefinitions("Attr")) {
+    const Record &Attr = *A;
+    std::vector<const Record *> Docs =
+        Attr.getValueAsListOfDefs("Documentation");
+    for (const auto *D : Docs) {
+      const Record &Doc = *D;
+      const Record *Category = Doc.getValueAsDef("Category");
+      if (Category->getValueAsString("Name") == "Undocumented")
+        UndocumentedAttrs.push_back(A);
+    }
+  }
+}
+
+void EmitClangUndocumentedAttrList(const llvm::RecordKeeper &Records,
+                                   llvm::raw_ostream &OS) {
+  // Emit a newline separated list of attributes whose Documentation is set to
+  // Undocumented.
+  std::vector<const Record *> UndocumentedAttrs;
+  GetListOfUndocumentedAttributes(Records, UndocumentedAttrs);
+
+  // Print a small header; this helps catch the situation where someone adds an
+  // attribute without documentation but it is alphabetically before the first
+  // attribute in the test file.
+  OS << "Undocumented attributes:\n";
+
+  for (const auto *A : UndocumentedAttrs) {
+    OS << A->getName() << "\n";
+  }
+
+  // Also print the count; this helps catch attributes after the last one in
+  // the test file.
+  OS << "Total: " << UndocumentedAttrs.size() << "\n";
 }
 
 void EmitClangAttrDocs(const RecordKeeper &Records, raw_ostream &OS) {

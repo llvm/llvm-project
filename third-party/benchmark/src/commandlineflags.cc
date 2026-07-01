@@ -109,12 +109,13 @@ bool ParseKvPairs(const std::string& src_text, const char* str,
 // Returns the name of the environment variable corresponding to the
 // given flag.  For example, FlagToEnvVar("foo") will return
 // "BENCHMARK_FOO" in the open-source version.
-static std::string FlagToEnvVar(const char* flag) {
+std::string FlagToEnvVar(const char* flag) {
   const std::string flag_str(flag);
 
   std::string env_var;
-  for (size_t i = 0; i != flag_str.length(); ++i)
+  for (size_t i = 0; i != flag_str.length(); ++i) {
     env_var += static_cast<char>(::toupper(flag_str.c_str()[i]));
+  }
 
   return env_var;
 }
@@ -167,7 +168,9 @@ std::map<std::string, std::string> KvPairsFromEnv(
   const std::string env_var = FlagToEnvVar(flag);
   const char* const value_str = getenv(env_var.c_str());
 
-  if (value_str == nullptr) return default_val;
+  if (value_str == nullptr) {
+    return default_val;
+  }
 
   std::map<std::string, std::string> value;
   if (!ParseKvPairs("Environment variable " + env_var, value_str, &value)) {
@@ -175,6 +178,8 @@ std::map<std::string, std::string> KvPairsFromEnv(
   }
   return value;
 }
+
+namespace {
 
 // Parses a string as a command line flag.  The string should have
 // the format "--flag=value".  When def_optional is true, the "=value"
@@ -184,27 +189,37 @@ std::map<std::string, std::string> KvPairsFromEnv(
 const char* ParseFlagValue(const char* str, const char* flag,
                            bool def_optional) {
   // str and flag must not be nullptr.
-  if (str == nullptr || flag == nullptr) return nullptr;
+  if (str == nullptr || flag == nullptr) {
+    return nullptr;
+  }
 
   // The flag must start with "--".
   const std::string flag_str = std::string("--") + std::string(flag);
   const size_t flag_len = flag_str.length();
-  if (strncmp(str, flag_str.c_str(), flag_len) != 0) return nullptr;
+  if (strncmp(str, flag_str.c_str(), flag_len) != 0) {
+    return nullptr;
+  }
 
   // Skips the flag name.
   const char* flag_end = str + flag_len;
 
   // When def_optional is true, it's OK to not have a "=value" part.
-  if (def_optional && (flag_end[0] == '\0')) return flag_end;
+  if (def_optional && (flag_end[0] == '\0')) {
+    return flag_end;
+  }
 
   // If def_optional is true and there are more characters after the
   // flag name, or if def_optional is false, there must be a '=' after
   // the flag name.
-  if (flag_end[0] != '=') return nullptr;
+  if (flag_end[0] != '=') {
+    return nullptr;
+  }
 
   // Returns the string after "=".
   return flag_end + 1;
 }
+
+}  // end namespace
 
 BENCHMARK_EXPORT
 bool ParseBoolFlag(const char* str, const char* flag, bool* value) {
@@ -212,7 +227,9 @@ bool ParseBoolFlag(const char* str, const char* flag, bool* value) {
   const char* const value_str = ParseFlagValue(str, flag, true);
 
   // Aborts if the parsing failed.
-  if (value_str == nullptr) return false;
+  if (value_str == nullptr) {
+    return false;
+  }
 
   // Converts the string value to a bool.
   *value = IsTruthyFlagValue(value_str);
@@ -225,7 +242,9 @@ bool ParseInt32Flag(const char* str, const char* flag, int32_t* value) {
   const char* const value_str = ParseFlagValue(str, flag, false);
 
   // Aborts if the parsing failed.
-  if (value_str == nullptr) return false;
+  if (value_str == nullptr) {
+    return false;
+  }
 
   // Sets *value to the value of the flag.
   return ParseInt32(std::string("The value of flag --") + flag, value_str,
@@ -238,7 +257,9 @@ bool ParseDoubleFlag(const char* str, const char* flag, double* value) {
   const char* const value_str = ParseFlagValue(str, flag, false);
 
   // Aborts if the parsing failed.
-  if (value_str == nullptr) return false;
+  if (value_str == nullptr) {
+    return false;
+  }
 
   // Sets *value to the value of the flag.
   return ParseDouble(std::string("The value of flag --") + flag, value_str,
@@ -251,7 +272,9 @@ bool ParseStringFlag(const char* str, const char* flag, std::string* value) {
   const char* const value_str = ParseFlagValue(str, flag, false);
 
   // Aborts if the parsing failed.
-  if (value_str == nullptr) return false;
+  if (value_str == nullptr) {
+    return false;
+  }
 
   *value = value_str;
   return true;
@@ -262,11 +285,15 @@ bool ParseKeyValueFlag(const char* str, const char* flag,
                        std::map<std::string, std::string>* value) {
   const char* const value_str = ParseFlagValue(str, flag, false);
 
-  if (value_str == nullptr) return false;
+  if (value_str == nullptr) {
+    return false;
+  }
 
   for (const auto& kvpair : StrSplit(value_str, ',')) {
     const auto kv = StrSplit(kvpair, '=');
-    if (kv.size() != 2) return false;
+    if (kv.size() != 2) {
+      return false;
+    }
     value->emplace(kv[0], kv[1]);
   }
 

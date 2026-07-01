@@ -144,19 +144,19 @@ void AMDGPUAsmPrinter::initTargetStreamer(Module &M) {
   if (getTargetStreamer() && !getTargetStreamer()->getTargetID())
     initializeTargetID(M);
 
-  if (TM.getTargetTriple().getOS() != Triple::AMDHSA &&
-      TM.getTargetTriple().getOS() != Triple::AMDPAL)
+  const Triple &TT = M.getTargetTriple();
+  if (TT.getOS() != Triple::AMDHSA && TT.getOS() != Triple::AMDPAL)
     return;
 
   getTargetStreamer()->EmitDirectiveAMDGCNTarget();
 
-  if (TM.getTargetTriple().getOS() == Triple::AMDHSA) {
+  if (TT.getOS() == Triple::AMDHSA) {
     getTargetStreamer()->EmitDirectiveAMDHSACodeObjectVersion(
         CodeObjectVersion);
     HSAMetadataStream->begin(M, *getTargetStreamer()->getTargetID());
   }
 
-  if (TM.getTargetTriple().getOS() == Triple::AMDPAL)
+  if (TT.getOS() == Triple::AMDPAL)
     getTargetStreamer()->getPALMetadata()->readFromIR(M);
 }
 
@@ -165,12 +165,13 @@ void AMDGPUAsmPrinter::emitEndOfAsmFile(Module &M) {
   if (!IsTargetStreamerInitialized)
     initTargetStreamer(M);
 
-  if (TM.getTargetTriple().getOS() != Triple::AMDHSA)
+  const Triple &TT = M.getTargetTriple();
+  if (TT.getOS() != Triple::AMDHSA)
     getTargetStreamer()->EmitISAVersion();
 
   // Emit HSA Metadata (NT_AMD_AMDGPU_HSA_METADATA).
   // Emit HSA Metadata (NT_AMD_HSA_METADATA).
-  if (TM.getTargetTriple().getOS() == Triple::AMDHSA) {
+  if (TT.getOS() == Triple::AMDHSA) {
     HSAMetadataStream->end();
     bool Success = HSAMetadataStream->emitTo(*getTargetStreamer());
     (void)Success;
@@ -198,7 +199,7 @@ void AMDGPUAsmPrinter::emitFunctionBodyStart() {
   // Make sure function's xnack settings are compatible with module's
   // xnack settings.
   if (FunctionTargetID.isXnackSupported() &&
-      FunctionTargetID.getXnackSetting() != IsaInfo::TargetIDSetting::Any &&
+      FunctionTargetID.getXnackSetting() != AMDGPU::TargetIDSetting::Any &&
       FunctionTargetID.getXnackSetting() !=
           getTargetStreamer()->getTargetID()->getXnackSetting()) {
     OutContext.reportError(
@@ -209,7 +210,7 @@ void AMDGPUAsmPrinter::emitFunctionBodyStart() {
   // Make sure function's sramecc settings are compatible with module's
   // sramecc settings.
   if (FunctionTargetID.isSramEccSupported() &&
-      FunctionTargetID.getSramEccSetting() != IsaInfo::TargetIDSetting::Any &&
+      FunctionTargetID.getSramEccSetting() != AMDGPU::TargetIDSetting::Any &&
       FunctionTargetID.getSramEccSetting() !=
           getTargetStreamer()->getTargetID()->getSramEccSetting()) {
     OutContext.reportError(
@@ -399,9 +400,10 @@ void AMDGPUAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
 }
 
 bool AMDGPUAsmPrinter::doInitialization(Module &M) {
+  const llvm::Triple &TT = M.getTargetTriple();
   CodeObjectVersion = AMDGPU::getAMDHSACodeObjectVersion(M);
 
-  if (TM.getTargetTriple().getOS() == Triple::AMDHSA) {
+  if (TT.getOS() == Triple::AMDHSA) {
     switch (CodeObjectVersion) {
     case AMDGPU::AMDHSA_COV4:
       HSAMetadataStream = std::make_unique<HSAMD::MetadataStreamerMsgPackV4>();
@@ -434,17 +436,29 @@ const AMDGPUMCExpr *createOccupancy(unsigned InitOcc, const MCExpr *NumSGPRs,
   unsigned MaxWaves = IsaInfo::getMaxWavesPerEU(STM);
   unsigned Granule = IsaInfo::getVGPRAllocGranule(STM, DynamicVGPRBlockSize);
   unsigned TargetTotalNumVGPRs = IsaInfo::getTotalNumVGPRs(STM);
-  unsigned Generation = STM.getGeneration();
+
+  // Bake the per-function SGPR budget into the operands so the late-evaluated
+  // MCExpr stays arithmetic. The trap reservation in particular is implicit on
+  // amdhsa and lives on STM, not on the assembler's MCSubtargetInfo.
+  unsigned SGPRTotal = IsaInfo::getTotalNumSGPRs(STM);
+  unsigned SGPRGranule = IsaInfo::getSGPRAllocGranule(STM);
+  unsigned SGPRTrapReserve = STM.hasTrapHandler() ? IsaInfo::TRAP_NUM_SGPRS : 0;
 
   auto CreateExpr = [&Ctx](unsigned Value) {
     return MCConstantExpr::create(Value, Ctx);
   };
 
+  // Zero SGPR count when SGPRs don't limit occupancy, so the MCExpr skips the
+  // SGPR term without having to test the generation itself.
+  const MCExpr *SGPRArg =
+      IsaInfo::isSGPROccupancyLimited(STM) ? NumSGPRs : CreateExpr(0);
+
   return AMDGPUMCExpr::create(AMDGPUMCExpr::AGVK_Occupancy,
                               {CreateExpr(MaxWaves), CreateExpr(Granule),
                                CreateExpr(TargetTotalNumVGPRs),
-                               CreateExpr(Generation), CreateExpr(InitOcc),
-                               NumSGPRs, NumVGPRs},
+                               CreateExpr(InitOcc), CreateExpr(SGPRTotal),
+                               CreateExpr(SGPRGranule),
+                               CreateExpr(SGPRTrapReserve), SGPRArg, NumVGPRs},
                               Ctx);
 }
 
@@ -701,14 +715,15 @@ void AMDGPUAsmPrinter::emitAMDGPUInfo(Module &M) {
 }
 
 bool AMDGPUAsmPrinter::doFinalization(Module &M) {
+  const Triple &TT = M.getTargetTriple();
+
   // Pad with s_code_end to help tools and guard against instruction prefetch
   // causing stale data in caches. Arguably this should be done by the linker,
   // which is why this isn't done for Mesa.
   // Don't do it if there is no code.
   const MCSubtargetInfo &STI = *getGlobalSTI();
   if ((AMDGPU::isGFX10Plus(STI) || AMDGPU::isGFX90A(STI)) &&
-      (STI.getTargetTriple().getOS() == Triple::AMDHSA ||
-       STI.getTargetTriple().getOS() == Triple::AMDPAL)) {
+      (TT.getOS() == Triple::AMDHSA || TT.getOS() == Triple::AMDPAL)) {
     MCSection *TextSect = getObjFileLowering().getTextSection();
     if (TextSect->hasInstructions()) {
       OutStreamer->switchSection(TextSect);
@@ -1131,28 +1146,47 @@ void AMDGPUAsmPrinter::emitDVgprSymbol(MachineFunction &MF) {
       MF.getFunction().getCallingConv() == CallingConv::AMDGPU_CS_Chain) {
     MCContext &Ctx = MF.getContext();
     unsigned BlockSize = MFI.getDynamicVGPRBlockSize();
-    MCValue NumVGPRs;
-    if (!CurrentProgramInfo.NumVGPRsForWavesPerEU->evaluateAsRelocatable(
-            NumVGPRs, nullptr) ||
-        !NumVGPRs.isAbsolute()) {
-      llvm_unreachable("unable to resolve NumVGPRs for _dvgpr$ symbol");
-    }
-    // Calculate number of VGPR blocks.
-    // Treat 0 VGPRs as 1 VGPR to avoid underflowing.
-    unsigned NumBlocks =
-        divideCeil(std::max(unsigned(NumVGPRs.getConstant()), 1U), BlockSize);
 
-    if (NumBlocks > 8) {
-      OutContext.reportError({},
-                             "too many DVGPR blocks for _dvgpr$ symbol for '" +
-                                 Twine(CurrentFnSym->getName()) + "'");
-      return;
+    const MCExpr *EncodedBlocks;
+    MCValue NumVGPRs;
+    if (CurrentProgramInfo.NumVGPRsForWavesPerEU->evaluateAsRelocatable(
+            NumVGPRs, nullptr) &&
+        NumVGPRs.isAbsolute()) {
+
+      // Calculate number of VGPR blocks.
+      // Treat 0 VGPRs as 1 VGPR to avoid underflowing.
+      unsigned NumBlocks =
+          divideCeil(std::max(unsigned(NumVGPRs.getConstant()), 1U), BlockSize);
+
+      if (NumBlocks > AMDGPU::IsaInfo::MaxDynamicVGPRBlocks) {
+        OutContext.reportError(
+            {}, "DVGPR block count " + Twine(NumBlocks) +
+                    " exceeds maximum of " +
+                    Twine(AMDGPU::IsaInfo::MaxDynamicVGPRBlocks) +
+                    " for __dvgpr$ symbol for '" +
+                    Twine(CurrentFnSym->getName()) + "'");
+        return;
+      }
+      unsigned EncodedNumBlocks = (NumBlocks - 1) << 3;
+      EncodedBlocks = MCConstantExpr::create(EncodedNumBlocks, Ctx);
+    } else {
+      // Value not yet available so build a symbolic MCExpr:
+      // ((alignTo(max(NumVGPRs, 1), BlockSize) / BlockSize - 1) << 3
+      const MCExpr *One = MCConstantExpr::create(1, Ctx);
+      const MCExpr *BlockSizeConst = MCConstantExpr::create(BlockSize, Ctx);
+      const MCExpr *MaxVGPRs = AMDGPUMCExpr::createMax(
+          {CurrentProgramInfo.NumVGPRsForWavesPerEU, One}, Ctx);
+      const MCExpr *NumBlocks = MCBinaryExpr::createDiv(
+          AMDGPUMCExpr::createAlignTo(MaxVGPRs, BlockSizeConst, Ctx),
+          BlockSizeConst, Ctx);
+      EncodedBlocks =
+          MCBinaryExpr::createShl(MCBinaryExpr::createSub(NumBlocks, One, Ctx),
+                                  MCConstantExpr::create(3, Ctx), Ctx);
     }
-    unsigned EncodedNumBlocks = (NumBlocks - 1) << 3;
+
     // Add to function symbol to create _dvgpr$ symbol.
     const MCExpr *DVgprFuncVal = MCBinaryExpr::createAdd(
-        MCSymbolRefExpr::create(CurrentFnSym, Ctx),
-        MCConstantExpr::create(EncodedNumBlocks, Ctx), Ctx);
+        MCSymbolRefExpr::create(CurrentFnSym, Ctx), EncodedBlocks, Ctx);
     MCSymbol *DVgprFuncSym =
         Ctx.getOrCreateSymbol(Twine("_dvgpr$") + CurrentFnSym->getName());
     OutStreamer->emitAssignment(DVgprFuncSym, DVgprFuncVal);
@@ -1181,12 +1215,12 @@ void AMDGPUAsmPrinter::initializeTargetID(const Module &M) {
       break;
 
     const GCNSubtarget &STM = TM.getSubtarget<GCNSubtarget>(F);
-    const IsaInfo::AMDGPUTargetID &STMTargetID = STM.getTargetID();
+    const AMDGPU::TargetID &STMTargetID = STM.getTargetID();
     if (TSTargetID->isXnackSupported())
-      if (TSTargetID->getXnackSetting() == IsaInfo::TargetIDSetting::Any)
+      if (TSTargetID->getXnackSetting() == AMDGPU::TargetIDSetting::Any)
         TSTargetID->setXnackSetting(STMTargetID.getXnackSetting());
     if (TSTargetID->isSramEccSupported())
-      if (TSTargetID->getSramEccSetting() == IsaInfo::TargetIDSetting::Any)
+      if (TSTargetID->getSramEccSetting() == AMDGPU::TargetIDSetting::Any)
         TSTargetID->setSramEccSetting(STMTargetID.getSramEccSetting());
   }
 }

@@ -1044,13 +1044,6 @@ void Sema::InstantiateAttrs(const MultiLevelTemplateArgumentList &TemplateArgs,
       continue;
     }
 
-    if (auto *A = dyn_cast<HLSLMatrixLayoutAttr>(TmplAttr)) {
-      if (!HLSL().diagnoseInstantiatedMatrixLayoutAttr(New, A) &&
-          !New->hasAttr<HLSLMatrixLayoutAttr>())
-        New->addAttr(A->clone(Context));
-      continue;
-    }
-
     assert(!TmplAttr->isPackExpansion());
     if (TmplAttr->isLateParsed() && LateAttrs) {
       // Late parsed attributes must be instantiated and attached after the
@@ -4862,13 +4855,6 @@ TemplateDeclInstantiator::SubstTemplateParams(TemplateParameterList *L) {
     return nullptr;
 
   Expr *InstRequiresClause = L->getRequiresClause();
-  if (InstRequiresClause && EvaluateConstraints) {
-    ExprResult E =
-        SemaRef.SubstConstraintExpr(InstRequiresClause, TemplateArgs);
-    if (E.isInvalid())
-      return nullptr;
-    InstRequiresClause = E.get();
-  }
 
   TemplateParameterList *InstL
     = TemplateParameterList::Create(SemaRef.Context, L->getTemplateLoc(),

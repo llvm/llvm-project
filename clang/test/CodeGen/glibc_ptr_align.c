@@ -4,7 +4,7 @@
 // Make sure that we do not set inbounds flag if the base pointer may be a constant null.
 
 // CHECK-LABEL: define dso_local ptr @glibc_ptr_align(
-// CHECK-SAME: ptr noundef readnone captures(none) [[BASE:%.*]], ptr noundef [[POINTER:%.*]], i64 noundef [[ALIGN_MASK:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+// CHECK-SAME: ptr nofree noundef readnone captures(none) [[BASE:%.*]], ptr noundef [[POINTER:%.*]], i64 noundef [[ALIGN_MASK:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[SUB_PTR_LHS_CAST:%.*]] = ptrtoint ptr [[POINTER]] to i64
 // CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 [[ALIGN_MASK]], [[SUB_PTR_LHS_CAST]]
@@ -22,7 +22,7 @@ char *glibc_ptr_align(char *base, char *pointer, long align_mask) {
 }
 
 // CHECK-LABEL: define dso_local ptr @glibc_ptr_align_commuted(
-// CHECK-SAME: ptr noundef readnone captures(none) [[BASE:%.*]], ptr noundef [[POINTER:%.*]], i64 noundef [[ALIGN_MASK:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr nofree noundef readnone captures(none) [[BASE:%.*]], ptr noundef [[POINTER:%.*]], i64 noundef [[ALIGN_MASK:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[SUB_PTR_LHS_CAST:%.*]] = ptrtoint ptr [[POINTER]] to i64
 // CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 [[ALIGN_MASK]], [[SUB_PTR_LHS_CAST]]

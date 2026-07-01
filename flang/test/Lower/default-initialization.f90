@@ -47,8 +47,11 @@ contains
   subroutine local_alloc_comp
     !CHECK: %[[xalloc:.*]] = fir.alloca !fir.type<_QMtest_dinitTt_alloc_comp{{(,sequence)?}}{i:!fir.box<!fir.heap<!fir.array<?xf32>>>}> {bindc_name = "x", uniq_name = "_QMtest_dinitFlocal_alloc_compEx"}
     !CHECK: %[[x:.*]]:2 = hlfir.declare %[[xalloc]] {uniq_name = "_QMtest_dinitFlocal_alloc_compEx"}
-    !CHECK: %[[ADDR:.*]] = fir.address_of(@_QQ_QMtest_dinitTt_alloc_comp.DerivedInit) : !fir.ref<!fir.type<_QMtest_dinitTt_alloc_comp{{(,sequence)?}}{i:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>
-    !CHECK: fir.copy %[[ADDR]] to %[[x]]#0 no_overlap : !fir.ref<!fir.type<_QMtest_dinitTt_alloc_comp{{(,sequence)?}}{i:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>, !fir.ref<!fir.type<_QMtest_dinitTt_alloc_comp{{(,sequence)?}}{i:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>
+    !CHECK: %[[COORD:.*]] = fir.coordinate_of %[[x]]#0, i : (!fir.ref<!fir.type<_QMtest_dinitTt_alloc_comp{i:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+    !CHECK: %[[ZERO:.*]] = fir.zero_bits !fir.heap<!fir.array<?xf32>>
+    !CHECK: %[[SHAPE:.*]] = fir.shape %c0{{.*}} : (index) -> !fir.shape<1>
+    !CHECK: %[[EMBOX:.*]] = fir.embox %[[ZERO]](%[[SHAPE]]) : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
+    !CHECK: fir.store %[[EMBOX]] to %[[COORD]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
     type(t_alloc_comp) :: x
   end subroutine
 

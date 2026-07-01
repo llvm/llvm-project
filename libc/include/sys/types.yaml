@@ -9,6 +9,7 @@ types:
   - type_name: gid_t
   - type_name: ino_t
   - type_name: key_t
+  - type_name: loff_t
   - type_name: mode_t
   - type_name: nlink_t
   - type_name: off_t
@@ -27,4 +28,7 @@ types:
   - type_name: ssize_t
   - type_name: suseconds_t
   - type_name: time_t
+  - type_name: u_char
+  - type_name: u_int32_t
   - type_name: uid_t
+  - type_name: uint

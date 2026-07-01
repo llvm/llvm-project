@@ -135,8 +135,8 @@ int main() {
 // CHECK-ONE: ${{_ZN3NSP5CBaseC2Ev|_ZN8CDerivedC2Ev}} = comdat any
 // CHECK-ONE: ${{_ZN3NSP5CBaseC2Ev|_ZN8CDerivedC2Ev}} = comdat any
 
-// CHECK-ONE: @_ZTV8CDerived = {{.*}}unnamed_addr constant {{.*}}, align 8, !dbg [[DERIVED_VTABLE_VAR:![0-9]*]]
-// CHECK-ONE: @_ZTVN3NSP5CBaseE = {{.*}}unnamed_addr constant {{.*}}, align 8, !dbg [[BASE_VTABLE_VAR:![0-9]*]]
+// CHECK-ONE: @_ZTV8CDerived = {{.*}}constant {{.*}}, align 8, !dbg [[DERIVED_VTABLE_VAR:![0-9]*]]
+// CHECK-ONE: @_ZTVN3NSP5CBaseE = {{.*}}constant {{.*}}, align 8, !dbg [[BASE_VTABLE_VAR:![0-9]*]]
 
 // CHECK-ONE: [[DERIVED_VTABLE_VAR]] = !DIGlobalVariableExpression(var: [[DERIVED_VTABLE:![0-9]*]], expr: !DIExpression())
 // CHECK-ONE-NEXT: [[DERIVED_VTABLE]] = distinct !DIGlobalVariable(name: "__clang_vtable", linkageName: "_ZTV8CDerived"
@@ -155,8 +155,8 @@ int main() {
 // CHECK-TWO: ${{_ZN3NSP5CBaseC2Ev|_ZN8CDerivedC2Ev}} = comdat any
 // CHECK-TWO: ${{_ZN3NSP5CBaseC2Ev|_ZN8CDerivedC2Ev}} = comdat any
 
-// CHECK-TWO: @_ZTVN3NSP5CBaseE = {{.*}}unnamed_addr constant {{.*}}, align 8, !dbg [[BASE_VTABLE_VAR:![0-9]*]]
-// CHECK-TWO: @_ZTV8CDerived = {{.*}}unnamed_addr constant {{.*}}, align 8, !dbg [[DERIVED_VTABLE_VAR:![0-9]*]]
+// CHECK-TWO: @_ZTVN3NSP5CBaseE = {{.*}}constant {{.*}}, align 8, !dbg [[BASE_VTABLE_VAR:![0-9]*]]
+// CHECK-TWO: @_ZTV8CDerived = {{.*}}constant {{.*}}, align 8, !dbg [[DERIVED_VTABLE_VAR:![0-9]*]]
 
 // CHECK-TWO: [[BASE_VTABLE_VAR]] = !DIGlobalVariableExpression(var: [[BASE_VTABLE:![0-9]*]], expr: !DIExpression())
 // CHECK-TWO-NEXT: [[BASE_VTABLE]] = distinct !DIGlobalVariable(name: "__clang_vtable", linkageName: "_ZTVN3NSP5CBaseE"

@@ -14,7 +14,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Builder/CUDAIntrinsicCall.h"
-#include "flang/Evaluate/common.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/MutableBox.h"
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
@@ -1339,12 +1338,12 @@ mlir::Value
 CUDAIntrinsicLibrary::genSyncThreadsAnd(mlir::Type resultType,
                                         llvm::ArrayRef<mlir::Value> args) {
   mlir::Value arg = builder.createConvert(loc, builder.getI32Type(), args[0]);
-  return mlir::NVVM::BarrierOp::create(
-             builder, loc, resultType, {}, {},
+  return mlir::NVVM::BarrierReductionOp::create(
+             builder, loc, resultType, /*barrierId=*/mlir::Value{},
              mlir::NVVM::BarrierReductionAttr::get(
                  builder.getContext(), mlir::NVVM::BarrierReduction::AND),
              arg)
-      .getResult(0);
+      .getResult();
 }
 
 // SYNCTHREADS_COUNT
@@ -1352,12 +1351,12 @@ mlir::Value
 CUDAIntrinsicLibrary::genSyncThreadsCount(mlir::Type resultType,
                                           llvm::ArrayRef<mlir::Value> args) {
   mlir::Value arg = builder.createConvert(loc, builder.getI32Type(), args[0]);
-  return mlir::NVVM::BarrierOp::create(
-             builder, loc, resultType, {}, {},
+  return mlir::NVVM::BarrierReductionOp::create(
+             builder, loc, resultType, /*barrierId=*/mlir::Value{},
              mlir::NVVM::BarrierReductionAttr::get(
                  builder.getContext(), mlir::NVVM::BarrierReduction::POPC),
              arg)
-      .getResult(0);
+      .getResult();
 }
 
 // SYNCTHREADS_OR
@@ -1365,12 +1364,12 @@ mlir::Value
 CUDAIntrinsicLibrary::genSyncThreadsOr(mlir::Type resultType,
                                        llvm::ArrayRef<mlir::Value> args) {
   mlir::Value arg = builder.createConvert(loc, builder.getI32Type(), args[0]);
-  return mlir::NVVM::BarrierOp::create(
-             builder, loc, resultType, {}, {},
+  return mlir::NVVM::BarrierReductionOp::create(
+             builder, loc, resultType, /*barrierId=*/mlir::Value{},
              mlir::NVVM::BarrierReductionAttr::get(
                  builder.getContext(), mlir::NVVM::BarrierReduction::OR),
              arg)
-      .getResult(0);
+      .getResult();
 }
 
 // SYNCWARP

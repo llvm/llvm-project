@@ -3262,6 +3262,10 @@ static QualType GetDeclSpecTypeForDeclarator(TypeProcessingState &state,
         (Auto && Auto->getKeyword() != AutoTypeKeyword::GNUAutoType);
     bool IsDeducedReturnType = false;
 
+    SourceRange AutoRange = D.getDeclSpec().getTypeSpecTypeLoc();
+    if (D.getName().getKind() == UnqualifiedIdKind::IK_ConversionFunctionId)
+      AutoRange = D.getName().getSourceRange();
+
     switch (D.getContext()) {
     case DeclaratorContext::LambdaExpr:
       // Declared return type of a lambda-declarator is implicit and is always
@@ -3279,11 +3283,16 @@ static QualType GetDeclSpecTypeForDeclarator(TypeProcessingState &state,
       InventedTemplateParameterInfo *Info = nullptr;
       if (D.getContext() == DeclaratorContext::Prototype) {
         // With concepts we allow 'auto' in function parameters.
-        if (!SemaRef.getLangOpts().CPlusPlus20 || !Auto ||
+        if (!SemaRef.getLangOpts().CPlusPlus || !Auto ||
             Auto->getKeyword() != AutoTypeKeyword::Auto) {
           Error = 0;
           break;
-        } else if (!SemaRef.getCurScope()->isFunctionDeclarationScope()) {
+        }
+
+        if (!SemaRef.getLangOpts().CPlusPlus20)
+          SemaRef.DiagCompat(AutoRange.getBegin(), diag_compat::auto_param);
+
+        if (!SemaRef.getCurScope()->isFunctionDeclarationScope()) {
           Error = 21;
           break;
         }
@@ -3418,10 +3427,6 @@ static QualType GetDeclSpecTypeForDeclarator(TypeProcessingState &state,
     if (D.isFunctionDeclarator() &&
         (!SemaRef.getLangOpts().CPlusPlus11 || !IsCXXAutoType))
       Error = 13;
-
-    SourceRange AutoRange = D.getDeclSpec().getTypeSpecTypeLoc();
-    if (D.getName().getKind() == UnqualifiedIdKind::IK_ConversionFunctionId)
-      AutoRange = D.getName().getSourceRange();
 
     if (Error != -1) {
       unsigned Kind;
@@ -9104,10 +9109,13 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
       // it it breaks large amounts of Linux software.
       attr.setUsedAsTypeAttr();
       break;
-    case ParsedAttr::AT_OpenCLPrivateAddressSpace:
-    case ParsedAttr::AT_OpenCLGlobalAddressSpace:
     case ParsedAttr::AT_OpenCLGlobalDeviceAddressSpace:
     case ParsedAttr::AT_OpenCLGlobalHostAddressSpace:
+      state.getSema().Diag(attr.getLoc(), diag::warn_deprecated_attribute)
+          << attr;
+      [[fallthrough]];
+    case ParsedAttr::AT_OpenCLPrivateAddressSpace:
+    case ParsedAttr::AT_OpenCLGlobalAddressSpace:
     case ParsedAttr::AT_OpenCLLocalAddressSpace:
     case ParsedAttr::AT_OpenCLConstantAddressSpace:
     case ParsedAttr::AT_OpenCLGenericAddressSpace:
@@ -9127,6 +9135,13 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
         // regardless of the order of groupshared or in/out/inout specified in
         // the parameter. And checking there produces a better error message.
       }
+      attr.setUsedAsTypeAttr();
+      break;
+    case ParsedAttr::AT_HLSLRowMajor:
+    case ParsedAttr::AT_HLSLColumnMajor:
+      if (Attr *A =
+              state.getSema().HLSL().buildMatrixLayoutTypeAttr(type, attr))
+        type = state.getAttributedType(A, type, type);
       attr.setUsedAsTypeAttr();
       break;
     OBJC_POINTER_TYPE_ATTRS_CASELIST:
@@ -9344,6 +9359,7 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
     case ParsedAttr::AT_HLSLResourceDimension:
     case ParsedAttr::AT_HLSLROV:
     case ParsedAttr::AT_HLSLRawBuffer:
+    case ParsedAttr::AT_HLSLIsArray:
     case ParsedAttr::AT_HLSLContainedType: {
       // Only collect HLSL resource type attributes that are in
       // decl-specifier-seq; do not collect attributes on declarations or those
@@ -10016,7 +10032,7 @@ QualType Sema::getDecltypeForExpr(Expr *E) {
   // parameter object. This rule makes no difference before C++20 so we apply
   // it unconditionally.
   if (const auto *SNTTPE = dyn_cast<SubstNonTypeTemplateParmExpr>(IDExpr))
-    return SNTTPE->getParameterType(Context);
+    IDExpr = SNTTPE->getReplacement();
 
   //     - if e is an unparenthesized id-expression or an unparenthesized class
   //       member access (5.2.5), decltype(e) is the type of the entity named
@@ -10101,16 +10117,17 @@ QualType Sema::BuildPackIndexingType(QualType Pattern, Expr *IndexExpr,
                                      ArrayRef<QualType> Expansions) {
 
   UnsignedOrNone Index = std::nullopt;
-  if (FullySubstituted && !IndexExpr->isValueDependent() &&
-      !IndexExpr->isTypeDependent()) {
-    llvm::APSInt Value(Context.getIntWidth(Context.getSizeType()));
+  if (!IndexExpr->isInstantiationDependent()) {
+    llvm::APSInt Value;
     ExprResult Res = CheckConvertedConstantExpression(
-        IndexExpr, Context.getSizeType(), Value, CCEKind::ArrayBound);
-    if (!Res.isUsable())
+        IndexExpr, Context.getSizeType(), Value, CCEKind::PackIndex);
+
+    if (!Res.isUsable() || !Value.isRepresentableByInt64())
       return QualType();
+
     IndexExpr = Res.get();
-    int64_t V = Value.getExtValue();
-    if (FullySubstituted && (V < 0 || V >= int64_t(Expansions.size()))) {
+    uint64_t V = Value.getZExtValue();
+    if (FullySubstituted && (V < 0 || V >= Expansions.size())) {
       Diag(IndexExpr->getBeginLoc(), diag::err_pack_index_out_of_bound)
           << V << Pattern << Expansions.size();
       return QualType();

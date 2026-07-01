@@ -26,9 +26,8 @@ MCAsmInfoXCOFF::MCAsmInfoXCOFF(const MCTargetOptions &Options)
   IsLittleEndian = false;
 
   InternalSymbolPrefix = "L..";
-  PrivateLabelPrefix = "L..";
   SupportsQuotedNames = false;
-  if (UseLEB128Directives == cl::BOU_UNSET)
+  if (UseLEB128Directives == cl::boolOrDefault::BOU_UNSET)
     HasLEB128Directives = false;
   ZeroDirective = "\t.space\t";
   AsciiDirective = nullptr; // not supported

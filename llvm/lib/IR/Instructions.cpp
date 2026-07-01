@@ -71,9 +71,12 @@ AllocaInst::getAllocationSize(const DataLayout &DL) const {
     auto *C = dyn_cast<ConstantInt>(getArraySize());
     if (!C)
       return std::nullopt;
+    std::optional<uint64_t> NumElements = C->getValue().tryZExtValue();
+    if (!NumElements)
+      return std::nullopt;
     assert(!Size.isScalable() && "Array elements cannot have a scalable size");
     auto CheckedProd =
-        checkedMulUnsigned(Size.getKnownMinValue(), C->getZExtValue());
+        checkedMulUnsigned(Size.getKnownMinValue(), *NumElements);
     if (!CheckedProd)
       return std::nullopt;
     return TypeSize::getFixed(*CheckedProd);
@@ -607,6 +610,22 @@ CallBase *CallBase::removeOperandBundle(CallBase *CB, uint32_t ID,
   }
 
   return CreateNew ? Create(CB, Bundles, InsertPt) : CB;
+}
+
+CallBase *CallBase::removeOperandBundleAt(CallBase *CB, size_t Offset,
+                                          InsertPosition InsertPt) {
+  auto OpBundleCount = CB->getNumOperandBundles();
+  assert(Offset < OpBundleCount &&
+         "Trying to remove non-existant operand bundle");
+  SmallVector<OperandBundleDef> Bundles;
+  Bundles.reserve(OpBundleCount - 1);
+  size_t I = 0;
+  for (; I != Offset; ++I)
+    Bundles.emplace_back(CB->getOperandBundleAt(I));
+  ++I;
+  for (; I != OpBundleCount; ++I)
+    Bundles.emplace_back(CB->getOperandBundleAt(I));
+  return Create(CB, Bundles, InsertPt);
 }
 
 bool CallBase::hasReadingOperandBundles() const {
@@ -3017,6 +3036,10 @@ unsigned CastInst::isEliminableCastPair(Instruction::CastOps firstOp,
       // FIXME: this state can be merged with (1), but the following assert
       // is useful to check the correcteness of the sequence due to semantic
       // change of bitcast.
+      // addrspacecast can only fold through a bitcast if the result remains a
+      // pointer. A pointer-to-byte bitcast must stay as a separate bitcast.
+      if (!DstTy->isPtrOrPtrVectorTy())
+        return 0;
       assert(
         SrcTy->isPtrOrPtrVectorTy() &&
         MidTy->isPtrOrPtrVectorTy() &&
@@ -3028,6 +3051,10 @@ unsigned CastInst::isEliminableCastPair(Instruction::CastOps firstOp,
       return firstOp;
     case 14:
       // bitcast, addrspacecast -> addrspacecast
+      // addrspacecast can only fold through a bitcast if the source was already
+      // a pointer. A byte-to-pointer bitcast must stay as a separate bitcast.
+      if (!SrcTy->isPtrOrPtrVectorTy())
+        return 0;
       return Instruction::AddrSpaceCast;
     case 15:
       // FIXME: this state can be merged with (1), but the following assert
@@ -4259,11 +4286,11 @@ void SwitchInstProfUpdateWrapper::setSuccessorWeight(
 SwitchInstProfUpdateWrapper::CaseWeightOpt
 SwitchInstProfUpdateWrapper::getSuccessorWeight(const SwitchInst &SI,
                                                 unsigned idx) {
-  if (MDNode *ProfileData = getBranchWeightMDNode(SI))
-    if (ProfileData->getNumOperands() == SI.getNumSuccessors() + 1)
-      return mdconst::extract<ConstantInt>(ProfileData->getOperand(idx + 1))
-          ->getValue()
-          .getZExtValue();
+  if (MDNode *ProfileData = getValidBranchWeightMDNode(SI)) {
+    SmallVector<uint32_t> Weights;
+    extractFromBranchWeightMD32(ProfileData, Weights);
+    return Weights[idx];
+  }
 
   return std::nullopt;
 }
@@ -4469,11 +4496,15 @@ FPExtInst *FPExtInst::cloneImpl() const {
 }
 
 UIToFPInst *UIToFPInst::cloneImpl() const {
-  return new UIToFPInst(getOperand(0), getType());
+  auto *Result = new UIToFPInst(getOperand(0), getType());
+  Result->FMF = FMF;
+  return Result;
 }
 
 SIToFPInst *SIToFPInst::cloneImpl() const {
-  return new SIToFPInst(getOperand(0), getType());
+  auto *Result = new SIToFPInst(getOperand(0), getType());
+  Result->FMF = FMF;
+  return Result;
 }
 
 FPToUIInst *FPToUIInst::cloneImpl() const {

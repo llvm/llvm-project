@@ -133,7 +133,7 @@ void ConvertMemberFunctionsToStaticCheck::registerMatchers(
 }
 
 /// Obtain the original source code text from a SourceRange.
-static StringRef getStringFromRange(SourceManager &SourceMgr,
+static StringRef getStringFromRange(const SourceManager &SourceMgr,
                                     const LangOptions &LangOpts,
                                     SourceRange Range) {
   if (SourceMgr.getFileID(Range.getBegin()) !=
@@ -145,7 +145,7 @@ static StringRef getStringFromRange(SourceManager &SourceMgr,
 }
 
 static SourceRange getLocationOfConst(const TypeSourceInfo *TSI,
-                                      SourceManager &SourceMgr,
+                                      const SourceManager &SourceMgr,
                                       const LangOptions &LangOpts) {
   assert(TSI);
   const auto FTL = TSI->getTypeLoc().IgnoreParens().getAs<FunctionTypeLoc>();

@@ -1174,6 +1174,10 @@ bool AMDGPURegisterBankInfo::applyMappingDynStackAlloc(
   Register AllocSize = MI.getOperand(1).getReg();
   Align Alignment = assumeAligned(MI.getOperand(2).getImm());
 
+  // When using flat-scratch, the stack offset is unscaled.
+  const bool HasFlatScratch = ST.hasFlatScratchEnabled();
+  const unsigned WavefrontSizeLog2 = ST.getWavefrontSizeLog2();
+
   const RegisterBank *SizeBank = getRegBank(AllocSize, MRI, *TRI);
 
   if (SizeBank != &AMDGPU::SGPRRegBank) {
@@ -1191,16 +1195,24 @@ bool AMDGPURegisterBankInfo::applyMappingDynStackAlloc(
   Register SPReg = Info->getStackPtrOffsetReg();
   ApplyRegBankMapping ApplyBank(B, *this, MRI, &AMDGPU::SGPRRegBank);
 
-  auto WaveSize = B.buildConstant(LLT::scalar(32), ST.getWavefrontSizeLog2());
-  auto ScaledSize = B.buildShl(IntPtrTy, AllocSize, WaveSize);
+  Register ScaledSize = AllocSize;
+  if (!HasFlatScratch) {
+    auto WaveSize = B.buildConstant(LLT::scalar(32), WavefrontSizeLog2);
+    ScaledSize = B.buildShl(IntPtrTy, AllocSize, WaveSize).getReg(0);
+  }
 
   auto OldSP = B.buildCopy(PtrTy, SPReg);
   if (Alignment > TFI.getStackAlign()) {
-    auto StackAlignMask = (Alignment.value() << ST.getWavefrontSizeLog2()) - 1;
+    const uint64_t ScaledAlignment =
+        HasFlatScratch ? Alignment.value()
+                       : (Alignment.value() << WavefrontSizeLog2);
+    const uint64_t StackAlignMask = ScaledAlignment - 1;
     auto Tmp1 = B.buildPtrAdd(PtrTy, OldSP,
                               B.buildConstant(LLT::scalar(32), StackAlignMask));
     B.buildMaskLowPtrBits(Dst, Tmp1,
-                          Log2(Alignment) + ST.getWavefrontSizeLog2());
+                          (HasFlatScratch
+                               ? Log2(Alignment)
+                               : Log2(Alignment) + WavefrontSizeLog2));
   } else {
     B.buildCopy(Dst, OldSP);
   }
@@ -1270,7 +1282,7 @@ unsigned AMDGPURegisterBankInfo::setBufferOffsets(
                                         /*CheckNUW=*/CheckNUW);
 
   uint32_t SOffset, ImmOffset;
-  if ((int)Offset > 0 &&
+  if (static_cast<int32_t>(Offset) > 0 &&
       TII->splitMUBUFOffset(Offset, SOffset, ImmOffset, Alignment)) {
     if (getRegBank(Base, *MRI, *TRI) == &AMDGPU::VGPRRegBank) {
       VOffsetReg = Base;
@@ -1292,7 +1304,7 @@ unsigned AMDGPURegisterBankInfo::setBufferOffsets(
 
   // Handle the variable sgpr + vgpr case.
   MachineInstr *Add = getOpcodeDef(AMDGPU::G_ADD, CombinedOffset, *MRI);
-  if (Add && (int)Offset >= 0 &&
+  if (Add && static_cast<int32_t>(Offset) >= 0 &&
       (!CheckNUW || Add->getFlag(MachineInstr::NoUWrap))) {
     Register Src0 = getSrcRegIgnoringCopies(Add->getOperand(1).getReg(), *MRI);
     Register Src1 = getSrcRegIgnoringCopies(Add->getOperand(2).getReg(), *MRI);
@@ -1833,7 +1845,7 @@ AMDGPURegisterBankInfo::splitBufferOffsets(MachineIRBuilder &B,
     // vgpr, even if adding the immediate offset makes it positive.
     unsigned Overflow = ImmOffset & ~MaxImm;
     ImmOffset -= Overflow;
-    if ((int32_t)Overflow < 0) {
+    if (static_cast<int32_t>(Overflow) < 0) {
       Overflow += ImmOffset;
       ImmOffset = 0;
     }
@@ -3371,7 +3383,8 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
       constrainOpWithReadfirstlane(B, MI, 2);
       return;
     }
-    case Intrinsic::amdgcn_s_prefetch_data: {
+    case Intrinsic::amdgcn_s_prefetch_data:
+    case Intrinsic::amdgcn_s_prefetch_inst: {
       Register PtrReg = MI.getOperand(1).getReg();
       unsigned AS = MRI.getType(PtrReg).getAddressSpace();
       if (AMDGPU::isFlatGlobalAddrSpace(AS)) {
@@ -4050,8 +4063,14 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case AMDGPU::G_UBFX:
   case AMDGPU::G_AMDGPU_S_MUL_I64_I32:
   case AMDGPU::G_AMDGPU_S_MUL_U64_U32:
-    if (isSALUMapping(MI))
+    if (isSALUMapping(MI)) {
+      LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+      unsigned Size = Ty.getSizeInBits();
+      // Packed add and sub are VALU only.
+      if (Subtarget.hasPackedU64Ops() && Ty.isVector() && Size == 128)
+        return getDefaultMappingVOP(MI);
       return getDefaultMappingSOP(MI);
+    }
     return getDefaultMappingVOP(MI);
   case AMDGPU::G_SMIN:
   case AMDGPU::G_SMAX:
@@ -4060,7 +4079,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     if (isSALUMapping(MI)) {
       // There are no scalar 64-bit min and max, use vector instruction instead.
       if (MRI.getType(MI.getOperand(0).getReg()).getSizeInBits() == 64 &&
-          Subtarget.hasIntMinMax64())
+          Subtarget.hasMinMaxI64Insts())
         return getDefaultMappingVOP(MI);
       return getDefaultMappingSOP(MI);
     }
@@ -4813,6 +4832,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_swmmac_f32_16x16x32_fp8_bf8:
     case Intrinsic::amdgcn_swmmac_f32_16x16x32_bf8_fp8:
     case Intrinsic::amdgcn_swmmac_f32_16x16x32_bf8_bf8:
+    case Intrinsic::amdgcn_wmma_f64_16x16x4_f64:
     case Intrinsic::amdgcn_wmma_f32_16x16x4_f32:
     case Intrinsic::amdgcn_wmma_f32_16x16x32_bf16:
     case Intrinsic::amdgcn_wmma_f32_16x16x32_f16:
@@ -5660,7 +5680,8 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       }
       break;
     }
-    case Intrinsic::amdgcn_s_prefetch_data: {
+    case Intrinsic::amdgcn_s_prefetch_data:
+    case Intrinsic::amdgcn_s_prefetch_inst: {
       OpdsMapping[1] = getSGPROpMapping(MI.getOperand(1).getReg(), MRI, *TRI);
       OpdsMapping[2] = getSGPROpMapping(MI.getOperand(2).getReg(), MRI, *TRI);
       break;

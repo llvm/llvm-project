@@ -58,8 +58,7 @@ bool expandReductions(Function &F, const TargetTransformInfo *TTI,
   }
 
   for (auto *II : Worklist) {
-    FastMathFlags FMF =
-        isa<FPMathOperator>(II) ? II->getFastMathFlags() : FastMathFlags{};
+    FastMathFlags FMF = II->getFastMathFlagsOrNone();
     Intrinsic::ID ID = II->getIntrinsicID();
     RecurKind RK = getMinMaxReductionRecurKind(ID);
     TargetTransformInfo::ReductionShuffle RS =

@@ -25,7 +25,7 @@ class DwarfEHPreparePass : public RequiredPassInfoMixin<DwarfEHPreparePass> {
 
 public:
   explicit DwarfEHPreparePass(const TargetMachine &TM_) : TM(&TM_) {}
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
 
 } // namespace llvm

@@ -140,3 +140,24 @@ subroutine atomic_compare_float_gt(x, e)
   !$omp atomic compare
   if (x .gt. e) x = e
 end
+
+! CHECK-LABEL: func.func @_QPatomic_compare_int_eq_weak(
+! CHECK-SAME:    %[[X:.*]]: !fir.ref<i32> {fir.bindc_name = "x"}
+! CHECK-SAME:    %[[E:.*]]: !fir.ref<i32> {fir.bindc_name = "e"}
+! CHECK-SAME:    %[[D:.*]]: !fir.ref<i32> {fir.bindc_name = "d"}
+! CHECK:         %[[D_DECL:.*]]:2 = hlfir.declare %[[D]] {{.*}}
+! CHECK:         %[[E_DECL:.*]]:2 = hlfir.declare %[[E]] {{.*}}
+! CHECK:         %[[X_DECL:.*]]:2 = hlfir.declare %[[X]] {{.*}}
+! CHECK:         %[[EVAL:.*]] = fir.load %[[E_DECL]]#0 : !fir.ref<i32>
+! CHECK:         omp.atomic.compare memory_order(relaxed) %[[X_DECL]]#0 : !fir.ref<i32> {
+! CHECK:         ^bb0(%[[XVAL:.*]]: i32):
+! CHECK:           %[[CMP:.*]] = arith.cmpi eq, %[[XVAL]], %[[EVAL]] : i32
+! CHECK:           %[[DVAL:.*]] = fir.load %[[D_DECL]]#0 : !fir.ref<i32>
+! CHECK:           %[[SEL:.*]] = arith.select %[[CMP]], %[[DVAL]], %[[XVAL]] : i32
+! CHECK:           omp.yield(%[[SEL]] : i32)
+! CHECK:         } {{.*}}weak{{.*}}
+subroutine atomic_compare_int_eq_weak(x, e, d)
+  integer :: x, e, d
+  !$omp atomic compare weak
+  if (x .eq. e) x = d
+end

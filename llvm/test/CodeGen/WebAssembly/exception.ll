@@ -672,5 +672,32 @@ attributes #0 = { nounwind }
 attributes #1 = { noreturn }
 attributes #2 = { noreturn nounwind }
 
+; CHECK-LABEL: empty_cleanup_pad:
+; CHECK:     try_table    (catch_all_ref 0)
+; CHECK:     throw_ref
+define void @empty_cleanup_pad(i32 %arg) personality ptr @__gxx_wasm_personality_v0 {
+entry:
+  br label %loop
+
+loop:
+  invoke void @foo()
+          to label %loop unwind label %cleanup
+
+cleanup:
+  %exn = cleanuppad within none []
+  br label %dispatch
+
+dispatch:                                         ; preds = %cleanup, %dispatch
+  %cond = icmp eq i32 %arg, 0
+  br i1 %cond, label %ret, label %dispatch
+
+ret:                                              ; preds = %dispatch
+  cleanupret from %exn unwind label %cleanup2
+
+cleanup2:                                         ; preds = %ret
+  %exn2 = cleanuppad within none []
+  ret void
+}
+
 ;; The exception tag should not be defined locally
 ; CHECK-NOT: __cpp_exception:

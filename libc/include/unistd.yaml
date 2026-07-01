@@ -14,13 +14,23 @@ macros:
     macro_header: unistd-macros.h
   - macro_name: STDERR_FILENO
     macro_header: unistd-macros.h
+  - macro_name: _SC_ARG_MAX
+    macro_header: unistd-macros.h
   - macro_name: _SC_PAGESIZE
     macro_header: unistd-macros.h
   - macro_name: _SC_PAGE_SIZE
     macro_header: unistd-macros.h
+  - macro_name: _SC_OPEN_MAX
+    macro_header: unistd-macros.h
+  - macro_name: _SC_THREADS
+    macro_header: unistd-macros.h
   - macro_name: _SC_NPROCESSORS_CONF
     macro_header: unistd-macros.h
   - macro_name: _SC_NPROCESSORS_ONLN
+    macro_header: unistd-macros.h
+  - macro_name: _SC_PHYS_PAGES
+    macro_header: unistd-macros.h
+  - macro_name: _POSIX_THREADS
     macro_header: unistd-macros.h
 types:
   - type_name: uid_t
@@ -63,6 +73,12 @@ functions:
     return_type: _Noreturn void
     arguments:
       - type: int
+  - name: alarm
+    standards:
+      - posix
+    return_type: unsigned int
+    arguments:
+      - type: unsigned int
   - name: access
     standards:
       - posix
@@ -184,7 +200,7 @@ functions:
       - type: size_t
   - name: getentropy
     standards:
-      - GNUExtensions
+      - gnu
     return_type: int
     arguments:
       - type: void *
@@ -204,7 +220,7 @@ functions:
       - type: size_t
   - name: getpagesize
     standards:
-      - BSDExtensions
+      - bsd
     return_type: int
     arguments:
       - type: void
@@ -236,7 +252,7 @@ functions:
       - type: pid_t
   - name: gettid
     standards:
-      - Linux
+      - linux
     return_type: pid_t
     arguments:
       - type: void
@@ -300,7 +316,7 @@ functions:
       - type: int *
   - name: pipe2
     standards:
-      - Linux
+      - linux
     return_type: int
     arguments:
       - type: int *

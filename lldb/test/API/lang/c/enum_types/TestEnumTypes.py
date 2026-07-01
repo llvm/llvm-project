@@ -14,6 +14,7 @@ class EnumTypesTestCase(TestBase):
         # Find the line number to break inside main().
         self.line = line_number("main.c", "// Set break point at this line.")
 
+    @skipIfWasm  # no expression evaluation
     def test_command_line(self):
         """Test 'image lookup -t enum_test_days' and check for correct display and enum value printing."""
         self.build()

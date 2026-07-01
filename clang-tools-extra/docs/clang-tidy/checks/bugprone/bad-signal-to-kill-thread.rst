@@ -13,6 +13,6 @@ just the individual thread. Use any signal except ``SIGTERM``.
 
 This check corresponds to the CERT C Coding Standard rule
 `POS44-C. Do not use signals to terminate threads
-<https://wiki.sei.cmu.edu/confluence/display/c/POS44-C.+Do+not+use+signals+to+terminate+threads>`_.
+<https://cmu-sei.github.io/secure-coding-standards/sei-cert-c-coding-standard/rules/posix-pos/pos44-c/>`_.
 
 `cert-pos44-c` redirects here as an alias of this check.

@@ -10,7 +10,6 @@
 #include "LibCxx.h"
 #include "LibStdcpp.h"
 #include "MsvcStl.h"
-#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/Target/Target.h"
 #include "llvm/Support/ErrorExtras.h"

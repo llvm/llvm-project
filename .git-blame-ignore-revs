@@ -152,3 +152,9 @@ b7e332d3f59f567b1999fbcc660d7837cba8e406
 c73870dbe89a8219130e21a0b3f13df76d299352
 74c40293c309dbd142bf1f0ebfbfde6be8d30655
 a7ba8dcad76476478100c228a31d9c48391b1e03
+
+# [NFC][clang] Format pragma comment kind StringSwitch
+511d2e40ddeacf25f403b40ed73a41d1dea1b636
+
+# [NFC][clang] Split clang/lib/CodeGen/CGBuiltin.cpp into target-specific files (#132252)
+7f920e2e5f70b25c79adbc0b1005b1d1286d4681

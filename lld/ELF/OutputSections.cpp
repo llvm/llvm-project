@@ -91,7 +91,8 @@ static bool canMergeToProgbits(Ctx &ctx, unsigned type) {
   return type == SHT_NOBITS || type == SHT_PROGBITS || type == SHT_INIT_ARRAY ||
          type == SHT_PREINIT_ARRAY || type == SHT_FINI_ARRAY ||
          type == SHT_NOTE ||
-         (type == SHT_X86_64_UNWIND && ctx.arg.emachine == EM_X86_64);
+         (type == SHT_X86_64_UNWIND && ctx.arg.emachine == EM_X86_64) ||
+         type == SHT_LLVM_CFI_JUMP_TABLE;
 }
 
 // Record that isec will be placed in the OutputSection. isec does not become

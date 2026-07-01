@@ -12,7 +12,6 @@
 ; CHECK: @bar2 = internal addrspace(3) global [2 x target("amdgcn.named.barrier", 0)] poison, !absolute_symbol [[META0:![0-9]+]]
 ; CHECK: @bar3 = internal addrspace(3) global target("amdgcn.named.barrier", 0) poison, !absolute_symbol [[META1:![0-9]+]]
 ; CHECK: @bar1 = internal addrspace(3) global [4 x %class.ExpAmdWorkgroupWaveBarrier] poison, !absolute_symbol [[META2:![0-9]+]]
-; CHECK: @bar1.kernel1 = internal addrspace(3) global [4 x %class.ExpAmdWorkgroupWaveBarrier] poison, !absolute_symbol [[META2]]
 ;.
 define void @func1() {
 ; CHECK-LABEL: define void @func1() {
@@ -43,10 +42,10 @@ define void @func2() {
 define amdgpu_kernel void @kernel1() #0 {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel1(
 ; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    call void @llvm.amdgcn.s.barrier.join(ptr addrspace(3) @bar1.kernel1)
-; CHECK-NEXT:    call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) @bar1.kernel1, i32 11)
+; CHECK-NEXT:    call void @llvm.amdgcn.s.barrier.join(ptr addrspace(3) @bar1)
+; CHECK-NEXT:    call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) @bar1, i32 11)
 ; CHECK-NEXT:    call void @llvm.amdgcn.s.barrier.wait(i16 1)
-; CHECK-NEXT:    [[STATE:%.*]] = call i32 @llvm.amdgcn.s.get.named.barrier.state(ptr addrspace(3) @bar1.kernel1)
+; CHECK-NEXT:    [[STATE:%.*]] = call i32 @llvm.amdgcn.s.get.named.barrier.state(ptr addrspace(3) @bar1)
 ; CHECK-NEXT:    call void @llvm.amdgcn.s.barrier()
 ; CHECK-NEXT:    call void @func1()
 ; CHECK-NEXT:    call void @func2()
@@ -97,7 +96,7 @@ attributes #2 = { nounwind readnone }
 ; CHECK: attributes #[[ATTR0]] = { nounwind }
 ; CHECK: attributes #[[ATTR1:[0-9]+]] = { convergent nocallback nofree nounwind willreturn }
 ;.
-; CHECK: [[META0]] = !{i32 8396816, i32 8396817}
+; CHECK: [[META0]] = !{i32 8396880, i32 8396881}
 ; CHECK: [[META1]] = !{i32 8396912, i32 8396913}
-; CHECK: [[META2]] = !{i32 8396848, i32 8396849}
+; CHECK: [[META2]] = !{i32 8396816, i32 8396817}
 ;.

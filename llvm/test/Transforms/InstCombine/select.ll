@@ -3966,7 +3966,7 @@ define i32 @pr61361(i32 %arg) {
 
 define i32 @pr62088() {
 ; CHECK-LABEL: define i32 @pr62088() {
-; CHECK-NEXT:  entry:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    br i1 true, label %[[LOOP]], label %[[EXIT:.*]]
@@ -5420,6 +5420,70 @@ loop:
 exit:
   store i8 %res, ptr %out, align 1
   ret void
+}
+
+define i1 @select_replacement_trunc_nuw_i1(i8 %x) {
+; CHECK-LABEL: define i1 @select_replacement_trunc_nuw_i1(
+; CHECK-SAME: i8 [[X:%.*]]) {
+; CHECK-NEXT:    [[SELECT:%.*]] = icmp ne i8 [[X]], 0
+; CHECK-NEXT:    ret i1 [[SELECT]]
+;
+  %icmp = icmp eq i8 %x, 2
+  %trunc = trunc nuw i8 %x to i1
+  %select = select i1 %icmp, i1 true, i1 %trunc
+  ret i1 %select
+}
+
+define <2 x i1> @select_replacement_trunc_nuw_i1_vec(<2 x i8> %x) {
+; CHECK-LABEL: define <2 x i1> @select_replacement_trunc_nuw_i1_vec(
+; CHECK-SAME: <2 x i8> [[X:%.*]]) {
+; CHECK-NEXT:    [[SELECT:%.*]] = icmp ne <2 x i8> [[X]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[SELECT]]
+;
+  %icmp = icmp eq <2 x i8> %x, <i8 2, i8 2>
+  %trunc = trunc nuw <2 x i8> %x to <2 x i1>
+  %select = select <2 x i1> %icmp, <2 x i1> <i1 true, i1 true>, <2 x i1> %trunc
+  ret <2 x i1> %select
+}
+
+define i1 @neg_select_replacement_trunc_nuw_i1(i8 %x, i8 %y) {
+; CHECK-LABEL: define i1 @neg_select_replacement_trunc_nuw_i1(
+; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
+; CHECK-NEXT:    [[ICMP_NOT:%.*]] = icmp eq i8 [[Y]], 2
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw i8 [[X]] to i1
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[ICMP_NOT]], i1 true, i1 [[TRUNC]]
+; CHECK-NEXT:    ret i1 [[SELECT]]
+;
+  %icmp = icmp eq i8 %y, 2
+  %trunc = trunc nuw i8 %x to i1
+  %select = select i1 %icmp, i1 true, i1 %trunc
+  ret i1 %select
+}
+
+define i1 @neg_select_replacement_trunc_i1(i8 %x) {
+; CHECK-LABEL: define i1 @neg_select_replacement_trunc_i1(
+; CHECK-SAME: i8 [[X:%.*]]) {
+; CHECK-NEXT:    [[ICMP:%.*]] = icmp eq i8 [[X]], 2
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[X]] to i1
+; CHECK-NEXT:    [[SELECT:%.*]] = or i1 [[ICMP]], [[TRUNC]]
+; CHECK-NEXT:    ret i1 [[SELECT]]
+;
+  %icmp = icmp eq i8 %x, 2
+  %trunc = trunc i8 %x to i1
+  %select = select i1 %icmp, i1 true, i1 %trunc
+  ret i1 %select
+}
+
+define i2 @neg_select_replacement_trunc_nuw_i2(i8 %x) {
+; CHECK-LABEL: define i2 @neg_select_replacement_trunc_nuw_i2(
+; CHECK-SAME: i8 [[X:%.*]]) {
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[X]] to i2
+; CHECK-NEXT:    ret i2 [[TRUNC]]
+;
+  %icmp = icmp eq i8 %x, 2
+  %trunc = trunc nuw i8 %x to i2
+  %select = select i1 %icmp, i2 2, i2 %trunc
+  ret i2 %select
 }
 
 define i64 @fold_select_neg_not_eq(i64 %lo, i64 %hi) {

@@ -40,14 +40,14 @@ extern bool SectionData;
 extern bool ExpandRelocs;
 extern bool CodeViewSubsectionBytes;
 extern bool Demangle;
+extern bool UnwindShowWODPool;
 enum OutputStyleTy { LLVM, GNU, JSON, UNKNOWN };
 extern OutputStyleTy Output;
 } // namespace opts
 
-#define LLVM_READOBJ_ENUM_ENT(ns, enum) \
-  { #enum, ns::enum }
+#define LLVM_READOBJ_ENUM_ENT(ns, enum) {{#enum}, ns::enum}
 
-#define LLVM_READOBJ_ENUM_CLASS_ENT(enum_class, enum) \
-  { #enum, std::underlying_type_t<enum_class>(enum_class::enum) }
+#define LLVM_READOBJ_ENUM_CLASS_ENT(enum_class, enum)                          \
+  {{#enum}, std::underlying_type_t<enum_class>(enum_class::enum)}
 
 #endif

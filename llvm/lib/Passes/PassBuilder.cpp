@@ -16,6 +16,7 @@
 
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/ADT/StringTable.h"
 #include "llvm/Analysis/AliasAnalysisEvaluator.h"
 #include "llvm/Analysis/AliasSetTracker.h"
 #include "llvm/Analysis/AssumptionCache.h"
@@ -83,6 +84,8 @@
 #include "llvm/CodeGen/BasicBlockSectionsProfileReader.h"
 #include "llvm/CodeGen/BranchFoldingPass.h"
 #include "llvm/CodeGen/BranchRelaxation.h"
+#include "llvm/CodeGen/BreakFalseDeps.h"
+#include "llvm/CodeGen/CFIFixup.h"
 #include "llvm/CodeGen/CodeGenPrepare.h"
 #include "llvm/CodeGen/ComplexDeinterleavingPass.h"
 #include "llvm/CodeGen/DeadMachineInstructionElim.h"
@@ -125,6 +128,7 @@
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
 #include "llvm/CodeGen/MachineCFGPrinter.h"
 #include "llvm/CodeGen/MachineCSE.h"
+#include "llvm/CodeGen/MachineCheckDebugify.h"
 #include "llvm/CodeGen/MachineCopyPropagation.h"
 #include "llvm/CodeGen/MachineDebugify.h"
 #include "llvm/CodeGen/MachineDominanceFrontier.h"
@@ -135,6 +139,7 @@
 #include "llvm/CodeGen/MachineLateInstrsCleanup.h"
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
+#include "llvm/CodeGen/MachineRegionInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/MachineSink.h"
@@ -198,6 +203,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Target/TargetMachine.h"
@@ -369,6 +375,7 @@
 #include "llvm/Transforms/Utils/LibCallsShrinkWrap.h"
 #include "llvm/Transforms/Utils/LoopSimplify.h"
 #include "llvm/Transforms/Utils/LoopVersioning.h"
+#include "llvm/Transforms/Utils/LowerCommentStringPass.h"
 #include "llvm/Transforms/Utils/LowerGlobalDtors.h"
 #include "llvm/Transforms/Utils/LowerIFunc.h"
 #include "llvm/Transforms/Utils/LowerInvoke.h"
@@ -384,7 +391,7 @@
 #include "llvm/Transforms/Utils/StripGCRelocates.h"
 #include "llvm/Transforms/Utils/StripNonLineTableDebugInfo.h"
 #include "llvm/Transforms/Utils/SymbolRewriter.h"
-#include "llvm/Transforms/Utils/UnifyFunctionExitNodes.h"
+#include "llvm/Transforms/Utils/TriggerCrashPass.h"
 #include "llvm/Transforms/Utils/UnifyLoopExits.h"
 #include "llvm/Transforms/Vectorize/LoadStoreVectorizer.h"
 #include "llvm/Transforms/Vectorize/LoopIdiomVectorize.h"
@@ -396,10 +403,63 @@
 
 using namespace llvm;
 
-cl::opt<bool> llvm::PrintPipelinePasses(
-    "print-pipeline-passes",
-    cl::desc("Print a '-passes' compatible string describing the pipeline "
-             "(best-effort only)."));
+cl::opt<std::optional<PrintPipelinePassesFormat>, false,
+        PrintPipelinePassesFormatParser>
+    llvm::PrintPipelinePasses(
+        "print-pipeline-passes", cl::ValueOptional,
+        cl::desc(
+            "Print string describing the pipeline (best-effort only).\n"
+            "  - =text\tPrint a '-passes' compatible string describing the "
+            "pipeline.\n"
+            "  - =tree\tPrint a tree-like structure describing the pipeline."));
+
+bool PrintPipelinePassesFormatParser::parse(
+    cl::Option &O, StringRef ArgName, StringRef Arg,
+    std::optional<PrintPipelinePassesFormat> &Val) {
+  std::optional<PrintPipelinePassesFormat> Format =
+      StringSwitch<std::optional<PrintPipelinePassesFormat>>(Arg)
+          .Case("text", PrintPipelinePassesFormat::Text)
+          .Case("", PrintPipelinePassesFormat::Text)
+          .Case("tree", PrintPipelinePassesFormat::Tree)
+          .Default(std::nullopt);
+
+  if (!Format)
+    return O.error(formatv(
+        "'{0}' value invalid for print-pipeline-passes argument!", Arg));
+
+  Val = Format;
+  return false;
+}
+
+void llvm::printFormattedPipelinePasses(raw_ostream &OS, StringRef Pipeline,
+                                        PrintPipelinePassesFormat Format) {
+  switch (Format) {
+  case PrintPipelinePassesFormat::Text:
+    OS << Pipeline;
+    break;
+  case PrintPipelinePassesFormat::Tree: {
+    int IndentLevel = 0;
+    for (char C : Pipeline) {
+      switch (C) {
+      case '(':
+        ++IndentLevel;
+        OS << formatv("\n{0}", fmt_repeat("  ", IndentLevel));
+        break;
+      case ')':
+        --IndentLevel;
+        assert(IndentLevel >= 0 && "Invalid pipeline string!");
+        break;
+      case ',':
+        OS << formatv("\n{0}", fmt_repeat("  ", IndentLevel));
+        break;
+      default:
+        OS << C;
+      }
+    }
+    break;
+  }
+  }
+}
 
 AnalysisKey NoOpModuleAnalysis::Key;
 AnalysisKey NoOpCGSCCAnalysis::Key;
@@ -420,28 +480,6 @@ bool applyMIRDebugify(DIBuilder &DIB, Function &F, ModuleAnalysisManager &AM) {
         return MFA ? &MFA->getMF() : nullptr;
       });
 }
-
-// Passes for testing crashes.
-// DO NOT USE THIS EXCEPT FOR TESTING!
-class TriggerCrashModulePass
-    : public OptionalPassInfoMixin<TriggerCrashModulePass> {
-public:
-  PreservedAnalyses run(Module &, ModuleAnalysisManager &) {
-    abort();
-    return PreservedAnalyses::all();
-  }
-  static StringRef name() { return "TriggerCrashModulePass"; }
-};
-
-class TriggerCrashFunctionPass
-    : public OptionalPassInfoMixin<TriggerCrashFunctionPass> {
-public:
-  PreservedAnalyses run(Function &, FunctionAnalysisManager &) {
-    abort();
-    return PreservedAnalyses::all();
-  }
-  static StringRef name() { return "TriggerCrashFunctionPass"; }
-};
 
 // A pass for testing message reporting of -verify-each failures.
 // DO NOT USE THIS EXCEPT FOR TESTING!
@@ -829,6 +867,17 @@ Expected<HardwareLoopOptions> parseHardwareLoopOptions(StringRef Params) {
 Expected<bool> parseLintOptions(StringRef Params) {
   return PassBuilder::parseSinglePassOption(Params, "abort-on-error",
                                             "LintPass");
+}
+
+/// Parser of parameters for FunctionPropertiesStatistics pass.
+Expected<bool> parseFunctionPropertiesStatisticsOptions(StringRef Params) {
+  return PassBuilder::parseSinglePassOption(Params, "pre-opt",
+                                            "FunctionPropertiesStatisticsPass");
+}
+
+/// Parser of parameters for InstCount pass.
+Expected<bool> parseInstCountOptions(StringRef Params) {
+  return PassBuilder::parseSinglePassOption(Params, "pre-opt", "InstCountPass");
 }
 
 /// Parser of parameters for LoopUnroll pass.
@@ -1428,16 +1477,36 @@ Expected<ScalarizerPassOptions> parseScalarizerOptions(StringRef Params) {
 }
 
 Expected<SROAOptions> parseSROAOptions(StringRef Params) {
-  if (Params.empty() || Params == "modify-cfg")
-    return SROAOptions::ModifyCFG;
-  if (Params == "preserve-cfg")
-    return SROAOptions::PreserveCFG;
-  return make_error<StringError>(
-      formatv("invalid SROA pass parameter '{}' (either preserve-cfg or "
-              "modify-cfg can be specified)",
-              Params)
-          .str(),
-      inconvertibleErrorCode());
+  SROAOptions Result(SROAOptions::ModifyCFG);
+  bool SawCFGOption = false;
+  while (!Params.empty()) {
+    StringRef ParamName;
+    std::tie(ParamName, Params) = Params.split(';');
+
+    if (ParamName == "modify-cfg") {
+      if (SawCFGOption)
+        return make_error<StringError>("multiple SROA CFG options specified",
+                                       inconvertibleErrorCode());
+      Result.CFG = SROAOptions::ModifyCFG;
+      SawCFGOption = true;
+    } else if (ParamName == "preserve-cfg") {
+      if (SawCFGOption)
+        return make_error<StringError>("multiple SROA CFG options specified",
+                                       inconvertibleErrorCode());
+      Result.CFG = SROAOptions::PreserveCFG;
+      SawCFGOption = true;
+    } else if (ParamName == "aggregate-to-vector") {
+      Result.AggregateToVector = true;
+    } else {
+      return make_error<StringError>(
+          formatv("invalid SROA pass parameter '{}' (expected preserve-cfg, "
+                  "modify-cfg, or aggregate-to-vector)",
+                  ParamName)
+              .str(),
+          inconvertibleErrorCode());
+    }
+  }
+  return Result;
 }
 
 Expected<StackLifetime::LivenessType>
@@ -2785,92 +2854,159 @@ PassBuilder::parseRegAllocFilter(StringRef FilterName) {
   return std::nullopt;
 }
 
-static void printPassName(StringRef PassName, raw_ostream &OS) {
-  OS << "  " << PassName << "\n";
+LLVM_ATTRIBUTE_NOINLINE static void printPassNameList(StringTable PassNames,
+                                                      raw_ostream &OS) {
+  for (StringRef PassName : drop_begin(PassNames))
+    OS << "  " << PassName << '\n';
 }
-static void printPassName(StringRef PassName, StringRef Params,
-                          raw_ostream &OS) {
-  OS << "  " << PassName << "<" << Params << ">\n";
+
+LLVM_ATTRIBUTE_NOINLINE static void
+printPassNameListWithParams(StringTable PassNames, raw_ostream &OS) {
+  auto I = PassNames.begin();
+  auto End = PassNames.end();
+  ++I;
+  while (I != End) {
+    StringRef Name = *I;
+    ++I;
+    assert(I != End);
+    StringRef Params = *I;
+    ++I;
+    OS << "  " << Name << '<' << Params << ">\n";
+  }
 }
 
 void PassBuilder::printPassNames(raw_ostream &OS) {
   // TODO: print pass descriptions when they are available
 
   OS << "Module passes:\n";
-#define MODULE_PASS(NAME, CREATE_PASS) printPassName(NAME, OS);
+  static constexpr char ModulePassNames[] = {"\0"
+#define MODULE_PASS(NAME, CREATE_PASS) NAME "\0"
 #include "PassRegistry.def"
+  };
+  printPassNameList(StringTable(ModulePassNames), OS);
 
   OS << "Module passes with params:\n";
+  static constexpr char ModulePassNamesWithParams[] = {"\0"
 #define MODULE_PASS_WITH_PARAMS(NAME, CLASS, CREATE_PASS, PARSER, PARAMS)      \
-  printPassName(NAME, PARAMS, OS);
+  NAME "\0" PARAMS "\0"
 #include "PassRegistry.def"
+  };
+  printPassNameListWithParams(StringTable(ModulePassNamesWithParams), OS);
 
   OS << "Module analyses:\n";
-#define MODULE_ANALYSIS(NAME, CREATE_PASS) printPassName(NAME, OS);
+  static constexpr char ModuleAnalysisNames[] = {"\0"
+#define MODULE_ANALYSIS(NAME, CREATE_PASS) NAME "\0"
 #include "PassRegistry.def"
+  };
+  printPassNameList(StringTable(ModuleAnalysisNames), OS);
 
   OS << "Module alias analyses:\n";
-#define MODULE_ALIAS_ANALYSIS(NAME, CREATE_PASS) printPassName(NAME, OS);
+  static constexpr char ModuleAliasAnalysisNames[] = {"\0"
+#define MODULE_ALIAS_ANALYSIS(NAME, CREATE_PASS) NAME "\0"
 #include "PassRegistry.def"
+  };
+  printPassNameList(StringTable(ModuleAliasAnalysisNames), OS);
 
   OS << "CGSCC passes:\n";
-#define CGSCC_PASS(NAME, CREATE_PASS) printPassName(NAME, OS);
+  static constexpr char CGSCCPassNames[] = {"\0"
+#define CGSCC_PASS(NAME, CREATE_PASS) NAME "\0"
 #include "PassRegistry.def"
+  };
+  printPassNameList(StringTable(CGSCCPassNames), OS);
 
   OS << "CGSCC passes with params:\n";
+  static constexpr char CGSCCPassNamesWithParams[] = {"\0"
 #define CGSCC_PASS_WITH_PARAMS(NAME, CLASS, CREATE_PASS, PARSER, PARAMS)       \
-  printPassName(NAME, PARAMS, OS);
+  NAME "\0" PARAMS "\0"
 #include "PassRegistry.def"
+  };
+  printPassNameListWithParams(StringTable(CGSCCPassNamesWithParams), OS);
 
   OS << "CGSCC analyses:\n";
-#define CGSCC_ANALYSIS(NAME, CREATE_PASS) printPassName(NAME, OS);
+  static constexpr char CGSCCAnalysisNames[] = {"\0"
+#define CGSCC_ANALYSIS(NAME, CREATE_PASS) NAME "\0"
 #include "PassRegistry.def"
+  };
+  printPassNameList(StringTable(CGSCCAnalysisNames), OS);
 
   OS << "Function passes:\n";
-#define FUNCTION_PASS(NAME, CREATE_PASS) printPassName(NAME, OS);
+  static constexpr char FunctionPassNames[] = {"\0"
+#define FUNCTION_PASS(NAME, CREATE_PASS) NAME "\0"
 #include "PassRegistry.def"
+  };
+  printPassNameList(StringTable(FunctionPassNames), OS);
 
   OS << "Function passes with params:\n";
+  static constexpr char FunctionPassNamesWithParams[] = {"\0"
 #define FUNCTION_PASS_WITH_PARAMS(NAME, CLASS, CREATE_PASS, PARSER, PARAMS)    \
-  printPassName(NAME, PARAMS, OS);
+  NAME "\0" PARAMS "\0"
 #include "PassRegistry.def"
+  };
+  printPassNameListWithParams(StringTable(FunctionPassNamesWithParams), OS);
 
   OS << "Function analyses:\n";
-#define FUNCTION_ANALYSIS(NAME, CREATE_PASS) printPassName(NAME, OS);
+  static constexpr char FunctionAnalysisNames[] = {"\0"
+#define FUNCTION_ANALYSIS(NAME, CREATE_PASS) NAME "\0"
 #include "PassRegistry.def"
+  };
+  printPassNameList(StringTable(FunctionAnalysisNames), OS);
 
   OS << "Function alias analyses:\n";
-#define FUNCTION_ALIAS_ANALYSIS(NAME, CREATE_PASS) printPassName(NAME, OS);
+  static constexpr char FunctionAliasAnalysisNames[] = {"\0"
+#define FUNCTION_ALIAS_ANALYSIS(NAME, CREATE_PASS) NAME "\0"
 #include "PassRegistry.def"
+  };
+  printPassNameList(StringTable(FunctionAliasAnalysisNames), OS);
 
   OS << "LoopNest passes:\n";
-#define LOOPNEST_PASS(NAME, CREATE_PASS) printPassName(NAME, OS);
+  static constexpr char LoopNestPassNames[] = {"\0"
+#define LOOPNEST_PASS(NAME, CREATE_PASS) NAME "\0"
 #include "PassRegistry.def"
+  };
+  printPassNameList(StringTable(LoopNestPassNames), OS);
 
   OS << "Loop passes:\n";
-#define LOOP_PASS(NAME, CREATE_PASS) printPassName(NAME, OS);
+  static constexpr char LoopPassNames[] = {"\0"
+#define LOOP_PASS(NAME, CREATE_PASS) NAME "\0"
 #include "PassRegistry.def"
+  };
+  printPassNameList(StringTable(LoopPassNames), OS);
 
   OS << "Loop passes with params:\n";
+  static constexpr char LoopPassNamesWithParams[] = {"\0"
 #define LOOP_PASS_WITH_PARAMS(NAME, CLASS, CREATE_PASS, PARSER, PARAMS)        \
-  printPassName(NAME, PARAMS, OS);
+  NAME "\0" PARAMS "\0"
 #include "PassRegistry.def"
+  };
+  printPassNameListWithParams(StringTable(LoopPassNamesWithParams), OS);
 
   OS << "Loop analyses:\n";
-#define LOOP_ANALYSIS(NAME, CREATE_PASS) printPassName(NAME, OS);
+  static constexpr char LoopAnalysisNames[] = {"\0"
+#define LOOP_ANALYSIS(NAME, CREATE_PASS) NAME "\0"
 #include "PassRegistry.def"
+  };
+  printPassNameList(StringTable(LoopAnalysisNames), OS);
 
   OS << "Machine module passes (WIP):\n";
-#define MACHINE_MODULE_PASS(NAME, CREATE_PASS) printPassName(NAME, OS);
+  static constexpr char MachineModulePassNames[] = {"\0"
+#define MACHINE_MODULE_PASS(NAME, CREATE_PASS) NAME "\0"
 #include "llvm/Passes/MachinePassRegistry.def"
+  };
+  printPassNameList(StringTable(MachineModulePassNames), OS);
 
   OS << "Machine function passes (WIP):\n";
-#define MACHINE_FUNCTION_PASS(NAME, CREATE_PASS) printPassName(NAME, OS);
+  static constexpr char MachineFunctionPassNames[] = {"\0"
+#define MACHINE_FUNCTION_PASS(NAME, CREATE_PASS) NAME "\0"
 #include "llvm/Passes/MachinePassRegistry.def"
+  };
+  printPassNameList(StringTable(MachineFunctionPassNames), OS);
 
   OS << "Machine function analyses (WIP):\n";
-#define MACHINE_FUNCTION_ANALYSIS(NAME, CREATE_PASS) printPassName(NAME, OS);
+  static constexpr char MachineFunctionAnalysisNames[] = {"\0"
+#define MACHINE_FUNCTION_ANALYSIS(NAME, CREATE_PASS) NAME "\0"
 #include "llvm/Passes/MachinePassRegistry.def"
+  };
+  printPassNameList(StringTable(MachineFunctionAnalysisNames), OS);
 }
 
 void PassBuilder::registerParseTopLevelPipelineCallback(

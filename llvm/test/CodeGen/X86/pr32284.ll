@@ -7,6 +7,8 @@
 ; RUN: llc -O0 -mtriple=x86_64-unknown -mcpu=skx -mattr=+zu,+prefer-legacy-setcc -o - %s | FileCheck %s --check-prefix=X64-O0-NO-SETZUCC
 ; RUN: llc     -mtriple=x86_64-unknown -mcpu=skx -mattr=+zu -o - %s | FileCheck %s --check-prefix=X64-SETZUCC
 ; RUN: llc     -mtriple=x86_64-unknown -mcpu=skx -mattr=+zu,+prefer-legacy-setcc -o - %s | FileCheck %s --check-prefix=X64-NO-SETZUCC
+; RUN: llc     -mtriple=x86_64-unknown -mcpu=novalake -mattr=-ndd,-egpr,-ccmp,-cf,-nf,-push2pop2,-ppx -o - %s | FileCheck %s --check-prefix=X64-NO-SETZUCC
+; RUN: llc     -mtriple=x86_64-unknown -mcpu=diamondrapids -mattr=-ndd,-egpr,-ccmp,-cf,-nf,-push2pop2,-ppx -o - %s | FileCheck %s --check-prefix=X64-NO-SETZUCC
 
 ; The test is to check if setzucc instruction is emitted when zu feature is
 ; specified in llc option or setcc instruction is emitted when
@@ -168,12 +170,14 @@ define void @foo() {
 ; X64-NO-SETZUCC-LABEL: foo:
 ; X64-NO-SETZUCC:       # %bb.0: # %entry
 ; X64-NO-SETZUCC-NEXT:    movzbl c(%rip), %eax
+; X64-NO-SETZUCC-NEXT:    xorl %ecx, %ecx
 ; X64-NO-SETZUCC-NEXT:    testl %eax, %eax
-; X64-NO-SETZUCC-NEXT:    setzune %cl
-; X64-NO-SETZUCC-NEXT:    setne -{{[0-9]+}}(%rsp)
+; X64-NO-SETZUCC-DAG:     setne -{{[0-9]+}}(%rsp)
+; X64-NO-SETZUCC-DAG:     setne %cl
+; X64-NO-SETZUCC-NEXT:    xorl %edx, %edx
 ; X64-NO-SETZUCC-NEXT:    cmpl %eax, %ecx
-; X64-NO-SETZUCC-NEXT:    setzule %al
-; X64-NO-SETZUCC-NEXT:    movl %eax, -{{[0-9]+}}(%rsp)
+; X64-NO-SETZUCC-NEXT:    setle %dl
+; X64-NO-SETZUCC-NEXT:    movl %edx, -{{[0-9]+}}(%rsp)
 ; X64-NO-SETZUCC-NEXT:    retq
 entry:
   %a = alloca i8, align 1
@@ -437,14 +441,17 @@ define void @f1() {
 ; X64-NO-SETZUCC-NEXT:    movabsq $-8381627093, %rcx # imm = 0xFFFFFFFE0C6A852B
 ; X64-NO-SETZUCC-NEXT:    cmpq %rcx, %rax
 ; X64-NO-SETZUCC-NEXT:    setne -{{[0-9]+}}(%rsp)
+; X64-NO-SETZUCC-NEXT:    xorl %ecx, %ecx
 ; X64-NO-SETZUCC-NEXT:    cmpq $-1, %rax
-; X64-NO-SETZUCC-NEXT:    setzue %cl
+; X64-NO-SETZUCC-NEXT:    sete %cl
+; X64-NO-SETZUCC-NEXT:    xorl %edx, %edx
 ; X64-NO-SETZUCC-NEXT:    cmpl $-1, %eax
-; X64-NO-SETZUCC-NEXT:    setzue %dl
+; X64-NO-SETZUCC-NEXT:    sete %dl
 ; X64-NO-SETZUCC-NEXT:    addq $7093, %rax # imm = 0x1BB5
+; X64-NO-SETZUCC-NEXT:    xorl %esi, %esi
 ; X64-NO-SETZUCC-NEXT:    cmpq %rax, %rdx
-; X64-NO-SETZUCC-NEXT:    setzug %al
-; X64-NO-SETZUCC-NEXT:    movq %rax, var_57(%rip)
+; X64-NO-SETZUCC-NEXT:    setg %sil
+; X64-NO-SETZUCC-NEXT:    movq %rsi, var_57(%rip)
 ; X64-NO-SETZUCC-NEXT:    movq %rcx, _ZN8struct_210member_2_0E(%rip)
 ; X64-NO-SETZUCC-NEXT:    retq
 entry:
@@ -639,12 +646,14 @@ define void @f2() {
 ; X64-NO-SETZUCC-LABEL: f2:
 ; X64-NO-SETZUCC:       # %bb.0: # %entry
 ; X64-NO-SETZUCC-NEXT:    movzbl var_7(%rip), %eax
+; X64-NO-SETZUCC-NEXT:    xorl %ecx, %ecx
 ; X64-NO-SETZUCC-NEXT:    testl %eax, %eax
-; X64-NO-SETZUCC-NEXT:    setzue %cl
+; X64-NO-SETZUCC-NEXT:    sete %cl
+; X64-NO-SETZUCC-NEXT:    xorl %edx, %edx
 ; X64-NO-SETZUCC-NEXT:    xorl %eax, %ecx
 ; X64-NO-SETZUCC-NEXT:    movw %cx, -{{[0-9]+}}(%rsp)
-; X64-NO-SETZUCC-NEXT:    setzue %al
-; X64-NO-SETZUCC-NEXT:    movw %ax, (%rax)
+; X64-NO-SETZUCC-NEXT:    sete %dl
+; X64-NO-SETZUCC-NEXT:    movw %dx, (%rax)
 ; X64-NO-SETZUCC-NEXT:    retq
 entry:
   %a = alloca i16, align 2
@@ -876,9 +885,10 @@ define void @f3() #0 {
 ; X64-NO-SETZUCC-LABEL: f3:
 ; X64-NO-SETZUCC:       # %bb.0: # %entry
 ; X64-NO-SETZUCC-NEXT:    movl var_13(%rip), %eax
+; X64-NO-SETZUCC-NEXT:    xorl %ecx, %ecx
 ; X64-NO-SETZUCC-NEXT:    testl %eax, %eax
 ; X64-NO-SETZUCC-NEXT:    notl %eax
-; X64-NO-SETZUCC-NEXT:    setzue %cl
+; X64-NO-SETZUCC-NEXT:    sete %cl
 ; X64-NO-SETZUCC-NEXT:    movl var_16(%rip), %edx
 ; X64-NO-SETZUCC-NEXT:    xorl %eax, %edx
 ; X64-NO-SETZUCC-NEXT:    andl %edx, %ecx

@@ -86,6 +86,10 @@ if re.match(r".*-(windows-msvc)$", config.target_triple):
 if re.match(r".*-(windows-gnu|mingw32)$", config.target_triple):
     config.available_features.add("windows-gnu")
 
+if config.targets_to_build:
+    for arch in config.targets_to_build.split(";"):
+        if arch:
+            config.available_features.add(arch.lower() + "-registered-target")
 
 def calculate_arch_features(arch_string):
     # This will add a feature such as x86, arm, mips, etc for each built
@@ -120,7 +124,7 @@ for cachedir in [config.clang_module_cache, config.lldb_module_cache]:
 # lit complains if the value is set but it is not supported.
 supported, errormsg = lit_config.maxIndividualTestTimeIsSupported
 if supported:
-    lit_config.maxIndividualTestTime = 600
+    config.maxIndividualTestTime = 600
 else:
     lit_config.warning("Could not set a default per-test timeout. " + errormsg)
 

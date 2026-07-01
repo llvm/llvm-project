@@ -67,17 +67,17 @@ static bool runNVVMIntrRange(Function &F) {
     return false;
 
   auto ReqNTID = getReqNTID(F);
-  const auto OverallMaxNTID = getOverallMaxNTID(F);
+  const std::optional<uint64_t> OverallMaxNTID = getOverallMaxNTID(F);
   auto ClusterDim = getClusterDim(F);
-  const auto MaxClusterRank = getMaxClusterRank(F);
+  const std::optional<unsigned> MaxClusterRank = getMaxClusterRank(F);
 
   // If this function lacks any range information, do nothing.
   if (ReqNTID.empty() && !OverallMaxNTID && ClusterDim.empty() &&
       !MaxClusterRank)
     return false;
 
-  const unsigned MaxNTID =
-      OverallMaxNTID.value_or(std::numeric_limits<unsigned>::max());
+  const uint64_t MaxNTID =
+      OverallMaxNTID.value_or(std::numeric_limits<uint64_t>::max());
 
   // When reqntid is specified, block dimensions are exact compile-time
   // constants. Otherwise, use maxntid (capped at hardware limits) as upper
@@ -88,8 +88,9 @@ static bool runNVVMIntrRange(Function &F) {
     MinBlockDim = MaxBlockDim = {ReqNTID[0], ReqNTID[1], ReqNTID[2]};
   } else {
     MinBlockDim = {1, 1, 1};
-    MaxBlockDim = {std::min(1024u, MaxNTID), std::min(1024u, MaxNTID),
-                   std::min(64u, MaxNTID)};
+    MaxBlockDim = {static_cast<unsigned>(std::min(uint64_t{1024}, MaxNTID)),
+                   static_cast<unsigned>(std::min(uint64_t{1024}, MaxNTID)),
+                   static_cast<unsigned>(std::min(uint64_t{64}, MaxNTID))};
   }
 
   const bool HasClusterInfo = !ClusterDim.empty() || MaxClusterRank;

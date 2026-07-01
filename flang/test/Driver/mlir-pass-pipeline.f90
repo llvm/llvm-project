@@ -9,6 +9,11 @@
 
 end program
 
+! At -O0 on the host (no OpenMP target-device compilation), InlineHLFIRAssign
+! is no longer scheduled. See PR #197092 follow-up restricting the -O0 pass
+! to OpenMP target-device compilation.
+! O0-NOT: InlineHLFIRAssign
+
 ! ALL: Pass statistics report
 ! ALL: Fortran::lower::VerifierPass
 
@@ -31,23 +36,23 @@ end program
 ! ALL-NEXT:'fir.global' Pipeline
 ! O2-NEXT:   SimplifyHLFIRIntrinsics
 ! ALL:       InlineElementals
-! O0-NEXT:   InlineHLFIRAssign
+! ALL-NEXT:  SeparateAllocatableAssign
 ! ALL-NEXT:'func.func' Pipeline
 ! O2-NEXT:   SimplifyHLFIRIntrinsics
 ! ALL:       InlineElementals
-! O0-NEXT:   InlineHLFIRAssign
+! ALL-NEXT:  SeparateAllocatableAssign
 ! ALL-NEXT:'omp.declare_mapper' Pipeline
 ! O2-NEXT:   SimplifyHLFIRIntrinsics
 ! ALL:       InlineElementals
-! O0-NEXT:   InlineHLFIRAssign
+! ALL-NEXT:  SeparateAllocatableAssign
 ! ALL-NEXT:'omp.declare_reduction' Pipeline
 ! O2-NEXT:   SimplifyHLFIRIntrinsics
 ! ALL:       InlineElementals
-! O0-NEXT:   InlineHLFIRAssign
+! ALL-NEXT:  SeparateAllocatableAssign
 ! ALL-NEXT:'omp.private' Pipeline
 ! O2-NEXT:   SimplifyHLFIRIntrinsics
 ! ALL:       InlineElementals
-! O0-NEXT:   InlineHLFIRAssign
+! ALL-NEXT:  SeparateAllocatableAssign
 ! O2-NEXT: Canonicalizer
 ! O2-NEXT: CSE
 ! O2-NEXT: (S) {{.*}} num-cse'd

@@ -93,6 +93,7 @@
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/InitializePasses.h"
@@ -630,12 +631,6 @@ static cl::opt<bool>
                            cl::desc("Enable AMDGPUAttributorPass"),
                            cl::init(true), cl::Hidden);
 
-static cl::opt<bool> NewRegBankSelect(
-    "new-reg-bank-select",
-    cl::desc("Run amdgpu-regbankselect and amdgpu-regbanklegalize instead of "
-             "regbankselect"),
-    cl::init(false), cl::Hidden);
-
 static cl::opt<bool> HasClosedWorldAssumption(
     "amdgpu-link-time-closed-world",
     cl::desc("Whether has closed-world assumption at link time"),
@@ -1095,7 +1090,7 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
         if (EnableLowerExecSync)
           PM.addPass(AMDGPULowerExecSyncPass());
         if (EnableSwLowerLDS)
-          PM.addPass(AMDGPUSwLowerLDSPass(*this));
+          PM.addPass(AMDGPUSwLowerLDSPass());
         if (EnableLowerModuleLDS)
           PM.addPass(AMDGPULowerModuleLDSPass(*this));
         if (Level != OptimizationLevel::O0) {
@@ -1245,21 +1240,43 @@ GCNTargetMachine::GCNTargetMachine(const Target &T, const Triple &TT,
                                    CodeGenOptLevel OL, bool JIT)
     : AMDGPUTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL) {}
 
+enum class OOBFlagValue {
+  Any = 0,
+  Relaxed = 1,
+  Strict = 2,
+};
+
+/// Returns the OOB mode encoded by a module flag.
+/// An absent flag defaults to Any.
+static OOBFlagValue getOOBFlagValue(const Module &M, StringRef FlagName) {
+  const auto *Flag =
+      mdconst::dyn_extract_or_null<ConstantInt>(M.getModuleFlag(FlagName));
+  if (!Flag)
+    return OOBFlagValue::Any;
+  return static_cast<OOBFlagValue>(Flag->getZExtValue());
+}
+
 const TargetSubtargetInfo *
 GCNTargetMachine::getSubtargetImpl(const Function &F) const {
   StringRef GPU = getGPUName(F);
   StringRef FS = getFeatureString(F);
 
+  const Module &M = *F.getParent();
+  OOBFlagValue BufOOB = getOOBFlagValue(M, AMDGPUOOBMode::BufferFlag);
+  OOBFlagValue TBufOOB = getOOBFlagValue(M, AMDGPUOOBMode::TBufferFlag);
+  bool BufRelaxed = BufOOB == OOBFlagValue::Relaxed;
+  bool TBufRelaxed = TBufOOB == OOBFlagValue::Relaxed;
   SmallString<128> SubtargetKey(GPU);
   SubtargetKey.append(FS);
+  if (BufRelaxed)
+    SubtargetKey.append(",buf-oob=1");
+  if (TBufRelaxed)
+    SubtargetKey.append(",tbuf-oob=1");
 
   auto &I = SubtargetMap[SubtargetKey];
   if (!I) {
-    // This needs to be done before we create a new subtarget since any
-    // creation will depend on the TM and the code generation flags on the
-    // function that reside in TargetOptions.
-    resetTargetOptions(F);
-    I = std::make_unique<GCNSubtarget>(TargetTriple, GPU, FS, *this);
+    I = std::make_unique<GCNSubtarget>(TargetTriple, GPU, FS, *this, BufRelaxed,
+                                       TBufRelaxed);
   }
 
   I->setScalarizeGlobalBehavior(ScalarizeGlobal);
@@ -1467,7 +1484,7 @@ void AMDGPUPassConfig::addIRPasses() {
 
   // Lower LDS accesses to global memory pass if address sanitizer is enabled.
   if (EnableSwLowerLDS)
-    addPass(createAMDGPUSwLowerLDSLegacyPass(&TM));
+    addPass(createAMDGPUSwLowerLDSLegacyPass());
 
   // Runs before PromoteAlloca so the latter can account for function uses
   if (EnableLowerModuleLDS) {
@@ -1602,9 +1619,10 @@ bool GCNPassConfig::addPreISel() {
   addPass(createAMDGPURewriteUndefForPHILegacyPass());
 
   // SDAG requires LCSSA, GlobalISel does not. Disable LCSSA for -global-isel
-  // with -new-reg-bank-select and without any of the fallback options.
-  if (!getCGPassBuilderOption().EnableGlobalISelOption ||
-      !isGlobalISelAbortEnabled() || !NewRegBankSelect)
+  // without any of the fallback options.
+  if (getCGPassBuilderOption().EnableGlobalISelOption !=
+          cl::boolOrDefault::BOU_TRUE ||
+      !isGlobalISelAbortEnabled())
     addPass(createLCSSAPass());
 
   if (TM->getOptLevel() > CodeGenOptLevel::Less)
@@ -1675,12 +1693,8 @@ void GCNPassConfig::addPreRegBankSelect() {
 }
 
 bool GCNPassConfig::addRegBankSelect() {
-  if (NewRegBankSelect) {
-    addPass(createAMDGPURegBankSelectPass());
-    addPass(createAMDGPURegBankLegalizePass());
-  } else {
-    addPass(new RegBankSelect());
-  }
+  addPass(createAMDGPURegBankSelectPass());
+  addPass(createAMDGPURegBankLegalizePass());
   return false;
 }
 
@@ -2255,7 +2269,7 @@ void AMDGPUCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) const {
     addModulePass(AMDGPULowerExecSyncPass(), PMW);
 
   if (EnableSwLowerLDS)
-    addModulePass(AMDGPUSwLowerLDSPass(TM), PMW);
+    addModulePass(AMDGPUSwLowerLDSPass(), PMW);
 
   // Runs before PromoteAlloca so the latter can account for function uses
   if (EnableLowerModuleLDS)
@@ -2367,8 +2381,9 @@ void AMDGPUCodeGenPassBuilder::addPreISel(PassManagerWrapper &PMW) const {
   // control flow modifications.
   addFunctionPass(AMDGPURewriteUndefForPHIPass(), PMW);
 
-  if (!getCGPassBuilderOption().EnableGlobalISelOption ||
-      !isGlobalISelAbortEnabled() || !NewRegBankSelect)
+  if (getCGPassBuilderOption().EnableGlobalISelOption !=
+          cl::boolOrDefault::BOU_TRUE ||
+      !isGlobalISelAbortEnabled())
     addFunctionPass(LCSSAPass(), PMW);
 
   if (TM.getOptLevel() > CodeGenOptLevel::Less) {

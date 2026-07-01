@@ -848,6 +848,7 @@ enum class CCEKind {
                            ///< message.
   StaticAssertMessageData, ///< Call to data() in a static assert
                            ///< message.
+  PackIndex ///< Index of a pack indexing expression or specifier.
 };
 
 /// Enums for the diagnostics of target, target_version and target_clones.
@@ -2972,6 +2973,10 @@ private:
 
   void checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD, CallExpr *TheCall);
 
+  /// Argument-value fortify checks for libc functions that are not builtins,
+  /// dispatched by name (e.g. umask). Diagnostics belong to -Wfortify-source.
+  void checkFortifiedLibcArgument(FunctionDecl *FD, CallExpr *TheCall);
+
   /// Check the arguments to '__builtin_va_start', '__builtin_ms_va_start',
   /// or '__builtin_c23_va_start' for validity. Emit an error and return true
   /// on failure; return false on success.
@@ -3572,7 +3577,7 @@ public:
   /// correctly named definition after the renamed definition.
   llvm::SmallPtrSet<const NamedDecl *, 4> TypoCorrectedFunctionDefinitions;
 
-  /// A cache of the flags available in enumerations with the flag_bits
+  /// A cache of the flags available in enumerations with the flag_enum
   /// attribute.
   mutable llvm::DenseMap<const EnumDecl *, llvm::APInt> FlagBitsCache;
 
@@ -7639,25 +7644,15 @@ public:
   ExprResult ActOnStmtExprResult(ExprResult E);
   void ActOnStmtExprError();
 
-  // __builtin_offsetof(type, identifier(.identifier|[expr])*)
-  struct OffsetOfComponent {
-    SourceLocation LocStart, LocEnd;
-    bool isBrackets; // true if [expr], false if .ident
-    union {
-      IdentifierInfo *IdentInfo;
-      Expr *E;
-    } U;
-  };
-
   /// __builtin_offsetof(type, a.b[123][456].c)
   ExprResult BuildBuiltinOffsetOf(SourceLocation BuiltinLoc,
                                   TypeSourceInfo *TInfo,
-                                  ArrayRef<OffsetOfComponent> Components,
+                                  const Designation &Desig,
                                   SourceLocation RParenLoc);
   ExprResult ActOnBuiltinOffsetOf(Scope *S, SourceLocation BuiltinLoc,
                                   SourceLocation TypeLoc,
                                   ParsedType ParsedArgTy,
-                                  ArrayRef<OffsetOfComponent> Components,
+                                  const Designation &Desig,
                                   SourceLocation RParenLoc);
 
   // __builtin_choose_expr(constExpr, expr1, expr2)
@@ -8576,6 +8571,9 @@ public:
 
   /// ActOnCXXBoolLiteral - Parse {true,false} literals.
   ExprResult ActOnCXXBoolLiteral(SourceLocation OpLoc, tok::TokenKind Kind);
+
+  /// Build a boolean-typed literal expression.
+  ExprResult BuildBoolLiteral(SourceLocation Loc, bool Value);
 
   /// ActOnCXXNullPtrLiteral - Parse 'nullptr'.
   ExprResult ActOnCXXNullPtrLiteral(SourceLocation Loc);
@@ -11338,10 +11336,6 @@ private:
   /// issuing a diagnostic and returning false if not.
   bool checkMustTailAttr(const Stmt *St, const Attr &MTA);
 
-  /// Check if the given expression contains 'break' or 'continue'
-  /// statement that produces control flow different from GCC.
-  void CheckBreakContinueBinding(Expr *E);
-
   ///@}
 
   //
@@ -11769,7 +11763,7 @@ public:
       AccessSpecifier AS, SourceLocation ModulePrivateLoc,
       SourceLocation FriendLoc, unsigned NumOuterTemplateParamLists,
       TemplateParameterList **OuterTemplateParamLists,
-      SkipBodyInfo *SkipBody = nullptr);
+      bool IsMemberSpecialization, SkipBodyInfo *SkipBody = nullptr);
 
   /// Translates template arguments as provided by the parser
   /// into template arguments used by semantic analysis.
@@ -11873,10 +11867,11 @@ public:
     return Arg;
   }
 
-  ExprResult BuildSubstNonTypeTemplateParmExpr(
-      Decl *AssociatedDecl, const NonTypeTemplateParmDecl *NTTP,
-      SourceLocation loc, TemplateArgument Replacement,
-      UnsignedOrNone PackIndex, bool Final);
+  ExprResult
+  BuildSubstNonTypeTemplateParmExpr(Decl *AssociatedDecl, unsigned Index,
+                                    QualType ParamType, SourceLocation loc,
+                                    TemplateArgument Replacement,
+                                    UnsignedOrNone PackIndex, bool Final);
 
   /// Form a template name from a name that is syntactically required to name a
   /// template, either due to use of the 'template' keyword or because a name in
@@ -12232,8 +12227,7 @@ public:
   /// doesn't need to live too long. It would be useful if this function
   /// could return a temporary expression.
   ExprResult BuildExpressionFromDeclTemplateArgument(
-      const TemplateArgument &Arg, QualType ParamType, SourceLocation Loc,
-      NamedDecl *TemplateParam = nullptr);
+      const TemplateArgument &Arg, QualType ParamType, SourceLocation Loc);
   ExprResult
   BuildExpressionFromNonTypeTemplateArgument(const TemplateArgument &Arg,
                                              SourceLocation Loc);
@@ -12645,10 +12639,9 @@ public:
   ///
   /// \param Loc The source location to use for the resulting template
   /// argument.
-  TemplateArgumentLoc
-  getTrivialTemplateArgumentLoc(const TemplateArgument &Arg, QualType NTTPType,
-                                SourceLocation Loc,
-                                NamedDecl *TemplateParam = nullptr);
+  TemplateArgumentLoc getTrivialTemplateArgumentLoc(const TemplateArgument &Arg,
+                                                    QualType NTTPType,
+                                                    SourceLocation Loc);
 
   /// Get a template argument mapping the given template parameter to itself,
   /// e.g. for X in \c template<int X>, this would return an expression template

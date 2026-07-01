@@ -11,13 +11,13 @@ define void @test(ptr %0, ptr %1, double %2) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = phi <4 x double> [ [[TMP26:%.*]], %[[DOT_CRIT_EDGE384_US_US_US_US:.*]] ], [ zeroinitializer, %[[ITER_CHECK]] ]
 ; CHECK-NEXT:    br i1 false, label %[[DOT_CRIT_EDGE384_US_US_US_US]], label %[[BB4:.*]]
 ; CHECK:       [[BB4]]:
+; CHECK-NEXT:    [[TMP15:%.*]] = fadd <2 x double> [[TMP4]], zeroinitializer
 ; CHECK-NEXT:    [[TMP5:%.*]] = load double, ptr [[TMP0]], align 8
-; CHECK-NEXT:    [[TMP6:%.*]] = fmul double [[TMP5]], 0.000000e+00
 ; CHECK-NEXT:    [[TMP7:%.*]] = load double, ptr [[TMP1]], align 8
+; CHECK-NEXT:    [[TMP13:%.*]] = load double, ptr [[TMP0]], align 8
+; CHECK-NEXT:    [[TMP6:%.*]] = fmul double [[TMP5]], 0.000000e+00
 ; CHECK-NEXT:    [[TMP10:%.*]] = fadd double [[TMP7]], [[TMP6]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = fadd double [[TMP7]], [[TMP6]]
-; CHECK-NEXT:    [[TMP15:%.*]] = fadd <2 x double> [[TMP4]], zeroinitializer
-; CHECK-NEXT:    [[TMP13:%.*]] = load double, ptr [[TMP0]], align 8
 ; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <2 x double> poison, double [[TMP13]], i32 0
 ; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <2 x double> [[TMP14]], double [[TMP5]], i32 1
 ; CHECK-NEXT:    [[TMP18:%.*]] = fadd <2 x double> [[TMP15]], [[TMP17]]

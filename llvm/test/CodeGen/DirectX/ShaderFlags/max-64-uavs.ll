@@ -1,5 +1,5 @@
 ; RUN: opt -S --passes="print-dx-shader-flags" 2>&1 %s | FileCheck %s
-; RUN: llc %s --filetype=obj -o - | obj2yaml | FileCheck %s --check-prefix=DXC
+; RUN: llc %s -disable-dxil-remove-unused-resources --filetype=obj -o - | obj2yaml | FileCheck %s --check-prefix=DXC
 
 ; This test makes sure that the shader flag '64 UAV slots' is set when there are
 ; more than 8 UAVs in the module.

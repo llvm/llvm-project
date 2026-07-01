@@ -571,6 +571,8 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
     setAllExpand(MVT::bf16);
     if (!Subtarget->hasFullFP16())
       setOperationAction(ISD::BITCAST, MVT::bf16, Custom);
+    setOperationAction(ISD::FP_ROUND, MVT::bf16, Custom);
+    setOperationAction(ISD::STRICT_FP_ROUND, MVT::bf16, Custom);
   } else {
     setOperationAction(ISD::BF16_TO_FP, MVT::f32, Expand);
     setOperationAction(ISD::BF16_TO_FP, MVT::f64, Expand);
@@ -3649,10 +3651,15 @@ SDValue ARMTargetLowering::LowerGlobalAddressELF(SDValue Op,
       return V;
 
   if (isPositionIndependent()) {
-    SDValue G = DAG.getTargetGlobalAddress(
-        GV, dl, PtrVT, 0, GV->isDSOLocal() ? 0 : ARMII::MO_GOT);
+    // Weak symbols need GOT indirection even when hidden/DSO-local.
+    // The assembler eagerly resolves PC-relative expressions when the
+    // symbol and reference are in the same section, which prevents the
+    // linker from overriding a weak definition with a non-weak one.
+    bool UseGOT = !GV->isDSOLocal() || GV->isWeakForLinker();
+    SDValue G = DAG.getTargetGlobalAddress(GV, dl, PtrVT, 0,
+                                           UseGOT ? ARMII::MO_GOT : 0);
     SDValue Result = DAG.getNode(ARMISD::WrapperPIC, dl, PtrVT, G);
-    if (!GV->isDSOLocal())
+    if (UseGOT)
       Result =
           DAG.getLoad(PtrVT, dl, DAG.getEntryNode(), Result,
                       MachinePointerInfo::getGOT(DAG.getMachineFunction()));
@@ -7791,7 +7798,8 @@ SDValue ARMTargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
 
   // Loads are better lowered with insert_vector_elt/ARMISD::BUILD_VECTOR.
   // Keep going if we are hitting this case.
-  if (isOnlyLowElement && !ISD::isNormalLoad(Value.getNode()))
+  if (isOnlyLowElement && !ISD::isNormalLoad(Value.getNode()) &&
+      (VT != MVT::v8f16 || ST->hasFullFP16()))
     return DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, VT, Value);
 
   unsigned EltSize = VT.getScalarSizeInBits();
@@ -7921,7 +7929,8 @@ SDValue ARMTargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
   // scalar_to_vector for the elements followed by a shuffle (provided the
   // shuffle is valid for the target) and materialization element by element
   // on the stack followed by a load for everything else.
-  if (!isConstant && !usesOnlyOneValue) {
+  if ((!isConstant && !usesOnlyOneValue) ||
+      (VT == MVT::v8f16 && !ST->hasFullFP16())) {
     SDValue Vec = DAG.getUNDEF(VT);
     for (unsigned i = 0 ; i < NumElts; ++i) {
       SDValue V = Op.getOperand(i);
@@ -8701,7 +8710,8 @@ static SDValue LowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
     }
   }
 
-  if (ST->hasMVEIntegerOps() && EltSize <= 32) {
+  if (ST->hasMVEIntegerOps() && EltSize <= 32 &&
+      (ST->hasFullFP16() || VT != MVT::v8f16)) {
     if (SDValue V = LowerVECTOR_SHUFFLEUsingOneOff(Op, ShuffleMask, DAG))
       return V;
 
@@ -8789,6 +8799,16 @@ static SDValue LowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
   if (ST->hasMVEIntegerOps())
     if (SDValue NewOp = LowerVECTOR_SHUFFLEUsingMovs(Op, ShuffleMask, DAG))
       return NewOp;
+
+  // Lower v8f16 via v8i16 to avoid invalid f16 nodes.
+  if (VT == MVT::v8f16 && !ST->hasFullFP16()) {
+    SDValue BC0 =
+        DAG.getNode(ARMISD::VECTOR_REG_CAST, dl, MVT::v8i16, Op.getOperand(0));
+    SDValue BC1 =
+        DAG.getNode(ARMISD::VECTOR_REG_CAST, dl, MVT::v8i16, Op.getOperand(1));
+    SDValue Shuf = DAG.getVectorShuffle(MVT::v8i16, dl, BC0, BC1, ShuffleMask);
+    return DAG.getNode(ARMISD::VECTOR_REG_CAST, dl, VT, Shuf);
+  }
 
   return SDValue();
 }
@@ -16923,38 +16943,37 @@ static SDValue PerformSTORECombine(SDNode *N,
 
   // Split a store of a VMOVDRR into two integer stores to avoid mixing NEON and
   // ARM stores of arguments in the same cache line.
-  if (StVal.getNode()->getOpcode() == ARMISD::VMOVDRR &&
-      StVal.getNode()->hasOneUse()) {
-    SelectionDAG  &DAG = DCI.DAG;
+  if (StVal.getOpcode() == ARMISD::VMOVDRR && StVal->hasOneUse()) {
+    SelectionDAG &DAG = DCI.DAG;
     bool isBigEndian = DAG.getDataLayout().isBigEndian();
     SDLoc DL(St);
     SDValue BasePtr = St->getBasePtr();
-    SDValue NewST1 = DAG.getStore(
-        St->getChain(), DL, StVal.getNode()->getOperand(isBigEndian ? 1 : 0),
-        BasePtr, St->getPointerInfo(), St->getBaseAlign(),
-        St->getMemOperand()->getFlags());
+    SDValue NewST1 =
+        DAG.getStore(St->getChain(), DL, StVal.getOperand(isBigEndian ? 1 : 0),
+                     BasePtr, St->getPointerInfo(), St->getBaseAlign(),
+                     St->getMemOperand()->getFlags());
 
     SDValue OffsetPtr = DAG.getNode(ISD::ADD, DL, MVT::i32, BasePtr,
                                     DAG.getConstant(4, DL, MVT::i32));
     return DAG.getStore(NewST1.getValue(0), DL,
-                        StVal.getNode()->getOperand(isBigEndian ? 0 : 1),
-                        OffsetPtr, St->getPointerInfo().getWithOffset(4),
+                        StVal.getOperand(isBigEndian ? 0 : 1), OffsetPtr,
+                        St->getPointerInfo().getWithOffset(4),
                         St->getBaseAlign(), St->getMemOperand()->getFlags());
   }
 
   if (StVal.getValueType() == MVT::i64 &&
-      StVal.getNode()->getOpcode() == ISD::EXTRACT_VECTOR_ELT) {
-
+      StVal.getOpcode() == ISD::EXTRACT_VECTOR_ELT) {
     // Bitcast an i64 store extracted from a vector to f64.
     // Otherwise, the i64 value will be legalized to a pair of i32 values.
     SelectionDAG &DAG = DCI.DAG;
     SDLoc dl(StVal);
     SDValue IntVec = StVal.getOperand(0);
-    EVT FloatVT = EVT::getVectorVT(*DAG.getContext(), MVT::f64,
-                                   IntVec.getValueType().getVectorNumElements());
+    EVT FloatVT =
+        EVT::getVectorVT(*DAG.getContext(), MVT::f64,
+                         IntVec.getValueType().getVectorNumElements());
     SDValue Vec = DAG.getNode(ISD::BITCAST, dl, FloatVT, IntVec);
-    SDValue ExtElt = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, MVT::f64,
-                                 Vec, StVal.getOperand(1));
+    SDValue ExtElt = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, MVT::f64, Vec,
+                                 StVal.getOperand(1));
     dl = SDLoc(N);
     SDValue V = DAG.getNode(ISD::BITCAST, dl, MVT::i64, ExtElt);
     // Make the DAGCombiner fold the bitcasts.
@@ -18078,22 +18097,55 @@ static SDValue PerformMinMaxToSatCombine(SDValue Op, SelectionDAG &DAG,
   if (Min.getOpcode() == ISD::SMAX)
     std::swap(Min, Max);
 
+  if (Min.getOpcode() != ISD::SMIN || Max.getOpcode() != ISD::SMAX)
+    return SDValue();
+
   APInt MinC = Min.getConstantOperandAPInt(1);
   APInt MaxC = Max.getConstantOperandAPInt(1);
-
-  if (Min.getOpcode() != ISD::SMIN || Max.getOpcode() != ISD::SMAX ||
-      !(MinC + 1).isPowerOf2())
+  if (MaxC.sgt(MinC))
     return SDValue();
 
   SDLoc DL(Op);
-  if (MinC == ~MaxC)
-    return DAG.getNode(ARMISD::SSAT, DL, VT, Input,
-                       DAG.getConstant(MinC.countr_one(), DL, VT));
-  if (MaxC == 0)
-    return DAG.getNode(ARMISD::USAT, DL, VT, Input,
-                       DAG.getConstant(MinC.countr_one(), DL, VT));
 
-  return SDValue();
+  // A clamp whose bounds are already a saturation range maps to a single
+  // SSAT / USAT.
+  if ((MinC + 1).isPowerOf2()) {
+    if (MinC == ~MaxC)
+      return DAG.getNode(ARMISD::SSAT, DL, VT, Input,
+                         DAG.getConstant(MinC.countr_one(), DL, VT));
+    if (MaxC == 0)
+      return DAG.getNode(ARMISD::USAT, DL, VT, Input,
+                         DAG.getConstant(MinC.countr_one(), DL, VT));
+  }
+
+  // For power-of-two clamp widths, convert the range to be zero-centered,
+  // apply SSAT, and convert the result back.
+  //
+  //   Width  = Hi - Lo + 1
+  //   Center = Lo + Width / 2
+  //   Result = ssat(X - Center) + Center
+  //
+  // The idea is to shift the input so that the clamp range is centered
+  // around zero, apply ssat, and then shift the result back.
+  //
+  // For example clamp(X, -118, 137) -> Width = 256, Center = 10, so it becomes
+  // ssat(X - 10, 8) + 10
+
+  APInt Width = MinC - MaxC + 1;
+  if (!Width.isPowerOf2() || Width.isOne())
+    return SDValue();
+  unsigned SatBit = Width.logBase2() - 1; // ssat to SatBit + 1 signed bits
+  APInt Center = MaxC + Width.lshr(1);
+
+  // The rewrite is only valid when X - Center does not overflow;
+  SDValue NegC = DAG.getConstant(-Center, DL, VT);
+  if (DAG.computeOverflowForSignedAdd(Input, NegC) != SelectionDAG::OFK_Never)
+    return SDValue();
+
+  SDValue Shifted = DAG.getNode(ISD::ADD, DL, VT, Input, NegC);
+  SDValue Sat = DAG.getNode(ARMISD::SSAT, DL, VT, Shifted,
+                            DAG.getConstant(SatBit, DL, VT));
+  return DAG.getNode(ISD::ADD, DL, VT, Sat, DAG.getConstant(Center, DL, VT));
 }
 
 /// PerformMinMaxCombine - Target-specific DAG combining for creating truncating
@@ -21047,6 +21099,13 @@ SDValue ARMTargetLowering::LowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
   SDValue SrcVal = Op.getOperand(IsStrict ? 1 : 0);
   EVT SrcVT = SrcVal.getValueType();
   EVT DstVT = Op.getValueType();
+
+  if (DstVT == MVT::bf16) {
+    if (Subtarget->hasBF16() && SrcVT == MVT::f32)
+      return Op;
+    return SDValue();
+  }
+
   const unsigned DstSz = Op.getValueType().getSizeInBits();
   const unsigned SrcSz = SrcVT.getSizeInBits();
   (void)DstSz;
@@ -21385,17 +21444,16 @@ Instruction *ARMTargetLowering::makeDMB(IRBuilderBase &Builder,
       Value* args[6] = {Builder.getInt32(15), Builder.getInt32(0),
                         Builder.getInt32(0), Builder.getInt32(7),
                         Builder.getInt32(10), Builder.getInt32(5)};
-      return Builder.CreateIntrinsic(Intrinsic::arm_mcr, args);
-    } else {
-      // Instead of using barriers, atomic accesses on these subtargets use
-      // libcalls.
-      llvm_unreachable("makeDMB on a target so old that it has no barriers");
+      return Builder.CreateIntrinsicWithoutFolding(Intrinsic::arm_mcr, args);
     }
+    // Instead of using barriers, atomic accesses on these subtargets use
+    // libcalls.
+    llvm_unreachable("makeDMB on a target so old that it has no barriers");
   } else {
     // Only a full system barrier exists in the M-class architectures.
     Domain = Subtarget->isMClass() ? ARM_MB::SY : Domain;
     Constant *CDomain = Builder.getInt32(Domain);
-    return Builder.CreateIntrinsic(Intrinsic::arm_dmb, CDomain);
+    return Builder.CreateIntrinsicWithoutFolding(Intrinsic::arm_dmb, CDomain);
   }
 }
 
@@ -21674,7 +21732,7 @@ Value *ARMTargetLowering::emitLoadLinked(IRBuilderBase &Builder, Type *ValueTy,
 
   Type *Tys[] = { Addr->getType() };
   Intrinsic::ID Int = IsAcquire ? Intrinsic::arm_ldaex : Intrinsic::arm_ldrex;
-  CallInst *CI = Builder.CreateIntrinsic(Int, Tys, Addr);
+  CallInst *CI = Builder.CreateIntrinsicWithoutFolding(Int, Tys, Addr);
 
   CI->addParamAttr(
       0, Attribute::get(M->getContext(), Attribute::ElementType, ValueTy));
@@ -21878,7 +21936,7 @@ bool ARMTargetLowering::lowerInterleavedLoad(
       BaseAddr = Builder.CreateConstGEP1_32(VecTy->getElementType(), BaseAddr,
                                             VecTy->getNumElements() * Factor);
 
-    CallInst *VldN = createLoadIntrinsic(BaseAddr);
+    Value *VldN = createLoadIntrinsic(BaseAddr);
 
     // Replace uses of each shufflevector with the corresponding vector loaded
     // by ldN.
