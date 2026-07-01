@@ -121,6 +121,12 @@ private:
                        MachineFunction &MF) const;
   bool selectSelect(MachineInstr &I, MachineRegisterInfo &MRI,
                     MachineFunction &MF) const;
+  bool selectInsertVectorElt(MachineInstr &I, MachineRegisterInfo &MRI,
+                             MachineFunction &MF);
+  bool selectScalarToVector(MachineInstr &I, MachineRegisterInfo &MRI);
+
+  unsigned getMachineOpcodeForInsert(unsigned EltSizeInBits) const;
+  unsigned getScalarToVecOpcode(unsigned EltSizeInBits) const;
 
   ComplexRendererFns selectAddr(MachineOperand &Root) const;
 
@@ -491,6 +497,10 @@ bool X86InstructionSelector::select(MachineInstr &I) {
     return selectMulDivRem(I, MRI, MF);
   case TargetOpcode::G_SELECT:
     return selectSelect(I, MRI, MF);
+  case TargetOpcode::G_INSERT_VECTOR_ELT:
+    return selectInsertVectorElt(I, MRI, MF);
+  case X86::G_SCALAR_TO_VECTOR:
+    return selectScalarToVector(I, MRI);
   }
 
   return false;
@@ -1963,6 +1973,189 @@ bool X86InstructionSelector::selectSelect(MachineInstr &I,
   }
 
   Sel.eraseFromParent();
+  return true;
+}
+
+unsigned X86InstructionSelector::getMachineOpcodeForInsert(
+    unsigned EltSizeInBits) const {
+  bool HasAVX = STI.hasAVX();
+  bool HasAVX512 = STI.hasAVX512();
+  bool HasBWI = STI.hasBWI();
+  bool HasDQI = STI.hasDQI();
+  bool HasVLX = STI.hasVLX();
+  bool HasSSE41 = STI.hasSSE41();
+
+  // {SSE, AVX, AVX512} opcodes per element size.
+  static constexpr unsigned PinsrOpcodes[][3] = {
+      {X86::PINSRBrri, X86::VPINSRBrri, X86::VPINSRBZrri}, // 8-bit
+      {X86::PINSRWrri, X86::VPINSRWrri, X86::VPINSRWZrri}, // 16-bit
+      {X86::PINSRDrri, X86::VPINSRDrri, X86::VPINSRDZrri}, // 32-bit
+      {X86::PINSRQrri, X86::VPINSRQrri, X86::VPINSRQZrri}, // 64-bit
+  };
+  assert(EltSizeInBits % 8 == 0 && EltSizeInBits <= 64);
+  unsigned Row = Log2_32(EltSizeInBits / 8);
+  if (EltSizeInBits == 8) {
+    if (HasBWI)
+      return PinsrOpcodes[Row][2];
+    if (HasAVX)
+      return PinsrOpcodes[Row][1];
+    if (HasSSE41)
+      return PinsrOpcodes[Row][0];
+    return 0;
+  }
+  if (EltSizeInBits == 16) {
+    if (HasBWI)
+      return PinsrOpcodes[Row][2];
+    if (HasAVX)
+      return PinsrOpcodes[Row][1];
+    return PinsrOpcodes[Row][0];
+  }
+  // 32/64-bit
+  if (HasAVX512 && (HasDQI || HasVLX))
+    return PinsrOpcodes[Row][2];
+  if (HasAVX)
+    return PinsrOpcodes[Row][1];
+  if (HasSSE41)
+    return PinsrOpcodes[Row][0];
+  return 0;
+}
+
+unsigned
+X86InstructionSelector::getScalarToVecOpcode(unsigned EltSizeInBits) const {
+  bool HasAVX = STI.hasAVX();
+  bool HasAVX512 = STI.hasAVX512();
+  switch (EltSizeInBits) {
+  case 32:
+    return HasAVX512 ? X86::VMOVDI2PDIZrr
+           : HasAVX  ? X86::VMOVDI2PDIrr
+                     : X86::MOVDI2PDIrr;
+  case 64:
+    return HasAVX512 ? X86::VMOV64toPQIZrr
+           : HasAVX  ? X86::VMOV64toPQIrr
+                     : X86::MOV64toPQIrr;
+  default:
+    llvm_unreachable("Unsupported element size");
+  }
+  return 0;
+}
+
+bool X86InstructionSelector::selectInsertVectorElt(MachineInstr &I,
+                                                   MachineRegisterInfo &MRI,
+                                                   MachineFunction &MF) {
+  assert(I.getOpcode() == TargetOpcode::G_INSERT_VECTOR_ELT);
+
+  Register DstReg = I.getOperand(0).getReg();
+  Register VecReg = I.getOperand(1).getReg();
+  Register EltReg = I.getOperand(2).getReg();
+  Register IdxReg = I.getOperand(3).getReg();
+
+  LLT VecTy = MRI.getType(DstReg);
+  unsigned EltSize = VecTy.getScalarSizeInBits();
+  unsigned NumElts = VecTy.getNumElements();
+
+  auto IdxVal = getIConstantVRegValWithLookThrough(IdxReg, MRI);
+  if (!IdxVal)
+    return false;
+  uint64_t Idx = IdxVal->Value.getZExtValue();
+  if (Idx >= NumElts)
+    return false;
+
+  // For v2i64, use PUNPCKLQDQ instead of PINSRQ when inserting at index 1
+  // into a scalar_to_vector result. This breaks the dependency chain by using
+  // two independent MOVQs followed by an unpack, matching SDAG behavior.
+  // When the scalar sources originate from vector registers (FP case), we skip
+  // the GPR→XMM MOVQ entirely and use the XMM source directly.
+  if (EltSize == 64 && NumElts == 2 && Idx == 1) {
+    MachineInstr *VecDef = MRI.getVRegDef(VecReg);
+    if (VecDef && VecDef->getOpcode() == X86::G_SCALAR_TO_VECTOR) {
+      unsigned MovOpc = getScalarToVecOpcode(64);
+      unsigned UnpckOpc = STI.hasAVX512() && STI.hasVLX() ? X86::VPUNPCKLQDQZ128rr
+                          : STI.hasAVX()                  ? X86::VPUNPCKLQDQrr
+                                                          : X86::PUNPCKLQDQrr;
+
+      // For hi element: check if source is a COPY from vecr (FP register).
+      // If so, use it directly; otherwise emit MOVQ from GPR.
+      Register HiVecReg;
+      MachineInstr *EltDef = MRI.getVRegDef(EltReg);
+      if (EltDef && EltDef->isCopy()) {
+        Register CopySrc = EltDef->getOperand(1).getReg();
+        if (CopySrc.isVirtual() &&
+            RBI.getRegBank(CopySrc, MRI, TRI)->getID() == X86::VECRRegBankID) {
+          HiVecReg = CopySrc;
+          MRI.setRegClass(HiVecReg, &X86::VR128RegClass);
+        }
+      }
+      if (!HiVecReg) {
+        HiVecReg = MRI.createVirtualRegister(&X86::VR128RegClass);
+        BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(MovOpc), HiVecReg)
+            .addReg(EltReg);
+      }
+
+      // For lo element: check if G_SCALAR_TO_VECTOR source is a COPY from
+      // vecr. If so, use it directly; otherwise emit MOVQ from GPR.
+      Register LoVecReg;
+      Register StvSrcReg = VecDef->getOperand(1).getReg();
+      MachineInstr *StvSrcDef = MRI.getVRegDef(StvSrcReg);
+      if (StvSrcDef && StvSrcDef->isCopy()) {
+        Register CopySrc = StvSrcDef->getOperand(1).getReg();
+        if (CopySrc.isVirtual() &&
+            RBI.getRegBank(CopySrc, MRI, TRI)->getID() == X86::VECRRegBankID) {
+          LoVecReg = CopySrc;
+          MRI.setRegClass(LoVecReg, &X86::VR128RegClass);
+        }
+      }
+      if (!LoVecReg) {
+        LoVecReg = MRI.createVirtualRegister(&X86::VR128RegClass);
+        BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(MovOpc), LoVecReg)
+            .addReg(StvSrcReg);
+      }
+
+      auto &UnpckMIB = *BuildMI(*I.getParent(), I, I.getDebugLoc(),
+                                TII.get(UnpckOpc), DstReg)
+                            .addReg(LoVecReg)
+                            .addReg(HiVecReg);
+      constrainSelectedInstRegOperands(UnpckMIB, TII, TRI, RBI);
+
+      if (MRI.use_nodbg_empty(VecDef->getOperand(0).getReg()))
+        VecDef->eraseFromParent();
+
+      I.eraseFromParent();
+      return true;
+    }
+  }
+
+  unsigned Opc = getMachineOpcodeForInsert(EltSize);
+  if (!Opc)
+    return false;
+
+  auto &MIB = *BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(Opc), DstReg)
+                   .addReg(VecReg)
+                   .addReg(EltReg)
+                   .addImm(Idx);
+
+  constrainSelectedInstRegOperands(MIB, TII, TRI, RBI);
+  I.eraseFromParent();
+  return true;
+}
+
+bool X86InstructionSelector::selectScalarToVector(MachineInstr &I,
+                                                  MachineRegisterInfo &MRI) {
+  assert(I.getOpcode() == X86::G_SCALAR_TO_VECTOR);
+
+  Register DstReg = I.getOperand(0).getReg();
+  Register SrcReg = I.getOperand(1).getReg();
+  LLT DstTy = MRI.getType(DstReg);
+  unsigned EltSize = DstTy.getScalarSizeInBits();
+
+  unsigned Opc = getScalarToVecOpcode(EltSize);
+  if (!Opc)
+    return false;
+
+  auto &MIB = *BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(Opc), DstReg)
+                   .addReg(SrcReg);
+
+  constrainSelectedInstRegOperands(MIB, TII, TRI, RBI);
+  I.eraseFromParent();
   return true;
 }
 

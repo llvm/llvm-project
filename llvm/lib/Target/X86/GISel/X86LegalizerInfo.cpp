@@ -560,6 +560,24 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .clampNumElements(0, v2s64, s64MaxVector)
       .moreElementsToNextPow2(0);
 
+  getActionDefinitionsBuilder(G_INSERT_VECTOR_ELT)
+      .legalFor(HasSSE1, {{v4s32, s32, sMaxScalar}})
+      .legalFor(HasSSE2, {{v16s8, s8, sMaxScalar},
+                          {v8s16, s16, sMaxScalar},
+                          {v2s64, s64, sMaxScalar}})
+      .customIf([=](const LegalityQuery &Query) {
+        const LLT VecTy = Query.Types[0];
+        const LLT EltTy = Query.Types[1];
+        if (EltTy != VecTy.getElementType())
+          return false;
+        if (VecTy.getSizeInBits() <= 128)
+          return false;
+        return (HasAVX && (VecTy == v32s8 || VecTy == v16s16 ||
+                           VecTy == v8s32 || VecTy == v4s64)) ||
+               (HasAVX512 && (VecTy == v64s8 || VecTy == v32s16 ||
+                              VecTy == v16s32 || VecTy == v8s64));
+      });
+
   getActionDefinitionsBuilder({G_EXTRACT, G_INSERT})
       .legalIf([=](const LegalityQuery &Query) {
         unsigned SubIdx = Query.Opcode == G_EXTRACT ? 0 : 1;
@@ -639,6 +657,8 @@ bool X86LegalizerInfo::legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI,
     return false;
   case TargetOpcode::G_BUILD_VECTOR:
     return legalizeBuildVector(MI, MRI, Helper);
+  case TargetOpcode::G_INSERT_VECTOR_ELT:
+    return legalizeInsertVectorElt(MI, MRI, Helper);
   case TargetOpcode::G_FPTOUI:
     return legalizeFPTOUI(MI, MRI, Helper);
   case TargetOpcode::G_UITOFP:
@@ -724,10 +744,13 @@ bool X86LegalizerInfo::legalizeBuildVector(MachineInstr &MI,
   LLT DstTy = MRI.getType(Dst);
   MachineFunction &MF = MIRBuilder.getMF();
   LLVMContext &Ctx = MF.getFunction().getContext();
-  uint64_t DstTySize = DstTy.getScalarSizeInBits();
+  unsigned EltSize = DstTy.getScalarSizeInBits();
+  unsigned NumElts = BuildVector.getNumSources();
 
-  SmallVector<Constant *, 4> CstIdxs;
-  for (unsigned i = 0; i < BuildVector.getNumSources(); ++i) {
+  // Try constant-pool materialization for all-constant vectors.
+  bool AllConst = true;
+  SmallVector<Constant *, 16> CstIdxs;
+  for (unsigned i = 0; i < NumElts; ++i) {
     Register Source = BuildVector.getSourceReg(i);
 
     auto ValueAndReg = getIConstantVRegValWithLookThrough(Source, MRI);
@@ -743,25 +766,79 @@ bool X86LegalizerInfo::legalizeBuildVector(MachineInstr &MI,
     }
 
     if (getOpcodeDef<GImplicitDef>(Source, MRI)) {
-      CstIdxs.emplace_back(UndefValue::get(Type::getIntNTy(Ctx, DstTySize)));
+      CstIdxs.emplace_back(UndefValue::get(Type::getIntNTy(Ctx, EltSize)));
       continue;
     }
-    return false;
+    AllConst = false;
+    break;
   }
 
-  Constant *ConstVal = ConstantVector::get(CstIdxs);
+  if (AllConst) {
+    Constant *ConstVal = ConstantVector::get(CstIdxs);
+    const DataLayout &DL = MIRBuilder.getDataLayout();
+    unsigned AddrSpace = DL.getDefaultGlobalsAddressSpace();
+    Align Alignment(DL.getABITypeAlign(ConstVal->getType()));
+    auto Addr = MIRBuilder.buildConstantPool(
+        LLT::pointer(AddrSpace, DL.getPointerSizeInBits(AddrSpace)),
+        MF.getConstantPool()->getConstantPoolIndex(ConstVal, Alignment));
+    MachineMemOperand *MMO =
+        MF.getMachineMemOperand(MachinePointerInfo::getConstantPool(MF),
+                                MachineMemOperand::MOLoad, DstTy, Alignment);
+    MIRBuilder.buildLoad(Dst, Addr, *MMO);
+    MI.eraseFromParent();
+    return true;
+  }
 
-  const DataLayout &DL = MIRBuilder.getDataLayout();
-  unsigned AddrSpace = DL.getDefaultGlobalsAddressSpace();
-  Align Alignment(DL.getABITypeAlign(ConstVal->getType()));
-  auto Addr = MIRBuilder.buildConstantPool(
-      LLT::pointer(AddrSpace, DL.getPointerSizeInBits(AddrSpace)),
-      MF.getConstantPool()->getConstantPoolIndex(ConstVal, Alignment));
-  MachineMemOperand *MMO =
-      MF.getMachineMemOperand(MachinePointerInfo::getConstantPool(MF),
-                              MachineMemOperand::MOLoad, DstTy, Alignment);
+  // Non-constant: lower to a sequence of G_INSERT_VECTOR_ELT.
+  LLT IdxTy = LLT::scalar(Subtarget.is64Bit() ? 64 : 32);
 
-  MIRBuilder.buildLoad(Dst, Addr, *MMO);
+  Register Vec = MIRBuilder.buildUndef(DstTy).getReg(0);
+  for (unsigned i = 0; i < NumElts; ++i) {
+    Register Src = BuildVector.getSourceReg(i);
+    if (getOpcodeDef<GImplicitDef>(Src, MRI))
+      continue;
+    auto Idx = MIRBuilder.buildConstant(IdxTy, i);
+    Vec = MIRBuilder.buildInsertVectorElement(DstTy, Vec, Src, Idx).getReg(0);
+  }
+
+  MIRBuilder.buildCopy(Dst, Vec);
+  MI.eraseFromParent();
+  return true;
+}
+
+bool X86LegalizerInfo::legalizeInsertVectorElt(MachineInstr &MI,
+                                               MachineRegisterInfo &MRI,
+                                               LegalizerHelper &Helper) const {
+  MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
+  Register Dst = MI.getOperand(0).getReg();
+  Register Vec = MI.getOperand(1).getReg();
+  Register Elt = MI.getOperand(2).getReg();
+  Register IdxReg = MI.getOperand(3).getReg();
+
+  LLT VecTy = MRI.getType(Dst);
+  unsigned EltSize = VecTy.getScalarSizeInBits();
+  unsigned SubNumElts = 128 / EltSize;
+  LLT SubVecTy = LLT::fixed_vector(SubNumElts, EltSize);
+  LLT IdxTy = LLT::scalar(Subtarget.is64Bit() ? 64 : 32);
+
+  auto IdxVal = getIConstantVRegValWithLookThrough(IdxReg, MRI);
+  if (!IdxVal)
+    return false;
+  uint64_t Idx = IdxVal->Value.getZExtValue();
+  unsigned SubVecIdx = Idx / SubNumElts;
+  unsigned EltIdx = Idx % SubNumElts;
+
+  // Extract 128-bit subvector.
+  auto SubVec = MIRBuilder.buildExtract(SubVecTy, Vec, SubVecIdx * 128);
+
+  // Insert element into the 128-bit subvector.
+  auto NewIdx = MIRBuilder.buildConstant(IdxTy, EltIdx);
+  auto NewSubVec =
+      MIRBuilder.buildInsertVectorElement(SubVecTy, SubVec, Elt, NewIdx);
+
+  // Re-insert 128-bit subvector into the wide vector.
+  MIRBuilder.buildInsert(Dst, Vec, NewSubVec, SubVecIdx * 128);
+
   MI.eraseFromParent();
   return true;
 }

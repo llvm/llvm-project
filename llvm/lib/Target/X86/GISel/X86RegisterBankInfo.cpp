@@ -301,6 +301,7 @@ X86RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     // VECRReg)
     getInstrPartialMappingIdxs(MI, MRI, /* isFP= */ true, OpRegBankIdx);
     break;
+  case X86::G_SCALAR_TO_VECTOR:
   case X86::G_FIST:
   case X86::G_FILD: {
     auto &Op0 = MI.getOperand(0);
