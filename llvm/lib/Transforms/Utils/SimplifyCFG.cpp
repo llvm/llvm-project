@@ -7820,32 +7820,26 @@ static bool simplifySwitchDefaultBranch(SwitchInst *SI, DomTreeUpdater *DTU,
     return false;
 
   // If the switch condition is guaranteed to take some concrete value
-  // in the default block, we can create a new case based on that concrete
-  // value and make the default block unreachable. For example, we can
-  // move the default branch into an explicit case here:
-  //
-  // switch_bb:
-  //   switch i8 %x, label %default_bb [...]
-  //
-  // default_bb:
-  //   %cmp = icmp eq i8 %x, 1
-  //   call void llvm.assume(i1 %cmp) ; Implies %x must be 1
-  //   ...
-  //
+  // in the default block, we can make some nice simplifications to the
+  // switch.
   BasicBlock *Default = SI->getDefaultDest();
   const Instruction *CxtI = Default->getTerminator();
   const KnownBits Known = computeKnownBits(SI->getOperand(0), DL, AC, CxtI);
   if (!Known.isConstant())
     return false;
 
-  // Make sure we don't create invalid IR if the switch already
-  // has an explicit case for this constant.
+  // If the known value for the switch operand already has a case,
+  // the default branch must be dead - mark it as unreachable.
   ConstantInt *CaseVal =
       ConstantInt::get(SI->getContext(), Known.getConstant());
   const llvm::SwitchInst::CaseIt CaseIt = SI->findCaseValue(CaseVal);
-  if (CaseIt != SI->case_default())
-    return false;
+  if (CaseIt != SI->case_default()) {
+   createUnreachableSwitchDefault(SI, DTU,
+                                 /*RemoveOrigDefaultBlock*/ false);
+   return true;
+  }
 
+  // Otherwise, we can move the default branch into an explicit case branch.
   SwitchInstProfUpdateWrapper SIW(*SI);
   SIW.addCase(CaseVal, Default, SIW.getSuccessorWeight(0));
   SIW.setSuccessorWeight(0, 0);
