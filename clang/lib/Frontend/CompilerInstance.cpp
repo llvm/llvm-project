@@ -12,6 +12,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/DiagnosticDriver.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/FileManager.h"
@@ -26,6 +27,7 @@
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Frontend/FrontendPluginRegistry.h"
 #include "clang/Frontend/LogDiagnosticPrinter.h"
+#include "clang/Frontend/SARIFDiagnostic.h"
 #include "clang/Frontend/SARIFDiagnosticPrinter.h"
 #include "clang/Frontend/SerializedDiagnosticPrinter.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
@@ -356,6 +358,47 @@ static void SetupSerializedDiagnostics(DiagnosticOptions &DiagOpts,
   }
 }
 
+static void SetupAdditionalLogs(DiagnosticOptions &DiagOpts,
+                                DiagnosticsEngine &Diags) {
+  for (StringRef Config : DiagOpts.AdditionalOutputConfigs) {
+    auto [Format, PairsString] = Config.split(":");
+
+    SmallVector<StringRef, 4> PairStrings;
+    PairsString.split(PairStrings, ",", -1, /* KeepEmpty = */ false);
+    SmallVector<std::pair<StringRef, StringRef>, 4> Pairs;
+    for (const auto &PairString : PairStrings) {
+      auto [Key, Value] = PairString.split("=");
+      if (Value.empty()) {
+        Diags.Report(SourceLocation(), diag::err_diagnostic_output_no_value)
+            << Key;
+        break;
+      }
+
+      Pairs.push_back(std::make_pair(Key, Value));
+    }
+
+    std::unique_ptr<DiagnosticConsumer> Consumer;
+    if (Format == "sarif") {
+      Consumer = SARIFDiagnosticPrinter::create(Pairs, DiagOpts, Diags);
+
+    } else {
+      // Only support "sarif" for now.
+      Diags.Report(SourceLocation(), diag::err_diagnostic_output_unknown_format)
+          << Format;
+    }
+
+    if (Consumer) {
+      if (Diags.ownsClient()) {
+        Diags.setClient(new ChainedDiagnosticConsumer(Diags.takeClient(),
+                                                      std::move(Consumer)));
+      } else {
+        Diags.setClient(new ChainedDiagnosticConsumer(Diags.getClient(),
+                                                      std::move(Consumer)));
+      }
+    }
+  }
+}
+
 void CompilerInstance::createDiagnostics(DiagnosticConsumer *Client,
                                          bool ShouldOwnClient) {
   Diagnostics = createDiagnostics(getVirtualFileSystem(), getDiagnosticOpts(),
@@ -374,7 +417,7 @@ IntrusiveRefCntPtr<DiagnosticsEngine> CompilerInstance::createDiagnostics(
   if (Client) {
     Diags->setClient(Client, ShouldOwnClient);
   } else if (Opts.getFormat() == DiagnosticOptions::SARIF) {
-    Diags->setClient(new SARIFDiagnosticPrinter(llvm::errs(), Opts));
+    Diags->setClient(new SARIFDiagnosticPrinter("", Opts));
   } else
     Diags->setClient(new TextDiagnosticPrinter(llvm::errs(), Opts));
 
@@ -388,6 +431,8 @@ IntrusiveRefCntPtr<DiagnosticsEngine> CompilerInstance::createDiagnostics(
 
   if (!Opts.DiagnosticSerializationFile.empty())
     SetupSerializedDiagnostics(Opts, *Diags, Opts.DiagnosticSerializationFile);
+
+  SetupAdditionalLogs(Opts, *Diags);
 
   // Configure our handling of diagnostics.
   ProcessWarningOptions(*Diags, Opts, VFS);
