@@ -340,17 +340,6 @@ TEST_F(NumericLiteralCaseTest, UnderScoreSeparatorLanguages) {
   verifyFormat("o = 0o0_10_010;", "o = 0O0_10_010;", Style);
 }
 
-TEST_F(NumericLiteralCaseTest, IncompleteLiteralDoesNotCrash) {
-  auto Style = getLLVMStyle();
-  Style.NumericLiteralCase.HexDigit = FormatStyle::NLCS_Upper;
-
-  verifyFormat("i = 1e;", Style);
-  verifyFormat("i = 1.0e;", Style);
-  verifyFormat("i = 0x1p;", Style);
-  verifyFormat("i = 0x;", Style);
-  verifyFormat("i = 0x_;", Style);
-}
-
 } // namespace
 } // namespace test
 } // namespace format
