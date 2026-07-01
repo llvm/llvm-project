@@ -222,6 +222,21 @@ define i64 @smax_allones_i64(i64 %x) {
   ret i64 %r
 }
 
+; smax(sext(X), -1) should NOT use the shift fold -- doing so doubles the use
+; count of the sext node and causes worse codegen under register pressure.
+define i64 @smax_allones_sext_i32(i32 %x) {
+; CHECK-LABEL: smax_allones_sext_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movslq %edi, %rcx
+; CHECK-NEXT:    testq %rcx, %rcx
+; CHECK-NEXT:    movq $-1, %rax
+; CHECK-NEXT:    cmovnsq %rcx, %rax
+; CHECK-NEXT:    retq
+  %sext = sext i32 %x to i64
+  %r = call i64 @llvm.smax.i64(i64 %sext, i64 -1)
+  ret i64 %r
+}
+
 ; smax(X, 0) should NOT transform -- no 2-instruction bitwise form exists.
 define i32 @smax_zero_i32(i32 %x) {
 ; CHECK-LABEL: smax_zero_i32:
