@@ -67,7 +67,9 @@ SmallVector<MemorySlot> memref::AllocaOp::getPromotableSlots() {
   if (!type.hasStaticShape())
     return {};
   // Make sure the memref contains only a single element.
-  if (type.getNumElements() != 1)
+  std::optional<int64_t> numElements = 
+      ShapedType::tryGetNumElements(type.getShape());
+  if (!numElements || *numElements != 1)
     return {};
 
   return {MemorySlot{getResult(), type.getElementType()}};
@@ -290,9 +292,12 @@ struct MemRefDestructurableTypeExternalModel
   getSubelementIndexMap(Type type) const {
     auto memrefType = llvm::cast<MemRefType>(type);
     constexpr int64_t maxMemrefSizeForDestructuring = 16;
-    if (!memrefType.hasStaticShape() ||
-        memrefType.getNumElements() > maxMemrefSizeForDestructuring ||
-        memrefType.getNumElements() == 1)
+    if (!memrefType.hasStaticShape())
+      return {};
+    std::optional<int64_t> numElements = 
+        ShapedType::tryGetNumElements(memrefType.getShape());
+    if (!numElements || *numElements > maxMemrefSizeForDestructuring || 
+        *numElements == 1)
       return {};
 
     DenseMap<Attribute, Type> destructured;
