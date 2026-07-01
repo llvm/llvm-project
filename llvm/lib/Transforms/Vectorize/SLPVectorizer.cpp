@@ -6251,6 +6251,8 @@ private:
                      });
             };
         for (ScheduleEntity *SD : Bundle.getBundle()) {
+          if (SD->isScheduled())
+            continue;
           ArrayRef<ScheduleBundle *> SDBundles;
           if (!isa<ScheduleCopyableData>(SD))
             SDBundles = getScheduleBundles(SD->getInst());
@@ -6361,6 +6363,58 @@ private:
       }
     }
 
+    /// Handle may-alias stores within the same bundle, have to be scheduled one
+    /// at a time since later nodes are not ready until earlier stores are
+    /// scheduled. Must ensure that the ordering of scheduling matches order in
+    /// bundle
+    void
+    scheduleInternalStores(ScheduleBundle &Bundle,
+                           function_ref<void(ScheduleEntity *)> ScheduleCall,
+                           const OrdersType &CurrentOrder) {
+      if (Bundle.isReady() || !CurrentOrder.empty())
+        return;
+      // Make sure all bundle members are:
+      // (1) Only dependent on other members of the bundle
+      // (2) Only dependent on members after them in the bundle
+      // (3) Store instructions
+      // If all of these are satisfied, then can schedule them
+      // one at a time
+      SmallDenseMap<ScheduleEntity *, std::pair<unsigned, int>> BundleMembers;
+      for (auto [Idx, BM] : enumerate(Bundle.getBundle()))
+        BundleMembers[BM] = {Idx, BM->getUnscheduledDeps()};
+      for (ScheduleEntity *BundleMember : Bundle.getBundle()) {
+        auto *SD = dyn_cast<ScheduleData>(BundleMember);
+        if (!SD || !isa<StoreInst>(SD->getInst()))
+          return;
+        if (BundleMember->isScheduled())
+          continue;
+        for (ScheduleData *MemDep : SD->getMemoryDependencies()) {
+          if (!BundleMembers.contains(MemDep))
+            continue;
+          if (BundleMembers[MemDep].first >= BundleMembers[SD].first)
+            return;
+          --BundleMembers[MemDep].second;
+        }
+      }
+      for (auto &[BM, P] : BundleMembers)
+        if (P.second != 0)
+          return;
+
+      bool ForwardProgress = true;
+      while (ForwardProgress) {
+        ForwardProgress = false;
+        for (ScheduleEntity *BundleMember : Bundle.getBundle()) {
+          if (BundleMember->isScheduled() || !BundleMember->isReady())
+            continue;
+          LLVM_DEBUG(dbgs() << "SLP: schedule ready bundle member "
+                            << *BundleMember << "\n");
+          ScheduleCall(BundleMember);
+          ForwardProgress = true;
+        }
+      }
+      return;
+    }
+
     /// Build a bundle from the ScheduleData nodes corresponding to the
     /// scalar instruction for each lane.
     /// \param VL The list of scalar instructions.
@@ -6376,7 +6430,8 @@ private:
     /// std::nullopt if \p VL is allowed to be scheduled.
     std::optional<ScheduleBundle *>
     tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
-                      const InstructionsState &S, const EdgeInfo &EI);
+                      const InstructionsState &S, const EdgeInfo &EI,
+                      const OrdersType &CurrentOrder);
 
     /// Allocates schedule data chunk.
     ScheduleData *allocateScheduleDataChunks();
@@ -7836,7 +7891,7 @@ bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
   SmallVector<unsigned> SortedIndicesForOffset0;
   const SCEV *Stride0 =
       calculateRtStride(PointerOps0, BaseTy, *DL, *SE, SortedIndicesForOffset0);
-  if (!Stride0)
+  if (!Stride0 || isa<SCEVConstant>(Stride0))
     return false;
 
   ArrayRef<unsigned> IndicesInAllPointerOps0 =
@@ -7867,6 +7922,26 @@ bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
   SortedIndices = std::move(SortedIndicesDraft);
   SPtrInfo.StrideSCEV = Stride0;
   SPtrInfo.Ty = StridedLoadTy;
+
+  auto isReverseWidenedOrder = [&](ArrayRef<unsigned> Order,
+                                   unsigned NumOffsets) -> bool {
+    if (Order.empty())
+      return false;
+    unsigned Sz = Order.size();
+    return all_of(enumerate(Order), [&](const auto &Pair) {
+      return Pair.value() == Sz ||
+             (NumOffsets - (Pair.index() / NumOffsets) - 1 ==
+                  (Pair.value() / NumOffsets) &&
+              (Pair.index() % NumOffsets) == (Pair.value() % NumOffsets));
+    });
+  };
+
+  if (isIdentityOrder(SortedIndices)) {
+    SortedIndices.clear();
+  } else if (isReverseWidenedOrder(SortedIndices, NumOffsets)) {
+    SPtrInfo.StrideSCEV = SE->getNegativeSCEV(SPtrInfo.StrideSCEV);
+    SortedIndices.clear();
+  }
   return true;
 }
 
@@ -11248,12 +11323,12 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
         Ptr0 = PointerOps[CurrentOrder.front()];
         PtrN = PointerOps[CurrentOrder.back()];
       }
-      Align CommonAlignment = computeCommonAlignment<StoreInst>(VL);
       std::optional<int64_t> Dist =
           getPointersDiff(ScalarTy, Ptr0, ScalarTy, PtrN, *DL, *SE);
       // Check that the sorted pointer operands are consecutive.
       if (static_cast<uint64_t>(*Dist) == VL.size() - 1)
         return TreeEntry::Vectorize;
+      Align CommonAlignment = computeCommonAlignment<StoreInst>(VL);
       if (EnableStridedStores &&
           analyzeConstantStrideCandidate(PointerOps, ScalarTy, CommonAlignment,
                                          CurrentOrder, *Dist, Ptr0, SPtrInfo))
@@ -11267,6 +11342,13 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
                                 StoreVecTy)) {
         SPtrInfo.Ty = StoreVecTy;
         return TreeEntry::ExpandVectorize;
+      }
+    }
+    if (EnableStridedStores) {
+      Align CommonAlignment = computeCommonAlignment<StoreInst>(VL);
+      if (analyzeRtStrideCandidate(PointerOps, ScalarTy, CommonAlignment,
+                                   CurrentOrder, SPtrInfo, /*isLoad=*/false)) {
+        return TreeEntry::StridedVectorize;
       }
     }
 
@@ -13177,8 +13259,8 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
   BlockScheduling &BS = *BSRef;
 
   SetVector<Value *> UniqueValues(llvm::from_range, VL);
-  std::optional<ScheduleBundle *> BundlePtr =
-      BS.tryScheduleBundle(UniqueValues.getArrayRef(), this, S, UserTreeIdx);
+  std::optional<ScheduleBundle *> BundlePtr = BS.tryScheduleBundle(
+      UniqueValues.getArrayRef(), this, S, UserTreeIdx, CurrentOrder);
 #ifdef EXPENSIVE_CHECKS
   // Make sure we didn't break any internal invariants
   BS.verify();
@@ -24176,7 +24258,13 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         assert(StridedStoreTy && "Missing StridedPointerInfo for tree entry.");
         unsigned StridedStoreEC = getNumElements(StridedStoreTy);
         Value *Stride = SPtrInfo.StrideVal;
-        assert(Stride && "Missing StridedPointerInfo for tree entry.");
+        if (!Stride) {
+          const SCEV *StrideSCEV = SPtrInfo.StrideSCEV;
+          assert(StrideSCEV && "Neither StrideVal nor StrideSCEV were set.");
+          SCEVExpander Expander(*SE, "strided-store-vec");
+          Stride = Expander.expandCodeFor(StrideSCEV, StrideSCEV->getType(),
+                                          &*Builder.GetInsertPoint());
+        }
         Value *StrideVal =
             Builder.CreateIntCast(Stride, StrideTy, /*isSigned=*/true);
         // vp_strided_store::stride is defined in bytes
@@ -25601,7 +25689,8 @@ BoUpSLP::ScheduleBundle &BoUpSLP::BlockScheduling::buildBundle(
 std::optional<BoUpSLP::ScheduleBundle *>
 BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
                                             const InstructionsState &S,
-                                            const EdgeInfo &EI) {
+                                            const EdgeInfo &EI,
+                                            const OrdersType &CurrentOrder) {
   // No need to schedule PHIs, insertelement, extractelement and extractvalue
   // instructions.
   if (isa<PHINode>(S.getMainOp()) ||
@@ -25956,6 +26045,13 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
     // dependencies. As soon as the bundle is "ready" it means that there are no
     // cyclic dependencies and we can schedule it. Note that's important that we
     // don't "schedule" the bundle yet.
+    if (Bundle && !Bundle.isReady()) {
+      auto ScheduleCall = [&](ScheduleEntity *SE) -> void {
+        ReadyInsts.remove(SE);
+        schedule(*SLP, S, EI, SE, ReadyInsts);
+      };
+      scheduleInternalStores(Bundle, ScheduleCall, CurrentOrder);
+    }
     while (((!Bundle && ReSchedule) || (Bundle && !Bundle.isReady())) &&
            !ReadyInsts.empty()) {
       ScheduleEntity *Picked = ReadyInsts.pop_back_val();
@@ -26496,6 +26592,7 @@ void BoUpSLP::BlockScheduling::calculateDependencies(
         BundleMember->incDependencies();
         if (!DepDest->isScheduled())
           BundleMember->incrementUnscheduledDeps(1);
+
         if (!DepDest->hasValidDependencies() ||
             (InsertInReadyList && DepDest->isReady()))
           WorkList.push_back(DepDest);
@@ -26723,9 +26820,36 @@ void BoUpSLP::scheduleBlock(const BoUpSLP &R, BlockScheduling *BS) {
   BS->initialFillReadyList(ReadyInsts);
 
   Instruction *LastScheduledInst = BS->ScheduleEnd;
+  SmallPtrSet<Instruction *, 16> Scheduled;
+  for (std::unique_ptr<ScheduleBundle> &Bundle : BS->ScheduledBundlesList) {
+    if (!Bundle->hasValidDependencies() || Bundle->isReady())
+      continue;
+    if (all_of(Bundle->getBundle(),
+               [](const ScheduleEntity *SE) { return !SE->isReady(); }))
+      continue;
+    if (!all_of(Bundle->getBundle(), [](const ScheduleEntity *SE) {
+          auto *SD = dyn_cast<ScheduleData>(SE);
+          return SD && isa<StoreInst>(SD->getInst());
+        }))
+      continue;
+    auto ScheduleCall = [&](ScheduleEntity *SE) -> void {
+      ReadyInsts.erase(SE);
+      auto *SD = cast<ScheduleData>(SE);
+      Instruction *PickedInst = SD->getInst();
+      if (PickedInst->getNextNode() != LastScheduledInst)
+        PickedInst->moveAfter(LastScheduledInst->getPrevNode());
+      LastScheduledInst = PickedInst;
+      auto Invalid = InstructionsState::invalid();
+      BS->schedule(R, Invalid, EdgeInfo(), SE, ReadyInsts);
+      Scheduled.insert(PickedInst);
+    };
+    // Order already checked when scheduling initially. The TreeEntry's order
+    // now may reflect ordering pushed down the tree.
+    OrdersType EmptyOrder;
+    BS->scheduleInternalStores(*Bundle, ScheduleCall, EmptyOrder);
+  }
 
   // Do the "real" scheduling.
-  SmallPtrSet<Instruction *, 16> Scheduled;
   while (!ReadyInsts.empty()) {
     auto *Picked = *ReadyInsts.begin();
     ReadyInsts.erase(ReadyInsts.begin());
@@ -27913,8 +28037,21 @@ public:
                              SmallVector<unsigned> &RangeSizesByIdx,
                              unsigned Stride)
       : Operands(Ops), RangeSizesStorage(RangeSizes),
-        RangeSizesByIdx(RangeSizesByIdx), Stride(Stride) {}
+        RangeSizesByIdx(RangeSizesByIdx), Stride(Stride), RTStride(nullptr) {}
 
+  explicit StoreChainContext(ArrayRef<Value *> Ops,
+                             ArrayRef<SizePair> RangeSizes,
+                             SmallVector<unsigned> &RangeSizesByIdx,
+                             const SCEV *RTStride)
+      : Operands(Ops), RangeSizesStorage(RangeSizes),
+        RangeSizesByIdx(RangeSizesByIdx), Stride(0), RTStride(RTStride) {}
+
+  /// Compare two Contexts prioritize small constant strides
+  bool operator<(const StoreChainContext &Other) const {
+    if (RTStride || Other.RTStride)
+      return !RTStride;
+    return Stride < Other.Stride;
+  }
   /// Set up initial values using the already set Operands
   bool initializeContext(
       BoUpSLP &R, const DataLayout &DL, const TargetTransformInfo &TTI,
@@ -27924,8 +28061,6 @@ public:
   std::optional<unsigned> getCurrentVF() const;
   /// Return the maximum VF for the context
   unsigned getMaxVF() const { return MaxVF; }
-  /// Return the stride of the context
-  unsigned getStride() const { return Stride; }
   /// Attempt to vectorize Operands for the given VF
   /// Returns false if no more attempts should be made for the context
   bool vectorizeOneVF(const TargetTransformInfo &TTI, unsigned VF,
@@ -28035,6 +28170,8 @@ private:
   bool RepeatChanged = false;
   /// For constant strided stores, what is the stride amount
   const unsigned Stride = 0;
+  /// For runtime strided stores
+  const SCEV *RTStride = nullptr;
   /// Store information about failed vectorization attempts due to scheduling
   SmallDenseMap<Value *, SizePair> NonSchedulable;
 };
@@ -28108,7 +28245,7 @@ bool StoreChainContext::initializeContext(
       Store->getPointerAddressSpace()));
   MinVF /= getNumElements(StoreTy);
   MinVF = std::max<unsigned>(2, MinVF);
-  if (Stride > 1)
+  if (Stride > 1 || RTStride)
     MinVF = std::max<unsigned>(MinVF, MinProfitableStridedStores);
 
   if (MaxVF < MinVF) {
@@ -28323,7 +28460,7 @@ bool StoreChainContext::vectorizeOneVF(
         markRangeVectorized(SliceStartIdx, VF, FirstUnvecStore, MaxSliceEnd);
         SliceStartIdx += VF;
         ++NumStoreChains;
-        if (Stride > 1)
+        if (Stride > 1 || RTStride)
           ++NumStridedStoreChains;
         NumVectorizedStores += VF;
         continue;
@@ -28552,7 +28689,7 @@ bool SLPVectorizerPass::vectorizeStores(
     llvm::stable_sort(AllContexts,
                       [](const std::unique_ptr<StoreChainContext> &A,
                          const std::unique_ptr<StoreChainContext> &B) {
-                        return A && (!B || A->getStride() < B->getStride());
+                        return A && (!B || *A < *B);
                       });
 
     for (unsigned LimitVF = GlobalMaxVF; LimitVF > 0;
@@ -28657,6 +28794,47 @@ bool SLPVectorizerPass::vectorizeStores(
   // Final vectorization attempt.
   for (RelatedStoreInsts &StoreSeq : SortedStores)
     ExtendContexts(StoreSeq.getStores());
+
+  if (EnableStridedStores) {
+    // Stores is already reversed, reverse again so that we generate
+    // chains in program order in order for scheduling to occur
+    const unsigned NumStores = Stores.size();
+    assert(NumStores > 0 && "Expected at least one StoreInst");
+    unsigned Idx = NumStores - 1;
+    while (Idx > 0) {
+      StoreInst *StartSI = Stores[Idx];
+      StoreInst *NextSI = Stores[Idx - 1];
+      Type *StoreTy = StartSI->getValueOperand()->getType();
+      if (NextSI->getValueOperand()->getType() != StoreTy) {
+        --Idx;
+        continue;
+      }
+      const SCEV *StartSCEV = SE->getSCEV(StartSI->getPointerOperand());
+      const SCEV *NextSCEV = SE->getSCEV(NextSI->getPointerOperand());
+      const SCEV *Stride = SE->getMinusSCEV(NextSCEV, StartSCEV);
+      if (isa<SCEVCouldNotCompute, SCEVConstant, SCEVVScale>(Stride)) {
+        --Idx;
+        continue;
+      }
+      SmallVector<Value *> Ops{StartSI, NextSI};
+      SmallVector<StoreChainContext::SizePair> RS{{Idx, 1}, {Idx - 1, 1}};
+      --Idx;
+      while (Idx > 0) {
+        NextSI = Stores[Idx - 1];
+        if (NextSI->getValueOperand()->getType() != StoreTy)
+          break;
+        NextSCEV = SE->getAddExpr(NextSCEV, Stride);
+        if (NextSCEV != SE->getSCEV(NextSI->getPointerOperand()))
+          break;
+        --Idx;
+        Ops.push_back(NextSI);
+        RS.emplace_back(Idx, 1);
+      }
+      if (Ops.size() >= MinProfitableStridedStores)
+        AllContexts.emplace_back(std::make_unique<StoreChainContext>(
+            Ops, RS, RangeSizesByIdx, Stride));
+    }
+  }
 
   ActuallyVectorizeContexts();
 
