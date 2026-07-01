@@ -146,6 +146,14 @@ functions:
     arguments:
       - type: const char *
       - type: const char *
+  - name: freopen
+    standards:
+      - stdc
+    return_type: FILE *
+    arguments:
+      - type: const char *
+      - type: const char *
+      - type: FILE *
   - name: fopencookie
     standards:
       - gnu

@@ -29,6 +29,7 @@ public:
         fd(file_descriptor) {}
 
   int get_fd() const { return fd; }
+  void set_fd(int new_fd) { fd = new_fd; }
 };
 
 // Create a File object and associate it with a fd.

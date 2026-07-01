@@ -185,6 +185,19 @@ add_generic_entrypoint_object(
 )
 
 add_generic_entrypoint_object(
+  freopen
+  SRCS
+    freopen.cpp
+  HDRS
+    ../freopen.h
+  DEPENDS
+    libc.hdr.types.FILE
+    libc.src.errno.errno
+    libc.src.__support.File.file
+    libc.src.__support.File.platform_file
+)
+
+add_generic_entrypoint_object(
   fclose
   SRCS
     fclose.cpp
