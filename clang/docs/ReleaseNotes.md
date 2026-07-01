@@ -1139,6 +1139,12 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 - Fixed `-nolibsycl` being silently ignored on Linux: the SYCL runtime
   library was unconditionally added to the link line even when the flag was
   passed.
+- Added the `-fsycl-device-image-split=` option to select the granularity at
+  which SYCL device code is grouped into device images. Supported values are
+  `kernel` (one device image per kernel), `translation_unit` (one device image
+  per translation unit), and `link_unit` (one device image per linking unit).
+  The bare `-fsycl-device-image-split` flag is an alias for
+  `-fsycl-device-image-split=translation_unit`, which is also the default.
 - Clang now is capable of diagnosing reference kernel parameters which are not
   allowed by SYCL 2020 spec.
 
