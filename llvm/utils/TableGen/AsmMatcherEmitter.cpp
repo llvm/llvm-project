@@ -3826,8 +3826,9 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   if (HasOptionalOperands)
     OS << "    OptionalOperandsMask.reset(0, "
        << MaxNumOperands + HasMnemonicFirst << ");\n";
+  OS << "    unsigned ActualIdx = " << (HasMnemonicFirst ? "1" : "SIndex")
+     << ";\n";
   OS << "    for (unsigned FormalIdx = " << (HasMnemonicFirst ? "0" : "SIndex")
-     << ", ActualIdx = " << (HasMnemonicFirst ? "1" : "SIndex")
      << "; FormalIdx != " << MaxNumOperands << "; ++FormalIdx) {\n";
   OS << "      auto Formal = "
      << "static_cast<MatchClassKind>(it->Classes[FormalIdx]);\n";
@@ -3961,6 +3962,22 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
           "opcode\\n\");\n";
     OS << "        MultipleInvalidOperands = true;\n";
     OS << "        break;\n";
+    OS << "      }\n";
+    OS << "    }\n\n";
+    OS << "    // Reject surplus operands as one more operand mismatch.\n";
+    OS << "    if (!MultipleInvalidOperands && ActualIdx < Operands.size()) "
+          "{\n";
+    OS << "      if (!OperandNearMiss) {\n";
+    OS << "        DEBUG_WITH_TYPE(\"asm-matcher\", dbgs() << \"too many "
+          "operands, recording near-miss at index \"\n";
+    OS << "                        << ActualIdx << \"\\n\");\n";
+    OS << "        OperandNearMiss = NearMissInfo::getMissedOperand(\n";
+    OS << "            Match_InvalidOperand, InvalidMatchClass, it->Opcode, "
+          "ActualIdx);\n";
+    OS << "      } else {\n";
+    OS << "        DEBUG_WITH_TYPE(\"asm-matcher\", dbgs() << \"too many "
+          "operands after an earlier mismatch, skipping this opcode\\n\");\n";
+    OS << "        MultipleInvalidOperands = true;\n";
     OS << "      }\n";
     OS << "    }\n\n";
   } else {
