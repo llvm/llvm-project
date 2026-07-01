@@ -10,7 +10,7 @@
 
 // <set>
 
-// void swap(set& c)
+// constexpr void swap(set& c) // constexpr since C++26
 //     noexcept(!allocator_type::propagate_on_container_swap::value ||
 //              __is_nothrow_swappable<allocator_type>::value);
 //
@@ -86,7 +86,7 @@ struct some_alloc3 {
   typedef std::false_type is_always_equal;
 };
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   {
     typedef std::set<MoveOnly> C;
     static_assert(noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
@@ -131,5 +131,12 @@ int main(int, char**) {
 #  endif // _LIBCPP_VERSION
 #endif
 
+  return true;
+}
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }

@@ -162,6 +162,29 @@ declare <4 x double> @llvm.aarch64.sve.sdot.v4f64(<4 x double>, <16 x half>, flo
 ; type signature = [llvm_anyvector_ty], [LLVMMatchType<0>, LLVMMatchType<0>, LLVMVectorOfBitcastsToInt<0>, llvm_anyint_ty]
 declare <4 x float> @llvm.riscv.vrgather.vv.v4f32.i32(<4 x float>, <4 x float>, i32, i32)
 
+; CHECK: intrinsic has incorrect number of args. Expected 1, but got 2
+; CHECK-NEXT: declare i64 @llvm.experimental.gc.get.pointer.offset.p0p0(ptr, ptr)
+declare i64 @llvm.experimental.gc.get.pointer.offset.p0p0(ptr, ptr)
+
+; CHECK: intrinsic return type expected i64, but got i32
+; CHECK-NEXT: declare i32 @llvm.experimental.gc.get.pointer.offset.p0(ptr)
+declare i32 @llvm.experimental.gc.get.pointer.offset.p0(ptr)
+
+; CHECK:intrinsic argument 0 type (overload type 0) expected any pointer type, but got i32
+; CHECK-NEXT: declare i64 @llvm.experimental.gc.get.pointer.offset.i32(i32)
+declare i64 @llvm.experimental.gc.get.pointer.offset.i32(i32)
+
+; CHECK: intrinsic has incorrect number of args. Expected 1, but got 2
+; CHECK-NEXT: declare ptr @llvm.experimental.gc.get.pointer.base.p0p0(ptr, ptr)
+declare ptr @llvm.experimental.gc.get.pointer.base.p0p0(ptr, ptr)
+
+; CHECK: intrinsic return type (overload type 0) expected any pointer type, but got i32
+; CHECK-NEXT: declare i32 @llvm.experimental.gc.get.pointer.base.i32.p0(ptr)
+declare i32 @llvm.experimental.gc.get.pointer.base.i32.p0(ptr)
+
+; CHECK: intrinsic argument 0 type (matching overload type 0) expected ptr, but got ptr addrspace(1)
+; CHECK-NEXT: declare ptr @llvm.experimental.gc.get.pointer.base.p0.p1(ptr addrspace(1))
+declare ptr @llvm.experimental.gc.get.pointer.base.p0.p1(ptr addrspace(1))
 
 ;--- test1.ll
 ; RUN: not opt -S -passes=verify -disable-output 2>&1 < %t/test1.ll | FileCheck %t/test1.ll

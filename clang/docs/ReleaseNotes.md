@@ -88,6 +88,24 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
   are now ill-formed.
 
+- `__has_feature(modules)` is no longer true when just `-std=c++20` (or higher)
+  is passed. It's only true if `-fmodules` is passed, which enables Clang's
+  module map semantics. Objective-C++ of the form
+
+  ```objc
+  #if __has_feature(modules)
+  @import Foundation;
+  #else
+  #import <Foundation/Foundation.h>
+  #endif
+  ```
+
+  previously took the `@import` branch under `-std=c++20` even though no module
+  maps were in use, which would always fail.
+
+  `__cpp_modules` continues to be the standard macro to use to check if C++20
+  modules are available.
+
 ### C++ Specific Potentially Breaking Changes
 
 - Clang now more aggressively optimizes away stores to objects after they are
@@ -800,6 +818,8 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 - Fixed crashes in Itanium C++ name mangling for lambdas with trailing requires-clauses involving requires-expressions. (#GH100774) (#GH123854)
 - Fixed an invalid rejection and assertion failure while generating `operator=` for fields with the `__restrict` qualifier. (#GH37979)
 - Fixed a use-after-free bug when parsing default arguments containing lambdas in declarations with template-id declarators. (#GH196725)
+- Fixed missing destructor cleanups for lambda init-captures in default member
+  initializers used during aggregate initialization. (#GH196469)
 - Fixed a crash in constant evaluation using placement new on an array which was later initialized. (#GH196450)
 - Fixed an issue where Clang incorrectly accepted invalid unqualified uses of local nested class names outside their declaring scope. (#GH184622)
 - Fixed a crash when parsing invalid friend declaration with storage-class specifier. (#GH186569)
@@ -981,6 +1001,8 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 ### AST Matchers
 
+- Fixed `nullPointerConstant` matcher falsely matching integer literal `0`
+  in non-null-pointer contexts such as array subscripts and pointer arithmetic.
 - Add `functionTypeLoc` matcher for matching `FunctionTypeLoc`.
 - Add missing support for `TraversalKind` in some `addMatcher()` overloads.
 
@@ -1020,6 +1042,7 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 - Fixed a crash in code completion when using a C-Style cast with a parenthesized
   operand in Objective-C++ mode. (#GH180125)
+- Fixed a crash when code completion is triggered inside an ill-formed lambda's trailing requires-clause. (#GH201632)  
 
 ### Static Analyzer
 
@@ -1116,6 +1139,8 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 - Fixed `-nolibsycl` being silently ignored on Linux: the SYCL runtime
   library was unconditionally added to the link line even when the flag was
   passed.
+- Clang now is capable of diagnosing reference kernel parameters which are not
+  allowed by SYCL 2020 spec.
 
 #### Improvements
 
