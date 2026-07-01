@@ -25,6 +25,31 @@ using namespace llvm;
 static constexpr unsigned RVV_VTA = 0x1;
 static constexpr unsigned RVV_VMA = 0x2;
 
+// Emit an element-wise XCVsimd op whose packed (NumElts x EltBits) vector is
+// carried in a 32-bit GPR: bitcast the i32 operand(s) to the packed vector
+// type, apply the op, and bitcast the result back to i32. The op selects the
+// cv.*.h / cv.*.b SIMD instruction with no dedicated intrinsic.
+static Value *emitCVSimdBinOp(
+    CodeGenFunction &CGF, ArrayRef<Value *> Ops, unsigned NumElts,
+    unsigned EltBits,
+    llvm::function_ref<Value *(CGBuilderTy &, Value *, Value *)> Op) {
+  auto *VecTy =
+      llvm::FixedVectorType::get(CGF.Builder.getIntNTy(EltBits), NumElts);
+  Value *LHS = CGF.Builder.CreateBitCast(Ops[0], VecTy);
+  Value *RHS = CGF.Builder.CreateBitCast(Ops[1], VecTy);
+  return CGF.Builder.CreateBitCast(Op(CGF.Builder, LHS, RHS), CGF.Int32Ty);
+}
+
+static Value *
+emitCVSimdUnOp(CodeGenFunction &CGF, ArrayRef<Value *> Ops, unsigned NumElts,
+               unsigned EltBits,
+               llvm::function_ref<Value *(CGBuilderTy &, Value *)> Op) {
+  auto *VecTy =
+      llvm::FixedVectorType::get(CGF.Builder.getIntNTy(EltBits), NumElts);
+  Value *V = CGF.Builder.CreateBitCast(Ops[0], VecTy);
+  return CGF.Builder.CreateBitCast(Op(CGF.Builder, V), CGF.Int32Ty);
+}
+
 // RISC-V Vector builtin helper functions are marked NOINLINE to prevent
 // excessive inlining in CodeGenFunction::EmitRISCVBuiltinExpr's large switch
 // statement, which would significantly increase compilation time.
@@ -1522,6 +1547,330 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
     break;
   case RISCV::BI__builtin_riscv_cv_alu_subuRN:
     ID = Intrinsic::riscv_cv_alu_subuRN;
+    break;
+
+  // XCVbitmanip
+  case RISCV::BI__builtin_riscv_cv_bitmanip_extract:
+    ID = Intrinsic::riscv_cv_bitmanip_extract;
+    break;
+  case RISCV::BI__builtin_riscv_cv_bitmanip_extractu:
+    ID = Intrinsic::riscv_cv_bitmanip_extractu;
+    break;
+  case RISCV::BI__builtin_riscv_cv_bitmanip_bclr:
+    ID = Intrinsic::riscv_cv_bitmanip_bclr;
+    break;
+  case RISCV::BI__builtin_riscv_cv_bitmanip_bset:
+    ID = Intrinsic::riscv_cv_bitmanip_bset;
+    break;
+  case RISCV::BI__builtin_riscv_cv_bitmanip_insert:
+    ID = Intrinsic::riscv_cv_bitmanip_insert;
+    break;
+  case RISCV::BI__builtin_riscv_cv_bitmanip_clb:
+    ID = Intrinsic::riscv_cv_bitmanip_clb;
+    break;
+  case RISCV::BI__builtin_riscv_cv_bitmanip_bitrev:
+    ID = Intrinsic::riscv_cv_bitmanip_bitrev;
+    break;
+
+  // XCVelw
+  case RISCV::BI__builtin_riscv_cv_elw_elw: {
+    // cv.elw rd, imm(rs1) — load word with event wait
+    // Emit as a volatile load from the memory-mapped address
+    // The builtin takes a pointer; emit as intrinsic call
+    ID = Intrinsic::riscv_cv_elw_elw;
+    break;
+  }
+
+  // XCVmac
+  case RISCV::BI__builtin_riscv_cv_mac_mac:
+    ID = Intrinsic::riscv_cv_mac_mac;
+    break;
+  case RISCV::BI__builtin_riscv_cv_mac_msu:
+    ID = Intrinsic::riscv_cv_mac_msu;
+    break;
+  case RISCV::BI__builtin_riscv_cv_mac_muluN:
+    ID = Intrinsic::riscv_cv_mac_muluN;
+    break;
+  case RISCV::BI__builtin_riscv_cv_mac_mulhhuN:
+    ID = Intrinsic::riscv_cv_mac_mulhhuN;
+    break;
+  case RISCV::BI__builtin_riscv_cv_mac_mulsN:
+    ID = Intrinsic::riscv_cv_mac_mulsN;
+    break;
+  case RISCV::BI__builtin_riscv_cv_mac_mulhhsN:
+    ID = Intrinsic::riscv_cv_mac_mulhhsN;
+    break;
+  case RISCV::BI__builtin_riscv_cv_mac_muluRN:
+    ID = Intrinsic::riscv_cv_mac_muluRN;
+    break;
+  case RISCV::BI__builtin_riscv_cv_mac_mulhhuRN:
+    ID = Intrinsic::riscv_cv_mac_mulhhuRN;
+    break;
+  case RISCV::BI__builtin_riscv_cv_mac_mulsRN:
+    ID = Intrinsic::riscv_cv_mac_mulsRN;
+    break;
+  case RISCV::BI__builtin_riscv_cv_mac_mulhhsRN:
+    ID = Intrinsic::riscv_cv_mac_mulhhsRN;
+    break;
+  case RISCV::BI__builtin_riscv_cv_mac_macuN:
+    ID = Intrinsic::riscv_cv_mac_macuN;
+    break;
+  case RISCV::BI__builtin_riscv_cv_mac_machhuN:
+    ID = Intrinsic::riscv_cv_mac_machhuN;
+    break;
+  case RISCV::BI__builtin_riscv_cv_mac_macsN:
+    ID = Intrinsic::riscv_cv_mac_macsN;
+    break;
+  case RISCV::BI__builtin_riscv_cv_mac_machhsN:
+    ID = Intrinsic::riscv_cv_mac_machhsN;
+    break;
+  case RISCV::BI__builtin_riscv_cv_mac_macuRN:
+    ID = Intrinsic::riscv_cv_mac_macuRN;
+    break;
+  case RISCV::BI__builtin_riscv_cv_mac_machhuRN:
+    ID = Intrinsic::riscv_cv_mac_machhuRN;
+    break;
+  case RISCV::BI__builtin_riscv_cv_mac_macsRN:
+    ID = Intrinsic::riscv_cv_mac_macsRN;
+    break;
+  case RISCV::BI__builtin_riscv_cv_mac_machhsRN:
+    ID = Intrinsic::riscv_cv_mac_machhsRN;
+    break;
+
+  // XCVsimd element-wise ops: emitted as native packed-vector IR
+  // (2 x i16 / 4 x i8) so they select the cv.*.h / cv.*.b instructions
+  // directly, with no dedicated intrinsic.
+  case RISCV::BI__builtin_riscv_cv_simd_add_h:
+    return emitCVSimdBinOp(
+        *this, Ops, 2, 16,
+        [](CGBuilderTy &B, Value *L, Value *R) { return B.CreateAdd(L, R); });
+  case RISCV::BI__builtin_riscv_cv_simd_add_b:
+    return emitCVSimdBinOp(
+        *this, Ops, 4, 8,
+        [](CGBuilderTy &B, Value *L, Value *R) { return B.CreateAdd(L, R); });
+  case RISCV::BI__builtin_riscv_cv_simd_sub_h:
+    return emitCVSimdBinOp(
+        *this, Ops, 2, 16,
+        [](CGBuilderTy &B, Value *L, Value *R) { return B.CreateSub(L, R); });
+  case RISCV::BI__builtin_riscv_cv_simd_sub_b:
+    return emitCVSimdBinOp(
+        *this, Ops, 4, 8,
+        [](CGBuilderTy &B, Value *L, Value *R) { return B.CreateSub(L, R); });
+  case RISCV::BI__builtin_riscv_cv_simd_min_h:
+    return emitCVSimdBinOp(
+        *this, Ops, 2, 16, [](CGBuilderTy &B, Value *L, Value *R) {
+          return B.CreateBinaryIntrinsic(Intrinsic::smin, L, R);
+        });
+  case RISCV::BI__builtin_riscv_cv_simd_min_b:
+    return emitCVSimdBinOp(
+        *this, Ops, 4, 8, [](CGBuilderTy &B, Value *L, Value *R) {
+          return B.CreateBinaryIntrinsic(Intrinsic::smin, L, R);
+        });
+  case RISCV::BI__builtin_riscv_cv_simd_minu_h:
+    return emitCVSimdBinOp(
+        *this, Ops, 2, 16, [](CGBuilderTy &B, Value *L, Value *R) {
+          return B.CreateBinaryIntrinsic(Intrinsic::umin, L, R);
+        });
+  case RISCV::BI__builtin_riscv_cv_simd_minu_b:
+    return emitCVSimdBinOp(
+        *this, Ops, 4, 8, [](CGBuilderTy &B, Value *L, Value *R) {
+          return B.CreateBinaryIntrinsic(Intrinsic::umin, L, R);
+        });
+  case RISCV::BI__builtin_riscv_cv_simd_max_h:
+    return emitCVSimdBinOp(
+        *this, Ops, 2, 16, [](CGBuilderTy &B, Value *L, Value *R) {
+          return B.CreateBinaryIntrinsic(Intrinsic::smax, L, R);
+        });
+  case RISCV::BI__builtin_riscv_cv_simd_max_b:
+    return emitCVSimdBinOp(
+        *this, Ops, 4, 8, [](CGBuilderTy &B, Value *L, Value *R) {
+          return B.CreateBinaryIntrinsic(Intrinsic::smax, L, R);
+        });
+  case RISCV::BI__builtin_riscv_cv_simd_maxu_h:
+    return emitCVSimdBinOp(
+        *this, Ops, 2, 16, [](CGBuilderTy &B, Value *L, Value *R) {
+          return B.CreateBinaryIntrinsic(Intrinsic::umax, L, R);
+        });
+  case RISCV::BI__builtin_riscv_cv_simd_maxu_b:
+    return emitCVSimdBinOp(
+        *this, Ops, 4, 8, [](CGBuilderTy &B, Value *L, Value *R) {
+          return B.CreateBinaryIntrinsic(Intrinsic::umax, L, R);
+        });
+  case RISCV::BI__builtin_riscv_cv_simd_and_h:
+    return emitCVSimdBinOp(
+        *this, Ops, 2, 16,
+        [](CGBuilderTy &B, Value *L, Value *R) { return B.CreateAnd(L, R); });
+  case RISCV::BI__builtin_riscv_cv_simd_and_b:
+    return emitCVSimdBinOp(
+        *this, Ops, 4, 8,
+        [](CGBuilderTy &B, Value *L, Value *R) { return B.CreateAnd(L, R); });
+  case RISCV::BI__builtin_riscv_cv_simd_or_h:
+    return emitCVSimdBinOp(
+        *this, Ops, 2, 16,
+        [](CGBuilderTy &B, Value *L, Value *R) { return B.CreateOr(L, R); });
+  case RISCV::BI__builtin_riscv_cv_simd_or_b:
+    return emitCVSimdBinOp(
+        *this, Ops, 4, 8,
+        [](CGBuilderTy &B, Value *L, Value *R) { return B.CreateOr(L, R); });
+  case RISCV::BI__builtin_riscv_cv_simd_xor_h:
+    return emitCVSimdBinOp(
+        *this, Ops, 2, 16,
+        [](CGBuilderTy &B, Value *L, Value *R) { return B.CreateXor(L, R); });
+  case RISCV::BI__builtin_riscv_cv_simd_xor_b:
+    return emitCVSimdBinOp(
+        *this, Ops, 4, 8,
+        [](CGBuilderTy &B, Value *L, Value *R) { return B.CreateXor(L, R); });
+  case RISCV::BI__builtin_riscv_cv_simd_abs_h:
+    return emitCVSimdUnOp(*this, Ops, 2, 16, [](CGBuilderTy &B, Value *V) {
+      return B.CreateBinaryIntrinsic(Intrinsic::abs, V, B.getFalse());
+    });
+  case RISCV::BI__builtin_riscv_cv_simd_abs_b:
+    return emitCVSimdUnOp(*this, Ops, 4, 8, [](CGBuilderTy &B, Value *V) {
+      return B.CreateBinaryIntrinsic(Intrinsic::abs, V, B.getFalse());
+    });
+
+  // XCVsimd - DOT PRODUCTS
+  case RISCV::BI__builtin_riscv_cv_simd_dotup_h:
+    ID = Intrinsic::riscv_cv_simd_dotup_h;
+    break;
+  case RISCV::BI__builtin_riscv_cv_simd_dotup_b:
+    ID = Intrinsic::riscv_cv_simd_dotup_b;
+    break;
+  case RISCV::BI__builtin_riscv_cv_simd_dotup_sc_h:
+    ID = Intrinsic::riscv_cv_simd_dotup_sc_h;
+    break;
+  case RISCV::BI__builtin_riscv_cv_simd_dotup_sc_b:
+    ID = Intrinsic::riscv_cv_simd_dotup_sc_b;
+    break;
+  case RISCV::BI__builtin_riscv_cv_simd_dotusp_h:
+    ID = Intrinsic::riscv_cv_simd_dotusp_h;
+    break;
+  case RISCV::BI__builtin_riscv_cv_simd_dotusp_b:
+    ID = Intrinsic::riscv_cv_simd_dotusp_b;
+    break;
+  case RISCV::BI__builtin_riscv_cv_simd_dotusp_sc_h:
+    ID = Intrinsic::riscv_cv_simd_dotusp_sc_h;
+    break;
+  case RISCV::BI__builtin_riscv_cv_simd_dotusp_sc_b:
+    ID = Intrinsic::riscv_cv_simd_dotusp_sc_b;
+    break;
+  case RISCV::BI__builtin_riscv_cv_simd_dotsp_h:
+    ID = Intrinsic::riscv_cv_simd_dotsp_h;
+    break;
+  case RISCV::BI__builtin_riscv_cv_simd_dotsp_b:
+    ID = Intrinsic::riscv_cv_simd_dotsp_b;
+    break;
+  case RISCV::BI__builtin_riscv_cv_simd_dotsp_sc_h:
+    ID = Intrinsic::riscv_cv_simd_dotsp_sc_h;
+    break;
+  case RISCV::BI__builtin_riscv_cv_simd_dotsp_sc_b:
+    ID = Intrinsic::riscv_cv_simd_dotsp_sc_b;
+    break;
+
+  // XCVsimd - SDOT (accumulating dot products — rd is both input and output)
+  case RISCV::BI__builtin_riscv_cv_simd_sdotup_h:
+    ID = Intrinsic::riscv_cv_simd_sdotup_h;
+    break;
+  case RISCV::BI__builtin_riscv_cv_simd_sdotup_b:
+    ID = Intrinsic::riscv_cv_simd_sdotup_b;
+    break;
+  case RISCV::BI__builtin_riscv_cv_simd_sdotup_sc_h:
+    ID = Intrinsic::riscv_cv_simd_sdotup_sc_h;
+    break;
+  case RISCV::BI__builtin_riscv_cv_simd_sdotup_sc_b:
+    ID = Intrinsic::riscv_cv_simd_sdotup_sc_b;
+    break;
+  case RISCV::BI__builtin_riscv_cv_simd_sdotusp_h:
+    ID = Intrinsic::riscv_cv_simd_sdotusp_h;
+    break;
+  case RISCV::BI__builtin_riscv_cv_simd_sdotusp_b:
+    ID = Intrinsic::riscv_cv_simd_sdotusp_b;
+    break;
+  case RISCV::BI__builtin_riscv_cv_simd_sdotusp_sc_h:
+    ID = Intrinsic::riscv_cv_simd_sdotusp_sc_h;
+    break;
+  case RISCV::BI__builtin_riscv_cv_simd_sdotusp_sc_b:
+    ID = Intrinsic::riscv_cv_simd_sdotusp_sc_b;
+    break;
+  case RISCV::BI__builtin_riscv_cv_simd_sdotsp_h:
+    ID = Intrinsic::riscv_cv_simd_sdotsp_h;
+    break;
+  case RISCV::BI__builtin_riscv_cv_simd_sdotsp_b:
+    ID = Intrinsic::riscv_cv_simd_sdotsp_b;
+    break;
+  case RISCV::BI__builtin_riscv_cv_simd_sdotsp_sc_h:
+    ID = Intrinsic::riscv_cv_simd_sdotsp_sc_h;
+    break;
+  case RISCV::BI__builtin_riscv_cv_simd_sdotsp_sc_b:
+    ID = Intrinsic::riscv_cv_simd_sdotsp_sc_b;
+    break;
+
+  // XCVsimd - EXTRACT / INSERT
+  case RISCV::BI__builtin_riscv_cv_simd_extract_h:
+    ID = Intrinsic::riscv_cv_simd_extract_h;
+    break;
+  case RISCV::BI__builtin_riscv_cv_simd_extract_b:
+    ID = Intrinsic::riscv_cv_simd_extract_b;
+    break;
+  case RISCV::BI__builtin_riscv_cv_simd_extractu_h:
+    ID = Intrinsic::riscv_cv_simd_extractu_h;
+    break;
+  case RISCV::BI__builtin_riscv_cv_simd_extractu_b:
+    ID = Intrinsic::riscv_cv_simd_extractu_b;
+    break;
+  case RISCV::BI__builtin_riscv_cv_simd_insert_h:
+    ID = Intrinsic::riscv_cv_simd_insert_h;
+    break;
+  case RISCV::BI__builtin_riscv_cv_simd_insert_b:
+    ID = Intrinsic::riscv_cv_simd_insert_b;
+    break;
+
+  // XCVsimd - SHUFFLE / SHUFFLE2
+  case RISCV::BI__builtin_riscv_cv_simd_shuffle_h:
+    ID = Intrinsic::riscv_cv_simd_shuffle_h;
+    break;
+  case RISCV::BI__builtin_riscv_cv_simd_shuffle_b:
+    ID = Intrinsic::riscv_cv_simd_shuffle_b;
+    break;
+  case RISCV::BI__builtin_riscv_cv_simd_shuffle_sci_h:
+    ID = Intrinsic::riscv_cv_simd_shuffle_sci_h;
+    break;
+  case RISCV::BI__builtin_riscv_cv_simd_shuffle_sci_b:
+    ID = Intrinsic::riscv_cv_simd_shuffle_sci_b;
+    break;
+  case RISCV::BI__builtin_riscv_cv_simd_shuffle2_h:
+    ID = Intrinsic::riscv_cv_simd_shuffle2_h;
+    break;
+  case RISCV::BI__builtin_riscv_cv_simd_shuffle2_b:
+    ID = Intrinsic::riscv_cv_simd_shuffle2_b;
+    break;
+
+  // XCVsimd - PACK
+  case RISCV::BI__builtin_riscv_cv_simd_packhi_h:
+    ID = Intrinsic::riscv_cv_simd_packhi_h;
+    break;
+  case RISCV::BI__builtin_riscv_cv_simd_packlo_h:
+    ID = Intrinsic::riscv_cv_simd_packlo_h;
+    break;
+  case RISCV::BI__builtin_riscv_cv_simd_packhi_b:
+    ID = Intrinsic::riscv_cv_simd_packhi_b;
+    break;
+  case RISCV::BI__builtin_riscv_cv_simd_packlo_b:
+    ID = Intrinsic::riscv_cv_simd_packlo_b;
+    break;
+
+  // XCVsimd - COMPLEX
+  case RISCV::BI__builtin_riscv_cv_simd_cplxmul_r:
+    ID = Intrinsic::riscv_cv_simd_cplxmul_r;
+    break;
+  case RISCV::BI__builtin_riscv_cv_simd_cplxmul_i:
+    ID = Intrinsic::riscv_cv_simd_cplxmul_i;
+    break;
+  case RISCV::BI__builtin_riscv_cv_simd_cplxconj:
+    ID = Intrinsic::riscv_cv_simd_cplxconj;
+    break;
+  case RISCV::BI__builtin_riscv_cv_simd_subrotmj:
+    ID = Intrinsic::riscv_cv_simd_subrotmj;
     break;
 
   // XAndesPerf
