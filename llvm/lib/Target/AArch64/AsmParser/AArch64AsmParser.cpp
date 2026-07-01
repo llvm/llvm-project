@@ -162,7 +162,6 @@ private:
   bool parseSysAlias(StringRef Name, SMLoc NameLoc, OperandVector &Operands);
   bool parseSyslAlias(StringRef Name, SMLoc NameLoc, OperandVector &Operands);
   bool parseSyspAlias(StringRef Name, SMLoc NameLoc, OperandVector &Operands);
-  bool parseHintAlias(StringRef Name, SMLoc NameLoc, OperandVector &Operands);
   void createSysAlias(uint16_t Encoding, OperandVector &Operands, SMLoc S);
   AArch64CC::CondCode parseCondCodeString(StringRef Cond,
                                           std::string &Suggestion);
@@ -497,24 +496,24 @@ private:
   };
 
   union {
-    TokOp Tok;
-    RegOp Reg;
-    MatrixRegOp MatrixReg;
-    MatrixTileListOp MatrixTileList;
-    VectorListOp VectorList;
-    VectorIndexOp VectorIndex;
-    ImmOp Imm;
-    ShiftedImmOp ShiftedImm;
-    ImmRangeOp ImmRange;
-    CondCodeOp CondCode;
-    FPImmOp FPImm;
-    BarrierOp Barrier;
-    SysRegOp SysReg;
-    SysCRImmOp SysCRImm;
-    PrefetchOp Prefetch;
-    TIndexHintOp TIndexHint;
-    ShiftExtendOp ShiftExtend;
-    SVCROp SVCR;
+    struct TokOp Tok;
+    struct RegOp Reg;
+    struct MatrixRegOp MatrixReg;
+    struct MatrixTileListOp MatrixTileList;
+    struct VectorListOp VectorList;
+    struct VectorIndexOp VectorIndex;
+    struct ImmOp Imm;
+    struct ShiftedImmOp ShiftedImm;
+    struct ImmRangeOp ImmRange;
+    struct CondCodeOp CondCode;
+    struct FPImmOp FPImm;
+    struct BarrierOp Barrier;
+    struct SysRegOp SysReg;
+    struct SysCRImmOp SysCRImm;
+    struct PrefetchOp Prefetch;
+    struct TIndexHintOp TIndexHint;
+    struct ShiftExtendOp ShiftExtend;
+    struct SVCROp SVCR;
   };
 
   // Keep the MCContext around as the MCExprs may need manipulated during
@@ -2463,8 +2462,8 @@ public:
                                                         MCContext &Ctx) {
     auto Op = std::make_unique<AArch64Operand>(k_Prefetch, Ctx);
     Op->Prefetch.Val = Val;
-    Op->Prefetch.Data = Str.data();
-    Op->Prefetch.Length = Str.size();
+    Op->Barrier.Data = Str.data();
+    Op->Barrier.Length = Str.size();
     Op->StartLoc = S;
     Op->EndLoc = S;
     return Op;
@@ -4086,123 +4085,6 @@ bool AArch64AsmParser::parseSyspAlias(StringRef Name, SMLoc NameLoc,
   return false;
 }
 
-/// parseHintAlias - Some named HINT encodings have aliases. Parse them
-/// specially so that we create a HINT MCInst.
-bool AArch64AsmParser::parseHintAlias(StringRef Name, SMLoc NameLoc,
-                                      OperandVector &Operands) {
-  if (Name.contains('.'))
-    return TokError("invalid operand");
-
-  enum class HintAliasKind { Invalid, BTI, PSB, SHUH, STCPH, STSHH, TSB };
-  HintAliasKind Kind = StringSwitch<HintAliasKind>(Name)
-                           .Case("bti", HintAliasKind::BTI)
-                           .Case("psb", HintAliasKind::PSB)
-                           .Case("shuh", HintAliasKind::SHUH)
-                           .Case("stcph", HintAliasKind::STCPH)
-                           .Case("stshh", HintAliasKind::STSHH)
-                           .Case("tsb", HintAliasKind::TSB)
-                           .Default(HintAliasKind::Invalid);
-  if (Kind == HintAliasKind::Invalid)
-    llvm_unreachable("unknown HINT alias");
-
-  Mnemonic = Name;
-  Operands.push_back(
-      AArch64Operand::CreateToken("hint", NameLoc, getContext()));
-
-  const AsmToken &Tok = getTok();
-  SMLoc S = Tok.getLoc();
-  unsigned Imm;
-
-  switch (Kind) {
-  case HintAliasKind::Invalid:
-    llvm_unreachable("unknown HINT alias");
-  case HintAliasKind::STCPH:
-    Imm = 52;
-    break;
-  case HintAliasKind::BTI:
-    if (Tok.is(AsmToken::EndOfStatement)) {
-      Imm = 32;
-    } else if (Tok.is(AsmToken::Identifier)) {
-      StringRef Op = Tok.getString();
-      if (Op == "r")
-        Imm = 32;
-      else if (Op == "c")
-        Imm = 34;
-      else if (Op == "j")
-        Imm = 36;
-      else if (Op == "jc")
-        Imm = 38;
-      else
-        return TokError("invalid operand for instruction");
-      Lex(); // Eat operand.
-    } else {
-      return TokError("invalid operand for instruction");
-    }
-    break;
-  case HintAliasKind::SHUH:
-    if (Tok.is(AsmToken::EndOfStatement)) {
-      Imm = 50;
-    } else if (Tok.is(AsmToken::Identifier) && Tok.getString() == "ph") {
-      Imm = 51;
-      Lex(); // Eat operand.
-    } else {
-      return TokError("invalid operand for instruction");
-    }
-    break;
-  case HintAliasKind::PSB:
-  case HintAliasKind::STSHH:
-  case HintAliasKind::TSB: {
-    if ((Kind == HintAliasKind::PSB || Kind == HintAliasKind::TSB) &&
-        Tok.is(AsmToken::EndOfStatement))
-      return Error(NameLoc, "too few operands for instruction");
-
-    if (Tok.isNot(AsmToken::Identifier)) {
-      return TokError("invalid operand for instruction");
-    }
-
-    StringRef Op = Tok.getString();
-    switch (Kind) {
-    case HintAliasKind::STSHH:
-      if (Op == "keep")
-        Imm = 48;
-      else if (Op == "strm")
-        Imm = 49;
-      else
-        return TokError("invalid operand for instruction");
-      break;
-    case HintAliasKind::PSB:
-      if (Op != "csync")
-        return TokError("invalid operand for instruction");
-      if (!getSTI().hasFeature(AArch64::FeatureAll) &&
-          !getSTI().hasFeature(AArch64::FeatureSPE))
-        return TokError("instruction requires: spe");
-      Imm = 17;
-      break;
-    case HintAliasKind::TSB:
-      if (Op != "csync")
-        return TokError("invalid operand for instruction");
-      if (!getSTI().hasFeature(AArch64::FeatureAll) &&
-          !getSTI().hasFeature(AArch64::FeatureTRACEV8_4))
-        return TokError("instruction requires: tracev8.4");
-      Imm = 18;
-      break;
-    default:
-      llvm_unreachable("unexpected HINT alias kind");
-    }
-    Lex(); // Eat operand.
-    break;
-  }
-  }
-
-  Operands.push_back(AArch64Operand::CreateImm(
-      MCConstantExpr::create(Imm, getContext()), S, getLoc(), getContext()));
-
-  if (parseToken(AsmToken::EndOfStatement, "unexpected token in argument list"))
-    return true;
-
-  return false;
-}
-
 ParseStatus AArch64AsmParser::tryParseBarrierOperand(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
   const AsmToken &Tok = getTok();
@@ -5030,7 +4912,15 @@ bool AArch64AsmParser::parseKeywordOperand(OperandVector &Operands) {
 
   auto Keyword = Tok.getString();
   Keyword = StringSwitch<StringRef>(Keyword.lower())
+                .Case("c", "c")
+                .Case("csync", "csync")
+                .Case("j", "j")
+                .Case("jc", "jc")
+                .Case("keep", "keep")
+                .Case("ph", "ph")
+                .Case("r", "r")
                 .Case("sm", "sm")
+                .Case("strm", "strm")
                 .Case("za", "za")
                 .Default(Keyword);
   Operands.push_back(
@@ -5142,7 +5032,8 @@ bool AArch64AsmParser::parseOperand(OperandVector &Operands, bool isCondCode,
     // If this is a two-word mnemonic, parse its special keyword
     // operand as an identifier.
     if (Mnemonic == "brb" || Mnemonic == "smstart" || Mnemonic == "smstop" ||
-        Mnemonic == "gcsb")
+        Mnemonic == "gcsb" || Mnemonic == "bti" || Mnemonic == "stshh" ||
+        Mnemonic == "psb" || Mnemonic == "tsb" || Mnemonic == "shuh")
       return parseKeywordOperand(Operands);
 
     // This was not a register so parse other operands that start with an
@@ -5409,11 +5300,6 @@ bool AArch64AsmParser::parseInstruction(ParseInstructionInfo &Info,
   // TLBIP instructions are aliases for the SYSP instruction.
   if (Head == "tlbip")
     return parseSyspAlias(Head, NameLoc, Operands);
-
-  // These mnemonics are aliases for HINT instructions.
-  if (Head == "bti" || Head == "stshh" || Head == "psb" || Head == "tsb" ||
-      Head == "shuh" || Head == "stcph")
-    return parseHintAlias(Name, NameLoc, Operands);
 
   Operands.push_back(AArch64Operand::CreateToken(Head, NameLoc, getContext()));
   Mnemonic = Head;

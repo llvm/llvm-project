@@ -5,9 +5,9 @@ stshh foo
 stshh #0
 stshh 0
 
-// CHECK:      error: invalid operand for instruction
+// CHECK:      error: too few operands for instruction
 // CHECK-NEXT: stshh
-// CHECK-NEXT:      ^
+// CHECK-NEXT: ^~~~~
 // CHECK:      error: invalid operand for instruction
 // CHECK-NEXT: stshh foo
 // CHECK-NEXT:       ^

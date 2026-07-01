@@ -696,16 +696,6 @@ namespace AArch64PState {
 #include "AArch64GenSystemOperands.inc"
 }
 
-namespace AArch64BTIHint {
-inline static bool isBTIEncoding(int64_t Enc) {
-  return Enc == 0 || Enc == 2 || Enc == 4 || Enc == 6;
-}
-
-inline static bool isHintSpaceBTI(int64_t Imm) {
-  return Imm >= 32 && Imm < 64 && isBTIEncoding(Imm - 32);
-}
-} // namespace AArch64BTIHint
-
 namespace AArch64TIndexHint {
 struct TIndex : SysAlias {
   using SysAlias::SysAlias;

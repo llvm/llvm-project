@@ -1574,12 +1574,12 @@ void AArch64InstPrinter::printPrefetchOp(const MCInst *MI, unsigned OpNum,
 void AArch64InstPrinter::printTIndexHintOp(const MCInst *MI, unsigned OpNum,
                                            const MCSubtargetInfo &STI,
                                            raw_ostream &O) {
-  unsigned TIndexHintOp = MI->getOperand(OpNum).getImm();
-  auto TIndex = AArch64TIndexHint::lookupTIndexByEncoding(TIndexHintOp);
+  unsigned tindexhintop = MI->getOperand(OpNum).getImm();
+  auto TIndex = AArch64TIndexHint::lookupTIndexByEncoding(tindexhintop);
   if (TIndex)
     O << AArch64TIndexHint::getTIndexStr(TIndex->Name);
   else
-    markup(O, Markup::Immediate) << '#' << formatImm(TIndexHintOp);
+    markup(O, Markup::Immediate) << '#' << formatImm(tindexhintop);
 }
 
 void AArch64InstPrinter::printFPImmOperand(const MCInst *MI, unsigned OpNum,
