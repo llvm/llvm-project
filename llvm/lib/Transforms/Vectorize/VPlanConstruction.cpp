@@ -1208,12 +1208,11 @@ void VPlanTransforms::createInLoopReductionRecipes(VPlan &Plan,
     R->eraseFromParent();
 }
 
-/// Check if all loads in the loop are dereferenceable. Iterates over the
-/// loop body blocks reachable from \p HeaderVPBB. Returns false if any
-/// non-dereferenceable load is found.
-static bool areAllLoadsDereferenceable(VPBasicBlock *HeaderVPBB, Loop *TheLoop,
-                                       PredicatedScalarEvolution &PSE,
-                                       DominatorTree &DT, AssumptionCache *AC) {
+bool VPlanTransforms::areAllLoadsDereferenceable(VPBasicBlock *HeaderVPBB,
+                                                 Loop *TheLoop,
+                                                 PredicatedScalarEvolution &PSE,
+                                                 DominatorTree &DT,
+                                                 AssumptionCache *AC) {
   ScalarEvolution &SE = *PSE.getSE();
   const DataLayout &DL = TheLoop->getHeader()->getDataLayout();
   for (VPBasicBlock *VPBB : vp_rpo_plain_cfg_loop_body(HeaderVPBB)) {
@@ -1252,29 +1251,8 @@ static bool areAllLoadsDereferenceable(VPBasicBlock *HeaderVPBB, Loop *TheLoop,
   return true;
 }
 
-bool VPlanTransforms::handleEarlyExits(VPlan &Plan, UncountableExitStyle Style,
-                                       Loop *TheLoop,
-                                       PredicatedScalarEvolution &PSE,
-                                       DominatorTree &DT, AssumptionCache *AC) {
+void VPlanTransforms::handleCountableEarlyExits(VPlan &Plan) {
   auto *MiddleVPBB = VPBlockUtils::getPlainCFGMiddleBlock(Plan);
-  auto [HeaderVPBB, LatchVPBB] = VPBlockUtils::getPlainCFGHeaderAndLatch(Plan);
-
-  // TODO: We would like to detect uncountable exits and stores within loops
-  //       with such exits from the VPlan alone. Exit detection can be moved
-  //       here from handleUncountableEarlyExits, but we need to improve
-  //       detection of recipes which may write to memory.
-  if (Style != UncountableExitStyle::NoUncountableExit) {
-    // Dereferenceability is checked separately for uncountable exit loops with
-    // stores, as only the loads contributing to the exit condition need to
-    // be checked.
-    if (Style == UncountableExitStyle::ReadOnly &&
-        !areAllLoadsDereferenceable(HeaderVPBB, TheLoop, PSE, DT, AC))
-      return false;
-    // TODO: Check target preference for style.
-    return handleUncountableEarlyExits(Plan, HeaderVPBB, LatchVPBB, MiddleVPBB,
-                                       TheLoop, PSE, DT, AC, Style);
-  }
-
   // Disconnect countable early exits from the loop, leaving it with a single
   // exit from the latch. Countable early exits are left for a scalar epilog.
   for (VPIRBasicBlock *EB : Plan.getExitBlocks()) {
@@ -1290,7 +1268,6 @@ bool VPlanTransforms::handleEarlyExits(VPlan &Plan, UncountableExitStyle Style,
       VPBlockUtils::disconnectBlocks(Pred, EB);
     }
   }
-  return true;
 }
 
 void VPlanTransforms::addMiddleCheck(VPlan &Plan) {
