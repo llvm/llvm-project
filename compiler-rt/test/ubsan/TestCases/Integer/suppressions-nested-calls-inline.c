@@ -50,10 +50,10 @@ int main(void) {
 
 // The inlined my_make_signed call still produces a report under name-based
 // suppression.
-// CHECK-MAKE-SIGNED-INLINE-NAME: {{.*}}wrappers.h:11:23: runtime error: implicit conversion from type 'unsigned int' of value 4003333333
+// CHECK-MAKE-SIGNED-INLINE-NAME: {{.*}}wrappers.h:12:23: runtime error: implicit conversion from type 'unsigned int' of value 4003333333
 // CHECK-MAKE-SIGNED-INLINE-NAME: {{.*}}make_signed.h:10:10: runtime error: implicit conversion from type 'unsigned int' of value 4003333333
 
-// CHECK-MAKE-SIGNED: {{.*}}wrappers.h:11:23: runtime error: implicit conversion from type 'unsigned int' of value 4003333333
+// CHECK-MAKE-SIGNED: {{.*}}wrappers.h:12:23: runtime error: implicit conversion from type 'unsigned int' of value 4003333333
 // CHECK-MAKE-SIGNED-NOT: make_signed.h:{{.*}}runtime error:
 
 // CHECK-WRAPPERS: {{.*}}make_signed.h:7:12: runtime error: implicit conversion from type 'unsigned int' of value 4001111111

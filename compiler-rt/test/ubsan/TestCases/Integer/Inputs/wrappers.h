@@ -4,6 +4,7 @@
 #include "make_signed.h"
 
 int my_wrapper(unsigned a) {
+  // direct wrapper
   return my_make_signed(a);
 }
 
