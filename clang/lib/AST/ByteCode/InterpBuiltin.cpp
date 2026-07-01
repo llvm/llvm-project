@@ -5652,6 +5652,14 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
     return interp__builtin_elementwise_int_binop(S, OpPC, Call,
                                                  llvm::APIntOps::clmul);
 
+  case Builtin::BIfma:
+  case Builtin::BIfmal:
+  case Builtin::BIfmaf:
+  case Builtin::BI__builtin_fma:
+  case Builtin::BI__builtin_fmal:
+  case Builtin::BI__builtin_fmaf:
+  case Builtin::BI__builtin_fmaf16:
+  case Builtin::BI__builtin_fmaf128:
   case Builtin::BI__builtin_elementwise_fma:
     return interp__builtin_elementwise_triop_fp(
         S, OpPC, Call,
