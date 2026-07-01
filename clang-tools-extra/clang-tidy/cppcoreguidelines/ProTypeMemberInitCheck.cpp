@@ -572,8 +572,6 @@ void ProTypeMemberInitCheck::checkMissingBaseClassInitializer(
 
     for (const CXXCtorInitializer *Init : Ctor->inits())
       if (Init->isBaseInitializer() && Init->isWritten()) {
-        // In template AST BaseInitializer could be generated too even if it's
-        // not target to base class.
         if (const CXXRecordDecl *CRD =
                 Init->getBaseClass()->getAsCXXRecordDecl())
           BasesToInit.erase(CRD->getCanonicalDecl());

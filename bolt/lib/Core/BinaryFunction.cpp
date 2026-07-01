@@ -1279,6 +1279,29 @@ BinaryFunction::disassembleInstructionAtOffset(uint64_t Offset) const {
   return std::nullopt;
 }
 
+uint64_t
+BinaryFunction::getInstructionSequenceLength(uint64_t Offset,
+                                             uint64_t MinLength) const {
+  assert(Offset + MinLength <= MaxSize && "Invalid offset / min length");
+  ErrorOr<ArrayRef<unsigned char>> FunctionData = getData();
+  assert(FunctionData && "Cannot get function as data");
+  uint64_t Current = Offset;
+  const uint64_t Target = Offset + MinLength;
+  while (Current < Target) {
+    MCInst Instr;
+    uint64_t InstrSize = 0;
+    const uint64_t InstrAddress = getAddress() + Current;
+    [[maybe_unused]] MCDisassembler::DecodeStatus Res =
+        BC.DisAsm->getInstruction(Instr, InstrSize,
+                                  FunctionData->slice(Current), InstrAddress,
+                                  nulls());
+    assert(Res != MCDisassembler::DecodeStatus::Fail &&
+           "Function has been disassembled previously");
+    Current += InstrSize;
+  }
+  return Current - Offset;
+}
+
 Error BinaryFunction::disassemble() {
   NamedRegionTimer T("disassemble", "Disassemble function", "buildfuncs",
                      "Build Binary Functions", opts::TimeBuild);

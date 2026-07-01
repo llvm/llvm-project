@@ -3650,7 +3650,14 @@ void DAGTypeLegalizer::SplitVecRes_VP_SPLICE(SDNode *N, SDValue &Lo,
       PtrInfo, MachineMemOperand::MOLoad, LocationSize::beforeOrAfterPointer(),
       Alignment);
 
-  SDValue StackPtr2 = TLI.getVectorElementPointer(DAG, StackPtr, VT, EVL1);
+  SDValue EltByteSize =
+      DAG.getTypeSize(DL, PtrVT, VT.getVectorElementType().getStoreSize());
+  SDValue EVL1Ptr = DAG.getZExtOrTrunc(EVL1, DL, PtrVT);
+  SDValue EVL1Bytes = DAG.getNode(ISD::MUL, DL, PtrVT, EVL1Ptr, EltByteSize);
+  // Clip EVL1Bytes to make sure we stay within the stack object.
+  SDValue VTBytes = DAG.getTypeSize(DL, PtrVT, VT.getStoreSize());
+  EVL1Bytes = DAG.getNode(ISD::UMIN, DL, PtrVT, EVL1Bytes, VTBytes);
+  SDValue StackPtr2 = DAG.getMemBasePlusOffset(StackPtr, EVL1Bytes, DL);
   SDValue PoisonPtr = DAG.getPOISON(PtrVT);
 
   SDValue TrueMask = DAG.getBoolConstant(true, DL, Mask.getValueType(), VT);
@@ -7734,6 +7741,10 @@ bool DAGTypeLegalizer::WidenVectorOperand(SDNode *N, unsigned OpNo) {
   case ISD::VP_REDUCE_FMINIMUM:
     Res = WidenVecOp_VP_REDUCE(N);
     break;
+  case ISD::CTTZ_ELTS:
+  case ISD::CTTZ_ELTS_ZERO_POISON:
+    Res = WidenVecOp_CttzElements(N);
+    break;
   case ISD::VP_CTTZ_ELTS:
   case ISD::VP_CTTZ_ELTS_ZERO_POISON:
     Res = WidenVecOp_VP_CttzElements(N);
@@ -8714,6 +8725,26 @@ SDValue DAGTypeLegalizer::WidenVecOp_VSELECT(SDNode *N) {
   SDValue Select = DAG.getNode(N->getOpcode(), DL, LeftIn.getValueType(), Cond,
                                LeftIn, RightIn);
   return DAG.getExtractSubvector(DL, VT, Select, 0);
+}
+
+SDValue DAGTypeLegalizer::WidenVecOp_CttzElements(SDNode *N) {
+  SDLoc DL(N);
+  SDValue Source = N->getOperand(0);
+  EVT WideVT =
+      TLI.getTypeToTransformTo(*DAG.getContext(), Source.getValueType());
+
+  SDValue WideSource;
+  if (N->getOpcode() == ISD::CTTZ_ELTS_ZERO_POISON) {
+    WideSource = GetWidenedVector(Source);
+  } else {
+    // Pad the widened portion with all-ones so the extra lanes appear as
+    // active (non-zero) elements and do not contribute trailing zeros.
+    SDValue AllOnes = DAG.getAllOnesConstant(DL, WideVT);
+    WideSource = DAG.getInsertSubvector(DL, AllOnes, Source, 0);
+  }
+
+  return DAG.getNode(N->getOpcode(), DL, N->getValueType(0), WideSource,
+                     N->getFlags());
 }
 
 SDValue DAGTypeLegalizer::WidenVecOp_VP_CttzElements(SDNode *N) {

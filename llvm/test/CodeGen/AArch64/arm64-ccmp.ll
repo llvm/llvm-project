@@ -4,18 +4,31 @@
 target triple = "arm64-apple-ios"
 
 define i32 @single_same(i32 %a, i32 %b) nounwind ssp {
-; CHECK-LABEL: single_same:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    cmp w0, #5
-; CHECK-NEXT:    ccmp w1, #17, #4, ne
-; CHECK-NEXT:    b.ne LBB0_2
-; CHECK-NEXT:  ; %bb.1: ; %if.then
-; CHECK-NEXT:    stp x29, x30, [sp, #-16]! ; 16-byte Folded Spill
-; CHECK-NEXT:    bl _foo
-; CHECK-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
-; CHECK-NEXT:  LBB0_2: ; %if.end
-; CHECK-NEXT:    mov w0, #7 ; =0x7
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: single_same:
+; CHECK-SD:       ; %bb.0: ; %entry
+; CHECK-SD-NEXT:    cmp w1, #17
+; CHECK-SD-NEXT:    ccmp w0, #5, #4, ne
+; CHECK-SD-NEXT:    b.ne LBB0_2
+; CHECK-SD-NEXT:  ; %bb.1: ; %if.then
+; CHECK-SD-NEXT:    stp x29, x30, [sp, #-16]! ; 16-byte Folded Spill
+; CHECK-SD-NEXT:    bl _foo
+; CHECK-SD-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
+; CHECK-SD-NEXT:  LBB0_2: ; %if.end
+; CHECK-SD-NEXT:    mov w0, #7 ; =0x7
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: single_same:
+; CHECK-GI:       ; %bb.0: ; %entry
+; CHECK-GI-NEXT:    cmp w0, #5
+; CHECK-GI-NEXT:    ccmp w1, #17, #4, ne
+; CHECK-GI-NEXT:    b.ne LBB0_2
+; CHECK-GI-NEXT:  ; %bb.1: ; %if.then
+; CHECK-GI-NEXT:    stp x29, x30, [sp, #-16]! ; 16-byte Folded Spill
+; CHECK-GI-NEXT:    bl _foo
+; CHECK-GI-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
+; CHECK-GI-NEXT:  LBB0_2: ; %if.end
+; CHECK-GI-NEXT:    mov w0, #7 ; =0x7
+; CHECK-GI-NEXT:    ret
 entry:
   %cmp = icmp eq i32 %a, 5
   %cmp1 = icmp eq i32 %b, 17
@@ -34,9 +47,9 @@ if.end:
 define i32 @single_different(i32 %a, i32 %b) nounwind ssp {
 ; CHECK-SD-LABEL: single_different:
 ; CHECK-SD:       ; %bb.0: ; %entry
-; CHECK-SD-NEXT:    cmp w0, #6
-; CHECK-SD-NEXT:    ccmp w1, #17, #0, ge
-; CHECK-SD-NEXT:    b.eq LBB1_2
+; CHECK-SD-NEXT:    cmp w1, #17
+; CHECK-SD-NEXT:    ccmp w0, #5, #4, eq
+; CHECK-SD-NEXT:    b.gt LBB1_2
 ; CHECK-SD-NEXT:  ; %bb.1: ; %if.then
 ; CHECK-SD-NEXT:    stp x29, x30, [sp, #-16]! ; 16-byte Folded Spill
 ; CHECK-SD-NEXT:    bl _foo
@@ -276,17 +289,31 @@ if.end:
 
 ; Chain multiple compares.
 define void @multi_different(i32 %a, i32 %b, i32 %c) nounwind ssp {
-; CHECK-LABEL: multi_different:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    sdiv w8, w1, w0
-; CHECK-NEXT:    ccmp w8, #5, #0, gt
-; CHECK-NEXT:    ccmp w8, w2, #4, eq
-; CHECK-NEXT:    b.gt LBB6_2
-; CHECK-NEXT:  ; %bb.1: ; %if.end
-; CHECK-NEXT:    ret
-; CHECK-NEXT:  LBB6_2: ; %if.then
-; CHECK-NEXT:    b _foo
+; CHECK-SD-LABEL: multi_different:
+; CHECK-SD:       ; %bb.0: ; %entry
+; CHECK-SD-NEXT:    cmp w0, w1
+; CHECK-SD-NEXT:    b.le LBB6_3
+; CHECK-SD-NEXT:  ; %bb.1: ; %land.lhs.true
+; CHECK-SD-NEXT:    sdiv w8, w1, w0
+; CHECK-SD-NEXT:    cmp w8, w2
+; CHECK-SD-NEXT:    ccmp w8, #5, #0, gt
+; CHECK-SD-NEXT:    b.ne LBB6_3
+; CHECK-SD-NEXT:  ; %bb.2: ; %if.then
+; CHECK-SD-NEXT:    b _foo
+; CHECK-SD-NEXT:  LBB6_3: ; %if.end
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: multi_different:
+; CHECK-GI:       ; %bb.0: ; %entry
+; CHECK-GI-NEXT:    cmp w0, w1
+; CHECK-GI-NEXT:    sdiv w8, w1, w0
+; CHECK-GI-NEXT:    ccmp w8, #5, #0, gt
+; CHECK-GI-NEXT:    ccmp w8, w2, #4, eq
+; CHECK-GI-NEXT:    b.gt LBB6_2
+; CHECK-GI-NEXT:  ; %bb.1: ; %if.end
+; CHECK-GI-NEXT:    ret
+; CHECK-GI-NEXT:  LBB6_2: ; %if.then
+; CHECK-GI-NEXT:    b _foo
 entry:
   %cmp = icmp sgt i32 %a, %b
   br i1 %cmp, label %land.lhs.true, label %if.end
@@ -308,18 +335,31 @@ if.end:
 
 ; Convert a cbz in the head block.
 define i32 @cbz_head(i32 %a, i32 %b) nounwind ssp {
-; CHECK-LABEL: cbz_head:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    cmp w0, #0
-; CHECK-NEXT:    ccmp w1, #17, #0, ne
-; CHECK-NEXT:    b.eq LBB7_2
-; CHECK-NEXT:  ; %bb.1: ; %if.then
-; CHECK-NEXT:    stp x29, x30, [sp, #-16]! ; 16-byte Folded Spill
-; CHECK-NEXT:    bl _foo
-; CHECK-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
-; CHECK-NEXT:  LBB7_2: ; %if.end
-; CHECK-NEXT:    mov w0, #7 ; =0x7
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: cbz_head:
+; CHECK-SD:       ; %bb.0: ; %entry
+; CHECK-SD-NEXT:    cmp w1, #17
+; CHECK-SD-NEXT:    ccmp w0, #0, #4, eq
+; CHECK-SD-NEXT:    b.ne LBB7_2
+; CHECK-SD-NEXT:  ; %bb.1: ; %if.then
+; CHECK-SD-NEXT:    stp x29, x30, [sp, #-16]! ; 16-byte Folded Spill
+; CHECK-SD-NEXT:    bl _foo
+; CHECK-SD-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
+; CHECK-SD-NEXT:  LBB7_2: ; %if.end
+; CHECK-SD-NEXT:    mov w0, #7 ; =0x7
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: cbz_head:
+; CHECK-GI:       ; %bb.0: ; %entry
+; CHECK-GI-NEXT:    cmp w0, #0
+; CHECK-GI-NEXT:    ccmp w1, #17, #0, ne
+; CHECK-GI-NEXT:    b.eq LBB7_2
+; CHECK-GI-NEXT:  ; %bb.1: ; %if.then
+; CHECK-GI-NEXT:    stp x29, x30, [sp, #-16]! ; 16-byte Folded Spill
+; CHECK-GI-NEXT:    bl _foo
+; CHECK-GI-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
+; CHECK-GI-NEXT:  LBB7_2: ; %if.end
+; CHECK-GI-NEXT:    mov w0, #7 ; =0x7
+; CHECK-GI-NEXT:    ret
 entry:
   %cmp = icmp eq i32 %a, 0
   %cmp1 = icmp ne i32 %b, 17
@@ -338,22 +378,35 @@ if.end:
 ; smaller range of immediates than subs/adds.
 ; The ccmp immediates must be in the range 0-31.
 define i32 @immediate_range(i32 %a, i32 %b) nounwind ssp {
-; CHECK-LABEL: immediate_range:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    cmp w0, #5
-; CHECK-NEXT:    b.eq LBB8_3
-; CHECK-NEXT:  ; %bb.1: ; %entry
-; CHECK-NEXT:    cmp w1, #32
-; CHECK-NEXT:    b.eq LBB8_3
-; CHECK-NEXT:  ; %bb.2: ; %if.end
-; CHECK-NEXT:    mov w0, #7 ; =0x7
-; CHECK-NEXT:    ret
-; CHECK-NEXT:  LBB8_3: ; %if.then
-; CHECK-NEXT:    stp x29, x30, [sp, #-16]! ; 16-byte Folded Spill
-; CHECK-NEXT:    bl _foo
-; CHECK-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
-; CHECK-NEXT:    mov w0, #7 ; =0x7
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: immediate_range:
+; CHECK-SD:       ; %bb.0: ; %entry
+; CHECK-SD-NEXT:    cmp w1, #32
+; CHECK-SD-NEXT:    ccmp w0, #5, #4, ne
+; CHECK-SD-NEXT:    b.ne LBB8_2
+; CHECK-SD-NEXT:  ; %bb.1: ; %if.then
+; CHECK-SD-NEXT:    stp x29, x30, [sp, #-16]! ; 16-byte Folded Spill
+; CHECK-SD-NEXT:    bl _foo
+; CHECK-SD-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
+; CHECK-SD-NEXT:  LBB8_2: ; %if.end
+; CHECK-SD-NEXT:    mov w0, #7 ; =0x7
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: immediate_range:
+; CHECK-GI:       ; %bb.0: ; %entry
+; CHECK-GI-NEXT:    cmp w0, #5
+; CHECK-GI-NEXT:    b.eq LBB8_3
+; CHECK-GI-NEXT:  ; %bb.1: ; %entry
+; CHECK-GI-NEXT:    cmp w1, #32
+; CHECK-GI-NEXT:    b.eq LBB8_3
+; CHECK-GI-NEXT:  ; %bb.2: ; %if.end
+; CHECK-GI-NEXT:    mov w0, #7 ; =0x7
+; CHECK-GI-NEXT:    ret
+; CHECK-GI-NEXT:  LBB8_3: ; %if.then
+; CHECK-GI-NEXT:    stp x29, x30, [sp, #-16]! ; 16-byte Folded Spill
+; CHECK-GI-NEXT:    bl _foo
+; CHECK-GI-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
+; CHECK-GI-NEXT:    mov w0, #7 ; =0x7
+; CHECK-GI-NEXT:    ret
 entry:
   %cmp = icmp eq i32 %a, 5
   %cmp1 = icmp eq i32 %b, 32

@@ -489,7 +489,7 @@ PlatformDarwinKernel::GetKernelsAndKextsInDirectoryHelper(
 
   PlatformDarwinKernel *thisp = (PlatformDarwinKernel *)baton;
 
-  llvm::StringRef filename = file_spec.GetFilename().GetStringRef();
+  llvm::StringRef filename = file_spec.GetFilename();
   bool is_kernel_filename =
       filename.starts_with("kernel") || filename.starts_with("mach");
   bool is_dsym_yaa = filename.ends_with(".dSYM.yaa");
@@ -611,7 +611,7 @@ void PlatformDarwinKernel::AddKextToMap(PlatformDarwinKernel *thisp,
 bool PlatformDarwinKernel::KextHasdSYMSibling(
     const FileSpec &kext_bundle_filepath) {
   FileSpec dsym_fspec = kext_bundle_filepath;
-  std::string filename = dsym_fspec.GetFilename().GetString();
+  std::string filename = dsym_fspec.GetFilename().str();
   filename += ".dSYM";
   dsym_fspec.SetFilename(filename);
   if (FileSystem::Instance().IsDirectory(dsym_fspec)) {
@@ -648,7 +648,7 @@ bool PlatformDarwinKernel::KextHasdSYMSibling(
 //    /dir/dir/mach.development.t7004.dSYM
 bool PlatformDarwinKernel::KernelHasdSYMSibling(const FileSpec &kernel_binary) {
   FileSpec kernel_dsym = kernel_binary;
-  std::string filename = kernel_binary.GetFilename().GetString();
+  std::string filename = kernel_binary.GetFilename().str();
   filename += ".dSYM";
   kernel_dsym.SetFilename(filename);
   return FileSystem::Instance().IsDirectory(kernel_dsym);
@@ -697,7 +697,7 @@ PlatformDarwinKernel::GetDWARFBinaryInDSYMBundle(const FileSpec &dsym_bundle) {
   }
   // Drop the '.dSYM' from the filename
   llvm::StringRef filename = dsym_bundle.GetFileNameStrippingExtension();
-  std::string dirname = dsym_bundle.GetDirectory().GetCString();
+  std::string dirname = dsym_bundle.GetDirectory().str();
 
   std::string binary_filepath = dsym_bundle.GetPath();
   binary_filepath += "/Contents/Resources/DWARF/";

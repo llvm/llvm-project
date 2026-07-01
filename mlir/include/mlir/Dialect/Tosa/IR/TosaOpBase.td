@@ -166,6 +166,12 @@ def Tosa_MatMulOpQuantInfoBuilder : OpBuilder<
                                a, b);
   }]>;
 
+def Tosa_MatMulTOpQuantInfoBuilder
+    : OpBuilder<(ins "Type":$outputType, "Value":$a, "Value":$b), [{
+    buildMatMulTOpWithQuantInfo($_builder, $_state, outputType,
+                                a, b);
+  }]>;
+
 // Both the tosa.avg_pool2d and unary ops use the same
 // UnaryOpQuantizationAttr but the avg_pool operator has its own builder as it
 // has additional parameters not part of the unary ops.

@@ -14,6 +14,7 @@ from lldbsuite.test.gdbclientutils import *
 @skipIfRemote
 @skipIfWindows
 @skipIf(archs=["arm64e"])
+@skipIfWasm  # no qemu-wasm32
 class TestQemuLaunch(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 

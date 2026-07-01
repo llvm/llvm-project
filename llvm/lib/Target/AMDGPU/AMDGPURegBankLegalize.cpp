@@ -23,6 +23,7 @@
 #include "GCNSubtarget.h"
 #include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/GlobalISel/CSEMIRBuilder.h"
+#include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
@@ -63,6 +64,7 @@ public:
     AU.addRequired<TargetPassConfig>();
     AU.addRequired<GISelCSEAnalysisWrapperPass>();
     AU.addRequired<MachineUniformityAnalysisPass>();
+    AU.addRequired<GISelValueTrackingAnalysisLegacy>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -80,6 +82,7 @@ INITIALIZE_PASS_BEGIN(AMDGPURegBankLegalize, DEBUG_TYPE,
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_DEPENDENCY(GISelCSEAnalysisWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineUniformityAnalysisPass)
+INITIALIZE_PASS_DEPENDENCY(GISelValueTrackingAnalysisLegacy)
 INITIALIZE_PASS_END(AMDGPURegBankLegalize, DEBUG_TYPE,
                     "AMDGPU Register Bank Legalize", false, false)
 
@@ -439,12 +442,14 @@ bool AMDGPURegBankLegalize::runOnMachineFunction(MachineFunction &MF) {
   const RegisterBankInfo &RBI = *ST.getRegBankInfo();
   const MachineUniformityInfo &MUI =
       getAnalysis<MachineUniformityAnalysisPass>().getUniformityInfo();
+  GISelValueTracking &VT =
+      getAnalysis<GISelValueTrackingAnalysisLegacy>().get(MF);
 
   // RegBankLegalizeRules is initialized with assigning sets of IDs to opcodes.
   const RegBankLegalizeRules &RBLRules = getRules(ST, MRI);
 
   // Logic that does legalization based on IDs assigned to Opcode.
-  RegBankLegalizeHelper RBLHelper(B, MUI, RBI, RBLRules);
+  RegBankLegalizeHelper RBLHelper(B, MUI, &VT, RBI, RBLRules);
 
   SmallVector<MachineInstr *> AllInst;
 

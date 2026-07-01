@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx600 < %s | FileCheck -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}max_sgprs_gfx10:
 ; GCN: NumSgprs: 108

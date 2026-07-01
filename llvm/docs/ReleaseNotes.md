@@ -97,6 +97,16 @@ Makes programs 10x faster by doing Special New Thing.
 * The ``modular-format`` attribute now supports the ``fixed`` aspect for C
   ISO 18037 fixed-point ``printf`` specifiers.
 
+* Added `noipa` attribute which disables interprocedural analyses that inspect
+  the definition of the function. This attribute does *not* control inlining or
+  outlining. Add the `noinline` and `nooutline` attributes as well in cases
+  where inlining and outlining should additionally be disabled.
+
+* Added support for ``callgraph`` metadata. The `!callgraph` metadata
+  associates a function definition with its type identifier and is used for call
+  graph section generation. See the [callgraph Metadata](https://llvm.org/docs/LangRef.html#callgraph-metadata)
+  section of the LangRef for details.
+
 ### Changes to LLVM infrastructure
 
 * Removed ``Constant::isZeroValue``. It was functionally identical to
@@ -203,6 +213,7 @@ Makes programs 10x faster by doing Special New Thing.
 * The `r14` register can now be used as an alias for the link register `lr`
   in inline assembly. Clang always canonicalizes the name to `lr`, but other
   frontends may not.
+* `subs pc, lr, #imm` can now be predicated in Thumb2.
 
 ### Changes to the AVR Backend
 
@@ -259,6 +270,15 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the WebAssembly Backend
 
+* WebAssembly reference types are now represented in LLVM IR as the target
+  extension types `target("wasm.externref")` and `target("wasm.funcref")`,
+  rather than as pointers in address spaces 10 and 20 (`ptr addrspace(10)` /
+  `ptr addrspace(20)`).
+* As a consequence of the representation change, reference types are no longer
+  treated as vectorizable pointers. This fixes a crash in the SLP vectorizer,
+  which previously would attempt to gather `externref`/`funcref` values into a
+  vector and then crash.
+
 ### Changes to the Windows Target
 
 * The `.seh_startchained` and `.seh_endchained` assembly instructions have been removed and replaced
@@ -285,6 +305,11 @@ Makes programs 10x faster by doing Special New Thing.
   two-register push in Windows x64 V3 unwind info. The directive takes two
   register operands: ``.seh_push2regs %r12, %r13``.
 
+* The `fp128` type is now returned via sret instead of XMM0 for some calling
+  conventions to match GCC. The C and Win64 calling conventions now use
+  sret, other calling conventions do not need to be compatible with
+  GCC and still return via XMM0.
+
 ### Changes to the OCaml bindings
 
 ### Changes to the Python bindings
@@ -304,6 +329,11 @@ Makes programs 10x faster by doing Special New Thing.
 
 * Renamed ISD::CTTZ_ZERO_UNDEF to ISD::CTTZ_ZERO_POISON opcode to make it clear that
   a zero input results in poison.
+
+* LLVM intrinsics can now declare required target features using the
+  ``TargetFeatures`` TableGen field. SelectionDAG and GlobalISel use this
+  metadata to reject unsupported target intrinsics generically, so targets do
+  not need custom lowering checks for each annotated intrinsic.
 
 ### Changes to the GlobalISel infrastructure
 
@@ -355,6 +385,7 @@ Makes programs 10x faster by doing Special New Thing.
 * Add `-mtune` option to `opt`.
 * Fixed `llvm-ar` to correctly handle the `N` count modifier on Windows for archive members whose names differ only
   in case (e.g. `FOO.OBJ` and `foo.obj`). Previously, `-N 2` would fail with "not found" even when two matching members existed.
+* `llvm-readobj` and `llvm-readelf` now support the `--call-graph-section` option to dump the contents of the experimental [call graph section](CallGraphSection.md).
 
 ### Changes to LLDB
 
@@ -370,6 +401,11 @@ Makes programs 10x faster by doing Special New Thing.
   * Highlights matching keywords in its output when color is enabled.
   * Searches the components of settings paths. For example `apropos qemu-user` will now
     show `platform.plugin.qemu-user` as one of the results.
+* Reading global and static variables on WebAssembly targets now works correctly. Previously their
+  values could not be read because data sections were mapped to the wrong address space.
+* A new `diagnostics report` command (aliased `bugreport`) assembles a diagnostics bundle and files
+  a pre-filled GitHub issue, pointing at the bundle to attach. The GitHub reporter is built by
+  default and can be disabled with the `LLDB_ENABLE_GITHUB_BUG_REPORTER=OFF` CMake option.
 
 #### Deprecated APIs
 

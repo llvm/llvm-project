@@ -57,6 +57,12 @@ struct SymbolAndDesignatorExtractor {
                            evaluate::AsGenericExpr(AsRvalueRef(e)));
   }
 
+  template <typename T>
+  static SymbolWithDesignator visit(const evaluate::FunctionRef<T> &e) {
+    return std::make_tuple(symbol_addr(*e.proc().GetSymbol()),
+                           evaluate::AsGenericExpr(AsRvalueRef(e)));
+  }
+
   static SymbolWithDesignator visit(const evaluate::ProcedureDesignator &e) {
     return std::make_tuple(symbol_addr(*e.GetSymbol()), std::nullopt);
   }
@@ -78,12 +84,16 @@ struct SymbolAndDesignatorExtractor {
     if (maybeRef) {
       if (&maybeRef->GetLastSymbol() == symbol)
         return; // Symbol with a designator for it -> OK
-      llvm_unreachable("Expecting designator for given symbol");
+      llvm_unreachable("Symbol mismatch");
+    } else if (auto *ref = evaluate::UnwrapProcedureRef(*maybeDsg)) {
+      if (ref->proc().GetSymbol() == symbol)
+        return;
+      llvm_unreachable("Symbol mismatch");
     } else {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
       maybeDsg->dump();
 #endif
-      llvm_unreachable("Expecting DataRef designator");
+      llvm_unreachable("Unexpected expression");
     }
   }
 };
@@ -110,6 +120,14 @@ Object makeObject(const parser::Designator &dsg,
   return Object{std::get<0>(sd), std::move(std::get<1>(sd))};
 }
 
+Object makeObject(const parser::FunctionReference &ref,
+                  semantics::SemanticsContext &semaCtx) {
+  evaluate::ExpressionAnalyzer ea{semaCtx};
+  SymbolWithDesignator sd = getSymbolAndDesignator(ea.Analyze(ref));
+  SymbolAndDesignatorExtractor::verify(sd);
+  return Object{std::get<0>(sd), std::move(std::get<1>(sd))};
+}
+
 Object makeObject(const parser::StructureComponent &comp,
                   semantics::SemanticsContext &semaCtx) {
   evaluate::ExpressionAnalyzer ea{semaCtx};
@@ -123,12 +141,28 @@ Object makeObject(const parser::OmpObject &object,
                   semantics::SemanticsContext &semaCtx) {
   // If object is a common block, expression analyzer won't be able to
   // do anything.
-  if (const auto *name = std::get_if<parser::Name>(&object.u)) {
+  if (const auto *name = parser::omp::GetCommonBlockFromObj(object)) {
     assert(name->symbol && "Expecting Symbol");
     return Object{name->symbol, std::nullopt};
   }
-  // OmpObject is std::variant<Designator, /*common block*/ Name>;
-  return makeObject(std::get<parser::Designator>(object.u), semaCtx);
+  assert(!std::holds_alternative<parser::OmpObject::Invalid>(object.u) &&
+         "Invalid object should have been caught in semantics");
+  // OmpObject is std::variant<Designator, OmpLocator, Name, Invalid>;
+  if (auto *desg = parser::omp::GetDesignatorFromObj(object))
+    return makeObject(*desg, semaCtx);
+  if (auto *locator = parser::omp::GetLocatorFromObj(object)) {
+    return common::visit( //
+        common::visitors{
+            [&](const parser::OmpReservedIdentifier &x) {
+              return makeObject(x.v, semaCtx);
+            },
+            [&](const parser::FunctionReference &x) {
+              return makeObject(x, semaCtx);
+            },
+        },
+        locator->u);
+  }
+  llvm_unreachable("Unexpected OmpObject");
 }
 
 Object makeObject(const parser::EntityDecl &decl,
@@ -139,13 +173,10 @@ Object makeObject(const parser::EntityDecl &decl,
 ObjectList makeObjects(const parser::OmpArgumentList &objects,
                        semantics::SemanticsContext &semaCtx) {
   return makeList(objects.v, [&](const parser::OmpArgument &arg) {
-    return common::visit(
+    return common::visit( //
         common::visitors{
-            [&](const parser::OmpLocator &locator) -> Object {
-              if (auto *object = std::get_if<parser::OmpObject>(&locator.u)) {
-                return makeObject(*object, semaCtx);
-              }
-              llvm_unreachable("Expecting object");
+            [&](const parser::OmpObject &object) -> Object {
+              return makeObject(object, semaCtx);
             },
             [](auto &&s) -> Object { //
               llvm_unreachable("Expecting object");

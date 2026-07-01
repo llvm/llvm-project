@@ -75,6 +75,7 @@
 ; RUN: llc -filetype=obj -mtriple=amdgcn -mcpu=gfx1151 < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX1151 %s
 ; RUN: llc -filetype=obj -mtriple=amdgcn -mcpu=gfx1152 < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX1152 %s
 ; RUN: llc -filetype=obj -mtriple=amdgcn -mcpu=gfx1153 < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX1153 %s
+; RUN: llc -filetype=obj -mtriple=amdgcn -mcpu=gfx1154 < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX1154 %s
 ; RUN: llc -filetype=obj -mtriple=amdgcn -mcpu=gfx1170 < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX1170 %s
 ; RUN: llc -filetype=obj -mtriple=amdgcn -mcpu=gfx1171 < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX1171 %s
 ; RUN: llc -filetype=obj -mtriple=amdgcn -mcpu=gfx1172 < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX1172 %s
@@ -89,8 +90,10 @@
 ; RUN: llc -filetype=obj --amdhsa-code-object-version=6 -mtriple=amdgcn -mcpu=gfx10-1-generic < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX10_1_GENERIC %s
 ; RUN: llc -filetype=obj --amdhsa-code-object-version=6 -mtriple=amdgcn -mcpu=gfx10-3-generic < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX10_3_GENERIC %s
 ; RUN: llc -filetype=obj --amdhsa-code-object-version=6 -mtriple=amdgcn -mcpu=gfx11-generic < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX11_GENERIC %s
+; RUN: llc -filetype=obj --amdhsa-code-object-version=6 -mtriple=amdgcn -mcpu=gfx11-7-generic < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX11_7_GENERIC %s
 ; RUN: llc -filetype=obj --amdhsa-code-object-version=6 -mtriple=amdgcn -mcpu=gfx12-generic < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX12_GENERIC %s
 ; RUN: llc -filetype=obj --amdhsa-code-object-version=6 -mtriple=amdgcn -mcpu=gfx12-5-generic < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX12_5_GENERIC %s
+; RUN: llc -filetype=obj --amdhsa-code-object-version=6 -mtriple=amdgcn -mcpu=gfx13-generic < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX13_GENERIC %s
 
 ; FIXME: With the default attributes the eflags are not accurate for
 ; xnack and sramecc. Subsequent Target-ID patches will address this.
@@ -163,6 +166,7 @@
 ; GFX1151:       EF_AMDGPU_MACH_AMDGCN_GFX1151 (0x4A)
 ; GFX1152:       EF_AMDGPU_MACH_AMDGCN_GFX1152 (0x55)
 ; GFX1153:       EF_AMDGPU_MACH_AMDGCN_GFX1153 (0x58)
+; GFX1154:       EF_AMDGPU_MACH_AMDGCN_GFX1154 (0x57)
 ; GFX1170:       EF_AMDGPU_MACH_AMDGCN_GFX1170 (0x5D)
 ; GFX1171:       EF_AMDGPU_MACH_AMDGCN_GFX1171 (0x5E)
 ; GFX1172:       EF_AMDGPU_MACH_AMDGCN_GFX1172 (0x5C)
@@ -177,8 +181,10 @@
 ; GFX10_1_GENERIC:    EF_AMDGPU_MACH_AMDGCN_GFX10_1_GENERIC (0x52)
 ; GFX10_3_GENERIC:    EF_AMDGPU_MACH_AMDGCN_GFX10_3_GENERIC (0x53)
 ; GFX11_GENERIC:      EF_AMDGPU_MACH_AMDGCN_GFX11_GENERIC (0x54)
+; GFX11_7_GENERIC:    EF_AMDGPU_MACH_AMDGCN_GFX11_7_GENERIC (0x62)
 ; GFX12_GENERIC:      EF_AMDGPU_MACH_AMDGCN_GFX12_GENERIC (0x59)
 ; GFX12_5_GENERIC:    EF_AMDGPU_MACH_AMDGCN_GFX12_5_GENERIC (0x5B)
+; GFX13_GENERIC:      EF_AMDGPU_MACH_AMDGCN_GFX13_GENERIC (0x63)
 ; ALL:         ]
 
 define amdgpu_kernel void @elf_header() {

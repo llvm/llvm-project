@@ -84,8 +84,20 @@ ol_result_t olWaitEvents(ol_queue_handle_t Queue, ol_event_handle_t *Events,
   return mock::getMockLiboffload().olWaitEvents(Queue, Events, NumEvents);
 }
 
-ol_result_t olCreateEvent(ol_queue_handle_t Queue, ol_event_handle_t *Event) {
-  return mock::getMockLiboffload().olCreateEvent(Queue, Event);
+ol_result_t olLaunchKernel(ol_queue_handle_t Queue, ol_device_handle_t Device,
+                           ol_symbol_handle_t Kernel,
+                           const ol_kernel_launch_size_args_t *LaunchSizeArgs,
+                           const ol_kernel_launch_prop_t *Properties,
+                           size_t NumArgs, void **ArgPtrs,
+                           const size_t *ArgSizes) {
+  return mock::getMockLiboffload().olLaunchKernel(Queue, Device, Kernel,
+                                                  LaunchSizeArgs, Properties,
+                                                  NumArgs, ArgPtrs, ArgSizes);
+}
+
+ol_result_t olCreateEvent(ol_queue_handle_t Queue, ol_event_flags_t Flags,
+                          ol_event_handle_t *Event) {
+  return mock::getMockLiboffload().olCreateEvent(Queue, Flags, Event);
 }
 
 ol_result_t olDestroyEvent(ol_event_handle_t Event) {

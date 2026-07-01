@@ -130,7 +130,7 @@ bool TailDuplication::isOverwrittenBeforeUsed(BinaryBasicBlock &StartBB,
     BinaryBasicBlock *NextBB = *Itr;
     Q.push(NextBB);
   }
-  std::set<BinaryBasicBlock *> Visited;
+  SmallPtrSet<BinaryBasicBlock *, 16> Visited;
   // Breadth first search through successive blocks and see if Reg is ever used
   // before its overwritten
   while (Q.size() > 0) {

@@ -210,3 +210,8 @@
 # AMDGPU Memory Model
 /llvm/lib/Target/AMDGPU/SIMemoryLegalizer* @Pierre-vh @ritter-x2a
 /llvm/lib/Target/AMDGPU/SIInsertWaitcnts* @Pierre-vh @ritter-x2a
+
+# Clang-Tidy tool
+/clang-tools-extra/clang-tidy/ @vbvictor @zeyi2
+/clang-tools-extra/test/clang-tidy/ @vbvictor @zeyi2
+/clang-tools-extra/docs/clang-tidy/ @vbvictor @zeyi2

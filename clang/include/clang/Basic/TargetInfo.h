@@ -1324,10 +1324,10 @@ public:
     return Triple;
   }
 
-  /// Returns the target ID if supported.
-  virtual std::optional<std::string> getTargetID() const {
-    return std::nullopt;
-  }
+  /// Returns true if the target's processor is compatible with the processor
+  /// named by \p Name, i.e. \p Name names this target's processor or a
+  /// compatible processor.
+  virtual bool isProcessorName(StringRef Name) const { return false; }
 
   const char *getDataLayoutString() const {
     assert(!DataLayoutString.empty() && "Uninitialized DataLayout!");

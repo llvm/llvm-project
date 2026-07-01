@@ -1302,6 +1302,12 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                 "libc++ std::strong_ordering summary provider",
                 "^std::__[[:alnum:]]+::strong_ordering$",
                 eTypeOptionHideChildren | eTypeOptionHideValue, true);
+
+  AddCXXSummary(cpp_category_sp,
+                lldb_private::formatters::LibcxxSourceLocationSummaryProvider,
+                "libc++ std::source_location summary provider",
+                "^std::__[[:alnum:]]+::source_location$", stl_summary_flags,
+                true);
 }
 
 static void RegisterStdStringSummaryProvider(
@@ -1522,6 +1528,12 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                 lldb_private::formatters::StdlibCoroutineHandleSummaryProvider,
                 "libstdc++ std::coroutine_handle summary provider",
                 libstdcpp_std_coroutine_handle_regex, stl_summary_flags, true);
+
+  AddCXXSummary(
+      cpp_category_sp,
+      lldb_private::formatters::LibStdcppSourceLocationSummaryProvider,
+      "libstdc++ std::source_location summary provider", "std::source_location",
+      stl_summary_flags);
 }
 
 static lldb_private::SyntheticChildrenFrontEnd *

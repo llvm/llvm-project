@@ -1295,6 +1295,20 @@ let Predicates = [HasBMI] in
                                        GR8:$src, sub_8bit)),
               sub_8bit)>;
 
+// BLSMSK only has GR32/GR64 forms. For an i8 operand we use INSERT_SUBREG
+// with IMPLICIT_DEF (any-extend) rather than SUBREG_TO_REG (zero-extend).
+// Although BLSMSK computes (src XOR (src-1)), dirty upper bits [31:8] cannot
+// corrupt bits [7:0] of the result: borrow from (src-1) only propagates
+// downward through contiguous zeros, and even when [7:0] is zero the
+// EXTRACT_SUBREG still yields the correct all-ones result. This matches the
+// same approach used for BLSI.
+let Predicates = [HasBMI] in
+  def : Pat<(xor GR8:$src, (add GR8:$src, -1)),
+            (EXTRACT_SUBREG
+              (BLSMSK32rr (INSERT_SUBREG (i32 (IMPLICIT_DEF)),
+                                         GR8:$src, sub_8bit)),
+              sub_8bit)>;
+
 multiclass Bmi4VOp3<bits<8> o, string m, X86TypeInfo t, SDPatternOperator node,
                     X86FoldableSchedWrite sched, string Suffix = ""> {
   let SchedRW = [sched], Form = MRMSrcReg4VOp3 in

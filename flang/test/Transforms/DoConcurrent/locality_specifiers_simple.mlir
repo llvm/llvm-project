@@ -45,4 +45,4 @@ func.func @_QPlocal_spec_translation() {
 // CHECK:     }
 // CHECK:   }
 // CHECK:   omp.terminator
-// CHECK: }
+// CHECK: } {omp.combined}

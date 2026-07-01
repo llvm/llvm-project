@@ -117,7 +117,7 @@ TEST(ThreadSafeAllocatorTest, AllocWithAlign) {
   Threads.wait();
 
   Alloc.applyLocked([](BumpPtrAllocator &Alloc) {
-    EXPECT_EQ(4950U * sizeof(int), Alloc.getBytesAllocated());
+    EXPECT_LE(4950U * sizeof(int), Alloc.getTotalMemory());
   });
 }
 

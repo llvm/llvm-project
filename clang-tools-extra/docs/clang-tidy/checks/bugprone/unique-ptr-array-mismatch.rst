@@ -35,5 +35,5 @@ Example:
 
 This check partially covers the CERT C++ Coding Standard rule
 `MEM51-CPP. Properly deallocate dynamically allocated resources
-<https://wiki.sei.cmu.edu/confluence/display/cplusplus/MEM51-CPP.+Properly+deallocate+dynamically+allocated+resources>`_
+<https://cmu-sei.github.io/secure-coding-standards/sei-cert-cpp-coding-standard/rules/memory-management-mem/mem51-cpp/>`_
 However, only the ``std::unique_ptr`` case is detected by this check.

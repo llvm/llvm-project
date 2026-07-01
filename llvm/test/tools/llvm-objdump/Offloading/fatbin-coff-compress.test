@@ -1,6 +1,7 @@
 ## Test that --offloading with a compressed fatbin works correctly in a COFF object.
 
-# REQUIRES: amdgpu-registered-target, zstd
+# The embedded compressed data is in little endian.
+# REQUIRES: amdgpu-registered-target, zstd, host-byteorder-little-endian
 # RUN: yaml2obj %s -o %t.coff
 # RUN: llvm-objdump --offloading %t.coff
 # RUN: llvm-objdump -d %t.coff.0.hip-amdgcn-hsa-amdhsa--gfx942 | FileCheck %s
