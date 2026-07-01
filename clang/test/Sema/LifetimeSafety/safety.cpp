@@ -2073,6 +2073,66 @@ std::string_view refViewMemberReturnRefView1(RefMember a) { return a.view_ref; }
 std::string_view& refViewMemberReturnRefView2(RefMember a) { return a.view_ref; }
 } // namespace field_access
 
+namespace pointer_to_member {
+struct S { int x; void f() const; };
+
+// `&(obj.*pm)` borrows the object, like `&obj.field`.
+void via_dot_star() {
+  const int *p;
+  {
+    S s{5};
+    int S::*pm = &S::x;
+    p = &(s.*pm); // expected-warning {{local variable 's' does not live long enough}}
+  }               // expected-note {{local variable 's' is destroyed here}}
+  (void)*p;       // expected-note {{later used here}}
+}
+
+void via_arrow_star() {
+  const int *p;
+  {
+    S s{5};
+    int S::*pm = &S::x;
+    S *sp = &s;     // expected-warning {{local variable 's' does not live long enough}}
+    p = &(sp->*pm); // expected-note {{local variable 'sp' aliases the storage of local variable 's'}}
+  }                 // expected-note {{local variable 's' is destroyed here}}
+  (void)*p;         // expected-note {{later used here}}
+}
+
+// Negative: a long-lived object borrowed through `.*` stays silent.
+void via_dot_star_ok() {
+  static S s{5};
+  int S::*pm = &S::x;
+  const int *p = &(s.*pm);
+  (void)*p; // no-warning
+}
+
+// A pointer/view member makes `obj.*pm` an origin one level deeper than the
+// object; flowing only the outer (storage) level still ties the borrow to the
+// object, so a dangle is caught.
+struct V { std::string_view view; };
+void via_dot_star_view_member() {
+  std::string_view *p;
+  {
+    V v;
+    std::string_view V::*pm = &V::view;
+    p = &(v.*pm); // expected-warning {{local variable 'v' does not live long enough}}
+  }               // expected-note {{local variable 'v' is destroyed here}}
+  (void)*p;       // expected-note {{later used here}}
+}
+
+// A pointer-to-member-function result is only callable (not storable), so it
+// carries no borrow -- but calling one on a dangling object is still caught.
+void via_member_function_ptr() {
+  void (S::*pmf)() const = &S::f;
+  S *sp;
+  {
+    S s;
+    sp = &s; // expected-warning {{local variable 's' does not live long enough}}
+  }          // expected-note {{local variable 's' is destroyed here}}
+  (sp->*pmf)(); // expected-note {{later used here}}
+}
+} // namespace pointer_to_member
+
 namespace attr_on_template_params {
 struct MyObj {
   ~MyObj();
@@ -2329,6 +2389,44 @@ auto capture_multilevel_pointer() {
   return lambda; // expected-note 3 {{returned here}}
 }
 } // namespace lambda_captures
+
+namespace global_init_lambda {
+// A lambda defined in a global-storage variable initializer is reached by the
+// call graph, so TU-end analysis (not just per-function mode) sees a stack
+// address escaping to a global.
+int *leaked = nullptr; // expected-note 3 {{this global dangles}}
+
+int escaping = [] {
+  int local = 0;
+  leaked = &local; // expected-warning {{stack memory associated with local variable 'local' escapes to the global variable 'leaked' which will dangle}}
+  return 1;
+}();
+
+// A lambda nested inside another global-init lambda is reached too.
+int nested = [] {
+  auto inner = [] {
+    int local = 0;
+    leaked = &local; // expected-warning {{stack memory associated with local variable 'local' escapes to the global variable 'leaked' which will dangle}}
+    return 0;
+  };
+  return inner();
+}();
+
+// A static data member initializer is reached the same way.
+struct S {
+  static inline int member = [] {
+    int local = 0;
+    leaked = &local; // expected-warning {{stack memory associated with local variable 'local' escapes to the global variable 'leaked' which will dangle}}
+    return 1;
+  }();
+};
+
+// A clean lambda introduces no false positive.
+int ok = [] {
+  int local = 42;
+  return local;
+}();
+} // namespace global_init_lambda
 
 namespace LoopLocalPointers {
 
@@ -3894,4 +3992,96 @@ void capturing_multiple_locals() {
 struct [[gsl::Pointer()]] PtrWithInt { int x; };
 PtrWithInt f() {
   return PtrWithInt{10};
+}
+
+// A GNU statement expression (`({ ...; e; })`) yields the value of its final
+// expression `e`. `e`'s origins flow into the statement expression's value, so
+// a borrow `e` carries is tracked: a borrow of a body-local dangles, and a
+// borrow forwarded from an outer object propagates to the value's users.
+namespace statement_expression {
+void use(int *p);
+
+// A borrow of a statement-expression-local escaping via the value.
+void borrow_of_local() {
+  int *p = ({ int x = 7; &x; }); // expected-warning {{local variable 'x' does not live long enough}} expected-note {{local variable 'x' is destroyed here}}
+  use(p); // expected-note {{later used here}}
+}
+
+// An outer borrow forwarded through a statement expression and returned:
+// use-after-return.
+int *return_borrow_of_local() {
+  int local = 0;
+  return ({ (void)0; &local; }); // expected-warning {{stack memory associated with local variable 'local' is returned}} expected-note {{returned here}}
+}
+
+// A view bound to a temporary produced by the statement expression dangles.
+void borrow_temporary() {
+  std::string_view view = ({ std::string x = "long enough heap string!!!!!!"; x; }); // expected-warning {{temporary object does not live long enough}} expected-note {{temporary object is destroyed here}}
+  (void)view; // expected-note {{later used here}}
+}
+
+// Forwarding an outer borrow that dangles.
+void forward_outer_borrow() {
+  int *p;
+  {
+    int local = 0;
+    p = ({ (void)0; &local; }); // expected-warning {{local variable 'local' does not live long enough}}
+  } // expected-note {{local variable 'local' is destroyed here}}
+  use(p); // expected-note {{later used here}}
+}
+
+// The statement-expression result carries the borrow, so a `?:` sibling
+// supplying a valid loan no longer hides it via the merge.
+void masked(bool c) {
+  static int valid;
+  int *keep = &valid;
+  int *r;
+  {
+    int local = 0;
+    r = c ? keep : ({ &local; }); // expected-warning {{local variable 'local' does not live long enough}}
+  } // expected-note {{local variable 'local' is destroyed here}}
+  use(r); // expected-note {{later used here}}
+}
+
+// Both conditional arms are statement expressions returning a borrow of a
+// body-local; each is caught as a returned stack address.
+int *conditional_arms(bool c) {
+  return c ? ({ int x = 7; &x; })  // expected-warning {{stack memory associated with local variable 'x' is returned}} expected-note 2 {{returned here}}
+           : ({ int y = 7; &y; }); // expected-warning {{stack memory associated with local variable 'y' is returned}}
+}
+
+// Negative: a statement expression yielding a long-lived borrow stays silent.
+void ok() {
+  static int s;
+  int *p = ({ int unused = 0; (void)unused; &s; });
+  use(p); // no-warning
+}
+
+// A discarded statement expression's value is not consumed, so a borrow of a
+// body-local in it does not reach any user and is correctly not flagged.
+void discarded_body_local() {
+  (void)({ int x = 7; &x; }); // no-warning
+}
+} // namespace statement_expression
+
+// This would normally trigger a suggestion warning if -Wlifetime-safety-suggestions was on.
+// Since it is off, we expect NO warnings or notes here.
+View suggestion_disabled_test(View a) {
+  return a;
+}
+
+// Test case for false positive involving conditional operator in a loop.
+struct LoopCondBindS {
+  int* get() const [[clang::lifetimebound]];
+};
+void consume_loop_cond_bind(int*);
+void test_loop_cond_bind(bool cond) {
+  for (int i = 0; i < 2; i++) {
+    LoopCondBindS s;
+    consume_loop_cond_bind(cond ? s.get() : nullptr); // no-warning
+  }
+  for (int i = 0; i < 2; i++) {
+    int x, y;
+    consume_loop_cond_bind(cond ? &x : &y); // no-warning
+  }
 }

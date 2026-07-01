@@ -137,7 +137,7 @@ public:
   //  variant_names[3] => "-[NSString myStringWithCString:]"
   // Also returns the FunctionNameType of each possible name.
   std::vector<Language::MethodNameVariant>
-  GetMethodNameVariants(ConstString method_name) const override;
+  GetMethodNameVariants(llvm::StringRef method_name) const override;
 
   std::pair<lldb::FunctionNameType, std::optional<ConstString>>
   GetFunctionNameInfo(ConstString name) const override;

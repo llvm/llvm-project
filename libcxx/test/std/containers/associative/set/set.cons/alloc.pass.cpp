@@ -10,7 +10,7 @@
 
 // class set
 
-// set(const allocator_type& a);
+// constexpr set(const allocator_type& a); // constexpr since C++26
 
 #include <set>
 #include <cassert>
@@ -18,7 +18,7 @@
 #include "test_macros.h"
 #include "test_allocator.h"
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   typedef std::less<int> C;
   typedef test_allocator<int> A;
   std::set<int, C, A> m(A(5));
@@ -26,5 +26,12 @@ int main(int, char**) {
   assert(m.begin() == m.end());
   assert(m.get_allocator() == A(5));
 
+  return true;
+}
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }

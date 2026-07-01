@@ -9,22 +9,16 @@ declare i64 @llvm.umin.i64(i64, i64)
 ; use from %smax3 and side use from %res2.
 define i32 @smax_test1(i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: @smax_test1(
-; CHECK-NEXT:    [[C1:%.*]] = icmp sgt i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[SMAX1:%.*]] = select i1 [[C1]], i32 [[A]], i32 [[B]]
-; CHECK-NEXT:    [[C2:%.*]] = icmp sgt i32 [[B]], [[C:%.*]]
-; CHECK-NEXT:    [[SMAX2:%.*]] = select i1 [[C2]], i32 [[B]], i32 [[C]]
-; CHECK-NEXT:    [[C3:%.*]] = icmp sgt i32 [[SMAX2]], [[A]]
-; CHECK-NEXT:    [[SMAX3:%.*]] = select i1 [[C3]], i32 [[SMAX2]], i32 [[A]]
+; CHECK-NEXT:    [[SMAX1:%.*]] = call i32 @llvm.smax.i32(i32 [[A:%.*]], i32 [[B:%.*]])
+; CHECK-NEXT:    [[SMAX2:%.*]] = call i32 @llvm.smax.i32(i32 [[B]], i32 [[C:%.*]])
+; CHECK-NEXT:    [[SMAX3:%.*]] = call i32 @llvm.smax.i32(i32 [[SMAX2]], i32 [[A]])
 ; CHECK-NEXT:    [[RES:%.*]] = add i32 [[SMAX1]], [[SMAX3]]
 ; CHECK-NEXT:    [[RES2:%.*]] = add i32 [[RES]], [[SMAX2]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
-  %c1 = icmp sgt i32 %a, %b
-  %smax1 = select i1 %c1, i32 %a, i32 %b
-  %c2 = icmp sgt i32 %b, %c
-  %smax2 = select i1 %c2, i32 %b, i32 %c
-  %c3 = icmp sgt i32 %smax2, %a
-  %smax3 = select i1 %c3, i32 %smax2, i32 %a
+  %smax1 = call i32 @llvm.smax.i32(i32 %a, i32 %b)
+  %smax2 = call i32 @llvm.smax.i32(i32 %b, i32 %c)
+  %smax3 = call i32 @llvm.smax.i32(i32 %smax2, i32 %a)
   %res = add i32 %smax1, %smax3
   %res2 = add i32 %res, %smax2
   ret i32 %res
@@ -71,33 +65,18 @@ bb:
 ; which is matched on the next iteration.
 define i32 @nary_infinite_loop_minmax(i32 %d0, i32 %d1, i32 %d2, i32 %d3) {
 ; CHECK-LABEL: @nary_infinite_loop_minmax(
-; CHECK-NEXT:    [[CMP0:%.*]] = icmp slt i32 [[D2:%.*]], [[D1:%.*]]
-; CHECK-NEXT:    [[SEL0:%.*]] = select i1 [[CMP0]], i32 [[D1]], i32 [[D2]]
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[D3:%.*]], [[D0:%.*]]
-; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[CMP1]], i32 [[D0]], i32 [[D3]]
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[SEL1]], [[SEL0]]
-; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[CMP2]], i32 [[SEL1]], i32 [[SEL0]]
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp slt i32 [[D3]], [[D0]]
-; CHECK-NEXT:    [[SEL3:%.*]] = select i1 [[CMP3]], i32 [[D0]], i32 [[D3]]
-; CHECK-NEXT:    [[SEL5_NARY:%.*]] = call i32 @llvm.smax.i32(i32 [[SEL0]], i32 [[SEL3]])
+; CHECK-NEXT:    [[SEL0:%.*]] = call i32 @llvm.smax.i32(i32 [[D2:%.*]], i32 [[D1:%.*]])
+; CHECK-NEXT:    [[SEL1:%.*]] = call i32 @llvm.smax.i32(i32 [[D3:%.*]], i32 [[D0:%.*]])
+; CHECK-NEXT:    [[SEL2:%.*]] = call i32 @llvm.smax.i32(i32 [[SEL1]], i32 [[SEL0]])
+; CHECK-NEXT:    [[SEL3:%.*]] = call i32 @llvm.smax.i32(i32 [[D3]], i32 [[D0]])
+; CHECK-NEXT:    [[SEL5_NARY:%.*]] = call i32 @llvm.smax.i32(i32 [[SEL3]], i32 [[SEL0]])
 ; CHECK-NEXT:    ret i32 [[SEL5_NARY]]
 ;
-  %cmp0 = icmp slt i32 %d2, %d1
-  %sel0 = select i1 %cmp0, i32 %d1, i32 %d2
-
-  %cmp1 = icmp slt i32 %d3, %d0
-  %sel1 = select i1 %cmp1, i32 %d0, i32 %d3
-
-  %cmp2 = icmp slt i32 %sel1, %sel0
-  %sel2 = select i1 %cmp2, i32 %sel1, i32 %sel0
-
-  %cmp3 = icmp slt i32 %d3, %d0
-  %sel3 = select i1 %cmp3, i32 %d0, i32 %d3
-
-  %cmp4 = icmp slt i32 %sel3, %d2
-  %sel4 = select i1 %cmp4, i32 %d2, i32 %sel3
-
-  %cmp5 = icmp slt i32 %sel4, %d1
-  %sel5 = select i1 %cmp5, i32 %d1, i32 %sel4
+  %sel0 = call i32 @llvm.smax.i32(i32 %d2, i32 %d1)
+  %sel1 = call i32 @llvm.smax.i32(i32 %d3, i32 %d0)
+  %sel2 = call i32 @llvm.smax.i32(i32 %sel1, i32 %sel0)
+  %sel3 = call i32 @llvm.smax.i32(i32 %d3, i32 %d0)
+  %sel4 = call i32 @llvm.smax.i32(i32 %sel3, i32 %d2)
+  %sel5 = call i32 @llvm.smax.i32(i32 %sel4, i32 %d1)
   ret i32 %sel5
 }

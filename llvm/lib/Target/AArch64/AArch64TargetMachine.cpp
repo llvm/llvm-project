@@ -276,7 +276,7 @@ LLVMInitializeAArch64Target() {
   initializeLDTLSCleanupPass(PR);
   initializeMachineKCFILegacyPass(PR);
   initializeMachineSMEABIPass(PR);
-  initializeAArch64SRLTDefineSuperRegsPass(PR);
+  initializeAArch64SRLTDefineSuperRegsLegacyPass(PR);
   initializeSMEPeepholeOptPass(PR);
   initializeSVEIntrinsicOptsPass(PR);
   initializeAArch64SpeculationHardeningPass(PR);
@@ -860,7 +860,7 @@ void AArch64PassConfig::addPreRegAlloc() {
 
 void AArch64PassConfig::addPostRewrite() {
   if (EnableSRLTSubregToRegMitigation)
-    addPass(createAArch64SRLTDefineSuperRegsPass());
+    addPass(createAArch64SRLTDefineSuperRegsLegacyPass());
 }
 
 void AArch64PassConfig::addPostRegAlloc() {

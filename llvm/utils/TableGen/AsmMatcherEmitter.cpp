@@ -3784,6 +3784,13 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   OS << "  if (MnemonicRange.first == MnemonicRange.second)\n";
   OS << "    return Match_MnemonicFail;\n\n";
 
+  if (ReportMultipleNearMisses) {
+    OS << "  // First operand near-miss of each opcode that mismatched in\n";
+    OS << "  // more than one operand. Used only if no opcode yields a\n";
+    OS << "  // near-miss of its own (see below).\n";
+    OS << "  SmallVector<NearMissInfo, 4> MultiMismatchFallback;\n\n";
+  }
+
   OS << "  for (const MatchEntry *it = MnemonicRange.first, "
      << "*ie = MnemonicRange.second;\n";
   OS << "       it != ie; ++it) {\n";
@@ -4002,6 +4009,13 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   OS << "                                               \"operand mismatches, "
         "ignoring \"\n";
   OS << "                                               \"this opcode\\n\");\n";
+  if (ReportMultipleNearMisses) {
+    OS << "      // Too many invalid operands to report a single near-miss;\n";
+    OS << "      // keep the first one as a fallback in case no opcode\n";
+    OS << "      // matches more closely.\n";
+    OS << "      if (OperandNearMiss)\n";
+    OS << "        MultiMismatchFallback.push_back(OperandNearMiss);\n";
+  }
   OS << "      continue;\n";
   OS << "    }\n";
 
@@ -4229,7 +4243,13 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   OS << "  }\n\n";
 
   if (ReportMultipleNearMisses) {
-    OS << "  // No instruction variants matched exactly.\n";
+    OS << "  // No instruction variants matched exactly. If nothing produced\n";
+    OS << "  // a near-miss, fall back to the multi-mismatch list so we can\n";
+    OS << "  // still give a specific diagnostic rather than a generic\n";
+    OS << "  // \"invalid instruction\".\n";
+    OS << "  if (NearMisses && NearMisses->empty())\n";
+    OS << "    NearMisses->append(MultiMismatchFallback.begin(),\n";
+    OS << "                       MultiMismatchFallback.end());\n";
     OS << "  return Match_NearMisses;\n";
   } else {
     OS << "  // Okay, we had no match.  Try to return a useful error code.\n";

@@ -970,71 +970,34 @@ define hidden void @mult_ptr_iv(ptr noalias nocapture readonly %x, ptr noalias n
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[Z]], i32 3000
-; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[X]], i32 3000
-; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[Z]], [[SCEVGEP1]]
-; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[X]], [[SCEVGEP]]
-; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
-; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
-; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ [[X]], %[[VECTOR_PH]] ], [ [[PTR_IND:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[POINTER_PHI2:%.*]] = phi ptr [ [[Z]], %[[VECTOR_PH]] ], [ [[PTR_IND6:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_MEMCHECK]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ [[X]], %[[VECTOR_MEMCHECK]] ], [ [[PTR_IND:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[POINTER_PHI2:%.*]] = phi ptr [ [[Z]], %[[VECTOR_MEMCHECK]] ], [ [[PTR_IND6:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VECTOR_GEP:%.*]] = getelementptr i8, ptr [[POINTER_PHI2]], <4 x i32> <i32 0, i32 3, i32 6, i32 9>
 ; CHECK-NEXT:    [[VECTOR_GEP3:%.*]] = getelementptr i8, ptr [[POINTER_PHI]], <4 x i32> <i32 0, i32 3, i32 6, i32 9>
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, <4 x ptr> [[VECTOR_GEP3]], i32 1
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x i8> @llvm.masked.gather.v4i8.v4p0(<4 x ptr> align 1 [[VECTOR_GEP3]], <4 x i1> splat (i1 true), <4 x i8> poison), !alias.scope [[META28:![0-9]+]]
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x i8> @llvm.masked.gather.v4i8.v4p0(<4 x ptr> align 1 [[VECTOR_GEP3]], <4 x i1> splat (i1 true), <4 x i8> poison)
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, <4 x ptr> [[VECTOR_GEP3]], i32 2
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER4:%.*]] = call <4 x i8> @llvm.masked.gather.v4i8.v4p0(<4 x ptr> align 1 [[TMP0]], <4 x i1> splat (i1 true), <4 x i8> poison), !alias.scope [[META28]]
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER5:%.*]] = call <4 x i8> @llvm.masked.gather.v4i8.v4p0(<4 x ptr> align 1 [[TMP1]], <4 x i1> splat (i1 true), <4 x i8> poison), !alias.scope [[META28]]
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER4:%.*]] = call <4 x i8> @llvm.masked.gather.v4i8.v4p0(<4 x ptr> align 1 [[TMP0]], <4 x i1> splat (i1 true), <4 x i8> poison)
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER5:%.*]] = call <4 x i8> @llvm.masked.gather.v4i8.v4p0(<4 x ptr> align 1 [[TMP1]], <4 x i1> splat (i1 true), <4 x i8> poison)
 ; CHECK-NEXT:    [[TMP2:%.*]] = mul <4 x i8> [[WIDE_MASKED_GATHER]], splat (i8 10)
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul <4 x i8> [[WIDE_MASKED_GATHER]], [[WIDE_MASKED_GATHER4]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul <4 x i8> [[WIDE_MASKED_GATHER]], [[WIDE_MASKED_GATHER5]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, <4 x ptr> [[VECTOR_GEP]], i32 1
-; CHECK-NEXT:    call void @llvm.masked.scatter.v4i8.v4p0(<4 x i8> [[TMP2]], <4 x ptr> align 1 [[VECTOR_GEP]], <4 x i1> splat (i1 true)), !alias.scope [[META31:![0-9]+]], !noalias [[META28]]
+; CHECK-NEXT:    call void @llvm.masked.scatter.v4i8.v4p0(<4 x i8> [[TMP2]], <4 x ptr> align 1 [[VECTOR_GEP]], <4 x i1> splat (i1 true))
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, <4 x ptr> [[VECTOR_GEP]], i32 2
-; CHECK-NEXT:    call void @llvm.masked.scatter.v4i8.v4p0(<4 x i8> [[TMP3]], <4 x ptr> align 1 [[TMP5]], <4 x i1> splat (i1 true)), !alias.scope [[META31]], !noalias [[META28]]
-; CHECK-NEXT:    call void @llvm.masked.scatter.v4i8.v4p0(<4 x i8> [[TMP4]], <4 x ptr> align 1 [[TMP6]], <4 x i1> splat (i1 true)), !alias.scope [[META31]], !noalias [[META28]]
+; CHECK-NEXT:    call void @llvm.masked.scatter.v4i8.v4p0(<4 x i8> [[TMP3]], <4 x ptr> align 1 [[TMP5]], <4 x i1> splat (i1 true))
+; CHECK-NEXT:    call void @llvm.masked.scatter.v4i8.v4p0(<4 x i8> [[TMP4]], <4 x ptr> align 1 [[TMP6]], <4 x i1> splat (i1 true))
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[PTR_IND]] = getelementptr i8, ptr [[POINTER_PHI]], i32 12
 ; CHECK-NEXT:    [[PTR_IND6]] = getelementptr i8, ptr [[POINTER_PHI2]], i32 12
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1000
-; CHECK-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP33:![0-9]+]]
-; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br label %[[END:.*]]
+; CHECK-NEXT:    br i1 [[TMP7]], label %[[SCALAR_PH:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP28:![0-9]+]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[X_ADDR_050:%.*]] = phi ptr [ [[INCDEC_PTR2:%.*]], %[[FOR_BODY]] ], [ [[X]], %[[SCALAR_PH]] ]
-; CHECK-NEXT:    [[Z_ADDR_049:%.*]] = phi ptr [ [[INCDEC_PTR34:%.*]], %[[FOR_BODY]] ], [ [[Z]], %[[SCALAR_PH]] ]
-; CHECK-NEXT:    [[I_048:%.*]] = phi i32 [ [[INC:%.*]], %[[FOR_BODY]] ], [ 0, %[[SCALAR_PH]] ]
-; CHECK-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds i8, ptr [[X_ADDR_050]], i32 1
-; CHECK-NEXT:    [[TMP8:%.*]] = load i8, ptr [[X_ADDR_050]], align 1
-; CHECK-NEXT:    [[INCDEC_PTR1:%.*]] = getelementptr inbounds i8, ptr [[X_ADDR_050]], i32 2
-; CHECK-NEXT:    [[TMP9:%.*]] = load i8, ptr [[INCDEC_PTR]], align 1
-; CHECK-NEXT:    [[INCDEC_PTR2]] = getelementptr inbounds i8, ptr [[X_ADDR_050]], i32 3
-; CHECK-NEXT:    [[TMP10:%.*]] = load i8, ptr [[INCDEC_PTR1]], align 1
-; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[TMP8]] to i32
-; CHECK-NEXT:    [[MUL3:%.*]] = mul nuw nsw i32 [[CONV]], 10
-; CHECK-NEXT:    [[CONV1:%.*]] = zext i8 [[TMP9]] to i32
-; CHECK-NEXT:    [[CONV2:%.*]] = zext i8 [[TMP10]] to i32
-; CHECK-NEXT:    [[MUL4:%.*]] = mul nuw nsw i32 [[CONV]], [[CONV1]]
-; CHECK-NEXT:    [[MUL5:%.*]] = mul nuw nsw i32 [[CONV]], [[CONV2]]
-; CHECK-NEXT:    [[MUL:%.*]] = trunc i32 [[MUL3]] to i8
-; CHECK-NEXT:    [[MUL1:%.*]] = trunc i32 [[MUL4]] to i8
-; CHECK-NEXT:    [[MUL2:%.*]] = trunc i32 [[MUL5]] to i8
-; CHECK-NEXT:    [[INCDEC_PTR32:%.*]] = getelementptr inbounds i8, ptr [[Z_ADDR_049]], i32 1
-; CHECK-NEXT:    store i8 [[MUL]], ptr [[Z_ADDR_049]], align 1
-; CHECK-NEXT:    [[INCDEC_PTR33:%.*]] = getelementptr inbounds i8, ptr [[Z_ADDR_049]], i32 2
-; CHECK-NEXT:    store i8 [[MUL1]], ptr [[INCDEC_PTR32]], align 1
-; CHECK-NEXT:    [[INCDEC_PTR34]] = getelementptr inbounds i8, ptr [[Z_ADDR_049]], i32 3
-; CHECK-NEXT:    store i8 [[MUL2]], ptr [[INCDEC_PTR33]], align 1
-; CHECK-NEXT:    [[INC]] = add nuw i32 [[I_048]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], 1000
-; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[END]], label %[[FOR_BODY]], !llvm.loop [[LOOP34:![0-9]+]]
-; CHECK:       [[END]]:
 ; CHECK-NEXT:    ret void
 ;
 entry:

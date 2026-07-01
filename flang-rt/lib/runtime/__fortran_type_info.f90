@@ -13,7 +13,7 @@
 
 module __fortran_type_info
 
-  use, intrinsic :: __fortran_builtins, &
+  use __fortran_builtins, &
     only: __builtin_c_ptr, __builtin_c_devptr, __builtin_c_funptr
   implicit none
 

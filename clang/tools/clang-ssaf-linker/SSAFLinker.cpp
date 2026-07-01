@@ -11,12 +11,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/ScalableStaticAnalysisFramework/Core/EntityLinker/EntityLinker.h"
-#include "clang/ScalableStaticAnalysisFramework/Core/EntityLinker/TUSummaryEncoding.h"
-#include "clang/ScalableStaticAnalysisFramework/Core/Model/BuildNamespace.h"
-#include "clang/ScalableStaticAnalysisFramework/Core/Support/ErrorBuilder.h"
-#include "clang/ScalableStaticAnalysisFramework/SSAFForceLinker.h" // IWYU pragma: keep
-#include "clang/ScalableStaticAnalysisFramework/Tool/Utils.h"
+#include "clang/ScalableStaticAnalysis/Core/EntityLinker/EntityLinker.h"
+#include "clang/ScalableStaticAnalysis/Core/EntityLinker/TUSummaryEncoding.h"
+#include "clang/ScalableStaticAnalysis/Core/Model/BuildNamespace.h"
+#include "clang/ScalableStaticAnalysis/Core/Support/ErrorBuilder.h"
+#include "clang/ScalableStaticAnalysis/SSAFForceLinker.h" // IWYU pragma: keep
+#include "clang/ScalableStaticAnalysis/Tool/Utils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/CommandLine.h"

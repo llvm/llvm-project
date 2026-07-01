@@ -122,8 +122,10 @@
 ; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx10-1-generic -mattr=+xnack < %s | FileCheck --check-prefixes=GFX10_1_GENERIC_XNACK %s
 ; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx10-3-generic < %s | FileCheck --check-prefixes=GFX10_3_GENERIC %s
 ; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx11-generic < %s | FileCheck --check-prefixes=GFX11_GENERIC %s
+; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx11-7-generic < %s | FileCheck --check-prefixes=GFX11_7_GENERIC %s
 ; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx12-generic < %s | FileCheck --check-prefixes=GFX12_GENERIC %s
 ; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx12-5-generic < %s | FileCheck --check-prefixes=GFX12_5_GENERIC %s
+; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx13-generic < %s | FileCheck --check-prefixes=GFX13_GENERIC %s
 
 ; GFX600: .amdgcn_target "amdgcn-amd-amdhsa-unknown-gfx600"
 ; GFX601: .amdgcn_target "amdgcn-amd-amdhsa-unknown-gfx601"
@@ -227,8 +229,10 @@
 ; GFX10_1_GENERIC_XNACK:    .amdgcn_target "amdgcn-amd-amdhsa-unknown-gfx10-1-generic:xnack+"
 ; GFX10_3_GENERIC:          .amdgcn_target "amdgcn-amd-amdhsa-unknown-gfx10-3-generic"
 ; GFX11_GENERIC:            .amdgcn_target "amdgcn-amd-amdhsa-unknown-gfx11-generic"
+; GFX11_7_GENERIC:          .amdgcn_target "amdgcn-amd-amdhsa-unknown-gfx11-7-generic"
 ; GFX12_GENERIC:            .amdgcn_target "amdgcn-amd-amdhsa-unknown-gfx12-generic"
 ; GFX12_5_GENERIC:          .amdgcn_target "amdgcn-amd-amdhsa-unknown-gfx12-5-generic"
+; GFX13_GENERIC:            .amdgcn_target "amdgcn-amd-amdhsa-unknown-gfx13-generic"
 
 define amdgpu_kernel void @directive_amdgcn_target() {
   ret void

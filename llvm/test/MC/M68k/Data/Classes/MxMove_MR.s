@@ -22,13 +22,3 @@ move.l	%d0, (-1,%a1)
 ; CHECK:      move.l  %a0, (-1,%a1)
 ; CHECK-SAME: encoding: [0x23,0x48,0xff,0xff]
 move.l	%a0, (-1,%a1)
-
-; CHECK:      move.b  %d0, (%a0)
-; CHECK-SAME: encoding: [0x10,0x80]
-move.b	%d0, (%a0)
-; CHECK:      move.l  %d3, (%a1)
-; CHECK-SAME: encoding: [0x22,0x83]
-move.l	%d3, (%a1)
-; CHECK:      move.l  %a4, (%a1)
-; CHECK-SAME: encoding: [0x22,0x8c]
-move.l	%a4, (%a1)

@@ -9,4 +9,4 @@
 
 # CHECK:      (lldb) b bar
 # CHECK-NOT:  unsupported DW_FORM values:
-# CHECK:      Breakpoint 1: address = 0x0000000000001000
+# CHECK:      Breakpoint 1: {{.*}}address = 0x0000000000001000

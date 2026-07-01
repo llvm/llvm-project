@@ -428,6 +428,7 @@ static bool hasDistinctMetadataIntrinsic(const Function &F) {
 /// Check whether \p F is eligible for function merging.
 static bool isEligibleForMerging(Function &F) {
   return !F.isDeclaration() && !F.hasAvailableExternallyLinkage() &&
+         !F.hasFnAttribute(Attribute::NoIPA) &&
          !hasDistinctMetadataIntrinsic(F);
 }
 
@@ -473,7 +474,8 @@ template <typename FuncContainer> bool MergeFunctions::run(FuncContainer &M) {
       if (!I)
         continue;
       Function *F = cast<Function>(I);
-      if (!F->isDeclaration() && !F->hasAvailableExternallyLinkage()) {
+      if (!F->isDeclaration() && !F->hasAvailableExternallyLinkage() &&
+          !F->hasFnAttribute(Attribute::NoIPA)) {
         Changed |= insert(F);
       }
     }
@@ -803,6 +805,7 @@ void MergeFunctions::writeThunk(Function *F, Function *G) {
     // Ensure CFI type metadata is propagated to the new function.
     copyMetadataIfPresent(G, NewG, "type");
     copyMetadataIfPresent(G, NewG, "kcfi_type");
+    copyMetadataIfPresent(G, NewG, "callgraph");
     removeUsers(G);
     G->replaceAllUsesWith(NewG);
     G->eraseFromParent();
@@ -900,6 +903,7 @@ void MergeFunctions::mergeTwoFunctions(Function *F, Function *G) {
     // Ensure CFI type metadata is propagated to the new function.
     copyMetadataIfPresent(F, NewF, "type");
     copyMetadataIfPresent(F, NewF, "kcfi_type");
+    copyMetadataIfPresent(F, NewF, "callgraph");
     removeUsers(F);
     F->replaceAllUsesWith(NewF);
 

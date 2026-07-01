@@ -1681,7 +1681,7 @@ static bool interp__builtin_operator_delete(InterpState &S, CodePtr OpPC,
   std::optional<DynamicAllocator::Form> AllocForm =
       Allocator.getAllocationForm(Source);
 
-  if (!Allocator.deallocate(Source, BlockToDelete, S)) {
+  if (!Allocator.deallocate(Source, BlockToDelete)) {
     // Nothing has been deallocated, this must be a double-delete.
     const SourceInfo &Loc = S.Current->getSource(OpPC);
     S.FFDiag(Loc, diag::note_constexpr_double_delete);
@@ -5228,13 +5228,13 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case clang::X86::BI__builtin_ia32_pdep_di:
   case Builtin::BI__builtin_elementwise_pdep:
     return interp__builtin_elementwise_int_binop(S, OpPC, Call,
-                                                 llvm::APIntOps::expandBits);
+                                                 llvm::APIntOps::pdep);
 
   case clang::X86::BI__builtin_ia32_pext_si:
   case clang::X86::BI__builtin_ia32_pext_di:
   case Builtin::BI__builtin_elementwise_pext:
     return interp__builtin_elementwise_int_binop(S, OpPC, Call,
-                                                 llvm::APIntOps::compressBits);
+                                                 llvm::APIntOps::pext);
 
   case clang::X86::BI__builtin_ia32_addcarryx_u32:
   case clang::X86::BI__builtin_ia32_addcarryx_u64:

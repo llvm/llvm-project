@@ -161,6 +161,7 @@ endif()
 include(WarningFlags)
 
 # Build the shared library.
+if (LIBCXXABI_SUPPORTS_SHARED_LIBRARY)
 add_library(cxxabi_shared_objects OBJECT EXCLUDE_FROM_ALL ${LIBCXXABI_SOURCES} ${LIBCXXABI_HEADERS})
 cxx_add_warning_flags(cxxabi_shared_objects ${LIBCXXABI_ENABLE_WERROR} ${LIBCXXABI_ENABLE_PEDANTIC})
 if (LIBCXXABI_USE_LLVM_UNWINDER)
@@ -260,6 +261,7 @@ if (LIBCXXABI_ENABLE_EXCEPTIONS)
     reexport_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/personality-v0.exp")
   endif()
 endif()
+endif(LIBCXXABI_SUPPORTS_SHARED_LIBRARY)
 
 # Build the static library.
 add_library(cxxabi_static_objects OBJECT EXCLUDE_FROM_ALL ${LIBCXXABI_SOURCES} ${LIBCXXABI_HEADERS})
@@ -320,14 +322,14 @@ target_link_libraries(cxxabi_static
 
 # Add a meta-target for both libraries.
 add_custom_target(cxxabi)
-if (LIBCXXABI_ENABLE_SHARED)
+if (LIBCXXABI_ENABLE_SHARED AND TARGET cxxabi_shared)
   add_dependencies(cxxabi cxxabi_shared)
 endif()
 if (LIBCXXABI_ENABLE_STATIC)
   add_dependencies(cxxabi cxxabi_static)
 endif()
 
-if (LIBCXXABI_INSTALL_SHARED_LIBRARY)
+if (LIBCXXABI_INSTALL_SHARED_LIBRARY AND TARGET cxxabi_shared)
   install(TARGETS cxxabi_shared
     ARCHIVE DESTINATION ${LIBCXXABI_INSTALL_LIBRARY_DIR} COMPONENT cxxabi
     LIBRARY DESTINATION ${LIBCXXABI_INSTALL_LIBRARY_DIR} COMPONENT cxxabi

@@ -23,6 +23,7 @@
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Runtime/stop.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
+#include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -1127,7 +1128,7 @@ public:
     mlir::SymbolTable symtab(module);
 
     std::optional<mlir::DataLayout> dl = fir::support::getOrSetMLIRDataLayout(
-        module, /*allowDefaultLayout=*/false);
+        module, /*allowDefaultLayout=*/true);
     if (!dl.has_value()) {
       mlir::emitError(
           module.getLoc(),
