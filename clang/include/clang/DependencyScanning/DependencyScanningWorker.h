@@ -27,14 +27,11 @@ namespace clang {
 
 class DependencyOutputOptions;
 
-namespace tooling {
-class CompilerInstanceWithContext;
-}
-
 namespace dependencies {
 
 class DependencyConsumer;
 class DependencyScanningWorkerFilesystem;
+class CompilerInstanceWithContext;
 
 /// An individual dependency scanning worker that is able to run on its own
 /// thread.
@@ -78,6 +75,18 @@ public:
     return TracingFS.get();
   }
 
+  bool initializeCIWC(
+      StringRef CWD, ArrayRef<std::string> CC1CommandLine,
+      std::unique_ptr<DiagnosticsEngineWithDiagOpts> DiagEngineWithDiagOpts,
+      IntrusiveRefCntPtr<llvm::vfs::FileSystem> OverlayFS,
+      DependencyActionController &Controller);
+
+  void resetCIWC();
+
+  bool computeDependenciesByName(StringRef ModuleName,
+                                 DependencyConsumer &Consumer,
+                                 DependencyActionController &Controller);
+
 private:
   /// The parent dependency scanning service.
   DependencyScanningService &Service;
@@ -88,7 +97,9 @@ private:
   /// The tracing VFS overlaid on top of the base VFS.
   IntrusiveRefCntPtr<llvm::vfs::TracingFileSystem> TracingFS;
 
-  friend tooling::CompilerInstanceWithContext;
+  std::unique_ptr<CompilerInstanceWithContext> CIWC;
+
+  friend class CompilerInstanceWithContext;
 };
 } // end namespace dependencies
 } // end namespace clang

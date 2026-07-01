@@ -9,6 +9,7 @@
 #include "clang/DependencyScanning/DependencyScanningWorker.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticFrontend.h"
+#include "clang/DependencyScanning/CompilerInstanceWithContext.h"
 #include "clang/DependencyScanning/DependencyConsumer.h"
 #include "clang/DependencyScanning/DependencyScannerImpl.h"
 #include "clang/Serialization/ObjectFilePCHContainerReader.h"
@@ -42,20 +43,6 @@ DependencyScanningWorker::DependencyScanningWorker(
 
 DependencyScanningWorker::~DependencyScanningWorker() = default;
 
-static bool createAndRunToolInvocation(
-    ArrayRef<std::string> CommandLine, DependencyScanningAction &Action,
-    IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
-    std::shared_ptr<clang::PCHContainerOperations> &PCHContainerOps,
-    DiagnosticsEngine &Diags) {
-  auto Invocation = createCompilerInvocation(CommandLine, Diags);
-  if (!Invocation)
-    return false;
-
-  return Action.runInvocation(CommandLine[0], std::move(Invocation),
-                              std::move(FS), PCHContainerOps,
-                              Diags.getClient());
-}
-
 IntrusiveRefCntPtr<llvm::vfs::FileSystem>
 DependencyScanningWorker::makeEffectiveVFS(
     StringRef WorkingDirectory,
@@ -71,6 +58,30 @@ DependencyScanningWorker::makeEffectiveVFS(
   return FS;
 }
 
+bool DependencyScanningWorker::initializeCIWC(
+    StringRef CWD, ArrayRef<std::string> CC1CommandLine,
+    std::unique_ptr<DiagnosticsEngineWithDiagOpts> DiagEngineWithDiagOpts,
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> OverlayFS,
+    DependencyActionController &Controller) {
+  CIWC.reset();
+  auto Result = CompilerInstanceWithContext::initializeFromCC1Commandline(
+      *this, CWD, CC1CommandLine, std::move(DiagEngineWithDiagOpts),
+      std::move(OverlayFS), Controller);
+  if (!Result)
+    return false;
+  CIWC = std::make_unique<CompilerInstanceWithContext>(std::move(*Result));
+  return true;
+}
+
+void DependencyScanningWorker::resetCIWC() { CIWC.reset(); }
+
+bool DependencyScanningWorker::computeDependenciesByName(
+    StringRef ModuleName, DependencyConsumer &Consumer,
+    DependencyActionController &Controller) {
+  assert(CIWC && "initializeCIWC must succeed before calling this method");
+  return CIWC->computeDependencies(ModuleName, Consumer, Controller);
+}
+
 bool DependencyScanningWorker::computeDependencies(
     StringRef WorkingDirectory, ArrayRef<ArrayRef<std::string>> CommandLines,
     DependencyConsumer &DepConsumer, DependencyActionController &Controller,
@@ -78,8 +89,8 @@ bool DependencyScanningWorker::computeDependencies(
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> OverlayFS) {
   auto FS = makeEffectiveVFS(WorkingDirectory, std::move(OverlayFS));
 
-  DependencyScanningAction Action(Service, WorkingDirectory, DepConsumer,
-                                  Controller, DepFS);
+  bool Scanned = false;
+  std::shared_ptr<ModuleDepCollector> MDC;
 
   const bool Success = llvm::all_of(CommandLines, [&](const auto &Cmd) {
     if (StringRef(Cmd[1]) != "-cc1") {
@@ -90,14 +101,28 @@ bool DependencyScanningWorker::computeDependencies(
     }
 
     auto DiagEngineWithDiagOpts =
-        DiagnosticsEngineWithDiagOpts(Cmd, FS, DiagConsumer);
-    auto &Diags = *DiagEngineWithDiagOpts.DiagEngine;
+        std::make_unique<DiagnosticsEngineWithDiagOpts>(Cmd, FS, DiagConsumer);
+    if (!Scanned) {
+      Scanned = true;
+      if (!initializeCIWC(WorkingDirectory, Cmd,
+                          std::move(DiagEngineWithDiagOpts), OverlayFS,
+                          Controller))
+        return false;
+      MDC = CIWC->scanTranslationUnit(DepConsumer, Controller);
+      return MDC != nullptr;
+    }
 
-    // Create an invocation that uses the underlying file system to ensure that
-    // any file system requests that are made by the driver do not go through
-    // the dependency scanning filesystem.
-    return createAndRunToolInvocation(Cmd, Action, FS, PCHContainerOps, Diags);
+    auto Invocation =
+        createCompilerInvocation(Cmd, *DiagEngineWithDiagOpts->DiagEngine);
+
+    if (!Invocation)
+      return false;
+
+    if (!Invocation)
+      return false;
+    return CIWC->applyAndReport(*MDC, *Invocation, DepConsumer, Controller,
+                                Cmd.front());
   });
 
-  return Success && Action.hasScanned();
+  return Success && Scanned;
 }

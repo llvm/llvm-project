@@ -524,35 +524,6 @@ dependencies::initializeScanInstanceDependencyCollector(
   return MDC;
 }
 
-/// Manages (and terminates) the asynchronous compilation of modules.
-class AsyncModuleCompiles {
-  std::mutex Mutex;
-  bool Stop = false;
-  // FIXME: Have the service own a thread pool and use that instead.
-  std::vector<std::thread> Compiles;
-
-public:
-  /// Registers the module compilation, unless this instance is about to be
-  /// destroyed.
-  void add(llvm::unique_function<void()> Compile) {
-    std::lock_guard<std::mutex> Lock(Mutex);
-    if (!Stop)
-      Compiles.emplace_back(std::move(Compile));
-  }
-
-  ~AsyncModuleCompiles() {
-    {
-      // Prevent registration of further module compiles.
-      std::lock_guard<std::mutex> Lock(Mutex);
-      Stop = true;
-    }
-
-    // Wait for outstanding module compiles to finish.
-    for (std::thread &Compile : Compiles)
-      Compile.join();
-  }
-};
-
 struct SingleModuleWithAsyncModuleCompiles : PreprocessOnlyAction {
   DependencyScanningService &Service;
   DependencyActionController &Controller;
@@ -692,119 +663,10 @@ bool SingleModuleWithAsyncModuleCompiles::BeginSourceFileAction(
   return true;
 }
 
-bool DependencyScanningAction::runInvocation(
-    std::string Executable,
-    std::unique_ptr<CompilerInvocation> OriginalInvocation,
-    IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
-    std::shared_ptr<PCHContainerOperations> PCHContainerOps,
-    DiagnosticConsumer *DiagConsumer) {
-  // Making sure that we canonicalize the defines early to avoid unnecessary
-  // variants in both the scanner and in the resulting  explicit command lines.
-  if (any(Service.getOpts().OptimizeArgs & ScanningOptimizations::Macros))
-    canonicalizeDefines(OriginalInvocation->getPreprocessorOpts());
-
-  if (Scanned) {
-    CompilerInstance &ScanInstance = *ScanInstanceStorage;
-
-    // Scanning runs once for the first -cc1 invocation in a chain of driver
-    // jobs. For any dependent jobs, reuse the scanning result and just
-    // update the new invocation.
-    // FIXME: to support multi-arch builds, each arch requires a separate scan
-    if (MDC)
-      MDC->applyDiscoveredDependencies(*OriginalInvocation);
-
-    bool Success = OriginalInvocation->withCowRef<bool>(
-        [&](CowCompilerInvocation &CowOriginalInvocation) {
-          return Controller.finalize(ScanInstance, CowOriginalInvocation);
-        });
-    if (!Success)
-      return false;
-
-    Consumer.handleBuildCommand(
-        {Executable, OriginalInvocation->getCC1CommandLine()});
-    return true;
-  }
-
-  Scanned = true;
-
-  // Create a compiler instance to handle the actual work.
-  auto ScanInvocation =
-      createScanCompilerInvocation(*OriginalInvocation, Service, Controller);
-
-  // Quickly discovers and compiles modules for the real scan below.
-  std::optional<AsyncModuleCompiles> AsyncCompiles;
-  if (Service.getOpts().AsyncScanModules) {
-    auto ModCache = makeInProcessModuleCache(Service.getModuleCacheEntries());
-    auto ScanInstanceStorage = std::make_unique<CompilerInstance>(
-        std::make_shared<CompilerInvocation>(*ScanInvocation), PCHContainerOps,
-        std::move(ModCache));
-    CompilerInstance &ScanInstance = *ScanInstanceStorage;
-
-    DiagnosticConsumer DiagConsumer;
-    initializeScanCompilerInstance(ScanInstance, FS, &DiagConsumer, Service,
-                                   DepFS);
-
-    // FIXME: Do this only once.
-    SmallVector<StringRef> StableDirs = getInitialStableDirs(ScanInstance);
-    auto MaybePrebuiltModulesASTMap =
-        computePrebuiltModulesASTMap(ScanInstance, StableDirs);
-    if (!MaybePrebuiltModulesASTMap)
-      return false;
-
-    // Normally this would be handled by GeneratePCHAction
-    if (ScanInstance.getFrontendOpts().ProgramAction == frontend::GeneratePCH)
-      ScanInstance.getLangOpts().CompilingPCH = true;
-
-    AsyncCompiles.emplace();
-    SingleTUWithAsyncModuleCompiles Action(Service, Controller, *AsyncCompiles);
-    (void)ScanInstance.ExecuteAction(Action);
-  }
-
-  auto ModCache = makeInProcessModuleCache(Service.getModuleCacheEntries());
-  ScanInstanceStorage.emplace(std::move(ScanInvocation),
-                              std::move(PCHContainerOps), std::move(ModCache));
-  CompilerInstance &ScanInstance = *ScanInstanceStorage;
-
-  initializeScanCompilerInstance(ScanInstance, FS, DiagConsumer, Service,
-                                 DepFS);
-
-  llvm::SmallVector<StringRef> StableDirs = getInitialStableDirs(ScanInstance);
-  auto MaybePrebuiltModulesASTMap =
-      computePrebuiltModulesASTMap(ScanInstance, StableDirs);
-  if (!MaybePrebuiltModulesASTMap)
-    return false;
-
-  auto DepOutputOpts = createDependencyOutputOptions(*OriginalInvocation);
-
-  MDC = initializeScanInstanceDependencyCollector(
-      ScanInstance, std::move(DepOutputOpts), Service, *OriginalInvocation,
-      Controller, *MaybePrebuiltModulesASTMap, StableDirs);
-
-  if (ScanInstance.getDiagnostics().hasErrorOccurred())
-    return false;
-
-  if (!Controller.initialize(ScanInstance, *OriginalInvocation))
-    return false;
-
-  ReadPCHAndPreprocessAction Action;
-  const bool Result = ScanInstance.ExecuteAction(Action);
-
-  if (Result) {
-    if (MDC) {
-      MDC->run(Consumer);
-      MDC->applyDiscoveredDependencies(*OriginalInvocation);
-    }
-
-    bool Success = OriginalInvocation->withCowRef<bool>(
-        [&](CowCompilerInvocation &CowOriginalInvocation) {
-          return Controller.finalize(ScanInstance, CowOriginalInvocation);
-        });
-    if (!Success)
-      return false;
-
-    Consumer.handleBuildCommand(
-        {Executable, OriginalInvocation->getCC1CommandLine()});
-  }
-
-  return Result;
+void dependencies::runTUModulePrescan(CompilerInstance &PrescanCI,
+                                      DependencyScanningService &Service,
+                                      DependencyActionController &Controller,
+                                      AsyncModuleCompiles &Compiles) {
+  SingleTUWithAsyncModuleCompiles Action(Service, Controller, Compiles);
+  (void)PrescanCI.ExecuteAction(Action);
 }
