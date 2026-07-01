@@ -869,7 +869,7 @@ public:
 
   /// Goes over all memory accesses, checks whether a RT check is needed
   /// and builds sets of dependent accesses.
-  void buildDependenceSets();
+  void buildDependenceSets(const MemoryDepChecker &DepChecker);
 
   /// Initial processing of memory accesses determined that we need to
   /// perform dependency checking.
@@ -1529,7 +1529,16 @@ bool AccessAnalysis::canCheckPtrAtRT(
   return CanDoRTIfNeeded;
 }
 
-void AccessAnalysis::buildDependenceSets() {
+static bool isInvariant(Value *V, const Loop *TheLoop, ScalarEvolution *SE) {
+  if (TheLoop->isLoopInvariant(V))
+    return true;
+  if (!SE->isSCEVable(V->getType()))
+    return false;
+  const SCEV *S = SE->getSCEV(V);
+  return SE->isLoopInvariant(S, TheLoop);
+}
+
+void AccessAnalysis::buildDependenceSets(const MemoryDepChecker &DepChecker) {
   // We process the set twice: first we process read-write pointers, last we
   // process read-only pointers. This allows us to skip dependence tests for
   // read-only pointers.
@@ -1611,7 +1620,31 @@ void AccessAnalysis::buildDependenceSets() {
           // this is a read only check other writes for conflicts (but only if
           // there is no other write to the ptr - this is an optimization to
           // catch "a[i] = a[i] + " without having to do a dependence check).
-          if ((IsWrite || IsReadOnlyPtr) && AliasSetHasWrite) {
+          //
+          // If there are multiple writes into the same pointer we need to make
+          // sure that there are no cross-iteration dependencies between those
+          // writes to avoid the following scenario:
+          //
+          //   code:
+          //     if (RT_COND0) *p = x;
+          //     if (RT_COND1) *p = y;
+          //
+          //   execution:
+          //     Iter0     |  Iter1
+          //    no store   |   *p = 2
+          //     *p = 1    |  no store
+          //
+          // Scalar loop would leave `*p == 2`, yet two vectorized scatter's
+          // would result in `*p == 1` which is wrong.
+          //
+          // NOTE: Known invariant stores are handled separately in both this
+          // file and LoopVectorizationLegality to support the case when
+          // reduction wasn't completely transformed into SSA form.
+          bool MultipleNonInvariantStoresToPtrExist =
+              DepChecker.getOrderForAccess(Ptr, true).size() > 1 &&
+              !::isInvariant(Ptr, TheLoop, PSE.getSE());
+          if ((IsWrite || IsReadOnlyPtr) &&
+              (AliasSetHasWrite || MultipleNonInvariantStoresToPtrExist)) {
             CheckDeps.push_back(Access);
             IsRTCheckAnalysisNeeded = true;
           }
@@ -2814,14 +2847,14 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
   // If we write (or read-write) to a single destination and there are no other
   // reads in this loop then is it safe to vectorize: the vectorized stores
   // preserve ordering via replication or order-preserving @llvm.masked.scatter.
-  if (NumReadWrites == 1 && NumReads == 0) {
+  if (NumReadWrites == 1 && NumReads == 0 && Stores.size() == 1) {
     LLVM_DEBUG(dbgs() << "LAA: Found a write-only loop!\n");
     return true;
   }
 
   // Build dependence sets and check whether we need a runtime pointer bounds
   // check.
-  Accesses.buildDependenceSets();
+  Accesses.buildDependenceSets(getDepChecker());
 
   // Find pointers with computable bounds. We are going to use this information
   // to place a runtime bound check.
@@ -3017,13 +3050,7 @@ LoopAccessInfo::recordAnalysis(StringRef RemarkName, const Instruction *I) {
 }
 
 bool LoopAccessInfo::isInvariant(Value *V) const {
-  auto *SE = PSE->getSE();
-  if (TheLoop->isLoopInvariant(V))
-    return true;
-  if (!SE->isSCEVable(V->getType()))
-    return false;
-  const SCEV *S = SE->getSCEV(V);
-  return SE->isLoopInvariant(S, TheLoop);
+  return ::isInvariant(V, TheLoop, PSE->getSE());
 }
 
 /// If \p Ptr is a GEP, which has a loop-variant operand, return that operand.
