@@ -108,6 +108,7 @@ public:
 
 private:
   void handleEventDependencies(std::vector<ol_event_handle_t> &Deps);
+  EventImplPtr createEvent();
 
   // Queue features.
   ol_queue_handle_t MOffloadQueue = {};

@@ -66,10 +66,9 @@ QueueImpl::~QueueImpl() {
 backend QueueImpl::getBackend() const noexcept { return MDevice.getBackend(); }
 
 static ol_device_handle_t getHostOLDevice() {
-  auto HostDeviceRange =
-      getOffloadTopologies()[OL_PLATFORM_BACKEND_HOST].getDevices(0);
-  assert(HostDeviceRange.size() == 1);
-  return *HostDeviceRange.begin();
+  static ol_device_handle_t HostDevice =
+      *(getOffloadTopologies()[OL_PLATFORM_BACKEND_HOST].getDevices(0).begin());
+  return HostDevice;
 }
 
 void QueueImpl::wait() { callAndThrow(olSyncQueue, MOffloadQueue); }
@@ -137,8 +136,7 @@ void QueueImpl::submitKernelImpl(DeviceKernelInfo &KernelInfo, void *ArgData,
   ol_event_flags_t Flags{};
   callAndThrow(olCreateEvent, MOffloadQueue, Flags, &NewEvent);
 
-  MCurrentSubmitInfo.LastEvent =
-      EventImpl::createEventWithHandle(NewEvent, MDevice.getPlatformImpl());
+  MCurrentSubmitInfo.LastEvent = createEvent();
 }
 
 // Returns the {DeviceHandle, IsHostDevice} pair associated with the ptr.
@@ -163,16 +161,22 @@ static std::pair<ol_device_handle_t, bool> getAllocDevice(const void *ptr) {
 std::shared_ptr<EventImpl>
 QueueImpl::memcpy(void *Dest, const void *Src, std::size_t NumBytes,
                   const std::vector<EventImplPtr> &DepEvents) {
+  checkEventsPlatformMatch(DepEvents, MDevice.getPlatformImpl());
+  auto EventHandles = getSyclObjHandles(DepEvents);
+  if (NumBytes == 0) {
+    handleEventDependencies(EventHandles);
+    return createEvent();
+  }
+
   if (!Dest || !Src) {
     throw sycl::exception(sycl::make_error_code(sycl::errc::invalid),
                           "Nullptr argument in memcpy operation");
   }
-  checkEventsPlatformMatch(DepEvents, MDevice.getPlatformImpl());
 
   auto [DestOLDevice, IsDestOLDeviceHost] = getAllocDevice(Dest);
   auto [SrcOLDevice, IsSrcOLDeviceHost] = getAllocDevice(Src);
 
-  // FIXME Currently, liboffload does not let us specify a queue for
+  // TODO: Currently, liboffload does not let us specify a queue for
   // host-to-host cases, which means that the operation would be synchronous and
   // any implicit dependencies wouldn't be respected for an in-order queue.
   if (IsDestOLDeviceHost && IsSrcOLDeviceHost)
@@ -180,15 +184,10 @@ QueueImpl::memcpy(void *Dest, const void *Src, std::size_t NumBytes,
         sycl::make_error_code(sycl::errc::feature_not_supported),
         "Host-to-host copy is not implemented yet");
 
-  auto EventHandles = getSyclObjHandles(DepEvents);
   handleEventDependencies(EventHandles);
-
   callAndThrow(olMemcpy, MOffloadQueue, Dest, DestOLDevice, Src, SrcOLDevice,
                NumBytes);
-  ol_event_handle_t NewEvent{};
-  ol_event_flags_t Flags{};
-  callAndThrow(olCreateEvent, MOffloadQueue, Flags, &NewEvent);
-  return EventImpl::createEventWithHandle(NewEvent, MDevice.getPlatformImpl());
+  return createEvent();
 }
 
 void QueueImpl::handleEventDependencies(std::vector<ol_event_handle_t> &Deps) {
@@ -201,6 +200,13 @@ void QueueImpl::handleEventDependencies(std::vector<ol_event_handle_t> &Deps) {
   if (!Deps.empty()) {
     callAndThrow(olWaitEvents, MOffloadQueue, Deps.data(), Deps.size());
   }
+}
+
+EventImplPtr QueueImpl::createEvent() {
+  ol_event_handle_t NewEvent{};
+  ol_event_flags_t Flags{};
+  callAndThrow(olCreateEvent, MOffloadQueue, Flags, &NewEvent);
+  return EventImpl::createEventWithHandle(NewEvent, MDevice.getPlatformImpl());
 }
 } // namespace detail
 _LIBSYCL_END_NAMESPACE_SYCL

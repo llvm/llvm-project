@@ -333,14 +333,18 @@ public:
   }
 
   /// Submits a memory copy operation from one USM or host pointer to another.
+  /// USM pointers must be accessible on the device associated with the queue.
   ///
   /// \param dest is the pointer to copy to.
   /// \param src is the pointer to copy from.
   /// \param numBytes is the number of bytes to copy.
   /// \return an event that represents the status of the operation.
-  event memcpy(void *dest, const void *src, std::size_t numBytes);
+  event memcpy(void *dest, const void *src, std::size_t numBytes) {
+    return memcpy(dest, src, numBytes, std::vector<event>{});
+  }
 
   /// Submits a memory copy operation from one USM or host pointer to another.
+  /// USM pointers must be accessible on the device associated with the queue.
   ///
   /// \param dest is the pointer to copy to.
   /// \param src is the pointer to copy from.
@@ -349,9 +353,12 @@ public:
   /// operation.
   /// \return an event that represents the status of the operation.
   event memcpy(void *dest, const void *src, std::size_t numBytes,
-               event depEvent);
+               event depEvent) {
+    return memcpy(dest, src, numBytes, std::vector<event>{depEvent});
+  }
 
   /// Submits a memory copy operation from one USM or host pointer to another.
+  /// USM pointers must be accessible on the device associated with the queue.
   ///
   /// \param dest is the pointer to copy to.
   /// \param src is the pointer to copy from.

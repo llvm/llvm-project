@@ -78,8 +78,7 @@ void runTestsForMemCpyFunc(MemCpyFuncT MemCpyFunc) {
     try {
       RunTest(HostAllocF, HostAllocF);
       assert(false);
-    } catch (sycl::exception e) {
-
+    } catch (const sycl::exception &e) {
       assert(e.code() == make_error_code(errc::feature_not_supported));
     }
     RunTest(HostAllocF, HostUSMAllocF);
