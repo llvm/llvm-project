@@ -18,7 +18,7 @@ from dex.utils.Exceptions import Error
 
 
 def setup_yaml_parser(loader):
-    reg_classes = [Where, Value, DexRange, Label, Then, Address, ValueAll]
+    reg_classes = [Where, Value, DexRange, Label, Then, Address, ValueAll, Step]
     for c in reg_classes:
         c.register_yaml(loader)
 
@@ -52,6 +52,19 @@ class FileLabels:
 class Where:
     """One or more instances of this class define a range of steps in a debugging session. Any expects in the script
     within scope of a "Where" will only be evaluated for the steps where the Where applies.
+
+    Supports a set of attributes to specify the state of a stack frame that this node matches against:
+    - file: The path (absolute or relative) of the frame source location.
+    - line: The line number of the frame source location.
+    - function: The function name (exactly matching the name shown by the debugger) of the frame.
+    - at_frame_idx: Only specifiable for !and nodes; changes the frame that this node matches against from its parent
+                    frame to the frame at the specified index.
+    - after_hit_count: Requires that this node must become "active" a specified number of times before it will be
+                       considered as active. If for_hit_count is also specified, the "for" hit count will only begin
+                       accumulating after the "after" hit count.
+    - for_hit_count: Limits this node to becoming active a specified number of times, after which it will not become
+                     active again. If after_hit_count is also specified, the "for" hit count will only begin
+                     accumulating after the "after" hit count.
     """
 
     def __init__(self, attributes: dict, is_and: bool):
@@ -61,22 +74,17 @@ class Where:
         if isinstance(lines, (int, Label)):
             lines = Line(lines)
         self.lines: Union[Line, DexRange, None] = lines
+        self.at_frame_idx: Optional[int] = attributes.pop("at_frame_idx", None)
         self.after_hit_count: Optional[int] = attributes.pop("after_hit_count", None)
         self.for_hit_count: Optional[int] = attributes.pop("for_hit_count", None)
-        self.conditions: dict = attributes.pop("conditions", None)
+        self.conditions: Optional[str] = attributes.pop("conditions", None)
         self.is_and = is_and
         if attributes:
             raise DexterNodeError(
                 self, f"unexpected attributes {', '.join(attributes)}"
             )
-        if (
-            not self.function
-            and not self.lines
-            and (self.for_hit_count or self.after_hit_count)
-        ):
-            raise DexterNodeError(
-                self, "can't check hit counts without an explicit lines or function arg"
-            )
+        if self.at_frame_idx is not None and not self.is_and:
+            raise DexterNodeError(self, "at_frame_idx can only be used with !and nodes")
 
     def __repr__(self):
         elts = [
@@ -92,6 +100,7 @@ class Where:
             "file": self.file,
             "function": self.function,
             "lines": self.lines.value if isinstance(self.lines, Line) else self.lines,
+            "at_frame_idx": self.at_frame_idx,
             "for_hit_count": self.for_hit_count,
             "after_hit_count": self.after_hit_count,
             "conditions": self.conditions,
@@ -225,6 +234,37 @@ class ValueAll(Expect):
     def register_yaml(loader):
         yaml.add_constructor("!value/all", ValueAll.constructor, loader)
         yaml.add_representer(ValueAll, ValueAll.representer)
+
+
+class Step(Expect):
+    """Sets an expectation for stepping behaviour, with the expected value being a list of integer lines:
+    - !step exactly: while this !expect is active, we expect see exactly the expected lines in-order as many times as
+      they appear in the expected lines list.
+    - !step at_least: while this !expect is active, we expect to see each of the expected lines in-order at least as many
+      times as they appear in the expected list, ignoring excess lines and lines not in the expected lines list.
+    - !step never: while this !expect is active, we expect to not see any of the lines in the expected lines list.
+    """
+
+    def __init__(self, kind: str):
+        self.kind = kind
+        if kind not in ["exactly", "at_least", "never"]:
+            raise DexterNodeError(self, f'invalid !step kind "{self.kind}"')
+
+    def __repr__(self):
+        return f"Step({self.kind})"
+
+    @staticmethod
+    def constructor(loader: yaml.Loader, node):
+        return Step(loader.construct_scalar(node))
+
+    @staticmethod
+    def representer(dumper, data):
+        return dumper.represent_scalar("!step", data.kind)
+
+    @staticmethod
+    def register_yaml(loader):
+        yaml.add_constructor("!step", Step.constructor, loader)
+        yaml.add_representer(Step, Step.representer)
 
 
 ##############

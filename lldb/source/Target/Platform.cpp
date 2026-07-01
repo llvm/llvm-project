@@ -490,7 +490,7 @@ RecurseCopy_Callback(void *baton, llvm::sys::fs::file_type ft,
   case fs::file_type::directory_file: {
     // make the new directory and get in there
     FileSpec dst_dir = rc_baton->dst;
-    if (!dst_dir.GetFilename())
+    if (dst_dir.GetFilename().empty())
       dst_dir.SetFilename(src.GetFilename());
     Status error = rc_baton->platform_ptr->MakeDirectory(
         dst_dir, lldb::eFilePermissionsDirectoryDefault);
@@ -521,7 +521,7 @@ RecurseCopy_Callback(void *baton, llvm::sys::fs::file_type ft,
   case fs::file_type::symlink_file: {
     // copy the file and keep going
     FileSpec dst_file = rc_baton->dst;
-    if (!dst_file.GetFilename())
+    if (dst_file.GetFilename().empty())
       dst_file.SetFilename(src.GetFilename());
 
     FileSpec src_resolved;
@@ -543,7 +543,7 @@ RecurseCopy_Callback(void *baton, llvm::sys::fs::file_type ft,
   case fs::file_type::regular_file: {
     // copy the file and keep going
     FileSpec dst_file = rc_baton->dst;
-    if (!dst_file.GetFilename())
+    if (dst_file.GetFilename().empty())
       dst_file.SetFilename(src.GetFilename());
     Status err = rc_baton->platform_ptr->PutFile(src, dst_file);
     if (err.Fail()) {
@@ -570,21 +570,21 @@ Status Platform::Install(const FileSpec &src, const FileSpec &dst) {
             src.GetPath().c_str(), dst.GetPath().c_str());
   FileSpec fixed_dst(dst);
 
-  if (!fixed_dst.GetFilename())
+  if (fixed_dst.GetFilename().empty())
     fixed_dst.SetFilename(src.GetFilename());
 
   FileSpec working_dir = GetWorkingDirectory();
 
   if (dst) {
-    if (dst.GetDirectory()) {
-      const char first_dst_dir_char = dst.GetDirectory().GetCString()[0];
+    if (!dst.GetDirectory().empty()) {
+      const char first_dst_dir_char = dst.GetDirectory().front();
       if (first_dst_dir_char == '/' || first_dst_dir_char == '\\') {
         fixed_dst.SetDirectory(dst.GetDirectory());
       }
       // If the fixed destination file doesn't have a directory yet, then we
       // must have a relative path. We will resolve this relative path against
       // the platform's working directory
-      if (!fixed_dst.GetDirectory()) {
+      if (fixed_dst.GetDirectory().empty()) {
         FileSpec relative_spec;
         if (working_dir) {
           relative_spec = working_dir;
@@ -1951,9 +1951,8 @@ uint32_t Platform::LoadImageUsingPaths(lldb_private::Process *process,
 {
   FileSpec file_to_use;
   if (remote_filename.IsAbsolute())
-    file_to_use = FileSpec(remote_filename.GetFilename().GetStringRef(),
-
-                           remote_filename.GetPathStyle());
+    file_to_use =
+        FileSpec(remote_filename.GetFilename(), remote_filename.GetPathStyle());
   else
     file_to_use = remote_filename;
 

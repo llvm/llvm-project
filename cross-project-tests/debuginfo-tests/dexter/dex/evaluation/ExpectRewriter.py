@@ -10,8 +10,17 @@ from collections import defaultdict
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 from dex.dextIR import DextIR, StepIR, ValueIR
-from dex.evaluation.StateMatch import get_active_where_matches
-from dex.test_script.Nodes import DexRange, Expect, Line, Then, Value, ValueAll, Where
+from dex.evaluation.StateMatch import StateMatchContext, get_state_match
+from dex.test_script.Nodes import (
+    DexRange,
+    Expect,
+    Line,
+    Step,
+    Then,
+    Value,
+    ValueAll,
+    Where,
+)
 from dex.test_script.Script import DexterScript, Scope
 from dex.tools.Main import Context
 from dex.utils.Exceptions import Error
@@ -156,34 +165,59 @@ def collect_scope_values(
     return per_range_var_unique_expected_values
 
 
+def get_expected_lines(expect: Expect, lines: List[int]) -> List[int]:
+    """For a !step expect and the list of lines seen while that expect was active, returns the list of lines that should
+    be expected by that expect."""
+    assert isinstance(expect, Step), "Trying to get expected lines for non-step node?"
+    if expect.kind == "never":
+        # We can't really get useful "expected values" for a !step never node, unless we throw in some convoluted extra
+        # steps, e.g. finding all breakpoint locations within the expect's enclosing scope, and creating a list of all
+        # lines that have valid breakpoint locations but weren't seen.
+        return []
+    # Although !step order and !step exactly are evaluated differently, they both aim to match lines stepped on; since
+    # we don't have any meaningful reason to exclude any seen lines from the written expected line list, we just use the
+    # whole thing.
+    return lines
+
+
 class StepExpectRewriter:
     """Processes all active, unknown expects at a given debugger step and produces ExpectedValueRewriter results for
     each."""
 
-    def __init__(self, step: StepIR, script: DexterScript):
+    def __init__(
+        self, step: StepIR, script: DexterScript, state_match_context: StateMatchContext
+    ):
         self.step = step
         self.script = script
-        self.state_match = get_active_where_matches(script, step)
+        self.state_match = get_state_match(script, step, state_match_context)
         active_expects = {
-            expect
-            for where_match in self.state_match.values()
+            expect: where_match.frame_idx
+            for where_match in self.state_match.where_match_results.values()
             for expect in where_match.active_expects
         }
         self.expect_value_matches: Dict[Expect, ExpectedValueRewriter] = {}
         self.expect_scope_matches: Dict[Expect, ExpectedScopeRewriter] = {}
+        self.expect_step_matches: Dict[Expect, int] = {}
 
         def add_expected_values(expect: Expect, expected_value: Any, scope: Scope):
             if expect not in active_expects or expected_value is not None:
                 return
+            expect_frame_idx = active_expects[expect]
             if (expr := expect.get_watched_expr()) is not None:
                 self.expect_value_matches[expect] = ExpectedValueRewriter(
-                    expect, step.watches[expr]
+                    expect, step.frames[expect_frame_idx].watches[expr]
                 )
             elif (scope_name := expect.get_watched_scope()) is not None:
-                scope_vars = step.scope_watches.get(scope_name, [])
-                self.expect_scope_matches[expect] = ExpectedScopeRewriter(
-                    expect, step, [step.watches[var] for var in scope_vars]
+                scope_vars = step.frames[expect_frame_idx].scope_watches.get(
+                    scope_name, []
                 )
+                self.expect_scope_matches[expect] = ExpectedScopeRewriter(
+                    expect,
+                    step,
+                    [step.frames[expect_frame_idx].watches[var] for var in scope_vars],
+                )
+            elif isinstance(expect, Step):
+                self.expect_step_matches[expect] = step.current_location.lineno
             else:
                 raise Error(
                     f"Unexpected expect without watched expression or scope: {expect}"
@@ -205,6 +239,7 @@ class ScriptExpectRewriter:
         self.scope_expect_rewrites: Dict[
             Expect, List[Tuple[int, ExpectedScopeRewriter]]
         ] = {}
+        self.step_expect_rewrites: Dict[Expect, List[Tuple[int, int]]] = {}
         self.new_script: Optional[DexterScript] = None
         self.new_expected_values: Dict[Expect, Any] = {}
         self.new_expected_scopes: Dict[Expect, ExpectedScopeRewrites] = {}
@@ -220,25 +255,39 @@ class ScriptExpectRewriter:
         def collect_expects_to_rewrite(
             expect: Expect, expected_value: Any, scope: Scope
         ):
+            if expected_value is not None:
+                return
             if isinstance(expect, ValueAll):
-                assert expected_value is None
                 self.scope_expect_rewrites[expect] = []
                 return
-            assert isinstance(expect, Value), "Non-Value expects currently unsupported"
-            if expected_value is None:
-                self.unknown_expect_rewrites[expect] = []
+            if isinstance(expect, Step):
+                self.step_expect_rewrites[expect] = []
+                return
+            assert isinstance(expect, Value), f"Unexpected expect node kind {expect}"
+            self.unknown_expect_rewrites[expect] = []
 
         script.visit_script(visit_expect=collect_expects_to_rewrite)
 
         # If there are no expects to update, then there is no rewriting to be done - exit early.
-        if not self.unknown_expect_rewrites and not self.scope_expect_rewrites:
+        if (
+            not self.unknown_expect_rewrites
+            and not self.scope_expect_rewrites
+            and not self.step_expect_rewrites
+        ):
             return
 
-        # Populate the `unknown_expect_rewrites` dict, mapping each expect with an unknown value to its list of observed
-        # during this run, along with the corresponding step indices.
+        def check_condition(step: StepIR, frame_idx: int, condition: str):
+            cond_value = step.frames[frame_idx].watches[condition]
+            result = cond_value.could_evaluate and cond_value.value.lower() == "true"
+            return result
+
+        state_match_context = StateMatchContext(check_condition=check_condition)
         self.step_rewriters = [
-            StepExpectRewriter(step, script) for step in dext_ir.steps
+            StepExpectRewriter(step, script, state_match_context)
+            for step in dext_ir.steps
         ]
+        # Populate the expect_rewrites dicts, mapping each expect with an unknown value to its list of observed values
+        # during this run, along with the corresponding step indices.
         for step_rewriter in self.step_rewriters:
             step_idx = step_rewriter.step.step_index
             for (
@@ -255,10 +304,15 @@ class ScriptExpectRewriter:
                 self.scope_expect_rewrites[expect].append(
                     (step_idx, expected_scope_rewriter)
                 )
+            for (
+                expect,
+                line,
+            ) in step_rewriter.expect_step_matches.items():
+                self.step_expect_rewrites[expect].append((step_idx, line))
 
         # For each unknown expect, merge the observed values into a writable "expected values" entry, which may be a
         # list or a single value.
-        self.new_expected_values = {
+        self.new_expected_values: Dict[Expect, Any] = {
             expect: expected_values
             for expect, expect_rewriters in self.unknown_expect_rewrites.items()
             if (
@@ -268,6 +322,15 @@ class ScriptExpectRewriter:
             )
             is not None
         }
+        # Do the same for unknown step expects.
+        self.new_expected_values.update(
+            {
+                expect: get_expected_lines(
+                    expect, [line for step_index, line in step_lines]
+                )
+                for expect, step_lines in self.step_expect_rewrites.items()
+            }
+        )
         # Do the same for unknown scope expects.
         self.new_expected_scopes = {
             expect: collect_scope_values(
@@ -371,7 +434,7 @@ def rewrite_script(
                     new_expect_sibling_list.append(new_expect)
                     new_node_child_map[new_expect] = expected_values
             return
-        assert isinstance(expect, Value)
+        assert isinstance(expect, (Step, Value))
         new_expected_value = add_expected_values.get(expect) or expected_value
         new_node_child_map[expect] = new_expected_value
         scope_where_children.append(expect)

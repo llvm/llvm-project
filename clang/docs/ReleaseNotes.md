@@ -88,6 +88,24 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
   are now ill-formed.
 
+- `__has_feature(modules)` is no longer true when just `-std=c++20` (or higher)
+  is passed. It's only true if `-fmodules` is passed, which enables Clang's
+  module map semantics. Objective-C++ of the form
+
+  ```objc
+  #if __has_feature(modules)
+  @import Foundation;
+  #else
+  #import <Foundation/Foundation.h>
+  #endif
+  ```
+
+  previously took the `@import` branch under `-std=c++20` even though no module
+  maps were in use, which would always fail.
+
+  `__cpp_modules` continues to be the standard macro to use to check if C++20
+  modules are available.
+
 ### C++ Specific Potentially Breaking Changes
 
 - Clang now more aggressively optimizes away stores to objects after they are
@@ -1022,6 +1040,7 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 - Fixed a crash in code completion when using a C-Style cast with a parenthesized
   operand in Objective-C++ mode. (#GH180125)
+- Fixed a crash when code completion is triggered inside an ill-formed lambda's trailing requires-clause. (#GH201632)  
 
 ### Static Analyzer
 
@@ -1118,6 +1137,8 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 - Fixed `-nolibsycl` being silently ignored on Linux: the SYCL runtime
   library was unconditionally added to the link line even when the flag was
   passed.
+- Clang now is capable of diagnosing reference kernel parameters which are not
+  allowed by SYCL 2020 spec.
 
 #### Improvements
 
