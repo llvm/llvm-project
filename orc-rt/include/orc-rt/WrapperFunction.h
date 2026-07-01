@@ -135,7 +135,7 @@ struct WFHandlerTraitsImpl {
   }
 };
 
-template <bool /* is_const */, typename... Ts>
+template <bool /* is_const */, bool /* is_noexcept */, typename... Ts>
 struct WFHandlerTraitsImplAdapter : WFHandlerTraitsImpl<Ts...> {};
 
 template <typename C>
