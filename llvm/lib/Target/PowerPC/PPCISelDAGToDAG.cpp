@@ -4691,6 +4691,7 @@ void PPCDAGToDAGISel::transferMemOperands(SDNode *N, SDNode *Result) {
   MachineMemOperand *MemOp = cast<MemSDNode>(N)->getMemOperand();
   CurDAG->setNodeMemRefs(cast<MachineSDNode>(Result), {MemOp});
 }
+
 static bool mayUseP9SetbForFloat(SDNode *N, const ISD::CondCode &CC,
                                  bool &NeedSwapOps) {
   assert(N->getOpcode() == ISD::SELECT_CC && "Expecting a SELECT_CC here.");
