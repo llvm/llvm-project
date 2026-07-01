@@ -333,9 +333,16 @@ ThunkArgInfo AArch64Arm64ECCallLowering::canonicalizeThunkType(
     return direct(T);
   }
 
+  if (T->isFP128Ty()) {
+    // Prefix with `llvm` since MSVC doesn't specify `_Float128`
+    Out << "__llvm_q__";
+    // f128 uses sret for compatibility with GCC.
+    return pointerIndirection(T);
+  }
+
   if (T->isFloatingPointTy()) {
-    report_fatal_error("Only 16, 32, and 64 bit floating points are supported "
-                       "for ARM64EC thunks");
+    report_fatal_error("Only 16, 32, 64, and 128 bit IEEE floating points "
+                       "are supported for ARM64EC thunks");
   }
 
   auto &DL = M->getDataLayout();
@@ -350,7 +357,7 @@ ThunkArgInfo AArch64Arm64ECCallLowering::canonicalizeThunkType(
     uint64_t ElementSizePerBytes = DL.getTypeSizeInBits(ElementTy) / 8;
     uint64_t TotalSizeBytes = ElementCnt * ElementSizePerBytes;
     if (ElementTy->isHalfTy() || ElementTy->isFloatTy() ||
-        ElementTy->isDoubleTy()) {
+        ElementTy->isDoubleTy() || ElementTy->isFP128Ty()) {
       if (ElementTy->isHalfTy())
         // Prefix with `llvm` since MSVC doesn't specify `_Float16`
         Out << "__llvm_H__";
@@ -358,6 +365,9 @@ ThunkArgInfo AArch64Arm64ECCallLowering::canonicalizeThunkType(
         Out << "F";
       else if (ElementTy->isDoubleTy())
         Out << "D";
+      else if (ElementTy->isFP128Ty())
+        // Prefix with `llvm` since MSVC doesn't specify `_Float128`
+        Out << "__llvm_Q__";
       Out << TotalSizeBytes;
       if (Alignment.value() >= 16 && !Ret)
         Out << "a" << Alignment.value();
@@ -370,9 +380,8 @@ ThunkArgInfo AArch64Arm64ECCallLowering::canonicalizeThunkType(
         return pointerIndirection(T);
       }
     } else if (T->isFloatingPointTy()) {
-      report_fatal_error(
-          "Only 16, 32, and 64 bit floating points are supported "
-          "for ARM64EC thunks");
+      report_fatal_error("Only 16, 32, 64, and 128 bit IEEE floating points "
+                         "are supported for ARM64EC thunks");
     }
   }
 

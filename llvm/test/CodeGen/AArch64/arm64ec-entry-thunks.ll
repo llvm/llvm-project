@@ -85,10 +85,10 @@ define i64 @simple_integers(i8, i16, i32, i64) nounwind {
   ret i64 0
 }
 
-; NOTE: Only half, float, and double are supported.
-define double @simple_floats(half, float, double) nounwind {
-; CHECK-LABEL:    .def    $ientry_thunk$cdecl$d$__llvm_h__fd;
-; CHECK:          .section        .wowthk$aa,"xr",discard,$ientry_thunk$cdecl$d$__llvm_h__fd
+; NOTE: Only half, float, double, and fp128 are supported.
+define double @simple_floats(half, float, double, fp128) nounwind {
+; CHECK-LABEL:    .def    $ientry_thunk$cdecl$d$__llvm_h__fd__llvm_q__;
+; CHECK:          .section        .wowthk$aa,"xr",discard,$ientry_thunk$cdecl$d$__llvm_h__fd__llvm_q__
 ; CHECK:          // %bb.0:
 ; CHECK-NEXT:     stp     q6, q7, [sp, #-176]!            // 32-byte Folded Spill
 ; CHECK-NEXT:     .seh_save_any_reg_px    q6, 176
@@ -105,6 +105,7 @@ define double @simple_floats(half, float, double) nounwind {
 ; CHECK-NEXT:     add     x29, sp, #160
 ; CHECK-NEXT:     .seh_add_fp     160
 ; CHECK-NEXT:     .seh_endprologue
+; CHECK-NEXT:     ldr     q3, [x3]
 ; CHECK-NEXT:     blr     x9
 ; CHECK-NEXT:     adrp    x8, __os_arm64x_dispatch_ret
 ; CHECK-NEXT:     ldr     x0, [x8, :lo12:__os_arm64x_dispatch_ret]
@@ -602,7 +603,7 @@ start:
 ; CHECK-NEXT:     .symidx $ientry_thunk$cdecl$i8$i8i8i8i8
 ; CHECK-NEXT:     .word   1
 ; CHECK-NEXT:     .symidx "#simple_floats"
-; CHECK-NEXT:     .symidx $ientry_thunk$cdecl$d$__llvm_h__fd
+; CHECK-NEXT:     .symidx $ientry_thunk$cdecl$d$__llvm_h__fd__llvm_q__
 ; CHECK-NEXT:     .word   1
 ; CHECK-NEXT:     .symidx "#has_varargs"
 ; CHECK-NEXT:     .symidx $ientry_thunk$cdecl$v$varargs
