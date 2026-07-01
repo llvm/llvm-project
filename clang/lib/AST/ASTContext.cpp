@@ -12921,20 +12921,15 @@ static QualType DecodeTypeFromStr(const char *&Str, const ASTContext &Context,
   case 'm':
     Type = Context.MFloat8Ty;
     break;
-  case 'T':
-    switch (*Str++) {
-    case 'x': {
-      Type = Context.getfexcept_tType();
-      break;
+  case 't':
+    Type = Context.getfexcept_tType();
+    if (Type.isNull()) {
+      Error = ASTContext::GE_Missing_fenv;
+      return {};
     }
-    case 'e': {
-      Type = Context.getfenv_tType();
-      break;
-    }
-    default: {
-      llvm_unreachable("Unexpected target builtin type");
-    }
-    }
+    break;
+  case 'e':
+    Type = Context.getfenv_tType();
     if (Type.isNull()) {
       Error = ASTContext::GE_Missing_fenv;
       return {};
