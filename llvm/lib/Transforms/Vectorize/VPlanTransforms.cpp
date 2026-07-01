@@ -7142,7 +7142,12 @@ static std::optional<int64_t> getConstantStride(VPValue *Addr, Type *AccessTy,
   if (!AddRec)
     return {};
 
-  return getStrideFromAddRec(AddRec, L, AccessTy, /*Ptr=*/nullptr, PSE);
+  const auto *Stride = dyn_cast_or_null<SCEVConstant>(
+      getStrideFromAddRec(AddRec, L, AccessTy, /*Ptr=*/nullptr, PSE));
+  if (!Stride)
+    return {};
+
+  return Stride->getAPInt().trySExtValue();
 }
 
 void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
