@@ -16,71 +16,92 @@
 
 using namespace clang;
 
-TEST(LogLineTest, NoOpLogLineProducesNoOutput) {
-  LogLine() << "stream to empty line";
-  // Check to make sure streaming into Empty does not lead to crashes.
+TEST(AtomicLineLoggerTest, DisabledLoggerDoesNotCrash) {
+  AtomicLineLogger Logger;
+  Logger.log() << "this goes nowhere";
+
+  // An empty logger should not crash.
   EXPECT_TRUE(true);
 }
 
-TEST(LogLineTest, MoveConstructor) {
-  SmallString<128> Buffer;
-  llvm::raw_svector_ostream OS(Buffer);
+#ifndef _WIN32
+TEST(AtomicLineLoggerTest, LogLineMoveConstructor) {
+  llvm::unittest::TempDir Dir("atomic-logger-test", /*Unique=*/true);
+  SmallString<128> LogPath(Dir.path());
+  llvm::sys::path::append(LogPath, "test.log");
 
   {
-    LogLine Original(OS);
+    AtomicLineLogger Logger(LogPath);
+    LogLine Original = Logger.log();
     LogLine Moved(std::move(Original));
     Moved << "after_move";
   }
 
-  StringRef Output = OS.str();
+  auto BufOrErr = llvm::MemoryBuffer::getFile(LogPath);
+  ASSERT_TRUE(BufOrErr) << "Failed to read log file";
+  StringRef Content = (*BufOrErr)->getBuffer();
 
   // Only one line should be written (from Moved, not from Original).
-  EXPECT_EQ(Output.count('\n'), 1u);
-  EXPECT_TRUE(Output.contains("after_move"));
+  EXPECT_EQ(Content.count('\n'), 1u);
+  EXPECT_TRUE(Content.contains("after_move"));
 }
 
-TEST(LogLineTest, ActiveLogLinePIDTIDMsg) {
-  SmallString<128> Buffer;
-  llvm::raw_svector_ostream OS(Buffer);
-  LogLine(OS) << "test_event: " << "some_file.pcm";
+TEST(AtomicLineLoggerTest, LogLinePIDTIDMsg) {
+  llvm::unittest::TempDir Dir("atomic-logger-test", /*Unique=*/true);
+  SmallString<128> LogPath(Dir.path());
+  llvm::sys::path::append(LogPath, "test.log");
 
-  StringRef Output = OS.str();
+  {
+    AtomicLineLogger Logger(LogPath);
+    Logger.log() << "test_event: " << "some_file.pcm";
+  }
+
+  auto BufOrErr = llvm::MemoryBuffer::getFile(LogPath);
+  ASSERT_TRUE(BufOrErr) << "Failed to read log file";
+  StringRef Content = (*BufOrErr)->getBuffer();
 
   // Ends with message + newline.
-  EXPECT_TRUE(Output.ends_with("test_event: some_file.pcm\n"));
+  EXPECT_TRUE(Content.ends_with("test_event: some_file.pcm\n"));
 
   // Prefix has the form: "<timestamp> <pid> <tid>: "
   // Verify PID matches this process.
   std::string ExpectedPID = std::to_string(llvm::sys::Process::getProcessId());
-  EXPECT_TRUE(Output.contains(ExpectedPID));
+  EXPECT_TRUE(Content.contains(ExpectedPID));
 
   // Verify TID is present.
   std::string ExpectedTID = std::to_string(llvm::get_threadid());
-  EXPECT_TRUE(Output.contains(ExpectedTID));
+  EXPECT_TRUE(Content.contains(ExpectedTID));
 }
 
-TEST(LogLineTest, ActiveLogLineTimestamp) {
-  SmallString<128> Buffer;
-  llvm::raw_svector_ostream OS(Buffer);
+TEST(AtomicLineLoggerTest, LogLineTimestamp) {
+  llvm::unittest::TempDir Dir("atomic-logger-test", /*Unique=*/true);
+  SmallString<128> LogPath(Dir.path());
+  llvm::sys::path::append(LogPath, "test.log");
+
   // Test that the timestamp generated is always sandwiched between Before
   // and After to verify the correctness.
   auto Before = std::chrono::duration_cast<std::chrono::milliseconds>(
                     std::chrono::system_clock::now().time_since_epoch())
                     .count();
 
-  LogLine(OS) << "test_event";
+  {
+    AtomicLineLogger Logger(LogPath);
+    Logger.log() << "test_event";
+  }
 
   auto After = std::chrono::duration_cast<std::chrono::milliseconds>(
                    std::chrono::system_clock::now().time_since_epoch())
                    .count();
 
-  StringRef Output = OS.str();
+  auto BufOrErr = llvm::MemoryBuffer::getFile(LogPath);
+  ASSERT_TRUE(BufOrErr) << "Failed to read log file";
+  StringRef Content = (*BufOrErr)->getBuffer();
 
   // Extract timestamp from "[<seconds>.<millis>]" prefix.
-  ASSERT_TRUE(Output.starts_with("["));
-  size_t CloseBracket = Output.find(']');
+  ASSERT_TRUE(Content.starts_with("["));
+  size_t CloseBracket = Content.find(']');
   ASSERT_NE(CloseBracket, StringRef::npos);
-  StringRef TimestampStr = Output.slice(1, CloseBracket);
+  StringRef TimestampStr = Content.slice(1, CloseBracket);
 
   // Parse "<seconds>.<millis>".
   auto [SecStr, MillisStr] = TimestampStr.split('.');
@@ -91,14 +112,6 @@ TEST(LogLineTest, ActiveLogLineTimestamp) {
   uint64_t LoggedMillis = Seconds * 1000 + Millis;
   EXPECT_GE(LoggedMillis, (uint64_t)Before);
   EXPECT_LE(LoggedMillis, (uint64_t)After);
-}
-
-TEST(AtomicLineLoggerTest, DisabledLoggerDoesNotCrash) {
-  AtomicLineLogger Logger;
-  Logger.log() << "this goes nowhere";
-
-  // An empty logger should not crash.
-  EXPECT_TRUE(true);
 }
 
 TEST(AtomicLineLoggerTest, SingleLineWrittenToFile) {
@@ -139,7 +152,10 @@ TEST(AtomicLineLoggerTest, ConcurrentWritesProduceCompleteLines) {
   constexpr unsigned MessageLen = 32;
 
   {
-    AtomicLineLogger Logger(LogPath);
+    // Creating two loggers based on the same file to make sure
+    // the write is still atomic.
+    AtomicLineLogger LoggerOdd(LogPath);
+    AtomicLineLogger LoggerEven(LogPath);
 
     std::vector<std::thread> Threads;
     for (unsigned I = 0; I < NumThreads; ++I) {
@@ -152,14 +168,17 @@ TEST(AtomicLineLoggerTest, ConcurrentWritesProduceCompleteLines) {
           // Pad to fixed width.
           while (Msg.size() < MessageLen)
             MsgOS << '_';
-          Logger.log() << Msg;
+          if (I % 2)
+            LoggerOdd.log() << Msg;
+          else
+            LoggerEven.log() << Msg;
         }
       });
     }
     for (auto &T : Threads)
       T.join();
   }
-  // Logger destroyed here. Log file is written to disk.
+  // Loggers destroyed here. Log file is written to disk.
 
   auto BufOrErr = llvm::MemoryBuffer::getFile(LogPath);
   ASSERT_TRUE(BufOrErr) << "Failed to read log file";
@@ -210,3 +229,4 @@ TEST(AtomicLineLoggerTest, ConcurrentWritesProduceCompleteLines) {
     EXPECT_EQ(Pid, (uint64_t)llvm::sys::Process::getProcessId());
   }
 }
+#endif

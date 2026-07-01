@@ -13,8 +13,14 @@
 
 #include "clang/Basic/AtomicLineLogger.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Errno.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Format.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Threading.h"
+#ifndef _WIN32
+#include <unistd.h>
+#endif
 #ifdef __APPLE__
 #include <sys/time.h>
 #endif
@@ -35,43 +41,79 @@ static uint64_t getTimestampMillis() {
 #endif
 }
 
-LogLine::LogLine(raw_ostream &Dest) : FormattingOS(Buffer), Dest(&Dest) {
+// Writes the whole line into an FD that is opened with OF_Append.
+// This function only does one write (up to retry due to interrupts), and the
+// single write is blocking and atomic on POSIX systems.
+static bool writeLineToFD(int FD, const char *Data, size_t Size) {
+#ifndef _WIN32
+  ssize_t Written = llvm::sys::RetryAfterSignal(-1, write, FD, Data, Size);
+  return Written >= 0 && (static_cast<size_t>(Written) == Size);
+#else
+  (void)FD, (void)Data, (void)Size;
+  llvm_unreachable("Logging not supported on Windows!");
+  return false;
+#endif
+}
+
+LogLine::LogLine(int FD, std::atomic<uint64_t> *DroppedLines)
+    : FormattingOS(Buffer), FD(FD), DroppedLines(DroppedLines) {
   auto Millis = getTimestampMillis();
-  assert(FormattingOS && "Cannot have unintialized FormattingOS");
   *FormattingOS << llvm::format("[%lld.%0.3lld]", Millis / 1000, Millis % 1000);
   *FormattingOS << ' ' << llvm::sys::Process::getProcessId() << ' '
                 << llvm::get_threadid() << ": ";
 }
 
 LogLine::LogLine(LogLine &&Other)
-    : Buffer(std::move(Other.Buffer)), Dest(Other.Dest) {
-  if (Dest)
+    : Buffer(std::move(Other.Buffer)), FD(Other.FD),
+      DroppedLines(Other.DroppedLines) {
+  if (Other.FormattingOS)
     FormattingOS.emplace(Buffer);
-  Other.Dest = nullptr;
+
+  // Destroy the info in Other so its destructor does not write out the line.
+  Other.FormattingOS.reset();
+  Other.FD = -1;
+  Other.DroppedLines = nullptr;
 }
 
-AtomicLineLogger::AtomicLineLogger(StringRef LogFilePath) {
+LogLine::~LogLine() {
+  if (!FormattingOS)
+    return;
+  *FormattingOS << "\n";
+  if (!writeLineToFD(FD, Buffer.data(), Buffer.size()))
+    DroppedLines->fetch_add(1, std::memory_order_relaxed);
+}
+
+AtomicLineLogger::AtomicLineLogger(StringRef LogFilePath)
+    : LogPath(LogFilePath.str()) {
+#ifndef _WIN32
   if (LogFilePath.empty())
     return;
 
-  std::error_code EC;
-  OS = std::make_unique<llvm::raw_fd_ostream>(
-      LogFilePath, EC, llvm::sys::fs::CD_OpenAlways, llvm::sys::fs::FA_Write,
-      llvm::sys::fs::OF_Append);
+  std::error_code EC = llvm::sys::fs::openFileForWrite(
+      LogFilePath, FD, llvm::sys::fs::CD_OpenAlways, llvm::sys::fs::OF_Append);
   if (EC) {
     llvm::errs() << "warning: unable to open log file '" << LogFilePath
                  << "': " << EC.message() << "\n";
-    OS.reset();
+    FD = -1;
     return;
   }
-
-  // We need to set the OS to unbuffered, so LogLine's destructor can write
-  // a single line as an atomic operation.
-  OS->SetUnbuffered();
+#endif
+  // Write to files opened with OF_Append may not be guaranteed to be atomic
+  // on Windows, so we do not enable logging on Windows.
 }
 
 LogLine AtomicLineLogger::log() {
-  if (OS)
-    return LogLine(*OS);
+  if (FD != -1)
+    return LogLine(FD, &DroppedLines);
   return LogLine();
+}
+
+AtomicLineLogger::~AtomicLineLogger() {
+  if (FD == -1)
+    return;
+  if (uint64_t Dropped = DroppedLines.load(std::memory_order_relaxed))
+    llvm::errs() << "warning: log '" << LogPath
+                 << "' is incomplete: " << Dropped
+                 << " line(s) dropped due to write errors\n";
+  llvm::sys::Process::SafelyCloseFileDescriptor(FD);
 }

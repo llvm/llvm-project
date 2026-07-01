@@ -18,46 +18,53 @@
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/raw_ostream.h"
-#include <memory>
+#include <atomic>
+#include <optional>
+#include <string>
 
 namespace clang {
 
 class LogLine {
   SmallString<128> Buffer;
   std::optional<llvm::raw_svector_ostream> FormattingOS;
-  raw_ostream *Dest = nullptr;
+  int FD = -1;
+  std::atomic<uint64_t> *DroppedLines = nullptr;
+
+  explicit LogLine(int FD, std::atomic<uint64_t> *DroppedLines);
 
 public:
-  explicit LogLine(raw_ostream &Dest);
   LogLine() {}
   LogLine(LogLine &&Other);
   LogLine(const LogLine &) = delete;
   LogLine &operator=(const LogLine &) = delete;
   LogLine &operator=(LogLine &&) = delete;
 
-  ~LogLine() {
-    if (Dest) {
-      assert(FormattingOS && "Cannot have uninitialized FormattingOS");
-      *FormattingOS << '\n';
-      Dest->write(Buffer.data(), Buffer.size());
-    }
-  }
+  ~LogLine();
 
   template <typename T> LogLine &operator<<(const T &Val) {
-    if (Dest) {
-      assert(FormattingOS && "Cannot have uninitialized FormattingOS");
+    if (FormattingOS)
       *FormattingOS << Val;
-    }
     return *this;
   }
+
+  friend class AtomicLineLogger;
 };
 
 class AtomicLineLogger {
-  std::unique_ptr<llvm::raw_fd_ostream> OS;
+  int FD = -1;
+  std::string LogPath;
+  std::atomic<uint64_t> DroppedLines{0};
 
 public:
   AtomicLineLogger() {}
   AtomicLineLogger(StringRef LogFilePath);
+
+  // AtomicLineLogger is non-movable because LogLines have pointers to the
+  // atomic member DroppedLines.
+  AtomicLineLogger(AtomicLineLogger &&) = delete;
+  AtomicLineLogger &operator=(AtomicLineLogger &&) = delete;
+
+  ~AtomicLineLogger();
 
   LogLine log();
 };
