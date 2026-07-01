@@ -164,10 +164,13 @@ private:
   /// This newline handling is used when the server is configured to provide
   /// Plaintext hover content.
   ///
-  /// In case the client requests Markdown content, the newline "character"
-  /// needs to be a Markdown line break (two spaces followed by `\n`).
-  /// Otherwise the linebreak will not be rendered correctly.
-  /// This can be controlled by the \p UseMarkdownLinebreaks parameter.
+  /// In case the client requests Markdown content:
+  /// - the newline "character" needs to be a Markdown line break (two spaces
+  /// followed by `\n`).
+  ///   Otherwise the linebreak will not be rendered correctly.
+  ///   This can be controlled by the \p UseMarkdownLinebreaks parameter.
+  /// - verbatim newlines are replaced with a space to replicate Markdown render
+  /// behaviour inside paragraphs.
   ///
   /// \param OS The stream to render to.
   /// \param ParagraphText The text of the paragraph to render.
