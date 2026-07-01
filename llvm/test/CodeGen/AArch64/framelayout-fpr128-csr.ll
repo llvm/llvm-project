@@ -3,18 +3,18 @@
 ; RUN: llc -verify-machineinstrs -mtriple=aarch64-windows-msvc < %s | FileCheck %s --check-prefix=CHECK-WINDOWS
 
 ; The purpose of this test is to verify q8 is assigned a 16-byte aligned offset
-; after the x10 is assigned an offset. The CSRs (on Linux) are assigned offsets
-; in the order GPRs then FPRs. The stack size of this function is 32
-; (alignTo((16 + 8), 16)), so after x8 is given the offset 24, q8 originally
-; would be assigned offset 8, which is not 16-byte aligned.
+; when a GPR (x10) is also callee-saved. The CSRs (on Linux) are assigned
+; offsets in the order GPRs then FPRs. The stack size of this function is 32
+; (alignTo((16 + 8), 16)); q8 must be assigned the 16-byte aligned offset 0,
+; with x10 in the 8-byte slot above it and the alignment padding at the top.
 define preserve_allcc void @d(ptr %ptr) nounwind {
 ; CHECK-LABEL: d:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    str q8, [sp, #-32]! // 16-byte Folded Spill
-; CHECK-NEXT:    str x10, [sp, #24] // 8-byte Spill
+; CHECK-NEXT:    str x10, [sp, #16] // 8-byte Spill
 ; CHECK-NEXT:    //APP
 ; CHECK-NEXT:    //NO_APP
-; CHECK-NEXT:    ldr x10, [sp, #24] // 8-byte Reload
+; CHECK-NEXT:    ldr x10, [sp, #16] // 8-byte Reload
 ; CHECK-NEXT:    ldr q8, [sp], #32 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
 ;

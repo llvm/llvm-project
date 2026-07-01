@@ -1784,27 +1784,39 @@ void computeCalleeSaveRegisterPairs(const AArch64FrameLowering &AFL,
 
     bool NeedsWinCFI = AFL.needsWinCFI(MF);
     int Scale = TRI->getSpillSize(*RPI.RC);
+    // A paired LDP/STP can only encode a signed 7-bit scaled offset ([-64,
+    // 63]). When the callee-save area is large (e.g. preserve_all spills 30+
+    // registers), the highest pairs fall outside that range. Only pair if the
+    // resulting offset is encodable; otherwise leave the register unpaired and
+    // let it be spilled with a single STR/LDR, which has a much wider 12-bit
+    // immediate.
+    auto PairFitsImmRange = [&]() {
+      int PairOffset =
+          IsWindows ? ByteOffset : ByteOffset + StackFillDir * 2 * Scale;
+      int Scaled = PairOffset / Scale;
+      return Scaled >= -64 && Scaled <= 63;
+    };
     // Add the next reg to the pair if it is in the same register class.
     if (unsigned(i + RegInc) < Count && !HasCSHazardPadding) {
       MCRegister NextReg = CSI[i + RegInc].getReg();
       unsigned SpillCount = NeedsWinCFI ? FirstReg - i : i;
       switch (RPI.Type) {
       case RegPairInfo::GPR:
-        if (AArch64::GPR64RegClass.contains(NextReg) &&
+        if (AArch64::GPR64RegClass.contains(NextReg) && PairFitsImmRange() &&
             !invalidateRegisterPairing(SpillExtendedVolatile, SpillCount,
                                        RPI.Reg1, NextReg, IsWindows,
                                        NeedsWinCFI, NeedsFrameRecord, TRI))
           RPI.Reg2 = NextReg;
         break;
       case RegPairInfo::FPR64:
-        if (AArch64::FPR64RegClass.contains(NextReg) &&
+        if (AArch64::FPR64RegClass.contains(NextReg) && PairFitsImmRange() &&
             !invalidateRegisterPairing(SpillExtendedVolatile, SpillCount,
                                        RPI.Reg1, NextReg, IsWindows,
                                        NeedsWinCFI, NeedsFrameRecord, TRI))
           RPI.Reg2 = NextReg;
         break;
       case RegPairInfo::FPR128:
-        if (AArch64::FPR128RegClass.contains(NextReg))
+        if (AArch64::FPR128RegClass.contains(NextReg) && PairFitsImmRange())
           RPI.Reg2 = NextReg;
         break;
       case RegPairInfo::PPR:
@@ -2631,17 +2643,30 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
   unsigned ZPRCSStackSize = 0;
   unsigned PPRCSStackSize = 0;
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+  // A register and its super-register can both appear in SavedRegs (e.g. for
+  // preserve_all, AAPCS contributes D8-D15 while the extended convention
+  // contributes the enclosing Q8-Q31). Only the widest register is actually
+  // spilled, skip such sub-registers here to avoid double-counting the overlap.
+  BitVector CSMask(SavedRegs.size());
+  for (unsigned i = 0; CSRegs[i]; ++i)
+    CSMask.set(CSRegs[i]);
   for (unsigned Reg : SavedRegs.set_bits()) {
     auto *RC = TRI->getMinimalPhysRegClass(MCRegister(Reg));
     assert(RC && "expected register class!");
     auto SpillSize = TRI->getSpillSize(*RC);
     bool IsZPR = AArch64::ZPRRegClass.contains(Reg);
     bool IsPPR = !IsZPR && AArch64::PPRRegClass.contains(Reg);
+    bool SavedSuper = false;
+    for (MCPhysReg SuperReg : TRI->superregs(MCRegister(Reg)))
+      if (SavedRegs.test(SuperReg) && CSMask.test(SuperReg)) {
+        SavedSuper = true;
+        break;
+      }
     if (IsZPR)
       ZPRCSStackSize += SpillSize;
     else if (IsPPR)
       PPRCSStackSize += SpillSize;
-    else
+    else if (!SavedSuper)
       CSStackSize += SpillSize;
   }
 
