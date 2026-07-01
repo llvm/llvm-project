@@ -182,15 +182,18 @@ private:
   // Is alt macro mode enabled.
   bool AltMacroMode = false;
 
-  /// Current recursion depth of parsePrimaryExpr. This bounds the combined
-  /// nesting depth of all recursive forms it handles -- unary operators
-  /// (!, ~, unary +/-) as well as parenthesized and bracketed sub-expressions
-  /// -- so that pathological input cannot overflow the stack.
+  /// Current recursion depth of the mutually-recursive expression parser.
+  /// parseExpression and parsePrimaryExpr call each other through
+  /// parenthesized/bracketed sub-expressions and through target-specific
+  /// parsePrimaryExpr overrides, so the counter is bumped in both places.
+  /// Bounding it bounds every recursive form -- unary operators (!, ~, unary
+  /// +/-), parenthesized and bracketed sub-expressions, and target primary
+  /// expressions -- so that pathological input cannot overflow the stack.
   unsigned ExprParseDepth = 0;
 
-  /// Maximum nesting depth accepted by parsePrimaryExpr. Chosen to be well
-  /// above any plausible hand-written or machine-generated expression while
-  /// still small enough to fail before exhausting the stack.
+  /// Maximum nesting depth accepted by the expression parser. Chosen to be
+  /// well above any plausible hand-written or machine-generated expression
+  /// while still small enough to fail before exhausting the stack.
   static constexpr unsigned MaxExprParseDepth = 1024;
 
 protected:
@@ -1484,6 +1487,17 @@ bool MCAsmParser::parseAtSpecifier(const MCExpr *&Res, SMLoc &EndLoc) {
 bool AsmParser::parseExpression(const MCExpr *&Res, SMLoc &EndLoc) {
   // Parse the expression.
   Res = nullptr;
+
+  // parseExpression and parsePrimaryExpr are mutually recursive. Guarding only
+  // parsePrimaryExpr is not enough: a target's parsePrimaryExpr override may
+  // recurse back through parseExpression without ever re-entering the generic
+  // parsePrimaryExpr (e.g. AMDGPU's max()/min() operators). Bound the depth
+  // here too, sharing one counter, so every recursive form is caught.
+  if (ExprParseDepth >= MaxExprParseDepth)
+    return TokError("expression nesting limit reached (possible infinite "
+                    "recursion)");
+  SaveAndRestore<unsigned> RAII(ExprParseDepth, ExprParseDepth + 1);
+
   auto &TS = getTargetParser();
   if (TS.parsePrimaryExpr(Res, EndLoc) || parseBinOpRHS(1, Res, EndLoc))
     return true;
