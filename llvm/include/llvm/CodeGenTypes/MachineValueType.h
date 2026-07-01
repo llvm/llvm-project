@@ -265,6 +265,33 @@ namespace llvm {
       return MVT::getVectorVT(EltVT, EltCnt * 2);
     }
 
+    // Return a VT for an Integer type doubled in size
+    MVT widenIntegerElementType() const {
+      assert(isScalarInteger() && "Not an integer MVT!");
+      assert((SimpleTy != MVT::LAST_INTEGER_VALUETYPE) &&
+             "Widening of this Integer type not supported !");
+
+      // i1 is a special case doubling gives i2 which is not a valid MVT
+      // so promote directly to i8 instead.
+      if (SimpleTy == MVT::i1)
+        return MVT::i8;
+
+      unsigned NextSizeInBits = getScalarSizeInBits() * 2;
+      return getIntegerVT(NextSizeInBits);
+    }
+
+    // Return a VT for an integer vector type with the size of the
+    // elements doubled.
+    MVT widenIntegerVectorElementType() const {
+      assert(isVector() && "Not a vector MVT!");
+
+      MVT WideEltTy = getVectorElementType().widenIntegerElementType();
+      MVT VecTy = MVT::getVectorVT(WideEltTy, getVectorElementCount());
+      assert(VecTy.SimpleTy != MVT::INVALID_SIMPLE_VALUE_TYPE &&
+             "Widening of this Vector Integer type not supported !");
+      return VecTy;
+    }
+
     /// Returns true if the given vector is a power of 2.
     bool isPow2VectorType() const {
       unsigned NElts = getVectorMinNumElements();
