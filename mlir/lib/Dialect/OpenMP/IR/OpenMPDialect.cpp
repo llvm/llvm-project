@@ -3978,6 +3978,8 @@ void NewCliOp::getAsmResultNames(OpAsmSetValueNameFn setNameFn) {
               else
                 return "fused";
             })
+            .Case(
+                [&](InterchangeOp op) -> std::string { return "interchanged"; })
             .Case([&](TileOp op) -> std::string {
               auto [generateesFirst, generateesCount] =
                   op.getGenerateesODSOperandIndexAndLength();
@@ -4272,7 +4274,8 @@ static ParseResult parseLoopTransformClis(
 ///    (loop bounds are invariant in respect to the outer loops)
 ///
 /// TODO: Generalize for LoopTransformationInterface.
-static LogicalResult checkApplyeesNesting(TileOp op) {
+template <typename OpenMPTransform>
+static LogicalResult checkApplyeesNesting(OpenMPTransform op) {
   // Collect the loops from the nest
   bool isOnlyCanonLoops = true;
   SmallVector<CanonicalLoopOp> canonLoops;
@@ -4299,8 +4302,8 @@ static LogicalResult checkApplyeesNesting(TileOp op) {
     auto loop = canonLoops[i];
 
     if (parentLoop.getOperation() != loop.getOperation()->getParentOp())
-      return op.emitOpError()
-             << "tiled loop nest must be nested within each other";
+      return op.emitOpError() << "OpenMP transformation loop nest must be "
+                                 "nested within each other";
 
     parentIVs.insert(parentLoop.getInductionVar());
 
@@ -4328,10 +4331,12 @@ static LogicalResult checkApplyeesNesting(TileOp op) {
       return true;
     }();
     if (!isPerfectlyNested)
-      return op.emitOpError() << "tiled loop nest must be perfectly nested";
+      return op.emitOpError()
+             << "OpenMP transformation loop nest must be perfectly nested";
 
     if (parentIVs.contains(loop.getTripCount()))
-      return op.emitOpError() << "tiled loop nest must be rectangular";
+      return op.emitOpError()
+             << "OpenMP transformation loop nest must be rectangular";
   }
 
   // TODO: The tile sizes must be computed before the loop, but checking this
@@ -4422,6 +4427,68 @@ std::pair<unsigned, unsigned> FuseOp::getApplyeesODSOperandIndexAndLength() {
 }
 
 std::pair<unsigned, unsigned> FuseOp::getGenerateesODSOperandIndexAndLength() {
+  return getODSOperandIndexAndLength(odsIndex_generatees);
+}
+
+//===----------------------------------------------------------------------===//
+// InterchangeOp
+//===----------------------------------------------------------------------===//
+
+static void printLoopTransformClis(OpAsmPrinter &p, InterchangeOp op,
+                                   OperandRange generatees,
+                                   OperandRange applyees) {
+  if (!generatees.empty())
+    p << '(' << llvm::interleaved(generatees) << ')';
+
+  if (!applyees.empty())
+    p << " <- (" << llvm::interleaved(applyees) << ')';
+}
+
+LogicalResult InterchangeOp::verify() {
+  if (getApplyees().size() < 2)
+    return emitOpError() << "must apply to at least two loops";
+
+  if (!getPermutation().has_value())
+    return emitOpError() << "must have permutation attribute";
+
+  auto permutation = getPermutation().value();
+  if (permutation.size() != getApplyees().size())
+    return emitOpError() << "expecting the same number of permutation "
+                            "attributes and applyees";
+
+  llvm::SmallVector<bool> found(permutation.size(), false);
+  for (auto &val : permutation) {
+    if (auto intAttr = llvm::dyn_cast<IntegerAttr>(val)) {
+      int perm = intAttr.getInt();
+      if (perm <= 0)
+        return emitOpError()
+               << "permutation attribute must be a positive integer";
+      if ((size_t)perm - 1 < permutation.size())
+        found[perm - 1] = true;
+    } else
+      return emitOpError() << "permutation attribute must be of integer type";
+  }
+  for (bool b : found) {
+    if (!b)
+      return emitOpError()
+             << "every integer from 1 must appear in the permutation attribute";
+  }
+
+  if (!getGeneratees().empty() &&
+      getApplyees().size() != getGeneratees().size())
+    return emitOpError()
+           << "expecting the same number of generatees and applyees";
+
+  return checkApplyeesNesting(*this);
+}
+
+std::pair<unsigned, unsigned>
+InterchangeOp::getApplyeesODSOperandIndexAndLength() {
+  return getODSOperandIndexAndLength(odsIndex_applyees);
+}
+
+std::pair<unsigned, unsigned>
+InterchangeOp::getGenerateesODSOperandIndexAndLength() {
   return getODSOperandIndexAndLength(odsIndex_generatees);
 }
 

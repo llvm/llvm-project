@@ -1229,6 +1229,30 @@ class OpenMP_LooprangeClauseSkip<
 def OpenMP_LooprangeClause : OpenMP_LooprangeClauseSkip<>;
 
 //===----------------------------------------------------------------------===//
+//  V6.0: `permutation` clause
+//===----------------------------------------------------------------------===//
+
+class OpenMP_PermutationClauseSkip<
+    bit traits = false, bit arguments = false, bit assemblyFormat = false,
+    bit description = false, bit extraClassDeclaration = false>
+    : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
+  let arguments = (ins OptionalAttr<ArrayAttr>:$permutation);
+
+  let optAssemblyFormat = [{
+    `permutation` `(` $permutation `)`
+  }];
+
+  let description = [{
+    The `permutation` clause contains the new order in which the loops affected
+    by a loop interchange are arranged. The clause contains a list of constant 
+    positive numbers.
+  }];
+}
+
+def OpenMP_PermutationClause : OpenMP_PermutationClauseSkip<>;
+
+//===----------------------------------------------------------------------===//
 // V5.2: [10.1.2] `num_threads` clause
 //===----------------------------------------------------------------------===//
 
