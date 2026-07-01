@@ -503,7 +503,7 @@ bool serialization::needsAnonymousDeclarationNumber(const NamedDecl *D) {
     if (auto *VD = dyn_cast<VarDecl>(D))
       return VD->isStaticLocal();
     // FIXME: What about CapturedDecls (and declarations nested within them)?
-    return isa<TagDecl, BlockDecl>(D);
+    return isa<TagDecl>(D);
   }
 
   // Otherwise, we only care about anonymous class members / block-scope decls.
