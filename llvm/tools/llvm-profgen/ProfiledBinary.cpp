@@ -81,6 +81,12 @@ static cl::opt<bool>
                  cl::desc("Generate the profile for Linux kernel binary."),
                  cl::cat(ProfGenCategory));
 
+static cl::opt<unsigned> TargetPageSize(
+    "page-size", cl::init(0x1000),
+    cl::desc("Page size for aligning segment addresses. Use 4096 for 4KB "
+             "pages (default) or 65536 for 64KB pages (e.g. AArch64)."),
+    cl::cat(ProfGenCategory));
+
 namespace sampleprof {
 
 static const Target *getTarget(const ObjectFile *Obj) {
@@ -362,11 +368,13 @@ template <class ELFT>
 void ProfiledBinary::setPreferredTextSegmentAddresses(const ELFFile<ELFT> &Obj,
                                                       StringRef FileName) {
   const auto &PhdrRange = unwrapOrError(Obj.program_headers(), FileName);
-  // FIXME: This should be the page size of the system running profiling.
-  // However such info isn't available at post-processing time, assuming
-  // 4K page now. Note that we don't use EXEC_PAGESIZE from <linux/param.h>
-  // because we may build the tools on non-linux.
-  uint64_t PageSize = 0x1000;
+  // Promote to 64-bit so that the bitwise masking below operates on the
+  // same width as the 64-bit segment addresses (p_vaddr / p_offset).
+  uint64_t PageSize = TargetPageSize;
+  if (!PageSize || (PageSize & (PageSize - 1)))
+    exitWithError("Number in -page-size=<num> must be positive power of two",
+                  FileName);
+
   for (const typename ELFT::Phdr &Phdr : PhdrRange) {
     if (Phdr.p_type == ELF::PT_INTERP)
       HasInterp = true;
