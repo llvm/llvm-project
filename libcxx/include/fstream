@@ -643,7 +643,10 @@ const char* basic_filebuf<_CharT, _Traits>::__make_mdstring(ios_base::openmode _
 // semantics via fopen(), returning nullptr is the correct behaviour.
 // _AIX is defined by clang on AIX; __TOS_AIX__ is defined by both clang and XLC.
 #      if defined(_AIX) || defined(__TOS_AIX__)
+#        pragma GCC diagnostic push
+#        pragma GCC diagnostic warning "-Wcpp"
 #        warning 'exclusive mode is unsupported on this target'
+#        pragma GCC diagnostic pop
 #      endif
 #      if !defined(_AIX) && !defined(__TOS_AIX__)
   case ios_base::out | ios_base::noreplace:
