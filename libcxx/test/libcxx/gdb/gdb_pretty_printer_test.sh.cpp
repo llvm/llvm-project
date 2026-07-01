@@ -26,7 +26,7 @@
 
 // RUN: %{cxx} %{flags} %s -o %t.exe %{compile_flags} -g %{link_flags}
 // Ensure locale-independence for unicode tests.
-// RUN: env LANG=en_US.UTF-8 %{gdb} -nx -batch -iex "set autoload off" -ex "source %S/../../../utils/gdb/libcxx/printers.py" -ex "python register_libcxx_printer_loader()" -ex "source %S/gdb_pretty_printer_test.py" %t.exe
+// RUN: env LANG=en_US.UTF-8 %{gdb} -nx -batch -iex "set autoload off" -ex "source %{extras-dir}/gdb/libcxx/printers.py" -ex "python register_libcxx_printer_loader()" -ex "source %S/gdb_pretty_printer_test.py" %t.exe
 
 #include <bitset>
 #include <deque>
