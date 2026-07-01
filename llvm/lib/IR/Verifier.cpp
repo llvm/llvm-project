@@ -5540,6 +5540,7 @@ void Verifier::visitInlineHistoryMetadata(Instruction &I, MDNode *MD) {
 
 void Verifier::visitMemCacheHintMetadata(Instruction &I, MDNode *MD) {
   Check(I.mayReadOrWriteMemory(),
+        "!mem.cache_hint is only valid on memory operations", &I);
 
   Check(MD->getNumOperands() % 2 == 0,
         "!mem.cache_hint must have even number of operands "
@@ -5612,6 +5613,8 @@ void Verifier::visitMemCacheHintMetadata(Instruction &I, MDNode *MD) {
 }
 
 /// verifyInstruction - Verify that an instruction is well formed.
+///
+void Verifier::visitInstruction(Instruction &I) {
   BasicBlock *BB = I.getParent();
   Check(BB, "Instruction not embedded in basic block!", &I);
 
@@ -5851,7 +5854,10 @@ void Verifier::visitMemCacheHintMetadata(Instruction &I, MDNode *MD) {
 
   if (MDNode *MD = I.getMetadata(LLVMContext::MD_mem_cache_hint))
     visitMemCacheHintMetadata(I, MD);
+
   if (MDNode *N = I.getDebugLoc().getAsMDNode()) {
+    CheckDI(isa<DILocation>(N), "invalid !dbg metadata attachment", &I, N);
+    visitMDNode(*N, AreDebugLocsAllowed::Yes);
 
     if (auto *DL = dyn_cast<DILocation>(N)) {
       if (DL->getAtomGroup()) {
