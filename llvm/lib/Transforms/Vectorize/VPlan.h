@@ -1374,9 +1374,10 @@ private:
   /// needed.
   bool canGenerateScalarForFirstLane() const;
 
-  /// Utility method serving execute: Generates a scalar or vector value. \p
-  /// IsScalar determines whether to generate a scalar value.
-  Value *generate(VPTransformState &State, bool IsScalar);
+  /// Utility method serving execute: Generates either a single-scalar or vector
+  /// value. \p IsSingleScalar determines whether to generate a single-scalar
+  /// value.
+  Value *generate(VPTransformState &State, bool IsSingleScalar);
 
   /// Returns true if the VPInstruction does not need masking.
   bool alwaysUnmasked() const {

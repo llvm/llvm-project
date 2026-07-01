@@ -725,12 +725,12 @@ static Instruction::BinaryOps getSubRecurOpcode(RecurKind Kind) {
   llvm_unreachable("RecurKind should be Sub/FSub.");
 }
 
-Value *VPInstruction::generate(VPTransformState &State, bool IsScalar) {
+Value *VPInstruction::generate(VPTransformState &State, bool IsSingleScalar) {
   IRBuilderBase &Builder = State.Builder;
 
   if (Instruction::isBinaryOp(getOpcode())) {
-    Value *A = State.get(getOperand(0), IsScalar);
-    Value *B = State.get(getOperand(1), IsScalar);
+    Value *A = State.get(getOperand(0), IsSingleScalar);
+    Value *B = State.get(getOperand(1), IsSingleScalar);
     auto *Res =
         Builder.CreateBinOp((Instruction::BinaryOps)getOpcode(), A, B, Name);
     if (auto *I = dyn_cast<Instruction>(Res))
@@ -740,7 +740,7 @@ Value *VPInstruction::generate(VPTransformState &State, bool IsScalar) {
 
   switch (getOpcode()) {
   case VPInstruction::Not: {
-    Value *A = State.get(getOperand(0), IsScalar);
+    Value *A = State.get(getOperand(0), IsSingleScalar);
     return Builder.CreateNot(A, Name);
   }
   case Instruction::ExtractElement: {
@@ -759,23 +759,24 @@ Value *VPInstruction::generate(VPTransformState &State, bool IsScalar) {
     return Builder.CreateInsertElement(Vec, Elt, Idx, Name);
   }
   case Instruction::Freeze: {
-    Value *Op = State.get(getOperand(0), IsScalar);
+    Value *Op = State.get(getOperand(0), IsSingleScalar);
     return Builder.CreateFreeze(Op, Name);
   }
   case Instruction::FCmp:
   case Instruction::ICmp: {
-    Value *A = State.get(getOperand(0), IsScalar);
-    Value *B = State.get(getOperand(1), IsScalar);
+    Value *A = State.get(getOperand(0), IsSingleScalar);
+    Value *B = State.get(getOperand(1), IsSingleScalar);
     return Builder.CreateCmp(getPredicate(), A, B, Name);
   }
   case Instruction::PHI: {
     llvm_unreachable("should be handled by VPPhi::execute");
   }
   case Instruction::Select: {
-    Value *Cond = State.get(getOperand(0),
-                            IsScalar || vputils::isSingleScalar(getOperand(0)));
-    Value *Op1 = State.get(getOperand(1), IsScalar);
-    Value *Op2 = State.get(getOperand(2), IsScalar);
+    Value *Cond =
+        State.get(getOperand(0),
+                  IsSingleScalar || vputils::isSingleScalar(getOperand(0)));
+    Value *Op1 = State.get(getOperand(1), IsSingleScalar);
+    Value *Op2 = State.get(getOperand(2), IsSingleScalar);
     return Builder.CreateSelectFMF(Cond, Op1, Op2, getFastMathFlagsOrNone(),
                                    Name);
   }
@@ -996,13 +997,13 @@ Value *VPInstruction::generate(VPTransformState &State, bool IsScalar) {
     return Builder.CreateLogicalOr(A, B, Name);
   }
   case VPInstruction::PtrAdd: {
-    assert(IsScalar && "Can only generate first lane for PtrAdd");
-    Value *Ptr = State.get(getOperand(0), IsScalar);
-    Value *Addend = State.get(getOperand(1), IsScalar);
+    assert(IsSingleScalar && "Can only generate first lane for PtrAdd");
+    Value *Ptr = State.get(getOperand(0), IsSingleScalar);
+    Value *Addend = State.get(getOperand(1), IsSingleScalar);
     return Builder.CreatePtrAdd(Ptr, Addend, Name, getGEPNoWrapFlags());
   }
   case VPInstruction::WidePtrAdd: {
-    assert(!IsScalar && "Cannot generate scalar value for WidePtrAdd");
+    assert(!IsSingleScalar && "Cannot generate scalar value for WidePtrAdd");
     Value *Ptr =
         State.get(getOperand(0), vputils::isSingleScalar(getOperand(0)));
     Value *Addend = State.get(getOperand(1));
