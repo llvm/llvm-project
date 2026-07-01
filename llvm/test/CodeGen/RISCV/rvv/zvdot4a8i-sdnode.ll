@@ -1106,20 +1106,18 @@ define i32 @vdot4au_vv_chain4(<vscale x 16 x i8> %a0, <vscale x 16 x i8> %b0, <v
 ; NODOT:       # %bb.0: # %entry
 ; NODOT-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
 ; NODOT-NEXT:    vwmulu.vv v24, v20, v22
+; NODOT-NEXT:    vwmulu.vv v20, v8, v10
+; NODOT-NEXT:    vwmulu.vv v28, v12, v14
+; NODOT-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
+; NODOT-NEXT:    vwaddu.vv v8, v28, v20
+; NODOT-NEXT:    vsetvli zero, zero, e8, m2, ta, ma
 ; NODOT-NEXT:    vwmulu.vv v28, v16, v18
 ; NODOT-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
 ; NODOT-NEXT:    vwaddu.vv v16, v24, v28
-; NODOT-NEXT:    vsetvli zero, zero, e8, m2, ta, ma
-; NODOT-NEXT:    vwmulu.vv v24, v12, v14
-; NODOT-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
-; NODOT-NEXT:    vwaddu.wv v16, v16, v24
-; NODOT-NEXT:    vsetvli zero, zero, e8, m2, ta, ma
-; NODOT-NEXT:    vwmulu.vv v12, v8, v10
-; NODOT-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
-; NODOT-NEXT:    vwaddu.wv v16, v16, v12
 ; NODOT-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
-; NODOT-NEXT:    vmv.s.x v8, zero
-; NODOT-NEXT:    vredsum.vs v8, v16, v8
+; NODOT-NEXT:    vadd.vv v8, v16, v8
+; NODOT-NEXT:    vmv.s.x v16, zero
+; NODOT-NEXT:    vredsum.vs v8, v8, v16
 ; NODOT-NEXT:    vmv.x.s a0, v8
 ; NODOT-NEXT:    ret
 ;
@@ -1127,10 +1125,10 @@ define i32 @vdot4au_vv_chain4(<vscale x 16 x i8> %a0, <vscale x 16 x i8> %b0, <v
 ; DOT:       # %bb.0: # %entry
 ; DOT-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
 ; DOT-NEXT:    vmv.v.i v24, 0
-; DOT-NEXT:    vdot4au.vv v24, v20, v22
-; DOT-NEXT:    vdot4au.vv v24, v16, v18
 ; DOT-NEXT:    vdot4au.vv v24, v12, v14
 ; DOT-NEXT:    vdot4au.vv v24, v8, v10
+; DOT-NEXT:    vdot4au.vv v24, v20, v22
+; DOT-NEXT:    vdot4au.vv v24, v16, v18
 ; DOT-NEXT:    vmv.s.x v8, zero
 ; DOT-NEXT:    vredsum.vs v8, v24, v8
 ; DOT-NEXT:    vmv.x.s a0, v8

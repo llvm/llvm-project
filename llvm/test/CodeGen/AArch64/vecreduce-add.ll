@@ -4421,50 +4421,51 @@ define i32 @full(ptr %p1, i32 noundef %s1, ptr %p2, i32 noundef %s2) {
 ; CHECK-SD-BASE-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-SD-BASE-NEXT:    sxtw x8, w3
 ; CHECK-SD-BASE-NEXT:    sxtw x9, w1
-; CHECK-SD-BASE-NEXT:    ldr d0, [x0]
-; CHECK-SD-BASE-NEXT:    ldr d1, [x2]
+; CHECK-SD-BASE-NEXT:    ldr d3, [x0]
+; CHECK-SD-BASE-NEXT:    ldr d4, [x2]
 ; CHECK-SD-BASE-NEXT:    add x10, x0, x9
 ; CHECK-SD-BASE-NEXT:    add x11, x2, x8
+; CHECK-SD-BASE-NEXT:    add x12, x10, x9
+; CHECK-SD-BASE-NEXT:    add x13, x11, x8
+; CHECK-SD-BASE-NEXT:    add x14, x12, x9
+; CHECK-SD-BASE-NEXT:    add x15, x13, x8
+; CHECK-SD-BASE-NEXT:    ldr d5, [x13]
+; CHECK-SD-BASE-NEXT:    add x16, x14, x9
+; CHECK-SD-BASE-NEXT:    add x17, x15, x8
+; CHECK-SD-BASE-NEXT:    add x18, x16, x9
+; CHECK-SD-BASE-NEXT:    add x1, x17, x8
+; CHECK-SD-BASE-NEXT:    add x3, x18, x9
+; CHECK-SD-BASE-NEXT:    add x4, x1, x8
+; CHECK-SD-BASE-NEXT:    ldr d0, [x3]
+; CHECK-SD-BASE-NEXT:    ldr d1, [x4]
+; CHECK-SD-BASE-NEXT:    ldr d2, [x4, x8]
 ; CHECK-SD-BASE-NEXT:    uabdl v0.8h, v0.8b, v1.8b
-; CHECK-SD-BASE-NEXT:    ldr d1, [x10]
-; CHECK-SD-BASE-NEXT:    ldr d2, [x11]
-; CHECK-SD-BASE-NEXT:    add x10, x10, x9
-; CHECK-SD-BASE-NEXT:    add x11, x11, x8
+; CHECK-SD-BASE-NEXT:    ldr d1, [x3, x9]
 ; CHECK-SD-BASE-NEXT:    uabdl v1.8h, v1.8b, v2.8b
-; CHECK-SD-BASE-NEXT:    ldr d2, [x11]
-; CHECK-SD-BASE-NEXT:    add x11, x11, x8
+; CHECK-SD-BASE-NEXT:    ldr d2, [x1]
 ; CHECK-SD-BASE-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-SD-BASE-NEXT:    uadalp v0.4s, v1.8h
-; CHECK-SD-BASE-NEXT:    ldr d1, [x10]
-; CHECK-SD-BASE-NEXT:    add x10, x10, x9
+; CHECK-SD-BASE-NEXT:    ldr d1, [x18]
 ; CHECK-SD-BASE-NEXT:    uabdl v1.8h, v1.8b, v2.8b
-; CHECK-SD-BASE-NEXT:    ldr d2, [x11]
-; CHECK-SD-BASE-NEXT:    add x11, x11, x8
+; CHECK-SD-BASE-NEXT:    ldr d2, [x17]
+; CHECK-SD-BASE-NEXT:    uadalp v0.4s, v1.8h
+; CHECK-SD-BASE-NEXT:    ldr d1, [x16]
+; CHECK-SD-BASE-NEXT:    uabdl v1.8h, v1.8b, v2.8b
+; CHECK-SD-BASE-NEXT:    ldr d2, [x15]
+; CHECK-SD-BASE-NEXT:    uadalp v0.4s, v1.8h
+; CHECK-SD-BASE-NEXT:    ldr d1, [x14]
+; CHECK-SD-BASE-NEXT:    uabdl v1.8h, v1.8b, v2.8b
+; CHECK-SD-BASE-NEXT:    uabdl v2.8h, v3.8b, v4.8b
+; CHECK-SD-BASE-NEXT:    ldr d3, [x11]
+; CHECK-SD-BASE-NEXT:    ldr d4, [x12]
+; CHECK-SD-BASE-NEXT:    uaddlp v2.4s, v2.8h
 ; CHECK-SD-BASE-NEXT:    uadalp v0.4s, v1.8h
 ; CHECK-SD-BASE-NEXT:    ldr d1, [x10]
-; CHECK-SD-BASE-NEXT:    add x10, x10, x9
-; CHECK-SD-BASE-NEXT:    uabdl v1.8h, v1.8b, v2.8b
-; CHECK-SD-BASE-NEXT:    ldr d2, [x11]
-; CHECK-SD-BASE-NEXT:    add x11, x11, x8
-; CHECK-SD-BASE-NEXT:    uadalp v0.4s, v1.8h
-; CHECK-SD-BASE-NEXT:    ldr d1, [x10]
-; CHECK-SD-BASE-NEXT:    add x10, x10, x9
-; CHECK-SD-BASE-NEXT:    uabdl v1.8h, v1.8b, v2.8b
-; CHECK-SD-BASE-NEXT:    ldr d2, [x11]
-; CHECK-SD-BASE-NEXT:    add x11, x11, x8
-; CHECK-SD-BASE-NEXT:    uadalp v0.4s, v1.8h
-; CHECK-SD-BASE-NEXT:    ldr d1, [x10]
-; CHECK-SD-BASE-NEXT:    add x10, x10, x9
-; CHECK-SD-BASE-NEXT:    uabdl v1.8h, v1.8b, v2.8b
-; CHECK-SD-BASE-NEXT:    ldr d2, [x11]
-; CHECK-SD-BASE-NEXT:    uadalp v0.4s, v1.8h
-; CHECK-SD-BASE-NEXT:    ldr d1, [x10]
-; CHECK-SD-BASE-NEXT:    uabdl v1.8h, v1.8b, v2.8b
-; CHECK-SD-BASE-NEXT:    ldr d2, [x11, x8]
-; CHECK-SD-BASE-NEXT:    uadalp v0.4s, v1.8h
-; CHECK-SD-BASE-NEXT:    ldr d1, [x10, x9]
-; CHECK-SD-BASE-NEXT:    uabdl v1.8h, v1.8b, v2.8b
-; CHECK-SD-BASE-NEXT:    uadalp v0.4s, v1.8h
+; CHECK-SD-BASE-NEXT:    uabdl v1.8h, v1.8b, v3.8b
+; CHECK-SD-BASE-NEXT:    uabdl v3.8h, v4.8b, v5.8b
+; CHECK-SD-BASE-NEXT:    uadalp v2.4s, v1.8h
+; CHECK-SD-BASE-NEXT:    uadalp v0.4s, v3.8h
+; CHECK-SD-BASE-NEXT:    add v0.4s, v2.4s, v0.4s
 ; CHECK-SD-BASE-NEXT:    addv s0, v0.4s
 ; CHECK-SD-BASE-NEXT:    fmov w0, s0
 ; CHECK-SD-BASE-NEXT:    ret

@@ -16633,52 +16633,6 @@ static SDValue combineAddMulh(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(RISCVISD::MULHSU, DL, VT, X, Mulh.getOperand(1));
 }
 
-// Reassociate a scalar accumulator chain of vector reductions so the
-// reductions become adjacent and can be merged:
-//   add(vecreduce_add(X), add(vecreduce_add(Y), Z))
-//     -> add(vecreduce_add(add(X, Y)), Z)
-// The generic DAGCombiner only folds add(vecreduce(x), vecreduce(y)) ->
-// vecreduce(add(x, y)) when both operands of a single add are reductions
-// (DAGCombiner::reassociateReduction). SLP often produces a left-leaning
-// scalar chain add(reduce_i, acc) where the cascade breaks, leaving one
-// reduction (and, with Zvdot4a8i, one vredsum) per term. Applied to fixpoint
-// by the combiner worklist, this collapses the whole chain into
-// add(vecreduce_add(BigSum), acc), after which the generic fold and the
-// vdot4a accumulator chaining produce a single reduction.
-static SDValue combineReduceAddChain(SDNode *N, SelectionDAG &DAG,
-                                     const RISCVSubtarget &Subtarget) {
-  using namespace SDPatternMatch;
-  EVT VT = N->getValueType(0);
-  // Only scalar integer adds; vector reductions feed a scalar result.
-  if (!Subtarget.hasVInstructions() || !VT.isScalarInteger())
-    return SDValue();
-
-  // Match add(vecreduce_add(X), Tail) where Tail is add(vecreduce_add(Y), Z).
-  SDValue X, Y, Z;
-  if (!sd_match(N, m_Add(m_OneUse(m_UnaryOp(ISD::VECREDUCE_ADD, m_Value(X))),
-                         m_OneUse(m_Add(m_OneUse(m_UnaryOp(ISD::VECREDUCE_ADD,
-                                                           m_Value(Y))),
-                                        m_Value(Z))))))
-    return SDValue();
-
-  // The two reductions must be over the same vector type to merge them.
-  EVT SrcVT = X.getValueType();
-  if (SrcVT != Y.getValueType())
-    return SDValue();
-
-  // The add on the source vector type must be available.
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  if (!TLI.isOperationLegalOrCustom(ISD::ADD, SrcVT))
-    return SDValue();
-
-  // Reassociating the wrapping reduction sum invalidates the per-step nsw/nuw
-  // facts, so build the new nodes without flags.
-  SDLoc DL(N);
-  SDValue Sum = DAG.getNode(ISD::ADD, DL, SrcVT, X, Y);
-  SDValue Red = DAG.getNode(ISD::VECREDUCE_ADD, DL, VT, Sum);
-  return DAG.getNode(ISD::ADD, DL, VT, Red, Z);
-}
-
 static SDValue performADDCombine(SDNode *N,
                                  TargetLowering::DAGCombinerInfo &DCI,
                                  const RISCVSubtarget &Subtarget) {
@@ -16693,8 +16647,6 @@ static SDValue performADDCombine(SDNode *N,
     if (SDValue V = combineShlAddIAdd(N, DAG, Subtarget))
       return V;
   }
-  if (SDValue V = combineReduceAddChain(N, DAG, Subtarget))
-    return V;
   if (SDValue V = combineBinOpToReduce(N, DAG, Subtarget))
     return V;
   if (SDValue V = combineBinOpOfExtractToReduceTree(N, DAG, Subtarget))

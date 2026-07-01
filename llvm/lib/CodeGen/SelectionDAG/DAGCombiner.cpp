@@ -1401,6 +1401,44 @@ SDValue DAGCombiner::reassociateReduction(unsigned RedOpc, unsigned Opc,
     SDValue Op2 = DAG.getNode(Opc, DL, VT, B, D);
     return DAG.getNode(Opc, DL, VT, Red, Op2);
   }
+
+  // Reassociate a reduction chain so two reductions become adjacent and the
+  // folds above can merge them:
+  //   op(vecreduce(X), op(vecreduce(Y), Z))
+  //     -> op(vecreduce(op(X, Y)), Z)
+  // Applied to fixpoint by the combiner worklist, this collapses an
+  // arbitrarily long chain of reductions (such as the left-leaning chain SLP
+  // emits) into a single reduction.
+  auto FoldReductionChain = [&](SDValue Red0, SDValue Chain) -> SDValue {
+    SDValue X, Y, Z, RedX, RedY;
+    if (!sd_match(Red0, m_AllOf(m_OneUse(m_UnaryOp(RedOpc, m_Value(X))),
+                                m_Value(RedX))) ||
+        !sd_match(Chain, m_OneUse(m_c_BinOp(
+                             Opc,
+                             m_AllOf(m_OneUse(m_UnaryOp(RedOpc, m_Value(Y))),
+                                     m_Value(RedY)),
+                             m_Value(Z)))) ||
+        sd_match(Z, m_UnaryOp(RedOpc, m_Value())) ||
+        X.getValueType() != Y.getValueType() ||
+        !hasOperation(Opc, X.getValueType()) ||
+        !TLI.shouldReassociateReduction(RedOpc, VT))
+      return SDValue();
+    if ((Opc == ISD::FADD || Opc == ISD::FMUL) &&
+        (!Chain->getFlags().hasAllowReassociation() ||
+         !RedX->getFlags().hasAllowReassociation() ||
+         !RedY->getFlags().hasAllowReassociation()))
+      return SDValue();
+    SelectionDAG::FlagInserter FlagsInserter(
+        DAG, Flags & Chain->getFlags() & RedX->getFlags() & RedY->getFlags());
+    SDValue Sum = DAG.getNode(Opc, DL, X.getValueType(), X, Y);
+    SDValue Red = DAG.getNode(RedOpc, DL, VT, Sum);
+    return DAG.getNode(Opc, DL, VT, Red, Z);
+  };
+  if (SDValue V = FoldReductionChain(N0, N1))
+    return V;
+  if (SDValue V = FoldReductionChain(N1, N0))
+    return V;
+
   return SDValue();
 }
 
