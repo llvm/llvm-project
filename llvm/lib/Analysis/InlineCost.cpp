@@ -3081,7 +3081,7 @@ LLVM_DUMP_METHOD void InlineCostCallAnalyzer::dump() { print(dbgs()); }
 /// Test that there are no attribute conflicts between Caller and Callee
 ///        that prevent inlining.
 static bool functionsHaveCompatibleAttributes(
-    Function *Caller, Function *Callee, TargetTransformInfo &TTI,
+    Function *Caller, Function *Callee,
     function_ref<const TargetLibraryInfo &(Function &)> &GetTLI) {
   // Note that CalleeTLI must be a copy not a reference. The legacy pass manager
   // caches the most recently created TLI in the TargetLibraryInfoWrapperPass
@@ -3232,7 +3232,7 @@ std::optional<InlineResult> llvm::getAttributeBasedInliningDecision(
 
   // Never inline functions with conflicting attributes (unless callee has
   // always-inline attribute).
-  if (!functionsHaveCompatibleAttributes(Caller, Callee, CalleeTTI, GetTLI))
+  if (!functionsHaveCompatibleAttributes(Caller, Callee, GetTLI))
     return InlineResult::failure("conflicting attributes");
 
   // Flatten: inline all viable calls from flatten functions regardless of cost.
