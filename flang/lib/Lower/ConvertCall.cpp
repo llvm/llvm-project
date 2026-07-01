@@ -1494,6 +1494,8 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
     // is contiguous according to the dummy type.
     if (mustSetDynamicTypeToDummyType)
       entity = genSetDynamicTypeToDummyType(entity);
+
+    const bool isParameter = isParameterObjectOrSubObject(entity);
     if (arg.hasValueAttribute() ||
         // Constant expressions might be lowered as variables with
         // 'parameter' attribute. Even though the constant expressions
@@ -1501,7 +1503,7 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
         // possible, we have to create a temporary copies when we pass
         // them down the call stack because of potential compiler
         // generated writes in copy-out.
-        isParameterObjectOrSubObject(entity)) {
+        (isParameter && arg.mayBeModifiedByCall())) {
       // Make a copy in a temporary.
       auto copy = hlfir::AsExprOp::create(builder, loc, entity);
       mlir::Type storageType = entity.getType();
@@ -1511,7 +1513,7 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
       entity = hlfir::Entity{associate.getBase()};
       // Register the temporary destruction after the call.
       preparedDummy.pushExprAssociateCleanUp(associate);
-    } else if (mustDoCopyIn || mustDoCopyOut) {
+    } else if ((mustDoCopyIn || mustDoCopyOut) && !isParameter) {
       // Copy-in non contiguous variables.
       //
       // TODO: copy-in and copy-out are now determined separately, in order
