@@ -409,24 +409,19 @@ std::optional<Value> TosaReduceTransposes::buildMappedToValue(
   auto reshapeOutput = reshapeOp.getOutput();
   auto reshapeInputType =
       llvm::dyn_cast<RankedTensorType>(reshapeOp.getInput1().getType());
-  auto reshapeInputShape = reshapeInputType.getShape();
   if (!reshapeInputType)
     return std::nullopt;
+  auto reshapeInputShape = reshapeInputType.getShape();
   auto reshapeOutputType =
       llvm::cast<RankedTensorType>(reshapeOutput.getType());
   const ArrayRef<int64_t> reshapeOutputShape = reshapeOutputType.getShape();
+
   // Instead of inserting a TransposeOp here, we check if we can fold it into
   // the ReshapeOp. There is more complex cases where this is possible, and
   // this check can be extended.
-
   if (failed(verifyUnitExpandedVectorShape(reshapeInputShape)) ||
       failed(verifyUnitExpandedVectorShape(reshapeOutputShape)))
     return std::nullopt;
-
-  SmallVector<int64_t> mappedShape =
-      applyTOSAPermutation(reshapeOutputShape, hoistedPerms);
-  if (llvm::equal(mappedShape, reshapeInputShape))
-    return reshapeOp.getInput1();
 
   // Do not insert a TransposeOp, instead we fold the reshape and its attribute.
   llvm::SmallVector<int64_t> newShape;
@@ -438,7 +433,9 @@ std::optional<Value> TosaReduceTransposes::buildMappedToValue(
   ImplicitLocOpBuilder builder(reshapeOp.getLoc(), rewriter);
   auto foldedReshape = ReshapeOp::create(
       rewriter, reshapeOp.getLoc(),
-      RankedTensorType::get(mappedShape, reshapeOutputType.getElementType()),
+      RankedTensorType::get(
+          applyTOSAPermutation(reshapeOutputShape, hoistedPerms),
+          reshapeOutputType.getElementType()),
       reshapeOp.getInput1(),
       getTosaConstShape(builder, applyTOSAPermutation(llvm::ArrayRef(newShape),
                                                       hoistedPerms)));
