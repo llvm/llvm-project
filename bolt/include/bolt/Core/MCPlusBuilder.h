@@ -1864,7 +1864,9 @@ public:
   /// the following sequence will be generated:
   ///
   ///     adrp Reg, PageBase(label)
-  ///     ldr  x0, [Reg, PageOffset(label)]
+  ///     ldr  q0, [Reg, PageOffset(label)]
+  ///
+  /// where Reg is provided by the 3rd argument.
   virtual InstructionListType
   createAdrpLdr(const MCInst &LDRInst, MCContext *Ctx,
                 MCPhysReg Reg = MCRegister::NoRegister) const {
