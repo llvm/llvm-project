@@ -698,6 +698,19 @@ void HexagonFrameLowering::insertPrologueInBlock(MachineBasicBlock &MBB,
 
   bool AlignStack = (MaxAlign > getStackAlign());
 
+  // PS_aligna was emitted during instruction selection with the MaxAlign known
+  // at that time (only static entry-block allocas had been processed). Register
+  // allocation may have since raised MaxAlign by adding HVX spill slots, which
+  // carry 128-byte alignment in Hvx128 mode. Update the PS_aligna immediate
+  // here so that the AP register uses the correct mask, preventing misaligned 
+  // vmem spills from corrupting adjacent stack slots.
+  if (MFI.hasVarSizedObjects()) {
+    if (MachineInstr *AI = const_cast<MachineInstr *>(getAlignaInstr(MF))) {
+      if (AI->getOperand(1).getImm() < (int64_t)MaxAlign.value())
+        AI->getOperand(1).setImm(MaxAlign.value());
+    }
+  }
+
   // Get the number of bytes to allocate from the FrameInfo.
   unsigned NumBytes = MFI.getStackSize();
   Register SP = HRI.getStackRegister();
