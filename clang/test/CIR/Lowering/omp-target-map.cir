@@ -16,8 +16,8 @@ module {
     // CHECK: %[[MAP:.*]] = omp.map.info var_ptr(%[[ALLOCA]] : !llvm.ptr, i32) map_clauses(from) capture(ByRef) -> !llvm.ptr {name = "x"}
     %1 = omp.map.info var_ptr(%0 : !cir.ptr<!s32i>, !s32i) map_clauses(from) capture(ByRef) -> !cir.ptr<!s32i> {name = "x"}
 
-    // CHECK: omp.target map_entries(%[[MAP]] -> %[[ARG:.*]] : !llvm.ptr)
-    omp.target map_entries(%1 -> %arg1 : !cir.ptr<!s32i>) {
+    // CHECK: omp.target kernel_type(generic) map_entries(%[[MAP]] -> %[[ARG:.*]] : !llvm.ptr)
+    omp.target kernel_type(generic) map_entries(%1 -> %arg1 : !cir.ptr<!s32i>) {
       // CHECK: %[[C10:.*]] = llvm.mlir.constant(10 : i32) : i32
       // CHECK: llvm.store %[[C10]], %[[ARG]]
       %c10 = cir.const #cir.int<10> : !s32i

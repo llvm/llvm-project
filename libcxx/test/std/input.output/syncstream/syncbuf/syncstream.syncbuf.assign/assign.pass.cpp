@@ -169,6 +169,7 @@ static void test_basic() {
   { // Test properties
     std::basic_syncbuf<CharT> sync_buf1(nullptr);
     std::basic_syncbuf<CharT> sync_buf2(nullptr);
+    ASSERT_NOT_NOEXCEPT(sync_buf1 = std::move(sync_buf2)); // LWG3498
     [[maybe_unused]] std::same_as<std::basic_syncbuf<CharT>&> decltype(auto) ret =
         sync_buf1.operator=(std::move(sync_buf2));
   }

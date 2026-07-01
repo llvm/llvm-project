@@ -3,6 +3,8 @@
 
 target datalayout = "p:16:16"
 
+declare ptr @get_ptr()
+
 define void @align_on_i128_offset(ptr %p) {
 ; CHECK-LABEL: define void @align_on_i128_offset(
 ; CHECK-SAME: ptr [[P:%.*]]) {
@@ -22,5 +24,16 @@ define void @align_on_i128_offset_unaligned(ptr %p) {
 ;
   %gep = getelementptr i8, ptr %p, i16 32
   call void @llvm.assume(i1 true) ["align"(ptr %gep, i64 16)]
+  ret void
+}
+
+define void @align_greater_than_ptr_size() {
+; CHECK-LABEL: define void @align_greater_than_ptr_size() {
+; CHECK-NEXT:    [[P:%.*]] = call ptr @get_ptr()
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[P]], i64 8589934592) ]
+; CHECK-NEXT:    ret void
+;
+  %p = call ptr @get_ptr()
+  call void @llvm.assume(i1 true) [ "align"(ptr %p, i64 8589934592) ]
   ret void
 }

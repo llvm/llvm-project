@@ -79,6 +79,10 @@ public:
   static const AMDGPUMCExpr *
   create(VariantKind Kind, ArrayRef<const MCExpr *> Args, MCContext &Ctx);
 
+  /// \returns the required operand count for \p Kind, or 0 for the variadic
+  /// kinds (or/max/min). Used at parse time and by the create() assert.
+  static unsigned getNumExpectedArgs(VariantKind Kind);
+
   static const AMDGPUMCExpr *createOr(ArrayRef<const MCExpr *> Args,
                                       MCContext &Ctx) {
     return create(VariantKind::AGVK_Or, Args, Ctx);

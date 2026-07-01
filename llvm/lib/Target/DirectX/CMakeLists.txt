@@ -33,6 +33,7 @@ add_llvm_target(DirectXCodeGen
   DXILPostOptimizationValidation.cpp
   DXILPrepare.cpp
   DXILPrettyPrinter.cpp
+  DXILRemoveUnusedResources.cpp
   DXILResourceAccess.cpp
   DXILResourceImplicitBinding.cpp
   DXILShaderFlags.cpp

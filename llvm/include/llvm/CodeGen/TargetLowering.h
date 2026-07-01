@@ -527,7 +527,8 @@ public:
   /// can be used to store the results of comparisons for use by selects
   /// and conditional branches. With multiple condition registers, the code
   /// generator will not aggressively sink comparisons into the blocks of their
-  /// users.
+  /// users. \p VT is the type of the condition value, e.g. the type of the
+  /// result of a comparison.
   virtual bool hasMultipleConditionRegisters(EVT VT) const { return false; }
 
   /// Return true if the target has BitExtract instructions.
@@ -2138,7 +2139,7 @@ public:
   }
 
   virtual bool needsFixedCatchObjects() const {
-    report_fatal_error("Funclet EH is not implemented for this target");
+    reportFatalUsageError("Funclet EH is not implemented for this target");
   }
 
   /// Return the minimum stack alignment of an argument.
@@ -2182,11 +2183,11 @@ public:
   virtual Value *getSDagStackGuard(const Module &M,
                                    const LibcallLoweringInfo &Libcalls) const;
 
-  /// If this function returns true, stack protection checks should XOR the
+  /// If this function returns true, stack protection checks should mix the
   /// frame pointer (or whichever pointer is used to address locals) into the
   /// stack guard value before checking it. getIRStackGuard must return nullptr
   /// if this returns true.
-  virtual bool useStackGuardXorFP() const { return false; }
+  virtual bool useStackGuardMixFP() const { return false; }
 
   /// If the target has a standard stack protection check function that
   /// performs validation and error handling, returns the function. Otherwise,
@@ -2550,8 +2551,10 @@ public:
   /// select(N0|N1, X, Y) => select(N0, select(N1, X, Y, Y)) if it is likely
   /// that it saves us from materializing N0 and N1 in an integer register.
   /// Targets that are able to perform and/or on flags should return false here.
-  virtual bool shouldNormalizeToSelectSequence(LLVMContext &Context,
-                                               EVT VT) const {
+  /// \p VT is the type of the select (and X and Y). \p CCVT is the type of its
+  /// condition (N0 and N1).
+  virtual bool shouldNormalizeToSelectSequence(LLVMContext &Context, EVT VT,
+                                               EVT CCVT) const {
     // If a target has multiple condition registers, then it likely has logical
     // operations on those registers.
     if (hasMultipleConditionRegisters(VT))
@@ -5147,7 +5150,7 @@ public:
   /// so the default action is to bail.
   virtual Register getRegisterByName(const char* RegName, LLT Ty,
                                      const MachineFunction &MF) const {
-    report_fatal_error("Named registers not implemented for this target");
+    reportFatalUsageError("Named registers not implemented for this target");
   }
 
   /// Return the type that should be used to zero or sign extend a
@@ -5660,6 +5663,11 @@ public:
   /// \returns The expansion result
   SDValue expandFCANONICALIZE(SDNode *Node, SelectionDAG &DAG) const;
 
+  /// Expand CONVERT_TO_ARBITRARY_FP using bit manipulation.
+  /// \param Node Node to expand.
+  /// \returns The expansion result, or SDValue() if fails.
+  SDValue expandCONVERT_TO_ARBITRARY_FP(SDNode *Node, SelectionDAG &DAG) const;
+
   /// Expand CONVERT_FROM_ARBITRARY_FP using bit manipulation.
   /// \param Node Node to expand.
   /// \returns The expansion result, or SDValue() if fails.
@@ -5980,7 +5988,7 @@ public:
   /// LOAD_STACK_GUARD node when it is lowering Intrinsic::stackprotector.
   virtual bool useLoadStackGuardNode(const Module &M) const { return false; }
 
-  virtual SDValue emitStackGuardXorFP(SelectionDAG &DAG, SDValue Val,
+  virtual SDValue emitStackGuardMixFP(SelectionDAG &DAG, SDValue Val,
                                       const SDLoc &DL) const {
     llvm_unreachable("not implemented for this target");
   }

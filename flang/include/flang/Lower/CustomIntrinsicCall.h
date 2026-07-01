@@ -38,6 +38,9 @@ struct SpecificIntrinsic;
 
 namespace lower {
 
+/// Build intrinsic lowering options from the converter state.
+fir::IntrinsicLoweringOptions getIntrinsicLoweringOptions(AbstractConverter &);
+
 /// Does the call \p procRef to \p intrinsic need to be handle via this custom
 /// framework due to optional arguments. Otherwise, the tools from
 /// IntrinsicCall.cpp should be used directly.

@@ -310,10 +310,15 @@ def fir_LoadOp : fir_OneResultOp<"load", [
 
     The ssa-value has an undefined value if the memory reference is undefined
     or null.
+
+    A set `invariant` attribute indicates that the referenced memory location
+    contains the same value at all points in the program where it is
+    dereferenceable, so the load may be treated as invariant.
   }];
 
   let arguments = (ins AnyReferenceLike:$memref,
       OptionalAttr<LLVM_TBAATagArrayAttr>:$tbaa, UnitAttr:$nontemporal,
+      UnitAttr:$invariant,
       OptionalAttr<LLVM_AccessGroupArrayAttr>:$accessGroups);
 
   let builders = [OpBuilder<(ins "mlir::Value":$refVal)>,
@@ -2560,6 +2565,8 @@ def fir_IfOp
         "bool":$withElseRegion)>
   ];
 
+  let hasCanonicalizer = 1;
+
   let extraClassDeclaration = [{
     mlir::OpBuilder getThenBodyBuilder() {
       assert(!getThenRegion().empty() && "Unexpected empty 'where' region.");
@@ -3070,15 +3077,9 @@ def fir_VolatileCastOp
 }
 
 def fir_ConvertOp
-    : fir_SimpleOneResultOp<"convert",
-                            [NoMemoryEffect, ViewLikeOpInterface,
-                             ConditionallySpeculatable,
-                             DeclareOpInterfaceMethods<PromotableOpInterface>,
-                             DeclareOpInterfaceMethods<
-                                 PromotableAliaserInterface,
-                                 ["projectSlotValueToAliasValue",
-                                  "projectAliasValueToSlotValue"]>,
-                             fir_FortranObjectViewOpInterface]> {
+    : fir_SimpleOneResultOp<"convert", [NoMemoryEffect, ViewLikeOpInterface,
+                                        ConditionallySpeculatable,
+                                        fir_FortranObjectViewOpInterface]> {
   let summary = "encapsulates all Fortran entity type conversions";
 
   let description = [{
@@ -3607,7 +3608,6 @@ def fir_DeclareOp
                          DeclareOpInterfaceMethods<PromotableOpInterface,
                                                    ["requiresReplacedValues",
                                                     "visitReplacedValues"]>,
-                         DeclareOpInterfaceMethods<PromotableAliaserInterface>,
                          fir_FortranObjectViewOpInterface]> {
   let summary = "declare a variable";
 

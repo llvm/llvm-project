@@ -79,6 +79,12 @@ void initializeDXILOpLoweringLegacyPass(PassRegistry &);
 /// Pass to lowering LLVM intrinsic call to DXIL op function call.
 ModulePass *createDXILOpLoweringLegacyPass();
 
+/// Initializer for DXILRemoveUnusedResources
+void initializeDXILRemoveUnusedResourcesLegacyPass(PassRegistry &);
+
+/// Pass to update remove unsused resources.
+FunctionPass *createDXILRemoveUnusedResourcesLegacyPass();
+
 /// Initializer for DXILResourceAccess
 void initializeDXILResourceAccessLegacyPass(PassRegistry &);
 

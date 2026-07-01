@@ -1035,6 +1035,9 @@ public:
   /// regarding the AST record layout.
   std::optional<size_t>
   computeOffsetForComparison(const ASTContext &ASTCtx) const;
+  /// Compute the pointer offset as given by the ASTRecordLayout.
+  /// Returns the result in bytes.
+  std::optional<size_t> computeLayoutOffset(const ASTContext &ASTCtx) const;
 
 private:
   friend class Block;
@@ -1103,14 +1106,14 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Pointer &P) {
       std::reverse(Indices.begin(), Indices.end());
       OS << Indices;
     }
-  } else if (P.isArrayRoot())
+  } else if (P.isBlockPointer() && P.isArrayRoot())
     OS << " arrayroot";
 
   if (P.isBlockPointer() && P.block() && P.block()->isDummy())
     OS << " dummy";
   if (!P.isLive())
     OS << " dead";
-  if (P.isBaseClass())
+  if (P.isBlockPointer() && P.isBaseClass())
     OS << " base-class";
   return OS;
 }

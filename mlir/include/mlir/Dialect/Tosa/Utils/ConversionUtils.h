@@ -271,6 +271,11 @@ std::optional<ArrayRef<T>> tryGetDenseResourceValues(ElementsAttr attr) {
   return std::nullopt;
 }
 
+// returns the value of a constant scalar int tensor, or failure if
+// the value cannot be extracted
+template <typename T>
+FailureOr<T> getConstantScalarIntValue(Value val);
+
 } // namespace tosa
 } // namespace mlir
 

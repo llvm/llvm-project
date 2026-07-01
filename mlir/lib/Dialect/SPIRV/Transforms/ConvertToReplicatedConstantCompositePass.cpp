@@ -28,6 +28,8 @@ static Type getArrayElemType(Attribute attr) {
   }
 
   if (auto arrayAttr = dyn_cast<ArrayAttr>(attr)) {
+    if (arrayAttr.empty())
+      return nullptr;
     return ArrayType::get(getArrayElemType(arrayAttr[0]), arrayAttr.size());
   }
 
@@ -45,7 +47,7 @@ getSplatAttrAndNumElements(Attribute valueAttr, Type valueType) {
   }
 
   if (auto arrayAttr = dyn_cast<ArrayAttr>(valueAttr)) {
-    if (llvm::all_equal(arrayAttr)) {
+    if (!arrayAttr.empty() && llvm::all_equal(arrayAttr)) {
       Attribute attr = arrayAttr[0];
       uint32_t numElements = arrayAttr.size();
 
@@ -94,9 +96,9 @@ struct SpecConstantCompositeOpConversion final
       return rewriter.notifyMatchFailure(op, "not a composite constant");
 
     ArrayAttr constituents = op.getConstituents();
-    if (constituents.size() == 1)
-      return rewriter.notifyMatchFailure(op,
-                                         "composite has only one consituent");
+    if (constituents.size() <= 1)
+      return rewriter.notifyMatchFailure(
+          op, "composite has zero or one consituent");
 
     if (!llvm::all_equal(constituents))
       return rewriter.notifyMatchFailure(op, "composite is not splat");

@@ -30,6 +30,10 @@ TEST(CHERICapabilityFormat, RV32Y) {
     EXPECT_EQ(RV32Y::getRequiredAlignment(Len), 16);
     EXPECT_EQ(RV32Y::getAlignmentMask(Len), 0xFFFFFFF0);
   }
+
+  EXPECT_EQ(RV32Y::getRepresentableLength(0xFFFFFFF0), 0ULL);
+  EXPECT_EQ(RV32Y::getRequiredAlignment(0xFFFFFFF0), 67108864);
+  EXPECT_EQ(RV32Y::getAlignmentMask(0xFFFFFFF0), 0xFC000000);
 }
 
 TEST(CHERICapabilityFormat, RV64Y) {
@@ -59,6 +63,11 @@ TEST(CHERICapabilityFormat, RV64Y) {
     EXPECT_EQ(RV64Y::getRequiredAlignment(Len), 16);
     EXPECT_EQ(RV64Y::getAlignmentMask(Len), 0xFFFFFFFFFFFFFFF0);
   }
+
+  EXPECT_EQ(RV64Y::getRepresentableLength(0xFFFFFFFFFFFFFFF0), 0ULL);
+  EXPECT_EQ(RV64Y::getRequiredAlignment(0xFFFFFFFFFFFFFFF0),
+            18014398509481984ULL);
+  EXPECT_EQ(RV64Y::getAlignmentMask(0xFFFFFFFFFFFFFFF0), 0xFFC0000000000000);
 }
 
 TEST(CHERICapabilityFormat, CHERIoT) {
@@ -86,6 +95,10 @@ TEST(CHERICapabilityFormat, CHERIoT) {
     assert(CHERIoT::getRequiredAlignment(Len) == 4);
     EXPECT_EQ(CHERIoT::getAlignmentMask(Len), 0xFFFFFFFC);
   }
+
+  EXPECT_EQ(CHERIoT::getRepresentableLength(0xFFFFFFF0), 0ULL);
+  EXPECT_EQ(CHERIoT::getRequiredAlignment(0xFFFFFFF0), 16777216ULL);
+  EXPECT_EQ(CHERIoT::getAlignmentMask(0xFFFFFFF0), 0xFF000000);
 }
 
 } // namespace

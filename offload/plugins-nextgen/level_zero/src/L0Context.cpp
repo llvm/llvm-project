@@ -57,6 +57,12 @@ Error L0ContextTy::init() {
   if (RC != ZE_RESULT_SUCCESS)
     zexKernelGetArgumentSize = nullptr;
 
+  CALL_ZE(RC, zeDriverGetExtensionFunctionAddress, zeDriver,
+          "zeCommandListAppendHostFunction",
+          (void **)&zeCommandListAppendHostFunction);
+  if (RC != ZE_RESULT_SUCCESS)
+    zeCommandListAppendHostFunction = nullptr;
+
   return Plugin::success();
 }
 

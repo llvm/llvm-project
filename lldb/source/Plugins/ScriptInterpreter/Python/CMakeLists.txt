@@ -77,6 +77,8 @@ if (LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS)
       lldbPluginScriptInterpreterPython)
   endif()
 
+  lldb_add_scriptinterpreter_plugin_to_framework(lldbPluginScriptInterpreterPython)
+
   # Static variant linked directly by unit tests. Separate compilation is
   # required so llvm::Error RTTI (ErrorInfoBase::ID) has a single address
   # shared between the test binary and the plugin code.

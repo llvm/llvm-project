@@ -151,6 +151,7 @@ add_math_entrypoint_object(erfcf16)
 add_math_entrypoint_object(exp)
 add_math_entrypoint_object(expf)
 add_math_entrypoint_object(expf16)
+add_math_entrypoint_object(expbf16)
 
 add_math_entrypoint_object(exp2)
 add_math_entrypoint_object(exp2f)
@@ -587,6 +588,7 @@ add_math_entrypoint_object(sqrtf128)
 add_math_entrypoint_object(sqrtbf16)
 
 add_math_entrypoint_object(tan)
+add_math_entrypoint_object(tanbf16)
 add_math_entrypoint_object(tanf)
 add_math_entrypoint_object(tanf16)
 

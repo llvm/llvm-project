@@ -1,0 +1,125 @@
+// Top-level StaticLibrary structure tests: target_triple, namespace
+// (StaticLibrary kind), members array, and per-member validation. Mirrors
+// the LUSummary top-level test pattern but covers the StaticLibrary-specific
+// shape.
+
+// ============================================================================
+// readStaticLibrary() / writeStaticLibrary() type-field errors
+// ============================================================================
+
+// RUN: not clang-ssaf-format --type static-library %S/Inputs/missing-type.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=MISSING-TYPE
+// MISSING-TYPE:      clang-ssaf-format: error: reading StaticLibrary from file '{{.*}}missing-type.json'
+// MISSING-TYPE-NEXT: failed to read summary type from field 'type': expected JSON string
+
+// RUN: not clang-ssaf-format --type static-library %S/Inputs/mismatched-type.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=MISMATCHED-TYPE
+// MISMATCHED-TYPE:      clang-ssaf-format: error: reading StaticLibrary from file '{{.*}}mismatched-type.json'
+// MISMATCHED-TYPE-NEXT: expected 'StaticLibrary' for field 'type' but got 'TUSummary'
+
+// ============================================================================
+// target_triple errors
+// ============================================================================
+
+// RUN: not clang-ssaf-format --type static-library %S/Inputs/missing-target-triple.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=MISSING-TARGET-TRIPLE
+// MISSING-TARGET-TRIPLE:      clang-ssaf-format: error: reading StaticLibrary from file '{{.*}}missing-target-triple.json'
+// MISSING-TARGET-TRIPLE-NEXT: failed to read TargetTriple from field 'target_triple': expected JSON string
+
+// RUN: not clang-ssaf-format --type static-library %S/Inputs/not-normalized-target-triple.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=NOT-NORMALIZED-TARGET-TRIPLE
+// NOT-NORMALIZED-TARGET-TRIPLE:      clang-ssaf-format: error: reading StaticLibrary from file '{{.*}}not-normalized-target-triple.json'
+// NOT-NORMALIZED-TARGET-TRIPLE-NEXT: reading TargetTriple from field 'target_triple'
+// NOT-NORMALIZED-TARGET-TRIPLE-NEXT: target triple 'arm64-macosx-apple' is not in normalized form (expected 'arm64-apple-macosx')
+
+// ============================================================================
+// namespace errors
+// ============================================================================
+
+// RUN: not clang-ssaf-format --type static-library %S/Inputs/missing-namespace.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=MISSING-NAMESPACE
+// MISSING-NAMESPACE:      clang-ssaf-format: error: reading StaticLibrary from file '{{.*}}missing-namespace.json'
+// MISSING-NAMESPACE-NEXT: failed to read BuildNamespace from field 'namespace': expected JSON object
+
+// RUN: not clang-ssaf-format --type static-library %S/Inputs/namespace-missing-kind.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=NAMESPACE-MISSING-KIND
+// NAMESPACE-MISSING-KIND:      clang-ssaf-format: error: reading StaticLibrary from file '{{.*}}namespace-missing-kind.json'
+// NAMESPACE-MISSING-KIND-NEXT: reading BuildNamespace from field 'namespace'
+// NAMESPACE-MISSING-KIND-NEXT: failed to read BuildNamespaceKind from field 'kind': expected JSON string
+
+// RUN: not clang-ssaf-format --type static-library %S/Inputs/namespace-invalid-kind.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=NAMESPACE-INVALID-KIND
+// NAMESPACE-INVALID-KIND:      clang-ssaf-format: error: reading StaticLibrary from file '{{.*}}namespace-invalid-kind.json'
+// NAMESPACE-INVALID-KIND-NEXT: reading BuildNamespace from field 'namespace'
+// NAMESPACE-INVALID-KIND-NEXT: reading BuildNamespaceKind from field 'kind'
+// NAMESPACE-INVALID-KIND-NEXT: invalid BuildNamespaceKind value 'invalid_kind' for field 'kind'
+
+// StaticLibrary's namespace field must specifically have kind=StaticLibrary.
+// Any other well-formed kind (CompilationUnit, LinkUnit) is reported as a
+// mismatch.
+// RUN: not clang-ssaf-format --type static-library %S/Inputs/namespace-wrong-kind.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=NAMESPACE-WRONG-KIND
+// NAMESPACE-WRONG-KIND:      clang-ssaf-format: error: reading StaticLibrary from file '{{.*}}namespace-wrong-kind.json'
+// NAMESPACE-WRONG-KIND-NEXT: expected 'StaticLibrary' for field 'namespace.kind' but got 'CompilationUnit'
+
+// RUN: not clang-ssaf-format --type static-library %S/Inputs/namespace-missing-name.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=NAMESPACE-MISSING-NAME
+// NAMESPACE-MISSING-NAME:      clang-ssaf-format: error: reading StaticLibrary from file '{{.*}}namespace-missing-name.json'
+// NAMESPACE-MISSING-NAME-NEXT: reading BuildNamespace from field 'namespace'
+// NAMESPACE-MISSING-NAME-NEXT: failed to read BuildNamespaceName from field 'name': expected JSON string
+
+// ============================================================================
+// members array errors
+// ============================================================================
+
+// RUN: not clang-ssaf-format --type static-library %S/Inputs/missing-members.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=MISSING-MEMBERS
+// MISSING-MEMBERS:      clang-ssaf-format: error: reading StaticLibrary from file '{{.*}}missing-members.json'
+// MISSING-MEMBERS-NEXT: failed to read StaticLibrary members from field 'members': expected JSON array
+
+// RUN: not clang-ssaf-format --type static-library %S/Inputs/members-not-array.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=MEMBERS-NOT-ARRAY
+// MEMBERS-NOT-ARRAY:      clang-ssaf-format: error: reading StaticLibrary from file '{{.*}}members-not-array.json'
+// MEMBERS-NOT-ARRAY-NEXT: failed to read StaticLibrary members from field 'members': expected JSON array
+
+// RUN: not clang-ssaf-format --type static-library %S/Inputs/member-not-object.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=MEMBER-NOT-OBJECT
+// MEMBER-NOT-OBJECT:      clang-ssaf-format: error: reading StaticLibrary from file '{{.*}}member-not-object.json'
+// MEMBER-NOT-OBJECT-NEXT: failed to read StaticLibrary member from index '0': expected JSON object
+
+// ============================================================================
+// per-member errors
+// ============================================================================
+
+// RUN: not clang-ssaf-format --type static-library %S/Inputs/member-mismatched-type.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=MEMBER-MISMATCHED-TYPE
+// MEMBER-MISMATCHED-TYPE:      clang-ssaf-format: error: reading StaticLibrary from file '{{.*}}member-mismatched-type.json'
+// MEMBER-MISMATCHED-TYPE-NEXT: reading StaticLibrary member from index '0'
+// MEMBER-MISMATCHED-TYPE-NEXT: expected 'TUSummary' for field 'type' but got 'LUSummary'
+
+// RUN: not clang-ssaf-format --type static-library %S/Inputs/member-missing-type.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=MEMBER-MISSING-TYPE
+// MEMBER-MISSING-TYPE:      clang-ssaf-format: error: reading StaticLibrary from file '{{.*}}member-missing-type.json'
+// MEMBER-MISSING-TYPE-NEXT: reading StaticLibrary member from index '0'
+// MEMBER-MISSING-TYPE-NEXT: failed to read summary type from field 'type': expected JSON string
+
+// Verifies that errors raised inside readTUSummaryEncodingFromObject (here,
+// a missing tu_namespace on the member) are properly wrapped with the
+// "reading StaticLibrary member from index 'N'" context, then with the
+// outer "reading StaticLibrary from file '...'" context.
+// RUN: not clang-ssaf-format --type static-library %S/Inputs/member-inner-error.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=MEMBER-INNER-ERROR
+// MEMBER-INNER-ERROR:      clang-ssaf-format: error: reading StaticLibrary from file '{{.*}}member-inner-error.json'
+// MEMBER-INNER-ERROR-NEXT: reading StaticLibrary member from index '0'
+// MEMBER-INNER-ERROR-NEXT: failed to read BuildNamespace from field 'tu_namespace': expected JSON object
+
+// RUN: not clang-ssaf-format --type static-library %S/Inputs/member-triple-mismatch.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=MEMBER-TRIPLE-MISMATCH
+// MEMBER-TRIPLE-MISMATCH:      clang-ssaf-format: error: reading StaticLibrary from file '{{.*}}member-triple-mismatch.json'
+// MEMBER-TRIPLE-MISMATCH-NEXT: reading StaticLibrary member from index '0'
+// MEMBER-TRIPLE-MISMATCH-NEXT: expected 'arm64-apple-macosx' for field 'target_triple' but got 'x86_64-apple-macosx'
+
+// RUN: not clang-ssaf-format --type static-library %S/Inputs/duplicate-member.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=DUPLICATE-MEMBER
+// DUPLICATE-MEMBER:      clang-ssaf-format: error: reading StaticLibrary from file '{{.*}}duplicate-member.json'
+// DUPLICATE-MEMBER-NEXT: failed to insert StaticLibrary member at index '1': encountered duplicate 'BuildNamespace(CompilationUnit, a.cpp)'

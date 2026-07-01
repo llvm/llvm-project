@@ -7,5 +7,6 @@
       "kind": "LinkUnit",
       "name": "test.exe"
     }
-  ]
+  ],
+  "type": "LUSummary"
 }

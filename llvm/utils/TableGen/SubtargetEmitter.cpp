@@ -136,6 +136,8 @@ class SubtargetEmitter : TargetFeaturesEmitter {
   void emitGetMacroFusions(const std::string &ClassName, raw_ostream &OS);
   void emitHwModeCheck(const std::string &ClassName, raw_ostream &OS,
                        bool IsMC);
+  void emitInlineFeatures(const std::string &ClassName, raw_ostream &OS,
+                          StringRef Behavior);
   void parseFeaturesFunction(raw_ostream &OS);
 
 public:
@@ -1990,6 +1992,25 @@ void SubtargetEmitter::parseFeaturesFunction(raw_ostream &OS) {
   OS << "}\n";
 }
 
+void SubtargetEmitter::emitInlineFeatures(const std::string &ClassName,
+                                          raw_ostream &OS, StringRef Behavior) {
+  std::vector<const Record *> FeatureList =
+      Records.getAllDerivedDefinitions("SubtargetFeature");
+  llvm::sort(FeatureList, LessRecordFieldFieldName());
+
+  OS << "const FeatureBitset &" << ClassName << "::get" << Behavior
+     << "Features() const {\n"
+     << "  static constexpr FeatureBitset Features = {\n";
+
+  for (const Record *Feature : FeatureList)
+    if (Behavior == Feature->getValueAsDef("InlineBehavior")->getName())
+      OS << Target << "::" << Feature->getName() << ",\n";
+
+  OS << "  };\n"
+     << "  return Features;\n"
+     << "}\n\n";
+}
+
 void SubtargetEmitter::emitGenMCSubtargetInfo(raw_ostream &OS) {
   {
     NamespaceEmitter NS(OS, (Target + Twine("_MC")).str());
@@ -2177,6 +2198,10 @@ void SubtargetEmitter::emitHeader(raw_ostream &OS) {
     OS << "  std::vector<MacroFusionPredTy> getMacroFusions() const "
           "final;\n";
 
+  OS << "  const FeatureBitset &getInlineIgnoreFeatures() const override;\n";
+  OS << "  const FeatureBitset &getInlineInverseFeatures() const override;\n";
+  OS << "  const FeatureBitset &getInlineMustMatchFeatures() const override;\n";
+
   STIPredicateExpander PE(Target);
   PE.setByRef(false);
   for (const STIPredicateFunction &Fn : SchedModels.getSTIPredicates())
@@ -2244,6 +2269,9 @@ void SubtargetEmitter::emitCtor(raw_ostream &OS, unsigned NumNames,
   emitSchedModelHelpers(ClassName, OS);
   emitHwModeCheck(ClassName, OS, /*IsMC=*/false);
   emitGetMacroFusions(ClassName, OS);
+  emitInlineFeatures(ClassName, OS, "InlineIgnore");
+  emitInlineFeatures(ClassName, OS, "InlineInverse");
+  emitInlineFeatures(ClassName, OS, "InlineMustMatch");
 }
 
 //

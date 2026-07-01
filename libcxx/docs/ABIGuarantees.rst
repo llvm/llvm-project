@@ -58,6 +58,56 @@ most cases.
 This significantly restructures how ``function`` is written to provide better performance, but is currently not ABI
 stable.
 
+``_LIBCPP_ABI_VECTOR_LAYOUT_SIZE_BASED``
+----------------------------------------
+Changes the layout of :cpp:type:`std::vector` from pointer-based to size-based.
+
+libc++ supports two different data layouts for :cpp:type:`std::vector`:
+
+.. list-table::
+  :header-rows: 1
+
+  * - **Layout**
+    - ABI
+    - Description
+  * - Pointer-based layout
+    - Stable ABI (default)
+    - :cpp:type:`std::vector` uses three pointers to manage its state:
+
+        * A pointer to the beginning of the buffer (:cpp:expr:`begin_`);
+        * A pointer to where the next element should be inserted (:cpp:expr:`end_`); and
+        * A pointer to the end of the buffer (:cpp:expr:`cap_`).
+
+      This layout causes :cpp:type:`vector`'s implementation details to be pointer-oriented.
+      The following methods are of particular interest:
+
+        * :cpp:expr:`vector::size()` returns :cpp:expr:`end_ - begin_`;
+        * :cpp:expr:`vector::capacity()` returns :cpp:expr:`cap_ - begin_`; and
+        * :cpp:expr:`vector::end()` returns :cpp:expr:`end_`.
+
+      This is the original layout for libc++'s :cpp:type:`std::vector` implementation, and
+      is the default layout as a result.
+
+  * - Size-based layout
+    - Unstable ABI (opt-in)
+    - :cpp:type:`std::vector` uses a pointer and two integers to manage its state:
+
+        * A pointer to the beginning of the buffer (:cpp:expr:`begin_`);
+        * An integer storing how many elements are in the vector (:cpp:expr:`size_`); and
+        * An integer storing how many elements the vector can potentially hold before needing
+          to reallocate (:cpp:expr:`capacity_`).
+
+        This layout causes :cpp:type:`vector`'s implementation details to be integer-oriented.
+        The following methods are of particular interest:
+
+        * :cpp:expr:`vector::size()` returns :cpp:expr:`size_`;
+        * :cpp:expr:`vector::capacity()` returns :cpp:expr:`cap_`; and
+        * :cpp:expr:`vector::end()` returns :cpp:expr:`begin_ + size_`.
+
+      This layout is opt-in, and is incompatible with the pointer-based layout. It has the
+      potential for significant performance improvements, especially when combined with
+      :ref:`hardening`.
+
 ``_LIBCPP_ABI_NO_RANDOM_DEVICE_COMPATIBILITY_LAYOUT``
 -----------------------------------------------------
 This changes the layout of ``random_device`` to only holds state with an implementation that gets entropy from a file
@@ -67,7 +117,7 @@ removes these workarounds for platforms that don't care about ABI compatibility.
 
 ``_LIBCPP_ABI_NO_COMPRESSED_PAIR_PADDING``
 ------------------------------------------
-This removes artificial padding from ``_LIBCPP_COMPRESSED_PAIR`` and ``_LIBCPP_COMPRESSED_TRIPLE``.
+This removes artificial padding from ``_LIBCPP_COMPRESSED_PAIR``.
 
 These macros are used inside the associative and unordered containers, ``deque``, ``forward_list``, ``future``,
 ``list``, ``basic_string``, ``function``, ``shared_ptr``, ``unique_ptr``, and ``vector`` to stay ABI compatible with the

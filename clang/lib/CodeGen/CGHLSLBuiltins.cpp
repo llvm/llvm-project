@@ -125,7 +125,7 @@ static Value *handleHlslSplitdouble(const CallExpr *E, CodeGenFunction *CGF) {
 
     auto *RetTy = llvm::StructType::get(RetElementTy, RetElementTy);
 
-    CallInst *CI = CGF->Builder.CreateIntrinsic(
+    Value *CI = CGF->Builder.CreateIntrinsic(
         RetTy, Intrinsic::dx_splitdouble, {Op0}, nullptr, "hlsl.splitdouble");
 
     LowBits = CGF->Builder.CreateExtractValue(CI, 0);
@@ -950,7 +950,8 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     llvm::Intrinsic::ID IntrinsicID =
         llvm::Intrinsic::spv_resource_counterhandlefromimplicitbinding;
     SmallVector<Value *> Args{MainHandle, OrderID, SpaceOp};
-    return Builder.CreateIntrinsic(HandleTy, IntrinsicID, Args);
+    return EmitIntrinsicCall(IntrinsicID, {HandleTy, MainHandle->getType()},
+                             Args);
   }
   case Builtin::BI__builtin_hlsl_resource_nonuniformindex: {
     Value *IndexOp = EmitScalarExpr(E->getArg(0));
@@ -1281,12 +1282,17 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     unsigned Rows = MatTy->getNumRows();
     unsigned Cols = MatTy->getNumColumns();
     llvm::MatrixBuilder MB(Builder);
-    // The matrix transpose intrinsic operates on column-major matrices.
-    // For row-major, a row-major RxC matrix is equivalent to a column-major
-    // CxR matrix, so transposing with swapped dimensions produces the correct
-    // row-major CxR result directly.
-    bool IsRowMajor = isMatrixRowMajor(getLangOpts(), E->getArg(0)->getType());
-    if (IsRowMajor)
+    // The correct lowering of a transpose depends on both the source layout
+    // and the result layout.
+    bool SrcRowMajor = isMatrixRowMajor(getLangOpts(), E->getArg(0)->getType());
+    bool DstRowMajor = isMatrixRowMajor(getLangOpts(), E->getType());
+    //  When the source & result layouts differ, the operand already holds the
+    //  transposed result, ie transpose is a no-op on the underlying vector.
+    if (SrcRowMajor != DstRowMajor)
+      return Op0;
+    // When the source and result share a layout, emit a transpose.
+    if (SrcRowMajor)
+      // For row-major operands the dimensions are swapped
       return MB.CreateMatrixTranspose(Op0, Cols, Rows);
     return MB.CreateMatrixTranspose(Op0, Rows, Cols);
   }

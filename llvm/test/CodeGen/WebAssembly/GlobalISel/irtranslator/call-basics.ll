@@ -5,8 +5,6 @@
 ; RUN: llc -mtriple=wasm64 -mattr=+simd128,+multivalue -target-abi=experimental-mv -global-isel -stop-after=irtranslator < %s | FileCheck %s -check-prefixes=CHECK,WASM64,MULTIVAL-SIMD,WASM64-MULTIVAL-SIMD
 
 
-%externref = type ptr addrspace(10)
-%funcref = type ptr addrspace(20)
 
 declare void @ret_void_args_none()
 define void @call_ret_void_args_none() {
@@ -87,29 +85,9 @@ define ptr @call_ret_ptr_args_none() {
   ret ptr %ret
 }
 
-declare %externref @ret_externref_args_none()
-define %externref @call_ret_externref_args_none() {
-  ; CHECK-LABEL: name: call_ret_externref_args_none
-  ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $arguments
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[CALL:%[0-9]+]]:externref(p10) = CALL @ret_externref_args_none, implicit-def $arguments, implicit $sp32, implicit $sp64
-  ; CHECK-NEXT:   RETURN [[CALL]](p10), implicit-def $arguments
-  %ret = call %externref @ret_externref_args_none()
-  ret %externref %ret
-}
-
-declare %funcref @ret_funcref_args_none()
-define %funcref @call_ret_funcref_args_none() {
-  ; CHECK-LABEL: name: call_ret_funcref_args_none
-  ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $arguments
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[CALL:%[0-9]+]]:funcref(p20) = CALL @ret_funcref_args_none, implicit-def $arguments, implicit $sp32, implicit $sp64
-  ; CHECK-NEXT:   RETURN [[CALL]](p20), implicit-def $arguments
-  %ret = call %funcref @ret_funcref_args_none()
-  ret %funcref %ret
-}
+; NOTE: Reference-type (externref/funcref) returns are intentionally not tested
+; here. GlobalISel currently falls back to SelectionDAG for them; see
+; reference-types-fallback.ll.
 
 declare i128 @ret_i128_args_none()
 define i128 @call_ret_i128_args_none() {
@@ -234,31 +212,9 @@ define void @call_ret_void_args_ptr(ptr %a) {
   ret void
 }
 
-declare void @ret_void_args_externref(%externref)
-define void @call_ret_void_args_externref(%externref %a) {
-  ; CHECK-LABEL: name: call_ret_void_args_externref
-  ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $arguments
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[ARGUMENT_externref:%[0-9]+]]:externref(p10) = ARGUMENT_externref 0, implicit $arguments
-  ; CHECK-NEXT:   CALL @ret_void_args_externref, [[ARGUMENT_externref]](p10), implicit-def $arguments, implicit $sp32, implicit $sp64
-  ; CHECK-NEXT:   RETURN implicit-def $arguments
-  call void @ret_void_args_externref(%externref %a)
-  ret void
-}
-
-declare void @ret_void_args_funcref(%funcref)
-define void @call_ret_void_args_funcref(%funcref %a) {
-  ; CHECK-LABEL: name: call_ret_void_args_funcref
-  ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $arguments
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[ARGUMENT_funcref:%[0-9]+]]:funcref(p20) = ARGUMENT_funcref 0, implicit $arguments
-  ; CHECK-NEXT:   CALL @ret_void_args_funcref, [[ARGUMENT_funcref]](p20), implicit-def $arguments, implicit $sp32, implicit $sp64
-  ; CHECK-NEXT:   RETURN implicit-def $arguments
-  call void @ret_void_args_funcref(%funcref %a)
-  ret void
-}
+; NOTE: Reference-type (externref/funcref) arguments are intentionally not
+; tested here. GlobalISel currently falls back to SelectionDAG for them; see
+; reference-types-fallback.ll.
 
 declare void @ret_void_args_i128(i128)
 define void @call_ret_void_args_i128(i128 %a) {

@@ -15,7 +15,7 @@ define i32 @cost_prefers_fixed_width_vf_but_force_scalable_vf(ptr noalias %dst, 
 ; CHECK:  Cost for VF vscale x 2: 9 (Estimated cost per lane: 4.5)
 ; CHECK:  Cost for VF vscale x 4: 8 (Estimated cost per lane: 2)
 ; CHECK:  LV: Selecting VF: vscale x 4.
-; CHECK:  VPlan 'Final VPlan for VF={vscale x 1,vscale x 2,vscale x 4},UF={2}' {
+; CHECK:  VPlan 'Final VPlan for VF={vscale x 1,vscale x 2,vscale x 4},UF={4}' {
 ;
 entry:
   br label %loop
@@ -43,7 +43,7 @@ define i32 @no_sve_fallback_to_neon(ptr %src, i64 %n) "target-features"="+neon" 
 ; CHECK:  Cost for VF 2: 4 (Estimated cost per lane: 2)
 ; CHECK:  Cost for VF 4: 4 (Estimated cost per lane: 1)
 ; CHECK:  LV: Selecting VF: 4.
-; CHECK:  VPlan 'Final VPlan for VF={2,4},UF={2}' {
+; CHECK:  VPlan 'Final VPlan for VF={2,4},UF={4}' {
 ;
 entry:
   br label %loop

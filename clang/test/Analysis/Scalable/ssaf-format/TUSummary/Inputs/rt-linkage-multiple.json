@@ -47,5 +47,6 @@
   "tu_namespace": {
     "kind": "CompilationUnit",
     "name": "test.cpp"
-  }
+  },
+  "type": "TUSummary"
 }

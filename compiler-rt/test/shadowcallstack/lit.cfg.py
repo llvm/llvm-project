@@ -25,6 +25,8 @@ config.substitutions.append(
 scs_arch_cflags = config.target_cflags
 if config.target_arch == "aarch64":
     scs_arch_cflags += " -ffixed-x18 "
+elif config.target_arch == "hexagon":
+    scs_arch_cflags += " -ffixed-r19 "
 config.substitutions.append(
     (
         "%clang_scs ",
@@ -32,5 +34,9 @@ config.substitutions.append(
     )
 )
 
-if config.target_os not in ["Linux"] or config.target_arch not in ["aarch64", "riscv64"]:
+if config.target_os not in ["Linux"] or config.target_arch not in [
+    "aarch64",
+    "hexagon",
+    "riscv64",
+]:
     config.unsupported = True
