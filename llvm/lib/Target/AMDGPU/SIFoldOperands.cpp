@@ -1001,7 +1001,7 @@ const TargetRegisterClass *SIFoldOperandsImpl::getRegSeqInit(
 
   for (unsigned I = 1, E = RegSeq.getNumExplicitOperands(); I != E; I += 2) {
     MachineOperand &SrcOp = RegSeq.getOperand(I);
-    if (SrcOp.isReg() && SrcOp.getReg().isPhysical())
+    if (SrcOp.getReg().isPhysical())
       return nullptr;
     unsigned SubRegIdx = RegSeq.getOperand(I + 1).getImm();
 
