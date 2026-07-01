@@ -301,6 +301,24 @@ struct atomic_ref<_Tp> : public __atomic_ref_base<_Tp> {
     return __atomic_fetch_xor(this->__ptr_, __arg, std::__to_gcc_order(__order));
   }
 
+#  if _LIBCPP_STD_VER >= 26
+  _LIBCPP_HIDE_FROM_ABI void store_add(_Tp __arg, memory_order __order = memory_order_seq_cst) const noexcept {
+    (void)fetch_add(__arg, __order);
+  }
+  _LIBCPP_HIDE_FROM_ABI void store_sub(_Tp __arg, memory_order __order = memory_order_seq_cst) const noexcept {
+    (void)fetch_sub(__arg, __order);
+  }
+  _LIBCPP_HIDE_FROM_ABI void store_and(_Tp __arg, memory_order __order = memory_order_seq_cst) const noexcept {
+    (void)fetch_and(__arg, __order);
+  }
+  _LIBCPP_HIDE_FROM_ABI void store_or(_Tp __arg, memory_order __order = memory_order_seq_cst) const noexcept {
+    (void)fetch_or(__arg, __order);
+  }
+  _LIBCPP_HIDE_FROM_ABI void store_xor(_Tp __arg, memory_order __order = memory_order_seq_cst) const noexcept {
+    (void)fetch_xor(__arg, __order);
+  }
+#  endif // _LIBCPP_STD_VER >= 26
+
   _LIBCPP_HIDE_FROM_ABI _Tp operator++(int) const noexcept { return fetch_add(_Tp(1)); }
   _LIBCPP_HIDE_FROM_ABI _Tp operator--(int) const noexcept { return fetch_sub(_Tp(1)); }
   _LIBCPP_HIDE_FROM_ABI _Tp operator++() const noexcept { return fetch_add(_Tp(1)) + _Tp(1); }
@@ -356,6 +374,15 @@ struct atomic_ref<_Tp> : public __atomic_ref_base<_Tp> {
     }
   }
 
+#  if _LIBCPP_STD_VER >= 26
+  _LIBCPP_HIDE_FROM_ABI void store_add(_Tp __arg, memory_order __order = memory_order_seq_cst) const noexcept {
+    (void)fetch_add(__arg, __order);
+  }
+  _LIBCPP_HIDE_FROM_ABI void store_sub(_Tp __arg, memory_order __order = memory_order_seq_cst) const noexcept {
+    (void)fetch_sub(__arg, __order);
+  }
+#  endif // _LIBCPP_STD_VER >= 26
+
   _LIBCPP_HIDE_FROM_ABI _Tp operator+=(_Tp __arg) const noexcept { return fetch_add(__arg) + __arg; }
   _LIBCPP_HIDE_FROM_ABI _Tp operator-=(_Tp __arg) const noexcept { return fetch_sub(__arg) - __arg; }
 };
@@ -378,6 +405,15 @@ struct atomic_ref<_Tp*> : public __atomic_ref_base<_Tp*> {
   _LIBCPP_HIDE_FROM_ABI _Tp* fetch_sub(ptrdiff_t __arg, memory_order __order = memory_order_seq_cst) const noexcept {
     return __atomic_fetch_sub(this->__ptr_, __arg * sizeof(_Tp), std::__to_gcc_order(__order));
   }
+
+#  if _LIBCPP_STD_VER >= 26
+  _LIBCPP_HIDE_FROM_ABI void store_add(ptrdiff_t __arg, memory_order __order = memory_order_seq_cst) const noexcept {
+    (void)fetch_add(__arg, __order);
+  }
+  _LIBCPP_HIDE_FROM_ABI void store_sub(ptrdiff_t __arg, memory_order __order = memory_order_seq_cst) const noexcept {
+    (void)fetch_sub(__arg, __order);
+  }
+#  endif // _LIBCPP_STD_VER >= 26
 
   _LIBCPP_HIDE_FROM_ABI _Tp* operator++(int) const noexcept { return fetch_add(1); }
   _LIBCPP_HIDE_FROM_ABI _Tp* operator--(int) const noexcept { return fetch_sub(1); }
