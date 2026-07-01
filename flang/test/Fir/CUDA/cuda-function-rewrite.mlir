@@ -42,3 +42,89 @@ func.func @_QMmtestsPdo3(%arg0: !fir.ref<i32> {cuf.data_attr = #cuf.cuda<device>
 
 // CHECK-LABEL: func.func @_QMmtestsPdo3
 // CHECK: fir.if %false
+
+// -----
+
+// Test on_device() with Fortran name mangling (_QPon_device) in device context
+gpu.module @acc_device_mod {
+  func.func @_QMmtestPsub_device() {
+    %c2_i32 = arith.constant 2 : i32
+    %c1_i32 = arith.constant 1 : i32
+    %0 = fir.alloca i32
+    %13 = fir.call @_QPon_device() fastmath<contract> : () -> !fir.logical<4>
+    %14 = fir.convert %13 : (!fir.logical<4>) -> i1
+    fir.if %14 {
+      fir.store %c1_i32 to %0 : !fir.ref<i32>
+    } else {
+      fir.store %c2_i32 to %0 : !fir.ref<i32>
+    }
+    return
+  }
+}
+
+// CHECK-LABEL: gpu.module @acc_device_mod
+// CHECK: func.func @_QMmtestPsub_device
+// CHECK: fir.if %true
+
+// -----
+
+// Test _QPon_device on host side
+func.func @_QMmtestPsub_host() {
+  %c2_i32 = arith.constant 2 : i32
+  %c1_i32 = arith.constant 1 : i32
+  %0 = fir.alloca i32
+  %13 = fir.call @_QPon_device() fastmath<contract> : () -> !fir.logical<4>
+  %14 = fir.convert %13 : (!fir.logical<4>) -> i1
+  fir.if %14 {
+    fir.store %c1_i32 to %0 : !fir.ref<i32>
+  } else {
+    fir.store %c2_i32 to %0 : !fir.ref<i32>
+  }
+  return
+}
+
+// CHECK-LABEL: func.func @_QMmtestPsub_host
+// CHECK: fir.if %false
+
+// -----
+
+// Test externally-mangled on_device_ (after ExternalNameConversion) in device context
+gpu.module @acc_extname_device_mod {
+  func.func @_QMmtestPsub_extname_device() {
+    %c2_i32 = arith.constant 2 : i32
+    %c1_i32 = arith.constant 1 : i32
+    %0 = fir.alloca i32
+    %13 = fir.call @on_device_() fastmath<contract> : () -> !fir.logical<4>
+    %14 = fir.convert %13 : (!fir.logical<4>) -> i1
+    fir.if %14 {
+      fir.store %c1_i32 to %0 : !fir.ref<i32>
+    } else {
+      fir.store %c2_i32 to %0 : !fir.ref<i32>
+    }
+    return
+  }
+}
+
+// CHECK-LABEL: gpu.module @acc_extname_device_mod
+// CHECK: func.func @_QMmtestPsub_extname_device
+// CHECK: fir.if %true
+
+// -----
+
+// Test on_device_ on host side
+func.func @_QMmtestPsub_extname_host() {
+  %c2_i32 = arith.constant 2 : i32
+  %c1_i32 = arith.constant 1 : i32
+  %0 = fir.alloca i32
+  %13 = fir.call @on_device_() fastmath<contract> : () -> !fir.logical<4>
+  %14 = fir.convert %13 : (!fir.logical<4>) -> i1
+  fir.if %14 {
+    fir.store %c1_i32 to %0 : !fir.ref<i32>
+  } else {
+    fir.store %c2_i32 to %0 : !fir.ref<i32>
+  }
+  return
+}
+
+// CHECK-LABEL: func.func @_QMmtestPsub_extname_host
+// CHECK: fir.if %false
