@@ -3980,12 +3980,19 @@ Given that definition, R\ :sub:`byte` is defined as follows:
    R\ :sub:`byte`, R\ :sub:`byte` returns ``undef`` for that byte.
 -  Otherwise, if R\ :sub:`byte` may see exactly one write,
    R\ :sub:`byte` returns the value written by that write.
--  Otherwise, if R is atomic, and all the writes R\ :sub:`byte` may
-   see are atomic, it chooses one of the values written. See the :ref:`Atomic
+-  Otherwise, if R is atomic, all the writes R\ :sub:`byte` may
+   see are atomic, and R and the writes all access the exact same set of
+   bytes, it chooses one of the values written. See the :ref:`Atomic
    Memory Ordering Constraints <ordering>` section for additional
    constraints on how the choice is made. Targets may impose additional
    requirements on R and the writes it may see based on their ``syncscope``.
 -  Otherwise R\ :sub:`byte` returns ``undef``.
+
+Defined atomic accesses cannot tear: Two byte subaccesses
+R\ :sub:`byte1`, R\ :sub:`byte2` of an atomic read R cannot read from
+different atomic writes W\ :sub:`1`, W\ :sub:`2` if both read
+subaccesses, R\ :sub:`byte1`, R\ :sub:`byte2`, may see both writes,
+W\ :sub:`1`, W\ :sub:`2`.
 
 R returns the value composed of the series of bytes it read. This
 implies that some bytes within the value may be ``undef`` **without**
