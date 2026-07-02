@@ -58,8 +58,8 @@ macro(add_lld_tool name)
         RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
         COMPONENT ${name})
 
-      if (LLVM_ENABLE_PDB)
-        install(FILES $<TARGET_PDB_FILE:${name}> DESTINATION "${CMAKE_INSTALL_BINDIR}" COMPONENT ${name} OPTIONAL)
+      if (MSVC)
+        install(FILES $<TARGET_FILE_DIR:${name}>/$<TARGET_FILE_BASE_NAME:${name}>.pdb DESTINATION "${CMAKE_INSTALL_BINDIR}" COMPONENT ${name} OPTIONAL)
       endif()
 
       if(NOT CMAKE_CONFIGURATION_TYPES)

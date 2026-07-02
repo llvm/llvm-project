@@ -323,6 +323,11 @@ function(add_lldb_library name)
       LIBRARY DESTINATION ${install_dest}
       ARCHIVE DESTINATION ${install_dest}
       FRAMEWORK DESTINATION ${install_dest})
+    if (MSVC)
+      install(FILES $<TARGET_FILE_DIR:${name}>/$<TARGET_FILE_BASE_NAME:${name}>.pdb
+              DESTINATION "${CMAKE_INSTALL_BINDIR}" COMPONENT ${name}
+              OPTIONAL)
+    endif()
     if (NOT CMAKE_CONFIGURATION_TYPES)
       add_llvm_install_targets(install-${name}
                               DEPENDS ${name}
@@ -422,6 +427,11 @@ function(add_lldb_executable name)
             LIBRARY DESTINATION ${install_dest}
             BUNDLE DESTINATION ${install_dest}
             FRAMEWORK DESTINATION ${install_dest})
+    if (MSVC)
+      install(FILES $<TARGET_FILE_DIR:${name}>/$<TARGET_FILE_BASE_NAME:${name}>.pdb
+              DESTINATION ${install_dest} COMPONENT ${name}
+              OPTIONAL)
+    endif()
     if (NOT CMAKE_CONFIGURATION_TYPES)
       add_llvm_install_targets(install-${name}
                                DEPENDS ${name}
