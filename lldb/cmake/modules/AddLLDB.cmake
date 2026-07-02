@@ -473,6 +473,13 @@ endfunction()
 # build-tree. Remove them before installing to avoid collisions with their
 # own install targets.
 function(lldb_add_to_buildtree_lldb_framework name subdir)
+  # The rpaths needed to find the LLVM dylib in the buildtree differ from installation rpaths.
+  if (LLVM_LINK_LLVM_DYLIB)
+    set_target_properties(${name} PROPERTIES
+      BUILD_WITH_INSTALL_RPATH OFF
+    )
+  endif()
+
   # Destination for the copy in the build-tree. While the framework target may
   # not exist yet, it will exist when the generator expression gets expanded.
   set(copy_dest "${LLDB_FRAMEWORK_ABSOLUTE_BUILD_DIR}/${subdir}/$<TARGET_FILE_NAME:${name}>")
@@ -501,6 +508,14 @@ function(lldb_add_scriptinterpreter_plugin_to_framework name)
   if(NOT LLDB_BUILD_FRAMEWORK)
     return()
   endif()
+
+  # The rpaths needed to find the LLVM dylib in the buildtree differ from installation rpaths.
+  if (LLVM_LINK_LLVM_DYLIB)
+    set_target_properties(${name} PROPERTIES
+      BUILD_WITH_INSTALL_RPATH OFF
+    )
+  endif()
+
   set_property(TARGET ${name} APPEND PROPERTY
     INSTALL_RPATH "@loader_path/../../..")
   # Copy under the unversioned name: PluginManager derives a plugin's
