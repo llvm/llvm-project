@@ -34,8 +34,8 @@ void f(bool which) {
 // LLVM-DAG: @[[GV1:.*]] = private constant [2 x i32] [i32 50, i32 60]
 
 // LLVM: define{{.*}} @_Z1fb
-// LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr {{[^,]+}}, ptr @[[GV0]], i64 16, i1 false)
-// LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr {{[^,]+}}, ptr @[[GV1]], i64 8, i1 false)
+// LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr {{[^,]+}}, ptr align 4 @[[GV0]], i64 16, i1 false)
+// LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr {{[^,]+}}, ptr align 4 @[[GV1]], i64 8, i1 false)
 
 // OGCG-DAG: @[[GV0:.*]] = private unnamed_addr constant [4 x i32] [i32 10, i32 20, i32 30, i32 40]
 // OGCG-DAG: @[[GV1:.*]] = private unnamed_addr constant [2 x i32] [i32 50, i32 60]

@@ -30,6 +30,7 @@
 #include "clang/Lex/ModuleMap.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/PPEmbedParameters.h"
+#include "clang/Lex/TextEncoding.h"
 #include "clang/Lex/Token.h"
 #include "clang/Lex/TokenLexer.h"
 #include "clang/Support/Compiler.h"
@@ -198,6 +199,7 @@ class Preprocessor {
   std::unique_ptr<ScratchBuffer> ScratchBuf;
   HeaderSearch      &HeaderInfo;
   ModuleLoader      &TheModuleLoader;
+  TextEncoding TE;
 
   /// External source of macros.
   ExternalPreprocessorSource *ExternalSource;
@@ -1264,6 +1266,7 @@ public:
   SelectorTable &getSelectorTable() { return Selectors; }
   Builtin::Context &getBuiltinInfo() { return *BuiltinInfo; }
   llvm::BumpPtrAllocator &getPreprocessorAllocator() { return BP; }
+  TextEncoding &getTextEncoding() { return TE; }
 
   void setExternalSource(ExternalPreprocessorSource *Source) {
     ExternalSource = Source;

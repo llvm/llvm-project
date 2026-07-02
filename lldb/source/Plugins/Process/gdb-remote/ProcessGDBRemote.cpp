@@ -53,6 +53,7 @@
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Interpreter/OptionGroupBoolean.h"
+#include "lldb/Interpreter/OptionGroupPlatform.h"
 #include "lldb/Interpreter/OptionGroupUInt64.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Interpreter/Options.h"
@@ -64,7 +65,6 @@
 #include "lldb/Target/DynamicLoader.h"
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/ProcessIOHandler.h"
-#include "lldb/Target/RegisterFlags.h"
 #include "lldb/Target/SystemRuntime.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/TargetList.h"
@@ -74,6 +74,7 @@
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/FileSpecList.h"
 #include "lldb/Utility/LLDBLog.h"
+#include "lldb/Utility/RegisterFlags.h"
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/Timer.h"
@@ -2636,6 +2637,8 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
 
     SetAddressableBitMasks(addressable_bits);
 
+    m_last_stop_primary_tid = tid;
+
     ThreadSP thread_sp = SetThreadStopInfo(
         tid, expedited_register_map, signo, thread_name, reason, description,
         exc_type, exc_data, thread_dispatch_qaddr, queue_vars_valid,
@@ -2684,7 +2687,17 @@ void ProcessGDBRemote::RefreshStateAfterStop() {
   if (m_initial_tid != LLDB_INVALID_THREAD_ID) {
     m_thread_list.SetSelectedThreadByID(m_initial_tid);
     m_initial_tid = LLDB_INVALID_THREAD_ID;
+  } else if (m_last_stop_primary_tid != LLDB_INVALID_THREAD_ID &&
+             StateIsRunningState(m_last_broadcast_state)) {
+    if (ThreadSP primary_thread_sp = m_thread_list.FindThreadByProtocolID(
+            m_last_stop_primary_tid, /*can_update=*/false)) {
+      ThreadSP selected_thread_sp = m_thread_list.GetSelectedThread();
+      if (!selected_thread_sp ||
+          selected_thread_sp->GetID() != primary_thread_sp->GetID())
+        m_thread_list.SetSelectedThreadByID(primary_thread_sp->GetID());
+    }
   }
+  m_last_stop_primary_tid = LLDB_INVALID_THREAD_ID;
 
   // Let all threads recover from stopping and do any clean up based on the
   // previous thread state (if any).
@@ -4238,6 +4251,59 @@ ProcessGDBRemote::HandleAcceleratorActions(const AcceleratorActions &actions) {
       return error;
   }
 
+  if (actions.connect_info) {
+    if (llvm::Error error = HandleAcceleratorConnection(actions))
+      return error;
+  }
+
+  return llvm::Error::success();
+}
+
+llvm::Error ProcessGDBRemote::HandleAcceleratorConnection(
+    const AcceleratorActions &actions) {
+  const AcceleratorConnectionInfo &connect_info = *actions.connect_info;
+  Debugger &debugger = GetTarget().GetDebugger();
+
+  OptionGroupPlatform platform_options(/*include_platform_option=*/false);
+  platform_options.SetPlatformName(connect_info.platform_name.c_str());
+  std::string exe_path = connect_info.exe_path.value_or("");
+  TargetSP accelerator_target_sp;
+  Status error = debugger.GetTargetList().CreateTarget(
+      debugger, exe_path, connect_info.triple, eLoadDependentsNo,
+      &platform_options, accelerator_target_sp);
+  if (error.Fail())
+    return error.takeError();
+  if (!accelerator_target_sp)
+    return llvm::createStringError("failed to create accelerator target");
+
+  PlatformSP platform_sp = accelerator_target_sp->GetPlatform();
+  if (!platform_sp)
+    return llvm::createStringErrorV(
+        "no platform '{0}' compatible with triple '{1}' for the accelerator "
+        "target",
+        connect_info.platform_name, connect_info.triple);
+  ProcessSP process_sp =
+      connect_info.synchronous
+          ? platform_sp->ConnectProcessSynchronous(
+                connect_info.connect_url, GetPluginNameStatic(), debugger,
+                *debugger.GetAsyncOutputStream(), accelerator_target_sp.get(),
+                error)
+          : platform_sp->ConnectProcess(connect_info.connect_url,
+                                        GetPluginNameStatic(), debugger,
+                                        accelerator_target_sp.get(), error);
+  if (error.Fail())
+    return error.takeError();
+  if (!process_sp)
+    return llvm::createStringError("failed to connect to the accelerator");
+
+  accelerator_target_sp->SetTargetSessionName(actions.session_name);
+
+  // Broadcast the new-target event so API clients can detect it.
+  auto event_sp = std::make_shared<Event>(
+      Target::eBroadcastBitNewTargetCreated,
+      new Target::TargetEventData(GetTarget().shared_from_this(),
+                                  accelerator_target_sp));
+  GetTarget().BroadcastEvent(event_sp);
   return llvm::Error::success();
 }
 
@@ -4372,9 +4438,15 @@ bool ProcessGDBRemote::AcceleratorBreakpointHit(
   // The plugin may request new actions (e.g. additional breakpoints) in
   // response to this breakpoint being hit.
   if (response->actions) {
-    if (llvm::Error error = HandleAcceleratorActions(*response->actions))
-      LLDB_LOG_ERROR(log, std::move(error),
-                     "failed to handle accelerator actions: {0}");
+    if (llvm::Error error = HandleAcceleratorActions(*response->actions)) {
+      // Also print the failure to the user; during a stop, logging alone is
+      // invisible.
+      std::string message = llvm::toString(std::move(error));
+      LLDB_LOG(log, "failed to handle accelerator actions: {0}", message);
+      target.GetDebugger().GetAsyncErrorStream()->Printf(
+          "error: accelerator plugin '%s': %s\n",
+          response->actions->plugin_name.c_str(), message.c_str());
+    }
   }
 
   // Returning true stops the native process; false auto-resumes it.

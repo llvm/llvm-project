@@ -1,4 +1,4 @@
-; RUN: not opt -S %s 2>&1 | FileCheck %s
+; RUN: not opt -S -disable-output %s 2>&1 | FileCheck %s
 
 define <4 x float> @transpose(<4 x float> %m, i32 %arg) {
 ; CHECK: Result of a matrix operation does not fit in the returned vector!
@@ -60,17 +60,14 @@ define void @column.major_store(ptr %m, ptr %n, i64 %arg) {
   ret void
 }
 
-define <4 x float> @transpose_mixed_types(<4 x float> %fvec, <4 x i32> %ivec, i32 %arg) {
 ;
-; CHECK-NEXT: intrinsic argument 0 type (matching overload type 0) expected <4 x float>, but got <4 x i32>
-; CHECK-NEXT: ptr @llvm.matrix.transpose.v4f32.v4i32
-; CHECK-NEXT: intrinsic argument 0 type (matching overload type 0) expected <4 x i32>, but got <4 x float>
-; CHECK-NEXT: ptr @llvm.matrix.transpose.v4i32.v4f32
-;
-  %result.0 = call <4 x float> @llvm.matrix.transpose.v4f32.v4i32(<4 x i32> %ivec, i32 0, i32 0)
-  %result.1 = call <4 x i32> @llvm.matrix.transpose.v4i32.v4f32(<4 x float> %result.0, i32 3, i32 2)
-  ret <4 x float> %result.0
-}
+; CHECK: intrinsic argument 0 type (matching overload type 0) expected <4 x float>, but got <4 x i32>
+; CHECK-NEXT: declare <4 x float> @llvm.matrix.transpose.v4f32.v4i32(<4 x i32>, i32, i32)
+declare <4 x float> @llvm.matrix.transpose.v4f32.v4i32(<4 x i32>, i32, i32)
+
+; CHECK: intrinsic argument 0 type (matching overload type 0) expected <4 x i32>, but got <4 x float>
+; CHECK-NEXT: declare <4 x i32> @llvm.matrix.transpose.v4i32.v4f32(<4 x float>, i32, i32)
+declare <4 x i32> @llvm.matrix.transpose.v4i32.v4f32(<4 x float>, i32, i32)
 
 define <4 x float> @multiply_mixed_types(<4 x i32> %ivec, <4 x float> %fvec, i32 %arg) {
 ;
@@ -146,9 +143,7 @@ declare void @llvm.matrix.column.major.store.v4p0.i64(<4 x ptr>, ptr, i64, i1, i
 declare void @llvm.matrix.column.major.store.v4p0.i8(<4 x ptr>, ptr, i8, i1, i32, i32)
 declare void @llvm.matrix.column.major.store.v4p0.i128(<4 x ptr>, ptr, i128, i1, i32, i32)
 
-declare <4 x i32>   @llvm.matrix.transpose.v4i32.v4f32(<4 x float>, i32, i32)
 declare <4 x float> @llvm.matrix.transpose.v4f32(<4 x float>, i32, i32)
-declare <4 x float> @llvm.matrix.transpose.v4f32.v4i32(<4 x i32>, i32, i32)
 
 declare <4 x i32>   @llvm.matrix.multiply.v4i32.v4f32.v4f32(<4 x float>, <4 x float>, i32, i32, i32)
 declare <4 x float> @llvm.matrix.multiply.v4f32.v4i32.v4f32(<4 x i32>, <4 x float>, i32, i32, i32)
