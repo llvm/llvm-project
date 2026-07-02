@@ -36,7 +36,6 @@ static cl::opt<unsigned long>
 
 static constexpr unsigned long StopBundleDisabled =
     std::numeric_limits<unsigned long>::max();
-
 static cl::opt<unsigned long>
     StopBundle("sbvec-stop-bndl", cl::init(StopBundleDisabled), cl::Hidden,
                cl::desc("Vectorize up to this many bundles."));
@@ -281,58 +280,6 @@ void BottomUpVec::collectPotentiallyDeadInstrs(ArrayRef<Value *> Bndl) {
   }
 }
 
-/// From a user \p U0 of lane 0 (\p V0), try to form a bundle of matching users
-/// for all lanes in \p Bndl. Used by the top-down vectorizer only. Returns an
-/// empty vector if no complete bundle can be formed.
-static SmallVector<Value *, 4> getNextUserBundle(ArrayRef<Value *> Bndl,
-                                                 User *U0, Value *V0,
-                                                 InstrMaps &IMaps) {
-  auto *UI0 = dyn_cast<Instruction>(U0);
-  if (!UI0 || IMaps.isVectorized(UI0))
-    return {};
-
-  // Find the operand index at which U0 uses lane 0.
-  unsigned OpIdx = UI0->getNumOperands();
-  for (unsigned Idx : seq<unsigned>(UI0->getNumOperands())) {
-    if (UI0->getOperand(Idx) == V0) {
-      OpIdx = Idx;
-      break;
-    }
-  }
-  if (OpIdx == UI0->getNumOperands())
-    return {};
-
-  // Find a distinct matching user for each of the remaining lanes.
-  SmallVector<Value *, 4> NextUserBndl;
-  NextUserBndl.push_back(UI0);
-  SmallPtrSet<Instruction *, 4> Claimed;
-  Claimed.insert(UI0);
-  for (Value *V : drop_begin(Bndl)) {
-    Instruction *Match = nullptr;
-    for (User *U : V->users()) {
-      auto *UI = dyn_cast<Instruction>(U);
-      if (!UI || IMaps.isVectorized(UI) || Claimed.contains(UI))
-        continue;
-      if (UI->getOpcode() != UI0->getOpcode() ||
-          UI->getType() != UI0->getType())
-        continue;
-      // The whole bundle must live in the same block.
-      if (UI->getParent() != UI0->getParent())
-        continue;
-      // The user must consume this lane at the same operand index.
-      if (OpIdx >= UI->getNumOperands() || UI->getOperand(OpIdx) != V)
-        continue;
-      Match = UI;
-      break;
-    }
-    if (!Match)
-      return {};
-    Claimed.insert(Match);
-    NextUserBndl.push_back(Match);
-  }
-  return NextUserBndl;
-}
-
 Action *BottomUpVec::vectorizeRec(ArrayRef<Value *> Bndl,
                                   ArrayRef<Value *> UserBndl, unsigned Depth,
                                   LegalityAnalysis &Legality) {
@@ -373,7 +320,7 @@ Action *BottomUpVec::vectorizeRec(ArrayRef<Value *> Bndl,
       Value *V0 = Bndl[0];
       for (User *U0 : V0->users()) {
         SmallVector<Value *, 4> NextUserBndl =
-            getNextUserBundle(Bndl, U0, V0, *IMaps);
+            VecUtils::getNextUserBundle(Bndl, U0, V0, *IMaps);
         if (NextUserBndl.size() == Bndl.size())
           vectorizeRec(NextUserBndl, Bndl, Depth + 1, Legality);
       }
@@ -693,4 +640,3 @@ bool BottomUpVec::runOnRegion(Region &Rgn, const Analyses &A) {
 
 } // namespace sandboxir
 } // namespace llvm
-

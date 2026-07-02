@@ -33,6 +33,8 @@ template <> struct DenseMapInfo<SmallVector<sandboxir::Value *>> {
 
 namespace sandboxir {
 
+class InstrMaps;
+
 class VecUtils {
 public:
   /// \Returns the number of elements in \p Ty. That is the number of lanes if a
@@ -224,6 +226,13 @@ public:
   }
   /// \Returns the first integer power of 2 that is <= Num.
   LLVM_ABI static unsigned getFloorPowerOf2(unsigned Num);
+
+  /// From a user \p U0 of lane 0 (\p V0), try to form a bundle of matching
+  /// users for all lanes in \p Bndl. Returns an empty vector if no complete
+  /// bundle can be formed.
+  LLVM_ABI static SmallVector<Value *, 4>
+  getNextUserBundle(ArrayRef<Value *> Bndl, User *U0, Value *V0,
+                    InstrMaps &IMaps);
 
   /// Helper struct for `matchPack()`. Describes the instructions and operands
   /// of a pack pattern.
