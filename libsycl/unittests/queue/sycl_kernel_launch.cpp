@@ -132,7 +132,8 @@ INSTANTIATE_TEST_SUITE_P(
                      [](sycl::detail::MockQueue &Q) {
                        sycl::nd_range<1> NDR(sycl::range<1>{8},
                                              sycl::range<1>{2});
-                       Q.setKernelParameters({}, NDR);
+                       Q.setKernelParameters(std::vector<sycl::event>{});
+                       Q.setKernelParameters(NDR);
                      },
                      /*Dims=*/1, /*NG=*/4, 1, 1, /*GS=*/2, 1, 1},
         // 2D nd_range: swap [0]<->[1].
@@ -141,7 +142,8 @@ INSTANTIATE_TEST_SUITE_P(
                      [](sycl::detail::MockQueue &Q) {
                        sycl::nd_range<2> NDR(sycl::range<2>{4, 6},
                                              sycl::range<2>{2, 3});
-                       Q.setKernelParameters({}, NDR);
+                       Q.setKernelParameters(std::vector<sycl::event>{});
+                       Q.setKernelParameters(NDR);
                      },
                      /*Dims=*/2, /*NG=*/2, 2, 1, /*GS=*/3, 2, 1},
         // 3D nd_range: swap [0]<->[2].
@@ -151,7 +153,8 @@ INSTANTIATE_TEST_SUITE_P(
                      [](sycl::detail::MockQueue &Q) {
                        sycl::nd_range<3> NDR(sycl::range<3>{2, 4, 6},
                                              sycl::range<3>{1, 2, 3});
-                       Q.setKernelParameters({}, NDR);
+                       Q.setKernelParameters(std::vector<sycl::event>{});
+                       Q.setKernelParameters(NDR);
                      },
                      /*Dims=*/3, /*NG=*/2, 2, 2, /*GS=*/3, 2, 1},
         // 2D range (no local): swap [0]<->[1], GroupSize stays {1,1,1}.
@@ -159,7 +162,8 @@ INSTANTIATE_TEST_SUITE_P(
         DimSwapParam{"2D_Range",
                      [](sycl::detail::MockQueue &Q) {
                        sycl::range<2> R(4, 6);
-                       Q.setKernelParameters({}, R);
+                       Q.setKernelParameters(std::vector<sycl::event>{});
+                       Q.setKernelParameters(R);
                      },
                      /*Dims=*/2, /*NG=*/6, 4, 1, /*GS=*/1, 1, 1}),
     [](const ::testing::TestParamInfo<DimSwapParam> &Info) {

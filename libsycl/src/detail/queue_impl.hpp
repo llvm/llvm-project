@@ -97,12 +97,15 @@ public:
     return MCurrentSubmitInfo.LastEvent;
   }
 
-  /// Sets kernel parameters to be used in the next submitKernelImpl call.
+  /// Sets event dependencies for the next submitKernelImpl call.
   /// Must be called prior to a submitKernelImpl call.
   /// \param Events a collection of events that the kernel depends on.
+  void setKernelParameters(std::vector<EventImplPtr> &&Events);
+
+  /// Sets the execution range for the next submitKernelImpl call.
+  /// Must be called prior to a submitKernelImpl call.
   /// \param Range a unified range view of the execution range.
-  void setKernelParameters(std::vector<EventImplPtr> &&Events,
-                           const detail::UnifiedRangeView &Range);
+  void setKernelParameters(const detail::UnifiedRangeView &Range);
 
   /// \return the async_handler associated with this queue.
   const async_handler &getAsyncHandler() const { return MAsyncHandler; }
@@ -116,6 +119,8 @@ public:
   /// \return an event impl object that represents the status of the operation.
   EventImplPtr memcpy(void *Dest, const void *Src, std::size_t NumBytes,
                       const std::vector<EventImplPtr> &DepEvents);
+
+  EventImplPtr submitWithHandler(const TypelessCGF &CGF);
 
 private:
   void handleEventDependencies(const std::vector<EventImplPtr> &Dep);
@@ -131,9 +136,12 @@ private:
 
   // Submit data.
   struct KernelSubmitInfo {
+    KernelSubmitInfo() : Handler(nullptr) {}
+
     EventImplPtr LastEvent;
     ol_kernel_launch_size_args_t Range;
     std::vector<EventImplPtr> DepEvents;
+    handler *Handler;
   };
   inline static thread_local KernelSubmitInfo MCurrentSubmitInfo = {};
 };
