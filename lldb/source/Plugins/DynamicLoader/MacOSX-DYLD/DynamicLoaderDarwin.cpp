@@ -763,13 +763,13 @@ bool DynamicLoaderDarwin::AddModulesUsingPreloadedModules(
       if (objfile) {
         SectionList *sections = objfile->GetSectionList();
         if (sections) {
-          ConstString commpage_dbstr("__commpage");
+          llvm::StringRef commpage_sect_name("__commpage");
           Section *commpage_section =
-              sections->FindSectionByName(commpage_dbstr).get();
+              sections->FindSectionByName(commpage_sect_name).get();
           if (commpage_section) {
             ModuleSpec module_spec(objfile->GetFileSpec(),
                                    image_info.GetArchitecture());
-            module_spec.GetObjectName() = commpage_dbstr;
+            module_spec.GetObjectName() = ConstString(commpage_sect_name);
             ModuleSP commpage_image_module_sp(
                 target_images.FindFirstModule(module_spec));
             if (!commpage_image_module_sp) {
