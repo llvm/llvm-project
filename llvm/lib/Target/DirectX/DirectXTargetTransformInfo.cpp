@@ -19,6 +19,7 @@ bool DirectXTTIImpl::isTargetIntrinsicWithScalarOpAtArg(
     Intrinsic::ID ID, unsigned ScalarOpdIdx) const {
   switch (ID) {
   case Intrinsic::dx_wave_readlane:
+  case Intrinsic::dx_quad_read_lane_at:
     return ScalarOpdIdx == 1;
   default:
     return false;

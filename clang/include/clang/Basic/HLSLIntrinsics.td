@@ -1322,6 +1322,22 @@ def hlsl_pow : HLSLTwoArgBuiltin<"pow", "__builtin_elementwise_pow"> {
   let VaryingMatDims = [];
 }
 
+// Returns the value from the lane with the specified index in the quad.
+def hlsl_quad_read_lane_at : HLSLBuiltin<"QuadReadLaneAt", "__builtin_hlsl_quad_read_lane_at"> {
+  let Doc = [{
+\brief Returns the value from the lane with the specified index in the quad.
+\param Val The value to read.
+\param Index The lane index.
+}];
+  let ReturnType = Varying;
+  let Args = [Varying, UIntTy];
+  let VaryingTypes = AllTypesWithBool;
+  let VaryingScalar = 1;
+  let VaryingVecSizes = [2, 3, 4];
+  let VaryingMatDims = [];
+  let IsConvergent = 1;
+}
+
 // Reads the value from the lane across the X axis of the quad.
 def hlsl_quad_read_across_x :
     HLSLOneArgBuiltin<"QuadReadAcrossX",
