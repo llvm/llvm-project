@@ -187,7 +187,8 @@ computeUnrollCount(Loop *L, const TargetTransformInfo &TTI, DominatorTree &DT,
                    unsigned MaxTripCount, bool MaxOrZero, unsigned TripMultiple,
                    const UnrollCostEstimator &UCE,
                    TargetTransformInfo::UnrollingPreferences &UP,
-                   TargetTransformInfo::PeelingPreferences &PP);
+                   TargetTransformInfo::PeelingPreferences &PP,
+                   bool AllowLoadWideningPeel = true);
 
 LLVM_ABI std::optional<RecurrenceDescriptor>
 canParallelizeReductionWhenUnrolling(PHINode &Phi, Loop *L,
