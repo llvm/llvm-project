@@ -109,12 +109,13 @@ Align GEPOperator::getMaxPreservedAlignment(const DataLayout &DL) const {
 
     if (StructType *STy = GTI.getStructTypeOrNull()) {
       const StructLayout *SL = DL.getStructLayout(STy);
-      Offset = SL->getElementOffset(OpC->getZExtValue());
+      Offset =
+          SL->getElementOffset(OpC->getValue().getLoBits(32).getZExtValue());
     } else {
       assert(GTI.isSequential() && "should be sequencial");
       /// If the index isn't known, we take 1 because it is the index that will
       /// give the worse alignment of the offset.
-      const uint64_t ElemCount = OpC ? OpC->getZExtValue() : 1;
+      const uint64_t ElemCount = OpC ? OpC->getLimitedValue() : 1;
       Offset = GTI.getSequentialElementStride(DL) * ElemCount;
     }
     Result = Align(MinAlign(Offset, Result.value()));
@@ -299,4 +300,31 @@ void FastMathFlags::print(raw_ostream &O) const {
     if (approxFunc())
       O << " afn";
   }
+}
+
+FastMathFlags &FPMathOperator::getFastMathFlagsImpl() {
+  auto *I = cast<Instruction>(this);
+
+  if (FastMathFlagsStorage *Op = dyn_cast<FPUnaryOperator>(I))
+    return Op->FMF;
+  if (FastMathFlagsStorage *Op = dyn_cast<FPBinaryOperator>(I))
+    return Op->FMF;
+  if (FastMathFlagsStorage *Op = dyn_cast<FPTruncInst>(I))
+    return Op->FMF;
+  if (FastMathFlagsStorage *Op = dyn_cast<FPExtInst>(I))
+    return Op->FMF;
+  if (FastMathFlagsStorage *Op = dyn_cast<FCmpInst>(I))
+    return Op->FMF;
+  if (FastMathFlagsStorage *Op = dyn_cast<PHINode>(I))
+    return Op->FMF;
+  if (FastMathFlagsStorage *Op = dyn_cast<SelectInst>(I))
+    return Op->FMF;
+  if (FastMathFlagsStorage *Op = dyn_cast<CallInst>(I))
+    return Op->FMF;
+  if (FastMathFlagsStorage *Op = dyn_cast<UIToFPInst>(I))
+    return Op->FMF;
+  if (FastMathFlagsStorage *Op = dyn_cast<SIToFPInst>(I))
+    return Op->FMF;
+
+  llvm_unreachable("Unknown FPMathOperator!");
 }

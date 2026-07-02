@@ -2596,9 +2596,9 @@ static void HandleRecvmsg(ThreadState *thr, uptr pc,
 
 #define COMMON_INTERCEPTOR_DLOPEN(filename, flag) \
   ({                                              \
-    CheckNoDeepBind(filename, flag);              \
+    OnDlOpen(filename, flag);                     \
     ThreadIgnoreBegin(thr, 0);                    \
-    void *res = REAL(dlopen)(filename, flag);     \
+    void* res = REAL(dlopen)(filename, flag);     \
     ThreadIgnoreEnd(thr);                         \
     res;                                          \
   })

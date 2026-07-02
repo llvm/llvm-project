@@ -87,7 +87,6 @@ void ConvertVectorToLLVMPass::runOnOperation() {
     populateVectorMaskMaterializationPatterns(patterns,
                                               force32BitVectorIndices);
     populateVectorInsertExtractStridedSliceTransforms(patterns);
-    populateVectorStepLoweringPatterns(patterns);
     populateVectorRankReducingFMAPattern(patterns);
     populateVectorGatherLoweringPatterns(patterns);
     populateVectorFromElementsUnrollPatterns(patterns);
@@ -114,7 +113,7 @@ void ConvertVectorToLLVMPass::runOnOperation() {
   populateVectorTransferLoweringPatterns(patterns);
   populateVectorToLLVMConversionPatterns(
       converter, patterns, reassociateFPReductions, force32BitVectorIndices,
-      useVectorAlignment);
+      useVectorAlignment, enableGEPInboundsNuw);
 
   // Architecture specific augmentations.
   LLVMConversionTarget target(getContext());

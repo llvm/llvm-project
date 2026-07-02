@@ -90,7 +90,7 @@ enum class BaseTypeModifier : uint8_t {
 };
 
 // Modifier for type, used for both scalar and vector types.
-enum class TypeModifier : uint8_t {
+enum class TypeModifier : uint16_t {
   NoModifier = 0,
   Pointer = 1 << 0,
   Const = 1 << 1,
@@ -105,8 +105,10 @@ enum class TypeModifier : uint8_t {
   // simple enum, so we decide keek LMUL1 in TypeModifier for code size
   // optimization of clang binary size.
   LMUL1 = 1 << 7,
-  MaxOffset = 7,
-  LLVM_MARK_AS_BITMASK_ENUM(LMUL1),
+  // Toggle between the two OFP8 element types (FloatE4M3 <-> FloatE5M2).
+  AltFP8 = 1 << 8,
+  MaxOffset = 8,
+  LLVM_MARK_AS_BITMASK_ENUM(AltFP8),
 };
 
 class Policy {
@@ -175,7 +177,7 @@ struct PrototypeDescriptor {
       VectorTypeModifier VTM = VectorTypeModifier::NoModifier,
       TypeModifier TM = TypeModifier::NoModifier)
       : PT(PT), VTM(VTM), TM(TM) {}
-  constexpr PrototypeDescriptor(uint8_t PT, uint8_t VTM, uint8_t TM)
+  constexpr PrototypeDescriptor(uint8_t PT, uint8_t VTM, uint16_t TM)
       : PT(static_cast<BaseTypeModifier>(PT)),
         VTM(static_cast<VectorTypeModifier>(VTM)),
         TM(static_cast<TypeModifier>(TM)) {}
@@ -407,6 +409,7 @@ private:
   // InputTypes. -1 means the return type.
   std::vector<int64_t> IntrinsicTypes;
   unsigned NF = 1;
+  bool HasSegInstSEW = false;
   Policy PolicyAttrs;
   unsigned TWiden = 0;
 
@@ -418,8 +421,8 @@ public:
                bool HasBuiltinAlias, llvm::StringRef ManualCodegen,
                const RVVTypes &Types,
                const std::vector<int64_t> &IntrinsicTypes, unsigned NF,
-               Policy PolicyAttrs, bool HasFRMRoundModeOp, unsigned TWiden,
-               bool AltFmt);
+               bool HasSegInstSEW, Policy PolicyAttrs, bool HasFRMRoundModeOp,
+               unsigned TWiden, bool AltFmt);
   ~RVVIntrinsic() = default;
 
   RVVTypePtr getOutputType() const { return OutputType; }
@@ -443,6 +446,7 @@ public:
   llvm::StringRef getManualCodegen() const { return ManualCodegen; }
   PolicyScheme getPolicyScheme() const { return Scheme; }
   unsigned getNF() const { return NF; }
+  bool hasSegInstSEW() const { return HasSegInstSEW; }
   unsigned getTWiden() const { return TWiden; }
   const std::vector<int64_t> &getIntrinsicTypes() const {
     return IntrinsicTypes;

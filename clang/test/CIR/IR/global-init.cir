@@ -2,9 +2,9 @@
 
 !u8i = !cir.int<u, 8>
 
-!rec_NeedsCtor = !cir.record<struct "NeedsCtor" padded {!u8i}>
-!rec_NeedsDtor = !cir.record<struct "NeedsDtor" padded {!u8i}>
-!rec_NeedsCtorDtor = !cir.record<struct "NeedsCtorDtor" padded {!u8i}>
+!rec_NeedsCtor = !cir.struct<"NeedsCtor" padded {!u8i}>
+!rec_NeedsDtor = !cir.struct<"NeedsDtor" padded {!u8i}>
+!rec_NeedsCtorDtor = !cir.struct<"NeedsCtorDtor" padded {!u8i}>
 
 module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
   cir.func private @_ZN9NeedsCtorC1Ev(!cir.ptr<!rec_NeedsCtor>)

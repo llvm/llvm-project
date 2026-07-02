@@ -104,15 +104,21 @@ enum class TensormapFillMode : uint8_t {
   OOB_NAN_FILL = 1,
 };
 
-void printTcgen05MMAKind(raw_ostream &OS, const Constant *ImmArgVal);
+LLVM_ABI void printTcgen05MMAKind(raw_ostream &OS, const Constant *ImmArgVal);
 
-void printTcgen05CollectorUsageOp(raw_ostream &OS, const Constant *ImmArgVal);
+LLVM_ABI void printTcgen05CollectorUsageOp(raw_ostream &OS,
+                                           const Constant *ImmArgVal);
 
-void printTensormapElemType(raw_ostream &OS, const Constant *ImmArgVal);
-void printTensormapInterleaveLayout(raw_ostream &OS, const Constant *ImmArgVal);
-void printTensormapSwizzleMode(raw_ostream &OS, const Constant *ImmArgVal);
-void printTensormapSwizzleAtomicity(raw_ostream &OS, const Constant *ImmArgVal);
-void printTensormapFillMode(raw_ostream &OS, const Constant *ImmArgVal);
+LLVM_ABI void printTensormapElemType(raw_ostream &OS,
+                                     const Constant *ImmArgVal);
+LLVM_ABI void printTensormapInterleaveLayout(raw_ostream &OS,
+                                             const Constant *ImmArgVal);
+LLVM_ABI void printTensormapSwizzleMode(raw_ostream &OS,
+                                        const Constant *ImmArgVal);
+LLVM_ABI void printTensormapSwizzleAtomicity(raw_ostream &OS,
+                                             const Constant *ImmArgVal);
+LLVM_ABI void printTensormapFillMode(raw_ostream &OS,
+                                     const Constant *ImmArgVal);
 
 inline bool FPToIntegerIntrinsicShouldFTZ(Intrinsic::ID IntrinsicID) {
   switch (IntrinsicID) {

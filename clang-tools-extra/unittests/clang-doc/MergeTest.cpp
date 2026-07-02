@@ -199,20 +199,22 @@ TEST_F(MergeTest, mergeSingleNamespaceInfo) {
   Expected.Children.Enums.push_back(EE2Node);
   NamespaceInfo ReducedObj;
   ReducedObj.IT = InfoType::IT_namespace;
-  doc::OwnedPtr<doc::Info> Reduced = &ReducedObj;
+  doc::Info *Reduced = &ReducedObj;
 
+  // mergeSingleInfo requires an arena, so allow this one usage.
+  llvm::BumpPtrAllocator Arena;
   Info *PtrOne = &One;
-  auto Err1 = mergeSingleInfo(Reduced, std::move(PtrOne), doc::PersistentArena);
+  auto Err1 = mergeSingleInfo(Reduced, std::move(PtrOne), Arena);
   assert(!Err1);
 
   Info *PtrTwo = &Two;
-  auto Err2 = mergeSingleInfo(Reduced, std::move(PtrTwo), doc::PersistentArena);
+  auto Err2 = mergeSingleInfo(Reduced, std::move(PtrTwo), Arena);
   assert(!Err2);
 
   CheckNamespaceInfo(InfoAsNamespace(&Expected),
-                     static_cast<NamespaceInfo *>(getPtr(Reduced)));
+                     static_cast<NamespaceInfo *>(Reduced));
 
-  auto *RedNS = static_cast<NamespaceInfo *>(getPtr(Reduced));
+  auto *RedNS = static_cast<NamespaceInfo *>(Reduced);
   // Check that children functions are NOT the same instances as in One or Two
   ASSERT_NE(RedNS->Children.Functions.front().Ptr, &F1);
   ASSERT_NE(RedNS->Children.Functions.back().Ptr, &F2);

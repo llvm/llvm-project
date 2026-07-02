@@ -738,13 +738,16 @@ struct MappingGoRiscv64_48 {
 Go on linux/s390x
 0000 0000 1000 - 1000 0000 0000: executable and heap - 16 TiB
 1000 0000 0000 - 4000 0000 0000: -
-4000 0000 0000 - 6000 0000 0000: shadow - 64TiB (4 * app)
-6000 0000 0000 - 9000 0000 0000: -
-9000 0000 0000 - 9800 0000 0000: metainfo - 8TiB (0.5 * app)
+4000 0000 0000 - 6000 0000 0000: shadow - 32 TiB (2 * app)
+6000 0000 0000 - 7000 0000 0000: -
+7000 0000 0000 - 7800 0000 0000: metainfo - 8 TiB (0.5 * app)
+7800 0000 0000 - 8000 0000 0000: -
 */
 struct MappingGoS390x {
-  static const uptr kMetaShadowBeg = 0x900000000000ull;
-  static const uptr kMetaShadowEnd = 0x980000000000ull;
+  // Keep the mapping below 2^47 for QEMU linux-user on x86-64 hosts with
+  // four-level page tables.
+  static const uptr kMetaShadowBeg = 0x700000000000ull;
+  static const uptr kMetaShadowEnd = 0x780000000000ull;
   static const uptr kShadowBeg     = 0x400000000000ull;
   static const uptr kShadowEnd = 0x600000000000ull;
   static const uptr kLoAppMemBeg = 0x000000001000ull;

@@ -18,8 +18,6 @@
 #include "llvm/ProfileData/MemProf.h"
 #include "llvm/Support/Compiler.h"
 
-#include <unordered_map>
-
 namespace llvm {
 class IndexedInstrProfReader;
 class Module;
@@ -56,14 +54,7 @@ LLVM_ABI DenseMap<uint64_t, SmallVector<CallEdgeTy, 0>> extractCallsFromIR(
       return true;
     });
 
-struct LineLocationHash {
-  uint64_t operator()(const LineLocation &Loc) const {
-    return Loc.getHashCode();
-  }
-};
-
-using LocToLocMap =
-    std::unordered_map<LineLocation, LineLocation, LineLocationHash>;
+using LocToLocMap = DenseMap<LineLocation, LineLocation>;
 
 // Compute an undrifting map.  The result is a map from caller GUIDs to an inner
 // map that maps source locations in the profile to those in the current IR.

@@ -2878,8 +2878,6 @@ TEST_F(OpenMPIRBuilderTest, MasterDirective) {
   F->setName("func");
   IRBuilder<> Builder(BB);
 
-  OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
-
   AllocaInst *PrivAI = nullptr;
 
   BasicBlock *EntryBB = nullptr;
@@ -2959,8 +2957,6 @@ TEST_F(OpenMPIRBuilderTest, MaskedDirective) {
   OMPBuilder.initialize();
   F->setName("func");
   IRBuilder<> Builder(BB);
-
-  OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
 
   AllocaInst *PrivAI = nullptr;
 
@@ -3042,8 +3038,6 @@ TEST_F(OpenMPIRBuilderTest, CriticalDirective) {
   OMPBuilder.initialize();
   F->setName("func");
   IRBuilder<> Builder(BB);
-
-  OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
 
   Type *PrivType = F->arg_begin()->getType();
   AllocaInst *PrivAI = Builder.CreateAlloca(PrivType);
@@ -3128,8 +3122,6 @@ TEST_F(OpenMPIRBuilderTest, OrderedDirectiveDependSource) {
   IRBuilder<> Builder(BB);
   LLVMContext &Ctx = M->getContext();
 
-  OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
-
   InsertPointTy AllocaIP(&F->getEntryBlock(),
                          F->getEntryBlock().getFirstInsertionPt());
 
@@ -3213,8 +3205,6 @@ TEST_F(OpenMPIRBuilderTest, OrderedDirectiveDependSink) {
   IRBuilder<> Builder(BB);
   LLVMContext &Ctx = M->getContext();
 
-  OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
-
   InsertPointTy AllocaIP(&F->getEntryBlock(),
                          F->getEntryBlock().getFirstInsertionPt());
 
@@ -3297,8 +3287,6 @@ TEST_F(OpenMPIRBuilderTest, OrderedDirectiveThreads) {
   F->setName("func");
   IRBuilder<> Builder(BB);
 
-  OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
-
   Type *PrivType = F->arg_begin()->getType();
   AllocaInst *PrivAI = Builder.CreateAlloca(PrivType, nullptr, "priv.inst");
 
@@ -3374,8 +3362,6 @@ TEST_F(OpenMPIRBuilderTest, OrderedDirectiveSimd) {
   F->setName("func");
   IRBuilder<> Builder(BB);
 
-  OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
-
   Type *PrivType = F->arg_begin()->getType();
   AllocaInst *PrivAI = Builder.CreateAlloca(PrivType, nullptr, "priv.inst");
 
@@ -3441,8 +3427,6 @@ TEST_F(OpenMPIRBuilderTest, CopyinBlocks) {
   F->setName("func");
   IRBuilder<> Builder(BB);
 
-  OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
-
   IntegerType *Int32 = Type::getInt32Ty(M->getContext());
   AllocaInst *MasterAddress = Builder.CreateAlloca(Builder.getPtrTy());
   AllocaInst *PrivAddress = Builder.CreateAlloca(Builder.getPtrTy());
@@ -3476,8 +3460,6 @@ TEST_F(OpenMPIRBuilderTest, SingleDirective) {
   OMPBuilder.initialize();
   F->setName("func");
   IRBuilder<> Builder(BB);
-
-  OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
 
   AllocaInst *PrivAI = nullptr;
 
@@ -3570,8 +3552,6 @@ TEST_F(OpenMPIRBuilderTest, SingleDirectiveNowait) {
   OMPBuilder.initialize();
   F->setName("func");
   IRBuilder<> Builder(BB);
-
-  OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
 
   AllocaInst *PrivAI = nullptr;
 
@@ -3684,8 +3664,6 @@ TEST_F(OpenMPIRBuilderTest, SingleDirectiveCopyPrivate) {
   OMPBuilder.initialize();
   F->setName("func");
   IRBuilder<> Builder(BB);
-
-  OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
 
   AllocaInst *PrivAI = nullptr;
 
@@ -3989,8 +3967,6 @@ TEST_F(OpenMPIRBuilderTest, OMPAtomicUpdate) {
   F->setName("func");
   IRBuilder<> Builder(BB);
 
-  OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
-
   IntegerType *Int32 = Type::getInt32Ty(M->getContext());
   AllocaInst *XVal = Builder.CreateAlloca(Int32);
   XVal->setName("AtomicVar");
@@ -4058,8 +4034,6 @@ TEST_F(OpenMPIRBuilderTest, OMPAtomicUpdateFloat) {
   F->setName("func");
   IRBuilder<> Builder(BB);
 
-  OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
-
   Type *FloatTy = Type::getFloatTy(M->getContext());
   AllocaInst *XVal = Builder.CreateAlloca(FloatTy);
   XVal->setName("AtomicVar");
@@ -4125,8 +4099,6 @@ TEST_F(OpenMPIRBuilderTest, OMPAtomicUpdateIntr) {
   OMPBuilder.initialize();
   F->setName("func");
   IRBuilder<> Builder(BB);
-
-  OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
 
   Type *IntTy = Type::getInt32Ty(M->getContext());
   AllocaInst *XVal = Builder.CreateAlloca(IntTy);
@@ -4195,8 +4167,6 @@ TEST_F(OpenMPIRBuilderTest, OMPAtomicCapture) {
   F->setName("func");
   IRBuilder<> Builder(BB);
 
-  OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
-
   LLVMContext &Ctx = M->getContext();
   IntegerType *Int32 = Type::getInt32Ty(Ctx);
   AllocaInst *XVal = Builder.CreateAlloca(Int32);
@@ -4246,8 +4216,6 @@ TEST_F(OpenMPIRBuilderTest, OMPAtomicCompare) {
   OMPBuilder.initialize();
   F->setName("func");
   IRBuilder<> Builder(BB);
-
-  OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
 
   LLVMContext &Ctx = M->getContext();
   IntegerType *Int32 = Type::getInt32Ty(Ctx);
@@ -4306,8 +4274,6 @@ TEST_F(OpenMPIRBuilderTest, OMPAtomicCompareCapture) {
   OMPBuilder.initialize();
   F->setName("func");
   IRBuilder<> Builder(BB);
-
-  OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
 
   LLVMContext &Ctx = M->getContext();
   IntegerType *Int32 = Type::getInt32Ty(Ctx);
@@ -4661,7 +4627,6 @@ TEST_F(OpenMPIRBuilderTest, CreateTeams) {
     return Error::success();
   };
 
-  OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
   ASSERT_EXPECTED_INIT(
       OpenMPIRBuilder::InsertPointTy, AfterIP,
       OMPBuilder.createTeams(Builder, BodyGenCB, /*NumTeamsLower=*/nullptr,
@@ -4913,7 +4878,6 @@ TEST_F(OpenMPIRBuilderTest, CreateTeamsWithNumTeamsAndThreadLimit) {
     return Error::success();
   };
 
-  OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
   ASSERT_EXPECTED_INIT(OpenMPIRBuilder::InsertPointTy, AfterIP,
                        OMPBuilder.createTeams(Builder, BodyGenCB, NumTeamsLower,
                                               NumTeamsUpper, ThreadLimit,
@@ -8458,6 +8422,60 @@ TEST_F(OpenMPIRBuilderTest, ScopeDirectiveNowait) {
       if (CI && CI->getCalledFunction())
         EXPECT_NE(CI->getCalledFunction()->getName(), "__kmpc_barrier");
     }
+  }
+}
+
+// This test ensures loop fusion does not leave orphaned non-entry blocks.
+// It's a regression test for SmallPtrSet::remove_if behavior change from
+// #197637.
+TEST_F(OpenMPIRBuilderTest, FuseLoopRangeNoDeadBlocks) {
+  using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.initialize();
+  F->setName("func");
+
+  IRBuilder<> Builder(BB);
+  Type *LCTy = F->getArg(0)->getType();
+  Value *TripCount = F->getArg(0);
+
+  auto LoopBodyGenCB = [&](InsertPointTy CodeGenIP, Value *LC) {
+    Builder.restoreIP(CodeGenIP);
+    createPrintfCall(Builder, "%d\n", {LC});
+    return Error::success();
+  };
+
+  OpenMPIRBuilder::LocationDescription Loc1({Builder.saveIP(), DL});
+  ASSERT_EXPECTED_INIT(
+      CanonicalLoopInfo *, Loop1,
+      OMPBuilder.createCanonicalLoop(Loc1, LoopBodyGenCB, TripCount, "loop1"));
+  Builder.restoreIP(Loop1->getAfterIP());
+
+  Value *TripCount2 = Builder.CreateAdd(TripCount, ConstantInt::get(LCTy, 1));
+  OpenMPIRBuilder::LocationDescription Loc2({Builder.saveIP(), DL});
+  ASSERT_EXPECTED_INIT(
+      CanonicalLoopInfo *, Loop2,
+      OMPBuilder.createCanonicalLoop(Loc2, LoopBodyGenCB, TripCount2, "loop2"));
+  Builder.restoreIP(Loop2->getAfterIP());
+
+  Value *TripCount3 = Builder.CreateAdd(TripCount, ConstantInt::get(LCTy, 2));
+  OpenMPIRBuilder::LocationDescription Loc3({Builder.saveIP(), DL});
+  ASSERT_EXPECTED_INIT(
+      CanonicalLoopInfo *, Loop3,
+      OMPBuilder.createCanonicalLoop(Loc3, LoopBodyGenCB, TripCount3, "loop3"));
+  Builder.restoreIP(Loop3->getAfterIP());
+  Builder.CreateRetVoid();
+
+  CanonicalLoopInfo *Fused = OMPBuilder.fuseLoops(DL, {Loop1, Loop2});
+
+  OMPBuilder.finalize();
+  ASSERT_FALSE(verifyModule(*M, &errs()));
+
+  Fused->assertOK();
+  for (BasicBlock &Block : *F) {
+    if (&Block == &F->getEntryBlock())
+      continue;
+    EXPECT_TRUE(Block.hasNPredecessorsOrMore(1))
+        << "Dead block found: " << Block.getName().str();
   }
 }
 

@@ -90,7 +90,7 @@ declare ptr @llvm.coro.free(token, ptr nocapture readonly)
 ; CHECK-NEXT:    ret void
 ;
 ;
-; CHECK-LABEL: define internal fastcc void @h.resume(
+; CHECK-LABEL: define internal void @h.resume(
 ; CHECK-SAME: ptr noundef nonnull align 8 dereferenceable(32) [[HDL:%.*]]) personality i32 0 {
 ; CHECK-NEXT:  [[ENTRY_RESUME:.*:]]
 ; CHECK-NEXT:    [[COND_RELOAD_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 25
@@ -123,7 +123,7 @@ declare ptr @llvm.coro.free(token, ptr nocapture readonly)
 ; CHECK-NEXT:    ret void
 ;
 ;
-; CHECK-LABEL: define internal fastcc void @h.destroy(
+; CHECK-LABEL: define internal void @h.destroy(
 ; CHECK-SAME: ptr noundef nonnull align 8 dereferenceable(32) [[HDL:%.*]]) personality i32 0 {
 ; CHECK-NEXT:  [[ENTRY_DESTROY:.*:]]
 ; CHECK-NEXT:    [[MEM:%.*]] = call ptr @llvm.coro.free(token poison, ptr [[HDL]])
@@ -131,7 +131,7 @@ declare ptr @llvm.coro.free(token, ptr nocapture readonly)
 ; CHECK-NEXT:    ret void
 ;
 ;
-; CHECK-LABEL: define internal fastcc void @h.cleanup(
+; CHECK-LABEL: define internal void @h.cleanup(
 ; CHECK-SAME: ptr noundef nonnull align 8 dereferenceable(32) [[HDL:%.*]]) personality i32 0 {
 ; CHECK-NEXT:  [[ENTRY_CLEANUP:.*:]]
 ; CHECK-NEXT:    call void @free(ptr null)

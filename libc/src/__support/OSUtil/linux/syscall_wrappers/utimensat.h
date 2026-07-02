@@ -23,14 +23,18 @@ namespace linux_syscalls {
 LIBC_INLINE ErrorOr<int> utimensat(int dirfd, const char *path,
                                    const struct timespec times[2], int flags) {
 #if defined(SYS_utimensat_time64)
-  constexpr auto UTIMENSAT_SYSCALL_ID = SYS_utimensat_time64;
+  int ret = syscall_impl<int>(SYS_utimensat_time64, dirfd, path, times, flags);
 #elif defined(SYS_utimensat)
-  constexpr auto UTIMENSAT_SYSCALL_ID = SYS_utimensat;
+  static_assert(
+      sizeof(timespec::tv_nsec) == sizeof(long),
+      "This legacy syscall fallback is only safe on platforms where tv_nsec "
+      "matches the register size (long). It is unsafe on 32-bit platforms "
+      "with 64-bit tv_nsec.");
+  int ret = syscall_impl<int>(SYS_utimensat, dirfd, path, times, flags);
 #else
 #error "utimensat or utimensat_time64 syscalls not available."
 #endif
 
-  int ret = syscall_impl<int>(UTIMENSAT_SYSCALL_ID, dirfd, path, times, flags);
   if (ret < 0)
     return Error(-static_cast<int>(ret));
   return ret;

@@ -230,11 +230,10 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
 
   const MachineFunction &MF = *MI.getParent()->getParent();
   const MachineRegisterInfo &MRI = MF.getRegInfo();
-  const TargetSubtargetInfo &STI = MF.getSubtarget();
-  const TargetRegisterInfo &TRI = *STI.getRegisterInfo();
+  const RISCVSubtarget &Subtarget = MF.getSubtarget<RISCVSubtarget>();
+  const TargetRegisterInfo &TRI = *Subtarget.getRegisterInfo();
 
-  unsigned GPRSize = getMaximumSize(RISCV::GPRBRegBankID);
-  assert((GPRSize == 32 || GPRSize == 64) && "Unexpected GPR size");
+  unsigned GPRSize = Subtarget.getXLen();
 
   unsigned NumOperands = MI.getNumOperands();
   const ValueMapping *GPRValueMapping =

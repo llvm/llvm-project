@@ -131,7 +131,7 @@ define i16 @bswap_src_and_lo_i16(i16 %x) {
 define i16 @bswap_src_and_hi_i16(i16 %x) {
 ; CHECK-LABEL: bswap_src_and_hi_i16:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    and w8, w0, #0xffffff00
+; CHECK-NEXT:    and w8, w0, #0xff00
 ; CHECK-NEXT:    rev16 w0, w8
 ; CHECK-NEXT:    ret
   %m = and i16 %x, 65280

@@ -19,7 +19,6 @@ declare void @llvm.memcpy.inline.p0.p0.i32(ptr nocapture, ptr nocapture, i32, i1
 declare void @llvm.memset.p0.i64(ptr nocapture, i8, i64, i1) nounwind
 
 ; Check that one of the memcpy's are removed.
-;; FIXME: PR 8643 We should be able to eliminate the last memcpy here.
 define void @test1(ptr sret(%0)  %agg.result, x86_fp80 %z.0, x86_fp80 %z.1) nounwind  {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:

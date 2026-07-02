@@ -14,6 +14,7 @@
 #define FIR_DIALECT_FIR_TYPES
 
 include "mlir/IR/AttrTypeBase.td"
+include "mlir/IR/BuiltinTypeInterfaces.td"
 include "flang/Optimizer/Dialect/FIRDialect.td"
 
 //===----------------------------------------------------------------------===//
@@ -77,14 +78,15 @@ def fir_BoxType : FIR_Type<"Box", "box", [], "BaseBoxType"> {
     to) whether the entity is an array, its size, or what type it has.
   }];
 
-  let parameters = (ins "mlir::Type":$eleTy, "bool":$isVolatile);
+  let parameters = (ins "mlir::Type":$eleTy, "bool":$isVolatile, "int64_t":$corank);
 
   let skipDefaultBuilders = 1;
 
   let builders = [
     TypeBuilderWithInferredContext<(ins
-        "mlir::Type":$eleTy, CArg<"bool", "false">:$isVolatile), [{
-      return Base::get(eleTy.getContext(), eleTy, isVolatile);
+        "mlir::Type":$eleTy, CArg<"bool", "false">:$isVolatile, 
+        CArg<"int64_t", "0">:$corank), [{
+      return Base::get(eleTy.getContext(), eleTy, isVolatile, corank);
     }]>,
   ];
 
@@ -146,11 +148,12 @@ def fir_ClassType : FIR_Type<"Class", "class", [], "BaseBoxType"> {
     is equivalent to a fir.box type with a dynamic type.
   }];
 
-  let parameters = (ins "mlir::Type":$eleTy, "bool":$isVolatile);
+  let parameters = (ins "mlir::Type":$eleTy, "bool":$isVolatile, "int64_t":$corank);
 
   let builders = [
-    TypeBuilderWithInferredContext<(ins "mlir::Type":$eleTy, CArg<"bool", "false">:$isVolatile), [{
-      return $_get(eleTy.getContext(), eleTy, isVolatile);
+    TypeBuilderWithInferredContext<(ins "mlir::Type":$eleTy, CArg<"bool", "false">:$isVolatile, 
+        CArg<"int64_t", "0">:$corank), [{
+      return $_get(eleTy.getContext(), eleTy, isVolatile, corank);
     }]>
   ];
 
@@ -313,7 +316,7 @@ def fir_PointerType : FIR_Type<"Pointer", "ptr"> {
   }];
 }
 
-def fir_RecordType : FIR_Type<"Record", "type"> {
+def fir_RecordType : FIR_Type<"Record", "type", [MemRefElementTypeInterface]> {
   let summary = "FIR derived type";
 
   let description = [{

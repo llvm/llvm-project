@@ -88,14 +88,14 @@ int f(int i) {
 
 // With CIR, f1() is emitted after the lambda.
 // CIR-LABEL: cir.func {{.*}} @_Z1fi(
-// CIR:         %[[A_ADDR:.*]] = cir.alloca !rec_A, !cir.ptr<!rec_A>, ["a", init, const]
+// CIR:         %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init const : !cir.ptr<!rec_A>
 // CIR:         %[[A_INIT:.*]] = cir.get_global @[[F_A]] : !cir.ptr<!rec_A>
 // CIR:         cir.copy %[[A_INIT]] to %[[A_ADDR]]
 // CIR:         %[[ZERO:.*]] = cir.const #cir.int<0> : !s64i
 // CIR:         cir.call @_ZZ1fiENK3$_0clEiM1Ai({{.*}}, {{.*}}, %[[ZERO]])
 
 // LLVM-LABEL: define{{.*}} i32 @_Z1fi(
-// LLVM:         call void @llvm.memcpy{{.*}}({{.*}}, ptr @[[F_A]]
+// LLVM:         call void @llvm.memcpy{{.*}}({{.*}}, ptr align 4 @[[F_A]]
 // LLVM:         call{{.*}} i32 @"_ZZ1fiENK3$_0clEiM1Ai"(ptr {{.*}} %{{.*}}, i32 {{.*}} %{{.*}}, i64 0)
 
 namespace PR42276 {

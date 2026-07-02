@@ -42,7 +42,14 @@ void MisplacedWideningCastCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(varDecl(hasInitializer(Cast)), this);
   Finder->addMatcher(returnStmt(hasReturnValue(Cast)), this);
   Finder->addMatcher(callExpr(hasAnyArgument(Cast)), this);
-  Finder->addMatcher(binaryOperator(hasOperatorName("="), hasRHS(Cast)), this);
+  // When assigning to a bit field, bind the FieldDecl so check() can use the
+  // actual bit width instead of the declared type width.
+  Finder->addMatcher(
+      binaryOperator(hasOperatorName("="),
+                     hasLHS(expr(optionally(memberExpr(hasDeclaration(
+                         fieldDecl(isBitField()).bind("BitField")))))),
+                     hasRHS(Cast)),
+      this);
   Finder->addMatcher(
       binaryOperator(isComparisonOperator(), hasEitherOperand(Cast)), this);
 }
@@ -195,14 +202,27 @@ void MisplacedWideningCastCheck::check(const MatchFinder::MatchResult &Result) {
   const QualType CastType = Cast->getType();
   const QualType CalcType = Calc->getType();
 
+  // If assigning to a bit field, use the bit field width as the effective
+  // target width. The declared type may be wider than the actual bit field
+  // storage.
+  unsigned TargetWidth = Context.getIntWidth(CastType);
+  bool IsBitfieldAssign = false;
+  if (const auto *FD = Result.Nodes.getNodeAs<FieldDecl>("BitField")) {
+    TargetWidth = FD->getBitWidthValue();
+    IsBitfieldAssign = true;
+  }
+
   // Explicit truncation using cast.
-  if (Context.getIntWidth(CastType) < Context.getIntWidth(CalcType))
+  if (TargetWidth < Context.getIntWidth(CalcType))
     return;
 
   // If CalcType and CastType have same size then there is no real danger, but
   // there can be a portability problem.
 
-  if (Context.getIntWidth(CastType) == Context.getIntWidth(CalcType)) {
+  if (TargetWidth == Context.getIntWidth(CalcType)) {
+    // Bit field width is fixed across platforms — no portability concern.
+    if (IsBitfieldAssign)
+      return;
     const auto *CastBuiltinType =
         dyn_cast<BuiltinType>(CastType->getUnqualifiedDesugaredType());
     const auto *CalcBuiltinType =

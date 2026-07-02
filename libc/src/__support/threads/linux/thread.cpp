@@ -12,6 +12,9 @@
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/CPP/stringstream.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/mmap.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/mprotect.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/munmap.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/open.h"
 #include "src/__support/OSUtil/syscall.h" // For syscall functions.
 #include "src/__support/common.h"
 #include "src/__support/error_or.h"
@@ -100,11 +103,11 @@ LIBC_INLINE ErrorOr<void *> alloc_stack(size_t stacksize, size_t guardsize) {
   if (guardsize) {
     // Give read/write permissions to actual stack.
     // TODO: We are assuming stack growsdown here.
-    long result = LIBC_NAMESPACE::syscall_impl<long>(
-        SYS_mprotect, stack, stacksize, PROT_READ | PROT_WRITE);
+    auto result =
+        linux_syscalls::mprotect(stack, stacksize, PROT_READ | PROT_WRITE);
 
-    if (result != 0)
-      return Error{int(-result)};
+    if (!result)
+      return Error{result.error()};
   }
   return stack;
 }
@@ -117,7 +120,7 @@ free_stack(void *stack, size_t stacksize, size_t guardsize) {
   uintptr_t stackaddr = reinterpret_cast<uintptr_t>(stack);
   stackaddr -= guardsize;
   stack = reinterpret_cast<void *>(stackaddr);
-  LIBC_NAMESPACE::syscall_impl<long>(SYS_munmap, stack, stacksize + guardsize);
+  linux_syscalls::munmap(stack, stacksize + guardsize);
 }
 
 struct Thread;
@@ -428,19 +431,13 @@ int Thread::set_name(const cpp::string_view &name) {
   char path_name_buffer[THREAD_NAME_PATH_SIZE];
   cpp::StringStream path_stream(path_name_buffer);
   construct_thread_name_file_path(path_stream, attrib->tid);
-#ifdef SYS_open
-  int fd =
-      LIBC_NAMESPACE::syscall_impl<int>(SYS_open, path_name_buffer, O_RDWR);
-#else
-  int fd = LIBC_NAMESPACE::syscall_impl<int>(SYS_openat, AT_FDCWD,
-                                             path_name_buffer, O_RDWR);
-#endif
-  if (fd < 0)
-    return -fd;
+  ErrorOr<int> fd = linux_syscalls::open(path_name_buffer, O_RDWR, 0);
+  if (!fd)
+    return fd.error();
 
-  int retval = LIBC_NAMESPACE::syscall_impl<int>(SYS_write, fd, name.data(),
-                                                 name.size());
-  LIBC_NAMESPACE::syscall_impl<long>(SYS_close, fd);
+  int retval = LIBC_NAMESPACE::syscall_impl<int>(SYS_write, fd.value(),
+                                                 name.data(), name.size());
+  LIBC_NAMESPACE::syscall_impl<long>(SYS_close, fd.value());
 
   if (retval < 0)
     return -retval;
@@ -470,19 +467,13 @@ int Thread::get_name(cpp::StringStream &name) const {
   char path_name_buffer[THREAD_NAME_PATH_SIZE];
   cpp::StringStream path_stream(path_name_buffer);
   construct_thread_name_file_path(path_stream, attrib->tid);
-#ifdef SYS_open
-  int fd =
-      LIBC_NAMESPACE::syscall_impl<int>(SYS_open, path_name_buffer, O_RDONLY);
-#else
-  int fd = LIBC_NAMESPACE::syscall_impl<int>(SYS_openat, AT_FDCWD,
-                                             path_name_buffer, O_RDONLY);
-#endif
-  if (fd < 0)
-    return -fd;
+  ErrorOr<int> fd = linux_syscalls::open(path_name_buffer, O_RDONLY, 0);
+  if (!fd)
+    return fd.error();
 
-  int retval = LIBC_NAMESPACE::syscall_impl<int>(SYS_read, fd, name_buffer,
-                                                 NAME_SIZE_MAX);
-  LIBC_NAMESPACE::syscall_impl<long>(SYS_close, fd);
+  int retval = LIBC_NAMESPACE::syscall_impl<int>(SYS_read, fd.value(),
+                                                 name_buffer, NAME_SIZE_MAX);
+  LIBC_NAMESPACE::syscall_impl<long>(SYS_close, fd.value());
   if (retval < 0)
     return -retval;
   if (retval == NAME_SIZE_MAX)

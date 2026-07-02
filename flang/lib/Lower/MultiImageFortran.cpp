@@ -158,7 +158,7 @@ Fortran::lower::genChangeTeamStmt(Fortran::lower::AbstractConverter &converter,
   const std::list<Fortran::parser::CoarrayAssociation> &coarrayAssocList =
       std::get<std::list<Fortran::parser::CoarrayAssociation>>(stmt.t);
   if (coarrayAssocList.size())
-    TODO(loc, "Coarrays provided in the association list.");
+    TODO(loc, "coarray: coarrays provided in the association list");
 
   // Handle TEAM-VALUE
   const auto *teamExpr =
@@ -410,6 +410,7 @@ genCoBounds(Fortran::lower::AbstractConverter &converter, mlir::Location loc,
             std::get<1>(allocSpec.t)) {
       auto expr = Fortran::semantics::GetExpr(*lastCobound);
       lb = fir::getBase(converter.genExprValue(loc, expr, stmtCtx));
+      lb = fir::ConvertOp::create(builder, loc, i64Ty, lb);
     }
     mlir::Value index =
         builder.createIntegerConstant(loc, builder.getIndexType(), i);
@@ -457,10 +458,10 @@ mlir::Value Fortran::lower::genAllocateCoarray(
 fir::ExtendedValue Fortran::lower::CoarrayExprHelper::genAddr(
     const Fortran::evaluate::CoarrayRef &expr) {
   (void)symMap;
-  TODO(converter.getCurrentLocation(), "co-array address");
+  TODO(converter.getCurrentLocation(), "coarray: coarray address");
 }
 
 fir::ExtendedValue Fortran::lower::CoarrayExprHelper::genValue(
     const Fortran::evaluate::CoarrayRef &expr) {
-  TODO(converter.getCurrentLocation(), "co-array value");
+  TODO(converter.getCurrentLocation(), "coarray: coarray value");
 }

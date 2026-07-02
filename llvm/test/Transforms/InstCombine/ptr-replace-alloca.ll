@@ -481,6 +481,26 @@ define i8 @call_readonly_keep_alloca2() {
   ret i8 %v
 }
 
+; The pointer changes but the load type doesn't, so all metadata (here
+; !annotation, which the type-changing copyMetadataForLoad would drop) must be
+; preserved.
+@g3 = external constant [32 x i8], align 16
+
+define i8 @preserve_load_metadata(i64 %idx) {
+; CHECK-LABEL: @preserve_load_metadata(
+; CHECK-NEXT:    [[PTR:%.*]] = getelementptr inbounds i8, ptr @g3, i64 [[IDX:%.*]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr [[PTR]], align 1, !annotation [[META0:![0-9]+]]
+; CHECK-NEXT:    ret i8 [[LOAD]]
+;
+  %alloca = alloca [32 x i8], align 1, addrspace(1)
+  call void @llvm.memcpy.p1.p0.i64(ptr addrspace(1) %alloca, ptr @g3, i64 32, i1 false)
+  %ptr = getelementptr inbounds [32 x i8], ptr addrspace(1) %alloca, i64 0, i64 %idx
+  %load = load i8, ptr addrspace(1) %ptr, !annotation !0
+  ret i8 %load
+}
+
+!0 = !{!"my-annotation"}
+
 declare void @llvm.memcpy.p1.p0.i64(ptr addrspace(1), ptr, i64, i1)
 declare void @llvm.memcpy.p0.p0.i64(ptr, ptr, i64, i1)
 declare void @llvm.memcpy.p0.p1.i64(ptr, ptr addrspace(1), i64, i1)

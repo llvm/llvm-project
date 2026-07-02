@@ -18,7 +18,6 @@
 #include "lldb/Core/Debugger.h"
 #include "lldb/Expression/UserExpression.h"
 #include "lldb/Symbol/Block.h"
-#include "lldb/Target/Policy.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Target/Target.h"
@@ -28,6 +27,7 @@
 #include "lldb/Target/UnixSignals.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/Policy.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/ValueObject/ValueObject.h"
 
@@ -193,7 +193,7 @@ public:
   bool ShouldStopSynchronous(Event *event_ptr) override {
     // Breakpoint callbacks run on the PST during stop processing. Push
     // private state context so callback code sees the private reality.
-    PolicyStack::Guard policy_guard(Policy::PrivateState());
+    PolicyStack::Guard policy_guard = PolicyStack::Get().PushPrivateState();
 
     ThreadSP thread_sp(m_thread_wp.lock());
     if (thread_sp) {
@@ -903,7 +903,7 @@ protected:
   bool ShouldStopSynchronous(Event *event_ptr) override {
     // Watchpoint callbacks run on the PST during stop processing. Push
     // private state context so callback code sees the private reality.
-    PolicyStack::Guard policy_guard(Policy::PrivateState());
+    PolicyStack::Guard policy_guard = PolicyStack::Get().PushPrivateState();
 
     // If we are running our step-over the watchpoint plan, stop if it's done
     // and continue if it's not:

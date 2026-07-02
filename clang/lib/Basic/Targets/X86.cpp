@@ -164,11 +164,6 @@ bool X86TargetInfo::initFeatureMap(
   for (auto &F : CPUFeatures)
     setFeatureEnabled(Features, F, true);
 
-  if (Features.lookup("egpr") && getTriple().isOSWindows()) {
-    setFeatureEnabled(Features, "push2pop2", false);
-    setFeatureEnabled(Features, "ppx", false);
-  }
-
   std::vector<std::string> UpdatedFeaturesVec;
   for (const auto &Feature : FeaturesVec) {
     // Expand general-regs-only to -x86, -mmx and -sse
@@ -301,6 +296,8 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasAVX512DQ = true;
     } else if (Feature == "+avx512bitalg") {
       HasAVX512BITALG = true;
+    } else if (Feature == "+avx512bmm") {
+      HasAVX512BMM = true;
     } else if (Feature == "+avx512bw") {
       HasAVX512BW = true;
     } else if (Feature == "+avx512vl") {
@@ -729,6 +726,18 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
   case CK_Geode:
     defineCPUMacros(Builder, "geode");
     break;
+  case CK_C86_4G_M4:
+    defineCPUMacros(Builder, "c86_4g_m4");
+    break;
+  case CK_C86_4G_M6:
+    defineCPUMacros(Builder, "c86_4g_m6");
+    break;
+  case CK_C86_4G_M7:
+    defineCPUMacros(Builder, "c86_4g_m7");
+    break;
+  case CK_C86_4G_M8:
+    defineCPUMacros(Builder, "c86_4g_m8");
+    break;
   }
 
   // Target properties.
@@ -843,6 +852,8 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__AVX512DQ__");
   if (HasAVX512BITALG)
     Builder.defineMacro("__AVX512BITALG__");
+  if (HasAVX512BMM)
+    Builder.defineMacro("__AVX512BMM__");
   if (HasAVX512BW)
     Builder.defineMacro("__AVX512BW__");
   if (HasAVX512VL) {
@@ -979,9 +990,9 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__ZU__");
   if (HasJMPABS)
     Builder.defineMacro("__JMPABS__");
-  if (HasEGPR && HasNDD && HasCCMP && HasNF && HasZU && HasJMPABS)
-    if (getTriple().isOSWindows() || (HasPush2Pop2 && HasPPX))
-      Builder.defineMacro("__APX_F__");
+  if (HasEGPR && HasPush2Pop2 && HasPPX && HasNDD && HasCCMP && HasNF &&
+      HasZU && HasJMPABS)
+    Builder.defineMacro("__APX_F__");
   if (HasEGPR && HasInlineAsmUseGPR32)
     Builder.defineMacro("__APX_INLINE_ASM_USE_GPR32__");
 
@@ -1089,6 +1100,7 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
       .Case("avx512fp16", true)
       .Case("avx512dq", true)
       .Case("avx512bitalg", true)
+      .Case("avx512bmm", true)
       .Case("avx512bw", true)
       .Case("avx512vl", true)
       .Case("avx512vbmi", true)
@@ -1210,6 +1222,7 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
       .Case("avx512fp16", HasAVX512FP16)
       .Case("avx512dq", HasAVX512DQ)
       .Case("avx512bitalg", HasAVX512BITALG)
+      .Case("avx512bmm", HasAVX512BMM)
       .Case("avx512bw", HasAVX512BW)
       .Case("avx512vl", HasAVX512VL)
       .Case("avx512vbmi", HasAVX512VBMI)
@@ -1657,6 +1670,11 @@ std::optional<unsigned> X86TargetInfo::getCPUCacheLineSize() const {
     case CK_ZNVER4:
     case CK_ZNVER5:
     case CK_ZNVER6:
+    // Hygon
+    case CK_C86_4G_M4:
+    case CK_C86_4G_M6:
+    case CK_C86_4G_M7:
+    case CK_C86_4G_M8:
     // Deprecated
     case CK_x86_64:
     case CK_x86_64_v2:

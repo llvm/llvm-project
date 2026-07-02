@@ -1,0 +1,114 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("@rules_cc//cc:defs.bzl", "cc_library")
+load("//mlir:tblgen.bzl", "gentbl_cc_library", "td_library")
+
+package(
+    default_visibility = ["//visibility:public"],
+    features = [
+        "layering_check",
+    ],
+)
+
+licenses(["notice"])
+
+cc_library(
+    name = "HLFIRHeaders",
+    hdrs = [
+        "HLFIRDialect.h",
+        "HLFIROps.h",
+        "Passes.h",
+    ],
+    strip_include_prefix = "/flang/include",
+    deps = [
+        ":HLFIROpBaseIncGen",
+        ":HLFIROpsIncGen",
+        ":HLFIRPassesIncGen",
+        "//flang/include/flang/Optimizer/Dialect:DialectHeaders",
+        "//flang/include/flang/Optimizer/Dialect/CUF/Attributes:CUFAttrsHeaders",
+        "//mlir:IR",
+        "//mlir:Pass",
+    ],
+)
+
+td_library(
+    name = "HLFIRDialectTdFiles",
+    srcs = [
+        "HLFIROpBase.td",
+        "HLFIROps.td",
+    ],
+    includes = ["/flang/include"],
+    deps = [
+        "//flang/include/flang/Optimizer/Dialect:FIRDialectTdFiles",
+        "//flang/include/flang/Optimizer/Dialect/CUF/Attributes:CUFAttrsTdFiles",
+        "//mlir:ArithOpsTdFiles",
+        "//mlir:BuiltinDialectTdFiles",
+        "//mlir:OpBaseTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "HLFIROpBaseIncGen",
+    strip_include_prefix = "/flang/include",
+    tbl_outs = {
+        "HLFIRAttributes.cpp.inc": [
+            "-gen-attrdef-defs",
+            "-attrdefs-dialect=hlfir",
+        ],
+        "HLFIRAttributes.h.inc": [
+            "-gen-attrdef-decls",
+            "-attrdefs-dialect=hlfir",
+        ],
+        "HLFIRDialect.cpp.inc": [
+            "-gen-dialect-defs",
+            "-dialect=hlfir",
+        ],
+        "HLFIRDialect.h.inc": [
+            "-gen-dialect-decls",
+            "-dialect=hlfir",
+        ],
+        "HLFIREnums.cpp.inc": ["-gen-enum-defs"],
+        "HLFIREnums.h.inc": ["-gen-enum-decls"],
+        "HLFIRTypes.cpp.inc": [
+            "-gen-typedef-defs",
+            "-typedefs-dialect=hlfir",
+        ],
+        "HLFIRTypes.h.inc": [
+            "-gen-typedef-decls",
+            "-typedefs-dialect=hlfir",
+        ],
+    },
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "HLFIROpBase.td",
+    deps = [":HLFIRDialectTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "HLFIROpsIncGen",
+    strip_include_prefix = "/flang/include",
+    tbl_outs = {
+        "HLFIROpInterfaces.cpp.inc": ["-gen-op-interface-defs"],
+        "HLFIROpInterfaces.h.inc": ["-gen-op-interface-decls"],
+        "HLFIROps.cpp.inc": ["-gen-op-defs"],
+        "HLFIROps.h.inc": ["-gen-op-decls"],
+    },
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "HLFIROps.td",
+    deps = [":HLFIRDialectTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "HLFIRPassesIncGen",
+    strip_include_prefix = "/flang/include",
+    tbl_outs = {
+        "Passes.h.inc": [
+            "-gen-pass-decls",
+            "-name=HLFIR",
+        ],
+    },
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "Passes.td",
+    deps = ["//mlir:PassBaseTdFiles"],
+)

@@ -10,8 +10,8 @@
 // CHECK-SPIRV-BINARY: [[P3:[0-9]+]]: input, "[[INPUT]].c", hip, (device-hip, amdgcnspirv)
 // CHECK-SPIRV-BINARY: [[P4:[0-9]+]]: preprocessor,  {[[P3]]}, hip-cpp-output, (device-hip, amdgcnspirv)
 // CHECK-SPIRV-BINARY: [[P5:[0-9]+]]: compiler,  {[[P4]]}, ir, (device-hip, amdgcnspirv)
-// CHECK-SPIRV-BINARY: [[P6:[0-9]+]]: backend,  {[[P5]]}, ir, (device-hip, amdgcnspirv)
-// CHECK-SPIRV-BINARY: [[P7:[0-9]+]]: offload,  "device-hip (spirv64-amd-amdhsa:amdgcnspirv)" {[[P6]]}, ir
+// CHECK-SPIRV-BINARY: [[P6:[0-9]+]]: backend,  {[[P5]]}, lto-bc, (device-hip, amdgcnspirv)
+// CHECK-SPIRV-BINARY: [[P7:[0-9]+]]: offload,  "device-hip (spirv64-amd-amdhsa:amdgcnspirv)" {[[P6]]}, lto-bc
 // CHECK-SPIRV-BINARY: [[P8:[0-9]+]]: llvm-offload-binary, {[[P7]]}, image, (device-hip)
 // CHECK-SPIRV-BINARY: [[P9:[0-9]+]]: clang-linker-wrapper, {[[P8]]}, hip-fatbin, (device-hip)
 
@@ -32,8 +32,8 @@
 // CHECK-SPIRV-BINARY-RDC: [[P3:[0-9]+]]: input, "[[INPUT]].c", hip, (device-hip, amdgcnspirv)
 // CHECK-SPIRV-BINARY-RDC: [[P4:[0-9]+]]: preprocessor,  {[[P3]]}, hip-cpp-output, (device-hip, amdgcnspirv)
 // CHECK-SPIRV-BINARY-RDC: [[P5:[0-9]+]]: compiler,  {[[P4]]}, ir, (device-hip, amdgcnspirv)
-// CHECK-SPIRV-BINARY-RDC: [[P6:[0-9]+]]: backend,  {[[P5]]}, ir, (device-hip, amdgcnspirv)
-// CHECK-SPIRV-BINARY-RDC: [[P7:[0-9]+]]: offload,  "device-hip (spirv64-amd-amdhsa:amdgcnspirv)" {[[P6]]}, ir
+// CHECK-SPIRV-BINARY-RDC: [[P6:[0-9]+]]: backend,  {[[P5]]}, lto-bc, (device-hip, amdgcnspirv)
+// CHECK-SPIRV-BINARY-RDC: [[P7:[0-9]+]]: offload,  "device-hip (spirv64-amd-amdhsa:amdgcnspirv)" {[[P6]]}, lto-bc
 // CHECK-SPIRV-BINARY-RDC: [[P8:[0-9]+]]: llvm-offload-binary, {[[P7]]}, image, (device-hip)
 
 // CHECK-SPIRV-BINARY-RDC: [[P9:[0-9]+]]: offload, "host-hip (x86_64-unknown-linux-gnu)" {[[P2]]}, "device-hip (x86_64-unknown-linux-gnu)" {[[P8]]}, ir
@@ -49,10 +49,11 @@
 // CHECK-SPIRV-BINARY-OFFLOAD-DEVICE-ONLY: [[P0:[0-9]+]]: input, "{{.*}}.c", hip, (device-hip, amdgcnspirv)
 // CHECK-SPIRV-BINARY-OFFLOAD-DEVICE-ONLY: [[P1:[0-9]+]]: preprocessor, {[[P0]]}, hip-cpp-output, (device-hip, amdgcnspirv)
 // CHECK-SPIRV-BINARY-OFFLOAD-DEVICE-ONLY: [[P2:[0-9]+]]: compiler, {[[P1]]}, ir, (device-hip, amdgcnspirv)
-// CHECK-SPIRV-BINARY-OFFLOAD-DEVICE-ONLY: [[P3:[0-9]+]]: backend, {[[P2]]}, image, (device-hip, amdgcnspirv)
-// CHECK-SPIRV-BINARY-OFFLOAD-DEVICE-ONLY: [[P4:[0-9]+]]: offload, "device-hip (spirv64-amd-amdhsa:amdgcnspirv)" {[[P3]]}, image
-// CHECK-SPIRV-BINARY-OFFLOAD-DEVICE-ONLY: [[P5:[0-9]+]]: linker, {[[P4]]}, hip-fatbin, (device-hip)
-// CHECK-SPIRV-BINARY-OFFLOAD-DEVICE-ONLY: [[P6:[0-9]+]]: offload, "device-hip (spirv64-amd-amdhsa)" {[[P5]]}, none
+// CHECK-SPIRV-BINARY-OFFLOAD-DEVICE-ONLY: [[P3:[0-9]+]]: backend, {[[P2]]}, lto-bc, (device-hip, amdgcnspirv)
+// CHECK-SPIRV-BINARY-OFFLOAD-DEVICE-ONLY: [[P4:[0-9]+]]: linker, {[[P3]]}, image, (device-hip, amdgcnspirv)
+// CHECK-SPIRV-BINARY-OFFLOAD-DEVICE-ONLY: [[P5:[0-9]+]]: offload, "device-hip (spirv64-amd-amdhsa:amdgcnspirv)" {[[P4]]}, image
+// CHECK-SPIRV-BINARY-OFFLOAD-DEVICE-ONLY: [[P6:[0-9]+]]: linker, {[[P5]]}, hip-fatbin, (device-hip)
+// CHECK-SPIRV-BINARY-OFFLOAD-DEVICE-ONLY: [[P7:[0-9]+]]: offload, "device-hip (spirv64-amd-amdhsa)" {[[P6]]}, none
 
 // RUN: %clang --offload-new-driver --target=x86_64-unknown-linux-gnu --offload-arch=amdgcnspirv \
 // RUN:         -nogpuinc -nogpulib -x hip %s -save-temps \ 
@@ -62,7 +63,7 @@
 // CHECK-SPIRV-OFFLOAD-DEVICE-ONLY-RDC: [[P0:[0-9]+]]: input, "{{.*}}.c", hip, (device-hip, amdgcnspirv)
 // CHECK-SPIRV-OFFLOAD-DEVICE-ONLY-RDC: [[P1:[0-9]+]]: preprocessor, {[[P0]]}, hip-cpp-output, (device-hip, amdgcnspirv)
 // CHECK-SPIRV-OFFLOAD-DEVICE-ONLY-RDC: [[P2:[0-9]+]]: compiler, {[[P1]]}, ir, (device-hip, amdgcnspirv)
-// CHECK-SPIRV-OFFLOAD-DEVICE-ONLY-RDC: [[P3:[0-9]+]]: backend, {[[P2]]}, ir, (device-hip, amdgcnspirv)
+// CHECK-SPIRV-OFFLOAD-DEVICE-ONLY-RDC: [[P3:[0-9]+]]: backend, {[[P2]]}, lto-{{(bc|ir)}}, (device-hip, amdgcnspirv)
 // CHECK-SPIRV-OFFLOAD-DEVICE-ONLY-RDC: [[P4:[0-9]+]]: offload, "device-hip (spirv64-amd-amdhsa:amdgcnspirv)" {[[P3]]}, none
 
 // RUN: %clang --offload-new-driver --target=x86_64-unknown-linux-gnu --offload-arch=amdgcnspirv \

@@ -23,7 +23,7 @@ class StringRef;
 class LoongArchMCExpr : public MCSpecifierExpr {
 public:
   using Specifier = uint16_t;
-  enum { VK_None };
+  enum { VK_None, VK_DTPREL };
 
 private:
   const bool RelaxHint;

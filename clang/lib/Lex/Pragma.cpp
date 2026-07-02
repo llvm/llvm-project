@@ -288,10 +288,10 @@ void Preprocessor::Handle_Pragma(Token &Tok) {
 
   // Make and enter a lexer object so that we lex and expand the tokens just
   // like any others.
-  Lexer *TL = Lexer::Create_PragmaLexer(TokLoc, PragmaLoc, RParenLoc,
-                                        StrVal.size(), *this);
+  std::unique_ptr<Lexer> TL = Lexer::Create_PragmaLexer(
+      TokLoc, PragmaLoc, RParenLoc, StrVal.size(), *this);
 
-  EnterSourceFileWithLexer(TL, nullptr);
+  EnterSourceFileWithLexer(std::move(TL), nullptr);
 
   // With everything set up, lex this as a #pragma directive.
   HandlePragmaDirective({PIK__Pragma, PragmaLoc});
@@ -779,7 +779,7 @@ static bool LexModuleNameComponent(Preprocessor &PP, Token &Tok,
                                    bool First) {
   PP.LexUnexpandedToken(Tok);
   if (Tok.is(tok::string_literal) && !Tok.hasUDSuffix()) {
-    StringLiteralParser Literal(Tok, PP);
+    StringLiteralParser Literal(Tok, PP, StringLiteralEvalMethod::Unevaluated);
     if (Literal.hadError)
       return true;
     ModuleNameComponent = IdentifierLoc(

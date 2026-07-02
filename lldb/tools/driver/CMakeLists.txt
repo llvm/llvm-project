@@ -34,10 +34,6 @@ set(LLDB_DRIVER_LINK_LIBS
   lldbUtility
 )
 
-if(WIN32)
-  list(APPEND LLDB_DRIVER_LINK_LIBS lldbHostPythonPathSetup)
-endif()
-
 add_lldb_tool(lldb
   Driver.cpp
   Platform.cpp
@@ -55,6 +51,8 @@ add_dependencies(lldb
   LLDBOptionsTableGen
   ${tablegen_deps}
 )
+
+lldb_prevent_liblldb_symbol_interposition(lldb)
 
 if(LLDB_BUILD_FRAMEWORK)
   # In the build-tree, we know the exact path to the framework directory.

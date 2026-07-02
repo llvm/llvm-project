@@ -11,15 +11,15 @@
 //===----------------------------------------------------------------------===//
 #include "xray-registry.h"
 
-#include <unordered_map>
+#include "llvm/ADT/DenseMap.h"
 
 using namespace llvm;
 using namespace xray;
 
 using HandlerType = std::function<Error()>;
 
-static std::unordered_map<cl::SubCommand *, HandlerType> &getCommands() {
-  static std::unordered_map<cl::SubCommand *, HandlerType> Commands;
+static DenseMap<cl::SubCommand *, HandlerType> &getCommands() {
+  static DenseMap<cl::SubCommand *, HandlerType> Commands;
   return Commands;
 }
 

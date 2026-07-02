@@ -50,10 +50,11 @@
 #include "lldb/Target/LanguageRuntime.h"
 #include "lldb/Target/MemoryHistory.h"
 #include "lldb/Target/MemoryRegionInfo.h"
+#include "lldb/Target/MemoryRegionInfoCache.h"
 #include "lldb/Target/OperatingSystem.h"
 #include "lldb/Target/Platform.h"
-#include "lldb/Target/Policy.h"
 #include "lldb/Target/Process.h"
+#include "lldb/Target/ProcessIOHandler.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Target/StructuredDataPlugin.h"
@@ -71,6 +72,7 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/NameMatches.h"
+#include "lldb/Utility/Policy.h"
 #include "lldb/Utility/ProcessInfo.h"
 #include "lldb/Utility/SelectHelper.h"
 #include "lldb/Utility/State.h"
@@ -478,14 +480,15 @@ Process::Process(lldb::TargetSP target_sp, ListenerSP listener_sp,
       m_stdio_communication("process.stdio"), m_stdio_communication_mutex(),
       m_stdin_forward(false), m_stdout_data(), m_stderr_data(),
       m_profile_data_comm_mutex(), m_profile_data(), m_iohandler_sync(0),
-      m_memory_cache(*this), m_allocated_memory_cache(*this),
-      m_should_detach(false), m_next_event_action_up(),
-      m_currently_handling_do_on_removals(false), m_resume_requested(false),
-      m_interrupt_tid(LLDB_INVALID_THREAD_ID), m_finalizing(false),
-      m_destructing(false), m_clear_thread_plans_on_stop(false),
-      m_force_next_event_delivery(false), m_last_broadcast_state(eStateInvalid),
-      m_destroy_in_process(false), m_can_interpret_function_calls(false),
-      m_run_thread_plan_lock(), m_can_jit(eCanJITDontKnow),
+      m_memory_cache(*this), m_memory_region_infos_cache(),
+      m_allocated_memory_cache(*this), m_should_detach(false),
+      m_next_event_action_up(), m_currently_handling_do_on_removals(false),
+      m_resume_requested(false), m_interrupt_tid(LLDB_INVALID_THREAD_ID),
+      m_finalizing(false), m_destructing(false),
+      m_clear_thread_plans_on_stop(false), m_force_next_event_delivery(false),
+      m_last_broadcast_state(eStateInvalid), m_destroy_in_process(false),
+      m_can_interpret_function_calls(false), m_run_thread_plan_lock(),
+      m_can_jit(eCanJITDontKnow),
       m_crash_info_dict_sp(new StructuredData::Dictionary()) {
   CheckInWithManager();
 
@@ -594,6 +597,7 @@ void Process::Finalize(bool destructing) {
   m_notifications.swap(empty_notifications);
   m_image_tokens.clear();
   m_memory_cache.Clear();
+  m_memory_region_infos_cache.Clear();
   m_allocated_memory_cache.Clear(/*deallocate_memory=*/true);
   {
     std::lock_guard<std::recursive_mutex> guard(m_language_runtimes_mutex);
@@ -1457,6 +1461,7 @@ void Process::SetPrivateState(StateType new_state) {
       if (!m_mod_id.IsLastResumeForUserExpression())
         m_mod_id.SetStopEventForLastNaturalStopID(event_sp);
       m_memory_cache.Clear();
+      m_memory_region_infos_cache.Clear();
       LLDB_LOGF(log, "(plugin = %s, state = %s, stop_id = %u",
                GetPluginName().data(), StateAsCString(new_state),
                m_mod_id.GetStopID());
@@ -1569,8 +1574,8 @@ Process::GetBreakpointSiteList() const {
 
 void Process::DisableAllBreakpointSites() {
   m_breakpoint_site_list.ForEach([this](BreakpointSite *bp_site) -> void {
-    llvm::consumeError(
-        ExecuteBreakpointSiteAction(*bp_site, BreakpointAction::Disable));
+    llvm::consumeError(ExecuteBreakpointSiteAction(
+        *bp_site, BreakpointAction::Disable, /*forbid_delay=*/false));
   });
 }
 
@@ -1588,8 +1593,8 @@ Status Process::DisableBreakpointSiteByID(lldb::user_id_t break_id) {
   BreakpointSiteSP bp_site_sp = m_breakpoint_site_list.FindByID(break_id);
   if (bp_site_sp) {
     if (IsBreakpointSiteEnabled(*bp_site_sp))
-      error = Status::FromError(
-          ExecuteBreakpointSiteAction(*bp_site_sp, BreakpointAction::Disable));
+      error = Status::FromError(ExecuteBreakpointSiteAction(
+          *bp_site_sp, BreakpointAction::Disable, /*forbid_delay=*/false));
   } else {
     error = Status::FromErrorStringWithFormat(
         "invalid breakpoint site ID: %" PRIu64, break_id);
@@ -1599,7 +1604,17 @@ Status Process::DisableBreakpointSiteByID(lldb::user_id_t break_id) {
 }
 
 llvm::Error Process::ExecuteBreakpointSiteAction(BreakpointSite &site,
-                                                 BreakpointAction action) {
+                                                 BreakpointAction action,
+                                                 bool forbid_delay) {
+  // Breakpoints immediately affect running processes, so do not delay them.
+  forbid_delay |= StateIsRunningState(GetPrivateState());
+
+  if (forbid_delay)
+    if (llvm::Error E = FlushDelayedBreakpoints())
+      LLDB_LOG_ERROR(
+          GetLog(LLDBLog::Breakpoints), std::move(E),
+          "eager breakpoint requested, but failed to flush breakpoints: {0}");
+
   auto site_sp = site.shared_from_this();
   std::unique_lock<std::recursive_mutex> guard(m_delayed_breakpoints_mutex);
 
@@ -1607,7 +1622,7 @@ llvm::Error Process::ExecuteBreakpointSiteAction(BreakpointSite &site,
   if (IsBreakpointSiteEnabled(*site_sp) == (action == BreakpointAction::Enable))
     return llvm::Error::success();
 
-  if (ShouldUseDelayedBreakpoints()) {
+  if (!forbid_delay && ShouldUseDelayedBreakpoints()) {
     m_delayed_breakpoints.Enqueue(site_sp, action);
     return llvm::Error::success();
   }
@@ -1630,8 +1645,8 @@ Status Process::EnableBreakpointSiteByID(lldb::user_id_t break_id) {
   BreakpointSiteSP bp_site_sp = m_breakpoint_site_list.FindByID(break_id);
   if (bp_site_sp) {
     if (!IsBreakpointSiteEnabled(*bp_site_sp))
-      error = Status::FromError(
-          ExecuteBreakpointSiteAction(*bp_site_sp, BreakpointAction::Enable));
+      error = Status::FromError(ExecuteBreakpointSiteAction(
+          *bp_site_sp, BreakpointAction::Enable, /*forbid_delay=*/false));
   } else {
     error = Status::FromErrorStringWithFormat(
         "invalid breakpoint site ID: %" PRIu64, break_id);
@@ -1767,19 +1782,10 @@ Process::CreateBreakpointSite(const BreakpointLocationSP &constituent,
   bool bp_from_address =
       constituent->GetBreakpoint().GetResolver()->GetResolverTy() ==
       BreakpointResolver::ResolverTy::AddressResolver;
-  bool should_be_eager = use_hardware || bp_from_address;
+  bool forbid_delay = use_hardware || bp_from_address;
 
-  // If this breakpoint must be eager, flush the breakpoint queue in case there
-  // is an interaction between the sites in the queue and this new site.
-  if (should_be_eager)
-    if (llvm::Error E = FlushDelayedBreakpoints())
-      LLDB_LOG_ERROR(
-          GetLog(LLDBLog::Breakpoints), std::move(E),
-          "eager breakpoint requested, but failed to flush breakpoints: {0}");
-
-  auto error = should_be_eager ? EnableBreakpointSite(bp_site_sp.get())
-                               : Status::FromError(ExecuteBreakpointSiteAction(
-                                     *bp_site_sp, BreakpointAction::Enable));
+  auto error = Status::FromError(ExecuteBreakpointSiteAction(
+      *bp_site_sp, BreakpointAction::Enable, forbid_delay));
   if (error.Success()) {
     constituent->SetBreakpointSite(bp_site_sp);
     return m_breakpoint_site_list.Add(bp_site_sp);
@@ -1804,8 +1810,8 @@ void Process::RemoveConstituentFromBreakpointSite(
   if (num_constituents == 0) {
     // Don't try to disable the site if we don't have a live process anymore.
     if (IsAlive())
-      llvm::consumeError(
-          ExecuteBreakpointSiteAction(*bp_site_sp, BreakpointAction::Disable));
+      llvm::consumeError(ExecuteBreakpointSiteAction(
+          *bp_site_sp, BreakpointAction::Disable, /*forbid_delay=*/false));
     m_breakpoint_site_list.RemoveByAddress(bp_site_sp->GetLoadAddress());
   }
 }
@@ -2071,6 +2077,19 @@ size_t Process::ReadMemory(addr_t addr, void *buf, size_t size, Status &error) {
 llvm::SmallVector<llvm::MutableArrayRef<uint8_t>>
 Process::ReadMemoryRanges(llvm::ArrayRef<Range<lldb::addr_t, size_t>> ranges,
                           llvm::MutableArrayRef<uint8_t> buffer) {
+  llvm::SmallVector<Range<lldb::addr_t, size_t>> fixed_ranges;
+  fixed_ranges.reserve(ranges.size());
+  for (const Range<lldb::addr_t, size_t> &range : ranges)
+    fixed_ranges.emplace_back(FixAnyAddress(range.GetRangeBase()),
+                              range.GetByteSize());
+  if (!GetDisableMemoryCache())
+    return m_memory_cache.ReadRanges(fixed_ranges, buffer);
+  return DoReadMemoryRanges(fixed_ranges, buffer);
+}
+
+llvm::SmallVector<llvm::MutableArrayRef<uint8_t>>
+Process::DoReadMemoryRanges(llvm::ArrayRef<Range<lldb::addr_t, size_t>> ranges,
+                            llvm::MutableArrayRef<uint8_t> buffer) {
   auto total_ranges_len = llvm::sum_of(
       llvm::map_range(ranges, [](auto range) { return range.size; }));
   // If the buffer is not large enough, this is a programmer error.
@@ -2682,7 +2701,11 @@ addr_t Process::AllocateMemory(size_t size, uint32_t permissions,
     return LLDB_INVALID_ADDRESS;
   }
 
-  return m_allocated_memory_cache.AllocateMemory(size, permissions, error);
+  addr_t alloced_addr =
+      m_allocated_memory_cache.AllocateMemory(size, permissions, error);
+  m_memory_region_infos_cache.Clear();
+
+  return alloced_addr;
 }
 
 addr_t Process::CallocateMemory(size_t size, uint32_t permissions,
@@ -2735,6 +2758,7 @@ void Process::SetCanRunCode(bool can_run_code) {
 
 Status Process::DeallocateMemory(addr_t ptr) {
   Status error;
+  m_memory_region_infos_cache.Clear();
   if (!m_allocated_memory_cache.DeallocateMemory(ptr)) {
     error = Status::FromErrorStringWithFormat(
         "deallocation of memory at 0x%" PRIx64 " failed.", (uint64_t)ptr);
@@ -2776,8 +2800,8 @@ Process::ReadModuleFromMemory(const FileSpec &file_spec,
   // only print a progress update if we're reading from a
   // live session which might go over gdb remote serial protocol.
   if (IsLiveDebugSession())
-    progress_up = std::make_unique<Progress>(
-        "Reading binary from memory", file_spec.GetFilename().GetString());
+    progress_up = std::make_unique<Progress>("Reading binary from memory",
+                                             file_spec.GetFilename().str());
 
   if (ObjectFile *_ = module_sp->GetMemoryObjectFile(
           shared_from_this(), header_addr, error, size_to_read))
@@ -4348,7 +4372,7 @@ thread_result_t Process::RunPrivateStateThread(bool is_override) {
   // They must see parent frames, not provider-augmented frames.
   std::optional<PolicyStack::Guard> policy_guard;
   if (is_override)
-    policy_guard.emplace(Policy::PrivateState());
+    policy_guard = PolicyStack::Get().PushPrivateState();
 
   bool control_only = true;
 
@@ -4947,151 +4971,6 @@ void Process::STDIOReadThreadBytesReceived(void *baton, const void *src,
   process->AppendSTDOUT(static_cast<const char *>(src), src_len);
 }
 
-class IOHandlerProcessSTDIO : public IOHandler {
-public:
-  IOHandlerProcessSTDIO(Process *process, int write_fd)
-      : IOHandler(process->GetTarget().GetDebugger(),
-                  IOHandler::Type::ProcessIO),
-        m_process(process),
-        m_read_file(GetInputFD(), File::eOpenOptionReadOnly, false),
-        m_write_file(write_fd, File::eOpenOptionWriteOnly, false) {
-    m_pipe.CreateNew();
-  }
-
-  ~IOHandlerProcessSTDIO() override = default;
-
-  void SetIsRunning(bool running) {
-    std::lock_guard<std::mutex> guard(m_mutex);
-    SetIsDone(!running);
-    m_is_running = running;
-  }
-
-  // Each IOHandler gets to run until it is done. It should read data from the
-  // "in" and place output into "out" and "err and return when done.
-  void Run() override {
-    if (!m_read_file.IsValid() || !m_write_file.IsValid() ||
-        !m_pipe.CanRead() || !m_pipe.CanWrite()) {
-      SetIsDone(true);
-      return;
-    }
-
-    SetIsDone(false);
-    const int read_fd = m_read_file.GetDescriptor();
-    Terminal terminal(read_fd);
-    TerminalState terminal_state(terminal, false);
-    // FIXME: error handling?
-    llvm::consumeError(terminal.SetCanonical(false));
-    llvm::consumeError(terminal.SetEcho(false));
-// FD_ZERO, FD_SET are not supported on windows
-#ifndef _WIN32
-    const int pipe_read_fd = m_pipe.GetReadFileDescriptor();
-    SetIsRunning(true);
-    while (true) {
-      {
-        std::lock_guard<std::mutex> guard(m_mutex);
-        if (GetIsDone())
-          break;
-      }
-
-      SelectHelper select_helper;
-      select_helper.FDSetRead(read_fd);
-      select_helper.FDSetRead(pipe_read_fd);
-      Status error = select_helper.Select();
-
-      if (error.Fail())
-        break;
-
-      char ch = 0;
-      size_t n;
-      if (select_helper.FDIsSetRead(read_fd)) {
-        n = 1;
-        if (m_read_file.Read(&ch, n).Success() && n == 1) {
-          if (m_write_file.Write(&ch, n).Fail() || n != 1)
-            break;
-        } else
-          break;
-      }
-
-      if (select_helper.FDIsSetRead(pipe_read_fd)) {
-        // Consume the interrupt byte
-        if (llvm::Expected<size_t> bytes_read = m_pipe.Read(&ch, 1)) {
-          if (ch == 'q')
-            break;
-          if (ch == 'i')
-            if (StateIsRunningState(m_process->GetState()))
-              m_process->SendAsyncInterrupt();
-        } else {
-          LLDB_LOG_ERROR(GetLog(LLDBLog::Process), bytes_read.takeError(),
-                         "Pipe read failed: {0}");
-        }
-      }
-    }
-    SetIsRunning(false);
-#endif
-  }
-
-  void Cancel() override {
-    std::lock_guard<std::mutex> guard(m_mutex);
-    SetIsDone(true);
-    // Only write to our pipe to cancel if we are in
-    // IOHandlerProcessSTDIO::Run(). We can end up with a python command that
-    // is being run from the command interpreter:
-    //
-    // (lldb) step_process_thousands_of_times
-    //
-    // In this case the command interpreter will be in the middle of handling
-    // the command and if the process pushes and pops the IOHandler thousands
-    // of times, we can end up writing to m_pipe without ever consuming the
-    // bytes from the pipe in IOHandlerProcessSTDIO::Run() and end up
-    // deadlocking when the pipe gets fed up and blocks until data is consumed.
-    if (m_is_running) {
-      char ch = 'q'; // Send 'q' for quit
-      if (llvm::Error err = m_pipe.Write(&ch, 1).takeError()) {
-        LLDB_LOG_ERROR(GetLog(LLDBLog::Process), std::move(err),
-                       "Pipe write failed: {0}");
-      }
-    }
-  }
-
-  bool Interrupt() override {
-    // Do only things that are safe to do in an interrupt context (like in a
-    // SIGINT handler), like write 1 byte to a file descriptor. This will
-    // interrupt the IOHandlerProcessSTDIO::Run() and we can look at the byte
-    // that was written to the pipe and then call
-    // m_process->SendAsyncInterrupt() from a much safer location in code.
-    if (m_active) {
-      char ch = 'i'; // Send 'i' for interrupt
-      return !errorToBool(m_pipe.Write(&ch, 1).takeError());
-    } else {
-      // This IOHandler might be pushed on the stack, but not being run
-      // currently so do the right thing if we aren't actively watching for
-      // STDIN by sending the interrupt to the process. Otherwise the write to
-      // the pipe above would do nothing. This can happen when the command
-      // interpreter is running and gets a "expression ...". It will be on the
-      // IOHandler thread and sending the input is complete to the delegate
-      // which will cause the expression to run, which will push the process IO
-      // handler, but not run it.
-
-      if (StateIsRunningState(m_process->GetState())) {
-        m_process->SendAsyncInterrupt();
-        return true;
-      }
-    }
-    return false;
-  }
-
-  void GotEOF() override {}
-
-protected:
-  Process *m_process;
-  NativeFile m_read_file;  // Read from this file (usually actual STDIN for LLDB
-  NativeFile m_write_file; // Write to this file (usually the primary pty for
-                           // getting io to debuggee)
-  Pipe m_pipe;
-  std::mutex m_mutex;
-  bool m_is_running = false;
-};
-
 void Process::SetSTDIOFileDescriptor(int fd) {
   // First set up the Read Thread for reading/handling process I/O
   m_stdio_communication.SetConnection(
@@ -5548,7 +5427,7 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
     // GetStackFrameList returns parent frames during event processing.
     std::optional<PolicyStack::Guard> policy_guard;
     if (backup_private_state_thread)
-      policy_guard.emplace(Policy::PrivateState());
+      policy_guard = PolicyStack::Get().PushPrivateState();
 
     while (true) {
       // We usually want to resume the process if we get to the top of the
@@ -5620,10 +5499,10 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
             Halt(clear_thread_plans, use_run_lock);
           }
 
-          diagnostic_manager.Printf(
-              lldb::eSeverityError,
-              "didn't get running event after initial resume, got %s instead.",
-              StateAsCString(stop_state));
+          diagnostic_manager.Printf(lldb::eSeverityError,
+                                    "didn't get running event after initial "
+                                    "resume, got %s instead.",
+                                    StateAsCString(stop_state));
           return_value = eExpressionSetupError;
           break;
         }
@@ -6399,6 +6278,7 @@ void Process::DidExec() {
   m_instrumentation_runtimes.clear();
   m_thread_list.DiscardThreadPlans();
   m_memory_cache.Clear(true);
+  m_memory_region_infos_cache.Clear();
   DoDidExec();
   CompleteAttach();
   // Flush the process (threads and all stack frames) after running
@@ -6511,8 +6391,8 @@ bool Process::GetProcessInfo(ProcessInstanceInfo &info) {
   return platform_sp->GetProcessInfo(GetID(), info);
 }
 
-lldb_private::UUID Process::FindModuleUUID(const llvm::StringRef path) {
-  return lldb_private::UUID();
+bool Process::FindModuleUUID(ModuleSpec &spec) {
+  return spec.GetUUID().IsValid();
 }
 
 ThreadCollectionSP Process::GetHistoryThreads(lldb::addr_t addr) {
@@ -6619,10 +6499,22 @@ Status Process::GetMemoryRegionInfo(lldb::addr_t load_addr,
                                     MemoryRegionInfo &range_info) {
   if (const lldb::ABISP &abi = GetABI())
     load_addr = abi->FixAnyAddress(load_addr);
+
+  std::optional<MemoryRegionInfo> cached_region =
+      m_memory_region_infos_cache.GetMemoryRegion(load_addr);
+  if (cached_region) {
+    range_info = *cached_region;
+    return Status();
+  }
+
   Status error = DoGetMemoryRegionInfo(load_addr, range_info);
-  // Reject a region that does not contain the requested address.
-  if (error.Success() && !range_info.GetRange().Contains(load_addr))
-    error = Status::FromErrorString("Invalid memory region");
+  if (error.Success()) {
+    // Reject a region that does not contain the requested address.
+    if (!range_info.GetRange().Contains(load_addr))
+      error = Status::FromErrorString("Invalid memory region");
+    else
+      m_memory_region_infos_cache.AddRegion(range_info);
+  }
 
   return error;
 }

@@ -6975,6 +6975,13 @@ public:
 /// In this example directive '#pragma omp teams' has clause 'num_teams'
 /// with single expression 'n'.
 ///
+/// \code
+/// #pragma omp teams num_teams(m:n)
+/// \endcode
+/// In this example directive '#pragma omp teams' has clause 'num_teams' with
+/// single expression 'n' as upper-bound and modifier expression 'm' as
+/// lower-bound.
+///
 /// When 'ompx_bare' clause exists on a 'target' directive, 'num_teams' clause
 /// can accept up to three expressions.
 ///
@@ -6988,8 +6995,11 @@ class OMPNumTeamsClause final
   friend OMPVarListClause;
   friend TrailingObjects;
 
-  /// Location of '('.
-  SourceLocation LParenLoc;
+  /// Modifier that was specified.
+  OpenMPNumTeamsClauseModifier Modifier = OMPC_NUMTEAMS_unknown;
+
+  /// Location of the modifier.
+  SourceLocation ModifierLoc;
 
   OMPNumTeamsClause(const ASTContext &C, SourceLocation StartLoc,
                     SourceLocation LParenLoc, SourceLocation EndLoc, unsigned N)
@@ -7011,23 +7021,22 @@ public:
   /// \param LParenLoc Location of '('.
   /// \param EndLoc Ending location of the clause.
   /// \param VL List of references to the variables.
+  /// \param Modifier The modifier specified in the clause.
+  /// \param ModifierExpr The expression of the modifier.
+  /// \param ModifierLoc Location of the modifier.
   /// \param PreInit
   static OMPNumTeamsClause *
   Create(const ASTContext &C, OpenMPDirectiveKind CaptureRegion,
          SourceLocation StartLoc, SourceLocation LParenLoc,
-         SourceLocation EndLoc, ArrayRef<Expr *> VL, Stmt *PreInit);
+         SourceLocation EndLoc, ArrayRef<Expr *> VL,
+         OpenMPNumTeamsClauseModifier Modifier, Expr *ModifierExpr,
+         SourceLocation ModifierLoc, Stmt *PreInit);
 
   /// Creates an empty clause with \a N variables.
   ///
   /// \param C AST context.
   /// \param N The number of variables.
   static OMPNumTeamsClause *CreateEmpty(const ASTContext &C, unsigned N);
-
-  /// Sets the location of '('.
-  void setLParenLoc(SourceLocation Loc) { LParenLoc = Loc; }
-
-  /// Returns the location of '('.
-  SourceLocation getLParenLoc() const { return LParenLoc; }
 
   /// Return NumTeams expressions.
   ArrayRef<Expr *> getNumTeams() { return getVarRefs(); }
@@ -7037,9 +7046,30 @@ public:
     return const_cast<OMPNumTeamsClause *>(this)->getNumTeams();
   }
 
+  /// Get the modifier.
+  OpenMPNumTeamsClauseModifier getModifier() const { return Modifier; }
+
+  /// Set the modifier.
+  void setModifier(OpenMPNumTeamsClauseModifier M) { Modifier = M; }
+
+  /// Get the expression of the modifier.
+  const Expr *getModifierExpr() const { return *varlist_end(); }
+
+  /// Get the expression of the modifier.
+  Expr *getModifierExpr() { return *varlist_end(); }
+
+  /// Set the expression of the modifier.
+  void setModifierExpr(Expr *E) { *varlist_end() = E; }
+
+  /// Get the location of the modifier.
+  SourceLocation getModifierLoc() const { return ModifierLoc; }
+
+  /// Set the location of the modifier.
+  void setModifierLoc(SourceLocation Loc) { ModifierLoc = Loc; }
+
   child_range children() {
     return child_range(reinterpret_cast<Stmt **>(varlist_begin()),
-                       reinterpret_cast<Stmt **>(varlist_end()));
+                       reinterpret_cast<Stmt **>(varlist_end()) + 1);
   }
 
   const_child_range children() const {
@@ -7080,9 +7110,6 @@ class OMPThreadLimitClause final
   friend OMPVarListClause;
   friend TrailingObjects;
 
-  /// Location of '('.
-  SourceLocation LParenLoc;
-
   OMPThreadLimitClause(const ASTContext &C, SourceLocation StartLoc,
                        SourceLocation LParenLoc, SourceLocation EndLoc,
                        unsigned N)
@@ -7115,12 +7142,6 @@ public:
   /// \param C AST context.
   /// \param N The number of variables.
   static OMPThreadLimitClause *CreateEmpty(const ASTContext &C, unsigned N);
-
-  /// Sets the location of '('.
-  void setLParenLoc(SourceLocation Loc) { LParenLoc = Loc; }
-
-  /// Returns the location of '('.
-  SourceLocation getLParenLoc() const { return LParenLoc; }
 
   /// Return ThreadLimit expressions.
   ArrayRef<Expr *> getThreadLimit() { return getVarRefs(); }
@@ -8851,7 +8872,7 @@ public:
 /// \endcode
 class OMPInitClause final
     : public OMPVarListClause<OMPInitClause>,
-      private llvm::TrailingObjects<OMPInitClause, Expr *> {
+      private llvm::TrailingObjects<OMPInitClause, Expr *, unsigned> {
   friend class OMPClauseReader;
   friend OMPVarListClause;
   friend TrailingObjects;
@@ -8861,12 +8882,52 @@ class OMPInitClause final
 
   bool IsTarget = false;
   bool IsTargetSync = false;
+  bool HasPreferAttrs = false;
+
+  /// Total number of attr() exprs across all pref-specs; equals the last entry
+  /// of the trailing unsigned[] of cumulative end offsets (or 0 if no prefs).
+  unsigned NumAttrs = 0;
+
+  /// Trailing-objects layout (single contiguous Expr* array):
+  ///   Expr*[ varlist_size() + NumAttrs ]:
+  ///     [0]                    = InteropVar
+  ///     [1 .. NumPrefs]        = Fr expr per pref-spec (null if attr-only)
+  ///     [varlist_size() ..]    = flat list of attr exprs, concatenated in
+  ///                              pref-spec order
+  ///   unsigned[ NumPrefs ]:
+  ///     [i]                    = end offset of pref-spec i's attrs in the flat
+  ///                              attr block (inclusive cumulative attr count);
+  ///                              spec i's attrs are [ends[i-1], ends[i]), with
+  ///                              an implicit 0 before ends[0]
+  ///
+  /// varlist_size() = 1 + NumPrefs, so OMPVarListClause iteration covers
+  /// InteropVar + the Fr block.
+
+  size_t numTrailingObjects(OverloadToken<Expr *>) const {
+    return varlist_size() + NumAttrs;
+  }
+  size_t numTrailingObjects(OverloadToken<unsigned>) const {
+    return getNumPrefs();
+  }
 
   void setInteropVar(Expr *E) { varlist_begin()[0] = E; }
 
   void setIsTarget(bool V) { IsTarget = V; }
 
   void setIsTargetSync(bool V) { IsTargetSync = V; }
+
+  void setHasPreferAttrs(bool V) { HasPreferAttrs = V; }
+
+  void setAttrs(ArrayRef<unsigned> Counts, ArrayRef<Expr *> Attrs);
+
+  /// Number of pref-specs in prefer_type(...).
+  unsigned getNumPrefs() const { return varlist_size() - 1; }
+
+  /// Per-pref-spec attr end offsets: entry i is the inclusive cumulative attr
+  /// count through pref-spec i (one past its last attr in the flat attr block).
+  ArrayRef<unsigned> getAttrEnds() const {
+    return getTrailingObjects<unsigned>(getNumPrefs());
+  }
 
   /// Sets the location of the interop variable.
   void setVarLoc(SourceLocation Loc) { VarLoc = Loc; }
@@ -8879,7 +8940,7 @@ class OMPInitClause final
   /// \param LParenLoc Location of '('.
   /// \param VarLoc Location of the interop variable.
   /// \param EndLoc Ending location of the clause.
-  /// \param N Number of expressions.
+  /// \param N Number of varlist entries (1 + NumPrefs).
   OMPInitClause(bool IsTarget, bool IsTargetSync, SourceLocation StartLoc,
                 SourceLocation LParenLoc, SourceLocation VarLoc,
                 SourceLocation EndLoc, unsigned N)
@@ -8894,6 +8955,14 @@ class OMPInitClause final
   }
 
 public:
+  struct PrefView {
+    /// Foreign-runtime-id expression. Null for attr-only specs.
+    Expr *Fr;
+    /// attr() string-literal expressions. Empty for fr-only or OMP 5.1
+    /// flat specs.
+    ArrayRef<Expr *> Attrs;
+  };
+
   /// Creates a fully specified clause.
   ///
   /// \param C AST context.
@@ -8909,11 +8978,14 @@ public:
                                SourceLocation LParenLoc, SourceLocation VarLoc,
                                SourceLocation EndLoc);
 
-  /// Creates an empty clause with \a N expressions.
+  /// Creates an empty clause sized for \a NumPrefs pref-specs and \a NumAttrs
+  /// total attr() exprs across them.
   ///
   /// \param C AST context.
-  /// \param N Number of expression items.
-  static OMPInitClause *CreateEmpty(const ASTContext &C, unsigned N);
+  /// \param NumPrefs Number of pref-specs (length of the Fr block).
+  /// \param NumAttrs Total attr() exprs across all pref-specs.
+  static OMPInitClause *CreateEmpty(const ASTContext &C, unsigned NumPrefs,
+                                    unsigned NumAttrs);
 
   /// Returns the location of the interop variable.
   SourceLocation getVarLoc() const { return VarLoc; }
@@ -8928,9 +9000,19 @@ public:
   /// Returns true is interop-type 'targetsync' is used.
   bool getIsTargetSync() const { return IsTargetSync; }
 
+  /// Returns true if OMP 6.0 {fr/attr} syntax is used.
+  bool hasPreferAttrs() const { return HasPreferAttrs; }
+
+  /// All attr() exprs across every pref-spec, in pref-spec order (flat block).
+  ArrayRef<Expr *> attrs() const {
+    return ArrayRef<Expr *>(getTrailingObjects<Expr *>() + varlist_size(),
+                            NumAttrs);
+  }
+
   child_range children() {
-    return child_range(reinterpret_cast<Stmt **>(varlist_begin()),
-                       reinterpret_cast<Stmt **>(varlist_end()));
+    return child_range(
+        reinterpret_cast<Stmt **>(varlist_begin()),
+        reinterpret_cast<Stmt **>(varlist_begin() + varlist_size() + NumAttrs));
   }
 
   const_child_range children() const {
@@ -8944,18 +9026,19 @@ public:
     return const_child_range(const_child_iterator(), const_child_iterator());
   }
 
-  using prefs_iterator = MutableArrayRef<Expr *>::iterator;
-  using const_prefs_iterator = ArrayRef<const Expr *>::iterator;
-  using prefs_range = llvm::iterator_range<prefs_iterator>;
-  using const_prefs_range = llvm::iterator_range<const_prefs_iterator>;
-
-  prefs_range prefs() {
-    return prefs_range(reinterpret_cast<Expr **>(std::next(varlist_begin())),
-                       reinterpret_cast<Expr **>(varlist_end()));
-  }
-
-  const_prefs_range prefs() const {
-    return const_prefs_range(const_cast<OMPInitClause *>(this)->prefs());
+  /// Returns a range of PrefView objects, one per preference-specification,
+  /// each carrying the fr() expression (or null) and the attr() exprs.
+  auto prefs() const {
+    unsigned N = getNumPrefs();
+    Expr *const *E = getTrailingObjects<Expr *>();
+    ArrayRef<unsigned> Ends = getAttrEnds();
+    return llvm::map_range(llvm::seq<unsigned>(0, N), [=](unsigned I) {
+      unsigned Start = (I == 0) ? 0 : Ends[I - 1];
+      return PrefView{
+          const_cast<Expr *>(E[1 + I]),
+          ArrayRef<Expr *>(const_cast<Expr **>(E) + varlist_size() + Start,
+                           Ends[I] - Start)};
+    });
   }
 
   static bool classof(const OMPClause *T) {

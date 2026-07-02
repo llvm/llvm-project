@@ -50,6 +50,7 @@ X86_CPU_TYPE(INTEL_SIERRAFOREST,  "sierraforest")
 X86_CPU_TYPE(INTEL_GRANDRIDGE,    "grandridge")
 X86_CPU_TYPE(INTEL_CLEARWATERFOREST, "clearwaterforest")
 X86_CPU_TYPE(AMDFAM1AH,           "amdfam1ah")
+X86_CPU_TYPE(HYGONFAM18H,         "hygonfam18h")
 
 // Alternate names supported by __builtin_cpu_is and target multiversioning.
 X86_CPU_TYPE_ALIAS(INTEL_BONNELL,    "atom")
@@ -110,6 +111,10 @@ X86_CPU_SUBTYPE(AMDFAM1AH_ZNVER5,            "znver5")
 X86_CPU_SUBTYPE(AMDFAM1AH_ZNVER6,            "znver6")
 X86_CPU_SUBTYPE(INTEL_COREI7_DIAMONDRAPIDS,  "diamondrapids")
 X86_CPU_SUBTYPE(INTEL_COREI7_NOVALAKE,       "novalake")
+X86_CPU_SUBTYPE(HYGONFAM18H_C86_4G_M4,       "c86-4g-m4")
+X86_CPU_SUBTYPE(HYGONFAM18H_C86_4G_M6,       "c86-4g-m6")
+X86_CPU_SUBTYPE(HYGONFAM18H_C86_4G_M7,       "c86-4g-m7")
+X86_CPU_SUBTYPE(HYGONFAM18H_C86_4G_M8,       "c86-4g-m8")
 
 // Alternate names supported by __builtin_cpu_is and target multiversioning.
 X86_CPU_SUBTYPE_ALIAS(INTEL_COREI7_ALDERLAKE, "raptorlake")
@@ -248,6 +253,7 @@ X86_FEATURE_COMPAT(AMX_TF32,           "amx-tf32",               0, 118)
 X86_FEATURE_COMPAT(AMX_FP8,            "amx-fp8",                0, 120)
 X86_FEATURE_COMPAT(MOVRS,              "movrs",                  0, 121)
 X86_FEATURE_COMPAT(AMX_MOVRS,          "amx-movrs",              0, 122)
+X86_FEATURE_COMPAT(AVX512BMM,          "avx512bmm",              0, 123)
 
 // Features we don't multiversion on.
 X86_FEATURE       (NF,                 "nf")

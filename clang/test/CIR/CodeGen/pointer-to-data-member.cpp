@@ -19,7 +19,7 @@ int Point::*ptr_none = nullptr;
 // OGCG: @ptr_none = global i64 -1
 
 int Point::*pt_member = &Point::z;
-// CIR-BEFORE: cir.global external @pt_member = #cir.data_member<2> : !cir.data_member<!s32i in !rec_Point>
+// CIR-BEFORE: cir.global external @pt_member = #cir.data_member<[2]> : !cir.data_member<!s32i in !rec_Point>
 // CIR-AFTER: cir.global external @pt_member = #cir.int<8> : !s64i
 // LLVM: @pt_member = global i64 8
 // OGCG: @pt_member = global i64 8
@@ -41,26 +41,85 @@ int Point::*pt_member_nested_region = test1();
 // CIR-AFTER:   %[[MEMBER_PTR_ADDR:.*]] = cir.get_global @pt_member_nested_region : !cir.ptr<!s64i>
 // CIR-AFTER:   %[[MEMBER_PTR:.*]] = cir.call @_Z5test1v() : () -> !s64i
 // CIR-AFTER:   cir.store align(8) %[[MEMBER_PTR]], %[[MEMBER_PTR_ADDR]] : !s64i, !cir.ptr<!s64i>
+// CIR-AFTER: cir.global external @p_inherit_single = #cir.int<0> : !s64i
+// CIR-AFTER: cir.global external @p_multi_inherit = #cir.int<8> : !s64i
+// CIR-AFTER: cir.global external @p_depth3 = #cir.int<8> : !s64i
+// CIR-AFTER: cir.global external @p_vbase_sibling_nv = #cir.int<8> : !s64i
+// CIR-AFTER: cir.global external @p_vbase_sibling_direct = #cir.int<12> : !s64i
 
 // LLVM: @pt_member_nested_region = global i64 -1, align 8
+// LLVM: @p_inherit_single = global i64 0, align 8
+// LLVM: @p_multi_inherit = global i64 8, align 8
+// LLVM: @p_depth3 = global i64 8, align 8
+// LLVM: @p_vbase_sibling_nv = global i64 8, align 8
+// LLVM: @p_vbase_sibling_direct = global i64 12, align 8
 // LLVM: define internal void @__cxx_global_var_init()
 // LLVM:   %[[MEMBER_PTR:.*]] = call i64 @_Z5test1v()
 // LLVM:   store i64 %[[MEMBER_PTR]], ptr @pt_member_nested_region, align 8
 
 // OGCG: @pt_member_nested_region = global i64 -1, align 8
+// OGCG: @p_inherit_single = global i64 0, align 8
+// OGCG: @p_multi_inherit = global i64 8, align 8
+// OGCG: @p_depth3 = global i64 8, align 8
+// OGCG: @p_vbase_sibling_nv = global i64 8, align 8
+// OGCG: @p_vbase_sibling_direct = global i64 12, align 8
 // OGCG emits __cxx_global_var_init between test1() and test2(). See checks below.
+
+struct InheritBase {
+  int x;
+};
+
+struct InheritDerived : InheritBase {
+  double y;
+};
+
+int InheritDerived::*p_inherit_single = &InheritDerived::x;
+// CIR-BEFORE: cir.global external @p_inherit_single = #cir.data_member<[0, 0]> : !cir.data_member<!s32i in !rec_InheritDerived>
+
+struct MultiA {
+  double a;
+};
+
+struct MultiB {
+  int b;
+};
+
+struct MultiM : MultiA, MultiB {};
+
+int MultiM::*p_multi_inherit = &MultiM::b;
+// CIR-BEFORE: cir.global external @p_multi_inherit = #cir.data_member<[1, 0]> : !cir.data_member<!s32i in !rec_MultiM>
+
+struct DepthA { double a; int x; };
+struct DepthB : DepthA { double y; };
+struct DepthC : DepthB { float z; };
+
+int DepthC::*p_depth3 = &DepthC::x;
+// CIR-BEFORE: cir.global external @p_depth3 = #cir.data_member<[0, 0, 1]> : !cir.data_member<!s32i in !rec_DepthC>
+
+struct VBaseField { int v; };
+struct NVBaseField { int x; };
+struct Diamond : virtual VBaseField, NVBaseField { int d; };
+
+// A virtual base elsewhere in the hierarchy must not block a member reached
+// through a non-virtual base.
+int Diamond::*p_vbase_sibling_nv = &NVBaseField::x;
+// CIR-BEFORE: cir.global external @p_vbase_sibling_nv = #cir.data_member<[1, 0]> : !cir.data_member<!s32i in !rec_Diamond>
+
+// A direct member of a class with a virtual base still resolves.
+int Diamond::*p_vbase_sibling_direct = &Diamond::d;
+// CIR-BEFORE: cir.global external @p_vbase_sibling_direct = #cir.data_member<[2]> : !cir.data_member<!s32i in !rec_Diamond>
 
 // Checks for test1()
 
 // CIR-BEFORE: cir.func {{.*}} @_Z5test1v() -> !cir.data_member<!s32i in !rec_Point> attributes {{{.*}}nothrow} {
-// CIR-BEFORE:   %[[RETVAL:.*]] = cir.alloca !cir.data_member<!s32i in !rec_Point>, !cir.ptr<!cir.data_member<!s32i in !rec_Point>>, ["__retval"]
-// CIR-BEFORE:   %[[MEMBER:.*]] = cir.const #cir.data_member<1> : !cir.data_member<!s32i in !rec_Point>
+// CIR-BEFORE:   %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.data_member<!s32i in !rec_Point>>
+// CIR-BEFORE:   %[[MEMBER:.*]] = cir.const #cir.data_member<[1]> : !cir.data_member<!s32i in !rec_Point>
 // CIR-BEFORE:   cir.store %[[MEMBER]], %[[RETVAL]] : !cir.data_member<!s32i in !rec_Point>, !cir.ptr<!cir.data_member<!s32i in !rec_Point>>
 // CIR-BEFORE:   %[[RET:.*]] = cir.load %[[RETVAL]] : !cir.ptr<!cir.data_member<!s32i in !rec_Point>>, !cir.data_member<!s32i in !rec_Point>
 // CIR-BEFORE:   cir.return %[[RET]] : !cir.data_member<!s32i in !rec_Point>
 
 // CIR-AFTER: cir.func {{.*}} @_Z5test1v() -> !s64i attributes {{{.*}}nothrow} {
-// CIR-AFTER:   %[[RETVAL:.*]] = cir.alloca !s64i, !cir.ptr<!s64i>, ["__retval"]
+// CIR-AFTER:   %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s64i>
 // CIR-AFTER:   %[[OFFSET:.*]] = cir.const #cir.int<4> : !s64i
 // CIR-AFTER:   cir.store %[[OFFSET]], %[[RETVAL]] : !s64i, !cir.ptr<!s64i>
 // CIR-AFTER:   %[[RET:.*]] = cir.load %[[RETVAL]] : !cir.ptr<!s64i>, !s64i
@@ -87,9 +146,9 @@ int test2(const Point &pt, int Point::*member) {
 // CIR-BEFORE:       cir.func {{.*}} @_Z5test2RK5PointMS_i(
 // CIR-BEFORE-SAME:        %[[PT_ARG:.*]]: !cir.ptr<!rec_Point>
 // CIR-BEFORE-SAME:        %[[MEMBER_ARG:.*]]: !cir.data_member<!s32i in !rec_Point>
-// CIR-BEFORE:         %[[PT_ADDR:.*]] = cir.alloca {{.*}} ["pt", init, const]
-// CIR-BEFORE:         %[[MEMBER_ADDR:.*]] = cir.alloca {{.*}} ["member", init]
-// CIR-BEFORE:         %[[RETVAL_ADDR:.*]] = cir.alloca {{.*}} ["__retval"]
+// CIR-BEFORE:         %[[PT_ADDR:.*]] = cir.alloca "pt" {{.*}} init const
+// CIR-BEFORE:         %[[MEMBER_ADDR:.*]] = cir.alloca "member" {{.*}} init
+// CIR-BEFORE:         %[[RETVAL_ADDR:.*]] = cir.alloca "__retval"
 // CIR-BEFORE:         cir.store %[[PT_ARG]], %[[PT_ADDR]]
 // CIR-BEFORE:         cir.store %[[MEMBER_ARG]], %[[MEMBER_ADDR]]
 // CIR-BEFORE:         %[[PT:.*]] = cir.load %[[PT_ADDR]]
@@ -103,9 +162,9 @@ int test2(const Point &pt, int Point::*member) {
 // CIR-AFTER:      cir.func {{.*}} @_Z5test2RK5PointMS_i(
 // CIR-AFTER-SAME:        %[[PT_ARG:.*]]: !cir.ptr<!rec_Point>
 // CIR-AFTER-SAME:        %[[MEMBER_ARG:.*]]: !s64i
-// CIR-AFTER:        %[[PT_ADDR:.*]] = cir.alloca !cir.ptr<!rec_Point>, !cir.ptr<!cir.ptr<!rec_Point>>, ["pt", init, const]
-// CIR-AFTER:        %[[MEMBER_ADDR:.*]] = cir.alloca !s64i, !cir.ptr<!s64i>, ["member", init]
-// CIR-AFTER:        %[[RETVAL_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
+// CIR-AFTER:        %[[PT_ADDR:.*]] = cir.alloca "pt" {{.*}} init const : !cir.ptr<!cir.ptr<!rec_Point>>
+// CIR-AFTER:        %[[MEMBER_ADDR:.*]] = cir.alloca "member" {{.*}} init : !cir.ptr<!s64i>
+// CIR-AFTER:        %[[RETVAL_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
 // CIR-AFTER:        cir.store %[[PT_ARG]], %[[PT_ADDR]] : !cir.ptr<!rec_Point>, !cir.ptr<!cir.ptr<!rec_Point>>
 // CIR-AFTER:        cir.store %[[MEMBER_ARG]], %[[MEMBER_ADDR]] : !s64i, !cir.ptr<!s64i>
 // CIR-AFTER:        %[[PT:.*]] = cir.load %[[PT_ADDR]] : !cir.ptr<!cir.ptr<!rec_Point>>, !cir.ptr<!rec_Point>
@@ -150,9 +209,9 @@ int test3(const Point *pt, int Point::*member) {
 // CIR-BEFORE:       cir.func {{.*}} @_Z5test3PK5PointMS_i(
 // CIR-BEFORE-SAME:        %[[PT_ARG:.*]]: !cir.ptr<!rec_Point>
 // CIR-BEFORE-SAME:        %[[MEMBER_ARG:.*]]: !cir.data_member<!s32i in !rec_Point>
-// CIR-BEFORE:         %[[PT_ADDR:.*]] = cir.alloca {{.*}} ["pt", init]
-// CIR-BEFORE:         %[[MEMBER_ADDR:.*]] = cir.alloca {{.*}} ["member", init]
-// CIR-BEFORE:         %[[RETVAL_ADDR:.*]] = cir.alloca {{.*}} ["__retval"]
+// CIR-BEFORE:         %[[PT_ADDR:.*]] = cir.alloca "pt" {{.*}} init
+// CIR-BEFORE:         %[[MEMBER_ADDR:.*]] = cir.alloca "member" {{.*}} init
+// CIR-BEFORE:         %[[RETVAL_ADDR:.*]] = cir.alloca "__retval"
 // CIR-BEFORE:         cir.store %[[PT_ARG]], %[[PT_ADDR]]
 // CIR-BEFORE:         cir.store %[[MEMBER_ARG]], %[[MEMBER_ADDR]]
 // CIR-BEFORE:         %[[PT:.*]] = cir.load{{.*}} %[[PT_ADDR]]
@@ -166,9 +225,9 @@ int test3(const Point *pt, int Point::*member) {
 // CIR-AFTER:      cir.func {{.*}} @_Z5test3PK5PointMS_i(
 // CIR-AFTER-SAME:        %[[PT_ARG:.*]]: !cir.ptr<!rec_Point>
 // CIR-AFTER-SAME:        %[[MEMBER_ARG:.*]]: !s64i
-// CIR-AFTER:        %[[PT_ADDR:.*]] = cir.alloca !cir.ptr<!rec_Point>, !cir.ptr<!cir.ptr<!rec_Point>>, ["pt", init]
-// CIR-AFTER:        %[[MEMBER_ADDR:.*]] = cir.alloca !s64i, !cir.ptr<!s64i>, ["member", init]
-// CIR-AFTER:        %[[RETVAL_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
+// CIR-AFTER:        %[[PT_ADDR:.*]] = cir.alloca "pt" {{.*}} init : !cir.ptr<!cir.ptr<!rec_Point>>
+// CIR-AFTER:        %[[MEMBER_ADDR:.*]] = cir.alloca "member" {{.*}} init : !cir.ptr<!s64i>
+// CIR-AFTER:        %[[RETVAL_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
 // CIR-AFTER:        cir.store %[[PT_ARG]], %[[PT_ADDR]] : !cir.ptr<!rec_Point>, !cir.ptr<!cir.ptr<!rec_Point>>
 // CIR-AFTER:        cir.store %[[MEMBER_ARG]], %[[MEMBER_ADDR]] : !s64i, !cir.ptr<!s64i>
 // CIR-AFTER:        %[[PT:.*]] = cir.load{{.*}} %[[PT_ADDR]] : !cir.ptr<!cir.ptr<!rec_Point>>, !cir.ptr<!rec_Point>
@@ -214,8 +273,8 @@ auto test4(int Incomplete::*member) -> int Incomplete::* {
 
 // CIR-BEFORE:       cir.func {{.*}} @_Z5test4M10Incompletei(
 // CIR-BEFORE-SAME:        %[[MEMBER_ARG:.*]]: !cir.data_member<!s32i in !rec_Incomplete>
-// CIR-BEFORE:         %[[MEMBER_ADDR:.*]] = cir.alloca {{.*}} ["member", init]
-// CIR-BEFORE:         %[[RETVAL_ADDR:.*]] = cir.alloca {{.*}} ["__retval"]
+// CIR-BEFORE:         %[[MEMBER_ADDR:.*]] = cir.alloca "member" {{.*}} init
+// CIR-BEFORE:         %[[RETVAL_ADDR:.*]] = cir.alloca "__retval"
 // CIR-BEFORE:         cir.store %[[MEMBER_ARG]], %[[MEMBER_ADDR]]
 // CIR-BEFORE:         %[[MEMBER:.*]] = cir.load{{.*}} %[[MEMBER_ADDR]]
 // CIR-BEFORE:         cir.store %[[MEMBER]], %[[RETVAL_ADDR]]
@@ -224,8 +283,8 @@ auto test4(int Incomplete::*member) -> int Incomplete::* {
 
 // CIR-AFTER:      cir.func {{.*}} @_Z5test4M10Incompletei(
 // CIR-AFTER-SAME:       %[[MEMBER_ARG:.*]]: !s64i
-// CIR-AFTER:        %[[MEMBER_ADDR:.*]] = cir.alloca !s64i, !cir.ptr<!s64i>, ["member", init]
-// CIR-AFTER:        %[[RETVAL_ADDR:.*]] = cir.alloca !s64i, !cir.ptr<!s64i>, ["__retval"]
+// CIR-AFTER:        %[[MEMBER_ADDR:.*]] = cir.alloca "member" {{.*}} init : !cir.ptr<!s64i>
+// CIR-AFTER:        %[[RETVAL_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s64i>
 // CIR-AFTER:        cir.store %[[MEMBER_ARG]], %[[MEMBER_ADDR]] : !s64i, !cir.ptr<!s64i>
 // CIR-AFTER:        %[[MEMBER:.*]] = cir.load{{.*}} %[[MEMBER_ADDR]] : !cir.ptr<!s64i>, !s64i
 // CIR-AFTER:        cir.store %[[MEMBER]], %[[RETVAL_ADDR]] : !s64i, !cir.ptr<!s64i>
@@ -254,9 +313,9 @@ int test5(Incomplete *ic, int Incomplete::*member) {
 // CIR-BEFORE:       cir.func {{.*}} @_Z5test5P10IncompleteMS_i(
 // CIR-BEFORE-SAME:        %[[IC_ARG:.*]]: !cir.ptr<!rec_Incomplete>
 // CIR-BEFORE-SAME:        %[[MEMBER_ARG:.*]]: !cir.data_member<!s32i in !rec_Incomplete>
-// CIR-BEFORE:         %[[IC_ADDR:.*]] = cir.alloca {{.*}} ["ic", init]
-// CIR-BEFORE:         %[[MEMBER_ADDR:.*]] = cir.alloca {{.*}} ["member", init]
-// CIR-BEFORE:         %[[RETVAL_ADDR:.*]] = cir.alloca {{.*}} ["__retval"]
+// CIR-BEFORE:         %[[IC_ADDR:.*]] = cir.alloca "ic" {{.*}} init
+// CIR-BEFORE:         %[[MEMBER_ADDR:.*]] = cir.alloca "member" {{.*}} init
+// CIR-BEFORE:         %[[RETVAL_ADDR:.*]] = cir.alloca "__retval"
 // CIR-BEFORE:         cir.store %[[IC_ARG]], %[[IC_ADDR]]
 // CIR-BEFORE:         cir.store %[[MEMBER_ARG]], %[[MEMBER_ADDR]]
 // CIR-BEFORE:         %[[IC:.*]] = cir.load{{.*}} %[[IC_ADDR]]
@@ -270,9 +329,9 @@ int test5(Incomplete *ic, int Incomplete::*member) {
 // CIR-AFTER:      cir.func {{.*}} @_Z5test5P10IncompleteMS_i(
 // CIR-AFTER-SAME:       %[[IC_ARG:.*]]: !cir.ptr<!rec_Incomplete>
 // CIR-AFTER-SAME:       %[[MEMBER_ARG:.*]]: !s64i
-// CIR-AFTER:        %[[IC_ADDR:.*]] = cir.alloca !cir.ptr<!rec_Incomplete>, !cir.ptr<!cir.ptr<!rec_Incomplete>>, ["ic", init]
-// CIR-AFTER:        %[[MEMBER_ADDR:.*]] = cir.alloca !s64i, !cir.ptr<!s64i>, ["member", init]
-// CIR-AFTER:        %[[RETVAL_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
+// CIR-AFTER:        %[[IC_ADDR:.*]] = cir.alloca "ic" {{.*}} init : !cir.ptr<!cir.ptr<!rec_Incomplete>>
+// CIR-AFTER:        %[[MEMBER_ADDR:.*]] = cir.alloca "member" {{.*}} init : !cir.ptr<!s64i>
+// CIR-AFTER:        %[[RETVAL_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
 // CIR-AFTER:        cir.store %[[IC_ARG]], %[[IC_ADDR]] : !cir.ptr<!rec_Incomplete>, !cir.ptr<!cir.ptr<!rec_Incomplete>>
 // CIR-AFTER:        cir.store %[[MEMBER_ARG]], %[[MEMBER_ADDR]] : !s64i, !cir.ptr<!s64i>
 // CIR-AFTER:        %[[IC:.*]] = cir.load{{.*}} %[[IC_ADDR]] : !cir.ptr<!cir.ptr<!rec_Incomplete>>, !cir.ptr<!rec_Incomplete>
@@ -315,7 +374,7 @@ auto test_null() -> int Point::* {
 }
 
 // CIR: cir.func {{.*}} @_Z9test_nullv() -> !cir.data_member<!s32i in !rec_Point> {
-// CIR:   %[[RETVAL_ADDR:.*]] = cir.alloca !cir.data_member<!s32i in !rec_Point>, !cir.ptr<!cir.data_member<!s32i in !rec_Point>>, ["__retval"]
+// CIR:   %[[RETVAL_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.data_member<!s32i in !rec_Point>>
 // CIR:   %[[CONST_NULL:.*]] = cir.const #cir.data_member<null> : !cir.data_member<!s32i in !rec_Point>
 // CIR:   cir.store %[[CONST_NULL]], %[[RETVAL_ADDR]]
 // CIR:   %[[RET:.*]] = cir.load %[[RETVAL_ADDR]]
@@ -335,7 +394,7 @@ auto test_null_incomplete() -> int Incomplete::* {
 }
 
 // CIR: cir.func {{.*}} @_Z20test_null_incompletev() -> !cir.data_member<!s32i in !rec_Incomplete> {
-// CIR:   %[[RETVAL_ADDR:.*]] = cir.alloca !cir.data_member<!s32i in !rec_Incomplete>, !cir.ptr<!cir.data_member<!s32i in !rec_Incomplete>>, ["__retval"]
+// CIR:   %[[RETVAL_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.data_member<!s32i in !rec_Incomplete>>
 // CIR:   %[[CONST_NULL:.*]] = cir.const #cir.data_member<null> : !cir.data_member<!s32i in !rec_Incomplete>
 // CIR:   cir.store %[[CONST_NULL]], %[[RETVAL_ADDR]]
 // CIR:   %[[RET:.*]] = cir.load %[[RETVAL_ADDR]]

@@ -74,14 +74,15 @@ public:
   const ABICompatInfo &getABICompatInfo() const { return CompatInfo; }
 
 protected:
-  RecordArgABI getRecordArgABI(const RecordType *RT) const;
-  RecordArgABI getRecordArgABI(const Type *Ty) const;
-  bool isPromotableInteger(const IntegerType *IT) const;
-  ArgInfo getNaturalAlignIndirect(const Type *Ty, bool ByVal = true) const;
-  bool isAggregateTypeForABI(const Type *Ty) const;
+  LLVM_ABI RecordArgABI getRecordArgABI(const RecordType *RT) const;
+  LLVM_ABI RecordArgABI getRecordArgABI(const Type *Ty) const;
+  LLVM_ABI bool isPromotableInteger(const IntegerType *IT) const;
+  LLVM_ABI ArgInfo getNaturalAlignIndirect(const Type *Ty,
+                                           bool ByVal = true) const;
+  LLVM_ABI bool isAggregateTypeForABI(const Type *Ty) const;
 };
 
-std::unique_ptr<TargetInfo> createBPFTargetInfo(TypeBuilder &TB);
+LLVM_ABI std::unique_ptr<TargetInfo> createBPFTargetInfo(TypeBuilder &TB);
 
 } // namespace abi
 } // namespace llvm

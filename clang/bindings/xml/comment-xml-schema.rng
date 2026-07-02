@@ -14,6 +14,7 @@
       <ref name="Namespace" />
       <ref name="Typedef" />
       <ref name="Enum" />
+      <ref name="Concept" />
     </choice>
   </start>
 
@@ -287,6 +288,41 @@
       <optional>
         <ref name="TemplateParameters" />
       </optional>
+      <optional>
+        <ref name="Parameters" />
+      </optional>
+      <optional>
+        <ref name="ResultDiscussion" />
+      </optional>
+
+      <optional>
+        <ref name="Discussion" />
+      </optional>
+    </element>
+  </define>
+
+  <define name="Concept">
+    <element name="Concept">
+      <ref name="attrSourceLocation" />
+      <ref name="Name" />
+      <optional>
+        <ref name="USR" />
+      </optional>
+      <optional>
+        <ref name="Headerfile" />
+      </optional>
+      <optional>
+        <ref name="Declaration" />
+      </optional>
+      <optional>
+        <ref name="Abstract" />
+      </optional>
+      <optional>
+        <ref name="TemplateParameters" />
+      </optional>
+
+      <!-- Parameters and results don't make sense for concepts, but the user
+           can specify \param or \returns in a comment anyway. -->
       <optional>
         <ref name="Parameters" />
       </optional>

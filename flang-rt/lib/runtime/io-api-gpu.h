@@ -12,6 +12,10 @@
 #include <cstdint>
 
 namespace Fortran::runtime::io {
+
+// Registers the callbacks with the offloading runtime.
+void RegisterRPCHandlers();
+
 // We reserve the RPC opcodes with 'f' in the MSB for Fortran usage.
 constexpr std::uint32_t MakeOpcode(std::uint32_t base) {
   return ('f' << 24) | base;

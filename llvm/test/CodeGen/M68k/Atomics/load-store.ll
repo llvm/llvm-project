@@ -684,3 +684,24 @@ start:
 exit:                                              ; preds = %start
   ret i32 %2
 }
+
+@dst = external global i32
+
+define void @test0() nounwind {
+; NO-ATOMIC-LABEL: test0:
+; NO-ATOMIC:       ; %bb.0: ; %entry
+; NO-ATOMIC-NEXT:    moveq #0, %d0
+; NO-ATOMIC-NEXT:    lea (dst,%pc), %a0
+; NO-ATOMIC-NEXT:    move.l %d0, (%a0)
+; NO-ATOMIC-NEXT:    rts
+;
+; ATOMIC-LABEL: test0:
+; ATOMIC:       ; %bb.0: ; %entry
+; ATOMIC-NEXT:    moveq #0, %d0
+; ATOMIC-NEXT:    lea (dst,%pc), %a0
+; ATOMIC-NEXT:    move.l %d0, (%a0)
+; ATOMIC-NEXT:    rts
+entry:
+    store atomic i32 0, ptr @dst unordered, align 4
+    ret void
+}

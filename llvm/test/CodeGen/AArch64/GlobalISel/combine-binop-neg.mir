@@ -235,3 +235,62 @@ body: |
     $x0 = COPY %and2
     RET_ReallyLR implicit $x0
 ...
+---
+name:            binop_with_neg_sub_and
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $x0, $x1, $x2, $x3
+
+    ; CHECK-LABEL: name: binop_with_neg_sub_and
+    ; CHECK: liveins: $x0, $x1, $x2, $x3
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %a:_(s64) = COPY $x0
+    ; CHECK-NEXT: %b:_(s64) = COPY $x1
+    ; CHECK-NEXT: %c:_(s64) = COPY $x2
+    ; CHECK-NEXT: %mone:_(s64) = G_CONSTANT i64 -1
+    ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(s64) = G_ADD %b, %c
+    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(s64) = G_XOR [[ADD]], %mone
+    ; CHECK-NEXT: %dst:_(s64) = G_AND %a, [[XOR]]
+    ; CHECK-NEXT: $x0 = COPY %dst(s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %a:_(s64) = COPY $x0
+    %b:_(s64) = COPY $x1
+    %c:_(s64) = COPY $x2
+    %mone:_(s64) = G_CONSTANT i64 -1
+    %neg_y:_(s64) = G_XOR %mone, %b
+    %sub:_(s64) = G_SUB %neg_y, %c
+    %dst:_(s64) = G_AND %a, %sub
+    $x0 = COPY %dst
+    RET_ReallyLR implicit $x0
+...
+---
+# This test should not transform
+name:            binop_with_neg_sub_and_commuted
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $x0, $x1, $x2, $x3
+
+    ; CHECK-LABEL: name: binop_with_neg_sub_and_commuted
+    ; CHECK: liveins: $x0, $x1, $x2, $x3
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %a:_(s64) = COPY $x0
+    ; CHECK-NEXT: %b:_(s64) = COPY $x1
+    ; CHECK-NEXT: %c:_(s64) = COPY $x2
+    ; CHECK-NEXT: %mone:_(s64) = G_CONSTANT i64 -1
+    ; CHECK-NEXT: %neg_y:_(s64) = G_XOR %b, %mone
+    ; CHECK-NEXT: %sub:_(s64) = G_SUB %c, %neg_y
+    ; CHECK-NEXT: %dst:_(s64) = G_AND %a, %sub
+    ; CHECK-NEXT: $x0 = COPY %dst(s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %a:_(s64) = COPY $x0
+    %b:_(s64) = COPY $x1
+    %c:_(s64) = COPY $x2
+    %mone:_(s64) = G_CONSTANT i64 -1
+    %neg_y:_(s64) = G_XOR %mone, %b
+    %sub:_(s64) = G_SUB %c, %neg_y
+    %dst:_(s64) = G_AND %a, %sub
+    $x0 = COPY %dst
+    RET_ReallyLR implicit $x0
+...

@@ -21,6 +21,7 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/RegisterBank.h"
+#include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/MC/LaneBitmask.h"
 #include "llvm/MC/MCRegisterInfo.h"
@@ -61,6 +62,7 @@ public:
 
   /// Configurable target specific flags.
   const uint8_t TSFlags;
+  const uint8_t SpillStackID;
   /// Whether the class supports two (or more) disjunct subregister indices.
   const bool HasDisjunctSubRegs;
   /// Whether a combination of subregisters can cover every register in the
@@ -68,7 +70,6 @@ public:
   const bool CoveredBySubRegs;
   const unsigned *SuperClasses;
   const uint16_t SuperClassesSize;
-  ArrayRef<MCPhysReg> (*OrderFunc)(const MachineFunction &, bool Rev);
 
   /// Return the register class ID number.
   unsigned getID() const { return MC->getID(); }
@@ -191,24 +192,6 @@ public:
   /// class of at least one other TargetRegisterClass.
   bool isASubClass() const { return SuperClasses != nullptr; }
 
-  /// Returns the preferred order for allocating registers from this register
-  /// class in MF. The raw order comes directly from the .td file and may
-  /// include reserved registers that are not allocatable.
-  /// Register allocators should also make sure to allocate
-  /// callee-saved registers only after all the volatiles are used. The
-  /// RegisterClassInfo class provides filtered allocation orders with
-  /// callee-saved registers moved to the end.
-  ///
-  /// The MachineFunction argument can be used to tune the allocatable
-  /// registers based on the characteristics of the function, subtarget, or
-  /// other criteria.
-  ///
-  /// By default, this method returns all registers in the class.
-  ArrayRef<MCPhysReg> getRawAllocationOrder(const MachineFunction &MF,
-                                            bool Rev = false) const {
-    return OrderFunc ? OrderFunc(MF, Rev) : getRegisters();
-  }
-
   /// Returns the combination of all lane masks of register in this class.
   /// The lane masks of the registers are the combination of all lane masks
   /// of their subregisters. Returns 1 if there are no subregisters.
@@ -251,8 +234,8 @@ public:
   /// SubRegCoveredBits - Emitted by tablegen: bit range covered by a subreg
   /// index, -1 in any being invalid.
   struct SubRegCoveredBits {
-    uint16_t Offset;
-    uint16_t Size;
+    uint32_t Offset;
+    uint32_t Size;
   };
 
 private:
@@ -319,6 +302,12 @@ public:
     return Align(getRegClassInfo(RC).SpillAlignment / 8);
   }
 
+  /// Return the stack ID for spill slots holding a spilled copy of a register
+  /// from this class.
+  TargetStackID::Value getSpillStackID(const TargetRegisterClass &RC) const {
+    return static_cast<TargetStackID::Value>(RC.SpillStackID);
+  }
+
   /// Return true if the given TargetRegisterClass has the ValueType T.
   bool isTypeLegalForClass(const TargetRegisterClass &RC, MVT T) const {
     for (auto I = legalclasstypes_begin(RC); *I != MVT::Other; ++I)
@@ -353,33 +342,15 @@ public:
     return I;
   }
 
-  /// Returns the Register Class of a physical register of the given type,
-  /// picking the most sub register class of the right type that contains this
-  /// physreg.
-  const TargetRegisterClass *getMinimalPhysRegClass(MCRegister Reg,
-                                                    MVT VT = MVT::Other) const;
+  /// Returns the Register Class of a physical register, picking the smallest
+  /// register subclass that contains this physreg.
+  virtual const TargetRegisterClass *
+  getMinimalPhysRegClass(MCRegister Reg) const = 0;
 
-  /// Returns the common Register Class of two physical registers of the given
-  /// type, picking the most sub register class of the right type that contains
-  /// these two physregs.
+  /// Returns the common Register Class of two physical registers, picking the
+  /// smallest register subclass that contains these two physregs.
   const TargetRegisterClass *
-  getCommonMinimalPhysRegClass(MCRegister Reg1, MCRegister Reg2,
-                               MVT VT = MVT::Other) const;
-
-  /// Returns the Register Class of a physical register of the given type,
-  /// picking the most sub register class of the right type that contains this
-  /// physreg. If there is no register class compatible with the given type,
-  /// returns nullptr.
-  const TargetRegisterClass *getMinimalPhysRegClassLLT(MCRegister Reg,
-                                                       LLT Ty = LLT()) const;
-
-  /// Returns the common Register Class of two physical registers of the given
-  /// type, picking the most sub register class of the right type that contains
-  /// these two physregs. If there is no register class compatible with the
-  /// given type, returns nullptr.
-  const TargetRegisterClass *
-  getCommonMinimalPhysRegClassLLT(MCRegister Reg1, MCRegister Reg2,
-                                  LLT Ty = LLT()) const;
+  getCommonMinimalPhysRegClass(MCRegister Reg1, MCRegister Reg2) const;
 
   /// Return the maximal subclass of the given register class that is
   /// allocatable or NULL.
@@ -829,13 +800,6 @@ public:
     return nullptr;
   }
 
-  /// Returns the target-defined minimal register class for an untyped physical
-  /// register query or nullptr if the register is not in any register class.
-  virtual const TargetRegisterClass *
-  getDefaultMinimalPhysRegClass(MCRegister Reg) const {
-    return nullptr;
-  }
-
 protected:
   /// Overridden by TableGen in targets that have sub-registers.
   virtual unsigned composeSubRegIndicesImpl(unsigned, unsigned) const {
@@ -1012,6 +976,25 @@ public:
 
   /// Get the scale factor of spill weight for this register class.
   virtual float getSpillWeightScaleFactor(const TargetRegisterClass *RC) const;
+
+  /// Returns the preferred order for allocating registers from this register
+  /// class in MF. The raw order comes directly from the .td file and may
+  /// include reserved registers that are not allocatable.
+  /// Register allocators should also make sure to allocate
+  /// callee-saved registers only after all the volatiles are used. The
+  /// RegisterClassInfo class provides filtered allocation orders with
+  /// callee-saved registers moved to the end.
+  ///
+  /// The MachineFunction argument can be used to tune the allocatable
+  /// registers based on the characteristics of the function, subtarget, or
+  /// other criteria.
+  ///
+  /// By default, this method returns all registers in the class.
+  virtual ArrayRef<MCPhysReg>
+  getRawAllocationOrder(const TargetRegisterClass &RC, const MachineFunction &,
+                        bool /*Rev*/ = false) const {
+    return RC.getRegisters();
+  }
 
   /// Get a list of 'hint' registers that the register allocator should try
   /// first when allocating a physical register for the virtual register

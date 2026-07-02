@@ -196,6 +196,22 @@ getDeclAtPosition(ParsedAST &AST, SourceLocation Pos, DeclRelationSet Relations,
   return Result;
 }
 
+// Returns the deepest CallExpr whose selection-tree commonAncestor is the call
+// itself at `Loc` (i.e. the cursor lands on the call's parens area, not on a
+// child like the callee identifier or an argument). Returns null otherwise.
+const CallExpr *findEnclosingCallAt(ParsedAST &AST, SourceLocation Loc) {
+  unsigned Offset = AST.getSourceManager().getDecomposedSpellingLoc(Loc).second;
+  const CallExpr *Found = nullptr;
+  SelectionTree::createEach(AST.getASTContext(), AST.getTokens(), Offset,
+                            Offset, [&](SelectionTree ST) {
+                              if (const SelectionTree::Node *N =
+                                      ST.commonAncestor())
+                                Found = N->ASTNode.get<CallExpr>();
+                              return true;
+                            });
+  return Found;
+}
+
 // Expects Loc to be a SpellingLocation, will bail out otherwise as it can't
 // figure out a filename.
 std::optional<Location> makeLocation(const ASTContext &AST, SourceLocation Loc,
@@ -418,6 +434,31 @@ locateASTReferent(SourceLocation CurLoc, const syntax::Token *TouchedIdentifier,
       Result.back().Definition = makeLocation(
           AST.getASTContext(), nameLocation(*Def, SM), MainFilePath);
   };
+
+  // Special case: if the cursor lands directly on a call expression (i.e.
+  // its enclosing SelectionTree node is the CallExpr itself, not the callee
+  // identifier or an argument), and the call invokes a forwarding wrapper
+  // such as `std::make_unique<T>(...)`, navigate to the constructor of `T`
+  // that the wrapper ultimately calls. This mirrors the existing
+  // constructor-call behaviour: `Abc^()` jumps to the constructor while
+  // `A^bc()` jumps to the type. The hook does not fire when the cursor is
+  // on the wrapper's identifier; that path continues to navigate to the
+  // wrapper itself via the candidate loop below.
+  if (const auto *CE = findEnclosingCallAt(AST, CurLoc)) {
+    if (const auto *Callee = CE->getDirectCallee()) {
+      llvm::SmallPtrSet<const CXXConstructorDecl *, 1> Seen;
+      for (const auto *Ctor :
+           getForwardedConstructors(Callee, AST.ForwardingToConstructorCache))
+        if (Seen.insert(Ctor).second) {
+          LocateASTReferentMetric.record(1, "forwarded-constructor");
+          AddResultDecl(Ctor);
+        }
+    }
+  }
+  if (!Result.empty()) {
+    enhanceLocatedSymbolsFromIndex(Result, Index, MainFilePath);
+    return Result;
+  }
 
   // Emit all symbol locations (declaration or definition) from AST.
   DeclRelationSet Relations =
@@ -966,27 +1007,12 @@ public:
   bool forwardsToConstructor(const Decl *D) {
     if (TargetConstructors.empty())
       return false;
-    auto *FD = llvm::dyn_cast<clang::FunctionDecl>(D);
-    if (FD == nullptr || !FD->isTemplateInstantiation())
+    const auto *FD = llvm::dyn_cast<clang::FunctionDecl>(D);
+    if (!FD)
       return false;
-
-    SmallVector<const CXXConstructorDecl *, 1> *Constructors = nullptr;
-    if (auto Entry = AST.ForwardingToConstructorCache.find(FD);
-        Entry != AST.ForwardingToConstructorCache.end())
-      Constructors = &Entry->getSecond();
-    if (Constructors == nullptr) {
-      if (auto *PT = FD->getPrimaryTemplate();
-          PT == nullptr || !isLikelyForwardingFunction(PT))
-        return false;
-
-      SmallVector<const CXXConstructorDecl *, 1> FoundConstructors =
-          searchConstructorsInForwardingFunction(FD);
-      auto Iter = AST.ForwardingToConstructorCache.try_emplace(
-          FD, std::move(FoundConstructors));
-      Constructors = &Iter.first->getSecond();
-    }
-    for (auto *Constructor : *Constructors)
-      if (TargetConstructors.contains(Constructor))
+    for (const auto *Ctor :
+         getForwardedConstructors(FD, AST.ForwardingToConstructorCache))
+      if (TargetConstructors.contains(Ctor))
         return true;
     return false;
   }
@@ -1870,7 +1896,8 @@ static std::optional<HierarchyItem> symbolToHierarchyItem(const Symbol &S,
   }
   HierarchyItem HI;
   HI.name = std::string(S.Name);
-  HI.detail = (S.Scope + S.Name).str();
+  HI.detail = S.Scope.empty() ? std::string()
+                              : S.Scope.drop_back(2).str(); // Trailing "::"
   HI.kind = indexSymbolKindToSymbolKind(S.SymInfo);
   HI.selectionRange = Loc->range;
   // FIXME: Populate 'range' correctly

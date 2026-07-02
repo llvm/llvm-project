@@ -116,7 +116,7 @@ struct InstrumentorIRBuilderTy {
 
   /// Map that holds the currently used allocas and the list where they belong.
   /// Once an alloca has to be returned, it is returned directly to its list.
-  DenseMap<AllocaInst *, AllocaListTy *> UsedAllocas;
+  MapVector<AllocaInst *, AllocaListTy *> UsedAllocas;
 
   /// Instructions that should be erased later.
   SmallPtrSet<Instruction *, 32> ErasableInstructions;
@@ -177,7 +177,7 @@ template <typename EnumTy> struct BaseConfigTy {
 /// opportunity. Returns true if the filter passes (or is empty), false
 /// otherwise. Dynamic values (non-constants) are assumed to pass.
 LLVM_ABI
-bool evaluateFilter(Value &V, InstrumentationOpportunity &IO,
+bool evaluateFilter(Value &V, bool &Changed, InstrumentationOpportunity &IO,
                     InstrumentationConfig &IConf,
                     InstrumentorIRBuilderTy &IIRB);
 

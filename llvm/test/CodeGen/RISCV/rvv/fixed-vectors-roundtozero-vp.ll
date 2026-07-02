@@ -11,11 +11,11 @@
 define <2 x half> @vp_roundtozero_v2f16(<2 x half> %va, <2 x i1> %m, i32 zeroext %evl) {
 ; ZVFH-LABEL: vp_roundtozero_v2f16:
 ; ZVFH:       # %bb.0:
-; ZVFH-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; ZVFH-NEXT:    vfabs.v v9, v8
 ; ZVFH-NEXT:    li a0, 25
 ; ZVFH-NEXT:    slli a0, a0, 10
 ; ZVFH-NEXT:    fmv.h.x fa5, a0
+; ZVFH-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; ZVFH-NEXT:    vfabs.v v9, v8
 ; ZVFH-NEXT:    vmflt.vf v0, v9, fa5
 ; ZVFH-NEXT:    vfcvt.rtz.x.f.v v9, v8, v0.t
 ; ZVFH-NEXT:    vfcvt.f.x.v v9, v9, v0.t
@@ -25,12 +25,12 @@ define <2 x half> @vp_roundtozero_v2f16(<2 x half> %va, <2 x i1> %m, i32 zeroext
 ;
 ; ZVFHMIN-LABEL: vp_roundtozero_v2f16:
 ; ZVFHMIN:       # %bb.0:
+; ZVFHMIN-NEXT:    lui a0, 307200
+; ZVFHMIN-NEXT:    fmv.w.x fa5, a0
 ; ZVFHMIN-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v9, v8
-; ZVFHMIN-NEXT:    lui a0, 307200
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; ZVFHMIN-NEXT:    vfabs.v v8, v9
-; ZVFHMIN-NEXT:    fmv.w.x fa5, a0
 ; ZVFHMIN-NEXT:    vmflt.vf v0, v8, fa5
 ; ZVFHMIN-NEXT:    vfcvt.rtz.x.f.v v8, v9, v0.t
 ; ZVFHMIN-NEXT:    vfcvt.f.x.v v8, v8, v0.t
@@ -46,11 +46,11 @@ define <2 x half> @vp_roundtozero_v2f16(<2 x half> %va, <2 x i1> %m, i32 zeroext
 define <2 x half> @vp_roundtozero_v2f16_unmasked(<2 x half> %va, i32 zeroext %evl) {
 ; ZVFH-LABEL: vp_roundtozero_v2f16_unmasked:
 ; ZVFH:       # %bb.0:
-; ZVFH-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; ZVFH-NEXT:    vfabs.v v9, v8
 ; ZVFH-NEXT:    li a0, 25
 ; ZVFH-NEXT:    slli a0, a0, 10
 ; ZVFH-NEXT:    fmv.h.x fa5, a0
+; ZVFH-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; ZVFH-NEXT:    vfabs.v v9, v8
 ; ZVFH-NEXT:    vmflt.vf v0, v9, fa5
 ; ZVFH-NEXT:    vfcvt.rtz.x.f.v v9, v8, v0.t
 ; ZVFH-NEXT:    vfcvt.f.x.v v9, v9, v0.t
@@ -60,12 +60,12 @@ define <2 x half> @vp_roundtozero_v2f16_unmasked(<2 x half> %va, i32 zeroext %ev
 ;
 ; ZVFHMIN-LABEL: vp_roundtozero_v2f16_unmasked:
 ; ZVFHMIN:       # %bb.0:
+; ZVFHMIN-NEXT:    lui a0, 307200
+; ZVFHMIN-NEXT:    fmv.w.x fa5, a0
 ; ZVFHMIN-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v9, v8
-; ZVFHMIN-NEXT:    lui a0, 307200
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; ZVFHMIN-NEXT:    vfabs.v v8, v9
-; ZVFHMIN-NEXT:    fmv.w.x fa5, a0
 ; ZVFHMIN-NEXT:    vmflt.vf v0, v8, fa5
 ; ZVFHMIN-NEXT:    vfcvt.rtz.x.f.v v8, v9, v0.t
 ; ZVFHMIN-NEXT:    vfcvt.f.x.v v8, v8, v0.t
@@ -81,11 +81,11 @@ define <2 x half> @vp_roundtozero_v2f16_unmasked(<2 x half> %va, i32 zeroext %ev
 define <4 x half> @vp_roundtozero_v4f16(<4 x half> %va, <4 x i1> %m, i32 zeroext %evl) {
 ; ZVFH-LABEL: vp_roundtozero_v4f16:
 ; ZVFH:       # %bb.0:
-; ZVFH-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; ZVFH-NEXT:    vfabs.v v9, v8
 ; ZVFH-NEXT:    li a0, 25
 ; ZVFH-NEXT:    slli a0, a0, 10
 ; ZVFH-NEXT:    fmv.h.x fa5, a0
+; ZVFH-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; ZVFH-NEXT:    vfabs.v v9, v8
 ; ZVFH-NEXT:    vmflt.vf v0, v9, fa5
 ; ZVFH-NEXT:    vfcvt.rtz.x.f.v v9, v8, v0.t
 ; ZVFH-NEXT:    vfcvt.f.x.v v9, v9, v0.t
@@ -95,12 +95,12 @@ define <4 x half> @vp_roundtozero_v4f16(<4 x half> %va, <4 x i1> %m, i32 zeroext
 ;
 ; ZVFHMIN-LABEL: vp_roundtozero_v4f16:
 ; ZVFHMIN:       # %bb.0:
+; ZVFHMIN-NEXT:    lui a0, 307200
+; ZVFHMIN-NEXT:    fmv.w.x fa5, a0
 ; ZVFHMIN-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v9, v8
-; ZVFHMIN-NEXT:    lui a0, 307200
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
 ; ZVFHMIN-NEXT:    vfabs.v v8, v9
-; ZVFHMIN-NEXT:    fmv.w.x fa5, a0
 ; ZVFHMIN-NEXT:    vmflt.vf v0, v8, fa5
 ; ZVFHMIN-NEXT:    vfcvt.rtz.x.f.v v8, v9, v0.t
 ; ZVFHMIN-NEXT:    vfcvt.f.x.v v8, v8, v0.t
@@ -116,11 +116,11 @@ define <4 x half> @vp_roundtozero_v4f16(<4 x half> %va, <4 x i1> %m, i32 zeroext
 define <4 x half> @vp_roundtozero_v4f16_unmasked(<4 x half> %va, i32 zeroext %evl) {
 ; ZVFH-LABEL: vp_roundtozero_v4f16_unmasked:
 ; ZVFH:       # %bb.0:
-; ZVFH-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; ZVFH-NEXT:    vfabs.v v9, v8
 ; ZVFH-NEXT:    li a0, 25
 ; ZVFH-NEXT:    slli a0, a0, 10
 ; ZVFH-NEXT:    fmv.h.x fa5, a0
+; ZVFH-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; ZVFH-NEXT:    vfabs.v v9, v8
 ; ZVFH-NEXT:    vmflt.vf v0, v9, fa5
 ; ZVFH-NEXT:    vfcvt.rtz.x.f.v v9, v8, v0.t
 ; ZVFH-NEXT:    vfcvt.f.x.v v9, v9, v0.t
@@ -130,12 +130,12 @@ define <4 x half> @vp_roundtozero_v4f16_unmasked(<4 x half> %va, i32 zeroext %ev
 ;
 ; ZVFHMIN-LABEL: vp_roundtozero_v4f16_unmasked:
 ; ZVFHMIN:       # %bb.0:
+; ZVFHMIN-NEXT:    lui a0, 307200
+; ZVFHMIN-NEXT:    fmv.w.x fa5, a0
 ; ZVFHMIN-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v9, v8
-; ZVFHMIN-NEXT:    lui a0, 307200
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
 ; ZVFHMIN-NEXT:    vfabs.v v8, v9
-; ZVFHMIN-NEXT:    fmv.w.x fa5, a0
 ; ZVFHMIN-NEXT:    vmflt.vf v0, v8, fa5
 ; ZVFHMIN-NEXT:    vfcvt.rtz.x.f.v v8, v9, v0.t
 ; ZVFHMIN-NEXT:    vfcvt.f.x.v v8, v8, v0.t
@@ -151,11 +151,11 @@ define <4 x half> @vp_roundtozero_v4f16_unmasked(<4 x half> %va, i32 zeroext %ev
 define <8 x half> @vp_roundtozero_v8f16(<8 x half> %va, <8 x i1> %m, i32 zeroext %evl) {
 ; ZVFH-LABEL: vp_roundtozero_v8f16:
 ; ZVFH:       # %bb.0:
-; ZVFH-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; ZVFH-NEXT:    vfabs.v v9, v8
 ; ZVFH-NEXT:    li a0, 25
 ; ZVFH-NEXT:    slli a0, a0, 10
 ; ZVFH-NEXT:    fmv.h.x fa5, a0
+; ZVFH-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; ZVFH-NEXT:    vfabs.v v9, v8
 ; ZVFH-NEXT:    vmflt.vf v0, v9, fa5
 ; ZVFH-NEXT:    vfcvt.rtz.x.f.v v9, v8, v0.t
 ; ZVFH-NEXT:    vfcvt.f.x.v v9, v9, v0.t
@@ -165,12 +165,12 @@ define <8 x half> @vp_roundtozero_v8f16(<8 x half> %va, <8 x i1> %m, i32 zeroext
 ;
 ; ZVFHMIN-LABEL: vp_roundtozero_v8f16:
 ; ZVFHMIN:       # %bb.0:
+; ZVFHMIN-NEXT:    lui a0, 307200
+; ZVFHMIN-NEXT:    fmv.w.x fa5, a0
 ; ZVFHMIN-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v10, v8
-; ZVFHMIN-NEXT:    lui a0, 307200
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; ZVFHMIN-NEXT:    vfabs.v v8, v10
-; ZVFHMIN-NEXT:    fmv.w.x fa5, a0
 ; ZVFHMIN-NEXT:    vmflt.vf v0, v8, fa5
 ; ZVFHMIN-NEXT:    vfcvt.rtz.x.f.v v8, v10, v0.t
 ; ZVFHMIN-NEXT:    vfcvt.f.x.v v8, v8, v0.t
@@ -186,11 +186,11 @@ define <8 x half> @vp_roundtozero_v8f16(<8 x half> %va, <8 x i1> %m, i32 zeroext
 define <8 x half> @vp_roundtozero_v8f16_unmasked(<8 x half> %va, i32 zeroext %evl) {
 ; ZVFH-LABEL: vp_roundtozero_v8f16_unmasked:
 ; ZVFH:       # %bb.0:
-; ZVFH-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; ZVFH-NEXT:    vfabs.v v9, v8
 ; ZVFH-NEXT:    li a0, 25
 ; ZVFH-NEXT:    slli a0, a0, 10
 ; ZVFH-NEXT:    fmv.h.x fa5, a0
+; ZVFH-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; ZVFH-NEXT:    vfabs.v v9, v8
 ; ZVFH-NEXT:    vmflt.vf v0, v9, fa5
 ; ZVFH-NEXT:    vfcvt.rtz.x.f.v v9, v8, v0.t
 ; ZVFH-NEXT:    vfcvt.f.x.v v9, v9, v0.t
@@ -200,12 +200,12 @@ define <8 x half> @vp_roundtozero_v8f16_unmasked(<8 x half> %va, i32 zeroext %ev
 ;
 ; ZVFHMIN-LABEL: vp_roundtozero_v8f16_unmasked:
 ; ZVFHMIN:       # %bb.0:
+; ZVFHMIN-NEXT:    lui a0, 307200
+; ZVFHMIN-NEXT:    fmv.w.x fa5, a0
 ; ZVFHMIN-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v10, v8
-; ZVFHMIN-NEXT:    lui a0, 307200
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; ZVFHMIN-NEXT:    vfabs.v v8, v10
-; ZVFHMIN-NEXT:    fmv.w.x fa5, a0
 ; ZVFHMIN-NEXT:    vmflt.vf v0, v8, fa5
 ; ZVFHMIN-NEXT:    vfcvt.rtz.x.f.v v8, v10, v0.t
 ; ZVFHMIN-NEXT:    vfcvt.f.x.v v8, v8, v0.t
@@ -221,11 +221,11 @@ define <8 x half> @vp_roundtozero_v8f16_unmasked(<8 x half> %va, i32 zeroext %ev
 define <16 x half> @vp_roundtozero_v16f16(<16 x half> %va, <16 x i1> %m, i32 zeroext %evl) {
 ; ZVFH-LABEL: vp_roundtozero_v16f16:
 ; ZVFH:       # %bb.0:
-; ZVFH-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
-; ZVFH-NEXT:    vfabs.v v10, v8
 ; ZVFH-NEXT:    li a0, 25
 ; ZVFH-NEXT:    slli a0, a0, 10
 ; ZVFH-NEXT:    fmv.h.x fa5, a0
+; ZVFH-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
+; ZVFH-NEXT:    vfabs.v v10, v8
 ; ZVFH-NEXT:    vmflt.vf v0, v10, fa5
 ; ZVFH-NEXT:    vfcvt.rtz.x.f.v v10, v8, v0.t
 ; ZVFH-NEXT:    vfcvt.f.x.v v10, v10, v0.t
@@ -237,9 +237,9 @@ define <16 x half> @vp_roundtozero_v16f16(<16 x half> %va, <16 x i1> %m, i32 zer
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v12, v8
-; ZVFHMIN-NEXT:    lui a0, 307200
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFHMIN-NEXT:    vfabs.v v8, v12
+; ZVFHMIN-NEXT:    lui a0, 307200
 ; ZVFHMIN-NEXT:    fmv.w.x fa5, a0
 ; ZVFHMIN-NEXT:    vmflt.vf v0, v8, fa5
 ; ZVFHMIN-NEXT:    vfcvt.rtz.x.f.v v8, v12, v0.t
@@ -256,11 +256,11 @@ define <16 x half> @vp_roundtozero_v16f16(<16 x half> %va, <16 x i1> %m, i32 zer
 define <16 x half> @vp_roundtozero_v16f16_unmasked(<16 x half> %va, i32 zeroext %evl) {
 ; ZVFH-LABEL: vp_roundtozero_v16f16_unmasked:
 ; ZVFH:       # %bb.0:
-; ZVFH-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
-; ZVFH-NEXT:    vfabs.v v10, v8
 ; ZVFH-NEXT:    li a0, 25
 ; ZVFH-NEXT:    slli a0, a0, 10
 ; ZVFH-NEXT:    fmv.h.x fa5, a0
+; ZVFH-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
+; ZVFH-NEXT:    vfabs.v v10, v8
 ; ZVFH-NEXT:    vmflt.vf v0, v10, fa5
 ; ZVFH-NEXT:    vfcvt.rtz.x.f.v v10, v8, v0.t
 ; ZVFH-NEXT:    vfcvt.f.x.v v10, v10, v0.t
@@ -272,9 +272,9 @@ define <16 x half> @vp_roundtozero_v16f16_unmasked(<16 x half> %va, i32 zeroext 
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v12, v8
-; ZVFHMIN-NEXT:    lui a0, 307200
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFHMIN-NEXT:    vfabs.v v8, v12
+; ZVFHMIN-NEXT:    lui a0, 307200
 ; ZVFHMIN-NEXT:    fmv.w.x fa5, a0
 ; ZVFHMIN-NEXT:    vmflt.vf v0, v8, fa5
 ; ZVFHMIN-NEXT:    vfcvt.rtz.x.f.v v8, v12, v0.t
@@ -291,10 +291,10 @@ define <16 x half> @vp_roundtozero_v16f16_unmasked(<16 x half> %va, i32 zeroext 
 define <2 x float> @vp_roundtozero_v2f32(<2 x float> %va, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_roundtozero_v2f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; CHECK-NEXT:    vfabs.v v9, v8
 ; CHECK-NEXT:    lui a0, 307200
 ; CHECK-NEXT:    fmv.w.x fa5, a0
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; CHECK-NEXT:    vfabs.v v9, v8
 ; CHECK-NEXT:    vmflt.vf v0, v9, fa5
 ; CHECK-NEXT:    vfcvt.rtz.x.f.v v9, v8, v0.t
 ; CHECK-NEXT:    vfcvt.f.x.v v9, v9, v0.t
@@ -308,10 +308,10 @@ define <2 x float> @vp_roundtozero_v2f32(<2 x float> %va, <2 x i1> %m, i32 zeroe
 define <2 x float> @vp_roundtozero_v2f32_unmasked(<2 x float> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_roundtozero_v2f32_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; CHECK-NEXT:    vfabs.v v9, v8
 ; CHECK-NEXT:    lui a0, 307200
 ; CHECK-NEXT:    fmv.w.x fa5, a0
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; CHECK-NEXT:    vfabs.v v9, v8
 ; CHECK-NEXT:    vmflt.vf v0, v9, fa5
 ; CHECK-NEXT:    vfcvt.rtz.x.f.v v9, v8, v0.t
 ; CHECK-NEXT:    vfcvt.f.x.v v9, v9, v0.t
@@ -325,10 +325,10 @@ define <2 x float> @vp_roundtozero_v2f32_unmasked(<2 x float> %va, i32 zeroext %
 define <4 x float> @vp_roundtozero_v4f32(<4 x float> %va, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_roundtozero_v4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vfabs.v v9, v8
 ; CHECK-NEXT:    lui a0, 307200
 ; CHECK-NEXT:    fmv.w.x fa5, a0
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vfabs.v v9, v8
 ; CHECK-NEXT:    vmflt.vf v0, v9, fa5
 ; CHECK-NEXT:    vfcvt.rtz.x.f.v v9, v8, v0.t
 ; CHECK-NEXT:    vfcvt.f.x.v v9, v9, v0.t
@@ -342,10 +342,10 @@ define <4 x float> @vp_roundtozero_v4f32(<4 x float> %va, <4 x i1> %m, i32 zeroe
 define <4 x float> @vp_roundtozero_v4f32_unmasked(<4 x float> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_roundtozero_v4f32_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vfabs.v v9, v8
 ; CHECK-NEXT:    lui a0, 307200
 ; CHECK-NEXT:    fmv.w.x fa5, a0
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vfabs.v v9, v8
 ; CHECK-NEXT:    vmflt.vf v0, v9, fa5
 ; CHECK-NEXT:    vfcvt.rtz.x.f.v v9, v8, v0.t
 ; CHECK-NEXT:    vfcvt.f.x.v v9, v9, v0.t
@@ -359,10 +359,10 @@ define <4 x float> @vp_roundtozero_v4f32_unmasked(<4 x float> %va, i32 zeroext %
 define <8 x float> @vp_roundtozero_v8f32(<8 x float> %va, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_roundtozero_v8f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; CHECK-NEXT:    vfabs.v v10, v8
 ; CHECK-NEXT:    lui a0, 307200
 ; CHECK-NEXT:    fmv.w.x fa5, a0
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; CHECK-NEXT:    vfabs.v v10, v8
 ; CHECK-NEXT:    vmflt.vf v0, v10, fa5
 ; CHECK-NEXT:    vfcvt.rtz.x.f.v v10, v8, v0.t
 ; CHECK-NEXT:    vfcvt.f.x.v v10, v10, v0.t
@@ -376,10 +376,10 @@ define <8 x float> @vp_roundtozero_v8f32(<8 x float> %va, <8 x i1> %m, i32 zeroe
 define <8 x float> @vp_roundtozero_v8f32_unmasked(<8 x float> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_roundtozero_v8f32_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; CHECK-NEXT:    vfabs.v v10, v8
 ; CHECK-NEXT:    lui a0, 307200
 ; CHECK-NEXT:    fmv.w.x fa5, a0
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; CHECK-NEXT:    vfabs.v v10, v8
 ; CHECK-NEXT:    vmflt.vf v0, v10, fa5
 ; CHECK-NEXT:    vfcvt.rtz.x.f.v v10, v8, v0.t
 ; CHECK-NEXT:    vfcvt.f.x.v v10, v10, v0.t
@@ -440,11 +440,11 @@ define <2 x double> @vp_roundtozero_v2f64(<2 x double> %va, <2 x i1> %m, i32 zer
 ;
 ; RV64ZVFH-LABEL: vp_roundtozero_v2f64:
 ; RV64ZVFH:       # %bb.0:
-; RV64ZVFH-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; RV64ZVFH-NEXT:    vfabs.v v9, v8
 ; RV64ZVFH-NEXT:    li a0, 1075
 ; RV64ZVFH-NEXT:    slli a0, a0, 52
 ; RV64ZVFH-NEXT:    fmv.d.x fa5, a0
+; RV64ZVFH-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; RV64ZVFH-NEXT:    vfabs.v v9, v8
 ; RV64ZVFH-NEXT:    vmflt.vf v0, v9, fa5
 ; RV64ZVFH-NEXT:    vfcvt.rtz.x.f.v v9, v8, v0.t
 ; RV64ZVFH-NEXT:    vfcvt.f.x.v v9, v9, v0.t
@@ -467,11 +467,11 @@ define <2 x double> @vp_roundtozero_v2f64(<2 x double> %va, <2 x i1> %m, i32 zer
 ;
 ; RV64ZVFHMIN-LABEL: vp_roundtozero_v2f64:
 ; RV64ZVFHMIN:       # %bb.0:
-; RV64ZVFHMIN-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; RV64ZVFHMIN-NEXT:    vfabs.v v9, v8
 ; RV64ZVFHMIN-NEXT:    li a0, 1075
 ; RV64ZVFHMIN-NEXT:    slli a0, a0, 52
 ; RV64ZVFHMIN-NEXT:    fmv.d.x fa5, a0
+; RV64ZVFHMIN-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; RV64ZVFHMIN-NEXT:    vfabs.v v9, v8
 ; RV64ZVFHMIN-NEXT:    vmflt.vf v0, v9, fa5
 ; RV64ZVFHMIN-NEXT:    vfcvt.rtz.x.f.v v9, v8, v0.t
 ; RV64ZVFHMIN-NEXT:    vfcvt.f.x.v v9, v9, v0.t
@@ -498,11 +498,11 @@ define <2 x double> @vp_roundtozero_v2f64_unmasked(<2 x double> %va, i32 zeroext
 ;
 ; RV64ZVFH-LABEL: vp_roundtozero_v2f64_unmasked:
 ; RV64ZVFH:       # %bb.0:
-; RV64ZVFH-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; RV64ZVFH-NEXT:    vfabs.v v9, v8
 ; RV64ZVFH-NEXT:    li a0, 1075
 ; RV64ZVFH-NEXT:    slli a0, a0, 52
 ; RV64ZVFH-NEXT:    fmv.d.x fa5, a0
+; RV64ZVFH-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; RV64ZVFH-NEXT:    vfabs.v v9, v8
 ; RV64ZVFH-NEXT:    vmflt.vf v0, v9, fa5
 ; RV64ZVFH-NEXT:    vfcvt.rtz.x.f.v v9, v8, v0.t
 ; RV64ZVFH-NEXT:    vfcvt.f.x.v v9, v9, v0.t
@@ -525,11 +525,11 @@ define <2 x double> @vp_roundtozero_v2f64_unmasked(<2 x double> %va, i32 zeroext
 ;
 ; RV64ZVFHMIN-LABEL: vp_roundtozero_v2f64_unmasked:
 ; RV64ZVFHMIN:       # %bb.0:
-; RV64ZVFHMIN-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; RV64ZVFHMIN-NEXT:    vfabs.v v9, v8
 ; RV64ZVFHMIN-NEXT:    li a0, 1075
 ; RV64ZVFHMIN-NEXT:    slli a0, a0, 52
 ; RV64ZVFHMIN-NEXT:    fmv.d.x fa5, a0
+; RV64ZVFHMIN-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; RV64ZVFHMIN-NEXT:    vfabs.v v9, v8
 ; RV64ZVFHMIN-NEXT:    vmflt.vf v0, v9, fa5
 ; RV64ZVFHMIN-NEXT:    vfcvt.rtz.x.f.v v9, v8, v0.t
 ; RV64ZVFHMIN-NEXT:    vfcvt.f.x.v v9, v9, v0.t
@@ -556,11 +556,11 @@ define <4 x double> @vp_roundtozero_v4f64(<4 x double> %va, <4 x i1> %m, i32 zer
 ;
 ; RV64ZVFH-LABEL: vp_roundtozero_v4f64:
 ; RV64ZVFH:       # %bb.0:
-; RV64ZVFH-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; RV64ZVFH-NEXT:    vfabs.v v10, v8
 ; RV64ZVFH-NEXT:    li a0, 1075
 ; RV64ZVFH-NEXT:    slli a0, a0, 52
 ; RV64ZVFH-NEXT:    fmv.d.x fa5, a0
+; RV64ZVFH-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; RV64ZVFH-NEXT:    vfabs.v v10, v8
 ; RV64ZVFH-NEXT:    vmflt.vf v0, v10, fa5
 ; RV64ZVFH-NEXT:    vfcvt.rtz.x.f.v v10, v8, v0.t
 ; RV64ZVFH-NEXT:    vfcvt.f.x.v v10, v10, v0.t
@@ -583,11 +583,11 @@ define <4 x double> @vp_roundtozero_v4f64(<4 x double> %va, <4 x i1> %m, i32 zer
 ;
 ; RV64ZVFHMIN-LABEL: vp_roundtozero_v4f64:
 ; RV64ZVFHMIN:       # %bb.0:
-; RV64ZVFHMIN-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; RV64ZVFHMIN-NEXT:    vfabs.v v10, v8
 ; RV64ZVFHMIN-NEXT:    li a0, 1075
 ; RV64ZVFHMIN-NEXT:    slli a0, a0, 52
 ; RV64ZVFHMIN-NEXT:    fmv.d.x fa5, a0
+; RV64ZVFHMIN-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; RV64ZVFHMIN-NEXT:    vfabs.v v10, v8
 ; RV64ZVFHMIN-NEXT:    vmflt.vf v0, v10, fa5
 ; RV64ZVFHMIN-NEXT:    vfcvt.rtz.x.f.v v10, v8, v0.t
 ; RV64ZVFHMIN-NEXT:    vfcvt.f.x.v v10, v10, v0.t
@@ -614,11 +614,11 @@ define <4 x double> @vp_roundtozero_v4f64_unmasked(<4 x double> %va, i32 zeroext
 ;
 ; RV64ZVFH-LABEL: vp_roundtozero_v4f64_unmasked:
 ; RV64ZVFH:       # %bb.0:
-; RV64ZVFH-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; RV64ZVFH-NEXT:    vfabs.v v10, v8
 ; RV64ZVFH-NEXT:    li a0, 1075
 ; RV64ZVFH-NEXT:    slli a0, a0, 52
 ; RV64ZVFH-NEXT:    fmv.d.x fa5, a0
+; RV64ZVFH-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; RV64ZVFH-NEXT:    vfabs.v v10, v8
 ; RV64ZVFH-NEXT:    vmflt.vf v0, v10, fa5
 ; RV64ZVFH-NEXT:    vfcvt.rtz.x.f.v v10, v8, v0.t
 ; RV64ZVFH-NEXT:    vfcvt.f.x.v v10, v10, v0.t
@@ -641,11 +641,11 @@ define <4 x double> @vp_roundtozero_v4f64_unmasked(<4 x double> %va, i32 zeroext
 ;
 ; RV64ZVFHMIN-LABEL: vp_roundtozero_v4f64_unmasked:
 ; RV64ZVFHMIN:       # %bb.0:
-; RV64ZVFHMIN-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; RV64ZVFHMIN-NEXT:    vfabs.v v10, v8
 ; RV64ZVFHMIN-NEXT:    li a0, 1075
 ; RV64ZVFHMIN-NEXT:    slli a0, a0, 52
 ; RV64ZVFHMIN-NEXT:    fmv.d.x fa5, a0
+; RV64ZVFHMIN-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; RV64ZVFHMIN-NEXT:    vfabs.v v10, v8
 ; RV64ZVFHMIN-NEXT:    vmflt.vf v0, v10, fa5
 ; RV64ZVFHMIN-NEXT:    vfcvt.rtz.x.f.v v10, v8, v0.t
 ; RV64ZVFHMIN-NEXT:    vfcvt.f.x.v v10, v10, v0.t
@@ -659,10 +659,10 @@ define <4 x double> @vp_roundtozero_v4f64_unmasked(<4 x double> %va, i32 zeroext
 define <8 x double> @vp_roundtozero_v8f64(<8 x double> %va, <8 x i1> %m, i32 zeroext %evl) {
 ; RV32ZVFH-LABEL: vp_roundtozero_v8f64:
 ; RV32ZVFH:       # %bb.0:
-; RV32ZVFH-NEXT:    lui a0, %hi(.LCPI20_0)
-; RV32ZVFH-NEXT:    fld fa5, %lo(.LCPI20_0)(a0)
 ; RV32ZVFH-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV32ZVFH-NEXT:    vfabs.v v12, v8
+; RV32ZVFH-NEXT:    lui a0, %hi(.LCPI20_0)
+; RV32ZVFH-NEXT:    fld fa5, %lo(.LCPI20_0)(a0)
 ; RV32ZVFH-NEXT:    vmflt.vf v0, v12, fa5
 ; RV32ZVFH-NEXT:    vfcvt.rtz.x.f.v v12, v8, v0.t
 ; RV32ZVFH-NEXT:    vfcvt.f.x.v v12, v12, v0.t
@@ -686,10 +686,10 @@ define <8 x double> @vp_roundtozero_v8f64(<8 x double> %va, <8 x i1> %m, i32 zer
 ;
 ; RV32ZVFHMIN-LABEL: vp_roundtozero_v8f64:
 ; RV32ZVFHMIN:       # %bb.0:
-; RV32ZVFHMIN-NEXT:    lui a0, %hi(.LCPI20_0)
-; RV32ZVFHMIN-NEXT:    fld fa5, %lo(.LCPI20_0)(a0)
 ; RV32ZVFHMIN-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV32ZVFHMIN-NEXT:    vfabs.v v12, v8
+; RV32ZVFHMIN-NEXT:    lui a0, %hi(.LCPI20_0)
+; RV32ZVFHMIN-NEXT:    fld fa5, %lo(.LCPI20_0)(a0)
 ; RV32ZVFHMIN-NEXT:    vmflt.vf v0, v12, fa5
 ; RV32ZVFHMIN-NEXT:    vfcvt.rtz.x.f.v v12, v8, v0.t
 ; RV32ZVFHMIN-NEXT:    vfcvt.f.x.v v12, v12, v0.t
@@ -717,10 +717,10 @@ define <8 x double> @vp_roundtozero_v8f64(<8 x double> %va, <8 x i1> %m, i32 zer
 define <8 x double> @vp_roundtozero_v8f64_unmasked(<8 x double> %va, i32 zeroext %evl) {
 ; RV32ZVFH-LABEL: vp_roundtozero_v8f64_unmasked:
 ; RV32ZVFH:       # %bb.0:
-; RV32ZVFH-NEXT:    lui a0, %hi(.LCPI21_0)
-; RV32ZVFH-NEXT:    fld fa5, %lo(.LCPI21_0)(a0)
 ; RV32ZVFH-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV32ZVFH-NEXT:    vfabs.v v12, v8
+; RV32ZVFH-NEXT:    lui a0, %hi(.LCPI21_0)
+; RV32ZVFH-NEXT:    fld fa5, %lo(.LCPI21_0)(a0)
 ; RV32ZVFH-NEXT:    vmflt.vf v0, v12, fa5
 ; RV32ZVFH-NEXT:    vfcvt.rtz.x.f.v v12, v8, v0.t
 ; RV32ZVFH-NEXT:    vfcvt.f.x.v v12, v12, v0.t
@@ -744,10 +744,10 @@ define <8 x double> @vp_roundtozero_v8f64_unmasked(<8 x double> %va, i32 zeroext
 ;
 ; RV32ZVFHMIN-LABEL: vp_roundtozero_v8f64_unmasked:
 ; RV32ZVFHMIN:       # %bb.0:
-; RV32ZVFHMIN-NEXT:    lui a0, %hi(.LCPI21_0)
-; RV32ZVFHMIN-NEXT:    fld fa5, %lo(.LCPI21_0)(a0)
 ; RV32ZVFHMIN-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV32ZVFHMIN-NEXT:    vfabs.v v12, v8
+; RV32ZVFHMIN-NEXT:    lui a0, %hi(.LCPI21_0)
+; RV32ZVFHMIN-NEXT:    fld fa5, %lo(.LCPI21_0)(a0)
 ; RV32ZVFHMIN-NEXT:    vmflt.vf v0, v12, fa5
 ; RV32ZVFHMIN-NEXT:    vfcvt.rtz.x.f.v v12, v8, v0.t
 ; RV32ZVFHMIN-NEXT:    vfcvt.f.x.v v12, v12, v0.t
@@ -775,10 +775,10 @@ define <8 x double> @vp_roundtozero_v8f64_unmasked(<8 x double> %va, i32 zeroext
 define <15 x double> @vp_roundtozero_v15f64(<15 x double> %va, <15 x i1> %m, i32 zeroext %evl) {
 ; RV32ZVFH-LABEL: vp_roundtozero_v15f64:
 ; RV32ZVFH:       # %bb.0:
-; RV32ZVFH-NEXT:    lui a0, %hi(.LCPI22_0)
-; RV32ZVFH-NEXT:    fld fa5, %lo(.LCPI22_0)(a0)
 ; RV32ZVFH-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; RV32ZVFH-NEXT:    vfabs.v v16, v8
+; RV32ZVFH-NEXT:    lui a0, %hi(.LCPI22_0)
+; RV32ZVFH-NEXT:    fld fa5, %lo(.LCPI22_0)(a0)
 ; RV32ZVFH-NEXT:    vmflt.vf v0, v16, fa5
 ; RV32ZVFH-NEXT:    vfcvt.rtz.x.f.v v16, v8, v0.t
 ; RV32ZVFH-NEXT:    vfcvt.f.x.v v16, v16, v0.t
@@ -802,10 +802,10 @@ define <15 x double> @vp_roundtozero_v15f64(<15 x double> %va, <15 x i1> %m, i32
 ;
 ; RV32ZVFHMIN-LABEL: vp_roundtozero_v15f64:
 ; RV32ZVFHMIN:       # %bb.0:
-; RV32ZVFHMIN-NEXT:    lui a0, %hi(.LCPI22_0)
-; RV32ZVFHMIN-NEXT:    fld fa5, %lo(.LCPI22_0)(a0)
 ; RV32ZVFHMIN-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; RV32ZVFHMIN-NEXT:    vfabs.v v16, v8
+; RV32ZVFHMIN-NEXT:    lui a0, %hi(.LCPI22_0)
+; RV32ZVFHMIN-NEXT:    fld fa5, %lo(.LCPI22_0)(a0)
 ; RV32ZVFHMIN-NEXT:    vmflt.vf v0, v16, fa5
 ; RV32ZVFHMIN-NEXT:    vfcvt.rtz.x.f.v v16, v8, v0.t
 ; RV32ZVFHMIN-NEXT:    vfcvt.f.x.v v16, v16, v0.t
@@ -833,10 +833,10 @@ define <15 x double> @vp_roundtozero_v15f64(<15 x double> %va, <15 x i1> %m, i32
 define <15 x double> @vp_roundtozero_v15f64_unmasked(<15 x double> %va, i32 zeroext %evl) {
 ; RV32ZVFH-LABEL: vp_roundtozero_v15f64_unmasked:
 ; RV32ZVFH:       # %bb.0:
-; RV32ZVFH-NEXT:    lui a0, %hi(.LCPI23_0)
-; RV32ZVFH-NEXT:    fld fa5, %lo(.LCPI23_0)(a0)
 ; RV32ZVFH-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; RV32ZVFH-NEXT:    vfabs.v v16, v8
+; RV32ZVFH-NEXT:    lui a0, %hi(.LCPI23_0)
+; RV32ZVFH-NEXT:    fld fa5, %lo(.LCPI23_0)(a0)
 ; RV32ZVFH-NEXT:    vmflt.vf v0, v16, fa5
 ; RV32ZVFH-NEXT:    vfcvt.rtz.x.f.v v16, v8, v0.t
 ; RV32ZVFH-NEXT:    vfcvt.f.x.v v16, v16, v0.t
@@ -860,10 +860,10 @@ define <15 x double> @vp_roundtozero_v15f64_unmasked(<15 x double> %va, i32 zero
 ;
 ; RV32ZVFHMIN-LABEL: vp_roundtozero_v15f64_unmasked:
 ; RV32ZVFHMIN:       # %bb.0:
-; RV32ZVFHMIN-NEXT:    lui a0, %hi(.LCPI23_0)
-; RV32ZVFHMIN-NEXT:    fld fa5, %lo(.LCPI23_0)(a0)
 ; RV32ZVFHMIN-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; RV32ZVFHMIN-NEXT:    vfabs.v v16, v8
+; RV32ZVFHMIN-NEXT:    lui a0, %hi(.LCPI23_0)
+; RV32ZVFHMIN-NEXT:    fld fa5, %lo(.LCPI23_0)(a0)
 ; RV32ZVFHMIN-NEXT:    vmflt.vf v0, v16, fa5
 ; RV32ZVFHMIN-NEXT:    vfcvt.rtz.x.f.v v16, v8, v0.t
 ; RV32ZVFHMIN-NEXT:    vfcvt.f.x.v v16, v16, v0.t
@@ -891,10 +891,10 @@ define <15 x double> @vp_roundtozero_v15f64_unmasked(<15 x double> %va, i32 zero
 define <16 x double> @vp_roundtozero_v16f64(<16 x double> %va, <16 x i1> %m, i32 zeroext %evl) {
 ; RV32ZVFH-LABEL: vp_roundtozero_v16f64:
 ; RV32ZVFH:       # %bb.0:
-; RV32ZVFH-NEXT:    lui a0, %hi(.LCPI24_0)
-; RV32ZVFH-NEXT:    fld fa5, %lo(.LCPI24_0)(a0)
 ; RV32ZVFH-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; RV32ZVFH-NEXT:    vfabs.v v16, v8
+; RV32ZVFH-NEXT:    lui a0, %hi(.LCPI24_0)
+; RV32ZVFH-NEXT:    fld fa5, %lo(.LCPI24_0)(a0)
 ; RV32ZVFH-NEXT:    vmflt.vf v0, v16, fa5
 ; RV32ZVFH-NEXT:    vfcvt.rtz.x.f.v v16, v8, v0.t
 ; RV32ZVFH-NEXT:    vfcvt.f.x.v v16, v16, v0.t
@@ -918,10 +918,10 @@ define <16 x double> @vp_roundtozero_v16f64(<16 x double> %va, <16 x i1> %m, i32
 ;
 ; RV32ZVFHMIN-LABEL: vp_roundtozero_v16f64:
 ; RV32ZVFHMIN:       # %bb.0:
-; RV32ZVFHMIN-NEXT:    lui a0, %hi(.LCPI24_0)
-; RV32ZVFHMIN-NEXT:    fld fa5, %lo(.LCPI24_0)(a0)
 ; RV32ZVFHMIN-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; RV32ZVFHMIN-NEXT:    vfabs.v v16, v8
+; RV32ZVFHMIN-NEXT:    lui a0, %hi(.LCPI24_0)
+; RV32ZVFHMIN-NEXT:    fld fa5, %lo(.LCPI24_0)(a0)
 ; RV32ZVFHMIN-NEXT:    vmflt.vf v0, v16, fa5
 ; RV32ZVFHMIN-NEXT:    vfcvt.rtz.x.f.v v16, v8, v0.t
 ; RV32ZVFHMIN-NEXT:    vfcvt.f.x.v v16, v16, v0.t
@@ -949,10 +949,10 @@ define <16 x double> @vp_roundtozero_v16f64(<16 x double> %va, <16 x i1> %m, i32
 define <16 x double> @vp_roundtozero_v16f64_unmasked(<16 x double> %va, i32 zeroext %evl) {
 ; RV32ZVFH-LABEL: vp_roundtozero_v16f64_unmasked:
 ; RV32ZVFH:       # %bb.0:
-; RV32ZVFH-NEXT:    lui a0, %hi(.LCPI25_0)
-; RV32ZVFH-NEXT:    fld fa5, %lo(.LCPI25_0)(a0)
 ; RV32ZVFH-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; RV32ZVFH-NEXT:    vfabs.v v16, v8
+; RV32ZVFH-NEXT:    lui a0, %hi(.LCPI25_0)
+; RV32ZVFH-NEXT:    fld fa5, %lo(.LCPI25_0)(a0)
 ; RV32ZVFH-NEXT:    vmflt.vf v0, v16, fa5
 ; RV32ZVFH-NEXT:    vfcvt.rtz.x.f.v v16, v8, v0.t
 ; RV32ZVFH-NEXT:    vfcvt.f.x.v v16, v16, v0.t
@@ -976,10 +976,10 @@ define <16 x double> @vp_roundtozero_v16f64_unmasked(<16 x double> %va, i32 zero
 ;
 ; RV32ZVFHMIN-LABEL: vp_roundtozero_v16f64_unmasked:
 ; RV32ZVFHMIN:       # %bb.0:
-; RV32ZVFHMIN-NEXT:    lui a0, %hi(.LCPI25_0)
-; RV32ZVFHMIN-NEXT:    fld fa5, %lo(.LCPI25_0)(a0)
 ; RV32ZVFHMIN-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; RV32ZVFHMIN-NEXT:    vfabs.v v16, v8
+; RV32ZVFHMIN-NEXT:    lui a0, %hi(.LCPI25_0)
+; RV32ZVFHMIN-NEXT:    fld fa5, %lo(.LCPI25_0)(a0)
 ; RV32ZVFHMIN-NEXT:    vmflt.vf v0, v16, fa5
 ; RV32ZVFHMIN-NEXT:    vfcvt.rtz.x.f.v v16, v8, v0.t
 ; RV32ZVFHMIN-NEXT:    vfcvt.f.x.v v16, v16, v0.t
@@ -1007,10 +1007,10 @@ define <16 x double> @vp_roundtozero_v16f64_unmasked(<16 x double> %va, i32 zero
 define <32 x double> @vp_roundtozero_v32f64(<32 x double> %va, <32 x i1> %m, i32 zeroext %evl) {
 ; RV32ZVFH-LABEL: vp_roundtozero_v32f64:
 ; RV32ZVFH:       # %bb.0:
-; RV32ZVFH-NEXT:    lui a0, %hi(.LCPI26_0)
-; RV32ZVFH-NEXT:    fld fa5, %lo(.LCPI26_0)(a0)
 ; RV32ZVFH-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; RV32ZVFH-NEXT:    vfabs.v v24, v8
+; RV32ZVFH-NEXT:    lui a0, %hi(.LCPI26_0)
+; RV32ZVFH-NEXT:    fld fa5, %lo(.LCPI26_0)(a0)
 ; RV32ZVFH-NEXT:    vmflt.vf v0, v24, fa5
 ; RV32ZVFH-NEXT:    vfabs.v v24, v16
 ; RV32ZVFH-NEXT:    vmflt.vf v7, v24, fa5
@@ -1050,10 +1050,10 @@ define <32 x double> @vp_roundtozero_v32f64(<32 x double> %va, <32 x i1> %m, i32
 ;
 ; RV32ZVFHMIN-LABEL: vp_roundtozero_v32f64:
 ; RV32ZVFHMIN:       # %bb.0:
-; RV32ZVFHMIN-NEXT:    lui a0, %hi(.LCPI26_0)
-; RV32ZVFHMIN-NEXT:    fld fa5, %lo(.LCPI26_0)(a0)
 ; RV32ZVFHMIN-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; RV32ZVFHMIN-NEXT:    vfabs.v v24, v8
+; RV32ZVFHMIN-NEXT:    lui a0, %hi(.LCPI26_0)
+; RV32ZVFHMIN-NEXT:    fld fa5, %lo(.LCPI26_0)(a0)
 ; RV32ZVFHMIN-NEXT:    vmflt.vf v0, v24, fa5
 ; RV32ZVFHMIN-NEXT:    vfabs.v v24, v16
 ; RV32ZVFHMIN-NEXT:    vmflt.vf v7, v24, fa5
@@ -1097,10 +1097,10 @@ define <32 x double> @vp_roundtozero_v32f64(<32 x double> %va, <32 x i1> %m, i32
 define <32 x double> @vp_roundtozero_v32f64_unmasked(<32 x double> %va, i32 zeroext %evl) {
 ; RV32ZVFH-LABEL: vp_roundtozero_v32f64_unmasked:
 ; RV32ZVFH:       # %bb.0:
-; RV32ZVFH-NEXT:    lui a0, %hi(.LCPI27_0)
-; RV32ZVFH-NEXT:    fld fa5, %lo(.LCPI27_0)(a0)
 ; RV32ZVFH-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; RV32ZVFH-NEXT:    vfabs.v v24, v8
+; RV32ZVFH-NEXT:    lui a0, %hi(.LCPI27_0)
+; RV32ZVFH-NEXT:    fld fa5, %lo(.LCPI27_0)(a0)
 ; RV32ZVFH-NEXT:    vmflt.vf v0, v24, fa5
 ; RV32ZVFH-NEXT:    vfabs.v v24, v16
 ; RV32ZVFH-NEXT:    vmflt.vf v7, v24, fa5
@@ -1140,10 +1140,10 @@ define <32 x double> @vp_roundtozero_v32f64_unmasked(<32 x double> %va, i32 zero
 ;
 ; RV32ZVFHMIN-LABEL: vp_roundtozero_v32f64_unmasked:
 ; RV32ZVFHMIN:       # %bb.0:
-; RV32ZVFHMIN-NEXT:    lui a0, %hi(.LCPI27_0)
-; RV32ZVFHMIN-NEXT:    fld fa5, %lo(.LCPI27_0)(a0)
 ; RV32ZVFHMIN-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; RV32ZVFHMIN-NEXT:    vfabs.v v24, v8
+; RV32ZVFHMIN-NEXT:    lui a0, %hi(.LCPI27_0)
+; RV32ZVFHMIN-NEXT:    fld fa5, %lo(.LCPI27_0)(a0)
 ; RV32ZVFHMIN-NEXT:    vmflt.vf v0, v24, fa5
 ; RV32ZVFHMIN-NEXT:    vfabs.v v24, v16
 ; RV32ZVFHMIN-NEXT:    vmflt.vf v7, v24, fa5

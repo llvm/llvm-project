@@ -86,7 +86,7 @@ protected:
   lldb::LanguageType m_language;
   bool m_skip_prologue;
 
-  void AddNameLookup(ConstString name,
+  void AddNameLookup(llvm::StringRef name,
                      lldb::FunctionNameType name_type_mask);
 };
 

@@ -48,6 +48,19 @@ int main(int, char**) {
     test(m, std::begin(keys), std::end(keys));
   }
 
+  { // Check that the first element is returned
+    std::multiset<int> m = {1, 1, 1};
+    auto ptr             = std::addressof(*m.begin());
+    auto res             = m.extract(1);
+    assert(std::addressof(res.value()) == ptr);
+  }
+
+  { // Check that no element is returned if there is no match
+    std::multiset<int> m = {1, 2, 3};
+    auto res             = m.extract(0);
+    assert(!res);
+  }
+
   {
     std::multiset<Counter<int>> m = {1, 2, 3, 4, 5, 6};
     {

@@ -545,6 +545,9 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
       case 300:
         Builder.defineMacro("__OPENCL_C_VERSION__", "300");
         break;
+      case 310:
+        Builder.defineMacro("__OPENCL_C_VERSION__", "310");
+        break;
       default:
         llvm_unreachable("Unsupported OpenCL version");
       }
@@ -554,6 +557,7 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
     Builder.defineMacro("CL_VERSION_1_2", "120");
     Builder.defineMacro("CL_VERSION_2_0", "200");
     Builder.defineMacro("CL_VERSION_3_0", "300");
+    Builder.defineMacro("CL_VERSION_3_1", "310");
 
     if (TI.isLittleEndian())
       Builder.defineMacro("__ENDIAN_LITTLE__");
@@ -743,7 +747,7 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
   // we also define their feature test macros.
   if (LangOpts.CPlusPlus11)
     Builder.defineMacro("__cpp_static_call_operator", "202207L");
-  Builder.defineMacro("__cpp_named_character_escapes", "202207L");
+  Builder.defineMacro("__cpp_named_character_escapes", "202606L");
   Builder.defineMacro("__cpp_placeholder_variables", "202306L");
 
   // C++26 features supported in earlier language modes.
@@ -1033,10 +1037,16 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
     }
   }
 
-  // Macros to help identify the narrow and wide character sets
-  // FIXME: clang currently ignores -fexec-charset=. If this changes,
-  // then this may need to be updated.
-  Builder.defineMacro("__clang_literal_encoding__", "\"UTF-8\"");
+  // Macros to help identify the narrow and wide character sets. This is set
+  // to fexec-charset. If fexec-charset is not specified, the default is the
+  // system charset.
+  Builder.defineMacro("__clang_literal_encoding__",
+                      Twine("\"" +
+                            (LangOpts.LiteralEncoding.empty()
+                                 ? TI.getDefaultOrdinaryLiteralEncoding()
+                                 : LangOpts.LiteralEncoding) +
+                            "\""));
+
   if (TI.getTypeWidth(TI.getWCharType()) >= 32) {
     // FIXME: 32-bit wchar_t signals UTF-32. This may change
     // if -fwide-exec-charset= is ever supported.

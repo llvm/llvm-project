@@ -12,6 +12,9 @@ from lldbsuite.test.lldbtest import *
 
 @skipIfWasm  # no expression evaluation
 class ExprInsideLambdaTestCase(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
+    SHARED_BUILD_TESTCASE = False
+
     def expectExprError(self, expr: str, expected: str):
         frame = self.thread.GetFrameAtIndex(0)
         value = frame.EvaluateExpression(expr)
@@ -112,18 +115,32 @@ class ExprInsideLambdaTestCase(TestBase):
         # Check access to outer top-level structure's members
         self.expectExprError(
             "class_var",
-            ("use of non-static data member" " 'class_var' of 'Foo' from nested type"),
+            (
+                "use of undeclared identifier"
+                if self.getDebugInfo() == "pdb"
+                else (
+                    "use of non-static data member 'class_var' of 'Foo' from nested type"
+                )
+            ),
         )
 
         self.expectExprError(
-            "base_var", ("use of non-static data member" " 'base_var'")
+            "base_var",
+            (
+                "use of undeclared identifier"
+                if self.getDebugInfo() == "pdb"
+                else ("use of non-static data member 'base_var'")
+            ),
         )
 
         self.expectExprError(
             "local_var",
             (
-                "use of non-static data member 'local_var'"
-                " of '(unnamed class)' from nested type 'LocalLambdaClass'"
+                "use of undeclared identifier"
+                if self.getDebugInfo() == "pdb"
+                else (
+                    "use of non-static data member 'local_var' of '(unnamed class)' from nested type 'LocalLambdaClass'"
+                )
             ),
         )
 
@@ -135,5 +152,11 @@ class ExprInsideLambdaTestCase(TestBase):
 
         self.expectExprError(
             "class_var",
-            ("use of non-static data member" " 'class_var' of 'Foo' from nested type"),
+            (
+                "use of undeclared identifier"
+                if self.getDebugInfo() == "pdb"
+                else (
+                    "use of non-static data member 'class_var' of 'Foo' from nested type"
+                )
+            ),
         )

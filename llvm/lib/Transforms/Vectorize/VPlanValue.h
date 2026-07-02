@@ -92,7 +92,7 @@ public:
   VPValue &operator=(const VPValue &) = delete;
 
   virtual ~VPValue() {
-    assert(Users.empty() && "trying to delete a VPValue with remaining users");
+    assert(user_empty() && "trying to delete a VPValue with remaining users");
   }
 
   /// \return an ID for the concrete type of this object.
@@ -113,7 +113,7 @@ public:
   void assertNotMaterialized() const;
 
   unsigned getNumUsers() const {
-    if (Users.empty())
+    if (user_empty())
       return 0;
     assertNotMaterialized();
     return Users.size();
@@ -158,10 +158,11 @@ public:
   const_user_range users() const {
     return const_user_range(user_begin(), user_end());
   }
+  bool user_empty() const { return Users.empty(); } // NOLINT
 
   /// Returns true if the value has more than one unique user.
   bool hasMoreThanOneUniqueUser() const {
-    if (getNumUsers() == 0)
+    if (user_empty())
       return false;
 
     // Check if all users match the first user.
@@ -193,6 +194,10 @@ public:
   /// by a recipe, i.e. is a live-in.
   VPRecipeBase *getDefiningRecipe();
   const VPRecipeBase *getDefiningRecipe() const;
+
+  /// Returns the scalar type of this VPValue, dispatching based on the
+  /// concrete subclass.
+  Type *getScalarType() const;
 
   /// Returns true if this VPValue is defined by a recipe.
   bool hasDefiningRecipe() const { return getDefiningRecipe(); }
@@ -312,6 +317,9 @@ class VPRecipeValue : public VPValue {
   friend class VPValue;
   friend class VPDef;
 
+  /// The scalar type of the value produced by this recipe.
+  Type *Ty = nullptr;
+
 #if !defined(NDEBUG)
   /// Returns true if this VPRecipeValue is defined by \p D.
   /// NOTE: Only used by VPDef to assert that VPRecipeValues added/removed from
@@ -320,10 +328,14 @@ class VPRecipeValue : public VPValue {
 #endif
 
 protected:
-  VPRecipeValue(unsigned char SC, Value *UV = nullptr) : VPValue(SC, UV) {}
+  VPRecipeValue(unsigned char SC, Value *UV, Type *Ty = nullptr)
+      : VPValue(SC, UV), Ty(Ty) {}
 
 public:
   LLVM_ABI_FOR_TEST virtual ~VPRecipeValue() = 0;
+
+  /// Returns the scalar type of this VPRecipeValue.
+  Type *getScalarType() const { return Ty; }
 
   static bool classof(const VPValue *V) {
     return V->getVPValueID() == VPVMultiDefValueSC ||
@@ -339,10 +351,10 @@ class VPSingleDefValue : public VPRecipeValue {
 protected:
   /// Construct a VPSingleDefValue. Must only be used by VPSingleDefRecipe.
   LLVM_ABI_FOR_TEST VPSingleDefValue(VPSingleDefRecipe *Def,
-                                     Value *UV = nullptr);
+                                     Value *UV = nullptr, Type *Ty = nullptr);
 
 public:
-  ~VPSingleDefValue() override = default;
+  ~VPSingleDefValue() override;
 
   static bool classof(const VPValue *V) {
     return V->getVPValueID() == VPVSingleDefValueSC;
@@ -357,9 +369,9 @@ class VPMultiDefValue : public VPRecipeValue {
   VPRecipeBase *Def;
 
 public:
-  LLVM_ABI_FOR_TEST VPMultiDefValue(VPRecipeBase *Def, Value *UV = nullptr);
+  LLVM_ABI_FOR_TEST VPMultiDefValue(VPRecipeBase *Def, Value *UV, Type *Ty);
 
-  ~VPMultiDefValue() override = default;
+  ~VPMultiDefValue() override;
 
   VPRecipeBase *getDef() const { return Def; }
 
@@ -370,9 +382,11 @@ public:
 
 /// This class augments VPValue with operands which provide the inverse def-use
 /// edges from VPValue's users to their defs.
-class VPUser {
+class LLVM_ABI_FOR_TEST VPUser {
   /// Grant access to removeOperand for VPPhiAccessors, the only supported user.
   friend class VPPhiAccessors;
+  /// Grant access to addOperand for VPWidenMemoryRecipe.
+  friend class VPWidenMemoryRecipe;
 
   SmallVector<VPValue *, 2> Operands;
 
@@ -394,6 +408,11 @@ protected:
       addOperand(Operand);
   }
 
+  void addOperand(VPValue *Operand) {
+    Operands.push_back(Operand);
+    Operand->addUser(*this);
+  }
+
 public:
   VPUser() = delete;
   VPUser(const VPUser &) = delete;
@@ -403,11 +422,6 @@ public:
       Op->removeUser(*this);
   }
 
-  void addOperand(VPValue *Operand) {
-    Operands.push_back(Operand);
-    Operand->addUser(*this);
-  }
-
   unsigned getNumOperands() const { return Operands.size(); }
   inline VPValue *getOperand(unsigned N) const {
     assert(N < Operands.size() && "Operand index out of bounds");
@@ -415,6 +429,9 @@ public:
   }
 
   void setOperand(unsigned I, VPValue *New) {
+    assert((!Operands[I]->getScalarType() || !New->getScalarType() ||
+            Operands[I]->getScalarType() == New->getScalarType()) &&
+           "scalar type of new operand must match the old operand");
     Operands[I]->removeUser(*this);
     Operands[I] = New;
     New->addUser(*this);
@@ -507,7 +524,7 @@ public:
     for (VPRecipeValue *D : to_vector(DefinedValues)) {
       assert(D->isDefinedBy(this) &&
              "all defined VPValues should point to the containing VPDef");
-      assert(D->getNumUsers() == 0 &&
+      assert(D->user_empty() &&
              "all defined VPValues should have no more users");
       delete D;
     }

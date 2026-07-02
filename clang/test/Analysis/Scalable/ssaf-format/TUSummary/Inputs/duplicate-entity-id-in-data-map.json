@@ -1,0 +1,44 @@
+{
+  "tu_namespace": {
+    "kind": "CompilationUnit",
+    "name": "test.cpp"
+  },
+  "id_table": [
+    {
+      "id": 0,
+      "name": {
+        "usr": "c:@F@foo",
+        "suffix": ""
+      }
+    }
+  ],
+  "linkage_table": [
+    {
+      "id": 0,
+      "linkage": {
+        "type": "None"
+      }
+    }
+  ],
+  "data": [
+    {
+      "summary_name": "PairsEntitySummary",
+      "summary_data": [
+        {
+          "entity_id": 0,
+          "entity_summary": {
+            "pairs": []
+          }
+        },
+        {
+          "entity_id": 0,
+          "entity_summary": {
+            "pairs": []
+          }
+        }
+      ]
+    }
+  ],
+  "target_triple": "arm64-apple-macosx",
+  "type": "TUSummary"
+}

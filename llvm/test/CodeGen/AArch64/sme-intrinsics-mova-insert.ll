@@ -486,6 +486,17 @@ define void @test_add_with_disjoint_or(i64 %idx, <vscale x 4 x i1> %pg) {
   ret void
 }
 
+; Test we materialize the zero register base within a GPR when we only have an immediate slice offset.
+define void @test_imm_offset_with_zero_register_base(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %vec) {
+; CHECK-LABEL: test_imm_offset_with_zero_register_base:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w12, wzr
+; CHECK-NEXT:    mov za0h.s[w12, 1], p0/m, z0.s
+; CHECK-NEXT:    ret
+  call void @llvm.aarch64.sme.write.horiz.nxv4i32(i32 0, i32 1, <vscale x 4 x i1> %pg, <vscale x 4 x i32> %vec)
+  ret void
+}
+
 declare void @llvm.aarch64.sme.write.horiz.nxv16i8(i32, i32, <vscale x 16 x i1>, <vscale x 16 x i8>)
 declare void @llvm.aarch64.sme.write.horiz.nxv8i16(i32, i32, <vscale x 8 x i1>, <vscale x 8 x i16>)
 declare void @llvm.aarch64.sme.write.horiz.nxv8f16(i32, i32, <vscale x 8 x i1>, <vscale x 8 x half>)

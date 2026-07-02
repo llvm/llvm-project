@@ -182,22 +182,17 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
       // expand the arguments that do not follow this rule.
       //
       if (ArgSize % DWORD_ALIGN != 0) {
-        Type *ResType = Type::getInt32Ty(Ctx);
-        if (auto *VecType = dyn_cast<VectorType>(ArgType))
-          ResType = VectorType::get(ResType, VecType->getElementCount());
+        Type *ResType = ArgType->getWithNewType(Type::getInt32Ty(Ctx));
         Builder.SetInsertPoint(CI);
         Builder.SetCurrentDebugLocation(CI->getDebugLoc());
 
-        if (ArgType->isFloatingPointTy()) {
-          Arg = Builder.CreateBitCast(
-              Arg,
-              IntegerType::getIntNTy(Ctx, ArgType->getPrimitiveSizeInBits()));
-        }
-
-        if (OpConvSpecifiers[ArgCount - 1] == 'x' ||
-            OpConvSpecifiers[ArgCount - 1] == 'X' ||
-            OpConvSpecifiers[ArgCount - 1] == 'u' ||
-            OpConvSpecifiers[ArgCount - 1] == 'o')
+        if (ArgType->isFPOrFPVectorTy()) {
+          Arg = Builder.CreateFPExt(
+              Arg, ArgType->getWithNewType(Type::getFloatTy(Ctx)));
+        } else if (OpConvSpecifiers[ArgCount - 1] == 'x' ||
+                   OpConvSpecifiers[ArgCount - 1] == 'X' ||
+                   OpConvSpecifiers[ArgCount - 1] == 'u' ||
+                   OpConvSpecifiers[ArgCount - 1] == 'o')
           Arg = Builder.CreateZExt(Arg, ResType);
         else
           Arg = Builder.CreateSExt(Arg, ResType);

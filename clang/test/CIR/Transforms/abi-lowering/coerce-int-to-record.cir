@@ -1,0 +1,57 @@
+// RUN: cir-opt %s -cir-call-conv-lowering="classification-attr=test_classify" \
+// RUN:   | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+!s64i = !cir.int<s, 64>
+!rec_Pair = !cir.struct<"Pair" {!s32i, !s32i}>
+
+#coerce_pair_return_to_i64 = {
+  return = { kind = "direct", coerced_type = !s64i },
+  args   = [ ]
+}
+
+#caller_ret_i32 = {
+  return = { kind = "direct" },
+  args   = [ ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  cir.func @returns_pair() -> !rec_Pair
+      attributes { test_classify = #coerce_pair_return_to_i64 } {
+    %0 = cir.const #cir.zero : !rec_Pair
+    cir.return %0 : !rec_Pair
+  }
+
+  // Record return operand coerced to !s64i through an entry-block memory slot.
+  // CHECK:      cir.func{{.*}} @returns_pair() -> !s64i
+  // CHECK:        %[[SLOT:.*]] = cir.alloca "coerce" {{.*}} : !cir.ptr<!rec_Pair>
+  // CHECK:        %[[VAL:.*]] = cir.const #cir.zero : !rec_Pair
+  // CHECK:        cir.store %[[VAL]], %[[SLOT]] : !rec_Pair, !cir.ptr<!rec_Pair>
+  // CHECK:        %[[CAST:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!rec_Pair> -> !cir.ptr<!s64i>
+  // CHECK:        %[[COERCED:.*]] = cir.load %[[CAST]] : !cir.ptr<!s64i>, !s64i
+  // CHECK:        cir.return %[[COERCED]] : !s64i
+
+  cir.func @caller() -> !s32i
+      attributes { test_classify = #caller_ret_i32 } {
+    %0 = cir.call @returns_pair() : () -> !rec_Pair
+    %1 = cir.alloca "r" align(4) : !cir.ptr<!rec_Pair>
+    cir.store %0, %1 : !rec_Pair, !cir.ptr<!rec_Pair>
+    %2 = cir.get_member %1[0] {name = "first"} : !cir.ptr<!rec_Pair> -> !cir.ptr<!s32i>
+    %3 = cir.load %2 : !cir.ptr<!s32i>, !s32i
+    cir.return %3 : !s32i
+  }
+
+  // The !s64i call result is coerced back to !rec_Pair through memory.
+  // CHECK:      cir.func{{.*}} @caller() -> !s32i
+  // CHECK:        %[[RET:.*]] = cir.call @returns_pair() : () -> !s64i
+  // CHECK:        cir.store %[[RET]], %{{.*}} : !s64i, !cir.ptr<!s64i>
+  // CHECK:        %[[RCAST:.*]] = cir.cast bitcast %{{.*}} : !cir.ptr<!s64i> -> !cir.ptr<!rec_Pair>
+  // CHECK:        %[[REC:.*]] = cir.load %[[RCAST]] : !cir.ptr<!rec_Pair>, !rec_Pair
+  // CHECK:        %[[MEMBER:.*]] = cir.get_member %{{.*}}[0] {name = "first"} : !cir.ptr<!rec_Pair> -> !cir.ptr<!s32i>
+
+}

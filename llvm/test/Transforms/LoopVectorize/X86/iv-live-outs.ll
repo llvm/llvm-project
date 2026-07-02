@@ -164,7 +164,7 @@ loop:
   %dst.gep = getelementptr i32, ptr %A, i64 %iv.next
   store i32 %store.val, ptr %dst.gep, align 4
   %exit.cond = icmp eq i64 %iv, 0
-  br i1 %exit.cond, label %exit, label %loop
+  br i1 %exit.cond, label %exit, label %loop, !llvm.loop !0
 
 exit:
   %liveout = phi i32 [ %load, %loop ]
@@ -172,3 +172,8 @@ exit:
 }
 
 attributes #0 = { "target-cpu"="skylake-avx512" }
+
+!0 = distinct !{!0, !1, !2, !3}
+!1 = !{!"llvm.loop.vectorize.width", i32 2}
+!2 = !{!"llvm.loop.vectorize.scalable.enable", i1 false}
+!3 = !{!"llvm.loop.vectorize.enable", i1 true}

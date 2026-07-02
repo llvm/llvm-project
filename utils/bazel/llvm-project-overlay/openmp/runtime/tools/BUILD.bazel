@@ -1,0 +1,17 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+package(
+    default_visibility = ["//visibility:public"],
+)
+
+licenses(["notice"])
+
+# message-converter.py is invoked at build time to generate the
+# kmp_i18n_id.inc and kmp_i18n_default.inc message catalog headers.
+# libomputils.py is imported by message-converter.py.
+exports_files([
+    "message-converter.py",
+    "libomputils.py",
+])

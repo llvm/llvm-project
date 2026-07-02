@@ -1,0 +1,61 @@
+# RUN: llc -run-pass=machine-outliner -verify-machineinstrs %s -o - | FileCheck %s
+
+--- |
+  target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
+  target triple = "thumbv7m-unknown-none-eabihf"
+
+  define void @callee_saved() #0 { ret void }
+  define void @caller_saved() #0 { ret void }
+
+  attributes #0 = { minsize }
+...
+---
+name:            callee_saved
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: name: callee_saved
+  ; CHECK:       tBL 14 /* CC::al */, $noreg, @[[CALLEE_SAVED_OUTLINED:OUTLINED_FUNCTION_[0-9]+]]
+  ; CHECK-NEXT:  tBL 14 /* CC::al */, $noreg, @[[CALLEE_SAVED_OUTLINED]]
+  ; CHECK-NEXT:  tBX_RET
+  bb.0:
+    liveins: $r4, $lr
+
+    $r1 = t2MOVi 0, 14, $noreg, $noreg
+    $r2 = t2MVNi 99, 14, $noreg, $noreg
+    tBLXr 14, $noreg, $r4, implicit-def dead $lr, implicit $sp
+    $r1 = t2MOVi 0, 14, $noreg, $noreg
+    $r2 = t2MVNi 99, 14, $noreg, $noreg
+    tBLXr 14, $noreg, $r4, implicit-def dead $lr, implicit $sp
+    tBX_RET 14, $noreg
+...
+---
+name:            caller_saved
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: name: caller_saved
+  ; CHECK:       tBL 14 /* CC::al */, $noreg, @[[CALLER_SAVED_OUTLINED:OUTLINED_FUNCTION_[0-9]+]]
+  ; CHECK-NEXT:  tBL 14 /* CC::al */, $noreg, @[[CALLER_SAVED_OUTLINED]]
+  ; CHECK-NEXT:  tBX_RET
+  bb.0:
+    liveins: $r0, $lr
+
+    $r1 = t2MOVi 13, 14, $noreg, $noreg
+    $r2 = t2MVNi 88, 14, $noreg, $noreg
+    tBLXr 14, $noreg, $r0, implicit-def dead $lr, implicit $sp
+    $r1 = t2MOVi 13, 14, $noreg, $noreg
+    $r2 = t2MVNi 88, 14, $noreg, $noreg
+    tBLXr 14, $noreg, $r0, implicit-def dead $lr, implicit $sp
+    tBX_RET 14, $noreg
+...
+
+# CHECK:       name: [[CALLER_SAVED_OUTLINED]]
+# CHECK:       $r1 = t2MOVi 13
+# CHECK-NEXT:  $r2 = t2MVNi 88
+# CHECK-NOT:   tBLXr
+# CHECK:       tTAILJMPr $r0
+
+# CHECK:       name: [[CALLEE_SAVED_OUTLINED]]
+# CHECK:       $r1 = t2MOVi 0
+# CHECK-NEXT:  $r2 = t2MVNi 99
+# CHECK-NOT:   tBLXr
+# CHECK:       tTAILJMPr $r4

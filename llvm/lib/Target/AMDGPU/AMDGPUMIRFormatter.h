@@ -54,6 +54,8 @@ private:
   void printSWaitAluImm(uint64_t Imm, raw_ostream &OS) const;
   /// Prints the string to represent s_waitcnt immediate value.
   void printSWaitcntImm(uint64_t Imm, raw_ostream &OS) const;
+  /// Prints the string to represent s_wait_loadcnt_dscnt immediate value.
+  void printSWaitLoadcntDscntImm(uint64_t Imm, raw_ostream &OS) const;
   /// Print the string to represent s_delay_alu immediate value
   void printSDelayAluImm(int64_t Imm, llvm::raw_ostream &OS) const;
 
@@ -64,6 +66,11 @@ private:
 
   /// Parse the immediate pseudo literal for s_waitcnt
   bool parseSWaitcntImmMnemonic(
+      const unsigned int OpIdx, int64_t &Imm, StringRef &Src,
+      MIRFormatter::ErrorCallbackType &ErrorCallback) const;
+
+  /// Parse the immediate pseudo literal for s_wait_loadcnt_dscnt
+  bool parseSWaitLoadcntDscntImmMnemonic(
       const unsigned int OpIdx, int64_t &Imm, StringRef &Src,
       MIRFormatter::ErrorCallbackType &ErrorCallback) const;
 

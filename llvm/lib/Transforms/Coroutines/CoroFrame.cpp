@@ -2002,7 +2002,7 @@ void coro::normalizeCoroutine(Function &F, coro::Shape &Shape,
 }
 
 void coro::BaseABI::buildCoroutineFrame(bool OptimizeFrame) {
-  SuspendCrossingInfo Checker(F, Shape.CoroSuspends, Shape.CoroEnds);
+  SuspendCrossingInfo Checker(F, Shape);
   doRematerializations(F, Checker, IsMaterializable);
 
   const DominatorTree DT(F);

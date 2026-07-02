@@ -23,11 +23,11 @@ bool isExpansionLocInHeaderFile(SourceLocation Loc, const SourceManager &SM,
                                 const FileExtensionsSet &HeaderFileExtensions);
 
 /// Checks whether presumed location of \p Loc is in header file.
-bool isPresumedLocInHeaderFile(SourceLocation Loc, SourceManager &SM,
+bool isPresumedLocInHeaderFile(SourceLocation Loc, const SourceManager &SM,
                                const FileExtensionsSet &HeaderFileExtensions);
 
 /// Checks whether spelling location of \p Loc is in header file.
-bool isSpellingLocInHeaderFile(SourceLocation Loc, SourceManager &SM,
+bool isSpellingLocInHeaderFile(SourceLocation Loc, const SourceManager &SM,
                                const FileExtensionsSet &HeaderFileExtensions);
 
 /// Returns recommended default value for the list of header file

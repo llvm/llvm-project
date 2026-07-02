@@ -9,12 +9,10 @@ define i1 @foo() {
 ; CHECK-NEXT:    [[TOBOOL_NOT_NOT509_I_2329_I_I1:%.*]] = icmp ne i32 0, 0
 ; CHECK-NEXT:    [[STOREMERGE_2333_I_I:%.*]] = select i1 [[TOBOOL_NOT_NOT509_I_2329_I_I1]], i32 0, i32 0
 ; CHECK-NEXT:    [[TOBOOL_NOT_NOT509_I_1_2_I_I:%.*]] = icmp ne i32 [[STOREMERGE_2333_I_I]], 0
-; CHECK-NEXT:    [[TMP0:%.*]] = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> zeroinitializer)
-; CHECK-NEXT:    [[OP_RDX4:%.*]] = select i1 [[TMP0]], i1 [[TOBOOL_NOT_NOT509_I_1_2_I_I]], i1 false
+; CHECK-NEXT:    [[OP_RDX4:%.*]] = select i1 false, i1 [[TOBOOL_NOT_NOT509_I_1_2_I_I]], i1 false
 ; CHECK-NEXT:    [[OP_RDX1:%.*]] = select i1 [[TOBOOL_NOT_NOT509_I_2329_I_I1]], i1 [[TOBOOL_NOT_NOT509_I_1_1_I_I]], i1 false
-; CHECK-NEXT:    [[OP_RDX2:%.*]] = select i1 [[TOBOOL_NOT_NOT509_I_2329_I_I]], i1 false, i1 false
 ; CHECK-NEXT:    [[OP_RDX3:%.*]] = select i1 [[OP_RDX4]], i1 [[OP_RDX1]], i1 false
-; CHECK-NEXT:    [[OP_RDX:%.*]] = select i1 [[OP_RDX3]], i1 [[OP_RDX2]], i1 false
+; CHECK-NEXT:    [[OP_RDX:%.*]] = select i1 [[OP_RDX3]], i1 [[TOBOOL_NOT_NOT509_I_2329_I_I]], i1 false
 ; CHECK-NEXT:    ret i1 [[OP_RDX]]
 ;
 entry:

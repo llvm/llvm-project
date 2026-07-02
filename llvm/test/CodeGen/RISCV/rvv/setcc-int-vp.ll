@@ -546,11 +546,11 @@ define <vscale x 8 x i1> @icmp_eq_vv_nxv8i7(<vscale x 8 x i7> %va, <vscale x 8 x
 define <vscale x 8 x i1> @icmp_eq_vx_nxv8i7(<vscale x 8 x i7> %va, i7 %b, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_eq_vx_nxv8i7:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a1, 127
-; CHECK-NEXT:    vsetvli a2, zero, e8, m1, ta, ma
+; CHECK-NEXT:    vsetvli a1, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.x v9, a0
-; CHECK-NEXT:    vand.vx v8, v8, a1
-; CHECK-NEXT:    vand.vx v9, v9, a1
+; CHECK-NEXT:    li a0, 127
+; CHECK-NEXT:    vand.vx v8, v8, a0
+; CHECK-NEXT:    vand.vx v9, v9, a0
 ; CHECK-NEXT:    vmseq.vv v0, v8, v9
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 8 x i7> poison, i7 %b, i32 0
@@ -562,11 +562,11 @@ define <vscale x 8 x i1> @icmp_eq_vx_nxv8i7(<vscale x 8 x i7> %va, i7 %b, <vscal
 define <vscale x 8 x i1> @icmp_eq_vx_swap_nxv8i7(<vscale x 8 x i7> %va, i7 %b, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_eq_vx_swap_nxv8i7:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a1, 127
-; CHECK-NEXT:    vsetvli a2, zero, e8, m1, ta, ma
+; CHECK-NEXT:    vsetvli a1, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.x v9, a0
-; CHECK-NEXT:    vand.vx v8, v8, a1
-; CHECK-NEXT:    vand.vx v9, v9, a1
+; CHECK-NEXT:    li a0, 127
+; CHECK-NEXT:    vand.vx v8, v8, a0
+; CHECK-NEXT:    vand.vx v9, v9, a0
 ; CHECK-NEXT:    vmseq.vv v0, v9, v8
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 8 x i7> poison, i7 %b, i32 0
@@ -1067,43 +1067,14 @@ define <vscale x 8 x i1> @icmp_sle_vi_swap_nxv8i8(<vscale x 8 x i8> %va, <vscale
 define <vscale x 128 x i1> @icmp_eq_vv_nxv128i8(<vscale x 128 x i8> %va, <vscale x 128 x i8> %vb, <vscale x 128 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_eq_vv_nxv128i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    slli a2, a1, 3
-; CHECK-NEXT:    add a1, a2, a1
-; CHECK-NEXT:    sub sp, sp, a1
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x09, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 9 * vlenb
-; CHECK-NEXT:    addi a1, sp, 16
-; CHECK-NEXT:    vs8r.v v16, (a1) # vscale x 64-byte Folded Spill
-; CHECK-NEXT:    vsetvli a1, zero, e8, m8, ta, ma
-; CHECK-NEXT:    vmv8r.v v16, v8
+; CHECK-NEXT:    vl8r.v v24, (a0)
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    slli a1, a1, 3
-; CHECK-NEXT:    add a1, a0, a1
-; CHECK-NEXT:    vl8r.v v8, (a0)
-; CHECK-NEXT:    vl8r.v v0, (a1)
-; CHECK-NEXT:    vmseq.vv v24, v16, v8
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    slli a0, a0, 3
-; CHECK-NEXT:    add a0, sp, a0
-; CHECK-NEXT:    addi a0, a0, 16
-; CHECK-NEXT:    vs1r.v v24, (a0) # vscale x 8-byte Folded Spill
-; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vl8r.v v16, (a0) # vscale x 64-byte Folded Reload
-; CHECK-NEXT:    vmseq.vv v8, v16, v0
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    slli a0, a0, 3
-; CHECK-NEXT:    add a0, sp, a0
-; CHECK-NEXT:    addi a0, a0, 16
-; CHECK-NEXT:    vl1r.v v0, (a0) # vscale x 8-byte Folded Reload
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    slli a1, a0, 3
-; CHECK-NEXT:    add a0, a1, a0
-; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
-; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-NEXT:    vsetvli a2, zero, e8, m8, ta, ma
+; CHECK-NEXT:    vmseq.vv v0, v8, v24
+; CHECK-NEXT:    add a0, a0, a1
+; CHECK-NEXT:    vl8r.v v24, (a0)
+; CHECK-NEXT:    vmseq.vv v8, v16, v24
 ; CHECK-NEXT:    ret
   %v = call <vscale x 128 x i1> @llvm.vp.icmp.nxv128i8(<vscale x 128 x i8> %va, <vscale x 128 x i8> %vb, metadata !"eq", <vscale x 128 x i1> %m, i32 %evl)
   ret <vscale x 128 x i1> %v
@@ -1113,8 +1084,9 @@ define <vscale x 128 x i1> @icmp_eq_vx_nxv128i8(<vscale x 128 x i8> %va, i8 %b, 
 ; CHECK-LABEL: icmp_eq_vx_nxv128i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m8, ta, ma
+; CHECK-NEXT:    vmseq.vx v24, v16, a0
 ; CHECK-NEXT:    vmseq.vx v0, v8, a0
-; CHECK-NEXT:    vmseq.vx v8, v16, a0
+; CHECK-NEXT:    vmv1r.v v8, v24
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 128 x i8> poison, i8 %b, i8 0
   %vb = shufflevector <vscale x 128 x i8> %elt.head, <vscale x 128 x i8> poison, <vscale x 128 x i32> zeroinitializer
@@ -1126,8 +1098,9 @@ define <vscale x 128 x i1> @icmp_eq_vx_swap_nxv128i8(<vscale x 128 x i8> %va, i8
 ; CHECK-LABEL: icmp_eq_vx_swap_nxv128i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m8, ta, ma
+; CHECK-NEXT:    vmseq.vx v24, v16, a0
 ; CHECK-NEXT:    vmseq.vx v0, v8, a0
-; CHECK-NEXT:    vmseq.vx v8, v16, a0
+; CHECK-NEXT:    vmv1r.v v8, v24
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 128 x i8> poison, i8 %b, i8 0
   %vb = shufflevector <vscale x 128 x i8> %elt.head, <vscale x 128 x i8> poison, <vscale x 128 x i32> zeroinitializer
@@ -2116,46 +2089,17 @@ define <vscale x 8 x i1> @icmp_sle_vi_swap_nxv8i32(<vscale x 8 x i32> %va, <vsca
 define <vscale x 32 x i1> @icmp_eq_vv_nxv32i32(<vscale x 32 x i32> %va, <vscale x 32 x i32> %vb, <vscale x 32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_eq_vv_nxv32i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    vl8re32.v v24, (a0)
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    slli a2, a1, 3
-; CHECK-NEXT:    add a1, a2, a1
-; CHECK-NEXT:    sub sp, sp, a1
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x09, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 9 * vlenb
-; CHECK-NEXT:    addi a1, sp, 16
-; CHECK-NEXT:    vs8r.v v16, (a1) # vscale x 64-byte Folded Spill
-; CHECK-NEXT:    vsetvli a1, zero, e32, m8, ta, ma
-; CHECK-NEXT:    vmv8r.v v16, v8
-; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    vl8re32.v v8, (a0)
-; CHECK-NEXT:    slli a2, a1, 3
+; CHECK-NEXT:    vsetvli a3, zero, e32, m8, ta, ma
+; CHECK-NEXT:    vmseq.vv v0, v8, v24
 ; CHECK-NEXT:    add a0, a0, a2
-; CHECK-NEXT:    vl8re32.v v0, (a0)
+; CHECK-NEXT:    vl8re32.v v8, (a0)
 ; CHECK-NEXT:    vmseq.vv v24, v16, v8
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    slli a0, a0, 3
-; CHECK-NEXT:    add a0, sp, a0
-; CHECK-NEXT:    addi a0, a0, 16
-; CHECK-NEXT:    vs1r.v v24, (a0) # vscale x 8-byte Folded Spill
-; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vl8r.v v16, (a0) # vscale x 64-byte Folded Reload
-; CHECK-NEXT:    vmseq.vv v8, v16, v0
 ; CHECK-NEXT:    srli a1, a1, 2
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    slli a0, a0, 3
-; CHECK-NEXT:    add a0, sp, a0
-; CHECK-NEXT:    addi a0, a0, 16
-; CHECK-NEXT:    vl1r.v v0, (a0) # vscale x 8-byte Folded Reload
 ; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
-; CHECK-NEXT:    vslideup.vx v0, v8, a1
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    slli a1, a0, 3
-; CHECK-NEXT:    add a0, a1, a0
-; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
-; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-NEXT:    vslideup.vx v0, v24, a1
 ; CHECK-NEXT:    ret
   %v = call <vscale x 32 x i1> @llvm.vp.icmp.nxv32i32(<vscale x 32 x i32> %va, <vscale x 32 x i32> %vb, metadata !"eq", <vscale x 32 x i1> %m, i32 %evl)
   ret <vscale x 32 x i1> %v

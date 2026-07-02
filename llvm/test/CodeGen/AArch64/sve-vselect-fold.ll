@@ -7,8 +7,7 @@ define <vscale x 4 x i32> @select_ptrue_fold_all_active(<vscale x 4 x i32> %fals
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z0.d, z1.d
 ; CHECK-NEXT:    ret
-  %p = call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
-  %res = select <vscale x 4 x i1> %p, <vscale x 4 x i32> %true, <vscale x 4 x i32> %false
+  %res = select <vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> %true, <vscale x 4 x i32> %false
   ret <vscale x 4 x i32> %res
 }
 

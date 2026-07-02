@@ -8,10 +8,12 @@
 //
 // This file is used to generate lib/Support/UnicodeNameToCodepointGenerated.cpp
 // using UnicodeData.txt and NameAliases.txt available at
-// https://unicode.org/Public/15.1.0/ucd/
+// https://unicode.org/Public/draft/ucd/
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include <algorithm>
@@ -57,13 +59,6 @@ loadDataFiles(const std::string &NamesFile, const std::string &AliasesFile) {
         // Ignore ranges of characters, as their name is either absent or
         // generated.
         continue;
-      }
-
-      // Some aliases are ignored for compatibility with C++
-      if (IsAliasFile) {
-        std::string Kind = Line.substr(SecondSemiPos + 1);
-        if (Kind != "control" && Kind != "correction" && Kind != "alternate")
-          continue;
       }
 
       auto InsertUnique = [&](char32_t CP, std::string Name) {
@@ -189,12 +184,12 @@ public:
 
     // Keep track of the start of each node
     // position in the serialized data.
-    std::unordered_map<Node *, int32_t> Offsets;
+    llvm::DenseMap<Node *, int32_t> Offsets;
 
     // Keep track of where to write the index
     // of the first children
     std::vector<ChildrenOffset> ChildrenOffsets;
-    std::unordered_map<Node *, bool> SiblingTracker;
+    llvm::SmallPtrSet<Node *, 16> SiblingTracker;
     std::deque<Node *> AllNodes;
     std::vector<uint8_t> Bytes;
     Bytes.reserve(250'000);
@@ -206,7 +201,7 @@ public:
         const std::unique_ptr<Node> &Child = Children[Index];
         AllNodes.push_back(Child.get());
         if (Index != Children.size() - 1)
-          SiblingTracker[Child.get()] = true;
+          SiblingTracker.insert(Child.get());
       }
     };
     CollectChildren(Root->Children);
@@ -236,7 +231,7 @@ public:
         Bytes.push_back(Low);
       }
 
-      const bool HasSibling = SiblingTracker.count(N) != 0;
+      const bool HasSibling = SiblingTracker.contains(N);
       const bool HasChildren = N->Children.size() != 0;
 
       if (!!N->Value) {
@@ -354,9 +349,9 @@ int main(int argc, char **argv) {
          "Usage: %s UnicodeData.txt NameAliases.txt output\n\n",
          argv[0]);
   printf("NameAliases.txt can be found at "
-         "https://unicode.org/Public/15.1.0/ucd/NameAliases.txt\n"
+         "https://unicode.org/Public/draft/ucd/NameAliases.txt\n"
          "UnicodeData.txt can be found at "
-         "https://unicode.org/Public/15.1.0/ucd/UnicodeData.txt\n\n");
+         "https://unicode.org/Public/draft/ucd/UnicodeData.txt\n\n");
 
   if (argc != 4)
     return EXIT_FAILURE;

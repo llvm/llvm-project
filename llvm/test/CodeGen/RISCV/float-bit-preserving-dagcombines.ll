@@ -361,12 +361,12 @@ define double @bitcast_double_xor(double %a1, double %a2) nounwind {
 ; RV64FD:       # %bb.0:
 ; RV64FD-NEXT:    fmv.d.x fa5, a1
 ; RV64FD-NEXT:    fmv.d.x fa4, a0
-; RV64FD-NEXT:    li a0, -1
 ; RV64FD-NEXT:    fmul.d fa5, fa4, fa5
 ; RV64FD-NEXT:    fmul.d fa5, fa4, fa5
-; RV64FD-NEXT:    fmv.x.d a1, fa5
-; RV64FD-NEXT:    slli a0, a0, 63
-; RV64FD-NEXT:    xor a0, a1, a0
+; RV64FD-NEXT:    fmv.x.d a0, fa5
+; RV64FD-NEXT:    li a1, -1
+; RV64FD-NEXT:    slli a1, a1, 63
+; RV64FD-NEXT:    xor a0, a0, a1
 ; RV64FD-NEXT:    ret
   %a3 = fmul double %a1, %a2
   %bc1 = bitcast double %a3 to i64
@@ -557,13 +557,13 @@ define double @bitcast_double_or(double %a1, double %a2) nounwind {
 ; RV64FD:       # %bb.0:
 ; RV64FD-NEXT:    fmv.d.x fa5, a1
 ; RV64FD-NEXT:    fmv.d.x fa4, a0
-; RV64FD-NEXT:    li a0, -1
 ; RV64FD-NEXT:    fmul.d fa5, fa4, fa5
 ; RV64FD-NEXT:    fabs.d fa5, fa5
 ; RV64FD-NEXT:    fmul.d fa5, fa4, fa5
-; RV64FD-NEXT:    fmv.x.d a1, fa5
-; RV64FD-NEXT:    slli a0, a0, 63
-; RV64FD-NEXT:    xor a0, a1, a0
+; RV64FD-NEXT:    fmv.x.d a0, fa5
+; RV64FD-NEXT:    li a1, -1
+; RV64FD-NEXT:    slli a1, a1, 63
+; RV64FD-NEXT:    xor a0, a0, a1
 ; RV64FD-NEXT:    ret
   %a3 = fmul double %a1, %a2
   %bc1 = bitcast double %a3 to i64

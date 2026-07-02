@@ -135,6 +135,7 @@ public:
 
   // Call related instructions
   int64_t IntrinsicCount = 0;
+  int64_t NoReturnCallCount = 0;
   int64_t DirectCallCount = 0;
   int64_t IndirectCallCount = 0;
   int64_t CallReturnsIntegerCount = 0;
@@ -184,11 +185,14 @@ public:
 
 /// Statistics pass for the FunctionPropertiesAnalysis results.
 class FunctionPropertiesStatisticsPass
-    : public RequiredPassInfoMixin<FunctionPropertiesStatisticsPass> {
-public:
-  explicit FunctionPropertiesStatisticsPass() {}
+    : public PassInfoMixin<FunctionPropertiesStatisticsPass> {
+  bool IsPreOptimization;
 
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+public:
+  explicit FunctionPropertiesStatisticsPass(bool IsPreOptimization = false)
+      : IsPreOptimization(IsPreOptimization) {}
+
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
 
 /// Correctly update FunctionPropertiesInfo post-inlining. A

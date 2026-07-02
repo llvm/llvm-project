@@ -335,10 +335,7 @@ bool CachingVPExpander::expandPredicationToFPCall(
 static Value *getNeutralReductionElement(const VPReductionIntrinsic &VPI,
                                          Type *EltTy) {
   Intrinsic::ID RdxID = *VPI.getFunctionalIntrinsicID();
-  FastMathFlags FMF;
-  if (isa<FPMathOperator>(VPI))
-    FMF = VPI.getFastMathFlags();
-  return getReductionIdentity(RdxID, EltTy, FMF);
+  return getReductionIdentity(RdxID, EltTy, VPI.getFastMathFlagsOrNone());
 }
 
 bool CachingVPExpander::expandPredicationInReduction(

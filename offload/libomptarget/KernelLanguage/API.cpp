@@ -68,6 +68,7 @@ unsigned llvmLaunchKernel(const void *func, dim3 gridDim, dim3 blockDim,
   Args.UserThreadLimit[2] = blockDim.z;
   Args.ArgPtrs = reinterpret_cast<void **>(args);
   Args.Flags.IsCUDA = true;
+  Args.Flags.StrictBlocksAndThreads = true;
   return __tgt_target_kernel(nullptr, 0, gridDim.x, blockDim.x, func, &Args);
 }
 }

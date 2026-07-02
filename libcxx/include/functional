@@ -542,7 +542,7 @@ POLICY:  For non-variadic implementations, the number of arguments is limited
 #  include <__functional/binder1st.h>
 #  include <__functional/binder2nd.h>
 #  include <__functional/hash.h>
-#  include <__functional/mem_fn.h> // TODO: deprecate
+#  include <__functional/mem_fn.h>
 #  include <__functional/mem_fun_ref.h>
 #  include <__functional/operations.h>
 #  include <__functional/pointer_to_binary_function.h>
@@ -577,18 +577,18 @@ POLICY:  For non-variadic implementations, the number of arguments is limited
 #    pragma GCC system_header
 #  endif
 
-#  if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && defined(_LIBCPP_CXX03_LANG)
+#  if defined(_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23) && defined(_LIBCPP_CXX03_LANG)
 #    include <limits>
 #    include <new>
 #  endif
 
-#  if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 14
+#  if defined(_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23) && _LIBCPP_STD_VER <= 14
 #    include <array>
 #    include <initializer_list>
 #    include <unordered_map>
 #  endif
 
-#  if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#  if defined(_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23) && _LIBCPP_STD_VER <= 20
 #    include <atomic>
 #    include <concepts>
 #    include <cstdlib>
@@ -603,7 +603,7 @@ POLICY:  For non-variadic implementations, the number of arguments is limited
 #    include <vector>
 #  endif
 
-#  if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER == 23
+#  if defined(_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23) && _LIBCPP_STD_VER == 23
 #    include <__vector/vector.h>
 #  endif
 #endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)

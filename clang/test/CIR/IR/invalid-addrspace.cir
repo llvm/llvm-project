@@ -46,7 +46,7 @@ cir.func @lang_address_space_empty(%p : !cir.ptr<!u64i, lang_address_space()>) {
 // -----
 
 !u64i = !cir.int<u, 64>
-// expected-error@+1 {{expected one of [default, offload_private, offload_local, offload_global, offload_constant, offload_generic] for language address space kind}}
+// expected-error@+1 {{expected one of [default, offload_private, offload_local, offload_global, offload_constant, offload_generic, offload_global_device, offload_global_host] for language address space kind}}
 cir.func @lang_address_space_invalid(%p : !cir.ptr<!u64i, lang_address_space(foobar)>) {
   cir.return
 }

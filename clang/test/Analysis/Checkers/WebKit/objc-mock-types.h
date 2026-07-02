@@ -174,6 +174,8 @@ __attribute__((objc_root_class))
 - ( const char *)UTF8String;
 - (id)initWithUTF8String:(const char *)nullTerminatedCString;
 - (NSString *)copy;
+- (NSString *)mutableCopy;
+- (BOOL)isEqualToString:(NSString *)aString;
 + (id)stringWithUTF8String:(const char *)nullTerminatedCString;
 @end
 
@@ -209,8 +211,10 @@ extern NSApplication * NSApp;
 @end
 
 @interface SomeObj : NSObject
++ (SomeObj *)sharedInstance;
 - (instancetype)_init;
 - (SomeObj *)mutableCopy;
+- (BOOL)isEqual:(SomeObj *)other;
 - (SomeObj *)copyWithValue:(int)value;
 - (void)doWork;
 - (SomeObj *)other;
@@ -447,6 +451,9 @@ template<typename T> static inline void releaseOSObject(T ptr)
 
 template<typename T> class OSObjectPtr {
 public:
+    using ValueType = typename RemovePointer<T>::Type;
+    using PtrType = ValueType*;
+
     OSObjectPtr()
         : m_ptr(nullptr)
     {
@@ -460,6 +467,7 @@ public:
 
     T get() const { return m_ptr; }
 
+    operator PtrType() const { return m_ptr; }
     explicit operator bool() const { return m_ptr; }
     bool operator!() const { return !m_ptr; }
 

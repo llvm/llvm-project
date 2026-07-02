@@ -414,4 +414,59 @@ TEST_F(SuppressionMappingTest, ParsingRespectsOtherWarningOpts) {
   clang::ProcessWarningOptions(Diags, Diags.getDiagnosticOptions(), *FS);
   EXPECT_THAT(diags(), IsEmpty());
 }
+
+#ifdef _WIN32
+TEST_F(SuppressionMappingTest, CanonicalizesSlashesOnWindows) {
+  llvm::StringLiteral SuppressionMappingFile = R"(#!special-case-list-v4
+  [unused]
+  src:*clang/*
+  src:*clang/lib/Sema/*=emit
+  src:*clang/lib\\Sema/foo*
+  fun:suppress/me)";
+  Diags.getDiagnosticOptions().DiagnosticSuppressionMappingsFile = "foo.txt";
+  FS->addFile("foo.txt", /*ModificationTime=*/{},
+              llvm::MemoryBuffer::getMemBuffer(SuppressionMappingFile));
+  clang::ProcessWarningOptions(Diags, Diags.getDiagnosticOptions(), *FS);
+  EXPECT_THAT(diags(), IsEmpty());
+
+  EXPECT_TRUE(Diags.isSuppressedViaMapping(
+      diag::warn_unused_function, locForFile(R"(clang/lib/Basic/bar.h)")));
+  EXPECT_TRUE(Diags.isSuppressedViaMapping(
+      diag::warn_unused_function, locForFile(R"(clang/lib/Basic\bar.h)")));
+  EXPECT_TRUE(Diags.isSuppressedViaMapping(
+      diag::warn_unused_function, locForFile(R"(clang\lib/Basic/bar.h)")));
+  EXPECT_FALSE(Diags.isSuppressedViaMapping(
+      diag::warn_unused_function, locForFile(R"(clang/lib/Sema/baz.h)")));
+  EXPECT_FALSE(Diags.isSuppressedViaMapping(
+      diag::warn_unused_function, locForFile(R"(clang/lib/Sema\baz.h)")));
+
+  // Under slash-agnostic matching, backslashes and forward slashes match each
+  // other, so we match the third pattern.
+  EXPECT_TRUE(Diags.isSuppressedViaMapping(
+      diag::warn_unused_function, locForFile(R"(clang\lib\Sema/foo.h)")));
+  EXPECT_TRUE(Diags.isSuppressedViaMapping(
+      diag::warn_unused_function, locForFile(R"(clang/lib/Sema/foo.h)")));
+}
+#endif
+
+TEST(DisplayCodePointForDiagnosticTest, printableDisplaysQuoted) {
+  EXPECT_EQ(DisplayCodePointForDiagnostic(U'A'), "'A' U+0041");
+  EXPECT_EQ(DisplayCodePointForDiagnostic(U'🤡'), "'🤡' U+1F921");
+  EXPECT_EQ(DisplayCodePointForDiagnostic(U' '), "' ' U+0020");
+}
+
+TEST(DisplayCodePointForDiagnosticTest, nonPrintableDisplaysNoQuoted) {
+  EXPECT_EQ(DisplayCodePointForDiagnostic(U'\n'), "U+000A");
+  EXPECT_EQ(DisplayCodePointForDiagnostic(U'\0'), "U+0000");
+  EXPECT_EQ(DisplayCodePointForDiagnostic(U'\x1B'), "U+001B");
+}
+
+TEST(DisplayCodePointForDiagnosticTest, nonScalarValues) {
+  // Low and high surrogates:
+  EXPECT_EQ(DisplayCodePointForDiagnostic(0xD800), "U+D800");
+  EXPECT_EQ(DisplayCodePointForDiagnostic(0xDFFF), "U+DFFF");
+  // Overly large values:
+  EXPECT_EQ(DisplayCodePointForDiagnostic(0x110000), "U+110000");
+}
+
 } // namespace

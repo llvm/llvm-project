@@ -138,7 +138,7 @@ int llvm_debuginfod_main(int argc, char **argv, const llvm::ToolContext &) {
   else
     ExitOnErr(Server.Server.bind(Port, HostInterface.c_str()));
 
-  Log.push("Listening on port " + Twine(Port).str());
+  Log.push("Listening on port " + Twine(Port));
 
   Pool.async([&]() { ExitOnErr(Server.Server.listen()); });
   Pool.async([&]() {

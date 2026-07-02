@@ -15,6 +15,8 @@
 #include "ClauseFinder.h"
 #include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/tools.h"
+#include "flang/Optimizer/Dialect/Support/FIRContext.h"
+#include "mlir/Dialect/OpenMP/OpenMPInterfaces.h"
 #include <flang/Lower/AbstractConverter.h>
 #include <flang/Lower/ConvertType.h>
 #include <flang/Lower/DirectivesCommon.h>
@@ -28,6 +30,7 @@
 #include <flang/Parser/openmp-utils.h>
 #include <flang/Parser/parse-tree.h>
 #include <flang/Parser/tools.h>
+#include <flang/Semantics/openmp-utils.h>
 #include <flang/Semantics/tools.h>
 #include <flang/Semantics/type.h>
 #include <flang/Utils/OpenMP.h>
@@ -568,16 +571,16 @@ void insertChildMapInfoIntoParent(
     lower::StatementContext &stmtCtx,
     std::map<Object, OmpMapParentAndMemberData> &parentMemberIndices,
     llvm::SmallVectorImpl<mlir::Value> &mapOperands,
-    llvm::SmallVectorImpl<const semantics::Symbol *> &mapSyms) {
+    llvm::SmallVectorImpl<Object> &mapObjects) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   for (auto indices : parentMemberIndices) {
     auto *parentIter =
-        llvm::find_if(mapSyms, [&indices](const semantics::Symbol *v) {
-          return v == indices.first.sym();
+        llvm::find_if(mapObjects, [&indices](const Object &object) {
+          return object.sym() == indices.first.sym();
         });
-    if (parentIter != mapSyms.end()) {
+    if (parentIter != mapObjects.end()) {
       auto mapOp = llvm::cast<mlir::omp::MapInfoOp>(
-          mapOperands[std::distance(mapSyms.begin(), parentIter)]
+          mapOperands[std::distance(mapObjects.begin(), parentIter)]
               .getDefiningOp());
 
       // Once explicit members are attached to a parent map, do not also invoke
@@ -640,7 +643,7 @@ void insertChildMapInfoIntoParent(
           /*partialMap=*/true);
 
       mapOperands.push_back(mapOp);
-      mapSyms.push_back(indices.first.sym());
+      mapObjects.push_back(indices.first);
     }
   }
 }
@@ -797,6 +800,38 @@ void collectLoopRelatedInfo(
     const parser::LoopControl::Bounds *bounds =
         std::get_if<parser::LoopControl::Bounds>(&loopControl->u);
     assert(bounds && "Expected bounds for worksharing do loop");
+    // Check for non-rectangular loops: if any bound of this loop references
+    // an iteration variable from an enclosing collapsed loop, this is a
+    // non-rectangular loop nest which is not yet supported by the
+    // OpenMPIRBuilder's collapseLoops.
+    if (!iv.empty()) {
+      auto referencesOuterIV = [&iv](const semantics::SomeExpr &expr) -> bool {
+        for (const semantics::SymbolRef &sym :
+             evaluate::GetSymbolVector(expr)) {
+          for (const semantics::Symbol *outerIV : iv) {
+            if (&sym->GetUltimate() == &outerIV->GetUltimate())
+              return true;
+          }
+        }
+        return false;
+      };
+      if (const auto *lowerExpr = semantics::GetExpr(bounds->Lower()))
+        if (referencesOuterIV(*lowerExpr))
+          TODO(currentLocation,
+               "Non-rectangular loop nests with COLLAPSE are not yet "
+               "supported");
+      if (const auto *upperExpr = semantics::GetExpr(bounds->Upper()))
+        if (referencesOuterIV(*upperExpr))
+          TODO(currentLocation,
+               "Non-rectangular loop nests with COLLAPSE are not yet "
+               "supported");
+      if (auto &step = bounds->Step())
+        if (const auto *stepExpr = semantics::GetExpr(step))
+          if (referencesOuterIV(*stepExpr))
+            TODO(currentLocation,
+                 "Non-rectangular loop nests with COLLAPSE are not yet "
+                 "supported");
+    }
     lower::StatementContext stmtCtx;
     result.loopLowerBounds.push_back(fir::getBase(
         converter.genExprValue(*semantics::GetExpr(bounds->Lower()), stmtCtx)));
@@ -1017,6 +1052,159 @@ void defaultMangler(Fortran::lower::AbstractConverter &converter,
     mapperIdName = converter.mangleName(mapperIdName, memberSym->owner());
 }
 
+static const semantics::DerivedTypeSpec *
+getSymbolDerivedType(const semantics::Symbol &symbol) {
+  const semantics::Symbol &ultimate = symbol.GetUltimate();
+  if (const semantics::DeclTypeSpec *declType = ultimate.GetType())
+    if (const auto *derived = declType->AsDerived())
+      return derived;
+  return nullptr;
+}
+
+static std::string
+getDefaultMapperID(Fortran::lower::AbstractConverter &converter,
+                   fir::FirOpBuilder &firOpBuilder,
+                   const semantics::DerivedTypeSpec *typeSpec) {
+  if (mlir::isa<mlir::omp::DeclareMapperOp>(
+          firOpBuilder.getRegion().getParentOp()) ||
+      !typeSpec)
+    return {};
+
+  std::string mapperIdName =
+      typeSpec->name().ToString() + llvm::omp::OmpDefaultMapperName;
+  if (auto *sym = converter.getCurrentScope().FindSymbol(mapperIdName)) {
+    mapperIdName =
+        converter.mangleName(mapperIdName, sym->GetUltimate().owner());
+  } else {
+    mapperIdName = converter.mangleName(mapperIdName, *typeSpec->GetScope());
+  }
+
+  // Make sure we don't return a mapper to self.
+  if (auto declMapOp = mlir::dyn_cast<mlir::omp::DeclareMapperOp>(
+          firOpBuilder.getRegion().getParentOp()))
+    if (mapperIdName == declMapOp.getSymName())
+      return {};
+  return mapperIdName;
+}
+
+static std::string
+findMapperIfTypeMatch(Fortran::lower::AbstractConverter &converter,
+                      const semantics::DerivedTypeSpec *objectTypeSpec,
+                      llvm::StringRef explicitMapperName) {
+  auto declMapperOp =
+      converter.getModuleOp().lookupSymbol<mlir::omp::DeclareMapperOp>(
+          explicitMapperName);
+  if (!declMapperOp)
+    return "__implicit_mapper";
+
+  // Verify if the explicit mapper provided matches the type being mapped.
+  // If it does return the mapper name, if it doesn't return null-ary.
+  mlir::Type mapperType = declMapperOp.getType();
+  mlir::Type objectType = converter.genType(*objectTypeSpec);
+  auto mapperRecordType = mlir::dyn_cast<fir::RecordType>(mapperType);
+  auto objectRecordType = mlir::dyn_cast<fir::RecordType>(objectType);
+  if (mapperRecordType && objectRecordType &&
+      mapperRecordType.getName() == objectRecordType.getName())
+    return explicitMapperName.str();
+
+  return "__implicit_mapper";
+}
+
+static mlir::FlatSymbolRefAttr
+addImplicitMapper(Fortran::lower::AbstractConverter &converter,
+                  mlir::Location loc, const omp::Object &object,
+                  std::string &mapperIdName, bool allowGenerate) {
+  if (!allowGenerate || mapperIdName.empty())
+    return mlir::FlatSymbolRefAttr();
+
+  const semantics::DerivedTypeSpec *typeSpec =
+      getSymbolDerivedType(*object.sym());
+  if (!typeSpec && object.sym()->owner().IsDerivedType())
+    typeSpec = object.sym()->owner().derivedTypeSpec();
+
+  if (!typeSpec)
+    return mlir::FlatSymbolRefAttr();
+
+  mlir::Type type = converter.genType(*typeSpec);
+  auto recordType = mlir::dyn_cast<fir::RecordType>(type);
+  if (!recordType)
+    return mlir::FlatSymbolRefAttr();
+
+  return utils::openmp::getOrGenImplicitDefaultDeclareMapper(
+      converter.getFirOpBuilder(), loc, recordType, mapperIdName,
+      [&](std::string &mapperIdName, llvm::StringRef memberName) {
+        defaultMangler(converter, mapperIdName, memberName);
+      });
+}
+
+mlir::FlatSymbolRefAttr
+resolveMapperId(Fortran::lower::AbstractConverter &converter,
+                mlir::Location loc, const omp::Object &object,
+                llvm::StringRef mapperIdNameRef,
+                mlir::omp::ClauseMapFlags mapTypeBits,
+                llvm::omp::Directive directive, bool hasParentObj) {
+  const semantics::DerivedTypeSpec *objectTypeSpec =
+      getSymbolDerivedType(*object.sym());
+  if (!objectTypeSpec)
+    return mlir::FlatSymbolRefAttr();
+
+  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+  mlir::FlatSymbolRefAttr mapperId;
+  std::string mapperIdName = mapperIdNameRef.str();
+  // if we have an explicit mapper specified, we need to check it matches
+  // the type being mapped, if it doesn't we fallback to look for a user
+  // default mapper or generate an compiler defined default mapper if
+  // relevant. This function will return "__implicit_mapper" if we find that
+  // the map isn't relevant to the explicit declare mapper, which allows it
+  // to fallback.
+  if (!mapperIdName.empty() && mapperIdName != "__implicit_mapper")
+    mapperIdName =
+        findMapperIfTypeMatch(converter, objectTypeSpec, mapperIdName);
+
+  if (mapperIdName == "__implicit_mapper") {
+    mapperIdName = getDefaultMapperID(converter, firOpBuilder, objectTypeSpec);
+    // Currently we do not apply implicit compiler generated delcare mappers
+    // to enter, exit or update directives. However, we will syntheize one
+    // below if we're not a target enter/exit/update and no user defined
+    // implicit declare mapper has been defined and we meet the other
+    // conditions
+    // TODO/FIXME: Loosen this restriction to comply with the OpenMP
+    // specification.
+    auto *userDefinedDefault =
+        converter.getModuleOp().lookupSymbol(mapperIdName);
+    if (!userDefinedDefault && !hasParentObj &&
+        (directive != llvm::omp::Directive::OMPD_target_enter_data &&
+         directive != llvm::omp::Directive::OMPD_target_exit_data &&
+         directive != llvm::omp::Directive::OMPD_target_update)) {
+      bool isAllocOrPointer =
+          semantics::IsAllocatableOrObjectPointer(object.sym());
+      bool isPointer = semantics::IsPointer(*object.sym());
+      bool isImplicitMap =
+          (mapTypeBits & mlir::omp::ClauseMapFlags::implicit) ==
+          mlir::omp::ClauseMapFlags::implicit;
+      bool needsDefaultMapper =
+          isAllocOrPointer ||
+          requiresImplicitDefaultDeclareMapper(*objectTypeSpec);
+      // For implicit captures, avoid synthesizing default mappers for
+      // pointer entities (which can over-map pointer payloads) and for
+      // plain non-allocatable/non-pointer entities. Keep implicit mapper
+      // support for allocatables.
+      if (isImplicitMap && (isPointer || !isAllocOrPointer))
+        needsDefaultMapper = false;
+      mapperId = addImplicitMapper(converter, loc, object, mapperIdName,
+                                   /*allowGenerate=*/needsDefaultMapper);
+    }
+  }
+
+  // Make sure we've generated the symbol in one of our previous steps
+  // before assigning the symbol.
+  if (!mapperIdName.empty() &&
+      converter.getModuleOp().lookupSymbol(mapperIdName))
+    mapperId =
+        mlir::FlatSymbolRefAttr::get(&converter.getMLIRContext(), mapperIdName);
+  return mapperId;
+}
+
 // Build the array coordinate for an object that uses iterator variables.
 // If the object is a section, use the first element of that section
 // as the coordinate. Currently only support top-level ArrayRef designators.
@@ -1128,6 +1316,70 @@ mlir::Value genIteratorCoordinate(Fortran::lower::AbstractConverter &converter,
                                   /*slice=*/mlir::Value{},
                                   /*indices=*/ivs,
                                   /*typeparams=*/mlir::ValueRange{});
+}
+
+// ---------------------------------------------------------------------------
+// FlangOMPContext — shared OMPContext for metadirective variant-matching
+// ---------------------------------------------------------------------------
+
+static llvm::Triple getOffloadTargetTriple(mlir::ModuleOp module) {
+  auto iface =
+      llvm::cast<mlir::omp::OffloadModuleInterface>(module.getOperation());
+  auto targetTriples = iface.getTargetTriples();
+  if (!targetTriples.empty())
+    if (auto tripleAttr =
+            llvm::dyn_cast<mlir::StringAttr>(targetTriples.front()))
+      return llvm::Triple(tripleAttr.getValue());
+  return llvm::Triple();
+}
+
+bool FlangOMPContext::isDeviceCompilation(mlir::ModuleOp module) {
+  return llvm::cast<mlir::omp::OffloadModuleInterface>(module.getOperation())
+      .getIsTargetDevice();
+}
+
+FlangOMPContext::FlangOMPContext(
+    mlir::ModuleOp module,
+    llvm::ArrayRef<llvm::omp::TraitProperty> constructTraits)
+    // No specific device is selected during variant matching; use an unknown
+    // device number so OMPContext does not inadvertently describe the host
+    // device (which would cause target-device selectors to match incorrectly).
+    : OMPContext(isDeviceCompilation(module), fir::getTargetTriple(module),
+                 getOffloadTargetTriple(module),
+                 /*DeviceNum=*/-1),
+      targetFeatures(fir::getTargetFeatures(module)) {
+  for (llvm::omp::TraitProperty trait : constructTraits)
+    addTrait(trait);
+}
+
+bool FlangOMPContext::matchesISATrait(llvm::StringRef rawString) const {
+  if (!targetFeatures || targetFeatures.nullOrEmpty())
+    return false;
+  return targetFeatures.contains(("+" + rawString).str());
+}
+
+void collectEnclosingConstructTraits(
+    mlir::Operation *op,
+    llvm::SmallVectorImpl<llvm::omp::TraitProperty> &constructTraits) {
+  // Collect enclosing OpenMP operations so variants chosen by an outer
+  // metadirective are part of this metadirective's context. For example, an
+  // inner metadirective inside `target` and an outer-selected `parallel` must
+  // be able to match construct={target, parallel}. The final reverse yields
+  // outermost-to-innermost order as required by OMPContext.
+  for (; op; op = op->getParentOp()) {
+    if (mlir::isa<mlir::omp::WsloopOp>(op))
+      constructTraits.push_back(llvm::omp::TraitProperty::construct_for_for);
+    if (mlir::isa<mlir::omp::ParallelOp>(op))
+      constructTraits.push_back(
+          llvm::omp::TraitProperty::construct_parallel_parallel);
+    if (mlir::isa<mlir::omp::TeamsOp>(op))
+      constructTraits.push_back(
+          llvm::omp::TraitProperty::construct_teams_teams);
+    if (mlir::isa<mlir::omp::TargetOp>(op))
+      constructTraits.push_back(
+          llvm::omp::TraitProperty::construct_target_target);
+  }
+  std::reverse(constructTraits.begin(), constructTraits.end());
 }
 
 } // namespace omp

@@ -15,7 +15,7 @@ namespace llvm {
 
 namespace pdb {
 
-class PDBSymbolAnnotation : public PDBSymbol {
+class LLVM_ABI PDBSymbolAnnotation : public PDBSymbol {
   DECLARE_PDB_SYMBOL_CONCRETE_TYPE(PDB_SymType::Annotation)
 
 public:

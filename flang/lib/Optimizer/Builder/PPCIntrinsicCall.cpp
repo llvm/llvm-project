@@ -14,8 +14,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Builder/PPCIntrinsicCall.h"
-#include "flang/Evaluate/common.h"
-#include "flang/Lower/AbstractConverter.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/MutableBox.h"
 #include "mlir/Dialect/Index/IR/IndexOps.h"
@@ -955,18 +953,15 @@ checkPPCMathOperationsRange(llvm::StringRef name) {
 // Helper functions for vector element ordering.
 bool PPCIntrinsicLibrary::isBEVecElemOrderOnLE() {
   const auto triple{fir::getTargetTriple(builder.getModule())};
-  return (triple.isLittleEndian() &&
-          converter->getLoweringOptions().getNoPPCNativeVecElemOrder());
+  return (triple.isLittleEndian() && options.noPPCNativeVecElemOrder);
 }
 bool PPCIntrinsicLibrary::isNativeVecElemOrderOnLE() {
   const auto triple{fir::getTargetTriple(builder.getModule())};
-  return (triple.isLittleEndian() &&
-          !converter->getLoweringOptions().getNoPPCNativeVecElemOrder());
+  return (triple.isLittleEndian() && !options.noPPCNativeVecElemOrder);
 }
 bool PPCIntrinsicLibrary::changeVecElemOrder() {
   const auto triple{fir::getTargetTriple(builder.getModule())};
-  return (triple.isLittleEndian() !=
-          converter->getLoweringOptions().getNoPPCNativeVecElemOrder());
+  return (triple.isLittleEndian() != options.noPPCNativeVecElemOrder);
 }
 
 static mlir::FunctionType genMmaVpFuncType(mlir::MLIRContext *context,

@@ -170,9 +170,11 @@ def err_hex_escape_no_digits : Error<
 def err_invalid_ucn_name : Error<
   "'%0' is not a valid Unicode character name">;
 def note_invalid_ucn_name_loose_matching : Note<
-  "characters names in Unicode escape sequences are sensitive to case and whitespaces">;
+  "character names in Unicode escape sequences are sensitive to case and whitespaces">;
 def note_invalid_ucn_name_candidate : Note<
-  "did you mean %0 ('%2' U+%1)?">;
+  "did you mean %0 (%1)?">;
+def note_invalid_ucn_name_character : Note<
+  "character %0 cannot appear in a Unicode character name">;
 
 def warn_ucn_escape_no_digits : Warning<
   "\\%0 used with no following hex digits; "
@@ -287,6 +289,8 @@ def ext_string_too_long : Extension<"string literal of length %0 exceeds "
   "support">, InGroup<OverlengthStrings>;
 def err_character_too_large : Error<
   "character too large for enclosing character literal type">;
+def err_exec_charset_conversion_failed
+    : Error<"conversion to literal encoding failed: '%0'">;
 def warn_c99_compat_unicode_literal : Warning<
   "unicode literals are incompatible with C99">,
   InGroup<C99Compat>, DefaultIgnore;
@@ -373,13 +377,21 @@ def ext_missing_whitespace_after_macro_name : ExtWarn<
 def warn_missing_whitespace_after_macro_name : Warning<
   "whitespace recommended after macro name">;
 
-class NonportablePath  : Warning<
+class NonportablePath : Warning<
   "non-portable path to file '%0'; specified path differs in case from file"
   " name on disk">;
 def pp_nonportable_path : NonportablePath,
   InGroup<NonportableIncludePath>;
 def pp_nonportable_system_path : NonportablePath, DefaultIgnore,
-  InGroup<DiagGroup<"nonportable-system-include-path">>;
+  InGroup<NonportableSystemIncludePath>;
+
+class NonportablePathTrailing : Warning<
+  "non-portable path to file '%0'; specified path contains trailing"
+  " %select{whitespace|dot}1">;
+def pp_nonportable_path_trailing : NonportablePathTrailing,
+  InGroup<NonportableIncludePath>;
+def pp_nonportable_system_path_trailing : NonportablePathTrailing, DefaultIgnore,
+  InGroup<NonportableSystemIncludePath>;
 def pp_nonportable_path_separator : Warning<
   "non-portable path to file '%0'; specified path contains backslashes">,
   DefaultIgnore, InGroup<NonportableIncludePathSeparator>;

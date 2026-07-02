@@ -127,14 +127,6 @@ hash_code hash_value(const ComplexValue &Arg) {
 typedef SmallVector<struct ComplexValue, 2> ComplexValues;
 
 template <> struct llvm::DenseMapInfo<ComplexValue> {
-  static inline ComplexValue getEmptyKey() {
-    return {DenseMapInfo<Value *>::getEmptyKey(),
-            DenseMapInfo<Value *>::getEmptyKey()};
-  }
-  static inline ComplexValue getTombstoneKey() {
-    return {DenseMapInfo<Value *>::getTombstoneKey(),
-            DenseMapInfo<Value *>::getTombstoneKey()};
-  }
   static unsigned getHashValue(const ComplexValue &Val) {
     return hash_combine(DenseMapInfo<Value *>::getHashValue(Val.Real),
                         DenseMapInfo<Value *>::getHashValue(Val.Imag));
@@ -1253,11 +1245,8 @@ ComplexDeinterleavingGraph::identifyReassocNodes(Instruction *Real,
   auto Collect = [&Flags](Instruction *Insn, SmallVectorImpl<Product> &Muls,
                           AddendList &Addends) -> bool {
     SmallVector<PointerIntPair<Value *, 1, bool>> Worklist = {{Insn, true}};
-    SmallPtrSet<Value *, 8> Visited;
     while (!Worklist.empty()) {
       auto [V, IsPositive] = Worklist.pop_back_val();
-      if (!Visited.insert(V).second)
-        continue;
 
       Instruction *I = dyn_cast<Instruction>(V);
       if (!I) {
@@ -2070,12 +2059,12 @@ ComplexDeinterleavingGraph::identifyDeinterleave(ComplexValues &Vals) {
   }
 
   Value *RealOp1 = RealShuffle->getOperand(1);
-  if (!isa<UndefValue>(RealOp1) && !isa<ConstantAggregateZero>(RealOp1)) {
+  if (!isa<UndefValue>(RealOp1) && !match(RealOp1, m_Zero())) {
     LLVM_DEBUG(dbgs() << " - RealOp1 is not undef or zero.\n");
     return nullptr;
   }
   Value *ImagOp1 = ImagShuffle->getOperand(1);
-  if (!isa<UndefValue>(ImagOp1) && !isa<ConstantAggregateZero>(ImagOp1)) {
+  if (!isa<UndefValue>(ImagOp1) && !match(ImagOp1, m_Zero())) {
     LLVM_DEBUG(dbgs() << " - ImagOp1 is not undef or zero.\n");
     return nullptr;
   }

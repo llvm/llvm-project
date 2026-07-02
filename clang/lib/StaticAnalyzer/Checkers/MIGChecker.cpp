@@ -149,14 +149,12 @@ static const ParmVarDecl *getOriginParam(SVal V, CheckerContext &C,
 }
 
 static bool isInMIGCall(CheckerContext &C) {
-  const LocationContext *LC = C.getLocationContext();
-  assert(LC && "Unknown location context");
+  const StackFrame *SF = C.getStackFrame();
+  assert(SF && "Unknown stack frame");
 
-  const StackFrame *SF;
   // Find the top frame.
-  while (LC) {
-    SF = LC->getStackFrame();
-    LC = SF->getParent();
+  while (SF->getParent()) {
+    SF = SF->getParent();
   }
 
   const Decl *D = SF->getDecl();

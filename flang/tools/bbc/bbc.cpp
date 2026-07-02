@@ -100,6 +100,11 @@ static llvm::cl::alias
                           llvm::cl::desc("intrinsic module directory"),
                           llvm::cl::aliasopt(intrinsicIncludeDirs));
 
+static llvm::cl::alias
+    intrinsicModulePath("fintrinsic-modules-path",
+                        llvm::cl::desc("intrinsic module search paths"),
+                        llvm::cl::aliasopt(intrinsicIncludeDirs));
+
 static llvm::cl::opt<std::string>
     moduleDir("module", llvm::cl::desc("module output directory (default .)"),
               llvm::cl::init("."));
@@ -571,6 +576,8 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
     config.SkipConvertComplexPow = targetMachine.getTargetTriple().isAMDGCN();
     if (enableOpenMP)
       config.EnableOpenMP = true;
+    if (enableOpenMPDevice)
+      config.EnableOpenMPIsTargetDevice = true;
     config.NSWOnLoopVarInc = !integerWrapAround;
     fir::registerDefaultInlinerPass(config);
     fir::createDefaultFIROptimizerPassPipeline(pm, config);

@@ -7,8 +7,8 @@ declare !type !2 extern_weak void @external_addrtaken(i8)
 
 !cfi.functions = !{!0, !1}
 
-!0 = !{!"external_addrtaken", i8 2, !2}
-!1 = !{!"external_addrtaken", i8 0, !2}
+!0 = !{!"external_addrtaken", i8 2, i64 16594175687743574550, !2}
+!1 = !{!"external_addrtaken", i8 0, i64 16594175687743574550, !2}
 !2 = !{i64 0, !"typeid1"}
 
 ; CHECK-DAG: @external_addrtaken = alias [8 x i8], ptr @.cfi.jumptable

@@ -88,9 +88,7 @@ void CompileUnit::markEverythingAsKept() {
 
     if (auto ExprLockBlock = Value->getAsBlock()) {
       // Parse 'exprloc' expression.
-      DataExtractor Data(toStringRef(*ExprLockBlock),
-                         U->getContext().isLittleEndian(),
-                         U->getAddressByteSize());
+      DataExtractor Data(*ExprLockBlock, U->getContext().isLittleEndian());
       DWARFExpression Expression(Data, U->getAddressByteSize(),
                                  U->getFormParams().Format);
 

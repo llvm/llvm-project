@@ -17,6 +17,7 @@ set(
     "cfloat16"
     "cfloat128"
     "ext_vector_type"
+    "stdc_fenv_access"
 )
 
 # Making sure ALL_COMPILER_FEATURES is sorted.
@@ -66,6 +67,12 @@ foreach(feature IN LISTS ALL_COMPILER_FEATURES)
   set(link_options "")
   if(${feature} STREQUAL "fixed_point")
     list(APPEND compile_options "-ffixed-point")
+  elseif(${feature} STREQUAL "stdc_fenv_access")
+    if (MSVC)
+      list(APPEND compile_options "/WX")
+    else()
+      list(APPEND compile_options "-Wall -Werror")
+    endif()
   elseif(${feature} MATCHES "^builtin_" OR
          ${feature} STREQUAL "float16_conversion")
     set(compile_options ${LIBC_COMPILE_OPTIONS_DEFAULT})
@@ -132,6 +139,8 @@ foreach(feature IN LISTS ALL_COMPILER_FEATURES)
       set(LIBC_COMPILER_HAS_BUILTIN_ROUNDEVEN TRUE)
     elseif(${feature} STREQUAL "ext_vector_type")
       set(LIBC_COMPILER_HAS_EXT_VECTOR_TYPE TRUE)
+    elseif(${feature} STREQUAL "stdc_fenv_access")
+      set(LIBC_COMPILER_HAS_STDC_FENV_ACCESS TRUE)
     endif()
   endif()
 endforeach()
@@ -153,5 +162,6 @@ check_cxx_compiler_flag("-nostdlib++" LIBC_CC_SUPPORTS_NOSTDLIBPP)
 # clang-3.0+
 check_cxx_compiler_flag("-nostdlibinc" LIBC_CC_SUPPORTS_NOSTDLIBINC)
 
-# clang-23+, post llvm.org/pr187860
-check_cxx_compiler_flag("-Werror -Wno-fenv-access" LIBC_CC_SUPPORTS_NO_FENV_ACCESS)
+# clang-all, gcc-8+
+check_cxx_compiler_flag("-Wextra-semi" LIBC_CC_SUPPORTS_EXTRA_SEMI)
+

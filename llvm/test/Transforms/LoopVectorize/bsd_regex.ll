@@ -18,15 +18,15 @@ define void @foo(ptr nocapture %A) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = shl nsw <2 x i64> [[VEC_IND]], splat (i64 2)
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i64> [[TMP0]], i64 0
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i64> [[TMP0]], i64 1
 ; CHECK-NEXT:    [[STEP_ADD:%.*]] = shl <2 x i64> [[VEC_IND]], splat (i64 2)
 ; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i64> [[STEP_ADD]], splat (i64 8)
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x i64> [[TMP1]], i64 0
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x i64> [[TMP1]], i64 1
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i64> [[TMP0]], i64 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [4 x i8], ptr [[A:%.*]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i64> [[TMP0]], i64 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [4 x i8], ptr [[A]], i64 [[TMP6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x i64> [[TMP1]], i64 0
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [4 x i8], ptr [[A]], i64 [[TMP8]]
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x i64> [[TMP1]], i64 1
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [4 x i8], ptr [[A]], i64 [[TMP11]]
 ; CHECK-NEXT:    store i32 4, ptr [[TMP5]], align 4
 ; CHECK-NEXT:    store i32 4, ptr [[TMP7]], align 4

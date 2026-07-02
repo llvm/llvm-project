@@ -250,9 +250,7 @@ protected:
   void DoExecute(Args &args, CommandReturnObject &result) override {
     Stream &ostrm = result.GetOutputStream();
 
-    Target *target = &GetTarget();
-    if (target->IsDummyTarget())
-      target = nullptr;
+    Target *target = GetTarget();
     PlatformSP platform_sp;
     if (target)
       platform_sp = target->GetPlatform();
@@ -1022,7 +1020,7 @@ public:
 
     FileSpec src_fs(src);
     FileSystem::Instance().Resolve(src_fs);
-    FileSpec dst_fs(dst ? dst : src_fs.GetFilename().GetCString());
+    FileSpec dst_fs(dst ? dst : src_fs.GetFilename());
 
     PlatformSP platform_sp(
         GetDebugger().GetPlatformList().GetSelectedPlatform());
@@ -1071,7 +1069,8 @@ public:
 
 protected:
   void DoExecute(Args &args, CommandReturnObject &result) override {
-    Target *target = &GetTarget();
+    Target *target = GetTarget();
+    assert(target && "target guaranteed by eCommandRequiresTarget");
     PlatformSP platform_sp = target->GetPlatform();
     if (!platform_sp) {
       platform_sp = GetDebugger().GetPlatformList().GetSelectedPlatform();
@@ -1115,7 +1114,7 @@ protected:
         Debugger &debugger = GetDebugger();
 
         if (argc == 0) {
-          // If no arguments were given to the command, use target.run-args.
+          // If no arguments were given to the command, use target->run-args.
           Args target_run_args;
           target->GetRunArguments(target_run_args);
           m_options.launch_info.GetArguments().AppendArguments(target_run_args);
@@ -1219,9 +1218,7 @@ public:
 
 protected:
   void DoExecute(Args &args, CommandReturnObject &result) override {
-    Target *target = &GetTarget();
-    if (target->IsDummyTarget())
-      target = nullptr;
+    Target *target = GetTarget();
     PlatformSP platform_sp;
     if (target) {
       platform_sp = target->GetPlatform();
@@ -1251,9 +1248,9 @@ protected:
         const uint32_t matches =
             platform_sp->FindProcesses(m_options.match_info, proc_infos);
         const char *match_desc = nullptr;
-        const char *match_name =
+        llvm::StringRef match_name =
             m_options.match_info.GetProcessInfo().GetName();
-        if (match_name && match_name[0]) {
+        if (!match_name.empty()) {
           switch (m_options.match_info.GetNameMatchType()) {
           case NameMatch::Ignore:
             break;
@@ -1468,9 +1465,7 @@ public:
 
 protected:
   void DoExecute(Args &args, CommandReturnObject &result) override {
-    Target *target = &GetTarget();
-    if (target->IsDummyTarget())
-      target = nullptr;
+    Target *target = GetTarget();
     PlatformSP platform_sp;
     if (target) {
       platform_sp = target->GetPlatform();

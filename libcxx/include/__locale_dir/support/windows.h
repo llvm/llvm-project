@@ -164,6 +164,7 @@ inline _LIBCPP_HIDE_FROM_ABI char* __setlocale(int __category, const char* __loc
   return __new_locale;
 }
 _LIBCPP_EXPORTED_FROM_ABI __lconv_t* __localeconv(__locale_t& __loc);
+_LIBCPP_EXPORTED_FROM_ABI const char* __get_locale_encoding(__locale_t __loc);
 #endif // _LIBCPP_BUILDING_LIBRARY
 
 //

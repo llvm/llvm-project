@@ -80,6 +80,9 @@ public:
     return languageFeatures_;
   }
   const common::LangOptions &langOptions() const { return langOpts_; }
+  const std::string &openAccDefaultNoneScalarsStrictDisableOption() const {
+    return openAccDefaultNoneScalarsStrictDisableOption_;
+  }
   int GetDefaultKind(TypeCategory) const;
   int doublePrecisionKind() const {
     return defaultKinds_.doublePrecisionKind();
@@ -166,6 +169,11 @@ public:
   }
   SemanticsContext &set_debugModuleWriter(bool x) {
     debugModuleWriter_ = x;
+    return *this;
+  }
+  SemanticsContext &set_openAccDefaultNoneScalarsStrictDisableOption(
+      std::string x) {
+    openAccDefaultNoneScalarsStrictDisableOption_ = std::move(x);
     return *this;
   }
 
@@ -295,8 +303,10 @@ public:
   void UseFortranBuiltinsModule();
   const Scope *GetBuiltinsScope() const { return builtinsScope_; }
 
-  const Scope &GetCUDABuiltinsScope();
-  const Scope &GetCUDADeviceScope();
+  // Locate CUDA intrinsic modules on demand. These return null after emitting a
+  // diagnostic when the required module file cannot be read.
+  const Scope *GetCUDABuiltinsScope();
+  const Scope *GetCUDADeviceScope();
 
   void UsePPCBuiltinTypesModule();
   void UsePPCBuiltinsModule();
@@ -367,6 +377,7 @@ private:
   const common::LanguageFeatureControl &languageFeatures_;
   const common::LangOptions &langOpts_;
   parser::AllCookedSources &allCookedSources_;
+  std::string openAccDefaultNoneScalarsStrictDisableOption_;
   std::optional<parser::CharBlock> location_;
   std::vector<std::string> searchDirectories_;
   std::vector<std::string> intrinsicModuleDirectories_;

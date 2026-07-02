@@ -1,4 +1,4 @@
-; RUN: not opt -S %s -passes=verify 2>&1 | FileCheck %s
+; RUN: not opt -S %s -passes=verify -disable-output 2>&1 | FileCheck %s
 
 ; CHECK: Number of label constraints does not match number of callbr dests
 ; CHECK-NEXT: #too_few_label_constraints
@@ -69,15 +69,10 @@ abnormal:
   ret i32 %ret
 }
 
-;; Tests of the callbr.landingpad intrinsic function.
+;; Tests of the callbr.landingpad intrinsic function with bad type.
+; CHECK: intrinsic argument 0 type (matching overload type 0) expected i32, but got i64
+; CHECK-NEXT: declare i32 @llvm.callbr.landingpad.i64(i64)
 declare i32 @llvm.callbr.landingpad.i64(i64)
-define void @callbrpad_bad_type() {
-entry:
-; CHECK: intrinsic has incorrect argument type!
-; CHECK-NEXT: ptr @llvm.callbr.landingpad.i64
-  %foo = call i32 @llvm.callbr.landingpad.i64(i64 42)
-  ret void
-}
 
 declare i32 @llvm.callbr.landingpad.i32(i32)
 define i32 @callbrpad_multi_preds() {

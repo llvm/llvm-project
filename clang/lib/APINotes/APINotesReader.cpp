@@ -46,6 +46,38 @@ llvm::VersionTuple ReadVersionTuple(const uint8_t *&Data) {
   return llvm::VersionTuple(Major, Minor, Subminor, Build);
 }
 
+static FunctionTableKey readFunctionTableKey(const uint8_t *Data,
+                                             unsigned Length) {
+  assert(Length >= FunctionTableKeyBaseLength &&
+         "Unexpected function table key length");
+
+  auto CtxID = endian::readNext<uint32_t, llvm::endianness::little>(Data);
+  auto NameID = endian::readNext<uint32_t, llvm::endianness::little>(Data);
+  uint8_t FunctionKeyFlags =
+      endian::readNext<uint8_t, llvm::endianness::little>(Data);
+  auto ParameterCount =
+      endian::readNext<uint16_t, llvm::endianness::little>(Data);
+
+  assert(Length ==
+             FunctionTableKeyBaseLength + ParameterCount * sizeof(uint32_t) &&
+         "Unexpected function table key length");
+
+  llvm::SmallVector<IdentifierID, 2> ParameterTypeIDs;
+  ParameterTypeIDs.reserve(ParameterCount);
+  for (unsigned I = 0; I != ParameterCount; ++I)
+    ParameterTypeIDs.push_back(
+        endian::readNext<uint32_t, llvm::endianness::little>(Data));
+
+  assert((FunctionKeyFlags & ~FunctionKeyHasParameterSelector) == 0 &&
+         "Unexpected function table key flags");
+  if (FunctionKeyFlags & FunctionKeyHasParameterSelector)
+    return {CtxID, NameID, ParameterTypeIDs};
+
+  assert(ParameterTypeIDs.empty() &&
+         "Broad function table key should not store parameters");
+  return {CtxID, NameID};
+}
+
 /// An on-disk hash table whose data is versioned based on the Swift version.
 template <typename Derived, typename KeyType, typename UnversionedDataType>
 class VersionedTableInfo {
@@ -527,13 +559,11 @@ public:
 
 /// Used to deserialize the on-disk global function table.
 class GlobalFunctionTableInfo
-    : public VersionedTableInfo<GlobalFunctionTableInfo, SingleDeclTableKey,
+    : public VersionedTableInfo<GlobalFunctionTableInfo, FunctionTableKey,
                                 GlobalFunctionInfo> {
 public:
   static internal_key_type ReadKey(const uint8_t *Data, unsigned Length) {
-    auto CtxID = endian::readNext<uint32_t, llvm::endianness::little>(Data);
-    auto NameID = endian::readNext<uint32_t, llvm::endianness::little>(Data);
-    return {CtxID, NameID};
+    return readFunctionTableKey(Data, Length);
   }
 
   hash_value_type ComputeHash(internal_key_type Key) {
@@ -550,13 +580,11 @@ public:
 
 /// Used to deserialize the on-disk C++ method table.
 class CXXMethodTableInfo
-    : public VersionedTableInfo<CXXMethodTableInfo, SingleDeclTableKey,
+    : public VersionedTableInfo<CXXMethodTableInfo, FunctionTableKey,
                                 CXXMethodInfo> {
 public:
   static internal_key_type ReadKey(const uint8_t *Data, unsigned Length) {
-    auto CtxID = endian::readNext<uint32_t, llvm::endianness::little>(Data);
-    auto NameID = endian::readNext<uint32_t, llvm::endianness::little>(Data);
-    return {CtxID, NameID};
+    return readFunctionTableKey(Data, Length);
   }
 
   hash_value_type ComputeHash(internal_key_type Key) {
@@ -827,6 +855,17 @@ public:
                                     llvm::SmallVectorImpl<uint64_t> &Scratch);
   llvm::Error readGlobalVariableBlock(llvm::BitstreamCursor &Cursor,
                                       llvm::SmallVectorImpl<uint64_t> &Scratch);
+  std::optional<FunctionTableKey> getFunctionKey(uint32_t ParentContextID,
+                                                 llvm::StringRef Name);
+  std::optional<FunctionTableKey>
+  getFunctionKey(uint32_t ParentContextID, llvm::StringRef Name,
+                 llvm::ArrayRef<llvm::StringRef> Parameters);
+  std::optional<FunctionTableKey>
+  getFunctionKey(std::optional<Context> ParentContext, llvm::StringRef Name);
+  std::optional<FunctionTableKey>
+  getFunctionKey(std::optional<Context> ParentContext, llvm::StringRef Name,
+                 llvm::ArrayRef<llvm::StringRef> Parameters);
+
   llvm::Error readGlobalFunctionBlock(llvm::BitstreamCursor &Cursor,
                                       llvm::SmallVectorImpl<uint64_t> &Scratch);
   llvm::Error readEnumConstantBlock(llvm::BitstreamCursor &Cursor,
@@ -850,6 +889,37 @@ APINotesReader::Implementation::getIdentifier(llvm::StringRef Str) {
     return std::nullopt;
 
   return *Known;
+}
+
+std::optional<FunctionTableKey>
+APINotesReader::Implementation::getFunctionKey(uint32_t ParentContextID,
+                                               llvm::StringRef Name) {
+  return getFunctionKeyImpl(ParentContextID, Name, [this](llvm::StringRef S) {
+    return getIdentifier(S);
+  });
+}
+
+std::optional<FunctionTableKey> APINotesReader::Implementation::getFunctionKey(
+    uint32_t ParentContextID, llvm::StringRef Name,
+    llvm::ArrayRef<llvm::StringRef> Parameters) {
+  return getFunctionKeyImpl(
+      ParentContextID, Name, Parameters,
+      [this](llvm::StringRef S) { return getIdentifier(S); });
+}
+
+std::optional<FunctionTableKey> APINotesReader::Implementation::getFunctionKey(
+    std::optional<Context> ParentContext, llvm::StringRef Name) {
+  uint32_t ParentContextID =
+      ParentContext ? ParentContext->id.Value : static_cast<uint32_t>(-1);
+  return getFunctionKey(ParentContextID, Name);
+}
+
+std::optional<FunctionTableKey> APINotesReader::Implementation::getFunctionKey(
+    std::optional<Context> ParentContext, llvm::StringRef Name,
+    llvm::ArrayRef<llvm::StringRef> Parameters) {
+  uint32_t ParentContextID =
+      ParentContext ? ParentContext->id.Value : static_cast<uint32_t>(-1);
+  return getFunctionKey(ParentContextID, Name, Parameters);
 }
 
 std::optional<SelectorID>
@@ -2268,15 +2338,45 @@ auto APINotesReader::lookupField(ContextID CtxID, llvm::StringRef Name)
 
 auto APINotesReader::lookupCXXMethod(ContextID CtxID, llvm::StringRef Name)
     -> VersionedInfo<CXXMethodInfo> {
+  return lookupCXXMethodImpl(CtxID, Name);
+}
+
+auto APINotesReader::lookupCXXMethod(ContextID CtxID, llvm::StringRef Name,
+                                     llvm::ArrayRef<llvm::StringRef> Parameters)
+    -> VersionedInfo<CXXMethodInfo> {
+  return lookupCXXMethodImpl(CtxID, Name, Parameters);
+}
+
+auto APINotesReader::lookupCXXMethodImpl(ContextID CtxID, llvm::StringRef Name)
+    -> VersionedInfo<CXXMethodInfo> {
   if (!Implementation->CXXMethodTable)
     return std::nullopt;
 
-  std::optional<IdentifierID> NameID = Implementation->getIdentifier(Name);
-  if (!NameID)
+  std::optional<FunctionTableKey> Key =
+      Implementation->getFunctionKey(CtxID.Value, Name);
+  if (!Key)
     return std::nullopt;
 
-  auto Known = Implementation->CXXMethodTable->find(
-      SingleDeclTableKey(CtxID.Value, *NameID));
+  auto Known = Implementation->CXXMethodTable->find(*Key);
+  if (Known == Implementation->CXXMethodTable->end())
+    return std::nullopt;
+
+  return {Implementation->SwiftVersion, *Known};
+}
+
+auto APINotesReader::lookupCXXMethodImpl(
+    ContextID CtxID, llvm::StringRef Name,
+    llvm::ArrayRef<llvm::StringRef> Parameters)
+    -> VersionedInfo<CXXMethodInfo> {
+  if (!Implementation->CXXMethodTable)
+    return std::nullopt;
+
+  std::optional<FunctionTableKey> Key =
+      Implementation->getFunctionKey(CtxID.Value, Name, Parameters);
+  if (!Key)
+    return std::nullopt;
+
+  auto Known = Implementation->CXXMethodTable->find(*Key);
   if (Known == Implementation->CXXMethodTable->end())
     return std::nullopt;
 
@@ -2305,16 +2405,45 @@ auto APINotesReader::lookupGlobalVariable(llvm::StringRef Name,
 auto APINotesReader::lookupGlobalFunction(llvm::StringRef Name,
                                           std::optional<Context> Ctx)
     -> VersionedInfo<GlobalFunctionInfo> {
+  return lookupGlobalFunctionImpl(Name, Ctx);
+}
+
+auto APINotesReader::lookupGlobalFunction(
+    llvm::StringRef Name, llvm::ArrayRef<llvm::StringRef> Parameters,
+    std::optional<Context> Ctx) -> VersionedInfo<GlobalFunctionInfo> {
+  return lookupGlobalFunctionImpl(Name, Parameters, Ctx);
+}
+
+auto APINotesReader::lookupGlobalFunctionImpl(llvm::StringRef Name,
+                                              std::optional<Context> Ctx)
+    -> VersionedInfo<GlobalFunctionInfo> {
   if (!Implementation->GlobalFunctionTable)
     return std::nullopt;
 
-  std::optional<IdentifierID> NameID = Implementation->getIdentifier(Name);
-  if (!NameID)
+  std::optional<FunctionTableKey> Key =
+      Implementation->getFunctionKey(Ctx, Name);
+  if (!Key)
     return std::nullopt;
 
-  SingleDeclTableKey Key(Ctx, *NameID);
+  auto Known = Implementation->GlobalFunctionTable->find(*Key);
+  if (Known == Implementation->GlobalFunctionTable->end())
+    return std::nullopt;
 
-  auto Known = Implementation->GlobalFunctionTable->find(Key);
+  return {Implementation->SwiftVersion, *Known};
+}
+
+auto APINotesReader::lookupGlobalFunctionImpl(
+    llvm::StringRef Name, llvm::ArrayRef<llvm::StringRef> Parameters,
+    std::optional<Context> Ctx) -> VersionedInfo<GlobalFunctionInfo> {
+  if (!Implementation->GlobalFunctionTable)
+    return std::nullopt;
+
+  std::optional<FunctionTableKey> Key =
+      Implementation->getFunctionKey(Ctx, Name, Parameters);
+  if (!Key)
+    return std::nullopt;
+
+  auto Known = Implementation->GlobalFunctionTable->find(*Key);
   if (Known == Implementation->GlobalFunctionTable->end())
     return std::nullopt;
 

@@ -4,8 +4,7 @@
 define i16 @test() {
 ; CHECK-LABEL: define i16 @test() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP9:%.*]] = call i16 @llvm.vector.reduce.and.v4i16(<4 x i16> zeroinitializer)
-; CHECK-NEXT:    ret i16 [[TMP9]]
+; CHECK-NEXT:    ret i16 0
 ;
 entry:
   %conv73 = xor i64 0, 0

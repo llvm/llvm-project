@@ -23,6 +23,8 @@
 ; RUN: llc -mtriple=aarch64 -mattr=v8.3a < %s | FileCheck --check-prefixes=CHECK,V83A %s
 ; RUN: llc -mtriple=aarch64 -mattr=v9a -mattr=pauth-lr < %s | FileCheck --check-prefixes=PAUTHLR %s
 
+; See also: sign-return-address-pauth-lr-mir.ll
+
 define i32 @leaf(i32 %x) "branch-protection-pauth-lr" {
 ; CHECK-LABEL: leaf:
 ; CHECK:       // %bb.0:

@@ -525,6 +525,17 @@ TEST(CommandMangler, RespectsOriginalSysroot) {
                 Not(HasSubstr(testPath("fake/sysroot"))));
   }
 }
+TEST(CommandMangler, ClangUnknownArgs) {
+  // Check that clang++ will drop unknown flags
+  const auto Mangler = CommandMangler::forTests();
+  tooling::CompileCommand Cmd;
+  Cmd.CommandLine = {"clang++", "-std=c++23", "--unknown-flag",
+                     "--unknown-option=abcd"};
+  Mangler(Cmd, "foo.cc");
+  EXPECT_THAT(Cmd.CommandLine, Not(Contains("--unknown-flag")));
+  EXPECT_THAT(Cmd.CommandLine, Not(Contains("--unknown-option=abcd")));
+  EXPECT_THAT(Cmd.CommandLine, Contains("-std=c++23"));
+}
 
 TEST(CommandMangler, StdLatestFlag) {
   const auto Mangler = CommandMangler::forTests();

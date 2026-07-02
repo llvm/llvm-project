@@ -230,4 +230,4 @@ s_waitcnt vmcnt(0) lgkmcnt(0)
 # CHECK-NEXT: 33.    1     0.0    0.0    0.0       v_mov_b32_e32 v28, s28
 # CHECK-NEXT: 34.    1     0.0    0.0    0.0       v_mov_b32_e32 v29, s29
 # CHECK-NEXT: 35.    1     0.0    0.0    0.0       s_waitcnt vmcnt(0) lgkmcnt(0)
-# CHECK-NEXT:        1     0.0    0.0    0.0       <total>
+# CHECK-NEXT:        36    0.0    0.0    0.0       <total>

@@ -5,22 +5,6 @@ entry:
       ptr undef,
       !DILocalVariable(scope: !1),
       !DIExpression(),
-      !{})
-; CHECK-LABEL: invalid #dbg record DILocation
-; CHECK-NEXT: #dbg_value({{.*}})
-
-    #dbg_declare(
-      ptr undef,
-      !DILocalVariable(scope: !1),
-      !DIExpression(),
-      !{})
-; CHECK-LABEL: invalid #dbg record DILocation
-; CHECK-NEXT: #dbg_declare({{.*}})
-
-    #dbg_value(
-      ptr undef,
-      !DILocalVariable(scope: !1),
-      !DIExpression(),
       !DILocation(scope: !2))
 ; CHECK-LABEL: mismatched subprogram between #dbg record variable and DILocation
 ; CHECK-NEXT: #dbg_value({{[^,]+}}, ![[VAR:[0-9]+]], {{[^,]+}}, ![[LOC:[0-9]+]]

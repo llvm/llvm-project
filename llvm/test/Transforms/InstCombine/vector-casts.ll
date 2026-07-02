@@ -288,30 +288,30 @@ define <8 x i32> @pr24458(<8 x float> %n) {
   ret <8 x i32> %wrong
 }
 
-; Hoist a trunc to a scalar if we're inserting into an undef vector.
-; trunc (inselt undef, X, Index) --> inselt undef, (trunc X), Index
+; Hoist a trunc to a scalar if we're inserting into a poison vector.
+; trunc (inselt poison, X, Index) --> inselt poison, (trunc X), Index
 
-define <3 x i16> @trunc_inselt_undef(i32 %x) {
-; CHECK-LABEL: @trunc_inselt_undef(
+define <3 x i16> @trunc_inselt_poison(i32 %x, i32 %index) {
+; CHECK-LABEL: @trunc_inselt_poison(
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[X:%.*]] to i16
-; CHECK-NEXT:    [[TRUNC:%.*]] = insertelement <3 x i16> <i16 undef, i16 poison, i16 undef>, i16 [[TMP1]], i64 1
+; CHECK-NEXT:    [[TRUNC:%.*]] = insertelement <3 x i16> poison, i16 [[TMP1]], i32 [[INDEX:%.*]]
 ; CHECK-NEXT:    ret <3 x i16> [[TRUNC]]
 ;
-  %vec = insertelement <3 x i32> undef, i32 %x, i32 1
+  %vec = insertelement <3 x i32> poison, i32 %x, i32 %index
   %trunc = trunc <3 x i32> %vec to <3 x i16>
   ret <3 x i16> %trunc
 }
 
-; Hoist a trunc to a scalar if we're inserting into an undef vector.
-; trunc (inselt undef, X, Index) --> inselt undef, (trunc X), Index
+; Hoist a trunc to a scalar if we're inserting into a poison vector.
+; trunc (inselt poison, X, Index) --> inselt poison, (trunc X), Index
 
-define <2 x float> @fptrunc_inselt_undef(double %x, i32 %index) {
-; CHECK-LABEL: @fptrunc_inselt_undef(
+define <2 x float> @fptrunc_inselt_poison(double %x, i32 %index) {
+; CHECK-LABEL: @fptrunc_inselt_poison(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fptrunc double [[X:%.*]] to float
-; CHECK-NEXT:    [[TRUNC:%.*]] = insertelement <2 x float> undef, float [[TMP1]], i32 [[INDEX:%.*]]
+; CHECK-NEXT:    [[TRUNC:%.*]] = insertelement <2 x float> poison, float [[TMP1]], i32 [[INDEX:%.*]]
 ; CHECK-NEXT:    ret <2 x float> [[TRUNC]]
 ;
-  %vec = insertelement <2 x double> <double undef, double undef>, double %x, i32 %index
+  %vec = insertelement <2 x double> poison, double %x, i32 %index
   %trunc = fptrunc <2 x double> %vec to <2 x float>
   ret <2 x float> %trunc
 }
@@ -337,11 +337,11 @@ define <3 x i16> @trunc_inselt1(i32 %x) {
 
 define <2 x float> @fptrunc_inselt1(double %x, i32 %index) {
 ; CHECK-LABEL: @fptrunc_inselt1(
-; CHECK-NEXT:    [[VEC:%.*]] = insertelement <2 x double> <double undef, double 3.000000e+00>, double [[X:%.*]], i32 [[INDEX:%.*]]
+; CHECK-NEXT:    [[VEC:%.*]] = insertelement <2 x double> <double poison, double 3.000000e+00>, double [[X:%.*]], i32 [[INDEX:%.*]]
 ; CHECK-NEXT:    [[TRUNC:%.*]] = fptrunc <2 x double> [[VEC]] to <2 x float>
 ; CHECK-NEXT:    ret <2 x float> [[TRUNC]]
 ;
-  %vec = insertelement <2 x double> <double undef, double 3.0>, double %x, i32 %index
+  %vec = insertelement <2 x double> <double poison, double 3.0>, double %x, i32 %index
   %trunc = fptrunc <2 x double> %vec to <2 x float>
   ret <2 x float> %trunc
 }

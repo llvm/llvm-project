@@ -46,10 +46,10 @@ body:             |
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: $sp = frame-setup SUBXri $sp, 16, 0
-    ; CHECK-NEXT: early-clobber $sp = STRXpre killed renamable $x0, $sp, 16
+    ; CHECK-NEXT: early-clobber $sp = STRXpre killed renamable $x0, $sp, 16 :: (store (s64))
     ; CHECK-NEXT: RET undef $lr
     $sp = frame-setup SUBXri $sp, 16, 0
-    STRXui killed renamable $x0, $sp, 2
+    STRXui killed renamable $x0, $sp, 2 :: (store (s64))
     $sp = ADDXri $sp, 16, 0
     RET undef $lr
 ...
@@ -63,11 +63,11 @@ body:             |
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: $sp = frame-setup SUBXri $sp, 16, 0
-    ; CHECK-NEXT: STRXui killed renamable $x0, $sp, 2
+    ; CHECK-NEXT: STRXui killed renamable $x0, $sp, 2 :: (store (s64))
     ; CHECK-NEXT: $sp = ADDXri $sp, 16, 0
     ; CHECK-NEXT: RET undef $lr
     $sp = frame-setup SUBXri $sp, 16, 0
-    STRXui killed renamable $x0, $sp, 2
+    STRXui killed renamable $x0, $sp, 2 :: (store (s64))
     $sp = ADDXri $sp, 16, 0
     RET undef $lr
 ...
@@ -81,10 +81,10 @@ body:             |
     ; CHECK: liveins: $x0, $x1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: $x1 = frame-setup SUBXri $x1, 16, 0
-    ; CHECK-NEXT: early-clobber $x1 = STRXpre killed renamable $x0, $x1, 16
+    ; CHECK-NEXT: early-clobber $x1 = STRXpre killed renamable $x0, $x1, 16 :: (store (s64))
     ; CHECK-NEXT: RET undef $lr, implicit $x1
     $x1 = frame-setup SUBXri $x1, 16, 0
-    STRXui killed renamable $x0, $x1, 2
+    STRXui killed renamable $x0, $x1, 2 :: (store (s64))
     $x1 = ADDXri $x1, 16, 0
     RET undef $lr, implicit $x1
 ...
@@ -98,10 +98,10 @@ body:             |
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: $sp = frame-setup SUBXri $sp, 16, 0
-    ; CHECK-NEXT: early-clobber $sp = STRXpost killed renamable $x0, $sp, 16
+    ; CHECK-NEXT: early-clobber $sp = STRXpost killed renamable $x0, $sp, 16 :: (store (s64))
     ; CHECK-NEXT: RET undef $lr
     $sp = frame-setup SUBXri $sp, 16, 0
-    STRXui killed renamable $x0, $sp, 0
+    STRXui killed renamable $x0, $sp, 0 :: (store (s64))
     $sp = ADDXri $sp, 16, 0
     RET undef $lr
 ...
@@ -115,11 +115,11 @@ body:             |
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: $sp = frame-setup SUBXri $sp, 16, 0
-    ; CHECK-NEXT: STRXui killed renamable $x0, $sp, 0
+    ; CHECK-NEXT: STRXui killed renamable $x0, $sp, 0 :: (store (s64))
     ; CHECK-NEXT: $sp = ADDXri $sp, 16, 0
     ; CHECK-NEXT: RET undef $lr
     $sp = frame-setup SUBXri $sp, 16, 0
-    STRXui killed renamable $x0, $sp, 0
+    STRXui killed renamable $x0, $sp, 0 :: (store (s64))
     $sp = ADDXri $sp, 16, 0
     RET undef $lr
 ...
@@ -133,10 +133,10 @@ body:             |
     ; CHECK: liveins: $x0, $x1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: $x1 = frame-setup SUBXri $x1, 16, 0
-    ; CHECK-NEXT: early-clobber $x1 = STRXpost killed renamable $x0, $x1, 16
+    ; CHECK-NEXT: early-clobber $x1 = STRXpost killed renamable $x0, $x1, 16 :: (store (s64))
     ; CHECK-NEXT: RET undef $lr, implicit $x1
     $x1 = frame-setup SUBXri $x1, 16, 0
-    STRXui killed renamable $x0, $x1, 0
+    STRXui killed renamable $x0, $x1, 0 :: (store (s64))
     $x1 = ADDXri $x1, 16, 0
     RET undef $lr, implicit $x1
 ...

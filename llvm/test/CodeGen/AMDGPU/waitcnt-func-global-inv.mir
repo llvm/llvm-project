@@ -21,7 +21,7 @@ body: |
     ; GFX12-LABEL: name: func_global_inv_only
     ; GFX12: liveins: $sgpr30_sgpr31
     ; GFX12-NEXT: {{  $}}
-    ; GFX12-NEXT: S_WAIT_LOADCNT_DSCNT 0
+    ; GFX12-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
     ; GFX12-NEXT: S_WAIT_EXPCNT 0
     ; GFX12-NEXT: S_WAIT_SAMPLECNT 0
     ; GFX12-NEXT: S_WAIT_BVHCNT 0
@@ -45,7 +45,7 @@ body: |
     ; GFX12-LABEL: name: func_global_inv_with_vgpr_load
     ; GFX12: liveins: $vgpr0, $sgpr0_sgpr1, $sgpr30_sgpr31
     ; GFX12-NEXT: {{  $}}
-    ; GFX12-NEXT: S_WAIT_LOADCNT_DSCNT 0
+    ; GFX12-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
     ; GFX12-NEXT: S_WAIT_EXPCNT 0
     ; GFX12-NEXT: S_WAIT_SAMPLECNT 0
     ; GFX12-NEXT: S_WAIT_BVHCNT 0
@@ -71,7 +71,7 @@ body: |
     ; GFX12-LABEL: name: func_vgpr_load_no_global_inv
     ; GFX12: liveins: $vgpr0, $sgpr0_sgpr1, $sgpr30_sgpr31
     ; GFX12-NEXT: {{  $}}
-    ; GFX12-NEXT: S_WAIT_LOADCNT_DSCNT 0
+    ; GFX12-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
     ; GFX12-NEXT: S_WAIT_EXPCNT 0
     ; GFX12-NEXT: S_WAIT_SAMPLECNT 0
     ; GFX12-NEXT: S_WAIT_BVHCNT 0
@@ -96,7 +96,7 @@ body: |
     ; GFX12-LABEL: name: func_global_inv_load_already_waited
     ; GFX12: liveins: $vgpr0, $sgpr0_sgpr1, $sgpr30_sgpr31
     ; GFX12-NEXT: {{  $}}
-    ; GFX12-NEXT: S_WAIT_LOADCNT_DSCNT 0
+    ; GFX12-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
     ; GFX12-NEXT: S_WAIT_EXPCNT 0
     ; GFX12-NEXT: S_WAIT_SAMPLECNT 0
     ; GFX12-NEXT: S_WAIT_BVHCNT 0

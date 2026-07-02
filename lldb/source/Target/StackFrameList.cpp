@@ -15,7 +15,6 @@
 #include "lldb/Symbol/Block.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/Symbol.h"
-#include "lldb/Target/Policy.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/StackFrame.h"
@@ -27,6 +26,7 @@
 #include "lldb/Target/Unwind.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/Policy.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/ConvertUTF.h"
@@ -1021,7 +1021,6 @@ size_t StackFrameList::GetStatus(Stream &strm, uint32_t first_frame,
 
   StackFrameSP selected_frame_sp =
       m_thread.GetSelectedFrame(DoNoSelectMostRelevantFrame);
-  std::string buffer;
   std::string marker;
   for (frame_idx = first_frame; frame_idx < last_frame; ++frame_idx) {
     frame_sp = GetFrameAtIndex(frame_idx);

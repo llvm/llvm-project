@@ -20,8 +20,12 @@ end subroutine forall_with_allocatable2
 ! CHECK:         %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[VAL_1]] arg 1 {uniq_name = "_QFforall_with_allocatable2Ea1"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
 ! CHECK:         %[[VAL_8:.*]] = fir.alloca !fir.type<_QFforall_with_allocatable2Tt{i:i32,arr:!fir.box<!fir.heap<!fir.array<?xf32>>>}> {bindc_name = "thing", uniq_name = "_QFforall_with_allocatable2Ething"}
 ! CHECK:         %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_8]] {uniq_name = "_QFforall_with_allocatable2Ething"} : (!fir.ref<!fir.type<_QFforall_with_allocatable2Tt{i:i32,arr:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>) -> (!fir.ref<!fir.type<_QFforall_with_allocatable2Tt{i:i32,arr:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>, !fir.ref<!fir.type<_QFforall_with_allocatable2Tt{i:i32,arr:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>)
-! CHECK:         %[[VAL_10:.*]] = fir.address_of(@_QQ_QFforall_with_allocatable2Tt.DerivedInit) : !fir.ref<!fir.type<_QFforall_with_allocatable2Tt{i:i32,arr:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>
-! CHECK:         fir.copy %[[VAL_10]] to %[[VAL_9]]#0 no_overlap : !fir.ref<!fir.type<_QFforall_with_allocatable2Tt{i:i32,arr:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>, !fir.ref<!fir.type<_QFforall_with_allocatable2Tt{i:i32,arr:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>
+! CHECK:         %[[VAL_2:.*]] = fir.coordinate_of %[[VAL_9]]#0, arr : (!fir.ref<!fir.type<_QFforall_with_allocatable2Tt{i:i32,arr:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+! CHECK:         %[[VAL_3:.*]] = fir.zero_bits !fir.heap<!fir.array<?xf32>>
+! CHECK:         %[[VAL_4:.*]] = arith.constant 0 : index
+! CHECK:         %[[VAL_5:.*]] = fir.shape %[[VAL_4]] : (index) -> !fir.shape<1>
+! CHECK:         %[[VAL_6:.*]] = fir.embox %[[VAL_3]](%[[VAL_5]]) : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
+! CHECK:         fir.store %[[VAL_6]] to %[[VAL_2]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
 ! CHECK:         %[[VAL_11:.*]] = arith.constant 5 : i32
 ! CHECK:         %[[VAL_12:.*]] = arith.constant 15 : i32
 ! CHECK:         hlfir.forall lb {
@@ -45,5 +49,8 @@ end subroutine forall_with_allocatable2
 ! CHECK:             hlfir.yield %[[VAL_23]] : !fir.ref<f32>
 ! CHECK:           }
 ! CHECK:         }
+! CHECK:         %[[VAL_24:.*]] = fir.embox %[[VAL_9]]#0 : (!fir.ref<!fir.type<_QFforall_with_allocatable2Tt{i:i32,arr:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>) -> !fir.box<!fir.type<_QFforall_with_allocatable2Tt{i:i32,arr:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>
+! CHECK:         %[[VAL_25:.*]] = fir.convert %[[VAL_24]] : (!fir.box<!fir.type<_QFforall_with_allocatable2Tt{i:i32,arr:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>) -> !fir.box<none>
+! CHECK:         fir.call @_FortranADestroy(%[[VAL_25]]) fastmath<contract> : (!fir.box<none>) -> ()
 ! CHECK:         return
 ! CHECK:       }

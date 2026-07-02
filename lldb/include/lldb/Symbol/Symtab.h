@@ -208,7 +208,7 @@ public:
   /// time when the debugger starts up. The index cache file for the symbol
   /// table has the modification time set to the same time as the main module.
   /// If the cache file exists and the modification times match, we will load
-  /// the symbol table from the serlized cache file.
+  /// the symbol table from the serialized cache file.
   ///
   /// \return
   ///   True if the symbol table was successfully loaded from the index cache,

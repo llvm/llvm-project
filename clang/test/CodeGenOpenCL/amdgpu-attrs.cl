@@ -134,9 +134,9 @@ __attribute__((reqd_work_group_size(32, 2, 1))) // expected-no-diagnostics
 kernel void reqd_work_group_size_32_2_1() {
 // CHECK: define{{.*}} amdgpu_kernel void @reqd_work_group_size_32_2_1() [[FLAT_WORK_GROUP_SIZE_64_64:#[0-9]+]]
 }
-__attribute__((reqd_work_group_size(32, 2, 1), amdgpu_flat_work_group_size(16, 128))) // expected-no-diagnostics
-kernel void reqd_work_group_size_32_2_1_flat_work_group_size_16_128() {
-// CHECK: define{{.*}} amdgpu_kernel void @reqd_work_group_size_32_2_1_flat_work_group_size_16_128() [[FLAT_WORK_GROUP_SIZE_16_128:#[0-9]+]]
+__attribute__((reqd_work_group_size(32, 2, 1), amdgpu_flat_work_group_size(64, 64))) // expected-no-diagnostics
+kernel void reqd_work_group_size_32_2_1_flat_work_group_size_64_64() {
+// CHECK: define{{.*}} amdgpu_kernel void @reqd_work_group_size_32_2_1_flat_work_group_size_64_64() [[FLAT_WORK_GROUP_SIZE_64_64]]
 }
 
 __attribute__((amdgpu_max_num_work_groups(1, 1, 1))) // expected-no-diagnostics
@@ -203,7 +203,6 @@ kernel void default_kernel() {
 
 // CHECK-DAG: attributes [[FLAT_WORK_GROUP_SIZE_32_64]] = {{.*}} "amdgpu-flat-work-group-size"="32,64"
 // CHECK-DAG: attributes [[FLAT_WORK_GROUP_SIZE_64_64]] = {{.*}} "amdgpu-flat-work-group-size"="64,64"
-// CHECK-DAG: attributes [[FLAT_WORK_GROUP_SIZE_16_128]] = {{.*}} "amdgpu-flat-work-group-size"="16,128"
 
 // CHECK-DAG: attributes [[WAVES_PER_EU_2]] = {{.*}} "amdgpu-flat-work-group-size"="1,256"  "amdgpu-waves-per-eu"="2"
 

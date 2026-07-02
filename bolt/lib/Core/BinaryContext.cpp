@@ -35,6 +35,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Regex.h"
+#include "llvm/Support/ScopedPrinter.h"
 #include <algorithm>
 #include <functional>
 #include <iterator>
@@ -194,8 +195,9 @@ Expected<std::unique_ptr<BinaryContext>> BinaryContext::createBinaryContext(
     ArchName = "aarch64";
     FeaturesStr = "+all";
     break;
-  case llvm::Triple::riscv64: {
-    ArchName = "riscv64";
+  case llvm::Triple::riscv64:
+  case llvm::Triple::riscv32: {
+    ArchName = TheTriple.getArchName();
     if (!Features)
       return createFatalBOLTError("RISCV target needs SubtargetFeatures");
     // We rely on relaxation for some transformations (e.g., promoting all calls
@@ -2460,11 +2462,11 @@ void BinaryContext::addRelocation(uint64_t Address, MCSymbol *Symbol,
 
 void BinaryContext::addDynamicRelocation(uint64_t Address, MCSymbol *Symbol,
                                          uint32_t Type, uint64_t Addend,
-                                         uint64_t Value) {
+                                         uint64_t Value, bool IsRELR) {
   ErrorOr<BinarySection &> Section = getSectionForAddress(Address);
   assert(Section && "cannot find section for address");
   Section->addDynamicRelocation(Address - Section->getAddress(), Symbol, Type,
-                                Addend, Value);
+                                Addend, Value, IsRELR);
 }
 
 bool BinaryContext::removeRelocationAt(uint64_t Address) {

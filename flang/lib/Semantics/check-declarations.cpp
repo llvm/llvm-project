@@ -1466,6 +1466,10 @@ void CheckHelper::CheckArraySpec(
 void CheckHelper::CheckProcEntity(
     const Symbol &symbol, const ProcEntityDetails &details) {
   CheckSymbolType(symbol);
+  // F2018 8.5.17: an entity with the TARGET attribute shall be a variable;
+  // a procedure (EXTERNAL or INTRINSIC) is not a variable.
+  CheckConflicting(symbol, Attr::EXTERNAL, Attr::TARGET);
+  CheckConflicting(symbol, Attr::INTRINSIC, Attr::TARGET);
   const Symbol *interface{details.procInterface()};
   if (details.isDummy()) {
     if (!symbol.attrs().test(Attr::POINTER) && // C843
@@ -1750,7 +1754,7 @@ void CheckHelper::CheckSubprogram(
     messages_.Say(symbol.name(),
         "A subroutine may not have LAUNCH_BOUNDS() or CLUSTER_DIMS() unless it has ATTRIBUTES(GLOBAL) or ATTRIBUTES(GRID_GLOBAL)"_err_en_US);
   }
-  if (!IsStmtFunction(symbol)) {
+  if (!IsStmtFunction(symbol) && !details.isInterface() && !details.isDummy()) {
     if (const Scope * outerDevice{FindCUDADeviceContext(&symbol.owner())};
         outerDevice && outerDevice->symbol()) {
       if (auto *msg{messages_.Say(symbol.name(),
@@ -1837,6 +1841,10 @@ void CheckHelper::CheckExternal(const Symbol &symbol) {
 
 void CheckHelper::CheckDerivedType(
     const Symbol &derivedType, const DerivedTypeDetails &details) {
+  if (details.isEnumerationType()) {
+    // Enumeration types have no components, parameters, or bindings to check.
+    return;
+  }
   if (details.isForwardReferenced() && !context_.HasError(derivedType)) {
     messages_.Say("The derived type '%s' has not been defined"_err_en_US,
         derivedType.name());

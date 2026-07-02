@@ -8,7 +8,6 @@
 
 #include "LibCxx.h"
 
-#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/ConstString.h"
@@ -362,12 +361,12 @@ lldb::ChildCacheState lldb_private::formatters::
   //
   // std::unordered_map stores the actual key/value pair in
   // __hash_value_type::__cc_ (or previously __cc).
-  auto potential_child_sp = key_value_sp->Clone(ConstString("pair"));
+  auto potential_child_sp = key_value_sp->Clone("pair");
   if (potential_child_sp)
     if (potential_child_sp->GetNumChildrenIgnoringErrors() == 1)
       if (auto child0_sp = potential_child_sp->GetChildAtIndex(0);
           child0_sp->GetName() == "__cc_" || child0_sp->GetName() == "__cc")
-        potential_child_sp = child0_sp->Clone(ConstString("pair"));
+        potential_child_sp = child0_sp->Clone("pair");
 
   m_pair_sp = potential_child_sp;
 
