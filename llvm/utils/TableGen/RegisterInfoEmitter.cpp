@@ -1590,12 +1590,6 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, raw_ostream &MainOS,
     }
   }
 
-  OS << "static const TargetRegisterClass *const " << TargetName
-     << "RegisterClasses[] = {\n";
-  for (const auto &RC : RegisterClasses)
-    OS << "    &" << RC.getQualifiedName() << "RegClass,\n";
-  OS << "  };\n";
-
   // Emit extra information about registers.
   const auto &Regs = RegBank.getRegisters();
   unsigned NumRegCosts = 1;
@@ -1794,9 +1788,9 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, raw_ostream &MainOS,
             "  unsigned RCID = Mapping[Reg.id()];\n"
             "  if (RCID == InvalidRegClassID)\n"
             "    return nullptr;\n"
-            "  return "
+            "  return &"
          << TargetName
-         << "RegisterClasses[RCID];\n"
+         << "MCRegisterClassStorage.Classes[RCID];\n"
             "}\n";
     }
   }
@@ -1827,9 +1821,9 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, raw_ostream &MainOS,
           "  unsigned RCID = Mapping[Reg.id()];\n"
           "  if (RCID == InvalidRegClassID)\n"
           "    return nullptr;\n"
-          "  return "
+          "  return &"
        << TargetName
-       << "RegisterClasses[RCID];\n"
+       << "MCRegisterClassStorage.Classes[RCID];\n"
           "}\n";
   }
 
@@ -1851,7 +1845,7 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, raw_ostream &MainOS,
 {0}::
 {0}(unsigned RA, unsigned DwarfFlavour, unsigned EHFlavour,
     unsigned PC, unsigned HwMode)
-  : TargetRegisterInfo(&{1}RegInfoDesc, {1}RegisterClasses,
+  : TargetRegisterInfo(&{1}RegInfoDesc,
       {1}SubRegIndexStrings, {1}SubRegIndexNameOffsets,
       {1}SubRegIdxRangeTable, {1}SubRegIndexLaneMaskTable,
 

@@ -71,7 +71,6 @@ struct RegClassWeight {
 ///
 class LLVM_ABI TargetRegisterInfo : public MCRegisterInfo {
 public:
-  using regclass_iterator = const TargetRegisterClass * const *;
   using vt_iterator = const MVT::SimpleValueType *;
   struct RegClassInfo {
     unsigned RegSize, SpillSize, SpillAlignment;
@@ -95,7 +94,6 @@ private:
   // Pointer to array of lane masks, one per sub-reg index.
   const LaneBitmask *SubRegIndexLaneMasks;
 
-  regclass_iterator RegClassBegin, RegClassEnd;   // List of regclasses
   LaneBitmask CoveringLanes;
   const RegClassInfo *const RCInfos;
   const MVT::SimpleValueType *const RCVTLists;
@@ -103,7 +101,6 @@ private:
 
 protected:
   TargetRegisterInfo(const TargetRegisterInfoDesc *ID,
-                     ArrayRef<const TargetRegisterClass *> RegisterClasses,
                      const char *SubRegIndexStrings,
                      ArrayRef<uint32_t> SubRegIndexNameOffsets,
                      const SubRegCoveredBits *SubRegIdxRanges,
@@ -494,13 +491,6 @@ public:
   /// remove pseudo-registers that should be ignored).
   virtual void adjustStackMapLiveOutMask(uint32_t *Mask) const {}
 
-  /// Return a super-register of register \p Reg such that its sub-register of
-  /// index \p SubIdx is \p Reg.
-  MCRegister getMatchingSuperReg(MCRegister Reg, unsigned SubIdx,
-                                 const TargetRegisterClass *RC) const {
-    return MCRegisterInfo::getMatchingSuperReg(Reg, SubIdx, RC);
-  }
-
   /// Return a subclass of the register class \p A so that each register in it
   /// has a sub-register of sub-register index \p Idx which is in the register
   /// class \p B.
@@ -713,27 +703,10 @@ protected:
   }
 
 public:
-  /// Register class iterators
-  regclass_iterator regclass_begin() const { return RegClassBegin; }
-  regclass_iterator regclass_end() const { return RegClassEnd; }
-  iterator_range<regclass_iterator> regclasses() const {
-    return make_range(regclass_begin(), regclass_end());
-  }
-
-  unsigned getNumRegClasses() const {
-    return (unsigned)(regclass_end()-regclass_begin());
-  }
-
   /// Returns the register class associated with the enumeration value.
   /// See class MCOperandInfo.
   const TargetRegisterClass *getRegClass(unsigned i) const {
-    assert(i < getNumRegClasses() && "Register Class ID out of range");
-    return RegClassBegin[i];
-  }
-
-  /// Returns the name of the register class.
-  const char *getRegClassName(const TargetRegisterClass *Class) const {
-    return MCRegisterInfo::getRegClassName(Class);
+    return &MCRegisterInfo::getRegClass(i);
   }
 
   /// Find the largest common subclass of A and B.

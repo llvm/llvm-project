@@ -108,8 +108,8 @@ static bool hasPhysRegClassForType(const TargetRegisterInfo &TRI,
   if (TRI.isTypeLegalForClass(*RC, Ty))
     return true;
 
-  return llvm::any_of(TRI.regclasses(), [&](const TargetRegisterClass *RC) {
-    return RC->contains(Reg) && TRI.isTypeLegalForClass(*RC, Ty);
+  return llvm::any_of(TRI.regclasses(), [&](const TargetRegisterClass &RC) {
+    return RC.contains(Reg) && TRI.isTypeLegalForClass(RC, Ty);
   });
 }
 

@@ -645,10 +645,10 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   //
   unsigned MaxNumSGPRs = ST.getMaxNumSGPRs(MF);
   unsigned TotalNumSGPRs = AMDGPU::SGPR_32RegClass.getNumRegs();
-  for (const TargetRegisterClass *RC : regclasses()) {
-    if (RC->isBaseClass() && isSGPRClass(RC)) {
-      unsigned NumRegs = divideCeil(getRegSizeInBits(*RC), 32);
-      for (MCPhysReg Reg : *RC) {
+  for (const TargetRegisterClass &RC : regclasses()) {
+    if (RC.isBaseClass() && isSGPRClass(&RC)) {
+      unsigned NumRegs = divideCeil(getRegSizeInBits(RC), 32);
+      for (MCPhysReg Reg : RC) {
         unsigned Index = getHWRegIndex(Reg);
         if (Index + NumRegs > MaxNumSGPRs && Index < TotalNumSGPRs &&
             Reg != AMDGPU::VCC_LO && Reg != AMDGPU::VCC_HI &&
@@ -701,10 +701,10 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   //
   auto [MaxNumVGPRs, MaxNumAGPRs] = ST.getMaxNumVectorRegs(MF.getFunction());
 
-  for (const TargetRegisterClass *RC : regclasses()) {
-    if (RC->isBaseClass() && isVGPRClass(RC)) {
-      unsigned NumRegs = divideCeil(getRegSizeInBits(*RC), 32);
-      for (MCPhysReg Reg : *RC) {
+  for (const TargetRegisterClass &RC : regclasses()) {
+    if (RC.isBaseClass() && isVGPRClass(&RC)) {
+      unsigned NumRegs = divideCeil(getRegSizeInBits(RC), 32);
+      for (MCPhysReg Reg : RC) {
         unsigned Index = getHWRegIndex(Reg);
         if (Index + NumRegs > MaxNumVGPRs)
           Reserved.set(Reg);
@@ -715,10 +715,10 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   // Reserve all the AGPRs if there are no instructions to use it.
   if (!ST.hasMAIInsts())
     MaxNumAGPRs = 0;
-  for (const TargetRegisterClass *RC : regclasses()) {
-    if (RC->isBaseClass() && isAGPRClass(RC)) {
-      unsigned NumRegs = divideCeil(getRegSizeInBits(*RC), 32);
-      for (MCPhysReg Reg : *RC) {
+  for (const TargetRegisterClass &RC : regclasses()) {
+    if (RC.isBaseClass() && isAGPRClass(&RC)) {
+      unsigned NumRegs = divideCeil(getRegSizeInBits(RC), 32);
+      for (MCPhysReg Reg : RC) {
         unsigned Index = getHWRegIndex(Reg);
         if (Index + NumRegs > MaxNumAGPRs)
           Reserved.set(Reg);

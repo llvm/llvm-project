@@ -5988,21 +5988,21 @@ TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *RI,
       std::make_pair(0u, static_cast<const TargetRegisterClass *>(nullptr));
 
   // Figure out which register class contains this reg.
-  for (const TargetRegisterClass *RC : RI->regclasses()) {
+  for (const TargetRegisterClass &RC : RI->regclasses()) {
     // If none of the value types for this register class are valid, we
     // can't use it.  For example, 64-bit reg classes on 32-bit targets.
-    if (!isLegalRC(*RI, *RC))
+    if (!isLegalRC(*RI, RC))
       continue;
 
-    for (const MCPhysReg &PR : *RC) {
+    for (const MCPhysReg &PR : RC) {
       if (RegName.equals_insensitive(RI->getRegAsmName(PR))) {
         std::pair<unsigned, const TargetRegisterClass *> S =
-            std::make_pair(PR, RC);
+            std::make_pair(PR, &RC);
 
         // If this register class has the requested value type, return it,
         // otherwise keep searching and return the first class found
         // if no other is found which explicitly has the requested type.
-        if (RI->isTypeLegalForClass(*RC, VT))
+        if (RI->isTypeLegalForClass(RC, VT))
           return S;
         if (!R.second)
           R = S;
