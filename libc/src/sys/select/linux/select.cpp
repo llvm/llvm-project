@@ -17,7 +17,11 @@
 #include "src/__support/macros/config.h"
 
 #include "hdr/types/size_t.h"
-#include <sys/syscall.h> // For syscall numbers.
+#include "src/__support/time/linux/kernel_timespec.h"
+#include <sys/syscall.h>
+#if defined(SYS_pselect6_time64)
+#include <linux/time_types.h>
+#endif
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -55,8 +59,25 @@ LLVM_LIBC_FUNCTION(int, select,
   }
   pselect6_sigset_t pss{nullptr, sizeof(sigset_t)};
 #if defined(SYS_pselect6_time64)
-  int ret = LIBC_NAMESPACE::syscall_impl<int>(
-      SYS_pselect6_time64, nfds, read_set, write_set, error_set, &ts, &pss);
+  int ret;
+  // In overlay mode on 32-bit platforms, the system timespec (which we use)
+  // may be 32-bit (8 bytes), while the kernel's __kernel_timespec (used by
+  // _time64 syscalls) is 64-bit (16 bytes). If they match, we can pass the
+  // pointer directly. Otherwise, we must convert to avoid stack corruption.
+  if constexpr (sizeof(timespec) == sizeof(__kernel_timespec)) {
+    ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_pselect6_time64, nfds, read_set,
+                                            write_set, error_set,
+                                            timeout ? &ts : nullptr, &pss);
+  } else {
+    __kernel_timespec ts64{};
+    __kernel_timespec *ts_ptr = nullptr;
+    if (timeout != nullptr) {
+      ts64 = to_kernel_timespec(ts);
+      ts_ptr = &ts64;
+    }
+    ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_pselect6_time64, nfds, read_set,
+                                            write_set, error_set, ts_ptr, &pss);
+  }
 #elif defined(SYS_pselect6)
   static_assert(
       sizeof(timespec::tv_nsec) == sizeof(long),
@@ -64,7 +85,8 @@ LLVM_LIBC_FUNCTION(int, select,
       "matches the register size (long). It is unsafe on 32-bit platforms "
       "with 64-bit tv_nsec.");
   int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_pselect6, nfds, read_set,
-                                              write_set, error_set, &ts, &pss);
+                                              write_set, error_set,
+                                              timeout ? &ts : nullptr, &pss);
 #else
 #error "SYS_pselect6 and SYS_pselect6_time64 syscalls not available."
 #endif
