@@ -44,6 +44,7 @@ add_llvm_component_library(LLVMipo
   SampleProfileMatcher.cpp
   SampleProfileProbe.cpp
   SCCP.cpp
+  SelectFunction.cpp
   StripDeadPrototypes.cpp
   StripSymbols.cpp
   ThinLTOBitcodeWriter.cpp
