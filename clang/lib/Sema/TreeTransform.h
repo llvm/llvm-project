@@ -3409,9 +3409,13 @@ public:
           TInfo, LParenLoc, MultiExprArg(PLE->getExprs(), PLE->getNumExprs()),
           RParenLoc, ListInitialization);
 
+    // Skip compiler-added exprs — only pass what the user actually wrote,
+    // or we get false "too many initializers" errors.
     if (auto *PLE = dyn_cast<CXXParenListInitExpr>(Sub))
       return getSema().BuildCXXTypeConstructExpr(
-          TInfo, LParenLoc, PLE->getInitExprs(), RParenLoc, ListInitialization);
+          TInfo, LParenLoc,
+          PLE->getInitExprs().slice(0, PLE->getUserSpecifiedInitExprs().size()),
+          RParenLoc, ListInitialization);
 
     return getSema().BuildCXXTypeConstructExpr(TInfo, LParenLoc,
                                                MultiExprArg(&Sub, 1), RParenLoc,
