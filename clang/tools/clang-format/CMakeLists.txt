@@ -1,7 +1,18 @@
-set(LLVM_LINK_COMPONENTS support)
+set(LLVM_LINK_COMPONENTS
+  Option
+  Support
+  )
+
+set(LLVM_TARGET_DEFINITIONS Opts.td)
+tablegen(LLVM Opts.inc -gen-opt-parser-defs)
+add_public_tablegen_target(ClangFormatOptsTableGen)
 
 add_clang_tool(clang-format
   ClangFormat.cpp
+
+  DEPENDS
+  ClangFormatOptsTableGen
+  GENERATE_DRIVER
   )
 
 set(CLANG_FORMAT_LIB_DEPS
