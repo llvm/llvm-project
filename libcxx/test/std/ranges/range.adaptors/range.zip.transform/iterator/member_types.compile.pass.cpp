@@ -102,7 +102,7 @@ void test() {
 
     static_assert(std::is_same_v<Iter::iterator_concept, std::forward_iterator_tag>);
     static_assert(std::is_same_v<Iter::iterator_category, std::forward_iterator_tag>);
-    static_assert(std::is_same_v<Iter::difference_type, std::ptrdiff_t>);
+    static_assert(std::is_same_v<Iter::difference_type, std::intptr_t>);
     static_assert(std::is_same_v<Iter::value_type, int>);
     static_assert(HasIterCategory<Iter>);
   }
@@ -114,7 +114,7 @@ void test() {
 
     static_assert(std::is_same_v<Iter::iterator_concept, std::forward_iterator_tag>);
     static_assert(std::is_same_v<Iter::iterator_category, std::input_iterator_tag>);
-    static_assert(std::is_same_v<Iter::difference_type, std::ptrdiff_t>);
+    static_assert(std::is_same_v<Iter::difference_type, std::intptr_t>);
     static_assert(std::is_same_v<Iter::value_type, std::tuple<int>>);
     static_assert(HasIterCategory<Iter>);
   }
@@ -125,7 +125,7 @@ void test() {
     using Iter = decltype(v.begin());
 
     static_assert(std::is_same_v<Iter::iterator_concept, std::input_iterator_tag>);
-    static_assert(std::is_same_v<Iter::difference_type, std::ptrdiff_t>);
+    static_assert(std::is_same_v<Iter::difference_type, std::intptr_t>);
     static_assert(std::is_same_v<Iter::value_type, int>);
     static_assert(!HasIterCategory<Iter>);
   }
