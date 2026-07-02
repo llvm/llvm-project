@@ -6969,6 +6969,15 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           &Call);
     break;
   }
+  case Intrinsic::ptrauth_auth_with_pc_and_resign: {
+    // Verify that the auth key is IA (0) or IB (1), not DA (2) or DB (3)
+    auto *AuthKey = cast<ConstantInt>(Call.getArgOperand(1));
+    uint64_t Key = AuthKey->getZExtValue();
+    Check(Key == 0 || Key == 1,
+          "ptrauth.auth.with.pc.and.resign key must be IA (0) or IB (1)",
+          &Call);
+    break;
+  }
   };
 
   // Verify that there aren't any unmediated control transfers between funclets.
