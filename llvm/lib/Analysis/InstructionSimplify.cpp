@@ -5668,6 +5668,17 @@ static Value *simplifyCastInst(unsigned CastOpc, Value *Op, Type *Ty,
       X->getType() == Ty && Ty == Q.DL.getIndexType(Ptr->getType()))
     return X;
 
+  // Fold a value-preserving zext/sext of a trunc back to the original value.
+  if (CastOpc == Instruction::ZExt || CastOpc == Instruction::SExt) {
+    if (auto *Trunc = dyn_cast<TruncInst>(Op)) {
+      Value *Src = Trunc->getOperand(0);
+      bool NoWrap = CastOpc == Instruction::ZExt ? Trunc->hasNoUnsignedWrap()
+                                                 : Trunc->hasNoSignedWrap();
+      if (Src->getType() == Ty && NoWrap)
+        return Src;
+    }
+  }
+
   return nullptr;
 }
 
