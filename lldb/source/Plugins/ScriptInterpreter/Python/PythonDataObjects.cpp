@@ -697,7 +697,7 @@ PythonObject PythonDictionary::GetItemForKey(const PythonObject &key) const {
 
 Expected<PythonObject>
 PythonDictionary::GetItem(const PythonObject &key) const {
-  if (!IsValid())
+  if (!IsValid() || !key.IsValid())
     return nullDeref();
   PyObject *o = PyDict_GetItemWithError(m_py_obj, key.get());
   if (PyErr_Occurred())
