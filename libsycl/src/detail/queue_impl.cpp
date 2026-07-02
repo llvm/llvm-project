@@ -132,10 +132,6 @@ void QueueImpl::submitKernelImpl(DeviceKernelInfo &KernelInfo, void *ArgData,
                               KernelInfo.getName().data() + ") failed with " +
                               formatCodeString(Result));
 
-  ol_event_handle_t NewEvent{};
-  ol_event_flags_t Flags{};
-  callAndThrow(olCreateEvent, MOffloadQueue, Flags, &NewEvent);
-
   MCurrentSubmitInfo.LastEvent = createEvent();
 }
 
