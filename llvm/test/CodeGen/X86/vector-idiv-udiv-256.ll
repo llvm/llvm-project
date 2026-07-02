@@ -360,6 +360,104 @@ define <32 x i8> @test_divconstant_32i8(<32 x i8> %a) nounwind {
 }
 
 ;
+; udiv by variable
+;
+
+define <8 x i32> @test_divv_8i32(<8 x i32> %a, <8 x i32> %b) nounwind {
+; AVX1-LABEL: test_divv_8i32:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
+; AVX1-NEXT:    vpextrd $1, %xmm2, %eax
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm3
+; AVX1-NEXT:    vpextrd $1, %xmm3, %ecx
+; AVX1-NEXT:    xorl %edx, %edx
+; AVX1-NEXT:    divl %ecx
+; AVX1-NEXT:    movl %eax, %ecx
+; AVX1-NEXT:    vmovd %xmm2, %eax
+; AVX1-NEXT:    vmovd %xmm3, %esi
+; AVX1-NEXT:    xorl %edx, %edx
+; AVX1-NEXT:    divl %esi
+; AVX1-NEXT:    vmovd %eax, %xmm4
+; AVX1-NEXT:    vpinsrd $1, %ecx, %xmm4, %xmm4
+; AVX1-NEXT:    vpextrd $2, %xmm2, %eax
+; AVX1-NEXT:    vpextrd $2, %xmm3, %ecx
+; AVX1-NEXT:    xorl %edx, %edx
+; AVX1-NEXT:    divl %ecx
+; AVX1-NEXT:    vpinsrd $2, %eax, %xmm4, %xmm4
+; AVX1-NEXT:    vpextrd $3, %xmm2, %eax
+; AVX1-NEXT:    vpextrd $3, %xmm3, %ecx
+; AVX1-NEXT:    xorl %edx, %edx
+; AVX1-NEXT:    divl %ecx
+; AVX1-NEXT:    vpinsrd $3, %eax, %xmm4, %xmm2
+; AVX1-NEXT:    vpextrd $1, %xmm0, %eax
+; AVX1-NEXT:    vpextrd $1, %xmm1, %ecx
+; AVX1-NEXT:    xorl %edx, %edx
+; AVX1-NEXT:    divl %ecx
+; AVX1-NEXT:    movl %eax, %ecx
+; AVX1-NEXT:    vmovd %xmm0, %eax
+; AVX1-NEXT:    vmovd %xmm1, %esi
+; AVX1-NEXT:    xorl %edx, %edx
+; AVX1-NEXT:    divl %esi
+; AVX1-NEXT:    vmovd %eax, %xmm3
+; AVX1-NEXT:    vpinsrd $1, %ecx, %xmm3, %xmm3
+; AVX1-NEXT:    vpextrd $2, %xmm0, %eax
+; AVX1-NEXT:    vpextrd $2, %xmm1, %ecx
+; AVX1-NEXT:    xorl %edx, %edx
+; AVX1-NEXT:    divl %ecx
+; AVX1-NEXT:    vpinsrd $2, %eax, %xmm3, %xmm3
+; AVX1-NEXT:    vpextrd $3, %xmm0, %eax
+; AVX1-NEXT:    vpextrd $3, %xmm1, %ecx
+; AVX1-NEXT:    xorl %edx, %edx
+; AVX1-NEXT:    divl %ecx
+; AVX1-NEXT:    vpinsrd $3, %eax, %xmm3, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2NOBW-LABEL: test_divv_8i32:
+; AVX2NOBW:       # %bb.0:
+; AVX2NOBW-NEXT:    vpmovzxdq {{.*#+}} ymm2 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero
+; AVX2NOBW-NEXT:    vpbroadcastq {{.*#+}} ymm3 = [4.503599627370496E+15,4.503599627370496E+15,4.503599627370496E+15,4.503599627370496E+15]
+; AVX2NOBW-NEXT:    vpor %ymm3, %ymm2, %ymm2
+; AVX2NOBW-NEXT:    vsubpd %ymm3, %ymm2, %ymm2
+; AVX2NOBW-NEXT:    vpmovzxdq {{.*#+}} ymm4 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
+; AVX2NOBW-NEXT:    vpor %ymm3, %ymm4, %ymm4
+; AVX2NOBW-NEXT:    vsubpd %ymm3, %ymm4, %ymm4
+; AVX2NOBW-NEXT:    vdivpd %ymm2, %ymm4, %ymm2
+; AVX2NOBW-NEXT:    vbroadcastsd {{.*#+}} ymm4 = [2.147483648E+9,2.147483648E+9,2.147483648E+9,2.147483648E+9]
+; AVX2NOBW-NEXT:    vsubpd %ymm4, %ymm2, %ymm5
+; AVX2NOBW-NEXT:    vcvttpd2dq %ymm5, %xmm5
+; AVX2NOBW-NEXT:    vextracti128 $1, %ymm1, %xmm1
+; AVX2NOBW-NEXT:    vpmovzxdq {{.*#+}} ymm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero
+; AVX2NOBW-NEXT:    vpor %ymm3, %ymm1, %ymm1
+; AVX2NOBW-NEXT:    vsubpd %ymm3, %ymm1, %ymm1
+; AVX2NOBW-NEXT:    vextracti128 $1, %ymm0, %xmm0
+; AVX2NOBW-NEXT:    vpmovzxdq {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
+; AVX2NOBW-NEXT:    vpor %ymm3, %ymm0, %ymm0
+; AVX2NOBW-NEXT:    vsubpd %ymm3, %ymm0, %ymm0
+; AVX2NOBW-NEXT:    vdivpd %ymm1, %ymm0, %ymm0
+; AVX2NOBW-NEXT:    vsubpd %ymm4, %ymm0, %ymm1
+; AVX2NOBW-NEXT:    vcvttpd2dq %ymm1, %xmm1
+; AVX2NOBW-NEXT:    vinsertf128 $1, %xmm1, %ymm5, %ymm1
+; AVX2NOBW-NEXT:    vcvttpd2dq %ymm2, %xmm2
+; AVX2NOBW-NEXT:    vcvttpd2dq %ymm0, %xmm0
+; AVX2NOBW-NEXT:    vinsertf128 $1, %xmm0, %ymm2, %ymm0
+; AVX2NOBW-NEXT:    vpsrad $31, %ymm0, %ymm2
+; AVX2NOBW-NEXT:    vandpd %ymm2, %ymm1, %ymm1
+; AVX2NOBW-NEXT:    vorpd %ymm1, %ymm0, %ymm0
+; AVX2NOBW-NEXT:    retq
+;
+; AVX512BW-LABEL: test_divv_8i32:
+; AVX512BW:       # %bb.0:
+; AVX512BW-NEXT:    vcvtudq2pd %ymm1, %zmm1
+; AVX512BW-NEXT:    vcvtudq2pd %ymm0, %zmm0
+; AVX512BW-NEXT:    vdivpd %zmm1, %zmm0, %zmm0
+; AVX512BW-NEXT:    vcvttpd2udq %zmm0, %ymm0
+; AVX512BW-NEXT:    retq
+  %res = udiv <8 x i32> %a, %b
+  ret <8 x i32> %res
+}
+
+;
 ; urem by 7
 ;
 

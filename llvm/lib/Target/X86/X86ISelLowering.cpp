@@ -2822,6 +2822,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
                        ISD::FP_TO_UINT_SAT,
                        ISD::SETCC,
                        ISD::MUL,
+                       ISD::UDIV,
+                       ISD::SDIV,
+                       ISD::UREM,
+                       ISD::SREM,
                        ISD::XOR,
                        ISD::MSCATTER,
                        ISD::MGATHER,
@@ -50843,6 +50847,140 @@ static SDValue combineMulToPMADD52(SDNode *N, const SDLoc &DL,
   return SDValue();
 }
 
+// x86 has no vector integer divide instructions. Lower vector
+// UDIV/SDIV/UREM/SREM through float division instead of scalarizing into N
+// scalar hardware divides.
+static SDValue combineIntDivRem(SDNode *N, SelectionDAG &DAG,
+                                TargetLowering::DAGCombinerInfo &DCI,
+                                const X86Subtarget &Subtarget) {
+  EVT VT = N->getValueType(0);
+  SDLoc DL(N);
+
+  // Run before the legalizer expands the division.
+  if (!VT.isVector() || !DCI.isBeforeLegalizeOps())
+    return SDValue();
+
+  // Don't introduce a trapping FP divide under strict FP.
+  if (DAG.getMachineFunction().getFunction().hasFnAttribute(
+          Attribute::StrictFP))
+    return SDValue();
+
+  SDValue Dividend = N->getOperand(0);
+  SDValue Divisor = N->getOperand(1);
+  unsigned Opc = N->getOpcode();
+  bool IsRem = Opc == ISD::UREM || Opc == ISD::SREM;
+  bool IsSigned = Opc == ISD::SDIV || Opc == ISD::SREM;
+
+  // If the result is only read back as scalar extracts, scalarization computes
+  // just the demanded lanes.
+  if (all_of(N->users(), [](const SDNode *U) {
+        return U->getOpcode() == ISD::EXTRACT_VECTOR_ELT;
+      }))
+    return SDValue();
+
+  // i8/i16/i32: operands fit the float mantissa exactly (f32 for <=16-bit, f64
+  // for 32-bit) so one float divide is exact.
+  if (VT.getScalarSizeInBits() <= 32 && Subtarget.hasSSE2()) {
+    // <=32-bit constant divisors are better as magic multiply (unlike i64,
+    // whose magic multiply is huge, so the i64 path below keeps constants).
+    if (DAG.isConstantIntBuildVectorOrConstantInt(Divisor))
+      return SDValue();
+    // Unsigned i32 needs FP_TO_UINT(f64->u32) which is emulated and a loss
+    // before AVX2
+    if (!IsSigned && VT.getScalarSizeInBits() == 32 && !Subtarget.hasAVX2())
+      return SDValue();
+    MVT FPSclVT = VT.getScalarSizeInBits() <= 16 ? MVT::f32 : MVT::f64;
+    EVT FPVT = EVT::getVectorVT(*DAG.getContext(), FPSclVT,
+                                VT.getVectorElementCount());
+    unsigned ToFP = IsSigned ? ISD::SINT_TO_FP : ISD::UINT_TO_FP;
+    unsigned FromFP = IsSigned ? ISD::FP_TO_SINT : ISD::FP_TO_UINT;
+    SDValue X = DAG.getNode(ToFP, DL, FPVT, Dividend);
+    SDValue Y = DAG.getNode(ToFP, DL, FPVT, Divisor);
+    SDValue Quot = DAG.getNode(ISD::FDIV, DL, FPVT, X, Y);
+    SDValue Q = DAG.getNode(FromFP, DL, VT, Quot);
+    if (!IsRem)
+      return Q;
+    // rem = dividend - quotient * divisor
+    return DAG.getNode(ISD::SUB, DL, VT, Dividend,
+                       DAG.getNode(ISD::MUL, DL, VT, Q, Divisor));
+  }
+
+  // i64: f64 cannot hold the quotient exactly, so compute a round-down
+  // reciprocal of the divisor and refine it with two round-down multiply
+  // iterations plus a final +1 correction. The embedded rounding control is
+  // 512-bit only so this is limited to AVX512DQ on v8i64.
+  if (VT == MVT::v8i64 && Subtarget.hasDQI()) {
+    MVT FPVT = MVT::v8f64;
+    SDValue RD = DAG.getTargetConstant( // {rd-sae}
+        X86::STATIC_ROUNDING::TO_NEG_INF | X86::STATIC_ROUNDING::NO_EXC, DL,
+        MVT::i32);
+    SDValue RU = DAG.getTargetConstant( // {ru-sae}
+        X86::STATIC_ROUNDING::TO_POS_INF | X86::STATIC_ROUNDING::NO_EXC, DL,
+        MVT::i32);
+
+    // Build an AVX512 intrinsic node (the intrinsic id is operand 0).
+    auto Emit = [&](Intrinsic::ID ID, EVT ResVT, ArrayRef<SDValue> Args) {
+      SmallVector<SDValue, 5> Ops = {DAG.getTargetConstant(ID, DL, MVT::i32)};
+      Ops.append(Args.begin(), Args.end());
+      return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, ResVT, Ops);
+    };
+    auto UToF = [&](SDValue V, SDValue Rnd) { // vcvtuqq2pd
+      return Emit(Intrinsic::x86_avx512_uitofp_round, FPVT, {V, Rnd});
+    };
+    auto FToU = [&](SDValue V) { // vcvtpd2uqq {rd-sae}
+      return Emit(
+          Intrinsic::x86_avx512_mask_cvtpd2uqq_512, VT,
+          {V, DAG.getUNDEF(VT), DAG.getTargetConstant(0xff, DL, MVT::i8), RD});
+    };
+    auto FMul = [&](SDValue A, SDValue B) { // vmulpd {rd-sae}
+      return Emit(Intrinsic::x86_avx512_mul_pd_512, FPVT, {A, B, RD});
+    };
+
+    // For a signed divide, work on absolute values and reapply the sign below.
+    SDValue A = IsSigned ? DAG.getNode(ISD::ABS, DL, VT, Dividend) : Dividend;
+    SDValue B = IsSigned ? DAG.getNode(ISD::ABS, DL, VT, Divisor) : Divisor;
+
+    // b_rcp = round_down(1.0 / round_up(double(b)))
+    SDValue Recip = Emit(Intrinsic::x86_avx512_div_pd_512, FPVT,
+                         {DAG.getConstantFP(1.0, DL, FPVT), UToF(B, RU), RD});
+    // first = round_down(uint64(round_down(double(a)) * b_rcp))
+    SDValue First = FToU(FMul(UToF(A, RD), Recip));
+    // rem = a - first * b
+    SDValue Rem = DAG.getNode(ISD::SUB, DL, VT, A,
+                              DAG.getNode(ISD::MUL, DL, VT, First, B));
+    // refine with a second iteration on the remainder
+    SDValue Second = FToU(FMul(UToF(Rem, RD), Recip));
+    SDValue Quot = DAG.getNode(ISD::ADD, DL, VT, First, Second);
+    // rem = a - (first + second) * b, which may still be >= b (off by one)
+    Rem = DAG.getNode(ISD::SUB, DL, VT, Rem,
+                      DAG.getNode(ISD::MUL, DL, VT, Second, B));
+    EVT CCVT = DAG.getTargetLoweringInfo().getSetCCResultType(
+        DAG.getDataLayout(), *DAG.getContext(), VT);
+    SDValue Ge = DAG.getSetCC(DL, CCVT, Rem, B, ISD::SETUGE);
+    // Apply the +1 correction to the quotient or remainder (magnitude if
+    // signed).
+    SDValue Mag;
+    if (IsRem)
+      Mag =
+          DAG.getSelect(DL, VT, Ge, DAG.getNode(ISD::SUB, DL, VT, Rem, B), Rem);
+    else
+      Mag = DAG.getNode(ISD::ADD, DL, VT, Quot,
+                        DAG.getNode(ISD::ZERO_EXTEND, DL, VT, Ge));
+    if (!IsSigned)
+      return Mag;
+    // A quotient is negative when the operand signs differ. A remainder takes
+    // the dividend's sign.
+    SDValue SignSrc =
+        IsRem ? Dividend : DAG.getNode(ISD::XOR, DL, VT, Dividend, Divisor);
+    SDValue Zero = DAG.getConstant(0, DL, VT);
+    SDValue IsNeg = DAG.getSetCC(DL, CCVT, SignSrc, Zero, ISD::SETLT);
+    return DAG.getSelect(DL, VT, IsNeg,
+                         DAG.getNode(ISD::SUB, DL, VT, Zero, Mag), Mag);
+  }
+
+  return SDValue();
+}
+
 static SDValue combineMul(SDNode *N, SelectionDAG &DAG,
                           TargetLowering::DAGCombinerInfo &DCI,
                           const X86Subtarget &Subtarget) {
@@ -63315,6 +63453,10 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::SBB:         return combineSBB(N, DAG);
   case X86ISD::ADC:         return combineADC(N, DAG, DCI);
   case ISD::MUL:            return combineMul(N, DAG, DCI, Subtarget);
+  case ISD::UDIV:
+  case ISD::SDIV:
+  case ISD::UREM:
+  case ISD::SREM:           return combineIntDivRem(N, DAG, DCI, Subtarget);
   case ISD::SHL:            return combineShiftLeft(N, DAG, Subtarget);
   case ISD::SRA:            return combineShiftRightArithmetic(N, DAG, Subtarget);
   case ISD::SRL:            return combineShiftRightLogical(N, DAG, DCI, Subtarget);
