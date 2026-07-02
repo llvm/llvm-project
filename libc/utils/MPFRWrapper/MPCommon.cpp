@@ -654,7 +654,7 @@ template <> bfloat16 MPFRNumber::as<bfloat16>() const {
 }
 
 template <> Float128 MPFRNumber::as<Float128>() const {
-  return fputil::cast<Float128>(mpfr_get_flt(value, mpfr_rounding));
+  return fputil::cast<Float128>(mpfr_get_float128(value, mpfr_rounding));
 }
 
 } // namespace mpfr
