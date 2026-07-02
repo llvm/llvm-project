@@ -1946,6 +1946,8 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       DirectConversionPattern<spirv::CLAtan2Op, LLVM::ATan2Op>,
       DirectConversionPattern<spirv::CLSqrtOp, LLVM::SqrtOp>,
       DirectConversionPattern<spirv::CLTruncOp, LLVM::FTruncOp>,
+      DirectConversionPattern<spirv::CLCopysignOp, LLVM::CopySignOp>,
+      DirectConversionPattern<spirv::CLFmodOp, LLVM::FRemOp>,
       DirectConversionPattern<spirv::CLSMaxOp, LLVM::SMaxOp>,
       DirectConversionPattern<spirv::CLSMinOp, LLVM::SMinOp>,
       DirectConversionPattern<spirv::CLUMaxOp, LLVM::UMaxOp>,

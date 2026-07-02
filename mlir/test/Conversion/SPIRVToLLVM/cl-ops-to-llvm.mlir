@@ -69,6 +69,10 @@ spirv.func @cl_binary_float(%arg0: f32, %arg1: f32) "None" {
   %2 = spirv.CL.fmax %arg0, %arg1 : f32
   // CHECK: llvm.intr.minnum(%{{.*}}, %{{.*}}) : (f32, f32) -> f32
   %3 = spirv.CL.fmin %arg0, %arg1 : f32
+  // CHECK: llvm.intr.copysign(%{{.*}}, %{{.*}}) : (f32, f32) -> f32
+  %4 = spirv.CL.copysign %arg0, %arg1 : f32
+  // CHECK: llvm.frem %{{.*}}, %{{.*}} : f32
+  %5 = spirv.CL.fmod %arg0, %arg1 : f32
   spirv.Return
 }
 
