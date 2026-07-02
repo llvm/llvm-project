@@ -11,6 +11,8 @@
 
 // static void swap(reference x, reference y) noexcept;
 
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
+
 #include <vector>
 #include <cassert>
 
