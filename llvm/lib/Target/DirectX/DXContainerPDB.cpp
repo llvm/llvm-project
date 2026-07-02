@@ -148,7 +148,8 @@ bool DXContainerPDB::runOnModule(Module &M) {
   auto BypassSandbox = sys::sandbox::scopedDisable();
   codeview::GUID IgnoredOutGuid;
   if (Error Err = Builder.commit(DebugFileName, &IgnoredOutGuid))
-    reportFatalUsageError(std::move(Err));
+    reportFatalUsageError("Couldn't write to PDB file: " +
+                          Twine(toString(std::move(Err))));
 
   reset();
 
