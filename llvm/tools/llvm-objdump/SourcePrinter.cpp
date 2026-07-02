@@ -188,16 +188,27 @@ void LiveVariable::print(raw_ostream &OS, const MCRegisterInfo &MRI) const {
   DataExtractor Data(LocExpr.Expr, Unit->getContext().isLittleEndian());
   DWARFExpression Expression(Data, Unit->getAddressByteSize());
 
-  auto GetRegName = [&MRI, &OS](uint64_t DwarfRegNum, bool IsEH) -> StringRef {
+  // Buffer the "<unknown register N>" surface here rather than writing it
+  // directly to OS. The compact printer may invoke this callback
+  // speculatively and then succeed via its own fallback (e.g. ASCII packed
+  // virtual-register decoding); flushing eagerly would interleave the
+  // unknown text with the decoded name. We replay the buffer only if the
+  // printer ultimately reports failure, which preserves the original
+  // "<unknown register N>" surface for truly unmappable reg nums.
+  std::string localBuf;
+  raw_string_ostream localOS(localBuf);
+  auto GetRegName = [&MRI, &localOS](uint64_t DwarfRegNum,
+                                     bool IsEH) -> StringRef {
     if (std::optional<MCRegister> LLVMRegNum =
             MRI.getLLVMRegNum(DwarfRegNum, IsEH))
       if (const char *RegName = MRI.getName(*LLVMRegNum))
         return StringRef(RegName);
-    OS << "<unknown register " << DwarfRegNum << ">";
+    localOS << "<unknown register " << DwarfRegNum << ">";
     return {};
   };
 
-  printDwarfExpressionCompact(&Expression, OS, GetRegName);
+  if (!printDwarfExpressionCompact(&Expression, OS, GetRegName))
+    OS << localBuf;
 }
 
 void LiveVariable::dump(raw_ostream &OS) const {
