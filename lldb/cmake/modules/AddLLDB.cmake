@@ -183,7 +183,7 @@ function(add_lldb_library name)
 )
 
   cmake_parse_arguments(PARAM
-    "MODULE;SHARED;STATIC;OBJECT;PLUGIN;FRAMEWORK;NO_INTERNAL_DEPENDENCIES;NO_PLUGIN_DEPENDENCIES"
+    "MODULE;SHARED;STATIC;OBJECT;PLUGIN;FRAMEWORK;NO_INTERNAL_DEPENDENCIES;NO_PLUGIN_DEPENDENCIES;CONSUMES_LIBLLDB"
     "INSTALL_PREFIX"
     "LINK_LIBS;CLANG_LIBS;ALLOWED_INTERNAL_DEPENDENCIES"
     ${ARGN})
@@ -354,6 +354,10 @@ function(add_lldb_library name)
   # cannot re-export a symbol that was hidden at compile time.
   if (LLDB_EXPORT_ALL_SYMBOLS OR LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS)
     set_target_properties(${name} PROPERTIES CXX_VISIBILITY_PRESET default)
+  endif()
+
+  if (PARAM_CONSUMES_LIBLLDB)
+    set_property(GLOBAL APPEND PROPERTY LLDB_LIBLLDB_CONSUMERS ${name})
   endif()
 endfunction(add_lldb_library)
 

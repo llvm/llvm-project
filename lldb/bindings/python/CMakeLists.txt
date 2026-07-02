@@ -144,6 +144,7 @@ function(finish_swig_python swig_target lldb_python_bindings_dir lldb_python_tar
   if (LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS)
     # The SWIG wrapper lives in the plugin library in this mode.
     set(liblldb_filename "liblldbPluginScriptInterpreterPython${CMAKE_SHARED_LIBRARY_SUFFIX}")
+    add_dependencies(${swig_target} lldbPluginScriptInterpreterPython)
   elseif (LLDB_BUILD_FRAMEWORK)
     set(liblldb_filename "LLDB")
   else()
