@@ -34,8 +34,10 @@
 #include "llvm/Plugins/PassPlugin.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/Program.h"
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -45,6 +47,8 @@
 #include "llvm/Transforms/IPO/WholeProgramDevirt.h"
 #include "llvm/Transforms/Utils/FunctionImportUtils.h"
 #include "llvm/Transforms/Utils/SplitModule.h"
+#include "llvm/Transforms/Utils/SplitModuleCG.h"
+#include <filesystem>
 #include <optional>
 
 using namespace llvm;
@@ -79,6 +83,13 @@ static cl::list<std::string>
                     cl::desc("Only save bitcode for module whose name without "
                              "path matches this for -save-temps options"),
                     cl::CommaSeparated, cl::Hidden);
+
+static cl::opt<unsigned> LTOSplitPartitions(
+    "lto-split-partitions", cl::Hidden, cl::init(0),
+    cl::desc("Control split to how many partitions in lto backend."));
+
+static cl::opt<bool> LTOSplitByCG("lto-split-by-callgraph", cl::init(false),
+			   cl::desc("Enable split module in lto backend."));
 
 namespace llvm {
 extern cl::opt<bool> NoPGOWarnMismatch;
@@ -124,12 +135,19 @@ Error Config::addSaveTemps(std::string OutputFileName, bool UseInputModulePath,
       if (LinkerHook && !LinkerHook(Task, M))
         return false;
 
+      auto extract_filename = [](const std::string &path) -> std::string {
+        std::filesystem::path fs_path(path);
+        return fs_path.filename().string();
+      };
+
       std::string PathPrefix;
       // If this is the combined module (not a ThinLTO backend compile) or the
       // user hasn't requested using the input module's path, emit to a file
       // named from the provided OutputFileName with the Task ID appended.
       if (M.getModuleIdentifier() == "ld-temp.o" || !UseInputModulePath) {
         PathPrefix = OutputFileName;
+        if (LTOSplitByCG)
+          PathPrefix += extract_filename(M.getSourceFileName()) + ".";
         if (Task != (unsigned)-1)
           PathPrefix += utostr(Task) + ".";
       } else
@@ -513,6 +531,67 @@ static void codegen(const Config &Conf, TargetMachine *TM,
     report_fatal_error(std::move(Err));
 }
 
+static bool splitOptAndCodeGenThin(unsigned task, const Config &C,
+                                   TargetMachine *TM, AddStreamFn AddStream,
+                                   unsigned ParallelCodeGenParallelismLevel,
+                                   Module &Mod,
+                                   const ModuleSummaryIndex &CombinedIndex,
+                                   const std::vector<uint8_t> &CmdArgs,
+                                   bool DoOpt, AddStreamFn IRAddStream,
+                                   ArrayRef<StringRef> &BitcodeLibFuncs,
+                                   bool IsThinLTO = true) {
+  const Target *T = &TM->getTarget();
+
+  SplitModuleCG SplitModuleCG(Mod, CombinedIndex, ParallelCodeGenParallelismLevel);
+  ParallelCodeGenParallelismLevel = SplitModuleCG.getPartitionNum();
+
+  const auto HandleModulePartition = [&](std::unique_ptr<Module> MPart,
+                                         unsigned PartitionId) {
+    std::unique_ptr<TargetMachine> ThreadTM = createTargetMachine(C, T, *MPart);
+
+    if (DoOpt) {
+      if (!opt(C, ThreadTM.get(), PartitionId, *MPart, /*IsThinLTO=*/true,
+               /*ExportSummary=*/nullptr, /*ImportSummary=*/&CombinedIndex,
+               CmdArgs, BitcodeLibFuncs)) {
+        report_fatal_error("Failed to gen opt for split mod in thread.");
+      }
+
+      // Save the current module before the first codegen round.
+      // Note that the second codegen round runs only `codegen()` without
+      // running `opt()`. We're not reaching here as it's bailed out earlier
+      // with `CodeGenOnly` which has been set in `SecondRoundThinBackend`.
+      if (IRAddStream)
+        cgdata::saveModuleForTwoRounds(*MPart, PartitionId,
+                                       IRAddStream);
+    }
+
+    if (IsThinLTO) {
+      // Rename the GlobalValues whose internal is changed to external. That's
+      // can avoid duplicate symbols int ThinLTO.
+      auto PromotedRenames = SplitModuleCG.getPromotedRenames();
+      for (auto &GV : MPart->global_values()) {
+        if (auto It = PromotedRenames.find(GV.getName());
+            It != PromotedRenames.end()) {
+          GV.setName(It->second);
+        }
+      }
+    }
+
+    // FIXME: For distributed ThinLTO, the current 'Addstream' callbcak needs
+    // to be reconstructed to support emitting multiple split submodules.
+    codegen(C, ThreadTM.get(), AddStream, PartitionId, *MPart,
+            CombinedIndex);
+  };
+
+  SplitModuleCG.SplitModule(HandleModulePartition, C);
+
+  // TODO: After CodeGen emission, an arbitrary number of split submodules will
+  // be generated. These fragments need to be merged before the final link
+  // stage to prevent disruptions to the distrubuted ThinLTO workflow.
+
+  return true;
+}
+
 static void splitCodeGen(const Config &C, TargetMachine *TM,
                          AddStreamFn AddStream,
                          unsigned ParallelCodeGenParallelismLevel, Module &Mod,
@@ -614,6 +693,11 @@ Error lto::backend(const Config &C, AddStreamFn AddStream,
 
   if (ParallelCodeGenParallelismLevel == 1) {
     codegen(C, TM.get(), AddStream, 0, Mod, CombinedIndex);
+  } else if (LTOSplitByCG) {
+    splitOptAndCodeGenThin(/*Task*/0, C, TM.get(), AddStream,
+                           ParallelCodeGenParallelismLevel, Mod, CombinedIndex,
+                           /*CmdArgs*/ std::vector<uint8_t>(), /*DoOpt*/false,
+                            AddStreamFn(), BitcodeLibFuncs, false);
   } else {
     splitCodeGen(C, TM.get(), AddStream, ParallelCodeGenParallelismLevel, Mod,
                  CombinedIndex);
@@ -673,9 +757,14 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
 
   LLVM_DEBUG(dbgs() << "Running ThinLTO\n");
   if (CodeGenOnly) {
-    // If CodeGenOnly is set, we only perform code generation and skip
-    // optimization. This value may differ from Conf.CodeGenOnly.
-    codegen(Conf, TM.get(), AddStream, Task, Mod, CombinedIndex);
+    if (LTOSplitByCG)
+      splitOptAndCodeGenThin(Task, Conf, TM.get(), AddStream,
+                             LTOSplitPartitions, Mod, CombinedIndex,
+                             CmdArgs, false, IRAddStream, BitcodeLibFuncs);
+    else
+      // If CodeGenOnly is set, we only perform code generation and skip
+      // optimization. This value may differ from Conf.CodeGenOnly.
+      codegen(Conf, TM.get(), AddStream, Task, Mod, CombinedIndex);
     return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
   }
 
@@ -685,20 +774,27 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
   auto OptimizeAndCodegen =
       [&](Module &Mod, TargetMachine *TM,
           LLVMRemarkFileHandle DiagnosticOutputFile) {
-        // Perform optimization and code generation for ThinLTO.
-        if (!opt(Conf, TM, Task, Mod, /*IsThinLTO=*/true,
-                 /*ExportSummary=*/nullptr, /*ImportSummary=*/&CombinedIndex,
-                 CmdArgs, BitcodeLibFuncs))
-          return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
+        if (LTOSplitByCG) {
+          if (!splitOptAndCodeGenThin(
+                  Task, Conf, TM, AddStream, LTOSplitPartitions, Mod,
+                  CombinedIndex, CmdArgs, true, IRAddStream, BitcodeLibFuncs))
+            return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
+        } else {
+          // Perform optimization and code generation for ThinLTO.
+          if (!opt(Conf, TM, Task, Mod, /*IsThinLTO=*/true,
+                  /*ExportSummary=*/nullptr, /*ImportSummary=*/&CombinedIndex,
+                  CmdArgs, BitcodeLibFuncs))
+            return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
 
-        // Save the current module before the first codegen round.
-        // Note that the second codegen round runs only `codegen()` without
-        // running `opt()`. We're not reaching here as it's bailed out earlier
-        // with `CodeGenOnly` which has been set in `SecondRoundThinBackend`.
-        if (IRAddStream)
-          cgdata::saveModuleForTwoRounds(Mod, Task, IRAddStream);
+          // Save the current module before the first codegen round.
+          // Note that the second codegen round runs only `codegen()` without
+          // running `opt()`. We're not reaching here as it's bailed out earlier
+          // with `CodeGenOnly` which has been set in `SecondRoundThinBackend`.
+          if (IRAddStream)
+            cgdata::saveModuleForTwoRounds(Mod, Task, IRAddStream);
 
-        codegen(Conf, TM, AddStream, Task, Mod, CombinedIndex);
+          codegen(Conf, TM, AddStream, Task, Mod, CombinedIndex);
+        }
         return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
       };
 

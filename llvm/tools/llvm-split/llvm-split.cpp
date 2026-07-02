@@ -18,8 +18,10 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/PassInstrumentation.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/IRReader/IRReader.h"
+#include "llvm/LTO/Config.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
@@ -35,6 +37,7 @@
 #include "llvm/Transforms/IPO/GlobalDCE.h"
 #include "llvm/Transforms/Utils/SplitModule.h"
 #include "llvm/Transforms/Utils/SplitModuleByCategory.h"
+#include "llvm/Transforms/Utils/SplitModuleCG.h"
 
 using namespace llvm;
 
@@ -76,6 +79,10 @@ static cl::opt<std::string>
 static cl::opt<std::string>
     MCPU("mcpu", cl::desc("Target CPU, ignored if --mtriple is not used"),
          cl::value_desc("cpu"), cl::cat(SplitCategory));
+         
+static cl::opt<bool>
+    EnableSplitModuleCG("enable-split-module-CG", cl::Prefix, cl::init(false),
+     cl::desc("Split module using call graph"), cl::cat(SplitCategory));
 
 enum class SplitByCategoryType {
   SBCT_ByAttribute,
@@ -323,6 +330,35 @@ int main(int argc, char **argv) {
               "splitModule implementation\n";
   }
 
+  if (EnableSplitModuleCG) {
+    const auto HandleModulePartCG = [&](std::unique_ptr<Module> MPart, unsigned I) {
+      std::error_code EC;
+      std::unique_ptr<ToolOutputFile> Out(
+          new ToolOutputFile(OutputFilename + utostr(I), EC, sys::fs::OF_None));
+      if (EC) {
+        errs() << EC.message() << '\n';
+        exit(1);
+      }
+
+      if (verifyModule(*MPart, &errs())) {
+        errs() << "Broken module!\n";
+        exit(1);
+      }
+
+      WriteBitcodeToFile(*MPart, Out->os());
+
+      // Declare success.
+      Out->keep();
+    };
+
+    llvm::lto::Config Config;
+    ModuleSummaryIndex CombinedIndex(false);
+    SplitModuleCG SplitModuleCG(*M, CombinedIndex, NumOutputs);
+    SplitModuleCG.SplitModule(HandleModulePartCG, Config);
+    return 0;
+  }
+
   SplitModule(*M, NumOutputs, HandleModulePart, PreserveLocals, RoundRobin);
   return 0;
 }
+
