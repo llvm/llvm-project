@@ -103,6 +103,7 @@ template <ARM::ISAKind ISAKind> struct AssertSameExtensionFlags {
                             FormatExtensionFlags(GotFlags), GotFlags, CPUName,
                             FormatExtensionFlags(ExpectedFlags ^ GotFlags));
   }
+
 private:
   StringRef CPUName;
 };
@@ -2284,28 +2285,25 @@ INSTANTIATE_TEST_SUITE_P(
 AArch64ExtensionDependenciesBaseCPUTestParams
     AArch64ExtensionDependenciesCPUData[] = {
         // Base CPU features
-        {"cortex-a57",
-         {},
-         {"v8a", "aes", "crc", "fp-armv8", "sha2", "neon"},
-         {}},
+        {"cortex-a57", {}, {"v8a", "aes", "crc", "sha2"}, {"fp-armv8", "neon"}},
         {"cortex-r82",
          {},
-         {"v8r", "crc", "dotprod", "fp-armv8", "fullfp16", "fp16fml", "lse",
-          "ras", "rcpc", "rdm", "sb", "neon", "ssbs"},
-         {}},
+         {"v8r"},
+         {"crc", "dotprod", "fp-armv8", "fullfp16", "fp16fml", "lse", "ras",
+          "rcpc", "rdm", "sb", "neon", "ssbs"}},
         {"cortex-a520",
          {},
-         {"v9.2a",    "bf16",    "crc",  "dotprod",     "flagm", "fp-armv8",
-          "fullfp16", "fp16fml", "i8mm", "lse",         "mte",   "pauth",
-          "perfmon",  "predres", "ras",  "rcpc",        "rdm",   "sb",
-          "neon",     "ssbs",    "sve",  "sve-bitperm", "sve2"},
-         {}},
+         {"v9.2a", "fp16fml", "mte", "perfmon", "sve-bitperm"},
+         {"bf16", "crc", "dotprod", "flagm", "fp-armv8", "fullfp16", "i8mm",
+          "lse", "pauth", "predres", "ras", "rcpc", "rdm", "sb", "neon", "ssbs",
+          "sve", "sve2"}},
 
         // Negative modifiers
         {"cortex-r82",
          {"nofp"},
-         {"v8r", "crc", "lse", "ras", "rcpc", "sb", "ssbs"},
-         {"fp-armv8", "neon", "fullfp16", "fp16fml", "dotprod", "rdm"}},
+         {"v8r"},
+         {"crc", "lse", "ras", "rcpc", "sb", "ssbs", "fp-armv8", "neon",
+          "fullfp16", "fp16fml", "dotprod", "rdm"}},
 };
 
 INSTANTIATE_TEST_SUITE_P(

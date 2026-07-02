@@ -5,12 +5,18 @@
 
 // RUN: %clang --target=aarch64-linux-gnu -mcpu=neoverse-v2+nosve %s -### 2>&1 | FileCheck %s --check-prefix=NEOVERSE-V2-NOSVE
 // NEOVERSE-V2-NOSVE: "-target-feature" "-sve"
+// NEOVERSE-V2-NOSVE-NOT: "-target-feature" "+sve"
+// NEOVERSE-V2-NOSVE: "-target-feature" "-sve2"
+// NEOVERSE-V2-NOSVE-NOT: "-target-feature" "+sve"
+// NEOVERSE-V2-NOSVE-NOT: "-target-feature" "+sve2"
 
 // RUN: %clang --target=aarch64-linux-gnu -mcpu=neoverse-v2+norng %s -### 2>&1 | FileCheck %s --check-prefix=NEOVERSE-V2-NORNG
 // NEOVERSE-V2-NORNG: "-target-feature" "-rand"
+// NEOVERSE-V2-NORNG-NOT: "-target-feature" "+rand"
 
 // RUN: %clang --target=aarch64-linux-gnu -mcpu=neoverse-v2+nosb %s -### 2>&1 | FileCheck %s --check-prefix=NEOVERSE-V2-NOSB
 // NEOVERSE-V2-NOSB: "-target-feature" "-sb"
+// NEOVERSE-V2-NOSB-NOT: "-target-feature" "+sb"
 
 // RUN: %clang --target=aarch64-linux-gnu -mcpu=neoverse-v2+nosha2 %s -### 2>&1 | FileCheck %s --check-prefix=NEOVERSE-V2-NOSHA2
 // NEOVERSE-V2-NOSHA2-NOT: "-target-feature" "+sha2"
