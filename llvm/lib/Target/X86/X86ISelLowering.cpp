@@ -46058,6 +46058,68 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
 
     break;
   }
+  case X86ISD::BZHI: {
+    SDValue Op0 = Op.getOperand(0);
+    SDValue Op1 = Op.getOperand(1);
+
+    // If the index's max value is less than BitWidth, bits above it
+    // are not demanded from the source.
+    auto SimplifySrcDemandedBits = [&](uint64_t MaxIdx) -> bool {
+      if (MaxIdx < BitWidth) {
+        APInt DemandedSrc =
+            OriginalDemandedBits & APInt::getLowBitsSet(BitWidth, MaxIdx);
+        if (SimplifyDemandedBits(Op0, DemandedSrc, Known, TLO, Depth + 1))
+          return true;
+      }
+      return false;
+    };
+
+    if (auto *Cst1 = dyn_cast<ConstantSDNode>(Op1)) {
+      uint64_t Val = Cst1->getZExtValue();
+      uint64_t Masked = Val & 0xFF;
+
+      if (SimplifySrcDemandedBits(Masked))
+        return true;
+
+      // Known bits: exact index, so bits above Masked are known zero.
+      if (Masked < BitWidth) {
+        Known.Zero.setBits(Masked, BitWidth);
+        Known.One.clearBits(Masked, BitWidth);
+      }
+
+      if (Masked != Val) {
+        SDLoc DL(Op);
+        return TLO.CombineTo(
+            Op, TLO.DAG.getNode(X86ISD::BZHI, DL, VT, Op0,
+                                TLO.DAG.getConstant(Masked, DL, VT)));
+      }
+    } else {
+      KnownBits Known1;
+      APInt DemandedMask(APInt::getLowBitsSet(BitWidth, 8));
+      if (SimplifyDemandedBits(Op1, DemandedMask, Known1, TLO, Depth + 1))
+        return true;
+
+      KnownBits Known1Trunc = Known1.trunc(8);
+      uint64_t MinValue = Known1Trunc.getMinValue().getZExtValue();
+      uint64_t MaxValue = Known1Trunc.getMaxValue().getZExtValue();
+
+      if (SimplifySrcDemandedBits(MaxValue))
+        return true;
+
+      // Known bits: adjust based on control range.
+      if (MinValue >= BitWidth) {
+        // BZHI is a no-op, Known from Op0 is valid as-is.
+      } else if (MaxValue < BitWidth) {
+        Known.Zero.setBits(MaxValue, BitWidth);
+        Known.One.clearBits(MaxValue, BitWidth);
+        Known.One.clearBits(MinValue, MaxValue);
+      } else {
+        Known.One.clearAllBits();
+      }
+    }
+
+    break;
+  }
   case X86ISD::VPMADD52L:
   case X86ISD::VPMADD52H: {
     KnownBits KnownOp0, KnownOp1, KnownOp2;
