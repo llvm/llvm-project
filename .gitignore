@@ -90,3 +90,7 @@ pythonenv*
 /clang/utils/analyzer/projects/*/RefScanBuildResults
 # automodapi puts generated documentation files here.
 /lldb/docs/python_api/
+CLANG_COMMENT_PARSER_NOTES.md
+MARKDOWN_PARSER_RESEARCH.md
+followed
+prefix

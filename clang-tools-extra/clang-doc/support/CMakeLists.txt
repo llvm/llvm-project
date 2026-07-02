@@ -6,5 +6,6 @@ set(LLVM_LINK_COMPONENTS
 
 add_clang_library(clangDocSupport STATIC
   File.cpp
+  Markdown.cpp
   Utils.cpp
   )
