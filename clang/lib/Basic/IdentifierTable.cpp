@@ -19,6 +19,7 @@
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TokenKinds.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/StringMap.h"
@@ -26,8 +27,10 @@
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
+#include <cstdint>
 #include <cstdio>
 #include <cstring>
+#include <limits>
 #include <string>
 
 using namespace clang;
@@ -267,27 +270,103 @@ static void AddNotableIdentifier(StringRef Name,
   }
 }
 
+namespace {
+
+struct KeywordTableEntry {
+  uint32_t Flags;
+  uint16_t TokenCode;
+  uint8_t SpellingLength;
+};
+
+template <size_t Size>
+constexpr uint8_t keywordSpellingLength(const char (&)[Size]) {
+  static_assert(Size - 1 <= std::numeric_limits<uint8_t>::max());
+  return Size - 1;
+}
+
+constexpr char KeywordSpellings[] =
+#define KEYWORD(NAME, FLAGS) #NAME "\0"
+#define ALIAS(NAME, TOK, FLAGS) NAME "\0"
+#define TESTING_KEYWORD(NAME, FLAGS)
+#include "clang/Basic/TokenKinds.def"
+    "";
+
+constexpr KeywordTableEntry KeywordTable[] = {
+#define KEYWORD(NAME, FLAGS)                                                   \
+  {FLAGS, static_cast<uint16_t>(tok::kw_##NAME), keywordSpellingLength(#NAME)},
+#define ALIAS(NAME, TOK, FLAGS)                                                \
+  {FLAGS, static_cast<uint16_t>(tok::kw_##TOK), keywordSpellingLength(NAME)},
+#define TESTING_KEYWORD(NAME, FLAGS)
+#include "clang/Basic/TokenKinds.def"
+};
+
+constexpr size_t keywordSpellingBytes() {
+  size_t Size = 0;
+  for (const KeywordTableEntry &Keyword : KeywordTable)
+    Size += Keyword.SpellingLength + 1;
+  return Size;
+}
+
+static_assert(sizeof(KeywordTableEntry) == 8);
+static_assert(tok::NUM_TOKENS <= std::numeric_limits<uint16_t>::max());
+static_assert((KEYMAX | (KEYMAX - 1)) <= std::numeric_limits<uint32_t>::max());
+constexpr size_t KeywordTokenCount = tok::kw___unknown_anytype - tok::kw_auto;
+constexpr size_t AliasCount =
+#define KEYWORD(NAME, FLAGS)
+#define ALIAS(NAME, TOK, FLAGS) 1 +
+#define TESTING_KEYWORD(NAME, FLAGS)
+#include "clang/Basic/TokenKinds.def"
+    0;
+static_assert(sizeof(KeywordTable) / sizeof(KeywordTable[0]) ==
+              KeywordTokenCount + AliasCount);
+static_assert(sizeof(KeywordSpellings) == keywordSpellingBytes() + 1);
+// CXX_KEYWORD_OPERATOR entries precede restrict in TokenKinds.def.
+constexpr size_t CXXOperatorPosition = tok::kw_restrict - tok::kw_auto;
+static_assert(KeywordTable[CXXOperatorPosition].TokenCode == tok::kw_restrict);
+
+} // namespace
+
 /// AddKeywords - Add all keywords to the symbol table.
 ///
 void IdentifierTable::AddKeywords(const LangOptions &LangOpts) {
   // Add keywords and tokens for the current language.
-#define KEYWORD(NAME, FLAGS) \
-  AddKeyword(StringRef(#NAME), tok::kw_ ## NAME,  \
-             FLAGS, LangOpts, *this);
-#define ALIAS(NAME, TOK, FLAGS) \
-  AddKeyword(StringRef(NAME), tok::kw_ ## TOK,  \
-             FLAGS, LangOpts, *this);
+  const char *KeywordSpelling = KeywordSpellings;
+  auto AddKeywordRange = [&](size_t Begin, size_t End) {
+    for (const KeywordTableEntry &Keyword :
+         llvm::ArrayRef(KeywordTable).slice(Begin, End - Begin)) {
+      AddKeyword(StringRef(KeywordSpelling, Keyword.SpellingLength),
+                 static_cast<tok::TokenKind>(Keyword.TokenCode), Keyword.Flags,
+                 LangOpts, *this);
+      KeywordSpelling += Keyword.SpellingLength + 1;
+    }
+  };
+
+  AddKeywordRange(0, CXXOperatorPosition);
+
+#define KEYWORD(NAME, FLAGS)
+#define ALIAS(NAME, TOK, FLAGS)
 #define CXX_KEYWORD_OPERATOR(NAME, ALIAS)                                      \
   if (LangOpts.CXXOperatorNames)                                               \
     AddCXXOperatorKeyword(StringRef(#NAME), tok::ALIAS, *this);                \
   else                                                                         \
     MarkIdentifierAsKeywordInCpp(*this, StringRef(#NAME));
-#define OBJC_AT_KEYWORD(NAME)  \
-  if (LangOpts.ObjC)           \
+#define OBJC_AT_KEYWORD(NAME)
+#define NOTABLE_IDENTIFIER(NAME)
+#define TESTING_KEYWORD(NAME, FLAGS)
+#include "clang/Basic/TokenKinds.def"
+
+  AddKeywordRange(CXXOperatorPosition,
+                  sizeof(KeywordTable) / sizeof(KeywordTable[0]));
+  assert(KeywordSpelling == KeywordSpellings + sizeof(KeywordSpellings) - 1);
+
+#define KEYWORD(NAME, FLAGS)
+#define ALIAS(NAME, TOK, FLAGS)
+#define CXX_KEYWORD_OPERATOR(NAME, ALIAS)
+#define OBJC_AT_KEYWORD(NAME)                                                  \
+  if (LangOpts.ObjC)                                                           \
     AddObjCKeyword(StringRef(#NAME), tok::objc_##NAME, *this);
 #define NOTABLE_IDENTIFIER(NAME)                                               \
   AddNotableIdentifier(StringRef(#NAME), tok::NAME, *this);
-
 #define TESTING_KEYWORD(NAME, FLAGS)
 #include "clang/Basic/TokenKinds.def"
 
