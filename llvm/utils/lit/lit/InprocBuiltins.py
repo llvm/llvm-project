@@ -251,6 +251,7 @@ def executeBuiltinRm(cmd, cmd_shenv):
                 else:
                     shutil.rmtree(path, onerror=on_rm_error if force else None)
             else:
+                path = lit.util.get_windows_extended_path(path)
                 if force and not os.access(path, os.W_OK):
                     os.chmod(path, stat.S_IMODE(os.stat(path).st_mode) | stat.S_IWRITE)
                 os.remove(path)
