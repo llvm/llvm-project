@@ -235,7 +235,7 @@ struct B : A {
   void bar();
 };
 
-// CHECK8-DAG: @_ZTVN5test81CE = linkonce_odr constant
+// CHECK8-DAG: @_ZTVN5test81CE = linkonce_odr unnamed_addr constant
 struct C : A {
   C();
   void bar();
@@ -250,7 +250,7 @@ struct D : A {
 };
 void D::bar() {}
 
-// CHECK8-DAG: @_ZTVN5test81EE = linkonce_odr constant
+// CHECK8-DAG: @_ZTVN5test81EE = linkonce_odr unnamed_addr constant
 struct E : A {
   E();
 };
