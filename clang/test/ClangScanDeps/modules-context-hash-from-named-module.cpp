@@ -39,7 +39,9 @@ module root { header "root.h" }
 // RUN: clang-scan-deps \
 // RUN:   -compilation-database=%t/compile_commands.json \
 // RUN:   -format experimental-full \
-// RUN:   | sed 's:\\\\\?:/:g' | FileCheck %s -DPREFIX=%/t
+// RUN:   | sed 's:\\\\\?:/:g' \
+// RUN:   | %scan-deps-filter --fields=clang-context-hash,clang-module-deps,clang-modulemap-file,context-hash,file-deps,input-file,link-libraries,name,named-module,named-module-deps \
+// RUN:   | FileCheck %s -DPREFIX=%/t
 
 // CHECK:      {
 // CHECK-NEXT:   "modules": [
