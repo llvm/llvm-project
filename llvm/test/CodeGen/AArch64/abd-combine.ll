@@ -523,6 +523,70 @@ define <1 x i64> @recursive() {
   ret <1 x i64> %10
 }
 
+define <4 x i32> @abd_select_sext(<4 x i16> %a, <4 x i16> %b) {
+; CHECK-LABEL: abd_select_sext:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sabdl v0.4s, v1.4h, v0.4h
+; CHECK-NEXT:    ret
+  %conv = sext <4 x i16> %a to <4 x i32>
+  %conv1 = sext <4 x i16> %b to <4 x i32>
+  %sub.i = sub nsw <4 x i32> %conv, %conv1
+  %cmp.i = icmp sgt <4 x i16> %b, %a
+  %sub1.i = sub nsw <4 x i32> %conv1, %conv
+  %spec.select.i = select <4 x i1> %cmp.i, <4 x i32> %sub1.i, <4 x i32> %sub.i
+  ret <4 x i32> %spec.select.i
+}
+
+define <4 x i32> @abd_select_sext_add(<4 x i16> %a, <4 x i16> %b) {
+; CHECK-LABEL: abd_select_sext_add:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v2.4s, #19
+; CHECK-NEXT:    sabal v2.4s, v1.4h, v0.4h
+; CHECK-NEXT:    mov v0.16b, v2.16b
+; CHECK-NEXT:    ret
+  %conv = sext <4 x i16> %a to <4 x i32>
+  %conv1 = sext <4 x i16> %b to <4 x i32>
+  %sub.i = sub nsw <4 x i32> %conv, %conv1
+  %cmp.i = icmp sgt <4 x i16> %b, %a
+  %sub1.i = sub nsw <4 x i32> %conv1, %conv
+  %spec.select.i = select <4 x i1> %cmp.i, <4 x i32> %sub1.i, <4 x i32> %sub.i
+  %add = add nsw <4 x i32> %spec.select.i, splat (i32 19)
+  ret <4 x i32> %add
+}
+
+define <4 x i32> @abd_select_zext_add(<4 x i16> %a, <4 x i16> %b) {
+; CHECK-LABEL: abd_select_zext_add:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v2.4s, #19
+; CHECK-NEXT:    uabal v2.4s, v1.4h, v0.4h
+; CHECK-NEXT:    mov v0.16b, v2.16b
+; CHECK-NEXT:    ret
+  %conv = zext <4 x i16> %a to <4 x i32>
+  %conv1 = zext <4 x i16> %b to <4 x i32>
+  %sub.i = sub nsw <4 x i32> %conv, %conv1
+  %cmp.i = icmp ugt <4 x i16> %b, %a
+  %sub1.i = sub nsw <4 x i32> %conv1, %conv
+  %spec.select.i = select <4 x i1> %cmp.i, <4 x i32> %sub1.i, <4 x i32> %sub.i
+  %add = add nsw <4 x i32> %spec.select.i, splat (i32 19)
+  ret <4 x i32> %add
+}
+
+define <4 x i32> @neg_abd_select_sext(<4 x i16> %a, <4 x i16> %b) {
+; CHECK-LABEL: neg_abd_select_sext:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    sabdl v0.4s, v0.4h, v1.4h
+; CHECK-NEXT:    neg v0.4s, v0.4s
+; CHECK-NEXT:    ret
+entry:
+  %conv = sext <4 x i16> %a to <4 x i32>
+  %conv1 = sext <4 x i16> %b to <4 x i32>
+  %cmp = icmp slt <4 x i16> %a, %b
+  %sub = sub nsw <4 x i32> %conv, %conv1
+  %sub7 = sub nsw <4 x i32> %conv1, %conv
+  %cond = select <4 x i1> %cmp, <4 x i32> %sub, <4 x i32> %sub7
+  ret <4 x i32> %cond
+}
+
 declare <8 x i8> @llvm.aarch64.neon.umax.v8i8(<8 x i8>, <8 x i8>)
 declare <1 x i64> @llvm.aarch64.neon.saddlp.v1i64.v2i32(<2 x i32>)
 declare <8 x i8> @llvm.aarch64.neon.uabd.v8i8(<8 x i8>, <8 x i8>)

@@ -12960,7 +12960,7 @@ SDValue DAGCombiner::foldSelectToABD(SDValue LHS, SDValue RHS, SDValue True,
                                      const SDLoc &DL) {
   bool IsSigned = isSignedIntSetCC(CC);
   unsigned ABDOpc = IsSigned ? ISD::ABDS : ISD::ABDU;
-  EVT VT = LHS.getValueType();
+  EVT VT = True.getValueType();
 
   if (LegalOperations && !hasOperation(ABDOpc, VT))
     return SDValue();
@@ -12984,38 +12984,47 @@ SDValue DAGCombiner::foldSelectToABD(SDValue LHS, SDValue RHS, SDValue True,
       TLI.isTypeLegal(VT) || TLI.getTypeAction(*DAG.getContext(), VT) ==
                                  TargetLowering::TypePromoteInteger;
 
+  auto LHSPat = ISD::isSignedIntSetCC(CC) ? m_SExtOrSelf(m_Specific(LHS))
+                                          : m_ZExtOrSelf(m_Specific(LHS));
+  auto RHSPat = ISD::isSignedIntSetCC(CC) ? m_SExtOrSelf(m_Specific(RHS))
+                                          : m_ZExtOrSelf(m_Specific(RHS));
+  auto GetAbdNode = [&] {
+    auto AbdNode = DAG.getNode(ABDOpc, DL, LHS.getValueType(), LHS, RHS);
+    return DAG.getZExtOrTrunc(AbdNode, DL, VT);
+  };
+
   switch (CC) {
   case ISD::SETGT:
   case ISD::SETGE:
   case ISD::SETUGT:
   case ISD::SETUGE:
-    if (sd_match(True, m_AnyOf(m_Sub(m_Specific(LHS), m_Specific(RHS)),
+    if (sd_match(True, m_AnyOf(m_Sub(LHSPat, RHSPat),
                                m_Add(m_Specific(LHS), m_SpecificNeg(RHS)))) &&
-        sd_match(False, m_AnyOf(m_Sub(m_Specific(RHS), m_Specific(LHS)),
+        sd_match(False, m_AnyOf(m_Sub(RHSPat, LHSPat),
                                 m_Add(m_Specific(RHS), m_SpecificNeg(LHS)))))
-      return DAG.getNode(ABDOpc, DL, VT, LHS, RHS);
-    if (sd_match(True, m_AnyOf(m_Sub(m_Specific(RHS), m_Specific(LHS)),
+      return GetAbdNode();
+    if (sd_match(True, m_AnyOf(m_Sub(RHSPat, LHSPat),
                                m_Add(m_Specific(RHS), m_SpecificNeg(LHS)))) &&
-        sd_match(False, m_AnyOf(m_Sub(m_Specific(LHS), m_Specific(RHS)),
+        sd_match(False, m_AnyOf(m_Sub(LHSPat, RHSPat),
                                 m_Add(m_Specific(LHS), m_SpecificNeg(RHS)))) &&
         IsTypeLegalOrPromote)
-      return DAG.getNegative(DAG.getNode(ABDOpc, DL, VT, LHS, RHS), DL, VT);
+      return DAG.getNegative(GetAbdNode(), DL, VT);
     break;
   case ISD::SETLT:
   case ISD::SETLE:
   case ISD::SETULT:
   case ISD::SETULE:
-    if (sd_match(True, m_AnyOf(m_Sub(m_Specific(RHS), m_Specific(LHS)),
+    if (sd_match(True, m_AnyOf(m_Sub(RHSPat, LHSPat),
                                m_Add(m_Specific(RHS), m_SpecificNeg(LHS)))) &&
-        sd_match(False, m_AnyOf(m_Sub(m_Specific(LHS), m_Specific(RHS)),
+        sd_match(False, m_AnyOf(m_Sub(LHSPat, RHSPat),
                                 m_Add(m_Specific(LHS), m_SpecificNeg(RHS)))))
-      return DAG.getNode(ABDOpc, DL, VT, LHS, RHS);
-    if (sd_match(True, m_AnyOf(m_Sub(m_Specific(LHS), m_Specific(RHS)),
+      return GetAbdNode();
+    if (sd_match(True, m_AnyOf(m_Sub(LHSPat, RHSPat),
                                m_Add(m_Specific(LHS), m_SpecificNeg(RHS)))) &&
-        sd_match(False, m_AnyOf(m_Sub(m_Specific(RHS), m_Specific(LHS)),
+        sd_match(False, m_AnyOf(m_Sub(RHSPat, LHSPat),
                                 m_Add(m_Specific(RHS), m_SpecificNeg(LHS)))) &&
         IsTypeLegalOrPromote)
-      return DAG.getNegative(DAG.getNode(ABDOpc, DL, VT, LHS, RHS), DL, VT);
+      return DAG.getNegative(GetAbdNode(), DL, VT);
     break;
   default:
     break;
