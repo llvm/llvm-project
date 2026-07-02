@@ -20406,6 +20406,37 @@ static SDValue useInversedSetcc(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+static SDValue
+canonicalizeVSelectTrueToOneUse(SDNode *N, SelectionDAG &DAG,
+                                const RISCVSubtarget &Subtarget) {
+  SDValue CC = N->getOperand(0);
+  SDValue TrueVal = N->getOperand(1);
+  SDValue FalseVal = N->getOperand(2);
+
+  if (CC.getOpcode() != ISD::SETCC || !CC.hasOneUse() || TrueVal.hasOneUse() ||
+      !FalseVal.hasOneUse())
+    return SDValue();
+
+  // Only handles ISD::SETEQ and ISD::SETNE; no extra RVV introduced.
+  ISD::CondCode CCVal = cast<CondCodeSDNode>(CC.getOperand(2))->get();
+  if (!isIntEqualitySetCC(CCVal))
+    return SDValue();
+
+  if (DAG.isSplatValue(TrueVal) || DAG.isSplatValue(FalseVal) ||
+      TrueVal.getOpcode() == ISD::SPLAT_VECTOR_PARTS ||
+      FalseVal.getOpcode() == ISD::SPLAT_VECTOR_PARTS ||
+      TrueVal.getOpcode() == RISCVISD::VMV_V_X_VL ||
+      FalseVal.getOpcode() == RISCVISD::VMV_V_X_VL)
+    return SDValue();
+
+  SDLoc DL(N);
+  EVT CVT = CC.getValueType();
+  SDValue InvertedCC = DAG.getSetCC(DL, CVT, CC.getOperand(0), CC.getOperand(1),
+                                    ISD::getSetCCInverse(CCVal, CVT));
+  return DAG.getNode(ISD::VSELECT, DL, N->getValueType(0), InvertedCC, FalseVal,
+                     TrueVal);
+}
+
 static bool matchSelectAddSub(SDValue TrueVal, SDValue FalseVal, bool &SwapCC) {
   if (!TrueVal.hasOneUse() || !FalseVal.hasOneUse())
     return false;
@@ -20426,16 +20457,24 @@ static bool matchSelectAddSub(SDValue TrueVal, SDValue FalseVal, bool &SwapCC) {
           (TrueVal.getOperand(1) == A && TrueVal.getOperand(0) == B));
 }
 
-/// Convert vselect CC, (add a, b), (sub a, b) to add a, (vselect CC, -b, b).
-/// This allows us match a vadd.vv fed by a masked vrsub, which reduces
-/// register pressure over the add followed by masked vsub sequence.
-static SDValue performVSELECTCombine(SDNode *N, SelectionDAG &DAG) {
+static SDValue performVSELECTCombine(SDNode *N, SelectionDAG &DAG,
+                                     const RISCVSubtarget &Subtarget) {
   SDLoc DL(N);
   EVT VT = N->getValueType(0);
   SDValue CC = N->getOperand(0);
   SDValue TrueVal = N->getOperand(1);
   SDValue FalseVal = N->getOperand(2);
 
+  // Convert (vselect CC, true, false) to (vselect InvertCC, false, true) when
+  // false has one use and true has multiple use.
+  // It relies on RISCVVectorPeephole.cpp foldVMergeToMask to eliminate
+  // vmerge.vv
+  if (SDValue V = canonicalizeVSelectTrueToOneUse(N, DAG, Subtarget))
+    return V;
+
+  // Convert vselect CC, (add a, b), (sub a, b) to add a, (vselect CC, -b, b).
+  // This allows us match a vadd.vv fed by a masked vrsub, which reduces
+  // register pressure over the add followed by masked vsub sequence.
   bool SwapCC;
   if (!matchSelectAddSub(TrueVal, FalseVal, SwapCC))
     return SDValue();
@@ -22194,7 +22233,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::SELECT:
     return performSELECTCombine(N, DAG, Subtarget);
   case ISD::VSELECT:
-    return performVSELECTCombine(N, DAG);
+    return performVSELECTCombine(N, DAG, Subtarget);
   case RISCVISD::CZERO_EQZ:
   case RISCVISD::CZERO_NEZ: {
     SDValue Val = N->getOperand(0);
