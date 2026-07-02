@@ -24,11 +24,9 @@ class TestCase(TestBase):
             summary="nullptr",
         )
         self.assertEqual(valobj.GetNumChildren(), 0)
+        self.assertEqual(valobj.GetIndexOfChildWithName("pointer"), 0)
         self.assertEqual(
             valobj.member["pointer"].GetValueAsUnsigned(lldb.LLDB_INVALID_ADDRESS), 0
-        )
-        self.assertEqual(
-            valobj.GetChildAtIndex(0).GetID(), valobj.member["pointer"].GetID()
         )
 
         # Null unique_ptr should not output braces.
