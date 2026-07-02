@@ -138,6 +138,9 @@ void FactsGenerator::run() {
       else if (std::optional<CFGLifetimeEnds> LifetimeEnds =
                    Element.getAs<CFGLifetimeEnds>())
         handleLifetimeEnds(*LifetimeEnds);
+      else if (std::optional<CFGCleanupFunction> CleanupFunction =
+                   Element.getAs<CFGCleanupFunction>())
+        handleCleanupFunction(*CleanupFunction);
       else if (std::optional<CFGFullExprCleanup> FullExprCleanup =
                    Element.getAs<CFGFullExprCleanup>()) {
         handleFullExprCleanup(*FullExprCleanup);
@@ -822,6 +825,20 @@ void FactsGenerator::handleLifetimeEnds(const CFGLifetimeEnds &LifetimeEnds) {
   const VarDecl *LifetimeEndsVD = LifetimeEnds.getVarDecl();
   if (!LifetimeEndsVD)
     return;
+  // A non-trivial destructor at scope exit may read a borrow the object holds
+  // (e.g. a [[gsl::Pointer]] whose out-of-line ~T() dereferences its view). The
+  // analysis never sees that body, so model the destruction as a use, keeping
+  // the borrow live to that point so a borrowed-from object destroyed earlier
+  // (reverse-declaration order) is reported. Owners are excluded: their
+  // destruction frees their own storage (modeled by the ExpireFact), not a
+  // borrow into another object.
+  QualType VDTy = LifetimeEndsVD->getType();
+  if (const CXXRecordDecl *RD = VDTy->getAsCXXRecordDecl();
+      RD && RD->hasDefinition() && RD->hasNonTrivialDestructor() &&
+      !isGslOwnerType(VDTy) && hasOrigins(VDTy))
+    if (OriginList *List = getOriginsList(*LifetimeEndsVD))
+      CurrentBlockFacts.push_back(FactMgr.createFact<UseFact>(
+          LifetimeEnds.getTriggerStmt()->getEndLoc(), List));
   // Expire the origin when its variable's lifetime ends to ensure liveness
   // doesn't persist through loop back-edges.
   std::optional<OriginID> ExpiredOID;
@@ -835,6 +852,22 @@ void FactsGenerator::handleLifetimeEnds(const CFGLifetimeEnds &LifetimeEnds) {
   CurrentBlockFacts.push_back(FactMgr.createFact<ExpireFact>(
       AccessPath(LifetimeEndsVD), LifetimeEnds.getTriggerStmt()->getEndLoc(),
       ExpiredOID));
+}
+
+void FactsGenerator::handleCleanupFunction(
+    const CFGCleanupFunction &CleanupFunction) {
+  // A variable with __attribute__((cleanup(fn))) has fn(&var) called at scope
+  // exit; like a non-trivial destructor, that callback may read a borrow the
+  // variable holds, so model it as a use of the variable. Unlike the destructor
+  // case, owners are not excluded: the cleanup callback receives the variable's
+  // address explicitly and may read whatever it holds, regardless of whether
+  // the variable is a gsl::Owner.
+  const VarDecl *VD = CleanupFunction.getVarDecl();
+  if (!VD || !hasOrigins(VD->getType()))
+    return;
+  if (OriginList *List = getOriginsList(*VD))
+    CurrentBlockFacts.push_back(
+        FactMgr.createFact<UseFact>(VD->getLocation(), List));
 }
 
 void FactsGenerator::handleFullExprCleanup(

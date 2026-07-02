@@ -68,6 +68,12 @@ public:
                                    const Expr *MovedExpr,
                                    SourceLocation FreeLoc,
                                    llvm::ArrayRef<const Expr *> ExprChain) {}
+  // Variant for an implicit use with no source expression; `UseLoc` anchors the
+  // "used here" note.
+  virtual void reportUseAfterScope(const Expr *IssueExpr, SourceLocation UseLoc,
+                                   const Expr *MovedExpr,
+                                   SourceLocation FreeLoc,
+                                   llvm::ArrayRef<const Expr *> ExprChain) {}
 
   virtual void reportUseAfterReturn(const Expr *IssueExpr,
                                     const Expr *ReturnExpr,
@@ -90,6 +96,14 @@ public:
                                           const Expr *InvalidationExpr) {}
   virtual void reportUseAfterInvalidation(const ParmVarDecl *PVD,
                                           const Expr *UseExpr,
+                                          const Expr *InvalidationExpr) {}
+  // Variants for an implicit use with no source expression; `UseLoc` anchors
+  // the "used here" note.
+  virtual void reportUseAfterInvalidation(const Expr *IssueExpr,
+                                          SourceLocation UseLoc,
+                                          const Expr *InvalidationExpr) {}
+  virtual void reportUseAfterInvalidation(const ParmVarDecl *PVD,
+                                          SourceLocation UseLoc,
                                           const Expr *InvalidationExpr) {}
   virtual void reportInvalidatedField(const Expr *IssueExpr,
                                       const FieldDecl *Field,

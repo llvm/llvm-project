@@ -4085,3 +4085,64 @@ void test_loop_cond_bind(bool cond) {
     consume_loop_cond_bind(cond ? &x : &y); // no-warning
   }
 }
+
+// A scope-exit destructor or cleanup callback may read a borrow the object
+// holds. The analysis never sees the out-of-line body, so it is modeled as a
+// use of the object: a borrowed-from object destroyed earlier (reverse-
+// declaration order) is reported.
+namespace ScopeExitUse {
+struct [[gsl::Pointer]] Ref {
+  std::string_view sv;
+  Ref() = default;
+  Ref &operator=(std::string_view s [[clang::lifetime_capture_by(this)]]);
+  ~Ref(); // non-trivial, out-of-line: may read sv
+};
+
+void dtor_reverse_order() {
+  Ref r;                // destroyed LAST
+  std::string backing;  // destroyed FIRST
+  r = backing;          // expected-warning {{local variable 'backing' does not live long enough}}
+}                       // expected-note {{local variable 'backing' is destroyed here}} expected-note {{later used here}}
+
+void dtor_safe_order() {
+  std::string backing;
+  Ref r;
+  r = backing; // no-warning
+}
+
+struct [[gsl::Pointer]] TrivialRef {
+  std::string_view sv;
+  TrivialRef &operator=(std::string_view s [[clang::lifetime_capture_by(this)]]);
+  // trivial destructor cannot read sv
+};
+void trivial_dtor_no_use() {
+  TrivialRef r;
+  std::string backing;
+  r = backing; // no-warning
+}
+
+void cleanup_ref(Ref *r); // out-of-line: may read r->sv
+void cleanup_reverse_order() {
+  Ref g __attribute__((cleanup(cleanup_ref))); // cleaned up LAST  // expected-note {{later used here}}
+  std::string backing;                          // destroyed FIRST
+  g = backing; // expected-warning {{local variable 'backing' does not live long enough}}
+}              // expected-note {{local variable 'backing' is destroyed here}}
+
+void cleanup_safe_order() {
+  std::string backing;
+  Ref g __attribute__((cleanup(cleanup_ref)));
+  g = backing; // no-warning
+}
+
+// The destructor-as-use is not limited to gsl::Pointer: any origin-holding type
+// with a non-trivial destructor qualifies. A lambda capturing a Ref by value is
+// not itself a gsl::Pointer, but holds the Ref's origin and has a non-trivial
+// destructor -- so ~closure runs ~Ref(), which reads the captured borrow.
+void closure_dtor_reads_captured_borrow() {
+  std::function<void()> fn = [] {}; // destroyed LAST
+  std::string backing;              // destroyed FIRST
+  Ref r;
+  r = backing;        // expected-warning {{local variable 'backing' does not live long enough}}
+  fn = [r] {};        // expected-note {{local variable 'r' aliases the storage of local variable 'backing'}}
+}                     // expected-note {{local variable 'backing' is destroyed here}} expected-note {{later used here}}
+} // namespace ScopeExitUse
