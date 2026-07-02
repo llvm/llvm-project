@@ -126,6 +126,38 @@ define {<vscale x 4 x i32>, <vscale x 4 x i32>} @vector_deinterleave_nxv4i32_nxv
 ret {<vscale x 4 x i32>, <vscale x 4 x i32>} %retval
 }
 
+define {<vscale x 5 x i32>, <vscale x 5 x i32>, <vscale x 5 x i32>} @vector_deinterleave3_nxv5i32_nxv15i32(<vscale x 15 x i32> %v) nounwind {
+; CHECK-LABEL: vector_deinterleave3_nxv5i32_nxv15i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    slli a0, a0, 4
+; CHECK-NEXT:    sub sp, sp, a0
+; CHECK-NEXT:    addi a0, sp, 16
+; CHECK-NEXT:    vs8r.v v8, (a0)
+; CHECK-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
+; CHECK-NEXT:    vmv2r.v v8, v14
+; CHECK-NEXT:    csrr a1, vlenb
+; CHECK-NEXT:    slli a1, a1, 3
+; CHECK-NEXT:    add a1, sp, a1
+; CHECK-NEXT:    addi a1, a1, 16
+; CHECK-NEXT:    vs8r.v v8, (a1)
+; CHECK-NEXT:    vlseg3e32.v v12, (a0)
+; CHECK-NEXT:    vlseg3e32.v v20, (a1)
+; CHECK-NEXT:    vmv4r.v v8, v12
+; CHECK-NEXT:    vmv2r.v v10, v20
+; CHECK-NEXT:    vmv2r.v v20, v14
+; CHECK-NEXT:    vmv2r.v v18, v24
+; CHECK-NEXT:    vmv4r.v v12, v20
+; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    slli a0, a0, 4
+; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    ret
+  %d = call {<vscale x 5 x i32>, <vscale x 5 x i32>, <vscale x 5 x i32>} @llvm.vector.deinterleave3(<vscale x 15 x i32> %v)
+  ret {<vscale x 5 x i32>, <vscale x 5 x i32>, <vscale x 5 x i32>} %d
+}
+
 define {<vscale x 2 x i64>, <vscale x 2 x i64>} @vector_deinterleave_nxv2i64_nxv4i64(<vscale x 4 x i64> %vec) {
 ; V-LABEL: vector_deinterleave_nxv2i64_nxv4i64:
 ; V:       # %bb.0:
