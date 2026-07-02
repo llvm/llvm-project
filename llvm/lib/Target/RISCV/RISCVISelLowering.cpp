@@ -13119,25 +13119,6 @@ SDValue RISCVTargetLowering::lowerVECTOR_DEINTERLEAVE(SDValue Op,
   if (VecVT.getVectorElementType() == MVT::i1)
     return widenVectorOpsToi8(Op, DL, DAG);
 
-  // Convert to scalable vectors first.
-  if (VecVT.isFixedLengthVector()) {
-    MVT ContainerVT = getContainerForFixedLengthVector(VecVT);
-    SmallVector<SDValue, 8> Ops(Factor);
-    for (unsigned i = 0U; i < Factor; ++i)
-      Ops[i] = convertToScalableVector(ContainerVT, Op.getOperand(i), DAG,
-                                       Subtarget);
-
-    SmallVector<EVT, 8> VTs(Factor, ContainerVT);
-    SDValue NewDeinterleave =
-        DAG.getNode(ISD::VECTOR_DEINTERLEAVE, DL, VTs, Ops);
-
-    SmallVector<SDValue, 8> Res(Factor);
-    for (unsigned i = 0U; i < Factor; ++i)
-      Res[i] = convertFromScalableVector(VecVT, NewDeinterleave.getValue(i),
-                                         DAG, Subtarget);
-    return DAG.getMergeValues(Res, DL);
-  }
-
   // If concatenating would exceed LMUL=8, we need to split.
   if ((VecVT.getSizeInBits().getKnownMinValue() * Factor) >
       (8 * RISCV::RVVBitsPerBlock)) {
@@ -13160,6 +13141,83 @@ SDValue RISCVTargetLowering::lowerVECTOR_DEINTERLEAVE(SDValue Op,
       Res[i] = DAG.getNode(ISD::CONCAT_VECTORS, DL, VecVT, Lo.getValue(i),
                            Hi.getValue(i));
 
+    return DAG.getMergeValues(Res, DL);
+  }
+
+  // Convert to scalable vectors.
+  if (VecVT.isFixedLengthVector()) {
+    ElementCount OrigEC = VecVT.getVectorElementCount();
+    // Note that we cannot just convert individual operands to scalable vectors
+    // and call it a day: as scalable vector container is always equal or
+    // larger than the fixed vector subject, in the case where it is larger
+    // than fixed vector, this approach will create "padded" lanes in the
+    // conceptually concated vector created by VECTOR_DEINTERLEAVE per its
+    // semantics.
+
+    // First, concat operands into a larger (fixed) vector.
+    // There are two ways to do this: insert each operands into a larger
+    // (legal) vector one by one, or concat_vectors with additional
+    // operands to pad to legal type. The first way seems to lead to
+    // worse codegen primarily because we don't run DAGCombiner to
+    // simplify stuffs before some of the insert_subvector got
+    // lower into vslideup/down prematurely.
+    EVT ConcatVecEVT = EVT(VecVT).changeVectorElementCount(
+        *DAG.getContext(), OrigEC.multiplyCoefficientBy(Factor));
+    SmallVector<SDValue, 8> ConcatOps(Op->op_begin(), Op->op_end());
+    MVT ConcatVecVT;
+    if (!isTypeLegal(ConcatVecEVT)) {
+      // SplitVector should already be handled above.
+      assert(getTypeAction(*DAG.getContext(), ConcatVecEVT) ==
+             TargetLowering::TypeWidenVector);
+      ConcatVecVT =
+          getTypeToTransformTo(*DAG.getContext(), ConcatVecEVT).getSimpleVT();
+      ElementCount WidenedConcatEC = ConcatVecVT.getVectorElementCount();
+      // Both OrigEC and WidenedConcatEC are both derived from legal fixed
+      // vector types. A legal fixed vector's element count is always power of
+      // two, so WidenedConcatEC will always be a multiple of OrigEC.
+      assert(WidenedConcatEC.hasKnownScalarFactor(OrigEC));
+      unsigned NumTotalConcatOps = WidenedConcatEC.getKnownScalarFactor(OrigEC);
+      assert(NumTotalConcatOps > Factor);
+      ConcatOps.append(NumTotalConcatOps - Factor, DAG.getUNDEF(VecVT));
+    } else {
+      ConcatVecVT = ConcatVecEVT.getSimpleVT();
+    }
+
+    SDValue ConcatVec =
+        DAG.getNode(ISD::CONCAT_VECTORS, DL, ConcatVecVT, ConcatOps);
+    MVT ConcatContainerVT = getContainerForFixedLengthVector(ConcatVecVT);
+    ElementCount ConcatContainerEC = ConcatContainerVT.getVectorElementCount();
+    ConcatVec =
+        convertToScalableVector(ConcatContainerVT, ConcatVec, DAG, Subtarget);
+
+    MVT ContainerVT = getContainerForFixedLengthVector(VecVT);
+    ElementCount ContainerEC = ContainerVT.getVectorElementCount();
+
+    SmallVector<SDValue, 8> Ops(Factor);
+    // Then, we extract the new scalable sub-vectors.
+    for (unsigned i = 0U; i < Factor; ++i) {
+      ElementCount Idx = ContainerEC.multiplyCoefficientBy(i);
+      // Index might be out-of-bound. This usually happens on large
+      // VLEN where a single or a few VR registers is enough to caputre
+      // the entire concat vector. In this case we can just use poison
+      // on other VECTOR_DEINTERLEAVE operands -- semantically
+      // VECTOR_DEINTERLEAVE will just concat them back together later
+      // anyway.
+      if (ElementCount::isKnownGE(Idx, ConcatContainerEC))
+        Ops[i] = DAG.getUNDEF(ContainerVT);
+      else
+        Ops[i] = DAG.getExtractSubvector(DL, ContainerVT, ConcatVec,
+                                         Idx.getKnownMinValue());
+    }
+
+    SmallVector<EVT, 8> VTs(Factor, ContainerVT);
+    SDValue NewDeinterleave =
+        DAG.getNode(ISD::VECTOR_DEINTERLEAVE, DL, VTs, Ops);
+
+    SmallVector<SDValue, 8> Res(Factor);
+    for (unsigned i = 0U; i < Factor; ++i)
+      Res[i] = convertFromScalableVector(VecVT, NewDeinterleave.getValue(i),
+                                         DAG, Subtarget);
     return DAG.getMergeValues(Res, DL);
   }
 
