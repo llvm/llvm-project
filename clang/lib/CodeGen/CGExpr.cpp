@@ -3071,11 +3071,9 @@ llvm::Value *CodeGenFunction::emitAMDGPUPinnedValue(llvm::Value *V,
   llvm::Intrinsic::ID IID =
       IsAGPR ? llvm::Intrinsic::amdgcn_pin_agpr : llvm::Intrinsic::amdgcn_pin_vgpr;
 
-  // Pin selection patterns exist for i32-based widths 1/2/4/8/16 dwords
-  // (i32, v2i32, v4i32, v8i32, v16i32). Use the i32 element type: a float base
-  // would need v1f32 / v2f32, which have no pattern and crash isel. Any dword
-  // count decomposes into a descending sequence of these widths (e.g. 12 -> 8+4,
-  // 2 -> a single v2i32, a 3-dword tail -> 2 + 1).
+  // Pin patterns exist for i32-based widths of 1/2/4/8/16 dwords (i32, v2i32,
+  // v4i32, v8i32, v16i32); a float base would need v1f32/v2f32, which have none
+  // and crash isel. Decompose any dword count into these widths (e.g. 12 -> 8+4).
   llvm::Type *I32 = Int32Ty;
   auto *VecI = llvm::FixedVectorType::get(I32, Lanes);
   llvm::Value *Vec = Builder.CreateBitCast(V, VecI);
