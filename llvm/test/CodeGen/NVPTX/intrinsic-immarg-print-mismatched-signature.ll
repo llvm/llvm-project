@@ -2,8 +2,6 @@
 ;       against a null-pointer dereference.
 ; RUN: llvm-as -disable-verify < %s | llvm-dis | FileCheck %s
 
-target triple = "nvptx64-nvidia-cuda"
-
 declare void @llvm.nvvm.tensormap.replace.elemtype.p0(ptr, i32)
 
 ; A well-formed call: the elemtype immediate is pretty-printed.
