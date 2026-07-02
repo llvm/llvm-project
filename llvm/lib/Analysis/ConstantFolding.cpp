@@ -2129,7 +2129,8 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
            Name == "cosh" || Name == "coshf";
   case 'e':
     return Name == "exp" || Name == "expf" || Name == "exp2" ||
-           Name == "exp2f" || Name == "erf" || Name == "erff";
+           Name == "exp2f" || Name == "erf" || Name == "erff" 
+            ||  Name == "expm1" || Name == "expm1f";
   case 'f':
     return Name == "fabs" || Name == "fabsf" ||
            Name == "floor" || Name == "floorf" ||
@@ -3063,6 +3064,11 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
     case LibFunc_expf_finite:
       if (TLI->has(Func))
         return ConstantFoldFP(exp, APF, Ty);
+      break;
+    case LibFunc_expm1:
+    case LibFunc_expm1f:
+      if (TLI->has(Func))
+        return ConstantFoldFP(expm1, APF, Ty);
       break;
     case LibFunc_exp2:
     case LibFunc_exp2f:
@@ -4804,6 +4810,9 @@ bool llvm::isMathLibCallNoop(const CallBase *Call,
         if (OpC->getType()->isFloatTy())
           return !(Op < APFloat(-149.0f) || Op > APFloat(127.0f));
         break;
+      case LibFunc_expm1:
+      case LibFunc_expm1f:
+        return true;
 
       case LibFunc_sinl:
       case LibFunc_sin:
