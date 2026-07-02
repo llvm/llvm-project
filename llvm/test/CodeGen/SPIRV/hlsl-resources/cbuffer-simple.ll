@@ -9,7 +9,7 @@
 ; CHECK-DAG: %[[CBUFFER_TYPE:[0-9]+]] = OpTypeStruct %[[STRUCT]]
 ; CHECK-DAG: %[[PTR_CBUFFER:[0-9]+]] = OpTypePointer Uniform %[[CBUFFER_TYPE]]
 ; CHECK-DAG: %[[INT:[0-9]+]] = OpTypeInt 32 0
-; CHECK-DAG: %[[ZERO:[0-9]+]] = OpConstant %[[INT]] 0{{$}}
+; CHECK-DAG: %[[ZERO:[0-9]+]] = OpConstantNull %[[INT]]
 ; CHECK-DAG: %[[ONE:[0-9]+]] = OpConstant %[[INT]] 1{{$}}
 
 ; CHECK-DAG: OpMemberDecorate %[[STRUCT]] 0 Offset 0

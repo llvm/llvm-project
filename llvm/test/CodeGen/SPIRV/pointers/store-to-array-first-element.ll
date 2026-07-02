@@ -6,7 +6,7 @@
 ; CHECK-DAG: %[[#Array:]] = OpTypeArray %[[#Int]] %[[#]]
 ; CHECK-DAG: %[[#ArrayPtr:]] = OpTypePointer Function %[[#Array]]
 ; CHECK-DAG: %[[#Const:]] = OpConstant %[[#Int]] 123
-; CHECK-DAG: %[[#Zero:]] = OpConstant %[[#Int]] 0
+; CHECK-DAG: %[[#Zero:]] = OpConstantNull %[[#Int]]
 
 ; CHECK: %[[#Var:]] = OpVariable %[[#ArrayPtr]] Function
 ; CHECK: %[[#GEP:]] = OpInBoundsAccessChain %[[#IntPtr]] %[[#Var]] %[[#Zero]]

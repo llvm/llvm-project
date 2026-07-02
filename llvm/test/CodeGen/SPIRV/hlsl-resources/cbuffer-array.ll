@@ -22,7 +22,7 @@
 ; CHECK-DAG: OpMemberDecorate %[[STRUCT_CBUFFER]] 0 Offset 0
 ; CHECK-DAG: OpDecorate %[[STRUCT_CBUFFER]] Block
 
-; CHECK-DAG: %[[ZERO:[0-9]+]] = OpConstant %[[INT]] 0{{$}}
+; CHECK-DAG: %[[ZERO:[0-9]+]] = OpConstantNull %[[INT]]
 ; CHECK-DAG: %[[ONE:[0-9]+]] = OpConstant %[[INT]] 1{{$}}
 
 ; CHECK: %[[CBUFFER:[0-9]+]] = OpVariable %[[PTR_CBUFFER]] Uniform

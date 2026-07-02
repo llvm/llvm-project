@@ -6,7 +6,7 @@
 ; CHECK-DAG: [[uint:%[0-9]+]] = OpTypeInt 32 0
 ; CHECK-DAG: [[v2int:%[0-9]+]] = OpTypeVector [[uint]] 2
 ; CHECK-DAG: [[v4int:%[0-9]+]] = OpTypeVector [[uint]] 4
-; CHECK-DAG: [[zero:%[0-9]+]] = OpConstant [[uint]] 0
+; CHECK-DAG: [[zero:%[0-9]+]] = OpConstantNull [[uint]]
 ; CHECK-DAG: [[one:%[0-9]+]] = OpConstant [[uint]] 1
 ; CHECK-DAG: [[twenty:%[0-9]+]] = OpConstant [[uint]] 20
 ; CHECK-DAG: [[twenty_three:%[0-9]+]] = OpConstant [[uint]] 23

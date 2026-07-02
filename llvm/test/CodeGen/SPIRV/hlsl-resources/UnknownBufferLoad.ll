@@ -9,7 +9,7 @@
 ; CHECK-DAG: OpDecorate [[IntBufferVar]] Binding 7
 
 ; CHECK-DAG: [[int:%[0-9]+]] = OpTypeInt 32 0
-; CHECK-DAG: [[zero:%[0-9]+]] = OpConstant [[int]] 0
+; CHECK-DAG: [[zero:%[0-9]+]] = OpConstantNull [[int]]
 ; CHECK-DAG: [[v4_int:%[0-9]+]] = OpTypeVector [[int]] 4
 ; CHECK-DAG: [[RWBufferTypeInt:%[0-9]+]] = OpTypeImage [[int]] Buffer 2 0 0 2 Unknown {{$}}
 ; CHECK-DAG: [[IntBufferPtrType:%[0-9]+]] = OpTypePointer UniformConstant [[RWBufferTypeInt]]

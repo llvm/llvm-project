@@ -18,7 +18,7 @@ source_filename = "test_counters.hlsl"
 ; CHECK-DAG: OpDecorate [[InputBufferCounter]] DescriptorSet 0
 ; CHECK-DAG: OpDecorate [[InputBufferCounter]] Binding 2
 ; CHECK-DAG: [[int:%[0-9]+]] = OpTypeInt 32 0
-; CHECK-DAG: [[zero:%[0-9]+]] = OpConstant [[int]] 0{{$}}
+; CHECK-DAG: [[zero:%[0-9]+]] = OpConstantNull [[int]]
 ; CHECK-DAG: [[one:%[0-9]+]] = OpConstant [[int]] 1{{$}}
 ; CHECK-DAG: [[minus_one:%[0-9]+]] = OpConstant [[int]] 4294967295
 ; CHECK: [[OutputBufferHandle:%[0-9]+]] = OpCopyObject {{%[0-9]+}} [[OutputBuffer]]

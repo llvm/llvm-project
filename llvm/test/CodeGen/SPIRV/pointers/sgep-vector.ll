@@ -6,7 +6,7 @@
 ; CHECK-DAG: %[[#ptr_vec4:]] = OpTypePointer Function %[[#vec4]]
 ; CHECK-DAG: %[[#ptr_float:]] = OpTypePointer Function %[[#float]]
 ; CHECK-DAG: %[[#int:]] = OpTypeInt 32 0
-; CHECK-DAG: %[[#idx_0:]] = OpConstant %[[#int]] 0
+; CHECK-DAG: %[[#idx_0:]] = OpConstantNull %[[#int]]
 ; CHECK-DAG: %[[#idx_1:]] = OpConstant %[[#int]] 1
 ; CHECK-DAG: %[[#idx_2:]] = OpConstant %[[#int]] 2
 ; CHECK-DAG: %[[#idx_5:]] = OpConstant %[[#int]] 5

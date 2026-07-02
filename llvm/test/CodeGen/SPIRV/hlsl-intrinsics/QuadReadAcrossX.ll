@@ -10,7 +10,7 @@
 ; CHECK-DAG:   %[[#uint:]] = OpTypeInt 32 0
 ; CHECK-DAG:   %[[#v4_half:]] = OpTypeVector %[[#f16]] 4
 ; CHECK-DAG:   %[[#scope:]] = OpConstant %[[#uint]] 3
-; CHECK-DAG:   %[[#direction:]] = OpConstant %[[#uint]] 0
+; CHECK-DAG:   %[[#direction:]] = OpConstantNull %[[#uint]]
 
 ; CHECK-LABEL: Begin function test_float
 ; CHECK:   %[[#fexpr:]] = OpFunctionParameter %[[#f32]]

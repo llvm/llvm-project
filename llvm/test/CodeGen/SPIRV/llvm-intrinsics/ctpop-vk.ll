@@ -14,7 +14,7 @@
 ; CHECK-DAG: [[i64x4_t:%.+]] = OpTypeVector [[i64_t]] 4
 ; CHECK-DAG: [[i16x3_t:%.+]] = OpTypeVector [[i16_t]] 3
 
-; CHECK-DAG: [[zero:%.*]] = OpConstant [[i32_t]] 0
+; CHECK-DAG: [[zero:%.*]] = OpConstantNull [[i32_t]]
 ; CHECK-DAG: [[one:%.*]] = OpConstant [[i32_t]] 1
 ; CHECK-DAG: [[two:%.*]] = OpConstant [[i64_t]] 2
 

@@ -5,7 +5,7 @@
 ; CHECK-DAG:        OpDecorate %[[#WorkgroupId:]] BuiltIn WorkgroupId
 
 ; CHECK-DAG:             %[[#uint:]] = OpTypeInt 32 0
-; CHECK-DAG:           %[[#uint_0:]] = OpConstant %[[#uint]] 0
+; CHECK-DAG:           %[[#uint_0:]] = OpConstantNull %[[#uint]]
 ; CHECK-DAG:           %[[#v3uint:]] = OpTypeVector %[[#uint]] 3
 ; CHECK-DAG:   %[[#ptr_Input_uint:]] = OpTypePointer Input %[[#uint]]
 ; CHECK-DAG: %[[#ptr_Input_v3uint:]] = OpTypePointer Input %[[#v3uint]]

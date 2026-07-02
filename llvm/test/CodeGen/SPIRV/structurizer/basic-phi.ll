@@ -7,7 +7,7 @@ target triple = "spirv-unknown-vulkan1.3-compute"
 ; Function Attrs: convergent noinline norecurse nounwind optnone
 define spir_func noundef i32 @_Z7processv() #0 {
 
-; CHECK-DAG:    %[[#int_0:]] = OpConstant %[[#]] 0
+; CHECK-DAG:    %[[#int_0:]] = OpConstantNull %[[#]]
 ; CHECK-DAG:    %[[#int_1:]] = OpConstant %[[#]] 1
 
 ; CHECK: %[[#entry:]] = OpLabel

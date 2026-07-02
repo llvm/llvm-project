@@ -3,7 +3,7 @@
 
 ; CHECK-DAG:      [[uint:%[0-9]+]] = OpTypeInt 32 0
 ; CHECK-DAG:     [[uint2:%[0-9]+]] = OpTypeVector [[uint]] 2
-; CHECK-DAG:    [[uint_0:%[0-9]+]] = OpConstant [[uint]] 0
+; CHECK-DAG:    [[uint_0:%[0-9]+]] = OpConstantNull [[uint]]
 ; CHECK-DAG:    [[uint_1:%[0-9]+]] = OpConstant [[uint]] 1
 ; CHECK-DAG:  [[ptr_uint:%[0-9]+]] = OpTypePointer Function [[uint]]
 ; CHECK-DAG: [[ptr_uint2:%[0-9]+]] = OpTypePointer Function [[uint2]]

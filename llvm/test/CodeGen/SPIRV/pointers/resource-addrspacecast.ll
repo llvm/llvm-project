@@ -6,7 +6,7 @@
 %struct.S = type { i32 }
 
 ; CHECK-DAG:                     %[[#uint:]] = OpTypeInt 32 0
-; CHECK-DAG:                   %[[#uint_0:]] = OpConstant %[[#uint]] 0
+; CHECK-DAG:                   %[[#uint_0:]] = OpConstantNull %[[#uint]]
 ; CHECK-DAG:                  %[[#uint_10:]] = OpConstant %[[#uint]] 10
 ; CHECK-DAG:   %[[#ptr_StorageBuffer_uint:]] = OpTypePointer StorageBuffer %[[#uint]]
 ; CHECK-DAG:                   %[[#struct:]] = OpTypeStruct %[[#uint]]
