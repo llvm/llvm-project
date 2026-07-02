@@ -18,6 +18,32 @@ irdl.dialect @test_irdl_to_cpp {
         irdl.results(res: %0)
     }
 
+    // CHECK: // ::mlir::test_irdl_to_cpp::nested::NamespacedOp declarations
+    // CHECK: namespace nested {
+    // CHECK: class NamespacedOp : public ::mlir::Op<NamespacedOp
+    // CHECK: static constexpr ::llvm::StringLiteral getOperationName()
+    // CHECK-NEXT: return ::llvm::StringLiteral("test_irdl_to_cpp.nested.namespaced");
+    // CHECK: } // namespace nested
+    // CHECK: MLIR_DECLARE_EXPLICIT_TYPE_ID(::mlir::test_irdl_to_cpp::nested::NamespacedOp)
+    irdl.operation @nested.namespaced {
+        %0 = irdl.any
+        irdl.results(res: %0)
+    }
+
+    // CHECK: // ::mlir::test_irdl_to_cpp::nested::namespaced::MoreOp declarations
+    // CHECK: namespace nested {
+    // CHECK: namespace namespaced {
+    // CHECK: class MoreOp : public ::mlir::Op<MoreOp
+    // CHECK: static constexpr ::llvm::StringLiteral getOperationName()
+    // CHECK-NEXT: return ::llvm::StringLiteral("test_irdl_to_cpp.nested.namespaced.more");
+    // CHECK: } // namespace namespaced
+    // CHECK: } // namespace nested
+    // CHECK: MLIR_DECLARE_EXPLICIT_TYPE_ID(::mlir::test_irdl_to_cpp::nested::namespaced::MoreOp)
+    irdl.operation @nested.namespaced.more {
+        %0 = irdl.any
+        irdl.results(res: %0)
+    }
+
     // CHECK: class BeefOp
     // CHECK: ::mlir::Value getLhs()
     // CHECK: ::mlir::Value getRhs()
@@ -49,6 +75,20 @@ irdl.dialect @test_irdl_to_cpp {
     // CHECK:  ::mlir::Region &getThen() { return (*this)->getRegion(1); }
     // CHECK:  ::mlir::Region &getElse() { return (*this)->getRegion(2); }
 
+    // CHECK: // ::mlir::test_irdl_to_cpp::nested::NamespacedOp definitions
+    // CHECK: namespace nested {
+    // CHECK: NamespacedOp::build
+    // CHECK: } // namespace nested
+    // CHECK: MLIR_DEFINE_EXPLICIT_TYPE_ID(::mlir::test_irdl_to_cpp::nested::NamespacedOp)
+
+    // CHECK: // ::mlir::test_irdl_to_cpp::nested::namespaced::MoreOp definitions
+    // CHECK: namespace nested {
+    // CHECK: namespace namespaced {
+    // CHECK: MoreOp::build
+    // CHECK: } // namespace namespaced
+    // CHECK: } // namespace nested
+    // CHECK: MLIR_DEFINE_EXPLICIT_TYPE_ID(::mlir::test_irdl_to_cpp::nested::namespaced::MoreOp)
+
     // CHECK: ConditionalOp definitions
     // CHECK: __mlir_irdl_local_region_constraint_ConditionalOp_cond
     // CHECK: if (!(region.getNumArguments() == 1)) {
@@ -73,6 +113,10 @@ irdl.dialect @test_irdl_to_cpp {
     // CHECK: __mlir_irdl_local_region_constraint_ConditionalOp_else
     // CHECK: failure
     // CHECK: success
+
+    // CHECK: void TestIrdlToCppDialect::initialize()
+    // CHECK: ::mlir::test_irdl_to_cpp::nested::NamespacedOp
+    // CHECK: ::mlir::test_irdl_to_cpp::nested::namespaced::MoreOp
     irdl.operation @conditional {
         %r0 = irdl.region      // Unconstrained region
         %r1 = irdl.region()    // Region with no entry block arguments
