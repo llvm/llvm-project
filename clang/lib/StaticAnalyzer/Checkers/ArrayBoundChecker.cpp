@@ -185,7 +185,7 @@ void ArrayBoundChecker::handleAccessExpr(const Expr *E,
       bounds::SizeUnit SU = bounds::SizeUnit::forExpr(E, C);
       Tag = C.getNoteTag(
           [Res, RN, SU](PathSensitiveBugReport &BR) -> std::string {
-            return Res.getMessage(BR, RN, SU);
+            return Res.getAssumptionMsg(BR, RN, SU);
           });
     }
 
@@ -201,9 +201,7 @@ void ArrayBoundChecker::handleAccessExpr(const Expr *E,
       if (taint::isTainted(State, ASE->getIdx(), C.getStackFrame()))
         OffsetName = "index";
 
-    bounds::Messages Msgs =
-        bounds::getTaintMsgs(RN, OffsetName,
-                             /*AlsoMentionUnderflow=*/Res.assumedNonNegative());
+    bounds::Messages Msgs = Res.getTaintMsgs(RN, OffsetName);
     SmallVector<NonLoc, 2> Interesting = {ByteOffset};
     if (Extent)
       Interesting.push_back(*Extent);
@@ -214,7 +212,7 @@ void ArrayBoundChecker::handleAccessExpr(const Expr *E,
     bounds::SizeUnit SU =
         bounds::SizeUnit::forSVal(Location, C.getASTContext());
     bounds::BadOffsetKind BOK = *Res.getBadOffsetKind();
-    bounds::Messages Msgs = getNonTaintMsgs(RN, SU, ByteOffset, Extent, BOK);
+    bounds::Messages Msgs = Res.getNonTaintMsgs(RN, SU);
     SmallVector<NonLoc, 2> Interesting = {ByteOffset};
     if (Extent && BOK != bounds::BadOffsetKind::Negative)
       Interesting.push_back(*Extent);

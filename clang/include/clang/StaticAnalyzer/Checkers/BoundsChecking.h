@@ -165,8 +165,12 @@ public:
     }
   }
 
-  std::string getMessage(PathSensitiveBugReport &BR, StringRef RegName,
-                         SizeUnit SU) const;
+  Messages getTaintMsgs(std::string RegName, const char *OffsetName);
+
+  Messages getNonTaintMsgs(std::string RegName, SizeUnit SU);
+
+  std::string getAssumptionMsg(PathSensitiveBugReport &BR, StringRef RegName,
+                               SizeUnit SU) const;
 
 private:
   /// Return true if information about the symbol behind `SV` can constrain
@@ -192,12 +196,6 @@ CheckResult checkBounds(ProgramStateRef State, SValBuilder &SVB, NonLoc Offset,
 
 // FIXME: This utility probably should become a method of `MemRegion`.
 std::string getRegionName(const MemSpaceRegion *Space, const SubRegion *Region);
-
-Messages getTaintMsgs(std::string RegName, const char *OffsetName,
-                      bool AlsoMentionUnderflow);
-
-Messages getNonTaintMsgs(std::string RegName, SizeUnit SU, NonLoc Offset,
-                         std::optional<NonLoc> Extent, BadOffsetKind Problem);
 
 } // namespace clang::ento::bounds
 

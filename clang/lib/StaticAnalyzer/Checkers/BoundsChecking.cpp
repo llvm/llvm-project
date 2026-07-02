@@ -216,9 +216,10 @@ bool bounds::SizeUnit::tryConvertValuesFromBytes(
   return true;
 }
 
-Messages bounds::getNonTaintMsgs(std::string RegName, SizeUnit SU,
-                                 NonLoc Offset, std::optional<NonLoc> Extent,
-                                 BadOffsetKind Problem) {
+Messages bounds::CheckResult::getNonTaintMsgs(std::string RegName,
+                                              SizeUnit SU) {
+  // BadOffsetKind will be removed in a follow-up change.
+  BadOffsetKind Problem = *getBadOffsetKind();
 
   std::optional<int64_t> OffsetN = getConcreteValue(Offset);
   std::optional<int64_t> ExtentN = getConcreteValue(Extent);
@@ -266,18 +267,18 @@ Messages bounds::getNonTaintMsgs(std::string RegName, SizeUnit SU,
           std::string(Buf)};
 }
 
-Messages bounds::getTaintMsgs(std::string RegName, const char *OffsetName,
-                              bool AlsoMentionUnderflow) {
+Messages bounds::CheckResult::getTaintMsgs(std::string RegName,
+                                           const char *OffsetName) {
   return {formatv("Potential out of bound access to {0} with tainted {1}",
                   RegName, OffsetName),
           formatv("Access of {0} with a tainted {1} that may be {2}too large",
                   RegName, OffsetName,
-                  AlsoMentionUnderflow ? "negative or " : "")};
+                  assumedNonNegative() ? "negative or " : "")};
 }
 
-std::string bounds::CheckResult::getMessage(PathSensitiveBugReport &BR,
-                                            StringRef RegName,
-                                            SizeUnit SU) const {
+std::string bounds::CheckResult::getAssumptionMsg(PathSensitiveBugReport &BR,
+                                                  StringRef RegName,
+                                                  SizeUnit SU) const {
   bool ShouldReportNonNegative = AssumedNonNegative;
   if (!providesInformationAboutInteresting(Offset, BR)) {
     if (AssumedUpperBound && providesInformationAboutInteresting(*Extent, BR)) {
