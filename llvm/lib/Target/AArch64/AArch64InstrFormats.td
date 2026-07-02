@@ -447,6 +447,19 @@ def uimm16 : Operand<i16>, ImmLeaf<i16, [{return Imm >= 0 && Imm < 65536;}]>{
   let OperandType = "OPERAND_IMMEDIATE";
 }
 
+def HinteUImm16Operand : AsmOperandClass {
+  let Name = "HinteUImm16";
+  let DiagnosticType = "InvalidHinteUImm16";
+  let RenderMethod = "addImmOperands";
+  let PredicateMethod = "isHinteUImm16";
+}
+
+def hinte_uimm16 : Operand<i64> {
+  let ParserMatchClass = HinteUImm16Operand;
+  let OperandType = "OPERAND_IMMEDIATE";
+  let DecoderMethod = "DecodeHinteUImm16";
+}
+
 def uimm6_64b : Operand<i64>, ImmLeaf<i64, [{ return Imm >= 0 && Imm < 64; }]> {
     let ParserMatchClass = UImm6Operand;
   let OperandType = "OPERAND_IMMEDIATE";
@@ -1860,6 +1873,20 @@ let mayStore = 1, mayLoad = 1, hasSideEffects = 1 in
     let Inst{20-12} = 0b000110010;
     let Inst{11-5} = imm;
   }
+
+// Hint instructions (extended).
+class HintE<string mnemonic>
+    : I<(outs), (ins hinte_uimm16:$imm16), mnemonic, "\t$imm16", "", []>,
+      Sched<[WriteHint]> {
+  bits<16> imm16;
+  let Inst{31-22} = 0b1101010100;
+  let Inst{21}    = imm16{15};
+  let Inst{20-19} = 0b00;
+  let Inst{18-16} = imm16{14-12};
+  let Inst{15-12} = 0b0010;
+  let Inst{11-5}  = imm16{11-5};
+  let Inst{4-0}   = imm16{4-0};
+}
 
 def PHintInstOperand : AsmOperandClass {
     let Name = "PHint";

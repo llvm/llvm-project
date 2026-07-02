@@ -1435,6 +1435,9 @@ TEST(TargetParserTest, testAArch64Extension) {
   EXPECT_FALSE(testAArch64Extension(AArch64::ARMV8_3A, "fp16fml"));
   EXPECT_FALSE(testAArch64Extension(AArch64::ARMV8_4A, "fp16"));
   EXPECT_FALSE(testAArch64Extension(AArch64::ARMV8_4A, "fp16fml"));
+  EXPECT_FALSE(testAArch64Extension(AArch64::ARMV9_5A, "hinte"));
+  EXPECT_TRUE(testAArch64Extension(AArch64::ARMV9_6A, "hinte"));
+  EXPECT_TRUE(testAArch64Extension(AArch64::ARMV9_7A, "hinte"));
 }
 
 TEST(TargetParserTest, AArch64ExtensionFeatures) {
@@ -1493,7 +1496,7 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
       AArch64::AEK_POE2,         AArch64::AEK_TEV,
       AArch64::AEK_BTIE,         AArch64::AEK_F64MM,
       AArch64::AEK_POPS,         AArch64::AEK_SVESM4,
-      AArch64::AEK_MTETC,
+      AArch64::AEK_MTETC,        AArch64::AEK_HINTE,
   };
 
   std::vector<StringRef> Features;
@@ -1617,6 +1620,7 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
   EXPECT_TRUE(llvm::is_contained(Features, "+poe2"));
   EXPECT_TRUE(llvm::is_contained(Features, "+tev"));
   EXPECT_TRUE(llvm::is_contained(Features, "+btie"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+hinte"));
 
   // Assuming we listed every extension above, this should produce the same
   // result.
@@ -1795,6 +1799,7 @@ TEST(TargetParserTest, AArch64ArchExtFeature) {
       {"poe2", "nopoe2", "+poe2", "-poe2"},
       {"tev", "notev", "+tev", "-tev"},
       {"btie", "nobtie", "+btie", "-btie"},
+      {"hinte", "nohinte", "+hinte", "-hinte"},
   };
 
   for (unsigned i = 0; i < std::size(ArchExt); i++) {
