@@ -9,6 +9,7 @@
 #ifndef LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_MSVC_H
 #define LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_MSVC_H
 
+#include "MinGW.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/CudaInstallationDetector.h"
 #include "clang/Driver/LazyDetector.h"
@@ -137,8 +138,10 @@ protected:
                                      const Twine &subfolder2 = "",
                                      const Twine &subfolder3 = "") const;
 
+  Tool *getTool(Action::ActionClass AC) const override;
   Tool *buildLinker() const override;
   Tool *buildAssembler() const override;
+
 private:
   std::optional<llvm::StringRef> WinSdkDir, WinSdkVersion, WinSysRoot;
   std::string VCToolChainPath;
@@ -146,6 +149,7 @@ private:
   LazyDetector<CudaInstallationDetector> CudaInstallation;
   LazyDetector<RocmInstallationDetector> RocmInstallation;
   LazyDetector<SYCLInstallationDetector> SYCLInstallation;
+  mutable std::unique_ptr<tools::MinGW::LLVMObjcopy> LLVMObjcopy;
 };
 
 } // end namespace toolchains

@@ -46,9 +46,9 @@
 // ARM64X: "-machine:arm64x"
 
 // RUN: not %clang --target=x86_64-linux-gnu -marm64x -### %s 2>&1 | FileCheck --check-prefix=HYBRID-ERR %s
-// HYBRID-ERR: error: unsupported option '-marm64x' for target 'x86_64-linux-gnu'
+// HYBRID-ERR: error: unsupported option '-marm64x' for target 'x86_64-unknown-linux-gnu'
 
-// RUN: %clang -c -marm64x  --target=arm64ec-pc-windows-msvc -fuse-ld=link -### %s 2>&1 | \
+// RUN: %clang -S -marm64x  --target=arm64ec-pc-windows-msvc -fuse-ld=link -### %s 2>&1 | \
 // RUN:        FileCheck --check-prefix=HYBRID-WARN %s
 // HYBRID-WARN: warning: argument unused during compilation: '-marm64x' [-Wunused-command-line-argument]
 
