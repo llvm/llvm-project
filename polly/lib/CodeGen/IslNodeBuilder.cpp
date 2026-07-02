@@ -646,17 +646,35 @@ void IslNodeBuilder::createForParallel(__isl_take isl_ast_node *For) {
   }
   IDToValue[IteratorID] = IV;
 
-  // Also update OutsideLoopIterations to use values from the subfunction.
+  // Remap OutsideLoopIterations to use values from the subfunction.
   // SCEVExpander may fold identity operations (e.g. x+0 -> x), returning the
-  // original loop PHI instead of a new instruction. We need to remap these
-  // values through NewValues so GenSE (now SubSE) doesn't operate on values
-  // from the caller function.
-  for (auto &[L, S] : OutsideLoopIterations) {
-    if (auto *U = dyn_cast<SCEVUnknown>(S)) {
-      Value *NewVal = NewValues.lookup(U->getValue());
-      assert(NewVal && "must have a new value");
-      OutsideLoopIterations[L] = GenSE->getUnknown(NewVal);
+  // original caller-function PHI instead of a new instruction. That PHI may
+  // not be in NewValues, so look up ValueMap as a fallback (SCoP-invariant
+  // values passed as subfunction arguments). Skip non-instruction values
+  // (constants/globals) as they are valid in any function context.
+  // Collect updates separately to avoid modifying the MapVector while
+  // iterating over it.
+  {
+    SmallVector<std::pair<const Loop *, const SCEV *>, 8> Updates;
+    for (auto &[L, S] : OutsideLoopIterations) {
+      auto *U = dyn_cast<SCEVUnknown>(S);
+      if (!U)
+        continue;
+      Value *OldVal = U->getValue();
+      Value *NewVal = NewValues.lookup(OldVal);
+      if (!NewVal)
+        NewVal = ValueMap.lookup(OldVal);
+      if (!NewVal) {
+        if (!isa<Instruction>(OldVal))
+          continue;
+        LLVM_DEBUG(dbgs() << "Polly: OutsideLoopIterations: could not remap "
+                          << *OldVal << " into subfunction; skipping.\n");
+        continue;
+      }
+      Updates.emplace_back(L, GenSE->getUnknown(NewVal));
     }
+    for (auto &[L, NewSCEV] : Updates)
+      OutsideLoopIterations[L] = NewSCEV;
   }
 
 #ifndef NDEBUG
