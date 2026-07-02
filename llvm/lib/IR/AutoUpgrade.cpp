@@ -6039,6 +6039,14 @@ Constant *llvm::UpgradeBitCastExpr(unsigned Opc, Constant *C, Type *DestTy) {
   return nullptr;
 }
 
+static std::optional<StringRef> getModuleFlagNameSafely(const MDNode &Flag) {
+  if (Flag.getNumOperands() < 3)
+    return std::nullopt;
+  if (MDString *Name = dyn_cast_or_null<MDString>(Flag.getOperand(1)))
+    return Name->getString();
+  return std::nullopt;
+}
+
 /// Check the debug info version number, if it is out-dated, drop the debug
 /// info. Return true if module is modified.
 bool llvm::UpgradeDebugInfo(Module &M) {
@@ -6052,10 +6060,8 @@ bool llvm::UpgradeDebugInfo(Module &M) {
   unsigned Version = 0;
   if (NamedMDNode *ModFlags = M.getModuleFlagsMetadata()) {
     auto OpIt = find_if(ModFlags->operands(), [](const MDNode *Flag) {
-      if (Flag->getNumOperands() < 3)
-        return false;
-      if (MDString *K = dyn_cast_or_null<MDString>(Flag->getOperand(1)))
-        return K->getString() == "Debug Info Version";
+      if (auto Name = getModuleFlagNameSafely(*Flag))
+        return *Name == "Debug Info Version";
       return false;
     });
     if (OpIt != ModFlags->op_end()) {
@@ -6372,12 +6378,113 @@ void llvm::UpgradeARCRuntime(Module &M) {
     UpgradeToIntrinsic(I.first, I.second);
 }
 
+// Upgrade from storing `ptrauth` constants in `@llvm.global_(ctors|dtors)`
+// arrays to configuring signing of pointers to *structors via module flags.
+//
+// Only perform the upgrade if all elements of *both* arrays agree on a common
+// signing schema.
+static bool upgradePtrauthInitFiniArrays(Module &M) {
+  // Either "not decided yet" or whether we should request address diversity
+  // in addition to the basic constant diversity.
+  // There is no value representing "decided not to sign", as this results
+  // in immediate return from upgradePtrauthInitFiniArrays.
+  std::optional<bool> UseAddressDisc;
+
+  // Do not attempt upgrading if the new module flags already exist.
+  if (const NamedMDNode *ModFlags = M.getModuleFlagsMetadata()) {
+    for (const MDNode *Flag : ModFlags->operands()) {
+      std::optional<StringRef> Name = getModuleFlagNameSafely(*Flag);
+      if (Name && (*Name == "ptrauth-init-fini" ||
+                   *Name == "ptrauth-init-fini-address-discrimination"))
+        return false;
+    }
+  }
+
+  auto UpgradeSinglePointer = [&UseAddressDisc](Constant *CV) -> Constant * {
+    const unsigned ExpectedConstDisc = 0xD9D4;
+    const unsigned ExpectedAddressMarker = 1;
+
+    auto *CPA = dyn_cast<ConstantPtrAuth>(CV);
+    if (!CPA || !CPA->getDiscriminator()->equalsInt(ExpectedConstDisc))
+      return nullptr; // Nothing to upgrade or unknown pattern found.
+
+    bool HasAddressDisc;
+    if (!CPA->hasAddressDiscriminator())
+      HasAddressDisc = false;
+    else if (CPA->hasSpecialAddressDiscriminator(ExpectedAddressMarker))
+      HasAddressDisc = true;
+    else
+      return nullptr; // Unknown pattern.
+
+    if (UseAddressDisc && *UseAddressDisc != HasAddressDisc)
+      return nullptr; // Disagreement with the decided mode.
+
+    UseAddressDisc = HasAddressDisc;
+    return CPA->getPointer();
+  };
+
+  // Do not apply any changes until we know the upgrade is non-ambiguous.
+  using PendingUpgrade = std::pair<GlobalVariable *, Constant *>;
+  SmallVector<PendingUpgrade, 2> GlobalArraysToUpgrade;
+
+  for (const char *Name : {"llvm.global_ctors", "llvm.global_dtors"}) {
+    auto *GV = dyn_cast_if_present<GlobalVariable>(M.getNamedValue(Name));
+    if (!GV || !GV->hasInitializer())
+      continue; // Skip, but it is okay to upgrade the other variable.
+
+    auto *OldStructorsArray = dyn_cast<ConstantArray>(GV->getInitializer());
+    if (!OldStructorsArray)
+      return false;
+
+    std::vector<Constant *> NewStructors;
+    NewStructors.reserve(OldStructorsArray->getNumOperands());
+
+    for (Use &U : OldStructorsArray->operands()) {
+      ConstantStruct *Structor = dyn_cast<ConstantStruct>(U.get());
+      if (!Structor || Structor->getNumOperands() != 3)
+        return false;
+
+      Constant *Prio = Structor->getOperand(0);
+      Constant *Func = Structor->getOperand(1);
+      Constant *Arg = Structor->getOperand(2);
+
+      Func = UpgradeSinglePointer(Func);
+      if (!Func)
+        return false;
+
+      NewStructors.push_back(
+          ConstantStruct::get(Structor->getType(), {Prio, Func, Arg}));
+    }
+
+    Constant *NewInit =
+        ConstantArray::get(OldStructorsArray->getType(), NewStructors);
+    GlobalArraysToUpgrade.push_back({GV, NewInit});
+  }
+
+  if (GlobalArraysToUpgrade.empty())
+    return false;
+  assert(UseAddressDisc.has_value());
+
+  for (auto [GV, NewInit] : GlobalArraysToUpgrade)
+    GV->setInitializer(NewInit);
+
+  M.addModuleFlag(Module::Error, "ptrauth-init-fini", 1);
+  if (UseAddressDisc.value())
+    M.addModuleFlag(Module::Error, "ptrauth-init-fini-address-discrimination",
+                    1);
+
+  return true;
+}
+
 bool llvm::UpgradeModuleFlags(Module &M) {
+  bool Changed = false;
+  Changed |= upgradePtrauthInitFiniArrays(M);
+
   NamedMDNode *ModFlags = M.getModuleFlagsMetadata();
   if (!ModFlags)
-    return false;
+    return Changed;
 
-  bool HasObjCFlag = false, HasClassProperties = false, Changed = false;
+  bool HasObjCFlag = false, HasClassProperties = false;
   bool HasSwiftVersionFlag = false;
   uint8_t SwiftMajorVersion, SwiftMinorVersion;
   uint32_t SwiftABIVersion;
