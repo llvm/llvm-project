@@ -5024,7 +5024,7 @@ bool AreAPValuesPotentiallyMergeable(const APValue &LHS, const APValue &RHS,
   return AreAPValuesPotentiallyMergeableSlow(LHS, RHS, Ctx);
 }
 
-std::optional<ArraySubobjectLocation> getArraySubobjectLocationImpl(
+std::optional<ArraySubobjectLocation> computeArraySubobjectLocation(
     const ASTContext &Ctx, const ConstantArrayType *ArrayType, uint64_t Index,
     CharUnits LValueOffset, bool IsValidOnePastEnd) {
   uint64_t ArraySize = ArrayType->getZExtSize();
@@ -5081,7 +5081,7 @@ namespace {
 /// kinds are both read through an APValue array (borrowed and owned,
 /// respectively), while the StringLiteral kind materializes characters lazily.
 /// The single public entry point is arePotentiallyOverlapping().
-class NonUniqueObject {
+class PotentialNonUniqueObject {
 public:
   /// Returns true when two lvalues designate potentially non-unique arrays
   /// whose overlapping elements could be merged into the same storage, making
@@ -5101,7 +5101,7 @@ private:
 
   /// The evaluation state and diagnostic expression are stored so the member
   /// functions need not thread them through every call.
-  NonUniqueObject(EvalInfo &Info, const Expr *E) : Info(Info), E(E) {}
+  PotentialNonUniqueObject(EvalInfo &Info, const Expr *E) : Info(Info), E(E) {}
 
   /// Recognizes the non-unique array LV designates, filling in this object and
   /// returning true, or returning false when LV is not such an object.
@@ -5112,7 +5112,7 @@ private:
   /// offset and element-compatible types, and every element the overlap would
   /// alias must be pairwise mergeable. Element data the representation cannot
   /// expose is treated conservatively as a possible match.
-  bool mayShareStorageWith(const NonUniqueObject &Other) const;
+  bool mayShareStorageWith(const PotentialNonUniqueObject &Other) const;
 
   // Lvalue classification helpers used by recognize().
 
@@ -5179,27 +5179,29 @@ private:
 };
 } // namespace
 
-const Expr *NonUniqueObject::getStringLiteralBase(APValue::LValueBase Base) {
+const Expr *
+PotentialNonUniqueObject::getStringLiteralBase(APValue::LValueBase Base) {
   const auto *BaseExpr = Base.dyn_cast<const Expr *>();
   if (isa_and_nonnull<StringLiteral, PredefinedExpr>(BaseExpr))
     return BaseExpr;
   return nullptr;
 }
 
-bool NonUniqueObject::isInitializerListBackingArray(const LValue &LV) {
+bool PotentialNonUniqueObject::isInitializerListBackingArray(const LValue &LV) {
   const auto *BaseExpr = LV.Base.dyn_cast<const Expr *>();
   const auto *MTE = dyn_cast_or_null<MaterializeTemporaryExpr>(BaseExpr);
   return MTE && MTE->isBackingArrayForInitializerList();
 }
 
-const APValue *NonUniqueObject::getCompleteObjectValue(const LValue &LV) const {
+const APValue *
+PotentialNonUniqueObject::getCompleteObjectValue(const LValue &LV) const {
   CompleteObject Obj =
       findCompleteObject(Info, E, AK_Read, LV, getType(LV.Base));
   return Obj ? Obj.Value : nullptr;
 }
 
 std::optional<ArraySubobjectLocation>
-NonUniqueObject::getArraySubobjectLocation(const LValue &LV) const {
+PotentialNonUniqueObject::getArraySubobjectLocation(const LValue &LV) const {
   if (LV.Designator.Invalid || LV.Designator.Entries.empty())
     return std::nullopt;
 
@@ -5210,12 +5212,13 @@ NonUniqueObject::getArraySubobjectLocation(const LValue &LV) const {
   uint64_t Index = LV.Designator.Entries.front().getAsArrayIndex();
   bool IsValidOnePastEnd =
       LV.Designator.Entries.size() == 1 && LV.Designator.isOnePastTheEnd();
-  return getArraySubobjectLocationImpl(Info.Ctx, CAT, Index, LV.Offset,
+  return computeArraySubobjectLocation(Info.Ctx, CAT, Index, LV.Offset,
                                        IsValidOnePastEnd);
 }
 
 std::optional<ArraySubobjectLocation>
-NonUniqueObject::getStringArraySubobjectLocation(const LValue &LV) const {
+PotentialNonUniqueObject::getStringArraySubobjectLocation(
+    const LValue &LV) const {
   if (!getStringLiteralBase(LV.Base))
     return std::nullopt;
 
@@ -5246,8 +5249,8 @@ NonUniqueObject::getStringArraySubobjectLocation(const LValue &LV) const {
                                 CharUnits::fromQuantity(OffsetInElement)};
 }
 
-std::optional<NonUniqueObject::ArraySubobjectPathInfo>
-NonUniqueObject::getArraySubobjectPathInfo(const LValue &LV) const {
+std::optional<PotentialNonUniqueObject::ArraySubobjectPathInfo>
+PotentialNonUniqueObject::getArraySubobjectPathInfo(const LValue &LV) const {
   const ASTContext &Ctx = Info.Ctx;
   if (LV.Designator.Invalid || LV.Designator.Entries.empty())
     return std::nullopt;
@@ -5264,7 +5267,7 @@ NonUniqueObject::getArraySubobjectPathInfo(const LValue &LV) const {
       CharUnits OffsetInArray = LV.Offset - PathOffset;
       bool IsValidOnePastEnd = I + 1 == N && LV.Designator.isOnePastTheEnd();
       std::optional<ArraySubobjectLocation> EltLoc =
-          getArraySubobjectLocationImpl(Ctx, CAT, Index, OffsetInArray,
+          computeArraySubobjectLocation(Ctx, CAT, Index, OffsetInArray,
                                         IsValidOnePastEnd);
       if (EltLoc)
         Result = ArraySubobjectPathInfo{CAT, I, *EltLoc};
@@ -5312,7 +5315,7 @@ NonUniqueObject::getArraySubobjectPathInfo(const LValue &LV) const {
   return Result;
 }
 
-bool NonUniqueObject::recognize(const LValue &LV) {
+bool PotentialNonUniqueObject::recognize(const LValue &LV) {
   ASTContext &Ctx = Info.Ctx;
 
   if (const Expr *StringBase = getStringLiteralBase(LV.Base)) {
@@ -5368,7 +5371,8 @@ bool NonUniqueObject::recognize(const LValue &LV) {
   return true;
 }
 
-bool NonUniqueObject::mayShareStorageWith(const NonUniqueObject &Other) const {
+bool PotentialNonUniqueObject::mayShareStorageWith(
+    const PotentialNonUniqueObject &Other) const {
   if (location().OffsetInElement != Other.location().OffsetInElement)
     return false;
   if (!Info.Ctx.hasSameUnqualifiedType(ArrayType->getElementType(),
@@ -5392,11 +5396,12 @@ bool NonUniqueObject::mayShareStorageWith(const NonUniqueObject &Other) const {
   return true;
 }
 
-bool NonUniqueObject::arePotentiallyOverlapping(EvalInfo &Info, const Expr *E,
-                                                const LValue &LHS,
-                                                const LValue &RHS) {
-  NonUniqueObject LHSObj(Info, E);
-  NonUniqueObject RHSObj(Info, E);
+bool PotentialNonUniqueObject::arePotentiallyOverlapping(EvalInfo &Info,
+                                                         const Expr *E,
+                                                         const LValue &LHS,
+                                                         const LValue &RHS) {
+  PotentialNonUniqueObject LHSObj(Info, E);
+  PotentialNonUniqueObject RHSObj(Info, E);
   if (!LHSObj.recognize(LHS) || !RHSObj.recognize(RHS))
     return false;
 
@@ -19430,8 +19435,8 @@ EvaluateComparisonBinaryOperator(EvalInfo &Info, const BinaryOperator *E,
       //
       if (ArePotentiallyOverlappingStringLiterals(Info, LHSValue, RHSValue))
         return DiagComparison(diag::note_constexpr_literal_comparison);
-      if (NonUniqueObject::arePotentiallyOverlapping(Info, E, LHSValue,
-                                                     RHSValue))
+      if (PotentialNonUniqueObject::arePotentiallyOverlapping(Info, E, LHSValue,
+                                                              RHSValue))
         return DiagComparison(
             diag::note_constexpr_non_unique_object_comparison);
       if (IsOpaqueConstantCall(LHSValue) || IsOpaqueConstantCall(RHSValue))

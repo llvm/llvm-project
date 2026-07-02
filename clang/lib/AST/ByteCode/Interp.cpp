@@ -2867,7 +2867,7 @@ getArraySubobjectLocation(const ASTContext &Ctx, const Pointer &Ptr) {
 
   uint64_t Index = Path.front().getAsArrayIndex();
   bool IsValidOnePastEnd = Path.size() == 1;
-  std::optional<ArraySubobjectLocation> Loc = getArraySubobjectLocationImpl(
+  std::optional<ArraySubobjectLocation> Loc = computeArraySubobjectLocation(
       Ctx, ArrayType, Index, PtrValue.getLValueOffset(), IsValidOnePastEnd);
   if (!Loc)
     return std::nullopt;
@@ -2947,7 +2947,7 @@ getNonUniqueAPValueArraySubobjectLocation(const ASTContext &Ctx,
 
   uint64_t Index = Path.front().getAsArrayIndex();
   bool IsValidOnePastEnd = Path.size() == 1;
-  std::optional<ArraySubobjectLocation> Loc = getArraySubobjectLocationImpl(
+  std::optional<ArraySubobjectLocation> Loc = computeArraySubobjectLocation(
       Ctx, ArrayType, Index,
       PtrValue.getLValueOffset() - ArrayValue.getLValueOffset(),
       IsValidOnePastEnd);
@@ -2990,7 +2990,7 @@ getStringArraySubobjectLocation(const ASTContext &Ctx, const Pointer &Ptr) {
 
   uint64_t Index = Path.front().getAsArrayIndex();
   bool IsValidOnePastEnd = Path.size() == 1;
-  std::optional<ArraySubobjectLocation> Loc = getArraySubobjectLocationImpl(
+  std::optional<ArraySubobjectLocation> Loc = computeArraySubobjectLocation(
       Ctx, ArrayType, Index, PtrValue.getLValueOffset(), IsValidOnePastEnd);
   if (!Loc)
     return std::nullopt;

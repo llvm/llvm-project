@@ -112,7 +112,7 @@ struct ArraySubobjectLocation {
 /// array (which the caller determines from its own lvalue representation).
 /// Returns std::nullopt if the lvalue does not designate an element,
 /// one-past-the-end position, or subobject of an element.
-std::optional<ArraySubobjectLocation> getArraySubobjectLocationImpl(
+std::optional<ArraySubobjectLocation> computeArraySubobjectLocation(
     const ASTContext &Ctx, const ConstantArrayType *ArrayType, uint64_t Index,
     CharUnits LValueOffset, bool IsValidOnePastEnd);
 
