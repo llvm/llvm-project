@@ -8,9 +8,9 @@
 define i64 @g_i64(i64 %a, i64 %b) nounwind {
 ; CHECK-LABEL: g_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #-10 // =0xfffffffffffffff6
+; CHECK-NEXT:    mov w8, #9 // =0x9
 ; CHECK-NEXT:    subs x9, x0, x1
-; CHECK-NEXT:    sbc x0, x9, x8
+; CHECK-NEXT:    adc x0, x9, x8
 ; CHECK-NEXT:    ret
   %ov  = call {i64, i1} @llvm.usub.with.overflow.i64(i64 %a, i64 %b)
   %val = extractvalue { i64, i1 } %ov, 0
@@ -25,9 +25,9 @@ define i64 @g_i64(i64 %a, i64 %b) nounwind {
 define i32 @g_i32(i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: g_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #-10 // =0xfffffff6
+; CHECK-NEXT:    mov w8, #9 // =0x9
 ; CHECK-NEXT:    subs w9, w0, w1
-; CHECK-NEXT:    sbc w0, w9, w8
+; CHECK-NEXT:    adc w0, w9, w8
 ; CHECK-NEXT:    ret
   %ov  = call {i32, i1} @llvm.usub.with.overflow.i32(i32 %a, i32 %b)
   %val = extractvalue { i32, i1 } %ov, 0
@@ -41,9 +41,8 @@ define i32 @g_i32(i32 %a, i32 %b) nounwind {
 define i64 @g_i64_add1(i64 %a, i64 %b) nounwind {
 ; CHECK-LABEL: g_i64_add1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    subs x9, x0, x1
-; CHECK-NEXT:    sbc x0, x9, x8
+; CHECK-NEXT:    subs x8, x0, x1
+; CHECK-NEXT:    cinc x0, x8, hs
 ; CHECK-NEXT:    ret
   %ov  = call {i64, i1} @llvm.usub.with.overflow.i64(i64 %a, i64 %b)
   %val = extractvalue { i64, i1 } %ov, 0
@@ -57,9 +56,8 @@ define i64 @g_i64_add1(i64 %a, i64 %b) nounwind {
 define i32 @g_i32_add1(i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: g_i32_add1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
-; CHECK-NEXT:    subs w9, w0, w1
-; CHECK-NEXT:    sbc w0, w9, w8
+; CHECK-NEXT:    subs w8, w0, w1
+; CHECK-NEXT:    cinc w0, w8, hs
 ; CHECK-NEXT:    ret
   %ov  = call {i32, i1} @llvm.usub.with.overflow.i32(i32 %a, i32 %b)
   %val = extractvalue { i32, i1 } %ov, 0
@@ -90,9 +88,8 @@ define i64 @g_i64_neg10(i64 %a, i64 %b) nounwind {
 define i128 @sub_i128(i128 %a) {
 ; CHECK-LABEL: sub_i128:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    subs x0, x0, #10
-; CHECK-NEXT:    adc x1, x1, x8
+; CHECK-NEXT:    sbc x1, x1, xzr
 ; CHECK-NEXT:    ret
   %r = sub i128 %a, 10
   ret i128 %r
