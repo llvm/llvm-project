@@ -82,7 +82,8 @@ define void @load_feeding_only_mask_not_scalarized(ptr noalias %A, ptr noalias %
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    then:
 ; CHECK-NEXT:      EMIT ir<%gep.B> = getelementptr ir<%B>, ir<%iv>
-; CHECK-NEXT:      EMIT-SCALAR ir<%l.p> = load ir<%gep.B>, ir<%cmp>
+; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer ir<%gep.B>, ir<1>
+; CHECK-NEXT:      WIDEN ir<%l.p> = load vp<[[VP5]]>, ir<%cmp>
 ; CHECK-NEXT:      EMIT store ir<42>, ir<%l.p>, ir<%cmp>
 ; CHECK-NEXT:    Successor(s): latch
 ; CHECK-EMPTY:
@@ -373,10 +374,12 @@ define void @cond_load_store(ptr noalias %a, ptr noalias %b, ptr noalias %cond, 
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    then:
 ; CHECK-NEXT:      EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%iv>
-; CHECK-NEXT:      EMIT-SCALAR ir<%lv> = load ir<%gep.a>, ir<%cmp>
+; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds ir<%gep.a>, ir<1>
+; CHECK-NEXT:      WIDEN ir<%lv> = load vp<[[VP5]]>, ir<%cmp>
 ; CHECK-NEXT:      EMIT ir<%add> = add ir<%lv>, ir<1>, ir<%cmp>
 ; CHECK-NEXT:      EMIT ir<%gep.b> = getelementptr inbounds ir<%b>, ir<%iv>
-; CHECK-NEXT:      EMIT store ir<%add>, ir<%gep.b>, ir<%cmp>
+; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer inbounds ir<%gep.b>, ir<1>
+; CHECK-NEXT:      WIDEN store vp<[[VP6]]>, ir<%add>, ir<%cmp>
 ; CHECK-NEXT:    Successor(s): latch
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    latch:

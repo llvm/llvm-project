@@ -5409,12 +5409,10 @@ void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
         });
   }
 
-  // Widen unmasked unit-stride consecutive accesses, matching the legacy CM.
+  // Widen unit-stride consecutive accesses, matching the legacy CM.
   VPlanTransforms::runPass(
       "widenConsecutiveMemOps", ProcessSubset, Plan, [&](VPInstruction *VPI) {
         Instruction *I = VPI->getUnderlyingInstr();
-        if (RecipeBuilder.isPredicatedInst(I))
-          return false;
 
         bool IsLoad = VPI->getOpcode() == Instruction::Load;
         VPValue *Ptr = VPI->getOperand(!IsLoad);
@@ -5423,6 +5421,24 @@ void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
         if (getConstantStride(Ptr, ScalarTy, CostCtx.PSE, CostCtx.L) != 1)
           return false;
 
+        // A predicated access can only be widened (rather than scalarized) if
+        // the target supports a masked load/store for it.
+        if (RecipeBuilder.isPredicatedInst(I)) {
+          unsigned AddressSpace =
+              cast<PointerType>(Ptr->getScalarType())->getAddressSpace();
+          Align Alignment = getLoadStoreAlignment(I);
+          if (!LoopVectorizationPlanner::getDecisionAndClampRange(
+                  [&](ElementCount VF) {
+                    return CostCtx.Config.isLegalMaskedLoadOrStore(
+                        IsLoad, ScalarTy, Alignment, AddressSpace);
+                  },
+                  Range))
+            return false;
+        }
+
+        // TODO: Determine dereferenceability directly in VPlan.
+        VPValue *Mask =
+            RecipeBuilder.isPredicatedInst(I) ? VPI->getMask() : nullptr;
         Type *StrideTy =
             Plan.getDataLayout().getIndexType(Ptr->getScalarType());
         VPValue *StrideOne = Plan.getConstantInt(StrideTy, 1);
@@ -5432,14 +5448,13 @@ void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
         VectorPtr->insertBefore(VPI);
         VPRecipeBase *WidenedR;
         if (IsLoad)
-          WidenedR = new VPWidenLoadRecipe(*cast<LoadInst>(I), VectorPtr,
-                                           /*Mask=*/nullptr,
+          WidenedR = new VPWidenLoadRecipe(*cast<LoadInst>(I), VectorPtr, Mask,
                                            /*Consecutive=*/true, *VPI,
                                            VPI->getDebugLoc());
         else
           WidenedR = new VPWidenStoreRecipe(
-              *cast<StoreInst>(I), VectorPtr, VPI->getOperand(0),
-              /*Mask=*/nullptr, /*Consecutive=*/true, *VPI, VPI->getDebugLoc());
+              *cast<StoreInst>(I), VectorPtr, VPI->getOperand(0), Mask,
+              /*Consecutive=*/true, *VPI, VPI->getDebugLoc());
         return ReplaceWith(VPI, WidenedR);
       });
 
