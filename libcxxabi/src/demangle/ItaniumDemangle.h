@@ -6151,6 +6151,10 @@ AbstractManglingParser<Derived, Alloc>::parseTemplateArgs(bool TagTemplates) {
   if (!consumeIf('I'))
     return nullptr;
 
+  // Subtypes within template args are complete, so they can always parse their
+  // own template args.
+  ScopedOverride<bool> SaveTryToParseTemplateArgs(TryToParseTemplateArgs, true);
+
   // <template-params> refer to the innermost <template-args>. Clear out any
   // outer args that we may have inserted into TemplateParams.
   if (TagTemplates) {
