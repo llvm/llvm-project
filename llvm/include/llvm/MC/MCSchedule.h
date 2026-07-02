@@ -152,6 +152,12 @@ struct MCSchedClassDesc {
   }
 };
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+static_assert(sizeof(MCSchedClassDesc) == 20);
+#else
+static_assert(sizeof(MCSchedClassDesc) == 14);
+#endif
+
 /// Specify the cost of a register definition in terms of number of physical
 /// register allocated at register renaming stage. For example, AMD Jaguar.
 /// natively supports 128-bit data types, and operations on 256-bit registers
@@ -337,6 +343,7 @@ struct MCSchedModel {
   const InstrItinerary *InstrItineraries;
 
   const MCExtraProcessorInfo *ExtraProcessorInfo;
+  const uint16_t *SchedClassTableIndices;
 
   bool hasExtraProcessorInfo() const { return ExtraProcessorInfo; }
 
@@ -373,6 +380,8 @@ struct MCSchedModel {
     assert(hasInstrSchedModel() && "No scheduling machine model");
 
     assert(SchedClassIdx < NumSchedClasses && "bad scheduling class idx");
+    if (SchedClassTableIndices)
+      SchedClassIdx = SchedClassTableIndices[SchedClassIdx];
     return &SchedClassTable[SchedClassIdx];
   }
 
