@@ -2070,22 +2070,14 @@ let TargetPrefix = "riscv" in {
 // They use llvm_anyint_ty for consistency with RVV configuration intrinsics,
 // but the only supported type is XLen.
 let TargetPrefix = "riscv" in {
-  // Implementation geometry helpers.
+  // Return architectural VLEN in bits. This may fold to a constant when exact
+  // VLEN is known.
   def int_riscv_ime_vlen : Intrinsic<[llvm_anyint_ty], [], [IntrNoMem]>;
-  def int_riscv_ime_lambda : Intrinsic<[llvm_anyint_ty], [], [IntrNoMem]>;
 
-  // Current selected vtype.lambda readback. This is not a memory operation,
-  // but keep it conservative until LLVM IR has a first-class vtype state model.
-  def int_riscv_ime_readlambda
-      : Intrinsic<[llvm_anyint_ty], [], [IntrNoMem, IntrHasSideEffects]>;
-
-  // Write a nonzero requested lambda and return the established lambda.
-  // Source-level contract: the argument is a positive power of two in
-  // {1,2,4,8,16,32,64}. Clang emits a separate readlambda path for
-  // requested_lambda == 0 before calling this primitive.
-  def int_riscv_ime_vsetlambda_nonzero
-      : Intrinsic<[llvm_anyint_ty], [LLVMMatchType<0>],
-                  [IntrNoMem, IntrHasSideEffects]>;
+  // Return the currently selected vtype.lambda value. This reads architectural
+  // vtype state but does not modify vtype, vl, or vector registers.
+  def int_riscv_ime_lambda
+      : Intrinsic<[llvm_anyint_ty], [], [IntrReadMem, IntrInaccessibleMemOnly]>;
 } // TargetPrefix = "riscv"
 
 // Vendor extensions

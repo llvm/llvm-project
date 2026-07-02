@@ -26,7 +26,6 @@
 #include "clang/Sema/Sema.h"
 #include "clang/Support/RISCVVIntrinsicUtils.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/TargetParser/RISCVTargetParser.h"
 #include <optional>
@@ -679,44 +678,11 @@ bool SemaRISCV::CheckBuiltinFunctionCall(const TargetInfo &TI,
            CheckLMUL(TheCall, LMULOffset);
   };
 
-  auto CheckIMEVSetLambda = [&]() -> bool {
-    assert(TheCall->getNumArgs() == 1 && "unexpected vsetlambda arity");
-
-    Expr *Arg = TheCall->getArg(0);
-    if (Arg->isTypeDependent() || Arg->isValueDependent())
-      return false;
-    Expr *DiagArg = Arg->IgnoreParenCasts();
-
-    Expr::EvalResult Eval;
-    Expr *EvalArg = DiagArg;
-    // Prefer evaluating the user source expression before the macro-introduced
-    // (size_t) cast. This catches constants that would otherwise wrap into a
-    // valid size_t value on RV32, e.g. 0x100000004ULL -> 4.
-    if (!EvalArg->EvaluateAsInt(Eval, Context, Expr::SE_NoSideEffects))
-      return false;
-
-    llvm::APSInt Val = Eval.Val.getInt();
-    if (Val.isSigned() && Val.isNegative())
-      return Diag(DiagArg->getBeginLoc(),
-                  diag::err_riscv_builtin_invalid_ime_lambda)
-             << DiagArg->getSourceRange();
-
-    uint64_t U = Val.getLimitedValue(65);
-    if (U != 0 && (U > 64 || !llvm::isPowerOf2_64(U)))
-      return Diag(DiagArg->getBeginLoc(),
-                  diag::err_riscv_builtin_invalid_ime_lambda)
-             << DiagArg->getSourceRange();
-
-    return false;
-  };
-
   switch (BuiltinID) {
   case RISCVVector::BI__builtin_rvv_vsetvli:
     return CheckVSetVL(1, 2);
   case RISCVVector::BI__builtin_rvv_vsetvlimax:
     return CheckVSetVL(0, 1);
-  case RISCVVector::BI__builtin_rvv_vsetlambda:
-    return CheckIMEVSetLambda();
   case RISCVVector::BI__builtin_rvv_sf_vsettnt:
   case RISCVVector::BI__builtin_rvv_sf_vsettm:
   case RISCVVector::BI__builtin_rvv_sf_vsettn:

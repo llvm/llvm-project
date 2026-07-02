@@ -371,16 +371,16 @@ The primary goal of experimental support is to assist in the process of ratifica
   LLVM implements the `0.1 draft specification <https://github.com/ved-rivos/riscv-isa-manual/blob/zvzip/src/zvzip.adoc>`__.
 
 ``experimental-zvvfmm``
-  LLVM implements the `0.1 draft specification <https://github.com/riscv/integrated-matrix-extension/releases/tag/riscv-isa-release-71c48b9-2026-05-17>`__.
+  LLVM implements the `0.1 draft specification <https://github.com/riscv/integrated-matrix-extension/releases/tag/riscv-isa-release-43d6553-2026-06-29>`__.
 
 ``experimental-zvvmm``
-  LLVM implements the `0.1 draft specification <https://github.com/riscv/integrated-matrix-extension/releases/tag/riscv-isa-release-71c48b9-2026-05-17>`__.
+  LLVM implements the `0.1 draft specification <https://github.com/riscv/integrated-matrix-extension/releases/tag/riscv-isa-release-43d6553-2026-06-29>`__.
 
 ``experimental-zvvmtls``
-  LLVM implements the `0.1 draft specification <https://github.com/riscv/integrated-matrix-extension/releases/tag/riscv-isa-release-71c48b9-2026-05-17>`__.
+  LLVM implements the `0.1 draft specification <https://github.com/riscv/integrated-matrix-extension/releases/tag/riscv-isa-release-43d6553-2026-06-29>`__.
 
 ``experimental-zvvmttls``
-  LLVM implements the `0.1 draft specification <https://github.com/riscv/integrated-matrix-extension/releases/tag/riscv-isa-release-71c48b9-2026-05-17>`__.
+  LLVM implements the `0.1 draft specification <https://github.com/riscv/integrated-matrix-extension/releases/tag/riscv-isa-release-43d6553-2026-06-29>`__.
 
 ``experimental-zvqwbdota8i``, ``experimental-zvqwbdota16i``, ``experimental-zvfqwbdota8f``, ``experimental-zvfwbdota16bf``, ``experimental-zvfbdota32f``
   LLVM implements the `0.2 draft specification <https://github.com/aswaterman/riscv-misc/blob/main/isa/ldot-bdot/ldot-bdot.adoc>`__.

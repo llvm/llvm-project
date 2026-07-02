@@ -54,21 +54,6 @@ def VScaleOp : RegisterOperand<VMV0> {
 // IME configuration pseudos
 //===----------------------------------------------------------------------===//
 
-// Low-level backend node for writing a full vtype value with register-form
-// vsetvl, preserving vl.
-def riscv_ime_vsetvtype
-    : RVSDNode<"IME_VSETVTYPE",
-               SDTypeProfile<0, 1, [SDTCisInt<0>]>,
-               [SDNPHasChain]>;
-
-let Predicates = [HasStdExtZvvmm], Defs = [VL, VTYPE], Uses = [VL, VTYPE],
-    hasSideEffects = 1, mayLoad = 0, mayStore = 0 in
-def PseudoIMEVSETVTYPE
-    : Pseudo<(outs), (ins GPR:$vtype),
-             [(riscv_ime_vsetvtype (XLenVT GPR:$vtype))]>,
-      PseudoInstExpansion<(VSETVL X0, X0, GPR:$vtype)>,
-      Sched<[WriteVSETVL, ReadVSETVL]>;
-
 let Predicates = [HasStdExtZvvmm], Uses = [VTYPE], hasSideEffects = 0,
     mayLoad = 0, mayStore = 0, isCodeGenOnly = 1 in
 def PseudoIMEReadVTYPE

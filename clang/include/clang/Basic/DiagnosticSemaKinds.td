@@ -13601,8 +13601,6 @@ def err_riscv_builtin_requires_extension : Error<
   "builtin requires%select{| at least one of the following extensions}0: %1">;
 def err_riscv_builtin_invalid_lmul : Error<
   "LMUL argument must be in the range [0,3] or [5,7]">;
-def err_riscv_builtin_invalid_ime_lambda : Error<
-  "constant argument to RISC-V IME vsetlambda builtin must be 0 or a power of two in the range [1, 64]">;
 def err_riscv_type_requires_extension : Error<
   "RISC-V type %0 requires the '%1' extension">;
 def err_riscv_attribute_interrupt_requires_extension : Error<

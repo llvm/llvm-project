@@ -11571,45 +11571,6 @@ static unsigned getIMELambdaShift(const RISCVSubtarget &Subtarget) {
   return Subtarget.getXLen() - 4;
 }
 
-static uint64_t getIMELambdaFieldMask(const RISCVSubtarget &Subtarget) {
-  return UINT64_C(7) << getIMELambdaShift(Subtarget);
-}
-
-static uint64_t getIMEClearLambdaMask(const RISCVSubtarget &Subtarget) {
-  uint64_t Mask = ~getIMELambdaFieldMask(Subtarget);
-  if (!Subtarget.is64Bit())
-    Mask = static_cast<uint32_t>(Mask);
-  return Mask;
-}
-
-static bool isValidIMELambdaValue(uint64_t Value) {
-  return Value != 0 && Value <= 64 && isPowerOf2_64(Value);
-}
-
-// The IME implementation lambda is derived from implementation VLEN using the
-// representative shape from the spec:
-//
-//   VLEN = 64 * lambda^2
-//
-// For a known VLEN in bits this gives:
-//
-//   log2(lambda) = (log2(VLEN) - log2(64)) / 2
-//                = (log2(VLEN) - 6) / 2
-//
-// Values below VLEN=64 produce lambda=1.  The selected vtype.lambda encoding
-// has seven non-zero values, so the maximum representable lambda is 64
-// (log2(lambda)=6).
-static unsigned getKnownIMEImplementationLambda(unsigned VLenBits) {
-  unsigned Log2VLen = Log2_32(VLenBits);
-  if (Log2VLen <= 6)
-    return 1;
-
-  unsigned LambdaLog2 = (Log2VLen - 6) / 2;
-  if (LambdaLog2 > 6)
-    LambdaLog2 = 6;
-  return 1U << LambdaLog2;
-}
-
 // Decode the selected vtype.lambda field.  The IME vtype encoding uses zero to
 // mean "no selected lambda"; otherwise the encoded value is one plus log2 of
 // the selected lambda:
@@ -11638,11 +11599,11 @@ decodeSelectedIMELambdaFromVType(SDValue VType, const SDLoc &DL,
   return DAG.getSelect(DL, XLenVT, IsZero, Zero, Lambda);
 }
 
-// Read the architectural vtype CSR.  This is selected as:
+// Read the architectural vtype CSR. This is selected as:
 //
 //   csrr rd, vtype
 //
-// and is used only for IME selected-lambda readback and read-modify-write.
+// and is used for the IME __riscv_ime_lambda() selected-lambda query.
 static SDValue readIMEVType(SDValue Chain, const SDLoc &DL, SelectionDAG &DAG,
                             const RISCVSubtarget &Subtarget) {
   MVT XLenVT = Subtarget.getXLenVT();
@@ -11675,183 +11636,19 @@ static SDValue lowerIMEVLen(SDValue Op, SelectionDAG &DAG,
   return VLen;
 }
 
-// Lower the implementation representative lambda query.  This is the
-// implementation geometry lambda described by the IME spec, not the currently
-// selected vtype.lambda.  It must not read vtype.
-//
-// The spec-derived formula is VLEN = 64 * lambda^2.  For dynamic VLEN we read
-// vlenb, where vlenb = VLEN / 8, so:
-//
-//   ctz(vlenb) = log2(VLEN) - 3
-//   log2(lambda) = (log2(VLEN) - 6) / 2
-//                = (ctz(vlenb) - 3) / 2
-//
-// Conceptual lowering:
-//
-//   csrr rd, vlenb
-//   lambda_log2 = clamp((ctz(rd) - 3) / 2, 0, 6)
-//   rd = 1 << lambda_log2
-static SDValue lowerIMEImplementationLambda(SDValue Op, SelectionDAG &DAG,
-                                            const RISCVSubtarget &Subtarget) {
-  SDLoc DL(Op);
-  MVT XLenVT = Subtarget.getXLenVT();
-
-  SDValue Lambda;
-  if (std::optional<unsigned> KnownVLen = Subtarget.getRealVLen()) {
-    Lambda = DAG.getConstant(getKnownIMEImplementationLambda(*KnownVLen), DL,
-                             XLenVT);
-  } else {
-    SDValue VLenB = DAG.getNode(RISCVISD::READ_VLENB, DL, XLenVT);
-    SDValue Ctz = DAG.getNode(ISD::CTTZ_ZERO_POISON, DL, XLenVT, VLenB);
-
-    SDValue Three = DAG.getConstant(3, DL, XLenVT);
-    SDValue IsSmall = DAG.getSetCC(DL, XLenVT, Ctz, Three, ISD::SETULT);
-    SDValue LambdaLog2 = DAG.getNode(ISD::SUB, DL, XLenVT, Ctz, Three);
-    LambdaLog2 = DAG.getSelect(DL, XLenVT, IsSmall,
-                               DAG.getConstant(0, DL, XLenVT), LambdaLog2);
-    LambdaLog2 = DAG.getNode(ISD::SRL, DL, XLenVT, LambdaLog2,
-                             DAG.getConstant(1, DL, XLenVT));
-
-    SDValue Six = DAG.getConstant(6, DL, XLenVT);
-    SDValue IsTooLarge = DAG.getSetCC(DL, XLenVT, LambdaLog2, Six, ISD::SETUGT);
-    LambdaLog2 = DAG.getSelect(DL, XLenVT, IsTooLarge, Six, LambdaLog2);
-
-    Lambda = DAG.getNode(ISD::SHL, DL, XLenVT, DAG.getConstant(1, DL, XLenVT),
-                         LambdaLog2);
-  }
-
-  return Lambda;
-}
-
-// Lower the selected vtype.lambda readback used by __riscv_vsetlambda(0).
-// This is a read-only query of architectural vtype state and must not emit
-// vsetvl or otherwise modify vl/vtype:
+// Lower the selected vtype.lambda query.
 //
 //   csrr rd, vtype
-//   rd = decode(vtype.lambda)
-static SDValue lowerIMEReadSelectedLambda(SDValue Op, SelectionDAG &DAG,
-                                          const RISCVSubtarget &Subtarget) {
+//   rd = decode(vtype.lambda[2:0])
+//
+static SDValue lowerIMESelectedLambda(SDValue Op, SelectionDAG &DAG,
+                                      const RISCVSubtarget &Subtarget) {
   SDLoc DL(Op);
   SDValue Chain = Op.getOperand(0);
 
   SDValue VType = readIMEVType(Chain, DL, DAG, Subtarget);
   Chain = VType.getValue(1);
   SDValue Lambda = decodeSelectedIMELambdaFromVType(VType, DL, DAG, Subtarget);
-  return DAG.getMergeValues({Lambda, Chain}, DL);
-}
-
-static SDValue encodeRuntimeIMELambda(SDValue Requested, const SDLoc &DL,
-                                      SelectionDAG &DAG,
-                                      const RISCVSubtarget &Subtarget,
-                                      MVT XLenVT) {
-  // This primitive is the nonzero arm of the C-level __riscv_vsetlambda
-  // lowering. Valid runtime inputs are {1,2,4,8,16,32,64}. On targets with
-  // Zbb, ctz(x) + 1 maps directly to the 3-bit vtype.lambda encoding.
-  if (Subtarget.hasStdExtZbb()) {
-    SDValue Zero = DAG.getConstant(0, DL, XLenVT);
-    SDValue One = DAG.getConstant(1, DL, XLenVT);
-
-    // Direct IR users can still pass zero or another invalid runtime value to
-    // this nonzero primitive. Use the defined ctz operation, guard the runtime
-    // value, and map invalid runtime values to encoding 0. The later
-    // read-modify-write sequence preserves all non-lambda vtype fields and
-    // clears lambda[2:0] for invalid runtime values, avoiding poison and
-    // avoiding out-of-range encodings.
-    SDValue Ctz = DAG.getNode(ISD::CTTZ, DL, XLenVT, Requested);
-    SDValue Encoded =
-        DAG.getNode(ISD::ADD, DL, XLenVT, Ctz, DAG.getConstant(1, DL, XLenVT));
-
-    SDValue NonZero = DAG.getSetCC(DL, XLenVT, Requested, Zero, ISD::SETNE);
-    SDValue IsInRange = DAG.getSetCC(
-        DL, XLenVT, Requested, DAG.getConstant(64, DL, XLenVT), ISD::SETULE);
-    SDValue MinusOne = DAG.getNode(ISD::SUB, DL, XLenVT, Requested, One);
-    SDValue PowerOf2Bits =
-        DAG.getNode(ISD::AND, DL, XLenVT, Requested, MinusOne);
-    SDValue IsPowerOf2 =
-        DAG.getSetCC(DL, XLenVT, PowerOf2Bits, Zero, ISD::SETEQ);
-
-    SDValue IsValid = DAG.getNode(ISD::AND, DL, XLenVT, NonZero, IsInRange);
-    IsValid = DAG.getNode(ISD::AND, DL, XLenVT, IsValid, IsPowerOf2);
-
-    return DAG.getSelect(DL, XLenVT, IsValid, Encoded, Zero);
-  }
-
-  // Without Zbb, generic cttz can expand to libcalls. Build the 3-bit
-  // vtype.lambda encoding directly instead.
-  //
-  // Invalid runtime inputs are outside the source-level contract. Leave their
-  // encoding as zero so this lowering does not write outside lambda[2:0] or
-  // synthesize an encoding that sets VILL.
-  SDValue Encoded = DAG.getConstant(0, DL, XLenVT);
-
-  auto SelectIfEq = [&](uint64_t Value, unsigned Enc) {
-    SDValue IsEq = DAG.getSetCC(DL, XLenVT, Requested,
-                                DAG.getConstant(Value, DL, XLenVT), ISD::SETEQ);
-    Encoded = DAG.getSelect(DL, XLenVT, IsEq, DAG.getConstant(Enc, DL, XLenVT),
-                            Encoded);
-  };
-
-  SelectIfEq(1, 1);
-  SelectIfEq(2, 2);
-  SelectIfEq(4, 3);
-  SelectIfEq(8, 4);
-  SelectIfEq(16, 5);
-  SelectIfEq(32, 6);
-  SelectIfEq(64, 7);
-
-  return Encoded;
-}
-
-// Lower the nonzero selected-lambda write/readback primitive used by the
-// nonzero path of __riscv_vsetlambda(N). Valid source-level values are
-// {1,2,4,8,16,32,64}. The IME vtype fields live in high vtype bits outside the
-// vsetvli/vsetivli immediate fields, so the spec requires configuring them
-// with register-form vsetvl using a full vtype value in a GPR.
-//
-// The lowering preserves the current vl and all other vtype fields:
-//
-//   old_vtype = csrr vtype
-//   encoded = log2(N) + 1
-//   new_vtype = (old_vtype & ~lambda_mask) | (encoded << lambda_shift)
-//   vsetvl x0, x0, new_vtype
-//   updated_vtype = csrr vtype
-//   return decode(updated_vtype.lambda)
-static SDValue lowerIMEVSetLambdaNonZero(SDValue Op, SelectionDAG &DAG,
-                                         const RISCVSubtarget &Subtarget) {
-  SDLoc DL(Op);
-  SDValue Chain = Op.getOperand(0);
-  SDValue Requested = Op.getOperand(2);
-  MVT XLenVT = Subtarget.getXLenVT();
-
-  SDValue OldVType = readIMEVType(Chain, DL, DAG, Subtarget);
-  Chain = OldVType.getValue(1);
-
-  SDValue Encoded;
-  if (auto *C = dyn_cast<ConstantSDNode>(Requested)) {
-    uint64_t Value = C->getZExtValue();
-    if (!isValidIMELambdaValue(Value))
-      reportFatalUsageError("invalid constant requested lambda for "
-                            "llvm.riscv.ime.vsetlambda.nonzero");
-
-    Encoded = DAG.getConstant(Log2_64(Value) + 1, DL, XLenVT);
-  } else {
-    Encoded = encodeRuntimeIMELambda(Requested, DL, DAG, Subtarget, XLenVT);
-  }
-
-  SDValue Cleared = DAG.getNode(
-      ISD::AND, DL, XLenVT, OldVType,
-      DAG.getConstant(getIMEClearLambdaMask(Subtarget), DL, XLenVT));
-  SDValue EncodedBits =
-      DAG.getNode(ISD::SHL, DL, XLenVT, Encoded,
-                  DAG.getConstant(getIMELambdaShift(Subtarget), DL, XLenVT));
-  SDValue NewVType = DAG.getNode(ISD::OR, DL, XLenVT, Cleared, EncodedBits);
-
-  Chain = DAG.getNode(RISCVISD::IME_VSETVTYPE, DL, MVT::Other, Chain, NewVType);
-
-  SDValue UpdatedVType = readIMEVType(Chain, DL, DAG, Subtarget);
-  Chain = UpdatedVType.getValue(1);
-  SDValue Lambda =
-      decodeSelectedIMELambdaFromVType(UpdatedVType, DL, DAG, Subtarget);
   return DAG.getMergeValues({Lambda, Chain}, DL);
 }
 
@@ -12025,8 +11822,6 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return lowerGetVectorLength(Op.getNode(), DAG, Subtarget);
   case Intrinsic::riscv_ime_vlen:
     return lowerIMEVLen(Op, DAG, Subtarget);
-  case Intrinsic::riscv_ime_lambda:
-    return lowerIMEImplementationLambda(Op, DAG, Subtarget);
   case Intrinsic::riscv_vmv_x_s: {
     SDValue Res = DAG.getNode(RISCVISD::VMV_X_S, DL, XLenVT, Op.getOperand(1));
     return DAG.getNode(ISD::TRUNCATE, DL, Op.getValueType(), Res);
@@ -12332,10 +12127,8 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
   case Intrinsic::riscv_sseg8_load_mask:
     return lowerFixedVectorSegLoadIntrinsics(IntNo, Op, Subtarget, DAG);
 
-  case Intrinsic::riscv_ime_readlambda:
-    return lowerIMEReadSelectedLambda(Op, DAG, Subtarget);
-  case Intrinsic::riscv_ime_vsetlambda_nonzero:
-    return lowerIMEVSetLambdaNonZero(Op, DAG, Subtarget);
+  case Intrinsic::riscv_ime_lambda:
+    return lowerIMESelectedLambda(Op, DAG, Subtarget);
 
   case Intrinsic::riscv_sf_vc_v_x_se:
     return getVCIXISDNodeWCHAIN(Op, DAG, RISCVISD::SF_VC_V_X_SE);
