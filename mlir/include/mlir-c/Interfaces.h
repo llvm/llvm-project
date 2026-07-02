@@ -165,6 +165,51 @@ MLIR_CAPI_EXPORTED void mlirMemoryEffectsOpInterfaceAttachFallbackModel(
     MlirContext ctx, MlirStringRef opName,
     MlirMemoryEffectsOpInterfaceCallbacks callbacks);
 
+//===---------------------------------------------------------------------===//
+// LoopLikeOpInterface
+//===---------------------------------------------------------------------===//
+
+/// Returns the interface TypeID of the LoopLikeOpInterface.
+MLIR_CAPI_EXPORTED MlirTypeID mlirLoopLikeOpInterfaceTypeID(void);
+
+/// Returns the loop regions of the given loop-like operation. The regions are
+/// written into the caller-allocated `regions` buffer, up to `n` entries, and
+/// the total number of loop regions is returned. The operation must implement
+/// LoopLikeOpInterface.
+MLIR_CAPI_EXPORTED intptr_t mlirLoopLikeOpInterfaceGetLoopRegions(
+    MlirOperation op, intptr_t n, MlirRegion *regions);
+
+/// Returns true if the given value is defined outside of the loop. The
+/// operation must implement LoopLikeOpInterface.
+MLIR_CAPI_EXPORTED bool
+mlirLoopLikeOpInterfaceIsDefinedOutsideOfLoop(MlirOperation op,
+                                              MlirValue value);
+
+/// Returns the induction variables of the loop. The values are written into the
+/// caller-allocated `vars` buffer, up to `n` entries, and the total number of
+/// induction variables is returned. A negative return value indicates that the
+/// loop has no notion of induction variables. The operation must implement
+/// LoopLikeOpInterface.
+MLIR_CAPI_EXPORTED intptr_t mlirLoopLikeOpInterfaceGetLoopInductionVars(
+    MlirOperation op, intptr_t n, MlirValue *vars);
+
+/// Returns the region iter_args of the loop (the block arguments corresponding
+/// to the init operands). The values are written into the caller-allocated
+/// `args` buffer, up to `n` entries, and the total number is returned. The
+/// operation must implement LoopLikeOpInterface.
+MLIR_CAPI_EXPORTED intptr_t mlirLoopLikeOpInterfaceGetRegionIterArgs(
+    MlirOperation op, intptr_t n, MlirValue *args);
+
+/// Moves the given loop-invariant operation out of the loop. The loop operation
+/// must implement LoopLikeOpInterface.
+MLIR_CAPI_EXPORTED void
+mlirLoopLikeOpInterfaceMoveOutOfLoop(MlirOperation loopOp, MlirOperation op);
+
+/// Returns the static trip count of the loop, or -1 if it cannot be determined
+/// statically. The operation must implement LoopLikeOpInterface.
+MLIR_CAPI_EXPORTED int64_t
+mlirLoopLikeOpInterfaceGetStaticTripCount(MlirOperation op);
+
 #ifdef __cplusplus
 }
 #endif

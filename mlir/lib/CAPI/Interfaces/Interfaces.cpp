@@ -16,6 +16,7 @@
 #include "mlir/CAPI/Wrap.h"
 #include "mlir/IR/ValueRange.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
+#include "mlir/Interfaces/LoopLikeInterface.h"
 #include "llvm/ADT/ScopeExit.h"
 #include <optional>
 
@@ -344,4 +345,64 @@ void mlirMemoryEffectsOpInterfaceAttachFallbackModel(
       opInfo->getInterface<MemoryEffectOpInterfaceFallbackModel>());
   assert(model && "Failed to get MemoryEffectOpInterfaceFallbackModel");
   model->setCallbacks(callbacks);
+}
+
+//===---------------------------------------------------------------------===//
+// LoopLikeOpInterface
+//===---------------------------------------------------------------------===//
+
+MlirTypeID mlirLoopLikeOpInterfaceTypeID(void) {
+  return wrap(LoopLikeOpInterface::getInterfaceID());
+}
+
+intptr_t mlirLoopLikeOpInterfaceGetLoopRegions(MlirOperation op, intptr_t n,
+                                               MlirRegion *regions) {
+  SmallVector<Region *> loopRegions =
+      cast<LoopLikeOpInterface>(unwrap(op)).getLoopRegions();
+  intptr_t count = static_cast<intptr_t>(loopRegions.size());
+  for (intptr_t i = 0; i < count && i < n; ++i)
+    regions[i] = wrap(loopRegions[i]);
+  return count;
+}
+
+bool mlirLoopLikeOpInterfaceIsDefinedOutsideOfLoop(MlirOperation op,
+                                                   MlirValue value) {
+  return cast<LoopLikeOpInterface>(unwrap(op))
+      .isDefinedOutsideOfLoop(unwrap(value));
+}
+
+intptr_t mlirLoopLikeOpInterfaceGetLoopInductionVars(MlirOperation op,
+                                                     intptr_t n,
+                                                     MlirValue *vars) {
+  std::optional<SmallVector<Value>> inductionVars =
+      cast<LoopLikeOpInterface>(unwrap(op)).getLoopInductionVars();
+  if (!inductionVars)
+    return -1;
+  intptr_t count = static_cast<intptr_t>(inductionVars->size());
+  for (intptr_t i = 0; i < count && i < n; ++i)
+    vars[i] = wrap((*inductionVars)[i]);
+  return count;
+}
+
+intptr_t mlirLoopLikeOpInterfaceGetRegionIterArgs(MlirOperation op, intptr_t n,
+                                                  MlirValue *args) {
+  Block::BlockArgListType iterArgs =
+      cast<LoopLikeOpInterface>(unwrap(op)).getRegionIterArgs();
+  intptr_t count = static_cast<intptr_t>(iterArgs.size());
+  for (intptr_t i = 0; i < count && i < n; ++i)
+    args[i] = wrap(iterArgs[i]);
+  return count;
+}
+
+void mlirLoopLikeOpInterfaceMoveOutOfLoop(MlirOperation loopOp,
+                                          MlirOperation op) {
+  cast<LoopLikeOpInterface>(unwrap(loopOp)).moveOutOfLoop(unwrap(op));
+}
+
+int64_t mlirLoopLikeOpInterfaceGetStaticTripCount(MlirOperation op) {
+  std::optional<llvm::APInt> tripCount =
+      cast<LoopLikeOpInterface>(unwrap(op)).getStaticTripCount();
+  if (!tripCount)
+    return -1;
+  return static_cast<int64_t>(tripCount->getZExtValue());
 }

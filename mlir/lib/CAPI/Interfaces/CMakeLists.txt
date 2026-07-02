@@ -3,4 +3,5 @@ add_mlir_upstream_c_api_library(MLIRCAPIInterfaces
 
   LINK_LIBS PUBLIC
   MLIRInferTypeOpInterface
+  MLIRLoopLikeInterface
   MLIRSideEffectInterfaces)

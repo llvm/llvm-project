@@ -2900,6 +2900,85 @@ int testDominanceInfo(MlirContext ctx) {
   return 0;
 }
 
+int testLoopLikeOpInterface(MlirContext ctx) {
+  fprintf(stderr, "@testLoopLikeOpInterface\n");
+  // CHECK-LABEL: @testLoopLikeOpInterface
+
+  mlirContextGetOrLoadDialect(ctx, mlirStringRefCreateFromCString("arith"));
+  mlirContextGetOrLoadDialect(ctx, mlirStringRefCreateFromCString("scf"));
+
+  const char *moduleStr =
+      "func.func @f(%arg0: i32) -> i32 {\n"
+      "  %lb = arith.constant 0 : index\n"
+      "  %ub = arith.constant 10 : index\n"
+      "  %step = arith.constant 1 : index\n"
+      "  %0 = scf.for %i = %lb to %ub step %step iter_args(%acc = %arg0) -> "
+      "(i32) {\n"
+      "    %inv = arith.muli %arg0, %arg0 : i32\n"
+      "    %1 = arith.addi %acc, %inv : i32\n"
+      "    scf.yield %1 : i32\n"
+      "  }\n"
+      "  return %0 : i32\n"
+      "}\n";
+  MlirModule module =
+      mlirModuleCreateParse(ctx, mlirStringRefCreateFromCString(moduleStr));
+
+  MlirBlock moduleBody = mlirModuleGetBody(module);
+  MlirOperation funcOp = mlirBlockGetFirstOperation(moduleBody);
+  MlirRegion funcRegion = mlirOperationGetRegion(funcOp, 0);
+  MlirBlock funcBody = mlirRegionGetFirstBlock(funcRegion);
+  MlirValue funcArg0 = mlirBlockGetArgument(funcBody, 0);
+
+  MlirOperation lbOp = mlirBlockGetFirstOperation(funcBody);
+  MlirOperation ubOp = mlirOperationGetNextInBlock(lbOp);
+  MlirOperation stepOp = mlirOperationGetNextInBlock(ubOp);
+  MlirOperation forOp = mlirOperationGetNextInBlock(stepOp);
+
+  MlirRegion forRegion = mlirOperationGetRegion(forOp, 0);
+  MlirBlock forBody = mlirRegionGetFirstBlock(forRegion);
+  MlirValue indVar = mlirBlockGetArgument(forBody, 0);
+  MlirValue iterArg = mlirBlockGetArgument(forBody, 1);
+
+  // The scf.for op implements the interface.
+  MlirTypeID id = mlirLoopLikeOpInterfaceTypeID();
+  assert(!mlirTypeIDIsNull(id));
+  assert(mlirOperationImplementsInterface(forOp, id));
+
+  // It has a single loop region, which is the body region.
+  MlirRegion regions[1];
+  assert(mlirLoopLikeOpInterfaceGetLoopRegions(forOp, 1, regions) == 1);
+  assert(mlirRegionEqual(regions[0], forRegion));
+
+  // The function argument is defined outside the loop; the iter_arg is not.
+  assert(mlirLoopLikeOpInterfaceIsDefinedOutsideOfLoop(forOp, funcArg0));
+  assert(!mlirLoopLikeOpInterfaceIsDefinedOutsideOfLoop(forOp, iterArg));
+
+  // The single induction variable is the loop body's first block argument.
+  MlirValue vars[1];
+  assert(mlirLoopLikeOpInterfaceGetLoopInductionVars(forOp, 1, vars) == 1);
+  assert(mlirValueEqual(vars[0], indVar));
+
+  // The single region iter_arg is the loop body's second block argument.
+  MlirValue iterArgs[1];
+  assert(mlirLoopLikeOpInterfaceGetRegionIterArgs(forOp, 1, iterArgs) == 1);
+  assert(mlirValueEqual(iterArgs[0], iterArg));
+
+  // lb = 0, ub = 10, step = 1 -> static trip count of 10.
+  assert(mlirLoopLikeOpInterfaceGetStaticTripCount(forOp) == 10);
+
+  // Move the loop-invariant `arith.muli` out of the loop; it should land in the
+  // function body alongside the for op.
+  MlirOperation invOp = mlirBlockGetFirstOperation(forBody);
+  mlirLoopLikeOpInterfaceMoveOutOfLoop(forOp, invOp);
+  assert(mlirBlockEqual(mlirOperationGetBlock(invOp), funcBody));
+
+  mlirModuleDestroy(module);
+
+  // CHECK: testLoopLikeOpInterface: PASSED
+  fprintf(stderr, "testLoopLikeOpInterface: PASSED\n");
+  return 0;
+}
+
 int main(void) {
   MlirContext ctx = mlirContextCreate();
   registerAllUpstreamDialects(ctx);
@@ -2955,6 +3034,8 @@ int main(void) {
     return 19;
   if (testDominanceInfo(ctx))
     return 20;
+  if (testLoopLikeOpInterface(ctx))
+    return 21;
 
   // CHECK: DESTROY MAIN CONTEXT
   // CHECK: reportResourceDelete: resource_i64_blob
