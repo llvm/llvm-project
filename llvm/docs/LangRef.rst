@@ -12093,7 +12093,7 @@ Syntax:
 ::
 
       <result> = load [volatile] <ty>, ptr <pointer>[, align <alignment>][, !nontemporal !<nontemp_node>][, !invariant.load !<empty_node>][, !invariant.group !<empty_node>][, !nonnull !<empty_node>][, !dereferenceable !<deref_bytes_node>][, !dereferenceable_or_null !<deref_bytes_node>][, !align !<align_node>][, !noundef !<empty_node>]
-      <result> = load atomic [volatile] <ty>, ptr <pointer> [syncscope("<target-scope>")] <ordering>, align <alignment> [, !invariant.group !<empty_node>]
+      <result> = load atomic [volatile] [elementwise] <ty>, ptr <pointer> [syncscope("<target-scope>")] <ordering>, align <alignment> [, !invariant.group !<empty_node>]
       !<nontemp_node> = !{ i32 1 }
       !<empty_node> = !{}
       !<deref_bytes_node> = !{ i64 <dereferenceable_bytes> }
@@ -12118,15 +12118,27 @@ If the ``load`` is marked as ``atomic``, it takes an extra :ref:`ordering
 <ordering>` and optional ``syncscope("<target-scope>")`` argument. The
 ``release`` and ``acq_rel`` orderings are not valid on ``load`` instructions.
 Atomic loads produce :ref:`defined <memmodel>` results when they may see
-multiple atomic stores. The type of the pointee must be an integer, pointer,
-floating-point, or vector type whose bit width is a power of two greater than
-or equal to eight. ``align`` must be
-explicitly specified on atomic loads. Note: if the alignment is not greater or
-equal to the size of the `<value>` type, the atomic operation is likely to
-require a lock and have poor performance. ``!nontemporal`` does not have any
-defined semantics for atomic loads.
+multiple atomic stores. Atomic loads support scalar integer, pointer, and
+floating-point types whose bit width is a power of two greater than or equal
+to eight. Atomic loads also support vector types whose total bit width is a
+power of two greater than or equal to eight. That is, the entire vector is
+loaded atomically.
 
-The optional constant ``align`` argument specifies the alignment of the
+If the ``elementwise`` modifier is present, the loaded type must be a fixed
+vector type whose total bit width is a power of two greater than or equal to
+eight, and whose element type is supported by scalar atomic loads. The load has
+per-element atomic load semantics: it behaves as if it were expanded into
+one scalar atomic load per element, and the element loads are not ordered with
+respect to each other. Without ``elementwise``, vector atomic loads keep
+whole-value atomic semantics.
+
+``align`` must be explicitly specified on atomic loads, and is otherwise
+optional on non-atomic loads. Note: if the alignment is not greater than or equal
+to the size of the ``<ty>`` type, or the element type for an ``elementwise`` load,
+the atomic operation is likely to require a lock and have poor performance.
+``!nontemporal`` does not have any defined semantics for atomic loads.
+
+The constant ``align`` argument specifies the alignment of the
 operation (that is, the alignment of the memory address). It is the
 responsibility of the code emitter to ensure that the alignment information is
 correct. Overestimating the alignment results in undefined behavior.

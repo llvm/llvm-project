@@ -1363,15 +1363,16 @@ LoadInst::LoadInst(Type *Ty, Value *Ptr, const Twine &Name, bool isVolatile,
 LoadInst::LoadInst(Type *Ty, Value *Ptr, const Twine &Name, bool isVolatile,
                    Align Align, InsertPosition InsertBef)
     : LoadInst(Ty, Ptr, Name, isVolatile, Align, AtomicOrdering::NotAtomic,
-               SyncScope::System, InsertBef) {}
+               SyncScope::System, InsertBef, /*IsElementwise=*/false) {}
 
 LoadInst::LoadInst(Type *Ty, Value *Ptr, const Twine &Name, bool isVolatile,
                    Align Align, AtomicOrdering Order, SyncScope::ID SSID,
-                   InsertPosition InsertBef)
+                   InsertPosition InsertBef, bool IsElementwise)
     : UnaryInstruction(Ty, Load, Ptr, InsertBef) {
   setVolatile(isVolatile);
   setAlignment(Align);
   setAtomic(Order, SSID);
+  setElementwise(IsElementwise);
   AssertOK();
   setName(Name);
 }
@@ -4442,7 +4443,8 @@ AllocaInst *AllocaInst::cloneImpl() const {
 
 LoadInst *LoadInst::cloneImpl() const {
   return new LoadInst(getType(), getOperand(0), Twine(), isVolatile(),
-                      getAlign(), getOrdering(), getSyncScopeID());
+                      getAlign(), getOrdering(), getSyncScopeID(),
+                      /*InsertBefore=*/nullptr, isElementwise());
 }
 
 StoreInst *StoreInst::cloneImpl() const {

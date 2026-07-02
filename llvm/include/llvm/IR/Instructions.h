@@ -182,9 +182,10 @@ class LoadInst : public UnaryInstruction {
   using VolatileField = BoolBitfieldElementT<0>;
   using AlignmentField = AlignmentBitfieldElementT<VolatileField::NextBit>;
   using OrderingField = AtomicOrderingBitfieldElementT<AlignmentField::NextBit>;
-  static_assert(
-      Bitfield::areContiguous<VolatileField, AlignmentField, OrderingField>(),
-      "Bitfields must be contiguous");
+  using ElementWiseField = BoolBitfieldElementT<OrderingField::NextBit>;
+  static_assert(Bitfield::areContiguous<VolatileField, AlignmentField,
+                                        OrderingField, ElementWiseField>(),
+                "Bitfields must be contiguous");
 
   void AssertOK();
 
@@ -204,13 +205,20 @@ public:
   LLVM_ABI LoadInst(Type *Ty, Value *Ptr, const Twine &NameStr, bool isVolatile,
                     Align Align, AtomicOrdering Order,
                     SyncScope::ID SSID = SyncScope::System,
-                    InsertPosition InsertBefore = nullptr);
+                    InsertPosition InsertBefore = nullptr,
+                    bool IsElementwise = false);
 
   /// Return true if this is a load from a volatile memory location.
   bool isVolatile() const { return getSubclassData<VolatileField>(); }
 
   /// Specify whether this is a volatile load or not.
   void setVolatile(bool V) { setSubclassData<VolatileField>(V); }
+
+  /// Return true if this is an elementwise atomic load.
+  bool isElementwise() const { return getSubclassData<ElementWiseField>(); }
+
+  /// Specify whether this is an elementwise atomic load or not.
+  void setElementwise(bool V) { setSubclassData<ElementWiseField>(V); }
 
   /// Return the alignment of the access that is being performed.
   Align getAlign() const {
