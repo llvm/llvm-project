@@ -1428,8 +1428,8 @@ SDValue DAGCombiner::reassociateReduction(unsigned RedOpc, unsigned Opc,
       return SDValue();
     SelectionDAG::FlagInserter FlagsInserter(
         DAG, Flags & Chain->getFlags() & Red0->getFlags() & RedY->getFlags());
-    SDValue Sum = DAG.getNode(Opc, DL, X.getValueType(), X, Y);
-    SDValue Red = DAG.getNode(RedOpc, DL, VT, Sum);
+    SDValue Op = DAG.getNode(Opc, DL, X.getValueType(), X, Y);
+    SDValue Red = DAG.getNode(RedOpc, DL, VT, Op);
     return DAG.getNode(Opc, DL, VT, Red, Z);
   };
   if (SDValue V = FoldReductionChain(N0, N1))
