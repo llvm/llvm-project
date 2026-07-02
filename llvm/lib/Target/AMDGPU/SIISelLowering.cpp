@@ -33,6 +33,7 @@
 #include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
+#include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
@@ -1037,7 +1038,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                        Custom);
   }
 
-  setTargetDAGCombine({ISD::ADD,
+  setTargetDAGCombine({ISD::ABS,
+                       ISD::ADD,
                        ISD::PTRADD,
                        ISD::SUB,
                        ISD::MUL,
@@ -18620,6 +18622,11 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
 
   if (getTargetMachine().getOptLevel() == CodeGenOptLevel::None)
     return SDValue();
+
+  // expandABS but only for i8 and i16
+  if (ISD::isAbsOpcode(N->getOpcode()) && !N->isDivergent() &&
+      (N->getValueType(0) == MVT::i8 || N->getValueType(0) == MVT::i16))
+    return expandABS(N, DCI.DAG);
 
   switch (N->getOpcode()) {
   case ISD::ADD:
