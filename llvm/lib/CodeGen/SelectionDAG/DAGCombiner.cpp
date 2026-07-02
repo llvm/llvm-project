@@ -27262,6 +27262,13 @@ static void collectSubVectorSrcs(
     if (!Slot)
       Slot = Sub;
   };
+  if (V.getOpcode() == ISD::CONCAT_VECTORS &&
+      V.getOperand(0).getValueType() == SubVT) {
+    for (unsigned I = 0, E = V.getNumOperands(); I != E; ++I)
+      record(I, V.getOperand(I));
+    return;
+  }
+
   while (V.getOpcode() == ISD::INSERT_SUBVECTOR &&
          V.getOperand(1).getValueType() == SubVT) {
     uint64_t InsIdx = V.getConstantOperandVal(2);
@@ -27270,17 +27277,19 @@ static void collectSubVectorSrcs(
     record(InsIdx / NumSubElts, V.getOperand(1));
     V = V.getOperand(0);
   }
-  if (V.getOpcode() == ISD::CONCAT_VECTORS &&
-      V.getOperand(0).getValueType() == SubVT)
-    for (unsigned I = 0, E = V.getNumOperands(); I != E; ++I)
-      record(I, V.getOperand(I));
 }
 
 // Try to narrow a wide vector binop whose result is consumed *only* by
-// extract_subvector nodes that all extract the SAME narrow type. The pattern
-// is:
+// extract_subvector nodes that all extract the SAME narrow type SubVT. The
+// pattern, for each extract at index Idx, is:
 //   extract (binop (insert/concat ..., X, Idx), (insert/concat ..., Y, Idx)),
 //   Idx
+// Within one such match the two inserts and the extract share the same Idx, and
+// across the different extracts the indices are subvector-aligned and strided
+// by the subvector element count: Idx is a multiple of
+// SubVT.getVectorNumElements() (0, NumSubElts, 2*NumSubElts, ...), so each
+// extract pulls out a distinct, non-overlapping SubVT-sized slot.
+// Overlapping/unaligned indices (e.g. extract lanes 0-1 then 1-2) are rejected.
 // When every extract pulls the same SubVT out of both wide operands for free,
 // we replace the wide binop by one narrow binop per extract, eliminating all of
 // the inserts/extracts and the wide binop in a single combine:
@@ -27371,8 +27380,6 @@ static SDValue narrowInsertExtractVectorBinOp(SDNode *N, SDValue BinOp,
     if (HasNonZeroExt)
       return SDValue();
     for (auto &[Ext, Sub0, Sub1] : drop_begin(Slots)) {
-      if (!Sub0 && !Sub1)
-        continue;
       if (!IsZeroOrUndef(Sub0) || !IsZeroOrUndef(Sub1))
         return SDValue();
     }
@@ -27382,7 +27389,7 @@ static SDValue narrowInsertExtractVectorBinOp(SDNode *N, SDValue BinOp,
   // ext (binop (ins ?, X, Idx), (ins ?, Y, Idx)), Idx --> binop X, Y
   // Build N's replacement first so node creation order (and thus scheduling)
   // matches the combiner visiting N directly; rewrite the siblings in place.
-  SDValue Result = SDValue();
+  SDValue Result;
   for (auto [Ext, Sub0, Sub1] : Slots) {
     if (Ext) {
       SDValue Narrow = DAG.getNode(BinOpcode, SDLoc(Ext), SubVT, Sub0, Sub1,
