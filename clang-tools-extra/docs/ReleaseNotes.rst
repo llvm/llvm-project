@@ -632,7 +632,10 @@ Changes in existing checks
 
 - Improved :doc:`modernize-return-braced-init-list
   <clang-tidy/checks/modernize/return-braced-init-list>` check to apply fix-it
-  when type qualifiers and/or reference modifiers are used with parameters.
+  when type qualifiers and/or reference modifiers are used with parameters, and
+  to no longer rewrite the return value when the constructed type has a
+  ``std::initializer_list`` constructor, as the braced form could select a
+  different constructor.
 
 - Improved :doc:`modernize-type-traits
   <clang-tidy/checks/modernize/type-traits>` check to suggest usage of

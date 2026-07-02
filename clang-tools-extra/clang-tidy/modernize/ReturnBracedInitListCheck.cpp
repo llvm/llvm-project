@@ -7,7 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "ReturnBracedInitListCheck.h"
+#include "../utils/TypeTraits.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/DeclTemplate.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Lex/Lexer.h"
@@ -15,6 +17,25 @@
 using namespace clang::ast_matchers;
 
 namespace clang::tidy::modernize {
+
+static bool hasInitListConstructor(const CXXRecordDecl *RD) {
+  if (RD == nullptr || !RD->hasDefinition())
+    return false;
+  auto IsInitListCtor = [](const CXXConstructorDecl *Ctor) {
+    return Ctor->hasOneParamOrDefaultArgs() &&
+           utils::type_traits::isStdInitializerList(
+               Ctor->getParamDecl(0)->getType().getNonReferenceType());
+  };
+  return llvm::any_of(RD->decls(), [&](const Decl *D) {
+    if (const auto *Ctor = dyn_cast<CXXConstructorDecl>(D))
+      return IsInitListCtor(Ctor);
+    if (const auto *FTD = dyn_cast<FunctionTemplateDecl>(D))
+      if (const auto *Ctor =
+              dyn_cast<CXXConstructorDecl>(FTD->getTemplatedDecl()))
+        return IsInitListCtor(Ctor);
+    return false;
+  });
+}
 
 void ReturnBracedInitListCheck::registerMatchers(MatchFinder *Finder) {
   auto SemanticallyDifferentContainer = allOf(
@@ -64,6 +85,13 @@ void ReturnBracedInitListCheck::check(const MatchFinder::MatchResult &Result) {
   const QualType ConstructType =
       MatchedConstructExpr->getType().getCanonicalType();
   if (ReturnType != ConstructType)
+    return;
+
+  // Rewriting `T(args)` to a braced-init-list changes overload resolution when
+  // `T` has a std::initializer_list constructor: list-initialization prefers
+  // the initializer_list overload, so the braced form may silently select a
+  // different constructor than the parenthesized call.
+  if (hasInitListConstructor(ConstructType->getAsCXXRecordDecl()))
     return;
 
   auto Diag = diag(Loc, "avoid repeating the return type from the "
