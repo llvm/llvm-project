@@ -40,3 +40,58 @@ module {
     wasmssa.return %0 : i32
   }
 }
+
+// -----
+
+module {
+  wasmssa.func @f() {
+    %0 = wasmssa.const 1 : i32
+    // expected-error@+1 {{symbol @missing is undefined}}
+    wasmssa.global_set @missing to %0 : i32
+    wasmssa.return
+  }
+}
+
+// -----
+
+module {
+  wasmssa.global @global_0 i32 : {
+    %0 = wasmssa.const 0 : i32
+    wasmssa.return %0 : i32
+  }
+  wasmssa.func @f() {
+    %0 = wasmssa.const 1 : i32
+    // expected-error@+1 {{global.set target must be mutable}}
+    wasmssa.global_set @global_0 to %0 : i32
+    wasmssa.return
+  }
+}
+
+// -----
+
+module {
+  wasmssa.global @global_0 i64 mutable : {
+    %0 = wasmssa.const 0 : i64
+    wasmssa.return %0 : i64
+  }
+  wasmssa.func @f() {
+    %0 = wasmssa.const 1 : i32
+    // expected-error@+1 {{global.set value type does not match target global type: expected 'i64' but got 'i32'}}
+    wasmssa.global_set @global_0 to %0 : i32
+    wasmssa.return
+  }
+}
+
+// -----
+
+module {
+  wasmssa.func @not_global() {
+    wasmssa.return
+  }
+  wasmssa.func @f() {
+    %0 = wasmssa.const 1 : i32
+    // expected-error@+1 {{symbol @not_global is not a global symbol}}
+    wasmssa.global_set @not_global to %0 : i32
+    wasmssa.return
+  }
+}
