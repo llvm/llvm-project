@@ -25,7 +25,8 @@ class LoopRotatePass : public OptionalPassInfoMixin<LoopRotatePass> {
 public:
   LLVM_ABI LoopRotatePass(bool EnableHeaderDuplication = true,
                           bool PrepareForLTO = false,
-                          bool CheckExitCount = false);
+                          bool CheckExitCount = false,
+                          bool UpdateBranchWeights = false);
   LLVM_ABI PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
                                  LoopStandardAnalysisResults &AR,
                                  LPMUpdater &U);
@@ -38,6 +39,7 @@ private:
   const bool EnableHeaderDuplication;
   const bool PrepareForLTO;
   const bool CheckExitCount;
+  const bool UpdateBranchWeights;
 };
 }
 

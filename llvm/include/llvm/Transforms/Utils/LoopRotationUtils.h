@@ -18,6 +18,7 @@
 namespace llvm {
 
 class AssumptionCache;
+class BlockFrequencyInfo;
 class DominatorTree;
 class Loop;
 class LoopInfo;
@@ -32,13 +33,17 @@ class TargetTransformInfo;
 /// header. If the loop header's size exceeds the threshold, the loop rotation
 /// will give up. The flag IsUtilMode controls the heuristic used in the
 /// LoopRotation. If it is true, the profitability heuristic will be ignored.
+/// If \p BFI is provided, use it to recover loop entry counts when updating
+/// branch weights, ensuring correctness for multi-exit loops under both
+/// count-based and ratio-based profiles.
 LLVM_ABI bool LoopRotation(Loop *L, LoopInfo *LI,
                            const TargetTransformInfo *TTI, AssumptionCache *AC,
                            DominatorTree *DT, ScalarEvolution *SE,
                            MemorySSAUpdater *MSSAU, const SimplifyQuery &SQ,
                            bool RotationOnly, unsigned Threshold,
                            bool IsUtilMode, bool PrepareForLTO = false,
-                           bool CheckExitCount = false);
+                           bool CheckExitCount = false,
+                           BlockFrequencyInfo *BFI = nullptr);
 
 } // namespace llvm
 
