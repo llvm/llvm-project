@@ -75,6 +75,13 @@ define i1 @test_and_commuted(i32 %A) {
 
 define i1 @test_known_bits(i32 %A) {
   ; clear bit 30
+; CHECK-LABEL: @test_known_bits(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[A:%.*]], -1
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[A]], 1073741823
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i32 [[AND]], 0
+; CHECK-NEXT:    [[RES:%.*]] = and i1 [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
   %A_and = and i32 %A, -1073741825
   %cmp1 = icmp sge i32 %A_and, 0
   %and = and i32 %A_and, 1073741823
@@ -85,6 +92,13 @@ define i1 @test_known_bits(i32 %A) {
 
 define i1 @test_known_bits_or(i32 %A) {
   ; clear bit 30
+; CHECK-LABEL: @test_known_bits_or(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[A:%.*]], 0
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[A]], 1073741823
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[AND]], 0
+; CHECK-NEXT:    [[RES:%.*]] = or i1 [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
   %A_and = and i32 %A, -1073741825
   %cmp1 = icmp slt i32 %A_and, 0
   %and = and i32 %A_and, 1073741823
