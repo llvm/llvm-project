@@ -2608,19 +2608,20 @@ instCombineSVEPairwiseAddLong(InstCombiner &IC, IntrinsicInst &II) {
   if (!II.hasOneUse() || !match(II.getArgOperand(1), m_Zero()))
     return std::nullopt;
 
-  auto *User = dyn_cast<Instruction>(*II.user_begin());
+  auto *User = cast<Instruction>(*II.user_begin());
   Value *Acc;
-  if (!User || !match(User, m_c_Add(m_Specific(&II), m_Value(Acc))))
+  if (!match(User, m_c_Add(m_Specific(&II), m_Value(Acc))))
     return std::nullopt;
 
   IC.Builder.SetInsertPoint(User);
   Value *PairwiseAddLong = IC.Builder.CreateIntrinsic(
       II.getIntrinsicID(), {II.getType()},
       {II.getArgOperand(0), Acc, II.getArgOperand(2)});
-  PairwiseAddLong->takeName(User);
 
   IC.replaceInstUsesWith(*User, PairwiseAddLong);
-  return IC.eraseInstFromFunction(*User);
+  IC.eraseInstFromFunction(*User);
+  IC.eraseInstFromFunction(II);
+  return nullptr;
 }
 
 static std::optional<Instruction *> instCombineSVEVectorAdd(InstCombiner &IC,
