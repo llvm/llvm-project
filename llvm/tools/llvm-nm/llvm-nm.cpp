@@ -28,6 +28,7 @@
 #include "llvm/Object/COFF.h"
 #include "llvm/Object/COFFImportFile.h"
 #include "llvm/Object/ELFObjectFile.h"
+#include "llvm/Object/GOFFObjectFile.h"
 #include "llvm/Object/IRObjectFile.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Object/MachOUniversal.h"
@@ -1013,6 +1014,42 @@ static char getSymbolNMTypeChar(COFFImportFile &Obj) {
   return '?';
 }
 
+static char getSymbolNMTypeChar(GOFFObjectFile &Obj, basic_symbol_iterator I) {
+  symbol_iterator SymI(I);
+  Expected<section_iterator> SecIOrErr = SymI->getSection();
+  if (!SecIOrErr) {
+    consumeError(SecIOrErr.takeError());
+    return '?';
+  }
+
+  GOFFSymbolRef Ref(*I);
+  Expected<uint32_t> Flags = Ref.getSymbolGOFFFlags();
+  Expected<SymbolRef::Type> Type = Ref.getSymbolGOFFType();
+
+  if (!Type || !Flags) {
+    return '?';
+  }
+
+  switch (*Type) {
+  case SymbolRef::ST_Unknown:
+    return 'U';
+  case SymbolRef::ST_Data: {
+    if (*Flags & SymbolRef::SF_Global)
+      return 'D';
+    return 'd';
+  }
+  case SymbolRef::ST_Debug:
+    return 'g';
+  case SymbolRef::ST_Function: {
+    if (*Flags & SymbolRef::SF_Global)
+      return 'T';
+    return 't';
+  }
+  default:
+    return 'o';
+  }
+}
+
 static char getSymbolNMTypeChar(MachOObjectFile &Obj, basic_symbol_iterator I) {
   DataRefImpl Symb = I->getRawDataRefImpl();
   uint8_t NType = Obj.is64Bit() ? Obj.getSymbol64TableEntry(Symb).n_type
@@ -1173,7 +1210,9 @@ static char getNMSectionTagAndName(SymbolicFile &Obj, basic_symbol_iterator I,
     Ret = getSymbolNMTypeChar(*ELF, I);
     if (ELFSymbolRef(*I).getBinding() == ELF::STB_GNU_UNIQUE)
       return Ret;
-  } else
+  } else if (GOFFObjectFile *GOFF = dyn_cast<GOFFObjectFile>(&Obj))
+    Ret = getSymbolNMTypeChar(*GOFF, I);
+  else
     llvm_unreachable("unknown binary format");
 
   if (!(Symflags & object::SymbolRef::SF_Global))
@@ -1852,6 +1891,9 @@ static bool getSymbolNamesFromObject(SymbolicFile &Obj,
       S.Address = 0;
       if (isa<ELFObjectFileBase>(&Obj))
         S.Size = ELFSymbolRef(Sym).getSize();
+      else if (isa<GOFFObjectFile>(&Obj)) {
+        S.Size = GOFFSymbolRef(Sym).getSize();
+      }
 
       if (const XCOFFObjectFile *XCOFFObj =
               dyn_cast<const XCOFFObjectFile>(&Obj))
