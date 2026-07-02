@@ -83,6 +83,26 @@ def ACCDeclareActionConversion
   let dependentDialects = ["fir::FIROpsDialect"];
 }
 
+def ACCHoistAllocatableRealloc
+    : Pass<"acc-hoist-allocatable-realloc", "mlir::func::FuncOp"> {
+  let summary = "Hoist allocatable reallocation out of OpenACC compute regions";
+  let description = [{
+    Intrinsic assignment to an allocatable inside an OpenACC compute construct
+    can (re)allocate the left-hand side. SeparateAllocatableAssign splits that
+    reallocation from the assignment but leaves it in place, inside the compute
+    region, so the (re)allocation would run on the device -- which the OpenACC
+    spec lists as undefined behavior.
+
+    This pass moves the separated reallocation (the conditional
+    allocmem/freemem/embox/store sequence that writes the allocatable
+    descriptor) out of the compute construct to the host, leaving only the
+    assignment in the kernel. The reallocation is hoisted only when all its
+    inputs are defined outside the region; self-dependent assignments are not
+    split by SeparateAllocatableAssign, so they are never matched here.
+  }];
+  let dependentDialects = ["mlir::acc::OpenACCDialect", "fir::FIROpsDialect"];
+}
+
 def ACCOptimizeFirstprivateMap
     : Pass<"acc-optimize-firstprivate-map", "mlir::func::FuncOp"> {
   let summary = "Optimize firstprivate mapping";
