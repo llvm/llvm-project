@@ -3,12 +3,9 @@
 
 define i1 @logical_xor_of_icmps(i32 %a, i32 %b) {
 ; CHECK-LABEL: @logical_xor_of_icmps(
-; CHECK-NEXT:    [[OR_AB:%.*]] = or i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i32 [[OR_AB]], 0
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[A]], 0
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp eq i32 [[B]], 0
-; CHECK-NEXT:    [[OR_CMP23:%.*]] = or i1 [[CMP2]], [[CMP3]]
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[CMP1]], [[OR_CMP23]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[A:%.*]], 0
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp eq i32 [[B:%.*]], 0
+; CHECK-NEXT:    [[AND:%.*]] = xor i1 [[CMP2]], [[CMP3]]
 ; CHECK-NEXT:    ret i1 [[AND]]
 ;
   %or_ab = or i32 %a, %b
@@ -22,12 +19,9 @@ define i1 @logical_xor_of_icmps(i32 %a, i32 %b) {
 
 define i1 @logical_xor_of_icmps_swapped_and(i32 %a, i32 %b) {
 ; CHECK-LABEL: @logical_xor_of_icmps_swapped_and(
-; CHECK-NEXT:    [[OR_AB:%.*]] = or i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i32 [[OR_AB]], 0
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[A]], 0
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp eq i32 [[B]], 0
-; CHECK-NEXT:    [[OR_CMP23:%.*]] = or i1 [[CMP2]], [[CMP3]]
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[OR_CMP23]], [[CMP1]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[A:%.*]], 0
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp eq i32 [[B:%.*]], 0
+; CHECK-NEXT:    [[AND:%.*]] = xor i1 [[CMP2]], [[CMP3]]
 ; CHECK-NEXT:    ret i1 [[AND]]
 ;
   %or_ab = or i32 %a, %b
@@ -41,12 +35,9 @@ define i1 @logical_xor_of_icmps_swapped_and(i32 %a, i32 %b) {
 
 define i1 @logical_xor_of_icmps_swapped_or(i32 %a, i32 %b) {
 ; CHECK-LABEL: @logical_xor_of_icmps_swapped_or(
-; CHECK-NEXT:    [[OR_AB:%.*]] = or i32 [[B:%.*]], [[A:%.*]]
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i32 [[OR_AB]], 0
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[A]], 0
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp eq i32 [[B]], 0
-; CHECK-NEXT:    [[OR_CMP23:%.*]] = or i1 [[CMP3]], [[CMP2]]
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[CMP1]], [[OR_CMP23]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[A:%.*]], 0
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp eq i32 [[B:%.*]], 0
+; CHECK-NEXT:    [[AND:%.*]] = xor i1 [[CMP3]], [[CMP2]]
 ; CHECK-NEXT:    ret i1 [[AND]]
 ;
   %or_ab = or i32 %b, %a
@@ -56,4 +47,52 @@ define i1 @logical_xor_of_icmps_swapped_or(i32 %a, i32 %b) {
   %or_cmp23 = or i1 %cmp3, %cmp2
   %and = and i1 %cmp1, %or_cmp23
   ret i1 %and
+}
+
+define i1 @logical_xor_of_icmps_demorgan(i32 %a, i32 %b) {
+; CHECK-LABEL: @logical_xor_of_icmps_demorgan(
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i32 [[A:%.*]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[B:%.*]], 0
+; CHECK-NEXT:    [[OR:%.*]] = xor i1 [[CMP2]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[OR]]
+;
+  %or_ab = or i32 %a, %b
+  %cmp1 = icmp eq i32 %or_ab, 0
+  %cmp2 = icmp ne i32 %a, 0
+  %cmp3 = icmp ne i32 %b, 0
+  %and23 = and i1 %cmp2, %cmp3
+  %or = or i1 %cmp1, %and23
+  ret i1 %or
+}
+
+define i1 @logical_xor_of_icmps_demorgan_swapped_or(i32 %a, i32 %b) {
+; CHECK-LABEL: @logical_xor_of_icmps_demorgan_swapped_or(
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i32 [[A:%.*]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[B:%.*]], 0
+; CHECK-NEXT:    [[OR:%.*]] = xor i1 [[CMP2]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[OR]]
+;
+  %or_ab = or i32 %a, %b
+  %cmp1 = icmp eq i32 %or_ab, 0
+  %cmp2 = icmp ne i32 %a, 0
+  %cmp3 = icmp ne i32 %b, 0
+  %and23 = and i1 %cmp2, %cmp3
+  %or = or i1 %and23, %cmp1
+  ret i1 %or
+}
+
+define i1 @logical_xor_of_icmps_demorgan_swapped_and(i32 %a, i32 %b) {
+; CHECK-LABEL: @logical_xor_of_icmps_demorgan_swapped_and(
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp ne i32 [[B:%.*]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[A:%.*]], 0
+; CHECK-NEXT:    [[OR:%.*]] = xor i1 [[CMP3]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[OR]]
+;
+  %or_ab = or i32 %b, %a
+  %cmp1 = icmp eq i32 %or_ab, 0
+  %cmp2 = icmp ne i32 %a, 0
+  %cmp3 = icmp ne i32 %b, 0
+  %and23 = and i1 %cmp3, %cmp2
+  %or = or i1 %cmp1, %and23
+  ret i1 %or
 }

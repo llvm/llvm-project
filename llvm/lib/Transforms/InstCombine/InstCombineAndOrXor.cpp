@@ -1940,6 +1940,21 @@ static Instruction *foldAndToXor(BinaryOperator &I,
                           m_c_Or(m_Not(m_Deferred(A)), m_Deferred(B)))))
       return BinaryOperator::CreateNot(Builder.CreateXor(A, B));
 
+  // (A | B) != 0 & (A == 0 | B == 0) -> (A == 0) ^ (B == 0)
+  // This is effectively (A | B) & ~(A & B) where A and B are conditions.
+  Value *CmpA, *CmpB;
+  if (match(&I,
+            m_c_And(
+                m_SpecificICmp(ICmpInst::ICMP_NE, m_Or(m_Value(A), m_Value(B)),
+                               m_Zero()),
+                m_c_Or(m_CombineAnd(m_Value(CmpA),
+                                    m_SpecificICmp(ICmpInst::ICMP_EQ,
+                                                   m_Deferred(A), m_Zero())),
+                       m_CombineAnd(m_Value(CmpB),
+                                    m_SpecificICmp(ICmpInst::ICMP_EQ,
+                                                   m_Deferred(B), m_Zero()))))))
+    return BinaryOperator::CreateXor(CmpA, CmpB);
+
   return nullptr;
 }
 
@@ -1973,6 +1988,22 @@ static Instruction *foldOrToXor(BinaryOperator &I,
   if (match(Op0, m_c_And(m_Value(A), m_Not(m_Value(B)))) &&
       match(Op1, m_c_And(m_Not(m_Specific(A)), m_Specific(B))))
     return BinaryOperator::CreateXor(A, B);
+
+  // (A | B) == 0 | (A != 0 & B != 0) -> (A != 0) == (B != 0) -> ~(A != 0 ^ B !=
+  // 0) This is effectively (A | B) == 0 | ~(A == 0 | B == 0) where A and B are
+  // conditions.
+  Value *CmpA, *CmpB;
+  if (match(&I,
+            m_c_Or(m_SpecificICmp(ICmpInst::ICMP_EQ,
+                                  m_Or(m_Value(A), m_Value(B)), m_Zero()),
+                   m_c_And(
+                       m_CombineAnd(m_Value(CmpA),
+                                    m_SpecificICmp(ICmpInst::ICMP_NE,
+                                                   m_Deferred(A), m_Zero())),
+                       m_CombineAnd(m_Value(CmpB),
+                                    m_SpecificICmp(ICmpInst::ICMP_NE,
+                                                   m_Deferred(B), m_Zero()))))))
+    return BinaryOperator::CreateNot(Builder.CreateXor(CmpA, CmpB));
 
   return nullptr;
 }
