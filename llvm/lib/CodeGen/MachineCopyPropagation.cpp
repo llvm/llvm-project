@@ -1338,7 +1338,8 @@ void MachineCopyPropagation::eliminateSpillageCopies(MachineBasicBlock &MBB) {
   // we put the COPY in this set to keep property#2.
   DenseSet<const MachineInstr *> CopySourceInvalid;
   // Track uses of a register as a source for a previous COPY
-  DenseMap<const MachineInstr *, SmallVector<const MachineInstr *>> CopySourceDefCopies;
+  DenseMap<const MachineInstr *, SmallVector<const MachineInstr *>>
+      CopySourceDefCopies;
 
   auto TryFoldSpillageCopies =
       [&, this](const SmallVectorImpl<MachineInstr *> &SC,
@@ -1378,7 +1379,8 @@ void MachineCopyPropagation::eliminateSpillageCopies(MachineBasicBlock &MBB) {
           }
         };
 
-        auto HasUnexpectedCopySourceDef = [&](const MachineInstr *Copy, const MachineInstr *ExpectedDef) {
+        auto HasUnexpectedCopySourceDef = [&](const MachineInstr *Copy,
+                                              const MachineInstr *ExpectedDef) {
           auto CopySouceDefPair = CopySourceDefCopies.find(Copy);
           if (CopySouceDefPair == CopySourceDefCopies.end())
             return false;
@@ -1517,8 +1519,8 @@ void MachineCopyPropagation::eliminateSpillageCopies(MachineBasicBlock &MBB) {
     }
 
     auto [Dst, Src] = getDstSrcMCRegs(*CopyOperands);
-    // Track potential unexpected COPY def's that use a source in the chain. These
-    // cannot be folded across to preserve the original source value.
+    // Track potential unexpected COPY def's that use a source in the chain.
+    // These cannot be folded across to preserve the original source value.
     if (MachineInstr *LastUseCopy = Tracker.findLastSeenUseInCopy(Dst, *TRI)) {
       CopySourceDefCopies[LastUseCopy].push_back(&MI);
     }
