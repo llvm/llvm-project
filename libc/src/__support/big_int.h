@@ -1187,7 +1187,6 @@ LIBC_INLINE_VAR constexpr bool is_unsigned_integral_or_big_int_v =
 
 namespace cpp {
 
-
 // Specialization of cpp::popcount ('bit.h') for BigInt.
 template <typename T>
 [[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<is_big_int_v<T>, int>
@@ -1293,7 +1292,7 @@ mask_trailing_ones() {
     return T::all_ones();
   constexpr size_t QUOTIENT = count / T::WORD_SIZE;
   constexpr size_t REMAINDER = count % T::WORD_SIZE;
-  T out{}; // zero initialized
+  T out{};
   for (size_t i = 0; i <= QUOTIENT; ++i)
     out[i] = i < QUOTIENT
                  ? cpp::numeric_limits<typename T::word_type>::max()
@@ -1309,7 +1308,7 @@ LIBC_INLINE constexpr cpp::enable_if_t<is_big_int_v<T>, T> mask_leading_ones() {
     return T::all_ones();
   constexpr size_t QUOTIENT = (T::BITS - count - 1U) / T::WORD_SIZE;
   constexpr size_t REMAINDER = count % T::WORD_SIZE;
-  T out{}; // zero initialized
+  T out{};
   for (size_t i = QUOTIENT; i < T::WORD_COUNT; ++i)
     out[i] = i > QUOTIENT
                  ? cpp::numeric_limits<typename T::word_type>::max()
