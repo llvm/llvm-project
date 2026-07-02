@@ -3623,7 +3623,9 @@ bool Sema::InstantiateClassImpl(
 
     if (Member->isInvalidDecl()) {
       Instantiation->setInvalidDecl();
-      continue;
+      // Keep invalid variable templates for partial specialization lookup.
+      if (!isa<VarTemplateDecl>(Member))
+        continue;
     }
 
     Decl *NewMember = Instantiator.Visit(Member);
@@ -3654,6 +3656,9 @@ bool Sema::InstantiateClassImpl(
             (MD->isVirtualAsWritten() || Instantiation->getNumBases()))
           MightHaveConstexprVirtualFunctions = true;
       }
+
+      if (Member->isInvalidDecl())
+        NewMember->setInvalidDecl();
 
       if (NewMember->isInvalidDecl())
         Instantiation->setInvalidDecl();

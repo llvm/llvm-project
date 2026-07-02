@@ -8055,9 +8055,7 @@ NamedDecl *Sema::ActOnVariableDeclarator(
     if (R->getContainedDeducedType())
       ParsingInitForAutoVars.insert(NewVD);
 
-    // Mark the declaration as invalid on error, but exempt variable templates
-    // with invalid types for error recovery.
-    if ((D.isInvalidType() && !IsVariableTemplate) || Invalid) {
+    if (D.isInvalidType() || Invalid) {
       NewVD->setInvalidDecl();
       if (NewTemplate)
         NewTemplate->setInvalidDecl();
