@@ -7383,6 +7383,105 @@ TEST(APFloatTest, x87Next) {
   EXPECT_TRUE(ilogb(F) == -1);
 }
 
+static APInt makeX87Bits(bool sign, int64_t exponent, int integerBit,
+                         int64_t significand) {
+  return (APInt(80, (sign ? 1 : 0)) << 79) | (APInt(80, exponent) << 64) |
+         (APInt(80, integerBit) << 63) | APInt(80, significand);
+}
+
+static APFloat makeX87FromBits(bool sign, int64_t exponent, int integerBit,
+                               int64_t significand) {
+  return APFloat(APFloatBase::x87DoubleExtended(),
+                 makeX87Bits(sign, exponent, integerBit, significand));
+}
+
+static APFloat makeX87(float value) {
+  bool losesInfo = false;
+  APFloat apf(value);
+  apf.convert(APFloatBase::x87DoubleExtended(),
+              llvm::APFloat::rmNearestTiesToEven, &losesInfo);
+  return apf;
+}
+
+TEST(APFloatTest, x87Bits) {
+  constexpr int bias = 16383;
+  EXPECT_TRUE(makeX87FromBits(false, 0, 0, 0).bitwiseIsEqual(makeX87(0.0)));
+  EXPECT_TRUE(makeX87FromBits(false, bias, 1, 0).bitwiseIsEqual(makeX87(1.0)));
+
+  EXPECT_TRUE(
+      makeX87FromBits(false, bias + 1, 1, 0).bitwiseIsEqual(makeX87(2.0)));
+  EXPECT_TRUE(
+      makeX87FromBits(true, bias + 1, 1, 0).bitwiseIsEqual(makeX87(-2.0)));
+  EXPECT_TRUE(
+      makeX87FromBits(false, bias + 2, 1, 0).bitwiseIsEqual(makeX87(4.0)));
+  EXPECT_TRUE(
+      makeX87FromBits(true, bias + 2, 1, 0).bitwiseIsEqual(makeX87(-4.0)));
+  EXPECT_TRUE(
+      makeX87FromBits(false, bias + 8, 1, 0).bitwiseIsEqual(makeX87(256.0)));
+  EXPECT_TRUE(
+      makeX87FromBits(true, bias + 8, 1, 0).bitwiseIsEqual(makeX87(-256.0)));
+
+  EXPECT_EQ(makeX87FromBits(false, (1u << 14u) - 1u, 1, 0).bitcastToAPInt(),
+            APInt(80, 0x7fff) << 63);
+  EXPECT_EQ(
+      makeX87FromBits(false, (1ull << 14ull) - 1ull, 1, (1ull << 63ull) - 1ull)
+          .bitcastToAPInt(),
+      (APInt(80, 1) << 78) - 1);
+
+  const fltSemantics &S = APFloat::x87DoubleExtended();
+
+  // Test valid infinity: exp=0x7fff, int_bit=1, significand=0
+  {
+    APFloat inf(S, APInt(80, {0x8000000000000000ull, 0x7fffull}));
+    EXPECT_TRUE(inf.isInfinity());
+    EXPECT_FALSE(inf.isNaN());
+    EXPECT_TRUE(inf.bitwiseIsEqual(APFloat::getInf(S, false)));
+  }
+
+  // Test valid NaN: exp=0x7fff, int_bit=1, significand!=0
+  {
+    APFloat nan(S, APInt(80, {0xC000000000000000ull, 0x7fffull}));
+    EXPECT_TRUE(nan.isNaN());
+    EXPECT_FALSE(nan.isInfinity());
+  }
+
+  // Test pseudoinfinity: exp=0x7fff, int_bit=0, significand=0
+  // Is treated as NaN in APFloat, see IEEEFloat::initFromF80LongDoubleAPInt
+  {
+    APFloat pseudoInf(S, APInt(80, {0x0000000000000000ull, 0x7fffull}));
+    EXPECT_TRUE(pseudoInf.isNaN());
+    EXPECT_TRUE(pseudoInf.isSignaling());
+    EXPECT_FALSE(pseudoInf.isInfinity());
+  }
+
+  // Test pseudoNaN: exp=0x7fff, int_bit=0, significand!=0
+  // Is treated as NaN in APFloat, see IEEEFloat::initFromF80LongDoubleAPInt
+  {
+    APFloat pseudoNan(S, APInt(80, {0x4000000000000000ull, 0x7fffull}));
+    EXPECT_TRUE(pseudoNan.isNaN());
+    EXPECT_FALSE(pseudoNan.isInfinity());
+  }
+
+  // Test unnormal: exp!=0 and !=0x7fff, int_bit=0
+  // Is treated as NaN in APFloat, see IEEEFloat::initFromF80LongDoubleAPInt
+  {
+    APFloat unnormal(S, APInt(80, {0x4000000000000000ull, 0x4000ull}));
+    EXPECT_TRUE(unnormal.isNaN());
+    EXPECT_FALSE(unnormal.isSignaling());
+  }
+
+  // Test pseudodenormal: exp=0, integer int_bit=1
+  {
+    APFloat pseudoDenormal(APFloat::x87DoubleExtended(),
+                           makeX87Bits(false, 0, 1, 0));
+    EXPECT_TRUE(pseudoDenormal.isFinite());
+    EXPECT_FALSE(pseudoDenormal.isDenormal());
+    APFloat scale(APFloat::x87DoubleExtended(),
+                  makeX87Bits(false, bias * 2 - 1, 1, 0));
+    EXPECT_TRUE((pseudoDenormal * scale).bitwiseIsEqual(makeX87(1.0)));
+  }
+}
+
 static bool isBitcastRoundtripSafe(APFloat value) {
   APInt bits = value.bitcastToAPInt();
   APFloat fromBits = APFloat(value.getSemantics(), bits);
