@@ -10307,6 +10307,50 @@ static std::optional<bool> isFCmpEqualZero(FPClassTest Test,
   return std::nullopt;
 }
 
+// Compare the bitcast of a float value with zero to get the Sign.
+// If the GPR cannot hold the bitcast of the float type, let's truncate
+// the float type to a narrow one.
+static SDValue getFloatSign(EVT ResultVT, bool &NeedFPTrunc, SDValue Op,
+                            SelectionDAG &DAG, const SDLoc &DL,
+                            const TargetLowering &TLI) {
+  EVT OperandVT = Op.getValueType();
+  EVT IntVT = OperandVT.changeTypeToInteger();
+  unsigned EltBitsize = OperandVT.getScalarSizeInBits();
+  SDValue OpAsInt = DAG.getBitcast(IntVT, Op);
+  SDValue SignBitResult = DAG.getSetCC(
+      DL, ResultVT, OpAsInt, DAG.getConstant(0, DL, IntVT), ISD::SETLT);
+  NeedFPTrunc = false;
+
+  EVT TruncIntVT = TLI.getTypeToTransformTo(*DAG.getContext(), IntVT);
+  EVT TruncFloatEltVT =
+      EVT::getFloatingPointVT(TruncIntVT.getScalarSizeInBits());
+  EVT TruncFloatVT =
+      OperandVT.changeElementType(*DAG.getContext(), TruncFloatEltVT);
+  unsigned TruncFloatEltBitsize = TruncFloatVT.getScalarSizeInBits();
+  unsigned TruncIntEltBitsize = TruncIntVT.getScalarSizeInBits();
+  if (TLI.isTypeLegal(TruncIntVT) && TLI.isTypeLegal(TruncFloatVT) &&
+      TruncFloatEltBitsize == TruncIntEltBitsize &&
+      TruncFloatEltBitsize < EltBitsize) {
+    if (TruncFloatVT != OperandVT)
+      NeedFPTrunc = true;
+  }
+
+  if (NeedFPTrunc &&
+      TLI.isOperationLegalOrCustom(ISD::FP_ROUND, TruncFloatVT)) {
+    // Round to smaller float type, then bitcast to integer for sign check.
+    // Use TargetConstant for the truncation flag.
+    EVT PointerVT = TLI.getPointerTy(DAG.getDataLayout());
+    SDValue OpTrunc = DAG.getNode(ISD::FP_ROUND, DL, TruncFloatVT, Op,
+                                  DAG.getTargetConstant(0, DL, PointerVT));
+    SDValue OpTruncInt = DAG.getBitcast(TruncIntVT, OpTrunc);
+    SignBitResult =
+        DAG.getSetCC(DL, ResultVT, OpTruncInt,
+                     DAG.getConstant(0, DL, TruncIntVT), ISD::SETLT);
+  }
+
+  return SignBitResult;
+}
+
 SDValue TargetLowering::expandIS_FPCLASS(EVT ResultVT, SDValue Op,
                                          const FPClassTest OrigTestMask,
                                          SDNodeFlags Flags, const SDLoc &DL,
@@ -10524,6 +10568,49 @@ SDValue TargetLowering::expandIS_FPCLASS(EVT ResultVT, SDValue Op,
 
   // Tests that involve more than one class should be processed first.
   SDValue PartialRes;
+
+  // Handle sign bit tests first (fcPositive/fcNegative).
+  // These test only the sign bit, if not NaN.
+  // On 32-bit platforms with 64-bit floats, we need to be careful about
+  // integer comparisons. We use FP_ROUND to convert to a smaller float type
+  // that matches ResultVT's size, then compare with 0.
+  FPClassTest FPTestSign = Test & (~fcNan);
+  FPClassTest FPTestNaN = Test & fcNan;
+  // FPTestSign must be exactly fcNegative or fcPositive; combined flags are
+  // not supported.
+  bool testNegative = FPTestSign == fcNegative;
+  bool testPositive = FPTestSign == fcPositive;
+  // FPTestNaN must be fcNan or fcNone; testing sNan or qNan individually is
+  // not supported.
+  bool testNaN = FPTestNaN == fcNan;
+  bool testNotNaN = FPTestNaN == fcNone;
+  if ((testPositive || testNegative) && (testNaN || testNotNaN)) {
+    bool NeedFPTrunc = false;
+
+    SDValue SignBitResult =
+        getFloatSign(ResultVT, NeedFPTrunc, Op, DAG, DL, *this);
+    // This logic is not needed if we are sure that Op is not NaN,
+    // while combiner will help us to remove it: maybe in future.
+    if (testNaN) {
+      SDValue IsNaN = DAG.getSetCC(DL, ResultVT, Op, Op, ISD::SETUO);
+      SignBitResult = DAG.getNode(ISD::OR, DL, ResultVT, IsNaN, SignBitResult);
+    } else {
+      SDValue NotNaN = DAG.getSetCC(DL, ResultVT, Op, Op, ISD::SETO);
+      SignBitResult =
+          DAG.getNode(ISD::AND, DL, ResultVT, NotNaN, SignBitResult);
+    }
+
+    bool IsICmpImmLegal =
+        isLegalICmpImmediate(APInt::getAllOnes(BitSize).getSExtValue());
+    if (NeedFPTrunc || DAG.isKnownNeverNaN(Op) ||
+        (OperandVT.isVector() && isTypeLegal(OperandVT)) || testNegative ||
+        !IsICmpImmLegal) {
+      if (!testNegative)
+        SignBitResult = DAG.getNode(ISD::XOR, DL, ResultVT, SignBitResult,
+                                    ResultInversionMask);
+      return SignBitResult;
+    }
+  }
 
   if (IsF80)
     ; // Detect finite numbers of f80 by checking individual classes because
