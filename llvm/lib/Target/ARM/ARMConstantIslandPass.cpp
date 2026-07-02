@@ -84,6 +84,10 @@ static cl::opt<bool> SynthesizeThumb1TBB(
     cl::desc("Use compressed jump tables in Thumb-1 by synthesizing an "
              "equivalent to the TBB/TBH instructions"));
 
+static cl::opt<bool>
+    Thumb1EstimateCheck("arm-thumb1-estimate-check", cl::Hidden, cl::init(true),
+                        cl::desc("Verify estimates of Thumb1 function size"));
+
 namespace {
 
   /// ARMConstantIslands - Due to limited PC-relative displacements, ARM
@@ -511,33 +515,36 @@ bool ARMConstantIslands::runOnMachineFunction(MachineFunction &mf) {
 
   LLVM_DEBUG(dbgs() << '\n'; dumpBBs());
 
-  if (auto Estimate = AFI->getEstimatedFunctionSizeInBytes()) {
-    auto RealSize = BBUtils->getFunctionSize();
-    if (RealSize > *Estimate) {
-      LLVM_DEBUG({
-        dbgs() << "ARMConstantIslandsPass output for " << mf.getName()
-               << " with sizes:\n";
-        for (MachineBasicBlock &MBB : mf) {
-          unsigned Offset = BBUtils->getOffsetOf(&MBB);
-          unsigned End = BBUtils->getBBInfo()[MBB.getNumber()].postOffset();
-          dbgs() << printMBBReference(MBB) << ": // offset "
-                 << Twine::utohexstr(Offset) << "\n";
-          for (MachineInstr &MI : MBB) {
-            unsigned InstSize = TII->getInstSizeInBytes(MI);
-            LLVM_DEBUG(dbgs() << "    0x" << Twine::utohexstr(Offset) << " +"
-                              << InstSize << ": " << MI);
-            Offset += InstSize;
+  if (Thumb1EstimateCheck) {
+    if (auto Estimate = AFI->getEstimatedFunctionSizeInBytes()) {
+      auto RealSize = BBUtils->getFunctionSize();
+      if (RealSize > *Estimate) {
+        LLVM_DEBUG({
+          dbgs() << "ARMConstantIslandsPass output for " << mf.getName()
+                 << " with sizes:\n";
+          for (MachineBasicBlock &MBB : mf) {
+            unsigned Offset = BBUtils->getOffsetOf(&MBB);
+            unsigned End = BBUtils->getBBInfo()[MBB.getNumber()].postOffset();
+            dbgs() << printMBBReference(MBB) << ": // offset "
+                   << Twine::utohexstr(Offset) << "\n";
+            for (MachineInstr &MI : MBB) {
+              unsigned InstSize = TII->getInstSizeInBytes(MI);
+              LLVM_DEBUG(dbgs() << "    0x" << Twine::utohexstr(Offset) << " +"
+                                << InstSize << ": " << MI);
+              Offset += InstSize;
+            }
+            if (Offset < End) {
+              LLVM_DEBUG(dbgs() << "    0x" << Twine::utohexstr(Offset) << " +"
+                                << (End - Offset) << ": extra\n");
+            }
           }
-          if (Offset < End) {
-            LLVM_DEBUG(dbgs() << "    0x" << Twine::utohexstr(Offset) << " +"
-                              << (End - Offset) << ": extra\n");
-          }
-        }
-      });
-      report_fatal_error(
-          Twine("Underestimated size of function ") + mf.getName() +
-          ": estimate = " + Twine(*Estimate) +
-          ", size after ARMConstantIslandsPass = " + Twine(RealSize));
+        });
+        report_fatal_error(
+            Twine("Underestimated size of function ") + mf.getName() +
+            ": estimate = " + Twine(*Estimate) +
+            ", size after ARMConstantIslandsPass = " + Twine(RealSize) +
+            " (use --arm-thumb1-estimate-check=0 to inhibit this check)");
+      }
     }
   }
 
