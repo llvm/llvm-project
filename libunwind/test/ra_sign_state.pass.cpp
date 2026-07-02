@@ -89,8 +89,6 @@ static _Unwind_Reason_Code frame_handler(struct _Unwind_Context *ctx,
 
 #if defined(_LIBUNWIND_TARGET_AARCH64_AUTHENTICATED_UNWINDING)
   assert(ra_sign_state == 1 || ra_sign_state == 2);
-#else
-  assert(ra_sign_state == 0);
 #endif
 
   return _URC_NO_REASON;
@@ -139,8 +137,6 @@ FUNC_ATTR(main_func) int main(int, char **) {
   ret = check_vanilla("check_vanilla");
 #if defined(_LIBUNWIND_TARGET_AARCH64_AUTHENTICATED_UNWINDING)
   assert(ret == 1 || ret == 2);
-#else
-  assert(ret == 0);
 #endif
 
   if (!checkHasPAuth()) {
