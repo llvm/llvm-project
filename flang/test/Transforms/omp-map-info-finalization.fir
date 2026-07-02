@@ -43,6 +43,30 @@ func.func @test_descriptor_expansion_pass(%arg0: !fir.box<!fir.array<?xi32>>) {
 
 // -----
 
+func.func @test_iterator_descriptor_map_is_not_expanded(%arg0: !fir.box<!fir.array<?xf32>>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  %dims:3 = fir.box_dims %arg0, %c0 : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
+  %it = omp.iterator(%iv: index) = (%c1 to %c10 step %c1) {
+    %addr = fir.box_addr %arg0 : (!fir.box<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>>
+    %lb = arith.subi %iv, %c1 : index
+    %bounds = omp.map.bounds lower_bound(%lb : index) upper_bound(%lb : index) extent(%dims#1 : index) stride(%dims#2 : index) start_idx(%dims#0 : index) {stride_in_bytes = true}
+    %map = omp.map.info var_ptr(%addr : !fir.ref<!fir.array<?xf32>>, !fir.array<?xf32>) map_clauses(to) capture(ByRef) bounds(%bounds) -> !fir.ref<!fir.array<?xf32>> {name = ""}
+    omp.yield(%map : !fir.ref<!fir.array<?xf32>>)
+  } -> !omp.iterated<!fir.ref<!fir.array<?xf32>>>
+  omp.target_enter_data map_iterated(%it : !omp.iterated<!fir.ref<!fir.array<?xf32>>>) {}
+  return
+}
+
+// CHECK-LABEL: func.func @test_iterator_descriptor_map_is_not_expanded
+// CHECK-NOT: fir.box_offset
+// CHECK: omp.iterator
+// CHECK: omp.map.info var_ptr({{.*}} : !fir.ref<!fir.array<?xf32>>, !fir.array<?xf32>) map_clauses(to) capture(ByRef) bounds({{.*}}) -> !fir.ref<!fir.array<?xf32>> {name = ""}
+// CHECK: omp.target_enter_data map_iterated
+
+// -----
+
 func.func @test_derived_type_map_operand_and_block_addition(%arg0: !fir.ref<!fir.type<_QFTdtype{ix:i32,rx:f32,zx:complex<f32>,nested:!fir.box<!fir.heap<!fir.type<_QFTdtype>>>,ry:f32}>>) {
   %0 = hlfir.designate %arg0{"rx"}   : (!fir.ref<!fir.type<_QFTdtype{ix:i32,rx:f32,zx:complex<f32>,nested:!fir.box<!fir.heap<!fir.type<_QFTdtype>>>,ry:f32}>>) -> !fir.ref<f32>
   %1 = omp.map.info var_ptr(%0 : !fir.ref<f32>, f32) map_clauses(from) capture(ByRef) -> !fir.ref<f32> {name = "scalar_struct%rx"}
