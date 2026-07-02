@@ -12,6 +12,7 @@ add_flang_library(FIRTransforms
   CUDA/CUFAddConstructor.cpp
   CUDA/CUFAllocationConversion.cpp
   CUDA/CUFAllocationConversion.cpp
+  CUDA/CUFAllocDelay.cpp
   CUDA/CUFComputeSharedMemoryOffsetsAndSize.cpp
   CUDA/CUFDeviceFuncTransform.cpp
   CUDA/CUFDeviceGlobal.cpp
