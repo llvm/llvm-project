@@ -39495,6 +39495,48 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
   Known.resetAll();
   switch (Opc) {
   default: break;
+  case X86ISD::GF2P8AFFINEQB: {
+    SDValue Input = Op.getOperand(0);
+    SDValue Matrix = Op.getOperand(1);
+
+    APInt UndefElts;
+    SmallVector<APInt, 64> MatEltBits;
+    if (!getTargetConstantBitsFromNode(Matrix, 8, UndefElts, MatEltBits,
+                                       /*AllowWholeUndefs=*/false,
+                                       /*AllowPartialUndefs=*/false))
+      break;
+
+    bool IsSplat = true;
+    for (unsigned I = 8, E = MatEltBits.size(); I < E && IsSplat; ++I)
+      if (MatEltBits[I] != MatEltBits[I % 8])
+        IsSplat = false;
+    if (!IsSplat)
+      break;
+
+    KnownBits InputKnown = DAG.computeKnownBits(Input, DemandedElts, Depth + 1);
+    KnownBits Res(8);
+
+    for (unsigned OutBit = 0; OutBit != 8; ++OutBit) {
+      unsigned RowIdx = 7 - OutBit;
+
+      KnownBits KnownRow = KnownBits::makeConstant(MatEltBits[RowIdx]);
+      KnownRow &= InputKnown;
+
+      if (!KnownRow.isConstant())
+        continue;
+
+      if (KnownRow.One.popcount() & 1)
+        Res.One.setBit(OutBit);
+      else
+        Res.Zero.setBit(OutBit);
+    }
+
+    uint8_t Imm8 = (uint8_t)Op.getConstantOperandVal(2);
+    Res ^= KnownBits::makeConstant(APInt(8, Imm8));
+
+    Known = Res;
+    break;
+  }
   case X86ISD::MUL_IMM: {
     KnownBits Known2;
     Known = DAG.computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
