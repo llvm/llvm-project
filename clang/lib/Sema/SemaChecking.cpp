@@ -4653,6 +4653,106 @@ void Sema::checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
         Diag(Loc, diag::note_sme_use_preserves_za);
       }
     }
+
+    // Check if there's any conflicting call for every state, it should not be
+    // any conflict if caller and callee are in different state.
+
+    if (CallerFD &&
+        (!FD || !FD->getBuiltinID() ||
+         Context.BuiltinInfo.isLibFunction(FD->getBuiltinID()) ||
+         Context.BuiltinInfo.isPredefinedLibFunction(FD->getBuiltinID()))) {
+      QualType CallerType = CallerFD->getType();
+      if (!CallerType.isNull()) {
+        if (const auto *FPT = CallerType->getAs<FunctionProtoType>()) {
+          FunctionProtoType::ExtProtoInfo CallerExtInfo =
+              FPT->getExtProtoInfo();
+          llvm::StringMap<bool> CallerFeatureMap;
+          if (CallerExtInfo.RISCVAttributes & FunctionType::RISCVAttributeMask)
+            Context.getFunctionFeatureMap(CallerFeatureMap, CallerFD);
+          // tuple(CallerAttr, CalleeAttr, required feature)
+          const std::tuple<FunctionType::RISCVStateValue,
+                           FunctionType::RISCVStateValue, StringRef>
+              RISCVStateInfo[] = {
+                  {FunctionType::getRISCVXsfmmState(
+                       CallerExtInfo.RISCVAttributes),
+                   FunctionType::getRISCVXsfmmState(ExtInfo.RISCVAttributes),
+                   "xsfmmbase"}};
+          for (auto [CallerAttr, CalleeAttr, RequiredFeature] :
+               RISCVStateInfo) {
+            // If both caller and callee are not attributed, then we're fine.
+            if (CallerAttr == FunctionType::RISCVNone &&
+                CalleeAttr == FunctionType::RISCVNone)
+              continue;
+
+            if (!Context.getTargetInfo().hasFeature(RequiredFeature) &&
+                !CallerFeatureMap.lookup(RequiredFeature)) {
+              // check if corresponding attributes are enabled.
+              Diag(Loc, diag::err_riscv_call_invalid_features)
+                  << RequiredFeature;
+              continue;
+            }
+
+            switch (CallerAttr) {
+            case FunctionType::RISCVNone:
+              if (CalleeAttr != FunctionType::RISCVNew) {
+                // Check limitation:
+                // 1. Only __riscv_new function can be called in non-attributed
+                // function.
+                Diag(Loc, diag::err_conflicting_attributes_riscv_state)
+                    << "Only __riscv_new function can be called in "
+                       "non-attributed function.";
+              }
+              break;
+            case FunctionType::RISCVIn:
+              if (CalleeAttr != FunctionType::RISCVIn &&
+                  CalleeAttr != FunctionType::RISCVPreserves) {
+                // 2. Function with __riscv_in can only call __riscv_in and
+                // __riscv_preserves function.
+                Diag(Loc, diag::err_conflicting_attributes_riscv_state)
+                    << "Function with __riscv_in can only call __riscv_in and "
+                       "__riscv_preserves function.";
+              }
+              break;
+            case FunctionType::RISCVOut:
+              if (CalleeAttr != FunctionType::RISCVIn &&
+                  CalleeAttr != FunctionType::RISCVOut &&
+                  CalleeAttr != FunctionType::RISCVPreserves) {
+                // 3. Function with __riscv_out can only call
+                // __riscv_in, __riscv_out and __riscv_preserves function.
+                Diag(Loc, diag::err_conflicting_attributes_riscv_state)
+                    << "Function with __riscv_out can only call "
+                       "__riscv_in, __riscv_out and __riscv_preserves "
+                       "function.";
+              }
+              break;
+            case FunctionType::RISCVPreserves:
+              if (CalleeAttr != FunctionType::RISCVPreserves) {
+                // 4. Function with __riscv_preserves can only call
+                // __riscv_preserves function.
+                Diag(Loc, diag::err_conflicting_attributes_riscv_state)
+                    << "Function with __riscv_preserves can only call "
+                       "__riscv_preserves function.";
+              }
+              break;
+            case FunctionType::RISCVNew:
+            case FunctionType::RISCVInOut:
+              if (CalleeAttr == FunctionType::RISCVNone ||
+                  CalleeAttr == FunctionType::RISCVNew) {
+                // Handle remainings: __riscv_new, __riscv_inout
+                // 5. Function with attribute can only call function with
+                // attribute(except for __riscv_new), i.e. __riscv_new and
+                // non-attributed function can not be called in attributed
+                // function.
+                Diag(Loc, diag::err_conflicting_attributes_riscv_state)
+                    << "__riscv_new and non-attributed function can not be "
+                       "called in attributed function.";
+              }
+              break;
+            }
+          }
+        }
+      }
+    }
   }
 
   if (FDecl && FDecl->hasAttr<AllocAlignAttr>()) {

@@ -6789,6 +6789,73 @@ the ABI. This variant aims to pass fixed-length vectors via vector registers,
 if possible, rather than through general-purpose registers.}];
 }
 
+def RISCVInDocs : Documentation {
+  let Category = DocCatFunction;
+  let Heading = "__riscv_in";
+  let Content = [{
+The ``__riscv_in(S)`` attribute indicates that a function reads from state S.
+This attribute is usually used in RISC-V matrix extensions to specify that the
+function will read from a matrix state passed as arguments.
+This helps compiler checks to prevent common programming errors that could lead
+to undefined behavior, data corruption, or incorrect computation results when
+working with matrix operations.
+  }];
+}
+
+def RISCVOutDocs : Documentation {
+  let Category = DocCatFunction;
+  let Heading = "__riscv_out";
+  let Content = [{
+The ``__riscv_out(S)`` attribute indicates that a function writes to state S.
+This attribute is usually used in RISC-V matrix extensions to specify that the
+function will write to a matrix state passed as arguments.
+This helps compiler checks to prevent common programming errors that could lead
+to undefined behavior, data corruption, or incorrect computation results when
+working with matrix operations.
+  }];
+}
+
+def RISCVInOutDocs : Documentation {
+  let Category = DocCatFunction;
+  let Heading = "__riscv_inout";
+  let Content = [{
+The ``__riscv_inout(S)`` attribute indicates that a function reads from and
+writes to state S.
+This attribute is usually used in RISC-V matrix extensions to specify that the
+function will read from and write to a matrix state passed as arguments.
+This helps compiler checks to prevent common programming errors that could lead
+to undefined behavior, data corruption, or incorrect computation results when
+working with matrix operations.
+  }];
+}
+
+def RISCVPreservesDocs : Documentation {
+  let Category = DocCatFunction;
+  let Heading = "__riscv_preserves";
+  let Content = [{
+The ``__riscv_preserves(S)`` attribute indicates that a function neither reads
+from nor writes to state S.
+This attribute is usually used in RISC-V matrix extensions to specify that the
+function will not read from or write to a matrix state passed as arguments.
+This helps compiler checks to prevent common programming errors that could lead
+to undefined behavior, data corruption, or incorrect computation results when
+working with matrix operations.
+  }];
+}
+
+def RISCVNewDocs : Documentation {
+  let Category = DocCatFunction;
+  let Heading = "__riscv_new";
+  let Content = [{
+The ``__riscv_new(S)`` attribute indicates that a function initiates a new state.
+This attribute is usually used in RISC-V matrix extensions to specify that the
+function will initiate a new matrix state passed as arguments.
+This helps compiler checks to prevent common programming errors that could lead
+to undefined behavior, data corruption, or incorrect computation results when
+working with matrix operations.
+  }];
+}
+
 def PreferredNameDocs : Documentation {
   let Category = DocCatDecl;
   let Content = [{
