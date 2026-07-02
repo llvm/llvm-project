@@ -2787,6 +2787,19 @@ def int_masked_srem:
              LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
             [IntrNoMem]>;
 
+// Speculatively load a value from memory.
+def int_speculative_load:
+  DefaultAttrsIntrinsic<[llvm_any_ty],
+            [llvm_anyptr_ty, llvm_i1_ty, llvm_vararg_ty],
+            [IntrReadMem, IntrArgMemOnly, IntrWillReturn, NoCapture<ArgIndex<0>>,
+             ImmArg<ArgIndex<1>>]>;
+
+// Returns true if it's safe to speculatively load 'num_bytes' from 'ptr'.
+def int_can_load_speculatively:
+  DefaultAttrsIntrinsic<[llvm_i1_ty],
+            [llvm_anyptr_ty, llvm_i64_ty],
+            [IntrNoMem, IntrSpeculatable, IntrWillReturn]>;
+
 // Test whether a pointer is associated with a type metadata identifier.
 def int_type_test : DefaultAttrsIntrinsic<[llvm_i1_ty],
                       [llvm_ptr_ty, llvm_metadata_ty],

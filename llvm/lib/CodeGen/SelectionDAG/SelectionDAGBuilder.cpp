@@ -5180,6 +5180,32 @@ void SelectionDAGBuilder::visitMaskedLoad(const CallInst &I, bool IsExpanding) {
   setValue(&I, Res);
 }
 
+void SelectionDAGBuilder::visitSpeculativeLoad(const CallInst &I) {
+  SDLoc sdl = getCurSDLoc();
+  Value *PtrOperand = I.getArgOperand(0);
+  // The remaining arguments (num_accessible_bytes or oracle function + args)
+  // are IR-level semantics only; they are not needed at codegen.
+  SDValue Ptr = getValue(PtrOperand);
+
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  EVT VT = TLI.getValueType(DAG.getDataLayout(), I.getType());
+  Align Alignment = I.getParamAlign(0).valueOrOne();
+  AAMDNodes AAInfo = I.getAAMetadata();
+
+  SDValue InChain = DAG.getRoot();
+
+  // Use MOLoad but NOT MODereferenceable - the memory may not be
+  // fully dereferenceable.
+  MachineMemOperand::Flags MMOFlags = MachineMemOperand::MOLoad;
+  LocationSize LocSize = LocationSize::upperBound(VT.getStoreSize());
+  MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
+      MachinePointerInfo(PtrOperand), MMOFlags, LocSize, Alignment, AAInfo);
+
+  SDValue Load = DAG.getLoad(VT, sdl, InChain, Ptr, MMO);
+  PendingLoads.push_back(Load.getValue(1));
+  setValue(&I, Load);
+}
+
 void SelectionDAGBuilder::visitMaskedGather(const CallInst &I) {
   SDLoc sdl = getCurSDLoc();
 
@@ -6988,6 +7014,9 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     return;
   case Intrinsic::masked_compressstore:
     visitMaskedStore(I, true /* IsCompressing */);
+    return;
+  case Intrinsic::speculative_load:
+    visitSpeculativeLoad(I);
     return;
   case Intrinsic::powi:
     setValue(&I, ExpandPowI(sdl, getValue(I.getArgOperand(0)),
