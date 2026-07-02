@@ -1178,6 +1178,8 @@ public:
 
   virtual bool shouldConsiderVectorizationRegPressure() const { return false; }
 
+  virtual bool preferControlFlowVectorization() const { return false; }
+
   virtual bool shouldExpandReduction(const IntrinsicInst *II) const {
     return true;
   }

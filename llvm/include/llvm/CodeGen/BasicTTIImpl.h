@@ -822,6 +822,10 @@ public:
     return BaseT::getPreferredTailFoldingStyle();
   }
 
+  bool preferControlFlowVectorization() const override {
+    return BaseT::preferControlFlowVectorization();
+  }
+
   std::optional<Instruction *>
   instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const override {
     return BaseT::instCombineIntrinsic(IC, II);

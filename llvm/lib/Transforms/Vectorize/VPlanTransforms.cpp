@@ -7618,3 +7618,141 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
     }
   }
 }
+
+void VPlanTransforms::optimizeConditionalVPBB(VPlan &Plan) {
+  VPDominatorTree VPDT(Plan);
+
+  VPValue *HeaderMask = vputils::findHeaderMask(Plan);
+
+  // Get the mask from the store recipes.
+  auto GetMask = [&HeaderMask](VPRecipeBase &R) -> VPValue * {
+    using namespace llvm::VPlanPatternMatch;
+    auto *StoreR = dyn_cast<VPWidenStoreRecipe>(&R);
+    if (!StoreR)
+      return nullptr;
+    VPValue *OrigMask = StoreR->getMask();
+    if (!OrigMask || OrigMask == HeaderMask)
+      return nullptr;
+
+    return OrigMask;
+  };
+
+  // First, collect all masked stores.
+  SmallVector<std::pair<VPRecipeBase *, VPValue *>> MaskedStores;
+  ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> RPOT(
+      Plan.getEntry());
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT)) {
+    for (VPRecipeBase &R : *VPBB) {
+      if (VPValue *Mask = GetMask(R))
+        MaskedStores.emplace_back(&R, Mask);
+    }
+  }
+
+  if (MaskedStores.empty())
+    return;
+
+  DenseSet<VPRecipeBase *> Candidates;
+  auto AddOperandsToCandidates = [&Candidates](VPRecipeBase *R) {
+    for (VPValue *Op : R->operands())
+      if (VPRecipeBase *OpR = Op->getDefiningRecipe())
+        Candidates.insert(OpR);
+  };
+
+  SmallVector<SetVector<VPRecipeBase *>> MaskedTrees;
+
+  // Collect all possible masked recipes from masked store.
+  while (!MaskedStores.empty()) {
+    auto [StoreR, M] = MaskedStores.pop_back_val();
+    Candidates.clear();
+    AddOperandsToCandidates(StoreR);
+
+    SetVector<VPRecipeBase *> CurrentTree;
+    CurrentTree.insert(StoreR);
+
+    VPBasicBlock *MaskBlock =
+        M->hasDefiningRecipe() ? M->getDefiningRecipe()->getParent() : nullptr;
+
+    // Don't move recipes before the mask and PHI recipes.
+    auto End =
+        MaskBlock == StoreR->getParent()
+            ? M->getDefiningRecipe()->getReverseIterator()
+            : std::next(
+                  StoreR->getParent()->getFirstNonPhi()->getReverseIterator());
+    // Also don't move the recipes through any recipe that may have side effects
+    // or write to memory.
+    for (auto It = std::next(StoreR->getReverseIterator()); It != End; ++It) {
+      if (It->mayHaveSideEffects() || It->mayWriteToMemory()) {
+        End = It;
+        break;
+      }
+    }
+
+    // Greedily add all recipes that are only used to compute the stored value
+    // to the tree. All users of the added recipe must dominate the store
+    // recipe.
+    for (VPRecipeBase &R : make_range(StoreR->getReverseIterator(), End)) {
+      // Recipe is not part of the tree
+      if (!Candidates.contains(&R))
+        continue;
+
+      // Make sure all users of recipes moved into conditional block also in
+      // side the block. This prevents the live-out value handling for the
+      // conditional block.
+      if (any_of(R.definedValues(),
+                 [&StoreR = StoreR, &CurrentTree, &VPDT](VPValue *Def) {
+                   for (VPUser *U : Def->users()) {
+                     if (auto *UR = dyn_cast<VPRecipeBase>(U)) {
+                       if (CurrentTree.contains(UR) &&
+                           (UR == StoreR || VPDT.properlyDominates(UR, StoreR)))
+                         continue;
+                     }
+                     return true;
+                   }
+                   return false;
+                 }))
+        continue;
+
+      CurrentTree.insert(&R);
+      AddOperandsToCandidates(&R);
+    }
+    MaskedTrees.push_back(CurrentTree);
+  }
+
+  // Construct conditional VPBB for each tree.
+  for (const auto &List : MaskedTrees) {
+    VPRecipeBase *StoreR = List.front();
+    VPValue *Mask = cast<VPWidenStoreRecipe>(StoreR)->getMask();
+    assert(Mask && "Mask VPValue must exist at this point");
+    auto Recipes = reverse(List.getArrayRef());
+
+    // Split the current basic block at the store recipe point so that
+    // a predicated block can be added in between.
+    VPBasicBlock *ParentBB = StoreR->getParent();
+    VPBasicBlock *ContBB = ParentBB->splitAt(StoreR->getIterator());
+
+    // Create VPBB and insert it between ParentBB and ContBB.
+    VPBasicBlock *IfBB = Plan.createVPBasicBlock("vector.if.bb");
+    VPBlockUtils::insertBlockAfter(IfBB, ParentBB);
+    if (ContBB->getNumSuccessors() == 0)
+      ParentBB->getEnclosingLoopRegion()->setExiting(ContBB);
+
+    // Move recipes into the conditional block.
+    for (VPRecipeBase *R : Recipes)
+      R->moveBefore(*IfBB, IfBB->end());
+
+    // Create conditional branch.
+    auto *ActiveLane = new VPInstruction(VPInstruction::AnyOf, {Mask}, {}, {},
+                                         DebugLoc::getUnknown(), "any.of.mask");
+
+    auto *BranchOnCond =
+        new VPInstruction(VPInstruction::BranchOnCond, ActiveLane);
+    ParentBB->appendRecipe(ActiveLane);
+    ParentBB->appendRecipe(BranchOnCond);
+
+    // Set proper predecessors and successors for the conditional block.
+    ParentBB->clearSuccessors();
+    ParentBB->setSuccessors({IfBB, ContBB});
+    ContBB->clearPredecessors();
+    ContBB->setPredecessors({ParentBB, IfBB});
+  }
+}
