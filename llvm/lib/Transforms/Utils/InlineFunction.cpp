@@ -86,7 +86,6 @@
 
 using namespace llvm;
 using namespace llvm::memprof;
-using ProfileCount = Function::ProfileCount;
 
 static cl::opt<bool>
 EnableNoAliasConversion("enable-noalias-to-md-conversion", cl::init(true),
@@ -934,6 +933,62 @@ propagateMemProfMetadata(Function *Callee, CallBase &CB,
       continue;
     }
     propagateMemProfHelper(OrigCall, ClonedCall, CallsiteMD, ORE);
+  }
+}
+
+/// Collect all calls that produce RetVal, following only pointer-preserving
+/// instructions (cast, phi, select).
+static void collectPointerReturningCalls(Value *RetVal,
+                                         SmallVectorImpl<CallBase *> &Out) {
+  SmallVector<Value *, 8> Worklist{RetVal};
+  SmallPtrSet<Value *, 8> Visited;
+  while (!Worklist.empty()) {
+    Value *V = Worklist.pop_back_val();
+    if (!V->getType()->isPointerTy() || !Visited.insert(V).second)
+      continue;
+    if (auto *CB = dyn_cast<CallBase>(V))
+      Out.push_back(CB);
+    else if (isa<BitCastInst, AddrSpaceCastInst>(V))
+      Worklist.push_back(cast<CastInst>(V)->getOperand(0));
+    else if (auto *PN = dyn_cast<PHINode>(V))
+      append_range(Worklist, PN->incoming_values());
+    else if (auto *SI = dyn_cast<SelectInst>(V)) {
+      Worklist.push_back(SI->getTrueValue());
+      Worklist.push_back(SI->getFalseValue());
+    }
+  }
+}
+
+/// When inlining a call that carries !alloc_token metadata, propagate that
+/// metadata onto calls exposed by inlining the wrapper body.  Propagation is
+/// restricted to return-value producing calls, which avoids instrumenting
+/// unrelated calls in the wrapper body.
+static void
+propagateAllocTokenMetadata(Function *CalledFunc, CallBase &CB,
+                            const ValueMap<const Value *, WeakTrackingVH> &VMap,
+                            ClonedCodeInfo &InlinedFunctionInfo) {
+  MDNode *AllocTokenMD = CB.getMetadata(LLVMContext::MD_alloc_token);
+  if (!AllocTokenMD)
+    return;
+
+  SmallVector<CallBase *, 2> AllocCalls;
+  for (BasicBlock &BB : *CalledFunc)
+    if (auto *RI = dyn_cast<ReturnInst>(BB.getTerminator()))
+      if (Value *RV = RI->getReturnValue())
+        collectPointerReturningCalls(RV, AllocCalls);
+
+  for (CallBase *OrigCall : AllocCalls) {
+    auto *ClonedCall = dyn_cast_or_null<CallBase>(VMap.lookup(OrigCall));
+    if (!ClonedCall)
+      continue;
+    // Skip calls simplified during inlining; propagation may be incorrect.
+    if (InlinedFunctionInfo.isSimplified(OrigCall, ClonedCall))
+      continue;
+    // Fill missing only: never overwrite a more specific token the wrapper
+    // already set on an internal allocation.
+    if (ClonedCall->getMetadata(LLVMContext::MD_alloc_token))
+      continue;
+    ClonedCall->setMetadata(LLVMContext::MD_alloc_token, AllocTokenMD);
   }
 }
 
@@ -2106,15 +2161,14 @@ static void updateCallerBFI(BasicBlock *CallSiteBlock,
 
 /// Update the branch metadata for cloned call instructions.
 static void updateCallProfile(Function *Callee, const ValueToValueMapTy &VMap,
-                              const ProfileCount &CalleeEntryCount,
+                              const uint64_t &CalleeEntryCount,
                               const CallBase &TheCall, ProfileSummaryInfo *PSI,
                               BlockFrequencyInfo *CallerBFI) {
-  if (CalleeEntryCount.isSynthetic() || CalleeEntryCount.getCount() < 1)
+  if (CalleeEntryCount < 1)
     return;
   auto CallSiteCount =
       PSI ? PSI->getProfileCount(TheCall, CallerBFI) : std::nullopt;
-  int64_t CallCount =
-      std::min(CallSiteCount.value_or(0), CalleeEntryCount.getCount());
+  int64_t CallCount = std::min(CallSiteCount.value_or(0), CalleeEntryCount);
   updateProfileCallee(Callee, -CallCount, &VMap);
 }
 
@@ -2125,14 +2179,12 @@ void llvm::updateProfileCallee(
   if (!CalleeCount)
     return;
 
-  const uint64_t PriorEntryCount = CalleeCount->getCount();
-
   // Since CallSiteCount is an estimate, it could exceed the original callee
   // count and has to be set to 0 so guard against underflow.
   const uint64_t NewEntryCount =
-      (EntryDelta < 0 && static_cast<uint64_t>(-EntryDelta) > PriorEntryCount)
+      (EntryDelta < 0 && static_cast<uint64_t>(-EntryDelta) > *CalleeCount)
           ? 0
-          : PriorEntryCount + EntryDelta;
+          : *CalleeCount + EntryDelta;
 
   auto updateVTableProfWeight = [](CallBase *CB, const uint64_t NewEntryCount,
                                    const uint64_t PriorEntryCount) {
@@ -2143,18 +2195,18 @@ void llvm::updateProfileCallee(
 
   // During inlining ?
   if (VMap) {
-    uint64_t CloneEntryCount = PriorEntryCount - NewEntryCount;
+    uint64_t CloneEntryCount = *CalleeCount - NewEntryCount;
     for (auto Entry : *VMap) {
       if (isa<CallInst>(Entry.first))
         if (auto *CI = dyn_cast_or_null<CallInst>(Entry.second)) {
-          CI->updateProfWeight(CloneEntryCount, PriorEntryCount);
-          updateVTableProfWeight(CI, CloneEntryCount, PriorEntryCount);
+          CI->updateProfWeight(CloneEntryCount, *CalleeCount);
+          updateVTableProfWeight(CI, CloneEntryCount, *CalleeCount);
         }
 
       if (isa<InvokeInst>(Entry.first))
         if (auto *II = dyn_cast_or_null<InvokeInst>(Entry.second)) {
-          II->updateProfWeight(CloneEntryCount, PriorEntryCount);
-          updateVTableProfWeight(II, CloneEntryCount, PriorEntryCount);
+          II->updateProfWeight(CloneEntryCount, *CalleeCount);
+          updateVTableProfWeight(II, CloneEntryCount, *CalleeCount);
         }
     }
   }
@@ -2167,12 +2219,12 @@ void llvm::updateProfileCallee(
       if (!VMap || VMap->count(&BB))
         for (Instruction &I : BB) {
           if (CallInst *CI = dyn_cast<CallInst>(&I)) {
-            CI->updateProfWeight(NewEntryCount, PriorEntryCount);
-            updateVTableProfWeight(CI, NewEntryCount, PriorEntryCount);
+            CI->updateProfWeight(NewEntryCount, *CalleeCount);
+            updateVTableProfWeight(CI, NewEntryCount, *CalleeCount);
           }
           if (InvokeInst *II = dyn_cast<InvokeInst>(&I)) {
-            II->updateProfWeight(NewEntryCount, PriorEntryCount);
-            updateVTableProfWeight(II, NewEntryCount, PriorEntryCount);
+            II->updateProfWeight(NewEntryCount, *CalleeCount);
+            updateVTableProfWeight(II, NewEntryCount, *CalleeCount);
           }
         }
   }
@@ -2903,6 +2955,9 @@ void llvm::InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
     // Propagate metadata on the callsite if necessary.
     PropagateCallSiteMetadata(CB, FirstNewBlock, Caller->end());
 
+    // Propagate an allocation wrapper's !alloc_token if necessary.
+    propagateAllocTokenMetadata(CalledFunc, CB, VMap, InlinedFunctionInfo);
+
     // Propagate implicit ref metadata.
     if (CalledFunc->hasMetadata(LLVMContext::MD_implicit_ref)) {
       SmallVector<MDNode *> MDs;
@@ -3241,32 +3296,13 @@ void llvm::InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
   // musttail.  Therefore it's safe to return without merging control into the
   // phi below.
   if (InlinedMustTailCalls) {
-    // Check if we need to bitcast the result of any musttail calls.
-    Type *NewRetTy = Caller->getReturnType();
-    bool NeedBitCast = !CB.use_empty() && CB.getType() != NewRetTy;
-
     // Handle the returns preceded by musttail calls separately.
     SmallVector<ReturnInst *, 8> NormalReturns;
     for (ReturnInst *RI : Returns) {
       CallInst *ReturnedMustTail =
           RI->getParent()->getTerminatingMustTailCall();
-      if (!ReturnedMustTail) {
+      if (!ReturnedMustTail)
         NormalReturns.push_back(RI);
-        continue;
-      }
-      if (!NeedBitCast)
-        continue;
-
-      // Delete the old return and any preceding bitcast.
-      BasicBlock *CurBB = RI->getParent();
-      auto *OldCast = dyn_cast_or_null<BitCastInst>(RI->getReturnValue());
-      RI->eraseFromParent();
-      if (OldCast)
-        OldCast->eraseFromParent();
-
-      // Insert a new bitcast and return with the right type.
-      IRBuilder<> Builder(CurBB);
-      Builder.CreateRet(Builder.CreateBitCast(ReturnedMustTail, NewRetTy));
     }
 
     // Leave behind the normal returns so we can merge control flow.
@@ -3488,7 +3524,7 @@ void llvm::InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
   CB.eraseFromParent();
 
   // If we inlined any musttail calls and the original return is now
-  // unreachable, delete it.  It can only contain a bitcast and ret.
+  // unreachable, delete it.  It can only contain a ret.
   if (InlinedMustTailCalls && pred_empty(AfterCallBB))
     AfterCallBB->eraseFromParent();
 

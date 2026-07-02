@@ -37,13 +37,38 @@
 #      warning "Libc++ only supports Clang 21 and later"
 #    endif
 #  elif defined(_LIBCPP_APPLE_CLANG_VER)
-#    if _LIBCPP_APPLE_CLANG_VER < 1700
-#      warning "Libc++ only supports AppleClang 26 and later"
+#    if _LIBCPP_APPLE_CLANG_VER < 2100
+#      warning "Libc++ only supports AppleClang 26.4 and later"
 #    endif
 #  elif defined(_LIBCPP_GCC_VER)
 #    if _LIBCPP_GCC_VER < 1500
 #      warning "Libc++ only supports GCC 15 and later"
 #    endif
+#  endif
+
+#  ifndef __has_constexpr_builtin
+#    define __has_constexpr_builtin(x) 0
+#  endif
+
+// This checks wheter a Clang module is built
+#  ifndef __building_module
+#    define __building_module(...) 0
+#  endif
+
+// '__is_identifier' returns '0' if '__x' is a reserved identifier provided by
+// the compiler and '1' otherwise.
+#  ifndef __is_identifier
+#    define __is_identifier(__x) 1
+#  endif
+
+#  define __has_keyword(__x) !(__is_identifier(__x))
+
+#  ifndef __has_warning
+#    define __has_warning(...) 0
+#  endif
+
+#  if !defined(_LIBCPP_COMPILER_CLANG_BASED) && __cplusplus < 201103L
+#    error "libc++ only supports C++03 with Clang-based compilers. Please enable C++11"
 #  endif
 
 #endif

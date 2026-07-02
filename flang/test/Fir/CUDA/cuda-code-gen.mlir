@@ -399,3 +399,100 @@ module {
 // CHECK-LABEL: llvm.func @_QMkernelsPuse_managed()
 // CHECK: %{{.*}} = llvm.mlir.addressof @_QMmodEmval : !llvm.ptr
 // CHECK: llvm.mlir.global external @_QMmodEmval() {addr_space = 0 : i32} : i32
+
+// -----
+
+// Test that a rebox whose result is passed to gpu.launch_func gets a managed
+// descriptor so the GPU kernel can access it.
+
+module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<f80, dense<128> : vector<2xi64>>, #dlti.dl_entry<i128, dense<128> : vector<2xi64>>, #dlti.dl_entry<i64, dense<64> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr<272>, dense<64> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<271>, dense<32> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<270>, dense<32> : vector<4xi64>>, #dlti.dl_entry<f128, dense<128> : vector<2xi64>>, #dlti.dl_entry<f64, dense<64> : vector<2xi64>>, #dlti.dl_entry<f16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i32, dense<32> : vector<2xi64>>, #dlti.dl_entry<i16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i8, dense<8> : vector<2xi64>>, #dlti.dl_entry<i1, dense<8> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr, dense<64> : vector<4xi64>>, #dlti.dl_entry<"dlti.endianness", "little">, #dlti.dl_entry<"dlti.stack_alignment", 128 : i64>>, gpu.container_module} {
+  gpu.module @cuda_device_mod {
+    gpu.func @_QMtestmePmykernel(%arg0: !fir.box<!fir.array<?x?xi32>>, %arg1: i32) kernel {
+      gpu.return
+    }
+  }
+  func.func @_QQmain() {
+    %c1 = arith.constant 1 : index
+    %c32 = arith.constant 32 : index
+    %c0_i32 = arith.constant 0 : i32
+    %c32_i32 = arith.constant 32 : i32
+    %0 = fir.alloca !fir.box<!fir.heap<!fir.array<?x?xi32>>>
+    %1 = fir.load %0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>>
+    %2 = fircg.ext_rebox %1 : (!fir.box<!fir.heap<!fir.array<?x?xi32>>>) -> !fir.box<!fir.array<?x?xi32>>
+    gpu.launch_func @cuda_device_mod::@_QMtestmePmykernel blocks in (%c1, %c1, %c1) threads in (%c32, %c1, %c1) dynamic_shared_memory_size %c0_i32 args(%2 : !fir.box<!fir.array<?x?xi32>>, %c32_i32 : i32)
+    return
+  }
+}
+
+// CHECK-LABEL: llvm.func @_QQmain()
+// CHECK: llvm.call @_FortranACUFAllocDescriptor(
+// CHECK: gpu.launch_func @cuda_device_mod::@_QMtestmePmykernel
+
+// -----
+
+// Test that an embox whose converted result is passed to gpu.launch_func gets a
+// managed descriptor so the GPU kernel can access it.
+
+module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<i64, dense<64> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr, dense<64> : vector<4xi64>>, #dlti.dl_entry<i32, dense<32> : vector<2xi64>>, #dlti.dl_entry<i8, dense<8> : vector<2xi64>>, #dlti.dl_entry<i1, dense<8> : vector<2xi64>>, #dlti.dl_entry<"dlti.endianness", "little">, #dlti.dl_entry<"dlti.stack_alignment", 128 : i64>>, gpu.container_module} {
+  func.func @_QQmain() {
+    %c0_i32 = arith.constant 0 : i32
+    %c1 = arith.constant 1 : index
+    %c10 = arith.constant 10 : index
+    %c20 = arith.constant 20 : index
+    %base = fir.alloca !fir.array<10x20xi32>
+    %box = fircg.ext_embox %base(%c10, %c20) : (!fir.ref<!fir.array<10x20xi32>>, index, index) -> !fir.box<!fir.array<10x20xi32>>
+    %arg = fir.convert %box : (!fir.box<!fir.array<10x20xi32>>) -> !fir.box<!fir.array<?x?xi32>>
+    gpu.launch_func @cuda_device_mod::@kernel blocks in (%c1, %c1, %c1) threads in (%c1, %c1, %c1) dynamic_shared_memory_size %c0_i32 args(%arg : !fir.box<!fir.array<?x?xi32>>) {cuf.proc_attr = #cuf.cuda_proc<global>}
+    return
+  }
+  gpu.module @cuda_device_mod {
+    gpu.func @kernel(%arg0: !fir.box<!fir.array<?x?xi32>>) kernel {
+      gpu.return
+    }
+  }
+}
+
+// CHECK-LABEL: llvm.func @_QQmain()
+// CHECK: %[[DESC:.*]] = llvm.call @_FortranACUFAllocDescriptor(
+// CHECK: %[[BOX:.*]] = builtin.unrealized_conversion_cast %[[DESC]] : !llvm.ptr to !fir.box<!fir.array<?x?xi32>>
+// CHECK: llvm.store %{{.*}}, %[[DESC]]
+// CHECK: gpu.launch_func {{.*}} args(%[[BOX]] : !fir.box<!fir.array<?x?xi32>>)
+
+// -----
+
+// A rebox of a device-resident global (isDeviceAllocation == true) whose result
+// is consumed by an OpenACC data-clause op (here acc.present) must NOT be placed
+// in managed memory. The box is host-side descriptor metadata for the data
+// clause; a managed descriptor created here is never freed and leaves a stale
+// descriptor behind when its address is reused. The descriptor storage should
+// therefore be a plain stack alloca and no _FortranACUFAllocDescriptor call
+// should be emitted for it.
+
+module attributes {gpu.container_module} {
+  fir.global @_QMm1Eda {data_attr = #cuf.cuda<device>} : !fir.box<!fir.heap<!fir.array<?x?xf32>>> {
+    %c0 = arith.constant 0 : index
+    %0 = fir.zero_bits !fir.heap<!fir.array<?x?xf32>>
+    %1 = fircg.ext_embox %0(%c0, %c0) {allocator_idx = 2 : i32} : (!fir.heap<!fir.array<?x?xf32>>, index, index) -> !fir.box<!fir.heap<!fir.array<?x?xf32>>>
+    fir.has_value %1 : !fir.box<!fir.heap<!fir.array<?x?xf32>>>
+  }
+  func.func @_QQmain() {
+    %0 = fir.address_of(@_QMm1Eda) : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>
+    %1 = fir.load %0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>
+    %2 = fircg.ext_rebox %1 : (!fir.box<!fir.heap<!fir.array<?x?xf32>>>) -> !fir.box<!fir.array<?x?xf32>>
+    %3 = acc.present var(%2 : !fir.box<!fir.array<?x?xf32>>) -> !fir.box<!fir.array<?x?xf32>> {name = "uf"}
+    acc.delete accVar(%3 : !fir.box<!fir.array<?x?xf32>>) {dataClause = #acc<data_clause acc_present>, name = "uf"}
+    return
+  }
+  gpu.module @cuda_device_mod {
+    fir.global @_QMm1Eda {data_attr = #cuf.cuda<device>} : !fir.box<!fir.heap<!fir.array<?x?xf32>>> {
+      %c0 = arith.constant 0 : index
+      %0 = fir.zero_bits !fir.heap<!fir.array<?x?xf32>>
+      %1 = fircg.ext_embox %0(%c0, %c0) {allocator_idx = 2 : i32} : (!fir.heap<!fir.array<?x?xf32>>, index, index) -> !fir.box<!fir.heap<!fir.array<?x?xf32>>>
+      fir.has_value %1 : !fir.box<!fir.heap<!fir.array<?x?xf32>>>
+    }
+  }
+}
+
+// CHECK-LABEL: llvm.func @_QQmain()
+// CHECK: llvm.alloca {{.*}} x !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<2 x array<3 x i64>>)>
+// CHECK-NOT: llvm.call @_FortranACUFAllocDescriptor

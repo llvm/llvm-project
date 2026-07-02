@@ -23,6 +23,7 @@
 #include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Driver/Compilation.h"
+#include "clang/Options/Options.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/Option/ArgList.h"
@@ -174,22 +175,29 @@ int main(int argc, const char **argv) {
   if (rejectAssemblyInputs(c->getInputArgs(), diags))
     return 1;
 
-  // Set the environment variable, FLANG_COMPILER_OPTIONS_STRING, to contain all
-  // the compiler options. This is intended for the frontend driver,
-  // flang -fc1, to enable the implementation of the COMPILER_OPTIONS
-  // intrinsic. To this end, the frontend driver requires the list of the
-  // original compiler options, which is not available through other means.
+  // Set the environment variable, FLANG_COMPILER_OPTIONS_STRING, to contain
+  // the compiler options (excluding input file names and the program name).
+  // This is intended for the frontend driver, flang -fc1, to enable the
+  // implementation of the COMPILER_OPTIONS intrinsic. To this end, the
+  // frontend driver requires the list of the original compiler options,
+  // which is not available through other means.
   // TODO: This way of passing information between the compiler and frontend
   // drivers is discouraged. We should find a better way not involving env
   // variables.
   std::string compilerOptsGathered;
   llvm::raw_string_ostream os(compilerOptsGathered);
-  for (int i = 0; i < argc; ++i) {
-    os << argv[i];
-    if (i < argc - 1) {
-      os << ' ';
+  const llvm::opt::InputArgList &argList = c->getInputArgs();
+  bool first = true;
+  for (const llvm::opt::Arg *arg : argList) {
+    if (!arg->getOption().matches(clang::options::OPT_INPUT)) {
+      if (!first) {
+        os << ' ';
+      }
+      os << arg->getAsString(argList);
+      first = false;
     }
   }
+
 #ifdef _WIN32
   _putenv_s("FLANG_COMPILER_OPTIONS_STRING", compilerOptsGathered.c_str());
 #else

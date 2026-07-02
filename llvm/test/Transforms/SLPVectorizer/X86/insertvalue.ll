@@ -230,15 +230,7 @@ define void @julia_load_struct_of_float(ptr %a, ptr %b, ptr %c) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[A:%.*]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x float>, ptr [[B:%.*]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = fsub <4 x float> [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x float> [[TMP4]], i32 0
-; CHECK-NEXT:    [[C_STRUCT0:%.*]] = insertvalue [[PSEUDOVEC:%.*]] undef, float [[TMP5]], 0
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x float> [[TMP4]], i32 1
-; CHECK-NEXT:    [[C_STRUCT1:%.*]] = insertvalue [[PSEUDOVEC]] [[C_STRUCT0]], float [[TMP6]], 1
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x float> [[TMP4]], i32 2
-; CHECK-NEXT:    [[C_STRUCT2:%.*]] = insertvalue [[PSEUDOVEC]] [[C_STRUCT1]], float [[TMP7]], 2
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x float> [[TMP4]], i32 3
-; CHECK-NEXT:    [[C_STRUCT3:%.*]] = insertvalue [[PSEUDOVEC]] [[C_STRUCT2]], float [[TMP8]], 3
-; CHECK-NEXT:    store [[PSEUDOVEC]] [[C_STRUCT3]], ptr [[C:%.*]], align 4
+; CHECK-NEXT:    store <4 x float> [[TMP4]], ptr [[C:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 top:

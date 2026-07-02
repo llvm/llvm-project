@@ -685,6 +685,14 @@ common::optional<char32_t> IoStatementState::NextInField(
             return common::nullopt;
           }
           break;
+        case '!':
+          // Extension (gfortran, ifx, classic nvfortran): in NAMELIST input,
+          // '!' terminates a value even when not preceded by a separator,
+          // so that "name=value!comment" is accepted.
+          if (edit.IsNamelist()) {
+            return common::nullopt;
+          }
+          break;
         case ',':
           if (!(edit.modes.editingFlags & decimalComma)) {
             return common::nullopt;

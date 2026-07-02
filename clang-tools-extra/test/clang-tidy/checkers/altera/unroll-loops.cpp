@@ -125,11 +125,47 @@ void for_loops(int *A, int size) {
     A[i]++;
   }
 
+#pragma unroll
+  for (int i = 0, j = 0; i < 50; ++i) {
+    A[i] += j;
+  }
+
+#pragma unroll
+  for (int i = 0, j = 0; i < 50; ++i, ++j) {
+    // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: loop likely has a large number of iterations and thus cannot be fully unrolled; to partially unroll this loop, use the '#pragma unroll <num>' directive
+    // FIXME: This is a false positive.
+    A[i] += j;
+  }
+
+#pragma unroll
+  for (int j = size, i = 0; i < 50; ++i) {
+    A[i] += j;
+  }
+
+#pragma unroll
+  for (int j = 0, i = 100; i < 150; ++i) {
+    // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: loop likely has a large number of iterations and thus cannot be fully unrolled; to partially unroll this loop, use the '#pragma unroll <num>' directive
+    // FIXME: This is a false positive.
+    A[i] += j;
+  }
+
 // Loop with unknown size should be partially unrolled.
 #pragma unroll
   for (int i = 0; i < size; ++i) {
     // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: full unrolling requested, but loop bounds are not known; to partially unroll this loop, use the '#pragma unroll <num>' directive [altera-unroll-loops]
     A[i]++;
+  }
+
+#pragma unroll
+  for (int i = 0, j = 0; i < size; ++i) {
+    // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: full unrolling requested, but loop bounds are not known; to partially unroll this loop, use the '#pragma unroll <num>' directive
+    A[i] += j;
+  }
+
+#pragma unroll
+  for (int j = 0, i = size; i < 50; ++i) {
+    // FIXME: This is a false negative.
+    A[i] += j;
   }
 
 #pragma unroll
@@ -181,11 +217,28 @@ void for_loops(int *A, int size) {
     A[i]++;
   }
 
+#pragma unroll 5
+  for (int i = 0, j = 0; i < size; ++i) {
+    A[i] += j;
+  }
+
 // Loop with large size should be partially unrolled.
 #pragma unroll
   for (int i = 0; i < 51; ++i) {
     // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: loop likely has a large number of iterations and thus cannot be fully unrolled; to partially unroll this loop, use the '#pragma unroll <num>' directive [altera-unroll-loops]
     A[i]++;
+  }
+
+#pragma unroll
+  for (int i = 0, j = 0; i < 51; ++i) {
+    // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: loop likely has a large number of iterations and thus cannot be fully unrolled; to partially unroll this loop, use the '#pragma unroll <num>' directive
+    A[i] += j;
+  }
+
+#pragma unroll
+  for (int j = 100, i = 0; i < 51; ++i) {
+    // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: loop likely has a large number of iterations and thus cannot be fully unrolled; to partially unroll this loop, use the '#pragma unroll <num>' directive
+    A[i] += j;
   }
 
 // Loop with large size correctly unrolled.

@@ -666,3 +666,6 @@ def : Pat<(i64 (any_llround FPR64INX:$rs1)), (FCVT_L_D_INX $rs1, FRM_RMM)>;
 def : Pat<(any_sint_to_fp (i64 GPR:$rs1)), (FCVT_D_L_INX GPR:$rs1, FRM_DYN)>;
 def : Pat<(any_uint_to_fp (i64 GPR:$rs1)), (FCVT_D_LU_INX GPR:$rs1, FRM_DYN)>;
 } // Predicates = [HasStdExtZdinx, IsRV64]
+
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+def PseudoClearFPR64 : Pseudo<(outs FPR64:$rd), (ins), []>;

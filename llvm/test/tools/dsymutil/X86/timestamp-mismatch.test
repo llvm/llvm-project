@@ -3,8 +3,8 @@ RUN: cp %p/../Inputs/basic.macho.x86_64 %t/Inputs
 RUN: cp %p/../Inputs/basic1.macho.x86_64.o %t/Inputs
 RUN: cp %p/../Inputs/basic2.macho.x86_64.o %t/Inputs
 RUN: cp %p/../Inputs/basic3.macho.x86_64.o %t/Inputs
-RUN: dsymutil -oso-prepend-path=%t %t/Inputs/basic.macho.x86_64 -o %t.dSYM 2>&1 | FileCheck %s --check-prefix=WARN
-RUN: dsymutil -no-object-timestamp -oso-prepend-path=%t %t/Inputs/basic.macho.x86_64 -o %t.dSYM 2>&1 | FileCheck %s --allow-empty --check-prefix=NOWARN
+RUN: dsymutil --linker classic -oso-prepend-path=%t %t/Inputs/basic.macho.x86_64 -o %t.dSYM 2>&1 | FileCheck %s --check-prefix=WARN
+RUN: dsymutil --linker classic -no-object-timestamp -oso-prepend-path=%t %t/Inputs/basic.macho.x86_64 -o %t.dSYM 2>&1 | FileCheck %s --allow-empty --check-prefix=NOWARN
 
 RUN: dsymutil --linker parallel -oso-prepend-path=%t %t/Inputs/basic.macho.x86_64 -o %t.dSYM 2>&1 | FileCheck %s --check-prefix=WARN
 RUN: dsymutil --linker parallel -no-object-timestamp -oso-prepend-path=%t %t/Inputs/basic.macho.x86_64 -o %t.dSYM 2>&1 | FileCheck %s --allow-empty --check-prefix=NOWARN

@@ -31,15 +31,7 @@ public:
 
   DWARFDataExtractorBase(ArrayRef<uint8_t> Data, bool IsLittleEndian,
                          unsigned AddressSize)
-      : DataExtractor(
-            StringRef(reinterpret_cast<const char *>(Data.data()), Data.size()),
-            IsLittleEndian),
-        AddressSize(AddressSize) {}
-
-  /// Truncating constructor
-  DWARFDataExtractorBase(const DWARFDataExtractorBase &Other, size_t Length)
-      : DataExtractor(Other.getData().substr(0, Length), Other.isLittleEndian(),
-                      Other.getAddressSize()) {}
+      : DataExtractor(Data, IsLittleEndian), AddressSize(AddressSize) {}
 
   /// Get the address size for this extractor.
   unsigned getAddressSize() const { return AddressSize; }
@@ -228,9 +220,9 @@ class DWARFDataExtractorSimple
 public:
   using DWARFDataExtractorBase::DWARFDataExtractorBase;
 
-  LLVM_ABI uint64_t getRelocatedValueImpl(uint32_t Size, uint64_t *Off,
-                                          uint64_t *SectionIndex = nullptr,
-                                          Error *Err = nullptr) const {
+  uint64_t getRelocatedValueImpl(uint32_t Size, uint64_t *Off,
+                                 uint64_t *SectionIndex = nullptr,
+                                 Error *Err = nullptr) const {
     assert(SectionIndex == nullptr &&
            "DWARFDATAExtractorSimple cannot take section indices.");
     return getUnsigned(Off, Size, Err);

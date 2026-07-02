@@ -57,8 +57,8 @@ void runSVEPseudoTestForCPU(const std::string &CPU) {
   std::unique_ptr<AArch64InstrInfo> II = createInstrInfo(TM.get());
   ASSERT_TRUE(II);
 
-  const MCSubtargetInfo *STI = TM->getMCSubtargetInfo();
-  MCSchedModel SchedModel = STI->getSchedModel();
+  const MCSubtargetInfo &STI = TM->getMCSubtargetInfo();
+  MCSchedModel SchedModel = STI.getSchedModel();
 
   for (unsigned i = 0; i < AArch64::INSTRUCTION_LIST_END; ++i) {
     // Check if instruction is in the pseudo table
@@ -72,7 +72,7 @@ void runSVEPseudoTestForCPU(const std::string &CPU) {
     // model for the CPU we're testing. This avoids this test from failing when
     // new instructions are added that are not yet covered by the scheduler
     // model.
-    if (!isInstructionSupportedByCPU(OrigInstr, STI->getFeatureBits()))
+    if (!isInstructionSupportedByCPU(OrigInstr, STI.getFeatureBits()))
       continue;
 
     const MCInstrDesc &Desc = II->get(i);
@@ -87,18 +87,25 @@ void runSVEPseudoTestForCPU(const std::string &CPU) {
     int Latency = 0;
     int LatencyOrig = 0;
 
+    ASSERT_TRUE(SCDesc->isValid());
+    ASSERT_TRUE(SCDescOrig->isValid());
+    // We need to handle the variant if this becomes true
+    ASSERT_FALSE(SCDesc->isVariant());
+    ASSERT_FALSE(SCDescOrig->isVariant());
+    ASSERT_EQ(SCDesc->NumWriteLatencyEntries,
+              SCDescOrig->NumWriteLatencyEntries);
     for (unsigned DefIdx = 0, DefEnd = SCDesc->NumWriteLatencyEntries;
          DefIdx != DefEnd; ++DefIdx) {
       const MCWriteLatencyEntry *WLEntry =
-          STI->getWriteLatencyEntry(SCDesc, DefIdx);
+          STI.getWriteLatencyEntry(SCDesc, DefIdx);
       const MCWriteLatencyEntry *WLEntryOrig =
-          STI->getWriteLatencyEntry(SCDescOrig, DefIdx);
+          STI.getWriteLatencyEntry(SCDescOrig, DefIdx);
       Latency = std::max(Latency, static_cast<int>(WLEntry->Cycles));
-      LatencyOrig = std::max(Latency, static_cast<int>(WLEntryOrig->Cycles));
+      LatencyOrig =
+          std::max(LatencyOrig, static_cast<int>(WLEntryOrig->Cycles));
     }
 
     ASSERT_EQ(Latency, LatencyOrig);
-    ASSERT_TRUE(SCDesc->isValid());
   }
 }
 

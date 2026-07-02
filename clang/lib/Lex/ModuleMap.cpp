@@ -46,6 +46,8 @@
 
 using namespace clang;
 
+static constexpr llvm::StringRef kPrivateModuleSuffix = "_Private";
+
 void ModuleMapCallbacks::anchor() {}
 
 void ModuleMap::resolveLinkAsDependencies(Module *Mod) {
@@ -178,8 +180,7 @@ OptionalFileEntryRef ModuleMap::findHeader(
   SmallString<128> FullPathName(Directory->getName());
 
   auto GetFile = [&](StringRef Filename) -> OptionalFileEntryRef {
-    auto File =
-        expectedToOptional(SourceMgr.getFileManager().getFileRef(Filename));
+    auto File = SourceMgr.getFileManager().getOptionalFileRef(Filename);
     if (!File || (Header.Size && File->getSize() != *Header.Size) ||
         (Header.ModTime && File->getModificationTime() != *Header.ModTime))
       return std::nullopt;
@@ -498,10 +499,31 @@ void ModuleMap::diagnoseHeaderInclusion(Module *RequestingModule,
 
   // No errors for indirect modules. This may be a bit of a problem for modules
   // with no source files.
-  if (getTopLevelOrNull(RequestingModule) != getTopLevelOrNull(SourceModule))
-    return;
+  Module *TopLevelRequestingModule = getTopLevelOrNull(RequestingModule);
+  Module *TopLevelSourceModule = getTopLevelOrNull(SourceModule);
+  bool IsPublicForMainPrivateModule = false;
+  if (TopLevelRequestingModule != TopLevelSourceModule) {
+    // Suppose we have a pair of files foo.cpp / foo.h.
+    // Our build system may want to verify that foo.cpp only uses things
+    // declared in the implementation_deps of foo, while foo.h only uses things
+    // declared in interface_deps. This requires them to be two seperate
+    // modules, foo_Private and foo. This check is required to ensure that foo.h
+    // is still checked. Otherwise, foo.h would never be checked, since it will
+    // never be the top-level module.
+    if (TopLevelRequestingModule && TopLevelSourceModule &&
+        llvm::StringRef(TopLevelSourceModule->Name)
+            .ends_with(kPrivateModuleSuffix) &&
+        llvm::StringRef(TopLevelSourceModule->Name)
+                .drop_back(kPrivateModuleSuffix.size()) ==
+            TopLevelRequestingModule->Name) {
+      IsPublicForMainPrivateModule = true;
+    } else {
+      return;
+    }
+  }
 
   bool Excluded = false;
+  bool UsedByPrivateModule = false;
   Module *Private = nullptr;
   Module *NotUsed = nullptr;
 
@@ -524,6 +546,9 @@ void ModuleMap::diagnoseHeaderInclusion(Module *RequestingModule,
       if (RequestingModule && LangOpts.ModulesDeclUse &&
           !RequestingModule->directlyUses(Header.getModule())) {
         NotUsed = Header.getModule();
+        if (IsPublicForMainPrivateModule) {
+          UsedByPrivateModule = SourceModule->directlyUses(Header.getModule());
+        }
         continue;
       }
 
@@ -543,9 +568,15 @@ void ModuleMap::diagnoseHeaderInclusion(Module *RequestingModule,
 
   // We have found a module, but we don't use it.
   if (NotUsed) {
-    Diags.Report(FilenameLoc, diag::err_undeclared_use_of_module_indirect)
-        << RequestingModule->getTopLevelModule()->Name << Filename
-        << NotUsed->Name;
+    if (UsedByPrivateModule) {
+      Diags.Report(FilenameLoc, diag::err_undeclared_use_of_module_private)
+          << RequestingModule->getTopLevelModule()->Name << Filename
+          << NotUsed->Name;
+    } else {
+      Diags.Report(FilenameLoc, diag::err_undeclared_use_of_module_indirect)
+          << RequestingModule->getTopLevelModule()->Name << Filename
+          << NotUsed->Name;
+    }
     return;
   }
 
@@ -938,7 +969,8 @@ Module *ModuleMap::lookupModuleUnqualified(StringRef Name,
   return findModule(Name);
 }
 
-Module *ModuleMap::lookupModuleQualified(StringRef Name, Module *Context) const{
+ModuleRef ModuleMap::lookupModuleQualified(StringRef Name,
+                                           Module *Context) const {
   if (!Context)
     return findModule(Name);
 
@@ -950,8 +982,8 @@ std::pair<Module *, bool> ModuleMap::findOrCreateModule(StringRef Name,
                                                         bool IsFramework,
                                                         bool IsExplicit) {
   // Try to find an existing module with this name.
-  if (Module *Sub = lookupModuleQualified(Name, Parent))
-    return std::make_pair(Sub, false);
+  if (ModuleRef Sub = lookupModuleQualified(Name, Parent); Sub.getExisting())
+    return std::make_pair(Sub.getExisting(), false);
 
   // Create a new module with this name.
   Module *M = createModule(Name, Parent, IsFramework, IsExplicit);
@@ -960,7 +992,7 @@ std::pair<Module *, bool> ModuleMap::findOrCreateModule(StringRef Name,
 
 Module *ModuleMap::createModule(StringRef Name, Module *Parent,
                                 bool IsFramework, bool IsExplicit) {
-  assert(lookupModuleQualified(Name, Parent) == nullptr &&
+  assert(!lookupModuleQualified(Name, Parent).getExisting() &&
          "Creating duplicate submodule");
 
   Module *Result = new (ModulesAlloc.Allocate())
@@ -1626,7 +1658,7 @@ bool ModuleMap::resolveExports(Module *Mod, bool Complain) {
   Mod->UnresolvedExports.clear();
   for (auto &UE : Unresolved) {
     Module::ExportDecl Export = resolveExport(Mod, UE, Complain);
-    if (Export.getPointer() || Export.getInt())
+    if (Export.first || Export.second)
       Mod->Exports.push_back(Export);
     else
       Mod->UnresolvedExports.push_back(UE);
@@ -1849,17 +1881,22 @@ void ModuleMapLoader::handleModuleDecl(const modulemap::ModuleDecl &MD) {
     // We might see a (re)definition of a module that we already have a
     // definition for in four cases:
     //  - If the Existing module was loaded from an AST file and we've found its
-    //    original source module map, or
+    //    original source module map, or we cannot determine Existing's
+    //    definition location.
     bool LoadedFromASTFile = Existing->IsFromModuleFile;
     if (LoadedFromASTFile) {
       OptionalFileEntryRef ExistingModMapFile =
           Map.getContainingModuleMapFile(Existing);
       OptionalFileEntryRef CurrentModMapFile =
           SourceMgr.getFileEntryRefForID(ModuleMapFID);
-      if (ExistingModMapFile && CurrentModMapFile &&
-          *ExistingModMapFile == *CurrentModMapFile)
+      if ((ExistingModMapFile && CurrentModMapFile &&
+           *ExistingModMapFile == *CurrentModMapFile) ||
+          Existing->DefinitionLoc.isInvalid()) {
+        // If we do not know Existing's definition location, we have
+        // no way of checking against it, and hence we stay conservative and do
+        // not check for duplicating module definitions.
         LoadedFromASTFile = true;
-      else
+      } else
         LoadedFromASTFile = false;
     }
     //  - If we previously inferred this module from different module map file.
@@ -2001,6 +2038,13 @@ void ModuleMapLoader::handleExternModuleDecl(
   if (llvm::sys::path::is_relative(FileNameRef)) {
     ModuleMapFileName += Directory.getName();
     llvm::sys::path::append(ModuleMapFileName, EMD.Path);
+    // As extern module declarations are parsed recursively, relative paths
+    // to those modules can become arbitrarily long.
+    // If the OS name length limit is exceeded when trying to get the file ref
+    // we can silently fail to find an extern module that exists.
+    // To mitigate this, collapse relative paths containing '../' for when
+    // constructing the name of each module file referenced as an extern module.
+    llvm::sys::path::remove_dots(ModuleMapFileName, /*remove_dot_dot=*/true);
     FileNameRef = ModuleMapFileName;
   }
   if (auto File = SourceMgr.getFileManager().getOptionalFileRef(FileNameRef))

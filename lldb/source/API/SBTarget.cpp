@@ -29,6 +29,7 @@
 #include "lldb/Breakpoint/BreakpointIDList.h"
 #include "lldb/Breakpoint/BreakpointList.h"
 #include "lldb/Breakpoint/BreakpointLocation.h"
+#include "lldb/Breakpoint/ScriptedBreakpointOverrideResolver.h"
 #include "lldb/Core/Address.h"
 #include "lldb/Core/AddressResolver.h"
 #include "lldb/Core/Debugger.h"
@@ -39,7 +40,9 @@
 #include "lldb/Core/SearchFilter.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Core/StructuredDataImpl.h"
+#include "lldb/Expression/ExpressionVariable.h"
 #include "lldb/Host/Host.h"
+#include "lldb/Interpreter/Interfaces/ScriptedBreakpointInterface.h"
 #include "lldb/Interpreter/Interfaces/ScriptedFrameProviderInterface.h"
 #include "lldb/Symbol/DeclVendor.h"
 #include "lldb/Symbol/ObjectFile.h"
@@ -677,6 +680,48 @@ size_t SBTarget::ReadMemory(const SBAddress addr, void *buf, size_t size,
   }
 
   return bytes_read;
+}
+
+uint64_t SBTarget::AddBreakpointOverride(const char *class_name,
+                                         const char *description,
+                                         SBStructuredData &args_data,
+                                         SBError &error) {
+  if (!class_name || class_name[0] == '\0') {
+    error.SetErrorString("empty class name");
+    return LLDB_INVALID_INDEX64;
+  }
+
+  if (TargetSP target_sp = GetSP()) {
+    StructuredDataImpl impl;
+    args_data.CopyImpl(impl);
+    StructuredData::ObjectSP object_sp = impl.GetObjectSP();
+    StructuredData::DictionarySP args_dict(
+        new StructuredData::Dictionary(object_sp));
+    if (!args_dict->IsValid()) {
+      error.SetErrorString("args data is not a dictionary");
+      return LLDB_INVALID_INDEX64;
+    }
+
+    llvm::Expected<lldb::user_id_t> id_or_err =
+        target_sp->AddBreakpointResolverOverride(
+            class_name, args_dict,
+            description ? description : "<No Description>");
+    if (id_or_err)
+      return *id_or_err;
+    error.SetErrorString(llvm::toString(id_or_err.takeError()).c_str());
+    return LLDB_INVALID_INDEX64;
+
+  } else {
+    error.SetErrorString("invalid SBTarget.");
+    return LLDB_INVALID_INDEX64;
+  }
+}
+
+bool SBTarget::RemoveBreakpointOverride(uint64_t id) {
+  if (TargetSP target_sp = GetSP()) {
+    return target_sp->RemoveBreakpointResolverOverride(id);
+  }
+  return false;
 }
 
 SBBreakpoint SBTarget::BreakpointCreateByLocation(const char *file,
@@ -1617,11 +1662,11 @@ const char *SBTarget::GetTriple() {
   LLDB_INSTRUMENT_VA(this);
 
   if (TargetSP target_sp = GetSP()) {
-    std::string triple(target_sp->GetArchitecture().GetTriple().str());
+    const std::string &triple = target_sp->GetArchitecture().GetTriple().str();
     // Unique the string so we don't run into ownership issues since the const
     // strings put the string into the string pool once and the strings never
     // comes out
-    ConstString const_triple(triple.c_str());
+    ConstString const_triple(triple);
     return const_triple.GetCString();
   }
   return nullptr;
@@ -1644,8 +1689,7 @@ const char *SBTarget::GetABIName() {
   LLDB_INSTRUMENT_VA(this);
 
   if (TargetSP target_sp = GetSP()) {
-    std::string abi_name(target_sp->GetABIName().str());
-    ConstString const_name(abi_name.c_str());
+    ConstString const_name(target_sp->GetABIName());
     return const_name.GetCString();
   }
   return nullptr;
@@ -1655,7 +1699,7 @@ const char *SBTarget::GetLabel() const {
   LLDB_INSTRUMENT_VA(this);
 
   if (TargetSP target_sp = GetSP())
-    return ConstString(target_sp->GetLabel().data()).AsCString(nullptr);
+    return ConstString(target_sp->GetLabel()).AsCString(nullptr);
   return nullptr;
 }
 
@@ -1833,6 +1877,96 @@ lldb::SBSymbolContextList SBTarget::FindGlobalFunctions(const char *name,
     }
   }
   return sb_sc_list;
+}
+
+lldb::SBType SBTarget::FindExpressionTypeForLanguage(
+    const char *typename_cstr, lldb::LanguageType language, SBError &sb_error) {
+  LLDB_INSTRUMENT_VA(this, typename_cstr, language, sb_error);
+  sb_error.Clear();
+
+  TargetSP target_sp = GetSP();
+  if (!target_sp) {
+    sb_error.SetErrorString("no target.");
+    return {};
+  }
+
+  if (!typename_cstr || !typename_cstr[0]) {
+    sb_error.SetErrorString("empty type name for search.");
+    return {};
+  }
+
+  if (language == eLanguageTypeUnknown) {
+    sb_error.SetErrorString("eLanguageTypeUnknown can't define expression "
+                            "types.");
+    return {};
+  }
+
+  PersistentExpressionState *persistent =
+      target_sp->GetPersistentExpressionStateForLanguage(language);
+
+  if (!persistent) {
+    sb_error.SetErrorString(
+        llvm::formatv("language {0} does not support expression defined types",
+                      language)
+            .str()
+            .c_str());
+    return {};
+  }
+
+  ConstString const_typename(typename_cstr);
+  std::optional<CompilerType> type_op =
+      persistent->GetCompilerTypeFromPersistentDecl(const_typename);
+  if (type_op && (*type_op)) {
+    return SBType(*type_op);
+  }
+  sb_error.SetErrorString(
+      llvm::formatv("no type {0} found in expression types for language {1}",
+                    typename_cstr, language)
+          .str()
+          .c_str());
+  return {};
+}
+
+lldb::SBValue
+SBTarget::FindExpressionVariableForLanguage(const char *varname_cstr,
+                                            lldb::LanguageType language) {
+  LLDB_INSTRUMENT_VA(this, varname_cstr, language);
+  TargetSP target_sp = GetSP();
+  if (!target_sp)
+    return ValueObjectConstResult::Create(
+        nullptr,
+        Status::FromErrorStringWithFormatv(
+            "no variable {0} found for language {1}", varname_cstr, language));
+
+  if (!varname_cstr || !varname_cstr[0])
+    return ValueObjectConstResult::Create(
+        target_sp.get(),
+        Status::FromErrorString("empty variable name for search."));
+
+  if (language == eLanguageTypeUnknown)
+    return ValueObjectConstResult::Create(
+        nullptr, Status::FromErrorString("eLanguageTypeUnknown doesn't support "
+                                         "expression variables."));
+
+  PersistentExpressionState *persistent =
+      target_sp->GetPersistentExpressionStateForLanguage(language);
+  if (!persistent) {
+    return ValueObjectConstResult::Create(
+        target_sp.get(),
+        Status::FromErrorStringWithFormatv(
+            "language: {0} doesn't support expression variables.", language));
+  }
+
+  ConstString const_varname(varname_cstr);
+  lldb::ExpressionVariableSP expr_var_sp =
+      persistent->GetVariable(const_varname);
+  if (expr_var_sp)
+    return expr_var_sp->GetValueObject();
+
+  return ValueObjectConstResult::Create(
+      target_sp.get(),
+      Status::FromErrorStringWithFormatv(
+          "no variable {0} found for language {1}", varname_cstr, language));
 }
 
 lldb::SBType SBTarget::FindFirstType(const char *typename_cstr) {

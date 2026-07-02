@@ -35,6 +35,14 @@ void invalid_index_types() {
   // expected-error@*:* {{static assertion failed: extents::index_type must be a signed or unsigned integer type}}
   [[maybe_unused]] std::extents<wchar_t, L'*'> ewc;
 #endif
+  // cv-qualified IndexType is not a signed/unsigned integer type per
+  // [basic.fundamental]/p1-2 and [basic.type.qualifier].
+  // expected-error@*:* {{static assertion failed: extents::index_type must be a signed or unsigned integer type}}
+  [[maybe_unused]] std::extents<const int, 1> eci;
+  // expected-error@*:* {{static assertion failed: extents::index_type must be a signed or unsigned integer type}}
+  [[maybe_unused]] std::extents<volatile int, 1> evi;
+  // expected-error@*:* {{static assertion failed: extents::index_type must be a signed or unsigned integer type}}
+  [[maybe_unused]] std::extents<const volatile unsigned, 1> ecvu;
 }
 
 void invalid_extent_values() {

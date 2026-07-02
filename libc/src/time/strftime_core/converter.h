@@ -1,9 +1,14 @@
-//===-- Format specifier converter for strftime -----------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Format specifier converter for strftime.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIBC_SRC_STDIO_STRFTIME_CORE_CONVERTER_H
@@ -12,18 +17,22 @@
 #include "hdr/types/struct_tm.h"
 #include "src/__support/macros/config.h"
 #include "src/stdio/printf_core/writer.h"
+#include "src/time/strftime_core/composite_converter.h"
 #include "src/time/strftime_core/core_structs.h"
-
-#include "composite_converter.h"
-#include "num_converter.h"
-#include "str_converter.h"
+#include "src/time/strftime_core/num_converter.h"
+#include "src/time/strftime_core/str_converter.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace strftime_core {
 
-// convert will call a conversion function to convert the FormatSection into
-// its string representation, and then that will write the result to the
-// writer.
+/// Converts a format section and writes it to the writer.
+///
+/// \tparam write_mode The write mode for the writer.
+/// \param writer The writer to write the output to.
+/// \param to_conv The format section to convert.
+/// \param timeptr Pointer to the tm structure.
+/// \return Number of characters written on success, or a negative error code on
+/// failure.
 template <printf_core::WriteMode write_mode>
 int convert(printf_core::Writer<write_mode> *writer,
             const FormatSection &to_conv, const tm *timeptr) {
@@ -66,6 +75,10 @@ int convert(printf_core::Writer<write_mode> *writer,
   case 'y': // Year of the Century [00-99]
   case 'Y': // Full year
     return convert_int(writer, to_conv, timeptr);
+  case 'z': // Timezone offset (+/-hhmm) (num conv)
+    if (timeptr->tm_isdst < 0)
+      return 0;
+    return convert_int(writer, to_conv, timeptr);
 
     // string conversions
   case 'a': // Abbreviated weekday name
@@ -74,6 +87,11 @@ int convert(printf_core::Writer<write_mode> *writer,
   case 'B': // Full month name
   case 'h': // same as %b
   case 'p': // AM/PM designation
+    return convert_str(writer, to_conv, timeptr);
+
+  case 'Z': // Timezone name (string conv)
+    if (timeptr->tm_isdst < 0)
+      return 0;
     return convert_str(writer, to_conv, timeptr);
 
     // composite conversions
@@ -86,17 +104,9 @@ int convert(printf_core::Writer<write_mode> *writer,
   case 'x': // locale specified date
   case 'X': // locale specified time
     return convert_composite(writer, to_conv, timeptr);
-
-    // timezone conversions
-  case 'z': // Timezone offset (+/-hhmm) (num conv)
-  case 'Z': // Timezone name (string conv)
-    // the standard says if no time zone is determinable, write no characters.
-    // Leave this here until time zones are implemented.
-    return 0;
   default:
     return writer->write(to_conv.raw_string);
   }
-  return 0;
 }
 
 } // namespace strftime_core

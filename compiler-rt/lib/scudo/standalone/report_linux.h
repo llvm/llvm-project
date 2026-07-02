@@ -21,6 +21,10 @@ namespace scudo {
 // hold the requested size on an out-of-memory error, 0 otherwise.
 void NORETURN reportMapError(uptr SizeIfOOM = 0);
 
+// Report a fatal error when a map call using a fixed address doesn't
+// return the requested address.
+void NORETURN reportMapFixedError(uptr ExpectedAddr, uptr RequestedAddr);
+
 // Report a fatal error when an unmap call fails.
 void NORETURN reportUnmapError(uptr Addr, uptr Size);
 

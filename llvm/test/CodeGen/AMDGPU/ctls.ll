@@ -5,6 +5,7 @@
 declare i32 @llvm.ctlz.i32(i32, i1)
 declare i64 @llvm.ctlz.i64(i64, i1)
 declare i32 @llvm.amdgcn.sffbh.i32(i32)
+declare i32 @llvm.umin.i32(i32, i32)
 
 ; Test that ctls(x) is lowered to umin(ffbh_i32(x), bitwidth) - 1
 ; ctls is formed by the DAG combiner from: ctlz(x ^ ashr(x, 31)) - 1
@@ -85,8 +86,8 @@ define i32 @ctls_i32_xor_commuted(i32 %x) {
   ret i32 %d
 }
 
-define i32 @ctls_i32_zero_undef(i32 %x) {
-; GFX6-LABEL: ctls_i32_zero_undef:
+define i32 @ctls_i32_zero_poison(i32 %x) {
+; GFX6-LABEL: ctls_i32_zero_poison:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-NEXT:    v_ffbh_i32_e32 v0, v0
@@ -94,7 +95,7 @@ define i32 @ctls_i32_zero_undef(i32 %x) {
 ; GFX6-NEXT:    v_add_i32_e32 v0, vcc, -1, v0
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-LABEL: ctls_i32_zero_undef:
+; GFX11-LABEL: ctls_i32_zero_poison:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_cls_i32_e32 v0, v0
@@ -104,7 +105,7 @@ define i32 @ctls_i32_zero_undef(i32 %x) {
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %a = ashr i32 %x, 31
   %b = xor i32 %x, %a
-  %c = call i32 @llvm.ctlz.i32(i32 %b, i1 true)  ; zero_undef = true
+  %c = call i32 @llvm.ctlz.i32(i32 %b, i1 true)  ; zero_poison = true
   %d = sub i32 %c, 1
   ret i32 %d
 }
@@ -138,6 +139,31 @@ define i32 @ctls_i32_known_mixed_bits(i32 %x) {
   %c = call i32 @llvm.ctlz.i32(i32 %b, i1 false)
   %d = sub i32 %c, 1
   ret i32 %d
+}
+
+; Only bit 0 is known set; the high bits are unknown so x may be all-ones.
+; The umin clamp must be preserved (sffbh(-1) = -1 must clamp to bitwidth).
+define i32 @ctls_i32_maybe_all_ones(i32 %x) {
+; GFX6-LABEL: ctls_i32_maybe_all_ones:
+; GFX6:       ; %bb.0:
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    v_or_b32_e32 v0, 1, v0
+; GFX6-NEXT:    v_ffbh_i32_e32 v0, v0
+; GFX6-NEXT:    v_min_u32_e32 v0, 32, v0
+; GFX6-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: ctls_i32_maybe_all_ones:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_or_b32_e32 v0, 1, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    v_cls_i32_e32 v0, v0
+; GFX11-NEXT:    v_min_u32_e32 v0, 32, v0
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %nz = or i32 %x, 1
+  %sffbh = call i32 @llvm.amdgcn.sffbh.i32(i32 %nz)
+  %r = call i32 @llvm.umin.i32(i32 %sffbh, i32 32)
+  ret i32 %r
 }
 
 ; test for i64 CTLS.
@@ -362,9 +388,9 @@ define <2 x i32> @ctls_v2i32_known_mixed_bits(<2 x i32> %x) {
   ret <2 x i32> %d
 }
 
-; Vector with ctlz_zero_undef.
-define <2 x i32> @ctls_v2i32_zero_undef(<2 x i32> %x) {
-; GFX6-LABEL: ctls_v2i32_zero_undef:
+; Vector with ctlz_zero_poison.
+define <2 x i32> @ctls_v2i32_zero_poison(<2 x i32> %x) {
+; GFX6-LABEL: ctls_v2i32_zero_poison:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-NEXT:    v_ashrrev_i32_e32 v2, 31, v1
@@ -377,7 +403,7 @@ define <2 x i32> @ctls_v2i32_zero_undef(<2 x i32> %x) {
 ; GFX6-NEXT:    v_add_i32_e32 v1, vcc, -1, v1
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-LABEL: ctls_v2i32_zero_undef:
+; GFX11-LABEL: ctls_v2i32_zero_poison:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_ashrrev_i32_e32 v2, 31, v0

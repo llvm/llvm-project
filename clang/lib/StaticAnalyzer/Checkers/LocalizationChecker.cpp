@@ -1031,7 +1031,7 @@ class EmptyLocalizationContextChecker
     BugReporter &BR;
     AnalysisManager &Mgr;
     const CheckerBase *Checker;
-    LocationOrAnalysisDeclContext DCtx;
+    StackFrameOrAnalysisDeclContext DCtx;
 
   public:
     MethodCrawler(const ObjCMethodDecl *InMD, BugReporter &InBR,

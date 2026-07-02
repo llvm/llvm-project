@@ -53,7 +53,7 @@ public:
     TestPoint,
     /// An origin that escapes the function scope (e.g., via return).
     OriginEscapes,
-    /// An origin is invalidated (e.g. vector resized).
+    /// An origin is invalidated (e.g. vector resized, `delete` called).
     InvalidateOrigin,
     /// All loans of an origin are cleared.
     KillOrigin,
@@ -349,6 +349,10 @@ public:
   void addBlockFacts(const CFGBlock *B, llvm::ArrayRef<Fact *> NewFacts) {
     if (!NewFacts.empty())
       BlockToFacts[B->getBlockID()].assign(NewFacts.begin(), NewFacts.end());
+  }
+
+  void appendBlockFact(const CFGBlock *B, const Fact *F) {
+    BlockToFacts[B->getBlockID()].push_back(F);
   }
 
   template <typename FactType, typename... Args>

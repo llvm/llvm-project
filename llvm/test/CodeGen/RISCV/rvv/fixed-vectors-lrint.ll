@@ -598,13 +598,14 @@ define <32 x iXLen> @lrint_v32bf16(<32 x bfloat> %x) {
 ; RV64-i64-LABEL: lrint_v32bf16:
 ; RV64-i64:       # %bb.0:
 ; RV64-i64-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
-; RV64-i64-NEXT:    vfwcvtbf16.f.f.v v16, v8
+; RV64-i64-NEXT:    vmv4r.v v16, v8
+; RV64-i64-NEXT:    vfwcvtbf16.f.f.v v20, v16
+; RV64-i64-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
+; RV64-i64-NEXT:    vfwcvt.x.f.v v8, v20
 ; RV64-i64-NEXT:    vsetivli zero, 16, e16, m4, ta, ma
-; RV64-i64-NEXT:    vslidedown.vi v20, v8, 16
-; RV64-i64-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
-; RV64-i64-NEXT:    vfwcvt.x.f.v v8, v16
-; RV64-i64-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; RV64-i64-NEXT:    vfwcvtbf16.f.f.v v24, v20
+; RV64-i64-NEXT:    vslidedown.vi v16, v16, 16
+; RV64-i64-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
+; RV64-i64-NEXT:    vfwcvtbf16.f.f.v v24, v16
 ; RV64-i64-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; RV64-i64-NEXT:    vfwcvt.x.f.v v16, v24
 ; RV64-i64-NEXT:    ret

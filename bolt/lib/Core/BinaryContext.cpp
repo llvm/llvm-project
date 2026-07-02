@@ -35,6 +35,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Regex.h"
+#include "llvm/Support/ScopedPrinter.h"
 #include <algorithm>
 #include <functional>
 #include <iterator>
@@ -157,9 +158,6 @@ BinaryContext::BinaryContext(std::unique_ptr<MCContext> Ctx,
       STI(std::move(STI)), InstPrinter(std::move(InstPrinter)),
       MIA(std::move(MIA)), MIB(std::move(MIB)), MRI(std::move(MRI)),
       DisAsm(std::move(DisAsm)), Logger(Logger), InitialDynoStats(isAArch64()) {
-  // createMCAsmInfo stored a pointer to a local MCTargetOptions in MCAsmInfo.
-  // Update it to point to our member that will outlive MCAsmInfo.
-  const_cast<MCAsmInfo *>(this->AsmInfo.get())->setTargetOptions(MCOptions);
   RegularPageSize = isAArch64() ? RegularPageSizeAArch64 : RegularPageSizeX86;
   PageAlign = opts::NoHugePages ? RegularPageSize : HugePageSize;
 }
@@ -197,8 +195,9 @@ Expected<std::unique_ptr<BinaryContext>> BinaryContext::createBinaryContext(
     ArchName = "aarch64";
     FeaturesStr = "+all";
     break;
-  case llvm::Triple::riscv64: {
-    ArchName = "riscv64";
+  case llvm::Triple::riscv64:
+  case llvm::Triple::riscv32: {
+    ArchName = TheTriple.getArchName();
     if (!Features)
       return createFatalBOLTError("RISCV target needs SubtargetFeatures");
     // We rely on relaxation for some transformations (e.g., promoting all calls
@@ -229,8 +228,9 @@ Expected<std::unique_ptr<BinaryContext>> BinaryContext::createBinaryContext(
         make_error_code(std::errc::not_supported),
         Twine("BOLT-ERROR: no register info for target ", TripleName));
 
-  // Set up disassembler.
-  MCTargetOptions MCOptions;
+  // Set up disassembler. The MCAsmInfo holds a reference to MCTargetOptions, so
+  // make it static to outlive the AsmInfo.
+  static const MCTargetOptions MCOptions;
   std::unique_ptr<MCAsmInfo> AsmInfo(
       TheTarget->createMCAsmInfo(*MRI, TheTriple, MCOptions));
   if (!AsmInfo)
@@ -257,7 +257,7 @@ Expected<std::unique_ptr<BinaryContext>> BinaryContext::createBinaryContext(
         Twine("BOLT-ERROR: no instruction info for target ", TripleName));
 
   std::unique_ptr<MCContext> Ctx(
-      new MCContext(TheTriple, AsmInfo.get(), MRI.get(), STI.get()));
+      new MCContext(TheTriple, *AsmInfo, *MRI, *STI));
   std::unique_ptr<MCObjectFileInfo> MOFI(
       TheTarget->createMCObjectFileInfo(*Ctx, IsPIC));
   Ctx->setObjectFileInfo(MOFI.get());
@@ -2462,11 +2462,11 @@ void BinaryContext::addRelocation(uint64_t Address, MCSymbol *Symbol,
 
 void BinaryContext::addDynamicRelocation(uint64_t Address, MCSymbol *Symbol,
                                          uint32_t Type, uint64_t Addend,
-                                         uint64_t Value) {
+                                         uint64_t Value, bool IsRELR) {
   ErrorOr<BinarySection &> Section = getSectionForAddress(Address);
   assert(Section && "cannot find section for address");
   Section->addDynamicRelocation(Address - Section->getAddress(), Symbol, Type,
-                                Addend, Value);
+                                Addend, Value, IsRELR);
 }
 
 bool BinaryContext::removeRelocationAt(uint64_t Address) {

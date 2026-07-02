@@ -242,13 +242,9 @@ StackMaps::parseOperand(MachineInstr::const_mop_iterator MOI,
       } else {
         // ConstPool is intentionally a MapVector of 'uint64_t's (as
         // opposed to 'int64_t's).  We should never be in a situation
-        // where we have to insert either the tombstone or the empty
-        // keys into a map, and for a DenseMap<uint64_t, T> these are
-        // (uint64_t)0 and (uint64_t)-1.  They can be and are
+        // where we have to insert the empty key into a map, and for a
+        // DenseMap<uint64_t, T> this is (uint64_t)-1.  It can be and is
         // represented using 32 bit integers.
-        assert((uint64_t)Imm != DenseMapInfo<uint64_t>::getEmptyKey() &&
-               (uint64_t)Imm != DenseMapInfo<uint64_t>::getTombstoneKey() &&
-               "empty and tombstone keys should fit in 32 bits!");
         auto Result = ConstPool.insert(std::make_pair(Imm, Imm));
         Locs.emplace_back(Location::ConstantIndex, sizeof(int64_t), 0,
                           Result.first - ConstPool.begin());

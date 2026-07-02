@@ -146,7 +146,7 @@ public:
   ///    will be determined by the address size specified in the constructor.
   void AppendAddress(lldb::addr_t addr);
 
-  /// Append a bytes to the end of the owned data.
+  /// Append bytes to the end of the owned data.
   ///
   /// Append the bytes contained in the string reference. This function will
   /// not append a NULL termination character for a C string. Use the
@@ -156,7 +156,7 @@ public:
   ///     A string reference that contains bytes to append.
   void AppendData(llvm::StringRef data);
 
-  /// Append a bytes to the end of the owned data.
+  /// Append bytes to the end of the owned data.
   ///
   /// Append the bytes contained in the array reference.
   ///

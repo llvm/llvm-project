@@ -53,6 +53,22 @@ define i32 @test_ctpop_poison(i32 %a) {
   ret i32 %res
 }
 
+define i8 @clmul() {
+; CHECK-LABEL: @clmul(
+; CHECK-NEXT:    ret i8 84
+;
+  %clmul = call i8 @llvm.clmul.i8(i8 7, i8 28)
+  ret i8 %clmul
+}
+
+define i8 @clmul_poison() {
+; CHECK-LABEL: @clmul_poison(
+; CHECK-NEXT:    ret i8 0
+;
+  %clmul = call i8 @llvm.clmul.i8(i8 3, i8 poison)
+  ret i8 %clmul
+}
+
 define void @pow_poison(i16 %arg_int,float %arg_flt, ptr %P) {
 ; CHECK-LABEL: @pow_poison(
 ; CHECK-NEXT:    store volatile float poison, ptr [[P:%.*]], align 4

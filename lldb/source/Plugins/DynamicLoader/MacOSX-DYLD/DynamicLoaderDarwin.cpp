@@ -154,11 +154,11 @@ ModuleSP DynamicLoaderDarwin::FindTargetModuleForImageInfo(
 
       else
         image_info = HostInfo::GetSharedCacheImageInfo(
-            module_spec.GetFileSpec().GetPathAsConstString(), sc_uuid, sc_mode);
+            ConstString(module_spec.GetFileSpec().GetPath()), sc_uuid, sc_mode);
     } else {
       // Fall back to looking lldb's own shared cache by filename
       image_info = HostInfo::GetSharedCacheImageInfo(
-          module_spec.GetFileSpec().GetPathAsConstString(), sc_mode);
+          ConstString(module_spec.GetFileSpec().GetPath()), sc_mode);
     }
 
     // If we found it and it has the correct UUID, let's proceed with
@@ -177,7 +177,8 @@ ModuleSP DynamicLoaderDarwin::FindTargetModuleForImageInfo(
   // added to the target, don't let it be called for every one.
   if (!module_sp || module_sp->GetObjectFile() == nullptr) {
     llvm::Expected<ModuleSP> module_sp_or_err = m_process->ReadModuleFromMemory(
-        image_info.file_spec, image_info.address);
+        image_info.file_spec, image_info.address,
+        image_info.mh_and_load_cmd_size);
     if (auto err = module_sp_or_err.takeError()) {
       LLDB_LOG_ERROR(GetLog(LLDBLog::DynamicLoader), std::move(err),
                      "Failed to load module from memory: {0}");
@@ -275,6 +276,7 @@ void DynamicLoaderDarwin::UnloadAllImages() {
 bool DynamicLoaderDarwin::UpdateImageLoadAddress(Module *module,
                                                  ImageInfo &info) {
   bool changed = false;
+  Log *log = GetLog(LLDBLog::DynamicLoader);
   if (module) {
     ObjectFile *image_object_file = module->GetObjectFile();
     if (image_object_file) {
@@ -304,6 +306,23 @@ bool DynamicLoaderDarwin::UpdateImageLoadAddress(Module *module,
               // all other sections.
               const bool warn_multiple =
                   section_sp->GetName() != g_section_name_LINKEDIT;
+
+              // If a segment was eliminated for the in-memory image,
+              // don't map it into lldb's target section load list.
+              if (info.segments[i].vmsize == 0) {
+                LLDB_LOG(log, "{0}: Omitting zero-size segment {1}",
+                         info.file_spec.GetFilename(),
+                         info.segments[i].name.AsCString(""));
+                continue;
+              }
+
+              if (info.segments[i].vmsize != section_sp->GetByteSize())
+                LLDB_LOG(log,
+                         "{0}: In-memory segment size for {1} is {2:x}"
+                         " but file segment size is {3:x}",
+                         info.file_spec.GetFilename(),
+                         info.segments[i].name.AsCString(""),
+                         info.segments[i].vmsize, section_sp->GetByteSize());
 
               changed = m_process->GetTarget().SetSectionLoadAddress(
                   section_sp, new_section_load_addr, warn_multiple);
@@ -427,6 +446,10 @@ bool DynamicLoaderDarwin::JSONImageInformationIntoImageInfo(
         mh->GetValueForKey("cpusubtype")->GetUnsignedIntegerValue();
     image_infos[i].header.filetype =
         mh->GetValueForKey("filetype")->GetUnsignedIntegerValue();
+    if (mh->HasKey("sizeof_mh_and_loadcmds"))
+      image_infos[i].mh_and_load_cmd_size =
+          mh->GetValueForKey("sizeof_mh_and_loadcmds")
+              ->GetUnsignedIntegerValue();
 
     if (image->HasKey("min_version_os_name")) {
       std::string os_name =
@@ -896,7 +919,7 @@ void DynamicLoaderDarwin::ImageInfo::PutToLog(Log *log) const {
   if (!log)
     return;
   if (address == LLDB_INVALID_ADDRESS) {
-    LLDB_LOG(log, "uuid={1} path='{2}' (UNLOADED)", uuid.GetAsString(),
+    LLDB_LOG(log, "uuid={} path='{}' (UNLOADED)", uuid.GetAsString(),
              file_spec.GetPath());
   } else {
     LLDB_LOG(log, "address={0:x+16} uuid={1} path='{2}'", address,

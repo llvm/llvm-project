@@ -31,6 +31,7 @@ write_cmake_config("Config") {
     "CLANG_ENABLE_CIR=",
     "CLANG_SYSTEMZ_DEFAULT_ARCH=z10",
     "PPC_LINUX_DEFAULT_IEEELONGDOUBLE=",
+    "CLANG_USE_EXPERIMENTAL_CONST_INTERP=",
   ]
 
   if (clang_enable_static_analyzer) {

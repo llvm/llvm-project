@@ -3,18 +3,11 @@
 ; RUN: opt -passes='gvn<memoryssa>' -S < %s | FileCheck --check-prefixes=CHECK,MSSA %s
 
 define i32 @test1(ptr %p, ptr %q) {
-; MDEP-LABEL: define i32 @test1(
-; MDEP-SAME: ptr [[P:%.*]], ptr [[Q:%.*]]) {
-; MDEP-NEXT:    [[A:%.*]] = call i32 @foo(ptr [[P]]), !tbaa [[C_TBAA0:![0-9]+]]
-; MDEP-NEXT:    [[C:%.*]] = add i32 [[A]], [[A]]
-; MDEP-NEXT:    ret i32 [[C]]
-;
-; MSSA-LABEL: define i32 @test1(
-; MSSA-SAME: ptr [[P:%.*]], ptr [[Q:%.*]]) {
-; MSSA-NEXT:    [[A:%.*]] = call i32 @foo(ptr [[P]]), !tbaa [[C_TBAA0:![0-9]+]]
-; MSSA-NEXT:    [[B:%.*]] = call i32 @foo(ptr [[P]])
-; MSSA-NEXT:    [[C:%.*]] = add i32 [[A]], [[B]]
-; MSSA-NEXT:    ret i32 [[C]]
+; CHECK-LABEL: define i32 @test1(
+; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]]) {
+; CHECK-NEXT:    [[A:%.*]] = call i32 @foo(ptr [[P]]), !tbaa [[C_TBAA0:![0-9]+]]
+; CHECK-NEXT:    [[C:%.*]] = add i32 [[A]], [[A]]
+; CHECK-NEXT:    ret i32 [[C]]
 ;
   %a = call i32 @foo(ptr %p), !tbaa !0
   %b = call i32 @foo(ptr %p)
@@ -23,18 +16,11 @@ define i32 @test1(ptr %p, ptr %q) {
 }
 
 define i32 @test2(ptr %p, ptr %q) {
-; MDEP-LABEL: define i32 @test2(
-; MDEP-SAME: ptr [[P:%.*]], ptr [[Q:%.*]]) {
-; MDEP-NEXT:    [[A:%.*]] = call i32 @foo(ptr [[P]]), !tbaa [[C_TBAA0]]
-; MDEP-NEXT:    [[C:%.*]] = add i32 [[A]], [[A]]
-; MDEP-NEXT:    ret i32 [[C]]
-;
-; MSSA-LABEL: define i32 @test2(
-; MSSA-SAME: ptr [[P:%.*]], ptr [[Q:%.*]]) {
-; MSSA-NEXT:    [[A:%.*]] = call i32 @foo(ptr [[P]]), !tbaa [[C_TBAA0]]
-; MSSA-NEXT:    [[B:%.*]] = call i32 @foo(ptr [[P]]), !tbaa [[C_TBAA0]]
-; MSSA-NEXT:    [[C:%.*]] = add i32 [[A]], [[B]]
-; MSSA-NEXT:    ret i32 [[C]]
+; CHECK-LABEL: define i32 @test2(
+; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]]) {
+; CHECK-NEXT:    [[A:%.*]] = call i32 @foo(ptr [[P]]), !tbaa [[C_TBAA0]]
+; CHECK-NEXT:    [[C:%.*]] = add i32 [[A]], [[A]]
+; CHECK-NEXT:    ret i32 [[C]]
 ;
   %a = call i32 @foo(ptr %p), !tbaa !0
   %b = call i32 @foo(ptr %p), !tbaa !0
@@ -43,18 +29,11 @@ define i32 @test2(ptr %p, ptr %q) {
 }
 
 define i32 @test3(ptr %p, ptr %q) {
-; MDEP-LABEL: define i32 @test3(
-; MDEP-SAME: ptr [[P:%.*]], ptr [[Q:%.*]]) {
-; MDEP-NEXT:    [[A:%.*]] = call i32 @foo(ptr [[P]]), !tbaa [[B_TBAA4:![0-9]+]]
-; MDEP-NEXT:    [[C:%.*]] = add i32 [[A]], [[A]]
-; MDEP-NEXT:    ret i32 [[C]]
-;
-; MSSA-LABEL: define i32 @test3(
-; MSSA-SAME: ptr [[P:%.*]], ptr [[Q:%.*]]) {
-; MSSA-NEXT:    [[A:%.*]] = call i32 @foo(ptr [[P]]), !tbaa [[B_TBAA4:![0-9]+]]
-; MSSA-NEXT:    [[B:%.*]] = call i32 @foo(ptr [[P]]), !tbaa [[B_TBAA4]]
-; MSSA-NEXT:    [[C:%.*]] = add i32 [[A]], [[B]]
-; MSSA-NEXT:    ret i32 [[C]]
+; CHECK-LABEL: define i32 @test3(
+; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]]) {
+; CHECK-NEXT:    [[A:%.*]] = call i32 @foo(ptr [[P]]), !tbaa [[B_TBAA4:![0-9]+]]
+; CHECK-NEXT:    [[C:%.*]] = add i32 [[A]], [[A]]
+; CHECK-NEXT:    ret i32 [[C]]
 ;
   %a = call i32 @foo(ptr %p), !tbaa !3
   %b = call i32 @foo(ptr %p), !tbaa !3
@@ -63,18 +42,11 @@ define i32 @test3(ptr %p, ptr %q) {
 }
 
 define i32 @test4(ptr %p, ptr %q) {
-; MDEP-LABEL: define i32 @test4(
-; MDEP-SAME: ptr [[P:%.*]], ptr [[Q:%.*]]) {
-; MDEP-NEXT:    [[A:%.*]] = call i32 @foo(ptr [[P]]), !tbaa [[A_TBAA6:![0-9]+]]
-; MDEP-NEXT:    [[C:%.*]] = add i32 [[A]], [[A]]
-; MDEP-NEXT:    ret i32 [[C]]
-;
-; MSSA-LABEL: define i32 @test4(
-; MSSA-SAME: ptr [[P:%.*]], ptr [[Q:%.*]]) {
-; MSSA-NEXT:    [[A:%.*]] = call i32 @foo(ptr [[P]]), !tbaa [[A_TBAA6:![0-9]+]]
-; MSSA-NEXT:    [[B:%.*]] = call i32 @foo(ptr [[P]]), !tbaa [[C_TBAA0]]
-; MSSA-NEXT:    [[C:%.*]] = add i32 [[A]], [[B]]
-; MSSA-NEXT:    ret i32 [[C]]
+; CHECK-LABEL: define i32 @test4(
+; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]]) {
+; CHECK-NEXT:    [[A:%.*]] = call i32 @foo(ptr [[P]]), !tbaa [[A_TBAA6:![0-9]+]]
+; CHECK-NEXT:    [[C:%.*]] = add i32 [[A]], [[A]]
+; CHECK-NEXT:    ret i32 [[C]]
 ;
   %a = call i32 @foo(ptr %p), !tbaa !1
   %b = call i32 @foo(ptr %p), !tbaa !0
@@ -83,18 +55,11 @@ define i32 @test4(ptr %p, ptr %q) {
 }
 
 define i32 @test5(ptr %p, ptr %q) {
-; MDEP-LABEL: define i32 @test5(
-; MDEP-SAME: ptr [[P:%.*]], ptr [[Q:%.*]]) {
-; MDEP-NEXT:    [[A:%.*]] = call i32 @foo(ptr [[P]]), !tbaa [[C_TBAA0]]
-; MDEP-NEXT:    [[C:%.*]] = add i32 [[A]], [[A]]
-; MDEP-NEXT:    ret i32 [[C]]
-;
-; MSSA-LABEL: define i32 @test5(
-; MSSA-SAME: ptr [[P:%.*]], ptr [[Q:%.*]]) {
-; MSSA-NEXT:    [[A:%.*]] = call i32 @foo(ptr [[P]]), !tbaa [[C_TBAA0]]
-; MSSA-NEXT:    [[B:%.*]] = call i32 @foo(ptr [[P]]), !tbaa [[A_TBAA6]]
-; MSSA-NEXT:    [[C:%.*]] = add i32 [[A]], [[B]]
-; MSSA-NEXT:    ret i32 [[C]]
+; CHECK-LABEL: define i32 @test5(
+; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]]) {
+; CHECK-NEXT:    [[A:%.*]] = call i32 @foo(ptr [[P]]), !tbaa [[C_TBAA0]]
+; CHECK-NEXT:    [[C:%.*]] = add i32 [[A]], [[A]]
+; CHECK-NEXT:    ret i32 [[C]]
 ;
   %a = call i32 @foo(ptr %p), !tbaa !0
   %b = call i32 @foo(ptr %p), !tbaa !1
@@ -103,18 +68,11 @@ define i32 @test5(ptr %p, ptr %q) {
 }
 
 define i32 @test6(ptr %p, ptr %q) {
-; MDEP-LABEL: define i32 @test6(
-; MDEP-SAME: ptr [[P:%.*]], ptr [[Q:%.*]]) {
-; MDEP-NEXT:    [[A:%.*]] = call i32 @foo(ptr [[P]]), !tbaa [[C_TBAA0]]
-; MDEP-NEXT:    [[C:%.*]] = add i32 [[A]], [[A]]
-; MDEP-NEXT:    ret i32 [[C]]
-;
-; MSSA-LABEL: define i32 @test6(
-; MSSA-SAME: ptr [[P:%.*]], ptr [[Q:%.*]]) {
-; MSSA-NEXT:    [[A:%.*]] = call i32 @foo(ptr [[P]]), !tbaa [[C_TBAA0]]
-; MSSA-NEXT:    [[B:%.*]] = call i32 @foo(ptr [[P]]), !tbaa [[B_TBAA4]]
-; MSSA-NEXT:    [[C:%.*]] = add i32 [[A]], [[B]]
-; MSSA-NEXT:    ret i32 [[C]]
+; CHECK-LABEL: define i32 @test6(
+; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]]) {
+; CHECK-NEXT:    [[A:%.*]] = call i32 @foo(ptr [[P]]), !tbaa [[C_TBAA0]]
+; CHECK-NEXT:    [[C:%.*]] = add i32 [[A]], [[A]]
+; CHECK-NEXT:    ret i32 [[C]]
 ;
   %a = call i32 @foo(ptr %p), !tbaa !0
   %b = call i32 @foo(ptr %p), !tbaa !3
@@ -123,18 +81,11 @@ define i32 @test6(ptr %p, ptr %q) {
 }
 
 define i32 @test7(ptr %p, ptr %q) {
-; MDEP-LABEL: define i32 @test7(
-; MDEP-SAME: ptr [[P:%.*]], ptr [[Q:%.*]]) {
-; MDEP-NEXT:    [[A:%.*]] = call i32 @foo(ptr [[P]]), !tbaa [[SCALAR_TYPE_TBAA7:![0-9]+]]
-; MDEP-NEXT:    [[C:%.*]] = add i32 [[A]], [[A]]
-; MDEP-NEXT:    ret i32 [[C]]
-;
-; MSSA-LABEL: define i32 @test7(
-; MSSA-SAME: ptr [[P:%.*]], ptr [[Q:%.*]]) {
-; MSSA-NEXT:    [[A:%.*]] = call i32 @foo(ptr [[P]]), !tbaa [[SCALAR_TYPE_TBAA7:![0-9]+]]
-; MSSA-NEXT:    [[B:%.*]] = call i32 @foo(ptr [[P]]), !tbaa [[B_TBAA4]]
-; MSSA-NEXT:    [[C:%.*]] = add i32 [[A]], [[B]]
-; MSSA-NEXT:    ret i32 [[C]]
+; CHECK-LABEL: define i32 @test7(
+; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]]) {
+; CHECK-NEXT:    [[A:%.*]] = call i32 @foo(ptr [[P]]), !tbaa [[SCALAR_TYPE_TBAA7:![0-9]+]]
+; CHECK-NEXT:    [[C:%.*]] = add i32 [[A]], [[A]]
+; CHECK-NEXT:    ret i32 [[C]]
 ;
   %a = call i32 @foo(ptr %p), !tbaa !4
   %b = call i32 @foo(ptr %p), !tbaa !3
@@ -143,18 +94,10 @@ define i32 @test7(ptr %p, ptr %q) {
 }
 
 define i32 @test8(ptr %p, ptr %q) {
-; MDEP-LABEL: define i32 @test8(
-; MDEP-SAME: ptr [[P:%.*]], ptr [[Q:%.*]]) {
-; MDEP-NEXT:    store i32 15, ptr [[P]], align 4
-; MDEP-NEXT:    ret i32 0
-;
-; MSSA-LABEL: define i32 @test8(
-; MSSA-SAME: ptr [[P:%.*]], ptr [[Q:%.*]]) {
-; MSSA-NEXT:    [[A:%.*]] = load i32, ptr [[Q]], align 4, !tbaa [[NODE_TBAA10:![0-9]+]]
-; MSSA-NEXT:    store i32 15, ptr [[P]], align 4
-; MSSA-NEXT:    [[B:%.*]] = load i32, ptr [[Q]], align 4, !tbaa [[NODE_TBAA10]]
-; MSSA-NEXT:    [[C:%.*]] = sub i32 [[A]], [[B]]
-; MSSA-NEXT:    ret i32 [[C]]
+; CHECK-LABEL: define i32 @test8(
+; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]]) {
+; CHECK-NEXT:    store i32 15, ptr [[P]], align 4
+; CHECK-NEXT:    ret i32 0
 ;
 ; Since we know the location is invariant, we can forward the
 ; load across the potentially aliasing store.
@@ -167,18 +110,10 @@ define i32 @test8(ptr %p, ptr %q) {
 }
 
 define i32 @test9(ptr %p, ptr %q) {
-; MDEP-LABEL: define i32 @test9(
-; MDEP-SAME: ptr [[P:%.*]], ptr [[Q:%.*]]) {
-; MDEP-NEXT:    call void @clobber()
-; MDEP-NEXT:    ret i32 0
-;
-; MSSA-LABEL: define i32 @test9(
-; MSSA-SAME: ptr [[P:%.*]], ptr [[Q:%.*]]) {
-; MSSA-NEXT:    [[A:%.*]] = load i32, ptr [[Q]], align 4, !tbaa [[NODE_TBAA10]]
-; MSSA-NEXT:    call void @clobber()
-; MSSA-NEXT:    [[B:%.*]] = load i32, ptr [[Q]], align 4, !tbaa [[NODE_TBAA10]]
-; MSSA-NEXT:    [[C:%.*]] = sub i32 [[A]], [[B]]
-; MSSA-NEXT:    ret i32 [[C]]
+; CHECK-LABEL: define i32 @test9(
+; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]]) {
+; CHECK-NEXT:    call void @clobber()
+; CHECK-NEXT:    ret i32 0
 ;
 ; Since we know the location is invariant, we can forward the
 ; load across the potentially aliasing store (within the call).
@@ -193,18 +128,11 @@ define i32 @test9(ptr %p, ptr %q) {
 define i32 @test10(ptr %p, ptr %q) {
 ; If one access encloses the other, then the merged access is the enclosed one
 ; and not just the common final access type.
-; MDEP-LABEL: define i32 @test10(
-; MDEP-SAME: ptr [[P:%.*]], ptr [[Q:%.*]]) {
-; MDEP-NEXT:    [[A:%.*]] = call i32 @foo(ptr [[P]]), !tbaa [[INT_TBAA10:![0-9]+]]
-; MDEP-NEXT:    [[C:%.*]] = add i32 [[A]], [[A]]
-; MDEP-NEXT:    ret i32 [[C]]
-;
-; MSSA-LABEL: define i32 @test10(
-; MSSA-SAME: ptr [[P:%.*]], ptr [[Q:%.*]]) {
-; MSSA-NEXT:    [[A:%.*]] = call i32 @foo(ptr [[P]]), !tbaa [[INT_TBAA13:![0-9]+]]
-; MSSA-NEXT:    [[B:%.*]] = call i32 @foo(ptr [[P]]), !tbaa [[INT_TBAA17:![0-9]+]]
-; MSSA-NEXT:    [[C:%.*]] = add i32 [[A]], [[B]]
-; MSSA-NEXT:    ret i32 [[C]]
+; CHECK-LABEL: define i32 @test10(
+; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]]) {
+; CHECK-NEXT:    [[A:%.*]] = call i32 @foo(ptr [[P]]), !tbaa [[INT_TBAA10:![0-9]+]]
+; CHECK-NEXT:    [[C:%.*]] = add i32 [[A]], [[A]]
+; CHECK-NEXT:    ret i32 [[C]]
 ;
   %a = call i32 @foo(ptr %p), !tbaa !15  ; TAG_X_i
   %b = call i32 @foo(ptr %p), !tbaa !19  ; TAG_Y_x_i
@@ -238,40 +166,21 @@ declare i32 @foo(ptr) readonly
 !9 = !{!"yet another root"}
 !10 = !{!"node", !9, i64 1}
 ;.
-; MDEP: [[C_TBAA0]] = !{[[META1:![0-9]+]], [[META1]], i64 0}
-; MDEP: [[META1]] = !{!"C", [[META2:![0-9]+]]}
-; MDEP: [[META2]] = !{!"A", [[META3:![0-9]+]]}
-; MDEP: [[META3]] = !{!"tbaa root"}
-; MDEP: [[B_TBAA4]] = !{[[META5:![0-9]+]], [[META5]], i64 0}
-; MDEP: [[META5]] = !{!"B", [[META2]]}
-; MDEP: [[A_TBAA6]] = !{[[META2]], [[META2]], i64 0}
-; MDEP: [[SCALAR_TYPE_TBAA7]] = !{[[META8:![0-9]+]], [[META8]], i64 0}
-; MDEP: [[META8]] = !{!"scalar type", [[META9:![0-9]+]]}
-; MDEP: [[META9]] = !{!"another root"}
-; MDEP: [[INT_TBAA10]] = !{[[META11:![0-9]+]], [[META12:![0-9]+]], i64 0}
-; MDEP: [[META11]] = !{!"struct X", [[META12]], i64 0}
-; MDEP: [[META12]] = !{!"int", [[META13:![0-9]+]], i64 0}
-; MDEP: [[META13]] = !{!"char", [[META3]], i64 0}
-;.
-; MSSA: [[C_TBAA0]] = !{[[META1:![0-9]+]], [[META1]], i64 0}
-; MSSA: [[META1]] = !{!"C", [[META2:![0-9]+]]}
-; MSSA: [[META2]] = !{!"A", [[META3:![0-9]+]]}
-; MSSA: [[META3]] = !{!"tbaa root"}
-; MSSA: [[B_TBAA4]] = !{[[META5:![0-9]+]], [[META5]], i64 0}
-; MSSA: [[META5]] = !{!"B", [[META2]]}
-; MSSA: [[A_TBAA6]] = !{[[META2]], [[META2]], i64 0}
-; MSSA: [[SCALAR_TYPE_TBAA7]] = !{[[META8:![0-9]+]], [[META8]], i64 0}
-; MSSA: [[META8]] = !{!"scalar type", [[META9:![0-9]+]]}
-; MSSA: [[META9]] = !{!"another root"}
-; MSSA: [[NODE_TBAA10]] = !{[[META11:![0-9]+]], [[META11]], i64 0, i64 1}
-; MSSA: [[META11]] = !{!"node", [[META12:![0-9]+]]}
-; MSSA: [[META12]] = !{!"yet another root"}
-; MSSA: [[INT_TBAA13]] = !{[[META14:![0-9]+]], [[META15:![0-9]+]], i64 0}
-; MSSA: [[META14]] = !{!"struct X", [[META15]], i64 0}
-; MSSA: [[META15]] = !{!"int", [[META16:![0-9]+]], i64 0}
-; MSSA: [[META16]] = !{!"char", [[META3]], i64 0}
-; MSSA: [[INT_TBAA17]] = !{[[META18:![0-9]+]], [[META15]], i64 0}
-; MSSA: [[META18]] = !{!"struct Y", [[META14]], i64 0}
+; CHECK: [[C_TBAA0]] = !{[[META1:![0-9]+]], [[META1]], i64 0}
+; CHECK: [[META1]] = !{!"C", [[META2:![0-9]+]]}
+; CHECK: [[META2]] = !{!"A", [[META3:![0-9]+]]}
+; CHECK: [[META3]] = !{!"tbaa root"}
+; CHECK: [[B_TBAA4]] = !{[[META5:![0-9]+]], [[META5]], i64 0}
+; CHECK: [[META5]] = !{!"B", [[META2]]}
+; CHECK: [[A_TBAA6]] = !{[[META2]], [[META2]], i64 0}
+; CHECK: [[SCALAR_TYPE_TBAA7]] = !{[[META8:![0-9]+]], [[META8]], i64 0}
+; CHECK: [[META8]] = !{!"scalar type", [[META9:![0-9]+]]}
+; CHECK: [[META9]] = !{!"another root"}
+; CHECK: [[INT_TBAA10]] = !{[[META11:![0-9]+]], [[META12:![0-9]+]], i64 0}
+; CHECK: [[META11]] = !{!"struct X", [[META12]], i64 0}
+; CHECK: [[META12]] = !{!"int", [[META13:![0-9]+]], i64 0}
+; CHECK: [[META13]] = !{!"char", [[META3]], i64 0}
 ;.
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; CHECK: {{.*}}
+; MDEP: {{.*}}
+; MSSA: {{.*}}

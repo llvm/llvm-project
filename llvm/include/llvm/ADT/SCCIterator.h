@@ -25,6 +25,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/GraphTraits.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/iterator.h"
 #include <cassert>
@@ -32,8 +33,6 @@
 #include <iterator>
 #include <queue>
 #include <set>
-#include <unordered_map>
-#include <unordered_set>
 #include <vector>
 
 namespace llvm {
@@ -177,8 +176,7 @@ void scc_iterator<GraphT, GT>::DFSVisitChildren() {
   while (VisitStack.back().NextChild != GT::child_end(VisitStack.back().Node)) {
     // TOS has at least one more child so continue DFS
     NodeRef childN = *VisitStack.back().NextChild++;
-    typename DenseMap<NodeRef, unsigned>::iterator Visited =
-        nodeVisitNumbers.find(childN);
+    auto Visited = nodeVisitNumbers.find(childN);
     if (Visited == nodeVisitNumbers.end()) {
       // this node has never been seen.
       DFSVisitOne(childN);
@@ -305,7 +303,7 @@ class scc_member_iterator {
     return true;
   }
 
-  std::unordered_map<NodeType *, NodeInfo> NodeInfoMap;
+  DenseMap<NodeType *, NodeInfo> NodeInfoMap;
   NodesType Nodes;
 
 public:
@@ -324,6 +322,7 @@ scc_member_iterator<GraphT, GT>::scc_member_iterator(
 
   // Initialize auxilary node information.
   NodeInfoMap.clear();
+  NodeInfoMap.reserve(InputNodes.size());
   for (auto *Node : InputNodes) {
     // Construct a `NodeInfo` object in place.  `insert()` would involve a copy
     // construction, invalidating the initial value of the `Group` field, which
@@ -348,7 +347,7 @@ scc_member_iterator<GraphT, GT>::scc_member_iterator(
 
   // Traverse all the edges and compute the Maximum Weight Spanning Tree
   // using Kruskal's algorithm.
-  std::unordered_set<const EdgeType *> MSTEdges;
+  SmallPtrSet<const EdgeType *, 0> MSTEdges;
   for (auto *Edge : SortedEdges) {
     if (unionGroups(Edge))
       MSTEdges.insert(Edge);
@@ -378,7 +377,12 @@ scc_member_iterator<GraphT, GT>::scc_member_iterator(
     Queue.pop();
     Nodes.push_back(Node);
     for (auto &Edge : Node->Edges) {
-      NodeInfo &Info = NodeInfoMap[Edge.Target];
+      // Edges to nodes outside the SCC carry no MST state; skip them instead
+      // of inserting a fresh entry (the map must not grow at this point).
+      auto It = NodeInfoMap.find(Edge.Target);
+      if (It == NodeInfoMap.end())
+        continue;
+      NodeInfo &Info = It->second;
       Info.IncomingMSTEdges.erase(&Edge);
       if (MSTEdges.count(&Edge) && Info.IncomingMSTEdges.empty()) {
         Queue.push(Edge.Target);

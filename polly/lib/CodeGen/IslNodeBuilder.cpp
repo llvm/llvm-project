@@ -587,6 +587,8 @@ void IslNodeBuilder::createForParallel(__isl_take isl_ast_node *For) {
   ScalarEvolution *CallerSE = GenSE;
   ValueMapT CallerGlobals = ValueMap;
   IslExprBuilder::IDToValueTy IDToValueCopy = IDToValue;
+  MapVector<const Loop *, const SCEV *> OutsideLoopIterationsCopy =
+      OutsideLoopIterations;
 
   // Get the analyses for the subfunction. ParallelLoopGenerator already create
   // DominatorTree and LoopInfo for us.
@@ -618,15 +620,11 @@ void IslNodeBuilder::createForParallel(__isl_take isl_ast_node *For) {
   // Update the ValueMap to use instructions in the subfunction. Note that
   // "GlobalMap" used in BlockGenerator/IslExprBuilder is a reference to this
   // ValueMap.
-  for (auto &[OldVal, NewVal] : ValueMap) {
-    NewVal = NewValues.lookup(NewVal);
-
-    // Clean-up any value that getReferencesInSubtree thinks we do not need.
-    // DenseMap::erase only writes a tombstone (and destroys OldVal/NewVal), so
-    // does not invalidate our iterator.
-    if (!NewVal)
-      ValueMap.erase(OldVal);
-  }
+  ValueMap.remove_if([&](auto &P) {
+    P.second = NewValues.lookup(P.second);
+    // Clean up any value that getReferencesInSubtree thinks we do not need.
+    return !P.second;
+  });
 
   // This is for NewVals that do not appear in ValueMap (such as SCoP-invariant
   // values whose original value can be reused as long as we are in the same
@@ -647,6 +645,19 @@ void IslNodeBuilder::createForParallel(__isl_take isl_ast_node *For) {
     assert(NewVal);
   }
   IDToValue[IteratorID] = IV;
+
+  // Also update OutsideLoopIterations to use values from the subfunction.
+  // SCEVExpander may fold identity operations (e.g. x+0 -> x), returning the
+  // original loop PHI instead of a new instruction. We need to remap these
+  // values through NewValues so GenSE (now SubSE) doesn't operate on values
+  // from the caller function.
+  for (auto &[L, S] : OutsideLoopIterations) {
+    if (auto *U = dyn_cast<SCEVUnknown>(S)) {
+      Value *NewVal = NewValues.lookup(U->getValue());
+      assert(NewVal && "must have a new value");
+      OutsideLoopIterations[L] = GenSE->getUnknown(NewVal);
+    }
+  }
 
 #ifndef NDEBUG
   // Check whether the maps now exclusively refer to SubFn values.
@@ -680,13 +691,11 @@ void IslNodeBuilder::createForParallel(__isl_take isl_ast_node *For) {
   GenSE = CallerSE;
   IDToValue = std::move(IDToValueCopy);
   ValueMap = std::move(CallerGlobals);
+  OutsideLoopIterations = std::move(OutsideLoopIterationsCopy);
   ExprBuilder.switchGeneratedFunc(CallerFn, CallerDT, CallerLI, CallerSE);
   RegionGen.switchGeneratedFunc(CallerFn, CallerDT, CallerLI, CallerSE);
   BlockGen.switchGeneratedFunc(CallerFn, CallerDT, CallerLI, CallerSE);
   Builder.SetInsertPoint(AfterLoop);
-
-  for (const Loop *L : Loops)
-    OutsideLoopIterations.erase(L);
 
   isl_ast_node_free(For);
   isl_ast_expr_free(Iterator);
@@ -1076,11 +1085,6 @@ Value *IslNodeBuilder::preloadUnconditionally(isl::set AccessRange,
   PreloadVal = Builder.CreateLoad(Ty, Ptr, Name + ".load");
   if (LoadInst *PreloadInst = dyn_cast<LoadInst>(PreloadVal))
     PreloadInst->setAlignment(cast<LoadInst>(AccInst)->getAlign());
-
-  // TODO: This is only a hot fix for SCoP sequences that use the same load
-  //       instruction contained and hoisted by one of the SCoPs.
-  if (SE.isSCEVable(Ty))
-    SE.forgetValue(AccInst);
 
   return PreloadVal;
 }

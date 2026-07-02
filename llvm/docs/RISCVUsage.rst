@@ -206,6 +206,7 @@ on support follow.
      ``Zicboz``        Assembly Support
      ``Ziccamoa``      Supported (`See note <#riscv-profiles-extensions-note>`__)
      ``Ziccamoc``      Supported (`See note <#riscv-profiles-extensions-note>`__)
+     ``Ziccid``        Supported
      ``Ziccif``        Supported (`See note <#riscv-profiles-extensions-note>`__)
      ``Zicclsm``       Supported (`See note <#riscv-profiles-extensions-note>`__)
      ``Ziccrse``       Supported (`See note <#riscv-profiles-extensions-note>`__)
@@ -257,6 +258,10 @@ on support follow.
      ``Zvksg``         Supported (`See note <#riscv-vector-crypto-note>`__)
      ``Zvksh``         Supported (`See note <#riscv-vector-crypto-note>`__)
      ``Zvkt``          Supported
+     ``Zvvfmm``        Assembly Support
+     ``Zvvmm``         Assembly Support
+     ``Zvvmtls``       Assembly Support
+     ``Zvvmttls``      Assembly Support
      ``Zvl32b``        (`Partially <#riscv-vlen-32-note>`__) Supported
      ``Zvl64b``        Supported
      ``Zvl128b``       Supported
@@ -353,6 +358,9 @@ The primary goal of experimental support is to assist in the process of ratifica
 ``experimental-zvdot4a8i``
   LLVM implements the `0.1 draft specification <https://github.com/riscv/riscv-isa-manual/pull/2576>`__.
 
+``experimental-zvqwdota8i``, ``experimental-zvqwdota16i``, ``experimental-zvfwdota16bf``, ``experimental-zvfqwdota8f``
+  LLVM implements the `0.2 draft specification <https://github.com/aswaterman/riscv-misc/blob/main/isa/ldot-bdot/ldot-bdot.adoc>`__.
+
 ``experimental-smpmpmt``
   LLVM implements the `0.6 draft specification <https://github.com/riscv/riscv-isa-manual/blob/smpmpmt/src/smpmpmt.adoc>`__.
 
@@ -361,6 +369,21 @@ The primary goal of experimental support is to assist in the process of ratifica
 
 ``experimental-zvzip``
   LLVM implements the `0.1 draft specification <https://github.com/ved-rivos/riscv-isa-manual/blob/zvzip/src/zvzip.adoc>`__.
+
+``experimental-zvvfmm``
+  LLVM implements the `0.1 draft specification <https://github.com/riscv/integrated-matrix-extension/releases/tag/riscv-isa-release-71c48b9-2026-05-17>`__.
+
+``experimental-zvvmm``
+  LLVM implements the `0.1 draft specification <https://github.com/riscv/integrated-matrix-extension/releases/tag/riscv-isa-release-71c48b9-2026-05-17>`__.
+
+``experimental-zvvmtls``
+  LLVM implements the `0.1 draft specification <https://github.com/riscv/integrated-matrix-extension/releases/tag/riscv-isa-release-71c48b9-2026-05-17>`__.
+
+``experimental-zvvmttls``
+  LLVM implements the `0.1 draft specification <https://github.com/riscv/integrated-matrix-extension/releases/tag/riscv-isa-release-71c48b9-2026-05-17>`__.
+
+``experimental-zvqwbdota8i``, ``experimental-zvqwbdota16i``, ``experimental-zvfqwbdota8f``, ``experimental-zvfwbdota16bf``, ``experimental-zvfbdota32f``
+  LLVM implements the `0.2 draft specification <https://github.com/aswaterman/riscv-misc/blob/main/isa/ldot-bdot/ldot-bdot.adoc>`__.
 
 To use an experimental extension from `clang`, you must add `-menable-experimental-extensions` to the command line, and specify the exact version of the experimental extension you are using.  To use an experimental extension with LLVM's internal developer tools (e.g. `llc`, `llvm-objdump`, `llvm-mc`), you must prefix the extension name with `experimental-`.  Note that you don't need to specify the version with internal tools, and shouldn't include the `experimental-` prefix with `clang`.
 
@@ -471,6 +494,9 @@ The current vendor extensions supported are:
 ``Xqccmp``
   LLVM implements `version 0.3 of the 16-bit Push/Pop instructions and double-moves extension specification <https://github.com/quic/riscv-unified-db/releases/tag/Xqccmp_extension-0.3.0>`__ by Qualcomm. All instructions are prefixed with `qc.` as described in the specification.
 
+``experimental-Xqccmt``
+  LLVM implements `version 0.1 of the Qualcomm 16-bit Table Jump extension specification <https://github.com/riscv/riscv-unified-db/pull/1788>`__ by Qualcomm. All instructions are prefixed with ``qc.`` as described in the specification.
+
 ``Xqci``
   LLVM implements `version 0.13 of the Qualcomm uC extension specification <https://github.com/quic/riscv-unified-db/releases/tag/Xqci-0.13.0>`__ by Qualcomm. These instructions are only available for riscv32.
 
@@ -536,9 +562,6 @@ The current vendor extensions supported are:
 
 ``Xmipslsp``
   LLVM implements load/store pair instructions for the `p8700 processor <https://mips.com/products/hardware/p8700/>`__ by MIPS.
-
-``experimental-XRivosVizip``
-  LLVM implements `version 0.1 of the Rivos Vector Register Zips extension specification <https://github.com/rivosinc/rivos-custom-extensions>`__.
 
 ``XAndesPerf``
   LLVM implements `version 5.0.0 of the Andes Performance Extension specification <https://github.com/andestech/andes-v5-isa/releases/download/ast-v5_4_0-release/AndeStar_V5_ISA_Spec_UM165-v1.5.08-20250317.pdf>`__ by Andes Technology. All instructions are prefixed with `nds.` as described in the specification.
@@ -636,16 +659,29 @@ Sanitizers
 
   MSan intrinsics support is only required if code (including dependencies) manually calls the intrinsic.
 
+Scheduling Model and Tuning
+===========================
+
+RISC-V is highly configurable, meaning its scheduling models could be highly diversified as well. Yet we still believe it is helpful to provide a "generic" tuning processor / scheduling model that represents the "lowest common denominator" RISC-V implementation at the time. The idea is that it could serve as a "good-enough" baseline model for performance tuning purposes on some of the most common use cases.
+
+Though details of this generic scheduling model might evolve over time, we always have some _expectations_ on the kind of processors it is used for.
+
+For example, the ``generic`` tuning processor is expected to target in-order, superscalar application processors designed for general-purpose computing. It is usually RVA22U64- or RVA23U64-capable intended to run Linux. The ``generic-ooo`` has a similar set of expectations, except it is targeting out-of-order application processors.
+
+Right now, we simply assign a scheduling model that is widely used by the community to ``generic``. But in the future, we can create a standalone scheduling model for ``generic``, or even create a generic model for each of the individual sectors. For example, a ``generic-embedded`` for embedded processors and a ``generic-server`` for server workloads.
+
+These future generic models could even serve as the "base" model for other scheduling models to derive from: it's not uncommon for multiple processors to share a similar set of instruction scheduling info except a few key instructions, and this is especially true for RISC-V given its highly configurable nature. If we could design the base model in a way that it can be _parameterized_ by subtarget tuning features, we can substitue the traditional way of creating individual scheduling models with a combination of base scheduling model + different subtarget features.
+
 Processor-Specific Tuning Feature String
 ========================================
 Due to RISC-V's highly configurable nature, it is often desirable to share a single scheduling model across multiple similar RISC-V processors that only differ in a small number of (uArch) tuning features. An example of such tuning feature could be whether the latency of vector operations depend on VL or not. This could be extended to tuning features that are not directly connected to scheduling model but other parts of the RISC-V backend, like the cost of ``vrgather.vv`` instruction.
 
-To that end, RISC-V LLVM supports a tuning feature string format that helps users to build a performance model by "configuring" an existing tune CPU, along with its scheduling model. For example, this string
+To that end, RISC-V LLVM supports a tuning feature string format, through frontend flags like ``-mtune`` in Clang, to help users building a performance model by "configuring" an existing tune CPU, along with its scheduling model. For example, this flag
 
 ::
-    "sifive-x280:single-element-vec-fp64"
+    -mtune=sifive-x280:single-element-vec-fp64
 
-takes ``sifive-x280`` as the "base" tune CPU and configured it with ``single-element-vec-fp64``. This gives us a performance model that looks exactly like that of ``sifive-x280``, except some of the 64-bit vector floating point instructions now produce only a single element per cycle due to ``single-element-vec-fp64``. This string could eventually be used in places like ``-mtune`` at the frontend.
+takes ``sifive-x280`` as the "base" tune CPU and configured it with ``single-element-vec-fp64``. This gives us a performance model that looks exactly like that of ``sifive-x280``, except some of the 64-bit vector floating point instructions now produce only a single element per cycle due to ``single-element-vec-fp64``.
 
 More formally speaking, each tuning feature string has the following format:
 

@@ -7,18 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/nanf.h"
-#include "src/__support/common.h"
-#include "src/__support/libc_errno.h"
-#include "src/__support/macros/config.h"
-#include "src/__support/str_to_float.h"
+#include "src/__support/math/nanf.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(float, nanf, (const char *arg)) {
-  auto result = internal::strtonan<float>(arg);
-  if (result.has_error())
-    libc_errno = result.error;
-  return result.value;
-}
+LLVM_LIBC_FUNCTION(float, nanf, (const char *arg)) { return math::nanf(arg); }
 
 } // namespace LIBC_NAMESPACE_DECL

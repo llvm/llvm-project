@@ -41,6 +41,7 @@
 #include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/Program.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/WithColor.h"
@@ -116,6 +117,7 @@ struct DsymutilOptions {
   bool NoObjectTimestamp = false;
   std::string OutputFile;
   std::string Toolchain;
+  std::string CodesignIdentity;
   std::string ReproducerPath;
   std::string AllowFile;
   std::string DisallowFile;
@@ -221,6 +223,16 @@ static Error verifyOptions(const DsymutilOptions &Options) {
         "--embed-resource is not supported with --flat",
         errc::invalid_argument);
 
+  if (!Options.CodesignIdentity.empty() && Options.Flat)
+    return make_error<StringError>(
+        "--codesign is not supported with --flat: no bundle to sign",
+        errc::invalid_argument);
+
+  if (!Options.CodesignIdentity.empty() && Options.LinkOpts.NoOutput)
+    return make_error<StringError>(
+        "--codesign is not supported with --no-output: nothing to sign",
+        errc::invalid_argument);
+
   return Error::success();
 }
 
@@ -261,7 +273,7 @@ getDWARFLinkerType(opt::InputArgList &Args) {
                                    inconvertibleErrorCode());
   }
 
-  return DsymutilDWARFLinkerType::Classic;
+  return DsymutilDWARFLinkerType::Parallel;
 }
 
 static Expected<ReproducerMode> getReproducerMode(opt::InputArgList &Args) {
@@ -387,6 +399,9 @@ static Expected<DsymutilOptions> getOptions(opt::InputArgList &Args) {
 
   if (opt::Arg *Toolchain = Args.getLastArg(OPT_toolchain))
     Options.Toolchain = Toolchain->getValue();
+
+  if (opt::Arg *Codesign = Args.getLastArg(OPT_codesign))
+    Options.CodesignIdentity = Codesign->getValue();
 
   if (Args.hasArg(OPT_assembly))
     Options.LinkOpts.FileType = DWARFLinkerBase::OutputFileType::Assembly;
@@ -657,6 +672,33 @@ getOutputFileName(StringRef InputFile, const DsymutilOptions &Options) {
   return OutputLocation(std::string(Path), ResourceDir);
 }
 
+static Error codesignBundle(StringRef BundlePath, StringRef Identity,
+                            StringRef SDKPath) {
+  auto Path = sys::findProgramByName("codesign", ArrayRef(SDKPath));
+  if (!Path)
+    Path = sys::findProgramByName("codesign");
+
+  if (!Path)
+    return make_error<StringError>(
+        "codesign not found: " + Path.getError().message(), Path.getError());
+
+  SmallVector<StringRef, 5> Args;
+  Args.push_back("codesign");
+  Args.push_back("-f");
+  Args.push_back("-s");
+  Args.push_back(Identity);
+  Args.push_back(BundlePath);
+
+  std::string ErrMsg;
+  int Result =
+      sys::ExecuteAndWait(*Path, Args, std::nullopt, {}, 0, 0, &ErrMsg);
+  if (Result)
+    return make_error<StringError>("codesign failed: " + ErrMsg,
+                                   inconvertibleErrorCode());
+
+  return Error::success();
+}
+
 int dsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
   // Parse arguments.
   DsymutilOptTable T;
@@ -742,7 +784,7 @@ int dsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
 
     auto ParseAllowDisallowFile =
         [&](const std::string &FilePath) -> Expected<StringSet<>> {
-      auto BufOrErr = MemoryBuffer::getFile(FilePath);
+      auto BufOrErr = MemoryBuffer::getFile(FilePath, /*IsText=*/true);
       if (!BufOrErr)
         return make_error<StringError>(
             Twine("cannot open allow/disallow file '") + FilePath +
@@ -827,18 +869,10 @@ int dsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
     }
     Options.LinkOpts.ResourceDir = OutputLocationOrErr->getResourceDir();
 
-    // Statistics only require different architectures to be processed
-    // sequentially, the link itself can still happen in parallel. Change the
-    // thread pool strategy here instead of modifying LinkOpts.Threads.
-    ThreadPoolStrategy S = hardware_concurrency(
-        Options.LinkOpts.Statistics ? 1 : Options.LinkOpts.Threads);
-    if (Options.LinkOpts.Threads == 0) {
-      // If NumThreads is not specified, create one thread for each input, up to
-      // the number of hardware threads.
-      S.ThreadsRequested = DebugMapPtrsOrErr->size();
-      S.Limit = true;
-    }
-    DefaultThreadPool Threads(S);
+    // Use a single thread for --statistics and --verbose (which forces one
+    // thread) so the per-architecture link output is emitted in order.
+    DefaultThreadPool ThreadPool(hardware_concurrency(
+        Options.LinkOpts.Statistics ? 1 : Options.LinkOpts.Threads));
 
     // If there is more than one link to execute, we need to generate
     // temporary files.
@@ -858,11 +892,10 @@ int dsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
 
     const bool Crashed = !CRC.RunSafely([&]() {
       for (auto &Map : *DebugMapPtrsOrErr) {
-        if (Options.LinkOpts.Verbose || Options.DumpDebugMap)
+        if (Options.DumpDebugMap) {
           Map->print(outs());
-
-        if (Options.DumpDebugMap)
           continue;
+        }
 
         if (Map->begin() == Map->end()) {
           if (!Options.LinkOpts.Quiet) {
@@ -908,8 +941,12 @@ int dsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
 
         auto LinkLambda = [&,
                            OutputFile](std::shared_ptr<raw_fd_ostream> Stream) {
+          // Print the debug map here, on the thread that links it, so verbose
+          // output stays interleaved per architecture.
+          if (Options.LinkOpts.Verbose)
+            Map->print(outs());
           DwarfLinkerForBinary Linker(*Stream, BinHolder, Options.LinkOpts,
-                                      ErrorHandlerMutex);
+                                      ErrorHandlerMutex, &ThreadPool);
           AllOK.fetch_and(Linker.link(*Map));
           Stream->flush();
           if (flagIsSet(Options.Verify, DWARFVerify::Output) ||
@@ -921,16 +958,10 @@ int dsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
           }
         };
 
-        // FIXME: The DwarfLinker can have some very deep recursion that can max
-        // out the (significantly smaller) stack when using threads. We don't
-        // want this limitation when we only have a single thread.
-        if (S.ThreadsRequested == 1)
-          LinkLambda(OS);
-        else
-          Threads.async(LinkLambda, OS);
+        ThreadPool.async(LinkLambda, OS);
       }
 
-      Threads.wait();
+      ThreadPool.wait();
     });
 
     if (Crashed)
@@ -984,6 +1015,48 @@ int dsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
               TempFiles, OutputLocationOrErr->DWARFFile, Options.LinkOpts,
               SDKPath, Fat64))
         return EXIT_FAILURE;
+    }
+
+    if (!Options.CodesignIdentity.empty()) {
+      StringRef DWARFFile = OutputLocationOrErr->DWARFFile;
+      auto Pos = DWARFFile.find(".dSYM/");
+      if (Pos == StringRef::npos)
+        Pos = DWARFFile.find(".dSYM");
+      if (Pos != StringRef::npos) {
+        std::string BundlePath = DWARFFile.substr(0, Pos + 5).str();
+        if (auto E =
+                codesignBundle(BundlePath, Options.CodesignIdentity, SDKPath)) {
+          WithColor::error() << toString(std::move(E)) << '\n';
+          return EXIT_FAILURE;
+        }
+      }
+    }
+
+    // Bump the .dSYM bundle directory's mtime so macOS Spotlight reimports
+    // the (possibly new) UUID. Rewriting the inner DWARF file alone leaves
+    // the bundle directory mtime frozen, and Spotlight keeps serving the
+    // previous build's UUID, falling through to slow dsymForUUID lookups.
+    {
+      StringRef DWARFFile = OutputLocationOrErr->DWARFFile;
+      // Walk components from the right: the innermost match is the bundle
+      // itself, even when a parent directory is also named *.dSYM.
+      StringRef BundlePath;
+      for (auto I = sys::path::rbegin(DWARFFile),
+                E = sys::path::rend(DWARFFile);
+           I != E; ++I) {
+        StringRef Component = *I;
+        if (sys::path::extension(Component) == ".dSYM") {
+          BundlePath = DWARFFile.substr(0, Component.end() - DWARFFile.begin());
+          break;
+        }
+      }
+      if (!BundlePath.empty()) {
+        auto Now = std::chrono::system_clock::now();
+        if (auto EC =
+                sys::fs::setLastAccessAndModificationTime(BundlePath, Now))
+          WithColor::warning() << "could not update mtime of " << BundlePath
+                               << ": " << EC.message() << '\n';
+      }
     }
   }
 

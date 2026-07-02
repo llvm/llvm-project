@@ -2,7 +2,7 @@
 
 !u8i = !cir.int<u, 8>
 !u32i = !cir.int<u, 32>
-!rec_S = !cir.record<struct "S" {!u8i, !u32i}>
+!rec_S = !cir.struct<"S" {!u8i, !u32i}>
 
 module  {
   cir.func @struct_extract_member_invalid_element_type() {
@@ -17,7 +17,7 @@ module  {
 
 !u8i = !cir.int<u, 8>
 !u32i = !cir.int<u, 32>
-!rec_S = !cir.record<struct "S" {!u8i, !u32i}>
+!rec_S = !cir.struct<"S" {!u8i, !u32i}>
 
 module  {
   cir.func @struct_extract_member_invalid_index_value() {
@@ -31,7 +31,7 @@ module  {
 // -----
 
 !u32i = !cir.int<u, 32>
-!rec_U = !cir.record<union "U" {!u32i}>
+!rec_U = !cir.union<"U" {!u32i}>
 
 module  {
   cir.func @extract_member_invalid_for_union() {
@@ -46,7 +46,7 @@ module  {
 
 !u8i = !cir.int<u, 8>
 !u32i = !cir.int<u, 32>
-!rec_S = !cir.record<struct "S" {!u8i, !u32i}>
+!rec_S = !cir.struct<"S" {!u8i, !u32i}>
 
 module  {
   cir.func @struct_insert_member_invalid_element_type() {
@@ -62,7 +62,7 @@ module  {
 
 !u8i = !cir.int<u, 8>
 !u32i = !cir.int<u, 32>
-!rec_S = !cir.record<struct "S" {!u8i, !u32i}>
+!rec_S = !cir.struct<"S" {!u8i, !u32i}>
 
 module  {
   cir.func @struct_extract_member_invalid_index_value() {
@@ -77,7 +77,7 @@ module  {
 // -----
 
 !u32i = !cir.int<u, 32>
-!rec_U = !cir.record<union "U" {!u32i}>
+!rec_U = !cir.union<"U" {!u32i}>
 
 module  {
   cir.func @extract_member_invalid_for_union() {

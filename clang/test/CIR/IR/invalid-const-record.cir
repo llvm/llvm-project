@@ -1,15 +1,15 @@
 // RUN: cir-opt %s -verify-diagnostics -split-input-file
 
 !s32i = !cir.int<s, 32>
-!rec_anon_struct = !cir.record<struct  packed {!s32i, !s32i, !cir.array<!s32i x 8>}>
+!rec_anon_struct = !cir.struct< packed {!s32i, !s32i, !cir.array<!s32i x 8>}>
 
-// expected-error @below {{expected !cir.record type}}
+// expected-error @below {{expected !cir.struct or !cir.union type}}
 cir.global external @e = #cir.const_record<{#cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.zero : !cir.array<!s32i x 8>}> : !cir.ptr<!rec_anon_struct>
 
 // -----
 
 !s32i = !cir.int<s, 32>
-!rec_anon_struct = !cir.record<struct  packed {!s32i, !s32i, !cir.array<!s32i x 8>}>
+!rec_anon_struct = !cir.struct< packed {!s32i, !s32i, !cir.array<!s32i x 8>}>
 
 // expected-error @below {{number of elements must match}}
 cir.global external @e = #cir.const_record<{#cir.int<1> : !s32i, #cir.zero : !cir.array<!s32i x 8>}> : !rec_anon_struct
@@ -17,7 +17,69 @@ cir.global external @e = #cir.const_record<{#cir.int<1> : !s32i, #cir.zero : !ci
 // -----
 
 !s32i = !cir.int<s, 32>
-!rec_anon_struct = !cir.record<struct  packed {!s32i, !s32i, !cir.array<!s32i x 8>}>
+!rec_anon_struct = !cir.struct< packed {!s32i, !s32i, !cir.array<!s32i x 8>}>
 
 // expected-error @below {{element at index 1 has type '!cir.float' but the expected type for this element is '!cir.int<s, 32>'}}
 cir.global external @e = #cir.const_record<{#cir.int<1> : !s32i, #cir.fp<2.000000e+00> : !cir.float, #cir.zero : !cir.array<!s32i x 8>}> : !rec_anon_struct
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!u8i = !cir.int<u, 8>
+!rec_U = !cir.union<"U" {!s32i, !u8i}, padding = {!cir.array<!u8i x 3>}>
+
+// A union constant must have exactly one element (the active member).
+// expected-error @below {{union constant must have exactly one element, got 2}}
+cir.global external @u = #cir.const_record<{#cir.int<5> : !s32i, #cir.int<7> : !u8i}> : !rec_U
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!u8i = !cir.int<u, 8>
+!rec_U = !cir.union<"U" {!s32i, !u8i}, padding = {!cir.array<!u8i x 3>}>
+
+// expected-error @below {{union constant must have exactly one element, got 0}}
+cir.global external @u = #cir.const_record<{}> : !rec_U
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!u8i = !cir.int<u, 8>
+!rec_U = !cir.union<"U" {!s32i, !u8i}, padding = {!cir.array<!u8i x 3>}>
+
+// The single element's type must be one of the union's member types.
+// expected-error @below {{union element type '!cir.float' is not a member of}}
+cir.global external @u = #cir.const_record<{#cir.fp<2.000000e+00> : !cir.float}> : !rec_U
+
+// -----
+
+!s8i = !cir.int<s, 8>
+!s32i = !cir.int<s, 32>
+!rec_S = !cir.struct<"S" {!s32i, !cir.array<!s8i x 0>}>
+
+// The flexible array member (trailing zero-length array) must be initialized
+// with an array; a non-array initializer is rejected.
+// expected-error @below {{element at index 1 has type '!cir.int<s, 32>' but the expected type for this element is '!cir.array<!cir.int<s, 8> x 0>'}}
+cir.global external @fam_non_array = #cir.const_record<{#cir.int<3> : !s32i, #cir.int<4> : !s32i}> : !rec_S
+
+// -----
+
+!s8i = !cir.int<s, 8>
+!s32i = !cir.int<s, 32>
+!rec_S = !cir.struct<"S" {!s32i, !cir.array<!s8i x 0>}>
+
+// The flexible array member initializer must have the same element type as the
+// declared zero-length array.
+// expected-error @below {{flexible array member at index 1 has type '!cir.array<!cir.int<s, 32> x 2>' which doesn't match the expected element type of member '!cir.array<!cir.int<s, 8> x 0>'}}
+cir.global external @fam_wrong_elt = #cir.const_record<{#cir.int<3> : !s32i, #cir.const_array<[#cir.int<1> : !s32i, #cir.int<2> : !s32i]> : !cir.array<!s32i x 2>}> : !rec_S
+
+// -----
+
+!s8i = !cir.int<s, 8>
+!s32i = !cir.int<s, 32>
+!rec_F = !cir.struct<"F" {!s32i, !cir.array<!s8i x 2>}>
+
+// The oversized-array relaxation only applies when the declared trailing array
+// is zero-length; a non-zero-length array still requires an exact type match.
+// expected-error @below {{element at index 1 has type '!cir.array<!cir.int<s, 8> x 3>' but the expected type for this element is '!cir.array<!cir.int<s, 8> x 2>'}}
+cir.global external @not_zero_len = #cir.const_record<{#cir.int<3> : !s32i, #cir.const_array<[#cir.int<97> : !s8i, #cir.int<98> : !s8i, #cir.int<99> : !s8i]> : !cir.array<!s8i x 3>}> : !rec_F

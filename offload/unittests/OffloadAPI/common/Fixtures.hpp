@@ -9,6 +9,8 @@
 #include <OffloadAPI.h>
 #include <OffloadPrint.hpp>
 #include <gtest/gtest.h>
+#include <optional>
+#include <string>
 #include <thread>
 
 #include "Environment.hpp"
@@ -61,6 +63,53 @@
   } while (0)
 #endif
 
+struct BackendMatcher {
+  ol_platform_backend_t Backend;
+  std::string Message;
+
+  BackendMatcher(ol_platform_backend_t B, std::string M = {})
+      : Backend(B), Message(std::move(M)) {}
+};
+
+struct LevelZero : BackendMatcher {
+  LevelZero(std::string M = {})
+      : BackendMatcher(OL_PLATFORM_BACKEND_LEVEL_ZERO, std::move(M)) {}
+};
+
+struct CUDA : BackendMatcher {
+  CUDA(std::string M = {})
+      : BackendMatcher(OL_PLATFORM_BACKEND_CUDA, std::move(M)) {}
+};
+
+struct AMDGPU : BackendMatcher {
+  AMDGPU(std::string M = {})
+      : BackendMatcher(OL_PLATFORM_BACKEND_AMDGPU, std::move(M)) {}
+};
+
+inline std::string knownFailureMessage(const BackendMatcher &M) {
+  std::string Msg;
+  llvm::raw_string_ostream OS(Msg);
+  OS << "Known failure on " << M.Backend;
+  if (!M.Message.empty())
+    OS << ": " << M.Message;
+  return Msg;
+}
+
+inline std::optional<std::string>
+findKnownFailure(ol_platform_backend_t CurBackend,
+                 std::initializer_list<BackendMatcher> Matchers) {
+  for (const auto &M : Matchers) {
+    if (M.Backend == CurBackend)
+      return knownFailureMessage(M);
+  }
+  return std::nullopt;
+}
+
+#define SKIP_KNOWN_FAILURE(...)                                                \
+  if (auto KFMsg =                                                             \
+          ::findKnownFailure(this->getPlatformBackend(), {__VA_ARGS__}))       \
+  GTEST_SKIP() << *KFMsg
+
 #define RETURN_ON_FATAL_FAILURE(...)                                           \
   __VA_ARGS__;                                                                 \
   if (this->HasFatalFailure() || this->IsSkipped()) {                          \
@@ -110,7 +159,7 @@ struct ManuallyTriggeredTask {
             this))
       return Err;
 
-    return olCreateEvent(Queue, &CompleteEvent);
+    return olCreateEvent(Queue, OL_EVENT_FLAGS_NONE, &CompleteEvent);
   }
 
   void wait() {
@@ -241,7 +290,7 @@ struct OffloadQueueTest : OffloadDeviceTest {
 struct OffloadEventTest : OffloadQueueTest {
   void SetUp() override {
     RETURN_ON_FATAL_FAILURE(OffloadQueueTest::SetUp());
-    ASSERT_SUCCESS(olCreateEvent(Queue, &Event));
+    ASSERT_SUCCESS(olCreateEvent(Queue, OL_EVENT_FLAGS_NONE, &Event));
     ASSERT_SUCCESS(olSyncQueue(Queue));
   }
 
@@ -252,6 +301,41 @@ struct OffloadEventTest : OffloadQueueTest {
   }
 
   ol_event_handle_t Event = nullptr;
+};
+
+struct LaunchKernelTestBase : OffloadQueueTest {
+  void SetUpProgram(const char *program) {
+    RETURN_ON_FATAL_FAILURE(OffloadQueueTest::SetUp());
+    ASSERT_TRUE(TestEnvironment::loadDeviceBinary(program, Device, DeviceBin));
+    ASSERT_GE(DeviceBin->getBufferSize(), 0lu);
+    ASSERT_SUCCESS(olCreateProgram(Device, DeviceBin->getBufferStart(),
+                                   DeviceBin->getBufferSize(), &Program));
+
+    LaunchArgs.Dimensions = 1;
+    LaunchArgs.GroupSize = {64, 1, 1};
+    LaunchArgs.NumGroups = {1, 1, 1};
+    LaunchArgs.DynSharedMemory = 0;
+  }
+
+  void TearDown() override {
+    if (Program)
+      olDestroyProgram(Program);
+    RETURN_ON_FATAL_FAILURE(OffloadQueueTest::TearDown());
+  }
+
+  std::unique_ptr<llvm::MemoryBuffer> DeviceBin;
+  ol_program_handle_t Program = nullptr;
+  ol_kernel_launch_size_args_t LaunchArgs{};
+};
+
+struct LaunchSingleKernelTestBase : LaunchKernelTestBase {
+  void SetUpKernel(const char *kernel) {
+    RETURN_ON_FATAL_FAILURE(SetUpProgram(kernel));
+    ASSERT_SUCCESS(
+        olGetSymbol(Program, kernel, OL_SYMBOL_KIND_KERNEL, &Kernel));
+  }
+
+  ol_symbol_handle_t Kernel = nullptr;
 };
 
 // Devices might not be available for offload testing, so allow uninstantiated

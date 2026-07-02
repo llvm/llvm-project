@@ -26,8 +26,7 @@ define float @foo1(ptr %x0, ptr %x1, ptr %x2) nounwind {
 ; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
 entry:
-  %0 = call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
-  %1 = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> %0)
+  %1 = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> splat (i1 true))
   %2 = call {<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>} @llvm.aarch64.sve.ld4.sret.nxv2f64(<vscale x 2 x i1> %1, ptr %x0)
   %3 = call {<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>} @llvm.aarch64.sve.ld4.sret.nxv2f64(<vscale x 2 x i1> %1, ptr %x1)
   %4 = call <vscale x 2 x double> @llvm.aarch64.sve.ld1.nxv2f64(<vscale x 2 x i1> %1, ptr %x2)
@@ -81,8 +80,7 @@ define float @foo2(ptr %x0, ptr %x1) nounwind {
 ; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
 entry:
-  %0 = call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
-  %1 = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> %0)
+  %1 = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> splat (i1 true))
   %2 = call {<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>} @llvm.aarch64.sve.ld4.sret.nxv2f64(<vscale x 2 x i1> %1, ptr %x0)
   %3 = call {<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>} @llvm.aarch64.sve.ld4.sret.nxv2f64(<vscale x 2 x i1> %1, ptr %x1)
   %4 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } %2,  0
@@ -125,8 +123,7 @@ define float @foo3(ptr %x0, ptr %x1, ptr %x2) nounwind {
 ; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
 entry:
-  %0 = call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
-  %1 = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> %0)
+  %1 = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> splat (i1 true))
   %2 = call {<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>} @llvm.aarch64.sve.ld4.sret.nxv2f64(<vscale x 2 x i1> %1, ptr %x0)
   %3 = call {<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>} @llvm.aarch64.sve.ld3.sret.nxv2f64(<vscale x 2 x i1> %1, ptr %x1)
   %4 = call <vscale x 2 x double> @llvm.aarch64.sve.ld1.nxv2f64(<vscale x 2 x i1> %1, ptr %x2)

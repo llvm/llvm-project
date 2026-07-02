@@ -7,8 +7,8 @@ define i32 @main() vscale_range(2,2) {
 ; CHECK-NEXT:    lui a0, 1040368
 ; CHECK-NEXT:    addi a0, a0, -144
 ; CHECK-NEXT:    vl2re16.v v8, (a0)
-; CHECK-NEXT:    vs2r.v v8, (zero)
 ; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    vs2r.v v8, (zero)
 ; CHECK-NEXT:    ret
 vector.body:
   %0 = load <16 x i16>, ptr getelementptr ([3 x [23 x [23 x i16]]], ptr null, i64 -10593, i64 1, i64 22, i64 0), align 16

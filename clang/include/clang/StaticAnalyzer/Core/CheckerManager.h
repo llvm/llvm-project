@@ -29,7 +29,6 @@ namespace clang {
 class AnalyzerOptions;
 class CallExpr;
 class Decl;
-class LocationContext;
 class Stmt;
 class TranslationUnitDecl;
 
@@ -331,6 +330,11 @@ public:
                                const CallEvent &Call, ExprEngine &Eng,
                                bool wasInlined = false);
 
+  /// Run checkers for the end of a variable's lifetime.
+  void runCheckersForLifetimeEnd(ExplodedNodeSet &Dst,
+                                 const ExplodedNodeSet &Src,
+                                 const VarDecl *Decl, ExprEngine &Eng);
+
   /// Run checkers for load/store of a location.
   void runCheckersForLocation(ExplodedNodeSet &Dst,
                               const ExplodedNodeSet &Src,
@@ -411,8 +415,7 @@ public:
                               const InvalidatedSymbols *invalidated,
                               ArrayRef<const MemRegion *> ExplicitRegions,
                               ArrayRef<const MemRegion *> Regions,
-                              const LocationContext *LCtx,
-                              const CallEvent *Call);
+                              const StackFrame *SF, const CallEvent *Call);
 
   /// Run checkers when pointers escape.
   ///
@@ -495,6 +498,9 @@ public:
   using CheckCallFunc =
       CheckerFn<void (const CallEvent &, CheckerContext &)>;
 
+  using CheckLifetimeEndFunc =
+      CheckerFn<void(const VarDecl *, CheckerContext &)>;
+
   using CheckLocationFunc = CheckerFn<void(SVal location, bool isLoad,
                                            const Stmt *S, CheckerContext &)>;
 
@@ -523,13 +529,11 @@ public:
 
   using CheckLiveSymbolsFunc = CheckerFn<void (ProgramStateRef,SymbolReaper &)>;
 
-  using CheckRegionChangesFunc =
-      CheckerFn<ProgramStateRef (ProgramStateRef,
-                                 const InvalidatedSymbols *symbols,
-                                 ArrayRef<const MemRegion *> ExplicitRegions,
-                                 ArrayRef<const MemRegion *> Regions,
-                                 const LocationContext *LCtx,
-                                 const CallEvent *Call)>;
+  using CheckRegionChangesFunc = CheckerFn<ProgramStateRef(
+      ProgramStateRef, const InvalidatedSymbols *symbols,
+      ArrayRef<const MemRegion *> ExplicitRegions,
+      ArrayRef<const MemRegion *> Regions, const StackFrame *SF,
+      const CallEvent *Call)>;
 
   using CheckPointerEscapeFunc =
       CheckerFn<ProgramStateRef (ProgramStateRef,
@@ -560,6 +564,8 @@ public:
 
   void _registerForPreCall(CheckCallFunc checkfn);
   void _registerForPostCall(CheckCallFunc checkfn);
+
+  void _registerForLifetimeEnd(CheckLifetimeEndFunc checkfn);
 
   void _registerForLocation(CheckLocationFunc checkfn);
 
@@ -668,6 +674,8 @@ private:
 
   std::vector<CheckCallFunc> PreCallCheckers;
   std::vector<CheckCallFunc> PostCallCheckers;
+
+  std::vector<CheckLifetimeEndFunc> LifetimeEndCheckers;
 
   std::vector<CheckLocationFunc> LocationCheckers;
 

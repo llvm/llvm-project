@@ -11,17 +11,18 @@
 ; RUN: llvm-dwarfdump --debug-info -r 0 main.dwo.dwo | FileCheck -check-prefix=BOLT-DWO-DWO-MAIN %s
 ; RUN: llvm-dwarfdump --debug-info -r 0 helper.dwo.dwo | FileCheck -check-prefix=BOLT-DWO-DWO-HELPER %s
 
-;; Tests that BOLT correctly handles DWARF5 DWP file as input. Output has correct CU, and all the type units are written out.
+;; Tests that BOLT correctly handles DWARF5 DWP file as input. Output has the correct CU,
+;; and only type units referenced by that CU are written out.
 
 ; BOLT-DWO-DWO-MAIN: debug_info.dwo
 ; BOLT-DWO-DWO-MAIN-NEXT: type_signature = 0x49dc260088be7e56
 ; BOLT-DWO-DWO-MAIN: type_signature = 0x104ec427d2ebea6f
-; BOLT-DWO-DWO-MAIN: type_signature = 0xca1e65a66d92b970
+; BOLT-DWO-DWO-MAIN-NOT: type_signature = 0xca1e65a66d92b970
 ; BOLT-DWO-DWO-MAIN: Compile Unit
 ; BOLT-DWO-DWO-MAIN-SAME: DWO_id = 0x52bda211bf6d26b7
 ; BOLT-DWO-DWO-MAIN-NOT: Compile Unit
 ; BOLT-DWO-DWO-HELPER: debug_info.dwo
-; BOLT-DWO-DWO-HELPER-NEXT: type_signature = 0x49dc260088be7e56
+; BOLT-DWO-DWO-HELPER-NOT: type_signature = 0x49dc260088be7e56
 ; BOLT-DWO-DWO-HELPER: type_signature = 0x104ec427d2ebea6f
 ; BOLT-DWO-DWO-HELPER: type_signature = 0xca1e65a66d92b970
 ; BOLT-DWO-DWO-HELPER: Compile Unit

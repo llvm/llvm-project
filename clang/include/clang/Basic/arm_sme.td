@@ -915,11 +915,11 @@ let SMETargetGuard = "sme2,sme-tmop,sme-b16b16" in {
 }
 
 let SMETargetGuard = "sme2,sme-tmop,sme-f8f16" in {
-  def SVTMOPA_ZA16_FPM : Inst<"svtmopa_lane_za16[_{d}_{d}]", "vi2.dd[i>", "m", MergeNone, "aarch64_sme_ftmopa_za16", [IsStreaming, IsInOutZA], [ImmCheck<0, ImmCheck0_1>, ImmCheck<4, ImmCheck0_3>]>;
+  def SVTMOPA_ZA16_FPM : Inst<"svtmopa_lane_za16[_{d}_{d}]", "vi2.dd[i>", "m", MergeNone, "aarch64_sme_fp8_ftmopa_za16", [IsStreaming, IsInOutZA, IsOverloadNone], [ImmCheck<0, ImmCheck0_1>, ImmCheck<4, ImmCheck0_3>]>;
 }
 
 let SMETargetGuard = "sme2,sme-tmop,sme-f8f32" in {
-  def SVTMOPA_ZA32_FPM : Inst<"svtmopa_lane_za32[_{d}_{d}]", "vi2.dd[i>", "m", MergeNone, "aarch64_sme_ftmopa_za32", [IsStreaming, IsInOutZA], [ImmCheck<0, ImmCheck0_3>, ImmCheck<4, ImmCheck0_3>]>;
+  def SVTMOPA_ZA32_FPM : Inst<"svtmopa_lane_za32[_{d}_{d}]", "vi2.dd[i>", "m", MergeNone, "aarch64_sme_fp8_ftmopa_za32", [IsStreaming, IsInOutZA, IsOverloadNone], [ImmCheck<0, ImmCheck0_3>, ImmCheck<4, ImmCheck0_3>]>;
 }
 
 multiclass ZAReadz<string n_suffix, string vg_num, string t, string i_prefix, list<ImmCheck> ch> {
@@ -979,6 +979,11 @@ let SMETargetGuard = "sme-lutv2" in {
   def SVWRITE_LANE_ZT : SInst<"svwrite_lane_zt[_{d}]", "vidi", "cUcsUsiUilUlfhdb", MergeNone, "aarch64_sme_write_lane_zt", [IsStreaming, IsInOutZT0], [ImmCheck<0, ImmCheck0_0>, ImmCheck<2, ImmCheck1_3>]>;
   def SVWRITE_ZT : SInst<"svwrite_zt[_{d}]", "vid", "cUcsUsiUilUlfhdb", MergeNone, "aarch64_sme_write_zt", [IsStreaming, IsOutZT0], [ImmCheck<0, ImmCheck0_0>]>;
   def SVLUTI4_ZT_X4 : SInst<"svluti4_zt_{d}_x4", "4i2.u", "cUc", MergeNone, "aarch64_sme_luti4_zt_x4", [IsStreaming, IsInZT0], [ImmCheck<0, ImmCheck0_0>]>;
+}
+
+let SMETargetGuard = "sme2p3" in {
+  def SVLUTI6_ZT      : SInst<"svluti6_zt_{d}", "di[", "cUcm", MergeNone, "aarch64_sme_luti6_zt", [IsOverloadNone, IsStreaming, IsInZT0], [ImmCheck<0, ImmCheck0_0>]>;
+  def SVLUTI6_ZT_X4   : SInst<"svluti6_zt_{d}_x4", "4i3.[", "cUcm", MergeNone, "aarch64_sme_luti6_zt_x4", [IsOverloadNone, IsStreaming, IsInZT0], [ImmCheck<0, ImmCheck0_0>]>;
 }
 
 let SMETargetGuard = "sme-f8f32" in {

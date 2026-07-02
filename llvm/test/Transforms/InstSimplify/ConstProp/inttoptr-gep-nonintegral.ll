@@ -77,7 +77,7 @@ define ptr addrspace(3) @test_inttoptr_base_external() {
 
 define <2 x ptr> @test_vec_null_base_normal() {
 ; CHECK-LABEL: define <2 x ptr> @test_vec_null_base_normal() {
-; CHECK-NEXT:    ret <2 x ptr> getelementptr (i8, <2 x ptr> zeroinitializer, <2 x i16> <i16 -2, i16 -3>)
+; CHECK-NEXT:    ret <2 x ptr> getelementptr (i8, <2 x ptr> splat (ptr null), <2 x i16> <i16 -2, i16 -3>)
 ;
   %gep = getelementptr i8, <2 x ptr> <ptr null, ptr null>, <2 x i8> <i8 -2, i8 -3>
   ret <2 x ptr> %gep
@@ -95,7 +95,7 @@ define <2 x ptr> @test_vec_inttoptr_base_normal() {
 ;; the index bits: (i8 -2 == i16 254)
 define <2 x ptr addrspace(1)> @test_vec_null_base_nonintegral() {
 ; CHECK-LABEL: define <2 x ptr addrspace(1)> @test_vec_null_base_nonintegral() {
-; CHECK-NEXT:    ret <2 x ptr addrspace(1)> getelementptr (i8, <2 x ptr addrspace(1)> zeroinitializer, <2 x i8> <i8 -2, i8 -3>)
+; CHECK-NEXT:    ret <2 x ptr addrspace(1)> getelementptr (i8, <2 x ptr addrspace(1)> splat (ptr addrspace(1) null), <2 x i8> <i8 -2, i8 -3>)
 ;
   %gep = getelementptr i8, <2 x ptr addrspace(1)> <ptr addrspace(1) null, ptr addrspace(1) null>, <2 x i8> <i8 -2, i8 -3>
   ret <2 x ptr addrspace(1)> %gep
@@ -112,7 +112,7 @@ define <2 x ptr addrspace(1)> @test_vec_inttoptr_base_nonintegral() {
 ;; For unstable pointers we should avoid any introduction of inttoptr
 define <2 x ptr addrspace(2)> @test_vec_null_base_unstable() {
 ; CHECK-LABEL: define <2 x ptr addrspace(2)> @test_vec_null_base_unstable() {
-; CHECK-NEXT:    ret <2 x ptr addrspace(2)> getelementptr (i8, <2 x ptr addrspace(2)> zeroinitializer, <2 x i8> <i8 -2, i8 -3>)
+; CHECK-NEXT:    ret <2 x ptr addrspace(2)> getelementptr (i8, <2 x ptr addrspace(2)> splat (ptr addrspace(2) null), <2 x i8> <i8 -2, i8 -3>)
 ;
   %gep = getelementptr i8, <2 x ptr addrspace(2)> <ptr addrspace(2) null, ptr addrspace(2) null>, <2 x i8> <i8 -2, i8 -3>
   ret <2 x ptr addrspace(2)> %gep
@@ -129,7 +129,7 @@ define <2 x ptr addrspace(2)> @test_vec_inttoptr_base_unstable() {
 ;; The same is true for pointers with external state: no new inttoptr
 define <2 x ptr addrspace(3)> @test_vec_null_base_external() {
 ; CHECK-LABEL: define <2 x ptr addrspace(3)> @test_vec_null_base_external() {
-; CHECK-NEXT:    ret <2 x ptr addrspace(3)> getelementptr (i8, <2 x ptr addrspace(3)> zeroinitializer, <2 x i8> <i8 -2, i8 -3>)
+; CHECK-NEXT:    ret <2 x ptr addrspace(3)> getelementptr (i8, <2 x ptr addrspace(3)> splat (ptr addrspace(3) null), <2 x i8> <i8 -2, i8 -3>)
 ;
   %gep = getelementptr i8, <2 x ptr addrspace(3)> <ptr addrspace(3) null, ptr addrspace(3) null>, <2 x i8> <i8 -2, i8 -3>
   ret <2 x ptr addrspace(3)> %gep

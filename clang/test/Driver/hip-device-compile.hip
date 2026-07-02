@@ -62,7 +62,7 @@
 // CHECK-SAME: "-aux-triple" "x86_64-unknown-linux-gnu"
 // BC-SAME: "-emit-llvm-bc"
 // LL-SAME: "-emit-llvm"
-// ASM-NOT: "-emit-llvm"
+// ASM-SAME: "-S"
 // CHECK-SAME: "-main-file-name" "a.cu"
 // CHECK-SAME: "-fcuda-is-device"
 // CHECK-SAME: {{".*lib1.bc"}}
@@ -126,7 +126,19 @@
 // OBJ-NOT: {{"*.llvm-link"}}
 // OBJ-NOT: {{".*opt"}}
 // OBJ-NOT: {{".*llc"}}
-// OBJ-BUN: {{".*lld.*"}}{{.*}}"-o" "{{.*}}.o"
+// OBJ-BUN: {{".*lld.*"}}{{.*}}"-o" "{{.*}}.out"
 // OBJ-UBUN: {{".*lld.*"}}{{.*}}"-o" "a.o"
 // OBJ-BUN: {{".*clang-offload-bundler"}}{{.*}}"-output=a.o"
 // OBJ-UBUN-NOT: {{".*clang-offload-bundler"}}
+
+// RUN: %clang -S --cuda-device-only -### --target=x86_64-linux-gnu \
+// RUN:   --rocm-path=%S/Inputs/rocm -x hip --cuda-gpu-arch=gfx900 --no-gpu-bundle-output \
+// RUN:   --no-offload-new-driver -fno-offload-lto \
+// RUN:   %S/Inputs/hip_multiple_inputs/a.cu \
+// RUN: 2>&1 | FileCheck -check-prefixes=NOLTO %s
+
+// NOLTO: {{".*clang.*"}} "-cc1" "-triple" "amdgcn-amd-amdhsa"
+// NOLTO-SAME: "-S"
+// NOLTO-NOT: "-flto
+// NOLTO-SAME: "-target-cpu" "gfx900"
+// NOLTO-SAME: "-o" "a-hip-amdgcn-amd-amdhsa-gfx900.s"

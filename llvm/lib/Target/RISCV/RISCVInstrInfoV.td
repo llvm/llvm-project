@@ -1293,7 +1293,7 @@ def : InstAlias<"vmsge.vv $vd, $va, $vb$vm",
 
 let ElementsDependOn = EltDepsNone in {
 
-let isCodeGenOnly = 0, isAsmParserOnly = 1, hasSideEffects = 0, mayLoad = 0,
+let isCodeGenOnly = 0, hasSideEffects = 0, mayLoad = 0,
     mayStore = 0, DestEEW = EEW1 in {
 // For unsigned comparisons we need to special case 0 immediate to maintain
 // the always true/false semantics we would invert if we just decremented the
@@ -1316,18 +1316,12 @@ def PseudoVMSLT_VI : Pseudo<(outs VR:$vd),
                             [], "vmslt.vi", "$vd, $vs2, $imm$vm">;
 }
 
-let isCodeGenOnly = 0, isAsmParserOnly = 1, hasSideEffects = 0, mayLoad = 0,
+let isCodeGenOnly = 0, hasSideEffects = 0, mayLoad = 0,
     mayStore = 0, DestEEW = EEW1 in {
-def PseudoVMSGEU_VX : Pseudo<(outs VR:$vd),
-                             (ins VR:$vs2, GPR:$rs1),
-                             [], "vmsgeu.vx", "$vd, $vs2, $rs1">;
-def PseudoVMSGE_VX : Pseudo<(outs VR:$vd),
-                            (ins VR:$vs2, GPR:$rs1),
-                            [], "vmsge.vx", "$vd, $vs2, $rs1">;
-def PseudoVMSGEU_VX_M : Pseudo<(outs VRNoV0:$vd),
+def PseudoVMSGEU_VX_M : Pseudo<(outs VR:$vd),
                                (ins VR:$vs2, GPR:$rs1, VMaskOp:$vm),
                                [], "vmsgeu.vx", "$vd, $vs2, $rs1$vm">;
-def PseudoVMSGE_VX_M : Pseudo<(outs VRNoV0:$vd),
+def PseudoVMSGE_VX_M : Pseudo<(outs VR:$vd),
                               (ins VR:$vs2, GPR:$rs1, VMaskOp:$vm),
                               [], "vmsge.vx", "$vd, $vs2, $rs1$vm">;
 def PseudoVMSGEU_VX_M_T : Pseudo<(outs VR:$vd, VRNoV0:$scratch),

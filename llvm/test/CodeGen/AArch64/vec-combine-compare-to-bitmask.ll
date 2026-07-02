@@ -17,10 +17,10 @@ define i16 @convert_to_bitmask16(<16 x i8> %vec) {
 ; CHECK-SD-NEXT:    cmeq.16b v0, v0, #0
 ; CHECK-SD-NEXT:    ldr q1, [x8, lCPI0_0@PAGEOFF]
 ; CHECK-SD-NEXT:    bic.16b v0, v1, v0
-; CHECK-SD-NEXT:    ext.16b v1, v0, v0, #8
-; CHECK-SD-NEXT:    zip1.16b v0, v0, v1
-; CHECK-SD-NEXT:    addv.8h h0, v0
-; CHECK-SD-NEXT:    fmov w0, s0
+; CHECK-SD-NEXT:    addp.16b v0, v0, v0
+; CHECK-SD-NEXT:    addp.16b v0, v0, v0
+; CHECK-SD-NEXT:    addp.16b v0, v0, v0
+; CHECK-SD-NEXT:    umov.h w0, v0[0]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: convert_to_bitmask16:
@@ -521,10 +521,10 @@ define i16 @convert_to_bitmask_without_knowing_type(<16 x i1> %vec) {
 ; CHECK-SD-NEXT:    ldr q1, [x8, lCPI10_0@PAGEOFF]
 ; CHECK-SD-NEXT:    cmlt.16b v0, v0, #0
 ; CHECK-SD-NEXT:    and.16b v0, v0, v1
-; CHECK-SD-NEXT:    ext.16b v1, v0, v0, #8
-; CHECK-SD-NEXT:    zip1.16b v0, v0, v1
-; CHECK-SD-NEXT:    addv.8h h0, v0
-; CHECK-SD-NEXT:    fmov w0, s0
+; CHECK-SD-NEXT:    addp.16b v0, v0, v0
+; CHECK-SD-NEXT:    addp.16b v0, v0, v0
+; CHECK-SD-NEXT:    addp.16b v0, v0, v0
+; CHECK-SD-NEXT:    umov.h w0, v0[0]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: convert_to_bitmask_without_knowing_type:
@@ -619,11 +619,8 @@ define i4 @convert_to_bitmask_4xi8(<4 x i8> %vec) {
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    sub sp, sp, #16
 ; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-GI-NEXT:    movi d1, #0000000000000000
+; CHECK-GI-NEXT:    movi.2d v1, #0000000000000000
 ; CHECK-GI-NEXT:    uzp1.8b v0, v0, v0
-; CHECK-GI-NEXT:    mov.b v1[1], wzr
-; CHECK-GI-NEXT:    mov.b v1[2], wzr
-; CHECK-GI-NEXT:    mov.b v1[3], wzr
 ; CHECK-GI-NEXT:    cmeq.8b v0, v0, v1
 ; CHECK-GI-NEXT:    mvn.8b v0, v0
 ; CHECK-GI-NEXT:    umov.b w8, v0[1]
@@ -948,21 +945,20 @@ define i6 @no_combine_illegal_num_elements(<6 x i32> %vec) {
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    sub sp, sp, #16
 ; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-GI-NEXT:    fmov s1, w0
-; CHECK-GI-NEXT:    movi d0, #0000000000000000
-; CHECK-GI-NEXT:    fmov s2, w4
-; CHECK-GI-NEXT:    mov.s v1[1], w1
-; CHECK-GI-NEXT:    mov.s v2[1], w5
-; CHECK-GI-NEXT:    mov.s v0[1], wzr
-; CHECK-GI-NEXT:    mov.s v1[2], w2
-; CHECK-GI-NEXT:    cmeq.4s v0, v2, v0
-; CHECK-GI-NEXT:    mov.s v1[3], w3
-; CHECK-GI-NEXT:    mvn.16b v0, v0
-; CHECK-GI-NEXT:    cmtst.4s v1, v1, v1
-; CHECK-GI-NEXT:    mov.s w8, v1[1]
-; CHECK-GI-NEXT:    mov.s w9, v1[2]
-; CHECK-GI-NEXT:    fmov w11, s1
-; CHECK-GI-NEXT:    mov.s w10, v1[3]
+; CHECK-GI-NEXT:    fmov s0, w0
+; CHECK-GI-NEXT:    fmov s1, w4
+; CHECK-GI-NEXT:    movi.2d v2, #0000000000000000
+; CHECK-GI-NEXT:    mov.s v0[1], w1
+; CHECK-GI-NEXT:    mov.s v1[1], w5
+; CHECK-GI-NEXT:    mov.s v0[2], w2
+; CHECK-GI-NEXT:    cmeq.4s v1, v1, v2
+; CHECK-GI-NEXT:    mov.s v0[3], w3
+; CHECK-GI-NEXT:    cmtst.4s v0, v0, v0
+; CHECK-GI-NEXT:    mov.s w8, v0[1]
+; CHECK-GI-NEXT:    mov.s w9, v0[2]
+; CHECK-GI-NEXT:    fmov w11, s0
+; CHECK-GI-NEXT:    mov.s w10, v0[3]
+; CHECK-GI-NEXT:    mvn.16b v0, v1
 ; CHECK-GI-NEXT:    and w8, w8, #0x1
 ; CHECK-GI-NEXT:    bfi w11, w8, #1, #31
 ; CHECK-GI-NEXT:    and w8, w9, #0x1
@@ -996,9 +992,9 @@ define <2 x i8> @vector_to_vector_cast(<16 x i1> %arg) nounwind {
 ; CHECK-SD-NEXT:    ldr q1, [x8, lCPI20_0@PAGEOFF]
 ; CHECK-SD-NEXT:    cmlt.16b v0, v0, #0
 ; CHECK-SD-NEXT:    and.16b v0, v0, v1
-; CHECK-SD-NEXT:    ext.16b v1, v0, v0, #8
-; CHECK-SD-NEXT:    zip1.16b v0, v0, v1
-; CHECK-SD-NEXT:    addv.8h h0, v0
+; CHECK-SD-NEXT:    addp.16b v0, v0, v0
+; CHECK-SD-NEXT:    addp.16b v0, v0, v0
+; CHECK-SD-NEXT:    addp.16b v0, v0, v0
 ; CHECK-SD-NEXT:    ushll.8h v0, v0, #0
 ; CHECK-SD-NEXT:    ushll.4s v0, v0, #0
 ; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $q0
@@ -1201,4 +1197,29 @@ define <2 x i8> @vector_to_vector_cast(<16 x i1> %arg) nounwind {
 ; CHECK-GI-NEXT:    ret
   %bc = bitcast <16 x i1> %arg to <2 x i8>
   ret <2 x i8> %bc
+}
+
+; Regression test for the assertion failure when type legalization splits a
+; <32 x i1> bitcast result into two <16 x i1> halves and applies the v16i8
+; bitmask lowering to each half.
+define <32 x i1> @bitmask_v32i8_split(<32 x i8> %a, <32 x i8> %b) {
+; CHECK-LABEL: bitmask_v32i8_split:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    cmeq.16b v1, v1, v3
+; CHECK-NEXT:    adrp x9, lCPI21_0@PAGE
+; CHECK-NEXT:    cmeq.16b v0, v0, v2
+; CHECK-NEXT:    ldr q2, [x9, lCPI21_0@PAGEOFF]
+; CHECK-NEXT:    and.16b v1, v1, v2
+; CHECK-NEXT:    and.16b v0, v0, v2
+; CHECK-NEXT:    addp.16b v1, v1, v1
+; CHECK-NEXT:    addp.16b v0, v0, v0
+; CHECK-NEXT:    addp.16b v1, v1, v1
+; CHECK-NEXT:    addp.16b v0, v0, v0
+; CHECK-NEXT:    addp.16b v1, v1, v1
+; CHECK-NEXT:    addp.16b v0, v0, v0
+; CHECK-NEXT:    str h1, [x8, #2]
+; CHECK-NEXT:    str h0, [x8]
+; CHECK-NEXT:    ret
+  %r = icmp eq <32 x i8> %a, %b
+  ret <32 x i1> %r
 }

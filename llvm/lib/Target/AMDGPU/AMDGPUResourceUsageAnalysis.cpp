@@ -77,7 +77,7 @@ bool AMDGPUResourceUsageAnalysisWrapperPass::runOnMachineFunction(
     return false;
 
   const TargetMachine &TM = TPC->getTM<TargetMachine>();
-  const MCSubtargetInfo &STI = *TM.getMCSubtargetInfo();
+  const MCSubtargetInfo &STI = TM.getMCSubtargetInfo();
 
   // By default, for code object v5 and later, track only the minimum scratch
   // size
@@ -104,7 +104,7 @@ AnalysisKey AMDGPUResourceUsageAnalysis::Key;
 AMDGPUResourceUsageAnalysis::Result
 AMDGPUResourceUsageAnalysis::run(MachineFunction &MF,
                                  MachineFunctionAnalysisManager &MFAM) {
-  const MCSubtargetInfo &STI = *TM.getMCSubtargetInfo();
+  const MCSubtargetInfo &STI = TM.getMCSubtargetInfo();
 
   // By default, for code object v5 and later, track only the minimum scratch
   // size
@@ -274,6 +274,9 @@ AMDGPUResourceUsageAnalysisImpl::analyzeResourceUsage(
 
         bool IsIndirect = !Callee || Callee->isDeclaration();
         Info.HasIndirectCall |= IsIndirect;
+
+        bool IsChainCall = MI.getOpcode() == AMDGPU::SI_TCRETURN_CHAIN;
+        Info.HasNonChainIndirectCall |= (!IsChainCall && IsIndirect);
 
         // In object linking mode the linker has the full cross-TU view. It
         // propagates resource usage across both direct calls to external

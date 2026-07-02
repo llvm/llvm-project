@@ -499,22 +499,22 @@ AArch64RegisterInfo::getStrictlyReservedRegs(const MachineFunction &MF) const {
   Reserved.set(AArch64::WZR_HI);
   static_assert(AArch64::W30_HI - AArch64::W0_HI == 30,
                 "Unexpected order of registers");
-  Reserved.set(AArch64::W0_HI, AArch64::W30_HI);
+  Reserved.set(AArch64::W0_HI, AArch64::W30_HI + 1);
   static_assert(AArch64::B31_HI - AArch64::B0_HI == 31,
                 "Unexpected order of registers");
-  Reserved.set(AArch64::B0_HI, AArch64::B31_HI);
+  Reserved.set(AArch64::B0_HI, AArch64::B31_HI + 1);
   static_assert(AArch64::H31_HI - AArch64::H0_HI == 31,
                 "Unexpected order of registers");
-  Reserved.set(AArch64::H0_HI, AArch64::H31_HI);
+  Reserved.set(AArch64::H0_HI, AArch64::H31_HI + 1);
   static_assert(AArch64::S31_HI - AArch64::S0_HI == 31,
                 "Unexpected order of registers");
-  Reserved.set(AArch64::S0_HI, AArch64::S31_HI);
+  Reserved.set(AArch64::S0_HI, AArch64::S31_HI + 1);
   static_assert(AArch64::D31_HI - AArch64::D0_HI == 31,
                 "Unexpected order of registers");
-  Reserved.set(AArch64::D0_HI, AArch64::D31_HI);
+  Reserved.set(AArch64::D0_HI, AArch64::D31_HI + 1);
   static_assert(AArch64::Q31_HI - AArch64::Q0_HI == 31,
                 "Unexpected order of registers");
-  Reserved.set(AArch64::Q0_HI, AArch64::Q31_HI);
+  Reserved.set(AArch64::Q0_HI, AArch64::Q31_HI + 1);
 
   return Reserved;
 }
@@ -1220,7 +1220,10 @@ bool AArch64RegisterInfo::getRegAllocationHints(
                                      const MachineOperand &MO) -> bool {
           // R is a suitable register hint if R can reuse one of the other
           // source operands.
-          if (VRM->getPhys(MO.getReg()) != R)
+          MCPhysReg PhysReg = VRM->getPhys(MO.getReg());
+          if (PhysReg && MO.getSubReg())
+            PhysReg = getSubReg(PhysReg, MO.getSubReg());
+          if (PhysReg != R)
             return false;
           Hints.push_back(R);
           return true;

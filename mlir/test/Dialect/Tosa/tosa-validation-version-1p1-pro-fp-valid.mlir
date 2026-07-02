@@ -16,6 +16,15 @@ func.func @test_scatter_i8_i32(%input: tensor<13x27x3xi8>, %indices: tensor<13x2
 
 // -----
 
+// CHECK-LABEL: test_row_gather_i8_i32
+func.func @test_row_gather_i8_i32(%input: tensor<13x27x3xi8>, %indices: tensor<13x26xi32>) -> tensor<13x52x3xi8> {
+  %row_count = "tosa.const"() {values = dense<2> : tensor<1xi32>} : () -> tensor<1xi32>
+  %gather = tosa.row_gather %input, %indices, %row_count : (tensor<13x27x3xi8>, tensor<13x26xi32>, tensor<1xi32>) -> tensor<13x52x3xi8>
+  return %gather : tensor<13x52x3xi8>
+}
+
+// -----
+
 // CHECK-LABEL: test_row_gather_block_scaled_i8_i32
 func.func @test_row_gather_block_scaled_i8_i32(%input: tensor<13x27x3xi8>, %indices: tensor<13x26xi32>) -> tensor<13x52x3xi8> {
   %row_count = "tosa.const"() {values = dense<2> : tensor<1xi32>} : () -> tensor<1xi32>

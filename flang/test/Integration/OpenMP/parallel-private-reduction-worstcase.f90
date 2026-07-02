@@ -105,7 +105,7 @@ end subroutine
 ! CHECK-NEXT:    br label %omp.reduction.init
 
 ! CHECK:       omp.reduction.init:                               ; preds = %omp.region.cont15
-!                [deffered stores for results of reduction alloc regions]
+!                [deferred stores for results of reduction alloc regions]
 ! CHECK:         br label %[[VAL_96:.*]]
 
 ! CHECK:       omp.reduction.neutral:                            ; preds = %omp.reduction.init

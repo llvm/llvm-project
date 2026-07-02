@@ -69,19 +69,19 @@ struct TSDRegistrySharedT {
     init(Instance); // Sets Initialized.
   }
 
-  void unmapTestOnly(Allocator *Instance) EXCLUDES(Mutex) {
+  void unmapTestOnly(Allocator *Instance) {
+    ScopedLock L(Mutex);
     for (u32 I = 0; I < TSDsArraySize; I++) {
       TSDs[I].commitBack(Instance);
       TSDs[I] = {};
     }
     setCurrentTSD(nullptr);
-    ScopedLock L(Mutex);
     atomic_store_relaxed(&Initialized, 0);
   }
 
   void drainCaches(Allocator *Instance) {
-    ScopedLock L(Mutex);
-    for (uptr I = 0; I < NumberOfTSDs; ++I) {
+    u32 TotalTSDs = atomic_load_relaxed(&NumberOfTSDs);
+    for (uptr I = 0; I < TotalTSDs; ++I) {
       TSDs[I].lock();
       Instance->drainCache(&TSDs[I]);
       TSDs[I].unlock();
@@ -120,12 +120,11 @@ struct TSDRegistrySharedT {
 
   bool getDisableMemInit() const { return *getTlsPtr() & 1; }
 
-  void getStats(ScopedString *Str) EXCLUDES(Mutex) {
-    ScopedLock L(Mutex);
-
-    Str->append("Stats: SharedTSDs: %u available; total %u\n", NumberOfTSDs,
+  void getStats(ScopedString *Str) {
+    u32 TotalTSDs = atomic_load_relaxed(&NumberOfTSDs);
+    Str->append("Stats: SharedTSDs: %u available; total %u\n", TotalTSDs,
                 TSDsArraySize);
-    for (uptr I = 0; I < NumberOfTSDs; ++I) {
+    for (uptr I = 0; I < TotalTSDs; ++I) {
       TSDs[I].lock();
       // Theoretically, we want to mark TSD::lock()/TSD::unlock() with proper
       // thread annotations. However, given the TSD is only locked on shared
@@ -152,7 +151,7 @@ private:
       TSD->lock();
       return TSD;
     }
-    return getTSDAndLockSlow(TSD);
+    return getTSDSlow(TSD);
   }
 
   ALWAYS_INLINE uptr *getTlsPtr() const {
@@ -175,14 +174,23 @@ private:
     return reinterpret_cast<TSD<Allocator> *>(*getTlsPtr() & ~1ULL);
   }
 
+  // Requires a lock to avoid multiple threads trying to set the TSDs at once.
   bool setNumberOfTSDs(u32 N) REQUIRES(Mutex) {
-    if (N < NumberOfTSDs)
+    const u32 TotalTSDs = atomic_load_relaxed(&NumberOfTSDs);
+    // In order to avoid needing locks for these values, the number of TSDs
+    // can never be decreased.
+    if (N < TotalTSDs)
       return false;
+
     if (N > TSDsArraySize)
       N = TSDsArraySize;
-    NumberOfTSDs = N;
-    NumberOfCoPrimes = 0;
-    // Compute all the coprimes of NumberOfTSDs. This will be used to walk the
+
+    // In order to avoid locks around the CoPrimes, compute all of the
+    // new values and then set them in place after.
+    u32 NewCoPrimes[TSDsArraySize] = {};
+    u32 NewNumberOfCoPrimes = 0;
+
+    // Compute all the coprimes of the TSDs. This will be used to walk the
     // array of TSDs in a random order. For details, see:
     // https://lemire.me/blog/2017/09/18/visiting-all-values-in-an-array-exactly-once-in-random-order/
     for (u32 I = 0; I < N; I++) {
@@ -195,8 +203,17 @@ private:
         B = T % B;
       }
       if (A == 1)
-        CoPrimes[NumberOfCoPrimes++] = I + 1;
+        NewCoPrimes[NewNumberOfCoPrimes++] = I + 1;
     }
+
+    // Set these values in this particular order so that if getTSDSlow
+    // is called while they are being modified, nothing crashes, or encounters
+    // a zero CoPrime value.
+    for (u32 I = 0; I < NewNumberOfCoPrimes; I++) {
+      atomic_store(&CoPrimes[I], NewCoPrimes[I], memory_order_release);
+    }
+    atomic_store(&NumberOfCoPrimes, NewNumberOfCoPrimes, memory_order_release);
+    atomic_store(&NumberOfTSDs, N, memory_order_release);
     return true;
   }
 
@@ -205,54 +222,54 @@ private:
     *getTlsPtr() |= B;
   }
 
-  NOINLINE void initThread(Allocator *Instance) NO_THREAD_SAFETY_ANALYSIS {
+  NOINLINE void initThread(Allocator *Instance) {
     initOnceMaybe(Instance);
     // Initial context assignment is done in a plain round-robin fashion.
     const u32 Index = atomic_fetch_add(&CurrentIndex, 1U, memory_order_relaxed);
-    setCurrentTSD(&TSDs[Index % NumberOfTSDs]);
+    setCurrentTSD(&TSDs[Index % atomic_load_relaxed(&NumberOfTSDs)]);
     Instance->callPostInitCallback();
   }
 
   // TSDs is an array of locks which is not supported for marking thread-safety
   // capability.
-  NOINLINE TSD<Allocator> *getTSDAndLockSlow(TSD<Allocator> *CurrentTSD)
-      EXCLUDES(Mutex) {
+  NOINLINE TSD<Allocator> *getTSDSlow(TSD<Allocator> *CurrentTSD) {
+    const u32 TotalTSDs = atomic_load_relaxed(&NumberOfTSDs);
+    if (UNLIKELY(TotalTSDs <= 1U)) {
+      CurrentTSD->lock();
+      return CurrentTSD;
+    }
+
     // Use the Precedence of the current TSD as our random seed. Since we are
     // in the slow path, it means that tryLock failed, and as a result it's
     // very likely that said Precedence is non-zero.
     const u32 R = static_cast<u32>(CurrentTSD->getPrecedence());
-    u32 N, Inc;
-    {
-      ScopedLock L(Mutex);
-      N = NumberOfTSDs;
-      DCHECK_NE(NumberOfCoPrimes, 0U);
-      Inc = CoPrimes[R % NumberOfCoPrimes];
+    const u32 TotalCoPrimes = atomic_load_relaxed(&NumberOfCoPrimes);
+    DCHECK_NE(TotalCoPrimes, 0U);
+    const u32 Inc = atomic_load_relaxed(&CoPrimes[R % TotalCoPrimes]);
+
+    u32 Index = R % TotalTSDs;
+    uptr LowestPrecedence = UINTPTR_MAX;
+    TSD<Allocator> *CandidateTSD = nullptr;
+    // Go randomly through at most 4 contexts and find a candidate.
+    for (u32 I = 0; I < Min(4U, TotalTSDs); I++) {
+      if (TSDs[Index].tryLock()) {
+        setCurrentTSD(&TSDs[Index]);
+        return &TSDs[Index];
+      }
+      const uptr Precedence = TSDs[Index].getPrecedence();
+      // A 0 precedence here means another thread just locked this TSD.
+      if (Precedence && Precedence < LowestPrecedence) {
+        CandidateTSD = &TSDs[Index];
+        LowestPrecedence = Precedence;
+      }
+      Index += Inc;
+      if (Index >= TotalTSDs)
+        Index -= TotalTSDs;
     }
-    if (N > 1U) {
-      u32 Index = R % N;
-      uptr LowestPrecedence = UINTPTR_MAX;
-      TSD<Allocator> *CandidateTSD = nullptr;
-      // Go randomly through at most 4 contexts and find a candidate.
-      for (u32 I = 0; I < Min(4U, N); I++) {
-        if (TSDs[Index].tryLock()) {
-          setCurrentTSD(&TSDs[Index]);
-          return &TSDs[Index];
-        }
-        const uptr Precedence = TSDs[Index].getPrecedence();
-        // A 0 precedence here means another thread just locked this TSD.
-        if (Precedence && Precedence < LowestPrecedence) {
-          CandidateTSD = &TSDs[Index];
-          LowestPrecedence = Precedence;
-        }
-        Index += Inc;
-        if (Index >= N)
-          Index -= N;
-      }
-      if (CandidateTSD) {
-        CandidateTSD->lock();
-        setCurrentTSD(CandidateTSD);
-        return CandidateTSD;
-      }
+    if (CandidateTSD) {
+      CandidateTSD->lock();
+      setCurrentTSD(CandidateTSD);
+      return CandidateTSD;
     }
     // Last resort, stick with the current one.
     CurrentTSD->lock();
@@ -260,9 +277,9 @@ private:
   }
 
   atomic_u32 CurrentIndex = {};
-  u32 NumberOfTSDs GUARDED_BY(Mutex) = 0;
-  u32 NumberOfCoPrimes GUARDED_BY(Mutex) = 0;
-  u32 CoPrimes[TSDsArraySize] GUARDED_BY(Mutex) = {};
+  atomic_u32 NumberOfTSDs = {};
+  atomic_u32 NumberOfCoPrimes = {};
+  atomic_u32 CoPrimes[TSDsArraySize] = {};
   atomic_u8 Initialized = {};
   // Used for global initialization and TSDs access.
   // Acquiring the global initialization should only lock once in normal

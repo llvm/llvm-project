@@ -11,7 +11,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "SPIRVRegularizer.h"
 #include "SPIRV.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
@@ -24,27 +26,25 @@
 
 using namespace llvm;
 
+static bool runImpl(Function &F);
+
 namespace {
-struct SPIRVRegularizer : public FunctionPass {
+struct SPIRVRegularizerLegacy : public FunctionPass {
 public:
   static char ID;
-  SPIRVRegularizer() : FunctionPass(ID) {}
-  bool runOnFunction(Function &F) override;
+  SPIRVRegularizerLegacy() : FunctionPass(ID) {}
+  bool runOnFunction(Function &F) override { return runImpl(F); }
   StringRef getPassName() const override { return "SPIR-V Regularizer"; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     FunctionPass::getAnalysisUsage(AU);
   }
-
-private:
-  void runLowerConstExpr(Function &F);
-  void runLowerI1Comparisons(Function &F);
 };
 } // namespace
 
-char SPIRVRegularizer::ID = 0;
+char SPIRVRegularizerLegacy::ID = 0;
 
-INITIALIZE_PASS(SPIRVRegularizer, DEBUG_TYPE, "SPIR-V Regularizer", false,
+INITIALIZE_PASS(SPIRVRegularizerLegacy, DEBUG_TYPE, "SPIR-V Regularizer", false,
                 false)
 
 // Since SPIR-V cannot represent constant expression, constant expressions
@@ -55,7 +55,7 @@ INITIALIZE_PASS(SPIRVRegularizer, DEBUG_TYPE, "SPIR-V Regularizer", false,
 // and all uses of it by instructions in that function are replaced by
 // one instruction.
 // TODO: remove redundant instructions for common subexpression.
-void SPIRVRegularizer::runLowerConstExpr(Function &F) {
+static void runLowerConstExpr(Function &F) {
   LLVMContext &Ctx = F.getContext();
   std::list<Instruction *> WorkList;
   for (auto &II : instructions(F))
@@ -96,15 +96,14 @@ void SPIRVRegularizer::runLowerConstExpr(Function &F) {
     auto LowerConstantVec = [&II, &LowerOp, &WorkList,
                              &Ctx](ConstantVector *Vec,
                                    unsigned NumOfOp) -> Value * {
-      if (std::all_of(Vec->op_begin(), Vec->op_end(), [](Value *V) {
+      if (llvm::all_of(Vec->operands(), [](Value *V) {
             return isa<ConstantExpr>(V) || isa<Function>(V);
           })) {
         // Expand a vector of constexprs and construct it back with
         // series of insertelement instructions.
         std::list<Value *> OpList;
-        std::transform(Vec->op_begin(), Vec->op_end(),
-                       std::back_inserter(OpList),
-                       [LowerOp](Value *V) { return LowerOp(V); });
+        llvm::transform(Vec->operands(), std::back_inserter(OpList),
+                        [LowerOp](Value *V) { return LowerOp(V); });
         Value *Repl = nullptr;
         unsigned Idx = 0;
         auto *PhiII = dyn_cast<PHINode>(II);
@@ -157,13 +156,13 @@ void SPIRVRegularizer::runLowerConstExpr(Function &F) {
 // The backend treats i1 as boolean values, and SPIR-V only allows logical
 // operations for boolean values. This function lowers i1 comparisons with
 // certain predicates to logical operations to generate valid SPIR-V.
-void SPIRVRegularizer::runLowerI1Comparisons(Function &F) {
+static void runLowerI1Comparisons(Function &F) {
   for (auto &I : make_early_inc_range(instructions(F))) {
     auto *Cmp = dyn_cast<ICmpInst>(&I);
     if (!Cmp)
       continue;
 
-    bool IsI1 = Cmp->getOperand(0)->getType()->isIntegerTy(1);
+    bool IsI1 = Cmp->getOperand(0)->getType()->getScalarType()->isIntegerTy(1);
     if (!IsI1)
       continue;
 
@@ -209,12 +208,17 @@ void SPIRVRegularizer::runLowerI1Comparisons(Function &F) {
   }
 }
 
-bool SPIRVRegularizer::runOnFunction(Function &F) {
+static bool runImpl(Function &F) {
   runLowerI1Comparisons(F);
   runLowerConstExpr(F);
   return true;
 }
 
+PreservedAnalyses SPIRVRegularizer::run(Function &F,
+                                        FunctionAnalysisManager &AM) {
+  return runImpl(F) ? PreservedAnalyses::none() : PreservedAnalyses::all();
+}
+
 FunctionPass *llvm::createSPIRVRegularizerPass() {
-  return new SPIRVRegularizer();
+  return new SPIRVRegularizerLegacy();
 }

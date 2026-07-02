@@ -69,7 +69,7 @@ config.test_exec_root = os.path.join(config.bolt_obj_root, "test")
 supported, errormsg = lit_config.maxIndividualTestTimeIsSupported
 if supported:
     config.available_features.add("lit-max-individual-test-time")
-    lit_config.maxIndividualTestTime = 60
+    config.maxIndividualTestTime = 60
 else:
     lit_config.warning(
         "Setting a timeout per test not supported. "

@@ -805,8 +805,7 @@ void LVDWARFReader::processLocationList(dwarf::Attribute Attr,
       (DWARFAttribute::mayHaveLocationExpr(Attr) &&
        FormValue.isFormClass(DWARFFormValue::FC_Exprloc))) {
     ArrayRef<uint8_t> Expr = *FormValue.getAsBlock();
-    DataExtractor Data(StringRef((const char *)Expr.data(), Expr.size()),
-                       IsLittleEndian, 0);
+    DataExtractor Data(Expr, IsLittleEndian);
     DWARFExpression Expression(Data, U->getAddressByteSize(),
                                U->getFormParams().Format);
 
@@ -962,13 +961,11 @@ Error LVDWARFReader::loadTargetInfo(const ObjectFile &Obj) {
   Triple TT = Obj.makeTriple();
 
   // Features to be passed to target/subtarget
-  Expected<SubtargetFeatures> Features = Obj.getFeatures();
   SubtargetFeatures FeaturesValue;
-  if (!Features) {
+  if (Expected<SubtargetFeatures> Features = Obj.getFeatures())
+    FeaturesValue = std::move(*Features);
+  else
     consumeError(Features.takeError());
-    FeaturesValue = SubtargetFeatures();
-  }
-  FeaturesValue = *Features;
 
   StringRef CPU;
   if (auto OptCPU = Obj.tryGetCPUName())

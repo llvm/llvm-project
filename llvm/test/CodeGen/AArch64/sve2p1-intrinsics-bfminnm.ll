@@ -17,8 +17,7 @@ define <vscale x 8 x bfloat> @bfminnm(<vscale x 8 x bfloat> %a, <vscale x 8 x bf
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    bfminnm z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT:    ret
-  %elt = call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
-  %res = call <vscale x 8 x bfloat> @llvm.aarch64.sve.fminnm.nxv8bf16(<vscale x 8 x i1> %elt, <vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b)
+  %res = call <vscale x 8 x bfloat> @llvm.aarch64.sve.fminnm.nxv8bf16(<vscale x 8 x i1> splat (i1 true), <vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b)
   ret <vscale x 8 x bfloat> %res
 }
 
@@ -50,8 +49,7 @@ define <vscale x 8 x bfloat> @bfminnm_u(<vscale x 8 x bfloat> %a, <vscale x 8 x 
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    bfminnm z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT:    ret
-  %elt = call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
-  %res = call <vscale x 8 x bfloat> @llvm.aarch64.sve.fminnm.u.nxv8bf16(<vscale x 8 x i1> %elt, <vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b)
+  %res = call <vscale x 8 x bfloat> @llvm.aarch64.sve.fminnm.u.nxv8bf16(<vscale x 8 x i1> splat (i1 true), <vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b)
   ret <vscale x 8 x bfloat> %res
 }
 

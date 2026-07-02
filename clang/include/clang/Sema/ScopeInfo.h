@@ -328,14 +328,6 @@ public:
     // instantiated.
     class DenseMapInfo {
     public:
-      static inline WeakObjectProfileTy getEmptyKey() {
-        return WeakObjectProfileTy();
-      }
-
-      static inline WeakObjectProfileTy getTombstoneKey() {
-        return WeakObjectProfileTy::getSentinel();
-      }
-
       static unsigned getHashValue(const WeakObjectProfileTy &Val) {
         using Pair = std::pair<BaseInfoTy, const NamedDecl *>;
 

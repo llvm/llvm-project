@@ -46,7 +46,7 @@ enum __tgt_target_return_t : int {
 };
 
 /// Data attributes for each data reference used in an OpenMP target region.
-enum tgt_map_type {
+enum tgt_map_type : uint64_t {
   // No flags
   OMP_TGT_MAPTYPE_NONE = 0x000,
   // copy data from host to device
@@ -428,10 +428,11 @@ void __tgt_target_nowait_query(void **AsyncHandle);
 /// device memory.
 int __tgt_target_kernel_replay(
     ident_t *Loc, int64_t DeviceId, void *HostPtr, void *DeviceMemory,
-    int64_t DeviceMemorySize, const llvm::offloading::EntryTy *Globals,
-    int32_t NumGlobals, void **TgtArgs, ptrdiff_t *TgtOffsets, int32_t NumArgs,
-    int32_t NumTeams, int32_t ThreadLimit, uint32_t SharedMemorySize,
-    uint64_t LoopTripCount, KernelReplayOutcomeTy *ReplayOutcome);
+    void *ReuseDeviceAlloc, int64_t DeviceMemorySize,
+    const llvm::offloading::EntryTy *Globals, int32_t NumGlobals,
+    void **TgtArgs, ptrdiff_t *TgtOffsets, int32_t NumArgs, int32_t NumTeams,
+    int32_t ThreadLimit, uint32_t SharedMemorySize, uint64_t LoopTripCount,
+    KernelReplayOutcomeTy *ReplayOutcome);
 
 void __tgt_set_info_flag(uint32_t);
 

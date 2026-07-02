@@ -219,7 +219,7 @@ def include_swiftmodules_from_interface: Flag<["--", "-"], "include-swiftmodules
 
 def linker: Separate<["--", "-"], "linker">,
   MetaVarName<"<DWARF linker type>">,
-  HelpText<"Specify the desired type of DWARF linker. Defaults to 'classic'">,
+  HelpText<"Specify the desired type of DWARF linker. Defaults to 'parallel'">,
   Group<grp_general>;
 def: Joined<["--", "-"], "linker=">, Alias<linker>;
 
@@ -255,6 +255,12 @@ def disallow: Separate<["--", "-"], "disallow">,
   "entries.">,
   Group<grp_general>;
 def: Joined<["--", "-"], "disallow=">, Alias<disallow>;
+
+def codesign: Separate<["--", "-"], "codesign">,
+  MetaVarName<"<identity>">,
+  HelpText<"Code sign the dSYM bundle with the given signing identity after linking.">,
+  Group<grp_general>;
+def: Joined<["--", "-"], "codesign=">, Alias<codesign>;
 
 def dsym_search_path: Separate<["-", "--"], "D">,
   MetaVarName<"<path>">,

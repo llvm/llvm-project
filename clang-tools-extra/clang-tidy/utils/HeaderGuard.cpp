@@ -239,16 +239,21 @@ public:
       if (SeenMacro)
         continue;
 
+      const StringRef LineEnding = SM.getBufferData(FID).detectEOL();
+
       Check->diag(StartLoc, "header is missing header guard")
           << FixItHint::CreateInsertion(
-                 StartLoc,
-                 (Twine("#ifndef ") + CPPVar + "\n#define " + CPPVar + "\n\n")
-                     .str())
+                 StartLoc, (Twine("#ifndef ") + CPPVar + LineEnding +
+                            "#define " + CPPVar + LineEnding + LineEnding)
+                               .str())
           << FixItHint::CreateInsertion(
                  SM.getLocForEndOfFile(FID),
-                 Check->shouldSuggestEndifComment(FileName)
-                     ? "\n#" + Check->formatEndIf(CPPVar) + "\n"
-                     : "\n#endif\n");
+                 (Twine(LineEnding) + "#" +
+                  (Check->shouldSuggestEndifComment(FileName)
+                       ? Check->formatEndIf(CPPVar)
+                       : "endif") +
+                  LineEnding)
+                     .str());
     }
   }
 
