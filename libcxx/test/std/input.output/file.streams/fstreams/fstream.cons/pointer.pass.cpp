@@ -16,8 +16,6 @@
 // In C++23 and later, this test requires support for P2467R1 in the dylib (a3f17ba3febbd546f2342ffc780ac93b694fdc8d)
 // XFAIL: (!c++03 && !c++11 && !c++14 && !c++17 && !c++20) && using-built-library-before-llvm-18
 
-// XFAIL: LIBCXX-AIX-FIXME
-
 #include <fstream>
 #include <cassert>
 
@@ -91,14 +89,23 @@ int main(int, char**)
 
           {
             std::fstream f(tmp.c_str(), mode);
-            assert(!f.is_open()); // since it already exists
+            // On AIX, fopen() does not support the 'x' (exclusive) mode suffix so open()
+            // returns nullptr for all noreplace modes. On other platforms, the file already
+            // exists so noreplace causes open() to fail.
+            assert(!f.is_open());
           }
 
           {
             std::remove(tmp.c_str());
 
             std::fstream f(tmp.c_str(), mode);
+#  if defined(_AIX) || defined(__TOS_AIX__)
+            // AIX fopen() does not support the 'x' (exclusive) mode suffix;
+            // open() returns nullptr for all noreplace modes regardless of whether the file exists.
+            assert(!f.is_open());
+#  else
             assert(f.is_open()); // since it doesn't exist
+#  endif
           }
         }
 
@@ -108,14 +115,23 @@ int main(int, char**)
 
           {
             std::wfstream f(tmp.c_str(), mode);
-            assert(!f.is_open()); // since it already exists
+            // On AIX, fopen() does not support the 'x' (exclusive) mode suffix so open()
+            // returns nullptr for all noreplace modes. On other platforms, the file already
+            // exists so noreplace causes open() to fail.
+            assert(!f.is_open());
           }
 
           {
             std::remove(tmp.c_str());
 
             std::wfstream f(tmp.c_str(), mode);
+#    if defined(_AIX) || defined(__TOS_AIX__)
+            // AIX fopen() does not support the 'x' (exclusive) mode suffix;
+            // open() returns nullptr for all noreplace modes regardless of whether the file exists.
+            assert(!f.is_open());
+#    else
             assert(f.is_open()); // since it doesn't exist
+#    endif
           }
         }
 #  endif
