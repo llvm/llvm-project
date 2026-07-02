@@ -18,7 +18,9 @@
 #include "libc_common.h"
 
 #include "builtins/adddf3.h"
+#include "builtins/addsf3.h"
 #include "builtins/addtf3.h"
+#include "builtins/divdf3.h"
 #include "builtins/divtf3.h"
 #include "builtins/muldf3.h"
 #include "builtins/multf3.h"

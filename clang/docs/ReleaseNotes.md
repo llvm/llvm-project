@@ -789,6 +789,11 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 - Clang incorrectly instantiated variable specializations outside of the immediate context. (#GH54439)
 - Fixed a crash when pack expansions are used as arguments for non-pack parameters of built-in templates. (#GH180307)
 - Fixed crash instantiating class member specializations.
+- Fixed a crash during class template instantiation when a member variable
+  template's type substitution fails (e.g. `typename T::type` with `T=int`),
+  which left the `VarTemplateDecl` unregistered and caused a subsequent
+  assertion failure when instantiating a partial specialization of that member.
+  (#GH198890)
 - Fix a problem where a substitution failure when evaluating a type requirement
   could directly make the program ill-formed.
 - Typo correction now corrects the name qualifier for invalid template names.
@@ -818,6 +823,8 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 - Fixed crashes in Itanium C++ name mangling for lambdas with trailing requires-clauses involving requires-expressions. (#GH100774) (#GH123854)
 - Fixed an invalid rejection and assertion failure while generating `operator=` for fields with the `__restrict` qualifier. (#GH37979)
 - Fixed a use-after-free bug when parsing default arguments containing lambdas in declarations with template-id declarators. (#GH196725)
+- Fixed missing destructor cleanups for lambda init-captures in default member
+  initializers used during aggregate initialization. (#GH196469)
 - Fixed a crash in constant evaluation using placement new on an array which was later initialized. (#GH196450)
 - Fixed an issue where Clang incorrectly accepted invalid unqualified uses of local nested class names outside their declaring scope. (#GH184622)
 - Fixed a crash when parsing invalid friend declaration with storage-class specifier. (#GH186569)
@@ -1040,6 +1047,7 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 - Fixed a crash in code completion when using a C-Style cast with a parenthesized
   operand in Objective-C++ mode. (#GH180125)
+- Fixed a crash when code completion is triggered inside an ill-formed lambda's trailing requires-clause. (#GH201632)  
 
 ### Static Analyzer
 
@@ -1136,6 +1144,14 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 - Fixed `-nolibsycl` being silently ignored on Linux: the SYCL runtime
   library was unconditionally added to the link line even when the flag was
   passed.
+- Added the `-fsycl-device-image-split=` option to select the granularity at
+  which SYCL device code is grouped into device images. Supported values are
+  `kernel` (one device image per kernel), `translation_unit` (one device image
+  per translation unit), and `link_unit` (one device image per linking unit).
+  The bare `-fsycl-device-image-split` flag is an alias for
+  `-fsycl-device-image-split=translation_unit`, which is also the default.
+- Clang now is capable of diagnosing reference kernel parameters which are not
+  allowed by SYCL 2020 spec.
 
 #### Improvements
 

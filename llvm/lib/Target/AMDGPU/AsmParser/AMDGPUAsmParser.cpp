@@ -2997,7 +2997,7 @@ MCRegister AMDGPUAsmParser::getRegularReg(RegisterKind RegKind, unsigned RegNum,
   }
 
   const MCRegisterInfo *TRI = getContext().getRegisterInfo();
-  const MCRegisterClass RC = TRI->getRegClass(RCID);
+  const MCRegisterClass &RC = TRI->getRegClass(RCID);
   if (RegIdx >= RC.getNumRegs() || (RegKind == IS_VGPR && RegIdx > 255)) {
     Error(Loc, "register index is out of range");
     return AMDGPU::NoRegister;
