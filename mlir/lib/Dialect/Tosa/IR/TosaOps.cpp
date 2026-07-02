@@ -20,6 +20,7 @@
 #include "mlir/Dialect/Tosa/Utils/ShapeUtils.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Utils/VerificationUtils.h"
+#include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/Matchers.h"
@@ -628,6 +629,8 @@ Value mlir::tosa::createPadConstTensor(OpBuilder &builder, Location loc,
 }
 
 unsigned mlir::tosa::getBitWidth(Type type) {
+  if (auto blockScaledTy = dyn_cast<tosa::BlockScaledType>(type))
+    return getBitWidth(blockScaledTy.getValueType());
   if (dyn_cast<tosa::mxint8Type>(type))
     return 8;
   return type.getIntOrFloatBitWidth();
@@ -735,6 +738,131 @@ LogicalResult mlir::tosa::mxint8Type::convertFromAttribute(
 }
 
 //===----------------------------------------------------------------------===//
+// TOSA block scaling utilities.
+//===----------------------------------------------------------------------===//
+
+static ParseResult parseScaleValues(AsmParser &parser,
+                                    SmallVector<Attribute> &scaleValues,
+                                    Type scaleType) {
+  const auto parseScaleValue = [&]() -> ParseResult {
+    const SMLoc loc = parser.getCurrentLocation();
+
+    double floatValue;
+    if (parser.parseFloat(floatValue))
+      return failure();
+
+    if (floatValue < 0.0)
+      return parser.emitError(loc, "scale value must be non-negative, got ")
+             << floatValue;
+
+    Type attrType = scaleType;
+    if (succeeded(parser.parseOptionalColon()) && parser.parseType(attrType))
+      return failure();
+
+    if (attrType != scaleType)
+      return parser.emitError(loc, "parsed attribute type ")
+             << attrType << " does not match expected scale type " << scaleType;
+
+    scaleValues.push_back(FloatAttr::get(attrType, floatValue));
+    return success();
+  };
+
+  return parser.parseCommaSeparatedList(parseScaleValue);
+}
+
+static void printScaleValues(AsmPrinter &printer,
+                             ArrayRef<Attribute> scaleValues, Type) {
+  llvm::interleaveComma(scaleValues, printer, [&](Attribute scaleValue) {
+    printer.printAttributeWithoutType(scaleValue);
+  });
+}
+
+static LogicalResult verifyBlockScaledTensorType(Operation &op, mlir::Type type,
+                                                 bool allowScaleValues) {
+  const auto tensorType = llvm::cast<ShapedType>(type);
+  const BlockScaledType elemType =
+      llvm::dyn_cast<BlockScaledType>(tensorType.getElementType());
+  if (!elemType)
+    return success();
+
+  if (!allowScaleValues && elemType.hasScaleValues())
+    return op.emitError()
+           << "tensor type " << type
+           << " does not support scale values for this operation";
+
+  if (!tensorType.hasRank())
+    return success();
+
+  if (tensorType.getRank() == 0)
+    return op.emitError()
+           << "tensor type " << type
+           << " does not support block scaling on scalar tensors";
+
+  const ArrayRef<int64_t> tensorShape = tensorType.getShape();
+  const uint32_t blockSize =
+      BlockShapeAttr::getBlockShapeValue(elemType.getBlockShape());
+
+  if (allowScaleValues && elemType.hasScaleValues() &&
+      tensorType.hasStaticShape()) {
+    const size_t numBlocks =
+        llvm::accumulate(tensorShape, int64_t(1), std::multiplies<int64_t>());
+    if (elemType.getScaleValues().size() != numBlocks / blockSize)
+      return op.emitError()
+             << "tensor type " << type << " has " << numBlocks / blockSize
+             << " blocks but got " << elemType.getScaleValues().size()
+             << " scale values";
+  }
+
+  const int64_t blockedDimension = tensorShape.back();
+  if (ShapedType::isDynamic(blockedDimension))
+    return success();
+  if (blockedDimension % blockSize != 0)
+    return op.emitError()
+           << "tensor type " << type
+           << " blocked dimension must be a multiple of block size, got "
+           << blockedDimension << " and block size " << blockSize;
+
+  return success();
+}
+
+LogicalResult OpTrait::tosa::verifyBlockScaledTensorType(Operation &op,
+                                                         mlir::Type type) {
+  return ::verifyBlockScaledTensorType(op, type, /*allowScaleValues=*/false);
+}
+
+size_t mlir::tosa::BlockScaledType::getDenseElementBitSize() const {
+  const Type valueType = getValueType();
+  if (isa<tosa::mxint8Type>(valueType))
+    return 8;
+  return valueType.getIntOrFloatBitWidth();
+}
+
+Attribute
+mlir::tosa::BlockScaledType::convertToAttribute(ArrayRef<char> rawData) const {
+  assert(rawData.size() == 1 && "expected 1 byte for block_scaled element");
+  const Type valueType = getValueType();
+  if (const auto mxint8Value = dyn_cast<tosa::mxint8Type>(valueType))
+    return mxint8Value.convertToAttribute(rawData);
+  if (!isa<FloatType>(valueType))
+    return {};
+  return mlir::detail::convertFloatTypeToAttribute(valueType, rawData);
+}
+
+LogicalResult mlir::tosa::BlockScaledType::convertFromAttribute(
+    Attribute attr, SmallVectorImpl<char> &result) const {
+  const Type valueType = getValueType();
+  if (const auto mxint8Value = dyn_cast<tosa::mxint8Type>(valueType))
+    return mxint8Value.convertFromAttribute(attr, result);
+
+  const auto floatAttr = dyn_cast<FloatAttr>(attr);
+  if (!floatAttr || floatAttr.getType() != valueType)
+    return failure();
+  const APFloat value = floatAttr.getValue();
+  return mlir::detail::convertFloatTypeFromAttribute(
+      valueType, FloatAttr::get(valueType, value), result);
+}
+
+//===----------------------------------------------------------------------===//
 // TOSA Operator Verifiers.
 //===----------------------------------------------------------------------===//
 
@@ -820,7 +948,7 @@ static LogicalResult verifyConvOp(T op) {
 }
 
 LogicalResult tosa::ConstOp::verify() {
-
+  Operation &op = *getOperation();
   auto attrType = llvm::dyn_cast<TensorType>(getValuesAttr().getType());
   auto outputType = llvm::dyn_cast<TensorType>(getOutput().getType());
 
@@ -829,16 +957,48 @@ LogicalResult tosa::ConstOp::verify() {
     return failure();
   }
 
-  if (auto result = llvm::dyn_cast<mlir::quant::QuantizedType>(
-          outputType.getElementType())) {
-    if (getStorageElementTypeFromQuantized(result) == attrType.getElementType())
+  const Type attrElemType = attrType.getElementType();
+  const Type resultElemType = outputType.getElementType();
+
+  if (auto result =
+          llvm::dyn_cast<mlir::quant::QuantizedType>(resultElemType)) {
+    if (getStorageElementTypeFromQuantized(result) == attrElemType)
       return success();
   }
 
-  if (attrType.getElementType() != outputType.getElementType()) {
-    emitOpError("expected same attr/result element types");
-    return failure();
+  if (auto attrBlockScaledType =
+          llvm::dyn_cast<mlir::tosa::BlockScaledType>(attrElemType)) {
+    if (failed(verifyBlockScaledTensorType(op, attrType, true)) ||
+        failed(verifyBlockScaledTensorType(op, outputType, false)))
+      return failure();
+
+    if (!attrBlockScaledType.hasScaleValues())
+      return op.emitOpError(
+          "attribute block scaled type must have scale values");
+
+    const BlockScaledType resultBlockScaledType =
+        llvm::dyn_cast<mlir::tosa::BlockScaledType>(resultElemType);
+    if (!resultBlockScaledType)
+      return op.emitOpError(
+          "result type must be block scaled type if attribute is block "
+          "scaled type");
+
+    if (attrBlockScaledType.getValueType() !=
+            resultBlockScaledType.getValueType() ||
+        attrBlockScaledType.getScaleType() !=
+            resultBlockScaledType.getScaleType() ||
+        attrBlockScaledType.getBlockShape() !=
+            resultBlockScaledType.getBlockShape())
+      return op.emitOpError(
+                 "expected block scaled element type to be compatible "
+                 "between attr and result, got ")
+             << attrBlockScaledType << " vs. " << resultBlockScaledType;
+
+    return success();
   }
+
+  if (attrElemType != resultElemType)
+    return emitOpError("expected same attr/result element types");
 
   return success();
 }
@@ -5184,6 +5344,34 @@ LogicalResult RescaleOp::inferReturnTypeComponents(
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
   ShapeAdaptor inputShape(adaptor.getInput().getType());
   inferredReturnShapes.push_back(ShapedTypeComponents(inputShape));
+  return success();
+}
+
+LogicalResult CastOp::verify() {
+  const ShapedType inputType = llvm::cast<ShapedType>(getInput().getType());
+  const ShapedType outputType = llvm::cast<ShapedType>(getType());
+  const Type inputElementType = inputType.getElementType();
+  const Type outputElementType = outputType.getElementType();
+
+  const bool inputIsBlockScaled = llvm::isa<BlockScaledType>(inputElementType);
+  const bool outputIsBlockScaled =
+      llvm::isa<BlockScaledType>(outputElementType);
+  if (!inputIsBlockScaled && !outputIsBlockScaled)
+    return success();
+
+  if (inputIsBlockScaled && outputIsBlockScaled)
+    return emitOpError()
+           << "requires exactly one of input or output to have block scaled "
+              "element type";
+
+  const Type scalarElementType =
+      inputIsBlockScaled ? outputElementType : inputElementType;
+  if (!llvm::isa<FloatType>(scalarElementType))
+    return emitOpError()
+           << "requires non-block-scaled element type to be floating-point "
+              "when casting to or from block scaled element type, got "
+           << scalarElementType;
+
   return success();
 }
 

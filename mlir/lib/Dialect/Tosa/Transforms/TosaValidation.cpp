@@ -1495,7 +1495,7 @@ bool TosaValidation::isValidElementType(Type type, const bool allowUnsigned) {
     }
   } else if (isa<tosa::shapeType>(type))
     return true;
-  else if (isa<tosa::mxint8Type>(type))
+  else if (isa<tosa::mxint8Type, tosa::BlockScaledType>(type))
     return true;
   return false;
 }
