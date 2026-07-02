@@ -4231,6 +4231,56 @@ UnrollHeuristicOp::getGenerateesODSOperandIndexAndLength() {
 }
 
 //===----------------------------------------------------------------------===//
+// UnrollPartialOp
+//===----------------------------------------------------------------------===//
+
+void UnrollPartialOp::build(::mlir::OpBuilder &odsBuilder,
+                            ::mlir::OperationState &odsState, ::mlir::Value cli,
+                            uint64_t unrollFactor) {
+  odsState.addOperands(cli);
+  Properties &props = odsState.getOrAddProperties<Properties>();
+  props.unroll_factor = odsBuilder.getI64IntegerAttr(unrollFactor);
+}
+
+void UnrollPartialOp::print(OpAsmPrinter &p) {
+  p << '(' << getApplyee() << ')';
+
+  p.printOptionalAttrDict((*this)->getAttrs());
+}
+
+mlir::ParseResult UnrollPartialOp::parse(::mlir::OpAsmParser &parser,
+                                         ::mlir::OperationState &result) {
+  auto cliType = CanonicalLoopInfoType::get(parser.getContext());
+
+  if (parser.parseLParen())
+    return failure();
+
+  OpAsmParser::UnresolvedOperand applyee;
+  if (parser.parseOperand(applyee) ||
+      parser.resolveOperand(applyee, cliType, result.operands))
+    return failure();
+
+  if (parser.parseRParen())
+    return failure();
+
+  // The unroll factor is carried by the `unroll_factor` attribute.
+  if (parser.parseOptionalAttrDict(result.attributes))
+    return failure();
+
+  return mlir::success();
+}
+
+std::pair<unsigned, unsigned>
+UnrollPartialOp::getApplyeesODSOperandIndexAndLength() {
+  return getODSOperandIndexAndLength(odsIndex_applyee);
+}
+
+std::pair<unsigned, unsigned>
+UnrollPartialOp::getGenerateesODSOperandIndexAndLength() {
+  return {0, 0};
+}
+
+//===----------------------------------------------------------------------===//
 // TileOp
 //===----------------------------------------------------------------------===//
 
