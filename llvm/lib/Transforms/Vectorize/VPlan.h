@@ -1036,14 +1036,18 @@ public:
     }
   }
 
-  WrapFlagsTy getNoWrapFlagsOrNone() const {
+  bool hasNoWrapFlags() const {
     switch (OpType) {
     case OperationType::OverflowingBinOp:
     case OperationType::Trunc:
-      return {hasNoUnsignedWrap(), hasNoSignedWrap()};
+      return true;
     default:
-      return {};
+      return false;
     }
+  }
+
+  WrapFlagsTy getNoWrapFlags() const {
+    return {hasNoUnsignedWrap(), hasNoSignedWrap()};
   }
 
   bool isDisjoint() const {
@@ -4124,7 +4128,7 @@ public:
 
   VPWidenCanonicalIVRecipe *clone() override {
     auto *WideCanIV =
-        new VPWidenCanonicalIVRecipe(getCanonicalIV(), getNoWrapFlagsOrNone());
+        new VPWidenCanonicalIVRecipe(getCanonicalIV(), getNoWrapFlags());
     if (VPValue *Step = getStepValue())
       WideCanIV->addPerPartStep(Step);
     return WideCanIV;
@@ -4192,7 +4196,7 @@ public:
 
   VPDerivedIVRecipe *clone() override {
     return new VPDerivedIVRecipe(Kind, FPBinOp, getStartValue(), getOperand(1),
-                                 getStepValue(), getNoWrapFlagsOrNone());
+                                 getStepValue(), getNoWrapFlags());
   }
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPDerivedIVSC)

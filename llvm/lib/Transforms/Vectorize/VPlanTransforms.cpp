@@ -733,7 +733,7 @@ void VPlanTransforms::replaceWideCanonicalIVWithWideIV(
     WideCanIV->replaceAllUsesWith(createScalarIVSteps(
         Plan, InductionDescriptor::IK_IntInduction, Instruction::Add, nullptr,
         nullptr, Plan.getZero(CanIVTy), Plan.getConstantInt(CanIVTy, 1),
-        WideCanIV->getDebugLoc(), Builder, WideCanIV->getNoWrapFlagsOrNone()));
+        WideCanIV->getDebugLoc(), Builder, WideCanIV->getNoWrapFlags()));
     WideCanIV->eraseFromParent();
     return;
   }
@@ -782,7 +782,7 @@ void VPlanTransforms::replaceWideCanonicalIVWithWideIV(
   VPValue *StepV = Plan.getConstantInt(CanIVTy, 1);
   auto *NewWideIV = new VPWidenIntOrFpInductionRecipe(
       /*IV=*/nullptr, Plan.getZero(CanIVTy), StepV, &Plan.getVF(), ID,
-      WideCanIV->getNoWrapFlagsOrNone(), WideCanIV->getDebugLoc());
+      WideCanIV->getNoWrapFlags(), WideCanIV->getDebugLoc());
   NewWideIV->insertBefore(&*Header->getFirstNonPhi());
   WideCanIV->replaceAllUsesWith(NewWideIV);
   WideCanIV->eraseFromParent();
@@ -939,7 +939,9 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
         Plan, ID.getKind(), ID.getInductionOpcode(),
         dyn_cast_or_null<FPMathOperator>(ID.getInductionBinOp()),
         WideIV->getTruncInst(), WideIV->getStartValue(), WideIV->getStepValue(),
-        WideIV->getDebugLoc(), Builder, WideIV->getNoWrapFlagsOrNone());
+        WideIV->getDebugLoc(), Builder,
+        WideIV->hasNoWrapFlags() ? WideIV->getNoWrapFlags()
+                                 : VPIRFlags::WrapFlagsTy());
 
     // Update scalar users of IV to use Step instead.
     if (!HasOnlyVectorVFs) {
@@ -3437,7 +3439,7 @@ void VPlanTransforms::addExplicitVectorLength(
 
   auto *NextIter = Builder.createAdd(
       OpVPEVL, CurrentIteration, CanonicalIVIncrement->getDebugLoc(),
-      "current.iteration.next", CanonicalIVIncrement->getNoWrapFlagsOrNone());
+      "current.iteration.next", CanonicalIVIncrement->getNoWrapFlags());
   CurrentIteration->addBackedgeValue(NextIter);
 
   VPValue *NextAVL =
@@ -4010,14 +4012,14 @@ static void expandVPDerivedIV(VPDerivedIVRecipe *R) {
     return R->replaceAllUsesWith(Builder.createAdd(
         Start,
         Builder.createOverflowingOp(Instruction::Mul, {Index, Step},
-                                    R->getNoWrapFlagsOrNone()),
-        R->getDebugLoc(), "", R->getNoWrapFlagsOrNone()));
+                                    R->getNoWrapFlags()),
+        R->getDebugLoc(), "", R->getNoWrapFlags()));
   }
   case InductionDescriptor::IK_PtrInduction:
     return R->replaceAllUsesWith(Builder.createPtrAdd(
-        Start, Builder.createOverflowingOp(Instruction::Mul, {Index, Step},
-                                           R->getNoWrapFlagsOrNone(),
-                                           R->getDebugLoc())));
+        Start,
+        Builder.createOverflowingOp(Instruction::Mul, {Index, Step},
+                                    R->getNoWrapFlags(), R->getDebugLoc())));
   case InductionDescriptor::IK_FpInduction: {
     assert(StepTy->isFloatingPointTy() && "Expected FP Step value");
     const FPMathOperator *FPBinOp = R->getFPBinOp();
@@ -4160,7 +4162,7 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
             Step, Builder.createNaryOp(VPInstruction::StepVector, {}, CanIVTy));
         VPValue *CanVecIV =
             Builder.createAdd(CanIV, Step, WideCanIV->getDebugLoc(), "vec.iv",
-                              WideCanIV->getNoWrapFlagsOrNone());
+                              WideCanIV->getNoWrapFlags());
         WideCanIV->replaceAllUsesWith(CanVecIV);
         WideCanIV->eraseFromParent();
         continue;
@@ -4237,7 +4239,7 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
               m_VPInstruction<VPInstruction::CanonicalIVIncrementForPart>())) {
         auto *VPI = cast<VPInstruction>(&R);
         VPValue *Add = Builder.createOverflowingOp(
-            Instruction::Add, VPI->operands(), VPI->getNoWrapFlagsOrNone(),
+            Instruction::Add, VPI->operands(), VPI->getNoWrapFlags(),
             VPI->getDebugLoc());
         VPI->replaceAllUsesWith(Add);
         VPI->eraseFromParent();

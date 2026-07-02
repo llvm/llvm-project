@@ -179,7 +179,8 @@ void UnrollState::unrollWidenInductionByUF(
   VPIRFlags::WrapFlagsTy WrapFlags(false, false);
   if (auto *IntOrFPInd = dyn_cast<VPWidenIntOrFpInductionRecipe>(IV)) {
     FMF = IntOrFPInd->getFastMathFlagsOrNone();
-    WrapFlags = IntOrFPInd->getNoWrapFlagsOrNone();
+    if (IntOrFPInd->hasNoWrapFlags())
+      WrapFlags = IntOrFPInd->getNoWrapFlags();
   }
 
   VPValue *ScalarStep = IV->getStepValue();
