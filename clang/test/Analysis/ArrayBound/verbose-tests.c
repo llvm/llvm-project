@@ -44,8 +44,7 @@ struct TwoInts underflowReportedAsStruct(void) {
 
 struct TwoInts underflowOnlyByteOffset(void) {
   // In this case the negative byte offset is not a multiple of the size of the
-  // accessed element, so the part "= -... * sizeof(type)" is omitted at the
-  // end of the message.
+  // accessed element, so we use a byte offset instead of an index.
   return *(struct TwoInts*)(TenElements - 3);
   // expected-warning@-1 {{Out of bound access to memory preceding 'TenElements'}}
   // expected-note@-2 {{Access of 'TenElements' at negative byte offset -12}}

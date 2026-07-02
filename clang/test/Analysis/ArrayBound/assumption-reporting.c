@@ -54,7 +54,32 @@ int assumingLower(int arg) {
   if (arg >= 10)
     return 0;
   int a = TenElements[arg];
-  // expected-note@-1 {{Assuming index is non-negative}}
+  // expected-note-re@-1 {{Assuming index is non-negative{{$}}}}
+  int b = TenElements[arg + 10];
+  // expected-warning@-1 {{Out of bound access to memory after the end of 'TenElements'}}
+  // expected-note@-2 {{Access of 'TenElements' at an overflowing index, while it holds only 10 'int' elements}}
+  return a + b;
+}
+
+int assumingLowerOnlyUseIndex(int arg) {
+  // This testcase validates that the note tag says that the _index_ is
+  // non-negative when there is no upper bound assumption -- even in the case
+  // when the extent (which is totally irrelevant) is not an integer multiple
+  // of the element size.
+
+  char TwoAndHalfInts[10] = {0};
+  // expected-note@+2 {{Assuming 'arg' is < 2}}
+  // expected-note@+1 {{Taking false branch}}
+  if (arg >= 2)
+    return 0;
+
+  int a = ((int*)TwoAndHalfInts)[arg];
+  // expected-note@-1 {{Assuming byte offset is non-negative and less than 10, the extent of 'TwoAndHalfInts'}}
+  // FIXME: This assumption note should say
+  //   {{Assuming index is non-negative{{$}}}}
+  // but the comparison logic is not smart enough to deduce that if arg < 2,
+  // then 4*arg < 10.
+
   int b = TenElements[arg + 10];
   // expected-warning@-1 {{Out of bound access to memory after the end of 'TenElements'}}
   // expected-note@-2 {{Access of 'TenElements' at an overflowing index, while it holds only 10 'int' elements}}
@@ -91,6 +116,22 @@ int assumingUpperIrrelevant(int arg) {
   int b = TenElements[arg + 10];
   // expected-warning@-1 {{Out of bound access to memory after the end of 'TenElements'}}
   // expected-note@-2 {{Access of 'TenElements' at an overflowing index, while it holds only 10 'int' elements}}
+  return a + b;
+}
+
+int assumingLowerIrrelevant(int arg) {
+  // FIXME: Analogously to `assumingUpperIrrelevant` here the assumption
+  // "assuming index is non-negative" is irrelevant, but printed.
+  //
+  // expected-note@+2 {{Assuming 'arg' is < 10}}
+  // expected-note@+1 {{Taking false branch}}
+  if (arg >= 10)
+    return 0;
+  int a = TenElements[arg];
+  // expected-note-re@-1 {{Assuming index is non-negative{{$}}}}
+  int b = TenElements[arg - 10];
+  // expected-warning@-1 {{Out of bound access to memory preceding 'TenElements'}}
+  // expected-note@-2 {{Access of 'TenElements' at a negative index}}
   return a + b;
 }
 
@@ -191,8 +232,8 @@ int assumingExtent(int arg) {
 }
 
 int *extentInterestingness(int arg) {
-  // Verify that in an out-of-bounds access issue the extent is marked as
-  // interesting (so assumptions about its value are printed).
+  // Verify that in a buffer overflow issue the extent is marked as interesting
+  // (so assumptions about its value are printed).
   int *mem = (int*)malloc(arg);
 
   TenElements[arg] = 123;
@@ -201,6 +242,18 @@ int *extentInterestingness(int arg) {
   return &mem[12];
   // expected-warning@-1 {{Out of bound access to memory after the end of the heap area}}
   // expected-note@-2 {{Access of 'int' element in the heap area at index 12}}
+}
+
+int *extentNonInterestingInUnderflow(int arg) {
+  // Verify that in a buffer underflow issue the extent is _not_ marked as
+  // interesting (because it does not influence anything).
+  int *mem = (int*)malloc(arg);
+
+  TenElements[arg] = 123; // no-note: arg is not interesting
+
+  return &mem[-2];
+  // expected-warning@-1 {{Out of bound access to memory preceding the heap area}}
+  // expected-note@-2 {{Access of 'int' element in the heap area at negative index -2}}
 }
 
 int triggeredByAnyReport(int arg) {

@@ -22,6 +22,7 @@ static_library("Checkers") {
     "BitwiseShiftChecker.cpp",
     "BlockInCriticalSectionChecker.cpp",
     "BoolAssignmentChecker.cpp",
+    "BoundsChecking.cpp",
     "BuiltinFunctionChecker.cpp",
     "CStringChecker.cpp",
     "CStringSyntaxChecker.cpp",

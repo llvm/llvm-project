@@ -11,139 +11,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/AST/CharUnits.h"
 #include "clang/AST/ParentMapContext.h"
+#include "clang/StaticAnalyzer/Checkers/BoundsChecking.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Checkers/Taint.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/APSIntType.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/DynamicExtent.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
-#include "llvm/ADT/APSInt.h"
-#include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/raw_ostream.h"
 #include <optional>
 
 using namespace clang;
 using namespace ento;
-using namespace taint;
-using llvm::formatv;
 
 namespace {
-/// If `E` is an array subscript expression with a base that is "clean" (= not
-/// modified by pointer arithmetic = the beginning of a memory region), return
-/// it as a pointer to ArraySubscriptExpr; otherwise return nullptr.
-/// This helper function is used by two separate heuristics that are only valid
-/// in these "clean" cases.
-static const ArraySubscriptExpr *
-getAsCleanArraySubscriptExpr(const Expr *E, const CheckerContext &C) {
-  const auto *ASE = dyn_cast<ArraySubscriptExpr>(E);
-  if (!ASE)
-    return nullptr;
-
-  const MemRegion *SubscriptBaseReg = C.getSVal(ASE->getBase()).getAsRegion();
-  if (!SubscriptBaseReg)
-    return nullptr;
-
-  // The base of the subscript expression is affected by pointer arithmetics,
-  // so we want to report byte offsets instead of indices and we don't want to
-  // activate the "index is unsigned -> cannot be negative" shortcut.
-  if (isa<ElementRegion>(SubscriptBaseReg->StripCasts()))
-    return nullptr;
-
-  return ASE;
-}
-
-/// If `E` is a "clean" array subscript expression, return the type of the
-/// accessed element; otherwise return std::nullopt because that's the best (or
-/// least bad) option for the diagnostic generation that relies on this.
-static std::optional<QualType> determineElementType(const Expr *E,
-                                                    const CheckerContext &C) {
-  const auto *ASE = getAsCleanArraySubscriptExpr(E, C);
-  if (!ASE)
-    return std::nullopt;
-
-  return ASE->getType();
-}
-
-static std::optional<int64_t>
-determineElementSize(const std::optional<QualType> T, const CheckerContext &C) {
-  if (!T)
-    return std::nullopt;
-  return C.getASTContext().getTypeSizeInChars(*T).getQuantity();
-}
-
-class StateUpdateReporter {
-  const MemSpaceRegion *Space;
-  const SubRegion *Reg;
-  const NonLoc ByteOffsetVal;
-  const std::optional<QualType> ElementType;
-  const std::optional<int64_t> ElementSize;
-  bool AssumedNonNegative = false;
-  std::optional<NonLoc> AssumedUpperBound = std::nullopt;
-
-public:
-  StateUpdateReporter(const SubRegion *R, NonLoc ByteOffsVal, const Expr *E,
-                      CheckerContext &C)
-      : Space(R->getMemorySpace(C.getState())), Reg(R),
-        ByteOffsetVal(ByteOffsVal), ElementType(determineElementType(E, C)),
-        ElementSize(determineElementSize(ElementType, C)) {}
-
-  void recordNonNegativeAssumption() { AssumedNonNegative = true; }
-  void recordUpperBoundAssumption(NonLoc UpperBoundVal) {
-    AssumedUpperBound = UpperBoundVal;
-  }
-
-  bool assumedNonNegative() { return AssumedNonNegative; }
-
-  const NoteTag *createNoteTag(CheckerContext &C) const;
-
-private:
-  std::string getMessage(PathSensitiveBugReport &BR) const;
-
-  /// Return true if information about the value of `Sym` can put constraints
-  /// on some symbol which is interesting within the bug report `BR`.
-  /// In particular, this returns true when `Sym` is interesting within `BR`;
-  /// but it also returns true if `Sym` is an expression that contains integer
-  /// constants and a single symbolic operand which is interesting (in `BR`).
-  /// We need to use this instead of plain `BR.isInteresting()` because if we
-  /// are analyzing code like
-  ///   int array[10];
-  ///   int f(int arg) {
-  ///     return array[arg] && array[arg + 10];
-  ///   }
-  /// then the byte offsets are `arg * 4` and `(arg + 10) * 4`, which are not
-  /// sub-expressions of each other (but `getSimplifiedOffsets` is smart enough
-  /// to detect this out of bounds access).
-  static bool providesInformationAboutInteresting(SymbolRef Sym,
-                                                  PathSensitiveBugReport &BR);
-  static bool providesInformationAboutInteresting(SVal SV,
-                                                  PathSensitiveBugReport &BR) {
-    return providesInformationAboutInteresting(SV.getAsSymbol(), BR);
-  }
-};
-
-struct Messages {
-  std::string Short, Full;
-};
-
-enum class BadOffsetKind { Negative, Overflowing, Indeterminate };
-
-constexpr llvm::StringLiteral Adjectives[] = {"a negative", "an overflowing",
-                                              "a negative or overflowing"};
-static StringRef asAdjective(BadOffsetKind Problem) {
-  return Adjectives[static_cast<int>(Problem)];
-}
-
-constexpr llvm::StringLiteral Prepositions[] = {"preceding", "after the end of",
-                                                "around"};
-static StringRef asPreposition(BadOffsetKind Problem) {
-  return Prepositions[static_cast<int>(Problem)];
-}
-
 // NOTE: The `ArraySubscriptExpr` and `UnaryOperator` callbacks are `PostStmt`
 // instead of `PreStmt` because the current implementation passes the whole
 // expression to `CheckerContext::getSVal()` which only works after the
@@ -157,10 +38,10 @@ class ArrayBoundChecker : public Checker<check::PostStmt<ArraySubscriptExpr>,
   BugType BT{this, "Out-of-bound access"};
   BugType TaintBT{this, "Out-of-bound access", categories::TaintedData};
 
-  void performCheck(const Expr *E, CheckerContext &C) const;
+  void handleAccessExpr(const Expr *E, CheckerContext &C) const;
 
-  void reportOOB(CheckerContext &C, ProgramStateRef ErrorState, Messages Msgs,
-                 NonLoc Offset, std::optional<NonLoc> Extent,
+  void reportOOB(CheckerContext &C, ProgramStateRef ErrorState,
+                 bounds::Messages Msgs, ArrayRef<NonLoc> Extent,
                  bool IsTaintBug = false) const;
 
   static void markPartsInteresting(PathSensitiveBugReport &BR,
@@ -171,27 +52,23 @@ class ArrayBoundChecker : public Checker<check::PostStmt<ArraySubscriptExpr>,
 
   static bool isOffsetObviouslyNonnegative(const Expr *E, CheckerContext &C);
 
-  static bool isIdiomaticPastTheEndPtr(const Expr *E, ProgramStateRef State,
-                                       NonLoc Offset, NonLoc Limit,
-                                       CheckerContext &C);
   static bool isInAddressOf(const Stmt *S, ASTContext &AC);
 
 public:
   void checkPostStmt(const ArraySubscriptExpr *E, CheckerContext &C) const {
-    performCheck(E, C);
+    handleAccessExpr(E, C);
   }
   void checkPostStmt(const UnaryOperator *E, CheckerContext &C) const {
     if (E->getOpcode() == UO_Deref)
-      performCheck(E, C);
+      handleAccessExpr(E, C);
   }
   void checkPostStmt(const MemberExpr *E, CheckerContext &C) const {
     if (E->isArrow())
-      performCheck(E->getBase(), C);
+      handleAccessExpr(E->getBase(), C);
   }
 };
 
 } // anonymous namespace
-
 /// For a given Location that can be represented as a symbolic expression
 /// Arr[Idx] (or perhaps Arr[Idx1][Idx2] etc.), return the parent memory block
 /// Arr and the distance of Location from the beginning of Arr (expressed in a
@@ -248,332 +125,8 @@ computeOffset(ProgramStateRef State, SValBuilder &SVB, SVal Location) {
   return std::nullopt;
 }
 
-// NOTE: This function is the "heart" of this checker. It simplifies
-// inequalities with transformations that are valid (and very elementary) in
-// pure mathematics, but become invalid if we use them in C++ number model
-// where the calculations may overflow.
-// Due to the overflow issues I think it's impossible (or at least not
-// practical) to integrate this kind of simplification into the resolution of
-// arbitrary inequalities (i.e. the code of `evalBinOp`); but this function
-// produces valid results when the calculations are handling memory offsets
-// and every value is well below SIZE_MAX.
-// TODO: This algorithm should be moved to a central location where it's
-// available for other checkers that need to compare memory offsets.
-// NOTE: the simplification preserves the order of the two operands in a
-// mathematical sense, but it may change the result produced by a C++
-// comparison operator (and the automatic type conversions).
-// For example, consider a comparison "X+1 < 0", where the LHS is stored as a
-// size_t and the RHS is stored in an int. (As size_t is unsigned, this
-// comparison is false for all values of "X".) However, the simplification may
-// turn it into "X < -1", which is still always false in a mathematical sense,
-// but can produce a true result when evaluated by `evalBinOp` (which follows
-// the rules of C++ and casts -1 to SIZE_MAX).
-static std::pair<NonLoc, nonloc::ConcreteInt>
-getSimplifiedOffsets(NonLoc offset, nonloc::ConcreteInt extent,
-                     SValBuilder &svalBuilder) {
-  const llvm::APSInt &extentVal = extent.getValue();
-  std::optional<nonloc::SymbolVal> SymVal = offset.getAs<nonloc::SymbolVal>();
-  if (SymVal && SymVal->isExpression()) {
-    if (const SymIntExpr *SIE = dyn_cast<SymIntExpr>(SymVal->getSymbol())) {
-      llvm::APSInt constant = APSIntType(extentVal).convert(SIE->getRHS());
-      switch (SIE->getOpcode()) {
-      case BO_Mul:
-        // The constant should never be 0 here, becasue multiplication by zero
-        // is simplified by the engine.
-        if ((extentVal % constant) != 0)
-          return std::pair<NonLoc, nonloc::ConcreteInt>(offset, extent);
-        else
-          return getSimplifiedOffsets(
-              nonloc::SymbolVal(SIE->getLHS()),
-              svalBuilder.makeIntVal(extentVal / constant), svalBuilder);
-      case BO_Add:
-        return getSimplifiedOffsets(
-            nonloc::SymbolVal(SIE->getLHS()),
-            svalBuilder.makeIntVal(extentVal - constant), svalBuilder);
-      default:
-        break;
-      }
-    }
-  }
-
-  return std::pair<NonLoc, nonloc::ConcreteInt>(offset, extent);
-}
-
-static bool isNegative(SValBuilder &SVB, ProgramStateRef State, NonLoc Value) {
-  const llvm::APSInt *MaxV = SVB.getMaxValue(State, Value);
-  return MaxV && MaxV->isNegative();
-}
-
-static bool isUnsigned(SValBuilder &SVB, NonLoc Value) {
-  QualType T = Value.getType(SVB.getContext());
-  return T->isUnsignedIntegerType();
-}
-
-// Evaluate the comparison Value < Threshold with the help of the custom
-// simplification algorithm defined for this checker. Return a pair of states,
-// where the first one corresponds to "value below threshold" and the second
-// corresponds to "value at or above threshold". Returns {nullptr, nullptr} in
-// the case when the evaluation fails.
-// If the optional argument CheckEquality is true, then use BO_EQ instead of
-// the default BO_LT after consistently applying the same simplification steps.
-static std::pair<ProgramStateRef, ProgramStateRef>
-compareValueToThreshold(ProgramStateRef State, NonLoc Value, NonLoc Threshold,
-                        SValBuilder &SVB, bool CheckEquality = false) {
-  if (auto ConcreteThreshold = Threshold.getAs<nonloc::ConcreteInt>()) {
-    std::tie(Value, Threshold) =
-        getSimplifiedOffsets(Value, *ConcreteThreshold, SVB);
-  }
-
-  // We want to perform a _mathematical_ comparison between the numbers `Value`
-  // and `Threshold`; but `evalBinOpNN` evaluates a C/C++ operator that may
-  // perform automatic conversions. For example the number -1 is less than the
-  // number 1000, but -1 < `1000ull` will evaluate to `false` because the `int`
-  // -1 is converted to ULONGLONG_MAX.
-  // To avoid automatic conversions, we evaluate the "obvious" cases without
-  // calling `evalBinOpNN`:
-  if (isNegative(SVB, State, Value) && isUnsigned(SVB, Threshold)) {
-    if (CheckEquality) {
-      // negative_value == unsigned_threshold is always false
-      return {nullptr, State};
-    }
-    // negative_value < unsigned_threshold is always true
-    return {State, nullptr};
-  }
-  if (isUnsigned(SVB, Value) && isNegative(SVB, State, Threshold)) {
-    // unsigned_value == negative_threshold and
-    // unsigned_value < negative_threshold are both always false
-    return {nullptr, State};
-  }
-  // FIXME: These special cases are sufficient for handling real-world
-  // comparisons, but in theory there could be contrived situations where
-  // automatic conversion of a symbolic value (which can be negative and can be
-  // positive) leads to incorrect results.
-  // NOTE: We NEED to use the `evalBinOpNN` call in the "common" case, because
-  // we want to ensure that assumptions coming from this precondition and
-  // assumptions coming from regular C/C++ operator calls are represented by
-  // constraints on the same symbolic expression. A solution that would
-  // evaluate these "mathematical" comparisons through a separate pathway would
-  // be a step backwards in this sense.
-
-  const BinaryOperatorKind OpKind = CheckEquality ? BO_EQ : BO_LT;
-  auto BelowThreshold =
-      SVB.evalBinOpNN(State, OpKind, Value, Threshold, SVB.getConditionType())
-          .getAs<NonLoc>();
-
-  if (BelowThreshold)
-    return State->assume(*BelowThreshold);
-
-  return {nullptr, nullptr};
-}
-
-static std::string getRegionName(const MemSpaceRegion *Space,
-                                 const SubRegion *Region) {
-  if (std::string RegName = Region->getDescriptiveName(); !RegName.empty())
-    return RegName;
-
-  // Field regions only have descriptive names when their parent has a
-  // descriptive name; so we provide a fallback representation for them:
-  if (const auto *FR = Region->getAs<FieldRegion>()) {
-    if (StringRef Name = FR->getDecl()->getName(); !Name.empty())
-      return formatv("the field '{0}'", Name);
-    return "the unnamed field";
-  }
-
-  if (isa<AllocaRegion>(Region))
-    return "the memory returned by 'alloca'";
-
-  if (isa<SymbolicRegion>(Region) && isa<HeapSpaceRegion>(Space))
-    return "the heap area";
-
-  if (isa<StringRegion>(Region))
-    return "the string literal";
-
-  return "the region";
-}
-
-static std::optional<int64_t> getConcreteValue(NonLoc SV) {
-  if (auto ConcreteVal = SV.getAs<nonloc::ConcreteInt>()) {
-    return ConcreteVal->getValue()->tryExtValue();
-  }
-  return std::nullopt;
-}
-
-static std::optional<int64_t> getConcreteValue(std::optional<NonLoc> SV) {
-  return SV ? getConcreteValue(*SV) : std::nullopt;
-}
-
-/// Try to divide `Val1` and `Val2` (in place) by `Divisor` and return true if
-/// it can be performed (`Divisor` is nonzero and there is no remainder). The
-/// values `Val1` and `Val2` may be nullopt and in that case the corresponding
-/// division is considered to be successful.
-static bool tryDividePair(std::optional<int64_t> &Val1,
-                          std::optional<int64_t> &Val2, int64_t Divisor) {
-  if (!Divisor)
-    return false;
-  const bool Val1HasRemainder = Val1 && *Val1 % Divisor;
-  const bool Val2HasRemainder = Val2 && *Val2 % Divisor;
-  if (Val1HasRemainder || Val2HasRemainder)
-    return false;
-  if (Val1)
-    *Val1 /= Divisor;
-  if (Val2)
-    *Val2 /= Divisor;
-  return true;
-}
-
-static Messages getNonTaintMsgs(const ASTContext &ACtx,
-                                const MemSpaceRegion *Space,
-                                const SubRegion *Region, NonLoc Offset,
-                                std::optional<NonLoc> Extent, SVal Location,
-                                BadOffsetKind Problem) {
-  std::string RegName = getRegionName(Space, Region);
-  const auto *EReg = Location.getAsRegion()->getAs<ElementRegion>();
-  assert(EReg && "this checker only handles element access");
-  QualType ElemType = EReg->getElementType();
-
-  std::optional<int64_t> OffsetN = getConcreteValue(Offset);
-  std::optional<int64_t> ExtentN = getConcreteValue(Extent);
-
-  int64_t ElemSize = ACtx.getTypeSizeInChars(ElemType).getQuantity();
-
-  bool UseByteOffsets = !tryDividePair(OffsetN, ExtentN, ElemSize);
-  const char *OffsetOrIndex = UseByteOffsets ? "byte offset" : "index";
-
-  SmallString<256> Buf;
-  llvm::raw_svector_ostream Out(Buf);
-  Out << "Access of ";
-  if (OffsetN && !ExtentN && !UseByteOffsets) {
-    // If the offset is reported as an index, then the report must mention the
-    // element type (because it is not always clear from the code). It's more
-    // natural to mention the element type later where the extent is described,
-    // but if the extent is unknown/irrelevant, then the element type can be
-    // inserted into the message at this point.
-    Out << "'" << ElemType.getAsString() << "' element in ";
-  }
-  Out << RegName << " at ";
-  if (OffsetN) {
-    if (Problem == BadOffsetKind::Negative)
-      Out << "negative ";
-    Out << OffsetOrIndex << " " << *OffsetN;
-  } else {
-    Out << asAdjective(Problem) << " " << OffsetOrIndex;
-  }
-  if (ExtentN) {
-    Out << ", while it holds only ";
-    if (*ExtentN != 1)
-      Out << *ExtentN;
-    else
-      Out << "a single";
-    if (UseByteOffsets)
-      Out << " byte";
-    else
-      Out << " '" << ElemType.getAsString() << "' element";
-
-    if (*ExtentN > 1)
-      Out << "s";
-  }
-
-  return {formatv("Out of bound access to memory {0} {1}",
-                  asPreposition(Problem), RegName),
-          std::string(Buf)};
-}
-
-static Messages getTaintMsgs(const MemSpaceRegion *Space,
-                             const SubRegion *Region, const char *OffsetName,
-                             bool AlsoMentionUnderflow) {
-  std::string RegName = getRegionName(Space, Region);
-  return {formatv("Potential out of bound access to {0} with tainted {1}",
-                  RegName, OffsetName),
-          formatv("Access of {0} with a tainted {1} that may be {2}too large",
-                  RegName, OffsetName,
-                  AlsoMentionUnderflow ? "negative or " : "")};
-}
-
-const NoteTag *StateUpdateReporter::createNoteTag(CheckerContext &C) const {
-  // Don't create a note tag if we didn't assume anything:
-  if (!AssumedNonNegative && !AssumedUpperBound)
-    return nullptr;
-
-  return C.getNoteTag([*this](PathSensitiveBugReport &BR) -> std::string {
-    return getMessage(BR);
-  });
-}
-
-std::string StateUpdateReporter::getMessage(PathSensitiveBugReport &BR) const {
-  bool ShouldReportNonNegative = AssumedNonNegative;
-  if (!providesInformationAboutInteresting(ByteOffsetVal, BR)) {
-    if (AssumedUpperBound &&
-        providesInformationAboutInteresting(*AssumedUpperBound, BR)) {
-      // Even if the byte offset isn't interesting (e.g. it's a constant value),
-      // the assumption can still be interesting if it provides information
-      // about an interesting symbolic upper bound.
-      ShouldReportNonNegative = false;
-    } else {
-      // We don't have anything interesting, don't report the assumption.
-      return "";
-    }
-  }
-
-  std::optional<int64_t> OffsetN = getConcreteValue(ByteOffsetVal);
-  std::optional<int64_t> ExtentN = getConcreteValue(AssumedUpperBound);
-
-  const bool UseIndex =
-      ElementSize && tryDividePair(OffsetN, ExtentN, *ElementSize);
-
-  SmallString<256> Buf;
-  llvm::raw_svector_ostream Out(Buf);
-  Out << "Assuming ";
-  if (UseIndex) {
-    Out << "index ";
-    if (OffsetN)
-      Out << "'" << OffsetN << "' ";
-  } else if (AssumedUpperBound) {
-    Out << "byte offset ";
-    if (OffsetN)
-      Out << "'" << OffsetN << "' ";
-  } else {
-    Out << "offset ";
-  }
-
-  Out << "is";
-  if (ShouldReportNonNegative) {
-    Out << " non-negative";
-  }
-  if (AssumedUpperBound) {
-    if (ShouldReportNonNegative)
-      Out << " and";
-    Out << " less than ";
-    if (ExtentN)
-      Out << *ExtentN << ", ";
-    if (UseIndex && ElementType)
-      Out << "the number of '" << ElementType->getAsString()
-          << "' elements in ";
-    else
-      Out << "the extent of ";
-    Out << getRegionName(Space, Reg);
-  }
-  return std::string(Out.str());
-}
-
-bool StateUpdateReporter::providesInformationAboutInteresting(
-    SymbolRef Sym, PathSensitiveBugReport &BR) {
-  if (!Sym)
-    return false;
-  for (SymbolRef PartSym : Sym->symbols()) {
-    // The interestingess mark may appear on any layer as we're stripping off
-    // the SymIntExpr, UnarySymExpr etc. layers...
-    if (BR.isInteresting(PartSym))
-      return true;
-    // ...but if both sides of the expression are symbolic, then there is no
-    // practical algorithm to produce separate constraints for the two
-    // operands (from the single combined result).
-    if (isa<SymSymExpr>(PartSym))
-      return false;
-  }
-  return false;
-}
-
-void ArrayBoundChecker::performCheck(const Expr *E, CheckerContext &C) const {
+void ArrayBoundChecker::handleAccessExpr(const Expr *E,
+                                         CheckerContext &C) const {
   const SVal Location = C.getSVal(E);
 
   // The header ctype.h (from e.g. glibc) implements the isXXXXX() macros as
@@ -595,139 +148,73 @@ void ArrayBoundChecker::performCheck(const Expr *E, CheckerContext &C) const {
 
   auto [Reg, ByteOffset] = *RawOffset;
 
-  // The state updates will be reported as a single note tag, which will be
-  // composed by this helper class.
-  StateUpdateReporter SUR(Reg, ByteOffset, E, C);
-
-  // CHECK LOWER BOUND
   const MemSpaceRegion *Space = Reg->getMemorySpace(State);
-  if (!(isa<SymbolicRegion>(Reg) && isa<UnknownSpaceRegion>(Space))) {
-    // A symbolic region in unknown space represents an unknown pointer that
-    // may point into the middle of an array, so we don't look for underflows.
-    // Both conditions are significant because we want to check underflows in
-    // symbolic regions on the heap (which may be introduced by checkers like
-    // MallocChecker that call SValBuilder::getConjuredHeapSymbolVal()) and
-    // non-symbolic regions (e.g. a field subregion of a symbolic region) in
-    // unknown space.
-    auto [PrecedesLowerBound, WithinLowerBound] = compareValueToThreshold(
-        State, ByteOffset, SVB.makeZeroArrayIndex(), SVB);
+  auto Extent = getDynamicExtent(State, Reg, SVB).getAs<NonLoc>();
 
-    if (PrecedesLowerBound) {
-      // The analyzer thinks that the offset may be invalid (negative)...
+  // A symbolic region in unknown space represents an unknown pointer that
+  // may point into the middle of an array, so we don't look for underflows.
+  // Both conditions are significant because we want to check underflows in
+  // symbolic regions on the heap (which may be introduced by checkers like
+  // MallocChecker that call SValBuilder::getConjuredHeapSymbolVal()) and
+  // non-symbolic regions (e.g. a field subregion of a symbolic region) in
+  // unknown space.
 
-      if (isOffsetObviouslyNonnegative(E, C)) {
-        // ...but the offset is obviously non-negative (clear array subscript
-        // with an unsigned index), so we're in a buggy situation.
+  bounds::CheckFlags Flags = {
+      /*CheckUnderflow=*/!(isa<SymbolicRegion>(Reg) &&
+                           isa<UnknownSpaceRegion>(Space)),
+      /*OffsetObviouslyNonnegative=*/isOffsetObviouslyNonnegative(E, C),
+      /*AcceptPastTheEnd=*/isa<ArraySubscriptExpr>(E) &&
+          isInAddressOf(E, C.getASTContext()),
+  };
 
-        // TODO: Currently the analyzer ignores many casts (e.g. signed ->
-        // unsigned casts), so it can easily reach states where it will load a
-        // signed (and negative) value from an unsigned variable. This sanity
-        // check is a duct tape "solution" that silences most of the ugly false
-        // positives that are caused by this buggy behavior. Note that this is
-        // not a complete solution: this cannot silence reports where pointer
-        // arithmetic complicates the picture and cannot ensure modeling of the
-        // "unsigned index is positive with highest bit set" cases which are
-        // "usurped" by the nonsense "unsigned index is negative" case.
-        // For more information about this topic, see the umbrella ticket
-        // https://github.com/llvm/llvm-project/issues/39492
-        // TODO: Remove this hack once 'SymbolCast's are modeled properly.
+  bounds::CheckResult Res = checkBounds(State, SVB, ByteOffset, Extent, Flags);
 
-        if (!WithinLowerBound) {
-          // The state is completely nonsense -- let's just sink it!
-          C.addSink();
-          return;
-        }
-        // Otherwise continue on the 'WithinLowerBound' branch where the
-        // unsigned index _is_ non-negative. Don't mention this assumption as a
-        // note tag, because it would just confuse the users!
-      } else {
-        if (!WithinLowerBound) {
-          // ...and it cannot be valid (>= 0), so report an error.
-          Messages Msgs = getNonTaintMsgs(C.getASTContext(), Space, Reg,
-                                          ByteOffset, /*Extent=*/std::nullopt,
-                                          Location, BadOffsetKind::Negative);
-          reportOOB(C, PrecedesLowerBound, Msgs, ByteOffset, std::nullopt);
-          return;
-        }
-        // ...but it can be valid as well, so the checker will (optimistically)
-        // assume that it's valid and mention this in the note tag.
-        SUR.recordNonNegativeAssumption();
-      }
+  std::string RN = bounds::getRegionName(Space, Reg);
+
+  switch (Res.getKind()) {
+  case bounds::CheckResult::Kind::Invalid: {
+    bounds::SizeUnit SU =
+        bounds::SizeUnit::forSVal(Location, C.getASTContext());
+    bounds::Messages Msgs = Res.getNonTaintMsgs(RN, SU);
+    reportOOB(C, Res.getState(), Msgs, Res.getInteresting());
+    return;
+  }
+  case bounds::CheckResult::Kind::Valid: {
+    const NoteTag *Tag = nullptr;
+    if (Res.hasAssumption()) {
+      bounds::SizeUnit SU = bounds::SizeUnit::forExpr(E, C);
+      Tag = C.getNoteTag(
+          [Res, RN, SU](PathSensitiveBugReport &BR) -> std::string {
+            return Res.getAssumptionMsg(BR, RN, SU);
+          });
     }
 
-    // Actually update the state. The "if" only fails in the extremely unlikely
-    // case when compareValueToThreshold returns {nullptr, nullptr} because
-    // evalBinOpNN fails to evaluate the less-than operator.
-    if (WithinLowerBound)
-      State = WithinLowerBound;
+    C.addTransition(Res.getState(), Tag);
+    return;
+  }
+  case bounds::CheckResult::Kind::TaintBug: {
+    // Diagnostic detail: saying "tainted offset" is always correct, but
+    // the common case is that 'idx' is tainted in 'arr[idx]' and then it's
+    // nicer to say "tainted index".
+    const char *OffsetName = "offset";
+    if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(E))
+      if (taint::isTainted(State, ASE->getIdx(), C.getStackFrame()))
+        OffsetName = "index";
+
+    bounds::Messages Msgs = Res.getTaintMsgs(RN, OffsetName);
+    reportOOB(C, Res.getState(), Msgs, Res.getInteresting(),
+              /*IsTaintBug=*/true);
+    return;
+  }
+  case bounds::CheckResult::Kind::CorruptedState:
+    // The current state is corrupted (due to bad modeling of casts we assumed
+    // that an unsigned value is negative), so we should sink the execution
+    // path.
+    C.addSink();
+    return;
   }
 
-  // CHECK UPPER BOUND
-  DefinedOrUnknownSVal Size = getDynamicExtent(State, Reg, SVB);
-  if (auto KnownSize = Size.getAs<NonLoc>()) {
-    // In a situation where both underflow and overflow are possible (but the
-    // index is either tainted or known to be invalid), the logic of this
-    // checker will first assume that the offset is non-negative, and then
-    // (with this additional assumption) it will detect an overflow error.
-    // In this situation the warning message should mention both possibilities.
-    bool AlsoMentionUnderflow = SUR.assumedNonNegative();
-
-    auto [WithinUpperBound, ExceedsUpperBound] =
-        compareValueToThreshold(State, ByteOffset, *KnownSize, SVB);
-
-    if (ExceedsUpperBound) {
-      // The offset may be invalid (>= Size)...
-      if (!WithinUpperBound) {
-        // ...and it cannot be within bounds, so report an error, unless we can
-        // definitely determine that this is an idiomatic `&array[size]`
-        // expression that calculates the past-the-end pointer.
-        if (isIdiomaticPastTheEndPtr(E, ExceedsUpperBound, ByteOffset,
-                                     *KnownSize, C)) {
-          C.addTransition(ExceedsUpperBound, SUR.createNoteTag(C));
-          return;
-        }
-
-        BadOffsetKind Problem = AlsoMentionUnderflow
-                                    ? BadOffsetKind::Indeterminate
-                                    : BadOffsetKind::Overflowing;
-        Messages Msgs =
-            getNonTaintMsgs(C.getASTContext(), Space, Reg, ByteOffset,
-                            *KnownSize, Location, Problem);
-        reportOOB(C, ExceedsUpperBound, Msgs, ByteOffset, KnownSize);
-        return;
-      }
-      // ...and it can be valid as well...
-      if (isTainted(State, ByteOffset)) {
-        // ...but it's tainted, so report an error.
-
-        // Diagnostic detail: saying "tainted offset" is always correct, but
-        // the common case is that 'idx' is tainted in 'arr[idx]' and then it's
-        // nicer to say "tainted index".
-        const char *OffsetName = "offset";
-        if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(E))
-          if (isTainted(State, ASE->getIdx(), C.getStackFrame()))
-            OffsetName = "index";
-
-        Messages Msgs =
-            getTaintMsgs(Space, Reg, OffsetName, AlsoMentionUnderflow);
-        reportOOB(C, ExceedsUpperBound, Msgs, ByteOffset, KnownSize,
-                  /*IsTaintBug=*/true);
-        return;
-      }
-      // ...and it isn't tainted, so the checker will (optimistically) assume
-      // that the offset is in bounds and mention this in the note tag.
-      SUR.recordUpperBoundAssumption(*KnownSize);
-    }
-
-    // Actually update the state. The "if" only fails in the extremely unlikely
-    // case when compareValueToThreshold returns {nullptr, nullptr} because
-    // evalBinOpNN fails to evaluate the less-than operator.
-    if (WithinUpperBound)
-      State = WithinUpperBound;
-  }
-
-  // Add a transition, reporting the state updates that we accumulated.
-  C.addTransition(State, SUR.createNoteTag(C));
+  llvm_unreachable("all CheckResult values are covered in switch");
 }
 
 void ArrayBoundChecker::markPartsInteresting(PathSensitiveBugReport &BR,
@@ -748,14 +235,14 @@ void ArrayBoundChecker::markPartsInteresting(PathSensitiveBugReport &BR,
     // offset, then put interestingness onto symbols that could be the origin
     // of the taint. Note that this may find symbols that did not appear in
     // `Sym->symbols()` (because they're only loosely connected to `Val`).
-    for (SymbolRef Sym : getTaintedSymbols(ErrorState, Val))
+    for (SymbolRef Sym : taint::getTaintedSymbols(ErrorState, Val))
       BR.markInteresting(Sym);
   }
 }
 
 void ArrayBoundChecker::reportOOB(CheckerContext &C, ProgramStateRef ErrorState,
-                                  Messages Msgs, NonLoc Offset,
-                                  std::optional<NonLoc> Extent,
+                                  bounds::Messages Msgs,
+                                  ArrayRef<NonLoc> Interesting,
                                   bool IsTaintBug /*=false*/) const {
 
   ExplodedNode *ErrorNode = C.generateErrorNode(ErrorState);
@@ -778,9 +265,8 @@ void ArrayBoundChecker::reportOOB(CheckerContext &C, ProgramStateRef ErrorState,
   //   (which is technically true, but irrelevant).
   // If trackExpressionValue() becomes reliable, it should be applied instead
   // of this custom markPartsInteresting().
-  markPartsInteresting(*BR, ErrorState, Offset, IsTaintBug);
-  if (Extent)
-    markPartsInteresting(*BR, ErrorState, *Extent, IsTaintBug);
+  for (NonLoc Val : Interesting)
+    markPartsInteresting(*BR, ErrorState, Val, IsTaintBug);
 
   C.emitReport(std::move(BR));
 }
@@ -806,7 +292,7 @@ bool ArrayBoundChecker::isFromCtypeMacro(const Expr *E, ASTContext &ACtx) {
 
 bool ArrayBoundChecker::isOffsetObviouslyNonnegative(const Expr *E,
                                                      CheckerContext &C) {
-  const ArraySubscriptExpr *ASE = getAsCleanArraySubscriptExpr(E, C);
+  const ArraySubscriptExpr *ASE = bounds::getAsCleanArraySubscriptExpr(E, C);
   if (!ASE)
     return false;
   return ASE->getIdx()->getType()->isUnsignedIntegerOrEnumerationType();
@@ -822,18 +308,6 @@ bool ArrayBoundChecker::isInAddressOf(const Stmt *S, ASTContext &ACtx) {
   } while (isa_and_nonnull<ParenExpr, ImplicitCastExpr>(S));
   const auto *UnaryOp = dyn_cast_or_null<UnaryOperator>(S);
   return UnaryOp && UnaryOp->getOpcode() == UO_AddrOf;
-}
-
-bool ArrayBoundChecker::isIdiomaticPastTheEndPtr(const Expr *E,
-                                                 ProgramStateRef State,
-                                                 NonLoc Offset, NonLoc Limit,
-                                                 CheckerContext &C) {
-  if (isa<ArraySubscriptExpr>(E) && isInAddressOf(E, C.getASTContext())) {
-    auto [EqualsToThreshold, NotEqualToThreshold] = compareValueToThreshold(
-        State, Offset, Limit, C.getSValBuilder(), /*CheckEquality=*/true);
-    return EqualsToThreshold && !NotEqualToThreshold;
-  }
-  return false;
 }
 
 void ento::registerArrayBoundChecker(CheckerManager &mgr) {
