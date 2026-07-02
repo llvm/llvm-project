@@ -2948,6 +2948,18 @@ private:
       ActualArguments &, FoldingContext &) const;
   std::optional<SpecificCall> HandleC_Devloc(
       ActualArguments &, FoldingContext &) const;
+  std::optional<SpecificCall> HandleEnumerationHuge(
+      const semantics::DerivedTypeSpec &, ActualArguments &,
+      FoldingContext &) const;
+  std::optional<SpecificCall> HandleEnumerationNext(
+      const semantics::DerivedTypeSpec &, ActualArguments &,
+      FoldingContext &) const;
+  std::optional<SpecificCall> HandleEnumerationPrevious(
+      const semantics::DerivedTypeSpec &, ActualArguments &,
+      FoldingContext &) const;
+  std::optional<SpecificCall> HandleEnumerationInt(
+      const semantics::DerivedTypeSpec &, ActualArguments &,
+      FoldingContext &) const;
   const std::string &ResolveAlias(const std::string &name) const {
     auto iter{aliases_.find(name)};
     return iter == aliases_.end() ? name : iter->second;
@@ -2976,7 +2988,7 @@ bool IntrinsicProcTable::Implementation::IsIntrinsicFunction(
   }
   // special cases
   return name == "__builtin_c_loc" || name == "__builtin_c_devloc" ||
-      name == "null";
+      name == "null" || name == "next" || name == "previous";
 }
 bool IntrinsicProcTable::Implementation::IsIntrinsicSubroutine(
     const std::string &name0) const {
@@ -3086,6 +3098,31 @@ bool CheckAndRearrangeArguments(ActualArguments &arguments,
   }
   arguments = std::move(rearranged);
   return !anyMissing;
+}
+
+// Locates the actual argument that binds to the first dummy argument of an
+// intrinsic, honoring keyword syntax.  The enumeration-type inline handlers
+// (HUGE/INT/NEXT/PREVIOUS) must decide whether the enum path applies before
+// the actual arguments have been rearranged into dummy order, so they cannot
+// simply inspect arguments[0].  The first dummy is bound either by an explicit
+// keyword (e.g. INT(KIND=8, A=RED)) or, absent that keyword, by the first
+// positional argument.  Returns nullptr if no such argument is present.
+static const ActualArgument *FindFirstDummyArgument(
+    const ActualArguments &arguments, const char *firstDummyKeyword) {
+  const ActualArgument *firstPositional{nullptr};
+  for (const std::optional<ActualArgument> &arg : arguments) {
+    if (!arg) {
+      continue;
+    }
+    if (arg->keyword()) {
+      if (*arg->keyword() == firstDummyKeyword) {
+        return &*arg;
+      }
+    } else if (!firstPositional) {
+      firstPositional = &*arg;
+    }
+  }
+  return firstPositional;
 }
 
 // The NULL() intrinsic is a special case.
@@ -3656,6 +3693,210 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::HandleC_Devloc(
   return std::nullopt;
 }
 
+// HUGE(x) for enumeration types — returns the last enumerator
+std::optional<SpecificCall>
+IntrinsicProcTable::Implementation::HandleEnumerationHuge(
+    const semantics::DerivedTypeSpec &derived, ActualArguments &arguments,
+    FoldingContext &context) const {
+  static const char *const keywords[]{"x", nullptr};
+  if (!CheckAndRearrangeArguments(arguments, context.messages(), keywords)) {
+    return std::nullopt;
+  }
+  int count{derived.typeSymbol()
+          .GetUltimate()
+          .get<semantics::DerivedTypeDetails>()
+          .enumeratorCount()};
+  // Build a StructureConstructor with __ordinal = enumeratorCount
+  const auto *scope{derived.GetScope()};
+  if (!scope) {
+    return std::nullopt;
+  }
+  auto ordIter{scope->find(semantics::SourceName{"__ordinal", 9})};
+  if (ordIter == scope->end()) {
+    return std::nullopt;
+  }
+  const semantics::Symbol &ordSym{*ordIter->second};
+  StructureConstructor ctor{derived};
+  ctor.Add(ordSym,
+      Expr<SomeType>{
+          Expr<SomeInteger>{Expr<Type<TypeCategory::Integer, 4>>{count}}});
+  // Build FunctionResult and DummyArguments
+  DynamicType enumType{derived};
+  characteristics::DummyDataObject ddo{characteristics::TypeAndShape{enumType}};
+  ddo.intent = common::Intent::In;
+  ddo.attrs.set(characteristics::DummyDataObject::Attr::OnlyIntrinsicInquiry);
+  characteristics::Procedure::Attrs attrs;
+  attrs.set(characteristics::Procedure::Attr::Pure);
+  // Replace arguments with the constant result
+  arguments.clear();
+  arguments.emplace_back(
+      AsGenericExpr(Expr<SomeDerived>{Constant<SomeDerived>{std::move(ctor)}}));
+  return SpecificCall{
+      SpecificIntrinsic{"huge"s,
+          characteristics::Procedure{characteristics::FunctionResult{enumType},
+              characteristics::DummyArguments{
+                  characteristics::DummyArgument{"x"s, std::move(ddo)}},
+              attrs}},
+      std::move(arguments)};
+}
+
+// NEXT(a [, stat]) for enumeration types — returns the next enumerator
+std::optional<SpecificCall>
+IntrinsicProcTable::Implementation::HandleEnumerationNext(
+    const semantics::DerivedTypeSpec &derived, ActualArguments &arguments,
+    FoldingContext &context) const {
+  static const char *const keywords[]{"a", "stat", nullptr};
+  if (!CheckAndRearrangeArguments(arguments, context.messages(), keywords, 1)) {
+    return std::nullopt;
+  }
+  if (!arguments[0]) {
+    context.messages().Say("NEXT() requires argument A"_err_en_US);
+    return std::nullopt;
+  }
+  // TEMPORARY: Reject STAT= until lowering handler lands in PR 4/5
+  if (arguments.size() > 1 && arguments[1]) {
+    context.messages().Say(arguments[1]->sourceLocation(),
+        "NEXT() with STAT= is not yet supported"_err_en_US);
+    return std::nullopt;
+  }
+  // TEMPORARY: Reject non-constant argument until lowering handler in PR 4/5
+  if (const auto *expr{arguments[0]->UnwrapExpr()}) {
+    if (!IsConstantExpr(*expr)) {
+      context.messages().Say(arguments[0]->sourceLocation(),
+          "NEXT() with a non-constant argument is not yet supported"_err_en_US);
+      return std::nullopt;
+    }
+  }
+  DynamicType enumerationType{derived};
+  characteristics::DummyDataObject ddoA{
+      characteristics::TypeAndShape{enumerationType}};
+  ddoA.intent = common::Intent::In;
+  DynamicType statType{
+      TypeCategory::Integer, defaults_.GetDefaultKind(TypeCategory::Integer)};
+  characteristics::DummyDataObject ddoStat{
+      characteristics::TypeAndShape{statType}};
+  ddoStat.intent = common::Intent::Out;
+  ddoStat.attrs.set(characteristics::DummyDataObject::Attr::Optional);
+  characteristics::Procedure::Attrs attrs;
+  attrs.set(characteristics::Procedure::Attr::Pure);
+  attrs.set(characteristics::Procedure::Attr::Elemental);
+  return SpecificCall{
+      SpecificIntrinsic{"next"s,
+          characteristics::Procedure{
+              characteristics::FunctionResult{enumerationType},
+              characteristics::DummyArguments{
+                  characteristics::DummyArgument{"a"s, std::move(ddoA)},
+                  characteristics::DummyArgument{"stat"s, std::move(ddoStat)}},
+              attrs}},
+      std::move(arguments)};
+}
+
+// PREVIOUS(a [, stat]) for enumeration types — returns the previous enumerator
+std::optional<SpecificCall>
+IntrinsicProcTable::Implementation::HandleEnumerationPrevious(
+    const semantics::DerivedTypeSpec &derived, ActualArguments &arguments,
+    FoldingContext &context) const {
+  static const char *const keywords[]{"a", "stat", nullptr};
+  if (!CheckAndRearrangeArguments(arguments, context.messages(), keywords, 1)) {
+    return std::nullopt;
+  }
+  if (!arguments[0]) {
+    context.messages().Say("PREVIOUS() requires argument A"_err_en_US);
+    return std::nullopt;
+  }
+  // TEMPORARY: Reject STAT= until lowering handler lands in PR 4/5
+  if (arguments.size() > 1 && arguments[1]) {
+    context.messages().Say(arguments[1]->sourceLocation(),
+        "PREVIOUS() with STAT= is not yet supported"_err_en_US);
+    return std::nullopt;
+  }
+  // TEMPORARY: Reject non-constant argument until lowering handler in PR 4/5
+  if (const auto *expr{arguments[0]->UnwrapExpr()}) {
+    if (!IsConstantExpr(*expr)) {
+      context.messages().Say(arguments[0]->sourceLocation(),
+          "PREVIOUS() with a non-constant argument is not yet supported"_err_en_US);
+      return std::nullopt;
+    }
+  }
+  DynamicType enumerationType{derived};
+  characteristics::DummyDataObject ddoA{
+      characteristics::TypeAndShape{enumerationType}};
+  ddoA.intent = common::Intent::In;
+  DynamicType statType{
+      TypeCategory::Integer, defaults_.GetDefaultKind(TypeCategory::Integer)};
+  characteristics::DummyDataObject ddoStat{
+      characteristics::TypeAndShape{statType}};
+  ddoStat.intent = common::Intent::Out;
+  ddoStat.attrs.set(characteristics::DummyDataObject::Attr::Optional);
+  characteristics::Procedure::Attrs attrs;
+  attrs.set(characteristics::Procedure::Attr::Pure);
+  attrs.set(characteristics::Procedure::Attr::Elemental);
+  return SpecificCall{
+      SpecificIntrinsic{"previous"s,
+          characteristics::Procedure{
+              characteristics::FunctionResult{enumerationType},
+              characteristics::DummyArguments{
+                  characteristics::DummyArgument{"a"s, std::move(ddoA)},
+                  characteristics::DummyArgument{"stat"s, std::move(ddoStat)}},
+              attrs}},
+      std::move(arguments)};
+}
+
+// INT(x) for enumeration types — returns the ordinal as an integer
+std::optional<SpecificCall>
+IntrinsicProcTable::Implementation::HandleEnumerationInt(
+    const semantics::DerivedTypeSpec &derived, ActualArguments &arguments,
+    FoldingContext &context) const {
+  static const char *const keywords[]{"a", "kind", nullptr};
+  if (!CheckAndRearrangeArguments(arguments, context.messages(), keywords, 1)) {
+    return std::nullopt;
+  }
+  // Determine result kind using the same validation as the ordinary INT
+  // intrinsic (fold, check IsTypeEnabled, emit the same diagnostic on failure).
+  int kind{defaults_.GetDefaultKind(TypeCategory::Integer)};
+  if (arguments.size() > 1 && arguments[1]) {
+    if (const auto *kindExpr{arguments[1]->UnwrapExpr()}) {
+      bool kindOk{false};
+      if (auto kindVal{ToInt64(Fold(context, common::Clone(*kindExpr)))}) {
+        if (context.targetCharacteristics().IsTypeEnabled(
+                TypeCategory::Integer, *kindVal)) {
+          kind = static_cast<int>(*kindVal);
+          kindOk = true;
+        }
+      }
+      if (!kindOk) {
+        context.messages().Say(arguments[1]->sourceLocation(),
+            "'kind=' argument must be a constant scalar integer whose value is "
+            "a supported kind for the intrinsic result type"_err_en_US);
+        // fall through with default kind for error recovery
+      }
+    }
+  }
+  DynamicType enumerationType{derived};
+  DynamicType resultType{TypeCategory::Integer, kind};
+  characteristics::DummyDataObject ddo{
+      characteristics::TypeAndShape{enumerationType}};
+  ddo.intent = common::Intent::In;
+  characteristics::Procedure::Attrs attrs;
+  attrs.set(characteristics::Procedure::Attr::Pure);
+  attrs.set(characteristics::Procedure::Attr::Elemental);
+  characteristics::DummyArguments dummies;
+  dummies.emplace_back("a"s, std::move(ddo));
+  // Always include KIND dummy — CheckAndRearrangeArguments always populates
+  // the slot even when absent
+  characteristics::DummyDataObject kindDdo{
+      characteristics::TypeAndShape{DynamicType{TypeCategory::Integer,
+          defaults_.GetDefaultKind(TypeCategory::Integer)}}};
+  kindDdo.intent = common::Intent::In;
+  auto &kindDummy{dummies.emplace_back("kind"s, std::move(kindDdo))};
+  kindDummy.SetOptional();
+  return SpecificCall{SpecificIntrinsic{"int"s,
+                          characteristics::Procedure{
+                              characteristics::FunctionResult{resultType},
+                              std::move(dummies), attrs}},
+      std::move(arguments)};
+}
+
 static bool CheckForNonPositiveValues(FoldingContext &context,
     const ActualArgument &arg, const std::string &procName,
     const std::string &argName) {
@@ -3861,6 +4102,42 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::Probe(
           // Treat ALLOCATED(ptr) as ASSOCIATED(ptr)
           CallCharacteristics newCall{"associated"};
           return Probe(newCall, arguments, context);
+        }
+      }
+    }
+
+    // NEXT/PREVIOUS are enumeration-type-only intrinsics.
+    if (call.name == "next" || call.name == "previous") {
+      const semantics::DerivedTypeSpec *derived{nullptr};
+      if (const ActualArgument *arg{FindFirstDummyArgument(arguments, "a")}) {
+        if (auto type{arg->GetType()}) {
+          derived = GetDerivedTypeSpec(*type);
+        }
+      }
+      if (derived && derived->IsEnumerationType()) {
+        return call.name == "next"
+            ? HandleEnumerationNext(*derived, arguments, context)
+            : HandleEnumerationPrevious(*derived, arguments, context);
+      }
+      context.messages().Say(
+          "Argument of %s() must be of enumeration type"_err_en_US,
+          parser::ToUpperCaseLetters(call.name));
+      return std::nullopt;
+    }
+
+    // HUGE/INT are ordinary intrinsics that also accept enumeration types.
+    if (call.name == "huge" || call.name == "int") {
+      const char *firstDummyKeyword{call.name == "huge" ? "x" : "a"};
+      if (const ActualArgument *arg{
+              FindFirstDummyArgument(arguments, firstDummyKeyword)}) {
+        if (auto type{arg->GetType()}) {
+          if (const auto *derived{GetDerivedTypeSpec(*type)}) {
+            if (derived->IsEnumerationType()) {
+              return call.name == "huge"
+                  ? HandleEnumerationHuge(*derived, arguments, context)
+                  : HandleEnumerationInt(*derived, arguments, context);
+            }
+          }
         }
       }
     }
