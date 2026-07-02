@@ -61,7 +61,7 @@ gen maybe_throwing(bool x) {
 
 // CHECK: define{{.*}}@_Z14maybe_throwingb.destroy
 // CHECK: %[[INDEX:.+]] = load i1, ptr %index.addr, align 1
-// CHECK: br i1 %[[INDEX]], label %[[AFTERSUSPEND:.+]], label %[[CORO_FREE:.+]]
+// CHECK: br i1 %[[INDEX]], label %[[AFTERSUSPEND:.+]], label %[[CORO_FREE:.+]], !prof
 // CHECK: [[AFTERSUSPEND]]:
 // CHECK: call{{.*}}_ZN3gen12promise_type13final_awaiterD1Ev(
 // CHECK: [[CORO_FREE]]:

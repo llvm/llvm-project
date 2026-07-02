@@ -12,6 +12,7 @@
 #ifndef LLVM_TRANSFORMS_COROUTINES_COROSHAPE_H
 #define LLVM_TRANSFORMS_COROUTINES_COROSHAPE_H
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/Compiler.h"
@@ -57,6 +58,9 @@ struct Shape {
   SmallVector<CoroSizeInst *, 2> CoroSizes;
   SmallVector<CoroAlignInst *, 2> CoroAligns;
   SmallVector<AnyCoroSuspendInst *, 4> CoroSuspends;
+  // Map from suspend instructions to their execution frequency, used for branch
+  // weights in the resume function.
+  SmallDenseMap<AnyCoroSuspendInst *, uint64_t, 4> SuspendFreqs;
   SmallVector<CoroAwaitSuspendInst *, 4> CoroAwaitSuspends;
   SmallVector<CallInst *, 2> SymmetricTransfers;
 
@@ -70,6 +74,7 @@ struct Shape {
     CoroSizes.clear();
     CoroAligns.clear();
     CoroSuspends.clear();
+    SuspendFreqs.clear();
     CoroAwaitSuspends.clear();
     SymmetricTransfers.clear();
 
@@ -77,6 +82,7 @@ struct Shape {
 
     FramePtr = nullptr;
     AllocaSpillBlock = nullptr;
+    SwitchSuspendProfileWeights.clear();
   }
 
   // Scan the function and collect the above intrinsics for later processing
@@ -100,6 +106,13 @@ struct Shape {
   uint64_t FrameSize = 0;
   Value *FramePtr = nullptr;
   BasicBlock *AllocaSpillBlock = nullptr;
+
+  struct SwitchSuspendWeights {
+    uint32_t Resume = 0;
+    uint32_t Destroy = 0;
+    bool HasProfile = false;
+  };
+  SmallVector<SwitchSuspendWeights, 4> SwitchSuspendProfileWeights;
 
   struct SwitchLoweringStorage {
     SwitchInst *ResumeSwitch;
