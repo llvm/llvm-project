@@ -40,7 +40,7 @@ struct MyConstants {
 
 ConstantBuffer<MyConstants> Constants;
 
-// CHECK-LABEL: main
+// CHECK-LABEL: define internal void @main()()
 [numthreads(4,1,1)]
 void main() {
 // CHECK: [[TMP1:%.*]] = alloca %struct.MyStruct, align 4
