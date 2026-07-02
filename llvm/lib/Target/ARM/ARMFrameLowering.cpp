@@ -2382,28 +2382,26 @@ static unsigned EstimateFunctionSizeInBytes(const MachineFunction &MF,
       unsigned InstSize;
       switch (MI.getOpcode()) {
       case ARM::tADDframe:
-        if (BigFrameOffsets) {
+        if (BigFrameOffsets)
           // We might need two ADD instructions, or even a constant
           // load. In the latter case we must count the constant as
           // well as the load instruction and the addition, for 8
           // bytes total.
           InstSize = 8;
-        } else {
+        else
           InstSize = 2;
-        }
         break;
       case ARM::tLDRspi:
       case ARM::tSTRspi:
-        if (BigFrameOffsets) {
+        if (BigFrameOffsets)
           // In a really nasty case, accessing a stack slot might
           // require saving and restoring a scratch register (4 bytes)
           // to make space to load (2 bytes) a constant (4 bytes) to
           // add to SP or FP (2 bytes) and then do the load/store to
           // the resulting register (2 bytes).
           InstSize = 14;
-        } else {
+        else
           InstSize = 2;
-        }
         break;
       case TargetOpcode::COPY:
         // In some situations, COPY has to go via a high register, to
@@ -2431,19 +2429,18 @@ static unsigned EstimateFunctionSizeInBytes(const MachineFunction &MF,
         break;
 
       case TargetOpcode::LOAD_STACK_GUARD:
-        if (STI.genExecuteOnly()) {
+        if (STI.genExecuteOnly())
           // In execute-only code generation, it costs seven 2-byte
           // instructions (MOV + 3 ADD + 3 LSL) to load an arbitrary
           // 32-bit constant, plus two 4-byte MSRs to save/restore the
           // flags those instructions clobber. Then we load from the
           // resulting address with one more 2-byte instruction.
           InstSize = 7 * 2 + 2 * 4 + 8;
-        } else {
+        else
           // If we're not generating execute-only code, the constant
           // just costs an LDR and a literal, and then another LDR is
           // needed to load from that address.
           InstSize = 2 * 2 + 4;
-        }
         break;
 
       default:
