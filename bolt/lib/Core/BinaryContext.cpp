@@ -159,7 +159,16 @@ BinaryContext::BinaryContext(std::unique_ptr<MCContext> Ctx,
       MIA(std::move(MIA)), MIB(std::move(MIB)), MRI(std::move(MRI)),
       DisAsm(std::move(DisAsm)), Logger(Logger), InitialDynoStats(isAArch64()) {
   RegularPageSize = isAArch64() ? RegularPageSizeAArch64 : RegularPageSizeX86;
-  PageAlign = opts::NoHugePages ? RegularPageSize : HugePageSize;
+  if (opts::Hugify) {
+    if (opts::NoHugePages) {
+      this->errs() << "BOLT-ERROR: a conflict between --hugify and "
+                      "--no-huge-pages options, choose one of them\n";
+      exit(1);
+    }
+    PageAlign = HugePageSize;
+  } else {
+    PageAlign = opts::NoHugePages ? RegularPageSize : HugePageSize;
+  }
 }
 
 BinaryContext::~BinaryContext() {
