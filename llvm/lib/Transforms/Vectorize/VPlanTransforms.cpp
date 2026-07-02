@@ -1918,8 +1918,33 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
            vp_depth_first_deep(Plan.getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(reverse(*VPBB))) {
       if (!isa<VPWidenRecipe, VPWidenGEPRecipe, VPReplicateRecipe,
-               VPWidenIntrinsicRecipe>(&R))
+               VPWidenIntrinsicRecipe, VPWidenStoreRecipe>(&R))
         continue;
+
+      // Narrow header masked scatter to scalar store.
+      auto *WidenStoreR = dyn_cast<VPWidenStoreRecipe>(&R);
+      if (WidenStoreR) {
+        if (!vputils::isUniformAcrossVFsAndUFs(WidenStoreR->getAddr()) ||
+            WidenStoreR->isConsecutive())
+          continue;
+        VPValue *Mask = WidenStoreR->getMask();
+        if (!Mask || !vputils::isHeaderMask(Mask, Plan))
+          continue;
+
+        VPBuilder Builder(WidenStoreR);
+        VPInstruction *LastActiveLane = Builder.createLastActiveLane(Mask);
+        VPInstruction *Extract = Builder.createNaryOp(
+            VPInstruction::ExtractLane,
+            {LastActiveLane, WidenStoreR->getStoredValue()});
+        auto *ScalarStore = new VPReplicateRecipe(
+            &WidenStoreR->getIngredient(), {Extract, WidenStoreR->getAddr()},
+            /*IsSingleScalar*/ true, /*Mask*/ nullptr, {},
+            /*Metadata*/ *WidenStoreR);
+        ScalarStore->insertBefore(WidenStoreR);
+        WidenStoreR->eraseFromParent();
+        continue;
+      }
+
       auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
       if (RepR && (RepR->isSingleScalar() || RepR->isPredicated()))
         continue;
