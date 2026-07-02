@@ -16,6 +16,7 @@
 #include "clang/AST/ASTMutationListener.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/DependentDiagnostic.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprConcepts.h"
@@ -3929,6 +3930,12 @@ bool Sema::usesPartialOrExplicitSpecialization(
   return false;
 }
 
+static DeclContext *getAsDeclContextOrEnclosing(Decl *D) {
+  if (auto *DC = dyn_cast<DeclContext>(D))
+    return DC;
+  return D->getDeclContext();
+}
+
 /// Get the instantiation pattern to use to instantiate the definition of a
 /// given ClassTemplateSpecializationDecl (either the pattern of the primary
 /// template or of a partial specialization).
@@ -3977,9 +3984,28 @@ static ActionResult<CXXRecordDecl *> getPatternForClassTemplateSpecialization(
         continue;
 
       TemplateDeductionInfo Info(FailedCandidates.getLocation());
-      if (TemplateDeductionResult Result = S.DeduceTemplateArguments(
-              Partial, ClassTemplateSpec->getTemplateArgs().asArray(), Info);
-          Result != TemplateDeductionResult::Success) {
+
+      TemplateDeductionResult Result = S.DeduceTemplateArguments(
+          Partial, ClassTemplateSpec->getTemplateArgs().asArray(), Info);
+
+      if (Result == TemplateDeductionResult::Success) {
+        // Handle any dependent diags that might have been created for access
+        // checks. Reject Candidate if it fails access checks.
+        if (!Partial->ddiags().empty()) {
+          auto *Decl = Partial->hasDefinition()
+                           ? Partial
+                           : Partial->getInstantiatedFromMember();
+          Sema::ContextRAII SavedContext(S, getAsDeclContextOrEnclosing(Decl));
+          Sema::SFINAETrap Trap(S, Info);
+          S.PerformDependentDiagnostics(
+              Partial, S.getTemplateInstantiationArgs(Partial), true);
+          if (Trap.hasErrorOccurred()) {
+            Result = TemplateDeductionResult::SubstitutionFailure;
+          }
+        }
+      }
+
+      if (Result != TemplateDeductionResult::Success) {
         // Store the failed-deduction information for use in diagnostics, later.
         // TODO: Actually use the failed-deduction info?
         FailedCandidates.addCandidate().set(
@@ -3991,6 +4017,7 @@ static ActionResult<CXXRecordDecl *> getPatternForClassTemplateSpecialization(
         List.push_back(MatchResult{Partial, Info.takeCanonical()});
       }
     }
+
     if (Matched.empty() && PrimaryStrictPackMatch)
       Matched = std::move(ExtraMatched);
 

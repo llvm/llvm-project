@@ -7295,13 +7295,16 @@ void Sema::PerformPendingInstantiations(bool LocalOnly, bool AtEndOfTU) {
     PendingInstantiations.swap(DelayedImplicitInstantiations);
 }
 
-void Sema::PerformDependentDiagnostics(const DeclContext *Pattern,
-                       const MultiLevelTemplateArgumentList &TemplateArgs) {
+void Sema::PerformDependentDiagnostics(
+    const DeclContext *Pattern,
+    const MultiLevelTemplateArgumentList &TemplateArgs, bool MarkInactive) {
   for (auto *DD : Pattern->ddiags()) {
-    switch (DD->getKind()) {
-    case DependentDiagnostic::Access:
+    if (DD->getKind() == DependentDiagnostic::Access && DD->isActive()) {
       HandleDependentAccessCheck(*DD, TemplateArgs);
-      break;
+
+      if (MarkInactive) {
+        DD->setActive(false);
+      }
     }
   }
 }
