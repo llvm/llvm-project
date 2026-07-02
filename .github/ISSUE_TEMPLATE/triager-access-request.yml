@@ -10,7 +10,7 @@ body:
         Thank you for your interest in contributing to LLVM! Please replace
         `<user>` in the issue title with your GitHub username, and complete
         the form below. See the
-        [Developer Policy](https://llvm.org/docs/DeveloperPolicy.html#obtaining-commit-access)
+        [Developer Policy](https://llvm.org/docs/DeveloperPolicy.html#joining-the-triage-team)
         for a description of the triager role and how requests are handled.
   - type: checkboxes
     id: policies
@@ -38,7 +38,7 @@ body:
   - type: textarea
     id: background
     attributes:
-      label: Background
+      label: Background (optional)
       description: >
         Optionally, tell us how you plan to participate in the project, such
         as issues you would like to triage, areas of interest, or past

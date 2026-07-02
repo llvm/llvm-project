@@ -10,7 +10,7 @@ body:
         Thank you for your contributions to LLVM! Please replace `<user>` in
         the issue title with your GitHub username, and complete the form
         below. See the
-        [Developer Policy](https://llvm.org/docs/DeveloperPolicy.html#obtaining-code-ownership)
+        [Developer Policy](https://llvm.org/docs/DeveloperPolicy.html#obtaining-commit-access)
         for the criteria used to evaluate commit access requests. After you
         file this issue, you will need two current committers to vouch for
         you, at least one of whom does not share your organizational
@@ -60,7 +60,7 @@ body:
   - type: textarea
     id: reason
     attributes:
-      label: Why Are You Requesting Commit Access?
+      label: Background
       description: >
         Tell us about your involvement with the project and why you are
         requesting commit access.

@@ -65,6 +65,8 @@ many regular workgroup video calls and office hours. See {doc}`GettingInvolved`
 for more information on other ways to engage with the community.
 
 (patch)=
+(code review)=
+(code reviews)=
 ### Making and Submitting a Patch
 
 Patches are submitted to GitHub and reviewed using Pull Requests. Follow the
@@ -86,7 +88,9 @@ Here are some tips to enable a successful code review:
   branch, land a change in `main` first and then follow the {ref}`backporting
   instructions <backporting>`.
 
-See {doc}`CodeReview` for more info on what to expect.
+LLVM uses code review, which is a generally accepted software engineering best
+practice for maintaining high code quality. See {doc}`CodeReview` for more
+information on LLVM's code review process and what to expect.
 
 When submitting patches, please do not add confidentiality or non-disclosure
 notices to the patches themselves. These notices conflict with the LLVM
@@ -105,13 +109,6 @@ address associated with their GitHub commits, so please ensure that "Keep my
 email addresses private" is disabled in your [account
 settings](https://github.com/settings/emails). There are many free email
 forwarding services available if you wish to keep your identity private.
-
-(code review)=
-### Code Reviews
-
-LLVM uses code review, which is a generally accepted software engineering best
-practice for maintaining high code quality. Please see {doc}`CodeReview` for
-more information on LLVM's code review process.
 
 (maintainers)=
 ### Maintainers
@@ -467,8 +464,8 @@ What are the expectations around a revert?
 - When re-applying a reverted patch, the commit message should be updated to
   indicate the problem that was addressed and how it was addressed.
 
-(obtaining_commit_access)=
-### Obtaining Commit Access
+(joining_the_triage_team)=
+### Joining the Triage Team
 
 LLVM grants contributor permissions liberally. We believe that empowering new
 contributors is part of what makes LLVM a successful project. The first step on
@@ -481,7 +478,7 @@ the `users/` prefix, but most other branches are protected. To merge changes
 into `main`, you need to make a pull request and get approved by a member of
 the LLVM committers team. Once a PR is approved by a committer, a triager can
 push the merge button to land any PR, whether it is their own, or someone
-else's.
+else's (see {ref}`merging pull requests <merging_pull_requests>`).
 
 To apply to be a triager, read the following developer policy docs, and file an
 issue using [this template][triager-issue], stating that you've read the
@@ -504,7 +501,8 @@ membership.
 
 [triager-issue]: https://github.com/llvm/llvm-project/issues/new?template=triager-access-request.yml
 
-### Obtaining Code Ownership
+(obtaining_commit_access)=
+### Obtaining Commit Access
 
 The next step in contributing to LLVM is joining the LLVM committers team,
 which grants the right to approve other contributors' PRs, and to land your own
@@ -725,9 +723,10 @@ awareness of. For such changes, the following should be done:
 
 ### Attribution of Changes
 
-When contributors submit a patch to an LLVM project, other developers with
-commit access may merge the PR for the author (based on the progression of code
-review, etc.). GitHub will automatically ensure that authorship is preserved,
+When contributors submit a patch to an LLVM project, another committer or
+triager may merge the PR for the author once it has been approved (see
+{ref}`merging pull requests <merging_pull_requests>`). GitHub will
+automatically ensure that authorship is preserved,
 and one does not need to take any further action. We do not want the source
 code to be littered with random attributions "this code written by J. Random
 Hacker" (this is noisy and distracting). In practice, the revision control
