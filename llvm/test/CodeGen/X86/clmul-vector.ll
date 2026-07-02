@@ -2150,52 +2150,50 @@ define <4 x i32> @clmulr_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ;
 ; SSE42-PCLMUL-LABEL: clmulr_v4i32:
 ; SSE42-PCLMUL:       # %bb.0:
-; SSE42-PCLMUL-NEXT:    pxor %xmm2, %xmm2
-; SSE42-PCLMUL-NEXT:    pblendw {{.*#+}} xmm2 = xmm1[0,1],xmm2[2,3,4,5,6,7]
-; SSE42-PCLMUL-NEXT:    pxor %xmm3, %xmm3
-; SSE42-PCLMUL-NEXT:    pblendw {{.*#+}} xmm3 = xmm0[0,1],xmm3[2,3,4,5,6,7]
-; SSE42-PCLMUL-NEXT:    pclmulqdq $0, %xmm2, %xmm3
-; SSE42-PCLMUL-NEXT:    movq %xmm3, %rax
 ; SSE42-PCLMUL-NEXT:    movdqa %xmm0, %xmm3
-; SSE42-PCLMUL-NEXT:    movdqa %xmm1, %xmm4
-; SSE42-PCLMUL-NEXT:    movdqa %xmm0, %xmm5
+; SSE42-PCLMUL-NEXT:    pmovzxdq {{.*#+}} xmm4 = xmm1[0],zero,xmm1[1],zero
+; SSE42-PCLMUL-NEXT:    pmovzxdq {{.*#+}} xmm5 = xmm0[0],zero,xmm0[1],zero
 ; SSE42-PCLMUL-NEXT:    movdqa %xmm1, %xmm6
 ; SSE42-PCLMUL-NEXT:    movdqa %xmm0, %xmm7
+; SSE42-PCLMUL-NEXT:    movdqa %xmm1, %xmm8
+; SSE42-PCLMUL-NEXT:    movdqa %xmm0, %xmm9
 ; SSE42-PCLMUL-NEXT:    movdqa %xmm0, %xmm2
 ; SSE42-PCLMUL-NEXT:    pclmulqdq $0, %xmm1, %xmm2
-; SSE42-PCLMUL-NEXT:    pshufd {{.*#+}} xmm10 = xmm1[1,1,1,1]
-; SSE42-PCLMUL-NEXT:    pshufd {{.*#+}} xmm8 = xmm0[1,1,1,1]
-; SSE42-PCLMUL-NEXT:    pshufd {{.*#+}} xmm9 = xmm0[3,3,3,3]
+; SSE42-PCLMUL-NEXT:    pshufd {{.*#+}} xmm12 = xmm1[1,1,1,1]
+; SSE42-PCLMUL-NEXT:    pshufd {{.*#+}} xmm10 = xmm0[1,1,1,1]
+; SSE42-PCLMUL-NEXT:    pshufd {{.*#+}} xmm11 = xmm0[3,3,3,3]
 ; SSE42-PCLMUL-NEXT:    pclmulqdq $17, %xmm1, %xmm0
-; SSE42-PCLMUL-NEXT:    pshufd {{.*#+}} xmm11 = xmm1[3,3,3,3]
+; SSE42-PCLMUL-NEXT:    pshufd {{.*#+}} xmm13 = xmm1[3,3,3,3]
 ; SSE42-PCLMUL-NEXT:    psrlq $32, %xmm1
 ; SSE42-PCLMUL-NEXT:    psrlq $32, %xmm3
 ; SSE42-PCLMUL-NEXT:    pclmulqdq $0, %xmm1, %xmm3
-; SSE42-PCLMUL-NEXT:    movq %xmm3, %rcx
-; SSE42-PCLMUL-NEXT:    pxor %xmm1, %xmm1
-; SSE42-PCLMUL-NEXT:    punpckhdq {{.*#+}} xmm4 = xmm4[2],xmm1[2],xmm4[3],xmm1[3]
-; SSE42-PCLMUL-NEXT:    punpckhdq {{.*#+}} xmm5 = xmm5[2],xmm1[2],xmm5[3],xmm1[3]
+; SSE42-PCLMUL-NEXT:    movq %xmm3, %rax
 ; SSE42-PCLMUL-NEXT:    pclmulqdq $0, %xmm4, %xmm5
-; SSE42-PCLMUL-NEXT:    movq %xmm5, %rdx
-; SSE42-PCLMUL-NEXT:    psrldq {{.*#+}} xmm6 = xmm6[12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; SSE42-PCLMUL-NEXT:    psrldq {{.*#+}} xmm7 = xmm7[12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; SSE42-PCLMUL-NEXT:    movq %xmm5, %rcx
+; SSE42-PCLMUL-NEXT:    pxor %xmm1, %xmm1
+; SSE42-PCLMUL-NEXT:    punpckhdq {{.*#+}} xmm6 = xmm6[2],xmm1[2],xmm6[3],xmm1[3]
+; SSE42-PCLMUL-NEXT:    punpckhdq {{.*#+}} xmm7 = xmm7[2],xmm1[2],xmm7[3],xmm1[3]
 ; SSE42-PCLMUL-NEXT:    pclmulqdq $0, %xmm6, %xmm7
-; SSE42-PCLMUL-NEXT:    movq %xmm7, %rsi
-; SSE42-PCLMUL-NEXT:    shrq $32, %rax
-; SSE42-PCLMUL-NEXT:    pclmulqdq $0, %xmm10, %xmm8
-; SSE42-PCLMUL-NEXT:    movd %eax, %xmm1
+; SSE42-PCLMUL-NEXT:    movq %xmm7, %rdx
+; SSE42-PCLMUL-NEXT:    psrldq {{.*#+}} xmm8 = xmm8[12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; SSE42-PCLMUL-NEXT:    psrldq {{.*#+}} xmm9 = xmm9[12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; SSE42-PCLMUL-NEXT:    pclmulqdq $0, %xmm8, %xmm9
+; SSE42-PCLMUL-NEXT:    movq %xmm9, %rsi
 ; SSE42-PCLMUL-NEXT:    shrq $32, %rcx
-; SSE42-PCLMUL-NEXT:    pinsrd $1, %ecx, %xmm1
+; SSE42-PCLMUL-NEXT:    pclmulqdq $0, %xmm12, %xmm10
+; SSE42-PCLMUL-NEXT:    movd %ecx, %xmm1
+; SSE42-PCLMUL-NEXT:    shrq $32, %rax
+; SSE42-PCLMUL-NEXT:    pinsrd $1, %eax, %xmm1
 ; SSE42-PCLMUL-NEXT:    shrq $32, %rdx
 ; SSE42-PCLMUL-NEXT:    pinsrd $2, %edx, %xmm1
 ; SSE42-PCLMUL-NEXT:    shrq $32, %rsi
 ; SSE42-PCLMUL-NEXT:    pinsrd $3, %esi, %xmm1
 ; SSE42-PCLMUL-NEXT:    paddd %xmm1, %xmm1
-; SSE42-PCLMUL-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm8[0],xmm2[1],xmm8[1]
+; SSE42-PCLMUL-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm10[0],xmm2[1],xmm10[1]
 ; SSE42-PCLMUL-NEXT:    movq %xmm0, %rax
 ; SSE42-PCLMUL-NEXT:    pinsrd $2, %eax, %xmm2
-; SSE42-PCLMUL-NEXT:    pclmulqdq $0, %xmm9, %xmm11
-; SSE42-PCLMUL-NEXT:    movq %xmm11, %rax
+; SSE42-PCLMUL-NEXT:    pclmulqdq $0, %xmm11, %xmm13
+; SSE42-PCLMUL-NEXT:    movq %xmm13, %rax
 ; SSE42-PCLMUL-NEXT:    pinsrd $3, %eax, %xmm2
 ; SSE42-PCLMUL-NEXT:    psrld $31, %xmm2
 ; SSE42-PCLMUL-NEXT:    por %xmm1, %xmm2
@@ -2204,25 +2202,25 @@ define <4 x i32> @clmulr_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ;
 ; AVX2-LABEL: clmulr_v4i32:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX2-NEXT:    vpblendd {{.*#+}} xmm3 = xmm1[0],xmm2[1,2,3]
-; AVX2-NEXT:    vpblendd {{.*#+}} xmm4 = xmm0[0],xmm2[1,2,3]
-; AVX2-NEXT:    vpclmulqdq $0, %xmm3, %xmm4, %xmm3
-; AVX2-NEXT:    vmovq %xmm3, %rax
-; AVX2-NEXT:    shrq $32, %rax
-; AVX2-NEXT:    vmovd %eax, %xmm3
-; AVX2-NEXT:    vpsrlq $32, %xmm1, %xmm4
-; AVX2-NEXT:    vpsrlq $32, %xmm0, %xmm5
-; AVX2-NEXT:    vpclmulqdq $0, %xmm4, %xmm5, %xmm4
-; AVX2-NEXT:    vmovq %xmm4, %rax
-; AVX2-NEXT:    shrq $32, %rax
-; AVX2-NEXT:    vpinsrd $1, %eax, %xmm3, %xmm3
-; AVX2-NEXT:    vpunpckhdq {{.*#+}} xmm4 = xmm1[2],xmm2[2],xmm1[3],xmm2[3]
-; AVX2-NEXT:    vpunpckhdq {{.*#+}} xmm2 = xmm0[2],xmm2[2],xmm0[3],xmm2[3]
-; AVX2-NEXT:    vpclmulqdq $0, %xmm4, %xmm2, %xmm2
+; AVX2-NEXT:    vpsrlq $32, %xmm1, %xmm2
+; AVX2-NEXT:    vpsrlq $32, %xmm0, %xmm3
+; AVX2-NEXT:    vpclmulqdq $0, %xmm2, %xmm3, %xmm2
 ; AVX2-NEXT:    vmovq %xmm2, %rax
 ; AVX2-NEXT:    shrq $32, %rax
-; AVX2-NEXT:    vpinsrd $2, %eax, %xmm3, %xmm2
+; AVX2-NEXT:    vpmovzxdq {{.*#+}} xmm2 = xmm1[0],zero,xmm1[1],zero
+; AVX2-NEXT:    vpmovzxdq {{.*#+}} xmm3 = xmm0[0],zero,xmm0[1],zero
+; AVX2-NEXT:    vpclmulqdq $0, %xmm2, %xmm3, %xmm2
+; AVX2-NEXT:    vmovq %xmm2, %rcx
+; AVX2-NEXT:    shrq $32, %rcx
+; AVX2-NEXT:    vmovd %ecx, %xmm2
+; AVX2-NEXT:    vpinsrd $1, %eax, %xmm2, %xmm2
+; AVX2-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX2-NEXT:    vpunpckhdq {{.*#+}} xmm4 = xmm1[2],xmm3[2],xmm1[3],xmm3[3]
+; AVX2-NEXT:    vpunpckhdq {{.*#+}} xmm3 = xmm0[2],xmm3[2],xmm0[3],xmm3[3]
+; AVX2-NEXT:    vpclmulqdq $0, %xmm4, %xmm3, %xmm3
+; AVX2-NEXT:    vmovq %xmm3, %rax
+; AVX2-NEXT:    shrq $32, %rax
+; AVX2-NEXT:    vpinsrd $2, %eax, %xmm2, %xmm2
 ; AVX2-NEXT:    vpsrldq {{.*#+}} xmm3 = xmm1[12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; AVX2-NEXT:    vpsrldq {{.*#+}} xmm4 = xmm0[12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; AVX2-NEXT:    vpclmulqdq $0, %xmm3, %xmm4, %xmm3
@@ -2249,18 +2247,17 @@ define <4 x i32> @clmulr_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ;
 ; AVX512-LABEL: clmulr_v4i32:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512-NEXT:    vpblendd {{.*#+}} xmm3 = xmm1[0],xmm2[1,2,3]
-; AVX512-NEXT:    vpblendd {{.*#+}} xmm2 = xmm0[0],xmm2[1,2,3]
-; AVX512-NEXT:    vpclmulqdq $0, %xmm3, %xmm2, %xmm2
+; AVX512-NEXT:    vpsrlq $32, %xmm1, %xmm2
+; AVX512-NEXT:    vpsrlq $32, %xmm0, %xmm3
+; AVX512-NEXT:    vpclmulqdq $0, %xmm2, %xmm3, %xmm2
 ; AVX512-NEXT:    vmovq %xmm2, %rax
 ; AVX512-NEXT:    shrq $32, %rax
-; AVX512-NEXT:    vmovd %eax, %xmm2
-; AVX512-NEXT:    vpsrlq $32, %xmm1, %xmm3
-; AVX512-NEXT:    vpsrlq $32, %xmm0, %xmm4
-; AVX512-NEXT:    vpclmulqdq $0, %xmm3, %xmm4, %xmm3
-; AVX512-NEXT:    vmovq %xmm3, %rax
-; AVX512-NEXT:    shrq $32, %rax
+; AVX512-NEXT:    vpmovzxdq {{.*#+}} xmm2 = xmm1[0],zero,xmm1[1],zero
+; AVX512-NEXT:    vpmovzxdq {{.*#+}} xmm3 = xmm0[0],zero,xmm0[1],zero
+; AVX512-NEXT:    vpclmulqdq $0, %xmm2, %xmm3, %xmm2
+; AVX512-NEXT:    vmovq %xmm2, %rcx
+; AVX512-NEXT:    shrq $32, %rcx
+; AVX512-NEXT:    vmovd %ecx, %xmm2
 ; AVX512-NEXT:    vpinsrd $1, %eax, %xmm2, %xmm2
 ; AVX512-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; AVX512-NEXT:    vpunpckhdq {{.*#+}} xmm4 = xmm1[2],xmm3[2],xmm1[3],xmm3[3]
@@ -3978,23 +3975,21 @@ define <4 x i32> @clmulh_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ;
 ; SSE42-PCLMUL-LABEL: clmulh_v4i32:
 ; SSE42-PCLMUL:       # %bb.0:
-; SSE42-PCLMUL-NEXT:    pxor %xmm3, %xmm3
-; SSE42-PCLMUL-NEXT:    pxor %xmm2, %xmm2
-; SSE42-PCLMUL-NEXT:    pblendw {{.*#+}} xmm2 = xmm1[0,1],xmm2[2,3,4,5,6,7]
-; SSE42-PCLMUL-NEXT:    pxor %xmm4, %xmm4
-; SSE42-PCLMUL-NEXT:    pblendw {{.*#+}} xmm4 = xmm0[0,1],xmm4[2,3,4,5,6,7]
-; SSE42-PCLMUL-NEXT:    pclmulqdq $0, %xmm2, %xmm4
-; SSE42-PCLMUL-NEXT:    movq %xmm4, %rax
+; SSE42-PCLMUL-NEXT:    movdqa %xmm1, %xmm2
+; SSE42-PCLMUL-NEXT:    psrlq $32, %xmm2
+; SSE42-PCLMUL-NEXT:    movdqa %xmm0, %xmm3
+; SSE42-PCLMUL-NEXT:    psrlq $32, %xmm3
+; SSE42-PCLMUL-NEXT:    pclmulqdq $0, %xmm2, %xmm3
+; SSE42-PCLMUL-NEXT:    movq %xmm3, %rax
 ; SSE42-PCLMUL-NEXT:    shrq $32, %rax
-; SSE42-PCLMUL-NEXT:    movd %eax, %xmm2
-; SSE42-PCLMUL-NEXT:    movdqa %xmm1, %xmm4
-; SSE42-PCLMUL-NEXT:    psrlq $32, %xmm4
-; SSE42-PCLMUL-NEXT:    movdqa %xmm0, %xmm5
-; SSE42-PCLMUL-NEXT:    psrlq $32, %xmm5
-; SSE42-PCLMUL-NEXT:    pclmulqdq $0, %xmm4, %xmm5
-; SSE42-PCLMUL-NEXT:    movq %xmm5, %rax
-; SSE42-PCLMUL-NEXT:    shrq $32, %rax
+; SSE42-PCLMUL-NEXT:    pmovzxdq {{.*#+}} xmm2 = xmm1[0],zero,xmm1[1],zero
+; SSE42-PCLMUL-NEXT:    pmovzxdq {{.*#+}} xmm3 = xmm0[0],zero,xmm0[1],zero
+; SSE42-PCLMUL-NEXT:    pclmulqdq $0, %xmm2, %xmm3
+; SSE42-PCLMUL-NEXT:    movq %xmm3, %rcx
+; SSE42-PCLMUL-NEXT:    shrq $32, %rcx
+; SSE42-PCLMUL-NEXT:    movd %ecx, %xmm2
 ; SSE42-PCLMUL-NEXT:    pinsrd $1, %eax, %xmm2
+; SSE42-PCLMUL-NEXT:    pxor %xmm3, %xmm3
 ; SSE42-PCLMUL-NEXT:    movdqa %xmm1, %xmm4
 ; SSE42-PCLMUL-NEXT:    punpckhdq {{.*#+}} xmm4 = xmm4[2],xmm3[2],xmm4[3],xmm3[3]
 ; SSE42-PCLMUL-NEXT:    movdqa %xmm0, %xmm5
@@ -4014,25 +4009,25 @@ define <4 x i32> @clmulh_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ;
 ; AVX2-LABEL: clmulh_v4i32:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX2-NEXT:    vpblendd {{.*#+}} xmm3 = xmm1[0],xmm2[1,2,3]
-; AVX2-NEXT:    vpblendd {{.*#+}} xmm4 = xmm0[0],xmm2[1,2,3]
-; AVX2-NEXT:    vpclmulqdq $0, %xmm3, %xmm4, %xmm3
-; AVX2-NEXT:    vmovq %xmm3, %rax
-; AVX2-NEXT:    shrq $32, %rax
-; AVX2-NEXT:    vmovd %eax, %xmm3
-; AVX2-NEXT:    vpsrlq $32, %xmm1, %xmm4
-; AVX2-NEXT:    vpsrlq $32, %xmm0, %xmm5
-; AVX2-NEXT:    vpclmulqdq $0, %xmm4, %xmm5, %xmm4
-; AVX2-NEXT:    vmovq %xmm4, %rax
-; AVX2-NEXT:    shrq $32, %rax
-; AVX2-NEXT:    vpinsrd $1, %eax, %xmm3, %xmm3
-; AVX2-NEXT:    vpunpckhdq {{.*#+}} xmm4 = xmm1[2],xmm2[2],xmm1[3],xmm2[3]
-; AVX2-NEXT:    vpunpckhdq {{.*#+}} xmm2 = xmm0[2],xmm2[2],xmm0[3],xmm2[3]
-; AVX2-NEXT:    vpclmulqdq $0, %xmm4, %xmm2, %xmm2
+; AVX2-NEXT:    vpsrlq $32, %xmm1, %xmm2
+; AVX2-NEXT:    vpsrlq $32, %xmm0, %xmm3
+; AVX2-NEXT:    vpclmulqdq $0, %xmm2, %xmm3, %xmm2
 ; AVX2-NEXT:    vmovq %xmm2, %rax
 ; AVX2-NEXT:    shrq $32, %rax
-; AVX2-NEXT:    vpinsrd $2, %eax, %xmm3, %xmm2
+; AVX2-NEXT:    vpmovzxdq {{.*#+}} xmm2 = xmm1[0],zero,xmm1[1],zero
+; AVX2-NEXT:    vpmovzxdq {{.*#+}} xmm3 = xmm0[0],zero,xmm0[1],zero
+; AVX2-NEXT:    vpclmulqdq $0, %xmm2, %xmm3, %xmm2
+; AVX2-NEXT:    vmovq %xmm2, %rcx
+; AVX2-NEXT:    shrq $32, %rcx
+; AVX2-NEXT:    vmovd %ecx, %xmm2
+; AVX2-NEXT:    vpinsrd $1, %eax, %xmm2, %xmm2
+; AVX2-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX2-NEXT:    vpunpckhdq {{.*#+}} xmm4 = xmm1[2],xmm3[2],xmm1[3],xmm3[3]
+; AVX2-NEXT:    vpunpckhdq {{.*#+}} xmm3 = xmm0[2],xmm3[2],xmm0[3],xmm3[3]
+; AVX2-NEXT:    vpclmulqdq $0, %xmm4, %xmm3, %xmm3
+; AVX2-NEXT:    vmovq %xmm3, %rax
+; AVX2-NEXT:    shrq $32, %rax
+; AVX2-NEXT:    vpinsrd $2, %eax, %xmm2, %xmm2
 ; AVX2-NEXT:    vpsrldq {{.*#+}} xmm1 = xmm1[12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; AVX2-NEXT:    vpsrldq {{.*#+}} xmm0 = xmm0[12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; AVX2-NEXT:    vpclmulqdq $0, %xmm1, %xmm0, %xmm0
@@ -4043,18 +4038,17 @@ define <4 x i32> @clmulh_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ;
 ; AVX512-LABEL: clmulh_v4i32:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512-NEXT:    vpblendd {{.*#+}} xmm3 = xmm1[0],xmm2[1,2,3]
-; AVX512-NEXT:    vpblendd {{.*#+}} xmm2 = xmm0[0],xmm2[1,2,3]
-; AVX512-NEXT:    vpclmulqdq $0, %xmm3, %xmm2, %xmm2
+; AVX512-NEXT:    vpsrlq $32, %xmm1, %xmm2
+; AVX512-NEXT:    vpsrlq $32, %xmm0, %xmm3
+; AVX512-NEXT:    vpclmulqdq $0, %xmm2, %xmm3, %xmm2
 ; AVX512-NEXT:    vmovq %xmm2, %rax
 ; AVX512-NEXT:    shrq $32, %rax
-; AVX512-NEXT:    vmovd %eax, %xmm2
-; AVX512-NEXT:    vpsrlq $32, %xmm1, %xmm3
-; AVX512-NEXT:    vpsrlq $32, %xmm0, %xmm4
-; AVX512-NEXT:    vpclmulqdq $0, %xmm3, %xmm4, %xmm3
-; AVX512-NEXT:    vmovq %xmm3, %rax
-; AVX512-NEXT:    shrq $32, %rax
+; AVX512-NEXT:    vpmovzxdq {{.*#+}} xmm2 = xmm1[0],zero,xmm1[1],zero
+; AVX512-NEXT:    vpmovzxdq {{.*#+}} xmm3 = xmm0[0],zero,xmm0[1],zero
+; AVX512-NEXT:    vpclmulqdq $0, %xmm2, %xmm3, %xmm2
+; AVX512-NEXT:    vmovq %xmm2, %rcx
+; AVX512-NEXT:    shrq $32, %rcx
+; AVX512-NEXT:    vmovd %ecx, %xmm2
 ; AVX512-NEXT:    vpinsrd $1, %eax, %xmm2, %xmm2
 ; AVX512-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; AVX512-NEXT:    vpunpckhdq {{.*#+}} xmm4 = xmm1[2],xmm3[2],xmm1[3],xmm3[3]
@@ -7215,14 +7209,13 @@ define <4 x i32> @clmulr_v4i32_allones(<4 x i32> %x) nounwind {
 ; SSE42-PCLMUL-NEXT:    movdqa %xmm0, %xmm3
 ; SSE42-PCLMUL-NEXT:    psrlq $32, %xmm3
 ; SSE42-PCLMUL-NEXT:    pclmulqdq $0, %xmm2, %xmm3
-; SSE42-PCLMUL-NEXT:    pxor %xmm4, %xmm4
-; SSE42-PCLMUL-NEXT:    pxor %xmm1, %xmm1
-; SSE42-PCLMUL-NEXT:    pblendw {{.*#+}} xmm1 = xmm0[0,1],xmm1[2,3,4,5,6,7]
+; SSE42-PCLMUL-NEXT:    pmovzxdq {{.*#+}} xmm1 = xmm0[0],zero,xmm0[1],zero
 ; SSE42-PCLMUL-NEXT:    pclmulqdq $0, %xmm2, %xmm1
 ; SSE42-PCLMUL-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm3[0]
 ; SSE42-PCLMUL-NEXT:    movdqa %xmm0, %xmm3
 ; SSE42-PCLMUL-NEXT:    psrldq {{.*#+}} xmm3 = xmm3[12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; SSE42-PCLMUL-NEXT:    pclmulqdq $0, %xmm2, %xmm3
+; SSE42-PCLMUL-NEXT:    pxor %xmm4, %xmm4
 ; SSE42-PCLMUL-NEXT:    punpckhdq {{.*#+}} xmm0 = xmm0[2],xmm4[2],xmm0[3],xmm4[3]
 ; SSE42-PCLMUL-NEXT:    pclmulqdq $0, %xmm2, %xmm0
 ; SSE42-PCLMUL-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm3[0]
@@ -8135,15 +8128,15 @@ define <4 x i32> @clmulh_v4i32_allones(<4 x i32> %x) nounwind {
 ; SSE42-PCLMUL:       # %bb.0:
 ; SSE42-PCLMUL-NEXT:    movq $-1, %rax
 ; SSE42-PCLMUL-NEXT:    movq %rax, %xmm2
-; SSE42-PCLMUL-NEXT:    movdqa %xmm0, %xmm3
-; SSE42-PCLMUL-NEXT:    psrldq {{.*#+}} xmm3 = xmm3[12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; SSE42-PCLMUL-NEXT:    pclmulqdq $0, %xmm2, %xmm3
-; SSE42-PCLMUL-NEXT:    pxor %xmm1, %xmm1
+; SSE42-PCLMUL-NEXT:    movdqa %xmm0, %xmm1
+; SSE42-PCLMUL-NEXT:    psrldq {{.*#+}} xmm1 = xmm1[12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; SSE42-PCLMUL-NEXT:    pclmulqdq $0, %xmm2, %xmm1
+; SSE42-PCLMUL-NEXT:    pxor %xmm3, %xmm3
 ; SSE42-PCLMUL-NEXT:    movdqa %xmm0, %xmm4
-; SSE42-PCLMUL-NEXT:    punpckhdq {{.*#+}} xmm4 = xmm4[2],xmm1[2],xmm4[3],xmm1[3]
+; SSE42-PCLMUL-NEXT:    punpckhdq {{.*#+}} xmm4 = xmm4[2],xmm3[2],xmm4[3],xmm3[3]
 ; SSE42-PCLMUL-NEXT:    pclmulqdq $0, %xmm2, %xmm4
-; SSE42-PCLMUL-NEXT:    punpcklqdq {{.*#+}} xmm4 = xmm4[0],xmm3[0]
-; SSE42-PCLMUL-NEXT:    pblendw {{.*#+}} xmm1 = xmm0[0,1],xmm1[2,3,4,5,6,7]
+; SSE42-PCLMUL-NEXT:    punpcklqdq {{.*#+}} xmm4 = xmm4[0],xmm1[0]
+; SSE42-PCLMUL-NEXT:    pmovzxdq {{.*#+}} xmm1 = xmm0[0],zero,xmm0[1],zero
 ; SSE42-PCLMUL-NEXT:    psrlq $32, %xmm0
 ; SSE42-PCLMUL-NEXT:    pclmulqdq $0, %xmm2, %xmm0
 ; SSE42-PCLMUL-NEXT:    pclmulqdq $0, %xmm2, %xmm1
