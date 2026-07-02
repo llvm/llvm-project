@@ -282,3 +282,7 @@ DYNAMIC_TAG(FILTER, 0x7FFFFFFF)    // Shared object to get values from
 #undef RISCV_DYNAMIC_TAG
 #undef RISCV_DYNAMIC_TAG_DEFINED
 #endif
+#ifdef SPARC_DYNAMIC_TAG_DEFINED
+#undef SPARC_DYNAMIC_TAG
+#undef SPARC_DYNAMIC_TAG_DEFINED
+#endif
