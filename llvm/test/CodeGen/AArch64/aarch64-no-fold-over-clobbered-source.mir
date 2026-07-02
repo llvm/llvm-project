@@ -1,0 +1,33 @@
+# RUN: llc -mtriple=aarch64 -run-pass=machine-cp -enable-spill-copy-elim -verify-machineinstrs -o - %s | FileCheck %s
+# When running MachineCopyPropagation, we need to make sure COPY's do not get removed
+# when calls outside of the chain clobber a source included in the chain.
+# See: https://github.com/llvm/llvm-project/issues/206839
+---
+name: spill_chain_copy_clobbers_source
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $w10, $w13, $w23, $w25, $x7
+
+    ; CHECK: renamable $w10 = COPY killed renamable $w13
+    ; CHECK: renamable $w13 = COPY killed renamable $w10
+
+    renamable $w11 = COPY killed renamable $w10  ; S1
+    renamable $w10 = COPY killed renamable $w13  ; S2
+
+    renamable $w13 = COPY killed renamable $w23  ; clobbers S2 source
+    renamable $w15 = COPY killed renamable $w13
+    HINT 0, implicit killed $w15
+
+    renamable $w13 = COPY killed renamable $w25  ; S3
+
+    HINT 0, implicit killed $x7
+
+    renamable $w25 = COPY killed renamable $w13  ; R1
+    renamable $w13 = COPY killed renamable $w10  ; R2
+    renamable $w10 = COPY killed renamable $w11  ; R3
+
+    HINT 0, implicit killed $w10
+    HINT 0, implicit killed $w13
+
+...
