@@ -71,7 +71,6 @@ struct RegClassWeight {
 ///
 class LLVM_ABI TargetRegisterInfo : public MCRegisterInfo {
 public:
-  using regclass_iterator = const MCRegisterClass *;
   using vt_iterator = const MVT::SimpleValueType *;
   struct RegClassInfo {
     unsigned RegSize, SpillSize, SpillAlignment;
@@ -95,7 +94,6 @@ private:
   // Pointer to array of lane masks, one per sub-reg index.
   const LaneBitmask *SubRegIndexLaneMasks;
 
-  regclass_iterator RegClassBegin, RegClassEnd;   // List of regclasses
   LaneBitmask CoveringLanes;
   const RegClassInfo *const RCInfos;
   const MVT::SimpleValueType *const RCVTLists;
