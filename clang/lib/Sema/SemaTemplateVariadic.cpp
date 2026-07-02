@@ -911,6 +911,34 @@ bool Sema::CheckParameterPacksForExpansion(
     // Determine the size of this argument pack.
     unsigned NewPackSize, PendingPackExpansionSize = 0;
     if (IsVarDeclPack) {
+
+      // if there is a function paramter pack and we directly call findInstantiationOf
+      // then it fails because localdecls are not added to the instantiation scope until 
+      // after we check for pack expansions. So we need to check for parameter packs here 
+      // and add them to the instantiation scope before we call findInstantiationOf.
+      if (CurrentInstantiationScope) {
+        if (auto *PVD = dyn_cast<ParmVarDecl>(ND)) {
+          if (PVD->isParameterPack() &&
+              !CurrentInstantiationScope->getInstantiationOfIfExists(PVD)) {
+            // Copy the pack expansion logic from
+            // addInstantiatedParametersToScope
+            CurrentInstantiationScope->MakeInstantiatedLocalArgPack(PVD);
+
+            UnsignedOrNone NumArguments =
+                getNumArgumentsInExpansion(PVD->getType(), TemplateArgs);
+            if (NumArguments) {
+              for (unsigned Arg = 0; Arg < *NumArguments; ++Arg) {
+                ArgPackSubstIndexRAII SubstIndex(*this, Arg);
+                ParmVarDecl *NewParam = SubstParmVarDecl(PVD, TemplateArgs, Arg,
+                                                         std::nullopt, false);
+                CurrentInstantiationScope->InstantiatedLocalPackArg(PVD,
+                                                                    NewParam);
+              }
+            }
+          }
+        }
+      }
+      
       // Figure out whether we're instantiating to an argument pack or not.
       llvm::PointerUnion<Decl *, DeclArgumentPack *> *Instantiation =
           CurrentInstantiationScope->findInstantiationOf(
