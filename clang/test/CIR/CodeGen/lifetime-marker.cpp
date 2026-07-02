@@ -27,6 +27,11 @@ void f() {
 // LLVM:         call void @llvm.lifetime.start.p0(ptr %[[X]])
 // LLVM:         call void @llvm.lifetime.end.p0(ptr %[[X]])
 
+// Without optimization no lifetime markers are emitted. Checked per function so
+// a regression in a single function can't hide behind a passing global check.
+// O0-LABEL: cir.func{{.*}} @_Z1fv()
+// O0-NOT:     cir.lifetime
+
 struct S {
   ~S();
 };
@@ -50,5 +55,58 @@ void g() {
 // LLVM:         call void @_ZN1SD1Ev(ptr {{.*}} %[[S]])
 // LLVM:         call void @llvm.lifetime.end.p0(ptr %[[S]])
 
-// Without optimization no lifetime markers are emitted at all.
-// O0-NOT: cir.lifetime
+// O0-LABEL: cir.func{{.*}} @_Z1gv()
+// O0-NOT:     cir.lifetime
+
+// A statement that can bypass a local's initialization -- switch, label, or
+// indirect goto -- miscompiles under stack coloring (PR28267). Lacking classic
+// CodeGen's per-decl bypass analysis, we conservatively drop lifetime markers
+// for the *whole* function whenever any such statement is present, even at -O2
+// and even for locals (like `x` below) that are not themselves bypassed.
+
+void bypass_switch(int n) {
+  int x;
+  use(x);
+  switch (n) {
+  case 0:
+    return;
+  }
+}
+
+// CIR-LABEL: cir.func{{.*}}bypass_switch
+// CIR-NOT:     cir.lifetime
+
+// LLVM-LABEL: define{{.*}}bypass_switch
+// LLVM-NOT:    call void @llvm.lifetime
+
+// O0-LABEL: cir.func{{.*}}bypass_switch
+// O0-NOT:     cir.lifetime
+
+void bypass_label(int n) {
+  int x;
+  use(x);
+target:
+  if (n)
+    goto target;
+}
+
+// CIR-LABEL: cir.func{{.*}}bypass_label
+// CIR-NOT:     cir.lifetime
+
+// O0-LABEL: cir.func{{.*}}bypass_label
+// O0-NOT:     cir.lifetime
+
+void bypass_indirect_goto() {
+  int x;
+  use(x);
+  void *p = &&target;
+  goto *p;
+target:
+  return;
+}
+
+// CIR-LABEL: cir.func{{.*}}bypass_indirect_goto
+// CIR-NOT:     cir.lifetime
+
+// O0-LABEL: cir.func{{.*}}bypass_indirect_goto
+// O0-NOT:     cir.lifetime

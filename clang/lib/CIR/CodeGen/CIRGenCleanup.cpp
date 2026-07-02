@@ -436,6 +436,7 @@ bool EHScopeStack::requiresCatchOrCleanup() const {
   for (stable_iterator si = getInnermostEHScope(); si != stable_end();) {
     if (auto *cleanup = dyn_cast<EHCleanupScope>(&*find(si))) {
       if (cleanup->isLifetimeMarker()) {
+        // Skip lifetime markers and continue from the enclosing EH scope
         si = cleanup->getEnclosingEHScope();
         continue;
       }
