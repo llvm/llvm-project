@@ -21439,20 +21439,22 @@ SDValue X86TargetLowering::LowerUINT_TO_FP(SDValue Op,
   bool IsStrict = Op->isStrictFPOpcode();
   unsigned OpNo = IsStrict ? 1 : 0;
   SDValue Src = Op.getOperand(OpNo);
-  SDLoc dl(Op);
+  SDValue Chain = IsStrict ? Op.getOperand(0) : DAG.getEntryNode();
   auto PtrVT = getPointerTy(DAG.getDataLayout());
   MVT SrcVT = Src.getSimpleValueType();
   MVT DstVT = Op->getSimpleValueType(0);
-  SDValue Chain = IsStrict ? Op.getOperand(0) : DAG.getEntryNode();
-
-  // Bail out when we don't have native conversion instructions.
-  if (DstVT == MVT::f128)
-    return SDValue();
+  SDLoc dl(Op);
 
   if (isBF16orSoftF16(DstVT, Subtarget))
     return promoteXINT_TO_FP(Op, dl, DAG);
   else if (isLegalConversion(SrcVT, DstVT, false, Subtarget))
     return Op;
+
+  if (Subtarget.isTargetWin64() && SrcVT == MVT::i128)
+    return LowerWin64_INT128_TO_FP(Op, DAG);
+
+  if (SDValue Extract = vectorizeExtractedCast(Op, dl, DAG, Subtarget))
+    return Extract;
 
   if (SDValue V = lowerFPToIntToFP(Op, dl, DAG, Subtarget))
     return V;
@@ -21460,11 +21462,9 @@ SDValue X86TargetLowering::LowerUINT_TO_FP(SDValue Op,
   if (DstVT.isVector())
     return lowerUINT_TO_FP_vec(Op, dl, DAG, Subtarget);
 
-  if (Subtarget.isTargetWin64() && SrcVT == MVT::i128)
-    return LowerWin64_INT128_TO_FP(Op, DAG);
-
-  if (SDValue Extract = vectorizeExtractedCast(Op, dl, DAG, Subtarget))
-    return Extract;
+  // Bail out when we don't have native conversion instructions.
+  if (DstVT == MVT::f128)
+    return SDValue();
 
   if (Subtarget.hasAVX512() && isScalarFPTypeInSSEReg(DstVT) &&
       (SrcVT == MVT::i32 || (SrcVT == MVT::i64 && Subtarget.is64Bit()))) {
