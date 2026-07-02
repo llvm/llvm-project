@@ -1808,6 +1808,54 @@ static bool rightDistributesOverLeft(Instruction::BinaryOps LOp, bool HasNUW,
   }
 }
 
+/// Folds a min/max intrinsic when one operand is a NUW shift-by-constant.
+///
+/// Handles patterns like:
+///   umax(x << K, C) --> umax(x, C >> K) << K
+static Value *foldMinMaxWithShiftedOperand(IntrinsicInst *MinMax,
+                                           InstCombiner::BuilderTy &Builder) {
+  Intrinsic::ID IID = MinMax->getIntrinsicID();
+  if (IID != Intrinsic::umax && IID != Intrinsic::umin)
+    return nullptr;
+
+  Value *LHS = MinMax->getOperand(0), *RHS = MinMax->getOperand(1);
+
+  const APInt *ConstOperand;
+  BinaryOperator *BinOp;
+
+  bool Matched =
+      (match(LHS, m_BinOp(BinOp)) && match(RHS, m_APInt(ConstOperand))) ||
+      (match(RHS, m_BinOp(BinOp)) && match(LHS, m_APInt(ConstOperand)));
+
+  if (!Matched)
+    return nullptr;
+
+  if (!BinOp->hasOneUse())
+    return nullptr;
+
+  if (BinOp->getOpcode() != Instruction::Shl || !BinOp->hasNoUnsignedWrap())
+    return nullptr;
+
+  Value *ShiftBase = BinOp->getOperand(0);
+  Value *ShiftAmount = BinOp->getOperand(1);
+
+  const APInt *ShiftAmountConst;
+  if (!match(ShiftAmount, m_APInt(ShiftAmountConst)))
+    return nullptr;
+
+  uint64_t K = ShiftAmountConst->getZExtValue();
+  if (ConstOperand->countTrailingZeros() < K)
+    return nullptr;
+
+  APInt HoistedConst = ConstOperand->lshr(K);
+  Value *NewConstant = ConstantInt::get(MinMax->getType(), HoistedConst);
+
+  Value *NarrowedMinMax =
+      Builder.CreateBinaryIntrinsic(IID, ShiftBase, NewConstant);
+
+  return Builder.CreateShl(NarrowedMinMax, ShiftAmount, "", /*NUW=*/true);
+}
+
 // Attempts to factorise a common term
 // in an instruction that has the form "(A op' B) op (C op' D)
 // where op is an intrinsic and op' is a binop
@@ -2188,6 +2236,9 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       if (Instruction *I = foldMaxMulShift(I1, I0))
         return I;
     }
+
+    if (Value *V = foldMinMaxWithShiftedOperand(II, Builder))
+      return replaceInstUsesWith(*II, V);
 
     // If both operands of unsigned min/max are sign-extended, it is still ok
     // to narrow the operation.
