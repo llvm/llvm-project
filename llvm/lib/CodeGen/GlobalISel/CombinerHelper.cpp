@@ -7561,7 +7561,6 @@ bool CombinerHelper::isConstantOrConstantVectorI(Register Src) const {
   return true;
 }
 
-// TODO: use knownbits to determine zeros
 bool CombinerHelper::tryFoldSelectOfConstants(GSelect *Select,
                                               BuildFnTy &MatchInfo) const {
   uint32_t Flags = Select->getFlags();
@@ -7585,51 +7584,98 @@ bool CombinerHelper::tryFoldSelectOfConstants(GSelect *Select,
   std::optional<ValueAndVReg> FalseOpt =
       getIConstantVRegValWithLookThrough(False, MRI);
 
+  // Use KnownBits to determine zeros when not a constant.
+  bool TrueIsZero = TrueOpt ? TrueOpt->Value.isZero()
+                            : (VT && VT->getKnownBits(True).isZero());
+  bool FalseIsZero = FalseOpt ? FalseOpt->Value.isZero()
+                              : (VT && VT->getKnownBits(False).isZero());
+
+  // Patterns with a constant true value and a zero false value.
+  if (TrueOpt && FalseIsZero) {
+    APInt TrueValue = TrueOpt->Value;
+
+    // select Cond, 1, 0 --> zext (Cond)
+    if (TrueValue.isOne()) {
+      MatchInfo = [=](MachineIRBuilder &B) {
+        B.setInstrAndDebugLoc(*Select);
+        B.buildZExtOrTrunc(Dest, Cond);
+      };
+      return true;
+    }
+
+    // select Cond, -1, 0 --> sext (Cond)
+    if (TrueValue.isAllOnes()) {
+      MatchInfo = [=](MachineIRBuilder &B) {
+        B.setInstrAndDebugLoc(*Select);
+        B.buildSExtOrTrunc(Dest, Cond);
+      };
+      return true;
+    }
+
+    // select Cond, Pow2, 0 --> (zext Cond) << log2(Pow2)
+    if (TrueValue.isPowerOf2()) {
+      MatchInfo = [=](MachineIRBuilder &B) {
+        B.setInstrAndDebugLoc(*Select);
+        Register Inner = MRI.createGenericVirtualRegister(TrueTy);
+        B.buildZExtOrTrunc(Inner, Cond);
+        // The shift amount must be scalar.
+        LLT ShiftTy = TrueTy.isVector() ? TrueTy.getElementType() : TrueTy;
+        auto ShAmtC = B.buildConstant(ShiftTy, TrueValue.exactLogBase2());
+        B.buildShl(Dest, Inner, ShAmtC, Flags);
+      };
+      return true;
+    }
+  }
+
+  // Patterns with a zero true value and a constant false value.
+  if (TrueIsZero && FalseOpt) {
+    APInt FalseValue = FalseOpt->Value;
+
+    // select Cond, 0, 1 --> zext (!Cond)
+    if (FalseValue.isOne()) {
+      MatchInfo = [=](MachineIRBuilder &B) {
+        B.setInstrAndDebugLoc(*Select);
+        Register Inner = MRI.createGenericVirtualRegister(CondTy);
+        B.buildNot(Inner, Cond);
+        B.buildZExtOrTrunc(Dest, Inner);
+      };
+      return true;
+    }
+
+    // select Cond, 0, -1 --> sext (!Cond)
+    if (FalseValue.isAllOnes()) {
+      MatchInfo = [=](MachineIRBuilder &B) {
+        B.setInstrAndDebugLoc(*Select);
+        Register Inner = MRI.createGenericVirtualRegister(CondTy);
+        B.buildNot(Inner, Cond);
+        B.buildSExtOrTrunc(Dest, Inner);
+      };
+      return true;
+    }
+
+    // select Cond, 0, Pow2 --> (zext (!Cond)) << log2(Pow2)
+    if (FalseValue.isPowerOf2()) {
+      MatchInfo = [=](MachineIRBuilder &B) {
+        B.setInstrAndDebugLoc(*Select);
+        Register Not = MRI.createGenericVirtualRegister(CondTy);
+        B.buildNot(Not, Cond);
+        Register Inner = MRI.createGenericVirtualRegister(TrueTy);
+        B.buildZExtOrTrunc(Inner, Not);
+        // The shift amount must be scalar.
+        LLT ShiftTy = TrueTy.isVector() ? TrueTy.getElementType() : TrueTy;
+        auto ShAmtC = B.buildConstant(ShiftTy, FalseValue.exactLogBase2());
+        B.buildShl(Dest, Inner, ShAmtC, Flags);
+      };
+      return true;
+    }
+  }
+
+  // The remaining patterns require both operands to be constants.
   if (!TrueOpt || !FalseOpt)
     return false;
 
   APInt TrueValue = TrueOpt->Value;
   APInt FalseValue = FalseOpt->Value;
-
-  // select Cond, 1, 0 --> zext (Cond)
-  if (TrueValue.isOne() && FalseValue.isZero()) {
-    MatchInfo = [=](MachineIRBuilder &B) {
-      B.setInstrAndDebugLoc(*Select);
-      B.buildZExtOrTrunc(Dest, Cond);
-    };
-    return true;
-  }
-
-  // select Cond, -1, 0 --> sext (Cond)
-  if (TrueValue.isAllOnes() && FalseValue.isZero()) {
-    MatchInfo = [=](MachineIRBuilder &B) {
-      B.setInstrAndDebugLoc(*Select);
-      B.buildSExtOrTrunc(Dest, Cond);
-    };
-    return true;
-  }
-
-  // select Cond, 0, 1 --> zext (!Cond)
-  if (TrueValue.isZero() && FalseValue.isOne()) {
-    MatchInfo = [=](MachineIRBuilder &B) {
-      B.setInstrAndDebugLoc(*Select);
-      Register Inner = MRI.createGenericVirtualRegister(CondTy);
-      B.buildNot(Inner, Cond);
-      B.buildZExtOrTrunc(Dest, Inner);
-    };
-    return true;
-  }
-
-  // select Cond, 0, -1 --> sext (!Cond)
-  if (TrueValue.isZero() && FalseValue.isAllOnes()) {
-    MatchInfo = [=](MachineIRBuilder &B) {
-      B.setInstrAndDebugLoc(*Select);
-      Register Inner = MRI.createGenericVirtualRegister(CondTy);
-      B.buildNot(Inner, Cond);
-      B.buildSExtOrTrunc(Dest, Inner);
-    };
-    return true;
-  }
 
   // select Cond, C1, C1-1 --> add (zext Cond), C1-1
   if (TrueValue - 1 == FalseValue) {
@@ -7649,36 +7695,6 @@ bool CombinerHelper::tryFoldSelectOfConstants(GSelect *Select,
       Register Inner = MRI.createGenericVirtualRegister(TrueTy);
       B.buildSExtOrTrunc(Inner, Cond);
       B.buildAdd(Dest, Inner, False);
-    };
-    return true;
-  }
-
-  // select Cond, Pow2, 0 --> (zext Cond) << log2(Pow2)
-  if (TrueValue.isPowerOf2() && FalseValue.isZero()) {
-    MatchInfo = [=](MachineIRBuilder &B) {
-      B.setInstrAndDebugLoc(*Select);
-      Register Inner = MRI.createGenericVirtualRegister(TrueTy);
-      B.buildZExtOrTrunc(Inner, Cond);
-      // The shift amount must be scalar.
-      LLT ShiftTy = TrueTy.isVector() ? TrueTy.getElementType() : TrueTy;
-      auto ShAmtC = B.buildConstant(ShiftTy, TrueValue.exactLogBase2());
-      B.buildShl(Dest, Inner, ShAmtC, Flags);
-    };
-    return true;
-  }
-
-  // select Cond, 0, Pow2 --> (zext (!Cond)) << log2(Pow2)
-  if (FalseValue.isPowerOf2() && TrueValue.isZero()) {
-    MatchInfo = [=](MachineIRBuilder &B) {
-      B.setInstrAndDebugLoc(*Select);
-      Register Not = MRI.createGenericVirtualRegister(CondTy);
-      B.buildNot(Not, Cond);
-      Register Inner = MRI.createGenericVirtualRegister(TrueTy);
-      B.buildZExtOrTrunc(Inner, Not);
-      // The shift amount must be scalar.
-      LLT ShiftTy = TrueTy.isVector() ? TrueTy.getElementType() : TrueTy;
-      auto ShAmtC = B.buildConstant(ShiftTy, FalseValue.exactLogBase2());
-      B.buildShl(Dest, Inner, ShAmtC, Flags);
     };
     return true;
   }
@@ -7710,7 +7726,6 @@ bool CombinerHelper::tryFoldSelectOfConstants(GSelect *Select,
   return false;
 }
 
-// TODO: use knownbits to determine zeros
 bool CombinerHelper::tryFoldBoolSelectToLogic(GSelect *Select,
                                               BuildFnTy &MatchInfo) const {
   uint32_t Flags = Select->getFlags();
@@ -7731,9 +7746,27 @@ bool CombinerHelper::tryFoldBoolSelectToLogic(GSelect *Select,
   if (CondTy != TrueTy)
     return false;
 
+  // Use KnownBits to determine zeros/ones when not a constant splat.
+  bool TrueIsZero = isZeroOrZeroSplat(True, /* AllowUndefs */ true);
+  bool TrueIsOne = isOneOrOneSplat(True, /* AllowUndefs */ true);
+  bool FalseIsZero = isZeroOrZeroSplat(False, /* AllowUndefs */ true);
+  bool FalseIsOne = isOneOrOneSplat(False, /* AllowUndefs */ true);
+  if (VT) {
+    if (!TrueIsZero && !TrueIsOne) {
+      KnownBits KnownTrue = VT->getKnownBits(True);
+      TrueIsZero = KnownTrue.isZero();
+      TrueIsOne = KnownTrue.isAllOnes();
+    }
+    if (!FalseIsZero && !FalseIsOne) {
+      KnownBits KnownFalse = VT->getKnownBits(False);
+      FalseIsZero = KnownFalse.isZero();
+      FalseIsOne = KnownFalse.isAllOnes();
+    }
+  }
+
   // select Cond, Cond, F --> or Cond, F
   // select Cond, 1, F    --> or Cond, F
-  if ((Cond == True) || isOneOrOneSplat(True, /* AllowUndefs */ true)) {
+  if ((Cond == True) || TrueIsOne) {
     MatchInfo = [=](MachineIRBuilder &B) {
       B.setInstrAndDebugLoc(*Select);
       Register Ext = MRI.createGenericVirtualRegister(TrueTy);
@@ -7746,7 +7779,7 @@ bool CombinerHelper::tryFoldBoolSelectToLogic(GSelect *Select,
 
   // select Cond, T, Cond --> and Cond, T
   // select Cond, T, 0    --> and Cond, T
-  if ((Cond == False) || isZeroOrZeroSplat(False, /* AllowUndefs */ true)) {
+  if ((Cond == False) || FalseIsZero) {
     MatchInfo = [=](MachineIRBuilder &B) {
       B.setInstrAndDebugLoc(*Select);
       Register Ext = MRI.createGenericVirtualRegister(TrueTy);
@@ -7758,7 +7791,7 @@ bool CombinerHelper::tryFoldBoolSelectToLogic(GSelect *Select,
   }
 
   // select Cond, T, 1 --> or (not Cond), T
-  if (isOneOrOneSplat(False, /* AllowUndefs */ true)) {
+  if (FalseIsOne) {
     MatchInfo = [=](MachineIRBuilder &B) {
       B.setInstrAndDebugLoc(*Select);
       // First the not.
@@ -7774,7 +7807,7 @@ bool CombinerHelper::tryFoldBoolSelectToLogic(GSelect *Select,
   }
 
   // select Cond, 0, F --> and (not Cond), F
-  if (isZeroOrZeroSplat(True, /* AllowUndefs */ true)) {
+  if (TrueIsZero) {
     MatchInfo = [=](MachineIRBuilder &B) {
       B.setInstrAndDebugLoc(*Select);
       // First the not.
