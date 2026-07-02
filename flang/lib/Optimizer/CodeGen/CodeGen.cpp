@@ -2883,6 +2883,13 @@ struct XArrayCoorOpConversion
     mlir::LLVM::GEPNoWrapFlags gepFlags =
         mlir::LLVM::GEPNoWrapFlags::nusw | mlir::LLVM::GEPNoWrapFlags::nuw;
 
+    // An assumed-size array's last dimension has an unknown extent that is
+    // encoded as -1, so no meaningful upper-bound assume can be emitted for it.
+    const bool lastDimIsAssumedSize =
+        !coor.getShape().empty() &&
+        llvm::isa_and_nonnull<fir::AssumedSizeExtentOp>(
+            coor.getShape().back().getDefiningOp());
+
     // For each dimension of the array, generate the offset calculation.
     for (unsigned i = 0; i < rank; ++i, ++indexOffset, ++shapeOffset,
                   ++shiftOffset, sliceOffset += 3, sliceOps += 3) {
@@ -2891,6 +2898,43 @@ struct XArrayCoorOpConversion
       mlir::Value lb =
           isShifted ? integerCast(loc, rewriter, idxTy, operands[shiftOffset])
                     : one;
+
+      // Emit array bounds assumes per Fortran 2018 standard section 9.5.3.3.2:
+      // "The value of each subscript expression shall be within the bounds for
+      // its dimension unless the array section has size zero."
+      // For non-boxed arrays with known shape, emit: assume(index >= lb) and
+      // assume(index <= lb + extent - 1).
+      // The llvm.array_bounds attribute marks these assumes for removal before
+      // vectorization to prevent IR bloat and avoid impacting cost models. This
+      // is only emitted at higher optimization levels (see FIRToLLVMPassOptions
+      // and getFIRToLLVMPassOptions).
+      if (options.emitArrayBoundsAssumes && !baseIsBoxed &&
+          !coor.getShape().empty()) {
+        // Lower bound assume: index >= lb.
+        mlir::Value lbCheck = mlir::LLVM::ICmpOp::create(
+            rewriter, loc, mlir::LLVM::ICmpPredicate::sge, index, lb);
+        auto lbAssume = mlir::LLVM::AssumeOp::create(rewriter, loc, lbCheck);
+        lbAssume->setAttr(mlir::LLVM::AssumeOp::getArrayBoundsAttrName(),
+                          rewriter.getUnitAttr());
+
+        // Upper bound assume: index <= lb + extent - 1. The extent of an
+        // assumed-size array's last dimension is unknown, so skip the
+        // upper-bound assume in that case to avoid a bogus assumption.
+        if (!(i == rank - 1 && lastDimIsAssumedSize)) {
+          mlir::Value extent =
+              integerCast(loc, rewriter, idxTy, operands[shapeOffset]);
+          mlir::Value lbPlusExtent =
+              mlir::LLVM::AddOp::create(rewriter, loc, idxTy, lb, extent, nsw);
+          mlir::Value ub = mlir::LLVM::SubOp::create(rewriter, loc, idxTy,
+                                                     lbPlusExtent, one, nsw);
+          mlir::Value ubCheck = mlir::LLVM::ICmpOp::create(
+              rewriter, loc, mlir::LLVM::ICmpPredicate::sle, index, ub);
+          auto ubAssume = mlir::LLVM::AssumeOp::create(rewriter, loc, ubCheck);
+          ubAssume->setAttr(mlir::LLVM::AssumeOp::getArrayBoundsAttrName(),
+                            rewriter.getUnitAttr());
+        }
+      }
+
       mlir::Value step = one;
       bool normalSlice = isSliced;
       // Compute zero based index in dimension i of the element, applying

@@ -130,6 +130,11 @@ getFIRToLLVMPassOptions(const MLIRToLLVMPassPipelineConfig &config) {
   options.typeDescriptorsRenamedForAssembly =
       !disableCompilerGeneratedNamesConversion;
   options.ComplexRange = config.ComplexRange;
+  // Only emit array bounds assumes at -O2 and above, as they increase IR size
+  // for a benefit that mainly helps loop optimizations at higher optimization
+  // levels.
+  options.emitArrayBoundsAssumes =
+      enableArrayBoundsAssumes && config.OptLevel.getSpeedupLevel() >= 2;
   return options;
 }
 
