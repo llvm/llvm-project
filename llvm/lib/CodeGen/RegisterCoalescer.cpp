@@ -119,7 +119,7 @@ static cl::opt<unsigned> LargeIntervalFreqThreshold(
     cl::desc("For a large interval, if it is coalesced with other live "
              "intervals many times more than the threshold, stop its "
              "coalescing to control the compile time. "),
-    cl::init(256));
+    cl::init(16));
 
 namespace {
 
