@@ -318,6 +318,12 @@ New checks
   Checks for presence or absence of trailing commas in enum definitions and
   initializer lists.
 
+- New :doc:`readability-use-rethrow
+  <clang-tidy/checks/readability/use-rethrow>` check.
+
+  Detects cases where a caught exception object is re-thrown using the variable 
+  name, and suggests using a bare ``throw;`` instead.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
