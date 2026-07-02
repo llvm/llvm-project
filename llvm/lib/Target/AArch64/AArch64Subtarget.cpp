@@ -483,9 +483,13 @@ unsigned AArch64Subtarget::classifyGlobalFunctionReference(
     return AArch64II::MO_GOT;
 
   // NonLazyBind goes via GOT unless we know it's available locally.
+  // When -fno-plt is enabled (getRtLibUseGOT), all external function calls
+  // go through GOT, matching the X86 backend behavior.
   auto *F = dyn_cast<Function>(GV);
   if ((!isTargetMachO() || MachOUseNonLazyBind) && F &&
-      F->hasFnAttribute(Attribute::NonLazyBind) && !TM.shouldAssumeDSOLocal(GV))
+      (F->hasFnAttribute(Attribute::NonLazyBind) ||
+       F->getParent()->getRtLibUseGOT()) &&
+      !(TM.shouldAssumeDSOLocal(GV) || GV->hasLocalLinkage()))
     return AArch64II::MO_GOT;
 
   if (getTargetTriple().isOSWindows()) {
