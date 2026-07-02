@@ -2110,6 +2110,16 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::LOAD, MVT::nxv4f64, Custom);
       setOperationAction(ISD::LOAD, MVT::nxv16bf16, Custom);
 
+      // 2x stores
+      setOperationAction(ISD::STORE, MVT::nxv32i8, Custom);
+      setOperationAction(ISD::STORE, MVT::nxv16i16, Custom);
+      setOperationAction(ISD::STORE, MVT::nxv8i32, Custom);
+      setOperationAction(ISD::STORE, MVT::nxv4i64, Custom);
+      setOperationAction(ISD::STORE, MVT::nxv16f16, Custom);
+      setOperationAction(ISD::STORE, MVT::nxv8f32, Custom);
+      setOperationAction(ISD::STORE, MVT::nxv4f64, Custom);
+      setOperationAction(ISD::STORE, MVT::nxv16bf16, Custom);
+
       // 4x loads
       setOperationAction(ISD::LOAD, MVT::nxv64i8, Custom);
       setOperationAction(ISD::LOAD, MVT::nxv32i16, Custom);
@@ -2119,6 +2129,16 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::LOAD, MVT::nxv16f32, Custom);
       setOperationAction(ISD::LOAD, MVT::nxv8f64, Custom);
       setOperationAction(ISD::LOAD, MVT::nxv32bf16, Custom);
+
+      // 4x stores
+      setOperationAction(ISD::STORE, MVT::nxv64i8, Custom);
+      setOperationAction(ISD::STORE, MVT::nxv32i16, Custom);
+      setOperationAction(ISD::STORE, MVT::nxv16i32, Custom);
+      setOperationAction(ISD::STORE, MVT::nxv8i64, Custom);
+      setOperationAction(ISD::STORE, MVT::nxv32f16, Custom);
+      setOperationAction(ISD::STORE, MVT::nxv16f32, Custom);
+      setOperationAction(ISD::STORE, MVT::nxv8f64, Custom);
+      setOperationAction(ISD::STORE, MVT::nxv32bf16, Custom);
     }
   }
 
@@ -7739,6 +7759,93 @@ static SDValue LowerNTStore(StoreSDNode *StoreNode, EVT VT, EVT MemVT,
   return SDValue();
 }
 
+// Lower scalable vectors that are 2/4 times the width of a legal SVE type to
+// multi-vector operations.
+static SDValue tryLowerMultiVectorStore(StoreSDNode *StoreNode,
+                                        SelectionDAG &DAG) {
+  SDValue Value = StoreNode->getValue();
+  EVT VT = Value.getValueType();
+  EVT MemVT = StoreNode->getMemoryVT();
+
+  if (!StoreNode->isSimple() || !StoreNode->isUnindexed() ||
+      StoreNode->isNonTemporal() || !StoreNode->getOffset().isUndef() ||
+      !VT.isScalableVector() || !VT.isSimple() || VT != MemVT)
+    return SDValue();
+
+  MVT StoreVT = VT.getSimpleVT();
+  MVT RegVT;
+  unsigned IntID;
+  unsigned NumVecs;
+
+  switch (StoreVT.SimpleTy) {
+  default:
+    return SDValue();
+
+  case MVT::nxv32i8:
+  case MVT::nxv16i16:
+  case MVT::nxv8i32:
+  case MVT::nxv4i64:
+  case MVT::nxv16f16:
+  case MVT::nxv8f32:
+  case MVT::nxv4f64:
+  case MVT::nxv16bf16:
+    IntID = Intrinsic::aarch64_sve_st1_pn_x2;
+    NumVecs = 2;
+    RegVT = StoreVT.getHalfNumVectorElementsVT();
+    break;
+  case MVT::nxv64i8:
+  case MVT::nxv32i16:
+  case MVT::nxv16i32:
+  case MVT::nxv8i64:
+  case MVT::nxv32f16:
+  case MVT::nxv16f32:
+  case MVT::nxv8f64:
+  case MVT::nxv32bf16:
+    IntID = Intrinsic::aarch64_sve_st1_pn_x4;
+    NumVecs = 4;
+    RegVT = StoreVT.getHalfNumVectorElementsVT().getHalfNumVectorElementsVT();
+    break;
+  }
+
+  unsigned PredIntID;
+  switch (StoreVT.getScalarSizeInBits()) {
+  default:
+    llvm_unreachable("covered by previous switch");
+  case 8:
+    PredIntID = Intrinsic::aarch64_sve_ptrue_c8;
+    break;
+  case 16:
+    PredIntID = Intrinsic::aarch64_sve_ptrue_c16;
+    break;
+  case 32:
+    PredIntID = Intrinsic::aarch64_sve_ptrue_c32;
+    break;
+  case 64:
+    PredIntID = Intrinsic::aarch64_sve_ptrue_c64;
+    break;
+  }
+
+  SDLoc DL(StoreNode);
+  SDValue PNg = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::aarch64svcount,
+                            DAG.getConstant(PredIntID, DL, MVT::i64));
+
+  SmallVector<SDValue, 8> Ops;
+  Ops.push_back(StoreNode->getChain());
+  Ops.push_back(DAG.getConstant(IntID, DL, MVT::i64));
+
+  unsigned RegElts = RegVT.getVectorMinNumElements();
+  for (unsigned i = 0; i != NumVecs; ++i)
+    Ops.push_back(DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, RegVT, Value,
+                              DAG.getVectorIdxConstant(i * RegElts, DL)));
+
+  Ops.push_back(PNg);
+  Ops.push_back(StoreNode->getBasePtr());
+
+  return DAG.getMemIntrinsicNode(
+      ISD::INTRINSIC_VOID, DL, DAG.getVTList(MVT::Other), Ops,
+      StoreNode->getMemoryVT(), StoreNode->getMemOperand());
+}
+
 // Custom lowering for any store, vector or scalar and/or default or with
 // a truncate operations.  Currently only custom lower truncate operation
 // from vector v4i16 to v4i8 or volatile stores of i128.
@@ -7759,6 +7866,9 @@ SDValue AArch64TargetLowering::LowerSTORE(SDValue Op,
   }
 
   if (VT.isVector()) {
+    if (SDValue Store = tryLowerMultiVectorStore(StoreNode, DAG))
+      return Store;
+
     if (useSVEForFixedLengthVectorVT(
             VT,
             /*OverrideNEON=*/Subtarget->useSVEForFixedLengthVectors()))
