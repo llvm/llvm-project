@@ -36,6 +36,7 @@
 ;
 ; Simple functionality check.
 ; RUN: opt -S -print-changed=diff-quiet -passes=instsimplify 2>&1 -o /dev/null < %s | FileCheck %s --check-prefix=CHECK-DIFF-QUIET-SIMPLE --allow-empty
+; RUN: opt -S -print-changed=diff,quiet -passes=instsimplify 2>&1 -o /dev/null < %s | FileCheck %s --check-prefix=CHECK-DIFF-QUIET-SIMPLE --allow-empty
 ;
 ; Check that only the passes that change the IR are printed and that the
 ; others (including g) are filtered out.

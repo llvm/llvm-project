@@ -38,6 +38,9 @@ public:
     ClearedProperties = getClearedProperties();
     return false;
   }
+
+  bool doFinalization(Module &) override;
+
 protected:
   explicit MachineFunctionPass(char &ID) : FunctionPass(ID) {}
 

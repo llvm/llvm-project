@@ -26,6 +26,7 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Register.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/StructuralHash.h"
@@ -243,4 +244,211 @@ stable_hash llvm::stableHashValue(const MachineFunction &MF) {
   for (const auto &MBB : MF)
     HashComponents.push_back(stableHashValue(MBB));
   return stable_hash_combine(HashComponents);
+}
+
+// The generic stableHashValue() API is conservative: it can return 0 when an
+// operand cannot be hashed with the stability needed by compiler analyses. The
+// print-changed hash is diagnostic-only, so it is more permissive and hashes
+// those operands using the best local identity available. This keeps
+// -print-changed=hash-func/hash-bb useful for change detection without changing
+// the contract of the generic stable hash APIs.
+// TODO: Prefer stable symbolic identities over local numbering where available
+// to reduce false positives from renumbering.
+static stable_hash
+hashMachineOperandForChangePrinter(const MachineOperand &MO) {
+  stable_hash H = stable_hash_combine(
+      MO.getType(), static_cast<unsigned>(MO.getTargetFlags()));
+
+  switch (MO.getType()) {
+  case MachineOperand::MO_Register: {
+    H = stable_hash_combine(
+        H, stable_hash_combine(MO.getReg().id(), MO.isDef(), MO.isImplicit()),
+        stable_hash_combine(MO.isDead(), MO.isKill()));
+    if (MO.getSubReg())
+      H = stable_hash_combine(H, MO.getSubReg());
+    return H;
+  }
+  case MachineOperand::MO_Immediate:
+    return stable_hash_combine(H, MO.getImm());
+  case MachineOperand::MO_CImmediate: {
+    APInt Val = MO.getCImm()->getValue();
+    return stable_hash_combine(H, static_cast<stable_hash>(hash_value(Val)));
+  }
+  case MachineOperand::MO_FPImmediate: {
+    APInt Val = MO.getFPImm()->getValueAPF().bitcastToAPInt();
+    return stable_hash_combine(H, static_cast<stable_hash>(hash_value(Val)));
+  }
+  case MachineOperand::MO_MachineBasicBlock:
+    return stable_hash_combine(H, MO.getMBB()->getNumber());
+  case MachineOperand::MO_FrameIndex:
+    return stable_hash_combine(H, MO.getIndex());
+  case MachineOperand::MO_ConstantPoolIndex:
+    return stable_hash_combine(H, MO.getIndex(), MO.getOffset());
+  case MachineOperand::MO_TargetIndex:
+    return stable_hash_combine(H, MO.getIndex(), MO.getOffset());
+  case MachineOperand::MO_JumpTableIndex:
+    return stable_hash_combine(H, MO.getIndex());
+  case MachineOperand::MO_ExternalSymbol:
+    return stable_hash_combine(
+        H, MO.getOffset(),
+        static_cast<stable_hash>(hash_value(StringRef(MO.getSymbolName()))));
+  case MachineOperand::MO_GlobalAddress:
+    return stable_hash_combine(
+        H, static_cast<stable_hash>(hash_value(MO.getGlobal()->getName())),
+        MO.getOffset());
+  case MachineOperand::MO_BlockAddress:
+    return stable_hash_combine(
+        H,
+        static_cast<stable_hash>(
+            hash_value(MO.getBlockAddress()->getFunction()->getName())),
+        MO.getBlockAddress()->getBasicBlock()->hasName()
+            ? static_cast<stable_hash>(
+                  hash_value(MO.getBlockAddress()->getBasicBlock()->getName()))
+            : static_cast<stable_hash>(
+                  hash_value(MO.getBlockAddress()->getBasicBlock())),
+        MO.getOffset());
+  case MachineOperand::MO_Metadata:
+    return stable_hash_combine(H, hash_value(MO.getMetadata()));
+  case MachineOperand::MO_MCSymbol:
+    return stable_hash_combine(
+        H, static_cast<stable_hash>(hash_value(MO.getMCSymbol()->getName())));
+  case MachineOperand::MO_RegisterMask:
+  case MachineOperand::MO_RegisterLiveOut: {
+    const MachineInstr *MI = MO.getParent();
+    const MachineBasicBlock *MBB = MI ? MI->getParent() : nullptr;
+    const MachineFunction *MF = MBB ? MBB->getParent() : nullptr;
+    const TargetRegisterInfo *TRI =
+        MF ? MF->getSubtarget().getRegisterInfo() : nullptr;
+    if (!TRI)
+      return H;
+    unsigned RegMaskSize = MachineOperand::getRegMaskSize(TRI->getNumRegs());
+    const uint32_t *RegMask =
+        MO.isRegMask() ? MO.getRegMask() : MO.getRegLiveOut();
+    SmallVector<stable_hash, 32> RegMaskHashes(RegMask, RegMask + RegMaskSize);
+    return stable_hash_combine(H, stable_hash_combine(RegMaskHashes));
+  }
+  case MachineOperand::MO_CFIIndex:
+    return stable_hash_combine(H, MO.getCFIIndex());
+  case MachineOperand::MO_IntrinsicID:
+    return stable_hash_combine(H, MO.getIntrinsicID());
+  case MachineOperand::MO_Predicate:
+    return stable_hash_combine(H, MO.getPredicate());
+  case MachineOperand::MO_ShuffleMask: {
+    SmallVector<stable_hash, 8> ShuffleMaskHashes;
+    llvm::transform(MO.getShuffleMask(), std::back_inserter(ShuffleMaskHashes),
+                    [](int S) { return stable_hash(S); });
+    return stable_hash_combine(H, stable_hash_combine(ShuffleMaskHashes));
+  }
+  case MachineOperand::MO_DbgInstrRef:
+    return stable_hash_combine(H, MO.getInstrRefInstrIndex(),
+                               MO.getInstrRefOpIndex());
+  case MachineOperand::MO_LaneMask:
+    return stable_hash_combine(H, MO.getLaneMask().getAsInteger());
+  }
+  llvm_unreachable("Invalid machine operand type");
+}
+
+static stable_hash hashLocationSizeForChangePrinter(LocationSize Size) {
+  if (!Size.hasValue())
+    return 0;
+
+  TypeSize TySize = Size.getValue();
+  return stable_hash_combine(/*HasValue=*/true, TySize.getKnownMinValue(),
+                             TySize.isScalable());
+}
+
+static stable_hash
+hashMachineMemOperandForChangePrinter(const MachineMemOperand &MMO) {
+  AAMDNodes AAInfo = MMO.getAAInfo();
+  SmallVector<stable_hash, 16> HashComponents;
+  HashComponents.push_back(static_cast<unsigned>(MMO.getFlags()));
+  HashComponents.push_back(hashLocationSizeForChangePrinter(MMO.getSize()));
+  HashComponents.push_back(MMO.getOffset());
+  HashComponents.push_back(MMO.getAddrSpace());
+  HashComponents.push_back(MMO.getBaseAlign().value());
+  HashComponents.push_back(static_cast<unsigned>(MMO.getSyncScopeID()));
+  HashComponents.push_back(static_cast<unsigned>(MMO.getSuccessOrdering()));
+  HashComponents.push_back(static_cast<unsigned>(MMO.getFailureOrdering()));
+  HashComponents.push_back(MMO.getMemoryType().isValid()
+                               ? MMO.getMemoryType().getUniqueRAWLLTData()
+                               : uint64_t(0));
+  HashComponents.push_back(
+      static_cast<stable_hash>(hash_value(MMO.getOpaqueValue())));
+  HashComponents.push_back(static_cast<stable_hash>(hash_value(AAInfo.TBAA)));
+  HashComponents.push_back(
+      static_cast<stable_hash>(hash_value(AAInfo.TBAAStruct)));
+  HashComponents.push_back(static_cast<stable_hash>(hash_value(AAInfo.Scope)));
+  HashComponents.push_back(
+      static_cast<stable_hash>(hash_value(AAInfo.NoAlias)));
+  HashComponents.push_back(
+      static_cast<stable_hash>(hash_value(AAInfo.NoAliasAddrSpace)));
+  HashComponents.push_back(
+      static_cast<stable_hash>(hash_value(MMO.getRanges())));
+  return stable_hash_combine(HashComponents);
+}
+
+stable_hash llvm::stableHashValueForChangePrinter(const MachineInstr &MI) {
+  stable_hash H =
+      stable_hash_combine(MI.getOpcode(), MI.getFlags(), MI.getNumOperands(),
+                          MI.getNumMemOperands());
+  for (const MachineOperand &MO : MI.operands())
+    H = stable_hash_combine(H, hashMachineOperandForChangePrinter(MO));
+  for (const MachineMemOperand *MMO : MI.memoperands())
+    H = stable_hash_combine(H, hashMachineMemOperandForChangePrinter(*MMO));
+  return H;
+}
+
+static stable_hash stableHashMachineBasicBlockForChangePrinter(
+    const MachineBasicBlock &MBB,
+    MachineBasicBlockStableHashInfo *Details = nullptr) {
+  if (Details)
+    Details->MBB = &MBB;
+
+  stable_hash MBBHash = 0;
+  for (const MachineInstr &MI : MBB) {
+    stable_hash MIHash = stableHashValueForChangePrinter(MI);
+    MBBHash = stable_hash_combine(MBBHash, MIHash);
+  }
+
+  if (Details)
+    Details->Hash = MBBHash;
+  return MBBHash;
+}
+
+static stable_hash hashMachineFunctionForChangePrinter(
+    const MachineFunction &MF,
+    MachineFunctionStableHashInfo *Details = nullptr) {
+  if (Details)
+    Details->Blocks.reserve(MF.size());
+
+  stable_hash MFHash = 0;
+  for (const MachineBasicBlock &MBB : MF) {
+    MachineBasicBlockStableHashInfo *BlockDetails = nullptr;
+    if (Details) {
+      Details->Blocks.emplace_back();
+      BlockDetails = &Details->Blocks.back();
+    }
+    MFHash = stable_hash_combine(
+        MFHash, stableHashMachineBasicBlockForChangePrinter(MBB, BlockDetails));
+  }
+
+  if (Details)
+    Details->Hash = MFHash;
+  return MFHash;
+}
+
+stable_hash
+llvm::stableHashValueForChangePrinter(const MachineBasicBlock &MBB) {
+  return stableHashMachineBasicBlockForChangePrinter(MBB);
+}
+
+stable_hash llvm::stableHashValueForChangePrinter(const MachineFunction &MF) {
+  return hashMachineFunctionForChangePrinter(MF);
+}
+
+MachineFunctionStableHashInfo
+llvm::stableHashValueWithDetailsForChangePrinter(const MachineFunction &MF) {
+  MachineFunctionStableHashInfo Details;
+  hashMachineFunctionForChangePrinter(MF, &Details);
+  return Details;
 }

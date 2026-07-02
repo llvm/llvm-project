@@ -15,17 +15,22 @@
 #include "llvm/Passes/StandardInstrumentations.h"
 #include "llvm/ADT/Any.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/CodeGen/MIRPrinter.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/CodeGen/MachineStableHash.h"
 #include "llvm/CodeGen/MachineVerifier.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/ModuleSlotTracker.h"
 #include "llvm/IR/PassInstrumentation.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PrintPasses.h"
@@ -42,6 +47,7 @@
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/xxhash.h"
+#include <optional>
 #include <utility>
 #include <vector>
 
@@ -291,6 +297,283 @@ bool shouldPrintIR(Any IR) {
   llvm_unreachable("Unknown wrapped IR type");
 }
 
+static stable_hash hashFunctionForChangePrinter(const Function &F) {
+  SmallVector<stable_hash> Hashes = {stable_hash_name(F.getName()),
+                                     F.isDeclaration()};
+  if (!F.isDeclaration())
+    Hashes.push_back(StructuralHash(F, /*DetailedHash=*/true));
+  return stable_hash_combine(Hashes);
+}
+
+static void saveFunctionAttributesForChangePrinter(
+    const Function &F, SmallVectorImpl<FunctionChangeAttributes> &Attrs) {
+  Attrs.push_back({F.getName().str(), F.getAttributes(),
+                   static_cast<unsigned>(F.arg_size())});
+}
+
+static std::string getBasicBlockChangeKey(
+    const BasicBlock &BB,
+    const DenseMap<const BasicBlock *, unsigned> *Numbers = nullptr) {
+  if (BB.hasName())
+    return BB.getName().str();
+  if (Numbers)
+    return formatv("{0}", Numbers->lookup(&BB)).str();
+
+  unsigned Index = 0;
+  for (const BasicBlock &FuncBB : *BB.getParent()) {
+    if (&FuncBB == &BB)
+      return formatv("{0}", Index).str();
+    ++Index;
+  }
+  llvm_unreachable("basic block must be in its parent function");
+}
+
+static std::string getMachineBasicBlockChangeKey(
+    const MachineBasicBlock &MBB,
+    const DenseMap<const MachineBasicBlock *, unsigned> *Numbers = nullptr) {
+  if (MBB.hasName())
+    return MBB.getName().str();
+  if (Numbers)
+    return formatv("{0}", Numbers->lookup(&MBB)).str();
+  return formatv("{0}", MBB.getNumber()).str();
+}
+
+static void appendFunctionChangeHash(IRChangeHash &Output,
+                                     FunctionChangeHash &&FunctionHash) {
+  Output.Hash = stable_hash_combine(
+      Output.Hash, stable_hash_name(FunctionHash.Name), FunctionHash.Hash);
+  Output.Functions.push_back(std::move(FunctionHash));
+}
+
+static bool shouldCollectAllBasicBlocks(const BasicBlock &) { return true; }
+
+// BasicBlock pointers in StructuralHashWithDetails are only valid for the
+// current snapshot. Across passes, hash-bb matches blocks by a derived key:
+// the block name when present, otherwise the block's ordinal position in the
+// function. This does not suppress transformed or duplicated blocks; changed
+// and newly-created blocks are still printed. The limitation is association:
+// passes that delete/recreate, duplicate, or reorder unnamed blocks can appear
+// as added/deleted or position-matched block changes instead of being matched
+// to a previous logical block. TODO: add a more stable block tracking key.
+static void collectFunctionChangeHash(
+    const Function &F, IRChangeHash &Output, bool MatchAllFunctions = false,
+    function_ref<bool(const BasicBlock &)> ShouldCollectBlock =
+        shouldCollectAllBasicBlocks) {
+  if (!MatchAllFunctions && !isFunctionInPrintList(F.getName()))
+    return;
+
+  ChangePrinterHashMode HashMode = getPrintChangedHashMode();
+  FunctionChangeHash FunctionHash;
+  FunctionHash.Name = F.getName().str();
+  saveFunctionAttributesForChangePrinter(F, Output.FunctionAttrs);
+
+  if (F.isDeclaration() || HashMode == ChangePrinterHashMode::Function ||
+      (HashMode == ChangePrinterHashMode::BasicBlock && F.size() <= 1)) {
+    FunctionHash.Hash = hashFunctionForChangePrinter(F);
+  } else {
+    FunctionStructuralHashInfo Details =
+        StructuralHashWithDetails(F, /*DetailedHash=*/true, ShouldCollectBlock);
+    FunctionHash.Hash = stable_hash_combine(
+        stable_hash_name(F.getName()), F.isDeclaration(), Details.FunctionHash);
+    DenseMap<const BasicBlock *, unsigned> BlockNumbers;
+    unsigned BlockNumber = 0;
+    for (const BasicBlock &BB : F)
+      BlockNumbers.try_emplace(&BB, BlockNumber++);
+    for (const BasicBlockStructuralHashInfo &BlockInfo : Details.Blocks) {
+      BasicBlockChangeHash BlockHash;
+      BlockHash.Key = getBasicBlockChangeKey(*BlockInfo.BB, &BlockNumbers);
+      BlockHash.Hash = BlockInfo.BlockHash;
+      FunctionHash.Blocks.push_back(std::move(BlockHash));
+    }
+  }
+
+  appendFunctionChangeHash(Output, std::move(FunctionHash));
+}
+
+static void collectMachineFunctionChangeHash(const MachineFunction &MF,
+                                             IRChangeHash &Output) {
+  if (!isFunctionInPrintList(MF.getName()))
+    return;
+
+  ChangePrinterHashMode HashMode = getPrintChangedHashMode();
+  FunctionChangeHash FunctionHash;
+  FunctionHash.Name = MF.getName().str();
+
+  if (HashMode == ChangePrinterHashMode::Function ||
+      (HashMode == ChangePrinterHashMode::BasicBlock && MF.size() <= 1)) {
+    FunctionHash.Hash = stableHashValueForChangePrinter(MF);
+    appendFunctionChangeHash(Output, std::move(FunctionHash));
+    return;
+  }
+
+  MachineFunctionStableHashInfo Details =
+      stableHashValueWithDetailsForChangePrinter(MF);
+  FunctionHash.Hash = Details.Hash;
+  DenseMap<const MachineBasicBlock *, unsigned> BlockNumbers;
+  unsigned BlockNumber = 0;
+  for (const MachineBasicBlock &MBB : MF)
+    BlockNumbers.try_emplace(&MBB, BlockNumber++);
+  for (const MachineBasicBlockStableHashInfo &BlockInfo : Details.Blocks) {
+    BasicBlockChangeHash BlockHash;
+    BlockHash.Key =
+        getMachineBasicBlockChangeKey(*BlockInfo.MBB, &BlockNumbers);
+    BlockHash.Hash = BlockInfo.Hash;
+    FunctionHash.Blocks.push_back(std::move(BlockHash));
+  }
+
+  appendFunctionChangeHash(Output, std::move(FunctionHash));
+}
+
+static constexpr stable_hash PrintedFunctionsHashSalt = 0x8a2d3c4f;
+
+static void hashIRForChangePrinter(Any IR, IRChangeHash &Output) {
+  Output.Hash = PrintedFunctionsHashSalt;
+
+  if (const auto *M = unwrapIR<Module>(IR)) {
+    bool MatchAllFunctions = isFunctionInPrintList("*") || forcePrintModuleIR();
+    if (MatchAllFunctions)
+      Output.Hash = stable_hash_combine(
+          Output.Hash, StructuralHash(*M, /*DetailedHash=*/true));
+    for (const Function &F : *M)
+      collectFunctionChangeHash(F, Output, MatchAllFunctions);
+    return;
+  }
+
+  if (const auto *F = unwrapIR<Function>(IR)) {
+    collectFunctionChangeHash(*F, Output);
+    return;
+  }
+
+  if (const auto *C = unwrapIR<LazyCallGraph::SCC>(IR)) {
+    for (const LazyCallGraph::Node &N : *C)
+      collectFunctionChangeHash(N.getFunction(), Output);
+    return;
+  }
+
+  if (const auto *L = unwrapIR<Loop>(IR)) {
+    SmallPtrSet<const BasicBlock *, 8> LoopBlocks;
+    for (const BasicBlock *BB : L->blocks())
+      LoopBlocks.insert(BB);
+    collectFunctionChangeHash(*L->getHeader()->getParent(), Output,
+                              /*MatchAllFunctions=*/false,
+                              [&LoopBlocks](const BasicBlock &BB) {
+                                return LoopBlocks.contains(&BB);
+                              });
+    return;
+  }
+
+  llvm_unreachable("Unknown wrapped IR type");
+}
+
+static bool
+collectFunctionNamesForChangePrinter(Any IR,
+                                     SmallVectorImpl<std::string> &Names) {
+  if (const auto *M = unwrapIR<Module>(IR)) {
+    bool MatchAllFunctions = isFunctionInPrintList("*") || forcePrintModuleIR();
+    for (const Function &F : *M)
+      if (MatchAllFunctions || isFunctionInPrintList(F.getName()))
+        Names.push_back(F.getName().str());
+    return true;
+  }
+
+  if (const auto *F = unwrapIR<Function>(IR)) {
+    if (isFunctionInPrintList(F->getName()))
+      Names.push_back(F->getName().str());
+    return true;
+  }
+
+  if (const auto *C = unwrapIR<LazyCallGraph::SCC>(IR)) {
+    for (const LazyCallGraph::Node &N : *C)
+      if (isFunctionInPrintList(N.getFunction().getName()))
+        Names.push_back(N.getFunction().getName().str());
+    return true;
+  }
+
+  if (const auto *L = unwrapIR<Loop>(IR)) {
+    const Function *F = L->getHeader()->getParent();
+    if (isFunctionInPrintList(F->getName()))
+      Names.push_back(F->getName().str());
+    return true;
+  }
+
+  if (const auto *MF = unwrapIR<MachineFunction>(IR)) {
+    if (isFunctionInPrintList(MF->getName()))
+      Names.push_back(MF->getName().str());
+    return false;
+  }
+
+  llvm_unreachable("Unknown wrapped IR type");
+}
+
+static void hashWholeIRForStatefulChangePrinter(Any IR, IRChangeHash &Output) {
+  if (const auto *MF = unwrapIR<MachineFunction>(IR)) {
+    Output.Hash = PrintedFunctionsHashSalt;
+    collectMachineFunctionChangeHash(*MF, Output);
+    return;
+  }
+
+  if (const auto *L = unwrapIR<Loop>(IR)) {
+    Output.Hash = PrintedFunctionsHashSalt;
+    collectFunctionChangeHash(*L->getHeader()->getParent(), Output);
+    return;
+  }
+
+  hashIRForChangePrinter(IR, Output);
+}
+
+static void updateStatefulHashCache(
+    const IRChangeHash &Hash, ArrayRef<std::string> BeforeNames,
+    StringMap<FunctionChangeHash> &FunctionCache,
+    StringMap<FunctionChangeAttributes> *AttrCache = nullptr) {
+  DenseSet<StringRef> AfterNames;
+  for (const FunctionChangeHash &Func : Hash.Functions) {
+    AfterNames.insert(Func.Name);
+    FunctionCache[Func.Name] = Func;
+  }
+
+  if (AttrCache)
+    for (const FunctionChangeAttributes &Attrs : Hash.FunctionAttrs)
+      (*AttrCache)[Attrs.Name] = Attrs;
+
+  for (StringRef Name : BeforeNames) {
+    if (AfterNames.contains(Name))
+      continue;
+    FunctionCache.erase(Name);
+    if (AttrCache)
+      AttrCache->erase(Name);
+  }
+}
+
+static void
+buildStatefulBeforeHash(ArrayRef<std::string> FunctionNames,
+                        const StringMap<FunctionChangeHash> &FunctionCache,
+                        const StringMap<FunctionChangeAttributes> *AttrCache,
+                        IRChangeHash &Before) {
+  Before.Hash = PrintedFunctionsHashSalt;
+  for (StringRef Name : FunctionNames) {
+    auto FuncIt = FunctionCache.find(Name);
+    if (FuncIt == FunctionCache.end())
+      continue;
+    FunctionChangeHash Func = FuncIt->second;
+    appendFunctionChangeHash(Before, std::move(Func));
+
+    if (AttrCache) {
+      auto AttrIt = AttrCache->find(Name);
+      if (AttrIt != AttrCache->end())
+        Before.FunctionAttrs.push_back(AttrIt->second);
+    }
+  }
+}
+
+static bool
+hasMissingStatefulHash(ArrayRef<std::string> FunctionNames,
+                       const StringMap<FunctionChangeHash> &FunctionCache) {
+  for (StringRef Name : FunctionNames)
+    if (!FunctionCache.contains(Name))
+      return true;
+  return false;
+}
+
 /// Generic IR-printing helper that unpacks a pointer to IRUnit wrapped into
 /// Any and does actual print job.
 void unwrapAndPrint(raw_ostream &OS, Any IR) {
@@ -507,9 +790,30 @@ void TextChangeReporter<T>::handleIgnored(StringRef PassID, std::string &Name) {
 
 IRChangedPrinter::~IRChangedPrinter() = default;
 
+static bool isTextualChangePrinter() {
+  return PrintChanged == ChangePrinter::Verbose ||
+         PrintChanged == ChangePrinter::Quiet;
+}
+
+static bool isHashChangePrinter() {
+  return isTextualChangePrinter() && shouldUsePrintChangedHash();
+}
+
+static bool isAttributeChangePrinter() {
+  return isTextualChangePrinter() && shouldPrintChangedAttributeDiffs();
+}
+
+static bool isHashOrAttributeChangePrinter() {
+  return isHashChangePrinter() || isAttributeChangePrinter();
+}
+
+static bool shouldUseStatefulHashChangePrinter() {
+  return isHashChangePrinter() && !PrintChangedBefore && isFilterPassesEmpty();
+}
+
 void IRChangedPrinter::registerCallbacks(PassInstrumentationCallbacks &PIC) {
-  if (PrintChanged == ChangePrinter::Verbose ||
-      PrintChanged == ChangePrinter::Quiet)
+  if (isTextualChangePrinter() && !shouldUsePrintChangedHash() &&
+      !shouldPrintChangedAttributeDiffs())
     TextChangeReporter<std::string>::registerRequiredCallbacks(PIC);
 }
 
@@ -536,6 +840,676 @@ void IRChangedPrinter::handleAfter(StringRef PassID, std::string &Name,
   }
 
   Out << "*** IR Dump After " << PassID << " on " << Name << " ***\n" << After;
+}
+
+IRChangedHashPrinter::~IRChangedHashPrinter() = default;
+
+void IRChangedHashPrinter::registerCallbacks(
+    PassInstrumentationCallbacks &PIC) {
+  if (!isHashOrAttributeChangePrinter())
+    return;
+  if (shouldUseStatefulHashChangePrinter()) {
+    registerStatefulHashCallbacks(PIC);
+    return;
+  }
+  TextChangeReporter<IRChangeHash>::registerRequiredCallbacks(PIC);
+}
+
+void IRChangedHashPrinter::registerStatefulHashCallbacks(
+    PassInstrumentationCallbacks &PIC) {
+  PIC.registerBeforeNonSkippedPassCallback([&PIC, this](StringRef P, Any IR) {
+    saveStatefulBeforePass(IR, P, PIC.getPassNameForClassName(P));
+  });
+
+  PIC.registerAfterPassCallback(
+      [&PIC, this](StringRef P, Any IR, const PreservedAnalyses &) {
+        handleStatefulAfterPass(IR, P, PIC.getPassNameForClassName(P));
+      });
+  PIC.registerAfterPassInvalidatedCallback(
+      [this](StringRef P, const PreservedAnalyses &) {
+        handleStatefulInvalidatedPass(P);
+      });
+}
+
+void IRChangedHashPrinter::saveStatefulBeforePass(Any IR, StringRef PassID,
+                                                  StringRef PassName) {
+  assert(isFilterPassesEmpty() &&
+         "stateful hash change printer is disabled with -filter-passes");
+  if (InitialIR) {
+    InitialIR = false;
+    if (VerboseMode)
+      handleInitialIR(IR);
+  }
+
+  StatefulHashFrame Frame;
+  StatefulHashStack.push_back(std::move(Frame));
+
+  if (!isInteresting(IR, PassID, PassName))
+    return;
+
+  StatefulHashFrame &CurrentFrame = StatefulHashStack.back();
+  CurrentFrame.IsInteresting = true;
+  CurrentFrame.IsIR =
+      collectFunctionNamesForChangePrinter(IR, CurrentFrame.FunctionNames);
+  if (CurrentFrame.FunctionNames.empty())
+    return;
+
+  StringMap<FunctionChangeHash> &FunctionCache =
+      CurrentFrame.IsIR ? StatefulFunctionHashes
+                        : StatefulMachineFunctionHashes;
+
+  if (unwrapIR<Loop>(IR)) {
+    CurrentFrame.UseBeforeOverride = true;
+    hashIRForChangePrinter(IR, CurrentFrame.BeforeOverride);
+  }
+
+  if (!hasMissingStatefulHash(CurrentFrame.FunctionNames, FunctionCache))
+    return;
+
+  IRChangeHash Current;
+  hashWholeIRForStatefulChangePrinter(IR, Current);
+  updateStatefulHashCache(Current, ArrayRef<std::string>(), FunctionCache,
+                          CurrentFrame.IsIR ? &StatefulFunctionAttrs : nullptr);
+}
+
+void IRChangedHashPrinter::handleStatefulInvalidatedPass(StringRef PassID) {
+  assert(!StatefulHashStack.empty() && "Unexpected empty stack encountered.");
+  if (VerboseMode)
+    handleInvalidated(PassID);
+  StatefulHashStack.pop_back();
+}
+
+void IRChangedHashPrinter::generateIRRepresentation(Any IR, StringRef PassID,
+                                                    IRChangeHash &Output) {
+  if (!shouldUsePrintChangedHash()) {
+    Output.UseTextComparison = true;
+    if (!unwrapIR<MachineFunction>(IR))
+      hashIRForChangePrinter(IR, Output);
+    raw_string_ostream OS(Output.Text);
+    unwrapAndPrint(OS, IR);
+    OS.str();
+    return;
+  }
+
+  if (const auto *MF = unwrapIR<MachineFunction>(IR)) {
+    Output.Hash = PrintedFunctionsHashSalt;
+    collectMachineFunctionChangeHash(*MF, Output);
+    if (PrintChangedBefore) {
+      raw_string_ostream OS(Output.Text);
+      unwrapAndPrint(OS, IR);
+      OS.str();
+    }
+    return;
+  }
+
+  hashIRForChangePrinter(IR, Output);
+  if (PrintChangedBefore) {
+    raw_string_ostream OS(Output.Text);
+    unwrapAndPrint(OS, IR);
+    OS.str();
+  }
+}
+
+static bool hasOnlyFunctionAttributeChanges(const IRChangeHash &Before,
+                                            const IRChangeHash &After) {
+  if (Before.Hash != After.Hash ||
+      Before.FunctionAttrs.size() != After.FunctionAttrs.size())
+    return false;
+
+  bool HasAttributeChange = false;
+  for (auto [BeforeAttrs, AfterAttrs] :
+       zip_equal(Before.FunctionAttrs, After.FunctionAttrs)) {
+    if (BeforeAttrs.Name != AfterAttrs.Name ||
+        BeforeAttrs.ArgCount != AfterAttrs.ArgCount)
+      return false;
+    HasAttributeChange |= BeforeAttrs.Attributes != AfterAttrs.Attributes;
+  }
+
+  return HasAttributeChange;
+}
+
+static void printAttributeSetChange(raw_ostream &Out, StringRef Label,
+                                    AttributeList BeforeAttrs,
+                                    AttributeList AfterAttrs, unsigned Index) {
+  if (BeforeAttrs.getAttributes(Index) == AfterAttrs.getAttributes(Index))
+    return;
+
+  std::string Before = BeforeAttrs.getAsString(Index);
+  std::string After = AfterAttrs.getAsString(Index);
+  Out << "  " << Label << " before: " << (Before.empty() ? "(none)" : Before)
+      << '\n';
+  Out << "  " << Label << " after:  " << (After.empty() ? "(none)" : After)
+      << '\n';
+}
+
+static void
+printFunctionAttributeChange(raw_ostream &Out,
+                             const FunctionChangeAttributes &Before,
+                             const FunctionChangeAttributes &After) {
+  if (Before.Attributes == After.Attributes)
+    return;
+
+  Out << "Function: " << After.Name << '\n';
+  printAttributeSetChange(Out, "function", Before.Attributes, After.Attributes,
+                          AttributeList::FunctionIndex);
+  printAttributeSetChange(Out, "return", Before.Attributes, After.Attributes,
+                          AttributeList::ReturnIndex);
+  for (unsigned ArgNo = 0; ArgNo != After.ArgCount; ++ArgNo) {
+    std::string Label = "arg " + std::to_string(ArgNo);
+    printAttributeSetChange(Out, Label, Before.Attributes, After.Attributes,
+                            AttributeList::FirstArgIndex + ArgNo);
+  }
+}
+
+static void printFunctionAttributeChanges(raw_ostream &Out, StringRef PassID,
+                                          StringRef Name,
+                                          const IRChangeHash &Before,
+                                          const IRChangeHash &After) {
+  Out << "*** IR Attribute Changes After " << PassID << " on " << Name
+      << " ***\n";
+  for (auto [BeforeAttrs, AfterAttrs] :
+       zip_equal(Before.FunctionAttrs, After.FunctionAttrs))
+    printFunctionAttributeChange(Out, BeforeAttrs, AfterAttrs);
+}
+
+static DenseMap<StringRef, const FunctionChangeHash *>
+collectFunctionChangeHashMap(ArrayRef<FunctionChangeHash> Hashes) {
+  DenseMap<StringRef, const FunctionChangeHash *> Map;
+  for (const FunctionChangeHash &Hash : Hashes)
+    Map.try_emplace(Hash.Name, &Hash);
+  return Map;
+}
+
+static const Function *findFunctionInIR(Any IR, StringRef Name) {
+  if (const auto *M = unwrapIR<Module>(IR))
+    return M->getFunction(Name);
+
+  if (const auto *F = unwrapIR<Function>(IR))
+    return F->getName() == Name ? F : nullptr;
+
+  if (const auto *C = unwrapIR<LazyCallGraph::SCC>(IR)) {
+    for (const LazyCallGraph::Node &N : *C)
+      if (N.getName() == Name)
+        return &N.getFunction();
+    return nullptr;
+  }
+
+  if (const auto *L = unwrapIR<Loop>(IR)) {
+    const Function *F = L->getHeader()->getParent();
+    return F->getName() == Name ? F : nullptr;
+  }
+
+  return nullptr;
+}
+
+static const MachineFunction *findMachineFunctionInIR(Any IR, StringRef Name) {
+  if (const auto *MF = unwrapIR<MachineFunction>(IR))
+    return MF->getName() == Name ? MF : nullptr;
+  return nullptr;
+}
+
+static const BasicBlock *findBasicBlockByKey(const Function &F, StringRef Key) {
+  for (const BasicBlock &BB : F)
+    if (BB.hasName() && BB.getName() == Key)
+      return &BB;
+
+  unsigned Index;
+  if (Key.getAsInteger(10, Index))
+    return nullptr;
+  unsigned CurrentIndex = 0;
+  for (const BasicBlock &BB : F) {
+    if (CurrentIndex == Index)
+      return &BB;
+    ++CurrentIndex;
+  }
+  return nullptr;
+}
+
+static const MachineBasicBlock *
+findMachineBasicBlockByKey(const MachineFunction &MF, StringRef Key) {
+  for (const MachineBasicBlock &MBB : MF)
+    if (MBB.hasName() && MBB.getName() == Key)
+      return &MBB;
+
+  unsigned Number;
+  if (Key.getAsInteger(10, Number))
+    return nullptr;
+  unsigned CurrentIndex = 0;
+  for (const MachineBasicBlock &MBB : MF)
+    if (CurrentIndex++ == Number)
+      return &MBB;
+  return nullptr;
+}
+
+static StringMap<const BasicBlock *> collectBasicBlockMap(const Function &F) {
+  StringMap<const BasicBlock *> Blocks;
+  DenseMap<const BasicBlock *, unsigned> BlockNumbers;
+  unsigned BlockNumber = 0;
+  for (const BasicBlock &BB : F)
+    BlockNumbers.try_emplace(&BB, BlockNumber++);
+  for (const BasicBlock &BB : F)
+    Blocks[getBasicBlockChangeKey(BB, &BlockNumbers)] = &BB;
+  return Blocks;
+}
+
+static StringMap<const MachineBasicBlock *>
+collectMachineBasicBlockMap(const MachineFunction &MF) {
+  StringMap<const MachineBasicBlock *> Blocks;
+  DenseMap<const MachineBasicBlock *, unsigned> BlockNumbers;
+  unsigned BlockNumber = 0;
+  for (const MachineBasicBlock &MBB : MF)
+    BlockNumbers.try_emplace(&MBB, BlockNumber++);
+  for (const MachineBasicBlock &MBB : MF)
+    Blocks[getMachineBasicBlockChangeKey(MBB, &BlockNumbers)] = &MBB;
+  return Blocks;
+}
+
+static const Module *getModuleForChangePrinting(Any IR) {
+  if (const auto *M = unwrapIR<Module>(IR))
+    return M;
+
+  if (const auto *F = unwrapIR<Function>(IR))
+    return F->getParent();
+
+  if (const auto *C = unwrapIR<LazyCallGraph::SCC>(IR)) {
+    for (const LazyCallGraph::Node &N : *C)
+      return N.getFunction().getParent();
+    return nullptr;
+  }
+
+  if (const auto *L = unwrapIR<Loop>(IR))
+    return L->getHeader()->getParent()->getParent();
+
+  if (const auto *MF = unwrapIR<MachineFunction>(IR))
+    return MF->getFunction().getParent();
+
+  return nullptr;
+}
+
+class ChangePrinterPrintContext {
+  Any IR;
+  std::optional<ModuleSlotTracker> MST;
+  bool TriedToCreateMST = false;
+
+  ModuleSlotTracker *getModuleSlotTracker() {
+    if (!TriedToCreateMST) {
+      TriedToCreateMST = true;
+      if (const Module *M = getModuleForChangePrinting(IR))
+        MST.emplace(M, /*ShouldInitializeAllMetadata=*/false);
+    }
+    return MST ? &*MST : nullptr;
+  }
+
+public:
+  explicit ChangePrinterPrintContext(Any IR) : IR(IR) {}
+
+  void printFunction(raw_ostream &Out, const Function &F) {
+    if (ModuleSlotTracker *MST = getModuleSlotTracker()) {
+      static_cast<const Value &>(F).print(Out, *MST);
+      return;
+    }
+    F.print(Out);
+  }
+
+  void printBasicBlock(raw_ostream &Out, const BasicBlock &BB) {
+    if (ModuleSlotTracker *MST = getModuleSlotTracker()) {
+      static_cast<const Value &>(BB).print(Out, *MST, /*IsForDebug=*/true);
+      return;
+    }
+    BB.print(Out, nullptr, /*ShouldPreserveUseListOrder=*/true,
+             /*IsForDebug=*/true);
+  }
+};
+
+static void printFunctionForChange(raw_ostream &Out, Any IR,
+                                   StringRef FunctionName,
+                                   ChangePrinterPrintContext &PrintCtx) {
+  if (const Function *F = findFunctionInIR(IR, FunctionName)) {
+    PrintCtx.printFunction(Out, *F);
+    return;
+  }
+  if (const MachineFunction *MF = findMachineFunctionInIR(IR, FunctionName)) {
+    MF->print(Out);
+    return;
+  }
+  Out << "*** Function " << FunctionName << " deleted ***\n";
+}
+
+static void printBasicBlockForChange(raw_ostream &Out, Any IR,
+                                     StringRef FunctionName, StringRef BlockKey,
+                                     ChangePrinterPrintContext &PrintCtx) {
+  if (const Function *F = findFunctionInIR(IR, FunctionName)) {
+    if (const BasicBlock *BB = findBasicBlockByKey(*F, BlockKey)) {
+      PrintCtx.printBasicBlock(Out, *BB);
+      return;
+    }
+  }
+  if (const MachineFunction *MF = findMachineFunctionInIR(IR, FunctionName)) {
+    if (const MachineBasicBlock *MBB =
+            findMachineBasicBlockByKey(*MF, BlockKey)) {
+      MBB->print(Out);
+      return;
+    }
+  }
+  Out << "*** BasicBlock " << FunctionName << ":" << BlockKey
+      << " deleted ***\n";
+}
+
+static void
+printBasicBlockChangeHeader(raw_ostream &Out, StringRef FunctionName,
+                            StringRef BlockKey, StringRef Change,
+                            const BasicBlock *BB = nullptr,
+                            const MachineBasicBlock *MBB = nullptr) {
+  Out << "*** BasicBlock " << FunctionName << ":";
+  if (BB && BB->hasName())
+    Out << BB->getName();
+  else if (MBB && MBB->hasName())
+    Out << MBB->getName();
+  else
+    Out << BlockKey;
+  Out << " " << Change << " ***\n";
+}
+
+static bool printFunctionHashChanges(raw_ostream &Out, StringRef PassID,
+                                     StringRef Name, const IRChangeHash &Before,
+                                     const IRChangeHash &After, Any IR,
+                                     ChangePrinterPrintContext &PrintCtx) {
+  bool Printed = false;
+  auto EnsureHeader = [&]() {
+    if (Printed)
+      return;
+    Out << "*** IR Function Changes After " << PassID << " on " << Name
+        << " ***\n";
+    Printed = true;
+  };
+  DenseMap<StringRef, const FunctionChangeHash *> BeforeFuncs =
+      collectFunctionChangeHashMap(Before.Functions);
+  DenseMap<StringRef, const FunctionChangeHash *> AfterFuncs =
+      collectFunctionChangeHashMap(After.Functions);
+  for (const FunctionChangeHash &AfterFunc : After.Functions) {
+    const FunctionChangeHash *BeforeFunc = BeforeFuncs.lookup(AfterFunc.Name);
+    if (BeforeFunc && BeforeFunc->Hash == AfterFunc.Hash)
+      continue;
+    EnsureHeader();
+    Out << "*** Function " << AfterFunc.Name << " changed ***\n";
+    printFunctionForChange(Out, IR, AfterFunc.Name, PrintCtx);
+  }
+  for (const FunctionChangeHash &BeforeFunc : Before.Functions) {
+    if (AfterFuncs.contains(BeforeFunc.Name))
+      continue;
+    EnsureHeader();
+    Out << "*** Function " << BeforeFunc.Name << " deleted ***\n";
+  }
+  return Printed;
+}
+
+static bool printBasicBlockHashChanges(raw_ostream &Out, StringRef PassID,
+                                       StringRef Name,
+                                       const IRChangeHash &Before,
+                                       const IRChangeHash &After, Any IR,
+                                       ChangePrinterPrintContext &PrintCtx) {
+  bool Printed = false;
+  auto EnsureHeader = [&]() {
+    if (Printed)
+      return;
+    Out << "*** IR BasicBlock Changes After " << PassID << " on " << Name
+        << " ***\n";
+    Printed = true;
+  };
+  DenseMap<StringRef, const FunctionChangeHash *> BeforeFuncs =
+      collectFunctionChangeHashMap(Before.Functions);
+  DenseMap<StringRef, const FunctionChangeHash *> AfterFuncs =
+      collectFunctionChangeHashMap(After.Functions);
+  for (const FunctionChangeHash &AfterFunc : After.Functions) {
+    const FunctionChangeHash *BeforeFunc = BeforeFuncs.lookup(AfterFunc.Name);
+    if (!BeforeFunc) {
+      EnsureHeader();
+      Out << "*** Function " << AfterFunc.Name << " added ***\n";
+      if (AfterFunc.Blocks.empty()) {
+        printFunctionForChange(Out, IR, AfterFunc.Name, PrintCtx);
+        continue;
+      }
+      const Function *F = findFunctionInIR(IR, AfterFunc.Name);
+      StringMap<const BasicBlock *> CurrentBlocks =
+          F ? collectBasicBlockMap(*F) : StringMap<const BasicBlock *>();
+      const MachineFunction *MF = findMachineFunctionInIR(IR, AfterFunc.Name);
+      StringMap<const MachineBasicBlock *> CurrentMachineBlocks =
+          MF ? collectMachineBasicBlockMap(*MF)
+             : StringMap<const MachineBasicBlock *>();
+      for (const BasicBlockChangeHash &AfterBlock : AfterFunc.Blocks) {
+        const BasicBlock *BB = CurrentBlocks.lookup(AfterBlock.Key);
+        const MachineBasicBlock *MBB =
+            CurrentMachineBlocks.lookup(AfterBlock.Key);
+        printBasicBlockChangeHeader(Out, AfterFunc.Name, AfterBlock.Key,
+                                    "added", BB, MBB);
+        if (BB)
+          PrintCtx.printBasicBlock(Out, *BB);
+        else if (MBB)
+          MBB->print(Out);
+        else
+          printBasicBlockForChange(Out, IR, AfterFunc.Name, AfterBlock.Key,
+                                   PrintCtx);
+      }
+      continue;
+    }
+    if (BeforeFunc->Hash == AfterFunc.Hash)
+      continue;
+
+    if (BeforeFunc->Blocks.empty() || AfterFunc.Blocks.empty()) {
+      EnsureHeader();
+      Out << "*** Function " << AfterFunc.Name << " changed ***\n";
+      printFunctionForChange(Out, IR, AfterFunc.Name, PrintCtx);
+      continue;
+    }
+
+    DenseMap<StringRef, const BasicBlockChangeHash *> BeforeBlocks;
+    DenseMap<StringRef, const BasicBlockChangeHash *> AfterBlocks;
+    for (const BasicBlockChangeHash &BeforeBlock : BeforeFunc->Blocks)
+      BeforeBlocks.try_emplace(BeforeBlock.Key, &BeforeBlock);
+    for (const BasicBlockChangeHash &AfterBlock : AfterFunc.Blocks)
+      AfterBlocks.try_emplace(AfterBlock.Key, &AfterBlock);
+
+    unsigned ChangedBlockCount = 0;
+    for (const BasicBlockChangeHash &AfterBlock : AfterFunc.Blocks) {
+      const BasicBlockChangeHash *BeforeBlock =
+          BeforeBlocks.lookup(AfterBlock.Key);
+      if (!BeforeBlock || BeforeBlock->Hash != AfterBlock.Hash)
+        ++ChangedBlockCount;
+    }
+    for (const BasicBlockChangeHash &BeforeBlock : BeforeFunc->Blocks)
+      if (!AfterBlocks.contains(BeforeBlock.Key))
+        ++ChangedBlockCount;
+    if (ChangedBlockCount == 0)
+      continue;
+
+    EnsureHeader();
+    Out << "*** Function " << AfterFunc.Name << " changed ***\n";
+
+    const Function *F = findFunctionInIR(IR, AfterFunc.Name);
+    StringMap<const BasicBlock *> CurrentBlocks =
+        F ? collectBasicBlockMap(*F) : StringMap<const BasicBlock *>();
+    const MachineFunction *MF = findMachineFunctionInIR(IR, AfterFunc.Name);
+    StringMap<const MachineBasicBlock *> CurrentMachineBlocks =
+        MF ? collectMachineBasicBlockMap(*MF)
+           : StringMap<const MachineBasicBlock *>();
+
+    unsigned UnchangedBlockCount = 0;
+    for (const BasicBlockChangeHash &AfterBlock : AfterFunc.Blocks) {
+      const BasicBlockChangeHash *BeforeBlock =
+          BeforeBlocks.lookup(AfterBlock.Key);
+      if (BeforeBlock && BeforeBlock->Hash == AfterBlock.Hash) {
+        ++UnchangedBlockCount;
+        continue;
+      }
+      const BasicBlock *BB = CurrentBlocks.lookup(AfterBlock.Key);
+      const MachineBasicBlock *MBB =
+          CurrentMachineBlocks.lookup(AfterBlock.Key);
+      printBasicBlockChangeHeader(Out, AfterFunc.Name, AfterBlock.Key,
+                                  "changed", BB, MBB);
+      if (BB)
+        PrintCtx.printBasicBlock(Out, *BB);
+      else if (MBB)
+        MBB->print(Out);
+      else
+        printBasicBlockForChange(Out, IR, AfterFunc.Name, AfterBlock.Key,
+                                 PrintCtx);
+    }
+    if (UnchangedBlockCount != 0)
+      Out << "; " << UnchangedBlockCount << " unchanged basic blocks omitted\n";
+    for (const BasicBlockChangeHash &BeforeBlock : BeforeFunc->Blocks) {
+      if (AfterBlocks.contains(BeforeBlock.Key))
+        continue;
+      printBasicBlockChangeHeader(Out, AfterFunc.Name, BeforeBlock.Key,
+                                  "deleted");
+    }
+  }
+  for (const FunctionChangeHash &BeforeFunc : Before.Functions) {
+    if (AfterFuncs.contains(BeforeFunc.Name))
+      continue;
+    EnsureHeader();
+    Out << "*** Function " << BeforeFunc.Name << " deleted ***\n";
+  }
+  return Printed;
+}
+
+void IRChangedHashPrinter::handleStatefulAfterPass(Any IR, StringRef PassID,
+                                                   StringRef /*PassName*/) {
+  assert(!StatefulHashStack.empty() && "Unexpected empty stack encountered.");
+  StatefulHashFrame Frame = std::move(StatefulHashStack.back());
+  StatefulHashStack.pop_back();
+
+  std::string Name = getIRName(IR);
+  if (isIgnored(PassID)) {
+    if (VerboseMode)
+      handleIgnored(PassID, Name);
+    return;
+  }
+  if (!Frame.IsInteresting) {
+    if (VerboseMode)
+      handleFiltered(PassID, Name);
+    return;
+  }
+
+  StringMap<FunctionChangeHash> &FunctionCache =
+      Frame.IsIR ? StatefulFunctionHashes : StatefulMachineFunctionHashes;
+
+  IRChangeHash Before;
+  if (Frame.UseBeforeOverride) {
+    Before = std::move(Frame.BeforeOverride);
+  } else {
+    buildStatefulBeforeHash(Frame.FunctionNames, FunctionCache,
+                            Frame.IsIR ? &StatefulFunctionAttrs : nullptr,
+                            Before);
+  }
+
+  IRChangeHash After;
+  if (Frame.UseBeforeOverride) {
+    if (Frame.IsIR)
+      hashIRForChangePrinter(IR, After);
+    else
+      hashWholeIRForStatefulChangePrinter(IR, After);
+  } else {
+    hashWholeIRForStatefulChangePrinter(IR, After);
+  }
+
+  auto UpdateCache = [&]() {
+    if (Frame.UseBeforeOverride) {
+      IRChangeHash WholeAfter;
+      hashWholeIRForStatefulChangePrinter(IR, WholeAfter);
+      updateStatefulHashCache(WholeAfter, Frame.FunctionNames, FunctionCache,
+                              Frame.IsIR ? &StatefulFunctionAttrs : nullptr);
+      return;
+    }
+    updateStatefulHashCache(After, Frame.FunctionNames, FunctionCache,
+                            Frame.IsIR ? &StatefulFunctionAttrs : nullptr);
+  };
+
+  if (shouldPrintChangedAttributeDiffs() &&
+      hasOnlyFunctionAttributeChanges(Before, After)) {
+    printFunctionAttributeChanges(Out, PassID, Name, Before, After);
+    UpdateCache();
+    return;
+  }
+
+  ChangePrinterPrintContext PrintCtx(IR);
+  bool Printed = false;
+  switch (getPrintChangedHashMode()) {
+  case ChangePrinterHashMode::Function:
+    Printed = printFunctionHashChanges(Out, PassID, Name, Before, After, IR,
+                                       PrintCtx);
+    break;
+  case ChangePrinterHashMode::BasicBlock:
+    Printed = printBasicBlockHashChanges(Out, PassID, Name, Before, After, IR,
+                                         PrintCtx);
+    break;
+  case ChangePrinterHashMode::None:
+    llvm_unreachable("expected hash mode");
+  }
+  if (!Printed) {
+    if (Before == After) {
+      if (VerboseMode)
+        omitAfter(PassID, Name);
+    } else {
+      std::string AfterText;
+      raw_string_ostream OS(AfterText);
+      unwrapAndPrint(OS, IR);
+      OS.str();
+      if (AfterText.empty())
+        Out << "*** IR Deleted After " << PassID << " on " << Name << " ***\n";
+      else
+        Out << "*** IR Dump After " << PassID << " on " << Name << " ***\n"
+            << AfterText;
+    }
+  }
+
+  UpdateCache();
+}
+
+void IRChangedHashPrinter::handleAfter(StringRef PassID, std::string &Name,
+                                       const IRChangeHash &Before,
+                                       const IRChangeHash &After, Any IR) {
+  if (shouldPrintChangedAttributeDiffs() &&
+      hasOnlyFunctionAttributeChanges(Before, After)) {
+    printFunctionAttributeChanges(Out, PassID, Name, Before, After);
+    return;
+  }
+
+  if (PrintChangedBefore)
+    Out << "*** IR Dump Before " << PassID << " on " << Name << " ***\n"
+        << Before.Text;
+
+  ChangePrinterPrintContext PrintCtx(IR);
+  switch (getPrintChangedHashMode()) {
+  case ChangePrinterHashMode::Function:
+    if (printFunctionHashChanges(Out, PassID, Name, Before, After, IR,
+                                 PrintCtx))
+      return;
+    break;
+  case ChangePrinterHashMode::BasicBlock:
+    if (printBasicBlockHashChanges(Out, PassID, Name, Before, After, IR,
+                                   PrintCtx))
+      return;
+    break;
+  case ChangePrinterHashMode::None:
+    break;
+  }
+
+  std::string AfterText;
+  if (After.UseTextComparison) {
+    AfterText = After.Text;
+  } else {
+    raw_string_ostream OS(AfterText);
+    unwrapAndPrint(OS, IR);
+    OS.str();
+  }
+
+  if (AfterText.empty()) {
+    Out << "*** IR Deleted After " << PassID << " on " << Name << " ***\n";
+    return;
+  }
+
+  Out << "*** IR Dump After " << PassID << " on " << Name << " ***\n"
+      << AfterText;
 }
 
 IRChangedTester::~IRChangedTester() = default;
@@ -2441,6 +3415,7 @@ StandardInstrumentations::StandardInstrumentations(
     : PrintPass(DebugLogging, PrintPassOpts), OptNone(DebugLogging),
       OptPassGate(Context),
       PrintChangedIR(PrintChanged == ChangePrinter::Verbose),
+      PrintChangedHashIR(PrintChanged == ChangePrinter::Verbose),
       PrintChangedDiff(PrintChanged == ChangePrinter::DiffVerbose ||
                            PrintChanged == ChangePrinter::ColourDiffVerbose,
                        PrintChanged == ChangePrinter::ColourDiffVerbose ||
@@ -2518,6 +3493,7 @@ void StandardInstrumentations::registerCallbacks(
   PseudoProbeVerification.registerCallbacks(PIC);
   if (VerifyEach)
     Verify.registerCallbacks(PIC, MAM);
+  PrintChangedHashIR.registerCallbacks(PIC);
   PrintChangedDiff.registerCallbacks(PIC);
   WebsiteChangeReporter.registerCallbacks(PIC);
   ChangeTester.registerCallbacks(PIC);
