@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// A bottom-up vectorizer pass. TopDownVec reuses this implementation with a
-// different traversal direction.
+// A vectorizer pass that walks the def-use chain bottom-up or top-down,
+// depending on the auxiliary pass argument.
 //
 
 #ifndef LLVM_TRANSFORMS_VECTORIZE_SANDBOXVECTORIZER_PASSES_BOTTOMUPVEC_H
@@ -17,13 +17,15 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/SandboxIR/Constant.h"
 #include "llvm/SandboxIR/Pass.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/InstrMaps.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Legality.h"
+#include "llvm/Transforms/Vectorize/SandboxVectorizer/Scheduler.h"
 
 namespace llvm::sandboxir {
 
-/// This is a simple bottom-up vectorizer Region pass.
+/// This is a simple vectorizer Region pass.
 /// It expects a "seed slice" as an input in the Region's Aux vector.
 /// The "seed slice" is a vector of instructions that can be used as a starting
 /// point for vectorization, like stores to consecutive memory addresses.
@@ -33,13 +35,14 @@ namespace llvm::sandboxir {
 /// profitable or not. For now profitability is checked at the end of the region
 /// pass pipeline by a dedicated pass that accepts or rejects the IR
 /// transaction, depending on the cost.
-class LLVM_ABI BottomUpVec : public RegionPass {
-protected:
-  virtual SchedDirection getSchedDirection() const {
-    return SchedDirection::BottomUp;
-  }
+class LLVM_ABI BottomUpVec final : public RegionPass {
+private:
   /// Set to true whenever the pass emits vector code in the current region.
   bool Change = false;
+  static constexpr StringRef TopDownArgStr = "top-down";
+  static constexpr StringRef BottomUpArgStr = "bottom-up";
+  /// Direction for vectorization, defaults to bottom-up.
+  SchedDirection Dir = SchedDirection::BottomUp;
   /// The original instructions that are potentially dead after vectorization.
   DenseSet<Instruction *> DeadInstrCandidates;
   /// Maps scalars to vectors.
@@ -105,21 +108,20 @@ protected:
 
 public:
   BottomUpVec(StringRef AuxArg) : RegionPass("bottom-up-vec") {
-    assert(AuxArg.empty() && "This pass ignores aux arg!");
+    if (AuxArg.empty() || AuxArg == BottomUpArgStr)
+      Dir = SchedDirection::BottomUp;
+    else if (AuxArg == TopDownArgStr)
+      Dir = SchedDirection::TopDown;
+    else {
+      std::string ErrStr;
+      raw_string_ostream ErrSS(ErrStr);
+      ErrSS << "bottom-up-vec only supports '" << BottomUpArgStr << "' or '"
+            << TopDownArgStr << "' aux argument!\n";
+      reportFatalUsageError(ErrStr.c_str());
+    }
   }
+
   bool runOnRegion(Region &Rgn, const Analyses &A) final;
-};
-
-/// Top-down vectorizer Region pass. It expects a "seed slice" in the Region's
-/// Aux vector and walks down the def-use chain from the seed instructions.
-class LLVM_ABI TopDownVec final : public BottomUpVec {
-protected:
-  SchedDirection getSchedDirection() const override {
-    return SchedDirection::TopDown;
-  }
-
-public:
-  TopDownVec() : BottomUpVec("top-down-vec") {}
 };
 
 } // namespace llvm::sandboxir

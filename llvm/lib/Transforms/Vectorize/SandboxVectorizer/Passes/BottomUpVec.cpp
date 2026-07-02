@@ -681,7 +681,7 @@ bool BottomUpVec::runOnRegion(Region &Rgn, const Analyses &A) {
   LegalityAnalysis Legality(A.getAA(), A.getScalarEvolution(),
                             F.getParent()->getDataLayout(), F.getContext(),
                             *IMaps);
-  Legality.setDirection(getSchedDirection());
+  Legality.setDirection(Dir);
 
   // TODO: Refactor to remove the unnecessary copy to SeedSliceVals.
   SmallVector<Value *> SeedSliceVals(SeedSlice.begin(), SeedSlice.end());
@@ -693,3 +693,4 @@ bool BottomUpVec::runOnRegion(Region &Rgn, const Analyses &A) {
 
 } // namespace sandboxir
 } // namespace llvm
+
