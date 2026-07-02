@@ -145,11 +145,11 @@ attributes #1 = { nofree nosync nounwind readnone speculatable willreturn }
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = distinct !DIGlobalVariable(name: "deferred", linkageName: "assumedlength_$DEFERRED", scope: !2, file: !3, line: 2, type: !9, isLocal: true, isDefinition: true)
-!2 = distinct !DISubprogram(name: "assumedlength", linkageName: "MAIN__", scope: !3, file: !3, line: 1, type: !4, scopeLine: 1, spFlags: DISPFlagDefinition, unit: !6, retainedNodes: !7)
+!2 = distinct !DISubprogram(name: "assumedlength", linkageName: "MAIN__", scope: !3, file: !3, line: 1, type: !4, scopeLine: 1, spFlags: DISPFlagDefinition, unit: !6, retainedNodes: !8)
 !3 = !DIFile(filename: "distring.f90", directory: "/iusers/cchen15/examples/tests")
 !4 = !DISubroutineType(types: !5)
 !5 = !{null}
-!6 = distinct !DICompileUnit(language: DW_LANG_Fortran95, file: !3, producer: "Intel(R) Fortran 21.0-2142", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !7, globals: !8, splitDebugInlining: false, nameTableKind: None)
+!6 = distinct !DICompileUnit(language: DW_LANG_Fortran95, file: !3, producer: "Intel(R) Fortran 21.0-2142", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !7, splitDebugInlining: false, nameTableKind: None)
 !7 = !{}
 !8 = !{!0}
 !9 = !DIStringType(name: ".str.DEFERRED", stringLengthExpression: !DIExpression(DW_OP_push_object_address, DW_OP_plus_uconst, 8), stringLocationExpression: !DIExpression(DW_OP_push_object_address, DW_OP_deref))

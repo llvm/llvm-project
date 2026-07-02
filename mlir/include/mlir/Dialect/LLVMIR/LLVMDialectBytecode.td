@@ -164,7 +164,7 @@ def DISubprogramAttr : DialectAttribute<(attr
   EnumClassFlag<"DISubprogramFlags", "getSubprogramFlags()">:$_rawflags,
   LocalVar<"DISubprogramFlags", "(DISubprogramFlags)_rawflags">:$subprogramFlags,
   OptionalAttribute<"DISubroutineTypeAttr">:$type,
-  OptionalArrayRef<"DINodeAttr">:$retainedNodes,
+  OptionalArrayRef<"Attribute">:$retainedNodes,
   OptionalArrayRef<"DINodeAttr">:$annotations
 )>;
 

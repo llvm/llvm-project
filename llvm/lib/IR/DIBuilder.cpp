@@ -33,7 +33,7 @@ DIBuilder::DIBuilder(Module &m, bool AllowUnresolvedNodes, DICompileUnit *CU)
     if (const auto &RTs = CUNode->getRetainedTypes())
       AllRetainTypes.assign(RTs.begin(), RTs.end());
     if (const auto &GVs = CUNode->getGlobalVariables())
-      AllGVs.assign(GVs.begin(), GVs.end());
+      Globals.assign(GVs.begin(), GVs.end());
     if (const auto &IMs = CUNode->getImportedEntities())
       ImportedModules.assign(IMs.begin(), IMs.end());
     if (const auto &MNs = CUNode->getMacros())
@@ -103,8 +103,8 @@ void DIBuilder::finalize() {
     if (auto *SP = dyn_cast<DISubprogram>(N))
       finalizeSubprogram(SP);
 
-  if (!AllGVs.empty())
-    CUNode->replaceGlobalVariables(MDTuple::get(VMContext, AllGVs));
+  if (!Globals.empty())
+    CUNode->replaceGlobalVariables(MDTuple::get(VMContext, Globals));
 
   if (!ImportedModules.empty())
     CUNode->replaceImportedEntities(MDTuple::get(
@@ -961,7 +961,10 @@ DIGlobalVariableExpression *DIBuilder::createGlobalVariableExpression(
   if (!Expr)
     Expr = createExpression();
   auto *N = DIGlobalVariableExpression::get(VMContext, GV, Expr);
-  AllGVs.push_back(N);
+  if (isa_and_nonnull<DILocalScope>(Context))
+    getSubprogramNodesTrackingVector(Context).emplace_back(N);
+  else
+    Globals.push_back(N);
   return N;
 }
 

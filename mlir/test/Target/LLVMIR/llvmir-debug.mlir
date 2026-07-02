@@ -365,10 +365,12 @@ llvm.mlir.global external @module_global() {dbg_exprs = [#llvm.di_global_variabl
 // -----
 
 // CHECK: @func_global = external global i64, !dbg {{.*}}
-// CHECK-DAG: ![[CU:.*]] = distinct !DICompileUnit({{.*}}globals: ![[GVALS:[0-9]+]], debugInfoForProfiling: true)
-// CHECK-DAG: ![[SP:.*]] = distinct !DISubprogram(name: "fn_with_gl"{{.*}}unit: ![[CU]])
+// CHECK-DAG: ![[SP:.*]] = distinct !DISubprogram(name: "fn_with_gl"{{.*}}unit: ![[CU:.*]], {{.*}}retainedNodes: ![[GVALS:.*]])
 // CHECK-DAG: ![[GVAR:.*]] = distinct !DIGlobalVariable(name: "func_global"{{.*}}, scope: ![[SP]]{{.*}})
 // CHECK-DAG: ![[GEXPR:.*]] = !DIGlobalVariableExpression(var: ![[GVAR]], expr: !DIExpression())
+// CHECK-DAG: ![[CU]] = distinct !DICompileUnit(
+// CHECK-NOT:     globals:
+// CHECK-SAME:    emissionKind: FullDebug, debugInfoForProfiling: true)
 // CHECK-DAG: ![[GVALS]] = !{![[GEXPR]]}
 
 #file = #llvm.di_file<"test.f90" in "existence">

@@ -2124,6 +2124,10 @@ private:
   }
 
 public:
+  constexpr static unsigned GLOBALS_IDX = 6;
+  constexpr static unsigned IMPORTED_ENTITIES_IDX = 7;
+  constexpr static unsigned ENUMS_IDX = 4;
+
   static void get() = delete;
   static void getIfExists() = delete;
 
@@ -2211,10 +2215,12 @@ public:
   MDString *getRawSplitDebugFilename() const {
     return getOperandAs<MDString>(3);
   }
-  Metadata *getRawEnumTypes() const { return getOperand(4); }
+  Metadata *getRawEnumTypes() const { return getOperand(ENUMS_IDX); }
   Metadata *getRawRetainedTypes() const { return getOperand(5); }
-  Metadata *getRawGlobalVariables() const { return getOperand(6); }
-  Metadata *getRawImportedEntities() const { return getOperand(7); }
+  Metadata *getRawGlobalVariables() const { return getOperand(GLOBALS_IDX); }
+  Metadata *getRawImportedEntities() const {
+    return getOperand(IMPORTED_ENTITIES_IDX);
+  }
   Metadata *getRawMacros() const { return getOperand(8); }
   MDString *getRawSysRoot() const { return getOperandAs<MDString>(9); }
   MDString *getRawSDK() const { return getOperandAs<MDString>(10); }
@@ -2225,14 +2231,14 @@ public:
   /// DICompileUnit should be fairly rare.
   /// @{
   void replaceEnumTypes(DICompositeTypeArray N) {
-    replaceOperandWith(4, N.get());
+    replaceOperandWith(ENUMS_IDX, N.get());
   }
   void replaceRetainedTypes(DITypeArray N) { replaceOperandWith(5, N.get()); }
   void replaceGlobalVariables(DIGlobalVariableExpressionArray N) {
-    replaceOperandWith(6, N.get());
+    replaceOperandWith(GLOBALS_IDX, N.get());
   }
   void replaceImportedEntities(DIImportedEntityArray N) {
-    replaceOperandWith(7, N.get());
+    replaceOperandWith(IMPORTED_ENTITIES_IDX, N.get());
   }
   void replaceMacros(DIMacroNodeArray N) { replaceOperandWith(8, N.get()); }
   /// @}
@@ -2339,7 +2345,7 @@ private:
           unsigned VirtualIndex, int ThisAdjustment, DIFlags Flags,
           DISPFlags SPFlags, DICompileUnit *Unit,
           DITemplateParameterArray TemplateParams, DISubprogram *Declaration,
-          DINodeArray RetainedNodes, DITypeArray ThrownTypes,
+          MDNodeArray RetainedNodes, DITypeArray ThrownTypes,
           DINodeArray Annotations, StringRef TargetFuncName,
           bool UsesKeyInstructions, StorageType Storage,
           bool ShouldCreate = true) {
@@ -2380,7 +2386,7 @@ public:
        DIType *ContainingType, unsigned VirtualIndex, int ThisAdjustment,
        DIFlags Flags, DISPFlags SPFlags, DICompileUnit *Unit,
        DITemplateParameterArray TemplateParams = nullptr,
-       DISubprogram *Declaration = nullptr, DINodeArray RetainedNodes = nullptr,
+       DISubprogram *Declaration = nullptr, MDNodeArray RetainedNodes = nullptr,
        DITypeArray ThrownTypes = nullptr, DINodeArray Annotations = nullptr,
        StringRef TargetFuncName = "", bool UsesKeyInstructions = false),
       (Scope, Name, LinkageName, File, Line, Type, ScopeLine, ContainingType,
@@ -2509,7 +2515,7 @@ public:
     return cast_or_null<DISubprogram>(getRawDeclaration());
   }
   void replaceDeclaration(DISubprogram *Decl) { replaceOperandWith(6, Decl); }
-  DINodeArray getRetainedNodes() const {
+  MDNodeArray getRetainedNodes() const {
     return cast_or_null<MDTuple>(getRawRetainedNodes());
   }
   DITypeArray getThrownTypes() const {
@@ -2548,19 +2554,24 @@ public:
   void replaceRawLinkageName(MDString *LinkageName) {
     replaceOperandWith(3, LinkageName);
   }
-  void replaceRetainedNodes(DINodeArray N) {
-    replaceOperandWith(7, N.get());
+  void replaceRetainedNodes(MDNodeArray N) { replaceOperandWith(7, N.get()); }
+
+  template <typename IterT> void retainNodes(IterT NodesBegin, IterT NodesEnd) {
+    auto RetainedNodes = getRetainedNodes();
+    SmallVector<Metadata *> MDs(RetainedNodes.begin(), RetainedNodes.end());
+    MDs.append(NodesBegin, NodesEnd);
+    replaceRetainedNodes(MDNode::get(getContext(), MDs));
   }
 
   /// For the given retained node of DISubprogram, applies one of the
   /// given functions depending on the type of the node.
   template <typename T, typename MetadataT, typename FuncLVT,
             typename FuncLabelT, typename FuncImportedEntityT,
-            typename FuncTypeT, typename FuncUnknownT>
+            typename FuncTypeT, typename FuncGVET, typename FuncUnknownT>
   static T visitRetainedNode(MetadataT *N, FuncLVT &&FuncLV,
                              FuncLabelT &&FuncLabel,
                              FuncImportedEntityT &&FuncIE, FuncTypeT &&FuncType,
-                             FuncUnknownT &&FuncUnknown) {
+                             FuncGVET &&FuncGVE, FuncUnknownT &&FuncUnknown) {
     static_assert(std::is_base_of_v<Metadata, MetadataT>,
                   "N must point to Metadata or const Metadata");
 
@@ -2572,6 +2583,8 @@ public:
       return FuncIE(IE);
     if (auto *Ty = dyn_cast<DIType>(N))
       return FuncType(Ty);
+    if (auto *GVE = dyn_cast<DIGlobalVariableExpression>(N))
+      return FuncGVE(GVE);
     return FuncUnknown(N);
   }
 
@@ -2585,12 +2598,13 @@ public:
   /// For each retained node, applies one of the given functions depending
   /// on the type of a node.
   template <typename FuncLVT, typename FuncLabelT, typename FuncImportedEntityT,
-            typename FuncTypeT>
+            typename FuncTypeT, typename FuncGVET>
   void forEachRetainedNode(FuncLVT &&FuncLV, FuncLabelT &&FuncLabel,
-                           FuncImportedEntityT &&FuncIE, FuncTypeT &&FuncType) {
+                           FuncImportedEntityT &&FuncIE, FuncTypeT &&FuncType,
+                           FuncGVET &&FuncGVE) {
     for (MDNode *N : getRetainedNodes())
       visitRetainedNode<void>(
-          N, FuncLV, FuncLabel, FuncIE, FuncType,
+          N, FuncLV, FuncLabel, FuncIE, FuncType, FuncGVE,
           [](auto *N) { llvm_unreachable("Unexpected retained node!"); });
   }
 
@@ -2621,6 +2635,17 @@ public:
   /// it is more complicated for debugger to properly discover local types
   /// of a current scope for expression evaluation.
   LLVM_ABI void cleanupRetainedNodes();
+
+  template <typename T> void cleanupRetainedNodesIf(T &&RemovePred) {
+    MDTuple *RetainedNodes = dyn_cast_or_null<MDTuple>(getRawRetainedNodes());
+    // As this is expected to be called during module loading, before
+    // stripping old or incorrect debug info, perform minimal sanity check.
+    if (!RetainedNodes)
+      return;
+    // replaceRetainedNodes() should not re-unique DISubprogram if new list is
+    // the same pointer.
+    replaceRetainedNodes(RetainedNodes->filter(RemovePred));
+  }
 
   /// Calls SP->cleanupRetainedNodes() for a range of DISubprograms.
   template <typename RangeT>
@@ -4817,6 +4842,24 @@ public:
 template <>
 struct DenseMapInfo<DebugVariableAggregate>
     : public DenseMapInfo<DebugVariable> {};
+
+template <typename NodeT> static const DIScope *getScope(const NodeT *N) {
+  return N->getScope();
+}
+
+template <typename NodeT> static DIScope *getScope(NodeT *N) {
+  return N->getScope();
+}
+
+template <>
+[[maybe_unused]] const DIScope *
+getScope<>(const DIGlobalVariableExpression *N) {
+  return N->getVariable()->getScope();
+}
+template <>
+[[maybe_unused]] DIScope *getScope<>(DIGlobalVariableExpression *N) {
+  return N->getVariable()->getScope();
+}
 } // end namespace llvm
 
 #undef DEFINE_MDNODE_GET_UNPACK_IMPL

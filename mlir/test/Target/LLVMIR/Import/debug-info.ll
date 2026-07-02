@@ -1014,3 +1014,35 @@ define void @variant_part_import() !dbg !3 {
 !11 = !DIBasicType(name: "float64", size: 64, encoding: DW_ATE_float)
 !12 = !DIDerivedType(tag: DW_TAG_member, name: "_int64", baseType: !10, size: 64, offset: 64, extraData: i8 1)
 !13 = !DIDerivedType(tag: DW_TAG_member, name: "_float64", baseType: !11, size: 64, offset: 64, extraData: i8 2)
+
+; // -----
+
+; Test that static local DIGlobalVariable listed in DISubprogram's retainedNodes does not get duplicated after import.
+
+; CHECK-DAG: #[[LVAR:.+]] = #llvm.di_local_variable<{{.*}}name = "unused_local"{{.*}}>
+; CHECK-DAG: #[[SP:.+]] = #llvm.di_subprogram<{{.*}}name = "fn_with_static_local"{{.*}}retainedNodes = [#[[LVAR]]]>
+; CHECK-DAG: #[[GVAR:.+]] = #llvm.di_global_variable<scope = #[[SP]], name = "static_local"{{.*}}>
+; CHECK-DAG: #[[GEXPR:.+]] = #llvm.di_global_variable_expression<var = #[[GVAR]], expr = <>>
+; CHECK-DAG-COUNT-1: {{#llvm\.di_global_variable_expression<}}
+; CHECK-DAG-COUNT-1: {{#llvm\.di_global_variable<}}
+
+@static_local = internal global i64 0, align 8, !dbg !0
+
+define void @fn_with_static_local() !dbg !3 {
+  ret void
+}
+
+!llvm.dbg.cu = !{!7}
+!llvm.module.flags = !{!10}
+
+!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
+!1 = distinct !DIGlobalVariable(name: "static_local", linkageName: "static_local", scope: !3, file: !4, line: 121, type: !9, isLocal: true, isDefinition: true)
+!3 = distinct !DISubprogram(name: "fn_with_static_local", scope: !4, file: !4, spFlags: DISPFlagDefinition, unit: !7, type: !13, retainedNodes: !11)
+!4 = !DIFile(filename: "test.c", directory: "")
+!7 = distinct !DICompileUnit(language: DW_LANG_C, file: !4)
+!9 = !DIBasicType(name: "int", size: 64, encoding: DW_ATE_signed)
+!10 = !{i32 2, !"Debug Info Version", i32 3}
+!11 = !{!0, !12}
+!12 = !DILocalVariable(name: "unused_local", scope: !3, file: !4, line: 122, type: !9)
+!13 = !DISubroutineType(types: !14)
+!14 = !{null}
