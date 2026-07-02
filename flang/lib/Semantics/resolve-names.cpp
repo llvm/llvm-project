@@ -172,6 +172,18 @@ public:
   }
   bool IsIntrinsic(
       const SourceName &name, std::optional<Symbol::Flag> flag) const {
+    // TEMPORARY (enumeration-type feature gating): NEXT and PREVIOUS are only
+    // recognized as intrinsic names when the enumeration-type feature is
+    // enabled, so that pre-F2023 programs may still use those names for
+    // implicit external procedures.  This gating is removed once the
+    // enumeration-type feature is fully implemented.
+    if (!context_->languageFeatures().IsEnabled(
+            common::LanguageFeature::EnumerationType)) {
+      const std::string nameStr{name.ToString()};
+      if (nameStr == "next" || nameStr == "previous") {
+        return false;
+      }
+    }
     if (!flag) {
       return context_->intrinsics().IsIntrinsic(name.ToString());
     } else if (flag == Symbol::Flag::Function) {
