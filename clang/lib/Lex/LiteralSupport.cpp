@@ -2451,6 +2451,7 @@ bool StringLiteralParser::CopyStringFragment(
           Diags->Report(Tok.getLocation(),
                         diag::err_exec_charset_conversion_failed)
               << EC.message();
+        return true;
       }
     }
     return false;
