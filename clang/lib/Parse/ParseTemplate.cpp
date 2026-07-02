@@ -563,14 +563,13 @@ bool Parser::TryAnnotateTypeConstraint() {
 
     TemplateTy PossibleConcept;
     bool MemberOfUnknownSpecialization = false;
-    auto TNK = Actions.isTemplateName(getCurScope(), SS,
-                                      /*hasTemplateKeyword=*/false,
-                                      PossibleConceptName,
-                                      /*ObjectType=*/ParsedType(),
-                                      /*EnteringContext=*/false,
-                                      PossibleConcept,
-                                      MemberOfUnknownSpecialization,
-                                      /*Disambiguation=*/true);
+    auto TNK = Actions.isTemplateName(
+        getCurScope(), SS,
+        /*hasTemplateKeyword=*/false, PossibleConceptName,
+        /*ObjectType=*/ParsedType(),
+        /*EnteringContext=*/false, PossibleConcept,
+        MemberOfUnknownSpecialization,
+        /*AllowTypoCorrection=*/false);
     if (MemberOfUnknownSpecialization || !PossibleConcept ||
         TNK != TNK_Concept_template) {
       if (SS.isNotEmpty())

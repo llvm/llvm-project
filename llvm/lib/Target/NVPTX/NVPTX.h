@@ -59,6 +59,7 @@ FunctionPass *createNVPTXIRPeepholePass();
 MachineFunctionPass *createNVPTXPeephole();
 MachineFunctionPass *createNVPTXProxyRegErasurePass();
 MachineFunctionPass *createNVPTXForwardParamsPass();
+MachineFunctionPass *createNVPTXAddressFolderPass();
 
 void initializeNVVMReflectLegacyPassPass(PassRegistry &);
 void initializeGenericToNVVMLegacyPassPass(PassRegistry &);
@@ -74,6 +75,7 @@ void initializeNVPTXLowerArgsLegacyPassPass(PassRegistry &);
 void initializeNVPTXSetByValParamAlignLegacyPassPass(PassRegistry &);
 void initializeNVPTXProxyRegErasurePass(PassRegistry &);
 void initializeNVPTXForwardParamsPassPass(PassRegistry &);
+void initializeNVPTXAddressFolderPassPass(PassRegistry &);
 void initializeNVVMIntrRangePass(PassRegistry &);
 void initializeNVVMReflectPass(PassRegistry &);
 void initializeNVPTXAAWrapperPassPass(PassRegistry &);
@@ -294,6 +296,7 @@ void initializeNVPTXDAGToDAGISelLegacyPass(PassRegistry &);
 // Defines symbolic names for the NVPTX instructions.
 #define GET_INSTRINFO_ENUM
 #define GET_INSTRINFO_MC_HELPER_DECLS
+#define GET_INSTRINFO_OPERAND_ENUM
 #include "NVPTXGenInstrInfo.inc"
 
 #endif

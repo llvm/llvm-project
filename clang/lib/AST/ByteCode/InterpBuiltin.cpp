@@ -1681,7 +1681,7 @@ static bool interp__builtin_operator_delete(InterpState &S, CodePtr OpPC,
   std::optional<DynamicAllocator::Form> AllocForm =
       Allocator.getAllocationForm(Source);
 
-  if (!Allocator.deallocate(Source, BlockToDelete, S)) {
+  if (!Allocator.deallocate(Source, BlockToDelete)) {
     // Nothing has been deallocated, this must be a double-delete.
     const SourceInfo &Loc = S.Current->getSource(OpPC);
     S.FFDiag(Loc, diag::note_constexpr_double_delete);

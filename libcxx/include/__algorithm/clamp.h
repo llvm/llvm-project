@@ -17,9 +17,10 @@
 #  pragma GCC system_header
 #endif
 
+#if _LIBCPP_STD_VER >= 17
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER >= 17
 template <class _Tp, class _Compare>
 [[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI constexpr const _Tp&
 clamp(_LIBCPP_LIFETIMEBOUND const _Tp& __v,
@@ -37,8 +38,9 @@ clamp(_LIBCPP_LIFETIMEBOUND const _Tp& __v,
       _LIBCPP_LIFETIMEBOUND const _Tp& __hi) {
   return std::clamp(__v, __lo, __hi, __less<>());
 }
-#endif
 
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 17
 
 #endif // _LIBCPP___ALGORITHM_CLAMP_H

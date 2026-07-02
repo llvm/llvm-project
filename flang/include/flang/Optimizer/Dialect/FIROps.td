@@ -310,10 +310,15 @@ def fir_LoadOp : fir_OneResultOp<"load", [
 
     The ssa-value has an undefined value if the memory reference is undefined
     or null.
+
+    A set `invariant` attribute indicates that the referenced memory location
+    contains the same value at all points in the program where it is
+    dereferenceable, so the load may be treated as invariant.
   }];
 
   let arguments = (ins AnyReferenceLike:$memref,
       OptionalAttr<LLVM_TBAATagArrayAttr>:$tbaa, UnitAttr:$nontemporal,
+      UnitAttr:$invariant,
       OptionalAttr<LLVM_AccessGroupArrayAttr>:$accessGroups);
 
   let builders = [OpBuilder<(ins "mlir::Value":$refVal)>,

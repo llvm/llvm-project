@@ -332,6 +332,17 @@ lowerConstRecordAttr(cir::ConstRecordAttr constRecord,
       return std::nullopt;
     loweredMembers.push_back(*lowered);
   }
+
+  // For a union, the CIR representation is a single field. However, if the
+  // union has padding, we would have added that as an LLVM field, so make sure
+  // we have a corresponding undef for that spot.
+  if (auto unionTy = mlir::dyn_cast<cir::UnionType>(constRecord.getType());
+      unionTy && unionTy.getPadded()) {
+    assert(loweredMembers.size() == 1);
+    loweredMembers.push_back(
+        mlir::LLVM::UndefAttr::get(constRecord.getContext()));
+  }
+
   return mlir::ArrayAttr::get(constRecord.getContext(), loweredMembers);
 }
 

@@ -1954,18 +1954,24 @@ OMPContainsClause *OMPContainsClause::CreateEmpty(const ASTContext &C,
 OMPNumTeamsClause *OMPNumTeamsClause::Create(
     const ASTContext &C, OpenMPDirectiveKind CaptureRegion,
     SourceLocation StartLoc, SourceLocation LParenLoc, SourceLocation EndLoc,
-    ArrayRef<Expr *> VL, Stmt *PreInit) {
-  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(VL.size()));
+    ArrayRef<Expr *> VL, OpenMPNumTeamsClauseModifier Modifier,
+    Expr *ModifierExpr, SourceLocation ModifierLoc, Stmt *PreInit) {
+  // Reserve space for an extra modifier expression.
+  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(VL.size() + 1));
   OMPNumTeamsClause *Clause =
       new (Mem) OMPNumTeamsClause(C, StartLoc, LParenLoc, EndLoc, VL.size());
   Clause->setVarRefs(VL);
+  Clause->setModifier(Modifier);
+  Clause->setModifierExpr(ModifierExpr);
+  Clause->setModifierLoc(ModifierLoc);
   Clause->setPreInitStmt(PreInit, CaptureRegion);
   return Clause;
 }
 
 OMPNumTeamsClause *OMPNumTeamsClause::CreateEmpty(const ASTContext &C,
                                                   unsigned N) {
-  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(N));
+  // Reserve space for an extra modifier expression.
+  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(N + 1));
   return new (Mem) OMPNumTeamsClause(N);
 }
 
@@ -2366,19 +2372,13 @@ void OMPClausePrinter::VisitOMPDeviceClause(OMPDeviceClause *Node) {
 
 void OMPClausePrinter::VisitOMPNumTeamsClause(OMPNumTeamsClause *Node) {
   if (!Node->varlist_empty()) {
-    OS << "num_teams(";
-    // Handle lower-bound:upper-bound syntax when there are exactly 2
-    // expressions
-    if (Node->varlist_size() == 2) {
-      llvm::interleave(
-          Node->varlist(), OS,
-          [&](const auto *Expr) { Expr->printPretty(OS, nullptr, Policy, 0); },
-          ":");
+    OS << "num_teams";
+    if (const Expr *LowerBound = Node->getModifierExpr()) {
+      OS << "(";
+      LowerBound->printPretty(OS, nullptr, Policy, 0);
+      VisitOMPClauseList(Node, ':');
     } else {
-      // For single expression or other cases, use comma-separated list
-      llvm::interleaveComma(Node->varlist(), OS, [&](const auto *Expr) {
-        Expr->printPretty(OS, nullptr, Policy, 0);
-      });
+      VisitOMPClauseList(Node, '(');
     }
     OS << ")";
   }

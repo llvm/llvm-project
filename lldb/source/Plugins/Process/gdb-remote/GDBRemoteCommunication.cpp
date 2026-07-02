@@ -242,8 +242,15 @@ GDBRemoteCommunication::WaitForPacketNoLock(StringExtractorGDBRemote &packet,
   Log *log = GetLog(GDBRLog::Packets);
 
   // Check for a packet from our cache first without trying any reading...
-  if (CheckForPacket(nullptr, 0, packet) != PacketType::Invalid)
+  switch (CheckForPacketIgnoreNotifications(nullptr, 0, packet)) {
+  case PacketType::Standard:
     return PacketResult::Success;
+  case PacketType::Invalid:
+    break;
+  case PacketType::Notify:
+    // These are ignored by CheckForPacketIgnoreNotifications.
+    llvm_unreachable("unreachable");
+  }
 
   bool timed_out = false;
   bool disconnected = false;
@@ -258,8 +265,15 @@ GDBRemoteCommunication::WaitForPacketNoLock(StringExtractorGDBRemote &packet,
                      error, bytes_read);
 
     if (bytes_read > 0) {
-      if (CheckForPacket(buffer, bytes_read, packet) != PacketType::Invalid)
+      switch (CheckForPacketIgnoreNotifications(buffer, bytes_read, packet)) {
+      case PacketType::Standard:
         return PacketResult::Success;
+      case PacketType::Invalid:
+        break;
+      case PacketType::Notify:
+        // These are ignored by CheckForPacketIgnoreNotifications.
+        llvm_unreachable("unreachable");
+      }
     } else {
       switch (status) {
       case eConnectionStatusTimedOut:
@@ -837,6 +851,30 @@ GDBRemoteCommunication::CheckForPacket(const uint8_t *src, size_t src_len,
   }
   packet.Clear();
   return GDBRemoteCommunication::PacketType::Invalid;
+}
+
+GDBRemoteCommunication::PacketType
+GDBRemoteCommunication::CheckForPacketIgnoreNotifications(
+    const uint8_t *src, size_t src_len, StringExtractorGDBRemote &packet) {
+  for (;;) {
+    switch (CheckForPacket(src, src_len, packet)) {
+    case PacketType::Standard:
+      return PacketType::Standard;
+    case PacketType::Invalid:
+      // Either an incomplete packet or an invalid one that was removed.
+      // There may be more data in the buffer that contains valid
+      // packets but CheckForPacket does not distinguish these cases.
+      return PacketType::Invalid;
+    case PacketType::Notify:
+      // No notifications are currently supported so they should be ignored.
+      // There may be more packets in the buffer so go back to check.
+
+      // Set src_len=0 so that it doesn't add the
+      // data we read to the internal buffer again.
+      src_len = 0;
+      break;
+    }
+  }
 }
 
 Status GDBRemoteCommunication::StartDebugserverProcess(
