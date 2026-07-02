@@ -1064,7 +1064,7 @@ private:
   bool getInfoFromFdeCie(const typename CFI_Parser<A>::FDE_Info &fdeInfo,
                          const typename CFI_Parser<A>::CIE_Info &cieInfo,
                          typename R::link_hardened_reg_arg_t pc,
-                         uintptr_t dso_base);
+                         typename R::link_hardened_reg_arg_t dso_base);
   bool getInfoFromDwarfSection(typename R::link_hardened_reg_arg_t pc,
                                const UnwindInfoSections &sects,
                                uint32_t fdeSectionOffsetHint = 0);
@@ -1735,7 +1735,8 @@ template <typename A, typename R>
 bool UnwindCursor<A, R>::getInfoFromFdeCie(
     const typename CFI_Parser<A>::FDE_Info &fdeInfo,
     const typename CFI_Parser<A>::CIE_Info &cieInfo,
-    typename R::link_hardened_reg_arg_t pc, uintptr_t dso_base) {
+    typename R::link_hardened_reg_arg_t pc,
+    typename R::link_hardened_reg_arg_t dso_base) {
   typename CFI_Parser<A>::PrologInfo prolog;
   if (CFI_Parser<A>::template parseFDEInstructions<R>(
           _addressSpace, fdeInfo, cieInfo, pc, R::getArch(), &prolog)) {
