@@ -64,7 +64,7 @@ static bool isSubsequence(const field_names &Seq, const field_names &Subseq) {
   for (unsigned I = 0; I < SeqLen; ++I)
     if (Seq[I] == Subseq[0]) {
       IsSubseq = true;
-      for (unsigned J = 0; J + I < SeqLen && J < SubLen; ++J) {
+      for (unsigned J = 0; (J < SeqLen && I < SeqLen - J) && J < SubLen; ++J) {
         if (Seq[J + I] != Subseq[J]) {
           IsSubseq = false;
           break;

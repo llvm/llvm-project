@@ -173,7 +173,7 @@ llvm::Error GsymReader::parseGlobalDataEntries(uint64_t Offset) {
   const StringRef Buf = MemBuffer->getBuffer();
   const uint64_t BufSize = Buf.size();
   GsymDataExtractor Data(Buf, isLittleEndian());
-  while (Offset + sizeof(GlobalData) <= BufSize) {
+  while (Offset <= BufSize && sizeof(GlobalData) <= BufSize - Offset) {
     auto GDOrErr = GlobalData::decode(Data, Offset);
     if (!GDOrErr)
       return GDOrErr.takeError();
@@ -187,7 +187,7 @@ llvm::Error GsymReader::parseGlobalDataEntries(uint64_t Offset) {
                                "GlobalData section type %u has zero size",
                                static_cast<uint32_t>(GD.Type));
 
-    if (GD.FileOffset + GD.FileSize > BufSize)
+    if (GD.FileOffset > BufSize || GD.FileSize > BufSize - GD.FileOffset)
       return createStringError(
           std::errc::invalid_argument,
           "GlobalData section type %u extends beyond "
@@ -268,7 +268,7 @@ llvm::Error GsymReader::setFileTableData(StringRef Bytes) {
   uint32_t NumFiles = Data.getU32(&Offset);
   uint64_t EntriesSize =
       static_cast<uint64_t>(NumFiles) * FileEntry::getEncodedSize(StrpSize);
-  if (Bytes.size() < Offset + EntriesSize)
+  if (Bytes.size() < Offset || Bytes.size() - Offset < EntriesSize)
     return createStringError(std::errc::invalid_argument,
                              "FileTable section too small for %u files",
                              NumFiles);
@@ -305,7 +305,8 @@ GsymReader::getOptionalGlobalDataBytes(GlobalInfoType Type) const {
   if (!GD)
     return std::nullopt;
   StringRef Buf = MemBuffer->getBuffer();
-  if (GD->FileSize == 0 || GD->FileOffset + GD->FileSize > Buf.size())
+  if (GD->FileSize == 0 || (GD->FileOffset > Buf.size() ||
+                            GD->FileSize > Buf.size() - GD->FileOffset))
     return std::nullopt;
   return Buf.substr(GD->FileOffset, GD->FileSize);
 }

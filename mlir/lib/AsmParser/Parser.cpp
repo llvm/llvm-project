@@ -229,7 +229,7 @@ static size_t findCommentStart(StringRef line) {
     } else {
       if (c == '"') {
         inString = true;
-      } else if (c == '/' && i + 1 < e && line[i + 1] == '/') {
+      } else if (c == '/' && (i < e && 1 < e - i) && line[i + 1] == '/') {
         return i;
       }
     }

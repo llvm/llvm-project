@@ -86,7 +86,7 @@ bool SeedCollection::runOnFunction(Function &F, const Analyses &A) {
           // the slice. This could be quite expensive, so we enforce a limit.
           for (unsigned Offset = Seeds.getFirstUnusedElementIdx(),
                         OE = Seeds.size();
-               Offset + 1 < OE; Offset += 1) {
+               (Offset < OE && 1 < OE - Offset); Offset += 1) {
             // Seeds are getting used as we vectorize, so skip them.
             if (Seeds.isUsed(Offset))
               continue;

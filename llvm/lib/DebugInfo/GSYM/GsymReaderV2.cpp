@@ -44,7 +44,7 @@ void GsymReaderV2::dump(raw_ostream &OS) {
   const uint64_t BufSize = Buf.size();
   GsymDataExtractor Data(Buf, isLittleEndian());
   uint64_t Offset = HeaderV2::getEncodedSize();
-  while (Offset + sizeof(GlobalData) <= BufSize) {
+  while (Offset <= BufSize && sizeof(GlobalData) <= BufSize - Offset) {
     auto GDOrErr = GlobalData::decode(Data, Offset);
     assert(GDOrErr && "GlobalData::decode() should not fail");
     const GlobalData &GD = *GDOrErr;

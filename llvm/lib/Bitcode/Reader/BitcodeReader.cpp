@@ -483,7 +483,7 @@ BitcodeReaderBase::readNameFromStrtab(ArrayRef<uint64_t> Record) {
   if (!UseStrtab)
     return {"", Record};
   // Invalid reference. Let the caller complain about the record being empty.
-  if (Record[0] + Record[1] > Strtab.size())
+  if (Record[0] > Strtab.size() || Record[1] > Strtab.size() - Record[0])
     return {"", {}};
   return {StringRef(Strtab.data() + Record[0], Record[1]), Record.slice(2)};
 }
@@ -2539,7 +2539,7 @@ Error BitcodeReader::parseAttributeGroupBlock() {
             return error("Not a constant range list attribute");
 
           SmallVector<ConstantRange, 2> Val;
-          if (i + 2 > e)
+          if (i > e || 2 > e - i)
             return error("Too few records for constant range list");
           unsigned RangeSize = Record[i++];
           unsigned BitWidth = Record[i++];
@@ -4446,7 +4446,8 @@ Error BitcodeReader::parseFunctionRecord(ArrayRef<uint64_t> Record) {
   // Check whether we have enough values to read a partition name. Also make
   // sure Strtab has enough values.
   if (Record.size() > 18 && Strtab.data() &&
-      Record[17] + Record[18] <= Strtab.size()) {
+      (Record[17] <= Strtab.size() &&
+       Record[18] <= Strtab.size() - Record[17])) {
     Func->setPartition(StringRef(Strtab.data() + Record[17], Record[18]));
   }
 
@@ -4548,7 +4549,8 @@ Error BitcodeReader::parseGlobalIndirectSymbolRecord(
   // Check whether we have enough values to read a partition name.
   if (OpNum + 1 < Record.size()) {
     // Check Strtab has enough values for the partition.
-    if (Record[OpNum] + Record[OpNum + 1] > Strtab.size())
+    if (Record[OpNum] > Strtab.size() ||
+        Record[OpNum + 1] > Strtab.size() - Record[OpNum])
       return error("Malformed partition, too large.");
     NewGA->setPartition(
         StringRef(Strtab.data() + Record[OpNum], Record[OpNum + 1]));
@@ -8583,7 +8585,8 @@ llvm::getBitcodeFileContents(MemoryBufferRef Buffer) {
     // We may be consuming bitcode from a client that leaves garbage at the end
     // of the bitcode stream (e.g. Apple's ar tool). If we are close enough to
     // the end that there cannot possibly be another module, stop looking.
-    if (BCBegin + 8 >= Stream.getBitcodeBytes().size())
+    if ((BCBegin >= Stream.getBitcodeBytes().size() ||
+         8 >= Stream.getBitcodeBytes().size() - BCBegin))
       return F;
 
     Expected<llvm::BitstreamEntry> MaybeEntry = Stream.advance();

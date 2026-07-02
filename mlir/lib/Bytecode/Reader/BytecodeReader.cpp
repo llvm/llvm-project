@@ -1339,7 +1339,8 @@ LogicalResult AttrTypeReader::initialize(
         return failure();
 
       // Verify that the offset is actually valid.
-      if (currentOffset + entrySize > sectionData.size()) {
+      if (currentOffset > sectionData.size() ||
+          entrySize > sectionData.size() - currentOffset) {
         return offsetReader.emitError(
             "Attribute or Type entry offset points past the end of section");
       }

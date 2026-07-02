@@ -990,14 +990,14 @@ public:
     if (ShowRawInsn) {
       size_t Pos = 0, End = Bytes.size();
       if (STI.checkFeatures("+thumb-mode")) {
-        for (; Pos + 2 <= End; Pos += 2)
+        for (; (Pos <= End && 2 <= End - Pos); Pos += 2)
           OS << ' '
              << format_hex_no_prefix(
                     llvm::support::endian::read<uint16_t>(
                         Bytes.data() + Pos, InstructionEndianness),
                     4);
       } else {
-        for (; Pos + 4 <= End; Pos += 4)
+        for (; (Pos <= End && 4 <= End - Pos); Pos += 4)
           OS << ' '
              << format_hex_no_prefix(
                     llvm::support::endian::read<uint32_t>(
@@ -1044,7 +1044,7 @@ public:
       OS << format("%8" PRIx64 ":", Address.Address);
     if (ShowRawInsn) {
       size_t Pos = 0, End = Bytes.size();
-      for (; Pos + 4 <= End; Pos += 4)
+      for (; (Pos <= End && 4 <= End - Pos); Pos += 4)
         OS << ' '
            << format_hex_no_prefix(
                   llvm::support::endian::read<uint32_t>(
@@ -1085,7 +1085,7 @@ public:
       size_t Pos = 0, End = Bytes.size();
       if (End % 4 == 0) {
         // 32-bit and 64-bit instructions.
-        for (; Pos + 4 <= End; Pos += 4)
+        for (; (Pos <= End && 4 <= End - Pos); Pos += 4)
           OS << ' '
              << format_hex_no_prefix(
                     llvm::support::endian::read<uint32_t>(
@@ -1093,7 +1093,7 @@ public:
                     8);
       } else if (End % 2 == 0) {
         // 16-bit and 48-bits instructions.
-        for (; Pos + 2 <= End; Pos += 2)
+        for (; (Pos <= End && 2 <= End - Pos); Pos += 2)
           OS << ' '
              << format_hex_no_prefix(
                     llvm::support::endian::read<uint16_t>(
@@ -3102,7 +3102,7 @@ void objdump::printSectionContents(const ObjectFile *Obj) {
       for (std::size_t I = 0; I < 16; ++I) {
         if (I != 0 && I % 4 == 0)
           outs() << ' ';
-        if (Addr + I < End)
+        if (Addr < End && I < End - Addr)
           outs() << hexdigit((Contents[Addr + I] >> 4) & 0xF, true)
                  << hexdigit(Contents[Addr + I] & 0xF, true);
         else
@@ -3110,7 +3110,7 @@ void objdump::printSectionContents(const ObjectFile *Obj) {
       }
       // Print ascii.
       outs() << "  ";
-      for (std::size_t I = 0; I < 16 && Addr + I < End; ++I) {
+      for (std::size_t I = 0; I < 16 && (Addr < End && I < End - Addr); ++I) {
         if (isPrint(static_cast<unsigned char>(Contents[Addr + I]) & 0xFF))
           outs() << Contents[Addr + I];
         else

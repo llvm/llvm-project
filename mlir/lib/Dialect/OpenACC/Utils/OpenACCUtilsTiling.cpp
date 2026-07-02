@@ -192,7 +192,7 @@ mlir::acc::tileACCLoops(llvm::SmallVector<mlir::acc::LoopOp> &tileLoops,
     llvm::SmallVector<mlir::Value, 3> currentLoopSteps;
     for (auto [j, step] : llvm::enumerate(tileLoop.getStep())) {
       origSteps.push_back(step);
-      if (i + j >= tileSizes.size()) {
+      if (i >= tileSizes.size() || j >= tileSizes.size() - i) {
         currentLoopSteps.push_back(step);
       } else {
         mlir::Value tileSize = resolveAndCastTileSize(

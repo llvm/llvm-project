@@ -1348,7 +1348,7 @@ void SubtargetEmitter::emitSchedClassTables(SchedClassTables &SchedTables,
     OS << "  {" << format("%2d", WPREntry.ProcResourceIdx) << ", "
        << format("%2d", WPREntry.ReleaseAtCycle) << ",  "
        << format("%2d", WPREntry.AcquireAtCycle) << "}";
-    if (WPRIdx + 1 < WPREnd)
+    if (WPRIdx < WPREnd && 1 < WPREnd - WPRIdx)
       OS << ',';
     OS << " // #" << WPRIdx << '\n';
   }
@@ -1364,7 +1364,7 @@ void SubtargetEmitter::emitSchedClassTables(SchedClassTables &SchedTables,
     MCWriteLatencyEntry &WLEntry = SchedTables.WriteLatencies[WLIdx];
     OS << "  {" << format("%2d", WLEntry.Cycles) << ", "
        << format("%2d", WLEntry.WriteResourceID) << "}";
-    if (WLIdx + 1 < WLEnd)
+    if (WLIdx < WLEnd && 1 < WLEnd - WLIdx)
       OS << ',';
     OS << " // #" << WLIdx << " " << SchedTables.WriterNames[WLIdx] << '\n';
   }
@@ -1381,7 +1381,7 @@ void SubtargetEmitter::emitSchedClassTables(SchedClassTables &SchedTables,
     OS << "  {" << RAEntry.UseIdx << ", "
        << format("%2d", RAEntry.WriteResourceID) << ", "
        << format("%2d", RAEntry.Cycles) << "}";
-    if (RAIdx + 1 < RAEnd)
+    if (RAIdx < RAEnd && 1 < RAEnd - RAIdx)
       OS << ',';
     OS << " // #" << RAIdx << '\n';
   }

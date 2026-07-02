@@ -178,7 +178,7 @@ Error DirectX::Signature::initialize(StringRef Part) {
     return Err;
   size_t Size = sizeof(dxbc::ProgramSignatureElement) * SigHeader.ParamCount;
 
-  if (Part.size() < Size + SigHeader.FirstParamOffset)
+  if (Part.size() < Size || Part.size() - Size < SigHeader.FirstParamOffset)
     return parseFailed("Signature parameters extend beyond the part boundary");
 
   Parameters.Data = Part.substr(SigHeader.FirstParamOffset, Size);

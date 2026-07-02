@@ -82,7 +82,8 @@ getCommentSplit(StringRef Text, unsigned ContentStartColumn,
   if (Style.isJavaScript()) {
     StringRef::size_type SpaceOffset =
         Text.find_first_of(Blanks, MaxSplitBytes);
-    if (SpaceOffset != StringRef::npos && SpaceOffset + 1 < Text.size() &&
+    if (SpaceOffset != StringRef::npos &&
+        (SpaceOffset < Text.size() && 1 < Text.size() - SpaceOffset) &&
         Text[SpaceOffset + 1] == '{') {
       MaxSplitBytes = SpaceOffset + 1;
     }
@@ -115,7 +116,8 @@ getCommentSplit(StringRef Text, unsigned ContentStartColumn,
     }
 
     // Avoid ever breaking before a @tag or a { in JavaScript.
-    if (Style.isJavaScript() && SpaceOffset + 1 < Text.size() &&
+    if (Style.isJavaScript() &&
+        (SpaceOffset < Text.size() && 1 < Text.size() - SpaceOffset) &&
         (Text[SpaceOffset + 1] == '{' || Text[SpaceOffset + 1] == '@')) {
       SpaceOffset = Text.find_last_of(Blanks, SpaceOffset);
       continue;

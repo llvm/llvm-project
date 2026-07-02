@@ -365,7 +365,7 @@ private:
     MachineBasicBlock *MBB = InsertPos->getParent();
     for (unsigned i = 0, e = Literals.size(); i < e; i+=2) {
       unsigned LiteralPair0 = Literals[i];
-      unsigned LiteralPair1 = (i + 1 < e)?Literals[i + 1]:0;
+      unsigned LiteralPair1 = (i < e && 1 < e - i) ? Literals[i + 1] : 0;
       InsertPos = BuildMI(MBB, InsertPos->getDebugLoc(),
           TII->get(R600::LITERALS))
           .addImm(LiteralPair0)
@@ -416,7 +416,7 @@ private:
             MILit.addGlobalAddress(Literals[i]->getGlobal(),
                                    Literals[i]->getOffset());
         }
-        if (i + 1 < e) {
+        if (i < e && 1 < e - i) {
           if (Literals[i + 1]->isImm()) {
             MILit.addImm(Literals[i + 1]->getImm());
           } else {

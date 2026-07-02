@@ -56,7 +56,8 @@ createLinkGraphFromCOFFObject(MemoryBufferRef ObjectBuffer,
   bool IsPE = false;
 
   // Check if this is a PE/COFF file.
-  if (Data.size() >= sizeof(object::dos_header) + sizeof(COFF::PEMagic)) {
+  if (Data.size() >= sizeof(object::dos_header) &&
+      Data.size() - sizeof(object::dos_header) >= sizeof(COFF::PEMagic)) {
     const auto *DH =
         reinterpret_cast<const object::dos_header *>(Data.data() + CurPtr);
     if (DH->Magic[0] == 'M' && DH->Magic[1] == 'Z') {
@@ -70,7 +71,8 @@ createLinkGraphFromCOFFObject(MemoryBufferRef ObjectBuffer,
       IsPE = true;
     }
   }
-  if (Data.size() < CurPtr + sizeof(object::coff_file_header))
+  if (Data.size() < CurPtr ||
+      Data.size() - CurPtr < sizeof(object::coff_file_header))
     return make_error<JITLinkError>("Truncated COFF buffer");
 
   const object::coff_file_header *COFFHeader =

@@ -482,7 +482,7 @@ LLVM::InlineAsmOp PtxBuilder::build() {
   std::string mapped;
   mapped.reserve(ptxInstruction.size());
   for (size_t i = 0, e = ptxInstruction.size(); i < e; ++i) {
-    if (ptxInstruction[i] == '%' && i + 1 < e &&
+    if (ptxInstruction[i] == '%' && (i < e && 1 < e - i) &&
         llvm::isDigit(ptxInstruction[i + 1]))
       mapped.push_back('$');
     else

@@ -43,7 +43,7 @@ static llvm::Error decodeRecord(const Record &R, SymbolID &Field,
   if (R[0] != BitCodeConstants::USRHashSize)
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "incorrect USR size");
-  if (R.size() < R[0] + 1)
+  if (R.size() < R[0] || R.size() - R[0] < 1)
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "record too short for SymbolID");
 

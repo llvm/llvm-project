@@ -33,14 +33,14 @@ namespace {
 
 /// Read a little-endian uint32 from Data, or 0 if not enough bytes.
 static uint32_t readU32(ArrayRef<uint8_t> Data, size_t Offset) {
-  if (Offset + sizeof(uint32_t) > Data.size())
+  if (Offset > Data.size() || sizeof(uint32_t) > Data.size() - Offset)
     return 0;
   return support::endian::read32le(Data.data() + Offset);
 }
 
 /// Read a little-endian uint16 from Data, or 0 if not enough bytes.
 static uint16_t readU16(ArrayRef<uint8_t> Data, size_t Offset) {
-  if (Offset + sizeof(uint16_t) > Data.size())
+  if (Offset > Data.size() || sizeof(uint16_t) > Data.size() - Offset)
     return 0;
   return support::endian::read16le(Data.data() + Offset);
 }
@@ -157,7 +157,7 @@ static void applyByteMutations(StringRef Path, ArrayRef<uint8_t> Data) {
     return;
 
   // Parse as 7-byte chunks: [offset(4)][op(1)][value(1)][unused(1)]
-  for (size_t I = 0; I + 6 <= Data.size(); I += 7) {
+  for (size_t I = 0; (I <= Data.size() && 6 <= Data.size() - I); I += 7) {
     uint32_t Offset = readU32(Data, I) % Buf.size();
     uint8_t Op = Data[I + 4] % 3;
     uint8_t Value = Data[I + 5];
@@ -223,8 +223,10 @@ static void corruptStandaloneFiles(StringRef SubDir, ArrayRef<uint8_t> Data) {
 
   for (size_t I = 0; I < Data.size() && !StandaloneFiles.empty(); I += 3) {
     size_t FileIdx = Data[I] % StandaloneFiles.size();
-    uint8_t Action = (I + 1 < Data.size()) ? Data[I + 1] % 4 : 0;
-    uint8_t Param = (I + 2 < Data.size()) ? Data[I + 2] : 128;
+    uint8_t Action =
+        (I < Data.size() && 1 < Data.size() - I) ? Data[I + 1] % 4 : 0;
+    uint8_t Param =
+        (I < Data.size() && 2 < Data.size() - I) ? Data[I + 2] : 128;
 
     StringRef FilePath = StandaloneFiles[FileIdx];
     switch (Action) {
@@ -235,7 +237,7 @@ static void corruptStandaloneFiles(StringRef SubDir, ArrayRef<uint8_t> Data) {
       truncateFile(FilePath, Param);
       break;
     case 2: // Corrupt bytes
-      if (I + 3 < Data.size())
+      if (I < Data.size() && 3 < Data.size() - I)
         applyByteMutations(
             FilePath, Data.slice(I + 3, std::min(Data.size() - I - 3,
                                                  static_cast<size_t>(21))));

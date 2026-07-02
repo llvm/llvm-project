@@ -849,7 +849,7 @@ struct DiagTextDocPrinter : DiagTextVisitor<DiagTextDocPrinter> {
       const char *Separator = (Lines.size() > 1 || HasMultipleLines) ? "|" : "";
       HasMultipleLines = Lines.size() > 1;
 
-      if (Start + Lines.size() > RST.size())
+      if (Start > RST.size() || Lines.size() > RST.size() - Start)
         RST.resize(Start + Lines.size(), EmptyLinePrefix);
 
       padToSameLength(Lines.begin(), Lines.end());

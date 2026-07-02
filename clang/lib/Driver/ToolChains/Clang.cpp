@@ -8732,7 +8732,7 @@ ObjCRuntime Clang::AddObjCRuntimeArgs(const ArgList &args,
 }
 
 static bool maybeConsumeDash(const std::string &EH, size_t &I) {
-  bool HaveDash = (I + 1 < EH.size() && EH[I + 1] == '-');
+  bool HaveDash = ((I < EH.size() && 1 < EH.size() - I) && EH[I + 1] == '-');
   I += HaveDash;
   return !HaveDash;
 }

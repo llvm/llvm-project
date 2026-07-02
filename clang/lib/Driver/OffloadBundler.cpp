@@ -371,7 +371,7 @@ public:
       return Error::success();
 
     // Read number of bundles.
-    if (ReadChars + 8 > FC.size())
+    if (ReadChars > FC.size() || 8 > FC.size() - ReadChars)
       return Error::success();
 
     uint64_t NumberOfBundles = Read8byteIntegerFromBuffer(FC, ReadChars);
@@ -381,35 +381,35 @@ public:
     for (uint64_t i = 0; i < NumberOfBundles; ++i) {
 
       // Read offset.
-      if (ReadChars + 8 > FC.size())
+      if (ReadChars > FC.size() || 8 > FC.size() - ReadChars)
         return Error::success();
 
       uint64_t Offset = Read8byteIntegerFromBuffer(FC, ReadChars);
       ReadChars += 8;
 
       // Read size.
-      if (ReadChars + 8 > FC.size())
+      if (ReadChars > FC.size() || 8 > FC.size() - ReadChars)
         return Error::success();
 
       uint64_t Size = Read8byteIntegerFromBuffer(FC, ReadChars);
       ReadChars += 8;
 
       // Read triple size.
-      if (ReadChars + 8 > FC.size())
+      if (ReadChars > FC.size() || 8 > FC.size() - ReadChars)
         return Error::success();
 
       uint64_t TripleSize = Read8byteIntegerFromBuffer(FC, ReadChars);
       ReadChars += 8;
 
       // Read triple.
-      if (ReadChars + TripleSize > FC.size())
+      if (ReadChars > FC.size() || TripleSize > FC.size() - ReadChars)
         return Error::success();
 
       StringRef Triple(&FC.data()[ReadChars], TripleSize);
       ReadChars += TripleSize;
 
       // Check if the offset and size make sense.
-      if (!Offset || Offset + Size > FC.size())
+      if (!Offset || (Offset > FC.size() || Size > FC.size() - Offset))
         return Error::success();
 
       BundlesInfo[Triple] = BinaryBundleInfo(Size, Offset);

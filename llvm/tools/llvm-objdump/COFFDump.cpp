@@ -910,7 +910,8 @@ static void printWin64EHUnwindInfoV3(ArrayRef<uint8_t> Data) {
       outs() << format("    Handler: 0x%X\n", HandlerRVA);
     }
   } else if (Info.Flags & UNW_ChainInfo) {
-    if (Info.PayloadSize + sizeof(RuntimeFunction) <= Data.size()) {
+    if (Info.PayloadSize <= Data.size() &&
+        sizeof(RuntimeFunction) <= Data.size() - Info.PayloadSize) {
       const auto *Chained =
           reinterpret_cast<const RuntimeFunction *>(&Data[Info.PayloadSize]);
       outs() << "    Chained:\n"

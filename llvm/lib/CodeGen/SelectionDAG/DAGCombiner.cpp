@@ -23167,13 +23167,13 @@ DAGCombiner::getConsecutiveStores(SmallVectorImpl<MemOpLink> &StoreNodes,
   while (true) {
     // Find a store past the width of the first store.
     size_t StartIdx = 0;
-    while ((StartIdx + 1 < StoreNodes.size()) &&
+    while ((StartIdx < StoreNodes.size() && 1 < StoreNodes.size() - StartIdx) &&
            StoreNodes[StartIdx].OffsetFromBase + ElementSizeBytes !=
-              StoreNodes[StartIdx + 1].OffsetFromBase)
+               StoreNodes[StartIdx + 1].OffsetFromBase)
       ++StartIdx;
 
     // Bail if we don't have enough candidates to merge.
-    if (StartIdx + 1 >= StoreNodes.size())
+    if (StartIdx >= StoreNodes.size() || 1 >= StoreNodes.size() - StartIdx)
       return 0;
 
     // Trim stores that overlapped with the first store.

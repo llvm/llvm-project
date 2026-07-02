@@ -86,7 +86,8 @@ static bool hasCategoryPropertyPrefix(StringRef PropertyName) {
 
 static bool prefixedPropertyNameValid(StringRef PropertyName) {
   const size_t Start = PropertyName.find_first_of('_');
-  assert(Start != StringRef::npos && Start + 1 < PropertyName.size());
+  assert(Start != StringRef::npos &&
+         (Start < PropertyName.size() && 1 < PropertyName.size() - Start));
   auto Prefix = PropertyName.substr(0, Start);
   if (Prefix.lower() != Prefix)
     return false;

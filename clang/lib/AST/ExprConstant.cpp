@@ -2093,8 +2093,9 @@ static bool ArePotentiallyOverlappingStringLiterals(const EvalInfo &Info,
   // The null terminator isn't included in the string data, so check for it
   // manually. If the longer string doesn't have a null terminator where the
   // shorter string ends, they aren't potentially overlapping.
-  for (int NullByte : llvm::seq(ShorterCharWidth)) {
-    if (Shorter.size() + NullByte >= Longer.size())
+  for (size_t NullByte : llvm::seq(ShorterCharWidth)) {
+    if (Shorter.size() >= Longer.size() ||
+        NullByte >= Longer.size() - Shorter.size())
       break;
     if (Longer[Shorter.size() + NullByte])
       return false;
@@ -5305,8 +5306,9 @@ static const ValueDecl *HandleMemberPointerAccess(EvalInfo &Info,
     // C++23 [expr.mptr.oper]p4:
     //   If the result of E1 is an object [...] whose most derived object does
     //   not contain the member to which E2 refers, the behavior is undefined.
-    if (LV.Designator.MostDerivedPathLength + MemPtr.Path.size() >
-        LV.Designator.Entries.size()) {
+    if (LV.Designator.MostDerivedPathLength > LV.Designator.Entries.size() ||
+        MemPtr.Path.size() > LV.Designator.Entries.size() -
+                                 LV.Designator.MostDerivedPathLength) {
       Info.FFDiag(RHS);
       return nullptr;
     }

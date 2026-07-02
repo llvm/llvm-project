@@ -7178,7 +7178,9 @@ void LegalizerHelper::multiplyRegisters(SmallVectorImpl<Register> &DstRegs,
     // Collect low parts of muls for DstIdx. Visit the diagonal starting with
     // the low Src1 part, so multiply-add selectors can use it as the first
     // accumulated cross product.
-    unsigned LowStart = DstIdx + 1 < SrcParts ? 0 : DstIdx - SrcParts + 1;
+    unsigned LowStart = (DstIdx < SrcParts && 1 < SrcParts - DstIdx)
+                            ? 0
+                            : DstIdx - SrcParts + 1;
     unsigned LowEnd = std::min(DstIdx, SrcParts - 1);
     for (unsigned RevI = LowEnd + 1; RevI != LowStart; --RevI) {
       unsigned i = RevI - 1;

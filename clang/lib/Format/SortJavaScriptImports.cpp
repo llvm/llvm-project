@@ -162,7 +162,7 @@ public:
     for (unsigned I = 0, E = References.size(); I != E; ++I) {
       JsModuleReference Reference = References[I];
       appendReference(ReferencesText, Reference);
-      if (I + 1 < E) {
+      if (I < E && 1 < E - I) {
         // Insert breaks between imports and exports.
         ReferencesText += "\n";
         // Separate imports groups with two line breaks, but keep all exports

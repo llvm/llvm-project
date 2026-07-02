@@ -95,7 +95,7 @@ static bool hasExportListLinkerOpts(const ArgStringList &CmdArgs) {
       return true;
 
     // If we split -b option, check the next opt.
-    if (ArgString == "-b" && i + 1 < Size) {
+    if (ArgString == "-b" && (i < Size && 1 < Size - i)) {
       ++i;
       llvm::StringRef ArgNextString(CmdArgs[i]);
       if (ArgNextString.starts_with("E:") ||

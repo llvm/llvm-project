@@ -478,8 +478,9 @@ OnDiskTrieRawHashMap::recoverFromFileOffset(FileOffset Offset) const {
   //
   // Note: There's no potential overflow when using \c uint64_t because Offset
   // is in valid offset range and the record size is in \c [0,UINT32_MAX].
-  if (!validOffset(Offset) ||
-      Offset.get() + Impl->Trie.getRecordSize() > Impl->File.getAlloc().size())
+  if (!validOffset(Offset) || (Offset.get() > Impl->File.getAlloc().size() ||
+                               Impl->Trie.getRecordSize() >
+                                   Impl->File.getAlloc().size() - Offset.get()))
     return createStringError(make_error_code(std::errc::protocol_error),
                              "file offset too large: 0x" +
                                  utohexstr(Offset.get(), /*LowerCase=*/true));
@@ -1124,7 +1125,8 @@ Error TrieVisitor::validateSubTrie(SubtrieHandle Node, bool IsRoot) {
 
 Error TrieVisitor::validateSubtrieHeader(uint64_t Offset, bool IsRoot) {
   uint64_t RegionSize = Trie.getRegion().size();
-  if (Offset + sizeof(SubtrieHandle::Header) > RegionSize)
+  if (Offset > RegionSize ||
+      sizeof(SubtrieHandle::Header) > RegionSize - Offset)
     return createInvalidTrieError(Offset, "subtrie header out of bound");
 
   auto *H = reinterpret_cast<const SubtrieHandle::Header *>(
@@ -1135,8 +1137,8 @@ Error TrieVisitor::validateSubtrieHeader(uint64_t Offset, bool IsRoot) {
   if (!IsRoot && H->NumBits > Trie.getNumSubtrieBits())
     return createInvalidTrieError(Offset, "subtrie has corrupt NumBits");
 
-  if (Offset + static_cast<uint64_t>(SubtrieHandle::getSize(H->NumBits)) >
-      RegionSize)
+  if (Offset > RegionSize || static_cast<uint64_t>(SubtrieHandle::getSize(
+                                 H->NumBits)) > RegionSize - Offset)
     return createInvalidTrieError(Offset, "subtrie node spans out of bound");
 
   return Error::success();

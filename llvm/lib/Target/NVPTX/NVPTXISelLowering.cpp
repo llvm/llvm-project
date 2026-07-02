@@ -1795,7 +1795,7 @@ static SDValue buildTreeReduction(
     // Build the next level by partially reducing all elements.
     SmallVector<SDValue> ReducedLevel;
     unsigned I = 0, E = Level.size();
-    for (; I + NumInputs <= E; I += NumInputs) {
+    for (; (I <= E && NumInputs <= E - I); I += NumInputs) {
       // Reduce elements in groups of [NumInputs], as much as possible.
       ReducedLevel.push_back(DAG.getNode(
           Op, DL, EltTy, ArrayRef<SDValue>(Level).slice(I, NumInputs), Flags));

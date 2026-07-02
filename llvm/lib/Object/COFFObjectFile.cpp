@@ -550,7 +550,8 @@ Error COFFObjectFile::getDebugPDBInfo(const debug_directory *DebugDir,
           getRvaAndSizeAsBytes(DebugDir->AddressOfRawData, DebugDir->SizeOfData,
                                InfoBytes, "PDB info"))
     return E;
-  if (InfoBytes.size() < sizeof(*PDBInfo) + 1)
+  if (InfoBytes.size() < sizeof(*PDBInfo) ||
+      InfoBytes.size() - sizeof(*PDBInfo) < 1)
     return createStringError(object_error::parse_failed, "PDB info too small");
   PDBInfo = reinterpret_cast<const codeview::DebugInfo *>(InfoBytes.data());
   InfoBytes = InfoBytes.drop_front(sizeof(*PDBInfo));
@@ -2394,7 +2395,7 @@ ResourceSectionRef::getContents(const coff_resource_data_entry &Entry) {
     ArrayRef<uint8_t> Contents;
     if (Error E = Obj->getSectionContents(*Section, Contents))
       return E;
-    if (Offset + Entry.DataSize > Contents.size())
+    if (Offset > Contents.size() || Entry.DataSize > Contents.size() - Offset)
       return createStringError(object_error::parse_failed,
                                "data outside of section");
     // Return a reference to the data inside the section.

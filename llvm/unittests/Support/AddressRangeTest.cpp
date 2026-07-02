@@ -162,7 +162,8 @@ TEST(AddressRangeTest, TestRangesRandom) {
   }
 
   // Check ranges.
-  for (size_t Idx = 0; Idx + 1 < Ranges.size(); Idx++) {
+  for (size_t Idx = 0; (Idx < Ranges.size() && 1 < Ranges.size() - Idx);
+       Idx++) {
     // Check that ranges are not intersected.
     EXPECT_FALSE(Ranges[Idx].intersects(Ranges[Idx + 1]));
 
@@ -402,7 +403,8 @@ TEST(AddressRangeTest, TestRangesMapRandom) {
   }
 
   // Check ranges.
-  for (size_t Idx = 0; Idx + 1 < Ranges.size(); Idx++) {
+  for (size_t Idx = 0; (Idx < Ranges.size() && 1 < Ranges.size() - Idx);
+       Idx++) {
     // Check that ranges are not intersected.
     EXPECT_FALSE(Ranges[Idx].Range.intersects(Ranges[Idx + 1].Range));
 
@@ -420,7 +422,8 @@ TEST(AddressRangeTest, TestRangesMapRandom) {
   }
 
   // Check ranges.
-  for (size_t Idx = 0; Idx + 1 < Ranges.size(); Idx++) {
+  for (size_t Idx = 0; (Idx < Ranges.size() && 1 < Ranges.size() - Idx);
+       Idx++) {
     // Check that ranges are not intersected.
     EXPECT_FALSE(Ranges[Idx].Range.intersects(Ranges[Idx + 1].Range));
 

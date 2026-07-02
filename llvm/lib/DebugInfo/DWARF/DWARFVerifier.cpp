@@ -2264,7 +2264,8 @@ bool DWARFVerifier::verifyDebugStrOffsets(
       std::tie(Length, Format) = DA.getInitialLength(C);
       if (!C)
         break;
-      if (C.tell() + Length > DA.getData().size()) {
+      if ((C.tell() > DA.getData().size() ||
+           Length > DA.getData().size() - C.tell())) {
         ErrorCategory.Report(
             "Section contribution length exceeds available space", [&]() {
               error() << formatv(

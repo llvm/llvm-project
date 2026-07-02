@@ -591,8 +591,9 @@ LogicalResult ShardingOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
         for (auto i : innerSplitAxes.asArrayRef()) {
           numShards += gridShape[i];
         }
-        for (int64_t i = 0; i <= numShards; ++i) {
-          if (shardedDimsOffsets.size() <= pos + i) {
+        for (size_t i = 0; i <= static_cast<size_t>(numShards); ++i) {
+          if (shardedDimsOffsets.size() <= pos ||
+              shardedDimsOffsets.size() - pos <= i) {
             return emitError() << "sharded dims offsets has wrong size.";
           }
           if (ShapedType::isStatic(shardedDimsOffsets[pos + i])) {

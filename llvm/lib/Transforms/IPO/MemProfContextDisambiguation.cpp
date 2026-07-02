@@ -5358,7 +5358,8 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
       // skip it. Need to add one for the original copy.
       // Use >= in case there were clones that were skipped due to having empty
       // context ids
-      if (Node->Clones.size() + 1 >= FuncCloneInfos.size())
+      if (Node->Clones.size() >= FuncCloneInfos.size() ||
+          1 >= FuncCloneInfos.size() - Node->Clones.size())
         continue;
       // First collect all function clones we cloned this callsite node for.
       // They may not be sequential due to empty clones e.g.

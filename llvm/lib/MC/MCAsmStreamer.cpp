@@ -1074,7 +1074,8 @@ void MCAsmStreamer::emitXCOFFCInfoSym(StringRef Name, StringRef Metadata) {
   };
 
   size_t Index = 0;
-  for (; Index + WordSize <= MetadataSize; Index += WordSize)
+  for (; (Index <= MetadataSize && WordSize <= MetadataSize - Index);
+       Index += WordSize)
     PrintWord(reinterpret_cast<const uint8_t *>(Metadata.data()) + Index);
 
   // If there is padding, then we have at least one byte of payload left

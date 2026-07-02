@@ -8458,7 +8458,7 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom,
         UsedVals.set(Val);
         for (unsigned K = 0; K < NumParts; ++K) {
           unsigned Idx = Val + Sz * K;
-          if (Idx < VF && I + K < VF)
+          if (Idx < VF && (I < VF && K < VF - I))
             ResOrder[Idx] = I + K;
         }
       }
@@ -13775,7 +13775,7 @@ bool BoUpSLP::canReuseExtract(ArrayRef<Value *> VL,
   }
   if (MaxIdx - MinIdx + 1 > E)
     return false;
-  if (MaxIdx + 1 <= E)
+  if (MaxIdx <= E && 1 <= E - MaxIdx)
     MinIdx = 0;
 
   // Check that all of the indices extract from the correct offset.
@@ -15217,7 +15217,7 @@ void BoUpSLP::transformNodes() {
                *TTI, VL.front()->getType(), VL.size() - 1);
            VF >= MinVF; VF = getFloorFullVectorNumberOfElements(
                             *TTI, VL.front()->getType(), VF - 1)) {
-        if (StartIdx + VF > End)
+        if (StartIdx > End || VF > End - StartIdx)
           continue;
         SmallVector<std::pair<unsigned, unsigned>> Slices;
         bool AllStrided = true;
@@ -28803,7 +28803,8 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
   InstructionCost MinCost = SLPCostThreshold.getValue();
 
   unsigned NextInst = 0, MaxInst = VL.size();
-  for (unsigned VF = MaxVF; NextInst + 1 < MaxInst && VF >= MinVF;
+  for (unsigned VF = MaxVF;
+       (NextInst < MaxInst && 1 < MaxInst - NextInst) && VF >= MinVF;
        VF = getFloorFullVectorNumberOfElements(*TTI, I0->getType(), VF - 1)) {
     // No actual vectorization should happen, if number of parts is the same as
     // provided vectorization factor (i.e. the scalar type is used for vector
@@ -29879,7 +29880,7 @@ public:
       bool ShuffledExtracts = false;
       // Try to handle shuffled extractelements.
       if (S && S.getOpcode() == Instruction::ExtractElement &&
-          !S.isAltShuffle() && I + 1 < E) {
+          !S.isAltShuffle() && (I < E && 1 < E - I)) {
         SmallVector<Value *> CommonCandidates(Candidates);
         for (Value *RV : ReducedVals[I + 1]) {
           Value *RdxVal = TrackedVals.at(RV);

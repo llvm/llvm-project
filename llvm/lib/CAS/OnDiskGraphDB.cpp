@@ -652,7 +652,8 @@ DataRecordHandle::getFromDataPool(const OnDiskDataAllocator &Pool,
     return HeaderData.takeError();
 
   auto Record = DataRecordHandle::get(HeaderData->data());
-  if (Record.getTotalSize() + Offset.get() > Pool.size())
+  if (Record.getTotalSize() > Pool.size() ||
+      Offset.get() > Pool.size() - Record.getTotalSize())
     return createStringError(
         make_error_code(std::errc::illegal_byte_sequence),
         "data record span passed the end of the data pool");
@@ -959,8 +960,9 @@ Error OnDiskGraphDB::validate(bool Deep, HashingFuncT Hasher) const {
     case TrieRecord::StorageKind::DataPool: {
       // Check offset is a postive value, and large enough to hold the
       // header for the data record.
-      if (D.Offset.get() <= 0 ||
-          D.Offset.get() + sizeof(DataRecordHandle::Header) >= DataPool.size())
+      if (D.Offset.get() <= 0 || (D.Offset.get() >= DataPool.size() ||
+                                  sizeof(DataRecordHandle::Header) >=
+                                      DataPool.size() - D.Offset.get()))
         return formatError("datapool record out of bound");
 
       // DataRecord start needs to be aligned.
@@ -1897,7 +1899,8 @@ Error OnDiskGraphDB::importFullTree(ObjectID PrimaryID,
 
       // The bottom of \p PrimaryNodesStack contains the primary ID for the
       // current node plus the list of imported referenced IDs.
-      assert(PrimaryNodesStack.size() >= Cur.RefsCount + 1);
+      assert((PrimaryNodesStack.size() >= Cur.RefsCount &&
+              PrimaryNodesStack.size() - Cur.RefsCount >= 1));
       ObjectID PrimaryID = *(PrimaryNodesStack.end() - Cur.RefsCount - 1);
       auto PrimaryRefs = ArrayRef(PrimaryNodesStack)
                              .slice(PrimaryNodesStack.size() - Cur.RefsCount);

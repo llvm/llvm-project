@@ -2014,7 +2014,8 @@ AffineForOp mlir::affine::insertBackwardComputationSlice(
   // Sanity check.
   unsigned sliceSurroundingLoopsSize = sliceSurroundingLoops.size();
   (void)sliceSurroundingLoopsSize;
-  assert(dstLoopDepth + numSrcLoopIVs >= sliceSurroundingLoopsSize);
+  assert((dstLoopDepth >= sliceSurroundingLoopsSize ||
+          numSrcLoopIVs >= sliceSurroundingLoopsSize - dstLoopDepth));
   unsigned sliceLoopLimit = dstLoopDepth + numSrcLoopIVs;
   (void)sliceLoopLimit;
   assert(sliceLoopLimit >= sliceSurroundingLoopsSize);

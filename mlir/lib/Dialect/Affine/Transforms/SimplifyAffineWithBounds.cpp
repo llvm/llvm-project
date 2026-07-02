@@ -59,7 +59,8 @@ static std::optional<size_t> tryMatchProduct(ArrayRef<OpFoldResult> lhs,
   // Incrementally accumulate lhs product and check for equality.
   AffineExpr lhsExpr = getAffineConstantExpr(1, ctx);
   SmallVector<Value> lhsOperands;
-  for (size_t k = 1; k + lhsTailConsumed <= lhs.size(); ++k) {
+  for (size_t k = 1; (k <= lhs.size() && lhsTailConsumed <= lhs.size() - k);
+       ++k) {
     buildProductExpr(lhs[lhs.size() - lhsTailConsumed - k], lhsExpr,
                      lhsOperands, ctx);
     AffineMap lhsMap = AffineMap::get(0, lhsOperands.size(), lhsExpr, ctx);

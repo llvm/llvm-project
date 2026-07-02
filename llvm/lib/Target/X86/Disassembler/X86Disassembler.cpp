@@ -199,7 +199,7 @@ static bool peek(struct InternalInstruction *insn, uint8_t &byte) {
 template <typename T> static bool consume(InternalInstruction *insn, T &ptr) {
   auto r = insn->bytes;
   uint64_t offset = insn->readerCursor - insn->startLocation;
-  if (offset + sizeof(T) > r.size())
+  if (offset > r.size() || sizeof(T) > r.size() - offset)
     return true;
   ptr = support::endian::read<T>(&r[offset], llvm::endianness::little);
   insn->readerCursor += sizeof(T);

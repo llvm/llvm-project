@@ -51,7 +51,7 @@ static LogicalResult verifyImageOperands(Operation *imageOp,
       return imageOp->emitError(
           "Bias is only valid with implicit-lod instructions");
 
-    if (index + 1 > operands.size())
+    if (index > operands.size() || 1 > operands.size() - index)
       return imageOp->emitError("Bias operand requires 1 argument");
 
     if (!isCoreFloat(operands[index].getType()))
@@ -82,7 +82,7 @@ static LogicalResult verifyImageOperands(Operation *imageOp,
       return imageOp->emitError(
           "Lod is only valid with explicit-lod and fetch instructions");
 
-    if (index + 1 > operands.size())
+    if (index > operands.size() || 1 > operands.size() - index)
       return imageOp->emitError("Lod operand requires 1 argument");
 
     spirv::ImageType imageType;
@@ -124,7 +124,7 @@ static LogicalResult verifyImageOperands(Operation *imageOp,
       return imageOp->emitError(
           "Grad is only valid with explicit-lod instructions");
 
-    if (index + 2 > operands.size())
+    if (index > operands.size() || 2 > operands.size() - index)
       return imageOp->emitError(
           "Grad operand requires 2 arguments (scalars or vectors)");
 

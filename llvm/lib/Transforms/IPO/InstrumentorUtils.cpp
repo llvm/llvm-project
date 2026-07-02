@@ -69,7 +69,8 @@ private:
     Expected<bool> Result = parseAndExpr();
     while (Result) {
       skipWhitespace();
-      if (Pos + 1 < Expr.size() && Expr[Pos] == '|' && Expr[Pos + 1] == '|') {
+      if ((Pos < Expr.size() && 1 < Expr.size() - Pos) && Expr[Pos] == '|' &&
+          Expr[Pos + 1] == '|') {
         Pos += 2;
         Expected<bool> NextResult = parseAndExpr();
         if (!NextResult)
@@ -86,7 +87,8 @@ private:
     Expected<bool> Result = parsePrimary();
     while (Result) {
       skipWhitespace();
-      if (Pos + 1 < Expr.size() && Expr[Pos] == '&' && Expr[Pos + 1] == '&') {
+      if ((Pos < Expr.size() && 1 < Expr.size() - Pos) && Expr[Pos] == '&' &&
+          Expr[Pos + 1] == '&') {
         Pos += 2;
         Expected<bool> NextResult = parsePrimary();
         if (!NextResult)
@@ -222,18 +224,22 @@ private:
       // Parse operator.
       enum OpKind { EQ, NE, LT, GT, LE, GE } Op;
       if (Pos < Expr.size()) {
-        if (Expr[Pos] == '=' && Pos + 1 < Expr.size() && Expr[Pos + 1] == '=') {
+        if (Expr[Pos] == '=' && (Pos < Expr.size() && 1 < Expr.size() - Pos) &&
+            Expr[Pos + 1] == '=') {
           Op = EQ;
           Pos += 2;
-        } else if (Expr[Pos] == '!' && Pos + 1 < Expr.size() &&
+        } else if (Expr[Pos] == '!' &&
+                   (Pos < Expr.size() && 1 < Expr.size() - Pos) &&
                    Expr[Pos + 1] == '=') {
           Op = NE;
           Pos += 2;
-        } else if (Expr[Pos] == '<' && Pos + 1 < Expr.size() &&
+        } else if (Expr[Pos] == '<' &&
+                   (Pos < Expr.size() && 1 < Expr.size() - Pos) &&
                    Expr[Pos + 1] == '=') {
           Op = LE;
           Pos += 2;
-        } else if (Expr[Pos] == '>' && Pos + 1 < Expr.size() &&
+        } else if (Expr[Pos] == '>' &&
+                   (Pos < Expr.size() && 1 < Expr.size() - Pos) &&
                    Expr[Pos + 1] == '=') {
           Op = GE;
           Pos += 2;
@@ -305,10 +311,12 @@ private:
       // Parse operator (only == and != for strings).
       enum OpKind { EQ, NE } Op;
       if (Pos < Expr.size()) {
-        if (Expr[Pos] == '=' && Pos + 1 < Expr.size() && Expr[Pos + 1] == '=') {
+        if (Expr[Pos] == '=' && (Pos < Expr.size() && 1 < Expr.size() - Pos) &&
+            Expr[Pos + 1] == '=') {
           Op = EQ;
           Pos += 2;
-        } else if (Expr[Pos] == '!' && Pos + 1 < Expr.size() &&
+        } else if (Expr[Pos] == '!' &&
+                   (Pos < Expr.size() && 1 < Expr.size() - Pos) &&
                    Expr[Pos + 1] == '=') {
           Op = NE;
           Pos += 2;
@@ -347,10 +355,12 @@ private:
       // Parse operator (only == and != for pointers).
       enum OpKind { EQ, NE } Op;
       if (Pos < Expr.size()) {
-        if (Expr[Pos] == '=' && Pos + 1 < Expr.size() && Expr[Pos + 1] == '=') {
+        if (Expr[Pos] == '=' && (Pos < Expr.size() && 1 < Expr.size() - Pos) &&
+            Expr[Pos + 1] == '=') {
           Op = EQ;
           Pos += 2;
-        } else if (Expr[Pos] == '!' && Pos + 1 < Expr.size() &&
+        } else if (Expr[Pos] == '!' &&
+                   (Pos < Expr.size() && 1 < Expr.size() - Pos) &&
                    Expr[Pos + 1] == '=') {
           Op = NE;
           Pos += 2;

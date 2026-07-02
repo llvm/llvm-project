@@ -1064,7 +1064,7 @@ void Decoder::decodeOpcodes(ArrayRef<uint8_t> Opcodes, unsigned Offset,
       }
 
       if ((Opcodes[OI] & DecodeRing[DI].Mask) == DecodeRing[DI].Value) {
-        if (OI + DecodeRing[DI].Length > OE) {
+        if (OI > OE || DecodeRing[DI].Length > OE - OI) {
           SW.startLine() << format("Opcode 0x%02x goes past the unwind data\n",
                                     Opcodes[OI]);
           OI += DecodeRing[DI].Length;

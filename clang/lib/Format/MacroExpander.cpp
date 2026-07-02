@@ -103,7 +103,7 @@ private:
   }
 
   void nextToken() {
-    if (Pos + 1 < Tokens.size())
+    if (Pos < Tokens.size() && 1 < Tokens.size() - Pos)
       ++Pos;
     Current = Tokens[Pos];
     Current->Finalized = true;

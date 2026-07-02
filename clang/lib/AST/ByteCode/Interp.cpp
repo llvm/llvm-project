@@ -2811,7 +2811,8 @@ bool arePotentiallyOverlappingStringLiterals(const Pointer &LHS,
   // manually. If the longer string doesn't have a null terminator where the
   // shorter string ends, they aren't potentially overlapping.
   for (unsigned NullByte : llvm::seq(ShorterCharWidth)) {
-    if (Shorter.size() + NullByte >= Longer.size())
+    if (Shorter.size() >= Longer.size() ||
+        NullByte >= Longer.size() - Shorter.size())
       break;
     if (Longer[Shorter.size() + NullByte])
       return false;

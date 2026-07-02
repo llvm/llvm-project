@@ -1464,8 +1464,9 @@ getCollapsableIterationSpaceDims(GenericOp genericOp, OpOperand *fusableOperand,
           continue;
         // If sizes doesnt match, trivial not contiguous. This condition should
         // not be hit.
-        if (startDim.index() + foldedIterationSpaceDims.size() >
-            reductionDims.size())
+        if (startDim.index() > reductionDims.size() ||
+            foldedIterationSpaceDims.size() >
+                reductionDims.size() - startDim.index())
           break;
         // Check that the contiguity is maintained.
         isContiguous = true;

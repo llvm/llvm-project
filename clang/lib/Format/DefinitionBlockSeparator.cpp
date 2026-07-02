@@ -152,7 +152,9 @@ void DefinitionBlockSeparator::separateBlocks(
         return false;
 
       const auto *NextLine =
-          OperateIndex + 1 < Lines.size() ? Lines[OperateIndex + 1] : nullptr;
+          (OperateIndex < Lines.size() && 1 < Lines.size() - OperateIndex)
+              ? Lines[OperateIndex + 1]
+              : nullptr;
 
       if (const auto *Tok = OperateLine->First;
           Tok->is(tok::comment) && !isClangFormatOn(Tok->TokenText)) {
@@ -248,7 +250,8 @@ void DefinitionBlockSeparator::separateBlocks(
       // definition.
       if (!TargetToken->closesScope() && !IsPPConditional(OpeningLineIndex)) {
         // Check whether current line may precede a definition line.
-        while (OpeningLineIndex + 1 < Lines.size() &&
+        while ((OpeningLineIndex < Lines.size() &&
+                1 < Lines.size() - OpeningLineIndex) &&
                MayPrecedeDefinition(/*Direction=*/0)) {
           ++OpeningLineIndex;
         }

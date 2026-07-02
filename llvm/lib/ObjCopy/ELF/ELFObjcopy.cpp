@@ -633,10 +633,10 @@ RemoveNoteDetail::findNotesToRemove(ArrayRef<uint8_t> Data, size_t Align,
   using Elf_Note = typename ELFT::Note;
   std::vector<DeletedRange> ToRemove;
   uint64_t CurPos = 0;
-  while (CurPos + sizeof(Elf_Nhdr) <= Data.size()) {
+  while (CurPos <= Data.size() && sizeof(Elf_Nhdr) <= Data.size() - CurPos) {
     auto Nhdr = reinterpret_cast<const Elf_Nhdr *>(Data.data() + CurPos);
     size_t FullSize = Nhdr->getSize(Align);
-    if (CurPos + FullSize > Data.size())
+    if (CurPos > Data.size() || FullSize > Data.size() - CurPos)
       break;
     Elf_Note Note(*Nhdr);
     bool ShouldRemove =

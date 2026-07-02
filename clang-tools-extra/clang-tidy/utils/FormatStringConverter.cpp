@@ -623,7 +623,8 @@ bool FormatStringConverter::HandlePrintfSpecifier(const PrintfSpecifier &FS,
                                                   unsigned SpecifierLen,
                                                   const TargetInfo &Target) {
   const size_t StartSpecifierPos = StartSpecifier - PrintfFormatString.data();
-  assert(StartSpecifierPos + SpecifierLen <= PrintfFormatString.size());
+  assert((StartSpecifierPos <= PrintfFormatString.size() &&
+          SpecifierLen <= PrintfFormatString.size() - StartSpecifierPos));
 
   // Everything before the specifier needs copying verbatim
   assert(StartSpecifierPos >= PrintfFormatStringPos);

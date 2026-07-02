@@ -250,7 +250,8 @@ bool hasOpcode(SmallVectorImpl<uint32_t> &binary, spirv::Opcode target) {
   size_t offset = spirv::kHeaderWordCount;
   while (offset < binary.size()) {
     uint32_t wordCount = binary[offset] >> 16;
-    if (!wordCount || offset + wordCount > binary.size())
+    if (!wordCount ||
+        (offset > binary.size() || wordCount > binary.size() - offset))
       return false;
     auto op = static_cast<spirv::Opcode>(binary[offset] & 0xffff);
     if (op == target)
@@ -268,7 +269,7 @@ bool hasLongCompositesCapabilityAndExtension(
   size_t binarySize = binary.size();
   while (offset < binarySize) {
     uint32_t wordCount = binary[offset] >> 16;
-    if (!wordCount || offset + wordCount > binarySize)
+    if (!wordCount || (offset > binarySize || wordCount > binarySize - offset))
       break;
     auto op = static_cast<spirv::Opcode>(binary[offset] & 0xffff);
     ArrayRef<uint32_t> operands(binary.data() + offset + 1, wordCount - 1);
@@ -516,7 +517,7 @@ unsigned countOpcode(SmallVectorImpl<uint32_t> &binary, spirv::Opcode target) {
   size_t binarySize = binary.size();
   while (offset < binarySize) {
     uint32_t wordCount = binary[offset] >> 16;
-    if (!wordCount || offset + wordCount > binarySize)
+    if (!wordCount || (offset > binarySize || wordCount > binarySize - offset))
       break;
     auto op = static_cast<spirv::Opcode>(binary[offset] & 0xffff);
     if (op == target)

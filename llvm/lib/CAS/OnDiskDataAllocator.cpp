@@ -181,7 +181,8 @@ Expected<ArrayRef<char>> OnDiskDataAllocator::get(FileOffset Offset,
                                                   size_t Size) const {
   assert(Offset);
   assert(Impl);
-  if (Offset.get() + Size >= Impl->File.getAlloc().size())
+  if (Offset.get() >= Impl->File.getAlloc().size() ||
+      Size >= Impl->File.getAlloc().size() - Offset.get())
     return createStringError(make_error_code(std::errc::protocol_error),
                              "requested size too large in allocator");
   return ArrayRef<char>{Impl->File.getRegion().data() + Offset.get(), Size};
