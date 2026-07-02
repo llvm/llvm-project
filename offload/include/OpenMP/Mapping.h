@@ -28,6 +28,10 @@ class AsyncInfoTy;
 
 using map_var_info_t = void *;
 
+inline bool isNullMap(const void *HstPtrBegin, int64_t Size) {
+  return HstPtrBegin == nullptr && Size == 0;
+}
+
 class MappingConfig {
 
   MappingConfig() {
