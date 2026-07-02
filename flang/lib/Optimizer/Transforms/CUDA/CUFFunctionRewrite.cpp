@@ -12,7 +12,6 @@
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Support/DataLayout.h"
 #include "flang/Optimizer/Transforms/Passes.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/MLIRContext.h"
@@ -79,6 +78,10 @@ private:
     return fir::ConvertOp::create(rewriter, loc, op.getResult(0).getType(), t);
   }
 
+  // on_device may reach this pass under different symbol names depending on how
+  // it was declared and when the pass runs: its bind(c) name ("on_device"), its
+  // Fortran internal name ("_QPon_device"), or its externally-mangled name after
+  // external-name conversion ("on_device_").
   const llvm::StringMap<genFunctionType> genMappings_ = {
       {"on_device", &genOnDevice},
       {"_QPon_device", &genOnDevice},
@@ -99,22 +102,6 @@ public:
       mlir::emitError(mlir::UnknownLoc::get(ctx),
                       "error in CUFFunctionRewrite op conversion\n");
       signalPassFailure();
-      return;
-    }
-
-    static const llvm::StringRef rewrittenNames[] = {
-        "on_device", "_QPon_device", "on_device_"};
-    auto removeUnusedDecl = [](mlir::ModuleOp mod, llvm::StringRef name) {
-      if (auto func = mod.lookupSymbol<mlir::func::FuncOp>(name))
-        if (func.isDeclaration() && func.symbolKnownUseEmpty(mod))
-          func.erase();
-    };
-    if (auto mod = getOperation()->getParentOfType<mlir::ModuleOp>()) {
-      for (auto name : rewrittenNames)
-        removeUnusedDecl(mod, name);
-    } else if (auto mod = mlir::dyn_cast<mlir::ModuleOp>(getOperation())) {
-      for (auto name : rewrittenNames)
-        removeUnusedDecl(mod, name);
     }
   }
 };
