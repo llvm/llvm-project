@@ -42,7 +42,6 @@ class TestOverridesResolver(TestBase):
         command = "command script import " + script_name
         self.runCmd(command)
 
-
     def calculate_mask_desc(self, mask):
         mask_str = ""
         if mask & lldb.eResolverFileAndLine:
@@ -50,8 +49,17 @@ class TestOverridesResolver(TestBase):
         if mask & lldb.eResolverName:
             mask_str += "N"
         return mask_str
-    
-    def add_override_python(self, help_text, class_name, mask, key, value, expect_error=False, error_string=""):
+
+    def add_override_python(
+        self,
+        help_text,
+        class_name,
+        mask,
+        key,
+        value,
+        expect_error=False,
+        error_string="",
+    ):
         extra_args = lldb.SBStructuredData()
         json_str = '{"' + str(key) + '":"' + str(value) + '"}'
         extra_args.SetFromJSON(json_str)
@@ -64,7 +72,7 @@ class TestOverridesResolver(TestBase):
         else:
             self.assertFailure(error, error_string)
             return 0
-            
+
         # Check the override listing, make sure our new entry is present:
         mask_str = self.calculate_mask_desc(mask)
 
@@ -74,7 +82,17 @@ class TestOverridesResolver(TestBase):
 
         return override_id
 
-    def add_override_cmd(self, help_text, class_name, mask_args, mask_desc, key, value, expect_error=False, error_string=""):
+    def add_override_cmd(
+        self,
+        help_text,
+        class_name,
+        mask_args,
+        mask_desc,
+        key,
+        value,
+        expect_error=False,
+        error_string="",
+    ):
         result = lldb.SBCommandReturnObject()
         self.ci.HandleCommand(
             f"breakpoint override add -P {class_name} -k {key} -v {value} -d '{help_text}' {mask_args}",
@@ -103,7 +121,7 @@ class TestOverridesResolver(TestBase):
         trivial_help = "Trivial help text"
         trivial_id = 0
         useful_id = 0
-        
+
         if use_cmd:
             trivial_id = self.add_override_cmd(
                 trivial_help,
@@ -235,7 +253,7 @@ class TestOverridesResolver(TestBase):
         # type that was not part of the mask.
         self.expect("checker trivial_not_name", startstr="0")
         self.expect("checker override_not_file", startstr="0")
-        
+
     def do_test_bad_values(self):
         self.make_target_and_import()
         # Add our trivial one with a bad mask:
@@ -249,7 +267,7 @@ class TestOverridesResolver(TestBase):
             "test_key",
             "test_value",
             expect_error=True,
-            error_string="invalid breakpoint type mask: 64, should be composed of the elements of the BreakpointResolverType enum."
+            error_string="invalid breakpoint type mask: 64, should be composed of the elements of the BreakpointResolverType enum.",
         )
 
         # Now try with an empty class name:
@@ -260,10 +278,12 @@ class TestOverridesResolver(TestBase):
             "test_key",
             "test_value",
             expect_error=True,
-            error_string="empty class name"
-	)
+            error_string="empty class name",
+        )
+        # FIXME: We aren't currently returning a correct
+        # error when the class name doesn't exist.
         # And with a class name that doesn't exist:
-        #trivial_id = self.add_override_python(
+        # trivial_id = self.add_override_python(
         #    trivial_help,
         #    "NoModuleOfThisName.NoClassOfThisName",
         #    lldb.eResolverName,
@@ -271,7 +291,7 @@ class TestOverridesResolver(TestBase):
         #    "test_value",
         #    expect_error=True,
         #    error_string=""
-        #)
+        # )
 
         trivial_id = self.add_override_cmd(
             trivial_help,
@@ -281,8 +301,5 @@ class TestOverridesResolver(TestBase):
             "test_key",
             "test_value",
             expect_error=True,
-            error_string=""
+            error_string="",
         )
-        
-        
-

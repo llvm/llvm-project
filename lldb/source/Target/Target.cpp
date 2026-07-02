@@ -957,12 +957,14 @@ llvm::Expected<lldb::user_id_t> Target::AddBreakpointResolverOverride(
     StructuredData::DictionarySP args_data_sp, llvm::StringRef description) {
   if (class_name.empty())
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
-        "empty class name");
+                                   "empty class name");
 
   if (!BreakpointResolver::TypeMaskIsValid(type_mask))
-    return llvm::createStringErrorV(llvm::inconvertibleErrorCode(),
+    return llvm::createStringErrorV(
+        llvm::inconvertibleErrorCode(),
         "invalid breakpoint type mask: {0}, should be composed of the "
-        "elements of the BreakpointResolverType enum.", type_mask);
+        "elements of the BreakpointResolverType enum.",
+        type_mask);
 
   StructuredDataImpl impl;
   impl.SetObjectSP(args_data_sp);
@@ -1024,8 +1026,8 @@ Target::CheckBreakpointOverrides(lldb::BreakpointResolverSP original_sp) {
   for (auto const &elem : m_breakpoint_overrides) {
     if (!original_sp->ResolverTyInMask(elem.second->GetTypeMask()))
       continue;
-    if (lldb::BreakpointResolverSP overriden_sp
-      = elem.second->CheckForOverride(*this, original_sp))
+    if (lldb::BreakpointResolverSP overriden_sp =
+            elem.second->CheckForOverride(*this, original_sp))
       return overriden_sp;
   }
   return {};
