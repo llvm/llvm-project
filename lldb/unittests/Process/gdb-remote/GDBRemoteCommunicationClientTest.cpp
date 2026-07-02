@@ -11,7 +11,9 @@
 #include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Host/XML.h"
 #include "lldb/Target/MemoryRegionInfo.h"
+#include "lldb/Utility/AddressSpace.h"
 #include "lldb/Utility/DataBuffer.h"
+#include "lldb/Utility/GDBRemote.h"
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/lldb-enumerations.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -51,6 +53,17 @@ void HandlePacket(MockServer &server,
   ASSERT_EQ(PacketResult::Success, server.GetPacket(request));
   ASSERT_THAT(std::string(request.GetStringRef()), expected);
   ASSERT_EQ(PacketResult::Success, server.SendPacket(response));
+}
+
+// Run the qSupported handshake and have the server advertise "address-spaces+"
+// so that subsequent address-space packets are enabled on the client.
+void EnableAddressSpaces(GDBRemoteCommunicationClient &client,
+                         MockServer &server) {
+  std::future<void> result =
+      std::async(std::launch::async, [&] { client.GetRemoteQSupported(); });
+  HandlePacket(server, testing::StartsWith("qSupported:"),
+               "PacketSize=3fff;address-spaces+");
+  result.get();
 }
 
 uint8_t all_registers[] = {'@', 'A', 'B', 'C', 'D', 'E', 'F', 'G',
@@ -189,6 +202,48 @@ TEST_F(GDBRemoteCommunicationClientTest, ReadRegister) {
   ASSERT_TRUE(bool(buffer_sp));
   ASSERT_EQ(0,
             memcmp(buffer_sp->GetBytes(), all_registers, sizeof all_registers));
+}
+
+TEST_F(GDBRemoteCommunicationClientTest, GetAddressSpaces) {
+  EnableAddressSpaces(client, server);
+  std::future<std::vector<AddressSpaceInfo>> result =
+      std::async(std::launch::async, [&] { return client.GetAddressSpaces(); });
+  // JSON responses are sent with the gdb-remote escaping applied (the same way
+  // the server's StreamGDBRemote::PutAsJSONArray does), so '{' and '}' survive
+  // the round trip.
+  StreamGDBRemote escaped;
+  llvm::StringRef json =
+      R"([{"name":"global","value":1,"is_thread_specific":false},)"
+      R"({"name":"local","value":2,"is_thread_specific":true}])";
+  escaped.PutEscapedBytes(json.data(), json.size());
+  HandlePacket(server, "jAddressSpacesInfo", escaped.GetString());
+
+  std::vector<AddressSpaceInfo> spaces = result.get();
+  ASSERT_EQ(spaces.size(), 2u);
+  EXPECT_EQ(spaces[0].name, "global");
+  EXPECT_EQ(spaces[0].value, 1u);
+  EXPECT_FALSE(spaces[0].is_thread_specific);
+  EXPECT_EQ(spaces[1].name, "local");
+  EXPECT_EQ(spaces[1].value, 2u);
+  EXPECT_TRUE(spaces[1].is_thread_specific);
+}
+
+TEST_F(GDBRemoteCommunicationClientTest, GetAddressSpacesNotAdvertised) {
+  // Without "address-spaces+" in qSupported the client never sends the packet.
+  EXPECT_TRUE(client.GetAddressSpaces().empty());
+}
+
+TEST_F(GDBRemoteCommunicationClientTest, GetAddressSpacesMalformed) {
+  EnableAddressSpaces(client, server);
+  std::future<std::vector<AddressSpaceInfo>> result =
+      std::async(std::launch::async, [&] { return client.GetAddressSpaces(); });
+  // Valid-looking JSON array, but the objects are missing required fields, so
+  // parsing fails and the client returns an empty list rather than crashing.
+  StreamGDBRemote escaped;
+  llvm::StringRef bad = R"([{"name":"global"}])";
+  escaped.PutEscapedBytes(bad.data(), bad.size());
+  HandlePacket(server, "jAddressSpacesInfo", escaped.GetString());
+  EXPECT_TRUE(result.get().empty());
 }
 
 TEST_F(GDBRemoteCommunicationClientTest, SaveRestoreRegistersNoSuffix) {

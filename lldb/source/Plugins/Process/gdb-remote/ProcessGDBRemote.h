@@ -139,6 +139,10 @@ public:
   size_t DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
                       Status &error) override;
 
+  size_t DoReadMemory(const AddressSpec &addr_spec,
+                      const AddressSpaceInfo &info, void *buf, size_t size,
+                      Status &error) override;
+
   /// Override of DoReadMemoryRanges that uses MultiMemRead to perform this
   /// operation in a single packet.
   llvm::SmallVector<llvm::MutableArrayRef<uint8_t>>

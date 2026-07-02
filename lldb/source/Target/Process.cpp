@@ -2026,6 +2026,39 @@ Status Process::DisableSoftwareBreakpoint(BreakpointSite *bp_site) {
   return error;
 }
 
+size_t Process::ReadMemory(const AddressSpec &addr_spec, void *buf, size_t size,
+                           Status &error) {
+  error.Clear();
+  if (addr_spec.IsInDefaultAddressSpace()) {
+    llvm::Expected<lldb::addr_t> load_addr =
+        addr_spec.ResolveAddressInDefaultAddressSpace(*this);
+    if (load_addr) {
+      // We were able to resolve the address to an address in the default
+      // address space. Just call our standard read memory method which goes
+      // through memory caching and ABI address fixing.
+      return ReadMemory(*load_addr, buf, size, error);
+    }
+    error = Status::FromError(load_addr.takeError());
+    return 0;
+  }
+  // We have an address that can't be resolved in the default address space, so
+  // we need to call the overload that knows how to read from an address space.
+  llvm::Expected<AddressSpaceInfo> info = addr_spec.GetAddressSpaceInfo(*this);
+
+  if (info)
+    return DoReadMemory(addr_spec, *info, buf, size, error);
+  error = Status::FromError(info.takeError());
+  return 0;
+}
+
+size_t Process::DoReadMemory(const AddressSpec &addr_spec,
+                             const AddressSpaceInfo &info, void *buf,
+                             size_t size, Status &error) {
+  error =
+      Status::FromErrorString("AddressSpec memory reading is not supported");
+  return 0;
+}
+
 // Uncomment to verify memory caching works after making changes to caching
 // code
 //#define VERIFY_MEMORY_READS
@@ -7114,4 +7147,59 @@ void Process::SetAddressableBitMasks(AddressableBits bit_masks) {
     SetHighmemCodeAddressMask(high_addr_mask);
     SetHighmemDataAddressMask(high_addr_mask);
   }
+}
+
+llvm::Expected<AddressSpaceInfo>
+AddressSpec::GetAddressSpaceInfo(lldb_private::Process &process) const {
+  if (m_addr_space_id.has_value())
+    return process.GetAddressSpaceInfo(*m_addr_space_id);
+  if (m_addr_space_name.has_value())
+    return process.GetAddressSpaceInfo(GetSpaceName());
+  return llvm::createStringError("AddressSpec has no address space info");
+}
+
+llvm::Expected<lldb::addr_t> AddressSpec::ResolveAddressInDefaultAddressSpace(
+    lldb_private::Process &) const {
+  if (!IsInDefaultAddressSpace())
+    return llvm::createStringError(
+        "address is not in the default address space");
+  // We just have a plain load address.
+  return m_value;
+}
+
+llvm::Expected<AddressSpaceInfo>
+Process::GetAddressSpaceInfo(llvm::StringRef address_space_name) {
+  if (m_address_spaces.empty())
+    return llvm::createStringError("process doesn't support address spaces");
+
+  for (const auto &address_space_info : m_address_spaces) {
+    if (address_space_info.name == address_space_name.str())
+      return address_space_info;
+  }
+
+  std::string error_str("invalid address space \"");
+  error_str.append(address_space_name.str());
+  error_str.append("\", address space must be one of:");
+  bool first = true;
+  for (const auto &addr_space_info : m_address_spaces) {
+    if (!first)
+      error_str.append(",");
+    error_str.append(" \"");
+    error_str.append(addr_space_info.name);
+    error_str.append("\"");
+    first = false;
+  }
+  return llvm::createStringError(error_str.c_str());
+}
+
+llvm::Expected<AddressSpaceInfo>
+Process::GetAddressSpaceInfo(uint64_t address_space_id) {
+  if (m_address_spaces.empty())
+    return llvm::createStringError("process doesn't support address spaces");
+
+  for (const auto &address_space_info : m_address_spaces) {
+    if (address_space_info.value == address_space_id)
+      return address_space_info;
+  }
+  return llvm::createStringError("invalid address space id");
 }

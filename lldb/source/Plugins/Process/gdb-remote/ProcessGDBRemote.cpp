@@ -1193,6 +1193,9 @@ void ProcessGDBRemote::LoadStubBinaries() {
           allow_memory_image_last_resort);
     }
   }
+
+  // Cache the address spaces the remote exposes (empty for most processes).
+  m_address_spaces = m_gdb_comm.GetAddressSpaces();
 }
 
 void ProcessGDBRemote::MaybeLoadExecutableModule() {
@@ -2950,6 +2953,12 @@ size_t ProcessGDBRemote::DoReadMemory(addr_t addr, void *buf, size_t size,
                                               packet);
   }
   return 0;
+}
+
+size_t ProcessGDBRemote::DoReadMemory(const AddressSpec &addr_spec,
+                                      const AddressSpaceInfo &info, void *buf,
+                                      size_t size, Status &error) {
+  return m_gdb_comm.ReadMemory(this, addr_spec, info, buf, size, error);
 }
 
 /// Returns the number of ranges that is safe to request using MultiMemRead

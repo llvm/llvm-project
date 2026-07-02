@@ -11,9 +11,11 @@
 #include "lldb/API/SBProcess.h"
 #include "lldb/API/SBSection.h"
 #include "lldb/API/SBStream.h"
+#include "lldb/API/SBThread.h"
 #include "lldb/Core/Address.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Symbol/LineEntry.h"
+#include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/Instrumentation.h"
 #include "lldb/Utility/StreamString.h"
@@ -259,4 +261,43 @@ SBLineEntry SBAddress::GetLineEntry() {
       sb_line_entry.SetLineEntry(line_entry);
   }
   return sb_line_entry;
+}
+
+SBAddressSpec::SBAddressSpec()
+    : m_opaque_up(new AddressSpec(LLDB_INVALID_ADDRESS)) {
+  LLDB_INSTRUMENT_VA(this);
+}
+
+SBAddressSpec::SBAddressSpec(const SBAddressSpec &rhs)
+    : m_opaque_up(new AddressSpec(rhs.ref())) {
+  LLDB_INSTRUMENT_VA(this, rhs);
+}
+
+SBAddressSpec::~SBAddressSpec() = default;
+
+SBAddressSpec::SBAddressSpec(lldb::addr_t load_addr)
+    : m_opaque_up(new AddressSpec(load_addr)) {
+  LLDB_INSTRUMENT_VA(this);
+}
+
+SBAddressSpec::SBAddressSpec(lldb::addr_t addr, const char *address_space)
+    : m_opaque_up(new AddressSpec(addr, address_space)) {
+  LLDB_INSTRUMENT_VA(this, addr, address_space);
+}
+
+SBAddressSpec::SBAddressSpec(lldb::addr_t addr, uint64_t address_space_id)
+    : m_opaque_up(
+          new AddressSpec(addr, std::optional<uint64_t>(address_space_id))) {
+  LLDB_INSTRUMENT_VA(this, addr, address_space_id);
+}
+
+AddressSpec &SBAddressSpec::ref() { return *m_opaque_up; }
+
+const AddressSpec &SBAddressSpec::ref() const { return *m_opaque_up; }
+
+const SBAddressSpec &SBAddressSpec::operator=(const SBAddressSpec &rhs) {
+  LLDB_INSTRUMENT_VA(this, rhs);
+  if (this != &rhs)
+    m_opaque_up = clone(rhs.m_opaque_up);
+  return *this;
 }

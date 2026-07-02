@@ -130,6 +130,45 @@ private:
 bool LLDB_API operator==(const SBAddress &lhs, const SBAddress &rhs);
 #endif
 
+/// A specification for a memory address that can include an address space.
+///
+/// A plain load address fully describes a location in most processes, but some
+/// (such as GPUs) need an address space identifier -- and possibly a thread for
+/// address spaces that are thread specific -- to describe a location in memory.
+class LLDB_API SBAddressSpec {
+public:
+  /// Create an invalid address spec.
+  SBAddressSpec();
+
+  SBAddressSpec(const SBAddressSpec &rhs);
+
+  /// Create from a load address.
+  ///
+  /// This represents a load address in memory and is equivalent to calling the
+  /// ReadMemory(...) methods that take a single lldb::addr_t value.
+  SBAddressSpec(lldb::addr_t load_addr);
+
+  /// Create an instance from an address and address space name.
+  SBAddressSpec(lldb::addr_t addr, const char *address_space);
+
+  /// Create an instance from an address and numeric address space identifier.
+  SBAddressSpec(lldb::addr_t addr, uint64_t address_space_id);
+
+  ~SBAddressSpec();
+
+  const lldb::SBAddressSpec &operator=(const lldb::SBAddressSpec &rhs);
+
+protected:
+  friend class SBProcess;
+
+  lldb_private::AddressSpec &ref();
+
+  const lldb_private::AddressSpec &ref() const;
+
+private:
+  std::unique_ptr<lldb_private::AddressSpec> m_opaque_up;
+};
+
 } // namespace lldb
 
 #endif // LLDB_API_SBADDRESS_H

@@ -199,6 +199,26 @@ public:
 
   size_t ReadMemory(addr_t addr, void *buf, size_t size, lldb::SBError &error);
 
+  /// Read memory from an address space.
+  ///
+  /// \param [in] addr_spec
+  ///   An address space specification that describes the memory to read from.
+  ///
+  /// \param [in] buf
+  ///   A pointer to a buffer to place the memory that is read.
+  ///
+  /// \param [in] size
+  ///   The number of bytes to read from memory.
+  ///
+  /// \param [out] error
+  ///   An error object that gets modified to indicate the success or failure
+  ///   of the memory read.
+  ///
+  /// \return
+  ///   The number of bytes that were successfully read into \a buf.
+  size_t ReadMemoryFromSpec(SBAddressSpec addr_spec, void *buf, size_t size,
+                            lldb::SBError &error);
+
   size_t WriteMemory(addr_t addr, const void *buf, size_t size,
                      lldb::SBError &error);
 

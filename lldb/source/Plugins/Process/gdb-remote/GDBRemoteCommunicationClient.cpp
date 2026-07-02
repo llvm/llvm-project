@@ -384,6 +384,7 @@ void GDBRemoteCommunicationClient::ResetDiscoverableSettings(bool did_exec) {
     m_attach_or_wait_reply = eLazyBoolCalculate;
     m_avoid_g_packets = eLazyBoolCalculate;
     m_supports_multiprocess = eLazyBoolCalculate;
+    m_supports_address_spaces = false;
     m_supports_qSaveCore = eLazyBoolCalculate;
     m_supports_qXfer_auxv_read = eLazyBoolCalculate;
     m_supports_qXfer_libraries_read = eLazyBoolCalculate;
@@ -451,6 +452,7 @@ void GDBRemoteCommunicationClient::GetRemoteQSupported() {
   m_supports_QPassSignals = eLazyBoolNo;
   m_supports_memory_tagging = eLazyBoolNo;
   m_supports_qSaveCore = eLazyBoolNo;
+  m_supports_address_spaces = false;
   m_uses_native_signals = eLazyBoolNo;
   m_x_packet_state.reset();
   m_supports_reverse_continue = eLazyBoolNo;
@@ -511,6 +513,8 @@ void GDBRemoteCommunicationClient::GetRemoteQSupported() {
         m_supports_memory_tagging = eLazyBoolYes;
       else if (x == "qSaveCore+")
         m_supports_qSaveCore = eLazyBoolYes;
+      else if (x == "address-spaces+")
+        m_supports_address_spaces = true;
       else if (x == "native-signals+")
         m_uses_native_signals = eLazyBoolYes;
       else if (x == "binary-upload+")
@@ -1158,6 +1162,79 @@ GDBRemoteCommunicationClient::GetProcessStandaloneBinaries() {
   if (m_qProcessInfo_is_valid == eLazyBoolCalculate)
     GetCurrentProcessInfo();
   return m_binary_addresses;
+}
+
+std::vector<AddressSpaceInfo> GDBRemoteCommunicationClient::GetAddressSpaces() {
+  // Address space support is advertised via the "address-spaces+" qSupported
+  // feature; don't send the packet if the server didn't advertise it.
+  if (!m_supports_address_spaces)
+    return {};
+
+  StringExtractorGDBRemote response;
+  response.SetResponseValidatorToJSON();
+  if (SendPacketAndWaitForResponse("jAddressSpacesInfo", response) !=
+      PacketResult::Success)
+    return {};
+
+  if (response.IsUnsupportedResponse() || response.IsErrorResponse()) {
+    m_supports_address_spaces = false;
+    return {};
+  }
+
+  llvm::Expected<std::vector<AddressSpaceInfo>> info =
+      llvm::json::parse<std::vector<AddressSpaceInfo>>(response.Peek(),
+                                                       "AddressSpaceInfo");
+  if (info)
+    return std::move(*info);
+
+  // A bare JSON parse error is meaningless on its own, so log both the full
+  // response and the parse error rather than surfacing it to the user.
+  Log *log = GetLog(GDBRLog::Process);
+  LLDB_LOG_ERROR(log, info.takeError(),
+                 "malformed jAddressSpacesInfo response '{1}': {0}",
+                 response.GetStringRef());
+  return {};
+}
+
+size_t GDBRemoteCommunicationClient::ReadMemory(ProcessGDBRemote *process,
+                                                const AddressSpec &addr_spec,
+                                                const AddressSpaceInfo &info,
+                                                void *buf, size_t size,
+                                                Status &error) {
+  // Make sure this packet is supported.
+  if (!m_supports_address_spaces) {
+    error = Status::FromErrorString("address spaces are not supported");
+    return 0;
+  }
+  StreamString packet;
+  packet.PutCString("qMemRead:");
+  packet.PutCString("addr:");
+  packet.PutHex64(addr_spec.GetValue());
+  packet.PutChar(';');
+  packet.PutCString("space:");
+  packet.PutHex64(info.value);
+  packet.PutChar(';');
+  packet.PutCString("length:");
+  packet.PutHex64(size);
+  packet.PutChar(';');
+
+  StringExtractorGDBRemote response;
+  if (SendPacketAndWaitForResponse(packet.GetString(), response) !=
+      PacketResult::Success) {
+    error = Status::FromErrorString("failed to send qMemRead packet");
+    return 0;
+  }
+  if (response.IsUnsupportedResponse()) {
+    m_supports_address_spaces = false;
+    error = Status::FromErrorString("address spaces are not supported");
+    return 0;
+  }
+  if (response.IsErrorResponse()) {
+    error = response.GetStatus();
+    return 0;
+  }
+  return response.GetHexBytes(
+      llvm::MutableArrayRef<uint8_t>((uint8_t *)buf, size), '\xdd');
 }
 
 bool GDBRemoteCommunicationClient::GetGDBServerVersion() {
