@@ -14,7 +14,9 @@
 //     requires approximately_sized_range<const V>
 
 #include <cassert>
+#include <cstddef>
 #include <ranges>
+#include <utility>
 
 #include "test_macros.h"
 #include "types.h"

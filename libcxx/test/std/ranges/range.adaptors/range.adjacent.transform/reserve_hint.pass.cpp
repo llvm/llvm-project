@@ -14,6 +14,7 @@
 //     requires approximately_sized_range<const InnerView>;
 
 #include <cassert>
+#include <cstddef>
 #include <ranges>
 #include <utility>
 

@@ -14,6 +14,7 @@
 //     requires approximately_sized_range<const V>
 
 #include <cassert>
+#include <cstddef>
 #include <ranges>
 #include <tuple>
 #include <utility>

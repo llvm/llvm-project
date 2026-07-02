@@ -11,7 +11,9 @@
 // std::ranges::reserve_hint
 
 #include <cassert>
+#include <cstddef>
 #include <ranges>
+#include <type_traits>
 
 #include "test_iterators.h"
 #include "test_macros.h"
