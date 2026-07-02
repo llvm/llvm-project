@@ -185,18 +185,40 @@ def BlahLibrary : SystemRuntimeLibrary<isBlahArch, (add calloc, LibraryWithCondi
 // CHECK-NEXT: }
 
 // CHECK: iota_range<RTLIB::LibcallImpl> RTLIB::RuntimeLibcallsInfo::lookupLibcallImplNameImpl(StringRef Name) {
-// CHECK: static constexpr uint16_t HashTableNameToEnum[16] = {
-// CHECK: 2,
-// CHECK: 0,
-// CHECK: 6,
-// CHECK: 0,
-// CHECK: };
+// CHECK: static constexpr uint16_t HashTableFirstValues[] = {
+// CHECK: static constexpr uint16_t HashTableSecondValues[] = {
+// CHECK: 5,
+// CHECK: struct HashTableCollisionBucket {
+// CHECK: uint16_t Bucket;
+// CHECK: uint16_t Start;
+// CHECK: uint16_t Count;
+// CHECK: static constexpr HashTableCollisionBucket HashTableCollisionBuckets[] = {
+// CHECK: {0, 0, 0},
+// CHECK: static constexpr uint16_t HashTableCollisionValues[] = {
+// CHECK: static_assert(RTLIB::NumLibcallImpls <= uint32_t(UINT16_MAX) + 1,
+// CHECK: static_assert(8 <= uint32_t(UINT16_MAX) + 1,
+// CHECK: static_assert(0 <= UINT16_MAX,
+// CHECK: static_assert(sizeof(HashTableFirstValues) / sizeof(HashTableFirstValues[0]) == 8);
+// CHECK: static_assert(sizeof(HashTableSecondValues) / sizeof(HashTableSecondValues[0]) == 8);
+// CHECK: static_assert(sizeof(HashTableCollisionBucket) == 6);
+// CHECK: static_assert(sizeof(HashTableCollisionBuckets) / sizeof(HashTableCollisionBuckets[0]) == 1);
+// CHECK: static_assert(sizeof(HashTableCollisionValues) / sizeof(HashTableCollisionValues[0]) == 1);
 
-// CHECK: unsigned Idx = (hash(Name) % 8) * 2;
-// CHECK: for (int I = 0; I != 2; ++I) {
-// CHECK: return libcallImplNameHit(Entry, StrOffset);
-
+// CHECK: unsigned Idx = hash(Name) % 8;
+// CHECK: uint16_t Entry = HashTableFirstValues[Idx];
+// CHECK: if (Str != Name) {
+// CHECK: Entry = HashTableSecondValues[Idx];
+// CHECK: if (Entry == 0)
+// CHECK: if (Str != Name) {
+// CHECK: auto CollisionBuckets = ArrayRef(HashTableCollisionBuckets, 0);
+// CHECK: auto It = llvm::lower_bound(
+// CHECK: if (It == CollisionBuckets.end() || It->Bucket != Idx)
+// CHECK: for (unsigned I = It->Start, E = I + It->Count; I != E; ++I) {
+// CHECK: Entry = HashTableCollisionValues[I];
+// CHECK: if (Str == Name)
+// CHECK-NEXT: return libcallImplNameHit(Entry, StrOffset);
 // CHECK: return enum_seq(RTLIB::Unsupported, RTLIB::Unsupported);
+// CHECK: return libcallImplNameHit(Entry, StrOffset);
 // CHECK-NEXT: }
 
 // CHECK: void llvm::RTLIB::RuntimeLibcallsInfo::setTargetRuntimeLibcallSets(const llvm::Triple &TT, ExceptionHandling ExceptionModel, FloatABI::ABIType FloatABI, EABI EABIVersion, StringRef ABIName) {
