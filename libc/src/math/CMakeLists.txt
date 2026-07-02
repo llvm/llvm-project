@@ -602,6 +602,7 @@ add_math_entrypoint_object(tanpif16)
 add_math_entrypoint_object(tgamma)
 add_math_entrypoint_object(tgammaf)
 add_math_entrypoint_object(lgamma)
+add_math_entrypoint_object(lgammabf16)
 add_math_entrypoint_object(lgamma_r)
 
 add_math_entrypoint_object(totalorder)

@@ -37,6 +37,19 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  lgammabf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    lgammabf16_test.cpp
+  DEPENDS
+    libc.src.math.lgammabf16
+    libc.src.__support.FPUtil.bfloat16
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
+)
+
+add_fp_unittest(
   cospif16_test
   SUITE
     libc-math-smoke-tests

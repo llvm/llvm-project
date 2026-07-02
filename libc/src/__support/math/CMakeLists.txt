@@ -62,6 +62,22 @@ add_header_library(
 )
 
 add_header_library(
+  lgammabf16
+  HDRS
+    lgammabf16.h
+  DEPENDS
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.cast
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.polyeval  
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
+)
+
+add_header_library(
   acosh_float_constants
   HDRS
     acosh_float_constants.h

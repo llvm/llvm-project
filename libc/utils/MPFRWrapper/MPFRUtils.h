@@ -54,6 +54,7 @@ enum class Operation : int {
   Log10,
   Log10p1,
   Log1p,
+  Lgamma,
   Mod2PI,
   ModPIOver2,
   ModPIOver4,

@@ -4930,6 +4930,16 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  lgammabf16
+  SRCS
+    lgammabf16.cpp
+  HDRS
+    ../lgammabf16.h
+  DEPENDS
+    libc.src.__support.math.lgammabf16
+)
+
+add_entrypoint_object(
   bf16fmaf128
   SRCS
     bf16fmaf128.cpp

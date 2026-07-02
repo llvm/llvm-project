@@ -312,6 +312,7 @@ add_fp_unittest(
     libc.src.__support.math.ldexpbf16
     libc.src.__support.math.ldexpf
     libc.src.__support.math.ldexpl
+    libc.src.__support.math.lgammabf16
     libc.src.__support.math.llogb
     libc.src.__support.math.llogbbf16
     libc.src.__support.math.llrint
