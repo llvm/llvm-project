@@ -14,7 +14,9 @@ namespace clang::doc::markdown {
 // S-expression style formatting (as used by the Swift AST printer) to make
 // dumped trees easier to read.
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void InlineNode::dump() const { print(llvm::errs()); }
+#endif
 
 void TextNode::print(llvm::raw_ostream &OS) const {
   OS << "TextNode: " << getText() << "\n";
@@ -36,7 +38,9 @@ void StrongNode::print(llvm::raw_ostream &OS) const {
     Child.print(OS);
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void BlockNode::dump() const { print(llvm::errs()); }
+#endif
 
 void ParagraphNode::print(llvm::raw_ostream &OS) const {
   OS << "ParagraphNode\n";
@@ -60,7 +64,9 @@ void ListItemNode::print(llvm::raw_ostream &OS) const {
     Child.print(OS);
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void ListItemNode::dump() const { print(llvm::errs()); }
+#endif
 
 void UnorderedListNode::print(llvm::raw_ostream &OS) const {
   OS << "UnorderedListNode\n";

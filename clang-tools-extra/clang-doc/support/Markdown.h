@@ -53,10 +53,14 @@ public:
   explicit InlineNode(NodeKind K) : Kind(K) {}
   virtual ~InlineNode() = default;
   NodeKind getKind() const { return Kind; }
+
   /// Recursively prints the node and its children to OS.
   virtual void print(llvm::raw_ostream &OS) const = 0;
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Prints to llvm::errs(). Only available in assert builds.
   LLVM_DUMP_METHOD void dump() const;
+#endif
 
 private:
   NodeKind Kind;
@@ -135,10 +139,14 @@ public:
   explicit BlockNode(NodeKind K) : Kind(K) {}
   virtual ~BlockNode() = default;
   NodeKind getKind() const { return Kind; }
+
   /// Recursively prints the node and its children to OS.
   virtual void print(llvm::raw_ostream &OS) const = 0;
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Prints to llvm::errs(). Only available in assert builds.
   LLVM_DUMP_METHOD void dump() const;
+#endif
 
 private:
   NodeKind Kind;
@@ -210,13 +218,18 @@ public:
   InlineList &children() { return Children; }
   const InlineList &children() const { return Children; }
   void print(llvm::raw_ostream &OS) const;
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Prints to llvm::errs(). Only available in assert builds.
   /// ListItemNode provides its own dump() since it does not inherit BlockNode.
   LLVM_DUMP_METHOD void dump() const;
+#endif
 
 private:
   InlineList Children;
 };
+
+using ItemList = llvm::simple_ilist<ListItemNode>;
 
 /// An unordered list (-, *, or + markers).
 class UnorderedListNode : public BlockNode {
@@ -224,15 +237,15 @@ public:
   UnorderedListNode() : BlockNode(NodeKind::NK_UnorderedList) {}
   void addItem(ListItemNode &N) { Items.push_back(N); }
   void removeItem(ListItemNode &N) { Items.remove(N); }
-  llvm::simple_ilist<ListItemNode> &items() { return Items; }
-  const llvm::simple_ilist<ListItemNode> &items() const { return Items; }
+  ItemList &items() { return Items; }
+  const ItemList &items() const { return Items; }
   void print(llvm::raw_ostream &OS) const override;
   static bool classof(const BlockNode *N) {
     return N->getKind() == NodeKind::NK_UnorderedList;
   }
 
 private:
-  llvm::simple_ilist<ListItemNode> Items;
+  ItemList Items;
 };
 
 /// An ordered list (1. 2. 3. markers). Start holds the first item number.
@@ -243,8 +256,8 @@ public:
   unsigned getStart() const { return Start; }
   void addItem(ListItemNode &N) { Items.push_back(N); }
   void removeItem(ListItemNode &N) { Items.remove(N); }
-  llvm::simple_ilist<ListItemNode> &items() { return Items; }
-  const llvm::simple_ilist<ListItemNode> &items() const { return Items; }
+  ItemList &items() { return Items; }
+  const ItemList &items() const { return Items; }
   void print(llvm::raw_ostream &OS) const override;
   static bool classof(const BlockNode *N) {
     return N->getKind() == NodeKind::NK_OrderedList;
@@ -252,7 +265,7 @@ public:
 
 private:
   unsigned Start;
-  llvm::simple_ilist<ListItemNode> Items;
+  ItemList Items;
 };
 
 /// A block quote (> marker).
