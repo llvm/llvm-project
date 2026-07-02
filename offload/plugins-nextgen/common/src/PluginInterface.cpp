@@ -695,9 +695,8 @@ Expected<DeviceImageTy *> GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
     return ImageOrErr.takeError();
   DeviceImageTy *Image = *ImageOrErr;
 
-  if (identify_magic(InputTgtImage) == file_magic::bitcode) {
+  if (identify_magic(InputTgtImage) == file_magic::bitcode)
     Image->setIRImage(MemoryBuffer::getMemBufferCopy(InputTgtImage));
-  }
 
   // Add the image to list.
   LoadedImages.push_back(Image);

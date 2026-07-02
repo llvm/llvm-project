@@ -406,24 +406,19 @@ public:
                            "Image");
   }
 
-  /// Get the IR image starting address.
-  const void *getIRStart() const {
-    // if (!DeviceIRImage) return nullptr;
-    return DeviceIRImage->getBufferStart();
-  }
-
-  /// Get the IR image size.
-  size_t getIRSize() const { return DeviceIRImage->getBufferSize(); }
-
   /// Get a memory buffer reference to the whole IR image.
-  MemoryBufferRef getIRMemoryBuffer() const {
-    return MemoryBufferRef(StringRef((const char *)getIRStart(), getIRSize()),
-                           "IRImage");
+  MemoryBufferRef getIRImageMemoryBuffer() const {
+    if (DeviceIRImage)
+      return MemoryBufferRef(*DeviceIRImage);
+
+    return MemoryBufferRef();
   }
 
-  /// Set the IR image
-  void setIRImage(std::unique_ptr<MemoryBuffer> m) {
-    DeviceIRImage = std::move(m);
+  bool hasIRImage() const { return DeviceIRImage != nullptr; }
+
+  /// Set the IR image.
+  void setIRImage(std::unique_ptr<MemoryBuffer> ImageBuffer) {
+    DeviceIRImage = std::move(ImageBuffer);
   }
 };
 

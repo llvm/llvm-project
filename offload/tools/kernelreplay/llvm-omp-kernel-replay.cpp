@@ -305,11 +305,7 @@ Error replayKernel() {
   }
 
   // Load the device image file.
-  if (LoadBitcodeOpt) {
-    Filepath.replace_extension("bc");
-  } else {
-    Filepath.replace_extension("image");
-  }
+  Filepath.replace_extension(LoadBitcodeOpt ? "bc" : "image");
   auto ImageBufferOrErr =
       MemoryBuffer::getFile(Filepath.c_str(), /*isText=*/false,
                             /*RequiresNullTerminator=*/false);
