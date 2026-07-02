@@ -3477,6 +3477,66 @@ template <typename ToTy> struct DenseMapInfo<ReachabilityQueryInfo<ToTy> *> {
 
 namespace {
 
+/// Tracks which basic blocks have been visited during a single traversal.
+///
+/// When a DominatorTree is available, visited state is stored in a persistent
+/// vector indexed by the block's DT DFS-in number. A monotonically increasing
+/// per-query ID lets us reuse the vector across queries without clearing it:
+/// a block is considered visited iff its slot equals the current query ID.
+/// This avoids the per-query allocation, hashing, and teardown cost of a
+/// SmallPtrSet when the same AA object runs many reachability queries. If no
+/// DominatorTree is available (or a block has no DT node), we transparently
+/// fall back to a SmallPtrSet scoped to the current query.
+class DFSNumVisitedTracker {
+public:
+  explicit DFSNumVisitedTracker(const DominatorTree *DT) : DT(DT) {}
+
+  /// Start a new traversal. Must be called before any call to markVisited()
+  /// for a given query.
+  void beginQuery() {
+    Fallback.clear();
+    if (!DT)
+      return;
+    if (VisitedMap.empty()) {
+      if (auto *Root = DT->getRootNode())
+        VisitedMap.resize(Root->getDFSNumOut() + 1, 0);
+    }
+    if (++CurrentQueryID == 0) {
+      // Query-ID wraparound: reset the map and start over at 1.
+      std::fill(VisitedMap.begin(), VisitedMap.end(), 0);
+      CurrentQueryID = 1;
+    }
+  }
+
+  /// Record that \p BB has been visited by the current query. Returns true if
+  /// this call transitioned \p BB from unvisited to visited (i.e. the caller
+  /// should process it), and false if \p BB was already visited.
+  bool markVisited(const BasicBlock *BB) {
+    if (DT) {
+      if (auto *Node = DT->getNode(BB)) {
+        unsigned DFSNum = Node->getDFSNumIn();
+        if (DFSNum < VisitedMap.size()) {
+          if (VisitedMap[DFSNum] == CurrentQueryID)
+            return false;
+          VisitedMap[DFSNum] = CurrentQueryID;
+          return true;
+        }
+      }
+    }
+    return Fallback.insert(BB).second;
+  }
+
+private:
+  const DominatorTree *DT;
+  /// Per-block visited slots, indexed by DT DFS-in number. A block is visited
+  /// by the current query iff VisitedMap[DFSNum] == CurrentQueryID.
+  std::vector<unsigned> VisitedMap;
+  /// Monotonically increasing query ID; 0 means "unvisited".
+  unsigned CurrentQueryID = 0;
+  /// Used only when DT is null or a block lacks a DT node.
+  SmallPtrSet<const BasicBlock *, 16> Fallback;
+};
+
 template <typename BaseTy, typename ToTy>
 struct CachedReachabilityAA : public BaseTy {
   using RQITy = ReachabilityQueryInfo<ToTy>;
@@ -3585,10 +3645,10 @@ struct AAIntraFnReachabilityFunction final
     : public CachedReachabilityAA<AAIntraFnReachability, Instruction> {
   using Base = CachedReachabilityAA<AAIntraFnReachability, Instruction>;
   AAIntraFnReachabilityFunction(const IRPosition &IRP, Attributor &A)
-      : Base(IRP, A) {
-    DT = A.getInfoCache().getAnalysisResultForFunction<DominatorTreeAnalysis>(
-        *IRP.getAssociatedFunction());
-  }
+      : Base(IRP, A),
+        DT(A.getInfoCache().getAnalysisResultForFunction<DominatorTreeAnalysis>(
+            *IRP.getAssociatedFunction())),
+        VisitedTracker(DT) {}
 
   bool isAssumedReachable(
       Attributor &A, const Instruction &From, const Instruction &To,
@@ -3683,14 +3743,18 @@ struct AAIntraFnReachabilityFunction final
                             IsTemporaryRQI);
     }
 
-    SmallPtrSet<const BasicBlock *, 16> Visited;
+    // Use a Dominator Tree DFS-number-backed visited tracker to avoid
+    // per-query SmallPtrSet allocation/hashing when we run many reachability
+    // queries.
+    VisitedTracker.beginQuery();
+
     SmallVector<const BasicBlock *, 16> Worklist;
     Worklist.push_back(FromBB);
 
     DenseSet<std::pair<const BasicBlock *, const BasicBlock *>> LocalDeadEdges;
     while (!Worklist.empty()) {
       const BasicBlock *BB = Worklist.pop_back_val();
-      if (!Visited.insert(BB).second)
+      if (!VisitedTracker.markVisited(BB))
         continue;
       for (const BasicBlock *SuccBB : successors(BB)) {
         if (LivenessAA && LivenessAA->isEdgeDead(BB, SuccBB)) {
@@ -3732,6 +3796,9 @@ private:
 
   /// The dominator tree of the function to short-circuit reasoning.
   const DominatorTree *DT = nullptr;
+
+  /// Tracks visited blocks across reachability queries on this AA.
+  DFSNumVisitedTracker VisitedTracker;
 };
 } // namespace
 
