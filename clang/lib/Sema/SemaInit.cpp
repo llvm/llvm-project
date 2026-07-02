@@ -39,6 +39,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+#include <limits>
 
 using namespace clang;
 
@@ -3373,6 +3374,24 @@ InitListChecker::CheckDesignatedInitializer(const InitializedEntity &Entity,
       DesignatedEndIndex.extOrTrunc(DesignatedIndexBitWidth);
     DesignatedStartIndex.setIsUnsigned(true);
     DesignatedEndIndex.setIsUnsigned(true);
+  }
+
+  // The semantic form of an initializer list stores one pointer for every
+  // array element, including the elements omitted before a designator. Avoid
+  // creating an initializer list whose dense representation is too large for
+  // an unsigned-sized allocation.
+  constexpr unsigned MaxInitListElements =
+      std::numeric_limits<unsigned>::max() / sizeof(Stmt *);
+  if (DesignatedEndIndex.uge(MaxInitListElements)) {
+    if (!VerifyOnly) {
+      llvm::APSInt NumInits =
+          DesignatedEndIndex.extend(DesignatedEndIndex.getBitWidth() + 1);
+      ++NumInits;
+      SemaRef.Diag(IndexExpr->getBeginLoc(), diag::err_array_too_large)
+          << toString(NumInits, 10) << IndexExpr->getSourceRange();
+    }
+    ++Index;
+    return true;
   }
 
   bool IsStringLiteralInitUpdate =

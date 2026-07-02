@@ -748,6 +748,7 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 - Fixed an assertion where we improperly handled implicit conversions to integral types from an atomic-type with a conversion function. (#GH201770)
 - Fixed assertion failures involving code completion with delayed default arguments and exception specifications. (#GH200879)
 - Fixed a regression where calling a function that takes a class-type parameter by value inside `decltype` of a concept could be incorrectly rejected when used as a non-type template argument. (#GH175831)
+- Clang now diagnoses inferred-size arrays with huge designated initializer indices instead of attempting to allocate an enormous initializer list and crashing with an out-of-memory error. (#GH205472)
 
 #### Bug Fixes to Compiler Builtins
 
