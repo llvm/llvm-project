@@ -1,5 +1,7 @@
 // Test that when two threads are scanning two different TUs, we log an expected
 // number of events, and for each pcm file, the sequence of events is expected.
+
+// UNSUPPORTED: system-windows
 // RUN: rm -rf %t
 // RUN: split-file %s %t
 // RUN: sed -e "s|DIR|%/t|g" %t/cdb.json.template > %t/cdb.json

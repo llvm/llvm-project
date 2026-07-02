@@ -73,6 +73,23 @@ TEST(AtomicLineLoggerTest, LogLinePIDTIDMsg) {
   EXPECT_TRUE(Content.contains(ExpectedTID));
 }
 
+TEST(AtomicLineLoggerTest, LogLineLogArray) {
+  llvm::unittest::TempDir Dir("atomic-logger-test", /*Unique=*/true);
+  SmallString<128> LogPath(Dir.path());
+  llvm::sys::path::append(LogPath, "test.log");
+
+  {
+    AtomicLineLogger Logger(LogPath);
+    SmallVector<std::string> Args = {"clang", "-cc1", "-x", "c"};
+    Logger.log().logArray("cmd:", " ", ArrayRef<std::string>(Args));
+  }
+
+  auto BufOrErr = llvm::MemoryBuffer::getFile(LogPath);
+  ASSERT_TRUE(BufOrErr) << "Failed to read log file";
+  StringRef Content = (*BufOrErr)->getBuffer();
+  EXPECT_TRUE(Content.contains("cmd: clang -cc1 -x c"));
+}
+
 TEST(AtomicLineLoggerTest, LogLineTimestamp) {
   llvm::unittest::TempDir Dir("atomic-logger-test", /*Unique=*/true);
   SmallString<128> LogPath(Dir.path());

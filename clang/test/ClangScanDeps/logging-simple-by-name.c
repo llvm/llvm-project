@@ -6,6 +6,8 @@
 // it needs to compile a PCM for module M, it creates a new thread with TID2 to
 // to do the module compilation. Similarly, the compiler creates a new thread
 // with TID3 to compile module N.
+
+// UNSUPPORTED: system-windows
 // RUN: rm -rf %t
 // RUN: split-file %s %t
 // RUN: sed -e "s|DIR|%/t|g" %t/cdb.json.template > %t/cdb.json

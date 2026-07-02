@@ -90,20 +90,10 @@ bool DependencyScanningWorker::computeDependencies(
       return true;
     }
 
-    {
-      auto LogLine = Service.getLogger().log();
-      LogLine << "starting scanning command:";
-      for (const auto &C : Cmd) {
-        LogLine << " " << C;
-      }
-    }
-
+    Service.getLogger().log().logArray("starting scanning command:", " ", Cmd);
     llvm::scope_exit ExitLogging([&] {
-      auto LogLine = Service.getLogger().log();
-      LogLine << "finished scanning command:";
-      for (const auto &C : Cmd) {
-        LogLine << " " << C;
-      }
+      Service.getLogger().log().logArray("finished scanning command:", " ",
+                                         Cmd);
     });
 
     auto DiagEngineWithDiagOpts =
