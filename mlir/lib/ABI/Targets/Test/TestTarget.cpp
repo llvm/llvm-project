@@ -125,8 +125,8 @@ namespace {
 /// set causes a parse error (no silent ignore).  Updated when new
 /// optional keys are added to the schema.
 constexpr StringRef knownArgKeys[] = {
-    "kind",        "coerced_type",   "sign_extend",
-    "can_flatten", "indirect_align", "byval",
+    "kind",           "coerced_type", "sign_extend",   "can_flatten",
+    "indirect_align", "byval",        "direct_offset",
 };
 
 bool isKnownArgKey(StringRef key) {
@@ -151,7 +151,7 @@ parseOne(DictionaryAttr argDict, function_ref<InFlightDiagnostic()> emitError) {
       emitError() << "unknown key '" << na.getName().getValue()
                   << "' in classification dictionary; allowed keys are "
                   << "kind, coerced_type, sign_extend, can_flatten, "
-                  << "indirect_align, byval";
+                  << "indirect_align, byval, direct_offset";
       return std::nullopt;
     }
 
@@ -164,6 +164,18 @@ parseOne(DictionaryAttr argDict, function_ref<InFlightDiagnostic()> emitError) {
     auto c = ArgClassification::getDirect(coerced);
     if (auto cf = argDict.getAs<BoolAttr>("can_flatten"))
       c.canFlatten = cf.getValue();
+    if (auto off = argDict.getAs<IntegerAttr>("direct_offset")) {
+      if (!coerced) {
+        emitError() << "'direct_offset' requires 'coerced_type'";
+        return std::nullopt;
+      }
+      if (off.getInt() < 0) {
+        emitError() << "'direct_offset' must be non-negative; got "
+                    << off.getInt();
+        return std::nullopt;
+      }
+      c.directOffset = off.getInt();
+    }
     return c;
   }
 

@@ -74,10 +74,23 @@ struct ArgClassification {
   /// For Indirect: whether the callee gets ownership (byval).
   bool byVal = false;
 
+  /// For Direct with coercion: the byte offset within the original aggregate
+  /// at which the coerced value lives.  Non-zero when the low eightbyte is
+  /// NO_CLASS and the value is carried in a later eightbyte (x86-64 SysV).
+  unsigned directOffset = 0;
+
   static ArgClassification getDirect(Type coerced = nullptr) {
     ArgClassification c;
     c.kind = ArgKind::Direct;
     c.coercedType = coerced;
+    return c;
+  }
+
+  static ArgClassification getDirect(Type coerced, unsigned offset) {
+    ArgClassification c;
+    c.kind = ArgKind::Direct;
+    c.coercedType = coerced;
+    c.directOffset = offset;
     return c;
   }
 

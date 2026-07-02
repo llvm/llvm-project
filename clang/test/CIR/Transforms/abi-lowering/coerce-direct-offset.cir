@@ -1,0 +1,75 @@
+// RUN: cir-opt %s -cir-call-conv-lowering="classification-attr=test_classify" \
+// RUN:   | FileCheck %s
+
+!u8i = !cir.int<u, 8>
+!s32i = !cir.int<s, 32>
+!s64i = !cir.int<s, 64>
+!rec_HiPair = !cir.struct<"HiPair" {!cir.array<!u8i x 8>, !s64i}>
+
+// 16-byte record whose live value is the high eightbyte: coerced to !s64i
+// taken at byte offset 8.
+#hi_return = {
+  return = { kind = "direct", coerced_type = !s64i, direct_offset = 8 : i64 },
+  args   = [ ]
+}
+
+#hi_arg = {
+  return = { kind = "direct" },
+  args   = [ { kind = "direct", coerced_type = !s64i, direct_offset = 8 : i64 } ]
+}
+
+// Offset 0 (no direct_offset): must remain byte-identical to today - no GEP.
+#zero_return = {
+  return = { kind = "direct", coerced_type = !s64i },
+  args   = [ ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  cir.func @returns_hi() -> !rec_HiPair
+      attributes { test_classify = #hi_return } {
+    %0 = cir.const #cir.zero : !rec_HiPair
+    cir.return %0 : !rec_HiPair
+  }
+
+  // Return coerced to !s64i read from byte offset 8 of the record slot.
+  // CHECK:      cir.func{{.*}} @returns_hi() -> !s64i
+  // CHECK:        %[[SLOT:.*]] = cir.alloca "coerce" {{.*}} : !cir.ptr<!rec_HiPair>
+  // CHECK:        cir.store %{{.*}}, %[[SLOT]] : !rec_HiPair, !cir.ptr<!rec_HiPair>
+  // CHECK:        %[[U8:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!rec_HiPair> -> !cir.ptr<!u8i>
+  // CHECK:        %[[OFF:.*]] = cir.const #cir.int<8> : !s64i
+  // CHECK:        %[[GEP:.*]] = cir.ptr_stride %[[U8]], %[[OFF]] : (!cir.ptr<!u8i>, !s64i) -> !cir.ptr<!u8i>
+  // CHECK:        %[[VCAST:.*]] = cir.cast bitcast %[[GEP]] : !cir.ptr<!u8i> -> !cir.ptr<!s64i>
+  // CHECK:        %[[COERCED:.*]] = cir.load %[[VCAST]] : !cir.ptr<!s64i>, !s64i
+  // CHECK:        cir.return %[[COERCED]] : !s64i
+
+  cir.func @takes_hi(%arg0: !rec_HiPair) -> !s32i
+      attributes { test_classify = #hi_arg } {
+    %0 = cir.const #cir.int<0> : !s32i
+    cir.return %0 : !s32i
+  }
+
+  // Arg arrives as !s64i; reconstructed into the record slot at byte offset 8.
+  // CHECK:      cir.func{{.*}} @takes_hi(%[[A:.*]]: !s64i) -> !s32i
+  // CHECK:        %[[ASLOT:.*]] = cir.alloca "coerce" {{.*}} : !cir.ptr<!rec_HiPair>
+  // CHECK:        %[[AU8:.*]] = cir.cast bitcast %[[ASLOT]] : !cir.ptr<!rec_HiPair> -> !cir.ptr<!u8i>
+  // CHECK:        %[[AOFF:.*]] = cir.const #cir.int<8> : !s64i
+  // CHECK:        %[[AGEP:.*]] = cir.ptr_stride %[[AU8]], %[[AOFF]] : (!cir.ptr<!u8i>, !s64i) -> !cir.ptr<!u8i>
+  // CHECK:        %[[ACAST:.*]] = cir.cast bitcast %[[AGEP]] : !cir.ptr<!u8i> -> !cir.ptr<!s64i>
+  // CHECK:        cir.store %[[A]], %[[ACAST]] : !s64i, !cir.ptr<!s64i>
+
+  cir.func @returns_zero() -> !rec_HiPair
+      attributes { test_classify = #zero_return } {
+    %0 = cir.const #cir.zero : !rec_HiPair
+    cir.return %0 : !rec_HiPair
+  }
+
+  // Offset 0: coercion goes straight through the bitcast view, no ptr_stride.
+  // CHECK:      cir.func{{.*}} @returns_zero() -> !s64i
+  // CHECK-NOT:    cir.ptr_stride
+  // CHECK:        cir.return %{{.*}} : !s64i
+}
