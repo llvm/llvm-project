@@ -1047,6 +1047,22 @@ void AMDGPUEarlyRegisterSpilling::spill(MachineInstr *CurMI,
       WhereToSpill = SpillBlock->getFirstTerminator();
       if (WhereToSpill == SpillBlock->end())
         WhereToSpill = SpillBlock->instr_end();
+
+      MachineInstr *InstrOfRegToSpill = MRI->getOneDef(RegToSpill)->getParent();
+      MachineBasicBlock *DefBlock = InstrOfRegToSpill->getParent();
+      if (DefBlock == SpillBlock &&
+          // Try to avoid to spill after an instruction that uses hardware wait
+          // counters.
+          (!TII->isVMEM(*InstrOfRegToSpill) ||
+           !TII->isSMRD(*InstrOfRegToSpill) || !TII->isDS(*InstrOfRegToSpill) ||
+           !TII->isEXP(*InstrOfRegToSpill) ||
+           (TII->isFLAT(*InstrOfRegToSpill) &&
+            (!TII->mayAccessVMEMThroughFlat(*InstrOfRegToSpill) ||
+             !TII->mayAccessLDSThroughFlat(*InstrOfRegToSpill))))) {
+        WhereToSpill = InstrOfRegToSpill->getNextNode()->getIterator();
+        if (WhereToSpill == SpillBlock->end())
+          WhereToSpill = SpillBlock->instr_end();
+      }
     }
 
     SmallVector<DomGroup> GroupOfUses;

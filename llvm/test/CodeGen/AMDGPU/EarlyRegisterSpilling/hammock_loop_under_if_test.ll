@@ -41,7 +41,9 @@ define amdgpu_ps void @hammock_loop_under_if_test(ptr addrspace(1) inreg %out, p
   ; CHECK-NEXT:   [[GLOBAL_LOAD_USHORT1:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_USHORT [[REG_SEQUENCE3]], 2, 0, implicit $exec :: (load (s16) from %ir.p1 + 2, addrspace 1)
   ; CHECK-NEXT:   SI_SPILL_V64_SAVE [[REG_SEQUENCE2]], %stack.0, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.0, align 4, addrspace 5)
   ; CHECK-NEXT:   [[GLOBAL_LOAD_USHORT2:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_USHORT [[REG_SEQUENCE1]], 0, 0, implicit $exec :: (load (s16) from %ir.p7, addrspace 1)
+  ; CHECK-NEXT:   SI_SPILL_V32_SAVE [[GLOBAL_LOAD_USHORT2]], %stack.5, $sgpr32, 0, implicit $exec :: (store (s32) into %stack.5, addrspace 5)
   ; CHECK-NEXT:   [[GLOBAL_LOAD_USHORT3:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_USHORT [[REG_SEQUENCE1]], 2, 0, implicit $exec :: (load (s16) from %ir.p7 + 2, addrspace 1)
+  ; CHECK-NEXT:   SI_SPILL_V32_SAVE [[GLOBAL_LOAD_USHORT3]], %stack.6, $sgpr32, 0, implicit $exec :: (store (s32) into %stack.6, addrspace 5)
   ; CHECK-NEXT:   SI_SPILL_V64_SAVE [[REG_SEQUENCE1]], %stack.1, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.1, align 4, addrspace 5)
   ; CHECK-NEXT:   SI_SPILL_V32_SAVE [[COPY13]], %stack.2, $sgpr32, 0, implicit $exec :: (store (s32) into %stack.2, addrspace 5)
   ; CHECK-NEXT:   [[GLOBAL_LOAD_DWORDX3_SADDR:%[0-9]+]]:vreg_96 = GLOBAL_LOAD_DWORDX3_SADDR [[REG_SEQUENCE4]], [[COPY18]], 0, 0, implicit $exec :: (load (s96) from %ir.base, align 4, addrspace 1)
@@ -54,8 +56,6 @@ define amdgpu_ps void @hammock_loop_under_if_test(ptr addrspace(1) inreg %out, p
   ; CHECK-NEXT:   [[V_LSHL_OR_B32_e64_2:%[0-9]+]]:vgpr_32 = V_LSHL_OR_B32_e64 [[V_LSHL_OR_B32_e64_1]], 16, [[V_LSHL_OR_B32_e64_]], implicit $exec
   ; CHECK-NEXT:   [[V_CMP_LE_U32_e64_:%[0-9]+]]:sreg_32 = V_CMP_LE_U32_e64 [[V_LSHL_OR_B32_e64_2]], [[GLOBAL_LOAD_DWORD]], implicit $exec
   ; CHECK-NEXT:   [[V_LSHL_OR_B32_e64_3:%[0-9]+]]:vgpr_32 = V_LSHL_OR_B32_e64 [[GLOBAL_LOAD_USHORT1]], 16, [[GLOBAL_LOAD_USHORT]], implicit $exec
-  ; CHECK-NEXT:   SI_SPILL_V32_SAVE [[GLOBAL_LOAD_USHORT2]], %stack.5, $sgpr32, 0, implicit $exec :: (store (s32) into %stack.5, addrspace 5)
-  ; CHECK-NEXT:   SI_SPILL_V32_SAVE [[GLOBAL_LOAD_USHORT3]], %stack.6, $sgpr32, 0, implicit $exec :: (store (s32) into %stack.6, addrspace 5)
   ; CHECK-NEXT:   [[SI_IF:%[0-9]+]]:sreg_32 = SI_IF [[V_CMP_LE_U32_e64_]], %bb.28, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; CHECK-NEXT:   S_BRANCH %bb.1
   ; CHECK-NEXT: {{  $}}
@@ -456,10 +456,10 @@ define amdgpu_ps void @hammock_loop_under_if_test(ptr addrspace(1) inreg %out, p
   ; CHECK-NEXT:   [[SI_SPILL_V32_RESTORE12:%[0-9]+]]:vgpr_32 = SI_SPILL_V32_RESTORE %stack.5, $sgpr32, 0, implicit $exec :: (load (s32) from %stack.5, addrspace 5)
   ; CHECK-NEXT:   [[SI_SPILL_V32_RESTORE13:%[0-9]+]]:vgpr_32 = SI_SPILL_V32_RESTORE %stack.6, $sgpr32, 0, implicit $exec :: (load (s32) from %stack.6, addrspace 5)
   ; CHECK-NEXT:   [[V_LSHL_OR_B32_e64_7:%[0-9]+]]:vgpr_32 = V_LSHL_OR_B32_e64 [[SI_SPILL_V32_RESTORE13]], 16, [[SI_SPILL_V32_RESTORE12]], implicit $exec
+  ; CHECK-NEXT:   SI_SPILL_V32_SAVE [[V_LSHL_OR_B32_e64_7]], %stack.12, $sgpr32, 0, implicit $exec :: (store (s32) into %stack.12, addrspace 5)
   ; CHECK-NEXT:   [[REG_SEQUENCE14:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[COPY17]], %subreg.sub0, [[COPY16]], %subreg.sub1
   ; CHECK-NEXT:   SI_SPILL_V32_SAVE [[GLOBAL_LOAD_DWORD_SADDR1]], %stack.10, $sgpr32, 0, implicit $exec :: (store (s32) into %stack.10, addrspace 5)
   ; CHECK-NEXT:   SI_SPILL_V32_SAVE [[GLOBAL_LOAD_DWORD]], %stack.11, $sgpr32, 0, implicit $exec :: (store (s32) into %stack.11, addrspace 5)
-  ; CHECK-NEXT:   SI_SPILL_V32_SAVE [[V_LSHL_OR_B32_e64_7]], %stack.12, $sgpr32, 0, implicit $exec :: (store (s32) into %stack.12, addrspace 5)
   ; CHECK-NEXT:   SI_SPILL_V32_SAVE [[V_LSHL_OR_B32_e64_3]], %stack.13, $sgpr32, 0, implicit $exec :: (store (s32) into %stack.13, addrspace 5)
   ; CHECK-NEXT:   SI_SPILL_V96_SAVE [[GLOBAL_LOAD_DWORDX3_SADDR]], %stack.15, $sgpr32, 0, implicit $exec :: (store (s96) into %stack.15, align 4, addrspace 5)
   ; CHECK-NEXT:   [[SI_ELSE2:%[0-9]+]]:sreg_32 = SI_ELSE [[SI_IF]], %bb.11, implicit-def dead $exec, implicit-def dead $scc, implicit $exec

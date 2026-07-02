@@ -18,13 +18,13 @@ define amdgpu_ps i64 @test1(ptr addrspace(3) %p1, ptr addrspace(3) %p2, i1 %cond
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr4
+  ; CHECK-NEXT:   SI_SPILL_V32_SAVE [[COPY]], %stack.0, $sgpr32, 0, implicit $exec :: (store (s32) into %stack.0, addrspace 5)
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr2
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr3
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; CHECK-NEXT:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 1, [[COPY1]], implicit $exec
   ; CHECK-NEXT:   [[V_CMP_NE_U32_e64_:%[0-9]+]]:sreg_32 = V_CMP_NE_U32_e64 1, [[V_AND_B32_e64_]], implicit $exec
-  ; CHECK-NEXT:   SI_SPILL_V32_SAVE [[COPY]], %stack.0, $sgpr32, 0, implicit $exec :: (store (s32) into %stack.0, addrspace 5)
   ; CHECK-NEXT:   [[SI_IF:%[0-9]+]]:sreg_32 = SI_IF [[V_CMP_NE_U32_e64_]], %bb.1, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; CHECK-NEXT:   S_BRANCH %bb.3
   ; CHECK-NEXT: {{  $}}

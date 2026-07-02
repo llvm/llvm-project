@@ -44,9 +44,9 @@ define amdgpu_ps void @test5(ptr addrspace(1) %p1, ptr addrspace(1) %p2, ptr add
   ; CHECK-NEXT:   [[V_LSHL_OR_B32_e64_2:%[0-9]+]]:vgpr_32 = V_LSHL_OR_B32_e64 [[V_LSHL_OR_B32_e64_1]], 16, [[V_LSHL_OR_B32_e64_]], implicit $exec
   ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
   ; CHECK-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY4]], %subreg.sub0, [[COPY3]], %subreg.sub1
+  ; CHECK-NEXT:   SI_SPILL_V64_SAVE [[REG_SEQUENCE1]], %stack.1, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.1, align 4, addrspace 5)
   ; CHECK-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY6]], %subreg.sub0, [[COPY5]], %subreg.sub1
   ; CHECK-NEXT:   [[SI_SPILL_V32_RESTORE:%[0-9]+]]:vgpr_32 = SI_SPILL_V32_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s32) from %stack.0, addrspace 5)
-  ; CHECK-NEXT:   SI_SPILL_V64_SAVE [[REG_SEQUENCE1]], %stack.1, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.1, align 4, addrspace 5)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1.loop.header:
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.5(0x40000000)

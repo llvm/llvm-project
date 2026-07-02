@@ -63,6 +63,7 @@ define amdgpu_ps void @test7(ptr addrspace(1) %p1, ptr addrspace(1) %p2, ptr add
   ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
   ; CHECK-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
   ; CHECK-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY7]], %subreg.sub0, [[COPY6]], %subreg.sub1
+  ; CHECK-NEXT:   SI_SPILL_V64_SAVE [[REG_SEQUENCE2]], %stack.7, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.7, align 4, addrspace 5)
   ; CHECK-NEXT:   [[SI_SPILL_V32_RESTORE:%[0-9]+]]:vgpr_32 = SI_SPILL_V32_RESTORE %stack.5, $sgpr32, 0, implicit $exec :: (load (s32) from %stack.5, addrspace 5)
   ; CHECK-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[SI_SPILL_V32_RESTORE]], %subreg.sub0, [[COPY8]], %subreg.sub1
   ; CHECK-NEXT:   [[SI_SPILL_V32_RESTORE1:%[0-9]+]]:vgpr_32 = SI_SPILL_V32_RESTORE %stack.3, $sgpr32, 0, implicit $exec :: (load (s32) from %stack.3, addrspace 5)
@@ -70,9 +71,8 @@ define amdgpu_ps void @test7(ptr addrspace(1) %p1, ptr addrspace(1) %p2, ptr add
   ; CHECK-NEXT:   SI_SPILL_V64_SAVE [[REG_SEQUENCE1]], %stack.6, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.6, align 4, addrspace 5)
   ; CHECK-NEXT:   [[REG_SEQUENCE4:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[SI_SPILL_V32_RESTORE1]], %subreg.sub0, [[SI_SPILL_V32_RESTORE2]], %subreg.sub1
   ; CHECK-NEXT:   [[SI_SPILL_V32_RESTORE3:%[0-9]+]]:vgpr_32 = SI_SPILL_V32_RESTORE %stack.1, $sgpr32, 0, implicit $exec :: (load (s32) from %stack.1, addrspace 5)
-  ; CHECK-NEXT:   [[SI_SPILL_V32_RESTORE4:%[0-9]+]]:vgpr_32 = SI_SPILL_V32_RESTORE %stack.2, $sgpr32, 0, implicit $exec :: (load (s32) from %stack.2, addrspace 5)
   ; CHECK-NEXT:   SI_SPILL_V64_SAVE [[REG_SEQUENCE3]], %stack.8, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.8, align 4, addrspace 5)
-  ; CHECK-NEXT:   SI_SPILL_V64_SAVE [[REG_SEQUENCE2]], %stack.7, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.7, align 4, addrspace 5)
+  ; CHECK-NEXT:   [[SI_SPILL_V32_RESTORE4:%[0-9]+]]:vgpr_32 = SI_SPILL_V32_RESTORE %stack.2, $sgpr32, 0, implicit $exec :: (load (s32) from %stack.2, addrspace 5)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1.loop1.header:
   ; CHECK-NEXT:   successors: %bb.4(0x40000000), %bb.2(0x40000000)
