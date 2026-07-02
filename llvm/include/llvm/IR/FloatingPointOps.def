@@ -1,0 +1,72 @@
+//===- llvm/IR/FloatingPointOps.def - FP intrinsics -------------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// Defines set of intrinsics, which are classified as floating-point operations.
+//
+//===----------------------------------------------------------------------===//
+
+// Describes floating-point operation.
+// Arguments of the entries are:
+// N - intrinsic function name,
+// R - true if the operation depends on rounding mode
+// D - DAG node corresponding to the intrinsic.
+#ifndef FUNCTION
+#define FUNCTION(N,R,D)
+#endif
+
+// Describes a floating-point operation that is lowered to DAG nodes STRICT_*
+// in strictfp functions.
+#ifndef STRICT_NODE
+#define STRICT_NODE(N,R,D) FUNCTION(N,R,D)
+#endif
+
+// Describes a floating-point operation that is lowered to DAG nodes STRICT_*
+// in strictfp functions, and requires special expansion in the DAG builder.
+#ifndef SPECIAL_DAG
+#define SPECIAL_DAG(N,R,D) FUNCTION(N,R,D)
+#endif
+
+STRICT_NODE(nearbyint,      1, FNEARBYINT)
+STRICT_NODE(trunc,          0, FTRUNC)
+STRICT_NODE(ceil,           0, FCEIL)
+STRICT_NODE(floor,          0, FFLOOR)
+STRICT_NODE(round,          0, FROUND)
+STRICT_NODE(roundeven,      0, FROUNDEVEN)
+STRICT_NODE(rint,           1, FRINT)
+STRICT_NODE(lround,         0, LROUND)
+STRICT_NODE(llround,        0, LLROUND)
+STRICT_NODE(lrint,          1, LRINT)
+STRICT_NODE(llrint,         1, LLRINT)
+STRICT_NODE(minnum,         0, FMINNUM)
+STRICT_NODE(maxnum,         0, FMAXNUM)
+STRICT_NODE(minimum,        0, FMINIMUM)
+STRICT_NODE(maximum,        0, FMAXIMUM)
+STRICT_NODE(sqrt,           1, FSQRT)
+SPECIAL_DAG(exp,            1, FEXP)
+SPECIAL_DAG(exp2,           1, FEXP2)
+SPECIAL_DAG(log,            1, FLOG)
+SPECIAL_DAG(log2,           1, FLOG2)
+SPECIAL_DAG(log10,          1, FLOG10)
+SPECIAL_DAG(pow,            1, FPOW)
+SPECIAL_DAG(powi,           1, FPOWI)
+STRICT_NODE(sin,            1, FSIN)
+STRICT_NODE(cos,            1, FCOS)
+STRICT_NODE(tan,            1, FTAN)
+STRICT_NODE(sinh,           1, FSINH)
+STRICT_NODE(cosh,           1, FCOSH)
+STRICT_NODE(tanh,           1, FTANH)
+STRICT_NODE(asin,           1, FASIN)
+STRICT_NODE(acos,           1, FACOS)
+STRICT_NODE(atan,           1, FATAN)
+STRICT_NODE(atan2,          1, FATAN2)
+STRICT_NODE(ldexp,          1, FLDEXP)
+STRICT_NODE(fma,            1, FMA)
+
+#undef FUNCTION
+#undef STRICT_NODE
+#undef SPECIAL_BUILD

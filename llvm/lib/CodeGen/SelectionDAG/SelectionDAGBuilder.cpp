@@ -7011,111 +7011,24 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     setValue(&I,
              expandExp2(sdl, getValue(I.getArgOperand(0)), DAG, TLI, Flags));
     return;
+  case Intrinsic::exp10:
+    setValue(&I, DAG.getNode(ISD::FEXP10, sdl,
+                             getValue(I.getArgOperand(0)).getValueType(),
+                             getValue(I.getArgOperand(0)), Flags));
+    return;
   case Intrinsic::pow:
     setValue(&I, expandPow(sdl, getValue(I.getArgOperand(0)),
                            getValue(I.getArgOperand(1)), DAG, TLI, Flags));
     return;
-  case Intrinsic::sqrt:
   case Intrinsic::fabs:
-  case Intrinsic::sin:
-  case Intrinsic::cos:
-  case Intrinsic::tan:
-  case Intrinsic::asin:
-  case Intrinsic::acos:
-  case Intrinsic::atan:
-  case Intrinsic::sinh:
-  case Intrinsic::cosh:
-  case Intrinsic::tanh:
-  case Intrinsic::exp10:
-  case Intrinsic::floor:
-  case Intrinsic::ceil:
-  case Intrinsic::trunc:
-  case Intrinsic::rint:
-  case Intrinsic::nearbyint:
-  case Intrinsic::round:
-  case Intrinsic::roundeven:
-  case Intrinsic::canonicalize: {
-    unsigned Opcode;
-    // clang-format off
-    switch (Intrinsic) {
-    default: llvm_unreachable("Impossible intrinsic");  // Can't reach here.
-    case Intrinsic::sqrt:         Opcode = ISD::FSQRT;         break;
-    case Intrinsic::fabs:         Opcode = ISD::FABS;          break;
-    case Intrinsic::sin:          Opcode = ISD::FSIN;          break;
-    case Intrinsic::cos:          Opcode = ISD::FCOS;          break;
-    case Intrinsic::tan:          Opcode = ISD::FTAN;          break;
-    case Intrinsic::asin:         Opcode = ISD::FASIN;         break;
-    case Intrinsic::acos:         Opcode = ISD::FACOS;         break;
-    case Intrinsic::atan:         Opcode = ISD::FATAN;         break;
-    case Intrinsic::sinh:         Opcode = ISD::FSINH;         break;
-    case Intrinsic::cosh:         Opcode = ISD::FCOSH;         break;
-    case Intrinsic::tanh:         Opcode = ISD::FTANH;         break;
-    case Intrinsic::exp10:        Opcode = ISD::FEXP10;        break;
-    case Intrinsic::floor:        Opcode = ISD::FFLOOR;        break;
-    case Intrinsic::ceil:         Opcode = ISD::FCEIL;         break;
-    case Intrinsic::trunc:        Opcode = ISD::FTRUNC;        break;
-    case Intrinsic::rint:         Opcode = ISD::FRINT;         break;
-    case Intrinsic::nearbyint:    Opcode = ISD::FNEARBYINT;    break;
-    case Intrinsic::round:        Opcode = ISD::FROUND;        break;
-    case Intrinsic::roundeven:    Opcode = ISD::FROUNDEVEN;    break;
-    case Intrinsic::canonicalize: Opcode = ISD::FCANONICALIZE; break;
-    }
-    // clang-format on
-
-    setValue(&I, DAG.getNode(Opcode, sdl,
+    setValue(&I, DAG.getNode(ISD::FABS, sdl,
                              getValue(I.getArgOperand(0)).getValueType(),
                              getValue(I.getArgOperand(0)), Flags));
     return;
-  }
-  case Intrinsic::atan2:
-    setValue(&I, DAG.getNode(ISD::FATAN2, sdl,
+  case Intrinsic::canonicalize:
+    setValue(&I, DAG.getNode(ISD::FCANONICALIZE, sdl,
                              getValue(I.getArgOperand(0)).getValueType(),
-                             getValue(I.getArgOperand(0)),
-                             getValue(I.getArgOperand(1)), Flags));
-    return;
-  case Intrinsic::lround:
-  case Intrinsic::llround:
-  case Intrinsic::lrint:
-  case Intrinsic::llrint: {
-    unsigned Opcode;
-    // clang-format off
-    switch (Intrinsic) {
-    default: llvm_unreachable("Impossible intrinsic");  // Can't reach here.
-    case Intrinsic::lround:  Opcode = ISD::LROUND;  break;
-    case Intrinsic::llround: Opcode = ISD::LLROUND; break;
-    case Intrinsic::lrint:   Opcode = ISD::LRINT;   break;
-    case Intrinsic::llrint:  Opcode = ISD::LLRINT;  break;
-    }
-    // clang-format on
-
-    EVT RetVT = TLI.getValueType(DAG.getDataLayout(), I.getType());
-    setValue(&I, DAG.getNode(Opcode, sdl, RetVT,
-                             getValue(I.getArgOperand(0))));
-    return;
-  }
-  case Intrinsic::minnum:
-    setValue(&I, DAG.getNode(ISD::FMINNUM, sdl,
-                             getValue(I.getArgOperand(0)).getValueType(),
-                             getValue(I.getArgOperand(0)),
-                             getValue(I.getArgOperand(1)), Flags));
-    return;
-  case Intrinsic::maxnum:
-    setValue(&I, DAG.getNode(ISD::FMAXNUM, sdl,
-                             getValue(I.getArgOperand(0)).getValueType(),
-                             getValue(I.getArgOperand(0)),
-                             getValue(I.getArgOperand(1)), Flags));
-    return;
-  case Intrinsic::minimum:
-    setValue(&I, DAG.getNode(ISD::FMINIMUM, sdl,
-                             getValue(I.getArgOperand(0)).getValueType(),
-                             getValue(I.getArgOperand(0)),
-                             getValue(I.getArgOperand(1)), Flags));
-    return;
-  case Intrinsic::maximum:
-    setValue(&I, DAG.getNode(ISD::FMAXIMUM, sdl,
-                             getValue(I.getArgOperand(0)).getValueType(),
-                             getValue(I.getArgOperand(0)),
-                             getValue(I.getArgOperand(1)), Flags));
+                             getValue(I.getArgOperand(0)), Flags));
     return;
   case Intrinsic::minimumnum:
     setValue(&I, DAG.getNode(ISD::FMINIMUMNUM, sdl,
@@ -7131,12 +7044,6 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     return;
   case Intrinsic::copysign:
     setValue(&I, DAG.getNode(ISD::FCOPYSIGN, sdl,
-                             getValue(I.getArgOperand(0)).getValueType(),
-                             getValue(I.getArgOperand(0)),
-                             getValue(I.getArgOperand(1)), Flags));
-    return;
-  case Intrinsic::ldexp:
-    setValue(&I, DAG.getNode(ISD::FLDEXP, sdl,
                              getValue(I.getArgOperand(0)).getValueType(),
                              getValue(I.getArgOperand(0)),
                              getValue(I.getArgOperand(1)), Flags));
@@ -7175,12 +7082,6 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
                              getValue(I.getArgOperand(0)), Flags));
     return;
   }
-  case Intrinsic::fma:
-    setValue(&I, DAG.getNode(
-                     ISD::FMA, sdl, getValue(I.getArgOperand(0)).getValueType(),
-                     getValue(I.getArgOperand(0)), getValue(I.getArgOperand(1)),
-                     getValue(I.getArgOperand(2)), Flags));
-    return;
 #define INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC)                         \
   case Intrinsic::INTRINSIC:
 #include "llvm/IR/ConstrainedOps.def"
@@ -7190,6 +7091,12 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
 #include "llvm/IR/VPIntrinsics.def"
     visitVectorPredicationIntrinsic(cast<VPIntrinsic>(I));
     return;
+#define SPECIAL_DAG(NAME, R, DAGN)
+#define FUNCTION(NAME, R, DAGN)                                                \
+  case Intrinsic::NAME:                                                        \
+    visitFPOperation(I, ISD::DAGN);                                            \
+    return;
+#include "llvm/IR/FloatingPointOps.def"
   case Intrinsic::fptrunc_round: {
     // Get the last argument, the metadata and convert it to an integer in the
     // call
@@ -9781,6 +9688,58 @@ bool SelectionDAGBuilder::visitBinaryFloatCall(const CallInst &I,
   SDValue Tmp1 = getValue(I.getArgOperand(1));
   EVT VT = Tmp0.getValueType();
   setValue(&I, DAG.getNode(Opcode, getCurSDLoc(), VT, Tmp0, Tmp1, Flags));
+  return true;
+}
+
+bool SelectionDAGBuilder::visitFPOperation(const CallInst &I, unsigned Opcode) {
+  MemoryEffects ME = I.getMemoryEffects();
+
+  SmallVector<SDValue, 4> Operands;
+  bool HasChain = ME.doesAccessInaccessibleMem();
+  if (HasChain)
+    Operands.push_back(getRoot());
+  for (auto &Arg : I.args())
+    Operands.push_back(getValue(Arg));
+
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  EVT VT = TLI.getValueType(DAG.getDataLayout(), I.getType(), true);
+  SDVTList NodeVT;
+  if (HasChain)
+    NodeVT = DAG.getVTList(VT, MVT::Other);
+  else
+    NodeVT = DAG.getVTList(VT);
+
+  SDNodeFlags Flags;
+  if (auto *FPOp = dyn_cast<FPMathOperator>(&I))
+    Flags.copyFMF(*FPOp);
+  fp::ExceptionBehavior EB;
+  if (DAG.getMachineFunction().getFunction().getAttributes().hasFnAttr(
+          llvm::Attribute::StrictFP)) {
+    EB = fp::ebStrict;
+    Flags.setNoFPExcept(true);
+  } else {
+    EB = fp::ebIgnore;
+  }
+
+  // Temporary solution: use STRICT_* nodes.
+  if (HasChain)
+    switch (Opcode) {
+    default:
+      break;
+#define STRICT_NODE(NAME, RM, DAGN)                                            \
+  case ISD::DAGN:                                                              \
+    Opcode = ISD::STRICT_##DAGN;                                               \
+    break;
+#include "llvm/IR/FloatingPointOps.def"
+    }
+
+  SDLoc sdl = getCurSDLoc();
+  SDValue Result = DAG.getNode(Opcode, sdl, NodeVT, Operands, Flags);
+  if (HasChain)
+    pushFPOpOutChain(Result, EB);
+
+  SDValue FPResult = Result.getValue(0);
+  setValue(&I, FPResult);
   return true;
 }
 
