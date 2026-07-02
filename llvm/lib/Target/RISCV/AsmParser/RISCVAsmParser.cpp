@@ -1705,10 +1705,25 @@ void RISCVAsmParser::FilterNearMisses(
   std::multimap<unsigned, unsigned> OperandMissesSeen;
   SmallSet<FeatureBitset, 4> FeatureMissesSeen;
   bool ReportedTooFewOperands = false;
+  bool ReportedTooManyOperands = false;
 
   for (NearMissInfo &I : NearMissesIn) {
     switch (I.getKind()) {
     case NearMissInfo::NearMissOperand: {
+      // When the matcher finds surplus operands, it records them as
+      // NearMissOperand with InvalidMatchClass. We detect this and report
+      // "too many operands" instead of "invalid operand".
+      if (I.getOperandClass() == InvalidMatchClass) {
+        if (!ReportedTooManyOperands) {
+          SMLoc OperandLoc =
+              ((RISCVOperand &)*Operands[I.getOperandIndex()]).getStartLoc();
+          NearMissesOut.emplace_back(
+              NearMissMessage{OperandLoc, "too many operands for instruction"});
+          ReportedTooManyOperands = true;
+        }
+        break;
+      }
+
       SMLoc OperandLoc =
           ((RISCVOperand &)*Operands[I.getOperandIndex()]).getStartLoc();
       std::string OperandDiag = getCustomOperandDiag(I.getOperandError());
