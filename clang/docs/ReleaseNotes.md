@@ -1057,6 +1057,10 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 ### Static Analyzer
 
+- The `-analyzer-constraints` option `z3` was renamed to `unsupported-z3`
+  because the Z3-based (constraint) solver was known for crashing for years now.
+  Didn't receive support, so it was marked unsupported.
+
 #### Crash and bug fixes
 
 - Fixed `security.VAList` checker producing false positives when analyzing
