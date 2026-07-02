@@ -1661,6 +1661,42 @@ CallExpr
 DeclRefExpr ''
 )cpp");
   }
+
+  auto AST3 = buildASTFromCodeWithArgs(R"cpp(
+
+struct S {
+  operator int(this const S&);
+};
+
+void f() {
+  S s;
+  int i = int(s);
+}
+
+)cpp",
+                                       {"-std=c++23"});
+  {
+    auto FN = ast_matchers::match(
+        explicitCastExpr(hasSourceExpression(expr().bind("sourceExpr"))),
+        AST3->getASTContext());
+    EXPECT_EQ(FN.size(), 1u);
+
+    EXPECT_EQ(dumpASTString(TK_AsIs, FN[0].getNodeAs<Expr>("sourceExpr")),
+              R"cpp(
+ImplicitCastExpr
+`-CallExpr
+  |-ImplicitCastExpr
+  | `-DeclRefExpr 'operator int'
+  `-ImplicitCastExpr
+    `-DeclRefExpr 's'
+)cpp");
+
+    EXPECT_EQ(dumpASTString(TK_IgnoreUnlessSpelledInSource,
+                            FN[0].getNodeAs<Expr>("sourceExpr")),
+              R"cpp(
+DeclRefExpr 's'
+)cpp");
+  }
 }
 
 TEST(Traverse, IgnoreUnlessSpelledInSourceTemplateInstantiations) {
