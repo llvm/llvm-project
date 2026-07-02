@@ -283,23 +283,28 @@ void DIEBuilder::buildTypeUnits(DebugStrOffsetsWriter *StrOffsetWriter,
   }
 }
 
-/// Recursively collects type unit signatures from the given DIE and all of its
-/// children.
+/// Collects the signatures of all type units referenced (via DW_FORM_ref_sig8)
+/// by any DIE of \p U.
+///
+/// The DIEs are streamed one at a time with DWARFDebugInfoEntry::extractFast so
+/// the unit's full DIE vector is never materialized -- this keeps RSS down
+/// during debug-info processing, where BOLT is already memory-heavy.
 ///
 /// Note: De-duplication of the collected signatures is handled at the outer
 /// level by registerUnit.
-static void collectReferencedTypeSignatures(DWARFDie Die,
+static void collectReferencedTypeSignatures(DWARFUnit &U,
                                             DenseSet<uint64_t> &ProcessedTU,
                                             SmallVectorImpl<uint64_t> &TUlist) {
-  SmallVector<DWARFDie, 8> DIElist;
-  DIElist.push_back(Die);
-
-  while (!DIElist.empty()) {
-    DWARFDie Current = DIElist.pop_back_val();
-    if (!Current)
-      continue;
-
-    for (const DWARFAttribute &Attr : Current.attributes()) {
+  DWARFDataExtractor DebugInfoData = U.getDebugInfoExtractor();
+  uint64_t DIEOffset = U.getOffset() + U.getHeaderSize();
+  const uint64_t NextCUOffset = U.getNextUnitOffset();
+  DWARFDebugInfoEntry DIEEntry;
+  while (DIEOffset < NextCUOffset &&
+         DIEEntry.extractFast(U, &DIEOffset, DebugInfoData, NextCUOffset, 0)) {
+    if (!DIEEntry.getAbbreviationDeclarationPtr())
+      continue; // Null entry: terminator of a sibling chain.
+    DWARFDie Die(&U, &DIEEntry);
+    for (const DWARFAttribute &Attr : Die.attributes()) {
       if (Attr.Value.getForm() != dwarf::DW_FORM_ref_sig8)
         continue;
       if (const std::optional<uint64_t> Signature =
@@ -307,9 +312,6 @@ static void collectReferencedTypeSignatures(DWARFDie Die,
         if (ProcessedTU.insert(*Signature).second)
           TUlist.push_back(*Signature);
     }
-
-    for (DWARFDie Child : Current.children())
-      DIElist.push_back(Child);
   }
 }
 
@@ -319,7 +321,7 @@ void DIEBuilder::buildDWPTypeUnitsForUnit(DWARFUnit &U) {
   DenseSet<uint64_t> ProcessedTU;
   SmallVector<uint64_t, 8> TUlist;
   // Collecting signatures of type units referenced by this unit.
-  collectReferencedTypeSignatures(U.getUnitDIE(), ProcessedTU, TUlist);
+  collectReferencedTypeSignatures(U, ProcessedTU, TUlist);
 
   getState().Type = U.getVersion() < 5 ? ProcessingType::DWARF4TUs
                                        : ProcessingType::DWARF5TUs;
@@ -336,7 +338,7 @@ void DIEBuilder::buildDWPTypeUnitsForUnit(DWARFUnit &U) {
     if (!UnitId || getState().CloneUnitCtxMap[*UnitId].IsConstructed)
       continue;
 
-    collectReferencedTypeSignatures(TU->getUnitDIE(), ProcessedTU, TUlist);
+    collectReferencedTypeSignatures(*TU, ProcessedTU, TUlist);
   }
 
   // Ensure original order of processing type units
