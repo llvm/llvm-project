@@ -6,7 +6,7 @@
 # RUN: %clang %cflags -O0 %t.o -o %t.exe -Wl,-q
 # RUN: link_fdata %s %t.o %t.fdata
 # RUN: llvm-bolt %t.exe -o %t.bolt  \
-# RUN:   --data %t.fdata  | FileCheck %s
+# RUN:   --data %t.fdata --lite=0 | FileCheck %s
 
 # CHECK: BOLT-INFO: Inserted 1 stubs in the hot area and 0 stubs in the cold area. 
 
