@@ -213,12 +213,6 @@ def __builtin_amdgcn_ds_permute : AMDGPUBuiltin<"int(int, int)", [Const]>;
 def __builtin_amdgcn_ds_bpermute : AMDGPUBuiltin<"int(int, int)", [Const]>;
 def __builtin_amdgcn_readfirstlane : AMDGPUBuiltin<"int(int)", [Const]>;
 def __builtin_amdgcn_readlane : AMDGPUBuiltin<"int(int, int)", [Const]>;
-def __builtin_amdgcn_pin_vgpr : AMDGPUBuiltin<"int(int, _Constant int)", [Const]>;
-def __builtin_amdgcn_pin_agpr : AMDGPUBuiltin<"int(int, _Constant int)", [Const]>;
-def __builtin_amdgcn_pin_vgpr_v4f32 : AMDGPUBuiltin<"_ExtVector<4, float>(_ExtVector<4, float>, _Constant int)", [Const]>;
-def __builtin_amdgcn_pin_agpr_v4f32 : AMDGPUBuiltin<"_ExtVector<4, float>(_ExtVector<4, float>, _Constant int)", [Const]>;
-def __builtin_amdgcn_pin_vgpr_v16f32 : AMDGPUBuiltin<"_ExtVector<16, float>(_ExtVector<16, float>, _Constant int)", [Const]>;
-def __builtin_amdgcn_pin_agpr_v16f32 : AMDGPUBuiltin<"_ExtVector<16, float>(_ExtVector<16, float>, _Constant int)", [Const]>;
 def __builtin_amdgcn_wave_shuffle : AMDGPUBuiltin<"int(int, int)", [Const]> {
   let Documentation = [DocWaveShuffle];
   let ArgNames = ["src", "idx"];

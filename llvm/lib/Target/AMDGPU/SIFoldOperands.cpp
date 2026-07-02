@@ -2683,9 +2683,15 @@ bool SIFoldOperandsImpl::tryFoldLoad(MachineInstr &MI) {
     return false;
 
   // Check that all uses a copy to an agpr or a reg_sequence producing an agpr.
+  // A PIN_AGPR_B* pseudo (from llvm.amdgcn.pin.agpr) is also an AGPR terminator:
+  // its def is already an AGPR tuple, so a load feeding it should be folded into
+  // AGPR (a native buffer_load into AGPR) exactly like a copy-to-AGPR.
+  auto IsPinAgpr = [&](const MachineInstr &MI) {
+    return TII->getName(MI.getOpcode()).starts_with("PIN_AGPR_B");
+  };
   while (!Users.empty()) {
     const MachineInstr *I = Users.pop_back_val();
-    if (!I->isCopy() && !I->isRegSequence())
+    if (!I->isCopy() && !I->isRegSequence() && !IsPinAgpr(*I))
       return false;
     Register DstReg = I->getOperand(0).getReg();
     // Physical registers may have more than one instruction definitions

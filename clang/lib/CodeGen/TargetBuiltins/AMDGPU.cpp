@@ -671,22 +671,6 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_readfirstlane:
     return emitBuiltinWithOneOverloadedType<1>(*this, E,
                                                Intrinsic::amdgcn_readfirstlane);
-  case AMDGPU::BI__builtin_amdgcn_pin_vgpr:
-  case AMDGPU::BI__builtin_amdgcn_pin_vgpr_v4f32:
-  case AMDGPU::BI__builtin_amdgcn_pin_vgpr_v16f32:
-  case AMDGPU::BI__builtin_amdgcn_pin_agpr:
-  case AMDGPU::BI__builtin_amdgcn_pin_agpr_v4f32:
-  case AMDGPU::BI__builtin_amdgcn_pin_agpr_v16f32: {
-    bool IsVGPR = BuiltinID == AMDGPU::BI__builtin_amdgcn_pin_vgpr ||
-                  BuiltinID == AMDGPU::BI__builtin_amdgcn_pin_vgpr_v4f32 ||
-                  BuiltinID == AMDGPU::BI__builtin_amdgcn_pin_vgpr_v16f32;
-    Intrinsic::ID IID =
-        IsVGPR ? Intrinsic::amdgcn_pin_vgpr : Intrinsic::amdgcn_pin_agpr;
-    llvm::Value *Val = EmitScalarExpr(E->getArg(0));
-    llvm::Value *Reg = EmitScalarExpr(E->getArg(1));
-    llvm::Function *F = CGM.getIntrinsic(IID, {Val->getType()});
-    return Builder.CreateCall(F, {Val, Reg});
-  }
   case AMDGPU::BI__builtin_amdgcn_div_fixup:
   case AMDGPU::BI__builtin_amdgcn_div_fixupf:
   case AMDGPU::BI__builtin_amdgcn_div_fixuph:
