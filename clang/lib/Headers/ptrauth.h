@@ -38,8 +38,7 @@ typedef enum {
      The extra data is always 0. */
   ptrauth_key_function_pointer = ptrauth_key_process_independent_code,
 
-  /* The key used to sign C++ v-table pointers.
-     The extra data is always 0. */
+  /* The key used to sign C++ v-table pointers. */
   ptrauth_key_cxx_vtable_pointer = ptrauth_key_process_independent_data,
 
   /* The key used to sign metadata pointers to Objective-C method-lists. */
