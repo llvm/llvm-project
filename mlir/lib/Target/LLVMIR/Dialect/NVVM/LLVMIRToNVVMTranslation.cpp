@@ -36,6 +36,35 @@ static ArrayRef<unsigned> getSupportedIntrinsicsImpl() {
   return convertibleIntrinsics;
 }
 
+/// Imports one of the four `bar.sync` LLVM intrinsic variants into a single
+/// `nvvm.barrier` op, deriving the `aligned` attribute and the optional
+/// `numberOfThreads` operand from the specific intrinsic ID.
+static LogicalResult
+convertBarrierSyncIntrinsic(OpBuilder &odsBuilder, llvm::CallInst *inst,
+                            LLVM::ModuleImport &moduleImport,
+                            ArrayRef<llvm::Value *> llvmOperands,
+                            ArrayRef<llvm::OperandBundleUse> llvmOpBundles) {
+  llvm::Intrinsic::ID id = inst->getIntrinsicID();
+  bool aligned = (id == llvm::Intrinsic::nvvm_barrier_cta_sync_aligned_all ||
+                  id == llvm::Intrinsic::nvvm_barrier_cta_sync_aligned_count);
+  bool hasCount = (id == llvm::Intrinsic::nvvm_barrier_cta_sync_count ||
+                   id == llvm::Intrinsic::nvvm_barrier_cta_sync_aligned_count);
+
+  SmallVector<Value> mlirOperands;
+  SmallVector<NamedAttribute> mlirAttrs;
+  if (failed(moduleImport.convertIntrinsicArguments(
+          llvmOperands, llvmOpBundles, /*requiresOpBundles=*/false, {}, {},
+          mlirOperands, mlirAttrs)))
+    return failure();
+
+  auto op = NVVM::BarrierOp::create(
+      odsBuilder, moduleImport.translateLoc(inst->getDebugLoc()),
+      mlirOperands.front(), hasCount ? mlirOperands.back() : Value{},
+      odsBuilder.getBoolAttr(aligned));
+  moduleImport.mapNoResultOp(inst, op);
+  return success();
+}
+
 /// Converts the LLVM intrinsic to an MLIR NVVM dialect operation if a
 /// conversion exits. Returns failure otherwise.
 static LogicalResult convertIntrinsicImpl(OpBuilder &odsBuilder,
