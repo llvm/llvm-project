@@ -15,6 +15,9 @@
 #include "src/__support/OSUtil/linux/syscall_wrappers/mprotect.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/munmap.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/open.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/sched_getparam.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/sched_getscheduler.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/sched_setscheduler.h"
 #include "src/__support/OSUtil/syscall.h" // For syscall functions.
 #include "src/__support/common.h"
 #include "src/__support/error_or.h"
@@ -483,6 +486,27 @@ int Thread::get_name(cpp::StringStream &name) const {
   else
     name_buffer[retval] = '\0';
   name << name_buffer << cpp::StringStream::ENDS;
+  return 0;
+}
+
+int Thread::setschedparam(int policy, const struct sched_param *param) {
+  auto result = linux_syscalls::sched_setscheduler(attrib->tid, policy, param);
+  if (!result.has_value())
+    return result.error();
+  return 0;
+}
+
+int Thread::getschedparam(int *policy, struct sched_param *param) const {
+  auto pol_result = linux_syscalls::sched_getscheduler(attrib->tid);
+  if (!pol_result.has_value())
+    return pol_result.error();
+
+  auto param_result = linux_syscalls::sched_getparam(attrib->tid, param);
+  if (!param_result.has_value())
+    return param_result.error();
+
+  if (policy != nullptr)
+    *policy = pol_result.value();
   return 0;
 }
 

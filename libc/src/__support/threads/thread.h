@@ -23,6 +23,8 @@
 
 #include <stddef.h> // For size_t
 
+struct sched_param;
+
 namespace LIBC_NAMESPACE_DECL {
 
 using ThreadRunnerPosix = void *(void *);
@@ -230,6 +232,20 @@ struct Thread {
 
   // Return the name of the thread in |name|. Return the error number of error.
   int get_name(cpp::StringStream &name) const;
+
+  /// Set the scheduling policy and parameters of the thread.
+  ///
+  /// \param policy The new scheduling policy.
+  /// \param param The new scheduling parameters.
+  /// \return 0 on success, or an error number on failure.
+  int setschedparam(int policy, const struct sched_param *param);
+
+  /// Get the scheduling policy and parameters of the thread.
+  ///
+  /// \param policy Pointer to store the retrieved policy (can be null).
+  /// \param param Pointer to store the retrieved parameters.
+  /// \return 0 on success, or an error number on failure.
+  int getschedparam(int *policy, struct sched_param *param) const;
 };
 
 LIBC_INLINE_VAR LIBC_THREAD_LOCAL Thread self;
