@@ -900,6 +900,46 @@ auto GetShapeHelper::operator()(const Substring &substring) const -> Result {
   return (*this)(substring.parent());
 }
 
+auto GetShapeHelper::operator()(const ActualArgument &arg) const -> Result {
+  // For ConditionalArg, compare shapes of all non-.NIL. consequent-args.
+  // C1539 requires the same rank.  If all branches also have the same
+  // static extents, return the common concrete shape; this preserves
+  // useful compile-time checks (e.g. elemental cross-argument conformance,
+  // intrinsic result derivation).  Otherwise return Shape(rank, nullopt) —
+  // correct rank, deferred extents.  Per-consequent checking in
+  // CheckExplicitDataArg handles the primary dummy-vs-actual conformance
+  // regardless.
+  if (const auto *condArg{arg.GetConditionalArg()}) {
+    const auto *firstExpr{condArg->FirstNonNilConsequent()};
+    if (!firstExpr) {
+      return std::nullopt;
+    }
+    Result commonShape{(*this)(*firstExpr)};
+    bool allMatch{true};
+    condArg->ForEachConsequent(
+        [&](const ActualArgument::ConditionalArg::Consequent &cons) {
+          if (!cons || !allMatch) {
+            return;
+          }
+          Result thisShape{(*this)(cons->value())};
+          if (commonShape != thisShape) {
+            allMatch = false;
+          }
+        });
+    if (allMatch && commonShape) {
+      return commonShape;
+    }
+    return Shape(firstExpr->Rank(), std::nullopt);
+  }
+  if (const auto *expr{arg.UnwrapExpr()}) {
+    return (*this)(*expr);
+  }
+  if (const auto *assumed{arg.GetAssumedTypeDummy()}) {
+    return (*this)(*assumed);
+  }
+  return std::nullopt;
+}
+
 auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {
   if (call.Rank() == 0) {
     return ScalarShape();
