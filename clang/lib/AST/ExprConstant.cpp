@@ -3564,20 +3564,16 @@ static unsigned getBaseIndex(const CXXRecordDecl *Derived,
                              const CXXRecordDecl *Base) {
   Base = Base->getCanonicalDecl();
   unsigned Index = 0;
-  for (CXXRecordDecl::base_class_const_iterator I = Derived->bases_begin(),
-                                                E = Derived->bases_end();
-       I != E; ++I) {
-    if (I->isVirtual())
+  for (const CXXBaseSpecifier &B : Derived->bases()) {
+    if (B.isVirtual())
       continue;
-    if (I->getType()->getAsCXXRecordDecl()->getCanonicalDecl() == Base)
+    if (B.getType()->getAsCXXRecordDecl()->getCanonicalDecl() == Base)
       return Index;
     ++Index;
   }
 
-  for (CXXRecordDecl::base_class_const_iterator I = Derived->vbases_begin(),
-                                                E = Derived->vbases_end();
-       I != E; ++I) {
-    if (I->getType()->getAsCXXRecordDecl()->getCanonicalDecl() == Base)
+  for (const CXXBaseSpecifier &B : Derived->vbases()) {
+    if (B.getType()->getAsCXXRecordDecl()->getCanonicalDecl() == Base)
       return Index;
     ++Index;
   }
@@ -4446,8 +4442,7 @@ findSubobject(EvalInfo &Info, const Expr *E, const CompleteObject &Obj,
       unsigned BaseIndex = getBaseIndex(Derived, Base);
       unsigned NumNonVirtualBases = O->getStructNumBases();
       if (BaseIndex >= NumNonVirtualBases) {
-        O = &O->getStructVirtualBase(
-            BaseIndex - NumNonVirtualBases); // getBaseIndex(Derived, Base));
+        O = &O->getStructVirtualBase(BaseIndex - NumNonVirtualBases);
       } else
         O = &O->getStructBase(BaseIndex);
 
@@ -5538,13 +5533,11 @@ static bool handleDefaultInitValue(QualType T, APValue &Result,
                 IsCompleteClass ? RD->getNumVBases() : 0);
 
     unsigned Index = 0;
-    for (CXXRecordDecl::base_class_const_iterator B = RD->bases_begin(),
-                                                  End = RD->bases_end();
-         B != End; ++B) {
-      if (B->isVirtual())
+    for (const CXXBaseSpecifier &B : RD->bases()) {
+      if (B.isVirtual())
         continue;
-      Success &= handleDefaultInitValue(B->getType(),
-                                        Result.getStructBase(Index), false);
+      Success &= handleDefaultInitValue(
+          B.getType(), Result.getStructBase(Index), /*IsCompleteClass=*/false);
       ++Index;
     }
 
@@ -5559,8 +5552,9 @@ static bool handleDefaultInitValue(QualType T, APValue &Result,
       Index = 0;
 
       for (const auto &B : RD->vbases()) {
-        Success &= handleDefaultInitValue(
-            B.getType(), Result.getStructVirtualBase(Index), false);
+        Success &= handleDefaultInitValue(B.getType(),
+                                          Result.getStructVirtualBase(Index),
+                                          /*IsCompleteClass=*/false);
         ++Index;
       }
     } else {
@@ -7274,7 +7268,7 @@ static bool HandleConstructorCall(const Expr *E, const LValue &This,
       return;
     }
 
-    // Default-initialize any fields with no explicit initializer.<
+    // Default-initialize any fields with no explicit initializer.
     for (; !declaresSameEntity(*FieldIt, FD); ++FieldIt) {
       assert(FieldIt != RD->field_end() && "missing field?");
       if (!FieldIt->isUnnamedBitField())
@@ -11264,12 +11258,11 @@ static bool HandleClassZeroInitialization(EvalInfo &Info, const Expr *E,
 
   if (CD) {
     unsigned Index = 0;
-    for (CXXRecordDecl::base_class_const_iterator I = CD->bases_begin(),
-                                                  End = CD->bases_end();
-         I != End; ++I) {
-      if (I->isVirtual())
+
+    for (const auto &B : CD->bases()) {
+      if (B.isVirtual())
         continue;
-      const CXXRecordDecl *Base = I->getType()->getAsCXXRecordDecl();
+      const CXXRecordDecl *Base = B.getType()->getAsCXXRecordDecl();
       LValue Subobject = This;
       if (!HandleLValueDirectBase(Info, E, Subobject, CD, Base, &Layout))
         return false;
@@ -11297,10 +11290,8 @@ static bool HandleClassZeroInitialization(EvalInfo &Info, const Expr *E,
 
   if (CD && This.Designator.Entries.empty()) {
     unsigned Index = 0;
-    for (CXXRecordDecl::base_class_const_iterator I = CD->vbases_begin(),
-                                                  End = CD->vbases_end();
-         I != End; ++I) {
-      const CXXRecordDecl *Base = I->getType()->getAsCXXRecordDecl();
+    for (const auto &B : CD->vbases()) {
+      const CXXRecordDecl *Base = B.getType()->getAsCXXRecordDecl();
       LValue Subobject = This;
       if (!HandleLValueDirectVirtualBase(Info, E, Subobject, CD, Base, &Layout))
         return false;

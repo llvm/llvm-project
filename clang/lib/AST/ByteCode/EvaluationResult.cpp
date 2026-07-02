@@ -196,7 +196,7 @@ static void collectBlocks(PtrView Ptr, llvm::SetVector<const Block *> &Blocks,
       if (!B.R->hasPtrField())
         continue;
       PtrView BasePtr = Ptr.atField(B.Offset);
-      collectBlocks(BasePtr, Blocks, false);
+      collectBlocks(BasePtr, Blocks, /*IsCompleteClass=*/false);
     }
 
     for (const Record::Field &F : R->fields()) {
@@ -211,7 +211,7 @@ static void collectBlocks(PtrView Ptr, llvm::SetVector<const Block *> &Blocks,
         if (!B.R->hasPtrField())
           continue;
         PtrView BasePtr = Ptr.atField(B.Offset);
-        collectBlocks(BasePtr, Blocks, false);
+        collectBlocks(BasePtr, Blocks, /*IsCompleteClass=*/false);
       }
     }
 

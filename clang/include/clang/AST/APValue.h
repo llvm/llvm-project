@@ -810,7 +810,6 @@ private:
     new ((void *)(char *)&Data) StructData(B, M, V);
     Kind = Struct;
   }
-
   void MakeUnion() {
     assert(isAbsent() && "Bad state change");
     new ((void *)(char *)&Data) UnionData();
