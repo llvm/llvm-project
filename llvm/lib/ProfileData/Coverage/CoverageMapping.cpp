@@ -27,6 +27,8 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/ThreadPool.h"
+#include "llvm/Support/Threading.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -966,6 +968,36 @@ Error CoverageMapping::loadFunctionRecord(
   return Error::success();
 }
 
+void CoverageMapping::mergeFrom(CoverageMapping &&Other) {
+  // Shards are produced from the same profile, so this must agree.
+  assert(!SingleByteCoverage || !Other.SingleByteCoverage ||
+         *SingleByteCoverage == *Other.SingleByteCoverage);
+  if (!SingleByteCoverage)
+    SingleByteCoverage = Other.SingleByteCoverage;
+
+  for (auto &Func : Other.Functions) {
+    auto FilenamesHash = hash_combine_range(Func.Filenames);
+    if (!RecordProvenance[FilenamesHash]
+             .insert(hash_value(StringRef(Func.Name)))
+             .second)
+      continue;
+
+    unsigned RecordIndex = Functions.size();
+    Functions.push_back(std::move(Func));
+
+    for (StringRef Filename : Functions.back().Filenames) {
+      auto &RecordIndices = FilenameHash2RecordIndices[hash_value(Filename)];
+      if (RecordIndices.empty() || RecordIndices.back() != RecordIndex)
+        RecordIndices.push_back(RecordIndex);
+    }
+  }
+
+  FuncHashMismatches.insert(
+      FuncHashMismatches.end(),
+      std::make_move_iterator(Other.FuncHashMismatches.begin()),
+      std::make_move_iterator(Other.FuncHashMismatches.end()));
+}
+
 // This function is for memory optimization by shortening the lifetimes
 // of CoverageMappingReader instances.
 Error CoverageMapping::loadFromReaders(
@@ -1049,11 +1081,13 @@ Error CoverageMapping::loadFromFile(
   return Error::success();
 }
 
-Expected<std::unique_ptr<CoverageMapping>> CoverageMapping::load(
-    ArrayRef<StringRef> ObjectFilenames,
-    std::optional<StringRef> ProfileFilename, vfs::FileSystem &FS,
-    ArrayRef<StringRef> Arches, StringRef CompilationDir,
-    const object::BuildIDFetcher *BIDFetcher, bool CheckBinaryIDs) {
+Expected<std::unique_ptr<CoverageMapping>>
+CoverageMapping::load(ArrayRef<StringRef> ObjectFilenames,
+                      std::optional<StringRef> ProfileFilename,
+                      vfs::FileSystem &FS, ArrayRef<StringRef> Arches,
+                      StringRef CompilationDir,
+                      const object::BuildIDFetcher *BIDFetcher,
+                      bool CheckBinaryIDs, unsigned MaxLoadThreads) {
   std::unique_ptr<IndexedInstrProfReader> ProfileReader;
   if (ProfileFilename) {
     auto ProfileReaderOrErr =
@@ -1079,11 +1113,87 @@ Expected<std::unique_ptr<CoverageMapping>> CoverageMapping::load(
   };
 
   SmallVector<object::BuildID> FoundBinaryIDs;
-  for (const auto &File : llvm::enumerate(ObjectFilenames)) {
-    if (Error E = loadFromFile(File.value(), GetArch(File.index()),
-                               CompilationDir, ProfileReaderRef, *Coverage,
-                               DataFound, &FoundBinaryIDs))
-      return std::move(E);
+  unsigned NumFiles = ObjectFilenames.size();
+  // Stdin can only be consumed once, so parallel loading is not possible.
+  bool IsStdinProfile = ProfileFilename && *ProfileFilename == "-";
+  unsigned NumThreads =
+      (MaxLoadThreads <= 1 || IsStdinProfile)
+          ? 1
+          : std::min({hardware_concurrency(NumFiles).compute_thread_count(),
+                      NumFiles, MaxLoadThreads});
+
+  if (NumThreads <= 1) {
+    for (const auto &File : llvm::enumerate(ObjectFilenames)) {
+      if (Error E = loadFromFile(File.value(), GetArch(File.index()),
+                                 CompilationDir, ProfileReaderRef, *Coverage,
+                                 DataFound, &FoundBinaryIDs))
+        return std::move(E);
+    }
+  } else {
+    std::vector<std::unique_ptr<IndexedInstrProfReader>> Readers(NumThreads);
+    if (ProfileFilename) {
+      for (unsigned T = 0; T < NumThreads; ++T) {
+        auto ReaderOrErr =
+            IndexedInstrProfReader::create(ProfileFilename.value(), FS);
+        if (Error E = ReaderOrErr.takeError())
+          return createFileError(ProfileFilename.value(), std::move(E));
+        Readers[T] = std::move(ReaderOrErr.get());
+      }
+    }
+
+    struct ShardData {
+      std::unique_ptr<CoverageMapping> Cov =
+          std::unique_ptr<CoverageMapping>(new CoverageMapping());
+      SmallVector<object::BuildID> BIDs;
+      bool Found = false;
+      std::optional<Error> Err;
+    };
+
+    std::vector<ShardData> Shards(NumThreads);
+
+    {
+      DefaultThreadPool Pool(hardware_concurrency(NumFiles));
+      unsigned ChunkSize = (NumFiles + NumThreads - 1) / NumThreads;
+      for (unsigned T = 0; T < NumThreads; ++T) {
+        unsigned Begin = T * ChunkSize;
+        unsigned End = std::min(Begin + ChunkSize, NumFiles);
+        Pool.async([&, T, Begin, End] {
+          auto &S = Shards[T];
+          auto ProfileReaderRef =
+              Readers[T] ? std::optional<
+                               std::reference_wrapper<IndexedInstrProfReader>>(
+                               *Readers[T])
+                         : std::nullopt;
+          for (unsigned I = Begin; I < End; ++I) {
+            if (Error E =
+                    loadFromFile(ObjectFilenames[I], GetArch(I), CompilationDir,
+                                 ProfileReaderRef, *S.Cov, S.Found, &S.BIDs)) {
+              S.Err = std::move(E);
+              return;
+            }
+          }
+        });
+      }
+    }
+
+    // All shard errors must be consumed; unchecked Errors assert in debug builds.
+    Error FirstErr = Error::success();
+    for (auto &S : Shards) {
+      if (S.Err) {
+        if (!FirstErr)
+          FirstErr = std::move(*S.Err);
+        else
+          consumeError(std::move(*S.Err));
+        continue;
+      }
+      if (!FirstErr) {
+        DataFound |= S.Found;
+        FoundBinaryIDs.append(S.BIDs.begin(), S.BIDs.end());
+        Coverage->mergeFrom(std::move(*S.Cov));
+      }
+    }
+    if (FirstErr)
+      return std::move(FirstErr);
   }
 
   if (BIDFetcher) {

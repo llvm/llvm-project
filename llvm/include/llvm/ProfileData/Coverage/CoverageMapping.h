@@ -1051,6 +1051,10 @@ class CoverageMapping {
       const std::optional<std::reference_wrapper<IndexedInstrProfReader>>
           &ProfileReader);
 
+  /// Merge function records from \p Other into this mapping, deduplicating
+  /// by (filenames hash, function name hash) as loadFunctionRecord does.
+  void mergeFrom(CoverageMapping &&Other);
+
   /// Look up the indices for function records which are at least partially
   /// defined in the specified file. This is guaranteed to return a superset of
   /// such records: extra records not in the file may be included if there is
@@ -1076,7 +1080,7 @@ public:
        std::optional<StringRef> ProfileFilename, vfs::FileSystem &FS,
        ArrayRef<StringRef> Arches = {}, StringRef CompilationDir = "",
        const object::BuildIDFetcher *BIDFetcher = nullptr,
-       bool CheckBinaryIDs = false);
+       bool CheckBinaryIDs = false, unsigned MaxLoadThreads = 1);
 
   /// The number of functions that couldn't have their profiles mapped.
   ///
