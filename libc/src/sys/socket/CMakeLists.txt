@@ -142,3 +142,10 @@ add_entrypoint_object(
   DEPENDS
     .${LIBC_TARGET_OS}.shutdown
 )
+
+add_entrypoint_object(
+  sockatmark
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.sockatmark
+)
