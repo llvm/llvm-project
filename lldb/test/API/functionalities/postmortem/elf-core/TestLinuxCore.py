@@ -1577,25 +1577,36 @@ class LinuxCoreTestCase(TestBase):
                 if d["path"] == path:
                     return d
             return None
-        module_dict = find_module_dict(modules, "/data/users/gclayton/crash-for-core/a.out")
+        module_dict = find_module_dict(
+            modules, "/data/users/gclayton/crash-for-core/a.out"
+        )
         self.assertIsNotNone(module_dict)
         self.assertNotIn("platformPath", module_dict)
         self.assertEqual(module_dict["coreHasUUID"], True)
         self.assertEqual(module_dict["memoryAddress"], 94267628855296)
-        self.assertEqual(module_dict["uuid"], "0DA654F5-BD3A-60F5-D3CF-A88CD0ABD565-AC497CEA")
+        self.assertEqual(
+            module_dict["uuid"], "0DA654F5-BD3A-60F5-D3CF-A88CD0ABD565-AC497CEA"
+        )
 
         module_dict = find_module_dict(modules, "linux-vdso.so.1")
         self.assertIsNotNone(module_dict)
         self.assertNotIn("platformPath", module_dict)
+        self.assertIn("coreHasUUID", module_dict)
         self.assertEqual(module_dict["coreHasUUID"], True)
         self.assertEqual(module_dict["memoryAddress"], 140248680775680)
-        self.assertEqual(module_dict["uuid"], "585A45BC-FF77-F58F-5F90-63149C609FC6-1BFEF054")
+        self.assertEqual(
+            module_dict["uuid"], "585A45BC-FF77-F58F-5F90-63149C609FC6-1BFEF054"
+        )
 
         module_dict = find_module_dict(modules, "/lib64/libstdc++.so.6")
         self.assertIsNotNone(module_dict)
+        self.assertIn("platformPath", module_dict)
         self.assertEqual(module_dict["platformPath"], "/usr/lib64/libstdc++.so.6.0.29")
+        self.assertIn("coreHasUUID", module_dict)
         self.assertEqual(module_dict["coreHasUUID"], True)
-        self.assertEqual(module_dict["uuid"], "0C8999CC-A62E-9B9F-0075-566ECB23D564-443ED68F")
+        self.assertEqual(
+            module_dict["uuid"], "0C8999CC-A62E-9B9F-0075-566ECB23D564-443ED68F"
+        )
 
         self.dbg.DeleteTarget(target)
 
