@@ -1640,7 +1640,33 @@ static bool isCmpSameOrSwapped(const CmpInst *BaseCI, const CmpInst *CI,
   Value *Op0 = CI->getOperand(0);
   Value *Op1 = CI->getOperand(1);
 
-  return (BasePred == Pred &&
+  // Helper lambdas to match our target shapes: eq %x, 0 and ult %x, C (C != 0)
+  auto IsEqZero = [](CmpInst::Predicate P, Value *L, Value *R) {
+    if (P != CmpInst::ICMP_EQ)
+      return false;
+    auto *C = dyn_cast<ConstantInt>(R);
+    return C && C->isZero();
+  };
+
+  auto IsUltNonZero = [](CmpInst::Predicate P, Value *L, Value *R) {
+    if (P != CmpInst::ICMP_ULT)
+      return false;
+    auto *C = dyn_cast<ConstantInt>(R);
+    return C && !C->isZero();
+  };
+
+  bool MixedCompatible = false;
+  if (BaseOp0 == Op0) { // Ensure the compared value (%x) is the same
+    if ((IsEqZero(BasePred, BaseOp0, BaseOp1) &&
+         IsUltNonZero(Pred, Op0, Op1)) ||
+        (IsUltNonZero(BasePred, BaseOp0, BaseOp1) &&
+         IsEqZero(Pred, Op0, Op1))) {
+      MixedCompatible = true;
+    }
+  }
+
+  return MixedCompatible ||
+         (BasePred == Pred &&
           areCompatibleCmpOps(BaseOp0, BaseOp1, Op0, Op1, TLI)) ||
          (BasePred == SwappedPred &&
           areCompatibleCmpOps(BaseOp0, BaseOp1, Op1, Op0, TLI));
@@ -4318,6 +4344,13 @@ private:
 
     /// Checks if the current node is a gather node.
     bool isGather() const { return State == NeedToGather; }
+
+    /// Canonical predicate for comparison nodes that may be rewritten for
+    /// vector emission.
+    CmpInst::Predicate CmpPredicate = CmpInst::BAD_ICMP_PREDICATE;
+
+    void setCmpPredicate(CmpInst::Predicate P) { CmpPredicate = P; }
+    CmpInst::Predicate getCmpPredicate() const { return CmpPredicate; }
 
     /// A vector of scalars.
     ValueList Scalars;
@@ -11112,10 +11145,34 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
     CmpInst::Predicate P0 = cast<CmpInst>(VL0)->getPredicate();
     CmpInst::Predicate SwapP0 = CmpInst::getSwappedPredicate(P0);
     Type *ComparedTy = VL0->getOperand(0)->getType();
+    Value *BaseOp0 = VL0->getOperand(0);
+    Value *BaseOp1 = VL0->getOperand(1);
     for (Value *V : VL) {
       if (isa<PoisonValue>(V))
         continue;
       auto *Cmp = cast<CmpInst>(V);
+      Value *Op0 = Cmp->getOperand(0);
+      Value *Op1 = Cmp->getOperand(1);
+
+      // Helper lambdas to match our target shapes: eq %x, 0 and ult %x, C (C !=
+      // 0)
+      auto IsEqZero = [](CmpInst::Predicate P, Value *L, Value *R) {
+        if (P != CmpInst::ICMP_EQ)
+          return false;
+        auto *C = dyn_cast<ConstantInt>(R);
+        return C && C->isZero();
+      };
+
+      auto IsUltNonZero = [](CmpInst::Predicate P, Value *L, Value *R) {
+        if (P != CmpInst::ICMP_ULT)
+          return false;
+        auto *C = dyn_cast<ConstantInt>(R);
+        return C && !C->isZero();
+      };
+
+      if (IsEqZero(P0, BaseOp0, BaseOp1) &&
+          IsUltNonZero(Cmp->getPredicate(), Op0, Op1))
+        continue;
       if ((Cmp->getPredicate() != P0 && Cmp->getPredicate() != SwapP0) ||
           Cmp->getOperand(0)->getType() != ComparedTy) {
         LLVM_DEBUG(dbgs() << "SLP: Gathering cmp with different predicate.\n");
@@ -13420,13 +13477,47 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
     case Instruction::FCmp: {
       // Check that all of the compares have the same predicate.
       CmpInst::Predicate P0 = cast<CmpInst>(VL0)->getPredicate();
+      auto IsEqZero = [](const Value *V) {
+        if (auto *Cmp = dyn_cast<ICmpInst>(V))
+          if (Cmp->getPredicate() == ICmpInst::ICMP_EQ)
+            if (auto *CI = dyn_cast<ConstantInt>(Cmp->getOperand(1)))
+              return CI->isZero();
+        return false;
+      };
+
+      auto IsUltNonZero = [](const Value *V) {
+        if (auto *Cmp = dyn_cast<ICmpInst>(V))
+          if (Cmp->getPredicate() == ICmpInst::ICMP_ULT)
+            if (auto *CI = dyn_cast<ConstantInt>(Cmp->getOperand(1)))
+              return !CI->isZero();
+        return false;
+      };
+
+      bool IsMixedCmp = any_of(VL, IsEqZero) && any_of(VL, IsUltNonZero);
+      // If the bundle is a mixture of eq 0 and ult lanes, canonicalize to ULT
+      if (IsMixedCmp) {
+        P0 = ICmpInst::ICMP_ULT; // Force vector generation to use ULT
+
+        for (auto [Idx, V] : enumerate(VL)) {
+          if (isa<PoisonValue>(V))
+            continue;
+          auto *Cmp = cast<ICmpInst>(V);
+          if (IsEqZero(Cmp)) {
+            // Rewrite the tracking constant for the 'eq 0' lane to be '1'
+            // so it builds perfectly into the right-hand side constant vector
+            Type *OpTy = Cmp->getOperand(1)->getType();
+            Operands.back()[Idx] = ConstantInt::get(OpTy, 1);
+          }
+        }
+      }
       TreeEntry *TE = newTreeEntry(VL, Bundle /*vectorized*/, S, UserTreeIdx,
                                    ReuseShuffleIndices);
+      TE->setCmpPredicate(P0);
       LLVM_DEBUG(dbgs() << "SLP: added a new TreeEntry (CmpInst).\n";
                  TE->dump());
 
       VLOperands Ops(VL, Operands, S, *this);
-      if (cast<CmpInst>(VL0)->isCommutative()) {
+      if (!IsMixedCmp && cast<CmpInst>(VL0)->isCommutative()) {
         // Commutative predicate - collect + sort operands of the instructions
         // so that each side is more likely to have the same opcode.
         assert(P0 == CmpInst::getSwappedPredicate(P0) &&
@@ -13440,6 +13531,8 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
           if (isa<PoisonValue>(V))
             continue;
           auto *Cmp = cast<CmpInst>(V);
+          if (IsMixedCmp && IsEqZero(Cmp))
+            continue;
           if (Cmp->getPredicate() != P0)
             std::swap(Operands.front()[Idx], Operands.back()[Idx]);
         }
@@ -23860,7 +23953,9 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         }
       }
 
-      CmpInst::Predicate P0 = cast<CmpInst>(VL0)->getPredicate();
+      CmpInst::Predicate P0 = E->getCmpPredicate();
+      if (P0 == CmpInst::BAD_ICMP_PREDICATE)
+        P0 = cast<CmpInst>(VL0)->getPredicate();
       Value *V = Builder.CreateCmp(P0, L, R);
       V = PropagateIRFlags(V);
       // Do not cast for cmps.
