@@ -1025,6 +1025,15 @@ public:
                                    EltSize, false))
           return false;
         MIB.setInstrAndDebugLoc(MI);
+
+        // Do not build an unmerge if it would be illegal for the target.
+        // Avoiding this way endless loop of creating illegal unmerge from
+        // multiple legal ones, then lowering it back to multiple ones since it
+        // is illegal.
+        if (!LI.isLegal(
+                {TargetOpcode::G_UNMERGE_VALUES, {DstTy, UnmergeSrcTy}}))
+          return false;
+
         auto NewUnmerge = MIB.buildUnmerge(DstTy, Unmerge->getSourceReg());
         unsigned DstIdx = (Elt0UnmergeIdx * EltSize) / DstTy.getSizeInBits();
         replaceRegOrBuildCopy(Dst, NewUnmerge.getReg(DstIdx), MRI, MIB,
