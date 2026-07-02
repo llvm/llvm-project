@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -target-feature +avx512fp16 -target-feature +avx512bf16 -target-feature +avx512vl -fclangir -emit-cir %s -o %t.cir
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -target-feature +avx512fp16 -target-feature +avx512bf16 -target-feature +avx512vl -target-feature +sse4a -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s -check-prefix=CIR
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -target-feature +avx512fp16 -target-feature +avx512bf16 -target-feature +avx512vl -fclangir -emit-llvm %s -o %t.ll
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -target-feature +avx512fp16 -target-feature +avx512bf16 -target-feature +avx512vl -target-feature +sse4a -fclangir -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=LLVM
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -target-feature +avx512fp16 -target-feature +avx512bf16 -target-feature +avx512vl -emit-llvm %s -o %t-ogcg.ll
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -target-feature +avx512fp16 -target-feature +avx512bf16 -target-feature +avx512vl -target-feature +sse4a -emit-llvm %s -o %t-ogcg.ll
 // RUN: FileCheck --input-file=%t-ogcg.ll %s -check-prefix=OGCG
 
 void test_sfence(void) {
@@ -260,4 +260,32 @@ void test_conditional_bzero(void) {
               ? __builtin_bzero(dst, len)
               : foo())
           : __builtin_bzero(dst, len));
+}
+
+void test_movnti(int dest, int src) {
+  // CIR-LABEL: test_movnti
+  // CIR: %[[VAL:.*]] = cir.load
+  // CIR: cir.store nontemporal {{.*}} %[[VAL]]
+  
+  // LLVM-LABEL: @test_movnti
+  // LLVM: store i32 %{{.*}}, ptr %{{.*}}, align 1, !nontemporal
+  
+  // OGCG-LABEL: @test_movnti
+  // OGCG: store i32 %{{.*}}, ptr %{{.*}}, align 1, !nontemporal
+  return __builtin_ia32_movnti(&dest, src);
+}
+
+void test_movntss(float *dest, v4f src) {
+  // CIR-LABEL: test_movntss
+  // CIR: %[[ARR:.*]] = cir.load align(16) {{.*}} : !cir.ptr<!cir.vector<4 x !cir.float>>
+  // CIR: %[[IDX:.*]] = cir.const #cir.int<0>
+  // CIR: %[[SCALAR:.*]] = cir.vec.extract %[[ARR]][%[[IDX]] : !u64i]
+  // CIR: cir.store nontemporal align(1) %[[SCALAR]], {{.*}} : !cir.float, !cir.ptr<!cir.float>
+
+  // LLVM-LABEL: @test_movntss
+  // LLVM: store float %{{.*}}, ptr %{{.*}}, align 1, !nontemporal
+
+  // OGCG-LABEL: @test_movntss
+  // OGCG: store float %{{.*}}, ptr %{{.*}}, align 1, !nontemporal 
+  return __builtin_ia32_movntss(dest, src);
 }
