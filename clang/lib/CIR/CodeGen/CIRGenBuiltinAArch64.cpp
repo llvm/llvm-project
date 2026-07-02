@@ -444,6 +444,14 @@ static mlir::Value emitCommonNeonSISDBuiltinExpr(
   case NEON::BI__builtin_neon_vpmaxqd_f64:
   case NEON::BI__builtin_neon_vpmaxnms_f32:
   case NEON::BI__builtin_neon_vpmaxnmqd_f64:
+  case NEON::BI__builtin_neon_vqsubs_s32:
+  case NEON::BI__builtin_neon_vqsubs_u32:
+  case NEON::BI__builtin_neon_vqsubd_s64:
+  case NEON::BI__builtin_neon_vqsubd_u64:
+  case NEON::BI__builtin_neon_vqsubb_s8:
+  case NEON::BI__builtin_neon_vqsubb_u8:
+  case NEON::BI__builtin_neon_vqsubh_s16:
+  case NEON::BI__builtin_neon_vqsubh_u16:
     break;
   }
 
@@ -457,8 +465,28 @@ static mlir::Value emitCommonNeonSISDBuiltinExpr(
   auto [funcResTy, argTypes] = deriveNeonSISDIntrinsicOperandTypes(
       cgf, info.TypeModifier, arg0Ty, resultTy, ops);
 
-  return emitNeonCall(cgf.cgm, builder, std::move(argTypes), ops, llvmIntrName,
-                      funcResTy, loc);
+  // Scalar operands feeding a vector `argType` (e.g. vqsubb_s8, which has no
+  // scalar overload) are splatted into lane 0 of a poison vector.
+  for (unsigned i = 0, e = ops.size(); i != e; ++i) {
+    auto vecArgTy = mlir::dyn_cast<cir::VectorType>(argTypes[i]);
+    if (vecArgTy && !mlir::isa<cir::VectorType>(ops[i].getType()) &&
+        cgf.cgm.getDataLayout().getTypeSizeInBits(ops[i].getType()) !=
+            cgf.cgm.getDataLayout().getTypeSizeInBits(vecArgTy)) {
+      mlir::Value poison =
+          builder.getConstant(loc, cir::PoisonAttr::get(vecArgTy));
+      ops[i] = builder.createInsertElement(loc, poison, ops[i], /*idx=*/0);
+    }
+  }
+
+  mlir::Value result = emitNeonCall(cgf.cgm, builder, std::move(argTypes), ops,
+                                    llvmIntrName, funcResTy, loc);
+
+  // Recover a scalar result from a wider vector intrinsic result via lane 0.
+  if (auto resVecTy = mlir::dyn_cast<cir::VectorType>(result.getType());
+      resVecTy && cgf.cgm.getDataLayout().getTypeSizeInBits(resultTy) <
+                      cgf.cgm.getDataLayout().getTypeSizeInBits(resVecTy))
+    return builder.createExtractElement(loc, result, /*idx=*/0);
+  return result;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1060,6 +1088,8 @@ static mlir::Value emitCommonNeonBuiltinExpr(
                      std::string("unimplemented AArch64 builtin call: ") +
                          cgf.getContext().BuiltinInfo.getName(builtinID));
     break;
+  case NEON::BI__builtin_neon_vqsub_v:
+  case NEON::BI__builtin_neon_vqsubq_v:
   case NEON::BI__builtin_neon_vshl_v:
   case NEON::BI__builtin_neon_vshlq_v: {
     llvm::StringRef llvmIntrName =
