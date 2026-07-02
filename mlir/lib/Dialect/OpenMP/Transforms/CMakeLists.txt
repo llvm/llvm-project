@@ -2,6 +2,7 @@ add_mlir_dialect_library(MLIROpenMPTransforms
   MarkDeclareTarget.cpp
   OpenMPOffloadPrivatizationPrepare.cpp
   StackToShared.cpp
+  OpenMPSIMDInlineBoost.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/OpenMP

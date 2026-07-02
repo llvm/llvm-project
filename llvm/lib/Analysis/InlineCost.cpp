@@ -1116,8 +1116,17 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
       Cost *= *AttrCostMult;
 
     if (std::optional<int> AttrThreshold =
-            getStringFnAttrAsInt(CandidateCall, "function-inline-threshold"))
+            getStringFnAttrAsInt(CandidateCall, "function-inline-threshold")) {
       Threshold = *AttrThreshold;
+
+      // The threshold bonus was already applied in onAnalysisStart() so that
+      // shouldStop() observes it. Re-apply it only when the explicit threshold
+      // override above resets Threshold.
+      if (std::optional<int> AttrThresholdBonus = getStringFnAttrAsInt(
+              CandidateCall,
+              InlineConstants::FunctionInlineThresholdBonusAttributeName))
+        Threshold += *AttrThresholdBonus;
+    }
 
     if (auto Result = costBenefitAnalysis()) {
       DecidedByCostBenefit = true;
@@ -1179,6 +1188,11 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
     // this Threshold any time, and cost cannot decrease, we can stop processing
     // the rest of the function body.
     Threshold += (SingleBBBonus + VectorBonus);
+
+    if (std::optional<int> AttrThresholdBonus = getStringFnAttrAsInt(
+            CandidateCall,
+            InlineConstants::FunctionInlineThresholdBonusAttributeName))
+      Threshold += *AttrThresholdBonus;
 
     // Give out bonuses for the callsite, as the instructions setting them up
     // will be gone after inlining.

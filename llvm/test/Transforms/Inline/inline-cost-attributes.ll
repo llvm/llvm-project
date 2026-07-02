@@ -11,12 +11,15 @@ entry:
 
 define void @fn2() "function-inline-threshold"="41" {
 ; INLINER-LABEL: Inlining calls in: fn2
-; INLINER-NEXT: Function size: 7
+; INLINER-NEXT: Function size: 8
 ; INLINER-NEXT: NOT Inlining (cost=321, threshold=123), Call:   call void @fn1()
 ; INLINER-NEXT: NOT Inlining (cost=963, threshold=123), Call:   call void @fn1()
 ; INLINER-NEXT: NOT Inlining (cost=321, threshold=321), Call:   call void @fn1()
 ; INLINER-NEXT: NOT Inlining (cost=197, threshold=123), Call:   call void @fn1()
 ; INLINER-NEXT: Inlining (cost=197, threshold=321), Call:   call void @fn1()
+; INLINER-NEXT: Size after inlining: 7
+; INLINER-NEXT: Inlining (cost=321, threshold=523), Call:   call void @fn1()
+; INLINER-NEXT: Size after inlining: 6
 
 ; COST-LABEL: define void @fn2()
 ; COST-NEXT: entry:
@@ -32,6 +35,8 @@ define void @fn2() "function-inline-threshold"="41" {
 ; COST-NEXT: call void @fn1()
 ; COST-NEXT: cost delta = 473
 ; COST-NEXT: call void @fn1()
+; COST-NEXT: cost delta = 271
+; COST-NEXT: call void @fn1()
 
 entry:
   call void @extern()
@@ -40,6 +45,7 @@ entry:
   call void @fn1() "call-inline-cost"="0" "function-inline-threshold"="321"
   call void @fn1() "call-threshold-bonus"="17" "function-inline-cost"="197"
   call void @fn1() "call-inline-cost"="473" "function-inline-cost"="197" "function-inline-threshold"="321"
+  call void @fn1() "function-inline-threshold-bonus"="400"
   ret void
 }
 
@@ -53,5 +59,20 @@ define void @fn3() {
 entry:
   call void @fn1() "function-inline-cost"="386" "function-inline-threshold"="849"
   call void @fn2()
+  ret void
+}
+
+define void @fn_no_threshold() {
+entry:
+  ret void
+}
+
+define void @fn4() {
+; INLINER-LABEL: Inlining calls in: fn4
+; INLINER-NEXT: Function size: 2
+; INLINER-NEXT: NOT Inlining (cost=900, threshold=737), Call:   call void @fn_no_threshold()
+
+entry:
+  call void @fn_no_threshold() "function-inline-cost"="900" "function-inline-threshold-bonus"="400"
   ret void
 }

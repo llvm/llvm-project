@@ -776,6 +776,18 @@ struct CallOpConversion : public fir::FIROpConversion<fir::CallOp> {
             call.getAccessGroups())
       llvmCall.setAccessGroups(*optionalAccessGroups);
 
+    // Boost inlining of calls inside OpenMP SIMD regions.
+    if (call->hasAttr("omp.simd_inline_boost")) {
+      mlir::NamedAttrList defaultFuncAttrs;
+      if (mlir::DictionaryAttr attrs = llvmCall.getDefaultFuncAttrsAttr())
+        defaultFuncAttrs.append(attrs.begin(), attrs.end());
+      defaultFuncAttrs.set("function-inline-threshold-bonus",
+                           rewriter.getStringAttr("2000"));
+      llvmCall.setDefaultFuncAttrsAttr(
+          defaultFuncAttrs.getDictionary(rewriter.getContext()));
+      llvmCall->removeAttr("omp.simd_inline_boost");
+    }
+
     if (memAttr)
       llvmCall.setMemoryEffectsAttr(
           mlir::cast<mlir::LLVM::MemoryEffectsAttr>(memAttr));
