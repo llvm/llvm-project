@@ -61,7 +61,7 @@ public:
   void Dump(llvm::raw_ostream &s, unsigned indent, Target *target,
             bool show_header, uint32_t depth) const;
 
-  lldb::SectionSP FindSectionByName(ConstString section_dstr) const;
+  lldb::SectionSP FindSectionByName(llvm::StringRef section_name) const;
 
   lldb::SectionSP FindSectionByID(lldb::user_id_t sect_id) const;
 

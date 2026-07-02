@@ -171,8 +171,7 @@ Sections:
     return file.takeError();
 
   auto module_sp = std::make_shared<Module>(file->moduleSpec());
-  SectionSP text_sp =
-      module_sp->GetSectionList()->FindSectionByName(ConstString(".text"));
+  SectionSP text_sp = module_sp->GetSectionList()->FindSectionByName(".text");
   if (!text_sp)
     return createStringError("No .text");
 

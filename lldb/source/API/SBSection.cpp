@@ -82,9 +82,7 @@ lldb::SBSection SBSection::FindSubSection(const char *sect_name) {
   if (sect_name) {
     SectionSP section_sp(GetSP());
     if (section_sp) {
-      ConstString const_sect_name(sect_name);
-      sb_section.SetSP(
-          section_sp->GetChildren().FindSectionByName(const_sect_name));
+      sb_section.SetSP(section_sp->GetChildren().FindSectionByName(sect_name));
     }
   }
   return sb_section;
