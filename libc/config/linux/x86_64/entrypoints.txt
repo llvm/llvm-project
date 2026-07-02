@@ -1369,6 +1369,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdio.stdin
     libc.src.stdio.stdout
     libc.src.stdio.ungetc
+    libc.src.stdio.tmpnam
 
     # stdlib.h entrypoints
     libc.src.stdlib._Exit

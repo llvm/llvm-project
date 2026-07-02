@@ -599,6 +599,18 @@ add_libc_test(
     libc.src.stdio.setvbuf
 )
 
+add_libc_test(
+  tmpnam_test
+  SUITE
+    libc_stdio_unittests
+  SRCS
+    tmpnam_test.cpp
+  DEPENDS
+    libc.src.stdio.tmpnam
+    libc.src.__support.CPP.string_view
+    libc.hdr.stdio_macros
+)
+
 # Create an output directory for any temporary test files.
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/testdata)
 
