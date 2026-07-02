@@ -28,6 +28,7 @@ declare float @llvm.rint.f32(float)
 declare float @llvm.nearbyint.f32(float)
 declare float @llvm.round.f32(float)
 declare float @llvm.roundeven.f32(float)
+declare float @_Z4powrff(float, float)
 
 define float @test_pow_fast_f32(float %x, float %y) {
 ; PRELINK-LABEL: define float @test_pow_fast_f32
@@ -6148,6 +6149,47 @@ define <2 x float> @test_pow_v2f32_known_integral_constant_vector_poison_elt(<2 
 ;
   %pow = tail call <2 x float> @_Z3powDv2_fS_(<2 x float> %x, <2 x float> <float 4.0, float poison>)
   ret <2 x float> %pow
+}
+
+define float @test_powr_f32_unknown_base_two(float %x) {
+; CHECK-LABEL: define float @test_powr_f32_unknown_base_two
+; CHECK-SAME: (float [[X:%.*]]) {
+; CHECK-NEXT:    [[POW:%.*]] = tail call float @_Z4powrff(float [[X]], float 2.000000e+00)
+; CHECK-NEXT:    ret float [[POW]]
+;
+  %pow = tail call float @_Z4powrff(float %x, float 2.0)
+  ret float %pow
+}
+
+define float @test_powr_f32_unknown_base_neg_one(float %x) {
+; CHECK-LABEL: define float @test_powr_f32_unknown_base_neg_one
+; CHECK-SAME: (float [[X:%.*]]) {
+; CHECK-NEXT:    [[POW:%.*]] = tail call float @_Z4powrff(float [[X]], float -1.000000e+00)
+; CHECK-NEXT:    ret float [[POW]]
+;
+  %pow = tail call float @_Z4powrff(float %x, float -1.0)
+  ret float %pow
+}
+
+define float @test_powr_f32_fabs_base_two(float %x) {
+; CHECK-LABEL: define float @test_powr_f32_fabs_base_two
+; CHECK-SAME: (float [[X:%.*]]) {
+; CHECK-NEXT:    [[__POW2:%.*]] = fmul float [[X]], [[X]]
+; CHECK-NEXT:    ret float [[__POW2]]
+;
+  %ax = call float @llvm.fabs.f32(float %x)
+  %pow = tail call float @_Z4powrff(float %ax, float 2.0)
+  ret float %pow
+}
+
+define float @test_powr_f32_nnan_base_two(float %x) {
+; CHECK-LABEL: define float @test_powr_f32_nnan_base_two
+; CHECK-SAME: (float [[X:%.*]]) {
+; CHECK-NEXT:    [[__POW2:%.*]] = fmul nnan float [[X]], [[X]]
+; CHECK-NEXT:    ret float [[__POW2]]
+;
+  %pow = tail call nnan float @_Z4powrff(float %x, float 2.0)
+  ret float %pow
 }
 
 attributes #0 = { minsize }
