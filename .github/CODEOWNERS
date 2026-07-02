@@ -36,9 +36,11 @@
 /clang/www/cxx_dr_status.html @Endilll
 /clang/www/make_cxx_dr_status @Endilll
 
-/clang/include/clang/CIR @lanza @bcardosolopes @xlauko @andykaylor
-/clang/lib/CIR @lanza @bcardosolopes @xlauko @andykaylor
-/clang/lib/CIR/CodeGen/CIRGenBuiltinAArch64.cpp @lanza @bcardosolopes @xlauko @andykaylor @banach-space
+# ClangIR
+# Emeritus owner: @lanza
+/clang/include/clang/CIR @bcardosolopes @xlauko @andykaylor
+/clang/lib/CIR @bcardosolopes @xlauko @andykaylor
+/clang/lib/CIR/CodeGen/CIRGenBuiltinAArch64.cpp @bcardosolopes @xlauko @andykaylor @banach-space
 /clang/tools/cir-* @lanza @bcardosolopes @xlauko @andykaylor
 
 /lldb/ @JDevlieghere
