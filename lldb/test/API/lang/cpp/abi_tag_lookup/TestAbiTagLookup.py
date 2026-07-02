@@ -60,14 +60,18 @@ class AbiTagLookupTestCase(TestBase):
 
         # Inline namespaces with ABI tags
         self.expect_expr(
-            "v1::withImplicitTag(Simple{.mem = 6})", result_type="int", result_value="6"
+            "lldb_test_abi_tag_lookup_inline_ns::withImplicitTag(Simple{.mem = 6})",
+            result_type="int",
+            result_value="6",
         )
         self.expect_expr(
             "withImplicitTag(Simple{.mem = 6})", result_type="int", result_value="6"
         )
 
         self.expect_expr(
-            "v1::withImplicitTag(Tagged{.mem = 6})", result_type="int", result_value="6"
+            "lldb_test_abi_tag_lookup_inline_ns::withImplicitTag(Tagged{.mem = 6})",
+            result_type="int",
+            result_value="6",
         )
         self.expect_expr(
             "withImplicitTag(Tagged{.mem = 6})", result_type="int", result_value="6"
