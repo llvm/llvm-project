@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 #include "ConfigFragment.h"
 #include "support/Logger.h"
+#include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
@@ -334,8 +335,11 @@ private:
   // We don't use YamlIO as we want to control over unknown keys.
   class DictParser {
     llvm::StringRef Description;
-    std::vector<std::pair<llvm::StringRef, std::function<void(Node &)>>> Keys;
-    std::function<bool(Located<std::string>, Node &)> UnknownHandler;
+    std::vector<
+        std::pair<llvm::StringRef, llvm::unique_function<void(Node &) const>>>
+        Keys;
+    llvm::unique_function<bool(Located<std::string>, Node &) const>
+        UnknownHandler;
     Parser *Outer;
 
   public:
@@ -345,7 +349,8 @@ private:
     // Parse is called when Key is encountered, and passed the associated value.
     // It should emit diagnostics if the value is invalid (e.g. wrong type).
     // If Key is seen twice, Parse runs only once and an error is reported.
-    void handle(llvm::StringLiteral Key, std::function<void(Node &)> Parse) {
+    void handle(llvm::StringLiteral Key,
+                llvm::unique_function<void(Node &) const> Parse) {
       for (const auto &Entry : Keys) {
         (void)Entry;
         assert(Entry.first != Key && "duplicate key handler");
@@ -357,7 +362,8 @@ private:
     // If this is unset or the Handler returns true, a warning is emitted for
     // the unknown key.
     void
-    unrecognized(std::function<bool(Located<std::string>, Node &)> Handler) {
+    unrecognized(llvm::unique_function<bool(Located<std::string>, Node &) const>
+                     Handler) {
       UnknownHandler = std::move(Handler);
     }
 
