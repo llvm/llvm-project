@@ -190,6 +190,9 @@ An overview of all the command-line options:
     --explain-config                 - For each enabled check explains, where it is
                                        enabled, i.e. in clang-tidy binary, command
                                        line or a specific configuration file.
+    --notify-aliases                 - Emit a note for each check alias used in
+                                       --checks or NOLINT comments, showing the
+                                       canonical check name.
     --export-fixes=<filename>        - YAML file to store suggested fixes in. The
                                        stored fixes can be applied to the input source
                                        code with clang-apply-replacements.

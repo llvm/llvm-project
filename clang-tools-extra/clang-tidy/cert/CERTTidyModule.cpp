@@ -35,11 +35,9 @@
 #include "../misc/NewDeleteOverloadsCheck.h"
 #include "../misc/NonCopyableObjectsCheck.h"
 #include "../misc/PredictableRandCheck.h"
-#include "../misc/StaticAssertCheck.h"
 #include "../misc/ThrowByValueCatchByReferenceCheck.h"
 #include "../modernize/AvoidSetjmpLongjmpCheck.h"
 #include "../modernize/AvoidVariadicFunctionsCheck.h"
-#include "../performance/MoveConstructorInitCheck.h"
 #include "../readability/EnumInitialValueCheck.h"
 #include "../readability/UppercaseLiteralSuffixCheck.h"
 
@@ -275,8 +273,6 @@ public:
     CheckFactories.registerCheck<bugprone::SignalHandlerCheck>(
         "cert-msc54-cpp");
     // OOP
-    CheckFactories.registerCheck<performance::MoveConstructorInitCheck>(
-        "cert-oop11-cpp");
     CheckFactories.registerCheck<bugprone::UnhandledSelfAssignmentCheck>(
         "cert-oop54-cpp");
     CheckFactories.registerCheck<bugprone::RawMemoryCallOnNonTrivialTypeCheck>(
@@ -292,7 +288,6 @@ public:
     CheckFactories.registerCheck<bugprone::SpuriouslyWakeUpFunctionsCheck>(
         "cert-con36-c");
     // DCL
-    CheckFactories.registerCheck<misc::StaticAssertCheck>("cert-dcl03-c");
     CheckFactories.registerCheck<readability::UppercaseLiteralSuffixCheck>(
         "cert-dcl16-c");
     CheckFactories.registerCheck<bugprone::ReservedIdentifierCheck>(

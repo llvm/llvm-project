@@ -10,11 +10,14 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CLANGTIDYMODULE_H
 
 #include "ClangTidyOptions.h"
+#include "llvm/ADT/SmallVector.h" // IWYU pragma: keep
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Registry.h"
 #include <functional>
 #include <memory>
+#include <string>
+#include <utility>
 
 namespace clang::tidy {
 
@@ -65,6 +68,23 @@ public:
 
   void eraseCheck(StringRef CheckName) { Factories.erase(CheckName); }
 
+  /// Registers \p AliasName as an alias for check \p CanonicalName.
+  /// The alias is resolved after all modules have registered their checks.
+  void registerCheckAlias(StringRef AliasName, StringRef CanonicalName) {
+    PendingAliases.emplace_back(AliasName, CanonicalName);
+  }
+
+  /// Resolves all pending aliases. Must be called after all modules have
+  /// registered their check factories.
+  void resolveAliases() {
+    for (const auto &[Alias, Canonical] : PendingAliases) {
+      auto It = Factories.find(Canonical);
+      if (It != Factories.end())
+        Factories[Alias] = It->second;
+    }
+    PendingAliases.clear();
+  }
+
   /// Create instances of checks that are enabled.
   std::vector<std::unique_ptr<ClangTidyCheck>>
   createChecks(ClangTidyContext *Context) const;
@@ -80,6 +100,7 @@ public:
 
 private:
   FactoryMap Factories;
+  SmallVector<std::pair<std::string, std::string>> PendingAliases;
 };
 
 /// A clang-tidy module groups a number of \c ClangTidyChecks and gives

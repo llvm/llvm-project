@@ -194,6 +194,13 @@ Improvements to clang-query
 Improvements to clang-tidy
 --------------------------
 
+- Added a check alias framework that allows registering alternative names for
+  existing checks. Aliases support bidirectional disable semantics (disabling
+  either the alias or canonical name disables both) and NOLINT suppression
+  using alias names. Added ``--notify-aliases`` option that emits a note for
+  each alias used in ``--checks`` or ``NOLINT`` comments, showing the canonical
+  check name.
+
 - Improved :program:`check_clang_tidy.py` script by adding the `-check-header`
   argument to simplify testing of header files. This argument automatically
   manages the creation of temporary header files and ensures that diagnostics

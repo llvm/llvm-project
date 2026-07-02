@@ -12,8 +12,17 @@
 
 #include "ClangTidyModule.h"
 #include "ClangTidyCheck.h"
+#include "aliases/ClangTidyAliases.h"
+#include "clang/Basic/LLVM.h"
+#include "llvm/ADT/StringRef.h"
 
 namespace clang::tidy {
+
+/// Returns true if CheckName is an alias whose canonical check is also enabled.
+static bool isRedundantAlias(StringRef CheckName, ClangTidyContext *Context) {
+  const StringRef Canonical = ClangTidyAliases::getCanonicalForAlias(CheckName);
+  return !Canonical.empty() && Context->isCheckEnabled(Canonical);
+}
 
 void ClangTidyCheckFactories::registerCheckFactory(StringRef Name,
                                                    CheckFactory Factory) {
@@ -24,7 +33,8 @@ std::vector<std::unique_ptr<ClangTidyCheck>>
 ClangTidyCheckFactories::createChecks(ClangTidyContext *Context) const {
   std::vector<std::unique_ptr<ClangTidyCheck>> Checks;
   for (const auto &[CheckName, Factory] : Factories)
-    if (Context->isCheckEnabled(CheckName))
+    if (Context->isCheckEnabled(CheckName) &&
+        !isRedundantAlias(CheckName, Context))
       Checks.emplace_back(Factory(CheckName, Context));
   return Checks;
 }
@@ -36,6 +46,8 @@ ClangTidyCheckFactories::createChecksForLanguage(
   const LangOptions &LO = Context->getLangOpts();
   for (const auto &[CheckName, Factory] : Factories) {
     if (!Context->isCheckEnabled(CheckName))
+      continue;
+    if (isRedundantAlias(CheckName, Context))
       continue;
     std::unique_ptr<ClangTidyCheck> Check = Factory(CheckName, Context);
     if (Check->isLanguageVersionSupported(LO))
