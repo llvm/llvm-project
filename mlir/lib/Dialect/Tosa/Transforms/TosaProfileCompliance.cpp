@@ -687,7 +687,7 @@ SmallVector<StringRef> TosaProfileCompliance::stringifyProfile(
   return debugStrings;
 }
 
-llvm::SmallString<7>
+llvm::SmallString<16>
 TosaProfileCompliance::stringifyTypeInfo(const TypeInfo &typeInfo) {
   if (typeInfo.typeID == mlir::IntegerType::getTypeID()) {
     return {"i" + llvm::utostr(typeInfo.bitWidth)};
@@ -713,5 +713,5 @@ TosaProfileCompliance::stringifyTypeInfo(const TypeInfo &typeInfo) {
   } else if (typeInfo.typeID == tosa::mxint8Type::getTypeID()) {
     return {"mxint8"};
   }
-  llvm_unreachable("unknown type");
+  return {"unknown<" + llvm::utostr(typeInfo.bitWidth) + ">"};
 }
