@@ -17957,9 +17957,18 @@ SDValue SITargetLowering::performFMACombine(SDNode *N,
       Op2.getOpcode() != ISD::FP_EXTEND)
     return SDValue();
 
-  // fdot2_f32_f16 always flushes fp32 denormal operand and output to zero,
-  // regardless of the denorm mode setting. Therefore,
-  // fp-contract is sufficient to allow generating fdot2.
+  // fdot2_f32_f16 unconditionally flushes the f32 accumulator input and
+  // output to zero, ignoring the hardware mode register. Only fold when the
+  // function's denormal-fp-math-f32 is PreserveSign for both inputs and
+  // outputs. IEEE and Dynamic are excluded because the mode requests denormal
+  // preservation.
+  const DenormalMode FP32DenormMode =
+      DAG.getMachineFunction().getDenormalMode(APFloat::IEEEsingle());
+  if (FP32DenormMode.Input != DenormalMode::PreserveSign ||
+      FP32DenormMode.Output != DenormalMode::PreserveSign)
+    return SDValue();
+
+  // fp-contract allows reassociating the fma tree into a dot product.
   const TargetOptions &Options = DAG.getTarget().Options;
   if (Options.AllowFPOpFusion == FPOpFusion::Fast ||
       (N->getFlags().hasAllowContract() &&

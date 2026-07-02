@@ -6,6 +6,7 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx906 -denormal-fp-math=preserve-sign -fp-contract=fast < %s | FileCheck %s  -check-prefixes=GCN,GFX906-CONTRACT
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx906 -denormal-fp-math=ieee -fp-contract=fast < %s | FileCheck %s  -check-prefixes=GCN,GFX906-DENORM-CONTRACT
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx906 -denormal-fp-math-f32=preserve-sign -mattr="+dot7-insts,-dot10-insts" < %s | FileCheck %s  -check-prefixes=GCN,GFX906-DOT10-DISABLED
+; RUN: llc -mtriple=amdgcn -mcpu=gfx950 -denormal-fp-math-f32=ieee < %s | FileCheck %s  -check-prefixes=GCN,GFX950-DENORM
 ; (fadd (fmul S1.x, S2.x), (fadd (fmul (S1.y, S2.y), z))) -> (fdot2 S1, S2, z)
 
 ; Tests to make sure fdot2 is not generated when vector elements of dot-product expressions
@@ -82,7 +83,7 @@ entry:
 
 ; GFX906-CONTRACT: v_dot2_f32_f16
 
-; GFX906-DENORM-CONTRACT: v_dot2_f32_f16
+; GFX906-DENORM-CONTRACT: v_fma_mix_f32
 ; GFX906-DOT10-DISABLED: v_fma_mix_f32
 define amdgpu_kernel void @dotproduct_f16_f32_contract(ptr addrspace(1) %src1,
                                                        ptr addrspace(1) %src2,
@@ -153,7 +154,7 @@ entry:
 ; GFX10-DL-UNSAFE: v_dot2c_f32_f16
 
 ; GFX906-CONTRACT: v_dot2_f32_f16
-; GFX906-DENORM-CONTRACT: v_dot2_f32_f16
+; GFX906-DENORM-CONTRACT: v_fma_mix_f32
 ; GFX906-DOT10-DISABLED: v_fma_mix_f32
 define amdgpu_kernel void @dotproduct_diffvecorder_contract(ptr addrspace(1) %src1,
                                                             ptr addrspace(1) %src2,
@@ -411,3 +412,52 @@ entry:
   store float %acc2, ptr addrspace(1) %dst, align 4
   ret void
 }
+
+; Fold is suppressed with IEEE denorm: v_dot2c always flushes to +0 but the
+; kernel requests denormal preservation, so v_fma_mix_f32 must be used.
+; GCN-LABEL: {{^}}dotproduct_f16_f32_contract_ieee_denorm
+; GFX950-DENORM:     v_fma_mix_f32
+; GFX950-DENORM:     v_fma_mix_f32
+; GFX950-DENORM-NOT: v_dot2c_f32_f16
+; GFX950-DENORM-NOT: v_dot2_f32_f16
+define amdgpu_kernel void @dotproduct_f16_f32_contract_ieee_denorm(<2 x half> %a, <2 x half> %b, float %z, ptr addrspace(1) %out) {
+  %ax = extractelement <2 x half> %a, i32 0
+  %axf = fpext half %ax to float
+  %ay = extractelement <2 x half> %a, i32 1
+  %ayf = fpext half %ay to float
+
+  %bx = extractelement <2 x half> %b, i32 0
+  %bxf = fpext half %bx to float
+  %by = extractelement <2 x half> %b, i32 1
+  %byf = fpext half %by to float
+
+  %inner = call contract float @llvm.fma.f32(float %ayf, float %byf, float %z)
+  %outer = call contract float @llvm.fma.f32(float %axf, float %bxf, float %inner)
+  store float %outer, ptr addrspace(1) %out
+  ret void
+}
+
+; Dynamic denormal mode: runtime mode could be IEEE, so fold must be suppressed.
+; GCN-LABEL: {{^}}dotproduct_f16_f32_contract_dynamic_denorm
+; GFX950-DENORM:     v_fma_mix_f32
+; GFX950-DENORM:     v_fma_mix_f32
+; GFX950-DENORM-NOT: v_dot2c_f32_f16
+; GFX950-DENORM-NOT: v_dot2_f32_f16
+define amdgpu_kernel void @dotproduct_f16_f32_contract_dynamic_denorm(<2 x half> %a, <2 x half> %b, float %z, ptr addrspace(1) %out) #0 {
+  %ax = extractelement <2 x half> %a, i32 0
+  %axf = fpext half %ax to float
+  %ay = extractelement <2 x half> %a, i32 1
+  %ayf = fpext half %ay to float
+
+  %bx = extractelement <2 x half> %b, i32 0
+  %bxf = fpext half %bx to float
+  %by = extractelement <2 x half> %b, i32 1
+  %byf = fpext half %by to float
+
+  %inner = call contract float @llvm.fma.f32(float %ayf, float %byf, float %z)
+  %outer = call contract float @llvm.fma.f32(float %axf, float %bxf, float %inner)
+  store float %outer, ptr addrspace(1) %out
+  ret void
+}
+
+attributes #0 = { denormal_fpenv(float: dynamic|dynamic) }
