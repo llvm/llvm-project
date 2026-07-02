@@ -12,7 +12,10 @@ bazel_dep(name = "platforms", version = "1.1.0")
 bazel_dep(name = "protobuf", version = "35.0", repo_name = "com_google_protobuf")
 bazel_dep(name = "rules_android", version = "0.7.2")
 bazel_dep(name = "rules_cc", version = "0.2.19")
-bazel_dep(name = "rules_python", version = "2.0.2")
+
+# Upgrade to 2.1.0 when released to BCR
+# 2.0.0-2.0.3 don't have the fix for https://github.com/bazel-contrib/rules_python/issues/3774
+bazel_dep(name = "rules_python", version = "1.9.1")
 bazel_dep(name = "rules_shell", version = "0.8.0")
 bazel_dep(name = "zlib-ng", version = "2.3.3", repo_name = "llvm_zlib")
 bazel_dep(name = "zstd", version = "1.5.7.bcr.1", repo_name = "llvm_zstd")

@@ -37,19 +37,26 @@ def lit_test(
         name = name,
         srcs = [Label("//llvm:lit")],
         main = Label("//llvm:utils/lit/lit.py"),
-        args = args + ["-v"] + ["$(execpath %s)" % src for src in srcs],
+        args = args + ["-v"] + ["$(rootpath %s)" % src for src in srcs],
         data = data + srcs,
         legacy_create_init = False,
         deps = deps + [Label("//llvm:lit")],
         **kwargs
     )
 
-def package_path(label):
-    """Returns the path to the package of 'label'.
+
+def runfiles_path(label):
+    """Returns the path relative to execution CWD of a runnable target (run/test)
 
     Args:
-      label: label. The label to return the package path of.
+      label: Label. The label to return the runfiles path of.
 
-    For example, package_path("@foo//bar:BUILD") returns 'external/foo/bar'.
+    For example, runfiles_path("@foo//bar:BUILD") returns `../foo/bar`.
     """
-    return paths.join(Label(label).workspace_root, Label(label).package)
+
+    # https://bazel.build/remote/output-directories#layout-diagram
+    # When running tests, the current working directory is  <testxyz.runfiles>/_main
+    # The runfiles for external modules are located in <testxyz.runfiles>/<external_mod.workspace_name>/<pkg_path>
+    rfiles_path = "../" + paths.join(Label(label).workspace_name, Label(label).package)
+    rfiles_path = paths.normalize(rfiles_path)
+    return rfiles_path

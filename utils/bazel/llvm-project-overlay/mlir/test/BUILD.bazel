@@ -4,7 +4,7 @@
 
 load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
 load("@rules_cc//cc:defs.bzl", "cc_library")
-load("//llvm:lit_test.bzl", "package_path")
+load("//llvm:lit_test.bzl", "runfiles_path")
 load("//llvm:targets.bzl", "llvm_targets")
 load("//mlir:tblgen.bzl", "gentbl_cc_library", "gentbl_sharded_ops", "td_library")
 
@@ -30,12 +30,12 @@ expand_template(
     out = "lit.site.cfg.py",
     substitutions = {
         "@LIT_SITE_CFG_IN_HEADER@": LIT_SITE_CFG_IN_HEADER,
-        "@LLVM_TOOLS_DIR@": package_path("//llvm:BUILD"),
+        "@LLVM_TOOLS_DIR@": runfiles_path("//llvm:BUILD"),
         "@ENABLE_SHARED@": "1",
         "@BUILD_SHARED_LIBS@": "1",
         "@ENABLE_ASSERTIONS@": "1",
-        "@MLIR_SOURCE_DIR@": package_path("//mlir:BUILD"),
-        "@MLIR_TOOLS_DIR@": package_path("//mlir:BUILD"),
+        "@MLIR_SOURCE_DIR@": runfiles_path("//mlir:BUILD"),
+        "@MLIR_TOOLS_DIR@": runfiles_path("//mlir:BUILD"),
         "\"@MLIR_BINARY_DIR@\"": "os.environ[\"TEST_UNDECLARED_OUTPUTS_DIR\"]",
         # All disabled, but required to substituted because they are not in quotes.
         "@LLVM_BUILD_EXAMPLES@": "0",
@@ -60,7 +60,7 @@ expand_template(
         "@MLIR_RUN_CUDA_SM80_LT_TESTS@": "0",
         "@MLIR_RUN_CUDA_SM90_TESTS@": "0",
         "@MLIR_INCLUDE_INTEGRATION_TESTS@": "0",
-        "@SHLIBDIR@": package_path("//llvm:BUILD"),
+        "@SHLIBDIR@": runfiles_path("//llvm:BUILD"),
     },
     template = "lit.site.cfg.py.in",
 )
