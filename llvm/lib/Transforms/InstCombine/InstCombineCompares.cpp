@@ -6418,6 +6418,62 @@ Instruction *InstCombinerImpl::foldICmpWithZextOrSext(ICmpInst &ICmp) {
         return new ICmpInst(ICmp.getPredicate(), Builder.CreateOr(X, Y),
                             Constant::getNullValue(X->getType()));
 
+      // Narrow compare of mismatched sext/zext to a smaller type.
+      // (icmp <pred> (sext iS X to iW), (zext iU Y to iW))
+      //   -> (icmp <pred> (sext iS X to iT), (zext iU Y to iT))
+      // T = max(S, U+1)
+      auto *ZextOp = cast<PossiblyNonNegInst>(ICmp.getOperand(IsZext0 ? 0 : 1));
+      if (!ICmp.isEquality() && !ZextOp->hasNonNeg()) {
+        Value *SignedSrc = IsZext0 ? Y : X;
+        Value *UnsignedSrc = IsZext0 ? X : Y;
+        unsigned SignedBits = SignedSrc->getType()->getScalarSizeInBits();
+        unsigned UnsignedBits = UnsignedSrc->getType()->getScalarSizeInBits();
+        unsigned RequiredBits = std::max(SignedBits, UnsignedBits + 1);
+        unsigned WideBits =
+            ICmp.getOperand(0)->getType()->getScalarSizeInBits();
+        unsigned NewBits = PowerOf2Ceil(RequiredBits);
+        if (NewBits < WideBits && shouldChangeType(WideBits, NewBits)) {
+          Type *NewTy =
+              ICmp.getOperand(0)->getType()->getWithNewBitWidth(NewBits);
+          Value *NewSigned = Builder.CreateSExt(SignedSrc, NewTy);
+          Value *NewUnsigned = Builder.CreateZExt(UnsignedSrc, NewTy);
+          Value *NewOp0 = IsZext0 ? NewUnsigned : NewSigned;
+          Value *NewOp1 = IsZext0 ? NewSigned : NewUnsigned;
+          return new ICmpInst(ICmp.getPredicate(), NewOp0, NewOp1);
+        }
+
+        // Fallback when no smaller signed-safe type fits
+        // (icmp slt (sext iS X to iW), (zext iU Y to iW))
+        //   -> or (icmp slt iS X, 0), (icmp ult iU (zext X to iU), Y)
+        if (WideBits > 64 && SignedBits <= UnsignedBits && ICmp.hasOneUse() &&
+            shouldChangeType(WideBits, UnsignedBits)) {
+          Type *UnsignedTy = UnsignedSrc->getType();
+          ICmpInst::Predicate Pred = ICmp.getPredicate();
+          ICmpInst::Predicate UnsignedPred =
+              ICmpInst::getUnsignedPredicate(Pred);
+          Value *WidenedSigned = Builder.CreateZExt(SignedSrc, UnsignedTy);
+          Value *NarrowOp0 = IsZext0 ? UnsignedSrc : WidenedSigned;
+          Value *NarrowOp1 = IsZext0 ? WidenedSigned : UnsignedSrc;
+          Value *NarrowCmp =
+              Builder.CreateICmp(UnsignedPred, NarrowOp0, NarrowOp1);
+          // When SignedSrc>=0, wide compare reduces to NarrowCmp.
+          // When <0, slt/sle/ugt/uge force-true.
+          ICmpInst::Predicate Effective =
+              IsZext0 ? ICmpInst::getSwappedPredicate(Pred) : Pred;
+          bool ForcedTrue = Effective == ICmpInst::ICMP_SLT ||
+                            Effective == ICmpInst::ICMP_SLE ||
+                            Effective == ICmpInst::ICMP_UGT ||
+                            Effective == ICmpInst::ICMP_UGE;
+          Value *Zero = Constant::getNullValue(SignedSrc->getType());
+          if (ForcedTrue) {
+            Value *Neg = Builder.CreateICmpSLT(SignedSrc, Zero);
+            return BinaryOperator::CreateOr(Neg, NarrowCmp);
+          }
+          Value *NonNeg = Builder.CreateICmpSGE(SignedSrc, Zero);
+          return BinaryOperator::CreateAnd(NonNeg, NarrowCmp);
+        }
+      }
+
       // If we have mismatched casts and zext has the nneg flag, we can
       //  treat the "zext nneg" as "sext". Otherwise, we cannot fold and quit.
 
