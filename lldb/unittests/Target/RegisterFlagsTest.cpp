@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Target/RegisterFlags.h"
+#include "lldb/Utility/RegisterFlags.h"
 #include "lldb/Utility/StreamString.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"

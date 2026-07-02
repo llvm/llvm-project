@@ -35,7 +35,7 @@ extern "C" void omp_target_free(void *, int);
 static PointerDeviceMap allocDeviceMap;
 
 /// Allocate \p AllocationSize bytes on the current default OpenMP device.
-static void *OpenMPAlloc(std::size_t AllocationSize, std::int64_t *) {
+static void *OpenMPAlloc(std::size_t AllocationSize, std::size_t, std::int64_t *) {
 #if ALLOC_DEBUG
   if (debugEnabled) {
     std::fprintf(stderr, "[OMP_ALLOC] %s(%zu) (%s:%d)\n", __PRETTY_FUNCTION__,
