@@ -38,6 +38,9 @@ static void getKernelVersion(uint32_t *Val) {
   // major, minor, release
   struct UtsNameTy UtsName;
   int Ret = __uname(&UtsName);
+  if (Ret < 0) {
+    // handle here
+  }
   const char *Buf = UtsName.release;
   const char *End = Buf + strLen(Buf);
   const char Delims[2][2] = {".", "."};
@@ -64,13 +67,13 @@ static void getKernelVersion(uint32_t *Val) {
 static bool hasPagecacheTHPSupport() {
   char Buf[64];
 
-  int FD = __open("/sys/kernel/mm/transparent_hugepage/enabled",
-                  0 /* O_RDONLY */, 0);
+  const int FD =
+      __open("/sys/kernel/mm/transparent_hugepage/enabled", O_RDONLY, 0);
   if (FD < 0)
     return false;
 
   memset(Buf, 0, sizeof(Buf));
-  const size_t Res = __read(FD, Buf, sizeof(Buf));
+  const ssize_t Res = __read(FD, Buf, sizeof(Buf));
   if (Res < 0)
     return false;
 
@@ -98,11 +101,9 @@ static bool hasPagecacheTHPSupport() {
 static void hugifyForOldKernel(uint8_t *From, uint8_t *To) {
   const size_t Size = To - From;
 
-  uint8_t *Mem = reinterpret_cast<uint8_t *>(
-      __mmap(0, Size, 0x3 /* PROT_READ | PROT_WRITE */,
-             0x22 /* MAP_PRIVATE | MAP_ANONYMOUS */, -1, 0));
-
-  if (Mem == ((void *)-1) /* MAP_FAILED */) {
+  void *Mem = __mmap(0, Size, PROT_READ | PROT_WRITE,
+                     MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+  if (isErrValue(Mem)) {
     char Msg[] = "[hugify] could not allocate memory for text move\n";
     reportError(Msg, sizeof(Msg));
   }
@@ -114,19 +115,18 @@ static void hugifyForOldKernel(uint8_t *From, uint8_t *To) {
   // Copy the hot code to a temporary location.
   memcpy(Mem, From, Size);
 
-  __prctl(41 /* PR_SET_THP_DISABLE */, 0, 0, 0, 0);
+  __prctl(PR_SET_THP_DISABLE, 0, 0, 0, 0);
   // Maps out the existing hot code.
-  if (__mmap(reinterpret_cast<uint64_t>(From), Size,
-             0x3 /* PROT_READ | PROT_WRITE */,
-             0x32 /* MAP_FIXED | MAP_ANONYMOUS | MAP_PRIVATE */, -1,
-             0) == ((void *)-1) /*MAP_FAILED*/) {
+  const void *Addr = __mmap(From, Size, PROT_READ | PROT_WRITE,
+                            MAP_FIXED | MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+  if (isErrValue(Addr)) {
     char Msg[] =
         "[hugify] failed to mmap memory for large page move terminating\n";
     reportError(Msg, sizeof(Msg));
   }
 
   // Mark the hot code page to be huge page.
-  if (__madvise(From, Size, 14 /* MADV_HUGEPAGE */) == -1) {
+  if (__madvise(From, Size, MADV_HUGEPAGE) < 0) {
     char Msg[] = "[hugify] setting MADV_HUGEPAGE is failed\n";
     reportError(Msg, sizeof(Msg));
   }
@@ -135,7 +135,7 @@ static void hugifyForOldKernel(uint8_t *From, uint8_t *To) {
   memcpy(From, Mem, Size);
 
   // Change permission back to read-only, ignore failure
-  __mprotect(From, Size, 0x5 /* PROT_READ | PROT_EXEC */);
+  __mprotect(From, Size, PROT_READ | PROT_EXEC);
 
   __munmap(Mem, Size);
 }
@@ -161,8 +161,8 @@ extern "C" void __bolt_hugify_self_impl() {
     return;
   }
 
-  if (__madvise(From, (To - From), 14 /* MADV_HUGEPAGE */) == -1) {
-    char Msg[] = "[hugify] failed to allocate large page\n";
+  if (__madvise(From, (To - From), MADV_HUGEPAGE) < 0) {
+    char Msg[] = "[hugify] setting MADV_HUGEPAGE is failed\n";
     // TODO: allow user to control the failure behavior.
     reportError(Msg, sizeof(Msg));
   }

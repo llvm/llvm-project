@@ -64,6 +64,13 @@ target_include_directories(bolt_rt_instr PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_compile_options(bolt_rt_hugify PRIVATE ${BOLT_RT_FLAGS})
 target_include_directories(bolt_rt_hugify PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 
+get_filename_component(LIBC_INCLUDE
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../libc
+    ABSOLUTE
+)
+target_include_directories(bolt_rt_instr PRIVATE ${LIBC_INCLUDE})
+target_include_directories(bolt_rt_hugify PRIVATE ${LIBC_INCLUDE})
+
 install(TARGETS bolt_rt_instr DESTINATION "lib${LLVM_LIBDIR_SUFFIX}")
 install(TARGETS bolt_rt_hugify DESTINATION "lib${LLVM_LIBDIR_SUFFIX}")
 
