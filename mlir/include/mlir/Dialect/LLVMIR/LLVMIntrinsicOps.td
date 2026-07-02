@@ -16,11 +16,15 @@ include "mlir/Interfaces/MemorySlotInterfaces.td"
 class LLVM_UnaryIntrOpBase<string func, Type element,
                            list<Trait> traits = [], bit requiresFastmath = 0> :
     LLVM_OneResultIntrOp<func, [], [0],
-           !listconcat([Pure, SameOperandsAndResultType], traits),
+           !listconcat(
+             !if(!gt(requiresFastmath, 0), LLVM_FPEnvConstrainedTraits, [Pure]),
+             [SameOperandsAndResultType], traits),
            requiresFastmath> {
   dag commonArgs = (ins LLVM_ScalarOrVectorOf<element>:$in);
   let assemblyFormat = "`(` operands `)` attr-dict `:` "
       "functional-type(operands, results)";
+  let extraClassDefinition = !if(!gt(requiresFastmath, 0),
+                                 LLVM_FPEnvConstrainedDefs, [{}]);
 }
 
 class LLVM_UnaryIntrOpI<string func, list<Trait> traits = []> :
@@ -29,21 +33,33 @@ class LLVM_UnaryIntrOpI<string func, list<Trait> traits = []> :
 }
 
 class LLVM_UnaryIntrOpF<string func, list<Trait> traits = []> :
-    LLVM_UnaryIntrOpBase<func, LLVM_AnyFloat, traits, /*requiresFastmath=*/1> {
-  dag fmfArg = (
-    ins DefaultValuedAttr<LLVM_FastmathFlagsAttr, "{}">:$fastmathFlags);
-  let arguments = !con(commonArgs, fmfArg);
+    LLVM_UnaryIntrOpBase<func, LLVM_AnyFloat, traits,
+        /*requiresFastmath=*/1> {
+  dag fpArgs = (
+    ins DefaultValuedAttr<LLVM_FastmathFlagsAttr, "{}">:$fastmathFlags,
+        LLVM_DefaultFenvAttr:$fenv);
+  let arguments = !con(commonArgs, fpArgs);
+  let llvmBuilder = [{
+    if (op.getFenvAttr()) {
+      return emitConstrainedFPIntrinsic(op, llvm::Intrinsic::}]
+      # llvmEnumName # [{, builder, moduleTranslation);
+    }
+  }] # baseLlvmBuilder # baseLlvmBuilderCoda;
 }
 
 class LLVM_BinarySameArgsIntrOpBase<string func, Type element,
               list<Trait> traits = [], bit requiresFastmath = 0> :
     LLVM_OneResultIntrOp<func, [], [0],
-           !listconcat([Pure, SameOperandsAndResultType], traits),
+           !listconcat(
+             !if(!gt(requiresFastmath, 0), LLVM_FPEnvConstrainedTraits, [Pure]),
+             [SameOperandsAndResultType], traits),
            requiresFastmath> {
   dag commonArgs = (ins LLVM_ScalarOrVectorOf<element>:$a,
                         LLVM_ScalarOrVectorOf<element>:$b);
   let assemblyFormat = "`(` operands `)` attr-dict `:` "
       "functional-type(operands, results)";
+  let extraClassDefinition = !if(!gt(requiresFastmath, 0),
+                                 LLVM_FPEnvConstrainedDefs, [{}]);
 }
 
 class LLVM_BinarySameArgsIntrOpI<string func, list<Trait> traits = []> :
@@ -54,21 +70,32 @@ class LLVM_BinarySameArgsIntrOpI<string func, list<Trait> traits = []> :
 class LLVM_BinarySameArgsIntrOpF<string func, list<Trait> traits = []> :
     LLVM_BinarySameArgsIntrOpBase<func, LLVM_AnyFloat, traits,
                                   /*requiresFastmath=*/1> {
-  dag fmfArg = (
-    ins DefaultValuedAttr<LLVM_FastmathFlagsAttr, "{}">:$fastmathFlags);
-  let arguments = !con(commonArgs, fmfArg);
+  dag fpArgs = (
+    ins DefaultValuedAttr<LLVM_FastmathFlagsAttr, "{}">:$fastmathFlags,
+        LLVM_DefaultFenvAttr:$fenv);
+  let arguments = !con(commonArgs, fpArgs);
+  let llvmBuilder = [{
+    if (op.getFenvAttr()) {
+      return emitConstrainedFPIntrinsic(op, llvm::Intrinsic::}]
+      # llvmEnumName # [{, builder, moduleTranslation);
+    }
+  }] # baseLlvmBuilder # baseLlvmBuilderCoda;
 }
 
 class LLVM_TernarySameArgsIntrOpBase<string func, Type element,
               list<Trait> traits = [], bit requiresFastmath = 0> :
     LLVM_OneResultIntrOp<func, [], [0],
-           !listconcat([Pure, SameOperandsAndResultType], traits),
+           !listconcat(
+             !if(!gt(requiresFastmath, 0), LLVM_FPEnvConstrainedTraits, [Pure]),
+             [SameOperandsAndResultType], traits),
            requiresFastmath> {
   dag commonArgs = (ins LLVM_ScalarOrVectorOf<element>:$a,
                        LLVM_ScalarOrVectorOf<element>:$b,
                        LLVM_ScalarOrVectorOf<element>:$c);
   let assemblyFormat = "`(` operands `)` attr-dict `:` "
       "functional-type(operands, results)";
+  let extraClassDefinition = !if(!gt(requiresFastmath, 0),
+                                 LLVM_FPEnvConstrainedDefs, [{}]);
 }
 
 class LLVM_TernarySameArgsIntrOpI<string func, list<Trait> traits = []> :
@@ -79,9 +106,16 @@ class LLVM_TernarySameArgsIntrOpI<string func, list<Trait> traits = []> :
 class LLVM_TernarySameArgsIntrOpF<string func, list<Trait> traits = []> :
     LLVM_TernarySameArgsIntrOpBase<func, LLVM_AnyFloat, traits,
                                   /*requiresFastmath=*/1> {
-  dag fmfArg = (
-    ins DefaultValuedAttr<LLVM_FastmathFlagsAttr, "{}">:$fastmathFlags);
-  let arguments = !con(commonArgs, fmfArg);
+  dag fpArgs = (
+    ins DefaultValuedAttr<LLVM_FastmathFlagsAttr, "{}">:$fastmathFlags,
+        LLVM_DefaultFenvAttr:$fenv);
+  let arguments = !con(commonArgs, fpArgs);
+  let llvmBuilder = [{
+    if (op.getFenvAttr()) {
+      return emitConstrainedFPIntrinsic(op, llvm::Intrinsic::}]
+      # llvmEnumName # [{, builder, moduleTranslation);
+    }
+  }] # baseLlvmBuilder # baseLlvmBuilderCoda;
 }
 
 class LLVM_CountZerosIntrOp<string func, list<Trait> traits = []> :

@@ -49,6 +49,111 @@ def FastmathFlagsInterface : OpInterface<"FastmathFlagsInterface"> {
   ];
 }
 
+def FPEnvConstrainedOpInterface : OpInterface<"FPEnvConstrainedOpInterface"> {
+  let description = [{
+    This interface is implemented by floating-point operations that can carry an
+    optional `#llvm.fenv` attribute describing constraints on their
+    floating-point environment. It provides a uniform API for querying the
+    attribute and its individual fields.
+
+    When the attribute is present, the operation is lowered to the corresponding
+    `llvm.experimental.constrained.*` intrinsic during translation to LLVM IR.
+  }];
+
+  let cppNamespace = "::mlir::LLVM";
+
+  let methods = [
+    InterfaceMethod<
+      /*desc=*/        [{Returns the `#llvm.fenv` attribute attached to the
+                         operation, or a null attribute if none is present.}],
+      /*returnType=*/  "::mlir::LLVM::FenvAttr",
+      /*methodName=*/  "getFenvAttr",
+      /*args=*/        (ins),
+      /*methodBody=*/  [{}],
+      /*defaultImpl=*/ [{
+        auto op = cast<ConcreteOp>(this->getOperation());
+        return op.getFenvAttr();
+      }]
+      >,
+    InterfaceMethod<
+      /*desc=*/        [{Returns the effective rounding mode requested by the
+                         attribute, substituting the default (`dynamic`) when the
+                         attribute is absent or does not request a static
+                         rounding mode.}],
+      /*returnType=*/  "::mlir::LLVM::FPRoundingMode",
+      /*methodName=*/  "getFenvRoundingMode",
+      /*args=*/        (ins),
+      /*methodBody=*/  [{}],
+      /*defaultImpl=*/ [{
+        ::mlir::LLVM::FenvAttr attr = $_op.getFenvAttr();
+        return attr ? attr.getRoundingModeOrDefault()
+                    : ::mlir::LLVM::FenvAttr::getDefaultRoundingMode();
+      }]
+      >,
+    InterfaceMethod<
+      /*desc=*/        [{Returns the effective known dynamic rounding mode
+                         requested by the attribute, substituting the default
+                         (`unknown`) when the attribute is absent or does not set
+                         the field.}],
+      /*returnType=*/  "::mlir::LLVM::FPDynamicRoundingMode",
+      /*methodName=*/  "getFenvDynamicRoundingMode",
+      /*args=*/        (ins),
+      /*methodBody=*/  [{}],
+      /*defaultImpl=*/ [{
+        ::mlir::LLVM::FenvAttr attr = $_op.getFenvAttr();
+        return attr ? attr.getDynamicRoundingModeOrDefault()
+                    : ::mlir::LLVM::FenvAttr::getDefaultDynamicRoundingMode();
+      }]
+      >,
+    InterfaceMethod<
+      /*desc=*/        [{Returns the effective known exception mode requested by
+                         the attribute, substituting the default (`masked`) when
+                         the attribute is absent or does not set the field.}],
+      /*returnType=*/  "::mlir::LLVM::FPExceptionMode",
+      /*methodName=*/  "getFenvExceptionMode",
+      /*args=*/        (ins),
+      /*methodBody=*/  [{}],
+      /*defaultImpl=*/ [{
+        ::mlir::LLVM::FenvAttr attr = $_op.getFenvAttr();
+        return attr ? attr.getExceptionModeOrDefault()
+                    : ::mlir::LLVM::FenvAttr::getDefaultExceptionMode();
+      }]
+      >,
+    InterfaceMethod<
+      /*desc=*/        [{Returns the effective strict-sNaN flag requested by the
+                         attribute. The flag is only meaningful when
+                         `except_mode` is `unmasked` or `unknown`, where it
+                         defaults to `true`; when `except_mode` is `masked` (or
+                         the attribute is absent) it is ignored and reported as
+                         `false`.}],
+      /*returnType=*/  "bool",
+      /*methodName=*/  "getFenvStrictSNaN",
+      /*args=*/        (ins),
+      /*methodBody=*/  [{}],
+      /*defaultImpl=*/ [{
+        ::mlir::LLVM::FenvAttr attr = $_op.getFenvAttr();
+        return attr ? attr.getStrictSNaNOrDefault() : false;
+      }]
+      >,
+    InterfaceMethod<
+      /*desc=*/        [{Returns the effective strict-exception flag requested by
+                         the attribute. The flag is only meaningful when
+                         `except_mode` is `unmasked` or `unknown`, where it
+                         defaults to `true`; when `except_mode` is `masked` (or
+                         the attribute is absent) it is ignored and reported as
+                         `false`.}],
+      /*returnType=*/  "bool",
+      /*methodName=*/  "getFenvStrictExcept",
+      /*args=*/        (ins),
+      /*methodBody=*/  [{}],
+      /*defaultImpl=*/ [{
+        ::mlir::LLVM::FenvAttr attr = $_op.getFenvAttr();
+        return attr ? attr.getStrictExceptOrDefault() : false;
+      }]
+      >
+  ];
+}
+
 def IntegerOverflowFlagsInterface : OpInterface<"IntegerOverflowFlagsInterface"> {
   let description = [{
     This interface defines an LLVM operation with integer overflow flags and

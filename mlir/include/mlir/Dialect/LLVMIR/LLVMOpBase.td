@@ -21,6 +21,53 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/CallInterfaces.td"
 
 //===----------------------------------------------------------------------===//
+// Floating-point environment (`#llvm.fenv`) traits.
+//===----------------------------------------------------------------------===//
+
+// Traits modeling the conditional purity of an operation that may carry a
+// `#llvm.fenv` attribute. Such operations are not unconditionally `Pure`:
+//   - They are speculatable only when floating-point exceptions are masked.
+//   - They carry an observable (write) side effect only when an exception may
+//      be raised (the exception mode is not `masked`) and it must be preserved
+//     (`strict_except` is set); otherwise the effect can be ignored, which
+//     keeps them eligible for dead-code elimination even when not speculatable.
+// The accompanying method definitions are provided by
+// `LLVM_FPEnvConstrainedDefs` and delegate to helpers in LLVMDialect.cpp.
+defvar LLVM_FPEnvConstrainedTraits = [
+    FPEnvConstrainedOpInterface,
+    DeclareOpInterfaceMethods<ConditionallySpeculatable>,
+    DeclareOpInterfaceMethods<MemoryEffectsOpInterface>];
+
+// Out-of-line definitions of the ConditionallySpeculatable and
+// MemoryEffectOpInterface methods for operations carrying a `#llvm.fenv`
+// attribute. Intended for use as (part of) an op's `extraClassDefinition`.
+defvar LLVM_FPEnvConstrainedDefs = [{
+  ::mlir::Speculation::Speculatability $cppClass::getSpeculatability() {
+    return ::getFPEnvSpeculatability(*this);
+  }
+  void $cppClass::getEffects(
+      ::llvm::SmallVectorImpl<::mlir::SideEffects::EffectInstance<
+          ::mlir::MemoryEffects::Effect>> &effects) {
+    ::getFPEnvEffects(*this, effects);
+  }
+}];
+
+// `llvmBuilder` prefix for math intrinsic operations that can carry a
+// `#llvm.fenv` attribute. When the attribute is present it routes to the
+// matching `llvm.experimental.constrained.*` intrinsic instead of the plain
+// intrinsic emitted by the default builder. The operation's base intrinsic ID
+// must be spliced in via the operation's `llvmEnumName` field, so this is
+// inlined directly into the relevant `LLVM_*IntrOpF` classes:
+//   let llvmBuilder = [{
+//       if (op.getFenvAttr()) {
+//         return emitConstrainedFPIntrinsic(op, llvm::Intrinsic::}]
+//       # llvmEnumName # [{, builder, moduleTranslation);
+//       }
+//     }] # baseLlvmBuilder # baseLlvmBuilderCoda;
+// `emitConstrainedFPIntrinsic` (LLVMToLLVMIRTranslation.cpp) maps the base ID
+//  to its constrained counterpart via `ConstrainedOps.def`.
+
+//===----------------------------------------------------------------------===//
 // LLVM dialect type constraints.
 //===----------------------------------------------------------------------===//
 

@@ -22,6 +22,7 @@
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/Interfaces/FunctionImplementation.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Transforms/InliningUtils.h"
 
 #include "llvm/ADT/APFloat.h"
@@ -42,6 +43,47 @@ using mlir::LLVM::linkage::getMaxEnumValForLinkage;
 using mlir::LLVM::tailcallkind::getMaxEnumValForTailCallKind;
 
 #include "mlir/Dialect/LLVMIR/LLVMOpsDialect.cpp.inc"
+
+//===----------------------------------------------------------------------===//
+// Floating-point environment (`#llvm.fenv`) side effects and speculation.
+//===----------------------------------------------------------------------===//
+
+namespace {
+/// Side-effect resource modeling the floating-point exception state. An
+/// operation that may raise a floating-point exception that must be preserved
+/// carries a write effect on this resource.
+struct FPExceptionStateResource
+    : public SideEffects::Resource::Base<FPExceptionStateResource> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(FPExceptionStateResource)
+  StringRef getName() const final { return "<FPExceptionState>"; }
+};
+} // namespace
+
+/// Computes the speculatability of an operation carrying a `#llvm.fenv`
+/// attribute. The operation can be speculatively executed exactly when
+/// floating-point exceptions are masked.
+static ::mlir::Speculation::Speculatability
+getFPEnvSpeculatability(LLVM::FPEnvConstrainedOpInterface op) {
+  return op.getFenvExceptionMode() == LLVM::FPExceptionMode::Masked
+             ? ::mlir::Speculation::Speculatability::Speculatable
+             : ::mlir::Speculation::Speculatability::NotSpeculatable;
+}
+
+/// Computes the memory effects of an operation carrying a `#llvm.fenv`
+/// attribute. The operation has an observable effect only when it may raise a
+/// floating-point exception (the exception mode is not `masked`) and that
+/// exception is required to be preserved (`strict_except` is set). Otherwise
+/// the effect can be ignored, leaving the operation eligible for dead-code
+/// elimination even when it is not speculatable.
+static void getFPEnvEffects(
+    LLVM::FPEnvConstrainedOpInterface op,
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  if (op.getFenvExceptionMode() != LLVM::FPExceptionMode::Masked &&
+      op.getFenvStrictExcept())
+    effects.emplace_back(MemoryEffects::Write::get(),
+                         FPExceptionStateResource::get());
+}
 
 //===----------------------------------------------------------------------===//
 // Attribute Helpers
@@ -4037,7 +4079,7 @@ void CallIntrinsicOp::build(OpBuilder &builder, OperationState &state,
   build(builder, state, /*resultTypes=*/TypeRange{}, intrin, args,
         FastmathFlagsAttr{},
         /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{}, /*arg_attrs=*/{},
-        /*res_attrs=*/{});
+        /*res_attrs=*/{}, /*fenv=*/{});
 }
 
 void CallIntrinsicOp::build(OpBuilder &builder, OperationState &state,
@@ -4046,7 +4088,7 @@ void CallIntrinsicOp::build(OpBuilder &builder, OperationState &state,
   build(builder, state, /*resultTypes=*/TypeRange{}, intrin, args,
         fastMathFlags,
         /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{}, /*arg_attrs=*/{},
-        /*res_attrs=*/{});
+        /*res_attrs=*/{}, /*fenv=*/{});
 }
 
 void CallIntrinsicOp::build(OpBuilder &builder, OperationState &state,
@@ -4054,7 +4096,7 @@ void CallIntrinsicOp::build(OpBuilder &builder, OperationState &state,
                             mlir::ValueRange args) {
   build(builder, state, {resultType}, intrin, args, FastmathFlagsAttr{},
         /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{}, /*arg_attrs=*/{},
-        /*res_attrs=*/{});
+        /*res_attrs=*/{}, /*fenv=*/{});
 }
 
 void CallIntrinsicOp::build(OpBuilder &builder, OperationState &state,
@@ -4063,7 +4105,7 @@ void CallIntrinsicOp::build(OpBuilder &builder, OperationState &state,
                             mlir::LLVM::FastmathFlagsAttr fastMathFlags) {
   build(builder, state, resultTypes, intrin, args, fastMathFlags,
         /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{}, /*arg_attrs=*/{},
-        /*res_attrs=*/{});
+        /*res_attrs=*/{}, /*fenv=*/{});
 }
 
 ParseResult CallIntrinsicOp::parse(OpAsmParser &parser,

@@ -20,9 +20,11 @@
 
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/IR/DIBuilder.h"
+#include "llvm/IR/FPEnv.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/MatrixBuilder.h"
 #include "llvm/IR/MemoryModelRelaxationAnnotations.h"
@@ -54,6 +56,229 @@ static llvm::FastMathFlags getFastmathFlags(FastmathFlagsInterface &op) {
     if (bitEnumContainsAll(fmfMlir, it.first))
       (ret.*(it.second))(true);
   return ret;
+}
+
+//===----------------------------------------------------------------------===//
+// Constrained floating-point lowering (the `#llvm.fenv` attribute).
+//===----------------------------------------------------------------------===//
+
+namespace {
+/// Scoped guard that configures the IRBuilder's constrained floating-point
+/// state, mirroring clang's `CodeGenFunction::CGFPOptionsRAII`. While the state
+/// is enabled, the IRBuilder automatically lowers ordinary floating-point
+/// operations (`CreateFAdd`, `CreateFCmp`, `CreateFPExt`, ...) to the matching
+/// `llvm.experimental.constrained.*` intrinsics. The previous state is restored
+/// on destruction.
+class ConstrainedFPStateRAII {
+public:
+  explicit ConstrainedFPStateRAII(llvm::IRBuilderBase &builder)
+      : builder(builder), oldIsConstrained(builder.getIsFPConstrained()),
+        oldExcept(builder.getDefaultConstrainedExcept()),
+        oldRounding(builder.getDefaultConstrainedRounding()) {}
+
+  ~ConstrainedFPStateRAII() {
+    builder.setIsFPConstrained(oldIsConstrained);
+    builder.setDefaultConstrainedExcept(oldExcept);
+    builder.setDefaultConstrainedRounding(oldRounding);
+  }
+
+  void enable(llvm::RoundingMode rounding, llvm::fp::ExceptionBehavior except) {
+    builder.setIsFPConstrained(true);
+    builder.setDefaultConstrainedRounding(rounding);
+    builder.setDefaultConstrainedExcept(except);
+  }
+
+private:
+  llvm::IRBuilderBase &builder;
+  bool oldIsConstrained;
+  llvm::fp::ExceptionBehavior oldExcept;
+  llvm::RoundingMode oldRounding;
+};
+} // namespace
+
+static llvm::RoundingMode
+getConstrainedRoundingMode(LLVM::FPEnvConstrainedOpInterface fenvOp) {
+  switch (fenvOp.getFenvRoundingMode()) {
+  case LLVM::FPRoundingMode::Dynamic:
+    return llvm::RoundingMode::Dynamic;
+  case LLVM::FPRoundingMode::ToNearest:
+    return llvm::RoundingMode::NearestTiesToEven;
+  case LLVM::FPRoundingMode::Downward:
+    return llvm::RoundingMode::TowardNegative;
+  case LLVM::FPRoundingMode::Upward:
+    return llvm::RoundingMode::TowardPositive;
+  case LLVM::FPRoundingMode::UpwardZero:
+    return llvm::RoundingMode::TowardZero;
+  case LLVM::FPRoundingMode::ToNearestAway:
+    return llvm::RoundingMode::NearestTiesToAway;
+  }
+  llvm_unreachable("unknown LLVM::FPRoundingMode");
+}
+
+static llvm::fp::ExceptionBehavior
+getConstrainedExceptionBehavior(LLVM::FPEnvConstrainedOpInterface fenvOp) {
+  switch (fenvOp.getFenvExceptionMode()) {
+  case LLVM::FPExceptionMode::Masked:
+    return llvm::fp::ebIgnore;
+  case LLVM::FPExceptionMode::Unmasked:
+  case LLVM::FPExceptionMode::Unknown:
+    return fenvOp.getFenvStrictExcept() ? llvm::fp::ebStrict
+                                        : llvm::fp::ebMayTrap;
+  }
+  llvm_unreachable("unknown LLVM::FPExceptionMode");
+}
+
+/// Maps a non-constrained LLVM intrinsic to its constrained counterpart, or
+/// `not_intrinsic` if none exists. Used both for the math intrinsic dialect
+/// operations and for `llvm.call_intrinsic`. `ConstrainedOps.def` is the single
+/// source of truth for this mapping.
+static constexpr llvm::Intrinsic::ID
+getConstrainedIntrinsicFor(llvm::Intrinsic::ID base) {
+  switch (base) {
+#define DAG_FUNCTION(NAME, NARG, ROUND, INTRINSIC, DAGN)                       \
+  case llvm::Intrinsic::NAME:                                                  \
+    return llvm::Intrinsic::INTRINSIC;
+#define FUNCTION(NAME, NARG, ROUND, INTRINSIC)                                 \
+  case llvm::Intrinsic::NAME:                                                  \
+    return llvm::Intrinsic::INTRINSIC;
+#include "llvm/IR/ConstrainedOps.def"
+  default:
+    return llvm::Intrinsic::not_intrinsic;
+  }
+}
+
+/// Emits a constrained floating-point call for a function-style operation: the
+/// math intrinsic dialect operations and `llvm.call_intrinsic`. The original
+/// floating-point operands are taken from \p fpOperands and the result is
+/// mapped to \p result.
+static LogicalResult
+emitConstrainedFPCall(Operation *op, llvm::Intrinsic::ID constrainedID,
+                      ValueRange fpOperands, Value result,
+                      llvm::IRBuilderBase &builder,
+                      LLVM::ModuleTranslation &moduleTranslation) {
+  llvm::Module *mod = builder.GetInsertBlock()->getModule();
+  llvm::LLVMContext &ctx = mod->getContext();
+
+  SmallVector<llvm::Value *> args = moduleTranslation.lookupValues(fpOperands);
+  llvm::Type *resultType = moduleTranslation.convertType(result.getType());
+
+  // Reconstruct the constrained intrinsic signature so the correct overloaded
+  // declaration can be resolved. Constrained intrinsics take one (exception
+  // behavior) or two (rounding mode and exception behavior) trailing metadata
+  // arguments in addition to the original floating-point arguments.
+  SmallVector<llvm::Type *> signatureArgTypes;
+  signatureArgTypes.reserve(args.size() + 2);
+  for (llvm::Value *arg : args)
+    signatureArgTypes.push_back(arg->getType());
+  unsigned numMetadataArgs =
+      llvm::Intrinsic::hasConstrainedFPRoundingModeOperand(constrainedID) ? 2
+                                                                          : 1;
+  llvm::Type *metadataType = llvm::Type::getMetadataTy(ctx);
+  for (unsigned i = 0; i < numMetadataArgs; ++i)
+    signatureArgTypes.push_back(metadataType);
+
+  llvm::FunctionType *signature = llvm::FunctionType::get(
+      resultType, signatureArgTypes, /*isVarArg=*/false);
+
+  std::string errorMsg;
+  llvm::raw_string_ostream errorOS(errorMsg);
+  SmallVector<llvm::Type *> overloadedTypes;
+  if (!llvm::Intrinsic::isSignatureValid(constrainedID, signature,
+                                         overloadedTypes, errorOS)) {
+    return op->emitError("could not resolve constrained intrinsic for the "
+                         "'fenv' attribute: ")
+           << errorMsg;
+  }
+
+  llvm::Function *callee = llvm::Intrinsic::getOrInsertDeclaration(
+      mod, constrainedID, overloadedTypes);
+  // The rounding mode and exception behavior come from the IRBuilder's
+  // constrained floating-point state, configured by ConstrainedFPStateRAII.
+  llvm::Value *call = builder.CreateConstrainedFPCall(callee, args, "");
+  moduleTranslation.mapValue(result, call);
+  return success();
+}
+
+static bool isSignalingPredicate(LLVM::FCmpPredicate predicate) {
+  switch (predicate) {
+  case LLVM::FCmpPredicate::oeq:
+  case LLVM::FCmpPredicate::one:
+  case LLVM::FCmpPredicate::ueq:
+  case LLVM::FCmpPredicate::une:
+  case LLVM::FCmpPredicate::ugt:
+  case LLVM::FCmpPredicate::uge:
+  case LLVM::FCmpPredicate::ult:
+  case LLVM::FCmpPredicate::ule:
+  case LLVM::FCmpPredicate::uno:
+    return false;
+  default:
+    return true;
+  }
+}
+
+/// Emits the comparison for an `llvm.fcmp` carrying a `#llvm.fenv` attribute.
+///
+/// - `masked` exceptions: a plain `fcmp` instruction is emitted, even if other
+///   `fenv` fields (such as rounding) are set, since comparisons are unaffected
+///   by rounding and raise no exception.
+/// - `unmasked`/`unknown` exceptions with `strict_snan` and a non-equality
+///   predicate: a signaling comparison (`experimental.constrained.fcmps`).
+/// - `unmasked`/`unknown` exceptions otherwise: a quiet comparison
+///   (`experimental.constrained.fcmp`).
+static LogicalResult
+emitConstrainedFCmp(LLVM::FCmpOp fcmpOp, llvm::IRBuilderBase &builder,
+                    LLVM::ModuleTranslation &moduleTranslation) {
+  llvm::Value *lhs = moduleTranslation.lookupValue(fcmpOp.getLhs());
+  llvm::Value *rhs = moduleTranslation.lookupValue(fcmpOp.getRhs());
+  llvm::CmpInst::Predicate predicate =
+      convertFCmpPredicateToLLVM(fcmpOp.getPredicate());
+
+  llvm::Value *result;
+  if (fcmpOp.getFenvExceptionMode() == LLVM::FPExceptionMode::Masked) {
+    // Exceptions are masked: emit an ordinary comparison. The IRBuilder's
+    // constrained state may be enabled because of unrelated `fenv` fields, so
+    // temporarily disable it to force an unconstrained `fcmp`.
+    bool wasConstrained = builder.getIsFPConstrained();
+    builder.setIsFPConstrained(false);
+    result = builder.CreateFCmp(predicate, lhs, rhs);
+    builder.setIsFPConstrained(wasConstrained);
+  } else if (fcmpOp.getFenvStrictSNaN() &&
+             isSignalingPredicate(fcmpOp.getPredicate())) {
+    result = builder.CreateFCmpS(predicate, lhs, rhs);
+  } else {
+    result = builder.CreateFCmp(predicate, lhs, rhs);
+  }
+  moduleTranslation.mapValue(fcmpOp.getRes(), result);
+  return success();
+}
+
+/// Emits the constrained floating-point form of a math intrinsic dialect
+/// operation (sqrt, sin, fma, ...) carrying a `#llvm.fenv` attribute. These are
+/// declared with `LLVM_{Unary,BinarySameArgs,TernarySameArgs}IntrOpF<"func">`.
+/// \p base is the operation's unconstrained LLVM intrinsic. It is known
+/// statically in the generated translation code (the same ID the default
+/// builder passes to `createIntrinsicCall`) and is mapped to its constrained
+/// counterpart via `ConstrainedOps.def`. Because `getConstrainedIntrinsicFor`
+/// is `constexpr` and \p base is a compile-time constant at each call site,
+/// that mapping folds to the exact `experimental_constrained_*` intrinsic. The
+/// rounding mode and exception behavior are taken from the IRBuilder's
+/// constrained state (see ConstrainedFPStateRAII).
+///
+/// This is invoked from the generated translation code
+/// (LLVMIntrinsicConversions .inc) for the math intrinsic operations. See the
+/// `llvmBuilder` overrides on the `LLVM_*SameArgsIntrOpF`/`LLVM_UnaryIntrOpF`
+/// base classes.
+static LogicalResult
+emitConstrainedFPIntrinsic(Operation *op, llvm::Intrinsic::ID base,
+                           llvm::IRBuilderBase &builder,
+                           LLVM::ModuleTranslation &moduleTranslation) {
+  llvm::Intrinsic::ID constrainedID = getConstrainedIntrinsicFor(base);
+  if (!constrainedID)
+    return op->emitError("no constrained intrinsic is available for '")
+           << op->getName().getStringRef() << "' carrying a 'fenv' attribute";
+
+  return emitConstrainedFPCall(op, constrainedID, op->getOperands(),
+                               op->getResult(0), builder, moduleTranslation);
 }
 
 /// Convert the value of a DenseI64ArrayAttr to a vector of unsigned indices.
@@ -139,6 +364,26 @@ convertOperandBundles(OperandRangeRange bundleOperands,
 static LogicalResult
 convertCallLLVMIntrinsicOp(CallIntrinsicOp op, llvm::IRBuilderBase &builder,
                            LLVM::ModuleTranslation &moduleTranslation) {
+  // A non-default `#llvm.fenv` attribute selects the constrained variant of the
+  // named intrinsic. The IRBuilder's constrained floating-point state
+  // (configured by ConstrainedFPStateRAII) supplies the rounding mode and
+  // exception behavior.
+  if (op.getFenvAttr()) {
+    llvm::Intrinsic::ID base =
+        llvm::Intrinsic::lookupIntrinsicID(op.getIntrin());
+    if (!base)
+      return op.emitError("could not find LLVM intrinsic: ") << op.getIntrin();
+    llvm::Intrinsic::ID constrainedID = getConstrainedIntrinsicFor(base);
+    if (!constrainedID)
+      return op.emitError("no constrained intrinsic is available for '")
+             << op.getIntrin() << "' carrying a 'fenv' attribute";
+    if (op.getNumResults() != 1)
+      return op.emitError("constrained lowering of 'llvm.call_intrinsic' "
+                          "requires exactly one result");
+    return emitConstrainedFPCall(op, constrainedID, op.getArgs(),
+                                 op.getResult(0), builder, moduleTranslation);
+  }
+
   llvm::Module *module = builder.GetInsertBlock()->getModule();
   llvm::Intrinsic::ID id =
       llvm::Intrinsic::lookupIntrinsicID(op.getIntrinAttr());
@@ -457,6 +702,22 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
   llvm::IRBuilder<>::FastMathFlagGuard fmfGuard(builder);
   if (auto fmf = dyn_cast<FastmathFlagsInterface>(opInst))
     builder.setFastMathFlags(getFastmathFlags(fmf));
+
+  // Operations carrying an `#llvm.fenv` attribute are lowered to the matching
+  // constrained floating-point intrinsic. Configure the IRBuilder's constrained
+  // floating-point state (as clang's CGFPOptionsRAII does) so that ordinary
+  // floating-point operations are emitted as the corresponding
+  // `llvm.experimental.constrained.*` intrinsics automatically. The state is
+  // restored when this guard goes out of scope. Operations the IRBuilder cannot
+  // constrain automatically (`llvm.fcmp`, the math intrinsics, and
+  // `llvm.call_intrinsic`) handle the constrained lowering themselves from
+  // their generated `llvmBuilder` code (see emitConstrainedFCmp,
+  // emitConstrainedFPIntrinsic, and convertCallLLVMIntrinsicOp).
+  ConstrainedFPStateRAII constrainedFPState(builder);
+  if (auto fenvOp = dyn_cast<LLVM::FPEnvConstrainedOpInterface>(opInst);
+      fenvOp && fenvOp.getFenvAttr())
+    constrainedFPState.enable(getConstrainedRoundingMode(fenvOp),
+                              getConstrainedExceptionBehavior(fenvOp));
 
 #include "mlir/Dialect/LLVMIR/LLVMConversions.inc"
 #include "mlir/Dialect/LLVMIR/LLVMIntrinsicConversions.inc"
