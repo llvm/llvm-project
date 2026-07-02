@@ -1302,6 +1302,15 @@ BinaryFunction::getInstructionSequenceLength(uint64_t Offset,
   return Current - Offset;
 }
 
+bool BinaryFunction::keepOffsetForInstruction(const MCInst &Inst,
+                                              uint64_t Offset) {
+  MCPlusBuilder &MIB = *BC.MIB;
+  if (MIB.isCall(Inst) || MIB.isBranch(Inst) || MIB.isReturn(Inst) ||
+      MIB.isPrefix(Inst) || MIB.isIndirectBranch(Inst))
+    return true;
+  return isDebugScopeBoundaryOffset(Offset);
+}
+
 Error BinaryFunction::disassemble() {
   NamedRegionTimer T("disassemble", "Disassemble function", "buildfuncs",
                      "Build Binary Functions", opts::TimeBuild);
@@ -1326,6 +1335,10 @@ Error BinaryFunction::disassemble() {
   // used, for example, on RISC-V where %pcrel_lo relocations point to the
   // corresponding %pcrel_hi.
   LabelsMapType InstructionLabels;
+
+  // Scope boundaries were appended unsorted during preprocessDebugInfo(); sort
+  // them so keepOffsetForInstruction() can query them below.
+  sortDebugScopeBoundaryOffsets();
 
   uint64_t Size = 0; // instruction size
   for (uint64_t Offset = 0; Offset < getSize(); Offset += Size) {
@@ -1550,8 +1563,9 @@ add_instruction:
       }
     }
 
-    // Record offset of the instruction for profile matching.
-    if (BC.keepOffsetForInstruction(Instruction))
+    // Record offset of the instruction for profile matching, for control-flow
+    // instructions, and for instructions on a DWARF lexical-scope boundary.
+    if (keepOffsetForInstruction(Instruction, Offset))
       MIB->setOffset(Instruction, static_cast<uint32_t>(Offset));
 
     if (BC.isX86() && BC.MIB->isNoop(Instruction)) {
@@ -1563,6 +1577,9 @@ add_instruction:
 
     addInstruction(Offset, std::move(Instruction));
   }
+
+  // Scope-boundary markers are only consulted while assigning offsets above.
+  clearList(DebugScopeBoundaryOffsets);
 
   for (auto [Offset, Label] : InstructionLabels) {
     InstrMapType::iterator II = Instructions.find(Offset);
@@ -2590,10 +2607,16 @@ void BinaryFunction::postProcessCFG() {
   // The final cleanup of intermediate structures.
   clearList(IgnoredBranches);
 
-  // Remove "Offset" annotations, unless we need an address-translation table
-  // later. This has no cost, since annotations are allocated by a bumpptr
-  // allocator and won't be released anyway until late in the pipeline.
-  if (!requiresAddressTranslation() && !opts::Instrument) {
+  // Remove "Offset" annotations, unless we need to build an instruction
+  // accurate IO address map later (used for BAT, SDT/pseudo-probe address
+  // translation, or --update-debug-sections, which relies on per-instruction
+  // offsets to translate DWARF scope ranges).
+  // This has no cost in memory for the BF object, since annotations are
+  // allocated by a bumpptr allocator and won't be released anyway until late
+  // in the pipeline, but the IO address map that is derived from these offsets
+  // does add non-trivial overhead and can get expensive -- that's why we don't
+  // add offsets to every single instruction.
+  if (!requiresPreciseAddressMap() && !opts::Instrument) {
     for (BinaryBasicBlock &BB : blocks())
       for (MCInst &Inst : BB)
         BC.MIB->clearOffset(Inst);
@@ -3261,16 +3284,16 @@ bool BinaryFunction::finalizeCFIState() {
   return true;
 }
 
-bool BinaryFunction::requiresAddressTranslation() const {
-  return opts::EnableBAT || hasSDTMarker() || hasPseudoProbe();
+bool BinaryFunction::requiresPreciseAddressMap() const {
+  return opts::UpdateDebugSections || opts::EnableBAT || hasSDTMarker() ||
+         hasPseudoProbe();
 }
 
 bool BinaryFunction::requiresAddressMap() const {
   if (isInjected())
     return false;
 
-  return opts::UpdateDebugSections || isMultiEntry() ||
-         requiresAddressTranslation();
+  return isMultiEntry() || requiresPreciseAddressMap();
 }
 
 uint64_t BinaryFunction::getInstructionCount() const {
@@ -4666,8 +4689,6 @@ uint64_t BinaryFunction::translateInputToOutputAddress(uint64_t Address) const {
       return *OutputAddress;
   }
 
-  // FIXME: #18950828 - we rely on relative offsets inside basic blocks to stay
-  //        intact. Instead we can use pseudo instructions and/or annotations.
   const uint64_t Offset = Address - getAddress();
   const BinaryBasicBlock *BB = getBasicBlockContainingOffset(Offset);
   if (!BB) {
@@ -4735,6 +4756,15 @@ BinaryFunction::translateInputToOutputRange(DebugAddressRange InRange) const {
     // to /p Offset. The output address should fall within the same basic
     // block boundaries.
     auto translateBlockOffset = [&](const uint64_t Offset) {
+      // Prefer the precise per-instruction input-to-output address map when
+      // available. The block-relative fallback below assumes intra-block byte
+      // offsets are preserved from input to output, which is not true after a
+      // size-changing pass (e.g. PLT optimization growing call@PLT -> call
+      // *@GOT) runs ahead of the boundary, and silently shifts the range.
+      if (BC.hasIOAddressMap())
+        if (std::optional<uint64_t> OutAddr = BC.getIOAddressMap().lookup(
+                getAddress() + BB.getOffset() + Offset))
+          return *OutAddr;
       const uint64_t OutAddress = BB.getOutputAddressRange().first + Offset;
       return std::min(OutAddress, BB.getOutputAddressRange().second);
     };

@@ -295,6 +295,18 @@ private:
   /// Offsets of indirect branches with unknown destinations.
   std::set<uint64_t> UnknownIndirectBranchOffsets;
 
+  /// Offsets of instructions that begin or end a DWARF lexical scope
+  /// (inlined_subroutine / lexical_block low_pc/high_pc and DW_AT_ranges).
+  /// Populated (unsorted, with possible duplicates) before disassembly, sorted
+  /// and deduplicated at the start of disassembly, and cleared once disassembly
+  /// of this function is done.
+  std::vector<uint64_t> DebugScopeBoundaryOffsets;
+
+  /// Cursor into the sorted DebugScopeBoundaryOffsets. Disassembly queries
+  /// offsets in monotonically increasing order, so isDebugScopeBoundaryOffset()
+  /// advances this cursor instead of binary-searching from scratch.
+  size_t DebugScopeBoundaryCursor = 0;
+
   /// A set of local and global symbols corresponding to secondary entry points.
   /// Each additional function entry point has a corresponding entry in the map.
   /// The key is a local symbol corresponding to a basic block and the value
@@ -1347,6 +1359,42 @@ public:
   const DenseSet<uint64_t> &getInternalRefDataRelocations() const {
     return InternalRefDataRelocations;
   }
+
+  /// Append function-relative \p Offset as a DWARF lexical-scope boundary. The
+  /// list is sorted later (sortDebugScopeBoundaryOffsets) before it is queried.
+  void addDebugScopeBoundaryOffset(uint64_t Offset) {
+    DebugScopeBoundaryOffsets.push_back(Offset);
+  }
+
+  /// Sort and deduplicate the collected scope boundaries and reset the query
+  /// cursor. Call once, before the first isDebugScopeBoundaryOffset() query.
+  void sortDebugScopeBoundaryOffsets() {
+    llvm::sort(DebugScopeBoundaryOffsets);
+    DebugScopeBoundaryOffsets.erase(llvm::unique(DebugScopeBoundaryOffsets),
+                                    DebugScopeBoundaryOffsets.end());
+    DebugScopeBoundaryCursor = 0;
+  }
+
+  /// Return true if function-relative \p Offset begins/ends a DWARF scope.
+  /// Requires sortDebugScopeBoundaryOffsets() to have been called, and that
+  /// queries arrive with non-decreasing \p Offset. This is designed to be
+  /// used in lock-step with the disassembly loop, don't use it outside of it.
+  bool isDebugScopeBoundaryOffset(uint64_t Offset) {
+    const size_t Size = DebugScopeBoundaryOffsets.size();
+    while (DebugScopeBoundaryCursor < Size &&
+           DebugScopeBoundaryOffsets[DebugScopeBoundaryCursor] < Offset)
+      ++DebugScopeBoundaryCursor;
+    return DebugScopeBoundaryCursor < Size &&
+           DebugScopeBoundaryOffsets[DebugScopeBoundaryCursor] == Offset;
+  }
+
+  /// Return true if an "Offset" annotation should be kept for instruction
+  /// \p Inst located at function-relative \p Offset. Offsets are kept for
+  /// control-flow instructions (profile matching) and for instructions that
+  /// begin/end a DWARF lexical scope (needed to translate scope ranges
+  /// precisely; see DebugScopeBoundaryOffsets).
+  bool keepOffsetForInstruction(const MCInst &Inst,
+                                uint64_t Offset);
 
   /// Return the name of the section this function originated from.
   std::optional<StringRef> getOriginSectionName() const {
@@ -2439,14 +2487,16 @@ public:
   /// is corrupted. If it is unable to fix it, it returns false.
   bool finalizeCFIState();
 
-  /// Return true if this function needs an address-translation table after
-  /// its code emission.
-  bool requiresAddressTranslation() const;
-
   /// Return true if the linker needs to generate an address map for this
   /// function. Used for keeping track of the mapping from input to out
   /// addresses of basic blocks.
   bool requiresAddressMap() const;
+
+  /// Return true if this function needs an address-translation table after
+  /// its code emission, or to update any metadata accurately (debug info,
+  /// SDT probes). This is gated since it incurs extra cost for the linker
+  /// to keep track of more addresses.
+  bool requiresPreciseAddressMap() const;
 
   /// Adjust branch instructions to match the CFG.
   ///
