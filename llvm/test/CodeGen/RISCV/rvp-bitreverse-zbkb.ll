@@ -12,8 +12,7 @@
 define <4 x i8> @test_bitreverse_v4i8(<4 x i8> %a) {
 ; CHECK-LABEL: test_bitreverse_v4i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    rev a0, a0
-; CHECK-NEXT:    rev8 a0, a0
+; CHECK-NEXT:    brev8 a0, a0
 ; CHECK-NEXT:    ret
   %res = call <4 x i8> @llvm.bitreverse.v4i8(<4 x i8> %a)
   ret <4 x i8> %res
@@ -38,16 +37,13 @@ define <2 x i16> @test_bitreverse_v2i16(<2 x i16> %a) {
 define <8 x i8> @test_bitreverse_v8i8(<8 x i8> %a) {
 ; RV32-LABEL: test_bitreverse_v8i8:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    rev a1, a1
-; RV32-NEXT:    rev a0, a0
-; RV32-NEXT:    rev8 a1, a1
-; RV32-NEXT:    rev8 a0, a0
+; RV32-NEXT:    brev8 a1, a1
+; RV32-NEXT:    brev8 a0, a0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_bitreverse_v8i8:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    rev a0, a0
-; RV64-NEXT:    rev8 a0, a0
+; RV64-NEXT:    brev8 a0, a0
 ; RV64-NEXT:    ret
   %res = call <8 x i8> @llvm.bitreverse.v8i8(<8 x i8> %a)
   ret <8 x i8> %res
