@@ -115,8 +115,8 @@ class LLVM_ABI MCSubtargetInfo {
   const MCSchedModel *CPUSchedModel;
 
   const InstrStage *Stages;            // Instruction itinerary stages
-  const unsigned *OperandCycles;       // Itinerary operand cycles
-  const unsigned *ForwardingPaths;
+  const uint8_t *OperandCycles;        // Itinerary operand cycles
+  const uint8_t *ForwardingPaths;
   FeatureBitset FeatureBits;           // Feature bits for current CPU + FS
   std::string FeatureString;           // Feature string
 
@@ -128,7 +128,7 @@ public:
                   ArrayRef<SubtargetSubTypeKV> PD,
                   const MCWriteProcResEntry *WPR, const MCWriteLatencyEntry *WL,
                   const MCReadAdvanceEntry *RA, const InstrStage *IS,
-                  const unsigned *OC, const unsigned *FP);
+                  const uint8_t *OC, const uint8_t *FP);
   MCSubtargetInfo() = delete;
   MCSubtargetInfo &operator=(const MCSubtargetInfo &) = delete;
   MCSubtargetInfo &operator=(MCSubtargetInfo &&) = delete;
