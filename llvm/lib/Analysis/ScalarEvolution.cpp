@@ -11075,6 +11075,9 @@ static bool MatchBinarySub(const SCEV *S, SCEVUse &LHS, SCEVUse &RHS) {
   return false;
 }
 
+static bool IsKnownPredicateViaMinOrMax(ScalarEvolution &SE, CmpPredicate Pred,
+                                        const SCEV *LHS, const SCEV *RHS);
+
 bool ScalarEvolution::SimplifyICmpOperands(CmpPredicate &Pred, SCEVUse &LHS,
                                            SCEVUse &RHS, unsigned Depth) {
   bool Changed = false;
@@ -11256,6 +11259,13 @@ bool ScalarEvolution::SimplifyICmpOperands(CmpPredicate &Pred, SCEVUse &LHS,
     if (ICmpInst::isFalseWhenEqual(Pred))
       return TrivialCase(false);
   }
+
+  // Try to resolve the comparison via min/max structure before simplifying.
+  if (IsKnownPredicateViaMinOrMax(*this, Pred, LHS, RHS))
+    return TrivialCase(true);
+  if (IsKnownPredicateViaMinOrMax(*this, ICmpInst::getInversePredicate(Pred),
+                                  LHS, RHS))
+    return TrivialCase(false);
 
   // If possible, canonicalize GE/LE comparisons to GT/LT comparisons, by
   // adding or subtracting 1 from one of the operands.
