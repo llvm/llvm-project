@@ -1432,7 +1432,7 @@ static bool foldConsecutiveLoads(Instruction &I, const DataLayout &DL,
     NewLoad->setAAMetadata(LOps.AATags);
 
   Value *NewOp = NewLoad;
-  // Check if zero extend needed.
+  // Check if zero extend or truncate needed.
   if (LOps.ZextType)
     NewOp = Builder.CreateZExtOrTrunc(NewOp, LOps.ZextType);
 
