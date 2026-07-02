@@ -17,7 +17,7 @@
 // template<container-compatible-range<T> R, class Alloc>
 //   queue(from_range_t, R&& rg, const Alloc&); // since C++23
 
-int main(int, char**) {
+constexpr bool test() {
   for_all_iterators_and_allocators<int>([]<class Iter, class Sent, class Alloc>() {
     test_container_adaptor<std::queue, std::deque, int, Iter, Sent, Alloc>();
   });
@@ -27,6 +27,15 @@ int main(int, char**) {
 
   test_exception_safety_throwing_copy<std::queue>();
   test_exception_safety_throwing_allocator<std::queue, int>();
+
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }
