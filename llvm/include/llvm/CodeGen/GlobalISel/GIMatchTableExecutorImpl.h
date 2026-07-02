@@ -149,16 +149,39 @@ bool GIMatchTableExecutor::executeMatchTable(
     assert(CurrentIdx != ~0u && "Invalid MatchTable index");
     uint8_t MatcherOpcode = MatchTable[CurrentIdx++];
     switch (MatcherOpcode) {
-    case GIM_Try: {
+    case GIM_Try:
+    case GIM_Try8:
+    case GIM_Try16: {
       DEBUG_WITH_TYPE(TgtExecutor::getName(),
                       dbgs() << CurrentIdx << ": Begin try-block\n");
-      OnFailResumeAt.push_back(readU32());
+      unsigned OnFail;
+      if (MatcherOpcode == GIM_Try) {
+        OnFail = readU32();
+      } else if (MatcherOpcode == GIM_Try8) {
+        OnFail = MatchTable[CurrentIdx++];
+        OnFail += CurrentIdx;
+      } else {
+        OnFail = readU16();
+        OnFail += CurrentIdx;
+      }
+      OnFailResumeAt.push_back(OnFail);
       break;
     }
-    case GIM_Try_CheckFeatures: {
+    case GIM_Try_CheckFeatures:
+    case GIM_Try_CheckFeatures8:
+    case GIM_Try_CheckFeatures16: {
       // This is optimized so that if the feature is not present, we don't even
       // modify OnFailResumeAt. Instead we directly jump to OnFail.
-      unsigned OnFail = readU32();
+      unsigned OnFail;
+      if (MatcherOpcode == GIM_Try_CheckFeatures) {
+        OnFail = readU32();
+      } else if (MatcherOpcode == GIM_Try_CheckFeatures8) {
+        OnFail = MatchTable[CurrentIdx++];
+        OnFail += CurrentIdx;
+      } else {
+        OnFail = readU16();
+        OnFail += CurrentIdx;
+      }
       uint16_t ExpectedBitsetID = readU16();
       DEBUG_WITH_TYPE(TgtExecutor::getName(),
                       dbgs() << CurrentIdx
@@ -741,10 +764,23 @@ bool GIMatchTableExecutor::executeMatchTable(
 
       break;
     }
+    case GIM_RootCheckType0:
+    case GIM_RootCheckType1:
+    case GIM_RootCheckType2:
+    case GIM_RootCheckType3:
+    case GIM_RootCheckType4:
+    case GIM_RootCheckType5:
+    case GIM_RootCheckType6:
+    case GIM_RootCheckType7:
+    case GIM_RootCheckType8:
     case GIM_RootCheckType:
     case GIM_CheckType: {
-      uint64_t InsnID = (MatcherOpcode == GIM_RootCheckType) ? 0 : readULEB();
-      uint64_t OpIdx = readULEB();
+      bool IsRoot = MatcherOpcode >= GIM_RootCheckType &&
+                    MatcherOpcode <= GIM_RootCheckType8;
+      uint64_t InsnID = IsRoot ? 0 : readULEB();
+      uint64_t OpIdx = MatcherOpcode >= GIM_RootCheckType0
+                           ? MatcherOpcode - GIM_RootCheckType0
+                           : readULEB();
       int TypeID = readS8();
       DEBUG_WITH_TYPE(TgtExecutor::getName(),
                       dbgs() << CurrentIdx << ": GIM_CheckType(MIs[" << InsnID
@@ -823,11 +859,23 @@ bool GIMatchTableExecutor::executeMatchTable(
       break;
     }
 
+    case GIM_RootCheckRegBankForClass0:
+    case GIM_RootCheckRegBankForClass1:
+    case GIM_RootCheckRegBankForClass2:
+    case GIM_RootCheckRegBankForClass3:
+    case GIM_RootCheckRegBankForClass4:
+    case GIM_RootCheckRegBankForClass5:
+    case GIM_RootCheckRegBankForClass6:
+    case GIM_RootCheckRegBankForClass7:
+    case GIM_RootCheckRegBankForClass8:
     case GIM_RootCheckRegBankForClass:
     case GIM_CheckRegBankForClass: {
-      uint64_t InsnID =
-          (MatcherOpcode == GIM_RootCheckRegBankForClass) ? 0 : readULEB();
-      uint64_t OpIdx = readULEB();
+      bool IsRoot = MatcherOpcode >= GIM_RootCheckRegBankForClass &&
+                    MatcherOpcode <= GIM_RootCheckRegBankForClass8;
+      uint64_t InsnID = IsRoot ? 0 : readULEB();
+      uint64_t OpIdx = MatcherOpcode >= GIM_RootCheckRegBankForClass0
+                           ? MatcherOpcode - GIM_RootCheckRegBankForClass0
+                           : readULEB();
       uint16_t RCEnum = readU16();
       DEBUG_WITH_TYPE(TgtExecutor::getName(),
                       dbgs() << CurrentIdx << ": GIM_CheckRegBankForClass(MIs["
@@ -1123,13 +1171,24 @@ bool GIMatchTableExecutor::executeMatchTable(
       break;
     }
 
+    case GIR_RootToRootCopy0:
+    case GIR_RootToRootCopy1:
+    case GIR_RootToRootCopy2:
+    case GIR_RootToRootCopy3:
+    case GIR_RootToRootCopy4:
+    case GIR_RootToRootCopy5:
+    case GIR_RootToRootCopy6:
+    case GIR_RootToRootCopy7:
+    case GIR_RootToRootCopy8:
     case GIR_RootToRootCopy:
     case GIR_Copy: {
-      uint64_t NewInsnID =
-          (MatcherOpcode == GIR_RootToRootCopy) ? 0 : readULEB();
-      uint64_t OldInsnID =
-          (MatcherOpcode == GIR_RootToRootCopy) ? 0 : readULEB();
-      uint64_t OpIdx = readULEB();
+      bool IsRoot = MatcherOpcode >= GIR_RootToRootCopy &&
+                    MatcherOpcode <= GIR_RootToRootCopy8;
+      uint64_t NewInsnID = IsRoot ? 0 : readULEB();
+      uint64_t OldInsnID = IsRoot ? 0 : readULEB();
+      uint64_t OpIdx = MatcherOpcode >= GIR_RootToRootCopy0
+                           ? MatcherOpcode - GIR_RootToRootCopy0
+                           : readULEB();
       assert(OutMIs[NewInsnID] && "Attempted to add to undefined instruction");
       OutMIs[NewInsnID].add(State.MIs[OldInsnID]->getOperand(OpIdx));
       DEBUG_WITH_TYPE(TgtExecutor::getName(),

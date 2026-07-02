@@ -12,6 +12,7 @@ add_public_tablegen_target(AutomataTestTableGen)
 add_llvm_unittest(TableGenTests
   AutomataTest.cpp
   CodeExpanderTest.cpp
+  GlobalISelMatchTableTest.cpp
   ParserEntryPointTest.cpp
 
   DISABLE_LLVM_LINK_LLVM_DYLIB
