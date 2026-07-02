@@ -328,7 +328,7 @@ void multi_refs(int one, int two, int, int three, int, int four, int) {
 // CIR:   cir.if %[[IS_UNINIT]] {
 //
 // CIR-BOTH:     %[[GET_REF_MS_INIT:.*]] = cir.get_global static_local @_ZZ10multi_refsiiiiiiiE17refs_magic_static : !cir.ptr<!rec_A>
-// CIR-BOTH:     cir.copy %[[GET_MS]] to %[[GET_REF_MS_INIT]] : !cir.ptr<!rec_A>
+// CIR-BOTH:     cir.copy %[[GET_MS]] align(4) to %[[GET_REF_MS_INIT]] align(4) : !cir.ptr<!rec_A>
 // CIR-BEFORE-LPP:     cir.yield
 // CIR-BEFORE-LPP:   }
 //
