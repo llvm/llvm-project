@@ -229,6 +229,11 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 - `__is_trivially_equality_comparable` no longer returns false for all enum types. (#GH132672)
 - `auto` parameters are now available in all C++ language modes as an extension.
 
+#### C++2d Feature Support
+
+- Clang now supports [P3733R1](https://wg21.link/p3733r1>) More named universal character escapes.
+  The change is applied as a DR to all C++ language modes. (#GH203944)
+
 #### C++2c Feature Support
 
 - Clang now propagates `constinit` and `constexpr` in structured bindings with tuple-like initializers.
