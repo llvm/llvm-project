@@ -882,7 +882,7 @@ bool IndirectCallPromoter::processFunction(ProfileSummaryInfo *PSI) {
         continue;
       }
       // Only pormote hot if ICPAllowHotOnly is true.
-      if (ICPAllowHotOnly && !PSI->isHotCount(TotalCount)) {
+      if (ICPAllowHotOnly && !PSI->isHotCount(TotalCount, true)) {
         LLVM_DEBUG(dbgs() << "Don't promote the non-hot candidate: TotalCount="
                           << TotalCount << "\n");
         continue;
