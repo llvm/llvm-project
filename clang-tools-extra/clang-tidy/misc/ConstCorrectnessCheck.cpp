@@ -16,6 +16,7 @@
 #include <cassert>
 
 using namespace clang::ast_matchers;
+using namespace clang::ast_matchers::internal;
 
 namespace clang::tidy::misc {
 
@@ -40,6 +41,10 @@ AST_MATCHER(ReferenceType, isSpelledAsLValue) {
 }
 AST_MATCHER(Type, isDependentType) { return Node.isDependentType(); }
 
+AST_MATCHER(TypeLoc, hasContainedAutoType) {
+  return !Node.getContainedAutoTypeLoc().isNull();
+}
+
 AST_MATCHER(FunctionDecl, isTemplate) {
   return Node.getDescribedFunctionTemplate() != nullptr;
 }
@@ -55,6 +60,8 @@ ConstCorrectnessCheck::ConstCorrectnessCheck(StringRef Name,
       AnalyzePointers(Options.get("AnalyzePointers", true)),
       AnalyzeReferences(Options.get("AnalyzeReferences", true)),
       AnalyzeValues(Options.get("AnalyzeValues", true)),
+      AnalyzeAutoVariables(Options.get("AnalyzeAutoVariables", true)),
+      AnalyzeLambdas(Options.get("AnalyzeLambdas", true)),
       AnalyzeParameters(Options.get("AnalyzeParameters", true)),
 
       WarnPointersAsPointers(Options.get("WarnPointersAsPointers", true)),
@@ -75,12 +82,19 @@ ConstCorrectnessCheck::ConstCorrectnessCheck(StringRef Name,
         "The check 'misc-const-correctness' will not "
         "perform any analysis because 'AnalyzeValues', "
         "'AnalyzeReferences' and 'AnalyzePointers' are false.");
+
+  if (AnalyzeLambdas && !AnalyzeAutoVariables)
+    this->configurationDiag("The check 'misc-const-correctness' will not "
+                            "analyze lambdas because 'AnalyzeLambdas' has no "
+                            "effect while 'AnalyzeAutoVariables' is false.");
 }
 
 void ConstCorrectnessCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "AnalyzePointers", AnalyzePointers);
   Options.store(Opts, "AnalyzeReferences", AnalyzeReferences);
   Options.store(Opts, "AnalyzeValues", AnalyzeValues);
+  Options.store(Opts, "AnalyzeAutoVariables", AnalyzeAutoVariables);
+  Options.store(Opts, "AnalyzeLambdas", AnalyzeLambdas);
   Options.store(Opts, "AnalyzeParameters", AnalyzeParameters);
 
   Options.store(Opts, "WarnPointersAsPointers", WarnPointersAsPointers);
@@ -114,7 +128,7 @@ void ConstCorrectnessCheck::registerMatchers(MatchFinder *Finder) {
       hasType(referenceType(pointee(hasCanonicalType(templateTypeParmType())))),
       hasType(referenceType(pointee(substTemplateTypeParmType()))));
 
-  auto AllowedTypeDecl = namedDecl(anyOf(
+  const auto AllowedTypeDecl = namedDecl(anyOf(
       matchers::matchesAnyListedRegexName(AllowedTypes), usingShadowDecl()));
 
   const auto AllowedType = hasType(qualType(
@@ -135,9 +149,17 @@ void ConstCorrectnessCheck::registerMatchers(MatchFinder *Finder) {
 
   // Match local variables which could be 'const' if not modified later.
   // Example: `int i = 10` would match `int i`.
-  const auto LocalValDecl =
-      varDecl(isLocal(), hasInitializer(unless(isInstantiationDependent())),
-              unless(CommonExcludeTypes));
+  const auto LocalValDecl = varDecl(
+      isLocal(), hasInitializer(anything()),
+      unless(anyOf(ConstType, ConstReference, TemplateType,
+                   hasInitializer(isInstantiationDependent()), RValueReference,
+                   FunctionPointerRef, isImplicit(), AllowedType)),
+      AnalyzeLambdas
+          ? Matcher<VarDecl>(anything())
+          : Matcher<VarDecl>(unless(hasType(cxxRecordDecl(isLambda())))),
+      AnalyzeAutoVariables
+          ? Matcher<VarDecl>(anything())
+          : Matcher<VarDecl>(unless(hasTypeLoc(hasContainedAutoType()))));
 
   // Match the function scope for which the analysis of all local variables
   // shall be run.
