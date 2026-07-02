@@ -198,9 +198,8 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
 
   class SMTVMADOTSP<bits<2> sign, string opcodestr, string argstr,
                     bit EarlyClobber = 0>
-      : RVInst<(outs VRM2NoV0:$vd_wb),
-               (ins VRM2NoV0:$vd, VRM2NoV0:$vs1, VRNoV0V1:$vs2, VRV0V1:$vmask, uimm2:$imm2,
-                   SMT_INT:$vtype),
+      : RVInst<(outs VRM2:$vd_wb),
+               (ins VRM2:$vd, VRM2:$vs1, VR:$vs2, VR:$vmask, uimm2:$imm2, SMT_INT:$vtype),
                opcodestr, argstr, [], InstFormatR> {
     bits<5> vd;
     bits<5> vs1;
@@ -224,13 +223,13 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
     let Constraints =
         !if(EarlyClobber, "@earlyclobber $vd_wb, $vd = $vd_wb", "$vd = $vd_wb");
     let UseNamedOperandTable = true;
+    let SMTConstraint = DiffWithMaskConstraint;
   }
 
   class SMTVMADOTHP<bits<3> funct3, string opcodestr, string argstr,
                     bit EarlyClobber = 0>
-      : RVInst<(outs VRNoV0V1:$vd_wb),
-               (ins VRNoV0V1:$vd, VRNoV0V1:$vs1, VRNoV0V1:$vs2, VRV0V1:$vmask, uimm3:$imm3,
-                   SMT_INT:$vtype),
+      : RVInst<(outs VR:$vd_wb),
+               (ins VR:$vd, VR:$vs1, VR:$vs2, VR:$vmask, uimm3:$imm3, SMT_INT:$vtype),
                opcodestr, argstr, [], InstFormatR> {
     bits<5> vd;
     bits<5> vs1;
@@ -251,6 +250,7 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
     let Constraints =
         !if(EarlyClobber, "@earlyclobber $vd_wb, $vd = $vd_wb", "$vd = $vd_wb");
     let UseNamedOperandTable = true;
+    let SMTConstraint = DiffWithMaskConstraint;
   }
 
   class SMTVFWMADOT<bits<3> funct3, dag outs, dag ins, string opcodestr,

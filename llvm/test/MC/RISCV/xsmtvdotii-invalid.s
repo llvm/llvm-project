@@ -48,19 +48,16 @@ smt.vmadot.sp v8, v2, v8, v0, 1, i4
 // CHECK-ERROR: :[[@LINE-1]]:15: error: the destination vector register group cannot overlap the source vector register group{{$}}
 
 smt.vmadot.sp v0, v2, v8, v0, 3, i4
-// CHECK-ERROR: :[[@LINE-1]]:15: error: invalid operand for instruction{{$}}
+// CHECK-ERROR: :[[@LINE-1]]:15: error: register conflicts with vmask register v0{{$}}
 
 smt.vmadot.sp v2, v0, v8, v1, 3, i4
-// CHECK-ERROR: :[[@LINE-1]]:19: error: invalid operand for instruction{{$}}
-
-smt.vmadot.sp v2, v4, v0, v1, 3, i4
-// CHECK-ERROR: :[[@LINE-1]]:23: error: invalid operand for instruction{{$}}
+// CHECK-ERROR: :[[@LINE-1]]:19: error: register conflicts with vmask register v1{{$}}
 
 smt.vmadot.sp v2, v4, v1, v1, 3, i4
-// CHECK-ERROR: :[[@LINE-1]]:23: error: invalid operand for instruction{{$}}
+// CHECK-ERROR: :[[@LINE-1]]:23: error: register conflicts with vmask register v1{{$}}
 
 smt.vmadot.sp v2, v4, v8, v3, 3, i4
-// CHECK-ERROR: :[[@LINE-1]]:27: error: invalid operand for instruction{{$}}
+// CHECK-ERROR: :[[@LINE-1]]:27: error: vmask operand only supports v0 or v1{{$}}
 
 smt.vmadot.sp v2, v4, v8, v1, 4, i4
 // CHECK-ERROR: :[[@LINE-1]]:31: error: immediate must be an integer in the range [0, 3]{{$}}
@@ -72,18 +69,18 @@ smt.vmadot.hp v8, v2, v8, v0, 5, i4
 // CHECK-ERROR: :[[@LINE-1]]:15: error: the destination vector register group cannot overlap the source vector register group{{$}}
 
 smt.vmadot.hp v0, v4, v8, v0, 3, i4
-// CHECK-ERROR: :[[@LINE-1]]:15: error: invalid operand for instruction{{$}}
+// CHECK-ERROR: :[[@LINE-1]]:15: error: register conflicts with vmask register v0{{$}}
 
 smt.vmadot.hp v2, v0, v8, v0, 3, i4
-// CHECK-ERROR: :[[@LINE-1]]:19: error: invalid operand for instruction{{$}}
+// CHECK-ERROR: :[[@LINE-1]]:19: error: register conflicts with vmask register v0{{$}}
 
 smt.vmadot.hp v8, v2, v0, v0, 5, i4
-// CHECK-ERROR: :[[@LINE-1]]:23: error: invalid operand for instruction{{$}}
+// CHECK-ERROR: :[[@LINE-1]]:23: error: register conflicts with vmask register v0{{$}}
 
 smt.vmadot.hp v2, v4, v8, v2, 3, i4
-// CHECK-ERROR: :[[@LINE-1]]:27: error: invalid operand for instruction{{$}}
+// CHECK-ERROR: :[[@LINE-1]]:27: error: vmask operand only supports v0 or v1{{$}}
 
-smt.vmadot.hp v2, v2, v8, v0, 8, i4
+smt.vmadot.hp v2, v4, v8, v0, 8, i4
 // CHECK-ERROR: :[[@LINE-1]]:31: error: immediate must be an integer in the range [0, 7]{{$}}
 
 smt.vfwmadot v3, v4, v2

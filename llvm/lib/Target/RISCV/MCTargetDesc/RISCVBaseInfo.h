@@ -282,6 +282,9 @@ enum {
 
   HasTKOpShift = HasTMOpShift + 1,
   HasTKOpMask = 1ULL << HasTKOpShift,
+
+  SMTConstraintShift = HasTKOpShift + 1,
+  SMTConstraintMask = 1ULL << SMTConstraintShift,
 };
 
 // Helper functions to read TSFlags.

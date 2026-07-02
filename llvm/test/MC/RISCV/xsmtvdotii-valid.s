@@ -58,6 +58,12 @@ smt.vmadot.sp v16, v2, v8, v0, 1
 // CHECK-INST:  smt.vmadot.sp	v16, v2, v8, v1, 0x2, i8
 smt.vmadot.sp v16, v2, v8, v1, 2, i8
 
+// CHECK-ENC: smt.vmadot.sp	v16, v2, v1, v0, 1, i4  # encoding: [0xab,0x38,0x11,0xc8]
+// CHECK-ERROR: instruction requires the following: 'XSMTVDotII' (SpacemiT Vector Extension for Matrix(2.0))
+// CHECK-INST:	smt.vmadot.sp	v16, v2, v1, v0, 0x1, i4
+// CHECK-UNKNOWN: c81138ab     	<unknown>
+smt.vmadot.sp v16, v2, v1, v0, 1, i4
+
 // CHECK-ENC:   encoding: [0x2b,0x38,0x81,0xd0]
 // CHECK-ERROR: instruction requires the following: 'XSMTVDotII' (SpacemiT Vector Extension for Matrix(2.0)){{$}}
 // CHECK-INST:  smt.vmadot.hp	v16, v2, v8, v0, 0x3, i4
@@ -82,6 +88,24 @@ smt.vmadot.hp v16, v2, v8, v1, 4, i8
 // CHECK-ERROR: instruction requires the following: 'XSMTVDotII' (SpacemiT Vector Extension for Matrix(2.0)){{$}}
 // CHECK-INST:  smt.vmadot.hp	v16, v2, v8, v1, 0x4, i8
 smt.vmadot.hp v16, v2, v8, v1, 4
+
+// CHECK-ENC: smt.vmadot.hp	v1, v2, v8, v0, 3, i4   # encoding: [0xab,0x30,0x81,0xd0]
+// CHECK-ERROR: instruction requires the following: 'XSMTVDotII' (SpacemiT Vector Extension for Matrix(2.0))
+// CHECK-INST: 	smt.vmadot.hp	v1, v2, v8, v0, 0x3, i4
+// CHECK-UNKNOWN: d08130ab     	<unknown>
+smt.vmadot.hp v1, v2, v8, v0, 3, i4
+
+// CHECK-ENC: smt.vmadot.hp	v16, v1, v8, v0, 3, i4  # encoding: [0x2b,0xb8,0x80,0xd0]
+// CHECK-ERROR: instruction requires the following: 'XSMTVDotII' (SpacemiT Vector Extension for Matrix(2.0))
+// CHECK-INST: 	smt.vmadot.hp	v16, v1, v8, v0, 0x3, i4
+// CHECK-UNKNOWN: d080b82b     	<unknown>
+smt.vmadot.hp v16, v1, v8, v0, 3, i4
+
+// CHECK-ENC: smt.vmadot.hp	v16, v2, v1, v0, 3, i4  # encoding: [0x2b,0x38,0x11,0xd0]
+// CHECK-ERROR: instruction requires the following: 'XSMTVDotII' (SpacemiT Vector Extension for Matrix(2.0))
+// CHECK-INST: 	smt.vmadot.hp	v16, v2, v1, v0, 0x3, i4
+// CHECK-UNKNOWN: d011382b     	<unknown>
+smt.vmadot.hp v16, v2, v1, v0, 3, i4
 
 // CHECK-ENC:   encoding: [0x2b,0x41,0x62,0x9e]
 // CHECK-ERROR: instruction requires the following: 'XSMTVDotII' (SpacemiT Vector Extension for Matrix(2.0)){{$}}

@@ -4316,6 +4316,36 @@ bool RISCVAsmParser::validateInstruction(MCInst &Inst,
     }
   }
 
+  if (MCID.TSFlags & RISCVII::SMTConstraintMask) {
+    // smt.vmadot with sp and hp: the vmask operand (only use V0 or V1) must not
+    // overlap with any of vd, vs1, or vs2.
+    int VMaskIdx =
+        RISCV::getNamedOperandIdx(Inst.getOpcode(), RISCV::OpName::vmask);
+    MCRegister MaskReg = Inst.getOperand(VMaskIdx).getReg();
+    if (MaskReg != RISCV::V0 && MaskReg != RISCV::V1)
+      return Error(Operands[VMaskIdx]->getStartLoc(),
+                   "vmask operand only supports v0 or v1");
+
+    unsigned MaskEnc = RI->getEncodingValue(MaskReg);
+    RISCV::OpName RegOps[] = {RISCV::OpName::vd, RISCV::OpName::vs1,
+                              RISCV::OpName::vs2};
+    for (RISCV::OpName OpN : RegOps) {
+      int Idx = RISCV::getNamedOperandIdx(Inst.getOpcode(), OpN);
+      if (Idx < 0 || !Inst.getOperand(Idx).isReg())
+        continue;
+      MCRegister Reg = Inst.getOperand(Idx).getReg();
+      unsigned RegEnc = RI->getEncodingValue(Reg);
+      unsigned RegLmul = getLMULFromVectorRegister(Reg);
+      for (unsigned i = 0; i < RegLmul; i++) {
+        if ((RegEnc + i) == MaskEnc) {
+          SMLoc Loc = Operands[Idx]->getStartLoc();
+          return Error(Loc, Twine("register conflicts with vmask register ") +
+                                (MaskReg == RISCV::V0 ? "v0" : "v1"));
+        }
+      }
+    }
+  }
+
   return false;
 }
 
