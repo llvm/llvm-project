@@ -552,6 +552,19 @@ file './input.cpp'
   }
 }
 
+TEST_F(TokenCollectorTest, FeatureLikeBuiltinMacros) {
+  recordTokens("__has_builtin(__builtin_allow_runtime_check)\n");
+  EXPECT_THAT(Buffer.expandedTokens(),
+              ElementsAre(AllOf(Kind(tok::numeric_constant), HasText("1")),
+                          Kind(tok::eof)));
+
+  AllowErrors = true;
+  recordTokens("__is_identifier;\n");
+  EXPECT_THAT(Buffer.expandedTokens(),
+              ElementsAre(AllOf(Kind(tok::numeric_constant), HasText("0")),
+                          Kind(tok::eof)));
+}
+
 TEST_F(TokenCollectorTest, SpecialTokens) {
   // Tokens coming from concatenations.
   recordTokens(R"cpp(
