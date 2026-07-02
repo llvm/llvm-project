@@ -2103,14 +2103,15 @@ void Sema::emitDeferredDiags() {
     ExternalSource->ReadDeclsToCheckForDeferredDiags(
         DeclsToCheckForDeferredDiags);
 
-  // For each implicit-H+D-explicit-inst function with deferred errors but no
-  // organic device caller, drop the diagnostics and mark for a trap body.
-  auto ClassifyImplicitHDExplicitInst = [&]() {
+  // For selected implicit-H+D functions with deferred device errors but no
+  // organic device caller, drop diagnostics and mark a trap body if CodeGen
+  // still needs a device symbol.
+  auto ClassifyImplicitHDDeviceDiags = [&]() {
     if (!LangOpts.CUDAIsDevice)
       return;
     for (auto &Pair : DeviceDeferredDiags) {
       const FunctionDecl *FD = Pair.first;
-      if (!SemaCUDA::isImplicitHDExplicitInstantiation(FD))
+      if (!SemaCUDA::isImplicitHostDeviceFunction(FD))
         continue;
       if (CUDA().DeviceKnownEmittedFns.count(FD))
         continue;
@@ -2129,14 +2130,14 @@ void Sema::emitDeferredDiags() {
 
   if ((DeviceDeferredDiags.empty() && !LangOpts.OpenMP) ||
       DeclsToCheckForDeferredDiags.empty()) {
-    ClassifyImplicitHDExplicitInst();
+    ClassifyImplicitHDDeviceDiags();
     return;
   }
 
   DeferredDiagnosticsEmitter DDE(*this);
   for (auto *D : DeclsToCheckForDeferredDiags)
     DDE.checkRecordedDecl(D);
-  ClassifyImplicitHDExplicitInst();
+  ClassifyImplicitHDDeviceDiags();
   DDE.emitCollectedDiags();
 }
 

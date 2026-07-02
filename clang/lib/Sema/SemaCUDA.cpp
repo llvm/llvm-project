@@ -926,7 +926,7 @@ SemaBase::SemaDiagnosticBuilder SemaCUDA::DiagIfDeviceCode(SourceLocation Loc,
       if (SemaRef.IsLastErrorImmediate &&
           getDiagnostics().getDiagnosticIDs()->isNote(DiagID))
         return SemaDiagnosticBuilder::K_Immediate;
-      if (isImplicitHDExplicitInstantiation(CurFunContext))
+      if (isImplicitHostDeviceFunction(CurFunContext))
         return SemaDiagnosticBuilder::K_Deferred;
       return (SemaRef.getEmissionStatus(CurFunContext) ==
               Sema::FunctionEmissionStatus::Emitted)
@@ -995,25 +995,23 @@ bool SemaCUDA::CheckCall(SourceLocation Loc, FunctionDecl *Callee) {
   // Otherwise, mark the call in our call graph so we can traverse it later.
   bool CallerKnownEmitted = SemaRef.getEmissionStatus(Caller) ==
                             Sema::FunctionEmissionStatus::Emitted;
-  bool CallerIsImplicitHDExplicitInst =
-      isImplicitHDExplicitInstantiation(Caller);
-  SemaDiagnosticBuilder::Kind DiagKind = [this, Caller, Callee,
-                                          CallerKnownEmitted,
-                                          CallerIsImplicitHDExplicitInst] {
-    switch (IdentifyPreference(Caller, Callee)) {
-    case CFP_Never:
-    case CFP_WrongSide:
-      assert(Caller && "Never/wrongSide calls require a non-null caller");
-      // If we know the caller will be emitted, we know this wrong-side call
-      // will be emitted, so it's an immediate error.  Otherwise, defer the
-      // error until we know the caller is emitted.
-      return (CallerKnownEmitted && !CallerIsImplicitHDExplicitInst)
-                 ? SemaDiagnosticBuilder::K_ImmediateWithCallStack
-                 : SemaDiagnosticBuilder::K_Deferred;
-    default:
-      return SemaDiagnosticBuilder::K_Nop;
-    }
-  }();
+  bool DeferImplicitHDDeviceDiag = isImplicitHostDeviceFunction(Caller);
+  SemaDiagnosticBuilder::Kind DiagKind =
+      [this, Caller, Callee, CallerKnownEmitted, DeferImplicitHDDeviceDiag] {
+        switch (IdentifyPreference(Caller, Callee)) {
+        case CFP_Never:
+        case CFP_WrongSide:
+          assert(Caller && "Never/wrongSide calls require a non-null caller");
+          // If we know the caller will be emitted, we know this wrong-side call
+          // will be emitted, so it's an immediate error.  Otherwise, defer the
+          // error until we know the caller is emitted.
+          return (CallerKnownEmitted && !DeferImplicitHDDeviceDiag)
+                     ? SemaDiagnosticBuilder::K_ImmediateWithCallStack
+                     : SemaDiagnosticBuilder::K_Deferred;
+        default:
+          return SemaDiagnosticBuilder::K_Nop;
+        }
+      }();
 
   bool IsDeviceKernelCall = Callee == getASTContext().getcudaLaunchDeviceDecl();
   bool CallerHD = Caller && Caller->hasAttr<CUDAHostAttr>() &&
