@@ -1733,12 +1733,16 @@ DEF_TRAVERSE_DECL(FriendDecl, {
 })
 
 DEF_TRAVERSE_DECL(FriendTemplateDecl, {
-  if (D->getFriendType())
-    TRY_TO(TraverseTypeLoc(D->getFriendType()->getTypeLoc()));
-  else
-    TRY_TO(TraverseDecl(D->getFriendDecl()));
-  for (unsigned I = 0, E = D->getNumTemplateParameters(); I < E; ++I) {
-    TemplateParameterList *TPL = D->getTemplateParameterList(I);
+  TemplateName Template = D->getFriendTemplateName();
+  if (Template.isNull()) {
+    if (D->getFriendType())
+      TRY_TO(TraverseTypeLoc(D->getFriendType()->getTypeLoc()));
+    else
+      TRY_TO(TraverseDecl(D->getFriendDecl()));
+  } else {
+    TRY_TO(TraverseTemplateName(Template));
+  }
+  for (TemplateParameterList *TPL : D->getFriendTypeTemplateParameterLists()) {
     for (TemplateParameterList::iterator ITPL = TPL->begin(), ETPL = TPL->end();
          ITPL != ETPL; ++ITPL) {
       TRY_TO(TraverseDecl(*ITPL));
