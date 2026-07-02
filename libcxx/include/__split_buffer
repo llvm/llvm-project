@@ -23,6 +23,7 @@
 #include <__memory/allocator.h>
 #include <__memory/allocator_traits.h>
 #include <__memory/compressed_pair.h>
+#include <__memory/destroy.h>
 #include <__memory/pointer_traits.h>
 #include <__memory/swap_allocator.h>
 #include <__memory/uninitialized_algorithms.h>
@@ -925,7 +926,19 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void __split_buffer<_Tp, _Allocator, _Layout>::emp
       difference_type __d = __back_spare();
       __d                 = (__d + 1) / 2;
       auto __new_end      = __end + __d;
-      __set_valid_range(std::move_backward(begin(), __end, __new_end), __new_end);
+      if (static_cast<size_type>(__d) >= size()) {
+        auto __new_begin = begin() + __d;
+        std::__uninitialized_allocator_relocate(
+            __get_allocator(), std::__to_address(begin()), std::__to_address(__end), std::__to_address(__new_begin));
+        __set_valid_range(__new_begin, __new_end);
+      } else {
+        auto __mid = __end - __d;
+        std::__uninitialized_allocator_copy(
+            __get_allocator(), move_iterator<pointer>(__mid), move_iterator<pointer>(__end), __end);
+        auto __new_begin = std::move_backward(begin(), __mid, __end);
+        std::__allocator_destroy(__get_allocator(), begin(), __new_begin);
+        __set_valid_range(__new_begin, __new_end);
+      }
     } else {
       size_type __c = std::max<size_type>(2 * capacity(), 1);
       __split_buffer<value_type, allocator_type, _Layout> __t(__c, (__c + 3) / 4, __get_allocator());
@@ -946,8 +959,21 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void __split_buffer<_Tp, _Allocator, _Layout>::emp
     if (__front_spare() > 0) {
       difference_type __d = __front_spare();
       __d                 = (__d + 1) / 2;
-      __end               = std::move(begin(), __end, begin() - __d);
-      __set_valid_range(begin() - __d, __end);
+      auto __new_begin    = begin() - __d;
+      if (static_cast<size_type>(__d) >= size()) {
+        std::__uninitialized_allocator_relocate(
+            __get_allocator(), std::__to_address(begin()), std::__to_address(__end), std::__to_address(__new_begin));
+        __end -= __d;
+        __set_valid_range(__new_begin, __end);
+      } else {
+        auto __mid = begin() + __d;
+        std::__uninitialized_allocator_copy(
+            __get_allocator(), move_iterator<pointer>(begin()), move_iterator<pointer>(__mid), __new_begin);
+        auto __new_end = std::move(__mid, __end, begin());
+        std::__allocator_destroy(__get_allocator(), __new_end, __end);
+        __end = __new_end;
+        __set_valid_range(__new_begin, __end);
+      }
     } else {
       size_type __c = std::max<size_type>(2 * capacity(), 1);
       __split_buffer<value_type, allocator_type, _Layout> __t(__c, __c / 4, __get_allocator());

@@ -24,7 +24,7 @@
 #include "min_allocator.h"
 
 template <class S, class U>
-void test0(S s, U val, S expected, std::size_t expected_erased_count) {
+TEST_CONSTEXPR_CXX26 void test0(S s, U val, S expected, std::size_t expected_erased_count) {
   ASSERT_SAME_TYPE(typename S::size_type, decltype(std::erase(s, val)));
   assert(expected_erased_count == std::erase(s, val));
   assert(s == expected);
@@ -32,7 +32,7 @@ void test0(S s, U val, S expected, std::size_t expected_erased_count) {
 }
 
 template <class S>
-void test() {
+TEST_CONSTEXPR_CXX26 void test() {
   test0(S(), 1, S(), 0);
 
   test0(S({1}), 1, S(), 1);
@@ -66,7 +66,7 @@ void test() {
   test0(S({1, 2, 1}), opt(3), S({1, 2, 1}), 0);
 }
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool tests() {
   test<std::deque<int>>();
   test<std::deque<int, min_allocator<int>>>();
   test<std::deque<int, safe_allocator<int>>>();
@@ -74,6 +74,14 @@ int main(int, char**) {
 
   test<std::deque<long>>();
   test<std::deque<double>>();
+  return true;
+}
+
+int main(int, char**) {
+  tests();
+#if TEST_STD_VER >= 26
+  static_assert(tests());
+#endif
 
   return 0;
 }

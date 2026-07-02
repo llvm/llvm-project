@@ -19,7 +19,7 @@
 #include "min_allocator.h"
 
 template <class C>
-C make(int size, int start = 0) {
+TEST_CONSTEXPR_CXX26 C make(int size, int start = 0) {
   const int b = 4096 / sizeof(int);
   int init    = 0;
   if (start > 0) {
@@ -38,7 +38,7 @@ C make(int size, int start = 0) {
 }
 
 template <class C>
-void testN(int start, int N, int M) {
+TEST_CONSTEXPR_CXX26 void testN(int start, int N, int M) {
   C c1      = make<C>(N, start);
   C c2      = make<C>(M);
   C c1_save = c1;
@@ -52,7 +52,7 @@ void testN(int start, int N, int M) {
   LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c2_save));
 }
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool tests() {
   {
     int rng[]   = {0, 1, 2, 3, 1023, 1024, 1025, 2047, 2048, 2049};
     const int N = sizeof(rng) / sizeof(rng[0]);
@@ -112,6 +112,14 @@ int main(int, char**) {
     LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c1));
     LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c2));
   }
+#endif
+  return true;
+}
+
+int main(int, char**) {
+  tests();
+#if TEST_STD_VER >= 26
+  static_assert(tests());
 #endif
 
   return 0;

@@ -51,7 +51,7 @@ bool Throws::sThrows = false;
 #endif
 
 template <class C>
-C make(int size, int start = 0) {
+TEST_CONSTEXPR_CXX26 C make(int size, int start = 0) {
   const int b = 4096 / sizeof(int);
   int init    = 0;
   if (start > 0) {
@@ -70,7 +70,7 @@ C make(int size, int start = 0) {
 }
 
 template <class C>
-void test(int P, C& c1, int size) {
+TEST_CONSTEXPR_CXX26 void test(int P, C& c1, int size) {
   typedef typename C::iterator I;
   assert(static_cast<std::size_t>(P + size) <= c1.size());
   std::size_t c1_osize = c1.size();
@@ -88,7 +88,7 @@ void test(int P, C& c1, int size) {
 }
 
 template <class C>
-void testN(int start, int N) {
+TEST_CONSTEXPR_CXX26 void testN(int start, int N) {
   int pstep = std::max(N / std::max(std::min(N, 10), 1), 1);
   for (int p = 0; p <= N; p += pstep) {
     int sstep = std::max((N - p) / std::max(std::min(N - p, 10), 1), 1);
@@ -99,7 +99,7 @@ void testN(int start, int N) {
   }
 }
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool tests() {
   {
     int rng[]   = {0, 1, 2, 3, 1023, 1024, 1025, 2047, 2048, 2049};
     const int N = sizeof(rng) / sizeof(rng[0]);
@@ -120,7 +120,7 @@ int main(int, char**) {
   // Test for LWG2953:
   // Throws: Nothing unless an exception is thrown by the assignment operator of T.
   // (which includes move assignment)
-  {
+  if (!TEST_IS_CONSTANT_EVALUATED) {
     Throws arr[] = {1, 2, 3};
     std::deque<Throws> v(arr, arr + 3);
     Throws::sThrows = true;
@@ -131,6 +131,14 @@ int main(int, char**) {
     assert(v.size() == 0);
     LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(v));
   }
+#endif
+  return true;
+}
+
+int main(int, char**) {
+  tests();
+#if TEST_STD_VER >= 26
+  static_assert(tests());
 #endif
 
   return 0;

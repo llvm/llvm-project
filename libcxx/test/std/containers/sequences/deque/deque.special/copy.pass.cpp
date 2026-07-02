@@ -23,7 +23,7 @@
 #include "min_allocator.h"
 
 template <class C>
-C make(int size, int start = 0) {
+TEST_CONSTEXPR_CXX26 C make(int size, int start = 0) {
   const int b = 4096 / sizeof(int);
   int init    = 0;
   if (start > 0) {
@@ -42,7 +42,7 @@ C make(int size, int start = 0) {
 }
 
 template <class C>
-void testN(int start, int N) {
+TEST_CONSTEXPR_CXX26 void testN(int start, int N) {
   typedef typename C::iterator I;
   typedef typename C::const_iterator CI;
   typedef random_access_iterator<I> RAI;
@@ -76,7 +76,7 @@ void testN(int start, int N) {
   LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c2));
 }
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool tests() {
   {
     int rng[]   = {0, 1, 2, 3, 1023, 1024, 1025, 2047, 2048, 2049};
     const int N = sizeof(rng) / sizeof(rng[0]);
@@ -92,6 +92,14 @@ int main(int, char**) {
       for (int j = 0; j < N; ++j)
         testN<std::deque<int, min_allocator<int>> >(rng[i], rng[j]);
   }
+#endif
+  return true;
+}
+
+int main(int, char**) {
+  tests();
+#if TEST_STD_VER >= 26
+  static_assert(tests());
 #endif
 
   return 0;

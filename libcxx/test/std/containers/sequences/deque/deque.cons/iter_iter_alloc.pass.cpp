@@ -26,7 +26,7 @@
 #endif
 
 template <class InputIterator, class Allocator>
-void test(InputIterator f, InputIterator l, const Allocator& a) {
+TEST_CONSTEXPR_CXX26 void test(InputIterator f, InputIterator l, const Allocator& a) {
   typedef typename std::iterator_traits<InputIterator>::value_type T;
   typedef std::deque<T, Allocator> C;
   C d(f, l, a);
@@ -37,7 +37,7 @@ void test(InputIterator f, InputIterator l, const Allocator& a) {
   assert(std::equal(d.begin(), d.end(), f));
 }
 
-void basic_test() {
+TEST_CONSTEXPR_CXX26 void basic_test() {
   int ab[] = {3, 4, 2, 8, 0, 1, 44, 34, 45, 96, 80, 1, 13, 31, 45};
   int* an  = ab + sizeof(ab) / sizeof(ab[0]);
   test(cpp17_input_iterator<const int*>(ab), cpp17_input_iterator<const int*>(an), test_allocator<int>(3));
@@ -52,7 +52,7 @@ void basic_test() {
 #endif
 }
 
-void test_emplacable_concept() {
+TEST_CONSTEXPR_CXX26 void test_emplacable_concept() {
 #if TEST_STD_VER >= 11
   int arr1[] = {42};
   int arr2[] = {1, 101, 42};
@@ -97,9 +97,17 @@ void test_emplacable_concept() {
 #endif
 }
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   basic_test();
   test_emplacable_concept();
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }
