@@ -62,6 +62,19 @@ enum : unsigned { PTR32_SPTR = 270, PTR32_UPTR = 271, PTR64 = 272 };
 class AArch64Subtarget;
 
 class AArch64TargetLowering : public TargetLowering {
+  // Copying needed for an outgoing byval argument.
+  enum ByValCopyKind {
+    // Argument is already in the correct location, no copy needed.
+    NoCopy,
+    // Argument value is currently in the local stack frame, needs copying to
+    // outgoing arguemnt area.
+    CopyOnce,
+    // Argument value is currently in the outgoing argument area, but not at
+    // the correct offset, so needs copying via a temporary in local stack
+    // space.
+    CopyViaTemp,
+  };
+
 public:
   explicit AArch64TargetLowering(const TargetMachine &TM,
                                  const AArch64Subtarget &STI);
@@ -610,6 +623,10 @@ public:
   // no validity filtering. This is the single entry point for the generated
   // register-name matcher, shared with getRegisterByName.
   Register matchRegisterName(StringRef RegName) const;
+
+  ByValCopyKind ByValNeedsCopyForTailCall(SelectionDAG &DAG, SDValue Src,
+                                          SDValue Dst,
+                                          ISD::ArgFlagsTy Flags) const;
 
 private:
   /// Keep a pointer to the AArch64Subtarget around so that we can

@@ -262,8 +262,6 @@ struct OutgoingArgHandler : public CallLowering::OutgoingValueHandler {
     LLT s64 = LLT::integer(64);
 
     if (IsTailCall) {
-      assert(!Flags.isByVal() && "byval unhandled with tail calls");
-
       Offset += FPDiff;
       int FI = MF.getFrameInfo().CreateFixedObject(Size, Offset, true);
       auto FIReg = MIRBuilder.buildFrameIndex(p0, FI);
@@ -298,6 +296,85 @@ struct OutgoingArgHandler : public CallLowering::OutgoingValueHandler {
     MIB.addUse(PhysReg, RegState::Implicit);
     Register ExtReg = extendRegister(ValVReg, VA);
     MIRBuilder.buildCopy(PhysReg, ExtReg);
+  }
+
+  enum ByValCopyKind { CopyOnce, CopyViaTemp, NoCopy };
+  ByValCopyKind classifyByValForTailCall(Register SrcPtr,
+                                         Register DstPtr) const {
+    const MachineFunction &MF = MIRBuilder.getMF();
+    const MachineFrameInfo &MFI = MF.getFrameInfo();
+
+    // Find the defining instruction (looking through copies).
+    MachineInstr *SrcDef = getDefIgnoringCopies(SrcPtr, MRI);
+    MachineInstr *DstDef = getDefIgnoringCopies(DstPtr, MRI);
+
+    // Convervatively copy when we can't find a root.
+    if (!SrcDef || !DstDef)
+      return CopyViaTemp;
+
+    // Globals are always safe to copy from.
+    if (SrcDef->getOpcode() == TargetOpcode::G_GLOBAL_VALUE ||
+        SrcDef->getOpcode() == TargetOpcode::G_CONSTANT_POOL)
+      return CopyOnce;
+
+    // Can only analyse frame index nodes, conservatively assume we need a
+    // temporary.
+    if (SrcDef->getOpcode() != TargetOpcode::G_FRAME_INDEX ||
+        DstDef->getOpcode() != TargetOpcode::G_FRAME_INDEX)
+      return CopyViaTemp;
+
+    int SrcFI = SrcDef->getOperand(1).getIndex();
+    int64_t SrcOffset = MFI.getObjectOffset(SrcFI);
+
+    // If the source is in the local frame, then the copy to the argument memory
+    // is always valid.
+    if (!MFI.isFixedObjectIndex(SrcFI) || SrcOffset < 0)
+      return CopyOnce;
+
+    // If the value is already in the correct location, then no copying is
+    // needed. If not, then we need to copy via a temporary.
+    int DstFI = DstDef->getOperand(1).getIndex();
+    int64_t DstOffset = MFI.getObjectOffset(DstFI);
+    if (SrcOffset == DstOffset)
+      return NoCopy;
+
+    return CopyViaTemp;
+  }
+
+  void copyArgumentMemory(const CallLowering::ArgInfo &Arg, Register DstPtr,
+                          Register SrcPtr, const MachinePointerInfo &DstPtrInfo,
+                          Align DstAlign, const MachinePointerInfo &SrcPtrInfo,
+                          Align SrcAlign, uint64_t MemSize,
+                          CCValAssign &VA) const override {
+    if (IsTailCall) {
+      ByValCopyKind Copy = classifyByValForTailCall(SrcPtr, DstPtr);
+      if (Copy == NoCopy) {
+        // The value is already in the right place.
+        return;
+      } else if (Copy == CopyViaTemp) {
+        // Copy first to a local, then to the destination.
+        MachineFunction &MF = MIRBuilder.getMF();
+        int TempFI = MF.getFrameInfo().CreateStackObject(
+            MemSize, std::max(SrcAlign, DstAlign), /*isSpillSlot=*/false);
+        LLT p0 = LLT::pointer(0, 64);
+        Register Temp = MIRBuilder.buildFrameIndex(p0, TempFI).getReg(0);
+        MachinePointerInfo TempMPO =
+            MachinePointerInfo::getFixedStack(MF, TempFI);
+
+        CallLowering::OutgoingValueHandler::copyArgumentMemory(
+            Arg, Temp, SrcPtr, TempMPO, DstAlign, SrcPtrInfo, SrcAlign, MemSize,
+            VA);
+        CallLowering::OutgoingValueHandler::copyArgumentMemory(
+            Arg, DstPtr, Temp, DstPtrInfo, DstAlign, TempMPO, DstAlign, MemSize,
+            VA);
+        return;
+      }
+    }
+
+    // Otherwise just use the default implementation.
+    CallLowering::OutgoingValueHandler::copyArgumentMemory(
+        Arg, DstPtr, SrcPtr, DstPtrInfo, DstAlign, SrcPtrInfo, SrcAlign,
+        MemSize, VA);
   }
 
   /// Check whether a stack argument requires lowering in a tail call.
@@ -1006,13 +1083,6 @@ bool AArch64CallLowering::isEligibleForTailCallOptimization(
     return false;
   }
 
-  // Byval parameters hand the function a pointer directly into the stack area
-  // we want to reuse during a tail call. Working around this *is* possible (see
-  // X86).
-  //
-  // FIXME: In AArch64ISelLowering, this isn't worked around. Can/should we try
-  // it?
-  //
   // On Windows, "inreg" attributes signify non-aggregate indirect returns.
   // In this case, it is necessary to save/restore X0 in the callee. Tail
   // call opt interferes with this. So we disable tail call opt when the
@@ -1024,10 +1094,10 @@ bool AArch64CallLowering::isEligibleForTailCallOptimization(
   // because would have to move into the swifterror register before the
   // tail call.
   if (any_of(CallerF.args(), [](const Argument &A) {
-        return A.hasByValAttr() || A.hasInRegAttr() || A.hasSwiftErrorAttr();
+        return A.hasInRegAttr() || A.hasSwiftErrorAttr();
       })) {
-    LLVM_DEBUG(dbgs() << "... Cannot tail call from callers with byval, "
-                         "inreg, or swifterror arguments\n");
+    LLVM_DEBUG(dbgs() << "... Cannot tail call from callers with inreg"
+                         " or swifterror arguments\n");
     return false;
   }
 
