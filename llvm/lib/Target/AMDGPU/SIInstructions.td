@@ -438,8 +438,12 @@ class PinPseudo<RegisterClass DstRC, RegisterClass SrcRC> :
 foreach w = [32,64,96,128,160,192,224,256,288,320,352,384,512,1024] in {
   defvar VRC = !cast<RegisterClass>(!if(!eq(w,32), "VGPR_32", "VReg_"#w));
   defvar ARC = !cast<RegisterClass>(!if(!eq(w,32), "AGPR_32", "AReg_"#w));
+  // AV source: the pinned value arrives in a VGPR, but SIFoldOperands' AGPR load
+  // fold may rewrite it to an AGPR in place (a native buffer_load into AGPR), so
+  // the source must accept either file.
+  defvar AVRC = !cast<RegisterClass>(!if(!eq(w,32), "AV_32", "AV_"#w));
   def PIN_VGPR_B#w : PinPseudo<VRC, VRC>;
-  def PIN_AGPR_B#w : PinPseudo<ARC, VRC>;
+  def PIN_AGPR_B#w : PinPseudo<ARC, AVRC>;
 }
 
 // Map each supported value type to the width-appropriate pseudo via its size.

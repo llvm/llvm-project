@@ -3070,54 +3070,44 @@ llvm::Value *CodeGenFunction::emitAMDGPUPinnedValue(llvm::Value *V,
 
   llvm::Intrinsic::ID IID =
       IsAGPR ? llvm::Intrinsic::amdgcn_pin_agpr : llvm::Intrinsic::amdgcn_pin_vgpr;
-  auto *F32 = llvm::Type::getFloatTy(getLLVMContext());
 
-  // Pin a value whose type is exactly W dwords (W in {1,4,8,16}).
-  auto pinExact = [&](llvm::Value *Chunk, unsigned RegNo) -> llvm::Value * {
+  // Pin selection patterns exist for i32-based widths 1/2/4/8/16 dwords
+  // (i32, v2i32, v4i32, v8i32, v16i32). Use the i32 element type: a float base
+  // would need v1f32 / v2f32, which have no pattern and crash isel. Any dword
+  // count decomposes into a descending sequence of these widths (e.g. 12 -> 8+4,
+  // 2 -> a single v2i32, a 3-dword tail -> 2 + 1).
+  llvm::Type *I32 = Int32Ty;
+  auto *VecI = llvm::FixedVectorType::get(I32, Lanes);
+  llvm::Value *Vec = Builder.CreateBitCast(V, VecI);
+
+  auto pin = [&](llvm::Value *Chunk, unsigned RegNo) -> llvm::Value * {
     llvm::Function *Fn = CGM.getIntrinsic(IID, {Chunk->getType()});
-    return Builder.CreateCall(
-        Fn, {Chunk, llvm::ConstantInt::get(Int32Ty, RegNo)});
+    return Builder.CreateCall(Fn,
+                              {Chunk, llvm::ConstantInt::get(Int32Ty, RegNo)});
+  };
+  auto floorWidth = [](unsigned L) -> unsigned {
+    if (L >= 16) return 16;
+    if (L >= 8) return 8;
+    if (L >= 4) return 4;
+    if (L >= 2) return 2;
+    return 1;
   };
 
-  // Single supported-width value: bitcast to <Lanes x float> and pin directly.
-  auto pinWidth = [&](llvm::Value *In, unsigned RegNo,
-                      unsigned W) -> llvm::Value * {
-    llvm::Type *VecTy =
-        W == 1 ? (llvm::Type *)F32 : llvm::FixedVectorType::get(F32, W);
-    llvm::Value *C = Builder.CreateBitCast(In, VecTy);
-    C = pinExact(C, RegNo);
-    return C;
-  };
-
-  // Value fits a single pin (<=16 dwords: 1/4/8/16)?
-  auto roundWidth = [](unsigned L) -> unsigned {
-    if (L == 1) return 1;
-    if (L <= 4) return 4;
-    if (L <= 8) return 8;
-    return 16;
-  };
-
-  if (Lanes <= 16 && (Lanes == 1 || Lanes == 4 || Lanes == 8 || Lanes == 16)) {
-    llvm::Value *Pinned = pinWidth(V, Reg, Lanes);
-    return Builder.CreateBitCast(Pinned, Ty);
-  }
-
-  // Wide value: chunk into 16-dword pieces (register-resident via
-  // llvm.vector.{extract,insert}), pinning each to consecutive registers.
-  auto *VecF = llvm::FixedVectorType::get(F32, Lanes);
-  llvm::Value *Vec = Builder.CreateBitCast(V, VecF);
-  auto *V16 = llvm::FixedVectorType::get(F32, 16);
   unsigned Off = 0;
   while (Off < Lanes) {
-    unsigned W = Lanes - Off >= 16 ? 16 : roundWidth(Lanes - Off);
-    if (Off + W > Lanes)
-      break; // leave a tiny non-power tail unpinned
-    llvm::Value *Idx = llvm::ConstantInt::get(Int64Ty, Off);
-    llvm::Type *SubTy =
-        W == 16 ? (llvm::Type *)V16 : llvm::FixedVectorType::get(F32, W);
-    llvm::Value *Sub = Builder.CreateExtractVector(SubTy, Vec, Idx);
-    Sub = pinExact(Sub, Reg + Off);
-    Vec = Builder.CreateInsertVector(VecF, Vec, Sub, Idx);
+    unsigned W = floorWidth(Lanes - Off);
+    if (W == 1) {
+      llvm::Value *Idx = llvm::ConstantInt::get(Int32Ty, Off);
+      llvm::Value *Elt = Builder.CreateExtractElement(Vec, Idx);
+      Elt = pin(Elt, Reg + Off);
+      Vec = Builder.CreateInsertElement(Vec, Elt, Idx);
+    } else {
+      llvm::Value *Idx = llvm::ConstantInt::get(Int64Ty, Off);
+      llvm::Value *Sub = Builder.CreateExtractVector(
+          llvm::FixedVectorType::get(I32, W), Vec, Idx);
+      Sub = pin(Sub, Reg + Off);
+      Vec = Builder.CreateInsertVector(VecI, Vec, Sub, Idx);
+    }
     Off += W;
   }
   return Builder.CreateBitCast(Vec, Ty);
