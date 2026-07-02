@@ -897,6 +897,13 @@ SourceLocation Lexer::getLocForEndOfToken(SourceLocation Loc, unsigned Offset,
       return Loc;
   }
 
+  // Don't hit the file system for ASTReader tokens.
+  if (SM.isLoadedSourceLocation(Loc)) {
+    FileID FID = SM.getFileID(Loc);
+    if (!SM.getFileEntryRefForID(FID))
+      return Loc;
+  }
+
   unsigned Len = Lexer::MeasureTokenLength(Loc, SM, LangOpts);
   if (Len > Offset)
     Len = Len - Offset;
