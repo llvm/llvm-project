@@ -4,7 +4,8 @@
 // REQUIRES: lldb
 // UNSUPPORTED: system-windows
 // RUN: %clang -std=gnu11 -O3 -glldb %s -o %t
-// RUN: %dexter --fail-lt 1.0 -w %dexter_lldb_args --binary %t -- %s
+// RUN: %dexter -w --use-script %dexter_lldb_args --binary %t -- %s \
+// RUN:   | FileCheck %s
 
 //// Adapted from https://bugs.llvm.org/show_bug.cgi?id=34136#c4
 
@@ -23,7 +24,7 @@ void thing(int x) {
 
 __attribute__((__noinline__))
 int fun(int param) {
-  esc(&param);      //// alloca is live until here        DexLabel('s1')
+  esc(&param);      //// alloca is live until here        !dex_label s1
   if (param == 0) { //// end of alloca live range
     //// param is now a constant, but without lowering to dbg.value we can't
     //// capture that and would still point to the stack slot that may even have
@@ -41,12 +42,19 @@ int fun(int param) {
     ////   CMP32mi8 %param.addr, 1, $noreg, 0, $noreg, 0, implicit-def $eflags, debug-location !44
     thing(param);
   }
-  return 0; //                                            DexLabel('s2')
+  return 0; //                                            !dex_label s2
 }
 
 int main() {
   return fun(5);
 }
 
-// DexExpectWatchValue('param', '5',  from_line=ref('s1'), to_line=ref('s2'))
+// CHECK-DAG: seen_values: 1
+// CHECK-DAG: correct_step_coverage: 100.0%
 
+/*
+---
+!where {lines: !range [!label s1, !label s2]}:
+  !value param: 5
+...
+*/

@@ -45,6 +45,15 @@ add_header_library(
 )
 
 add_header_library(
+  path
+  HDRS
+    path.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.CPP.string_view
+)
+
+add_header_library(
   sysinfo
   HDRS
     sysinfo.h

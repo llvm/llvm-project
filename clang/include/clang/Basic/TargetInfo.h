@@ -1588,6 +1588,13 @@ public:
             getTriple().isOSFreeBSD());
   }
 
+  // Default encoding on z/OS is IBM-1047 and UTF-8 otherwise
+  StringRef getDefaultOrdinaryLiteralEncoding() const {
+    if (getTriple().getOS() == llvm::Triple::ZOS)
+      return "IBM-1047";
+    return "UTF-8";
+  }
+
   // Identify whether this target supports __builtin_cpu_supports and
   // __builtin_cpu_is.
   virtual bool supportsCpuSupports() const { return false; }

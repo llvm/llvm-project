@@ -1859,6 +1859,24 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
     mlir::Value sv = builder.createVecShuffle(loc, in, zero, indices);
     return builder.createBitcast(sv, ops[0].getType());
   }
+  case X86::BI__builtin_ia32_movnti:
+  case X86::BI__builtin_ia32_movnti64:
+  case X86::BI__builtin_ia32_movntsd:
+  case X86::BI__builtin_ia32_movntss: {
+    mlir::Location loc = getLoc(expr->getExprLoc());
+
+    Address dest = Address{ops[0], CharUnits::One()};
+    mlir::Value src = ops[1];
+
+    if (builtinID == X86::BI__builtin_ia32_movntsd ||
+        builtinID == X86::BI__builtin_ia32_movntss)
+      src = builder.createExtractElement(loc, ops[1], 0);
+
+    cir::StoreOp so =
+        builder.createStore(loc, src, dest,
+                            /*isVolatile=*/false, /*isNontemporal=*/true);
+    return so.getValue();
+  }
   case X86::BI__builtin_ia32_vprotbi:
   case X86::BI__builtin_ia32_vprotwi:
   case X86::BI__builtin_ia32_vprotdi:

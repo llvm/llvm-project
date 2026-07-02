@@ -684,6 +684,7 @@ size_t SBTarget::ReadMemory(const SBAddress addr, void *buf, size_t size,
 
 uint64_t SBTarget::AddBreakpointOverride(const char *class_name,
                                          const char *description,
+                                         uint64_t type_mask,
                                          SBStructuredData &args_data,
                                          SBError &error) {
   if (!class_name || class_name[0] == '\0') {
@@ -704,7 +705,7 @@ uint64_t SBTarget::AddBreakpointOverride(const char *class_name,
 
     llvm::Expected<lldb::user_id_t> id_or_err =
         target_sp->AddBreakpointResolverOverride(
-            class_name, args_dict,
+            class_name, type_mask, args_dict,
             description ? description : "<No Description>");
     if (id_or_err)
       return *id_or_err;
