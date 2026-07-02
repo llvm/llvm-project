@@ -447,7 +447,8 @@ public:
 
   /// Add attributes to the attribute set. Returns a new set because attribute
   /// sets are immutable.
-  AttributeSet addAttributes(LLVMContext &C, const AttrBuilder &B) const;
+  LLVM_ABI AttributeSet addAttributes(LLVMContext &C,
+                                      const AttrBuilder &B) const;
 
   /// Remove the specified attribute from this set. Returns a new set because
   /// attribute sets are immutable.
@@ -578,9 +579,6 @@ private:
 
   static AttributeList getImpl(LLVMContext &C, ArrayRef<AttributeSet> AttrSets);
 
-  AttributeList setAttributesAtIndex(LLVMContext &C, unsigned Index,
-                                     AttributeSet Attrs) const;
-
 public:
   AttributeList() = default;
 
@@ -602,6 +600,11 @@ public:
                                     AttributeSet Attrs);
   LLVM_ABI static AttributeList get(LLVMContext &C, unsigned Index,
                                     const AttrBuilder &B);
+
+  /// Set the attribute set at the given index.
+  /// Returns a new list because attribute lists are immutable.
+  [[nodiscard]] LLVM_ABI AttributeList setAttributesAtIndex(
+      LLVMContext &C, unsigned Index, AttributeSet Attrs) const;
 
   // TODO: remove non-AtIndex versions of these methods.
   /// Add an attribute to the attribute set at the given index.

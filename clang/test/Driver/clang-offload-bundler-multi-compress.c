@@ -1,6 +1,6 @@
 // REQUIRES: x86-registered-target
 // REQUIRES: zlib || zstd
-// UNSUPPORTED: target={{.*}}-darwin{{.*}}, target={{.*}}-aix{{.*}}, target={{.*}}-zos{{.*}}
+// UNSUPPORTED: target={{.*}}-macosx{{.*}}, target={{.*}}-darwin{{.*}}, target={{.*}}-aix{{.*}}, target={{.*}}-zos{{.*}}
 
 // Tests that clang-offload-bundler --list correctly enumerates all bundle IDs
 // from multiple concatenated compressed (CCOB) fat binary blobs stored in the

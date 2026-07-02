@@ -347,10 +347,12 @@ function(add_lldb_library name)
     set_target_properties(${name} PROPERTIES FOLDER "LLDB/Libraries")
   endif()
 
-  # If we want to export all lldb symbols (i.e LLDB_EXPORT_ALL_SYMBOLS=ON), we
-  # need to use default visibility for all LLDB libraries even if a global
-  # `CMAKE_CXX_VISIBILITY_PRESET=hidden`is present.
-  if (LLDB_EXPORT_ALL_SYMBOLS)
+  # When liblldb re-exports private symbols (due to LLDB_EXPORT_ALL_SYMBOLS
+  # and/or LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS) those symbols must keep
+  # default visibility in the contributing libraries, even if a global
+  # `CMAKE_CXX_VISIBILITY_PRESET=hidden` is present. A linker version script
+  # cannot re-export a symbol that was hidden at compile time.
+  if (LLDB_EXPORT_ALL_SYMBOLS OR LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS)
     set_target_properties(${name} PROPERTIES CXX_VISIBILITY_PRESET default)
   endif()
 endfunction(add_lldb_library)
@@ -488,6 +490,31 @@ function(lldb_add_to_buildtree_lldb_framework name subdir)
     COMMENT "Removing ${name} from LLDB.framework")
   add_dependencies(lldb-framework-cleanup
     ${name}-cleanup)
+endfunction()
+
+# PluginManager discovers dynamic script interpreter plugins at runtime by
+# scanning the directory that holds liblldb, so a plugin is loaded only when it
+# sits beside it. A framework build moves liblldb into the bundle, so the plugin
+# must move with it and carry an rpath that reaches liblldb from its new
+# location.
+function(lldb_add_scriptinterpreter_plugin_to_framework name)
+  if(NOT LLDB_BUILD_FRAMEWORK)
+    return()
+  endif()
+  set_property(TARGET ${name} APPEND PROPERTY
+    INSTALL_RPATH "@loader_path/../../..")
+  # Copy under the unversioned name: PluginManager derives a plugin's
+  # initializer symbol from it. A versioned copy would load but never
+  # initialize.
+  set(plugin_in_framework
+    "${LLDB_FRAMEWORK_ABSOLUTE_BUILD_DIR}/LLDB.framework/Versions/${LLDB_FRAMEWORK_VERSION}/$<TARGET_LINKER_FILE_NAME:${name}>")
+  add_custom_command(TARGET ${name} POST_BUILD VERBATIM
+    COMMAND ${CMAKE_COMMAND} -E copy "$<TARGET_FILE:${name}>" "${plugin_in_framework}"
+    COMMENT "Copy ${name} into LLDB.framework")
+  add_custom_target(${name}-framework-cleanup
+    COMMAND ${CMAKE_COMMAND} -E remove "${plugin_in_framework}"
+    COMMENT "Removing ${name} from LLDB.framework")
+  add_dependencies(lldb-framework-cleanup ${name}-framework-cleanup)
 endfunction()
 
 # Add extra install steps for dSYM creation and stripping for the given target.

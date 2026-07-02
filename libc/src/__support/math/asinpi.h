@@ -84,6 +84,10 @@ LIBC_INLINE double asinpi(double x) {
             MantT sticky_mask = (MantT(1) << (SHIFT_53 - 1)) - 1;
             bool sticky = (r.mantissa & sticky_mask) != 0;
             bool lsb = static_cast<bool>(m53 & 1);
+#ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+            // Carry if round_bit && (lsb || sticky) (round half to even).
+            raise_underflow = !(round_bit && (lsb || sticky));
+#else
             switch (fputil::quick_get_round()) {
             case FE_TONEAREST:
               // Carry if round_bit && (lsb || sticky) (round half to even).
@@ -100,6 +104,7 @@ LIBC_INLINE double asinpi(double x) {
               raise_underflow = true; // truncation never carries
               break;
             }
+#endif // LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
           }
         }
         if (raise_underflow)

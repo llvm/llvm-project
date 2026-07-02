@@ -104,6 +104,8 @@ Error lto::DTLTO::checkCacheHit(Job &J) {
   if (!Cache.isValid())
     return Error::success();
 
+  TimeTraceScope TimeScope("Check cache for DTLTO", J.SummaryIndexPath);
+
   auto CacheAddStreamExp = Cache(J.Task, J.CacheKey, J.ModuleID);
   if (Error Err = CacheAddStreamExp.takeError())
     return Err;
@@ -152,6 +154,10 @@ Error lto::DTLTO::prepareDtltoJob(StringRef ModulePath, unsigned Task) {
   if (Error Err = checkCacheHit(J))
     return Err;
   if (!J.Cached) {
+    InputModuleIDsToSerialize.insert(J.ModuleID);
+    for (StringRef ImportPath : J.ImportsFilesList)
+      InputModuleIDsToSerialize.insert(ImportPath);
+
     TimeTraceScope JobScope("Emit individual index for DTLTO",
                             J.SummaryIndexPath);
     if (Error Err = save(SummaryIndexFiles[Task], J.SummaryIndexPath))
@@ -222,6 +228,8 @@ void lto::DTLTO::buildCommonRemoteCompilerOptions() {
 Error lto::DTLTO::prepareDtltoJobs() {
   auto &ModuleMap =
       ThinLTO.ModulesToCompile ? *ThinLTO.ModulesToCompile : ThinLTO.ModuleMap;
+
+  InputModuleIDsToSerialize.clear();
 
   if (ModuleMap.empty())
     return Error::success();

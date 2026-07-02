@@ -1364,11 +1364,16 @@ bool JumpThreadingPass::simplifyPartiallyRedundantLoad(LoadInst *LoadI) {
   // farther than to a predecessor, we need to reuse the code from GVN's PRE.
   // It requires domination tree analysis, so for this simple case it is an
   // overkill.
-  if (PredsScanned.size() != AvailablePreds.size() &&
-      !isSafeToSpeculativelyExecute(LoadI))
-    for (auto I = LoadBB->begin(); &*I != LoadI; ++I)
-      if (!isGuaranteedToTransferExecutionToSuccessor(&*I))
-        return false;
+  std::optional<bool> GuaranteedToTransfer;
+  auto CanSpeculateInto = [&](const BasicBlock *Pred) {
+    if (isSafeToSpeculativelyExecute(LoadI, Pred->getTerminator()))
+      return true;
+
+    if (!GuaranteedToTransfer)
+      GuaranteedToTransfer = isGuaranteedToTransferExecutionToSuccessor(
+          LoadBB->begin(), LoadI->getIterator());
+    return *GuaranteedToTransfer;
+  };
 
   // If there is exactly one predecessor where the value is unavailable, the
   // already computed 'OneUnavailablePred' block is it.  If it ends in an
@@ -1376,6 +1381,8 @@ bool JumpThreadingPass::simplifyPartiallyRedundantLoad(LoadInst *LoadI) {
   if (PredsScanned.size() == AvailablePreds.size()+1 &&
       OneUnavailablePred->getTerminator()->getNumSuccessors() == 1) {
     UnavailablePred = OneUnavailablePred;
+    if (!CanSpeculateInto(UnavailablePred))
+      return false;
   } else if (PredsScanned.size() != AvailablePreds.size()) {
     // Otherwise, we had multiple unavailable predecessors or we had a critical
     // edge from the one.
@@ -1389,8 +1396,11 @@ bool JumpThreadingPass::simplifyPartiallyRedundantLoad(LoadInst *LoadI) {
       if (isa<IndirectBrInst>(P->getTerminator()))
         return false;
 
-      if (!AvailablePredSet.count(P))
+      if (!AvailablePredSet.count(P)) {
+        if (!CanSpeculateInto(P))
+          return false;
         PredsToSplit.push_back(P);
+      }
     }
 
     // Split them out to their own block.
@@ -1982,14 +1992,19 @@ void JumpThreadingPass::updateSSA(BasicBlock *BB, BasicBlock *NewBB,
   for (Instruction &I : *BB) {
     // Scan all uses of this instruction to see if it is used outside of its
     // block, and if so, record them in UsesToRename.
+
+    SmallVector<Instruction *> LifetimeMarkers;
     for (Use &U : I.uses()) {
       Instruction *User = cast<Instruction>(U.getUser());
-      if (PHINode *UserPN = dyn_cast<PHINode>(User)) {
-        if (UserPN->getIncomingBlock(U) == BB)
+      if (User->isLifetimeStartOrEnd()) {
+        LifetimeMarkers.push_back(User);
+      } else {
+        if (PHINode *UserPN = dyn_cast<PHINode>(User)) {
+          if (UserPN->getIncomingBlock(U) == BB)
+            continue;
+        } else if (User->getParent() == BB)
           continue;
-      } else if (User->getParent() == BB)
-        continue;
-
+      }
       UsesToRename.push_back(&U);
     }
 
@@ -2018,6 +2033,15 @@ void JumpThreadingPass::updateSSA(BasicBlock *BB, BasicBlock *NewBB,
       DbgVariableRecords.clear();
     }
 
+    // Lifetime markers cannot be rewritten through PHIs. If threading leaves
+    // one of them pointing at a PHI, drop the whole set.
+    bool HasPhiArg = any_of(LifetimeMarkers, [](Instruction *User) {
+      return isa<PHINode>(cast<CallBase>(User)->getOperand(0));
+    });
+    if (HasPhiArg) {
+      for (Instruction *User : LifetimeMarkers)
+        User->eraseFromParent();
+    }
     LLVM_DEBUG(dbgs() << "\n");
   }
 }

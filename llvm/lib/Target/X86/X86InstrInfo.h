@@ -51,6 +51,9 @@ std::pair<CondCode, bool> getX86ConditionCode(CmpInst::Predicate Predicate);
 unsigned getCMovOpcode(unsigned RegBytes, bool HasMemoryOperand = false,
                        bool HasNDD = false);
 
+/// Return a MOVri opcode for materializing \p Imm into a 32- or 64-bit GPR.
+unsigned getMOVriOpcode(bool Use64BitReg, int64_t Imm);
+
 /// Return the source operand # for condition code by \p MCID. If the
 /// instruction doesn't have a condition code, return -1.
 int getCondSrcNoFromDesc(const MCInstrDesc &MCID);

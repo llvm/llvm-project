@@ -8,7 +8,7 @@
 
 #coerce_vec4_to_twoi64 = {
   return = { kind = "direct" },
-  args   = [ { kind = "direct", coerced_type = !rec_TwoI64 } ]
+  args   = [ { kind = "direct", coerced_type = !rec_TwoI64, can_flatten = false } ]
 }
 
 #caller_no_args = {
@@ -24,23 +24,23 @@ module attributes {
 
   cir.func @takes_vec(%arg0: !rec_Vec4)
       attributes { test_classify = #coerce_vec4_to_twoi64 } {
-    %0 = cir.alloca !rec_Vec4, !cir.ptr<!rec_Vec4>, ["v"] {alignment = 4 : i64}
+    %0 = cir.alloca "v" align(4) : !cir.ptr<!rec_Vec4>
     cir.store %arg0, %0 : !rec_Vec4, !cir.ptr<!rec_Vec4>
     cir.return
   }
 
   // 16-byte struct coerced to a two-eightbyte record through memory.
   // CHECK:      cir.func{{.*}} @takes_vec(%[[ARG:.*]]: !rec_TwoI64)
-  // CHECK:        %[[SLOT:.*]] = cir.alloca !rec_TwoI64, !cir.ptr<!rec_TwoI64>, ["coerce"]
+  // CHECK:        %[[SLOT:.*]] = cir.alloca "coerce" {{.*}} : !cir.ptr<!rec_TwoI64>
   // CHECK:        cir.store %[[ARG]], %[[SLOT]] : !rec_TwoI64, !cir.ptr<!rec_TwoI64>
   // CHECK:        %[[CAST:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!rec_TwoI64> -> !cir.ptr<!rec_Vec4>
   // CHECK:        %[[REC:.*]] = cir.load %[[CAST]] : !cir.ptr<!rec_Vec4>, !rec_Vec4
-  // CHECK:        %[[V:.*]] = cir.alloca !rec_Vec4, !cir.ptr<!rec_Vec4>, ["v"]
+  // CHECK:        %[[V:.*]] = cir.alloca "v" {{.*}} : !cir.ptr<!rec_Vec4>
   // CHECK:        cir.store %[[REC]], %[[V]] : !rec_Vec4, !cir.ptr<!rec_Vec4>
 
   cir.func @caller()
       attributes { test_classify = #caller_no_args } {
-    %0 = cir.alloca !rec_Vec4, !cir.ptr<!rec_Vec4>, ["v"] {alignment = 4 : i64}
+    %0 = cir.alloca "v" align(4) : !cir.ptr<!rec_Vec4>
     %1 = cir.load %0 : !cir.ptr<!rec_Vec4>, !rec_Vec4
     cir.call @takes_vec(%1) : (!rec_Vec4) -> ()
     cir.return

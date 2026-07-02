@@ -523,6 +523,44 @@ SCUDO_TYPED_TEST(ScudoCombinedDeathTest, ReallocateSame) {
   Allocator->deallocate(P, Origin);
 }
 
+// Verify that a realloc that shrinks retags all of the extra size
+// so it will fault it touched.
+SCUDO_TYPED_TEST(ScudoCombinedDeathTest, ReallocateDecreasingTagged) {
+  auto *Allocator = this->Allocator.get();
+  if (!Allocator->useMemoryTaggingTestOnly()) {
+    TEST_SKIP("Requires MTE");
+  }
+
+  const scudo::uptr GranuleSize = scudo::archMemoryTagGranuleSize();
+  // Get the largest value that fits in the primary.
+  scudo::uptr Size =
+      TypeParam::Primary::SizeClassMap::MaxSize - scudo::Chunk::getHeaderSize();
+  EXPECT_TRUE(
+      isPrimaryAllocation<TestAllocator<TypeParam>>(Size, 1U << MinAlignLog));
+  void *P = Allocator->allocate(Size, Origin);
+  EXPECT_NE(P, nullptr);
+  memset(P, 'Z', Size);
+
+  // Shrink three granule sizes to verify that extra space will fail.
+  EXPECT_GT(Size, GranuleSize * 3);
+  scudo::uptr NewSize = scudo::roundDown(Size - GranuleSize * 3, GranuleSize);
+  void *NewP = Allocator->reallocate(P, NewSize);
+  EXPECT_NE(NewP, nullptr);
+  EXPECT_EQ(P, NewP);
+  memset(NewP, 'Y', NewSize);
+
+  // Check that accessing the entire allocation after new size causes a crash.
+  for (size_t I = NewSize; I < Size; I++) {
+    EXPECT_DEATH(
+        {
+          disableDebuggerdMaybe();
+          reinterpret_cast<char *>(NewP)[I] = 'A';
+        },
+        "");
+  }
+  Allocator->deallocate(P, Origin);
+}
+
 SCUDO_TYPED_TEST(ScudoCombinedTest, IterateOverChunks) {
   auto *Allocator = this->Allocator.get();
   // Allocates a bunch of chunks, then iterate over all the chunks, ensuring

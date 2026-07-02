@@ -22,3 +22,9 @@ CHECK-NEXT: Script starting line [[# @LINE + 1 ]]
 !where {function: foo}:
 - !value x: 5
 ...
+
+CHECK-NEXT: Script starting line [[# @LINE + 1 ]]
+---
+# CHECK-NEXT: Invalid !then command "bar"
+!where {function: foo}: !then bar
+...

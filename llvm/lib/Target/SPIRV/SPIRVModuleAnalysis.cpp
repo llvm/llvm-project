@@ -754,6 +754,25 @@ void SPIRVModuleAnalysis::processOtherInstrs(const Module &M) {
         }
       }
   }
+  // Selection order can place a scope/list ahead of a domain/scope it
+  // references. The dependency meanwhile is domain -> scope -> list, so sort
+  // the def before its uses.
+  auto AliasingTier = [](const MachineInstr *MI) {
+    switch (MI->getOpcode()) {
+    case SPIRV::OpAliasDomainDeclINTEL:
+      return 0;
+    case SPIRV::OpAliasScopeDeclINTEL:
+      return 1;
+    case SPIRV::OpAliasScopeListDeclINTEL:
+      return 2;
+    default:
+      llvm_unreachable("unexpected aliasing instruction");
+    }
+  };
+  stable_sort(MAI.MS[SPIRV::MB_AliasingInsts],
+              [&](const MachineInstr *LHS, const MachineInstr *RHS) {
+                return AliasingTier(LHS) < AliasingTier(RHS);
+              });
 }
 
 // Number registers in all functions globally from 0 onwards and store
@@ -920,8 +939,10 @@ void SPIRV::RequirementHandler::addAvailableCaps(const CapabilityList &ToAdd) {
 void SPIRV::RequirementHandler::removeCapabilityIf(
     const Capability::Capability ToRemove,
     const Capability::Capability IfPresent) {
-  if (AllCaps.contains(IfPresent))
+  if (AllCaps.contains(IfPresent)) {
     AllCaps.erase(ToRemove);
+    llvm::erase(MinimalCaps, ToRemove);
+  }
 }
 
 namespace llvm {
@@ -1026,7 +1047,8 @@ void RequirementHandler::initAvailableCapabilitiesForVulkan(
   // Became core in Vulkan 1.2
   if (ST.isAtLeastSPIRVVer(VersionTuple(1, 5))) {
     addAvailableCaps(
-        {Capability::ShaderNonUniformEXT, Capability::RuntimeDescriptorArrayEXT,
+        {Capability::Int64Atomics, Capability::ShaderNonUniformEXT,
+         Capability::RuntimeDescriptorArrayEXT,
          Capability::InputAttachmentArrayDynamicIndexingEXT,
          Capability::UniformTexelBufferArrayDynamicIndexingEXT,
          Capability::StorageTexelBufferArrayDynamicIndexingEXT,
@@ -1195,7 +1217,10 @@ static void AddAtomicVectorFloatRequirements(const MachineInstr &MI,
         "The element type for the result type of an atomic vector float "
         "instruction must be a 16-bit floating-point scalar");
 
-  if (isBFloat16Type(EltTypeDef))
+  // The extension is defined for fp16, but the AMD target lets a bf16 vector
+  // use the same instruction so it can lower to a packed bf16 atomic.
+  if (isBFloat16Type(EltTypeDef) &&
+      ST.getTargetTriple().getVendor() != Triple::AMD)
     reportFatalUsageError(
         "The element type for the result type of an atomic vector float "
         "instruction cannot be a bfloat16 scalar");
@@ -1478,7 +1503,8 @@ void addPrintfRequirements(const MachineInstr &MI,
                            SPIRV::RequirementHandler &Reqs,
                            const SPIRVSubtarget &ST) {
   SPIRVGlobalRegistry *GR = ST.getSPIRVGlobalRegistry();
-  SPIRVTypeInst PtrType = GR->getSPIRVTypeForVReg(MI.getOperand(4).getReg());
+  SPIRVTypeInst PtrType =
+      GR->getSPIRVTypeForVReg(MI.getOperand(4).getReg(), MI.getMF());
   if (PtrType) {
     MachineOperand ASOp = PtrType->getOperand(1);
     if (ASOp.isImm()) {
@@ -1953,6 +1979,7 @@ void addInstrRequirements(const MachineInstr &MI,
     }
     break;
   case SPIRV::OpConstantFunctionPointerINTEL:
+  case SPIRV::OpFunctionPointerCallINTEL:
     if (ST.canUseExtension(SPIRV::Extension::SPV_INTEL_function_pointers)) {
       Reqs.addExtension(SPIRV::Extension::SPV_INTEL_function_pointers);
       Reqs.addCapability(SPIRV::Capability::FunctionPointersINTEL);
@@ -2026,12 +2053,6 @@ void addInstrRequirements(const MachineInstr &MI,
                          false);
     Reqs.addExtension(SPIRV::Extension::SPV_KHR_poison_freeze);
     Reqs.addCapability(SPIRV::Capability::PoisonFreezeKHR);
-    break;
-  case SPIRV::OpFunctionPointerCallINTEL:
-    if (ST.canUseExtension(SPIRV::Extension::SPV_INTEL_function_pointers)) {
-      Reqs.addExtension(SPIRV::Extension::SPV_INTEL_function_pointers);
-      Reqs.addCapability(SPIRV::Capability::FunctionPointersINTEL);
-    }
     break;
   case SPIRV::OpAtomicFAddEXT:
   case SPIRV::OpAtomicFMinEXT:
@@ -2152,14 +2173,24 @@ void addInstrRequirements(const MachineInstr &MI,
 
     // Check Layout operand in case if it's not a standard one and add the
     // appropriate capability.
-    std::unordered_map<unsigned, unsigned> LayoutToInstMap = {
-        {SPIRV::OpCooperativeMatrixLoadKHR, 3},
-        {SPIRV::OpCooperativeMatrixStoreKHR, 2},
-        {SPIRV::OpCooperativeMatrixLoadCheckedINTEL, 5},
-        {SPIRV::OpCooperativeMatrixStoreCheckedINTEL, 4},
-        {SPIRV::OpCooperativeMatrixPrefetchINTEL, 4}};
-
-    const unsigned LayoutNum = LayoutToInstMap[Op];
+    unsigned LayoutNum;
+    switch (Op) {
+    case SPIRV::OpCooperativeMatrixLoadKHR:
+      LayoutNum = 3;
+      break;
+    case SPIRV::OpCooperativeMatrixStoreKHR:
+      LayoutNum = 2;
+      break;
+    case SPIRV::OpCooperativeMatrixLoadCheckedINTEL:
+      LayoutNum = 5;
+      break;
+    case SPIRV::OpCooperativeMatrixStoreCheckedINTEL:
+    case SPIRV::OpCooperativeMatrixPrefetchINTEL:
+      LayoutNum = 4;
+      break;
+    default:
+      llvm_unreachable("unexpected cooperative matrix opcode");
+    }
     Register RegLayout = MI.getOperand(LayoutNum).getReg();
     const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
     MachineInstr *MILayout = MRI.getUniqueVRegDef(RegLayout);
@@ -2321,6 +2352,7 @@ void addInstrRequirements(const MachineInstr &MI,
     AddDotProductRequirements(MI, Reqs, ST);
     break;
   case SPIRV::OpImageSampleImplicitLod:
+  case SPIRV::OpImageFetch:
     Reqs.addCapability(SPIRV::Capability::Shader);
     addImageOperandReqs(MI, Reqs, ST, 4);
     break;
@@ -2328,17 +2360,7 @@ void addInstrRequirements(const MachineInstr &MI,
     addImageOperandReqs(MI, Reqs, ST, 4);
     break;
   case SPIRV::OpImageSampleDrefImplicitLod:
-    Reqs.addCapability(SPIRV::Capability::Shader);
-    addImageOperandReqs(MI, Reqs, ST, 5);
-    break;
   case SPIRV::OpImageSampleDrefExplicitLod:
-    Reqs.addCapability(SPIRV::Capability::Shader);
-    addImageOperandReqs(MI, Reqs, ST, 5);
-    break;
-  case SPIRV::OpImageFetch:
-    Reqs.addCapability(SPIRV::Capability::Shader);
-    addImageOperandReqs(MI, Reqs, ST, 4);
-    break;
   case SPIRV::OpImageDrefGather:
   case SPIRV::OpImageGather:
     Reqs.addCapability(SPIRV::Capability::Shader);
@@ -2753,20 +2775,21 @@ static void handleMIFlagDecoration(
     MachineInstr &I, const SPIRVSubtarget &ST, const SPIRVInstrInfo &TII,
     SPIRV::RequirementHandler &Reqs, const SPIRVGlobalRegistry *GR,
     SPIRV::FPFastMathDefaultInfoVector &FPFastMathDefaultInfoVec) {
-  if (I.getFlag(MachineInstr::MIFlag::NoSWrap) && TII.canUseNSW(I) &&
-      getSymbolicOperandRequirements(SPIRV::OperandCategory::DecorationOperand,
-                                     SPIRV::Decoration::NoSignedWrap, ST, Reqs)
-          .IsSatisfiable) {
-    buildOpDecorate(I.getOperand(0).getReg(), I, TII,
-                    SPIRV::Decoration::NoSignedWrap, {});
-  }
-  if (I.getFlag(MachineInstr::MIFlag::NoUWrap) && TII.canUseNUW(I) &&
-      getSymbolicOperandRequirements(SPIRV::OperandCategory::DecorationOperand,
-                                     SPIRV::Decoration::NoUnsignedWrap, ST,
-                                     Reqs)
-          .IsSatisfiable) {
-    buildOpDecorate(I.getOperand(0).getReg(), I, TII,
-                    SPIRV::Decoration::NoUnsignedWrap, {});
+  if (TII.canUseIntegerWrapDecoration(I)) {
+    if (I.getFlag(MachineInstr::MIFlag::NoSWrap) &&
+        getSymbolicOperandRequirements(
+            SPIRV::OperandCategory::DecorationOperand,
+            SPIRV::Decoration::NoSignedWrap, ST, Reqs)
+            .IsSatisfiable)
+      buildOpDecorate(I.getOperand(0).getReg(), I, TII,
+                      SPIRV::Decoration::NoSignedWrap, {});
+    if (I.getFlag(MachineInstr::MIFlag::NoUWrap) &&
+        getSymbolicOperandRequirements(
+            SPIRV::OperandCategory::DecorationOperand,
+            SPIRV::Decoration::NoUnsignedWrap, ST, Reqs)
+            .IsSatisfiable)
+      buildOpDecorate(I.getOperand(0).getReg(), I, TII,
+                      SPIRV::Decoration::NoUnsignedWrap, {});
   }
   // In Kernel environments, FPFastMathMode on OpExtInst is valid per core
   // spec. For other instruction types, SPV_KHR_float_controls2 is required.
@@ -3020,7 +3043,6 @@ bool SPIRVModuleAnalysis::runOnModule(Module &M) {
 
   // Process type/const/global var/func decl instructions, number their
   // destination registers from 0 to N, collect Extensions and Capabilities.
-  collectReqs(M, MAI, MMI, *ST);
   collectDeclarations(M);
 
   // Number rest of registers from N+1 onwards.

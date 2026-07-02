@@ -52,7 +52,7 @@
 // OBJDUMP-NEXT: 00f0 0000ac00 80000000 00000000 00000000
 
 .amdgcn_target "amdgcn-amd-amdhsa--gfx904:xnack+"
-// ASM: .amdgcn_target "amdgcn-amd-amdhsa--gfx904:xnack+"
+// ASM: .amdgcn_target "amdgcn-amd-amdhsa-unknown-gfx904:xnack+"
 
 .amdhsa_code_object_version 5
 // ASM: .amdhsa_code_object_version 5

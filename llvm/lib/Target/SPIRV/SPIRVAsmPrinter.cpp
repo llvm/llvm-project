@@ -13,6 +13,7 @@
 
 #include "MCTargetDesc/SPIRVInstPrinter.h"
 #include "SPIRV.h"
+#include "SPIRVAuxDataHandler.h"
 #include "SPIRVInstrInfo.h"
 #include "SPIRVMCInstLower.h"
 #include "SPIRVModuleAnalysis.h"
@@ -36,6 +37,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -44,6 +46,20 @@ using namespace llvm;
 #define DEBUG_TYPE "asm-printer"
 
 namespace {
+enum class SPIRVFPContractMode { On, Off, Fast };
+
+static cl::opt<SPIRVFPContractMode> SPIRVFPContract(
+    "spirv-fp-contract",
+    cl::desc("Override FP contraction policy for SPIR-V kernel entry points"),
+    cl::values(
+        clEnumValN(SPIRVFPContractMode::On, "on",
+                   "Follow IR metadata (default)"),
+        clEnumValN(SPIRVFPContractMode::Off, "off",
+                   "Force ContractionOff on all kernel entry points"),
+        clEnumValN(SPIRVFPContractMode::Fast, "fast",
+                   "Suppress ContractionOff on all kernel entry points")),
+    cl::init(SPIRVFPContractMode::On));
+
 class SPIRVAsmPrinter : public AsmPrinter {
   unsigned NLabels = 0;
   SmallPtrSet<const MachineBasicBlock *, 8> LabeledMBB;
@@ -110,6 +126,8 @@ public:
   // The handler's lifetime is managed by AsmPrinter (the base class of this
   // object), so this pointer cannot dangle.
   SPIRVNonSemanticDebugHandler *NSDebugHandler = nullptr;
+
+  std::unique_ptr<SPIRVAuxDataHandler> AuxDataHandler;
 
 protected:
   void cleanUp(Module &M);
@@ -344,6 +362,8 @@ void SPIRVAsmPrinter::outputDebugSourceAndStrings(const Module &M) {
   // emitNonSemanticGlobalDebugInfo().
   if (NSDebugHandler)
     NSDebugHandler->emitNonSemanticDebugStrings(*MAI);
+  if (AuxDataHandler)
+    AuxDataHandler->emitAuxDataStrings(*MAI);
 }
 
 void SPIRVAsmPrinter::outputOpExtInstImports(const Module &M) {
@@ -638,8 +658,14 @@ void SPIRVAsmPrinter::outputExecutionMode(const Module &M) {
       Inst.addOperand(MCOperand::createImm(EM));
       outputMCInst(Inst);
     }
-    if (ST->isKernel() && !M.getNamedMetadata("spirv.ExecutionMode") &&
-        !M.getNamedMetadata("opencl.enable.FP_CONTRACT")) {
+    // --spirv-fp-contract=off forces to emit ContractionOff for this kernel
+    // entry point, --spirv-fp-contract=fast suppresses it.
+    bool EmitContractionOff =
+        ST->isKernel() && !M.getNamedMetadata("spirv.ExecutionMode") &&
+        SPIRVFPContract != SPIRVFPContractMode::Fast &&
+        (SPIRVFPContract == SPIRVFPContractMode::Off ||
+         !M.getNamedMetadata("opencl.enable.FP_CONTRACT"));
+    if (EmitContractionOff) {
       if (ST->canUseExtension(SPIRV::Extension::SPV_KHR_float_controls2)) {
         // When SPV_KHR_float_controls2 is enabled, ContractionOff is
         // deprecated. We need to use FPFastMathDefault with the appropriate
@@ -770,7 +796,7 @@ void SPIRVAsmPrinter::outputFPFastMathDefaultInfo() {
   // int32, that might be used as FP Fast Math Mode.
   std::vector<const MachineInstr *> SPIRVFloatTypes;
   // Hashtable to associate immediate values with the constant holding them.
-  std::unordered_map<int, const MachineInstr *> ConstMap;
+  DenseMap<int, const MachineInstr *> ConstMap;
   for (const MachineInstr *MI : MAI->getMSInstrs(SPIRV::MB_TypeConstVars)) {
     // Skip if the instruction is not OpTypeFloat or OpConstant.
     unsigned OpCode = MI->getOpcode();
@@ -868,10 +894,18 @@ void SPIRVAsmPrinter::outputModuleSections() {
   MAI = &getAnalysis<SPIRVModuleAnalysis>().MAI;
   assert(ST && TII && MAI && M && "Module analysis is required");
 
+  if (!AuxDataHandler) {
+    auto Handler = std::make_unique<SPIRVAuxDataHandler>(*this, *M);
+    if (Handler->hasWork())
+      AuxDataHandler = std::move(Handler);
+  }
+
   // Let the NSDI handler add its extension and ext inst import entry to MAI
   // before the module header sections are emitted.
   if (NSDebugHandler)
     NSDebugHandler->prepareModuleOutput(*ST, *MAI);
+  if (AuxDataHandler)
+    AuxDataHandler->prepareModuleOutput(*ST, *MAI);
 
   // Output instructions according to the Logical Layout of a Module:
   // 1,2. All OpCapability instructions, then optional OpExtension
@@ -908,6 +942,8 @@ void SPIRVAsmPrinter::outputModuleSections() {
   // MB_NonSemanticGlobalDI section in MAI is intentionally left empty.
   if (NSDebugHandler)
     NSDebugHandler->emitNonSemanticGlobalDebugInfo(*MAI);
+  if (AuxDataHandler)
+    AuxDataHandler->emitAuxData(*MAI);
   // 11. All function declarations (functions without a body).
   outputExtFuncDecls();
   // 12. All function definitions (functions with a body).

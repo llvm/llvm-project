@@ -856,27 +856,10 @@ void LazyValueInfoImpl::intersectAssumeOrGuardBlockValueConstantRange(
       continue;
 
     if (AssumeVH.Index != AssumptionCache::ExprResultIdx) {
-      auto OBU = I->getOperandBundleAt(AssumeVH.Index);
-      switch (getBundleAttrFromOBU(OBU)) {
-      case BundleAttr::NonNull:
-        if (getAssumeNonNullInfo(OBU).Ptr != Val)
-          break;
+      if (assumeBundleImpliesNonNull(Val, BBI->getFunction(),
+                                     I->getOperandBundleAt(AssumeVH.Index)))
         BBLV = BBLV.intersect(ValueLatticeElement::getNot(
             Constant::getNullValue(Val->getType())));
-        break;
-
-      case BundleAttr::Dereferenceable: {
-        auto [Ptr, Count] = getAssumeDereferenceableInfo(OBU);
-        if (Ptr != Val)
-          break;
-        if (auto *CI = dyn_cast<ConstantInt>(Count); CI && !CI->isZero())
-          BBLV = BBLV.intersect(ValueLatticeElement::getNot(
-              Constant::getNullValue(Val->getType())));
-      } break;
-
-      default:
-        break;
-      }
     } else {
       BBLV = BBLV.intersect(*getValueFromCondition(Val, I->getArgOperand(0),
                                                    /*IsTrueDest*/ true,

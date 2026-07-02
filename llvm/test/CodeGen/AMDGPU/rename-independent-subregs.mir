@@ -1,8 +1,9 @@
-# RUN: llc -mtriple=amdgcn -verify-machineinstrs -run-pass register-coalescer,rename-independent-subregs -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx600 -verify-machineinstrs -run-pass register-coalescer,rename-independent-subregs -o - %s | FileCheck %s
 --- |
   define amdgpu_kernel void @test0() { ret void }
   define amdgpu_kernel void @test1() { ret void }
   define amdgpu_kernel void @test2() { ret void }
+  define amdgpu_kernel void @test3() { ret void }
 ...
 ---
 # In the test below we have two independent def+use pairs of subregister1 which
@@ -83,5 +84,56 @@ body: |
     undef %0.sub1:vreg_64 = V_ALIGNBIT_B32_e64 %0.sub0:vreg_64, %0.sub0:vreg_64, 16, implicit $exec
     INLINEASM &"", sideeffect attdialect, regdef:VGPR_32, def undef %0.sub0:vreg_64, regdef:VGPR_32, def %0.sub1:vreg_64, reguse tiedto:$0, undef %0.sub0:vreg_64(tied-def 3), reguse tiedto:$1, %0.sub1:vreg_64(tied-def 5)
     S_BRANCH %bb.1
+
+...
+---
+# Test for a bug where the insertion of missing definitions in mulitple
+# predecessors (in this case of bb.4) used to add duplicate subranges for the
+# unused lanes into the live interval of the split register.
+# This should pass the verifier afterwards.
+# CHECK-LABEL: name: test3
+# CHECK: S_NOP 0, implicit-def undef %0.sub3
+# CHECK: bb.1:
+# CHECK: S_NOP 0, implicit-def undef %1.sub0
+# CHECK: S_NOP 0, implicit-def %1.sub2
+# CHECK: bb.2:
+# CHECK: %1:vreg_128 = IMPLICIT_DEF
+# CHECK: bb.3:
+# CHECK: %1:vreg_128 = IMPLICIT_DEF
+# CHECK: bb.4:
+# CHECK: S_NOP 0, implicit %1.sub0_sub1_sub2
+name: test3
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: vreg_128 }
+body: |
+  bb.0:
+    successors: %bb.1(0x40000000), %bb.2(0x20000000), %bb.3(0x20000000)
+
+    S_NOP 0, implicit-def undef %0.sub3
+    S_NOP 0, implicit %0.sub3
+    S_CBRANCH_VCCNZ %bb.1, implicit undef $vcc
+    S_CBRANCH_SCC1 %bb.2, implicit undef $scc
+    S_BRANCH %bb.3
+
+  bb.1:
+    successors: %bb.4(0x80000000)
+
+    S_NOP 0, implicit-def undef %0.sub0
+    S_NOP 0, implicit-def %0.sub2
+    S_BRANCH %bb.4
+
+  bb.2:
+    successors: %bb.4(0x80000000)
+
+    S_BRANCH %bb.4
+
+  bb.3:
+    successors: %bb.4(0x80000000)
+
+    S_BRANCH %bb.4
+
+  bb.4:
+    S_NOP 0, implicit %0.sub0_sub1_sub2
 
 ...

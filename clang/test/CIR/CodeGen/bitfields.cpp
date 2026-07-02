@@ -27,6 +27,16 @@ typedef struct {
 // LLVM-DAG: %struct.T = type { i8, i32 }
 // OGCG-DAG: %struct.T = type { i8, i32 }
 
+union U { int x : 3; };
+const U u = {5};
+// CIR-DAG: cir.global "private" {{.*}}@_ZL1u = #cir.const_record<{#cir.int<5> : !u8i}> : !rec_U
+// LLVM-DAG: @_ZL1u = internal constant %union.U { i8 5, [3 x i8] undef }
+// OGCG-DAG: @_ZL1u = internal constant %union.U { i8 5, [3 x i8] undef }
+auto use() {
+  return u;
+}
+
+
 void def() {
   S s;
   T t;
@@ -36,7 +46,7 @@ int load_field(S* s) {
   return s->c;
 }
 // CIR: cir.func {{.*}} @_Z10load_field
-// CIR:   [[TMP0:%.*]] = cir.alloca !cir.ptr<!rec_S>, !cir.ptr<!cir.ptr<!rec_S>>, ["s", init]
+// CIR:   [[TMP0:%.*]] = cir.alloca "s" {{.*}} init : !cir.ptr<!cir.ptr<!rec_S>>
 // CIR:   [[TMP1:%.*]] = cir.load{{.*}} [[TMP0]] : !cir.ptr<!cir.ptr<!rec_S>>, !cir.ptr<!rec_S>
 // CIR:   [[TMP2:%.*]] = cir.get_member [[TMP1]][0] {name = "c"} : !cir.ptr<!rec_S> -> !cir.ptr<!u64i>
 // CIR:   [[TMP3:%.*]] = cir.get_bitfield align(4) (#bfi_c, [[TMP2]] : !cir.ptr<!u64i>) -> !s32i
@@ -64,7 +74,7 @@ void store_field() {
   s.a = 3;
 }
 // CIR: cir.func {{.*}} @_Z11store_field
-// CIR:   [[TMP0:%.*]] = cir.alloca !rec_S, !cir.ptr<!rec_S>
+// CIR:   [[TMP0:%.*]] = cir.alloca {{.*}} : !cir.ptr<!rec_S>
 // CIR:   [[TMP1:%.*]] = cir.const #cir.int<3> : !s32i
 // CIR:   [[TMP2:%.*]] = cir.get_member [[TMP0]][0] {name = "a"} : !cir.ptr<!rec_S> -> !cir.ptr<!u64i>
 // CIR:   cir.set_bitfield align(4) (#bfi_a, [[TMP2]] : !cir.ptr<!u64i>, [[TMP1]] : !s32i)
@@ -89,7 +99,7 @@ void store_bitfield_to_bitfield(S* s) {
 }
 
 // CIR: cir.func {{.*}} @_Z26store_bitfield_to_bitfieldP1S
-// CIR:   [[TMP0:%.*]] = cir.alloca !cir.ptr<!rec_S>, !cir.ptr<!cir.ptr<!rec_S>>, ["s", init] {alignment = 8 : i64}
+// CIR:   [[TMP0:%.*]] = cir.alloca "s" align(8) init : !cir.ptr<!cir.ptr<!rec_S>>
 // CIR:   [[TMP1:%.*]] = cir.const #cir.int<3> : !s32i
 // CIR:   [[TMP2:%.*]] = cir.load align(8) [[TMP0]] : !cir.ptr<!cir.ptr<!rec_S>>, !cir.ptr<!rec_S>
 // CIR:   [[TMP3:%.*]] = cir.get_member [[TMP2]][0] {name = "b"} : !cir.ptr<!rec_S> -> !cir.ptr<!u64i>

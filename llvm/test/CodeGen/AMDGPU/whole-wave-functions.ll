@@ -912,7 +912,7 @@ define amdgpu_gfx_whole_wave i32 @multiple_blocks(i1 %active, i32 %a, i32 %b) #0
 ; DAGISEL-NEXT:    s_mov_b32 exec_lo, -1
 ; DAGISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; DAGISEL-NEXT:    s_mov_b32 s1, exec_lo
-; DAGISEL-NEXT:    v_cmpx_eq_u32_e64 v0, v1
+; DAGISEL-NEXT:    v_cmpx_eq_u32_e32 v0, v1
 ; DAGISEL-NEXT:  ; %bb.1: ; %if.then
 ; DAGISEL-NEXT:    v_add_nc_u32_e32 v1, v0, v1
 ; DAGISEL-NEXT:  ; %bb.2: ; %if.end
@@ -942,7 +942,7 @@ define amdgpu_gfx_whole_wave i32 @multiple_blocks(i1 %active, i32 %a, i32 %b) #0
 ; GISEL-NEXT:    s_mov_b32 exec_lo, -1
 ; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GISEL-NEXT:    s_mov_b32 s1, exec_lo
-; GISEL-NEXT:    v_cmpx_eq_u32_e64 v0, v1
+; GISEL-NEXT:    v_cmpx_eq_u32_e32 v0, v1
 ; GISEL-NEXT:  ; %bb.1: ; %if.then
 ; GISEL-NEXT:    v_add_nc_u32_e32 v1, v0, v1
 ; GISEL-NEXT:  ; %bb.2: ; %if.end
@@ -972,7 +972,7 @@ define amdgpu_gfx_whole_wave i32 @multiple_blocks(i1 %active, i32 %a, i32 %b) #0
 ; DAGISEL64-NEXT:    s_mov_b64 exec, -1
 ; DAGISEL64-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; DAGISEL64-NEXT:    s_mov_b64 s[2:3], exec
-; DAGISEL64-NEXT:    v_cmpx_eq_u32_e64 v0, v1
+; DAGISEL64-NEXT:    v_cmpx_eq_u32_e32 v0, v1
 ; DAGISEL64-NEXT:  ; %bb.1: ; %if.then
 ; DAGISEL64-NEXT:    v_add_nc_u32_e32 v1, v0, v1
 ; DAGISEL64-NEXT:  ; %bb.2: ; %if.end
@@ -1002,7 +1002,7 @@ define amdgpu_gfx_whole_wave i32 @multiple_blocks(i1 %active, i32 %a, i32 %b) #0
 ; GISEL64-NEXT:    s_mov_b64 exec, -1
 ; GISEL64-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GISEL64-NEXT:    s_mov_b64 s[2:3], exec
-; GISEL64-NEXT:    v_cmpx_eq_u32_e64 v0, v1
+; GISEL64-NEXT:    v_cmpx_eq_u32_e32 v0, v1
 ; GISEL64-NEXT:  ; %bb.1: ; %if.then
 ; GISEL64-NEXT:    v_add_nc_u32_e32 v1, v0, v1
 ; GISEL64-NEXT:  ; %bb.2: ; %if.end
@@ -1030,7 +1030,7 @@ define amdgpu_gfx_whole_wave i32 @multiple_blocks(i1 %active, i32 %a, i32 %b) #0
 ; GFX1250-DAGISEL-NEXT:    s_mov_b32 exec_lo, -1
 ; GFX1250-DAGISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-DAGISEL-NEXT:    s_mov_b32 s1, exec_lo
-; GFX1250-DAGISEL-NEXT:    v_cmpx_eq_u32_e64 v0, v1
+; GFX1250-DAGISEL-NEXT:    v_cmpx_eq_u32_e32 v0, v1
 ; GFX1250-DAGISEL-NEXT:  ; %bb.1: ; %if.then
 ; GFX1250-DAGISEL-NEXT:    v_add_nc_u32_e32 v1, v0, v1
 ; GFX1250-DAGISEL-NEXT:  ; %bb.2: ; %if.end
