@@ -21,6 +21,7 @@ entry:
   ; RELOC: %[[PROFC_INTADDR:.+]] = add i64 ptrtoint (ptr @__profc_test to i64), %profc_bias
   ; RELOC: %[[PROFC_ADDR:.+]] = inttoptr i64 %[[PROFC_INTADDR]] to ptr
   ; RELOC: store i8 0, ptr %[[PROFC_ADDR]], align 1
+  ; ATOMIC: store atomic i8 0, ptr @__profc_test monotonic, align 1
 
   call void @llvm.instrprof.mcdc.parameters(ptr @__profn_test, i64 99278, i32 1)
   store i32 0, ptr %mcdc.addr, align 4
@@ -36,7 +37,9 @@ entry:
   ; CHECK-NEXT: %[[LAB8:[0-9]+]] = and i32 %[[TEMP]], 7
   ; CHECK-NEXT: %[[LAB9:[0-9]+]] = trunc i32 %[[LAB8]] to i8
   ; CHECK-NEXT: %[[LAB10:[0-9]+]] = shl i8 1, %[[LAB9]]
-  ; CHECK-NEXT: %[[BITS:.+]] = load i8, ptr %[[LAB7]], align 1
+  ; BASIC-NEXT: %[[BITS:.+]] = load i8, ptr %[[LAB7]], align 1
+  ; RELOC-NEXT: %[[BITS:.+]] = load i8, ptr %[[LAB7]], align 1
+  ; ATOMIC-NEXT: %[[BITS:.+]] = load atomic i8, ptr %[[LAB7]] monotonic, align 1
   ; ATOMIC-NEXT: %[[MASKED:.+]] = and i8 %[[BITS]], %[[LAB10]]
   ; ATOMIC-NEXT: %[[SHOULDWRITE:.+]] = icmp ne i8 %[[MASKED]], %[[LAB10]]
   ; ATOMIC-NEXT: br i1 %[[SHOULDWRITE]], label %[[WRITE:.+]], label %[[SKIP:.+]], !prof ![[MDPROF:[0-9]+]]
