@@ -104,7 +104,8 @@ public:
     if (isBoxAddressOrValue())
       return llvm::cast<fir::BaseBoxType>(fir::unwrapRefType(getType()));
     const bool isVolatile = fir::isa_volatile_type(getType());
-    return fir::BoxType::get(getElementOrSequenceType(), isVolatile);
+    const int64_t corank = fir::getBoxCorank(getType());
+    return fir::BoxType::get(getElementOrSequenceType(), isVolatile, corank);
   }
 
   bool hasLengthParameters() const {
@@ -522,7 +523,7 @@ convertToAddress(mlir::Location loc, fir::FirOpBuilder &builder,
 
 std::pair<fir::ExtendedValue, std::optional<hlfir::CleanupFunction>>
 convertToBox(mlir::Location loc, fir::FirOpBuilder &builder,
-             hlfir::Entity entity, mlir::Type targetType);
+             hlfir::Entity entity, mlir::Type targetType, unsigned corank = 0);
 
 /// Clone an hlfir.elemental_addr into an hlfir.elemental value.
 hlfir::ElementalOp cloneToElementalOp(mlir::Location loc,

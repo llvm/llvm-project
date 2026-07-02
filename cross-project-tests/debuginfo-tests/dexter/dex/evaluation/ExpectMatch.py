@@ -12,7 +12,7 @@ from enum import Enum, IntEnum
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 from dex.dextIR import ValueIR
-from dex.test_script.Nodes import Expect, Value, Address
+from dex.test_script.Nodes import Expect, Address
 
 
 def get_expected_value_set(
