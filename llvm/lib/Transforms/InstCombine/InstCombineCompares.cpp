@@ -8681,21 +8681,17 @@ static Instruction *foldFabsWithFcmpZero(FCmpInst &I, InstCombinerImpl &IC) {
   }
 }
 
-/// Return true if V is always non-negative (i.e., never strictly negative).
-/// Recognises:
-///   1. llvm.fabs(x) - always >= 0
-///   2. Abs-like select patterns - select(fcmp P x, 0), x, fneg(x)) where P
-///      guarantees the true arm is non-negative, and variants thereof.
-///
-/// -0.0 and NaN are allowed: oeq/une compare treats +0 == -0, and NaN
-/// propagates identically on both sides of the surrounding transformation.
-static bool isFPAbsLike(Value *V) {
-  // fabs intrinsic is always non-negative.
-  if (match(V, m_FAbs(m_Value())))
+/// Return true if V can never be ordered-less-than-zero (i.e. it is either
+/// NaN or >= 0.0), matching the "abs-via-select" idiom that
+/// computeKnownFPClass cannot see through on its own:
+///   select(fcmp Pred X, 0.0), X, fneg(X)   (and swapped-arm variants)
+/// computeKnownFPClass reasons about the negated arm (fneg(X)) in isolation
+/// and does not connect it back to the condition on X, so it never proves
+/// this pattern non-negative. Recognize it explicitly as a fallback.
+static bool isKnownNonNegativeOrNaNFP(Value *V, const SimplifyQuery &SQ) {
+  if (cannotBeOrderedLessThanZero(V, SQ))
     return true;
 
-  // Abs-select pattern: (cond ? x : fneg(x)) or (cond ? fneg(x) : x) where
-  // the condition on x with respect to zero ensures the chosen arm is >= 0.
   Value *Cond, *TrueVal, *FalseVal;
   if (!match(V, m_Select(m_Value(Cond), m_Value(TrueVal), m_Value(FalseVal))))
     return false;
@@ -8712,9 +8708,9 @@ static bool isFPAbsLike(Value *V) {
     if (!match(NegArm, m_FNeg(m_Specific(PosArm))))
       continue;
 
-    // When Swap=false the condition is TRUE - we pick PosArm - EffPred = Pred.
-    // When Swap=true  the condition is FALSE - we pick PosArm EffPred =
-    // !Pred.
+    // When Swap=false the condition is TRUE when we pick PosArm, so the
+    // effective predicate is Pred. When Swap=true the condition is FALSE
+    // when we pick PosArm, so the effective predicate is the inverse.
     FCmpInst::Predicate EffPred =
         Swap ? FCmpInst::getInversePredicate(Pred) : (FCmpInst::Predicate)Pred;
 
@@ -8730,9 +8726,15 @@ static bool isFPAbsLike(Value *V) {
 ///   oeq -> (fcmp oeq A, 0.0) and (fcmp oeq B, 0.0)
 ///   une -> (fcmp une A, 0.0) or  (fcmp une B, 0.0)
 ///
-/// If both addends are non-negative (e.g. fabs(x) or abs-like selects), their
-/// sum equals zero iff both are zero. NaN propagates symmetrically on both
-/// sides, so the transformation is always sound for oeq and une.
+/// If both addends can never be ordered-less-than-zero (i.e. each is either
+/// NaN or >= 0.0), their sum equals zero iff both are zero:
+///   - If either addend is NaN, the sum is NaN: oeq is false and une is true
+///     on both sides regardless of the other addend, since unordered
+///     predicates (une) are true for NaN and ordered predicates (oeq) are
+///     false for NaN.
+///   - Otherwise both addends are >= 0.0 (allowing -0.0), so their exact,
+///     unrounded sum is >= 0.0 and equals zero iff both addends are zero.
+/// Hence the transformation is sound for oeq and une.
 static Instruction *foldFAbsSumFCmpZero(FCmpInst &I, InstCombinerImpl &IC) {
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
   CmpInst::Predicate Pred = I.getPredicate();
@@ -8743,17 +8745,21 @@ static Instruction *foldFAbsSumFCmpZero(FCmpInst &I, InstCombinerImpl &IC) {
   if (!match(Op1, m_AnyZeroFP()))
     return nullptr;
 
+  // Only fold when the fadd isn't needed for anything else - otherwise we'd
+  // be adding new instructions without being able to remove the fadd.
+  if (!Op0->hasOneUse())
+    return nullptr;
+
   Value *A, *B;
   if (!match(Op0, m_FAdd(m_Value(A), m_Value(B))))
     return nullptr;
 
-  if (!isFPAbsLike(A) || !isFPAbsLike(B))
+  const SimplifyQuery &SQ = IC.getSimplifyQuery().getWithInstruction(&I);
+  if (!isKnownNonNegativeOrNaNFP(A, SQ) || !isKnownNonNegativeOrNaNFP(B, SQ))
     return nullptr;
 
-  // (|A| + |B|) oeq 0 → (A oeq 0) ∧ (B oeq 0)
-  // (|A| + |B|) une 0 → (A une 0) ∨ (B une 0)
-  // Subsequent folds (foldFabsWithFcmpZero / select-equality) will further
-  // simplify fabs(x) oeq 0 → x oeq 0 and select(_, x, -x) oeq 0 → x oeq 0.
+  // (A + B) oeq 0 → (A oeq 0) ∧ (B oeq 0)
+  // (A + B) une 0 → (A une 0) ∨ (B une 0)
   Type *Ty = A->getType();
   Constant *Zero = ConstantFP::getZero(Ty);
   Value *CmpA = IC.Builder.CreateFCmp(Pred, A, Zero);

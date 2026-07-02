@@ -285,3 +285,78 @@ define i1 @no_fold_select_ole(double %x, double %y) {
   %cmp = fcmp oeq double %sum, 0.000000e+00
   ret i1 %cmp
 }
+
+;------------------------------------------------------------------------------
+; One-use / multi-use tests
+;------------------------------------------------------------------------------
+
+declare void @use.f64(double)
+
+; The fadd result is used elsewhere, so it can't be removed - don't fold,
+; since doing so would just add new instructions on top of the existing fadd
+; instead of replacing it.
+define i1 @no_fold_fadd_multiuse(double %x, double %y) {
+; CHECK-LABEL: define i1 @no_fold_fadd_multiuse(
+; CHECK-SAME: double [[X:%.*]], double [[Y:%.*]]) {
+; CHECK-NEXT:    [[AX:%.*]] = call double @llvm.fabs.f64(double [[X]])
+; CHECK-NEXT:    [[AY:%.*]] = call double @llvm.fabs.f64(double [[Y]])
+; CHECK-NEXT:    [[SUM:%.*]] = fadd double [[AX]], [[AY]]
+; CHECK-NEXT:    call void @use.f64(double [[SUM]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq double [[SUM]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %ax = call double @llvm.fabs.f64(double %x)
+  %ay = call double @llvm.fabs.f64(double %y)
+  %sum = fadd double %ax, %ay
+  call void @use.f64(double %sum)
+  %cmp = fcmp oeq double %sum, 0.000000e+00
+  ret i1 %cmp
+}
+
+; An addend being used elsewhere doesn't block the fold: we never remove the
+; addend's definition, we only stop routing the comparison through the fadd.
+define i1 @fold_addend_multiuse(double %x, double %y) {
+; CHECK-LABEL: define i1 @fold_addend_multiuse(
+; CHECK-SAME: double [[X:%.*]], double [[Y:%.*]]) {
+; CHECK-NEXT:    [[AX:%.*]] = call double @llvm.fabs.f64(double [[X]])
+; CHECK-NEXT:    call void @use.f64(double [[AX]])
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp oeq double [[X]], 0.000000e+00
+; CHECK-NEXT:    [[TMP2:%.*]] = fcmp oeq double [[Y]], 0.000000e+00
+; CHECK-NEXT:    [[CMP:%.*]] = and i1 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %ax = call double @llvm.fabs.f64(double %x)
+  call void @use.f64(double %ax)
+  %ay = call double @llvm.fabs.f64(double %y)
+  %sum = fadd double %ax, %ay
+  %cmp = fcmp oeq double %sum, 0.000000e+00
+  ret i1 %cmp
+}
+
+; Same as above but with the select-abs idiom: the select and its condition
+; having other uses doesn't block the fold either.
+define i1 @fold_select_multiuse(double %x, double %y) {
+; CHECK-LABEL: define i1 @fold_select_multiuse(
+; CHECK-SAME: double [[X:%.*]], double [[Y:%.*]]) {
+; CHECK-NEXT:    [[CX:%.*]] = fcmp oge double [[X]], 0.000000e+00
+; CHECK-NEXT:    call void @use1(i1 [[CX]])
+; CHECK-NEXT:    [[NX:%.*]] = fneg double [[X]]
+; CHECK-NEXT:    [[AX:%.*]] = select i1 [[CX]], double [[X]], double [[NX]]
+; CHECK-NEXT:    call void @use.f64(double [[AX]])
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp oeq double [[X]], 0.000000e+00
+; CHECK-NEXT:    [[TMP2:%.*]] = fcmp oeq double [[Y]], 0.000000e+00
+; CHECK-NEXT:    [[CMP:%.*]] = and i1 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %cx = fcmp oge double %x, 0.000000e+00
+  call void @use1(i1 %cx)
+  %nx = fneg double %x
+  %ax = select i1 %cx, double %x, double %nx
+  call void @use.f64(double %ax)
+  %ay = call double @llvm.fabs.f64(double %y)
+  %sum = fadd double %ax, %ay
+  %cmp = fcmp oeq double %sum, 0.000000e+00
+  ret i1 %cmp
+}
+
+declare void @use1(i1)
