@@ -26,6 +26,11 @@
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
+class exception_list;
+namespace detail {
+void addAsyncException(exception_list &, const std::exception_ptr &);
+}
+
 // int is used as the underlying type for consistency with std::error_code.
 enum class errc : int {
   success = 0,
@@ -142,7 +147,15 @@ public:
 
 private:
   std::vector<std::exception_ptr> MList;
+
+  friend void detail::addAsyncException(exception_list &, const_reference);
 };
+
+namespace detail {
+// Default implementation of async_handler used by queue and context when no
+// user-defined async_handler is specified.
+_LIBSYCL_EXPORT void defaultAsyncHandler(exception_list Exceptions);
+} // namespace detail
 
 _LIBSYCL_END_NAMESPACE_SYCL
 
