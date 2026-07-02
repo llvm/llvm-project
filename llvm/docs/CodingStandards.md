@@ -1150,9 +1150,12 @@ In general, names should be in camel case (e.g. `TextFileReader` and
   be camel case, and start with an upper-case letter (e.g. `Leader` or
   `Boats`).
 
-* **Function names** should be verb phrases (as they represent actions), and
-  command-like function should be imperative.  The name should be camel case,
-  and start with a lowercase letter (e.g. `openFile()` or `isFoo()`).
+* **Function names and lambda names** should be verb phrases (as they
+  represent actions), and command-like function should be imperative.
+  The name should be camel case, and start with a lowercase
+  letter (e.g. `openFile()` or `isFoo()`). Since lambdas are used as
+  functions (but are local variables of class type), we use the same
+  rules for function and lambda names.
 
 * **Enum declarations** (e.g. `enum Foo {...}`) are types, so they should
   follow the naming conventions for types.  A common use for enums is as a
