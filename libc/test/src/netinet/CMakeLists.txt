@@ -14,6 +14,7 @@ add_libc_unittest(
     libc.hdr.types.struct_ip_mreqn
     libc.hdr.types.struct_ip_msfilter
     libc.hdr.types.struct_ip_opts
+    libc.hdr.types.struct_ipv6_mreq
     libc.hdr.types.struct_sockaddr_in6
     libc.src.arpa.inet.htons
     libc.src.arpa.inet.htonl

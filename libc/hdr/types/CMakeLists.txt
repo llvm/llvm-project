@@ -501,6 +501,15 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  struct_ipv6_mreq
+  HDRS
+    struct_ipv6_mreq.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_ipv6_mreq
+    libc.include.netinet_in
+)
+
+add_proxy_header_library(
   in_addr_t
   HDRS
     in_addr_t.h

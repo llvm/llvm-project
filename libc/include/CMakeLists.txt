@@ -917,6 +917,7 @@ add_header_macro(
     .llvm-libc-types.struct_ip_mreqn
     .llvm-libc-types.struct_ip_msfilter
     .llvm-libc-types.struct_ip_opts
+    .llvm-libc-types.struct_ipv6_mreq
     .llvm_libc_common_h
     .sys_socket
 )
