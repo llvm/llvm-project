@@ -255,5 +255,3 @@ define i32 @g_multi_use_i32(i32 %a, i32 %b, ptr %out) nounwind {
   %r   = add i32 %sbc, 10
   ret i32 %r
 }
-
-declare void @llvm.fake.use(...)
