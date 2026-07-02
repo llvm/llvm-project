@@ -1,5 +1,6 @@
 #include "clang/DependencyScanning/InProcessModuleCache.h"
 
+#include "clang/Basic/AtomicLineLogger.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Testing/Support/Error.h"
@@ -11,7 +12,9 @@ using namespace clang::dependencies;
 
 TEST(InProcessModuleCache, ReadWriteInvalidation) {
   ModuleCacheEntries Entries;
-  std::shared_ptr<ModuleCache> ModCache = makeInProcessModuleCache(Entries);
+  AtomicLineLogger Logger;
+  std::shared_ptr<ModuleCache> ModCache =
+      makeInProcessModuleCache(Entries, Logger);
 
   int FD;
   llvm::SmallString<256> Path;
@@ -38,7 +41,9 @@ TEST(InProcessModuleCache, ReadWriteInvalidation) {
 
 TEST(InProcessModuleCache, ReadReadInvalidation) {
   ModuleCacheEntries Entries;
-  std::shared_ptr<ModuleCache> ModCache = makeInProcessModuleCache(Entries);
+  AtomicLineLogger Logger;
+  std::shared_ptr<ModuleCache> ModCache =
+      makeInProcessModuleCache(Entries, Logger);
 
   int FD;
   llvm::SmallString<256> Path;

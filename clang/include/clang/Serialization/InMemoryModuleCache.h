@@ -15,6 +15,7 @@
 #include <memory>
 
 namespace clang {
+class AtomicLineLogger;
 
 /// In-memory cache for modules.
 ///
@@ -51,7 +52,11 @@ class InMemoryModuleCache : public llvm::RefCountedBase<InMemoryModuleCache> {
   /// Cache of buffers.
   llvm::StringMap<PCM> PCMs;
 
+  AtomicLineLogger &Logger;
+
 public:
+  explicit InMemoryModuleCache(AtomicLineLogger &Logger) : Logger(Logger) {}
+
   /// There are four states for a PCM.  It must monotonically increase.
   ///
   ///  1. Unknown: the PCM has neither been read from disk nor built.

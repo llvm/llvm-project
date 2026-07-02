@@ -412,6 +412,13 @@ llvm::Expected<CompilerInstanceWithContext>
 CompilerInstanceWithContext::initializeOrError(
     DependencyScanningTool &Tool, StringRef CWD,
     ArrayRef<std::string> CommandLine, DependencyActionController &Controller) {
+  {
+    auto LogLine = Tool.Worker.Service.getLogger().log();
+    LogLine << "init_compiler_instance_with_context:";
+    for (const auto &C : CommandLine) {
+      LogLine << " " << C;
+    }
+  }
   auto DiagPrinterWithOS =
       std::make_unique<TextDiagnosticsPrinterWithOutput>(CommandLine);
 
@@ -428,6 +435,11 @@ llvm::Expected<TranslationUnitDeps>
 CompilerInstanceWithContext::computeDependenciesByNameOrError(
     StringRef ModuleName, const llvm::DenseSet<ModuleID> &AlreadySeen,
     DependencyActionController &Controller) {
+  Worker.Service.getLogger().log() << "start scan_by_name: " << ModuleName;
+  llvm::scope_exit ExitLogging([&] {
+    Worker.Service.getLogger().log() << "finish scan_by_name: " << ModuleName;
+  });
+
   FullDependencyConsumer Consumer(AlreadySeen);
   // We need to clear the DiagnosticOutput so that each by-name lookup
   // has a clean diagnostics buffer.
@@ -462,8 +474,8 @@ bool CompilerInstanceWithContext::initialize(
     canonicalizeDefines(OriginalInvocation->getPreprocessorOpts());
 
   // Create the CompilerInstance.
-  std::shared_ptr<ModuleCache> ModCache =
-      makeInProcessModuleCache(Worker.Service.getModuleCacheEntries());
+  std::shared_ptr<ModuleCache> ModCache = makeInProcessModuleCache(
+      Worker.Service.getModuleCacheEntries(), Worker.Service.getLogger());
   CIPtr = std::make_unique<CompilerInstance>(
       createScanCompilerInvocation(*OriginalInvocation, Worker.Service,
                                    Controller),
