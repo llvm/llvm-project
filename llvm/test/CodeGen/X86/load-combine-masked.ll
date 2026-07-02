@@ -214,17 +214,12 @@ define i16 @negative_variable_mask(ptr %p, i8 %mask) {
 ; Multi-use: AND result is used elsewhere. The one-use check in
 ; calculateByteProvider should prevent combining since the AND can't be removed.
 declare void @use.i8(i8)
-define i16 @negative_multiuse_and(ptr %p) {
+define i16 @negative_multiuse_and(ptr %p) nounwind {
 ; CHECK-LABEL: negative_multiuse_and:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rbp
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    .cfi_offset %rbx, -24
-; CHECK-NEXT:    .cfi_offset %rbp, -16
 ; CHECK-NEXT:    movzbl (%rdi), %ebp
 ; CHECK-NEXT:    movzbl 1(%rdi), %ebx
 ; CHECK-NEXT:    andl $3, %ebx
@@ -234,11 +229,8 @@ define i16 @negative_multiuse_and(ptr %p) {
 ; CHECK-NEXT:    orl %ebp, %ebx
 ; CHECK-NEXT:    movl %ebx, %eax
 ; CHECK-NEXT:    addq $8, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-NEXT:    popq %rbx
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    popq %rbp
-; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   %p1 = getelementptr inbounds i8, ptr %p, i64 1
   %lo = load i8, ptr %p, align 1

@@ -267,18 +267,13 @@ define i16 @negative_variable_mask(ptr %p, i8 %mask) {
 ; Multi-use: AND result is used elsewhere. The one-use check in
 ; calculateByteProvider should prevent combining since the AND can't be removed.
 declare void @use.i8(i8)
-define i16 @negative_multiuse_and(ptr %p) {
+define i16 @negative_multiuse_and(ptr %p) nounwind {
 ; LE-LABEL: negative_multiuse_and:
 ; LE:       ; %bb.0:
 ; LE-NEXT:    stp x20, x19, [sp, #-32]! ; 16-byte Folded Spill
-; LE-NEXT:    stp x29, x30, [sp, #16] ; 16-byte Folded Spill
-; LE-NEXT:    .cfi_def_cfa_offset 32
-; LE-NEXT:    .cfi_offset w30, -8
-; LE-NEXT:    .cfi_offset w29, -16
-; LE-NEXT:    .cfi_offset w19, -24
-; LE-NEXT:    .cfi_offset w20, -32
 ; LE-NEXT:    ldrb w20, [x0, #1]
 ; LE-NEXT:    ldrb w19, [x0]
+; LE-NEXT:    stp x29, x30, [sp, #16] ; 16-byte Folded Spill
 ; LE-NEXT:    and w0, w20, #0x3
 ; LE-NEXT:    bl _use.i8
 ; LE-NEXT:    bfi w19, w20, #8, #2
@@ -291,10 +286,6 @@ define i16 @negative_multiuse_and(ptr %p) {
 ; BE:       // %bb.0:
 ; BE-NEXT:    str x30, [sp, #-32]! // 8-byte Folded Spill
 ; BE-NEXT:    stp x20, x19, [sp, #16] // 16-byte Folded Spill
-; BE-NEXT:    .cfi_def_cfa_offset 32
-; BE-NEXT:    .cfi_offset w19, -8
-; BE-NEXT:    .cfi_offset w20, -16
-; BE-NEXT:    .cfi_offset w30, -32
 ; BE-NEXT:    ldrb w20, [x0, #1]
 ; BE-NEXT:    ldrb w19, [x0]
 ; BE-NEXT:    and w0, w20, #0x3

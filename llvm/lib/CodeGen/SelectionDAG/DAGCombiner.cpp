@@ -9539,7 +9539,8 @@ using SDByteProvider = ByteProvider<SDNode *>;
 static std::optional<SDByteProvider>
 calculateByteProvider(SDValue Op, unsigned Index, unsigned Depth,
                       std::optional<uint64_t> VectorIndex,
-                      unsigned StartingIndex = 0, uint8_t *ByteMask = nullptr) {
+                      unsigned StartingIndex = 0,
+                      MutableArrayRef<uint8_t> ByteMask = {}) {
 
   // Typical i64 by i8 pattern requires recursion up to 8 calls depth
   if (Depth == 10)
@@ -9621,31 +9622,27 @@ calculateByteProvider(SDValue Op, unsigned Index, unsigned Depth,
                                  Depth + 1, VectorIndex, StartingIndex,
                                  ByteMask);
   case ISD::AND: {
-    unsigned MaskIdx = 1;
-    auto MaskOp = dyn_cast<ConstantSDNode>(Op->getOperand(MaskIdx));
-    if (!MaskOp) {
-      MaskIdx = 0;
-      MaskOp = dyn_cast<ConstantSDNode>(Op->getOperand(MaskIdx));
-      if (!MaskOp)
-        return std::nullopt;
-    }
+    // Constants are canonicalized to the RHS of AND, so only operand 1 needs
+    // to be checked.
+    auto *MaskOp = dyn_cast<ConstantSDNode>(Op->getOperand(1));
+    if (!MaskOp)
+      return std::nullopt;
 
-    uint64_t Mask = MaskOp->getZExtValue();
-    uint8_t MaskByte = (Mask >> (Index * 8)) & 0xFF;
+    uint8_t MaskByte =
+        MaskOp->getAPIntValue().extractBitsAsZExtValue(8, Index * 8);
 
     if (MaskByte == 0x00)
       return SDByteProvider::getConstantZero();
 
-    auto Result =
-        calculateByteProvider(Op->getOperand(1 - MaskIdx), Index, Depth + 1,
-                              VectorIndex, StartingIndex, ByteMask);
+    auto Result = calculateByteProvider(Op->getOperand(0), Index, Depth + 1,
+                                        VectorIndex, StartingIndex, ByteMask);
     if (!Result)
       return std::nullopt;
 
     // Only record the mask if this byte is actually provided (not zero).
     // A ConstantZero result may be discarded by the OR handler in favor of
     // the other operand, so writing the mask here would corrupt ByteMask.
-    if (MaskByte != 0xFF && ByteMask && !Result->isConstantZero())
+    if (MaskByte != 0xFF && !ByteMask.empty() && !Result->isConstantZero())
       ByteMask[StartingIndex] &= MaskByte;
 
     return Result;
@@ -10035,7 +10032,7 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
   for (int i = ByteWidth - 1; i >= 0; --i) {
     auto P =
         calculateByteProvider(SDValue(N, 0), i, 0, /*VectorIndex*/ std::nullopt,
-                              /*StartingIndex*/ i, ByteMasks.data());
+                              /*StartingIndex*/ i, ByteMasks);
     if (!P)
       return SDValue();
 
