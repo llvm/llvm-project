@@ -1505,7 +1505,12 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
         unsigned AbbrevCode = Stream.EmitAbbrev(std::move(Abbrev));
 
         RecordData::value_type Record[] = {MODULE_DIRECTORY};
-        Stream.EmitRecordWithBlob(AbbrevCode, Record, *BaseDir);
+
+        // Remap the path with the prefixes if specified. Write out only
+        // remapped directory, but keep working with the unmodified path.
+        SmallString<0> RPath(*BaseDir);
+        getLangOpts().remapPathPrefix(RPath);
+        Stream.EmitRecordWithBlob(AbbrevCode, Record, RPath);
       }
 
       // Write out all other paths relative to the base directory if possible.
@@ -5417,6 +5422,8 @@ bool ASTWriter::PreparePathForOutput(SmallVectorImpl<char> &Path) {
     Path.erase(Path.begin(), Path.begin() + (PathPtr - PathBegin));
     Changed = true;
   }
+  // Remap with the path prefixes if provided.
+  Changed |= getLangOpts().remapPathPrefix(Path);
 
   return Changed;
 }

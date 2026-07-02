@@ -734,7 +734,7 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
                              *AST->LangOpts, *AST->CodeGenOpts,
                              *AST->TargetOpts, Counter);
   if (ASTReader::readASTFileControlBlock(
-          Filename, TmpFileMgr, *AST->ModCache, PCHContainerRdr,
+          Filename, TmpFileMgr, *AST->ModCache, PCHContainerRdr, *AST->LangOpts,
           /*FindModuleFileExtensions=*/true, Collector,
           /*ValidateDiagnosticOptions=*/true, ASTReader::ARR_None)) {
     AST->getDiagnostics().Report(diag::err_fe_unable_to_load_ast_file);

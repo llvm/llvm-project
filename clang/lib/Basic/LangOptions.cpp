@@ -74,10 +74,15 @@ unsigned LangOptions::getOpenCLCompatibleVersion() const {
   llvm_unreachable("Unknown OpenCL version");
 }
 
-void LangOptions::remapPathPrefix(SmallVectorImpl<char> &Path) const {
-  for (const auto &Entry : MacroPrefixMap)
-    if (llvm::sys::path::replace_path_prefix(Path, Entry.first, Entry.second))
-      break;
+bool LangOptions::remapPathPrefix(SmallVectorImpl<char> &Path,
+                                  const bool reverse /*=false*/) const {
+  for (const auto &Entry : MacroPrefixMap) {
+    const std::string &From = reverse ? Entry.second : Entry.first;
+    const std::string &To = reverse ? Entry.first : Entry.second;
+    if (llvm::sys::path::replace_path_prefix(Path, From, To))
+      return true;
+  }
+  return false;
 }
 
 std::string LangOptions::getOpenCLVersionString() const {

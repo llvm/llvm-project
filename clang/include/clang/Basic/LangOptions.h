@@ -802,8 +802,11 @@ public:
 
   bool allowArrayReturnTypes() const { return HLSL; }
 
-  /// Remap path prefix according to -fmacro-prefix-path option.
-  void remapPathPrefix(SmallVectorImpl<char> &Path) const;
+  /// Remap path prefix according to -fmacro-prefix-map option.
+  /// If 'reverse' is true the swapped prefix pair will be used.
+  /// Returns true if Path was changed.
+  bool remapPathPrefix(SmallVectorImpl<char> &Path,
+                       const bool reverse = false) const;
 
   RoundingMode getDefaultRoundingMode() const {
     return RoundingMath ? RoundingMode::Dynamic

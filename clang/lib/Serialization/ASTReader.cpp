@@ -2341,8 +2341,8 @@ HeaderFileInfoTrait::getFile(const internal_key_type &Key) {
   if (!Key.Imported)
     return FileMgr.getOptionalFileRef(Key.Filename);
 
-  auto Resolved =
-      ASTReader::ResolveImportedPath(Reader.getPathBuf(), Key.Filename, M);
+  auto Resolved = Reader.ResolveImportedPath(
+      Reader.getPathBuf(), Key.Filename, M, Reader.getContext().getLangOpts());
   return FileMgr.getOptionalFileRef(*Resolved);
 }
 
@@ -2872,8 +2872,8 @@ InputFile ASTReader::getInputFile(ModuleFile &F, unsigned ID, bool Complain) {
   time_t StoredTime = FI.StoredTime;
   bool Overridden = FI.Overridden;
   bool Transient = FI.Transient;
-  auto Filename =
-      ResolveImportedPath(PathBuf, FI.UnresolvedImportedFilenameAsRequested, F);
+  auto Filename = ResolveImportedPath(
+      PathBuf, FI.UnresolvedImportedFilenameAsRequested, F, PP.getLangOpts());
   uint64_t StoredContentHash = FI.ContentHash;
 
   // For standard C++ modules, we don't need to check the inputs.
@@ -3056,16 +3056,36 @@ ASTReader::ResolveImportedPath(SmallString<0> &Buf, StringRef Path,
   return {ResolvedPath, Buf};
 }
 
-std::string ASTReader::ResolveImportedPathAndAllocate(SmallString<0> &Buf,
-                                                      StringRef P,
-                                                      ModuleFile &ModF) {
-  return ResolveImportedPathAndAllocate(Buf, P, ModF.BaseDirectory);
+ASTReader::TemporarilyOwnedStringRef
+ASTReader::ResolveImportedPath(SmallString<0> &Buf, StringRef Path,
+                               StringRef Prefix, const LangOptions &LangOpts) {
+  auto Resolved = ResolveImportedPath(Buf, Path, Prefix);
+
+  Buf.assign(*Resolved);
+  if (LangOpts.remapPathPrefix(Buf, true))
+    return {StringRef{Buf.data(), Buf.size()}, Buf};
+
+  return Resolved;
 }
 
-std::string ASTReader::ResolveImportedPathAndAllocate(SmallString<0> &Buf,
-                                                      StringRef P,
-                                                      StringRef Prefix) {
-  auto ResolvedPath = ResolveImportedPath(Buf, P, Prefix);
+ASTReader::TemporarilyOwnedStringRef
+ASTReader::ResolveImportedPath(SmallString<0> &Buf, StringRef Path,
+                               ModuleFile &ModF, const LangOptions &LangOpts) {
+  return ResolveImportedPath(Buf, Path, ModF.BaseDirectory, LangOpts);
+}
+
+std::string
+ASTReader::ResolveImportedPathAndAllocate(SmallString<0> &Buf, StringRef P,
+                                          ModuleFile &ModF,
+                                          const LangOptions &LangOpts) {
+  return ResolveImportedPathAndAllocate(Buf, P, ModF.BaseDirectory, LangOpts);
+}
+
+std::string
+ASTReader::ResolveImportedPathAndAllocate(SmallString<0> &Buf, StringRef P,
+                                          StringRef Prefix,
+                                          const LangOptions &LangOpts) {
+  auto ResolvedPath = ResolveImportedPath(Buf, P, Prefix, LangOpts);
   return ResolvedPath->str();
 }
 
@@ -3339,7 +3359,8 @@ ASTReader::ReadControlBlock(ModuleFile &F,
           bool IsSystem = I >= NumUserInputs;
           InputFileInfo FI = getInputFileInfo(F, I + 1);
           auto FilenameAsRequested = ResolveImportedPath(
-              PathBuf, FI.UnresolvedImportedFilenameAsRequested, F);
+              PathBuf, FI.UnresolvedImportedFilenameAsRequested, F,
+              PP.getLangOpts());
           Listener->visitInputFile(
               *FilenameAsRequested, IsSystem, FI.Overridden,
               F.Kind == MK_ExplicitModule || F.Kind == MK_PrebuiltModule);
@@ -3417,6 +3438,7 @@ ASTReader::ReadControlBlock(ModuleFile &F,
     // Read and process a record.
     Record.clear();
     StringRef Blob;
+    SmallString<0> RPath;
     Expected<unsigned> MaybeRecordType =
         Stream.readRecord(Entry.ID, Record, &Blob);
     if (!MaybeRecordType) {
@@ -3603,7 +3625,7 @@ ASTReader::ReadControlBlock(ModuleFile &F,
       F.OriginalSourceFileID = FileID::get(Record[0]);
       F.ActualOriginalSourceFileName = std::string(Blob);
       F.OriginalSourceFileName = ResolveImportedPathAndAllocate(
-          PathBuf, F.ActualOriginalSourceFileName, F);
+          PathBuf, F.ActualOriginalSourceFileName, F, PP.getLangOpts());
       break;
 
     case ORIGINAL_FILE_ID:
@@ -3627,10 +3649,15 @@ ASTReader::ReadControlBlock(ModuleFile &F,
 
     case MODULE_DIRECTORY: {
       // Save the BaseDirectory as written in the PCM for computing the module
-      // filename for the ModuleCache.
+      // filename for the ModuleCache. Remap path prefixes if specified.
+      RPath.assign(Blob.begin(), Blob.end());
+      if (PP.getLangOpts().remapPathPrefix(RPath, true))
+        Blob = StringRef(RPath.begin(), RPath.size());
+
       BaseDirectoryAsWritten = Blob;
       assert(!F.ModuleName.empty() &&
              "MODULE_DIRECTORY found before MODULE_NAME");
+
       F.BaseDirectory = std::string(Blob);
 
       auto [MaybeM, IgnoreError] =
@@ -4032,8 +4059,7 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
     case MODULAR_CODEGEN_DECLS:
       // FIXME: Skip reading this record if our ASTConsumer doesn't care about
       // them (ie: if we're not codegenerating this module).
-      if (F.Kind == MK_MainFile ||
-          getContext().getLangOpts().BuildingPCHWithObjectFile)
+      if (F.Kind == MK_MainFile || PP.getLangOpts().BuildingPCHWithObjectFile)
         for (unsigned I = 0, N = Record.size(); I != N; /*in loop*/)
           EagerlyDeserializedDecls.push_back(ReadDeclID(F, Record, I));
       break;
@@ -5974,9 +6000,9 @@ namespace {
 
 bool ASTReader::readASTFileControlBlock(
     StringRef Filename, FileManager &FileMgr, const ModuleCache &ModCache,
-    const PCHContainerReader &PCHContainerRdr, bool FindModuleFileExtensions,
-    ASTReaderListener &Listener, bool ValidateDiagnosticOptions,
-    unsigned ClientLoadCapabilities) {
+    const PCHContainerReader &PCHContainerRdr, const LangOptions &LangOpts,
+    bool FindModuleFileExtensions, ASTReaderListener &Listener,
+    bool ValidateDiagnosticOptions, unsigned ClientLoadCapabilities) {
   // Open the AST file.
   off_t Size;
   time_t ModTime;
@@ -6124,7 +6150,7 @@ bool ASTReader::readASTFileControlBlock(
     case MODULE_MAP_FILE: {
       unsigned Idx = 0;
       std::string PathStr = ReadString(Record, Idx);
-      auto Path = ResolveImportedPath(PathBuf, PathStr, ModuleDir);
+      auto Path = ResolveImportedPath(PathBuf, PathStr, ModuleDir, LangOpts);
       Listener.ReadModuleMapFile(*Path);
       break;
     }
@@ -6176,13 +6202,13 @@ bool ASTReader::readASTFileControlBlock(
           auto [UnresolvedFilenameAsRequested, UnresolvedFilename] =
               getUnresolvedInputFilenames(Record, Blob);
           auto FilenameAsRequestedBuf = ResolveImportedPath(
-              PathBuf, UnresolvedFilenameAsRequested, ModuleDir);
+              PathBuf, UnresolvedFilenameAsRequested, ModuleDir, LangOpts);
           StringRef Filename;
           if (UnresolvedFilename.empty())
             Filename = *FilenameAsRequestedBuf;
           else {
             auto FilenameBuf = ResolveImportedPath(
-                AdditionalPathBuf, UnresolvedFilename, ModuleDir);
+                AdditionalPathBuf, UnresolvedFilename, ModuleDir, LangOpts);
             Filename = *FilenameBuf;
           }
           shouldContinue = Listener.visitInputFileAsRequested(
@@ -6226,7 +6252,8 @@ bool ASTReader::readASTFileControlBlock(
       Blob = Blob.substr(ASTFileSignature::size);
 
       StringRef FilenameStr = ReadStringBlob(Record, Idx, Blob);
-      auto Filename = ResolveImportedPath(PathBuf, FilenameStr, ModuleDir);
+      auto Filename =
+          ResolveImportedPath(PathBuf, FilenameStr, ModuleDir, LangOpts);
       Listener.visitImport(ModuleName, *Filename);
       break;
     }
@@ -6313,6 +6340,7 @@ bool ASTReader::isAcceptableASTFile(
                                SpecificModuleCachePath, FileMgr,
                                RequireStrictOptionMatches);
   return !readASTFileControlBlock(Filename, FileMgr, ModCache, PCHContainerRdr,
+                                  LangOpts,
                                   /*FindModuleFileExtensions=*/false, validator,
                                   /*ValidateDiagnosticOptions=*/true);
 }
@@ -6548,13 +6576,13 @@ Module *ASTReader::getSubmodule(uint32_t GlobalID) {
       break;
 
     case SUBMODULE_TOPHEADER: {
-      auto HeaderName = ResolveImportedPath(PathBuf, Blob, F);
+      auto HeaderName = ResolveImportedPath(PathBuf, Blob, F, PP.getLangOpts());
       CurrentModule->addTopHeaderFilename(*HeaderName);
       break;
     }
 
     case SUBMODULE_UMBRELLA_DIR: {
-      auto Dirname = ResolveImportedPath(PathBuf, Blob, F);
+      auto Dirname = ResolveImportedPath(PathBuf, Blob, F, PP.getLangOpts());
       if (auto Umbrella =
               PP.getFileManager().getOptionalDirectoryRef(*Dirname)) {
         if (!CurrentModule->getUmbrellaDirAsWritten()) {
@@ -10464,14 +10492,16 @@ std::string ASTReader::ReadPath(ModuleFile &F, const RecordData &Record,
 std::string ASTReader::ReadPath(StringRef BaseDirectory,
                                 const RecordData &Record, unsigned &Idx) {
   std::string Filename = ReadString(Record, Idx);
-  return ResolveImportedPathAndAllocate(PathBuf, Filename, BaseDirectory);
+  return ResolveImportedPathAndAllocate(PathBuf, Filename, BaseDirectory,
+                                        PP.getLangOpts());
 }
 
 std::string ASTReader::ReadPathBlob(StringRef BaseDirectory,
                                     const RecordData &Record, unsigned &Idx,
                                     StringRef &Blob) {
   StringRef Filename = ReadStringBlob(Record, Idx, Blob);
-  return ResolveImportedPathAndAllocate(PathBuf, Filename, BaseDirectory);
+  return ResolveImportedPathAndAllocate(PathBuf, Filename, BaseDirectory,
+                                        PP.getLangOpts());
 }
 
 VersionTuple ASTReader::ReadVersionTuple(const RecordData &Record,
