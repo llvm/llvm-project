@@ -2604,11 +2604,12 @@ instCombineSVEPairwiseAddLong(InstCombiner &IC, IntrinsicInst &II) {
           II.getIntrinsicID() == Intrinsic::aarch64_sve_uadalp) &&
          "Expected SADALP or UADALP intrinsic");
 
-  // We are looking for add(adalp(%pred, zeroinitializer, %in), %acc)
-  if (!II.hasOneUse() || !match(II.getArgOperand(1), m_Zero()))
+  // Simplify add(adalp(pg, zeroinitializer, in), wide_acc)
+  //       -> adalp(pg, wide_acc, in)
+  auto *User = dyn_cast_or_null<Instruction>(II.getUniqueUndroppableUser());
+  if (!User || !match(II.getArgOperand(1), m_Zero()))
     return std::nullopt;
 
-  auto *User = cast<Instruction>(*II.user_begin());
   Value *Acc;
   if (!match(User, m_c_Add(m_Specific(&II), m_Value(Acc))))
     return std::nullopt;
