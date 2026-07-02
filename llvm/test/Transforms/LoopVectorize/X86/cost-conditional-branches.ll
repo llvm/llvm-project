@@ -1274,5 +1274,5 @@ exit:
 }
 
 attributes #0 = { "target-cpu"="znver4" }
-attributes #1 = { "target-features"="+avx512bw,+avx512cd,+avx512dq,+avx512f,+avx512vl" }
+attributes #1 = { "target-features"="+avx512bw,+avx512cd,+avx512dq,+avx512f,+avx512vl,+fast-gather" }
 attributes #2 = { "target-cpu"="znver3" }

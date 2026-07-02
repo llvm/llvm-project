@@ -6389,9 +6389,12 @@ int X86TTIImpl::getGatherOverhead() const {
   // to the Load operation. "2" is the number provided by Intel architects. This
   // parameter is used for cost estimation of Gather Op and comparison with
   // other alternatives.
-  // TODO: Remove the explicit hasAVX512()?, That would mean we would only
-  // enable gather with a -march.
-  if (ST->hasAVX512() || (ST->hasAVX2() && ST->hasFastGather()))
+  // Honor the "fast-gather" tuning uniformly: a fast hardware gather is a
+  // micro-architectural property, not an ISA one, so do not assume every
+  // AVX512 target has one. Targets that genuinely have a fast gather declare
+  // TuningFastGather (e.g. SKX, KNL, x86-64-v4); others (bare +avx512f, AMD
+  // Zen) get the slow-gather overhead.
+  if (ST->hasFastGather())
     return 2;
 
   return 1024;

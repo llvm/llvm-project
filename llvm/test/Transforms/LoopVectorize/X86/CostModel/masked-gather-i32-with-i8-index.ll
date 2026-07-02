@@ -4,7 +4,8 @@
 ; RUN: opt -passes=loop-vectorize -vectorizer-maximize-bandwidth -S -mattr=+avx  --debug-only=loop-vectorize --disable-output < %s 2>&1 | FileCheck %s --check-prefixes=AVX1
 ; RUN: opt -passes=loop-vectorize -vectorizer-maximize-bandwidth -S -mattr=+avx2,-fast-gather --debug-only=loop-vectorize --disable-output < %s 2>&1 | FileCheck %s --check-prefixes=AVX2-SLOWGATHER
 ; RUN: opt -passes=loop-vectorize -vectorizer-maximize-bandwidth -S -mattr=+avx2,+fast-gather --debug-only=loop-vectorize --disable-output < %s 2>&1 | FileCheck %s --check-prefixes=AVX2-FASTGATHER
-; RUN: opt -passes=loop-vectorize -vectorizer-maximize-bandwidth -S -mattr=+avx512bw --debug-only=loop-vectorize --disable-output < %s 2>&1 | FileCheck %s --check-prefixes=AVX512
+; RUN: opt -passes=loop-vectorize -vectorizer-maximize-bandwidth -S -mattr=+avx512bw --debug-only=loop-vectorize --disable-output < %s 2>&1 | FileCheck %s --check-prefixes=AVX512-SLOWGATHER
+; RUN: opt -passes=loop-vectorize -vectorizer-maximize-bandwidth -S -mattr=+avx512bw,+fast-gather --debug-only=loop-vectorize --disable-output < %s 2>&1 | FileCheck %s --check-prefixes=AVX512-FASTGATHER
 
 ; REQUIRES: asserts
 
@@ -47,14 +48,23 @@ define void @test() {
 ; AVX2-FASTGATHER:  Cost of 24 for VF 16: {{.*}}ir<%valB.loaded> = load
 ; AVX2-FASTGATHER:  Cost of 48 for VF 32: {{.*}}ir<%valB.loaded> = load
 ;
-; AVX512-LABEL: 'test'
-; AVX512:  LV: Found an estimated cost of 1 for VF 1 For instruction: %valB.loaded = load i32, ptr %inB, align 4
-; AVX512:  Cost of 8 for VF 2: {{.*}}ir<%valB.loaded> = load
-; AVX512:  Cost of 17 for VF 4: {{.*}}ir<%valB.loaded> = load
-; AVX512:  Cost of 10 for VF 8: {{.*}}ir<%valB.loaded> = load
-; AVX512:  Cost of 18 for VF 16: {{.*}}ir<%valB.loaded> = load
-; AVX512:  Cost of 36 for VF 32: {{.*}}ir<%valB.loaded> = load
-; AVX512:  Cost of 72 for VF 64: {{.*}}ir<%valB.loaded> = load
+; AVX512-SLOWGATHER-LABEL: 'test'
+; AVX512-SLOWGATHER:  LV: Found an estimated cost of 1 for VF 1 For instruction: %valB.loaded = load i32, ptr %inB, align 4
+; AVX512-SLOWGATHER:  Cost of 8 for VF 2: {{.*}}ir<%valB.loaded> = load
+; AVX512-SLOWGATHER:  Cost of 17 for VF 4: {{.*}}ir<%valB.loaded> = load
+; AVX512-SLOWGATHER:  Cost of 1032 for VF 8: {{.*}}ir<%valB.loaded> = load
+; AVX512-SLOWGATHER:  Cost of 1040 for VF 16: {{.*}}ir<%valB.loaded> = load
+; AVX512-SLOWGATHER:  Cost of 2080 for VF 32: {{.*}}ir<%valB.loaded> = load
+; AVX512-SLOWGATHER:  Cost of 4160 for VF 64: {{.*}}ir<%valB.loaded> = load
+;
+; AVX512-FASTGATHER-LABEL: 'test'
+; AVX512-FASTGATHER:  LV: Found an estimated cost of 1 for VF 1 For instruction: %valB.loaded = load i32, ptr %inB, align 4
+; AVX512-FASTGATHER:  Cost of 8 for VF 2: {{.*}}ir<%valB.loaded> = load
+; AVX512-FASTGATHER:  Cost of 17 for VF 4: {{.*}}ir<%valB.loaded> = load
+; AVX512-FASTGATHER:  Cost of 10 for VF 8: {{.*}}ir<%valB.loaded> = load
+; AVX512-FASTGATHER:  Cost of 18 for VF 16: {{.*}}ir<%valB.loaded> = load
+; AVX512-FASTGATHER:  Cost of 36 for VF 32: {{.*}}ir<%valB.loaded> = load
+; AVX512-FASTGATHER:  Cost of 72 for VF 64: {{.*}}ir<%valB.loaded> = load
 ;
 entry:
   br label %for.body

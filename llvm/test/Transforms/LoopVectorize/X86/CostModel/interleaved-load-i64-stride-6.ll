@@ -2,7 +2,7 @@
 ; RUN: opt -passes=loop-vectorize -vectorizer-maximize-bandwidth -S -mattr=+sse2 --debug-only=loop-vectorize --disable-output < %s 2>&1 | FileCheck %s --check-prefix=SSE2
 ; RUN: opt -passes=loop-vectorize -vectorizer-maximize-bandwidth -S -mattr=+avx  --debug-only=loop-vectorize --disable-output < %s 2>&1 | FileCheck %s --check-prefix=AVX1
 ; RUN: opt -passes=loop-vectorize -vectorizer-maximize-bandwidth -S -mattr=+avx2 --debug-only=loop-vectorize --disable-output < %s 2>&1 | FileCheck %s --check-prefix=AVX2
-; RUN: opt -passes=loop-vectorize -vectorizer-maximize-bandwidth -S -mattr=+avx512vl --debug-only=loop-vectorize --disable-output < %s 2>&1 | FileCheck %s --check-prefix=AVX512
+; RUN: opt -passes=loop-vectorize -vectorizer-maximize-bandwidth -S -mattr=+avx512vl,+fast-gather --debug-only=loop-vectorize --disable-output < %s 2>&1 | FileCheck %s --check-prefix=AVX512
 ; REQUIRES: asserts
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
