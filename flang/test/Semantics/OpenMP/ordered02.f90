@@ -143,4 +143,23 @@ subroutine sub1()
     !$omp end ordered
   end do
   !$omp end target parallel do
+
+  ! THREADS+SIMD inside a plain SIMD (not DO SIMD) region must be rejected
+  !$omp simd
+  do i = 1, N
+    !ERROR: An ORDERED directive with SIMD and THREADS clauses must be closely nested in a worksharing-loop SIMD region
+    !$omp ordered threads simd
+    arrayA(i) = foo(i)
+    !$omp end ordered
+  end do
+  !$omp end simd
+
+  ! THREADS+SIMD inside a DO SIMD region is valid
+  !$omp do simd ordered
+  do i = 1, N
+    !$omp ordered threads simd
+    arrayA(i) = foo(i)
+    !$omp end ordered
+  end do
+  !$omp end do simd
 end

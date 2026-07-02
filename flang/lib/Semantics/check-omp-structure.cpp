@@ -1673,6 +1673,13 @@ void OmpStructureChecker::ChecksOnOrderedAsBlock() {
       context_.Say(GetContext().directiveSource,
           "An ORDERED directive with SIMD clause must be closely nested in a "
           "SIMD or worksharing-loop SIMD region"_err_en_US);
+    } else if (CurrentDirectiveIsNested() &&
+        FindClause(llvm::omp::Clause::OMPC_simd) &&
+        FindClause(llvm::omp::Clause::OMPC_threads) && isNestedInSIMD &&
+        !isNestedInDoSIMD) {
+      context_.Say(GetContext().directiveSource,
+          "An ORDERED directive with SIMD and THREADS clauses must be closely "
+          "nested in a worksharing-loop SIMD region"_err_en_US);
     }
     if (isNestedInDo && (noOrderedClause || isOrderedClauseWithPara)) {
       context_.Say(GetContext().directiveSource,
