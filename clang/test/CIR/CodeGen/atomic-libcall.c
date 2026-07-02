@@ -67,7 +67,7 @@ void c11_load(_Atomic(struct Big) *ptr) {
   // CIR-NEXT: %[[ORDER:.+]] = cir.const #cir.int<0> : !s32i
   // CIR-NEXT: cir.call @__atomic_load(%[[SIZE]], %[[PTR_VOIDPTR]], %[[TEMP_VOIDPTR]], %[[ORDER]]) : (!u64i {llvm.noundef}, !cir.ptr<!void> {llvm.noundef}, !cir.ptr<!void> {llvm.noundef}, !s32i {llvm.noundef}) -> ()
   // CIR-NEXT: %[[TEMP_CAST:.+]] = cir.cast bitcast %[[TEMP_INTPTR]] : !cir.ptr<!cir.int<u, 192>> -> !cir.ptr<!rec_Big>
-  // CIR-NEXT: cir.copy %[[TEMP_CAST]] to %[[DEST_SLOT]] : !cir.ptr<!rec_Big>
+  // CIR-NEXT: cir.copy %[[TEMP_CAST]] align(4) to %[[DEST_SLOT]] align(4) : !cir.ptr<!rec_Big>
 
   // LLVM:      %[[DEST_SLOT:.+]] = alloca %struct.Big
   // LLVM-NEXT: %[[TEMP_SLOT:.+]] = alloca %struct.Big
@@ -123,7 +123,7 @@ void c11_store(_Atomic(struct Big) *dest, struct Big *val) {
   __c11_atomic_store(dest, *val, __ATOMIC_RELAXED);
   // CIR:      %[[DEST_PTR:.+]] = cir.load align(8) %{{.+}} : !cir.ptr<!cir.ptr<!rec_Big>>, !cir.ptr<!rec_Big>
   // CIR-NEXT: %[[VALUE_PTR:.+]] = cir.load deref align(8) %{{.+}} : !cir.ptr<!cir.ptr<!rec_Big>>, !cir.ptr<!rec_Big>
-  // CIR-NEXT: cir.copy %[[VALUE_PTR]] to %[[TEMP_SLOT:.+]] : !cir.ptr<!rec_Big>
+  // CIR-NEXT: cir.copy %[[VALUE_PTR]] align(4) to %[[TEMP_SLOT:.+]] align(4) : !cir.ptr<!rec_Big>
   // CIR-NEXT: %[[DEST_INTPTR:.+]] = cir.cast bitcast %[[DEST_PTR]] : !cir.ptr<!rec_Big> -> !cir.ptr<!cir.int<u, 192>>
   // CIR-NEXT: %[[VALUE_INTPTR:.+]] = cir.cast bitcast %[[TEMP_SLOT]] : !cir.ptr<!rec_Big> -> !cir.ptr<!cir.int<u, 192>>
   // CIR-NEXT: %[[SIZE:.+]] = cir.const #cir.int<24> : !u64i
