@@ -437,6 +437,8 @@ add_libc_test(
 #     libc.src.math.iscanonical
 #     libc.src.math.iscanonicalf
 #     libc.src.math.iscanonicall
+#     libc.src.math.iscanonicalf16
+#     libc.src.math.iscanonicalf128
 # )
 
 add_libc_test(
