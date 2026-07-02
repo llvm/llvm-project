@@ -816,6 +816,7 @@ void Instruction::andIRFlags(const Value *V) {
 }
 
 const char *Instruction::getOpcodeName(unsigned OpCode) {
+  // clang-format off
   switch (OpCode) {
   // Terminators
   case Ret:    return "ret";
@@ -897,9 +898,12 @@ const char *Instruction::getOpcodeName(unsigned OpCode) {
   case LandingPad:     return "landingpad";
   case CleanupPad:     return "cleanuppad";
   case Freeze:         return "freeze";
+  case BitInsert:      return "bitinsert";
+  case BitExtract:     return "bitextract";
 
   default: return "<Invalid operator> ";
   }
+  // clang-format on
 }
 
 /// This must be kept in sync with FunctionComparator::cmpOperations in

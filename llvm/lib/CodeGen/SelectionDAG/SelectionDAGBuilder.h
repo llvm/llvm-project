@@ -615,6 +615,9 @@ private:
   void visitGetElementPtr(const User &I);
   void visitSelect(const User &I);
 
+  void visitBitInsert(const User &I);
+  void visitBitExtract(const User &I);
+
   void visitAlloca(const AllocaInst &I);
   void visitLoad(const LoadInst &I);
   void visitStore(const StoreInst &I);

@@ -11726,6 +11726,98 @@ Example:
       <result> = xor i32 4, 8            ; yields i32:result = 12
       <result> = xor i32 %V, -1          ; yields i32:result = ~%V
 
+Byte Operations
+---------------
+
+Instructions for bit-range manipulation on :ref:`byte type <t_byte>` values.
+
+.. _i_bitextract:
+
+'``bitextract``' Instruction
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      <result> = bitextract <ty>, <bty> <source>, i32 <offset>
+
+Overview:
+"""""""""
+
+The '``bitextract``' instruction reads a contiguous range of bits from a
+:ref:`byte type <t_byte>` value and returns them as a value of type ``ty``.
+
+Arguments:
+""""""""""
+``<ty>`` is any :ref:`single value type <t_single_value>` and specifies
+the result type. The first operand, ``source``, must be a value of
+:ref:`byte type <t_byte>`. The ``offset`` operand is an ``i32`` giving
+the bit position at which the extraction begins within ``source``.
+
+Semantics:
+""""""""""
+
+The result is the bit range ``source[offset : offset + bitwidth(ty))``, 
+reinterpreted as a value of type ``ty`` as if by a ``bitcast``.
+Bit ``0`` is the least significant bit of ``source``.
+
+If ``offset + bitwidth(ty)`` is greater than ``bitwidth(source)``,
+:ref:`poison value <poisonvalues>` is returned.
+
+Example:
+""""""""
+
+.. code-block:: text
+
+      %result = bitextract i8, b32 %src, i32 24 ; Extract the last 8 bits from %src and return an 8-bit integer
+
+.. _i_bitinsert:
+
+'``bitinsert``' Instruction
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      <result> = bitinsert <bty> <base>, <ty> <val>, i32 <offset>
+
+Overview:
+"""""""""
+
+The '``bitinsert``' instruction writes a contiguous range of bits from a
+:ref:`single value type <t_single_value>` value into a :ref:`byte type <t_byte>`
+value and returns the result as a value of the same byte type.
+
+Arguments:
+""""""""""
+
+``<ty>`` is any :ref:`single value type <t_single_value>` and specifies the
+type of the value to insert. The first operand, ``base``, must be a value of
+:ref:`byte type <t_byte>`. The second operand, ``val``, must be a value of
+type ``ty``. The ``offset`` operand is an ``i32`` giving the bit position
+at which the insertion begins within ``base``.
+
+Semantics:
+""""""""""
+
+The result is ``base`` with the bit range ``[offset : offset + bitwidth(ty))``
+replaced by the bits of ``val``, reinterpreted as if by a ``bitcast``.
+Bit ``0`` is the least significant bit of ``base``.
+
+If ``offset + bitwidth(ty)`` is greater than ``bitwidth(base)``,
+:ref:`poison value <poisonvalues>` is returned.
+
+Example:
+""""""""
+
+.. code-block:: text
+
+      %result = bitinsert b32 %x, i8 %y, i32 3 ; Inserts the %y bits into %x with an offset of 3
+
 Vector Operations
 -----------------
 

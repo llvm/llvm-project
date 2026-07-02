@@ -2235,6 +2235,7 @@ int TargetLoweringBase::InstructionOpcodeToISD(unsigned Opcode) const {
 #define LAST_OTHER_INST(NUM) InstructionOpcodesCount = NUM
 #include "llvm/IR/Instruction.def"
   };
+  // clang-format off
   switch (static_cast<InstructionOpcodes>(Opcode)) {
   case Ret:            return 0;
   case UncondBr:       return 0;
@@ -2305,8 +2306,10 @@ int TargetLoweringBase::InstructionOpcodeToISD(unsigned Opcode) const {
   case InsertValue:    return ISD::MERGE_VALUES;
   case LandingPad:     return 0;
   case Freeze:         return ISD::FREEZE;
+  case BitInsert:      return 0;
+  case BitExtract:     return 0;
   }
-
+  // clang-format on
   llvm_unreachable("Unknown instruction type encountered!");
 }
 

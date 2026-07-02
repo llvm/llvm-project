@@ -414,6 +414,8 @@ private:
   void visitExtractElementInst(ExtractElementInst &EI);
   void visitInsertElementInst(InsertElementInst &EI);
   void visitShuffleVectorInst(ShuffleVectorInst &EI);
+  void visitBitInsertInst(BitInsertInst &EI);
+  void visitBitExtractInst(BitExtractInst &EI);
   void visitVAArgInst(VAArgInst &VAA) { visitInstruction(VAA); }
   void visitCallInst(CallInst &CI);
   void visitInvokeInst(InvokeInst &II);
@@ -4346,6 +4348,23 @@ void Verifier::visitShuffleVectorInst(ShuffleVectorInst &SV) {
                                            SV.getShuffleMask()),
         "Invalid shufflevector operands!", &SV);
   visitInstruction(SV);
+}
+
+void Verifier::visitBitInsertInst(BitInsertInst &IE) {
+  Check(BitInsertInst::isValidOperands(IE.getOperand(0), IE.getOperand(1),
+                                       IE.getOperand(2)),
+        "Invalid bitinsert operands!", &IE);
+  visitInstruction(IE);
+}
+
+void Verifier::visitBitExtractInst(BitExtractInst &IE) {
+  Check(BitExtractInst::isValidOperands(IE.getType(), IE.getOperand(0),
+                                        IE.getOperand(1)),
+        "Invalid bitextract operands!", &IE);
+  Check(DL.getTypeSizeInBits(IE.getType()) <=
+            DL.getTypeSizeInBits(IE.getOperand(0)->getType()),
+        "bitextract result type cannot be wider than source type!", &IE);
+  visitInstruction(IE);
 }
 
 void Verifier::visitGetElementPtrInst(GetElementPtrInst &GEP) {
