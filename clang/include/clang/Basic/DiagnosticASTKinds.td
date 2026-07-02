@@ -24,6 +24,8 @@ def note_constexpr_invalid_downcast : Note<
   "cannot cast object of dynamic type %0 to type %1">;
 def note_constexpr_overflow : Note<
   "value %0 is outside the range of representable values of type %1">;
+def note_constexpr_offsetof_overflow : Note<
+  "overflow in offsetof">;
 def note_constexpr_negative_shift : Note<"negative shift count %0">;
 def note_constexpr_large_shift : Note<
   "shift count %0 >= width of type %1 (%2 bit%s2)">;
