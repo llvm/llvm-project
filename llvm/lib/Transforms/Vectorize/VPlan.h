@@ -3175,8 +3175,6 @@ public:
                          R.getDebugLoc()) {
     assert(!getInterleaveGroup()->isReverse() &&
            "Reversed interleave-group with tail folding is not supported.");
-    assert(!needsMaskForGaps() && "Interleaved access with gap mask is not "
-                                  "supported for scalable vector.");
   }
 
   ~VPInterleaveEVLRecipe() override = default;
