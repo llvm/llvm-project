@@ -104,3 +104,35 @@ void test_broadcast_short16_rejected(short16 value) {
   (void)intel_sub_group_broadcast(value, 0u); // expected-error{{no matching function for call to 'intel_sub_group_broadcast'}}
   // expected-note@-1 0+{{candidate function not viable}}
 }
+
+void test_broadcast_invalid(ushort value, __global ushort *ptr) {
+  intel_sub_group_broadcast(); // expected-error{{no matching function for call to 'intel_sub_group_broadcast'}}
+  // expected-note@-1 0+{{candidate function not viable}}
+  intel_sub_group_broadcast(value); // expected-error{{no matching function for call to 'intel_sub_group_broadcast'}}
+  // expected-note@-1 0+{{candidate function not viable}}
+  intel_sub_group_broadcast(value, value, value); // expected-error{{no matching function for call to 'intel_sub_group_broadcast'}}
+  // expected-note@-1 0+{{candidate function not viable}}
+  intel_sub_group_broadcast(ptr, 1u); // expected-error{{no matching function for call to 'intel_sub_group_broadcast'}}
+  // expected-note@-1 0+{{candidate function not viable}}
+}
+
+void test_block_read_us_invalid(const __global ushort *in, ushort v) {
+  intel_sub_group_block_read_us(); // expected-error{{no matching function for call to 'intel_sub_group_block_read_us'}}
+  // expected-note@-1 0+{{candidate function not viable}}
+  intel_sub_group_block_read_us(in, in); // expected-error{{no matching function for call to 'intel_sub_group_block_read_us'}}
+  // expected-note@-1 0+{{candidate function not viable}}
+  intel_sub_group_block_read_us(v); // expected-error{{no matching function for call to 'intel_sub_group_block_read_us'}}
+  // expected-note@-1 0+{{candidate function not viable}}
+}
+
+void test_block_write_us_invalid(__global ushort *out, read_only image2d_t roimg,
+                                 int2 coord, ushort value) {
+  intel_sub_group_block_write_us(); // expected-error{{no matching function for call to 'intel_sub_group_block_write_us'}}
+  // expected-note@-1 0+{{candidate function not viable}}
+  intel_sub_group_block_write_us(out); // expected-error{{no matching function for call to 'intel_sub_group_block_write_us'}}
+  // expected-note@-1 0+{{candidate function not viable}}
+  intel_sub_group_block_write_us(out, value, value); // expected-error{{no matching function for call to 'intel_sub_group_block_write_us'}}
+  // expected-note@-1 0+{{candidate function not viable}}
+  intel_sub_group_block_write_us(roimg, coord, value); // expected-error{{no matching function for call to 'intel_sub_group_block_write_us'}}
+  // expected-note@-1 0+{{candidate function not viable}}
+}

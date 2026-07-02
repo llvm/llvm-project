@@ -163,3 +163,60 @@ void test_block_read_ul16_local_rejected(const __local ulong *in) {
   intel_sub_group_block_read_ul16(in); // expected-error{{no matching function for call to 'intel_sub_group_block_read_ul16'}}
   // expected-note@-1 0+{{candidate function not viable}}
 }
+
+void test_block_read_local_invalid(const __local uint *in,
+                                   const __local ushort *us_in, uint v) {
+  intel_sub_group_block_read(); // expected-error{{no matching function for call to 'intel_sub_group_block_read'}}
+  // expected-note@-1 0+{{candidate function not viable}}
+  intel_sub_group_block_read(in, in); // expected-error{{no matching function for call to 'intel_sub_group_block_read'}}
+  // expected-note@-1 0+{{candidate function not viable}}
+  intel_sub_group_block_read(v); // expected-error{{no matching function for call to 'intel_sub_group_block_read'}}
+  // expected-note@-1 0+{{candidate function not viable}}
+  intel_sub_group_block_read(us_in); // expected-error{{incompatible pointer types passing 'const __local ushort *__private'}}
+}
+
+void test_block_write_local_invalid(__local uint *out, __local ushort *us_out,
+                                    uint value, ushort us_value) {
+  intel_sub_group_block_write(); // expected-error{{no matching function for call to 'intel_sub_group_block_write'}}
+  // expected-note@-1 0+{{candidate function not viable}}
+  intel_sub_group_block_write(out); // expected-error{{no matching function for call to 'intel_sub_group_block_write'}}
+  // expected-note@-1 0+{{candidate function not viable}}
+  intel_sub_group_block_write(out, value, value); // expected-error{{no matching function for call to 'intel_sub_group_block_write'}}
+  // expected-note@-1 0+{{candidate function not viable}}
+  intel_sub_group_block_write(value, value); // expected-error{{no matching function for call to 'intel_sub_group_block_write'}}
+  // expected-note@-1 0+{{candidate function not viable}}
+  intel_sub_group_block_write(us_out, value); // expected-error{{incompatible pointer types passing '__local ushort *__private'}}
+}
+
+void test_block_read_uc_local_invalid(const __local uchar *in,
+                                      const __local ushort *us_in, uchar v) {
+  intel_sub_group_block_read_uc(); // expected-error{{no matching function for call to 'intel_sub_group_block_read_uc'}}
+  // expected-note@-1 0+{{candidate function not viable}}
+  intel_sub_group_block_read_uc(in, in); // expected-error{{no matching function for call to 'intel_sub_group_block_read_uc'}}
+  // expected-note@-1 0+{{candidate function not viable}}
+  intel_sub_group_block_read_uc(v); // expected-error{{no matching function for call to 'intel_sub_group_block_read_uc'}}
+  // expected-note@-1 0+{{candidate function not viable}}
+  intel_sub_group_block_read_uc(us_in); // expected-error{{incompatible pointer types passing 'const __local ushort *__private'}}
+}
+
+void test_block_write_us_local_invalid(__local ushort *out, __local uint *ui_out,
+                                       ushort value) {
+  intel_sub_group_block_write_us(); // expected-error{{no matching function for call to 'intel_sub_group_block_write_us'}}
+  // expected-note@-1 0+{{candidate function not viable}}
+  intel_sub_group_block_write_us(out); // expected-error{{no matching function for call to 'intel_sub_group_block_write_us'}}
+  // expected-note@-1 0+{{candidate function not viable}}
+  intel_sub_group_block_write_us(out, value, value); // expected-error{{no matching function for call to 'intel_sub_group_block_write_us'}}
+  // expected-note@-1 0+{{candidate function not viable}}
+  intel_sub_group_block_write_us(ui_out, value); // expected-error{{incompatible pointer types passing '__local uint *__private'}}
+}
+
+void test_block_read_ul_local_invalid(const __local ulong *in,
+                                      const __local uint *ui_in, ulong v) {
+  intel_sub_group_block_read_ul(); // expected-error{{no matching function for call to 'intel_sub_group_block_read_ul'}}
+  // expected-note@-1 0+{{candidate function not viable}}
+  intel_sub_group_block_read_ul(in, in); // expected-error{{no matching function for call to 'intel_sub_group_block_read_ul'}}
+  // expected-note@-1 0+{{candidate function not viable}}
+  intel_sub_group_block_read_ul(v); // expected-error{{no matching function for call to 'intel_sub_group_block_read_ul'}}
+  // expected-note@-1 0+{{candidate function not viable}}
+  intel_sub_group_block_read_ul(ui_in); // expected-error{{incompatible pointer types passing 'const __local uint *__private'}}
+}

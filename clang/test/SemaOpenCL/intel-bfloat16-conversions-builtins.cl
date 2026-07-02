@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -triple spir-unknown-unknown -cl-std=CL3.0 -fdeclare-opencl-builtins -verify -fsyntax-only %s
-// expected-no-diagnostics
 
 // Keep this test header-free so it exercises OpenCLBuiltins.td instead of
 // declarations from opencl-c.h.
@@ -62,4 +61,26 @@ float8 test_convert_as_bfloat168_float8(ushort8 source) {
 
 float16 test_convert_as_bfloat1616_float16(ushort16 source) {
   return intel_convert_as_bfloat1616_float16(source);
+}
+
+struct S { int x; };
+
+void test_convert_bfloat16_as_ushort_invalid(float source, struct S s,
+                                             float4 f4) {
+  intel_convert_bfloat16_as_ushort(); // expected-error{{too few arguments to function call, expected 1, have 0}}
+  // expected-note@-1 0+{{'intel_convert_bfloat16_as_ushort' declared here}}
+  intel_convert_bfloat16_as_ushort(source, source); // expected-error{{too many arguments to function call, expected 1, have 2}}
+  // expected-note@-1 0+{{'intel_convert_bfloat16_as_ushort' declared here}}
+  intel_convert_bfloat16_as_ushort(s); // expected-error{{passing '__private struct S' to parameter of incompatible type 'float'}}
+  intel_convert_bfloat162_as_ushort2(f4); // expected-error{{passing '__private float4' (vector of 4 'float' values) to parameter of incompatible type 'float __attribute__((ext_vector_type(2)))' (vector of 2 'float' values)}}
+}
+
+void test_convert_as_bfloat16_float_invalid(ushort source, struct S s,
+                                            ushort4 u4) {
+  intel_convert_as_bfloat16_float(); // expected-error{{too few arguments to function call, expected 1, have 0}}
+  // expected-note@-1 0+{{'intel_convert_as_bfloat16_float' declared here}}
+  intel_convert_as_bfloat16_float(source, source); // expected-error{{too many arguments to function call, expected 1, have 2}}
+  // expected-note@-1 0+{{'intel_convert_as_bfloat16_float' declared here}}
+  intel_convert_as_bfloat16_float(s); // expected-error{{passing '__private struct S' to parameter of incompatible type 'unsigned short'}}
+  intel_convert_as_bfloat162_float2(u4); // expected-error{{passing '__private ushort4' (vector of 4 'ushort' values) to parameter of incompatible type 'unsigned short __attribute__((ext_vector_type(2)))' (vector of 2 'unsigned short' values)}}
 }
