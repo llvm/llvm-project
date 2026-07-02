@@ -56,6 +56,7 @@ public:
   bool any() const { return Flags != 0; }
   bool none() const { return Flags == 0; }
   bool all() const { return Flags == AllFlagsMask; }
+  unsigned getRawFlags() const { return Flags; }
 
   void clear() { Flags = 0; }
   void set() { Flags = AllFlagsMask; }
