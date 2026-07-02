@@ -3461,6 +3461,9 @@ CIRGenModule::createCIRFunction(mlir::Location loc, StringRef name,
     // Mark C++ special member functions (Constructor, Destructor etc.)
     setCXXSpecialMemberAttr(func, funcDecl);
 
+    // Tag functions that match a known standard library entity.
+    setFuncIdentityAttr(func, funcDecl);
+
     if (!cgf)
       theModule.push_back(func);
 
@@ -3535,6 +3538,23 @@ void CIRGenModule::setCXXSpecialMemberAttr(
     funcOp.setFuncInfoAttr(cxxAssign);
     return;
   }
+}
+
+void CIRGenModule::setFuncIdentityAttr(cir::FuncOp funcOp,
+                                       const clang::FunctionDecl *funcDecl) {
+  // Only a free std function with a plain identifier can match a known
+  // entity, so members, static members, and operators never take a tag.
+  // Inline namespaces, like the versioning namespace of libc++, count as
+  // part of std.
+  if (!funcDecl || !funcDecl->getIdentifier() || isa<CXXMethodDecl>(funcDecl) ||
+      !funcDecl->isInStdNamespace())
+    return;
+
+  // The names and the tags come from CIRStdOps.td, and the recognizer
+  // checks the shape of each call.
+  if (funcDecl->getName() == cir::StdFindOp::getFunctionName())
+    funcOp.setFuncInfoAttr(cir::FuncIdentityAttr::get(
+        &getMLIRContext(), cir::StdFindOp::getFuncKind()));
 }
 
 static void setWindowsItaniumDLLImport(CIRGenModule &cgm, bool isLocal,

@@ -802,6 +802,11 @@ public:
   void setCXXSpecialMemberAttr(cir::FuncOp funcOp,
                                const clang::FunctionDecl *funcDecl);
 
+  /// Tag functions that match a known standard library entity, so passes
+  /// can recognize calls to them without the AST.
+  void setFuncIdentityAttr(cir::FuncOp funcOp,
+                           const clang::FunctionDecl *funcDecl);
+
   cir::FuncOp createRuntimeFunction(cir::FuncType ty, llvm::StringRef name,
                                     mlir::NamedAttrList extraAttrs = {},
                                     bool isLocal = false,

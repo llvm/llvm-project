@@ -33,7 +33,7 @@ runCIRToCIRPasses(mlir::ModuleOp theModule, mlir::MLIRContext &mlirContext,
     pm.addPass(mlir::createCIRSimplifyPass());
 
   if (enableIdiomRecognizer)
-    pm.addPass(mlir::createIdiomRecognizerPass(&astContext));
+    pm.addPass(mlir::createIdiomRecognizerPass());
 
   if (enableLibOpt) {
     auto libOptPass = mlir::createLibOptPass();
