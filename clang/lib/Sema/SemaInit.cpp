@@ -6133,8 +6133,23 @@ static void TryOrBuildParenListInitialization(
             // C++ [dcl.init]p16.6.2.2
             //   The remaining elements are initialized with their default
             //   member initializers, if any
-            ExprResult DIE = S.BuildCXXDefaultInitExpr(
-                Kind.getParenOrBraceRange().getEnd(), FD);
+            ExprResult DIE;
+            {
+              // Enter a default initializer rebuild context so immediate
+              // invocations that depend on the aggregate object are checked
+              // against the enclosing initializer.
+              EnterExpressionEvaluationContext RebuildDefaultInit(
+                  S, Sema::ExpressionEvaluationContext::PotentiallyEvaluated);
+              S.currentEvaluationContext().RebuildDefaultArgOrDefaultInit =
+                  true;
+              S.currentEvaluationContext().DelayedDefaultInitializationContext =
+                  S.parentEvaluationContext()
+                      .DelayedDefaultInitializationContext;
+              S.currentEvaluationContext().InLifetimeExtendingContext =
+                  S.parentEvaluationContext().InLifetimeExtendingContext;
+              DIE = S.BuildCXXDefaultInitExpr(
+                  Kind.getParenOrBraceRange().getEnd(), FD);
+            }
             if (DIE.isInvalid())
               return;
             S.checkInitializerLifetime(SubEntity, DIE.get());

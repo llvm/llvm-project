@@ -6891,6 +6891,10 @@ public:
     llvm::SmallVector<ImmediateInvocationCandidate, 4>
         ImmediateInvocationCandidates;
 
+    /// Immediate invocations in default member initializers that could not be
+    /// checked when rebuilt because they need the object under construction.
+    llvm::SmallVector<ConstantExpr *, 4> DelayedDefaultInitThisInvocations;
+
     /// Set of DeclRefExprs referencing a consteval function when used in a
     /// context not already known to be immediately invoked.
     llvm::SmallPtrSet<DeclRefExpr *, 4> ReferenceToConsteval;
@@ -7108,6 +7112,8 @@ public:
   void PopExpressionEvaluationContext();
 
   void DiscardCleanupsInEvaluationContext();
+
+  void CheckDelayedDefaultInitThisInvocations(Expr *E);
 
   ExprResult TransformToPotentiallyEvaluated(Expr *E);
   TypeSourceInfo *TransformToPotentiallyEvaluated(TypeSourceInfo *TInfo);
@@ -8274,6 +8280,13 @@ public:
 
   bool needsRebuildOfDefaultArgOrInit() const {
     return currentEvaluationContext().RebuildDefaultArgOrDefaultInit;
+  }
+
+  bool isRebuildingDefaultArgOrInit() const {
+    for (const auto &Ctx : llvm::reverse(ExprEvalContexts))
+      if (Ctx.RebuildDefaultArgOrDefaultInit)
+        return true;
+    return false;
   }
 
   bool isCheckingDefaultArgumentOrInitializer() const {

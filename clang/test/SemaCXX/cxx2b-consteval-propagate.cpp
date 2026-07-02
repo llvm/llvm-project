@@ -324,14 +324,38 @@ consteval int f(int x) {
 
 struct S {
     int i;
-    int j = f(i); // expected-error {{call to consteval function 'GlobalAggregateInit::f' is not a constant expression}} \
-                  // expected-note {{implicit use of 'this' pointer is only allowed within the evaluation of a call to a 'constexpr' member function}} \
-                  // expected-note {{declared here}}
+    int j = f(i); // expected-error {{call to consteval function 'GlobalAggregateInit::f' is not a constant expression}}
 };
 
-S s(0); // expected-note {{in the default initializer of 'j'}}
+S s(0);
+S t{0};
+
+void runtime(int n) { // expected-note {{declared here}}
+    S s{n}; // expected-note {{function parameter 'n' with unknown value cannot be used in a constant expression}}
+}
 
 }
+
+namespace GH207064 {
+
+struct Noisy {
+  int x;
+  consteval Noisy(int x) : x(x) {}
+  constexpr ~Noisy() {}
+};
+
+struct Function {
+  template <typename F> constexpr Function(F) {}
+};
+
+struct Options {
+  int x;
+  Function function{Noisy{x}};
+};
+
+Options kOptions{5};
+
+} // namespace GH207064
 
 namespace GH65985 {
 consteval int invalid(); // expected-note 2{{declared here}}

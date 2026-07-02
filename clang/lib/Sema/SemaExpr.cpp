@@ -18402,6 +18402,49 @@ ExprResult Sema::CheckForImmediateInvocation(ExprResult E, FunctionDecl *Decl) {
   return Res;
 }
 
+static void
+DiagnoseFailedImmediateInvocation(Sema &SemaRef, ConstantExpr *CE,
+                                  ArrayRef<PartialDiagnosticAt> Notes) {
+  SemaRef.FailedImmediateInvocations.insert(CE);
+  Expr *InnerExpr = CE->getSubExpr()->IgnoreImplicit();
+  if (auto *FunctionalCast = dyn_cast<CXXFunctionalCastExpr>(InnerExpr))
+    InnerExpr = FunctionalCast->getSubExpr()->IgnoreImplicit();
+  FunctionDecl *FD = nullptr;
+  if (auto *Call = dyn_cast<CallExpr>(InnerExpr))
+    FD = cast<FunctionDecl>(Call->getCalleeDecl());
+  else if (auto *Call = dyn_cast<CXXConstructExpr>(InnerExpr))
+    FD = Call->getConstructor();
+  else if (auto *Cast = dyn_cast<CastExpr>(InnerExpr))
+    FD = dyn_cast_or_null<FunctionDecl>(Cast->getConversionFunction());
+
+  assert(FD && FD->isImmediateFunction() &&
+         "could not find an immediate function in this expression");
+  if (FD->isInvalidDecl())
+    return;
+  SemaRef.Diag(CE->getBeginLoc(), diag::err_invalid_consteval_call)
+      << FD << FD->isConsteval();
+  if (auto Context =
+          SemaRef.InnermostDeclarationWithDelayedImmediateInvocations()) {
+    SemaRef.Diag(Context->Loc, diag::note_invalid_consteval_initializer)
+        << Context->Decl;
+    SemaRef.Diag(Context->Decl->getBeginLoc(), diag::note_declared_at);
+  }
+  if (!FD->isConsteval())
+    SemaRef.DiagnoseImmediateEscalatingReason(FD);
+  for (const auto &Note : Notes)
+    SemaRef.Diag(Note.first, Note.second);
+}
+
+static bool
+FailedDueToMissingDefaultInitThis(Sema &SemaRef,
+                                  ArrayRef<PartialDiagnosticAt> Notes) {
+  return SemaRef.InnermostDeclarationWithDelayedImmediateInvocations() &&
+         SemaRef.isRebuildingDefaultArgOrInit() && !Notes.empty() &&
+         llvm::all_of(Notes, [](const PartialDiagnosticAt &Note) {
+           return Note.second.getDiagID() == diag::note_constexpr_this;
+         });
+}
+
 static void EvaluateAndDiagnoseImmediateInvocation(
     Sema &SemaRef, Sema::ImmediateInvocationCandidate Candidate) {
   llvm::SmallVector<PartialDiagnosticAt, 8> Notes;
@@ -18411,34 +18454,13 @@ static void EvaluateAndDiagnoseImmediateInvocation(
   bool Result = CE->EvaluateAsConstantExpr(
       Eval, SemaRef.getASTContext(), ConstantExprKind::ImmediateInvocation);
   if (!Result || !Notes.empty()) {
-    SemaRef.FailedImmediateInvocations.insert(CE);
-    Expr *InnerExpr = CE->getSubExpr()->IgnoreImplicit();
-    if (auto *FunctionalCast = dyn_cast<CXXFunctionalCastExpr>(InnerExpr))
-      InnerExpr = FunctionalCast->getSubExpr()->IgnoreImplicit();
-    FunctionDecl *FD = nullptr;
-    if (auto *Call = dyn_cast<CallExpr>(InnerExpr))
-      FD = cast<FunctionDecl>(Call->getCalleeDecl());
-    else if (auto *Call = dyn_cast<CXXConstructExpr>(InnerExpr))
-      FD = Call->getConstructor();
-    else if (auto *Cast = dyn_cast<CastExpr>(InnerExpr))
-      FD = dyn_cast_or_null<FunctionDecl>(Cast->getConversionFunction());
-
-    assert(FD && FD->isImmediateFunction() &&
-           "could not find an immediate function in this expression");
-    if (FD->isInvalidDecl())
+    if (FailedDueToMissingDefaultInitThis(SemaRef, Notes)) {
+      SemaRef.currentEvaluationContext()
+          .DelayedDefaultInitThisInvocations.push_back(CE);
       return;
-    SemaRef.Diag(CE->getBeginLoc(), diag::err_invalid_consteval_call)
-        << FD << FD->isConsteval();
-    if (auto Context =
-            SemaRef.InnermostDeclarationWithDelayedImmediateInvocations()) {
-      SemaRef.Diag(Context->Loc, diag::note_invalid_consteval_initializer)
-          << Context->Decl;
-      SemaRef.Diag(Context->Decl->getBeginLoc(), diag::note_declared_at);
     }
-    if (!FD->isConsteval())
-      SemaRef.DiagnoseImmediateEscalatingReason(FD);
-    for (auto &Note : Notes)
-      SemaRef.Diag(Note.first, Note.second);
+
+    DiagnoseFailedImmediateInvocation(SemaRef, CE, Notes);
     return;
   }
   CE->MoveIntoResult(Eval.Val, SemaRef.getASTContext());
@@ -18709,6 +18731,10 @@ void Sema::PopExpressionEvaluationContext() {
 
   WarnOnPendingNoDerefs(Rec);
   HandleImmediateInvocations(*this, Rec);
+  if (!Rec.DelayedDefaultInitThisInvocations.empty() &&
+      ExprEvalContexts.size() > 1)
+    parentEvaluationContext().DelayedDefaultInitThisInvocations.append(
+        Rec.DelayedDefaultInitThisInvocations);
 
   // Warn on any volatile-qualified simple-assignments that are not discarded-
   // value expressions nor unevaluated operands (those cases get removed from
@@ -18737,6 +18763,32 @@ void Sema::PopExpressionEvaluationContext() {
 
   // Pop the current expression evaluation context off the stack.
   ExprEvalContexts.pop_back();
+}
+
+void Sema::CheckDelayedDefaultInitThisInvocations(Expr *E) {
+  auto &Delayed = currentEvaluationContext().DelayedDefaultInitThisInvocations;
+  if (Delayed.empty())
+    return;
+  if (!E || E->isValueDependent() || E->containsErrors()) {
+    Delayed.clear();
+    return;
+  }
+
+  llvm::SmallVector<PartialDiagnosticAt, 8> Notes;
+  Expr::EvalResult Eval;
+  Eval.Diag = &Notes;
+  bool Result = E->EvaluateAsConstantExpr(
+      Eval, getASTContext(), ConstantExprKind::ImmediateInvocation);
+
+  if (Result && Notes.empty()) {
+    Delayed.clear();
+    return;
+  }
+
+  for (ConstantExpr *CE : Delayed)
+    if (!CE->hasAPValueResult())
+      DiagnoseFailedImmediateInvocation(*this, CE, Notes);
+  Delayed.clear();
 }
 
 void Sema::DiscardCleanupsInEvaluationContext() {
