@@ -200,7 +200,7 @@ struct __find_first_of<__default_backend_tag, _ExecutionPolicy> {
     using _Ref1   = __iterator_reference<_ForwardIterator1>;
     using _Ref2   = __iterator_reference<_ForwardIterator2>;
     return _FindIf()(__policy, std::move(__first1), std::move(__last1), [&](_Ref1 __element) {
-      if constexpr (__desugars_to_v<__equal_tag, _Predicate, __remove_cvref_t<_Ref1>, __remove_cvref_t<_Ref2>>) {
+      if constexpr (__desugars_to_v<__equal_tag, _Predicate, _Ref1, _Ref2>) {
         // bypass an equality predicate and call directly to std::find() to allow more vectorization
         return std::find(__first2, __last2, __element) != __last2;
       } else {
