@@ -138,7 +138,7 @@ TEST(AArch64SVEPseudoTest, SchedNeoverseV3) {
   runSVEPseudoTestForCPU("neoverse-v3");
 }
 
-TEST(AArch64SVEPseudoTest, SchedNeoverseV3ae) {
+TEST(AArch64SVEPseudoTest, SchedNeoverseV3AE) {
   runSVEPseudoTestForCPU("neoverse-v3ae");
 }
 
@@ -159,7 +159,7 @@ TEST(AArch64SVEPseudoTest, ElementSize) {
     unsigned OpcElementSize = II->getElementSizeForOpcode(Opc);
     unsigned RealOpcElementSize = II->getElementSizeForOpcode(RealOpc);
     EXPECT_EQ(OpcElementSize, RealOpcElementSize)
-        << "PsuedoOpcode: " << II->getName(Opc)
+        << "PseudoOpcode: " << II->getName(Opc)
         << " Opcode: " << II->getName(RealOpc);
   }
 }
