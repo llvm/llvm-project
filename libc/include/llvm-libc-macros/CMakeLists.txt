@@ -315,6 +315,12 @@ add_macro_header(
 )
 
 add_macro_header(
+  net_if_macros
+  HDR
+    net-if-macros.h
+)
+
+add_macro_header(
   sys_time_macros
   HDR
     sys-time-macros.h

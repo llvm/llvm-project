@@ -65,6 +65,12 @@ add_header(
 )
 
 add_header(
+  net_if_macros
+  HDR
+    net-if-macros.h
+)
+
+add_header(
   sys_wait_macros
   HDR
     sys-wait-macros.h

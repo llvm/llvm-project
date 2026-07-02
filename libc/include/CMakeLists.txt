@@ -895,6 +895,18 @@ add_header_macro(
     .llvm-libc-types.siginfo_t
 )
 
+file(MAKE_DIRECTORY ${LIBC_INCLUDE_DIR}/net)
+
+add_header_macro(
+  net_if
+  ../libc/include/net/if.yaml
+  net/if.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.net_if_macros
+    .llvm-libc-types.struct_ifreq
+)
+
 # TODO: This should be conditional on POSIX networking being included.
 file(MAKE_DIRECTORY ${LIBC_INCLUDE_DIR}/netinet)
 

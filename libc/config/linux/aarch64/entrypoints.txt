@@ -1028,6 +1028,10 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.arpa.inet.ntohl
     libc.src.arpa.inet.ntohs
 
+    # net/if.h entrypoints
+    libc.src.net.if_indextoname
+    libc.src.net.if_nametoindex
+
     # netinet/in.h entrypoints
     libc.src.netinet.in6addr_any
     libc.src.netinet.in6addr_loopback
