@@ -122,6 +122,21 @@ static bool isBoolScalarOrVector(Type type) {
   return false;
 }
 
+/// Converts arith fast-math flags to SPIR-V FPFastMathMode flags.
+static spirv::FPFastMathMode
+convertArithFastMathFlagsToSPIRV(arith::FastMathFlags arithFMF) {
+  spirv::FPFastMathMode spirvFMF = spirv::FPFastMathMode::None;
+  if (bitEnumContainsAll(arithFMF, arith::FastMathFlags::nnan))
+    spirvFMF = spirvFMF | spirv::FPFastMathMode::NotNaN;
+  if (bitEnumContainsAll(arithFMF, arith::FastMathFlags::ninf))
+    spirvFMF = spirvFMF | spirv::FPFastMathMode::NotInf;
+  if (bitEnumContainsAll(arithFMF, arith::FastMathFlags::nsz))
+    spirvFMF = spirvFMF | spirv::FPFastMathMode::NSZ;
+  if (bitEnumContainsAll(arithFMF, arith::FastMathFlags::arcp))
+    spirvFMF = spirvFMF | spirv::FPFastMathMode::AllowRecip;
+  return spirvFMF;
+}
+
 /// Creates a scalar/vector integer constant.
 static Value getScalarOrVectorConstInt(Type type, uint64_t value,
                                        OpBuilder &builder, Location loc) {
@@ -220,6 +235,42 @@ struct ElementwiseArithOpPattern final : OpConversionPattern<Op> {
     if (bitEnumContainsAny(overflowFlags, arith::IntegerOverflowFlags::nuw))
       newOp->setAttr(getDecorationString(spirv::Decoration::NoUnsignedWrap),
                      rewriter.getUnitAttr());
+
+    return success();
+  }
+};
+
+/// Converts elementwise unary, binary and ternary floating-point arith
+/// operations to SPIR-V operations, propagating fast-math flags as
+/// FPFastMathMode decorations.
+template <typename Op, typename SPIRVOp>
+struct ElementwiseFPOpPattern final : OpConversionPattern<Op> {
+  using OpConversionPattern<Op>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(Op op, typename Op::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    assert(adaptor.getOperands().size() <= 3);
+    Type dstType = this->getTypeConverter()->convertType(op.getType());
+    if (!dstType) {
+      return rewriter.notifyMatchFailure(
+          op->getLoc(),
+          llvm::formatv("failed to convert type {0} for SPIR-V", op.getType()));
+    }
+
+    auto newOp = rewriter.template replaceOpWithNewOp<SPIRVOp>(
+        op, dstType, adaptor.getOperands());
+
+    auto *converter = this->template getTypeConverter<SPIRVTypeConverter>();
+    if (!converter->getTargetEnv().allows(spirv::Capability::Kernel))
+      return success();
+
+    spirv::FPFastMathMode spirvFMF =
+        convertArithFastMathFlagsToSPIRV(op.getFastmath());
+    if (spirvFMF != spirv::FPFastMathMode::None) {
+      newOp->setAttr("fp_fast_math_mode",
+                     spirv::FPFastMathModeAttr::get(op.getContext(), spirvFMF));
+    }
 
     return success();
   }
@@ -1489,12 +1540,12 @@ void mlir::arith::populateArithToSPIRVPatterns(
     spirv::ElementwiseOpPattern<arith::ShRUIOp, spirv::ShiftRightLogicalOp>,
     ShRSIBoolPattern,                      // shrsi(a,b) = a (identity; see pattern comment)
     spirv::ElementwiseOpPattern<arith::ShRSIOp, spirv::ShiftRightArithmeticOp>,
-    spirv::ElementwiseOpPattern<arith::NegFOp, spirv::FNegateOp>,
-    spirv::ElementwiseOpPattern<arith::AddFOp, spirv::FAddOp>,
-    spirv::ElementwiseOpPattern<arith::SubFOp, spirv::FSubOp>,
-    spirv::ElementwiseOpPattern<arith::MulFOp, spirv::FMulOp>,
-    spirv::ElementwiseOpPattern<arith::DivFOp, spirv::FDivOp>,
-    spirv::ElementwiseOpPattern<arith::RemFOp, spirv::FRemOp>,
+    ElementwiseFPOpPattern<arith::NegFOp, spirv::FNegateOp>,
+    ElementwiseFPOpPattern<arith::AddFOp, spirv::FAddOp>,
+    ElementwiseFPOpPattern<arith::SubFOp, spirv::FSubOp>,
+    ElementwiseFPOpPattern<arith::MulFOp, spirv::FMulOp>,
+    ElementwiseFPOpPattern<arith::DivFOp, spirv::FDivOp>,
+    ElementwiseFPOpPattern<arith::RemFOp, spirv::FRemOp>,
     ExtUIPattern, BoolToValuePattern<arith::ExtUIOp>,
     ExtSIPattern, ExtSII1Pattern,
     TypeCastingOpPattern<arith::ExtFOp, spirv::FConvertOp>,
