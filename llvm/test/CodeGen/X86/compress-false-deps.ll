@@ -13,6 +13,9 @@
 ; RUN: llc -verify-machineinstrs -mcpu=graniterapids -mtriple=x86_64-unknown-unknown < %s | FileCheck %s --check-prefixes=GNR
 
 
+; Test that dependencies on the output register are broken if it was written recently (write simulated using inline asm).
+
+
 define <16 x i8> @compressb_rrz_128(<16 x i8> %a0, i16 %a1) "target-features"="+avx512vbmi2" {
 ; X86_64_V4_DEFAULT-LABEL: compressb_rrz_128:
 ; X86_64_V4_DEFAULT:       # %bb.0:
@@ -2121,5 +2124,1634 @@ define <8 x double> @compresspd_rrz_512(<8 x double> %a0, i8 %a1) {
   %1 = tail call <2 x i64> asm sideeffect "", "=x,~{xmm0}"()
   %2 = bitcast i8 %a1 to <8 x i1>
   %3 = call <8 x double> @llvm.x86.avx512.mask.compress.v8f64(<8 x double> %a0, <8 x double> zeroinitializer, <8 x i1> %2)
+  ret <8 x double> %3
+}
+
+
+; Test that dependencies on the output register are not broken if it is the same as the input register or it was not written recently
+
+
+define <16 x i8> @no_break_compressb_rrz_128(<16 x i8> %dummy, <16 x i8> %a0, i16 %a1) "target-features"="+avx512vbmi2" {
+; X86_64_V4_DEFAULT-LABEL: no_break_compressb_rrz_128:
+; X86_64_V4_DEFAULT:       # %bb.0:
+; X86_64_V4_DEFAULT-NEXT:    kmovd %edi, %k1
+; X86_64_V4_DEFAULT-NEXT:    vpcompressb %xmm1, %xmm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    vpcompressb %xmm0, %xmm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    retq
+;
+; X86_64_V4_ENABLE-LABEL: no_break_compressb_rrz_128:
+; X86_64_V4_ENABLE:       # %bb.0:
+; X86_64_V4_ENABLE-NEXT:    kmovd %edi, %k1
+; X86_64_V4_ENABLE-NEXT:    vpcompressb %xmm1, %xmm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    vpcompressb %xmm0, %xmm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    retq
+;
+; ZEN4_DEFAULT-LABEL: no_break_compressb_rrz_128:
+; ZEN4_DEFAULT:       # %bb.0:
+; ZEN4_DEFAULT-NEXT:    kmovd %edi, %k1
+; ZEN4_DEFAULT-NEXT:    vpcompressb %xmm1, %xmm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    vpcompressb %xmm0, %xmm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    retq
+;
+; ZEN4_DISABLE-LABEL: no_break_compressb_rrz_128:
+; ZEN4_DISABLE:       # %bb.0:
+; ZEN4_DISABLE-NEXT:    kmovd %edi, %k1
+; ZEN4_DISABLE-NEXT:    vpcompressb %xmm1, %xmm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    vpcompressb %xmm0, %xmm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    retq
+;
+; ZEN5_DEFAULT-LABEL: no_break_compressb_rrz_128:
+; ZEN5_DEFAULT:       # %bb.0:
+; ZEN5_DEFAULT-NEXT:    kmovd %edi, %k1
+; ZEN5_DEFAULT-NEXT:    vpcompressb %xmm1, %xmm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    vpcompressb %xmm0, %xmm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    retq
+;
+; ZEN5_DISABLE-LABEL: no_break_compressb_rrz_128:
+; ZEN5_DISABLE:       # %bb.0:
+; ZEN5_DISABLE-NEXT:    kmovd %edi, %k1
+; ZEN5_DISABLE-NEXT:    vpcompressb %xmm1, %xmm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    vpcompressb %xmm0, %xmm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    retq
+;
+; ZEN6-LABEL: no_break_compressb_rrz_128:
+; ZEN6:       # %bb.0:
+; ZEN6-NEXT:    kmovd %edi, %k1
+; ZEN6-NEXT:    vpcompressb %xmm1, %xmm0 {%k1} {z}
+; ZEN6-NEXT:    vpcompressb %xmm0, %xmm0 {%k1} {z}
+; ZEN6-NEXT:    retq
+;
+; SKX-LABEL: no_break_compressb_rrz_128:
+; SKX:       # %bb.0:
+; SKX-NEXT:    kmovd %edi, %k1
+; SKX-NEXT:    vpcompressb %xmm1, %xmm0 {%k1} {z}
+; SKX-NEXT:    vpcompressb %xmm0, %xmm0 {%k1} {z}
+; SKX-NEXT:    retq
+;
+; ICL-LABEL: no_break_compressb_rrz_128:
+; ICL:       # %bb.0:
+; ICL-NEXT:    kmovd %edi, %k1
+; ICL-NEXT:    vpcompressb %xmm1, %xmm0 {%k1} {z}
+; ICL-NEXT:    vpcompressb %xmm0, %xmm0 {%k1} {z}
+; ICL-NEXT:    retq
+;
+; SPR-LABEL: no_break_compressb_rrz_128:
+; SPR:       # %bb.0:
+; SPR-NEXT:    kmovd %edi, %k1
+; SPR-NEXT:    vpcompressb %xmm1, %xmm0 {%k1} {z}
+; SPR-NEXT:    vpcompressb %xmm0, %xmm0 {%k1} {z}
+; SPR-NEXT:    retq
+;
+; EMR-LABEL: no_break_compressb_rrz_128:
+; EMR:       # %bb.0:
+; EMR-NEXT:    kmovd %edi, %k1
+; EMR-NEXT:    vpcompressb %xmm1, %xmm0 {%k1} {z}
+; EMR-NEXT:    vpcompressb %xmm0, %xmm0 {%k1} {z}
+; EMR-NEXT:    retq
+;
+; GNR-LABEL: no_break_compressb_rrz_128:
+; GNR:       # %bb.0:
+; GNR-NEXT:    kmovd %edi, %k1
+; GNR-NEXT:    vpcompressb %xmm1, %xmm0 {%k1} {z}
+; GNR-NEXT:    vpcompressb %xmm0, %xmm0 {%k1} {z}
+; GNR-NEXT:    retq
+  %1 = bitcast i16 %a1 to <16 x i1>
+  %2 = call <16 x i8> @llvm.x86.avx512.mask.compress.v16i8(<16 x i8> %a0, <16 x i8> zeroinitializer, <16 x i1> %1)
+  %3 = call <16 x i8> @llvm.x86.avx512.mask.compress.v16i8(<16 x i8> %2, <16 x i8> zeroinitializer, <16 x i1> %1)
+  ret <16 x i8> %3
+}
+
+define <32 x i8> @no_break_compressb_rrz_256(<32 x i8> %dummy, <32 x i8> %a0, i32 %a1) "target-features"="+avx512vbmi2" {
+; X86_64_V4_DEFAULT-LABEL: no_break_compressb_rrz_256:
+; X86_64_V4_DEFAULT:       # %bb.0:
+; X86_64_V4_DEFAULT-NEXT:    kmovd %edi, %k1
+; X86_64_V4_DEFAULT-NEXT:    vpcompressb %ymm1, %ymm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    vpcompressb %ymm0, %ymm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    retq
+;
+; X86_64_V4_ENABLE-LABEL: no_break_compressb_rrz_256:
+; X86_64_V4_ENABLE:       # %bb.0:
+; X86_64_V4_ENABLE-NEXT:    kmovd %edi, %k1
+; X86_64_V4_ENABLE-NEXT:    vpcompressb %ymm1, %ymm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    vpcompressb %ymm0, %ymm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    retq
+;
+; ZEN4_DEFAULT-LABEL: no_break_compressb_rrz_256:
+; ZEN4_DEFAULT:       # %bb.0:
+; ZEN4_DEFAULT-NEXT:    kmovd %edi, %k1
+; ZEN4_DEFAULT-NEXT:    vpcompressb %ymm1, %ymm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    vpcompressb %ymm0, %ymm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    retq
+;
+; ZEN4_DISABLE-LABEL: no_break_compressb_rrz_256:
+; ZEN4_DISABLE:       # %bb.0:
+; ZEN4_DISABLE-NEXT:    kmovd %edi, %k1
+; ZEN4_DISABLE-NEXT:    vpcompressb %ymm1, %ymm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    vpcompressb %ymm0, %ymm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    retq
+;
+; ZEN5_DEFAULT-LABEL: no_break_compressb_rrz_256:
+; ZEN5_DEFAULT:       # %bb.0:
+; ZEN5_DEFAULT-NEXT:    kmovd %edi, %k1
+; ZEN5_DEFAULT-NEXT:    vpcompressb %ymm1, %ymm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    vpcompressb %ymm0, %ymm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    retq
+;
+; ZEN5_DISABLE-LABEL: no_break_compressb_rrz_256:
+; ZEN5_DISABLE:       # %bb.0:
+; ZEN5_DISABLE-NEXT:    kmovd %edi, %k1
+; ZEN5_DISABLE-NEXT:    vpcompressb %ymm1, %ymm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    vpcompressb %ymm0, %ymm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    retq
+;
+; ZEN6-LABEL: no_break_compressb_rrz_256:
+; ZEN6:       # %bb.0:
+; ZEN6-NEXT:    kmovd %edi, %k1
+; ZEN6-NEXT:    vpcompressb %ymm1, %ymm0 {%k1} {z}
+; ZEN6-NEXT:    vpcompressb %ymm0, %ymm0 {%k1} {z}
+; ZEN6-NEXT:    retq
+;
+; SKX-LABEL: no_break_compressb_rrz_256:
+; SKX:       # %bb.0:
+; SKX-NEXT:    kmovd %edi, %k1
+; SKX-NEXT:    vpcompressb %ymm1, %ymm0 {%k1} {z}
+; SKX-NEXT:    vpcompressb %ymm0, %ymm0 {%k1} {z}
+; SKX-NEXT:    retq
+;
+; ICL-LABEL: no_break_compressb_rrz_256:
+; ICL:       # %bb.0:
+; ICL-NEXT:    kmovd %edi, %k1
+; ICL-NEXT:    vpcompressb %ymm1, %ymm0 {%k1} {z}
+; ICL-NEXT:    vpcompressb %ymm0, %ymm0 {%k1} {z}
+; ICL-NEXT:    retq
+;
+; SPR-LABEL: no_break_compressb_rrz_256:
+; SPR:       # %bb.0:
+; SPR-NEXT:    kmovd %edi, %k1
+; SPR-NEXT:    vpcompressb %ymm1, %ymm0 {%k1} {z}
+; SPR-NEXT:    vpcompressb %ymm0, %ymm0 {%k1} {z}
+; SPR-NEXT:    retq
+;
+; EMR-LABEL: no_break_compressb_rrz_256:
+; EMR:       # %bb.0:
+; EMR-NEXT:    kmovd %edi, %k1
+; EMR-NEXT:    vpcompressb %ymm1, %ymm0 {%k1} {z}
+; EMR-NEXT:    vpcompressb %ymm0, %ymm0 {%k1} {z}
+; EMR-NEXT:    retq
+;
+; GNR-LABEL: no_break_compressb_rrz_256:
+; GNR:       # %bb.0:
+; GNR-NEXT:    kmovd %edi, %k1
+; GNR-NEXT:    vpcompressb %ymm1, %ymm0 {%k1} {z}
+; GNR-NEXT:    vpcompressb %ymm0, %ymm0 {%k1} {z}
+; GNR-NEXT:    retq
+  %1 = bitcast i32 %a1 to <32 x i1>
+  %2 = call <32 x i8> @llvm.x86.avx512.mask.compress.v32i8(<32 x i8> %a0, <32 x i8> zeroinitializer, <32 x i1> %1)
+  %3 = call <32 x i8> @llvm.x86.avx512.mask.compress.v32i8(<32 x i8> %2, <32 x i8> zeroinitializer, <32 x i1> %1)
+  ret <32 x i8> %3
+}
+
+define <64 x i8> @no_break_compressb_rrz_512(<64 x i8> %dummy, <64 x i8> %a0, i64 %a1) "target-features"="+avx512vbmi2" {
+; X86_64_V4_DEFAULT-LABEL: no_break_compressb_rrz_512:
+; X86_64_V4_DEFAULT:       # %bb.0:
+; X86_64_V4_DEFAULT-NEXT:    kmovq %rdi, %k1
+; X86_64_V4_DEFAULT-NEXT:    vpcompressb %zmm1, %zmm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    vpcompressb %zmm0, %zmm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    retq
+;
+; X86_64_V4_ENABLE-LABEL: no_break_compressb_rrz_512:
+; X86_64_V4_ENABLE:       # %bb.0:
+; X86_64_V4_ENABLE-NEXT:    kmovq %rdi, %k1
+; X86_64_V4_ENABLE-NEXT:    vpcompressb %zmm1, %zmm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    vpcompressb %zmm0, %zmm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    retq
+;
+; ZEN4_DEFAULT-LABEL: no_break_compressb_rrz_512:
+; ZEN4_DEFAULT:       # %bb.0:
+; ZEN4_DEFAULT-NEXT:    kmovq %rdi, %k1
+; ZEN4_DEFAULT-NEXT:    vpcompressb %zmm1, %zmm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    vpcompressb %zmm0, %zmm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    retq
+;
+; ZEN4_DISABLE-LABEL: no_break_compressb_rrz_512:
+; ZEN4_DISABLE:       # %bb.0:
+; ZEN4_DISABLE-NEXT:    kmovq %rdi, %k1
+; ZEN4_DISABLE-NEXT:    vpcompressb %zmm1, %zmm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    vpcompressb %zmm0, %zmm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    retq
+;
+; ZEN5_DEFAULT-LABEL: no_break_compressb_rrz_512:
+; ZEN5_DEFAULT:       # %bb.0:
+; ZEN5_DEFAULT-NEXT:    kmovq %rdi, %k1
+; ZEN5_DEFAULT-NEXT:    vpcompressb %zmm1, %zmm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    vpcompressb %zmm0, %zmm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    retq
+;
+; ZEN5_DISABLE-LABEL: no_break_compressb_rrz_512:
+; ZEN5_DISABLE:       # %bb.0:
+; ZEN5_DISABLE-NEXT:    kmovq %rdi, %k1
+; ZEN5_DISABLE-NEXT:    vpcompressb %zmm1, %zmm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    vpcompressb %zmm0, %zmm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    retq
+;
+; ZEN6-LABEL: no_break_compressb_rrz_512:
+; ZEN6:       # %bb.0:
+; ZEN6-NEXT:    kmovq %rdi, %k1
+; ZEN6-NEXT:    vpcompressb %zmm1, %zmm0 {%k1} {z}
+; ZEN6-NEXT:    vpcompressb %zmm0, %zmm0 {%k1} {z}
+; ZEN6-NEXT:    retq
+;
+; SKX-LABEL: no_break_compressb_rrz_512:
+; SKX:       # %bb.0:
+; SKX-NEXT:    kmovq %rdi, %k1
+; SKX-NEXT:    vpcompressb %zmm1, %zmm0 {%k1} {z}
+; SKX-NEXT:    vpcompressb %zmm0, %zmm0 {%k1} {z}
+; SKX-NEXT:    retq
+;
+; ICL-LABEL: no_break_compressb_rrz_512:
+; ICL:       # %bb.0:
+; ICL-NEXT:    kmovq %rdi, %k1
+; ICL-NEXT:    vpcompressb %zmm1, %zmm0 {%k1} {z}
+; ICL-NEXT:    vpcompressb %zmm0, %zmm0 {%k1} {z}
+; ICL-NEXT:    retq
+;
+; SPR-LABEL: no_break_compressb_rrz_512:
+; SPR:       # %bb.0:
+; SPR-NEXT:    kmovq %rdi, %k1
+; SPR-NEXT:    vpcompressb %zmm1, %zmm0 {%k1} {z}
+; SPR-NEXT:    vpcompressb %zmm0, %zmm0 {%k1} {z}
+; SPR-NEXT:    retq
+;
+; EMR-LABEL: no_break_compressb_rrz_512:
+; EMR:       # %bb.0:
+; EMR-NEXT:    kmovq %rdi, %k1
+; EMR-NEXT:    vpcompressb %zmm1, %zmm0 {%k1} {z}
+; EMR-NEXT:    vpcompressb %zmm0, %zmm0 {%k1} {z}
+; EMR-NEXT:    retq
+;
+; GNR-LABEL: no_break_compressb_rrz_512:
+; GNR:       # %bb.0:
+; GNR-NEXT:    kmovq %rdi, %k1
+; GNR-NEXT:    vpcompressb %zmm1, %zmm0 {%k1} {z}
+; GNR-NEXT:    vpcompressb %zmm0, %zmm0 {%k1} {z}
+; GNR-NEXT:    retq
+  %1 = bitcast i64 %a1 to <64 x i1>
+  %2 = call <64 x i8> @llvm.x86.avx512.mask.compress.v64i8(<64 x i8> %a0, <64 x i8> zeroinitializer, <64 x i1> %1)
+  %3 = call <64 x i8> @llvm.x86.avx512.mask.compress.v64i8(<64 x i8> %2, <64 x i8> zeroinitializer, <64 x i1> %1)
+  ret <64 x i8> %3
+}
+
+
+define <8 x i16> @no_break_compressw_rrz_128(<8 x i16> %dummy, <8 x i16> %a0, i8 %a1) "target-features"="+avx512vbmi2" {
+; X86_64_V4_DEFAULT-LABEL: no_break_compressw_rrz_128:
+; X86_64_V4_DEFAULT:       # %bb.0:
+; X86_64_V4_DEFAULT-NEXT:    kmovd %edi, %k1
+; X86_64_V4_DEFAULT-NEXT:    vpcompressw %xmm1, %xmm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    vpcompressw %xmm0, %xmm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    retq
+;
+; X86_64_V4_ENABLE-LABEL: no_break_compressw_rrz_128:
+; X86_64_V4_ENABLE:       # %bb.0:
+; X86_64_V4_ENABLE-NEXT:    kmovd %edi, %k1
+; X86_64_V4_ENABLE-NEXT:    vpcompressw %xmm1, %xmm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    vpcompressw %xmm0, %xmm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    retq
+;
+; ZEN4_DEFAULT-LABEL: no_break_compressw_rrz_128:
+; ZEN4_DEFAULT:       # %bb.0:
+; ZEN4_DEFAULT-NEXT:    kmovd %edi, %k1
+; ZEN4_DEFAULT-NEXT:    vpcompressw %xmm1, %xmm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    vpcompressw %xmm0, %xmm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    retq
+;
+; ZEN4_DISABLE-LABEL: no_break_compressw_rrz_128:
+; ZEN4_DISABLE:       # %bb.0:
+; ZEN4_DISABLE-NEXT:    kmovd %edi, %k1
+; ZEN4_DISABLE-NEXT:    vpcompressw %xmm1, %xmm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    vpcompressw %xmm0, %xmm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    retq
+;
+; ZEN5_DEFAULT-LABEL: no_break_compressw_rrz_128:
+; ZEN5_DEFAULT:       # %bb.0:
+; ZEN5_DEFAULT-NEXT:    kmovd %edi, %k1
+; ZEN5_DEFAULT-NEXT:    vpcompressw %xmm1, %xmm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    vpcompressw %xmm0, %xmm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    retq
+;
+; ZEN5_DISABLE-LABEL: no_break_compressw_rrz_128:
+; ZEN5_DISABLE:       # %bb.0:
+; ZEN5_DISABLE-NEXT:    kmovd %edi, %k1
+; ZEN5_DISABLE-NEXT:    vpcompressw %xmm1, %xmm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    vpcompressw %xmm0, %xmm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    retq
+;
+; ZEN6-LABEL: no_break_compressw_rrz_128:
+; ZEN6:       # %bb.0:
+; ZEN6-NEXT:    kmovd %edi, %k1
+; ZEN6-NEXT:    vpcompressw %xmm1, %xmm0 {%k1} {z}
+; ZEN6-NEXT:    vpcompressw %xmm0, %xmm0 {%k1} {z}
+; ZEN6-NEXT:    retq
+;
+; SKX-LABEL: no_break_compressw_rrz_128:
+; SKX:       # %bb.0:
+; SKX-NEXT:    kmovd %edi, %k1
+; SKX-NEXT:    vpcompressw %xmm1, %xmm0 {%k1} {z}
+; SKX-NEXT:    vpcompressw %xmm0, %xmm0 {%k1} {z}
+; SKX-NEXT:    retq
+;
+; ICL-LABEL: no_break_compressw_rrz_128:
+; ICL:       # %bb.0:
+; ICL-NEXT:    kmovd %edi, %k1
+; ICL-NEXT:    vpcompressw %xmm1, %xmm0 {%k1} {z}
+; ICL-NEXT:    vpcompressw %xmm0, %xmm0 {%k1} {z}
+; ICL-NEXT:    retq
+;
+; SPR-LABEL: no_break_compressw_rrz_128:
+; SPR:       # %bb.0:
+; SPR-NEXT:    kmovd %edi, %k1
+; SPR-NEXT:    vpcompressw %xmm1, %xmm0 {%k1} {z}
+; SPR-NEXT:    vpcompressw %xmm0, %xmm0 {%k1} {z}
+; SPR-NEXT:    retq
+;
+; EMR-LABEL: no_break_compressw_rrz_128:
+; EMR:       # %bb.0:
+; EMR-NEXT:    kmovd %edi, %k1
+; EMR-NEXT:    vpcompressw %xmm1, %xmm0 {%k1} {z}
+; EMR-NEXT:    vpcompressw %xmm0, %xmm0 {%k1} {z}
+; EMR-NEXT:    retq
+;
+; GNR-LABEL: no_break_compressw_rrz_128:
+; GNR:       # %bb.0:
+; GNR-NEXT:    kmovd %edi, %k1
+; GNR-NEXT:    vpcompressw %xmm1, %xmm0 {%k1} {z}
+; GNR-NEXT:    vpcompressw %xmm0, %xmm0 {%k1} {z}
+; GNR-NEXT:    retq
+  %1 = bitcast i8 %a1 to <8 x i1>
+  %2 = call <8 x i16> @llvm.x86.avx512.mask.compress.v8i16(<8 x i16> %a0, <8 x i16> zeroinitializer, <8 x i1> %1)
+  %3 = call <8 x i16> @llvm.x86.avx512.mask.compress.v8i16(<8 x i16> %2, <8 x i16> zeroinitializer, <8 x i1> %1)
+  ret <8 x i16> %3
+}
+
+define <16 x i16> @no_break_compressw_rrz_256(<16 x i16> %dummy, <16 x i16> %a0, i16 %a1) "target-features"="+avx512vbmi2" {
+; X86_64_V4_DEFAULT-LABEL: no_break_compressw_rrz_256:
+; X86_64_V4_DEFAULT:       # %bb.0:
+; X86_64_V4_DEFAULT-NEXT:    kmovd %edi, %k1
+; X86_64_V4_DEFAULT-NEXT:    vpcompressw %ymm1, %ymm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    vpcompressw %ymm0, %ymm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    retq
+;
+; X86_64_V4_ENABLE-LABEL: no_break_compressw_rrz_256:
+; X86_64_V4_ENABLE:       # %bb.0:
+; X86_64_V4_ENABLE-NEXT:    kmovd %edi, %k1
+; X86_64_V4_ENABLE-NEXT:    vpcompressw %ymm1, %ymm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    vpcompressw %ymm0, %ymm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    retq
+;
+; ZEN4_DEFAULT-LABEL: no_break_compressw_rrz_256:
+; ZEN4_DEFAULT:       # %bb.0:
+; ZEN4_DEFAULT-NEXT:    kmovd %edi, %k1
+; ZEN4_DEFAULT-NEXT:    vpcompressw %ymm1, %ymm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    vpcompressw %ymm0, %ymm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    retq
+;
+; ZEN4_DISABLE-LABEL: no_break_compressw_rrz_256:
+; ZEN4_DISABLE:       # %bb.0:
+; ZEN4_DISABLE-NEXT:    kmovd %edi, %k1
+; ZEN4_DISABLE-NEXT:    vpcompressw %ymm1, %ymm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    vpcompressw %ymm0, %ymm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    retq
+;
+; ZEN5_DEFAULT-LABEL: no_break_compressw_rrz_256:
+; ZEN5_DEFAULT:       # %bb.0:
+; ZEN5_DEFAULT-NEXT:    kmovd %edi, %k1
+; ZEN5_DEFAULT-NEXT:    vpcompressw %ymm1, %ymm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    vpcompressw %ymm0, %ymm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    retq
+;
+; ZEN5_DISABLE-LABEL: no_break_compressw_rrz_256:
+; ZEN5_DISABLE:       # %bb.0:
+; ZEN5_DISABLE-NEXT:    kmovd %edi, %k1
+; ZEN5_DISABLE-NEXT:    vpcompressw %ymm1, %ymm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    vpcompressw %ymm0, %ymm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    retq
+;
+; ZEN6-LABEL: no_break_compressw_rrz_256:
+; ZEN6:       # %bb.0:
+; ZEN6-NEXT:    kmovd %edi, %k1
+; ZEN6-NEXT:    vpcompressw %ymm1, %ymm0 {%k1} {z}
+; ZEN6-NEXT:    vpcompressw %ymm0, %ymm0 {%k1} {z}
+; ZEN6-NEXT:    retq
+;
+; SKX-LABEL: no_break_compressw_rrz_256:
+; SKX:       # %bb.0:
+; SKX-NEXT:    kmovd %edi, %k1
+; SKX-NEXT:    vpcompressw %ymm1, %ymm0 {%k1} {z}
+; SKX-NEXT:    vpcompressw %ymm0, %ymm0 {%k1} {z}
+; SKX-NEXT:    retq
+;
+; ICL-LABEL: no_break_compressw_rrz_256:
+; ICL:       # %bb.0:
+; ICL-NEXT:    kmovd %edi, %k1
+; ICL-NEXT:    vpcompressw %ymm1, %ymm0 {%k1} {z}
+; ICL-NEXT:    vpcompressw %ymm0, %ymm0 {%k1} {z}
+; ICL-NEXT:    retq
+;
+; SPR-LABEL: no_break_compressw_rrz_256:
+; SPR:       # %bb.0:
+; SPR-NEXT:    kmovd %edi, %k1
+; SPR-NEXT:    vpcompressw %ymm1, %ymm0 {%k1} {z}
+; SPR-NEXT:    vpcompressw %ymm0, %ymm0 {%k1} {z}
+; SPR-NEXT:    retq
+;
+; EMR-LABEL: no_break_compressw_rrz_256:
+; EMR:       # %bb.0:
+; EMR-NEXT:    kmovd %edi, %k1
+; EMR-NEXT:    vpcompressw %ymm1, %ymm0 {%k1} {z}
+; EMR-NEXT:    vpcompressw %ymm0, %ymm0 {%k1} {z}
+; EMR-NEXT:    retq
+;
+; GNR-LABEL: no_break_compressw_rrz_256:
+; GNR:       # %bb.0:
+; GNR-NEXT:    kmovd %edi, %k1
+; GNR-NEXT:    vpcompressw %ymm1, %ymm0 {%k1} {z}
+; GNR-NEXT:    vpcompressw %ymm0, %ymm0 {%k1} {z}
+; GNR-NEXT:    retq
+  %1 = bitcast i16 %a1 to <16 x i1>
+  %2 = call <16 x i16> @llvm.x86.avx512.mask.compress.v16i16(<16 x i16> %a0, <16 x i16> zeroinitializer, <16 x i1> %1)
+  %3 = call <16 x i16> @llvm.x86.avx512.mask.compress.v16i16(<16 x i16> %2, <16 x i16> zeroinitializer, <16 x i1> %1)
+  ret <16 x i16> %3
+}
+
+define <32 x i16> @no_break_compressw_rrz_512(<32 x i16> %dummy, <32 x i16> %a0, i32 %a1) "target-features"="+avx512vbmi2" {
+; X86_64_V4_DEFAULT-LABEL: no_break_compressw_rrz_512:
+; X86_64_V4_DEFAULT:       # %bb.0:
+; X86_64_V4_DEFAULT-NEXT:    kmovd %edi, %k1
+; X86_64_V4_DEFAULT-NEXT:    vpcompressw %zmm1, %zmm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    vpcompressw %zmm0, %zmm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    retq
+;
+; X86_64_V4_ENABLE-LABEL: no_break_compressw_rrz_512:
+; X86_64_V4_ENABLE:       # %bb.0:
+; X86_64_V4_ENABLE-NEXT:    kmovd %edi, %k1
+; X86_64_V4_ENABLE-NEXT:    vpcompressw %zmm1, %zmm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    vpcompressw %zmm0, %zmm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    retq
+;
+; ZEN4_DEFAULT-LABEL: no_break_compressw_rrz_512:
+; ZEN4_DEFAULT:       # %bb.0:
+; ZEN4_DEFAULT-NEXT:    kmovd %edi, %k1
+; ZEN4_DEFAULT-NEXT:    vpcompressw %zmm1, %zmm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    vpcompressw %zmm0, %zmm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    retq
+;
+; ZEN4_DISABLE-LABEL: no_break_compressw_rrz_512:
+; ZEN4_DISABLE:       # %bb.0:
+; ZEN4_DISABLE-NEXT:    kmovd %edi, %k1
+; ZEN4_DISABLE-NEXT:    vpcompressw %zmm1, %zmm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    vpcompressw %zmm0, %zmm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    retq
+;
+; ZEN5_DEFAULT-LABEL: no_break_compressw_rrz_512:
+; ZEN5_DEFAULT:       # %bb.0:
+; ZEN5_DEFAULT-NEXT:    kmovd %edi, %k1
+; ZEN5_DEFAULT-NEXT:    vpcompressw %zmm1, %zmm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    vpcompressw %zmm0, %zmm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    retq
+;
+; ZEN5_DISABLE-LABEL: no_break_compressw_rrz_512:
+; ZEN5_DISABLE:       # %bb.0:
+; ZEN5_DISABLE-NEXT:    kmovd %edi, %k1
+; ZEN5_DISABLE-NEXT:    vpcompressw %zmm1, %zmm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    vpcompressw %zmm0, %zmm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    retq
+;
+; ZEN6-LABEL: no_break_compressw_rrz_512:
+; ZEN6:       # %bb.0:
+; ZEN6-NEXT:    kmovd %edi, %k1
+; ZEN6-NEXT:    vpcompressw %zmm1, %zmm0 {%k1} {z}
+; ZEN6-NEXT:    vpcompressw %zmm0, %zmm0 {%k1} {z}
+; ZEN6-NEXT:    retq
+;
+; SKX-LABEL: no_break_compressw_rrz_512:
+; SKX:       # %bb.0:
+; SKX-NEXT:    kmovd %edi, %k1
+; SKX-NEXT:    vpcompressw %zmm1, %zmm0 {%k1} {z}
+; SKX-NEXT:    vpcompressw %zmm0, %zmm0 {%k1} {z}
+; SKX-NEXT:    retq
+;
+; ICL-LABEL: no_break_compressw_rrz_512:
+; ICL:       # %bb.0:
+; ICL-NEXT:    kmovd %edi, %k1
+; ICL-NEXT:    vpcompressw %zmm1, %zmm0 {%k1} {z}
+; ICL-NEXT:    vpcompressw %zmm0, %zmm0 {%k1} {z}
+; ICL-NEXT:    retq
+;
+; SPR-LABEL: no_break_compressw_rrz_512:
+; SPR:       # %bb.0:
+; SPR-NEXT:    kmovd %edi, %k1
+; SPR-NEXT:    vpcompressw %zmm1, %zmm0 {%k1} {z}
+; SPR-NEXT:    vpcompressw %zmm0, %zmm0 {%k1} {z}
+; SPR-NEXT:    retq
+;
+; EMR-LABEL: no_break_compressw_rrz_512:
+; EMR:       # %bb.0:
+; EMR-NEXT:    kmovd %edi, %k1
+; EMR-NEXT:    vpcompressw %zmm1, %zmm0 {%k1} {z}
+; EMR-NEXT:    vpcompressw %zmm0, %zmm0 {%k1} {z}
+; EMR-NEXT:    retq
+;
+; GNR-LABEL: no_break_compressw_rrz_512:
+; GNR:       # %bb.0:
+; GNR-NEXT:    kmovd %edi, %k1
+; GNR-NEXT:    vpcompressw %zmm1, %zmm0 {%k1} {z}
+; GNR-NEXT:    vpcompressw %zmm0, %zmm0 {%k1} {z}
+; GNR-NEXT:    retq
+  %1 = bitcast i32 %a1 to <32 x i1>
+  %2 = call <32 x i16> @llvm.x86.avx512.mask.compress.v32i16(<32 x i16> %a0, <32 x i16> zeroinitializer, <32 x i1> %1)
+  %3 = call <32 x i16> @llvm.x86.avx512.mask.compress.v32i16(<32 x i16> %2, <32 x i16> zeroinitializer, <32 x i1> %1)
+  ret <32 x i16> %3
+}
+
+
+define <4 x i32> @no_break_compressd_rrz_128(<4 x i32> %dummy, <4 x i32> %a0, i4 %a1) {
+; X86_64_V4_DEFAULT-LABEL: no_break_compressd_rrz_128:
+; X86_64_V4_DEFAULT:       # %bb.0:
+; X86_64_V4_DEFAULT-NEXT:    kmovd %edi, %k1
+; X86_64_V4_DEFAULT-NEXT:    vpcompressd %xmm1, %xmm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    vpcompressd %xmm0, %xmm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    retq
+;
+; X86_64_V4_ENABLE-LABEL: no_break_compressd_rrz_128:
+; X86_64_V4_ENABLE:       # %bb.0:
+; X86_64_V4_ENABLE-NEXT:    kmovd %edi, %k1
+; X86_64_V4_ENABLE-NEXT:    vpcompressd %xmm1, %xmm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    vpcompressd %xmm0, %xmm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    retq
+;
+; ZEN4_DEFAULT-LABEL: no_break_compressd_rrz_128:
+; ZEN4_DEFAULT:       # %bb.0:
+; ZEN4_DEFAULT-NEXT:    kmovd %edi, %k1
+; ZEN4_DEFAULT-NEXT:    vpcompressd %xmm1, %xmm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    vpcompressd %xmm0, %xmm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    retq
+;
+; ZEN4_DISABLE-LABEL: no_break_compressd_rrz_128:
+; ZEN4_DISABLE:       # %bb.0:
+; ZEN4_DISABLE-NEXT:    kmovd %edi, %k1
+; ZEN4_DISABLE-NEXT:    vpcompressd %xmm1, %xmm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    vpcompressd %xmm0, %xmm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    retq
+;
+; ZEN5_DEFAULT-LABEL: no_break_compressd_rrz_128:
+; ZEN5_DEFAULT:       # %bb.0:
+; ZEN5_DEFAULT-NEXT:    kmovd %edi, %k1
+; ZEN5_DEFAULT-NEXT:    vpcompressd %xmm1, %xmm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    vpcompressd %xmm0, %xmm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    retq
+;
+; ZEN5_DISABLE-LABEL: no_break_compressd_rrz_128:
+; ZEN5_DISABLE:       # %bb.0:
+; ZEN5_DISABLE-NEXT:    kmovd %edi, %k1
+; ZEN5_DISABLE-NEXT:    vpcompressd %xmm1, %xmm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    vpcompressd %xmm0, %xmm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    retq
+;
+; ZEN6-LABEL: no_break_compressd_rrz_128:
+; ZEN6:       # %bb.0:
+; ZEN6-NEXT:    kmovd %edi, %k1
+; ZEN6-NEXT:    vpcompressd %xmm1, %xmm0 {%k1} {z}
+; ZEN6-NEXT:    vpcompressd %xmm0, %xmm0 {%k1} {z}
+; ZEN6-NEXT:    retq
+;
+; SKX-LABEL: no_break_compressd_rrz_128:
+; SKX:       # %bb.0:
+; SKX-NEXT:    kmovd %edi, %k1
+; SKX-NEXT:    vpcompressd %xmm1, %xmm0 {%k1} {z}
+; SKX-NEXT:    vpcompressd %xmm0, %xmm0 {%k1} {z}
+; SKX-NEXT:    retq
+;
+; ICL-LABEL: no_break_compressd_rrz_128:
+; ICL:       # %bb.0:
+; ICL-NEXT:    kmovd %edi, %k1
+; ICL-NEXT:    vpcompressd %xmm1, %xmm0 {%k1} {z}
+; ICL-NEXT:    vpcompressd %xmm0, %xmm0 {%k1} {z}
+; ICL-NEXT:    retq
+;
+; SPR-LABEL: no_break_compressd_rrz_128:
+; SPR:       # %bb.0:
+; SPR-NEXT:    kmovd %edi, %k1
+; SPR-NEXT:    vpcompressd %xmm1, %xmm0 {%k1} {z}
+; SPR-NEXT:    vpcompressd %xmm0, %xmm0 {%k1} {z}
+; SPR-NEXT:    retq
+;
+; EMR-LABEL: no_break_compressd_rrz_128:
+; EMR:       # %bb.0:
+; EMR-NEXT:    kmovd %edi, %k1
+; EMR-NEXT:    vpcompressd %xmm1, %xmm0 {%k1} {z}
+; EMR-NEXT:    vpcompressd %xmm0, %xmm0 {%k1} {z}
+; EMR-NEXT:    retq
+;
+; GNR-LABEL: no_break_compressd_rrz_128:
+; GNR:       # %bb.0:
+; GNR-NEXT:    kmovd %edi, %k1
+; GNR-NEXT:    vpcompressd %xmm1, %xmm0 {%k1} {z}
+; GNR-NEXT:    vpcompressd %xmm0, %xmm0 {%k1} {z}
+; GNR-NEXT:    retq
+  %1 = bitcast i4 %a1 to <4 x i1>
+  %2 = call <4 x i32> @llvm.x86.avx512.mask.compress.v4i32(<4 x i32> %a0, <4 x i32> zeroinitializer, <4 x i1> %1)
+  %3 = call <4 x i32> @llvm.x86.avx512.mask.compress.v4i32(<4 x i32> %2, <4 x i32> zeroinitializer, <4 x i1> %1)
+  ret <4 x i32> %3
+}
+
+define <8 x i32> @no_break_compressd_rrz_256(<8 x i32> %dummy, <8 x i32> %a0, i8 %a1) {
+; X86_64_V4_DEFAULT-LABEL: no_break_compressd_rrz_256:
+; X86_64_V4_DEFAULT:       # %bb.0:
+; X86_64_V4_DEFAULT-NEXT:    kmovd %edi, %k1
+; X86_64_V4_DEFAULT-NEXT:    vpcompressd %ymm1, %ymm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    vpcompressd %ymm0, %ymm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    retq
+;
+; X86_64_V4_ENABLE-LABEL: no_break_compressd_rrz_256:
+; X86_64_V4_ENABLE:       # %bb.0:
+; X86_64_V4_ENABLE-NEXT:    kmovd %edi, %k1
+; X86_64_V4_ENABLE-NEXT:    vpcompressd %ymm1, %ymm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    vpcompressd %ymm0, %ymm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    retq
+;
+; ZEN4_DEFAULT-LABEL: no_break_compressd_rrz_256:
+; ZEN4_DEFAULT:       # %bb.0:
+; ZEN4_DEFAULT-NEXT:    kmovd %edi, %k1
+; ZEN4_DEFAULT-NEXT:    vpcompressd %ymm1, %ymm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    vpcompressd %ymm0, %ymm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    retq
+;
+; ZEN4_DISABLE-LABEL: no_break_compressd_rrz_256:
+; ZEN4_DISABLE:       # %bb.0:
+; ZEN4_DISABLE-NEXT:    kmovd %edi, %k1
+; ZEN4_DISABLE-NEXT:    vpcompressd %ymm1, %ymm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    vpcompressd %ymm0, %ymm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    retq
+;
+; ZEN5_DEFAULT-LABEL: no_break_compressd_rrz_256:
+; ZEN5_DEFAULT:       # %bb.0:
+; ZEN5_DEFAULT-NEXT:    kmovd %edi, %k1
+; ZEN5_DEFAULT-NEXT:    vpcompressd %ymm1, %ymm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    vpcompressd %ymm0, %ymm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    retq
+;
+; ZEN5_DISABLE-LABEL: no_break_compressd_rrz_256:
+; ZEN5_DISABLE:       # %bb.0:
+; ZEN5_DISABLE-NEXT:    kmovd %edi, %k1
+; ZEN5_DISABLE-NEXT:    vpcompressd %ymm1, %ymm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    vpcompressd %ymm0, %ymm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    retq
+;
+; ZEN6-LABEL: no_break_compressd_rrz_256:
+; ZEN6:       # %bb.0:
+; ZEN6-NEXT:    kmovd %edi, %k1
+; ZEN6-NEXT:    vpcompressd %ymm1, %ymm0 {%k1} {z}
+; ZEN6-NEXT:    vpcompressd %ymm0, %ymm0 {%k1} {z}
+; ZEN6-NEXT:    retq
+;
+; SKX-LABEL: no_break_compressd_rrz_256:
+; SKX:       # %bb.0:
+; SKX-NEXT:    kmovd %edi, %k1
+; SKX-NEXT:    vpcompressd %ymm1, %ymm0 {%k1} {z}
+; SKX-NEXT:    vpcompressd %ymm0, %ymm0 {%k1} {z}
+; SKX-NEXT:    retq
+;
+; ICL-LABEL: no_break_compressd_rrz_256:
+; ICL:       # %bb.0:
+; ICL-NEXT:    kmovd %edi, %k1
+; ICL-NEXT:    vpcompressd %ymm1, %ymm0 {%k1} {z}
+; ICL-NEXT:    vpcompressd %ymm0, %ymm0 {%k1} {z}
+; ICL-NEXT:    retq
+;
+; SPR-LABEL: no_break_compressd_rrz_256:
+; SPR:       # %bb.0:
+; SPR-NEXT:    kmovd %edi, %k1
+; SPR-NEXT:    vpcompressd %ymm1, %ymm0 {%k1} {z}
+; SPR-NEXT:    vpcompressd %ymm0, %ymm0 {%k1} {z}
+; SPR-NEXT:    retq
+;
+; EMR-LABEL: no_break_compressd_rrz_256:
+; EMR:       # %bb.0:
+; EMR-NEXT:    kmovd %edi, %k1
+; EMR-NEXT:    vpcompressd %ymm1, %ymm0 {%k1} {z}
+; EMR-NEXT:    vpcompressd %ymm0, %ymm0 {%k1} {z}
+; EMR-NEXT:    retq
+;
+; GNR-LABEL: no_break_compressd_rrz_256:
+; GNR:       # %bb.0:
+; GNR-NEXT:    kmovd %edi, %k1
+; GNR-NEXT:    vpcompressd %ymm1, %ymm0 {%k1} {z}
+; GNR-NEXT:    vpcompressd %ymm0, %ymm0 {%k1} {z}
+; GNR-NEXT:    retq
+  %1 = bitcast i8 %a1 to <8 x i1>
+  %2 = call <8 x i32> @llvm.x86.avx512.mask.compress.v8i32(<8 x i32> %a0, <8 x i32> zeroinitializer, <8 x i1> %1)
+  %3 = call <8 x i32> @llvm.x86.avx512.mask.compress.v8i32(<8 x i32> %2, <8 x i32> zeroinitializer, <8 x i1> %1)
+  ret <8 x i32> %3
+}
+
+define <16 x i32> @no_break_compressd_rrz_512(<16 x i32> %dummy, <16 x i32> %a0, i16 %a1) {
+; X86_64_V4_DEFAULT-LABEL: no_break_compressd_rrz_512:
+; X86_64_V4_DEFAULT:       # %bb.0:
+; X86_64_V4_DEFAULT-NEXT:    kmovd %edi, %k1
+; X86_64_V4_DEFAULT-NEXT:    vpcompressd %zmm1, %zmm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    vpcompressd %zmm0, %zmm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    retq
+;
+; X86_64_V4_ENABLE-LABEL: no_break_compressd_rrz_512:
+; X86_64_V4_ENABLE:       # %bb.0:
+; X86_64_V4_ENABLE-NEXT:    kmovd %edi, %k1
+; X86_64_V4_ENABLE-NEXT:    vpcompressd %zmm1, %zmm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    vpcompressd %zmm0, %zmm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    retq
+;
+; ZEN4_DEFAULT-LABEL: no_break_compressd_rrz_512:
+; ZEN4_DEFAULT:       # %bb.0:
+; ZEN4_DEFAULT-NEXT:    kmovd %edi, %k1
+; ZEN4_DEFAULT-NEXT:    vpcompressd %zmm1, %zmm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    vpcompressd %zmm0, %zmm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    retq
+;
+; ZEN4_DISABLE-LABEL: no_break_compressd_rrz_512:
+; ZEN4_DISABLE:       # %bb.0:
+; ZEN4_DISABLE-NEXT:    kmovd %edi, %k1
+; ZEN4_DISABLE-NEXT:    vpcompressd %zmm1, %zmm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    vpcompressd %zmm0, %zmm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    retq
+;
+; ZEN5_DEFAULT-LABEL: no_break_compressd_rrz_512:
+; ZEN5_DEFAULT:       # %bb.0:
+; ZEN5_DEFAULT-NEXT:    kmovd %edi, %k1
+; ZEN5_DEFAULT-NEXT:    vpcompressd %zmm1, %zmm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    vpcompressd %zmm0, %zmm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    retq
+;
+; ZEN5_DISABLE-LABEL: no_break_compressd_rrz_512:
+; ZEN5_DISABLE:       # %bb.0:
+; ZEN5_DISABLE-NEXT:    kmovd %edi, %k1
+; ZEN5_DISABLE-NEXT:    vpcompressd %zmm1, %zmm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    vpcompressd %zmm0, %zmm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    retq
+;
+; ZEN6-LABEL: no_break_compressd_rrz_512:
+; ZEN6:       # %bb.0:
+; ZEN6-NEXT:    kmovd %edi, %k1
+; ZEN6-NEXT:    vpcompressd %zmm1, %zmm0 {%k1} {z}
+; ZEN6-NEXT:    vpcompressd %zmm0, %zmm0 {%k1} {z}
+; ZEN6-NEXT:    retq
+;
+; SKX-LABEL: no_break_compressd_rrz_512:
+; SKX:       # %bb.0:
+; SKX-NEXT:    kmovd %edi, %k1
+; SKX-NEXT:    vpcompressd %zmm1, %zmm0 {%k1} {z}
+; SKX-NEXT:    vpcompressd %zmm0, %zmm0 {%k1} {z}
+; SKX-NEXT:    retq
+;
+; ICL-LABEL: no_break_compressd_rrz_512:
+; ICL:       # %bb.0:
+; ICL-NEXT:    kmovd %edi, %k1
+; ICL-NEXT:    vpcompressd %zmm1, %zmm0 {%k1} {z}
+; ICL-NEXT:    vpcompressd %zmm0, %zmm0 {%k1} {z}
+; ICL-NEXT:    retq
+;
+; SPR-LABEL: no_break_compressd_rrz_512:
+; SPR:       # %bb.0:
+; SPR-NEXT:    kmovd %edi, %k1
+; SPR-NEXT:    vpcompressd %zmm1, %zmm0 {%k1} {z}
+; SPR-NEXT:    vpcompressd %zmm0, %zmm0 {%k1} {z}
+; SPR-NEXT:    retq
+;
+; EMR-LABEL: no_break_compressd_rrz_512:
+; EMR:       # %bb.0:
+; EMR-NEXT:    kmovd %edi, %k1
+; EMR-NEXT:    vpcompressd %zmm1, %zmm0 {%k1} {z}
+; EMR-NEXT:    vpcompressd %zmm0, %zmm0 {%k1} {z}
+; EMR-NEXT:    retq
+;
+; GNR-LABEL: no_break_compressd_rrz_512:
+; GNR:       # %bb.0:
+; GNR-NEXT:    kmovd %edi, %k1
+; GNR-NEXT:    vpcompressd %zmm1, %zmm0 {%k1} {z}
+; GNR-NEXT:    vpcompressd %zmm0, %zmm0 {%k1} {z}
+; GNR-NEXT:    retq
+  %1 = bitcast i16 %a1 to <16 x i1>
+  %2 = call <16 x i32> @llvm.x86.avx512.mask.compress.v16i32(<16 x i32> %a0, <16 x i32> zeroinitializer, <16 x i1> %1)
+  %3 = call <16 x i32> @llvm.x86.avx512.mask.compress.v16i32(<16 x i32> %2, <16 x i32> zeroinitializer, <16 x i1> %1)
+  ret <16 x i32> %3
+}
+
+
+define <2 x i64> @no_break_compressq_rrz_128(<2 x i64> %dummy, <2 x i64> %a0, i2 %a1) {
+; X86_64_V4_DEFAULT-LABEL: no_break_compressq_rrz_128:
+; X86_64_V4_DEFAULT:       # %bb.0:
+; X86_64_V4_DEFAULT-NEXT:    kmovd %edi, %k1
+; X86_64_V4_DEFAULT-NEXT:    vpcompressq %xmm1, %xmm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    vpcompressq %xmm0, %xmm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    retq
+;
+; X86_64_V4_ENABLE-LABEL: no_break_compressq_rrz_128:
+; X86_64_V4_ENABLE:       # %bb.0:
+; X86_64_V4_ENABLE-NEXT:    kmovd %edi, %k1
+; X86_64_V4_ENABLE-NEXT:    vpcompressq %xmm1, %xmm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    vpcompressq %xmm0, %xmm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    retq
+;
+; ZEN4_DEFAULT-LABEL: no_break_compressq_rrz_128:
+; ZEN4_DEFAULT:       # %bb.0:
+; ZEN4_DEFAULT-NEXT:    kmovd %edi, %k1
+; ZEN4_DEFAULT-NEXT:    vpcompressq %xmm1, %xmm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    vpcompressq %xmm0, %xmm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    retq
+;
+; ZEN4_DISABLE-LABEL: no_break_compressq_rrz_128:
+; ZEN4_DISABLE:       # %bb.0:
+; ZEN4_DISABLE-NEXT:    kmovd %edi, %k1
+; ZEN4_DISABLE-NEXT:    vpcompressq %xmm1, %xmm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    vpcompressq %xmm0, %xmm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    retq
+;
+; ZEN5_DEFAULT-LABEL: no_break_compressq_rrz_128:
+; ZEN5_DEFAULT:       # %bb.0:
+; ZEN5_DEFAULT-NEXT:    kmovd %edi, %k1
+; ZEN5_DEFAULT-NEXT:    vpcompressq %xmm1, %xmm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    vpcompressq %xmm0, %xmm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    retq
+;
+; ZEN5_DISABLE-LABEL: no_break_compressq_rrz_128:
+; ZEN5_DISABLE:       # %bb.0:
+; ZEN5_DISABLE-NEXT:    kmovd %edi, %k1
+; ZEN5_DISABLE-NEXT:    vpcompressq %xmm1, %xmm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    vpcompressq %xmm0, %xmm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    retq
+;
+; ZEN6-LABEL: no_break_compressq_rrz_128:
+; ZEN6:       # %bb.0:
+; ZEN6-NEXT:    kmovd %edi, %k1
+; ZEN6-NEXT:    vpcompressq %xmm1, %xmm0 {%k1} {z}
+; ZEN6-NEXT:    vpcompressq %xmm0, %xmm0 {%k1} {z}
+; ZEN6-NEXT:    retq
+;
+; SKX-LABEL: no_break_compressq_rrz_128:
+; SKX:       # %bb.0:
+; SKX-NEXT:    kmovd %edi, %k1
+; SKX-NEXT:    vpcompressq %xmm1, %xmm0 {%k1} {z}
+; SKX-NEXT:    vpcompressq %xmm0, %xmm0 {%k1} {z}
+; SKX-NEXT:    retq
+;
+; ICL-LABEL: no_break_compressq_rrz_128:
+; ICL:       # %bb.0:
+; ICL-NEXT:    kmovd %edi, %k1
+; ICL-NEXT:    vpcompressq %xmm1, %xmm0 {%k1} {z}
+; ICL-NEXT:    vpcompressq %xmm0, %xmm0 {%k1} {z}
+; ICL-NEXT:    retq
+;
+; SPR-LABEL: no_break_compressq_rrz_128:
+; SPR:       # %bb.0:
+; SPR-NEXT:    kmovd %edi, %k1
+; SPR-NEXT:    vpcompressq %xmm1, %xmm0 {%k1} {z}
+; SPR-NEXT:    vpcompressq %xmm0, %xmm0 {%k1} {z}
+; SPR-NEXT:    retq
+;
+; EMR-LABEL: no_break_compressq_rrz_128:
+; EMR:       # %bb.0:
+; EMR-NEXT:    kmovd %edi, %k1
+; EMR-NEXT:    vpcompressq %xmm1, %xmm0 {%k1} {z}
+; EMR-NEXT:    vpcompressq %xmm0, %xmm0 {%k1} {z}
+; EMR-NEXT:    retq
+;
+; GNR-LABEL: no_break_compressq_rrz_128:
+; GNR:       # %bb.0:
+; GNR-NEXT:    kmovd %edi, %k1
+; GNR-NEXT:    vpcompressq %xmm1, %xmm0 {%k1} {z}
+; GNR-NEXT:    vpcompressq %xmm0, %xmm0 {%k1} {z}
+; GNR-NEXT:    retq
+  %1 = bitcast i2 %a1 to <2 x i1>
+  %2 = call <2 x i64> @llvm.x86.avx512.mask.compress.v2i64(<2 x i64> %a0, <2 x i64> zeroinitializer, <2 x i1> %1)
+  %3 = call <2 x i64> @llvm.x86.avx512.mask.compress.v2i64(<2 x i64> %2, <2 x i64> zeroinitializer, <2 x i1> %1)
+  ret <2 x i64> %3
+}
+
+define <4 x i64> @no_break_compressq_rrz_256(<4 x i64> %dummy, <4 x i64> %a0, i4 %a1) {
+; X86_64_V4_DEFAULT-LABEL: no_break_compressq_rrz_256:
+; X86_64_V4_DEFAULT:       # %bb.0:
+; X86_64_V4_DEFAULT-NEXT:    kmovd %edi, %k1
+; X86_64_V4_DEFAULT-NEXT:    vpcompressq %ymm1, %ymm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    vpcompressq %ymm0, %ymm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    retq
+;
+; X86_64_V4_ENABLE-LABEL: no_break_compressq_rrz_256:
+; X86_64_V4_ENABLE:       # %bb.0:
+; X86_64_V4_ENABLE-NEXT:    kmovd %edi, %k1
+; X86_64_V4_ENABLE-NEXT:    vpcompressq %ymm1, %ymm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    vpcompressq %ymm0, %ymm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    retq
+;
+; ZEN4_DEFAULT-LABEL: no_break_compressq_rrz_256:
+; ZEN4_DEFAULT:       # %bb.0:
+; ZEN4_DEFAULT-NEXT:    kmovd %edi, %k1
+; ZEN4_DEFAULT-NEXT:    vpcompressq %ymm1, %ymm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    vpcompressq %ymm0, %ymm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    retq
+;
+; ZEN4_DISABLE-LABEL: no_break_compressq_rrz_256:
+; ZEN4_DISABLE:       # %bb.0:
+; ZEN4_DISABLE-NEXT:    kmovd %edi, %k1
+; ZEN4_DISABLE-NEXT:    vpcompressq %ymm1, %ymm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    vpcompressq %ymm0, %ymm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    retq
+;
+; ZEN5_DEFAULT-LABEL: no_break_compressq_rrz_256:
+; ZEN5_DEFAULT:       # %bb.0:
+; ZEN5_DEFAULT-NEXT:    kmovd %edi, %k1
+; ZEN5_DEFAULT-NEXT:    vpcompressq %ymm1, %ymm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    vpcompressq %ymm0, %ymm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    retq
+;
+; ZEN5_DISABLE-LABEL: no_break_compressq_rrz_256:
+; ZEN5_DISABLE:       # %bb.0:
+; ZEN5_DISABLE-NEXT:    kmovd %edi, %k1
+; ZEN5_DISABLE-NEXT:    vpcompressq %ymm1, %ymm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    vpcompressq %ymm0, %ymm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    retq
+;
+; ZEN6-LABEL: no_break_compressq_rrz_256:
+; ZEN6:       # %bb.0:
+; ZEN6-NEXT:    kmovd %edi, %k1
+; ZEN6-NEXT:    vpcompressq %ymm1, %ymm0 {%k1} {z}
+; ZEN6-NEXT:    vpcompressq %ymm0, %ymm0 {%k1} {z}
+; ZEN6-NEXT:    retq
+;
+; SKX-LABEL: no_break_compressq_rrz_256:
+; SKX:       # %bb.0:
+; SKX-NEXT:    kmovd %edi, %k1
+; SKX-NEXT:    vpcompressq %ymm1, %ymm0 {%k1} {z}
+; SKX-NEXT:    vpcompressq %ymm0, %ymm0 {%k1} {z}
+; SKX-NEXT:    retq
+;
+; ICL-LABEL: no_break_compressq_rrz_256:
+; ICL:       # %bb.0:
+; ICL-NEXT:    kmovd %edi, %k1
+; ICL-NEXT:    vpcompressq %ymm1, %ymm0 {%k1} {z}
+; ICL-NEXT:    vpcompressq %ymm0, %ymm0 {%k1} {z}
+; ICL-NEXT:    retq
+;
+; SPR-LABEL: no_break_compressq_rrz_256:
+; SPR:       # %bb.0:
+; SPR-NEXT:    kmovd %edi, %k1
+; SPR-NEXT:    vpcompressq %ymm1, %ymm0 {%k1} {z}
+; SPR-NEXT:    vpcompressq %ymm0, %ymm0 {%k1} {z}
+; SPR-NEXT:    retq
+;
+; EMR-LABEL: no_break_compressq_rrz_256:
+; EMR:       # %bb.0:
+; EMR-NEXT:    kmovd %edi, %k1
+; EMR-NEXT:    vpcompressq %ymm1, %ymm0 {%k1} {z}
+; EMR-NEXT:    vpcompressq %ymm0, %ymm0 {%k1} {z}
+; EMR-NEXT:    retq
+;
+; GNR-LABEL: no_break_compressq_rrz_256:
+; GNR:       # %bb.0:
+; GNR-NEXT:    kmovd %edi, %k1
+; GNR-NEXT:    vpcompressq %ymm1, %ymm0 {%k1} {z}
+; GNR-NEXT:    vpcompressq %ymm0, %ymm0 {%k1} {z}
+; GNR-NEXT:    retq
+  %1 = bitcast i4 %a1 to <4 x i1>
+  %2 = call <4 x i64> @llvm.x86.avx512.mask.compress.v4i64(<4 x i64> %a0, <4 x i64> zeroinitializer, <4 x i1> %1)
+  %3 = call <4 x i64> @llvm.x86.avx512.mask.compress.v4i64(<4 x i64> %2, <4 x i64> zeroinitializer, <4 x i1> %1)
+  ret <4 x i64> %3
+}
+
+define <8 x i64> @no_break_compressq_rrz_512(<8 x i64> %dummy, <8 x i64> %a0, i8 %a1) {
+; X86_64_V4_DEFAULT-LABEL: no_break_compressq_rrz_512:
+; X86_64_V4_DEFAULT:       # %bb.0:
+; X86_64_V4_DEFAULT-NEXT:    kmovd %edi, %k1
+; X86_64_V4_DEFAULT-NEXT:    vpcompressq %zmm1, %zmm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    vpcompressq %zmm0, %zmm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    retq
+;
+; X86_64_V4_ENABLE-LABEL: no_break_compressq_rrz_512:
+; X86_64_V4_ENABLE:       # %bb.0:
+; X86_64_V4_ENABLE-NEXT:    kmovd %edi, %k1
+; X86_64_V4_ENABLE-NEXT:    vpcompressq %zmm1, %zmm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    vpcompressq %zmm0, %zmm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    retq
+;
+; ZEN4_DEFAULT-LABEL: no_break_compressq_rrz_512:
+; ZEN4_DEFAULT:       # %bb.0:
+; ZEN4_DEFAULT-NEXT:    kmovd %edi, %k1
+; ZEN4_DEFAULT-NEXT:    vpcompressq %zmm1, %zmm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    vpcompressq %zmm0, %zmm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    retq
+;
+; ZEN4_DISABLE-LABEL: no_break_compressq_rrz_512:
+; ZEN4_DISABLE:       # %bb.0:
+; ZEN4_DISABLE-NEXT:    kmovd %edi, %k1
+; ZEN4_DISABLE-NEXT:    vpcompressq %zmm1, %zmm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    vpcompressq %zmm0, %zmm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    retq
+;
+; ZEN5_DEFAULT-LABEL: no_break_compressq_rrz_512:
+; ZEN5_DEFAULT:       # %bb.0:
+; ZEN5_DEFAULT-NEXT:    kmovd %edi, %k1
+; ZEN5_DEFAULT-NEXT:    vpcompressq %zmm1, %zmm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    vpcompressq %zmm0, %zmm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    retq
+;
+; ZEN5_DISABLE-LABEL: no_break_compressq_rrz_512:
+; ZEN5_DISABLE:       # %bb.0:
+; ZEN5_DISABLE-NEXT:    kmovd %edi, %k1
+; ZEN5_DISABLE-NEXT:    vpcompressq %zmm1, %zmm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    vpcompressq %zmm0, %zmm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    retq
+;
+; ZEN6-LABEL: no_break_compressq_rrz_512:
+; ZEN6:       # %bb.0:
+; ZEN6-NEXT:    kmovd %edi, %k1
+; ZEN6-NEXT:    vpcompressq %zmm1, %zmm0 {%k1} {z}
+; ZEN6-NEXT:    vpcompressq %zmm0, %zmm0 {%k1} {z}
+; ZEN6-NEXT:    retq
+;
+; SKX-LABEL: no_break_compressq_rrz_512:
+; SKX:       # %bb.0:
+; SKX-NEXT:    kmovd %edi, %k1
+; SKX-NEXT:    vpcompressq %zmm1, %zmm0 {%k1} {z}
+; SKX-NEXT:    vpcompressq %zmm0, %zmm0 {%k1} {z}
+; SKX-NEXT:    retq
+;
+; ICL-LABEL: no_break_compressq_rrz_512:
+; ICL:       # %bb.0:
+; ICL-NEXT:    kmovd %edi, %k1
+; ICL-NEXT:    vpcompressq %zmm1, %zmm0 {%k1} {z}
+; ICL-NEXT:    vpcompressq %zmm0, %zmm0 {%k1} {z}
+; ICL-NEXT:    retq
+;
+; SPR-LABEL: no_break_compressq_rrz_512:
+; SPR:       # %bb.0:
+; SPR-NEXT:    kmovd %edi, %k1
+; SPR-NEXT:    vpcompressq %zmm1, %zmm0 {%k1} {z}
+; SPR-NEXT:    vpcompressq %zmm0, %zmm0 {%k1} {z}
+; SPR-NEXT:    retq
+;
+; EMR-LABEL: no_break_compressq_rrz_512:
+; EMR:       # %bb.0:
+; EMR-NEXT:    kmovd %edi, %k1
+; EMR-NEXT:    vpcompressq %zmm1, %zmm0 {%k1} {z}
+; EMR-NEXT:    vpcompressq %zmm0, %zmm0 {%k1} {z}
+; EMR-NEXT:    retq
+;
+; GNR-LABEL: no_break_compressq_rrz_512:
+; GNR:       # %bb.0:
+; GNR-NEXT:    kmovd %edi, %k1
+; GNR-NEXT:    vpcompressq %zmm1, %zmm0 {%k1} {z}
+; GNR-NEXT:    vpcompressq %zmm0, %zmm0 {%k1} {z}
+; GNR-NEXT:    retq
+  %1 = bitcast i8 %a1 to <8 x i1>
+  %2 = call <8 x i64> @llvm.x86.avx512.mask.compress.v8i64(<8 x i64> %a0, <8 x i64> zeroinitializer, <8 x i1> %1)
+  %3 = call <8 x i64> @llvm.x86.avx512.mask.compress.v8i64(<8 x i64> %2, <8 x i64> zeroinitializer, <8 x i1> %1)
+  ret <8 x i64> %3
+}
+
+
+define <4 x float> @no_break_compressps_rrz_128(<4 x float> %dummy, <4 x float> %a0, i4 %a1) {
+; X86_64_V4_DEFAULT-LABEL: no_break_compressps_rrz_128:
+; X86_64_V4_DEFAULT:       # %bb.0:
+; X86_64_V4_DEFAULT-NEXT:    kmovd %edi, %k1
+; X86_64_V4_DEFAULT-NEXT:    vcompressps %xmm1, %xmm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    vcompressps %xmm0, %xmm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    retq
+;
+; X86_64_V4_ENABLE-LABEL: no_break_compressps_rrz_128:
+; X86_64_V4_ENABLE:       # %bb.0:
+; X86_64_V4_ENABLE-NEXT:    kmovd %edi, %k1
+; X86_64_V4_ENABLE-NEXT:    vcompressps %xmm1, %xmm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    vcompressps %xmm0, %xmm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    retq
+;
+; ZEN4_DEFAULT-LABEL: no_break_compressps_rrz_128:
+; ZEN4_DEFAULT:       # %bb.0:
+; ZEN4_DEFAULT-NEXT:    kmovd %edi, %k1
+; ZEN4_DEFAULT-NEXT:    vcompressps %xmm1, %xmm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    vcompressps %xmm0, %xmm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    retq
+;
+; ZEN4_DISABLE-LABEL: no_break_compressps_rrz_128:
+; ZEN4_DISABLE:       # %bb.0:
+; ZEN4_DISABLE-NEXT:    kmovd %edi, %k1
+; ZEN4_DISABLE-NEXT:    vcompressps %xmm1, %xmm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    vcompressps %xmm0, %xmm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    retq
+;
+; ZEN5_DEFAULT-LABEL: no_break_compressps_rrz_128:
+; ZEN5_DEFAULT:       # %bb.0:
+; ZEN5_DEFAULT-NEXT:    kmovd %edi, %k1
+; ZEN5_DEFAULT-NEXT:    vcompressps %xmm1, %xmm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    vcompressps %xmm0, %xmm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    retq
+;
+; ZEN5_DISABLE-LABEL: no_break_compressps_rrz_128:
+; ZEN5_DISABLE:       # %bb.0:
+; ZEN5_DISABLE-NEXT:    kmovd %edi, %k1
+; ZEN5_DISABLE-NEXT:    vcompressps %xmm1, %xmm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    vcompressps %xmm0, %xmm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    retq
+;
+; ZEN6-LABEL: no_break_compressps_rrz_128:
+; ZEN6:       # %bb.0:
+; ZEN6-NEXT:    kmovd %edi, %k1
+; ZEN6-NEXT:    vcompressps %xmm1, %xmm0 {%k1} {z}
+; ZEN6-NEXT:    vcompressps %xmm0, %xmm0 {%k1} {z}
+; ZEN6-NEXT:    retq
+;
+; SKX-LABEL: no_break_compressps_rrz_128:
+; SKX:       # %bb.0:
+; SKX-NEXT:    kmovd %edi, %k1
+; SKX-NEXT:    vcompressps %xmm1, %xmm0 {%k1} {z}
+; SKX-NEXT:    vcompressps %xmm0, %xmm0 {%k1} {z}
+; SKX-NEXT:    retq
+;
+; ICL-LABEL: no_break_compressps_rrz_128:
+; ICL:       # %bb.0:
+; ICL-NEXT:    kmovd %edi, %k1
+; ICL-NEXT:    vcompressps %xmm1, %xmm0 {%k1} {z}
+; ICL-NEXT:    vcompressps %xmm0, %xmm0 {%k1} {z}
+; ICL-NEXT:    retq
+;
+; SPR-LABEL: no_break_compressps_rrz_128:
+; SPR:       # %bb.0:
+; SPR-NEXT:    kmovd %edi, %k1
+; SPR-NEXT:    vcompressps %xmm1, %xmm0 {%k1} {z}
+; SPR-NEXT:    vcompressps %xmm0, %xmm0 {%k1} {z}
+; SPR-NEXT:    retq
+;
+; EMR-LABEL: no_break_compressps_rrz_128:
+; EMR:       # %bb.0:
+; EMR-NEXT:    kmovd %edi, %k1
+; EMR-NEXT:    vcompressps %xmm1, %xmm0 {%k1} {z}
+; EMR-NEXT:    vcompressps %xmm0, %xmm0 {%k1} {z}
+; EMR-NEXT:    retq
+;
+; GNR-LABEL: no_break_compressps_rrz_128:
+; GNR:       # %bb.0:
+; GNR-NEXT:    kmovd %edi, %k1
+; GNR-NEXT:    vcompressps %xmm1, %xmm0 {%k1} {z}
+; GNR-NEXT:    vcompressps %xmm0, %xmm0 {%k1} {z}
+; GNR-NEXT:    retq
+  %1 = bitcast i4 %a1 to <4 x i1>
+  %2 = call <4 x float> @llvm.x86.avx512.mask.compress.v432(<4 x float> %a0, <4 x float> zeroinitializer, <4 x i1> %1)
+  %3 = call <4 x float> @llvm.x86.avx512.mask.compress.v432(<4 x float> %2, <4 x float> zeroinitializer, <4 x i1> %1)
+  ret <4 x float> %3
+}
+
+define <8 x float> @no_break_compressps_rrz_256(<8 x float> %dummy, <8 x float> %a0, i8 %a1) {
+; X86_64_V4_DEFAULT-LABEL: no_break_compressps_rrz_256:
+; X86_64_V4_DEFAULT:       # %bb.0:
+; X86_64_V4_DEFAULT-NEXT:    kmovd %edi, %k1
+; X86_64_V4_DEFAULT-NEXT:    vcompressps %ymm1, %ymm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    vcompressps %ymm0, %ymm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    retq
+;
+; X86_64_V4_ENABLE-LABEL: no_break_compressps_rrz_256:
+; X86_64_V4_ENABLE:       # %bb.0:
+; X86_64_V4_ENABLE-NEXT:    kmovd %edi, %k1
+; X86_64_V4_ENABLE-NEXT:    vcompressps %ymm1, %ymm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    vcompressps %ymm0, %ymm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    retq
+;
+; ZEN4_DEFAULT-LABEL: no_break_compressps_rrz_256:
+; ZEN4_DEFAULT:       # %bb.0:
+; ZEN4_DEFAULT-NEXT:    kmovd %edi, %k1
+; ZEN4_DEFAULT-NEXT:    vcompressps %ymm1, %ymm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    vcompressps %ymm0, %ymm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    retq
+;
+; ZEN4_DISABLE-LABEL: no_break_compressps_rrz_256:
+; ZEN4_DISABLE:       # %bb.0:
+; ZEN4_DISABLE-NEXT:    kmovd %edi, %k1
+; ZEN4_DISABLE-NEXT:    vcompressps %ymm1, %ymm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    vcompressps %ymm0, %ymm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    retq
+;
+; ZEN5_DEFAULT-LABEL: no_break_compressps_rrz_256:
+; ZEN5_DEFAULT:       # %bb.0:
+; ZEN5_DEFAULT-NEXT:    kmovd %edi, %k1
+; ZEN5_DEFAULT-NEXT:    vcompressps %ymm1, %ymm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    vcompressps %ymm0, %ymm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    retq
+;
+; ZEN5_DISABLE-LABEL: no_break_compressps_rrz_256:
+; ZEN5_DISABLE:       # %bb.0:
+; ZEN5_DISABLE-NEXT:    kmovd %edi, %k1
+; ZEN5_DISABLE-NEXT:    vcompressps %ymm1, %ymm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    vcompressps %ymm0, %ymm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    retq
+;
+; ZEN6-LABEL: no_break_compressps_rrz_256:
+; ZEN6:       # %bb.0:
+; ZEN6-NEXT:    kmovd %edi, %k1
+; ZEN6-NEXT:    vcompressps %ymm1, %ymm0 {%k1} {z}
+; ZEN6-NEXT:    vcompressps %ymm0, %ymm0 {%k1} {z}
+; ZEN6-NEXT:    retq
+;
+; SKX-LABEL: no_break_compressps_rrz_256:
+; SKX:       # %bb.0:
+; SKX-NEXT:    kmovd %edi, %k1
+; SKX-NEXT:    vcompressps %ymm1, %ymm0 {%k1} {z}
+; SKX-NEXT:    vcompressps %ymm0, %ymm0 {%k1} {z}
+; SKX-NEXT:    retq
+;
+; ICL-LABEL: no_break_compressps_rrz_256:
+; ICL:       # %bb.0:
+; ICL-NEXT:    kmovd %edi, %k1
+; ICL-NEXT:    vcompressps %ymm1, %ymm0 {%k1} {z}
+; ICL-NEXT:    vcompressps %ymm0, %ymm0 {%k1} {z}
+; ICL-NEXT:    retq
+;
+; SPR-LABEL: no_break_compressps_rrz_256:
+; SPR:       # %bb.0:
+; SPR-NEXT:    kmovd %edi, %k1
+; SPR-NEXT:    vcompressps %ymm1, %ymm0 {%k1} {z}
+; SPR-NEXT:    vcompressps %ymm0, %ymm0 {%k1} {z}
+; SPR-NEXT:    retq
+;
+; EMR-LABEL: no_break_compressps_rrz_256:
+; EMR:       # %bb.0:
+; EMR-NEXT:    kmovd %edi, %k1
+; EMR-NEXT:    vcompressps %ymm1, %ymm0 {%k1} {z}
+; EMR-NEXT:    vcompressps %ymm0, %ymm0 {%k1} {z}
+; EMR-NEXT:    retq
+;
+; GNR-LABEL: no_break_compressps_rrz_256:
+; GNR:       # %bb.0:
+; GNR-NEXT:    kmovd %edi, %k1
+; GNR-NEXT:    vcompressps %ymm1, %ymm0 {%k1} {z}
+; GNR-NEXT:    vcompressps %ymm0, %ymm0 {%k1} {z}
+; GNR-NEXT:    retq
+  %1 = bitcast i8 %a1 to <8 x i1>
+  %2 = call <8 x float> @llvm.x86.avx512.mask.compress.v8f32(<8 x float> %a0, <8 x float> zeroinitializer, <8 x i1> %1)
+  %3 = call <8 x float> @llvm.x86.avx512.mask.compress.v8f32(<8 x float> %2, <8 x float> zeroinitializer, <8 x i1> %1)
+  ret <8 x float> %3
+}
+
+define <16 x float> @no_break_compressps_rrz_512(<16 x float> %dummy, <16 x float> %a0, i16 %a1) {
+; X86_64_V4_DEFAULT-LABEL: no_break_compressps_rrz_512:
+; X86_64_V4_DEFAULT:       # %bb.0:
+; X86_64_V4_DEFAULT-NEXT:    kmovd %edi, %k1
+; X86_64_V4_DEFAULT-NEXT:    vcompressps %zmm1, %zmm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    vcompressps %zmm0, %zmm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    retq
+;
+; X86_64_V4_ENABLE-LABEL: no_break_compressps_rrz_512:
+; X86_64_V4_ENABLE:       # %bb.0:
+; X86_64_V4_ENABLE-NEXT:    kmovd %edi, %k1
+; X86_64_V4_ENABLE-NEXT:    vcompressps %zmm1, %zmm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    vcompressps %zmm0, %zmm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    retq
+;
+; ZEN4_DEFAULT-LABEL: no_break_compressps_rrz_512:
+; ZEN4_DEFAULT:       # %bb.0:
+; ZEN4_DEFAULT-NEXT:    kmovd %edi, %k1
+; ZEN4_DEFAULT-NEXT:    vcompressps %zmm1, %zmm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    vcompressps %zmm0, %zmm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    retq
+;
+; ZEN4_DISABLE-LABEL: no_break_compressps_rrz_512:
+; ZEN4_DISABLE:       # %bb.0:
+; ZEN4_DISABLE-NEXT:    kmovd %edi, %k1
+; ZEN4_DISABLE-NEXT:    vcompressps %zmm1, %zmm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    vcompressps %zmm0, %zmm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    retq
+;
+; ZEN5_DEFAULT-LABEL: no_break_compressps_rrz_512:
+; ZEN5_DEFAULT:       # %bb.0:
+; ZEN5_DEFAULT-NEXT:    kmovd %edi, %k1
+; ZEN5_DEFAULT-NEXT:    vcompressps %zmm1, %zmm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    vcompressps %zmm0, %zmm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    retq
+;
+; ZEN5_DISABLE-LABEL: no_break_compressps_rrz_512:
+; ZEN5_DISABLE:       # %bb.0:
+; ZEN5_DISABLE-NEXT:    kmovd %edi, %k1
+; ZEN5_DISABLE-NEXT:    vcompressps %zmm1, %zmm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    vcompressps %zmm0, %zmm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    retq
+;
+; ZEN6-LABEL: no_break_compressps_rrz_512:
+; ZEN6:       # %bb.0:
+; ZEN6-NEXT:    kmovd %edi, %k1
+; ZEN6-NEXT:    vcompressps %zmm1, %zmm0 {%k1} {z}
+; ZEN6-NEXT:    vcompressps %zmm0, %zmm0 {%k1} {z}
+; ZEN6-NEXT:    retq
+;
+; SKX-LABEL: no_break_compressps_rrz_512:
+; SKX:       # %bb.0:
+; SKX-NEXT:    kmovd %edi, %k1
+; SKX-NEXT:    vcompressps %zmm1, %zmm0 {%k1} {z}
+; SKX-NEXT:    vcompressps %zmm0, %zmm0 {%k1} {z}
+; SKX-NEXT:    retq
+;
+; ICL-LABEL: no_break_compressps_rrz_512:
+; ICL:       # %bb.0:
+; ICL-NEXT:    kmovd %edi, %k1
+; ICL-NEXT:    vcompressps %zmm1, %zmm0 {%k1} {z}
+; ICL-NEXT:    vcompressps %zmm0, %zmm0 {%k1} {z}
+; ICL-NEXT:    retq
+;
+; SPR-LABEL: no_break_compressps_rrz_512:
+; SPR:       # %bb.0:
+; SPR-NEXT:    kmovd %edi, %k1
+; SPR-NEXT:    vcompressps %zmm1, %zmm0 {%k1} {z}
+; SPR-NEXT:    vcompressps %zmm0, %zmm0 {%k1} {z}
+; SPR-NEXT:    retq
+;
+; EMR-LABEL: no_break_compressps_rrz_512:
+; EMR:       # %bb.0:
+; EMR-NEXT:    kmovd %edi, %k1
+; EMR-NEXT:    vcompressps %zmm1, %zmm0 {%k1} {z}
+; EMR-NEXT:    vcompressps %zmm0, %zmm0 {%k1} {z}
+; EMR-NEXT:    retq
+;
+; GNR-LABEL: no_break_compressps_rrz_512:
+; GNR:       # %bb.0:
+; GNR-NEXT:    kmovd %edi, %k1
+; GNR-NEXT:    vcompressps %zmm1, %zmm0 {%k1} {z}
+; GNR-NEXT:    vcompressps %zmm0, %zmm0 {%k1} {z}
+; GNR-NEXT:    retq
+  %1 = bitcast i16 %a1 to <16 x i1>
+  %2 = call <16 x float> @llvm.x86.avx512.mask.compress.v16f32(<16 x float> %a0, <16 x float> zeroinitializer, <16 x i1> %1)
+  %3 = call <16 x float> @llvm.x86.avx512.mask.compress.v16f32(<16 x float> %2, <16 x float> zeroinitializer, <16 x i1> %1)
+  ret <16 x float> %3
+}
+
+
+define <2 x double> @no_break_compresspd_rrz_128(<2 x double> %dummy, <2 x double> %a0, i2 %a1) {
+; X86_64_V4_DEFAULT-LABEL: no_break_compresspd_rrz_128:
+; X86_64_V4_DEFAULT:       # %bb.0:
+; X86_64_V4_DEFAULT-NEXT:    kmovd %edi, %k1
+; X86_64_V4_DEFAULT-NEXT:    vcompresspd %xmm1, %xmm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    vcompresspd %xmm0, %xmm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    retq
+;
+; X86_64_V4_ENABLE-LABEL: no_break_compresspd_rrz_128:
+; X86_64_V4_ENABLE:       # %bb.0:
+; X86_64_V4_ENABLE-NEXT:    kmovd %edi, %k1
+; X86_64_V4_ENABLE-NEXT:    vcompresspd %xmm1, %xmm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    vcompresspd %xmm0, %xmm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    retq
+;
+; ZEN4_DEFAULT-LABEL: no_break_compresspd_rrz_128:
+; ZEN4_DEFAULT:       # %bb.0:
+; ZEN4_DEFAULT-NEXT:    kmovd %edi, %k1
+; ZEN4_DEFAULT-NEXT:    vcompresspd %xmm1, %xmm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    vcompresspd %xmm0, %xmm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    retq
+;
+; ZEN4_DISABLE-LABEL: no_break_compresspd_rrz_128:
+; ZEN4_DISABLE:       # %bb.0:
+; ZEN4_DISABLE-NEXT:    kmovd %edi, %k1
+; ZEN4_DISABLE-NEXT:    vcompresspd %xmm1, %xmm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    vcompresspd %xmm0, %xmm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    retq
+;
+; ZEN5_DEFAULT-LABEL: no_break_compresspd_rrz_128:
+; ZEN5_DEFAULT:       # %bb.0:
+; ZEN5_DEFAULT-NEXT:    kmovd %edi, %k1
+; ZEN5_DEFAULT-NEXT:    vcompresspd %xmm1, %xmm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    vcompresspd %xmm0, %xmm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    retq
+;
+; ZEN5_DISABLE-LABEL: no_break_compresspd_rrz_128:
+; ZEN5_DISABLE:       # %bb.0:
+; ZEN5_DISABLE-NEXT:    kmovd %edi, %k1
+; ZEN5_DISABLE-NEXT:    vcompresspd %xmm1, %xmm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    vcompresspd %xmm0, %xmm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    retq
+;
+; ZEN6-LABEL: no_break_compresspd_rrz_128:
+; ZEN6:       # %bb.0:
+; ZEN6-NEXT:    kmovd %edi, %k1
+; ZEN6-NEXT:    vcompresspd %xmm1, %xmm0 {%k1} {z}
+; ZEN6-NEXT:    vcompresspd %xmm0, %xmm0 {%k1} {z}
+; ZEN6-NEXT:    retq
+;
+; SKX-LABEL: no_break_compresspd_rrz_128:
+; SKX:       # %bb.0:
+; SKX-NEXT:    kmovd %edi, %k1
+; SKX-NEXT:    vcompresspd %xmm1, %xmm0 {%k1} {z}
+; SKX-NEXT:    vcompresspd %xmm0, %xmm0 {%k1} {z}
+; SKX-NEXT:    retq
+;
+; ICL-LABEL: no_break_compresspd_rrz_128:
+; ICL:       # %bb.0:
+; ICL-NEXT:    kmovd %edi, %k1
+; ICL-NEXT:    vcompresspd %xmm1, %xmm0 {%k1} {z}
+; ICL-NEXT:    vcompresspd %xmm0, %xmm0 {%k1} {z}
+; ICL-NEXT:    retq
+;
+; SPR-LABEL: no_break_compresspd_rrz_128:
+; SPR:       # %bb.0:
+; SPR-NEXT:    kmovd %edi, %k1
+; SPR-NEXT:    vcompresspd %xmm1, %xmm0 {%k1} {z}
+; SPR-NEXT:    vcompresspd %xmm0, %xmm0 {%k1} {z}
+; SPR-NEXT:    retq
+;
+; EMR-LABEL: no_break_compresspd_rrz_128:
+; EMR:       # %bb.0:
+; EMR-NEXT:    kmovd %edi, %k1
+; EMR-NEXT:    vcompresspd %xmm1, %xmm0 {%k1} {z}
+; EMR-NEXT:    vcompresspd %xmm0, %xmm0 {%k1} {z}
+; EMR-NEXT:    retq
+;
+; GNR-LABEL: no_break_compresspd_rrz_128:
+; GNR:       # %bb.0:
+; GNR-NEXT:    kmovd %edi, %k1
+; GNR-NEXT:    vcompresspd %xmm1, %xmm0 {%k1} {z}
+; GNR-NEXT:    vcompresspd %xmm0, %xmm0 {%k1} {z}
+; GNR-NEXT:    retq
+  %1 = bitcast i2 %a1 to <2 x i1>
+  %2 = call <2 x double> @llvm.x86.avx512.mask.compress.v2f64(<2 x double> %a0, <2 x double> zeroinitializer, <2 x i1> %1)
+  %3 = call <2 x double> @llvm.x86.avx512.mask.compress.v2f64(<2 x double> %2, <2 x double> zeroinitializer, <2 x i1> %1)
+  ret <2 x double> %3
+}
+
+define <4 x double> @no_break_compresspd_rrz_256(<4 x double> %dummy, <4 x double> %a0, i4 %a1) {
+; X86_64_V4_DEFAULT-LABEL: no_break_compresspd_rrz_256:
+; X86_64_V4_DEFAULT:       # %bb.0:
+; X86_64_V4_DEFAULT-NEXT:    kmovd %edi, %k1
+; X86_64_V4_DEFAULT-NEXT:    vcompresspd %ymm1, %ymm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    vcompresspd %ymm0, %ymm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    retq
+;
+; X86_64_V4_ENABLE-LABEL: no_break_compresspd_rrz_256:
+; X86_64_V4_ENABLE:       # %bb.0:
+; X86_64_V4_ENABLE-NEXT:    kmovd %edi, %k1
+; X86_64_V4_ENABLE-NEXT:    vcompresspd %ymm1, %ymm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    vcompresspd %ymm0, %ymm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    retq
+;
+; ZEN4_DEFAULT-LABEL: no_break_compresspd_rrz_256:
+; ZEN4_DEFAULT:       # %bb.0:
+; ZEN4_DEFAULT-NEXT:    kmovd %edi, %k1
+; ZEN4_DEFAULT-NEXT:    vcompresspd %ymm1, %ymm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    vcompresspd %ymm0, %ymm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    retq
+;
+; ZEN4_DISABLE-LABEL: no_break_compresspd_rrz_256:
+; ZEN4_DISABLE:       # %bb.0:
+; ZEN4_DISABLE-NEXT:    kmovd %edi, %k1
+; ZEN4_DISABLE-NEXT:    vcompresspd %ymm1, %ymm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    vcompresspd %ymm0, %ymm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    retq
+;
+; ZEN5_DEFAULT-LABEL: no_break_compresspd_rrz_256:
+; ZEN5_DEFAULT:       # %bb.0:
+; ZEN5_DEFAULT-NEXT:    kmovd %edi, %k1
+; ZEN5_DEFAULT-NEXT:    vcompresspd %ymm1, %ymm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    vcompresspd %ymm0, %ymm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    retq
+;
+; ZEN5_DISABLE-LABEL: no_break_compresspd_rrz_256:
+; ZEN5_DISABLE:       # %bb.0:
+; ZEN5_DISABLE-NEXT:    kmovd %edi, %k1
+; ZEN5_DISABLE-NEXT:    vcompresspd %ymm1, %ymm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    vcompresspd %ymm0, %ymm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    retq
+;
+; ZEN6-LABEL: no_break_compresspd_rrz_256:
+; ZEN6:       # %bb.0:
+; ZEN6-NEXT:    kmovd %edi, %k1
+; ZEN6-NEXT:    vcompresspd %ymm1, %ymm0 {%k1} {z}
+; ZEN6-NEXT:    vcompresspd %ymm0, %ymm0 {%k1} {z}
+; ZEN6-NEXT:    retq
+;
+; SKX-LABEL: no_break_compresspd_rrz_256:
+; SKX:       # %bb.0:
+; SKX-NEXT:    kmovd %edi, %k1
+; SKX-NEXT:    vcompresspd %ymm1, %ymm0 {%k1} {z}
+; SKX-NEXT:    vcompresspd %ymm0, %ymm0 {%k1} {z}
+; SKX-NEXT:    retq
+;
+; ICL-LABEL: no_break_compresspd_rrz_256:
+; ICL:       # %bb.0:
+; ICL-NEXT:    kmovd %edi, %k1
+; ICL-NEXT:    vcompresspd %ymm1, %ymm0 {%k1} {z}
+; ICL-NEXT:    vcompresspd %ymm0, %ymm0 {%k1} {z}
+; ICL-NEXT:    retq
+;
+; SPR-LABEL: no_break_compresspd_rrz_256:
+; SPR:       # %bb.0:
+; SPR-NEXT:    kmovd %edi, %k1
+; SPR-NEXT:    vcompresspd %ymm1, %ymm0 {%k1} {z}
+; SPR-NEXT:    vcompresspd %ymm0, %ymm0 {%k1} {z}
+; SPR-NEXT:    retq
+;
+; EMR-LABEL: no_break_compresspd_rrz_256:
+; EMR:       # %bb.0:
+; EMR-NEXT:    kmovd %edi, %k1
+; EMR-NEXT:    vcompresspd %ymm1, %ymm0 {%k1} {z}
+; EMR-NEXT:    vcompresspd %ymm0, %ymm0 {%k1} {z}
+; EMR-NEXT:    retq
+;
+; GNR-LABEL: no_break_compresspd_rrz_256:
+; GNR:       # %bb.0:
+; GNR-NEXT:    kmovd %edi, %k1
+; GNR-NEXT:    vcompresspd %ymm1, %ymm0 {%k1} {z}
+; GNR-NEXT:    vcompresspd %ymm0, %ymm0 {%k1} {z}
+; GNR-NEXT:    retq
+  %1 = bitcast i4 %a1 to <4 x i1>
+  %2 = call <4 x double> @llvm.x86.avx512.mask.compress.v4f64(<4 x double> %a0, <4 x double> zeroinitializer, <4 x i1> %1)
+  %3 = call <4 x double> @llvm.x86.avx512.mask.compress.v4f64(<4 x double> %2, <4 x double> zeroinitializer, <4 x i1> %1)
+  ret <4 x double> %3
+}
+
+define <8 x double> @no_break_compresspd_rrz_512(<8 x double> %dummy, <8 x double> %a0, i8 %a1) {
+; X86_64_V4_DEFAULT-LABEL: no_break_compresspd_rrz_512:
+; X86_64_V4_DEFAULT:       # %bb.0:
+; X86_64_V4_DEFAULT-NEXT:    kmovd %edi, %k1
+; X86_64_V4_DEFAULT-NEXT:    vcompresspd %zmm1, %zmm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    vcompresspd %zmm0, %zmm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    retq
+;
+; X86_64_V4_ENABLE-LABEL: no_break_compresspd_rrz_512:
+; X86_64_V4_ENABLE:       # %bb.0:
+; X86_64_V4_ENABLE-NEXT:    kmovd %edi, %k1
+; X86_64_V4_ENABLE-NEXT:    vcompresspd %zmm1, %zmm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    vcompresspd %zmm0, %zmm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    retq
+;
+; ZEN4_DEFAULT-LABEL: no_break_compresspd_rrz_512:
+; ZEN4_DEFAULT:       # %bb.0:
+; ZEN4_DEFAULT-NEXT:    kmovd %edi, %k1
+; ZEN4_DEFAULT-NEXT:    vcompresspd %zmm1, %zmm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    vcompresspd %zmm0, %zmm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    retq
+;
+; ZEN4_DISABLE-LABEL: no_break_compresspd_rrz_512:
+; ZEN4_DISABLE:       # %bb.0:
+; ZEN4_DISABLE-NEXT:    kmovd %edi, %k1
+; ZEN4_DISABLE-NEXT:    vcompresspd %zmm1, %zmm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    vcompresspd %zmm0, %zmm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    retq
+;
+; ZEN5_DEFAULT-LABEL: no_break_compresspd_rrz_512:
+; ZEN5_DEFAULT:       # %bb.0:
+; ZEN5_DEFAULT-NEXT:    kmovd %edi, %k1
+; ZEN5_DEFAULT-NEXT:    vcompresspd %zmm1, %zmm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    vcompresspd %zmm0, %zmm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    retq
+;
+; ZEN5_DISABLE-LABEL: no_break_compresspd_rrz_512:
+; ZEN5_DISABLE:       # %bb.0:
+; ZEN5_DISABLE-NEXT:    kmovd %edi, %k1
+; ZEN5_DISABLE-NEXT:    vcompresspd %zmm1, %zmm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    vcompresspd %zmm0, %zmm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    retq
+;
+; ZEN6-LABEL: no_break_compresspd_rrz_512:
+; ZEN6:       # %bb.0:
+; ZEN6-NEXT:    kmovd %edi, %k1
+; ZEN6-NEXT:    vcompresspd %zmm1, %zmm0 {%k1} {z}
+; ZEN6-NEXT:    vcompresspd %zmm0, %zmm0 {%k1} {z}
+; ZEN6-NEXT:    retq
+;
+; SKX-LABEL: no_break_compresspd_rrz_512:
+; SKX:       # %bb.0:
+; SKX-NEXT:    kmovd %edi, %k1
+; SKX-NEXT:    vcompresspd %zmm1, %zmm0 {%k1} {z}
+; SKX-NEXT:    vcompresspd %zmm0, %zmm0 {%k1} {z}
+; SKX-NEXT:    retq
+;
+; ICL-LABEL: no_break_compresspd_rrz_512:
+; ICL:       # %bb.0:
+; ICL-NEXT:    kmovd %edi, %k1
+; ICL-NEXT:    vcompresspd %zmm1, %zmm0 {%k1} {z}
+; ICL-NEXT:    vcompresspd %zmm0, %zmm0 {%k1} {z}
+; ICL-NEXT:    retq
+;
+; SPR-LABEL: no_break_compresspd_rrz_512:
+; SPR:       # %bb.0:
+; SPR-NEXT:    kmovd %edi, %k1
+; SPR-NEXT:    vcompresspd %zmm1, %zmm0 {%k1} {z}
+; SPR-NEXT:    vcompresspd %zmm0, %zmm0 {%k1} {z}
+; SPR-NEXT:    retq
+;
+; EMR-LABEL: no_break_compresspd_rrz_512:
+; EMR:       # %bb.0:
+; EMR-NEXT:    kmovd %edi, %k1
+; EMR-NEXT:    vcompresspd %zmm1, %zmm0 {%k1} {z}
+; EMR-NEXT:    vcompresspd %zmm0, %zmm0 {%k1} {z}
+; EMR-NEXT:    retq
+;
+; GNR-LABEL: no_break_compresspd_rrz_512:
+; GNR:       # %bb.0:
+; GNR-NEXT:    kmovd %edi, %k1
+; GNR-NEXT:    vcompresspd %zmm1, %zmm0 {%k1} {z}
+; GNR-NEXT:    vcompresspd %zmm0, %zmm0 {%k1} {z}
+; GNR-NEXT:    retq
+  %1 = bitcast i8 %a1 to <8 x i1>
+  %2 = call <8 x double> @llvm.x86.avx512.mask.compress.v8f64(<8 x double> %a0, <8 x double> zeroinitializer, <8 x i1> %1)
+  %3 = call <8 x double> @llvm.x86.avx512.mask.compress.v8f64(<8 x double> %2, <8 x double> zeroinitializer, <8 x i1> %1)
   ret <8 x double> %3
 }

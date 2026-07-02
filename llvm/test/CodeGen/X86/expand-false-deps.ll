@@ -13,6 +13,9 @@
 ; RUN: llc -verify-machineinstrs -mcpu=graniterapids -mtriple=x86_64-unknown-unknown < %s | FileCheck %s --check-prefixes=GNR
 
 
+; Test that dependencies on the output register are broken if it was written recently (write simulated using inline asm).
+
+
 define <16 x i8> @expandb_rrz_128(<16 x i8> %a0, i16 %a1) "target-features"="+avx512vbmi2" {
 ; X86_64_V4_DEFAULT-LABEL: expandb_rrz_128:
 ; X86_64_V4_DEFAULT:       # %bb.0:
@@ -4019,4 +4022,3026 @@ define <8 x double> @expandpd_rmz_512(ptr %p0, i8 %a1) {
   %2 = bitcast i8 %a1 to <8 x i1>
   %3 = call <8 x double> @llvm.masked.expandload.v8f64.p0(ptr %p0, <8 x i1> %2, <8 x double> zeroinitializer)
   ret <8 x double> %3
+}
+
+
+; Test that dependencies on the output register are not broken if it is the same as the input register or it was not written recently
+
+
+define <16 x i8> @no_break_expandb_rrz_128(<16 x i8> %dummy, <16 x i8> %a0, i16 %a1) "target-features"="+avx512vbmi2" {
+; X86_64_V4_DEFAULT-LABEL: no_break_expandb_rrz_128:
+; X86_64_V4_DEFAULT:       # %bb.0:
+; X86_64_V4_DEFAULT-NEXT:    kmovd %edi, %k1
+; X86_64_V4_DEFAULT-NEXT:    vpexpandb %xmm1, %xmm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    vpexpandb %xmm0, %xmm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    retq
+;
+; X86_64_V4_ENABLE-LABEL: no_break_expandb_rrz_128:
+; X86_64_V4_ENABLE:       # %bb.0:
+; X86_64_V4_ENABLE-NEXT:    kmovd %edi, %k1
+; X86_64_V4_ENABLE-NEXT:    vpexpandb %xmm1, %xmm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    vpexpandb %xmm0, %xmm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    retq
+;
+; ZEN4_DEFAULT-LABEL: no_break_expandb_rrz_128:
+; ZEN4_DEFAULT:       # %bb.0:
+; ZEN4_DEFAULT-NEXT:    kmovd %edi, %k1
+; ZEN4_DEFAULT-NEXT:    vpexpandb %xmm1, %xmm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    vpexpandb %xmm0, %xmm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    retq
+;
+; ZEN4_DISABLE-LABEL: no_break_expandb_rrz_128:
+; ZEN4_DISABLE:       # %bb.0:
+; ZEN4_DISABLE-NEXT:    kmovd %edi, %k1
+; ZEN4_DISABLE-NEXT:    vpexpandb %xmm1, %xmm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    vpexpandb %xmm0, %xmm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    retq
+;
+; ZEN5_DEFAULT-LABEL: no_break_expandb_rrz_128:
+; ZEN5_DEFAULT:       # %bb.0:
+; ZEN5_DEFAULT-NEXT:    kmovd %edi, %k1
+; ZEN5_DEFAULT-NEXT:    vpexpandb %xmm1, %xmm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    vpexpandb %xmm0, %xmm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    retq
+;
+; ZEN5_DISABLE-LABEL: no_break_expandb_rrz_128:
+; ZEN5_DISABLE:       # %bb.0:
+; ZEN5_DISABLE-NEXT:    kmovd %edi, %k1
+; ZEN5_DISABLE-NEXT:    vpexpandb %xmm1, %xmm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    vpexpandb %xmm0, %xmm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    retq
+;
+; ZEN6-LABEL: no_break_expandb_rrz_128:
+; ZEN6:       # %bb.0:
+; ZEN6-NEXT:    kmovd %edi, %k1
+; ZEN6-NEXT:    vpexpandb %xmm1, %xmm0 {%k1} {z}
+; ZEN6-NEXT:    vpexpandb %xmm0, %xmm0 {%k1} {z}
+; ZEN6-NEXT:    retq
+;
+; SKX-LABEL: no_break_expandb_rrz_128:
+; SKX:       # %bb.0:
+; SKX-NEXT:    kmovd %edi, %k1
+; SKX-NEXT:    vpexpandb %xmm1, %xmm0 {%k1} {z}
+; SKX-NEXT:    vpexpandb %xmm0, %xmm0 {%k1} {z}
+; SKX-NEXT:    retq
+;
+; ICL-LABEL: no_break_expandb_rrz_128:
+; ICL:       # %bb.0:
+; ICL-NEXT:    kmovd %edi, %k1
+; ICL-NEXT:    vpexpandb %xmm1, %xmm0 {%k1} {z}
+; ICL-NEXT:    vpexpandb %xmm0, %xmm0 {%k1} {z}
+; ICL-NEXT:    retq
+;
+; SPR-LABEL: no_break_expandb_rrz_128:
+; SPR:       # %bb.0:
+; SPR-NEXT:    kmovd %edi, %k1
+; SPR-NEXT:    vpexpandb %xmm1, %xmm0 {%k1} {z}
+; SPR-NEXT:    vpexpandb %xmm0, %xmm0 {%k1} {z}
+; SPR-NEXT:    retq
+;
+; EMR-LABEL: no_break_expandb_rrz_128:
+; EMR:       # %bb.0:
+; EMR-NEXT:    kmovd %edi, %k1
+; EMR-NEXT:    vpexpandb %xmm1, %xmm0 {%k1} {z}
+; EMR-NEXT:    vpexpandb %xmm0, %xmm0 {%k1} {z}
+; EMR-NEXT:    retq
+;
+; GNR-LABEL: no_break_expandb_rrz_128:
+; GNR:       # %bb.0:
+; GNR-NEXT:    kmovd %edi, %k1
+; GNR-NEXT:    vpexpandb %xmm1, %xmm0 {%k1} {z}
+; GNR-NEXT:    vpexpandb %xmm0, %xmm0 {%k1} {z}
+; GNR-NEXT:    retq
+  %1 = bitcast i16 %a1 to <16 x i1>
+  %2 = call <16 x i8> @llvm.x86.avx512.mask.expand.v16i8(<16 x i8> %a0, <16 x i8> zeroinitializer, <16 x i1> %1)
+  %3 = call <16 x i8> @llvm.x86.avx512.mask.expand.v16i8(<16 x i8> %2, <16 x i8> zeroinitializer, <16 x i1> %1)
+  ret <16 x i8> %3
+}
+
+define <32 x i8> @no_break_expandb_rrz_256(<32 x i8> %dummy, <32 x i8> %a0, i32 %a1) "target-features"="+avx512vbmi2" {
+; X86_64_V4_DEFAULT-LABEL: no_break_expandb_rrz_256:
+; X86_64_V4_DEFAULT:       # %bb.0:
+; X86_64_V4_DEFAULT-NEXT:    kmovd %edi, %k1
+; X86_64_V4_DEFAULT-NEXT:    vpexpandb %ymm1, %ymm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    vpexpandb %ymm0, %ymm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    retq
+;
+; X86_64_V4_ENABLE-LABEL: no_break_expandb_rrz_256:
+; X86_64_V4_ENABLE:       # %bb.0:
+; X86_64_V4_ENABLE-NEXT:    kmovd %edi, %k1
+; X86_64_V4_ENABLE-NEXT:    vpexpandb %ymm1, %ymm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    vpexpandb %ymm0, %ymm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    retq
+;
+; ZEN4_DEFAULT-LABEL: no_break_expandb_rrz_256:
+; ZEN4_DEFAULT:       # %bb.0:
+; ZEN4_DEFAULT-NEXT:    kmovd %edi, %k1
+; ZEN4_DEFAULT-NEXT:    vpexpandb %ymm1, %ymm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    vpexpandb %ymm0, %ymm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    retq
+;
+; ZEN4_DISABLE-LABEL: no_break_expandb_rrz_256:
+; ZEN4_DISABLE:       # %bb.0:
+; ZEN4_DISABLE-NEXT:    kmovd %edi, %k1
+; ZEN4_DISABLE-NEXT:    vpexpandb %ymm1, %ymm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    vpexpandb %ymm0, %ymm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    retq
+;
+; ZEN5_DEFAULT-LABEL: no_break_expandb_rrz_256:
+; ZEN5_DEFAULT:       # %bb.0:
+; ZEN5_DEFAULT-NEXT:    kmovd %edi, %k1
+; ZEN5_DEFAULT-NEXT:    vpexpandb %ymm1, %ymm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    vpexpandb %ymm0, %ymm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    retq
+;
+; ZEN5_DISABLE-LABEL: no_break_expandb_rrz_256:
+; ZEN5_DISABLE:       # %bb.0:
+; ZEN5_DISABLE-NEXT:    kmovd %edi, %k1
+; ZEN5_DISABLE-NEXT:    vpexpandb %ymm1, %ymm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    vpexpandb %ymm0, %ymm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    retq
+;
+; ZEN6-LABEL: no_break_expandb_rrz_256:
+; ZEN6:       # %bb.0:
+; ZEN6-NEXT:    kmovd %edi, %k1
+; ZEN6-NEXT:    vpexpandb %ymm1, %ymm0 {%k1} {z}
+; ZEN6-NEXT:    vpexpandb %ymm0, %ymm0 {%k1} {z}
+; ZEN6-NEXT:    retq
+;
+; SKX-LABEL: no_break_expandb_rrz_256:
+; SKX:       # %bb.0:
+; SKX-NEXT:    kmovd %edi, %k1
+; SKX-NEXT:    vpexpandb %ymm1, %ymm0 {%k1} {z}
+; SKX-NEXT:    vpexpandb %ymm0, %ymm0 {%k1} {z}
+; SKX-NEXT:    retq
+;
+; ICL-LABEL: no_break_expandb_rrz_256:
+; ICL:       # %bb.0:
+; ICL-NEXT:    kmovd %edi, %k1
+; ICL-NEXT:    vpexpandb %ymm1, %ymm0 {%k1} {z}
+; ICL-NEXT:    vpexpandb %ymm0, %ymm0 {%k1} {z}
+; ICL-NEXT:    retq
+;
+; SPR-LABEL: no_break_expandb_rrz_256:
+; SPR:       # %bb.0:
+; SPR-NEXT:    kmovd %edi, %k1
+; SPR-NEXT:    vpexpandb %ymm1, %ymm0 {%k1} {z}
+; SPR-NEXT:    vpexpandb %ymm0, %ymm0 {%k1} {z}
+; SPR-NEXT:    retq
+;
+; EMR-LABEL: no_break_expandb_rrz_256:
+; EMR:       # %bb.0:
+; EMR-NEXT:    kmovd %edi, %k1
+; EMR-NEXT:    vpexpandb %ymm1, %ymm0 {%k1} {z}
+; EMR-NEXT:    vpexpandb %ymm0, %ymm0 {%k1} {z}
+; EMR-NEXT:    retq
+;
+; GNR-LABEL: no_break_expandb_rrz_256:
+; GNR:       # %bb.0:
+; GNR-NEXT:    kmovd %edi, %k1
+; GNR-NEXT:    vpexpandb %ymm1, %ymm0 {%k1} {z}
+; GNR-NEXT:    vpexpandb %ymm0, %ymm0 {%k1} {z}
+; GNR-NEXT:    retq
+  %1 = bitcast i32 %a1 to <32 x i1>
+  %2 = call <32 x i8> @llvm.x86.avx512.mask.expand.v32i8(<32 x i8> %a0, <32 x i8> zeroinitializer, <32 x i1> %1)
+  %3 = call <32 x i8> @llvm.x86.avx512.mask.expand.v32i8(<32 x i8> %2, <32 x i8> zeroinitializer, <32 x i1> %1)
+  ret <32 x i8> %3
+}
+
+define <64 x i8> @no_break_expandb_rrz_512(<64 x i8> %dummy, <64 x i8> %a0, i64 %a1) "target-features"="+avx512vbmi2" {
+; X86_64_V4_DEFAULT-LABEL: no_break_expandb_rrz_512:
+; X86_64_V4_DEFAULT:       # %bb.0:
+; X86_64_V4_DEFAULT-NEXT:    kmovq %rdi, %k1
+; X86_64_V4_DEFAULT-NEXT:    vpexpandb %zmm1, %zmm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    vpexpandb %zmm0, %zmm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    retq
+;
+; X86_64_V4_ENABLE-LABEL: no_break_expandb_rrz_512:
+; X86_64_V4_ENABLE:       # %bb.0:
+; X86_64_V4_ENABLE-NEXT:    kmovq %rdi, %k1
+; X86_64_V4_ENABLE-NEXT:    vpexpandb %zmm1, %zmm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    vpexpandb %zmm0, %zmm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    retq
+;
+; ZEN4_DEFAULT-LABEL: no_break_expandb_rrz_512:
+; ZEN4_DEFAULT:       # %bb.0:
+; ZEN4_DEFAULT-NEXT:    kmovq %rdi, %k1
+; ZEN4_DEFAULT-NEXT:    vpexpandb %zmm1, %zmm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    vpexpandb %zmm0, %zmm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    retq
+;
+; ZEN4_DISABLE-LABEL: no_break_expandb_rrz_512:
+; ZEN4_DISABLE:       # %bb.0:
+; ZEN4_DISABLE-NEXT:    kmovq %rdi, %k1
+; ZEN4_DISABLE-NEXT:    vpexpandb %zmm1, %zmm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    vpexpandb %zmm0, %zmm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    retq
+;
+; ZEN5_DEFAULT-LABEL: no_break_expandb_rrz_512:
+; ZEN5_DEFAULT:       # %bb.0:
+; ZEN5_DEFAULT-NEXT:    kmovq %rdi, %k1
+; ZEN5_DEFAULT-NEXT:    vpexpandb %zmm1, %zmm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    vpexpandb %zmm0, %zmm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    retq
+;
+; ZEN5_DISABLE-LABEL: no_break_expandb_rrz_512:
+; ZEN5_DISABLE:       # %bb.0:
+; ZEN5_DISABLE-NEXT:    kmovq %rdi, %k1
+; ZEN5_DISABLE-NEXT:    vpexpandb %zmm1, %zmm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    vpexpandb %zmm0, %zmm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    retq
+;
+; ZEN6-LABEL: no_break_expandb_rrz_512:
+; ZEN6:       # %bb.0:
+; ZEN6-NEXT:    kmovq %rdi, %k1
+; ZEN6-NEXT:    vpexpandb %zmm1, %zmm0 {%k1} {z}
+; ZEN6-NEXT:    vpexpandb %zmm0, %zmm0 {%k1} {z}
+; ZEN6-NEXT:    retq
+;
+; SKX-LABEL: no_break_expandb_rrz_512:
+; SKX:       # %bb.0:
+; SKX-NEXT:    kmovq %rdi, %k1
+; SKX-NEXT:    vpexpandb %zmm1, %zmm0 {%k1} {z}
+; SKX-NEXT:    vpexpandb %zmm0, %zmm0 {%k1} {z}
+; SKX-NEXT:    retq
+;
+; ICL-LABEL: no_break_expandb_rrz_512:
+; ICL:       # %bb.0:
+; ICL-NEXT:    kmovq %rdi, %k1
+; ICL-NEXT:    vpexpandb %zmm1, %zmm0 {%k1} {z}
+; ICL-NEXT:    vpexpandb %zmm0, %zmm0 {%k1} {z}
+; ICL-NEXT:    retq
+;
+; SPR-LABEL: no_break_expandb_rrz_512:
+; SPR:       # %bb.0:
+; SPR-NEXT:    kmovq %rdi, %k1
+; SPR-NEXT:    vpexpandb %zmm1, %zmm0 {%k1} {z}
+; SPR-NEXT:    vpexpandb %zmm0, %zmm0 {%k1} {z}
+; SPR-NEXT:    retq
+;
+; EMR-LABEL: no_break_expandb_rrz_512:
+; EMR:       # %bb.0:
+; EMR-NEXT:    kmovq %rdi, %k1
+; EMR-NEXT:    vpexpandb %zmm1, %zmm0 {%k1} {z}
+; EMR-NEXT:    vpexpandb %zmm0, %zmm0 {%k1} {z}
+; EMR-NEXT:    retq
+;
+; GNR-LABEL: no_break_expandb_rrz_512:
+; GNR:       # %bb.0:
+; GNR-NEXT:    kmovq %rdi, %k1
+; GNR-NEXT:    vpexpandb %zmm1, %zmm0 {%k1} {z}
+; GNR-NEXT:    vpexpandb %zmm0, %zmm0 {%k1} {z}
+; GNR-NEXT:    retq
+  %1 = bitcast i64 %a1 to <64 x i1>
+  %2 = call <64 x i8> @llvm.x86.avx512.mask.expand.v64i8(<64 x i8> %a0, <64 x i8> zeroinitializer, <64 x i1> %1)
+  %3 = call <64 x i8> @llvm.x86.avx512.mask.expand.v64i8(<64 x i8> %2, <64 x i8> zeroinitializer, <64 x i1> %1)
+  ret <64 x i8> %3
+}
+
+
+define <8 x i16> @no_break_expandw_rrz_128(<8 x i16> %dummy, <8 x i16> %a0, i8 %a1) "target-features"="+avx512vbmi2" {
+; X86_64_V4_DEFAULT-LABEL: no_break_expandw_rrz_128:
+; X86_64_V4_DEFAULT:       # %bb.0:
+; X86_64_V4_DEFAULT-NEXT:    kmovd %edi, %k1
+; X86_64_V4_DEFAULT-NEXT:    vpexpandw %xmm1, %xmm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    vpexpandw %xmm0, %xmm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    retq
+;
+; X86_64_V4_ENABLE-LABEL: no_break_expandw_rrz_128:
+; X86_64_V4_ENABLE:       # %bb.0:
+; X86_64_V4_ENABLE-NEXT:    kmovd %edi, %k1
+; X86_64_V4_ENABLE-NEXT:    vpexpandw %xmm1, %xmm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    vpexpandw %xmm0, %xmm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    retq
+;
+; ZEN4_DEFAULT-LABEL: no_break_expandw_rrz_128:
+; ZEN4_DEFAULT:       # %bb.0:
+; ZEN4_DEFAULT-NEXT:    kmovd %edi, %k1
+; ZEN4_DEFAULT-NEXT:    vpexpandw %xmm1, %xmm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    vpexpandw %xmm0, %xmm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    retq
+;
+; ZEN4_DISABLE-LABEL: no_break_expandw_rrz_128:
+; ZEN4_DISABLE:       # %bb.0:
+; ZEN4_DISABLE-NEXT:    kmovd %edi, %k1
+; ZEN4_DISABLE-NEXT:    vpexpandw %xmm1, %xmm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    vpexpandw %xmm0, %xmm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    retq
+;
+; ZEN5_DEFAULT-LABEL: no_break_expandw_rrz_128:
+; ZEN5_DEFAULT:       # %bb.0:
+; ZEN5_DEFAULT-NEXT:    kmovd %edi, %k1
+; ZEN5_DEFAULT-NEXT:    vpexpandw %xmm1, %xmm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    vpexpandw %xmm0, %xmm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    retq
+;
+; ZEN5_DISABLE-LABEL: no_break_expandw_rrz_128:
+; ZEN5_DISABLE:       # %bb.0:
+; ZEN5_DISABLE-NEXT:    kmovd %edi, %k1
+; ZEN5_DISABLE-NEXT:    vpexpandw %xmm1, %xmm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    vpexpandw %xmm0, %xmm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    retq
+;
+; ZEN6-LABEL: no_break_expandw_rrz_128:
+; ZEN6:       # %bb.0:
+; ZEN6-NEXT:    kmovd %edi, %k1
+; ZEN6-NEXT:    vpexpandw %xmm1, %xmm0 {%k1} {z}
+; ZEN6-NEXT:    vpexpandw %xmm0, %xmm0 {%k1} {z}
+; ZEN6-NEXT:    retq
+;
+; SKX-LABEL: no_break_expandw_rrz_128:
+; SKX:       # %bb.0:
+; SKX-NEXT:    kmovd %edi, %k1
+; SKX-NEXT:    vpexpandw %xmm1, %xmm0 {%k1} {z}
+; SKX-NEXT:    vpexpandw %xmm0, %xmm0 {%k1} {z}
+; SKX-NEXT:    retq
+;
+; ICL-LABEL: no_break_expandw_rrz_128:
+; ICL:       # %bb.0:
+; ICL-NEXT:    kmovd %edi, %k1
+; ICL-NEXT:    vpexpandw %xmm1, %xmm0 {%k1} {z}
+; ICL-NEXT:    vpexpandw %xmm0, %xmm0 {%k1} {z}
+; ICL-NEXT:    retq
+;
+; SPR-LABEL: no_break_expandw_rrz_128:
+; SPR:       # %bb.0:
+; SPR-NEXT:    kmovd %edi, %k1
+; SPR-NEXT:    vpexpandw %xmm1, %xmm0 {%k1} {z}
+; SPR-NEXT:    vpexpandw %xmm0, %xmm0 {%k1} {z}
+; SPR-NEXT:    retq
+;
+; EMR-LABEL: no_break_expandw_rrz_128:
+; EMR:       # %bb.0:
+; EMR-NEXT:    kmovd %edi, %k1
+; EMR-NEXT:    vpexpandw %xmm1, %xmm0 {%k1} {z}
+; EMR-NEXT:    vpexpandw %xmm0, %xmm0 {%k1} {z}
+; EMR-NEXT:    retq
+;
+; GNR-LABEL: no_break_expandw_rrz_128:
+; GNR:       # %bb.0:
+; GNR-NEXT:    kmovd %edi, %k1
+; GNR-NEXT:    vpexpandw %xmm1, %xmm0 {%k1} {z}
+; GNR-NEXT:    vpexpandw %xmm0, %xmm0 {%k1} {z}
+; GNR-NEXT:    retq
+  %1 = bitcast i8 %a1 to <8 x i1>
+  %2 = call <8 x i16> @llvm.x86.avx512.mask.expand.v8i16(<8 x i16> %a0, <8 x i16> zeroinitializer, <8 x i1> %1)
+  %3 = call <8 x i16> @llvm.x86.avx512.mask.expand.v8i16(<8 x i16> %2, <8 x i16> zeroinitializer, <8 x i1> %1)
+  ret <8 x i16> %3
+}
+
+define <16 x i16> @no_break_expandw_rrz_256(<16 x i16> %dummy, <16 x i16> %a0, i16 %a1) "target-features"="+avx512vbmi2" {
+; X86_64_V4_DEFAULT-LABEL: no_break_expandw_rrz_256:
+; X86_64_V4_DEFAULT:       # %bb.0:
+; X86_64_V4_DEFAULT-NEXT:    kmovd %edi, %k1
+; X86_64_V4_DEFAULT-NEXT:    vpexpandw %ymm1, %ymm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    vpexpandw %ymm0, %ymm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    retq
+;
+; X86_64_V4_ENABLE-LABEL: no_break_expandw_rrz_256:
+; X86_64_V4_ENABLE:       # %bb.0:
+; X86_64_V4_ENABLE-NEXT:    kmovd %edi, %k1
+; X86_64_V4_ENABLE-NEXT:    vpexpandw %ymm1, %ymm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    vpexpandw %ymm0, %ymm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    retq
+;
+; ZEN4_DEFAULT-LABEL: no_break_expandw_rrz_256:
+; ZEN4_DEFAULT:       # %bb.0:
+; ZEN4_DEFAULT-NEXT:    kmovd %edi, %k1
+; ZEN4_DEFAULT-NEXT:    vpexpandw %ymm1, %ymm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    vpexpandw %ymm0, %ymm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    retq
+;
+; ZEN4_DISABLE-LABEL: no_break_expandw_rrz_256:
+; ZEN4_DISABLE:       # %bb.0:
+; ZEN4_DISABLE-NEXT:    kmovd %edi, %k1
+; ZEN4_DISABLE-NEXT:    vpexpandw %ymm1, %ymm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    vpexpandw %ymm0, %ymm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    retq
+;
+; ZEN5_DEFAULT-LABEL: no_break_expandw_rrz_256:
+; ZEN5_DEFAULT:       # %bb.0:
+; ZEN5_DEFAULT-NEXT:    kmovd %edi, %k1
+; ZEN5_DEFAULT-NEXT:    vpexpandw %ymm1, %ymm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    vpexpandw %ymm0, %ymm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    retq
+;
+; ZEN5_DISABLE-LABEL: no_break_expandw_rrz_256:
+; ZEN5_DISABLE:       # %bb.0:
+; ZEN5_DISABLE-NEXT:    kmovd %edi, %k1
+; ZEN5_DISABLE-NEXT:    vpexpandw %ymm1, %ymm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    vpexpandw %ymm0, %ymm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    retq
+;
+; ZEN6-LABEL: no_break_expandw_rrz_256:
+; ZEN6:       # %bb.0:
+; ZEN6-NEXT:    kmovd %edi, %k1
+; ZEN6-NEXT:    vpexpandw %ymm1, %ymm0 {%k1} {z}
+; ZEN6-NEXT:    vpexpandw %ymm0, %ymm0 {%k1} {z}
+; ZEN6-NEXT:    retq
+;
+; SKX-LABEL: no_break_expandw_rrz_256:
+; SKX:       # %bb.0:
+; SKX-NEXT:    kmovd %edi, %k1
+; SKX-NEXT:    vpexpandw %ymm1, %ymm0 {%k1} {z}
+; SKX-NEXT:    vpexpandw %ymm0, %ymm0 {%k1} {z}
+; SKX-NEXT:    retq
+;
+; ICL-LABEL: no_break_expandw_rrz_256:
+; ICL:       # %bb.0:
+; ICL-NEXT:    kmovd %edi, %k1
+; ICL-NEXT:    vpexpandw %ymm1, %ymm0 {%k1} {z}
+; ICL-NEXT:    vpexpandw %ymm0, %ymm0 {%k1} {z}
+; ICL-NEXT:    retq
+;
+; SPR-LABEL: no_break_expandw_rrz_256:
+; SPR:       # %bb.0:
+; SPR-NEXT:    kmovd %edi, %k1
+; SPR-NEXT:    vpexpandw %ymm1, %ymm0 {%k1} {z}
+; SPR-NEXT:    vpexpandw %ymm0, %ymm0 {%k1} {z}
+; SPR-NEXT:    retq
+;
+; EMR-LABEL: no_break_expandw_rrz_256:
+; EMR:       # %bb.0:
+; EMR-NEXT:    kmovd %edi, %k1
+; EMR-NEXT:    vpexpandw %ymm1, %ymm0 {%k1} {z}
+; EMR-NEXT:    vpexpandw %ymm0, %ymm0 {%k1} {z}
+; EMR-NEXT:    retq
+;
+; GNR-LABEL: no_break_expandw_rrz_256:
+; GNR:       # %bb.0:
+; GNR-NEXT:    kmovd %edi, %k1
+; GNR-NEXT:    vpexpandw %ymm1, %ymm0 {%k1} {z}
+; GNR-NEXT:    vpexpandw %ymm0, %ymm0 {%k1} {z}
+; GNR-NEXT:    retq
+  %1 = bitcast i16 %a1 to <16 x i1>
+  %2 = call <16 x i16> @llvm.x86.avx512.mask.expand.v16i16(<16 x i16> %a0, <16 x i16> zeroinitializer, <16 x i1> %1)
+  %3 = call <16 x i16> @llvm.x86.avx512.mask.expand.v16i16(<16 x i16> %2, <16 x i16> zeroinitializer, <16 x i1> %1)
+  ret <16 x i16> %3
+}
+
+define <32 x i16> @no_break_expandw_rrz_512(<32 x i16> %dummy, <32 x i16> %a0, i32 %a1) "target-features"="+avx512vbmi2" {
+; X86_64_V4_DEFAULT-LABEL: no_break_expandw_rrz_512:
+; X86_64_V4_DEFAULT:       # %bb.0:
+; X86_64_V4_DEFAULT-NEXT:    kmovd %edi, %k1
+; X86_64_V4_DEFAULT-NEXT:    vpexpandw %zmm1, %zmm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    vpexpandw %zmm0, %zmm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    retq
+;
+; X86_64_V4_ENABLE-LABEL: no_break_expandw_rrz_512:
+; X86_64_V4_ENABLE:       # %bb.0:
+; X86_64_V4_ENABLE-NEXT:    kmovd %edi, %k1
+; X86_64_V4_ENABLE-NEXT:    vpexpandw %zmm1, %zmm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    vpexpandw %zmm0, %zmm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    retq
+;
+; ZEN4_DEFAULT-LABEL: no_break_expandw_rrz_512:
+; ZEN4_DEFAULT:       # %bb.0:
+; ZEN4_DEFAULT-NEXT:    kmovd %edi, %k1
+; ZEN4_DEFAULT-NEXT:    vpexpandw %zmm1, %zmm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    vpexpandw %zmm0, %zmm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    retq
+;
+; ZEN4_DISABLE-LABEL: no_break_expandw_rrz_512:
+; ZEN4_DISABLE:       # %bb.0:
+; ZEN4_DISABLE-NEXT:    kmovd %edi, %k1
+; ZEN4_DISABLE-NEXT:    vpexpandw %zmm1, %zmm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    vpexpandw %zmm0, %zmm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    retq
+;
+; ZEN5_DEFAULT-LABEL: no_break_expandw_rrz_512:
+; ZEN5_DEFAULT:       # %bb.0:
+; ZEN5_DEFAULT-NEXT:    kmovd %edi, %k1
+; ZEN5_DEFAULT-NEXT:    vpexpandw %zmm1, %zmm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    vpexpandw %zmm0, %zmm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    retq
+;
+; ZEN5_DISABLE-LABEL: no_break_expandw_rrz_512:
+; ZEN5_DISABLE:       # %bb.0:
+; ZEN5_DISABLE-NEXT:    kmovd %edi, %k1
+; ZEN5_DISABLE-NEXT:    vpexpandw %zmm1, %zmm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    vpexpandw %zmm0, %zmm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    retq
+;
+; ZEN6-LABEL: no_break_expandw_rrz_512:
+; ZEN6:       # %bb.0:
+; ZEN6-NEXT:    kmovd %edi, %k1
+; ZEN6-NEXT:    vpexpandw %zmm1, %zmm0 {%k1} {z}
+; ZEN6-NEXT:    vpexpandw %zmm0, %zmm0 {%k1} {z}
+; ZEN6-NEXT:    retq
+;
+; SKX-LABEL: no_break_expandw_rrz_512:
+; SKX:       # %bb.0:
+; SKX-NEXT:    kmovd %edi, %k1
+; SKX-NEXT:    vpexpandw %zmm1, %zmm0 {%k1} {z}
+; SKX-NEXT:    vpexpandw %zmm0, %zmm0 {%k1} {z}
+; SKX-NEXT:    retq
+;
+; ICL-LABEL: no_break_expandw_rrz_512:
+; ICL:       # %bb.0:
+; ICL-NEXT:    kmovd %edi, %k1
+; ICL-NEXT:    vpexpandw %zmm1, %zmm0 {%k1} {z}
+; ICL-NEXT:    vpexpandw %zmm0, %zmm0 {%k1} {z}
+; ICL-NEXT:    retq
+;
+; SPR-LABEL: no_break_expandw_rrz_512:
+; SPR:       # %bb.0:
+; SPR-NEXT:    kmovd %edi, %k1
+; SPR-NEXT:    vpexpandw %zmm1, %zmm0 {%k1} {z}
+; SPR-NEXT:    vpexpandw %zmm0, %zmm0 {%k1} {z}
+; SPR-NEXT:    retq
+;
+; EMR-LABEL: no_break_expandw_rrz_512:
+; EMR:       # %bb.0:
+; EMR-NEXT:    kmovd %edi, %k1
+; EMR-NEXT:    vpexpandw %zmm1, %zmm0 {%k1} {z}
+; EMR-NEXT:    vpexpandw %zmm0, %zmm0 {%k1} {z}
+; EMR-NEXT:    retq
+;
+; GNR-LABEL: no_break_expandw_rrz_512:
+; GNR:       # %bb.0:
+; GNR-NEXT:    kmovd %edi, %k1
+; GNR-NEXT:    vpexpandw %zmm1, %zmm0 {%k1} {z}
+; GNR-NEXT:    vpexpandw %zmm0, %zmm0 {%k1} {z}
+; GNR-NEXT:    retq
+  %1 = bitcast i32 %a1 to <32 x i1>
+  %2 = call <32 x i16> @llvm.x86.avx512.mask.expand.v32i16(<32 x i16> %a0, <32 x i16> zeroinitializer, <32 x i1> %1)
+  %3 = call <32 x i16> @llvm.x86.avx512.mask.expand.v32i16(<32 x i16> %2, <32 x i16> zeroinitializer, <32 x i1> %1)
+  ret <32 x i16> %3
+}
+
+
+define <4 x i32> @no_break_expandd_rrz_128(<4 x i32> %dummy, <4 x i32> %a0, i4 %a1) {
+; X86_64_V4_DEFAULT-LABEL: no_break_expandd_rrz_128:
+; X86_64_V4_DEFAULT:       # %bb.0:
+; X86_64_V4_DEFAULT-NEXT:    kmovd %edi, %k1
+; X86_64_V4_DEFAULT-NEXT:    vpexpandd %xmm1, %xmm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    vpexpandd %xmm0, %xmm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    retq
+;
+; X86_64_V4_ENABLE-LABEL: no_break_expandd_rrz_128:
+; X86_64_V4_ENABLE:       # %bb.0:
+; X86_64_V4_ENABLE-NEXT:    kmovd %edi, %k1
+; X86_64_V4_ENABLE-NEXT:    vpexpandd %xmm1, %xmm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    vpexpandd %xmm0, %xmm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    retq
+;
+; ZEN4_DEFAULT-LABEL: no_break_expandd_rrz_128:
+; ZEN4_DEFAULT:       # %bb.0:
+; ZEN4_DEFAULT-NEXT:    kmovd %edi, %k1
+; ZEN4_DEFAULT-NEXT:    vpexpandd %xmm1, %xmm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    vpexpandd %xmm0, %xmm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    retq
+;
+; ZEN4_DISABLE-LABEL: no_break_expandd_rrz_128:
+; ZEN4_DISABLE:       # %bb.0:
+; ZEN4_DISABLE-NEXT:    kmovd %edi, %k1
+; ZEN4_DISABLE-NEXT:    vpexpandd %xmm1, %xmm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    vpexpandd %xmm0, %xmm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    retq
+;
+; ZEN5_DEFAULT-LABEL: no_break_expandd_rrz_128:
+; ZEN5_DEFAULT:       # %bb.0:
+; ZEN5_DEFAULT-NEXT:    kmovd %edi, %k1
+; ZEN5_DEFAULT-NEXT:    vpexpandd %xmm1, %xmm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    vpexpandd %xmm0, %xmm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    retq
+;
+; ZEN5_DISABLE-LABEL: no_break_expandd_rrz_128:
+; ZEN5_DISABLE:       # %bb.0:
+; ZEN5_DISABLE-NEXT:    kmovd %edi, %k1
+; ZEN5_DISABLE-NEXT:    vpexpandd %xmm1, %xmm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    vpexpandd %xmm0, %xmm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    retq
+;
+; ZEN6-LABEL: no_break_expandd_rrz_128:
+; ZEN6:       # %bb.0:
+; ZEN6-NEXT:    kmovd %edi, %k1
+; ZEN6-NEXT:    vpexpandd %xmm1, %xmm0 {%k1} {z}
+; ZEN6-NEXT:    vpexpandd %xmm0, %xmm0 {%k1} {z}
+; ZEN6-NEXT:    retq
+;
+; SKX-LABEL: no_break_expandd_rrz_128:
+; SKX:       # %bb.0:
+; SKX-NEXT:    kmovd %edi, %k1
+; SKX-NEXT:    vpexpandd %xmm1, %xmm0 {%k1} {z}
+; SKX-NEXT:    vpexpandd %xmm0, %xmm0 {%k1} {z}
+; SKX-NEXT:    retq
+;
+; ICL-LABEL: no_break_expandd_rrz_128:
+; ICL:       # %bb.0:
+; ICL-NEXT:    kmovd %edi, %k1
+; ICL-NEXT:    vpexpandd %xmm1, %xmm0 {%k1} {z}
+; ICL-NEXT:    vpexpandd %xmm0, %xmm0 {%k1} {z}
+; ICL-NEXT:    retq
+;
+; SPR-LABEL: no_break_expandd_rrz_128:
+; SPR:       # %bb.0:
+; SPR-NEXT:    kmovd %edi, %k1
+; SPR-NEXT:    vpexpandd %xmm1, %xmm0 {%k1} {z}
+; SPR-NEXT:    vpexpandd %xmm0, %xmm0 {%k1} {z}
+; SPR-NEXT:    retq
+;
+; EMR-LABEL: no_break_expandd_rrz_128:
+; EMR:       # %bb.0:
+; EMR-NEXT:    kmovd %edi, %k1
+; EMR-NEXT:    vpexpandd %xmm1, %xmm0 {%k1} {z}
+; EMR-NEXT:    vpexpandd %xmm0, %xmm0 {%k1} {z}
+; EMR-NEXT:    retq
+;
+; GNR-LABEL: no_break_expandd_rrz_128:
+; GNR:       # %bb.0:
+; GNR-NEXT:    kmovd %edi, %k1
+; GNR-NEXT:    vpexpandd %xmm1, %xmm0 {%k1} {z}
+; GNR-NEXT:    vpexpandd %xmm0, %xmm0 {%k1} {z}
+; GNR-NEXT:    retq
+  %1 = bitcast i4 %a1 to <4 x i1>
+  %2 = call <4 x i32> @llvm.x86.avx512.mask.expand.v4i32(<4 x i32> %a0, <4 x i32> zeroinitializer, <4 x i1> %1)
+  %3 = call <4 x i32> @llvm.x86.avx512.mask.expand.v4i32(<4 x i32> %2, <4 x i32> zeroinitializer, <4 x i1> %1)
+  ret <4 x i32> %3
+}
+
+define <8 x i32> @no_break_expandd_rrz_256(<8 x i32> %dummy, <8 x i32> %a0, i8 %a1) {
+; X86_64_V4_DEFAULT-LABEL: no_break_expandd_rrz_256:
+; X86_64_V4_DEFAULT:       # %bb.0:
+; X86_64_V4_DEFAULT-NEXT:    kmovd %edi, %k1
+; X86_64_V4_DEFAULT-NEXT:    vpexpandd %ymm1, %ymm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    vpexpandd %ymm0, %ymm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    retq
+;
+; X86_64_V4_ENABLE-LABEL: no_break_expandd_rrz_256:
+; X86_64_V4_ENABLE:       # %bb.0:
+; X86_64_V4_ENABLE-NEXT:    kmovd %edi, %k1
+; X86_64_V4_ENABLE-NEXT:    vpexpandd %ymm1, %ymm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    vpexpandd %ymm0, %ymm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    retq
+;
+; ZEN4_DEFAULT-LABEL: no_break_expandd_rrz_256:
+; ZEN4_DEFAULT:       # %bb.0:
+; ZEN4_DEFAULT-NEXT:    kmovd %edi, %k1
+; ZEN4_DEFAULT-NEXT:    vpexpandd %ymm1, %ymm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    vpexpandd %ymm0, %ymm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    retq
+;
+; ZEN4_DISABLE-LABEL: no_break_expandd_rrz_256:
+; ZEN4_DISABLE:       # %bb.0:
+; ZEN4_DISABLE-NEXT:    kmovd %edi, %k1
+; ZEN4_DISABLE-NEXT:    vpexpandd %ymm1, %ymm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    vpexpandd %ymm0, %ymm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    retq
+;
+; ZEN5_DEFAULT-LABEL: no_break_expandd_rrz_256:
+; ZEN5_DEFAULT:       # %bb.0:
+; ZEN5_DEFAULT-NEXT:    kmovd %edi, %k1
+; ZEN5_DEFAULT-NEXT:    vpexpandd %ymm1, %ymm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    vpexpandd %ymm0, %ymm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    retq
+;
+; ZEN5_DISABLE-LABEL: no_break_expandd_rrz_256:
+; ZEN5_DISABLE:       # %bb.0:
+; ZEN5_DISABLE-NEXT:    kmovd %edi, %k1
+; ZEN5_DISABLE-NEXT:    vpexpandd %ymm1, %ymm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    vpexpandd %ymm0, %ymm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    retq
+;
+; ZEN6-LABEL: no_break_expandd_rrz_256:
+; ZEN6:       # %bb.0:
+; ZEN6-NEXT:    kmovd %edi, %k1
+; ZEN6-NEXT:    vpexpandd %ymm1, %ymm0 {%k1} {z}
+; ZEN6-NEXT:    vpexpandd %ymm0, %ymm0 {%k1} {z}
+; ZEN6-NEXT:    retq
+;
+; SKX-LABEL: no_break_expandd_rrz_256:
+; SKX:       # %bb.0:
+; SKX-NEXT:    kmovd %edi, %k1
+; SKX-NEXT:    vpexpandd %ymm1, %ymm0 {%k1} {z}
+; SKX-NEXT:    vpexpandd %ymm0, %ymm0 {%k1} {z}
+; SKX-NEXT:    retq
+;
+; ICL-LABEL: no_break_expandd_rrz_256:
+; ICL:       # %bb.0:
+; ICL-NEXT:    kmovd %edi, %k1
+; ICL-NEXT:    vpexpandd %ymm1, %ymm0 {%k1} {z}
+; ICL-NEXT:    vpexpandd %ymm0, %ymm0 {%k1} {z}
+; ICL-NEXT:    retq
+;
+; SPR-LABEL: no_break_expandd_rrz_256:
+; SPR:       # %bb.0:
+; SPR-NEXT:    kmovd %edi, %k1
+; SPR-NEXT:    vpexpandd %ymm1, %ymm0 {%k1} {z}
+; SPR-NEXT:    vpexpandd %ymm0, %ymm0 {%k1} {z}
+; SPR-NEXT:    retq
+;
+; EMR-LABEL: no_break_expandd_rrz_256:
+; EMR:       # %bb.0:
+; EMR-NEXT:    kmovd %edi, %k1
+; EMR-NEXT:    vpexpandd %ymm1, %ymm0 {%k1} {z}
+; EMR-NEXT:    vpexpandd %ymm0, %ymm0 {%k1} {z}
+; EMR-NEXT:    retq
+;
+; GNR-LABEL: no_break_expandd_rrz_256:
+; GNR:       # %bb.0:
+; GNR-NEXT:    kmovd %edi, %k1
+; GNR-NEXT:    vpexpandd %ymm1, %ymm0 {%k1} {z}
+; GNR-NEXT:    vpexpandd %ymm0, %ymm0 {%k1} {z}
+; GNR-NEXT:    retq
+  %1 = bitcast i8 %a1 to <8 x i1>
+  %2 = call <8 x i32> @llvm.x86.avx512.mask.expand.v8i32(<8 x i32> %a0, <8 x i32> zeroinitializer, <8 x i1> %1)
+  %3 = call <8 x i32> @llvm.x86.avx512.mask.expand.v8i32(<8 x i32> %2, <8 x i32> zeroinitializer, <8 x i1> %1)
+  ret <8 x i32> %3
+}
+
+define <16 x i32> @no_break_expandd_rrz_512(<16 x i32> %dummy, <16 x i32> %a0, i16 %a1) {
+; X86_64_V4_DEFAULT-LABEL: no_break_expandd_rrz_512:
+; X86_64_V4_DEFAULT:       # %bb.0:
+; X86_64_V4_DEFAULT-NEXT:    kmovd %edi, %k1
+; X86_64_V4_DEFAULT-NEXT:    vpexpandd %zmm1, %zmm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    vpexpandd %zmm0, %zmm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    retq
+;
+; X86_64_V4_ENABLE-LABEL: no_break_expandd_rrz_512:
+; X86_64_V4_ENABLE:       # %bb.0:
+; X86_64_V4_ENABLE-NEXT:    kmovd %edi, %k1
+; X86_64_V4_ENABLE-NEXT:    vpexpandd %zmm1, %zmm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    vpexpandd %zmm0, %zmm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    retq
+;
+; ZEN4_DEFAULT-LABEL: no_break_expandd_rrz_512:
+; ZEN4_DEFAULT:       # %bb.0:
+; ZEN4_DEFAULT-NEXT:    kmovd %edi, %k1
+; ZEN4_DEFAULT-NEXT:    vpexpandd %zmm1, %zmm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    vpexpandd %zmm0, %zmm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    retq
+;
+; ZEN4_DISABLE-LABEL: no_break_expandd_rrz_512:
+; ZEN4_DISABLE:       # %bb.0:
+; ZEN4_DISABLE-NEXT:    kmovd %edi, %k1
+; ZEN4_DISABLE-NEXT:    vpexpandd %zmm1, %zmm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    vpexpandd %zmm0, %zmm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    retq
+;
+; ZEN5_DEFAULT-LABEL: no_break_expandd_rrz_512:
+; ZEN5_DEFAULT:       # %bb.0:
+; ZEN5_DEFAULT-NEXT:    kmovd %edi, %k1
+; ZEN5_DEFAULT-NEXT:    vpexpandd %zmm1, %zmm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    vpexpandd %zmm0, %zmm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    retq
+;
+; ZEN5_DISABLE-LABEL: no_break_expandd_rrz_512:
+; ZEN5_DISABLE:       # %bb.0:
+; ZEN5_DISABLE-NEXT:    kmovd %edi, %k1
+; ZEN5_DISABLE-NEXT:    vpexpandd %zmm1, %zmm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    vpexpandd %zmm0, %zmm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    retq
+;
+; ZEN6-LABEL: no_break_expandd_rrz_512:
+; ZEN6:       # %bb.0:
+; ZEN6-NEXT:    kmovd %edi, %k1
+; ZEN6-NEXT:    vpexpandd %zmm1, %zmm0 {%k1} {z}
+; ZEN6-NEXT:    vpexpandd %zmm0, %zmm0 {%k1} {z}
+; ZEN6-NEXT:    retq
+;
+; SKX-LABEL: no_break_expandd_rrz_512:
+; SKX:       # %bb.0:
+; SKX-NEXT:    kmovd %edi, %k1
+; SKX-NEXT:    vpexpandd %zmm1, %zmm0 {%k1} {z}
+; SKX-NEXT:    vpexpandd %zmm0, %zmm0 {%k1} {z}
+; SKX-NEXT:    retq
+;
+; ICL-LABEL: no_break_expandd_rrz_512:
+; ICL:       # %bb.0:
+; ICL-NEXT:    kmovd %edi, %k1
+; ICL-NEXT:    vpexpandd %zmm1, %zmm0 {%k1} {z}
+; ICL-NEXT:    vpexpandd %zmm0, %zmm0 {%k1} {z}
+; ICL-NEXT:    retq
+;
+; SPR-LABEL: no_break_expandd_rrz_512:
+; SPR:       # %bb.0:
+; SPR-NEXT:    kmovd %edi, %k1
+; SPR-NEXT:    vpexpandd %zmm1, %zmm0 {%k1} {z}
+; SPR-NEXT:    vpexpandd %zmm0, %zmm0 {%k1} {z}
+; SPR-NEXT:    retq
+;
+; EMR-LABEL: no_break_expandd_rrz_512:
+; EMR:       # %bb.0:
+; EMR-NEXT:    kmovd %edi, %k1
+; EMR-NEXT:    vpexpandd %zmm1, %zmm0 {%k1} {z}
+; EMR-NEXT:    vpexpandd %zmm0, %zmm0 {%k1} {z}
+; EMR-NEXT:    retq
+;
+; GNR-LABEL: no_break_expandd_rrz_512:
+; GNR:       # %bb.0:
+; GNR-NEXT:    kmovd %edi, %k1
+; GNR-NEXT:    vpexpandd %zmm1, %zmm0 {%k1} {z}
+; GNR-NEXT:    vpexpandd %zmm0, %zmm0 {%k1} {z}
+; GNR-NEXT:    retq
+  %1 = bitcast i16 %a1 to <16 x i1>
+  %2 = call <16 x i32> @llvm.x86.avx512.mask.expand.v16i32(<16 x i32> %a0, <16 x i32> zeroinitializer, <16 x i1> %1)
+  %3 = call <16 x i32> @llvm.x86.avx512.mask.expand.v16i32(<16 x i32> %2, <16 x i32> zeroinitializer, <16 x i1> %1)
+  ret <16 x i32> %3
+}
+
+
+define <2 x i64> @no_break_expandq_rrz_128(<2 x i64> %dummy, <2 x i64> %a0, i2 %a1) {
+; X86_64_V4_DEFAULT-LABEL: no_break_expandq_rrz_128:
+; X86_64_V4_DEFAULT:       # %bb.0:
+; X86_64_V4_DEFAULT-NEXT:    kmovd %edi, %k1
+; X86_64_V4_DEFAULT-NEXT:    vpexpandq %xmm1, %xmm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    vpexpandq %xmm0, %xmm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    retq
+;
+; X86_64_V4_ENABLE-LABEL: no_break_expandq_rrz_128:
+; X86_64_V4_ENABLE:       # %bb.0:
+; X86_64_V4_ENABLE-NEXT:    kmovd %edi, %k1
+; X86_64_V4_ENABLE-NEXT:    vpexpandq %xmm1, %xmm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    vpexpandq %xmm0, %xmm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    retq
+;
+; ZEN4_DEFAULT-LABEL: no_break_expandq_rrz_128:
+; ZEN4_DEFAULT:       # %bb.0:
+; ZEN4_DEFAULT-NEXT:    kmovd %edi, %k1
+; ZEN4_DEFAULT-NEXT:    vpexpandq %xmm1, %xmm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    vpexpandq %xmm0, %xmm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    retq
+;
+; ZEN4_DISABLE-LABEL: no_break_expandq_rrz_128:
+; ZEN4_DISABLE:       # %bb.0:
+; ZEN4_DISABLE-NEXT:    kmovd %edi, %k1
+; ZEN4_DISABLE-NEXT:    vpexpandq %xmm1, %xmm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    vpexpandq %xmm0, %xmm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    retq
+;
+; ZEN5_DEFAULT-LABEL: no_break_expandq_rrz_128:
+; ZEN5_DEFAULT:       # %bb.0:
+; ZEN5_DEFAULT-NEXT:    kmovd %edi, %k1
+; ZEN5_DEFAULT-NEXT:    vpexpandq %xmm1, %xmm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    vpexpandq %xmm0, %xmm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    retq
+;
+; ZEN5_DISABLE-LABEL: no_break_expandq_rrz_128:
+; ZEN5_DISABLE:       # %bb.0:
+; ZEN5_DISABLE-NEXT:    kmovd %edi, %k1
+; ZEN5_DISABLE-NEXT:    vpexpandq %xmm1, %xmm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    vpexpandq %xmm0, %xmm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    retq
+;
+; ZEN6-LABEL: no_break_expandq_rrz_128:
+; ZEN6:       # %bb.0:
+; ZEN6-NEXT:    kmovd %edi, %k1
+; ZEN6-NEXT:    vpexpandq %xmm1, %xmm0 {%k1} {z}
+; ZEN6-NEXT:    vpexpandq %xmm0, %xmm0 {%k1} {z}
+; ZEN6-NEXT:    retq
+;
+; SKX-LABEL: no_break_expandq_rrz_128:
+; SKX:       # %bb.0:
+; SKX-NEXT:    kmovd %edi, %k1
+; SKX-NEXT:    vpexpandq %xmm1, %xmm0 {%k1} {z}
+; SKX-NEXT:    vpexpandq %xmm0, %xmm0 {%k1} {z}
+; SKX-NEXT:    retq
+;
+; ICL-LABEL: no_break_expandq_rrz_128:
+; ICL:       # %bb.0:
+; ICL-NEXT:    kmovd %edi, %k1
+; ICL-NEXT:    vpexpandq %xmm1, %xmm0 {%k1} {z}
+; ICL-NEXT:    vpexpandq %xmm0, %xmm0 {%k1} {z}
+; ICL-NEXT:    retq
+;
+; SPR-LABEL: no_break_expandq_rrz_128:
+; SPR:       # %bb.0:
+; SPR-NEXT:    kmovd %edi, %k1
+; SPR-NEXT:    vpexpandq %xmm1, %xmm0 {%k1} {z}
+; SPR-NEXT:    vpexpandq %xmm0, %xmm0 {%k1} {z}
+; SPR-NEXT:    retq
+;
+; EMR-LABEL: no_break_expandq_rrz_128:
+; EMR:       # %bb.0:
+; EMR-NEXT:    kmovd %edi, %k1
+; EMR-NEXT:    vpexpandq %xmm1, %xmm0 {%k1} {z}
+; EMR-NEXT:    vpexpandq %xmm0, %xmm0 {%k1} {z}
+; EMR-NEXT:    retq
+;
+; GNR-LABEL: no_break_expandq_rrz_128:
+; GNR:       # %bb.0:
+; GNR-NEXT:    kmovd %edi, %k1
+; GNR-NEXT:    vpexpandq %xmm1, %xmm0 {%k1} {z}
+; GNR-NEXT:    vpexpandq %xmm0, %xmm0 {%k1} {z}
+; GNR-NEXT:    retq
+  %1 = bitcast i2 %a1 to <2 x i1>
+  %2 = call <2 x i64> @llvm.x86.avx512.mask.expand.v2i64(<2 x i64> %a0, <2 x i64> zeroinitializer, <2 x i1> %1)
+  %3 = call <2 x i64> @llvm.x86.avx512.mask.expand.v2i64(<2 x i64> %2, <2 x i64> zeroinitializer, <2 x i1> %1)
+  ret <2 x i64> %3
+}
+
+define <4 x i64> @no_break_expandq_rrz_256(<4 x i64> %dummy, <4 x i64> %a0, i4 %a1) {
+; X86_64_V4_DEFAULT-LABEL: no_break_expandq_rrz_256:
+; X86_64_V4_DEFAULT:       # %bb.0:
+; X86_64_V4_DEFAULT-NEXT:    kmovd %edi, %k1
+; X86_64_V4_DEFAULT-NEXT:    vpexpandq %ymm1, %ymm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    vpexpandq %ymm0, %ymm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    retq
+;
+; X86_64_V4_ENABLE-LABEL: no_break_expandq_rrz_256:
+; X86_64_V4_ENABLE:       # %bb.0:
+; X86_64_V4_ENABLE-NEXT:    kmovd %edi, %k1
+; X86_64_V4_ENABLE-NEXT:    vpexpandq %ymm1, %ymm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    vpexpandq %ymm0, %ymm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    retq
+;
+; ZEN4_DEFAULT-LABEL: no_break_expandq_rrz_256:
+; ZEN4_DEFAULT:       # %bb.0:
+; ZEN4_DEFAULT-NEXT:    kmovd %edi, %k1
+; ZEN4_DEFAULT-NEXT:    vpexpandq %ymm1, %ymm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    vpexpandq %ymm0, %ymm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    retq
+;
+; ZEN4_DISABLE-LABEL: no_break_expandq_rrz_256:
+; ZEN4_DISABLE:       # %bb.0:
+; ZEN4_DISABLE-NEXT:    kmovd %edi, %k1
+; ZEN4_DISABLE-NEXT:    vpexpandq %ymm1, %ymm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    vpexpandq %ymm0, %ymm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    retq
+;
+; ZEN5_DEFAULT-LABEL: no_break_expandq_rrz_256:
+; ZEN5_DEFAULT:       # %bb.0:
+; ZEN5_DEFAULT-NEXT:    kmovd %edi, %k1
+; ZEN5_DEFAULT-NEXT:    vpexpandq %ymm1, %ymm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    vpexpandq %ymm0, %ymm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    retq
+;
+; ZEN5_DISABLE-LABEL: no_break_expandq_rrz_256:
+; ZEN5_DISABLE:       # %bb.0:
+; ZEN5_DISABLE-NEXT:    kmovd %edi, %k1
+; ZEN5_DISABLE-NEXT:    vpexpandq %ymm1, %ymm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    vpexpandq %ymm0, %ymm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    retq
+;
+; ZEN6-LABEL: no_break_expandq_rrz_256:
+; ZEN6:       # %bb.0:
+; ZEN6-NEXT:    kmovd %edi, %k1
+; ZEN6-NEXT:    vpexpandq %ymm1, %ymm0 {%k1} {z}
+; ZEN6-NEXT:    vpexpandq %ymm0, %ymm0 {%k1} {z}
+; ZEN6-NEXT:    retq
+;
+; SKX-LABEL: no_break_expandq_rrz_256:
+; SKX:       # %bb.0:
+; SKX-NEXT:    kmovd %edi, %k1
+; SKX-NEXT:    vpexpandq %ymm1, %ymm0 {%k1} {z}
+; SKX-NEXT:    vpexpandq %ymm0, %ymm0 {%k1} {z}
+; SKX-NEXT:    retq
+;
+; ICL-LABEL: no_break_expandq_rrz_256:
+; ICL:       # %bb.0:
+; ICL-NEXT:    kmovd %edi, %k1
+; ICL-NEXT:    vpexpandq %ymm1, %ymm0 {%k1} {z}
+; ICL-NEXT:    vpexpandq %ymm0, %ymm0 {%k1} {z}
+; ICL-NEXT:    retq
+;
+; SPR-LABEL: no_break_expandq_rrz_256:
+; SPR:       # %bb.0:
+; SPR-NEXT:    kmovd %edi, %k1
+; SPR-NEXT:    vpexpandq %ymm1, %ymm0 {%k1} {z}
+; SPR-NEXT:    vpexpandq %ymm0, %ymm0 {%k1} {z}
+; SPR-NEXT:    retq
+;
+; EMR-LABEL: no_break_expandq_rrz_256:
+; EMR:       # %bb.0:
+; EMR-NEXT:    kmovd %edi, %k1
+; EMR-NEXT:    vpexpandq %ymm1, %ymm0 {%k1} {z}
+; EMR-NEXT:    vpexpandq %ymm0, %ymm0 {%k1} {z}
+; EMR-NEXT:    retq
+;
+; GNR-LABEL: no_break_expandq_rrz_256:
+; GNR:       # %bb.0:
+; GNR-NEXT:    kmovd %edi, %k1
+; GNR-NEXT:    vpexpandq %ymm1, %ymm0 {%k1} {z}
+; GNR-NEXT:    vpexpandq %ymm0, %ymm0 {%k1} {z}
+; GNR-NEXT:    retq
+  %1 = bitcast i4 %a1 to <4 x i1>
+  %2 = call <4 x i64> @llvm.x86.avx512.mask.expand.v4i64(<4 x i64> %a0, <4 x i64> zeroinitializer, <4 x i1> %1)
+  %3 = call <4 x i64> @llvm.x86.avx512.mask.expand.v4i64(<4 x i64> %2, <4 x i64> zeroinitializer, <4 x i1> %1)
+  ret <4 x i64> %3
+}
+
+define <8 x i64> @no_break_expandq_rrz_512(<8 x i64> %dummy, <8 x i64> %a0, i8 %a1) {
+; X86_64_V4_DEFAULT-LABEL: no_break_expandq_rrz_512:
+; X86_64_V4_DEFAULT:       # %bb.0:
+; X86_64_V4_DEFAULT-NEXT:    kmovd %edi, %k1
+; X86_64_V4_DEFAULT-NEXT:    vpexpandq %zmm1, %zmm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    vpexpandq %zmm0, %zmm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    retq
+;
+; X86_64_V4_ENABLE-LABEL: no_break_expandq_rrz_512:
+; X86_64_V4_ENABLE:       # %bb.0:
+; X86_64_V4_ENABLE-NEXT:    kmovd %edi, %k1
+; X86_64_V4_ENABLE-NEXT:    vpexpandq %zmm1, %zmm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    vpexpandq %zmm0, %zmm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    retq
+;
+; ZEN4_DEFAULT-LABEL: no_break_expandq_rrz_512:
+; ZEN4_DEFAULT:       # %bb.0:
+; ZEN4_DEFAULT-NEXT:    kmovd %edi, %k1
+; ZEN4_DEFAULT-NEXT:    vpexpandq %zmm1, %zmm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    vpexpandq %zmm0, %zmm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    retq
+;
+; ZEN4_DISABLE-LABEL: no_break_expandq_rrz_512:
+; ZEN4_DISABLE:       # %bb.0:
+; ZEN4_DISABLE-NEXT:    kmovd %edi, %k1
+; ZEN4_DISABLE-NEXT:    vpexpandq %zmm1, %zmm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    vpexpandq %zmm0, %zmm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    retq
+;
+; ZEN5_DEFAULT-LABEL: no_break_expandq_rrz_512:
+; ZEN5_DEFAULT:       # %bb.0:
+; ZEN5_DEFAULT-NEXT:    kmovd %edi, %k1
+; ZEN5_DEFAULT-NEXT:    vpexpandq %zmm1, %zmm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    vpexpandq %zmm0, %zmm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    retq
+;
+; ZEN5_DISABLE-LABEL: no_break_expandq_rrz_512:
+; ZEN5_DISABLE:       # %bb.0:
+; ZEN5_DISABLE-NEXT:    kmovd %edi, %k1
+; ZEN5_DISABLE-NEXT:    vpexpandq %zmm1, %zmm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    vpexpandq %zmm0, %zmm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    retq
+;
+; ZEN6-LABEL: no_break_expandq_rrz_512:
+; ZEN6:       # %bb.0:
+; ZEN6-NEXT:    kmovd %edi, %k1
+; ZEN6-NEXT:    vpexpandq %zmm1, %zmm0 {%k1} {z}
+; ZEN6-NEXT:    vpexpandq %zmm0, %zmm0 {%k1} {z}
+; ZEN6-NEXT:    retq
+;
+; SKX-LABEL: no_break_expandq_rrz_512:
+; SKX:       # %bb.0:
+; SKX-NEXT:    kmovd %edi, %k1
+; SKX-NEXT:    vpexpandq %zmm1, %zmm0 {%k1} {z}
+; SKX-NEXT:    vpexpandq %zmm0, %zmm0 {%k1} {z}
+; SKX-NEXT:    retq
+;
+; ICL-LABEL: no_break_expandq_rrz_512:
+; ICL:       # %bb.0:
+; ICL-NEXT:    kmovd %edi, %k1
+; ICL-NEXT:    vpexpandq %zmm1, %zmm0 {%k1} {z}
+; ICL-NEXT:    vpexpandq %zmm0, %zmm0 {%k1} {z}
+; ICL-NEXT:    retq
+;
+; SPR-LABEL: no_break_expandq_rrz_512:
+; SPR:       # %bb.0:
+; SPR-NEXT:    kmovd %edi, %k1
+; SPR-NEXT:    vpexpandq %zmm1, %zmm0 {%k1} {z}
+; SPR-NEXT:    vpexpandq %zmm0, %zmm0 {%k1} {z}
+; SPR-NEXT:    retq
+;
+; EMR-LABEL: no_break_expandq_rrz_512:
+; EMR:       # %bb.0:
+; EMR-NEXT:    kmovd %edi, %k1
+; EMR-NEXT:    vpexpandq %zmm1, %zmm0 {%k1} {z}
+; EMR-NEXT:    vpexpandq %zmm0, %zmm0 {%k1} {z}
+; EMR-NEXT:    retq
+;
+; GNR-LABEL: no_break_expandq_rrz_512:
+; GNR:       # %bb.0:
+; GNR-NEXT:    kmovd %edi, %k1
+; GNR-NEXT:    vpexpandq %zmm1, %zmm0 {%k1} {z}
+; GNR-NEXT:    vpexpandq %zmm0, %zmm0 {%k1} {z}
+; GNR-NEXT:    retq
+  %1 = bitcast i8 %a1 to <8 x i1>
+  %2 = call <8 x i64> @llvm.x86.avx512.mask.expand.v8i64(<8 x i64> %a0, <8 x i64> zeroinitializer, <8 x i1> %1)
+  %3 = call <8 x i64> @llvm.x86.avx512.mask.expand.v8i64(<8 x i64> %2, <8 x i64> zeroinitializer, <8 x i1> %1)
+  ret <8 x i64> %3
+}
+
+
+define <4 x float> @no_break_expandps_rrz_128(<4 x float> %dummy, <4 x float> %a0, i4 %a1) {
+; X86_64_V4_DEFAULT-LABEL: no_break_expandps_rrz_128:
+; X86_64_V4_DEFAULT:       # %bb.0:
+; X86_64_V4_DEFAULT-NEXT:    kmovd %edi, %k1
+; X86_64_V4_DEFAULT-NEXT:    vexpandps %xmm1, %xmm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    vexpandps %xmm0, %xmm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    retq
+;
+; X86_64_V4_ENABLE-LABEL: no_break_expandps_rrz_128:
+; X86_64_V4_ENABLE:       # %bb.0:
+; X86_64_V4_ENABLE-NEXT:    kmovd %edi, %k1
+; X86_64_V4_ENABLE-NEXT:    vexpandps %xmm1, %xmm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    vexpandps %xmm0, %xmm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    retq
+;
+; ZEN4_DEFAULT-LABEL: no_break_expandps_rrz_128:
+; ZEN4_DEFAULT:       # %bb.0:
+; ZEN4_DEFAULT-NEXT:    kmovd %edi, %k1
+; ZEN4_DEFAULT-NEXT:    vexpandps %xmm1, %xmm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    vexpandps %xmm0, %xmm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    retq
+;
+; ZEN4_DISABLE-LABEL: no_break_expandps_rrz_128:
+; ZEN4_DISABLE:       # %bb.0:
+; ZEN4_DISABLE-NEXT:    kmovd %edi, %k1
+; ZEN4_DISABLE-NEXT:    vexpandps %xmm1, %xmm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    vexpandps %xmm0, %xmm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    retq
+;
+; ZEN5_DEFAULT-LABEL: no_break_expandps_rrz_128:
+; ZEN5_DEFAULT:       # %bb.0:
+; ZEN5_DEFAULT-NEXT:    kmovd %edi, %k1
+; ZEN5_DEFAULT-NEXT:    vexpandps %xmm1, %xmm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    vexpandps %xmm0, %xmm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    retq
+;
+; ZEN5_DISABLE-LABEL: no_break_expandps_rrz_128:
+; ZEN5_DISABLE:       # %bb.0:
+; ZEN5_DISABLE-NEXT:    kmovd %edi, %k1
+; ZEN5_DISABLE-NEXT:    vexpandps %xmm1, %xmm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    vexpandps %xmm0, %xmm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    retq
+;
+; ZEN6-LABEL: no_break_expandps_rrz_128:
+; ZEN6:       # %bb.0:
+; ZEN6-NEXT:    kmovd %edi, %k1
+; ZEN6-NEXT:    vexpandps %xmm1, %xmm0 {%k1} {z}
+; ZEN6-NEXT:    vexpandps %xmm0, %xmm0 {%k1} {z}
+; ZEN6-NEXT:    retq
+;
+; SKX-LABEL: no_break_expandps_rrz_128:
+; SKX:       # %bb.0:
+; SKX-NEXT:    kmovd %edi, %k1
+; SKX-NEXT:    vexpandps %xmm1, %xmm0 {%k1} {z}
+; SKX-NEXT:    vexpandps %xmm0, %xmm0 {%k1} {z}
+; SKX-NEXT:    retq
+;
+; ICL-LABEL: no_break_expandps_rrz_128:
+; ICL:       # %bb.0:
+; ICL-NEXT:    kmovd %edi, %k1
+; ICL-NEXT:    vexpandps %xmm1, %xmm0 {%k1} {z}
+; ICL-NEXT:    vexpandps %xmm0, %xmm0 {%k1} {z}
+; ICL-NEXT:    retq
+;
+; SPR-LABEL: no_break_expandps_rrz_128:
+; SPR:       # %bb.0:
+; SPR-NEXT:    kmovd %edi, %k1
+; SPR-NEXT:    vexpandps %xmm1, %xmm0 {%k1} {z}
+; SPR-NEXT:    vexpandps %xmm0, %xmm0 {%k1} {z}
+; SPR-NEXT:    retq
+;
+; EMR-LABEL: no_break_expandps_rrz_128:
+; EMR:       # %bb.0:
+; EMR-NEXT:    kmovd %edi, %k1
+; EMR-NEXT:    vexpandps %xmm1, %xmm0 {%k1} {z}
+; EMR-NEXT:    vexpandps %xmm0, %xmm0 {%k1} {z}
+; EMR-NEXT:    retq
+;
+; GNR-LABEL: no_break_expandps_rrz_128:
+; GNR:       # %bb.0:
+; GNR-NEXT:    kmovd %edi, %k1
+; GNR-NEXT:    vexpandps %xmm1, %xmm0 {%k1} {z}
+; GNR-NEXT:    vexpandps %xmm0, %xmm0 {%k1} {z}
+; GNR-NEXT:    retq
+  %1 = bitcast i4 %a1 to <4 x i1>
+  %2 = call <4 x float> @llvm.x86.avx512.mask.expand.v432(<4 x float> %a0, <4 x float> zeroinitializer, <4 x i1> %1)
+  %3 = call <4 x float> @llvm.x86.avx512.mask.expand.v432(<4 x float> %2, <4 x float> zeroinitializer, <4 x i1> %1)
+  ret <4 x float> %3
+}
+
+define <8 x float> @no_break_expandps_rrz_256(<8 x float> %dummy, <8 x float> %a0, i8 %a1) {
+; X86_64_V4_DEFAULT-LABEL: no_break_expandps_rrz_256:
+; X86_64_V4_DEFAULT:       # %bb.0:
+; X86_64_V4_DEFAULT-NEXT:    kmovd %edi, %k1
+; X86_64_V4_DEFAULT-NEXT:    vexpandps %ymm1, %ymm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    vexpandps %ymm0, %ymm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    retq
+;
+; X86_64_V4_ENABLE-LABEL: no_break_expandps_rrz_256:
+; X86_64_V4_ENABLE:       # %bb.0:
+; X86_64_V4_ENABLE-NEXT:    kmovd %edi, %k1
+; X86_64_V4_ENABLE-NEXT:    vexpandps %ymm1, %ymm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    vexpandps %ymm0, %ymm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    retq
+;
+; ZEN4_DEFAULT-LABEL: no_break_expandps_rrz_256:
+; ZEN4_DEFAULT:       # %bb.0:
+; ZEN4_DEFAULT-NEXT:    kmovd %edi, %k1
+; ZEN4_DEFAULT-NEXT:    vexpandps %ymm1, %ymm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    vexpandps %ymm0, %ymm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    retq
+;
+; ZEN4_DISABLE-LABEL: no_break_expandps_rrz_256:
+; ZEN4_DISABLE:       # %bb.0:
+; ZEN4_DISABLE-NEXT:    kmovd %edi, %k1
+; ZEN4_DISABLE-NEXT:    vexpandps %ymm1, %ymm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    vexpandps %ymm0, %ymm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    retq
+;
+; ZEN5_DEFAULT-LABEL: no_break_expandps_rrz_256:
+; ZEN5_DEFAULT:       # %bb.0:
+; ZEN5_DEFAULT-NEXT:    kmovd %edi, %k1
+; ZEN5_DEFAULT-NEXT:    vexpandps %ymm1, %ymm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    vexpandps %ymm0, %ymm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    retq
+;
+; ZEN5_DISABLE-LABEL: no_break_expandps_rrz_256:
+; ZEN5_DISABLE:       # %bb.0:
+; ZEN5_DISABLE-NEXT:    kmovd %edi, %k1
+; ZEN5_DISABLE-NEXT:    vexpandps %ymm1, %ymm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    vexpandps %ymm0, %ymm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    retq
+;
+; ZEN6-LABEL: no_break_expandps_rrz_256:
+; ZEN6:       # %bb.0:
+; ZEN6-NEXT:    kmovd %edi, %k1
+; ZEN6-NEXT:    vexpandps %ymm1, %ymm0 {%k1} {z}
+; ZEN6-NEXT:    vexpandps %ymm0, %ymm0 {%k1} {z}
+; ZEN6-NEXT:    retq
+;
+; SKX-LABEL: no_break_expandps_rrz_256:
+; SKX:       # %bb.0:
+; SKX-NEXT:    kmovd %edi, %k1
+; SKX-NEXT:    vexpandps %ymm1, %ymm0 {%k1} {z}
+; SKX-NEXT:    vexpandps %ymm0, %ymm0 {%k1} {z}
+; SKX-NEXT:    retq
+;
+; ICL-LABEL: no_break_expandps_rrz_256:
+; ICL:       # %bb.0:
+; ICL-NEXT:    kmovd %edi, %k1
+; ICL-NEXT:    vexpandps %ymm1, %ymm0 {%k1} {z}
+; ICL-NEXT:    vexpandps %ymm0, %ymm0 {%k1} {z}
+; ICL-NEXT:    retq
+;
+; SPR-LABEL: no_break_expandps_rrz_256:
+; SPR:       # %bb.0:
+; SPR-NEXT:    kmovd %edi, %k1
+; SPR-NEXT:    vexpandps %ymm1, %ymm0 {%k1} {z}
+; SPR-NEXT:    vexpandps %ymm0, %ymm0 {%k1} {z}
+; SPR-NEXT:    retq
+;
+; EMR-LABEL: no_break_expandps_rrz_256:
+; EMR:       # %bb.0:
+; EMR-NEXT:    kmovd %edi, %k1
+; EMR-NEXT:    vexpandps %ymm1, %ymm0 {%k1} {z}
+; EMR-NEXT:    vexpandps %ymm0, %ymm0 {%k1} {z}
+; EMR-NEXT:    retq
+;
+; GNR-LABEL: no_break_expandps_rrz_256:
+; GNR:       # %bb.0:
+; GNR-NEXT:    kmovd %edi, %k1
+; GNR-NEXT:    vexpandps %ymm1, %ymm0 {%k1} {z}
+; GNR-NEXT:    vexpandps %ymm0, %ymm0 {%k1} {z}
+; GNR-NEXT:    retq
+  %1 = bitcast i8 %a1 to <8 x i1>
+  %2 = call <8 x float> @llvm.x86.avx512.mask.expand.v8f32(<8 x float> %a0, <8 x float> zeroinitializer, <8 x i1> %1)
+  %3 = call <8 x float> @llvm.x86.avx512.mask.expand.v8f32(<8 x float> %2, <8 x float> zeroinitializer, <8 x i1> %1)
+  ret <8 x float> %3
+}
+
+define <16 x float> @no_break_expandps_rrz_512(<16 x float> %dummy, <16 x float> %a0, i16 %a1) {
+; X86_64_V4_DEFAULT-LABEL: no_break_expandps_rrz_512:
+; X86_64_V4_DEFAULT:       # %bb.0:
+; X86_64_V4_DEFAULT-NEXT:    kmovd %edi, %k1
+; X86_64_V4_DEFAULT-NEXT:    vexpandps %zmm1, %zmm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    vexpandps %zmm0, %zmm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    retq
+;
+; X86_64_V4_ENABLE-LABEL: no_break_expandps_rrz_512:
+; X86_64_V4_ENABLE:       # %bb.0:
+; X86_64_V4_ENABLE-NEXT:    kmovd %edi, %k1
+; X86_64_V4_ENABLE-NEXT:    vexpandps %zmm1, %zmm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    vexpandps %zmm0, %zmm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    retq
+;
+; ZEN4_DEFAULT-LABEL: no_break_expandps_rrz_512:
+; ZEN4_DEFAULT:       # %bb.0:
+; ZEN4_DEFAULT-NEXT:    kmovd %edi, %k1
+; ZEN4_DEFAULT-NEXT:    vexpandps %zmm1, %zmm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    vexpandps %zmm0, %zmm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    retq
+;
+; ZEN4_DISABLE-LABEL: no_break_expandps_rrz_512:
+; ZEN4_DISABLE:       # %bb.0:
+; ZEN4_DISABLE-NEXT:    kmovd %edi, %k1
+; ZEN4_DISABLE-NEXT:    vexpandps %zmm1, %zmm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    vexpandps %zmm0, %zmm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    retq
+;
+; ZEN5_DEFAULT-LABEL: no_break_expandps_rrz_512:
+; ZEN5_DEFAULT:       # %bb.0:
+; ZEN5_DEFAULT-NEXT:    kmovd %edi, %k1
+; ZEN5_DEFAULT-NEXT:    vexpandps %zmm1, %zmm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    vexpandps %zmm0, %zmm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    retq
+;
+; ZEN5_DISABLE-LABEL: no_break_expandps_rrz_512:
+; ZEN5_DISABLE:       # %bb.0:
+; ZEN5_DISABLE-NEXT:    kmovd %edi, %k1
+; ZEN5_DISABLE-NEXT:    vexpandps %zmm1, %zmm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    vexpandps %zmm0, %zmm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    retq
+;
+; ZEN6-LABEL: no_break_expandps_rrz_512:
+; ZEN6:       # %bb.0:
+; ZEN6-NEXT:    kmovd %edi, %k1
+; ZEN6-NEXT:    vexpandps %zmm1, %zmm0 {%k1} {z}
+; ZEN6-NEXT:    vexpandps %zmm0, %zmm0 {%k1} {z}
+; ZEN6-NEXT:    retq
+;
+; SKX-LABEL: no_break_expandps_rrz_512:
+; SKX:       # %bb.0:
+; SKX-NEXT:    kmovd %edi, %k1
+; SKX-NEXT:    vexpandps %zmm1, %zmm0 {%k1} {z}
+; SKX-NEXT:    vexpandps %zmm0, %zmm0 {%k1} {z}
+; SKX-NEXT:    retq
+;
+; ICL-LABEL: no_break_expandps_rrz_512:
+; ICL:       # %bb.0:
+; ICL-NEXT:    kmovd %edi, %k1
+; ICL-NEXT:    vexpandps %zmm1, %zmm0 {%k1} {z}
+; ICL-NEXT:    vexpandps %zmm0, %zmm0 {%k1} {z}
+; ICL-NEXT:    retq
+;
+; SPR-LABEL: no_break_expandps_rrz_512:
+; SPR:       # %bb.0:
+; SPR-NEXT:    kmovd %edi, %k1
+; SPR-NEXT:    vexpandps %zmm1, %zmm0 {%k1} {z}
+; SPR-NEXT:    vexpandps %zmm0, %zmm0 {%k1} {z}
+; SPR-NEXT:    retq
+;
+; EMR-LABEL: no_break_expandps_rrz_512:
+; EMR:       # %bb.0:
+; EMR-NEXT:    kmovd %edi, %k1
+; EMR-NEXT:    vexpandps %zmm1, %zmm0 {%k1} {z}
+; EMR-NEXT:    vexpandps %zmm0, %zmm0 {%k1} {z}
+; EMR-NEXT:    retq
+;
+; GNR-LABEL: no_break_expandps_rrz_512:
+; GNR:       # %bb.0:
+; GNR-NEXT:    kmovd %edi, %k1
+; GNR-NEXT:    vexpandps %zmm1, %zmm0 {%k1} {z}
+; GNR-NEXT:    vexpandps %zmm0, %zmm0 {%k1} {z}
+; GNR-NEXT:    retq
+  %1 = bitcast i16 %a1 to <16 x i1>
+  %2 = call <16 x float> @llvm.x86.avx512.mask.expand.v16f32(<16 x float> %a0, <16 x float> zeroinitializer, <16 x i1> %1)
+  %3 = call <16 x float> @llvm.x86.avx512.mask.expand.v16f32(<16 x float> %2, <16 x float> zeroinitializer, <16 x i1> %1)
+  ret <16 x float> %3
+}
+
+
+define <2 x double> @no_break_expandpd_rrz_128(<2 x double> %dummy, <2 x double> %a0, i2 %a1) {
+; X86_64_V4_DEFAULT-LABEL: no_break_expandpd_rrz_128:
+; X86_64_V4_DEFAULT:       # %bb.0:
+; X86_64_V4_DEFAULT-NEXT:    kmovd %edi, %k1
+; X86_64_V4_DEFAULT-NEXT:    vexpandpd %xmm1, %xmm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    vexpandpd %xmm0, %xmm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    retq
+;
+; X86_64_V4_ENABLE-LABEL: no_break_expandpd_rrz_128:
+; X86_64_V4_ENABLE:       # %bb.0:
+; X86_64_V4_ENABLE-NEXT:    kmovd %edi, %k1
+; X86_64_V4_ENABLE-NEXT:    vexpandpd %xmm1, %xmm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    vexpandpd %xmm0, %xmm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    retq
+;
+; ZEN4_DEFAULT-LABEL: no_break_expandpd_rrz_128:
+; ZEN4_DEFAULT:       # %bb.0:
+; ZEN4_DEFAULT-NEXT:    kmovd %edi, %k1
+; ZEN4_DEFAULT-NEXT:    vexpandpd %xmm1, %xmm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    vexpandpd %xmm0, %xmm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    retq
+;
+; ZEN4_DISABLE-LABEL: no_break_expandpd_rrz_128:
+; ZEN4_DISABLE:       # %bb.0:
+; ZEN4_DISABLE-NEXT:    kmovd %edi, %k1
+; ZEN4_DISABLE-NEXT:    vexpandpd %xmm1, %xmm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    vexpandpd %xmm0, %xmm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    retq
+;
+; ZEN5_DEFAULT-LABEL: no_break_expandpd_rrz_128:
+; ZEN5_DEFAULT:       # %bb.0:
+; ZEN5_DEFAULT-NEXT:    kmovd %edi, %k1
+; ZEN5_DEFAULT-NEXT:    vexpandpd %xmm1, %xmm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    vexpandpd %xmm0, %xmm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    retq
+;
+; ZEN5_DISABLE-LABEL: no_break_expandpd_rrz_128:
+; ZEN5_DISABLE:       # %bb.0:
+; ZEN5_DISABLE-NEXT:    kmovd %edi, %k1
+; ZEN5_DISABLE-NEXT:    vexpandpd %xmm1, %xmm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    vexpandpd %xmm0, %xmm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    retq
+;
+; ZEN6-LABEL: no_break_expandpd_rrz_128:
+; ZEN6:       # %bb.0:
+; ZEN6-NEXT:    kmovd %edi, %k1
+; ZEN6-NEXT:    vexpandpd %xmm1, %xmm0 {%k1} {z}
+; ZEN6-NEXT:    vexpandpd %xmm0, %xmm0 {%k1} {z}
+; ZEN6-NEXT:    retq
+;
+; SKX-LABEL: no_break_expandpd_rrz_128:
+; SKX:       # %bb.0:
+; SKX-NEXT:    kmovd %edi, %k1
+; SKX-NEXT:    vexpandpd %xmm1, %xmm0 {%k1} {z}
+; SKX-NEXT:    vexpandpd %xmm0, %xmm0 {%k1} {z}
+; SKX-NEXT:    retq
+;
+; ICL-LABEL: no_break_expandpd_rrz_128:
+; ICL:       # %bb.0:
+; ICL-NEXT:    kmovd %edi, %k1
+; ICL-NEXT:    vexpandpd %xmm1, %xmm0 {%k1} {z}
+; ICL-NEXT:    vexpandpd %xmm0, %xmm0 {%k1} {z}
+; ICL-NEXT:    retq
+;
+; SPR-LABEL: no_break_expandpd_rrz_128:
+; SPR:       # %bb.0:
+; SPR-NEXT:    kmovd %edi, %k1
+; SPR-NEXT:    vexpandpd %xmm1, %xmm0 {%k1} {z}
+; SPR-NEXT:    vexpandpd %xmm0, %xmm0 {%k1} {z}
+; SPR-NEXT:    retq
+;
+; EMR-LABEL: no_break_expandpd_rrz_128:
+; EMR:       # %bb.0:
+; EMR-NEXT:    kmovd %edi, %k1
+; EMR-NEXT:    vexpandpd %xmm1, %xmm0 {%k1} {z}
+; EMR-NEXT:    vexpandpd %xmm0, %xmm0 {%k1} {z}
+; EMR-NEXT:    retq
+;
+; GNR-LABEL: no_break_expandpd_rrz_128:
+; GNR:       # %bb.0:
+; GNR-NEXT:    kmovd %edi, %k1
+; GNR-NEXT:    vexpandpd %xmm1, %xmm0 {%k1} {z}
+; GNR-NEXT:    vexpandpd %xmm0, %xmm0 {%k1} {z}
+; GNR-NEXT:    retq
+  %1 = bitcast i2 %a1 to <2 x i1>
+  %2 = call <2 x double> @llvm.x86.avx512.mask.expand.v2f64(<2 x double> %a0, <2 x double> zeroinitializer, <2 x i1> %1)
+  %3 = call <2 x double> @llvm.x86.avx512.mask.expand.v2f64(<2 x double> %2, <2 x double> zeroinitializer, <2 x i1> %1)
+  ret <2 x double> %3
+}
+
+define <4 x double> @no_break_expandpd_rrz_256(<4 x double> %dummy, <4 x double> %a0, i4 %a1) {
+; X86_64_V4_DEFAULT-LABEL: no_break_expandpd_rrz_256:
+; X86_64_V4_DEFAULT:       # %bb.0:
+; X86_64_V4_DEFAULT-NEXT:    kmovd %edi, %k1
+; X86_64_V4_DEFAULT-NEXT:    vexpandpd %ymm1, %ymm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    vexpandpd %ymm0, %ymm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    retq
+;
+; X86_64_V4_ENABLE-LABEL: no_break_expandpd_rrz_256:
+; X86_64_V4_ENABLE:       # %bb.0:
+; X86_64_V4_ENABLE-NEXT:    kmovd %edi, %k1
+; X86_64_V4_ENABLE-NEXT:    vexpandpd %ymm1, %ymm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    vexpandpd %ymm0, %ymm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    retq
+;
+; ZEN4_DEFAULT-LABEL: no_break_expandpd_rrz_256:
+; ZEN4_DEFAULT:       # %bb.0:
+; ZEN4_DEFAULT-NEXT:    kmovd %edi, %k1
+; ZEN4_DEFAULT-NEXT:    vexpandpd %ymm1, %ymm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    vexpandpd %ymm0, %ymm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    retq
+;
+; ZEN4_DISABLE-LABEL: no_break_expandpd_rrz_256:
+; ZEN4_DISABLE:       # %bb.0:
+; ZEN4_DISABLE-NEXT:    kmovd %edi, %k1
+; ZEN4_DISABLE-NEXT:    vexpandpd %ymm1, %ymm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    vexpandpd %ymm0, %ymm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    retq
+;
+; ZEN5_DEFAULT-LABEL: no_break_expandpd_rrz_256:
+; ZEN5_DEFAULT:       # %bb.0:
+; ZEN5_DEFAULT-NEXT:    kmovd %edi, %k1
+; ZEN5_DEFAULT-NEXT:    vexpandpd %ymm1, %ymm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    vexpandpd %ymm0, %ymm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    retq
+;
+; ZEN5_DISABLE-LABEL: no_break_expandpd_rrz_256:
+; ZEN5_DISABLE:       # %bb.0:
+; ZEN5_DISABLE-NEXT:    kmovd %edi, %k1
+; ZEN5_DISABLE-NEXT:    vexpandpd %ymm1, %ymm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    vexpandpd %ymm0, %ymm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    retq
+;
+; ZEN6-LABEL: no_break_expandpd_rrz_256:
+; ZEN6:       # %bb.0:
+; ZEN6-NEXT:    kmovd %edi, %k1
+; ZEN6-NEXT:    vexpandpd %ymm1, %ymm0 {%k1} {z}
+; ZEN6-NEXT:    vexpandpd %ymm0, %ymm0 {%k1} {z}
+; ZEN6-NEXT:    retq
+;
+; SKX-LABEL: no_break_expandpd_rrz_256:
+; SKX:       # %bb.0:
+; SKX-NEXT:    kmovd %edi, %k1
+; SKX-NEXT:    vexpandpd %ymm1, %ymm0 {%k1} {z}
+; SKX-NEXT:    vexpandpd %ymm0, %ymm0 {%k1} {z}
+; SKX-NEXT:    retq
+;
+; ICL-LABEL: no_break_expandpd_rrz_256:
+; ICL:       # %bb.0:
+; ICL-NEXT:    kmovd %edi, %k1
+; ICL-NEXT:    vexpandpd %ymm1, %ymm0 {%k1} {z}
+; ICL-NEXT:    vexpandpd %ymm0, %ymm0 {%k1} {z}
+; ICL-NEXT:    retq
+;
+; SPR-LABEL: no_break_expandpd_rrz_256:
+; SPR:       # %bb.0:
+; SPR-NEXT:    kmovd %edi, %k1
+; SPR-NEXT:    vexpandpd %ymm1, %ymm0 {%k1} {z}
+; SPR-NEXT:    vexpandpd %ymm0, %ymm0 {%k1} {z}
+; SPR-NEXT:    retq
+;
+; EMR-LABEL: no_break_expandpd_rrz_256:
+; EMR:       # %bb.0:
+; EMR-NEXT:    kmovd %edi, %k1
+; EMR-NEXT:    vexpandpd %ymm1, %ymm0 {%k1} {z}
+; EMR-NEXT:    vexpandpd %ymm0, %ymm0 {%k1} {z}
+; EMR-NEXT:    retq
+;
+; GNR-LABEL: no_break_expandpd_rrz_256:
+; GNR:       # %bb.0:
+; GNR-NEXT:    kmovd %edi, %k1
+; GNR-NEXT:    vexpandpd %ymm1, %ymm0 {%k1} {z}
+; GNR-NEXT:    vexpandpd %ymm0, %ymm0 {%k1} {z}
+; GNR-NEXT:    retq
+  %1 = bitcast i4 %a1 to <4 x i1>
+  %2 = call <4 x double> @llvm.x86.avx512.mask.expand.v4f64(<4 x double> %a0, <4 x double> zeroinitializer, <4 x i1> %1)
+  %3 = call <4 x double> @llvm.x86.avx512.mask.expand.v4f64(<4 x double> %2, <4 x double> zeroinitializer, <4 x i1> %1)
+  ret <4 x double> %3
+}
+
+define <8 x double> @no_break_expandpd_rrz_512(<8 x double> %dummy, <8 x double> %a0, i8 %a1) {
+; X86_64_V4_DEFAULT-LABEL: no_break_expandpd_rrz_512:
+; X86_64_V4_DEFAULT:       # %bb.0:
+; X86_64_V4_DEFAULT-NEXT:    kmovd %edi, %k1
+; X86_64_V4_DEFAULT-NEXT:    vexpandpd %zmm1, %zmm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    vexpandpd %zmm0, %zmm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    retq
+;
+; X86_64_V4_ENABLE-LABEL: no_break_expandpd_rrz_512:
+; X86_64_V4_ENABLE:       # %bb.0:
+; X86_64_V4_ENABLE-NEXT:    kmovd %edi, %k1
+; X86_64_V4_ENABLE-NEXT:    vexpandpd %zmm1, %zmm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    vexpandpd %zmm0, %zmm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    retq
+;
+; ZEN4_DEFAULT-LABEL: no_break_expandpd_rrz_512:
+; ZEN4_DEFAULT:       # %bb.0:
+; ZEN4_DEFAULT-NEXT:    kmovd %edi, %k1
+; ZEN4_DEFAULT-NEXT:    vexpandpd %zmm1, %zmm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    vexpandpd %zmm0, %zmm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    retq
+;
+; ZEN4_DISABLE-LABEL: no_break_expandpd_rrz_512:
+; ZEN4_DISABLE:       # %bb.0:
+; ZEN4_DISABLE-NEXT:    kmovd %edi, %k1
+; ZEN4_DISABLE-NEXT:    vexpandpd %zmm1, %zmm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    vexpandpd %zmm0, %zmm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    retq
+;
+; ZEN5_DEFAULT-LABEL: no_break_expandpd_rrz_512:
+; ZEN5_DEFAULT:       # %bb.0:
+; ZEN5_DEFAULT-NEXT:    kmovd %edi, %k1
+; ZEN5_DEFAULT-NEXT:    vexpandpd %zmm1, %zmm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    vexpandpd %zmm0, %zmm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    retq
+;
+; ZEN5_DISABLE-LABEL: no_break_expandpd_rrz_512:
+; ZEN5_DISABLE:       # %bb.0:
+; ZEN5_DISABLE-NEXT:    kmovd %edi, %k1
+; ZEN5_DISABLE-NEXT:    vexpandpd %zmm1, %zmm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    vexpandpd %zmm0, %zmm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    retq
+;
+; ZEN6-LABEL: no_break_expandpd_rrz_512:
+; ZEN6:       # %bb.0:
+; ZEN6-NEXT:    kmovd %edi, %k1
+; ZEN6-NEXT:    vexpandpd %zmm1, %zmm0 {%k1} {z}
+; ZEN6-NEXT:    vexpandpd %zmm0, %zmm0 {%k1} {z}
+; ZEN6-NEXT:    retq
+;
+; SKX-LABEL: no_break_expandpd_rrz_512:
+; SKX:       # %bb.0:
+; SKX-NEXT:    kmovd %edi, %k1
+; SKX-NEXT:    vexpandpd %zmm1, %zmm0 {%k1} {z}
+; SKX-NEXT:    vexpandpd %zmm0, %zmm0 {%k1} {z}
+; SKX-NEXT:    retq
+;
+; ICL-LABEL: no_break_expandpd_rrz_512:
+; ICL:       # %bb.0:
+; ICL-NEXT:    kmovd %edi, %k1
+; ICL-NEXT:    vexpandpd %zmm1, %zmm0 {%k1} {z}
+; ICL-NEXT:    vexpandpd %zmm0, %zmm0 {%k1} {z}
+; ICL-NEXT:    retq
+;
+; SPR-LABEL: no_break_expandpd_rrz_512:
+; SPR:       # %bb.0:
+; SPR-NEXT:    kmovd %edi, %k1
+; SPR-NEXT:    vexpandpd %zmm1, %zmm0 {%k1} {z}
+; SPR-NEXT:    vexpandpd %zmm0, %zmm0 {%k1} {z}
+; SPR-NEXT:    retq
+;
+; EMR-LABEL: no_break_expandpd_rrz_512:
+; EMR:       # %bb.0:
+; EMR-NEXT:    kmovd %edi, %k1
+; EMR-NEXT:    vexpandpd %zmm1, %zmm0 {%k1} {z}
+; EMR-NEXT:    vexpandpd %zmm0, %zmm0 {%k1} {z}
+; EMR-NEXT:    retq
+;
+; GNR-LABEL: no_break_expandpd_rrz_512:
+; GNR:       # %bb.0:
+; GNR-NEXT:    kmovd %edi, %k1
+; GNR-NEXT:    vexpandpd %zmm1, %zmm0 {%k1} {z}
+; GNR-NEXT:    vexpandpd %zmm0, %zmm0 {%k1} {z}
+; GNR-NEXT:    retq
+  %1 = bitcast i8 %a1 to <8 x i1>
+  %2 = call <8 x double> @llvm.x86.avx512.mask.expand.v8f64(<8 x double> %a0, <8 x double> zeroinitializer, <8 x i1> %1)
+  %3 = call <8 x double> @llvm.x86.avx512.mask.expand.v8f64(<8 x double> %2, <8 x double> zeroinitializer, <8 x i1> %1)
+  ret <8 x double> %3
+}
+
+
+
+define <16 x i8> @no_break_expandb_rmz_128(ptr %p0, i16 %a1) "target-features"="+avx512vbmi2" {
+; X86_64_V4_DEFAULT-LABEL: no_break_expandb_rmz_128:
+; X86_64_V4_DEFAULT:       # %bb.0:
+; X86_64_V4_DEFAULT-NEXT:    kmovd %esi, %k1
+; X86_64_V4_DEFAULT-NEXT:    vpexpandb (%rdi), %xmm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    retq
+;
+; X86_64_V4_ENABLE-LABEL: no_break_expandb_rmz_128:
+; X86_64_V4_ENABLE:       # %bb.0:
+; X86_64_V4_ENABLE-NEXT:    kmovd %esi, %k1
+; X86_64_V4_ENABLE-NEXT:    vpexpandb (%rdi), %xmm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    retq
+;
+; ZEN4_DEFAULT-LABEL: no_break_expandb_rmz_128:
+; ZEN4_DEFAULT:       # %bb.0:
+; ZEN4_DEFAULT-NEXT:    kmovd %esi, %k1
+; ZEN4_DEFAULT-NEXT:    vpexpandb (%rdi), %xmm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    retq
+;
+; ZEN4_DISABLE-LABEL: no_break_expandb_rmz_128:
+; ZEN4_DISABLE:       # %bb.0:
+; ZEN4_DISABLE-NEXT:    kmovd %esi, %k1
+; ZEN4_DISABLE-NEXT:    vpexpandb (%rdi), %xmm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    retq
+;
+; ZEN5_DEFAULT-LABEL: no_break_expandb_rmz_128:
+; ZEN5_DEFAULT:       # %bb.0:
+; ZEN5_DEFAULT-NEXT:    kmovd %esi, %k1
+; ZEN5_DEFAULT-NEXT:    vpexpandb (%rdi), %xmm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    retq
+;
+; ZEN5_DISABLE-LABEL: no_break_expandb_rmz_128:
+; ZEN5_DISABLE:       # %bb.0:
+; ZEN5_DISABLE-NEXT:    kmovd %esi, %k1
+; ZEN5_DISABLE-NEXT:    vpexpandb (%rdi), %xmm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    retq
+;
+; ZEN6-LABEL: no_break_expandb_rmz_128:
+; ZEN6:       # %bb.0:
+; ZEN6-NEXT:    kmovd %esi, %k1
+; ZEN6-NEXT:    vpexpandb (%rdi), %xmm0 {%k1} {z}
+; ZEN6-NEXT:    retq
+;
+; SKX-LABEL: no_break_expandb_rmz_128:
+; SKX:       # %bb.0:
+; SKX-NEXT:    kmovd %esi, %k1
+; SKX-NEXT:    vpexpandb (%rdi), %xmm0 {%k1} {z}
+; SKX-NEXT:    retq
+;
+; ICL-LABEL: no_break_expandb_rmz_128:
+; ICL:       # %bb.0:
+; ICL-NEXT:    kmovd %esi, %k1
+; ICL-NEXT:    vpexpandb (%rdi), %xmm0 {%k1} {z}
+; ICL-NEXT:    retq
+;
+; SPR-LABEL: no_break_expandb_rmz_128:
+; SPR:       # %bb.0:
+; SPR-NEXT:    kmovd %esi, %k1
+; SPR-NEXT:    vpexpandb (%rdi), %xmm0 {%k1} {z}
+; SPR-NEXT:    retq
+;
+; EMR-LABEL: no_break_expandb_rmz_128:
+; EMR:       # %bb.0:
+; EMR-NEXT:    kmovd %esi, %k1
+; EMR-NEXT:    vpexpandb (%rdi), %xmm0 {%k1} {z}
+; EMR-NEXT:    retq
+;
+; GNR-LABEL: no_break_expandb_rmz_128:
+; GNR:       # %bb.0:
+; GNR-NEXT:    kmovd %esi, %k1
+; GNR-NEXT:    vpexpandb (%rdi), %xmm0 {%k1} {z}
+; GNR-NEXT:    retq
+  %1 = bitcast i16 %a1 to <16 x i1>
+  %2 = call <16 x i8> @llvm.masked.expandload.v16i8.p0(ptr %p0, <16 x i1> %1, <16 x i8> zeroinitializer)
+  ret <16 x i8> %2
+}
+
+define <32 x i8> @no_break_expandb_rmz_256(ptr %p0, i32 %a1) "target-features"="+avx512vbmi2" {
+; X86_64_V4_DEFAULT-LABEL: no_break_expandb_rmz_256:
+; X86_64_V4_DEFAULT:       # %bb.0:
+; X86_64_V4_DEFAULT-NEXT:    kmovd %esi, %k1
+; X86_64_V4_DEFAULT-NEXT:    vpexpandb (%rdi), %ymm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    retq
+;
+; X86_64_V4_ENABLE-LABEL: no_break_expandb_rmz_256:
+; X86_64_V4_ENABLE:       # %bb.0:
+; X86_64_V4_ENABLE-NEXT:    kmovd %esi, %k1
+; X86_64_V4_ENABLE-NEXT:    vpexpandb (%rdi), %ymm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    retq
+;
+; ZEN4_DEFAULT-LABEL: no_break_expandb_rmz_256:
+; ZEN4_DEFAULT:       # %bb.0:
+; ZEN4_DEFAULT-NEXT:    kmovd %esi, %k1
+; ZEN4_DEFAULT-NEXT:    vpexpandb (%rdi), %ymm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    retq
+;
+; ZEN4_DISABLE-LABEL: no_break_expandb_rmz_256:
+; ZEN4_DISABLE:       # %bb.0:
+; ZEN4_DISABLE-NEXT:    kmovd %esi, %k1
+; ZEN4_DISABLE-NEXT:    vpexpandb (%rdi), %ymm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    retq
+;
+; ZEN5_DEFAULT-LABEL: no_break_expandb_rmz_256:
+; ZEN5_DEFAULT:       # %bb.0:
+; ZEN5_DEFAULT-NEXT:    kmovd %esi, %k1
+; ZEN5_DEFAULT-NEXT:    vpexpandb (%rdi), %ymm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    retq
+;
+; ZEN5_DISABLE-LABEL: no_break_expandb_rmz_256:
+; ZEN5_DISABLE:       # %bb.0:
+; ZEN5_DISABLE-NEXT:    kmovd %esi, %k1
+; ZEN5_DISABLE-NEXT:    vpexpandb (%rdi), %ymm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    retq
+;
+; ZEN6-LABEL: no_break_expandb_rmz_256:
+; ZEN6:       # %bb.0:
+; ZEN6-NEXT:    kmovd %esi, %k1
+; ZEN6-NEXT:    vpexpandb (%rdi), %ymm0 {%k1} {z}
+; ZEN6-NEXT:    retq
+;
+; SKX-LABEL: no_break_expandb_rmz_256:
+; SKX:       # %bb.0:
+; SKX-NEXT:    kmovd %esi, %k1
+; SKX-NEXT:    vpexpandb (%rdi), %ymm0 {%k1} {z}
+; SKX-NEXT:    retq
+;
+; ICL-LABEL: no_break_expandb_rmz_256:
+; ICL:       # %bb.0:
+; ICL-NEXT:    kmovd %esi, %k1
+; ICL-NEXT:    vpexpandb (%rdi), %ymm0 {%k1} {z}
+; ICL-NEXT:    retq
+;
+; SPR-LABEL: no_break_expandb_rmz_256:
+; SPR:       # %bb.0:
+; SPR-NEXT:    kmovd %esi, %k1
+; SPR-NEXT:    vpexpandb (%rdi), %ymm0 {%k1} {z}
+; SPR-NEXT:    retq
+;
+; EMR-LABEL: no_break_expandb_rmz_256:
+; EMR:       # %bb.0:
+; EMR-NEXT:    kmovd %esi, %k1
+; EMR-NEXT:    vpexpandb (%rdi), %ymm0 {%k1} {z}
+; EMR-NEXT:    retq
+;
+; GNR-LABEL: no_break_expandb_rmz_256:
+; GNR:       # %bb.0:
+; GNR-NEXT:    kmovd %esi, %k1
+; GNR-NEXT:    vpexpandb (%rdi), %ymm0 {%k1} {z}
+; GNR-NEXT:    retq
+  %1 = bitcast i32 %a1 to <32 x i1>
+  %2 = call <32 x i8> @llvm.masked.expandload.v32i8.p0(ptr %p0, <32 x i1> %1, <32 x i8> zeroinitializer)
+  ret <32 x i8> %2
+}
+
+define <64 x i8> @no_break_expandb_rmz_512(ptr %p0, i64 %a1) "target-features"="+avx512vbmi2" {
+; X86_64_V4_DEFAULT-LABEL: no_break_expandb_rmz_512:
+; X86_64_V4_DEFAULT:       # %bb.0:
+; X86_64_V4_DEFAULT-NEXT:    kmovq %rsi, %k1
+; X86_64_V4_DEFAULT-NEXT:    vpexpandb (%rdi), %zmm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    retq
+;
+; X86_64_V4_ENABLE-LABEL: no_break_expandb_rmz_512:
+; X86_64_V4_ENABLE:       # %bb.0:
+; X86_64_V4_ENABLE-NEXT:    kmovq %rsi, %k1
+; X86_64_V4_ENABLE-NEXT:    vpexpandb (%rdi), %zmm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    retq
+;
+; ZEN4_DEFAULT-LABEL: no_break_expandb_rmz_512:
+; ZEN4_DEFAULT:       # %bb.0:
+; ZEN4_DEFAULT-NEXT:    kmovq %rsi, %k1
+; ZEN4_DEFAULT-NEXT:    vpexpandb (%rdi), %zmm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    retq
+;
+; ZEN4_DISABLE-LABEL: no_break_expandb_rmz_512:
+; ZEN4_DISABLE:       # %bb.0:
+; ZEN4_DISABLE-NEXT:    kmovq %rsi, %k1
+; ZEN4_DISABLE-NEXT:    vpexpandb (%rdi), %zmm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    retq
+;
+; ZEN5_DEFAULT-LABEL: no_break_expandb_rmz_512:
+; ZEN5_DEFAULT:       # %bb.0:
+; ZEN5_DEFAULT-NEXT:    kmovq %rsi, %k1
+; ZEN5_DEFAULT-NEXT:    vpexpandb (%rdi), %zmm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    retq
+;
+; ZEN5_DISABLE-LABEL: no_break_expandb_rmz_512:
+; ZEN5_DISABLE:       # %bb.0:
+; ZEN5_DISABLE-NEXT:    kmovq %rsi, %k1
+; ZEN5_DISABLE-NEXT:    vpexpandb (%rdi), %zmm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    retq
+;
+; ZEN6-LABEL: no_break_expandb_rmz_512:
+; ZEN6:       # %bb.0:
+; ZEN6-NEXT:    kmovq %rsi, %k1
+; ZEN6-NEXT:    vpexpandb (%rdi), %zmm0 {%k1} {z}
+; ZEN6-NEXT:    retq
+;
+; SKX-LABEL: no_break_expandb_rmz_512:
+; SKX:       # %bb.0:
+; SKX-NEXT:    kmovq %rsi, %k1
+; SKX-NEXT:    vpexpandb (%rdi), %zmm0 {%k1} {z}
+; SKX-NEXT:    retq
+;
+; ICL-LABEL: no_break_expandb_rmz_512:
+; ICL:       # %bb.0:
+; ICL-NEXT:    kmovq %rsi, %k1
+; ICL-NEXT:    vpexpandb (%rdi), %zmm0 {%k1} {z}
+; ICL-NEXT:    retq
+;
+; SPR-LABEL: no_break_expandb_rmz_512:
+; SPR:       # %bb.0:
+; SPR-NEXT:    kmovq %rsi, %k1
+; SPR-NEXT:    vpexpandb (%rdi), %zmm0 {%k1} {z}
+; SPR-NEXT:    retq
+;
+; EMR-LABEL: no_break_expandb_rmz_512:
+; EMR:       # %bb.0:
+; EMR-NEXT:    kmovq %rsi, %k1
+; EMR-NEXT:    vpexpandb (%rdi), %zmm0 {%k1} {z}
+; EMR-NEXT:    retq
+;
+; GNR-LABEL: no_break_expandb_rmz_512:
+; GNR:       # %bb.0:
+; GNR-NEXT:    kmovq %rsi, %k1
+; GNR-NEXT:    vpexpandb (%rdi), %zmm0 {%k1} {z}
+; GNR-NEXT:    retq
+  %1 = bitcast i64 %a1 to <64 x i1>
+  %2 = call <64 x i8> @llvm.masked.expandload.v64i8.p0(ptr %p0, <64 x i1> %1, <64 x i8> zeroinitializer)
+  ret <64 x i8> %2
+}
+
+
+define <8 x i16> @no_break_expandw_rmz_128(ptr %p0, i8 %a1) "target-features"="+avx512vbmi2" {
+; X86_64_V4_DEFAULT-LABEL: no_break_expandw_rmz_128:
+; X86_64_V4_DEFAULT:       # %bb.0:
+; X86_64_V4_DEFAULT-NEXT:    kmovd %esi, %k1
+; X86_64_V4_DEFAULT-NEXT:    vpexpandw (%rdi), %xmm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    retq
+;
+; X86_64_V4_ENABLE-LABEL: no_break_expandw_rmz_128:
+; X86_64_V4_ENABLE:       # %bb.0:
+; X86_64_V4_ENABLE-NEXT:    kmovd %esi, %k1
+; X86_64_V4_ENABLE-NEXT:    vpexpandw (%rdi), %xmm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    retq
+;
+; ZEN4_DEFAULT-LABEL: no_break_expandw_rmz_128:
+; ZEN4_DEFAULT:       # %bb.0:
+; ZEN4_DEFAULT-NEXT:    kmovd %esi, %k1
+; ZEN4_DEFAULT-NEXT:    vpexpandw (%rdi), %xmm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    retq
+;
+; ZEN4_DISABLE-LABEL: no_break_expandw_rmz_128:
+; ZEN4_DISABLE:       # %bb.0:
+; ZEN4_DISABLE-NEXT:    kmovd %esi, %k1
+; ZEN4_DISABLE-NEXT:    vpexpandw (%rdi), %xmm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    retq
+;
+; ZEN5_DEFAULT-LABEL: no_break_expandw_rmz_128:
+; ZEN5_DEFAULT:       # %bb.0:
+; ZEN5_DEFAULT-NEXT:    kmovd %esi, %k1
+; ZEN5_DEFAULT-NEXT:    vpexpandw (%rdi), %xmm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    retq
+;
+; ZEN5_DISABLE-LABEL: no_break_expandw_rmz_128:
+; ZEN5_DISABLE:       # %bb.0:
+; ZEN5_DISABLE-NEXT:    kmovd %esi, %k1
+; ZEN5_DISABLE-NEXT:    vpexpandw (%rdi), %xmm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    retq
+;
+; ZEN6-LABEL: no_break_expandw_rmz_128:
+; ZEN6:       # %bb.0:
+; ZEN6-NEXT:    kmovd %esi, %k1
+; ZEN6-NEXT:    vpexpandw (%rdi), %xmm0 {%k1} {z}
+; ZEN6-NEXT:    retq
+;
+; SKX-LABEL: no_break_expandw_rmz_128:
+; SKX:       # %bb.0:
+; SKX-NEXT:    kmovd %esi, %k1
+; SKX-NEXT:    vpexpandw (%rdi), %xmm0 {%k1} {z}
+; SKX-NEXT:    retq
+;
+; ICL-LABEL: no_break_expandw_rmz_128:
+; ICL:       # %bb.0:
+; ICL-NEXT:    kmovd %esi, %k1
+; ICL-NEXT:    vpexpandw (%rdi), %xmm0 {%k1} {z}
+; ICL-NEXT:    retq
+;
+; SPR-LABEL: no_break_expandw_rmz_128:
+; SPR:       # %bb.0:
+; SPR-NEXT:    kmovd %esi, %k1
+; SPR-NEXT:    vpexpandw (%rdi), %xmm0 {%k1} {z}
+; SPR-NEXT:    retq
+;
+; EMR-LABEL: no_break_expandw_rmz_128:
+; EMR:       # %bb.0:
+; EMR-NEXT:    kmovd %esi, %k1
+; EMR-NEXT:    vpexpandw (%rdi), %xmm0 {%k1} {z}
+; EMR-NEXT:    retq
+;
+; GNR-LABEL: no_break_expandw_rmz_128:
+; GNR:       # %bb.0:
+; GNR-NEXT:    kmovd %esi, %k1
+; GNR-NEXT:    vpexpandw (%rdi), %xmm0 {%k1} {z}
+; GNR-NEXT:    retq
+  %1 = bitcast i8 %a1 to <8 x i1>
+  %2 = call <8 x i16> @llvm.masked.expandload.v8i16.p0(ptr %p0, <8 x i1> %1, <8 x i16> zeroinitializer)
+  ret <8 x i16> %2
+}
+
+define <16 x i16> @no_break_expandw_rmz_256(ptr %p0, i16 %a1) "target-features"="+avx512vbmi2" {
+; X86_64_V4_DEFAULT-LABEL: no_break_expandw_rmz_256:
+; X86_64_V4_DEFAULT:       # %bb.0:
+; X86_64_V4_DEFAULT-NEXT:    kmovd %esi, %k1
+; X86_64_V4_DEFAULT-NEXT:    vpexpandw (%rdi), %ymm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    retq
+;
+; X86_64_V4_ENABLE-LABEL: no_break_expandw_rmz_256:
+; X86_64_V4_ENABLE:       # %bb.0:
+; X86_64_V4_ENABLE-NEXT:    kmovd %esi, %k1
+; X86_64_V4_ENABLE-NEXT:    vpexpandw (%rdi), %ymm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    retq
+;
+; ZEN4_DEFAULT-LABEL: no_break_expandw_rmz_256:
+; ZEN4_DEFAULT:       # %bb.0:
+; ZEN4_DEFAULT-NEXT:    kmovd %esi, %k1
+; ZEN4_DEFAULT-NEXT:    vpexpandw (%rdi), %ymm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    retq
+;
+; ZEN4_DISABLE-LABEL: no_break_expandw_rmz_256:
+; ZEN4_DISABLE:       # %bb.0:
+; ZEN4_DISABLE-NEXT:    kmovd %esi, %k1
+; ZEN4_DISABLE-NEXT:    vpexpandw (%rdi), %ymm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    retq
+;
+; ZEN5_DEFAULT-LABEL: no_break_expandw_rmz_256:
+; ZEN5_DEFAULT:       # %bb.0:
+; ZEN5_DEFAULT-NEXT:    kmovd %esi, %k1
+; ZEN5_DEFAULT-NEXT:    vpexpandw (%rdi), %ymm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    retq
+;
+; ZEN5_DISABLE-LABEL: no_break_expandw_rmz_256:
+; ZEN5_DISABLE:       # %bb.0:
+; ZEN5_DISABLE-NEXT:    kmovd %esi, %k1
+; ZEN5_DISABLE-NEXT:    vpexpandw (%rdi), %ymm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    retq
+;
+; ZEN6-LABEL: no_break_expandw_rmz_256:
+; ZEN6:       # %bb.0:
+; ZEN6-NEXT:    kmovd %esi, %k1
+; ZEN6-NEXT:    vpexpandw (%rdi), %ymm0 {%k1} {z}
+; ZEN6-NEXT:    retq
+;
+; SKX-LABEL: no_break_expandw_rmz_256:
+; SKX:       # %bb.0:
+; SKX-NEXT:    kmovd %esi, %k1
+; SKX-NEXT:    vpexpandw (%rdi), %ymm0 {%k1} {z}
+; SKX-NEXT:    retq
+;
+; ICL-LABEL: no_break_expandw_rmz_256:
+; ICL:       # %bb.0:
+; ICL-NEXT:    kmovd %esi, %k1
+; ICL-NEXT:    vpexpandw (%rdi), %ymm0 {%k1} {z}
+; ICL-NEXT:    retq
+;
+; SPR-LABEL: no_break_expandw_rmz_256:
+; SPR:       # %bb.0:
+; SPR-NEXT:    kmovd %esi, %k1
+; SPR-NEXT:    vpexpandw (%rdi), %ymm0 {%k1} {z}
+; SPR-NEXT:    retq
+;
+; EMR-LABEL: no_break_expandw_rmz_256:
+; EMR:       # %bb.0:
+; EMR-NEXT:    kmovd %esi, %k1
+; EMR-NEXT:    vpexpandw (%rdi), %ymm0 {%k1} {z}
+; EMR-NEXT:    retq
+;
+; GNR-LABEL: no_break_expandw_rmz_256:
+; GNR:       # %bb.0:
+; GNR-NEXT:    kmovd %esi, %k1
+; GNR-NEXT:    vpexpandw (%rdi), %ymm0 {%k1} {z}
+; GNR-NEXT:    retq
+  %1 = bitcast i16 %a1 to <16 x i1>
+  %2 = call <16 x i16> @llvm.masked.expandload.v16i16.p0(ptr %p0, <16 x i1> %1, <16 x i16> zeroinitializer)
+  ret <16 x i16> %2
+}
+
+define <32 x i16> @no_break_expandw_rmz_512(ptr %p0, i32 %a1) "target-features"="+avx512vbmi2" {
+; X86_64_V4_DEFAULT-LABEL: no_break_expandw_rmz_512:
+; X86_64_V4_DEFAULT:       # %bb.0:
+; X86_64_V4_DEFAULT-NEXT:    kmovd %esi, %k1
+; X86_64_V4_DEFAULT-NEXT:    vpexpandw (%rdi), %zmm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    retq
+;
+; X86_64_V4_ENABLE-LABEL: no_break_expandw_rmz_512:
+; X86_64_V4_ENABLE:       # %bb.0:
+; X86_64_V4_ENABLE-NEXT:    kmovd %esi, %k1
+; X86_64_V4_ENABLE-NEXT:    vpexpandw (%rdi), %zmm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    retq
+;
+; ZEN4_DEFAULT-LABEL: no_break_expandw_rmz_512:
+; ZEN4_DEFAULT:       # %bb.0:
+; ZEN4_DEFAULT-NEXT:    kmovd %esi, %k1
+; ZEN4_DEFAULT-NEXT:    vpexpandw (%rdi), %zmm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    retq
+;
+; ZEN4_DISABLE-LABEL: no_break_expandw_rmz_512:
+; ZEN4_DISABLE:       # %bb.0:
+; ZEN4_DISABLE-NEXT:    kmovd %esi, %k1
+; ZEN4_DISABLE-NEXT:    vpexpandw (%rdi), %zmm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    retq
+;
+; ZEN5_DEFAULT-LABEL: no_break_expandw_rmz_512:
+; ZEN5_DEFAULT:       # %bb.0:
+; ZEN5_DEFAULT-NEXT:    kmovd %esi, %k1
+; ZEN5_DEFAULT-NEXT:    vpexpandw (%rdi), %zmm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    retq
+;
+; ZEN5_DISABLE-LABEL: no_break_expandw_rmz_512:
+; ZEN5_DISABLE:       # %bb.0:
+; ZEN5_DISABLE-NEXT:    kmovd %esi, %k1
+; ZEN5_DISABLE-NEXT:    vpexpandw (%rdi), %zmm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    retq
+;
+; ZEN6-LABEL: no_break_expandw_rmz_512:
+; ZEN6:       # %bb.0:
+; ZEN6-NEXT:    kmovd %esi, %k1
+; ZEN6-NEXT:    vpexpandw (%rdi), %zmm0 {%k1} {z}
+; ZEN6-NEXT:    retq
+;
+; SKX-LABEL: no_break_expandw_rmz_512:
+; SKX:       # %bb.0:
+; SKX-NEXT:    kmovd %esi, %k1
+; SKX-NEXT:    vpexpandw (%rdi), %zmm0 {%k1} {z}
+; SKX-NEXT:    retq
+;
+; ICL-LABEL: no_break_expandw_rmz_512:
+; ICL:       # %bb.0:
+; ICL-NEXT:    kmovd %esi, %k1
+; ICL-NEXT:    vpexpandw (%rdi), %zmm0 {%k1} {z}
+; ICL-NEXT:    retq
+;
+; SPR-LABEL: no_break_expandw_rmz_512:
+; SPR:       # %bb.0:
+; SPR-NEXT:    kmovd %esi, %k1
+; SPR-NEXT:    vpexpandw (%rdi), %zmm0 {%k1} {z}
+; SPR-NEXT:    retq
+;
+; EMR-LABEL: no_break_expandw_rmz_512:
+; EMR:       # %bb.0:
+; EMR-NEXT:    kmovd %esi, %k1
+; EMR-NEXT:    vpexpandw (%rdi), %zmm0 {%k1} {z}
+; EMR-NEXT:    retq
+;
+; GNR-LABEL: no_break_expandw_rmz_512:
+; GNR:       # %bb.0:
+; GNR-NEXT:    kmovd %esi, %k1
+; GNR-NEXT:    vpexpandw (%rdi), %zmm0 {%k1} {z}
+; GNR-NEXT:    retq
+  %1 = bitcast i32 %a1 to <32 x i1>
+  %2 = call <32 x i16> @llvm.masked.expandload.v32i16.p0(ptr %p0, <32 x i1> %1, <32 x i16> zeroinitializer)
+  ret <32 x i16> %2
+}
+
+
+define <4 x i32> @no_break_expandd_rmz_128(ptr %p0, i4 %a1) {
+; X86_64_V4_DEFAULT-LABEL: no_break_expandd_rmz_128:
+; X86_64_V4_DEFAULT:       # %bb.0:
+; X86_64_V4_DEFAULT-NEXT:    kmovd %esi, %k1
+; X86_64_V4_DEFAULT-NEXT:    vpexpandd (%rdi), %xmm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    retq
+;
+; X86_64_V4_ENABLE-LABEL: no_break_expandd_rmz_128:
+; X86_64_V4_ENABLE:       # %bb.0:
+; X86_64_V4_ENABLE-NEXT:    kmovd %esi, %k1
+; X86_64_V4_ENABLE-NEXT:    vpexpandd (%rdi), %xmm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    retq
+;
+; ZEN4_DEFAULT-LABEL: no_break_expandd_rmz_128:
+; ZEN4_DEFAULT:       # %bb.0:
+; ZEN4_DEFAULT-NEXT:    kmovd %esi, %k1
+; ZEN4_DEFAULT-NEXT:    vpexpandd (%rdi), %xmm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    retq
+;
+; ZEN4_DISABLE-LABEL: no_break_expandd_rmz_128:
+; ZEN4_DISABLE:       # %bb.0:
+; ZEN4_DISABLE-NEXT:    kmovd %esi, %k1
+; ZEN4_DISABLE-NEXT:    vpexpandd (%rdi), %xmm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    retq
+;
+; ZEN5_DEFAULT-LABEL: no_break_expandd_rmz_128:
+; ZEN5_DEFAULT:       # %bb.0:
+; ZEN5_DEFAULT-NEXT:    kmovd %esi, %k1
+; ZEN5_DEFAULT-NEXT:    vpexpandd (%rdi), %xmm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    retq
+;
+; ZEN5_DISABLE-LABEL: no_break_expandd_rmz_128:
+; ZEN5_DISABLE:       # %bb.0:
+; ZEN5_DISABLE-NEXT:    kmovd %esi, %k1
+; ZEN5_DISABLE-NEXT:    vpexpandd (%rdi), %xmm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    retq
+;
+; ZEN6-LABEL: no_break_expandd_rmz_128:
+; ZEN6:       # %bb.0:
+; ZEN6-NEXT:    kmovd %esi, %k1
+; ZEN6-NEXT:    vpexpandd (%rdi), %xmm0 {%k1} {z}
+; ZEN6-NEXT:    retq
+;
+; SKX-LABEL: no_break_expandd_rmz_128:
+; SKX:       # %bb.0:
+; SKX-NEXT:    kmovd %esi, %k1
+; SKX-NEXT:    vpexpandd (%rdi), %xmm0 {%k1} {z}
+; SKX-NEXT:    retq
+;
+; ICL-LABEL: no_break_expandd_rmz_128:
+; ICL:       # %bb.0:
+; ICL-NEXT:    kmovd %esi, %k1
+; ICL-NEXT:    vpexpandd (%rdi), %xmm0 {%k1} {z}
+; ICL-NEXT:    retq
+;
+; SPR-LABEL: no_break_expandd_rmz_128:
+; SPR:       # %bb.0:
+; SPR-NEXT:    kmovd %esi, %k1
+; SPR-NEXT:    vpexpandd (%rdi), %xmm0 {%k1} {z}
+; SPR-NEXT:    retq
+;
+; EMR-LABEL: no_break_expandd_rmz_128:
+; EMR:       # %bb.0:
+; EMR-NEXT:    kmovd %esi, %k1
+; EMR-NEXT:    vpexpandd (%rdi), %xmm0 {%k1} {z}
+; EMR-NEXT:    retq
+;
+; GNR-LABEL: no_break_expandd_rmz_128:
+; GNR:       # %bb.0:
+; GNR-NEXT:    kmovd %esi, %k1
+; GNR-NEXT:    vpexpandd (%rdi), %xmm0 {%k1} {z}
+; GNR-NEXT:    retq
+  %1 = bitcast i4 %a1 to <4 x i1>
+  %2 = call <4 x i32> @llvm.masked.expandload.v4i32.p0(ptr %p0, <4 x i1> %1, <4 x i32> zeroinitializer)
+  ret <4 x i32> %2
+}
+
+define <8 x i32> @no_break_expandd_rmz_256(ptr %p0, i8 %a1) {
+; X86_64_V4_DEFAULT-LABEL: no_break_expandd_rmz_256:
+; X86_64_V4_DEFAULT:       # %bb.0:
+; X86_64_V4_DEFAULT-NEXT:    kmovd %esi, %k1
+; X86_64_V4_DEFAULT-NEXT:    vpexpandd (%rdi), %ymm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    retq
+;
+; X86_64_V4_ENABLE-LABEL: no_break_expandd_rmz_256:
+; X86_64_V4_ENABLE:       # %bb.0:
+; X86_64_V4_ENABLE-NEXT:    kmovd %esi, %k1
+; X86_64_V4_ENABLE-NEXT:    vpexpandd (%rdi), %ymm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    retq
+;
+; ZEN4_DEFAULT-LABEL: no_break_expandd_rmz_256:
+; ZEN4_DEFAULT:       # %bb.0:
+; ZEN4_DEFAULT-NEXT:    kmovd %esi, %k1
+; ZEN4_DEFAULT-NEXT:    vpexpandd (%rdi), %ymm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    retq
+;
+; ZEN4_DISABLE-LABEL: no_break_expandd_rmz_256:
+; ZEN4_DISABLE:       # %bb.0:
+; ZEN4_DISABLE-NEXT:    kmovd %esi, %k1
+; ZEN4_DISABLE-NEXT:    vpexpandd (%rdi), %ymm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    retq
+;
+; ZEN5_DEFAULT-LABEL: no_break_expandd_rmz_256:
+; ZEN5_DEFAULT:       # %bb.0:
+; ZEN5_DEFAULT-NEXT:    kmovd %esi, %k1
+; ZEN5_DEFAULT-NEXT:    vpexpandd (%rdi), %ymm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    retq
+;
+; ZEN5_DISABLE-LABEL: no_break_expandd_rmz_256:
+; ZEN5_DISABLE:       # %bb.0:
+; ZEN5_DISABLE-NEXT:    kmovd %esi, %k1
+; ZEN5_DISABLE-NEXT:    vpexpandd (%rdi), %ymm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    retq
+;
+; ZEN6-LABEL: no_break_expandd_rmz_256:
+; ZEN6:       # %bb.0:
+; ZEN6-NEXT:    kmovd %esi, %k1
+; ZEN6-NEXT:    vpexpandd (%rdi), %ymm0 {%k1} {z}
+; ZEN6-NEXT:    retq
+;
+; SKX-LABEL: no_break_expandd_rmz_256:
+; SKX:       # %bb.0:
+; SKX-NEXT:    kmovd %esi, %k1
+; SKX-NEXT:    vpexpandd (%rdi), %ymm0 {%k1} {z}
+; SKX-NEXT:    retq
+;
+; ICL-LABEL: no_break_expandd_rmz_256:
+; ICL:       # %bb.0:
+; ICL-NEXT:    kmovd %esi, %k1
+; ICL-NEXT:    vpexpandd (%rdi), %ymm0 {%k1} {z}
+; ICL-NEXT:    retq
+;
+; SPR-LABEL: no_break_expandd_rmz_256:
+; SPR:       # %bb.0:
+; SPR-NEXT:    kmovd %esi, %k1
+; SPR-NEXT:    vpexpandd (%rdi), %ymm0 {%k1} {z}
+; SPR-NEXT:    retq
+;
+; EMR-LABEL: no_break_expandd_rmz_256:
+; EMR:       # %bb.0:
+; EMR-NEXT:    kmovd %esi, %k1
+; EMR-NEXT:    vpexpandd (%rdi), %ymm0 {%k1} {z}
+; EMR-NEXT:    retq
+;
+; GNR-LABEL: no_break_expandd_rmz_256:
+; GNR:       # %bb.0:
+; GNR-NEXT:    kmovd %esi, %k1
+; GNR-NEXT:    vpexpandd (%rdi), %ymm0 {%k1} {z}
+; GNR-NEXT:    retq
+  %1 = bitcast i8 %a1 to <8 x i1>
+  %2 = call <8 x i32> @llvm.masked.expandload.v8i32.p0(ptr %p0, <8 x i1> %1, <8 x i32> zeroinitializer)
+  ret <8 x i32> %2
+}
+
+define <16 x i32> @no_break_expandd_rmz_512(ptr %p0, i16 %a1) {
+; X86_64_V4_DEFAULT-LABEL: no_break_expandd_rmz_512:
+; X86_64_V4_DEFAULT:       # %bb.0:
+; X86_64_V4_DEFAULT-NEXT:    kmovd %esi, %k1
+; X86_64_V4_DEFAULT-NEXT:    vpexpandd (%rdi), %zmm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    retq
+;
+; X86_64_V4_ENABLE-LABEL: no_break_expandd_rmz_512:
+; X86_64_V4_ENABLE:       # %bb.0:
+; X86_64_V4_ENABLE-NEXT:    kmovd %esi, %k1
+; X86_64_V4_ENABLE-NEXT:    vpexpandd (%rdi), %zmm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    retq
+;
+; ZEN4_DEFAULT-LABEL: no_break_expandd_rmz_512:
+; ZEN4_DEFAULT:       # %bb.0:
+; ZEN4_DEFAULT-NEXT:    kmovd %esi, %k1
+; ZEN4_DEFAULT-NEXT:    vpexpandd (%rdi), %zmm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    retq
+;
+; ZEN4_DISABLE-LABEL: no_break_expandd_rmz_512:
+; ZEN4_DISABLE:       # %bb.0:
+; ZEN4_DISABLE-NEXT:    kmovd %esi, %k1
+; ZEN4_DISABLE-NEXT:    vpexpandd (%rdi), %zmm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    retq
+;
+; ZEN5_DEFAULT-LABEL: no_break_expandd_rmz_512:
+; ZEN5_DEFAULT:       # %bb.0:
+; ZEN5_DEFAULT-NEXT:    kmovd %esi, %k1
+; ZEN5_DEFAULT-NEXT:    vpexpandd (%rdi), %zmm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    retq
+;
+; ZEN5_DISABLE-LABEL: no_break_expandd_rmz_512:
+; ZEN5_DISABLE:       # %bb.0:
+; ZEN5_DISABLE-NEXT:    kmovd %esi, %k1
+; ZEN5_DISABLE-NEXT:    vpexpandd (%rdi), %zmm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    retq
+;
+; ZEN6-LABEL: no_break_expandd_rmz_512:
+; ZEN6:       # %bb.0:
+; ZEN6-NEXT:    kmovd %esi, %k1
+; ZEN6-NEXT:    vpexpandd (%rdi), %zmm0 {%k1} {z}
+; ZEN6-NEXT:    retq
+;
+; SKX-LABEL: no_break_expandd_rmz_512:
+; SKX:       # %bb.0:
+; SKX-NEXT:    kmovd %esi, %k1
+; SKX-NEXT:    vpexpandd (%rdi), %zmm0 {%k1} {z}
+; SKX-NEXT:    retq
+;
+; ICL-LABEL: no_break_expandd_rmz_512:
+; ICL:       # %bb.0:
+; ICL-NEXT:    kmovd %esi, %k1
+; ICL-NEXT:    vpexpandd (%rdi), %zmm0 {%k1} {z}
+; ICL-NEXT:    retq
+;
+; SPR-LABEL: no_break_expandd_rmz_512:
+; SPR:       # %bb.0:
+; SPR-NEXT:    kmovd %esi, %k1
+; SPR-NEXT:    vpexpandd (%rdi), %zmm0 {%k1} {z}
+; SPR-NEXT:    retq
+;
+; EMR-LABEL: no_break_expandd_rmz_512:
+; EMR:       # %bb.0:
+; EMR-NEXT:    kmovd %esi, %k1
+; EMR-NEXT:    vpexpandd (%rdi), %zmm0 {%k1} {z}
+; EMR-NEXT:    retq
+;
+; GNR-LABEL: no_break_expandd_rmz_512:
+; GNR:       # %bb.0:
+; GNR-NEXT:    kmovd %esi, %k1
+; GNR-NEXT:    vpexpandd (%rdi), %zmm0 {%k1} {z}
+; GNR-NEXT:    retq
+  %1 = bitcast i16 %a1 to <16 x i1>
+  %2 = call <16 x i32> @llvm.masked.expandload.v16i32.p0(ptr %p0, <16 x i1> %1, <16 x i32> zeroinitializer)
+  ret <16 x i32> %2
+}
+
+
+define <2 x i64> @no_break_expandq_rmz_128(ptr %p0, i2 %a1) {
+; X86_64_V4_DEFAULT-LABEL: no_break_expandq_rmz_128:
+; X86_64_V4_DEFAULT:       # %bb.0:
+; X86_64_V4_DEFAULT-NEXT:    kmovd %esi, %k1
+; X86_64_V4_DEFAULT-NEXT:    vpexpandq (%rdi), %xmm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    retq
+;
+; X86_64_V4_ENABLE-LABEL: no_break_expandq_rmz_128:
+; X86_64_V4_ENABLE:       # %bb.0:
+; X86_64_V4_ENABLE-NEXT:    kmovd %esi, %k1
+; X86_64_V4_ENABLE-NEXT:    vpexpandq (%rdi), %xmm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    retq
+;
+; ZEN4_DEFAULT-LABEL: no_break_expandq_rmz_128:
+; ZEN4_DEFAULT:       # %bb.0:
+; ZEN4_DEFAULT-NEXT:    kmovd %esi, %k1
+; ZEN4_DEFAULT-NEXT:    vpexpandq (%rdi), %xmm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    retq
+;
+; ZEN4_DISABLE-LABEL: no_break_expandq_rmz_128:
+; ZEN4_DISABLE:       # %bb.0:
+; ZEN4_DISABLE-NEXT:    kmovd %esi, %k1
+; ZEN4_DISABLE-NEXT:    vpexpandq (%rdi), %xmm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    retq
+;
+; ZEN5_DEFAULT-LABEL: no_break_expandq_rmz_128:
+; ZEN5_DEFAULT:       # %bb.0:
+; ZEN5_DEFAULT-NEXT:    kmovd %esi, %k1
+; ZEN5_DEFAULT-NEXT:    vpexpandq (%rdi), %xmm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    retq
+;
+; ZEN5_DISABLE-LABEL: no_break_expandq_rmz_128:
+; ZEN5_DISABLE:       # %bb.0:
+; ZEN5_DISABLE-NEXT:    kmovd %esi, %k1
+; ZEN5_DISABLE-NEXT:    vpexpandq (%rdi), %xmm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    retq
+;
+; ZEN6-LABEL: no_break_expandq_rmz_128:
+; ZEN6:       # %bb.0:
+; ZEN6-NEXT:    kmovd %esi, %k1
+; ZEN6-NEXT:    vpexpandq (%rdi), %xmm0 {%k1} {z}
+; ZEN6-NEXT:    retq
+;
+; SKX-LABEL: no_break_expandq_rmz_128:
+; SKX:       # %bb.0:
+; SKX-NEXT:    kmovd %esi, %k1
+; SKX-NEXT:    vpexpandq (%rdi), %xmm0 {%k1} {z}
+; SKX-NEXT:    retq
+;
+; ICL-LABEL: no_break_expandq_rmz_128:
+; ICL:       # %bb.0:
+; ICL-NEXT:    kmovd %esi, %k1
+; ICL-NEXT:    vpexpandq (%rdi), %xmm0 {%k1} {z}
+; ICL-NEXT:    retq
+;
+; SPR-LABEL: no_break_expandq_rmz_128:
+; SPR:       # %bb.0:
+; SPR-NEXT:    kmovd %esi, %k1
+; SPR-NEXT:    vpexpandq (%rdi), %xmm0 {%k1} {z}
+; SPR-NEXT:    retq
+;
+; EMR-LABEL: no_break_expandq_rmz_128:
+; EMR:       # %bb.0:
+; EMR-NEXT:    kmovd %esi, %k1
+; EMR-NEXT:    vpexpandq (%rdi), %xmm0 {%k1} {z}
+; EMR-NEXT:    retq
+;
+; GNR-LABEL: no_break_expandq_rmz_128:
+; GNR:       # %bb.0:
+; GNR-NEXT:    kmovd %esi, %k1
+; GNR-NEXT:    vpexpandq (%rdi), %xmm0 {%k1} {z}
+; GNR-NEXT:    retq
+  %1 = bitcast i2 %a1 to <2 x i1>
+  %2 = call <2 x i64> @llvm.masked.expandload.v2i64.p0(ptr %p0, <2 x i1> %1, <2 x i64> zeroinitializer)
+  ret <2 x i64> %2
+}
+
+define <4 x i64> @no_break_expandq_rmz_256(ptr %p0, i4 %a1) {
+; X86_64_V4_DEFAULT-LABEL: no_break_expandq_rmz_256:
+; X86_64_V4_DEFAULT:       # %bb.0:
+; X86_64_V4_DEFAULT-NEXT:    kmovd %esi, %k1
+; X86_64_V4_DEFAULT-NEXT:    vpexpandq (%rdi), %ymm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    retq
+;
+; X86_64_V4_ENABLE-LABEL: no_break_expandq_rmz_256:
+; X86_64_V4_ENABLE:       # %bb.0:
+; X86_64_V4_ENABLE-NEXT:    kmovd %esi, %k1
+; X86_64_V4_ENABLE-NEXT:    vpexpandq (%rdi), %ymm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    retq
+;
+; ZEN4_DEFAULT-LABEL: no_break_expandq_rmz_256:
+; ZEN4_DEFAULT:       # %bb.0:
+; ZEN4_DEFAULT-NEXT:    kmovd %esi, %k1
+; ZEN4_DEFAULT-NEXT:    vpexpandq (%rdi), %ymm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    retq
+;
+; ZEN4_DISABLE-LABEL: no_break_expandq_rmz_256:
+; ZEN4_DISABLE:       # %bb.0:
+; ZEN4_DISABLE-NEXT:    kmovd %esi, %k1
+; ZEN4_DISABLE-NEXT:    vpexpandq (%rdi), %ymm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    retq
+;
+; ZEN5_DEFAULT-LABEL: no_break_expandq_rmz_256:
+; ZEN5_DEFAULT:       # %bb.0:
+; ZEN5_DEFAULT-NEXT:    kmovd %esi, %k1
+; ZEN5_DEFAULT-NEXT:    vpexpandq (%rdi), %ymm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    retq
+;
+; ZEN5_DISABLE-LABEL: no_break_expandq_rmz_256:
+; ZEN5_DISABLE:       # %bb.0:
+; ZEN5_DISABLE-NEXT:    kmovd %esi, %k1
+; ZEN5_DISABLE-NEXT:    vpexpandq (%rdi), %ymm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    retq
+;
+; ZEN6-LABEL: no_break_expandq_rmz_256:
+; ZEN6:       # %bb.0:
+; ZEN6-NEXT:    kmovd %esi, %k1
+; ZEN6-NEXT:    vpexpandq (%rdi), %ymm0 {%k1} {z}
+; ZEN6-NEXT:    retq
+;
+; SKX-LABEL: no_break_expandq_rmz_256:
+; SKX:       # %bb.0:
+; SKX-NEXT:    kmovd %esi, %k1
+; SKX-NEXT:    vpexpandq (%rdi), %ymm0 {%k1} {z}
+; SKX-NEXT:    retq
+;
+; ICL-LABEL: no_break_expandq_rmz_256:
+; ICL:       # %bb.0:
+; ICL-NEXT:    kmovd %esi, %k1
+; ICL-NEXT:    vpexpandq (%rdi), %ymm0 {%k1} {z}
+; ICL-NEXT:    retq
+;
+; SPR-LABEL: no_break_expandq_rmz_256:
+; SPR:       # %bb.0:
+; SPR-NEXT:    kmovd %esi, %k1
+; SPR-NEXT:    vpexpandq (%rdi), %ymm0 {%k1} {z}
+; SPR-NEXT:    retq
+;
+; EMR-LABEL: no_break_expandq_rmz_256:
+; EMR:       # %bb.0:
+; EMR-NEXT:    kmovd %esi, %k1
+; EMR-NEXT:    vpexpandq (%rdi), %ymm0 {%k1} {z}
+; EMR-NEXT:    retq
+;
+; GNR-LABEL: no_break_expandq_rmz_256:
+; GNR:       # %bb.0:
+; GNR-NEXT:    kmovd %esi, %k1
+; GNR-NEXT:    vpexpandq (%rdi), %ymm0 {%k1} {z}
+; GNR-NEXT:    retq
+  %1 = bitcast i4 %a1 to <4 x i1>
+  %2 = call <4 x i64> @llvm.masked.expandload.v4i64.p0(ptr %p0, <4 x i1> %1, <4 x i64> zeroinitializer)
+  ret <4 x i64> %2
+}
+
+define <8 x i64> @no_break_expandq_rmz_512(ptr %p0, i8 %a1) {
+; X86_64_V4_DEFAULT-LABEL: no_break_expandq_rmz_512:
+; X86_64_V4_DEFAULT:       # %bb.0:
+; X86_64_V4_DEFAULT-NEXT:    kmovd %esi, %k1
+; X86_64_V4_DEFAULT-NEXT:    vpexpandq (%rdi), %zmm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    retq
+;
+; X86_64_V4_ENABLE-LABEL: no_break_expandq_rmz_512:
+; X86_64_V4_ENABLE:       # %bb.0:
+; X86_64_V4_ENABLE-NEXT:    kmovd %esi, %k1
+; X86_64_V4_ENABLE-NEXT:    vpexpandq (%rdi), %zmm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    retq
+;
+; ZEN4_DEFAULT-LABEL: no_break_expandq_rmz_512:
+; ZEN4_DEFAULT:       # %bb.0:
+; ZEN4_DEFAULT-NEXT:    kmovd %esi, %k1
+; ZEN4_DEFAULT-NEXT:    vpexpandq (%rdi), %zmm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    retq
+;
+; ZEN4_DISABLE-LABEL: no_break_expandq_rmz_512:
+; ZEN4_DISABLE:       # %bb.0:
+; ZEN4_DISABLE-NEXT:    kmovd %esi, %k1
+; ZEN4_DISABLE-NEXT:    vpexpandq (%rdi), %zmm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    retq
+;
+; ZEN5_DEFAULT-LABEL: no_break_expandq_rmz_512:
+; ZEN5_DEFAULT:       # %bb.0:
+; ZEN5_DEFAULT-NEXT:    kmovd %esi, %k1
+; ZEN5_DEFAULT-NEXT:    vpexpandq (%rdi), %zmm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    retq
+;
+; ZEN5_DISABLE-LABEL: no_break_expandq_rmz_512:
+; ZEN5_DISABLE:       # %bb.0:
+; ZEN5_DISABLE-NEXT:    kmovd %esi, %k1
+; ZEN5_DISABLE-NEXT:    vpexpandq (%rdi), %zmm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    retq
+;
+; ZEN6-LABEL: no_break_expandq_rmz_512:
+; ZEN6:       # %bb.0:
+; ZEN6-NEXT:    kmovd %esi, %k1
+; ZEN6-NEXT:    vpexpandq (%rdi), %zmm0 {%k1} {z}
+; ZEN6-NEXT:    retq
+;
+; SKX-LABEL: no_break_expandq_rmz_512:
+; SKX:       # %bb.0:
+; SKX-NEXT:    kmovd %esi, %k1
+; SKX-NEXT:    vpexpandq (%rdi), %zmm0 {%k1} {z}
+; SKX-NEXT:    retq
+;
+; ICL-LABEL: no_break_expandq_rmz_512:
+; ICL:       # %bb.0:
+; ICL-NEXT:    kmovd %esi, %k1
+; ICL-NEXT:    vpexpandq (%rdi), %zmm0 {%k1} {z}
+; ICL-NEXT:    retq
+;
+; SPR-LABEL: no_break_expandq_rmz_512:
+; SPR:       # %bb.0:
+; SPR-NEXT:    kmovd %esi, %k1
+; SPR-NEXT:    vpexpandq (%rdi), %zmm0 {%k1} {z}
+; SPR-NEXT:    retq
+;
+; EMR-LABEL: no_break_expandq_rmz_512:
+; EMR:       # %bb.0:
+; EMR-NEXT:    kmovd %esi, %k1
+; EMR-NEXT:    vpexpandq (%rdi), %zmm0 {%k1} {z}
+; EMR-NEXT:    retq
+;
+; GNR-LABEL: no_break_expandq_rmz_512:
+; GNR:       # %bb.0:
+; GNR-NEXT:    kmovd %esi, %k1
+; GNR-NEXT:    vpexpandq (%rdi), %zmm0 {%k1} {z}
+; GNR-NEXT:    retq
+  %1 = bitcast i8 %a1 to <8 x i1>
+  %2 = call <8 x i64> @llvm.masked.expandload.v8i64.p0(ptr %p0, <8 x i1> %1, <8 x i64> zeroinitializer)
+  ret <8 x i64> %2
+}
+
+
+define <4 x float> @no_break_expandps_rmz_128(ptr %p0, i4 %a1) {
+; X86_64_V4_DEFAULT-LABEL: no_break_expandps_rmz_128:
+; X86_64_V4_DEFAULT:       # %bb.0:
+; X86_64_V4_DEFAULT-NEXT:    kmovd %esi, %k1
+; X86_64_V4_DEFAULT-NEXT:    vexpandps (%rdi), %xmm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    retq
+;
+; X86_64_V4_ENABLE-LABEL: no_break_expandps_rmz_128:
+; X86_64_V4_ENABLE:       # %bb.0:
+; X86_64_V4_ENABLE-NEXT:    kmovd %esi, %k1
+; X86_64_V4_ENABLE-NEXT:    vexpandps (%rdi), %xmm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    retq
+;
+; ZEN4_DEFAULT-LABEL: no_break_expandps_rmz_128:
+; ZEN4_DEFAULT:       # %bb.0:
+; ZEN4_DEFAULT-NEXT:    kmovd %esi, %k1
+; ZEN4_DEFAULT-NEXT:    vexpandps (%rdi), %xmm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    retq
+;
+; ZEN4_DISABLE-LABEL: no_break_expandps_rmz_128:
+; ZEN4_DISABLE:       # %bb.0:
+; ZEN4_DISABLE-NEXT:    kmovd %esi, %k1
+; ZEN4_DISABLE-NEXT:    vexpandps (%rdi), %xmm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    retq
+;
+; ZEN5_DEFAULT-LABEL: no_break_expandps_rmz_128:
+; ZEN5_DEFAULT:       # %bb.0:
+; ZEN5_DEFAULT-NEXT:    kmovd %esi, %k1
+; ZEN5_DEFAULT-NEXT:    vexpandps (%rdi), %xmm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    retq
+;
+; ZEN5_DISABLE-LABEL: no_break_expandps_rmz_128:
+; ZEN5_DISABLE:       # %bb.0:
+; ZEN5_DISABLE-NEXT:    kmovd %esi, %k1
+; ZEN5_DISABLE-NEXT:    vexpandps (%rdi), %xmm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    retq
+;
+; ZEN6-LABEL: no_break_expandps_rmz_128:
+; ZEN6:       # %bb.0:
+; ZEN6-NEXT:    kmovd %esi, %k1
+; ZEN6-NEXT:    vexpandps (%rdi), %xmm0 {%k1} {z}
+; ZEN6-NEXT:    retq
+;
+; SKX-LABEL: no_break_expandps_rmz_128:
+; SKX:       # %bb.0:
+; SKX-NEXT:    kmovd %esi, %k1
+; SKX-NEXT:    vexpandps (%rdi), %xmm0 {%k1} {z}
+; SKX-NEXT:    retq
+;
+; ICL-LABEL: no_break_expandps_rmz_128:
+; ICL:       # %bb.0:
+; ICL-NEXT:    kmovd %esi, %k1
+; ICL-NEXT:    vexpandps (%rdi), %xmm0 {%k1} {z}
+; ICL-NEXT:    retq
+;
+; SPR-LABEL: no_break_expandps_rmz_128:
+; SPR:       # %bb.0:
+; SPR-NEXT:    kmovd %esi, %k1
+; SPR-NEXT:    vexpandps (%rdi), %xmm0 {%k1} {z}
+; SPR-NEXT:    retq
+;
+; EMR-LABEL: no_break_expandps_rmz_128:
+; EMR:       # %bb.0:
+; EMR-NEXT:    kmovd %esi, %k1
+; EMR-NEXT:    vexpandps (%rdi), %xmm0 {%k1} {z}
+; EMR-NEXT:    retq
+;
+; GNR-LABEL: no_break_expandps_rmz_128:
+; GNR:       # %bb.0:
+; GNR-NEXT:    kmovd %esi, %k1
+; GNR-NEXT:    vexpandps (%rdi), %xmm0 {%k1} {z}
+; GNR-NEXT:    retq
+  %1 = bitcast i4 %a1 to <4 x i1>
+  %2 = call <4 x float> @llvm.masked.expandload.v432.p0(ptr %p0, <4 x i1> %1, <4 x float> zeroinitializer)
+  ret <4 x float> %2
+}
+
+define <8 x float> @no_break_expandps_rmz_256(ptr %p0, i8 %a1) {
+; X86_64_V4_DEFAULT-LABEL: no_break_expandps_rmz_256:
+; X86_64_V4_DEFAULT:       # %bb.0:
+; X86_64_V4_DEFAULT-NEXT:    kmovd %esi, %k1
+; X86_64_V4_DEFAULT-NEXT:    vexpandps (%rdi), %ymm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    retq
+;
+; X86_64_V4_ENABLE-LABEL: no_break_expandps_rmz_256:
+; X86_64_V4_ENABLE:       # %bb.0:
+; X86_64_V4_ENABLE-NEXT:    kmovd %esi, %k1
+; X86_64_V4_ENABLE-NEXT:    vexpandps (%rdi), %ymm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    retq
+;
+; ZEN4_DEFAULT-LABEL: no_break_expandps_rmz_256:
+; ZEN4_DEFAULT:       # %bb.0:
+; ZEN4_DEFAULT-NEXT:    kmovd %esi, %k1
+; ZEN4_DEFAULT-NEXT:    vexpandps (%rdi), %ymm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    retq
+;
+; ZEN4_DISABLE-LABEL: no_break_expandps_rmz_256:
+; ZEN4_DISABLE:       # %bb.0:
+; ZEN4_DISABLE-NEXT:    kmovd %esi, %k1
+; ZEN4_DISABLE-NEXT:    vexpandps (%rdi), %ymm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    retq
+;
+; ZEN5_DEFAULT-LABEL: no_break_expandps_rmz_256:
+; ZEN5_DEFAULT:       # %bb.0:
+; ZEN5_DEFAULT-NEXT:    kmovd %esi, %k1
+; ZEN5_DEFAULT-NEXT:    vexpandps (%rdi), %ymm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    retq
+;
+; ZEN5_DISABLE-LABEL: no_break_expandps_rmz_256:
+; ZEN5_DISABLE:       # %bb.0:
+; ZEN5_DISABLE-NEXT:    kmovd %esi, %k1
+; ZEN5_DISABLE-NEXT:    vexpandps (%rdi), %ymm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    retq
+;
+; ZEN6-LABEL: no_break_expandps_rmz_256:
+; ZEN6:       # %bb.0:
+; ZEN6-NEXT:    kmovd %esi, %k1
+; ZEN6-NEXT:    vexpandps (%rdi), %ymm0 {%k1} {z}
+; ZEN6-NEXT:    retq
+;
+; SKX-LABEL: no_break_expandps_rmz_256:
+; SKX:       # %bb.0:
+; SKX-NEXT:    kmovd %esi, %k1
+; SKX-NEXT:    vexpandps (%rdi), %ymm0 {%k1} {z}
+; SKX-NEXT:    retq
+;
+; ICL-LABEL: no_break_expandps_rmz_256:
+; ICL:       # %bb.0:
+; ICL-NEXT:    kmovd %esi, %k1
+; ICL-NEXT:    vexpandps (%rdi), %ymm0 {%k1} {z}
+; ICL-NEXT:    retq
+;
+; SPR-LABEL: no_break_expandps_rmz_256:
+; SPR:       # %bb.0:
+; SPR-NEXT:    kmovd %esi, %k1
+; SPR-NEXT:    vexpandps (%rdi), %ymm0 {%k1} {z}
+; SPR-NEXT:    retq
+;
+; EMR-LABEL: no_break_expandps_rmz_256:
+; EMR:       # %bb.0:
+; EMR-NEXT:    kmovd %esi, %k1
+; EMR-NEXT:    vexpandps (%rdi), %ymm0 {%k1} {z}
+; EMR-NEXT:    retq
+;
+; GNR-LABEL: no_break_expandps_rmz_256:
+; GNR:       # %bb.0:
+; GNR-NEXT:    kmovd %esi, %k1
+; GNR-NEXT:    vexpandps (%rdi), %ymm0 {%k1} {z}
+; GNR-NEXT:    retq
+  %1 = bitcast i8 %a1 to <8 x i1>
+  %2 = call <8 x float> @llvm.masked.expandload.v8f32.p0(ptr %p0, <8 x i1> %1, <8 x float> zeroinitializer)
+  ret <8 x float> %2
+}
+
+define <16 x float> @no_break_expandps_rmz_512(ptr %p0, i16 %a1) {
+; X86_64_V4_DEFAULT-LABEL: no_break_expandps_rmz_512:
+; X86_64_V4_DEFAULT:       # %bb.0:
+; X86_64_V4_DEFAULT-NEXT:    kmovd %esi, %k1
+; X86_64_V4_DEFAULT-NEXT:    vexpandps (%rdi), %zmm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    retq
+;
+; X86_64_V4_ENABLE-LABEL: no_break_expandps_rmz_512:
+; X86_64_V4_ENABLE:       # %bb.0:
+; X86_64_V4_ENABLE-NEXT:    kmovd %esi, %k1
+; X86_64_V4_ENABLE-NEXT:    vexpandps (%rdi), %zmm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    retq
+;
+; ZEN4_DEFAULT-LABEL: no_break_expandps_rmz_512:
+; ZEN4_DEFAULT:       # %bb.0:
+; ZEN4_DEFAULT-NEXT:    kmovd %esi, %k1
+; ZEN4_DEFAULT-NEXT:    vexpandps (%rdi), %zmm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    retq
+;
+; ZEN4_DISABLE-LABEL: no_break_expandps_rmz_512:
+; ZEN4_DISABLE:       # %bb.0:
+; ZEN4_DISABLE-NEXT:    kmovd %esi, %k1
+; ZEN4_DISABLE-NEXT:    vexpandps (%rdi), %zmm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    retq
+;
+; ZEN5_DEFAULT-LABEL: no_break_expandps_rmz_512:
+; ZEN5_DEFAULT:       # %bb.0:
+; ZEN5_DEFAULT-NEXT:    kmovd %esi, %k1
+; ZEN5_DEFAULT-NEXT:    vexpandps (%rdi), %zmm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    retq
+;
+; ZEN5_DISABLE-LABEL: no_break_expandps_rmz_512:
+; ZEN5_DISABLE:       # %bb.0:
+; ZEN5_DISABLE-NEXT:    kmovd %esi, %k1
+; ZEN5_DISABLE-NEXT:    vexpandps (%rdi), %zmm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    retq
+;
+; ZEN6-LABEL: no_break_expandps_rmz_512:
+; ZEN6:       # %bb.0:
+; ZEN6-NEXT:    kmovd %esi, %k1
+; ZEN6-NEXT:    vexpandps (%rdi), %zmm0 {%k1} {z}
+; ZEN6-NEXT:    retq
+;
+; SKX-LABEL: no_break_expandps_rmz_512:
+; SKX:       # %bb.0:
+; SKX-NEXT:    kmovd %esi, %k1
+; SKX-NEXT:    vexpandps (%rdi), %zmm0 {%k1} {z}
+; SKX-NEXT:    retq
+;
+; ICL-LABEL: no_break_expandps_rmz_512:
+; ICL:       # %bb.0:
+; ICL-NEXT:    kmovd %esi, %k1
+; ICL-NEXT:    vexpandps (%rdi), %zmm0 {%k1} {z}
+; ICL-NEXT:    retq
+;
+; SPR-LABEL: no_break_expandps_rmz_512:
+; SPR:       # %bb.0:
+; SPR-NEXT:    kmovd %esi, %k1
+; SPR-NEXT:    vexpandps (%rdi), %zmm0 {%k1} {z}
+; SPR-NEXT:    retq
+;
+; EMR-LABEL: no_break_expandps_rmz_512:
+; EMR:       # %bb.0:
+; EMR-NEXT:    kmovd %esi, %k1
+; EMR-NEXT:    vexpandps (%rdi), %zmm0 {%k1} {z}
+; EMR-NEXT:    retq
+;
+; GNR-LABEL: no_break_expandps_rmz_512:
+; GNR:       # %bb.0:
+; GNR-NEXT:    kmovd %esi, %k1
+; GNR-NEXT:    vexpandps (%rdi), %zmm0 {%k1} {z}
+; GNR-NEXT:    retq
+  %1 = bitcast i16 %a1 to <16 x i1>
+  %2 = call <16 x float> @llvm.masked.expandload.v16f32.p0(ptr %p0, <16 x i1> %1, <16 x float> zeroinitializer)
+  ret <16 x float> %2
+}
+
+
+define <2 x double> @no_break_expandpd_rmz_128(ptr %p0, i2 %a1) {
+; X86_64_V4_DEFAULT-LABEL: no_break_expandpd_rmz_128:
+; X86_64_V4_DEFAULT:       # %bb.0:
+; X86_64_V4_DEFAULT-NEXT:    kmovd %esi, %k1
+; X86_64_V4_DEFAULT-NEXT:    vexpandpd (%rdi), %xmm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    retq
+;
+; X86_64_V4_ENABLE-LABEL: no_break_expandpd_rmz_128:
+; X86_64_V4_ENABLE:       # %bb.0:
+; X86_64_V4_ENABLE-NEXT:    kmovd %esi, %k1
+; X86_64_V4_ENABLE-NEXT:    vexpandpd (%rdi), %xmm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    retq
+;
+; ZEN4_DEFAULT-LABEL: no_break_expandpd_rmz_128:
+; ZEN4_DEFAULT:       # %bb.0:
+; ZEN4_DEFAULT-NEXT:    kmovd %esi, %k1
+; ZEN4_DEFAULT-NEXT:    vexpandpd (%rdi), %xmm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    retq
+;
+; ZEN4_DISABLE-LABEL: no_break_expandpd_rmz_128:
+; ZEN4_DISABLE:       # %bb.0:
+; ZEN4_DISABLE-NEXT:    kmovd %esi, %k1
+; ZEN4_DISABLE-NEXT:    vexpandpd (%rdi), %xmm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    retq
+;
+; ZEN5_DEFAULT-LABEL: no_break_expandpd_rmz_128:
+; ZEN5_DEFAULT:       # %bb.0:
+; ZEN5_DEFAULT-NEXT:    kmovd %esi, %k1
+; ZEN5_DEFAULT-NEXT:    vexpandpd (%rdi), %xmm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    retq
+;
+; ZEN5_DISABLE-LABEL: no_break_expandpd_rmz_128:
+; ZEN5_DISABLE:       # %bb.0:
+; ZEN5_DISABLE-NEXT:    kmovd %esi, %k1
+; ZEN5_DISABLE-NEXT:    vexpandpd (%rdi), %xmm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    retq
+;
+; ZEN6-LABEL: no_break_expandpd_rmz_128:
+; ZEN6:       # %bb.0:
+; ZEN6-NEXT:    kmovd %esi, %k1
+; ZEN6-NEXT:    vexpandpd (%rdi), %xmm0 {%k1} {z}
+; ZEN6-NEXT:    retq
+;
+; SKX-LABEL: no_break_expandpd_rmz_128:
+; SKX:       # %bb.0:
+; SKX-NEXT:    kmovd %esi, %k1
+; SKX-NEXT:    vexpandpd (%rdi), %xmm0 {%k1} {z}
+; SKX-NEXT:    retq
+;
+; ICL-LABEL: no_break_expandpd_rmz_128:
+; ICL:       # %bb.0:
+; ICL-NEXT:    kmovd %esi, %k1
+; ICL-NEXT:    vexpandpd (%rdi), %xmm0 {%k1} {z}
+; ICL-NEXT:    retq
+;
+; SPR-LABEL: no_break_expandpd_rmz_128:
+; SPR:       # %bb.0:
+; SPR-NEXT:    kmovd %esi, %k1
+; SPR-NEXT:    vexpandpd (%rdi), %xmm0 {%k1} {z}
+; SPR-NEXT:    retq
+;
+; EMR-LABEL: no_break_expandpd_rmz_128:
+; EMR:       # %bb.0:
+; EMR-NEXT:    kmovd %esi, %k1
+; EMR-NEXT:    vexpandpd (%rdi), %xmm0 {%k1} {z}
+; EMR-NEXT:    retq
+;
+; GNR-LABEL: no_break_expandpd_rmz_128:
+; GNR:       # %bb.0:
+; GNR-NEXT:    kmovd %esi, %k1
+; GNR-NEXT:    vexpandpd (%rdi), %xmm0 {%k1} {z}
+; GNR-NEXT:    retq
+  %1 = bitcast i2 %a1 to <2 x i1>
+  %2 = call <2 x double> @llvm.masked.expandload.v2f64.p0(ptr %p0, <2 x i1> %1, <2 x double> zeroinitializer)
+  ret <2 x double> %2
+}
+
+define <4 x double> @no_break_expandpd_rmz_256(ptr %p0, i4 %a1) {
+; X86_64_V4_DEFAULT-LABEL: no_break_expandpd_rmz_256:
+; X86_64_V4_DEFAULT:       # %bb.0:
+; X86_64_V4_DEFAULT-NEXT:    kmovd %esi, %k1
+; X86_64_V4_DEFAULT-NEXT:    vexpandpd (%rdi), %ymm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    retq
+;
+; X86_64_V4_ENABLE-LABEL: no_break_expandpd_rmz_256:
+; X86_64_V4_ENABLE:       # %bb.0:
+; X86_64_V4_ENABLE-NEXT:    kmovd %esi, %k1
+; X86_64_V4_ENABLE-NEXT:    vexpandpd (%rdi), %ymm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    retq
+;
+; ZEN4_DEFAULT-LABEL: no_break_expandpd_rmz_256:
+; ZEN4_DEFAULT:       # %bb.0:
+; ZEN4_DEFAULT-NEXT:    kmovd %esi, %k1
+; ZEN4_DEFAULT-NEXT:    vexpandpd (%rdi), %ymm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    retq
+;
+; ZEN4_DISABLE-LABEL: no_break_expandpd_rmz_256:
+; ZEN4_DISABLE:       # %bb.0:
+; ZEN4_DISABLE-NEXT:    kmovd %esi, %k1
+; ZEN4_DISABLE-NEXT:    vexpandpd (%rdi), %ymm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    retq
+;
+; ZEN5_DEFAULT-LABEL: no_break_expandpd_rmz_256:
+; ZEN5_DEFAULT:       # %bb.0:
+; ZEN5_DEFAULT-NEXT:    kmovd %esi, %k1
+; ZEN5_DEFAULT-NEXT:    vexpandpd (%rdi), %ymm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    retq
+;
+; ZEN5_DISABLE-LABEL: no_break_expandpd_rmz_256:
+; ZEN5_DISABLE:       # %bb.0:
+; ZEN5_DISABLE-NEXT:    kmovd %esi, %k1
+; ZEN5_DISABLE-NEXT:    vexpandpd (%rdi), %ymm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    retq
+;
+; ZEN6-LABEL: no_break_expandpd_rmz_256:
+; ZEN6:       # %bb.0:
+; ZEN6-NEXT:    kmovd %esi, %k1
+; ZEN6-NEXT:    vexpandpd (%rdi), %ymm0 {%k1} {z}
+; ZEN6-NEXT:    retq
+;
+; SKX-LABEL: no_break_expandpd_rmz_256:
+; SKX:       # %bb.0:
+; SKX-NEXT:    kmovd %esi, %k1
+; SKX-NEXT:    vexpandpd (%rdi), %ymm0 {%k1} {z}
+; SKX-NEXT:    retq
+;
+; ICL-LABEL: no_break_expandpd_rmz_256:
+; ICL:       # %bb.0:
+; ICL-NEXT:    kmovd %esi, %k1
+; ICL-NEXT:    vexpandpd (%rdi), %ymm0 {%k1} {z}
+; ICL-NEXT:    retq
+;
+; SPR-LABEL: no_break_expandpd_rmz_256:
+; SPR:       # %bb.0:
+; SPR-NEXT:    kmovd %esi, %k1
+; SPR-NEXT:    vexpandpd (%rdi), %ymm0 {%k1} {z}
+; SPR-NEXT:    retq
+;
+; EMR-LABEL: no_break_expandpd_rmz_256:
+; EMR:       # %bb.0:
+; EMR-NEXT:    kmovd %esi, %k1
+; EMR-NEXT:    vexpandpd (%rdi), %ymm0 {%k1} {z}
+; EMR-NEXT:    retq
+;
+; GNR-LABEL: no_break_expandpd_rmz_256:
+; GNR:       # %bb.0:
+; GNR-NEXT:    kmovd %esi, %k1
+; GNR-NEXT:    vexpandpd (%rdi), %ymm0 {%k1} {z}
+; GNR-NEXT:    retq
+  %1 = bitcast i4 %a1 to <4 x i1>
+  %2 = call <4 x double> @llvm.masked.expandload.v4f64.p0(ptr %p0, <4 x i1> %1, <4 x double> zeroinitializer)
+  ret <4 x double> %2
+}
+
+define <8 x double> @no_break_expandpd_rmz_512(ptr %p0, i8 %a1) {
+; X86_64_V4_DEFAULT-LABEL: no_break_expandpd_rmz_512:
+; X86_64_V4_DEFAULT:       # %bb.0:
+; X86_64_V4_DEFAULT-NEXT:    kmovd %esi, %k1
+; X86_64_V4_DEFAULT-NEXT:    vexpandpd (%rdi), %zmm0 {%k1} {z}
+; X86_64_V4_DEFAULT-NEXT:    retq
+;
+; X86_64_V4_ENABLE-LABEL: no_break_expandpd_rmz_512:
+; X86_64_V4_ENABLE:       # %bb.0:
+; X86_64_V4_ENABLE-NEXT:    kmovd %esi, %k1
+; X86_64_V4_ENABLE-NEXT:    vexpandpd (%rdi), %zmm0 {%k1} {z}
+; X86_64_V4_ENABLE-NEXT:    retq
+;
+; ZEN4_DEFAULT-LABEL: no_break_expandpd_rmz_512:
+; ZEN4_DEFAULT:       # %bb.0:
+; ZEN4_DEFAULT-NEXT:    kmovd %esi, %k1
+; ZEN4_DEFAULT-NEXT:    vexpandpd (%rdi), %zmm0 {%k1} {z}
+; ZEN4_DEFAULT-NEXT:    retq
+;
+; ZEN4_DISABLE-LABEL: no_break_expandpd_rmz_512:
+; ZEN4_DISABLE:       # %bb.0:
+; ZEN4_DISABLE-NEXT:    kmovd %esi, %k1
+; ZEN4_DISABLE-NEXT:    vexpandpd (%rdi), %zmm0 {%k1} {z}
+; ZEN4_DISABLE-NEXT:    retq
+;
+; ZEN5_DEFAULT-LABEL: no_break_expandpd_rmz_512:
+; ZEN5_DEFAULT:       # %bb.0:
+; ZEN5_DEFAULT-NEXT:    kmovd %esi, %k1
+; ZEN5_DEFAULT-NEXT:    vexpandpd (%rdi), %zmm0 {%k1} {z}
+; ZEN5_DEFAULT-NEXT:    retq
+;
+; ZEN5_DISABLE-LABEL: no_break_expandpd_rmz_512:
+; ZEN5_DISABLE:       # %bb.0:
+; ZEN5_DISABLE-NEXT:    kmovd %esi, %k1
+; ZEN5_DISABLE-NEXT:    vexpandpd (%rdi), %zmm0 {%k1} {z}
+; ZEN5_DISABLE-NEXT:    retq
+;
+; ZEN6-LABEL: no_break_expandpd_rmz_512:
+; ZEN6:       # %bb.0:
+; ZEN6-NEXT:    kmovd %esi, %k1
+; ZEN6-NEXT:    vexpandpd (%rdi), %zmm0 {%k1} {z}
+; ZEN6-NEXT:    retq
+;
+; SKX-LABEL: no_break_expandpd_rmz_512:
+; SKX:       # %bb.0:
+; SKX-NEXT:    kmovd %esi, %k1
+; SKX-NEXT:    vexpandpd (%rdi), %zmm0 {%k1} {z}
+; SKX-NEXT:    retq
+;
+; ICL-LABEL: no_break_expandpd_rmz_512:
+; ICL:       # %bb.0:
+; ICL-NEXT:    kmovd %esi, %k1
+; ICL-NEXT:    vexpandpd (%rdi), %zmm0 {%k1} {z}
+; ICL-NEXT:    retq
+;
+; SPR-LABEL: no_break_expandpd_rmz_512:
+; SPR:       # %bb.0:
+; SPR-NEXT:    kmovd %esi, %k1
+; SPR-NEXT:    vexpandpd (%rdi), %zmm0 {%k1} {z}
+; SPR-NEXT:    retq
+;
+; EMR-LABEL: no_break_expandpd_rmz_512:
+; EMR:       # %bb.0:
+; EMR-NEXT:    kmovd %esi, %k1
+; EMR-NEXT:    vexpandpd (%rdi), %zmm0 {%k1} {z}
+; EMR-NEXT:    retq
+;
+; GNR-LABEL: no_break_expandpd_rmz_512:
+; GNR:       # %bb.0:
+; GNR-NEXT:    kmovd %esi, %k1
+; GNR-NEXT:    vexpandpd (%rdi), %zmm0 {%k1} {z}
+; GNR-NEXT:    retq
+  %1 = bitcast i8 %a1 to <8 x i1>
+  %2 = call <8 x double> @llvm.masked.expandload.v8f64.p0(ptr %p0, <8 x i1> %1, <8 x double> zeroinitializer)
+  ret <8 x double> %2
 }
