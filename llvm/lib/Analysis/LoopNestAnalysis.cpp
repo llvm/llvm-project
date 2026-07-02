@@ -27,7 +27,7 @@ static const char *VerboseDebug = DEBUG_TYPE "-verbose";
 /// perfect nesting:
 ///  - the inner loop should be the outer loop's only child
 ///  - the outer loop header should 'flow' into the inner loop preheader
-///    or jump around the inner loop to the outer loop latch
+///    through at most empty blocks (no conditional branches allowed)
 ///  - if the inner loop latch exits the inner loop, it should 'flow' into
 ///    the outer loop latch.
 /// Returns true if the loop structure satisfies the basic requirements and
@@ -66,21 +66,7 @@ static CmpInst *getOuterLoopLatchCmp(const Loop &OuterLoop) {
   return OuterLoopLatchCmp;
 }
 
-static CmpInst *getInnerLoopGuardCmp(const Loop &InnerLoop) {
-  CondBrInst *InnerGuard = InnerLoop.getLoopGuardBranch();
-  CmpInst *InnerLoopGuardCmp =
-      (InnerGuard) ? dyn_cast<CmpInst>(InnerGuard->getCondition()) : nullptr;
-
-  DEBUG_WITH_TYPE(
-      VerboseDebug, if (InnerLoopGuardCmp) {
-        dbgs() << "Inner loop guard compare instruction: " << *InnerLoopGuardCmp
-               << "\n";
-      });
-  return InnerLoopGuardCmp;
-}
-
 static bool checkSafeInstruction(const Instruction &I,
-                                 const CmpInst *InnerLoopGuardCmp,
                                  const CmpInst *OuterLoopLatchCmp,
                                  std::optional<Loop::LoopBounds> OuterLoopLB) {
 
@@ -89,10 +75,10 @@ static bool checkSafeInstruction(const Instruction &I,
   if (!IsAllowed)
     return false;
   // The only binary instruction allowed is the outer loop step instruction,
-  // the only comparison instructions allowed are the inner loop guard
-  // compare instruction and the outer loop latch compare instruction.
+  // and the only comparison instruction allowed is the outer loop latch
+  // compare instruction.
   if ((isa<BinaryOperator>(I) && &I != &OuterLoopLB->getStepInst()) ||
-      (isa<CmpInst>(I) && &I != OuterLoopLatchCmp && &I != InnerLoopGuardCmp)) {
+      (isa<CmpInst>(I) && &I != OuterLoopLatchCmp)) {
     return false;
   }
   return true;
@@ -116,7 +102,7 @@ LoopNest::LoopNestEnum LoopNest::analyzeLoopNestForPerfectNest(
   // Determine whether the loops structure satisfies the following requirements:
   //  - the inner loop should be the outer loop's only child
   //  - the outer loop header should 'flow' into the inner loop preheader
-  //    or jump around the inner loop to the outer loop latch
+  //    through at most empty blocks
   //  - if the inner loop latch exits the inner loop, it should 'flow' into
   //    the outer loop latch.
   if (!checkLoopsStructure(OuterLoop, InnerLoop, SE)) {
@@ -133,18 +119,16 @@ LoopNest::LoopNestEnum LoopNest::analyzeLoopNestForPerfectNest(
   }
 
   CmpInst *OuterLoopLatchCmp = getOuterLoopLatchCmp(OuterLoop);
-  CmpInst *InnerLoopGuardCmp = getInnerLoopGuardCmp(InnerLoop);
 
   // Determine whether instructions in a basic block are one of:
-  //  - the inner loop guard comparison
   //  - the outer loop latch comparison
   //  - the outer loop induction variable increment
   //  - a phi node, a cast or a branch
   auto containsOnlySafeInstructions = [&](const BasicBlock &BB) {
     return llvm::all_of(BB, [&](const Instruction &I) {
-      bool IsSafeInstr = checkSafeInstruction(I, InnerLoopGuardCmp,
-                                              OuterLoopLatchCmp, OuterLoopLB);
-      if (IsSafeInstr) {
+      bool IsSafeInstr =
+          checkSafeInstruction(I, OuterLoopLatchCmp, OuterLoopLB);
+      if (!IsSafeInstr) {
         DEBUG_WITH_TYPE(VerboseDebug, {
           dbgs() << "Instruction: " << I << "\nin basic block:" << BB
                  << "is unsafe.\n";
@@ -203,12 +187,10 @@ LoopNest::InstrVectorTy LoopNest::getInterveningInstructions(
   auto OuterLoopLB = OuterLoop.getBounds(SE);
 
   CmpInst *OuterLoopLatchCmp = getOuterLoopLatchCmp(OuterLoop);
-  CmpInst *InnerLoopGuardCmp = getInnerLoopGuardCmp(InnerLoop);
 
   auto GetUnsafeInstructions = [&](const BasicBlock &BB) {
     for (const Instruction &I : BB) {
-      if (!checkSafeInstruction(I, InnerLoopGuardCmp, OuterLoopLatchCmp,
-                                OuterLoopLB)) {
+      if (!checkSafeInstruction(I, OuterLoopLatchCmp, OuterLoopLB)) {
         Instr.push_back(&I);
         DEBUG_WITH_TYPE(VerboseDebug, {
           dbgs() << "Instruction: " << I << "\nin basic block:" << BB
@@ -332,94 +314,21 @@ static bool checkLoopsStructure(const Loop &OuterLoop, const Loop &InnerLoop,
       InnerLoop.getExitingBlock() != InnerLoopLatch || !InnerLoopExit)
     return false;
 
-  // Returns whether the block `ExitBlock` contains at least one LCSSA Phi node.
-  auto ContainsLCSSAPhi = [](const BasicBlock &ExitBlock) {
-    return any_of(ExitBlock.phis(), [](const PHINode &PN) {
-      return PN.getNumIncomingValues() == 1;
-    });
-  };
-
-  // Returns whether the block `BB` qualifies for being an extra Phi block. The
-  // extra Phi block is the additional block inserted after the exit block of an
-  // "guarded" inner loop which contains "only" Phi nodes corresponding to the
-  // LCSSA Phi nodes in the exit block.
-  auto IsExtraPhiBlock = [&](const BasicBlock &BB) {
-    return &*BB.getFirstNonPHIIt() == BB.getTerminator() &&
-           all_of(BB.phis(), [&](const PHINode &PN) {
-             return all_of(PN.blocks(), [&](const BasicBlock *IncomingBlock) {
-               return IncomingBlock == InnerLoopExit ||
-                      IncomingBlock == OuterLoopHeader;
-             });
-           });
-  };
-
-  const BasicBlock *ExtraPhiBlock = nullptr;
-  // Ensure the only branch that may exist between the loops is the inner loop
-  // guard.
+  // Ensure the outer loop header flows directly into the inner loop preheader
+  // through at most empty (unconditional) blocks. Loop-invariant guards that
+  // previously branched from the outer header to the latch are removed by
+  // SimpleLoopUnswitch run, so no conditional branch is expected here.
   if (OuterLoopHeader != InnerLoopPreHeader) {
     const BasicBlock &SingleSucc =
         LoopNest::skipEmptyBlockUntil(OuterLoopHeader, InnerLoopPreHeader);
-
-    // no conditional branch present
-    if (&SingleSucc != InnerLoopPreHeader) {
-      const CondBrInst *BI = dyn_cast<CondBrInst>(SingleSucc.getTerminator());
-
-      if (!BI || BI != InnerLoop.getLoopGuardBranch())
-        return false;
-
-      bool InnerLoopExitContainsLCSSA = ContainsLCSSAPhi(*InnerLoopExit);
-
-      // The successors of the inner loop guard should be the inner loop
-      // preheader or the outer loop latch possibly through empty blocks.
-      for (const BasicBlock *Succ : BI->successors()) {
-        const BasicBlock *PotentialInnerPreHeader = Succ;
-        const BasicBlock *PotentialOuterLatch = Succ;
-
-        // Ensure the inner loop guard successor is empty before skipping
-        // blocks.
-        if (Succ->size() == 1) {
-          PotentialInnerPreHeader =
-              &LoopNest::skipEmptyBlockUntil(Succ, InnerLoopPreHeader);
-          PotentialOuterLatch =
-              &LoopNest::skipEmptyBlockUntil(Succ, OuterLoopLatch);
-        }
-
-        if (PotentialInnerPreHeader == InnerLoopPreHeader)
-          continue;
-        if (PotentialOuterLatch == OuterLoopLatch)
-          continue;
-
-        // If `InnerLoopExit` contains LCSSA Phi instructions, additional block
-        // may be inserted before the `OuterLoopLatch` to which `BI` jumps. The
-        // loops are still considered perfectly nested if the extra block only
-        // contains Phi instructions from InnerLoopExit and OuterLoopHeader.
-        if (InnerLoopExitContainsLCSSA && IsExtraPhiBlock(*Succ) &&
-            Succ->getSingleSuccessor() == OuterLoopLatch) {
-          // Points to the extra block so that we can reference it later in the
-          // final check. We can also conclude that the inner loop is
-          // guarded and there exists LCSSA Phi node in the exit block later if
-          // we see a non-null `ExtraPhiBlock`.
-          ExtraPhiBlock = Succ;
-          continue;
-        }
-
-        DEBUG_WITH_TYPE(VerboseDebug, {
-          dbgs() << "Inner loop guard successor " << Succ->getName()
-                 << " doesn't lead to inner loop preheader or "
-                    "outer loop latch.\n";
-        });
-        return false;
-      }
-    }
+    if (&SingleSucc != InnerLoopPreHeader)
+      return false;
   }
 
-  // Ensure the inner loop exit block lead to the outer loop latch possibly
+  // Ensure the inner loop exit block leads to the outer loop latch possibly
   // through empty blocks.
-  if ((!ExtraPhiBlock ||
-       &LoopNest::skipEmptyBlockUntil(InnerLoop.getExitBlock(),
-                                      ExtraPhiBlock) != ExtraPhiBlock) &&
-      (&LoopNest::skipEmptyBlockUntil(InnerLoop.getExitBlock(),
-                                      OuterLoopLatch) != OuterLoopLatch)) {
+  if (&LoopNest::skipEmptyBlockUntil(InnerLoop.getExitBlock(),
+                                     OuterLoopLatch) != OuterLoopLatch) {
     DEBUG_WITH_TYPE(
         VerboseDebug,
         dbgs() << "Inner loop exit block " << *InnerLoopExit
