@@ -1913,10 +1913,19 @@ void MicrosoftCXXNameMangler::mangleTemplateArg(const TemplateDecl *TD,
     break;
   }
   case TemplateArgument::Template: {
-    const NamedDecl *ND =
-        TA.getAsTemplate().getAsTemplateDecl()->getTemplatedDecl();
-    if (const auto *TD = dyn_cast<TagDecl>(ND)) {
-      mangleType(TD);
+    const TemplateDecl *TD = TA.getAsTemplate().getAsTemplateDecl();
+    if (isa<ConceptDecl>(TD)) {
+      // MSVC does not support concepts in template-template-parameter position,
+      // so there is no established mangling for this case under the Microsoft
+      // ABI.
+      Error("template argument (concept template-template arguments are not "
+            "supported by the Microsoft ABI)");
+      return;
+    }
+
+    const auto *ND = TD->getTemplatedDecl();
+    if (const auto *Tag = dyn_cast<TagDecl>(ND)) {
+      mangleType(Tag);
     } else if (isa<TypeAliasDecl>(ND)) {
       Out << "$$Y";
       mangleName(ND);
