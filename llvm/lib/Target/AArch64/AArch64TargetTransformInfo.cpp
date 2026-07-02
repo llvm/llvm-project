@@ -5662,6 +5662,7 @@ void AArch64TTIImpl::getUnrollingPreferences(
   BaseT::getUnrollingPreferences(L, SE, UP, ORE);
 
   UP.UpperBound = true;
+  UP.MaxUpperBoundWithEarlyExits = 5;
 
   // For inner loop, it is more likely to be a hot one, and the runtime check
   // can be promoted out from LICM pass, so the overhead is less, let's try

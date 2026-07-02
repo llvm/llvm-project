@@ -141,6 +141,11 @@ static cl::opt<unsigned> UnrollMaxUpperBound(
     cl::desc(
         "The max of trip count upper bound that is considered in unrolling"));
 
+static cl::opt<unsigned> UnrollMaxUpperBoundWithEarlyExits(
+    "unroll-max-upperbound-with-early-exits", cl::Hidden,
+    cl::desc("The max of trip count upper bound that is considered in "
+             "unrolling loops that may exit before reaching the bound"));
+
 static cl::opt<unsigned> PragmaUnrollThreshold(
     "pragma-unroll-threshold", cl::init(16 * 1024), cl::Hidden,
     cl::desc("Unrolled size limit for loops with unroll metadata "
@@ -207,6 +212,7 @@ TargetTransformInfo::UnrollingPreferences llvm::gatherUnrollingPreferences(
   UP.DefaultUnrollRuntimeCount = 8;
   UP.MaxCount = std::numeric_limits<unsigned>::max();
   UP.MaxUpperBound = UnrollMaxUpperBound;
+  UP.MaxUpperBoundWithEarlyExits = UP.MaxUpperBound;
   UP.FullUnrollMaxCount = std::numeric_limits<unsigned>::max();
   UP.BEInsns = 2;
   UP.Partial = false;
@@ -247,8 +253,12 @@ TargetTransformInfo::UnrollingPreferences llvm::gatherUnrollingPreferences(
     UP.MaxPercentThresholdBoost = UnrollMaxPercentThresholdBoost;
   if (UnrollMaxCount.getNumOccurrences() > 0)
     UP.MaxCount = UnrollMaxCount;
-  if (UnrollMaxUpperBound.getNumOccurrences() > 0)
+  if (UnrollMaxUpperBound.getNumOccurrences() > 0) {
     UP.MaxUpperBound = UnrollMaxUpperBound;
+    UP.MaxUpperBoundWithEarlyExits = UP.MaxUpperBound;
+  }
+  if (UnrollMaxUpperBoundWithEarlyExits.getNumOccurrences() > 0)
+    UP.MaxUpperBoundWithEarlyExits = UnrollMaxUpperBoundWithEarlyExits;
   if (UnrollFullMaxCount.getNumOccurrences() > 0)
     UP.FullUnrollMaxCount = UnrollFullMaxCount;
   if (UnrollAllowPartial.getNumOccurrences() > 0)
@@ -1130,8 +1140,10 @@ void llvm::computeUnrollCount(Loop *L, const TargetTransformInfo &TTI,
   // cost of exact full unrolling.  As such, if we have an exact count and
   // found it unprofitable, we'll never chose to bounded unroll.
   LLVM_DEBUG(dbgs().indent(1) << "Trying upper-bound unroll...\n");
+  unsigned UpperBoundLimit =
+      MaxOrZero ? UP.MaxUpperBound : UP.MaxUpperBoundWithEarlyExits;
   if (!TripCount && MaxTripCount && (UP.UpperBound || MaxOrZero) &&
-      MaxTripCount <= UP.MaxUpperBound) {
+      MaxTripCount <= UpperBoundLimit) {
     if (auto UnrollFactor = shouldFullUnroll(L, TTI, DT, SE, EphValues,
                                              MaxTripCount, UCE, UP)) {
       UP.Count = *UnrollFactor;
