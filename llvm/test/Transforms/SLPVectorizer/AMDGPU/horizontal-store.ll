@@ -15,15 +15,11 @@
 ; Tests whether the min/max reduction pattern is vectorized if SLP starts at the store.
 define i32 @smaxv6() {
 ; GFX9-LABEL: @smaxv6(
-; GFX9-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr @arr, align 16
-; GFX9-NEXT:    [[TMP2:%.*]] = extractelement <4 x i32> [[TMP1]], i32 0
-; GFX9-NEXT:    [[TMP3:%.*]] = extractelement <4 x i32> [[TMP1]], i32 1
+; GFX9-NEXT:    [[TMP1:%.*]] = load <6 x i32>, ptr @arr, align 16
+; GFX9-NEXT:    [[TMP2:%.*]] = extractelement <6 x i32> [[TMP1]], i32 0
+; GFX9-NEXT:    [[TMP3:%.*]] = extractelement <6 x i32> [[TMP1]], i32 1
 ; GFX9-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[TMP2]], [[TMP3]]
-; GFX9-NEXT:    [[LOAD5:%.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @arr, i64 16), align 16
-; GFX9-NEXT:    [[LOAD6:%.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @arr, i64 20), align 4
-; GFX9-NEXT:    [[TMP4:%.*]] = call i32 @llvm.vector.reduce.smax.v4i32(<4 x i32> [[TMP1]])
-; GFX9-NEXT:    [[TMP5:%.*]] = call i32 @llvm.smax.i32(i32 [[TMP4]], i32 [[LOAD5]])
-; GFX9-NEXT:    [[TMP6:%.*]] = call i32 @llvm.smax.i32(i32 [[TMP5]], i32 [[LOAD6]])
+; GFX9-NEXT:    [[TMP6:%.*]] = call i32 @llvm.vector.reduce.smax.v6i32(<6 x i32> [[TMP1]])
 ; GFX9-NEXT:    [[STORE_SELECT:%.*]] = select i1 [[CMP1]], i32 3, i32 4
 ; GFX9-NEXT:    store i32 [[STORE_SELECT]], ptr @var, align 8
 ; GFX9-NEXT:    ret i32 [[TMP6]]
@@ -47,15 +43,11 @@ define i32 @smaxv6() {
 
 define i64 @sminv6() {
 ; GFX9-LABEL: @sminv6(
-; GFX9-NEXT:    [[TMP1:%.*]] = load <4 x i64>, ptr @arr64, align 16
-; GFX9-NEXT:    [[TMP2:%.*]] = extractelement <4 x i64> [[TMP1]], i32 0
-; GFX9-NEXT:    [[TMP3:%.*]] = extractelement <4 x i64> [[TMP1]], i32 1
+; GFX9-NEXT:    [[TMP1:%.*]] = load <6 x i64>, ptr @arr64, align 16
+; GFX9-NEXT:    [[TMP2:%.*]] = extractelement <6 x i64> [[TMP1]], i32 0
+; GFX9-NEXT:    [[TMP3:%.*]] = extractelement <6 x i64> [[TMP1]], i32 1
 ; GFX9-NEXT:    [[CMP1:%.*]] = icmp slt i64 [[TMP2]], [[TMP3]]
-; GFX9-NEXT:    [[LOAD5:%.*]] = load i64, ptr getelementptr inbounds nuw (i8, ptr @arr64, i64 32), align 16
-; GFX9-NEXT:    [[LOAD6:%.*]] = load i64, ptr getelementptr inbounds nuw (i8, ptr @arr64, i64 40), align 8
-; GFX9-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vector.reduce.smin.v4i64(<4 x i64> [[TMP1]])
-; GFX9-NEXT:    [[TMP5:%.*]] = call i64 @llvm.smin.i64(i64 [[TMP4]], i64 [[LOAD5]])
-; GFX9-NEXT:    [[TMP6:%.*]] = call i64 @llvm.smin.i64(i64 [[TMP5]], i64 [[LOAD6]])
+; GFX9-NEXT:    [[TMP6:%.*]] = call i64 @llvm.vector.reduce.smin.v6i64(<6 x i64> [[TMP1]])
 ; GFX9-NEXT:    [[STORE_SELECT:%.*]] = select i1 [[CMP1]], i64 3, i64 4
 ; GFX9-NEXT:    store i64 [[STORE_SELECT]], ptr @var64, align 8
 ; GFX9-NEXT:    ret i64 [[TMP6]]

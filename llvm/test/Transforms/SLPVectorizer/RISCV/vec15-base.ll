@@ -9,7 +9,8 @@ define void @v15_load_i8_mul_by_constant_store(ptr %src, ptr noalias %dst) {
 ; NON-POW2-NEXT:    [[GEP_SRC_0:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i8 0
 ; NON-POW2-NEXT:    [[TMP0:%.*]] = load <15 x i8>, ptr [[GEP_SRC_0]], align 4
 ; NON-POW2-NEXT:    [[TMP1:%.*]] = mul nsw <15 x i8> [[TMP0]], splat (i8 10)
-; NON-POW2-NEXT:    store <15 x i8> [[TMP1]], ptr [[DST]], align 1
+; NON-POW2-NEXT:    [[TMP2:%.*]] = shufflevector <15 x i8> [[TMP1]], <15 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 poison>
+; NON-POW2-NEXT:    call void @llvm.masked.store.v16i8.p0(<16 x i8> [[TMP2]], ptr align 1 [[DST]], <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 false>)
 ; NON-POW2-NEXT:    ret void
 ;
 ; POW2-ONLY-LABEL: define void @v15_load_i8_mul_by_constant_store(

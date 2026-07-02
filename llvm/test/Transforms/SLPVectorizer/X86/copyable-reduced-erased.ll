@@ -12,12 +12,15 @@ define i32 @test(i32 %v7.0.v7.0.2979.fr.1) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i32> [[TMP3]], i32 2
 ; CHECK-NEXT:    [[TMP5:%.*]] = urem <4 x i32> [[TMP3]], splat (i32 46337)
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp ult <4 x i32> [[TMP5]], zeroinitializer
-; CHECK-NEXT:    [[TMP7:%.*]] = select <4 x i1> [[TMP6]], <4 x i32> zeroinitializer, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[ARG_13_0_LCSSA:%.*]] = select i1 false, i32 0, i32 0
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <4 x i1> [[TMP6]], <4 x i1> poison, <5 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison>
+; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <5 x i1> <i1 poison, i1 poison, i1 poison, i1 poison, i1 false>, <5 x i1> [[TMP10]], <5 x i32> <i32 5, i32 6, i32 7, i32 8, i32 4>
+; CHECK-NEXT:    [[TMP9:%.*]] = select <5 x i1> [[TMP11]], <5 x i32> zeroinitializer, <5 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP8:%.*]] = sub <4 x i32> zeroinitializer, [[TMP3]]
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <5 x i32> [[TMP9]], <5 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[RDX_OP:%.*]] = add <4 x i32> [[TMP7]], [[TMP8]]
-; CHECK-NEXT:    [[TMP9:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[RDX_OP]])
-; CHECK-NEXT:    [[OP_RDX:%.*]] = add i32 [[TMP9]], [[ARG_13_0_LCSSA]]
+; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <4 x i32> [[RDX_OP]], <4 x i32> poison, <5 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison>
+; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <5 x i32> [[TMP9]], <5 x i32> [[TMP12]], <5 x i32> <i32 5, i32 6, i32 7, i32 8, i32 4>
+; CHECK-NEXT:    [[OP_RDX:%.*]] = call i32 @llvm.vector.reduce.add.v5i32(<5 x i32> [[TMP13]])
 ; CHECK-NEXT:    [[OP_RDX1:%.*]] = add i32 [[OP_RDX]], [[TMP4]]
 ; CHECK-NEXT:    ret i32 [[OP_RDX1]]
 ;

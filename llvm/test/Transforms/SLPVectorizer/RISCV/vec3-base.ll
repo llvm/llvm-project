@@ -8,7 +8,8 @@ define void @v3_load_i32_mul_by_constant_store(ptr %src, ptr %dst) {
 ; NON-POW2-NEXT:    [[GEP_SRC_0:%.*]] = getelementptr inbounds i32, ptr [[SRC:%.*]], i32 0
 ; NON-POW2-NEXT:    [[TMP0:%.*]] = load <3 x i32>, ptr [[GEP_SRC_0]], align 4
 ; NON-POW2-NEXT:    [[TMP1:%.*]] = mul nsw <3 x i32> [[TMP0]], splat (i32 10)
-; NON-POW2-NEXT:    store <3 x i32> [[TMP1]], ptr [[DST:%.*]], align 4
+; NON-POW2-NEXT:    [[TMP2:%.*]] = shufflevector <3 x i32> [[TMP1]], <3 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
+; NON-POW2-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[TMP2]], ptr align 4 [[DST:%.*]], <4 x i1> <i1 true, i1 true, i1 true, i1 false>)
 ; NON-POW2-NEXT:    ret void
 ;
 ; POW2-ONLY-LABEL: @v3_load_i32_mul_by_constant_store(
@@ -57,7 +58,8 @@ define void @v3_load_i32_udiv_by_constant_store(ptr %src, ptr %dst) {
 ; NON-POW2-NEXT:    [[GEP_SRC_0:%.*]] = getelementptr inbounds i32, ptr [[SRC:%.*]], i32 0
 ; NON-POW2-NEXT:    [[TMP0:%.*]] = load <3 x i32>, ptr [[GEP_SRC_0]], align 4
 ; NON-POW2-NEXT:    [[TMP1:%.*]] = udiv <3 x i32> splat (i32 10), [[TMP0]]
-; NON-POW2-NEXT:    store <3 x i32> [[TMP1]], ptr [[DST:%.*]], align 4
+; NON-POW2-NEXT:    [[TMP2:%.*]] = shufflevector <3 x i32> [[TMP1]], <3 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
+; NON-POW2-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[TMP2]], ptr align 4 [[DST:%.*]], <4 x i1> <i1 true, i1 true, i1 true, i1 false>)
 ; NON-POW2-NEXT:    ret void
 ;
 ; POW2-ONLY-LABEL: @v3_load_i32_udiv_by_constant_store(
@@ -107,7 +109,8 @@ define void @v3_load_i32_mul_store(ptr %src.1, ptr %src.2, ptr %dst) {
 ; NON-POW2-NEXT:    [[TMP0:%.*]] = load <3 x i32>, ptr [[GEP_SRC_1_0]], align 4
 ; NON-POW2-NEXT:    [[TMP1:%.*]] = load <3 x i32>, ptr [[GEP_SRC_2_0]], align 4
 ; NON-POW2-NEXT:    [[TMP2:%.*]] = mul nsw <3 x i32> [[TMP0]], [[TMP1]]
-; NON-POW2-NEXT:    store <3 x i32> [[TMP2]], ptr [[DST:%.*]], align 4
+; NON-POW2-NEXT:    [[TMP3:%.*]] = shufflevector <3 x i32> [[TMP2]], <3 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
+; NON-POW2-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[TMP3]], ptr align 4 [[DST:%.*]], <4 x i1> <i1 true, i1 true, i1 true, i1 false>)
 ; NON-POW2-NEXT:    ret void
 ;
 ; POW2-ONLY-LABEL: @v3_load_i32_mul_store(
@@ -166,7 +169,8 @@ define void @v3_load_i32_mul_add_const_store(ptr %src.1, ptr %src.2, ptr %dst) {
 ; NON-POW2-NEXT:    [[TMP1:%.*]] = load <3 x i32>, ptr [[GEP_SRC_2_0]], align 4
 ; NON-POW2-NEXT:    [[TMP2:%.*]] = mul nsw <3 x i32> [[TMP0]], [[TMP1]]
 ; NON-POW2-NEXT:    [[TMP3:%.*]] = add <3 x i32> [[TMP2]], splat (i32 9)
-; NON-POW2-NEXT:    store <3 x i32> [[TMP3]], ptr [[DST:%.*]], align 4
+; NON-POW2-NEXT:    [[TMP4:%.*]] = shufflevector <3 x i32> [[TMP3]], <3 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
+; NON-POW2-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[TMP4]], ptr align 4 [[DST:%.*]], <4 x i1> <i1 true, i1 true, i1 true, i1 false>)
 ; NON-POW2-NEXT:    ret void
 ;
 ; POW2-ONLY-LABEL: @v3_load_i32_mul_add_const_store(
@@ -227,7 +231,8 @@ define void @v3_load_f32_fadd_fadd_by_constant_store(ptr %src, ptr %dst) {
 ; NON-POW2-NEXT:    [[GEP_SRC_0:%.*]] = getelementptr inbounds float, ptr [[SRC:%.*]], i32 0
 ; NON-POW2-NEXT:    [[TMP0:%.*]] = load <3 x float>, ptr [[GEP_SRC_0]], align 4
 ; NON-POW2-NEXT:    [[TMP1:%.*]] = fadd <3 x float> [[TMP0]], splat (float 1.000000e+01)
-; NON-POW2-NEXT:    store <3 x float> [[TMP1]], ptr [[DST:%.*]], align 4
+; NON-POW2-NEXT:    [[TMP2:%.*]] = shufflevector <3 x float> [[TMP1]], <3 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
+; NON-POW2-NEXT:    call void @llvm.masked.store.v4f32.p0(<4 x float> [[TMP2]], ptr align 4 [[DST:%.*]], <4 x i1> <i1 true, i1 true, i1 true, i1 false>)
 ; NON-POW2-NEXT:    ret void
 ;
 ; POW2-ONLY-LABEL: @v3_load_f32_fadd_fadd_by_constant_store(
@@ -275,7 +280,8 @@ define void @phi_store3(ptr %dst) {
 ; NON-POW2-NEXT:    br label [[EXIT]]
 ; NON-POW2:       exit:
 ; NON-POW2-NEXT:    [[TMP0:%.*]] = phi <3 x i32> [ <i32 1, i32 2, i32 3>, [[ENTRY:%.*]] ], [ poison, [[INVOKE_CONT8_LOOPEXIT:%.*]] ]
-; NON-POW2-NEXT:    store <3 x i32> [[TMP0]], ptr [[DST:%.*]], align 4
+; NON-POW2-NEXT:    [[TMP1:%.*]] = shufflevector <3 x i32> [[TMP0]], <3 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
+; NON-POW2-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[TMP1]], ptr align 4 [[DST:%.*]], <4 x i1> <i1 true, i1 true, i1 true, i1 false>)
 ; NON-POW2-NEXT:    ret void
 ;
 ; POW2-ONLY-LABEL: @phi_store3(
@@ -314,7 +320,7 @@ exit:
 define void @store_try_reorder(ptr %dst) {
 ; NON-POW2-LABEL: @store_try_reorder(
 ; NON-POW2-NEXT:  entry:
-; NON-POW2-NEXT:    store <3 x i32> zeroinitializer, ptr [[DST:%.*]], align 4
+; NON-POW2-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> <i32 0, i32 0, i32 0, i32 undef>, ptr align 4 [[DST:%.*]], <4 x i1> <i1 true, i1 true, i1 true, i1 false>)
 ; NON-POW2-NEXT:    ret void
 ;
 ; POW2-ONLY-LABEL: @store_try_reorder(
@@ -345,7 +351,8 @@ define void @vec3_fpext_cost(ptr %Colour, float %0) {
 ; NON-POW2-NEXT:    [[TMP3:%.*]] = fpext <3 x float> [[TMP2]] to <3 x double>
 ; NON-POW2-NEXT:    [[TMP4:%.*]] = call <3 x double> @llvm.fmuladd.v3f64(<3 x double> [[TMP3]], <3 x double> zeroinitializer, <3 x double> zeroinitializer)
 ; NON-POW2-NEXT:    [[TMP5:%.*]] = fptrunc <3 x double> [[TMP4]] to <3 x float>
-; NON-POW2-NEXT:    store <3 x float> [[TMP5]], ptr [[COLOUR:%.*]], align 4
+; NON-POW2-NEXT:    [[TMP6:%.*]] = shufflevector <3 x float> [[TMP5]], <3 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
+; NON-POW2-NEXT:    call void @llvm.masked.store.v4f32.p0(<4 x float> [[TMP6]], ptr align 4 [[COLOUR:%.*]], <4 x i1> <i1 true, i1 true, i1 true, i1 false>)
 ; NON-POW2-NEXT:    ret void
 ;
 ; POW2-ONLY-LABEL: @vec3_fpext_cost(
