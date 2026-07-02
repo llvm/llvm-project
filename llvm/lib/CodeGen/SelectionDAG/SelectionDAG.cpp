@@ -6423,10 +6423,20 @@ bool SelectionDAG::isKnownNeverNaN(SDValue Op, const APInt &DemandedElts,
   case ISD::FMAXNUM:
   case ISD::FMINIMUMNUM:
   case ISD::FMAXIMUMNUM: {
-    // Only one needs to be known not-nan, since it will be returned if the
-    // other ends up being one.
-    return isKnownNeverNaN(Op.getOperand(0), DemandedElts, SNaN, Depth + 1) ||
-           isKnownNeverNaN(Op.getOperand(1), DemandedElts, SNaN, Depth + 1);
+    // The result is a NaN only if both operands are NaN, so it is never NaN
+    // (and hence never a signaling NaN) if either operand is known to never be
+    // NaN.
+    if (isKnownNeverNaN(Op.getOperand(0), DemandedElts, false, Depth + 1) ||
+        isKnownNeverNaN(Op.getOperand(1), DemandedElts, false, Depth + 1))
+      return true;
+    // Otherwise, for the signaling-NaN query, these do not quiet a signaling
+    // NaN: an input signaling NaN may be returned unchanged, so the result is
+    // never a signaling NaN only if both operands are known to never be one.
+    if (SNaN &&
+        isKnownNeverNaN(Op.getOperand(0), DemandedElts, true, Depth + 1) &&
+        isKnownNeverNaN(Op.getOperand(1), DemandedElts, true, Depth + 1))
+      return true;
+    return false;
   }
   case ISD::FMINNUM_IEEE:
   case ISD::FMAXNUM_IEEE: {
