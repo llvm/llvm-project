@@ -1471,6 +1471,11 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::CheriotRTOS, T.getOS());
 
+  T = Triple("x86_64-unknown-motor");
+  EXPECT_EQ(Triple::x86_64, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::Motor, T.getOS());
+
   T = Triple("spirv64-unknown-chipstar");
   EXPECT_EQ(Triple::spirv64, T.getArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
