@@ -58,56 +58,55 @@ func.func @sparse_index_1d_conj(%arga: tensor<8xi64, #SparseVector>) -> tensor<8
   return %r : tensor<8xi64>
 }
 
-// CHECK-LABEL: func.func @sparse_index_1d_disj(
-// CHECK-SAME:      %[[VAL_0:.*]]: tensor<8xi64, #sparse{{[0-9]*}}>) -> tensor<8xi64> {
-// CHECK-DAG:       %[[VAL_1:.*]] = arith.constant 8 : index
-// CHECK-DAG:       %[[VAL_2:.*]] = arith.constant dense<[0, 1, 2, 3, 4, 5, 6, 7]> : vector<8xindex>
-// CHECK-DAG:       %[[VAL_3:.*]] = arith.constant 0 : i64
-// CHECK-DAG:       %[[VAL_4:.*]] = arith.constant 0 : index
-// CHECK-DAG:       %[[VAL_5:.*]] = arith.constant 1 : index
-// CHECK-DAG:       %[[VAL_6:.*]] = arith.constant true
-// CHECK-DAG:       %[[VAL_7:.*]] = tensor.empty() : tensor<8xi64>
-// CHECK-DAG:       %[[VAL_8:.*]] = sparse_tensor.positions %[[VAL_0]] {level = 0 : index} : tensor<8xi64, #sparse{{[0-9]*}}> to memref<?xindex>
-// CHECK-DAG:       %[[VAL_9:.*]] = sparse_tensor.coordinates %[[VAL_0]] {level = 0 : index} : tensor<8xi64, #sparse{{[0-9]*}}> to memref<?xindex>
-// CHECK-DAG:       %[[VAL_10:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<8xi64, #sparse{{[0-9]*}}> to memref<?xi64>
-// CHECK-DAG:       %[[VAL_11:.*]] = bufferization.to_buffer %[[VAL_7]] : tensor<8xi64> to memref<8xi64>
-// CHECK-DAG:       linalg.fill ins(%[[VAL_3]] : i64) outs(%[[VAL_11]] : memref<8xi64>)
-// CHECK:           %[[VAL_12:.*]] = memref.load %[[VAL_8]]{{\[}}%[[VAL_4]]] : memref<?xindex>
-// CHECK:           %[[VAL_13:.*]] = memref.load %[[VAL_8]]{{\[}}%[[VAL_5]]] : memref<?xindex>
-// CHECK:           %[[VAL_14:.*]]:2 = scf.while (%[[VAL_15:.*]] = %[[VAL_12]], %[[VAL_16:.*]] = %[[VAL_4]]) : (index, index) -> (index, index) {
-// CHECK:             %[[VAL_17:.*]] = arith.cmpi ult, %[[VAL_15]], %[[VAL_13]] : index
-// CHECK:             scf.condition(%[[VAL_17]]) %[[VAL_15]], %[[VAL_16]] : index, index
+// CHECK-LABEL:   func.func @sparse_index_1d_disj(
+// CHECK-SAME:      %[[ARG0:.*]]: tensor<8xi64, #sparse{{[0-9]*}}>) -> tensor<8xi64> {
+// CHECK:           %[[CONSTANT_0:.*]] = arith.constant dense<[0, 1, 2, 3, 4, 5, 6, 7]> : vector<8xindex>
+// CHECK:           %[[CONSTANT_1:.*]] = arith.constant true
+// CHECK:           %[[CONSTANT_2:.*]] = arith.constant 1 : index
+// CHECK:           %[[CONSTANT_3:.*]] = arith.constant 0 : index
+// CHECK:           %[[CONSTANT_4:.*]] = arith.constant 8 : index
+// CHECK:           %[[CONSTANT_5:.*]] = arith.constant 0 : i64
+// CHECK:           %[[EMPTY_0:.*]] = tensor.empty() : tensor<8xi64>
+// CHECK:           %[[VALUES_0:.*]] = sparse_tensor.values %[[ARG0]] : tensor<8xi64, #sparse{{[0-9]*}}> to memref<?xi64>
+// CHECK:           %[[TO_BUFFER_0:.*]] = bufferization.to_buffer %[[EMPTY_0]] : tensor<8xi64> to memref<8xi64>
+// CHECK:           linalg.fill ins(%[[CONSTANT_5]] : i64) outs(%[[TO_BUFFER_0]] : memref<8xi64>)
+// CHECK:           %[[POSITIONS_0:.*]] = sparse_tensor.positions %[[ARG0]] {level = 0 : index} : tensor<8xi64, #sparse{{[0-9]*}}> to memref<?xindex>
+// CHECK:           %[[COORDINATES_0:.*]] = sparse_tensor.coordinates %[[ARG0]] {level = 0 : index} : tensor<8xi64, #sparse{{[0-9]*}}> to memref<?xindex>
+// CHECK:           %[[LOAD_0:.*]] = memref.load %[[POSITIONS_0]]{{\[}}%[[CONSTANT_3]]] : memref<?xindex>
+// CHECK:           %[[LOAD_1:.*]] = memref.load %[[POSITIONS_0]]{{\[}}%[[CONSTANT_2]]] : memref<?xindex>
+// CHECK:           %[[WHILE_0:.*]]:2 = scf.while (%[[VAL_0:.*]] = %[[LOAD_0]], %[[VAL_1:.*]] = %[[CONSTANT_3]]) : (index, index) -> (index, index) {
+// CHECK:             %[[CMPI_0:.*]] = arith.cmpi ult, %[[VAL_0]], %[[LOAD_1]] : index
+// CHECK:             scf.condition(%[[CMPI_0]]) %[[VAL_0]], %[[VAL_1]] : index, index
 // CHECK:           } do {
-// CHECK:           ^bb0(%[[VAL_18:.*]]: index, %[[VAL_19:.*]]: index):
-// CHECK:             %[[VAL_20:.*]] = memref.load %[[VAL_9]]{{\[}}%[[VAL_18]]] : memref<?xindex>
-// CHECK:             %[[VAL_21:.*]] = arith.cmpi eq, %[[VAL_20]], %[[VAL_19]] : index
-// CHECK:             scf.if %[[VAL_21]] {
-// CHECK:               %[[VAL_22:.*]] = memref.load %[[VAL_10]]{{\[}}%[[VAL_18]]] : memref<?xi64>
-// CHECK:               %[[VAL_23:.*]] = arith.index_cast %[[VAL_19]] : index to i64
-// CHECK:               %[[VAL_24:.*]] = arith.addi %[[VAL_22]], %[[VAL_23]] : i64
-// CHECK:               memref.store %[[VAL_24]], %[[VAL_11]]{{\[}}%[[VAL_19]]] : memref<8xi64>
+// CHECK:           ^bb0(%[[VAL_2:.*]]: index, %[[VAL_3:.*]]: index):
+// CHECK:             %[[INDEX_CAST_0:.*]] = arith.index_cast %[[VAL_3]] : index to i64
+// CHECK:             %[[LOAD_2:.*]] = memref.load %[[COORDINATES_0]]{{\[}}%[[VAL_2]]] : memref<?xindex>
+// CHECK:             %[[CMPI_1:.*]] = arith.cmpi eq, %[[LOAD_2]], %[[VAL_3]] : index
+// CHECK:             scf.if %[[CMPI_1]] {
+// CHECK:               %[[LOAD_3:.*]] = memref.load %[[VALUES_0]]{{\[}}%[[VAL_2]]] : memref<?xi64>
+// CHECK:               %[[ADDI_0:.*]] = arith.addi %[[LOAD_3]], %[[INDEX_CAST_0]] : i64
+// CHECK:               memref.store %[[ADDI_0]], %[[TO_BUFFER_0]]{{\[}}%[[VAL_3]]] : memref<8xi64>
 // CHECK:             } else {
-// CHECK:               scf.if %[[VAL_6]] {
-// CHECK:                 %[[VAL_25:.*]] = arith.index_cast %[[VAL_19]] : index to i64
-// CHECK:                 memref.store %[[VAL_25]], %[[VAL_11]]{{\[}}%[[VAL_19]]] : memref<8xi64>
+// CHECK:               scf.if %[[CONSTANT_1]] {
+// CHECK:                 memref.store %[[INDEX_CAST_0]], %[[TO_BUFFER_0]]{{\[}}%[[VAL_3]]] : memref<8xi64>
 // CHECK:               } else {
 // CHECK:               }
 // CHECK:             }
-// CHECK:             %[[VAL_26:.*]] = arith.addi %[[VAL_18]], %[[VAL_5]] : index
-// CHECK:             %[[VAL_27:.*]] = arith.select %[[VAL_21]], %[[VAL_26]], %[[VAL_18]] : index
-// CHECK:             %[[VAL_28:.*]] = arith.addi %[[VAL_19]], %[[VAL_5]] : index
-// CHECK:             scf.yield %[[VAL_27]], %[[VAL_28]] : index, index
+// CHECK:             %[[ADDI_1:.*]] = arith.addi %[[VAL_2]], %[[CONSTANT_2]] : index
+// CHECK:             %[[SELECT_0:.*]] = arith.select %[[CMPI_1]], %[[ADDI_1]], %[[VAL_2]] : index
+// CHECK:             %[[ADDI_2:.*]] = arith.addi %[[VAL_3]], %[[CONSTANT_2]] : index
+// CHECK:             scf.yield %[[SELECT_0]], %[[ADDI_2]] : index, index
 // CHECK:           } attributes {"Emitted from" = "linalg.generic"}
-// CHECK:           scf.for %[[VAL_29:.*]] = %[[VAL_30:.*]]#1 to %[[VAL_1]] step %[[VAL_1]] {
-// CHECK:             %[[VAL_31:.*]] = affine.min #map(%[[VAL_1]], %[[VAL_29]]){{\[}}%[[VAL_1]]]
-// CHECK:             %[[VAL_32:.*]] = vector.create_mask %[[VAL_31]] : vector<8xi1>
-// CHECK:             %[[VAL_33:.*]] = vector.broadcast %[[VAL_29]] : index to vector<8xindex>
-// CHECK:             %[[VAL_34:.*]] = arith.addi %[[VAL_33]], %[[VAL_2]] : vector<8xindex>
-// CHECK:             %[[VAL_35:.*]] = arith.index_cast %[[VAL_34]] : vector<8xindex> to vector<8xi64>
-// CHECK:             vector.maskedstore %[[VAL_11]]{{\[}}%[[VAL_29]]], %[[VAL_32]], %[[VAL_35]] : memref<8xi64>, vector<8xi1>, vector<8xi64>
+// CHECK:           scf.for %[[VAL_4:.*]] = %[[VAL_5:.*]]#1 to %[[CONSTANT_4]] step %[[CONSTANT_4]] {
+// CHECK:             %[[MIN_0:.*]] = affine.min #{{.*}}(%[[CONSTANT_4]], %[[VAL_4]]){{\[}}%[[CONSTANT_4]]]
+// CHECK:             %[[CREATE_MASK_0:.*]] = vector.create_mask %[[MIN_0]] : vector<8xi1>
+// CHECK:             %[[BROADCAST_0:.*]] = vector.broadcast %[[VAL_4]] : index to vector<8xindex>
+// CHECK:             %[[ADDI_3:.*]] = arith.addi %[[BROADCAST_0]], %[[CONSTANT_0]] : vector<8xindex>
+// CHECK:             %[[INDEX_CAST_1:.*]] = arith.index_cast %[[ADDI_3]] : vector<8xindex> to vector<8xi64>
+// CHECK:             vector.maskedstore %[[TO_BUFFER_0]]{{\[}}%[[VAL_4]]], %[[CREATE_MASK_0]], %[[INDEX_CAST_1]] : memref<8xi64>, vector<8xi1>, vector<8xi64>
 // CHECK:           } {"Emitted from" = "linalg.generic"}
-// CHECK:           %[[VAL_36:.*]] = bufferization.to_tensor %[[VAL_11]] : memref<8xi64>
-// CHECK:           return %[[VAL_36]] : tensor<8xi64>
+// CHECK:           %[[TO_TENSOR_0:.*]] = bufferization.to_tensor %[[TO_BUFFER_0]] : memref<8xi64> to tensor<8xi64>
+// CHECK:           return %[[TO_TENSOR_0]] : tensor<8xi64>
 // CHECK:         }
 func.func @sparse_index_1d_disj(%arga: tensor<8xi64, #SparseVector>) -> tensor<8xi64> {
   %init = tensor.empty() : tensor<8xi64>

@@ -79,75 +79,71 @@ func.func @sqsum(%arg0: tensor<?x?x?x?xi32, #COO>) -> tensor<i32> {
 // ITER:         }
 
 // CHECK-LABEL:   func.func @add(
-// CHECK-SAME:      %[[VAL_0:.*]]: tensor<10xi32, #sparse{{.*}}>,
-// CHECK-SAME:      %[[VAL_1:.*]]: tensor<10xi32, #sparse{{.*}}>) -> tensor<10xi32> {
-// CHECK:           %[[VAL_2:.*]] = arith.constant 1 : index
-// CHECK:           %[[VAL_3:.*]] = arith.constant 0 : index
-// CHECK:           %[[VAL_4:.*]] = arith.constant 0 : i32
-// CHECK:           %[[VAL_5:.*]] = arith.constant dense<0> : tensor<10xi32>
-// CHECK:           %[[VAL_6:.*]] = bufferization.to_buffer %[[VAL_5]] : tensor<10xi32> to memref<10xi32>
-// CHECK:           linalg.fill ins(%[[VAL_4]] : i32) outs(%[[VAL_6]] : memref<10xi32>)
-// CHECK:           %[[VAL_7:.*]] = sparse_tensor.positions %[[VAL_0]] {level = 0 : index} : tensor<10xi32, #sparse{{.*}}> to memref<?xindex>
-// CHECK:           %[[VAL_8:.*]] = sparse_tensor.coordinates %[[VAL_0]] {level = 0 : index} : tensor<10xi32, #sparse{{.*}}> to memref<?xindex>
-// CHECK:           %[[VAL_9:.*]] = memref.load %[[VAL_7]]{{\[}}%[[VAL_3]]] : memref<?xindex>
-// CHECK:           %[[VAL_10:.*]] = memref.load %[[VAL_7]]{{\[}}%[[VAL_2]]] : memref<?xindex>
-// CHECK:           %[[VAL_11:.*]] = sparse_tensor.positions %[[VAL_1]] {level = 0 : index} : tensor<10xi32, #sparse{{.*}}> to memref<?xindex>
-// CHECK:           %[[VAL_12:.*]] = sparse_tensor.coordinates %[[VAL_1]] {level = 0 : index} : tensor<10xi32, #sparse{{.*}}> to memref<?xindex>
-// CHECK:           %[[VAL_13:.*]] = memref.load %[[VAL_11]]{{\[}}%[[VAL_3]]] : memref<?xindex>
-// CHECK:           %[[VAL_14:.*]] = memref.load %[[VAL_11]]{{\[}}%[[VAL_2]]] : memref<?xindex>
-// CHECK:           %[[VAL_15:.*]]:2 = scf.while (%[[VAL_16:.*]] = %[[VAL_9]], %[[VAL_17:.*]] = %[[VAL_13]]) : (index, index) -> (index, index) {
-// CHECK:             %[[VAL_18:.*]] = arith.cmpi ult, %[[VAL_16]], %[[VAL_10]] : index
-// CHECK:             %[[VAL_19:.*]] = arith.cmpi ult, %[[VAL_17]], %[[VAL_14]] : index
-// CHECK:             %[[VAL_20:.*]] = arith.andi %[[VAL_18]], %[[VAL_19]] : i1
-// CHECK:             scf.condition(%[[VAL_20]]) %[[VAL_16]], %[[VAL_17]] : index, index
+// CHECK-SAME:                   %[[ARG0:.*]]: tensor<10xi32, #sparse{{.*}}>,
+// CHECK-SAME:                   %[[ARG1:.*]]: tensor<10xi32, #sparse{{.*}}>) -> tensor<10xi32> {
+// CHECK:           %[[CONSTANT_0:.*]] = arith.constant 1 : index
+// CHECK:           %[[CONSTANT_1:.*]] = arith.constant 0 : index
+// CHECK:           %[[CONSTANT_2:.*]] = arith.constant dense<0> : tensor<10xi32>
+// CHECK:           %[[CONSTANT_3:.*]] = arith.constant 0 : i32
+// CHECK:           %[[VALUES_0:.*]] = sparse_tensor.values %[[ARG1]] : tensor<10xi32, #sparse{{.*}}> to memref<?xi32>
+// CHECK:           %[[VALUES_1:.*]] = sparse_tensor.values %[[ARG0]] : tensor<10xi32, #sparse{{.*}}> to memref<?xi32>
+// CHECK:           %[[TO_BUFFER_0:.*]] = bufferization.to_buffer %[[CONSTANT_2]] : tensor<10xi32> to memref<10xi32>
+// CHECK:           linalg.fill ins(%[[CONSTANT_3]] : i32) outs(%[[TO_BUFFER_0]] : memref<10xi32>)
+// CHECK:           %[[POSITIONS_0:.*]] = sparse_tensor.positions %[[ARG0]] {level = 0 : index} : tensor<10xi32, #sparse{{.*}}> to memref<?xindex>
+// CHECK:           %[[COORDINATES_0:.*]] = sparse_tensor.coordinates %[[ARG0]] {level = 0 : index} : tensor<10xi32, #sparse{{.*}}> to memref<?xindex>
+// CHECK:           %[[LOAD_0:.*]] = memref.load %[[POSITIONS_0]]{{\[}}%[[CONSTANT_1]]] : memref<?xindex>
+// CHECK:           %[[LOAD_1:.*]] = memref.load %[[POSITIONS_0]]{{\[}}%[[CONSTANT_0]]] : memref<?xindex>
+// CHECK:           %[[POSITIONS_1:.*]] = sparse_tensor.positions %[[ARG1]] {level = 0 : index} : tensor<10xi32, #sparse{{.*}}> to memref<?xindex>
+// CHECK:           %[[COORDINATES_1:.*]] = sparse_tensor.coordinates %[[ARG1]] {level = 0 : index} : tensor<10xi32, #sparse{{.*}}> to memref<?xindex>
+// CHECK:           %[[LOAD_2:.*]] = memref.load %[[POSITIONS_1]]{{\[}}%[[CONSTANT_1]]] : memref<?xindex>
+// CHECK:           %[[LOAD_3:.*]] = memref.load %[[POSITIONS_1]]{{\[}}%[[CONSTANT_0]]] : memref<?xindex>
+// CHECK:           %[[WHILE_0:.*]]:2 = scf.while (%[[VAL_0:.*]] = %[[LOAD_0]], %[[VAL_1:.*]] = %[[LOAD_2]]) : (index, index) -> (index, index) {
+// CHECK:             %[[CMPI_0:.*]] = arith.cmpi ult, %[[VAL_0]], %[[LOAD_1]] : index
+// CHECK:             %[[CMPI_1:.*]] = arith.cmpi ult, %[[VAL_1]], %[[LOAD_3]] : index
+// CHECK:             %[[ANDI_0:.*]] = arith.andi %[[CMPI_0]], %[[CMPI_1]] : i1
+// CHECK:             scf.condition(%[[ANDI_0]]) %[[VAL_0]], %[[VAL_1]] : index, index
 // CHECK:           } do {
-// CHECK:           ^bb0(%[[VAL_21:.*]]: index, %[[VAL_22:.*]]: index):
-// CHECK:             %[[VAL_23:.*]] = memref.load %[[VAL_8]]{{\[}}%[[VAL_21]]] : memref<?xindex>
-// CHECK:             %[[VAL_24:.*]] = memref.load %[[VAL_12]]{{\[}}%[[VAL_22]]] : memref<?xindex>
-// CHECK:             %[[VAL_25:.*]] = arith.minui %[[VAL_24]], %[[VAL_23]] : index
-// CHECK:             %[[VAL_26:.*]] = arith.cmpi eq, %[[VAL_23]], %[[VAL_25]] : index
-// CHECK:             %[[VAL_27:.*]] = arith.cmpi eq, %[[VAL_24]], %[[VAL_25]] : index
-// CHECK:             %[[VAL_28:.*]] = arith.andi %[[VAL_26]], %[[VAL_27]] : i1
-// CHECK:             scf.if %[[VAL_28]] {
-// CHECK:               %[[VAL_29:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<10xi32, #sparse{{.*}}> to memref<?xi32>
-// CHECK:               %[[VAL_30:.*]] = memref.load %[[VAL_29]]{{\[}}%[[VAL_21]]] : memref<?xi32>
-// CHECK:               %[[VAL_31:.*]] = sparse_tensor.values %[[VAL_1]] : tensor<10xi32, #sparse{{.*}}> to memref<?xi32>
-// CHECK:               %[[VAL_32:.*]] = memref.load %[[VAL_31]]{{\[}}%[[VAL_22]]] : memref<?xi32>
-// CHECK:               %[[VAL_33:.*]] = arith.addi %[[VAL_30]], %[[VAL_32]] : i32
-// CHECK:               memref.store %[[VAL_33]], %[[VAL_6]]{{\[}}%[[VAL_25]]] : memref<10xi32>
+// CHECK:           ^bb0(%[[VAL_2:.*]]: index, %[[VAL_3:.*]]: index):
+// CHECK:             %[[LOAD_4:.*]] = memref.load %[[COORDINATES_0]]{{\[}}%[[VAL_2]]] : memref<?xindex>
+// CHECK:             %[[LOAD_5:.*]] = memref.load %[[COORDINATES_1]]{{\[}}%[[VAL_3]]] : memref<?xindex>
+// CHECK:             %[[MINUI_0:.*]] = arith.minui %[[LOAD_5]], %[[LOAD_4]] : index
+// CHECK:             %[[CMPI_2:.*]] = arith.cmpi eq, %[[LOAD_4]], %[[MINUI_0]] : index
+// CHECK:             %[[CMPI_3:.*]] = arith.cmpi eq, %[[LOAD_5]], %[[MINUI_0]] : index
+// CHECK:             %[[ANDI_1:.*]] = arith.andi %[[CMPI_2]], %[[CMPI_3]] : i1
+// CHECK:             scf.if %[[ANDI_1]] {
+// CHECK:               %[[LOAD_6:.*]] = memref.load %[[VALUES_1]]{{\[}}%[[VAL_2]]] : memref<?xi32>
+// CHECK:               %[[LOAD_7:.*]] = memref.load %[[VALUES_0]]{{\[}}%[[VAL_3]]] : memref<?xi32>
+// CHECK:               %[[ADDI_0:.*]] = arith.addi %[[LOAD_6]], %[[LOAD_7]] : i32
+// CHECK:               memref.store %[[ADDI_0]], %[[TO_BUFFER_0]]{{\[}}%[[MINUI_0]]] : memref<10xi32>
 // CHECK:             } else {
-// CHECK:               scf.if %[[VAL_26]] {
-// CHECK:                 %[[VAL_34:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<10xi32, #sparse{{.*}}> to memref<?xi32>
-// CHECK:                 %[[VAL_35:.*]] = memref.load %[[VAL_34]]{{\[}}%[[VAL_21]]] : memref<?xi32>
-// CHECK:                 memref.store %[[VAL_35]], %[[VAL_6]]{{\[}}%[[VAL_25]]] : memref<10xi32>
+// CHECK:               scf.if %[[CMPI_2]] {
+// CHECK:                 %[[LOAD_8:.*]] = memref.load %[[VALUES_1]]{{\[}}%[[VAL_2]]] : memref<?xi32>
+// CHECK:                 memref.store %[[LOAD_8]], %[[TO_BUFFER_0]]{{\[}}%[[MINUI_0]]] : memref<10xi32>
 // CHECK:               } else {
-// CHECK:                 scf.if %[[VAL_27]] {
-// CHECK:                   %[[VAL_36:.*]] = sparse_tensor.values %[[VAL_1]] : tensor<10xi32, #sparse{{.*}}> to memref<?xi32>
-// CHECK:                   %[[VAL_37:.*]] = memref.load %[[VAL_36]]{{\[}}%[[VAL_22]]] : memref<?xi32>
-// CHECK:                   memref.store %[[VAL_37]], %[[VAL_6]]{{\[}}%[[VAL_25]]] : memref<10xi32>
+// CHECK:                 scf.if %[[CMPI_3]] {
+// CHECK:                   %[[LOAD_9:.*]] = memref.load %[[VALUES_0]]{{\[}}%[[VAL_3]]] : memref<?xi32>
+// CHECK:                   memref.store %[[LOAD_9]], %[[TO_BUFFER_0]]{{\[}}%[[MINUI_0]]] : memref<10xi32>
 // CHECK:                 }
 // CHECK:               }
 // CHECK:             }
-// CHECK:             %[[VAL_38:.*]] = arith.addi %[[VAL_21]], %[[VAL_2]] : index
-// CHECK:             %[[VAL_39:.*]] = arith.select %[[VAL_26]], %[[VAL_38]], %[[VAL_21]] : index
-// CHECK:             %[[VAL_40:.*]] = arith.addi %[[VAL_22]], %[[VAL_2]] : index
-// CHECK:             %[[VAL_41:.*]] = arith.select %[[VAL_27]], %[[VAL_40]], %[[VAL_22]] : index
-// CHECK:             scf.yield %[[VAL_39]], %[[VAL_41]] : index, index
+// CHECK:             %[[ADDI_1:.*]] = arith.addi %[[VAL_2]], %[[CONSTANT_0]] : index
+// CHECK:             %[[SELECT_0:.*]] = arith.select %[[CMPI_2]], %[[ADDI_1]], %[[VAL_2]] : index
+// CHECK:             %[[ADDI_2:.*]] = arith.addi %[[VAL_3]], %[[CONSTANT_0]] : index
+// CHECK:             %[[SELECT_1:.*]] = arith.select %[[CMPI_3]], %[[ADDI_2]], %[[VAL_3]] : index
+// CHECK:             scf.yield %[[SELECT_0]], %[[SELECT_1]] : index, index
 // CHECK:           }
-// CHECK:           %[[VAL_42:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<10xi32, #sparse{{.*}}> to memref<?xi32>
-// CHECK:           scf.for %[[VAL_43:.*]] = %[[VAL_44:.*]]#0 to %[[VAL_10]] step %[[VAL_2]] {
-// CHECK:             %[[VAL_45:.*]] = memref.load %[[VAL_8]]{{\[}}%[[VAL_43]]] : memref<?xindex>
-// CHECK:             %[[VAL_46:.*]] = memref.load %[[VAL_42]]{{\[}}%[[VAL_43]]] : memref<?xi32>
-// CHECK:             memref.store %[[VAL_46]], %[[VAL_6]]{{\[}}%[[VAL_45]]] : memref<10xi32>
+// CHECK:           scf.for %[[VAL_4:.*]] = %[[VAL_5:.*]]#0 to %[[LOAD_1]] step %[[CONSTANT_0]] {
+// CHECK:             %[[LOAD_10:.*]] = memref.load %[[COORDINATES_0]]{{\[}}%[[VAL_4]]] : memref<?xindex>
+// CHECK:             %[[LOAD_11:.*]] = memref.load %[[VALUES_1]]{{\[}}%[[VAL_4]]] : memref<?xi32>
+// CHECK:             memref.store %[[LOAD_11]], %[[TO_BUFFER_0]]{{\[}}%[[LOAD_10]]] : memref<10xi32>
 // CHECK:           }
-// CHECK:           %[[VAL_47:.*]] = sparse_tensor.values %[[VAL_1]] : tensor<10xi32, #sparse{{.*}}> to memref<?xi32>
-// CHECK:           scf.for %[[VAL_48:.*]] = %[[VAL_49:.*]]#1 to %[[VAL_14]] step %[[VAL_2]] {
-// CHECK:             %[[VAL_50:.*]] = memref.load %[[VAL_12]]{{\[}}%[[VAL_48]]] : memref<?xindex>
-// CHECK:             %[[VAL_51:.*]] = memref.load %[[VAL_47]]{{\[}}%[[VAL_48]]] : memref<?xi32>
-// CHECK:             memref.store %[[VAL_51]], %[[VAL_6]]{{\[}}%[[VAL_50]]] : memref<10xi32>
+// CHECK:           scf.for %[[VAL_6:.*]] = %[[VAL_7:.*]]#1 to %[[LOAD_3]] step %[[CONSTANT_0]] {
+// CHECK:             %[[LOAD_12:.*]] = memref.load %[[COORDINATES_1]]{{\[}}%[[VAL_6]]] : memref<?xindex>
+// CHECK:             %[[LOAD_13:.*]] = memref.load %[[VALUES_0]]{{\[}}%[[VAL_6]]] : memref<?xi32>
+// CHECK:             memref.store %[[LOAD_13]], %[[TO_BUFFER_0]]{{\[}}%[[LOAD_12]]] : memref<10xi32>
 // CHECK:           }
-// CHECK:           %[[VAL_52:.*]] = bufferization.to_tensor %[[VAL_6]] : memref<10xi32>
-// CHECK:           return %[[VAL_52]] : tensor<10xi32>
+// CHECK:           %[[TO_TENSOR_0:.*]] = bufferization.to_tensor %[[TO_BUFFER_0]] : memref<10xi32> to tensor<10xi32>
+// CHECK:           return %[[TO_TENSOR_0]] : tensor<10xi32>
 // CHECK:         }
 func.func @add(%arg0: tensor<10xi32, #VEC>, %arg1: tensor<10xi32, #VEC>) -> tensor<10xi32> {
   %cst = arith.constant dense<0> : tensor<10xi32>

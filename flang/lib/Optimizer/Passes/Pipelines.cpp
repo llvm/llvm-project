@@ -295,7 +295,9 @@ void createHLFIRToFIRPassPipeline(mlir::PassManager &pm,
       pm, hlfir::createSeparateAllocatableAssign);
   if (optLevel.isOptimizingForSpeed()) {
     addCanonicalizerPassWithoutRegionSimplification(pm);
-    pm.addPass(mlir::createCSEPass());
+    mlir::CSEPassOptions options;
+    options.hoistPureOps = false;
+    pm.addPass(mlir::createCSEPass(options));
     // Run SimplifyHLFIRIntrinsics pass late after CSE,
     // and allow introducing operations with new side effects.
     addNestedPassToAllTopLevelOperations(pm, [&]() {
