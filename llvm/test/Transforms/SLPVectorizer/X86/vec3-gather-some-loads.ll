@@ -21,7 +21,8 @@ define void @test_insert_loads(ptr %A, ptr noalias %B, float %0) #0 {
 ; NON-POW2-NEXT:    [[TMP5:%.*]] = shufflevector <7 x float> [[TMP4]], <7 x float> poison, <7 x i32> <i32 0, i32 1, i32 1, i32 3, i32 4, i32 5, i32 6>
 ; NON-POW2-NEXT:    [[TMP6:%.*]] = insertelement <7 x float> <float poison, float 0.000000e+00, float 0.000000e+00, float 4.000000e+00, float 3.000000e+00, float 2.000000e+00, float 1.000000e+00>, float [[L_B_0]], i32 0
 ; NON-POW2-NEXT:    [[TMP7:%.*]] = call <7 x float> @llvm.fmuladd.v7f32(<7 x float> [[TMP2]], <7 x float> [[TMP5]], <7 x float> [[TMP6]])
-; NON-POW2-NEXT:    store <7 x float> [[TMP7]], ptr [[GEP_4]], align 4
+; NON-POW2-NEXT:    [[TMP8:%.*]] = shufflevector <7 x float> [[TMP7]], <7 x float> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 poison>
+; NON-POW2-NEXT:    call void @llvm.masked.store.v8f32.p0(<8 x float> [[TMP8]], ptr align 4 [[GEP_4]], <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 false>)
 ; NON-POW2-NEXT:    ret void
 ;
 ; POW2-ONLY-LABEL: define void @test_insert_loads(

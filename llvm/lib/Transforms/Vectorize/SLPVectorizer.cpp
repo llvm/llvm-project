@@ -224,7 +224,9 @@ static cl::opt<bool>
 static cl::opt<bool> EnableMaskedStores(
     "slp-enable-masked-stores", cl::init(true), cl::Hidden,
     cl::desc("Enable vectorization of non-consecutive stores as a single "
-             "masked store, when the target supports masked stores."));
+             "masked store, or of a non-power-of-2 consecutive run as a "
+             "masked store into the next legal width, when the target "
+             "supports masked stores and it is profitable to do so."));
 
 static cl::opt<bool>
     DisableTreeReorder("slp-disable-tree-reorder", cl::init(false), cl::Hidden,
@@ -11275,8 +11277,44 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
       std::optional<int64_t> Dist =
           getPointersDiff(ScalarTy, Ptr0, ScalarTy, PtrN, *DL, *SE);
       // Check that the sorted pointer operands are consecutive.
-      if (static_cast<uint64_t>(*Dist) == VL.size() - 1)
+      if (static_cast<uint64_t>(*Dist) == VL.size() - 1) {
+        const unsigned NumElts = VL.size();
+        // A non-power-of-2 run is sometimes cheaper to store as a masked
+        // store into the next full/legal vector width (padding lanes are
+        // simply masked off) than as a direct odd-width vector store. Try
+        // that alternative and use it only if the target's cost model
+        // actually prefers it over the plain vector store.
+        if (EnableMaskedStores && !has_single_bit(NumElts) &&
+            (ScalarTy->isIntOrPtrTy() || ScalarTy->isFloatingPointTy())) {
+          const unsigned PaddedElts =
+              getFullVectorNumberOfElements(*TTI, ScalarTy, NumElts);
+          if (PaddedElts > NumElts) {
+            const unsigned AS = cast<StoreInst>(VL0)->getPointerAddressSpace();
+            auto *PaddedVecTy =
+                cast<FixedVectorType>(getWidenedType(ScalarTy, PaddedElts));
+            if (TTI->isLegalMaskedStore(PaddedVecTy, CommonAlignment, AS,
+                                        TTI::ConstantMask)) {
+              constexpr TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+              InstructionCost DirectCost = TTI->getMemoryOpCost(
+                  Instruction::Store, getWidenedType(ScalarTy, NumElts),
+                  CommonAlignment, AS, CostKind);
+              InstructionCost ExpandCost = TTI->getMemIntrinsicInstrCost(
+                  MemIntrinsicCostAttributes(Intrinsic::masked_store,
+                                             PaddedVecTy, CommonAlignment, AS),
+                  CostKind);
+              if (ExpandCost <= DirectCost) {
+                ReuseShuffleIndices.assign(PaddedElts, PoisonMaskElem);
+                for (unsigned I : seq<unsigned>(NumElts))
+                  ReuseShuffleIndices[I] = static_cast<int>(
+                      CurrentOrder.empty() ? I : CurrentOrder[I]);
+                SPtrInfo.Ty = PaddedVecTy;
+                return TreeEntry::ExpandVectorize;
+              }
+            }
+          }
+        }
         return TreeEntry::Vectorize;
+      }
       if (EnableStridedStores &&
           analyzeConstantStrideCandidate(PointerOps, ScalarTy, CommonAlignment,
                                          CurrentOrder, *Dist, Ptr0, SPtrInfo))
