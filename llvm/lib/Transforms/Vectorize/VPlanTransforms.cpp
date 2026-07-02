@@ -2774,11 +2774,7 @@ void VPlanTransforms::truncateToMinimalBitwidths(
   }
 }
 
-bool VPlanTransforms::removeBranchOnConst(VPlan &Plan, bool OnlyLatches) {
-  std::optional<VPDominatorTree> VPDT;
-  if (OnlyLatches)
-    VPDT.emplace(Plan);
-
+bool VPlanTransforms::removeBranchOnConst(VPlan &Plan) {
   // Collect all blocks before modifying the CFG so we can identify unreachable
   // ones after constant branch removal.
   SmallVector<VPBlockBase *> AllBlocks(vp_depth_first_shallow(Plan.getEntry()));
@@ -2788,9 +2784,6 @@ bool VPlanTransforms::removeBranchOnConst(VPlan &Plan, bool OnlyLatches) {
     VPValue *Cond;
     // Skip blocks that are not terminated by BranchOnCond.
     if (VPBB->empty() || !match(&VPBB->back(), m_BranchOnCond(m_VPValue(Cond))))
-      continue;
-
-    if (OnlyLatches && !VPBlockUtils::isLatch(VPBB, *VPDT))
       continue;
 
     assert(VPBB->getNumSuccessors() == 2 &&
@@ -2860,7 +2853,7 @@ void VPlanTransforms::optimize(VPlan &Plan) {
   RUN_VPLAN_PASS(removeRedundantExpandSCEVRecipes, Plan);
   RUN_VPLAN_PASS(reassociateHeaderMask, Plan);
   RUN_VPLAN_PASS(simplifyRecipes, Plan);
-  RUN_VPLAN_PASS(removeBranchOnConst, Plan, /*OnlyLatches=*/false);
+  RUN_VPLAN_PASS(removeBranchOnConst, Plan);
   RUN_VPLAN_PASS(simplifyReverses, Plan);
   RUN_VPLAN_PASS(removeDeadRecipes, Plan);
 

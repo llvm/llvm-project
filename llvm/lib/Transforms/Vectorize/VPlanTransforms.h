@@ -405,10 +405,9 @@ struct VPlanTransforms {
   static void simplifyReverses(VPlan &Plan);
 
   /// Remove BranchOnCond recipes with true or false conditions together with
-  /// removing dead edges to their successors. If \p OnlyLatches is true, only
-  /// process loop latches. Returns true if incoming values from any phi-like
-  /// recipe have been removed.
-  static bool removeBranchOnConst(VPlan &Plan, bool OnlyLatches = false);
+  /// removing dead edges to their successors. Returns true if incoming values
+  /// from any phi-like recipe have been removed.
+  static bool removeBranchOnConst(VPlan &Plan);
 
   /// Perform common-subexpression-elimination on \p Plan.
   static void cse(VPlan &Plan);
