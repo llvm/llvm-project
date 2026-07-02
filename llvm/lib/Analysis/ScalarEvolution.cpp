@@ -1933,7 +1933,7 @@ const SCEV *ScalarEvolution::getZeroExtendExprImpl(const SCEV *Op, Type *Ty,
     //
     // Unlike the smax case above, X may be unsigned-large (sign bit set),
     // so it must be zero-extended; sign-extending would change its value.
-    if (SA->hasNoSignedWrap() && SA->getNumOperands() == 2 &&
+    if (SA->hasNoSignedWrap() &&
         match(SA, m_scev_Add(m_scev_APInt(C), m_SCEV())) && C->isNegative() &&
         !C->isMinSignedValue() &&
         getUnsignedRangeMin(SA->getOperand(1)).uge(C->abs())) {
