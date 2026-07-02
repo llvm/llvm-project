@@ -75,6 +75,8 @@ STATISTIC(NumMoveToCpy, "Number of memmoves converted to memcpy");
 STATISTIC(NumCpyToSet, "Number of memcpys converted to memset");
 STATISTIC(NumCallSlot, "Number of call slot optimizations performed");
 STATISTIC(NumStackMove, "Number of stack-move optimizations performed");
+STATISTIC(NumByValMove,
+          "Number of byval-src memcpy forwarding optimizations performed");
 
 namespace {
 
@@ -1779,6 +1781,137 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
   return true;
 }
 
+/// Forward stores into a `byval` argument through a `memcpy(dest, byval, n)`
+/// that copies the byval out. If the byval is fully overwritten by stores
+/// before the memcpy and otherwise unused, replace the byval Argument's uses
+/// with the memcpy's destination pointer. The memcpy then becomes a
+/// self-copy that the caller erases, and the stores end up writing directly
+/// to dest.
+bool MemCpyOptPass::performByValSrcMoveOptzn(MemCpyInst *M,
+                                             BatchAAResults &BAA) {
+  auto *Arg = dyn_cast<Argument>(M->getSource());
+  if (!Arg || !Arg->hasByValAttr())
+    return false;
+
+  Type *ByValTy = Arg->getParamByValType();
+  const DataLayout &DL = M->getDataLayout();
+  TypeSize ByValTSize = DL.getTypeAllocSize(ByValTy);
+  if (ByValTSize.isScalable())
+    return false;
+  uint64_t ByValSize = ByValTSize.getFixedValue();
+
+  // The size of the memcpy should match the byval size
+  auto *Len = dyn_cast<ConstantInt>(M->getLength());
+  if (!Len || Len->getZExtValue() != ByValSize)
+    return false;
+
+  Value *DestPtr = M->getDest();
+  if (DestPtr->getType()->getPointerAddressSpace() !=
+      Arg->getType()->getPointerAddressSpace())
+    return false;
+
+  auto *DestArg = dyn_cast<Argument>(getUnderlyingObject(DestPtr));
+  if (!DestArg || DestArg == Arg || !DestArg->hasNoAliasAttr())
+    return false;
+
+  // `sret` is implicitly writable per LangRef
+  if (!DestArg->hasStructRetAttr() &&
+      !DestArg->hasAttribute(Attribute::Writable))
+    return false;
+
+  Instruction *FirstStore = nullptr;
+  SmallVector<std::pair<int64_t, int64_t>, 8> Intervals;
+  SmallVector<std::pair<Value *, int64_t>, 8> Worklist;
+  Worklist.push_back({Arg, 0});
+
+  while (!Worklist.empty()) {
+    auto [V, BaseOff] = Worklist.pop_back_val();
+    for (Use &U : V->uses()) {
+      auto *UI = dyn_cast<Instruction>(U.getUser());
+      if (!UI)
+        return false;
+
+      if (UI == M) {
+        if (&U != &M->getRawSourceUse())
+          return false;
+        continue;
+      }
+
+      if (auto *GEP = dyn_cast<GetElementPtrInst>(UI)) {
+        APInt Off(DL.getIndexTypeSizeInBits(GEP->getType()), 0);
+        if (!GEP->accumulateConstantOffset(DL, Off))
+          return false;
+        Worklist.push_back({GEP, BaseOff + Off.getSExtValue()});
+        continue;
+      }
+
+      if (auto *SI = dyn_cast<StoreInst>(UI)) {
+        // Use must be the pointer operand only.
+        if (U.getOperandNo() != StoreInst::getPointerOperandIndex())
+          return false;
+        if (!SI->isSimple())
+          return false;
+        if (SI->getParent() != M->getParent() || !SI->comesBefore(M))
+          return false;
+        TypeSize SSize = DL.getTypeStoreSize(SI->getValueOperand()->getType());
+        if (SSize.isScalable())
+          return false;
+        uint64_t Sz = SSize.getFixedValue();
+        if (BaseOff < 0 || Sz > ByValSize ||
+            static_cast<uint64_t>(BaseOff) > ByValSize - Sz)
+          return false;
+        int64_t Hi = BaseOff + static_cast<int64_t>(Sz);
+        Intervals.emplace_back(BaseOff, Hi);
+        if (!FirstStore || SI->comesBefore(FirstStore))
+          FirstStore = SI;
+        continue;
+      }
+
+      return false;
+    }
+  }
+
+  if (!FirstStore)
+    return false;
+
+  // Stores should cover [0, ByValSize).
+  llvm::sort(Intervals);
+  int64_t Cursor = 0;
+  for (auto [Lo, Hi] : Intervals) {
+    if (Lo > Cursor)
+      return false;
+    Cursor = std::max(Cursor, Hi);
+  }
+  if (static_cast<uint64_t>(Cursor) < ByValSize)
+    return false;
+
+  // The destination should be at least as aligned as the byval.
+  MaybeAlign ByValAlign = Arg->getParamAlign();
+  Align ReqAlign = ByValAlign ? *ByValAlign : DL.getABITypeAlign(ByValTy);
+  Align DestAlign = M->getDestAlign().valueOrOne();
+  if (DestAlign < ReqAlign)
+    return false;
+
+  if (!isDereferenceableAndAlignedPointer(
+          DestPtr, ReqAlign, APInt(64, ByValSize), DL, FirstStore, AC, DT))
+    return false;
+
+  // The [0, ByValSize) region should not be accessed between FirstStore and M.
+  MemoryLocation DestLoc(DestPtr, LocationSize::precise(ByValSize));
+  if (accessedBetween(BAA, DestLoc, MSSA->getMemoryAccess(FirstStore),
+                      MSSA->getMemoryAccess(M)))
+    return false;
+
+  Arg->replaceAllUsesWith(DestPtr);
+
+  LLVM_DEBUG(dbgs() << "MemCpyOpt: Forwarded stores into byval through"
+                       " memcpy by replacing byval arg with destination:\n"
+                    << "    arg: " << *Arg << "\n"
+                    << "    memcpy: " << *M << "\n");
+  ++NumByValMove;
+  return true;
+}
+
 static bool isZeroSize(Value *Size) {
   if (auto *I = dyn_cast<Instruction>(Size))
     if (auto *Res = simplifyInstruction(I, I->getDataLayout()))
@@ -1911,6 +2044,13 @@ bool MemCpyOptPass::processMemCpy(MemCpyInst *M, BasicBlock::iterator &BBI) {
   if (performStackMoveOptzn(M, M, M->getDest(), M->getSource(),
                             TypeSize::getFixed(Len->getZExtValue()), BAA)) {
     // Avoid invalidating the iterator.
+    BBI = M->getNextNode()->getIterator();
+    eraseInstruction(M);
+    ++NumMemCpyInstr;
+    return true;
+  }
+
+  if (performByValSrcMoveOptzn(M, BAA)) {
     BBI = M->getNextNode()->getIterator();
     eraseInstruction(M);
     ++NumMemCpyInstr;
