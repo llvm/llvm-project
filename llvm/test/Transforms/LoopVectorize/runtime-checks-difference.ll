@@ -619,5 +619,36 @@ exit:
   ret void
 }
 
+define void @constant_strided(ptr %p, ptr %p.out) {
+; CHECK-LABEL: define void @constant_strided(
+; CHECK-SAME: ptr [[P:%.*]], ptr [[P_OUT:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[P2:%.*]] = ptrtoaddr ptr [[P]] to i64
+; CHECK-NEXT:    [[P_OUT1:%.*]] = ptrtoaddr ptr [[P_OUT]] to i64
+; CHECK-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
+; CHECK:       [[VECTOR_MEMCHECK]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[P_OUT1]], [[P2]]
+; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = icmp ult i64 [[TMP0]], 56
+; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], [[SCALAR_PH:label %.*]], [[VECTOR_PH:label %.*]]
+;
+entry:
+  br label %header
+
+header:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %header ]
+  %iv.next = add nsw i64 %iv, 1
+  %idx = mul nuw nsw i64 %iv, 2
+  %gep.ld = getelementptr inbounds i64, ptr %p, i64 %idx
+  %gep.st = getelementptr inbounds i64, ptr %p.out, i64 %idx
+  %ld = load i64, ptr %gep.ld, align 4
+  %add = add i64 %ld, 1
+  store i64 %add, ptr %gep.st, align 4
+  %exitcond = icmp slt i64 %iv.next, 128
+  br i1 %exitcond, label %header, label %exit
+
+exit:
+  ret void
+}
+
 !0 = distinct !{!0, !1}
 !1 = !{!"llvm.loop.mustprogress"}

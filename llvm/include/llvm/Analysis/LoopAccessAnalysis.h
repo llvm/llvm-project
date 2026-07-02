@@ -495,11 +495,14 @@ struct PointerDiffInfo {
   const SCEV *SrcStart;
   const SCEV *SinkStart;
   unsigned AccessSize;
+  uint64_t AbsCommonStrideInBytes;
   bool NeedsFreeze;
 
   PointerDiffInfo(const SCEV *SrcStart, const SCEV *SinkStart,
-                  unsigned AccessSize, bool NeedsFreeze)
+                  unsigned AccessSize, uint64_t AbsCommonStrideInBytes,
+                  bool NeedsFreeze)
       : SrcStart(SrcStart), SinkStart(SinkStart), AccessSize(AccessSize),
+        AbsCommonStrideInBytes(AbsCommonStrideInBytes),
         NeedsFreeze(NeedsFreeze) {}
 };
 
