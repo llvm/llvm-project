@@ -65,7 +65,8 @@ constexpr void test_iterators() {
     // Regression test for https://llvm.org/PR193613.
     std::array in{1, 2, 3};
     std::array out{-1, -2, -3};
-    std::same_as<std::ranges::in_out_result<In, Out>> auto ret = std::ranges::copy_n(In(in.data()), -5, Out(out.data()));
+    std::same_as<std::ranges::in_out_result<In, Out>> auto ret =
+        std::ranges::copy_n(In(in.data()), -5, Out(out.data()));
     assert(base(ret.in) == in.data());
     assert(base(ret.out) == out.data());
     assert((out == std::array{-1, -2, -3}));

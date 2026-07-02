@@ -26,10 +26,8 @@
 int main(int, char**) {
   int a[] = {1, 2, 3};
 
-  TEST_LIBCPP_ASSERT_FAILURE(
-      std::for_each_n(a, -1, [](int) {}), "for_each_n requires a non-negative count");
-  TEST_LIBCPP_ASSERT_FAILURE(
-      std::for_each_n(a, -10000000, [](int) {}), "for_each_n requires a non-negative count");
+  TEST_LIBCPP_ASSERT_FAILURE(std::for_each_n(a, -1, [](int) {}), "for_each_n requires a non-negative count");
+  TEST_LIBCPP_ASSERT_FAILURE(std::for_each_n(a, -10000000, [](int) {}), "for_each_n requires a non-negative count");
 
   return 0;
 }

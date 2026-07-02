@@ -64,9 +64,9 @@ struct TestIterators {
 
       { // A negative count is a no-op that returns the unchanged output iterator.
         // Regression test for https://llvm.org/PR193613.
-        int source[]  = {1, 2, 3};
-        int dest[]    = {-1, -2, -3};
-        OutIter ret   = std::copy_n(InIter(source), -5, OutIter(dest));
+        int source[] = {1, 2, 3};
+        int dest[]   = {-1, -2, -3};
+        OutIter ret  = std::copy_n(InIter(source), -5, OutIter(dest));
         assert(base(ret) == dest);
         assert(dest[0] == -1 && dest[1] == -2 && dest[2] == -3);
       }
