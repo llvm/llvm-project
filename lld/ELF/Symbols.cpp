@@ -683,8 +683,10 @@ void Symbol::resolve(Ctx &ctx, const SharedSymbol &other) {
     // An undefined symbol with non default visibility must be satisfied
     // in the same DSO.
     uint8_t bind = binding;
+    uint8_t oldStOther = stOther;
     other.overwrite(*this);
     binding = bind;
+    stOther |= oldStOther & ~0x3;
   } else if (traced)
     printTraceSymbol(other, getName());
 }
