@@ -386,7 +386,6 @@ define i16 @crc16.be.tc8.misalign(i8 %msg, i16 %checksum) {
 ; CHECK-NEXT:    Initial CRC: i16 %checksum
 ; CHECK-NEXT:    Generating polynomial: 4129
 ; CHECK-NEXT:    Computed CRC: %crc.next = select i1 %check.sb, i16 %crc.shl, i16 %xor
-; CHECK-NEXT:    Auxiliary data: i8 %msg
 ; CHECK-NEXT:    Computed CRC lookup table:
 ; CHECK-NEXT:  0 4129 8258 12387 16516 20645 24774 28903 33032 37161 41290 45419 49548 53677 57806 61935
 ; CHECK-NEXT:  4657 528 12915 8786 21173 17044 29431 25302 37689 33560 45947 41818 54205 50076 62463 58334
@@ -480,7 +479,6 @@ define i16 @crc16.be.tc8.zext.data(i8 %msg, i16 %checksum) {
 ; CHECK-NEXT:    Initial CRC: i16 %checksum
 ; CHECK-NEXT:    Generating polynomial: 258
 ; CHECK-NEXT:    Computed CRC: %crc.next = select i1 %check.sb, i16 %crc.shl, i16 %crc.xor
-; CHECK-NEXT:    Auxiliary data: i8 %msg
 ; CHECK-NEXT:    Computed CRC lookup table:
 ; CHECK-NEXT:  0 258 516 774 1032 1290 1548 1806 2064 2322 2580 2838 3096 3354 3612 3870
 ; CHECK-NEXT:  4128 4386 4644 4902 5160 5418 5676 5934 6192 6450 6708 6966 7224 7482 7740 7998

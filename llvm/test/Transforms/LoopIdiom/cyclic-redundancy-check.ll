@@ -404,12 +404,9 @@ define i16 @crc16.be.tc8.misalign(i8 %msg, i16 %checksum) {
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[CRC2:%.*]] = phi i16 [ [[CHECKSUM]], %[[ENTRY]] ], [ [[CRC_NEXT3:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[IV_BITS:%.*]] = shl i8 [[IV]], 3
-; CHECK-NEXT:    [[DATA_INDEXER:%.*]] = shl i8 [[MSG]], [[IV_BITS]]
-; CHECK-NEXT:    [[CRC_INDEXER_CAST:%.*]] = trunc i16 [[CRC2]] to i8
-; CHECK-NEXT:    [[CRC_DATA_INDEXER:%.*]] = xor i8 [[DATA_INDEXER]], [[CRC_INDEXER_CAST]]
-; CHECK-NEXT:    [[INDEXER_HI:%.*]] = lshr i8 [[CRC_DATA_INDEXER]], 8
-; CHECK-NEXT:    [[INDEXER_EXT:%.*]] = zext i8 [[INDEXER_HI]] to i64
+; CHECK-NEXT:    [[INDEXER_HI:%.*]] = lshr i16 [[CRC2]], 8
+; CHECK-NEXT:    [[INDEXER_HI_LO_BYTE:%.*]] = trunc i16 [[INDEXER_HI]] to i8
+; CHECK-NEXT:    [[INDEXER_EXT:%.*]] = zext i8 [[INDEXER_HI_LO_BYTE]] to i64
 ; CHECK-NEXT:    [[TBL_PTRADD:%.*]] = getelementptr inbounds i16, ptr @.crctable.8, i64 [[INDEXER_EXT]]
 ; CHECK-NEXT:    [[TBL_LD:%.*]] = load i16, ptr [[TBL_PTRADD]], align 2
 ; CHECK-NEXT:    [[CRC_BE_SHIFT:%.*]] = shl i16 [[CRC2]], 8
@@ -498,12 +495,9 @@ define i16 @crc16.be.tc8.zext.data(i8 %msg, i16 %checksum) {
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[CRC2:%.*]] = phi i16 [ [[CHECKSUM]], %[[ENTRY]] ], [ [[CRC_NEXT3:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[IV_BITS:%.*]] = shl i8 [[IV]], 3
-; CHECK-NEXT:    [[DATA_INDEXER:%.*]] = shl i8 [[MSG]], [[IV_BITS]]
-; CHECK-NEXT:    [[CRC_INDEXER_CAST:%.*]] = trunc i16 [[CRC2]] to i8
-; CHECK-NEXT:    [[CRC_DATA_INDEXER:%.*]] = xor i8 [[DATA_INDEXER]], [[CRC_INDEXER_CAST]]
-; CHECK-NEXT:    [[INDEXER_HI:%.*]] = lshr i8 [[CRC_DATA_INDEXER]], 8
-; CHECK-NEXT:    [[INDEXER_EXT:%.*]] = zext i8 [[INDEXER_HI]] to i64
+; CHECK-NEXT:    [[INDEXER_HI:%.*]] = lshr i16 [[CRC2]], 8
+; CHECK-NEXT:    [[INDEXER_HI_LO_BYTE:%.*]] = trunc i16 [[INDEXER_HI]] to i8
+; CHECK-NEXT:    [[INDEXER_EXT:%.*]] = zext i8 [[INDEXER_HI_LO_BYTE]] to i64
 ; CHECK-NEXT:    [[TBL_PTRADD:%.*]] = getelementptr inbounds i16, ptr @.crctable.10, i64 [[INDEXER_EXT]]
 ; CHECK-NEXT:    [[TBL_LD:%.*]] = load i16, ptr [[TBL_PTRADD]], align 2
 ; CHECK-NEXT:    [[CRC_BE_SHIFT:%.*]] = shl i16 [[CRC2]], 8
