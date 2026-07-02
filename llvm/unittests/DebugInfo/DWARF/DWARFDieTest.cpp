@@ -839,4 +839,201 @@ TEST(DWARFDie, DWARFTypePrinterTest) {
   testAppendQualifiedName(Ctx->getDIEForOffset(0x1a), "t1<t3<int> >::t2");
   testAppendQualifiedName(Ctx->getDIEForOffset(0x28), "t3<int>::my_int");
 }
+
+TEST(DWARFDie, getLanguage) {
+  const char *yamldata = R"(
+    debug_abbrev:
+      - Table:
+          - Code:       1
+            Tag:        DW_TAG_compile_unit
+            Children:   DW_CHILDREN_no
+            Attributes:
+              - Attribute: DW_AT_language
+                Form:      DW_FORM_data2
+    debug_info:
+      - Version:    5
+        UnitType:   DW_UT_compile
+        AddrSize:   4
+        Entries:
+          - AbbrCode: 1
+            Values:
+              - Value: 4
+  )";
+  Expected<StringMap<std::unique_ptr<MemoryBuffer>>> Sections =
+      DWARFYAML::emitDebugSections(StringRef(yamldata), /*IsLittleEndian=*/true,
+                                   /*Is64BitAddrSize=*/false);
+  ASSERT_THAT_EXPECTED(Sections, Succeeded());
+  std::unique_ptr<DWARFContext> Ctx =
+      DWARFContext::create(*Sections, 4, /*isLittleEndian=*/true);
+  DWARFCompileUnit *CU = Ctx->getCompileUnitForOffset(0);
+  ASSERT_NE(nullptr, CU);
+  DWARFDie Die = CU->getUnitDIE();
+  ASSERT_TRUE(Die.isValid());
+  EXPECT_EQ(Die.getLanguage(), std::optional<uint64_t>(DW_LANG_C_plus_plus));
+}
+
+TEST(DWARFDie, getLanguageAbsent) {
+  const char *yamldata = R"(
+    debug_abbrev:
+      - Table:
+          - Code:       1
+            Tag:        DW_TAG_compile_unit
+            Children:   DW_CHILDREN_no
+            Attributes: []
+    debug_info:
+      - Version:    5
+        UnitType:   DW_UT_compile
+        AddrSize:   4
+        Entries:
+          - AbbrCode: 1
+            Values:   []
+  )";
+  Expected<StringMap<std::unique_ptr<MemoryBuffer>>> Sections =
+      DWARFYAML::emitDebugSections(StringRef(yamldata), /*IsLittleEndian=*/true,
+                                   /*Is64BitAddrSize=*/false);
+  ASSERT_THAT_EXPECTED(Sections, Succeeded());
+  std::unique_ptr<DWARFContext> Ctx =
+      DWARFContext::create(*Sections, 4, /*isLittleEndian=*/true);
+  DWARFCompileUnit *CU = Ctx->getCompileUnitForOffset(0);
+  ASSERT_NE(nullptr, CU);
+  DWARFDie Die = CU->getUnitDIE();
+  ASSERT_TRUE(Die.isValid());
+  EXPECT_FALSE(Die.getLanguage().has_value());
+}
+
+TEST(DWARFDie, getLanguageNameOnly) {
+  const char *yamldata = R"(
+    debug_abbrev:
+      - Table:
+          - Code:       1
+            Tag:        DW_TAG_compile_unit
+            Children:   DW_CHILDREN_no
+            Attributes:
+              - Attribute: DW_AT_language_name
+                Form:      DW_FORM_data2
+    debug_info:
+      - Version:    6
+        UnitType:   DW_UT_compile
+        AddrSize:   4
+        Entries:
+          - AbbrCode: 1
+            Values:
+              - Value: 4
+  )";
+  Expected<StringMap<std::unique_ptr<MemoryBuffer>>> Sections =
+      DWARFYAML::emitDebugSections(StringRef(yamldata), /*IsLittleEndian=*/true,
+                                   /*Is64BitAddrSize=*/false);
+  ASSERT_THAT_EXPECTED(Sections, Succeeded());
+  std::unique_ptr<DWARFContext> Ctx =
+      DWARFContext::create(*Sections, 4, /*isLittleEndian=*/true);
+  DWARFCompileUnit *CU = Ctx->getCompileUnitForOffset(0);
+  ASSERT_NE(nullptr, CU);
+  DWARFDie Die = CU->getUnitDIE();
+  ASSERT_TRUE(Die.isValid());
+  EXPECT_EQ(Die.getLanguage(), std::optional<uint64_t>(DW_LANG_C_plus_plus));
+}
+
+TEST(DWARFDie, getLanguageNameAndVersion) {
+  const char *yamldata = R"(
+    debug_abbrev:
+      - Table:
+          - Code:       1
+            Tag:        DW_TAG_compile_unit
+            Children:   DW_CHILDREN_no
+            Attributes:
+              - Attribute: DW_AT_language_name
+                Form:      DW_FORM_data2
+              - Attribute: DW_AT_language_version
+                Form:      DW_FORM_data4
+    debug_info:
+      - Version:    6
+        UnitType:   DW_UT_compile
+        AddrSize:   4
+        Entries:
+          - AbbrCode: 1
+            Values:
+              - Value: 4
+              - Value: 201703
+  )";
+  Expected<StringMap<std::unique_ptr<MemoryBuffer>>> Sections =
+      DWARFYAML::emitDebugSections(StringRef(yamldata), /*IsLittleEndian=*/true,
+                                   /*Is64BitAddrSize=*/false);
+  ASSERT_THAT_EXPECTED(Sections, Succeeded());
+  std::unique_ptr<DWARFContext> Ctx =
+      DWARFContext::create(*Sections, 4, /*isLittleEndian=*/true);
+  DWARFCompileUnit *CU = Ctx->getCompileUnitForOffset(0);
+  ASSERT_NE(nullptr, CU);
+  DWARFDie Die = CU->getUnitDIE();
+  ASSERT_TRUE(Die.isValid());
+  EXPECT_EQ(Die.getLanguage(), std::optional<uint64_t>(DW_LANG_C_plus_plus_17));
+}
+
+TEST(DWARFDie, getLanguageNameNoMapping) {
+  // DW_LNAME_CPP_for_OpenCL (0x24) has no corresponding DW_LANG_* constant.
+  const char *yamldata = R"(
+    debug_abbrev:
+      - Table:
+          - Code:       1
+            Tag:        DW_TAG_compile_unit
+            Children:   DW_CHILDREN_no
+            Attributes:
+              - Attribute: DW_AT_language_name
+                Form:      DW_FORM_data2
+    debug_info:
+      - Version:    6
+        UnitType:   DW_UT_compile
+        AddrSize:   4
+        Entries:
+          - AbbrCode: 1
+            Values:
+              - Value: 36
+  )";
+  Expected<StringMap<std::unique_ptr<MemoryBuffer>>> Sections =
+      DWARFYAML::emitDebugSections(StringRef(yamldata), /*IsLittleEndian=*/true,
+                                   /*Is64BitAddrSize=*/false);
+  ASSERT_THAT_EXPECTED(Sections, Succeeded());
+  std::unique_ptr<DWARFContext> Ctx =
+      DWARFContext::create(*Sections, 4, /*isLittleEndian=*/true);
+  DWARFCompileUnit *CU = Ctx->getCompileUnitForOffset(0);
+  ASSERT_NE(nullptr, CU);
+  DWARFDie Die = CU->getUnitDIE();
+  ASSERT_TRUE(Die.isValid());
+  EXPECT_EQ(Die.getLanguage(), std::nullopt);
+}
+
+TEST(DWARFDie, getLanguageNameInvalidVersion) {
+  const char *yamldata = R"(
+    debug_abbrev:
+      - Table:
+          - Code:       1
+            Tag:        DW_TAG_compile_unit
+            Children:   DW_CHILDREN_no
+            Attributes:
+              - Attribute: DW_AT_language_name
+                Form:      DW_FORM_data2
+              - Attribute: DW_AT_language_version
+                Form:      DW_FORM_data4
+    debug_info:
+      - Version:    6
+        UnitType:   DW_UT_compile
+        AddrSize:   4
+        Entries:
+          - AbbrCode: 1
+            Values:
+              - Value: 4
+              - Value: 999999
+  )";
+  Expected<StringMap<std::unique_ptr<MemoryBuffer>>> Sections =
+      DWARFYAML::emitDebugSections(StringRef(yamldata), /*IsLittleEndian=*/true,
+                                   /*Is64BitAddrSize=*/false);
+  ASSERT_THAT_EXPECTED(Sections, Succeeded());
+  std::unique_ptr<DWARFContext> Ctx =
+      DWARFContext::create(*Sections, 4, /*isLittleEndian=*/true);
+  DWARFCompileUnit *CU = Ctx->getCompileUnitForOffset(0);
+  ASSERT_NE(nullptr, CU);
+  DWARFDie Die = CU->getUnitDIE();
+  ASSERT_TRUE(Die.isValid());
+  EXPECT_EQ(Die.getLanguage(), std::nullopt);
+}
+
 } // end anonymous namespace
