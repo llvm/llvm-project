@@ -497,19 +497,25 @@ void SearchableTableEmitter::emitLookupFunction(const GenericTable &Table,
   auto emitComparator = [&](bool LHSIsKey, bool RHSIsKey) {
     for (const auto &Field : Index.Fields) {
       if (isa<StringRecTy>(Field.RecType)) {
+        std::string LHSVar = "LHS" + Field.Name + "Str";
+        std::string RHSVar = "RHS" + Field.Name + "Str";
+        std::string CmpVar = "Cmp" + Field.Name;
         if (LHSIsKey)
-          OS << "      StringRef LHSStr = LHS." << Field.Name << ";\n";
+          OS << "      StringRef " << LHSVar << " = LHS." << Field.Name
+             << ";\n";
         else
-          OS << "      StringRef LHSStr = " << Table.Name << "Strings[LHS."
-             << Field.Name << "];\n";
+          OS << "      StringRef " << LHSVar << " = " << Table.Name
+             << "Strings[LHS." << Field.Name << "];\n";
         if (RHSIsKey)
-          OS << "      StringRef RHSStr = RHS." << Field.Name << ";\n";
+          OS << "      StringRef " << RHSVar << " = RHS." << Field.Name
+             << ";\n";
         else
-          OS << "      StringRef RHSStr = " << Table.Name << "Strings[RHS."
-             << Field.Name << "];\n";
-        OS << "      int Cmp" << Field.Name << " = LHSStr.compare(RHSStr);\n";
-        OS << "      if (Cmp" << Field.Name << " < 0) return true;\n";
-        OS << "      if (Cmp" << Field.Name << " > 0) return false;\n";
+          OS << "      StringRef " << RHSVar << " = " << Table.Name
+             << "Strings[RHS." << Field.Name << "];\n";
+        OS << "      int " << CmpVar << " = " << LHSVar << ".compare(" << RHSVar
+           << ");\n";
+        OS << "      if (" << CmpVar << " < 0) return true;\n";
+        OS << "      if (" << CmpVar << " > 0) return false;\n";
       } else if (Field.Enum) {
         // Explicitly cast to unsigned, because the signedness of enums is
         // compiler-dependent.

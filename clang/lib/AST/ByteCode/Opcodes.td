@@ -748,6 +748,16 @@ def CastAPS : Opcode {
   let HasGroup = 1;
 }
 
+def APOnlyTypeClass : TypeClass {
+  let Types = [IntAP, IntAPS];
+}
+
+// Cast from an AP integer type to Sint64, failing if the value doesn't fit.
+def CastNoOverflow : Opcode {
+  let Types = [APOnlyTypeClass];
+  let HasGroup = 1;
+}
+
 // Cast an integer to a floating type
 def CastIntegralFloating : Opcode {
   let Types = [AluTypeClass];

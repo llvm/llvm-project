@@ -840,6 +840,50 @@ func.func @reflect_invalid_type(%arg0 : i32, %arg1 : i32) {
 // -----
 
 //===----------------------------------------------------------------------===//
+// spirv.GL.Step
+//===----------------------------------------------------------------------===//
+
+func.func @step_scalar(%edge : f32, %x : f32) {
+  %2 = spirv.GL.Step %edge, %x : f32
+  // CHECK: %{{.+}} = spirv.GL.Step %{{.+}}, %{{.+}} : f32
+  return
+}
+
+func.func @step_vector(%edge : vector<3xf32>, %x : vector<3xf32>) {
+  %2 = spirv.GL.Step %edge, %x : vector<3xf32>
+  // CHECK: %{{.+}} = spirv.GL.Step %{{.+}}, %{{.+}} : vector<3xf32>
+  return
+}
+
+// -----
+
+func.func @step_invalid_type(%edge : i32, %x : i32) {
+  // expected-error @+1 {{'spirv.GL.Step' op operand #0 must be 16/32/64-bit float or fixed-length vector of 16/32/64-bit float values}}
+  %0 = spirv.GL.Step %edge, %x : i32
+  return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.GL.SmoothStep
+//===----------------------------------------------------------------------===//
+
+func.func @smoothstep_scalar(%edge0 : f32, %edge1 : f32, %x : f32) {
+  // CHECK: spirv.GL.SmoothStep {{%[^,]*}}, {{%[^,]*}}, {{%[^,]*}} : f32
+  %2 = spirv.GL.SmoothStep %edge0, %edge1, %x : f32
+  return
+}
+
+func.func @smoothstep_vector(%edge0 : vector<3xf32>, %edge1 : vector<3xf32>, %x : vector<3xf32>) {
+  // CHECK: spirv.GL.SmoothStep {{%[^,]*}}, {{%[^,]*}}, {{%[^,]*}} : vector<3xf32>
+  %2 = spirv.GL.SmoothStep %edge0, %edge1, %x : vector<3xf32>
+  return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // spirv.GL.Fract
 //===----------------------------------------------------------------------===//
 

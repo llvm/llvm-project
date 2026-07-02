@@ -26,7 +26,6 @@ define void @foo(ptr nocapture %a, ptr nocapture %b, i32 %k, i32 %m) #0 {
 ; CHECK:       for.body3.lr.ph.us.preheader:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[M]], -1
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[K:%.*]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[M]] to i64
 ; CHECK-NEXT:    br label [[FOR_BODY3_LR_PH_US:%.*]]
 ; CHECK:       for.end.us:
 ; CHECK-NEXT:    [[ARRAYIDX9_US:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i64 [[INDVARS_IV33:%.*]]
@@ -57,6 +56,7 @@ define void @foo(ptr nocapture %a, ptr nocapture %b, i32 %k, i32 %m) #0 {
 ; CHECK-NEXT:    [[TMP8:%.*]] = trunc i64 [[INDVARS_IV33]] to i32
 ; CHECK-NEXT:    [[ADD_US]] = add i32 [[TMP8]], [[K]]
 ; CHECK-NEXT:    [[ARRAYIDX7_US]] = getelementptr inbounds i32, ptr [[A]], i64 [[INDVARS_IV33]]
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[M]] to i64
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP2]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH]], label [[VECTOR_SCEVCHECK:%.*]]
 ; CHECK:       vector.scevcheck:

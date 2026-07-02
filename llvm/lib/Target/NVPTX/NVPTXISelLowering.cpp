@@ -1130,10 +1130,13 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
                       MVT::v64f32, MVT::v128f32},
                      Custom);
 
-  // Custom lowering for tcgen05.st vector operands
+  // Custom lowering for tcgen05.st vector operands and the st.async
+  // i128 (.b128) operand. MVT::i8 is needed for the st.async.{sys,gpu} b8
+  // variant.
   setOperationAction(ISD::INTRINSIC_VOID,
-                     {MVT::v2i32, MVT::v4i32, MVT::v8i32, MVT::v16i32,
-                      MVT::v32i32, MVT::v64i32, MVT::v128i32, MVT::Other},
+                     {MVT::i8, MVT::v2i32, MVT::v4i32, MVT::v8i32, MVT::v16i32,
+                      MVT::v32i32, MVT::v64i32, MVT::v128i32, MVT::i128,
+                      MVT::Other},
                      Custom);
 
   // Enable custom lowering for the following:
@@ -1320,7 +1323,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   //
   // After all vararg is processed, 'VAOffset' holds the size of the
   // vararg byte array.
-  assert((CLI.IsVarArg || CLI.Args.size() == CLI.NumFixedArgs) &&
+  assert((CLI.IsVarArg || CLI.Args.size() <= CLI.NumFixedArgs) &&
          "Non-VarArg function with extra arguments");
 
   const unsigned FirstVAArg = CLI.NumFixedArgs; // position of first variadic
@@ -2509,6 +2512,90 @@ static SDValue lowerBSWAP(SDValue Op, SelectionDAG &DAG) {
   }
 }
 
+static SDValue lowerStAsyncWithMbarrier(SDValue Op, SelectionDAG &DAG) {
+  const Function &Fn = DAG.getMachineFunction().getFunction();
+  SDNode *N = Op.getNode();
+  SDLoc DL(N);
+  Intrinsic::ID IntrinsicID = N->getConstantOperandVal(1);
+  SDValue DestAddr = N->getOperand(2);
+  SDValue Value = N->getOperand(3);
+  SDValue MbarAddr = N->getOperand(4);
+
+  MVT ValueVT = Value.getSimpleValueType();
+
+  if (ValueVT == MVT::i32 || ValueVT == MVT::i64)
+    return Op;
+
+  if (ValueVT == MVT::i128) {
+    SDValue Cast = DAG.getNode(ISD::BITCAST, DL, MVT::v2i64, Value);
+    SDValue ValueLo = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i64, Cast,
+                                  DAG.getIntPtrConstant(0, DL));
+    SDValue ValueHi = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i64, Cast,
+                                  DAG.getIntPtrConstant(1, DL));
+    SDValue Ops[] = {N->getOperand(0), DestAddr, ValueLo, ValueHi, MbarAddr};
+    return DAG.getNode(NVPTXISD::ST_ASYNC_MBARRIER_B128, DL, MVT::Other, Ops);
+  }
+
+  DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+      Fn,
+      Twine("unsupported argument type ") + llvm::EVT(ValueVT).getEVTString() +
+          " for " + llvm::Intrinsic::getName(IntrinsicID) + " intrinsic",
+      DiagnosticLocation(DL.getDebugLoc())));
+  return Op.getOperand(0); // Return only the chain
+}
+
+static SDValue lowerStAsyncRelease(SDValue Op, SelectionDAG &DAG) {
+  const Function &Fn = DAG.getMachineFunction().getFunction();
+  SDNode *N = Op.getNode();
+  SDLoc DL(N);
+  Intrinsic::ID IntrinsicID = N->getConstantOperandVal(1);
+  SDValue DestAddr = N->getOperand(2);
+  SDValue Value = N->getOperand(3);
+
+  MVT ValueVT = Value.getSimpleValueType();
+
+  if (ValueVT == MVT::i16 || ValueVT == MVT::i32 || ValueVT == MVT::i64)
+    return Op;
+
+  if (ValueVT == MVT::i8) {
+    unsigned OpCode;
+    switch (IntrinsicID) {
+    case Intrinsic::nvvm_st_async_sys:
+      OpCode = NVPTXISD::ST_ASYNC_SYS_B8;
+      break;
+    case Intrinsic::nvvm_st_async_gpu:
+      OpCode = NVPTXISD::ST_ASYNC_GPU_B8;
+      break;
+    case Intrinsic::nvvm_st_async_mmio_sys:
+      OpCode = NVPTXISD::ST_ASYNC_MMIO_SYS_B8;
+      break;
+    default:
+      llvm_unreachable("unexpected intrinsic ID for st.async.release");
+    }
+
+    Value = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i16, Value);
+
+    // The `.mmio` variant has no multimem form and therefore no `isMultimem`
+    // operand.
+    if (IntrinsicID == Intrinsic::nvvm_st_async_mmio_sys) {
+      SDValue Ops[] = {N->getOperand(0), DestAddr, Value};
+      return DAG.getNode(OpCode, DL, MVT::Other, Ops);
+    }
+
+    SDValue IsMultimem =
+        DAG.getTargetConstant(N->getConstantOperandVal(4), DL, MVT::i1);
+    SDValue Ops[] = {N->getOperand(0), DestAddr, Value, IsMultimem};
+    return DAG.getNode(OpCode, DL, MVT::Other, Ops);
+  }
+
+  DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+      Fn,
+      Twine("unsupported argument type ") + llvm::EVT(ValueVT).getEVTString() +
+          " for " + llvm::Intrinsic::getName(IntrinsicID) + " intrinsic",
+      DiagnosticLocation(DL.getDebugLoc())));
+  return Op.getOperand(0); // Return only the chain
+}
+
 static unsigned getTcgen05MMADisableOutputLane(unsigned IID) {
   switch (IID) {
   case Intrinsic::nvvm_tcgen05_mma_shared_disable_output_lane_cg1:
@@ -2703,6 +2790,12 @@ static SDValue lowerIntrinsicVoid(SDValue Op, SelectionDAG &DAG) {
   switch (IntrinNo) {
   default:
     break;
+  case Intrinsic::nvvm_st_async:
+    return lowerStAsyncWithMbarrier(Op, DAG);
+  case Intrinsic::nvvm_st_async_sys:
+  case Intrinsic::nvvm_st_async_gpu:
+  case Intrinsic::nvvm_st_async_mmio_sys:
+    return lowerStAsyncRelease(Op, DAG);
   case Intrinsic::nvvm_tcgen05_st_16x64b_x2:
   case Intrinsic::nvvm_tcgen05_st_16x64b_x4:
   case Intrinsic::nvvm_tcgen05_st_16x64b_x8:
@@ -3965,15 +4058,17 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
   // See similar issue in LowerCall.
 
   auto AllIns = ArrayRef(Ins);
-  for (const auto &Arg : F.args()) {
-    const auto ArgIns = AllIns.take_while(
-        [&](auto I) { return I.OrigArgIndex == Arg.getArgNo(); });
+  const auto NonEmptyArgs = make_filter_range(
+      F.args(), [](const Argument &A) { return !A.getType()->isEmptyTy(); });
+  for (const auto &[ParamI, Arg] : enumerate(NonEmptyArgs)) {
+    const unsigned ArgNo = Arg.getArgNo();
+    const auto ArgIns =
+        AllIns.take_while([&](auto I) { return I.OrigArgIndex == ArgNo; });
     AllIns = AllIns.drop_front(ArgIns.size());
 
     Type *Ty = Arg.getType();
-
-    if (ArgIns.empty())
-      report_fatal_error("Empty parameter types are not supported");
+    assert(!ArgIns.empty() &&
+           "Non-empty argument produced no parameter values");
 
     if (Arg.use_empty()) {
       // argument is dead
@@ -3984,7 +4079,7 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
       continue;
     }
 
-    SDValue ArgSymbol = getParamSymbol(DAG, Arg.getArgNo(), PtrVT);
+    SDValue ArgSymbol = getParamSymbol(DAG, ParamI, PtrVT);
 
     // In the following cases, assign a node order of "i+1"
     // to newly created nodes. The SDNodes for params have to

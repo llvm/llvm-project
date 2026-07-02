@@ -3,6 +3,7 @@ subroutine s()
   real(8) :: a
   !ERROR: COMPLEX(KIND=128) is not a supported type
   complex(128) :: x
+  !ERROR: The name 'i' of a statement function dummy argument may not be the same as an accessible name unless that name is a scalar variable
   a(i)=a + ((i)+1) + 3.14
   !ERROR: 'a' has not been declared as an array or pointer-valued function
   a()=z(a * a + n-1 - x) + i((/0,0,0,0,0,0,0,0,0,0/)) + 8

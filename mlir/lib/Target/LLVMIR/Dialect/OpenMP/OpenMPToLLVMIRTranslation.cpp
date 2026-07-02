@@ -7784,19 +7784,24 @@ convertOmpDistribute(Operation &opInst, llvm::IRBuilderBase &builder,
   return success();
 }
 
-/// Lowers the FlagsAttr which is applied to the module on the device
-/// pass when offloading, this attribute contains OpenMP RTL globals that can
-/// be passed as flags to the frontend, otherwise they are set to default
+/// Lowers the FlagsAttr which is applied to the module when offloading. This
+/// attribute contains OpenMP RTL globals that can be passed as flags to the
+/// frontend, otherwise they are set to default
 static LogicalResult
 convertFlagsAttr(Operation *op, mlir::omp::FlagsAttr attribute,
                  LLVM::ModuleTranslation &moduleTranslation) {
-  if (!cast<mlir::ModuleOp>(op))
-    return failure();
+  auto offloadMod = dyn_cast<omp::OffloadModuleInterface>(op);
+  if (!offloadMod)
+    return op->emitOpError() << "omp flags attached to non offload module op";
 
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
 
   ompBuilder->M.addModuleFlag(llvm::Module::Max, "openmp-device",
                               attribute.getOpenmpDeviceVersion());
+
+  // The flags below are only intended to be emitted for GPU offload targets.
+  if (!offloadMod.getIsGPU())
+    return success();
 
   if (attribute.getNoGpuLib())
     return success();

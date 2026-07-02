@@ -142,10 +142,3 @@ class ProcessAttachTestCase(TestBase):
         )
         self.runCmd("process continue")
         self.expect("v g_val", substrs=["12345"])
-
-    def tearDown(self):
-        # Destroy process before TestBase.tearDown()
-        self.dbg.GetSelectedTarget().GetProcess().Destroy()
-
-        # Call super's tearDown().
-        TestBase.tearDown(self)

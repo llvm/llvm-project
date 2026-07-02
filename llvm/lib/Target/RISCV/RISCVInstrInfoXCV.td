@@ -272,7 +272,7 @@ class CVInstImmBranch<bits<3> funct3, dag outs, dag ins,
 let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in {
 class CVLoad_ri_inc<bits<3> funct3, string opcodestr>
     : RVInstI<funct3, OPC_CUSTOM_0, (outs GPR:$rd, GPR:$rs1_wb),
-              (ins BasePtr:$rs1, simm12_lo:$imm12),
+              (ins BasePtr:$rs1, simm12:$imm12),
               opcodestr, "$rd, (${rs1}), ${imm12}"> {
   let Constraints = "$rs1_wb = $rs1";
 }
@@ -293,7 +293,7 @@ class CVLoad_rr<bits<7> funct7, bits<3> funct3, string opcodestr>
 let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in {
 class CVStore_ri_inc<bits<3> funct3, string opcodestr>
     : RVInstS<funct3, OPC_CUSTOM_1, (outs GPR:$rs1_wb),
-              (ins GPR:$rs2, GPR:$rs1, simm12_lo:$imm12),
+              (ins GPR:$rs2, GPR:$rs1, simm12:$imm12),
               opcodestr, "$rs2, (${rs1}), ${imm12}"> {
   let Constraints = "$rs1_wb = $rs1";
 }
@@ -682,8 +682,8 @@ class CVLdrrPat<PatFrag LoadOp, RVInst Inst>
           (Inst CVrr:$regreg)>;
 
 class CVStriPat<PatFrag StoreOp, RVInst Inst>
-    : Pat<(StoreOp (i32 GPR:$rs2), GPR:$rs1, simm12_lo:$imm12),
-          (Inst GPR:$rs2, GPR:$rs1, simm12_lo:$imm12)>;
+    : Pat<(StoreOp (i32 GPR:$rs2), GPR:$rs1, simm12:$imm12),
+          (Inst GPR:$rs2, GPR:$rs1, simm12:$imm12)>;
 
 class CVStrriPat<PatFrag StoreOp, RVInst Inst>
     : Pat<(StoreOp (i32 GPR:$rs2), GPR:$rs1, GPR:$rs3),
