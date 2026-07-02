@@ -49,15 +49,14 @@ struct ResultNonUnitDimsAndOffsetsForRC {
 static std::optional<SmallVector<int64_t>>
 delinearizeStaticRCOffset(memref::ReinterpretCastOp rc) {
   ArrayRef<int64_t> rcOffsets = rc.getStaticOffsets();
+  MemRefType srcType = dyn_cast<MemRefType>(rc.getSource().getType());
   // FIXME: Despite what `getStaticOffsets` implies, `reinterpret_cast` takes
   // only a single offset. That should be fixed at the op definition level.
   assert(rcOffsets.size() == 1 && "Expecting single offset");
-  assert(ShapedType::isStatic(rcOffsets[0]) && "expected static offset");
 
+  assert(ShapedType::isStatic(rcOffsets[0]) && "expected static offset");
   assert(rcOffsets[0] >= 0 &&
          "static reinterpret_cast offset must be non-negative");
-
-  MemRefType srcType = dyn_cast<MemRefType>(rc.getSource().getType());
   assert(srcType.getLayout().isIdentity() &&
          "Expecting identity source layout.");
   if (srcType.getRank() == 0) {
@@ -102,97 +101,29 @@ static std::optional<unsigned> getSingleNonUnitDim(MemRefType type) {
   return (*nonUnitDims.begin()).index();
 }
 
-/// Returns the copy-relevant reinterpret_cast information: non-unit result
-/// dimensions, their source-dimension mapping, and optional source starting
-/// indices for a static offset.
+/// Returns reinterpret_cast result non-unit dimensions and, for static offsets,
+/// the corresponding source indices.
 ///
-/// Examples that return rewrite info:
+/// Supports ranked, static-shape, rank-preserving reinterpret_casts from
+/// identity-layout sources. Non-scalar results must have static strides
+/// identical to the source identity strides. Dynamic offsets are supported only
+/// for effectively-1D sources.
 ///
-///   // Scalar-shaped copy. There are no non-unit result dimensions, so result
-///   // strides do not affect index mapping - may be static or
-///   // dynamic.
-///   copy memref<1 x ... x 1 x f32>
-///     to reinterpret_cast memref<source-shape, identity-layout>
-///       to memref<1 x ... x 1 x f32,
-///                 strided<[?, ..., ?], offset: O>>
+/// Examples that return info:
 ///
-///   // Scalar-shaped copy with dynamic offset into an effectively-1D source.
-///   // The dynamic offset can be used directly as the index of the source's
-///   // unique non-unit dimension.
-///   copy memref<1 x ... x 1 x f32>
-///     to reinterpret_cast memref<1 x ... x M x ... x 1 x f32,
-///                               identity-layout>
-///       to memref<1 x ... x 1 x f32,
-///                 strided<[?, ..., ?], offset: ?>>
+///   reinterpret_cast memref<1xNxMxf32, identity-layout>
+///     to memref<1xNxKxf32, strided<[N*M, M, 1], offset: O>>
 ///
-///   // Non-scalar effectively-1D copy with static offset. Result strides must
-///   // be static and identical to the identity strides of the source.
-///   copy memref<1 x ... x N x ... x 1 x f32>
-///     to reinterpret_cast memref<1 x ... x M x ... x 1 x f32,
-///                               identity-layout>
-///       to memref<1 x ... x N x ... x 1 x f32,
-///                 strided<[source-identity-strides], offset: O>>
-///
-///   // Non-scalar effectively-1D copy with dynamic offset into an
-///   // effectively-1D source. Runtime delinearization is not needed because
-///   the
-///   // source has a unique non-unit dimension.
-///   copy memref<1 x ... x N x ... x 1 x f32>
-///     to reinterpret_cast memref<1 x ... x M x ... x 1 x f32,
-///                               identity-layout>
-///       to memref<1 x ... x N x ... x 1 x f32,
-///                 strided<[source-identity-strides], offset: ?>>
-///
-///   // Non-scalar multidimensional copy with static offset. Result strides
-///   must
-///   // be static and identical to the identity strides of the source.
-///   copy memref<1 x ... x N_0 x ... x N_K x ... x 1 x f32>
-///     to reinterpret_cast memref<source-shape, identity-layout>
-///       to memref<1 x ... x N_0 x ... x N_K x ... x 1 x f32,
-///                 strided<[source-identity-strides], offset: O>>
+///   reinterpret_cast memref<1xMxf32, identity-layout>
+///     to memref<1x1xf32, strided<[?, ?], offset: ?>>
 ///
 /// Examples that return no info:
 ///
-///   // Rank-changing reinterpret_casts are not supported.
-///   copy memref<1xNxf32>
-///     to reinterpret_cast memref<Mxf32, identity-layout>
-///       to memref<1xNxf32, strided<[N, 1]>>
+///   reinterpret_cast memref<1xNxMxf32, identity-layout>
+///     to memref<1xNxKxf32, strided<[?, M, 1]>>
 ///
-///   // Dynamic shapes are not supported.
-///   copy memref<?xNxf32>
-///     to reinterpret_cast memref<?xMxf32, identity-layout>
-///       to memref<?xNxf32, strided<[M, 1]>>
-///
-///   // Non-identity source layouts are not supported.
-///   copy memref<1xNxf32>
-///     to reinterpret_cast memref<1xMxf32, strided<[S, 1]>>
-///       to memref<1xNxf32, strided<[M, 1]>>
-///
-///   // Dynamic offset into a source with more than one non-unit dimension is
-///   // not supported because runtime delinearization is not implemented.
-///   copy memref<1x1xf32>
-///     to reinterpret_cast memref<1xNxMxf32, identity-layout>
-///       to memref<1x1xf32, strided<[?, ?], offset: ?>>
-///
-///   // Non-scalar copies with dynamic result strides are not supported.
-///   copy memref<1xNxf32>
-///     to reinterpret_cast memref<1xMxf32, identity-layout>
-///       to memref<1xNxf32, strided<[?, 1]>>
-///
-///   // Non-scalar copies with result strides different from the source
-///   identity
-///   // strides are not supported.
-///   copy memref<1xNxf32>
-///     to reinterpret_cast memref<1xMxf32, identity-layout>
-///       to memref<1xNxf32, strided<[S, 1]>>
-///
-///   // Multidimensional non-scalar copies with dynamic offset are not
-///   supported
-///   // unless the source is effectively 1D.
-///   copy memref<1xNxKxf32>
-///     to reinterpret_cast memref<1xNxMxf32, identity-layout>
-///       to memref<1xNxKxf32,
-///                 strided<[N*M, M, 1], offset: ?>>
+///   reinterpret_cast memref<1xNxMxf32, identity-layout>
+///     to memref<1xNx1xf32, strided<[N*M, M, K]>>
 static std::optional<ResultNonUnitDimsAndOffsetsForRC>
 getResultNonUnitDimsAndOffsetsForRC(memref::ReinterpretCastOp rc) {
   MemRefType srcType = dyn_cast<MemRefType>(rc.getSource().getType());
@@ -219,11 +150,12 @@ getResultNonUnitDimsAndOffsetsForRC(memref::ReinterpretCastOp rc) {
   ResultNonUnitDimsAndOffsetsForRC dimsAndOffs;
 
   assert(resType.hasStaticShape() && "expected static shape");
+
+  bool isScalarCopy =
+      llvm::all_of(resType.getShape(), [](int64_t size) { return size == 1; });
+
   // For scalar copies, result strides are irrelevant, including dynamic ones.
-  // For non-scalar copies, require static result strides identical to the
-  // identity strides of the reinterpret_cast source.
-  if (!llvm::all_of(resType.getShape(),
-                    [](int64_t size) { return size == 1; })) {
+  if (!isScalarCopy) {
     SmallVector<int64_t> srcIdentityStrides =
         computeStrides(srcType.getShape());
     ArrayRef<int64_t> rcResultStrides = rc.getStaticStrides();
@@ -231,7 +163,8 @@ getResultNonUnitDimsAndOffsetsForRC(memref::ReinterpretCastOp rc) {
     assert((srcIdentityStrides.size() == rcResultStrides.size()) &&
            "Expecting same number of strides for rank-preserving "
            "reinterpret_casts.");
-
+    // For non-scalar copies, require static result strides identical to the
+    // identity strides of the reinterpret_cast source.
     if (!llvm::all_of(llvm::zip_equal(srcIdentityStrides, rcResultStrides),
                       [](auto pair) {
                         auto [srcStride, resultStride] = pair;
@@ -239,6 +172,8 @@ getResultNonUnitDimsAndOffsetsForRC(memref::ReinterpretCastOp rc) {
                                srcStride == resultStride;
                       }))
       return std::nullopt;
+    // Track result dimensions that produce varying indices; unit dimensions are
+    // always indexed at 0.
     for (auto [dim, resultSize] : llvm::enumerate(resType.getShape())) {
       if (resultSize != 1)
         dimsAndOffs.nonUnitDimsPos.push_back(static_cast<unsigned>(dim));

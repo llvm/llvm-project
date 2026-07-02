@@ -2,15 +2,16 @@
 // RUN: | FileCheck %s
 
 //===----------------------------------------------------------------------===//
-// Positive tests
-// 
 // Scalar (0D) copy
+//
+// No varying RC result dimensions =>
+//   RC result strides do not affect copy destination address and are ignored.
 //===----------------------------------------------------------------------===//
 
 // The destination is effectively a scalar within a MemRef with rank == 0 
-// CHECK-LABEL: func.func private @copy_scalar_into_0D_strided(
+// CHECK-LABEL: func.func private @copy_scalar_into_0D_strided_zero_offset(
 // CHECK-SAME:   %[[SRC:.*]]: memref<f32>, %[[DST:.*]]: memref<f32>
-func.func private @copy_scalar_into_0D_strided(%src : memref<f32>, %dst : memref<f32>) {
+func.func private @copy_scalar_into_0D_strided_zero_offset(%src : memref<f32>, %dst : memref<f32>) {
   // CHECK-NOT:  memref.reinterpret_cast
   %rc = memref.reinterpret_cast %dst
     to offset: [0], sizes: [], strides: []
@@ -44,6 +45,25 @@ func.func private @copy_scalar_into_1D_strided_zero_offset(%src : memref<1x1xf32
   memref.copy %src, %rc
     : memref<1x1xf32> to memref<1x1xf32>
   // CHECK-NOT:  memref.copy
+  return
+}
+
+/// Reject non-identity layout rc source strides
+// CHECK-LABEL: func.func private @negative_copy_scalar_into_1D_strided_zero_offset_non_identity_layout(
+func.func private @negative_copy_scalar_into_1D_strided_zero_offset_non_identity_layout(
+  %src: memref<1x1xf32>, %dst: memref<1x108xf32, strided<[54, 2]>>) {
+  // CHECK:      %reinterpret_cast = memref.reinterpret_cast %arg1
+  %rc = memref.reinterpret_cast %dst
+    to offset: [0], sizes: [1, 1], strides: [54, 2]
+    : memref<1x108xf32, strided<[54, 2]>>
+      to memref<1x1xf32, strided<[54, 2]>>
+
+  // CHECK:      memref.copy %arg0, %reinterpret_cast
+  // CHECK-NOT:  memref.load
+  // CHECK-NOT:  memref.store
+  memref.copy %src, %rc
+    : memref<1x1xf32> to memref<1x1xf32, strided<[54, 2]>>
+
   return
 }
 
@@ -95,33 +115,31 @@ func.func private @copy_scalar_into_1D_strided_dynamic_offset(%offset: index, %s
   return
 }
 
-// Scalar copies have no varying result dimensions, so rc result strides do
-// not affect the copy destination address and are ignored.
-// CHECK-LABEL: func.func private @copy_scalar_into_1D_strided_non_identity_stride(
+// CHECK-LABEL: func.func private @copy_scalar_into_1D_strided_zero_offset_non_identity_stride(
 // CHECK-SAME:   %[[SRC:.*]]: memref<1x1xf32>
 // CHECK-SAME:   %[[DST:.*]]: memref<1x108xf32>
-func.func private @copy_scalar_into_1D_strided_non_identity_stride(%src : memref<1x1xf32>,
-  %dst : memref<1x108xf32>) {
+func.func private @copy_scalar_into_1D_strided_zero_offset_non_identity_stride(
+  %src : memref<1x1xf32>, %dst : memref<1x108xf32>) {
   // CHECK-NOT:  memref.reinterpret_cast
   %reinterpret_cast = memref.reinterpret_cast %dst
-    to offset: [0], sizes: [1, 1], strides: [2, 54]
-    : memref<1x108xf32> to memref<1x1xf32, strided<[2, 54]>>
+    to offset: [0], sizes: [1, 1], strides: [54, 2]
+    : memref<1x108xf32> to memref<1x1xf32, strided<[54, 2]>>
 
   // CHECK-NOT:  memref.copy
   // CHECK:      %[[C0:.*]] = arith.constant 0 : index
   // CHECK:      %[[VAL:.*]] = memref.load %[[SRC]][%[[C0]], %[[C0]]] : memref<1x1xf32>
   // CHECK:      memref.store %[[VAL]], %[[DST]][%[[C0]], %[[C0]]] : memref<1x108xf32>
   memref.copy %src, %reinterpret_cast
-    : memref<1x1xf32> to memref<1x1xf32, strided<[2, 54]>>
+    : memref<1x1xf32> to memref<1x1xf32, strided<[54, 2]>>
   return
 }
 
-// CHECK-LABEL: func.func private @copy_scalar_into_1D_strided_dynamic_stride(
+// CHECK-LABEL: func.func private @copy_scalar_into_1D_strided_zero_offset_dynamic_stride(
 // CHECK-SAME:   %[[STR0:[A-Za-z][A-Za-z0-9-]*]]: index
 // CHECK-SAME:   %[[STR1:[A-Za-z][A-Za-z0-9-]*]]: index
 // CHECK-SAME:   %[[SRC:[A-Za-z][A-Za-z0-9-]*]]: memref<1x1xf32>
 // CHECK-SAME:   %[[DST:[A-Za-z][A-Za-z0-9-]*]]: memref<1x108xf32>
-func.func private @copy_scalar_into_1D_strided_dynamic_stride(%stride0: index,
+func.func private @copy_scalar_into_1D_strided_zero_offset_dynamic_stride(%stride0: index,
   %stride1: index, %src : memref<1x1xf32>, %dst : memref<1x108xf32>) {
   // CHECK-NOT:  memref.reinterpret_cast
   %rc = memref.reinterpret_cast %dst
@@ -141,10 +159,10 @@ func.func private @copy_scalar_into_1D_strided_dynamic_stride(%stride0: index,
 }
 
 /// The destination is effectively a 2D array within a MemRef with rank >= 2 
-// CHECK-LABEL: func.func private @copy_scalar_into_2D_strided_non_identity_stride(
+// CHECK-LABEL: func.func private @copy_scalar_into_2D_strided_zero_offset_non_identity_stride(
 // CHECK-SAME:   %[[SRC:.*]]: memref<1x1x1xf32>
 // CHECK-SAME:   %[[DST:.*]]: memref<1x3x11xf32>
-func.func private @copy_scalar_into_2D_strided_non_identity_stride(
+func.func private @copy_scalar_into_2D_strided_zero_offset_non_identity_stride(
   %src : memref<1x1x1xf32>, %dst : memref<1x3x11xf32>) {
   // CHECK-NOT:  memref.reinterpret_cast
   %rc = memref.reinterpret_cast %dst
@@ -161,9 +179,26 @@ func.func private @copy_scalar_into_2D_strided_non_identity_stride(
   return
 }
 
+/// Reject dynamic offsets for rc sources with > 1 non-unit dimension -
+/// runtime delinearization of these offsets is TODO.
+// CHECK-LABEL: func.func private @negative_copy_scalar_into_2D_strided_dynamic_offset(
+func.func private @negative_copy_scalar_into_2D_strided_dynamic_offset(
+  %offset : index, %src : memref<1x1x1xf32>, %dst : memref<1x3x11xf32>) {
+  // CHECK:      %reinterpret_cast = memref.reinterpret_cast %arg2
+  %rc = memref.reinterpret_cast %dst
+    to offset: [%offset], sizes: [1, 1, 1], strides: [33, 11, 1]
+    : memref<1x3x11xf32> to memref<1x1x1xf32, strided<[33, 11, 1], offset: ?>>
+
+  // CHECK:      memref.copy %arg1, %reinterpret_cast
+  // CHECK-NOT:  memref.load
+  // CHECK-NOT:  memref.store
+  memref.copy %src, %rc
+    : memref<1x1x1xf32>
+      to memref<1x1x1xf32, strided<[33, 11, 1], offset: ?>>
+  return
+}
+
 //===----------------------------------------------------------------------===//
-// Positive tests
-// 
 // Non-scalar (ND) copy
 //===----------------------------------------------------------------------===//
 
@@ -217,6 +252,72 @@ func.func private @copy_1D_into_2D_strided_nonzero_offset(
     : memref<1x3x1xf32>
       to memref<1x3x1xf32, strided<[33, 11, 1], offset: 10>>
   // CHECK-NOT:  memref.copy
+  return
+}
+
+// CHECK-LABEL: func.func private @copy_1D_into_2D_strided_delinearized_offset(
+// CHECK-SAME:   %[[SRC:.*]]: memref<1x3x1xf32>
+// CHECK-SAME:   %[[DST:.*]]: memref<1x4x11xf32>
+func.func private @copy_1D_into_2D_strided_delinearized_offset(
+  %src : memref<1x3x1xf32>, %dst : memref<1x4x11xf32>) {
+  // CHECK-NOT:  memref.reinterpret_cast
+  %rc = memref.reinterpret_cast %dst
+    to offset: [12], sizes: [1, 3, 1], strides: [44, 11, 1]
+    : memref<1x4x11xf32>
+      to memref<1x3x1xf32, strided<[44, 11, 1], offset: 12>>
+
+  // CHECK-NOT:  memref.copy
+  // CHECK-DAG:  %[[C0:.*]] = arith.constant 0 : index
+  // CHECK-DAG:  %[[C1:.*]] = arith.constant 1 : index
+  // CHECK-DAG:  %[[UB:.*]] = arith.constant 3 : index
+  // CHECK:      scf.for %[[IDX:.*]] = %[[C0]] to %[[UB]] step %[[C1]] {
+  // CHECK:        %[[DST_IDX:.*]] = arith.addi %[[C1]], %[[IDX]] : index
+  // CHECK:        %[[VAL:.*]] = memref.load %[[SRC]][%[[C0]], %[[IDX]], %[[C0]]] : memref<1x3x1xf32>
+  // CHECK:        memref.store %[[VAL]], %[[DST]][%[[C0]], %[[DST_IDX]], %[[C1]]] : memref<1x4x11xf32>
+  // CHECK:      }
+  memref.copy %src, %rc
+    : memref<1x3x1xf32>
+      to memref<1x3x1xf32, strided<[44, 11, 1], offset: 12>>
+  // CHECK-NOT:  memref.copy
+  return
+}
+
+/// Reject rc result strides that not equal to rc source identity strides.
+/// (non-unit copied dimension needs stride-based address computation)
+// CHECK-LABEL: func.func private @negative_copy_1D_into_2D_strided_zero_offset_non_identity_strides(
+func.func private @negative_copy_1D_into_2D_strided_zero_offset_non_identity_strides(
+  %src : memref<1x3x1xf32>, %dst : memref<1x3x4xf32>) {
+  // CHECK:      %reinterpret_cast = memref.reinterpret_cast %arg1
+  %rc = memref.reinterpret_cast %dst
+    to offset: [0], sizes: [1, 3, 1], strides: [12, 4, 4]
+    : memref<1x3x4xf32>
+      to memref<1x3x1xf32, strided<[12, 4, 4]>>
+
+  // CHECK:      memref.copy %arg0, %reinterpret_cast
+  // CHECK-NOT:  memref.load
+  // CHECK-NOT:  memref.store
+  memref.copy %src, %rc
+    : memref<1x3x1xf32>
+      to memref<1x3x1xf32, strided<[12, 4, 4]>>
+  return
+}
+
+/// Reject dynamic rc result strides.
+// CHECK-LABEL: func.func private @negative_copy_1D_into_2D_strided_zero_offset_dynamic_stride(
+func.func private @negative_copy_1D_into_2D_strided_zero_offset_dynamic_stride(%stride : index,
+  %src : memref<1x3x1xf32>, %dst : memref<1x3x4xf32>) {
+  // CHECK:      %reinterpret_cast = memref.reinterpret_cast %arg2
+  %rc = memref.reinterpret_cast %dst
+    to offset: [0], sizes: [1, 3, 1], strides: [12, %stride, 1]
+    : memref<1x3x4xf32>
+      to memref<1x3x1xf32, strided<[12, ?, 1]>>
+
+  // CHECK:      memref.copy %arg1, %reinterpret_cast
+  // CHECK-NOT:  memref.load
+  // CHECK-NOT:  memref.store
+  memref.copy %src, %rc
+    : memref<1x3x1xf32>
+      to memref<1x3x1xf32, strided<[12, ?, 1]>>
   return
 }
 
@@ -309,9 +410,7 @@ func.func private @copy_1D_into_1D_strided_dynamic_offset(
   return
 }
 
-//===----------------------------------------------------------------------===//
-// Negative tests (must NOT rewrite)
-// 
+//===----------------------------------------------------------------------===// 
 // Either scalar (0D) OR non-scalar (ND) copy
 //===----------------------------------------------------------------------===//
 
@@ -361,25 +460,6 @@ func.func private @negative_copy_into_strided_rank_change(%src : memref<3x4xf32>
   return
 }
 
-/// Reject non-identity layout rc source strides
-// CHECK-LABEL: func.func private @negative_copy_into_strided_non_identity(
-func.func private @negative_copy_into_strided_non_identity(%src: memref<1x1xf32>,
-  %dst: memref<12x1xf32, strided<[10, 2]>>) {
-  // CHECK:      %reinterpret_cast = memref.reinterpret_cast %arg1
-  %rc = memref.reinterpret_cast %dst
-    to offset: [0], sizes: [1, 1], strides: [10, 2]
-    : memref<12x1xf32, strided<[10, 2]>>
-      to memref<1x1xf32, strided<[10, 2]>>
-
-  // CHECK:      memref.copy %arg0, %reinterpret_cast
-  // CHECK-NOT:  memref.load
-  // CHECK-NOT:  memref.store
-  memref.copy %src, %rc
-    : memref<1x1xf32> to memref<1x1xf32, strided<[10, 2]>>
-
-  return
-}
-
 /// Reject dynamic shapes
 // CHECK-LABEL: func.func private @negative_copy_into_strided_dynamic_copy_source_shape(
 func.func private @negative_copy_into_strided_dynamic_copy_source_shape(%src : memref<?xf32>,
@@ -426,70 +506,6 @@ func.func private @negative_copy_into_strided_dynamic_rc_result_shape(%dim : ind
   // CHECK-NOT:  memref.store
   memref.copy %src, %rc
     : memref<4xf32> to memref<?xf32, strided<[1]>>
-  return
-}
-
-/// Reject dynamic offsets for rc sources with > 1 non-unit dimension -
-/// runtime delinearization of these offsets is TODO.
-// CHECK-LABEL: func.func private @negative_copy_into_ND_strided_dynamic_offset(
-func.func private @negative_copy_into_ND_strided_dynamic_offset(
-  %offset : index, %src : memref<1x1xf32>, %dst : memref<3x4xf32>) {
-  // CHECK:      %reinterpret_cast = memref.reinterpret_cast %arg2
-  %rc = memref.reinterpret_cast %dst
-    to offset: [%offset], sizes: [1, 1], strides: [12, 1]
-    : memref<3x4xf32> to memref<1x1xf32, strided<[12, 1], offset: ?>>
-
-  // CHECK:      memref.copy %arg1, %reinterpret_cast
-  // CHECK-NOT:  memref.load
-  // CHECK-NOT:  memref.store
-  memref.copy %src, %rc
-    : memref<1x1xf32>
-      to memref<1x1xf32, strided<[12, 1], offset: ?>>
-  return
-}
-
-//===----------------------------------------------------------------------===//
-// Negative tests
-// 
-// Non-scalar (ND) copy
-//===----------------------------------------------------------------------===//
-
-/// Reject rc result strides that not equal to rc source identity strides.
-/// (non-unit copied dimension needs stride-based address computation)
-// CHECK-LABEL: func.func private @negative_copy_into_strided_non_identity_strides(
-func.func private @negative_copy_into_strided_non_identity_strides(
-  %src : memref<1x3x1xf32>, %dst : memref<1x3x4xf32>) {
-  // CHECK:      %reinterpret_cast = memref.reinterpret_cast %arg1
-  %rc = memref.reinterpret_cast %dst
-    to offset: [0], sizes: [1, 3, 1], strides: [12, 4, 4]
-    : memref<1x3x4xf32>
-      to memref<1x3x1xf32, strided<[12, 4, 4]>>
-
-  // CHECK:      memref.copy %arg0, %reinterpret_cast
-  // CHECK-NOT:  memref.load
-  // CHECK-NOT:  memref.store
-  memref.copy %src, %rc
-    : memref<1x3x1xf32>
-      to memref<1x3x1xf32, strided<[12, 4, 4]>>
-  return
-}
-
-/// Reject dynamic rc result strides.
-// CHECK-LABEL: func.func private @negative_copy_ND_into_strided_dynamic_stride(
-func.func private @negative_copy_ND_into_strided_dynamic_stride(%stride : index,
-  %src : memref<1x3x1xf32>, %dst : memref<1x3x4xf32>) {
-  // CHECK:      %reinterpret_cast = memref.reinterpret_cast %arg2
-  %rc = memref.reinterpret_cast %dst
-    to offset: [0], sizes: [1, 3, 1], strides: [12, %stride, 1]
-    : memref<1x3x4xf32>
-      to memref<1x3x1xf32, strided<[12, ?, 1]>>
-
-  // CHECK:      memref.copy %arg1, %reinterpret_cast
-  // CHECK-NOT:  memref.load
-  // CHECK-NOT:  memref.store
-  memref.copy %src, %rc
-    : memref<1x3x1xf32>
-      to memref<1x3x1xf32, strided<[12, ?, 1]>>
   return
 }
 
