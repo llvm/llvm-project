@@ -1805,6 +1805,9 @@ __kmp_serial_fork_call(ident_t *loc, int gtid, enum fork_context_e call_context,
     } else if (microtask == (microtask_t)__kmp_teams_master) {
       KMP_DEBUG_ASSERT(master_th->th.th_team == master_th->th.th_serial_team);
       team = master_th->th.th_team;
+#if OMPT_SUPPORT
+      __ompt_team_assign_id(team, *ompt_parallel_data);
+#endif
       // team->t.t_pkfn = microtask;
       team->t.t_invoke = invoker;
       __kmp_alloc_argv_entries(argc, team, TRUE);
