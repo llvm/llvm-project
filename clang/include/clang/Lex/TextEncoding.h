@@ -17,7 +17,7 @@ enum ConversionAction { CA_NoConversion, CA_ToLiteralEncoding };
 
 class TextEncoding {
   llvm::StringRef LiteralEncoding;
-  llvm::TextEncodingConverter *ToLiteralEncodingConverter = nullptr;
+  std::unique_ptr<llvm::TextEncodingConverter> ToLiteralEncodingConverter;
 
 public:
   llvm::TextEncodingConverter *getConverter(ConversionAction Action) const;
