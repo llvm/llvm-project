@@ -70,6 +70,45 @@ cc_binary(
     ],
 )
 
+expand_template(
+    name = "runtime_config",
+    out = "runtime/config.h",
+    substitutions = {
+        "#cmakedefine HAVE_ELF_H": "#define HAVE_ELF_H",
+    },
+    template = "runtime/config.h.in",
+)
+
+cc_library(
+    name = "bolt_rt_instr",
+    srcs = ["runtime/instr.cpp"],
+    hdrs = glob([
+        "runtime/*.h",
+    ]) + [":runtime_config"],
+    copts = [
+        "-ffreestanding",
+        "-fno-exceptions",
+        "-fno-rtti",
+        "-fno-stack-protector",
+        "-fPIC",
+        "-fomit-frame-pointer",
+    ] + select({
+        "@platforms//cpu:aarch64": [
+            "-mgeneral-regs-only",
+            "-mno-outline-atomics",
+        ],
+        "@platforms//cpu:x86_64": [
+            "-mgeneral-regs-only",
+            "-mno-sse",
+        ],
+        "//conditions:default": [],
+    }),
+    features = ["-thin_lto"],
+    includes = ["runtime"],
+    linkstatic = True,
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
 cc_binary(
     name = "llvm-bolt",
     srcs = glob([
