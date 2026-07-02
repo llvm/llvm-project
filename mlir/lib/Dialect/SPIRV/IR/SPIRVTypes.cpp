@@ -795,11 +795,13 @@ std::optional<int64_t> SPIRVType::getSizeInBytes() {
         return bitWidth / 8;
       })
       .Case([](ArrayType type) -> std::optional<int64_t> {
-        // Since array type may have an explicit stride declaration (in bytes),
-        // we also include it in the calculation.
+        // The stride, if set, is the per-element byte distance and already
+        // includes the element size; otherwise the array is tightly packed.
         auto elementType = cast<SPIRVType>(type.getElementType());
+        if (unsigned stride = type.getArrayStride())
+          return stride * type.getNumElements();
         if (std::optional<int64_t> size = elementType.getSizeInBytes())
-          return (*size + type.getArrayStride()) * type.getNumElements();
+          return *size * type.getNumElements();
         return std::nullopt;
       })
       .Case<VectorType, TensorArmType>([](auto type) -> std::optional<int64_t> {
