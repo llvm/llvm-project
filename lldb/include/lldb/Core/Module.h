@@ -164,8 +164,7 @@ public:
   //
   // Get a module spec for this module. If the process is specified valid
   // the load address of the module can be filled in as well.
-  lldb_private::ModuleSpec
-  GetModuleSpec(const lldb::ProcessSP &process_sp);
+  lldb_private::ModuleSpec GetModuleSpec(const lldb::ProcessSP &process_sp);
 
   /// Set the load address for all sections in a module to be the file address
   /// plus \a slide.
