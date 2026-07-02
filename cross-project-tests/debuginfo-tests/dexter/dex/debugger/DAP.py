@@ -1021,10 +1021,9 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
         )
 
     def collect_watches(
-        self, step: StepIR, watches: List[str], scope_watches: List[str]
+        self, step: StepIR, frame_idx: int, watches: List[str], scope_watches: List[str]
     ):
         """Evaluates the provided watches and stores their evaluation results (ValueIR) in the provided step."""
-        frame_idx = 0
         if not watches and not scope_watches:
             return
         active_exprs = set(watches)
@@ -1060,15 +1059,19 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
                 )
                 self._evaluate_subvariables(value, var["variablesReference"])
                 scope_var_values[value.expression] = value
-            step.scope_watches[scope_name] = list(scope_var_values.keys())
-            for var_name in sorted(step.scope_watches[scope_name]):
-                step.watches[var_name] = scope_var_values[var_name]
+            step.frames[frame_idx].scope_watches[scope_name] = sorted(
+                scope_var_values.keys()
+            )
+            for var_name in sorted(step.frames[frame_idx].scope_watches[scope_name]):
+                step.frames[frame_idx].watches[var_name] = scope_var_values[var_name]
             for expr in list(active_exprs):
                 if expr in scope_var_values:
                     active_exprs.remove(expr)
 
         for expr in active_exprs:
-            step.watches[expr] = self.evaluate_expression(expr, frame_idx)
+            step.frames[frame_idx].watches[expr] = self.evaluate_expression(
+                expr, frame_idx
+            )
 
     @property
     def is_running(self):

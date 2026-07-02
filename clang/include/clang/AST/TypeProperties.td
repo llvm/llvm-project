@@ -489,9 +489,12 @@ let Class = PackIndexingType in {
   def : Property<"expansions", Array<QualType>> {
     let Read = [{ node->getExpansions() }];
   }
+  def : Property<"index", UnsignedOrNone> {
+    let Read = [{ node->getSelectedIndex() }];
+  }
 
   def : Creator<[{
-    return ctx.getPackIndexingType(pattern, indexExpression, isFullySubstituted, expansions);
+    return ctx.getPackIndexingType(pattern, indexExpression, isFullySubstituted, expansions, index);
   }]>;
 }
 

@@ -1203,6 +1203,18 @@ class Base(unittest.TestCase):
                 for dict in reversed(self.dicts):
                     self.cleanup(dictionary=dict)
 
+        # Kill any process a target is still holding on to.
+        for i in range(self.dbg.GetNumTargets()):
+            process = self.dbg.GetTargetAtIndex(i).GetProcess()
+            # Only kill processes that are still alive.
+            if process.IsValid() and process.is_alive:
+                process.Kill()
+                self.assertEqual(
+                    process.GetState(),
+                    lldb.eStateExited,
+                    "Failed to kill process during teardown",
+                )
+
         # Remove subprocesses created by the test.
         self.cleanupSubprocesses()
 

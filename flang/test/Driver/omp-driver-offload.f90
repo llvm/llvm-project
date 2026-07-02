@@ -77,7 +77,7 @@
 ! RUN: -fopenmp-targets=nvptx64-nvidia-cuda \
 ! RUN: -fopenmp-assume-threads-oversubscription -nogpulib \
 ! RUN: | FileCheck %s --check-prefixes=CHECK-THREADS-OVS
-! CHECK-THREADS-OVS: "{{[^"]*}}flang{{[^"]*}}" "-fc1" {{.*}} "-fopenmp" {{.*}} "-fopenmp-is-target-device" "-fopenmp-assume-threads-oversubscription" {{.*}}.f90"
+! CHECK-THREADS-OVS: "{{[^"]*}}flang{{[^"]*}}" "-fc1" {{.*}} "-fopenmp" {{.*}} "-fopenmp-assume-threads-oversubscription" "-fopenmp-is-target-device" {{.*}}.f90"
 
 ! RUN: %flang -### %s -o %t 2>&1 \
 ! RUN: -fopenmp --offload-arch=gfx90a \
@@ -89,7 +89,7 @@
 ! RUN: -fopenmp-targets=nvptx64-nvidia-cuda \
 ! RUN: -fopenmp-assume-teams-oversubscription -nogpulib \
 ! RUN: | FileCheck %s --check-prefixes=CHECK-TEAMS-OVS
-! CHECK-TEAMS-OVS: "{{[^"]*}}flang{{[^"]*}}" "-fc1" {{.*}} "-fopenmp" {{.*}} "-fopenmp-is-target-device" "-fopenmp-assume-teams-oversubscription" {{.*}}.f90"
+! CHECK-TEAMS-OVS: "{{[^"]*}}flang{{[^"]*}}" "-fc1" {{.*}} "-fopenmp" {{.*}} "-fopenmp-assume-teams-oversubscription" "-fopenmp-is-target-device" {{.*}}.f90"
 
 ! RUN: %flang -### %s -o %t 2>&1 \
 ! RUN: -fopenmp --offload-arch=gfx90a \
@@ -153,8 +153,8 @@
 ! RUN: -fopenmp-assume-teams-oversubscription -fopenmp-assume-no-nested-parallelism \
 ! RUN: -fopenmp-assume-no-thread-state -nogpulib \
 ! RUN: | FileCheck %s --check-prefixes=CHECK-RTL-ALL
-! CHECK-RTL-ALL: "{{[^"]*}}flang{{[^"]*}}" "-fc1" {{.*}} "-fopenmp" {{.*}} "-fopenmp-is-target-device" "-fopenmp-target-debug" "-fopenmp-assume-teams-oversubscription"
-! CHECK-RTL-ALL: "-fopenmp-assume-threads-oversubscription" "-fopenmp-assume-no-thread-state" "-fopenmp-assume-no-nested-parallelism"
+! CHECK-RTL-ALL: "{{[^"]*}}flang{{[^"]*}}" "-fc1" {{.*}} "-fopenmp" {{.*}} "-fopenmp-assume-teams-oversubscription" "-fopenmp-assume-threads-oversubscription"
+! CHECK-RTL-ALL: "-fopenmp-is-target-device" "-fopenmp-target-debug" "-fopenmp-assume-no-thread-state" "-fopenmp-assume-no-nested-parallelism"
 ! CHECK-RTL-ALL: {{.*}}.f90"
 
 ! RUN: %flang -### %s -o %t 2>&1 \

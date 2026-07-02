@@ -1082,27 +1082,27 @@ define i8 @umin_intrinsic_rdx_v16i8(ptr %p0) {
 
 define void @PR49730() {
 ; CHECK-LABEL: @PR49730(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.smin.v4i32(<4 x i32> <i32 2, i32 2, i32 1, i32 undef>, <4 x i32> <i32 undef, i32 undef, i32 undef, i32 1>)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.smin.v4i32(<4 x i32> <i32 2, i32 2, i32 1, i32 9>, <4 x i32> <i32 5, i32 4, i32 7, i32 1>)
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <6 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 undef, i32 0>, <6 x i32> [[TMP2]], <6 x i32> <i32 6, i32 7, i32 8, i32 9, i32 4, i32 5>
-; CHECK-NEXT:    [[TMP4:%.*]] = sub nsw <6 x i32> undef, [[TMP3]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <6 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 11, i32 0>, <6 x i32> [[TMP2]], <6 x i32> <i32 6, i32 7, i32 8, i32 9, i32 4, i32 5>
+; CHECK-NEXT:    [[TMP4:%.*]] = sub nsw <6 x i32> <i32 1, i32 6, i32 8, i32 10, i32 12, i32 3>, [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @llvm.vector.reduce.umin.v6i32(<6 x i32> [[TMP4]])
 ; CHECK-NEXT:    [[T14:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP5]], i32 93)
 ; CHECK-NEXT:    ret void
 ;
-  %t = call i32 @llvm.smin.i32(i32 undef, i32 2)
-  %t1 = sub nsw i32 undef, %t
-  %t2 = call i32 @llvm.umin.i32(i32 undef, i32 %t1)
-  %t3 = call i32 @llvm.smin.i32(i32 undef, i32 2)
-  %t4 = sub nsw i32 undef, %t3
+  %t = call i32 @llvm.smin.i32(i32 5, i32 2)
+  %t1 = sub nsw i32 1, %t
+  %t2 = call i32 @llvm.umin.i32(i32 3, i32 %t1)
+  %t3 = call i32 @llvm.smin.i32(i32 4, i32 2)
+  %t4 = sub nsw i32 6, %t3
   %t5 = call i32 @llvm.umin.i32(i32 %t2, i32 %t4)
-  %t6 = call i32 @llvm.smin.i32(i32 undef, i32 1)
-  %t7 = sub nuw nsw i32 undef, %t6
+  %t6 = call i32 @llvm.smin.i32(i32 7, i32 1)
+  %t7 = sub nuw nsw i32 8, %t6
   %t8 = call i32 @llvm.umin.i32(i32 %t5, i32 %t7)
-  %t9 = call i32 @llvm.smin.i32(i32 undef, i32 1)
-  %t10 = sub nsw i32 undef, %t9
+  %t9 = call i32 @llvm.smin.i32(i32 9, i32 1)
+  %t10 = sub nsw i32 10, %t9
   %t11 = call i32 @llvm.umin.i32(i32 %t8, i32 %t10)
-  %t12 = sub nsw i32 undef, undef
+  %t12 = sub nsw i32 12, 11
   %t13 = call i32 @llvm.umin.i32(i32 %t11, i32 %t12)
   %t14 = call i32 @llvm.umin.i32(i32 %t13, i32 93)
   ret void

@@ -42,7 +42,8 @@ define <4 x float> @simple_select(<4 x float> %a, <4 x float> %b, <4 x i32> %c) 
 declare void @llvm.assume(i1) nounwind
 
 ; This entire tree is ephemeral, don't vectorize any of it.
-define <4 x float> @simple_select_eph(<4 x float> %a, <4 x float> %b, <4 x i32> %c) {
+define void @simple_select_eph(<4 x float> %a, <4 x float> %b, <4 x i32> %c) {
+;
 ; X86T-LABEL: @simple_select_eph(
 ; X86T-NEXT:    [[C0:%.*]] = extractelement <4 x i32> [[C:%.*]], i32 0
 ; X86T-NEXT:    [[C1:%.*]] = extractelement <4 x i32> [[C]], i32 1
@@ -77,7 +78,7 @@ define <4 x float> @simple_select_eph(<4 x float> %a, <4 x float> %b, <4 x i32> 
 ; X86T-NEXT:    [[Q6:%.*]] = fadd float [[Q4]], [[Q5]]
 ; X86T-NEXT:    [[QI:%.*]] = fcmp olt float [[Q6]], [[Q5]]
 ; X86T-NEXT:    call void @llvm.assume(i1 [[QI]])
-; X86T-NEXT:    ret <4 x float> undef
+; X86T-NEXT:    ret void
 ;
 ; X86-LABEL: @simple_select_eph(
 ; X86-NEXT:    [[C0:%.*]] = extractelement <4 x i32> [[C:%.*]], i32 0
@@ -113,7 +114,7 @@ define <4 x float> @simple_select_eph(<4 x float> %a, <4 x float> %b, <4 x i32> 
 ; X86-NEXT:    [[Q6:%.*]] = fadd float [[Q4]], [[Q5]]
 ; X86-NEXT:    [[QI:%.*]] = fcmp olt float [[Q6]], [[Q5]]
 ; X86-NEXT:    call void @llvm.assume(i1 [[QI]])
-; X86-NEXT:    ret <4 x float> undef
+; X86-NEXT:    ret void
 ;
 ; X86TM-LABEL: @simple_select_eph(
 ; X86TM-NEXT:    [[C0:%.*]] = extractelement <4 x i32> [[C:%.*]], i32 0
@@ -148,7 +149,7 @@ define <4 x float> @simple_select_eph(<4 x float> %a, <4 x float> %b, <4 x i32> 
 ; X86TM-NEXT:    [[TMP3:%.*]] = call float @llvm.vector.reduce.fadd.v3f32(float -0.000000e+00, <3 x float> [[TMP2]])
 ; X86TM-NEXT:    [[QI:%.*]] = fcmp olt float [[TMP3]], [[Q5]]
 ; X86TM-NEXT:    call void @llvm.assume(i1 [[QI]])
-; X86TM-NEXT:    ret <4 x float> undef
+; X86TM-NEXT:    ret void
 ;
 ; AARCH64T-LABEL: @simple_select_eph(
 ; AARCH64T-NEXT:    [[C0:%.*]] = extractelement <4 x i32> [[C:%.*]], i32 0
@@ -184,7 +185,7 @@ define <4 x float> @simple_select_eph(<4 x float> %a, <4 x float> %b, <4 x i32> 
 ; AARCH64T-NEXT:    [[Q6:%.*]] = fadd float [[Q4]], [[Q5]]
 ; AARCH64T-NEXT:    [[QI:%.*]] = fcmp olt float [[Q6]], [[Q5]]
 ; AARCH64T-NEXT:    call void @llvm.assume(i1 [[QI]])
-; AARCH64T-NEXT:    ret <4 x float> undef
+; AARCH64T-NEXT:    ret void
 ;
 ; AARCH64-LABEL: @simple_select_eph(
 ; AARCH64-NEXT:    [[C0:%.*]] = extractelement <4 x i32> [[C:%.*]], i32 0
@@ -220,7 +221,7 @@ define <4 x float> @simple_select_eph(<4 x float> %a, <4 x float> %b, <4 x i32> 
 ; AARCH64-NEXT:    [[Q6:%.*]] = fadd float [[Q4]], [[Q5]]
 ; AARCH64-NEXT:    [[QI:%.*]] = fcmp olt float [[Q6]], [[Q5]]
 ; AARCH64-NEXT:    call void @llvm.assume(i1 [[QI]])
-; AARCH64-NEXT:    ret <4 x float> undef
+; AARCH64-NEXT:    ret void
 ;
 ; AARCH64TM-LABEL: @simple_select_eph(
 ; AARCH64TM-NEXT:    [[C0:%.*]] = extractelement <4 x i32> [[C:%.*]], i32 0
@@ -255,7 +256,7 @@ define <4 x float> @simple_select_eph(<4 x float> %a, <4 x float> %b, <4 x i32> 
 ; AARCH64TM-NEXT:    [[TMP3:%.*]] = call float @llvm.vector.reduce.fadd.v3f32(float -0.000000e+00, <3 x float> [[TMP2]])
 ; AARCH64TM-NEXT:    [[QI:%.*]] = fcmp olt float [[TMP3]], [[Q5]]
 ; AARCH64TM-NEXT:    call void @llvm.assume(i1 [[QI]])
-; AARCH64TM-NEXT:    ret <4 x float> undef
+; AARCH64TM-NEXT:    ret void
 ;
   %c0 = extractelement <4 x i32> %c, i32 0
   %c1 = extractelement <4 x i32> %c, i32 1
@@ -290,7 +291,7 @@ define <4 x float> @simple_select_eph(<4 x float> %a, <4 x float> %b, <4 x i32> 
   %q6 = fadd float %q4, %q5
   %qi = fcmp olt float %q6, %q5
   call void @llvm.assume(i1 %qi)
-  ret <4 x float> undef
+  ret void
 }
 
 ; Insert in an order different from the vector indices to make sure it
