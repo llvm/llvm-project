@@ -276,6 +276,19 @@ void ChainedASTReaderListener::readModuleFileExtension(
 
 ASTReaderListener::~ASTReaderListener() = default;
 
+static LLVM_ATTRIBUTE_NOINLINE void diagnoseLanguageOptionFlagMismatch(
+    DiagnosticsEngine &Diags, StringRef Description, bool SerializedValue,
+    bool CurrentValue, StringRef ModuleFilename) {
+  Diags.Report(diag::err_ast_file_langopt_mismatch)
+      << Description << SerializedValue << CurrentValue << ModuleFilename;
+}
+
+static LLVM_ATTRIBUTE_NOINLINE void diagnoseLanguageOptionValueMismatch(
+    DiagnosticsEngine &Diags, StringRef Description, StringRef ModuleFilename) {
+  Diags.Report(diag::err_ast_file_langopt_value_mismatch)
+      << Description << ModuleFilename;
+}
+
 /// Compare the given set of language options against an existing set of
 /// language options.
 ///
@@ -300,12 +313,12 @@ static bool checkLanguageOptions(const LangOptions &LangOpts,
       if (ExistingLangOpts.Name != LangOpts.Name) {                            \
         if (Diags) {                                                           \
           if (Bits == 1)                                                       \
-            Diags->Report(diag::err_ast_file_langopt_mismatch)                 \
-                << Description << LangOpts.Name << ExistingLangOpts.Name       \
-                << ModuleFilename;                                             \
+            diagnoseLanguageOptionFlagMismatch(                                \
+                *Diags, Description, LangOpts.Name, ExistingLangOpts.Name,     \
+                ModuleFilename);                                               \
           else                                                                 \
-            Diags->Report(diag::err_ast_file_langopt_value_mismatch)           \
-                << Description << ModuleFilename;                              \
+            diagnoseLanguageOptionValueMismatch(*Diags, Description,           \
+                                                ModuleFilename);               \
         }                                                                      \
         return true;                                                           \
       }                                                                        \
@@ -319,8 +332,8 @@ static bool checkLanguageOptions(const LangOptions &LangOpts,
          !AllowCompatibleDifferences)) {                                       \
       if (ExistingLangOpts.Name != LangOpts.Name) {                            \
         if (Diags)                                                             \
-          Diags->Report(diag::err_ast_file_langopt_value_mismatch)             \
-              << Description << ModuleFilename;                                \
+          diagnoseLanguageOptionValueMismatch(*Diags, Description,             \
+                                              ModuleFilename);                 \
         return true;                                                           \
       }                                                                        \
     }                                                                          \
@@ -333,8 +346,8 @@ static bool checkLanguageOptions(const LangOptions &LangOpts,
          !AllowCompatibleDifferences)) {                                       \
       if (ExistingLangOpts.get##Name() != LangOpts.get##Name()) {              \
         if (Diags)                                                             \
-          Diags->Report(diag::err_ast_file_langopt_value_mismatch)             \
-              << Description << ModuleFilename;                                \
+          diagnoseLanguageOptionValueMismatch(*Diags, Description,             \
+                                              ModuleFilename);                 \
         return true;                                                           \
       }                                                                        \
     }                                                                          \
@@ -344,23 +357,23 @@ static bool checkLanguageOptions(const LangOptions &LangOpts,
 
   if (ExistingLangOpts.ModuleFeatures != LangOpts.ModuleFeatures) {
     if (Diags)
-      Diags->Report(diag::err_ast_file_langopt_value_mismatch)
-          << "module features" << ModuleFilename;
+      diagnoseLanguageOptionValueMismatch(*Diags, "module features",
+                                          ModuleFilename);
     return true;
   }
 
   if (ExistingLangOpts.ObjCRuntime != LangOpts.ObjCRuntime) {
     if (Diags)
-      Diags->Report(diag::err_ast_file_langopt_value_mismatch)
-          << "target Objective-C runtime" << ModuleFilename;
+      diagnoseLanguageOptionValueMismatch(*Diags, "target Objective-C runtime",
+                                          ModuleFilename);
     return true;
   }
 
   if (ExistingLangOpts.CommentOpts.BlockCommandNames !=
       LangOpts.CommentOpts.BlockCommandNames) {
     if (Diags)
-      Diags->Report(diag::err_ast_file_langopt_value_mismatch)
-          << "block command names" << ModuleFilename;
+      diagnoseLanguageOptionValueMismatch(*Diags, "block command names",
+                                          ModuleFilename);
     return true;
   }
 
