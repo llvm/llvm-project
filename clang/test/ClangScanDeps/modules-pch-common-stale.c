@@ -40,7 +40,9 @@ module mod_tu_extra { header "mod_tu_extra.h" }
 // RUN: clang-scan-deps -format experimental-full -o %t/deps_tu_clean.json -- \
 // RUN:     %clang -nostdinc -c %t/tu.c -o %t/tu.o -include %t/prefix.h \
 // RUN:     -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/cache
-// RUN: cat %t/deps_tu_clean.json | sed 's:\\\\\?:/:g' | FileCheck %s --check-prefix=CHECK-TU-CLEAN -DPREFIX=%/t
+// RUN: cat %t/deps_tu_clean.json | sed 's:\\\\\?:/:g' \
+// RUN:   | %scan-deps-filter --fields=name,clang-module-deps,clang-modulemap-file,command-line,context-hash,file-deps,link-libraries,clang-context-hash,executable,input-file \
+// RUN:   | FileCheck %s --check-prefix=CHECK-TU-CLEAN -DPREFIX=%/t
 // CHECK-TU-CLEAN:      {
 // CHECK-TU-CLEAN-NEXT:   "modules": [
 // CHECK-TU-CLEAN-NEXT:     {
@@ -109,7 +111,9 @@ module mod_tu_extra { header "mod_tu_extra.h" }
 // RUN: clang-scan-deps -format experimental-full -o %t/deps_tu_incremental.json -- \
 // RUN:     %clang -nostdinc -c %t/tu.c -o %t/tu.o -include %t/prefix.h \
 // RUN:     -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/cache
-// RUN: cat %t/deps_tu_incremental.json | sed 's:\\\\\?:/:g' | FileCheck %s --check-prefix=CHECK-TU-INCREMENTAL -DPREFIX=%/t
+// RUN: cat %t/deps_tu_incremental.json | sed 's:\\\\\?:/:g' \
+// RUN:   | %scan-deps-filter --fields=name,clang-module-deps,clang-modulemap-file,command-line,context-hash,file-deps,link-libraries,clang-context-hash,executable,input-file \
+// RUN:   | FileCheck %s --check-prefix=CHECK-TU-INCREMENTAL -DPREFIX=%/t
 // CHECK-TU-INCREMENTAL:      {
 // CHECK-TU-INCREMENTAL-NEXT:   "modules": [
 // CHECK-TU-INCREMENTAL-NEXT:     {
