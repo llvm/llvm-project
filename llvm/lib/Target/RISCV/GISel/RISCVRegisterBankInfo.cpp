@@ -521,6 +521,23 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       OpdsMapping[1] = GPRValueMapping;
     break;
   }
+  case RISCV::G_VMV_S_VL: {
+    OpdsMapping[0] = getVRBValueMapping(MRI.getType(MI.getOperand(2).getReg())
+                                            .getSizeInBits()
+                                            .getKnownMinValue());
+    OpdsMapping[1] = OpdsMapping[0];
+
+    // The element may be either a GPR or FPR. Preserve that behaviour.
+    if (getRegBank(MI.getOperand(2).getReg(), MRI, TRI) == &RISCV::FPRBRegBank)
+      OpdsMapping[2] = getFPValueMapping(
+          MRI.getType(MI.getOperand(2).getReg()).getSizeInBits());
+    else
+      OpdsMapping[2] = GPRValueMapping;
+
+    // VL needs to be a GPR.
+    OpdsMapping[3] = GPRValueMapping;
+    break;
+  }
   case TargetOpcode::G_INTRINSIC: {
     Intrinsic::ID IntrinsicID = cast<GIntrinsic>(MI).getIntrinsicID();
 
