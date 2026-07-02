@@ -607,13 +607,15 @@ Type *VPReplicateRecipe::computeScalarType(const Instruction *I,
 
 VPInstruction::VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands,
                              const VPIRFlags &Flags, const VPIRMetadata &MD,
-                             DebugLoc DL, const Twine &Name, Type *ResultTy)
+                             DebugLoc DL, const Twine &Name, Type *ResultTy,
+                             bool IsSingleScalar)
     : VPRecipeWithIRFlags(
           VPRecipeBase::VPInstructionSC, Operands,
           ResultTy ? ResultTy
                    : computeScalarTypeForInstruction(Opcode, Operands),
           Flags, DL),
-      VPIRMetadata(MD), Opcode(Opcode), Name(Name.str()) {
+      VPIRMetadata(MD), Opcode(Opcode), Name(Name.str()),
+      IsSingleScalar(IsSingleScalar) {
   assert(flagsValidForOpcode(getOpcode()) &&
          "Set flags not supported for the provided opcode");
   assert(hasRequiredFlagsForOpcode(getOpcode(), getScalarType()) &&
@@ -720,7 +722,8 @@ bool VPInstruction::doesGenerateSingleScalar() const {
   case VPInstruction::Not:
     return vputils::onlyFirstLaneUsed(this);
   default:
-    return Instruction::isBinaryOp(Opcode) && vputils::onlyFirstLaneUsed(this);
+    return (Instruction::isBinaryOp(Opcode) || Instruction::isCast(Opcode)) &&
+           vputils::onlyFirstLaneUsed(this);
   }
 }
 
@@ -1623,7 +1626,7 @@ bool VPInstruction::isSingleScalar() const {
   case VPInstruction::Intrinsic:
     return true;
   default:
-    return Instruction::isCast(getOpcode());
+    return IsSingleScalar;
   }
 }
 
