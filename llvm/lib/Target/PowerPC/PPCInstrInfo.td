@@ -1986,7 +1986,7 @@ def : InstAlias<"rfebb", (RFEBB 1)>;
 
 // DCB* instructions.
 def DCBA   : DCB_Form<758, 0, (outs), (ins (memrr $RA, $RB):$addr), "dcba $addr",
-                      IIC_LdStDCBF, [(int_ppc_dcba xoaddr:$addr)]>,
+                      IIC_LdStDCBA, [(int_ppc_dcba xoaddr:$addr)]>,
                       PPC970_DGroup_Single;
 def DCBI   : DCB_Form<470, 0, (outs), (ins (memrr $RA, $RB):$addr), "dcbi $addr",
                       IIC_LdStDCBF, [(int_ppc_dcbi xoaddr:$addr)]>,
