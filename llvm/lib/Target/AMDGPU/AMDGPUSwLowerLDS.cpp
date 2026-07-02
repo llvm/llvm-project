@@ -1208,15 +1208,16 @@ bool AMDGPUSwLowerLDS::run() {
 
   CallGraph CG = CallGraph(M);
 
-  Changed |= eliminateConstantExprUsesOfLDSFromAllInstructions(M);
+  Changed |=
+      eliminateGVConstantExprUsesFromAllInstructions(M, isLDSVariableToLower);
 
   // Get all the direct and indirect access of LDS for all the kernels.
-  LDSUsesInfoTy LDSUsesInfo = getTransitiveUsesOfLDS(CG, M);
+  GVUsesInfoTy LDSUsesInfo = getTransitiveUsesOfLDSForLowering(CG, M);
 
   // Flag to decide whether to lower all the LDS accesses
   // based on sanitize_address attribute.
-  bool LowerAllLDS = hasFnWithSanitizeAddressAttr(LDSUsesInfo.direct_access) ||
-                     hasFnWithSanitizeAddressAttr(LDSUsesInfo.indirect_access);
+  bool LowerAllLDS = hasFnWithSanitizeAddressAttr(LDSUsesInfo.DirectAccess) ||
+                     hasFnWithSanitizeAddressAttr(LDSUsesInfo.IndirectAccess);
 
   if (!LowerAllLDS)
     return Changed;
@@ -1255,8 +1256,8 @@ bool AMDGPUSwLowerLDS::run() {
     }
   };
 
-  PopulateKernelStaticDynamicLDS(LDSUsesInfo.direct_access, true);
-  PopulateKernelStaticDynamicLDS(LDSUsesInfo.indirect_access, false);
+  PopulateKernelStaticDynamicLDS(LDSUsesInfo.DirectAccess, true);
+  PopulateKernelStaticDynamicLDS(LDSUsesInfo.IndirectAccess, false);
 
   // Get address sanitizer scale.
   initAsanInfo();

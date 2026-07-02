@@ -291,8 +291,21 @@ Status GDBRemoteCommunicationServerLLGS::LaunchProcess() {
   m_process_launch_info.GetFlags().Set(eLaunchFlagDebug);
 
   if (should_forward_stdio) {
+#if defined(_WIN32)
+    ProcessLaunchInfo::STDIOWindowSize win_size =
+        m_process_launch_info.GetSTDIOWindowSize();
+    if (m_process_launch_info.IsSTDIOWindowSizeExplicit() &&
+        win_size.cols == 0 && win_size.rows == 0) {
+      if (llvm::Error Err = m_process_launch_info.SetUpPipeRedirection())
+        return Status::FromError(std::move(Err));
+    } else {
+      if (llvm::Error Err = m_process_launch_info.SetUpPtyRedirection())
+        return Status::FromError(std::move(Err));
+    }
+#else
     if (llvm::Error Err = m_process_launch_info.SetUpPtyRedirection())
       return Status::FromError(std::move(Err));
+#endif
   }
 
   {

@@ -35,8 +35,8 @@ struct TestOneShotModuleBufferizePass
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestOneShotModuleBufferizePass)
 
   TestOneShotModuleBufferizePass() = default;
-  TestOneShotModuleBufferizePass(const TestOneShotModuleBufferizePass &pass) =
-      default;
+  TestOneShotModuleBufferizePass(const TestOneShotModuleBufferizePass &pass)
+      : PassWrapper(pass) {}
 
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<test::TestDialect>();
@@ -91,6 +91,30 @@ struct TestOneShotModuleBufferizePass
                 return bufferization::BufferLikeType{};
               });
         };
+    // A simple yet distinct (from upstream) policy: compare layouts and return
+    // "smaller" one.
+    opt.reconcileBufferTypeMismatchFn =
+        [](bufferization::BufferLikeType x, bufferization::BufferLikeType y,
+           const bufferization::BufferizationOptions &)
+        -> FailureOr<bufferization::BufferLikeType> {
+      auto getLayout = [](bufferization::BufferLikeType t) {
+        auto m = dyn_cast<MemRefType>(t);
+        return m ? dyn_cast<test::TestMemRefLayoutAttr>(m.getLayout())
+                 : test::TestMemRefLayoutAttr();
+      };
+      auto lhsLayout = getLayout(x);
+      auto rhsLayout = getLayout(y);
+      if (lhsLayout && rhsLayout) {
+        return lhsLayout.getDummy().getValue() <=
+                       rhsLayout.getDummy().getValue()
+                   ? x
+                   : y;
+      }
+      return rhsLayout ? y : x;
+    };
+    // Function signature update only works with memref.cast. Disable it to
+    // align behaviour for upstream and user casts.
+    opt.inferFunctionResultLayout = false;
 
     bufferization::BufferizationState bufferizationState;
 

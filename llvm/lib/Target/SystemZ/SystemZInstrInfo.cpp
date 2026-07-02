@@ -1821,10 +1821,8 @@ void SystemZInstrInfo::expandStackGuardPseudo(MachineInstr &MI,
     // Emit a load of the global stack guard's address
     BuildMI(MBB, MI, DL, get(SystemZ::LOAD_GLOBAL_STACKGUARD_ADDR), AddrReg);
   } else {
-    report_fatal_error(
-        (Twine("unknown stack protector type \"") + GuardType + "\".")
-            .str()
-            .c_str());
+    report_fatal_error(Twine("unknown stack protector type \"") + GuardType +
+                       "\".");
   }
 
   // Construct the appropriate move or compare instruction using the
@@ -2426,6 +2424,8 @@ SystemZInstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
   using namespace SystemZII;
 
   static const std::pair<unsigned, const char *> TargetFlags[] = {
+      {MO_GOT, "systemz-got"},
+      {MO_INDNTPOFF, "systemz-indntpoff"},
       {MO_ADA_DATA_SYMBOL_ADDR, "systemz-ada-datasymboladdr"},
       {MO_ADA_INDIRECT_FUNC_DESC, "systemz-ada-indirectfuncdesc"},
       {MO_ADA_DIRECT_FUNC_DESC, "systemz-ada-directfuncdesc"}};

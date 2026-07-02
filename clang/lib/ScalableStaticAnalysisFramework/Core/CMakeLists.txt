@@ -1,5 +1,6 @@
 set(LLVM_LINK_COMPONENTS
   Support
+  TargetParser
   )
 
 add_clang_library(clangScalableStaticAnalysisFrameworkCore
@@ -11,6 +12,7 @@ add_clang_library(clangScalableStaticAnalysisFrameworkCore
   Model/EntityLinkage.cpp
   Model/EntityName.cpp
   Model/SummaryName.cpp
+  Serialization/JSONFormat/Artifact.cpp
   Serialization/JSONFormat/JSONEntitySummaryEncoding.cpp
   Serialization/JSONFormat/JSONFormatImpl.cpp
   Serialization/JSONFormat/LUSummary.cpp

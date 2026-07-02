@@ -10,6 +10,7 @@
 
 #include "clang/ScalableStaticAnalysisFramework/Core/Serialization/SerializationFormatRegistry.h"
 #include "llvm/Support/Registry.h"
+#include "llvm/TargetParser/Triple.h"
 
 using namespace clang;
 using namespace ssaf;
@@ -145,6 +146,36 @@ SummaryName summaryNameFromJSON(llvm::StringRef SummaryNameStr) {
 }
 
 llvm::StringRef summaryNameToJSON(const SummaryName &SN) { return SN.str(); }
+
+//----------------------------------------------------------------------------
+// Summary Type field
+//----------------------------------------------------------------------------
+
+llvm::Expected<llvm::StringRef> readSummaryType(const Object &RootObject) {
+  std::optional<llvm::StringRef> OptType = RootObject.getString(JSONTypeKey);
+  if (!OptType) {
+    return ErrorBuilder::create(std::errc::invalid_argument,
+                                ErrorMessages::FailedToReadObjectAtField,
+                                "summary type", JSONTypeKey, "string")
+        .build();
+  }
+  return *OptType;
+}
+
+llvm::Error checkSummaryType(const Object &RootObject,
+                             llvm::StringRef ExpectedType) {
+  auto ExpectedActual = readSummaryType(RootObject);
+  if (!ExpectedActual) {
+    return ExpectedActual.takeError();
+  }
+  if (*ExpectedActual != ExpectedType) {
+    return ErrorBuilder::create(std::errc::invalid_argument,
+                                ErrorMessages::MismatchedSummaryType,
+                                ExpectedType, JSONTypeKey, *ExpectedActual)
+        .build();
+  }
+  return llvm::Error::success();
+}
 
 //----------------------------------------------------------------------------
 // AnalysisName
@@ -408,6 +439,21 @@ entityLinkageTypeFromJSON(llvm::StringRef EntityLinkageTypeStr) {
 // Provided for consistency with respect to rest of the codebase.
 llvm::StringRef entityLinkageTypeToJSON(EntityLinkageType LT) {
   return entityLinkageTypeToString(LT);
+}
+
+//----------------------------------------------------------------------------
+// TargetTriple
+//----------------------------------------------------------------------------
+
+llvm::Error validateNormalizedTargetTriple(llvm::StringRef Triple) {
+  std::string Normalized = llvm::Triple::normalize(Triple);
+  if (Normalized != Triple) {
+    return ErrorBuilder::create(std::errc::invalid_argument,
+                                ErrorMessages::TargetTripleNotNormalized,
+                                Triple, Normalized)
+        .build();
+  }
+  return llvm::Error::success();
 }
 
 //----------------------------------------------------------------------------

@@ -134,6 +134,7 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/ControlFlowUtils.h"
@@ -320,7 +321,8 @@ static bool fixIrreducible(Cycle &C, CycleInfo &CI, DominatorTree &DT,
                           << printBasicBlock(Succ) << '\n');
       }
     } else {
-      llvm_unreachable("unsupported block terminator");
+      reportFatalUsageError("unsupported block terminator: fix-irreducible "
+                            "only supports br and callbr instructions");
     }
   }
 
@@ -364,7 +366,8 @@ static bool fixIrreducible(Cycle &C, CycleInfo &CI, DominatorTree &DT,
                           << printBasicBlock(Succ) << '\n');
       }
     } else {
-      llvm_unreachable("unsupported block terminator");
+      reportFatalUsageError("unsupported block terminator: fix-irreducible "
+                            "only supports br and callbr instructions");
     }
   }
 

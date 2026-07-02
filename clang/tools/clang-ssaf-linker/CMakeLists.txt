@@ -1,6 +1,7 @@
 set(LLVM_LINK_COMPONENTS
   Option
   Support
+  TargetParser
   )
 
 add_clang_tool(clang-ssaf-linker
@@ -12,5 +13,6 @@ clang_target_link_libraries(clang-ssaf-linker
   clangBasic
   clangScalableStaticAnalysisFrameworkAnalyses
   clangScalableStaticAnalysisFrameworkCore
+  clangScalableStaticAnalysisFrameworkSourceTransformation
   clangScalableStaticAnalysisFrameworkTool
   )

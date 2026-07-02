@@ -53,7 +53,7 @@ void MockSerializationFormat::forEachRegisteredAnalysis(
 llvm::Expected<TUSummary>
 MockSerializationFormat::readTUSummary(llvm::StringRef Path) {
   BuildNamespace NS(BuildNamespaceKind::CompilationUnit, "Mock.cpp");
-  TUSummary Summary(NS);
+  TUSummary Summary(llvm::Triple("arm64-apple-macosx"), NS);
 
   auto ManifestFile = llvm::MemoryBuffer::getFile(Path + "/analyses.txt");
   if (!ManifestFile) {
@@ -206,4 +206,27 @@ MockSerializationFormat::readWPASuite(llvm::StringRef Path) {
 llvm::Error MockSerializationFormat::writeWPASuite(const WPASuite &Suite,
                                                    llvm::StringRef Path) {
   llvm_unreachable("MockSerializationFormat does not support WPASuite");
+}
+
+llvm::Expected<Artifact>
+MockSerializationFormat::readArtifact(llvm::StringRef Path) {
+  llvm_unreachable("MockSerializationFormat does not support readArtifact");
+}
+
+llvm::Error MockSerializationFormat::writeArtifact(const Artifact &A,
+                                                   llvm::StringRef Path) {
+  llvm_unreachable("MockSerializationFormat does not support writeArtifact");
+}
+
+llvm::Expected<ArtifactEncoding>
+MockSerializationFormat::readArtifactEncoding(llvm::StringRef Path) {
+  llvm_unreachable(
+      "MockSerializationFormat does not support readArtifactEncoding");
+}
+
+llvm::Error
+MockSerializationFormat::writeArtifactEncoding(const ArtifactEncoding &E,
+                                               llvm::StringRef Path) {
+  llvm_unreachable(
+      "MockSerializationFormat does not support writeArtifactEncoding");
 }

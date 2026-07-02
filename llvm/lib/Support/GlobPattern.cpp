@@ -18,8 +18,6 @@ using namespace llvm;
 
 static constexpr char PrefixMetacharacters[] = "?*[{\\";
 static constexpr char SuffixMetacharacters[] = "?*[]{}\\";
-static constexpr char PrefixMetacharactersWithSlash[] = "?*[{\\/";
-static constexpr char SuffixMetacharactersWithSlash[] = "?*[]{}\\/";
 
 // Expands character ranges and returns a bitmap.
 // For example, "a-cf-hz" is expanded to "abcfghz".
@@ -137,12 +135,10 @@ parseBraceExpansions(StringRef S, std::optional<size_t> MaxSubPatterns) {
   return std::move(SubPatterns);
 }
 
-static StringRef maxPlainSubstring(StringRef S, bool SlashAgnostic) {
-  const char *Metas =
-      SlashAgnostic ? PrefixMetacharactersWithSlash : PrefixMetacharacters;
+static StringRef maxPlainSubstring(StringRef S) {
   StringRef Best;
   while (!S.empty()) {
-    size_t PrefixSize = S.find_first_of(Metas);
+    size_t PrefixSize = S.find_first_of(PrefixMetacharacters);
     if (PrefixSize == std::string::npos)
       PrefixSize = S.size();
 
@@ -182,20 +178,13 @@ static StringRef maxPlainSubstring(StringRef S, bool SlashAgnostic) {
   return Best;
 }
 
-Expected<GlobPattern> GlobPattern::create(StringRef S,
-                                          std::optional<size_t> MaxSubPatterns,
-                                          bool SlashAgnostic) {
+Expected<GlobPattern>
+GlobPattern::create(StringRef S, std::optional<size_t> MaxSubPatterns) {
   GlobPattern Pat;
-  Pat.SlashAgnostic = SlashAgnostic;
   Pat.Pattern = S;
 
-  const char *PrefixMetas =
-      SlashAgnostic ? PrefixMetacharactersWithSlash : PrefixMetacharacters;
-  const char *SuffixMetas =
-      SlashAgnostic ? SuffixMetacharactersWithSlash : SuffixMetacharacters;
-
   // Store the prefix that does not contain any metacharacter.
-  Pat.PrefixSize = S.find_first_of(PrefixMetas);
+  Pat.PrefixSize = S.find_first_of(PrefixMetacharacters);
   if (Pat.PrefixSize == std::string::npos) {
     Pat.PrefixSize = S.size();
     return Pat;
@@ -203,7 +192,7 @@ Expected<GlobPattern> GlobPattern::create(StringRef S,
   S = S.substr(Pat.PrefixSize);
 
   // Just in case we stop on unmatched opening brackets.
-  size_t SuffixStart = S.find_last_of(SuffixMetas);
+  size_t SuffixStart = S.find_last_of(SuffixMetacharacters);
   assert(SuffixStart != std::string::npos);
   if (S[SuffixStart] == '\\')
     ++SuffixStart;
@@ -216,7 +205,7 @@ Expected<GlobPattern> GlobPattern::create(StringRef S,
   if (auto Err = parseBraceExpansions(S, MaxSubPatterns).moveInto(SubPats))
     return std::move(Err);
   for (StringRef SubPat : SubPats) {
-    auto SubGlobOrErr = SubGlobPattern::create(SubPat, SlashAgnostic);
+    auto SubGlobOrErr = SubGlobPattern::create(SubPat);
     if (!SubGlobOrErr)
       return SubGlobOrErr.takeError();
     Pat.SubGlobs.push_back(*SubGlobOrErr);
@@ -226,7 +215,7 @@ Expected<GlobPattern> GlobPattern::create(StringRef S,
 }
 
 Expected<GlobPattern::SubGlobPattern>
-GlobPattern::SubGlobPattern::create(StringRef S, bool SlashAgnostic) {
+GlobPattern::SubGlobPattern::create(StringRef S) {
   SubGlobPattern Pat;
 
   // Parse brackets.
@@ -248,10 +237,6 @@ GlobPattern::SubGlobPattern::create(StringRef S, bool SlashAgnostic) {
       if (!BVOrErr)
         return BVOrErr.takeError();
       BitVector &BV = *BVOrErr;
-      if (SlashAgnostic && (BV['\\'] || BV['/'])) {
-        BV.set('\\');
-        BV.set('/');
-      }
       if (Invert)
         BV.flip();
       Pat.Brackets.push_back(Bracket{J + 1, std::move(BV)});
@@ -266,8 +251,8 @@ GlobPattern::SubGlobPattern::create(StringRef S, bool SlashAgnostic) {
 }
 
 StringRef GlobPattern::longest_substr() const {
-  return maxPlainSubstring(Pattern.drop_front(PrefixSize).drop_back(SuffixSize),
-                           SlashAgnostic);
+  return maxPlainSubstring(
+      Pattern.drop_front(PrefixSize).drop_back(SuffixSize));
 }
 
 bool GlobPattern::match(StringRef S) const {
@@ -278,23 +263,15 @@ bool GlobPattern::match(StringRef S) const {
   if (SubGlobs.empty() && S.empty())
     return true;
   for (auto &Glob : SubGlobs)
-    if (Glob.match(S, SlashAgnostic))
+    if (Glob.match(S))
       return true;
   return false;
-}
-
-static bool matchChar(char PatC, char QueryC, bool SlashAgnostic) {
-  if (PatC == QueryC)
-    return true;
-  return SlashAgnostic && (PatC == '\\' || PatC == '/') &&
-         (QueryC == '\\' || QueryC == '/');
 }
 
 // Factor the pattern into segments split by '*'. The segment is matched
 // sequentianlly by finding the first occurrence past the end of the previous
 // match.
-bool GlobPattern::SubGlobPattern::match(StringRef Str,
-                                        bool SlashAgnostic) const {
+bool GlobPattern::SubGlobPattern::match(StringRef Str) const {
   const char *P = Pat.data(), *SegmentBegin = nullptr, *S = Str.data(),
              *SavedS = S;
   const char *const PEnd = P + Pat.size(), *const End = S + Str.size();
@@ -316,12 +293,12 @@ bool GlobPattern::SubGlobPattern::match(StringRef Str,
         continue;
       }
     } else if (*P == '\\') {
-      if (matchChar(*++P, *S, SlashAgnostic)) {
+      if (*++P == *S) {
         ++P;
         ++S;
         continue;
       }
-    } else if (matchChar(*P, *S, SlashAgnostic) || *P == '?') {
+    } else if (*P == *S || *P == '?') {
       ++P;
       ++S;
       continue;

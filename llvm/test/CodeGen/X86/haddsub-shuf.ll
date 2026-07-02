@@ -1300,9 +1300,9 @@ define <8 x i32> @hadd_8i32_v8i32_shuffle(<8 x i32> %a0, <8 x i32> %a1) {
 ;
 ; AVX1-LABEL: hadd_8i32_v8i32_shuffle:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; AVX1-NEXT:    vphaddd %xmm2, %xmm1, %xmm1
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm3
+; AVX1-NEXT:    vphaddd %xmm3, %xmm1, %xmm1
 ; AVX1-NEXT:    vphaddd %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
@@ -1344,9 +1344,9 @@ define <8 x i32> @hsub_8i32_v8i32_shuffle(<8 x i32> %a0, <8 x i32> %a1) {
 ;
 ; AVX1-LABEL: hsub_8i32_v8i32_shuffle:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; AVX1-NEXT:    vphsubd %xmm2, %xmm1, %xmm1
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm3
+; AVX1-NEXT:    vphsubd %xmm3, %xmm1, %xmm1
 ; AVX1-NEXT:    vphsubd %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
@@ -1401,9 +1401,9 @@ define <16 x i16> @hadd_16i16_16i16_shuffle(<16 x i16> %a0, <16 x i16> %a1) {
 ;
 ; AVX1-LABEL: hadd_16i16_16i16_shuffle:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; AVX1-NEXT:    vphaddw %xmm2, %xmm1, %xmm1
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm3
+; AVX1-NEXT:    vphaddw %xmm3, %xmm1, %xmm1
 ; AVX1-NEXT:    vphaddw %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX1-NEXT:    retq

@@ -126,8 +126,7 @@ llvm::Expected<uint16_t> PlatformWasm::FindFreeTCPPort() {
 
 std::vector<ArchSpec>
 PlatformWasm::GetSupportedArchitectures(const ArchSpec &process_host_arch) {
-  return {ArchSpec("wasm32-unknown-unknown-wasm"),
-          ArchSpec("wasm64-unknown-unknown-wasm")};
+  return {ArchSpec("wasm32"), ArchSpec("wasm64")};
 }
 
 lldb::ProcessSP PlatformWasm::Attach(ProcessAttachInfo &attach_info,

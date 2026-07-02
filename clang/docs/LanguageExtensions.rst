@@ -905,6 +905,10 @@ T __builtin_elementwise_fshr(T x, T y, T z)     perform a funnel shift right. Co
                                                 first argument is 0 and no second argument is provided.
 T __builtin_elementwise_clmul(T x, T y)         perform a carry-less multiplication of x and y, returning the least    integer types
                                                 significant bits of the wide result.
+T __builtin_elementwise_pext(T x, T m)          extract bits from x selected by the mask m, pack them contiguously     integer types
+                                                into the least significant bits of the result, and zero the rest.
+T __builtin_elementwise_pdep(T x, T m)          deposit the least significant bits of x at the positions               integer types
+                                                where m has a 1-bit, and zero the rest.
 ============================================== ====================================================================== =========================================
 
 
@@ -6849,6 +6853,29 @@ Specifying Linker Options on ELF Targets
 The ``#pragma comment(lib, ...)`` directive is supported on all ELF targets.
 The second parameter is the library name (without the traditional Unix prefix of
 ``lib``).  This allows you to provide an implicit link of dependent libraries.
+
+Embedding Copyright Information on AIX
+======================================
+Clang supports the ``#pragma comment(copyright, "string")`` directive for AIX
+targets. This directive embeds a copyright or identifying string into the
+compiled object file. The string is included in the final executable or shared
+library and loaded into memory at program runtime. The directive is ignored on
+non-AIX targets.
+
+.. code-block:: c
+
+   #pragma comment(copyright, "string-literal")
+
+The second argument is an ordinary string literal. Concatenated ordinary string
+literals are also accepted. The directive is intended to appear at file scope;
+Clang treats it as being at file scope when it appears within other scopes.
+
+Interaction with C++20 Modules
+-------------------------------
+
+When ``#pragma comment(copyright, ...)`` appears in a C++20 module interface
+unit, the copyright string is embedded only in the object file compiled from
+that interface unit. Importing TUs do not re-emit the string.
 
 Evaluating Object Size
 ======================

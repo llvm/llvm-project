@@ -6,8 +6,8 @@
 ; RUN: llc < %s -show-mc-encoding -amdgpu-load-store-vectorizer=0 -enable-amdgpu-aa=0 -mtriple=amdgcn-amdhsa -mcpu=tonga -mattr=-unaligned-access-mode | FileCheck -enable-var-scope -check-prefix=SI-PROMOTE-VECT -check-prefix=SI -check-prefix=FUNC %s
 ; RUN: llc < %s -show-mc-encoding -disable-promote-alloca-to-vector -disable-promote-alloca-to-lds -amdgpu-load-store-vectorizer=0 -enable-amdgpu-aa=0 -mtriple=amdgcn-amdhsa -mcpu=tonga -mattr=-unaligned-access-mode | FileCheck -enable-var-scope -check-prefix=SI-ALLOCA -check-prefix=SI -check-prefix=FUNC %s
 
-; RUN: opt < %s -S -mtriple=amdgcn-unknown-amdhsa -data-layout=A5 -mcpu=kaveri -passes=amdgpu-promote-alloca -disable-promote-alloca-to-vector | FileCheck -enable-var-scope -check-prefix=HSAOPT -check-prefix=OPT %s
-; RUN: opt < %s -S -mtriple=amdgcn-unknown-unknown -data-layout=A5 -mcpu=kaveri -passes=amdgpu-promote-alloca -disable-promote-alloca-to-vector | FileCheck -enable-var-scope -check-prefix=NOHSAOPT -check-prefix=OPT %s
+; RUN: opt < %s -S -mtriple=amdgcn-unknown-amdhsa -mcpu=kaveri -passes=amdgpu-promote-alloca -disable-promote-alloca-to-vector | FileCheck -enable-var-scope -check-prefix=HSAOPT -check-prefix=OPT %s
+; RUN: opt < %s -S -mtriple=amdgcn-unknown-unknown -mcpu=kaveri -passes=amdgpu-promote-alloca -disable-promote-alloca-to-vector | FileCheck -enable-var-scope -check-prefix=NOHSAOPT -check-prefix=OPT %s
 
 ; RUN: llc < %s -mtriple=r600 -mcpu=cypress -disable-promote-alloca-to-vector | FileCheck %s -check-prefix=R600 -check-prefix=FUNC
 ; RUN: llc < %s -mtriple=r600 -mcpu=cypress | FileCheck %s -check-prefix=R600-VECT -check-prefix=FUNC

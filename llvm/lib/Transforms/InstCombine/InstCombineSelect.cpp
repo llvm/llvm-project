@@ -417,9 +417,8 @@ Instruction *InstCombinerImpl::foldSelectOpOp(SelectInst &SI, Instruction *TI,
           Value *SelectVal = Builder.CreateSelect(Cond, LdexpVal0, LdexpVal1);
           Value *SelectExp = Builder.CreateSelect(Cond, LdexpExp0, LdexpExp1);
 
-          CallInst *NewLdexp = Builder.CreateIntrinsic(
-              TII->getType(), Intrinsic::ldexp, {SelectVal, SelectExp});
-          NewLdexp->setFastMathFlags(FMF);
+          Value *NewLdexp = Builder.CreateIntrinsic(
+              TII->getType(), Intrinsic::ldexp, {SelectVal, SelectExp}, FMF);
           return replaceInstUsesWith(SI, NewLdexp);
         }
       }
@@ -1505,17 +1504,21 @@ static Instruction *foldSelectCtlzToCttz(ICmpInst *ICI, Value *TrueVal,
                                          Value *FalseVal,
                                          InstCombiner::BuilderTy &Builder) {
   unsigned BitWidth = TrueVal->getType()->getScalarSizeInBits();
-  if (!isPowerOf2_32(BitWidth) || !ICI->isEquality() ||
-      !match(ICI->getOperand(1), m_Zero()))
+  if (!ICI->isEquality() || !match(ICI->getOperand(1), m_Zero()))
     return nullptr;
 
   if (ICI->getPredicate() == ICmpInst::ICMP_NE)
     std::swap(TrueVal, FalseVal);
 
   Value *Ctlz;
-  if (!match(FalseVal,
-             m_Xor(m_Value(Ctlz), m_SpecificInt(BitWidth - 1))))
+  if (match(FalseVal,
+            m_Xor(m_Value(Ctlz), m_SpecificIntAllowPoison(BitWidth - 1)))) {
+    if (!isPowerOf2_32(BitWidth))
+      return nullptr;
+  } else if (!match(FalseVal, m_Sub(m_SpecificIntAllowPoison(BitWidth - 1),
+                                    m_Value(Ctlz)))) {
     return nullptr;
+  }
 
   if (!match(Ctlz, m_Ctlz(m_Value(), m_Value())))
     return nullptr;
@@ -2308,7 +2311,7 @@ Value *InstCombinerImpl::foldSelectWithConstOpToBinOp(ICmpInst *Cmp,
 
   auto FoldBinaryOpOrIntrinsic = [&](Constant *LHS, Constant *RHS) {
     return IsIntrinsic
-               ? ConstantFoldBinaryIntrinsic(Opcode, LHS, RHS, LHS->getType())
+               ? ConstantFoldIntrinsic(Opcode, {LHS, RHS}, LHS->getType())
                : ConstantFoldBinaryOpOperands(Opcode, LHS, RHS, DL);
   };
 

@@ -9,15 +9,15 @@ entry:
 }
 
 ; CHECK-LABEL: sum_vecs1
-; CHECK: vaf 1,24,25
-; CHECK: vaf 1,1,26
-; CHECK: vaf 1,1,27
-; CHECK: vaf 1,1,28
-; CHECK: vaf 1,1,29
-; CHECK: vl  0,2304(4),4
-; CHECK: vaf 1,1,30
-; CHECK: vaf 1,1,31
-; CHECK: vaf 24,1,0
+; CHECK: vaf 0,24,25
+; CHECK: vaf 0,0,26
+; CHECK: vaf 0,0,27
+; CHECK: vaf 0,0,28
+; CHECK: vaf 0,0,29
+; CHECK: vl  1,2304(4),4
+; CHECK: vaf 0,0,30
+; CHECK: vaf 0,0,31
+; CHECK: vaf 24,0,1
 define <4 x i32> @sum_vecs1(<4 x i32> %v1, <4 x i32> %v2, <4 x i32> %v3, <4 x i32> %v4, <4 x i32> %v5, <4 x i32> %v6, <4 x i32> %v7, <4 x i32> %v8, <4 x i32> %v9) {
 entry:
   %add0 = add <4 x i32> %v1, %v2

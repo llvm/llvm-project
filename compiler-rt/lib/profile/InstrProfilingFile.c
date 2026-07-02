@@ -1383,7 +1383,7 @@ int __llvm_write_custom_profile(const char *Target,
   TargetFilename[FilenameLength + 1 + TargetLength] = 0;
 
   /* Open and truncate target-specific PGO file */
-  FILE *OutputFile = fopen(TargetFilename, "w");
+  FILE *OutputFile = fopen(TargetFilename, "wb");
   setProfileFile(OutputFile);
 
   if (!OutputFile) {
@@ -1404,11 +1404,10 @@ int __llvm_write_custom_profile(const char *Target,
   if (VersionOverride)
     Version = *VersionOverride;
 
-  /* Write custom data to the file */
-  ReturnValue =
-      lprofWriteDataImpl(&fileWriter, DataBegin, DataEnd, CountersBegin,
-                         CountersEnd, NULL, NULL, lprofGetVPDataReader(), NULL,
-                         NULL, NULL, NULL, NamesBegin, NamesEnd, 0, Version);
+  ReturnValue = lprofWriteDataImpl(&fileWriter, DataBegin, DataEnd,
+                                   CountersBegin, CountersEnd, NULL, NULL,
+                                   lprofGetVPDataReader(), NamesBegin, NamesEnd,
+                                   NULL, NULL, NULL, NULL, 0, Version);
   closeFileObject(OutputFile);
 
   // Restore SIGKILL.

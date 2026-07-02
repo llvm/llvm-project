@@ -135,6 +135,28 @@ std::string detectStandardResourceDir() {
   return GetResourcesPath("clangd", (void *)&StaticForMainAddr);
 }
 
+std::optional<std::string>
+detectResourceDirWithClangPath(std::optional<std::string> ClangPath) {
+  std::string ResourceDir = detectStandardResourceDir();
+  if (llvm::sys::fs::exists(ResourceDir))
+    return ResourceDir;
+  vlog("Auto-detected standard resource directory '{0}' doesn't exist",
+       ResourceDir);
+
+  if (ClangPath) {
+    ResourceDir = GetResourcesPath(*ClangPath);
+    if (llvm::sys::fs::exists(ResourceDir))
+      return ResourceDir;
+    vlog("Auto-detected using clang path '{0}' "
+         "resource directory '{1}' doesn't exist",
+         *ClangPath, ResourceDir);
+  }
+
+  elog("Failed to auto-detect resource directory, "
+       "specify it manually via --resource-dir command line argument");
+  return std::nullopt;
+}
+
 // The path passed to argv[0] is important:
 //  - its parent directory is Driver::Dir, used for library discovery
 //  - its basename affects CLI parsing (clang-cl) and other settings
@@ -188,7 +210,7 @@ static std::string resolveDriver(llvm::StringRef Driver, bool FollowSymlink,
 CommandMangler CommandMangler::detect() {
   CommandMangler Result;
   Result.ClangPath = detectClangPath();
-  Result.ResourceDir = detectStandardResourceDir();
+  Result.ResourceDir = detectResourceDirWithClangPath(Result.ClangPath);
   Result.Sysroot = detectSysroot();
   return Result;
 }

@@ -527,7 +527,8 @@ public:
   /// can be used to store the results of comparisons for use by selects
   /// and conditional branches. With multiple condition registers, the code
   /// generator will not aggressively sink comparisons into the blocks of their
-  /// users.
+  /// users. \p VT is the type of the condition value, e.g. the type of the
+  /// result of a comparison.
   virtual bool hasMultipleConditionRegisters(EVT VT) const { return false; }
 
   /// Return true if the target has BitExtract instructions.
@@ -2550,8 +2551,10 @@ public:
   /// select(N0|N1, X, Y) => select(N0, select(N1, X, Y, Y)) if it is likely
   /// that it saves us from materializing N0 and N1 in an integer register.
   /// Targets that are able to perform and/or on flags should return false here.
-  virtual bool shouldNormalizeToSelectSequence(LLVMContext &Context,
-                                               EVT VT) const {
+  /// \p VT is the type of the select (and X and Y). \p CCVT is the type of its
+  /// condition (N0 and N1).
+  virtual bool shouldNormalizeToSelectSequence(LLVMContext &Context, EVT VT,
+                                               EVT CCVT) const {
     // If a target has multiple condition registers, then it likely has logical
     // operations on those registers.
     if (hasMultipleConditionRegisters(VT))
@@ -5572,6 +5575,16 @@ public:
   /// \returns The expansion if successful, SDValue() otherwise
   SDValue expandCLMUL(SDNode *N, SelectionDAG &DAG) const;
 
+  /// Expand parallel bit extract (compress).
+  /// \param N Node to expand
+  /// \returns The expansion if successful, SDValue() otherwise
+  SDValue expandPEXT(SDNode *N, SelectionDAG &DAG) const;
+
+  /// Expand parallel bit deposit (expand).
+  /// \param N Node to expand
+  /// \returns The expansion if successful, SDValue() otherwise
+  SDValue expandPDEP(SDNode *N, SelectionDAG &DAG) const;
+
   /// Expand rotations.
   /// \param N Node to expand
   /// \param AllowVectorOps expand vector rotate, this should only be performed
@@ -5649,6 +5662,11 @@ public:
   /// \param NodeNode to expand
   /// \returns The expansion result
   SDValue expandFCANONICALIZE(SDNode *Node, SelectionDAG &DAG) const;
+
+  /// Expand CONVERT_TO_ARBITRARY_FP using bit manipulation.
+  /// \param Node Node to expand.
+  /// \returns The expansion result, or SDValue() if fails.
+  SDValue expandCONVERT_TO_ARBITRARY_FP(SDNode *Node, SelectionDAG &DAG) const;
 
   /// Expand CONVERT_FROM_ARBITRARY_FP using bit manipulation.
   /// \param Node Node to expand.

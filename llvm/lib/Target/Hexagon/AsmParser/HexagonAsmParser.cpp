@@ -1559,7 +1559,7 @@ int HexagonAsmParser::processInstruction(MCInst &Inst,
 
       MES->switchSection(mySection);
       unsigned byteSize = is32bit ? 4 : 8;
-      getStreamer().emitCodeAlignment(Align(byteSize), &getSTI(), byteSize);
+      getStreamer().emitCodeAlignment(Align(byteSize), getSTI(), byteSize);
 
       MCSymbol *Sym;
 

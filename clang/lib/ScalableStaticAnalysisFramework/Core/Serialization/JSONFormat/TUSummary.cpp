@@ -9,6 +9,7 @@
 #include "JSONFormatImpl.h"
 
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/TUSummary.h"
+#include "llvm/TargetParser/Triple.h"
 
 #include <set>
 
@@ -35,14 +36,46 @@ llvm::Expected<TUSummary> JSONFormat::readTUSummary(llvm::StringRef Path) {
         .build();
   }
 
-  const Object &RootObject = *RootObjectPtr;
+  if (auto Err = checkSummaryType(*RootObjectPtr, JSONTypeValueTUSummary)) {
+    return ErrorBuilder::wrap(std::move(Err))
+        .context(ErrorMessages::ReadingFromFile, "TUSummary", Path)
+        .build();
+  }
+
+  auto ExpectedSummary = readTUSummaryFromObject(*RootObjectPtr);
+  if (!ExpectedSummary) {
+    return ErrorBuilder::wrap(ExpectedSummary.takeError())
+        .context(ErrorMessages::ReadingFromFile, "TUSummary", Path)
+        .build();
+  }
+
+  return std::move(*ExpectedSummary);
+}
+
+llvm::Expected<TUSummary>
+JSONFormat::readTUSummaryFromObject(const Object &RootObject) {
+  auto OptTargetTriple = RootObject.getString("target_triple");
+  if (!OptTargetTriple) {
+    return ErrorBuilder::create(std::errc::invalid_argument,
+                                ErrorMessages::FailedToReadObjectAtField,
+                                "TargetTriple", "target_triple", "string")
+        .build();
+  }
+
+  if (auto Err = validateNormalizedTargetTriple(*OptTargetTriple)) {
+    return ErrorBuilder::wrap(std::move(Err))
+        .context(ErrorMessages::ReadingFromField, "TargetTriple",
+                 "target_triple")
+        .build();
+  }
+
+  llvm::Triple T(*OptTargetTriple);
 
   const Object *TUNamespaceObject = RootObject.getObject("tu_namespace");
   if (!TUNamespaceObject) {
     return ErrorBuilder::create(std::errc::invalid_argument,
                                 ErrorMessages::FailedToReadObjectAtField,
                                 "BuildNamespace", "tu_namespace", "object")
-        .context(ErrorMessages::ReadingFromFile, "TUSummary", Path)
         .build();
   }
 
@@ -51,11 +84,10 @@ llvm::Expected<TUSummary> JSONFormat::readTUSummary(llvm::StringRef Path) {
     return ErrorBuilder::wrap(ExpectedTUNamespace.takeError())
         .context(ErrorMessages::ReadingFromField, "BuildNamespace",
                  "tu_namespace")
-        .context(ErrorMessages::ReadingFromFile, "TUSummary", Path)
         .build();
   }
 
-  TUSummary Summary(std::move(*ExpectedTUNamespace));
+  TUSummary Summary(std::move(T), std::move(*ExpectedTUNamespace));
 
   {
     const Array *IdTableArray = RootObject.getArray("id_table");
@@ -63,7 +95,6 @@ llvm::Expected<TUSummary> JSONFormat::readTUSummary(llvm::StringRef Path) {
       return ErrorBuilder::create(std::errc::invalid_argument,
                                   ErrorMessages::FailedToReadObjectAtField,
                                   "IdTable", "id_table", "array")
-          .context(ErrorMessages::ReadingFromFile, "TUSummary", Path)
           .build();
     }
 
@@ -71,7 +102,6 @@ llvm::Expected<TUSummary> JSONFormat::readTUSummary(llvm::StringRef Path) {
     if (!ExpectedIdTable) {
       return ErrorBuilder::wrap(ExpectedIdTable.takeError())
           .context(ErrorMessages::ReadingFromField, "IdTable", "id_table")
-          .context(ErrorMessages::ReadingFromFile, "TUSummary", Path)
           .build();
     }
 
@@ -84,7 +114,6 @@ llvm::Expected<TUSummary> JSONFormat::readTUSummary(llvm::StringRef Path) {
       return ErrorBuilder::create(std::errc::invalid_argument,
                                   ErrorMessages::FailedToReadObjectAtField,
                                   "LinkageTable", "linkage_table", "array")
-          .context(ErrorMessages::ReadingFromFile, "TUSummary", Path)
           .build();
     }
 
@@ -101,7 +130,6 @@ llvm::Expected<TUSummary> JSONFormat::readTUSummary(llvm::StringRef Path) {
       return ErrorBuilder::wrap(ExpectedLinkageTable.takeError())
           .context(ErrorMessages::ReadingFromField, "LinkageTable",
                    "linkage_table")
-          .context(ErrorMessages::ReadingFromFile, "TUSummary", Path)
           .build();
     }
 
@@ -114,7 +142,6 @@ llvm::Expected<TUSummary> JSONFormat::readTUSummary(llvm::StringRef Path) {
       return ErrorBuilder::create(std::errc::invalid_argument,
                                   ErrorMessages::FailedToReadObjectAtField,
                                   "SummaryData entries", "data", "array")
-          .context(ErrorMessages::ReadingFromFile, "TUSummary", Path)
           .build();
     }
 
@@ -124,7 +151,6 @@ llvm::Expected<TUSummary> JSONFormat::readTUSummary(llvm::StringRef Path) {
       return ErrorBuilder::wrap(ExpectedSummaryDataMap.takeError())
           .context(ErrorMessages::ReadingFromField, "SummaryData entries",
                    "data")
-          .context(ErrorMessages::ReadingFromFile, "TUSummary", Path)
           .build();
     }
 
@@ -137,6 +163,11 @@ llvm::Expected<TUSummary> JSONFormat::readTUSummary(llvm::StringRef Path) {
 llvm::Error JSONFormat::writeTUSummary(const TUSummary &S,
                                        llvm::StringRef Path) {
   Object RootObject;
+
+  RootObject[JSONTypeKey] = JSONTypeValueTUSummary;
+
+  RootObject["target_triple"] =
+      llvm::Triple::normalize(getTargetTriple(S).str());
 
   RootObject["tu_namespace"] = buildNamespaceToJSON(getTUNamespace(S));
 

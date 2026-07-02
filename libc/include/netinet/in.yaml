@@ -33,5 +33,9 @@ types:
   - type_name: struct_in_addr
   - type_name: struct_in6_addr
 enums: []
-objects: []
+objects:
+  - object_name: in6addr_any
+    object_type: const struct in6_addr
+  - object_name: in6addr_loopback
+    object_type: const struct in6_addr
 functions: []

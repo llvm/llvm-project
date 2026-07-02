@@ -307,7 +307,7 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
       .unsupportedIf(LegalityPredicates::any(typeIs(0, p9), typeIs(1, p9)))
       .legalIf(all(typeInSet(0, allPtrs), typeInSet(1, allPtrs)));
 
-  getActionDefinitionsBuilder(G_MEMSET)
+  getActionDefinitionsBuilder({G_MEMSET, G_MEMSET_INLINE})
       .unsupportedIf(typeIs(0, p9))
       .legalIf(all(typeInSet(0, allPtrs), typeInSet(1, allIntScalars)));
 
@@ -355,7 +355,11 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
 
   getActionDefinitionsBuilder(G_PHI)
       .legalFor(allPtrsScalarsAndVectors)
-      .legalIf(extendedPtrsScalarsAndVectors);
+      .legalIf(extendedPtrsScalarsAndVectors)
+      .moreElementsToNextPow2(0)
+      .fewerElementsIf(vectorElementCountIsGreaterThan(0, MaxVectorSize),
+                       LegalizeMutations::changeElementCountTo(
+                           0, ElementCount::getFixed(MaxVectorSize)));
 
   getActionDefinitionsBuilder(G_BITCAST).legalIf(
       all(typeInSet(0, allPtrsScalarsAndVectors),

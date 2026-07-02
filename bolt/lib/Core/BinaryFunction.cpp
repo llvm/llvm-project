@@ -111,11 +111,6 @@ static cl::opt<bool> NoScan(
         "slower binary)"),
     cl::Hidden, cl::cat(BoltOptCategory));
 
-cl::opt<bool>
-    PreserveBlocksAlignment("preserve-blocks-alignment",
-                            cl::desc("try to preserve basic block alignment"),
-                            cl::cat(BoltOptCategory));
-
 static cl::opt<bool> PrintOutputAddressRange(
     "print-output-address-range",
     cl::desc(
@@ -2351,7 +2346,7 @@ Error BinaryFunction::buildCFG(MCPlusBuilder::AllocatorIdTy AllocatorId) {
       // Always create new BB at branch destination.
       PrevBB = InsertBB ? InsertBB : PrevBB;
       InsertBB = addBasicBlockAt(LI->first, LI->second);
-      if (opts::PreserveBlocksAlignment && IsLastInstrNop)
+      if (BC.PreserveBlocksAlignment && IsLastInstrNop)
         InsertBB->setDerivedAlignment();
 
       if (PrevBB)
@@ -2388,7 +2383,7 @@ Error BinaryFunction::buildCFG(MCPlusBuilder::AllocatorIdTy AllocatorId) {
           Label = BC.Ctx->createNamedTempSymbol("FT");
         }
         InsertBB = addBasicBlockAt(Offset, Label);
-        if (opts::PreserveBlocksAlignment && IsLastInstrNop)
+        if (BC.PreserveBlocksAlignment && IsLastInstrNop)
           InsertBB->setDerivedAlignment();
         updateOffset(LastInstrOffset);
       }

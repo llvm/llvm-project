@@ -9,7 +9,11 @@
 
 from typing import Any, Dict, List, Union
 
-from dex.evaluation.ExpectMatch import DebuggerExpectMatch
+from dex.evaluation.ExpectMatch import (
+    DebuggerExpectMatch,
+    MatchResult,
+    get_expected_value_set,
+)
 from dex.test_script.Nodes import Expect, Value
 
 
@@ -52,6 +56,8 @@ class ScalarMetric(Metric):
         return ScalarMetric(self.value + other.value, self.improves_asc)
 
     def __repr__(self):
+        if isinstance(self.value, float):
+            return f"{self.value:.4}"
         return f"{self.value}"
 
 
@@ -98,19 +104,31 @@ def get_variable_metrics(
     if not isinstance(expected_values, list):
         expected_values = [expected_values]
     num_total_steps = len(matches)
+    all_expected_values = get_expected_value_set(expected_values)
     seen_expected_values = set()
     num_correct_steps = 0
     num_missing_var_steps = 0
     num_unexpected_value_steps = 0
+    partial_step_correctness = 0.0
     for match in matches:
-        if match.match_result:
-            seen_expected_values.add(match.expected)
+        partial_step_correctness += 1.0 - match.match_distance
+        seen_expected_values = seen_expected_values.union(
+            match.get_all_matched_values()
+        )
+        if match.match_result == MatchResult.TRUE:
             num_correct_steps += 1
         elif match.actual_result is None:
             num_missing_var_steps += 1
         else:
             num_unexpected_value_steps += 1
-    num_seen_values = sum(ev in seen_expected_values for ev in expected_values)
+    assert all(
+        ev in all_expected_values for ev in seen_expected_values
+    ), "Saw expected values that weren't expected?"
+    num_seen_values = sum(all_expected_values[ev] for ev in seen_expected_values)
+    num_missing_values = sum(
+        0 if ev in seen_expected_values else count
+        for ev, count in all_expected_values.items()
+    )
     # And finally produce the metrics map and add the new result to the list.
     metrics = {
         # The number of steps. Though this is not a useful metric in itself, it may be useful to see in tandem with
@@ -122,6 +140,8 @@ def get_variable_metrics(
         "incorrect_steps": ScalarMetric(
             num_total_steps - num_correct_steps, improves_asc=False
         ),
+        # The sum of the 0.0-1.0 "correctness value" of matches across each step.
+        "partial_step_correctness": ScalarMetric(partial_step_correctness),
         # The number of steps where the watched variable/expression was not available in the debugger.
         "missing_var_steps": ScalarMetric(num_missing_var_steps, improves_asc=False),
         # The number of steps where the watched variable/expression had a value not in the set of expected values.
@@ -133,8 +153,6 @@ def get_variable_metrics(
         # The number of expected values that were observed at least once.
         "seen_values": ScalarMetric(num_seen_values),
         # The number of expected values that were not observed.
-        "missing_values": ScalarMetric(
-            len(expected_values) - num_seen_values, improves_asc=False
-        ),
+        "missing_values": ScalarMetric(num_missing_values, improves_asc=False),
     }
     return metrics

@@ -66,7 +66,6 @@
 
 using namespace llvm;
 using namespace llvm::PatternMatch;
-using ProfileCount = Function::ProfileCount;
 
 #define DEBUG_TYPE "code-extractor"
 
@@ -1092,8 +1091,7 @@ Function *CodeExtractor::constructFunctionDeclaration(
   if (BFI) {
     auto Count = BFI->getProfileCountFromFreq(EntryFreq);
     if (Count.has_value())
-      newFunction->setEntryCount(
-          ProfileCount(*Count, Function::PCT_Real)); // FIXME
+      newFunction->setEntryCount(*Count);
   }
 
   return newFunction;

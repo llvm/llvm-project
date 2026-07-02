@@ -50,7 +50,14 @@ uint16_t utils::elf::getTargetMachine() {
 #elif defined(__loongarch__)
   return EM_LOONGARCH;
 #else
-#warning "Unknown ELF compilation target architecture"
+// #warning directive is available starting in C23 and C++23.
+#define UNKNOWN_ARCH_MSG "Unknown ELF compilation target architecture"
+#ifdef _MSC_VER
+#pragma message(UNKNOWN_ARCH_MSG)
+#else
+#warning UNKNOWN_ARCH_MSG
+#endif
+#undef UNKNOWN_ARCH_MSG
   return EM_NONE;
 #endif
 }

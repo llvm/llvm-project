@@ -61,10 +61,13 @@ class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
   int64_t DwarfVersion = 0;
 
   // DI types partitioned from DebugInfoFinder.types() in beginModule()
-  // (basics, pointers, subroutine types NSDI v1 may emit).
+  // (basics, pointers, vectors, subroutine types NSDI v1 may emit).
   SmallVector<const DIBasicType *> BasicTypes;
   SmallVector<const DIDerivedType *> PointerTypes;
   SmallVector<const DISubroutineType *> SubroutineTypes;
+  // DICompositeType nodes with DW_TAG_array_type and DINode::FlagVector,
+  // partitioned from DebugInfoFinder.types() in beginModule().
+  SmallVector<const DICompositeType *> VectorTypes;
 
   // Filled in emitNonSemanticGlobalDebugInfo(): DI types to their result
   // registers.
@@ -215,6 +218,16 @@ private:
   emitDebugTypeFunctionForSubroutineType(const DISubroutineType *ST,
                                          MCRegister ExtInstSetReg,
                                          SPIRV::ModuleAnalysisInfo &MAI);
+
+  /// Emit \c DebugTypeVector for the vector composite type \p VT.
+  ///
+  /// \returns The result id register on success. Returns \c std::nullopt and
+  /// emits nothing if \p VT has no \c DIBasicType base type, if the base type
+  /// has not been emitted yet, if \p VT has more than one \c DISubrange
+  /// element, or if the component count is not a compile-time constant.
+  std::optional<MCRegister> emitDebugTypeVector(const DICompositeType *VT,
+                                                MCRegister ExtInstSetReg,
+                                                SPIRV::ModuleAnalysisInfo &MAI);
 
   /// Map a \c DISubroutineType::getTypeArray() element to an operand register
   /// for

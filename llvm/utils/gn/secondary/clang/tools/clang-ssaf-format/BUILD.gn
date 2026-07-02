@@ -4,6 +4,7 @@ executable("clang-ssaf-format") {
     "//clang/lib/Basic",
     "//clang/lib/ScalableStaticAnalysisFramework/Analyses",
     "//clang/lib/ScalableStaticAnalysisFramework/Core",
+    "//clang/lib/ScalableStaticAnalysisFramework/SourceTransformation",
     "//clang/lib/ScalableStaticAnalysisFramework/Tool",
     "//llvm/lib/Option",
     "//llvm/lib/Support",

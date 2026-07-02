@@ -827,6 +827,24 @@ class ScriptedFrameProviderTestCase(TestBase):
         self.assertTrue(variables.IsValid())
         self.assertTrue(variables.GetValueAtIndex(0).name == "_handler_one")
 
+        # Ensure that we get synthetic variables in the other overloads.
+        # (arguments, locals, statics, in_scope_only)
+        variables = frame0.GetVariables(False, False, False, False)
+        self.assertTrue(variables.IsValid())
+        self.assertTrue(variables.GetValueAtIndex(0).name == "_handler_one")
+
+        # (arguments, locals, statics, in_scope_only, use_dynamic)
+        variables = frame0.GetVariables(
+            False, False, False, False, lldb.eNoDynamicValues
+        )
+        self.assertTrue(variables.IsValid())
+        self.assertTrue(variables.GetValueAtIndex(0).name == "_handler_one")
+
+        # FIXME: Synthetic variables are never in scope.
+        variables = frame0.GetVariables(False, False, False, True)
+        self.assertFalse(variables.IsValid())
+        self.assertEqual(variables.GetSize(), 0)
+
         # Check the `frame variable` command(s) handle synthetic variables the
         # way we expect by printing them.
         self.expect("frame var", substrs=["variable_in_main", "_handler_one"])

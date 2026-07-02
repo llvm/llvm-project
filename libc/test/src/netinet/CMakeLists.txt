@@ -12,6 +12,8 @@ add_libc_unittest(
     libc.hdr.types.struct_sockaddr_in6
     libc.src.arpa.inet.htons
     libc.src.arpa.inet.htonl
+    libc.src.netinet.in6addr_any
+    libc.src.netinet.in6addr_loopback
     libc.src.string.memcmp
 )
 

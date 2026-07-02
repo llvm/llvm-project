@@ -20,8 +20,7 @@ define amdgpu_kernel void @divrem24_assume(ptr addrspace(1) %arg, i32 %arg1) {
 ; CHECK-NEXT:    [[TMP10:%.*]] = fcmp fast oge float [[TMP8]], [[TMP9]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = select i1 [[TMP10]], i32 1, i32 0
 ; CHECK-NEXT:    [[TMP12:%.*]] = add i32 [[TMP7]], [[TMP11]]
-; CHECK-NEXT:    [[TMP13:%.*]] = and i32 [[TMP12]], 1023
-; CHECK-NEXT:    [[TMP4:%.*]] = zext i32 [[TMP13]] to i64
+; CHECK-NEXT:    [[TMP4:%.*]] = zext i32 [[TMP12]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[ARG:%.*]], i64 [[TMP4]]
 ; CHECK-NEXT:    store i32 0, ptr addrspace(1) [[TMP5]], align 4
 ; CHECK-NEXT:    ret void

@@ -511,7 +511,7 @@ public:
   ///     size is 0 and true is returned, it means the breakpoint fully matches
   ///     the
   ///     description.
-  bool GetMatchingFileLine(ConstString filename, uint32_t line_number,
+  bool GetMatchingFileLine(llvm::StringRef filename, uint32_t line_number,
                            BreakpointLocationCollection &loc_coll);
 
   void GetFilterDescription(Stream *s);

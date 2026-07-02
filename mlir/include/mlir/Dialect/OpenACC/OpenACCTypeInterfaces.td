@@ -250,6 +250,18 @@ def OpenACC_PointerLikeTypeInterface : TypeInterface<"PointerLikeType"> {
     >,
     InterfaceMethod<
       /*description=*/[{
+        Return this type as an equivalent MemRef type when convertible.
+      }],
+      /*retTy=*/"::mlir::MemRefType",
+      /*methodName=*/"getAsMemRefType",
+      /*args=*/(ins "::mlir::ModuleOp":$module),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return {};
+      }]
+    >,
+    InterfaceMethod<
+      /*description=*/[{
         Returns true if the pointer points to device data.
       }],
       /*retTy=*/"bool",

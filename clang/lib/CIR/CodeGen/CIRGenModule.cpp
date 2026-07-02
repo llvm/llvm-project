@@ -2277,8 +2277,81 @@ mlir::Value CIRGenModule::emitMemberPointerConstant(const UnaryOperator *e) {
   // Otherwise, a member data pointer.
   auto ty = mlir::cast<cir::DataMemberType>(convertType(e->getType()));
   const auto *fieldDecl = cast<FieldDecl>(decl);
-  return cir::ConstantOp::create(
-      builder, loc, builder.getDataMemberAttr(ty, fieldDecl->getFieldIndex()));
+  const auto *mpt = e->getType()->castAs<MemberPointerType>();
+  const auto *destClass = mpt->getMostRecentCXXRecordDecl();
+  std::optional<llvm::SmallVector<int32_t>> path =
+      buildMemberPath(destClass, fieldDecl);
+  if (!path)
+    return {};
+  return cir::ConstantOp::create(builder, loc,
+                                 builder.getDataMemberAttr(ty, *path));
+}
+
+std::optional<llvm::SmallVector<int32_t>>
+CIRGenModule::buildMemberPath(const CXXRecordDecl *destClass,
+                              const FieldDecl *field) {
+  llvm::SmallVector<int32_t> path;
+  if (!findFieldMemberPath(destClass, field, path))
+    return std::nullopt;
+  return path;
+}
+
+bool CIRGenModule::findFieldMemberPath(const CXXRecordDecl *currentClass,
+                                       const FieldDecl *field,
+                                       llvm::SmallVectorImpl<int32_t> &path) {
+  const CIRGenRecordLayout &layout =
+      getTypes().getCIRGenRecordLayout(currentClass);
+
+  // The field is declared directly in this class.
+  if (field->getParent() == currentClass) {
+    int32_t fieldIdx;
+    if (currentClass->isUnion()) {
+      // For unions, getCIRFieldNo always returns 0 for every union member (all
+      // members share offset 0 in the CIR record).  Use the declaration-order
+      // index to distinguish members with the same type at the same offset.
+      if (!layout.isZeroInitializable()) {
+        errorNYI(field->getLocation(),
+                 "data member pointer for non-zero-initializable union");
+        return false;
+      }
+      fieldIdx = static_cast<int32_t>(field->getFieldIndex());
+    } else {
+      fieldIdx = static_cast<int32_t>(layout.getCIRFieldNo(field));
+    }
+    path.push_back(fieldIdx);
+    return true;
+  }
+
+  // Otherwise search the base subobjects.  A virtual base only blocks lowering
+  // when the field actually lives within it; a virtual base elsewhere in the
+  // hierarchy must not stop us from reaching a member through a non-virtual
+  // path.
+  for (const CXXBaseSpecifier &base : currentClass->bases()) {
+    const auto *baseDecl =
+        cast<CXXRecordDecl>(base.getType()->getAsRecordDecl());
+
+    if (base.isVirtual()) {
+      // A pointer to a data member that traverses a virtual base is ill-formed,
+      // so this guard only fires defensively if the member is reached through
+      // the virtual base.  An unrelated virtual base is skipped so it does not
+      // block members reached through a non-virtual path.
+      llvm::SmallVector<int32_t> discardedPath;
+      if (findFieldMemberPath(baseDecl, field, discardedPath)) {
+        errorNYI(field->getLocation(),
+                 "data member pointer through virtual base");
+        return false;
+      }
+      continue;
+    }
+
+    auto baseFieldIdx =
+        static_cast<int32_t>(layout.getNonVirtualBaseCIRFieldNo(baseDecl));
+    path.push_back(baseFieldIdx);
+    if (findFieldMemberPath(baseDecl, field, path))
+      return true;
+    path.pop_back();
+  }
+  return false;
 }
 
 void CIRGenModule::emitDeclContext(const DeclContext *dc) {

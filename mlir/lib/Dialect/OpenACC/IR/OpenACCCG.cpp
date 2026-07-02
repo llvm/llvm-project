@@ -33,7 +33,7 @@ using namespace acc;
 namespace {
 
 /// Generic helper for single-region OpenACC ops that execute their body once
-/// and then return to the parent operation with their results (if any).
+/// and then continue after the operation with their results (if any).
 static void
 getSingleRegionOpSuccessorRegions(Operation *op, Region &region,
                                   RegionBranchPoint point,
@@ -42,12 +42,12 @@ getSingleRegionOpSuccessorRegions(Operation *op, Region &region,
     regions.push_back(RegionSuccessor(&region));
     return;
   }
-  regions.push_back(RegionSuccessor::parent());
+  regions.push_back(RegionSuccessor(op));
 }
 
 static ValueRange getSingleRegionSuccessorInputs(Operation *op,
                                                  RegionSuccessor successor) {
-  return successor.isParent() ? ValueRange(op->getResults()) : ValueRange();
+  return successor.isOperation() ? ValueRange(op->getResults()) : ValueRange();
 }
 
 /// Remove empty acc.kernel_environment operations. If the operation has wait

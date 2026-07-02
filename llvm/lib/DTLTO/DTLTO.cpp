@@ -104,6 +104,8 @@ Error lto::DTLTO::checkCacheHit(Job &J) {
   if (!Cache.isValid())
     return Error::success();
 
+  TimeTraceScope TimeScope("Check cache for DTLTO", J.SummaryIndexPath);
+
   auto CacheAddStreamExp = Cache(J.Task, J.CacheKey, J.ModuleID);
   if (Error Err = CacheAddStreamExp.takeError())
     return Err;

@@ -4157,7 +4157,7 @@ func.func @not_wrapper() {
 
 // -----
 func.func @missing_workshare(%idx : index) {
-  // expected-error @below {{must be nested in an omp.workshare}}
+  // expected-error @below {{'omp.workshare.loop_wrapper' op expects ancestor op 'omp.workshare'}}
   omp.workshare.loop_wrapper {
     omp.loop_nest (%iv) : index = (%idx) to (%idx) step (%idx) {
       omp.yield

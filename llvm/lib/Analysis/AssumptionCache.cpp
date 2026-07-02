@@ -115,7 +115,7 @@ void AssumptionCache::updateAffectedValues(AssumeInst *CI) {
   }
 }
 
-void AssumptionCache::unregisterAssumption(AssumeInst *CI) {
+void AssumptionCache::removeAffectedValues(AssumeInst *CI) {
   SmallVector<AssumptionCache::ResultElem, 16> Affected;
   findAffectedValues(CI, TTI, Affected);
 
@@ -138,8 +138,17 @@ void AssumptionCache::unregisterAssumption(AssumeInst *CI) {
     if (!HasNonnull)
       AffectedValues.erase(AVI);
   }
+}
 
+void AssumptionCache::unregisterAssumption(AssumeInst *CI) {
+  removeAffectedValues(CI);
   llvm::erase(AssumeHandles, CI);
+}
+
+void AssumptionCache::replaceAssumption(WeakVH &Handle, AssumeInst *New) {
+  removeAffectedValues(cast<AssumeInst>(Handle));
+  Handle = New;
+  updateAffectedValues(New);
 }
 
 void AssumptionCache::AffectedValueCallbackVH::deleted() {

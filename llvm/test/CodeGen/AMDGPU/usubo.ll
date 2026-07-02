@@ -14,14 +14,13 @@ define amdgpu_kernel void @s_usubo_i64_zext(ptr addrspace(1) %out, i64 %a, i64 %
 ; SI-NEXT:    s_mov_b32 s6, -1
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_mov_b32 s4, s0
-; SI-NEXT:    s_sub_u32 s2, s2, s8
-; SI-NEXT:    s_subb_u32 s3, s3, s9
+; SI-NEXT:    s_sub_u32 s0, s2, s8
 ; SI-NEXT:    s_mov_b32 s5, s1
-; SI-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; SI-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
-; SI-NEXT:    v_mov_b32_e32 v1, s3
-; SI-NEXT:    v_add_i32_e32 v0, vcc, s2, v0
-; SI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
+; SI-NEXT:    s_subb_u32 s1, s3, s9
+; SI-NEXT:    s_addc_u32 s0, s0, 0
+; SI-NEXT:    s_addc_u32 s1, s1, 0
+; SI-NEXT:    v_mov_b32_e32 v0, s0
+; SI-NEXT:    v_mov_b32_e32 v1, s1
 ; SI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; SI-NEXT:    s_endpgm
 ;
@@ -31,14 +30,13 @@ define amdgpu_kernel void @s_usubo_i64_zext(ptr addrspace(1) %out, i64 %a, i64 %
 ; VI-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x34
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
-; VI-NEXT:    s_sub_u32 s2, s2, s4
-; VI-NEXT:    s_subb_u32 s3, s3, s5
+; VI-NEXT:    s_sub_u32 s0, s2, s4
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
-; VI-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; VI-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s[0:1]
-; VI-NEXT:    v_mov_b32_e32 v3, s3
-; VI-NEXT:    v_add_u32_e32 v2, vcc, s2, v2
-; VI-NEXT:    v_addc_u32_e32 v3, vcc, 0, v3, vcc
+; VI-NEXT:    s_subb_u32 s1, s3, s5
+; VI-NEXT:    s_addc_u32 s0, s0, 0
+; VI-NEXT:    s_addc_u32 s1, s1, 0
+; VI-NEXT:    v_mov_b32_e32 v2, s0
+; VI-NEXT:    v_mov_b32_e32 v3, s1
 ; VI-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
 ; VI-NEXT:    s_endpgm
 ;
@@ -48,13 +46,12 @@ define amdgpu_kernel void @s_usubo_i64_zext(ptr addrspace(1) %out, i64 %a, i64 %
 ; GFX9-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    s_sub_u32 s4, s2, s6
-; GFX9-NEXT:    s_subb_u32 s5, s3, s7
-; GFX9-NEXT:    s_cselect_b64 s[2:3], -1, 0
-; GFX9-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[2:3]
-; GFX9-NEXT:    v_mov_b32_e32 v1, s5
-; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, s4, v0
-; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
+; GFX9-NEXT:    s_sub_u32 s2, s2, s6
+; GFX9-NEXT:    s_subb_u32 s3, s3, s7
+; GFX9-NEXT:    s_addc_u32 s2, s2, 0
+; GFX9-NEXT:    s_addc_u32 s3, s3, 0
+; GFX9-NEXT:    v_mov_b32_e32 v0, s2
+; GFX9-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX9-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
 ; GFX9-NEXT:    s_endpgm
 ;
@@ -67,10 +64,10 @@ define amdgpu_kernel void @s_usubo_i64_zext(ptr addrspace(1) %out, i64 %a, i64 %
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_sub_u32 s2, s2, s6
 ; GFX10-NEXT:    s_subb_u32 s3, s3, s7
-; GFX10-NEXT:    s_cselect_b32 s4, -1, 0
-; GFX10-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s4
-; GFX10-NEXT:    v_add_co_u32 v0, s2, s2, v0
-; GFX10-NEXT:    v_add_co_ci_u32_e64 v1, s2, s3, 0, s2
+; GFX10-NEXT:    s_addc_u32 s2, s2, 0
+; GFX10-NEXT:    s_addc_u32 s3, s3, 0
+; GFX10-NEXT:    v_mov_b32_e32 v0, s2
+; GFX10-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX10-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
 ; GFX10-NEXT:    s_endpgm
 ;
@@ -79,16 +76,14 @@ define amdgpu_kernel void @s_usubo_i64_zext(ptr addrspace(1) %out, i64 %a, i64 %
 ; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX11-NEXT:    s_load_b64 s[4:5], s[4:5], 0x34
-; GFX11-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_sub_u32 s2, s2, s4
 ; GFX11-NEXT:    s_subb_u32 s3, s3, s5
-; GFX11-NEXT:    s_cselect_b32 s4, -1, 0
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s4
-; GFX11-NEXT:    v_add_co_u32 v0, s2, s2, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, null, s3, 0, s2
+; GFX11-NEXT:    s_addc_u32 s2, s2, 0
+; GFX11-NEXT:    s_addc_u32 s3, s3, 0
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v1, s3
+; GFX11-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX11-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX11-NEXT:    s_endpgm
   %usub = call { i64, i1 } @llvm.usub.with.overflow.i64(i64 %a, i64 %b) #0
@@ -1138,6 +1133,180 @@ exit:
   %cout = phi i1 [false, %entry], [%c2, %if]
   store i32 %val, ptr addrspace(1) %out, align 4
   store i1 %cout, ptr addrspace(1) %carryout
+  ret void
+}
+
+; Borrow-out is USED: fold must be suppressed to preserve correct borrow semantics.
+define amdgpu_kernel void @usubo_carry_of_sub_borrowout_used(ptr addrspace(1) %out, i32 %x, i32 %y, i32 %z, i32 %w) #0 {
+; SI-LABEL: usubo_carry_of_sub_borrowout_used:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0xb
+; SI-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x9
+; SI-NEXT:    s_mov_b32 s7, 0xf000
+; SI-NEXT:    s_mov_b32 s6, -1
+; SI-NEXT:    s_waitcnt lgkmcnt(0)
+; SI-NEXT:    v_mov_b32_e32 v0, s3
+; SI-NEXT:    v_sub_i32_e32 v0, vcc, s2, v0
+; SI-NEXT:    s_sub_i32 s0, s0, s1
+; SI-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
+; SI-NEXT:    v_sub_i32_e32 v1, vcc, s0, v1
+; SI-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
+; SI-NEXT:    buffer_store_dword v2, off, s[4:7], 0 offset:8
+; SI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
+; SI-NEXT:    s_endpgm
+;
+; VI-LABEL: usubo_carry_of_sub_borrowout_used:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x2c
+; VI-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x24
+; VI-NEXT:    s_waitcnt lgkmcnt(0)
+; VI-NEXT:    v_mov_b32_e32 v0, s3
+; VI-NEXT:    v_sub_u32_e32 v0, vcc, s2, v0
+; VI-NEXT:    s_sub_i32 s0, s0, s1
+; VI-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
+; VI-NEXT:    v_sub_u32_e32 v1, vcc, s0, v1
+; VI-NEXT:    v_mov_b32_e32 v3, s4
+; VI-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
+; VI-NEXT:    v_mov_b32_e32 v4, s5
+; VI-NEXT:    flat_store_dwordx3 v[3:4], v[0:2]
+; VI-NEXT:    s_endpgm
+;
+; GFX9-LABEL: usubo_carry_of_sub_borrowout_used:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x2c
+; GFX9-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x24
+; GFX9-NEXT:    v_mov_b32_e32 v3, 0
+; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-NEXT:    v_mov_b32_e32 v0, s3
+; GFX9-NEXT:    v_sub_co_u32_e32 v0, vcc, s2, v0
+; GFX9-NEXT:    s_sub_i32 s0, s0, s1
+; GFX9-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
+; GFX9-NEXT:    v_sub_co_u32_e32 v1, vcc, s0, v1
+; GFX9-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
+; GFX9-NEXT:    global_store_dwordx3 v3, v[0:2], s[6:7]
+; GFX9-NEXT:    s_endpgm
+;
+; GFX10-LABEL: usubo_carry_of_sub_borrowout_used:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_clause 0x1
+; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x2c
+; GFX10-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x24
+; GFX10-NEXT:    v_mov_b32_e32 v3, 0
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    v_sub_co_u32 v0, s2, s2, s3
+; GFX10-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s2
+; GFX10-NEXT:    s_sub_i32 s0, s0, s1
+; GFX10-NEXT:    v_sub_co_u32 v1, s0, s0, v1
+; GFX10-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s0
+; GFX10-NEXT:    global_store_dwordx3 v3, v[0:2], s[6:7]
+; GFX10-NEXT:    s_endpgm
+;
+; GFX11-LABEL: usubo_carry_of_sub_borrowout_used:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x2c
+; GFX11-NEXT:    s_load_b64 s[4:5], s[4:5], 0x24
+; GFX11-NEXT:    v_mov_b32_e32 v3, 0
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    v_sub_co_u32 v0, s2, s2, s3
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s2
+; GFX11-NEXT:    s_sub_i32 s0, s0, s1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
+; GFX11-NEXT:    v_sub_co_u32 v1, s0, s0, v1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s0
+; GFX11-NEXT:    global_store_b96 v3, v[0:2], s[4:5]
+; GFX11-NEXT:    s_endpgm
+  %zwo    = call {i32, i1} @llvm.usub.with.overflow.i32(i32 %z, i32 %w)
+  %cc     = extractvalue {i32, i1} %zwo, 1
+  %ccv    = extractvalue {i32, i1} %zwo, 0
+  store i32 %ccv, ptr addrspace(1) %out
+  %xy     = sub i32 %x, %y
+  %cc_i32 = zext i1 %cc to i32
+  %r      = call {i32, i1} @llvm.usub.with.overflow.i32(i32 %xy, i32 %cc_i32)
+  %val    = extractvalue {i32, i1} %r, 0
+  %bo     = extractvalue {i32, i1} %r, 1
+  %bo_i32 = zext i1 %bo to i32
+  %p1 = getelementptr i32, ptr addrspace(1) %out, i64 1
+  store i32 %val, ptr addrspace(1) %p1
+  %p2 = getelementptr i32, ptr addrspace(1) %out, i64 2
+  store i32 %bo_i32, ptr addrspace(1) %p2
+  ret void
+}
+
+; Borrow-out is NOT USED: fold is safe since no consumer observes the borrow.
+define amdgpu_kernel void @usubo_carry_of_sub_borrowout_unused(ptr addrspace(1) %out, i32 %x, i32 %y, i32 %z, i32 %w) #0 {
+; SI-LABEL: usubo_carry_of_sub_borrowout_unused:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0xb
+; SI-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x9
+; SI-NEXT:    s_mov_b32 s7, 0xf000
+; SI-NEXT:    s_mov_b32 s6, -1
+; SI-NEXT:    s_waitcnt lgkmcnt(0)
+; SI-NEXT:    s_sub_u32 s2, s2, s3
+; SI-NEXT:    s_subb_u32 s0, s0, s1
+; SI-NEXT:    v_mov_b32_e32 v0, s0
+; SI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
+; SI-NEXT:    s_endpgm
+;
+; VI-LABEL: usubo_carry_of_sub_borrowout_unused:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x2c
+; VI-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x24
+; VI-NEXT:    s_waitcnt lgkmcnt(0)
+; VI-NEXT:    s_sub_u32 s2, s2, s3
+; VI-NEXT:    s_subb_u32 s0, s0, s1
+; VI-NEXT:    v_mov_b32_e32 v0, s4
+; VI-NEXT:    v_mov_b32_e32 v1, s5
+; VI-NEXT:    v_mov_b32_e32 v2, s0
+; VI-NEXT:    flat_store_dword v[0:1], v2
+; VI-NEXT:    s_endpgm
+;
+; GFX9-LABEL: usubo_carry_of_sub_borrowout_unused:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x2c
+; GFX9-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x24
+; GFX9-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-NEXT:    s_sub_u32 s2, s2, s3
+; GFX9-NEXT:    s_subb_u32 s0, s0, s1
+; GFX9-NEXT:    v_mov_b32_e32 v1, s0
+; GFX9-NEXT:    global_store_dword v0, v1, s[6:7]
+; GFX9-NEXT:    s_endpgm
+;
+; GFX10-LABEL: usubo_carry_of_sub_borrowout_unused:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_clause 0x1
+; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x2c
+; GFX10-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x24
+; GFX10-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    s_sub_u32 s2, s2, s3
+; GFX10-NEXT:    s_subb_u32 s0, s0, s1
+; GFX10-NEXT:    v_mov_b32_e32 v1, s0
+; GFX10-NEXT:    global_store_dword v0, v1, s[6:7]
+; GFX10-NEXT:    s_endpgm
+;
+; GFX11-LABEL: usubo_carry_of_sub_borrowout_unused:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x2c
+; GFX11-NEXT:    s_load_b64 s[4:5], s[4:5], 0x24
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    s_sub_u32 s2, s2, s3
+; GFX11-NEXT:    s_subb_u32 s0, s0, s1
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s0
+; GFX11-NEXT:    global_store_b32 v0, v1, s[4:5]
+; GFX11-NEXT:    s_endpgm
+  %zwo    = call {i32, i1} @llvm.usub.with.overflow.i32(i32 %z, i32 %w)
+  %cc     = extractvalue {i32, i1} %zwo, 1
+  %xy     = sub i32 %x, %y
+  %cc_i32 = zext i1 %cc to i32
+  %r      = call {i32, i1} @llvm.usub.with.overflow.i32(i32 %xy, i32 %cc_i32)
+  %val    = extractvalue {i32, i1} %r, 0
+  store i32 %val, ptr addrspace(1) %out
   ret void
 }
 

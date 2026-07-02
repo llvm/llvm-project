@@ -127,6 +127,39 @@ multiclass VOP3_VOP3PInst_t16<string OpName, VOP3P_Mix_Profile P> {
     }
 }
 
+def V_PK_VOP2_F64_Profile : VOP3P_Profile<VOP_V2F64_V2F64_V2F64, VOP3_PACKED> {
+  let HasOpSel = 0;
+  let HasOMod = 0;
+  let Src0RC64 = VSrc_v2f64;
+  let Src1RC64 = VSrc_v2f64;
+}
+
+def V_PK_VOP3_F64_Profile : VOP3P_Profile<VOP_V2F64_V2F64_V2F64_V2F64, VOP3_PACKED> {
+  let HasOpSel = 0;
+  let HasOMod = 0;
+  let Src0RC64 = VSrc_v2f64;
+  let Src1RC64 = VSrc_v2f64;
+  let Src2RC64 = VSrc_v2f64;
+}
+
+def V_PK_VOP2_I64_Profile : VOP3P_Profile<VOP_V2I64_V2I64_V2I64, VOP3_PACKED> {
+  let HasOpSel = 0;
+  let Src0RC64 = VSrc_v2b64;
+  let Src1RC64 = VSrc_v2b64;
+}
+
+def V_PK_LSHL_ADD_U64_Profile : VOP3P_Profile<VOP_V2I64_V2I64_V2I32_V2I64, VOP3_PACKED> {
+  let HasModifiers = 0;
+  let HasOpSel = 0;
+  let HasClamp = 0;
+  let Src0RC64 = VSrc_v2b64;
+  let Src1RC64 = VSrc_v2b32;
+  let Src2RC64 = VSrc_v2b64;
+  let InsVOP3P = getIns64<Src0RC64, Src1RC64, Src2RC64, NumSrcArgs,
+                          HasClamp, HasModifiers, HasSrc2Mods,
+                          HasOMod, Src0Mod, Src1Mod, Src2Mod>.ret;
+}
+
 let isReMaterializable = 1 in {
 let isCommutable = 1 in {
 defm V_PK_MAD_I16 : VOP3PInst<"v_pk_mad_i16", VOP3P_Profile<VOP_V2I16_V2I16_V2I16_V2I16>>;
@@ -149,11 +182,19 @@ defm V_PK_MIN_U16 : VOP3PInst<"v_pk_min_u16", VOP3P_Profile<VOP_V2I16_V2I16_V2I1
 defm V_PK_MAX_I16 : VOP3PInst<"v_pk_max_i16", VOP3P_Profile<VOP_V2I16_V2I16_V2I16>, smax>;
 defm V_PK_MAX_U16 : VOP3PInst<"v_pk_max_u16", VOP3P_Profile<VOP_V2I16_V2I16_V2I16>, umax>;
 
+let SubtargetPredicate = HasPackedFP64Ops, SchedRW = [WriteDouble] in {
+defm V_PK_MAX_NUM_F64 : VOP3PInst<"v_pk_max_num_f64", V_PK_VOP2_F64_Profile, fmaxnum_like>;
+defm V_PK_MIN_NUM_F64 : VOP3PInst<"v_pk_min_num_f64", V_PK_VOP2_F64_Profile, fminnum_like>;
+}
+
+let SubtargetPredicate = HasPackedU64Ops, SchedRW = [Write64Bit] in
+defm V_PK_ADD_NC_U64 : VOP3PInst<"v_pk_add_nc_u64", V_PK_VOP2_I64_Profile, add>;
+
 let SubtargetPredicate = HasIEEEMinimumMaximumInsts, ReadsModeReg = 0 in {
 defm V_PK_MAXIMUM_F16 : VOP3PInst<"v_pk_maximum_f16", VOP3P_Profile<VOP_V2F16_V2F16_V2F16, VOP3_PACKED>, fmaximum>;
 defm V_PK_MINIMUM_F16 : VOP3PInst<"v_pk_minimum_f16", VOP3P_Profile<VOP_V2F16_V2F16_V2F16, VOP3_PACKED>, fminimum>;
 } // End SubtargetPredicate = HasIEEEMinimumMaximumInsts, ReadsModeReg = 0
-}
+} // End isCommutable = 1
 
 defm V_PK_SUB_U16 : VOP3PInst<"v_pk_sub_u16", VOP3P_Profile<VOP_V2I16_V2I16_V2I16>>;
 defm V_PK_SUB_I16 : VOP3PInst<"v_pk_sub_i16", VOP3P_Profile<VOP_V2I16_V2I16_V2I16>, sub>;
@@ -161,6 +202,11 @@ defm V_PK_SUB_I16 : VOP3PInst<"v_pk_sub_i16", VOP3P_Profile<VOP_V2I16_V2I16_V2I1
 defm V_PK_LSHLREV_B16 : VOP3PInst<"v_pk_lshlrev_b16", VOP3P_Profile<VOP_V2I16_V2I16_V2I16>, clshl_rev_16>;
 defm V_PK_ASHRREV_I16 : VOP3PInst<"v_pk_ashrrev_i16", VOP3P_Profile<VOP_V2I16_V2I16_V2I16>, cashr_rev_16>;
 defm V_PK_LSHRREV_B16 : VOP3PInst<"v_pk_lshrrev_b16", VOP3P_Profile<VOP_V2I16_V2I16_V2I16>, clshr_rev_16>;
+
+let SubtargetPredicate = HasPackedU64Ops, SchedRW = [Write64Bit] in {
+defm V_PK_SUB_NC_U64 : VOP3PInst<"v_pk_sub_nc_u64", V_PK_VOP2_I64_Profile, sub>;
+defm V_PK_LSHL_ADD_U64 : VOP3PInst<"v_pk_lshl_add_u64", V_PK_LSHL_ADD_U64_Profile>;
+} // End SubtargetPredicate = HasPackedU64Ops, , SchedRW = [Write64Bit]
 } // End isReMaterializable = 1
 
 let SubtargetPredicate = HasVOP3PInsts in {
@@ -522,6 +568,38 @@ def : ThreeOp_OpSelClampPats<umax, umax, V_PK_MAX3_U16>;
 def : ThreeOp_OpSelClampPats<smin, smin, V_PK_MIN3_I16>;
 def : ThreeOp_OpSelClampPats<umin, umin, V_PK_MIN3_U16>;
 }
+
+let SubtargetPredicate = HasPackedU64Ops in {
+let AddedComplexity = 5 in
+def : GCNPat<
+  (v2i64 (DivergentBinFrag<shl_0_to_4> v2i64:$src0, v2i64:$src1)),
+  (v2i64 (V_PK_LSHL_ADD_U64 $src0,
+    (v2i32 (REG_SEQUENCE VReg_64,
+      (i32 (EXTRACT_SUBREG $src1, sub0)), sub0,
+      (i32 (EXTRACT_SUBREG $src1, sub2)), sub1)),
+    (v2i64 (as_i64imm (i32 0)))))
+>;
+
+def : GCNPat<
+  (v2i64 (DivergentBinFrag<cshl_64> v2i64:$src0, v2i64:$src1)),
+  (v2i64 (REG_SEQUENCE VReg_128,
+                       (V_LSHLREV_B64_pseudo_e64 (i32 (EXTRACT_SUBREG $src1, sub0)),
+                                                 (EXTRACT_SUBREG $src0, sub0_sub1)),
+                       sub0_sub1,
+                       (V_LSHLREV_B64_pseudo_e64 (i32 (EXTRACT_SUBREG $src1, sub2)),
+                                                 (EXTRACT_SUBREG $src0, sub2_sub3)),
+                       sub2_sub3))
+>;
+
+def : GCNPat<
+  (ThreeOpFrag<shl_0_to_4, add> v2i64:$src0, v2i64:$src1, v2i64:$src2),
+  (V_PK_LSHL_ADD_U64 VSrc_v2b64:$src0,
+    (v2i32 (REG_SEQUENCE VReg_64,
+      (i32 (EXTRACT_SUBREG $src1, sub0)), sub0,
+      (i32 (EXTRACT_SUBREG $src1, sub2)), sub1)),
+    VSrc_v2b64:$src2)
+>;
+} // End SubtargetPredicate = HasPackedU64Ops
 
 // Defines patterns that extract signed 4bit from each Idx[0].
 foreach Idx = [[0,28],[4,24],[8,20],[12,16],[16,12],[20,8],[24,4]] in
@@ -1383,6 +1461,12 @@ let isCommutable = 1, isReMaterializable = 1 in {
     let True16Predicate = UseFakeTrue16Insts in
     defm V_MAX_BF16_PSEUDO : VOP3Inst <"v_max_bf16", VOP_BF16_BF16_BF16>;
   }
+
+  let SubtargetPredicate = HasPackedFP64Ops, SchedRW = [WriteDouble] in {
+    defm V_PK_FMA_F64 : VOP3PInst<"v_pk_fma_f64", V_PK_VOP3_F64_Profile, any_fma>;
+    defm V_PK_MUL_F64 : VOP3PInst<"v_pk_mul_f64", V_PK_VOP2_F64_Profile, any_fmul>;
+    defm V_PK_ADD_F64 : VOP3PInst<"v_pk_add_f64", V_PK_VOP2_F64_Profile, any_fadd>;
+  } // End SubtargetPredicate = HasPackedFP64Ops, SchedRW = [WriteDouble]
 } // End isCommutable = 1, isReMaterializable = 1
 
 def : AMDGPUMnemonicAlias<"v_accvgpr_read",  "v_accvgpr_read_b32">;
@@ -2680,6 +2764,15 @@ let PostEncoderMethod = "postEncodeVOP3<true, true, false>" in {
   defm V_WMMA_LD_SCALE_PAIRED_B32   : VOP3P_Real_gfx1250<0x35>;
   defm V_WMMA_LD_SCALE16_PAIRED_B64 : VOP3P_Real_gfx1250<0x3a>;
 }
+
+defm V_PK_FMA_F64      : VOP3P_Real_gfx1250<0x3b>;
+defm V_PK_MUL_F64      : VOP3P_Real_gfx1250<0x3c>;
+defm V_PK_ADD_F64      : VOP3P_Real_gfx1250<0x4b>;
+defm V_PK_ADD_NC_U64   : VOP3P_Real_gfx1250<0x4c>;
+defm V_PK_SUB_NC_U64   : VOP3P_Real_gfx1250<0x4d>;
+defm V_PK_MAX_NUM_F64  : VOP3P_Real_gfx1250<0x4e>;
+defm V_PK_MIN_NUM_F64  : VOP3P_Real_gfx1250<0x4f>;
+defm V_PK_LSHL_ADD_U64 : VOP3P_Real_gfx1250<0x7e>;
 
 let AssemblerPredicate = isGFX1250Plus in
 def : AMDGPUMnemonicAlias<"v_fma_mix_f32_f16",  "v_fma_mix_f32">;

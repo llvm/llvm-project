@@ -575,3 +575,17 @@ gpu.module @test {
     gpu.return
   }
 }
+
+// -----
+gpu.module @test {
+// CHECK-LABEL: gpu.func @shape_cast_collapse_replicated(
+// CHECK: %[[CST:.*]] = arith.constant {layout_result_0 = #xegpu.layout<sg_layout = [2, 2, 1], sg_data = [8, 8, 8]>} dense<0.000000e+00> : vector<16x8x8xf16>
+// CHECK: %[[CAST:.*]] = vector.shape_cast %[[CST]] {layout_result_0 = #xegpu.layout<sg_layout = [2, 2], sg_data = [8, 64]>} : vector<16x8x8xf16> to vector<16x64xf16>
+  gpu.func @shape_cast_collapse_replicated(%dst: memref<16x64xf16>) kernel {
+    %cst = arith.constant dense<0.000000e+00> : vector<16x8x8xf16>
+    %0 = vector.shape_cast %cst : vector<16x8x8xf16> to vector<16x64xf16>
+    %tdesc = xegpu.create_nd_tdesc %dst : memref<16x64xf16> -> !xegpu.tensor_desc<16x64xf16>
+    xegpu.store_nd %0, %tdesc[0, 0] <{layout = #xegpu.layout<sg_layout = [2, 2], sg_data = [8, 64]>}> : vector<16x64xf16>, !xegpu.tensor_desc<16x64xf16>
+    gpu.return
+  }
+}

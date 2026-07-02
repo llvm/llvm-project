@@ -4198,6 +4198,10 @@ TEST_F(TokenAnnotatorTest, CppAltOperatorKeywords) {
   ASSERT_EQ(Tokens.size(), 7u) << Tokens;
   EXPECT_TOKEN(Tokens[3], tok::caretequal, TT_BinaryOperator);
 
+  Tokens = annotate("if (a and b) {}");
+  ASSERT_EQ(Tokens.size(), 9u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::ampamp, TT_BinaryOperator);
+
   const auto StyleC = getLLVMStyle(FormatStyle::LK_C);
 
   Tokens = annotate("xor = foo;", StyleC);

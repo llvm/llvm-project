@@ -1244,7 +1244,7 @@ define amdgpu_kernel void @test_vec_type_hint_unknown(i32 %a) #0
 ; CHECK-NEXT:       - 4
 ; CHECK:          .symbol:         test_reqd_wgs_vec_type_hint.kd
 ; CHECK:          .vec_type_hint:  int
-define amdgpu_kernel void @test_reqd_wgs_vec_type_hint(i32 %a) #0
+define amdgpu_kernel void @test_reqd_wgs_vec_type_hint(i32 %a) #4
     !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !3
     !kernel_arg_base_type !3 !kernel_arg_type_qual !4 !vec_type_hint !5
     !reqd_work_group_size !6 {
@@ -1769,6 +1769,7 @@ attributes #0 = { optnone noinline "amdgpu-no-completion-action" "amdgpu-no-defa
 attributes #1 = { optnone noinline "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-implicitarg-num-bytes"="56" "runtime-handle"="__test_block_invoke_kernel_runtime_handle" }
 attributes #2 = { optnone noinline "amdgpu-implicitarg-num-bytes"="56" }
 attributes #3 = { optnone noinline "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }
+attributes #4 = { optnone noinline "amdgpu-flat-work-group-size"="8,8" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-implicitarg-num-bytes"="56" }
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 400}

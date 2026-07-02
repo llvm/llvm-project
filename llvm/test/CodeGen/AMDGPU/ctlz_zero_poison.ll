@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=amdgcn < %s | FileCheck -check-prefixes=SI %s
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga < %s | FileCheck -check-prefixes=VI %s
 ; RUN: llc -mtriple=r600 -mcpu=cypress < %s | FileCheck -check-prefixes=EG %s
-; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck -check-prefixes=GFX9-GISEL %s
+; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck -check-prefixes=GFX9-GISEL %s
 
 declare i7 @llvm.ctlz.i7(i7, i1) nounwind readnone
 declare <2 x i7> @llvm.ctlz.v2i7(<2 x i7>, i1) nounwind readnone

@@ -426,8 +426,6 @@ bool llvm::runPassPipeline(
                                     Options.FloatABIType, Options.EABIVersion,
                                     Options.MCOptions.ABIName, Options.VecLib);
     });
-
-    MAM.registerPass([&] { return LibcallLoweringModuleAnalysis(); });
   }
 
   PassInstrumentationCallbacks PIC;

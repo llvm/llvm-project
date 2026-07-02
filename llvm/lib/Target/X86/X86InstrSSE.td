@@ -410,11 +410,11 @@ let Predicates = [HasAVX, NoVLX]  in {
 let SchedRW = [SchedWriteFMoveLS.XMM.MR] in {
 def VMOVAPSmr : VPSI<0x29, MRMDestMem, (outs), (ins f128mem:$dst, VR128:$src),
                    "movaps\t{$src, $dst|$dst, $src}",
-                   [(alignedstore (v4f32 VR128:$src), addr:$dst)]>,
+                   [(alignedstore128 (v4f32 VR128:$src), addr:$dst)]>,
                    VEX, WIG;
 def VMOVAPDmr : VPDI<0x29, MRMDestMem, (outs), (ins f128mem:$dst, VR128:$src),
                    "movapd\t{$src, $dst|$dst, $src}",
-                   [(alignedstore (v2f64 VR128:$src), addr:$dst)]>,
+                   [(alignedstore128 (v2f64 VR128:$src), addr:$dst)]>,
                    VEX, WIG;
 def VMOVUPSmr : VPSI<0x11, MRMDestMem, (outs), (ins f128mem:$dst, VR128:$src),
                    "movups\t{$src, $dst|$dst, $src}",
@@ -429,11 +429,11 @@ def VMOVUPDmr : VPDI<0x11, MRMDestMem, (outs), (ins f128mem:$dst, VR128:$src),
 let SchedRW = [SchedWriteFMoveLS.YMM.MR] in {
 def VMOVAPSYmr : VPSI<0x29, MRMDestMem, (outs), (ins f256mem:$dst, VR256:$src),
                    "movaps\t{$src, $dst|$dst, $src}",
-                   [(alignedstore (v8f32 VR256:$src), addr:$dst)]>,
+                   [(alignedstore256 (v8f32 VR256:$src), addr:$dst)]>,
                    VEX, VEX_L, WIG;
 def VMOVAPDYmr : VPDI<0x29, MRMDestMem, (outs), (ins f256mem:$dst, VR256:$src),
                    "movapd\t{$src, $dst|$dst, $src}",
-                   [(alignedstore (v4f64 VR256:$src), addr:$dst)]>,
+                   [(alignedstore256 (v4f64 VR256:$src), addr:$dst)]>,
                    VEX, VEX_L, WIG;
 def VMOVUPSYmr : VPSI<0x11, MRMDestMem, (outs), (ins f256mem:$dst, VR256:$src),
                    "movups\t{$src, $dst|$dst, $src}",
@@ -509,10 +509,10 @@ def : InstAlias<"vmovupd.s\t{$src, $dst|$dst, $src}",
 let SchedRW = [SchedWriteFMoveLS.XMM.MR] in {
 def MOVAPSmr : PSI<0x29, MRMDestMem, (outs), (ins f128mem:$dst, VR128:$src),
                    "movaps\t{$src, $dst|$dst, $src}",
-                   [(alignedstore (v4f32 VR128:$src), addr:$dst)]>;
+                   [(alignedstore128 (v4f32 VR128:$src), addr:$dst)]>;
 def MOVAPDmr : PDI<0x29, MRMDestMem, (outs), (ins f128mem:$dst, VR128:$src),
                    "movapd\t{$src, $dst|$dst, $src}",
-                   [(alignedstore (v2f64 VR128:$src), addr:$dst)]>;
+                   [(alignedstore128 (v2f64 VR128:$src), addr:$dst)]>;
 def MOVUPSmr : PSI<0x11, MRMDestMem, (outs), (ins f128mem:$dst, VR128:$src),
                    "movups\t{$src, $dst|$dst, $src}",
                    [(store (v4f32 VR128:$src), addr:$dst)]>;
@@ -565,13 +565,13 @@ let Predicates = [HasAVX, NoVLX] in {
   def : Pat<(loadv32i8 addr:$src),
             (VMOVUPSYrm addr:$src)>;
 
-  def : Pat<(alignedstore (v4i64 VR256:$src), addr:$dst),
+  def : Pat<(alignedstore256 (v4i64 VR256:$src), addr:$dst),
             (VMOVAPSYmr addr:$dst, VR256:$src)>;
-  def : Pat<(alignedstore (v8i32 VR256:$src), addr:$dst),
+  def : Pat<(alignedstore256 (v8i32 VR256:$src), addr:$dst),
             (VMOVAPSYmr addr:$dst, VR256:$src)>;
-  def : Pat<(alignedstore (v16i16 VR256:$src), addr:$dst),
+  def : Pat<(alignedstore256 (v16i16 VR256:$src), addr:$dst),
             (VMOVAPSYmr addr:$dst, VR256:$src)>;
-  def : Pat<(alignedstore (v32i8 VR256:$src), addr:$dst),
+  def : Pat<(alignedstore256 (v32i8 VR256:$src), addr:$dst),
             (VMOVAPSYmr addr:$dst, VR256:$src)>;
   def : Pat<(store (v4i64 VR256:$src), addr:$dst),
             (VMOVUPSYmr addr:$dst, VR256:$src)>;
@@ -590,9 +590,9 @@ let Predicates = [HasAVX, NoVLX] in {
             (VMOVUPSrm addr:$src)>;
   def : Pat<(loadv8bf16 addr:$src),
             (VMOVUPSrm addr:$src)>;
-  def : Pat<(alignedstore (v8f16 VR128:$src), addr:$dst),
+  def : Pat<(alignedstore128 (v8f16 VR128:$src), addr:$dst),
             (VMOVAPSmr addr:$dst, VR128:$src)>;
-  def : Pat<(alignedstore (v8bf16 VR128:$src), addr:$dst),
+  def : Pat<(alignedstore128 (v8bf16 VR128:$src), addr:$dst),
             (VMOVAPSmr addr:$dst, VR128:$src)>;
   def : Pat<(store (v8f16 VR128:$src), addr:$dst),
             (VMOVUPSmr addr:$dst, VR128:$src)>;
@@ -607,9 +607,9 @@ let Predicates = [HasAVX, NoVLX] in {
             (VMOVUPSYrm addr:$src)>;
   def : Pat<(loadv16bf16 addr:$src),
             (VMOVUPSYrm addr:$src)>;
-  def : Pat<(alignedstore (v16f16 VR256:$src), addr:$dst),
+  def : Pat<(alignedstore256 (v16f16 VR256:$src), addr:$dst),
             (VMOVAPSYmr addr:$dst, VR256:$src)>;
-  def : Pat<(alignedstore (v16bf16 VR256:$src), addr:$dst),
+  def : Pat<(alignedstore256 (v16bf16 VR256:$src), addr:$dst),
             (VMOVAPSYmr addr:$dst, VR256:$src)>;
   def : Pat<(store (v16f16 VR256:$src), addr:$dst),
             (VMOVUPSYmr addr:$dst, VR256:$src)>;
@@ -638,13 +638,13 @@ let Predicates = [UseSSE1] in {
   def : Pat<(loadv16i8 addr:$src),
             (MOVUPSrm addr:$src)>;
 
-  def : Pat<(alignedstore (v2i64 VR128:$src), addr:$dst),
+  def : Pat<(alignedstore128 (v2i64 VR128:$src), addr:$dst),
             (MOVAPSmr addr:$dst, VR128:$src)>;
-  def : Pat<(alignedstore (v4i32 VR128:$src), addr:$dst),
+  def : Pat<(alignedstore128 (v4i32 VR128:$src), addr:$dst),
             (MOVAPSmr addr:$dst, VR128:$src)>;
-  def : Pat<(alignedstore (v8i16 VR128:$src), addr:$dst),
+  def : Pat<(alignedstore128 (v8i16 VR128:$src), addr:$dst),
             (MOVAPSmr addr:$dst, VR128:$src)>;
-  def : Pat<(alignedstore (v16i8 VR128:$src), addr:$dst),
+  def : Pat<(alignedstore128 (v16i8 VR128:$src), addr:$dst),
             (MOVAPSmr addr:$dst, VR128:$src)>;
   def : Pat<(store (v2i64 VR128:$src), addr:$dst),
             (MOVUPSmr addr:$dst, VR128:$src)>;
@@ -661,7 +661,7 @@ let Predicates = [UseSSE2] in {
             (MOVAPSrm addr:$src)>;
   def : Pat<(loadv8f16 addr:$src),
             (MOVUPSrm addr:$src)>;
-  def : Pat<(alignedstore (v8f16 VR128:$src), addr:$dst),
+  def : Pat<(alignedstore128 (v8f16 VR128:$src), addr:$dst),
             (MOVAPSmr addr:$dst, VR128:$src)>;
   def : Pat<(store (v8f16 VR128:$src), addr:$dst),
             (MOVUPSmr addr:$dst, VR128:$src)>;
@@ -3363,7 +3363,7 @@ let mayStore = 1, hasSideEffects = 0, Predicates = [HasAVX,NoVLX] in {
 def VMOVDQAmr  : VPDI<0x7F, MRMDestMem, (outs),
                       (ins i128mem:$dst, VR128:$src),
                       "movdqa\t{$src, $dst|$dst, $src}",
-                      [(alignedstore (v2i64 VR128:$src), addr:$dst)]>,
+                      [(alignedstore128 (v2i64 VR128:$src), addr:$dst)]>,
                       Sched<[SchedWriteVecMoveLS.XMM.MR]>, VEX, WIG;
 def VMOVDQAYmr : VPDI<0x7F, MRMDestMem, (outs),
                       (ins i256mem:$dst, VR256:$src),
@@ -3414,7 +3414,7 @@ let mayStore = 1, hasSideEffects = 0,
     SchedRW = [SchedWriteVecMoveLS.XMM.MR] in {
 def MOVDQAmr : PDI<0x7F, MRMDestMem, (outs), (ins i128mem:$dst, VR128:$src),
                    "movdqa\t{$src, $dst|$dst, $src}",
-                   [/*(alignedstore (v2i64 VR128:$src), addr:$dst)*/]>;
+                   [/*(alignedstore128 (v2i64 VR128:$src), addr:$dst)*/]>;
 def MOVDQUmr :   I<0x7F, MRMDestMem, (outs), (ins i128mem:$dst, VR128:$src),
                    "movdqu\t{$src, $dst|$dst, $src}",
                    [/*(store (v2i64 VR128:$src), addr:$dst)*/]>,
@@ -3458,13 +3458,13 @@ let Predicates = [HasAVX, NoVLX] in {
   def : Pat<(loadv16i8 addr:$src),
             (VMOVDQUrm addr:$src)>;
 
-  def : Pat<(alignedstore (v4i32 VR128:$src), addr:$dst),
+  def : Pat<(alignedstore128 (v4i32 VR128:$src), addr:$dst),
             (VMOVDQAmr addr:$dst, VR128:$src)>;
-  def : Pat<(alignedstore (v8i16 VR128:$src), addr:$dst),
+  def : Pat<(alignedstore128 (v8i16 VR128:$src), addr:$dst),
             (VMOVDQAmr addr:$dst, VR128:$src)>;
-  def : Pat<(alignedstore (v8f16 VR128:$src), addr:$dst),
+  def : Pat<(alignedstore128 (v8f16 VR128:$src), addr:$dst),
             (VMOVDQAmr addr:$dst, VR128:$src)>;
-  def : Pat<(alignedstore (v16i8 VR128:$src), addr:$dst),
+  def : Pat<(alignedstore128 (v16i8 VR128:$src), addr:$dst),
             (VMOVDQAmr addr:$dst, VR128:$src)>;
   def : Pat<(store (v4i32 VR128:$src), addr:$dst),
             (VMOVDQUmr addr:$dst, VR128:$src)>;

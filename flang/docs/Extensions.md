@@ -347,6 +347,10 @@ end
   expression, such as an array bound, in a scope with IMPLICIT NONE(TYPE)
   if the name of the variable would have caused it to be implicitly typed
   as default INTEGER if IMPLICIT NONE(TYPE) were absent.
+* A named constant defined by a `PARAMETER` statement is permitted to appear
+  before its explicit type declaration in a scope with IMPLICIT NONE(TYPE);
+  it acquires the type it would have had under implicit typing rules (F2023 8.7),
+  and a later explicit declaration must specify that same type (F2023 8.6.11 p2).
 * OPEN(ACCESS='APPEND') is interpreted as OPEN(POSITION='APPEND')
   to ease porting from Sun Fortran.
 * Intrinsic subroutines EXIT([status]) and ABORT()

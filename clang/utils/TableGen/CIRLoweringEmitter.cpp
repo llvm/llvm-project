@@ -138,7 +138,7 @@ void GenerateLLVMLoweringPattern(llvm::StringRef OpName,
                                  llvm::StringRef PatternName, bool IsRecursive,
                                  llvm::StringRef ExtraDecl,
                                  const Record *CustomCtorRec,
-                                 llvm::StringRef LLVMOp, bool IsZeroResult) {
+                                 llvm::StringRef LLVMOp, bool HasZeroResult) {
   std::optional<CustomLoweringCtor> CustomCtor =
       parseCustomLoweringCtor(CustomCtorRec);
   std::string CodeBuffer;
@@ -188,7 +188,7 @@ void GenerateLLVMLoweringPattern(llvm::StringRef OpName,
         << "  mlir::LogicalResult matchAndRewrite(cir::" << OpName
         << " op, OpAdaptor adaptor, mlir::ConversionPatternRewriter &rewriter) "
            "const override {\n";
-    if (IsZeroResult) {
+    if (HasZeroResult) {
       Code << "    rewriter.replaceOpWithNewOp<mlir::LLVM::" << LLVMOp
            << ">(op, mlir::TypeRange{}, adaptor.getOperands());\n";
     } else {

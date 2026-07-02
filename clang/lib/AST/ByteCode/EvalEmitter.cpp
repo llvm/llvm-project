@@ -134,7 +134,7 @@ Scope::Local EvalEmitter::createLocal(Descriptor *D) {
   // Allocate memory for a local.
   auto Memory = std::make_unique<char[]>(sizeof(Block) + D->getAllocSize());
   auto *B = new (Memory.get()) Block(Ctx.getEvalID(), D, /*IsStatic=*/false);
-  B->invokeCtor();
+  B->invokeCtorNoMemset();
 
   // Initialize local variable inline descriptor.
   auto &Desc = B->getBlockDesc<InlineDescriptor>();
@@ -232,7 +232,7 @@ template <> bool EvalEmitter::emitRet<PT_Ptr>(SourceInfo Info) {
   if (this->PtrCB)
     return (*this->PtrCB)(Ptr);
 
-  if (!EvalResult.checkReturnValue(S, Ctx, Ptr, Info))
+  if (!EvalResult.checkDynamicAllocations(S, Ctx, Ptr, Info))
     return false;
   if (CheckFullyInitialized && !EvalResult.checkFullyInitialized(S, Ptr))
     return false;
@@ -292,7 +292,7 @@ bool EvalEmitter::emitRetVoid(SourceInfo Info) {
 bool EvalEmitter::emitRetValue(SourceInfo Info) {
   const auto &Ptr = S.Stk.pop<Pointer>();
 
-  if (!EvalResult.checkReturnValue(S, Ctx, Ptr, Info))
+  if (!EvalResult.checkDynamicAllocations(S, Ctx, Ptr, Info))
     return false;
   if (CheckFullyInitialized && !EvalResult.checkFullyInitialized(S, Ptr))
     return false;

@@ -381,7 +381,6 @@ void OmpStructureChecker::CheckNestedConstruct(
 
 void OmpStructureChecker::Enter(const parser::OpenMPLoopConstruct &x) {
   const parser::OmpDirectiveName &beginName{x.BeginDir().DirName()};
-  PushContextAndClauseSets(beginName.source, beginName.v);
 
   // Check matching, end directive is optional
   if (auto &endSpec{x.EndDir()}) {
@@ -688,7 +687,6 @@ void OmpStructureChecker::Leave(const parser::OpenMPLoopConstruct &x) {
   if (llvm::omp::allSimdSet.test(beginSpec.DirName().v)) {
     ExitDirectiveNest(SIMDNest);
   }
-  dirContext_.pop_back();
 }
 
 void OmpStructureChecker::Enter(const parser::OmpClause::Depth &x) {

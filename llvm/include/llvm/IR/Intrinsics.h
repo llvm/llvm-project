@@ -206,11 +206,10 @@ struct IITDescriptor {
     ElementCount VectorWidth;
   };
 
-  // AK_% : Defined in Intrinsics.td
-  enum AnyKind {
-#define GET_INTRINSIC_ANYKIND
+  // AnyKindVectorConstraint and AnyKindElementConstraint defined in
+  // Intrinsics.td
+#define GET_INTRINSIC_ANYKIND_ENUMS
 #include "llvm/IR/IntrinsicEnums.inc"
-  };
 
   unsigned getOverloadIndex() const {
     assert(Kind == Overloaded || Kind == Match || Kind == Extend ||
@@ -218,14 +217,19 @@ struct IITDescriptor {
            Kind == Subdivide2 || Kind == Subdivide4 ||
            Kind == VecOfBitcastsToInt || Kind == VecOfAnyPtrsToElt ||
            Kind == OneNthEltsVec);
-    // Overload index is packed into lower 5 bits.
-    return OverloadInfo & 0x1f;
+    // Overload index is packed into byte[0] of OverloadInfo.
+    return OverloadInfo & 0xf;
   }
 
-  AnyKind getOverloadKind() const {
-    // Overload kind is packed into upper 3 bits.
+  std::pair<AnyKindVectorConstraint, AnyKindElementConstraint>
+  getOverloadConstraints() const {
+    // Overload constraints are packed into byte[1] of OverloadInfo.
     assert(Kind == Overloaded);
-    return (AnyKind)((OverloadInfo >> 5) & 0x7);
+    uint8_t AKEnumsPacked = OverloadInfo >> 8;
+    AnyKindVectorConstraint VC = (AnyKindVectorConstraint)(AKEnumsPacked >> 4);
+    AnyKindElementConstraint EC =
+        (AnyKindElementConstraint)(AKEnumsPacked & 0xf);
+    return {VC, EC};
   }
 
   // OneNthEltsVecArguments uses both a divisor N and a reference argument for
