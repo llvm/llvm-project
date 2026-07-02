@@ -1466,6 +1466,14 @@ bool SystemZTargetLowering::findOptimalMemOpLowering(
   assert(Limit != ~0U &&
          "Expected EmitTargetCodeForMemXXX() to handle AlwaysInline cases.");
 
+  if (Op.isMemmove()) {
+    if (Op.size() >= 16 &&
+        (!Op.isAligned(Align(8)) || (Op.size() >= 25 && Op.size() <= 31)))
+      return false;
+    return TargetLowering::findOptimalMemOpLowering(
+        Context, MemOps, Limit, Op, DstAS, SrcAS, FuncAttributes, LargestVT);
+  }
+
   if (Op.isZeroMemset())
     return false; // Memset zero: Use XC.
 
@@ -10869,6 +10877,49 @@ SystemZTargetLowering::emitMemMemWrapper(MachineInstr &MI,
   return MBB;
 }
 
+MachineBasicBlock *
+SystemZTargetLowering::emitMemmoveImm(MachineInstr &MI,
+                                      MachineBasicBlock *MBB) const {
+  const SystemZInstrInfo *TII = Subtarget.getInstrInfo();
+
+  DebugLoc DL = MI.getDebugLoc();
+  MachineOperand DstAddr = earlyUseOperand(MI.getOperand(0));
+  MachineOperand SrcAddr = earlyUseOperand(MI.getOperand(1));
+  uint64_t Len = MI.getOperand(2).getImm();
+  assert(Len >= 16 && Len <= 256 &&
+         "Memmove of of unsupported constant length.");
+
+  // Use MVC or MVCRL after comparing the addresses.
+  MachineBasicBlock *DoneMBB = SystemZ::splitBlockAfter(MI, MBB);
+  MachineBasicBlock *MvcMBB = SystemZ::emitBlockAfter(MBB);
+  MachineBasicBlock *MvcrlMBB = SystemZ::emitBlockAfter(MvcMBB);
+  MBB->addSuccessor(MvcMBB);
+  MBB->addSuccessor(MvcrlMBB);
+  MvcMBB->addSuccessor(DoneMBB);
+  MvcrlMBB->addSuccessor(DoneMBB);
+
+  BuildMI(MBB, DL, TII->get(SystemZ::CLGR)).add(SrcAddr).add(DstAddr);
+  BuildMI(MBB, DL, TII->get(SystemZ::BRC))
+      .addImm(SystemZ::CCMASK_ICMP).addImm(SystemZ::CCMASK_CMP_LT)
+      .addMBB(MvcrlMBB);
+
+  BuildMI(MvcMBB, DL, TII->get(SystemZ::MVC))
+      .add(DstAddr).addImm(0)
+      .addImm(Len)
+      .add(SrcAddr).addImm(0)
+      .setMemRefs(MI.memoperands());
+  BuildMI(MvcMBB, DL, TII->get(SystemZ::J)).addMBB(DoneMBB);
+
+  BuildMI(MvcrlMBB, DL, TII->get(SystemZ::LHI), SystemZ::R0L).addImm(Len - 1);
+  BuildMI(MvcrlMBB, DL, TII->get(SystemZ::MVCRL))
+      .add(DstAddr).addImm(0)
+      .add(SrcAddr).addImm(0)
+      .setMemRefs(MI.memoperands());
+
+  MI.eraseFromParent();
+  return DoneMBB;
+}
+
 // Decompose string pseudo-instruction MI into a loop that continually performs
 // Opcode until CC != 3.
 MachineBasicBlock *SystemZTargetLowering::emitStringWrapper(
@@ -11240,6 +11291,8 @@ MachineBasicBlock *SystemZTargetLowering::EmitInstrWithCustomInserter(
   case SystemZ::MemsetRegImm:
   case SystemZ::MemsetRegReg:
     return emitMemMemWrapper(MI, MBB, SystemZ::MVC, true/*IsMemset*/);
+  case SystemZ::MemmoveImm:
+    return emitMemmoveImm(MI, MBB);
   case SystemZ::CLSTLoop:
     return emitStringWrapper(MI, MBB, SystemZ::CLST);
   case SystemZ::MVSTLoop:

@@ -9574,7 +9574,8 @@ static SDValue getMemmoveLoadsAndStores(
   unsigned Limit = AlwaysInline ? ~0U : TLI.getMaxStoresPerMemmove(OptSize);
   if (!TLI.findOptimalMemOpLowering(
           C, MemOps, Limit,
-          MemOp::Copy(Size, DstAlignCanChange, DstAlign, SrcAlign, isVol),
+          MemOp::Copy(Size, DstAlignCanChange, DstAlign, SrcAlign, isVol,
+                      /*MemcpyStrSrc*/ false, /*SrcDstMayOverlap*/ true),
           DstPtrInfo.getAddrSpace(), SrcPtrInfo.getAddrSpace(),
           MF.getFunction().getAttributes(), nullptr))
     return SDValue();
