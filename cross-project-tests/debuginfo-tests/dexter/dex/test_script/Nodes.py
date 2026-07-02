@@ -18,7 +18,18 @@ from dex.utils.Exceptions import Error
 
 
 def setup_yaml_parser(loader):
-    reg_classes = [Where, Value, DexRange, Label, Then, Address, ValueAll, Step]
+    reg_classes = [
+        Address,
+        DexRange,
+        Label,
+        Step,
+        Then,
+        Type,
+        TypeAll,
+        Value,
+        ValueAll,
+        Where,
+    ]
     for c in reg_classes:
         c.register_yaml(loader)
 
@@ -167,7 +178,25 @@ class Expect:
         return None
 
 
+class ExpectAll(Expect):
+    """An Expect for all variables within a named debugger scope; used only to generate scripts from debugger output,
+    cannot be used for testing debugger output directly.
+    """
+
+    @staticmethod
+    def get_base_expect(var_name: str) -> Expect:
+        raise NotImplementedError(f"No ExpectAll base type declared")
+
+
 class Value(Expect):
+    """Expect node used to test the value(s) for a single variable, functioning similarly to !value. Allows expecting
+    a single value, a list of values, and/or values of members for aggregate variables.
+
+    This node compares the expected values against the actual values observed in the debugger, and produces a set of
+    metrics quantifying the difference between expected and actual. Can be used with script rewriting to generate
+    expected values for the tested variable.
+    """
+
     def __init__(self, variable_name: str):
         self.variable_name = variable_name
         self.actual_values = None
@@ -200,7 +229,7 @@ class Value(Expect):
         yaml.add_representer(Value, Value.representer)
 
 
-class ValueAll(Expect):
+class ValueAll(ExpectAll):
     """Expect node used to write values for all variables within a particular debugger scope, as defined by the DAP
     specification; see: https://microsoft.github.io/debug-adapter-protocol/specification#Requests_Scopes.
 
@@ -214,6 +243,10 @@ class ValueAll(Expect):
 
     def __repr__(self):
         return f"ValueAll({self.scope_name})"
+
+    @staticmethod
+    def get_base_expect(var_name: str) -> Expect:
+        return Value(var_name)
 
     @staticmethod
     def get_variable_result(value: ValueIR) -> Optional[str]:
@@ -234,6 +267,85 @@ class ValueAll(Expect):
     def register_yaml(loader):
         yaml.add_constructor("!value/all", ValueAll.constructor, loader)
         yaml.add_representer(ValueAll, ValueAll.representer)
+
+
+class Type(Expect):
+    """Expect node used to test the type(s) for a single variable, functioning similarly to !value. Allows expecting
+    a single type, a list of types, and/or types of members for aggregate variables.
+
+    This node compares the expected types against the actual types observed in the debugger, and produces a set of
+    metrics quantifying the difference between expected and actual. Can be used with script rewriting to generate
+    expected types for the tested variable.
+    """
+
+    def __init__(self, variable_name: str):
+        self.variable_name = variable_name
+        self.actual_values = None
+
+    @staticmethod
+    def get_variable_result(value: ValueIR) -> Optional[str]:
+        if value.could_evaluate:
+            return value.type_name
+        return None
+
+    def get_watched_expr(self) -> str:
+        return self.variable_name
+
+    def __repr__(self):
+        return f"Type({self.variable_name})"
+
+    @staticmethod
+    def constructor(loader: yaml.Loader, node):
+        return Type(loader.construct_scalar(node))
+
+    @staticmethod
+    def representer(dumper, data):
+        return dumper.represent_scalar("!type", data.variable_name)
+
+    @staticmethod
+    def register_yaml(loader):
+        yaml.add_constructor("!type", Type.constructor, loader)
+        yaml.add_representer(Type, Type.representer)
+
+
+class TypeAll(ExpectAll):
+    """Expect node used to write types for all variables within a particular debugger scope, as defined by the DAP
+    specification; see: https://microsoft.github.io/debug-adapter-protocol/specification#Requests_Scopes.
+
+    This node is not directly evaluated; it must have no expected values, and when Dexter rewrites the original script,
+    this node will be replaced with !type nodes for each variable that was seen in its scope inserted under !and nodes
+    that cover that variable's live range(s).
+    """
+
+    def __init__(self, scope_name: str):
+        self.scope_name = scope_name
+
+    def __repr__(self):
+        return f"TypeAll({self.scope_name})"
+
+    @staticmethod
+    def get_base_expect(var_name: str) -> Expect:
+        return Type(var_name)
+
+    @staticmethod
+    def get_variable_result(value: ValueIR) -> Optional[str]:
+        return Type.get_variable_result(value)
+
+    def get_watched_scope(self) -> Optional[str]:
+        return self.scope_name
+
+    @staticmethod
+    def constructor(loader, node):
+        return TypeAll(loader.construct_scalar(node))
+
+    @staticmethod
+    def representer(dumper, data):
+        return dumper.represent_scalar("!type/all", data.scope_name)
+
+    @staticmethod
+    def register_yaml(loader):
+        yaml.add_constructor("!type/all", TypeAll.constructor, loader)
+        yaml.add_representer(TypeAll, TypeAll.representer)
 
 
 class Step(Expect):
