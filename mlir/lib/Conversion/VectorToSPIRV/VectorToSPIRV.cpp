@@ -859,6 +859,175 @@ struct VectorStoreOpConverter final
   }
 };
 
+struct VectorGatherOpConverter final
+    : public OpConversionPattern<vector::GatherOp> {
+  using Base::Base;
+
+  LogicalResult
+  matchAndRewrite(vector::GatherOp gatherOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    // Only support 1-D result vectors.
+    auto vectorType = gatherOp.getVectorType();
+    if (vectorType.getRank() != 1)
+      return rewriter.notifyMatchFailure(gatherOp,
+                                         "only 1-D vectors supported");
+
+    // Only support memref base (not tensor).
+    auto memrefType = dyn_cast<MemRefType>(gatherOp.getBaseType());
+    if (!memrefType)
+      return rewriter.notifyMatchFailure(gatherOp,
+                                         "only memref base supported");
+
+    auto attr =
+        dyn_cast_or_null<spirv::StorageClassAttr>(memrefType.getMemorySpace());
+    if (!attr)
+      return rewriter.notifyMatchFailure(gatherOp,
+                                         "expected spirv.storage_class");
+
+    const auto &typeConverter = *getTypeConverter<SPIRVTypeConverter>();
+    if (!typeConverter.getTargetEnv().allows(
+            spirv::Extension::SPV_INTEL_masked_gather_scatter))
+      return rewriter.notifyMatchFailure(gatherOp,
+                                         "target environment does not enable "
+                                         "SPV_INTEL_masked_gather_scatter");
+    auto loc = gatherOp.getLoc();
+
+    // Compute base element pointer from memref + offsets.
+    Value basePtr =
+        spirv::getElementPtr(typeConverter, memrefType, adaptor.getBase(),
+                             adaptor.getOffsets(), loc, rewriter);
+    if (!basePtr)
+      return rewriter.notifyMatchFailure(gatherOp,
+                                         "failed to get element pointer");
+
+    // Convert element type and construct pointer vector type.
+    auto storageClass = attr.getValue();
+    Type elementType = typeConverter.convertType(memrefType.getElementType());
+    if (!elementType)
+      return rewriter.notifyMatchFailure(gatherOp, "unsupported element type");
+    auto ptrType = spirv::PointerType::get(elementType, storageClass);
+    int64_t numElements = vectorType.getDimSize(0);
+    auto ptrVectorType = VectorType::get({numElements}, ptrType);
+
+    // Build pointer vector: for each index, compute ptr via PtrAccessChain.
+    auto indexType = typeConverter.getIndexType();
+    SmallVector<Value> pointers;
+    for (int64_t i = 0; i < numElements; ++i) {
+      auto i32Type = rewriter.getI32Type();
+      Value idx = spirv::ConstantOp::create(rewriter, loc, i32Type,
+                                            rewriter.getI32IntegerAttr(i));
+      Value scalarIndex = spirv::VectorExtractDynamicOp::create(
+          rewriter, loc, adaptor.getIndices(), idx);
+      // Cast index to the SPIR-V index type if needed.
+      if (scalarIndex.getType() != indexType)
+        scalarIndex =
+            spirv::SConvertOp::create(rewriter, loc, indexType, scalarIndex);
+      Value ptr = spirv::PtrAccessChainOp::create(rewriter, loc, basePtr,
+                                                  scalarIndex, /*indices=*/{});
+      pointers.push_back(ptr);
+    }
+    Value ptrVector = spirv::CompositeConstructOp::create(
+        rewriter, loc, ptrVectorType, pointers);
+
+    // Alignment.
+    auto i32Type = rewriter.getI32Type();
+    uint32_t align = gatherOp.getAlignment().value_or(0);
+    Value alignmentVal = spirv::ConstantOp::create(
+        rewriter, loc, i32Type, rewriter.getI32IntegerAttr(align));
+
+    // Create spirv.INTEL.MaskedGather.
+    auto resultType = typeConverter.convertType(vectorType);
+    rewriter.replaceOpWithNewOp<spirv::INTELMaskedGatherOp>(
+        gatherOp, resultType, ptrVector, alignmentVal, adaptor.getMask(),
+        adaptor.getPassThru());
+    return success();
+  }
+};
+
+struct VectorScatterOpConverter final
+    : public OpConversionPattern<vector::ScatterOp> {
+  using Base::Base;
+
+  LogicalResult
+  matchAndRewrite(vector::ScatterOp scatterOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    // Only support 1-D vectors.
+    auto vectorType = scatterOp.getVectorType();
+    if (vectorType.getRank() != 1)
+      return rewriter.notifyMatchFailure(scatterOp,
+                                         "only 1-D vectors supported");
+
+    // Only support memref base (not tensor).
+    auto memrefType = dyn_cast<MemRefType>(scatterOp.getBaseType());
+    if (!memrefType)
+      return rewriter.notifyMatchFailure(scatterOp,
+                                         "only memref base supported");
+
+    auto attr =
+        dyn_cast_or_null<spirv::StorageClassAttr>(memrefType.getMemorySpace());
+    if (!attr)
+      return rewriter.notifyMatchFailure(scatterOp,
+                                         "expected spirv.storage_class");
+
+    const auto &typeConverter = *getTypeConverter<SPIRVTypeConverter>();
+    if (!typeConverter.getTargetEnv().allows(
+            spirv::Extension::SPV_INTEL_masked_gather_scatter))
+      return rewriter.notifyMatchFailure(scatterOp,
+                                         "target environment does not enable "
+                                         "SPV_INTEL_masked_gather_scatter");
+    auto loc = scatterOp.getLoc();
+
+    // Compute base element pointer from memref + offsets.
+    Value basePtr =
+        spirv::getElementPtr(typeConverter, memrefType, adaptor.getBase(),
+                             adaptor.getOffsets(), loc, rewriter);
+    if (!basePtr)
+      return rewriter.notifyMatchFailure(scatterOp,
+                                         "failed to get element pointer");
+
+    // Convert element type and construct pointer vector type.
+    auto storageClass = attr.getValue();
+    Type elementType = typeConverter.convertType(memrefType.getElementType());
+    if (!elementType)
+      return rewriter.notifyMatchFailure(scatterOp, "unsupported element type");
+    auto ptrType = spirv::PointerType::get(elementType, storageClass);
+    int64_t numElements = vectorType.getDimSize(0);
+    auto ptrVectorType = VectorType::get({numElements}, ptrType);
+
+    // Build pointer vector: for each index, compute ptr via PtrAccessChain.
+    auto indexType = typeConverter.getIndexType();
+    SmallVector<Value> pointers;
+    for (int64_t i = 0; i < numElements; ++i) {
+      auto i32Type = rewriter.getI32Type();
+      Value idx = spirv::ConstantOp::create(rewriter, loc, i32Type,
+                                            rewriter.getI32IntegerAttr(i));
+      Value scalarIndex = spirv::VectorExtractDynamicOp::create(
+          rewriter, loc, adaptor.getIndices(), idx);
+      if (scalarIndex.getType() != indexType)
+        scalarIndex =
+            spirv::SConvertOp::create(rewriter, loc, indexType, scalarIndex);
+      Value ptr = spirv::PtrAccessChainOp::create(rewriter, loc, basePtr,
+                                                  scalarIndex, /*indices=*/{});
+      pointers.push_back(ptr);
+    }
+    Value ptrVector = spirv::CompositeConstructOp::create(
+        rewriter, loc, ptrVectorType, pointers);
+
+    // Alignment.
+    auto i32Type = rewriter.getI32Type();
+    uint32_t align = scatterOp.getAlignment().value_or(0);
+    Value alignmentVal = spirv::ConstantOp::create(
+        rewriter, loc, i32Type, rewriter.getI32IntegerAttr(align));
+
+    // Create spirv.INTEL.MaskedScatter.
+    spirv::INTELMaskedScatterOp::create(rewriter, loc, ptrVector, alignmentVal,
+                                        adaptor.getMask(),
+                                        adaptor.getValueToStore());
+    rewriter.eraseOp(scatterOp);
+    return success();
+  }
+};
+
 struct VectorReductionToIntDotProd final
     : OpRewritePattern<vector::ReductionOp> {
   using Base::Base;
@@ -1133,4 +1302,10 @@ void mlir::populateVectorToSPIRVPatterns(
 void mlir::populateVectorReductionToSPIRVDotProductPatterns(
     RewritePatternSet &patterns) {
   patterns.add<VectorReductionToIntDotProd>(patterns.getContext());
+}
+
+void mlir::populateVectorGatherScatterToSPIRVPatterns(
+    const SPIRVTypeConverter &typeConverter, RewritePatternSet &patterns) {
+  patterns.add<VectorGatherOpConverter, VectorScatterOpConverter>(
+      typeConverter, patterns.getContext(), PatternBenefit(1));
 }

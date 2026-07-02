@@ -32,6 +32,11 @@ void populateVectorToSPIRVPatterns(const SPIRVTypeConverter &typeConverter,
 void populateVectorReductionToSPIRVDotProductPatterns(
     RewritePatternSet &patterns);
 
+/// Appends patterns that lower vector.gather/vector.scatter to the
+/// SPV_INTEL_masked_gather_scatter extension ops.
+void populateVectorGatherScatterToSPIRVPatterns(
+    const SPIRVTypeConverter &typeConverter, RewritePatternSet &patterns);
+
 } // namespace mlir
 
 #endif // MLIR_CONVERSION_VECTORTOSPIRV_VECTORTOSPIRV_H
