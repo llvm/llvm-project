@@ -1572,6 +1572,7 @@ namespace {
     ExprResult TransformPredefinedExpr(PredefinedExpr *E);
     ExprResult TransformDeclRefExpr(DeclRefExpr *E);
     ExprResult TransformCXXDefaultArgExpr(CXXDefaultArgExpr *E);
+    ExprResult TransformStringLiteral(StringLiteral *E);
 
     ExprResult TransformTemplateParmRefExpr(DeclRefExpr *E,
                                             NonTypeTemplateParmDecl *D);
@@ -2158,6 +2159,12 @@ TemplateInstantiator::TransformPredefinedExpr(PredefinedExpr *E) {
     return E;
 
   return getSema().BuildPredefinedExpr(E->getLocation(), E->getIdentKind());
+}
+
+ExprResult TemplateInstantiator::TransformStringLiteral(StringLiteral *E) {
+  return StringLiteral::Create(
+      SemaRef.Context, E->getBytes(), E->getKind(), E->isPascal(), E->getType(),
+      llvm::ArrayRef<SourceLocation>(E->tokloc_begin(), E->tokloc_end()));
 }
 
 ExprResult
