@@ -749,9 +749,17 @@ static void addPltEntry(Ctx &ctx, PltSection &plt, GotPltSection &gotPlt,
                         RelocationBaseSection &rel, RelType type, Symbol &sym) {
   plt.addEntry(sym);
   gotPlt.addEntry(sym);
+  // The x86-64 psABI requires the r_addend of R_X86_64_JUMP_SLOT to hold the
+  // link-time VA of the PLT entry so that the dynamic linker can locate the
+  // indirect branch (l->l_addr + r_addend) and rewrite it to a direct branch
+  // when -z mark-plt is active.
+  RelExpr addendExpr = R_ADDEND;
+  if (ctx.arg.emachine == EM_X86_64 && ctx.arg.zMarkPlt &&
+      type == ctx.target->pltRel)
+    addendExpr = R_PLT;
   if (sym.isPreemptible)
     rel.addReloc(
-        {type, &gotPlt, sym.getGotPltOffset(ctx), true, sym, 0, R_ADDEND});
+        {type, &gotPlt, sym.getGotPltOffset(ctx), true, sym, 0, addendExpr});
   else
     rel.addReloc(
         {type, &gotPlt, sym.getGotPltOffset(ctx), false, sym, 0, R_ABS});

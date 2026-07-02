@@ -41,6 +41,11 @@
 #define SPARC_DYNAMIC_TAG_DEFINED
 #endif
 
+#ifndef X86_64_DYNAMIC_TAG
+#define X86_64_DYNAMIC_TAG(name, value) DYNAMIC_TAG(name, value)
+#define X86_64_DYNAMIC_TAG_DEFINED
+#endif
+
 #ifndef DYNAMIC_TAG_MARKER
 #define DYNAMIC_TAG_MARKER(name, value) DYNAMIC_TAG(name, value)
 #define DYNAMIC_TAG_MARKER_DEFINED
@@ -248,6 +253,12 @@ RISCV_DYNAMIC_TAG(RISCV_VARIANT_CC, 0x70000001)
 
 SPARC_DYNAMIC_TAG(SPARC_REGISTER, 0x70000001)
 
+// x86-64 specific dynamic table entry tags.
+
+X86_64_DYNAMIC_TAG(X86_64_PLT, 0x70000000)    // Address of PLT table.
+X86_64_DYNAMIC_TAG(X86_64_PLTSZ, 0x70000001)  // Size of PLT table in bytes.
+X86_64_DYNAMIC_TAG(X86_64_PLTENT, 0x70000003) // Size of a PLT entry in bytes.
+
 // Sun machine-independent extensions.
 DYNAMIC_TAG(AUXILIARY, 0x7FFFFFFD) // Shared object to load before self
 DYNAMIC_TAG(USED, 0x7FFFFFFE)      // Same as DT_NEEDED
@@ -281,4 +292,12 @@ DYNAMIC_TAG(FILTER, 0x7FFFFFFF)    // Shared object to get values from
 #ifdef RISCV_DYNAMIC_TAG_DEFINED
 #undef RISCV_DYNAMIC_TAG
 #undef RISCV_DYNAMIC_TAG_DEFINED
+#endif
+#ifdef SPARC_DYNAMIC_TAG_DEFINED
+#undef SPARC_DYNAMIC_TAG
+#undef SPARC_DYNAMIC_TAG_DEFINED
+#endif
+#ifdef X86_64_DYNAMIC_TAG_DEFINED
+#undef X86_64_DYNAMIC_TAG
+#undef X86_64_DYNAMIC_TAG_DEFINED
 #endif
