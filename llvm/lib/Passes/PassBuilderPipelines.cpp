@@ -2323,6 +2323,18 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   MPM.addPass(createModuleToFunctionPassAdaptor(std::move(MainFPM),
                                                 PTO.EagerlyInvalidateAnalyses));
 
+  if (EnableModuleInliner) {
+    MPM.addPass(ModuleInlinerPass(::getInlineParamsFromOptLevel(Level),
+                                  UseInlineAdvisor,
+                                  ThinOrFullLTOPhase::FullLTOPostLink));
+  } else {
+    MPM.addPass(ModuleInlinerWrapperPass(
+        ::getInlineParamsFromOptLevel(Level),
+        /* MandatoryFirst */ true,
+        InlineContext{ThinOrFullLTOPhase::FullLTOPostLink,
+                      InlinePass::CGSCCInliner}));
+  }
+
   // Lower type metadata and the type.test intrinsic. This pass supports
   // clang's control flow integrity mechanisms (-fsanitize=cfi*) and needs
   // to be run at link time if CFI is enabled. This pass does nothing if
@@ -2338,6 +2350,20 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
 
   // Add late LTO optimization passes.
   FunctionPassManager LateFPM;
+
+  LateFPM.addPass(SROAPass(SROAOptions::ModifyCFG));
+
+  // Delete basic blocks, which optimization passes may have killed.
+  LateFPM.addPass(SimplifyCFGPass(SimplifyCFGOptions()
+                                      .convertSwitchRangeToICmp(true)
+                                      .convertSwitchToArithmetic(true)
+                                      .hoistCommonInsts(true)
+                                      .speculateUnpredictables(true)));
+
+  LateFPM.addPass(createFunctionToLoopPassAdaptor(
+      LICMPass(PTO.LicmMssaOptCap, PTO.LicmMssaNoAccForPromotionCap,
+               /*AllowSpeculation=*/true),
+      /*USeMemorySSA=*/true));
 
   // LoopSink pass sinks instructions hoisted by LICM, which serves as a
   // canonicalization pass that enables other optimizations. As a result,
