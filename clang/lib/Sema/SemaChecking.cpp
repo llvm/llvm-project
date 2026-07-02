@@ -11672,6 +11672,14 @@ void Sema::CheckFloatComparison(SourceLocation Loc, const Expr *LHS,
   } else if (const auto *FLR = dyn_cast<FloatingLiteral>(RightExprSansParen))
     if (FLR->isExact())
       return;
+  if (const auto *ILL = dyn_cast<IntegerLiteral>(LeftExprSansParen)) {
+    if (ILL->getValue() == 0 || ILL->getValue() == 1)
+      return;
+  }
+  if (const auto *ILR = dyn_cast<IntegerLiteral>(RightExprSansParen)) {
+    if (ILR->getValue() == 0 || ILR->getValue() == 1)
+      return;
+  }
 
   // Check for comparisons with builtin types.
   if (const auto *CL = dyn_cast<CallExpr>(LeftExprSansParen);
