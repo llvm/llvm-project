@@ -54,6 +54,7 @@
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/CommandLine.h"
@@ -64,7 +65,6 @@
 #include "llvm/Transforms/Utils/LoopPeel.h"
 #include "llvm/Transforms/Utils/LoopSimplify.h"
 #include <list>
-
 using namespace llvm;
 
 #define DEBUG_TYPE "loop-fusion"
@@ -1113,6 +1113,36 @@ private:
     auto DepResult = DI.depends(&I0, &I1);
     if (!DepResult)
       return true;
+    // Dependence Analysis is conservative for function arguments and may
+    // report MayAlias for pointers that provably refer to different objects.
+    // For store-store pairs writing the same value to different underlying
+    // objects, the dependency is a false positive: fusing is safe because
+    // the observable result is identical regardless of execution order.
+    if (isa<StoreInst>(I0) && isa<StoreInst>(I1)) {
+      auto *S0 = cast<StoreInst>(&I0);
+      auto *S1 = cast<StoreInst>(&I1);
+
+      Value *P0 = getUnderlyingObject(S0->getPointerOperand());
+      Value *P1 = getUnderlyingObject(S1->getPointerOperand());
+
+      if (P0 != P1) {
+        // Case 1: Same Value* (constants, same variables, hoisted exprs)
+        if (S0->getValueOperand() == S1->getValueOperand())
+          return true;
+
+        // Case 2: Loop-invariant expressions with identical SCEV
+        // (e.g. val+unknown computed separately but symbolically equal)
+        // Note: this only works for loop-invariant SCEVs; IV-dependent
+        // expressions like i*2+1 have different loop anchors and won't
+        // match. Those require SCEVParameterRewriter (future work).
+        const SCEV *SCEV0 = SE.getSCEV(S0->getValueOperand());
+        const SCEV *SCEV1 = SE.getSCEV(S1->getValueOperand());
+        if (SCEV0 && SCEV1 && SCEV0 == SCEV1)
+          return true;
+      }
+    }
+    // TODO: Handle structurally identical IV-dependent expressions
+    // (e.g. a[i]=i*2+1; b[i]=i*2+1) using SCEVParameterRewriter.
 #ifndef NDEBUG
     if (VerboseFusionDebugging) {
       LLVM_DEBUG(dbgs() << "DA res: "; DepResult->dump(dbgs());
@@ -1148,7 +1178,6 @@ private:
     }
 
     assert(CurLoopLevel > Levels && "Fusion candidates are not separated");
-
     if (DepResult->isScalar(CurLoopLevel, true)) {
       if (DepResult->isInput() || DepResult->isOutput()) {
         LLVM_DEBUG(dbgs() << "Safe to fuse due to a loop-invariant "
@@ -1157,6 +1186,7 @@ private:
         NumDA++;
         return true;
       }
+
       LLVM_DEBUG(
           dbgs() << "Not safe to fuse due to a scalar flow dependency\n");
       return false;
