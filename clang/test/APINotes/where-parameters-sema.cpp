@@ -5,6 +5,8 @@
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache/WhereParametersSema -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -ast-dump -ast-dump-filter coexistGlobal -x c++ | FileCheck --check-prefix=CHECK-GLOBAL-COEXIST %s
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache/WhereParametersSema -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -ast-dump -ast-dump-filter mismatchGlobal -x c++ | FileCheck --check-prefix=CHECK-GLOBAL-MISMATCH %s
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache/WhereParametersSema -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -ast-dump -ast-dump-filter aliasGlobal -x c++ | FileCheck --check-prefix=CHECK-GLOBAL-ALIAS %s
+// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache/WhereParametersSema -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -ast-dump -ast-dump-filter aliasPrecedenceGlobal -x c++ | FileCheck --check-prefix=CHECK-GLOBAL-ALIAS-PRECEDENCE %s
+// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache/WhereParametersSema -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -ast-dump -ast-dump-filter nullableGlobal -x c++ | FileCheck --check-prefix=CHECK-GLOBAL-NULLABILITY %s
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache/WhereParametersSema -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -ast-dump -ast-dump-filter rawIntGlobal -x c++ | FileCheck --check-prefix=CHECK-GLOBAL-RAW-INT %s
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache/WhereParametersSema -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -ast-dump -ast-dump-filter constValueGlobal -x c++ | FileCheck --check-prefix=CHECK-GLOBAL-CONST %s
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache/WhereParametersSema -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -ast-dump -ast-dump-filter SelectorNamespace::makeNamespaced -x c++ | FileCheck --check-prefix=CHECK-GLOBAL-NAMESPACE %s
@@ -15,6 +17,8 @@
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache/WhereParametersSema -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -ast-dump -ast-dump-filter SelectorWidget::configure -x c++ | FileCheck --check-prefix=CHECK-METHOD-STATIC %s
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache/WhereParametersSema -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -ast-dump -ast-dump-filter SelectorWidget::mismatch -x c++ | FileCheck --check-prefix=CHECK-METHOD-MISMATCH %s
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache/WhereParametersSema -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -ast-dump -ast-dump-filter SelectorWidget::alias -x c++ | FileCheck --check-prefix=CHECK-METHOD-ALIAS %s
+// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache/WhereParametersSema -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -ast-dump -ast-dump-filter SelectorWidget::aliasPrecedence -x c++ | FileCheck --check-prefix=CHECK-METHOD-ALIAS-PRECEDENCE %s
+// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache/WhereParametersSema -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -ast-dump -ast-dump-filter SelectorWidget::nullable -x c++ | FileCheck --check-prefix=CHECK-METHOD-NULLABILITY %s
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache/WhereParametersSema -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -ast-dump -ast-dump-filter SelectorWidget::rawInt -x c++ | FileCheck --check-prefix=CHECK-METHOD-RAW-INT %s
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache/WhereParametersSema -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -ast-dump -ast-dump-filter SelectorWidget::constValue -x c++ | FileCheck --check-prefix=CHECK-METHOD-CONST %s
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache/WhereParametersSema -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -ast-dump -ast-dump-filter SelectorWidget::operator+ -x c++ | FileCheck --check-prefix=CHECK-METHOD-OPERATOR %s
@@ -46,7 +50,14 @@
 // CHECK-GLOBAL-MISMATCH-NOT: SwiftNameAttr
 
 // CHECK-GLOBAL-ALIAS: FunctionDecl {{.+}} aliasGlobal 'void (AliasInt)'
-// CHECK-GLOBAL-ALIAS-NOT: SwiftNameAttr
+// CHECK-GLOBAL-ALIAS: SwiftNameAttr {{.+}} "aliasGlobal(_:)"
+
+// CHECK-GLOBAL-ALIAS-PRECEDENCE: FunctionDecl {{.+}} aliasPrecedenceGlobal 'void (AliasInt)'
+// CHECK-GLOBAL-ALIAS-PRECEDENCE-NOT: fallbackAliasPrecedenceGlobal
+// CHECK-GLOBAL-ALIAS-PRECEDENCE: SwiftNameAttr {{.+}} "aliasPrecedenceGlobal(_:)"
+
+// CHECK-GLOBAL-NULLABILITY: FunctionDecl {{.+}} nullableGlobal 'void (char * _Nonnull)'
+// CHECK-GLOBAL-NULLABILITY: SwiftNameAttr {{.+}} "nullableGlobal(_:)"
 
 // CHECK-GLOBAL-RAW-INT: FunctionDecl {{.+}} rawIntGlobal 'void (int)'
 // CHECK-GLOBAL-RAW-INT: SwiftNameAttr {{.+}} "rawIntGlobal(_:)"
@@ -94,7 +105,14 @@
 // CHECK-METHOD-MISMATCH-NOT: SwiftNameAttr
 
 // CHECK-METHOD-ALIAS: CXXMethodDecl {{.+}} alias 'void (AliasInt)'
-// CHECK-METHOD-ALIAS-NOT: SwiftNameAttr
+// CHECK-METHOD-ALIAS: SwiftNameAttr {{.+}} "alias(_:)"
+
+// CHECK-METHOD-ALIAS-PRECEDENCE: CXXMethodDecl {{.+}} aliasPrecedence 'void (AliasInt)'
+// CHECK-METHOD-ALIAS-PRECEDENCE-NOT: fallbackAliasPrecedence
+// CHECK-METHOD-ALIAS-PRECEDENCE: SwiftNameAttr {{.+}} "aliasPrecedence(_:)"
+
+// CHECK-METHOD-NULLABILITY: CXXMethodDecl {{.+}} nullable 'void (char * _Nonnull)'
+// CHECK-METHOD-NULLABILITY: SwiftNameAttr {{.+}} "nullable(_:)"
 
 // CHECK-METHOD-RAW-INT: CXXMethodDecl {{.+}} rawInt 'void (int)'
 // CHECK-METHOD-RAW-INT: SwiftNameAttr {{.+}} "rawInt(_:)"

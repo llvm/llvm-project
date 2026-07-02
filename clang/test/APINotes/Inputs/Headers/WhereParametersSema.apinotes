@@ -33,7 +33,22 @@ Functions:
   Where:
     Parameters:
     - int
-  SwiftName: shouldNotApplyAliasGlobal(_:)
+  SwiftName: aliasGlobal(_:)
+- Name: aliasPrecedenceGlobal
+  Where:
+    Parameters:
+    - int
+  SwiftName: fallbackAliasPrecedenceGlobal(_:)
+- Name: aliasPrecedenceGlobal
+  Where:
+    Parameters:
+    - AliasInt
+  SwiftName: aliasPrecedenceGlobal(_:)
+- Name: nullableGlobal
+  Where:
+    Parameters:
+    - 'char *'
+  SwiftName: nullableGlobal(_:)
 - Name: rawIntGlobal
   Where:
     Parameters:
@@ -103,7 +118,22 @@ Tags:
     Where:
       Parameters:
       - int
-    SwiftName: shouldNotApplyAliasMethod(_:)
+    SwiftName: alias(_:)
+  - Name: aliasPrecedence
+    Where:
+      Parameters:
+      - int
+    SwiftName: fallbackAliasPrecedence(_:)
+  - Name: aliasPrecedence
+    Where:
+      Parameters:
+      - AliasInt
+    SwiftName: aliasPrecedence(_:)
+  - Name: nullable
+    Where:
+      Parameters:
+      - 'char *'
+    SwiftName: nullable(_:)
   - Name: rawInt
     Where:
       Parameters:

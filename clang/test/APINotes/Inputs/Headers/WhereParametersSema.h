@@ -15,6 +15,8 @@ void coexistGlobal(double);
 
 void mismatchGlobal(float);
 void aliasGlobal(AliasInt);
+void aliasPrecedenceGlobal(AliasInt);
+void nullableGlobal(char * _Nonnull);
 void rawIntGlobal(int);
 void constValueGlobal(const int);
 
@@ -41,6 +43,8 @@ struct SelectorWidget {
 
   void mismatch(float);
   void alias(AliasInt);
+  void aliasPrecedence(AliasInt);
+  void nullable(char * _Nonnull);
   void rawInt(int);
   void constValue(const int);
 
