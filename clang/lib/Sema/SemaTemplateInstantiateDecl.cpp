@@ -5982,20 +5982,12 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
     savedContext.pop();
   }
 
-  // We never need to emit the code for a lambda in unevaluated context.
-  // We also can't mangle a lambda in the require clause of a function template
-  // during constraint checking as the MSI ABI would need to mangle the (not yet
-  // specialized) enclosing declaration
-  // FIXME: Should we try to skip this for non-lambda functions too?
-  bool ShouldSkipCG = [&] {
-    auto *RD = dyn_cast<CXXRecordDecl>(Function->getParent());
-    if (!RD || !RD->isLambda())
-      return false;
-
-    return llvm::any_of(ExprEvalContexts, [](auto &Context) {
-      return Context.isUnevaluated() || Context.isImmediateFunctionContext();
-    });
-  }();
+  // We never need to emit the code in constriant substitution.
+  // For example, we can't mangle a lambda in the require clause of a function
+  // template during constraint checking as the MS ABI would need to mangle the
+  // (not yet specialized) enclosing declaration.
+  // FIXME: This can be removed when MS ABI supports concepts.
+  bool ShouldSkipCG = inConstraintSubstitution();
   if (!ShouldSkipCG) {
     DeclGroupRef DG(Function);
     Consumer.HandleTopLevelDecl(DG);

@@ -69,3 +69,37 @@ void test() {
 }
 // CHECK-LABEL:define {{.*}} void @"??$f@$0CK@@GH147650@@YAXXZ"()
 }
+
+namespace GH173160 {
+
+template< typename TypeList, typename Func >
+auto for_each_type(Func func) {
+  return func;
+}
+
+template< class T >
+struct X {};
+
+template< class T >
+concept Component = requires(T component) {
+  for_each_type<typename T::required_type>( []{} );
+};
+
+struct EntityRegistry {
+  template< Component C >
+  auto get_component(const int id) -> X<C> {
+    return {};
+  }
+};
+
+struct A {
+  struct required_type {};
+};
+
+void foo() {
+  EntityRegistry entities;
+  entities.get_component<A>(0);
+  // CHECK: define {{.*}} @"??$get_component@UA@GH173160@@@EntityRegistry@GH173160@@QEAA?AU?$X@UA@GH173160@@@1@H@Z"
+}
+
+}
