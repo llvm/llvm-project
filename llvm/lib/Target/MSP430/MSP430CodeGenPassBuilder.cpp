@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MSP430.h"
+#include "MSP430AsmPrinter.h"
 #include "MSP430TargetMachine.h"
 
 #include "llvm/CodeGen/AtomicExpand.h"
@@ -34,6 +35,9 @@ public:
   void addIRPasses(PassManagerWrapper &PMW) const;
   Error addInstSelector(PassManagerWrapper &PMW) const;
   void addPreEmitPass(PassManagerWrapper &PMW) const;
+  void addAsmPrinterBegin(PassManagerWrapper &PMW) const;
+  void addAsmPrinter(PassManagerWrapper &PMW) const;
+  void addAsmPrinterEnd(PassManagerWrapper &PMW) const;
 };
 
 void MSP430CodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) const {
@@ -49,6 +53,19 @@ Error MSP430CodeGenPassBuilder::addInstSelector(PassManagerWrapper &PMW) const {
 
 void MSP430CodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) const {
   addMachineFunctionPass(MSP430BranchSelectPass(), PMW);
+}
+
+void MSP430CodeGenPassBuilder::addAsmPrinterBegin(
+    PassManagerWrapper &PMW) const {
+  addModulePass(MSP430AsmPrinterBeginPass(), PMW, /*Force=*/true);
+}
+
+void MSP430CodeGenPassBuilder::addAsmPrinter(PassManagerWrapper &PMW) const {
+  addMachineFunctionPass(MSP430AsmPrinterPass(), PMW);
+}
+
+void MSP430CodeGenPassBuilder::addAsmPrinterEnd(PassManagerWrapper &PMW) const {
+  addModulePass(MSP430AsmPrinterEndPass(), PMW);
 }
 
 } // namespace
