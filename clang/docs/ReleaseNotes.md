@@ -1051,6 +1051,8 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   enum assignments without affecting other assignments.
 - Add `BreakBeforeReturnType` option to break before the function return
   type.
+- Add `Wrapped` option to `AllowShortFunctionsOnASingleLine,` for allowing
+  control over merging short function bodies after a wrapped opening brace.
 
 ### libclang
 

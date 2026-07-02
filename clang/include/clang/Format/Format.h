@@ -894,6 +894,7 @@ struct FormatStyle {
   ///     Empty: false
   ///     Inline: true
   ///     Other: false
+  ///     Wrapped: true
   /// \endcode
   struct ShortFunctionStyle {
     /// Merge top-level empty functions.
@@ -927,26 +928,38 @@ struct FormatStyle {
     ///   void f() { bar(); }
     /// \endcode
     bool Other;
+    /// Merge function bodies if the brace is wrapped.
+    /// \code
+    ///   void f()
+    ///   {}
+    ///   void f2()
+    ///   { bar2(); }
+    ///   void f3()
+    ///   { /* comment */ }
+    /// \endcode
+    bool Wrapped;
 
     bool operator==(const ShortFunctionStyle &R) const {
-      return Empty == R.Empty && Inline == R.Inline && Other == R.Other;
+      return Empty == R.Empty && Inline == R.Inline && Other == R.Other &&
+             Wrapped == R.Wrapped;
     }
     bool operator!=(const ShortFunctionStyle &R) const { return !(*this == R); }
-    ShortFunctionStyle() : Empty(false), Inline(false), Other(false) {}
-    ShortFunctionStyle(bool Empty, bool Inline, bool Other)
-        : Empty(Empty), Inline(Inline), Other(Other) {}
+    ShortFunctionStyle()
+        : Empty(false), Inline(false), Other(false), Wrapped(false) {}
+    ShortFunctionStyle(bool Empty, bool Inline, bool Other, bool Wrapped)
+        : Empty(Empty), Inline(Inline), Other(Other), Wrapped(Wrapped) {}
     bool isAll() const { return Empty && Inline && Other; }
     static ShortFunctionStyle setEmptyOnly() {
-      return ShortFunctionStyle(true, false, false);
+      return ShortFunctionStyle(true, false, false, false);
     }
     static ShortFunctionStyle setEmptyAndInline() {
-      return ShortFunctionStyle(true, true, false);
+      return ShortFunctionStyle(true, true, false, false);
     }
     static ShortFunctionStyle setInlineOnly() {
-      return ShortFunctionStyle(false, true, false);
+      return ShortFunctionStyle(false, true, false, false);
     }
     static ShortFunctionStyle setAll() {
-      return ShortFunctionStyle(true, true, true);
+      return ShortFunctionStyle(true, true, true, false);
     }
   };
 
