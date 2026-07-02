@@ -5567,9 +5567,11 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
       unsigned BitWidth = RI.getRegSizeInBits(*MRI->getRegClass(SrcReg));
       // Shift amount for min/max constants to adjust for 8/16/32 instruction
       // sizes.
+      APInt CmpVal(BitWidth, static_cast<uint64_t>(CmpValue),
+                   /*isSigned=*/false, /*implicitTrunc=*/true);
       switch (OldCC) {
       case X86::COND_L: // x <s (C + 1)  -->  x <=s C
-        if (ImmDelta != 1 || APInt::getSignedMinValue(BitWidth) == CmpValue)
+        if (ImmDelta != 1 || APInt::getSignedMinValue(BitWidth) == CmpVal)
           return false;
         ReplacementCC = X86::COND_LE;
         break;
@@ -5579,7 +5581,7 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
         ReplacementCC = X86::COND_BE;
         break;
       case X86::COND_GE: // x >=s (C + 1)  -->  x >s C
-        if (ImmDelta != 1 || APInt::getSignedMinValue(BitWidth) == CmpValue)
+        if (ImmDelta != 1 || APInt::getSignedMinValue(BitWidth) == CmpVal)
           return false;
         ReplacementCC = X86::COND_G;
         break;
@@ -5589,22 +5591,22 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
         ReplacementCC = X86::COND_A;
         break;
       case X86::COND_G: // x >s (C - 1)  -->  x >=s C
-        if (ImmDelta != -1 || APInt::getSignedMaxValue(BitWidth) == CmpValue)
+        if (ImmDelta != -1 || APInt::getSignedMaxValue(BitWidth) == CmpVal)
           return false;
         ReplacementCC = X86::COND_GE;
         break;
       case X86::COND_A: // x >u (C - 1)  -->  x >=u C
-        if (ImmDelta != -1 || APInt::getMaxValue(BitWidth) == CmpValue)
+        if (ImmDelta != -1 || APInt::getMaxValue(BitWidth) == CmpVal)
           return false;
         ReplacementCC = X86::COND_AE;
         break;
       case X86::COND_LE: // x <=s (C - 1)  -->  x <s C
-        if (ImmDelta != -1 || APInt::getSignedMaxValue(BitWidth) == CmpValue)
+        if (ImmDelta != -1 || APInt::getSignedMaxValue(BitWidth) == CmpVal)
           return false;
         ReplacementCC = X86::COND_L;
         break;
       case X86::COND_BE: // x <=u (C - 1)  -->  x <u C
-        if (ImmDelta != -1 || APInt::getMaxValue(BitWidth) == CmpValue)
+        if (ImmDelta != -1 || APInt::getMaxValue(BitWidth) == CmpVal)
           return false;
         ReplacementCC = X86::COND_B;
         break;

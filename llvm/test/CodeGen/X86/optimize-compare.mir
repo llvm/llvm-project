@@ -741,3 +741,28 @@ body: |
     liveins: $eflags
     $al = SETCCr 14, implicit $eflags
 ...
+---
+name: noopt_immdelta_at_umax
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: noopt_immdelta_at_umax
+    ; CHECK: [[COPY:%[0-9]+]]:gr8 = COPY $al
+    ; CHECK-NEXT: CMP8ri [[COPY]], 0, implicit-def $eflags
+    ; CHECK-NEXT: $cl = SETCCr 7, implicit $eflags
+    ; CHECK-NEXT: CMP8ri [[COPY]], -1, implicit-def $eflags
+    ; CHECK-NEXT: $bl = SETCCr 7, implicit $eflags
+    ; CHECK-NEXT: CMP8ri [[COPY]], 0, implicit-def $eflags
+    ; CHECK-NEXT: $cl = SETCCr 6, implicit $eflags
+    ; CHECK-NEXT: CMP8ri [[COPY]], -1, implicit-def $eflags
+    ; CHECK-NEXT: $bl = SETCCr 6, implicit $eflags
+    %0:gr8 = COPY $al
+    CMP8ri %0, 0, implicit-def $eflags
+    $cl = SETCCr 7, implicit $eflags
+    CMP8ri %0, -1, implicit-def $eflags
+    $bl = SETCCr 7, implicit $eflags
+
+    CMP8ri %0, 0, implicit-def $eflags
+    $cl = SETCCr 6, implicit $eflags
+    CMP8ri %0, -1, implicit-def $eflags
+    $bl = SETCCr 6, implicit $eflags
+...
