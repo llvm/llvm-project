@@ -888,7 +888,7 @@ TSTToUnaryTransformType(DeclSpec::TST SwitchTST) {
 #define TRANSFORM_TYPE_TRAIT_DEF(Enum, Trait)                                  \
   case TST_##Trait:                                                            \
     return UnaryTransformType::Enum;
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/Traits.inc"
   default:
     llvm_unreachable("attempted to parse a non-unary transform builtin");
   }
@@ -1308,7 +1308,7 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
   }
 
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) case DeclSpec::TST_##Trait:
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/Traits.inc"
     Result = S.GetTypeFromParser(DS.getRepAsType());
     assert(!Result.isNull() && "Didn't get a type for the transformation?");
     Result = S.BuildUnaryTransformType(

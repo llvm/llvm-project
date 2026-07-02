@@ -1954,16 +1954,8 @@ ExprResult Sema::BuildExpressionTrait(ExpressionTrait ET, SourceLocation KWLoc,
 
 static std::optional<TypeTrait> StdNameToTypeTrait(StringRef Name) {
   return llvm::StringSwitch<std::optional<TypeTrait>>(Name)
-      .Case("is_trivially_relocatable",
-            TypeTrait::UTT_IsCppTriviallyRelocatable)
-      .Case("is_trivially_copyable", TypeTrait::UTT_IsTriviallyCopyable)
-      .Case("is_assignable", TypeTrait::BTT_IsAssignable)
-      .Case("is_empty", TypeTrait::UTT_IsEmpty)
-      .Case("is_standard_layout", TypeTrait::UTT_IsStandardLayout)
-      .Case("is_aggregate", TypeTrait::UTT_IsAggregate)
-      .Case("is_constructible", TypeTrait::TT_IsConstructible)
-      .Case("is_final", TypeTrait::UTT_IsFinal)
-      .Case("is_abstract", TypeTrait::UTT_IsAbstract)
+#define EMIT_STD_NAME_CASES
+#include "clang/Basic/Traits.inc"
       .Default(std::nullopt);
 }
 

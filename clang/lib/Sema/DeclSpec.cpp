@@ -365,7 +365,7 @@ bool Declarator::isDeclarationOfFunction() const {
       return false;
 
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) case TST_##Trait:
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/Traits.inc"
     case TST_typename:
     case TST_typeof_unqualType:
     case TST_typeofType: {
@@ -573,9 +573,11 @@ const char *DeclSpec::getSpecifierName(DeclSpec::TST T,
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait)                                     \
   case DeclSpec::TST_##Trait:                                                  \
     return "__" #Trait;
-#include "clang/Basic/TransformTypeTraits.def"
-  case DeclSpec::TST_unknown_anytype: return "__unknown_anytype";
-  case DeclSpec::TST_atomic: return "_Atomic";
+#include "clang/Basic/Traits.inc"
+  case DeclSpec::TST_unknown_anytype:
+    return "__unknown_anytype";
+  case DeclSpec::TST_atomic:
+    return "_Atomic";
   case DeclSpec::TST_BFloat16: return "__bf16";
 #define GENERIC_IMAGE_TYPE(ImgType, Id) \
   case DeclSpec::TST_##ImgType##_t: \
