@@ -28,7 +28,6 @@
 template <class S, class SV>
 TEST_CONSTEXPR_CXX20 void test(SV sv, std::size_t pos, std::size_t n) {
   typedef typename S::traits_type T;
-  typedef typename S::allocator_type A;
   typedef typename S::size_type Size;
   if (pos <= sv.size()) {
     S s2(sv, static_cast<Size>(pos), static_cast<Size>(n));
@@ -37,7 +36,6 @@ TEST_CONSTEXPR_CXX20 void test(SV sv, std::size_t pos, std::size_t n) {
     std::size_t rlen = std::min(sv.size() - pos, n);
     assert(s2.size() == rlen);
     assert(T::compare(s2.data(), sv.data() + pos, rlen) == 0);
-    assert(s2.get_allocator() == A());
     assert(s2.capacity() >= s2.size());
     LIBCPP_ASSERT(is_string_asan_correct(s2));
   }
@@ -150,11 +148,41 @@ TEST_CONSTEXPR_CXX20 bool test() {
   return true;
 }
 
+template <class SV>
+void test_default_alloc_arg(SV sv, std::size_t pos, std::size_t n) {
+  using A = ControlledDefaultConstructorAllocator<char>;
+  using S = std::basic_string<char, std::char_traits<char>, A>;
+
+  typedef typename S::size_type Size;
+  if (pos <= sv.size()) {
+    A::reset_to_base();
+    S s2(sv, static_cast<Size>(pos), static_cast<Size>(n));
+    assert(s2.get_allocator().is_base());
+  }
+}
+
+void test_default_alloc_arg() {
+  using SV = std::basic_string_view<char, std::char_traits<char> >;
+
+  test_default_alloc_arg(SV(), 0, 0);
+  test_default_alloc_arg(SV(), 0, 1);
+  test_default_alloc_arg(SV(), 1, 0);
+  test_default_alloc_arg(SV(), 1, 1);
+  test_default_alloc_arg(SV(), 1, 2);
+  test_default_alloc_arg(SV("1"), 0, 0);
+  test_default_alloc_arg(SV("1"), 0, 1);
+  test_default_alloc_arg(SV("1234567890123456789012345678901234567890123456789012345678901234567890"), 50, 0);
+  test_default_alloc_arg(SV("1234567890123456789012345678901234567890123456789012345678901234567890"), 50, 1);
+  test_default_alloc_arg(SV("1234567890123456789012345678901234567890123456789012345678901234567890"), 50, 10);
+  test_default_alloc_arg(SV("1234567890123456789012345678901234567890123456789012345678901234567890"), 50, 100);
+}
+
 int main(int, char**) {
   test();
 #if TEST_STD_VER > 17
   static_assert(test());
 #endif
+  test_default_alloc_arg();
 
   return 0;
 }

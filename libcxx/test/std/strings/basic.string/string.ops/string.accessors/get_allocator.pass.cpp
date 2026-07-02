@@ -19,13 +19,14 @@
 
 template <class S>
 TEST_CONSTEXPR_CXX20 void test(const S& s, const typename S::allocator_type& a) {
+  static_assert(std::is_same<decltype(s.get_allocator()), typename S::allocator_type>::value, "");
   assert(s.get_allocator() == a);
 }
 
 template <class Alloc>
 TEST_CONSTEXPR_CXX20 void test_string(const Alloc& a) {
   using S = std::basic_string<char, std::char_traits<char>, Alloc>;
-  test(S(""), Alloc());
+  test(S("", Alloc(a)), Alloc(a));
   test(S("abcde", Alloc(a)), Alloc(a));
   test(S("abcdefghij", Alloc(a)), Alloc(a));
   test(S("abcdefghijklmnopqrst", Alloc(a)), Alloc(a));
