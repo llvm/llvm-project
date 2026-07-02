@@ -1910,6 +1910,8 @@ Currently, only the following parameter attributes are defined:
 
     This attribute cannot be applied to return values.
 
+.. _attr_range:
+
 ``range(<ty> <a>, <b>)``
     This attribute expresses the possible range of the parameter or return value.
     If the value is not in the specified range, it is converted to poison.
@@ -2873,8 +2875,7 @@ For example:
 
     The following aspects are currently supported:
 
-    - ``fixed``: The call has a C ISO 18037 fixed-point argument.
-    - ``float``: The call has a floating-point argument.
+    - ``float``: The call has a floating point argument
 
 
 
@@ -3196,6 +3197,14 @@ The following attributes are currently accepted:
 
 ``"noundef"(any_type %v)``
   Equivalent to :ref:`noundef <attr_noundef>` on ``%v``.
+
+``"range"(iN %val, iN %lower_bound, iN %upper_bound, i1 %inclusive)``
+  Equivalent to :ref:`range(iN %lower_bound, %upper_bound) <attr_range>` on
+  ``%val``, except that ``%inclusive`` determines whether the upper bound is
+  inclusive or exclusive and ``%upper_bound`` is always allowed to be equal to
+  ``%lower_bound``. ``%lower_bound == %upper_bound`` and ``%inclusive`` being
+  false implies an empty range, while ``%lower_bound == %upper_bound - 1`` and
+  ``%inclusive`` being true implies a full range.
 
 ``"separate_storage"(ptr %p1, ptr %p2)``
   This indicates that no pointer :ref:`based <pointeraliasing>` on one of its
@@ -13239,9 +13248,6 @@ the default rounding mode.
 If the ``nneg`` flag is set, and the ``uitofp`` argument is negative,
 the result is a poison value.
 
-If the '``nsz``' flag is set and the input value is 0, the sign bit of
-the result is non-deterministic.
-
 
 Example:
 """"""""
@@ -13288,9 +13294,6 @@ The '``sitofp``' instruction interprets its operand as a signed integer
 quantity and converts it to the corresponding floating-point value. If the
 value cannot be exactly represented, it is rounded using the default rounding
 mode.
-
-If the '``nsz``' flag is set and the input value is 0, the sign bit of
-the result is non-deterministic.
 
 Example:
 """"""""
