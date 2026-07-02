@@ -2753,6 +2753,55 @@ ExceptionHandling Triple::getDefaultExceptionHandling() const {
   return ExceptionHandling::None;
 }
 
+bool Triple::lowerF128LibmAsLongDouble() const {
+  bool Print = true;
+  // bool Print = getenv("PRINTME") != NULL;
+  // Note that the logic should be kept in sync with Clang's LongDoubleFormat,
+  // though defaulting to *f128 is always safe if available.
+
+  if (Print) fprintf(stderr, "CHECK 1\n");
+  // Windows and Apple always use f64 as `long double`.
+  if (isOSWindows() || isOSDarwin())
+    return false;
+
+  if (Print) fprintf(stderr, "CHECK 2\n");
+  // Android and Ohos use binary128 only on x86-64.
+  if (isAndroid() || isOHOSFamily()) {
+    if (isX86_64())
+      return true;
+    return false;
+  }
+
+  if (Print) fprintf(stderr, "CHECK 3\n");
+  // PowerPC `long double` is roughly:
+  // - f64 on musl
+  // - ibm128 most of the time, historically
+  // - f128 on Linux distros more recently if VSX is in the baseline (i.e.
+  //   64-bit LE only).
+  // Make the safe assumption that *f128 should be used.
+  if (isPPC())
+    return false;
+
+  if (Print) fprintf(stderr, "CHECK 4\n");
+  // Most 64-bit architectures use use binary128, a few are binary128 on both
+  // 64- and 32-bit.
+  if (isAArch64() || isLoongArch() || isRISCV() || isSPARC64() || isSystemZ() ||
+      isVE() || isWasm())
+    return true;
+
+  if (Print) fprintf(stderr, "CHECK 5\n");
+  // MIPS64 is usually f128, except on FreeBSD-like operating systems. MIPS32
+  // is f128 only with the N32 ABI (O32 is `f64`).
+  if ((isMIPS64() || isABIN32()) &&
+      !(isOSFreeBSD() || isOSKFreeBSD() || isOSDragonFly()))
+    return true;
+
+  if (Print) fprintf(stderr, "CHECK 6\n");
+  // By default, make the safe assumption that `long double !== f128`. This
+  // also catches x86 (`long double` is x87 `f80`)
+  return false;
+}
+
 // HLSL triple environment orders are relied on in the front end
 static_assert(Triple::Vertex - Triple::Pixel == 1,
               "incorrect HLSL stage order");

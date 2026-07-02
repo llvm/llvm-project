@@ -63,6 +63,14 @@ def hasSinCos : RuntimeLibcallPredicate<"hasSinCos(TT)">;
 // FIXME: Way to combine predicates
 def hasSinCos_f32_f64 : RuntimeLibcallPredicate<"hasSinCos_f32_f64(TT)">;
 
+def lowerF128LibmAsLongDouble : RuntimeLibcallPredicate<
+  "TT.lowerF128LibmAsLongDouble()"
+>;
+
+def lowerF128LibmAsDefault : RuntimeLibcallPredicate<
+  "!TT.lowerF128LibmAsLongDouble()"
+>;
+
 def ExceptionModelIsNotNone : RuntimeLibcallPredicate<
   [{ExceptionModel != ExceptionHandling::None}]
 >;
@@ -525,15 +533,23 @@ multiclass LibmLibcallImpls<string libcall_basename = !toupper(NAME),
   def NAME#""
       : RuntimeLibcallImpl<!cast<RuntimeLibcall>(libcall_basename#"_F64"),
                            !subst("<typesuffix>", "", rtbasename)>;
-  def NAME#"l_f128"
+  def NAME#"f128"
       : RuntimeLibcallImpl<!cast<RuntimeLibcall>(libcall_basename#"_F128"),
-                           !subst("<typesuffix>", "l", rtbasename)>;
+                           !subst("<typesuffix>", "f128", rtbasename)>;
   def NAME#"l_ppcf128"
       : RuntimeLibcallImpl<!cast<RuntimeLibcall>(libcall_basename#"_PPCF128"),
                            !subst("<typesuffix>", "l", rtbasename)>;
   def NAME#"l_f80"
       : RuntimeLibcallImpl<!cast<RuntimeLibcall>(libcall_basename#"_F80"),
                            !subst("<typesuffix>", "l", rtbasename)>;
+}
+
+// Replace `_F128` libcalls with `long double` versions.
+multiclass LibmF128AsLongDoubleImpls<string libcall_basename = !toupper(NAME),
+                                     string rtbasename = !strconcat(NAME, "X")> {
+  def NAME#"_ld128"
+      : RuntimeLibcallImpl<!cast<RuntimeLibcall>(libcall_basename#"_F128"),
+                           !subst("X", "l", rtbasename)>;
 }
 
 // AArch64 calls
@@ -1708,60 +1724,68 @@ def __safestack_unsafe_stack_ptr : RuntimeLibcallImpl<SAFESTACK_UNSAFE_STACK_PTR
 // F128 libm Runtime Libcalls
 //===----------------------------------------------------------------------===//
 
-defset list<RuntimeLibcallImpl> LibmF128Libcalls = {
-  def logf128 : RuntimeLibcallImpl<LOG_F128>;
-  def log2f128 : RuntimeLibcallImpl<LOG2_F128>;
-  def log10f128 : RuntimeLibcallImpl<LOG10_F128>;
-  def expf128 : RuntimeLibcallImpl<EXP_F128>;
-  def exp2f128 : RuntimeLibcallImpl<EXP2_F128>;
-  def exp10f128 : RuntimeLibcallImpl<EXP10_F128>;
-  def sinf128 : RuntimeLibcallImpl<SIN_F128>;
-  def cosf128 : RuntimeLibcallImpl<COS_F128>;
-  def tanf128 : RuntimeLibcallImpl<TAN_F128>;
-  def tanhf128 : RuntimeLibcallImpl<TANH_F128>;
-  def sincosf128 : RuntimeLibcallImpl<SINCOS_F128>;
-  def powf128 : RuntimeLibcallImpl<POW_F128>;
-  def fminf128 : RuntimeLibcallImpl<FMIN_F128>;
-  def fmaxf128 : RuntimeLibcallImpl<FMAX_F128>;
-  def fmodf128 : RuntimeLibcallImpl<REM_F128>;
-  def sqrtf128 : RuntimeLibcallImpl<SQRT_F128>;
-  def ceilf128 : RuntimeLibcallImpl<CEIL_F128>;
-  def floorf128 : RuntimeLibcallImpl<FLOOR_F128>;
-  def truncf128 : RuntimeLibcallImpl<TRUNC_F128>;
-  def roundf128 : RuntimeLibcallImpl<ROUND_F128>;
-  def lroundf128 : RuntimeLibcallImpl<LROUND_F128>;
-  def llroundf128 : RuntimeLibcallImpl<LLROUND_F128>;
-  def rintf128 : RuntimeLibcallImpl<RINT_F128>;
-  def lrintf128 : RuntimeLibcallImpl<LRINT_F128>;
-  def llrintf128 : RuntimeLibcallImpl<LLRINT_F128>;
-  def nearbyintf128 : RuntimeLibcallImpl<NEARBYINT_F128>;
-  def fmaf128 : RuntimeLibcallImpl<FMA_F128>;
-  def frexpf128 : RuntimeLibcallImpl<FREXP_F128>;
-  def cbrtf128 : RuntimeLibcallImpl<CBRT_F128>;
-  def fminimumf128 : RuntimeLibcallImpl<FMINIMUM_F128>;
-  def fmaximumf128 : RuntimeLibcallImpl<FMAXIMUM_F128>;
-  def fminimum_numf128 : RuntimeLibcallImpl<FMINIMUM_NUM_F128>;
-  def fmaximum_numf128 : RuntimeLibcallImpl<FMAXIMUM_NUM_F128>;
-  def asinf128 : RuntimeLibcallImpl<ASIN_F128>;
-  def acosf128 : RuntimeLibcallImpl<ACOS_F128>;
-  def atanf128 : RuntimeLibcallImpl<ATAN_F128>;
-  def atan2f128 : RuntimeLibcallImpl<ATAN2_F128>;
-  def ldexpf128 : RuntimeLibcallImpl<LDEXP_F128>;
-  def roundevenf128 : RuntimeLibcallImpl<ROUNDEVEN_F128>;
-  def modff128 : RuntimeLibcallImpl<MODF_F128>;
-  def sinhf128 : RuntimeLibcallImpl<SINH_F128>;
-  def coshf128 : RuntimeLibcallImpl<COSH_F128>;
-  def copysignf128 : RuntimeLibcallImpl<COPYSIGN_F128>;
+// f128 libcalls such as sqrt.f128 default to sqrtf128. Use this override list
+// to get sqrtl instead on platfroms where (1) long double is actually f128, and
+// (2) *f128 symbols don't exist, or there is a legacy reason to keep using
+// them.
+defset list<RuntimeLibcallImpl> LibmF128AsLongDoubleLibcalls = {
+  defm log : LibmF128AsLongDoubleImpls;
+  defm log2 : LibmF128AsLongDoubleImpls;
+  defm log10 : LibmF128AsLongDoubleImpls;
+  defm exp : LibmF128AsLongDoubleImpls;
+  defm exp2 : LibmF128AsLongDoubleImpls;
+  defm exp10 : LibmF128AsLongDoubleImpls;
+  defm sin : LibmF128AsLongDoubleImpls;
+  defm cos : LibmF128AsLongDoubleImpls;
+  defm tan : LibmF128AsLongDoubleImpls;
+  defm tanh : LibmF128AsLongDoubleImpls;
+  defm sincos : LibmF128AsLongDoubleImpls;
+  defm pow : LibmF128AsLongDoubleImpls;
+  defm fmin : LibmF128AsLongDoubleImpls;
+  defm fmax : LibmF128AsLongDoubleImpls;
+  defm fmod : LibmF128AsLongDoubleImpls<"REM">;
+  defm sqrt : LibmF128AsLongDoubleImpls;
+  defm ceil : LibmF128AsLongDoubleImpls;
+  defm floor : LibmF128AsLongDoubleImpls;
+  defm trunc : LibmF128AsLongDoubleImpls;
+  defm round : LibmF128AsLongDoubleImpls;
+  defm lround : LibmF128AsLongDoubleImpls;
+  defm llround : LibmF128AsLongDoubleImpls;
+  defm rint : LibmF128AsLongDoubleImpls;
+  defm lrint : LibmF128AsLongDoubleImpls;
+  defm llrint : LibmF128AsLongDoubleImpls;
+  defm nearbyint : LibmF128AsLongDoubleImpls;
+  defm fma : LibmF128AsLongDoubleImpls;
+  defm frexp : LibmF128AsLongDoubleImpls;
+  defm cbrt : LibmF128AsLongDoubleImpls;
+  defm fminimum : LibmF128AsLongDoubleImpls;
+  defm fmaximum : LibmF128AsLongDoubleImpls;
+  defm fminimum_num : LibmF128AsLongDoubleImpls;
+  defm fmaximum_num : LibmF128AsLongDoubleImpls;
+  defm asin : LibmF128AsLongDoubleImpls;
+  defm acos : LibmF128AsLongDoubleImpls;
+  defm atan : LibmF128AsLongDoubleImpls;
+  defm atan2 : LibmF128AsLongDoubleImpls;
+  defm ldexp : LibmF128AsLongDoubleImpls;
+  defm roundeven : LibmF128AsLongDoubleImpls;
+  defm modf : LibmF128AsLongDoubleImpls;
+  defm sinh : LibmF128AsLongDoubleImpls;
+  defm cosh : LibmF128AsLongDoubleImpls;
+  defm copysign : LibmF128AsLongDoubleImpls;
 }
 
-defset list<RuntimeLibcallImpl> LibmF128FiniteLibcalls = {
-  def __logf128_finite : RuntimeLibcallImpl<LOG_FINITE_F128>;
-  def __log2f128_finite : RuntimeLibcallImpl<LOG2_FINITE_F128>;
-  def __log10f128_finite : RuntimeLibcallImpl<LOG10_FINITE_F128>;
-  def __expf128_finite : RuntimeLibcallImpl<EXP_FINITE_F128>;
-  def __exp2f128_finite : RuntimeLibcallImpl<EXP2_FINITE_F128>;
-  def __exp10f128_finite : RuntimeLibcallImpl<EXP10_FINITE_F128>;
-  def __powf128_finite : RuntimeLibcallImpl<POW_FINITE_F128>;
+defset list<RuntimeLibcallImpl> LibmF128AsLongDoubleFiniteLibcalls = {
+  defm __log_finite : LibmF128AsLongDoubleImpls<"LOG_FINITE", "__logX_finite">;
+  defm __log2_finite
+      : LibmF128AsLongDoubleImpls<"LOG2_FINITE", "__log2X_finite">;
+  defm __log10_finite
+      : LibmF128AsLongDoubleImpls<"LOG10_FINITE", "__log10X_finite">;
+  defm __exp_finite : LibmF128AsLongDoubleImpls<"EXP_FINITE", "__expX_finite">;
+  defm __exp2_finite
+      : LibmF128AsLongDoubleImpls<"EXP2_FINITE", "__exp2X_finite">;
+  defm __exp10_finite
+      : LibmF128AsLongDoubleImpls<"EXP10_FINITE", "__exp10X_finite">;
+  defm __pow_finite : LibmF128AsLongDoubleImpls<"POW_FINITE", "__powX_finite">;
 }
 
 //--------------------------------------------------------------------
@@ -1802,15 +1826,18 @@ defvar AllDefaultRuntimeLibcallImpls
 
 defvar DefaultRuntimeLibcallImpls_f80 =
     !filter(entry, AllDefaultRuntimeLibcallImpls,
-            !match(!cast<string>(entry.Provides), "F80"));
+            !match(!cast<string>(entry.Provides), "_F80$"));
 
 defvar DefaultRuntimeLibcallImpls_ppcf128 =
     !filter(entry, AllDefaultRuntimeLibcallImpls,
-            !match(!cast<string>(entry.Provides), "PPCF128"));
+            !match(!cast<string>(entry.Provides), "_PPCF128$"));
 
 defvar DefaultRuntimeLibcallImpls_f128 =
     !filter(entry, AllDefaultRuntimeLibcallImpls,
-            !match(!cast<string>(entry.Provides), "_F128"));
+            // `!contains` does not exist, `not->empty->filter` is a slightly hacky way
+            !not(!empty(
+                !filter(override, LibmF128AsLongDoubleLibcalls,
+                        !eq(!cast<string>(override.Provides), !cast<string>(entry.Provides))))));
 
 // FIXME: Ideally we would just use dags everywhere, but for the
 // arm64ec case we need iterable lists so we can add the # prefix
@@ -1822,7 +1849,15 @@ defvar DefaultRuntimeLibcallImplsBaseList =
                 DefaultRuntimeLibcallImpls_ppcf128);
 
 defvar DefaultRuntimeLibcallImpls =
-  (add DefaultRuntimeLibcallImplsBaseList,
+  (add
+       // Not done as part of the above listremoves since f128 defaults should
+       // remain in the base list.
+       (sub DefaultRuntimeLibcallImplsBaseList,
+            DefaultRuntimeLibcallImpls_f128),
+       LibcallImpls<(add DefaultRuntimeLibcallImpls_f128),
+                    lowerF128LibmAsDefault>,
+       LibcallImpls<(add LibmF128AsLongDoubleLibcalls),
+                    lowerF128LibmAsLongDouble>,
        ExceptionModelCalls);
 
 /// Default set of libcall impls for 32-bit architectures.
@@ -1854,13 +1889,13 @@ defvar SecurityCheckCookieIfWinMSVC =
 defvar LibmHasSinCosF32 = LibcallImpls<(add sincosf), hasSinCos>;
 defvar LibmHasSinCosF64 =  LibcallImpls<(add sincos), hasSinCos>;
 defvar LibmHasSinCosF80 = LibcallImpls<(add sincosl_f80), hasSinCos>;
-defvar LibmHasSinCosF128 = LibcallImpls<(add sincosl_f128), hasSinCos>;
+defvar LibmHasSinCosF128 = LibcallImpls<(add sincosf128), hasSinCos>;
 defvar LibmHasSinCosPPCF128 = LibcallImpls<(add sincosl_ppcf128), hasSinCos>;
 
 defvar LibmHasExp10F32 = LibcallImpls<(add exp10f), hasExp10>;
 defvar LibmHasExp10F64 = LibcallImpls<(add exp10), hasExp10>;
+defvar LibmHasExp10F128 = LibcallImpls<(add exp10f128), hasExp10>;
 defvar LibmHasExp10F80 = LibcallImpls<(add exp10l_f80), hasExp10>;
-defvar LibmHasExp10F128 = LibcallImpls<(add exp10l_f128), hasExp10>;
 defvar LibmHasExp10PPCF128 = LibcallImpls<(add exp10l_ppcf128), hasExp10>;
 
 defvar DefaultLibmExp10 = [
@@ -1869,8 +1904,8 @@ defvar DefaultLibmExp10 = [
 
 
 defvar WindowsMathRemovals = [
-  ldexpf, ldexpl_f80, ldexpl_f128, ldexpl_ppcf128,
-  frexpf, frexpl_f80, frexpl_f128, frexpl_ppcf128
+  ldexpf, ldexpl_f80, ldexpf128, ldexpl_ppcf128,
+  frexpf, frexpl_f80, frexpf128, frexpl_ppcf128
 ];
 
 defvar MostPowI = !listremove(PowiLibcallImpls, [__powitf2_f128, __powitf2_ppc128]);
@@ -1891,8 +1926,8 @@ defvar LibmHasLdexpF32 = LibcallImpls<(add ldexpf), isNotOSWindowsOrIsCygwinMinG
 defvar LibmHasFrexpF80 = LibcallImpls<(add frexpl_f80), isNotOSWindowsOrIsCygwinMinGW>;
 defvar LibmHasLdexpF80 = LibcallImpls<(add ldexpl_f80), isNotOSWindowsOrIsCygwinMinGW>;
 
-defvar LibmHasFrexpF128 = LibcallImpls<(add frexpl_f128), isNotOSWindowsOrIsCygwinMinGW>;
-defvar LibmHasLdexpF128 = LibcallImpls<(add ldexpl_f128), isNotOSWindowsOrIsCygwinMinGW>;
+defvar LibmHasFrexpF128 = LibcallImpls<(add frexpf128), isNotOSWindowsOrIsCygwinMinGW>;
+defvar LibmHasLdexpF128 = LibcallImpls<(add ldexpf128), isNotOSWindowsOrIsCygwinMinGW>;
 
 defvar has__stack_chk_fail = LibcallImpls<(add __stack_chk_fail), hasStackChkFail>;
 defvar has__stack_chk_guard =
@@ -2643,7 +2678,7 @@ def HexagonSystemLibrary
     __umoddi3, __divdf3, __muldf3, __divsi3, __subdf3, sqrtf,
     __divdi3, __umodsi3, __moddi3, __modsi3), HexagonLibcalls,
     LibmHasSinCosF32, LibmHasSinCosF64, LibmHasSinCosF128,
-    exp10f, exp10, exp10l_f128, __stack_chk_fail, __stack_chk_guard,
+    exp10f, exp10, exp10f128, __stack_chk_fail, __stack_chk_guard,
     DefaultSafeStackGlobals)>;
 
 //===----------------------------------------------------------------------===//
@@ -2860,7 +2895,7 @@ defvar MSP430DefaultOptOut = [
 def MSP430SystemLibrary
     : SystemRuntimeLibrary<isMSP430,
     (add (sub DefaultRuntimeLibcallImpls, MSP430DefaultOptOut),
-      exp10f, exp10, exp10l_f128,
+      exp10f, exp10, exp10f128,
 
       // Floating point conversions - EABI Table 6
       __mspabi_cvtdf,
@@ -3050,12 +3085,11 @@ def AIX64Calls : LibcallImpls<(add PPC64AIXCallList), isPPC64_AIX>;
 def PPCSystemLibrary
     : SystemRuntimeLibrary<isPPC,
       (add PPCRuntimeLibcalls,
-           (sub DefaultRuntimeLibcallImpls, memcpy,
-                DefaultRuntimeLibcallImpls_f128),
+           (sub DefaultRuntimeLibcallImpls, memcpy),
            __extendkftf2, __trunctfkf2,
            DefaultRuntimeLibcallImpls_ppcf128,
            exp10f, exp10, exp10l_ppcf128,
-           LibmF128Libcalls, AIX32Calls, AIX64Calls,
+           AIX32Calls, AIX64Calls,
            LibmHasSinCosF32, LibmHasSinCosF64, LibmHasSinCosF128,
            LibmHasSinCosPPCF128,
            AvailableIf<memcpy, isNotAIX>,
@@ -3080,7 +3114,7 @@ def isRISCV64 : RuntimeLibcallPredicate<"TT.isRISCV64()">;
 def RISCVSystemLibrary
     : SystemRuntimeLibrary<isRISCV,
       (add DefaultRuntimeLibcallImpls,
-           exp10f, exp10, exp10l_f128,
+           exp10f, exp10, exp10f128,
            __riscv_flush_icache,
            LibcallImpls<(add Int128RTLibcalls), isRISCV64>,
            DefaultStackProtector,
@@ -3215,9 +3249,6 @@ def darwinHas__bzero : RuntimeLibcallPredicate<"TT.isMacOSX() && !TT.isMacOSXVer
 def hasExpFrexplLdexplF128
   : RuntimeLibcallPredicate<[{(!TT.isOSWindows() || TT.isOSCygMing()) && !TT.isGNUEnvironment()}]>;
 
-// Use the f128 variants of math functions on x86
-defvar X86_F128_Libcalls = LibcallImpls<(add LibmF128Libcalls, LibmF128FiniteLibcalls), isGNUEnvironment>;
-
 defvar SinCosF32F64Libcalls = LibcallImpls<(add sincosf, sincos), hasSinCos_f32_f64>;
 
 defvar MemChkLibcalls = [__memcpy_chk, __memset_chk, __memmove_chk];
@@ -3225,13 +3256,12 @@ defvar MemChkLibcalls = [__memcpy_chk, __memset_chk, __memmove_chk];
 defvar X86CommonLibcalls =
   (add (sub WinDefaultLibcallImpls, WindowsDivRemMulLibcallOverrides, MemChkLibcalls),
        DarwinSinCosStret, DarwinExp10, DarwinMemsetPattern, MacOSUnlockedIO,
-       X86_F128_Libcalls,
        LibmHasSinCosF80, // FIXME: Depends on long double
        SinCosF32F64Libcalls,
        LibcallImpls<(add __bzero), darwinHas__bzero>,
        LibmHasFrexpF32, LibmHasLdexpF32,
        LibmHasFrexpF80, LibmHasLdexpF80,
-       LibcallImpls<(add frexpl_f128, ldexpl_f128, exp10l_f128), hasExpFrexplLdexplF128>,
+       LibcallImpls<(add frexpf128, ldexpf128, exp10f128), hasExpFrexplLdexplF128>,
        DefaultRuntimeLibcallImpls_f80,
        LibmHasExp10F32, LibmHasExp10F64, LibmHasExp10F80,
        LibcallImpls<(add MostPowI), isNotOSMSVCRT>,
@@ -3277,10 +3307,9 @@ def isXCore : RuntimeLibcallPredicate<"TT.getArch() == Triple::xcore">;
 def XCoreSystemLibrary
     : SystemRuntimeLibrary<isXCore,
     (add DefaultRuntimeLibcallImpls,
-         exp10f, exp10, exp10l_f128,
+         exp10f, exp10, exp10f128,
          __memcpy_4,
-         iprintf, siprintf, fiprintf,
-         LibcallImpls<(add LibmF128Libcalls, LibmF128FiniteLibcalls), isGNUEnvironment>
+         iprintf, siprintf, fiprintf
 )>;
 
 //===----------------------------------------------------------------------===//
@@ -3424,7 +3453,7 @@ def LegacyDefaultSystemLibrary
     : SystemRuntimeLibrary<isDefaultLibcallArch,
       (add DefaultRuntimeLibcallImpls,
          LibmHasSinCosF32, LibmHasSinCosF64, LibmHasSinCosF128,
-         exp10f, exp10, exp10l_f128,
+         exp10f, exp10, exp10f128,
          __powisf2, __powidf2, __powitf2_f128,
          LibcallImpls<(add Int128RTLibcalls), isArch64Bit>,
          DefaultStackProtector, DefaultSafeStackGlobals
