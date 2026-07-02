@@ -7816,34 +7816,36 @@ static bool simplifySwitchWhenUMin(SwitchInst *SI, DomTreeUpdater *DTU) {
 static bool simplifySwitchDefaultBranch(SwitchInst *SI, DomTreeUpdater *DTU,
                                         const DataLayout &DL,
                                         AssumptionCache *AC) {
+  assert(SI);
   if (SI->defaultDestUnreachable())
     return false;
 
-  // If the switch condition is guaranteed to take some concrete value
+  // If it can be proved that the switch condition takes some concrete value
   // in the default block, we can make some nice simplifications to the
   // switch.
   BasicBlock *Default = SI->getDefaultDest();
   const Instruction *CxtI = Default->getTerminator();
-  const KnownBits Known = computeKnownBits(SI->getOperand(0), DL, AC, CxtI);
+  const KnownBits Known = computeKnownBits(SI->getCondition(), DL, AC, CxtI);
   if (!Known.isConstant())
     return false;
 
-  // If the known value for the switch operand already has a case,
-  // the default branch must be dead - mark it as unreachable.
+  // At this point, we know that only one value can be mapped to the
+  // default block. So, if a case doesn't exist for it already, we
+  // can create one pointing to the default block.
   ConstantInt *CaseVal =
       ConstantInt::get(SI->getContext(), Known.getConstant());
   const llvm::SwitchInst::CaseIt CaseIt = SI->findCaseValue(CaseVal);
-  if (CaseIt != SI->case_default()) {
-    createUnreachableSwitchDefault(SI, DTU, /*RemoveOrigDefaultBlock*/ false);
-    return true;
+  if (CaseIt == SI->case_default()) {
+    SwitchInstProfUpdateWrapper SIW(*SI);
+    SIW.addCase(CaseVal, Default, SIW.getSuccessorWeight(0));
+    SIW.setSuccessorWeight(0, 0);
   }
+  createUnreachableSwitchDefault(SI, DTU, /*RemoveOrigDefaultBlock*/ false);
 
-  // Otherwise, we can move the default branch into an explicit case branch.
-  SwitchInstProfUpdateWrapper SIW(*SI);
-  SIW.addCase(CaseVal, Default, SIW.getSuccessorWeight(0));
-  SIW.setSuccessorWeight(0, 0);
-  createUnreachableSwitchDefault(SI, DTU,
-                                 /*RemoveOrigDefaultBlock*/ false);
+  assert(SI->getNumCases() > 0 && "Switch should have at least one case");
+  assert(SI->findCaseValue(CaseVal) != SI->case_default() &&
+         "Proven value should have a dedicated case");
+  assert(SI->defaultDestUnreachable());
   return true;
 }
 
