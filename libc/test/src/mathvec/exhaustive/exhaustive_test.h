@@ -1,11 +1,17 @@
-//===-- Exhaustive tester for SIMD math functions -------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains exhaustive test logic for SIMD math functions.
+///
+//===----------------------------------------------------------------------===//
 
+#include "src/__support/CPP/limits.h"
 #include "src/__support/CPP/simd.h"
 #include "test/UnitTest/FPMatcher.h"
 
@@ -191,6 +197,21 @@ struct LlvmLibcExhaustiveMathvecTest
     test_full_range_RU(start, stop);
     test_full_range_RD(start, stop);
     test_full_range_RZ(start, stop);
+  }
+
+  static constexpr StorageType STORAGE_MAX =
+      LIBC_NAMESPACE::cpp::numeric_limits<StorageType>::max();
+
+  void test_full_range_RN() { test_full_range_RN(0, STORAGE_MAX); }
+
+  void test_full_range_RU() { test_full_range_RU(0, STORAGE_MAX); }
+
+  void test_full_range_RD() { test_full_range_RD(0, STORAGE_MAX); }
+
+  void test_full_range_RZ() { test_full_range_RZ(0, STORAGE_MAX); }
+
+  void test_full_range_all_roundings() {
+    test_full_range_all_roundings(0, STORAGE_MAX);
   }
 };
 

@@ -6,6 +6,279 @@ add_header_library(
     exhaustive_test.h
   DEPENDS
     libc.src.__support.CPP.simd
+    libc.src.__support.CPP.limits
+)
+
+add_fp_unittest(
+  acosf_test
+  NO_RUN_POSTBUILD
+  SUITE
+    libc-mathvec-exhaustivetests
+  SRCS
+    acosf_test.cpp
+  DEPENDS
+    .exhaustive_test
+    libc.src.math.acosf
+    libc.src.mathvec.acosf
+    libc.src.__support.CPP.simd
+  LINK_LIBRARIES
+    -lpthread
+)
+
+add_fp_unittest(
+  acoshf_test
+  NO_RUN_POSTBUILD
+  SUITE
+    libc-mathvec-exhaustivetests
+  SRCS
+    acoshf_test.cpp
+  DEPENDS
+    .exhaustive_test
+    libc.src.math.acoshf
+    libc.src.mathvec.acoshf
+    libc.src.__support.CPP.simd
+  LINK_LIBRARIES
+    -lpthread
+)
+
+add_fp_unittest(
+  acospif_test
+  NO_RUN_POSTBUILD
+  SUITE
+    libc-mathvec-exhaustivetests
+  SRCS
+    acospif_test.cpp
+  DEPENDS
+    .exhaustive_test
+    libc.src.math.acospif
+    libc.src.mathvec.acospif
+    libc.src.__support.CPP.simd
+  LINK_LIBRARIES
+    -lpthread
+)
+
+add_fp_unittest(
+  asinf_test
+  NO_RUN_POSTBUILD
+  SUITE
+    libc-mathvec-exhaustivetests
+  SRCS
+    asinf_test.cpp
+  DEPENDS
+    .exhaustive_test
+    libc.src.math.asinf
+    libc.src.mathvec.asinf
+    libc.src.__support.CPP.simd
+  LINK_LIBRARIES
+    -lpthread
+)
+
+add_fp_unittest(
+  asinhf_test
+  NO_RUN_POSTBUILD
+  SUITE
+    libc-mathvec-exhaustivetests
+  SRCS
+    asinhf_test.cpp
+  DEPENDS
+    .exhaustive_test
+    libc.src.math.asinhf
+    libc.src.mathvec.asinhf
+    libc.src.__support.CPP.simd
+  LINK_LIBRARIES
+    -lpthread
+)
+
+add_fp_unittest(
+  asinpif_test
+  NO_RUN_POSTBUILD
+  SUITE
+    libc-mathvec-exhaustivetests
+  SRCS
+    asinpif_test.cpp
+  DEPENDS
+    .exhaustive_test
+    libc.src.math.asinpif
+    libc.src.mathvec.asinpif
+    libc.src.__support.CPP.simd
+  LINK_LIBRARIES
+    -lpthread
+)
+
+add_fp_unittest(
+  atanf_test
+  NO_RUN_POSTBUILD
+  SUITE
+    libc-mathvec-exhaustivetests
+  SRCS
+    atanf_test.cpp
+  DEPENDS
+    .exhaustive_test
+    libc.src.math.atanf
+    libc.src.mathvec.atanf
+    libc.src.__support.CPP.simd
+  LINK_LIBRARIES
+    -lpthread
+)
+
+add_fp_unittest(
+  atanhf_test
+  NO_RUN_POSTBUILD
+  SUITE
+    libc-mathvec-exhaustivetests
+  SRCS
+    atanhf_test.cpp
+  DEPENDS
+    .exhaustive_test
+    libc.src.math.atanhf
+    libc.src.mathvec.atanhf
+    libc.src.__support.CPP.simd
+  LINK_LIBRARIES
+    -lpthread
+)
+
+add_fp_unittest(
+  cbrtf_test
+  NO_RUN_POSTBUILD
+  SUITE
+    libc-mathvec-exhaustivetests
+  SRCS
+    cbrtf_test.cpp
+  DEPENDS
+    .exhaustive_test
+    libc.src.math.cbrtf
+    libc.src.mathvec.cbrtf
+    libc.src.__support.CPP.simd
+  LINK_LIBRARIES
+    -lpthread
+)
+
+add_fp_unittest(
+  cosf_test
+  NO_RUN_POSTBUILD
+  SUITE
+    libc-mathvec-exhaustivetests
+  SRCS
+    cosf_test.cpp
+  DEPENDS
+    .exhaustive_test
+    libc.src.math.cosf
+    libc.src.mathvec.cosf
+    libc.src.__support.CPP.simd
+  LINK_LIBRARIES
+    -lpthread
+)
+
+add_fp_unittest(
+  coshf_test
+  NO_RUN_POSTBUILD
+  SUITE
+    libc-mathvec-exhaustivetests
+  SRCS
+    coshf_test.cpp
+  DEPENDS
+    .exhaustive_test
+    libc.src.math.coshf
+    libc.src.mathvec.coshf
+    libc.src.__support.CPP.simd
+  LINK_LIBRARIES
+    -lpthread
+)
+
+add_fp_unittest(
+  cospif_test
+  NO_RUN_POSTBUILD
+  SUITE
+    libc-mathvec-exhaustivetests
+  SRCS
+    cospif_test.cpp
+  DEPENDS
+    .exhaustive_test
+    libc.src.math.cospif
+    libc.src.mathvec.cospif
+    libc.src.__support.CPP.simd
+  LINK_LIBRARIES
+    -lpthread
+)
+
+add_fp_unittest(
+  erff_test
+  NO_RUN_POSTBUILD
+  SUITE
+    libc-mathvec-exhaustivetests
+  SRCS
+    erff_test.cpp
+  DEPENDS
+    .exhaustive_test
+    libc.src.math.erff
+    libc.src.mathvec.erff
+    libc.src.__support.CPP.simd
+  LINK_LIBRARIES
+    -lpthread
+)
+
+add_fp_unittest(
+  exp2f_test
+  NO_RUN_POSTBUILD
+  SUITE
+    libc-mathvec-exhaustivetests
+  SRCS
+    exp2f_test.cpp
+  DEPENDS
+    .exhaustive_test
+    libc.src.math.exp2f
+    libc.src.mathvec.exp2f
+    libc.src.__support.CPP.simd
+  LINK_LIBRARIES
+    -lpthread
+)
+
+add_fp_unittest(
+  exp2m1f_test
+  NO_RUN_POSTBUILD
+  SUITE
+    libc-mathvec-exhaustivetests
+  SRCS
+    exp2m1f_test.cpp
+  DEPENDS
+    .exhaustive_test
+    libc.src.math.exp2m1f
+    libc.src.mathvec.exp2m1f
+    libc.src.__support.CPP.simd
+  LINK_LIBRARIES
+    -lpthread
+)
+
+add_fp_unittest(
+  exp10f_test
+  NO_RUN_POSTBUILD
+  SUITE
+    libc-mathvec-exhaustivetests
+  SRCS
+    exp10f_test.cpp
+  DEPENDS
+    .exhaustive_test
+    libc.src.math.exp10f
+    libc.src.mathvec.exp10f
+    libc.src.__support.CPP.simd
+  LINK_LIBRARIES
+    -lpthread
+)
+
+add_fp_unittest(
+  exp10m1f_test
+  NO_RUN_POSTBUILD
+  SUITE
+    libc-mathvec-exhaustivetests
+  SRCS
+    exp10m1f_test.cpp
+  DEPENDS
+    .exhaustive_test
+    libc.src.math.exp10m1f
+    libc.src.mathvec.exp10m1f
+    libc.src.__support.CPP.simd
+  LINK_LIBRARIES
+    -lpthread
 )
 
 add_fp_unittest(
@@ -19,6 +292,214 @@ add_fp_unittest(
     .exhaustive_test
     libc.src.math.expf
     libc.src.mathvec.expf
+    libc.src.__support.CPP.simd
+  LINK_LIBRARIES
+    -lpthread
+)
+
+add_fp_unittest(
+  expm1f_test
+  NO_RUN_POSTBUILD
+  SUITE
+    libc-mathvec-exhaustivetests
+  SRCS
+    expm1f_test.cpp
+  DEPENDS
+    .exhaustive_test
+    libc.src.math.expm1f
+    libc.src.mathvec.expm1f
+    libc.src.__support.CPP.simd
+  LINK_LIBRARIES
+    -lpthread
+)
+
+add_fp_unittest(
+  log10f_test
+  NO_RUN_POSTBUILD
+  SUITE
+    libc-mathvec-exhaustivetests
+  SRCS
+    log10f_test.cpp
+  DEPENDS
+    .exhaustive_test
+    libc.src.math.log10f
+    libc.src.mathvec.log10f
+    libc.src.__support.CPP.simd
+  LINK_LIBRARIES
+    -lpthread
+)
+
+add_fp_unittest(
+  log1pf_test
+  NO_RUN_POSTBUILD
+  SUITE
+    libc-mathvec-exhaustivetests
+  SRCS
+    log1pf_test.cpp
+  DEPENDS
+    .exhaustive_test
+    libc.src.math.log1pf
+    libc.src.mathvec.log1pf
+    libc.src.__support.CPP.simd
+  LINK_LIBRARIES
+    -lpthread
+)
+
+add_fp_unittest(
+  log2f_test
+  NO_RUN_POSTBUILD
+  SUITE
+    libc-mathvec-exhaustivetests
+  SRCS
+    log2f_test.cpp
+  DEPENDS
+    .exhaustive_test
+    libc.src.math.log2f
+    libc.src.mathvec.log2f
+    libc.src.__support.CPP.simd
+  LINK_LIBRARIES
+    -lpthread
+)
+
+add_fp_unittest(
+  logf_test
+  NO_RUN_POSTBUILD
+  SUITE
+    libc-mathvec-exhaustivetests
+  SRCS
+    logf_test.cpp
+  DEPENDS
+    .exhaustive_test
+    libc.src.math.logf
+    libc.src.mathvec.logf
+    libc.src.__support.CPP.simd
+  LINK_LIBRARIES
+    -lpthread
+)
+
+add_fp_unittest(
+  rsqrtf_test
+  NO_RUN_POSTBUILD
+  SUITE
+    libc-mathvec-exhaustivetests
+  SRCS
+    rsqrtf_test.cpp
+  DEPENDS
+    .exhaustive_test
+    libc.src.math.rsqrtf
+    libc.src.mathvec.rsqrtf
+    libc.src.__support.CPP.simd
+  LINK_LIBRARIES
+    -lpthread
+)
+
+add_fp_unittest(
+  sinf_test
+  NO_RUN_POSTBUILD
+  SUITE
+    libc-mathvec-exhaustivetests
+  SRCS
+    sinf_test.cpp
+  DEPENDS
+    .exhaustive_test
+    libc.src.math.sinf
+    libc.src.mathvec.sinf
+    libc.src.__support.CPP.simd
+  LINK_LIBRARIES
+    -lpthread
+)
+
+add_fp_unittest(
+  sinhf_test
+  NO_RUN_POSTBUILD
+  SUITE
+    libc-mathvec-exhaustivetests
+  SRCS
+    sinhf_test.cpp
+  DEPENDS
+    .exhaustive_test
+    libc.src.math.sinhf
+    libc.src.mathvec.sinhf
+    libc.src.__support.CPP.simd
+  LINK_LIBRARIES
+    -lpthread
+)
+
+add_fp_unittest(
+  sinpif_test
+  NO_RUN_POSTBUILD
+  SUITE
+    libc-mathvec-exhaustivetests
+  SRCS
+    sinpif_test.cpp
+  DEPENDS
+    .exhaustive_test
+    libc.src.math.sinpif
+    libc.src.mathvec.sinpif
+    libc.src.__support.CPP.simd
+  LINK_LIBRARIES
+    -lpthread
+)
+
+add_fp_unittest(
+  sqrtf_test
+  NO_RUN_POSTBUILD
+  SUITE
+    libc-mathvec-exhaustivetests
+  SRCS
+    sqrtf_test.cpp
+  DEPENDS
+    .exhaustive_test
+    libc.src.math.sqrtf
+    libc.src.mathvec.sqrtf
+    libc.src.__support.CPP.simd
+  LINK_LIBRARIES
+    -lpthread
+)
+
+add_fp_unittest(
+  tanf_test
+  NO_RUN_POSTBUILD
+  SUITE
+    libc-mathvec-exhaustivetests
+  SRCS
+    tanf_test.cpp
+  DEPENDS
+    .exhaustive_test
+    libc.src.math.tanf
+    libc.src.mathvec.tanf
+    libc.src.__support.CPP.simd
+  LINK_LIBRARIES
+    -lpthread
+)
+
+add_fp_unittest(
+  tanhf_test
+  NO_RUN_POSTBUILD
+  SUITE
+    libc-mathvec-exhaustivetests
+  SRCS
+    tanhf_test.cpp
+  DEPENDS
+    .exhaustive_test
+    libc.src.math.tanhf
+    libc.src.mathvec.tanhf
+    libc.src.__support.CPP.simd
+  LINK_LIBRARIES
+    -lpthread
+)
+
+add_fp_unittest(
+  tanpif_test
+  NO_RUN_POSTBUILD
+  SUITE
+    libc-mathvec-exhaustivetests
+  SRCS
+    tanpif_test.cpp
+  DEPENDS
+    .exhaustive_test
+    libc.src.math.tanpif
+    libc.src.mathvec.tanpif
     libc.src.__support.CPP.simd
   LINK_LIBRARIES
     -lpthread
