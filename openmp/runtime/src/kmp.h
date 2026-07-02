@@ -4446,6 +4446,10 @@ extern kmp_int32 __kmp_omp_task(kmp_int32 gtid, kmp_task_t *new_task,
 extern kmp_int32 __kmp_build_taskgraph(kmp_int32 gtid,
                                        kmp_taskdata_t *current_taskdata,
                                        kmp_taskgraph_record_t *taskgraph);
+extern void __kmp_region_deplist_free(kmp_info_t *thread,
+                                      kmp_taskgraph_region_dep_t *list);
+extern void __kmp_region_deplist_recycle(kmp_taskgraph_region_dep_t **recycled,
+                                         kmp_taskgraph_region_dep_t *list);
 // True if the user asked for tracing of taskgraph structure and replay via the
 // KMP_TASKGRAPH_TRACE environment variable.
 extern bool __kmp_taskgraph_trace();
