@@ -16101,7 +16101,7 @@ static QualType getObjectType(APValue::LValueBase B) {
     if (const VarDecl *VD = dyn_cast<VarDecl>(D))
       return VD->getType();
   } else if (const Expr *E = B.dyn_cast<const Expr*>()) {
-    if (isa<CompoundLiteralExpr>(E))
+    if (isa<CompoundLiteralExpr>(E) || isa<StringLiteral>(E))
       return E->getType();
   } else if (B.is<TypeInfoLValue>()) {
     return B.getTypeInfoType();
