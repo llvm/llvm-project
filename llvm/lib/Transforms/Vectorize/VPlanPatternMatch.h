@@ -1077,7 +1077,17 @@ inline auto m_WidenIntrinsic(const T &...Ops) {
   return m_Isa<VPWidenIntrinsicRecipe>(m_Intrinsic<IntrID>(Ops...));
 }
 
-inline auto m_LiveIn() { return m_Isa<VPIRValue, VPSymbolicValue>(); }
+/// Match VPValues that represent live-ins: VPIRValues and (plain)
+/// VPSymbolicValues. VPRegionValues (which inherit from VPSymbolicValue) are
+/// not live-ins and are excluded.
+struct LiveIn_match {
+  template <typename ITy> bool match(ITy *V) const {
+    return isa<VPIRValue>(V) ||
+           (isa<VPSymbolicValue>(V) && !isa<VPRegionValue>(V));
+  }
+};
+
+inline LiveIn_match m_LiveIn() { return {}; }
 
 /// Match a GEP recipe (VPWidenGEPRecipe, VPInstruction, or VPReplicateRecipe)
 /// and bind the source element type and operands.
