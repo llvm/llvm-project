@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 --std=c++20 -fsyntax-only -verify -Wdangling-capture %s
+// RUN: %clang_cc1 --std=c++20 -fsyntax-only -Wno-dangling -verify=cfg -Wlifetime-safety %s
 
 #include "Inputs/lifetime-analysis.h"
 
@@ -11,13 +12,28 @@ void captureInt(const int &i [[clang::lifetime_capture_by(x)]], X &x);
 void captureRValInt(int &&i [[clang::lifetime_capture_by(x)]], X &x);
 void noCaptureInt(int i [[clang::lifetime_capture_by(x)]], X &x);
 
-void use() {
-  int local;
-  captureInt(1, // expected-warning {{object whose reference is captured by 'x' will be destroyed at the end of the full-expression}}
-            x);
-  captureRValInt(1, x); // expected-warning {{object whose reference is captured by 'x' will be destroyed at the end of the full-expression}}
-  captureInt(local, x);
+void temporary_int_capture() {
+  captureInt(1,x); // expected-warning {{object whose reference is captured by 'x' will be destroyed at the end of the full-expression}} \
+                   // cfg-warning {{temporary object does not live long enough}} \
+                   // cfg-note {{destroyed here}}
+  (void)x;         // cfg-note {{later used here}} 
+  captureRValInt(1, x); // expected-warning {{object whose reference is captured by 'x' will be destroyed at the end of the full-expression}} \
+                        // cfg-warning {{temporary object does not live long enough}} \
+                        // cfg-note {{destroyed here}}
+( void)x;               // cfg-note {{later used here}} 
+}
+
+void local_int_capture() {
+  {
+    int local;
+    captureInt(local, x); // cfg-warning {{local variable 'local' does not live long enough}}
+  }                       // cfg-note {{destroyed here}}
+  (void)x;                // cfg-note {{later used here}} 
+}
+
+void safe_int_captures() {
   noCaptureInt(1, x);
+  int local;
   noCaptureInt(local, x);
 }
 } // namespace capture_int
@@ -29,13 +45,33 @@ namespace capture_string {
 struct X {} x;
 void captureString(const std::string &s [[clang::lifetime_capture_by(x)]], X &x);
 void captureRValString(std::string &&s [[clang::lifetime_capture_by(x)]], X &x);
+void noCaptureString(std::string s [[clang::lifetime_capture_by(x)]], X &x);
 
-void use() {
-  std::string local_string;
-  captureString(std::string(), x); // expected-warning {{object whose reference is captured by 'x' will be destroyed at the end of the full-expression}}
-  captureString(local_string, x);
-  captureRValString(std::move(local_string), x);
-  captureRValString(std::string(), x); // expected-warning {{object whose reference is captured by 'x' will be destroyed at the end of the full-expression}}
+void temporary_string_capture() {
+  captureString(std::string(), x); // expected-warning {{object whose reference is captured by 'x' will be destroyed at the end of the full-expression}} \
+                                   // cfg-warning {{temporary object does not live long enough}} \
+                                   // cfg-note {{destroyed here}}
+  (void)x;                         // cfg-note {{later used here}}
+  captureRValString(std::string(), x); // expected-warning {{object whose reference is captured by 'x' will be destroyed at the end of the full-expression}} \
+                                       // cfg-warning {{temporary object does not live long enough}} \
+                                       // cfg-note {{destroyed here}}
+  (void)x;                             // cfg-note {{later used here}}   
+}
+
+void local_string_capture() {
+  {
+    std::string local_string1, local_string2;
+    captureString(local_string1, x);                // cfg-warning {{local variable 'local_string1' does not live long enough}}
+    captureRValString(std::move(local_string2), x); // cfg-warning {{local variable 'local_string2' does not live long enough}} \
+                                    // cfg-note {{result of call to 'move<std::basic_string<char> &>' aliases the storage of local variable 'local_string2'}}
+  }                                 // cfg-note 2 {{destroyed here}}                                 
+  (void)x;                          // cfg-note 2 {{later used here}}                         
+}
+
+void safe_string_captures() {
+  noCaptureString(std::string(), x);
+  std::string local;
+  noCaptureString(local, x);
 }
 } // namespace capture_string
 
@@ -53,35 +89,78 @@ std::string_view getNotLifetimeBoundView(const std::string& s);
 const std::string& getLifetimeBoundString(const std::string &s [[clang::lifetimebound]]);
 const std::string& getLifetimeBoundString(std::string_view sv [[clang::lifetimebound]]);
 
-void use() {
+void temporary_string_capture() {
+  captureStringView(std::string(), x); // expected-warning {{object whose reference is captured by 'x' will be destroyed at the end of the full-expression}} \
+                                       // cfg-warning {{temporary object does not live long enough}} \
+                                       // cfg-note {{destroyed here}}
+  (void)x;                             // cfg-note {{later used here}}       
+  captureRValStringView(std::string(), x); // expected-warning {{object whose reference is captured by 'x' will be destroyed at the end of the full-expression}} \
+                                           // cfg-warning {{temporary object does not live long enough}} \
+                                           // cfg-note {{destroyed here}}
+  (void)x;                                 // cfg-note {{later used here}}                                                      
+}
+
+void local_string_capture() {
+  {
+    std::string local_string;
+    captureStringView(getLifetimeBoundView(local_string), x);  // cfg-warning {{local variable 'local_string' does not live long enough}} \
+                                                               // cfg-note {{result of call to 'getLifetimeBoundView' aliases the storage of local variable 'local_string'}}
+  }                                                            // cfg-note {{destroyed here}}
+  (void)x;      // cfg-note {{later used here}}
+}
+
+// Lifetimebound captures
+void temporary_string_view_lifetimebound_capture() {
+  captureStringView(getLifetimeBoundView( // cfg-note {{result of call to 'getLifetimeBoundView' aliases the storage of temporary object}}
+  std::string()), x);                     // expected-warning {{object whose reference is captured by 'x' will be destroyed at the end of the full-expression}} \
+                                          // cfg-warning {{temporary object does not live long enough}} \
+                                          // cfg-note {{destroyed here}}
+  (void)x;                                // cfg-note {{later used here}}
+  captureStringView(getLifetimeBoundString(std::string()), x);   // expected-warning {{object whose reference is captured by 'x' will be destroyed at the end of the full-expression}} \
+                                                                 // cfg-warning {{temporary object does not live long enough}} \
+                                                                 // cfg-note {{destroyed here}} \
+                                                                 // cfg-note {{result of call to 'getLifetimeBoundString' aliases the storage of temporary object}}
+  (void)x;                                                       // cfg-note {{later used here}}
+  captureRValStringView(getLifetimeBoundView(std::string()), x); // expected-warning {{object whose reference is captured by 'x' will be destroyed at the end of the full-expression}} \
+                                                                 // cfg-warning {{temporary object does not live long enough}} \
+                                                                 // cfg-note {{result of call to 'getLifetimeBoundView' aliases the storage of temporary object}} \
+                                                                 // cfg-note {{destroyed here}}
+  (void)x;                                                       // cfg-note {{later used here}}                                                               
+}
+
+void local_string_lifetimebound_capture() {
+ {
+    std::string local_string;
+    captureRValStringView(getLifetimeBoundView(local_string), x); // cfg-warning {{local variable 'local_string' does not live long enough}} \
+                                                                  // cfg-note {{result of call to 'getLifetimeBoundView' aliases the storage of local variable 'local_string'}}                                                                                                                        
+ }                                                                // cfg-note {{destroyed here}}
+ (void)x;                                                         // cfg-note {{later used here}}
+}
+
+void temporary_nested_lifetimebound_capture() {
+  captureStringView(getLifetimeBoundString(getLifetimeBoundView(std::string())), x); // expected-warning {{object whose reference is captured by 'x' will be destroyed at the end of the full-expression}} \
+                                                                                     // cfg-warning {{temporary object does not live long enough}} \
+                                                                                     // cfg-note {{destroyed here}} \
+                                                                                     // cfg-note {{result of call to 'getLifetimeBoundView' aliases the storage of temporary object}} \
+                                                                                     // cfg-note {{result of call to 'getLifetimeBoundString' aliases the storage of temporary object}}
+  (void)x;                                                                           // cfg-note {{later used here}}
+  captureStringView(getLifetimeBoundString(getLifetimeBoundString(                   // cfg-note 2 {{result of call to 'getLifetimeBoundString' aliases the storage of temporary object}}
+    std::string())), x);  // expected-warning {{object whose reference is captured by 'x' will be destroyed at the end of the full-expression}} \
+                          // cfg-warning {{temporary object does not live long enough}} \
+                          // cfg-note {{destroyed here}}
+  (void)x;                // cfg-note {{later used here}}
+}
+
+void safe_captures() {
   std::string_view local_string_view;
-  std::string local_string;
   captureStringView(local_string_view, x);
-  captureStringView(std::string(), // expected-warning {{object whose reference is captured by 'x' will be destroyed at the end of the full-expression}}
-            x);
-
-  captureStringView(getLifetimeBoundView(local_string), x);
-  captureStringView(getNotLifetimeBoundView(std::string()), x);
   captureRValStringView(std::move(local_string_view), x);
-  captureRValStringView(std::string(), x); // expected-warning {{object whose reference is captured by 'x' will be destroyed at the end of the full-expression}}
-  captureRValStringView(std::string_view{"abcd"}, x);
-
+  captureRValStringView(std::string_view{"abcd"}, x);    
+  captureStringView(getNotLifetimeBoundView(std::string()), x);
+  captureRValStringView(getNotLifetimeBoundView(std::string()), x);
   noCaptureStringView(local_string_view, x);
   noCaptureStringView(std::string(), x);
-
-  // With lifetimebound functions.
-  captureStringView(getLifetimeBoundView(
-  std::string() // expected-warning {{object whose reference is captured by 'x' will be destroyed at the end of the full-expression}}
-  ), x);
-  captureRValStringView(getLifetimeBoundView(local_string), x);
-  captureRValStringView(getLifetimeBoundView(std::string()), x); // expected-warning {{object whose reference is captured by 'x' will be destroyed at the end of the full-expression}}
-  captureRValStringView(getNotLifetimeBoundView(std::string()), x);
   noCaptureStringView(getLifetimeBoundView(std::string()), x);
-  captureStringView(getLifetimeBoundString(std::string()), x); // expected-warning {{object whose reference is captured by 'x' will be destroyed at the end of the full-expression}}
-  captureStringView(getLifetimeBoundString(getLifetimeBoundView(std::string())), x); // expected-warning {{object whose reference is captured by 'x' will be destroyed at the end of the full-expression}}
-  captureStringView(getLifetimeBoundString(getLifetimeBoundString(
-    std::string()  // expected-warning {{object whose reference is captured by 'x' will be destroyed at the end of the full-expression}}
-    )), x);
 }
 } // namespace capture_string_view
 
@@ -92,15 +171,25 @@ const std::string* getLifetimeBoundPointer(const std::string &s [[clang::lifetim
 const std::string* getNotLifetimeBoundPointer(const std::string &s);
 
 namespace capture_pointer {
-struct X {} x;
+struct X {} x;   // cfg-note {{this global dangles}}
 void capturePointer(const std::string* sp [[clang::lifetime_capture_by(x)]], X &x);
-void use() {
-  capturePointer(getLifetimeBoundPointer(std::string()), x); // expected-warning {{object whose reference is captured by 'x' will be destroyed at the end of the full-expression}}
-  capturePointer(getLifetimeBoundPointer(*getLifetimeBoundPointer(
-    std::string()  // expected-warning {{object whose reference is captured by 'x' will be destroyed at the end of the full-expression}}
-    )), x);
-  capturePointer(getNotLifetimeBoundPointer(std::string()), x);
 
+void temporary_pointer_lifetimebound_capture() {
+  capturePointer(getLifetimeBoundPointer(std::string()), x); // expected-warning {{object whose reference is captured by 'x' will be destroyed at the end of the full-expression}} \
+                                                             // cfg-warning {{temporary object does not live long enough}} \
+                                                             // cfg-note {{destroyed here}} \
+                                                             // cfg-note {{result of call to 'getLifetimeBoundPointer' aliases the storage of temporary object}}
+  (void)x;                                                   // cfg-note {{later used here}}
+}
+
+void temporary_nested_lifetimebound_capture() {
+  capturePointer(getLifetimeBoundPointer(*getLifetimeBoundPointer(
+    std::string())), x);  // expected-warning {{object whose reference is captured by 'x' will be destroyed at the end of the full-expression}} \
+                          // cfg-warning {{stack memory associated with temporary object escapes to the global variable 'x' which will dangle}}
+}
+
+void safe_capture() {
+  capturePointer(getNotLifetimeBoundPointer(std::string()), x);
 }
 } // namespace capture_pointer
 
@@ -108,23 +197,41 @@ void use() {
 // Arrays and initializer lists.
 // ****************************************************************************
 namespace init_lists {
-struct X {} x;
+struct X {} x;    // cfg-note {{this global dangles}}
 void captureVector(const std::vector<int> &a [[clang::lifetime_capture_by(x)]], X &x);
 void captureArray(int array [[clang::lifetime_capture_by(x)]] [2], X &x);
 void captureInitList(std::initializer_list<int> abc [[clang::lifetime_capture_by(x)]], X &x);
 
-
 std::initializer_list<int> getLifetimeBoundInitList(std::initializer_list<int> abc [[clang::lifetimebound]]);
 
-void use() {
-  captureVector({1, 2, 3}, x); // expected-warning {{object whose reference is captured by 'x' will be destroyed at the end of the full-expression}}
-  captureVector(std::vector<int>{}, x); // expected-warning {{object whose reference is captured by 'x' will be destroyed at the end of the full-expression}}
-  std::vector<int> local_vector;
-  captureVector(local_vector, x);
+void temporary_vector_capture() {
+  captureVector({1, 2, 3}, x); // expected-warning {{object whose reference is captured by 'x' will be destroyed at the end of the full-expression}} \
+                               // cfg-warning {{temporary object does not live long enough}} \
+                               // cfg-note {{destroyed here}}
+  (void)x;                     // cfg-note {{later used here}}       
+  captureVector(std::vector<int>{}, x); // expected-warning {{object whose reference is captured by 'x' will be destroyed at the end of the full-expression}} \
+                                        // cfg-warning {{temporary object does not live long enough}} \
+                                        // cfg-note {{destroyed here}}
+  (void)x;                              // cfg-note {{later used here}}        
+}
+
+void local_vector_capture() {
+  {
+    std::vector<int> local_vector;
+    captureVector(local_vector, x);    // cfg-warning {{local variable 'local_vector' does not live long enough}}
+  }                                    // cfg-note {{destroyed here}}
+  (void)x;                             // cfg-note {{later used here}}
+}
+
+void local_array_capture() {
   int local_array[2]; 
-  captureArray(local_array, x);
+  captureArray(local_array, x);      // cfg-warning {{stack memory associated with local variable 'local_array' escapes to the global variable 'x' which will dangle}}
+}
+
+// FIXME: Add support for initializer lists in -Wlifetime-safety
+void initializer_list_capture() {
   captureInitList({1, 2}, x); // expected-warning {{object whose reference is captured by 'x' will be destroyed at the end of the full-expression}}
-  captureInitList(getLifetimeBoundInitList({1, 2}), x); // expected-warning {{object whose reference is captured by 'x' will be destroyed at the end of the full-expression}}
+  captureInitList(getLifetimeBoundInitList({1, 2}), x); // expected-warning {{object whose reference is captured by 'x' will be destroyed at the end of the full-expression}}                                
 }
 } // namespace init_lists
 
@@ -136,6 +243,8 @@ struct X {} x;
 struct S {
   void capture(X &x) [[clang::lifetime_capture_by(x)]];
 };
+
+// FIXME: Add support for capture of method declarations in -Wlifetime-safety
 void use() {
   S{}.capture(x); // expected-warning {{object whose reference is captured by 'x' will be destroyed at the end of the full-expression}}
   S s;
@@ -166,6 +275,7 @@ void captureByUnknown(std::string_view s [[clang::lifetime_capture_by(unknown)]]
 
 std::string_view getLifetimeBoundView(const std::string& s [[clang::lifetimebound]]);
 
+// FIXME: Add support for capture by global and unknown in -Wlifetime-safety
 void use() {  
   std::string_view local_string_view;
   std::string local_string;
@@ -195,12 +305,30 @@ std::string_view getLifetimeBoundView(const std::string& s [[clang::lifetimeboun
 std::string_view getNotLifetimeBoundView(const std::string& s);
 const std::string& getLifetimeBoundString(const std::string &s [[clang::lifetimebound]]);
 
-void use() {
+void temporary_capture_by_this() {
   S s;
-  s.captureInt(1); // expected-warning {{object whose reference is captured by 's' will be destroyed at the end of the full-expression}}
-  s.captureView(std::string()); // expected-warning {{object whose reference is captured by 's' will be destroyed at the end of the full-expression}}
-  s.captureView(getLifetimeBoundView(std::string())); // expected-warning {{object whose reference is captured by 's' will be destroyed at the end of the full-expression}}
-  s.captureView(getLifetimeBoundString(std::string()));  // expected-warning {{object whose reference is captured by 's' will be destroyed at the end of the full-expression}}
+  s.captureInt(1); // expected-warning {{object whose reference is captured by 's' will be destroyed at the end of the full-expression}} \
+                   // cfg-warning {{temporary object does not live long enough}} \
+                   // cfg-note {{destroyed here}}
+  (void)s;         // cfg-note {{later used here}}       
+  s.captureView(std::string()); // expected-warning {{object whose reference is captured by 's' will be destroyed at the end of the full-expression}} \
+                                // cfg-warning {{temporary object does not live long enough}} \
+                                // cfg-note {{destroyed here}}
+  (void)s;                      // cfg-note {{later used here}}                              
+}
+
+void lifetimebound_capture_by_this() {
+  S s;
+  s.captureView(getLifetimeBoundView(std::string()));    // expected-warning {{object whose reference is captured by 's' will be destroyed at the end of the full-expression}} \
+                                                         // cfg-warning {{temporary object does not live long enough}} \
+                                                         // cfg-note {{destroyed here}} \
+                                                         // cfg-note {{esult of call to 'getLifetimeBoundView' aliases the storage of temporary object}}
+  (void)s;                                               // cfg-note {{later used here}}         
+  s.captureView(getLifetimeBoundString(std::string()));  // expected-warning {{object whose reference is captured by 's' will be destroyed at the end of the full-expression}} \
+                                                         // cfg-warning {{temporary object does not live long enough}} \
+                                                         // cfg-note {{destroyed here}} \
+                                                         // cfg-note {{result of call to 'getLifetimeBoundString' aliases the storage of temporary object}}
+  (void)s;                                               // cfg-note {{later used here}}        
   s.captureView(getNotLifetimeBoundView(std::string()));
 }  
 } // namespace capture_by_this
@@ -253,10 +381,18 @@ struct MySet {
 };
 void user_defined_containers() {
   MySet<int> set_of_int;
-  set_of_int.insert(1); // expected-warning {{object whose reference is captured by 'set_of_int' will be destroyed at the end of the full-expression}}
+  set_of_int.insert(1); // expected-warning {{object whose reference is captured by 'set_of_int' will be destroyed at the end of the full-expression}} \
+                        // cfg-warning {{temporary object does not live long enough}} \
+                        // cfg-note {{destroyed here}}
+  (void)set_of_int;     // cfg-note {{later used here}}                   
   MySet<std::string_view> set_of_sv;
-  set_of_sv.insert(std::string());  // expected-warning {{object whose reference is captured by 'set_of_sv' will be destroyed at the end of the full-expression}}
+  set_of_sv.insert(std::string());       // expected-warning {{object whose reference is captured by 'set_of_sv' will be destroyed at the end of the full-expression}} \
+                                         // cfg-warning {{temporary object does not live long enough}} \
+                                         // cfg-note {{destroyed here}}
+  (void)set_of_sv;                       // cfg-note {{later used here}}                
   set_of_sv.insert(std::string_view());
+  (void)set_of_sv;                                             
+                                    
 }
 } // namespace containers_no_distinction
 
@@ -285,14 +421,31 @@ void use_container() {
   vector_of_string.push_back(std::string()); // Ok.
   
   MyVector<std::string_view> vector_of_view;
-  vector_of_view.push_back(std::string()); // expected-warning {{object whose reference is captured by 'vector_of_view' will be destroyed at the end of the full-expression}}
-  vector_of_view.push_back(getLifetimeBoundView(std::string())); // expected-warning {{object whose reference is captured by 'vector_of_view' will be destroyed at the end of the full-expression}}
-  
+  vector_of_view.push_back(std::string()); // expected-warning {{object whose reference is captured by 'vector_of_view' will be destroyed at the end of the full-expression}} \
+                                           // cfg-warning {{temporary object does not live long enough}} \
+                                           // cfg-note {{destroyed here}}
+  (void)vector_of_view;                    // cfg-note {{later used here}}
+  vector_of_view.push_back(getLifetimeBoundView(std::string())); // expected-warning {{object whose reference is captured by 'vector_of_view' will be destroyed at the end of the full-expression}} \
+                                                                 // cfg-warning {{temporary object does not live long enough}} \
+                                                                 // cfg-note {{destroyed here}} \
+                                                                 // cfg-note {{result of call to 'getLifetimeBoundView' aliases the storage of temporary object}}
+  (void)vector_of_view;                                          // cfg-note {{later used here}}
+
   MyVector<const std::string*> vector_of_pointer;
-  vector_of_pointer.push_back(getLifetimeBoundPointer(std::string())); // expected-warning {{object whose reference is captured by 'vector_of_pointer' will be destroyed at the end of the full-expression}}
-  vector_of_pointer.push_back(getLifetimeBoundPointer(*getLifetimeBoundPointer(std::string()))); // expected-warning {{object whose reference is captured by 'vector_of_pointer' will be destroyed at the end of the full-expression}}
-  vector_of_pointer.push_back(getLifetimeBoundPointer(local));
-  vector_of_pointer.push_back(getNotLifetimeBoundPointer(std::string()));
+  vector_of_pointer.push_back(getLifetimeBoundPointer(std::string())); // expected-warning {{object whose reference is captured by 'vector_of_pointer' will be destroyed at the end of the full-expression}} \
+                                                                       // cfg-warning {{temporary object does not live long enough}} \
+                                                                       // cfg-note {{destroyed here}}
+  (void)vector_of_pointer;                                             // cfg-note {{later used here}}
+  vector_of_pointer.push_back(getLifetimeBoundPointer(*getLifetimeBoundPointer(std::string()))); // expected-warning {{object whose reference is captured by 'vector_of_pointer' will be destroyed at the end of the full-expression}} \
+                                                                                                 // cfg-warning {{temporary object does not live long enough}} \
+                                                                                                 // cfg-note {{destroyed here}}
+  (void)vector_of_pointer;                                                                       // cfg-note {{later used here}}
+  vector_of_pointer.push_back(getLifetimeBoundPointer(local));              // cfg-warning {{temporary object does not live long enough}} \
+                                                                            // cfg-note {{destroyed here}}
+  (void)vector_of_pointer;                                                  // cfg-note {{later used here}}
+  vector_of_pointer.push_back(getNotLifetimeBoundPointer(std::string()));   // cfg-warning {{temporary object does not live long enough}} \
+                                                                            // cfg-note {{destroyed here}}
+  (void)vector_of_pointer;                                                  // cfg-note {{later used here}}
 }
 
 // ****************************************************************************
@@ -324,17 +477,35 @@ void use_my_view() {
   std::string local;
   MyVector<MyStringView> vector_of_my_view;
   vector_of_my_view.push_back(getMySV());
+  (void)vector_of_my_view;
   vector_of_my_view.push_back(MyStringView{});
+  (void)vector_of_my_view;
   vector_of_my_view.push_back(std::string_view{});
-  vector_of_my_view.push_back(std::string{}); // expected-warning {{object whose reference is captured by 'vector_of_my_view' will be destroyed at the end of the full-expression}}
-  vector_of_my_view.push_back(getLifetimeBoundView(std::string{})); // expected-warning {{object whose reference is captured by 'vector_of_my_view' will be destroyed at the end of the full-expression}}
-  vector_of_my_view.push_back(getLifetimeBoundString(getLifetimeBoundView(std::string{}))); // expected-warning {{object whose reference is captured by 'vector_of_my_view' will be destroyed at the end of the full-expression}}
+  (void)vector_of_my_view;
+  vector_of_my_view.push_back(std::string{});       // expected-warning {{object whose reference is captured by 'vector_of_my_view' will be destroyed at the end of the full-expression}} \
+                                                    // cfg-warning {{temporary object does not live long enough}} \
+                                                    // cfg-note {{destroyed here}}
+  (void)vector_of_my_view;                          // cfg-note {{later used here}}                                            
+  vector_of_my_view.push_back(getLifetimeBoundView(std::string{})); // expected-warning {{object whose reference is captured by 'vector_of_my_view' will be destroyed at the end of the full-expression}} \
+                                                    // cfg-warning {{temporary object does not live long enough}} \
+                                                    // cfg-note {{destroyed here}} \
+                                                    // cfg-note {{result of call to 'getLifetimeBoundView' aliases the storage of temporary object}}
+  (void)vector_of_my_view;                          // cfg-note {{later used here}}                                                   
+  vector_of_my_view.push_back(getLifetimeBoundString(getLifetimeBoundView(std::string{}))); // expected-warning {{object whose reference is captured by 'vector_of_my_view' will be destroyed at the end of the full-expression}} \
+                                                    // cfg-warning {{temporary object does not live long enough}} \
+                                                    // cfg-note {{destroyed here}} \
+                                                    // cfg-note {{esult of call to 'getLifetimeBoundView' aliases the storage of temporary object}} \
+                                                    // cfg-note {{result of call to 'getLifetimeBoundString' aliases the storage of temporary object}}
+  (void)vector_of_my_view;                          // cfg-note {{later used here}}                                                    
   vector_of_my_view.push_back(getNotLifetimeBoundView(getLifetimeBoundString(getLifetimeBoundView(std::string{}))));
+  (void)vector_of_my_view;
   
   // Use with container of other view types.
   MyVector<std::string_view> vector_of_view;
   vector_of_view.push_back(getMySV());
+  (void)vector_of_view;
   vector_of_view.push_back(getMySVNotP());
+  (void)vector_of_view;
 }
 
 // ****************************************************************************
@@ -345,10 +516,15 @@ void use_with_optional_view() {
 
   std::optional<std::string_view> optional_of_view;
   vector_of_view.push_back(optional_of_view.value());
-  vector_of_view.push_back(getOptionalS().value()); // expected-warning {{object whose reference is captured by 'vector_of_view' will be destroyed at the end of the full-expression}}
-  
+  vector_of_view.push_back(getOptionalS().value());      // expected-warning {{object whose reference is captured by 'vector_of_view' will be destroyed at the end of the full-expression}} \
+                                                         // cfg-warning {{temporary object does not live long enough}} \
+                                                         // cfg-note {{destroyed here}} \
+                                                         // cfg-note {{result of call to 'value' aliases the storage of temporary object}}                                                         
+  (void)vector_of_view;                                  // cfg-note {{later used here}}  
   vector_of_view.push_back(getOptionalSV().value());
+  (void)vector_of_view;
   vector_of_view.push_back(getOptionalMySV().value());
+  (void)vector_of_view;
   vector_of_view.push_back(getOptionalMySVNotP().value());
 }
 } // namespace conatiners_with_different
@@ -366,18 +542,29 @@ void capture3(const std::string_view& s [[clang::lifetime_capture_by(x)]], std::
 
 void use() {
   std::vector<std::string_view> x1;
-  capture1(std::string(), x1); // expected-warning {{object whose reference is captured by 'x1' will be destroyed at the end of the full-expression}}
+  capture1(std::string(), x1); // expected-warning {{object whose reference is captured by 'x1' will be destroyed at the end of the full-expression}} \
+                               // cfg-warning {{temporary object does not live long enough}} \
+                               // cfg-note {{destroyed here}}
+  (void)x1;                    // cfg-note {{later used here}}
   capture1(std::string_view(), x1);
 
   std::vector<std::string_view*> x2;
   // Clang considers 'const std::string_view&' to refer to the owner
   // 'std::string' and not 'std::string_view'. Therefore no diagnostic here.
   capture2(std::string_view(), x2);
-  capture2(std::string(), x2); // expected-warning {{object whose reference is captured by 'x2' will be destroyed at the end of the full-expression}}
+  (void)x2;
+  capture2(std::string(), x2);       // expected-warning {{object whose reference is captured by 'x2' will be destroyed at the end of the full-expression}} \
+                                     // cfg-warning {{temporary object does not live long enough}} \
+                                     // cfg-note {{destroyed here}}
+  (void)x2;                          // cfg-note {{later used here}}
   
   std::vector<std::string_view> x3;
   capture3(std::string_view(), x3);
-  capture3(std::string(), x3); // expected-warning {{object whose reference is captured by 'x3' will be destroyed at the end of the full-expression}}
+  (void)x3;      
+  capture3(std::string(), x3);       // expected-warning {{object whose reference is captured by 'x3' will be destroyed at the end of the full-expression}} \
+                                     // cfg-warning {{temporary object does not live long enough}}  \
+                                     // cfg-note {{destroyed here}}
+  (void)x3;                          // cfg-note {{later used here}}       
 }
 } // namespace temporary_views
 
@@ -391,23 +578,42 @@ const std::string* getNotLifetimeBoundPointer(const std::string &s);
 std::string_view getLifetimeBoundView(const std::string& s [[clang::lifetimebound]]);
 std::string_view getNotLifetimeBoundView(const std::string& s);
 void use() {
-  std::string local;
   std::vector<std::string_view> views;
-  views.push_back(std::string()); // expected-warning {{object whose reference is captured by 'views' will be destroyed at the end of the full-expression}}
+  views.push_back(std::string()); // expected-warning {{object whose reference is captured by 'views' will be destroyed at the end of the full-expression}} \
+                                  // cfg-warning {{temporary object does not live long enough}} \
+                                  // cfg-note {{destroyed here}}
+  (void)views;                    // cfg-note {{later used here}}             
   views.insert(views.begin(), 
-            std::string()); // expected-warning {{object whose reference is captured by 'views' will be destroyed at the end of the full-expression}}
-  views.push_back(getLifetimeBoundView(std::string())); // expected-warning {{object whose reference is captured by 'views' will be destroyed at the end of the full-expression}}
+            std::string());       // expected-warning {{object whose reference is captured by 'views' will be destroyed at the end of the full-expression}} \
+                                  // cfg-warning {{temporary object does not live long enough}} \
+                                  // cfg-note {{destroyed here}}
+  (void)views;                    // cfg-note {{later used here}}                             
+  views.push_back(getLifetimeBoundView(std::string()));    // expected-warning {{object whose reference is captured by 'views' will be destroyed at the end of the full-expression}} \
+                                                           // cfg-warning {{temporary object does not live long enough}} \
+                                                           // cfg-note {{destroyed here}} \
+                                                           // cfg-note {{result of call to 'getLifetimeBoundView' aliases the storage of temporary object}}
+  (void)views;                                             // cfg-note {{later used here}}                                                             
   views.push_back(getNotLifetimeBoundView(std::string()));
-  views.push_back(local);
-  views.insert(views.end(), local);
+  (void)views;
+  {
+      std::string local1, local2;
+      views.push_back(local1);    // cfg-warning {{local variable 'local1' does not live long enough}}
+      (void)views;       
+      views.insert(views.end(), local2);  // cfg-warning {{local variable 'local2' does not live long enough}}
+  }                                       // cfg-note 2 {{destroyed here}}                                       
+  (void)views;                            // cfg-note 2 {{later used here}}
 
   std::vector<std::string> strings;
   strings.push_back(std::string());
+  (void)views;
   strings.insert(strings.begin(), std::string());
 
   std::vector<const std::string*> pointers;
   pointers.push_back(getLifetimeBoundPointer(std::string()));
+  (void)views;
+  std::string local;
   pointers.push_back(&local);
+  (void)views;
 }
 
 namespace with_span {
@@ -419,9 +625,15 @@ struct [[gsl::Pointer]] Span {
 
 void use() {
   std::vector<Span<int>> spans;
-  spans.push_back(std::vector<int>{1, 2, 3}); // expected-warning {{object whose reference is captured by 'spans' will be destroyed at the end of the full-expression}}
-  std::vector<int> local;
-  spans.push_back(local);
+  spans.push_back(std::vector<int>{1, 2, 3}); // expected-warning {{object whose reference is captured by 'spans' will be destroyed at the end of the full-expression}} \
+                                              // cfg-warning {{temporary object does not live long enough}} \
+                                              // cfg-note {{destroyed here}}
+  (void)spans;                                // cfg-note {{later used here}}                                    
+  {
+    std::vector<int> local;
+    spans.push_back(local);    // cfg-warning {{local variable 'local' does not live long enough}}         
+  }                            // cfg-note {{destroyed here}}                        
+  (void)spans;                 // cfg-note {{later used here}} 
 }
 } // namespace with_span
 } // namespace inferred_capture_by

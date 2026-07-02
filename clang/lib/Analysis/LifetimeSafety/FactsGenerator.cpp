@@ -1008,28 +1008,34 @@ void FactsGenerator::handleLifetimeCaptureBy(const FunctionDecl *FD,
   const auto *Method = dyn_cast<CXXMethodDecl>(FD);
   bool IsInstance =
       Method && Method->isInstance() && !isa<CXXConstructorDecl>(FD);
-  auto getArgCaptureBy = [FD,
-                          IsInstance](unsigned I) -> LifetimeCaptureByAttr * {
-    const ParmVarDecl *PVD = nullptr;
+  auto getParamDeclAt = [FD, IsInstance](unsigned I) -> const ParmVarDecl * {
     if (IsInstance) {
       // FIXME: Add support for I == 0 i.e. capture_by on function declarations
       if (I > 0 && I - 1 < FD->getNumParams())
-        PVD = FD->getParamDecl(I - 1);
+        return FD->getParamDecl(I - 1);
     } else {
       if (I < FD->getNumParams())
-        PVD = FD->getParamDecl(I);
+        return FD->getParamDecl(I);
     }
-    return PVD ? PVD->getAttr<LifetimeCaptureByAttr>() : nullptr;
+    return nullptr;
   };
   for (unsigned I = 0; I < Args.size(); ++I) {
-    const LifetimeCaptureByAttr *Attr = getArgCaptureBy(I);
+    const ParmVarDecl *PVD = getParamDeclAt(I);
+    if (!PVD)
+      continue;
+    const auto *Attr = PVD->getAttr<LifetimeCaptureByAttr>();
     if (!Attr)
       continue;
     OriginList *CapturedOriginList = getOriginsList(*Args[I]);
     if (!CapturedOriginList)
       continue;
-    if (!CapturedOriginList)
-      continue;
+    if (QualType ParamType = PVD->getType();
+        ParamType->isReferenceType() &&
+        isGslPointerType(ParamType->getPointeeType())) {
+      if (CapturedOriginList->getLength() > 1) {
+        CapturedOriginList = CapturedOriginList->peelOuterOrigin();
+      }
+    }
     for (int CapturingArgIdx : Attr->params()) {
       // FIXME: Add support for capturing to Global/unknown.
       if (CapturingArgIdx == LifetimeCaptureByAttr::Global ||

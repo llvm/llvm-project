@@ -3918,7 +3918,6 @@ void member_capture() {
   (void)c.stored;   // expected-note {{later used here}}
 }
 
-// FIXME: Add support for simple containers without annotations.
 struct SimpleContainer {
   View stored;
   void set(View s [[clang::lifetime_capture_by(this)]]);
@@ -3928,9 +3927,9 @@ void member_capture_simple_container() {
   SimpleContainer c;
   {
     MyObj local;
-    c.set(local);   
-  }                 
-  (void)c.stored;   
+    c.set(local);   // expected-warning {{local variable 'local' does not live long enough}}
+  }                 // expected-note {{destroyed here}}   
+  (void)c.stored;   // expected-note {{later used here}}
 }
 
 void captureTwo(View& into, 
