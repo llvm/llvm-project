@@ -224,8 +224,8 @@ def ol_usm_migration_flag_t : Enum {
   let desc = "USM migration flags, indicating the direction data is migrated in.";
   let is_bit_field = 1;
   let etors = [
-    Etor<"HOST_TO_DEVICE", "Migrate data from the host to the device specified to olMemPrefetch">,
-    Etor<"DEVICE_TO_HOST", "Migrate data from the device specified to olMemPrefetch back to the host">,
+    Etor<"HOST_TO_DEVICE", "Migrate data from the host to the device">,
+    Etor<"DEVICE_TO_HOST", "Migrate data from the device to the host">,
   ];
 }
 
