@@ -194,4 +194,34 @@ TEST(ScalableVectorMVTsTest, SizeQueries) {
             nxv2i32.getSizeInBits());
 }
 
+TEST(ScalableVectorMVTsTest, WideningIntegerMVTs) {
+  MVT i1Ty = MVT::i1;
+  MVT i2Ty = MVT::i2;
+  MVT i4Ty = MVT::i4;
+  MVT i8Ty = MVT::i8;
+  MVT i16Ty = MVT::i16;
+  MVT i32Ty = MVT::i32;
+  MVT i64Ty = MVT::i64;
+  MVT i128Ty = MVT::i128;
+  MVT i256Ty = MVT::i256;
+  MVT i512Ty = MVT::i512;
+
+  EXPECT_EQ(i1Ty.widenIntegerElementType(), i2Ty);
+  EXPECT_EQ(i2Ty.widenIntegerElementType(), i4Ty);
+  EXPECT_EQ(i4Ty.widenIntegerElementType(), i8Ty);
+  EXPECT_EQ(i8Ty.widenIntegerElementType(), i16Ty);
+  EXPECT_EQ(i16Ty.widenIntegerElementType(), i32Ty);
+  EXPECT_EQ(i32Ty.widenIntegerElementType(), i64Ty);
+  EXPECT_EQ(i64Ty.widenIntegerElementType(), i128Ty);
+  EXPECT_EQ(i128Ty.widenIntegerElementType(), i256Ty);
+  EXPECT_EQ(i256Ty.widenIntegerElementType(), i512Ty);
+
+  MVT v128i1Ty = MVT::v128i1;
+  MVT v128i2Ty = MVT::v128i2;
+  MVT v8i32Ty = MVT::v8i32;
+  MVT v8i64Ty = MVT::v8i64;
+
+  EXPECT_EQ(v128i1Ty.widenIntegerElementType(), v128i2Ty);
+  EXPECT_EQ(v8i32Ty.widenIntegerElementType(), v8i64Ty);
+}
 } // end anonymous namespace
