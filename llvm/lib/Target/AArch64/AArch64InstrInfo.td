@@ -219,6 +219,8 @@ def HasLSUI          : Predicate<"Subtarget->hasLSUI()">,
                                  AssemblerPredicateWithAll<(all_of FeatureLSUI), "lsui">;
 def HasOCCMO         : Predicate<"Subtarget->hasOCCMO()">,
                                  AssemblerPredicateWithAll<(all_of FeatureOCCMO), "occmo">;
+def HasHINTE         : Predicate<"Subtarget->hasHINTE()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureHINTE), "hinte">;
 def HasLSCP          : Predicate<"Subtarget->hasLSCP()">,
                                  AssemblerPredicateWithAll<(all_of FeatureLSCP), "lscp">;
 def HasSVE2p2        : Predicate<"Subtarget->isSVEAvailable() && Subtarget->hasSVE2p2()">,
@@ -1552,6 +1554,9 @@ let hasSideEffects = 1, isCodeGenOnly = 1, isTerminator = 1, isBarrier = 1 in {
 //===----------------------------------------------------------------------===//
 
 def HINT : HintI<"hint">;
+let Predicates = [HasHINTE] in
+def HINTE : HintE<"hinte">;
+
 def : InstAlias<"yield",(HINT 0b001)>;
 def : InstAlias<"wfe",  (HINT 0b010)>;
 def : InstAlias<"wfi",  (HINT 0b011)>;
