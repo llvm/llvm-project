@@ -40,11 +40,12 @@
 #include <functional>
 #include <iterator>
 #include <unordered_set>
+#define DEBUG_TYPE "bolt"
+#include "llvm/Object/ELF.h"
+#include "llvm/Support/Debug.h"
+#include "llvm/Support/Format.h"
 
 using namespace llvm;
-
-#undef  DEBUG_TYPE
-#define DEBUG_TYPE "bolt"
 
 namespace opts {
 
@@ -200,13 +201,24 @@ Expected<std::unique_ptr<BinaryContext>> BinaryContext::createBinaryContext(
     ArchName = TheTriple.getArchName();
     if (!Features)
       return createFatalBOLTError("RISCV target needs SubtargetFeatures");
-    // We rely on relaxation for some transformations (e.g., promoting all calls
-    // to PseudoCALL and then making JITLink relax them). Since the relax
-    // feature is not stored in the object file, we manually enable it.
     Features->AddFeature("relax");
     FeaturesStr = Features->getString();
     break;
   }
+  case llvm::Triple::ppc64:
+    if (Features)
+      return createFatalBOLTError(
+          "PowerPC target does not use SubtargetFeatures");
+    ArchName = "ppc64";
+    FeaturesStr = "";
+    break;
+  case llvm::Triple::ppc64le:
+    if (Features)
+      return createFatalBOLTError(
+          "PowerPC target does not use SubtargetFeatures");
+    ArchName = "ppc64le";
+    FeaturesStr = "";
+    break;
   default:
     return createStringError(std::errc::not_supported,
                              "BOLT-ERROR: Unrecognized machine in ELF file");
@@ -2289,6 +2301,7 @@ BinaryContext::getSectionNameForAddress(uint64_t Address) const {
 }
 
 BinarySection &BinaryContext::registerSection(BinarySection *Section) {
+
   auto Res = Sections.insert(Section);
   (void)Res;
   assert(Res.second && "can't register the same section twice.");
@@ -2344,6 +2357,7 @@ BinaryContext::registerOrUpdateSection(const Twine &Name, unsigned ELFType,
 }
 
 void BinaryContext::deregisterSectionName(const BinarySection &Section) {
+
   auto NameRange = NameToSection.equal_range(Section.getName().str());
   while (NameRange.first != NameRange.second) {
     if (NameRange.first->second == &Section) {

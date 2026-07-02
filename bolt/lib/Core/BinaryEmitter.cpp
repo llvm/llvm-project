@@ -26,6 +26,8 @@
 #include "llvm/Support/SMLoc.h"
 
 #define DEBUG_TYPE "bolt"
+#include "llvm/Support/Debug.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 using namespace bolt;
@@ -505,7 +507,48 @@ void BinaryEmitter::emitFunctionBody(BinaryFunction &BF, FunctionFragment &FF,
         }
       }
 
+      LLVM_DEBUG(dbgs() << "EMIT " << BC.MII->getName(Instr.getOpcode())
+                        << "\n");
+
       Streamer.emitInstruction(Instr, *BC.STI);
+
+      if (BC.isPPC64() && BC.MIB->isTOCRestoreAfterCall(Instr))
+        LLVM_DEBUG(dbgs() << "EMIT is TOC-restore\n");
+
+      // --- PPC64 ELFv2: guarantee a post-call NOP (call slot)
+      if (BC.isPPC64() && BC.MIB->isCall(Instr)) {
+        bool NeedSlot = true;
+        LLVM_DEBUG(dbgs() << "PPC emit: call, considering slot after\n");
+
+        // If the next IR instruction exists and is already a NOP or TOC-restore
+        // , don't inject.
+        auto NextI = std::next(I);
+        LLVM_DEBUG({
+          dbgs() << "PPC emit: CALL seen: next=";
+          if (NextI == E)
+            dbgs() << "<end>\n";
+          else
+            dbgs() << BC.MII->getName(NextI->getOpcode())
+                   << (BC.MIB->isTOCRestoreAfterCall(*NextI)
+                           ? " (TOC restore)\n"
+                           : "\n");
+        });
+        if (NextI != E &&
+            (BC.MIB->isNoop(*NextI) || BC.MIB->isTOCRestoreAfterCall(*NextI))) {
+          NeedSlot = false;
+        }
+
+        if (NeedSlot) {
+          LLVM_DEBUG(dbgs() << "PPC emit: inserting post-call NOP\n");
+          MCInst N;
+          BC.MIB->createNoop(N);
+          Streamer.emitInstruction(N, *BC.STI);
+          LLVM_DEBUG(dbgs() << "PPC: inserted NOP after call at "
+                            << BF.getPrintName() << "\n");
+        } else {
+          LLVM_DEBUG(dbgs() << "PPC emit: post-call NOP not needed\n");
+        }
+      }
     }
   }
 
@@ -1216,7 +1259,11 @@ void BinaryEmitter::emitDataSections(StringRef OrgSecPrefix) {
       continue;
 
     StringRef Prefix = Section.hasSectionRef() ? OrgSecPrefix : "";
-    Section.emitAsData(Streamer, Prefix + Section.getName());
+    std::string OutName = (Prefix + Section.getName()).str();
+    // PPC64: drop relocations before emitting .bolt.org.* sections
+    if (BC.isPPC64() && StringRef(OutName).starts_with(OrgSecPrefix))
+      Section.clearRelocations();
+    Section.emitAsData(Streamer, OutName);
     Section.clearRelocations();
   }
 }

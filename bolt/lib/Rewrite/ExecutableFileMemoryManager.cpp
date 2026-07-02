@@ -104,6 +104,7 @@ public:
 void ExecutableFileMemoryManager::updateSection(
     const jitlink::Section &JLSection, uint8_t *Contents, size_t Size,
     size_t Alignment) {
+
   auto SectionID = JLSection.getName();
   auto SectionName = sectionName(JLSection, BC);
   auto Prot = JLSection.getMemProt();
@@ -148,6 +149,7 @@ void ExecutableFileMemoryManager::updateSection(
 
     Section = &OrgSection.get();
     Section->updateContents(Contents, Size);
+    Section->setExternallyOwnedContents(); // buffer owned by JITLink
   } else {
     // If the input contains a section with the section name, rename it in the
     // output file to avoid the section name conflict and emit the new section
@@ -169,6 +171,7 @@ void ExecutableFileMemoryManager::updateSection(
     if (UsePrefix)
       NewSection.setOutputName(SectionName);
     Section = &NewSection;
+    NewSection.setExternallyOwnedContents(); // buffer owned by JITLink
   }
 
   LLVM_DEBUG({
@@ -179,7 +182,6 @@ void ExecutableFileMemoryManager::updateSection(
            << " with size " << Size << ", alignment " << Alignment << " at "
            << Contents << ", ID = " << SectionID << "\n";
   });
-
   Section->setSectionID(SectionID);
 }
 

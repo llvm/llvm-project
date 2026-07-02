@@ -1328,6 +1328,7 @@ Error BinaryFunction::disassemble() {
   LabelsMapType InstructionLabels;
 
   uint64_t Size = 0; // instruction size
+  bool SeenTerminator = false; // PPC64: track if we passed a return/branch
   for (uint64_t Offset = 0; Offset < getSize(); Offset += Size) {
     MCInst Instruction;
     const uint64_t AbsoluteInstrAddr = getAddress() + Offset;
@@ -1346,6 +1347,18 @@ Error BinaryFunction::disassemble() {
       if (isZeroPaddingAt(Offset))
         break;
 
+      // PPC64 ELFv2: Function symbol size may include non-code bytes after the
+      // final blr/return instruction (e.g. metadata or exception pointers).
+      // Once a terminator instruction is seen, treat remaining undecodable
+      // bytes as trailing data and stop disassembly.
+      if (BC.isPPC64() && SeenTerminator) {
+        LLVM_DEBUG(dbgs() << "BOLT-DEBUG: PPC64: treating bytes at offset 0x"
+                          << Twine::utohexstr(Offset)
+                          << " as trailing data after terminator in " << *this
+                          << "\n");
+        break;
+      }
+
       BC.errs()
           << "BOLT-WARNING: unable to disassemble instruction at offset 0x"
           << Twine::utohexstr(Offset) << " (address 0x"
@@ -1360,6 +1373,12 @@ Error BinaryFunction::disassemble() {
       }
 
       break;
+    }
+
+    // PPC64: track terminator instructions (blr, bctr, unconditional branch)
+    if (BC.isPPC64() && (MIB->isReturn(Instruction) ||
+                         MIB->isUnconditionalBranch(Instruction))) {
+      SeenTerminator = true;
     }
 
     // Check integrity of LLVM assembler/disassembler.
@@ -1412,6 +1431,7 @@ Error BinaryFunction::disassemble() {
       setIgnored();
 
     if (MIB->isBranch(Instruction) || MIB->isCall(Instruction)) {
+
       uint64_t TargetAddress = 0;
       if (MIB->evaluateBranch(Instruction, AbsoluteInstrAddr, Size,
                               TargetAddress)) {
@@ -4383,14 +4403,40 @@ bool BinaryFunction::isSymbolValidInScope(const SymbolRef &Symbol,
 
   // It's okay to have a zero-sized symbol in the middle of non-zero-sized
   // function.
-  if (SymbolSize == 0 && containsAddress(cantFail(Symbol.getAddress())))
+  if (SymbolSize == 0 && containsAddress(cantFail(Symbol.getAddress()))) {
+    // PPC64 ELFv2: PLT call stubs are emitted in .text as local zero-sized
+    // symbols (e.g. "plt_call.*", "plt_branch.*", "__glink").
+    // Although their address may fall within an existing function range,
+    // they are separate call stubs and must not be treated as part of that
+    // function, otherwise function boundaries and control flow may be
+    // corrupted. Unlike other architectures where PLT entries reside in
+    // dedicated sections (e.g. .plt), PPC64 places these stubs in .text, making
+    // the distinction ambiguous without explicit filtering.
+    if (BC.isPPC64()) {
+      StringRef SymName = cantFail(Symbol.getName());
+      if (SymName.contains("plt_call.") || SymName.contains("plt_branch.") ||
+          SymName.contains("__glink")) {
+        return false;
+      }
+    }
     return true;
+  }
 
   if (cantFail(Symbol.getType()) != SymbolRef::ST_Unknown)
     return false;
 
   if (cantFail(Symbol.getFlags()) & SymbolRef::SF_Global)
     return false;
+
+  // General PPC64 ELFv2 guard: reject PLT/glink stubs as in-scope local
+  // symbols of the current function.
+  if (BC.isPPC64()) {
+    StringRef SymName = cantFail(Symbol.getName());
+    if (SymName.contains("plt_call.") || SymName.contains("plt_branch.") ||
+        SymName.contains("__glink")) {
+      return false;
+    }
+  }
 
   return true;
 }
