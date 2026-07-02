@@ -315,8 +315,8 @@ define void @i8_factor_5(ptr %data, i64 %n) {
 ; MINSIZE:  Cost of 1 for VF vscale x 4: INTERLEAVE-GROUP with factor 5, ir<%p0>, vp<%evl>
 ; MINSIZE:  Cost of 1 for VF vscale x 8: INTERLEAVE-GROUP with factor 5, ir<%p0>, vp<%evl>
 ; MINSIZE:  Cost of 1 for VF vscale x 8: INTERLEAVE-GROUP with factor 5, ir<%p0>, vp<%evl>
-; MINSIZE:  Cost of 1 for VF vscale x 16: INTERLEAVE-GROUP with factor 5, ir<%p0>, vp<%evl>
-; MINSIZE:  Cost of 1 for VF vscale x 16: INTERLEAVE-GROUP with factor 5, ir<%p0>, vp<%evl>
+; MINSIZE:  Cost of 2 for VF vscale x 16: INTERLEAVE-GROUP with factor 5, ir<%p0>, vp<%evl>
+; MINSIZE:  Cost of 2 for VF vscale x 16: INTERLEAVE-GROUP with factor 5, ir<%p0>, vp<%evl>
 ;
 entry:
   br label %for.body
@@ -401,8 +401,8 @@ define void @i8_factor_6(ptr %data, i64 %n) {
 ; MINSIZE:  Cost of 1 for VF vscale x 4: INTERLEAVE-GROUP with factor 6, ir<%p0>, vp<%evl>
 ; MINSIZE:  Cost of 1 for VF vscale x 8: INTERLEAVE-GROUP with factor 6, ir<%p0>, vp<%evl>
 ; MINSIZE:  Cost of 1 for VF vscale x 8: INTERLEAVE-GROUP with factor 6, ir<%p0>, vp<%evl>
-; MINSIZE:  Cost of 1 for VF vscale x 16: INTERLEAVE-GROUP with factor 6, ir<%p0>, vp<%evl>
-; MINSIZE:  Cost of 1 for VF vscale x 16: INTERLEAVE-GROUP with factor 6, ir<%p0>, vp<%evl>
+; MINSIZE:  Cost of 2 for VF vscale x 16: INTERLEAVE-GROUP with factor 6, ir<%p0>, vp<%evl>
+; MINSIZE:  Cost of 2 for VF vscale x 16: INTERLEAVE-GROUP with factor 6, ir<%p0>, vp<%evl>
 ;
 entry:
   br label %for.body
@@ -491,8 +491,8 @@ define void @i8_factor_7(ptr %data, i64 %n) {
 ; MINSIZE:  Cost of 1 for VF vscale x 4: INTERLEAVE-GROUP with factor 7, ir<%p0>, vp<%evl>
 ; MINSIZE:  Cost of 1 for VF vscale x 8: INTERLEAVE-GROUP with factor 7, ir<%p0>, vp<%evl>
 ; MINSIZE:  Cost of 1 for VF vscale x 8: INTERLEAVE-GROUP with factor 7, ir<%p0>, vp<%evl>
-; MINSIZE:  Cost of 1 for VF vscale x 16: INTERLEAVE-GROUP with factor 7, ir<%p0>, vp<%evl>
-; MINSIZE:  Cost of 1 for VF vscale x 16: INTERLEAVE-GROUP with factor 7, ir<%p0>, vp<%evl>
+; MINSIZE:  Cost of 2 for VF vscale x 16: INTERLEAVE-GROUP with factor 7, ir<%p0>, vp<%evl>
+; MINSIZE:  Cost of 2 for VF vscale x 16: INTERLEAVE-GROUP with factor 7, ir<%p0>, vp<%evl>
 ;
 entry:
   br label %for.body
@@ -585,8 +585,8 @@ define void @i8_factor_8(ptr %data, i64 %n) {
 ; MINSIZE:  Cost of 1 for VF vscale x 4: INTERLEAVE-GROUP with factor 8, ir<%p0>, vp<%evl>
 ; MINSIZE:  Cost of 1 for VF vscale x 8: INTERLEAVE-GROUP with factor 8, ir<%p0>, vp<%evl>
 ; MINSIZE:  Cost of 1 for VF vscale x 8: INTERLEAVE-GROUP with factor 8, ir<%p0>, vp<%evl>
-; MINSIZE:  Cost of 1 for VF vscale x 16: INTERLEAVE-GROUP with factor 8, ir<%p0>, vp<%evl>
-; MINSIZE:  Cost of 1 for VF vscale x 16: INTERLEAVE-GROUP with factor 8, ir<%p0>, vp<%evl>
+; MINSIZE:  Cost of 2 for VF vscale x 16: INTERLEAVE-GROUP with factor 8, ir<%p0>, vp<%evl>
+; MINSIZE:  Cost of 2 for VF vscale x 16: INTERLEAVE-GROUP with factor 8, ir<%p0>, vp<%evl>
 ;
 entry:
   br label %for.body

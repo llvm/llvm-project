@@ -1118,7 +1118,7 @@ InstructionCost RISCVTTIImpl::getInterleavedMemoryOpCost(
     // Need to make sure type has't been scalarized
     if (LT.second.isVector()) {
       if (CostKind == TTI::TCK_CodeSize)
-        return TTI::TCC_Basic;
+        return LT.first * TTI::TCC_Basic;
 
       auto *SubVecTy =
           VectorType::get(VTy->getElementType(),
