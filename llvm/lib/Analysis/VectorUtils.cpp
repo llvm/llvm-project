@@ -1590,10 +1590,13 @@ void InterleavedAccessInfo::analyzeInterleaving(
     assert(Member && "Group member does not exist");
     Value *MemberPtr = getLoadStorePointerOperand(Member);
     Type *AccessTy = getLoadStoreType(Member);
+    SmallVector<const SCEVPredicate *, 2> Predicates;
     if (getPtrStride(PSE, AccessTy, MemberPtr, TheLoop, *DT, Strides,
-                     /*Assume=*/false, /*ShouldCheckWrap=*/true)
-            .value_or(0))
+                     /*ShouldCheckWrap=*/true, &Predicates)
+            .value_or(0)) {
+      Group->addRequiredPredicates(Predicates);
       return false;
+    }
     LLVM_DEBUG(dbgs() << "LV: Invalidate candidate interleaved group due to "
                       << FirstOrLast
                       << " group member potentially pointer-wrapping.\n");
@@ -1605,11 +1608,6 @@ void InterleavedAccessInfo::analyzeInterleaving(
   // accesses may wrap around. We have to revisit the getPtrStride analysis,
   // this time with ShouldCheckWrap=true, since collectConstStrideAccesses does
   // not check wrapping (see documentation there).
-  // FORNOW we use Assume=false;
-  // TODO: Change to Assume=true but making sure we don't exceed the threshold
-  // of runtime SCEV assumptions checks (thereby potentially failing to
-  // vectorize altogether).
-  // Additional optional optimizations:
   // TODO: If we are peeling the loop and we know that the first pointer doesn't
   // wrap then we can deduce that all pointers in the group don't wrap.
   // This means that we can forcefully peel the loop in order to only have to

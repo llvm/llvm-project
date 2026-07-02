@@ -1098,6 +1098,25 @@ public:
     return EpilogueLoweringStatus == CM_EpilogueAllowed;
   }
 
+  bool isForceVectorized() const {
+    return Hints->getForce() == LoopVectorizeHints::FK_Enabled;
+  }
+
+  /// Returns true if the loop should be optimized for size, which means SCEV
+  /// predicates (i.e. runtime checks) are not allowed.
+  bool isOptForSize() const {
+    return !isForceVectorized() &&
+           (EpilogueLoweringStatus == CM_EpilogueNotAllowedOptSize ||
+            EpilogueLoweringStatus == CM_EpilogueNotAllowedLowTripLoop);
+  }
+
+  /// Returns the SCEV check complexity threshold, accounting for force
+  /// vectorization pragma which raises the limit.
+  unsigned getSCEVCheckThreshold() const {
+    return isForceVectorized() ? PragmaVectorizeSCEVCheckThreshold
+                               : VectorizeSCEVCheckThreshold;
+  }
+
   /// Returns true if tail-folding is preferred over an epilogue.
   bool preferTailFoldedLoop() const {
     return EpilogueLoweringStatus == CM_EpilogueNotNeededFoldTail ||
@@ -4760,8 +4779,15 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
           continue;
 
         NumAccesses = Group->getNumMembers();
-        if (interleavedAccessCanBeWidened(&I, VF))
-          InterleaveCost = getInterleaveGroupCost(&I, VF);
+        if (interleavedAccessCanBeWidened(&I, VF)) {
+          unsigned PredComplexity = 0;
+          for (const auto *P : Group->getRequiredPredicates())
+            PredComplexity += P->getComplexity();
+          if (PredComplexity == 0 ||
+              (!isOptForSize() && (PSE.getPredicate().getComplexity() +
+                                   PredComplexity) < getSCEVCheckThreshold()))
+            InterleaveCost = getInterleaveGroupCost(&I, VF);
+        }
       }
 
       InstructionCost GatherScatterCost =
@@ -4798,6 +4824,9 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
         } else {
           setWideningDecision(Group, VF, Decision, Cost);
         }
+        if (Decision == CM_Interleave)
+          for (const auto *P : Group->getRequiredPredicates())
+            PSE.addPredicate(*P);
       } else
         setWideningDecision(&I, VF, Decision, Cost);
     }
@@ -6556,16 +6585,9 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan1() {
                    LAI->getSymbolicStrides(), VPDT);
 
   // Add surviving induction predicates to PSE and check constraints.
-  bool ForceVectorization = Hints.getForce() == LoopVectorizeHints::FK_Enabled;
-  bool OptForSize =
-      !ForceVectorization &&
-      (CM.EpilogueLoweringStatus == CM_EpilogueNotAllowedOptSize ||
-       CM.EpilogueLoweringStatus == CM_EpilogueNotAllowedLowTripLoop);
-  unsigned SCEVCheckThreshold = ForceVectorization
-                                    ? PragmaVectorizeSCEVCheckThreshold
-                                    : VectorizeSCEVCheckThreshold;
   if (!RUN_VPLAN_PASS(VPlanTransforms::finalizeSCEVPredicates, *VPlan0, PSE,
-                      OptForSize, SCEVCheckThreshold, ORE, OrigLoop))
+                      CM.isOptForSize(), CM.getSCEVCheckThreshold(), ORE,
+                      OrigLoop))
     return nullptr;
 
   RUN_VPLAN_PASS(VPlanTransforms::addMiddleCheck, *VPlan0);
