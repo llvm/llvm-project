@@ -13,7 +13,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/TextEncoding.h"
 
-namespace clang {
 enum ConversionAction { CA_NoConversion, CA_ToLiteralEncoding };
 
 class TextEncoding {
@@ -27,5 +26,5 @@ public:
 
   llvm::StringRef getLiteralEncoding() { return LiteralEncoding; }
 };
-} // namespace clang
+
 #endif

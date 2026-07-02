@@ -9,8 +9,6 @@
 #include "clang/Lex/TextEncoding.h"
 #include "clang/Basic/DiagnosticDriver.h"
 
-using namespace clang;
-
 llvm::TextEncodingConverter *
 TextEncoding::getConverter(ConversionAction Action) const {
   switch (Action) {
