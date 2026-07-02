@@ -1042,6 +1042,13 @@ isImpliedCondition(const Value *LHS, CmpPredicate RHSPred, const Value *RHSOp0,
                    const Value *RHSOp1, const DataLayout &DL,
                    bool LHSIsTrue = true, unsigned Depth = 0);
 
+/// If @llvm.assume encodes LHS => RHS, return whether that
+/// implication holds for the given LHS.
+LLVM_ABI std::optional<bool> isImpliedByAssume(const Value *LHS,
+                                               const Value *RHS,
+                                               const SimplifyQuery &Q,
+                                               bool LHSIsTrue = true);
+
 /// Return the boolean condition value in the context of the given instruction
 /// if it is known based on dominating conditions.
 LLVM_ABI std::optional<bool>

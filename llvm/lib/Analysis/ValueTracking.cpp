@@ -10002,6 +10002,40 @@ std::optional<bool> llvm::isImpliedByDomCondition(CmpPredicate Pred,
   return std::nullopt;
 }
 
+std::optional<bool> llvm::isImpliedByAssume(const Value *LHS, const Value *RHS,
+                                            const SimplifyQuery &Q,
+                                            bool LHSIsTrue) {
+  if (!Q.AC || !Q.CxtI)
+    return std::nullopt;
+  if (!LHS->getType()->isIntOrIntVectorTy(1))
+    return std::nullopt;
+
+  const Value *Antecedent = LHSIsTrue ? LHS : RHS;
+  const Value *Consequent = LHSIsTrue ? RHS : LHS;
+
+  auto CheckAssumes = [&](const Value *IndexedVal) -> std::optional<bool> {
+    for (auto &AssumeVH : Q.AC->assumptionsFor(IndexedVal)) {
+      if (!AssumeVH)
+        continue;
+      auto *Assume = cast<CallInst>(AssumeVH);
+      assert(Assume->getIntrinsicID() == Intrinsic::assume);
+      if (!isValidAssumeForContext(Assume, Q.CxtI, Q.DT))
+        continue;
+
+      if (match(Assume->getArgOperand(0),
+                m_c_Or(m_Not(m_Specific(Antecedent)), m_Specific(Consequent))))
+        return LHSIsTrue;
+    }
+    return std::nullopt;
+  };
+
+  if (auto R = CheckAssumes(LHS))
+    return R;
+  if (auto R = CheckAssumes(RHS))
+    return R;
+  return std::nullopt;
+}
+
 static void setLimitsForBinOp(const BinaryOperator &BO, APInt &Lower,
                               APInt &Upper, const InstrInfoQuery &IIQ,
                               bool PreferSignedRange) {
@@ -10560,7 +10594,11 @@ void llvm::findValuesAffectedByCondition(
         AddAffected(X);
     }
 
-    if (match(V, m_LogicalOp(m_Value(A), m_Value(B)))) {
+    Value *P, *Q;
+    if (IsAssume && match(V, m_c_Or(m_Not(m_Value(P)), m_Value(Q)))) {
+      AddAffected(P);
+      AddAffected(Q);
+    } else if (match(V, m_LogicalOp(m_Value(A), m_Value(B)))) {
       // assume(A && B) is split to -> assume(A); assume(B);
       // assume(!(A || B)) is split to -> assume(!A); assume(!B);
       // Finally, assume(A || B) / assume(!(A && B)) generally don't provide
