@@ -4,7 +4,6 @@
 #map0 = affine_map<(i, j) -> (i, j)>
 #map1 = affine_map<(i, j)[s0] -> (i, j)>
 
-// CHECK: #map{{[0-9]*}} = affine_map<() -> (0)>
 // A map may have 0 inputs.
 // However, an affine.apply always takes at least one input.
 #map2 = affine_map<() -> (0)>
@@ -236,7 +235,7 @@ func.func private @f0(memref<2x4xi8, #map0, 1>)
 // CHECK: @f1(memref<2x4xi8, 1>)
 func.func private @f1(memref<2x4xi8, #map1, 1>)
 
-// CHECK: @f2(memref<i8, #map{{[0-9]*}}, 1>)
+// CHECK: @f2(memref<i8, 1>)
 func.func private @f2(memref<i8, #map2, 1>)
 
 // CHECK: @f3(memref<2x4xi8, #map{{[0-9]*}}, 1>)

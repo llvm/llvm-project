@@ -3151,17 +3151,18 @@ MemRefType SubViewOp::inferRankReducedResultType(
   assert(dimsToProject.has_value() && "invalid rank reduction");
 
   // Compute the layout and result type.
-  auto inferredLayout = llvm::cast<StridedLayoutAttr>(inferredType.getLayout());
+  int64_t offset;
+  SmallVector<int64_t> inferredStrides;
+  (void)inferredType.getStridesAndOffset(inferredStrides, offset);
   SmallVector<int64_t> rankReducedStrides;
   rankReducedStrides.reserve(resultShape.size());
-  for (auto [idx, value] : llvm::enumerate(inferredLayout.getStrides())) {
+  for (auto [idx, value] : llvm::enumerate(inferredStrides)) {
     if (!dimsToProject->contains(idx))
       rankReducedStrides.push_back(value);
   }
   return MemRefType::get(resultShape, inferredType.getElementType(),
-                         StridedLayoutAttr::get(inferredLayout.getContext(),
-                                                inferredLayout.getOffset(),
-                                                rankReducedStrides),
+                         StridedLayoutAttr::get(inferredType.getContext(),
+                                                offset, rankReducedStrides),
                          inferredType.getMemorySpace());
 }
 
@@ -3463,7 +3464,10 @@ static MemRefType getCanonicalSubViewResultType(
   if (failed(unusedDims))
     return nullptr;
 
-  auto layout = llvm::cast<StridedLayoutAttr>(nonRankReducedType.getLayout());
+  int64_t offset;
+  SmallVector<int64_t> nonRankReducedStrides;
+  (void)nonRankReducedType.getStridesAndOffset(nonRankReducedStrides, offset);
+
   SmallVector<int64_t> shape, strides;
   unsigned numDimsAfterReduction =
       nonRankReducedType.getRank() - unusedDims->count();
@@ -3471,17 +3475,17 @@ static MemRefType getCanonicalSubViewResultType(
   strides.reserve(numDimsAfterReduction);
   for (const auto &[idx, size, stride] :
        llvm::zip(llvm::seq<unsigned>(0, nonRankReducedType.getRank()),
-                 nonRankReducedType.getShape(), layout.getStrides())) {
+                 nonRankReducedType.getShape(), nonRankReducedStrides)) {
     if (unusedDims->test(idx))
       continue;
     shape.push_back(size);
     strides.push_back(stride);
   }
 
-  return MemRefType::get(shape, nonRankReducedType.getElementType(),
-                         StridedLayoutAttr::get(sourceType.getContext(),
-                                                layout.getOffset(), strides),
-                         nonRankReducedType.getMemorySpace());
+  return MemRefType::get(
+      shape, nonRankReducedType.getElementType(),
+      StridedLayoutAttr::get(sourceType.getContext(), offset, strides),
+      nonRankReducedType.getMemorySpace());
 }
 
 Value mlir::memref::createCanonicalRankReducingSubViewOp(

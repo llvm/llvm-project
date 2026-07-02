@@ -1390,7 +1390,7 @@ func.func @canonicalize_rank_reduced_subview(%arg0 : memref<8x?xf32>,
 // CHECK-SAME:     %[[ARG0:.+]]: memref<8x?xf32>
 // CHECK-SAME:     %[[ARG1:.+]]: index
 //      CHECK:   %[[SUBVIEW:.+]] = memref.subview %[[ARG0]][0, 0] [1, %[[ARG1]]] [1, 1]
-// CHECK-SAME:       memref<8x?xf32> to memref<?xf32, strided<[1]>>
+// CHECK-SAME:       memref<8x?xf32> to memref<?xf32>
 
 // -----
 
@@ -1408,10 +1408,9 @@ func.func @memref_realloc_dead(%src : memref<2xf32>, %v : f32) -> memref<2xf32>{
 // -----
 
 // CHECK-LABEL: func @collapse_expand_fold_to_cast(
-//  CHECK-SAME:     %[[m:.*]]: memref<?xf32, strided<[1]>, 3>
-//       CHECK:   %[[casted:.*]] = memref.cast %[[m]] : memref<?xf32, strided<[1]>, 3> to memref<?xf32, 3
-//       CHECK:   return %[[casted]]
-func.func @collapse_expand_fold_to_cast(%m: memref<?xf32, strided<[1]>, 3>, %sz0: index)
+//  CHECK-SAME:     %[[m:.*]]: memref<?xf32, 3>
+//       CHECK:   return %[[m]]
+func.func @collapse_expand_fold_to_cast(%m: memref<?xf32, 3>, %sz0: index)
     -> (memref<?xf32, 3>)
 {
   %0 = memref.expand_shape %m [[0, 1]] output_shape [1, %sz0]
