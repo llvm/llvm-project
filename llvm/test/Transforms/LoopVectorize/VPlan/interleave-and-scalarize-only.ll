@@ -20,7 +20,7 @@
 ; DBG-NEXT:     vp<[[CAN_IV:%.+]]> = CANONICAL-IV
 ; DBG-EMPTY:
 ; DBG-NEXT:   vector.body:
-; DBG-NEXT:     vp<[[DERIVED_IV:%.+]]> = DERIVED-IV ir<%start> + vp<[[CAN_IV]]> * ir<1>
+; DBG-NEXT:     vp<[[DERIVED_IV:%.+]]> = DERIVED-IV nsw ir<%start> + vp<[[CAN_IV]]> * ir<1>
 ; DBG-NEXT:     vp<[[IV_STEPS:%.]]>    = SCALAR-STEPS vp<[[DERIVED_IV]]>, ir<1>, vp<[[VF]]>
 ; DBG-NEXT:     CLONE ir<%min> = call @llvm.smin.i32(vp<[[IV_STEPS]]>, ir<65535>)
 ; DBG-NEXT:     CLONE ir<%arrayidx> = getelementptr inbounds ir<%dst>, vp<[[IV_STEPS]]>
@@ -34,7 +34,7 @@ define void @test_scalarize_call(i32 %start, ptr %dst) {
 ; CHECK-LABEL: @test_scalarize_call(
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %vector.body ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i32 %start, [[INDEX]]
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add nsw i32 %start, [[INDEX]]
 ; CHECK-NEXT:    [[INDUCTION1:%.*]] = add i32 [[OFFSET_IDX]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.smin.i32(i32 [[OFFSET_IDX]], i32 65535)
 ; CHECK-NEXT:    [[TMP2:%.*]] = tail call i32 @llvm.smin.i32(i32 [[INDUCTION1]], i32 65535)

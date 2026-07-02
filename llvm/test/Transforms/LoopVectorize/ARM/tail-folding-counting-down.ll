@@ -531,7 +531,7 @@ define void @sgt_for_loop(ptr noalias nocapture readonly %a, ptr noalias nocaptu
 ; DEFAULT-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; DEFAULT:       [[VECTOR_BODY]]:
 ; DEFAULT-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; DEFAULT-NEXT:    [[TMP1:%.*]] = sub i32 [[N]], [[INDEX]]
+; DEFAULT-NEXT:    [[TMP1:%.*]] = sub nsw i32 [[N]], [[INDEX]]
 ; DEFAULT-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[A]], i32 [[TMP1]]
 ; DEFAULT-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i32 -15
 ; DEFAULT-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP3]], align 1
@@ -567,7 +567,7 @@ define void @sgt_for_loop(ptr noalias nocapture readonly %a, ptr noalias nocaptu
 ; CHECK-PREFER-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-PREFER:       [[VECTOR_BODY]]:
 ; CHECK-PREFER-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-PREFER-NEXT:    [[TMP0:%.*]] = sub i32 [[N]], [[INDEX]]
+; CHECK-PREFER-NEXT:    [[TMP0:%.*]] = sub nsw i32 [[N]], [[INDEX]]
 ; CHECK-PREFER-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i32(i32 [[INDEX]], i32 [[N]])
 ; CHECK-PREFER-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[A]], i32 [[TMP0]]
 ; CHECK-PREFER-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP1]], i32 -15
@@ -608,7 +608,7 @@ define void @sgt_for_loop(ptr noalias nocapture readonly %a, ptr noalias nocaptu
 ; CHECK-ENABLE-TP-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-ENABLE-TP:       [[VECTOR_BODY]]:
 ; CHECK-ENABLE-TP-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-ENABLE-TP-NEXT:    [[TMP1:%.*]] = sub i32 [[N]], [[INDEX]]
+; CHECK-ENABLE-TP-NEXT:    [[TMP1:%.*]] = sub nsw i32 [[N]], [[INDEX]]
 ; CHECK-ENABLE-TP-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[A]], i32 [[TMP1]]
 ; CHECK-ENABLE-TP-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i32 -15
 ; CHECK-ENABLE-TP-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP3]], align 1
@@ -671,7 +671,7 @@ define void @sgt_for_loop_i64(ptr noalias nocapture readonly %a, ptr noalias noc
 ; DEFAULT-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; DEFAULT:       [[VECTOR_BODY]]:
 ; DEFAULT-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; DEFAULT-NEXT:    [[TMP1:%.*]] = sub i64 [[CONV16]], [[INDEX]]
+; DEFAULT-NEXT:    [[TMP1:%.*]] = sub nsw i64 [[CONV16]], [[INDEX]]
 ; DEFAULT-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i32
 ; DEFAULT-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[A]], i32 [[TMP2]]
 ; DEFAULT-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[TMP3]], i32 -15
@@ -709,7 +709,7 @@ define void @sgt_for_loop_i64(ptr noalias nocapture readonly %a, ptr noalias noc
 ; CHECK-PREFER-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-PREFER:       [[VECTOR_BODY]]:
 ; CHECK-PREFER-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-PREFER-NEXT:    [[TMP0:%.*]] = sub i64 [[CONV16]], [[INDEX]]
+; CHECK-PREFER-NEXT:    [[TMP0:%.*]] = sub nsw i64 [[CONV16]], [[INDEX]]
 ; CHECK-PREFER-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i64(i64 [[INDEX]], i64 [[CONV16]])
 ; CHECK-PREFER-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
 ; CHECK-PREFER-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[A]], i32 [[TMP1]]
@@ -752,7 +752,7 @@ define void @sgt_for_loop_i64(ptr noalias nocapture readonly %a, ptr noalias noc
 ; CHECK-ENABLE-TP-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-ENABLE-TP:       [[VECTOR_BODY]]:
 ; CHECK-ENABLE-TP-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-ENABLE-TP-NEXT:    [[TMP1:%.*]] = sub i64 [[CONV16]], [[INDEX]]
+; CHECK-ENABLE-TP-NEXT:    [[TMP1:%.*]] = sub nsw i64 [[CONV16]], [[INDEX]]
 ; CHECK-ENABLE-TP-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i32
 ; CHECK-ENABLE-TP-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[A]], i32 [[TMP2]]
 ; CHECK-ENABLE-TP-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[TMP3]], i32 -15

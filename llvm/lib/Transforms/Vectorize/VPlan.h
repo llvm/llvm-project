@@ -713,6 +713,7 @@ public:
     char HasNSW : 1;
 
     WrapFlagsTy(bool HasNUW, bool HasNSW) : HasNUW(HasNUW), HasNSW(HasNSW) {}
+    WrapFlagsTy() : HasNUW(false), HasNSW(false) {}
   };
 
   struct TruncFlagsTy {
@@ -1140,7 +1141,8 @@ struct VPRecipeWithIRFlags : public VPSingleDefRecipe, public VPIRFlags {
            R->getVPRecipeID() == VPRecipeBase::VPReplicateSC ||
            R->getVPRecipeID() == VPRecipeBase::VPVectorEndPointerSC ||
            R->getVPRecipeID() == VPRecipeBase::VPVectorPointerSC ||
-           R->getVPRecipeID() == VPRecipeBase::VPWidenCanonicalIVSC;
+           R->getVPRecipeID() == VPRecipeBase::VPWidenCanonicalIVSC ||
+           R->getVPRecipeID() == VPRecipeBase::VPDerivedIVSC;
   }
 
   static inline bool classof(const VPUser *U) {
@@ -4169,10 +4171,12 @@ protected:
 #endif
 };
 
-/// A recipe for converting the input value \p IV value to the corresponding
-/// value of an IV with different start and step values, using Start + IV *
-/// Step.
-class VPDerivedIVRecipe : public VPSingleDefRecipe {
+/// A recipe for converting \p Index into \p Start + \p Index * \p Step.
+/// FastMathFlags are derived from the \p FPBinOp in the case of fp inductions,
+/// GEPNoWrapFlags from \p Start in the case of pointer inductions, and the
+/// passed NoWrap \p Flags apply to the add and mul in the case of pointer and
+/// integer inductions.
+class VPDerivedIVRecipe : public VPSingleDefRecipe, public VPIRFlags {
   /// Kind of the induction.
   const InductionDescriptor::InductionKind Kind;
   /// If not nullptr, the floating point induction binary operator. Must be set
@@ -4182,16 +4186,17 @@ class VPDerivedIVRecipe : public VPSingleDefRecipe {
 public:
   VPDerivedIVRecipe(InductionDescriptor::InductionKind Kind,
                     const FPMathOperator *FPBinOp, VPIRValue *Start,
-                    VPValue *IV, VPValue *Step)
-      : VPSingleDefRecipe(VPRecipeBase::VPDerivedIVSC, {Start, IV, Step},
-                          Start->getScalarType(), nullptr),
-        Kind(Kind), FPBinOp(FPBinOp) {}
+                    VPValue *Index, VPValue *Step,
+                    const VPIRFlags::WrapFlagsTy &Flags = {})
+      : VPSingleDefRecipe(VPRecipeBase::VPDerivedIVSC, {Start, Index, Step},
+                          Start->getScalarType()),
+        VPIRFlags(Flags), Kind(Kind), FPBinOp(FPBinOp) {}
 
   ~VPDerivedIVRecipe() override = default;
 
   VPDerivedIVRecipe *clone() override {
     return new VPDerivedIVRecipe(Kind, FPBinOp, getStartValue(), getOperand(1),
-                                 getStepValue());
+                                 getStepValue(), getNoWrapFlags());
   }
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPDerivedIVSC)

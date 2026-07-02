@@ -14,7 +14,7 @@ define i64 @select_decreasing_induction_icmp_const_start(ptr %a) {
 ; IC1VF4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; IC1VF4-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 19999, i64 19998, i64 19997, i64 19996>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; IC1VF4-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ splat (i64 9223372036854775807), %[[VECTOR_PH]] ], [ [[TMP4:%.*]], %[[VECTOR_BODY]] ]
-; IC1VF4-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 19999, [[INDEX]]
+; IC1VF4-NEXT:    [[OFFSET_IDX:%.*]] = sub nsw i64 19999, [[INDEX]]
 ; IC1VF4-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[OFFSET_IDX]]
 ; IC1VF4-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i64 -3
 ; IC1VF4-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP2]], align 8
@@ -49,7 +49,7 @@ define i64 @select_decreasing_induction_icmp_const_start(ptr %a) {
 ; IC4VF4-NEXT:    [[STEP_ADD:%.*]] = add nsw <4 x i64> [[VEC_IND]], splat (i64 -4)
 ; IC4VF4-NEXT:    [[STEP_ADD_2:%.*]] = add nsw <4 x i64> [[STEP_ADD]], splat (i64 -4)
 ; IC4VF4-NEXT:    [[STEP_ADD_3:%.*]] = add nsw <4 x i64> [[STEP_ADD_2]], splat (i64 -4)
-; IC4VF4-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 19999, [[INDEX]]
+; IC4VF4-NEXT:    [[OFFSET_IDX:%.*]] = sub nsw i64 19999, [[INDEX]]
 ; IC4VF4-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[OFFSET_IDX]]
 ; IC4VF4-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i64 -3
 ; IC4VF4-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i64 -7
@@ -98,7 +98,7 @@ define i64 @select_decreasing_induction_icmp_const_start(ptr %a) {
 ; IC4VF1-NEXT:    [[VEC_PHI1:%.*]] = phi i64 [ 9223372036854775807, %[[VECTOR_PH]] ], [ [[TMP16:%.*]], %[[VECTOR_BODY]] ]
 ; IC4VF1-NEXT:    [[VEC_PHI2:%.*]] = phi i64 [ 9223372036854775807, %[[VECTOR_PH]] ], [ [[TMP17:%.*]], %[[VECTOR_BODY]] ]
 ; IC4VF1-NEXT:    [[VEC_PHI3:%.*]] = phi i64 [ 9223372036854775807, %[[VECTOR_PH]] ], [ [[TMP18:%.*]], %[[VECTOR_BODY]] ]
-; IC4VF1-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 19999, [[INDEX]]
+; IC4VF1-NEXT:    [[OFFSET_IDX:%.*]] = sub nsw i64 19999, [[INDEX]]
 ; IC4VF1-NEXT:    [[TMP0:%.*]] = add i64 [[OFFSET_IDX]], -1
 ; IC4VF1-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], -2
 ; IC4VF1-NEXT:    [[TMP2:%.*]] = add i64 [[OFFSET_IDX]], -3
@@ -165,7 +165,7 @@ define i16 @select_decreasing_induction_icmp_table_i16(i16 noundef %val) {
 ; IC1VF4-NEXT:    [[VEC_IND:%.*]] = phi <4 x i16> [ <i16 12, i16 11, i16 10, i16 9>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; IC1VF4-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i16> [ splat (i16 32767), %[[VECTOR_PH]] ], [ [[TMP5:%.*]], %[[VECTOR_BODY]] ]
 ; IC1VF4-NEXT:    [[DOTCAST:%.*]] = trunc i32 [[INDEX]] to i16
-; IC1VF4-NEXT:    [[OFFSET_IDX:%.*]] = sub i16 12, [[DOTCAST]]
+; IC1VF4-NEXT:    [[OFFSET_IDX:%.*]] = sub nsw i16 12, [[DOTCAST]]
 ; IC1VF4-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [13 x i16], ptr @table, i16 0, i16 [[OFFSET_IDX]]
 ; IC1VF4-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i16, ptr [[TMP0]], i64 -3
 ; IC1VF4-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i16>, ptr [[TMP2]], align 1
@@ -358,7 +358,7 @@ define i16 @select_decreasing_induction_icmp_table_i16(i16 noundef %val) {
 ; IC4VF1-NEXT:    [[VEC_PHI2:%.*]] = phi i16 [ 32767, %[[VECTOR_PH]] ], [ [[TMP21:%.*]], %[[VECTOR_BODY]] ]
 ; IC4VF1-NEXT:    [[VEC_PHI3:%.*]] = phi i16 [ 32767, %[[VECTOR_PH]] ], [ [[TMP22:%.*]], %[[VECTOR_BODY]] ]
 ; IC4VF1-NEXT:    [[DOTCAST:%.*]] = trunc i32 [[INDEX]] to i16
-; IC4VF1-NEXT:    [[OFFSET_IDX:%.*]] = sub i16 12, [[DOTCAST]]
+; IC4VF1-NEXT:    [[OFFSET_IDX:%.*]] = sub nsw i16 12, [[DOTCAST]]
 ; IC4VF1-NEXT:    [[TMP0:%.*]] = add i16 [[OFFSET_IDX]], -1
 ; IC4VF1-NEXT:    [[TMP1:%.*]] = add i16 [[OFFSET_IDX]], -2
 ; IC4VF1-NEXT:    [[TMP2:%.*]] = add i16 [[OFFSET_IDX]], -3
@@ -430,7 +430,7 @@ define i16 @select_decreasing_induction_icmp_table_half(half noundef %val) {
 ; IC1VF4-NEXT:    [[VEC_IND:%.*]] = phi <4 x i16> [ <i16 12, i16 11, i16 10, i16 9>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; IC1VF4-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i16> [ splat (i16 32767), %[[VECTOR_PH]] ], [ [[TMP5:%.*]], %[[VECTOR_BODY]] ]
 ; IC1VF4-NEXT:    [[DOTCAST:%.*]] = trunc i32 [[INDEX]] to i16
-; IC1VF4-NEXT:    [[OFFSET_IDX:%.*]] = sub i16 12, [[DOTCAST]]
+; IC1VF4-NEXT:    [[OFFSET_IDX:%.*]] = sub nsw i16 12, [[DOTCAST]]
 ; IC1VF4-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [13 x i16], ptr @table, i16 0, i16 [[OFFSET_IDX]]
 ; IC1VF4-NEXT:    [[TMP2:%.*]] = getelementptr inbounds half, ptr [[TMP0]], i64 -3
 ; IC1VF4-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x half>, ptr [[TMP2]], align 1
@@ -623,7 +623,7 @@ define i16 @select_decreasing_induction_icmp_table_half(half noundef %val) {
 ; IC4VF1-NEXT:    [[VEC_PHI2:%.*]] = phi i16 [ 32767, %[[VECTOR_PH]] ], [ [[TMP21:%.*]], %[[VECTOR_BODY]] ]
 ; IC4VF1-NEXT:    [[VEC_PHI3:%.*]] = phi i16 [ 32767, %[[VECTOR_PH]] ], [ [[TMP22:%.*]], %[[VECTOR_BODY]] ]
 ; IC4VF1-NEXT:    [[DOTCAST:%.*]] = trunc i32 [[INDEX]] to i16
-; IC4VF1-NEXT:    [[OFFSET_IDX:%.*]] = sub i16 12, [[DOTCAST]]
+; IC4VF1-NEXT:    [[OFFSET_IDX:%.*]] = sub nsw i16 12, [[DOTCAST]]
 ; IC4VF1-NEXT:    [[TMP0:%.*]] = add i16 [[OFFSET_IDX]], -1
 ; IC4VF1-NEXT:    [[TMP1:%.*]] = add i16 [[OFFSET_IDX]], -2
 ; IC4VF1-NEXT:    [[TMP2:%.*]] = add i16 [[OFFSET_IDX]], -3
@@ -693,7 +693,7 @@ define i64 @select_decreasing_induction_icmp_iv_unsigned(ptr %a) {
 ; IC1VF4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; IC1VF4-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 9223372036854775807, i64 9223372036854775806, i64 9223372036854775805, i64 9223372036854775804>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; IC1VF4-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ splat (i64 -1), %[[VECTOR_PH]] ], [ [[TMP4:%.*]], %[[VECTOR_BODY]] ]
-; IC1VF4-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 9223372036854775807, [[INDEX]]
+; IC1VF4-NEXT:    [[OFFSET_IDX:%.*]] = sub nsw i64 9223372036854775807, [[INDEX]]
 ; IC1VF4-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[OFFSET_IDX]]
 ; IC1VF4-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i64 -3
 ; IC1VF4-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP2]], align 8
@@ -728,7 +728,7 @@ define i64 @select_decreasing_induction_icmp_iv_unsigned(ptr %a) {
 ; IC4VF4-NEXT:    [[STEP_ADD:%.*]] = add nsw <4 x i64> [[VEC_IND]], splat (i64 -4)
 ; IC4VF4-NEXT:    [[STEP_ADD_2:%.*]] = add nsw <4 x i64> [[STEP_ADD]], splat (i64 -4)
 ; IC4VF4-NEXT:    [[STEP_ADD_3:%.*]] = add nsw <4 x i64> [[STEP_ADD_2]], splat (i64 -4)
-; IC4VF4-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 9223372036854775807, [[INDEX]]
+; IC4VF4-NEXT:    [[OFFSET_IDX:%.*]] = sub nsw i64 9223372036854775807, [[INDEX]]
 ; IC4VF4-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[OFFSET_IDX]]
 ; IC4VF4-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i64 -3
 ; IC4VF4-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i64 -7
@@ -777,7 +777,7 @@ define i64 @select_decreasing_induction_icmp_iv_unsigned(ptr %a) {
 ; IC4VF1-NEXT:    [[VEC_PHI1:%.*]] = phi i64 [ -1, %[[VECTOR_PH]] ], [ [[TMP16:%.*]], %[[VECTOR_BODY]] ]
 ; IC4VF1-NEXT:    [[VEC_PHI2:%.*]] = phi i64 [ -1, %[[VECTOR_PH]] ], [ [[TMP17:%.*]], %[[VECTOR_BODY]] ]
 ; IC4VF1-NEXT:    [[VEC_PHI3:%.*]] = phi i64 [ -1, %[[VECTOR_PH]] ], [ [[TMP18:%.*]], %[[VECTOR_BODY]] ]
-; IC4VF1-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 9223372036854775807, [[INDEX]]
+; IC4VF1-NEXT:    [[OFFSET_IDX:%.*]] = sub nsw i64 9223372036854775807, [[INDEX]]
 ; IC4VF1-NEXT:    [[TMP0:%.*]] = add i64 [[OFFSET_IDX]], -1
 ; IC4VF1-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], -2
 ; IC4VF1-NEXT:    [[TMP2:%.*]] = add i64 [[OFFSET_IDX]], -3
@@ -1123,7 +1123,7 @@ define i64 @select_decreasing_induction_icmp_non_const_start(ptr %a, ptr %b, i64
 ; IC1VF4-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ [[TMP3]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; IC1VF4-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ splat (i64 9223372036854775807), %[[VECTOR_PH]] ], [ [[TMP13:%.*]], %[[VECTOR_BODY]] ]
 ; IC1VF4-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP12:%.*]], %[[VECTOR_BODY]] ]
-; IC1VF4-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 [[N]], [[INDEX]]
+; IC1VF4-NEXT:    [[OFFSET_IDX:%.*]] = sub nsw i64 [[N]], [[INDEX]]
 ; IC1VF4-NEXT:    [[TMP4:%.*]] = add nsw i64 [[OFFSET_IDX]], -1
 ; IC1VF4-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP4]]
 ; IC1VF4-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr [[TMP5]], i64 -3
@@ -1198,7 +1198,7 @@ define i64 @select_decreasing_induction_icmp_non_const_start(ptr %a, ptr %b, i64
 ; IC4VF4-NEXT:    [[STEP_ADD:%.*]] = add nsw <4 x i64> [[VEC_IND]], splat (i64 -4)
 ; IC4VF4-NEXT:    [[STEP_ADD_2:%.*]] = add nsw <4 x i64> [[STEP_ADD]], splat (i64 -4)
 ; IC4VF4-NEXT:    [[STEP_ADD_3:%.*]] = add nsw <4 x i64> [[STEP_ADD_2]], splat (i64 -4)
-; IC4VF4-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 [[N]], [[INDEX]]
+; IC4VF4-NEXT:    [[OFFSET_IDX:%.*]] = sub nsw i64 [[N]], [[INDEX]]
 ; IC4VF4-NEXT:    [[TMP4:%.*]] = add nsw i64 [[OFFSET_IDX]], -1
 ; IC4VF4-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP4]]
 ; IC4VF4-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i64, ptr [[TMP5]], i64 -3
@@ -1299,7 +1299,7 @@ define i64 @select_decreasing_induction_icmp_non_const_start(ptr %a, ptr %b, i64
 ; IC4VF1-NEXT:    [[VEC_PHI5:%.*]] = phi i1 [ false, %[[VECTOR_PH]] ], [ [[TMP31:%.*]], %[[LOOP]] ]
 ; IC4VF1-NEXT:    [[VEC_PHI6:%.*]] = phi i1 [ false, %[[VECTOR_PH]] ], [ [[TMP32:%.*]], %[[LOOP]] ]
 ; IC4VF1-NEXT:    [[VEC_PHI7:%.*]] = phi i1 [ false, %[[VECTOR_PH]] ], [ [[TMP33:%.*]], %[[LOOP]] ]
-; IC4VF1-NEXT:    [[IV:%.*]] = sub i64 [[N]], [[INDEX]]
+; IC4VF1-NEXT:    [[IV:%.*]] = sub nsw i64 [[N]], [[INDEX]]
 ; IC4VF1-NEXT:    [[TMP3:%.*]] = add i64 [[IV]], -1
 ; IC4VF1-NEXT:    [[TMP4:%.*]] = add i64 [[IV]], -2
 ; IC4VF1-NEXT:    [[TMP5:%.*]] = add i64 [[IV]], -3

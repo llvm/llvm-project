@@ -22,7 +22,7 @@ define void @reverse_copy(ptr noalias %src, ptr noalias %dst, i32 %n) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nsw ir<%n>, ir<-1>, vp<[[VP0]]>
-; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = DERIVED-IV ir<%n> + vp<[[VP5]]> * ir<-1>
+; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = DERIVED-IV nsw ir<%n> + vp<[[VP5]]> * ir<-1>
 ; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = SCALAR-STEPS vp<[[VP6]]>, ir<-1>, vp<[[VP0]]>
 ; CHECK-NEXT:      CLONE ir<%iv.next> = add nsw vp<[[VP7]]>, ir<-1>
 ; CHECK-NEXT:      CLONE ir<%gep.src> = getelementptr ir<%src>, ir<%iv.next>

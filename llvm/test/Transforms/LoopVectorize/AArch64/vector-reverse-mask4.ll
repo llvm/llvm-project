@@ -32,7 +32,7 @@ define void @vector_reverse_mask_v4i1(ptr noalias %a, ptr noalias %cond, i64 %N)
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[N]], [[INDEX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sub nsw i64 [[N]], [[INDEX]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[TMP1]], -1
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds double, ptr [[COND:%.*]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds double, ptr [[TMP7]], i64 -3

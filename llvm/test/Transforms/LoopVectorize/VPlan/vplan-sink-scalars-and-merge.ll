@@ -367,7 +367,7 @@ define void @uniform_gep(i64 %k, ptr noalias %A, ptr noalias %B) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nsw ir<21>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = DERIVED-IV ir<21> + vp<[[VP4]]> * ir<1>
+; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = DERIVED-IV nsw ir<21> + vp<[[VP4]]> * ir<1>
 ; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = WIDEN-CANONICAL-INDUCTION nuw vp<[[VP4]]>
 ; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = icmp ule vp<[[VP6]]>, vp<[[VP3]]>
 ; CHECK-NEXT:      CLONE ir<%lv> = load ir<%A>
@@ -1338,7 +1338,7 @@ define void @merge_with_dead_gep_between_regions(i32 %n, i32 %k, ptr noalias %sr
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nsw ir<%n>, ir<-1>, vp<[[VP0]]>
-; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = DERIVED-IV ir<%n> + vp<[[VP4]]> * ir<-1>
+; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = DERIVED-IV nsw ir<%n> + vp<[[VP4]]> * ir<-1>
 ; CHECK-NEXT:      WIDEN ir<%cond> = icmp ult ir<%iv>, ir<%k>
 ; CHECK-NEXT:    Successor(s): pred.store
 ; CHECK-EMPTY:
