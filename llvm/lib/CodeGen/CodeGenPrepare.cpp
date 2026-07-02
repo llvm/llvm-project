@@ -1911,6 +1911,22 @@ static bool sinkCmpExpression(CmpInst *Cmp, const TargetLowering &TLI,
     if (isa<PHINode>(User))
       continue;
 
+    // Don't sink an "icmp (and X, mask), 0" into a return block when the
+    // 'and' currently has a single use in the same block as the cmp. Sinking
+    // would give the 'and' a second use (in the return block), causing
+    // sinkAndCmp0Expression to duplicate the 'and' there too, creating a
+    // redundant TEST+SETCC sequence. The backend's CopyToExportRegsIfNeeded
+    // mechanism handles this cross-block use of the condition without any
+    // extra work.
+    if (isa<ReturnInst>(User) &&
+        match(Cmp,
+              m_ICmp(m_OneUse(m_And(m_Value(), m_Value())), m_ZeroInt()))) {
+      auto *AndI = cast<BinaryOperator>(Cmp->getOperand(0));
+      if (AndI->getParent() == Cmp->getParent() &&
+          TLI.isMaskAndCmp0FoldingBeneficial(*AndI))
+        continue;
+    }
+
     // Figure out which BB this cmp is used in.
     BasicBlock *UserBB = User->getParent();
     BasicBlock *DefBB = Cmp->getParent();
