@@ -108,6 +108,8 @@ private:
   bool getIEEE() const;
   bool getDX10Clamp() const;
   bool isFminnumIeee(const MachineInstr &MI) const;
+  bool isFminnum(const MachineInstr &MI) const;
+  bool isFminnumLike(const MachineInstr &MI) const;
   bool isFCst(MachineInstr *MI) const;
   bool isClampZeroToOne(MachineInstr *K0, MachineInstr *K1) const;
 
@@ -275,7 +277,7 @@ bool AMDGPURegBankCombinerImpl::matchFPMinMaxToMed3(
   // nodes(max/min) have same behavior when one input is NaN and other isn't.
   // Don't consider max(min(SNaN, K1), K0) since there is no isKnownNeverQNaN,
   // also post-legalizer inputs to min/max are fcanonicalized (never SNaN).
-  if ((getIEEE() && isFminnumIeee(MI)) || VT->isKnownNeverNaN(Dst)) {
+  if ((getIEEE() && isFminnumLike(MI)) || VT->isKnownNeverNaN(Dst)) {
     // Don't fold single use constant that can't be inlined.
     if ((!MRI.hasOneNonDBGUse(K0->VReg) || TII.isInlineConstant(K0->Value)) &&
         (!MRI.hasOneNonDBGUse(K1->VReg) || TII.isInlineConstant(K1->Value))) {
@@ -304,7 +306,7 @@ bool AMDGPURegBankCombinerImpl::matchFPMinMaxToClamp(MachineInstr &MI,
   // no NaN inputs. Most often MI is marked with nnan fast math flag.
   // For IEEE=true consider NaN inputs. Only min(max(QNaN, 0.0), 1.0) evaluates
   // to 0.0 requires dx10_clamp = true.
-  if ((getIEEE() && getDX10Clamp() && isFminnumIeee(MI) &&
+  if ((getIEEE() && getDX10Clamp() && isFminnumLike(MI) &&
        VT->isKnownNeverSNaN(Val)) ||
       VT->isKnownNeverNaN(MI.getOperand(0).getReg())) {
     Reg = Val;
@@ -585,6 +587,14 @@ bool AMDGPURegBankCombinerImpl::getDX10Clamp() const {
 
 bool AMDGPURegBankCombinerImpl::isFminnumIeee(const MachineInstr &MI) const {
   return MI.getOpcode() == AMDGPU::G_FMINNUM_IEEE;
+}
+
+bool AMDGPURegBankCombinerImpl::isFminnum(const MachineInstr &MI) const {
+  return MI.getOpcode() == AMDGPU::G_FMINNUM;
+}
+
+bool AMDGPURegBankCombinerImpl::isFminnumLike(const MachineInstr &MI) const {
+  return isFminnumIeee(MI) || isFminnum(MI);
 }
 
 bool AMDGPURegBankCombinerImpl::isFCst(MachineInstr *MI) const {
