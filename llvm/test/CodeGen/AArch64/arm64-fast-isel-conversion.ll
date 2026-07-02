@@ -163,6 +163,16 @@ define zeroext i64 @sext_i16_i64(i16 zeroext %in) {
   ret i64 %big
 }
 
+define zeroext i64 @sext_i32_i64(i32 zeroext %in) {
+; CHECK-LABEL: sext_i32_i64:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    mov x8, x0
+; CHECK-NEXT:    sxtw x0, w8
+; CHECK-NEXT:    ret
+  %big = sext i32 %in to i64
+  ret i64 %big
+}
+
 ; Test sext i1 to i32
 define i32 @sext_i1_i32(i1 signext %a) nounwind ssp {
 ; CHECK-LABEL: sext_i1_i32:
@@ -496,12 +506,22 @@ define zeroext i64 @zext_i8_i64(i8 zeroext %in) {
   %big = zext i8 %in to i64
   ret i64 %big
 }
+
 define zeroext i64 @zext_i16_i64(i16 zeroext %in) {
 ; CHECK-LABEL: zext_i16_i64:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    ; kill: def $x0 killed $w0
 ; CHECK-NEXT:    ret
   %big = zext i16 %in to i64
+  ret i64 %big
+}
+
+define zeroext i64 @zext_i32_i64(i32 zeroext %in) {
+; CHECK-LABEL: zext_i32_i64:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    ; kill: def $x0 killed $w0
+; CHECK-NEXT:    ret
+  %big = zext i32 %in to i64
   ret i64 %big
 }
 
