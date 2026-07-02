@@ -17,6 +17,7 @@ add_fp_unittest(
   SRCS
     shared_math_test.cpp
   DEPENDS
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.math.acos
     libc.src.__support.math.acosbf16
@@ -527,6 +528,7 @@ add_fp_unittest(
     shared_math_constexpr_test.cpp
   DEPENDS
     libc.src.__support.math.asinbf16
+    libc.src.__support.FPUtil.float128
     libc.src.__support.math.bf16subl
     libc.src.__support.math.canonicalize
     libc.src.__support.math.canonicalizebf16
