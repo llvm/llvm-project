@@ -249,6 +249,22 @@ void ReportDeadlySignal(const SignalContext &sig) {
 }
 
 void ReportDoubleFree(uptr addr, BufferedStackTrace *free_stack) {
+  // GPU-only vmem reservations (VmemGpuReserveTracker) are not backed by
+  // AsanChunk metadata. Avoid reading chunk headers at such addresses to
+  // prevent potential crashes in StackDepot (e.g. 0xaa poison patterns).
+  if (!FindHeapChunkByAddress(addr).IsValid()) {
+    ScopedInErrorReport in_report;
+    Decorator d;
+    Printf("%s", d.Error());
+    Report(
+        "ERROR: AddressSanitizer: attempting double-free on %p in thread %s:\n",
+        (void*)addr, AsanThreadIdAndName(GetCurrentTidOrInvalid()).c_str());
+    Printf("%s", d.Default());
+    CHECK_GT(free_stack->size, 0);
+    free_stack->Print();
+    ReportErrorSummary("double-free", free_stack);
+    return;
+  }
   ScopedInErrorReport in_report;
   ErrorDoubleFree error(GetCurrentTidOrInvalid(), free_stack, addr);
   in_report.ReportError(error);

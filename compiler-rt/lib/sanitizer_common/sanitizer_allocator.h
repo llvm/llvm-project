@@ -24,6 +24,10 @@
 #include "sanitizer_procmaps.h"
 #include "sanitizer_type_traits.h"
 
+#if SANITIZER_AMDHSA
+#  include "sanitizer_common/sanitizer_hsa.h"
+#endif
+
 namespace __sanitizer {
 
 // Allows the tools to name their allocations appropriately.
@@ -63,13 +67,23 @@ struct NoOpMapUnmapCallback {
   void OnUnmap(uptr p, uptr size) const {}
 };
 
+// clang-format off
+// Include order is load-bearing (MemoryMapper, AllocatorStats, secondary
+// typedefs, then DeviceAllocatorT, then CombinedAllocator). The base
+// CombinedAllocator is host-only (primary + secondary); an optional device heap
+// tier is layered on top via DeviceCombinedAllocator (opt-in from
+// asan_allocator.h), so the shared base stays untouched.
+// Do not sort.
 #include "sanitizer_allocator_size_class_map.h"
 #include "sanitizer_allocator_stats.h"
 #include "sanitizer_allocator_primary64.h"
 #include "sanitizer_allocator_primary32.h"
 #include "sanitizer_allocator_local_cache.h"
 #include "sanitizer_allocator_secondary.h"
+#include "sanitizer_allocator_device.h"
 #include "sanitizer_allocator_combined.h"
+#include "sanitizer_allocator_combined_device.h"
+// clang-format on
 
 bool IsRssLimitExceeded();
 void SetRssLimitExceeded(bool limit_exceeded);

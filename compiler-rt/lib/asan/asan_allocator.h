@@ -18,6 +18,11 @@
 #include "asan_interceptors.h"
 #include "asan_internal.h"
 #include "sanitizer_common/sanitizer_allocator.h"
+#if SANITIZER_AMDHSA
+namespace __sanitizer {
+#  include "sanitizer_common/sanitizer_allocator_amdgpu.h"
+}  // namespace __sanitizer
+#endif
 #include "sanitizer_common/sanitizer_list.h"
 #include "sanitizer_common/sanitizer_platform.h"
 
@@ -269,7 +274,14 @@ static const uptr kNumberOfSizeClasses = SizeClassMap::kNumClasses;
 
 template <typename AddressSpaceView>
 using AsanAllocatorASVT =
+#if SANITIZER_AMDHSA
+    DeviceCombinedAllocator<
+        CombinedAllocator<PrimaryAllocatorASVT<AddressSpaceView>>,
+        __sanitizer::AmdgpuDeviceAllocatorT<
+            PrimaryAllocatorASVT<AddressSpaceView>>>;
+#else
     CombinedAllocator<PrimaryAllocatorASVT<AddressSpaceView>>;
+#endif
 using AsanAllocator = AsanAllocatorASVT<LocalAddressSpaceView>;
 using AllocatorCache = AsanAllocator::AllocatorCache;
 
@@ -330,5 +342,20 @@ void asan_mz_force_unlock();
 void PrintInternalAllocatorStats();
 void AsanSoftRssLimitExceededCallback(bool exceeded);
 
+#if SANITIZER_AMDHSA
+// Hooks for asan_hsa_amd* wrappers.
+void* AsanHsaAllocate(uptr size, uptr alignment, BufferedStackTrace* stack,
+                      DeviceAllocationInfo* da_info);
+void AsanHsaDeallocate(void* ptr, BufferedStackTrace* stack);
+void* AsanHsaGetBlockBegin(const void* ptr);
+uptr AsanHsaGetActuallyAllocatedSize(void* ptr);
+bool AsanHsaTranslateIpcCreate(void* ptr, size_t len, void** out_ptr,
+                               size_t* out_len);
+bool AsanHsaIsVmemFreeValid(void* ptr, uptr size);
+bool AsanHsaGetLiveMappingInfo(const void* ptr, void** map_base,
+                               uptr* used_size, uptr* offset);
+#endif  // SANITIZER_AMDHSA
+
 }  // namespace __asan
+
 #endif  // ASAN_ALLOCATOR_H

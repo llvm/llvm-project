@@ -14,6 +14,7 @@
 #include "asan_interceptors.h"
 
 #include "asan_allocator.h"
+#include "asan_hsa_linux.h"
 #include "asan_internal.h"
 #include "asan_mapping.h"
 #include "asan_poisoning.h"
@@ -1009,6 +1010,13 @@ void InitializeAsanInterceptors() {
 
 #  if ASAN_INTERCEPT_VFORK
   ASAN_INTERCEPT_FUNC(vfork);
+#  endif
+
+#  if SANITIZER_AMDHSA
+  // HSA/ROCr interceptors are split out of this TU to keep the host interceptor
+  // surface clean. Initialize them here so the REAL() slots exist before first
+  // HSA API call (the first such call is often hsa_init()).
+  InitializeAmdgpuInterceptors();
 #  endif
 
   VReport(1, "AddressSanitizer: libc interceptors initialized\n");

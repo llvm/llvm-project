@@ -393,6 +393,8 @@ struct Allocator {
 
   void InitLinkerInitialized(const AllocatorOptions& options) {
     SetAllocatorMayReturnNull(options.may_return_null);
+    // Device tier init is driven by DeviceBackend::kEnableDeviceBackend inside
+    // CombinedAllocator::InitLinkerInitialized (no separate ASan field).
     allocator.InitLinkerInitialized(options.release_to_os_interval_ms);
     SharedInitCode(options);
     max_user_defined_malloc_size = common_flags()->max_allocation_size_mb
@@ -536,11 +538,15 @@ struct Allocator {
   }
 
   // -------------------- Allocation/Deallocation routines ---------------
+  // Shared allocation core. `block_alloc(cache, needed_size)` supplies the raw
+  // backing block and is the only step that differs between the host heap and
+  // the AMDGPU device heap, so no device knowledge leaks into this routine.
   // may_return_null tells AllocateImpl() whether OOM should produce a nullptr
   // (true) or a fatal Report*+Die() (false).
+  template <typename BlockAllocFn>
   void* AllocateImpl(uptr size, uptr alignment, BufferedStackTrace* stack,
-                     AllocType alloc_type, bool can_fill,
-                     bool may_return_null) {
+                     AllocType alloc_type, bool can_fill, bool may_return_null,
+                     BlockAllocFn block_alloc) {
     if (UNLIKELY(!AsanInited()))
       AsanInitFromRtl();
     if (UNLIKELY(IsRssLimitExceeded())) {
@@ -595,11 +601,11 @@ struct Allocator {
     void* allocated;
     if (t) {
       AllocatorCache* cache = GetAllocatorCache(&t->malloc_storage());
-      allocated = allocator.Allocate(cache, needed_size, 8);
+      allocated = block_alloc(cache, needed_size);
     } else {
       SpinMutexLock l(&fallback_mutex);
       AllocatorCache* cache = &fallback_allocator_cache;
-      allocated = allocator.Allocate(cache, needed_size, 8);
+      allocated = block_alloc(cache, needed_size);
     }
     if (UNLIKELY(!allocated)) {
       SetAllocatorOutOfMemory();
@@ -682,12 +688,28 @@ struct Allocator {
     return res;
   }
 
-  // Defer to the global, flag controlled, OOM policy.
+  // Host heap entry point. Defers to the global, flag controlled, OOM policy.
   void* Allocate(uptr size, uptr alignment, BufferedStackTrace* stack,
                  AllocType alloc_type, bool can_fill) {
     return AllocateImpl(size, alignment, stack, alloc_type, can_fill,
-                        AllocatorMayReturnNull());
+                        AllocatorMayReturnNull(),
+                        [this](AllocatorCache* cache, uptr needed_size) {
+                          return allocator.Allocate(cache, needed_size, 8);
+                        });
   }
+
+#if SANITIZER_AMDHSA
+  // Device-heap entry point; keeps DeviceAllocationInfo off the host path.
+  void* AllocateDevice(uptr size, uptr alignment, BufferedStackTrace* stack,
+                       AllocType alloc_type, bool can_fill,
+                       DeviceAllocationInfo* da_info) {
+    return AllocateImpl(
+        size, alignment, stack, alloc_type, can_fill, AllocatorMayReturnNull(),
+        [this, da_info](AllocatorCache* cache, uptr needed_size) {
+          return allocator.Allocate(cache, needed_size, 8, da_info);
+        });
+  }
+#endif
 
   // Set quarantine flag if chunk is allocated, issue ASan error report on
   // available and quarantined chunks. Return true on success, false otherwise.
@@ -1475,3 +1497,72 @@ int __asan_update_allocation_context(void* addr) {
   GET_STACK_TRACE_MALLOC;
   return instance.UpdateAllocationStack((uptr)addr, &stack);
 }
+
+#if SANITIZER_AMDHSA
+
+namespace __asan {
+
+void* AsanHsaAllocate(uptr size, uptr alignment, BufferedStackTrace* stack,
+                      DeviceAllocationInfo* da_info) {
+  return instance.AllocateDevice(size, alignment, stack, FROM_MALLOC,
+                                 /*can_fill=*/false, da_info);
+}
+
+void AsanHsaDeallocate(void* ptr, BufferedStackTrace* stack) {
+  instance.Deallocate(ptr, 0, 0, stack, FROM_MALLOC);
+}
+
+void* AsanHsaGetBlockBegin(const void* ptr) {
+  return get_allocator().GetBlockBegin(ptr);
+}
+
+uptr AsanHsaGetActuallyAllocatedSize(void* ptr) {
+  return get_allocator().GetActuallyAllocatedSize(ptr);
+}
+
+bool AsanHsaTranslateIpcCreate(void* ptr, size_t len, void** out_ptr,
+                               size_t* out_len) {
+  static const uptr kHsaPageSize = 4096;
+  void* ptr_ = get_allocator().GetBlockBegin(ptr);
+  AsanChunk* m = ptr_
+                     ? instance.GetAsanChunkByAddr(reinterpret_cast<uptr>(ptr_))
+                     : nullptr;
+  if (!ptr_ || !m)
+    return false;
+  uptr p = reinterpret_cast<uptr>(ptr);
+  uptr p_ = reinterpret_cast<uptr>(ptr_);
+  if (p != p_ + kHsaPageSize || len != m->UsedSize())
+    return false;
+  *out_ptr = ptr_;
+  *out_len = get_allocator().GetActuallyAllocatedSize(ptr_);
+  return true;
+}
+
+bool AsanHsaIsVmemFreeValid(void* ptr, uptr size) {
+  void* p = get_allocator().GetBlockBegin(ptr);
+  if (!p)
+    return false;
+  uptr ptr_ = reinterpret_cast<uptr>(ptr);
+  AsanChunk* m = reinterpret_cast<AsanChunk*>(ptr_ - kChunkHeaderSize);
+  return m->Beg() == ptr_ && size == m->UsedSize();
+}
+
+bool AsanHsaGetLiveMappingInfo(const void* ptr, void** map_base,
+                               uptr* used_size, uptr* offset) {
+  void* hsa_map_base = get_allocator().GetBlockBegin(ptr);
+  if (!hsa_map_base)
+    return false;
+  uptr user = reinterpret_cast<uptr>(ptr);
+  AsanChunk* m = reinterpret_cast<AsanChunk*>(user - kChunkHeaderSize);
+  if (atomic_load(&m->chunk_state, memory_order_acquire) != CHUNK_ALLOCATED ||
+      m->Beg() != user)
+    return false;
+  *map_base = hsa_map_base;
+  *used_size = m->UsedSize();
+  *offset = user - reinterpret_cast<uptr>(hsa_map_base);
+  return true;
+}
+
+}  // namespace __asan
+
+#endif  // SANITIZER_AMDHSA
