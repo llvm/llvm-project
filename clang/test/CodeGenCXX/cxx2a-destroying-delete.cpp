@@ -42,11 +42,11 @@ void glob_delete_A(A *a) { ::delete a; }
 // CHECK: br i1
 
 // CHECK-ITANIUM: call void @_ZN1AD1Ev(ptr noundef nonnull align 8 dead_on_return(8) dereferenceable(8) %[[a]])
-// CHECK-ITANIUM-NEXT: call void @_ZdlPvm(ptr noundef %[[a]], i64 noundef 8)
+// CHECK-ITANIUM-NEXT: call void @_ZdlPvm(ptr noundef captures(address) %[[a]], i64 noundef 8)
 // CHECK-MSABI64: call void @"??1A@@QEAA@XZ"(ptr noundef nonnull align 8 dead_on_return(8) dereferenceable(8) %[[a]])
-// CHECK-MSABI64-NEXT: call void @"??3@YAXPEAX_K@Z"(ptr noundef %[[a]], i64 noundef 8)
+// CHECK-MSABI64-NEXT: call void @"??3@YAXPEAX_K@Z"(ptr noundef captures(address) %[[a]], i64 noundef 8)
 // CHECK-MSABI32: call x86_thiscallcc void @"??1A@@QAE@XZ"(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) %[[a]])
-// CHECK-MSABI32-NEXT: call void @"??3@YAXPAXI@Z"(ptr noundef %[[a]], i32 noundef 4)
+// CHECK-MSABI32-NEXT: call void @"??3@YAXPAXI@Z"(ptr noundef captures(address) %[[a]], i32 noundef 4)
 
 struct B {
   virtual ~B();
@@ -229,8 +229,8 @@ H::~H() { call_in_dtor(); }
 // CLANG22-MSABI-NEXT: br i1 %[[CHCK2]], label %dtor.call_class_delete, label %dtor.call_glob_delete
 //
 // CLANG22-MSABI-LABEL: dtor.call_glob_delete:
-// CLANG22-MSABI64: call void @"??3@YAXPEAX_K@Z"(ptr noundef %{{.*}}, i64 noundef 48)
-// CLANG22-MSABI32: call void @"??3@YAXPAXIW4align_val_t@std@@@Z"(ptr noundef %{{.*}}, i32 noundef 32, i32 noundef 16)
+// CLANG22-MSABI64: call void @"??3@YAXPEAX_K@Z"(ptr noundef captures(address) %{{.*}}, i64 noundef 48)
+// CLANG22-MSABI32: call void @"??3@YAXPAXIW4align_val_t@std@@@Z"(ptr noundef captures(address) %{{.*}}, i32 noundef 32, i32 noundef 16)
 // CLANG22-MSABI-NEXT: br label %[[RETURN:.*]]
 //
 // CLANG21-MSABI: dtor.call_delete:
@@ -284,8 +284,8 @@ I::~I() { call_in_dtor(); }
 // CLANG22-MSABI-NEXT: br i1 %[[CHCK2]], label %dtor.call_class_delete, label %dtor.call_glob_delete
 //
 // CLANG22-MSABI: dtor.call_glob_delete:
-// CLANG22-MSABI64: call void @"??3@YAXPEAX_KW4align_val_t@std@@@Z"(ptr noundef %{{.*}}, i64 noundef 96, i64 noundef 32)
-// CLANG22-MSABI32: call void @"??3@YAXPAXIW4align_val_t@std@@@Z"(ptr noundef %{{.*}}, i32 noundef 64, i32 noundef 32)
+// CLANG22-MSABI64: call void @"??3@YAXPEAX_KW4align_val_t@std@@@Z"(ptr noundef captures(address) %{{.*}}, i64 noundef 96, i64 noundef 32)
+// CLANG22-MSABI32: call void @"??3@YAXPAXIW4align_val_t@std@@@Z"(ptr noundef captures(address) %{{.*}}, i32 noundef 64, i32 noundef 32)
 // CLANG22-MSABI-NEXT: br label %[[RETURN:.*]]
 //
 // CLANG21-MSABI: dtor.call_delete:

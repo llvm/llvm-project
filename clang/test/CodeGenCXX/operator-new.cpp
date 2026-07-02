@@ -27,3 +27,9 @@ void *f2(long N) {
 }
 
 // ALL: declare noundef nonnull ptr @_Znaj(
+
+void f3(int *p) {
+  // SANE: call void @_ZdlPvj(ptr noundef captures(address) %{{.*}}, i32 noundef 4)
+  // SANENOT: call void @_ZdlPvj(ptr noundef %{{.*}}, i32 noundef 4)
+  delete p;
+}

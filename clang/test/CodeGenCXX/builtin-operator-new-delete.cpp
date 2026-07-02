@@ -43,7 +43,7 @@ extern "C" void test_basic() {
   __builtin_operator_delete(__builtin_operator_new(4));
 }
 // CHECK: declare noundef nonnull ptr @_Znwm(i64 noundef) [[ATTR_NOBUILTIN:#[^ ]*]]
-// CHECK: declare void @_ZdlPv(ptr noundef) [[ATTR_NOBUILTIN_NOUNWIND:#[^ ]*]]
+// CHECK: declare void @_ZdlPv(ptr noundef captures(address)) [[ATTR_NOBUILTIN_NOUNWIND:#[^ ]*]]
 
 // CHECK-LABEL: define{{.*}} void @test_aligned_alloc(
 extern "C" void test_aligned_alloc() {
@@ -52,7 +52,7 @@ extern "C" void test_aligned_alloc() {
   __builtin_operator_delete(__builtin_operator_new(4, std::align_val_t(4)), std::align_val_t(4));
 }
 // CHECK: declare noundef nonnull ptr @_ZnwmSt11align_val_t(i64 noundef, i64 noundef) [[ATTR_NOBUILTIN:#[^ ]*]]
-// CHECK: declare void @_ZdlPvSt11align_val_t(ptr noundef, i64 noundef) [[ATTR_NOBUILTIN_NOUNWIND:#[^ ]*]]
+// CHECK: declare void @_ZdlPvSt11align_val_t(ptr noundef captures(address), i64 noundef) [[ATTR_NOBUILTIN_NOUNWIND:#[^ ]*]]
 
 // CHECK-LABEL: define{{.*}} void @test_sized_delete(
 extern "C" void test_sized_delete() {
@@ -60,7 +60,7 @@ extern "C" void test_sized_delete() {
   // CHECK: call void @_ZdlPvm({{.*}}, i64 noundef 4) [[ATTR_BUILTIN_DELETE:#[^ ]*]]
   __builtin_operator_delete(__builtin_operator_new(4), 4);
 }
-// CHECK: declare void @_ZdlPvm(ptr noundef, i64 noundef) [[ATTR_NOBUILTIN_UNWIND:#[^ ]*]]
+// CHECK: declare void @_ZdlPvm(ptr noundef captures(address), i64 noundef) [[ATTR_NOBUILTIN_UNWIND:#[^ ]*]]
 
 
 // CHECK-DAG: attributes [[ATTR_NOBUILTIN]] = {{[{].*}} nobuiltin {{.*[}]}}

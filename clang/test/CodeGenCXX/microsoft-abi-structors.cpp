@@ -58,7 +58,7 @@ struct C {
 // DTORS-NEXT:   br i1 %[[CONDITION]], label %[[CONTINUE_LABEL:[0-9a-z._]+]], label %[[CALL_DELETE_LABEL:[0-9a-z._]+]]
 //
 // DTORS:      [[CALL_DELETE_LABEL]]
-// DTORS-NEXT:   call void @"??3@YAXPAX@Z"(ptr %[[THIS]])
+// DTORS-NEXT:   call void @"??3@YAXPAX@Z"(ptr captures(address) %[[THIS]])
 // DTORS-NEXT:   br label %[[CONTINUE_LABEL]]
 //
 // DTORS:      [[CONTINUE_LABEL]]
@@ -117,7 +117,7 @@ void call_deleting_dtor_and_global_delete(C *obj_ptr) {
 // CHECK-NEXT:   %[[VDTOR:.*]] = load ptr, ptr %[[PVDTOR]]
 // CLANG22-NEXT:   %[[CALL:.*]] = call x86_thiscallcc ptr %[[VDTOR]](ptr {{[^,]*}} %[[OBJ_PTR_VALUE]], i32 5)
 // CLANG21-NEXT:   %[[CALL:.*]] = call x86_thiscallcc ptr %[[VDTOR]](ptr {{[^,]*}} %[[OBJ_PTR_VALUE]], i32 0)
-// CLANG21-NEXT: call void @"??3@YAXPAX@Z"(ptr %[[CALL]])
+// CLANG21-NEXT: call void @"??3@YAXPAX@Z"(ptr captures(address) %[[CALL]])
 // CHECK:      ret void
 }
 
@@ -487,7 +487,7 @@ void checkH() {
 // DTORS-NEXT:   br i1 %[[CONDITION1]], label %[[CALL_CLASS_DELETE:[0-9a-z._]+]], label %[[CALL_GLOB_DELETE:[0-9a-z._]+]]
 //
 // DTORS:      [[CALL_GLOB_DELETE]]
-// DTORS-NEXT:   call void @"??3@YAXPAX@Z"(ptr %[[THIS]])
+// DTORS-NEXT:   call void @"??3@YAXPAX@Z"(ptr captures(address) %[[THIS]])
 // DTORS-NEXT:   br label %[[CONTINUE_LABEL]]
 //
 // DTORS:      [[CALL_CLASS_DELETE]]

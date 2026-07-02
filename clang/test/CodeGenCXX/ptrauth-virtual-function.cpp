@@ -496,7 +496,7 @@ void testD3Destructor0(D3 *a) {
 // CHECK: %[[T14:[0-9]+]] = call i64 @llvm.ptrauth.blend(i64 %[[T13]], i64 57279)
 // DARWIN: %call = call noundef ptr %[[T12]](ptr noundef nonnull align {{[0-9]+}} dereferenceable(32) %{{.*}}) #{{.*}} [ "ptrauth"(i32 0, i64 %[[T14]]) ]
 // ELF:    call void %[[T12]](ptr noundef nonnull align {{[0-9]+}} dereferenceable(32) %{{.*}}) #{{.*}} [ "ptrauth"(i32 0, i64 %[[T14]]) ]
-// CHECK: call void @_ZdlPv(ptr noundef %[[T7]])
+// CHECK: call void @_ZdlPv(ptr noundef captures(address) %[[T7]])
 
 void testD3Destructor1(D3 *a) {
   ::delete a;
