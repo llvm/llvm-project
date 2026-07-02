@@ -84,6 +84,17 @@ class Anon3 {
   Anon3() : b(1) {}
 };
 
+struct S0 {
+    S0(int) {}
+    template <class T>
+    S0(T) : Member(42), T(42) {}; // expected-warning {{field 'Member' will be initialized after base 'T'}}
+    int Member{21};
+};
+
+void InstantiateS0() {
+    S0 S0Instance(67);
+}
+
 namespace T1 {
 
 struct S1 { };
