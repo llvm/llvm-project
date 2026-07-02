@@ -695,6 +695,77 @@ namespace cwg241 { // cwg241: 9
   }
 } // namespace cwg241
 
+namespace cwg242 { // cwg242: 3.0
+  struct A {};
+  struct I1 : A {};
+  struct I2 : A {};
+  struct D : I1, I2 {};
+
+  A *upcast(D *p) {
+    return (A *)(p);
+    /* expected-error@-1
+    {{ambiguous conversion from derived class 'D' to base class 'A':
+    struct cwg242::D -> I1 -> A
+    struct cwg242::D -> I2 -> A}}*/
+  }
+
+  D *downcast(A *p) {
+    return (D *)(p);
+    /* expected-error@-1
+    {{ambiguous cast from base 'cwg242::A' to derived 'cwg242::D':
+    A -> I1 -> struct cwg242::D
+    A -> I2 -> struct cwg242::D}}*/
+  }
+
+  struct V {};
+  struct B : virtual V {};
+
+  B *virt_downcast(V *p) {
+    return (B *)(p);
+    // expected-error@-1 {{cannot cast 'cwg242::V *' to 'B *' via virtual base 'cwg242::V'}}
+  }
+
+  A &ref_upcast(D &r) {
+    return (A &)(r);
+    /* expected-error@-1
+    {{ambiguous conversion from derived class 'D' to base class 'A':
+    struct cwg242::D -> I1 -> A
+    struct cwg242::D -> I2 -> A}}*/
+  }
+
+  D &ref_downcast(A &r) {
+    return (D &)(r);
+    /* expected-error@-1
+    {{ambiguous cast from base 'cwg242::A' to derived 'cwg242::D':
+    A -> I1 -> struct cwg242::D
+    A -> I2 -> struct cwg242::D}}*/
+  }
+
+  A *qual_upcast(const D *p) {
+    return (A *)(p);
+    /* expected-error@-1
+    {{ambiguous conversion from derived class '(const )?D' to base class 'A':
+    struct cwg242::D -> I1 -> A
+    struct cwg242::D -> I2 -> A}}*/
+  }
+
+  D *qual_downcast(const A *p) {
+    return (D *)(p);
+    /* expected-error@-1
+    {{ambiguous cast from base '(const )?cwg242::A' to derived 'cwg242::D':
+    A -> I1 -> struct cwg242::D
+    A -> I2 -> struct cwg242::D}}*/
+  }
+
+  int D::*ptm_cast(int A::*p) {
+    return (int D::*)(p);
+    /* expected-error@-1
+    {{ambiguous conversion from pointer to member of base class 'A' to pointer to member of derived class 'D':
+    struct cwg242::D -> I1 -> A
+    struct cwg242::D -> I2 -> A}}*/
+  }
+} // namespace cwg242
+
 namespace cwg243 { // cwg243: 2.8
   struct B;
   struct A {
