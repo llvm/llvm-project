@@ -170,6 +170,12 @@ GOFFObjectFile::GOFFObjectFile(MemoryBufferRef Object, Error &Err)
       TextPtrs.emplace_back(I);
       LLVM_DEBUG(dbgs() << "  --  TXT\n");
       break;
+    case GOFF::RT_RLD:
+      LLVM_DEBUG(dbgs() << "  --  RLD (GOFF record type) unhandled\n");
+      break;
+    case GOFF::RT_LEN:
+      LLVM_DEBUG(dbgs() << "  --  LEN (GOFF record type) unhandled\n");
+      break;
     case GOFF::RT_END:
       LLVM_DEBUG(dbgs() << "  --  END (GOFF record type) unhandled\n");
       break;
