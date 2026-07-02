@@ -2441,6 +2441,28 @@ void AsmPrinter::emitFunctionBody() {
   // Emit target-specific gunk after the function body.
   emitFunctionBodyEnd();
 
+  // Tail-pad functions that want it.
+  if (F.hasFnAttribute("tail-pad-to-size")) {
+    auto *FnEndSym = createTempSymbol("tail_pad_start");
+    OutStreamer->emitLabel(FnEndSym);
+
+    uint64_t PadToSize = F.getFnAttributeAsParsedInteger("tail-pad-to-size");
+    uint64_t FillValue =
+        PadToSize ? F.getFnAttributeAsParsedInteger("tail-pad-value") : 0;
+
+    // .fill ((PadToSize - FuncSize) & (PadToSize - FuncSize >= 0)) FillValue
+    const MCExpr *FuncSize = MCBinaryExpr::createSub(
+        MCSymbolRefExpr::create(FnEndSym, OutContext),
+        MCSymbolRefExpr::create(CurrentFnSymForSize, OutContext), OutContext);
+    const MCExpr *SizeConst = MCConstantExpr::create(PadToSize, OutContext);
+    const MCExpr *Zero = MCConstantExpr::create(0, OutContext);
+    const MCExpr *SubExpr =
+        MCBinaryExpr::createSub(SizeConst, FuncSize, OutContext);
+    const MCExpr *Cmp = MCBinaryExpr::createGTE(SubExpr, Zero, OutContext);
+    const MCExpr *FillExpr = MCBinaryExpr::createAnd(SubExpr, Cmp, OutContext);
+    OutStreamer->emitFill(*FillExpr, FillValue);
+  }
+
   // Even though wasm supports .type and .size in general, function symbols
   // are automatically sized.
   bool EmitFunctionSize = MAI.hasDotTypeDotSizeDirective() && !TT.isWasm();
@@ -3212,7 +3234,8 @@ void AsmPrinter::SetupMachineFunction(MachineFunction &MF) {
   MBBSectionRanges.clear();
   MBBSectionExceptionSyms.clear();
   bool NeedsLocalForSize = MAI.needsLocalForSize();
-  if (F.hasFnAttribute("patchable-function-entry") ||
+  if (F.hasFnAttribute("tail-pad-to-size") ||
+      F.hasFnAttribute("patchable-function-entry") ||
       F.hasFnAttribute("function-instrument") ||
       F.hasFnAttribute("xray-instruction-threshold") ||
       needFuncLabels(MF, *this) || NeedsLocalForSize ||

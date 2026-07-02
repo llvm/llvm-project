@@ -2557,6 +2557,13 @@ For example:
     This attribute specifies the section used to record the start of the
     patchable function entry area when such a section is emitted.  If omitted,
     the default section name is ``__patchable_function_entries``.
+``"tail-pad-to-size"``
+    This attribute specifies a minimum size in bytes for functions. Smaller
+    functions will be padded up to this size with fill bytes inserted at the
+    end. See `tail-pad-value` for padding value.
+``""tail-pad-value"``
+    This attribute specifies a byte value to use for `tail-pad-to-size` fill,
+    with default of 0 if this attribute is absent.
 ``"probe-stack"``
     This attribute indicates that the function will trigger a guard region
     in the end of the stack. It ensures that accesses to the stack must be
