@@ -20,6 +20,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
+#include "llvm/Support/FormatVariadic.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -94,7 +95,12 @@ void BreakpointResolverScripted::CreateImplementationIfNeeded(
       m_interface_sp->CreatePluginObject(scripted_metadata, breakpoint_sp);
   if (!obj_or_err) {
     m_interface_sp.reset();
-    m_error = Status::FromError(obj_or_err.takeError());
+    std::string msg = llvm::toString(obj_or_err.takeError());
+    Debugger::ReportError(
+        llvm::formatv("Failed to create BreakpointResolverScripted: {0}", msg)
+            .str(),
+        target.GetDebugger().GetID());
+    m_error = Status(msg);
     return;
   }
   StructuredData::ObjectSP object_sp = *obj_or_err;

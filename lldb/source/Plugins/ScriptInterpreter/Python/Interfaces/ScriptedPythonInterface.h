@@ -9,12 +9,14 @@
 #ifndef LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDPYTHONINTERFACE_H
 #define LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDPYTHONINTERFACE_H
 
+#include <functional>
 #include <optional>
 #include <sstream>
 #include <tuple>
 #include <type_traits>
 #include <utility>
 
+#include "lldb/Core/Debugger.h"
 #include "lldb/Interpreter/Interfaces/ScriptedInterface.h"
 #include "lldb/Utility/DataBufferHeap.h"
 
@@ -28,6 +30,22 @@ class ScriptedPythonInterface : virtual public ScriptedInterface {
 public:
   ScriptedPythonInterface(ScriptInterpreterPythonImpl &interpreter);
   ~ScriptedPythonInterface() override = default;
+
+  /// Set callback to surface Python exceptions to CommandReturnObject.
+  ///
+  /// When set, this callback will be invoked whenever a Python exception occurs
+  /// in scripting affordance methods, allowing errors to be surfaced directly
+  /// to the user via CommandReturnObject::AppendError().
+  ///
+  /// If no callback is registered, errors will be reported via
+  /// Debugger::ReportError() instead.
+  ///
+  /// \param callback Function to call with Status containing exception details.
+  using ErrorCallback = std::function<void(const Status &)>;
+  void SetErrorCallback(ErrorCallback callback) override {
+    m_error_callback = std::move(callback);
+  }
+  void ClearErrorCallback() override { m_error_callback = nullptr; }
 
   enum class AbstractMethodCheckerCases {
     eNotImplemented,
@@ -130,7 +148,15 @@ public:
       llvm::Expected<PythonObject> callable_or_err =
           class_dict.GetItem(method_name);
       if (!callable_or_err) {
-        llvm::consumeError(callable_or_err.takeError());
+        Log *log = GetLog(LLDBLog::Script);
+        if (log) {
+          std::string error_msg =
+              ExtractPythonError(callable_or_err.takeError());
+          LLDB_LOGF(log, "Failed to get method '%s': %s", method_name.data(),
+                    error_msg.c_str());
+        } else {
+          llvm::consumeError(callable_or_err.takeError());
+        }
         SET_CASE_AND_CONTINUE(method_name,
                               AbstractMethodCheckerCases::eNotAllocated)
       }
@@ -145,7 +171,15 @@ public:
 
       auto arg_info_or_err = callable.GetArgInfo();
       if (!arg_info_or_err) {
-        llvm::consumeError(arg_info_or_err.takeError());
+        Log *log = GetLog(LLDBLog::Script);
+        if (log) {
+          std::string error_msg =
+              ExtractPythonError(arg_info_or_err.takeError());
+          LLDB_LOGF(log, "Failed to get arg info for method '%s': %s",
+                    method_name.data(), error_msg.c_str());
+        } else {
+          llvm::consumeError(arg_info_or_err.takeError());
+        }
         SET_CASE_AND_CONTINUE(method_name,
                               AbstractMethodCheckerCases::eUnknownArgumentCount)
       }
@@ -258,14 +292,18 @@ public:
 
         std::apply(
             [&init, &expected_return_object](auto &&...args) {
-              llvm::consumeError(expected_return_object.takeError());
+              // Consume placeholder error (expected initial state).
+              if (!expected_return_object)
+                llvm::consumeError(expected_return_object.takeError());
               expected_return_object = init(args...);
             },
             std::tuple_cat(transformed_args, std::make_tuple(dict)));
       } else {
         std::apply(
             [&init, &expected_return_object](auto &&...args) {
-              llvm::consumeError(expected_return_object.takeError());
+              // Consume placeholder error (expected initial state).
+              if (!expected_return_object)
+                llvm::consumeError(expected_return_object.takeError());
               expected_return_object = init(args...);
             },
             transformed_args);
@@ -467,13 +505,41 @@ public:
         llvm::createStringError("not initialized");
     std::apply(
         [&method, &expected_return_object](auto &&...args) {
-          llvm::consumeError(expected_return_object.takeError());
+          // Consume placeholder error (expected initial state).
+          if (!expected_return_object)
+            llvm::consumeError(expected_return_object.takeError());
           expected_return_object = method(args...);
         },
         transformed_args);
 
     if (llvm::Error e = expected_return_object.takeError()) {
-      error = Status::FromError(std::move(e));
+      // Extract Python backtrace and log it.
+      std::string detailed_error = ExtractPythonError(std::move(e));
+
+      Log *log = GetLog(LLDBLog::Script);
+      if (log) {
+        LLDB_LOGF(log, "%s: Python exception in static method %s:\n%s",
+                  caller_signature.c_str(), method_name.data(),
+                  detailed_error.c_str());
+      }
+
+      // Create Status with full context including the interface type.
+      // TODO: Stringify `args` and include them in the message so users
+      // can see what was passed to the failing call (e.g.
+      // `read_memory_at_address(0x500000000, 4)`). Requires a SFINAE
+      // helper that falls back to a placeholder for types without a
+      // format_provider / operator<<.
+      error = Status::FromErrorStringWithFormatv(
+          "Python exception in {0} method '{1}':\n{2}",
+          GetScriptedMetadata() ? GetScriptedMetadata()->GetClassName()
+                                : "<unknown>",
+          method_name, detailed_error);
+
+      // Surface error to user: use callback if available.
+      if (m_error_callback) {
+        m_error_callback(error);
+      }
+
       return ErrorWithMessage<T>(
           caller_signature, "python static method could not be called", error);
     }
@@ -492,6 +558,23 @@ public:
   }
 
 protected:
+  /// Extract detailed error message including Python backtrace if available.
+  ///
+  /// This helper processes llvm::Error objects that may contain PythonException
+  /// instances, extracting full Python backtraces when available.
+  ///
+  /// \param error The llvm::Error to extract information from.
+  /// \return A string containing the error message, including full Python
+  ///         backtrace if the error was a PythonException.
+  static std::string ExtractPythonError(llvm::Error error) {
+    std::string error_msg;
+    llvm::handleAllErrors(
+        std::move(error),
+        [&](python::PythonException &E) { error_msg = E.ReadBacktrace(); },
+        [&](const llvm::ErrorInfoBase &E) { error_msg = E.message(); });
+    return error_msg;
+  }
+
   template <typename T = StructuredData::ObjectSP>
   T ExtractValueFromPythonObject(python::PythonObject &p, Status &error) {
     return p.CreateStructuredObject();
@@ -530,14 +613,42 @@ protected:
         llvm::createStringError("not initialized");
     std::apply(
         [&implementor, &method_name, &expected_return_object](auto &&...args) {
-          llvm::consumeError(expected_return_object.takeError());
+          // Consume placeholder error (expected initial state).
+          if (!expected_return_object)
+            llvm::consumeError(expected_return_object.takeError());
           expected_return_object =
               implementor.CallMethod(method_name.data(), args...);
         },
         transformed_args);
 
     if (llvm::Error e = expected_return_object.takeError()) {
-      error = Status::FromError(std::move(e));
+      // Extract Python backtrace and log it.
+      std::string detailed_error = ExtractPythonError(std::move(e));
+
+      Log *log = GetLog(LLDBLog::Script);
+      if (log) {
+        LLDB_LOGF(log, "%s: Python exception in %s:\n%s",
+                  caller_signature.c_str(), method_name.data(),
+                  detailed_error.c_str());
+      }
+
+      // Create Status with full context including the interface type.
+      // TODO: Stringify `args` and include them in the message so users
+      // can see what was passed to the failing call (e.g.
+      // `read_memory_at_address(0x500000000, 4)`). Requires a SFINAE
+      // helper that falls back to a placeholder for types without a
+      // format_provider / operator<<.
+      error = Status::FromErrorStringWithFormatv(
+          "Python exception in {0} method '{1}':\n{2}",
+          GetScriptedMetadata() ? GetScriptedMetadata()->GetClassName()
+                                : "<unknown>",
+          method_name, detailed_error);
+
+      // Surface error to user: use callback if available.
+      if (m_error_callback) {
+        m_error_callback(error);
+      }
+
       return ErrorWithMessage<T>(caller_signature,
                                  "python method could not be called", error);
     }
@@ -738,6 +849,11 @@ protected:
 
   // The lifetime is managed by the ScriptInterpreter
   ScriptInterpreterPythonImpl &m_interpreter;
+
+  // Optional callback for surfacing errors to users (e.g.,
+  // CommandReturnObject). If not set, errors are reported via
+  // Debugger::ReportError().
+  ErrorCallback m_error_callback;
 };
 
 template <>

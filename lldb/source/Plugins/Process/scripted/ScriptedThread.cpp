@@ -69,11 +69,8 @@ ScriptedThread::Create(ScriptedProcess &process,
   auto obj_or_err = scripted_thread_interface->CreatePluginObject(
       thread_metadata, exe_ctx, script_object);
 
-  if (!obj_or_err) {
-    llvm::consumeError(obj_or_err.takeError());
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "Failed to create script object.");
-  }
+  if (!obj_or_err)
+    return obj_or_err.takeError();
 
   StructuredData::GenericSP owned_script_object_sp = *obj_or_err;
 
