@@ -118,7 +118,7 @@ CSRFirstTimeCost("regalloc-csr-first-time-cost",
 static cl::opt<unsigned> CSRCostScale(
     "regalloc-csr-cost-scale",
     cl::desc("Scale for the callee-saved register cost, in percentage."),
-    cl::init(80), cl::Hidden);
+    cl::init(30), cl::Hidden);
 
 static cl::opt<unsigned long> GrowRegionComplexityBudget(
     "grow-region-complexity-budget",
@@ -2449,11 +2449,16 @@ void RAGreedy::initializeCSRCost() {
     }
   } else {
     uint64_t EntryFreq = MBFI->getEntryFreq().getFrequency();
-    CSRCost = BlockFrequency(TRI->getCSRFirstUseCost() * EntryFreq);
-    if (CSRCostScale < 100)
-      CSRCost *= BranchProbability(CSRCostScale, 100);
+    CSRCost = BlockFrequency(TRI->getCSRFirstUseCost(*MF) * EntryFreq);
+    unsigned Scale = TRI->getCSRCostScale(*MF);
+    // Command line specified CSRCostScale can override target's default value.
+    if (CSRCostScale.getNumOccurrences())
+      Scale = CSRCostScale;
+
+    if (Scale < 100)
+      CSRCost *= BranchProbability(Scale, 100);
     else
-      CSRCost /= BranchProbability(100, CSRCostScale);
+      CSRCost /= BranchProbability(100, Scale);
   }
 }
 

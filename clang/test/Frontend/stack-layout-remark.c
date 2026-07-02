@@ -135,26 +135,28 @@ extern void use_dot_vector(struct Array *data);
 //      O0-DEBUG: Function: do_work
 // O0-DEBUG-NEXT: Offset: [SP-4], Type: Variable, Align: 4, Size: 4
 // O0-DEBUG-NEXT: Offset: [SP-16], Type: Variable, Align: 8, Size: 8
-// O0-DEBUG-NEXT:     A @ {{.*}}stack-layout-remark.c:[[# @LINE + 20]]
+// O0-DEBUG-NEXT:     A @ {{.*}}stack-layout-remark.c:[[# @LINE + 22]]
 // O0-DEBUG-NEXT: Offset: [SP-24], Type: Variable, Align: 8, Size: 8
-// O0-DEBUG-NEXT:     B @ {{.*}}stack-layout-remark.c:[[# @LINE + 18]]
+// O0-DEBUG-NEXT:     B @ {{.*}}stack-layout-remark.c:[[# @LINE + 20]]
 // O0-DEBUG-NEXT: Offset: [SP-32], Type: Variable, Align: 8, Size: 8
-// O0-DEBUG-NEXT:     out @ {{.*}}stack-layout-remark.c:[[# @LINE + 16]]
+// O0-DEBUG-NEXT:     out @ {{.*}}stack-layout-remark.c:[[# @LINE + 18]]
 // O0-DEBUG-NEXT: Offset: [SP-36], Type: Variable, Align: 4, Size: 4
-// O0-DEBUG-NEXT:     len @ {{.*}}stack-layout-remark.c:[[# @LINE + 19]]
+// O0-DEBUG-NEXT:     len @ {{.*}}stack-layout-remark.c:[[# @LINE + 21]]
 // O0-DEBUG-NEXT: Offset: [SP-48], Type: Variable, Align: 8, Size: 8
-// O0-DEBUG-NEXT:     AB @ {{.*}}stack-layout-remark.c:[[# @LINE + 18]]
+// O0-DEBUG-NEXT:     AB @ {{.*}}stack-layout-remark.c:[[# @LINE + 20]]
 // O0-DEBUG-NEXT: Offset: [SP-52], Type: Variable, Align: 4, Size: 4
-// O0-DEBUG-NEXT:     sum @ {{.*}}stack-layout-remark.c:[[# @LINE + 32]]
+// O0-DEBUG-NEXT:     sum @ {{.*}}stack-layout-remark.c:[[# @LINE + 34]]
 // O0-DEBUG-NEXT: Offset: [SP-56], Type: Variable, Align: 4, Size: 4
-// O0-DEBUG-NEXT:     i @ {{.*}}stack-layout-remark.c:[[# @LINE + 31]]
+// O0-DEBUG-NEXT:     i @ {{.*}}stack-layout-remark.c:[[# @LINE + 33]]
 
 //      O3-DEBUG: Function: do_work
 // O3-DEBUG-NEXT: Offset: [SP-8], Type: Spill, Align: 16, Size: 8
 // O3-DEBUG-NEXT: Offset: [SP-16], Type: Spill, Align: 8, Size: 8
-// O3-DEBUG-NEXT: Offset: [SP-24], Type: Spill, Align: 16, Size: 8
+// O3-DEBUG-NEXT: Offset: [SP-24], Type: Spill, Align: 8, Size: 8
+// O3-DEBUG-NEXT:     B @ {{.*}}stack-layout-remark.c:[[# @LINE + 4]]
 // O3-DEBUG-NEXT: Offset: [SP-32], Type: Spill, Align: 8, Size: 8
-// O3-DEBUG-NEXT: Offset: [SP-40], Type: Spill, Align: 16, Size: 8
+// O3-DEBUG-NEXT:     A @ {{.*}}stack-layout-remark.c:[[# @LINE + 2]]
+// O3-DEBUG-NEXT: Offset: [SP-40], Type: Spill, Align: 8, Size: 8
 int do_work(struct Array *A, struct Array *B, struct Result *out) {
   if (!A || !B)
     return -1;
