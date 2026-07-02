@@ -7459,12 +7459,12 @@ void ASTRecordWriter::AddCXXDefinitionData(const CXXRecordDecl *D) {
   if (!Data.IsLambda) {
     Record->push_back(Data.NumBases);
     if (Data.NumBases > 0)
-      AddCXXBaseSpecifiers(Data.bases());
+      AddCXXBaseSpecifiers(Data.bases(D->getASTContext()));
 
     // FIXME: Make VBases lazily computed when needed to avoid storing them.
     Record->push_back(Data.NumVBases);
     if (Data.NumVBases > 0)
-      AddCXXBaseSpecifiers(Data.vbases());
+      AddCXXBaseSpecifiers(Data.vbases(D->getASTContext()));
 
     AddDeclRef(D->getFirstFriend());
   } else {
