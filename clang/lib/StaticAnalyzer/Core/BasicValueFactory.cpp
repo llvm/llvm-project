@@ -242,12 +242,28 @@ const PointerToMemberData *BasicValueFactory::accumCXXBase(
   return getPointerToMemberData(ND, BaseSpecList);
 }
 
+std::optional<APSIntPtr> BasicValueFactory::evalAPSInt(UnaryOperator::Opcode Op,
+                                                       const llvm::APSInt &V1) {
+  switch (Op) {
+  default:
+    assert(false && "Invalid Opcode.");
+    return std::nullopt;
+
+  case UO_Minus:
+    return getValue(-V1);
+
+  case UO_Not:
+    return getValue(~V1);
+  }
+}
+
 std::optional<APSIntPtr>
 BasicValueFactory::evalAPSInt(BinaryOperator::Opcode Op, const llvm::APSInt &V1,
                               const llvm::APSInt &V2) {
   switch (Op) {
     default:
-      llvm_unreachable("Invalid Opcode.");
+      assert(false && "Invalid Opcode.");
+      return std::nullopt;
 
     case BO_Mul:
       return getValue(V1 * V2);
