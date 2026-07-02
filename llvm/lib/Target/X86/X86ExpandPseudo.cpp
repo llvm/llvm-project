@@ -370,6 +370,12 @@ bool X86ExpandPseudoImpl::expandMI(MachineBasicBlock &MBB,
                Opcode == X86::TCRETURNri64_ImpCall ||
                Opcode == X86::TCRETURN_WIN64ri) {
       JumpTarget.setIsKill();
+      if (Opcode == X86::TCRETURNri64_ImpCall &&
+          JumpTarget.getReg() != X86::RAX) {
+        report_fatal_error(
+            "Import call optimization register indirect tail call must use "
+            "RAX");
+      }
       BuildMI(MBB, MBBI, DL,
               TII->get(IsX64 ? X86::TAILJMPr64_REX : X86::TAILJMPr64))
           .add(JumpTarget);
@@ -722,9 +728,15 @@ bool X86ExpandPseudoImpl::expandMI(MachineBasicBlock &MBB,
   case X86::CALL64m_RVMARKER:
     expandCALL_RVMARKER(MBB, MBBI);
     return true;
-  case X86::CALL64r_ImpCall:
+  case X86::CALL64r_ImpCall: {
+    Register CalleeReg = MI.getOperand(0).getReg();
+    if (CalleeReg != X86::RAX) {
+      report_fatal_error(
+          "Import call optimization register indirect call must use RAX");
+    }
     MI.setDesc(TII->get(X86::CALL64r));
     return true;
+  }
   case X86::ADD32mi_ND:
   case X86::ADD64mi32_ND:
   case X86::SUB32mi_ND:

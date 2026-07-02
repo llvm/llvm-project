@@ -3287,11 +3287,6 @@ bool X86FastISel::fastLowerCall(CallLoweringInfo &CLI) {
     if (Flag.isSwiftError() || Flag.isPreallocated())
       return false;
 
-  // Can't handle import call optimization.
-  if (Is64Bit &&
-      MF->getFunction().getParent()->getModuleFlag("import-call-optimization"))
-    return false;
-
   SmallVector<MVT, 16> OutVTs;
   SmallVector<Type *, 16> ArgTys;
   SmallVector<Register, 16> ArgRegs;
@@ -3532,6 +3527,20 @@ bool X86FastISel::fastLowerCall(CallLoweringInfo &CLI) {
   if (CalleeOp) {
     // Register-indirect call.
     unsigned CallOpc = Is64Bit ? X86::CALL64r : X86::CALL32r;
+
+    const Module *M = FuncInfo.MF->getFunction().getParent();
+    if (Is64Bit && M->getModuleFlag("import-call-optimization")) {
+      // Import call optimization requires all indirect calls to use RAX.
+      // Use the CALL64r_ImpCall pseudo which guarantees this when expanded.
+      if (CalleeOp != X86::RAX) {
+        BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
+                TII.get(TargetOpcode::COPY), X86::RAX)
+            .addReg(CalleeOp);
+        CalleeOp = X86::RAX;
+      }
+      CallOpc = X86::CALL64r_ImpCall;
+    }
+
     MIB = BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(CallOpc))
       .addReg(CalleeOp);
   } else {

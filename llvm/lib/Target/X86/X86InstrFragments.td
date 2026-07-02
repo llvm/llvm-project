@@ -299,13 +299,6 @@ def X86call_globaladdr  : SDNode<"X86ISD::CALL_GLOBALADDR",     SDT_X86Call,
                         [SDNPHasChain, SDNPOutGlue, SDNPOptInGlue,
                          SDNPVariadic]>;
 
-// Pseudo for a call to an imported function to ensure the correct machine
-// instruction is emitted for Import Call Optimization.
-def X86imp_call  : SDNode<"X86ISD::IMP_CALL",     SDT_X86Call,
-                        [SDNPHasChain, SDNPOutGlue, SDNPOptInGlue,
-                         SDNPVariadic]>;
-
-// Same as call except it adds the NoTrack prefix.
 def X86NoTrackCall : SDNode<"X86ISD::NT_CALL", SDT_X86Call,
                             [SDNPHasChain, SDNPOutGlue, SDNPOptInGlue,
                              SDNPVariadic]>;

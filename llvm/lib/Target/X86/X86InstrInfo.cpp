@@ -3739,9 +3739,16 @@ bool X86InstrInfo::canMakeTailCallConditional(
     return false;
   }
 
-  if (Subtarget.isTargetWin64() && MF->hasWinCFI()) {
+  if (Subtarget.isTargetWin64()) {
     // Conditional tail calls confuse the Win64 unwinder.
-    return false;
+    if (MF->hasWinCFI())
+      return false;
+
+    // Conditional tail calls cannot be encoded in the Import Call Optimization
+    // metadata.
+    if (MF->getFunction().getParent()->getModuleFlag(
+            "import-call-optimization"))
+      return false;
   }
 
   assert(BranchCond.size() == 1);
