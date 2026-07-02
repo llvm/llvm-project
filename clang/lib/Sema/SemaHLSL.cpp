@@ -4298,6 +4298,17 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   case Builtin::BI__builtin_hlsl_elementwise_rcp: {
     if (SemaRef.checkArgCount(TheCall, 1))
       return true;
+    QualType ArgTy = TheCall->getArg(0)->getType();
+    if (ArgTy->isConstantMatrixType()) {
+      const auto *MT = ArgTy->getAs<ConstantMatrixType>();
+      if (!MT->getElementType()->isRealFloatingType())
+        return SemaRef.Diag(TheCall->getArg(0)->getBeginLoc(),
+                            diag::err_builtin_invalid_arg_type)
+               << /* ordinal */ 1 << /* scalar or vector */ 5 << /* no int */ 0
+               << /* fp */ 1 << ArgTy;
+      TheCall->setType(ArgTy);
+      break;
+    }
     if (!TheCall->getArg(0)
              ->getType()
              ->hasFloatingRepresentation()) // half or float or double
@@ -4322,6 +4333,10 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     if (CheckAllArgTypesAreCorrect(&SemaRef, TheCall,
                                    CheckFloatOrHalfRepresentation))
       return true;
+    if (TheCall->getArg(0)->getType()->isConstantMatrixType()) {
+      TheCall->setType(TheCall->getArg(0)->getType());
+      break;
+    }
     if (SemaRef.PrepareBuiltinElementwiseMathOneArgCall(TheCall))
       return true;
     break;
