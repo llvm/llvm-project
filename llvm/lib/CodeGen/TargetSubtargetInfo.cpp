@@ -39,6 +39,19 @@ bool TargetSubtargetInfo::isIntrinsicSupported(unsigned IntrinsicID) const {
   return It->second;
 }
 
+bool TargetSubtargetInfo::isIntrinsicSupported(unsigned IntrinsicID,
+                                               const FunctionType *FTy) const {
+  StringRef RequiredFeatures =
+      getRequiredTargetFeaturesForIntrinsic(IntrinsicID, FTy);
+  return RequiredFeatures.empty() || checkFeatureExpression(RequiredFeatures);
+}
+
+StringRef TargetSubtargetInfo::getRequiredTargetFeaturesForIntrinsic(
+    unsigned IntrinsicID, const FunctionType *FTy) const {
+  return Intrinsic::getRequiredTargetFeatures(
+      static_cast<Intrinsic::ID>(IntrinsicID));
+}
+
 bool TargetSubtargetInfo::enableAtomicExpand() const {
   return true;
 }

@@ -422,20 +422,21 @@ void DiagnosticInfoUnsupported::print(DiagnosticPrinter &DP) const {
 DiagnosticInfoUnsupportedTargetIntrinsic::
     DiagnosticInfoUnsupportedTargetIntrinsic(const Function &Fn,
                                              unsigned IntrinsicID,
-                                             const DiagnosticLocation &Loc)
+                                             StringRef IntrinsicName,
+                                             const DiagnosticLocation &Loc,
+                                             StringRef RequiredFeatures)
     : DiagnosticInfoWithLocationBase(DK_UnsupportedTargetIntrinsic, DS_Error,
                                      Fn, Loc),
-      IntrinsicID(IntrinsicID),
-      RequiredFeatures(Intrinsic::getRequiredTargetFeatures(
-          static_cast<Intrinsic::ID>(IntrinsicID))) {
+      IntrinsicID(IntrinsicID), IntrinsicName(IntrinsicName),
+      RequiredFeatures(RequiredFeatures) {
   assert(!RequiredFeatures.empty() &&
          "intrinsic without required features should be supported");
+  assert(!IntrinsicName.empty() && "intrinsic name should not be empty");
 }
 
 std::string DiagnosticInfoUnsupportedTargetIntrinsic::getMessage() const {
-  return (Twine(
-              Intrinsic::getBaseName(static_cast<Intrinsic::ID>(IntrinsicID))) +
-          " requires target feature '" + RequiredFeatures + "'")
+  return (Twine(IntrinsicName) + " requires target feature '" +
+          RequiredFeatures + "'")
       .str();
 }
 

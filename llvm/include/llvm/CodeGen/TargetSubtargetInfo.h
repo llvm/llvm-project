@@ -30,6 +30,7 @@
 namespace llvm {
 
 class APInt;
+class FunctionType;
 class MachineFunction;
 class ScheduleDAGMutation;
 class CallLowering;
@@ -91,6 +92,17 @@ public:
   /// \returns true if the target intrinsic \p IntrinsicID is supported by this
   /// subtarget.
   bool isIntrinsicSupported(unsigned IntrinsicID) const;
+  bool isIntrinsicSupported(unsigned IntrinsicID,
+                            const FunctionType *FTy) const;
+
+  /// \returns the target features required by the target intrinsic
+  /// \p IntrinsicID with signature \p FTy.
+  ///
+  /// The intrinsic TargetFeatures table is keyed by intrinsic ID. Targets can
+  /// override this when support also depends on the resolved overload type.
+  virtual StringRef
+  getRequiredTargetFeaturesForIntrinsic(unsigned IntrinsicID,
+                                        const FunctionType *FTy) const;
 
   // Interfaces to the major aspects of target machine information:
   //
