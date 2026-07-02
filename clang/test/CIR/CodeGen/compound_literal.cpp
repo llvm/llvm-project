@@ -115,7 +115,7 @@ void foo4() {
 
 // LLVM-LABEL: @_Z4foo4v
 // LLVM:   %[[P:.*]] = alloca %struct.Point
-// LLVM:   call void @llvm.memcpy{{.*}}(ptr %[[P]], ptr @[[FOO4_P]]
+// LLVM:   call void @llvm.memcpy{{.*}}(ptr align 4 %[[P]], ptr align 4 @[[FOO4_P]]
 
 // OGCG-LABEL: @_Z4foo4v
 // OGCG:   %[[P:.*]] = alloca %struct.Point

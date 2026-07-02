@@ -193,7 +193,7 @@ public:
   bool ShouldStopSynchronous(Event *event_ptr) override {
     // Breakpoint callbacks run on the PST during stop processing. Push
     // private state context so callback code sees the private reality.
-    PolicyStack::Guard policy_guard(Policy::PrivateState());
+    PolicyStack::Guard policy_guard = PolicyStack::Get().PushPrivateState();
 
     ThreadSP thread_sp(m_thread_wp.lock());
     if (thread_sp) {
@@ -903,7 +903,7 @@ protected:
   bool ShouldStopSynchronous(Event *event_ptr) override {
     // Watchpoint callbacks run on the PST during stop processing. Push
     // private state context so callback code sees the private reality.
-    PolicyStack::Guard policy_guard(Policy::PrivateState());
+    PolicyStack::Guard policy_guard = PolicyStack::Get().PushPrivateState();
 
     // If we are running our step-over the watchpoint plan, stop if it's done
     // and continue if it's not:
