@@ -71,6 +71,43 @@
 ; CHECK-NOT:  r19 = add(r19,#-4)
 ; CHECK-LABEL: nonleaf_cfi:
 
+;; Minsize + multiple callee-saved registers: the restore stub
+;; (__restore_r16_through_r17_and_deallocframe) must NOT be used when SCS is
+;; active because it performs deallocframe+jumpr without the SCS epilogue.
+; CHECK-LABEL: minsize_multicall:
+; CHECK:      r19 = add(r19,#4)
+; CHECK:      memw(r19+#-4) = r31
+; CHECK:      {
+; CHECK-DAG:  r19 = add(r19,#-4)
+; CHECK-DAG:  r31 = memw(r19+#-4)
+; CHECK:      }
+; CHECK-NOT:  __restore_
+; CHECK:      jumpr r31
+
+;; Minsize + tail call + multiple callee-saved registers: the tailcall restore
+;; stub (__restore_r16_through_r17_and_deallocframe_before_tailcall) must NOT be
+;; used when SCS is active.  The SCS epilogue and tail jump are fused together.
+; CHECK-LABEL: minsize_tailcall:
+; CHECK:      r19 = add(r19,#4)
+; CHECK:      memw(r19+#-4) = r31
+; CHECK:      {
+; CHECK-DAG:  r19 = add(r19,#-4)
+; CHECK-DAG:  r31 = memw(r19+#-4)
+; CHECK-DAG:  jump bar
+; CHECK:      }
+; CHECK-NOT:  __restore_
+
+;; Multiple return paths - each exit block gets its own SCS epilogue.
+; CHECK-LABEL: multi_return:
+; CHECK:      r19 = add(r19,#4)
+; CHECK:      memw(r19+#-4) = r31
+; CHECK:      r31 = memw(r19+#-4)
+; CHECK:      r19 = add(r19,#-4)
+; CHECK:      jumpr r31
+; CHECK:      r31 = memw(r19+#-4)
+; CHECK:      r19 = add(r19,#-4)
+; CHECK:      jumpr r31
+
 ;; Without r19 reserved, SCS should report an error.
 ; ERR: Must reserve r19 to use shadow call stack on Hexagon
 
@@ -97,7 +134,9 @@
 ; MUSL:       }
 ; MUSL:       jumpr r31
 
+declare i32 @foo(i32)
 declare void @bar()
+declare void @baz(i32)
 
 define void @leaf() shadowcallstack nounwind {
   ret void
@@ -142,4 +181,34 @@ define void @nonleaf_cfi() shadowcallstack uwtable {
 define void @vararg_musl(i32 %a, ...) shadowcallstack nounwind {
   call void @bar()
   ret void
+}
+
+define i32 @minsize_multicall(i32 %x) shadowcallstack nounwind minsize
+                              "disable-tail-calls"="true" {
+  %call = call i32 @foo(i32 %x)
+  %call1 = call i32 @foo(i32 %x)
+  %sum = add i32 %call, %call1
+  ret i32 %sum
+}
+
+define void @minsize_tailcall(i32 %x) shadowcallstack nounwind minsize {
+  call void @baz(i32 %x)
+  call void @baz(i32 %x)
+  tail call void @bar()
+  ret void
+}
+
+define i32 @multi_return(i32 %x) shadowcallstack nounwind optnone noinline {
+entry:
+  %call = call i32 @foo(i32 %x)
+  %cmp = icmp sgt i32 %call, 0
+  br i1 %cmp, label %pos, label %neg
+
+pos:
+  %r1 = call i32 @foo(i32 %call)
+  ret i32 %r1
+
+neg:
+  %r2 = call i32 @foo(i32 0)
+  ret i32 %r2
 }
