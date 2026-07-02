@@ -39,8 +39,6 @@ public:
   using iterator = const MCPhysReg*;
   using const_iterator = const MCPhysReg*;
 
-  MCRegisterClass(const MCRegisterClass &) = delete;
-
   // TODO: reorder fields to reduce memory usage.
   const uint32_t RegsOff;   ///< Relative offset to MCPhysReg array.
   const uint32_t RegSetOff; ///< Relative offset to uint8_t array.
