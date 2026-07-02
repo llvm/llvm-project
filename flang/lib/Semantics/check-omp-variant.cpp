@@ -20,6 +20,7 @@
 #include "flang/Parser/characters.h"
 #include "flang/Parser/message.h"
 #include "flang/Parser/parse-tree.h"
+#include "flang/Semantics/omp-declare-variant.h"
 #include "flang/Semantics/openmp-modifiers.h"
 #include "flang/Semantics/openmp-utils.h"
 #include "flang/Semantics/symbol.h"
@@ -740,6 +741,14 @@ void OmpStructureChecker::CheckOmpDeclareVariantDirective(
       },
       arg.u);
 
+  const parser::traits::OmpContextSelectorSpecification *matchSelector{
+      getMatchClauseContextSelector(spec)};
+  if (!matchSelector) {
+    context_.Say(x.source,
+        "DECLARE_VARIANT directive requires a MATCH clause"_err_en_US);
+    return;
+  }
+
   if (base && variant) {
     base = &base->GetUltimate();
     variant = &variant->GetUltimate();
@@ -750,20 +759,20 @@ void OmpStructureChecker::CheckOmpDeclareVariantDirective(
       context_.Say(arg.source,
           "Variant '%s' was already specified for '%s' in another DECLARE VARIANT directive"_err_en_US,
           variant->name(), base->name());
-    } else if (!hasArgModifiers) {
-      // adjust_args/append_args perform the "transformation for its OpenMP
-      // context", so the variant interface intentionally differs from the
-      // base; skip the same-interface check until they are supported.
-      CheckDeclareVariantInterface(context_, *base, *variant, arg.source);
+    } else {
+      if (!hasArgModifiers) {
+        // adjust_args/append_args perform the "transformation for its OpenMP
+        // context", so the variant interface intentionally differs from the
+        // base; skip the same-interface check until they are supported.
+        CheckDeclareVariantInterface(context_, *base, *variant, arg.source);
+      }
+      // Record the variant on its base procedure.
+      if (base->has<SubprogramDetails>()) {
+        auto &details{const_cast<Symbol &>(*base).get<SubprogramDetails>()};
+        details.addOmpDeclareVariant(
+            OmpDeclareVariantEntry{*variant, matchSelector});
+      }
     }
-  }
-
-  const parser::traits::OmpContextSelectorSpecification *matchSelector{
-      getMatchClauseContextSelector(spec)};
-  if (!matchSelector) {
-    context_.Say(x.source,
-        "DECLARE_VARIANT directive requires a MATCH clause"_err_en_US);
-    return;
   }
 
   EnterDirectiveNest(ContextSelectorNest);
