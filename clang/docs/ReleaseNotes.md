@@ -789,6 +789,11 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 - Clang incorrectly instantiated variable specializations outside of the immediate context. (#GH54439)
 - Fixed a crash when pack expansions are used as arguments for non-pack parameters of built-in templates. (#GH180307)
 - Fixed crash instantiating class member specializations.
+- Fixed a crash during class template instantiation when a member variable
+  template's type substitution fails (e.g. `typename T::type` with `T=int`),
+  which left the `VarTemplateDecl` unregistered and caused a subsequent
+  assertion failure when instantiating a partial specialization of that member.
+  (#GH198890)
 - Fix a problem where a substitution failure when evaluating a type requirement
   could directly make the program ill-formed.
 - Typo correction now corrects the name qualifier for invalid template names.
