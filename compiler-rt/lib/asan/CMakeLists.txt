@@ -109,7 +109,8 @@ set(ASAN_CFLAGS ${SANITIZER_COMMON_CFLAGS})
 
 # Win/ASan relies on the runtime functions being hotpatchable. See
 # https://github.com/llvm/llvm-project/pull/149444
-if(MSVC)
+# MSVC cl 64 bit architectures treat /hotpatch as an unknown option
+if(CLANG_CL OR (MSVC AND "i386" IN_LIST ASAN_SUPPORTED_ARCH))
   list(APPEND ASAN_CFLAGS /hotpatch)
 endif()
 
