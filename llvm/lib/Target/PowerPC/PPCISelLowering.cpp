@@ -17667,6 +17667,43 @@ static SDValue combineZextSetccWithZero(SDNode *N, SelectionDAG &DAG) {
 }
 
 // Combine XOR patterns with SELECT_CC_I4/I8, for Example:
+static SDValue combineXorOfSetCC(SDNode *N,
+                                 TargetLowering::DAGCombinerInfo &DCI) {
+  SelectionDAG &DAG = DCI.DAG;
+  assert(N->getOpcode() == ISD::XOR && "Expected XOR node");
+
+  // Allow generic DAGCombiner to fold bitwise logic of SETCCs first.
+  if (DCI.isBeforeLegalize())
+    return SDValue();
+
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+
+  if (LHS.getOpcode() != ISD::SETCC || RHS.getOpcode() != ISD::SETCC)
+    return SDValue();
+
+  // Only apply to integer comparisons.
+  if (!LHS.getOperand(0).getValueType().isInteger() ||
+      !RHS.getOperand(0).getValueType().isInteger())
+    return SDValue();
+
+  ISD::CondCode CC1 = cast<CondCodeSDNode>(LHS.getOperand(2))->get();
+  ISD::CondCode CC2 = cast<CondCodeSDNode>(RHS.getOperand(2))->get();
+
+  // (A != B) ^ (C != D) -> (A == B) ^ (C == D)
+  // This avoids the generation of XORI instructions on PPC for SETNE.
+  if (CC1 == ISD::SETNE && CC2 == ISD::SETNE) {
+    SDLoc dl(N);
+    SDValue NewLHS = DAG.getSetCC(dl, LHS.getValueType(), LHS.getOperand(0),
+                                  LHS.getOperand(1), ISD::SETEQ);
+    SDValue NewRHS = DAG.getSetCC(dl, RHS.getValueType(), RHS.getOperand(0),
+                                  RHS.getOperand(1), ISD::SETEQ);
+    return DAG.getNode(ISD::XOR, dl, N->getValueType(0), NewLHS, NewRHS);
+  }
+
+  return SDValue();
+}
+
 // 1. XOR(SELECT_CC_I4(cond, 1, 0, cc), 1) -> SELECT_CC_I4(cond, 0, 1, cc)
 // 2. XOR(ZEXT(SELECT_CC_I4(cond, 1, 0, cc)), 1) -> SELECT_CC_I4/I8(cond, 0,
 // 1, cc))
@@ -17784,6 +17821,8 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
     return DAG.getZExtOrTrunc(NarrowAnd, dl, N->getValueType(0));
   }
   case ISD::XOR: {
+    if (SDValue V = combineXorOfSetCC(N, DCI))
+      return V;
     // Optimize XOR(ISEL(1,0,CR), 1) -> ISEL(0,1,CR)
     if (SDValue V = combineXorSelectCC(N, DAG))
       return V;
