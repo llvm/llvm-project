@@ -20,6 +20,7 @@
 
 #include "NVPTX.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 
 using namespace llvm;
@@ -87,17 +88,11 @@ bool NVPTXProxyRegErasure::runOnMachineFunction(MachineFunction &MF) {
     MI->eraseFromParent();
   }
 
-  // Now go replace the registers.
-  for (auto &BB : MF) {
-    for (auto &MI : BB) {
-      for (auto &Op : MI.uses()) {
-        if (!Op.isReg())
-          continue;
-        auto it = RAUWBatch.find(Op.getReg());
-        if (it != RAUWBatch.end())
-          Op.setReg(it->second);
-      }
-    }
+  // Now go replace the registers and remove kill flags conservatively.
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  for (auto [From, To] : RAUWBatch) {
+    MRI.replaceRegWith(From, To);
+    MRI.clearKillFlags(To);
   }
 
   return true;
