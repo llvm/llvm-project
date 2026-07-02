@@ -4819,12 +4819,13 @@ Sema::BuildBaseInitializer(QualType BaseType, TypeSourceInfo *BaseTInfo,
       return true;
   }
 
+  if (!Dependent &&
+      declaresSameEntity(ClassDecl, BaseType->getAsCXXRecordDecl()))
+    return BuildDelegatingInitializer(BaseTInfo, Init, ClassDecl);
+
   // Check for direct and virtual base classes.
   const CXXBaseSpecifier *DirectBaseSpec = nullptr;
   const CXXBaseSpecifier *VirtualBaseSpec = nullptr;
-  if (!Dependent) {
-    if (declaresSameEntity(ClassDecl, BaseType->getAsCXXRecordDecl()))
-      return BuildDelegatingInitializer(BaseTInfo, Init, ClassDecl);
 
     FindBaseInitializer(*this, ClassDecl, BaseType, DirectBaseSpec,
                         VirtualBaseSpec);
@@ -4834,19 +4835,43 @@ Sema::BuildBaseInitializer(QualType BaseType, TypeSourceInfo *BaseTInfo,
     // constructor's class or a direct or virtual base of that class, the
     // mem-initializer is ill-formed.
     if (!DirectBaseSpec && !VirtualBaseSpec) {
-      // If the class has any dependent bases, then it's possible that
-      // one of those types will resolve to the same type as
-      // BaseType. Therefore, just treat this as a dependent base
-      // class initialization.  FIXME: Should we try to check the
-      // initialization anyway? It seems odd.
+      // If the class has any dependent bases, then it's possible that one of
+      // those types will resolve to the same type as BaseType. Therefore, just
+      // treat this as a dependent base class initialization.
+      // FIXME: Should we try to check the initialization anyway? It seems odd.
       if (ClassDecl->hasAnyDependentBases())
         Dependent = true;
-      else
+      // We may have a delegating initializer here but in a dependent context.
+      // Since that is also a type, that isn't a direct or virtual base of the
+      // instantiated type. That will be handled later.
+      //
+      // Another scenario we may get here is when the initialization list contains
+      // a type template parameter. If the class has any bases classes, the program can be valid, but if not, then the program must be invalid.
+      // For example, the following case must be invalid, no matter how we choose the type of the template at initialization:
+      //
+      // struct S0 {
+      //   S0(int) {}
+      //   template <class T>
+      //   S0(T) : T(42), Member(42) {};
+      //   int Member{21};
+      // };
+      // 
+      // This code can be valid, if we choose `SomeBase` as our template argument:
+      //
+      // class SomeBase {};
+      //
+      // struct S0 : SomeBase {
+      //   S0(int) {}
+      //   template <class T>
+      //   S0(T) : Member(42), T(42) {};
+      //   int Member{21};
+      // };
+      else if (!declaresSameEntity(ClassDecl, BaseType->getAsCXXRecordDecl()) &&
+               ClassDecl->bases().empty())
         return Diag(BaseLoc, diag::err_not_direct_base_or_virtual)
                << BaseType << Context.getCanonicalTagType(ClassDecl)
                << BaseTInfo->getTypeLoc().getSourceRange();
     }
-  }
 
   if (Dependent) {
     DiscardCleanupsInEvaluationContext();
