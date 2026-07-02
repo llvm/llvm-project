@@ -4,25 +4,26 @@
 define float @test() {
 ; CHECK-LABEL: define float @test() {
 ; CHECK-NEXT:  [[BB:.*:]]
-; CHECK-NEXT:    [[FADD:%.*]] = fadd float 0.000000e+00, 0.000000e+00
 ; CHECK-NEXT:    [[LOAD:%.*]] = load float, ptr null, align 4
-; CHECK-NEXT:    [[FADD1:%.*]] = fadd float [[FADD]], [[LOAD]]
-; CHECK-NEXT:    [[FADD2:%.*]] = fadd float 0.000000e+00, 0.000000e+00
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x float> <float poison, float 0.000000e+00>, float [[LOAD]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd <2 x float> zeroinitializer, [[TMP0]]
 ; CHECK-NEXT:    [[FMUL:%.*]] = fmul float 0.000000e+00, 0.000000e+00
 ; CHECK-NEXT:    [[FMUL3:%.*]] = fmul float 0.000000e+00, 0.000000e+00
 ; CHECK-NEXT:    [[FADD4:%.*]] = fadd float [[FMUL3]], 0.000000e+00
 ; CHECK-NEXT:    br i1 false, label %[[BB5:.*]], label %[[BB6:.*]]
 ; CHECK:       [[BB5]]:
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x float> [[TMP1]], i32 0
 ; CHECK-NEXT:    br label %[[BB8:.*]]
 ; CHECK:       [[BB6]]:
-; CHECK-NEXT:    [[FDIV:%.*]] = fdiv float [[FADD1]], 0.000000e+00
-; CHECK-NEXT:    [[FDIV7:%.*]] = fdiv float [[FADD2]], 0.000000e+00
+; CHECK-NEXT:    [[TMP3:%.*]] = fdiv <2 x float> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x float> [[TMP3]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x float> [[TMP3]], i32 1
 ; CHECK-NEXT:    br label %[[BB8]]
 ; CHECK:       [[BB8]]:
-; CHECK-NEXT:    [[PHI:%.*]] = phi float [ 0.000000e+00, %[[BB5]] ], [ [[FDIV7]], %[[BB6]] ]
+; CHECK-NEXT:    [[PHI:%.*]] = phi float [ 0.000000e+00, %[[BB5]] ], [ [[TMP5]], %[[BB6]] ]
 ; CHECK-NEXT:    [[PHI9:%.*]] = phi float [ [[FMUL]], %[[BB5]] ], [ 0.000000e+00, %[[BB6]] ]
 ; CHECK-NEXT:    [[PHI10:%.*]] = phi float [ [[FADD4]], %[[BB5]] ], [ [[LOAD]], %[[BB6]] ]
-; CHECK-NEXT:    [[TMP10:%.*]] = phi float [ [[FADD1]], %[[BB5]] ], [ [[FDIV]], %[[BB6]] ]
+; CHECK-NEXT:    [[TMP10:%.*]] = phi float [ [[TMP2]], %[[BB5]] ], [ [[TMP4]], %[[BB6]] ]
 ; CHECK-NEXT:    ret float [[TMP10]]
 ;
 bb:
