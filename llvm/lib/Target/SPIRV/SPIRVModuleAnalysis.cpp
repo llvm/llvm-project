@@ -14,10 +14,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-// TODO: uses or report_fatal_error (which is also deprecated) /
-//       ReportFatalUsageError in this file should be refactored, as per LLVM
-//       best practices, to rely on the Diagnostic infrastructure (such as the
-//       reportUnsupported function below).
+// TODO: Per LLVM best practices, the report_fatal_error (deprecated) /
+//       ReportFatalUsageError calls in this file should be replaced with the
+//       Diagnostic infrastructure (e.g. the reportUnsupported function below).
 
 #include "SPIRVModuleAnalysis.h"
 #include "MCTargetDesc/SPIRVBaseInfo.h"
@@ -1691,10 +1690,12 @@ void addInstrRequirements(const MachineInstr &MI,
 
       if (UsesBFloat16) {
         if (!ST.canUseExtension(
-                SPIRV::Extension::SPV_INTEL_bfloat16_arithmetic))
+                SPIRV::Extension::SPV_INTEL_bfloat16_arithmetic)) {
           reportUnsupported(
               MI, "OpenCL Extended instructions with bfloat16 require the "
                   "following SPIR-V extension: SPV_INTEL_bfloat16_arithmetic");
+          break;
+        }
         Reqs.addExtension(SPIRV::Extension::SPV_INTEL_bfloat16_arithmetic);
         Reqs.addCapability(SPIRV::Capability::BFloat16ArithmeticINTEL);
       }
