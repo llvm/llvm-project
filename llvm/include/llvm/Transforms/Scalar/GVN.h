@@ -220,6 +220,8 @@ public:
     LLVM_ABI uint32_t lookupOrAdd(MemoryAccess *MA);
     LLVM_ABI uint32_t lookupOrAdd(Value *V);
     LLVM_ABI uint32_t lookup(Value *V, bool Verify = true) const;
+    LLVM_ABI uint32_t lookupBinOp(unsigned Opcode, Type *Ty, Value *LHS,
+                                  Value *RHS) const;
     LLVM_ABI uint32_t lookupOrAddCmp(unsigned Opcode, CmpInst::Predicate Pred,
                                      Value *LHS, Value *RHS);
     LLVM_ABI uint32_t phiTranslate(const BasicBlock *BB,
@@ -496,6 +498,7 @@ private:
 
   // Other helper routines.
   bool processInstruction(Instruction *I);
+  bool foldScalarMulToVectorExtract(Instruction *I);
   bool processBlock(BasicBlock *BB);
   void dump(DenseMap<uint32_t, Value *> &Map) const;
   bool iterateOnFunction(Function &F);

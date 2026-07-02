@@ -93,6 +93,8 @@ STATISTIC(NumGVNPRE, "Number of instructions PRE'd");
 STATISTIC(NumGVNBlocks, "Number of blocks merged");
 STATISTIC(NumGVNSimpl, "Number of instructions simplified");
 STATISTIC(NumGVNEqProp, "Number of equalities propagated");
+STATISTIC(NumGVNScalarMulToExtract,
+          "Number of scalar mul/fmuls folded to extract of vector mul/fmul");
 STATISTIC(NumPRELoad, "Number of loads PRE'd");
 STATISTIC(NumPRELoopLoad, "Number of loop loads PRE'd");
 STATISTIC(NumPRELoadMoved2CEPred,
@@ -737,6 +739,27 @@ uint32_t GVNPass::ValueTable::lookup(Value *V, bool Verify) const {
     return VI->second;
   }
   return (VI != ValueNumbering.end()) ? VI->second : 0;
+}
+
+/// Returns the value number of an existing binary operator expression, or 0 if
+/// no such expression has been numbered yet.
+uint32_t GVNPass::ValueTable::lookupBinOp(unsigned Opcode, Type *Ty, Value *LHS,
+                                          Value *RHS) const {
+  assert(Instruction::isBinaryOp(Opcode) && "Not a binary operator!");
+  Expression Exp;
+  Exp.Ty = Ty;
+  Exp.Opcode = Opcode;
+  uint32_t LHSVN = lookup(LHS, /*Verify=*/false);
+  uint32_t RHSVN = lookup(RHS, /*Verify=*/false);
+  if (!LHSVN || !RHSVN)
+    return 0;
+  Exp.VarArgs = {LHSVN, RHSVN};
+  if (Instruction::isCommutative(Opcode)) {
+    if (Exp.VarArgs[0] > Exp.VarArgs[1])
+      std::swap(Exp.VarArgs[0], Exp.VarArgs[1]);
+    Exp.Commutative = true;
+  }
+  return ExpressionNumbering.lookup(Exp);
 }
 
 /// Returns the value number of the given comparison,
@@ -3291,6 +3314,65 @@ bool GVNPass::propagateEquality(
   return Changed;
 }
 
+/// If I is a scalar mul/fmul whose operands are both extracted from the same
+/// index of two vectors, and a matching vector mul/fmul dominates I, replace
+/// I with an extractelement from that vector result.
+bool GVNPass::foldScalarMulToVectorExtract(Instruction *I) {
+  unsigned Opc = I->getOpcode();
+  if (Opc != Instruction::Mul && Opc != Instruction::FMul)
+    return false;
+
+  auto *Ext0 = dyn_cast<ExtractElementInst>(I->getOperand(0));
+  auto *Ext1 = dyn_cast<ExtractElementInst>(I->getOperand(1));
+  if (!Ext0 || !Ext1)
+    return false;
+
+  Value *Idx = Ext0->getIndexOperand();
+  if (Idx != Ext1->getIndexOperand())
+    return false;
+
+  Value *Vec0 = Ext0->getVectorOperand();
+  Value *Vec1 = Ext1->getVectorOperand();
+  if (Vec0->getType() != Vec1->getType())
+    return false;
+
+  // Reuse GVN's existing expression numbering to find an available vector
+  // mul/fmul instead of matching specific users of Vec0/Vec1.
+  uint32_t VecNum = VN.lookupBinOp(Opc, Vec0->getType(), Vec0, Vec1);
+  if (!VecNum)
+    return false;
+
+  for (const auto &Entry : LeaderTable.getLeaders(VecNum)) {
+    Value *Leader = Entry.Val;
+    auto *VecBO = dyn_cast<BinaryOperator>(Leader);
+    if (!VecBO || VecBO->getOpcode() != Opc ||
+        VecBO->getType() != Vec0->getType())
+      continue;
+
+    // The vector op must dominate the scalar op.
+    if (!DT->dominates(VecBO, I))
+      continue;
+
+    // Reuse the vector op by weakening its flags and metadata with the scalar
+    // op, matching the usual GVN CSE behavior.
+    VecBO->andIRFlags(I);
+    combineMetadataForCSE(VecBO, I, /*DoesKMove=*/false);
+
+    // Replace the scalar mul/fmul with extractelement from the vector result.
+    auto *Extract =
+        ExtractElementInst::Create(VecBO, Idx, "", I->getIterator());
+    Extract->setDebugLoc(I->getDebugLoc());
+
+    ICF->removeUsersOf(I);
+    patchAndReplaceAllUsesWith(I, Extract);
+    salvageAndRemoveInstruction(I);
+    ++NumGVNScalarMulToExtract;
+    return true;
+  }
+
+  return false;
+}
+
 /// When calculating availability, handle an instruction
 /// by inserting it into the appropriate sets.
 bool GVNPass::processInstruction(Instruction *I) {
@@ -3322,6 +3404,11 @@ bool GVNPass::processInstruction(Instruction *I) {
 
   if (auto *Assume = dyn_cast<AssumeInst>(I))
     return processAssumeIntrinsic(Assume);
+
+  // Try to replace a scalar mul/fmul with extractelement of an existing
+  // vector mul/fmul before regular value numbering.
+  if (foldScalarMulToVectorExtract(I))
+    return true;
 
   if (LoadInst *Load = dyn_cast<LoadInst>(I)) {
     if (processLoad(Load))
