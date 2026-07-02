@@ -8,7 +8,7 @@
 __device__ void device_fn(int) {}
 // expected-note@-1 2 {{declared here}}
 
-inline __host__ __device__ int hd1() {
+inline __host__ __device__ int hd1() { // expected-note {{in HD-promoted function 'hd1'}}
   device_fn(0);  // expected-error {{reference to __device__ function}}
   return 0;
 }
@@ -19,7 +19,7 @@ inline __host__ __device__ int hd2() {
   return 0;
 }
 
-inline __host__ __device__ void hd3(int) {
+inline __host__ __device__ void hd3(int) { // expected-note {{in HD-promoted function 'hd3'}}
   device_fn(0);  // expected-error {{reference to __device__ function 'device_fn'}}
 }
 inline __host__ __device__ void hd3(double) {}

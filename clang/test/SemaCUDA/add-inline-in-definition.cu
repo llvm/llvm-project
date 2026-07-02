@@ -23,6 +23,9 @@ void host_fn() {}
 #endif
 
 __host__ __device__ void foo();
+#ifdef __CUDA_ARCH__
+  // expected-note@-2 {{in HD-promoted function 'foo'}}
+#endif
 __device__ void bar() {
   foo();
 #ifdef __CUDA_ARCH__
