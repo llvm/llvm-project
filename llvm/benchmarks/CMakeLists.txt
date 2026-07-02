@@ -18,6 +18,7 @@ add_benchmark(PointerUnionBM PointerUnionBM.cpp PARTIAL_SOURCES_INTENDED)
 add_benchmark(ImmutableSetIteratorBM ImmutableSetIteratorBM.cpp PARTIAL_SOURCES_INTENDED)
 
 add_benchmark(RuntimeLibcallsBench RuntimeLibcalls.cpp PARTIAL_SOURCES_INTENDED)
+add_benchmark(writeToOutputInParallelBench writeToOutputInParallel.cpp PARTIAL_SOURCES_INTENDED)
 
 if(NOT LLVM_TOOL_LLVM_DRIVER_BUILD)
   # TODO: Check if the tools are in LLVM_DISTRIBUTION_COMPONENTS with
