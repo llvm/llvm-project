@@ -132,6 +132,7 @@
 #include "llvm/Transforms/Scalar/Reassociate.h"
 #include "llvm/Transforms/Scalar/SCCP.h"
 #include "llvm/Transforms/Scalar/SROA.h"
+#include "llvm/Transforms/Scalar/ScalableToFixedVectors.h"
 #include "llvm/Transforms/Scalar/SimpleLoopUnswitch.h"
 #include "llvm/Transforms/Scalar/SimplifyCFG.h"
 #include "llvm/Transforms/Scalar/SpeculativeExecution.h"
@@ -1446,6 +1447,7 @@ void PassBuilder::addVectorPasses(OptimizationLevel Level,
 
   // Optimize parallel scalar instruction chains into SIMD instructions.
   if (PTO.SLPVectorization) {
+    FPM.addPass(ScalableToFixedVectorsPass());
     FPM.addPass(SLPVectorizerPass());
     if (Level.getSpeedupLevel() > 1 && ExtraVectorizerPasses) {
       FPM.addPass(EarlyCSEPass());
@@ -2356,6 +2358,7 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
                                       .convertSwitchToArithmetic(true)
                                       .hoistCommonInsts(true)
                                       .speculateUnpredictables(true)));
+
   MPM.addPass(createModuleToFunctionPassAdaptor(std::move(LateFPM)));
 
   // Drop bodies of available eternally objects to improve GlobalDCE.
