@@ -133,10 +133,10 @@ public:
         EnableMachineFunctionSplitter(false),
         EnableStaticDataPartitioning(false), SupportsDefaultOutlining(false),
         EmitAddrsig(false), BBAddrMap(false), EmitCallGraphSection(false),
-        EmitCallSiteInfo(false), SupportsDebugEntryValues(false),
-        EnableDebugEntryValues(false), ValueTrackingVariableLocations(false),
-        ForceDwarfFrameSection(false), XRayFunctionIndex(true),
-        DebugStrictDwarf(false), Hotpatch(false),
+        EmitCallSiteInfo(false), EmitCodeGenCallSiteInfo(false),
+        SupportsDebugEntryValues(false), EnableDebugEntryValues(false),
+        ValueTrackingVariableLocations(false), ForceDwarfFrameSection(false),
+        XRayFunctionIndex(true), DebugStrictDwarf(false), Hotpatch(false),
         PPCGenScalarMASSEntries(false), JMCInstrument(false),
         EnableCFIFixup(false), MisExpect(false), XCOFFReadOnlyPointers(false),
         VerifyArgABICompliance(true) {}
@@ -294,6 +294,10 @@ public:
   /// info, and it is restricted only to optimized code. This can be used for
   /// something else, so that should be controlled in the frontend.
   unsigned EmitCallSiteInfo : 1;
+
+  /// Enables call site info production for codegen purposes.
+  unsigned EmitCodeGenCallSiteInfo : 1;
+
   /// Set if the target supports the debug entry values by default.
   unsigned SupportsDebugEntryValues : 1;
   /// When set to true, the EnableDebugEntryValues option forces production

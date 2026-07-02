@@ -152,6 +152,9 @@ static cl::opt<RunOutliner> EnableMachineOutliner(
         clEnumValN(RunOutliner::NeverOutline, "never", "Disable all outlining"),
         // Sentinel value for unspecified option.
         clEnumValN(RunOutliner::AlwaysOutline, "", "")));
+static cl::opt<bool> EmitCodeGenCallSiteInfo(
+    "emit-codegen-call-site-info", cl::Hidden,
+    cl::desc("Emit call site info for codegen purposes"));
 static cl::opt<bool> EnableGlobalMergeFunc(
     "enable-global-merge-func", cl::Hidden,
     cl::desc("Enable global merge functions that are based on hash function"));
@@ -630,6 +633,9 @@ TargetPassConfig::TargetPassConfig(TargetMachine &TM, PassManagerBase &PM)
 
   if (EnableGlobalISelAbort.getNumOccurrences())
     TM.Options.GlobalISelAbort = EnableGlobalISelAbort;
+
+  if (EmitCodeGenCallSiteInfo.getNumOccurrences())
+    TM.Options.EmitCodeGenCallSiteInfo = EmitCodeGenCallSiteInfo;
 
   setStartStopPasses();
 }
