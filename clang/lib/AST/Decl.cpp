@@ -5860,17 +5860,13 @@ std::string FileScopeAsmDecl::getAsmString() const {
 }
 
 void TopLevelStmtDecl::anchor() {}
-
-TopLevelStmtDecl *TopLevelStmtDecl::Create(ASTContext &C, Stmt *Statement) {
+TopLevelStmtDecl *TopLevelStmtDecl::Create(ASTContext &C, DeclContext *DC, Stmt *Statement) {
   assert(C.getLangOpts().IncrementalExtensions &&
          "Must be used only in incremental mode");
 
-  SourceLocation Loc = Statement ? Statement->getBeginLoc() : SourceLocation();
-  DeclContext *DC = C.getTranslationUnitDecl();
-
-  return new (C, DC) TopLevelStmtDecl(DC, Loc, Statement);
+  SourceLocation BeginLoc = Statement ? Statement->getBeginLoc() : SourceLocation();
+  return new (C, DC) TopLevelStmtDecl(DC, BeginLoc, Statement);
 }
-
 TopLevelStmtDecl *TopLevelStmtDecl::CreateDeserialized(ASTContext &C,
                                                        GlobalDeclID ID) {
   return new (C, ID)
