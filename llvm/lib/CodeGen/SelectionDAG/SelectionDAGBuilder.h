@@ -429,6 +429,8 @@ public:
   // floor power of two.
   SDValue lowerRangeToAssertZExt(SelectionDAG &DAG, const Instruction &I,
                                  SDValue Op);
+  SDValue lowerRangeToAssertZExt(SelectionDAG &DAG,
+                                 std::optional<ConstantRange> CR, SDValue Op);
 
   // Lower nofpclass attributes to AssertNoFPClass
   SDValue lowerNoFPClassToAssertNoFPClass(SelectionDAG &DAG,

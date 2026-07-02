@@ -5,13 +5,13 @@
 ; operations.
 
 
-; Should be able to reduce this to a 32-bit or plus a copy
+; Should be able to reduce this to a 32-bit xor plus a copy
 ; https://alive2.llvm.org/ce/z/9LddFX
 define i64 @v_xor_i64_known_hi_i32_from_arg_range(i64 range(i64 0, 4294967296) %arg0, i64 %arg1) {
 ; CHECK-LABEL: v_xor_i64_known_hi_i32_from_arg_range:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_xor_b32_e32 v1, v1, v3
+; CHECK-NEXT:    v_mov_b32_e32 v1, v3
 ; CHECK-NEXT:    v_xor_b32_e32 v0, v0, v2
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %xor = xor i64 %arg0, %arg1
@@ -24,7 +24,7 @@ define i64 @v_or_i64_known_hi_i32_from_arg_range(i64 range(i64 0, 4294967296) %a
 ; CHECK-LABEL: v_or_i64_known_hi_i32_from_arg_range:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_or_b32_e32 v1, v1, v3
+; CHECK-NEXT:    v_mov_b32_e32 v1, v3
 ; CHECK-NEXT:    v_or_b32_e32 v0, v0, v2
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %or = or i64 %arg0, %arg1
@@ -32,7 +32,7 @@ define i64 @v_or_i64_known_hi_i32_from_arg_range(i64 range(i64 0, 4294967296) %a
 }
 
 ; https://alive2.llvm.org/ce/z/M96Ror
-; Should be able to reduce this to a 32-bit plus a copy
+; Should be able to reduce this to a 32-bit and plus a copy
 define i64 @v_and_i64_known_i32_from_arg_range(i64 range(i64 -4294967296, 0) %arg0, i64 %arg1) {
 ; CHECK-LABEL: v_and_i64_known_i32_from_arg_range:
 ; CHECK:       ; %bb.0:
@@ -50,7 +50,7 @@ define i64 @s_xor_i64_known_i32_from_arg_range(i64 range(i64 0, 65) inreg %arg) 
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_not_b64 s[4:5], s[16:17]
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s4
-; CHECK-NEXT:    v_mov_b32_e32 v1, s5
+; CHECK-NEXT:    v_mov_b32_e32 v1, -1
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %xor = xor i64 %arg, -1
   ret i64 %xor
