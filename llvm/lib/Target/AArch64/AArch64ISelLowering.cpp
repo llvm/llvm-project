@@ -19312,6 +19312,53 @@ bool AArch64TargetLowering::lowerInterleavedStore(Instruction *Store,
   return true;
 }
 
+static bool hasSingleWideningUIToFPUse(Value *V) {
+  using namespace llvm::PatternMatch;
+  if (!V->hasOneUse())
+    return false;
+  auto *UserInst = dyn_cast<Instruction>(V->user_back());
+  return UserInst && match(UserInst, m_UIToFP(m_Specific(V))) &&
+         V->getType()->getScalarSizeInBits() * 4 ==
+             UserInst->getType()->getScalarSizeInBits();
+}
+
+static bool areAllDeinterleaveUsersWideningUIToFP(IntrinsicInst *DI,
+                                                  VectorType *VTy) {
+  return all_of(DI->users(), [VTy](User *U) {
+    auto *EV = dyn_cast<ExtractValueInst>(U);
+    return EV && EV->getType() == VTy && hasSingleWideningUIToFPUse(EV);
+  });
+}
+
+static bool tryLowerDeinterleave4UIToFPLoadToShuffle(LoadInst *LI,
+                                                     IntrinsicInst *DI,
+                                                     VectorType *VTy) {
+  if (!areAllDeinterleaveUsersWideningUIToFP(DI, VTy))
+    return false;
+
+  constexpr unsigned Factor = 4;
+  auto *FVTy = cast<FixedVectorType>(VTy);
+  unsigned SubElts = FVTy->getNumElements();
+  unsigned WideElts = SubElts * Factor;
+  auto *WideTy = FixedVectorType::get(FVTy->getElementType(), WideElts);
+  assert(LI->getType() == WideTy &&
+         "Unexpected load type for deinterleave intrinsic");
+
+  IRBuilder<> Builder(LI);
+  LoadInst *ClonedLI = cast<LoadInst>(LI->clone());
+  Builder.Insert(ClonedLI);
+  Value *Result = PoisonValue::get(DI->getType());
+  for (unsigned I = 0; I < Factor; ++I) {
+    SmallVector<int, 16> Mask(SubElts);
+    for (unsigned J = 0; J < SubElts; ++J)
+      Mask[J] = I + J * Factor;
+    Value *Shuf = Builder.CreateShuffleVector(ClonedLI, Mask);
+    Result = Builder.CreateInsertValue(Result, Shuf, I);
+  }
+  DI->replaceAllUsesWith(Result);
+  return true;
+}
+
 bool AArch64TargetLowering::lowerDeinterleaveIntrinsicToLoad(
     Instruction *Load, Value *Mask, IntrinsicInst *DI,
     const APInt &GapMask) const {
@@ -19341,6 +19388,13 @@ bool AArch64TargetLowering::lowerDeinterleaveIntrinsicToLoad(
   // the code from lowerInterleavedLoad to obtain the correct container type.
   if (UseScalable && !VTy->isScalableTy())
     return false;
+
+  // When all deinterleaved results feed into uitofp,
+  // Convert the deinterleaved intrinsic load to wider load + shuffle
+  // to benefit from existing shufflevector optimizations.
+  if (Factor == 4 && !VTy->isScalableTy() &&
+      tryLowerDeinterleave4UIToFPLoadToShuffle(LI, DI, VTy))
+    return true;
 
   unsigned NumLoads = getNumInterleavedAccesses(VTy, DL, UseScalable);
   VectorType *LdTy =
