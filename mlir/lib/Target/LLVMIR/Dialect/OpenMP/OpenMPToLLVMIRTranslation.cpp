@@ -793,6 +793,24 @@ static llvm::omp::ProcBindKind getProcBindKind(omp::ClauseProcBindKind kind) {
   llvm_unreachable("Unknown ClauseProcBindKind kind");
 }
 
+/// Convert 'dispatch' operation into LLVM IR.
+static LogicalResult
+convertOmpDispatch(Operation &opInst, llvm::IRBuilderBase &builder,
+                   LLVM::ModuleTranslation &moduleTranslation) {
+  auto dispatchOp = cast<omp::DispatchOp>(opInst);
+
+  if (failed(checkImplementationStatus(opInst)))
+    return failure();
+
+  auto &region = dispatchOp.getRegion();
+  auto result = convertOmpOpRegions(region, "omp.dispatch.region", builder,
+                                    moduleTranslation);
+  if (!result)
+    return handleError(result.takeError(), opInst);
+  builder.SetInsertPoint(*result);
+  return success();
+}
+
 /// Converts an OpenMP 'masked' operation into LLVM IR using OpenMPIRBuilder.
 static LogicalResult
 convertOmpMasked(Operation &opInst, llvm::IRBuilderBase &builder,
@@ -9469,6 +9487,9 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::convertOperation(
           })
           .Case([&](omp::ParallelOp op) {
             return convertOmpParallel(op, builder, moduleTranslation);
+          })
+          .Case([&](omp::DispatchOp) {
+            return convertOmpDispatch(*op, builder, moduleTranslation);
           })
           .Case([&](omp::MaskedOp) {
             return convertOmpMasked(*op, builder, moduleTranslation);

@@ -2011,6 +2011,16 @@ static void genDistributeClauses(lower::AbstractConverter &converter,
   cp.processOrder(clauseOps);
 }
 
+static void genDispatchClauses(lower::AbstractConverter &converter,
+                               semantics::SemanticsContext &semaCtx,
+                               const List<Clause> &clauses,
+                               mlir::Location loc) {
+  ClauseProcessor cp(converter, semaCtx, clauses);
+  cp.processTODO<clause::Depend, clause::Device, clause::IsDevicePtr,
+                 clause::Nocontext, clause::Novariants, clause::Nowait>(
+      loc, llvm::omp::Directive::OMPD_dispatch);
+}
+
 static void genFlushClauses(lower::AbstractConverter &converter,
                             semantics::SemanticsContext &semaCtx,
                             const ObjectList &objects,
@@ -2502,6 +2512,18 @@ genCriticalOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
       OpWithBodyGenInfo(converter, symTable, semaCtx, loc, eval,
                         llvm::omp::Directive::OMPD_critical),
       queue, item, nameAttr);
+}
+
+static mlir::omp::DispatchOp
+genDispatchOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
+              semantics::SemanticsContext &semaCtx,
+              lower::pft::Evaluation &eval, mlir::Location loc,
+              const ConstructQueue &queue,
+              ConstructQueue::const_iterator item) {
+  return genOpWithBody<mlir::omp::DispatchOp>(
+      OpWithBodyGenInfo(converter, symTable, semaCtx, loc, eval,
+                        llvm::omp::Directive::OMPD_dispatch),
+      queue, item);
 }
 
 static mlir::omp::FlushOp
@@ -4299,6 +4321,9 @@ static void genOMPDispatch(lower::AbstractConverter &converter,
   case llvm::omp::Directive::OMPD_barrier:
     newOp = genBarrierOp(converter, symTable, semaCtx, eval, loc, queue, item);
     break;
+  case llvm::omp::Directive::OMPD_dispatch:
+    newOp = genDispatchOp(converter, symTable, semaCtx, eval, loc, queue, item);
+    break;
   case llvm::omp::Directive::OMPD_distribute:
     newOp = genStandaloneDistribute(converter, symTable, stmtCtx, semaCtx, eval,
                                     loc, queue, item);
@@ -5693,9 +5718,23 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    semantics::SemanticsContext &semaCtx,
                    lower::pft::Evaluation &eval,
-                   const parser::OpenMPDispatchConstruct &) {
-  if (!semaCtx.langOptions().OpenMPSimd)
-    TODO(converter.getCurrentLocation(), "OpenMPDispatchConstruct");
+                   const parser::OpenMPDispatchConstruct &dispatchConstruct) {
+  const parser::OmpDirectiveSpecification &beginSpec =
+      dispatchConstruct.BeginDir();
+  List<Clause> clauses = makeClauses(beginSpec.Clauses(), semaCtx);
+  if (auto &endSpec = dispatchConstruct.EndDir())
+    clauses.append(makeClauses(endSpec->Clauses(), semaCtx));
+
+  llvm::omp::Directive directive = beginSpec.DirId();
+  mlir::Location currentLocation = converter.genLocation(beginSpec.source);
+
+  genDispatchClauses(converter, semaCtx, clauses, currentLocation);
+
+  ConstructQueue queue{
+      buildConstructQueue(converter.getFirOpBuilder().getModule(), semaCtx,
+                          eval, beginSpec.source, directive, clauses)};
+  genOMPDispatch(converter, symTable, semaCtx, eval, currentLocation, queue,
+                 queue.begin());
 }
 
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
