@@ -81,6 +81,12 @@ static cl::opt<bool>
                  cl::desc("Generate the profile for Linux kernel binary."),
                  cl::cat(ProfGenCategory));
 
+static cl::opt<unsigned> PageSize(
+    "page-size", cl::init(0x1000),
+    cl::desc("Page size for aligning segment addresses. Use 4096 for 4KB "
+             "pages (default) or 65536 for 64KB pages (e.g. AArch64)."),
+    cl::cat(ProfGenCategory));
+
 namespace sampleprof {
 
 static const Target *getTarget(const ObjectFile *Obj) {
@@ -362,22 +368,21 @@ template <class ELFT>
 void ProfiledBinary::setPreferredTextSegmentAddresses(const ELFFile<ELFT> &Obj,
                                                       StringRef FileName) {
   const auto &PhdrRange = unwrapOrError(Obj.program_headers(), FileName);
-  // FIXME: This should be the page size of the system running profiling.
-  // However such info isn't available at post-processing time, assuming
-  // 4K page now. Note that we don't use EXEC_PAGESIZE from <linux/param.h>
-  // because we may build the tools on non-linux.
-  uint64_t PageSize = 0x1000;
+  uint64_t LocalPageSize = PageSize;
+  if (!LocalPageSize || (LocalPageSize & (LocalPageSize - 1)))
+    exitWithError("Number in -page-size=<num> must be positive power of two", FileName);
+
   for (const typename ELFT::Phdr &Phdr : PhdrRange) {
     if (Phdr.p_type == ELF::PT_INTERP)
       HasInterp = true;
     if (Phdr.p_type == ELF::PT_LOAD) {
       if (!FirstLoadableAddress)
-        FirstLoadableAddress = Phdr.p_vaddr & ~(PageSize - 1U);
+        FirstLoadableAddress = Phdr.p_vaddr & ~(LocalPageSize - 1U);
       if (Phdr.p_flags & ELF::PF_X) {
         // Segments will always be loaded at a page boundary.
         PreferredTextSegmentAddresses.push_back(Phdr.p_vaddr &
-                                                ~(PageSize - 1U));
-        TextSegmentOffsets.push_back(Phdr.p_offset & ~(PageSize - 1U));
+                                                ~(LocalPageSize - 1U));
+        TextSegmentOffsets.push_back(Phdr.p_offset & ~(LocalPageSize - 1U));
       } else {
         PhdrInfo Info;
         Info.FileOffset = Phdr.p_offset;
