@@ -26,7 +26,6 @@
 #include <__pstl/backend_fwd.h>
 #include <__pstl/dispatch.h>
 #include <__type_traits/desugars_to.h>
-#include <__type_traits/remove_cvref.h>
 #include <__utility/empty.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
