@@ -5837,7 +5837,7 @@ LoopVectorizationPlanner::computeBestVF() {
       [&](const VectorizationFactor &CurrentFactor, bool HasTail,
           bool ForceVectorization, const ElementCount &ExactTC,
           const VectorizationFactor &ScalarFactor,
-          const InstructionCost &ScalarCost) {
+          const InstructionCost &ScalarCost, unsigned int UserIC) {
         if (ForceVectorization || !HasTail || !ExactTC.isFixed() ||
             CurrentFactor.Width.isScalable())
           return false;
@@ -5848,7 +5848,7 @@ LoopVectorizationPlanner::computeBestVF() {
 
         unsigned EstimatedWidth = estimateElementCount(
             CurrentFactor.Width, Config.getVScaleForTuning());
-        if (TC != EstimatedWidth + 1)
+        if (TC != (EstimatedWidth * UserIC) + 1)
           return false;
 
         InstructionCost VectorCost =
@@ -5871,6 +5871,7 @@ LoopVectorizationPlanner::computeBestVF() {
       };
 
   ElementCount UserVF = Config.getHints().getWidth();
+  unsigned int UserIC = Config.getHints().getInterleave() != 0 ? Config.getHints().getInterleave() : 1;
   if (VPlans.size() == 1) {
     // For outer loops, the plan has a single vector VF determined by the
     // heuristic.
@@ -5878,7 +5879,7 @@ LoopVectorizationPlanner::computeBestVF() {
             FirstPlan.isOuterLoop()) &&
            "must have a single scalar VF, UserVF or an outer loop");
     bool ForceVectorization =
-        Hints.getForce() == LoopVectorizeHints::FK_Enabled;
+        Config.getHints().getForce() == LoopVectorizeHints::FK_Enabled;
     if (!FirstPlan.hasScalarVFOnly() && !FirstPlan.isOuterLoop() &&
         hasPlanWithVF(UserVF) && UserVF.isVector() && !ForceVectorization) {
       ElementCount ExactTC = getSmallConstantTripCount(PSE.getSE(), OrigLoop);
@@ -5898,7 +5899,7 @@ LoopVectorizationPlanner::computeBestVF() {
           VectorizationFactor ScalarFactor(ScalarVF, ScalarCost, ScalarCost);
           if (IsUnprofitableOneScalarTail(UserFactor, FirstPlan.hasScalarTail(),
                                           ForceVectorization, ExactTC,
-                                          ScalarFactor, ScalarCost)) {
+                                          ScalarFactor, ScalarCost, UserIC)) {
             return {ScalarFactor, &FirstPlan};
           }
         }
@@ -5985,7 +5986,7 @@ LoopVectorizationPlanner::computeBestVF() {
 
       if (IsUnprofitableOneScalarTail(CurrentFactor, P->hasScalarTail(),
                                       ForceVectorization, ExactTC, ScalarFactor,
-                                      ScalarCost))
+                                      ScalarCost, UserIC))
         continue;
 
       if (isMoreProfitable(CurrentFactor, BestFactor, P->hasScalarTail())) {
