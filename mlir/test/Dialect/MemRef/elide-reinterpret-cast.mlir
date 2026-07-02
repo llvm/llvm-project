@@ -104,15 +104,15 @@ func.func private @copy_scalar_into_1D_strided_non_identity_stride(%src : memref
   %dst : memref<1x108xf32>) {
   // CHECK-NOT:  memref.reinterpret_cast
   %reinterpret_cast = memref.reinterpret_cast %dst
-    to offset: [0], sizes: [1, 1], strides: [107, 2]
-    : memref<1x108xf32> to memref<1x1xf32, strided<[107, 2]>>
+    to offset: [0], sizes: [1, 1], strides: [2, 54]
+    : memref<1x108xf32> to memref<1x1xf32, strided<[2, 54]>>
 
   // CHECK-NOT:  memref.copy
   // CHECK:      %[[C0:.*]] = arith.constant 0 : index
   // CHECK:      %[[VAL:.*]] = memref.load %[[SRC]][%[[C0]], %[[C0]]] : memref<1x1xf32>
   // CHECK:      memref.store %[[VAL]], %[[DST]][%[[C0]], %[[C0]]] : memref<1x108xf32>
   memref.copy %src, %reinterpret_cast
-    : memref<1x1xf32> to memref<1x1xf32, strided<[107, 2]>>
+    : memref<1x1xf32> to memref<1x1xf32, strided<[2, 54]>>
   return
 }
 
@@ -315,9 +315,9 @@ func.func private @copy_1D_into_1D_strided_dynamic_offset(
 // Either scalar (0D) OR non-scalar (ND) copy
 //===----------------------------------------------------------------------===//
 
-/// Reject copies that don't target a strided memref
-// CHECK-LABEL: func.func private @negative_plain_copy(
-func.func private @negative_plain_copy(%src : memref<1x1xf32>,
+/// Reject copies that don't target a reinterpret_cast result
+// CHECK-LABEL: func.func private @negative_no_rc(
+func.func private @negative_no_rc(%src : memref<1x1xf32>,
   %dst : memref<1x1xf32>) {
   // CHECK:      memref.copy %arg0, %arg1
   // CHECK-NOT:  memref.load
@@ -364,18 +364,18 @@ func.func private @negative_copy_into_strided_rank_change(%src : memref<3x4xf32>
 /// Reject non-identity layout rc source strides
 // CHECK-LABEL: func.func private @negative_copy_into_strided_non_identity(
 func.func private @negative_copy_into_strided_non_identity(%src: memref<1x1xf32>,
-  %dst: memref<108x1xf32, strided<[10, 2]>>) {
+  %dst: memref<12x1xf32, strided<[10, 2]>>) {
   // CHECK:      %reinterpret_cast = memref.reinterpret_cast %arg1
   %rc = memref.reinterpret_cast %dst
-    to offset: [6], sizes: [1, 1], strides: [10, 2]
-    : memref<108x1xf32, strided<[10, 2]>>
-      to memref<1x1xf32, strided<[10, 2], offset: 6>>
+    to offset: [0], sizes: [1, 1], strides: [10, 2]
+    : memref<12x1xf32, strided<[10, 2]>>
+      to memref<1x1xf32, strided<[10, 2]>>
 
   // CHECK:      memref.copy %arg0, %reinterpret_cast
   // CHECK-NOT:  memref.load
   // CHECK-NOT:  memref.store
   memref.copy %src, %rc
-    : memref<1x1xf32> to memref<1x1xf32, strided<[10, 2], offset: 6>>
+    : memref<1x1xf32> to memref<1x1xf32, strided<[10, 2]>>
 
   return
 }
@@ -458,19 +458,19 @@ func.func private @negative_copy_into_ND_strided_dynamic_offset(
 /// (non-unit copied dimension needs stride-based address computation)
 // CHECK-LABEL: func.func private @negative_copy_into_strided_non_identity_strides(
 func.func private @negative_copy_into_strided_non_identity_strides(
-  %src : memref<1x3x1xf32>, %dst : memref<1x3x11xf32>) {
+  %src : memref<1x3x1xf32>, %dst : memref<1x3x4xf32>) {
   // CHECK:      %reinterpret_cast = memref.reinterpret_cast %arg1
   %rc = memref.reinterpret_cast %dst
-    to offset: [0], sizes: [1, 3, 1], strides: [33, 10, 1]
-    : memref<1x3x11xf32>
-      to memref<1x3x1xf32, strided<[33, 10, 1]>>
+    to offset: [0], sizes: [1, 3, 1], strides: [12, 4, 4]
+    : memref<1x3x4xf32>
+      to memref<1x3x1xf32, strided<[12, 4, 4]>>
 
   // CHECK:      memref.copy %arg0, %reinterpret_cast
   // CHECK-NOT:  memref.load
   // CHECK-NOT:  memref.store
   memref.copy %src, %rc
     : memref<1x3x1xf32>
-      to memref<1x3x1xf32, strided<[33, 10, 1]>>
+      to memref<1x3x1xf32, strided<[12, 4, 4]>>
   return
 }
 
