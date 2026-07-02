@@ -1,0 +1,47 @@
+name: Commit Access Request
+description: Request to join the LLVM committers team
+title: "Request Commit Access For <user>"
+labels:
+  - "infra:commit-access-request"
+body:
+  - type: markdown
+    attributes:
+      value: >
+        Thank you for your interest in contributing to LLVM! Please replace
+        `<user>` in the issue title with your GitHub username, and complete
+        the form below. See the
+        [Developer Policy](https://llvm.org/docs/DeveloperPolicy.html#obtaining-commit-access)
+        for a description of commit access and how requests are handled.
+  - type: checkboxes
+    id: policies
+    attributes:
+      label: Policy Agreement
+      description: >
+        Committers are expected to know and follow the community policies.
+        Please confirm each of the following.
+      options:
+        - label: >
+            I have read the [LLVM Community Code of
+            Conduct](https://llvm.org/docs/CodeOfConduct.html) and agree to
+            abide by it.
+          required: true
+        - label: >
+            I have read the [LLVM AI Tool Use
+            Policy](https://llvm.org/docs/AIToolPolicy.html) and agree to
+            abide by it.
+          required: true
+        - label: >
+            I have read the [LLVM Developer
+            Policy](https://llvm.org/docs/DeveloperPolicy.html) and agree to
+            abide by it.
+          required: true
+  - type: textarea
+    id: background
+    attributes:
+      label: Background (optional)
+      description: >
+        Optionally, tell us how you plan to participate in the project, such
+        as changes you would like to contribute, areas of interest, or past
+        contributions.
+    validations:
+      required: false

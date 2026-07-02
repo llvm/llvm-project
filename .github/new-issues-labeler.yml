@@ -34,6 +34,9 @@
 'infra:commit-access-request':
   - '/Request Commit Access/'
 
+'infra:reviewer-access-request':
+  - '/Request Reviewer Access/'
+
 'false-positive':
   - '\bfalse[- ]positive\b'
 
