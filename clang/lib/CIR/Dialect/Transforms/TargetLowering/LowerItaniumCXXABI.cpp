@@ -34,12 +34,15 @@ class LowerItaniumCXXABI : public CIRCXXABI {
 protected:
   bool useARMMethodPtrABI;
   bool use32BitVTableOffsetABI;
+  bool useARMArrayCookieABI;
 
 public:
   LowerItaniumCXXABI(LowerModule &lm, bool useARMMethodPtrABI = false,
-                     bool use32BitVTableOffsetABI = false)
+                     bool use32BitVTableOffsetABI = false,
+                     bool useARMArrayCookieABI = false)
       : CIRCXXABI(lm), useARMMethodPtrABI(useARMMethodPtrABI),
-        use32BitVTableOffsetABI(use32BitVTableOffsetABI) {}
+        use32BitVTableOffsetABI(use32BitVTableOffsetABI),
+        useARMArrayCookieABI(useARMArrayCookieABI) {}
 
   /// Lower the given data member pointer type to its ABI type. The returned
   /// type is also a CIR type.
@@ -143,6 +146,15 @@ std::unique_ptr<CIRCXXABI> createItaniumCXXABI(LowerModule &lm) {
         lm,
         /*useARMMethodPtrABI=*/true,
         /*use32BitVTableOffsetABI=*/true);
+
+  case clang::TargetCXXABI::GenericARM:
+    // 32-bit ARM uses the ARM method-pointer encoding and the two-word array
+    // cookie but, unlike AppleARM64, does not use 32-bit vtable offsets.
+    return std::make_unique<LowerItaniumCXXABI>(
+        lm,
+        /*useARMMethodPtrABI=*/true,
+        /*use32BitVTableOffsetABI=*/false,
+        /*useARMArrayCookieABI=*/true);
 
   case clang::TargetCXXABI::GenericItanium:
     return std::make_unique<LowerItaniumCXXABI>(lm);
@@ -874,10 +886,16 @@ LowerItaniumCXXABI::lowerVTableGetTypeInfo(cir::VTableGetTypeInfoOp op,
 
 clang::CharUnits LowerItaniumCXXABI::getArrayCookieSizeImpl(
     mlir::Type elementType, const mlir::DataLayout &dataLayout) const {
-  // The array cookie is a size_t; pad that up to the element alignment.
-  // The cookie is actually right-justified in that space.
   clang::CharUnits sizeOfSizeT =
       clang::CharUnits::fromQuantity(getPtrSizeInBits() / 8);
+
+  // On 32-bit ARM the cookie is two size_t words; the element count stays
+  // right-justified, so the read logic below is unchanged.
+  if (useARMArrayCookieABI)
+    return sizeOfSizeT * 2;
+
+  // The array cookie is a size_t; pad that up to the element alignment.
+  // The cookie is actually right-justified in that space.
   clang::CharUnits eltAlign = clang::CharUnits::fromQuantity(
       dataLayout.getTypePreferredAlignment(elementType));
   return std::max(sizeOfSizeT, eltAlign);

@@ -239,7 +239,8 @@ def CIR_ComplexType : CIR_Type<"Complex", "complex", [
 //===----------------------------------------------------------------------===//
 
 def CIR_PointerType : CIR_Type<"Pointer", "ptr", [
-    DeclareTypeInterfaceMethods<DataLayoutTypeInterface>,
+    DeclareTypeInterfaceMethods<DataLayoutTypeInterface,
+        ["verifyEntries", "areCompatible"]>,
     DeclareTypeInterfaceMethods<CIR_SizedTypeInterface>
 ]> {
   let summary = "CIR pointer type";

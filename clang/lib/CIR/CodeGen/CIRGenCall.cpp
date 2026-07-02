@@ -839,9 +839,6 @@ CIRGenTypes::arrangeCXXStructorDeclaration(GlobalDecl gd) {
                                ? astContext.VoidPtrTy
                                : astContext.VoidTy;
 
-  assert(!theCXXABI.hasThisReturn(gd) &&
-         "Please send PR with a test and remove this");
-
   assert(!cir::MissingFeatures::opCallCIRGenFuncInfoExtParamInfo());
   assert(!cir::MissingFeatures::opCallFnInfoOpts());
 
@@ -973,13 +970,12 @@ const CIRGenFunctionInfo &CIRGenTypes::arrangeCXXConstructorCall(
                               : RequiredArgs::All;
 
   GlobalDecl gd(d, ctorKind);
-  if (theCXXABI.hasThisReturn(gd))
-    cgm.errorNYI(d->getSourceRange(),
-                 "arrangeCXXConstructorCall: hasThisReturn");
   if (theCXXABI.hasMostDerivedReturn(gd))
     cgm.errorNYI(d->getSourceRange(),
                  "arrangeCXXConstructorCall: hasMostDerivedReturn");
-  CanQualType resultType = astContext.VoidTy;
+  // args[0] is the implicit 'this'; ABIs that return 'this' use its type.
+  CanQualType resultType =
+      theCXXABI.hasThisReturn(gd) ? argTypes.front() : astContext.VoidTy;
 
   assert(!cir::MissingFeatures::opCallFnInfoOpts());
   assert(!cir::MissingFeatures::opCallCIRGenFuncInfoExtParamInfo());

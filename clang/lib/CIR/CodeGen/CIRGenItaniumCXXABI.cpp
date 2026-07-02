@@ -37,10 +37,29 @@ protected:
   /// All the vtables which have been defined.
   llvm::DenseMap<const CXXRecordDecl *, cir::GlobalOp> vtables;
 
+  /// 32-bit ARM uses a two-word array cookie ({element_size, element_count})
+  /// rather than the generic single-size_t cookie.
+  bool useARMArrayCookieABI;
+
+  /// 32-bit ARM returns 'this' from constructors and non-deleting destructors.
+  bool useARMThisReturnABI;
+
 public:
-  CIRGenItaniumCXXABI(CIRGenModule &cgm) : CIRGenCXXABI(cgm) {
+  CIRGenItaniumCXXABI(CIRGenModule &cgm, bool useARMArrayCookieABI = false,
+                      bool useARMThisReturnABI = false)
+      : CIRGenCXXABI(cgm), useARMArrayCookieABI(useARMArrayCookieABI),
+        useARMThisReturnABI(useARMThisReturnABI) {
     assert(!cir::MissingFeatures::cxxabiUseARMMethodPtrABI());
     assert(!cir::MissingFeatures::cxxabiUseARMGuardVarABI());
+  }
+
+  bool hasThisReturn(clang::GlobalDecl gd) const override {
+    if (!useARMThisReturnABI)
+      return false;
+    // Constructors and non-deleting destructors return 'this'.
+    return isa<CXXConstructorDecl>(gd.getDecl()) ||
+           (isa<CXXDestructorDecl>(gd.getDecl()) &&
+            gd.getDtorType() != Dtor_Deleting);
   }
 
   AddedStructorArgs getImplicitConstructorArgs(CIRGenFunction &cgf,
@@ -262,8 +281,10 @@ void CIRGenItaniumCXXABI::emitInstanceFunctionProlog(SourceLocation loc,
   /// 2) in theory, an ABI could implement 'this' returns some other way;
   ///    HasThisReturn only specifies a contract, not the implementation
   if (hasThisReturn(cgf.curGD)) {
-    cgf.cgm.errorNYI(cgf.curFuncDecl->getLocation(),
-                     "emitInstanceFunctionProlog: hasThisReturn");
+    // Store 'this' into the return slot at function entry; the epilogue
+    // returns whatever is in that slot.
+    cgf.getBuilder().createStore(cgf.getLoc(loc), getThisValue(cgf),
+                                 cgf.returnValue);
   }
 }
 
@@ -1872,8 +1893,13 @@ CIRGenCXXABI *clang::CIRGen::CreateCIRGenItaniumCXXABI(CIRGenModule &cgm) {
   switch (cgm.getASTContext().getCXXABIKind()) {
   case TargetCXXABI::GenericItanium:
   case TargetCXXABI::GenericAArch64:
-  case TargetCXXABI::GenericARM:
     return new CIRGenItaniumCXXABI(cgm);
+
+  case TargetCXXABI::GenericARM:
+    // 32-bit ARM uses the two-word array cookie and returns 'this' from
+    // constructors and non-deleting destructors.
+    return new CIRGenItaniumCXXABI(cgm, /*useARMArrayCookieABI=*/true,
+                                   /*useARMThisReturnABI=*/true);
 
   case TargetCXXABI::AppleARM64:
     // The general Itanium ABI will do until we implement something that
@@ -2421,6 +2447,11 @@ void CIRGenItaniumCXXABI::emitVirtualObjectDelete(
 /************************** Array allocation cookies **************************/
 
 CharUnits CIRGenItaniumCXXABI::getArrayCookieSizeImpl(QualType elementType) {
+  if (useARMArrayCookieABI) {
+    // On 32-bit ARM the cookie is two size_t words {size, count}.
+    return cgm.getSizeSize() * 2;
+  }
+
   // The array cookie is a size_t; pad that up to the element alignment.
   // The cookie is actually right-justified in that space.
   return std::max(
@@ -2445,9 +2476,7 @@ Address CIRGenItaniumCXXABI::initializeArrayCookie(CIRGenFunction &cgf,
   mlir::Location loc = cgf.getLoc(e->getSourceRange());
 
   // The size of the cookie.
-  CharUnits cookieSize =
-      std::max(sizeSize, ctx.getPreferredTypeAlignInChars(elementType));
-  assert(cookieSize == getArrayCookieSizeImpl(elementType));
+  CharUnits cookieSize = getArrayCookieSizeImpl(elementType);
 
   mlir::Type u8Ty = cgf.getBuilder().getUInt8Ty();
   cir::PointerType u8PtrTy = cgf.getBuilder().getUInt8PtrTy();
@@ -2472,6 +2501,17 @@ Address CIRGenItaniumCXXABI::initializeArrayCookie(CIRGenFunction &cgf,
   Address numElementsPtr =
       cookiePtr.withElementType(cgf.getBuilder(), cgf.sizeTy);
   cgf.getBuilder().createStore(loc, numElements, numElementsPtr);
+
+  // On 32-bit ARM the cookie's first word holds the element size.
+  if (useARMArrayCookieABI) {
+    CharUnits eltSize = ctx.getTypeSizeInChars(elementType);
+    Address eltSizePtr(baseBytePtr, u8Ty, baseAlignment);
+    Address eltSizeSlot =
+        eltSizePtr.withElementType(cgf.getBuilder(), cgf.sizeTy);
+    mlir::Value eltSizeVal =
+        cgf.getBuilder().getConstInt(loc, cgf.sizeTy, eltSize.getQuantity());
+    cgf.getBuilder().createStore(loc, eltSizeVal, eltSizeSlot);
+  }
 
   // Finally, compute a pointer to the actual data buffer by skipping
   // over the cookie completely.

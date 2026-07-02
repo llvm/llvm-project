@@ -677,13 +677,21 @@ mlir::LogicalResult CIRDeleteArrayOpABILowering::matchAndRewrite(
       [&](mlir::OpBuilder &b, mlir::Location l) {
         if (dtorFn) {
           auto eltPtrTy = cir::PointerType::get(ptrTy.getPointee());
+          // The element destructor returns 'this' under ctor/dtor this-return
+          // ABIs (e.g. 32-bit ARM); match the callee type so it verifies.
+          mlir::Type dtorResultTy = cir::VoidType::get(rewriter.getContext());
+          if (auto dtorFunc =
+                  mlir::SymbolTable::lookupNearestSymbolFrom<cir::FuncOp>(
+                      op, dtorFn))
+            if (!dtorFunc.getFunctionType().hasVoidReturn())
+              dtorResultTy = dtorFunc.getFunctionType().getReturnType();
           auto arrayDtor = cir::ArrayDtor::create(
               b, l, loweredAddress, numElements,
               [&](mlir::OpBuilder &bb, mlir::Location ll) {
                 mlir::Value arg =
                     bb.getInsertionBlock()->addArgument(eltPtrTy, ll);
                 auto dtorCall = cir::CallOp::create(
-                    bb, ll, dtorFn, cir::VoidType(), mlir::ValueRange{arg});
+                    bb, ll, dtorFn, dtorResultTy, mlir::ValueRange{arg});
                 if (!op.getDtorMayThrow())
                   dtorCall.setNothrowAttr(bb.getUnitAttr());
                 cir::YieldOp::create(bb, ll);

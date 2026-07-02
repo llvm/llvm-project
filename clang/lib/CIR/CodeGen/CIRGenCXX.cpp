@@ -176,8 +176,10 @@ static void emitDeclDestroy(CIRGenFunction &cgf, const VarDecl *vd,
         mlir::cast<cir::PointerType>(thisAddr.getType()).getAddrSpace());
     if (realPtrTy != thisAddr.getType())
       thisAddr = builder.createBitcast(thisAddr.getLoc(), thisAddr, realPtrTy);
-    builder.createCallOp(cgf.getLoc(vd->getSourceRange()),
-                         mlir::FlatSymbolRefAttr::get(fnOp.getSymNameAttr()),
+    // Build the call against the destructor's real signature: under the ARM
+    // C++ ABI structors return `this`, so a void-typed call would mismatch the
+    // callee and fail verification. The returned `this` is unused here.
+    builder.createCallOp(cgf.getLoc(vd->getSourceRange()), fnOp,
                          mlir::ValueRange{thisAddr});
     assert(fnOp && "expected cir.func");
     // TODO(cir): This doesn't do anything but check for unhandled conditions.

@@ -212,9 +212,13 @@ mlir::LogicalResult CIRToLLVMCopyOpLowering::matchAndRewrite(
     cir::CopyOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
   mlir::DataLayout layout(op->getParentOfType<mlir::ModuleOp>());
+  // The llvm.memcpy length is size_t-wide (target-dependent), so take its
+  // width from the data layout rather than hardcoding i64.
+  auto llvmPtrTy = mlir::LLVM::LLVMPointerType::get(rewriter.getContext());
+  mlir::Type lenTy =
+      rewriter.getIntegerType(layout.getTypeSizeInBits(llvmPtrTy));
   const mlir::Value length = mlir::LLVM::ConstantOp::create(
-      rewriter, op.getLoc(), rewriter.getI64Type(),
-      op.getCopySizeInBytes(layout));
+      rewriter, op.getLoc(), lenTy, op.getCopySizeInBytes(layout));
   assert(!cir::MissingFeatures::aggValueSlotVolatile());
 
   uint64_t dstTypeAlign = dataLayout.getTypeABIAlignment(convertTypeForMemory(
@@ -3902,6 +3906,23 @@ void ConvertCIRToLLVMPass::runOnOperation() {
   if (failed(applyPartialConversion(ops, target, std::move(patterns))))
     signalPassFailure();
 
+  // The CIR-native pointer data-layout entry (keyed on cir.ptr) drives pointer
+  // widths during CIR codegen and lowering, but cir.ptr has no meaning once the
+  // module is translated to LLVM IR. Drop it so the resulting data layout only
+  // references LLVM types.
+  if (auto dlSpec = mlir::dyn_cast_or_null<mlir::DataLayoutSpecAttr>(
+          module->getAttr(mlir::DLTIDialect::kDataLayoutAttrName))) {
+    llvm::SmallVector<mlir::DataLayoutEntryInterface> kept;
+    for (mlir::DataLayoutEntryInterface entry : dlSpec.getEntries()) {
+      if (entry.isTypeEntry() &&
+          mlir::isa<cir::PointerType>(mlir::cast<mlir::Type>(entry.getKey())))
+        continue;
+      kept.push_back(entry);
+    }
+    module->setAttr(mlir::DLTIDialect::kDataLayoutAttrName,
+                    mlir::DataLayoutSpecAttr::get(module.getContext(), kept));
+  }
+
   // Emit the llvm.global_ctors array.
   buildCtorDtorList(module, cir::CIRDialect::getGlobalCtorsAttrName(),
                     "llvm.global_ctors", [](mlir::Attribute attr) {
@@ -4062,15 +4083,20 @@ mlir::LogicalResult CIRToLLVMThrowOpLowering::matchAndRewrite(
 mlir::LogicalResult CIRToLLVMAllocExceptionOpLowering::matchAndRewrite(
     cir::AllocExceptionOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
-  // Get or create `declare ptr @__cxa_allocate_exception(i64)`
+  // Get or create `declare ptr @__cxa_allocate_exception(size_t)`. thrown_size
+  // is size_t, so take its width from the data layout rather than hardcoding
+  // i64; otherwise the call mismatches the runtime on 32-bit targets.
   StringRef fnName = "__cxa_allocate_exception";
   auto llvmPtrTy = mlir::LLVM::LLVMPointerType::get(rewriter.getContext());
-  auto int64Ty = mlir::IntegerType::get(rewriter.getContext(), 64);
-  auto fnTy = mlir::LLVM::LLVMFunctionType::get(llvmPtrTy, {int64Ty});
+  mlir::DataLayout layout(op->getParentOfType<mlir::ModuleOp>());
+  auto sizeTTy = mlir::IntegerType::get(rewriter.getContext(),
+                                        layout.getTypeSizeInBits(llvmPtrTy));
+  auto fnTy = mlir::LLVM::LLVMFunctionType::get(llvmPtrTy, {sizeTTy});
 
   createLLVMFuncOpIfNotExist(rewriter, op, fnName, fnTy);
-  auto exceptionSize = mlir::LLVM::ConstantOp::create(rewriter, op.getLoc(),
-                                                      adaptor.getSizeAttr());
+  auto exceptionSize = mlir::LLVM::ConstantOp::create(
+      rewriter, op.getLoc(), sizeTTy,
+      rewriter.getIntegerAttr(sizeTTy, op.getSize()));
 
   auto allocaExceptionCall = mlir::LLVM::CallOp::create(
       rewriter, op.getLoc(), mlir::TypeRange{llvmPtrTy}, fnName,

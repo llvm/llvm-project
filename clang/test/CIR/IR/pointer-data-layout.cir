@@ -1,0 +1,16 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+// The cir.ptr data-layout entry carries an mlir::ptr::SpecAttr (#ptr.spec).
+// A well-formed entry round-trips without diagnostics.
+module attributes {dlti.dl_spec = #dlti.dl_spec<
+    !cir.ptr<!cir.void> = #ptr.spec<size = 32, abi = 32, preferred = 32>>} {
+}
+
+// -----
+
+// PointerType::verifyEntries rejects a cir.ptr entry whose value is not a
+// #ptr.spec attribute.
+// expected-error @below {{expected layout attribute for '!cir.ptr<!cir.void>' to be a #ptr.spec attribute}}
+module attributes {dlti.dl_spec = #dlti.dl_spec<
+    !cir.ptr<!cir.void> = dense<32> : vector<2xi64>>} {
+}
