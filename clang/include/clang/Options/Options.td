@@ -7572,6 +7572,16 @@ def fsycl_host_only : Flag<["-"], "fsycl-host-only">,
 def sycl_link : Flag<["--"], "sycl-link">, Flags<[HelpHidden]>,
   HelpText<"Perform link through clang-sycl-linker via the target "
   "offloading toolchain.">;
+def fsycl_device_image_split_EQ : Joined<["-"], "fsycl-device-image-split=">,
+  HelpText<"Select the granularity at which SYCL device code is grouped into "
+           "device images: kernel (one device image per kernel) | "
+           "translation_unit (one device image per translation unit) | "
+           "link_unit (one device image per linking unit). "
+           "Default is 'translation_unit'.">,
+  Values<"kernel,translation_unit,link_unit">;
+def fsycl_device_image_split : Flag<["-"], "fsycl-device-image-split">,
+  Alias<fsycl_device_image_split_EQ>, AliasArgs<["translation_unit"]>,
+  HelpText<"Group SYCL device code into device images: one per 'translation_unit'.">;
 } // let Group = sycl_Group
 
 // OS-specific options
@@ -7615,6 +7625,11 @@ let Visibility = [CC1Option, CC1AsOption, FC1Option] in {
 def tune_cpu : Separate<["-"], "tune-cpu">,
   HelpText<"Tune for a specific cpu type">,
   MarshallingInfoString<TargetOpts<"TuneCPU">>;
+def fexec_charset : Separate<["-"], "fexec-charset">, MetaVarName<"<encoding>">,
+  HelpText<"Set the <encoding> for ordinary string and character literals. "
+           "Supported character encodings include ISO-8859-1, UTF-8, IBM1047, "
+           "and possibly those supported by ICU or the host iconv library.">,
+  MarshallingInfoString<LangOpts<"LiteralEncoding">>;
 def target_cpu : Separate<["-"], "target-cpu">,
   HelpText<"Target a specific cpu type">,
   MarshallingInfoString<TargetOpts<"CPU">>;

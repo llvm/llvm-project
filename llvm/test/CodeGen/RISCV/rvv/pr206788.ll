@@ -16,11 +16,9 @@ define i1 @test() {
 ;
 ; ZVL64-LABEL: test:
 ; ZVL64:       # %bb.0:
-; ZVL64-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
-; ZVL64-NEXT:    vmv.v.i v8, 0
 ; ZVL64-NEXT:    vsetivli zero, 8, e8, m1, ta, ma
-; ZVL64-NEXT:    vle8.v v9, (zero)
-; ZVL64-NEXT:    vmsne.vv v8, v9, v8
+; ZVL64-NEXT:    vle8.v v8, (zero)
+; ZVL64-NEXT:    vmsne.vi v8, v8, 0
 ; ZVL64-NEXT:    vcpop.m a0, v8
 ; ZVL64-NEXT:    seqz a0, a0
 ; ZVL64-NEXT:    ret

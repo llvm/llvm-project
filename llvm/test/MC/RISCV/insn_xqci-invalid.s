@@ -32,7 +32,7 @@
 # CHECK-ERR: [[@LINE-1]]:24: error: invalid operand for instruction
 
 .insn qc.ei 127, 7, 3, x31, not_a_reg, 0
-# CHECK-ERR: [[@LINE-1]]:29: error: immediate must be an integer in the range [-33554432, 33554431]
+# CHECK-ERR: [[@LINE-1]]:29: error: invalid operand for instruction
 
 .insn qc.ei 127, 7, 3, x31, x31, 0x2000000
 # CHECK-ERR: [[@LINE-1]]:34: error: immediate must be an integer in the range [-33554432, 33554431]

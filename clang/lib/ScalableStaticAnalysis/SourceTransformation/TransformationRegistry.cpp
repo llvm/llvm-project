@@ -17,7 +17,7 @@ namespace clang::ssaf {
 volatile int SSAFSourceTransformationAnchorSource = 0;
 } // namespace clang::ssaf
 
-LLVM_DEFINE_REGISTRY(clang::ssaf::TransformationRegistry)
+LLVM_DEFINE_REGISTRY_EX(CLANG_ABI_EXPORT, clang::ssaf::TransformationRegistry)
 
 bool ssaf::isTransformationRegistered(llvm::StringRef Name) {
   for (const auto &Entry : TransformationRegistry::entries())

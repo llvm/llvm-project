@@ -1781,3 +1781,7 @@ def X86vpmaddwd_su : PatFrag<(ops node:$lhs, node:$rhs),
                              (X86vpmaddwd node:$lhs, node:$rhs), [{
   return N->hasOneUse();
 }]>;
+
+// BMM matrix multiplication operations
+def x86vbmacor  : SDNode<"X86ISD::VBMACOR",  SDTVnni>;
+def x86vbmacxor : SDNode<"X86ISD::VBMACXOR", SDTVnni>;

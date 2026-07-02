@@ -30,10 +30,10 @@
 ; RUN: %if x86-registered-target     %{ llc < %s -mtriple=i686-unknown-linux-musl      | FileCheck %s --check-prefixes=CHECK-ALL,CHECK-USELD %}
 ; RUN: %if x86-registered-target     %{ llc < %s -mtriple=x86_64-unknown-linux-gnu     | FileCheck %s --check-prefixes=CHECK-ALL,CHECK-F128  %}
 ; RUN: %if x86-registered-target     %{ llc < %s -mtriple=x86_64-unknown-linux-musl    | FileCheck %s --check-prefixes=CHECK-ALL,CHECK-USELD %}
-;
-; FIXME(#144006): Windows-MSVC should also be run but has a ldexp selection
-; failure.
-; %if x86-registered-target     %{ llc < %s -mtriple=x86_64-pc-windows-msvc       -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK-ALL,CHECK-F128  %}
+
+; FIXME(#144006): Windows-MSVC should also be run but has a ldexp selection failure.
+; %if x86-registered-target     %{ llc < %s -mtriple=x86_64-pc-windows-msvc       | FileCheck %s --check-prefixes=CHECK-ALL,CHECK-F128  %}
+; %if aarch64-registered-target %{ llc < %s -mtriple=arm64ec-pc-windows-msvc      | FileCheck %s --check-prefixes=CHECK-ALL,CHECK-F128  %}
 
 define fp128 @test_acos(fp128 %a) {
 ; CHECK-ALL-LABEL:  test_acos:

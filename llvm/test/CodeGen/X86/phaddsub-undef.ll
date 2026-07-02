@@ -10,13 +10,13 @@
 
 ; Verify that we correctly fold horizontal binop even in the presence of UNDEFs.
 
-define <8 x i32> @test14_undef(<8 x i32> %a, <8 x i32> %b) {
-; SSE-LABEL: test14_undef:
+define <8 x i32> @add_v8i32_0uu3uuuu(<8 x i32> %a, <8 x i32> %b) {
+; SSE-LABEL: add_v8i32_0uu3uuuu:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    phaddd %xmm2, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: test14_undef:
+; AVX-LABEL: add_v8i32_0uu3uuuu:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vphaddd %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
@@ -32,8 +32,8 @@ define <8 x i32> @test14_undef(<8 x i32> %a, <8 x i32> %b) {
 }
 
 ; integer horizontal adds instead of two scalar adds followed by vector inserts.
-define <8 x i32> @test15_undef(<8 x i32> %a, <8 x i32> %b) {
-; SSE-SLOW-LABEL: test15_undef:
+define <8 x i32> @add_v8i32_0uuuuu6u(<8 x i32> %a, <8 x i32> %b) {
+; SSE-SLOW-LABEL: add_v8i32_0uuuuu6u:
 ; SSE-SLOW:       # %bb.0:
 ; SSE-SLOW-NEXT:    movd %xmm0, %eax
 ; SSE-SLOW-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
@@ -48,14 +48,14 @@ define <8 x i32> @test15_undef(<8 x i32> %a, <8 x i32> %b) {
 ; SSE-SLOW-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,1,0,1]
 ; SSE-SLOW-NEXT:    retq
 ;
-; SSE-FAST-LABEL: test15_undef:
+; SSE-FAST-LABEL: add_v8i32_0uuuuu6u:
 ; SSE-FAST:       # %bb.0:
 ; SSE-FAST-NEXT:    movdqa %xmm3, %xmm1
 ; SSE-FAST-NEXT:    phaddd %xmm0, %xmm0
 ; SSE-FAST-NEXT:    phaddd %xmm3, %xmm1
 ; SSE-FAST-NEXT:    retq
 ;
-; AVX1-SLOW-LABEL: test15_undef:
+; AVX1-SLOW-LABEL: add_v8i32_0uuuuu6u:
 ; AVX1-SLOW:       # %bb.0:
 ; AVX1-SLOW-NEXT:    vmovd %xmm0, %eax
 ; AVX1-SLOW-NEXT:    vpextrd $1, %xmm0, %ecx
@@ -70,7 +70,7 @@ define <8 x i32> @test15_undef(<8 x i32> %a, <8 x i32> %b) {
 ; AVX1-SLOW-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX1-SLOW-NEXT:    retq
 ;
-; AVX1-FAST-LABEL: test15_undef:
+; AVX1-FAST-LABEL: add_v8i32_0uuuuu6u:
 ; AVX1-FAST:       # %bb.0:
 ; AVX1-FAST-NEXT:    vphaddd %xmm0, %xmm0, %xmm0
 ; AVX1-FAST-NEXT:    vextractf128 $1, %ymm1, %xmm1
@@ -78,12 +78,12 @@ define <8 x i32> @test15_undef(<8 x i32> %a, <8 x i32> %b) {
 ; AVX1-FAST-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX1-FAST-NEXT:    retq
 ;
-; AVX2-LABEL: test15_undef:
+; AVX2-LABEL: add_v8i32_0uuuuu6u:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vphaddd %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: test15_undef:
+; AVX512-LABEL: add_v8i32_0uuuuu6u:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vphaddd %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    retq
@@ -98,13 +98,14 @@ define <8 x i32> @test15_undef(<8 x i32> %a, <8 x i32> %b) {
   ret <8 x i32> %vecinit5
 }
 
-define <8 x i32> @PR40243_alt(<8 x i32> %a, <8 x i32> %b) {
-; SSE-LABEL: PR40243_alt:
+; PR40243_alt
+define <8 x i32> @add_v8i32_uuuu4uu7(<8 x i32> %a, <8 x i32> %b) {
+; SSE-LABEL: add_v8i32_uuuu4uu7:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    phaddd %xmm3, %xmm1
 ; SSE-NEXT:    retq
 ;
-; AVX1-LABEL: PR40243_alt:
+; AVX1-LABEL: add_v8i32_uuuu4uu7:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
@@ -112,12 +113,12 @@ define <8 x i32> @PR40243_alt(<8 x i32> %a, <8 x i32> %b) {
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
-; AVX2-LABEL: PR40243_alt:
+; AVX2-LABEL: add_v8i32_uuuu4uu7:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vphaddd %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: PR40243_alt:
+; AVX512-LABEL: add_v8i32_uuuu4uu7:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vphaddd %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    retq
@@ -132,13 +133,13 @@ define <8 x i32> @PR40243_alt(<8 x i32> %a, <8 x i32> %b) {
   ret <8 x i32> %r
 }
 
-define <8 x i32> @test16_undef(<8 x i32> %a, <8 x i32> %b) {
-; SSE-LABEL: test16_undef:
+define <8 x i32> @add_v8i32_01uuuuuu(<8 x i32> %a, <8 x i32> %b) {
+; SSE-LABEL: add_v8i32_01uuuuuu:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    phaddd %xmm0, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: test16_undef:
+; AVX-LABEL: add_v8i32_01uuuuuu:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vphaddd %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    retq
@@ -153,13 +154,13 @@ define <8 x i32> @test16_undef(<8 x i32> %a, <8 x i32> %b) {
   ret <8 x i32> %vecinit5
 }
 
-define <16 x i32> @test16_v16i32_undef(<16 x i32> %a, <16 x i32> %b) {
-; SSE-LABEL: test16_v16i32_undef:
+define <16 x i32> @add_v16i32_01uuuuuuuuuuuuuu(<16 x i32> %a, <16 x i32> %b) {
+; SSE-LABEL: add_v16i32_01uuuuuuuuuuuuuu:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    phaddd %xmm0, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: test16_v16i32_undef:
+; AVX-LABEL: add_v16i32_01uuuuuuuuuuuuuu:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vphaddd %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    retq
@@ -174,25 +175,25 @@ define <16 x i32> @test16_v16i32_undef(<16 x i32> %a, <16 x i32> %b) {
   ret <16 x i32> %vecinit5
 }
 
-define <8 x i32> @test17_undef(<8 x i32> %a, <8 x i32> %b) {
-; SSE-LABEL: test17_undef:
+define <8 x i32> @add_v8i32_0145uuuu(<8 x i32> %a, <8 x i32> %b) {
+; SSE-LABEL: add_v8i32_0145uuuu:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    phaddd %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX1-LABEL: test17_undef:
+; AVX1-LABEL: add_v8i32_0145uuuu:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; AVX1-NEXT:    vphaddd %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
 ;
-; AVX2-LABEL: test17_undef:
+; AVX2-LABEL: add_v8i32_0145uuuu:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX2-NEXT:    vphaddd %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: test17_undef:
+; AVX512-LABEL: add_v8i32_0145uuuu:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX512-NEXT:    vphaddd %xmm1, %xmm0, %xmm0
@@ -216,25 +217,25 @@ define <8 x i32> @test17_undef(<8 x i32> %a, <8 x i32> %b) {
   ret <8 x i32> %vecinit4
 }
 
-define <16 x i32> @test17_v16i32_undef(<16 x i32> %a, <16 x i32> %b) {
-; SSE-LABEL: test17_v16i32_undef:
+define <16 x i32> @add_v16i32_0145uuuuuuuuuuuu(<16 x i32> %a, <16 x i32> %b) {
+; SSE-LABEL: add_v16i32_0145uuuuuuuuuuuu:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    phaddd %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX1-LABEL: test17_v16i32_undef:
+; AVX1-LABEL: add_v16i32_0145uuuuuuuuuuuu:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; AVX1-NEXT:    vphaddd %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
 ;
-; AVX2-LABEL: test17_v16i32_undef:
+; AVX2-LABEL: add_v16i32_0145uuuuuuuuuuuu:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX2-NEXT:    vphaddd %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: test17_v16i32_undef:
+; AVX512-LABEL: add_v16i32_0145uuuuuuuuuuuu:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX512-NEXT:    vphaddd %xmm1, %xmm0, %xmm0

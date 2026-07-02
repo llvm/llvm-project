@@ -1,0 +1,56 @@
+# RUN: llc -mtriple=aarch64 -run-pass=machine-cp -enable-spill-copy-elim -o - %s | FileCheck %s
+
+# TODO -- remove this restriction with the follow up patch as it actually fixes it.
+# UNSUPPORTED: expensive_checks
+
+# Test to show a bug in eliminateSpillageCopies.
+# Here the spill copy "$x23 = COPY $x16" sits *before* the call and its
+# source $x16 (caller-saved) may be clobbered by the call, while its
+# destination $x23 is callee-saved. Because $x23 stays available in the
+# CopyTracker across the call, the chain builder paired this spill with the
+# post-call reload "$x16 = COPY $x23" and folded the whole chain, which
+# led to $x16 not being preserved across the call.
+
+--- |
+  declare void @callee()
+  define void @no_fold_spill_chain_across_call() {
+    ret void
+  }
+...
+---
+name:            no_fold_spill_chain_across_call
+alignment:       4
+tracksRegLiveness: true
+frameInfo:
+  adjustsStack:    true
+stack:
+  - { id: 0, size: 8, alignment: 8 }
+body:             |
+  bb.0:
+    liveins: $lr, $x16, $x20, $x23, $x26
+
+    ; CHECK-LABEL: name: no_fold_spill_chain_across_call
+    ; The value of $x16 must still be spilled into the callee-saved $x23 before
+    ; the call (this copy is erased if the chain is wrongly folded).
+    ; CHECK:      $x26 = COPY {{.*}}$x23
+    ; CHECK:      BL @callee
+    ; CHECK:      $x23 = COPY {{.*}}$x20
+    ; CHECK:      $x20 = COPY {{.*}}$x23
+
+    renamable $x26 = COPY killed renamable $x23
+    renamable $x23 = COPY killed renamable $x16
+
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
+    BL @callee, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp
+    ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
+
+    renamable $x16 = COPY killed renamable $x20
+    renamable $x20 = LDRXui %stack.0, 0 :: (load (s64) from %stack.0)
+    STRXui killed renamable $x20, %stack.0, 0 :: (store (s64) into %stack.0)
+
+    renamable $x20 = COPY killed renamable $x16
+    renamable $x16 = COPY killed renamable $x23
+    renamable $x23 = COPY killed renamable $x26
+
+    RET_ReallyLR implicit $x16, implicit $x20
+...

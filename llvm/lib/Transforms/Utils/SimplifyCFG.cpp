@@ -2004,6 +2004,18 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(Instruction *TI,
           });
     }
 
+    // A musttail call must be immediately followed by a ret, so hoisting is
+    // only legal if its ret is hoisted with it on the next iteration. That is,
+    // no instruction has been skipped (the entire successor can be hoisted into
+    // the predecessor) and the call is directly followed by a ret.
+    if (auto *CI = dyn_cast<CallInst>(I1);
+        AllInstsAreIdentical && CI && CI->isMustTailCall()) {
+      AllInstsAreIdentical =
+          NumSkipped == 0 && all_of(SuccIterPairs, [](const SuccIterPair &P) {
+            return isa<ReturnInst>(*std::next(P.first));
+          });
+    }
+
     if (AllInstsAreIdentical) {
       BB1ItrPair.first++;
       // For a normal instruction, we just move one to right before the
@@ -8902,7 +8914,7 @@ static bool passingValueIsAlwaysUndefined(Value *V, Instruction *I, bool PtrValu
       if (CB->isArgOperand(&Use)) {
         unsigned ArgIdx = CB->getArgOperandNo(&Use);
         // Passing null to a nonnnull+noundef argument is undefined.
-        if (isa<ConstantPointerNull>(C) &&
+        if (isa<ConstantPointerNull>(C) && C->getType()->isPointerTy() &&
             CB->paramHasNonNullAttr(ArgIdx, /*AllowUndefOrPoison=*/false))
           return !PtrValueMayBeModified;
         // Passing undef to a noundef argument is undefined.

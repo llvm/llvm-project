@@ -146,11 +146,10 @@ exit:
 define void @scev_zext_expanded(ptr %dst, i32 %a, i32 %b) {
 ; CHECK-LABEL: VPlan for loop in 'scev_zext_expanded'
 ; CHECK:  VPlan 'Final VPlan for VF={4},UF={1}' {
-; CHECK-NEXT:  Live-in ir<%0> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<loop.preheader>:
-; CHECK-NEXT:    IR   %0 = zext i32 %p to i64
-; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult ir<%0>, ir<4>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP2:%[0-9]+]]> = zext ir<%p> to i64
+; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult vp<[[VP2]]>, ir<4>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%min.iters.check>
 ; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.ph
 ;
@@ -176,11 +175,10 @@ exit:
 define void @scev_sext_expanded(ptr %dst, i32 %a, i32 %b) {
 ; CHECK-LABEL: VPlan for loop in 'scev_sext_expanded'
 ; CHECK:  VPlan 'Final VPlan for VF={4},UF={1}' {
-; CHECK-NEXT:  Live-in ir<%0> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<loop.preheader>:
-; CHECK-NEXT:    IR   %0 = sext i32 %p to i64
-; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult ir<%0>, ir<4>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP2:%[0-9]+]]> = sext ir<%p> to i64
+; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult vp<[[VP2]]>, ir<4>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%min.iters.check>
 ; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.ph
 ;

@@ -103,23 +103,20 @@ void test_unsigned_56() {
 
 // Same dispatch-availability guard as test_unsigned_65 above.
 #  if TEST_HAS_BUILTIN(__builtin_bswapg) || !defined(TEST_HAS_NO_INT128)
-#    if __BITINT_MAXWIDTH__ >= 80
-void test_unsigned_80() {
-  // sizeof(_BitInt(80)) == 16 on x86_64; 48 padding bits. Width 80 is also
-  // a multiple of 16, so bswapg would accept it without the static_assert.
-  unsigned _BitInt(80) v = 0;
+// 72 value bits leave padding on every ABI.
+#    if __BITINT_MAXWIDTH__ >= 72
+void test_unsigned_72() {
+  unsigned _BitInt(72) v = 0;
   // expected-error-re@*:* {{{{(std::byteswap requires T to have no padding bits|byteswap is unimplemented for integral types of this size)}}}}
   (void)std::byteswap(v);
 }
 #    endif
 
-// 32-bit x86 packs _BitInt(96) into 12 bytes (no padding), so std::byteswap
-// accepts it there; gate the case out. sizeof isn't available to the
-// preprocessor, so this is a target check rather than a has-padding predicate.
-#    if __BITINT_MAXWIDTH__ >= 96 && !defined(__i386__)
-void test_unsigned_96() {
-  // sizeof(_BitInt(96)) == 16 here; 32 padding bits.
-  unsigned _BitInt(96) v = 0;
+#    if __BITINT_MAXWIDTH__ >= 80
+void test_unsigned_80() {
+  // sizeof(_BitInt(80)) == 16 on x86_64; 48 padding bits. Width 80 is also
+  // a multiple of 16, so bswapg would accept it without the static_assert.
+  unsigned _BitInt(80) v = 0;
   // expected-error-re@*:* {{{{(std::byteswap requires T to have no padding bits|byteswap is unimplemented for integral types of this size)}}}}
   (void)std::byteswap(v);
 }

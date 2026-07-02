@@ -239,6 +239,16 @@ public:
   // Operation creation helpers
   // --------------------------
   //
+  using CIRBaseBuilderTy::createCopy;
+  cir::CopyOp createCopy(Address dst, Address src, bool isVolatile = false,
+                         bool skipTailPadding = false) {
+    cir::CopyOp op = createCopy(dst.getPointer(), src.getPointer(), isVolatile,
+                                skipTailPadding);
+    op.setDstAlignment(dst.getAlignment().getQuantity());
+    op.setSrcAlignment(src.getAlignment().getQuantity());
+    return op;
+  }
+
   cir::MemCpyOp createMemCpy(mlir::Location loc, mlir::Value dst,
                              mlir::Value src, mlir::Value len) {
     return cir::MemCpyOp::create(*this, loc, dst, src, len);

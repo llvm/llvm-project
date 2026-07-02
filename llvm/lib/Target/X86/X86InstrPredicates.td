@@ -86,6 +86,7 @@ def HasVPOPCNTDQ : Predicate<"Subtarget->hasVPOPCNTDQ()">;
 def HasDQI       : Predicate<"Subtarget->hasDQI()">;
 def NoDQI        : Predicate<"!Subtarget->hasDQI()">;
 def HasBWI       : Predicate<"Subtarget->hasBWI()">;
+def HasBMM       : Predicate<"Subtarget->hasBMM()">;
 def NoBWI        : Predicate<"!Subtarget->hasBWI()">;
 def HasVLX       : Predicate<"Subtarget->hasVLX()">;
 def NoVLX        : Predicate<"!Subtarget->hasVLX()">;

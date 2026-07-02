@@ -596,6 +596,17 @@ if(NOT LIBC_TARGET_OS_IS_BAREMETAL AND NOT LIBC_TARGET_OS_IS_GPU)
   endif()
 endif()
 
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
+  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
+endif()
+
+add_entrypoint_object(
+  realpath
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.realpath
+)
+
 if(NOT LLVM_LIBC_FULL_BUILD)
   return()
 endif()
@@ -676,10 +687,6 @@ add_entrypoint_object(
     libc.src.errno.errno
     libc.src.__support.str_to_integer
 )
-
-if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
-  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
-endif()
 
 add_entrypoint_object(
   setenv

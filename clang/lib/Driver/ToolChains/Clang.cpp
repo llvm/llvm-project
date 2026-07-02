@@ -9877,6 +9877,23 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
         LinkerArgs.emplace_back("--create-library");
       }
 
+      // Forward the SYCL device image split option to clang-sycl-linker.
+      // The driver and clang-sycl-linker share the same value vocabulary, so
+      // the value is passed through verbatim after validation.
+      if (Kind == Action::OFK_SYCL) {
+        if (Arg *A =
+                ToolChainArgs.getLastArg(OPT_fsycl_device_image_split_EQ)) {
+          StringRef Mode = A->getValue();
+          if (Mode != "kernel" && Mode != "translation_unit" &&
+              Mode != "link_unit")
+            C.getDriver().Diag(clang::diag::err_drv_invalid_value)
+                << A->getSpelling() << Mode;
+          else
+            LinkerArgs.emplace_back(
+                Args.MakeArgString("--module-split-mode=" + Mode));
+        }
+      }
+
       // Forward all of these to the appropriate toolchain.
       for (StringRef Arg : CompilerArgs)
         CmdArgs.push_back(Args.MakeArgString(

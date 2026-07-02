@@ -5,7 +5,8 @@
 // REQUIRES: lldb
 // UNSUPPORTED: system-windows
 // RUN: %clang -std=gnu11 -O2 -glldb %s -o %t
-// RUN: %dexter --fail-lt 1.0 -w %dexter_lldb_args --binary %t -- %s
+// RUN: %dexter -w --use-script %dexter_lldb_args --binary %t -- %s \
+// RUN:   | FileCheck %s
 //
 //// Check that a pointer to a variable living on the stack dereferences to the
 //// variable value.
@@ -20,16 +21,27 @@ void esc(int* p) {
 int main() {
   int local = 0xA;
   int *plocal = &local;
-  esc(plocal);      // DexLabel('s1')
+  esc(plocal);      // !dex_label s1
   local = 0xB;      //// DSE
-  return 0;         // DexLabel('s2')
+  return 0;         // !dex_label s2
 }
 
+// CHECK-DAG: seen_values: 5
+// CHECK-DAG: correct_step_coverage: 100.0%
 
-// DexExpectWatchValue('local', 0xA, on_line=ref('s1'))
-// DexExpectWatchValue('local', 0xB, on_line=ref('s2'))
-// DexExpectWatchValue('*plocal', 0xA, on_line=ref('s1'))
-// DexExpectWatchValue('*plocal', 0xB, on_line=ref('s2'))
-//// Ideally we should be able to observe the dead store to local (0xB) through
-//// plocal here.
-// DexExpectWatchValue('(local == *plocal)', 'true', from_line=ref('s1'), to_line=ref('s2'))
+/*
+---
+!where {lines: !label s1}:
+  !value local: 0xA
+  !value plocal:
+    "*": 0xA
+!where {lines: !label s2}:
+  !value local: 0xB
+  !value plocal:
+    "*": 0xB
+# Ideally we should be able to observe the dead store to local (0xB) through
+# plocal here.
+!where {lines: !range [!label s1, !label s2]}:
+  !value "(local == *plocal)": true
+...
+*/

@@ -756,8 +756,8 @@ mlir::Value fir::FirOpBuilder::createSlice(mlir::Location loc,
 
 mlir::Value fir::FirOpBuilder::createBox(mlir::Location loc,
                                          const fir::ExtendedValue &exv,
-                                         bool isPolymorphic,
-                                         bool isAssumedType) {
+                                         bool isPolymorphic, bool isAssumedType,
+                                         unsigned corank) {
   mlir::Value itemAddr = fir::getBase(exv);
   if (mlir::isa<fir::BaseBoxType>(itemAddr.getType()))
     return itemAddr;
@@ -774,13 +774,13 @@ mlir::Value fir::FirOpBuilder::createBox(mlir::Location loc,
   if (mlir::isa<fir::BaseBoxType>(elementType)) {
     boxTy = elementType;
   } else {
-    boxTy = fir::BoxType::get(elementType, isVolatile);
+    boxTy = fir::BoxType::get(elementType, isVolatile, corank);
     if (isPolymorphic) {
       elementType = fir::updateTypeForUnlimitedPolymorphic(elementType);
       if (isAssumedType)
-        boxTy = fir::BoxType::get(elementType, isVolatile);
+        boxTy = fir::BoxType::get(elementType, isVolatile, corank);
       else
-        boxTy = fir::ClassType::get(elementType, isVolatile);
+        boxTy = fir::ClassType::get(elementType, isVolatile, corank);
     }
   }
 
@@ -1852,10 +1852,11 @@ mlir::Value fir::factory::genCPtrOrCFunptrValue(fir::FirOpBuilder &builder,
 
 fir::BoxValue fir::factory::createBoxValue(fir::FirOpBuilder &builder,
                                            mlir::Location loc,
-                                           const fir::ExtendedValue &exv) {
+                                           const fir::ExtendedValue &exv,
+                                           unsigned corank) {
   if (auto *boxValue = exv.getBoxOf<fir::BoxValue>())
     return *boxValue;
-  mlir::Value box = builder.createBox(loc, exv);
+  mlir::Value box = builder.createBox(loc, exv, false, false, corank);
   llvm::SmallVector<mlir::Value> lbounds;
   llvm::SmallVector<mlir::Value> explicitTypeParams;
   exv.match(

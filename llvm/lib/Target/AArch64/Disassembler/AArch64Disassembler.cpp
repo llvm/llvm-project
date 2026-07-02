@@ -1468,6 +1468,16 @@ static DecodeStatus DecodeImm8OptLsl(MCInst &Inst, unsigned Imm, uint64_t Addr,
   return Success;
 }
 
+static DecodeStatus DecodeHinteUImm16(MCInst &Inst, unsigned Imm, uint64_t Addr,
+                                      const MCDisassembler *Decoder) {
+  if (Imm > 65535 ||
+      (Imm >= 12319 && Imm <= 16383 && ((Imm - 12319) % 32) == 0))
+    return Fail;
+
+  Inst.addOperand(MCOperand::createImm(Imm));
+  return Success;
+}
+
 // Decode uimm4 ranged from 1-16.
 static DecodeStatus DecodeSVEIncDecImm(MCInst &Inst, unsigned Imm,
                                        uint64_t Addr,

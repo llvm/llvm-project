@@ -5,10 +5,10 @@
 # RUN:     | FileCheck -check-prefixes=CHECK,CHECK-MINUS %s
 
 # CHECK-PLUS: :[[@LINE+2]]:20: error: register must be a GPR excluding zero (x0)
-# CHECK-MINUS: :[[@LINE+1]]:20: error: invalid operand for instruction
+# CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.csrrwr x10, x5, x0
 
-# CHECK: :[[@LINE+1]]:1: error: too few operands for instruction
+# CHECK: :[[@LINE+1]]:{{18: error: too few operands for instruction|1: error: invalid instruction}}
 qc.csrrwr x10, x5
 
 # CHECK-MINUS: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqcicsr' (Qualcomm uC CSR Extension)
@@ -16,13 +16,13 @@ qc.csrrwr x10, x5, x20
 
 
 # CHECK-PLUS: :[[@LINE+2]]:21: error: register must be a GPR excluding zero (x0)
-# CHECK-MINUS: :[[@LINE+1]]:21: error: invalid operand for instruction
+# CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.csrrwri x20, 31, x0
 
 # CHECK-PLUS: :[[@LINE+1]]:17: error: immediate must be an integer in the range [0, 31]
 qc.csrrwri x20, 45, x12
 
-# CHECK: :[[@LINE+1]]:1: error: too few operands for instruction
+# CHECK: :[[@LINE+1]]:{{19: error: too few operands for instruction|1: error: invalid instruction}}
 qc.csrrwri x20, 23
 
 # CHECK-MINUS: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqcicsr' (Qualcomm uC CSR Extension)

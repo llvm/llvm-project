@@ -1296,6 +1296,12 @@ void RegisterInfoEmitter::runTargetHeader(raw_ostream &OS, raw_ostream &MainOS,
 
   const auto &RegisterClasses = RegBank.getRegClasses();
   if (llvm::any_of(RegisterClasses,
+                   [](const auto &RC) { return !RC.AltOrderSelect.empty(); })) {
+    OS << "   ArrayRef<MCPhysReg> getRawAllocationOrder("
+          "const TargetRegisterClass &RC, const MachineFunction &MF, bool Rev) "
+          "const override;\n";
+  }
+  if (llvm::any_of(RegisterClasses,
                    [](const auto &RC) { return RC.getBaseClassOrder(); })) {
     OS << "  const TargetRegisterClass *getPhysRegBaseClass(MCRegister Reg) "
           "const override;\n";
@@ -1512,7 +1518,8 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, raw_ostream &MainOS,
            << "AltOrderSelect(const MachineFunction &MF, bool Rev) {"
            << RC.AltOrderSelect << "}\n\n"
            << "static ArrayRef<MCPhysReg> " << RC.getName()
-           << "GetRawAllocationOrder(const MachineFunction &MF, bool Rev) {\n";
+           << "GetRawAllocationOrder(const TargetRegisterClass &RC, "
+           << "const MachineFunction &MF, bool Rev) {\n";
         for (unsigned oi = 1, oe = RC.getNumOrders(); oi != oe; ++oi) {
           ArrayRef<const Record *> Elems = RC.getOrder(oi);
           if (!Elems.empty()) {
@@ -1522,10 +1529,8 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, raw_ostream &MainOS,
             OS << " };\n";
           }
         }
-        OS << "  const MCRegisterClass &MCR = get" << Target.getName()
-           << "MCRegisterClass(" << RC.getQualifiedName() + "RegClassID);\n"
-           << "  const ArrayRef<MCPhysReg> Order[] = {\n"
-           << "    ArrayRef(MCR.begin(), MCR.getNumRegs()";
+        OS << "  const ArrayRef<MCPhysReg> Order[] = {\n"
+           << "    RC.getRegisters(";
         for (unsigned oi = 1, oe = RC.getNumOrders(); oi != oe; ++oi)
           if (RC.getOrder(oi).empty())
             OS << "),\n    ArrayRef<MCPhysReg>(";
@@ -1560,11 +1565,7 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, raw_ostream &MainOS,
         OS << "nullptr, ";
       else
         OS << RC.getName() << "Superclasses,  ";
-      OS << RC.getSuperClasses().size() << ",\n    ";
-      if (RC.AltOrderSelect.empty())
-        OS << "nullptr\n";
-      else
-        OS << RC.getName() << "GetRawAllocationOrder\n";
+      OS << RC.getSuperClasses().size() << "\n";
       OS << "  };\n\n";
     }
   }
@@ -1704,6 +1705,26 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, raw_ostream &MainOS,
   }
 
   EmitRegUnitPressure(OS, ClassName);
+
+  if (llvm::any_of(RegisterClasses,
+                   [](const auto &RC) { return !RC.AltOrderSelect.empty(); })) {
+    OS << "ArrayRef<MCPhysReg> " << ClassName
+       << "::getRawAllocationOrder("
+          "const TargetRegisterClass &RC, const MachineFunction &MF, bool Rev) "
+          "const {\n";
+    OS << "  switch (RC.getID()) {\n";
+    for (const auto &RC : RegisterClasses) {
+      if (RC.AltOrderSelect.empty())
+        continue;
+      OS << "  case " << RC.getQualifiedIdName() << ":\n"
+         << "    return " << RC.getName()
+         << "GetRawAllocationOrder(RC, MF, Rev);\n";
+      ;
+    }
+    OS << "  }\n";
+    OS << "  return RC.getRegisters();\n";
+    OS << "}\n\n";
+  }
 
   // Emit register base class mapper
   if (!RegisterClasses.empty()) {

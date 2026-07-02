@@ -546,15 +546,6 @@ namespace  AArch64ISB {
 #include "AArch64GenSystemOperands.inc"
 }
 
-namespace  AArch64TSB {
-  struct TSB : SysAlias {
-    using SysAlias::SysAlias;
-  };
-#define GET_TSBValues_DECL
-#define GET_TSBsList_DECL
-#include "AArch64GenSystemOperands.inc"
-}
-
 namespace AArch64PRFM {
   struct PRFM : SysAlias {
     using SysAlias::SysAlias;
@@ -704,52 +695,6 @@ namespace AArch64PState {
 #define GET_PStateImm0_1sList_DECL
 #include "AArch64GenSystemOperands.inc"
 }
-
-namespace AArch64PSBHint {
-  struct PSB : SysAlias {
-    using SysAlias::SysAlias;
-  };
-#define GET_PSBValues_DECL
-#define GET_PSBsList_DECL
-#include "AArch64GenSystemOperands.inc"
-}
-
-namespace AArch64PHint {
-struct PHint {
-  StringTable::Offset Name;
-  unsigned Encoding;
-  FeatureBitset FeaturesRequired;
-
-  bool haveFeatures(FeatureBitset ActiveFeatures) const {
-    return ActiveFeatures[llvm::AArch64::FeatureAll] ||
-           (FeaturesRequired & ActiveFeatures) == FeaturesRequired;
-  }
-};
-
-#define GET_PHintValues_DECL
-#define GET_PHintsList_DECL
-#include "AArch64GenSystemOperands.inc"
-
-const PHint *lookupPHintByName(StringRef);
-const PHint *lookupPHintByEncoding(uint16_t);
-} // namespace AArch64PHint
-
-namespace AArch64BTIHint {
-  struct BTI : SysAlias {
-    using SysAlias::SysAlias;
-  };
-#define GET_BTIValues_DECL
-#define GET_BTIsList_DECL
-#include "AArch64GenSystemOperands.inc"
-}
-
-namespace AArch64CMHPriorityHint {
-struct CMHPriorityHint : SysAlias {
-  using SysAlias::SysAlias;
-};
-#define GET_CMHPRIORITYHINT_DECL
-#include "AArch64GenSystemOperands.inc"
-} // namespace AArch64CMHPriorityHint
 
 namespace AArch64TIndexHint {
 struct TIndex : SysAlias {

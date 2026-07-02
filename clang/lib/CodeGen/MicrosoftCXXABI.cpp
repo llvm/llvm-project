@@ -4207,18 +4207,17 @@ MicrosoftCXXABI::getAddrOfCXXCtorClosure(const CXXConstructorDecl *CD,
   if (SrcVal)
     Args.add(RValue::get(SrcVal), SrcParam->getType());
 
-  // Add the rest of the default arguments.
+  // Get the rest of the default arguments.
   SmallVector<const Stmt *, 4> ArgVec;
-  ArrayRef<ParmVarDecl *> params = CD->parameters().drop_front(IsCopy ? 1 : 0);
-  for (const ParmVarDecl *PD : params) {
-    assert(PD->hasDefaultArg() && "ctor closure lacks default args");
-    ArgVec.push_back(PD->getDefaultArg());
-  }
+  for (const CXXDefaultArgExpr *Expr :
+       CD->getCtorClosureDefaultArgs().drop_front(IsCopy ? 1 : 0))
+    ArgVec.push_back(Expr);
+  assert(ArgVec.size() == CD->getNumParams() - IsCopy);
 
   CodeGenFunction::RunCleanupsScope Cleanups(CGF);
 
   const auto *FPT = CD->getType()->castAs<FunctionProtoType>();
-  CGF.EmitCallArgs(Args, FPT, llvm::ArrayRef(ArgVec), CD, IsCopy ? 1 : 0);
+  CGF.EmitCallArgs(Args, FPT, ArrayRef(ArgVec), CD, IsCopy ? 1 : 0);
 
   // Insert any ABI-specific implicit constructor arguments.
   AddedStructorArgCounts ExtraArgs =

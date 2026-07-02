@@ -219,6 +219,8 @@ def HasLSUI          : Predicate<"Subtarget->hasLSUI()">,
                                  AssemblerPredicateWithAll<(all_of FeatureLSUI), "lsui">;
 def HasOCCMO         : Predicate<"Subtarget->hasOCCMO()">,
                                  AssemblerPredicateWithAll<(all_of FeatureOCCMO), "occmo">;
+def HasHINTE         : Predicate<"Subtarget->hasHINTE()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureHINTE), "hinte">;
 def HasLSCP          : Predicate<"Subtarget->hasLSCP()">,
                                  AssemblerPredicateWithAll<(all_of FeatureLSCP), "lscp">;
 def HasSVE2p2        : Predicate<"Subtarget->isSVEAvailable() && Subtarget->hasSVE2p2()">,
@@ -1552,13 +1554,16 @@ let hasSideEffects = 1, isCodeGenOnly = 1, isTerminator = 1, isBarrier = 1 in {
 //===----------------------------------------------------------------------===//
 
 def HINT : HintI<"hint">;
-def : InstAlias<"yield",(HINT 0b001)>;
-def : InstAlias<"wfe",  (HINT 0b010)>;
-def : InstAlias<"wfi",  (HINT 0b011)>;
-def : InstAlias<"sev",  (HINT 0b100)>;
-def : InstAlias<"sevl", (HINT 0b101)>;
-def : InstAlias<"dgh",  (HINT 0b110)>;
-def : InstAlias<"esb",  (HINT 0b10000)>, Requires<[HasRAS]>;
+let Predicates = [HasHINTE] in
+def HINTE : HintE<"hinte">;
+
+def : InstAlias<"yield",(HINT 1)>;
+def : InstAlias<"wfe",  (HINT 2)>;
+def : InstAlias<"wfi",  (HINT 3)>;
+def : InstAlias<"sev",  (HINT 4)>;
+def : InstAlias<"sevl", (HINT 5)>;
+def : InstAlias<"dgh",  (HINT 6)>;
+def : InstAlias<"esb",  (HINT 16)>, Requires<[HasRAS]>;
 def : InstAlias<"csdb", (HINT 20)>;
 
 let CRm = 0b0000, hasSideEffects = 0 in
@@ -1566,20 +1571,30 @@ def NOP : SystemNoOperands<0b000, "hint\t#0">;
 
 def : InstAlias<"nop", (NOP)>;
 
-def STSHH: STSHHI;
+def : InstAlias<"stshh keep", (HINT 48), 1>;
+def : InstAlias<"stshh strm", (HINT 49), 1>;
+def : InstAlias<"shuh", (HINT 50), 1>;
+def : InstAlias<"shuh ph", (HINT 51), 1>;
+def : InstAlias<"stcph", (HINT 52), 1>;
 
 // In order to be able to write readable assembly, LLVM should accept assembly
 // inputs that use Branch Target Identification mnemonics, even with BTI disabled.
 // However, in order to be compatible with other assemblers (e.g. GAS), LLVM
 // should not emit these mnemonics unless BTI is enabled.
 def : InstAlias<"bti",  (HINT 32), 0>;
-def : InstAlias<"bti $op", (HINT btihint_op:$op), 0>;
+def : InstAlias<"bti r",  (HINT 32), 0>;
+def : InstAlias<"bti c",  (HINT 34), 0>;
+def : InstAlias<"bti j",  (HINT 36), 0>;
+def : InstAlias<"bti jc", (HINT 38), 0>;
 def : InstAlias<"bti r", (HINT 32)>, Requires<[HasBTIE]>;
 def : InstAlias<"bti",  (HINT 32)>, Requires<[HasBTI]>;
-def : InstAlias<"bti $op", (HINT btihint_op:$op)>, Requires<[HasBTI]>;
+def : InstAlias<"bti c",  (HINT 34)>, Requires<[HasBTI]>;
+def : InstAlias<"bti j",  (HINT 36)>, Requires<[HasBTI]>;
+def : InstAlias<"bti jc", (HINT 38)>, Requires<[HasBTI]>;
 
 // v8.2a Statistical Profiling extension
-def : InstAlias<"psb $op",  (HINT psbhint_op:$op)>, Requires<[HasSPE]>;
+def : InstAlias<"psb csync", (HINT 17), 1>, Requires<[HasSPE]>;
+def : InstAlias<"tsb csync", (HINT 18), 1>, Requires<[HasTRACEV8_4]>;
 
 // As far as LLVM is concerned this writes to the system's exclusive monitors.
 let mayLoad = 1, mayStore = 1 in
@@ -1596,12 +1611,6 @@ def DSB   : CRmSystemI<barrier_op, 0b100, "dsb",
 
 def ISB   : CRmSystemI<barrier_op, 0b110, "isb",
                        [(int_aarch64_isb (i32 imm32_0_15:$CRm))]>;
-
-def TSB   : CRmSystemI<barrier_op, 0b010, "tsb", []> {
-  let CRm        = 0b0010;
-  let Inst{12}   = 0;
-  let Predicates = [HasTRACEV8_4];
-}
 
 def DSBnXS  : CRmSystemI<barrier_nxs_op, 0b001, "dsb"> {
   let CRm{1-0}   = 0b11;
@@ -11936,13 +11945,6 @@ let Predicates = [HasF16F32MM] in
 
 let Uses = [FPMR, FPCR] in
   defm FMMLA : SIMDThreeSameVectorFP8MatrixMul<"fmmla", int_aarch64_neon_fmmla>;
-
-//===----------------------------------------------------------------------===//
-// Contention Management Hints (FEAT_CMH)
-//===----------------------------------------------------------------------===//
-
-defm SHUH  : SHUH<"shuh">;       // Shared Update Hint instruction
-def STCPH  : STCPHInst<"stcph">; // Store Concurrent Priority Hint instruction
 
 //===----------------------------------------------------------------------===//
 // Permission Overlays Extension 2 (FEAT_S1POE2)

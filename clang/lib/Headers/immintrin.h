@@ -58,6 +58,10 @@
 
 #include <avx512bitalgintrin.h>
 
+#include <avx512bmmintrin.h>
+
+#include <avx512bmmvlintrin.h>
+
 #include <avx512cdintrin.h>
 
 #include <avx512vpopcntdqintrin.h>

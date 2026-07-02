@@ -1526,6 +1526,10 @@ if(LLVM_LIBC_FULL_BUILD)
 endif()
 
 if(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
+  list(APPEND TARGET_LIBC_ENTRYPOINTS
+    libc.src.stdlib.realpath
+  )
+
   if(LLVM_LIBC_FULL_BUILD)
     list(APPEND TARGET_LIBC_ENTRYPOINTS
       # regex.h entrypoints

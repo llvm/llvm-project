@@ -4,7 +4,8 @@
 // REQUIRES: lldb
 // UNSUPPORTED: system-windows
 // RUN: %clang -std=gnu11 -O3 -glldb %s -o %t
-// RUN: %dexter --fail-lt 1.0 -w %dexter_lldb_args --binary %t -- %s
+// RUN: %dexter -w --use-script %dexter_lldb_args --binary %t -- %s \
+// RUN:   | FileCheck %s
 
 // 1. param is escaped by inlineme(&param) so it is not promoted by
 //    SROA/mem2reg.
@@ -34,7 +35,7 @@ __attribute__((noinline))
 int fun(int param) {
   if (param)
     param = inlineme(&param);
-  fluff();           // DexLabel('s0')
+  fluff(); // !dex_label s0
   return param;
 }
 
@@ -42,4 +43,12 @@ int main() {
   return fun(5);
 }
 
-// DexExpectWatchValue('param', 10, on_line=ref('s0'))
+// CHECK-DAG: seen_values: 1
+// CHECK-DAG: correct_step_coverage: 100.0%
+
+/*
+---
+!where {lines: !label s0}:
+  !value param: 10
+...
+*/

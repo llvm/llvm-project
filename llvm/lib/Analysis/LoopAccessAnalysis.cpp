@@ -1316,8 +1316,9 @@ bool AccessAnalysis::createCheckForAccess(
     if (RTCheckPtrs.size() == 1) {
       PSE.addPredicates(Predicates);
       Predicates.clear();
-      AR =
-          cast<SCEVAddRecExpr>(replaceSymbolicStrideSCEV(PSE, StridesMap, Ptr));
+      if (auto *StrideAR = dyn_cast<SCEVAddRecExpr>(
+              replaceSymbolicStrideSCEV(PSE, StridesMap, Ptr)))
+        AR = StrideAR;
       P.setPointer(AR);
     }
 

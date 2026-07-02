@@ -106,14 +106,14 @@ define i32 @induction_with_loop_inv(i32 %init, ptr noalias nocapture %A, i32 %N,
 ; CHECK-LABEL: define i32 @induction_with_loop_inv(
 ; CHECK-SAME: i32 [[INIT:%.*]], ptr noalias captures(none) [[A:%.*]], i32 [[N:%.*]], i32 [[M:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[N]], -1
-; CHECK-NEXT:    [[TMP11:%.*]] = zext i32 [[TMP3]] to i64
-; CHECK-NEXT:    [[TMP0:%.*]] = add nuw nsw i64 [[TMP11]], 1
 ; CHECK-NEXT:    br label %[[OUTER_HEADER:.*]]
 ; CHECK:       [[OUTER_HEADER]]:
 ; CHECK-NEXT:    [[INDVARS_IV15:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[INDVARS_IV_NEXT16:%.*]], %[[OUTER_LATCH:.*]] ]
 ; CHECK-NEXT:    [[J_012:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[INC5:%.*]], %[[OUTER_LATCH]] ]
 ; CHECK-NEXT:    [[X_011:%.*]] = phi i32 [ [[INIT]], %[[ENTRY]] ], [ [[X_0_LCSSA:%.*]], %[[OUTER_LATCH]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[N]], -1
+; CHECK-NEXT:    [[TMP11:%.*]] = zext i32 [[TMP3]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = add nuw nsw i64 [[TMP11]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 8
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:

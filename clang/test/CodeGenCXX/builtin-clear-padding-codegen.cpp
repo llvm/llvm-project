@@ -728,7 +728,7 @@ struct S7 : VirtualBase, NonVirtualBase {
 };
 
 // LINUX-LABEL: define dso_local void @_Z10testVtable2S7(
-// LINUX-SAME: ptr noundef [[S:%.*]]) #[[ATTR0]] {
+// LINUX-SAME: ptr noundef align 8 [[S:%.*]]) #[[ATTR0]] {
 // LINUX-NEXT:  [[ENTRY:.*:]]
 // LINUX-NEXT:    [[S_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
 // LINUX-NEXT:    store ptr [[S]], ptr [[S_INDIRECT_ADDR]], align 8
@@ -739,7 +739,7 @@ struct S7 : VirtualBase, NonVirtualBase {
 // LINUX-NEXT:    ret void
 //
 // WINDOWS-LABEL: define dso_local void @_Z10testVtable2S7(
-// WINDOWS-SAME: ptr noundef [[S:%.*]]) #[[ATTR0]] {
+// WINDOWS-SAME: ptr noundef align 8 [[S:%.*]]) #[[ATTR0]] {
 // WINDOWS-NEXT:  [[ENTRY:.*:]]
 // WINDOWS-NEXT:    [[S_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
 // WINDOWS-NEXT:    store ptr [[S]], ptr [[S_INDIRECT_ADDR]], align 8
@@ -781,7 +781,7 @@ struct S8 : VirtualBase1, VirtualBase2, NonVirtualBase1, VirtualBase3 {
 };
 
 // LINUX-LABEL: define dso_local void @_Z23testMultipleBasesVtable2S8(
-// LINUX-SAME: ptr noundef [[S:%.*]]) #[[ATTR0]] {
+// LINUX-SAME: ptr noundef align 8 [[S:%.*]]) #[[ATTR0]] {
 // LINUX-NEXT:  [[ENTRY:.*:]]
 // LINUX-NEXT:    [[S_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
 // LINUX-NEXT:    store ptr [[S]], ptr [[S_INDIRECT_ADDR]], align 8
@@ -808,7 +808,7 @@ struct S8 : VirtualBase1, VirtualBase2, NonVirtualBase1, VirtualBase3 {
 // LINUX-NEXT:    ret void
 //
 // WINDOWS-LABEL: define dso_local void @_Z23testMultipleBasesVtable2S8(
-// WINDOWS-SAME: ptr noundef [[S:%.*]]) #[[ATTR0]] {
+// WINDOWS-SAME: ptr noundef align 8 [[S:%.*]]) #[[ATTR0]] {
 // WINDOWS-NEXT:  [[ENTRY:.*:]]
 // WINDOWS-NEXT:    [[S_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
 // WINDOWS-NEXT:    store ptr [[S]], ptr [[S_INDIRECT_ADDR]], align 8
@@ -868,7 +868,7 @@ struct S9 : NonVirtualBase2, VirtualChain3 {
 };
 
 // LINUX-LABEL: define dso_local void @_Z16testVirtualChain2S9(
-// LINUX-SAME: ptr noundef [[S:%.*]]) #[[ATTR0]] {
+// LINUX-SAME: ptr noundef align 8 [[S:%.*]]) #[[ATTR0]] {
 // LINUX-NEXT:  [[ENTRY:.*:]]
 // LINUX-NEXT:    [[S_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
 // LINUX-NEXT:    store ptr [[S]], ptr [[S_INDIRECT_ADDR]], align 8
@@ -879,7 +879,7 @@ struct S9 : NonVirtualBase2, VirtualChain3 {
 // LINUX-NEXT:    ret void
 //
 // WINDOWS-LABEL: define dso_local void @_Z16testVirtualChain2S9(
-// WINDOWS-SAME: ptr noundef [[S:%.*]]) #[[ATTR0]] {
+// WINDOWS-SAME: ptr noundef align 8 [[S:%.*]]) #[[ATTR0]] {
 // WINDOWS-NEXT:  [[ENTRY:.*:]]
 // WINDOWS-NEXT:    [[S_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
 // WINDOWS-NEXT:    store ptr [[S]], ptr [[S_INDIRECT_ADDR]], align 8
@@ -916,7 +916,7 @@ struct S10 : D1, D2 {
 };
 
 // LINUX-LABEL: define dso_local void @_Z22testVirtualInheritance3S10(
-// LINUX-SAME: ptr noundef dead_on_return [[S:%.*]]) #[[ATTR0]] {
+// LINUX-SAME: ptr noundef align 8 dead_on_return [[S:%.*]]) #[[ATTR0]] {
 // LINUX-NEXT:  [[ENTRY:.*:]]
 // LINUX-NEXT:    [[S_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
 // LINUX-NEXT:    store ptr [[S]], ptr [[S_INDIRECT_ADDR]], align 8
@@ -941,7 +941,7 @@ struct S10 : D1, D2 {
 // LINUX-NEXT:    ret void
 //
 // WINDOWS-LABEL: define dso_local void @_Z22testVirtualInheritance3S10(
-// WINDOWS-SAME: ptr noundef dead_on_return [[S:%.*]]) #[[ATTR0]] {
+// WINDOWS-SAME: ptr noundef align 8 dead_on_return [[S:%.*]]) #[[ATTR0]] {
 // WINDOWS-NEXT:  [[ENTRY:.*:]]
 // WINDOWS-NEXT:    [[S_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
 // WINDOWS-NEXT:    store ptr [[S]], ptr [[S_INDIRECT_ADDR]], align 8
@@ -1295,7 +1295,7 @@ struct NonTriviallyCopyable {
 };
 
 // LINUX-LABEL: define dso_local void @_Z24testNonTriviallyCopyable20NonTriviallyCopyable(
-// LINUX-SAME: ptr noundef [[NTC:%.*]]) #[[ATTR0]] {
+// LINUX-SAME: ptr noundef align 4 [[NTC:%.*]]) #[[ATTR0]] {
 // LINUX-NEXT:  [[ENTRY:.*:]]
 // LINUX-NEXT:    [[NTC_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
 // LINUX-NEXT:    store ptr [[NTC]], ptr [[NTC_INDIRECT_ADDR]], align 8
@@ -1308,7 +1308,7 @@ struct NonTriviallyCopyable {
 // LINUX-NEXT:    ret void
 //
 // WINDOWS-LABEL: define dso_local void @_Z24testNonTriviallyCopyable20NonTriviallyCopyable(
-// WINDOWS-SAME: ptr noundef [[NTC:%.*]]) #[[ATTR0]] {
+// WINDOWS-SAME: ptr noundef align 4 [[NTC:%.*]]) #[[ATTR0]] {
 // WINDOWS-NEXT:  [[ENTRY:.*:]]
 // WINDOWS-NEXT:    [[NTC_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
 // WINDOWS-NEXT:    store ptr [[NTC]], ptr [[NTC_INDIRECT_ADDR]], align 8

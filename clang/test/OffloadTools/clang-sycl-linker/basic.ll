@@ -26,7 +26,7 @@
 ;
 ; Test the dry run of a simple case to link two input files.
 ; Test that IMG_SPIRV image kind is set for non-AOT compilation.
-; RUN: clang-sycl-linker --dry-run -v --module-split-mode=none %t/input1.bc %t/input2.bc -o %t/spirv.out 2>&1 \
+; RUN: clang-sycl-linker --dry-run -v --module-split-mode=link_unit %t/input1.bc %t/input2.bc -o %t/spirv.out 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=SIMPLE-FO
 ; SIMPLE-FO:      link: inputs: {{.*}}.bc, {{.*}}.bc output: [[LLVMLINKOUT:.*]].bc
 ; SIMPLE-FO-NEXT: LLVM backend: input: [[LLVMLINKOUT]].bc, output: {{.*}}_0.spv
@@ -38,7 +38,7 @@
 ; RUN: llvm-as %t/lib1.ll -o %t/libs/lib1.bc
 ; RUN: llvm-as %t/lib2.ll -o %t/libs/lib2.bc
 ; RUN: llvm-ar rc %t/libs/libdevice.a %t/libs/lib1.bc %t/libs/lib2.bc
-; RUN: clang-sycl-linker --dry-run -v --module-split-mode=none %t/input1.bc %t/input2.bc --library-path=%t/libs --whole-archive -l device -o /dev/null 2>&1 \
+; RUN: clang-sycl-linker --dry-run -v --module-split-mode=link_unit %t/input1.bc %t/input2.bc --library-path=%t/libs --whole-archive -l device -o /dev/null 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=DEVLIBS
 ; DEVLIBS:      link: inputs: {{.*}}.bc, {{.*}}.bc, {{.*}}libdevice.a(lib1.bc), {{.*}}libdevice.a(lib2.bc) output: [[LLVMLINKOUT:.*]].bc
 ; DEVLIBS-NEXT: LLVM backend: input: [[LLVMLINKOUT]].bc, output: {{.*}}_0.spv
@@ -46,13 +46,13 @@
 ; DEVLIBS-NOT:  {{.+}}
 ;
 ; Test -L short form (joined) and -l with archive using --whole-archive.
-; RUN: clang-sycl-linker --dry-run -v --module-split-mode=none %t/input1.bc -L%t/libs --whole-archive -l device -o /dev/null 2>&1 \
+; RUN: clang-sycl-linker --dry-run -v --module-split-mode=link_unit %t/input1.bc -L%t/libs --whole-archive -l device -o /dev/null 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=DEVLIBS-SHORT
 ; DEVLIBS-SHORT: link: inputs: {{.*}}.bc, {{.*}}libdevice.a(lib1.bc), {{.*}}libdevice.a(lib2.bc) output: {{.*}}.bc
 ;
 ; Test that search continues past the first -L when the library is not found there. libdevice.a exists only in %t/libs (the second -L).
 ; RUN: mkdir -p %t/empty
-; RUN: clang-sycl-linker --dry-run -v --module-split-mode=none %t/input1.bc -L %t/empty -L %t/libs --whole-archive -l device -o /dev/null 2>&1 \
+; RUN: clang-sycl-linker --dry-run -v --module-split-mode=link_unit %t/input1.bc -L %t/empty -L %t/libs --whole-archive -l device -o /dev/null 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=DEVLIBS-FALLTHROUGH
 ; DEVLIBS-FALLTHROUGH: link: inputs: {{.*}}.bc, {{.*}}libdevice.a(lib1.bc), {{.*}}libdevice.a(lib2.bc) output: {{.*}}.bc
 ;
@@ -109,7 +109,7 @@
 ;
 ; Test AOT compilation for an Intel GPU.
 ; Test that IMG_Object image kind is set for AOT compilation (Intel GPU).
-; RUN: clang-sycl-linker --dry-run -v --module-split-mode=none -arch=bmg_g21 %t/input1.bc %t/input2.bc -o %t/aot-gpu.out 2>&1 \
+; RUN: clang-sycl-linker --dry-run -v --module-split-mode=link_unit -arch=bmg_g21 %t/input1.bc %t/input2.bc -o %t/aot-gpu.out 2>&1 \
 ; RUN:     --ocloc-options="-a -b" \
 ; RUN:   | FileCheck %s --check-prefix=AOT-INTEL-GPU
 ; AOT-INTEL-GPU:      link: inputs: {{.*}}.bc, {{.*}}.bc output: [[LLVMLINKOUT:.*]].bc
@@ -120,7 +120,7 @@
 ;
 ; Test AOT compilation for an Intel CPU.
 ; Test that IMG_Object image kind is set for AOT compilation (Intel CPU).
-; RUN: clang-sycl-linker --dry-run -v --module-split-mode=none -arch=graniterapids %t/input1.bc %t/input2.bc -o %t/aot-cpu.out 2>&1 \
+; RUN: clang-sycl-linker --dry-run -v --module-split-mode=link_unit -arch=graniterapids %t/input1.bc %t/input2.bc -o %t/aot-cpu.out 2>&1 \
 ; RUN:     --opencl-aot-options="-a -b" \
 ; RUN:   | FileCheck %s --check-prefix=AOT-INTEL-CPU
 ; AOT-INTEL-CPU:      link: inputs: {{.*}}.bc, {{.*}}.bc output: [[LLVMLINKOUT:.*]].bc

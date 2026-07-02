@@ -3171,15 +3171,13 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
       // but not if clang decides it must emit a packed struct, or the
       // user specifies increased alignment requirements.)
       //
-      // This is different from indirect *not* byval, where the object
-      // exists already, and the align attribute is purely
-      // informative.
+      // This is different from indirect *not* byval, where an aligned copy is
+      // already created by the caller, and the align attribute is purely
+      // informative. However, this can still be useful information for
+      // optimizations, such as giving us one necessary condition for checking
+      // if a load to this pointer can be speculatively executed.
       assert(!Align.isZero());
-
-      // For now, only add this when we have a byval argument.
-      // TODO: be less lazy about updating test cases.
-      if (AI.getIndirectByVal())
-        Attrs.addAlignmentAttr(Align.getQuantity());
+      Attrs.addAlignmentAttr(Align.getQuantity());
 
       // byval disables readnone and readonly.
       AddPotentialArgAccess();

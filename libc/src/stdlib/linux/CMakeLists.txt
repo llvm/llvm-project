@@ -10,6 +10,27 @@ add_header_library(
 )
 
 add_entrypoint_object(
+  realpath
+  SRCS
+    realpath.cpp
+  HDRS
+    ../realpath.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.limits_macros
+    libc.hdr.types.size_t
+    libc.src.__support.common
+    libc.src.__support.CPP.optional
+    libc.src.__support.CPP.string
+    libc.src.__support.CPP.string_view
+    libc.src.__support.error_or
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.__support.OSUtil.path
+    libc.src.string.memory_utils.inline_memcpy
+)
+
+add_entrypoint_object(
   setenv
   SRCS
     setenv.cpp
