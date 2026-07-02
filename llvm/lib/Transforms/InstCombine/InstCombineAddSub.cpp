@@ -1508,7 +1508,7 @@ static Instruction *factorizeMathWithShlOps(BinaryOperator &I,
 
 /// Reduce a sequence of masked half-width multiplies to a single multiply.
 /// ((XLow * YHigh) + (YLow * XHigh)) << HalfBits) + (XLow * YLow) --> X * Y
-static Instruction *foldBoxMultiply(BinaryOperator &I) {
+Instruction *InstCombinerImpl::foldBoxMultiply(BinaryOperator &I) {
   unsigned BitWidth = I.getType()->getScalarSizeInBits();
   // Skip the odd bitwidth types.
   if ((BitWidth & 0x1))
@@ -1526,22 +1526,32 @@ static Instruction *foldBoxMultiply(BinaryOperator &I) {
                          m_OneUse(m_Mul(m_Value(YLo), m_Value(XLo))))))
     return nullptr;
 
-  // XLo = X & HalfMask
-  // YLo = Y & HalfMask
-  // TODO: Refactor with SimplifyDemandedBits or KnownBits known leading zeros
-  // to enhance robustness
+  // XLo = X & HalfMask or X if upper bits are known zero
+  // YLo = Y & HalfMask or Y if upper bits are known zero
   Value *X, *Y;
-  if (!match(XLo, m_And(m_Value(X), m_SpecificInt(HalfMask))) ||
-      !match(YLo, m_And(m_Value(Y), m_SpecificInt(HalfMask))))
-    return nullptr;
+  APInt HighMask = APInt::getHighBitsSet(BitWidth, HalfBits);
+  if (!match(XLo, m_And(m_Value(X), m_SpecificInt(HalfMask)))) {
+    if (!MaskedValueIsZero(XLo, HighMask, &I))
+      return nullptr;
+    X = XLo;
+  }
+
+  if (!match(YLo, m_And(m_Value(Y), m_SpecificInt(HalfMask)))) {
+    if (!MaskedValueIsZero(YLo, HighMask, &I))
+      return nullptr;
+    Y = YLo;
+  }
 
   // CrossSum = (X' * (Y >> Halfbits)) + (Y' * (X >> HalfBits))
   // X' can be either X or XLo in the pattern (and the same for Y')
-  if (match(CrossSum,
-            m_c_Add(m_c_Mul(m_LShr(m_Specific(Y), m_SpecificInt(HalfBits)),
-                            m_CombineOr(m_Specific(X), m_Specific(XLo))),
-                    m_c_Mul(m_LShr(m_Specific(X), m_SpecificInt(HalfBits)),
-                            m_CombineOr(m_Specific(Y), m_Specific(YLo))))))
+  auto XHiPat = m_LShr(m_Specific(X), m_SpecificInt(HalfBits));
+  auto YHiPat = m_LShr(m_Specific(Y), m_SpecificInt(HalfBits));
+  auto XPat = m_CombineOr(m_Specific(X), m_Specific(XLo));
+  auto YPat = m_CombineOr(m_Specific(Y), m_Specific(YLo));
+
+  if (match(CrossSum, m_c_Add(m_c_Mul(YHiPat, XPat), m_c_Mul(XHiPat, YPat))) ||
+      (X == XLo && match(CrossSum, m_c_Mul(YHiPat, XPat))) ||
+      (Y == YLo && match(CrossSum, m_c_Mul(XHiPat, YPat))))
     return BinaryOperator::CreateMul(X, Y);
 
   return nullptr;
