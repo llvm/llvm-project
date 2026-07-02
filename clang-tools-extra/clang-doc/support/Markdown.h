@@ -13,8 +13,6 @@
 /// fenced code blocks, etc). Inline nodes represent span-level content (text,
 /// emphasis, inline code) that appears inside block nodes.
 ///
-/// All nodes are arena-allocated via ASTContext, which manages their lifetime.
-///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_DOC_SUPPORT_MARKDOWN_H
