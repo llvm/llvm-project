@@ -369,5 +369,16 @@ def int_spv_rsqrt : DefaultAttrsIntrinsic<[LLVMMatchType<0>], [llvm_anyfloat_ty]
   def int_spv_unpackhalf2x16 : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [llvm_i32_ty], [IntrNoMem]>;
   def int_spv_packhalf2x16 : DefaultAttrsIntrinsic<[llvm_anyint_ty], [llvm_anyfloat_ty], [IntrNoMem]>;
 
-
+  // SPV_KHR_cooperative_matrix operations under the Vulkan/Shader flavor,
+  // reached through llvm.spv intrinsics and GlobalISel selection because the
+  // __spirv_* builtin path is OpenCL-only. The matrix value is the opaque
+  // target("spirv.CooperativeMatrixKHR", ...) type, carried as llvm_any_ty.
+  def int_spv_cooperative_matrix_load
+    : Intrinsic<[llvm_any_ty], [llvm_anyptr_ty, llvm_i32_ty, llvm_i32_ty]>;
+  def int_spv_cooperative_matrix_store
+    : Intrinsic<[], [llvm_anyptr_ty, llvm_any_ty, llvm_i32_ty, llvm_i32_ty]>;
+  def int_spv_cooperative_matrix_muladd
+    : Intrinsic<[llvm_any_ty], [llvm_any_ty, llvm_any_ty, llvm_any_ty]>;
+  def int_spv_cooperative_matrix_splat
+    : Intrinsic<[llvm_any_ty], [llvm_any_ty]>;
 }

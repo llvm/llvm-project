@@ -452,6 +452,8 @@ private:
   bool selectGatherIntrinsic(Register &ResVReg, SPIRVTypeInst ResType,
                              MachineInstr &I) const;
   bool selectImageWriteIntrinsic(MachineInstr &I) const;
+  bool selectCoopMatrixStore(MachineInstr &I) const;
+  Register coopMatrixElementPtr(Register PtrReg, MachineInstr &I) const;
   bool selectResourceGetPointer(Register &ResVReg, SPIRVTypeInst ResType,
                                 MachineInstr &I) const;
   bool selectPushConstantGetPointer(Register &ResVReg, SPIRVTypeInst ResType,
@@ -1607,6 +1609,50 @@ bool SPIRVInstructionSelector::selectSincos(Register ResVReg,
     return true;
   }
   return false;
+}
+
+Register SPIRVInstructionSelector::coopMatrixElementPtr(Register PtrReg,
+                                                        MachineInstr &I) const {
+  SPIRVTypeInst PtrType = GR.getSPIRVTypeForVReg(PtrReg);
+  if (!PtrType)
+    return PtrReg;
+  SPIRVTypeInst PointeeType = GR.getPointeeType(PtrType);
+  if (!PointeeType || PointeeType->getOpcode() != SPIRV::OpTypeArray)
+    return PtrReg;
+  SPIRVTypeInst ElemType =
+      GR.getSPIRVTypeForVReg(PointeeType->getOperand(1).getReg());
+  if (!ElemType)
+    return PtrReg;
+  SPIRV::StorageClass::StorageClass SC = GR.getPointerStorageClass(PtrReg);
+  MachineIRBuilder MIRBuilder(I);
+  SPIRVTypeInst ElemPtrType =
+      GR.getOrCreateSPIRVPointerType(ElemType, MIRBuilder, SC);
+  SPIRVTypeInst I32Type = GR.getOrCreateSPIRVIntegerType(32, I, TII);
+  Register Zero = buildZerosVal(I32Type, I);
+  Register NewPtr = MRI->createVirtualRegister(GR.getRegClass(ElemPtrType));
+  GR.assignSPIRVTypeToVReg(ElemPtrType, NewPtr, *I.getParent()->getParent());
+  bool IsLogical = STI.isLogicalSPIRV();
+  unsigned Opcode = IsLogical ? SPIRV::OpAccessChain : SPIRV::OpPtrAccessChain;
+  auto MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(Opcode))
+                 .addDef(NewPtr)
+                 .addUse(GR.getSPIRVTypeID(ElemPtrType))
+                 .addUse(PtrReg);
+  if (!IsLogical)
+    MIB.addUse(Zero);
+  MIB.addUse(Zero);
+  MIB.constrainAllUses(TII, TRI, RBI);
+  return NewPtr;
+}
+
+bool SPIRVInstructionSelector::selectCoopMatrixStore(MachineInstr &I) const {
+  Register Ptr = coopMatrixElementPtr(I.getOperand(1).getReg(), I);
+  auto MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(),
+                     TII.get(SPIRV::OpCooperativeMatrixStoreKHR));
+  MIB.addUse(Ptr);
+  for (unsigned i = 2; i < I.getNumOperands(); ++i)
+    MIB.addUse(I.getOperand(i).getReg());
+  MIB.constrainAllUses(TII, TRI, RBI);
+  return true;
 }
 
 bool SPIRVInstructionSelector::selectOpWithSrcs(Register ResVReg,
@@ -4951,6 +4997,22 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
       report_fatal_error("incompatible result and operand types in a bitcast");
     return selectOpWithSrcs(ResVReg, ResType, I, {OpReg}, SPIRV::OpBitcast);
   }
+  case Intrinsic::spv_cooperative_matrix_load:
+    return selectOpWithSrcs(ResVReg, ResType, I,
+                            {coopMatrixElementPtr(I.getOperand(2).getReg(), I),
+                             I.getOperand(3).getReg(),
+                             I.getOperand(4).getReg()},
+                            SPIRV::OpCooperativeMatrixLoadKHR);
+  case Intrinsic::spv_cooperative_matrix_store:
+    return selectCoopMatrixStore(I);
+  case Intrinsic::spv_cooperative_matrix_muladd:
+    return selectOpWithSrcs(ResVReg, ResType, I,
+                            {I.getOperand(2).getReg(), I.getOperand(3).getReg(),
+                             I.getOperand(4).getReg()},
+                            SPIRV::OpCooperativeMatrixMulAddKHR);
+  case Intrinsic::spv_cooperative_matrix_splat:
+    return selectOpWithSrcs(ResVReg, ResType, I, {I.getOperand(2).getReg()},
+                            SPIRV::OpCompositeConstruct);
   case Intrinsic::spv_unref_global:
   case Intrinsic::spv_init_global: {
     MachineInstr *MI = MRI->getVRegDef(I.getOperand(1).getReg());
