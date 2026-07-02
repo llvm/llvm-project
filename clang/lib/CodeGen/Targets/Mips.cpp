@@ -44,7 +44,10 @@ class MIPSTargetCodeGenInfo : public TargetCodeGenInfo {
 public:
   MIPSTargetCodeGenInfo(CodeGenTypes &CGT, bool IsO32)
       : TargetCodeGenInfo(std::make_unique<MipsABIInfo>(CGT, IsO32)),
-        SizeOfUnwindException(IsO32 ? 24 : 32) {}
+        SizeOfUnwindException(IsO32 ? 24 : 32) {
+    SwiftInfo =
+        std::make_unique<SwiftABIInfo>(CGT, /*SwiftErrorInRegister=*/false);
+  }
 
   int getDwarfEHStackPointer(CodeGen::CodeGenModule &CGM) const override {
     return 29;
