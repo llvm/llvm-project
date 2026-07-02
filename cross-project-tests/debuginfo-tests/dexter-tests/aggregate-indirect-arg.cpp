@@ -2,7 +2,7 @@
 // UNSUPPORTED: system-windows
 //
 // RUN: %clang++ -std=gnu++11 -O0 -g %s -o %t
-// RUN: %dexter -w --use-script \
+// RUN: %dexter -w \
 // RUN:     --binary %t %dexter_lldb_args -- %s | FileCheck %s
 // Radar 8945514
 

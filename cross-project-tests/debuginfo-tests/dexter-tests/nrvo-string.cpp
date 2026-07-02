@@ -8,11 +8,11 @@
 //           compiler-rt. Only run this test on non-asanified configurations.
 //
 // RUN: %clang++ -std=gnu++11 -O0 -glldb -fno-exceptions %s -o %t
-// RUN: %dexter -w --use-script \
+// RUN: %dexter -w \
 // RUN:     --binary %t %dexter_lldb_args -- %s | FileCheck %s
 //
 // RUN: %clang++ -std=gnu++11 -O1 -glldb -fno-exceptions %s -o %t
-// RUN: %dexter -w --use-script \
+// RUN: %dexter -w \
 // RUN:     --binary %t %dexter_lldb_args -- %s | FileCheck %s
 //
 // PR34513

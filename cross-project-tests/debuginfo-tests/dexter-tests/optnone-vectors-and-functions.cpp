@@ -1,8 +1,8 @@
 // RUN: %clang++ -std=gnu++11 -O2 -g %s -o %t
-// RUN: %dexter -w --use-script \
+// RUN: %dexter -w \
 // RUN:     --binary %t %dexter_lldb_args -v -- %s | FileCheck %s
 // RUN: %clang++ -std=gnu++11 -O0 -g %s -o %t
-// RUN: %dexter -w --use-script \
+// RUN: %dexter -w \
 // RUN:     --binary %t %dexter_lldb_args -- %s | FileCheck %s
 
 // REQUIRES: lldb

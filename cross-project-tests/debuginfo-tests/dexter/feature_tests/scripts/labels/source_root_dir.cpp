@@ -1,6 +1,6 @@
 // RUN: %dexter_regression_test_cxx_build %s -o %t
 // RUN: %dexter_regression_test_run --source-root-dir %S/Inputs \
-// RUN:   --use-script --binary %t -- %s | FileCheck %s
+// RUN:   --binary %t -- %s | FileCheck %s
 
 // Check that when --source-root-dir is provided, labels will be checked
 // relative to that directory.
