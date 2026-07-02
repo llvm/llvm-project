@@ -1572,7 +1572,7 @@ public:
   LogicalResult
   matchAndRewrite(spirv::GLFractOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    auto dstType = getTypeConverter()->convertType(op.getType());
+    Type dstType = getTypeConverter()->convertType(op.getType());
     if (!dstType)
       return rewriter.notifyMatchFailure(op, "type conversion failed");
 
