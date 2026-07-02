@@ -89,18 +89,26 @@ def TestFuseConsumerOp : Op<Transform_Dialect, "test.fuse_consumer",
 
     Returns a handle to the consumer operation after fusion and the loops that might be
     modified.
+
+    The optional `inner_tile_alignments` array is supplied to the SCF driver as a
+    constant `scf::InnerTileAlignmentFnTy` control function (returning it for
+    every op, see `InnerTileAlignment`).
   }];
 
-  let arguments = (ins 
+  let arguments = (ins
       TransformHandleTypeInterface:$consumer,
-      Variadic<TransformHandleTypeInterface>:$loops);
+      Variadic<TransformHandleTypeInterface>:$loops,
+      DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$inner_tile_alignments);
   let results = (outs TransformHandleTypeInterface:$fused_consumer,
       Variadic<TransformHandleTypeInterface>:$result_loops);
 
   let assemblyFormat = [{
     $consumer `into` `(` $loops `)`
+    (`inner_tile_alignments` `=`
+        custom<InnerTileAlignmentArray>($inner_tile_alignments)^)?
     attr-dict `:` functional-type(operands, results)
   }];
+  let hasVerifier = 1;
 }
 
 
