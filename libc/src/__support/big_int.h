@@ -358,7 +358,7 @@ public:
 
   LIBC_INLINE_VAR static constexpr size_t WORD_COUNT = Bits / WORD_SIZE;
 
-  cpp::array<WordType, WORD_COUNT> val; // zero initialized.
+  cpp::array<WordType, WORD_COUNT> val;
 
   LIBC_INLINE constexpr BigInt() = default;
 
@@ -1187,30 +1187,6 @@ LIBC_INLINE_VAR constexpr bool is_unsigned_integral_or_big_int_v =
 
 namespace cpp {
 
-// // Specialization of cpp::bit_cast ('bit.h') from T to BigInt.
-// template <typename To, typename From>
-// LIBC_INLINE LIBC_BIT_CAST_CONSTEXPR cpp::enable_if_t<
-//     (sizeof(To) == sizeof(From)) && cpp::is_trivially_copyable<To>::value &&
-//         cpp::is_trivially_copyable<From>::value && is_big_int<To>::value,
-//     To>
-// bit_cast(const From &from) {
-//   To out;
-//   using Storage = decltype(out.val);
-//   out.val = cpp::bit_cast<Storage>(from);
-//   return out;
-// }
-
-// // Specialization of cpp::bit_cast ('bit.h') from BigInt to T.
-// template <typename To, size_t Bits>
-// LIBC_INLINE LIBC_BIT_CAST_CONSTEXPR
-//     cpp::enable_if_t<sizeof(To) == sizeof(UInt<Bits>) &&
-//                          cpp::is_trivially_constructible<To>::value &&
-//                          cpp::is_trivially_copyable<To>::value &&
-//                          cpp::is_trivially_copyable<UInt<Bits>>::value,
-//                      To>
-//     bit_cast(const UInt<Bits> &from) {
-//   return cpp::bit_cast<To>(from.val);
-// }
 
 // Specialization of cpp::popcount ('bit.h') for BigInt.
 template <typename T>
