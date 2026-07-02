@@ -741,6 +741,165 @@ define amdgpu_ps half @test_and_or_b16(i16 %a, i16 %b, i16 %c) {
   %ret_cast = bitcast i16 %or1 to half
   ret half %ret_cast
 }
+
+; ========= Shared-subexpression aliasing =========
+; These patterns triggered a bug where BitOp3_Op could assign two different
+; truth-table column bits to the same source value, producing wrong results.
+
+; (or(x, C) ^ x) -- x appears both as or's RHS and xor's RHS
+define i32 @bitop3_shared_or_xor_identity(i32 %x) {
+; GFX950-LABEL: bitop3_shared_or_xor_identity:
+; GFX950:       ; %bb.0:
+; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-NEXT:    v_or_b32_e32 v1, 0x80000000, v0
+; GFX950-NEXT:    v_xor_b32_e32 v0, v1, v0
+; GFX950-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250-LABEL: bitop3_shared_or_xor_identity:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_or_b32_e32 v1, 0x80000000, v0
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-NEXT:    v_xor_b32_e32 v0, v1, v0
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+  %or = or i32 %x, -2147483648
+  %xor = xor i32 %or, %x
+  ret i32 %xor
+}
+
+; and(xor(or(a,b), b), or(a,b)) -- or(a,b) appears as both and's RHS and xor's LHS
+define i32 @bitop3_shared_or_xor_and(i32 %a, i32 %b) {
+; GFX950-LABEL: bitop3_shared_or_xor_and:
+; GFX950:       ; %bb.0:
+; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-NEXT:    v_bitop3_b32 v0, v0, v1, v0 bitop3:0x30
+; GFX950-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250-LABEL: bitop3_shared_or_xor_and:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_bitop3_b32 v0, v0, v1, v0 bitop3:0x30
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+  %or = or i32 %a, %b
+  %xor = xor i32 %or, %b
+  %and = and i32 %xor, %or
+  ret i32 %and
+}
+
+; xor(or(xor(fshl(x,0,5), x), x), xor(fshl(x,0,5), x)) -- x shared across fshl, xor, and or
+define i32 @bitop3_shared_fshl_or_xor(i32 %x) {
+; GFX950-SDAG-LABEL: bitop3_shared_fshl_or_xor:
+; GFX950-SDAG:       ; %bb.0:
+; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-SDAG-NEXT:    v_lshlrev_b32_e32 v1, 5, v0
+; GFX950-SDAG-NEXT:    v_xor_b32_e32 v2, v1, v0
+; GFX950-SDAG-NEXT:    v_or_b32_e32 v0, v1, v0
+; GFX950-SDAG-NEXT:    v_xor_b32_e32 v0, v0, v2
+; GFX950-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-GISEL-LABEL: bitop3_shared_fshl_or_xor:
+; GFX950-GISEL:       ; %bb.0:
+; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-GISEL-NEXT:    v_alignbit_b32 v1, v0, 0, 27
+; GFX950-GISEL-NEXT:    v_xor_b32_e32 v2, v1, v0
+; GFX950-GISEL-NEXT:    v_bitop3_b32 v0, v1, v0, v1 bitop3:0xfc
+; GFX950-GISEL-NEXT:    v_xor_b32_e32 v0, v0, v2
+; GFX950-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250-SDAG-LABEL: bitop3_shared_fshl_or_xor:
+; GFX1250-SDAG:       ; %bb.0:
+; GFX1250-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-SDAG-NEXT:    v_lshlrev_b32_e32 v1, 5, v0
+; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-SDAG-NEXT:    v_or_b32_e32 v2, v1, v0
+; GFX1250-SDAG-NEXT:    v_xor3_b32 v0, v1, v0, v2
+; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1250-GISEL-LABEL: bitop3_shared_fshl_or_xor:
+; GFX1250-GISEL:       ; %bb.0:
+; GFX1250-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-GISEL-NEXT:    v_alignbit_b32 v1, v0, 0, 27
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX1250-GISEL-NEXT:    v_xor_b32_e32 v2, v1, v0
+; GFX1250-GISEL-NEXT:    v_bitop3_b32 v0, v1, v0, v1 bitop3:0xfc
+; GFX1250-GISEL-NEXT:    v_xor_b32_e32 v0, v0, v2
+; GFX1250-GISEL-NEXT:    s_set_pc_i64 s[30:31]
+  %fshl = call i32 @llvm.fshl.i32(i32 %x, i32 0, i32 5)
+  %xor = xor i32 %fshl, %x
+  %or = or i32 %xor, %x
+  %xor1 = xor i32 %or, %xor
+  ret i32 %xor1
+}
+
+declare i32 @llvm.fshl.i32(i32, i32, i32)
+
+; and(xor(x, C), x) -- x appears as both xor's LHS and and's RHS
+define i32 @bitop3_shared_and_xor_constant(i32 %x) {
+; GFX950-LABEL: bitop3_shared_and_xor_constant:
+; GFX950:       ; %bb.0:
+; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-NEXT:    v_xor_b32_e32 v1, 0x79ad5691, v0
+; GFX950-NEXT:    v_and_b32_e32 v0, v1, v0
+; GFX950-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250-LABEL: bitop3_shared_and_xor_constant:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_xor_b32_e32 v1, 0x79ad5691, v0
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-NEXT:    v_and_b32_e32 v0, v1, v0
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+  %xor = xor i32 %x, 2041403025
+  %and = and i32 %xor, %x
+  ret i32 %and
+}
+
+; xor(and(xor(a,b), b), xor(a,b)) -- xor(a,b) shared as and's LHS and outer xor's RHS
+define i32 @bitop3_shared_and_xor_identity(i32 %a, i32 %b) {
+; GFX950-SDAG-LABEL: bitop3_shared_and_xor_identity:
+; GFX950-SDAG:       ; %bb.0:
+; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-SDAG-NEXT:    v_xor_b32_e32 v2, v0, v1
+; GFX950-SDAG-NEXT:    v_bitop3_b32 v0, v0, v1, v0 bitop3:0xc
+; GFX950-SDAG-NEXT:    v_xor_b32_e32 v0, v0, v2
+; GFX950-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-GISEL-LABEL: bitop3_shared_and_xor_identity:
+; GFX950-GISEL:       ; %bb.0:
+; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-GISEL-NEXT:    v_xor_b32_e32 v0, v0, v1
+; GFX950-GISEL-NEXT:    v_bfi_b32 v0, v1, 0, v0
+; GFX950-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250-SDAG-LABEL: bitop3_shared_and_xor_identity:
+; GFX1250-SDAG:       ; %bb.0:
+; GFX1250-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-SDAG-NEXT:    v_xor_b32_e32 v2, v0, v1
+; GFX1250-SDAG-NEXT:    v_bitop3_b32 v0, v0, v1, v0 bitop3:0xc
+; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-SDAG-NEXT:    v_xor_b32_e32 v0, v0, v2
+; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1250-GISEL-LABEL: bitop3_shared_and_xor_identity:
+; GFX1250-GISEL:       ; %bb.0:
+; GFX1250-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-GISEL-NEXT:    v_xor_b32_e32 v0, v0, v1
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-GISEL-NEXT:    v_bfi_b32 v0, v1, 0, v0
+; GFX1250-GISEL-NEXT:    s_set_pc_i64 s[30:31]
+  %x = xor i32 %a, %b
+  %and = and i32 %x, %b
+  %result = xor i32 %and, %x
+  ret i32 %result
+}
+
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; GCN: {{.*}}
 ; GFX1250-FAKE16: {{.*}}
