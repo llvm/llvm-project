@@ -20178,6 +20178,28 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
     return true;
   }
 
+  case Builtin::BI__builtin_exp:
+  case Builtin::BI__builtin_expf: {
+    APFloat Input(0.);
+    if (!EvaluateFloat(E->getArg(0), Input, Info))
+      return false;
+    llvm::RoundingMode RM = getActiveRoundingMode(Info, E);
+    APFloat::opStatus Status = APFloat::opStatus::opOK;
+    std::optional<APFloat> r = exp(Input, RM, &Status);
+    // Check for unsupported rounding modes.
+    if (!r.has_value())
+      return false;
+    // Check for raised non-FE_INEXACT exceptions.
+    if (Status & (~APFloat::opStatus::opInexact))
+      return false;
+    Result = *r;
+    return true;
+  }
+  case Builtin::BI__builtin_expl:
+  case Builtin::BI__builtin_expf16:
+  case Builtin::BI__builtin_expf128:
+    return false;
+
   case Builtin::BI__builtin_fmax:
   case Builtin::BI__builtin_fmaxf:
   case Builtin::BI__builtin_fmaxl:

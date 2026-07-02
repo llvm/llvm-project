@@ -4218,7 +4218,14 @@ def Erfc : FPMathTemplate, LibBuiltin<"math.h"> {
   let AddBuiltinPrefixedAlias = 1;
 }
 
-def Exp : FPMathTemplate, LibBuiltin<"math.h"> {
+def Exp : Template<["float", "double"], ["f", ""]>, LibBuiltin<"math.h"> {
+  let Spellings = ["exp"];
+  let Attributes = [NoThrow, ConstIgnoringErrnoAndExceptions, Constexpr];
+  let Prototype = "T(T)";
+  let AddBuiltinPrefixedAlias = 1;
+}
+
+def Expl : Template<["long double"], ["l"]>, LibBuiltin<"math.h"> {
   let Spellings = ["exp"];
   let Attributes = [NoThrow, ConstIgnoringErrnoAndExceptions];
   let Prototype = "T(T)";

@@ -23,6 +23,7 @@
 #include "llvm/Support/AllocToken.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SipHash.h"
+#include <optional>
 
 namespace clang {
 namespace interp {
@@ -707,6 +708,26 @@ static bool interp__builtin_fpclassify(InterpState &S, CodePtr OpPC,
   assert(Index <= 4);
 
   pushInteger(S, Values[Index], Call->getType());
+  return true;
+}
+
+static bool interp__builtin_exp(InterpState &S, CodePtr OpPC,
+                                const InterpFrame *Frame,
+                                const CallExpr *Call) {
+  const Floating &Arg = S.Stk.pop<Floating>();
+  FPOptions FPO = Call->getFPFeaturesInEffect(S.Ctx.getLangOpts());
+  llvm::RoundingMode RM = getRoundingMode(FPO);
+  APFloat::opStatus Status = APFloat::opStatus::opOK;
+  std::optional<APFloat> Result = exp(Arg.getAPFloat(), RM, &Status);
+  // Check for unsupported rounding modes.
+  if (!Result.has_value())
+    return false;
+  // Check for raised non-FE_INEXACT exceptions.
+  if (Status & (~APFloat::opStatus::opInexact))
+    return false;
+  Floating Res = S.allocFloat(Arg.getSemantics());
+  Res.copy(*Result);
+  S.Stk.push<Floating>(Res);
   return true;
 }
 
@@ -4692,6 +4713,14 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BI__builtin_copysignl:
   case Builtin::BI__builtin_copysignf128:
     return interp__builtin_copysign(S, OpPC, Frame);
+
+  case Builtin::BI__builtin_exp:
+  case Builtin::BI__builtin_expf:
+    return interp__builtin_exp(S, OpPC, Frame, Call);
+  case Builtin::BI__builtin_expl:
+  case Builtin::BI__builtin_expf16:
+  case Builtin::BI__builtin_expf128:
+    return false;
 
   case Builtin::BI__builtin_fmin:
   case Builtin::BI__builtin_fminf:
