@@ -689,6 +689,94 @@ out:
   ret void
 }
 
+define void @hoist_memcpy_nontemporal_both(i1 %c, ptr %d, ptr %s) {
+; CHECK-LABEL: @hoist_memcpy_nontemporal_both(
+; CHECK-NEXT:  if:
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[D:%.*]], ptr [[S:%.*]], i64 64, i1 false), !nontemporal [[META15:![0-9]+]]
+; CHECK-NEXT:    ret void
+;
+if:
+  br i1 %c, label %then, label %else
+then:
+  call void @llvm.memcpy.p0.p0.i64(ptr %d, ptr %s, i64 64, i1 false), !nontemporal !15
+  br label %out
+else:
+  call void @llvm.memcpy.p0.p0.i64(ptr %d, ptr %s, i64 64, i1 false), !nontemporal !15
+  br label %out
+out:
+  ret void
+}
+
+define void @hoist_memcpy_nontemporal_one(i1 %c, ptr %d, ptr %s) {
+; CHECK-LABEL: @hoist_memcpy_nontemporal_one(
+; CHECK-NEXT:  if:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[D:%.*]], ptr [[S:%.*]], i64 64, i1 false), !nontemporal [[META15]]
+; CHECK-NEXT:    br label [[OUT:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[D]], ptr [[S]], i64 64, i1 false)
+; CHECK-NEXT:    br label [[OUT]]
+; CHECK:       out:
+; CHECK-NEXT:    ret void
+;
+if:
+  br i1 %c, label %then, label %else
+then:
+  call void @llvm.memcpy.p0.p0.i64(ptr %d, ptr %s, i64 64, i1 false), !nontemporal !15
+  br label %out
+else:
+  call void @llvm.memcpy.p0.p0.i64(ptr %d, ptr %s, i64 64, i1 false)
+  br label %out
+out:
+  ret void
+}
+
+declare void @llvm.memcpy.p0.p0.i64(ptr, ptr, i64, i1)
+
+define void @hoist_store_nontemporal_both(i1 %c, ptr %p) {
+; CHECK-LABEL: @hoist_store_nontemporal_both(
+; CHECK-NEXT:  if:
+; CHECK-NEXT:    store i32 0, ptr [[P:%.*]], align 4, !nontemporal [[META15]]
+; CHECK-NEXT:    ret void
+;
+if:
+  br i1 %c, label %then, label %else
+then:
+  store i32 0, ptr %p, !nontemporal !15
+  br label %out
+else:
+  store i32 0, ptr %p, !nontemporal !15
+  br label %out
+out:
+  ret void
+}
+
+define void @hoist_store_nontemporal_one(i1 %c, ptr %p) {
+; CHECK-LABEL: @hoist_store_nontemporal_one(
+; CHECK-NEXT:  if:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    store i32 0, ptr [[P:%.*]], align 4, !nontemporal [[META15]]
+; CHECK-NEXT:    br label [[OUT:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    store i32 0, ptr [[P]], align 4
+; CHECK-NEXT:    br label [[OUT]]
+; CHECK:       out:
+; CHECK-NEXT:    ret void
+;
+if:
+  br i1 %c, label %then, label %else
+then:
+  store i32 0, ptr %p, !nontemporal !15
+  br label %out
+else:
+  store i32 0, ptr %p
+  br label %out
+out:
+  ret void
+}
+
 !0 = !{ i8 0, i8 1 }
 !1 = !{ i8 3, i8 5 }
 !2 = !{}
@@ -704,6 +792,9 @@ out:
 !12 = !{ !"nvvm.l1_eviction", !"first" }
 !13 = !{ i32 0, !14 }
 !14 = !{ !"nvvm.l1_eviction", !"last" }
+!15 = !{ i32 1 }
+;.
+; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 ;.
 ; CHECK: [[RNG0]] = !{i8 0, i8 1, i8 3, i8 5}
 ; CHECK: [[RNG1]] = !{i8 0, i8 1, i8 3, i8 5, i8 7, i8 9}
@@ -720,4 +811,5 @@ out:
 ; CHECK: [[META12]] = !{i32 3}
 ; CHECK: [[META13]] = !{i32 1, [[META14:![0-9]+]]}
 ; CHECK: [[META14]] = !{!"nvvm.l1_eviction", !"first"}
+; CHECK: [[META15]] = !{i32 1}
 ;.
