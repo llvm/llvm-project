@@ -59,6 +59,26 @@ EVT EVT::getExtendedVectorVT(LLVMContext &Context, EVT VT, ElementCount EC) {
   return ResultVT;
 }
 
+EVT EVT::getIntegerVectorWithElementWidth(LLVMContext &Context,
+                                          TypeSize NewEltWidth) const {
+  if (!isVector() || !isInteger() || isScalableVector())
+    return EVT();
+
+  TypeSize TotalBits =
+      TypeSize::getFixed(getVectorMinNumElements() * getScalarSizeInBits());
+  if (!TotalBits.isKnownMultipleOf(NewEltWidth))
+    return EVT();
+
+  unsigned NewNumElements = TotalBits.getKnownScalarFactor(NewEltWidth);
+  EVT NewEltVT = EVT::getIntegerVT(Context, NewEltWidth);
+
+  // Preserve scalability
+  ElementCount EC = getVectorElementCount();
+  ElementCount NewEC = ElementCount::get(NewNumElements, EC.isScalable());
+
+  return EVT::getVectorVT(Context, NewEltVT, NewEC);
+}
+
 bool EVT::isExtendedFloatingPoint() const {
   assert(isExtended() && "Type is not extended!");
   return LLVMTy->isFPOrFPVectorTy();

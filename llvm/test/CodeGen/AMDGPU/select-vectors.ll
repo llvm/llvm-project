@@ -65,6 +65,21 @@ define amdgpu_kernel void @v_select_v16i8(ptr addrspace(1) %out, ptr addrspace(1
   ret void
 }
 
+; GCN-LABEL: {{^}}v_select_v32i4:
+; GCN: v_cndmask_b32_e32
+; GCN: v_cndmask_b32_e32
+; GCN: v_cndmask_b32_e32
+; GCN: v_cndmask_b32_e32
+; GCN-NOT: cndmask
+define amdgpu_kernel void @v_select_v32i4(ptr addrspace(1) %out, ptr addrspace(1) %a.ptr, ptr addrspace(4) %b.ptr, i32 %c) #0 {
+  %a = load <32 x i4>, ptr addrspace(1) %a.ptr, align 2
+  %b = load <32 x i4>, ptr addrspace(4) %b.ptr, align 2
+  %cmp = icmp eq i32 %c, 0
+  %select = select i1 %cmp, <32 x i4> %a, <32 x i4> %b
+  store <32 x i4> %select, ptr addrspace(1) %out, align 2
+  ret void
+}
+
 ; GCN-LABEL: {{^}}select_v4i8:
 ; GFX89: s_cselect_b32
 ; GFX89-NOT: s_cselect_b32
@@ -445,6 +460,53 @@ define amdgpu_kernel void @v_select_v4f16(ptr addrspace(1) %out, ptr addrspace(1
   %cmp = icmp eq i32 %c, 0
   %select = select i1 %cmp, <4 x half> %a, <4 x half> %b
   store <4 x half> %select, ptr addrspace(1) %out, align 4
+  ret void
+}
+
+; GCN-LABEL: {{^}}v_select_v16i4:
+; GCN: v_cndmask_b32_e32
+; GCN: v_cndmask_b32_e32
+; GCN-NOT: cndmask
+define amdgpu_kernel void @v_select_v16i4(ptr addrspace(1) %out, ptr addrspace(1) %a.ptr, ptr addrspace(4) %b.ptr, i32 %c) #0 {
+  %a = load <16 x i4>, ptr addrspace(1) %a.ptr, align 8
+  %b = load <16 x i4>, ptr addrspace(4) %b.ptr, align 8
+  %cmp = icmp eq i32 %c, 0
+  %select = select i1 %cmp, <16 x i4> %a, <16 x i4> %b
+  store <16 x i4> %select, ptr addrspace(1) %out, align 8
+  ret void
+}
+
+; GCN-LABEL: {{^}}v_select_v32i2:
+; GCN: v_cndmask_b32_e32
+; GCN: v_cndmask_b32_e32
+; GCN-NOT: cndmask
+define amdgpu_kernel void @v_select_v32i2(ptr addrspace(1) %out, ptr addrspace(1) %a.ptr, ptr addrspace(4) %b.ptr, i32 %c) #0 {
+  %a = load <32 x i2>, ptr addrspace(1) %a.ptr, align 8
+  %b = load <32 x i2>, ptr addrspace(4) %b.ptr, align 8
+  %cmp = icmp eq i32 %c, 0
+  %select = select i1 %cmp, <32 x i2> %a, <32 x i2> %b
+  store <32 x i2> %select, ptr addrspace(1) %out, align 8
+  ret void
+}
+
+; GCN-LABEL: {{^}}v_select_v15i4:
+; GCN: v_cndmask_b32_e32
+; GCN: v_cndmask_b32_e32
+; GCN-NOT: cndmask
+define void @v_select_v15i4(i1 %cond, ptr addrspace(1) %x, ptr addrspace(3) %y) {
+  %v = load <15 x i4>, ptr addrspace(1) %x, align 16
+  %vMasked = select i1 %cond, <15 x i4> %v, <15 x i4> zeroinitializer
+  store <15 x i4> %vMasked, ptr addrspace(3) %y, align 16
+  ret void
+}
+
+; GCN-LABEL: {{^}}v_select_v7i4:
+; GCN: v_cndmask_b32_e32
+; GCN-NOT: cndmask
+define void @v_select_v7i4(i1 %cond, ptr addrspace(1) %x, ptr addrspace(3) %y) {
+  %v = load <7 x i4>, ptr addrspace(1) %x, align 16
+  %vMasked = select i1 %cond, <7 x i4> %v, <7 x i4> zeroinitializer
+  store <7 x i4> %vMasked, ptr addrspace(3) %y, align 16
   ret void
 }
 
