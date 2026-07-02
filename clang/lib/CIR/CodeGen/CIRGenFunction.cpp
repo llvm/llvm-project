@@ -604,42 +604,7 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
   }
 }
 
-void CIRGenFunction::finishIndirectBranch() {
-  // The block is created on the first `goto *expr`, so if it is absent the
-  // function has no indirect goto and nothing needs wiring -- a label whose
-  // address is merely taken still emits its address constant on its own.
-  if (!indirectGotoBlock)
-    return;
-
-  // Every label is emitted by now, so each address-taken label resolves to its
-  // LabelOp.  A label may be named more than once (a dispatch table can list it
-  // twice), but a block only needs to appear once in the successor list, so
-  // duplicates are dropped.
-  llvm::SmallVector<mlir::Block *> successors;
-  llvm::SmallVector<mlir::ValueRange> rangeOperands;
-  llvm::SmallPtrSet<mlir::Block *, 8> seen;
-  for (cir::BlockAddrInfoAttr info : indirectGotoTargets) {
-    cir::LabelOp labelOp = cgm.lookupBlockAddressInfo(info);
-    assert(labelOp && "expected cir.label to be emitted for block address");
-    mlir::Block *dest = labelOp->getBlock();
-    if (!seen.insert(dest).second)
-      continue;
-    successors.push_back(dest);
-    rangeOperands.push_back(dest->getArguments());
-  }
-
-  mlir::OpBuilder::InsertionGuard guard(builder);
-  builder.setInsertionPointToEnd(indirectGotoBlock);
-  cir::IndirectBrOp::create(builder, builder.getUnknownLoc(),
-                            indirectGotoBlock->getArgument(0), false,
-                            rangeOperands, successors);
-  indirectGotoTargets.clear();
-}
-
 void CIRGenFunction::finishFunction(SourceLocation endLoc) {
-  // Emit the indirect branch with all resolved label destinations.
-  finishIndirectBranch();
-
   // Pop any cleanups that might have been associated with the
   // parameters.  Do this in whatever block we're currently in; it's
   // important to do this before we enter the return block or return
@@ -1545,17 +1510,6 @@ CIRGenFunction::emitArrayLength(const clang::ArrayType *origArrayType,
                           cir::OverflowBehavior::NoUnsignedWrap);
 
   return numElements;
-}
-
-void CIRGenFunction::instantiateIndirectGotoBlock() {
-  // If we already made the indirect branch for indirect goto, return its block.
-  if (indirectGotoBlock)
-    return;
-
-  mlir::OpBuilder::InsertionGuard guard(builder);
-  indirectGotoBlock =
-      builder.createBlock(builder.getBlock()->getParent(), {}, {voidPtrTy},
-                          {builder.getUnknownLoc()});
 }
 
 mlir::Value CIRGenFunction::emitAlignmentAssumption(

@@ -3881,19 +3881,6 @@ void CIRGenModule::errorUnsupported(const Decl *d, llvm::StringRef type) {
   diags.Report(astContext.getFullLoc(d->getLocation()), diagId) << type;
 }
 
-void CIRGenModule::mapBlockAddress(cir::BlockAddrInfoAttr blockInfo,
-                                   cir::LabelOp label) {
-  [[maybe_unused]] auto result =
-      blockAddressInfoToLabel.try_emplace(blockInfo, label);
-  assert(result.second &&
-         "attempting to map a blockaddress info that is already mapped");
-}
-
-cir::LabelOp
-CIRGenModule::lookupBlockAddressInfo(cir::BlockAddrInfoAttr blockInfo) {
-  return blockAddressInfoToLabel.lookup(blockInfo);
-}
-
 mlir::Operation *
 CIRGenModule::getAddrOfGlobalTemporary(const MaterializeTemporaryExpr *mte,
                                        const Expr *init) {

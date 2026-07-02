@@ -946,17 +946,15 @@ ConstantLValueEmitter::VisitPredefinedExpr(const PredefinedExpr *e) {
 ConstantLValue
 ConstantLValueEmitter::VisitAddrLabelExpr(const AddrLabelExpr *e) {
   // A label address taken in a constant context, e.g. a static computed-goto
-  // dispatch table `static const void *tbl[] = {&&L1, &&L2}`.  Besides emitting
-  // the constant, register the label as address-taken so a following
-  // `goto *tbl[i]` lists it among the indirect branch's successors.  A label is
+  // dispatch table `static const void *tbl[] = {&&L1, &&L2}`.  GotoSolver later
+  // collects this block-address attribute (here, from a global initializer) so
+  // the label survives and joins the indirect branch's successors.  A label is
   // always function-local, so cgf is set here.
   assert(emitter.cgf && "label address in a constant requires a function");
   CIRGenFunction &cgf = *const_cast<CIRGenFunction *>(emitter.cgf);
   auto func = cast<cir::FuncOp>(cgf.curFn);
-  cir::BlockAddrInfoAttr info = cir::BlockAddrInfoAttr::get(
-      &cgf.getMLIRContext(), func.getSymName(), e->getLabel()->getName());
-  cgf.indirectGotoTargets.push_back(info);
-  return info;
+  return cir::BlockAddrInfoAttr::get(&cgf.getMLIRContext(), func.getSymName(),
+                                     e->getLabel()->getName());
 }
 
 ConstantLValue ConstantLValueEmitter::VisitCallExpr(const CallExpr *e) {

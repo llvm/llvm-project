@@ -60,3 +60,31 @@ cir.func @c() {
 // CHECK:   cir.label "label1"
 // CHECK:   %1 = cir.block_address <@c, "label1"> : !cir.ptr<!void>
 // CHECK:   cir.store align(8) %1, {{.*}} : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>
+
+cir.func @d() {
+  %0 = cir.alloca "ptr" align(8) init : !cir.ptr<!cir.ptr<!void>>
+  %1 = cir.block_address <@d, "label1"> : !cir.ptr<!void>
+  cir.store align(8) %1, %0 : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>
+  %2 = cir.load align(8) %0 : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
+  cir.indirect_goto %2 : !cir.ptr<!void>
+^bb1:
+  cir.label "label1"
+  cir.return
+^bb2:
+  // Not address-taken, so this label is removed.
+  cir.label "label2"
+  cir.return
+}
+
+// The indirect goto is resolved to a branch into a shared block holding a
+// cir.indirect_br over every address-taken label.
+// CHECK: cir.func @d()
+// CHECK:   %[[ADDR:.*]] = cir.load align(8) {{.*}} : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
+// CHECK:   cir.br ^[[IGB:bb[0-9]+]](%[[ADDR]] : !cir.ptr<!void>)
+// CHECK: ^[[L1BB:bb[0-9]+]]:
+// CHECK:   cir.label "label1"
+// CHECK-NOT: cir.label "label2"
+// CHECK: ^[[IGB]](%[[DEST:.*]]: !cir.ptr<!void>{{.*}}):
+// CHECK:   cir.indirect_br %[[DEST]] : !cir.ptr<!void>, [
+// CHECK:   ^[[L1BB]]
+// CHECK:   ]

@@ -706,13 +706,22 @@ mlir::LogicalResult CIRGenFunction::emitGotoStmt(const clang::GotoStmt &s) {
 
 mlir::LogicalResult
 CIRGenFunction::emitIndirectGotoStmt(const IndirectGotoStmt &s) {
+  // An indirect goto that branches out of a scope needing cleanup (a VLA stack
+  // restore or a non-trivial destructor on the edge) must run that cleanup on
+  // the branch.  That is not implemented, so report it rather than emit a
+  // branch that silently skips the cleanup.
+  if (ehStack.stable_begin() != prologueCleanupDepth) {
+    cgm.errorNYI(s.getSourceRange(), "indirect goto across a cleanup scope");
+    return mlir::success();
+  }
+
   mlir::Value val = emitScalarExpr(s.getTarget());
-  // Create the shared indirect-branch block on first use.  Its successors are
-  // every address-taken label, wired in finishIndirectBranch once all labels
-  // are emitted.
-  instantiateIndirectGotoBlock();
-  cir::BrOp::create(builder, getLoc(s.getSourceRange()), indirectGotoBlock,
-                    val);
+  // Emit a symbolic indirect goto.  GotoSolver resolves it into the shared
+  // indirect-branch block after FlattenCFG merges regions, so this stays valid
+  // even when the goto sits inside a nested scope.
+  cir::IndirectGotoOp::create(builder, getLoc(s.getSourceRange()), val);
+
+  // The indirect goto ends the block; open a fresh one so codegen can resume.
   builder.createBlock(builder.getBlock()->getParent());
   return mlir::success();
 }
@@ -743,14 +752,7 @@ mlir::LogicalResult CIRGenFunction::emitLabel(const clang::LabelDecl &d) {
   }
 
   builder.setInsertionPointToEnd(labelBlock);
-  cir::LabelOp label =
-      cir::LabelOp::create(builder, getLoc(d.getSourceRange()), d.getName());
-  builder.setInsertionPointToEnd(labelBlock);
-  auto func = cast<cir::FuncOp>(curFn);
-  cgm.mapBlockAddress(cir::BlockAddrInfoAttr::get(builder.getContext(),
-                                                  func.getSymName(),
-                                                  label.getLabel()),
-                      label);
+  cir::LabelOp::create(builder, getLoc(d.getSourceRange()), d.getName());
   //  FIXME: emit debug info for labels, incrementProfileCounter
   assert(!cir::MissingFeatures::incrementProfileCounter());
   assert(!cir::MissingFeatures::generateDebugInfo());
