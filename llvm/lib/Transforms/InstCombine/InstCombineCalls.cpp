@@ -1914,6 +1914,35 @@ static Instruction *foldNeonShift(IntrinsicInst *II, InstCombinerImpl &IC) {
   return IC.replaceInstUsesWith(*II, Result);
 }
 
+/// interleaveN(extractvalue(deinterleaveN(x), 0), ...,
+///             extractvalue(deinterleaveN(x), N-1)) --> x
+///
+/// When the operands of an interleaveN are exactly the N fields of one
+/// deinterleaveN, in field order, the two cancel out and the interleave just
+/// reproduces the deinterleaved input. The leftover deinterleave/extractvalues
+/// are then trivially dead.
+Instruction *InstCombinerImpl::foldIdentityInterleave(IntrinsicInst &II) {
+  unsigned Factor = getInterleaveIntrinsicFactor(II.getIntrinsicID());
+  assert(Factor && Factor == II.arg_size() && "Unexpected interleave factor");
+
+  Intrinsic::ID DeinterleaveID = Intrinsic::getDeinterleaveIntrinsicID(Factor);
+  IntrinsicInst *DI = nullptr;
+  for (unsigned Idx = 0; Idx != Factor; ++Idx) {
+    auto *EV = dyn_cast<ExtractValueInst>(II.getArgOperand(Idx));
+    if (!EV || EV->getNumIndices() != 1 || *EV->idx_begin() != Idx)
+      return nullptr;
+    auto *CurDI = dyn_cast<IntrinsicInst>(EV->getAggregateOperand());
+    if (!CurDI || CurDI->getIntrinsicID() != DeinterleaveID)
+      return nullptr;
+    if (!DI)
+      DI = CurDI;
+    else if (DI != CurDI)
+      return nullptr;
+  }
+
+  return replaceInstUsesWith(II, DI->getArgOperand(0));
+}
+
 /// CallInst simplification. This mostly only handles folding of intrinsic
 /// instructions. For normal calls, it allows visitCallBase to do the heavy
 /// lifting.
@@ -4068,6 +4097,16 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     }
     break;
   }
+  case Intrinsic::vector_interleave2:
+  case Intrinsic::vector_interleave3:
+  case Intrinsic::vector_interleave4:
+  case Intrinsic::vector_interleave5:
+  case Intrinsic::vector_interleave6:
+  case Intrinsic::vector_interleave7:
+  case Intrinsic::vector_interleave8:
+    if (Instruction *I = foldIdentityInterleave(*II))
+      return I;
+    break;
   case Intrinsic::experimental_vp_reverse: {
     Value *X;
     Value *Vec = II->getArgOperand(0);

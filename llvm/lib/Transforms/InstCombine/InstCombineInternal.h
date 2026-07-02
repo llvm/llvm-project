@@ -825,6 +825,8 @@ public:
 
   Instruction *foldExtractionOfVectorDeinterleave(ZExtInst &RootZExt);
 
+  Instruction *foldIdentityInterleave(IntrinsicInst &II);
+
   bool replaceInInstruction(Value *V, Value *Old, Value *New,
                             unsigned Depth = 0);
 
