@@ -654,9 +654,7 @@ void Tpaddrspace(Spaddrspace s) { *s.x = 1; }
 // CHECK-A64-SAME: ) #[[ATTR0]] {
 // CHECK-A64-NEXT:  [[ENTRY:.*:]]
 // CHECK-A64-NEXT:    [[S:%.*]] = alloca [[STRUCT_SPADDRSPACE:%.*]], align 8
-// CHECK-A64-NEXT:    [[AGG_TMP:%.*]] = alloca [[STRUCT_SPADDRSPACE]], align 8
-// CHECK-A64-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TMP]], ptr align 8 [[S]], i64 8, i1 false)
-// CHECK-A64-NEXT:    [[COERCE_DIVE:%.*]] = getelementptr inbounds nuw [[STRUCT_SPADDRSPACE]], ptr [[AGG_TMP]], i32 0, i32 0
+// CHECK-A64-NEXT:    [[COERCE_DIVE:%.*]] = getelementptr inbounds nuw [[STRUCT_SPADDRSPACE]], ptr [[S]], i32 0, i32 0
 // CHECK-A64-NEXT:    [[TMP0:%.*]] = load ptr addrspace(100), ptr [[COERCE_DIVE]], align 8
 // CHECK-A64-NEXT:    [[COERCE_VAL_PI:%.*]] = ptrtoint ptr addrspace(100) [[TMP0]] to i64
 // CHECK-A64-NEXT:    call void @_Z11Tpaddrspace11Spaddrspace(i64 [[COERCE_VAL_PI]])
@@ -666,9 +664,7 @@ void Tpaddrspace(Spaddrspace s) { *s.x = 1; }
 // CHECK-A64_32-SAME: ) #[[ATTR0]] {
 // CHECK-A64_32-NEXT:  [[ENTRY:.*:]]
 // CHECK-A64_32-NEXT:    [[S:%.*]] = alloca [[STRUCT_SPADDRSPACE:%.*]], align 4
-// CHECK-A64_32-NEXT:    [[AGG_TMP:%.*]] = alloca [[STRUCT_SPADDRSPACE]], align 4
-// CHECK-A64_32-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[AGG_TMP]], ptr align 4 [[S]], i32 4, i1 false)
-// CHECK-A64_32-NEXT:    [[COERCE_DIVE:%.*]] = getelementptr inbounds nuw [[STRUCT_SPADDRSPACE]], ptr [[AGG_TMP]], i32 0, i32 0
+// CHECK-A64_32-NEXT:    [[COERCE_DIVE:%.*]] = getelementptr inbounds nuw [[STRUCT_SPADDRSPACE]], ptr [[S]], i32 0, i32 0
 // CHECK-A64_32-NEXT:    [[TMP0:%.*]] = load ptr addrspace(100), ptr [[COERCE_DIVE]], align 4
 // CHECK-A64_32-NEXT:    [[COERCE_VAL_PI:%.*]] = ptrtoint ptr addrspace(100) [[TMP0]] to i32
 // CHECK-A64_32-NEXT:    [[COERCE_VAL_II:%.*]] = zext i32 [[COERCE_VAL_PI]] to i64
@@ -709,9 +705,7 @@ void Tp2addrspace(Sp2addrspace s) { *s.x[0] = 1; }
 // CHECK-A64-SAME: ) #[[ATTR0]] {
 // CHECK-A64-NEXT:  [[ENTRY:.*:]]
 // CHECK-A64-NEXT:    [[S:%.*]] = alloca [[STRUCT_SP2ADDRSPACE:%.*]], align 8
-// CHECK-A64-NEXT:    [[AGG_TMP:%.*]] = alloca [[STRUCT_SP2ADDRSPACE]], align 8
-// CHECK-A64-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TMP]], ptr align 8 [[S]], i64 16, i1 false)
-// CHECK-A64-NEXT:    [[COERCE_DIVE:%.*]] = getelementptr inbounds nuw [[STRUCT_SP2ADDRSPACE]], ptr [[AGG_TMP]], i32 0, i32 0
+// CHECK-A64-NEXT:    [[COERCE_DIVE:%.*]] = getelementptr inbounds nuw [[STRUCT_SP2ADDRSPACE]], ptr [[S]], i32 0, i32 0
 // CHECK-A64-NEXT:    [[TMP0:%.*]] = load [2 x i64], ptr [[COERCE_DIVE]], align 8
 // CHECK-A64-NEXT:    call void @_Z12Tp2addrspace12Sp2addrspace([2 x i64] [[TMP0]])
 // CHECK-A64-NEXT:    ret void
@@ -720,9 +714,7 @@ void Tp2addrspace(Sp2addrspace s) { *s.x[0] = 1; }
 // CHECK-A64_32-SAME: ) #[[ATTR0]] {
 // CHECK-A64_32-NEXT:  [[ENTRY:.*:]]
 // CHECK-A64_32-NEXT:    [[S:%.*]] = alloca [[STRUCT_SP2ADDRSPACE:%.*]], align 4
-// CHECK-A64_32-NEXT:    [[AGG_TMP:%.*]] = alloca [[STRUCT_SP2ADDRSPACE]], align 4
-// CHECK-A64_32-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[AGG_TMP]], ptr align 4 [[S]], i32 8, i1 false)
-// CHECK-A64_32-NEXT:    [[COERCE_DIVE:%.*]] = getelementptr inbounds nuw [[STRUCT_SP2ADDRSPACE]], ptr [[AGG_TMP]], i32 0, i32 0
+// CHECK-A64_32-NEXT:    [[COERCE_DIVE:%.*]] = getelementptr inbounds nuw [[STRUCT_SP2ADDRSPACE]], ptr [[S]], i32 0, i32 0
 // CHECK-A64_32-NEXT:    [[TMP0:%.*]] = load i64, ptr [[COERCE_DIVE]], align 4
 // CHECK-A64_32-NEXT:    call void @_Z12Tp2addrspace12Sp2addrspace(i64 [[TMP0]])
 // CHECK-A64_32-NEXT:    ret void
@@ -761,12 +753,10 @@ void Traddrspace(Sraddrspace s) { s.x = 1; }
 // CHECK-A64-SAME: i64 [[S_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-A64-NEXT:  [[ENTRY:.*:]]
 // CHECK-A64-NEXT:    [[S:%.*]] = alloca [[STRUCT_SRADDRSPACE:%.*]], align 8
-// CHECK-A64-NEXT:    [[AGG_TMP:%.*]] = alloca [[STRUCT_SRADDRSPACE]], align 8
 // CHECK-A64-NEXT:    [[COERCE_DIVE:%.*]] = getelementptr inbounds nuw [[STRUCT_SRADDRSPACE]], ptr [[S]], i32 0, i32 0
 // CHECK-A64-NEXT:    [[COERCE_VAL_IP:%.*]] = inttoptr i64 [[S_COERCE]] to ptr addrspace(100)
 // CHECK-A64-NEXT:    store ptr addrspace(100) [[COERCE_VAL_IP]], ptr [[COERCE_DIVE]], align 8
-// CHECK-A64-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TMP]], ptr align 8 [[S]], i64 8, i1 false)
-// CHECK-A64-NEXT:    [[COERCE_DIVE1:%.*]] = getelementptr inbounds nuw [[STRUCT_SRADDRSPACE]], ptr [[AGG_TMP]], i32 0, i32 0
+// CHECK-A64-NEXT:    [[COERCE_DIVE1:%.*]] = getelementptr inbounds nuw [[STRUCT_SRADDRSPACE]], ptr [[S]], i32 0, i32 0
 // CHECK-A64-NEXT:    [[TMP0:%.*]] = load ptr addrspace(100), ptr [[COERCE_DIVE1]], align 8
 // CHECK-A64-NEXT:    [[COERCE_VAL_PI:%.*]] = ptrtoint ptr addrspace(100) [[TMP0]] to i64
 // CHECK-A64-NEXT:    call void @_Z11Traddrspace11Sraddrspace(i64 [[COERCE_VAL_PI]])
@@ -776,12 +766,10 @@ void Traddrspace(Sraddrspace s) { s.x = 1; }
 // CHECK-A64_32-SAME: i64 [[S_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-A64_32-NEXT:  [[ENTRY:.*:]]
 // CHECK-A64_32-NEXT:    [[S:%.*]] = alloca [[STRUCT_SRADDRSPACE:%.*]], align 4
-// CHECK-A64_32-NEXT:    [[AGG_TMP:%.*]] = alloca [[STRUCT_SRADDRSPACE]], align 4
 // CHECK-A64_32-NEXT:    [[COERCE_DIVE:%.*]] = getelementptr inbounds nuw [[STRUCT_SRADDRSPACE]], ptr [[S]], i32 0, i32 0
 // CHECK-A64_32-NEXT:    [[COERCE_VAL_II:%.*]] = trunc i64 [[S_COERCE]] to i32
 // CHECK-A64_32-NEXT:    store i32 [[COERCE_VAL_II]], ptr [[COERCE_DIVE]], align 4
-// CHECK-A64_32-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[AGG_TMP]], ptr align 4 [[S]], i32 4, i1 false)
-// CHECK-A64_32-NEXT:    [[COERCE_DIVE1:%.*]] = getelementptr inbounds nuw [[STRUCT_SRADDRSPACE]], ptr [[AGG_TMP]], i32 0, i32 0
+// CHECK-A64_32-NEXT:    [[COERCE_DIVE1:%.*]] = getelementptr inbounds nuw [[STRUCT_SRADDRSPACE]], ptr [[S]], i32 0, i32 0
 // CHECK-A64_32-NEXT:    [[TMP0:%.*]] = load ptr addrspace(100), ptr [[COERCE_DIVE1]], align 4
 // CHECK-A64_32-NEXT:    [[COERCE_VAL_PI:%.*]] = ptrtoint ptr addrspace(100) [[TMP0]] to i32
 // CHECK-A64_32-NEXT:    [[COERCE_VAL_II2:%.*]] = zext i32 [[COERCE_VAL_PI]] to i64

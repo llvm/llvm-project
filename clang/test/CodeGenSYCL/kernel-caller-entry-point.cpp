@@ -160,7 +160,6 @@ int main() {
 // CHECK-HOST-LINUX:      define dso_local void @_Z26single_purpose_kernel_task21single_purpose_kernel() #{{[0-9]+}} {
 // CHECK-HOST-LINUX-NEXT: entry:
 // CHECK-HOST-LINUX-NEXT:   %kernelFunc = alloca %struct.single_purpose_kernel, align 1
-// CHECK-HOST-LINUX-NEXT:   %agg.tmp = alloca %struct.single_purpose_kernel, align 1
 // CHECK-HOST-LINUX-NEXT:   call void @_Z18sycl_kernel_launchI26single_purpose_kernel_nameJ21single_purpose_kernelEEvPKcDpT0_(ptr noundef @.str)
 // CHECK-HOST-LINUX-NEXT:   ret void
 // CHECK-HOST-LINUX-NEXT: }
@@ -168,11 +167,9 @@ int main() {
 // CHECK-HOST-LINUX:      define internal void @_Z18kernel_single_taskIZ4mainEUlT_E_S1_EvT0_(i32 %kernelFunc.coerce) #{{[0-9]+}} {
 // CHECK-HOST-LINUX-NEXT: entry:
 // CHECK-HOST-LINUX-NEXT:   %kernelFunc = alloca %class.anon, align 4
-// CHECK-HOST-LINUX-NEXT:   %agg.tmp = alloca %class.anon, align 4
 // CHECK-HOST-LINUX-NEXT:   %coerce.dive = getelementptr inbounds nuw %class.anon, ptr %kernelFunc, i32 0, i32 0
 // CHECK-HOST-LINUX-NEXT:   store i32 %kernelFunc.coerce, ptr %coerce.dive, align 4
-// CHECK-HOST-LINUX-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %agg.tmp, ptr align 4 %kernelFunc, i64 4, i1 false)
-// CHECK-HOST-LINUX-NEXT:   %coerce.dive1 = getelementptr inbounds nuw %class.anon, ptr %agg.tmp, i32 0, i32 0
+// CHECK-HOST-LINUX-NEXT:   %coerce.dive1 = getelementptr inbounds nuw %class.anon, ptr %kernelFunc, i32 0, i32 0
 // CHECK-HOST-LINUX-NEXT:   %0 = load i32, ptr %coerce.dive1, align 4
 // CHECK-HOST-LINUX-NEXT:   call void @_Z18sycl_kernel_launchIZ4mainEUlT_E_JS1_EEvPKcDpT0_(ptr noundef @.str.1, i32 %0)
 // CHECK-HOST-LINUX-NEXT:   ret void
@@ -181,7 +178,6 @@ int main() {
 // CHECK-HOST-LINUX:      define internal void @"_Z18kernel_single_taskI6\CE\B4\CF\84\CF\87Z4mainEUliE_EvT0_"() #{{[0-9]+}} {
 // CHECK-HOST-LINUX-NEXT: entry:
 // CHECK-HOST-LINUX-NEXT:   %kernelFunc = alloca %class.anon.0, align 1
-// CHECK-HOST-LINUX-NEXT:   %agg.tmp = alloca %class.anon.0, align 1
 // CHECK-HOST-LINUX-NEXT:   call void @"_Z18sycl_kernel_launchI6\CE\B4\CF\84\CF\87JZ4mainEUliE_EEvPKcDpT0_"(ptr noundef @.str.2)
 // CHECK-HOST-LINUX-NEXT:   ret void
 // CHECK-HOST-LINUX-NEXT: }
@@ -210,11 +206,9 @@ int main() {
 // CHECK-HOST-LINUX:      define internal void @_Z14ref_arg_kernelI19ref_arg_kernel_nameZ4mainEUlT_E_EvRKT0_(ptr noundef nonnull align 4 dereferenceable(4) %ref) #{{[0-9]+}} {
 // CHECK-HOST-LINUX-NEXT: entry:
 // CHECK-HOST-LINUX-NEXT:   %ref.addr = alloca ptr, align 8
-// CHECK-HOST-LINUX-NEXT:   %agg.tmp = alloca %class.anon, align 4
 // CHECK-HOST-LINUX-NEXT:   store ptr %ref, ptr %ref.addr, align 8
 // CHECK-HOST-LINUX-NEXT:   %0 = load ptr, ptr %ref.addr, align 8
-// CHECK-HOST-LINUX-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %agg.tmp, ptr align 4 %0, i64 4, i1 false)
-// CHECK-HOST-LINUX-NEXT:   %coerce.dive = getelementptr inbounds nuw %class.anon, ptr %agg.tmp, i32 0, i32 0
+// CHECK-HOST-LINUX-NEXT:   %coerce.dive = getelementptr inbounds nuw %class.anon, ptr %0, i32 0, i32 0
 // CHECK-HOST-LINUX-NEXT:   %1 = load i32, ptr %coerce.dive, align 4
 // CHECK-HOST-LINUX-NEXT:   call void @_Z18sycl_kernel_launchI19ref_arg_kernel_nameJZ4mainEUlT_E_EEvPKcDpT0_(ptr noundef @.str.4, i32 %1)
 // CHECK-HOST-LINUX-NEXT:   ret void
@@ -223,11 +217,9 @@ int main() {
 // CHECK-HOST-LINUX:      define internal void @_Z18fwd_ref_arg_kernelI23fwd_ref_arg_kernel_nameRZ4mainEUlT_E_EvOT0_(ptr noundef nonnull align 4 dereferenceable(4) %ref) #{{[0-9]+}} {
 // CHECK-HOST-LINUX-NEXT: entry:
 // CHECK-HOST-LINUX-NEXT:   %ref.addr = alloca ptr, align 8
-// CHECK-HOST-LINUX-NEXT:   %agg.tmp = alloca %class.anon, align 4
 // CHECK-HOST-LINUX-NEXT:   store ptr %ref, ptr %ref.addr, align 8
 // CHECK-HOST-LINUX-NEXT:   %0 = load ptr, ptr %ref.addr, align 8
-// CHECK-HOST-LINUX-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %agg.tmp, ptr align 4 %0, i64 4, i1 false)
-// CHECK-HOST-LINUX-NEXT:   %coerce.dive = getelementptr inbounds nuw %class.anon, ptr %agg.tmp, i32 0, i32 0
+// CHECK-HOST-LINUX-NEXT:   %coerce.dive = getelementptr inbounds nuw %class.anon, ptr %0, i32 0, i32 0
 // CHECK-HOST-LINUX-NEXT:   %1 = load i32, ptr %coerce.dive, align 4
 // CHECK-HOST-LINUX-NEXT:   call void @_Z18sycl_kernel_launchI23fwd_ref_arg_kernel_nameJZ4mainEUlT_E_EEvPKcDpT0_(ptr noundef @.str.5, i32 %1)
 // CHECK-HOST-LINUX-NEXT:   ret void
@@ -236,11 +228,9 @@ int main() {
 // CHECK-HOST-LINUX:      define internal void @_Z18fwd_ref_arg_kernelI28fwd_ref_arg_kernel_name_moveZ4mainEUlT_E_EvOT0_(ptr noundef nonnull align 4 dereferenceable(4) %ref) #{{[0-9]+}} {
 // CHECK-HOST-LINUX-NEXT: entry:
 // CHECK-HOST-LINUX-NEXT:   %ref.addr = alloca ptr, align 8
-// CHECK-HOST-LINUX-NEXT:   %agg.tmp = alloca %class.anon, align 4
 // CHECK-HOST-LINUX-NEXT:   store ptr %ref, ptr %ref.addr, align 8
 // CHECK-HOST-LINUX-NEXT:   %0 = load ptr, ptr %ref.addr, align 8
-// CHECK-HOST-LINUX-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %agg.tmp, ptr align 4 %0, i64 4, i1 false)
-// CHECK-HOST-LINUX-NEXT:   %coerce.dive = getelementptr inbounds nuw %class.anon, ptr %agg.tmp, i32 0, i32 0
+// CHECK-HOST-LINUX-NEXT:   %coerce.dive = getelementptr inbounds nuw %class.anon, ptr %0, i32 0, i32 0
 // CHECK-HOST-LINUX-NEXT:   %1 = load i32, ptr %coerce.dive, align 4
 // CHECK-HOST-LINUX-NEXT:   call void @_Z18sycl_kernel_launchI28fwd_ref_arg_kernel_name_moveJZ4mainEUlT_E_EEvPKcDpT0_(ptr noundef @.str.6, i32 %1)
 // CHECK-HOST-LINUX-NEXT:   ret void
@@ -249,11 +239,9 @@ int main() {
 // CHECK-HOST-LINUX:      define internal void @_Z21rvalue_ref_arg_kernelI26rvalue_ref_arg_kernel_nameZ4mainEUlT_E0_EvONSt13type_identityIT0_E4typeE(ptr noundef nonnull align 4 dereferenceable(4) %ref) #{{[0-9]+}} {
 // CHECK-HOST-LINUX-NEXT: entry:
 // CHECK-HOST-LINUX-NEXT:   %ref.addr = alloca ptr, align 8
-// CHECK-HOST-LINUX-NEXT:   %agg.tmp = alloca %class.anon.2, align 4
 // CHECK-HOST-LINUX-NEXT:   store ptr %ref, ptr %ref.addr, align 8
 // CHECK-HOST-LINUX-NEXT:   %0 = load ptr, ptr %ref.addr, align 8
-// CHECK-HOST-LINUX-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %agg.tmp, ptr align 4 %0, i64 4, i1 false)
-// CHECK-HOST-LINUX-NEXT:   %coerce.dive = getelementptr inbounds nuw %class.anon.2, ptr %agg.tmp, i32 0, i32 0
+// CHECK-HOST-LINUX-NEXT:   %coerce.dive = getelementptr inbounds nuw %class.anon.2, ptr %0, i32 0, i32 0
 // CHECK-HOST-LINUX-NEXT:   %1 = load i32, ptr %coerce.dive, align 4
 // CHECK-HOST-LINUX-NEXT:   call void @_Z18sycl_kernel_launchI26rvalue_ref_arg_kernel_nameJZ4mainEUlT_E0_EEvPKcDpT0_(ptr noundef @.str.7, i32 %1)
 // CHECK-HOST-LINUX-NEXT:   ret void

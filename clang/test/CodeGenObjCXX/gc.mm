@@ -18,3 +18,15 @@ namespace test0 {
 // CHECK-NEXT: call ptr @objc_assign_strongCast(ptr [[T2]], ptr [[T1]])
 // CHECK-NEXT: ret void
 }
+
+namespace test1 {
+  // A trivially-copyable struct with an object member, passed by value, needs
+  // the GC write barrier. Forwarding the source variable must not bypass it.
+  struct S { id a; };
+  void sink(S);
+  void pass(S s) { sink(s); }
+
+// CHECK-LABEL: define{{.*}} void @_ZN5test14passENS_1SE(
+// CHECK:      call ptr @objc_memmove_collectable(
+// CHECK:      call void @_ZN5test14sinkENS_1SE(
+}
