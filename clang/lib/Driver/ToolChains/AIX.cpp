@@ -446,6 +446,8 @@ void AIX::AddClangCXXStdlibIncludeArgs(
     CC1Args.push_back("-D__LIBC_NO_CPP_MATH_OVERLOADS__");
     return;
   }
+  default:
+    break;
   }
 
   llvm_unreachable("Unexpected C++ library type; only libc++ is supported.");
@@ -475,9 +477,11 @@ void AIX::AddCXXStdlibLibArgs(const llvm::opt::ArgList &Args,
       CmdArgs.push_back("-lc++experimental");
     CmdArgs.push_back("-lc++abi");
     return;
+  default:
+    break;
   }
 
-  llvm_unreachable("Unexpected C++ library type; only libc++ is supported.");
+  llvm_unreachable("Unexpected C++ library type");
 }
 
 // This function processes all the mtocdata options to build the final

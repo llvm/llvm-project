@@ -1544,6 +1544,8 @@ ToolChain::RuntimeLibType ToolChain::GetRuntimeLibType(
     runtimeLibType = ToolChain::RLT_CompilerRT;
   else if (LibName == "libgcc")
     runtimeLibType = ToolChain::RLT_Libgcc;
+  else if (LibName == "vcruntime")
+    runtimeLibType = ToolChain::RLT_Vcruntime;
   else if (LibName == "platform")
     runtimeLibType = GetDefaultRuntimeLibType();
   else {
@@ -1583,6 +1585,8 @@ ToolChain::UnwindLibType ToolChain::GetUnwindLibType(
     unwindLibType = ToolChain::UNW_CompilerRT;
   } else if (LibName == "libgcc")
     unwindLibType = ToolChain::UNW_Libgcc;
+  else if (LibName == "vcruntime")
+    unwindLibType = ToolChain::UNW_Vcruntime;
   else {
     if (A)
       getDriver().Diag(diag::err_drv_invalid_unwindlib_name)
@@ -1606,6 +1610,8 @@ ToolChain::CXXStdlibType ToolChain::GetCXXStdlibType(const ArgList &Args) const{
     cxxStdlibType = ToolChain::CST_Libcxx;
   else if (LibName == "libstdc++")
     cxxStdlibType = ToolChain::CST_Libstdcxx;
+  else if (LibName == "msstl")
+    cxxStdlibType = ToolChain::CST_Msstl;
   else if (LibName == "platform")
     cxxStdlibType = GetDefaultCXXStdlibType();
   else {
@@ -1785,6 +1791,10 @@ void ToolChain::AddCXXStdlibLibArgs(const ArgList &Args,
 
   case ToolChain::CST_Libstdcxx:
     CmdArgs.push_back("-lstdc++");
+    break;
+
+  case ToolChain::CST_Msstl:
+    // MSVC STL does not need to add -l
     break;
   }
 }
