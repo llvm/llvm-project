@@ -61,4 +61,8 @@ void queue::submitKernelImpl(detail::DeviceKernelInfo &KernelInfo,
   impl->submitKernelImpl(KernelInfo, ArgData, ArgSize);
 }
 
+event queue::submitWithHandler(const TypelessCGF &CGF) {
+  return detail::createSyclObjFromImpl<event>(impl->submitWithHandler(CGF));
+}
+
 _LIBSYCL_END_NAMESPACE_SYCL

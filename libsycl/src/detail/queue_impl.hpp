@@ -117,6 +117,8 @@ public:
   EventImplPtr memcpy(void *Dest, const void *Src, std::size_t NumBytes,
                       const std::vector<EventImplPtr> &DepEvents);
 
+  EventImplPtr submitWithHandler(const TypelessCGF &CGF);
+
 private:
   void handleEventDependencies(const std::vector<EventImplPtr> &Dep);
   EventImplPtr createEvent(std::vector<EventImplPtr> &&Deps = {});
@@ -131,9 +133,12 @@ private:
 
   // Submit data.
   struct KernelSubmitInfo {
+    KernelSubmitInfo() : Handler(nullptr) {}
+
     EventImplPtr LastEvent;
     ol_kernel_launch_size_args_t Range;
     std::vector<EventImplPtr> DepEvents;
+    handler *Handler;
   };
   inline static thread_local KernelSubmitInfo MCurrentSubmitInfo = {};
 };
