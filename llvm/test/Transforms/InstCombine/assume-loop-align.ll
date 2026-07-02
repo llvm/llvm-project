@@ -10,7 +10,8 @@ target triple = "x86_64-unknown-linux-gnu"
 define void @foo(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[A:%.*]], i64 64), "align"(ptr [[B:%.*]], i64 64) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[A:%.*]], i64 64) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[B:%.*]], i64 64) ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]

@@ -426,6 +426,11 @@ int main(int argc, char **argv) {
     return 1;
   }
 
+  if (TheTriple.isAArch64() && STI->checkFeatures("+mca-streaming-sched"))
+    WithColor::warning()
+        << "AArch64 streaming SVE scheduling is enabled via "
+           "'-mattr=+mca-streaming-sched'; llvm-mca results are approximate.\n";
+
   if (WantsCPUHelp)
     return 0;
 

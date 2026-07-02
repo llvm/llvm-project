@@ -299,9 +299,9 @@ def __builtin_amdgcn_av_store_b128
 // Async mark builtins.
 //===----------------------------------------------------------------------===//
 
-// FIXME: Not supported on GFX12 yet. Will need a new feature when we do.
-def __builtin_amdgcn_asyncmark : AMDGPUBuiltin<"void()", [], "vmem-to-lds-load-insts">;
-def __builtin_amdgcn_wait_asyncmark : AMDGPUBuiltin<"void(_Constant unsigned short)", [], "vmem-to-lds-load-insts">;
+// Mirrors GCNSubtarget::hasAsyncMark()
+def __builtin_amdgcn_asyncmark : AMDGPUBuiltin<"void()", [], "vmem-to-lds-load-insts|asynccnt">;
+def __builtin_amdgcn_wait_asyncmark : AMDGPUBuiltin<"void(_Constant unsigned short)", [], "vmem-to-lds-load-insts|asynccnt">;
 
 //===----------------------------------------------------------------------===//
 // Ballot builtins.
@@ -378,6 +378,10 @@ def __builtin_amdgcn_perm : AMDGPUBuiltin<"unsigned int(unsigned int, unsigned i
 //===----------------------------------------------------------------------===//
 
 def __builtin_amdgcn_fmed3h : AMDGPUBuiltin<"__fp16(__fp16, __fp16, __fp16)", [Const], "gfx9-insts">;
+def __builtin_amdgcn_s_bitreplicate : AMDGPUBuiltin<"uint64_t(unsigned int)", [Const], "gfx9-insts"> {
+  let Documentation = [DocSBitReplicate];
+  let ArgNames = ["src"];
+}
 
 def __builtin_amdgcn_global_atomic_fadd_f64 : AMDGPUBuiltin<"double(double address_space<1> *, double)", [], "gfx90a-insts">;
 def __builtin_amdgcn_global_atomic_fadd_f32 : AMDGPUBuiltin<"float(float address_space<1> *, float)", [], "atomic-fadd-rtn-insts">;

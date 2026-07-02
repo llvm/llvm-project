@@ -3905,9 +3905,14 @@ bool CodeGenFunction::EmitOMPWorksharingLoop(
       // GPU combined `distribute parallel for`: emit a single
       // for_static_init with the fused distr_static_chunk + static_chunkone
       // schedule (enum 93). The surrounding EmitOMPDistributeLoop must skip
-      // its distribute_static_init under the same conditions.
-      if (StaticChunkedOne && canEmitGPUFusedDistSchedule(CGM, S, EKind))
-        ScheduleKind.UseFusedDistChunkSchedule = true;
+      // its distribute_static_init under the same conditions. Both sites are
+      // guarded by canEmitGPUFusedDistSchedule() alone so they cannot
+      // disagree; the assert guards the invariant that makes this safe today,
+      // aka that the implicit GPU default schedule is always static chunk-one.
+      ScheduleKind.UseFusedDistChunkSchedule =
+          canEmitGPUFusedDistSchedule(CGM, S, EKind);
+      assert((!ScheduleKind.UseFusedDistChunkSchedule || StaticChunkedOne) &&
+             "fused distribute schedule requires a static chunk-one schedule");
       bool IsMonotonic =
           Ordered ||
           (ScheduleKind.Schedule == OMPC_SCHEDULE_static &&

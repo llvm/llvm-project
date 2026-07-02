@@ -53,7 +53,7 @@ public:
         errs() << "\nCurrent properties: ";
         MFProps.print(errs());
         errs() << '\n';
-        report_fatal_error("MachineFunctionProperties check failed");
+        reportFatalUsageError("MachineFunctionProperties check failed");
       }
     }
 #endif // NDEBUG

@@ -11,6 +11,7 @@
 #include "mlir-c/Support.h"
 #include "mlir-c/Transforms.h"
 #include "mlir/CAPI/IR.h"
+#include "mlir/CAPI/IRMapping.h"
 #include "mlir/CAPI/Rewrite.h"
 #include "mlir/CAPI/Support.h"
 #include "mlir/CAPI/Wrap.h"
@@ -116,6 +117,12 @@ MlirOperation mlirRewriterBaseClone(MlirRewriterBase rewriter,
 MlirOperation mlirRewriterBaseCloneWithoutRegions(MlirRewriterBase rewriter,
                                                   MlirOperation op) {
   return wrap(unwrap(rewriter)->cloneWithoutRegions(*unwrap(op)));
+}
+
+MlirOperation mlirRewriterBaseCloneWithMapping(MlirRewriterBase rewriter,
+                                               MlirOperation op,
+                                               MlirIRMapping mapping) {
+  return wrap(unwrap(rewriter)->clone(*unwrap(op), *unwrap(mapping)));
 }
 
 void mlirRewriterBaseCloneRegionBefore(MlirRewriterBase rewriter,

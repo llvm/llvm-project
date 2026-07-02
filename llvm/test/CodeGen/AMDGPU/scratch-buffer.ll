@@ -1,4 +1,4 @@
-; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=gfx600 < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
 ; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=tonga < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
 
 ; When a frame index offset is more than 12-bits, make sure we don't store

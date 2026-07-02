@@ -401,12 +401,19 @@ public:
     const TargetSubtargetInfo *CalleeSTI = TM.getSubtargetImpl(*Callee);
     FeatureBitset InlineIgnoreFeatures = CallerSTI->getInlineIgnoreFeatures();
     FeatureBitset InlineInverseFeatures = CallerSTI->getInlineInverseFeatures();
+    FeatureBitset InlineMustMatchFeatures =
+        CallerSTI->getInlineMustMatchFeatures();
+
     FeatureBitset CallerBits =
         (CallerSTI->getFeatureBits() ^ InlineInverseFeatures) &
         ~InlineIgnoreFeatures;
     FeatureBitset CalleeBits =
         (CalleeSTI->getFeatureBits() ^ InlineInverseFeatures) &
         ~InlineIgnoreFeatures;
+
+    if ((CallerBits & InlineMustMatchFeatures) !=
+        (CalleeBits & InlineMustMatchFeatures))
+      return false;
 
     // Inline a callee if its target-features are a subset of the callers
     // target-features.
@@ -660,10 +667,9 @@ public:
     if (!TargetTriple.isArch64Bit())
       return false;
 
-    // Disable relative lookup tables for all AArch64 targets. Even AArch64's
-    // small code model allows a 4GB span of text + data, which might not fit
-    // in the 32-bit offsets relative lookup tables generate.
-    if (TargetTriple.isAArch64())
+    // TODO: Triggers issues on aarch64 on darwin, so temporarily disable it
+    // there.
+    if (TargetTriple.getArch() == Triple::aarch64 && TargetTriple.isOSDarwin())
       return false;
 
     return true;
@@ -1050,7 +1056,10 @@ public:
     }
   }
 
-  unsigned getMaxInterleaveFactor(ElementCount VF) const override { return 1; }
+  unsigned getMaxInterleaveFactor(ElementCount VF,
+                                  bool HasUnorderedReductions) const override {
+    return 1;
+  }
 
   InstructionCost getArithmeticInstrCost(
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,

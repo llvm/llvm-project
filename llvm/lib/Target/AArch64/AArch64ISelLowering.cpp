@@ -155,8 +155,6 @@ cl::opt<bool> EnableSVEGISel(
     cl::desc("Enable / disable SVE scalable vectors in Global ISel"),
     cl::init(false));
 
-// TODO: This option should be removed once we switch to always using PTRADD in
-// the SelectionDAG.
 static cl::opt<int> BrMergingBaseCostThresh(
     "aarch64-br-merging-base-cost", cl::init(2),
     cl::desc(
@@ -195,6 +193,8 @@ static cl::opt<int> BrMergingUnlikelyBias(
         "merge unlikely branches."),
     cl::Hidden);
 
+// TODO: This option should be removed once we switch to always using PTRADD in
+// the SelectionDAG.
 static cl::opt<bool> UseFEATCPACodegen(
     "aarch64-use-featcpa-codegen", cl::Hidden,
     cl::desc("Generate ISD::PTRADD nodes for pointer arithmetic in "
@@ -1595,7 +1595,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::CLMUL, MVT::i8, Custom);
     setOperationAction(ISD::CLMUL, {MVT::v8i8, MVT::v16i8}, Legal);
     if (Subtarget->hasAES()) {
-      setOperationAction(ISD::CLMUL, {MVT::i16, MVT::i32, MVT::i64}, Custom);
+      setOperationAction(ISD::CLMUL, {MVT::i16, MVT::i32, MVT::i64, MVT::v4i32},
+                         Custom);
       setOperationAction(ISD::CLMUL, {MVT::v1i64, MVT::v2i64}, Legal);
       setOperationAction(ISD::CLMULH, {MVT::v1i64, MVT::v2i64}, Legal);
     }
@@ -8315,10 +8316,26 @@ SDValue AArch64TargetLowering::LowerCLMUL(SDValue Op, SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
   SDLoc DL(Op);
   assert((VT == MVT::i64 || VT == MVT::i32 || VT == MVT::i16 || VT == MVT::i8 ||
-          VT == MVT::nxv8i16 || VT == MVT::nxv2i64) &&
+          VT == MVT::v4i32 || VT == MVT::nxv8i16 || VT == MVT::nxv2i64) &&
          "Unexpected Type");
   uint64_t ScalarSize = VT.getScalarSizeInBits();
   APInt HiWordMask = APInt::getBitsSet(ScalarSize, ScalarSize / 2, ScalarSize);
+
+  if (VT == MVT::v4i32) {
+    SDValue LoIdx = DAG.getVectorIdxConstant(0, DL);
+    SDValue HiIdx = DAG.getVectorIdxConstant(2, DL);
+    SDValue LoA = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v2i32,
+                              Op.getOperand(0), LoIdx);
+    SDValue LoB = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v2i32,
+                              Op.getOperand(1), LoIdx);
+    SDValue HiA = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v2i32,
+                              Op.getOperand(0), HiIdx);
+    SDValue HiB = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v2i32,
+                              Op.getOperand(1), HiIdx);
+    SDValue LoCLMUL = DAG.getNode(ISD::CLMUL, DL, MVT::v2i32, LoA, LoB);
+    SDValue HiCLMUL = DAG.getNode(ISD::CLMUL, DL, MVT::v2i32, HiA, HiB);
+    return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, LoCLMUL, HiCLMUL);
+  }
 
   if (VT == MVT::nxv2i64) {
     SDValue OpA =
@@ -31577,6 +31594,22 @@ bool AArch64TargetLowering::useLoadStackGuardNode(const Module &M) const {
   return true;
 }
 
+bool AArch64TargetLowering::useStackGuardMixFP() const {
+  // Currently only MSVC CRTs mix the frame pointer into the stack guard value.
+  return Subtarget->getTargetTriple().isOSMSVCRT();
+}
+
+SDValue AArch64TargetLowering::emitStackGuardMixFP(SelectionDAG &DAG,
+                                                   SDValue Val,
+                                                   const SDLoc &DL) const {
+  // Mix the cookie value with FP to create a position-dependent guard.
+  // Both prologue (stores FP - Cookie) and epilogue (compares FP - Cookie)
+  // use the same mixing operation: FP - Val.
+  return DAG.getNode(
+      ISD::SUB, DL, Val.getValueType(),
+      DAG.getCopyFromReg(DAG.getEntryNode(), DL, AArch64::FP, MVT::i64), Val);
+}
+
 unsigned AArch64TargetLowering::combineRepeatedFPDivisors() const {
   // Combine multiple FDIVs with the same divisor into multiple FMULs by the
   // reciprocal if there are three or more FDIVs.
@@ -33080,7 +33113,8 @@ SDValue AArch64TargetLowering::LowerToScalableOp(SDValue Op,
     Ops.push_back(convertToScalableVector(DAG, ContainerVT, V));
   }
 
-  auto ScalableRes = DAG.getNode(Op.getOpcode(), SDLoc(Op), ContainerVT, Ops);
+  auto ScalableRes =
+      DAG.getNode(Op.getOpcode(), SDLoc(Op), ContainerVT, Ops, Op->getFlags());
   return convertFromScalableVector(DAG, VT, ScalableRes);
 }
 

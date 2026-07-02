@@ -328,7 +328,7 @@ void multi_refs(int one, int two, int, int three, int, int four, int) {
 // CIR:   cir.if %[[IS_UNINIT]] {
 //
 // CIR-BOTH:     %[[GET_REF_MS_INIT:.*]] = cir.get_global static_local @_ZZ10multi_refsiiiiiiiE17refs_magic_static : !cir.ptr<!rec_A>
-// CIR-BOTH:     cir.copy %[[GET_MS]] to %[[GET_REF_MS_INIT]] : !cir.ptr<!rec_A>
+// CIR-BOTH:     cir.copy %[[GET_MS]] align(4) to %[[GET_REF_MS_INIT]] align(4) : !cir.ptr<!rec_A>
 // CIR-BEFORE-LPP:     cir.yield
 // CIR-BEFORE-LPP:   }
 //
@@ -543,7 +543,7 @@ void test_dtor() {
 // CIR:    %[[DTOR_DECAY:.*]] = cir.cast bitcast %[[GET_DTOR]] : !cir.ptr<!cir.func<(!cir.ptr<!rec_HasDtor>)>> -> !cir.ptr<!cir.func<(!cir.ptr<!void>)>>
 // CIR:    %[[MS_DECAY:.*]] = cir.cast bitcast %[[GET_MS_DEL]] : !cir.ptr<!rec_HasDtor> -> !cir.ptr<!void>
 // CIR:    %[[DSO_HANDLE:.*]] = cir.get_global @__dso_handle : !cir.ptr<i8>
-// CIR:    cir.call @__cxa_atexit(%[[DTOR_DECAY]], %[[MS_DECAY]], %[[DSO_HANDLE]]) : (!cir.ptr<!cir.func<(!cir.ptr<!void>)>>, !cir.ptr<!void>, !cir.ptr<i8>) -> ()
+// CIR:    cir.call @__cxa_atexit(%[[DTOR_DECAY]], %[[MS_DECAY]], %[[DSO_HANDLE]]) : (!cir.ptr<!cir.func<(!cir.ptr<!void>)>>, !cir.ptr<!void>, !cir.ptr<i8>) -> !s32i
 // CIR:    cir.call @__cxa_guard_release(%[[GET_GUARD]]) : (!cir.ptr<!s64i>) -> ()
 
 // CIR:   }
@@ -602,7 +602,7 @@ void test_ctor_dtor() {
 // CIR:    %[[DTOR_DECAY:.*]] = cir.cast bitcast %[[GET_DTOR]] : !cir.ptr<!cir.func<(!cir.ptr<!rec_HasCtorDtor>)>> -> !cir.ptr<!cir.func<(!cir.ptr<!void>)>>
 // CIR:    %[[MS_DECAY:.*]] = cir.cast bitcast %[[GET_MS_DEL]] : !cir.ptr<!rec_HasCtorDtor> -> !cir.ptr<!void>
 // CIR:    %[[DSO_HANDLE:.*]] = cir.get_global @__dso_handle : !cir.ptr<i8>
-// CIR:    cir.call @__cxa_atexit(%[[DTOR_DECAY]], %[[MS_DECAY]], %[[DSO_HANDLE]]) : (!cir.ptr<!cir.func<(!cir.ptr<!void>)>>, !cir.ptr<!void>, !cir.ptr<i8>) -> ()
+// CIR:    cir.call @__cxa_atexit(%[[DTOR_DECAY]], %[[MS_DECAY]], %[[DSO_HANDLE]]) : (!cir.ptr<!cir.func<(!cir.ptr<!void>)>>, !cir.ptr<!void>, !cir.ptr<i8>) -> !s32i
 // CIR:    cir.call @__cxa_guard_release(%[[GET_GUARD]]) : (!cir.ptr<!s64i>) -> ()
 // CIR:   }
 // CIR: }

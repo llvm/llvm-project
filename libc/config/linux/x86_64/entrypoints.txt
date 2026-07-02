@@ -1031,6 +1031,7 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   libc.src.math.canonicalizebf16
   libc.src.math.ceilbf16
   libc.src.math.copysignbf16
+  libc.src.math.expbf16
   libc.src.math.fabsbf16
   libc.src.math.fdimbf16
   libc.src.math.floorbf16
@@ -1078,6 +1079,7 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   libc.src.math.setpayloadbf16
   libc.src.math.setpayloadsigbf16
   libc.src.math.sqrtbf16
+  libc.src.math.tanbf16
   libc.src.math.truncbf16
   libc.src.math.totalorderbf16
   libc.src.math.totalordermagbf16
@@ -1302,13 +1304,17 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.pthread.pthread_setspecific
 
     # sched.h entrypoints
+    libc.src.sched.__sched_andcpuset
     libc.src.sched.__sched_clrcpuset
     libc.src.sched.__sched_cpualloc
+    libc.src.sched.__sched_cpuequal
     libc.src.sched.__sched_cpufree
     libc.src.sched.__sched_getcpucount
-    libc.src.sched.__sched_setcpuzero
-    libc.src.sched.__sched_setcpuset
     libc.src.sched.__sched_getcpuisset
+    libc.src.sched.__sched_orcpuset
+    libc.src.sched.__sched_setcpuset
+    libc.src.sched.__sched_setcpuzero
+    libc.src.sched.__sched_xorcpuset
 
     # setjmp.h entrypoints
     libc.src.setjmp.longjmp
@@ -1372,6 +1378,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdlib.exit
     libc.src.stdlib.getenv
     libc.src.stdlib.setenv
+    libc.src.stdlib.unsetenv
     libc.src.stdlib.mbstowcs
     libc.src.stdlib.mbtowc
     libc.src.stdlib.mblen
@@ -1519,6 +1526,10 @@ if(LLVM_LIBC_FULL_BUILD)
 endif()
 
 if(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
+  list(APPEND TARGET_LIBC_ENTRYPOINTS
+    libc.src.stdlib.realpath
+  )
+
   if(LLVM_LIBC_FULL_BUILD)
     list(APPEND TARGET_LIBC_ENTRYPOINTS
       # regex.h entrypoints

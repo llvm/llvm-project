@@ -434,6 +434,5 @@ CUresult cuOccupancyMaxPotentialBlockSize(int *, int *, CUfunction,
                                           CUoccupancyB2DSize, size_t, int);
 CUresult cuOccupancyMaxActiveBlocksPerMultiprocessor(int *, CUfunction, int,
                                                      size_t);
-CUresult cuFuncGetParamInfo(CUfunction, size_t, size_t *, size_t *);
 
 #endif

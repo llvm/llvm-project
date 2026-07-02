@@ -39,6 +39,7 @@ static_library("LLVMLanaiCodeGen") {
   include_dirs = [ "." ]
   sources = [
     "LanaiAsmPrinter.cpp",
+    "LanaiCodeGenPassBuilder.cpp",
     "LanaiDelaySlotFiller.cpp",
     "LanaiFrameLowering.cpp",
     "LanaiISelDAGToDAG.cpp",
