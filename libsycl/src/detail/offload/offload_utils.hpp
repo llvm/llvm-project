@@ -17,6 +17,7 @@
 
 #include <sycl/__impl/backend.hpp>
 #include <sycl/__impl/detail/config.hpp>
+#include <sycl/__impl/detail/unified_range_view.hpp>
 #include <sycl/__impl/exception.hpp>
 #include <sycl/__impl/info/device_type.hpp>
 #include <sycl/__impl/usm_alloc_type.hpp>
@@ -138,6 +139,10 @@ constexpr To map_info_desc(typename info_ol_mapping<To>::template M<Ts>... ms) {
              std::tuple{ms...})
       .value;
 }
+
+/// Converts a UnifiedRangeView into the liboffload
+/// ol_kernel_launch_size_args_t format.
+ol_kernel_launch_size_args_t convertToOlRange(const UnifiedRangeView &Range);
 
 } // namespace detail
 
