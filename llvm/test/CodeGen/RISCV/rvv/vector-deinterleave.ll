@@ -126,6 +126,11 @@ define {<vscale x 4 x i32>, <vscale x 4 x i32>} @vector_deinterleave_nxv4i32_nxv
 ret {<vscale x 4 x i32>, <vscale x 4 x i32>} %retval
 }
 
+define {<vscale x 5 x i32>, <vscale x 5 x i32>, <vscale x 5 x i32>} @vector_deinterleave3_nxv5i32_nxv15i32(<vscale x 15 x i32> %v) nounwind {
+  %d = call {<vscale x 5 x i32>, <vscale x 5 x i32>, <vscale x 5 x i32>} @llvm.vector.deinterleave3(<vscale x 15 x i32> %v)
+  ret {<vscale x 5 x i32>, <vscale x 5 x i32>, <vscale x 5 x i32>} %d
+}
+
 define {<vscale x 2 x i64>, <vscale x 2 x i64>} @vector_deinterleave_nxv2i64_nxv4i64(<vscale x 4 x i64> %vec) {
 ; V-LABEL: vector_deinterleave_nxv2i64_nxv4i64:
 ; V:       # %bb.0:
