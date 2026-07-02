@@ -227,6 +227,6 @@ PreservedAnalyses MSP430AsmPrinterEndPass::run(Module &M,
   MSP430AsmPrinter &AsmPrinter = static_cast<MSP430AsmPrinter &>(
       MAM.getResult<AsmPrinterAnalysis>(M).getPrinter());
   setupModuleAsmPrinter(M, MAM, AsmPrinter);
-  AsmPrinter.doInitialization(M);
+  AsmPrinter.doFinalization(M);
   return PreservedAnalyses::all();
 }
