@@ -800,13 +800,13 @@ static Value *promoteAllocaUserToVector(Instruction *Inst, const DataLayout &DL,
       return Builder.CreateVectorSplat(AA.Vector.Ty->getElementCount(), Elt);
     }
 
-    if (auto *Intr = dyn_cast<IntrinsicInst>(Inst)) {
-      if (Intr->getIntrinsicID() == Intrinsic::objectsize) {
-        Intr->replaceAllUsesWith(
-            Builder.getIntN(Intr->getType()->getIntegerBitWidth(),
-                            DL.getTypeAllocSize(AA.Vector.Ty)));
-        return nullptr;
-      }
+    if (PatternMatch::match(
+            Inst, PatternMatch::m_Intrinsic<Intrinsic::objectsize>())) {
+      auto *Intr = cast<IntrinsicInst>(Inst);
+      Intr->replaceAllUsesWith(
+          Builder.getIntN(Intr->getType()->getIntegerBitWidth(),
+                          DL.getTypeAllocSize(AA.Vector.Ty)));
+      return nullptr;
     }
 
     llvm_unreachable("Unsupported call when promoting alloca to vector");
@@ -1074,11 +1074,10 @@ void AMDGPUPromoteAllocaImpl::analyzePromoteToVector(AllocaAnalysis &AA) const {
       continue;
     }
 
-    if (auto *Intr = dyn_cast<IntrinsicInst>(Inst)) {
-      if (Intr->getIntrinsicID() == Intrinsic::objectsize) {
-        AA.Vector.Worklist.push_back(Inst);
-        continue;
-      }
+    if (PatternMatch::match(
+            Inst, PatternMatch::m_Intrinsic<Intrinsic::objectsize>())) {
+      AA.Vector.Worklist.push_back(Inst);
+      continue;
     }
 
     // Ignore assume-like intrinsics and comparisons used in assumes.
@@ -1312,25 +1311,13 @@ Value *AMDGPUPromoteAllocaImpl::getWorkitemID(IRBuilder<> &Builder,
 }
 
 static bool isCallPromotable(CallInst *CI) {
-  IntrinsicInst *II = dyn_cast<IntrinsicInst>(CI);
-  if (!II)
-    return false;
-
-  switch (II->getIntrinsicID()) {
-  case Intrinsic::memcpy:
-  case Intrinsic::memmove:
-  case Intrinsic::memset:
-  case Intrinsic::lifetime_start:
-  case Intrinsic::lifetime_end:
-  case Intrinsic::invariant_start:
-  case Intrinsic::invariant_end:
-  case Intrinsic::launder_invariant_group:
-  case Intrinsic::strip_invariant_group:
-  case Intrinsic::objectsize:
-    return true;
-  default:
-    return false;
-  }
+  return PatternMatch::match(
+      CI, PatternMatch::m_AnyIntrinsic<
+              Intrinsic::memcpy, Intrinsic::memmove, Intrinsic::memset,
+              Intrinsic::lifetime_start, Intrinsic::lifetime_end,
+              Intrinsic::invariant_start, Intrinsic::invariant_end,
+              Intrinsic::launder_invariant_group,
+              Intrinsic::strip_invariant_group, Intrinsic::objectsize>());
 }
 
 bool AMDGPUPromoteAllocaImpl::binaryOpIsDerivedFromSameAlloca(

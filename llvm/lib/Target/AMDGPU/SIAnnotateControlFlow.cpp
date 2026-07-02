@@ -23,6 +23,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -167,9 +168,9 @@ bool SIAnnotateControlFlow::isElse(PHINode *Phi) {
 
 bool SIAnnotateControlFlow::hasKill(const BasicBlock *BB) {
   for (const Instruction &I : *BB) {
-    if (const CallInst *CI = dyn_cast<CallInst>(&I))
-      if (CI->getIntrinsicID() == Intrinsic::amdgcn_kill)
-        return true;
+    if (PatternMatch::match(
+            &I, PatternMatch::m_Intrinsic<Intrinsic::amdgcn_kill>()))
+      return true;
   }
   return false;
 }

@@ -22,6 +22,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/KnownBits.h"
@@ -171,9 +172,9 @@ public:
         UserList.push_back(UseInst);
 
     auto IsLookThru = [](Instruction *II) {
-      if (const auto *Intr = dyn_cast<IntrinsicInst>(II))
-        return Intr->getIntrinsicID() == Intrinsic::amdgcn_perm;
-      return isa<PHINode, ShuffleVectorInst, InsertElementInst,
+      return PatternMatch::match(
+                 II, PatternMatch::m_Intrinsic<Intrinsic::amdgcn_perm>()) ||
+             isa<PHINode, ShuffleVectorInst, InsertElementInst,
                  ExtractElementInst, CastInst>(II);
     };
 

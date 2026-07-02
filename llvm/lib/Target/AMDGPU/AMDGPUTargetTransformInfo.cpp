@@ -1240,16 +1240,13 @@ bool GCNTTIImpl::isAlwaysUniform(const Value *V) const {
   if (!CI)
     return false;
 
-  if (const IntrinsicInst *Intrinsic = dyn_cast<IntrinsicInst>(CI)) {
-    switch (Intrinsic->getIntrinsicID()) {
-    default:
-      return false;
-    case Intrinsic::amdgcn_if:
-    case Intrinsic::amdgcn_else: {
+  if (isa<IntrinsicInst>(CI)) {
+    if (match(CI,
+              m_AnyIntrinsic<Intrinsic::amdgcn_if, Intrinsic::amdgcn_else>())) {
       ArrayRef<unsigned> Indices = ExtValue->getIndices();
       return Indices.size() == 1 && Indices[0] == 1;
     }
-    }
+    return false;
   }
 
   // If we have inline asm returning mixed SGPR and VGPR results, we inferred
@@ -1816,14 +1813,9 @@ unsigned GCNTTIImpl::getNumberOfParts(Type *Tp) const {
 }
 
 ValueUniformity GCNTTIImpl::getValueUniformity(const Value *V) const {
-  if (const IntrinsicInst *Intrinsic = dyn_cast<IntrinsicInst>(V)) {
-    switch (Intrinsic->getIntrinsicID()) {
-    case Intrinsic::amdgcn_wave_shuffle:
-      return ValueUniformity::Custom;
-    default:
-      break;
-    }
-  }
+  if (PatternMatch::match(
+          V, PatternMatch::m_Intrinsic<Intrinsic::amdgcn_wave_shuffle>()))
+    return ValueUniformity::Custom;
 
   if (isAlwaysUniform(V))
     return ValueUniformity::AlwaysUniform;
