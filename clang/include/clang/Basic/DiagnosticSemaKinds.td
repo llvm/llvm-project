@@ -1226,6 +1226,8 @@ def err_pragma_alloc_text_c_linkage: Error<
   "'#pragma alloc_text' is applicable only to functions with C linkage">;
 def err_pragma_alloc_text_not_function: Error<
   "'#pragma alloc_text' is applicable only to functions">;
+def err_pragma_init_seg_bad_func_type: Error<
+  "'#pragma init_seg' function %0 must have type 'int (*)(void (__cdecl *)(void))'">;
 
 def warn_pragma_unused_undeclared_var : Warning<
   "undeclared variable %0 used as an argument for '#pragma unused'">,

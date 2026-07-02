@@ -929,12 +929,42 @@ void Sema::ActOnPragmaMSSection(SourceLocation PragmaLocation,
 }
 
 void Sema::ActOnPragmaMSInitSeg(SourceLocation PragmaLocation,
-                                StringLiteral *SegmentName) {
+                                StringLiteral *SegmentName,
+                                IdentifierLoc *Func) {
   // There's no stack to maintain, so we just have a current section.  When we
   // see the default section, reset our current section back to null so we stop
   // tacking on unnecessary attributes.
-  CurInitSeg = SegmentName->getString() == ".CRT$XCU" ? nullptr : SegmentName;
-  CurInitSegLoc = PragmaLocation;
+  CurInitSeg.Segment =
+      SegmentName->getString() == ".CRT$XCU" ? nullptr : SegmentName;
+  CurInitSeg.PragmaLocation = PragmaLocation;
+  CurInitSeg.Func = nullptr;
+
+  if (Func) {
+    DeclarationNameInfo NameInfo(Func->getIdentifierInfo(), Func->getLoc());
+    LookupResult R(*this, NameInfo, LookupOrdinaryName);
+    LookupName(R, TUScope);
+
+    FunctionDecl *FD = R.getAsSingle<FunctionDecl>();
+    if (!FD) {
+      Diag(Func->getLoc(), diag::err_undeclared_var_use)
+          << Func->getIdentifierInfo();
+      return;
+    }
+
+    // the required type is: int __cdecl myexit (void (__cdecl *pf)(void))
+    QualType FnTy = FD->getType();
+    const auto *Proto = FnTy->getAs<FunctionProtoType>();
+    bool Valid = Proto && Proto->getReturnType()->isIntegerType() &&
+                 Proto->getNumParams() == 1 &&
+                 Proto->getParamType(0)->isFunctionPointerType();
+    if (!Valid) {
+      Diag(Func->getLoc(), diag::err_pragma_init_seg_bad_func_type)
+          << FD->getDeclName();
+      return;
+    }
+
+    CurInitSeg.Func = FD;
+  }
 }
 
 void Sema::ActOnPragmaMSAllocText(

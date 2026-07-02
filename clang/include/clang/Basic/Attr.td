@@ -4585,12 +4585,16 @@ def MSVtorDisp : InheritableAttr {
 
 def InitSeg : Attr {
   let Spellings = [Pragma<"", "init_seg">];
-  let Args = [StringArgument<"Section">];
+  let Args = [StringArgument<"Section">,
+              DeclArgument<Function, "Func", /*optional=*/1>];
   let SemaHandler = 0;
   let Documentation = [InitSegDocs];
   let AdditionalMembers = [{
   void printPrettyPragma(raw_ostream &OS, const PrintingPolicy &Policy) const {
-    OS << " (" << getSection() << ')';
+    OS << " (" << getSection();
+    if (const auto *FD = getFunc())
+      OS << ", " << FD->getName();
+    OS << ')';
   }
   }];
 }

@@ -2108,9 +2108,13 @@ public:
     bool ShouldAct;
   };
 
-  /// Last section used with #pragma init_seg.
-  StringLiteral *CurInitSeg;
-  SourceLocation CurInitSegLoc;
+  /// Used for #pragma init_seg.
+  struct InitSegPragmaState {
+    SourceLocation PragmaLocation;
+    StringLiteral *Segment = nullptr;
+    FunctionDecl *Func = nullptr;
+  };
+  InitSegPragmaState CurInitSeg;
 
   /// Sections used with #pragma alloc_text.
   llvm::StringMap<std::tuple<StringRef, SourceLocation>> FunctionToSectionMap;
@@ -2281,8 +2285,10 @@ public:
                             StringLiteral *SegmentName);
 
   /// Called on well-formed \#pragma init_seg().
+  /// If a function name is provided (", func-name"), it is passed via Func.
   void ActOnPragmaMSInitSeg(SourceLocation PragmaLocation,
-                            StringLiteral *SegmentName);
+                            StringLiteral *SegmentName,
+                            IdentifierLoc *Func = nullptr);
 
   /// Called on well-formed \#pragma alloc_text().
   void ActOnPragmaMSAllocText(
