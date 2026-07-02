@@ -393,23 +393,8 @@ static Value *MakeCpAsync(unsigned IntrinsicID, unsigned IntrinsicIDS,
                                        CGF.EmitScalarExpr(E->getArg(1))});
 }
 
-static bool EnsureNativeHalfSupport(unsigned BuiltinID, const CallExpr *E,
-                                    CodeGenFunction &CGF) {
-  auto &C = CGF.CGM.getContext();
-  if (!C.getLangOpts().NativeHalfType &&
-      C.getTargetInfo().useFP16ConversionIntrinsics()) {
-    CGF.CGM.Error(E->getExprLoc(), C.BuiltinInfo.getQuotedName(BuiltinID) +
-                                       " requires native half type support.");
-    return false;
-  }
-  return true;
-}
-
 static Value *MakeHalfType(Function *Intrinsic, unsigned BuiltinID,
                            const CallExpr *E, CodeGenFunction &CGF) {
-  if (!EnsureNativeHalfSupport(BuiltinID, E, CGF))
-    return nullptr;
-
   SmallVector<Value *, 16> Args;
   auto *FTy = Intrinsic->getFunctionType();
   unsigned ICEArguments = 0;
@@ -1128,13 +1113,10 @@ Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
                                         EmitScalarExpr(E->getArg(0)));
   case NVPTX::BI__nvvm_ldg_h:
   case NVPTX::BI__nvvm_ldg_h2:
-    return EnsureNativeHalfSupport(BuiltinID, E, *this) ? MakeLdg(*this, E)
-                                                        : nullptr;
+    return MakeLdg(*this, E);
   case NVPTX::BI__nvvm_ldu_h:
   case NVPTX::BI__nvvm_ldu_h2:
-    return EnsureNativeHalfSupport(BuiltinID, E, *this)
-               ? MakeLdu(Intrinsic::nvvm_ldu_global_f, *this, E)
-               : nullptr;
+    return MakeLdu(Intrinsic::nvvm_ldu_global_f, *this, E);
   case NVPTX::BI__nvvm_cp_async_ca_shared_global_4:
     return MakeCpAsync(Intrinsic::nvvm_cp_async_ca_shared_global_4,
                        Intrinsic::nvvm_cp_async_ca_shared_global_4_s, *this, E,

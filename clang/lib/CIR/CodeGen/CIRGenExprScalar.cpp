@@ -969,19 +969,10 @@ public:
     if (srcType->isHalfType() &&
         !cgf.getContext().getLangOpts().NativeHalfType) {
       // Cast to FP using the intrinsic if the half type itself isn't supported.
-      if (mlir::isa<cir::FPTypeInterface>(mlirDstType)) {
-        if (cgf.getContext().getTargetInfo().useFP16ConversionIntrinsics())
-          cgf.getCIRGenModule().errorNYI(loc,
-                                         "cast via llvm.convert.from.fp16");
-      } else {
-        // Cast to other types through float, using either the intrinsic or
-        // FPExt, depending on whether the half type itself is supported (as
-        // opposed to operations on half, available with NativeHalfType).
-        if (cgf.getContext().getTargetInfo().useFP16ConversionIntrinsics())
-          cgf.getCIRGenModule().errorNYI(loc,
-                                         "cast via llvm.convert.from.fp16");
-        // FIXME(cir): For now lets pretend we shouldn't use the conversion
-        // intrinsics and insert a cast here unconditionally.
+      if (!mlir::isa<cir::FPTypeInterface>(mlirDstType)) {
+        // Cast to other types through float, using FPExt, depending on whether
+        // the half type itself is supported (as opposed to operations on half,
+        // available with NativeHalfType).
         src = builder.createCast(cgf.getLoc(loc), cir::CastKind::floating, src,
                                  cgf.floatTy);
         srcType = cgf.getContext().FloatTy;
@@ -1039,11 +1030,6 @@ public:
     res = emitScalarCast(src, srcType, dstType, mlirSrcType, mlirDstType, opts);
 
     if (mlirDstType != resTy) {
-      if (cgf.getContext().getTargetInfo().useFP16ConversionIntrinsics()) {
-        cgf.getCIRGenModule().errorNYI(loc, "cast via llvm.convert.to.fp16");
-      }
-      // FIXME(cir): For now we never use FP16 conversion intrinsics even if
-      // required by the target. Change that once this is implemented
       res = builder.createCast(cgf.getLoc(loc), cir::CastKind::floating, res,
                                resTy);
     }

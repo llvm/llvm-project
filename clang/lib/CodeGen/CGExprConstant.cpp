@@ -2598,16 +2598,8 @@ ConstantEmitter::tryEmitPrivate(const APValue &Value, QualType DestType,
         llvm::StructType::get(Complex[0]->getType(), Complex[1]->getType());
     return llvm::ConstantStruct::get(STy, Complex);
   }
-  case APValue::Float: {
-    const llvm::APFloat &Init = Value.getFloat();
-    if (&Init.getSemantics() == &llvm::APFloat::IEEEhalf() &&
-        !CGM.getContext().getLangOpts().NativeHalfType &&
-        CGM.getContext().getTargetInfo().useFP16ConversionIntrinsics())
-      return llvm::ConstantInt::get(CGM.getLLVMContext(),
-                                    Init.bitcastToAPInt());
-    else
-      return llvm::ConstantFP::get(CGM.getLLVMContext(), Init);
-  }
+  case APValue::Float:
+    return llvm::ConstantFP::get(CGM.getLLVMContext(), Value.getFloat());
   case APValue::ComplexFloat: {
     llvm::Constant *Complex[2];
 

@@ -173,10 +173,6 @@ protected:
   }
 
 public:
-  // SPIR supports the half type and the only llvm intrinsic allowed in SPIR is
-  // memcpy as per section 3 of the SPIR spec.
-  bool useFP16ConversionIntrinsics() const override { return false; }
-
   llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const override {
     return {};
   }
