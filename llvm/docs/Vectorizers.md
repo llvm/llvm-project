@@ -1,12 +1,11 @@
-==========================
-Auto-Vectorization in LLVM
-==========================
+# Auto-Vectorization in LLVM
 
-.. contents::
-   :local:
+```{contents}
+:local:
+```
 
-LLVM has two vectorizers: The :ref:`Loop Vectorizer <loop-vectorizer>`,
-which operates on Loops, and the :ref:`SLP Vectorizer
+LLVM has two vectorizers: The {ref}`Loop Vectorizer <loop-vectorizer>`,
+which operates on Loops, and the {ref}`SLP Vectorizer
 <slp-vectorizer>`. These vectorizers
 focus on different optimization opportunities and use different techniques.
 The SLP vectorizer merges multiple scalars that are found in the code into
@@ -15,23 +14,20 @@ to operate on multiple consecutive iterations.
 
 Both the Loop Vectorizer and the SLP Vectorizer are enabled by default.
 
-.. _loop-vectorizer:
+(loop-vectorizer)=
 
-The Loop Vectorizer
-===================
+## The Loop Vectorizer
 
-Usage
------
+### Usage
 
 The Loop Vectorizer is enabled by default, but it can be disabled
 through clang using the command line flag:
 
-.. code-block:: console
+```console
+$ clang ... -fno-vectorize  file.c
+```
 
-   $ clang ... -fno-vectorize  file.c
-
-Command line flags
-^^^^^^^^^^^^^^^^^^
+#### Command line flags
 
 The loop vectorizer uses a cost model to decide on the optimal vectorization factor
 and unroll factor. However, users of the vectorizer can force the vectorizer to use
@@ -39,52 +35,49 @@ specific values. Both 'clang' and 'opt' support the flags below.
 
 Users can control the vectorization SIMD width using the command line flag "-force-vector-width".
 
-.. code-block:: console
-
-  $ clang  -mllvm -force-vector-width=8 ...
-  $ opt -loop-vectorize -force-vector-width=8 ...
+```console
+$ clang  -mllvm -force-vector-width=8 ...
+$ opt -loop-vectorize -force-vector-width=8 ...
+```
 
 Users can control the unroll factor using the command line flag "-force-vector-interleave"
 
-.. code-block:: console
+```console
+$ clang  -mllvm -force-vector-interleave=2 ...
+$ opt -loop-vectorize -force-vector-interleave=2 ...
+```
 
-  $ clang  -mllvm -force-vector-interleave=2 ...
-  $ opt -loop-vectorize -force-vector-interleave=2 ...
+#### Pragma loop hint directives
 
-Pragma loop hint directives
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-The ``#pragma clang loop`` directive allows loop vectorization hints to be
+The `#pragma clang loop` directive allows loop vectorization hints to be
 specified for the subsequent for, while, do-while, or c++11 range-based for
 loop. The directive allows vectorization and interleaving to be enabled or
 disabled. Vector width as well as interleave count can also be manually
 specified. The following example explicitly enables vectorization and
 interleaving:
 
-.. code-block:: c++
-
-  #pragma clang loop vectorize(enable) interleave(enable)
-  while(...) {
-    ...
-  }
+```c++
+#pragma clang loop vectorize(enable) interleave(enable)
+while(...) {
+  ...
+}
+```
 
 The following example implicitly enables vectorization and interleaving by
 specifying a vector width and interleaving count:
 
-.. code-block:: c++
-
-  #pragma clang loop vectorize_width(2) interleave_count(2)
-  for(...) {
-    ...
-  }
+```c++
+#pragma clang loop vectorize_width(2) interleave_count(2)
+for(...) {
+  ...
+}
+```
 
 See the Clang
-`language extensions
-<https://clang.llvm.org/docs/LanguageExtensions.html#extensions-for-loop-hint-optimizations>`_
+[language extensions](https://clang.llvm.org/docs/LanguageExtensions.html#extensions-for-loop-hint-optimizations)
 for details.
 
-Diagnostics
------------
+### Diagnostics
 
 Many loops cannot be vectorized including loops with complicated control flow,
 unvectorizable types, and unvectorizable calls. The loop vectorizer generates
@@ -93,74 +86,70 @@ and diagnose loops that are skipped by the loop-vectorizer.
 
 Optimization remarks are enabled using:
 
-``-Rpass=loop-vectorize`` identifies loops that were successfully vectorized.
+`-Rpass=loop-vectorize` identifies loops that were successfully vectorized.
 
-``-Rpass-missed=loop-vectorize`` identifies loops that failed vectorization and
+`-Rpass-missed=loop-vectorize` identifies loops that failed vectorization and
 indicates if vectorization was specified.
 
-``-Rpass-analysis=loop-vectorize`` identifies the statements that caused
-vectorization to fail. If in addition ``-fsave-optimization-record`` is
+`-Rpass-analysis=loop-vectorize` identifies the statements that caused
+vectorization to fail. If in addition `-fsave-optimization-record` is
 provided, multiple causes of vectorization failure may be listed (this behavior
 might change in the future).
 
 Consider the following loop:
 
-.. code-block:: c++
-
-  #pragma clang loop vectorize(enable)
-  for (int i = 0; i < Length; i++) {
-    switch(A[i]) {
-    case 0: A[i] = i*2; break;
-    case 1: A[i] = i;   break;
-    default: A[i] = 0;
-    }
+```c++
+#pragma clang loop vectorize(enable)
+for (int i = 0; i < Length; i++) {
+  switch(A[i]) {
+  case 0: A[i] = i*2; break;
+  case 1: A[i] = i;   break;
+  default: A[i] = 0;
   }
+}
+```
 
-The command line ``-Rpass-missed=loop-vectorize`` prints the remark:
+The command line `-Rpass-missed=loop-vectorize` prints the remark:
 
-.. code-block:: console
+```console
+no_switch.cpp:4:5: remark: loop not vectorized: vectorization is explicitly enabled [-Rpass-missed=loop-vectorize]
+```
 
-  no_switch.cpp:4:5: remark: loop not vectorized: vectorization is explicitly enabled [-Rpass-missed=loop-vectorize]
-
-And the command line ``-Rpass-analysis=loop-vectorize`` indicates that the
+And the command line `-Rpass-analysis=loop-vectorize` indicates that the
 switch statement cannot be vectorized.
 
-.. code-block:: console
-
-  no_switch.cpp:4:5: remark: loop not vectorized: loop contains a switch statement [-Rpass-analysis=loop-vectorize]
-    switch(A[i]) {
-    ^
+```console
+no_switch.cpp:4:5: remark: loop not vectorized: loop contains a switch statement [-Rpass-analysis=loop-vectorize]
+  switch(A[i]) {
+  ^
+```
 
 To ensure line and column numbers are produced include the command line options
-``-gline-tables-only`` and ``-gcolumn-info``. See the Clang `user manual
-<https://clang.llvm.org/docs/UsersManual.html#options-to-emit-optimization-reports>`_
+`-gline-tables-only` and `-gcolumn-info`. See the Clang [user manual](https://clang.llvm.org/docs/UsersManual.html#options-to-emit-optimization-reports)
 for details
 
-Features
---------
+### Features
 
 The LLVM Loop Vectorizer has a number of features that allow it to vectorize
 complex loops.
 
-Loops with unknown trip count
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+#### Loops with unknown trip count
 
 The Loop Vectorizer supports loops with an unknown trip count.
-In the loop below, the iteration ``start`` and ``finish`` points are unknown,
+In the loop below, the iteration `start` and `finish` points are unknown,
 and the Loop Vectorizer has a mechanism to vectorize loops that do not start
 at zero. In this example, 'n' may not be a multiple of the vector width, and
 the vectorizer has to execute the last few iterations as scalar code. Keeping
 a scalar copy of the loop increases the code size.
 
-.. code-block:: c++
+```c++
+void bar(float *A, float* B, float K, int start, int end) {
+  for (int i = start; i < end; ++i)
+    A[i] *= B[i] + K;
+}
+```
 
-  void bar(float *A, float* B, float K, int start, int end) {
-    for (int i = start; i < end; ++i)
-      A[i] *= B[i] + K;
-  }
-
-Runtime Checks of Pointers
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+#### Runtime Checks of Pointers
 
 In the example below, if the pointers A and B point to consecutive addresses,
 then it is illegal to vectorize the code because some elements of A will be
@@ -173,32 +162,30 @@ loop by placing code that checks, at runtime, if the arrays A and B point to
 disjointed memory locations. If arrays A and B overlap, then the scalar version
 of the loop is executed.
 
-.. code-block:: c++
+```c++
+void bar(float *A, float* B, float K, int n) {
+  for (int i = 0; i < n; ++i)
+    A[i] *= B[i] + K;
+}
+```
 
-  void bar(float *A, float* B, float K, int n) {
-    for (int i = 0; i < n; ++i)
-      A[i] *= B[i] + K;
-  }
+#### Reductions
 
-
-Reductions
-^^^^^^^^^^
-
-In this example the ``sum`` variable is used by consecutive iterations of
+In this example the `sum` variable is used by consecutive iterations of
 the loop. Normally, this would prevent vectorization, but the vectorizer can
 detect that 'sum' is a reduction variable. The variable 'sum' becomes a vector
 of integers, and at the end of the loop the elements of the array are added
 together to create the correct result. We support a number of different
 reduction operations, such as addition, multiplication, XOR, AND and OR.
 
-.. code-block:: c++
-
-  int foo(int *A, int n) {
-    unsigned sum = 0;
-    for (int i = 0; i < n; ++i)
-      sum += A[i] + 5;
-    return sum;
-  }
+```c++
+int foo(int *A, int n) {
+  unsigned sum = 0;
+  for (int i = 0; i < n; ++i)
+    sum += A[i] + 5;
+  return sum;
+}
+```
 
 Fully vectorizing reductions requires reordering operations, which is
 problematic for floating-point arithmetic because it is not associative;
@@ -214,95 +201,88 @@ ordered reductions are typically less efficient than traditionally vectorized
 reductions, therefore enabling floating-point reordering may still result in
 more performant reductions on these targets.
 
-Inductions
-^^^^^^^^^^
+#### Inductions
 
-In this example the value of the induction variable ``i`` is saved into an
+In this example the value of the induction variable `i` is saved into an
 array. The Loop Vectorizer knows to vectorize induction variables.
 
-.. code-block:: c++
+```c++
+void bar(float *A, int n) {
+  for (int i = 0; i < n; ++i)
+    A[i] = i;
+}
+```
 
-  void bar(float *A, int n) {
-    for (int i = 0; i < n; ++i)
-      A[i] = i;
-  }
-
-If Conversion
-^^^^^^^^^^^^^
+#### If Conversion
 
 The Loop Vectorizer is able to "flatten" the IF statement in the code and
 generate a single stream of instructions. The Loop Vectorizer supports any
 control flow in the innermost loop. The innermost loop may contain complex
 nesting of IFs, ELSEs and even GOTOs.
 
-.. code-block:: c++
+```c++
+int foo(int *A, int *B, int n) {
+  unsigned sum = 0;
+  for (int i = 0; i < n; ++i)
+    if (A[i] > B[i])
+      sum += A[i] + 5;
+  return sum;
+}
+```
 
-  int foo(int *A, int *B, int n) {
-    unsigned sum = 0;
-    for (int i = 0; i < n; ++i)
-      if (A[i] > B[i])
-        sum += A[i] + 5;
-    return sum;
-  }
-
-Pointer Induction Variables
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
+#### Pointer Induction Variables
 
 This example uses the "accumulate" function of the standard c++ library. This
 loop uses C++ iterators, which are pointers, and not integer indices.
 The Loop Vectorizer detects pointer induction variables and can vectorize
 this loop. This feature is important because many C++ programs use iterators.
 
-.. code-block:: c++
+```c++
+int baz(int *A, int n) {
+  return std::accumulate(A, A + n, 0);
+}
+```
 
-  int baz(int *A, int n) {
-    return std::accumulate(A, A + n, 0);
-  }
-
-Reverse Iterators
-^^^^^^^^^^^^^^^^^
+#### Reverse Iterators
 
 The Loop Vectorizer can vectorize loops that count backwards.
 
-.. code-block:: c++
+```c++
+void foo(int *A, int n) {
+  for (int i = n; i > 0; --i)
+    A[i] +=1;
+}
+```
 
-  void foo(int *A, int n) {
-    for (int i = n; i > 0; --i)
-      A[i] +=1;
-  }
-
-Scatter / Gather
-^^^^^^^^^^^^^^^^
+#### Scatter / Gather
 
 The Loop Vectorizer can vectorize code that becomes a sequence of scalar instructions
 that scatter/gathers memory.
 
-.. code-block:: c++
-
-  void foo(int * A, int * B, int n) {
-    for (intptr_t i = 0; i < n; ++i)
-        A[i] += B[i * 4];
-  }
+```c++
+void foo(int * A, int * B, int n) {
+  for (intptr_t i = 0; i < n; ++i)
+      A[i] += B[i * 4];
+}
+```
 
 In many situations the cost model will inform LLVM that this is not beneficial
 and LLVM will only vectorize such code if forced with "-mllvm -force-vector-width=#".
 
-Vectorization of Mixed Types
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+#### Vectorization of Mixed Types
 
 The Loop Vectorizer can vectorize programs with mixed types. The Vectorizer
 cost model can estimate the cost of the type conversion and decide if
 vectorization is profitable.
 
-.. code-block:: c++
+```c++
+void foo(int *A, char *B, int n) {
+  for (int i = 0; i < n; ++i)
+    A[i] += 4 * B[i];
+}
+```
 
-  void foo(int *A, char *B, int n) {
-    for (int i = 0; i < n; ++i)
-      A[i] += 4 * B[i];
-  }
-
-Global Structures Alias Analysis
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+#### Global Structures Alias Analysis
 
 Access to global structures can also be vectorized, with alias analysis being
 used to make sure accesses don't alias. Run-time checks can also be added on
@@ -311,34 +291,42 @@ pointer access to structure members.
 Many variations are supported, but some that rely on undefined behaviour being
 ignored (as other compilers do) are still being left un-vectorized.
 
-.. code-block:: c++
+```c++
+struct { int A[100], K, B[100]; } Foo;
 
-  struct { int A[100], K, B[100]; } Foo;
+void foo() {
+  for (int i = 0; i < 100; ++i)
+    Foo.A[i] = Foo.B[i] + 100;
+}
+```
 
-  void foo() {
-    for (int i = 0; i < 100; ++i)
-      Foo.A[i] = Foo.B[i] + 100;
-  }
-
-Vectorization of function calls
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+#### Vectorization of function calls
 
 The Loop Vectorizer can vectorize intrinsic math functions.
 See the table below for a list of these functions.
 
-+-----+-----+---------+
-| pow | exp |  exp2   |
-+-----+-----+---------+
-| sin | cos |  sqrt   |
-+-----+-----+---------+
-| log |log2 |  log10  |
-+-----+-----+---------+
-|fabs |floor|  ceil   |
-+-----+-----+---------+
-|fma  |trunc|nearbyint|
-+-----+-----+---------+
-|     |     | fmuladd |
-+-----+-----+---------+
+```{list-table}
+:header-rows: 0
+
+* - pow
+  - exp
+  - exp2
+* - sin
+  - cos
+  - sqrt
+* - log
+  - log2
+  - log10
+* - fabs
+  - floor
+  - ceil
+* - fma
+  - trunc
+  - nearbyint
+* -
+  -
+  - fmuladd
+```
 
 Note that the optimizer may not be able to vectorize math library functions
 that correspond to these intrinsics if the library calls access external state
@@ -350,12 +338,12 @@ vectorize a loop containing a function call that maps to the instructions. For
 example, the loop below will be vectorized on Intel x86 if the SSE4.1 roundps
 instruction is available.
 
-.. code-block:: c++
-
-  void foo(float *f) {
-    for (int i = 0; i != 1024; ++i)
-      f[i] = floorf(f[i]);
-  }
+```c++
+void foo(float *f) {
+  for (int i = 0; i != 1024; ++i)
+    f[i] = floorf(f[i]);
+}
+```
 
 Many of these math functions are only vectorizable if the file has been built
 with a specified target vector library that provides a vector implementation
@@ -363,12 +351,11 @@ of that math function. Using clang, this is handled by the "-fveclib" command
 line option with one of the following vector libraries:
 "Accelerate,libmvec,MASSV,SVML,SLEEF,Darwin_libsystem_m,ArmPL,AMDLIBM"
 
-.. code-block:: console
+```console
+$ clang ... -fno-math-errno -fveclib=libmvec file.c
+```
 
-   $ clang ... -fno-math-errno -fveclib=libmvec file.c
-
-Partial unrolling during vectorization
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+#### Partial unrolling during vectorization
 
 Modern processors feature multiple execution units, and only programs that contain a
 high degree of parallelism can fully utilize the entire width of the machine.
@@ -380,20 +367,19 @@ This is inefficient because only a single execution port can be used by the proc
 By unrolling the code the Loop Vectorizer allows two or more execution ports
 to be used simultaneously.
 
-.. code-block:: c++
-
-  int foo(int *A, int n) {
-    unsigned sum = 0;
-    for (int i = 0; i < n; ++i)
-        sum += A[i];
-    return sum;
-  }
+```c++
+int foo(int *A, int n) {
+  unsigned sum = 0;
+  for (int i = 0; i < n; ++i)
+      sum += A[i];
+  return sum;
+}
+```
 
 The Loop Vectorizer uses a cost model to decide when it is profitable to unroll loops.
 The decision to unroll the loop depends on the register pressure and the generated code size.
 
-Epilogue Vectorization
-^^^^^^^^^^^^^^^^^^^^^^
+#### Epilogue Vectorization
 
 When vectorizing a loop, often a scalar remainder (epilogue) loop is necessary
 to execute tail iterations of the loop if the loop trip count is unknown or it
@@ -409,67 +395,67 @@ illustrated the control flow is structured in a way that avoids duplicating the
 runtime pointer checks and optimizes the path length for loops that have very
 small trip counts.
 
-.. image:: epilogue-vectorization-cfg.png
+```{image} epilogue-vectorization-cfg.png
+```
 
-Early Exit Vectorization
-^^^^^^^^^^^^^^^^^^^^^^^^
+#### Early Exit Vectorization
 
 When vectorizing a loop with a single early exit, the loop blocks following the
 early exit are predicated and the vector loop will always exit via the latch.
 The loop terminates with a single BranchOnTwoConds VPInstruction, which takes
 both the early and latch exiting conditions. If the early exiting condition is
-true, BranchOnTwoConds exits to an intermediate block (``vector.early.exit``
+true, BranchOnTwoConds exits to an intermediate block (`vector.early.exit`
 below). This intermediate block is responsible for calculating any exit values
 of loop-defined variables that are used in the early exit block. If the latch
-exiting condition is true, BranchOnTwoConds exits to the ``middle.block`` which
+exiting condition is true, BranchOnTwoConds exits to the `middle.block` which
 selects between the exit block and the scalar remainder loop. Otherwise
 BranchOnTwoConds continues executing the loop by jumping back to the region
 header.
 
-.. image:: vplan-early-exit.png
+```{image} vplan-early-exit.png
+```
 
 BranchOnTwoConds is lowered to a chain of conditional branches exiting
 the vector loop after dissolving loop regions:
 
-.. image:: vplan-early-exit-lowered.png
+```{image} vplan-early-exit-lowered.png
+```
 
-
-
-Performance
------------
+### Performance
 
 This section shows the execution time of Clang on a simple benchmark:
-`gcc-loops <https://github.com/llvm/llvm-test-suite/tree/main/SingleSource/UnitTests/Vectorizer>`_.
+[gcc-loops](https://github.com/llvm/llvm-test-suite/tree/main/SingleSource/UnitTests/Vectorizer).
 This benchmarks is a collection of loops from the GCC autovectorization
-`page <http://gcc.gnu.org/projects/tree-ssa/vectorization.html>`_ by Dorit Nuzman.
+[page](http://gcc.gnu.org/projects/tree-ssa/vectorization.html) by Dorit Nuzman.
 
 The chart below compares GCC-4.7, ICC-13, and Clang-SVN with and without loop vectorization at -O3, tuned for "corei7-avx", running on a Sandybridge iMac.
 The Y-axis shows the time in msec. Lower is better. The last column shows the geomean of all the kernels.
 
-.. image:: gcc-loops.png
+```{image} gcc-loops.png
+```
 
 And Linpack-pc with the same configuration. Result is Mflops, higher is better.
 
-.. image:: linpack-pc.png
+```{image} linpack-pc.png
+```
 
-Ongoing Development Directions
-------------------------------
+### Ongoing Development Directions
 
-.. toctree::
-   :hidden:
+```{toctree}
+:hidden: true
 
-   VectorizationPlan
+VectorizationPlan
+```
 
-:doc:`VectorizationPlan`
-   Modeling the process and upgrading the infrastructure of LLVM's Loop Vectorizer.
+{doc}`VectorizationPlan`
 
-.. _slp-vectorizer:
+: Modeling the process and upgrading the infrastructure of LLVM's Loop Vectorizer.
 
-The SLP Vectorizer
-==================
+(slp-vectorizer)=
 
-Details
--------
+## The SLP Vectorizer
+
+### Details
 
 The goal of SLP vectorization (a.k.a. superword-level parallelism) is
 to combine similar independent instructions
@@ -480,32 +466,32 @@ For example, the following function performs very similar operations on its
 inputs (a1, b1) and (a2, b2). The basic-block vectorizer may combine these
 into vector operations.
 
-.. code-block:: c++
-
-  void foo(int a1, int a2, int b1, int b2, int *A) {
-    A[0] = a1*(a1 + b1);
-    A[1] = a2*(a2 + b2);
-    A[2] = a1*(a1 + b1);
-    A[3] = a2*(a2 + b2);
-  }
+```c++
+void foo(int a1, int a2, int b1, int b2, int *A) {
+  A[0] = a1*(a1 + b1);
+  A[1] = a2*(a2 + b2);
+  A[2] = a1*(a1 + b1);
+  A[3] = a2*(a2 + b2);
+}
+```
 
 The SLP-vectorizer processes the code bottom-up, across basic blocks, in search of scalars to combine.
 
-Usage
-------
+### Usage
 
 The SLP Vectorizer is enabled by default, but it can be disabled
 through clang using the command line flag:
 
-.. code-block:: console
+```console
+$ clang -fno-slp-vectorize file.c
+```
 
-   $ clang -fno-slp-vectorize file.c
+## The Sandbox Vectorizer
 
-The Sandbox Vectorizer
-======================
-.. toctree::
-   :hidden:
+```{toctree}
+:hidden: true
 
-   SandboxVectorizer
+SandboxVectorizer
+```
 
-The :doc:`Sandbox Vectorizer <SandboxVectorizer>` is an experimental framework for building modular vectorization pipelines on top of :doc:`Sandbox IR <SandboxIR>`, with a focus on ease of testing and ease of development.
+The {doc}`Sandbox Vectorizer <SandboxVectorizer>` is an experimental framework for building modular vectorization pipelines on top of {doc}`Sandbox IR <SandboxIR>`, with a focus on ease of testing and ease of development.

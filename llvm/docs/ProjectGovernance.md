@@ -1,16 +1,12 @@
-==================
-Project Governance
-==================
+# Project Governance
 
-.. contents::
-   :local:
+```{contents}
+:local:
+```
 
+## Area Teams
 
-Area Teams
-==========
-
-Role and Responsibilities
--------------------------
+### Role and Responsibilities
 
 *Area teams* have three main responsibilities.
 
@@ -58,8 +54,7 @@ their areas, although individuals on an *area team* may fulfill that role
 separately. The area team's role is as a steward and moderator ensuring the
 health and smooth operation of the area.
 
-Elections and Composition
--------------------------
+### Elections and Composition
 
 To be a *voting contributor* an individual must be a member of the LLVM GitHub
 Organization, and either have a public email address on their GitHub profile or
@@ -102,8 +97,7 @@ of the newly elected area team begins the first Monday in March. Each area team
 will meet during the first week in March to elect from themselves the team
 secretary and chair to re-constitute the project council.
 
-Vacancies
----------
+### Vacancies
 
 A member of an *area team* can resign at any time. As life can sometimes happen
 unexpectedly, a member of an *area team* may be unable to fulfill their duties or
@@ -114,34 +108,30 @@ If someone resigns or is otherwise removed from an *area team*, the remaining
 members of the *area team* may appoint a replacement to serve the remainder of
 the term through any process they choose.
 
-Active Area Teams
------------------
+### Active Area Teams
 
 There are currently four *area teams*:
 
-* **LLVM** - Covering ``llvm`` source area.
-* **Clang** - Covering ``clang`` source area.
-* **MLIR** - Covering ``mlir`` source area.
-* **Infrastructure** - Covering project-wide automation and other infrastructure.
+- **LLVM** - Covering `llvm` source area.
+- **Clang** - Covering `clang` source area.
+- **MLIR** - Covering `mlir` source area.
+- **Infrastructure** - Covering project-wide automation and other infrastructure.
 
+## Project Council
 
-Project Council
-===============
-
-Role and Responsibilities
--------------------------
+### Role and Responsibilities
 
 The *project council* is composed of the chair from each of the *area teams*.
 
 The *project council* has a mandate to:
 
-* Prioritize the long term health of the LLVM project and community.
-* Shape the community to be accessible, inclusive, and sustainable.
-* Maintain the relationship between the LLVM Community and the LLVM Foundation.
-* Assist *area teams* in identifying and growing community leaders.
-* Facilitate seeking consensus among the LLVM Community and *area teams*.
-* Act as, or delegate to, an *area team* for all issues that are not covered by an area team, or span across multiple project areas.
-* As a last resort, act as the final decision maker on debates.
+- Prioritize the long term health of the LLVM project and community.
+- Shape the community to be accessible, inclusive, and sustainable.
+- Maintain the relationship between the LLVM Community and the LLVM Foundation.
+- Assist *area teams* in identifying and growing community leaders.
+- Facilitate seeking consensus among the LLVM Community and *area teams*.
+- Act as, or delegate to, an *area team* for all issues that are not covered by an area team, or span across multiple project areas.
+- As a last resort, act as the final decision maker on debates.
 
 The *project council* will elect from among themselves a secretary who will
 take notes of all meetings, a chair who facilitates meetings, and a liaison to
@@ -160,9 +150,7 @@ Dissolving an area team, or altering the boundaries of an *area team* requires
 a consenting vote of the chair of the area team(s) being altered and a majority
 vote of the *project council*.
 
-
-Governance Meetings
-===================
+## Governance Meetings
 
 Each *area team* and the *project council* should have scheduled public
 meetings. The date of the scheduled meetings should be on the LLVM Community
@@ -175,88 +163,84 @@ Notes from all *area team* and *project council* meetings will be publicly
 posted. Notes will exclude reference to any private information, or information
 that otherwise needs to be confidential.
 
+## Current Composition (2026)
 
-Current Composition (2026)
-==========================
+### Project Council
 
-Project Council
----------------
+- **Chair:** Aaron Ballman (@AaronBallman) - representing Clang
 
-* **Chair:** Aaron Ballman (@AaronBallman) - representing Clang
-* **Secretary:** Alex Zinenko (@ftynse) - representing MLIR
-* **Members:**
+- **Secretary:** Alex Zinenko (@ftynse) - representing MLIR
 
-  * Nikita Popov (@nikic) - representing LLVM
-  * Reid Kleckner (@rnk) - representing Infrastructure
+- **Members:**
 
-Area Teams
-----------
+  - Nikita Popov (@nikic) - representing LLVM
+  - Reid Kleckner (@rnk) - representing Infrastructure
 
-* **LLVM Area Team**
+### Area Teams
 
-  * Nikita Popov (**Chair**)
-  * Matt Arsenault
-  * Florian Hahn
+- **LLVM Area Team**
 
-* **Clang Area Team**
+  - Nikita Popov (**Chair**)
+  - Matt Arsenault
+  - Florian Hahn
 
-  * Aaron Ballman (**Chair**)
-  * Eli Friedman
-  * Erich Keane
-  * Corentin Jabot
-  * Shafik Yaghmour
+- **Clang Area Team**
 
-* **MLIR Area Team**
+  - Aaron Ballman (**Chair**)
+  - Eli Friedman
+  - Erich Keane
+  - Corentin Jabot
+  - Shafik Yaghmour
 
-  * Alex Zinenko (**Chair**)
-  * Renato Golin
-  * Matthias Springer
+- **MLIR Area Team**
 
-* **Infrastructure Area Team**
+  - Alex Zinenko (**Chair**)
+  - Renato Golin
+  - Matthias Springer
 
-  * Reid Kleckner (**Chair**)
-  * Petr Hosek
-  * David Blaikie
+- **Infrastructure Area Team**
 
-Next Election Cycle
--------------------
+  - Reid Kleckner (**Chair**)
+  - Petr Hosek
+  - David Blaikie
 
-* **January 11, 2027:** Nominations begin.
-* **January 25, 2027:** Nominations close and voting begins.
-* **February 8, 2027:** Voting closes.
-* **February 10, 2027:** Election results announced no later than this date.
-* **March 1, 2027:** New area team terms begin.
-* **March 1-5, 2027:** Area teams meet to elect chairs and secretaries.
+### Next Election Cycle
 
-Meetings and Contact Information
-================================
+- **January 11, 2027:** Nominations begin.
+- **January 25, 2027:** Nominations close and voting begins.
+- **February 8, 2027:** Voting closes.
+- **February 10, 2027:** Election results announced no later than this date.
+- **March 1, 2027:** New area team terms begin.
+- **March 1-5, 2027:** Area teams meet to elect chairs and secretaries.
 
-Project Council
----------------
-* **Meetings:** First Wednesday of each month at 9:00 AM PT / 4:00 PM UTC / 6:00 PM CET.
-* **Contact:** Tag `@project-council` on `LLVM Discourse <https://discourse.llvm.org/>`_.
+## Meetings and Contact Information
 
-Area Teams
-----------
+### Project Council
 
-* **LLVM Area Team**
+- **Meetings:** First Wednesday of each month at 9:00 AM PT / 4:00 PM UTC / 6:00 PM CET.
+- **Contact:** Tag `@project-council` on [LLVM Discourse](https://discourse.llvm.org/).
 
-  * **Meetings:** Bi-weekly on Wednesdays at 16:00-17:00 CET.
-  * **Contact:** Tag `@llvm-area-team` on `LLVM Discourse <https://discourse.llvm.org/>`_.
+### Area Teams
 
-* **Clang Area Team**
+- **LLVM Area Team**
 
-  * **Meetings:** Closed administrative meeting bi-weekly on Thursdays at 10:00 AM PT. Open meetings are scheduled flexibly.
-  * **Contact:** Tag `@clang-area-team` on `LLVM Discourse <https://discourse.llvm.org/>`_.
+  - **Meetings:** Bi-weekly on Wednesdays at 16:00-17:00 CET.
+  - **Contact:** Tag `@llvm-area-team` on [LLVM Discourse](https://discourse.llvm.org/).
 
-* **MLIR Area Team**
+- **Clang Area Team**
 
-  * **Meetings:** Announced on Discourse (not regularly scheduled at a fixed interval).
-  * **Contact:** Tag `@mlir-area-team` on `LLVM Discourse <https://discourse.llvm.org/>`_.
+  - **Meetings:** Closed administrative meeting bi-weekly on Thursdays at 10:00 AM PT. Open meetings are scheduled flexibly.
+  - **Contact:** Tag `@clang-area-team` on [LLVM Discourse](https://discourse.llvm.org/).
 
-* **Infrastructure Area Team**
+- **MLIR Area Team**
 
-  * **Meetings:** Bi-weekly on Thursdays at 9:30 AM PT.
-  * **Contact:** Tag `@infrastructure-area-team` on `LLVM Discourse <https://discourse.llvm.org/>`_.
+  - **Meetings:** Announced on Discourse (not regularly scheduled at a fixed interval).
+  - **Contact:** Tag `@mlir-area-team` on [LLVM Discourse](https://discourse.llvm.org/).
 
-All meetings are listed on the `LLVM Community Calendar <https://calendar.google.com/calendar/u/0/embed?src=calendar@llvm.org>`_.
+- **Infrastructure Area Team**
+
+  - **Meetings:** Bi-weekly on Thursdays at 9:30 AM PT.
+  - **Contact:** Tag `@infrastructure-area-team` on [LLVM Discourse](https://discourse.llvm.org/).
+
+All meetings are listed on the [LLVM Community Calendar](https://calendar.google.com/calendar/u/0/embed?src=calendar@llvm.org).
+
