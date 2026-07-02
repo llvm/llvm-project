@@ -1082,6 +1082,16 @@ static SDValue accumulateOffset(SDValue &Addr, SDLoc DL, SelectionDAG *DAG) {
     if (!(CI + AccumulatedOffset).isSignedIntN(32))
       break;
 
+    // Using indexed [reg+offset] addressing mode may eliminate the intermediate
+    // Value holding (reg + offset), causing DWARF for the corresponding
+    // source-level variable to be dropped. When debug info is being preserved
+    // (-O0), skip folding the constant offset into the addressing mode if the
+    // address computation has an associated debug value, so the intermediate
+    // register (and its DW_AT_location) survives.
+    if (DAG->getOptLevel() == CodeGenOptLevel::None &&
+        Addr.getNode()->getHasDebugValue())
+      break;
+
     AccumulatedOffset += CI;
     Addr = stripAssertAlign(Addr->getOperand(0));
   }
