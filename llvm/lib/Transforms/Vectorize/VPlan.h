@@ -4237,21 +4237,11 @@ class LLVM_ABI_FOR_TEST VPScalarIVStepsRecipe : public VPRecipeWithIRFlags {
 
 public:
   VPScalarIVStepsRecipe(VPValue *IV, VPValue *Step, VPValue *VF,
-                        Instruction::BinaryOps Opcode, FastMathFlags FMFs,
-                        DebugLoc DL)
+                        Instruction::BinaryOps Opcode, FastMathFlags FMFs = {},
+                        DebugLoc DL = DebugLoc::getUnknown())
       : VPRecipeWithIRFlags(VPRecipeBase::VPScalarIVStepsSC, {IV, Step, VF},
                             IV->getScalarType(), FMFs, DL),
         InductionOpcode(Opcode) {}
-
-  VPScalarIVStepsRecipe(const InductionDescriptor &IndDesc, VPValue *IV,
-                        VPValue *Step, VPValue *VF,
-                        DebugLoc DL = DebugLoc::getUnknown())
-      : VPScalarIVStepsRecipe(
-            IV, Step, VF, IndDesc.getInductionOpcode(),
-            dyn_cast_or_null<FPMathOperator>(IndDesc.getInductionBinOp())
-                ? IndDesc.getInductionBinOp()->getFastMathFlags()
-                : FastMathFlags(),
-            DL) {}
 
   ~VPScalarIVStepsRecipe() override = default;
 
