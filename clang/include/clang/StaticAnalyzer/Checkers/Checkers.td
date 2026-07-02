@@ -795,9 +795,15 @@ def SmartPtrChecker: Checker<"SmartPtr">,
   Dependencies<[SmartPtrModeling]>,
   Documentation<HasDocumentation>;
 
+def LifetimeModeling : Checker<"LifetimeModeling">,
+  HelpText<"Model [[clang::lifetimebound]] annotations for lifetime analysis">,
+  Documentation<NotDocumented>,
+  Hidden;
+
 def UseAfterLifetimeEnd : Checker<"UseAfterLifetimeEnd">,
   HelpText<"Check for uses of references or pointers that "
            "outlive their bound object">,
+  Dependencies<[LifetimeModeling]>,
   Documentation<NotDocumented>;
 
 } // end: "alpha.cplusplus"
@@ -1588,10 +1594,10 @@ def CheckerDocumentationChecker : Checker<"CheckerDocumentation">,
   HelpText<"Defines an empty checker callback for all possible handlers.">,
   Documentation<NotDocumented>;
 
-def DebugUseAfterLifetimeEnd : Checker<"DebugUseAfterLifetimeEnd">,
-  HelpText<"Prints the bindings recorded by the UseAfterLifetimeEnd checker. "
+def DebugLifetimeModeling : Checker<"DebugLifetimeModeling">,
+  HelpText<"Prints the bindings recorded by the LifetimeModeling checker. "
            "Use with clang_analyzer_dumpLifetimeOriginsOf().">,
-  WeakDependencies<[UseAfterLifetimeEnd]>,
+  Dependencies<[LifetimeModeling]>,
   Documentation<NotDocumented>;
 
 } // end "debug"
