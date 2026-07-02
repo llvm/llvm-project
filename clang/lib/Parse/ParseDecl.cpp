@@ -564,6 +564,9 @@ unsigned Parser::ParseAttributeArgsCommon(
               nullptr,
               Sema::ExpressionEvaluationContextRecord::EK_AttrArgument);
 
+          SaveAndRestore<ConversionAction> SavedTranslationState(
+              ParserConversionAction, CA_NoConversion);
+
           ExprResult ArgExpr = ParseAssignmentExpression();
           if (ArgExpr.isInvalid()) {
             SkipUntil(tok::r_paren, StopAtSemi);
@@ -644,6 +647,9 @@ void Parser::ParseGNUAttributeArgs(
   ParsedAttr::Kind AttrKind =
       ParsedAttr::getParsedKind(AttrName, ScopeName, Form.getSyntax());
 
+  SaveAndRestore<ConversionAction> SavedTranslationState(ParserConversionAction,
+                                                         CA_NoConversion);
+
   if (AttrKind == ParsedAttr::AT_Availability) {
     ParseAvailabilityAttribute(*AttrName, AttrNameLoc, Attrs, EndLoc, ScopeName,
                                ScopeLoc, Form);
@@ -722,6 +728,9 @@ unsigned Parser::ParseClangAttributeArgs(
 
   ParsedAttr::Kind AttrKind =
       ParsedAttr::getParsedKind(AttrName, ScopeName, Form.getSyntax());
+
+  SaveAndRestore<ConversionAction> SavedTranslationState(ParserConversionAction,
+                                                         CA_NoConversion);
 
   switch (AttrKind) {
   default:
