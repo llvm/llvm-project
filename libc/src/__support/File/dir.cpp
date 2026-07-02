@@ -17,19 +17,23 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-ErrorOr<Dir *> Dir::open(const char *path) {
-  auto fd = platform_opendir(path);
-  if (!fd)
-    return LIBC_NAMESPACE::Error(fd.error());
-
+ErrorOr<Dir *> Dir::fdopen(int fd) {
   LIBC_NAMESPACE::AllocChecker ac;
-  Dir *dir = new (ac) Dir(fd.value());
+  Dir *dir = new (ac) Dir(fd);
   if (!ac)
     return LIBC_NAMESPACE::Error(ENOMEM);
   return dir;
 }
 
-ErrorOr<struct ::dirent *> Dir::read() {
+ErrorOr<Dir *> Dir::open(const char *path) {
+  auto fd = platform_opendir(path);
+  if (!fd)
+    return LIBC_NAMESPACE::Error(fd.error());
+
+  return Dir::fdopen(fd.value());
+}
+
+ErrorOr<struct dirent *> Dir::read() {
   cpp::lock_guard lock(mutex);
   if (readptr >= fillsize) {
     auto readsize = platform_fetch_dirents(fd, buffer);
@@ -41,7 +45,7 @@ ErrorOr<struct ::dirent *> Dir::read() {
   if (fillsize == 0)
     return nullptr;
 
-  struct ::dirent *d = reinterpret_cast<struct ::dirent *>(buffer + readptr);
+  struct dirent *d = reinterpret_cast<struct dirent *>(buffer + readptr);
 #ifdef __linux__
   // The d_reclen field is available on Linux but not required by POSIX.
   readptr += d->d_reclen;

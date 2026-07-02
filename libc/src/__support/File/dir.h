@@ -31,6 +31,11 @@ int platform_closedir(int fd);
 // failure.
 ErrorOr<size_t> platform_fetch_dirents(int fd, cpp::span<uint8_t> buffer);
 
+// Platform specific function which checks if |fd| is a valid file descriptor
+// open for reading, and refers to a directory. Returns 0 on success, or the
+// error number on failure.
+int platform_check_dir(int fd);
+
 // This class is designed to allow implementation of the POSIX dirent.h API.
 // By itself, it is platform independent but calls platform specific
 // functions to perform OS operations.
@@ -63,8 +68,9 @@ class Dir {
 
 public:
   static ErrorOr<Dir *> open(const char *path);
+  static ErrorOr<Dir *> fdopen(int fd);
 
-  ErrorOr<struct ::dirent *> read();
+  ErrorOr<struct dirent *> read();
 
   // Returns 0 on success or the error number on failure. If an error number
   // was returned, then the resources associated with the directory are not
