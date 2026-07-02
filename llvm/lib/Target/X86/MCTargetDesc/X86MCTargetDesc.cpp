@@ -16,6 +16,7 @@
 #include "X86BaseInfo.h"
 #include "X86IntelInstPrinter.h"
 #include "X86MCAsmInfo.h"
+#include "X86MCLFIRewriter.h"
 #include "X86TargetStreamer.h"
 #include "llvm-c/Visibility.h"
 #include "llvm/ADT/APInt.h"
@@ -787,6 +788,14 @@ static MCInstrAnalysis *createX86MCInstrAnalysis(const MCInstrInfo *Info) {
   return new X86_MC::X86MCInstrAnalysis(Info);
 }
 
+static MCLFIRewriter *
+createX86MCLFIRewriter(MCContext &Ctx,
+                       std::unique_ptr<MCRegisterInfo> &&RegInfo,
+                       std::unique_ptr<MCInstrInfo> &&InstInfo) {
+  return new X86::X86MCLFIRewriter(Ctx, std::move(RegInfo),
+                                   std::move(InstInfo));
+}
+
 // Force static initialization.
 extern "C" LLVM_C_ABI void LLVMInitializeX86TargetMC() {
   for (Target *T : {&getTheX86_32Target(), &getTheX86_64Target()}) {
@@ -808,6 +817,9 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86TargetMC() {
 
     // Register the code emitter.
     TargetRegistry::RegisterMCCodeEmitter(*T, createX86MCCodeEmitter);
+
+    // Register the LFI rewriter.
+    TargetRegistry::RegisterMCLFIRewriter(*T, createX86MCLFIRewriter);
 
     // Register the obj target streamer.
     TargetRegistry::RegisterObjectTargetStreamer(*T,

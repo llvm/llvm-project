@@ -159,6 +159,8 @@ public:
     AArch64SubArch_arm64ec,
     AArch64SubArch_lfi,
 
+    X86_64SubArch_lfi,
+
     KalimbaSubArch_v3,
     KalimbaSubArch_v4,
     KalimbaSubArch_v5,
@@ -916,8 +918,10 @@ public:
 
   /// Tests whether the target is LFI.
   bool isLFI() const {
-    return getArch() == Triple::aarch64 &&
-           getSubArch() == Triple::AArch64SubArch_lfi;
+    return (getArch() == Triple::aarch64 &&
+            getSubArch() == Triple::AArch64SubArch_lfi) ||
+           (getArch() == Triple::x86_64 &&
+            getSubArch() == Triple::X86_64SubArch_lfi);
   }
 
   /// Tests whether the target supports the EHABI exception
