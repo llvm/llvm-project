@@ -136,9 +136,23 @@ class Returned<ArgIndex idx> : IntrinsicProperty {
   int ArgNo = idx.Value;
 }
 
-// ImmArg - The specified argument must be an immediate.
-class ImmArg<ArgIndex idx> : IntrinsicProperty {
+// DefaultValue - A value carrier paired with ImmArg to declare a default for
+// a missing trailing argument. AutoUpgrade fills the default when an old
+// .bc / .ll file is loaded.
+class DefaultValue<int val> {
+  int Value = val;
+}
+
+// Sentinel — used as the default for ImmArg's optional DefaultValue parameter.
+def NoDefault : DefaultValue<0> {
+  let Value = ?;
+}
+
+// ImmArg - The specified argument must be an immediate. The optional
+// second template parameter specifies a default value for AutoUpgrade.
+class ImmArg<ArgIndex idx, DefaultValue val = NoDefault> : IntrinsicProperty {
   int ArgNo = idx.Value;
+  DefaultValue Default = val;
 }
 
 // ReadOnly - The specified argument pointer is not written to through the
@@ -1919,7 +1933,7 @@ def int_experimental_gc_relocate : DefaultAttrsIntrinsic<
     [IntrNoMem, ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>]>;
 
 def int_experimental_gc_get_pointer_base : DefaultAttrsIntrinsic<
-    [llvm_anyptr_ty], [llvm_anyptr_ty],
+    [llvm_anyptr_ty], [LLVMMatchType<0>],
     [IntrNoMem, ReadNone<ArgIndex<0>>, NoCapture<ArgIndex<0>>]>;
 
 def int_experimental_gc_get_pointer_offset : DefaultAttrsIntrinsic<

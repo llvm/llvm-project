@@ -182,8 +182,8 @@ declare ptr @llvm.experimental.gc.get.pointer.base.p0p0(ptr, ptr)
 ; CHECK-NEXT: declare i32 @llvm.experimental.gc.get.pointer.base.i32.p0(ptr)
 declare i32 @llvm.experimental.gc.get.pointer.base.i32.p0(ptr)
 
-; CHECK: gc.get.pointer.base operand and result must be of the same type
-; CHECK-NEXT: ptr @llvm.experimental.gc.get.pointer.base.p0.p1
+; CHECK: intrinsic argument 0 type (matching overload type 0) expected ptr, but got ptr addrspace(1)
+; CHECK-NEXT: declare ptr @llvm.experimental.gc.get.pointer.base.p0.p1(ptr addrspace(1))
 declare ptr @llvm.experimental.gc.get.pointer.base.p0.p1(ptr addrspace(1))
 
 ;--- test1.ll

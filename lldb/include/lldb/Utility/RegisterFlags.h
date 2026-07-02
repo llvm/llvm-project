@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_TARGET_REGISTERFLAGS_H
-#define LLDB_TARGET_REGISTERFLAGS_H
+#ifndef LLDB_UTILITY_REGISTERFLAGS_H
+#define LLDB_UTILITY_REGISTERFLAGS_H
 
 #include <stdint.h>
 #include <string>
@@ -195,4 +195,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // LLDB_TARGET_REGISTERFLAGS_H
+#endif // LLDB_UTILITY_REGISTERFLAGS_H

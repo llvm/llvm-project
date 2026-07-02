@@ -10,7 +10,7 @@ from collections import defaultdict
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 from dex.dextIR import DextIR, StepIR, ValueIR
-from dex.evaluation.StateMatch import StateMatchContext, get_active_where_matches
+from dex.evaluation.StateMatch import StateMatchContext, get_state_match
 from dex.test_script.Nodes import (
     DexRange,
     Expect,
@@ -189,10 +189,10 @@ class StepExpectRewriter:
     ):
         self.step = step
         self.script = script
-        self.state_match = get_active_where_matches(script, step, state_match_context)
+        self.state_match = get_state_match(script, step, state_match_context)
         active_expects = {
             expect: where_match.frame_idx
-            for where_match in self.state_match.values()
+            for where_match in self.state_match.where_match_results.values()
             for expect in where_match.active_expects
         }
         self.expect_value_matches: Dict[Expect, ExpectedValueRewriter] = {}
@@ -276,14 +276,18 @@ class ScriptExpectRewriter:
         ):
             return
 
-        state_match_context = StateMatchContext()
+        def check_condition(step: StepIR, frame_idx: int, condition: str):
+            cond_value = step.frames[frame_idx].watches[condition]
+            result = cond_value.could_evaluate and cond_value.value.lower() == "true"
+            return result
 
-        # Populate the `unknown_expect_rewrites` dict, mapping each expect with an unknown value to its list of observed
-        # during this run, along with the corresponding step indices.
+        state_match_context = StateMatchContext(check_condition=check_condition)
         self.step_rewriters = [
             StepExpectRewriter(step, script, state_match_context)
             for step in dext_ir.steps
         ]
+        # Populate the expect_rewrites dicts, mapping each expect with an unknown value to its list of observed values
+        # during this run, along with the corresponding step indices.
         for step_rewriter in self.step_rewriters:
             step_idx = step_rewriter.step.step_index
             for (
