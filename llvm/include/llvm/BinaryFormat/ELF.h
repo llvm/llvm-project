@@ -1970,6 +1970,7 @@ enum {
   NT_OPENBSD_FPREGS = 21,
   NT_OPENBSD_XFPREGS = 22,
   NT_OPENBSD_WCOOKIE = 23,
+  NT_OPENBSD_PACMASK = 24,
 };
 
 // AMDGPU-specific section indices.
