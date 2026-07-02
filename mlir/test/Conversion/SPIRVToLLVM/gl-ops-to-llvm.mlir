@@ -361,3 +361,18 @@ spirv.func @asin_acos_atan(%arg0: f32, %arg1: vector<3xf16>) "None" {
   %2 = spirv.GL.Atan %arg0 : f32
   spirv.Return
 }
+
+//===----------------------------------------------------------------------===//
+// spirv.GL.Fract
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @fract
+spirv.func @fract(%arg0: f32, %arg1: vector<3xf16>) "None" {
+  // CHECK: %[[FLOOR:.*]] = llvm.intr.floor(%{{.*}}) : (f32) -> f32
+  // CHECK: llvm.fsub %{{.*}}, %[[FLOOR]] : f32
+  %0 = spirv.GL.Fract %arg0 : f32
+  // CHECK: %[[FLOORV:.*]] = llvm.intr.floor(%{{.*}}) : (vector<3xf16>) -> vector<3xf16>
+  // CHECK: llvm.fsub %{{.*}}, %[[FLOORV]] : vector<3xf16>
+  %1 = spirv.GL.Fract %arg1 : vector<3xf16>
+  spirv.Return
+}
