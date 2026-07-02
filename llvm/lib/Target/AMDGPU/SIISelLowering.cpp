@@ -14204,11 +14204,25 @@ SDValue SITargetLowering::performFCopySignCombine(SDNode *N,
   SelectionDAG &DAG = DCI.DAG;
   SDLoc DL(N);
   EVT SignVT = SignOp.getValueType();
+  EVT MagVT = MagnitudeOp.getValueType();
+
+  // copysign(0.0, fneg(x)) for f32: fold to and(signmask, not(bitcast(x)))
+  // which AMDGPU ISel matches as V_BFI_B32(x, 0, signmask)
+  if (SignOp.getOpcode() == ISD::FNEG && MagVT == MVT::f32) {
+    SDValue StrippedSign = SignOp.getOperand(0);
+    ConstantFPSDNode *C = dyn_cast<ConstantFPSDNode>(MagnitudeOp);
+    if (StrippedSign.getValueType() == MVT::f32 && C && C->isZero()) {
+      SDValue SignAsInt = DAG.getBitcast(MVT::i32, StrippedSign);
+      SDValue NotSign = DAG.getNOT(DL, SignAsInt, MVT::i32);
+      SDValue MaskC = DAG.getConstant(0x80000000, DL, MVT::i32);
+      SDValue And = DAG.getNode(ISD::AND, DL, MVT::i32, MaskC, NotSign);
+      return DAG.getBitcast(MVT::f32, And);
+    }
+  }
 
   // f64 fcopysign is really an f32 copysign on the high bits, so replace the
   // lower half with a copy.
   // fcopysign f64:x, _:y -> x.lo32, (fcopysign (f32 x.hi32), _:y)
-  EVT MagVT = MagnitudeOp.getValueType();
 
   unsigned NumElts = MagVT.isVector() ? MagVT.getVectorNumElements() : 1;
 
