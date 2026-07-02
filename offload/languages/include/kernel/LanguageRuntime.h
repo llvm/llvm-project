@@ -21,6 +21,7 @@ enum Error_t : uint32_t {
 struct DeviceProp_t {
   char name[256];
   size_t totalGlobalMem;
+  int warpSize;
   int multiProcessorCount;
   int major;
   int minor;

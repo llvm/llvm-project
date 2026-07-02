@@ -48,6 +48,11 @@ unsigned __llvmPushCallConfiguration(dim3 gridDim, dim3 blockDim,
                                      size_t sharedMem = 0, void *stream = 0);
 }
 
+__LLVM_OFFLOAD_DEVICE_ATTR inline void __syncthreads(void) {
+#if __LLVM_OFFLOAD_HAS_GPU_INTRINSICS
+  __gpu_sync_threads();
+#endif
+}
 
 // Make sure nobody can create instances of the coordinate types, take their
 // address, copy, or assign them.
@@ -107,12 +112,39 @@ __GPU_COORD_BUILTIN(__gpu_builtin_gridDim_t, __gpu_num_blocks_x(),
 #endif
 #pragma pop_macro("__GPU_COORD_BUILTIN")
 #pragma pop_macro("__GPU_DISALLOW_BUILTINVAR_ACCESS")
-#undef __LLVM_OFFLOAD_HAS_GPU_INTRINSICS
 
 extern const __LLVM_OFFLOAD_DEVICE_WEAK_ATTR __gpu_builtin_threadIdx_t threadIdx;
 extern const __LLVM_OFFLOAD_DEVICE_WEAK_ATTR __gpu_builtin_blockIdx_t blockIdx;
 extern const __LLVM_OFFLOAD_DEVICE_WEAK_ATTR __gpu_builtin_blockDim_t blockDim;
 extern const __LLVM_OFFLOAD_DEVICE_WEAK_ATTR __gpu_builtin_gridDim_t gridDim;
+
+// warpSize: reads the actual warp/wavefront size from hardware
+// Uses implicit conversion operator to allow direct use as int.
+#if defined(__NVPTX__) || defined(__AMDGPU__) || defined(__SPIRV__)
+#pragma push_macro("__GPU_DISALLOW_BUILTINVAR_ACCESS")
+#define __GPU_DISALLOW_BUILTINVAR_ACCESS(__tag)                                \
+  __LLVM_OFFLOAD_DEVICE_ATTR __tag() = delete;                                 \
+  __LLVM_OFFLOAD_DEVICE_ATTR __tag(const __tag &) = delete;                    \
+  __LLVM_OFFLOAD_DEVICE_ATTR void operator=(const __tag &) const = delete;     \
+  __LLVM_OFFLOAD_DEVICE_ATTR __tag *operator&() const = delete
+
+struct __gpu_builtin_warpSize_t {
+  __LLVM_OFFLOAD_DEVICE_ATTR constexpr operator int() const {
+#if __LLVM_OFFLOAD_HAS_GPU_INTRINSICS
+    return __gpu_num_lanes();
+#endif
+  }
+
+private:
+  __GPU_DISALLOW_BUILTINVAR_ACCESS(__gpu_builtin_warpSize_t);
+};
+#pragma pop_macro("__GPU_DISALLOW_BUILTINVAR_ACCESS")
+
+// Provide an inline definition instead of just extern declaration
+static const __LLVM_OFFLOAD_DEVICE_ATTR __gpu_builtin_warpSize_t warpSize{};
+#endif
+
+#undef __LLVM_OFFLOAD_HAS_GPU_INTRINSICS
 
 #undef __LLVM_OFFLOAD_DEVICE_ATTR
 #undef __LLVM_OFFLOAD_DEVICE_WEAK_ATTR

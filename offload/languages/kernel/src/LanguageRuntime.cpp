@@ -144,8 +144,14 @@ Error_t DriverGetVersion(int *Version) {
 
 Error_t GetDeviceProperties(DeviceProp_t *DeviceProp, int DeviceNo) {
   // TODO: [h15] add remaining pci/mem fields
-  memcpy(&DeviceProp->name[0], "TESTGPU", sizeof("TESTGPU"));
-  DeviceProp->totalGlobalMem = 1024l * 1024 * 1024 * 40;
+  ol_device_handle_t Device = olKGetDefaultDevice();
+  size_t name_size = 0;
+  olGetDeviceInfoSize(Device, OL_DEVICE_INFO_NAME, &name_size);
+  olGetDeviceInfo(Device, OL_DEVICE_INFO_NAME, name_size, &DeviceProp->name[0]);
+  olGetDeviceInfo(Device, OL_DEVICE_INFO_GLOBAL_MEM_SIZE, sizeof(size_t),
+                  &DeviceProp->totalGlobalMem);
+  olGetDeviceInfo(Device, OL_DEVICE_INFO_WARP_SIZE, sizeof(uint32_t),
+                  &DeviceProp->warpSize);
   DeviceProp->multiProcessorCount = 110;
   DeviceProp->major = 47;
   DeviceProp->minor = 11;
