@@ -10,7 +10,7 @@
 define void @test_sext_mul_splat(ptr %src, ptr %dst, i16 signext %scale, i32 %n) {
 entry:
   %scale32 = sext i16 %scale to i32
-  %ins0 = insertelement <2 x i32> undef, i32 %scale32, i32 0
+  %ins0 = insertelement <2 x i32> poison, i32 %scale32, i32 0
   %splat = insertelement <2 x i32> %ins0, i32 %scale32, i32 1
   br label %loop
 
