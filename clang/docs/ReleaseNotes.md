@@ -237,6 +237,7 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 #### C++2c Feature Support
 
 - Clang now propagates `constinit` and `constexpr` in structured bindings with tuple-like initializers.
+- Clang now supports [P3533R2](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p3533r2.html) (constexpr virtual inheritance).
 
 #### C++23 Feature Support
 

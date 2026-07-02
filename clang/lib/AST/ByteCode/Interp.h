@@ -2193,6 +2193,14 @@ inline bool GetPtrVirtBasePop(InterpState &S, CodePtr OpPC,
   return VirtBaseHelper(S, OpPC, D, Ptr);
 }
 
+inline bool GetPtrVirtBase(InterpState &S, CodePtr OpPC, const RecordDecl *D) {
+  assert(D);
+  const Pointer &Ptr = S.Stk.peek<Pointer>();
+  if (!CheckNull(S, OpPC, Ptr, CSK_Base))
+    return false;
+  return VirtBaseHelper(S, OpPC, D, Ptr);
+}
+
 inline bool GetPtrThisVirtBase(InterpState &S, CodePtr OpPC,
                                const RecordDecl *D) {
   assert(D);
@@ -4111,6 +4119,11 @@ bool DiagTypeid(InterpState &S, CodePtr OpPC);
 inline bool CheckDestruction(InterpState &S, CodePtr OpPC) {
   const auto &Ptr = S.Stk.peek<Pointer>();
   return CheckDestructor(S, OpPC, Ptr);
+}
+
+inline bool IsBaseClass(InterpState &S, CodePtr OpPC) {
+  S.Stk.push<bool>(S.Stk.peek<Pointer>().isBaseClass());
+  return true;
 }
 
 //===----------------------------------------------------------------------===//

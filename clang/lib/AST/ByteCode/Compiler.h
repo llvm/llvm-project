@@ -321,7 +321,8 @@ protected:
   VarCreationState visitDecl(const VarDecl *VD);
   /// Visit an APValue.
   bool visitAPValue(const APValue &Val, PrimType ValType, SourceInfo Info);
-  bool visitAPValueInitializer(const APValue &Val, SourceInfo Info, QualType T);
+  bool visitAPValueInitializer(const APValue &Val, SourceInfo Info, QualType T,
+                               bool Toplevel = true);
   /// Visit the given decl as if we have a reference to it.
   bool visitDeclRef(const ValueDecl *D, const Expr *E);
 
@@ -364,7 +365,8 @@ private:
 
   /// Emits a zero initializer.
   bool visitZeroInitializer(PrimType T, QualType QT, const Expr *E);
-  bool visitZeroRecordInitializer(const Record *R, const Expr *E);
+  bool visitZeroRecordInitializer(const Record *R, const Expr *E,
+                                  bool Toplevel = true);
   bool visitZeroArrayInitializer(QualType T, const Expr *E);
   bool visitAssignment(const Expr *LHS, const Expr *RHS, const Expr *E);
 
