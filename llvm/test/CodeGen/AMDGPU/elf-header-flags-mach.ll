@@ -103,7 +103,7 @@
 ; ARCH-R600: AddressSize: 32bit
 
 ; ARCH-GCN: Format: elf64-amdgpu
-; ARCH-GCN: Arch: amdgcn
+; ARCH-GCN: Arch: amdgpu
 ; ARCH-GCN: AddressSize: 64bit
 
 ; ALL:         Flags [

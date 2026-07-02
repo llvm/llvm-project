@@ -49,7 +49,7 @@ OMPContext::OMPContext(bool IsDeviceCompilation, Triple TargetTriple,
     case Triple::x86_64:
       ActiveTraits.set(unsigned(TraitProperty::target_device_kind_cpu));
       break;
-    case Triple::amdgcn:
+    case Triple::amdgpu:
     case Triple::nvptx:
     case Triple::nvptx64:
     case Triple::spirv64:
@@ -92,7 +92,7 @@ OMPContext::OMPContext(bool IsDeviceCompilation, Triple TargetTriple,
       ActiveTraits.set(unsigned(TraitProperty::device_kind_cpu));
       ActiveTraits.set(unsigned(TraitProperty::target_device_kind_cpu));
       break;
-    case Triple::amdgcn:
+    case Triple::amdgpu:
     case Triple::nvptx:
     case Triple::nvptx64:
     case Triple::spirv64:

@@ -840,7 +840,7 @@ unsigned AMDGPUTargetELFStreamer::getEFlags() {
     llvm_unreachable("Unsupported Arch");
   case Triple::r600:
     return getEFlagsR600();
-  case Triple::amdgcn:
+  case Triple::amdgpu:
     return getEFlagsAMDGCN();
   }
 }

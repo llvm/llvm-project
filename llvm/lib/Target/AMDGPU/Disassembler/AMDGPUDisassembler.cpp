@@ -3033,4 +3033,8 @@ LLVMInitializeAMDGPUDisassembler() {
                                          createAMDGPUDisassembler);
   TargetRegistry::RegisterMCSymbolizer(getTheGCNTarget(),
                                        createAMDGPUSymbolizer);
+  TargetRegistry::RegisterMCDisassembler(getTheGCNLegacyTarget(),
+                                         createAMDGPUDisassembler);
+  TargetRegistry::RegisterMCSymbolizer(getTheGCNLegacyTarget(),
+                                       createAMDGPUSymbolizer);
 }

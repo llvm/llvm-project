@@ -575,6 +575,7 @@ def get_run_handler(triple):
         "hexagon": (scrub_asm_hexagon, ASM_FUNCTION_HEXAGON_RE),
         "r600": (scrub_asm_amdgpu, ASM_FUNCTION_AMDGPU_RE),
         "amdgcn": (scrub_asm_amdgpu, ASM_FUNCTION_AMDGPU_RE),
+        "amdgpu": (scrub_asm_amdgpu, ASM_FUNCTION_AMDGPU_RE),
         "arm": (scrub_asm_arm_eabi, ASM_FUNCTION_ARM_RE),
         "arm64": (scrub_asm_arm_eabi, ASM_FUNCTION_AARCH64_RE),
         "arm64e": (scrub_asm_arm_eabi, ASM_FUNCTION_AARCH64_DARWIN_RE),
