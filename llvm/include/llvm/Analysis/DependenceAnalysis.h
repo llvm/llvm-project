@@ -165,19 +165,9 @@ public:
     return nullptr;
   }
 
-  /// Check if the direction vector is negative. A negative direction
-  /// vector means Src and Dst are reversed in the actual program.
-  virtual bool isDirectionNegative() const { return false; }
-
   /// Negate the dependence by swapping the source and destination, and
   /// reversing the direction and distance information.
   virtual void negate(ScalarEvolution &SE) {}
-
-  /// If the direction vector is negative, normalize the direction
-  /// vector to make it non-negative. Normalization is done by reversing
-  /// Src and Dst, plus reversing the dependence directions and distances
-  /// in the vector.
-  virtual bool normalize(ScalarEvolution *SE) { return false; }
 
   /// inSameSDLoops - Returns true if this level is an SameSD level, i.e.,
   /// performed across two separate loop nests that have the Same Iteration and
@@ -275,17 +265,7 @@ public:
   /// particular common or SameSD level.
   const SCEV *getDistance(unsigned Level, bool SameSD = false) const override;
 
-  /// Check if the direction vector is negative. A negative direction
-  /// vector means Src and Dst are reversed in the actual program.
-  bool isDirectionNegative() const override;
-
   void negate(ScalarEvolution &SE) override;
-
-  /// If the direction vector is negative, normalize the direction
-  /// vector to make it non-negative. Normalization is done by reversing
-  /// Src and Dst, plus reversing the dependence directions and distances
-  /// in the vector.
-  bool normalize(ScalarEvolution *SE) override;
 
   /// inSameSDLoops - Returns true if this level is an SameSD level, i.e.,
   /// performed across two separate loop nests that have the Same Iteration and
