@@ -36,39 +36,7 @@ struct StaticDiagInfoRec;
 #include "clang/Basic/DiagnosticStableIDs.inc"
 #undef GET_DIAG_STABLE_ID_ARRAYS
 
-// Store the descriptions in a separate table to avoid pointers that need to
-// be relocated, and also decrease the amount of data needed on 64-bit
-// platforms. See "How To Write Shared Libraries" by Ulrich Drepper.
-struct StaticDiagInfoDescriptionStringTable {
-#define DIAG(ENUM, CLASS, DEFAULT_SEVERITY, DESC, GROUP, SFINAE, NOWERROR,     \
-             SHOWINSYSHEADER, SHOWINSYSMACRO, DEFERRABLE, CATEGORY, STABLE_ID, \
-             LEGACY_STABLE_IDS)                                                \
-  char ENUM##_desc[sizeof(DESC)];
-#include "clang/Basic/AllDiagnosticKinds.inc"
-#undef DIAG
-};
-
-const StaticDiagInfoDescriptionStringTable StaticDiagInfoDescriptions = {
-#define DIAG(ENUM, CLASS, DEFAULT_SEVERITY, DESC, GROUP, SFINAE, NOWERROR,     \
-             SHOWINSYSHEADER, SHOWINSYSMACRO, DEFERRABLE, CATEGORY, STABLE_ID, \
-             LEGACY_STABLE_IDS)                                                \
-  DESC,
-#include "clang/Basic/AllDiagnosticKinds.inc"
-#undef DIAG
-};
-
 extern const StaticDiagInfoRec StaticDiagInfo[];
-
-// Stored separately from StaticDiagInfoRec to pack better.  Otherwise,
-// StaticDiagInfoRec would have extra padding on 64-bit platforms.
-const uint32_t StaticDiagInfoDescriptionOffsets[] = {
-#define DIAG(ENUM, CLASS, DEFAULT_SEVERITY, DESC, GROUP, SFINAE, NOWERROR,     \
-             SHOWINSYSHEADER, SHOWINSYSMACRO, DEFERRABLE, CATEGORY, STABLE_ID, \
-             LEGACY_STABLE_IDS)                                                \
-  offsetof(StaticDiagInfoDescriptionStringTable, ENUM##_desc),
-#include "clang/Basic/AllDiagnosticKinds.inc"
-#undef DIAG
-};
 
 const uint32_t StaticDiagInfoStableIDOffsets[] = {
 #define DIAG(ENUM, CLASS, DEFAULT_SEVERITY, DESC, GROUP, SFINAE, NOWERROR,     \
@@ -111,25 +79,26 @@ struct StaticDiagInfoRec {
   uint16_t WarnNoWerror : 1;
   LLVM_PREFERRED_TYPE(bool)
   uint16_t WarnShowInSystemHeader : 1;
+  LLVM_PREFERRED_TYPE(diag::Group)
+  uint16_t OptionGroupIndex : 14;
   LLVM_PREFERRED_TYPE(bool)
   uint16_t WarnShowInSystemMacro : 1;
-
-  LLVM_PREFERRED_TYPE(diag::Group)
-  uint16_t OptionGroupIndex : 15;
   LLVM_PREFERRED_TYPE(bool)
   uint16_t Deferrable : 1;
 
-  uint16_t DescriptionLen;
+  uint16_t DescriptionOffsetLow;
+  uint16_t DescriptionOffsetHigh : 4;
+  uint16_t DescriptionLen : 12;
 
   unsigned getOptionGroupIndex() const {
     return OptionGroupIndex;
   }
 
   StringRef getDescription() const {
-    size_t MyIndex = this - &StaticDiagInfo[0];
-    uint32_t StringOffset = StaticDiagInfoDescriptionOffsets[MyIndex];
-    const char* Table = reinterpret_cast<const char*>(&StaticDiagInfoDescriptions);
-    return StringRef(&Table[StringOffset], DescriptionLen);
+    uint32_t Offset =
+        DescriptionOffsetLow | (uint32_t(DescriptionOffsetHigh) << 16);
+    return StringRef(StaticDiagInfoDescriptionsStorage + Offset,
+                     DescriptionLen);
   }
 
   StringRef getStableID() const {
@@ -159,6 +128,9 @@ struct StaticDiagInfoRec {
     return DiagID < RHS.DiagID;
   }
 };
+static_assert(sizeof(StaticDiagInfoRec) == 10);
+static_assert(static_cast<unsigned>(diag::Group::NUM_GROUPS) < (1U << 14),
+              "too many diagnostic groups for StaticDiagInfoRec");
 
 #define STRINGIFY_NAME(NAME) #NAME
 #define VALIDATE_DIAG_SIZE(NAME)                                               \
@@ -200,9 +172,11 @@ const StaticDiagInfoRec StaticDiagInfo[] = {
       CATEGORY,                                                                \
       NOWERROR,                                                                \
       SHOWINSYSHEADER,                                                         \
-      SHOWINSYSMACRO,                                                          \
       GROUP,                                                                   \
-	    DEFERRABLE,                                                              \
+      SHOWINSYSMACRO,                                                          \
+      DEFERRABLE,                                                              \
+      uint16_t(DIAG_DESC_OFFSET_##ENUM),                                       \
+      uint16_t(DIAG_DESC_OFFSET_##ENUM >> 16),                                 \
       STR_SIZE(DESC, uint16_t)},
 #include "clang/Basic/DiagnosticCommonKinds.inc"
 #include "clang/Basic/DiagnosticDriverKinds.inc"
