@@ -173,6 +173,26 @@ define double @load_atomic_f64_flat_agent(ptr %ptr) {
   ret double %ld
 }
 
+define <2 x float> @load_atomic_v2f32_global_align4_agent(ptr addrspace(1) %ptr) {
+; CHECK-LABEL: define <2 x float> @load_atomic_v2f32_global_align4_agent(
+; CHECK-SAME: ptr addrspace(1) [[PTR:%.*]]) {
+; CHECK-NEXT:    [[LD:%.*]] = load atomic <2 x float>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4, !some.unknown.md [[META0]]
+; CHECK-NEXT:    ret <2 x float> [[LD]]
+;
+  %ld = load atomic <2 x float>, ptr addrspace(1) %ptr syncscope("agent") monotonic, align 4, !some.unknown.md !0
+  ret <2 x float> %ld
+}
+
+define <2 x float> @load_atomic_v2f32_flat_align4_agent(ptr addrspace(0) %ptr) {
+; CHECK-LABEL: define <2 x float> @load_atomic_v2f32_flat_align4_agent(
+; CHECK-SAME: ptr [[PTR:%.*]]) {
+; CHECK-NEXT:    [[LD:%.*]] = load atomic <2 x float>, ptr [[PTR]] syncscope("agent") monotonic, align 4, !some.unknown.md [[META0]]
+; CHECK-NEXT:    ret <2 x float> [[LD]]
+;
+  %ld = load atomic <2 x float>, ptr addrspace(0) %ptr syncscope("agent") monotonic, align 4, !some.unknown.md !0
+  ret <2 x float> %ld
+}
+
 !0 = !{}
 
 

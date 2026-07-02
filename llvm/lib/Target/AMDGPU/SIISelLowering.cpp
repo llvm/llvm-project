@@ -20558,6 +20558,62 @@ SITargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
              : AtomicExpansionKind::None;
 }
 
+bool SITargetLowering::supportsUnalignedAtomicLoadInIR(
+    const LoadInst *LI) const {
+  // Only unordered and monotonic orderings are supported for sub naturally
+  // aligned atomic loads. Stronger orderings require synchronization
+  // guarantees that cannot be verified for cache line crossing accesses.
+  if (isStrongerThanMonotonic(LI->getOrdering()))
+    return false;
+
+  unsigned AS = LI->getPointerAddressSpace();
+  // LDS uses ds_read2_b32 for 4 byte aligned 8 byte accesses (two separate
+  // loads), but that technique breaks atomicity. ds_load_b64 requires 8 byte
+  // alignment. Reject all sub naturally aligned atomic LDS/GDS loads.
+  if (AS == AMDGPUAS::LOCAL_ADDRESS || AS == AMDGPUAS::REGION_ADDRESS)
+    return false;
+
+  // Atomic operations require at least DWORD alignment. Unaligned access mode
+  // only enables non atomic split accesses, which would break atomicity for
+  // sub DWORD aligned atomic loads.
+  if (LI->getAlign() < Align(4))
+    return false;
+
+  unsigned Size =
+      LI->getModule()->getDataLayout().getTypeSizeInBits(LI->getType());
+  return allowsMisalignedMemoryAccessesImpl(Size, AS, LI->getAlign(),
+                                            MachineMemOperand::MOLoad,
+                                            /*IsFast=*/nullptr);
+}
+
+bool SITargetLowering::supportsUnalignedAtomicStoreInIR(
+    const StoreInst *SI) const {
+  // Only unordered and monotonic orderings are supported for sub naturally
+  // aligned atomic stores. Stronger orderings require synchronization
+  // guarantees that cannot be verified for cache line crossing accesses.
+  if (isStrongerThanMonotonic(SI->getOrdering()))
+    return false;
+
+  unsigned AS = SI->getPointerAddressSpace();
+  // LDS uses ds_write2_b32 for 4 byte aligned 8 byte accesses (two separate
+  // stores), but that technique breaks atomicity. ds_store_b64 requires
+  // 8 byte alignment. Reject all sub naturally aligned atomic LDS/GDS stores.
+  if (AS == AMDGPUAS::LOCAL_ADDRESS || AS == AMDGPUAS::REGION_ADDRESS)
+    return false;
+
+  // Atomic operations require at least DWORD alignment. Unaligned access mode
+  // only enables non atomic split accesses, which would break atomicity for
+  // sub DWORD aligned atomic stores.
+  if (SI->getAlign() < Align(4))
+    return false;
+
+  unsigned Size = SI->getModule()->getDataLayout().getTypeSizeInBits(
+      SI->getValueOperand()->getType());
+  return allowsMisalignedMemoryAccessesImpl(Size, AS, SI->getAlign(),
+                                            MachineMemOperand::MOStore,
+                                            /*IsFast=*/nullptr);
+}
+
 TargetLowering::AtomicExpansionKind
 SITargetLowering::shouldExpandAtomicCmpXchgInIR(
     const AtomicCmpXchgInst *CmpX) const {

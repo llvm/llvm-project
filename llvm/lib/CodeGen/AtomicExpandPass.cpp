@@ -340,8 +340,12 @@ bool AtomicExpandImpl::processAtomicInstr(Instruction *I) {
       return false;
 
     if (!atomicSizeSupported(TLI, LI)) {
-      expandAtomicLoadToLibcall(LI);
-      return true;
+      unsigned Size = getAtomicOpSize(LI);
+      unsigned MaxSize = TLI->getMaxAtomicSizeInBitsSupported() / 8;
+      if (Size > MaxSize || !TLI->supportsUnalignedAtomicLoadInIR(LI)) {
+        expandAtomicLoadToLibcall(LI);
+        return true;
+      }
     }
 
     bool MadeChange = false;
@@ -363,8 +367,12 @@ bool AtomicExpandImpl::processAtomicInstr(Instruction *I) {
       return false;
 
     if (!atomicSizeSupported(TLI, SI)) {
-      expandAtomicStoreToLibcall(SI);
-      return true;
+      unsigned Size = getAtomicOpSize(SI);
+      unsigned MaxSize = TLI->getMaxAtomicSizeInBitsSupported() / 8;
+      if (Size > MaxSize || !TLI->supportsUnalignedAtomicStoreInIR(SI)) {
+        expandAtomicStoreToLibcall(SI);
+        return true;
+      }
     }
 
     bool MadeChange = false;
