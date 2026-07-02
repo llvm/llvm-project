@@ -17667,8 +17667,14 @@ static SDValue combineZextSetccWithZero(SDNode *N, SelectionDAG &DAG) {
 }
 
 // Combine XOR patterns with SELECT_CC_I4/I8, for Example:
-static SDValue combineXorOfSetCC(SDNode *N, SelectionDAG &DAG) {
+static SDValue combineXorOfSetCC(SDNode *N,
+                                 TargetLowering::DAGCombinerInfo &DCI) {
+  SelectionDAG &DAG = DCI.DAG;
   assert(N->getOpcode() == ISD::XOR && "Expected XOR node");
+
+  // Allow generic DAGCombiner to fold bitwise logic of SETCCs first.
+  if (DCI.isBeforeLegalize())
+    return SDValue();
 
   SDValue LHS = N->getOperand(0);
   SDValue RHS = N->getOperand(1);
@@ -17815,7 +17821,7 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
     return DAG.getZExtOrTrunc(NarrowAnd, dl, N->getValueType(0));
   }
   case ISD::XOR: {
-    if (SDValue V = combineXorOfSetCC(N, DAG))
+    if (SDValue V = combineXorOfSetCC(N, DCI))
       return V;
     // Optimize XOR(ISEL(1,0,CR), 1) -> ISEL(0,1,CR)
     if (SDValue V = combineXorSelectCC(N, DAG))
