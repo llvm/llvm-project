@@ -1,6 +1,7 @@
 ! RUN: %flang_fc1 -fsyntax-only %s 2>&1
 ! RUN: %flang -E %s 2>&1 | FileCheck %s
-! RUN: not %flang_fc1 -pedantic -Werror -fdebug-dump-parse-tree-no-sema %s 2>&1 | FileCheck %s --check-prefix=ERROR
+! RUN: not %flang_fc1 -pedantic -Werror -fdebug-dump-parse-tree-no-sema \
+! RUN:        -DTEST_ERRORS=1 %s 2>&1 | FileCheck %s --check-prefix=ERROR
 
       integer :: i
 
@@ -59,4 +60,9 @@ C comment */
 ! CHECK-NOT: C comment
 	print *, "TAB"
 	/* C comment after tab */
+
+! ERROR: error: Character in fixed-form label field must be a digit
+#if TEST_ERRORS
+/* Not-terminated C comment
+#endif
       end

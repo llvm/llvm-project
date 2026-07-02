@@ -72,7 +72,7 @@ static inline constexpr bool IsFixedFormCommentChar(char ch) {
 }
 
 static bool HasTabInLabelField(const char *col1) {
-  for (int i{0}; i < 6; ++i) {
+  for (int i{0}; i < 6 && col1[i] != '\n'; ++i) {
     if (col1[i] == '\t') {
       return true;
     }
@@ -1404,9 +1404,9 @@ const char *Prescanner::FixedFormContinuationLine(bool atNewline) {
   for (int i{4}; i > 0 && nextLine_[i] == ' '; --i) {
     ++trailingSpaces;
   }
-  bool CCommentAndSpaces{!HasTabInLabelField(nextLine_) &&
-      SkipCComment(SkipWhiteSpace(nextLine_)) - nextLine_ + trailingSpaces ==
-          5};
+  const char *afterCComment{SkipCComment(SkipWhiteSpace(nextLine_))};
+  bool CCommentAndSpaces{!HasTabInLabelField(nextLine_) && afterCComment &&
+      afterCComment - nextLine_ + trailingSpaces == 5};
   bool canBeNonDirectiveContinuation{
       ((col1 == ' ' ||
            ((col1 == 'D' || col1 == 'd') &&
