@@ -7501,6 +7501,85 @@ static CallWideningDecision decideCallWidening(VPInstruction &VPI,
   return CallWideningDecision::KindTy::Scalarize;
 }
 
+void VPlanTransforms::simplifyReductionInitValue(VPlan &Plan,
+                                                 VPCostContext &Ctx,
+                                                 VFRange &Range) {
+  // Sub is handled specially in preparePlanForEpilogueVectorLoop, so we skip it
+  // here.
+  if (Ctx.TTI.preferEpilogueVectorization(ElementCount::getFixed(1)))
+    return;
+
+  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
+  for (VPRecipeBase &R : LoopRegion->getEntryBasicBlock()->phis()) {
+    VPReductionPHIRecipe *PhiR = dyn_cast<VPReductionPHIRecipe>(&R);
+    if (!PhiR)
+      continue;
+
+    if (PhiR->isInLoop() || PhiR->isPartialReduction() || PhiR->isOrdered() ||
+        PhiR->getVFScaleFactor() != 1 || PhiR->hasUsesOutsideReductionChain())
+      continue;
+
+    VPInstruction *FinalReductionResult =
+        vputils::findComputeReductionResult(PhiR);
+    if (!FinalReductionResult)
+      continue;
+
+    RecurKind RK = PhiR->getRecurrenceKind();
+    if (is_contained({RecurKind::Add, RecurKind::Sub, RecurKind::And,
+                      RecurKind::Or, RecurKind::Xor,
+                      RecurKind::AddChainWithSubs},
+                     RK)) {
+      VPValue *Init, *Iden;
+      VPRecipeBase *Start = PhiR->getStartValue()->getDefiningRecipe();
+      if (Start &&
+          match(Start, m_VPInstruction<VPInstruction::ReductionStartVector>(
+                           m_VPValue(Init), m_VPValue(Iden), m_VPValue())) &&
+          Init != Iden) {
+        Type *ScalarTy = PhiR->getScalarType();
+        auto IsProfitable = [&](unsigned ScalarOp) -> bool {
+          return LoopVectorizationPlanner::getDecisionAndClampRange(
+              [&](ElementCount VF) {
+                auto *VecTy = toVectorTy(ScalarTy, VF);
+                if (!VecTy->isVectorTy())
+                  return false;
+                const InstructionCost CurrentCost =
+                    Ctx.TTI.getVectorInstrCost(Instruction::InsertElement,
+                                               VecTy, TTI::TCK_RecipThroughput);
+                const InstructionCost ScalarCost =
+                    Ctx.TTI.getArithmeticInstrCost(ScalarOp, ScalarTy,
+                                                   TTI::TCK_RecipThroughput);
+                return ScalarCost < CurrentCost;
+              },
+              Range);
+        };
+
+        unsigned ScalarOp;
+        if (RK == RecurKind::And)
+          ScalarOp = Instruction::And;
+        else if (RK == RecurKind::Or)
+          ScalarOp = Instruction::Or;
+        else if (RK == RecurKind::Xor)
+          ScalarOp = Instruction::Xor;
+        else
+          ScalarOp = Instruction::Add;
+
+        if (!IsProfitable(ScalarOp))
+          continue;
+
+        Start->setOperand(0, Iden);
+        VPBuilder Builder = VPBuilder::getToInsertAfter(FinalReductionResult);
+        VPInstruction *NewResult =
+            Builder.createNaryOp(ScalarOp, {FinalReductionResult, Init},
+                                 VPIRFlags::getDefaultFlags(ScalarOp),
+                                 FinalReductionResult->getDebugLoc());
+        FinalReductionResult->replaceUsesWithIf(
+            NewResult,
+            [&NewResult](VPUser &U, unsigned Idx) { return &U != NewResult; });
+      }
+    }
+  }
+}
+
 void VPlanTransforms::makeCallWideningDecisions(VPlan &Plan, VFRange &Range,
                                                 VPRecipeBuilder &RecipeBuilder,
                                                 VPCostContext &CostCtx) {
