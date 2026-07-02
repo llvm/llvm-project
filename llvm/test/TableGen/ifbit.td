@@ -1,5 +1,4 @@
 // RUN: llvm-tblgen %s | FileCheck %s
-// XFAIL: vg_leak
 // CHECK: a = 6
 // CHECK: a = 5
 

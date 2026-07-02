@@ -224,14 +224,14 @@ define void @pr52024(ptr %dst, i16 %N) {
 ; CHECK:       [[LOOP_2_PH]]:
 ; CHECK-NEXT:    [[IV_1_NEXT_LCSSA:%.*]] = phi i16 [ [[IV_1_NEXT]], %[[LOOP_1_LATCH]] ]
 ; CHECK-NEXT:    [[IV_1_NEXT_EXT:%.*]] = sext i16 [[IV_1_NEXT_LCSSA]] to i64
-; CHECK-NEXT:    [[TMP0:%.*]] = mul i16 [[IV_1]], 3
 ; CHECK-NEXT:    br label %[[LOOP_2_HEADER:.*]]
 ; CHECK:       [[LOOP_2_HEADER]]:
 ; CHECK-NEXT:    [[IV_1_REM:%.*]] = urem i64 100, [[IV_1_NEXT_EXT]]
 ; CHECK-NEXT:    [[REM_TRUNC:%.*]] = trunc i64 [[IV_1_REM]] to i16
 ; CHECK-NEXT:    [[TMP1:%.*]] = udiv i64 100, [[IV_1_NEXT_EXT]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i16
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i16 [[TMP0]], [[TMP2]]
+; CHECK-NEXT:    [[TMP15:%.*]] = mul i16 [[IV_1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = mul i16 [[TMP15]], 3
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i16 [[TMP3]], -100
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:

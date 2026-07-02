@@ -263,7 +263,7 @@ void case5() {
 // CHECK-NEXT: store <4 x float> [[CBufLoad_c]], ptr [[Ptr_c]], align 4
 
 // Call useS with the temporary variable.
-// CHECK-NEXT: call {{.*}}void @_Z4useS1S(ptr noundef dead_on_return [[AggTemp1]])
+// CHECK-NEXT: call {{.*}}void @_Z4useS1S(ptr noundef align 1 dead_on_return [[AggTemp1]])
   useS(cbs);
 
 //
@@ -282,7 +282,7 @@ void case5() {
 // CHECK-NEXT: store <4 x float> [[CBufLoad_c]], ptr [[Ptr_c]], align 4
 
 // Call useS with the temporary variable.
-// CHECK-NEXT: call {{.*}}void @_Z4useS1S(ptr noundef dead_on_return [[AggTemp2]])
+// CHECK-NEXT: call {{.*}}void @_Z4useS1S(ptr noundef align 1 dead_on_return [[AggTemp2]])
   useS(cbt.s);
 
 // CHECK-NEXT: ret void
@@ -323,7 +323,7 @@ void case6() {
 // CHECK-NEXT: store i32 [[CbufLoad_arr1]], ptr [[Ptr_arr1]], align 4
 
 // Call useT with the temporary variable
-// CHECK-NEXT: call {{.*}}void @_Z4useT1T(ptr noundef dead_on_return [[AggTemp]])
+// CHECK-NEXT: call {{.*}}void @_Z4useT1T(ptr noundef align 1 dead_on_return [[AggTemp]])
   useT(cbt);
 }
 
@@ -354,6 +354,6 @@ void case7() {
 
 // Convert to P temporary and call useP
 // CHECK-NEXT: call void @llvm.memcpy.p0.p0.{{i32|i64}}(ptr align 1 [[TempP]], ptr align 1 [[TempS]], {{i32|i64}} 12, i1 false)
-// CHECK-NEXT: call {{.*}}void @_Z4useP1P(ptr noundef dead_on_return [[TempP]])
+// CHECK-NEXT: call {{.*}}void @_Z4useP1P(ptr noundef align 1 dead_on_return [[TempP]])
   useP(cbs);
 }
