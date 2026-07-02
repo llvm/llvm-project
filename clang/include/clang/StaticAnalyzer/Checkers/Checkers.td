@@ -460,6 +460,11 @@ def CStringSyntaxChecker : Checker<"BadSizeArg">,
   Dependencies<[CStringModeling]>,
   Documentation<HasDocumentation>;
 
+def CStringUninitializedRead : Checker<"UninitializedRead">,
+  HelpText<"Checks if the string manipulation function would read uninitialized bytes">,
+  Dependencies<[CStringModeling]>,
+  Documentation<HasDocumentation>;
+
 } // end "unix.cstring"
 
 let ParentPackage = CStringAlpha in {
@@ -471,11 +476,6 @@ def CStringOutOfBounds : Checker<"OutOfBounds">,
 
 def CStringBufferOverlap : Checker<"BufferOverlap">,
   HelpText<"Checks for overlap in two buffer arguments">,
-  Dependencies<[CStringModeling]>,
-  Documentation<HasDocumentation>;
-
-def CStringUninitializedRead : Checker<"UninitializedRead">,
-  HelpText<"Checks if the string manipulation function would read uninitialized bytes">,
   Dependencies<[CStringModeling]>,
   Documentation<HasDocumentation>;
 
@@ -787,6 +787,11 @@ def SmartPtrChecker: Checker<"SmartPtr">,
   HelpText<"Find the dereference of null SmrtPtr">,
   Dependencies<[SmartPtrModeling]>,
   Documentation<HasDocumentation>;
+
+def UseAfterLifetimeEnd : Checker<"UseAfterLifetimeEnd">,
+  HelpText<"Check for uses of references or pointers that "
+           "outlive their bound object">,
+  Documentation<NotDocumented>;
 
 } // end: "alpha.cplusplus"
 
@@ -1574,6 +1579,12 @@ def StdCLibraryFunctionsTesterChecker : Checker<"StdCLibraryFunctionsTester">,
 
 def CheckerDocumentationChecker : Checker<"CheckerDocumentation">,
   HelpText<"Defines an empty checker callback for all possible handlers.">,
+  Documentation<NotDocumented>;
+
+def DebugUseAfterLifetimeEnd : Checker<"DebugUseAfterLifetimeEnd">,
+  HelpText<"Prints the bindings recorded by the UseAfterLifetimeEnd checker. "
+           "Use with clang_analyzer_dumpLifetimeOriginsOf().">,
+  WeakDependencies<[UseAfterLifetimeEnd]>,
   Documentation<NotDocumented>;
 
 } // end "debug"

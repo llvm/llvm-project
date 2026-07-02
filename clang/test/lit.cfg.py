@@ -313,6 +313,17 @@ config.substitutions.append(
     )
 )
 
+config.substitutions.append(
+    (
+        "%scan-deps-filter",
+        '"%s" %s'
+        % (
+            config.python_executable,
+            os.path.join(config.clang_src_dir, "utils", "scan-deps-filter.py"),
+        ),
+    )
+)
+
 # Determine whether the test target is compatible with execution on the host.
 if "aarch64" in config.host_arch:
     config.available_features.add("aarch64-host")
@@ -336,9 +347,7 @@ if config.clang_default_cxx_stdlib != "":
         "default-cxx-stdlib={}".format(config.clang_default_cxx_stdlib)
     )
 
-# As of 2011.08, crash-recovery tests still do not pass on FreeBSD.
-if platform.system() not in ["FreeBSD"]:
-    config.available_features.add("crash-recovery")
+config.available_features.add("crash-recovery")
 
 # ANSI escape sequences in non-dumb terminal
 if platform.system() not in ["Windows"]:

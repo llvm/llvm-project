@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+f,+v -verify-machineinstrs < %s | FileCheck %s
 ; RUN: llc -mtriple=riscv64 -mattr=+f,+v -verify-machineinstrs < %s | FileCheck %s
 
-define <vscale x 2 x float> @test_reverse_load_combiner(<vscale x 2 x float>* %ptr, i32 zeroext %evl) {
+define <vscale x 2 x float> @test_reverse_load_combiner(ptr %ptr, i32 zeroext %evl) {
 ; CHECK-LABEL: test_reverse_load_combiner:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    slli a2, a1, 2
@@ -12,12 +12,12 @@ define <vscale x 2 x float> @test_reverse_load_combiner(<vscale x 2 x float>* %p
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
 ; CHECK-NEXT:    vlse32.v v8, (a0), a2
 ; CHECK-NEXT:    ret
-  %load = call <vscale x 2 x float> @llvm.vp.load.nxv2f32.p0nxv2f32(<vscale x 2 x float>* %ptr, <vscale x 2 x i1> splat (i1 true), i32 %evl)
+  %load = call <vscale x 2 x float> @llvm.vp.load.nxv2f32.p0nxv2f32(ptr %ptr, <vscale x 2 x i1> splat (i1 true), i32 %evl)
   %rev = call <vscale x 2 x float> @llvm.experimental.vp.reverse.nxv2f32(<vscale x 2 x float> %load, <vscale x 2 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 2 x float> %rev
 }
 
-define <vscale x 2 x float> @test_load_mask_is_vp_reverse(<vscale x 2 x float>* %ptr, <vscale x 2 x i1> %mask, i32 zeroext %evl) {
+define <vscale x 2 x float> @test_load_mask_is_vp_reverse(ptr %ptr, <vscale x 2 x i1> %mask, i32 zeroext %evl) {
 ; CHECK-LABEL: test_load_mask_is_vp_reverse:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    slli a2, a1, 2
@@ -28,12 +28,12 @@ define <vscale x 2 x float> @test_load_mask_is_vp_reverse(<vscale x 2 x float>* 
 ; CHECK-NEXT:    vlse32.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
   %loadmask = call <vscale x 2 x i1> @llvm.experimental.vp.reverse.nxv2i1(<vscale x 2 x i1> %mask, <vscale x 2 x i1> splat (i1 true), i32 %evl)
-  %load = call <vscale x 2 x float> @llvm.vp.load.nxv2f32.p0nxv2f32(<vscale x 2 x float>* %ptr, <vscale x 2 x i1> %loadmask, i32 %evl)
+  %load = call <vscale x 2 x float> @llvm.vp.load.nxv2f32.p0nxv2f32(ptr %ptr, <vscale x 2 x i1> %loadmask, i32 %evl)
   %rev = call <vscale x 2 x float> @llvm.experimental.vp.reverse.nxv2f32(<vscale x 2 x float> %load, <vscale x 2 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 2 x float> %rev
 }
 
-define <vscale x 2 x float> @test_load_mask_is_vp_reverse_with_mask(<vscale x 2 x float>* %ptr, <vscale x 2 x i1> %mask, <vscale x 2 x i1> %revmask, i32 zeroext %evl) {
+define <vscale x 2 x float> @test_load_mask_is_vp_reverse_with_mask(ptr %ptr, <vscale x 2 x i1> %mask, <vscale x 2 x i1> %revmask, i32 zeroext %evl) {
 ; CHECK-LABEL: test_load_mask_is_vp_reverse_with_mask:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    slli a2, a1, 2
@@ -44,12 +44,12 @@ define <vscale x 2 x float> @test_load_mask_is_vp_reverse_with_mask(<vscale x 2 
 ; CHECK-NEXT:    vlse32.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
   %loadmask = call <vscale x 2 x i1> @llvm.experimental.vp.reverse.nxv2i1(<vscale x 2 x i1> %mask, <vscale x 2 x i1> %revmask, i32 %evl)
-  %load = call <vscale x 2 x float> @llvm.vp.load.nxv2f32.p0nxv2f32(<vscale x 2 x float>* %ptr, <vscale x 2 x i1> %loadmask, i32 %evl)
+  %load = call <vscale x 2 x float> @llvm.vp.load.nxv2f32.p0nxv2f32(ptr %ptr, <vscale x 2 x i1> %loadmask, i32 %evl)
   %rev = call <vscale x 2 x float> @llvm.experimental.vp.reverse.nxv2f32(<vscale x 2 x float> %load, <vscale x 2 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 2 x float> %rev
 }
 
-define <vscale x 2 x float> @test_load_mask_not_all_one(<vscale x 2 x float>* %ptr, <vscale x 2 x i1> %notallones, i32 zeroext %evl) {
+define <vscale x 2 x float> @test_load_mask_not_all_one(ptr %ptr, <vscale x 2 x i1> %notallones, i32 zeroext %evl) {
 ; CHECK-LABEL: test_load_mask_not_all_one:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
@@ -59,7 +59,7 @@ define <vscale x 2 x float> @test_load_mask_not_all_one(<vscale x 2 x float>* %p
 ; CHECK-NEXT:    vrsub.vx v10, v8, a1, v0.t
 ; CHECK-NEXT:    vrgather.vv v8, v9, v10, v0.t
 ; CHECK-NEXT:    ret
-  %load = call <vscale x 2 x float> @llvm.vp.load.nxv2f32.p0nxv2f32(<vscale x 2 x float>* %ptr, <vscale x 2 x i1> %notallones, i32 %evl)
+  %load = call <vscale x 2 x float> @llvm.vp.load.nxv2f32.p0nxv2f32(ptr %ptr, <vscale x 2 x i1> %notallones, i32 %evl)
   %rev = call <vscale x 2 x float> @llvm.experimental.vp.reverse.nxv2f32(<vscale x 2 x float> %load, <vscale x 2 x i1> %notallones, i32 %evl)
   ret <vscale x 2 x float> %rev
 }
@@ -79,7 +79,7 @@ define <vscale x 2 x float> @test_load_reverse_mask_not_all_one(ptr %ptr, <vscal
   ret <vscale x 2 x float> %rev
 }
 
-define <vscale x 2 x float> @test_different_evl(<vscale x 2 x float>* %ptr, <vscale x 2 x i1> %mask, i32 zeroext %evl1, i32 zeroext %evl2) {
+define <vscale x 2 x float> @test_different_evl(ptr %ptr, <vscale x 2 x i1> %mask, i32 zeroext %evl1, i32 zeroext %evl2) {
 ; CHECK-LABEL: test_different_evl:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, ma
@@ -101,7 +101,7 @@ define <vscale x 2 x float> @test_different_evl(<vscale x 2 x float>* %ptr, <vsc
 ; CHECK-NEXT:    vrgather.vv v8, v10, v9
 ; CHECK-NEXT:    ret
   %loadmask = call <vscale x 2 x i1> @llvm.experimental.vp.reverse.nxv2i1(<vscale x 2 x i1> %mask, <vscale x 2 x i1> splat (i1 true), i32 %evl1)
-  %load = call <vscale x 2 x float> @llvm.vp.load.nxv2f32.p0nxv2f32(<vscale x 2 x float>* %ptr, <vscale x 2 x i1> %loadmask, i32 %evl2)
+  %load = call <vscale x 2 x float> @llvm.vp.load.nxv2f32.p0nxv2f32(ptr %ptr, <vscale x 2 x i1> %loadmask, i32 %evl2)
   %rev = call <vscale x 2 x float> @llvm.experimental.vp.reverse.nxv2f32(<vscale x 2 x float> %load, <vscale x 2 x i1> splat (i1 true), i32 %evl2)
   ret <vscale x 2 x float> %rev
 }

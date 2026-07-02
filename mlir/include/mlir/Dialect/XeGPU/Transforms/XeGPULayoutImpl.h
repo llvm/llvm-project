@@ -11,7 +11,7 @@
 
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
-#include "mlir/Dialect/XeGPU/uArch/IntelGpuXe2.h"
+#include "mlir/Dialect/XeGPU/uArch/uArchCommon.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
@@ -159,6 +159,22 @@ DistributeLayoutAttr
 inferSourceLayoutFromResultForNonAnchorOp(OpOperand &operand,
                                           DistributeLayoutAttr resLayout);
 
+/// Note on the `consumerLayout` argument used by the consumer-driven setup* /
+/// complete* helpers below:
+///
+/// Layout propagation is a backward dataflow analysis, so a producer learns its
+/// consumers' demands one at a time. The `consumerLayout` passed to these
+/// helpers is the *single* layout that the first consumer to reach the producer
+/// has requested (see `getConsumerLayoutAt`); these helpers do not pick among,
+/// or merge, multiple consumers, and they do not reason about cost (e.g. a
+/// consumer inside a loop vs. one outside). If a producer has several consumers
+/// with conflicting layout demands, only the first-arriving one shapes the
+/// producer's anchor layout here; any later, inconsistent consumer is left
+/// as-is and reconciled afterwards by the layout conflict resolution process
+/// (`ResolveLayoutConflicts`), which inserts a `convert_layout` op on that
+/// edge. So these helpers can always assume exactly one (possibly null)
+/// consumer layout to honor.
+
 /// Sets up layout for Multi-Reduction operations by creating a SliceAttr for
 /// the result.
 ///
@@ -208,27 +224,94 @@ DistributeLayoutAttr setupInsertStridedSliceResultLayout(
     DistributeLayoutAttr consumerLayout, const uArch::uArch *uArch);
 
 /// Sets up the anchor layout for a load gather operation.
-DistributeLayoutAttr
-setupLoadGatherAnchorLayout(LayoutKind layoutKind, VectorType vectorTy,
-                            int chunkSize, DistributeLayoutAttr consumerLayout,
-                            const uArch::uArch *uArch);
+DistributeLayoutAttr setupLoadGatherAnchorLayout(
+    LayoutKind layoutKind, VectorType vectorTy, int contigChunkSize,
+    DistributeLayoutAttr consumerLayout, const uArch::uArch *uArch);
 
 /// Sets up the anchor layout for load matrix operation.
-DistributeLayoutAttr
-setupLoadMatrixAnchorLayout(LayoutKind layoutKind, VectorType vectorTy,
-                            DistributeLayoutAttr consumerLayout,
-                            const uArch::uArch *uArch);
+DistributeLayoutAttr setupLoadMatrixAnchorLayout(
+    LayoutKind layoutKind, VectorType vectorTy, int contigChunkSize,
+    DistributeLayoutAttr consumerLayout, const uArch::uArch *uArch);
 
 /// Sets up the anchor layout for a store scatter operation.
 DistributeLayoutAttr setupStoreScatterAnchorLayout(LayoutKind layoutKind,
                                                    VectorType vectorTy,
-                                                   int chunkSize,
+                                                   int contigChunkSize,
                                                    const uArch::uArch *uArch);
 
 /// Sets up the anchor layout for a store matrix operation.
 DistributeLayoutAttr setupStoreMatrixAnchorLayout(LayoutKind layoutKind,
                                                   VectorType vectorTy,
+                                                  int contigChunkSize,
                                                   const uArch::uArch *uArch);
+
+/// If the consumer layout has only inst_data (no lane_layout/lane_data),
+/// completes it by running the corresponding scatter-style Lane-kind setup
+/// rule with inst_data as the destination shape. The resulting lane info is
+/// merged with the consumer's inst_data so downstream setup* paths see a
+/// fully-populated layout.
+/// Returns the layout unchanged when it is null, has no inst_data, or already
+/// carries lane info; returns nullopt when the derived lane factorization does
+/// not divide the user's inst_data (an invalid inst_data).
+std::optional<DistributeLayoutAttr> completeScatterLoadLaneLayoutFromInstData(
+    DistributeLayoutAttr userSpecifiedLayout,
+    DistributeLayoutAttr consumerLayout, Type elemTy,
+    const xegpu::uArch::LoadGatherInstruction *uArchInstruction,
+    const int subgroupSize);
+
+/// Like completeScatterLoadLaneLayoutFromInstData, but for scatter stores
+/// (store_scatter / store_matrix). A store is a data sink: lane info is derived
+/// purely from inst_data using the uArch's StoreScatter per-lane store width,
+/// with no consumer layout to reuse.
+std::optional<DistributeLayoutAttr> completeScatterStoreLaneLayoutFromInstData(
+    DistributeLayoutAttr specifiedLayout, Type elemTy,
+    const xegpu::uArch::StoreScatterInstruction *uArchInstruction,
+    const int subgroupSize);
+
+/// Completes a user-provided 2D-block store_nd / prefetch_nd anchor that has
+/// only inst_data. These ops are data sinks, so lane info is derived purely
+/// from inst_data using the shared BlockIOInstructionInterface; one helper
+/// serves both store_nd and prefetch_nd.
+std::optional<DistributeLayoutAttr> completeBlockStoreLaneLayoutFromInstData(
+    DistributeLayoutAttr specifiedLayout, Type elemTy,
+    const xegpu::uArch::BlockIOInstructionInterface *uArchInstruction,
+    const int subgroupSize);
+
+/// Like completeBlockStoreLaneLayoutFromInstData, but for load_nd. The consumer
+/// layout supplies the transform / transpose / packing properties; the lane
+/// factorization is recomputed from inst_data (load-side lane counts differ
+/// from the consumer's).
+std::optional<DistributeLayoutAttr> completeBlockLoadLaneLayoutFromInstData(
+    DistributeLayoutAttr specifiedLayout, DistributeLayoutAttr consumerLayout,
+    Type elemTy,
+    const xegpu::uArch::BlockIOInstructionInterface *uArchInstruction,
+    const int subgroupSize);
+
+/// Sets up the anchor layout for a store_nd operation. StoreNd does not
+/// consider a consumer layout (it is a data sink), and picks its layout from
+/// uArch block parameters. `numSg` is only used for Subgroup-kind layouts.
+DistributeLayoutAttr setupStoreNdAnchorLayout(LayoutKind layoutKind,
+                                              VectorType vectorTy, int numSg,
+                                              const uArch::uArch *uArch);
+
+/// Sets up the anchor layout for a prefetch_nd operation. PrefetchNd has no
+/// value result and thus no consumer; it picks its layout from uArch block
+/// parameters. `numSg` is only used for Subgroup-kind layouts.
+DistributeLayoutAttr setupPrefetchNdAnchorLayout(LayoutKind layoutKind,
+                                                 TensorDescType tdescTy,
+                                                 int numSg,
+                                                 const uArch::uArch *uArch);
+
+/// Sets up the anchor layout for a load_nd operation. LoadNd takes a
+/// (downstream) consumer layout and validates it against uArch constraints;
+/// when valid, the consumer's `inst_data` / `sg_layout` are honored.
+/// Otherwise defaults derived from uArch block parameters are used.
+/// `consumerLayout` must be presented. `numSg` is only used for Subgroup-kind
+/// layouts when the consumer does not already provide an sg_layout.
+DistributeLayoutAttr
+setupLoadNdAnchorLayout(LayoutKind layoutKind, VectorType vectorTy,
+                        DistributeLayoutAttr consumerLayout, int numSg,
+                        const uArch::uArch *uArch);
 
 /// Sets up the anchor layouts for a dpas operands (A, B, and C/D).
 /// The numSg and consumerLayout (optional) are only used by sg layout creation.
@@ -248,6 +331,31 @@ setupDpasMxLayout(LayoutKind layoutKind, VectorType aTy, VectorType bTy,
                   VectorType cdTy, VectorType aScaleTy, VectorType bScaleTy,
                   DistributeLayoutAttr consumerLayout, int numSg,
                   const uArch::uArch *uArch);
+
+/// Completes user-provided DPAS A/B/C-D anchors that carry only inst_data by
+/// filling in lane_layout / lane_data derived from the operand shapes (mirrors
+/// the InstData branch of setupDpasLayout). Returns nullopt if the uArch lacks
+/// the matmul instruction.
+std::optional<std::tuple<DistributeLayoutAttr, DistributeLayoutAttr,
+                         DistributeLayoutAttr>>
+completeDpasLaneLayoutFromInstData(DistributeLayoutAttr aLayout,
+                                   DistributeLayoutAttr bLayout,
+                                   DistributeLayoutAttr cdLayout,
+                                   VectorType aTy, VectorType bTy,
+                                   VectorType cdTy, const uArch::uArch *uArch);
+
+/// Like completeDpasLaneLayoutFromInstData, but for dpas_mx: additionally
+/// re-derives the A_scale / B_scale layouts from the completed A / B layouts.
+std::optional<
+    std::tuple<DistributeLayoutAttr, DistributeLayoutAttr, DistributeLayoutAttr,
+               DistributeLayoutAttr, DistributeLayoutAttr>>
+completeDpasMxLaneLayoutFromInstData(DistributeLayoutAttr aLayout,
+                                     DistributeLayoutAttr bLayout,
+                                     DistributeLayoutAttr cdLayout,
+                                     VectorType aTy, VectorType bTy,
+                                     VectorType cdTy, VectorType aScaleTy,
+                                     VectorType bScaleTy,
+                                     const uArch::uArch *uArch);
 
 /// Gets the expected layout for a given consumer operand. This will check if
 /// the owning operation of the consumer operand is one of the special layout

@@ -208,7 +208,7 @@ static MCSymbol *smallData(AsmPrinter &AP, const MachineInstr &MI,
       OutStreamer.emitLabel(Sym);
       OutStreamer.emitSymbolAttribute(Sym, MCSA_Global);
       OutStreamer.emitIntValue(Value, AlignSize);
-      OutStreamer.emitCodeAlignment(Align(AlignSize), &STI);
+      OutStreamer.emitCodeAlignment(Align(AlignSize), STI);
     }
   } else {
     assert(Imm.isExpr() && "Expected expression and found none");
@@ -236,7 +236,7 @@ static MCSymbol *smallData(AsmPrinter &AP, const MachineInstr &MI,
       OutStreamer.emitLabel(Sym);
       OutStreamer.emitSymbolAttribute(Sym, MCSA_Local);
       OutStreamer.emitValue(Imm.getExpr(), AlignSize);
-      OutStreamer.emitCodeAlignment(Align(AlignSize), &STI);
+      OutStreamer.emitCodeAlignment(Align(AlignSize), STI);
     }
   }
   return Sym;
@@ -974,6 +974,116 @@ void HexagonAsmPrinter::LowerPATCHABLE_EVENT_CALL(const MachineInstr &MI,
   OutStreamer->emitLabel(EndSled);
   recordSled(CurSled, MI,
              Typed ? SledKind::TYPED_EVENT : SledKind::CUSTOM_EVENT, 2);
+}
+
+void HexagonAsmPrinter::LowerKCFI_CHECK(const MachineInstr &MI) {
+  Register AddrReg = MI.getOperand(0).getReg();
+  const int64_t Type = MI.getOperand(1).getImm();
+  [[maybe_unused]] MachineBasicBlock::const_instr_iterator NextI =
+      std::next(MI.getIterator());
+  assert(NextI != MI.getParent()->instr_end() && NextI->isCall() &&
+         "KCFI_CHECK not followed by a call instruction");
+  assert(NextI->getOperand(0).getReg() == AddrReg &&
+         "KCFI_CHECK call target doesn't match call operand");
+
+  // Scratch registers for the compare. Default to R6/R7 (caller-saved,
+  // in GeneralSubRegs for potential compounding). If AddrReg conflicts,
+  // fall back through other caller-saved registers.
+  unsigned ScratchRegs[] = {Hexagon::R6, Hexagon::R7};
+  unsigned NextReg = Hexagon::R8;
+  for (auto &Reg : ScratchRegs) {
+    if (Reg != AddrReg)
+      continue;
+    if (NextReg == AddrReg)
+      ++NextReg;
+    Reg = NextReg++;
+  }
+  unsigned LoadReg = ScratchRegs[0];
+  unsigned TypeReg = ScratchRegs[1];
+  unsigned PredReg = Hexagon::P0;
+
+  // Adjust for patchable-function-prefix (nop padding before the function).
+  int64_t PrefixNops = MI.getMF()->getFunction().getFnAttributeAsParsedInteger(
+      "patchable-function-prefix");
+  int64_t Offset = -(PrefixNops * 4 + 4);
+
+  // Emit the KCFI check sequence.
+  //
+  // Packet 1: Load the type hash and materialize the expected hash together.
+  // The load offset fits in the native instruction field for any
+  // patchable-function-prefix count, so it never requires a constant
+  // extender.  This lets the extender for ##hash share the same packet,
+  // saving one packet compared to emitting them separately.
+  //   { r_load = memw(r_addr + #offset); r_type = ##expected_hash }
+  MCInst *LoadInst = OutContext.createMCInst();
+  LoadInst->setOpcode(Hexagon::L2_loadri_io);
+  LoadInst->addOperand(MCOperand::createReg(LoadReg));
+  LoadInst->addOperand(MCOperand::createReg(AddrReg));
+  LoadInst->addOperand(MCOperand::createExpr(HexagonMCExpr::create(
+      MCConstantExpr::create(Offset, OutContext), OutContext)));
+
+  MCInst *TypeInst = OutContext.createMCInst();
+  TypeInst->setOpcode(Hexagon::A2_tfrsi);
+  TypeInst->addOperand(MCOperand::createReg(TypeReg));
+  auto *TypeExpr = HexagonMCExpr::create(
+      MCConstantExpr::create(Type, OutContext), OutContext);
+  HexagonMCInstrInfo::setMustExtend(*TypeExpr, true);
+  TypeInst->addOperand(MCOperand::createExpr(TypeExpr));
+
+  MCInst LoadTypePacket;
+  LoadTypePacket.setOpcode(Hexagon::BUNDLE);
+  LoadTypePacket.addOperand(MCOperand::createImm(0));
+  LoadTypePacket.addOperand(MCOperand::createInst(LoadInst));
+  LoadTypePacket.addOperand(MCOperand::createInst(TypeInst));
+  EmitToStreamer(*OutStreamer, LoadTypePacket);
+
+  // Packet 3: Compare and branch if equal.
+  //   { p0 = cmp.eq(r_load, r_type); if (p0.new) jump:t .Lpass }
+  MCSymbol *Pass = OutContext.createTempSymbol();
+
+  MCInst *CmpInst = OutContext.createMCInst();
+  CmpInst->setOpcode(Hexagon::C2_cmpeq);
+  CmpInst->addOperand(MCOperand::createReg(PredReg));
+  CmpInst->addOperand(MCOperand::createReg(LoadReg));
+  CmpInst->addOperand(MCOperand::createReg(TypeReg));
+
+  MCInst *JumpInst = OutContext.createMCInst();
+  JumpInst->setOpcode(Hexagon::J2_jumptnewpt);
+  JumpInst->addOperand(MCOperand::createReg(PredReg));
+  JumpInst->addOperand(MCOperand::createExpr(HexagonMCExpr::create(
+      MCSymbolRefExpr::create(Pass, OutContext), OutContext)));
+
+  MCInst CmpJmpPacket;
+  CmpJmpPacket.setOpcode(Hexagon::BUNDLE);
+  CmpJmpPacket.addOperand(MCOperand::createImm(0));
+  CmpJmpPacket.addOperand(MCOperand::createInst(CmpInst));
+  CmpJmpPacket.addOperand(MCOperand::createInst(JumpInst));
+  EmitToStreamer(*OutStreamer, CmpJmpPacket);
+
+  // Packet 4: Crash on mismatch via misaligned load.
+  // Use the same mechanism as llvm.trap (PS_crash): a doubleword load from
+  // a misaligned address is guaranteed to fault in all execution modes,
+  // including kernel/monitor mode where trap0 may not generate a useful
+  // exception.
+  MCSymbol *TrapLabel = OutContext.createTempSymbol();
+  OutStreamer->emitLabel(TrapLabel);
+
+  MCInst *CrashInst = OutContext.createMCInst();
+  CrashInst->setOpcode(Hexagon::PS_loadrdabs);
+  CrashInst->addOperand(MCOperand::createReg(Hexagon::D13));
+  auto *CrashExpr = HexagonMCExpr::create(
+      MCConstantExpr::create(0xBADC0FEE, OutContext), OutContext);
+  HexagonMCInstrInfo::setMustExtend(*CrashExpr, true);
+  CrashInst->addOperand(MCOperand::createExpr(CrashExpr));
+
+  MCInst CrashPacket;
+  CrashPacket.setOpcode(Hexagon::BUNDLE);
+  CrashPacket.addOperand(MCOperand::createImm(0));
+  CrashPacket.addOperand(MCOperand::createInst(CrashInst));
+  EmitToStreamer(*OutStreamer, CrashPacket);
+
+  emitKCFITrapEntry(*MI.getMF(), TrapLabel);
+  OutStreamer->emitLabel(Pass);
 }
 
 void HexagonAsmPrinter::EmitSled(const MachineInstr &MI, SledKind Kind) {

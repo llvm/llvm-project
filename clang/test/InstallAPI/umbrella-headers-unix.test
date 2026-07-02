@@ -4,7 +4,7 @@
 ; RUN: split-file %s %t
 ; RUN: sed -e "s|DSTROOT|%/t|g" %t/inputs.json.in > %t/inputs.json
 ; RUN: mkdir %t/Frameworks/
-; RUN: cp -r %S/Inputs/Umbrella/Umbrella.framework %t/Frameworks/
+; RUN: cp -R %S/Inputs/Umbrella/Umbrella.framework %t/Frameworks/
 
 // Only validate path based input that rely on regex matching on unix based file systems.
 ; RUN: clang-installapi --target=arm64-apple-macosx13 \

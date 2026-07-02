@@ -1023,6 +1023,11 @@ struct fltSemantics {
 
   /* Whether the sign bit of this semantics is the most significant bit */
   bool hasSignBitInMSB = true;
+
+  /* Whether the format supports IEEE754 denormal representation.
+     If both hasDenormals and hasZero are false exponent 0 is assumed to be a
+     regular exponent instead of being reserved. This changes the bias by +1. */
+  bool hasDenormals = true;
 };
 
 // This is a interface class that is currently forwarding functionalities from
@@ -1602,6 +1607,22 @@ public:
   int getExactLog2() const {
     return isNegative() ? INT_MIN : getExactLog2Abs();
   }
+
+  // Returns true if this value is exactly 2^N.
+  LLVM_READONLY
+  bool isPowerOf2(int N) const { return N != INT_MIN && getExactLog2() == N; }
+
+  // Returns true if this value is exactly -(2^N).
+  LLVM_READONLY
+  bool isNegPowerOf2(int N) const {
+    return N != INT_MIN && isNegative() && getExactLog2Abs() == N;
+  }
+
+  // Returns true if this value is exactly +1.0.
+  LLVM_READONLY bool isOne() const { return isPowerOf2(0); }
+
+  // Returns true if this value is exactly -1.0.
+  LLVM_READONLY bool isMinusOne() const { return isNegPowerOf2(0); }
 
   LLVM_ABI friend hash_code hash_value(const APFloat &Arg);
   friend int ilogb(const APFloat &Arg);

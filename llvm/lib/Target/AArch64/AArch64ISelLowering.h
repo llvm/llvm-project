@@ -175,6 +175,9 @@ public:
   MachineBasicBlock *EmitLoweredCatchRet(MachineInstr &MI,
                                            MachineBasicBlock *BB) const;
 
+  MachineBasicBlock *EmitLoweredSetFpmr(MachineInstr &MI,
+                                        MachineBasicBlock *MBB) const;
+
   MachineBasicBlock *EmitDynamicProbedAlloc(MachineInstr &MI,
                                             MachineBasicBlock *MBB) const;
 
@@ -373,6 +376,9 @@ public:
   }
 
   bool useLoadStackGuardNode(const Module &M) const override;
+  bool useStackGuardMixFP() const override;
+  SDValue emitStackGuardMixFP(SelectionDAG &DAG, SDValue Val,
+                              const SDLoc &DL) const override;
   TargetLoweringBase::LegalizeTypeAction
   getPreferredVectorAction(MVT VT) const override;
 
@@ -440,6 +446,10 @@ public:
   ShiftLegalizationStrategy
   preferredShiftLegalizationStrategy(SelectionDAG &DAG, SDNode *N,
                                      unsigned ExpansionFactor) const override;
+
+  CondMergingParams
+  getJumpConditionMergingParams(Instruction::BinaryOps Opc, const Value *Lhs,
+                                const Value *Rhs) const override;
 
   bool shouldTransformSignedTruncationCheck(EVT XVT,
                                             unsigned KeptBits) const override {

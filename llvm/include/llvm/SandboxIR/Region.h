@@ -189,10 +189,10 @@ public:
 
 #ifndef NDEBUG
   /// This is an expensive check, meant for testing.
-  LLVM_ABI_FOR_TEST bool operator==(const Region &Other) const;
+  LLVM_ABI bool operator==(const Region &Other) const;
   bool operator!=(const Region &other) const { return !(*this == other); }
 
-  LLVM_ABI_FOR_TEST void dump(raw_ostream &OS) const;
+  LLVM_ABI void dump(raw_ostream &OS) const;
   void dump() const;
   friend raw_ostream &operator<<(raw_ostream &OS, const Region &Rgn) {
     Rgn.dump(OS);

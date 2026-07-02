@@ -2463,6 +2463,34 @@ bool TargetLowering::SimplifyDemandedBits(
     Known = TLO.DAG.computeKnownBits(Op, DemandedElts, Depth);
     break;
   }
+  case ISD::PDEP: {
+    SDValue Op0 = Op.getOperand(0);
+    SDValue Op1 = Op.getOperand(1);
+
+    unsigned DemandedBitsLZ = OriginalDemandedBits.countl_zero();
+    APInt LoMask = APInt::getLowBitsSet(BitWidth, BitWidth - DemandedBitsLZ);
+
+    // If the demanded bits has leading zeroes, we don't demand those from the
+    // mask.
+    if (SimplifyDemandedBits(Op1, LoMask, Known, TLO, Depth + 1))
+      return true;
+
+    // The number of possible 1s in the mask determines the number of LSBs of
+    // operand 0 used. Undemanded bits from the mask don't matter so filter
+    // them before counting.
+    KnownBits Known2;
+    uint64_t Count = (~Known.Zero & LoMask).popcount();
+    APInt DemandedMask(APInt::getLowBitsSet(BitWidth, Count));
+    if (SimplifyDemandedBits(Op0, DemandedMask, Known2, TLO, Depth + 1))
+      return true;
+
+    // Zeroes are retained from the mask, but not ones.
+    Known.One.clearAllBits();
+    // The result will have at least as many trailing zeros as the non-mask
+    // operand since bits can only map to the same or higher bit position.
+    Known.Zero.setLowBits(Known2.countMinTrailingZeros());
+    break;
+  }
   case ISD::SIGN_EXTEND_INREG: {
     SDValue Op0 = Op.getOperand(0);
     EVT ExVT = cast<VTSDNode>(Op.getOperand(1))->getVT();
@@ -8897,6 +8925,56 @@ SDValue TargetLowering::expandCLMUL(SDNode *Node, SelectionDAG &DAG) const {
     // calculation in BasicTTIImpl::getTypeBasedIntrinsicInstrCost for
     // Intrinsic::clmul.
 
+    // Strategy 4: multiplication with holes.
+    //
+    // Uses "holes" (sequences of zeroes) to avoid carry spilling. When carries
+    // do occur, they wind up in a "hole" and are subsequently masked out of the
+    // result.
+    //
+    // A hole of 3 bits is optimal for 32-bit and 64-bit inputs. 128-bit
+    // integers need a larger hole, and for smaller integers the fallback below
+    // is more efficient.
+    //
+    // Based on bmul64 in bearssl and bmul in the rust polyval crate.
+    if (BW >= 32 && BW <= 64 &&
+        isOperationLegalOrCustom(ISD::MUL, getTypeToTransformTo(Ctx, VT))) {
+
+      // Set every fourth bit of each nibble, equivalent to 0b00010001...0001.
+      APInt MaskVal = APInt::getSplat(BW, APInt(4, 0b0001));
+
+      // Create versions of X and Y that keep only the I-th bit of
+      // each nibble.
+      SDValue M[4], Xp[4], Yp[4];
+      for (unsigned I = 0; I < 4; ++I) {
+        M[I] = DAG.getConstant(MaskVal.shl(I), DL, VT);
+        Xp[I] = DAG.getNode(ISD::AND, DL, VT, X, M[I]);
+        Yp[I] = DAG.getNode(ISD::AND, DL, VT, Y, M[I]);
+      }
+
+      // Codegens these expressions (16 multiplications):
+      //
+      // z0 = (x0 * y0) ^ (x1 * y3) ^ (x2 * y2) ^ (x3 * y1);
+      // z1 = (x0 * y1) ^ (x1 * y0) ^ (x2 * y3) ^ (x3 * y2);
+      // z2 = (x0 * y2) ^ (x1 * y1) ^ (x2 * y0) ^ (x3 * y3);
+      // z3 = (x0 * y3) ^ (x1 * y2) ^ (x2 * y1) ^ (x3 * y0);
+      SDValue Res = DAG.getConstant(0, DL, VT);
+      for (unsigned I = 0; I < 4; ++I) {
+        SDValue Zi = DAG.getConstant(0, DL, VT);
+        for (unsigned J = 0; J < 4; ++J) {
+          unsigned K = (I + 4 - J) % 4;
+          SDValue P = DAG.getNode(ISD::MUL, DL, VT, Xp[J], Yp[K]);
+          Zi = DAG.getNode(ISD::XOR, DL, VT, Zi, P);
+        }
+
+        // Keep only the bits belonging to this iteration, and bitwise or it all
+        // together.
+        Zi = DAG.getNode(ISD::AND, DL, VT, Zi, M[I]);
+        Res = DAG.getNode(ISD::OR, DL, VT, Res, Zi, SDNodeFlags::Disjoint);
+      }
+      return Res;
+    }
+
+    // Strategy 5: the naive fallback.
     EVT SetCCVT = getSetCCResultType(DAG.getDataLayout(), Ctx, VT);
 
     SDValue Res = DAG.getConstant(0, DL, VT);
@@ -9048,7 +9126,7 @@ SDValue TargetLowering::expandPDEP(SDNode *Node, SelectionDAG &DAG) const {
   // Each pass handles half the shift amount of the previous pass.
   SDValue X = Val;
   for (int S = (int)LogBW - 1; S >= 0; --S) {
-    SDValue ShiftSv = DAG.getShiftAmountConstant(1u << S, VT, DL);
+    SDValue ShiftSv = DAG.getShiftAmountConstant(1ull << S, VT, DL);
     SDValue T = DAG.getNode(ISD::SHL, DL, VT, X, ShiftSv);
     SDValue UnshiftedBits =
         DAG.getNode(ISD::AND, DL, VT, X, DAG.getNOT(DL, MvArray[S], VT));
@@ -10044,6 +10122,22 @@ SDValue TargetLowering::expandFMINNUM_FMAXNUM(SDNode *Node,
   return SDValue();
 }
 
+static SDValue isSpecificZeroAfterMaybeRounding(SelectionDAG &DAG,
+                                                const TargetLowering &TLI,
+                                                const SDLoc &DL, SDValue Val,
+                                                FPClassTest FPClass) {
+  EVT VT = Val.getValueType();
+  EVT CCVT = TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
+  EVT IntVT = VT.changeTypeToInteger();
+  EVT FloatVT = VT.changeElementType(*DAG.getContext(), MVT::f32);
+  SDValue TestZero = DAG.getTargetConstant(FPClass, DL, MVT::i32);
+  if (!TLI.isTypeLegal(IntVT) &&
+      !TLI.isOperationLegalOrCustom(ISD::IS_FPCLASS, VT))
+    Val = DAG.getNode(ISD::FP_ROUND, DL, FloatVT, Val,
+                      DAG.getIntPtrConstant(0, DL, /*isTarget=*/true));
+  return DAG.getNode(ISD::IS_FPCLASS, DL, CCVT, Val, TestZero);
+}
+
 SDValue TargetLowering::expandFMINIMUM_FMAXIMUM(SDNode *N,
                                                 SelectionDAG &DAG) const {
   if (SDValue Expanded = expandVectorNaryOpBySplitting(N, DAG))
@@ -10095,17 +10189,11 @@ SDValue TargetLowering::expandFMINIMUM_FMAXIMUM(SDNode *N,
   // fminimum/fmaximum requires -0.0 less than +0.0
   if (!MinMaxMustRespectOrderedZero && !N->getFlags().hasNoSignedZeros() &&
       !DAG.isKnownNeverLogicalZero(RHS) && !DAG.isKnownNeverLogicalZero(LHS)) {
-    SDValue IsZero = DAG.getSetCC(DL, CCVT, MinMax,
-                                  DAG.getConstantFP(0.0, DL, VT), ISD::SETOEQ);
-    SDValue TestZero =
-        DAG.getTargetConstant(IsMax ? fcPosZero : fcNegZero, DL, MVT::i32);
-    SDValue LCmp = DAG.getSelect(
-        DL, VT, DAG.getNode(ISD::IS_FPCLASS, DL, CCVT, LHS, TestZero), LHS,
-        MinMax, Flags);
-    SDValue RCmp = DAG.getSelect(
-        DL, VT, DAG.getNode(ISD::IS_FPCLASS, DL, CCVT, RHS, TestZero), RHS,
-        LCmp, Flags);
-    MinMax = DAG.getSelect(DL, VT, IsZero, RCmp, MinMax, Flags);
+    SDValue IsEqual = DAG.getSetCC(DL, CCVT, LHS, RHS, ISD::SETOEQ);
+    SDValue IsSpecificZero = isSpecificZeroAfterMaybeRounding(
+        DAG, *this, DL, LHS, IsMax ? fcPosZero : fcNegZero);
+    SDValue RetZero = DAG.getSelect(DL, VT, IsSpecificZero, LHS, RHS, Flags);
+    MinMax = DAG.getSelect(DL, VT, IsEqual, RetZero, MinMax, Flags);
   }
 
   return MinMax;
@@ -10185,22 +10273,13 @@ SDValue TargetLowering::expandFMINIMUMNUM_FMAXIMUMNUM(SDNode *Node,
       DAG.isKnownNeverLogicalZero(RHS)) {
     return MinMax;
   }
-  SDValue TestZero =
-      DAG.getTargetConstant(IsMax ? fcPosZero : fcNegZero, DL, MVT::i32);
   SDValue IsZero = DAG.getSetCC(DL, CCVT, MinMax,
                                 DAG.getConstantFP(0.0, DL, VT), ISD::SETEQ);
-  EVT IntVT = VT.changeTypeToInteger();
-  EVT FloatVT = VT.changeElementType(*DAG.getContext(), MVT::f32);
-  SDValue LHSTrunc = LHS;
-  if (!isTypeLegal(IntVT) && !isOperationLegalOrCustom(ISD::IS_FPCLASS, VT)) {
-    LHSTrunc = DAG.getNode(ISD::FP_ROUND, DL, FloatVT, LHS,
-                           DAG.getIntPtrConstant(0, DL, /*isTarget=*/true));
-  }
+  SDValue IsSpecificZero = isSpecificZeroAfterMaybeRounding(
+      DAG, *this, DL, LHS, IsMax ? fcPosZero : fcNegZero);
   // It's OK to select from LHS and MinMax, with only one ISD::IS_FPCLASS, as
   // we preferred RHS when generate MinMax, if the operands are equal.
-  SDValue RetZero = DAG.getSelect(
-      DL, VT, DAG.getNode(ISD::IS_FPCLASS, DL, CCVT, LHSTrunc, TestZero), LHS,
-      MinMax, Flags);
+  SDValue RetZero = DAG.getSelect(DL, VT, IsSpecificZero, LHS, MinMax, Flags);
   return DAG.getSelect(DL, VT, IsZero, RetZero, MinMax, Flags);
 }
 

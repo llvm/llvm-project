@@ -147,9 +147,9 @@ namespace std {
 _LIBCPP_PUSH_MACROS
 #    include <__undef_macros>
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #    if _LIBCPP_STD_VER >= 20 && _LIBCPP_HAS_EXPERIMENTAL_SYNCSTREAM
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 // [syncstream.syncbuf.overview]/1
 //   Class template basic_syncbuf stores character data written to it,
@@ -196,7 +196,8 @@ public:
   // calling __inc_reference.
   //
   // pre: __ptr is in __lut_
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI lock_guard<mutex> __get_lock([[maybe_unused]] void* __ptr) noexcept {
+  _LIBCPP_NO_THREAD_SAFETY_ANALYSIS [[nodiscard]] _LIBCPP_HIDE_FROM_ABI lock_guard<mutex>
+  __get_lock([[maybe_unused]] void* __ptr) noexcept {
     shared_lock __lock{__mutex_};
     return lock_guard{__get_it(__ptr)->second.__mutex};
   }
@@ -511,9 +512,9 @@ using std::osyncstream;
 using std::wosyncstream;
 #      endif
 
-#    endif // _LIBCPP_STD_VER >= 20 && _LIBCPP_HAS_EXPERIMENTAL_SYNCSTREAM
-
 _LIBCPP_END_NAMESPACE_STD
+
+#    endif // _LIBCPP_STD_VER >= 20 && _LIBCPP_HAS_EXPERIMENTAL_SYNCSTREAM
 
 _LIBCPP_POP_MACROS
 

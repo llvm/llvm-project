@@ -11,40 +11,40 @@ define void @repro(ptr %out, ptr %base) {
 ; CHECK-NEXT:    bne .LBB0_3
 ; CHECK-NEXT:  @ %bb.1: @ %cond.load
 ; CHECK-NEXT:    vmov.i32 d16, #0x0
-; CHECK-NEXT:    vldr d17, [r0]
+; CHECK-NEXT:    vldr d18, [r0]
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    beq .LBB0_4
 ; CHECK-NEXT:  .LBB0_2:
-; CHECK-NEXT:    vorr d18, d16, d16
+; CHECK-NEXT:    vorr d20, d16, d16
 ; CHECK-NEXT:    b .LBB0_5
 ; CHECK-NEXT:  .LBB0_3:
 ; CHECK-NEXT:    mov r2, #0
-; CHECK-NEXT:    vmov d17, r2, r2
-; CHECK-NEXT:    vorr d16, d17, d17
+; CHECK-NEXT:    vmov d18, r2, r2
+; CHECK-NEXT:    vorr d16, d18, d18
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    bne .LBB0_2
 ; CHECK-NEXT:  .LBB0_4: @ %cond.load1
 ; CHECK-NEXT:    ldm r0, {r0, r3}
-; CHECK-NEXT:    vmov d18, r0, r3
+; CHECK-NEXT:    vmov d20, r0, r3
 ; CHECK-NEXT:  .LBB0_5: @ %else2
 ; CHECK-NEXT:    mov r0, #1
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    bne .LBB0_8
 ; CHECK-NEXT:  @ %bb.6: @ %cond.load4
 ; CHECK-NEXT:    ldrd r2, r3, [r1]
-; CHECK-NEXT:    vmov d19, r2, r3
+; CHECK-NEXT:    vmov d22, r2, r3
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    beq .LBB0_9
 ; CHECK-NEXT:  .LBB0_7:
-; CHECK-NEXT:    vorr d20, d16, d16
+; CHECK-NEXT:    vorr d21, d16, d16
 ; CHECK-NEXT:    b .LBB0_10
 ; CHECK-NEXT:  .LBB0_8:
-; CHECK-NEXT:    vorr d19, d16, d16
+; CHECK-NEXT:    vorr d22, d16, d16
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    bne .LBB0_7
 ; CHECK-NEXT:  .LBB0_9: @ %cond.load7
 ; CHECK-NEXT:    ldrd r0, r1, [r0]
-; CHECK-NEXT:    vmov d20, r0, r1
+; CHECK-NEXT:    vmov d21, r0, r1
 ; CHECK-NEXT:  .LBB0_10: @ %else8
 ; CHECK-NEXT:    mov r0, #1
 ; CHECK-NEXT:    cmp r0, #0
@@ -68,19 +68,19 @@ define void @repro(ptr %out, ptr %base) {
 ; CHECK-NEXT:    add sp, sp, #4
 ; CHECK-NEXT:    bx lr
 ; CHECK-NEXT:  .LBB0_16: @ %cond.store
-; CHECK-NEXT:    vst1.8 {d17}, [r0]
+; CHECK-NEXT:    vst1.8 {d18}, [r0]
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    bne .LBB0_12
 ; CHECK-NEXT:  .LBB0_17: @ %cond.store15
-; CHECK-NEXT:    vst1.8 {d18}, [r0]
+; CHECK-NEXT:    vst1.8 {d20}, [r0]
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    bne .LBB0_13
 ; CHECK-NEXT:  .LBB0_18: @ %cond.store17
-; CHECK-NEXT:    vst1.8 {d19}, [r0]
+; CHECK-NEXT:    vst1.8 {d22}, [r0]
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    bne .LBB0_14
 ; CHECK-NEXT:  .LBB0_19: @ %cond.store19
-; CHECK-NEXT:    vst1.8 {d20}, [r0]
+; CHECK-NEXT:    vst1.8 {d21}, [r0]
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    bne .LBB0_15
 ; CHECK-NEXT:  .LBB0_20: @ %cond.store21

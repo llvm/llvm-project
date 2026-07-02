@@ -42,7 +42,7 @@
 
 # The input of this test is generated on Linux.
 # For regenerating the test:
-# cp -r %S/Inputs/directory_coverage /tmp
+# cp -R %S/Inputs/directory_coverage /tmp
 # cd /tmp/directory_coverage
 # clang -fprofile-instr-generate -fcoverage-mapping -mllvm -enable-name-compression=false \
 #   -o main main.cc a0/a1/a2.cc b0/b1_1.cc b0/b1_2.cc c0/c1/c2_1.cc c0/c1/c2_2.cc

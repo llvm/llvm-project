@@ -3530,6 +3530,13 @@ TEST(DataLayoutTest, UEFI) {
   EXPECT_THAT(TT.computeDataLayout(), testing::HasSubstr("-m:w-"));
 }
 
+TEST(TripleTest, WindowsOrUEFI) {
+  EXPECT_TRUE(Triple("x86_64-pc-windows-msvc").isOSWindowsOrUEFI());
+  EXPECT_TRUE(Triple("x86_64-w64-windows-gnu").isOSWindowsOrUEFI());
+  EXPECT_TRUE(Triple("x86_64-unknown-uefi").isOSWindowsOrUEFI());
+  EXPECT_FALSE(Triple("x86_64-unknown-linux-gnu").isOSWindowsOrUEFI());
+}
+
 TEST(TripleTest, DefaultWCharSize) {
   EXPECT_EQ(4u, Triple("x86_64-unknown-linux-gnu").getDefaultWCharSize());
   EXPECT_EQ(4u, Triple("aarch64-unknown-linux-gnu").getDefaultWCharSize());

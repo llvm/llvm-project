@@ -1256,7 +1256,7 @@ define i32 @print_umax_reduction(ptr %y) {
 ; CHECK-NEXT:      CLONE ir<%gep> = getelementptr inbounds ir<%y>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds ir<%gep>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%lv> = load vp<[[VP5]]>
-; CHECK-NEXT:      REDUCE ir<%red.next> = ir<%red> +  reduce.umax (ir<%lv>)
+; CHECK-NEXT:      WIDEN-INTRINSIC ir<%red.next> = call llvm.umax(ir<%red>, ir<%lv>)
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; CHECK-NEXT:    No successors
@@ -1264,7 +1264,7 @@ define i32 @print_umax_reduction(ptr %y) {
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = compute-reduction-result (umax, in-loop) ir<%red.next>
+; CHECK-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = compute-reduction-result (umax) ir<%red.next>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<100>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -1283,8 +1283,7 @@ loop:
   %red = phi i32 [ 0, %entry ], [ %red.next, %loop ]
   %gep = getelementptr inbounds i32, ptr %y, i64 %iv
   %lv = load i32, ptr %gep, align 4
-  %icmp = icmp ult i32 %lv, %red
-  %red.next = select i1 %icmp, i32 %red, i32 %lv
+  %red.next = call i32 @llvm.umax(i32 %red, i32 %lv)
   %iv.next = add i64 %iv, 1
   %ec = icmp eq i64 %iv.next, 100
   br i1 %ec, label %exit, label %loop
@@ -1316,7 +1315,7 @@ define i32 @print_umin_reduction(ptr %y) {
 ; CHECK-NEXT:      CLONE ir<%gep> = getelementptr inbounds ir<%y>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds ir<%gep>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%lv> = load vp<[[VP5]]>
-; CHECK-NEXT:      REDUCE ir<%red.next> = ir<%red> +  reduce.umin (ir<%lv>)
+; CHECK-NEXT:      WIDEN-INTRINSIC ir<%red.next> = call llvm.umin(ir<%lv>, ir<%red>)
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; CHECK-NEXT:    No successors
@@ -1324,7 +1323,7 @@ define i32 @print_umin_reduction(ptr %y) {
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = compute-reduction-result (umin, in-loop) ir<%red.next>
+; CHECK-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = compute-reduction-result (umin) ir<%red.next>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<100>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -1343,8 +1342,7 @@ loop:
   %red = phi i32 [ 0, %entry ], [ %red.next, %loop ]
   %gep = getelementptr inbounds i32, ptr %y, i64 %iv
   %lv = load i32, ptr %gep, align 4
-  %icmp = icmp ult i32 %lv, %red
-  %red.next = select i1 %icmp, i32 %lv, i32 %red
+  %red.next = call i32 @llvm.umin(i32 %lv, i32 %red)
   %iv.next = add i64 %iv, 1
   %ec = icmp eq i64 %iv.next, 100
   br i1 %ec, label %exit, label %loop
@@ -1376,7 +1374,7 @@ define i32 @print_smax_reduction(ptr %y) {
 ; CHECK-NEXT:      CLONE ir<%gep> = getelementptr inbounds ir<%y>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds ir<%gep>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%lv> = load vp<[[VP5]]>
-; CHECK-NEXT:      REDUCE ir<%red.next> = ir<%red> +  reduce.smax (ir<%lv>)
+; CHECK-NEXT:      WIDEN-INTRINSIC ir<%red.next> = call llvm.smax(ir<%red>, ir<%lv>)
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; CHECK-NEXT:    No successors
@@ -1384,7 +1382,7 @@ define i32 @print_smax_reduction(ptr %y) {
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = compute-reduction-result (smax, in-loop) ir<%red.next>
+; CHECK-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = compute-reduction-result (smax) ir<%red.next>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<100>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -1403,8 +1401,7 @@ loop:
   %red = phi i32 [ 0, %entry ], [ %red.next, %loop ]
   %gep = getelementptr inbounds i32, ptr %y, i64 %iv
   %lv = load i32, ptr %gep, align 4
-  %icmp = icmp slt i32 %lv, %red
-  %red.next = select i1 %icmp, i32 %red, i32 %lv
+  %red.next = call i32 @llvm.smax(i32 %red, i32 %lv)
   %iv.next = add i64 %iv, 1
   %ec = icmp eq i64 %iv.next, 100
   br i1 %ec, label %exit, label %loop
@@ -1436,7 +1433,7 @@ define i32 @print_smin_reduction(ptr %y) {
 ; CHECK-NEXT:      CLONE ir<%gep> = getelementptr inbounds ir<%y>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds ir<%gep>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%lv> = load vp<[[VP5]]>
-; CHECK-NEXT:      REDUCE ir<%red.next> = ir<%red> +  reduce.smin (ir<%lv>)
+; CHECK-NEXT:      WIDEN-INTRINSIC ir<%red.next> = call llvm.smin(ir<%lv>, ir<%red>)
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; CHECK-NEXT:    No successors
@@ -1444,7 +1441,7 @@ define i32 @print_smin_reduction(ptr %y) {
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = compute-reduction-result (smin, in-loop) ir<%red.next>
+; CHECK-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = compute-reduction-result (smin) ir<%red.next>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<100>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -1463,8 +1460,7 @@ loop:
   %red = phi i32 [ 0, %entry ], [ %red.next, %loop ]
   %gep = getelementptr inbounds i32, ptr %y, i64 %iv
   %lv = load i32, ptr %gep, align 4
-  %icmp = icmp slt i32 %lv, %red
-  %red.next = select i1 %icmp, i32 %lv, i32 %red
+  %red.next = call i32 @llvm.smin(i32 %lv, i32 %red)
   %iv.next = add i64 %iv, 1
   %ec = icmp eq i64 %iv.next, 100
   br i1 %ec, label %exit, label %loop

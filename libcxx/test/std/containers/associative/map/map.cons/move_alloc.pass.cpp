@@ -161,6 +161,7 @@ int main(int, char**) {
 
 #if TEST_STD_VER >= 26
   // FIXME: It is not yet possible to replace a `const MoveOnly` key subobject during constant evaluation.
+  // See https://github.com/llvm/llvm-project/issues/204617.
   // static_assert(test_move_alloc<MoveOnly>());
   static_assert(test_move_alloc<CopyConstructible>());
 #endif

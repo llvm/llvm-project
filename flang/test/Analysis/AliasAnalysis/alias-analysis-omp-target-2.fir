@@ -49,7 +49,7 @@ func.func @_QPTestTargetData(%arg0: !fir.ref<!fir.array<10xf32>> {fir.bindc_name
     %13 = arith.subi %c10_1, %c1_4 : index
     %14 = omp.map.bounds lower_bound(%c0_5 : index) upper_bound(%13 : index) extent(%c10_1 : index) stride(%c1_4 : index) start_idx(%c1_4 : index)
     %15 = omp.map.info var_ptr(%6#1 : !fir.ref<!fir.array<10xf32>>, !fir.array<10xf32>) map_clauses(implicit, tofrom) capture(ByRef) bounds(%14) -> !fir.ref<!fir.array<10xf32>> {name = "p"}
-    omp.target map_entries(%12 -> %arg3, %15 -> %arg4 : !fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>) {
+    omp.target kernel_type(generic) map_entries(%12 -> %arg3, %15 -> %arg4 : !fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>) {
       %c10_10 = arith.constant 10 : index
       %22 = fir.shape %c10_10 : (index) -> !fir.shape<1>
       %23:2 = hlfir.declare %arg3(%22) {uniq_name = "_QFtest_target_dataEa"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>)
@@ -74,7 +74,7 @@ func.func @_QPTestTargetData(%arg0: !fir.ref<!fir.array<10xf32>> {fir.bindc_name
     %19 = arith.subi %c10_1, %c1_8 : index
     %20 = omp.map.bounds lower_bound(%c0_9 : index) upper_bound(%19 : index) extent(%c10_1 : index) stride(%c1_8 : index) start_idx(%c1_8 : index)
     %21 = omp.map.info var_ptr(%6#1 : !fir.ref<!fir.array<10xf32>>, !fir.array<10xf32>) map_clauses(implicit, tofrom) capture(ByRef) bounds(%20) -> !fir.ref<!fir.array<10xf32>> {name = "p"}
-    omp.target map_entries(%18 -> %arg3, %21 -> %arg4 : !fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>) {
+    omp.target kernel_type(generic) map_entries(%18 -> %arg3, %21 -> %arg4 : !fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>) {
       %c10_10 = arith.constant 10 : index
       %22 = fir.shape %c10_10 : (index) -> !fir.shape<1>
       %23:2 = hlfir.declare %arg3(%22) {uniq_name = "_QFtest_target_dataEb"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>)

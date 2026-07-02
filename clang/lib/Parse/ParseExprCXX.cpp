@@ -496,7 +496,7 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
               getCurScope(), SS,
               /*hasTemplateKeyword=*/false, TemplateName, ObjectType,
               EnteringContext, Template, MemberOfUnknownSpecialization,
-              Disambiguation)) {
+              /*AllowTypoCorrection=*/!Disambiguation)) {
         // If lookup didn't find anything, we treat the name as a template-name
         // anyway. C++20 requires this, and in prior language modes it improves
         // error recovery. But before we commit to this, check that we actually
@@ -2276,9 +2276,9 @@ bool Parser::ParseUnqualifiedIdTemplateId(
           EnteringContext, Template, /*AllowInjectedClassName*/ true);
     } else {
       TNK = Actions.isTemplateName(getCurScope(), SS, TemplateKWLoc.isValid(),
-                                   TemplateName, ObjectType,
-                                   EnteringContext, Template,
-                                   MemberOfUnknownSpecialization);
+                                   TemplateName, ObjectType, EnteringContext,
+                                   Template, MemberOfUnknownSpecialization,
+                                   /*AllowTypoCorrection=*/false);
 
       if (TNK == TNK_Non_template && !Id.DestructorName.get()) {
         Diag(NameLoc, diag::err_destructor_template_id)

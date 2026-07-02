@@ -64,6 +64,7 @@ static_library("Core") {
     "DebuggerEvents.cpp",
     "Declaration.cpp",
     "DemangledNameInfo.cpp",
+    "Diagnostics.cpp",
     "Disassembler.cpp",
     "DumpDataExtractor.cpp",
     "DumpRegisterInfo.cpp",

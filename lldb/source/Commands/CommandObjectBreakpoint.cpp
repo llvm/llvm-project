@@ -2536,7 +2536,7 @@ protected:
     switch (break_type) {
     case eClearTypeFileAndLine: // Breakpoint by source position
     {
-      const ConstString filename(m_options.m_filename);
+      llvm::StringRef filename(m_options.m_filename);
       BreakpointLocationCollection loc_coll;
 
       for (size_t i = 0; i < num_breakpoints; ++i) {
@@ -3109,7 +3109,7 @@ protected:
         result.AppendError("no breakpoints specified, cannot delete names");
         return;
       }
-      ConstString bp_name(m_name_options.m_name.GetCurrentValue());
+      llvm::StringRef bp_name(m_name_options.m_name.GetCurrentValueAsRef());
       size_t num_valid_ids = valid_bp_ids.GetSize();
       for (size_t index = 0; index < num_valid_ids; index++) {
         lldb::break_id_t bp_id =

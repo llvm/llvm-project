@@ -11,11 +11,11 @@
 
 // GCN-LABEL: warning: test_target
 // GFX8-NOT: error:
-// GFX10: error: .amdgcn_target directive's target id amdgcn-amd-amdhsa--gfx810:xnack+ does not match the specified target id amdgcn-amd-amdhsa--gfx1010:xnack+
-// GFX11: error: .amdgcn_target directive's target id amdgcn-amd-amdhsa--gfx810:xnack+ does not match the specified target id amdgcn-amd-amdhsa--gfx1100
-// GFX12: error: .amdgcn_target directive's target id amdgcn-amd-amdhsa--gfx810:xnack+ does not match the specified target id amdgcn-amd-amdhsa--[[MCPU]]
-// GFX1170: error: .amdgcn_target directive's target id amdgcn-amd-amdhsa--gfx810:xnack+ does not match the specified target id amdgcn-amd-amdhsa--gfx1170
-// NONAMDHSA: error: .amdgcn_target directive's target id amdgcn-amd-amdhsa--gfx810:xnack+ does not match the specified target id amdgcn-amd-unknown--gfx810
+// GFX10: error: .amdgcn_target directive's target id amdgcn-amd-amdhsa-unknown-gfx810:xnack+ does not match the specified target id amdgcn-amd-amdhsa-unknown-gfx1010:xnack+
+// GFX11: error: .amdgcn_target directive's target id amdgcn-amd-amdhsa-unknown-gfx810:xnack+ does not match the specified target id amdgcn-amd-amdhsa-unknown-gfx1100
+// GFX12: error: .amdgcn_target directive's target id amdgcn-amd-amdhsa-unknown-gfx810:xnack+ does not match the specified target id amdgcn-amd-amdhsa-unknown-[[MCPU]]
+// GFX1170: error: .amdgcn_target directive's target id amdgcn-amd-amdhsa-unknown-gfx810:xnack+ does not match the specified target id amdgcn-amd-amdhsa-unknown-gfx1170
+// NONAMDHSA: error: .amdgcn_target directive's target id amdgcn-amd-amdhsa-unknown-gfx810:xnack+ does not match the specified target id amdgcn-amd-unknown-unknown-gfx810
 .warning "test_target"
 .amdgcn_target "amdgcn-amd-amdhsa--gfx810:xnack+"
 
