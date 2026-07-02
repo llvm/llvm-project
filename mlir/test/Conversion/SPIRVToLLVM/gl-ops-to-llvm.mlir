@@ -92,6 +92,32 @@ spirv.func @fmin(%arg0: f32, %arg1: vector<3xf16>) "None" {
 }
 
 //===----------------------------------------------------------------------===//
+// spirv.GL.NMax
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @nmax
+spirv.func @nmax(%arg0: f32, %arg1: vector<3xf16>) "None" {
+  // CHECK: llvm.intr.maxnum(%{{.*}}, %{{.*}}) : (f32, f32) -> f32
+  %0 = spirv.GL.NMax %arg0, %arg0 : f32
+  // CHECK: llvm.intr.maxnum(%{{.*}}, %{{.*}}) : (vector<3xf16>, vector<3xf16>) -> vector<3xf16>
+  %1 = spirv.GL.NMax %arg1, %arg1 : vector<3xf16>
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.GL.NMin
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @nmin
+spirv.func @nmin(%arg0: f32, %arg1: vector<3xf16>) "None" {
+  // CHECK: llvm.intr.minnum(%{{.*}}, %{{.*}}) : (f32, f32) -> f32
+  %0 = spirv.GL.NMin %arg0, %arg0 : f32
+  // CHECK: llvm.intr.minnum(%{{.*}}, %{{.*}}) : (vector<3xf16>, vector<3xf16>) -> vector<3xf16>
+  %1 = spirv.GL.NMin %arg1, %arg1 : vector<3xf16>
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
 // spirv.GL.Log
 //===----------------------------------------------------------------------===//
 
