@@ -289,6 +289,8 @@ def ext_string_too_long : Extension<"string literal of length %0 exceeds "
   "support">, InGroup<OverlengthStrings>;
 def err_character_too_large : Error<
   "character too large for enclosing character literal type">;
+def err_exec_charset_conversion_failed
+    : Error<"conversion to literal encoding failed: '%0'">;
 def warn_c99_compat_unicode_literal : Warning<
   "unicode literals are incompatible with C99">,
   InGroup<C99Compat>, DefaultIgnore;
