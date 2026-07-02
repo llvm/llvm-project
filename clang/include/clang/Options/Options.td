@@ -1663,9 +1663,9 @@ def : Flag<["-"], "static-libasan">, Alias<static_libsan>;
 def fasm : Flag<["-"], "fasm">, Group<f_Group>;
 
 defm assume_unique_vtables : BoolFOption<"assume-unique-vtables",
-  CodeGenOpts<"AssumeUniqueVTables">, DefaultTrue,
-  PosFlag<SetTrue>,
-  NegFlag<SetFalse, [], [ClangOption, CC1Option],
+  CodeGenOpts<"DisableExactDynamicCast">, DefaultFalse,
+  PosFlag<SetFalse>,
+  NegFlag<SetTrue, [], [ClangOption, CC1Option],
           "Disable optimizations based on vtable pointer identity">,
   BothFlags<[], [ClangOption, CLOption]>>;
 

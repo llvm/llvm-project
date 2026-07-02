@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -I%S %s -triple arm64e-apple-darwin10 -O1 -fptrauth-calls -fptrauth-vtable-pointer-address-discrimination  -fptrauth-vtable-pointer-type-discrimination -emit-llvm -std=c++11 -o - | FileCheck %s --check-prefixes=CHECK
+// RUN: %clang_cc1 -I%S %s -triple aarch64-linux-gnu -O1 -fptrauth-calls -fptrauth-vtable-pointer-address-discrimination  -fptrauth-vtable-pointer-type-discrimination -emit-llvm -std=c++11 -o - | FileCheck %s --check-prefixes=CHECK
 
 struct A {
   virtual ~A();
