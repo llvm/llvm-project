@@ -24,6 +24,9 @@
 // RUN: cd %t.relpath && %clang_cl --target=i686-windows-msvc /c /Z7 /Fo:hello.obj -- hello.cpp
 // RUN: llvm-pdbutil dump --types %t.relpath/hello.obj | FileCheck %s --check-prefix RELPATH
 
+// RUN: %clang_cl --target=i686-windows-msvc /Brepro /c /Z7 /Fo%t.obj -- %s
+// RUN: llvm-pdbutil dump --types %t.obj | FileCheck %s --check-prefix BREPRO
+
 int main(void) { return 42; }
 
 // CHECK:                       Types (.debug$T)
@@ -78,3 +81,10 @@ int main(void) { return 42; }
 // RELPATH-NEXT:           0x{{.*}}: `
 // RELPATH-NOT:   {{hello\.cpp}}
 // RELPATH-SAME:  `
+
+// BREPRO:       0x{{.+}} | LF_BUILDINFO [size = {{.+}}]
+// BREPRO-NEXT:           0x{{.*}}: ``
+// BREPRO-NEXT:           0x{{.*}}: ``
+// BREPRO-NEXT:           0x{{.*}}: `{{.+[\\/]codeview-buildinfo\.c}}`
+// BREPRO-NEXT:           0x{{.*}}: ``
+// BREPRO-NEXT:           0x{{.*}}: ``

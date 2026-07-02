@@ -5153,6 +5153,12 @@ defm codeview_command_line : BoolOption<"g", "codeview-command-line",
   NegFlag<SetFalse, [], [ClangOption], "Don't emit compiler path and command line into CodeView debug information">,
   BothFlags<[], [ClangOption, CLOption, DXCOption, CC1Option]>>,
   Group<g_flags_Group>;
+defm codeview_cwd : BoolOption<"g", "codeview-cwd",
+  CodeGenOpts<"CodeViewEmitCurrentWorkdir">, DefaultTrue,
+  PosFlag<SetTrue, [], [ClangOption], "Emit current working directory into CodeView debug information">,
+  NegFlag<SetFalse, [], [ClangOption], "Don't emit current working directory into CodeView debug information">,
+  BothFlags<[], [ClangOption, CLOption, DXCOption, CC1Option]>>,
+  Group<g_flags_Group>;
 defm inline_line_tables : BoolGOption<"inline-line-tables",
   CodeGenOpts<"NoInlineLineTables">, DefaultFalse,
   NegFlag<SetTrue, [], [ClangOption, CC1Option],

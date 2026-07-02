@@ -9092,6 +9092,9 @@ void Clang::AddClangCLArgs(const ArgList &Args, types::ID InputType,
     // This option does not allow the user redefinitions for these macros.
     if (!HasNoDateTime)
       CmdArgs.push_back("-init-datetime-macros=literalone");
+    // Omit tool, current workdir and command line in COFF CV debug section.
+    CmdArgs.push_back("-gno-codeview-command-line");
+    CmdArgs.push_back("-gno-codeview-cwd");
   }
 }
 
