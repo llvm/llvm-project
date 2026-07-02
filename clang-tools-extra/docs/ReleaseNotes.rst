@@ -265,6 +265,13 @@ New checks
 
   Finds cyclical initialization of static variables.
 
+- New :doc:`modernize-use-shared-ptr-array
+  <clang-tidy/checks/modernize/use-shared-ptr-array>` check.
+
+  Finds ``std::shared_ptr<T>`` constructions that manage dynamically allocated
+  arrays using explicit array deleters and suggests replacing them with
+  ``std::shared_ptr<T[]>``, which has been available since C++17.
+
 - New :doc:`modernize-use-std-bit
   <clang-tidy/checks/modernize/use-std-bit>` check.
 

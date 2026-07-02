@@ -46,6 +46,7 @@
 #include "UseOverrideCheck.h"
 #include "UseRangesCheck.h"
 #include "UseScopedLockCheck.h"
+#include "UseSharedPtrArrayCheck.h"
 #include "UseStartsEndsWithCheck.h"
 #include "UseStdBitCheck.h"
 #include "UseStdFormatCheck.h"
@@ -95,6 +96,8 @@ public:
     CheckFactories.registerCheck<UseRangesCheck>("modernize-use-ranges");
     CheckFactories.registerCheck<UseScopedLockCheck>(
         "modernize-use-scoped-lock");
+    CheckFactories.registerCheck<UseSharedPtrArrayCheck>(
+        "modernize-use-shared-ptr-array");
     CheckFactories.registerCheck<UseStartsEndsWithCheck>(
         "modernize-use-starts-ends-with");
     CheckFactories.registerCheck<UseStdBitCheck>("modernize-use-std-bit");
