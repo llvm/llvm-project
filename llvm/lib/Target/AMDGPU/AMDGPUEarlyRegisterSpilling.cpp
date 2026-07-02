@@ -620,8 +620,12 @@ void AMDGPUEarlyRegisterSpilling::groupUses(
     auto &G1 = Groups[Idx1];
     if (G1.isDeleted())
       continue;
-    for (unsigned Idx2 = Idx1 + 1; Idx2 < E; ++Idx2) {
+    for (unsigned Idx2 = 0; Idx2 != E; ++Idx2) {
       auto &G2 = Groups[Idx2];
+
+      if (G1.getHead() == G2.getHead())
+        continue;
+
       if (G2.isDeleted())
         continue;
 
