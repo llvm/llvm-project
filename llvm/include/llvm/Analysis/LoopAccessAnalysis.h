@@ -235,6 +235,25 @@ public:
            std::numeric_limits<uint64_t>::max();
   }
 
+  /// Returns true if a memory dependence at byte distance \p Distance between
+  /// a store and load (both with element size \p TypeByteSize bytes) would
+  /// prevent store-to-load forwarding when the store is widened to
+  /// \p VectorStoreSize bytes.
+  ///
+  /// The predicate fires when (a) the load is misaligned w.r.t. the widened
+  /// store window (\c Distance is not a multiple of \p VectorStoreSize), and
+  /// (b) the conflicting store is still likely to be in the store buffer
+  /// (\c Distance / VectorStoreSize is below 8 * TypeByteSize iterations).
+  /// Both couldPreventStoreLoadForward and SLPVectorizer use this as their
+  /// core STLF cost-model gate.
+  static bool isStoreLoadForwardingConflict(uint64_t Distance,
+                                            uint64_t VectorStoreSize,
+                                            uint64_t TypeByteSize) {
+    const uint64_t NumItersForStoreLoadThroughMemory = 8 * TypeByteSize;
+    return VectorStoreSize != 0 && Distance % VectorStoreSize != 0 &&
+           Distance / VectorStoreSize < NumItersForStoreLoadThroughMemory;
+  }
+
   /// Return safe power-of-2 number of elements, which do not prevent store-load
   /// forwarding, multiplied by the size of the elements in bits.
   uint64_t getStoreLoadForwardSafeDistanceInBits() const {

@@ -19,6 +19,7 @@
 #define LLVM_TRANSFORMS_VECTORIZE_SLPVECTORIZER_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
@@ -37,6 +38,7 @@ class GetElementPtrInst;
 class InsertElementInst;
 class InsertValueInst;
 class Instruction;
+class LoopAccessInfoManager;
 class LoopInfo;
 class OptimizationRemarkEmitter;
 class PHINode;
@@ -70,6 +72,7 @@ struct SLPVectorizerPass : public OptionalPassInfoMixin<SLPVectorizerPass> {
   DominatorTree *DT = nullptr;
   AssumptionCache *AC = nullptr;
   DemandedBits *DB = nullptr;
+  LoopAccessInfoManager *LAIs = nullptr;
   const DataLayout *DL = nullptr;
 
 public:
@@ -80,7 +83,8 @@ public:
                         TargetTransformInfo *TTI_, TargetLibraryInfo *TLI_,
                         AAResults *AA_, LoopInfo *LI_, DominatorTree *DT_,
                         AssumptionCache *AC_, DemandedBits *DB_,
-                        OptimizationRemarkEmitter *ORE_);
+                        OptimizationRemarkEmitter *ORE_,
+                        LoopAccessInfoManager *LAIs_);
 
 private:
   /// Collect store and getelementptr instructions and organize them
@@ -171,11 +175,20 @@ private:
                                           unsigned Idx, unsigned MinVF,
                                           unsigned &Size);
 
+  /// Returns true if vectorizing the store chain would cause store-to-load
+  /// forwarding conflicts due to short loop-carried dependence distances.
+  bool hasStoreLoadForwardingConflict(ArrayRef<Value *> Chain, unsigned VF);
+
   bool vectorizeStores(
       ArrayRef<StoreInst *> Stores, slpvectorizer::BoUpSLP &R,
       DenseSet<std::tuple<Value *, Value *, Value *, Value *, unsigned>>
           &Visited,
       bool AllowMaskedStores = true);
+
+  /// Cached STLF conflict decisions keyed by (first store in chain, VF).
+  /// Avoids re-walking the LAA dependence list when the same chain is retried
+  /// at multiple vector factors.
+  DenseMap<std::pair<const StoreInst *, unsigned>, bool> StlfConflictCache;
 
   /// The store instructions in a basic block organized by base pointer.
   StoreListMap Stores;
