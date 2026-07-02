@@ -684,6 +684,9 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   by the kernel, so setting them is almost always a typo (matching the
   bionic libc `diagnose_if` check).
 
+- Added warnings for floating-point exception function calls (fenv.h) without enabling floating-point
+  exception behavior via the appropriate flags or pragmas on supported targets. (#GH128239)
+
 ### Improvements to Clang's time-trace
 
 ### Improvements to Coverage Mapping

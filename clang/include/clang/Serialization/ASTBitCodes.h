@@ -1217,7 +1217,13 @@ enum SpecialTypeIDs {
   SPECIAL_TYPE_OBJC_SEL_REDEFINITION = 6,
 
   /// C ucontext_t typedef type
-  SPECIAL_TYPE_UCONTEXT_T = 7
+  SPECIAL_TYPE_UCONTEXT_T = 7,
+
+  /// C fexcept_t typedef type
+  SPECIAL_TYPE_FEXCEPT_T = 8,
+
+  /// C fenv_t typedef type
+  SPECIAL_TYPE_FENV_T = 9
 };
 
 /// The number of special type IDs.
