@@ -206,7 +206,7 @@ void ArrayBoundChecker::handleAccessExpr(const Expr *E,
               /*IsTaintBug=*/true);
     return;
   }
-  default: {
+  case bounds::CheckResult::Kind::Invalid: {
     bounds::SizeUnit SU =
         bounds::SizeUnit::forSVal(Location, C.getASTContext());
     bounds::Messages Msgs = Res.getNonTaintMsgs(RN, SU);
@@ -214,6 +214,8 @@ void ArrayBoundChecker::handleAccessExpr(const Expr *E,
     return;
   }
   }
+
+  llvm_unreachable("all CheckResult values are covered in switch");
 }
 
 void ArrayBoundChecker::markPartsInteresting(PathSensitiveBugReport &BR,

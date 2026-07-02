@@ -382,7 +382,7 @@ CheckResult bounds::checkBounds(ProgramStateRef State, SValBuilder &SVB,
       } else {
         if (!WithinLowerBound) {
           // ...and it cannot be valid (>= 0), so report an error.
-          Res.finalize(CheckResult::Kind::Underflow, PrecedesLowerBound);
+          Res.finalize(CheckResult::Kind::Invalid, PrecedesLowerBound);
           return Res;
         }
         // ...but it can be valid as well, so the checker will (optimistically)
@@ -425,7 +425,7 @@ CheckResult bounds::checkBounds(ProgramStateRef State, SValBuilder &SVB,
         }
 
         // Straightforward overflow, report an error.
-        Res.finalize(CheckResult::Kind::Overflow, ExceedsUpperBound);
+        Res.finalize(CheckResult::Kind::Invalid, ExceedsUpperBound);
         return Res;
       }
 
