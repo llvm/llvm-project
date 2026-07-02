@@ -5473,13 +5473,13 @@ Sema::CreateBuiltinArraySubscriptExpr(Expr *Base, SourceLocation LLoc,
     }
   } else if (LHSTy->isSubscriptableVectorType()) {
     if (LHSTy->isBuiltinType() &&
-        LHSTy->getAs<BuiltinType>()->isSveVLSBuiltinType()) {
+        LHSTy->getAs<BuiltinType>()->isVLSBuiltinType()) {
       const BuiltinType *BTy = LHSTy->getAs<BuiltinType>();
-      if (BTy->isSVEBool())
+      if (BTy->isSizelessVectorBool())
         return ExprError(Diag(LLoc, diag::err_subscript_svbool_t)
                          << LHSExp->getSourceRange()
                          << RHSExp->getSourceRange());
-      ResultType = BTy->getSveEltType(Context);
+      ResultType = LHSTy->getSizelessVectorEltType(Context);
     } else {
       const VectorType *VTy = LHSTy->getAs<VectorType>();
       ResultType = VTy->getElementType();
@@ -10686,11 +10686,11 @@ static bool tryGCCVectorConvertAndSplat(Sema &S, ExprResult *Scalar,
     assert(!isa<ExtVectorType>(VT) &&
            "ExtVectorTypes should not be handled here!");
     VectorEltTy = VT->getElementType();
-  } else if (VectorTy->isSveVLSBuiltinType()) {
-    VectorEltTy =
-        VectorTy->castAs<BuiltinType>()->getSveEltType(S.getASTContext());
+  } else if (VectorTy->isVLSBuiltinType()) {
+    VectorEltTy = VectorTy->getSizelessVectorEltType(S.getASTContext());
   } else {
-    llvm_unreachable("Only Fixed-Length and SVE Vector types are handled here");
+    llvm_unreachable(
+        "Only Fixed-Length and sizeless vector types are handled here");
   }
 
   // Reject cases where the vector element type or the scalar element type are
@@ -11057,8 +11057,8 @@ QualType Sema::CheckSizelessVectorOperands(ExprResult &LHS, ExprResult &RHS,
 
   unsigned DiagID = diag::err_typecheck_invalid_operands;
   if ((OperationKind == ArithConvKind::Arithmetic) &&
-      ((LHSBuiltinTy && LHSBuiltinTy->isSVEBool()) ||
-       (RHSBuiltinTy && RHSBuiltinTy->isSVEBool()))) {
+      ((LHSBuiltinTy && LHSBuiltinTy->isSizelessVectorBool()) ||
+       (RHSBuiltinTy && RHSBuiltinTy->isSizelessVectorBool()))) {
     Diag(Loc, DiagID) << LHSType << RHSType << LHS.get()->getSourceRange()
                       << RHS.get()->getSourceRange();
     return QualType();
@@ -11067,25 +11067,25 @@ QualType Sema::CheckSizelessVectorOperands(ExprResult &LHS, ExprResult &RHS,
   if (Context.hasSameType(LHSType, RHSType))
     return LHSType;
 
-  if (LHSType->isSveVLSBuiltinType() && !RHSType->isSveVLSBuiltinType()) {
+  if (LHSType->isVLSBuiltinType() && !RHSType->isVLSBuiltinType()) {
     if (!tryGCCVectorConvertAndSplat(*this, &RHS, &LHS))
       return LHSType;
   }
-  if (RHSType->isSveVLSBuiltinType() && !LHSType->isSveVLSBuiltinType()) {
+  if (RHSType->isVLSBuiltinType() && !LHSType->isVLSBuiltinType()) {
     if (LHS.get()->isLValue() ||
         !tryGCCVectorConvertAndSplat(*this, &LHS, &RHS))
       return RHSType;
   }
 
-  if ((!LHSType->isSveVLSBuiltinType() && !LHSType->isRealType()) ||
-      (!RHSType->isSveVLSBuiltinType() && !RHSType->isRealType())) {
+  if ((!LHSType->isVLSBuiltinType() && !LHSType->isRealType()) ||
+      (!RHSType->isVLSBuiltinType() && !RHSType->isRealType())) {
     Diag(Loc, diag::err_typecheck_vector_not_convertable_non_scalar)
         << LHSType << RHSType << LHS.get()->getSourceRange()
         << RHS.get()->getSourceRange();
     return QualType();
   }
 
-  if (LHSType->isSveVLSBuiltinType() && RHSType->isSveVLSBuiltinType() &&
+  if (LHSType->isVLSBuiltinType() && RHSType->isVLSBuiltinType() &&
       Context.getBuiltinVectorTypeInfo(LHSBuiltinTy).EC !=
           Context.getBuiltinVectorTypeInfo(RHSBuiltinTy).EC) {
     Diag(Loc, diag::err_typecheck_vector_lengths_not_equal)
@@ -11094,11 +11094,11 @@ QualType Sema::CheckSizelessVectorOperands(ExprResult &LHS, ExprResult &RHS,
     return QualType();
   }
 
-  if (LHSType->isSveVLSBuiltinType() || RHSType->isSveVLSBuiltinType()) {
-    QualType Scalar = LHSType->isSveVLSBuiltinType() ? RHSType : LHSType;
-    QualType Vector = LHSType->isSveVLSBuiltinType() ? LHSType : RHSType;
+  if (LHSType->isVLSBuiltinType() || RHSType->isVLSBuiltinType()) {
+    QualType Scalar = LHSType->isVLSBuiltinType() ? RHSType : LHSType;
+    QualType Vector = LHSType->isVLSBuiltinType() ? LHSType : RHSType;
     bool ScalarOrVector =
-        LHSType->isSveVLSBuiltinType() && RHSType->isSveVLSBuiltinType();
+        LHSType->isVLSBuiltinType() && RHSType->isVLSBuiltinType();
 
     Diag(Loc, diag::err_typecheck_vector_not_convertable_implict_truncation)
         << ScalarOrVector << Scalar << Vector;
@@ -11304,7 +11304,7 @@ QualType Sema::CheckMultiplyDivideOperands(ExprResult &LHS, ExprResult &RHS,
                                /*AllowBoolConversions*/ false,
                                /*AllowBooleanOperation*/ false,
                                /*ReportInvalid*/ true);
-  if (LHSTy->isSveVLSBuiltinType() || RHSTy->isSveVLSBuiltinType())
+  if (LHSTy->isVLSBuiltinType() || RHSTy->isVLSBuiltinType())
     return CheckSizelessVectorOperands(LHS, RHS, Loc, IsCompAssign,
                                        ArithConvKind::Arithmetic);
   if (!IsDiv &&
@@ -11370,8 +11370,8 @@ QualType Sema::CheckRemainderOperands(
     return InvalidOperands(Loc, LHS, RHS);
   }
 
-  if (LHS.get()->getType()->isSveVLSBuiltinType() ||
-      RHS.get()->getType()->isSveVLSBuiltinType()) {
+  if (LHS.get()->getType()->isVLSBuiltinType() ||
+      RHS.get()->getType()->isVLSBuiltinType()) {
     if (LHS.get()->getType()->hasIntegerRepresentation() &&
         RHS.get()->getType()->hasIntegerRepresentation())
       return CheckSizelessVectorOperands(LHS, RHS, Loc, IsCompAssign,
@@ -11697,8 +11697,8 @@ QualType Sema::CheckAdditionOperands(ExprResult &LHS, ExprResult &RHS,
     return compType;
   }
 
-  if (LHS.get()->getType()->isSveVLSBuiltinType() ||
-      RHS.get()->getType()->isSveVLSBuiltinType()) {
+  if (LHS.get()->getType()->isVLSBuiltinType() ||
+      RHS.get()->getType()->isVLSBuiltinType()) {
     QualType compType = CheckSizelessVectorOperands(LHS, RHS, Loc, CompLHSTy,
                                                     ArithConvKind::Arithmetic);
     if (CompLHSTy)
@@ -11824,8 +11824,8 @@ QualType Sema::CheckSubtractionOperands(ExprResult &LHS, ExprResult &RHS,
     return compType;
   }
 
-  if (LHS.get()->getType()->isSveVLSBuiltinType() ||
-      RHS.get()->getType()->isSveVLSBuiltinType()) {
+  if (LHS.get()->getType()->isVLSBuiltinType() ||
+      RHS.get()->getType()->isVLSBuiltinType()) {
     QualType compType = CheckSizelessVectorOperands(LHS, RHS, Loc, CompLHSTy,
                                                     ArithConvKind::Arithmetic);
     if (CompLHSTy)
@@ -12179,19 +12179,22 @@ static QualType checkSizelessVectorShift(Sema &S, ExprResult &LHS,
 
   QualType LHSType = LHS.get()->getType();
   const BuiltinType *LHSBuiltinTy = LHSType->castAs<BuiltinType>();
-  QualType LHSEleType = LHSType->isSveVLSBuiltinType()
-                            ? LHSBuiltinTy->getSveEltType(S.getASTContext())
-                            : LHSType;
+
+  QualType LHSEleType =
+      LHSType->isVLSBuiltinType()
+          ? LHSType->getSizelessVectorEltType(S.getASTContext())
+          : LHSType;
 
   // Note that RHS might not be a vector
   QualType RHSType = RHS.get()->getType();
   const BuiltinType *RHSBuiltinTy = RHSType->castAs<BuiltinType>();
-  QualType RHSEleType = RHSType->isSveVLSBuiltinType()
-                            ? RHSBuiltinTy->getSveEltType(S.getASTContext())
-                            : RHSType;
+  QualType RHSEleType =
+      RHSType->isVLSBuiltinType()
+          ? RHSType->getSizelessVectorEltType(S.getASTContext())
+          : RHSType;
 
-  if ((LHSBuiltinTy && LHSBuiltinTy->isSVEBool()) ||
-      (RHSBuiltinTy && RHSBuiltinTy->isSVEBool())) {
+  if ((LHSBuiltinTy && LHSBuiltinTy->isSizelessVectorBool()) ||
+      (RHSBuiltinTy && RHSBuiltinTy->isSizelessVectorBool())) {
     S.Diag(Loc, diag::err_typecheck_invalid_operands)
         << LHSType << RHSType << LHS.get()->getSourceRange();
     return QualType();
@@ -12209,7 +12212,7 @@ static QualType checkSizelessVectorShift(Sema &S, ExprResult &LHS,
     return QualType();
   }
 
-  if (LHSType->isSveVLSBuiltinType() && RHSType->isSveVLSBuiltinType() &&
+  if (LHSType->isVLSBuiltinType() && RHSType->isVLSBuiltinType() &&
       (S.Context.getBuiltinVectorTypeInfo(LHSBuiltinTy).EC !=
        S.Context.getBuiltinVectorTypeInfo(RHSBuiltinTy).EC)) {
     S.Diag(Loc, diag::err_typecheck_invalid_operands)
@@ -12218,8 +12221,8 @@ static QualType checkSizelessVectorShift(Sema &S, ExprResult &LHS,
     return QualType();
   }
 
-  if (!LHSType->isSveVLSBuiltinType()) {
-    assert(RHSType->isSveVLSBuiltinType());
+  if (!LHSType->isVLSBuiltinType()) {
+    assert(RHSType->isVLSBuiltinType());
     if (IsCompAssign)
       return RHSType;
     if (LHSEleType != RHSEleType) {
@@ -12232,7 +12235,7 @@ static QualType checkSizelessVectorShift(Sema &S, ExprResult &LHS,
         S.Context.getScalableVectorType(LHSEleType, VecSize.getKnownMinValue());
     LHS = S.ImpCastExprToType(LHS.get(), VecTy, clang::CK_VectorSplat);
     LHSType = VecTy;
-  } else if (RHSBuiltinTy && RHSBuiltinTy->isSveVLSBuiltinType()) {
+  } else if (RHSBuiltinTy && RHSType->isVLSBuiltinType()) {
     if (S.Context.getTypeSize(RHSBuiltinTy) !=
         S.Context.getTypeSize(LHSBuiltinTy)) {
       S.Diag(Loc, diag::err_typecheck_vector_lengths_not_equal)
@@ -12278,8 +12281,8 @@ QualType Sema::CheckShiftOperands(ExprResult &LHS, ExprResult &RHS,
     return checkVectorShift(*this, LHS, RHS, Loc, IsCompAssign);
   }
 
-  if (LHS.get()->getType()->isSveVLSBuiltinType() ||
-      RHS.get()->getType()->isSveVLSBuiltinType())
+  if (LHS.get()->getType()->isVLSBuiltinType() ||
+      RHS.get()->getType()->isVLSBuiltinType())
     return checkSizelessVectorShift(*this, LHS, RHS, Loc, IsCompAssign);
 
   // Shifts don't perform usual arithmetic conversions, they just do integer
@@ -13897,8 +13900,8 @@ inline QualType Sema::CheckBitwiseOperands(ExprResult &LHS, ExprResult &RHS,
     return InvalidOperands(Loc, LHS, RHS);
   }
 
-  if (LHS.get()->getType()->isSveVLSBuiltinType() ||
-      RHS.get()->getType()->isSveVLSBuiltinType()) {
+  if (LHS.get()->getType()->isVLSBuiltinType() ||
+      RHS.get()->getType()->isVLSBuiltinType()) {
     if (LHS.get()->getType()->hasIntegerRepresentation() &&
         RHS.get()->getType()->hasIntegerRepresentation())
       return CheckSizelessVectorOperands(LHS, RHS, Loc, IsCompAssign,
@@ -13906,8 +13909,8 @@ inline QualType Sema::CheckBitwiseOperands(ExprResult &LHS, ExprResult &RHS,
     return InvalidOperands(Loc, LHS, RHS);
   }
 
-  if (LHS.get()->getType()->isSveVLSBuiltinType() ||
-      RHS.get()->getType()->isSveVLSBuiltinType()) {
+  if (LHS.get()->getType()->isVLSBuiltinType() ||
+      RHS.get()->getType()->isVLSBuiltinType()) {
     if (LHS.get()->getType()->hasIntegerRepresentation() &&
         RHS.get()->getType()->hasIntegerRepresentation())
       return CheckSizelessVectorOperands(LHS, RHS, Loc, IsCompAssign,
@@ -16344,7 +16347,7 @@ ExprResult Sema::CreateBuiltinUnaryOp(SourceLocation OpLoc,
                 resultType->castAs<VectorType>()->getVectorKind() !=
                     VectorKind::AltiVecBool))
         break;
-      else if (resultType->isSveVLSBuiltinType()) // SVE vectors allow + and -
+      else if (resultType->isVLSBuiltinType()) // Sizeless vectors allow + and -
         break;
       else if (getLangOpts().CPlusPlus && // C++ [expr.unary.op]p6
                Opc == UO_Plus && resultType->isPointerType())

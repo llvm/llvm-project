@@ -2131,8 +2131,8 @@ bool Type::hasIntegerRepresentation() const {
   }
   if (CanonicalType->isRVVVLSBuiltinType()) {
     const auto *VT = cast<BuiltinType>(CanonicalType);
-    return (VT->getKind() >= BuiltinType::RvvInt8mf8 &&
-            VT->getKind() <= BuiltinType::RvvUint64m8);
+    return VT->isRVVBool() || (VT->getKind() >= BuiltinType::RvvInt8mf8 &&
+                               VT->getKind() <= BuiltinType::RvvUint64m8);
   }
 
   return isIntegerType();
@@ -2314,9 +2314,14 @@ bool Type::isSignedIntegerOrEnumerationType() const {
 bool Type::hasSignedIntegerRepresentation() const {
   if (const auto *VT = dyn_cast<VectorType>(CanonicalType))
     return VT->getElementType()->isSignedIntegerOrEnumerationType();
-
   if (const auto *BT = dyn_cast<BuiltinType>(CanonicalType)) {
     switch (BT->getKind()) {
+#define RVV_VECTOR_TYPE_INT(Name, Id, SingletonId, NumEls, ElBits, NF,         \
+                            IsSigned)                                          \
+  case BuiltinType::Id:                                                        \
+    return IsSigned;
+#include "clang/Basic/AArch64ACLETypes.def"
+#undef RVV_VECTOR_TYPE_INT
 #define SVE_VECTOR_TYPE_INT(Name, MangledName, Id, SingletonId, NumEls,        \
                             ElBits, NF, IsSigned)                              \
   case BuiltinType::Id:                                                        \
@@ -2326,7 +2331,6 @@ bool Type::hasSignedIntegerRepresentation() const {
       break;
     }
   }
-
   return isSignedIntegerOrEnumerationType();
 }
 
@@ -2386,6 +2390,18 @@ bool Type::hasUnsignedIntegerRepresentation() const {
     const auto *VT = cast<BuiltinType>(CanonicalType);
     return VT->getKind() >= BuiltinType::SveUint8 &&
            VT->getKind() <= BuiltinType::SveUint64;
+  }
+  if (const auto *BT = dyn_cast<BuiltinType>(CanonicalType)) {
+    switch (BT->getKind()) {
+#define RVV_VECTOR_TYPE_INT(Name, Id, SingletonId, NumEls, ElBits, NF,         \
+                            IsSigned)                                          \
+  case BuiltinType::Id:                                                        \
+    return !IsSigned;
+#include "clang/Basic/RISCVVTypes.def"
+#undef RVV_VECTOR_TYPE_INT
+    default:
+      break;
+    }
   }
   return isUnsignedIntegerOrEnumerationType();
 }

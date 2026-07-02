@@ -9671,7 +9671,7 @@ bool LValueExprEvaluator::VisitExtVectorElementExpr(
 }
 
 bool LValueExprEvaluator::VisitArraySubscriptExpr(const ArraySubscriptExpr *E) {
-  if (E->getBase()->getType()->isSveVLSBuiltinType())
+  if (E->getBase()->getType()->isVLSBuiltinType())
     return Error(E);
 
   APSInt Index;
