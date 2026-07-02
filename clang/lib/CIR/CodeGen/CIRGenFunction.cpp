@@ -1025,11 +1025,13 @@ clang::QualType CIRGenFunction::buildFunctionArgList(clang::GlobalDecl gd,
   // object as a regular parameter that fd->parameters() already enumerates.
   const auto *md = dyn_cast<CXXMethodDecl>(fd);
   if (md && md->isImplicitObjectMemberFunction()) {
-    if (cgm.getCXXABI().hasThisReturn(gd))
-      cgm.errorNYI(fd->getSourceRange(), "this return");
-    else if (cgm.getCXXABI().hasMostDerivedReturn(gd))
+    if (cgm.getCXXABI().hasMostDerivedReturn(gd))
       cgm.errorNYI(fd->getSourceRange(), "most derived return");
     cgm.getCXXABI().buildThisParam(*this, args);
+    // ABIs that return 'this' make the function's return type the 'this'
+    // pointer, so a return slot is allocated and the prolog can store into it.
+    if (cgm.getCXXABI().hasThisReturn(gd))
+      retTy = args.front()->getType();
   }
 
   bool passedParams = true;

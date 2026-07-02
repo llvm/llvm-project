@@ -11,6 +11,7 @@
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
+#include "mlir/Dialect/Ptr/IR/PtrDialect.h"
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/MLIRContext.h"
 
@@ -22,7 +23,8 @@ namespace cir {
 
 void registerAllDialects(mlir::DialectRegistry &registry) {
   registry.insert<mlir::BuiltinDialect, cir::CIRDialect, mlir::DLTIDialect,
-                  mlir::omp::OpenMPDialect, mlir::acc::OpenACCDialect>();
+                  mlir::ptr::PtrDialect, mlir::omp::OpenMPDialect,
+                  mlir::acc::OpenACCDialect>();
   // Register extensions to integrate CIR types with OpenACC and OpenMP.
   cir::omp::registerOpenMPExtensions(registry);
   cir::acc::registerOpenACCExtensions(registry);

@@ -2790,9 +2790,7 @@ emitTargetArchBuiltinExpr(CIRGenFunction *cgf, unsigned builtinID,
   case llvm::Triple::armeb:
   case llvm::Triple::thumb:
   case llvm::Triple::thumbeb:
-    // These are actually NYI, but that will be reported by emitBuiltinExpr.
-    // At this point, we don't even know that the builtin is target-specific.
-    return std::nullopt;
+    return cgf->emitARMBuiltinExpr(builtinID, e, returnValue, arch);
   case llvm::Triple::aarch64:
   case llvm::Triple::aarch64_32:
   case llvm::Triple::aarch64_be:

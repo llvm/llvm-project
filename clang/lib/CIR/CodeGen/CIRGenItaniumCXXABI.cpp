@@ -37,10 +37,23 @@ protected:
   /// All the vtables which have been defined.
   llvm::DenseMap<const CXXRecordDecl *, cir::GlobalOp> vtables;
 
+  /// 32-bit ARM returns 'this' from constructors and non-deleting destructors.
+  bool useARMThisReturnABI;
+
 public:
-  CIRGenItaniumCXXABI(CIRGenModule &cgm) : CIRGenCXXABI(cgm) {
+  CIRGenItaniumCXXABI(CIRGenModule &cgm, bool useARMThisReturnABI = false)
+      : CIRGenCXXABI(cgm), useARMThisReturnABI(useARMThisReturnABI) {
     assert(!cir::MissingFeatures::cxxabiUseARMMethodPtrABI());
     assert(!cir::MissingFeatures::cxxabiUseARMGuardVarABI());
+  }
+
+  bool hasThisReturn(clang::GlobalDecl gd) const override {
+    if (!useARMThisReturnABI)
+      return false;
+    // Constructors and non-deleting destructors return 'this'.
+    return isa<CXXConstructorDecl>(gd.getDecl()) ||
+           (isa<CXXDestructorDecl>(gd.getDecl()) &&
+            gd.getDtorType() != Dtor_Deleting);
   }
 
   AddedStructorArgs getImplicitConstructorArgs(CIRGenFunction &cgf,
@@ -262,8 +275,10 @@ void CIRGenItaniumCXXABI::emitInstanceFunctionProlog(SourceLocation loc,
   /// 2) in theory, an ABI could implement 'this' returns some other way;
   ///    HasThisReturn only specifies a contract, not the implementation
   if (hasThisReturn(cgf.curGD)) {
-    cgf.cgm.errorNYI(cgf.curFuncDecl->getLocation(),
-                     "emitInstanceFunctionProlog: hasThisReturn");
+    // Store 'this' into the return slot at function entry; the epilogue
+    // returns whatever is in that slot.
+    cgf.getBuilder().createStore(cgf.getLoc(loc), getThisValue(cgf),
+                                 cgf.returnValue);
   }
 }
 
@@ -1872,8 +1887,11 @@ CIRGenCXXABI *clang::CIRGen::CreateCIRGenItaniumCXXABI(CIRGenModule &cgm) {
   switch (cgm.getASTContext().getCXXABIKind()) {
   case TargetCXXABI::GenericItanium:
   case TargetCXXABI::GenericAArch64:
-  case TargetCXXABI::GenericARM:
     return new CIRGenItaniumCXXABI(cgm);
+
+  case TargetCXXABI::GenericARM:
+    // 32-bit ARM returns 'this' from constructors and non-deleting destructors.
+    return new CIRGenItaniumCXXABI(cgm, /*useARMThisReturnABI=*/true);
 
   case TargetCXXABI::AppleARM64:
     // The general Itanium ABI will do until we implement something that
