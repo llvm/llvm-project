@@ -4114,33 +4114,6 @@ void test_loop_cond_bind(bool cond) {
 // buildOriginFlowChain
 //===----------------------------------------------------------------------===//
 
-#define BRANCH(con) \
-  if (con) {} else {}
-
-#define BRANCH10(con) \
-  BRANCH(con); \
-  BRANCH(con); \
-  BRANCH(con); \
-  BRANCH(con); \
-  BRANCH(con); \
-  BRANCH(con); \
-  BRANCH(con); \
-  BRANCH(con); \
-  BRANCH(con); \
-  BRANCH(con)
-
-#define BRANCH100(con) \
-  BRANCH10(con); \
-  BRANCH10(con); \
-  BRANCH10(con); \
-  BRANCH10(con); \
-  BRANCH10(con); \
-  BRANCH10(con); \
-  BRANCH10(con); \
-  BRANCH10(con); \
-  BRANCH10(con); \
-  BRANCH10(con)
-
 void used_variable_reassigned() {
   View p, q, r;
   {
@@ -4178,6 +4151,33 @@ void multi_reassigned(bool condition) {
 
   p1.use();  // expected-note {{later used here}}
 }
+
+#define BRANCH(con) \
+  if (con) {} else {}
+
+#define BRANCH10(con) \
+  BRANCH(con); \
+  BRANCH(con); \
+  BRANCH(con); \
+  BRANCH(con); \
+  BRANCH(con); \
+  BRANCH(con); \
+  BRANCH(con); \
+  BRANCH(con); \
+  BRANCH(con); \
+  BRANCH(con)
+
+#define BRANCH100(con) \
+  BRANCH10(con); \
+  BRANCH10(con); \
+  BRANCH10(con); \
+  BRANCH10(con); \
+  BRANCH10(con); \
+  BRANCH10(con); \
+  BRANCH10(con); \
+  BRANCH10(con); \
+  BRANCH10(con); \
+  BRANCH10(con)
 
 void test_exponential_paths(bool c) {
   View v;
