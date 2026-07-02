@@ -484,6 +484,8 @@ AffIgnoringNonHybrid         "%1$s ignored: This machine is not a hybrid archite
 AffIgnoringNotAvailable      "%1$s ignored: %2$s is not available. Using \"%3$s\" instead."
 SetNumTeamsInParOrTeamsRegion "%1$s() called inside a parallel or teams region; call ignored."
 SetTeamsThreadLimitInParOrTeamsRegion "%1$s() called inside a parallel or teams region; call ignored."
+MalformedDeviceEnvVar        "%1$s: malformed device-scope environment variable name; expected `_ALL`, `_DEV`, or `_DEV_<n>` with a non-negative integer device id; ignored."
+DeviceEnvVarOnGlobalScope    "%1$s: device-scope environment variable suffix (`_ALL`/`_DEV`/`_DEV_<n>`) is not allowed on this base name (global-scope ICV); ignored."
 
 # --------------------------------------------------------------------------------------------------
 -*- HINTS -*-

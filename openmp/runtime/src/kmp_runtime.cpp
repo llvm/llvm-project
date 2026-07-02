@@ -13,6 +13,7 @@
 #include "kmp.h"
 #include "kmp_affinity.h"
 #include "kmp_atomic.h"
+#include "kmp_device_env.h"
 #include "kmp_environment.h"
 #include "kmp_error.h"
 #include "kmp_i18n.h"
@@ -8327,6 +8328,8 @@ void __kmp_cleanup(void) {
     KMP_INTERNAL_FREE(__kmp_affinity_format);
     __kmp_affinity_format = NULL;
   }
+
+  __kmp_device_env_reset();
 
   __kmp_i18n_catclose();
 
