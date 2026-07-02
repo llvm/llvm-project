@@ -150,11 +150,11 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_SWMMAC_cluster(ptr 
 ; COEXEC-NEXT:    v_swmmac_f16_16x16x32_f16 v[44:47], v[24:27], v[0:7], v48
 ; COEXEC-NEXT:    v_swmmac_f16_16x16x32_f16 v[40:43], v[20:23], v[0:7], v48
 ; COEXEC-NEXT:    v_swmmac_f16_16x16x32_f16 v[36:39], v[16:19], v[0:7], v48
+; COEXEC-NEXT:    ; sched_group_barrier mask(0x00000008) size(5) SyncID(0)
 ; COEXEC-NEXT:    ds_store_b128 v50, v[28:31]
 ; COEXEC-NEXT:    ds_store_b128 v49, v[32:35] offset:512
 ; COEXEC-NEXT:    ds_store_b128 v49, v[44:47] offset:1024
 ; COEXEC-NEXT:    ds_store_b128 v49, v[40:43] offset:1536
-; COEXEC-NEXT:    ; sched_group_barrier mask(0x00000008) size(5) SyncID(0)
 ; COEXEC-NEXT:    ds_store_b128 v49, v[36:39] offset:2048
 ; COEXEC-NEXT:    ; sched_group_barrier mask(0x00000200) size(5) SyncID(0)
 ; COEXEC-NEXT:    s_endpgm
