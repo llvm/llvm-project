@@ -165,7 +165,8 @@ function(llvm_ExternalProject_Add name source_dir)
   set(BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/${name}-bins/)
 
   add_custom_target(${name}-clear
-    COMMAND ${CMAKE_COMMAND} -E remove_directory ${BINARY_DIR}
+    COMMAND ${CMAKE_COMMAND} "-DBINARY_DIR=${BINARY_DIR}"
+                             -P "${LLVM_CMAKE_DIR}/ClearBuildDir.cmake"
     COMMAND ${CMAKE_COMMAND} -E remove_directory ${STAMP_DIR}
     COMMENT "Clobbering ${name} build and stamp directories"
     USES_TERMINAL
