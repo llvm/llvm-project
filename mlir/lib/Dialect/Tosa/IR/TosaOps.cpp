@@ -628,6 +628,8 @@ Value mlir::tosa::createPadConstTensor(OpBuilder &builder, Location loc,
 }
 
 unsigned mlir::tosa::getBitWidth(Type type) {
+  if (auto blockScaledTy = dyn_cast<tosa::BlockScaledType>(type))
+    return getBitWidth(blockScaledTy.getValueType());
   if (dyn_cast<tosa::mxint8Type>(type))
     return 8;
   return type.getIntOrFloatBitWidth();
@@ -732,6 +734,41 @@ LogicalResult mlir::tosa::mxint8Type::convertFromAttribute(
   if (!attrType.isSignlessInteger(8))
     return failure();
   return cast<IntegerType>(attrType).convertFromAttribute(attr, result);
+}
+
+//===----------------------------------------------------------------------===//
+// TOSA block scaling utilities.
+//===----------------------------------------------------------------------===//
+
+LogicalResult OpTrait::tosa::verifyBlockScaledTensorType(Operation &op,
+                                                         mlir::Type type) {
+  const auto tensorType = llvm::cast<ShapedType>(type);
+  const BlockScaledType elemType =
+      llvm::dyn_cast<BlockScaledType>(tensorType.getElementType());
+  if (!elemType)
+    return success();
+
+  if (!tensorType.hasRank())
+    return success();
+
+  if (tensorType.getRank() == 0)
+    return op.emitError()
+           << "tensor type " << type
+           << " does not support block scaling on scalar tensors";
+
+  const int64_t blockedDimension = tensorType.getShape().back();
+  if (ShapedType::isDynamic(blockedDimension))
+    return success();
+
+  const uint32_t blockSize =
+      BlockShapeAttr::getBlockShapeValue(elemType.getBlockShape());
+  if (blockedDimension % blockSize != 0)
+    return op.emitError()
+           << "tensor type " << type
+           << " blocked dimension must be a multiple of block size, got "
+           << blockedDimension << " and block size " << blockSize;
+
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -5184,6 +5221,34 @@ LogicalResult RescaleOp::inferReturnTypeComponents(
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
   ShapeAdaptor inputShape(adaptor.getInput().getType());
   inferredReturnShapes.push_back(ShapedTypeComponents(inputShape));
+  return success();
+}
+
+LogicalResult CastOp::verify() {
+  const ShapedType inputType = llvm::cast<ShapedType>(getInput().getType());
+  const ShapedType outputType = llvm::cast<ShapedType>(getType());
+  const Type inputElementType = inputType.getElementType();
+  const Type outputElementType = outputType.getElementType();
+
+  const bool inputIsBlockScaled = llvm::isa<BlockScaledType>(inputElementType);
+  const bool outputIsBlockScaled =
+      llvm::isa<BlockScaledType>(outputElementType);
+  if (!inputIsBlockScaled && !outputIsBlockScaled)
+    return success();
+
+  if (inputIsBlockScaled && outputIsBlockScaled)
+    return emitOpError()
+           << "requires exactly one of input or output to have block scaled "
+              "element type";
+
+  const Type scalarElementType =
+      inputIsBlockScaled ? outputElementType : inputElementType;
+  if (!llvm::isa<FloatType>(scalarElementType))
+    return emitOpError()
+           << "requires non-block-scaled element type to be floating-point "
+              "when casting to or from block scaled element type, got "
+           << scalarElementType;
+
   return success();
 }
 
