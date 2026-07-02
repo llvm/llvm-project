@@ -2496,10 +2496,18 @@ public:
   /// AtomicExpand pass.
   virtual AtomicExpansionKind
   shouldCastAtomicRMWIInIR(AtomicRMWInst *RMWI) const {
-    if (RMWI->getOperation() == AtomicRMWInst::Xchg &&
-        (RMWI->getValOperand()->getType()->isFloatingPointTy() ||
-         RMWI->getValOperand()->getType()->isPointerTy()))
-      return AtomicExpansionKind::CastToInteger;
+    if (RMWI->getOperation() == AtomicRMWInst::Xchg) {
+      Type *Ty = RMWI->getValOperand()->getType();
+      if (Ty->isFloatingPointTy() || Ty->isPointerTy())
+        return AtomicExpansionKind::CastToInteger;
+
+      if (Ty->isVectorTy()) {
+        TypeSize SizeInBits = RMWI->getDataLayout().getTypeStoreSizeInBits(Ty);
+        if (!SizeInBits.isScalable() &&
+            SizeInBits.getFixedValue() <= getMaxAtomicSizeInBitsSupported())
+          return AtomicExpansionKind::CastToInteger;
+      }
+    }
 
     return AtomicExpansionKind::None;
   }

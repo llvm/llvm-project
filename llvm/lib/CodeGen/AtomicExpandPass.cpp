@@ -20,6 +20,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/InstSimplifyFolder.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
+#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/CodeGen/AtomicExpand.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -44,6 +45,7 @@
 #include "llvm/IR/Value.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Alignment.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
@@ -105,6 +107,7 @@ private:
   bool tryExpandAtomicStore(StoreInst *SI);
   void expandAtomicStoreToXChg(StoreInst *SI);
   bool tryExpandAtomicRMW(AtomicRMWInst *AI);
+  void expandElementwiseAtomicRMW(AtomicRMWInst *AI);
   AtomicRMWInst *convertAtomicXchgToIntegerType(AtomicRMWInst *RMWI);
   Value *
   insertRMWLLSCLoop(IRBuilderBase &Builder, Type *ResultTy, Value *Addr,
@@ -382,30 +385,41 @@ bool AtomicExpandImpl::processAtomicInstr(Instruction *I) {
   }
 
   if (auto *RMWI = dyn_cast<AtomicRMWInst>(I)) {
+    bool IsElementwiseExpand =
+        RMWI->isElementwise() &&
+        TLI->shouldExpandAtomicRMWInIR(RMWI) ==
+            TargetLoweringBase::AtomicExpansionKind::Expand;
+
     if (!atomicSizeSupported(TLI, RMWI)) {
-      expandAtomicRMWToLibcall(RMWI);
-      return true;
+      // Elementwise expansion may split an atomicrmw into smaller, supported
+      // atomic sizes.
+      if (!IsElementwiseExpand) {
+        expandAtomicRMWToLibcall(RMWI);
+        return true;
+      }
     }
 
     bool MadeChange = false;
-    if (TLI->shouldCastAtomicRMWIInIR(RMWI) ==
-        TargetLoweringBase::AtomicExpansionKind::CastToInteger) {
+    if (!IsElementwiseExpand &&
+        TLI->shouldCastAtomicRMWIInIR(RMWI) ==
+            TargetLoweringBase::AtomicExpansionKind::CastToInteger) {
       RMWI = convertAtomicXchgToIntegerType(RMWI);
       MadeChange = true;
     }
 
     MadeChange |= tryInsertFencesForAtomic(
-        RMWI,
-        isReleaseOrStronger(RMWI->getOrdering()) ||
-            isAcquireOrStronger(RMWI->getOrdering()),
+        RMWI, isStrongerThanMonotonic(RMWI->getOrdering()),
         TLI->atomicOperationOrderAfterFenceSplit(RMWI));
 
     // There are two different ways of expanding RMW instructions:
     // - into a load if it is idempotent
     // - into a Cmpxchg/LL-SC loop otherwise
     // we try them in that order.
-    MadeChange |= (isIdempotentRMW(RMWI) && simplifyIdempotentRMW(RMWI)) ||
-                  tryExpandAtomicRMW(RMWI);
+    if (IsElementwiseExpand)
+      MadeChange |= tryExpandAtomicRMW(RMWI);
+    else
+      MadeChange |= (isIdempotentRMW(RMWI) && simplifyIdempotentRMW(RMWI)) ||
+                    tryExpandAtomicRMW(RMWI);
     return MadeChange;
   }
 
@@ -606,6 +620,120 @@ AtomicExpandImpl::convertAtomicXchgToIntegerType(AtomicRMWInst *RMWI) {
   RMWI->replaceAllUsesWith(NewRVal);
   RMWI->eraseFromParent();
   return NewRMWI;
+}
+
+/// Generic Expand handling for elementwise vector atomicrmw instructions.
+/// Halve an `atomicrmw elementwise <N x T>` and feed each half back through the
+/// normal atomic expansion pipeline. The target's shouldExpandAtomicRMWInIR()
+/// is re-queried at the halved width and may return any expansion kind there
+/// (e.g. None to preserve as a native vector atomic, Expand to keep halving,
+/// CmpXChg to emit one wide cmpxchg loop at the halved width). Three cases:
+///   N == 1: collapse directly to one scalar atomicrmw T
+///   N == 2: split into two scalar atomicrmw T (low at Ptr, high at
+///           gep inbounds T, Ptr, 1); reassemble via two insertelement's.
+///   N  > 2: split into two atomicrmw elementwise <N/2 x T> (low at Ptr, high
+///           at gep inbounds <N/2 x T>, Ptr, 1); reassemble via a
+///           shufflevector.
+/// Note that halving works because the vectors must always be a power of two.
+///
+/// Each new atomicrmw inherits the original ordering/syncscope/volatility and
+/// metadata, and is fed back through processAtomicInstr() so further expansion
+/// fires per-half.
+void AtomicExpandImpl::expandElementwiseAtomicRMW(AtomicRMWInst *AI) {
+  assert(AI->isElementwise());
+  auto *VecTy = cast<FixedVectorType>(AI->getType());
+  Type *LaneTy = VecTy->getElementType();
+  const unsigned NumLanes = VecTy->getNumElements();
+  Value *Ptr = AI->getPointerOperand();
+  Value *Val = AI->getValOperand();
+
+  ReplacementIRBuilder Builder(AI, *DL);
+  IntegerType *IdxTy =
+      DL->getIndexType(AI->getContext(), AI->getPointerAddressSpace());
+
+  auto CreateRMWInstruction = [&](Value *HalfPtr, Value *HalfVal, Align A,
+                                  bool Elementwise) -> AtomicRMWInst * {
+    auto *NewAI =
+        Builder.CreateAtomicRMW(AI->getOperation(), HalfPtr, HalfVal, A,
+                                AI->getOrdering(), AI->getSyncScopeID());
+    NewAI->setVolatile(AI->isVolatile());
+    NewAI->setElementwise(Elementwise);
+    copyMetadataForAtomic(*NewAI, *AI);
+    return NewAI;
+  };
+
+  Constant *IdxZero = ConstantInt::get(IdxTy, 0);
+  Constant *IdxOne = ConstantInt::get(IdxTy, 1);
+
+  // N == 1: collapse to a single scalar atomicrmw T and wrap the result back
+  // into a <1 x T> vector.
+  if (NumLanes == 1) {
+    Value *LaneVal = Builder.CreateExtractElement(Val, IdxZero, "lane.val");
+    AtomicRMWInst *LaneRMW = CreateRMWInstruction(Ptr, LaneVal, AI->getAlign(),
+                                                  /*Elementwise=*/false);
+    Value *Result = Builder.CreateInsertElement(PoisonValue::get(VecTy),
+                                                LaneRMW, IdxZero, "lane.old");
+    AI->replaceAllUsesWith(Result);
+    AI->eraseFromParent();
+    processAtomicInstr(LaneRMW);
+    return;
+  }
+
+  const uint64_t LaneBytes = DL->getTypeStoreSize(LaneTy).getFixedValue();
+
+  // N == 2 base case: split directly into two scalar atomicrmw T, one per
+  // lane.
+  if (NumLanes == 2) {
+    Value *LoVal = Builder.CreateExtractElement(Val, IdxZero, "lo.val");
+    Value *HiVal = Builder.CreateExtractElement(Val, IdxOne, "hi.val");
+    Value *HiPtr = Builder.CreateInBoundsGEP(LaneTy, Ptr, IdxOne, "hi.ptr");
+    Align LoAlign = AI->getAlign();
+    Align HiAlign = commonAlignment(LoAlign, LaneBytes);
+
+    AtomicRMWInst *LoRMW =
+        CreateRMWInstruction(Ptr, LoVal, LoAlign, /*Elementwise=*/false);
+    AtomicRMWInst *HiRMW =
+        CreateRMWInstruction(HiPtr, HiVal, HiAlign, /*Elementwise=*/false);
+
+    Value *Result = PoisonValue::get(VecTy);
+    Result = Builder.CreateInsertElement(Result, LoRMW, IdxZero, "lo.old");
+    Result = Builder.CreateInsertElement(Result, HiRMW, IdxOne, "hi.old");
+    AI->replaceAllUsesWith(Result);
+    AI->eraseFromParent();
+    processAtomicInstr(LoRMW);
+    processAtomicInstr(HiRMW);
+    return;
+  }
+
+  // N > 2: split into two <N/2 x T> elementwise atomicrmws and recurse via
+  // processAtomicInstr().
+  assert(isPowerOf2_32(NumLanes) &&
+         "elementwise atomicrmw vector length must be a power of two");
+  const unsigned HalfLanes = NumLanes / 2;
+  auto *HalfVecTy = FixedVectorType::get(LaneTy, HalfLanes);
+  const uint64_t HalfBytes = DL->getTypeStoreSize(HalfVecTy).getFixedValue();
+
+  Value *LoVal = Builder.CreateShuffleVector(
+      Val, createSequentialMask(0, HalfLanes, 0), "lo.val");
+  Value *HiVal = Builder.CreateShuffleVector(
+      Val, createSequentialMask(HalfLanes, HalfLanes, 0), "hi.val");
+
+  Value *HiPtr = Builder.CreateInBoundsGEP(HalfVecTy, Ptr, IdxOne, "hi.ptr");
+  Align LoAlign = AI->getAlign();
+  Align HiAlign = commonAlignment(LoAlign, HalfBytes);
+
+  AtomicRMWInst *LoRMW =
+      CreateRMWInstruction(Ptr, LoVal, LoAlign, /*Elementwise=*/true);
+  AtomicRMWInst *HiRMW =
+      CreateRMWInstruction(HiPtr, HiVal, HiAlign, /*Elementwise=*/true);
+
+  Value *Result = concatenateVectors(Builder, {LoRMW, HiRMW});
+  Result->setName("old");
+
+  AI->replaceAllUsesWith(Result);
+  AI->eraseFromParent();
+  processAtomicInstr(LoRMW);
+  processAtomicInstr(HiRMW);
 }
 
 bool AtomicExpandImpl::tryExpandAtomicLoad(LoadInst *LI) {
@@ -849,6 +977,12 @@ bool AtomicExpandImpl::tryExpandAtomicRMW(AtomicRMWInst *AI) {
     TLI->emitCmpArithAtomicRMWIntrinsic(AI);
     return true;
   }
+  case TargetLoweringBase::AtomicExpansionKind::Expand:
+    if (AI->isElementwise()) {
+      expandElementwiseAtomicRMW(AI);
+      return true;
+    }
+    llvm_unreachable("Unhandled atomicrmw Expand case");
   case TargetLoweringBase::AtomicExpansionKind::NotAtomic:
     return lowerAtomicRMWInst(AI);
   case TargetLoweringBase::AtomicExpansionKind::CustomExpand:
@@ -1037,6 +1171,13 @@ static Value *performMaskedAtomicOp(AtomicRMWInst::BinOp Op,
   case AtomicRMWInst::Add:
   case AtomicRMWInst::Sub:
   case AtomicRMWInst::Nand: {
+    if (PMV.ValueType->isVectorTy()) {
+      // Avoid letting packed integer arithmetic carry across vector lanes.
+      Value *Loaded_Extract = extractMaskedValue(Builder, Loaded, PMV);
+      Value *NewVal = buildAtomicRMWValue(Op, Builder, Loaded_Extract, Inc);
+      return insertMaskedValue(Builder, Loaded, NewVal, PMV);
+    }
+
     // The other arithmetic ops need to be masked into place.
     Value *NewVal = buildAtomicRMWValue(Op, Builder, Loaded, Shifted_Inc);
     Value *NewVal_Masked = Builder.CreateAnd(NewVal, PMV.Mask);
@@ -1099,8 +1240,10 @@ void AtomicExpandImpl::expandPartwordAtomicRMW(
                        AI->getAlign(), TLI->getMinCmpXchgSizeInBits() / 8);
 
   Value *ValOperand_Shifted = nullptr;
-  if (Op == AtomicRMWInst::Xchg || Op == AtomicRMWInst::Add ||
-      Op == AtomicRMWInst::Sub || Op == AtomicRMWInst::Nand) {
+  if (Op == AtomicRMWInst::Xchg ||
+      (!PMV.ValueType->isVectorTy() &&
+       (Op == AtomicRMWInst::Add || Op == AtomicRMWInst::Sub ||
+        Op == AtomicRMWInst::Nand))) {
     Value *ValOp = Builder.CreateBitCast(AI->getValOperand(), PMV.IntValueType);
     ValOperand_Shifted =
         Builder.CreateShl(Builder.CreateZExt(ValOp, PMV.WordType), PMV.ShiftAmt,
@@ -1143,9 +1286,15 @@ AtomicRMWInst *AtomicExpandImpl::widenPartwordAtomicRMW(AtomicRMWInst *AI) {
       createMaskInstrs(Builder, AI, AI->getType(), AI->getPointerOperand(),
                        AI->getAlign(), TLI->getMinCmpXchgSizeInBits() / 8);
 
+  Value *ValOp = AI->getValOperand();
+  if (ValOp->getType()->isVectorTy())
+    // For vectors, bitcast to the integer type before extending. Note that
+    // or/xor/and on vectors are equivalent to the same operation on an integer
+    // that spans the vector, so we can use the integer type for the operation.
+    ValOp = Builder.CreateBitCast(ValOp, PMV.IntValueType);
   Value *ValOperand_Shifted =
-      Builder.CreateShl(Builder.CreateZExt(AI->getValOperand(), PMV.WordType),
-                        PMV.ShiftAmt, "ValOperand_Shifted");
+      Builder.CreateShl(Builder.CreateZExt(ValOp, PMV.WordType), PMV.ShiftAmt,
+                        "ValOperand_Shifted");
 
   Value *NewOperand;
 

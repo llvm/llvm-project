@@ -142,6 +142,17 @@ public:
   bool isCheapToSpeculateCtlz(Type *Ty) const override { return true; }
 
   AtomicExpansionKind shouldCastAtomicLoadInIR(LoadInst *LI) const override {
+    Type *Ty = LI->getType();
+    // SelectionDAG can split vector computations, but not vector atomic loads.
+    // Splitting those loads into per-lane atomics would change the atomicity,
+    // so cast them to a single same-width integer atomic load instead.
+    if (Ty->isVectorTy()) {
+      TypeSize SizeInBits = LI->getDataLayout().getTypeStoreSizeInBits(Ty);
+      if (!SizeInBits.isScalable() &&
+          SizeInBits.getFixedValue() <= getMaxAtomicSizeInBitsSupported())
+        return AtomicExpansionKind::CastToInteger;
+    }
+
     return AtomicExpansionKind::None;
   }
 
