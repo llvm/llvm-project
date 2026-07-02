@@ -2468,12 +2468,24 @@ NonOdrUseReason Sema::getNonOdrUseReasonInCurrentContext(ValueDecl *D) {
   return NOUR_None;
 }
 
+void Sema::DiagnoseUseOfDroppedDecl(ValueDecl *D, SourceLocation Loc) {
+  auto *VD = dyn_cast<VarDecl>(D);
+  if (!VD)
+    return;
+  auto It = DroppedVars.find(VD);
+  if (It == DroppedVars.end())
+    return;
+  Diag(Loc, diag::err_use_of_dropped_var) << VD;
+  Diag(It->second, diag::note_dropped_here) << VD;
+}
+
 DeclRefExpr *
 Sema::BuildDeclRefExpr(ValueDecl *D, QualType Ty, ExprValueKind VK,
                        const DeclarationNameInfo &NameInfo,
                        NestedNameSpecifierLoc NNS, NamedDecl *FoundD,
                        SourceLocation TemplateKWLoc,
                        const TemplateArgumentListInfo *TemplateArgs) {
+  DiagnoseUseOfDroppedDecl(D, NameInfo.getLoc());
   bool RefersToCapturedVariable = isa<VarDecl, BindingDecl>(D) &&
                                   NeedToCaptureVariable(D, NameInfo.getLoc());
 
@@ -7445,7 +7457,18 @@ ExprResult Sema::BuildResolvedCallExpr(Expr *Fn, NamedDecl *NDecl,
     if (CheckOtherCall(TheCall, Proto))
       return ExprError();
   }
-
+  if (FunctionDecl *FDecl = TheCall->getDirectCallee()) {
+    unsigned N = std::min(TheCall->getNumArgs(), FDecl->getNumParams());
+    for (unsigned I = 0; I < N; ++I) {
+      if (!FDecl->getParamDecl(I)->hasAttr<DropAttr>())
+        continue;
+      if (auto *DRE = dyn_cast<DeclRefExpr>(
+              TheCall->getArg(I)->IgnoreParenImpCasts())) {
+        if (auto *VD = dyn_cast<VarDecl>(DRE->getDecl()))
+          DroppedVars.try_emplace(VD, TheCall->getBeginLoc());
+      }
+    }
+  }
   return CheckForImmediateInvocation(MaybeBindToTemporary(TheCall), FDecl);
 }
 

@@ -2129,6 +2129,14 @@ def ExplicitInit : InheritableAttr {
   let SimpleHandler = 1;
 }
 
+def Drop : InheritableAttr {
+  let Spellings = [Clang<"drop">];
+  let Subjects = SubjectList<[ParmVar], ErrorDiag>;
+  let Documentation = [DropDocs];
+  let LangOpts = [CPlusPlus];
+  let SimpleHandler = 1;
+}
+
 def LifetimeBound : DeclOrTypeAttr {
   let Spellings = [Clang<"lifetimebound", 1>];
   let Subjects = SubjectList<[ParmVar, ImplicitObjectParameter], ErrorDiag>;

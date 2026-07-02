@@ -2073,6 +2073,11 @@ public:
   // #pragma strict_gs_check.
   PragmaStack<bool> StrictGuardStackCheckStack;
 
+  /// local dropped variables ([[clang::drop]])
+  llvm::DenseMap<const VarDecl *, SourceLocation> DroppedVars;
+
+  void DiagnoseUseOfDroppedDecl(ValueDecl *D, SourceLocation Loc);
+
   // This stack tracks the current state of Sema.CurFPFeatures.
   PragmaStack<FPOptionsOverride> FpPragmaStack;
   FPOptionsOverride CurFPFeatureOverrides() {

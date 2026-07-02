@@ -7656,6 +7656,10 @@ def warn_cxx20_compat_use_of_unaddressable_function : Warning<
   "taking address of non-addressable standard library function "
   "is incompatible with C++20">, InGroup<CXX20Compat>;
 
+def err_use_of_dropped_var : Error<
+  "use of %0 after it was dropped">;
+def note_dropped_here : Note<"%0 dropped here">;
+
 def warn_redundant_move_on_return : Warning<
   "redundant move in return statement">,
   InGroup<RedundantMove>, DefaultIgnore;
