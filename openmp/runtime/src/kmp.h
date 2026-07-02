@@ -4465,6 +4465,10 @@ extern kmp_int32 __kmp_omp_task(kmp_int32 gtid, kmp_task_t *new_task,
 extern kmp_int32 __kmp_build_taskgraph(kmp_int32 gtid,
                                        kmp_taskdata_t *current_taskdata,
                                        kmp_taskgraph_record_t *taskgraph);
+extern void __kmp_region_deplist_free(kmp_info_t *thread,
+                                      kmp_taskgraph_region_dep_t *list);
+extern void __kmp_region_deplist_recycle(kmp_taskgraph_region_dep_t **recycled,
+                                         kmp_taskgraph_region_dep_t *list);
 extern kmp_int32
 __kmp_taskgraph_topological_order(kmp_taskgraph_region_t *region,
                                   kmp_taskgraph_region_t **order_out,
