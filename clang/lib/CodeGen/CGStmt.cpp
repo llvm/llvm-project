@@ -837,6 +837,17 @@ void CodeGenFunction::EmitGotoStmt(const GotoStmt &S) {
   if (HaveInsertPoint())
     EmitStopPoint(&S);
 
+  // For C++ scope re-entry we need to reinitialize variables this goto
+  // bypasses. Backward gotos reinit here while forward gotos are recorded for
+  // EmitAutoVarAlloca to patch once the alloca exists. Skip when jump sources
+  // are unknown (computed goto); EmitAutoVarAlloca then uses function-scope
+  // init.
+  if (HaveInsertPoint() && getLangOpts().CPlusPlus &&
+      !Bypasses.isAlwaysBypassed()) {
+    emitBypassedVarInitsForSource(&S);
+    BypassingForwardGotos.push_back({Builder.GetInsertBlock(), &S});
+  }
+
   ApplyAtomGroup Grp(getDebugInfo());
   EmitBranchThroughCleanup(getJumpDestForLabel(S.getLabel()));
 }
@@ -1749,6 +1760,8 @@ void CodeGenFunction::EmitCaseStmtRange(const CaseStmt &S,
   // switch machinery to enter this block.
   llvm::BasicBlock *CaseDest = createBasicBlock("sw.bb");
   EmitBlockWithFallThrough(CaseDest, &S);
+  if (getLangOpts().CPlusPlus)
+    emitBypassedVarInitsForSource(&S);
   EmitStmt(S.getSubStmt());
 
   // If range is empty, do nothing.
@@ -1886,6 +1899,8 @@ void CodeGenFunction::EmitCaseStmt(const CaseStmt &S,
 
   llvm::BasicBlock *CaseDest = createBasicBlock("sw.bb");
   EmitBlockWithFallThrough(CaseDest, &S);
+  if (getLangOpts().CPlusPlus)
+    emitBypassedVarInitsForSource(&S);
   if (SwitchWeights)
     SwitchWeights->push_back(getProfileCount(&S));
   SwitchInsn->addCase(CaseVal, CaseDest);
@@ -1918,6 +1933,8 @@ void CodeGenFunction::EmitCaseStmt(const CaseStmt &S,
       CaseDest = createBasicBlock("sw.bb");
       EmitBlockWithFallThrough(CaseDest, CurCase);
     }
+    if (getLangOpts().CPlusPlus)
+      emitBypassedVarInitsForSource(CurCase);
     // Since this loop is only executed when the CaseStmt has no attributes
     // use a hard-coded value.
     if (SwitchLikelihood)
@@ -1955,6 +1972,8 @@ void CodeGenFunction::EmitDefaultStmt(const DefaultStmt &S,
     SwitchLikelihood->front() = Stmt::getLikelihood(Attrs);
 
   EmitBlockWithFallThrough(DefaultBlock, &S);
+  if (getLangOpts().CPlusPlus)
+    emitBypassedVarInitsForSource(&S);
 
   EmitStmt(S.getSubStmt());
 }

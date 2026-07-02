@@ -6755,6 +6755,13 @@ CodeGenFunction::LexicalScope::LexicalScope(CodeGenFunction &CGF,
                                             SourceRange Range)
     : RunCleanupsScope(CGF), Range(Range), ParentScope(CGF.CurLexicalScope) {
   CGF.CurLexicalScope = this;
+  // Record the block this scope is entered through, used to initialize
+  // potentially bypassed variables under -ftrivial-auto-var-init, adhereing to
+  // C6.2.4p6. Also see CodeGenFunction::EmitAutoVarAlloca(). A scope with no
+  // insertion point (e.g. a switch body) inherits its parent's.
+  EntryBlock = CGF.Builder.GetInsertBlock();
+  if (!EntryBlock && ParentScope)
+    EntryBlock = ParentScope->EntryBlock;
   if (CGDebugInfo *DI = CGF.getDebugInfo())
     DI->EmitLexicalBlockStart(CGF.Builder, Range.getBegin());
 }

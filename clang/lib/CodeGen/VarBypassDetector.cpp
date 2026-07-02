@@ -16,13 +16,41 @@
 using namespace clang;
 using namespace CodeGen;
 
+/// True if the body contains a goto, switch, or indirect goto. Lets Init()
+/// skip scope building for the common jump-free function, this is a minor
+/// optimization win.
+static bool hasJumpStmts(const Stmt *Body) {
+  llvm::SmallVector<const Stmt *, 32> Worklist;
+  Worklist.push_back(Body);
+  while (!Worklist.empty()) {
+    const Stmt *S = Worklist.pop_back_val();
+    if (!S)
+      continue;
+    switch (S->getStmtClass()) {
+    case Stmt::GotoStmtClass:
+    case Stmt::SwitchStmtClass:
+    case Stmt::IndirectGotoStmtClass:
+      return true;
+    default:
+      break;
+    }
+    for (const Stmt *Child : S->children())
+      Worklist.push_back(Child);
+  }
+  return false;
+}
+
 /// Clear the object and pre-process for the given statement, usually function
 /// body statement.
 void VarBypassDetector::Init(CodeGenModule &CGM, const Stmt *Body) {
   FromScopes.clear();
   ToScopes.clear();
   Bypasses.clear();
+  BypassedVarsAtSource.clear();
   Scopes = {{~0U, nullptr}};
+  AlwaysBypassed = false;
+  if (!hasJumpStmts(Body))
+    return;
   unsigned ParentScope = 0;
   AlwaysBypassed = !BuildScopeInformation(CGM, Body, ParentScope);
   if (!AlwaysBypassed)
@@ -144,11 +172,11 @@ void VarBypassDetector::Detect() {
     unsigned from = S.second;
     if (const GotoStmt *GS = dyn_cast<GotoStmt>(St)) {
       if (const LabelStmt *LS = GS->getLabel()->getStmt())
-        Detect(from, ToScopes[LS]);
+        Detect(from, ToScopes[LS], GS);
     } else if (const SwitchStmt *SS = dyn_cast<SwitchStmt>(St)) {
       for (const SwitchCase *SC = SS->getSwitchCaseList(); SC;
            SC = SC->getNextSwitchCase()) {
-        Detect(from, ToScopes[SC]);
+        Detect(from, ToScopes[SC], SC);
       }
     } else {
       llvm_unreachable("goto or switch was expected");
@@ -157,13 +185,15 @@ void VarBypassDetector::Detect() {
 }
 
 /// Checks the jump and stores each variable declaration it bypasses.
-void VarBypassDetector::Detect(unsigned From, unsigned To) {
+void VarBypassDetector::Detect(unsigned From, unsigned To, const Stmt *Source) {
   while (From != To) {
     if (From < To) {
       assert(Scopes[To].first < To);
       const auto &ScopeTo = Scopes[To];
       To = ScopeTo.first;
       Bypasses.insert(ScopeTo.second);
+      if (ScopeTo.second)
+        BypassedVarsAtSource[Source].insert(ScopeTo.second);
     } else {
       assert(Scopes[From].first < From);
       From = Scopes[From].first;

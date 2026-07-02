@@ -1637,6 +1637,44 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
       }
     }
 
+    // A variable whose declaration is bypassed by a goto or switch is not
+    // initialized by EmitAutoVarInit (that runs at the declaration). Emit the
+    // trivial-auto-var-init separately, following each language's lifetime
+    // rules.
+    if (Bypasses.IsBypassed(&D) && !emission.IsEscapingByRef &&
+        !Ty->isVariablyModifiedType() &&
+        getAutoVarInitKind(Ty, D) !=
+            LangOptions::TrivialAutoVarInitKind::Uninitialized) {
+      if (getLangOpts().CPlusPlus && !Bypasses.isAlwaysBypassed()) {
+        // C++ [basic.stc.auto]: the lifetime restarts on each scope re-entry,
+        // so reinitialize at every bypassing jump. Switch cases and backward
+        // gotos are emitted at the jump source (after this alloca); forward
+        // gotos already emitted are patchd before their branch.
+        BypassedVarInits.insert({&D, address});
+        for (const BypassingForwardGoto &FG : BypassingForwardGotos) {
+          const auto *Vars = Bypasses.getBypassedVarsForSource(FG.Goto);
+          if (Vars && Vars->contains(&D))
+            if (llvm::Instruction *Term = FG.Block->getTerminator()) {
+              llvm::IRBuilderBase::InsertPointGuard IPG(Builder);
+              Builder.SetInsertPoint(Term);
+              emitZeroOrPatternForAutoVarInit(Ty, D, address);
+            }
+        }
+      } else {
+        // C (C6.2.4p6) and computed gotos: the lifetime begins at entry into
+        // the enclosing block, so initialize at that block's entry once for a
+        // function-scoped variable and every iteration for a loop-scoped one.
+        llvm::BasicBlock *Entry =
+            CurLexicalScope ? CurLexicalScope->getEntryBlock() : nullptr;
+        llvm::IRBuilderBase::InsertPointGuard IPG(Builder);
+        if (Entry && Entry->getTerminator())
+          Builder.SetInsertPoint(Entry->getTerminator());
+        else
+          Builder.SetInsertPoint(getPostAllocaInsertPoint());
+        emitZeroOrPatternForAutoVarInit(Ty, D, address);
+      }
+    }
+
     if (D.hasAttr<StackProtectorIgnoreAttr>()) {
       if (auto *AI = dyn_cast<llvm::AllocaInst>(address.getBasePointer())) {
         llvm::LLVMContext &Ctx = Builder.getContext();
@@ -1834,6 +1872,37 @@ bool CodeGenFunction::isTrivialInitializer(const Expr *Init) {
   return false;
 }
 
+LangOptions::TrivialAutoVarInitKind
+CodeGenFunction::getAutoVarInitKind(QualType type, const VarDecl &D) {
+  auto hasNoTrivialAutoVarInitAttr = [](const Decl *D) {
+    return D && D->hasAttr<NoTrivialAutoVarInitAttr>();
+  };
+  if (D.isConstexpr() || D.getAttr<UninitializedAttr>() ||
+      hasNoTrivialAutoVarInitAttr(type->getAsTagDecl()) ||
+      hasNoTrivialAutoVarInitAttr(CurFuncDecl))
+    return LangOptions::TrivialAutoVarInitKind::Uninitialized;
+  return getContext().getLangOpts().getTrivialAutoVarInit();
+}
+
+void CodeGenFunction::emitBypassedVarInitsForSource(const Stmt *Source) {
+  // C++ scope-reentry reinit is only sound when jump sources are known. With a
+  // computed goto we can't tell whether a jump leaves a variable's scope, so
+  // EmitAutoVarAlloca falls back to a single function-scope init and we must
+  // not reinitialize here -- doing so could clobber a still-live variable.
+  if (Bypasses.isAlwaysBypassed())
+    return;
+  const auto *Vars = Bypasses.getBypassedVarsForSource(Source);
+  if (!Vars)
+    return;
+  for (const VarDecl *VD : *Vars) {
+    auto It = BypassedVarInits.find(VD);
+    if (It != BypassedVarInits.end()) {
+      QualType Ty = VD->getType().getNonReferenceType();
+      emitZeroOrPatternForAutoVarInit(Ty, *VD, It->second);
+    }
+  }
+}
+
 void CodeGenFunction::emitZeroOrPatternForAutoVarInit(QualType type,
                                                       const VarDecl &D,
                                                       Address Loc) {
@@ -1993,16 +2062,9 @@ void CodeGenFunction::EmitAutoVarInit(const AutoVarEmission &emission) {
   const Address Loc =
       locIsByrefHeader ? emission.getObjectAddress(*this) : emission.Addr;
 
-  auto hasNoTrivialAutoVarInitAttr = [&](const Decl *D) {
-    return D && D->hasAttr<NoTrivialAutoVarInitAttr>();
-  };
   // Note: constexpr already initializes everything correctly.
   LangOptions::TrivialAutoVarInitKind trivialAutoVarInit =
-      ((D.isConstexpr() || D.getAttr<UninitializedAttr>() ||
-        hasNoTrivialAutoVarInitAttr(type->getAsTagDecl()) ||
-        hasNoTrivialAutoVarInitAttr(CurFuncDecl))
-           ? LangOptions::TrivialAutoVarInitKind::Uninitialized
-           : getContext().getLangOpts().getTrivialAutoVarInit());
+      getAutoVarInitKind(type, D);
 
   auto initializeWhatIsTechnicallyUninitialized = [&](Address Loc) {
     if (trivialAutoVarInit ==
