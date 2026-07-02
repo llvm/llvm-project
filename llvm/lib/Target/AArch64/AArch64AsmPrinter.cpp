@@ -197,6 +197,10 @@ public:
     uint64_t IntDisc;
     Register AddrDisc;
     bool AddrDiscIsKilled;
+
+    bool addrDiscIsKilledAndNoneOf(std::initializer_list<Register> Regs) {
+      return AddrDiscIsKilled && !llvm::is_contained(Regs, AddrDisc);
+    }
   };
 
   // Helper for emitting AUTRELLOADPAC: increment Pointer by Addend and then by
@@ -2295,21 +2299,9 @@ void AArch64AsmPrinter::emitPtrauthApplyIndirectAddend(Register Pointer,
                      .addImm(0));
 }
 
-void AArch64AsmPrinter::emitPtrauthAuthResign(
-    Register Pointer, Register Scratch, PtrAuthSchema AuthSchema,
-    std::optional<PtrAuthSchema> SignSchema, std::optional<int64_t> Addend,
-    Value *DS) {
-  const bool IsResign = SignSchema.has_value();
-  // We expand AUT/AUTPAC into a sequence of the form
-  //
-  //      ; authenticate x16
-  //      ; check pointer in x16
-  //    Lsuccess:
-  //      ; sign x16 (if AUTPAC)
-  //    Lend:   ; if not trapping on failure
-  //
-  // with the checking sequence chosen depending on whether/how we should check
-  // the pointer and whether we should trap on failure.
+static std::pair<bool, bool> getCheckAndTrapMode(const MachineFunction *MF,
+                                                 bool IsResign) {
+  const AArch64Subtarget &STI = MF->getSubtarget<AArch64Subtarget>();
 
   // By default, auth/resign sequences check for auth failures.
   bool ShouldCheck = true;
@@ -2318,7 +2310,7 @@ void AArch64AsmPrinter::emitPtrauthAuthResign(
 
   // On an FPAC CPU, you get traps whether you want them or not: there's
   // no point in emitting checks or traps.
-  if (STI->hasFPAC())
+  if (STI.hasFPAC())
     ShouldCheck = ShouldTrap = false;
 
   // However, command-line flags can override this, for experimentation.
@@ -2337,46 +2329,80 @@ void AArch64AsmPrinter::emitPtrauthAuthResign(
     break;
   }
 
-  // Compute aut discriminator
-  Register AUTDiscReg =
-      emitPtrauthDiscriminator(AuthSchema.IntDisc, AuthSchema.AddrDisc, Scratch,
-                               AuthSchema.AddrDiscIsKilled);
+  // Checked-but-not-trapping mode ("poison") only applies to resigning,
+  // replace with "unchecked" for standalone AUT.
+  if (!IsResign && ShouldCheck && !ShouldTrap)
+    ShouldCheck = ShouldTrap = false;
 
+  return std::make_pair(ShouldCheck, ShouldTrap);
+}
+
+// We expand AUTx16x17/AUTxMxN into a sequence of the form
+//
+//      ; authenticate Pointer
+//      ; check that Pointer is valid (optional, traps on failure)
+//
+// We expand AUTPAC into a sequence of the form
+//
+//      ; authenticate Pointer
+//      ; check that Pointer is valid (optional, traps on failure)
+//      ; load addend and add it to Pointer (if OptAddend)
+//      ; sign Pointer
+//
+// or
+//
+//      ; authenticate Pointer
+//      ; check that Pointer is valid (skips re-sign on failure)
+//      ; load addend and add it to Pointer (if OptAddend)
+//      ; sign Pointer
+//    Lon_failure:
+//
+void AArch64AsmPrinter::emitPtrauthAuthResign(
+    Register Pointer, Register Scratch, PtrAuthSchema AuthSchema,
+    std::optional<PtrAuthSchema> SignSchema, std::optional<int64_t> Addend,
+    Value *DS) {
+  const bool IsResign = SignSchema.has_value();
+  Register SignAddrDiscOrNone =
+      SignSchema ? SignSchema->AddrDisc : AArch64::NoRegister;
+
+  const auto [ShouldCheck, ShouldTrap] = getCheckAndTrapMode(MF, IsResign);
+  assert((ShouldCheck || !ShouldTrap) && "ShouldTrap implies ShouldCheck");
+
+  MCSymbol *OnFailure = nullptr;
+  if (ShouldCheck && !ShouldTrap)
+    OnFailure = createTempSymbol("resign_end_");
+
+  // While rather unlikely, it is technically possible to use the Pointer to
+  // compute its own discriminator.
+  // AuthSchema.AddrDisc may be clobbered by emitPtrauthDiscriminator as long as
+  // it is not used past this point neither externally (the register operand is
+  // "killed"), nor internally (it does not alias anything being used later).
+  Register AUTDiscReg = emitPtrauthDiscriminator(
+      AuthSchema.IntDisc, AuthSchema.AddrDisc, Scratch,
+      AuthSchema.addrDiscIsKilledAndNoneOf({Pointer, SignAddrDiscOrNone}));
   if (!emitDeactivationSymbolRelocation(DS))
     emitAUT(AuthSchema.Key, Pointer, AUTDiscReg);
 
-  // Unchecked or checked-but-non-trapping AUT is just an "AUT": we're done.
-  if (!IsResign && (!ShouldCheck || !ShouldTrap))
-    return;
-
-  MCSymbol *EndSym = nullptr;
-
-  if (ShouldCheck) {
-    if (IsResign && !ShouldTrap)
-      EndSym = createTempSymbol("resign_end_");
-
+  if (ShouldCheck)
     emitPtrauthCheckAuthenticatedValue(Pointer, Scratch, AuthSchema.Key,
                                        AArch64PAuth::AuthCheckMethod::XPAC,
-                                       EndSym);
-  }
+                                       OnFailure);
 
-  // We already emitted unchecked and checked-but-non-trapping AUTs.
-  // That left us with trapping AUTs, and AUTPA/AUTRELLOADPACs.
-  // Trapping AUTs don't need PAC: we're done.
-  if (!IsResign)
+  if (!IsResign) {
+    assert(!OnFailure && "Poison mode only applies to resigning");
     return;
+  }
 
   if (Addend.has_value())
     emitPtrauthApplyIndirectAddend(Pointer, Scratch, *Addend);
 
-  // Compute pac discriminator into x17
-  Register PACDiscReg = emitPtrauthDiscriminator(SignSchema->IntDisc,
-                                                 SignSchema->AddrDisc, Scratch);
+  Register PACDiscReg = emitPtrauthDiscriminator(
+      SignSchema->IntDisc, SignSchema->AddrDisc, Scratch,
+      SignSchema->addrDiscIsKilledAndNoneOf({Pointer}));
   emitPAC(SignSchema->Key, Pointer, PACDiscReg);
 
-  //  Lend:
-  if (EndSym)
-    OutStreamer->emitLabel(EndSym);
+  if (OnFailure)
+    OutStreamer->emitLabel(OnFailure);
 }
 
 void AArch64AsmPrinter::emitPtrauthSign(const MachineInstr *MI) {
