@@ -697,7 +697,7 @@ void test_lifetimebound_multi_level() {
     int** pp = &p;  
     int*** ppp = &pp; // expected-warning {{local variable 'pp' does not live long enough}}
     result = return_inner_ptr_addr(ppp); // expected-note {{local variable 'ppp' aliases the storage of local variable 'pp'}} \
-                                         // expected-note {{result of call to 'return_inner_ptr_addr' aliases the storage of local variable 'pp'}}
+                                         // expected-note {{result of call to 'return_inner_ptr_addr' aliases the storage of local variable 'pp' because parameter 'ppp' is marked [[clang::lifetimebound]]}}
   }                   // expected-note {{local variable 'pp' is destroyed here}}
   (void)**result;     // expected-note {{used here}}
 }
@@ -821,7 +821,7 @@ void lifetimebound_simple_function() {
   {
     MyObj obj;
     v = Identity(obj); // expected-warning {{local variable 'obj' does not live long enough}} \
-                       // expected-note {{result of call to 'Identity' aliases the storage of local variable 'obj'}}
+                       // expected-note {{result of call to 'Identity' aliases the storage of local variable 'obj' because parameter 'v' is marked [[clang::lifetimebound]]}}
   }                    // expected-note {{local variable 'obj' is destroyed here}}
   v.use();             // expected-note {{later used here}}
 }
@@ -830,8 +830,8 @@ void lifetimebound_multiple_args_definite() {
   View v;
   {
     MyObj obj1, obj2;
-    v = Choose(true,  // expected-note {{result of call to 'Choose' aliases the storage of local variable 'obj1'}} \
-                      // expected-note {{result of call to 'Choose' aliases the storage of local variable 'obj2'}}
+    v = Choose(true,  // expected-note {{result of call to 'Choose' aliases the storage of local variable 'obj1' because parameter 'a' is marked [[clang::lifetimebound]]}} \
+                      // expected-note {{result of call to 'Choose' aliases the storage of local variable 'obj2' because parameter 'b' is marked [[clang::lifetimebound]]}}
                obj1,  // expected-warning {{local variable 'obj1' does not live long enough}}
                obj2); // expected-warning {{local variable 'obj2' does not live long enough}}
   }                              // expected-note {{local variable 'obj1' is destroyed here}} \
@@ -860,7 +860,7 @@ void lifetimebound_mixed_args() {
   {
     MyObj obj1, obj2;
     v = SelectFirst(obj1,        // expected-warning {{local variable 'obj1' does not live long enough}} \
-                                 // expected-note {{result of call to 'SelectFirst' aliases the storage of local variable 'obj1'}}
+                                 // expected-note {{result of call to 'SelectFirst' aliases the storage of local variable 'obj1' because parameter 'a' is marked [[clang::lifetimebound]]}}
                     obj2);
   }                              // expected-note {{local variable 'obj1' is destroyed here}}
   v.use();                       // expected-note {{later used here}}
@@ -877,7 +877,7 @@ void lifetimebound_member_function() {
   {
     MyObj obj;
     v  = obj.getView(); // expected-warning {{local variable 'obj' does not live long enough}} \
-                        // expected-note {{result of call to 'getView' aliases the storage of local variable 'obj'}}
+                        // expected-note {{result of call to 'getView' aliases the storage of local variable 'obj' because the implicit object parameter is marked [[clang::lifetimebound]]}}
   }                     // expected-note {{local variable 'obj' is destroyed here}}
   v.use();              // expected-note {{later used here}}
 }
@@ -902,7 +902,7 @@ void lifetimebound_chained_calls() {
   {
     MyObj obj;
     v = Identity(Identity(Identity(obj))); // expected-warning {{local variable 'obj' does not live long enough}} \
-                                           // expected-note 3 {{result of call to 'Identity' aliases the storage of local variable 'obj'}}
+                                           // expected-note 3 {{result of call to 'Identity' aliases the storage of local variable 'obj' because parameter 'v' is marked [[clang::lifetimebound]]}}
   }                                        // expected-note {{local variable 'obj' is destroyed here}}
   v.use();                                 // expected-note {{later used here}}
 }
@@ -912,7 +912,7 @@ void lifetimebound_with_pointers() {
   {
     MyObj obj;
     ptr = GetPointer(obj); // expected-warning {{local variable 'obj' does not live long enough}} \
-                           // expected-note {{result of call to 'GetPointer' aliases the storage of local variable 'obj'}}
+                           // expected-note {{result of call to 'GetPointer' aliases the storage of local variable 'obj' because parameter 'obj' is marked [[clang::lifetimebound]]}}
   }                        // expected-note {{local variable 'obj' is destroyed here}}
   (void)*ptr;              // expected-note {{later used here}}
 }
@@ -922,7 +922,7 @@ void chained_assignment_lifetimebound_call() {
   {
     MyObj s;
     p = Identity(obj = &s); // expected-warning {{does not live long enough}} \
-                            // expected-note {{result of call to 'Identity' aliases the storage of local variable 's'}}
+                            // expected-note {{result of call to 'Identity' aliases the storage of local variable 's' because parameter 'v' is marked [[clang::lifetimebound]]}}
   }                         // expected-note {{local variable 's' is destroyed here}}
   (void)*p;                 // expected-note {{later used here}}
 }
@@ -955,7 +955,7 @@ void lifetimebound_return_reference() {
     MyObj obj;
     View temp_v = obj;  // expected-warning {{local variable 'obj' does not live long enough}}
     const MyObj& ref = GetObject(temp_v); // expected-note {{local variable 'temp_v' aliases the storage of local variable 'obj'}} \
-                                          // expected-note {{result of call to 'GetObject' aliases the storage of local variable 'obj'}}
+                                          // expected-note {{result of call to 'GetObject' aliases the storage of local variable 'obj' because parameter 'v' is marked [[clang::lifetimebound]]}}
     ptr = &ref;
   }                       // expected-note {{local variable 'obj' is destroyed here}}
   (void)*ptr;             // expected-note {{later used here}}
@@ -1010,7 +1010,7 @@ void lifetimebound_make_unique() {
   {
     MyObj obj;
     ptr = std::make_unique<LifetimeBoundCtor>(obj); // tu-warning {{local variable 'obj' does not live long enough}} \
-                                                    // tu-note {{result of call to 'make_unique<LifetimeBoundCtor, MyObj &>' aliases the storage of local variable 'obj'}}
+                                                    // tu-note {{result of call to 'make_unique<LifetimeBoundCtor, MyObj &>' aliases the storage of local variable 'obj' because parameter 'args' is marked [[clang::lifetimebound]]}}
   }                                                 // tu-note {{local variable 'obj' is destroyed here}}
   (void)ptr;                                        // tu-note {{later used here}}
 }
@@ -1028,7 +1028,7 @@ void non_lifetimebound_make_unique() {
 void lifetimebound_make_unique_temp() {
   std::unique_ptr<LifetimeBoundCtor> ptr = std::make_unique<LifetimeBoundCtor>(MyObj()); // tu-warning {{temporary object does not live long enough}} \
                                                                                          // tu-note {{temporary object is destroyed here}} \
-                                                                                         // tu-note {{result of call to 'make_unique<LifetimeBoundCtor, MyObj>' aliases the storage of temporary object}}
+                                                                                         // tu-note {{result of call to 'make_unique<LifetimeBoundCtor, MyObj>' aliases the storage of temporary object because parameter 'args' is marked [[clang::lifetimebound]]}}
   (void)ptr; // tu-note {{later used here}}
 }
 
@@ -1066,7 +1066,7 @@ void lifetimebound_make_unique_multi_params() {
   {
     MyObj obj_short;
     ptr = std::make_unique<MultiLifetimeBoundCtor>(obj_short, obj_long); // tu-warning {{local variable 'obj_short' does not live long enough}} \
-                                                                         // tu-note {{result of call to 'make_unique<MultiLifetimeBoundCtor, MyObj &, MyObj &>' aliases the storage of local variable 'obj_short'}}
+                                                                         // tu-note {{result of call to 'make_unique<MultiLifetimeBoundCtor, MyObj &, MyObj &>' aliases the storage of local variable 'obj_short' because parameter 'args' is marked [[clang::lifetimebound]]}}
   } // tu-note {{local variable 'obj_short' is destroyed here}}
   (void)ptr; // tu-note {{later used here}}
 }
@@ -1077,7 +1077,7 @@ void lifetimebound_make_unique_multi_params2() {
   {
     MyObj obj_short;
     ptr = std::make_unique<MultiLifetimeBoundCtor>(obj_long, obj_short, 1); // tu-warning {{local variable 'obj_short' does not live long enough}} \
-                                                                            // tu-note {{result of call to 'make_unique<MultiLifetimeBoundCtor, MyObj &, MyObj &, int>' aliases the storage of local variable 'obj_short'}}
+                                                                            // tu-note {{result of call to 'make_unique<MultiLifetimeBoundCtor, MyObj &, MyObj &, int>' aliases the storage of local variable 'obj_short' because parameter 'args' is marked [[clang::lifetimebound]]}}
   } // tu-note {{local variable 'obj_short' is destroyed here}}
   (void)ptr; // tu-note {{later used here}}
 }
@@ -1098,7 +1098,7 @@ void lifetimebound_make_unique_multi_params3_1() {
   {
     MyObj obj_short;
     ptr = std::make_unique<MultiLifetimeBoundCtor>(obj_short, obj_long, 1.0); // tu-warning {{local variable 'obj_short' does not live long enough}} \
-                                                                              // tu-note {{result of call to 'make_unique<MultiLifetimeBoundCtor, MyObj &, MyObj &, double>' aliases the storage of local variable 'obj_short'}}
+                                                                              // tu-note {{result of call to 'make_unique<MultiLifetimeBoundCtor, MyObj &, MyObj &, double>' aliases the storage of local variable 'obj_short' because parameter 'args' is marked [[clang::lifetimebound]]}}
   } // tu-note {{local variable 'obj_short' is destroyed here}}
   (void)ptr; // tu-note {{later used here}}
 }
@@ -1109,7 +1109,7 @@ void lifetimebound_make_unique_multi_params3_2() {
   {
     MyObj obj_short;
     ptr = std::make_unique<MultiLifetimeBoundCtor>(obj_long, obj_short, 1.0); // tu-warning {{local variable 'obj_short' does not live long enough}} \
-                                                                              // tu-note {{result of call to 'make_unique<MultiLifetimeBoundCtor, MyObj &, MyObj &, double>' aliases the storage of local variable 'obj_short'}}
+                                                                              // tu-note {{result of call to 'make_unique<MultiLifetimeBoundCtor, MyObj &, MyObj &, double>' aliases the storage of local variable 'obj_short' because parameter 'args' is marked [[clang::lifetimebound]]}}
   } // tu-note {{local variable 'obj_short' is destroyed here}}
   (void)ptr; // tu-note {{later used here}}
 }
@@ -1393,7 +1393,7 @@ void parentheses(bool cond) {
   {
     MyObj a;
     p = ((GetPointer((a))));  // expected-warning {{local variable 'a' does not live long enough}} \
-                              // expected-note {{result of call to 'GetPointer' aliases the storage of local variable 'a'}}
+                              // expected-note {{result of call to 'GetPointer' aliases the storage of local variable 'a' because parameter 'obj' is marked [[clang::lifetimebound]]}}
   }                           // expected-note {{local variable 'a' is destroyed here}}
   (void)*p;                   // expected-note {{later used here}}
 
@@ -1425,7 +1425,7 @@ void use_temporary_after_destruction() {
 void passing_temporary_to_lifetime_bound_function() {
   View a = construct_view(non_trivially_destructed_temporary()); // expected-warning {{temporary object does not live long enough}} \
                 expected-note {{temporary object is destroyed here}} \
-                expected-note {{result of call to 'construct_view' aliases the storage of temporary object}}
+                expected-note {{result of call to 'construct_view' aliases the storage of temporary object because parameter 'obj' is marked [[clang::lifetimebound]]}}
   use(a); // expected-note {{later used here}}
 }
 
@@ -1467,7 +1467,7 @@ int **bit_cast_multilevel() {
 namespace FullExprCleanupLoc {
 void var_initializer() {
   View v = non_trivially_destructed_temporary() // expected-warning {{temporary object does not live long enough}} \
-                                                // expected-note {{result of call to 'getView' aliases the storage of temporary object}}
+                                                // expected-note {{result of call to 'getView' aliases the storage of temporary object because the implicit object parameter is marked [[clang::lifetimebound]]}}
                .getView(); // expected-note {{temporary object is destroyed here}}
   v.use(); // expected-note {{later used here}}
 }
@@ -1475,7 +1475,7 @@ void var_initializer() {
 void expr_statement() {
   View v;
   v = non_trivially_destructed_temporary() // expected-warning {{temporary object does not live long enough}} \
-                                           // expected-note {{result of call to 'getView' aliases the storage of temporary object}}
+                                           // expected-note {{result of call to 'getView' aliases the storage of temporary object because the implicit object parameter is marked [[clang::lifetimebound]]}}
           .getView(); // expected-note {{temporary object is destroyed here}}
   v.use(); // expected-note {{later used here}}
 }
@@ -1519,7 +1519,7 @@ void foobar() {
   {
     StatusOr<MyObj> string_or = getStringOr();
     view = string_or. // expected-warning {{local variable 'string_or' does not live long enough}} \
-                      // expected-note {{result of call to 'value' aliases the storage of local variable 'string_or'}}
+                      // expected-note {{result of call to 'value' aliases the storage of local variable 'string_or' because the implicit object parameter is marked [[clang::lifetimebound]]}}
             value();
   }                     // expected-note {{local variable 'string_or' is destroyed here}}
   (void)view;           // expected-note {{later used here}}
@@ -1594,7 +1594,7 @@ void test_user_defined_deref_uaf() {
     MyObj obj;
     SmartPtr<MyObj> smart_ptr(&obj);
     p = &(*smart_ptr);  // expected-warning {{local variable 'smart_ptr' does not live long enough}} \
-                        // expected-note {{expression aliases the storage of local variable 'smart_ptr'}}
+                        // expected-note {{expression aliases the storage of local variable 'smart_ptr' because the implicit object parameter is marked [[clang::lifetimebound]]}}
   }                     // expected-note {{local variable 'smart_ptr' is destroyed here}}
   (void)*p;             // expected-note {{later used here}}
 }
@@ -1612,7 +1612,7 @@ void test_user_defined_deref_with_view() {
     MyObj obj;
     SmartPtr<MyObj> smart_ptr(&obj);
     v = *smart_ptr;  // expected-warning {{local variable 'smart_ptr' does not live long enough}} \
-                     // expected-note {{expression aliases the storage of local variable 'smart_ptr'}}
+                     // expected-note {{expression aliases the storage of local variable 'smart_ptr' because the implicit object parameter is marked [[clang::lifetimebound]]}}
   }                  // expected-note {{local variable 'smart_ptr' is destroyed here}}
   v.use();           // expected-note {{later used here}}
 }
@@ -1623,7 +1623,7 @@ void test_user_defined_deref_arrow() {
     MyObj obj;
     SmartPtr<MyObj> smart_ptr(&obj);
     p = smart_ptr.operator->();  // expected-warning {{local variable 'smart_ptr' does not live long enough}} \
-                                 // expected-note {{expression aliases the storage of local variable 'smart_ptr'}}
+                                 // expected-note {{expression aliases the storage of local variable 'smart_ptr' because the implicit object parameter is marked [[clang::lifetimebound]]}}
   }                              // expected-note {{local variable 'smart_ptr' is destroyed here}}
   (void)*p;                      // expected-note {{later used here}}
 }
@@ -1634,7 +1634,7 @@ void test_user_defined_deref_chained() {
     MyObj obj;
     SmartPtr<SmartPtr<MyObj>> double_ptr;
     p = &(**double_ptr);  // expected-warning {{local variable 'double_ptr' does not live long enough}} \
-                          // expected-note 2 {{expression aliases the storage of local variable 'double_ptr'}}
+                          // expected-note 2 {{expression aliases the storage of local variable 'double_ptr' because the implicit object parameter is marked [[clang::lifetimebound]]}}
   }                       // expected-note {{local variable 'double_ptr' is destroyed here}}
   (void)*p;               // expected-note {{later used here}}
 }
@@ -1829,7 +1829,7 @@ void wrong_use_of_move_is_permissive() {
     MyObj a;
     p = std::move(a).getData(); // expected-warning {{local variable 'a' does not live long enough}} \
                                 // expected-note {{result of call to 'move<MyObj &>' aliases the storage of local variable 'a'}} \
-                                // expected-note {{result of call to 'getData' aliases the storage of local variable 'a'}}
+                                // expected-note {{result of call to 'getData' aliases the storage of local variable 'a' because the implicit object parameter is marked [[clang::lifetimebound]]}}
   }         // expected-note {{local variable 'a' is destroyed here}}
   (void)p;  // expected-note {{later used here}}
 }
@@ -1864,10 +1864,10 @@ void bar() {
     {
         S s;
         x = s.x(); // expected-warning {{local variable 's' does not live long enough}} \
-                   // expected-note {{result of call to 'x' aliases the storage of local variable 's'}}
+                   // expected-note {{result of call to 'x' aliases the storage of local variable 's' because the implicit object parameter is marked [[clang::lifetimebound]]}}
         View y = S().x(); // expected-warning {{temporary object does not live long enough}} \
                              expected-note {{temporary object is destroyed here}} \
-                             expected-note {{result of call to 'x' aliases the storage of temporary object}}
+                             expected-note {{result of call to 'x' aliases the storage of temporary object because the implicit object parameter is marked [[clang::lifetimebound]]}}
         (void)y; // expected-note {{used here}}
     } // expected-note {{local variable 's' is destroyed here}}
     (void)x; // expected-note {{used here}}
@@ -1956,19 +1956,19 @@ const S& identity(const S& in [[clang::lifetimebound]]);
 
 void test_temporary() {
   const std::string& x = S().x(); // expected-warning {{temporary object does not live long enough}} expected-note {{temporary object is destroyed here}} \
-                                  // expected-note {{result of call to 'x' aliases the storage of temporary object}}
+                                  // expected-note {{result of call to 'x' aliases the storage of temporary object because the implicit object parameter is marked [[clang::lifetimebound]]}}
   (void)x; // expected-note {{later used here}}
 
   const std::string& y = identity(S().x()); // expected-warning {{temporary object does not live long enough}} expected-note {{temporary object is destroyed here}} \
-                                            // expected-note {{result of call to 'x' aliases the storage of temporary object}} \
-                                            // expected-note {{result of call to 'identity' aliases the storage of temporary object}}
+                                            // expected-note {{result of call to 'x' aliases the storage of temporary object because the implicit object parameter is marked [[clang::lifetimebound]]}} \
+                                            // expected-note {{result of call to 'identity' aliases the storage of temporary object because parameter 'in' is marked [[clang::lifetimebound]]}}
   (void)y; // expected-note {{later used here}}
 
   std::string_view z;
   {
     S s;
     const std::string& zz = s.x(); // expected-warning {{local variable 's' does not live long enough}} \
-                                   // expected-note {{result of call to 'x' aliases the storage of local variable 's'}}
+                                   // expected-note {{result of call to 'x' aliases the storage of local variable 's' because the implicit object parameter is marked [[clang::lifetimebound]]}}
     z = zz;                        // expected-note {{expression aliases the storage of local variable 's'}}
   } // expected-note {{local variable 's' is destroyed here}}
   (void)z; // expected-note {{later used here}}
@@ -1978,13 +1978,13 @@ void test_lifetime_extension_ok() {
   const S& x = S();
   (void)x;
   const S& y = identity(S()); // expected-warning {{temporary object does not live long enough}} expected-note {{temporary object is destroyed here}} \
-                              // expected-note {{result of call to 'identity' aliases the storage of temporary object}}
+                              // expected-note {{result of call to 'identity' aliases the storage of temporary object because parameter 'in' is marked [[clang::lifetimebound]]}}
   (void)y; // expected-note {{later used here}}
 }
 
 const std::string& test_return() {
   const std::string& x = S().x(); // expected-warning {{temporary object does not live long enough}} expected-note {{temporary object is destroyed here}} \
-                                  // expected-note {{result of call to 'x' aliases the storage of temporary object}}
+                                  // expected-note {{result of call to 'x' aliases the storage of temporary object because the implicit object parameter is marked [[clang::lifetimebound]]}}
   return x; // expected-note {{later used here}}
 }
 } // namespace reference_type_decl_ref_expr
@@ -2165,11 +2165,11 @@ const T* MemberFuncsTpl<T>::memberC(const T& x [[clang::lifetimebound]]) {
 void test() {
   MemberFuncsTpl<MyObj> mtf;
   const MyObj* pTMA = mtf.memberA(MyObj()); // expected-warning {{temporary object does not live long enough}} // expected-note {{temporary object is destroyed here}} \
-                                            // expected-note {{result of call to 'memberA' aliases the storage of temporary object}}
+                                            // expected-note {{result of call to 'memberA' aliases the storage of temporary object because parameter 'x' is marked [[clang::lifetimebound]]}}
   const MyObj* pTMB = mtf.memberB(MyObj()); // tu-warning {{temporary object does not live long enough}} // tu-note {{temporary object is destroyed here}} \
-                                            // tu-note {{result of call to 'memberB' aliases the storage of temporary object}}
+                                            // tu-note {{result of call to 'memberB' aliases the storage of temporary object because parameter 'x' is marked [[clang::lifetimebound]]}}
   const MyObj* pTMC = mtf.memberC(MyObj()); // expected-warning {{temporary object does not live long enough}} // expected-note {{temporary object is destroyed here}} \
-                                            // expected-note {{result of call to 'memberC' aliases the storage of temporary object}}
+                                            // expected-note {{result of call to 'memberC' aliases the storage of temporary object because parameter 'x' is marked [[clang::lifetimebound]]}}
   (void)pTMA; // expected-note {{later used here}}
   (void)pTMB; // tu-note {{later used here}}
   (void)pTMC; // expected-note {{later used here}}
@@ -2217,7 +2217,7 @@ void test_optional_arrow_lifetimebound() {
     std::optional<MyObj> opt;
     v = opt->getView();  // expected-warning {{local variable 'opt' does not live long enough}} \
                          // expected-note {{expression aliases the storage of local variable 'opt'}} \
-                         // expected-note {{result of call to 'getView' aliases the storage of local variable 'opt'}}
+                         // expected-note {{result of call to 'getView' aliases the storage of local variable 'opt' because the implicit object parameter is marked [[clang::lifetimebound]]}}
   }                      // expected-note {{local variable 'opt' is destroyed here}}
   v.use();               // expected-note {{later used here}}
 }
@@ -2618,7 +2618,8 @@ struct S {
 
 void indexing_with_static_operator() {
   S()(1, 2);
-  S& x = S()("1", // expected-note 2 {{expression aliases the storage of temporary object}}
+  S& x = S()("1", // expected-note {{expression aliases the storage of temporary object because parameter 'a' is marked [[clang::lifetimebound]]}} \
+                 // expected-note {{expression aliases the storage of temporary object because parameter 'b' is marked [[clang::lifetimebound]]}}
              2,   // expected-warning {{temporary object does not live long enough}}
              3);  // expected-warning {{temporary object does not live long enough}} expected-note 2 {{temporary object is destroyed here}}
 
@@ -2644,7 +2645,7 @@ S getS(const std::string &s [[clang::lifetimebound]]);
 void from_free_function() {
   S s = getS(std::string("temp")); // expected-warning {{temporary object does not live long enough}} \
                                    // expected-note {{temporary object is destroyed here}} \
-                                   // expected-note {{result of call to 'getS' aliases the storage of temporary object}}
+                                   // expected-note {{result of call to 'getS' aliases the storage of temporary object because parameter 's' is marked [[clang::lifetimebound]]}}
   use(s);                          // expected-note {{later used here}}
 }
 
@@ -2664,14 +2665,14 @@ void from_method() {
   Factory f;
   S s = f.make(std::string("temp")); // expected-warning {{temporary object does not live long enough}} \
                                      // expected-note {{temporary object is destroyed here}} \
-                                     // expected-note {{result of call to 'make' aliases the storage of temporary object}}
+                                     // expected-note {{result of call to 'make' aliases the storage of temporary object because parameter 's' is marked [[clang::lifetimebound]]}}
   use(s);                            // expected-note {{later used here}}
 }
 
 void from_static_method() {
   S s = Factory::create(std::string("temp")); // expected-warning {{temporary object does not live long enough}} \
                                               // expected-note {{temporary object is destroyed here}} \
-                                              // expected-note {{result of call to 'create' aliases the storage of temporary object}}
+                                              // expected-note {{result of call to 'create' aliases the storage of temporary object because parameter 's' is marked [[clang::lifetimebound]]}}
   use(s);                                     // expected-note {{later used here}}
 }
 
@@ -2680,7 +2681,7 @@ void from_lifetimebound_this_method() {
   {
     Factory f;
     value = f.makeThis(); // expected-warning {{local variable 'f' does not live long enough}} \
-                          // expected-note {{result of call to 'makeThis' aliases the storage of local variable 'f'}}
+                          // expected-note {{result of call to 'makeThis' aliases the storage of local variable 'f' because the implicit object parameter is marked [[clang::lifetimebound]]}}
   }                       // expected-note {{local variable 'f' is destroyed here}}
   use(value);             // expected-note {{later used here}}
 }
@@ -2690,7 +2691,7 @@ void across_scope() {
   {
     std::string str{"abc"};
     s = getS(str); // expected-warning {{local variable 'str' does not live long enough}} \
-                   // expected-note {{result of call to 'getS' aliases the storage of local variable 'str'}}
+                   // expected-note {{result of call to 'getS' aliases the storage of local variable 'str' because parameter 's' is marked [[clang::lifetimebound]]}}
   }                // expected-note {{local variable 'str' is destroyed here}}
   use(s);          // expected-note {{later used here}}
 }
@@ -2713,7 +2714,7 @@ void assignment_propagation() {
   {
     std::string str{"abc"};
     a = getS(str); // expected-warning {{local variable 'str' does not live long enough}} \
-                   // expected-note {{result of call to 'getS' aliases the storage of local variable 'str'}}
+                   // expected-note {{result of call to 'getS' aliases the storage of local variable 'str' because parameter 's' is marked [[clang::lifetimebound]]}}
     b = a;         // expected-note {{local variable 'a' aliases the storage of local variable 'str'}}
   }                // expected-note {{local variable 'str' is destroyed here}}
   use(b);          // expected-note {{later used here}}
@@ -2724,7 +2725,7 @@ void chained_defaulted_assignment_propagation() {
   {
     std::string str{"abc"};
     S a = getS(str); // expected-warning {{local variable 'str' does not live long enough}} \
-                     // expected-note {{result of call to 'getS' aliases the storage of local variable 'str'}}
+                     // expected-note {{result of call to 'getS' aliases the storage of local variable 'str' because parameter 's' is marked [[clang::lifetimebound]]}}
     c = b = a;       // expected-note {{local variable 'a' aliases the storage of local variable 'str'}}\
                      // expected-note {{expression aliases the storage of local variable 'str'}}
   }                  // expected-note {{local variable 'str' is destroyed here}}
@@ -2741,7 +2742,7 @@ void no_annotation() {
 void mix_annotated_and_not() {
   S s1 = getS(std::string("temp")); // expected-warning {{temporary object does not live long enough}} \
                                     // expected-note {{temporary object is destroyed here}} \
-                                    // expected-note {{result of call to 'getS' aliases the storage of temporary object}}
+                                    // expected-note {{result of call to 'getS' aliases the storage of temporary object because parameter 's' is marked [[clang::lifetimebound]]}}
   S s2 = getSNoAnnotation(std::string("temp"));
   use(s1); // expected-note {{later used here}}
   use(s2);
@@ -2753,7 +2754,7 @@ S multiple_lifetimebound_params() {
   std::string str{"abc"};
   S s = getS2(str, std::string("temp")); // expected-warning {{stack memory associated with local variable 'str' is returned}} \
                                          // expected-warning {{temporary object does not live long enough}} \
-                                         // expected-note {{result of call to 'getS2' aliases the storage of temporary object}} \
+                                         // expected-note {{result of call to 'getS2' aliases the storage of temporary object because parameter 'b' is marked [[clang::lifetimebound]]}} \
                                          // expected-note {{temporary object is destroyed here}}
   return s;                              // expected-note {{returned here}} \
                                          // expected-note {{later used here}}
@@ -2774,7 +2775,7 @@ T make(const std::string &s [[clang::lifetimebound]]);
 void from_template_instantiation() {
   S s = make<S>(std::string("temp")); // expected-warning {{temporary object does not live long enough}} \
                                       // expected-note {{temporary object is destroyed here}} \
-                                      // expected-note {{result of call to 'make<track_origins_for_lifetimebound_record_type::S>' aliases the storage of temporary object}}
+                                      // expected-note {{result of call to 'make<track_origins_for_lifetimebound_record_type::S>' aliases the storage of temporary object because parameter 's' is marked [[clang::lifetimebound]]}}
   use(s);                             // expected-note {{later used here}}
 }
 
@@ -2838,7 +2839,7 @@ SAlias getSAlias(const std::string &s [[clang::lifetimebound]]);
 void from_typedef_return() {
   SAlias s = getSAlias(std::string("temp")); // expected-warning {{temporary object does not live long enough}} \
                                              // expected-note {{temporary object is destroyed here}} \
-                                             // expected-note {{result of call to 'getSAlias' aliases the storage of temporary object}}
+                                             // expected-note {{result of call to 'getSAlias' aliases the storage of temporary object because parameter 's' is marked [[clang::lifetimebound]]}}
   use(s);                                    // expected-note {{later used here}}
 }
 
@@ -2913,7 +2914,7 @@ std::unique_ptr<S> getUniqueS(const std::string &s [[clang::lifetimebound]]);
 void owner_return_unique_ptr_s() {
   auto ptr = getUniqueS(std::string("temp")); // expected-warning {{temporary object does not live long enough}} \
                                               // expected-note {{temporary object is destroyed here}} \
-                                              // expected-note {{result of call to 'getUniqueS' aliases the storage of temporary object}}
+                                              // expected-note {{result of call to 'getUniqueS' aliases the storage of temporary object because parameter 's' is marked [[clang::lifetimebound]]}}
   (void)ptr;                                  // expected-note {{later used here}}
 }
 
@@ -2930,7 +2931,7 @@ void owner_outlives_lifetimebound_source() {
   {
     std::string local;
     ups = getUniqueS(local); // expected-warning {{local variable 'local' does not live long enough}} \
-                             // expected-note {{result of call to 'getUniqueS' aliases the storage of local variable 'local'}}
+                             // expected-note {{result of call to 'getUniqueS' aliases the storage of local variable 'local' because parameter 's' is marked [[clang::lifetimebound]]}}
   } // expected-note {{local variable 'local' is destroyed here}}
   (void)ups; // expected-note {{later used here}}
 }
@@ -2965,7 +2966,7 @@ void nested_local_pointer() {
   {
     Bar v;
     p = Pointer(v);     // expected-warning {{local variable 'v' does not live long enough}}
-    pp = Pointer(p);    // expected-note {{local variable 'p' aliases the storage of local variable 'v'}}
+    pp = Pointer(p);    // expected-note {{local variable 'p' aliases the storage of local variable 'v' because parameter 'bar' is marked [[clang::lifetimebound]]}}
     ppp = Pointer(pp);  // expected-note {{local variable 'pp' aliases the storage of local variable 'v'}}
   }                     // expected-note {{local variable 'v' is destroyed here}}
   use(***ppp);          // expected-note {{later used here}}
@@ -3723,7 +3724,7 @@ void uaf_via_lifetimebound() {
   {
     int local;
     f = capture_lifetimebound_param(local); // expected-warning {{local variable 'local' does not live long enough}} \
-                                            // expected-note {{result of call to 'capture_lifetimebound_param' aliases the storage of local variable 'local'}}
+                                            // expected-note {{result of call to 'capture_lifetimebound_param' aliases the storage of local variable 'local' because parameter 'x' is marked [[clang::lifetimebound]]}}
   } // expected-note {{local variable 'local' is destroyed here}}
   (void)f; // expected-note {{later used here}}
 }

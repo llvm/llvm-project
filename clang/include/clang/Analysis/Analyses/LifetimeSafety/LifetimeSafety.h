@@ -31,6 +31,7 @@
 #include "llvm/ADT/PointerUnion.h"
 #include <cstddef>
 #include <memory>
+#include <optional>
 
 namespace clang::lifetimes {
 
@@ -49,6 +50,11 @@ enum class WarningScope {
   IntraTU  // For warnings on functions local to a Translation Unit.
 };
 
+struct LifetimeSafetyAliasChainEntry {
+  const Expr *E = nullptr;
+  std::optional<internal::LifetimeBoundInfo> LifetimeBound;
+};
+
 /// Abstract interface for operations requiring Sema access.
 ///
 /// This class exists to break a circular dependency: the LifetimeSafety
@@ -64,10 +70,10 @@ public:
   LifetimeSafetySemaHelper() = default;
   virtual ~LifetimeSafetySemaHelper() = default;
 
-  virtual void reportUseAfterScope(const Expr *IssueExpr, const Expr *UseExpr,
-                                   const Expr *MovedExpr,
-                                   SourceLocation FreeLoc,
-                                   llvm::ArrayRef<const Expr *> ExprChain) {}
+  virtual void reportUseAfterScope(
+      const Expr *IssueExpr, const Expr *UseExpr, const Expr *MovedExpr,
+      SourceLocation FreeLoc,
+      llvm::ArrayRef<LifetimeSafetyAliasChainEntry> AliasChain) {}
 
   virtual void reportUseAfterReturn(const Expr *IssueExpr,
                                     const Expr *ReturnExpr,

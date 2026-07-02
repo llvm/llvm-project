@@ -202,14 +202,15 @@ public:
     return getLoans(getState(P), OID);
   }
 
-  llvm::SmallVector<OriginID>
-  buildOriginFlowChain(ProgramPoint StartPoint, const OriginID StartOID,
-                       const LoanID TargetLoan) const {
+  llvm::SmallVector<const OriginFlowFact *>
+  buildOriginFlowChainWithFacts(ProgramPoint StartPoint,
+                                const OriginID StartOID,
+                                const LoanID TargetLoan) const {
     assert(getLoans(StartOID, StartPoint).contains(TargetLoan) &&
            "TargetLoan must be present in the StartOID at the StartPoint");
 
     OriginID CurrOID = StartOID;
-    llvm::SmallVector<OriginID> OriginFlowChain;
+    llvm::SmallVector<const OriginFlowFact *> OriginFlowChain;
     llvm::ArrayRef<const Fact *> Facts = FactMgr.getBlockContaining(StartPoint);
     const auto *StartIt = llvm::find(Facts, StartPoint);
     assert(StartIt != Facts.end());
@@ -231,7 +232,7 @@ public:
       const OriginID SrcOriginID = OFF->getSrcOriginID();
       if (!getLoans(SrcOriginID, OFF).contains(TargetLoan))
         continue;
-      OriginFlowChain.push_back(SrcOriginID);
+      OriginFlowChain.push_back(OFF);
       CurrOID = SrcOriginID;
     }
 
@@ -240,6 +241,28 @@ public:
     // traversal is limited to a single CFG block, multi-block OriginFlowChain
     // construction might miss the IssueFact. We should add llvm_unreachable
     // here once multi-block support is implemented.
+    return {};
+  }
+
+  llvm::SmallVector<OriginID>
+  buildOriginFlowChain(ProgramPoint StartPoint, const OriginID StartOID,
+                       const LoanID TargetLoan) const {
+    llvm::SmallVector<OriginID> OriginFlowChain;
+    for (const OriginFlowFact *Flow :
+         buildOriginFlowChainWithFacts(StartPoint, StartOID, TargetLoan))
+      OriginFlowChain.push_back(Flow->getSrcOriginID());
+    return OriginFlowChain;
+  }
+
+  llvm::SmallVector<const OriginFlowFact *>
+  buildOriginFlowChainWithFacts(const UseFact *UF,
+                                const LoanID TargetLoan) const {
+    for (const OriginList *Cur = UF->getUsedOrigins(); Cur;
+         Cur = Cur->peelOuterOrigin())
+      if (getLoans(Cur->getOuterOriginID(), UF).contains(TargetLoan))
+        return buildOriginFlowChainWithFacts(UF, Cur->getOuterOriginID(),
+                                             TargetLoan);
+
     return {};
   }
 
@@ -314,5 +337,18 @@ llvm::SmallVector<OriginID>
 LoanPropagationAnalysis::buildOriginFlowChain(const UseFact *UF,
                                               const LoanID TargetLoan) const {
   return PImpl->buildOriginFlowChain(UF, TargetLoan);
+}
+
+llvm::SmallVector<const OriginFlowFact *>
+LoanPropagationAnalysis::buildOriginFlowChainWithFacts(
+    ProgramPoint StartPoint, const OriginID StartOID,
+    const LoanID TargetLoan) const {
+  return PImpl->buildOriginFlowChainWithFacts(StartPoint, StartOID, TargetLoan);
+}
+
+llvm::SmallVector<const OriginFlowFact *>
+LoanPropagationAnalysis::buildOriginFlowChainWithFacts(
+    const UseFact *UF, const LoanID TargetLoan) const {
+  return PImpl->buildOriginFlowChainWithFacts(UF, TargetLoan);
 }
 } // namespace clang::lifetimes::internal

@@ -272,7 +272,8 @@ public:
           // Scope-based expiry (use-after-scope).
           SemaHelper->reportUseAfterScope(
               IssueExpr, UF->getUseExpr(), MovedExpr, ExpiryLoc,
-              getExprChain(LoanPropagation.buildOriginFlowChain(UF, LID)));
+              getAliasChain(
+                  LoanPropagation.buildOriginFlowChainWithFacts(UF, LID)));
 
       } else if (const auto *OEF =
                      CausingFact.dyn_cast<const OriginEscapesFact *>()) {
@@ -524,13 +525,20 @@ public:
   /// Given a chain of origins that shows how a loan propagates, this function
   /// extracts the corresponding expressions for each origin. Origins that refer
   /// to declarations (rather than expressions) are skipped.
-  llvm::SmallVector<const Expr *>
-  getExprChain(llvm::ArrayRef<OriginID> OriginFlowChain) {
-    llvm::SmallVector<const Expr *> rs;
-    for (const OriginID CurrOID : OriginFlowChain)
-      if (const Expr *CurrExpr =
-              FactMgr.getOriginMgr().getOrigin(CurrOID).getExpr())
-        rs.push_back(CurrExpr);
+  llvm::SmallVector<LifetimeSafetyAliasChainEntry>
+  getAliasChain(llvm::ArrayRef<const OriginFlowFact *> OriginFlowChain) {
+    llvm::SmallVector<LifetimeSafetyAliasChainEntry> rs;
+    for (const OriginFlowFact *Flow : OriginFlowChain) {
+      const Expr *CurrExpr =
+          FactMgr.getOriginMgr().getOrigin(Flow->getSrcOriginID()).getExpr();
+      if (!CurrExpr)
+        continue;
+
+      LifetimeSafetyAliasChainEntry Entry;
+      Entry.E = CurrExpr;
+      Entry.LifetimeBound = FactMgr.getLifetimeBoundInfo(Flow);
+      rs.push_back(Entry);
+    }
     return rs;
   }
 };

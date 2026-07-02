@@ -278,21 +278,21 @@ View return_view_field(const ViewProvider& v) {    // expected-warning {{paramet
 void test_get_on_temporary_pointer() {
   const ReturnsSelf* s_ref = &ReturnsSelf().get(); // expected-warning {{temporary object does not live long enough}}.
                                                    // expected-note@-1 {{temporary object is destroyed here}}
-                                                   // expected-note@-2 {{result of call to 'get' aliases the storage of temporary object}}
+                                                   // expected-note@-2 {{result of call to 'get' aliases the storage of temporary object because the implicit object parameter is marked [[clang::lifetimebound]]}}
   (void)s_ref;                                     // expected-note {{later used here}}
 }
 
 void test_get_on_temporary_ref() {
   const ReturnsSelf& s_ref = ReturnsSelf().get();  // expected-warning {{temporary object does not live long enough}}.
                                                    // expected-note@-1 {{temporary object is destroyed here}}
-                                                   // expected-note@-2 {{result of call to 'get' aliases the storage of temporary object}}
+                                                   // expected-note@-2 {{result of call to 'get' aliases the storage of temporary object because the implicit object parameter is marked [[clang::lifetimebound]]}}
   (void)s_ref;                                     // expected-note {{later used here}}
 }
 
 void test_getView_on_temporary() {
   View sv = ViewProvider{1}.getView();      // expected-warning {{temporary object does not live long enough}}.
                                             // expected-note@-1 {{temporary object is destroyed here}}
-                                            // expected-note@-2 {{result of call to 'getView' aliases the storage of temporary object}}
+                                            // expected-note@-2 {{result of call to 'getView' aliases the storage of temporary object because the implicit object parameter is marked [[clang::lifetimebound]]}}
   (void)sv;                                 // expected-note {{later used here}}
 }
 
@@ -603,7 +603,7 @@ void uaf_via_inferred_lifetimebound() {
   {
     int local;
     f = return_lambda_capturing_param(local); // expected-warning {{local variable 'local' does not live long enough}} \
-                                              // expected-note {{result of call to 'return_lambda_capturing_param' aliases the storage of local variable 'local'}}
+                                              // expected-note {{result of call to 'return_lambda_capturing_param' aliases the storage of local variable 'local' because parameter 'x' is marked [[clang::lifetimebound]]}}
   } // expected-note {{local variable 'local' is destroyed here}}
   (void)f; // expected-note {{later used here}}
 }
@@ -627,7 +627,7 @@ void test_inference() {
   {
     MyObj obj;
     ptr = create_target(obj); // expected-warning {{local variable 'obj' does not live long enough}} \
-                              // expected-note {{result of call to 'create_target' aliases the storage of local variable 'obj'}}
+                              // expected-note {{result of call to 'create_target' aliases the storage of local variable 'obj' because parameter 'obj' is marked [[clang::lifetimebound]]}}
   } // expected-note {{local variable 'obj' is destroyed here}}
   (void)ptr; // expected-note {{later used here}}
 }
@@ -642,7 +642,7 @@ View* MakeView(const MyObj& in) { // expected-warning {{parameter in intra-TU fu
 void test_new_allocation() {
   View* v = MakeView(MyObj{}); // expected-warning {{temporary object does not live long enough}} \
                                // expected-note {{temporary object is destroyed here}} \
-                               // expected-note {{result of call to 'MakeView' aliases the storage of temporary object}}
+                               // expected-note {{result of call to 'MakeView' aliases the storage of temporary object because parameter 'in' is marked [[clang::lifetimebound]]}}
   (void)v;                     // expected-note {{later used here}}
 }
 

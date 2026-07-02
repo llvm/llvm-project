@@ -20,6 +20,7 @@
 #include "clang/Analysis/Analyses/LifetimeSafety/Utils.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Debug.h"
@@ -29,6 +30,11 @@
 namespace clang::lifetimes::internal {
 
 using FactID = utils::ID<struct FactTag>;
+
+struct LifetimeBoundInfo {
+  const ParmVarDecl *Param = nullptr;
+  bool IsImplicitObject = false;
+};
 
 /// An abstract base class for a single, atomic lifetime-relevant event.
 class Fact {
@@ -385,6 +391,16 @@ public:
   const LoanManager &getLoanMgr() const { return LoanMgr; }
   OriginManager &getOriginMgr() { return OriginMgr; }
   const OriginManager &getOriginMgr() const { return OriginMgr; }
+  void setLifetimeBoundInfo(const OriginFlowFact *F, LifetimeBoundInfo Info) {
+    LifetimeBoundFlows.try_emplace(F, Info);
+  }
+  std::optional<LifetimeBoundInfo>
+  getLifetimeBoundInfo(const OriginFlowFact *F) const {
+    auto It = LifetimeBoundFlows.find(F);
+    if (It == LifetimeBoundFlows.end())
+      return std::nullopt;
+    return It->second;
+  }
 
 private:
   FactID NextFactID{0};
@@ -392,6 +408,7 @@ private:
   OriginManager OriginMgr;
   /// Facts for each CFG block, indexed by block ID.
   llvm::SmallVector<llvm::SmallVector<const Fact *>> BlockToFacts;
+  llvm::DenseMap<const OriginFlowFact *, LifetimeBoundInfo> LifetimeBoundFlows;
   llvm::BumpPtrAllocator FactAllocator;
 };
 } // namespace clang::lifetimes::internal
