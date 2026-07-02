@@ -35,7 +35,8 @@ namespace llvm {
 class MachineInstr;
 class MachineOperand;
 class MipsSubtarget;
-class TargetRegisterClass;
+class MCRegisterClass;
+using TargetRegisterClass = MCRegisterClass;
 class TargetRegisterInfo;
 
 class MipsInstrInfo : public MipsGenInstrInfo {

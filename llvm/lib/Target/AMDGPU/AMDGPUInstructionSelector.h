@@ -43,7 +43,8 @@ class MachineRegisterInfo;
 class RegisterBank;
 class SIInstrInfo;
 class SIRegisterInfo;
-class TargetRegisterClass;
+class MCRegisterClass;
+using TargetRegisterClass = MCRegisterClass;
 
 class AMDGPUInstructionSelector final : public InstructionSelector {
 private:
