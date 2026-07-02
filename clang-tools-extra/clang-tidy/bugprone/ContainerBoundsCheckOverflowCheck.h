@@ -31,6 +31,8 @@ public:
 
 private:
   const std::vector<StringRef> IgnoredContainers;
+  const std::vector<StringRef> SizeMethodNames;
+  const std::vector<StringRef> IncludedFreeStandingSizeFuncNames;
 };
 
 } // namespace clang::tidy::bugprone

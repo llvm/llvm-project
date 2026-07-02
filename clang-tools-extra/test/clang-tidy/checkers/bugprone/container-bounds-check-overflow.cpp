@@ -1,5 +1,15 @@
-// RUN: %check_clang_tidy %s bugprone-container-bounds-check-overflow %t -- -config='{CheckOptions: { bugprone-container-bounds-check-overflow.IgnoredContainers: "::CustomClass"}}'
+// RUN: %check_clang_tidy %s bugprone-container-bounds-check-overflow %t -- \
+// RUN:  -config='{CheckOptions: { \
+// RUN:    bugprone-container-bounds-check-overflow.IgnoredContainers: "::CustomClass" \
+// RUN:  }}' -- -I %S/Inputs/container-bounds-check-overflow
+// RUN: %check_clang_tidy %s bugprone-container-bounds-check-overflow %t -- \
+// RUN:  -config='{CheckOptions: { \
+// RUN:    bugprone-container-bounds-check-overflow.IgnoredContainers: "::CustomClass", \
+// RUN:    bugprone-container-bounds-check-overflow.SizeMethodNames: "size;length", \
+// RUN:    bugprone-container-bounds-check-overflow.IncludedFreeStandingSizeFuncNames: "::std::size" \
+// RUN:  }}' -- -I %S/Inputs/container-bounds-check-overflow
 
+#include "size.h"
 #include <cstddef>
 #include <vector>
 #include <string>
@@ -83,6 +93,14 @@ void positives(size_t a, size_t b, const std::vector<int> &v) {
   if (x + y > str.size()) {}
   // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: potential overflow in unsigned integer addition before comparison [bugprone-container-bounds-check-overflow]
   // CHECK-FIXES: if (x > str.size() || y > str.size() - x) {}
+
+  // Confirm the check matches for all supported size method names, including free-standing size functions
+  if (x + y > str.length()) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: potential overflow in unsigned integer addition before comparison [bugprone-container-bounds-check-overflow]
+  // CHECK-FIXES: if (x > str.length() || y > str.length() - x) {}
+  if (x + y > std::size(str)) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: potential overflow in unsigned integer addition before comparison [bugprone-container-bounds-check-overflow]
+  // CHECK-FIXES: if (x > std::size(str) || y > std::size(str) - x) {}
 
   // The check should match local variables that are assigned the result of a size() call
   auto local_size = v.size();
