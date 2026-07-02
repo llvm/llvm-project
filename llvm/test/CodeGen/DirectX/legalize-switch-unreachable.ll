@@ -1,4 +1,4 @@
-; RUN: opt -S -passes='dxil-legalize' -mtriple=dxil-pc-shadermodel6.3-library %s | FileCheck %s
+; RUN: opt -S -passes='dxil-legalize' -mtriple=dxil-pc-shadermodel6.3-library %s | FileCheck %s --implicit-check-not='{{^ +unreachable$}}'
 
 ; Test that a switch with an unreachable default and a common successor across
 ; all case blocks has its default redirected to the common successor.
