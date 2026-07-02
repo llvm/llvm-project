@@ -654,8 +654,8 @@ Copyprivate make(const parser::OmpClause::Copyprivate &inp,
 // has been superseded by the OTHERWISE clause.
 // Disambiguate this in this representation: for the DSA case, create Default,
 // and in the other case create Otherwise.
-Default makeDefault(const parser::OmpClause::Default &inp,
-                    semantics::SemanticsContext &semaCtx) {
+Default make(const parser::OmpClause::Default &inp,
+             semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpDefaultClause
   using wrapped = parser::OmpDefaultClause;
 
@@ -669,11 +669,10 @@ Default makeDefault(const parser::OmpClause::Default &inp,
       // clang-format on
   );
 
-  auto dsa = std::get<wrapped::DataSharingAttribute>(inp.v.u);
-  return Default{/*DataSharingAttribute=*/convert(dsa)};
+  return Default{/*DataSharingAttribute=*/convert(inp.v.v)};
 }
 
-Otherwise makeOtherwise(const parser::OmpClause::Default &inp,
+Otherwise makeOtherwise(const parser::OmpClause::DefaultVariant &inp,
                         semantics::SemanticsContext &semaCtx) {
   return Otherwise{};
 }
@@ -1806,18 +1805,9 @@ Clause makeClause(const parser::OmpClause &cls,
                   semantics::SemanticsContext &semaCtx) {
   return Fortran::common::visit( //
       common::visitors{
-          [&](const parser::OmpClause::Default &s) {
-            using DSA = parser::OmpDefaultClause::DataSharingAttribute;
-            using ODS = common::Indirection<parser::OmpDirectiveSpecification>;
-            if (std::holds_alternative<DSA>(s.v.u)) {
-              return makeClause(llvm::omp::Clause::OMPC_default,
-                                clause::makeDefault(s, semaCtx), cls.source);
-            } else if (std::holds_alternative<ODS>(s.v.u)) {
-              return makeClause(llvm::omp::Clause::OMPC_otherwise,
-                                clause::makeOtherwise(s, semaCtx), cls.source);
-            } else {
-              llvm_unreachable("Unexpected alternative");
-            }
+          [&](const parser::OmpClause::DefaultVariant &s) {
+            return makeClause(llvm::omp::Clause::OMPC_default_variant,
+                              clause::makeOtherwise(s, semaCtx), cls.source);
           },
           [&](const parser::OmpClause::Depend &s) {
             using TaskDep = parser::OmpDependClause::TaskDep;

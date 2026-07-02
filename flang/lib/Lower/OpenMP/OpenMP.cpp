@@ -6019,12 +6019,10 @@ static void genMetadirective(lower::AbstractConverter &converter,
                    std::get_if<parser::OmpClause::Otherwise>(&clause.u)) {
       if (otherwiseClause->v && otherwiseClause->v->v)
         fallback = getFallbackVariant(otherwiseClause->v->v->value());
-    } else if (const auto *defaultClause =
-                   std::get_if<parser::OmpClause::Default>(&clause.u)) {
-      if (const auto *dirSpecPtr = std::get_if<
-              common::Indirection<parser::OmpDirectiveSpecification>>(
-              &defaultClause->v.u))
-        fallback = getFallbackVariant(dirSpecPtr->value());
+    } else if (const auto *defaultVariantClause =
+                   std::get_if<parser::OmpClause::DefaultVariant>(&clause.u)) {
+      const auto &dirSpec = defaultVariantClause->v.v;
+        fallback = getFallbackVariant(dirSpec.value());
     }
   }
 
