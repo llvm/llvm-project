@@ -24,6 +24,7 @@
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/IR/TensorEncoding.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/DestinationStyleOpInterface.h"
 #include "mlir/Interfaces/InferIntRangeInterface.h"
@@ -577,7 +578,18 @@ RankedTensorType ConcatOp::inferResultType(int64_t dim, TypeRange inputTypes) {
     concatSize =
         concatSize + SaturatedInteger::wrap(tensorType.getDimSize(dim));
   sizes[dim] = concatSize.asInteger();
-  return RankedTensorType::get(sizes, tensorTypes[0].getElementType());
+  // Preserve the encoding when all inputs share it; otherwise drop it (the
+  // semantics of concatenating tensors with differing encodings are undefined
+  // at this level, so we don't try to pick one).
+  Attribute encoding = tensorTypes[0].getEncoding();
+  for (auto tensorType : llvm::drop_begin(tensorTypes)) {
+    if (tensorType.getEncoding() != encoding) {
+      encoding = Attribute();
+      break;
+    }
+  }
+  return RankedTensorType::get(sizes, tensorTypes[0].getElementType(),
+                               encoding);
 }
 
 void ConcatOp::build(OpBuilder &builder, OperationState &result, int64_t dim,
@@ -811,11 +823,14 @@ struct InferConcatOperandTypes : public OpRewritePattern<ConcatOp> {
     SmallVector<int64_t> inferredOperandShape(inferredResultType.getShape());
     for (auto [operandIdx, operandType] :
          llvm::enumerate(concatOp->getOperandTypes())) {
-      // Compute inferred type for operand.
-      inferredOperandShape[dim] =
-          cast<RankedTensorType>(operandType).getDimSize(dim);
+      // Compute inferred type for operand. The refined type is applied to the
+      // operand itself, so it must carry the operand's own encoding rather
+      // than the (potentially different or missing) result encoding.
+      auto operandRankedType = cast<RankedTensorType>(operandType);
+      inferredOperandShape[dim] = operandRankedType.getDimSize(dim);
       auto inferredOperandType = RankedTensorType::get(
-          inferredOperandShape, inferredResultType.getElementType());
+          inferredOperandShape, inferredResultType.getElementType(),
+          operandRankedType.getEncoding());
 
       // Check if inferred type is more static.
       if (!preservesStaticInformation(inferredOperandType, operandType)) {
@@ -2023,7 +2038,10 @@ CollapseShapeOp::inferCollapsedType(RankedTensorType type,
     currentDim += dim;
   }
 
-  return RankedTensorType::get(newShape, type.getElementType());
+  Attribute encoding = type.getEncoding();
+  if (llvm::isa_and_present<VerifiableTensorEncoding>(encoding))
+    encoding = {};
+  return RankedTensorType::get(newShape, type.getElementType(), encoding);
 }
 
 void CollapseShapeOp::build(OpBuilder &b, OperationState &result, Value src,
@@ -2273,10 +2291,13 @@ struct ConvertToStaticExpandShape : public OpRewritePattern<ExpandShapeOp> {
 
     SmallVector<OpFoldResult> outputOfr =
         getMixedValues(newOutputShape, dynamicOutputShape, rewriter);
+    // The refined types keep the ranks of the src / result respectively
     auto inputType = RankedTensorType::get(
-        newInputShape, expandOp.getSrcType().getElementType());
+        newInputShape, expandOp.getSrcType().getElementType(),
+        expandOp.getSrcType().getEncoding());
     auto outputType = RankedTensorType::get(
-        newOutputShape, expandOp.getSrcType().getElementType());
+        newOutputShape, expandOp.getSrcType().getElementType(),
+        expandOp.getResultType().getEncoding());
     auto inputCast = CastOp::create(rewriter, expandOp.getLoc(), inputType,
                                     expandOp.getSrc());
     auto newExpand = ExpandShapeOp::create(
@@ -2385,7 +2406,8 @@ RankedTensorType ExtractSliceOp::inferCanonicalRankReducedResultType(
       if (!dimsToProject.test(pos))
         projectedShape.push_back(shape[pos]);
     inferredType =
-        RankedTensorType::get(projectedShape, inferredType.getElementType());
+        RankedTensorType::get(projectedShape, inferredType.getElementType(),
+                              inferredType.getEncoding());
   }
   return inferredType;
 }
@@ -3323,7 +3345,8 @@ RankedTensorType PadOp::inferResultType(RankedTensorType sourceType,
     }
   }
 
-  return RankedTensorType::get(inferredShape, sourceType.getElementType());
+  return RankedTensorType::get(inferredShape, sourceType.getElementType(),
+                               sourceType.getEncoding());
 }
 
 void PadOp::build(OpBuilder &b, OperationState &result, Type resultType,
@@ -3730,9 +3753,9 @@ struct FoldStaticPadding : public OpRewritePattern<PadOp> {
                      [&](int64_t x) { return x == ShapedType::kDynamic; }))
       return failure();
 
-    // Rewrite the op using the new static type.
     auto newResultType = RankedTensorType::get(
-        newOutDims, padTensorOp.getType().getElementType());
+        newOutDims, padTensorOp.getType().getElementType(),
+        padTensorOp.getType().getEncoding());
     auto newOp = PadOp::create(
         rewriter, padTensorOp->getLoc(), newResultType, input, staticLow,
         staticHigh, newLows, newHighs, padTensorOp.getNofold(),
