@@ -157,6 +157,8 @@ public:
   /// lldb::BreakpointResolverType.
   bool ResolverTyInMask(uint64_t mask);
 
+  static bool TypeMaskIsValid(uint64_t mask);
+
   enum ResolverTy GetResolverTy() {
     if (SubclassID > ResolverTy::LastKnownResolverType)
       return ResolverTy::UnknownResolver;
@@ -165,9 +167,6 @@ public:
 
   uint64_t MaskForResolverTy();
 
-  /// Returns true if this resolver is in the mask (made of elements of
-  /// BreakpointResolverType.
-  bool ResolverInMask(uint64_t mask);
   static std::string DescribeMask(uint64_t mask);
   const char *GetResolverName() { return ResolverTyToName(GetResolverTy()); }
 

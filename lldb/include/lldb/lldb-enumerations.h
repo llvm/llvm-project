@@ -1587,7 +1587,7 @@ enum BinaryInformationLevel {
 /// enum for making a mask to pass to RegisterOverrideResolver.  It has to be
 /// kept in sync with the ResolverTy.
 
-enum BreakpointResolverType {
+FLAGS_ENUM(BreakpointResolverType) {
   eResolverUnknown = 0,
   eResolverFileAndLine = (1 << 0),
   eResolverAddress = (1 << 1),
@@ -1597,6 +1597,10 @@ enum BreakpointResolverType {
   eResolverException = (1 << 5),
   eResolverLastKnown = eResolverException,
 };
+constexpr unsigned BreakpointResolverAllResolversMask =   eResolverFileAndLine |
+  eResolverAddress | eResolverName | eResolverFileRegex | eResolverPython |
+  eResolverException;
+
 
 } // namespace lldb
 

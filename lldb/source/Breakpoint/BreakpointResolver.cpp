@@ -67,7 +67,7 @@ bool BreakpointResolver::ResolverTyInMask(uint64_t mask) {
   if (mask == eResolverUnknown)
     return false;
 
-  return !((mask & MaskForResolverTy()) == 0);
+  return (mask & MaskForResolverTy()) != 0;
 }
 
 uint64_t BreakpointResolver::MaskForResolverTy() {
@@ -104,6 +104,13 @@ std::string BreakpointResolver::DescribeMask(uint64_t mask) {
     result.push_back('E');
   return result;
 }
+
+bool BreakpointResolver::TypeMaskIsValid(uint64_t mask) {
+    if (mask == 0)
+      return false;
+    return (mask & BreakpointResolverAllResolversMask) != 0;
+}
+
 
 BreakpointResolver::BreakpointResolver(const BreakpointSP &bkpt,
                                        const unsigned char resolverTy,

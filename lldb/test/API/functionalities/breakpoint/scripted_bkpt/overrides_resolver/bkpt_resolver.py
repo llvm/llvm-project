@@ -14,7 +14,7 @@ class CheckerCommand:
         self.debugger = debugger
 
     def get_short_help(self):
-        return "A command the checks how many times the resolvers were called"
+        return "A command that checks how many times the resolvers were called"
 
     def __call__(self, debugger, command, exe_ctx, result):
         global override_count
@@ -125,5 +125,4 @@ class TrivialExample:
 
 
 def __lldb_init_module(debugger, dict):
-    print(f"About to run: command script add -c {__name__}.CheckerCommand checker")
     debugger.HandleCommand(f"command script add -c {__name__}.CheckerCommand checker")

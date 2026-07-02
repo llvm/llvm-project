@@ -1010,8 +1010,8 @@ public:
   // be the one we use.  If no overrides return an override resolver, we'll use
   // the original one.
 
-  /// This is the abstract version of the override.  Particular implementations
-  /// e.g. the scripted override resolve instantiate actual versions of the
+  /// This is the abstract version of the override.  Particular implementations,
+  /// e.g. the scripted override resolver, instantiate actual versions of the
   /// class. The constructor takes the target this resolver is registered in, a
   /// description for the override and a mask of the resolver types this
   /// overrides, made of elements of the BreakpointResolverType enum.
