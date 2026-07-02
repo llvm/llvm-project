@@ -489,6 +489,9 @@ CompressedOffloadBundle::CompressedBundleHeader::tryParse(StringRef Blob) {
   CompressedBundleHeader Normalized;
   Normalized.Version = Header.Common.Version;
 
+  if (Normalized.Version < 1 || Normalized.Version > 3)
+    return createStringError("unknown compressed bundle version");
+
   size_t RequiredSize = getHeaderSize(Normalized.Version);
 
   if (Blob.size() < RequiredSize)
