@@ -273,6 +273,7 @@ define dso_local i128 @load_atomic_i128_aligned_acquire_const(ptr readonly %ptr)
 
 define dso_local i128 @load_atomic_i128_aligned_seq_cst(ptr %ptr) {
 ; CHECK-LABEL: load_atomic_i128_aligned_seq_cst:
+; CHECK:    dmb ish
 ; CHECK:    ldp x0, x1, [x0]
 ; CHECK:    dmb ish
     %r = load atomic i128, ptr %ptr seq_cst, align 16
@@ -281,6 +282,7 @@ define dso_local i128 @load_atomic_i128_aligned_seq_cst(ptr %ptr) {
 
 define dso_local i128 @load_atomic_i128_aligned_seq_cst_const(ptr readonly %ptr) {
 ; CHECK-LABEL: load_atomic_i128_aligned_seq_cst_const:
+; CHECK:    dmb ish
 ; CHECK:    ldp x0, x1, [x0]
 ; CHECK:    dmb ish
     %r = load atomic i128, ptr %ptr seq_cst, align 16
