@@ -256,11 +256,12 @@ def HasStdExtZtso : Predicate<"Subtarget->hasStdExtZtso()">,
                         "'Ztso' (Memory Model - Total Store Order)">;
 def NoStdExtZtso : Predicate<"!Subtarget->hasStdExtZtso()">;
 
-def FeatureStdExtZa64rs
-    : RISCVExtension<1, 0, "Reservation Set Size of at Most 64 Bytes">;
-
 def FeatureStdExtZa128rs
     : RISCVExtension<1, 0, "Reservation Set Size of at Most 128 Bytes">;
+
+def FeatureStdExtZa64rs
+    : RISCVExtension<1, 0, "Reservation Set Size of at Most 64 Bytes",
+                     [FeatureStdExtZa128rs]>;
 
 def FeatureStdExtZabha
     : RISCVExtension<1, 0, "Byte and Halfword Atomic Memory Operations",
