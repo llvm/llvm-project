@@ -4,12 +4,10 @@
 define i32 @xor_of_setne_0(i32 %a, i32 %b) {
 ; CHECK-LABEL: xor_of_setne_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    cntlzw 3, 3
 ; CHECK-NEXT:    cntlzw 4, 4
-; CHECK-NEXT:    srwi 3, 3, 5
+; CHECK-NEXT:    cntlzw 3, 3
 ; CHECK-NEXT:    srwi 4, 4, 5
-; CHECK-NEXT:    xori 3, 3, 1
-; CHECK-NEXT:    xori 4, 4, 1
+; CHECK-NEXT:    srwi 3, 3, 5
 ; CHECK-NEXT:    xor 3, 3, 4
 ; CHECK-NEXT:    blr
   %c = icmp ne i32 %a, 0
@@ -22,14 +20,12 @@ define i32 @xor_of_setne_0(i32 %a, i32 %b) {
 define i32 @xor_of_setne_const(i32 %a, i32 %b) {
 ; CHECK-LABEL: xor_of_setne_const:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xori 3, 3, 5
 ; CHECK-NEXT:    xori 4, 4, 6
-; CHECK-NEXT:    cntlzw 3, 3
+; CHECK-NEXT:    xori 3, 3, 5
 ; CHECK-NEXT:    cntlzw 4, 4
-; CHECK-NEXT:    srwi 3, 3, 5
+; CHECK-NEXT:    cntlzw 3, 3
 ; CHECK-NEXT:    srwi 4, 4, 5
-; CHECK-NEXT:    xori 3, 3, 1
-; CHECK-NEXT:    xori 4, 4, 1
+; CHECK-NEXT:    srwi 3, 3, 5
 ; CHECK-NEXT:    xor 3, 3, 4
 ; CHECK-NEXT:    blr
   %c = icmp ne i32 %a, 5
@@ -46,11 +42,8 @@ define i32 @xor_of_setne_multiuse(i32 %a, i32 %b) {
 ; CHECK-NEXT:    cntlzw 4, 4
 ; CHECK-NEXT:    srwi 3, 3, 5
 ; CHECK-NEXT:    srwi 4, 4, 5
-; CHECK-NEXT:    xori 5, 3, 1
-; CHECK-NEXT:    xori 4, 4, 1
-; CHECK-NEXT:    xor 4, 5, 4
-; CHECK-NEXT:    xor 3, 4, 3
-; CHECK-NEXT:    add 3, 5, 3
+; CHECK-NEXT:    xori 3, 3, 1
+; CHECK-NEXT:    add 3, 3, 4
 ; CHECK-NEXT:    blr
   %c = icmp ne i32 %a, 0
   %d = icmp ne i32 %b, 0
@@ -89,8 +82,8 @@ define <4 x i32> @xor_of_setne_vec_0(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: xor_of_setne_vec_0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xxlxor 36, 36, 36
-; CHECK-NEXT:    vcmpgtuw 2, 2, 4
-; CHECK-NEXT:    vcmpgtuw 3, 3, 4
+; CHECK-NEXT:    vcmpequw 3, 3, 4
+; CHECK-NEXT:    vcmpequw 2, 2, 4
 ; CHECK-NEXT:    xxlxor 34, 34, 35
 ; CHECK-NEXT:    blr
   %c = icmp ne <4 x i32> %a, zeroinitializer
@@ -105,11 +98,9 @@ define <4 x i32> @xor_of_setne_vec_const(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vspltisw 4, 5
 ; CHECK-NEXT:    vspltisw 5, 6
+; CHECK-NEXT:    vcmpequw 3, 3, 5
 ; CHECK-NEXT:    vcmpequw 2, 2, 4
-; CHECK-NEXT:    xxlnor 0, 34, 34
-; CHECK-NEXT:    vcmpequw 2, 3, 5
-; CHECK-NEXT:    xxlnor 1, 34, 34
-; CHECK-NEXT:    xxlxor 34, 0, 1
+; CHECK-NEXT:    xxlxor 34, 34, 35
 ; CHECK-NEXT:    blr
   %c = icmp ne <4 x i32> %a, <i32 5, i32 5, i32 5, i32 5>
   %d = icmp ne <4 x i32> %b, <i32 6, i32 6, i32 6, i32 6>

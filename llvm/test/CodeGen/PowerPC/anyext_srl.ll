@@ -9,10 +9,15 @@
 define zeroext i1 @foo(ptr %s_a, ptr %s_b) local_unnamed_addr {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lbz 3, 0(3)
 ; CHECK-NEXT:    lbz 4, 0(4)
+; CHECK-NEXT:    lbz 3, 0(3)
+; CHECK-NEXT:    rlwinm 4, 4, 0, 28, 28
+; CHECK-NEXT:    rlwinm 3, 3, 0, 28, 28
+; CHECK-NEXT:    cntlzw 4, 4
+; CHECK-NEXT:    cntlzw 3, 3
+; CHECK-NEXT:    srwi 4, 4, 5
+; CHECK-NEXT:    srwi 3, 3, 5
 ; CHECK-NEXT:    xor 3, 3, 4
-; CHECK-NEXT:    rldicl 3, 3, 61, 63
 ; CHECK-NEXT:    blr
 entry:
   %0 = load i32, ptr %s_a, align 8, !tbaa !1
