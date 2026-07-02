@@ -403,6 +403,7 @@
 #include "math/nextupl.h"
 #include "math/pow.h"
 #include "math/powf.h"
+#include "math/powf16.h"
 #include "math/remainder.h"
 #include "math/remainderbf16.h"
 #include "math/remainderf.h"
