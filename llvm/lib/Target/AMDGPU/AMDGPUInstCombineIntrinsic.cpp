@@ -1136,10 +1136,15 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       APFloat Val(ArgVal.getSemantics(), 1);
       Val.divide(ArgVal, APFloat::rmNearestTiesToEven);
 
-      // This is more precise than the instruction may give.
-      //
-      // TODO: The instruction always flushes denormal results (except for f16),
-      // should this also?
+      // v_rcp_f16 is correctly rounded, but v_rcp_f32/f64 only approximate the
+      // reciprocal, so the exact division above need not match the hardware.
+      // Only fold f32/f64 when the result is a value the instruction produces
+      // exactly: zero, infinity, NaN, or +/-1.
+      const fltSemantics &Sem = Val.getSemantics();
+      if (&Sem != &APFloat::IEEEhalf() && !Val.isZero() && !Val.isInfinity() &&
+          !Val.isNaN() && !Val.isOne() && !Val.isMinusOne())
+        break;
+
       return IC.replaceInstUsesWith(II, ConstantFP::get(II.getContext(), Val));
     }
 
