@@ -151,8 +151,7 @@ DynamicLoader::GetSectionListFromModule(const ModuleSP module) const {
   return sections;
 }
 
-ModuleSP DynamicLoader::FindModuleViaTarget(const ModuleSpec &spec) {
-  ModuleSpec module_spec(spec);
+ModuleSP DynamicLoader::FindModuleViaTarget(ModuleSpec &module_spec) {
   Target &target = m_process->GetTarget();
   // The process may be able to augment the module_spec with a UUID.
   if (!module_spec.GetUUID().IsValid())
@@ -185,6 +184,8 @@ ModuleSP DynamicLoader::LoadModuleAtAddress(const FileSpec &file,
                      "Failed to read module from memory: {0}");
     else {
       module_sp = *memory_module_sp_or_err;
+      if (module_spec.GetPlatformFileSpec())
+        module_sp->SetPlatformFileSpec(module_spec.GetPlatformFileSpec());
       m_process->GetTarget().GetImages().AppendIfNeeded(module_sp, false);
     }
   }

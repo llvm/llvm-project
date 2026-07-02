@@ -144,6 +144,7 @@ struct ModuleStats {
   llvm::json::Value ToJSON() const;
   intptr_t identifier;
   std::string path;
+  std::optional<std::string> platform_path;
   std::string uuid;
   std::string triple;
   // Path separate debug info file, or empty if none.
@@ -169,6 +170,9 @@ struct ModuleStats {
   bool symtab_stripped = false;
   bool debug_info_had_variable_errors = false;
   bool debug_info_had_incomplete_types = false;
+  /// If the module is loaded from memory, this will be a valid address.
+  std::optional<lldb::addr_t> memory_addr;
+  std::optional<bool> core_has_uuid;
   DWOStats dwo_stats;
 };
 

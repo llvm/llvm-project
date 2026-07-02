@@ -53,6 +53,8 @@ void TargetStats::CollectStats(Target &target) {
 json::Value ModuleStats::ToJSON() const {
   json::Object module;
   EmplaceSafeString(module, "path", path);
+  if (platform_path.has_value())
+    EmplaceSafeString(module, "platformPath", *platform_path);
   EmplaceSafeString(module, "uuid", uuid);
   EmplaceSafeString(module, "triple", triple);
   module.try_emplace("identifier", identifier);
@@ -77,7 +79,10 @@ json::Value ModuleStats::ToJSON() const {
   module.try_emplace("dwoFileCount", dwo_stats.dwo_file_count);
   module.try_emplace("loadedDwoFileCount", dwo_stats.loaded_dwo_file_count);
   module.try_emplace("dwoErrorCount", dwo_stats.dwo_error_count);
-
+  if (memory_addr.has_value())
+    module.try_emplace("memoryAddress", *memory_addr);
+  if (core_has_uuid.has_value())
+    module.try_emplace("coreHasUUID", *core_has_uuid);
   if (!symbol_locator_time.map.empty()) {
     json::Object obj;
     for (const auto &entry : symbol_locator_time.map)
@@ -328,6 +333,7 @@ llvm::json::Value DebuggerStats::ReportStatistics(
   const uint64_t num_modules = target != nullptr
                                    ? target->GetImages().GetSize()
                                    : Module::GetNumberAllocatedModules();
+  ProcessSP process_sp = target ? target->GetProcessSP() : ProcessSP();
   uint32_t num_debug_info_enabled_modules = 0;
   uint32_t num_modules_has_debug_info = 0;
   uint32_t num_modules_with_variable_errors = 0;
@@ -356,6 +362,23 @@ llvm::json::Value DebuggerStats::ReportStatistics(
       if (module_stat.symtab_saved_to_cache)
         ++symtabs_saved_to_cache;
     }
+    if (process_sp && !process_sp->IsLiveDebugSession()) {
+      // We have a core file, it is good to know if the module had UUID
+      // information in the core file. Some core files don't have UUIDs and
+      // we might end up loading the file from the current filesystem and it
+      // can be the wrong file.
+      ModuleSpec module_spec = module->GetModuleSpec(process_sp);
+      // If we have a UUID and the module is in memory, then the UUID is in
+      // the core file.
+      if (!module->GetMemoryModuleAddress().has_value()) {
+        // Clear the UUID and see if the process can resolve it.
+        module_spec.GetUUID().Clear();
+        // See if the core file has the UUID for this module.
+        process_sp->FindModuleUUID(module_spec);
+      }
+      module_stat.core_has_uuid = module_spec.GetUUID().IsValid();
+    }
+    module_stat.memory_addr = module->GetMemoryModuleAddress();
     SymbolFile *sym_file = module->GetSymbolFile(/*can_create=*/false);
     if (sym_file) {
       if (!summary_only) {
@@ -413,6 +436,8 @@ llvm::json::Value DebuggerStats::ReportStatistics(
     if (include_modules) {
       module_stat.identifier = (intptr_t)module;
       module_stat.path = module->GetFileSpec().GetPath();
+      if (module->GetFileSpec() != module->GetPlatformFileSpec())
+        module_stat.platform_path = module->GetPlatformFileSpec().GetPath();
       if (ConstString object_name = module->GetObjectName()) {
         module_stat.path.append(1, '(');
         module_stat.path.append(object_name.GetStringRef().str());
