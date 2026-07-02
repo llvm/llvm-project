@@ -54,6 +54,37 @@
 // CHECK-NO-SPIRVLINK-FLAGS-NOT: --device-linker=spirv64-unknown-unknown=--allow-partial-linkage
 // CHECK-NO-SPIRVLINK-FLAGS-NOT: --device-linker=spirv64-unknown-unknown=--create-library
 
+/// Check -fsycl-device-image-split= is forwarded to clang-sycl-linker as the
+/// corresponding --module-split-mode= value.
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl -fsycl-device-image-split=kernel %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHK-SPLIT-KERNEL %s
+// CHK-SPLIT-KERNEL: clang-linker-wrapper{{.*}}"--device-linker=spirv64-unknown-unknown=--module-split-mode=kernel"
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl -fsycl-device-image-split=translation_unit %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHK-SPLIT-TU %s
+// CHK-SPLIT-TU: clang-linker-wrapper{{.*}}"--device-linker=spirv64-unknown-unknown=--module-split-mode=translation_unit"
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl -fsycl-device-image-split=link_unit %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHK-SPLIT-LU %s
+// CHK-SPLIT-LU: clang-linker-wrapper{{.*}}"--device-linker=spirv64-unknown-unknown=--module-split-mode=link_unit"
+
+/// Check the bare -fsycl-device-image-split flag aliases to 'translation_unit'.
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl -fsycl-device-image-split %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHK-SPLIT-TU %s
+
+/// Check that without -fsycl-device-image-split, no --module-split-mode= is passed.
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHK-NO-SPLIT %s
+// CHK-NO-SPLIT-NOT: --module-split-mode=
+
+/// Check an invalid -fsycl-device-image-split= value is diagnosed.
+// RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl -fsycl-device-image-split=bogus %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHK-SPLIT-INVALID %s
+// CHK-SPLIT-INVALID: error: invalid value 'bogus' in '-fsycl-device-image-split='
+
+/// Check -fsycl-device-image-split is unused when not linking (e.g. -c).
+// RUN: %clang -### -c --target=x86_64-unknown-linux-gnu -fsycl -fsycl-device-image-split=kernel %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHK-SPLIT-UNUSED %s
+// CHK-SPLIT-UNUSED: warning: argument unused during compilation: '-fsycl-device-image-split=kernel'
+
 /// Check for option incompatibility with -fsycl
 // RUN: not %clang -### -fsycl -ffreestanding %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHK-INCOMPATIBILITY %s -DINCOMPATOPT=-ffreestanding

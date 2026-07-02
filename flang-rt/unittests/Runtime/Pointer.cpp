@@ -31,6 +31,35 @@ TEST(Pointer, BasicAllocateDeallocate) {
   EXPECT_FALSE(RTNAME(PointerIsAssociated)(*p));
 }
 
+TEST(Pointer, AllocateArrayIsAligned) {
+#if !defined(_WIN32)
+  // Since a single std::malloc result may happen to be 64-byte aligned
+  // allocate multiple arrays and check that all of them are aligned correctly
+  constexpr int count{32};
+  OwningPtr<Descriptor> pointers[count];
+  for (int i{0}; i < count; ++i) {
+    // REAL(8), POINTER :: p(:)
+    pointers[i] =
+        Descriptor::Create(TypeCode{Fortran::common::TypeCategory::Real, 8}, 8,
+            nullptr, 1, nullptr, CFI_attribute_pointer);
+    // ALLOCATE(p(100))
+    RTNAME(PointerSetBounds)(*pointers[i], 0, 1, 100);
+    RTNAME(PointerAllocate)
+    (*pointers[i], /*hasStat=*/false, /*errMsg=*/nullptr, __FILE__, __LINE__);
+    EXPECT_TRUE(RTNAME(PointerIsAssociated)(*pointers[i]));
+    EXPECT_EQ(reinterpret_cast<std::uintptr_t>(pointers[i]->raw().base_addr) %
+            kDefaultArrayAlignment,
+        0u);
+  }
+  for (int i{0}; i < count; ++i) {
+    // DEALLOCATE(p)
+    RTNAME(PointerDeallocate)
+    (*pointers[i], /*hasStat=*/false, /*errMsg=*/nullptr, __FILE__, __LINE__);
+    EXPECT_FALSE(RTNAME(PointerIsAssociated)(*pointers[i]));
+  }
+#endif
+}
+
 TEST(Pointer, ApplyMoldAllocation) {
   // REAL(4), POINTER :: p
   auto m{Descriptor::Create(TypeCode{Fortran::common::TypeCategory::Real, 4}, 4,

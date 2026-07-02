@@ -1,0 +1,76 @@
+! RUN: bbc -emit-hlfir -fcuda %s -o - | FileCheck %s
+
+! Test that allocating a component of a CUDA-attributed derived type variable
+! routes through the CUF allocator, not the default (host) allocator.
+! This ensures the component data lives in the same memory space as its parent.
+
+module m
+  type :: chunk_type
+    real(8), dimension(:,:), allocatable :: arr
+  end type
+  type :: outer_device_type
+    type(chunk_type), device, allocatable :: inner(:)
+  end type
+end module
+
+! Explicit managed attribute on variable with allocatable component.
+subroutine managed_component()
+  use m
+  type(chunk_type), managed, allocatable :: chunks(:)
+  allocate(chunks(1))
+  allocate(chunks(1)%arr(10,10))
+  deallocate(chunks)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPmanaged_component()
+! CHECK: cuf.allocate %{{.*}} : {{.*}} {data_attr = #cuf.cuda<managed>} -> i32
+! CHECK: hlfir.designate %{{.*}}{"arr"} {{.*}} : {{.*}} -> !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf64>>>>
+! CHECK: fir.embox %{{.*}} {allocator_idx = 3 : i32}
+! CHECK: cuf.allocate %{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf64>>>> {data_attr = #cuf.cuda<managed>} -> i32
+
+! Device attribute on variable with allocatable component.
+subroutine device_component()
+  use m
+  type(chunk_type), device, allocatable :: chunks(:)
+  allocate(chunks(1))
+  allocate(chunks(1)%arr(10,10))
+  deallocate(chunks)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPdevice_component()
+! CHECK: cuf.allocate %{{.*}} : {{.*}} {data_attr = #cuf.cuda<device>} -> i32
+! CHECK: hlfir.designate %{{.*}}{"arr"} {{.*}} : {{.*}} -> !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf64>>>>
+! CHECK: fir.embox %{{.*}} {allocator_idx = 2 : i32}
+! CHECK: cuf.allocate %{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf64>>>> {data_attr = #cuf.cuda<device>} -> i32
+
+! Managed component with source allocation.
+subroutine managed_component_source()
+  use m
+  type(chunk_type), managed, allocatable :: chunks(:)
+  real(8), allocatable :: src(:,:)
+  allocate(chunks(1))
+  allocate(src(10,10))
+  allocate(chunks(1)%arr, source=src)
+  deallocate(chunks)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPmanaged_component_source()
+! CHECK: cuf.allocate %{{.*}} : {{.*}} {data_attr = #cuf.cuda<managed>} -> i32
+! CHECK: hlfir.designate %{{.*}}{"arr"} {{.*}} : {{.*}} -> !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf64>>>>
+! CHECK: fir.embox %{{.*}} {allocator_idx = 3 : i32}
+! CHECK: cuf.allocate %{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf64>>>> source({{.*}}) {data_attr = #cuf.cuda<managed>} -> i32
+
+! Intermediate component has device attribute, outermost variable does not.
+subroutine intermediate_device_component()
+  use m
+  type(outer_device_type), allocatable :: outer(:)
+  allocate(outer(1))
+  allocate(outer(1)%inner(1))
+  allocate(outer(1)%inner(1)%arr(10,10))
+  deallocate(outer)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPintermediate_device_component()
+! CHECK: hlfir.designate %{{.*}}{"arr"} {{.*}} : {{.*}} -> !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf64>>>>
+! CHECK: fir.embox %{{.*}} {allocator_idx = 2 : i32}
+! CHECK: cuf.allocate %{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf64>>>> {data_attr = #cuf.cuda<device>} -> i32
