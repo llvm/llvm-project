@@ -144,7 +144,8 @@ public:
       const Fortran::semantics::Symbol &componentSym, mlir::Type fieldType,
       bool isVolatile) {
     if (mayHaveNonDefaultLowerBounds(componentSym)) {
-      mlir::Type boxType = fir::BoxType::get(fieldType, isVolatile);
+      mlir::Type boxType =
+          fir::BoxType::get(fieldType, isVolatile, componentSym.Corank());
       return std::make_tuple(boxType,
                              fir::FortranVariableFlagsEnum::contiguous);
     }
@@ -2315,9 +2316,10 @@ hlfir::EntityWithAttributes Fortran::lower::convertExprToHLFIR(
 fir::ExtendedValue Fortran::lower::convertToBox(
     mlir::Location loc, Fortran::lower::AbstractConverter &converter,
     hlfir::Entity entity, Fortran::lower::StatementContext &stmtCtx,
-    mlir::Type fortranType) {
+    mlir::Type fortranType, unsigned corank) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
-  auto [exv, cleanup] = hlfir::convertToBox(loc, builder, entity, fortranType);
+  auto [exv, cleanup] =
+      hlfir::convertToBox(loc, builder, entity, fortranType, corank);
   if (cleanup)
     stmtCtx.attachCleanup(*cleanup);
   return exv;
