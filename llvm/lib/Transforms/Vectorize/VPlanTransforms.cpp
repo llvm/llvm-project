@@ -2867,6 +2867,8 @@ void VPlanTransforms::optimize(VPlan &Plan) {
   RUN_VPLAN_PASS(createAndOptimizeReplicateRegions, Plan);
   RUN_VPLAN_PASS(mergeBlocksIntoPredecessors, Plan);
   RUN_VPLAN_PASS(licm, Plan);
+  RUN_VPLAN_PASS(cse, Plan);
+  RUN_VPLAN_PASS(removeDeadRecipes, Plan);
 }
 
 // Add a VPActiveLaneMaskPHIRecipe and related recipes to \p Plan and replace

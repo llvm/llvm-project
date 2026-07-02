@@ -375,19 +375,15 @@ define float @_Z4testmm(i64 %size, i64 %offset) {
 ; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF3:![0-9]+]]
 ; CHECK:       [[VEC_EPILOG_PH]]:
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_PH]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[TMP300]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0.000000e+00, %[[VECTOR_PH]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX36:%.*]] = phi float [ [[TMP301]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0.000000e+00, %[[VECTOR_PH]] ]
 ; CHECK-NEXT:    [[BC_MERGE_RDX37:%.*]] = phi float [ [[TMP302]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0.000000e+00, %[[VECTOR_PH]] ]
 ; CHECK-NEXT:    [[N_MOD_VF38:%.*]] = urem i64 [[SIZE]], 4
 ; CHECK-NEXT:    [[N_VEC39:%.*]] = sub i64 [[SIZE]], [[N_MOD_VF38]]
-; CHECK-NEXT:    [[TMP303:%.*]] = insertelement <4 x float> zeroinitializer, float [[BC_MERGE_RDX]], i32 0
-; CHECK-NEXT:    [[TMP304:%.*]] = insertelement <4 x float> zeroinitializer, float [[BC_MERGE_RDX36]], i32 0
 ; CHECK-NEXT:    [[TMP305:%.*]] = insertelement <4 x float> zeroinitializer, float [[BC_MERGE_RDX37]], i32 0
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV1:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT48:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[VEC_PHI41:%.*]] = phi <4 x float> [ [[TMP303]], %[[VEC_EPILOG_PH]] ], [ [[TMP337:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[VEC_PHI42:%.*]] = phi <4 x float> [ [[TMP304]], %[[VEC_EPILOG_PH]] ], [ [[TMP358:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[VEC_PHI41:%.*]] = phi <4 x float> [ [[TMP305]], %[[VEC_EPILOG_PH]] ], [ [[TMP337:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[VEC_PHI42:%.*]] = phi <4 x float> [ [[TMP305]], %[[VEC_EPILOG_PH]] ], [ [[TMP358:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[VEC_PHI43:%.*]] = phi <4 x float> [ [[TMP305]], %[[VEC_EPILOG_PH]] ], [ [[TMP379:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[TMP306:%.*]] = add i64 [[IV1]], 1
 ; CHECK-NEXT:    [[TMP307:%.*]] = add i64 [[IV1]], 2

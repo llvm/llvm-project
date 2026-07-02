@@ -31,8 +31,7 @@ define void @test_tc_less_than_16(ptr %A, i64 %N) {
 ; OPTIMIZE-NEXT:      vp<[[VP7:%[0-9]+]]> = vector-pointer vp<%next.gep>, ir<1>
 ; OPTIMIZE-NEXT:      WIDEN ir<%l> = load vp<[[VP7]]>
 ; OPTIMIZE-NEXT:      WIDEN ir<%add> = add nsw ir<%l>, ir<10>
-; OPTIMIZE-NEXT:      vp<[[VP8:%[0-9]+]]> = vector-pointer vp<%next.gep>, ir<1>
-; OPTIMIZE-NEXT:      WIDEN store vp<[[VP8]]>, ir<%add>
+; OPTIMIZE-NEXT:      WIDEN store vp<[[VP7]]>, ir<%add>
 ; OPTIMIZE-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP5]]>, vp<[[VP1]]>
 ; OPTIMIZE-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; OPTIMIZE-NEXT:    No successors
