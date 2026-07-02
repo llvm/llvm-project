@@ -2280,6 +2280,8 @@ void LoweringPreparePass::runOnOp(mlir::Operation *op) {
     lowerArrayDtor(arrayDtor);
   } else if (auto findOp = mlir::dyn_cast<cir::StdFindOp>(op)) {
     lowerStdOp(findOp);
+  } else if (auto strlenOp = mlir::dyn_cast<cir::StrLenOp>(op)) {
+    lowerStdOp(strlenOp);
   } else if (auto cast = mlir::dyn_cast<cir::CastOp>(op)) {
     lowerCastOp(cast);
   } else if (auto complexConj = mlir::dyn_cast<cir::ComplexConjOp>(op)) {
@@ -2918,7 +2920,8 @@ void LoweringPreparePass::runOnOperation() {
                   cir::ComplexConjOp, cir::ComplexMulOp, cir::ComplexDivOp,
                   cir::DynamicCastOp, cir::FuncOp, cir::CallOp,
                   cir::GetGlobalOp, cir::GlobalOp, cir::StoreOp,
-                  cir::CmpThreeWayOp, cir::LocalInitOp, cir::StdFindOp>(op))
+                  cir::CmpThreeWayOp, cir::LocalInitOp, cir::StdFindOp,
+                  cir::StrLenOp>(op))
       opsToTransform.push_back(op);
   });
 

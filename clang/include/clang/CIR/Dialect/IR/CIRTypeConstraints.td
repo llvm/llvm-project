@@ -125,6 +125,14 @@ def CIR_AnyFundamentalIntType
     let cppFunctionName = "isFundamentalIntType";
 }
 
+// An 8 bit character type of either signedness, since the signedness of plain
+// char follows the target. _BitInt types are excluded even at width 8.
+def CIR_AnyChar8Type
+    : CIR_ConfinedType<CIR_AnyIntType,
+        [CIR_HasWidthPred<8>, CIR_IsNotBitIntPred], "8-bit character type"> {
+    let cppFunctionName = "isChar8Type";
+}
+
 def CIR_AnyFundamentalUIntType
     : CIR_ConfinedType<CIR_AnyUIntType,
         [CIR_HasFundamentalIntWidthPred, CIR_IsNotBitIntPred],

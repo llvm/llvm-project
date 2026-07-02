@@ -1,0 +1,172 @@
+// RUN: cir-opt %s --cir-idiom-recognizer -split-input-file | FileCheck %s
+
+// Negative coverage for the strlen recognizer, exercised directly on CIR so
+// each conflicting strlen signature lives in its own module without a macro.
+// The recognizer raises only a direct, non-variadic call named strlen that
+// takes one pointer to an 8 bit character, returns a fundamental unsigned
+// integer, and has no builtin state blocking it. The first module is a
+// positive control proving the pass runs. Every later module keeps its plain
+// cir.call.
+
+!s8i = !cir.int<s, 8>
+!u64i = !cir.int<u, 64>
+module {
+  cir.func private @strlen(!cir.ptr<!s8i>) -> !u64i
+  cir.func @positive(%s: !cir.ptr<!s8i>) -> !u64i {
+    %0 = cir.call @strlen(%s) : (!cir.ptr<!s8i>) -> !u64i
+    cir.return %0 : !u64i
+  }
+}
+// CHECK-LABEL: cir.func @positive
+// CHECK: cir.std.strlen(%{{.*}} : !cir.ptr<!s8i>, @strlen) -> !u64i
+
+// -----
+// A function with strlen's signature but a different name is matched by symbol,
+// so it is not raised.
+!s8i = !cir.int<s, 8>
+!u64i = !cir.int<u, 64>
+module {
+  cir.func private @mylen(!cir.ptr<!s8i>) -> !u64i
+  cir.func @wrong_name(%s: !cir.ptr<!s8i>) -> !u64i {
+    %0 = cir.call @mylen(%s) : (!cir.ptr<!s8i>) -> !u64i
+    cir.return %0 : !u64i
+  }
+}
+// CHECK-LABEL: cir.func @wrong_name
+// CHECK: cir.call @mylen
+// CHECK-NOT: cir.std.strlen
+
+// -----
+// The library strlen is not variadic, so a variadic callee that shares the name
+// is not the library strlen.
+!s8i = !cir.int<s, 8>
+!u64i = !cir.int<u, 64>
+module {
+  cir.func private @strlen(!cir.ptr<!s8i>, ...) -> !u64i
+  cir.func @variadic(%s: !cir.ptr<!s8i>) -> !u64i {
+    %0 = cir.call @strlen(%s) : (!cir.ptr<!s8i>) -> !u64i
+    cir.return %0 : !u64i
+  }
+}
+// CHECK-LABEL: cir.func @variadic
+// CHECK: cir.call @strlen
+// CHECK-NOT: cir.std.strlen
+
+// -----
+// A call with no result has nothing to raise, so it is not matched.
+!s8i = !cir.int<s, 8>
+module {
+  cir.func private @strlen(!cir.ptr<!s8i>)
+  cir.func @void_result(%s: !cir.ptr<!s8i>) {
+    cir.call @strlen(%s) : (!cir.ptr<!s8i>) -> ()
+    cir.return
+  }
+}
+// CHECK-LABEL: cir.func @void_result
+// CHECK: cir.call @strlen
+// CHECK-NOT: cir.std.strlen
+
+// -----
+// A nullary call has no argument to inspect, so it is not matched.
+!u64i = !cir.int<u, 64>
+module {
+  cir.func private @strlen() -> !u64i
+  cir.func @nullary() -> !u64i {
+    %0 = cir.call @strlen() : () -> !u64i
+    cir.return %0 : !u64i
+  }
+}
+// CHECK-LABEL: cir.func @nullary
+// CHECK: cir.call @strlen
+// CHECK-NOT: cir.std.strlen
+
+// -----
+// The pointer must be to an 8 bit character, so a wider integer does not match.
+!s32i = !cir.int<s, 32>
+!u64i = !cir.int<u, 64>
+module {
+  cir.func private @strlen(!cir.ptr<!s32i>) -> !u64i
+  cir.func @bad_arg_type(%s: !cir.ptr<!s32i>) -> !u64i {
+    %0 = cir.call @strlen(%s) : (!cir.ptr<!s32i>) -> !u64i
+    cir.return %0 : !u64i
+  }
+}
+// CHECK-LABEL: cir.func @bad_arg_type
+// CHECK: cir.call @strlen
+// CHECK-NOT: cir.std.strlen
+
+// -----
+// A _BitInt is not a character type even at width 8.
+!s8bitint = !cir.int<s, 8, bitint>
+!u64i = !cir.int<u, 64>
+module {
+  cir.func private @strlen(!cir.ptr<!s8bitint>) -> !u64i
+  cir.func @bad_arg_bitint(%s: !cir.ptr<!s8bitint>) -> !u64i {
+    %0 = cir.call @strlen(%s) : (!cir.ptr<!s8bitint>) -> !u64i
+    cir.return %0 : !u64i
+  }
+}
+// CHECK-LABEL: cir.func @bad_arg_bitint
+// CHECK: cir.call @strlen
+// CHECK-NOT: cir.std.strlen
+
+// -----
+// A nobuiltin mark on the call blocks the raise.
+!s8i = !cir.int<s, 8>
+!u64i = !cir.int<u, 64>
+module {
+  cir.func private @strlen(!cir.ptr<!s8i>) -> !u64i
+  cir.func @nobuiltin_mark(%s: !cir.ptr<!s8i>) -> !u64i {
+    %0 = cir.call @strlen(%s) {nobuiltin} : (!cir.ptr<!s8i>) -> !u64i
+    cir.return %0 : !u64i
+  }
+}
+// CHECK-LABEL: cir.func @nobuiltin_mark
+// CHECK: cir.call @strlen
+// CHECK-NOT: cir.std.strlen
+
+// -----
+// A caller nobuiltins list naming strlen blocks the raise.
+!s8i = !cir.int<s, 8>
+!u64i = !cir.int<u, 64>
+module {
+  cir.func private @strlen(!cir.ptr<!s8i>) -> !u64i
+  cir.func @nobuiltins_list(%s: !cir.ptr<!s8i>) -> !u64i attributes {nobuiltins = ["strlen"]} {
+    %0 = cir.call @strlen(%s) : (!cir.ptr<!s8i>) -> !u64i
+    cir.return %0 : !u64i
+  }
+}
+// CHECK-LABEL: cir.func @nobuiltins_list
+// CHECK: cir.call @strlen
+// CHECK-NOT: cir.std.strlen
+
+// -----
+// An empty caller nobuiltins list disables every builtin, so it also blocks the
+// raise.
+!s8i = !cir.int<s, 8>
+!u64i = !cir.int<u, 64>
+module {
+  cir.func private @strlen(!cir.ptr<!s8i>) -> !u64i
+  cir.func @empty_nobuiltins(%s: !cir.ptr<!s8i>) -> !u64i attributes {nobuiltins = []} {
+    %0 = cir.call @strlen(%s) : (!cir.ptr<!s8i>) -> !u64i
+    cir.return %0 : !u64i
+  }
+}
+// CHECK-LABEL: cir.func @empty_nobuiltins
+// CHECK: cir.call @strlen
+// CHECK-NOT: cir.std.strlen
+
+// -----
+// The result is size_t, which is unsigned, so a signed result is not raised.
+!s8i = !cir.int<s, 8>
+!s64i = !cir.int<s, 64>
+module {
+  cir.func private @strlen(!cir.ptr<!s8i>) -> !s64i
+  cir.func @signed_result(%s: !cir.ptr<!s8i>) -> !s64i {
+    %0 = cir.call @strlen(%s) : (!cir.ptr<!s8i>) -> !s64i
+    cir.return %0 : !s64i
+  }
+}
+// CHECK-LABEL: cir.func @signed_result
+// CHECK: cir.call @strlen
+// CHECK-NOT: cir.std.strlen

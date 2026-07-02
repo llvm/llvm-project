@@ -14,8 +14,8 @@
 #ifndef CLANG_CIR_DIALECT_IR_CIRSTDOPS_TD
 #define CLANG_CIR_DIALECT_IR_CIRSTDOPS_TD
 
-// knownKind names the CIR_KnownFuncKind entry whose tagged calls raise
-// to this operation.
+// knownKind names the CIR_KnownFuncKind entry this operation raises, or is
+// empty for a C library function that has no such entry.
 class CIR_StdOp<string functionName, dag args, dag res,
                 list<Trait> traits = [], string knownKind = "">
     : CIR_Op<"std." # functionName, traits> {
@@ -47,6 +47,16 @@ def CIR_StdFindOp : CIR_StdOp<"find",
         $last `:` qualified(type($last)) `,`
         $pattern `:` qualified(type($pattern)) `,`
         $original_fn `)` `->` qualified(type($result)) attr-dict
+  }];
+}
+
+def CIR_StrLenOp : CIR_StdOp<"strlen",
+  (ins CIR_PtrToType<CIR_AnyChar8Type>:$string),
+  (outs CIR_AnyFundamentalUIntType:$result)> {
+  let summary = "C standard library strlen()";
+  let assemblyFormat = [{
+    `(` $string `:` qualified(type($string)) `,` $original_fn `)`
+    `->` qualified(type($result)) attr-dict
   }];
 }
 

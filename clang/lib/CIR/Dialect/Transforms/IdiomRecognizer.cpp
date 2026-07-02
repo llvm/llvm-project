@@ -45,9 +45,41 @@ template <> bool signatureMatches<StdFindOp>(CallOp call) {
          iterTy == call->getResult(0).getType();
 }
 
-// Raises a direct cir.call to `TargetOp` when the callee carries the
-// matching identity tag.
-template <typename TargetOp> class StdRecognizer {
+// strlen takes a pointer to an 8 bit character and returns size_t, an unsigned
+// fundamental integer. A _BitInt is not a character type even at width 8.
+template <> bool signatureMatches<StrLenOp>(CallOp call) {
+  if (call.getNumOperands() != StrLenOp::getNumArgs() ||
+      call->getNumResults() != 1)
+    return false;
+  auto ptrTy = mlir::dyn_cast<cir::PointerType>(call.getOperand(0).getType());
+  return ptrTy && cir::isChar8Type(ptrTy.getPointee()) &&
+         cir::isFundamentalUIntType(call->getResult(0).getType());
+}
+
+// Returns true when the recorded no builtin state forbids treating the call
+// as the C library function `name`. The call carries a nobuiltin mark and
+// the caller a nobuiltins list, where an empty list disables them all.
+bool isNoBuiltin(CallOp call, llvm::StringRef name) {
+  if (call->hasAttr(cir::CIRDialect::getNoBuiltinAttrName()))
+    return true;
+
+  auto enclosing = call->getParentOfType<cir::FuncOp>();
+  auto noBuiltins = enclosing ? enclosing->getAttrOfType<mlir::ArrayAttr>(
+                                    cir::CIRDialect::getNoBuiltinsAttrName())
+                              : nullptr;
+  if (!noBuiltins)
+    return false;
+  return noBuiltins.empty() ||
+         llvm::any_of(noBuiltins, [name](mlir::Attribute entry) {
+           auto builtinName = mlir::dyn_cast<mlir::StringAttr>(entry);
+           return builtinName && builtinName.getValue() == name;
+         });
+}
+
+// Raises a direct cir.call to `TargetOp`. C++ entities are matched through
+// the identity tag on the callee, and C library functions by callee symbol,
+// since C names have no mangling.
+template <typename TargetOp, bool MatchByTag = true> class StdRecognizer {
   template <size_t... Indices>
   static TargetOp buildCall(cir::CIRBaseBuilderTy &builder, CallOp call,
                             std::index_sequence<Indices...>) {
@@ -64,16 +96,32 @@ public:
         !signatureMatches<TargetOp>(call))
       return false;
 
-    // Only a free std function with the right name carries the tag, so
-    // members, static members, and operators never match. The shape of the
-    // call is checked here, so a variadic callee never matches.
-    cir::FuncOp callee = call.resolveCalleeInTable(symbolTables);
-    if (!callee || callee.getFunctionType().isVarArg())
-      return false;
-    auto funcIdentity = mlir::dyn_cast_if_present<cir::FuncIdentityAttr>(
-        callee.getFuncInfoAttr());
-    if (!funcIdentity || funcIdentity.getKind() != TargetOp::getFuncKind())
-      return false;
+    if constexpr (MatchByTag) {
+      // Only a free std function with the right name carries the tag, so
+      // members, static members, and operators never match. The shape of the
+      // call is checked here, so a variadic callee never matches.
+      cir::FuncOp callee = call.resolveCalleeInTable(symbolTables);
+      if (!callee || callee.getFunctionType().isVarArg())
+        return false;
+      auto funcIdentity = mlir::dyn_cast_if_present<cir::FuncIdentityAttr>(
+          callee.getFuncInfoAttr());
+      if (!funcIdentity || funcIdentity.getKind() != TargetOp::getFuncKind())
+        return false;
+    } else {
+      // A C library function has no identity tag, so it is matched by callee
+      // symbol, which works because C names are unmangled. The symbol alone is
+      // not enough when builtins are disabled, so the recorded no builtin state
+      // gates the match.
+      if (*call.getCallee() != TargetOp::getFunctionName() ||
+          isNoBuiltin(call, TargetOp::getFunctionName()))
+        return false;
+      // The library function is not variadic, so a variadic callee that only
+      // shares the name is not that function. This lookup runs only after the
+      // name matches.
+      cir::FuncOp callee = call.resolveCalleeInTable(symbolTables);
+      if (callee && callee.getFunctionType().isVarArg())
+        return false;
+    }
 
     cir::CIRBaseBuilderTy builder(context);
     builder.setInsertionPointAfter(call.getOperation());
@@ -82,7 +130,7 @@ public:
     // The raised operation keeps every call attribute except the callee,
     // which it carries as original_fn, so lowering back loses nothing.
     for (mlir::NamedAttribute attr : call->getAttrs())
-      if (attr.getName() != "callee")
+      if (attr.getName() != call.getCalleeAttrName())
         op->setAttr(attr.getName(), attr.getValue());
     call.replaceAllUsesWith(op);
     call.erase();
@@ -103,7 +151,10 @@ struct IdiomRecognizerPass
 
 void IdiomRecognizerPass::recognizeStandardLibraryCall(
     CallOp call, mlir::SymbolTableCollection &symbolTables) {
-  StdRecognizer<StdFindOp>::raise(call, getContext(), symbolTables);
+  if (StdRecognizer<StdFindOp>::raise(call, getContext(), symbolTables))
+    return;
+  StdRecognizer<StrLenOp, /*MatchByTag=*/false>::raise(call, getContext(),
+                                                       symbolTables);
 }
 
 void IdiomRecognizerPass::runOnOperation() {
