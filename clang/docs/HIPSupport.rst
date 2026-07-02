@@ -1076,6 +1076,59 @@ Notes
 - Set ``LLVM_PROFILE_VERBOSE=1`` to print runtime diagnostics for
   profile file creation and device profile collection.
 
+Source-Based Code Coverage for Device Code
+==========================================
+
+Clang supports source-based code coverage for HIP device code on AMD GPUs.
+Device code is instrumented with the same ``-fprofile-instr-generate
+-fcoverage-mapping`` flags used for host code; counters live in the device
+binary, are written to a ``.profraw`` file at process exit, and can be
+consumed by ``llvm-profdata`` and ``llvm-cov``.
+
+Prerequisites
+-------------
+
+Source-based device coverage relies on the AMDGPU profile runtime, so
+the toolchain must be built with the same CMake configuration used for
+HIP offload PGO. See the *Prerequisites* subsection under
+`Profile-Guided Optimization for Device Code`_.
+
+Example
+-------
+
+Given a HIP program ``demo.hip``, the following commands produce an LCOV
+report covering device code:
+
+.. code-block:: console
+
+   $ clang++ -x hip demo.hip \
+       --offload-arch=gfx1101 \
+       -fprofile-instr-generate -fcoverage-mapping \
+       -o demo
+
+   $ llvm-objcopy --dump-section=.hip_fatbin=fatbin.bin demo
+   $ clang-offload-bundler --type=o --input=fatbin.bin \
+       --output=device.gfx1101.o \
+       --targets=hip-amdgcn-amd-amdhsa--gfx1101 --unbundle
+
+   $ LLVM_PROFILE_FILE="cov.%p.profraw" ./demo
+   $ llvm-profdata merge -sparse -o cov.profdata cov.*.profraw
+
+   $ llvm-cov report device.gfx1101.o -instr-profile=cov.profdata
+   $ llvm-cov show   device.gfx1101.o -instr-profile=cov.profdata
+   $ llvm-cov export device.gfx1101.o -instr-profile=cov.profdata \
+       -format=lcov > coverage.lcov
+
+The device ELF is extracted from the ``.hip_fatbin`` section of the host
+binary and then unbundled with ``clang-offload-bundler``. The unbundle
+target string uses the bundle ID ``hip-amdgcn-amd-amdhsa--<arch>``,
+which is the offload kind (``hip``) followed by the standard
+four-component target triple (``amdgcn-amd-amdhsa-``, with the empty
+environment field giving the trailing dash) and then the target ID
+(``<arch>``). See :doc:`ClangOffloadBundler` for the full bundle entry
+ID grammar. ``llvm-cov`` is invoked against the device object because
+the coverage mapping for device functions is emitted there.
+
 SPIR-V Support on HIPAMD ToolChain
 ==================================
 

@@ -655,16 +655,20 @@ cc_library(
     copts = llvm_copts,
     deps = [
         ":BinaryFormat",
+        ":CodeGen",
+        ":Core",
         ":DebugInfo",
         ":DebugInfoCodeView",
         ":DebugInfoDWARF",
         ":DebugInfoDWARFLowLevel",
         ":DebugInfoPDB",
         ":Demangle",
+        ":IRReader",
         ":MC",
         ":MCDisassembler",
         ":Object",
         ":Support",
+        ":TransformUtils",
     ],
 )
 

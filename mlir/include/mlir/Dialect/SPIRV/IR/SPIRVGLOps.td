@@ -1488,6 +1488,58 @@ def SPIRV_GLReflectOp : SPIRV_GLBinaryArithmeticOp<"Reflect", 71, SPIRV_Float, [
 
 // ----
 
+def SPIRV_GLStepOp : SPIRV_GLBinaryArithmeticOp<"Step", 48, SPIRV_Float, [AlwaysSpeculatable]> {
+  let summary = "Return 0.0 if x < edge, else 1.0";
+
+  let description = [{
+    Result is 0.0 if x < edge; otherwise result is 1.0.
+
+    The operands must all be a scalar or vector whose component type is
+    floating-point.
+
+    Result Type and the type of all operands must be the same type. Results
+    are computed per component.
+
+    #### Example:
+
+    ```mlir
+    %2 = spirv.GL.Step %edge, %x : f32
+    %3 = spirv.GL.Step %edge, %x : vector<3xf32>
+    ```
+  }];
+}
+
+// ----
+
+def SPIRV_GLSmoothStepOp : SPIRV_GLTernaryArithmeticOp<"SmoothStep", 49, SPIRV_Float> {
+  let summary = "Return smooth Hermite interpolation between 0 and 1";
+
+  let description = [{
+    Result is 0.0 if x <= edge0 and 1.0 if x >= edge1 and performs smooth
+    Hermite interpolation between 0 and 1 when edge0 < x < edge1. This is
+    equivalent to:
+      t = clamp((x - edge0) / (edge1 - edge0), 0, 1)
+      t * t * (3 - 2 * t)
+
+    The resulting value is undefined if edge0 >= edge1.
+
+    The operands must all be a scalar or vector whose component type is
+    floating-point.
+
+    Result Type and the type of all operands must be the same type. Results
+    are computed per component.
+
+    #### Example:
+
+    ```mlir
+    %2 = spirv.GL.SmoothStep %edge0, %edge1, %x : f32
+    %3 = spirv.GL.SmoothStep %edge0, %edge1, %x : vector<3xf32>
+    ```
+  }];
+}
+
+// ----
+
 def SPIRV_GLFindILsbOp : SPIRV_GLUnaryArithmeticOp<"FindILsb", 73, SPIRV_Integer, [AlwaysSpeculatable]> {
   let summary = "Integer least-significant bit";
 
