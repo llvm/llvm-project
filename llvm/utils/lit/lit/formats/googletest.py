@@ -286,6 +286,7 @@ class GoogleTest(TestFormat):
         def remove_gtest(tests):
             return [t for t in tests if t.gtest_json_file is None]
 
+        shard_level_tests = list(discovered_tests)
         discovered_tests = remove_gtest(discovered_tests)
         gtests = [t for t in selected_tests if t.gtest_json_file]
         selected_tests = remove_gtest(selected_tests)
@@ -365,4 +366,4 @@ class GoogleTest(TestFormat):
                 selected_tests.append(test)
                 discovered_tests.append(test)
 
-        return selected_tests, discovered_tests
+        return selected_tests, discovered_tests, shard_level_tests
