@@ -27,7 +27,6 @@
 namespace clang {
 
 class DependencyOutputOptions;
-class AtomicLineLogger;
 
 namespace tooling {
 class CompilerInstanceWithContext;

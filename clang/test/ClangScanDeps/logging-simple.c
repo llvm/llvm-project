@@ -14,6 +14,9 @@
 
 // CHECK: [{{[0-9]+\.[0-9]+}}] [[#PID:]] [[#TID:]]: starting scanning command:{{.*}}tu.c
 // CHECK-NEXT: [{{[0-9]+\.[0-9]+}}] [[#PID]] [[#TID]]: timestamp_read: {{.*}}[[PCMFILE:.*\.pcm]]
+// CHECK-NEXT: [{{[0-9]+\.[0-9]+}}] [[#PID]] [[#TID]]: pcm_read_cached: {{.*}}[[PCMFILE]]
+// CHECK-NEXT: [{{[0-9]+\.[0-9]+}}] [[#PID]] [[#TID]]: pcm_read_disk: {{.*}}[[PCMFILE]]
+// CHECK-NEXT: [{{[0-9]+\.[0-9]+}}] [[#PID]] [[#TID2:]]: module_compile_thread: parent=[[#TID]] pcm_compile: {{.*}}[[PCMFILE]]
 // CHECK-NEXT: [{{[0-9]+\.[0-9]+}}] [[#PID]] [[#TID]]: pcm_write: {{.*}}[[PCMFILE]]
 // CHECK-NEXT: [{{[0-9]+\.[0-9]+}}] [[#PID]] [[#TID]]: timestamp_write: {{.*}}[[PCMFILE]]
 // CHECK-NEXT: [{{[0-9]+\.[0-9]+}}] [[#PID]] [[#TID]]: pcm_add_built: {{.*}}[[PCMFILE]]

@@ -1,6 +1,5 @@
 // Test that when two threads are scanning two different TUs, we log an expected
-// number of events (26 in this case), and for each pcm file, the sequence
-// of events is expected.
+// number of events, and for each pcm file, the sequence of events is expected.
 // RUN: rm -rf %t
 // RUN: split-file %s %t
 // RUN: sed -e "s|DIR|%/t|g" %t/cdb.json.template > %t/cdb.json
@@ -20,7 +19,7 @@
 
 // Verify the total number of logged events.
 // RUN: wc -l < %t/scan.log | FileCheck %s --check-prefix=LINECOUNT
-// LINECOUNT: {{^ *26$}}
+// LINECOUNT: {{^ *32$}}
 
 // Verify exactly two pcm_writes.
 // RUN: grep -c "pcm_write:" %t/scan.log | FileCheck %s --check-prefix=PCMWRITES
