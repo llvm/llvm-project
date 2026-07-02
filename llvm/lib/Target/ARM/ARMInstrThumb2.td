@@ -3557,6 +3557,8 @@ def : T2Pat<(ARMcmpZ GPRnopc:$Rn, (ineg rGPR:$Rm)),
             (t2CMNrr GPRnopc:$Rn, rGPR:$Rm)>;
 def : T2Pat<(ARMcmpZ GPRnopc:$Rn, (ineg t2_so_reg:$ShiftedRm)),
             (t2CMNrs GPRnopc:$Rn, t2_so_reg:$ShiftedRm)>;
+def : T2Pat<(ARMcmpZ (ineg GPRnopc:$Rn), t2_so_reg:$ShiftedRm),
+            (t2CMNrs GPRnopc:$Rn, t2_so_reg:$ShiftedRm)>;
 
 defm t2TST  : T2I_cmp_irs<0b0000, "tst", rGPR,
                           IIC_iTSTi, IIC_iTSTr, IIC_iTSTsi,
