@@ -440,6 +440,7 @@ add_header_macro(
     .llvm-libc-types.size_t
     .llvm-libc-types.ssize_t
     .llvm-libc-types.uid_t
+    .llvm-libc-types.useconds_t
     .llvm-libc-types.__getoptargv_t
 )
 
@@ -848,6 +849,7 @@ add_header_macro(
     .llvm-libc-types.size_t
     .llvm-libc-types.ssize_t
     .llvm-libc-types.suseconds_t
+    .llvm-libc-types.useconds_t
     .llvm-libc-types.time_t
     .llvm-libc-types.u_char
     .llvm-libc-types.u_int32_t

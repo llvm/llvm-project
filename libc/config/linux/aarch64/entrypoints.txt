@@ -396,12 +396,14 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.readlinkat
     libc.src.unistd.rmdir
     libc.src.unistd.setsid
+    libc.src.unistd.sleep
     libc.src.unistd.symlink
     libc.src.unistd.symlinkat
     libc.src.unistd.sysconf
     libc.src.unistd.truncate
     libc.src.unistd.unlink
     libc.src.unistd.unlinkat
+    libc.src.unistd.usleep
     libc.src.unistd.write
 
     # wchar.h entrypoints

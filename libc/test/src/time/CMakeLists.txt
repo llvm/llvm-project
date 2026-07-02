@@ -222,7 +222,9 @@ add_libc_test(
   DEPENDS
     libc.include.time
     libc.hdr.types.struct_timespec
+    libc.hdr.signal_macros
     libc.src.time.nanosleep
+    libc.src.__support.macros.config
     libc.test.UnitTest.ErrnoCheckingTest
 )
 
