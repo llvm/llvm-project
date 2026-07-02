@@ -246,7 +246,9 @@ Error NativeRecordReplayTy::recordPrologueImpl(
     return Err;
 
   SmallString<128> ImageFilename = getFilename(Instance, FileTy::Program);
-  return recordImage(Kernel, ImageFilename.c_str());
+
+  SmallString<128> IRImageFilename = getFilename(Instance, FileTy::IRModule);
+  return recordImage(Kernel, ImageFilename.c_str(), IRImageFilename.c_str());
 }
 
 Error NativeRecordReplayTy::recordEpilogueImpl(const GenericKernelTy &Kernel,
@@ -323,6 +325,8 @@ StringRef NativeRecordReplayTy::getExtension(FileTy FileType) {
     return "globals";
   case FileTy::Program:
     return "image";
+  case FileTy::IRModule:
+    return "bc";
   }
   return "";
 }
@@ -366,14 +370,24 @@ Error NativeRecordReplayTy::recordSnapshot(StringRef Filename) {
   return Plugin::success();
 }
 
-Error NativeRecordReplayTy::recordImage(const GenericKernelTy &Kernel,
-                                        StringRef Filename) {
+Error NativeRecordReplayTy::recordImage(
+    const GenericKernelTy &Kernel, StringRef Filename,
+    std::optional<StringRef> IRImageFilename) {
   std::error_code EC;
   raw_fd_ostream OS(Filename, EC);
   if (EC)
     return Plugin::error(ErrorCode::HOST_IO, "saving image file");
   OS << Kernel.getImage().getMemoryBuffer().getBuffer();
   OS.close();
+
+  if (IRImageFilename.has_value()) {
+    raw_fd_ostream IROS(IRImageFilename.value(), EC);
+    if (EC)
+      return Plugin::error(ErrorCode::HOST_IO, "saving image file");
+    IROS << Kernel.getImage().getIRMemoryBuffer().getBuffer();
+    IROS.close();
+  }
+
   return Plugin::success();
 }
 

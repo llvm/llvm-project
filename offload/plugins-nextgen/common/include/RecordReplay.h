@@ -57,7 +57,8 @@ public:
     EpilogueSnapshot,
     Descriptor,
     Globals,
-    Program
+    Program,
+    IRModule
   };
 
   struct HandleTy {
@@ -296,7 +297,8 @@ private:
   Error recordGlobals(StringRef Filename);
 
   /// Record the device image to a file.
-  Error recordImage(const GenericKernelTy &Kernel, StringRef Filename);
+  Error recordImage(const GenericKernelTy &Kernel, StringRef Filename,
+                    std::optional<StringRef> IRImageFilename);
 };
 
 } // namespace plugin
