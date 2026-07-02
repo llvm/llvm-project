@@ -30,6 +30,7 @@ CIRGenFunction::emitRISCVBuiltinExpr(unsigned builtinID, const CallExpr *e) {
 
   StringRef intrinsicName;
   mlir::Type returnType = convertType(e->getType());
+  mlir::Location loc = getLoc(e->getSourceRange());
   llvm::SmallVector<mlir::Value> ops;
 
   // `iceArguments` is a bitmap indicating whether the argument at the i-th bit
@@ -37,9 +38,33 @@ CIRGenFunction::emitRISCVBuiltinExpr(unsigned builtinID, const CallExpr *e) {
   unsigned iceArguments = 0;
   ASTContext::GetBuiltinTypeError error;
   getContext().GetBuiltinType(builtinID, error, &iceArguments);
-  assert(error == ASTContext::GE_None && "Should not codegen an error");
-  for (auto [idx, arg] : llvm::enumerate(e->arguments()))
+
+  // RVV vector builtins use a special type overload mechanism (no type string).
+  if (error == ASTContext::GE_Missing_type) {
+    // Vector intrinsics don't have a type string.
+    assert(builtinID >= clang::RISCV::FirstRVVBuiltin &&
+           builtinID <= clang::RISCV::LastRVVBuiltin);
+    iceArguments = 0;
+    if (builtinID == RISCVVector::BI__builtin_rvv_vget_v ||
+        builtinID == RISCVVector::BI__builtin_rvv_vset_v)
+      iceArguments = 1 << 1;
+  } else {
+    assert(error == ASTContext::GE_None && "Unexpected error");
+  }
+
+  for (auto [idx, arg] : llvm::enumerate(e->arguments())) {
+    // Handle aggregate argument, namely RVV tuple types in segment load/store
+    if (hasAggregateEvaluationKind(arg->getType())) {
+      LValue lv = emitAggExprToLValue(arg);
+      ops.push_back(builder.createLoad(loc, lv.getAddress()));
+      continue;
+    }
     ops.push_back(emitScalarOrConstFoldImmArg(iceArguments, idx, arg));
+  }
+
+  // TODO: Handle ManualCodegen.
+  bool hasCirManualCodegen = false;
+  int policyAttrs = 0;
 
   switch (builtinID) {
   default:
@@ -132,7 +157,6 @@ CIRGenFunction::emitRISCVBuiltinExpr(unsigned builtinID, const CallExpr *e) {
   // Zbb
   case RISCV::BI__builtin_riscv_clz_32:
   case RISCV::BI__builtin_riscv_clz_64: {
-    mlir::Location loc = getLoc(e->getSourceRange());
     auto op = cir::BitClzOp::create(builder, loc, ops[0],
                                     /*poison_zero=*/false);
     mlir::Value result = op.getResult();
@@ -142,7 +166,6 @@ CIRGenFunction::emitRISCVBuiltinExpr(unsigned builtinID, const CallExpr *e) {
   }
   case RISCV::BI__builtin_riscv_ctz_32:
   case RISCV::BI__builtin_riscv_ctz_64: {
-    mlir::Location loc = getLoc(e->getSourceRange());
     auto op = cir::BitCtzOp::create(builder, loc, ops[0],
                                     /*poison_zero=*/false);
     mlir::Value result = op.getResult();
@@ -254,9 +277,16 @@ CIRGenFunction::emitRISCVBuiltinExpr(unsigned builtinID, const CallExpr *e) {
     return mlir::Value{};
   }
 
-    // TODO: Handle vector builtins in tablegen.
+#include "clang/Basic/riscv_vector_builtin_cir_cg.inc"
+    // TODO: Handle Andes and SiFive vecotor builtin.
   }
 
-  mlir::Location loc = getLoc(e->getSourceRange());
+  if (hasCirManualCodegen) {
+    cgm.errorNYI(e->getSourceRange(),
+                 std::string("unimplemented RISC-V vector builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+    return mlir::Value{};
+  }
+
   return builder.emitIntrinsicCallOp(loc, intrinsicName, returnType, ops);
 }

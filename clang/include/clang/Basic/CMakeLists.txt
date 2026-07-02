@@ -226,6 +226,11 @@ clang_tablegen(riscv_vector_builtins.inc -gen-riscv-vector-builtins
 clang_tablegen(riscv_vector_builtin_cg.inc -gen-riscv-vector-builtin-codegen
   SOURCE riscv_vector.td
   TARGET ClangRISCVVectorBuiltinCG)
+if(CLANG_ENABLE_CIR)
+  clang_tablegen(riscv_vector_builtin_cir_cg.inc -gen-riscv-vector-builtin-cir-codegen
+    SOURCE riscv_vector.td
+    TARGET ClangRISCVVectorBuiltinCIRCG)
+endif()
 clang_tablegen(riscv_vector_builtin_sema.inc -gen-riscv-vector-builtin-sema
   SOURCE riscv_vector.td
   TARGET ClangRISCVVectorBuiltinSema)

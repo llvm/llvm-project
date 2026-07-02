@@ -110,6 +110,10 @@ public:
   /// Emit all the information needed to map builtin -> LLVM IR intrinsic.
   void createCodeGen(raw_ostream &o);
 
+  /// Emit all the information needed to map builtin -> LLVM IR intrinsic for
+  /// the CIR codegen path.
+  void createCIRCodeGen(raw_ostream &o);
+
   /// Emit all the information needed by SemaRISCVVectorLookup.cpp.
   /// We've large number of intrinsic function for RVV, creating a customized
   /// could speed up the compilation time.
@@ -321,6 +325,63 @@ void emitCodeGenSwitchBody(const RVVIntrinsic *RVVI, raw_ostream &OS) {
   if (RVVI->hasVL())
     OS << ", Ops.back()->getType()";
   OS << "};\n";
+  OS << "  break;\n";
+}
+
+void emitCIRCodeGenSwitchBody(const RVVIntrinsic *RVVI, raw_ostream &OS) {
+  if (!RVVI->getIRName().empty()) {
+    std::string IRName = RVVI->getIRName().str();
+    if (RVVI->isMasked())
+      IRName = StringRef(IRName).rsplit("_mask").first.str() + ".mask";
+    OS << "  intrinsicName = \"riscv." << IRName << "\";\n";
+  }
+
+  if (RVVI->hasManualCodegen()) {
+    OS << "  hasCirManualCodegen = true;\n";
+    OS << "  break;\n";
+    return;
+  }
+
+  OS << "  hasCirManualCodegen = false;\n";
+  OS << "  policyAttrs = " << RVVI->getPolicyAttrsBits() << ";\n";
+
+  for (const auto &I : enumerate(RVVI->getInputTypes())) {
+    if (I.value()->isPointer()) {
+      assert(RVVI->getIntrinsicTypes().front() == -1 &&
+             "RVVI should be vector load intrinsic.");
+    }
+  }
+
+  if (RVVI->isMasked()) {
+    if (RVVI->hasVL()) {
+      OS << "  std::rotate(ops.begin(), ops.begin() + 1, ops.end() - 1);\n";
+      if (RVVI->hasPolicyOperand())
+        OS << "  ops.push_back(getBuilder().getConstInt(loc, "
+              "ops.back().getType(),"
+              " policyAttrs));\n";
+      if (RVVI->hasMaskedOffOperand() && RVVI->getPolicyAttrs().isTAMAPolicy())
+        OS << "  ops.insert(ops.begin(), "
+              "getBuilder().getConstant(loc, "
+              "cir::PoisonAttr::get(returnType)));\n";
+      if (!RVVI->hasMaskedOffOperand() && RVVI->hasPassthruOperand() &&
+          RVVI->getPolicyAttrs().isTAMAPolicy())
+        OS << "  ops.insert(ops.begin(), "
+              "getBuilder().getConstant(loc, "
+              "cir::PoisonAttr::get(returnType)));\n";
+    } else {
+      OS << "  std::rotate(ops.begin(), ops.begin() + 1, ops.end());\n";
+    }
+  } else {
+    if (RVVI->hasPolicyOperand())
+      OS << "  ops.push_back(getBuilder().getConstInt(loc, "
+            "ops.back().getType(), "
+            "policyAttrs));\n";
+    else if (RVVI->hasPassthruOperand() && RVVI->getPolicyAttrs().isTAPolicy())
+      OS << "  ops.insert(ops.begin(), "
+            "getBuilder().getConstant(loc, "
+            "cir::PoisonAttr::get(returnType)));\n";
+  }
+
   OS << "  break;\n";
 }
 
@@ -646,6 +707,54 @@ void RVVEmitter::createCodeGen(raw_ostream &OS) {
   OS << "\n";
 }
 
+void RVVEmitter::createCIRCodeGen(raw_ostream &OS) {
+  std::vector<std::unique_ptr<RVVIntrinsic>> Defs;
+  createRVVIntrinsics(Defs);
+  stable_sort(Defs, [](const std::unique_ptr<RVVIntrinsic> &A,
+                       const std::unique_ptr<RVVIntrinsic> &B) {
+    if (A->getIRName() == B->getIRName())
+      return (A->getPolicyAttrs() < B->getPolicyAttrs());
+    return (A->getIRName() < B->getIRName());
+  });
+
+  // Map to keep track of which builtin names have already been emitted.
+  StringMap<RVVIntrinsic *> BuiltinMap;
+
+  // Print switch body when the ir name or ManualCodegen changes from
+  // previous iteration.
+  RVVIntrinsic *PrevDef = Defs.begin()->get();
+  for (auto &Def : Defs) {
+    StringRef CurIRName = Def->getIRName();
+    if (CurIRName != PrevDef->getIRName() ||
+        (Def->getManualCodegen() != PrevDef->getManualCodegen()) ||
+        (Def->getPolicyAttrs() != PrevDef->getPolicyAttrs())) {
+      emitCIRCodeGenSwitchBody(PrevDef, OS);
+    }
+    PrevDef = Def.get();
+
+    auto P =
+        BuiltinMap.insert(std::make_pair(Def->getBuiltinName(), Def.get()));
+    if (P.second) {
+      OS << "case RISCVVector::BI__builtin_rvv_" << Def->getBuiltinName()
+         << ":\n";
+      continue;
+    }
+
+    if (P.first->second->getIRName() != Def->getIRName())
+      PrintFatalError("Builtin with same name has different IRName");
+    else if (P.first->second->getManualCodegen() != Def->getManualCodegen())
+      PrintFatalError("Builtin with same name has different ManualCodegen");
+    else if (P.first->second->isMasked() != Def->isMasked())
+      PrintFatalError("Builtin with same name has different isMasked");
+    else if (P.first->second->hasVL() != Def->hasVL())
+      PrintFatalError("Builtin with same name has different hasVL");
+    else if (P.first->second->getPolicyScheme() != Def->getPolicyScheme())
+      PrintFatalError("Builtin with same name has different getPolicyScheme");
+  }
+  emitCIRCodeGenSwitchBody(Defs.back().get(), OS);
+  OS << "\n";
+}
+
 void RVVEmitter::createRVVIntrinsics(
     std::vector<std::unique_ptr<RVVIntrinsic>> &Out,
     std::vector<SemaRecord> *SemaRecords) {
@@ -903,6 +1012,10 @@ void EmitRVVBuiltins(const RecordKeeper &Records, raw_ostream &OS) {
 
 void EmitRVVBuiltinCG(const RecordKeeper &Records, raw_ostream &OS) {
   RVVEmitter(Records).createCodeGen(OS);
+}
+
+void EmitRVVBuiltinCIRCG(const RecordKeeper &Records, raw_ostream &OS) {
+  RVVEmitter(Records).createCIRCodeGen(OS);
 }
 
 void EmitRVVBuiltinSema(const RecordKeeper &Records, raw_ostream &OS) {
