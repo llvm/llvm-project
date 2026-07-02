@@ -10,7 +10,7 @@ This is the documentation page of the Static Analyzer; there is also an old [Off
 ```{toctree}
 :caption: Table of Contents
 :maxdepth: 2
-:numbered: true
+:numbered:
 
 analyzer/checkers
 analyzer/user-docs
