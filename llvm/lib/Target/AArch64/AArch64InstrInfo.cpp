@@ -10301,6 +10301,63 @@ static bool outliningCandidatesV8_3OpsConsensus(const outliner::Candidate &a,
   return SubtargetA.hasV8_3aOps() == SubtargetB.hasV8_3aOps();
 }
 
+/// If \p MI is an ADD/SUBXri that reads SP but does not write SP (e.g.
+/// "add x0, sp, #48"), try to adjust its signed byte offset by \p Delta and
+/// re-encode the result. On success, returns the new opcode, immediate, and
+/// shift. Returns false if \p MI is not a matching instruction or the adjusted
+/// offset is not encodable.
+static bool adjustSPAddSubImm(const MachineInstr &MI, int64_t Delta,
+                              unsigned &OutOpcode, int64_t &OutImm,
+                              int64_t &OutShift) {
+  bool IsSub;
+  switch (MI.getOpcode()) {
+  case AArch64::ADDXri:
+    IsSub = false;
+    break;
+  case AArch64::SUBXri:
+    IsSub = true;
+    break;
+  default:
+    return false;
+  }
+
+  if (!MI.getOperand(0).isReg() || !MI.getOperand(1).isReg() ||
+      !MI.getOperand(2).isImm() || !MI.getOperand(3).isImm())
+    return false;
+
+  if (MI.getOperand(0).getReg() == AArch64::SP)
+    return false;
+  if (MI.getOperand(1).getReg() != AArch64::SP)
+    return false;
+
+  // ADD/SUBXri encode a 12-bit unsigned immediate with an optional left shift
+  // which can only be 12.
+  int64_t Shift = MI.getOperand(3).getImm();
+  assert((Shift == 0 || Shift == 12) && "Unexpected add/sub immediate shift");
+
+  int64_t Offset = MI.getOperand(2).getImm() << Shift;
+  if (IsSub)
+    Offset = -Offset;
+
+  // Apply the adjustment and try to re-encode.
+  int64_t NewOffset = Offset + Delta;
+  int64_t AbsOffset = std::abs(NewOffset);
+
+  // Try to encode as a 12-bit immediate with shift=0 first.
+  if (AbsOffset <= 0xfff) {
+    OutImm = AbsOffset;
+    OutShift = 0;
+  } else if ((AbsOffset & 0xfff) == 0 && (AbsOffset >> 12) <= 0xfff) {
+    OutImm = AbsOffset >> 12;
+    OutShift = 12;
+  } else {
+    return false;
+  }
+
+  OutOpcode = NewOffset < 0 ? AArch64::SUBXri : AArch64::ADDXri;
+  return true;
+}
+
 std::optional<std::unique_ptr<outliner::OutlinedFunction>>
 AArch64InstrInfo::getOutliningCandidateInfo(
     const MachineModuleInfo &MMI,
@@ -10538,9 +10595,15 @@ AArch64InstrInfo::getOutliningCandidateInfo(
       return true;
     }
 
-    // FIXME: Add handling for instructions like "add x0, sp, #8".
+    {
+      unsigned NewOpcode;
+      int64_t NewImm, NewShift;
+      if (adjustSPAddSubImm(MI, 16, NewOpcode, NewImm, NewShift))
+        return true;
+    }
 
-    // We can't fix it up, so don't outline it.
+    // FIXME: Add handling for other SP-based address calculations that can be
+    // adjusted after outlining.
     return false;
   };
 
@@ -11057,27 +11120,37 @@ void AArch64InstrInfo::fixupPostOutline(MachineBasicBlock &MBB) const {
     bool OffsetIsScalable;
 
     // Is this a load or store with an immediate offset with SP as the base?
-    if (!MI.mayLoadOrStore() ||
-        !getMemOperandWithOffsetWidth(MI, Base, Offset, OffsetIsScalable, Width,
-                                      &RI) ||
-        (Base->isReg() && Base->getReg() != AArch64::SP))
+    if (MI.mayLoadOrStore() &&
+        getMemOperandWithOffsetWidth(MI, Base, Offset, OffsetIsScalable, Width,
+                                     &RI) &&
+        Base->isReg() && Base->getReg() == AArch64::SP) {
+      TypeSize Scale(0U, false);
+      int64_t Dummy1, Dummy2;
+
+      MachineOperand &StackOffsetOperand =
+          getMemOpBaseRegImmOfsOffsetOperand(MI);
+      assert(StackOffsetOperand.isImm() && "Stack offset wasn't immediate!");
+      getMemOpInfo(MI.getOpcode(), Scale, Width, Dummy1, Dummy2);
+      assert(Scale != 0 && "Unexpected opcode!");
+      assert(!OffsetIsScalable && "Expected offset to be a byte offset");
+
+      // We've pushed the return address to the stack, so add 16 to the offset.
+      // This is safe, since we already checked if it would overflow when we
+      // checked if this instruction was legal to outline.
+      int64_t NewImm = (Offset + 16) / (int64_t)Scale.getFixedValue();
+      StackOffsetOperand.setImm(NewImm);
       continue;
+    }
 
-    // It is, so we have to fix it up.
-    TypeSize Scale(0U, false);
-    int64_t Dummy1, Dummy2;
-
-    MachineOperand &StackOffsetOperand = getMemOpBaseRegImmOfsOffsetOperand(MI);
-    assert(StackOffsetOperand.isImm() && "Stack offset wasn't immediate!");
-    getMemOpInfo(MI.getOpcode(), Scale, Width, Dummy1, Dummy2);
-    assert(Scale != 0 && "Unexpected opcode!");
-    assert(!OffsetIsScalable && "Expected offset to be a byte offset");
-
-    // We've pushed the return address to the stack, so add 16 to the offset.
-    // This is safe, since we already checked if it would overflow when we
-    // checked if this instruction was legal to outline.
-    int64_t NewImm = (Offset + 16) / (int64_t)Scale.getFixedValue();
-    StackOffsetOperand.setImm(NewImm);
+    {
+      unsigned NewOpcode;
+      int64_t NewImm, NewShift;
+      if (adjustSPAddSubImm(MI, 16, NewOpcode, NewImm, NewShift)) {
+        MI.setDesc(get(NewOpcode));
+        MI.getOperand(2).setImm(NewImm);
+        MI.getOperand(3).setImm(NewShift);
+      }
+    }
   }
 }
 
