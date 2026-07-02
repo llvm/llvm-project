@@ -1095,6 +1095,8 @@ define void @experimental_constrained_fadd(float %s, <4 x float> %v) {
   %1 = call float @llvm.experimental.constrained.fadd.f32(float %s, float %s, metadata !"round.towardzero", metadata !"fpexcept.ignore")
   ; CHECK: llvm.intr.experimental.constrained.fadd %{{.*}}, %{{.*}} towardzero ignore : vector<4xf32>
   %2 = call <4 x float> @llvm.experimental.constrained.fadd.v4f32(<4 x float> %v, <4 x float> %v, metadata !"round.towardzero", metadata !"fpexcept.ignore")
+  ; CHECK: llvm.intr.experimental.constrained.fadd %{{.*}}, %{{.*}} tonearest strict {fastmathFlags = #llvm.fastmath<nnan, nsz>} : f32
+  %3 = call nnan nsz float @llvm.experimental.constrained.fadd.f32(float %s, float %s, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret void
 }
 
@@ -1213,6 +1215,87 @@ define void @experimental_constrained_fpext(float %s, <4 x float> %v) {
   %3 = call double @llvm.experimental.constrained.fpext.f64.f32(float %s, metadata !"fpexcept.strict")
   ; CHECK: llvm.intr.experimental.constrained.fpext %{{.*}} ignore : vector<4xf32> to vector<4xf64>
   %6 = call <4 x double> @llvm.experimental.constrained.fpext.v4f64.v4f32(<4 x float> %v, metadata !"fpexcept.ignore")
+  ret void
+}
+
+; CHECK-LABEL: experimental_constrained_nearbyint
+define void @experimental_constrained_nearbyint(float %s, <4 x float> %v) {
+  ; CHECK: llvm.intr.experimental.constrained.nearbyint %{{.*}} tonearest strict : f32
+  %1 = call float @llvm.experimental.constrained.nearbyint.f32(float %s, metadata !"round.tonearest", metadata !"fpexcept.strict")
+  ; CHECK: llvm.intr.experimental.constrained.nearbyint %{{.*}} towardzero ignore : vector<4xf32>
+  %2 = call <4 x float> @llvm.experimental.constrained.nearbyint.v4f32(<4 x float> %v, metadata !"round.towardzero", metadata !"fpexcept.ignore")
+  ; CHECK: llvm.intr.experimental.constrained.nearbyint %{{.*}} tonearest strict {fastmathFlags = #llvm.fastmath<nsz>} : f32
+  %3 = call nsz float @llvm.experimental.constrained.nearbyint.f32(float %s, metadata !"round.tonearest", metadata !"fpexcept.strict")
+  ret void
+}
+
+; CHECK-LABEL: experimental_constrained_ceil
+define void @experimental_constrained_ceil(float %s, <4 x float> %v) {
+  ; CHECK: llvm.intr.experimental.constrained.ceil %{{.*}} strict : f32
+  %1 = call float @llvm.experimental.constrained.ceil.f32(float %s, metadata !"fpexcept.strict")
+  ; CHECK: llvm.intr.experimental.constrained.ceil %{{.*}} ignore : vector<4xf32>
+  %2 = call <4 x float> @llvm.experimental.constrained.ceil.v4f32(<4 x float> %v, metadata !"fpexcept.ignore")
+  ret void
+}
+
+; CHECK-LABEL: experimental_constrained_maxnum
+define void @experimental_constrained_maxnum(float %s, <4 x float> %v) {
+  ; CHECK: llvm.intr.experimental.constrained.maxnum %{{.*}}, %{{.*}} strict : f32
+  %1 = call float @llvm.experimental.constrained.maxnum.f32(float %s, float %s, metadata !"fpexcept.strict")
+  ; CHECK: llvm.intr.experimental.constrained.maxnum %{{.*}}, %{{.*}} ignore : vector<4xf32>
+  %2 = call <4 x float> @llvm.experimental.constrained.maxnum.v4f32(<4 x float> %v, <4 x float> %v, metadata !"fpexcept.ignore")
+  ; CHECK: llvm.intr.experimental.constrained.maxnum %{{.*}}, %{{.*}} strict {fastmathFlags = #llvm.fastmath<nsz>} : f32
+  %3 = call nsz float @llvm.experimental.constrained.maxnum.f32(float %s, float %s, metadata !"fpexcept.strict")
+  ret void
+}
+
+; CHECK-LABEL: experimental_constrained_minnum
+define void @experimental_constrained_minnum(float %s, <4 x float> %v) {
+  ; CHECK: llvm.intr.experimental.constrained.minnum %{{.*}}, %{{.*}} strict : f32
+  %1 = call float @llvm.experimental.constrained.minnum.f32(float %s, float %s, metadata !"fpexcept.strict")
+  ; CHECK: llvm.intr.experimental.constrained.minnum %{{.*}}, %{{.*}} ignore {fastmathFlags = #llvm.fastmath<nsz>} : f32
+  %2 = call nsz float @llvm.experimental.constrained.minnum.f32(float %s, float %s, metadata !"fpexcept.ignore")
+  ; CHECK: llvm.intr.experimental.constrained.minnum %{{.*}}, %{{.*}} strict {fastmathFlags = #llvm.fastmath<nsz>} : vector<4xf32>
+  %3 = call nsz <4 x float> @llvm.experimental.constrained.minnum.v4f32(<4 x float> %v, <4 x float> %v, metadata !"fpexcept.strict")
+  ret void
+}
+
+; CHECK-LABEL: experimental_constrained_ldexp
+define void @experimental_constrained_ldexp(float %s, i32 %e) {
+  ; CHECK: llvm.intr.experimental.constrained.ldexp %{{.*}}, %{{.*}} tonearest strict : (f32, i32) -> f32
+  %1 = call float @llvm.experimental.constrained.ldexp.f32.i32(float %s, i32 %e, metadata !"round.tonearest", metadata !"fpexcept.strict")
+  ret void
+}
+
+; CHECK-LABEL: experimental_constrained_lrint
+define void @experimental_constrained_lrint(float %s) {
+  ; CHECK: llvm.intr.experimental.constrained.lrint %{{.*}} tonearest strict : f32 to i32
+  %1 = call i32 @llvm.experimental.constrained.lrint.i32.f32(float %s, metadata !"round.tonearest", metadata !"fpexcept.strict")
+  ret void
+}
+
+; CHECK-LABEL: experimental_constrained_lround
+define void @experimental_constrained_lround(float %s) {
+  ; CHECK: llvm.intr.experimental.constrained.lround %{{.*}} strict : f32 to i32
+  %1 = call i32 @llvm.experimental.constrained.lround.i32.f32(float %s, metadata !"fpexcept.strict")
+  ret void
+}
+
+; CHECK-LABEL: experimental_constrained_fptosi
+define void @experimental_constrained_fptosi(float %s, <4 x float> %v) {
+  ; CHECK: llvm.intr.experimental.constrained.fptosi %{{.*}} strict : f32 to i32
+  %1 = call i32 @llvm.experimental.constrained.fptosi.i32.f32(float %s, metadata !"fpexcept.strict")
+  ; CHECK: llvm.intr.experimental.constrained.fptosi %{{.*}} ignore : vector<4xf32> to vector<4xi32>
+  %2 = call <4 x i32> @llvm.experimental.constrained.fptosi.v4i32.v4f32(<4 x float> %v, metadata !"fpexcept.ignore")
+  ret void
+}
+
+; CHECK-LABEL: experimental_constrained_fcmp
+define void @experimental_constrained_fcmp(float %s, <4 x float> %v) {
+  ; CHECK: llvm.intr.experimental.constrained.fcmp oeq %{{.*}}, %{{.*}} strict : f32
+  %1 = call i1 @llvm.experimental.constrained.fcmp.f32(float %s, float %s, metadata !"oeq", metadata !"fpexcept.strict")
+  ; CHECK: llvm.intr.experimental.constrained.fcmps olt %{{.*}}, %{{.*}} ignore : vector<4xf32>
+  %2 = call <4 x i1> @llvm.experimental.constrained.fcmps.v4f32(<4 x float> %v, <4 x float> %v, metadata !"olt", metadata !"fpexcept.ignore")
   ret void
 }
 
@@ -1512,6 +1595,21 @@ declare <4 x half> @llvm.experimental.constrained.fptrunc.v4f16.v4f64(<4 x doubl
 declare float @llvm.experimental.constrained.fptrunc.f32.f64(double, metadata, metadata)
 declare <4 x double> @llvm.experimental.constrained.fpext.v4f64.v4f32(<4 x float>, metadata)
 declare double @llvm.experimental.constrained.fpext.f64.f32(float, metadata)
+declare float @llvm.experimental.constrained.nearbyint.f32(float, metadata, metadata)
+declare <4 x float> @llvm.experimental.constrained.nearbyint.v4f32(<4 x float>, metadata, metadata)
+declare float @llvm.experimental.constrained.ceil.f32(float, metadata)
+declare <4 x float> @llvm.experimental.constrained.ceil.v4f32(<4 x float>, metadata)
+declare float @llvm.experimental.constrained.maxnum.f32(float, float, metadata)
+declare <4 x float> @llvm.experimental.constrained.maxnum.v4f32(<4 x float>, <4 x float>, metadata)
+declare float @llvm.experimental.constrained.minnum.f32(float, float, metadata)
+declare <4 x float> @llvm.experimental.constrained.minnum.v4f32(<4 x float>, <4 x float>, metadata)
+declare float @llvm.experimental.constrained.ldexp.f32.i32(float, i32, metadata, metadata)
+declare i32 @llvm.experimental.constrained.lrint.i32.f32(float, metadata, metadata)
+declare i32 @llvm.experimental.constrained.lround.i32.f32(float, metadata)
+declare i32 @llvm.experimental.constrained.fptosi.i32.f32(float, metadata)
+declare <4 x i32> @llvm.experimental.constrained.fptosi.v4i32.v4f32(<4 x float>, metadata)
+declare i1 @llvm.experimental.constrained.fcmp.f32(float, float, metadata, metadata)
+declare <4 x i1> @llvm.experimental.constrained.fcmps.v4f32(<4 x float>, <4 x float>, metadata, metadata)
 declare i2 @llvm.ucmp.i2.i32(i32, i32)
 declare <4 x i32> @llvm.ucmp.v4i32.v4i32(<4 x i32>, <4 x i32>)
 declare i2 @llvm.scmp.i2.i32(i32, i32)
