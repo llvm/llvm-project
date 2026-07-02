@@ -14931,9 +14931,17 @@ public:
 /// should be copied with __builtin_memcpy rather than via explicit assignments,
 /// do so. This optimization only applies for arrays of scalars, and for arrays
 /// of class type where the selected copy/move-assignment operator is trivial.
+///
+/// \param SuppressMemaccessWarning casts the source and destination addresses
+/// to void pointers so that CheckMemaccessArguments does not warn.  A union's
+/// defaulted assignment copies the whole object representation by memcpy (like
+/// the defaulted union copy constructor), which is correct even when the union
+/// is not trivially copyable; the cast marks the copy as intentional, matching
+/// the documented (void*) silencing of -Wnontrivial-memcall.
 static StmtResult
 buildMemcpyForAssignmentOp(Sema &S, SourceLocation Loc, QualType T,
-                           const ExprBuilder &ToB, const ExprBuilder &FromB) {
+                           const ExprBuilder &ToB, const ExprBuilder &FromB,
+                           bool SuppressMemaccessWarning = false) {
   // Compute the size of the memory buffer to be copied.
   QualType SizeType = S.Context.getSizeType();
   llvm::APInt Size(S.Context.getTypeSize(SizeType),
@@ -14950,6 +14958,22 @@ buildMemcpyForAssignmentOp(Sema &S, SourceLocation Loc, QualType T,
   To = UnaryOperator::Create(
       S.Context, To, UO_AddrOf, S.Context.getPointerType(To->getType()),
       VK_PRValue, OK_Ordinary, Loc, false, S.CurFPFeatureOverrides());
+
+  if (SuppressMemaccessWarning) {
+    // An explicit cast to void* survives IgnoreParenImpCasts, so the memaccess
+    // check sees a void pointee and skips the non-trivial-copy warning.
+    QualType ConstVoidPtr =
+        S.Context.getPointerType(S.Context.VoidTy.withConst());
+    ExprResult FromCast = S.BuildCStyleCastExpr(
+        Loc, S.Context.getTrivialTypeSourceInfo(ConstVoidPtr, Loc), Loc, From);
+    ExprResult ToCast = S.BuildCStyleCastExpr(
+        Loc, S.Context.getTrivialTypeSourceInfo(S.Context.VoidPtrTy, Loc), Loc,
+        To);
+    assert(FromCast.isUsable() && ToCast.isUsable() &&
+           "cast to void* cannot fail");
+    From = FromCast.get();
+    To = ToCast.get();
+  }
 
   bool NeedsCollectableMemCpy = false;
   if (auto *RD = T->getBaseElementTypeUnsafe()->getAsRecordDecl())
@@ -15354,6 +15378,31 @@ static void diagnoseDeprecatedCopyOperation(Sema &S, CXXMethodDecl *CopyOp) {
   }
 }
 
+// A defaulted copy or move assignment operator for a union copies the object
+// representation as if by a memcpy, the same way the defaulted union copy
+// constructor does.  The memberwise loops in DefineImplicitCopyAssignment and
+// DefineImplicitMoveAssignment skip union members, so the whole-object copy is
+// emitted here instead.  Marks AssignOp invalid and returns false on failure.
+static bool buildUnionAssignmentCopy(Sema &S, SourceLocation Loc,
+                                     CXXRecordDecl *ClassDecl,
+                                     std::optional<RefBuilder> &ExplicitObject,
+                                     std::optional<DerefBuilder> &DerefThis,
+                                     const ExprBuilder &From,
+                                     CXXMethodDecl *AssignOp,
+                                     SmallVectorImpl<Stmt *> &Statements) {
+  ExprBuilder &To = ExplicitObject ? static_cast<ExprBuilder &>(*ExplicitObject)
+                                   : static_cast<ExprBuilder &>(*DerefThis);
+  StmtResult Copy = buildMemcpyForAssignmentOp(
+      S, Loc, S.Context.getCanonicalTagType(ClassDecl), To, From,
+      /*SuppressMemaccessWarning=*/true);
+  if (Copy.isInvalid()) {
+    AssignOp->setInvalidDecl();
+    return false;
+  }
+  Statements.push_back(Copy.getAs<Stmt>());
+  return true;
+}
+
 void Sema::DefineImplicitCopyAssignment(SourceLocation CurrentLocation,
                                         CXXMethodDecl *CopyAssignOperator) {
   assert((CopyAssignOperator->isDefaulted() &&
@@ -15477,10 +15526,17 @@ void Sema::DefineImplicitCopyAssignment(SourceLocation CurrentLocation,
     Statements.push_back(Copy.getAs<Expr>());
   }
 
+  // A union's defaulted copy assignment copies the whole object; see
+  // buildUnionAssignmentCopy.
+  if (ClassDecl->isUnion() &&
+      !buildUnionAssignmentCopy(*this, Loc, ClassDecl, ExplicitObject,
+                                DerefThis, OtherRef, CopyAssignOperator,
+                                Statements))
+    return;
+
   // Assign non-static members.
   for (auto *Field : ClassDecl->fields()) {
-    // FIXME: We should form some kind of AST representation for the implied
-    // memcpy in a union copy operation.
+    // Union members are copied by the whole-object memcpy emitted above.
     if (Field->isUnnamedBitField() || Field->getParent()->isUnion())
       continue;
 
@@ -15866,10 +15922,17 @@ void Sema::DefineImplicitMoveAssignment(SourceLocation CurrentLocation,
     Statements.push_back(Move.getAs<Expr>());
   }
 
+  // A union's defaulted move assignment copies the whole object; see
+  // buildUnionAssignmentCopy.
+  if (ClassDecl->isUnion() &&
+      !buildUnionAssignmentCopy(*this, Loc, ClassDecl, ExplicitObject,
+                                DerefThis, OtherRef, MoveAssignOperator,
+                                Statements))
+    return;
+
   // Assign non-static members.
   for (auto *Field : ClassDecl->fields()) {
-    // FIXME: We should form some kind of AST representation for the implied
-    // memcpy in a union copy operation.
+    // Union members are copied by the whole-object memcpy emitted above.
     if (Field->isUnnamedBitField() || Field->getParent()->isUnion())
       continue;
 
