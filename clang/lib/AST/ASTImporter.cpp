@@ -8045,8 +8045,16 @@ ExpectedStmt ASTNodeImporter::VisitParenListExpr(ParenListExpr *E) {
   if (!ToRParenLocOrErr)
     return ToRParenLocOrErr.takeError();
 
+  SmallVector<SourceLocation, 4> ToCommaLocs;
+  for (SourceLocation CommaLoc : E->getCommaLocs()) {
+    ExpectedSLoc ToCommaLocOrErr = import(CommaLoc);
+    if (!ToCommaLocOrErr)
+      return ToCommaLocOrErr.takeError();
+    ToCommaLocs.push_back(*ToCommaLocOrErr);
+  }
+
   return ParenListExpr::Create(Importer.getToContext(), *ToLParenLocOrErr,
-                               ToExprs, *ToRParenLocOrErr);
+                               ToExprs, *ToRParenLocOrErr, ToCommaLocs);
 }
 
 ExpectedStmt ASTNodeImporter::VisitStmtExpr(StmtExpr *E) {

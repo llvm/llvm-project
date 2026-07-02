@@ -2698,7 +2698,9 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
       ExpressionStarts = SetPreferredType;
     }
 
-    bool SawError = ParseExpressionList(Exprs, ExpressionStarts);
+    SmallVector<SourceLocation, 4> CommaLocs;
+    bool SawError = ParseExpressionList(Exprs, ExpressionStarts, false,
+                                        CommaLocs);
 
     if (SawError) {
       if (ThisVarDecl && PP.isCodeCompletionReached() && !CalledSignatureHelp) {
@@ -2716,7 +2718,7 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
 
       ExprResult Initializer = Actions.ActOnParenListExpr(T.getOpenLocation(),
                                                           T.getCloseLocation(),
-                                                          Exprs);
+                                                          Exprs, CommaLocs);
       Actions.AddInitializerToDecl(ThisDecl, Initializer.get(),
                                    /*DirectInit=*/true);
     }

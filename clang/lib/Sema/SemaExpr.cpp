@@ -8386,20 +8386,24 @@ Sema::MaybeConvertParenListExprToParenExpr(Scope *S, Expr *OrigExpr) {
     return OrigExpr;
 
   ExprResult Result(E->getExpr(0));
+  ArrayRef<SourceLocation> CommaLocs = E->getCommaLocs();
 
-  for (unsigned i = 1, e = E->getNumExprs(); i != e && !Result.isInvalid(); ++i)
-    Result = ActOnBinOp(S, E->getExprLoc(), tok::comma, Result.get(),
-                        E->getExpr(i));
+  for (unsigned i = 1, e = E->getNumExprs(); i != e && !Result.isInvalid();
+       ++i) {
+    SourceLocation CommaLoc =
+        CommaLocs[i - 1].isValid() ? CommaLocs[i - 1] : E->getLParenLoc();
+    Result = ActOnBinOp(S, CommaLoc, tok::comma, Result.get(), E->getExpr(i));
+  }
 
   if (Result.isInvalid()) return ExprError();
 
   return ActOnParenExpr(E->getLParenLoc(), E->getRParenLoc(), Result.get());
 }
 
-ExprResult Sema::ActOnParenListExpr(SourceLocation L,
-                                    SourceLocation R,
-                                    MultiExprArg Val) {
-  return ParenListExpr::Create(Context, L, Val, R);
+ExprResult Sema::ActOnParenListExpr(SourceLocation L, SourceLocation R,
+                                    MultiExprArg Val,
+                                    ArrayRef<SourceLocation> CommaLocs) {
+  return ParenListExpr::Create(Context, L, Val, R, CommaLocs);
 }
 
 ExprResult Sema::ActOnCXXParenListInitExpr(ArrayRef<Expr *> Args, QualType T,

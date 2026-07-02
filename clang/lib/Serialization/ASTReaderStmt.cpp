@@ -748,9 +748,12 @@ void ASTStmtReader::VisitParenListExpr(ParenListExpr *E) {
   unsigned NumExprs = Record.readInt();
   assert((NumExprs == E->getNumExprs()) && "Wrong NumExprs!");
   for (unsigned I = 0; I != NumExprs; ++I)
-    E->getTrailingObjects()[I] = Record.readSubStmt();
+    E->getTrailingObjects<Stmt *>()[I] = Record.readSubStmt();
   E->LParenLoc = readSourceLocation();
   E->RParenLoc = readSourceLocation();
+  unsigned NumCommas = E->getNumCommas();
+  for (unsigned I = 0; I != NumCommas; ++I)
+    E->getTrailingObjects<SourceLocation>()[I] = readSourceLocation();
 }
 
 void ASTStmtReader::VisitUnaryOperator(UnaryOperator *E) {
@@ -3303,11 +3306,12 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       S = new (Context) ParenExpr(Empty);
       break;
 
-    case EXPR_PAREN_LIST:
-      S = ParenListExpr::CreateEmpty(
-          Context,
-          /* NumExprs=*/Record[ASTStmtReader::NumExprFields]);
+    case EXPR_PAREN_LIST: {
+      unsigned NumExprs = Record[ASTStmtReader::NumExprFields];
+      S = ParenListExpr::CreateEmpty(Context,
+                                     /* NumExprs=*/NumExprs);
       break;
+    }
 
     case EXPR_UNARY_OPERATOR: {
       BitsUnpacker UnaryOperatorBits(Record[ASTStmtReader::NumStmtFields]);
