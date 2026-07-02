@@ -278,9 +278,9 @@ declare {<64 x i8>, <64 x i1>}  @llvm.smul.with.overflow.v64i8(<64 x i8>, <64 x 
 define i32 @smul(i32 %arg) {
 ; CHECK-LABEL: 'smul'
 ; CHECK-NEXT:  Cost Model: Found costs of 3 for: %I64 = call { i64, i1 } @llvm.smul.with.overflow.i64(i64 undef, i64 undef)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:34 CodeSize:20 Lat:28 SizeLat:28 for: %V2I64 = call { <2 x i64>, <2 x i1> } @llvm.smul.with.overflow.v2i64(<2 x i64> undef, <2 x i64> undef)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:68 CodeSize:37 Lat:53 SizeLat:53 for: %V4I64 = call { <4 x i64>, <4 x i1> } @llvm.smul.with.overflow.v4i64(<4 x i64> undef, <4 x i64> undef)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:136 CodeSize:71 Lat:103 SizeLat:103 for: %V8I64 = call { <8 x i64>, <8 x i1> } @llvm.smul.with.overflow.v8i64(<8 x i64> undef, <8 x i64> undef)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:38 CodeSize:20 Lat:28 SizeLat:28 for: %V2I64 = call { <2 x i64>, <2 x i1> } @llvm.smul.with.overflow.v2i64(<2 x i64> undef, <2 x i64> undef)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:76 CodeSize:37 Lat:53 SizeLat:53 for: %V4I64 = call { <4 x i64>, <4 x i1> } @llvm.smul.with.overflow.v4i64(<4 x i64> undef, <4 x i64> undef)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:152 CodeSize:71 Lat:103 SizeLat:103 for: %V8I64 = call { <8 x i64>, <8 x i1> } @llvm.smul.with.overflow.v8i64(<8 x i64> undef, <8 x i64> undef)
 ; CHECK-NEXT:  Cost Model: Found costs of 2 for: %I32 = call { i32, i1 } @llvm.smul.with.overflow.i32(i32 undef, i32 undef)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:38 CodeSize:10 Lat:10 SizeLat:10 for: %V4I32 = call { <4 x i32>, <4 x i1> } @llvm.smul.with.overflow.v4i32(<4 x i32> undef, <4 x i32> undef)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:76 CodeSize:17 Lat:17 SizeLat:17 for: %V8I32 = call { <8 x i32>, <8 x i1> } @llvm.smul.with.overflow.v8i32(<8 x i32> undef, <8 x i32> undef)
@@ -341,9 +341,9 @@ declare {<64 x i8>, <64 x i1>}  @llvm.umul.with.overflow.v64i8(<64 x i8>, <64 x 
 define i32 @umul(i32 %arg) {
 ; CHECK-LABEL: 'umul'
 ; CHECK-NEXT:  Cost Model: Found costs of 3 for: %I64 = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 undef, i64 undef)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:33 CodeSize:19 Lat:27 SizeLat:27 for: %V2I64 = call { <2 x i64>, <2 x i1> } @llvm.umul.with.overflow.v2i64(<2 x i64> undef, <2 x i64> undef)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:66 CodeSize:36 Lat:52 SizeLat:52 for: %V4I64 = call { <4 x i64>, <4 x i1> } @llvm.umul.with.overflow.v4i64(<4 x i64> undef, <4 x i64> undef)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:132 CodeSize:70 Lat:102 SizeLat:102 for: %V8I64 = call { <8 x i64>, <8 x i1> } @llvm.umul.with.overflow.v8i64(<8 x i64> undef, <8 x i64> undef)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:37 CodeSize:19 Lat:27 SizeLat:27 for: %V2I64 = call { <2 x i64>, <2 x i1> } @llvm.umul.with.overflow.v2i64(<2 x i64> undef, <2 x i64> undef)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:74 CodeSize:36 Lat:52 SizeLat:52 for: %V4I64 = call { <4 x i64>, <4 x i1> } @llvm.umul.with.overflow.v4i64(<4 x i64> undef, <4 x i64> undef)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:148 CodeSize:70 Lat:102 SizeLat:102 for: %V8I64 = call { <8 x i64>, <8 x i1> } @llvm.umul.with.overflow.v8i64(<8 x i64> undef, <8 x i64> undef)
 ; CHECK-NEXT:  Cost Model: Found costs of 2 for: %I32 = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 undef, i32 undef)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:37 CodeSize:9 Lat:9 SizeLat:9 for: %V4I32 = call { <4 x i32>, <4 x i1> } @llvm.umul.with.overflow.v4i32(<4 x i32> undef, <4 x i32> undef)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:74 CodeSize:16 Lat:16 SizeLat:16 for: %V8I32 = call { <8 x i32>, <8 x i1> } @llvm.umul.with.overflow.v8i32(<8 x i32> undef, <8 x i32> undef)
