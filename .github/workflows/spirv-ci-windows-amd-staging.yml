@@ -74,6 +74,13 @@ jobs:
       # zstd. FORCE_ON makes the configure fail loudly if zstd is missing
       # rather than silently building clang-offload-bundler without
       # compression.
+      # CMAKE_DISABLE_PRECOMPILE_HEADERS=ON: LLVM enables PCH by default, but the
+      # clang unit tests (built via clang-test-depends) reuse LLVMSupport's PCH.
+      # Upstream adds /utf-8 to the BasicTests target for unicode in test sources
+      # (llvm/llvm-project#206993); MSVC then rejects the PCH because its charset
+      # flags differ from the producer's (error C2855). Disabling PCH sidesteps
+      # this whole class of PCH consumer/producer flag-mismatch errors on MSVC.
+      # Mirrors ROCm/TheRock#6219, which disables PCH for the same reason (clang).
       - name: Configure LLVM
         run: |
           cmake -G Ninja -S llvm-project/llvm -B build \
@@ -85,7 +92,8 @@ jobs:
             -DLLVM_ENABLE_ZSTD=FORCE_ON \
             -DLLVM_INCLUDE_TESTS=ON \
             -DLLVM_INSTALL_GTEST=ON \
-            -DLLVM_LIT_ARGS="-sv --no-progress-bar"
+            -DLLVM_LIT_ARGS="-sv --no-progress-bar" \
+            -DCMAKE_DISABLE_PRECOMPILE_HEADERS=ON
 
       - name: Build LLVM + Clang + amd-llvm-spirv + test deps
         run: ninja -C build llvm-test-depends clang-test-depends amd-llvm-spirv
