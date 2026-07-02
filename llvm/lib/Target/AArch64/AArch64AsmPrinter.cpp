@@ -3390,11 +3390,11 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
   case AArch64::AUTPCPAC: {
     auto AuthSchema = PtrAuthSchema::CreateRegReg(
         (AArch64PACKey::ID)MI->getOperand(0).getImm(),
-        MI->getOperand(1).getReg(), MI->getOperand(2).getReg());
+        AArch64::X16, AArch64::X15);
 
     auto SignSchema = PtrAuthSchema::CreateImmReg(
-        (AArch64PACKey::ID)MI->getOperand(3).getImm(),
-        MI->getOperand(4).getImm(), MI->getOperand(5));
+        (AArch64PACKey::ID)MI->getOperand(1).getImm(),
+        MI->getOperand(2).getImm(), MI->getOperand(3));
 
     emitPtrauthAuthResign(/*Pointer=*/AArch64::X17, /*Scratch=*/AArch64::X16,
                           AuthSchema, SignSchema, std::nullopt,

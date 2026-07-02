@@ -6735,8 +6735,6 @@ bool AArch64InstructionSelector::selectIntrinsic(MachineInstr &I,
 
     MIB.buildInstr(AArch64::AUTPCPAC)
         .addImm(AUTKey)
-        .addUse(AArch64::X16)
-        .addUse(AArch64::X15)
         .addImm(PACKey)
         .addImm(PACConstDiscC)
         .addUse(PACAddrDisc)

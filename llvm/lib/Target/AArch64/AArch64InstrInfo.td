@@ -2270,10 +2270,13 @@ let Predicates = [HasPAuth] in {
   // AUT a pointer using a PC-blended discriminator and re-PAC with different
   // keys/data. This directly manipulates x16/x17, which are the only registers
   // certain OSs guarantee are safe to use for sensitive operations.
+  // Additionally, it uses fixed implicit registers x15/x16/x17 for the AUT as
+  // AUTI[AB]171615 is the only instruction that can do the three-input-operand
+  // AUT, unlike the other PAuth-related pseudos (AUTx16x17, AUTPAC) where
+  // the register operands are structurally necessary.
   def AUTPCPAC
       : Pseudo<(outs),
                (ins i32imm:$AUTKey,
-                    GPR64:$AUTAddrDisc, GPR64:$AUTPCDisc,
                     i32imm:$PACKey, i64imm:$PACDisc, GPR64noip:$PACAddrDisc),
                []>, Sched<[WriteI, ReadI]> {
     let isCodeGenOnly = 1;
