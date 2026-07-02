@@ -1608,7 +1608,7 @@ bool LoopIdiomRecognize::optimizeCRCLoopUsingClmul(const PolynomialInfo &Info) {
 
   IRBuilder<> Builder(CurLoop->getLoopPreheader()->getTerminator());
 
-  auto ShlOrLShr = [&](Value *Op, int ShlAmt, const Twine &Name) {
+  auto ShlOrLShr = [&Builder](Value *Op, int ShlAmt, const Twine &Name) {
     if (ShlAmt > 0)
       return Builder.CreateShl(Op, ShlAmt, Name);
     if (ShlAmt < 0)
@@ -1616,7 +1616,7 @@ bool LoopIdiomRecognize::optimizeCRCLoopUsingClmul(const PolynomialInfo &Info) {
     return Op;
   };
 
-  auto LoTCBits = [&](Value *Op, const Twine &Name) {
+  auto LoTCBits = [TC, &Builder, &Ctx](Value *Op, const Twine &Name) {
     unsigned OpBW = Op->getType()->getIntegerBitWidth();
     assert(OpBW >= TC && "Bit width should be at least TripCount");
     auto *Mask = ConstantInt::get(Ctx, APInt::getLowBitsSet(OpBW, TC));
