@@ -1978,7 +1978,9 @@ CompilerInvocation::getSemanticsCtx(
           clang::getDriverOptTable()
               .getOptionPrefixedName(
                   clang::options::OPT_fno_openacc_default_none_scalars_strict)
-              .str());
+              .str())
+      .set_targetTriple(targetMachine.getTargetTriple().str())
+      .set_targetFeatures(targetMachine.getTargetFeatureString().str());
 
   std::string compilerVersion = Fortran::common::getFlangFullVersion();
   Fortran::tools::setUpTargetCharacteristics(
