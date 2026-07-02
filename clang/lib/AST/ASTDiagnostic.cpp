@@ -2212,10 +2212,6 @@ std::string clang::FormatUTFCodeUnitAsCodepoint(unsigned Value, QualType T) {
     return std::string(Str.begin(), Str.end());
   }
 
-  char Buffer[UNI_MAX_UTF8_BYTES_PER_CODE_POINT];
-  char *Ptr = Buffer;
-  [[maybe_unused]] bool Converted = llvm::ConvertCodePointToUTF8(Value, Ptr);
-  assert(Converted && "trying to encode invalid code unit");
-  EscapeStringForDiagnostic(StringRef(Buffer, Ptr - Buffer), Str);
-  return std::string(Str.begin(), Str.end());
+  llvm::SmallString<16> Escaped = EscapeSingleCodepointForDiagnostic(Value);
+  return std::string(Escaped.begin(), Escaped.end());
 }
