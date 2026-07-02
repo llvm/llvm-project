@@ -34,30 +34,89 @@ llvm_canonicalize_cmake_booleans(
   LLVM_HAVE_OPENCSD
   )
 
-configure_lit_site_cfg(
-  ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.py.in
-  ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg.py
-  MAIN_CONFIG
-  ${CMAKE_CURRENT_SOURCE_DIR}/lit.cfg.py
-  PATHS
-  "CMAKE_OSX_SYSROOT"
-  "LLVM_SOURCE_DIR"
-  "LLVM_BINARY_DIR"
-  "LLVM_TOOLS_DIR"
-  "LLVM_LIBS_DIR"
-  "SHLIBDIR"
-  )
-configure_lit_site_cfg(
-  ${CMAKE_CURRENT_SOURCE_DIR}/Unit/lit.site.cfg.py.in
-  ${CMAKE_CURRENT_BINARY_DIR}/Unit/lit.site.cfg.py
-  MAIN_CONFIG
-  ${CMAKE_CURRENT_SOURCE_DIR}/Unit/lit.cfg.py
-  PATHS
-  "LLVM_SOURCE_DIR"
-  "LLVM_BINARY_DIR"
-  "LLVM_TOOLS_DIR"
-  "SHLIBDIR"
-  )
+if (LLVM_TEST_WINDOWS_PREFER_FORWARD_SLASH_MATRIX)
+  # Configure unit tests matrix
+  set(LLVM_WINDOWS_PREFER_FORWARD_SLASH_VAL "0")
+  configure_lit_site_cfg(
+    ${CMAKE_CURRENT_SOURCE_DIR}/Unit/lit.site.cfg.py.in
+    ${CMAKE_CURRENT_BINARY_DIR}/Unit/default/lit.site.cfg.py
+    MAIN_CONFIG
+    ${CMAKE_CURRENT_SOURCE_DIR}/Unit/lit.cfg.py
+    PATHS
+    "LLVM_SOURCE_DIR"
+    "LLVM_BINARY_DIR"
+    "LLVM_TOOLS_DIR"
+    "SHLIBDIR"
+    )
+  set(LLVM_WINDOWS_PREFER_FORWARD_SLASH_VAL "1")
+  configure_lit_site_cfg(
+    ${CMAKE_CURRENT_SOURCE_DIR}/Unit/lit.site.cfg.py.in
+    ${CMAKE_CURRENT_BINARY_DIR}/Unit/forward_slash/lit.site.cfg.py
+    MAIN_CONFIG
+    ${CMAKE_CURRENT_SOURCE_DIR}/Unit/lit.cfg.py
+    PATHS
+    "LLVM_SOURCE_DIR"
+    "LLVM_BINARY_DIR"
+    "LLVM_TOOLS_DIR"
+    "SHLIBDIR"
+    )
+
+  # Configure integration tests matrix
+  set(LLVM_WINDOWS_PREFER_FORWARD_SLASH_VAL "0")
+  configure_lit_site_cfg(
+    ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.py.in
+    ${CMAKE_CURRENT_BINARY_DIR}/default/lit.site.cfg.py
+    MAIN_CONFIG
+    ${CMAKE_CURRENT_SOURCE_DIR}/lit.cfg.py
+    PATHS
+    "CMAKE_OSX_SYSROOT"
+    "LLVM_SOURCE_DIR"
+    "LLVM_BINARY_DIR"
+    "LLVM_TOOLS_DIR"
+    "LLVM_LIBS_DIR"
+    "SHLIBDIR"
+    )
+  set(LLVM_WINDOWS_PREFER_FORWARD_SLASH_VAL "1")
+  configure_lit_site_cfg(
+    ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.py.in
+    ${CMAKE_CURRENT_BINARY_DIR}/forward_slash/lit.site.cfg.py
+    MAIN_CONFIG
+    ${CMAKE_CURRENT_SOURCE_DIR}/lit.cfg.py
+    PATHS
+    "CMAKE_OSX_SYSROOT"
+    "LLVM_SOURCE_DIR"
+    "LLVM_BINARY_DIR"
+    "LLVM_TOOLS_DIR"
+    "LLVM_LIBS_DIR"
+    "SHLIBDIR"
+    )
+else()
+  set(LLVM_WINDOWS_PREFER_FORWARD_SLASH_VAL "")
+  configure_lit_site_cfg(
+    ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.py.in
+    ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg.py
+    MAIN_CONFIG
+    ${CMAKE_CURRENT_SOURCE_DIR}/lit.cfg.py
+    PATHS
+    "CMAKE_OSX_SYSROOT"
+    "LLVM_SOURCE_DIR"
+    "LLVM_BINARY_DIR"
+    "LLVM_TOOLS_DIR"
+    "LLVM_LIBS_DIR"
+    "SHLIBDIR"
+    )
+  configure_lit_site_cfg(
+    ${CMAKE_CURRENT_SOURCE_DIR}/Unit/lit.site.cfg.py.in
+    ${CMAKE_CURRENT_BINARY_DIR}/Unit/lit.site.cfg.py
+    MAIN_CONFIG
+    ${CMAKE_CURRENT_SOURCE_DIR}/Unit/lit.cfg.py
+    PATHS
+    "LLVM_SOURCE_DIR"
+    "LLVM_BINARY_DIR"
+    "LLVM_TOOLS_DIR"
+    "SHLIBDIR"
+    )
+endif()
 
 # Set the depends list as a variable so that it can grow conditionally.
 # NOTE: Sync the substitutions in test/lit.cfg when adding to this list.
@@ -264,8 +323,19 @@ else()
   set(exclude_from_check_all "EXCLUDE_FROM_CHECK_ALL")
 endif()
 
+if (LLVM_TEST_WINDOWS_PREFER_FORWARD_SLASH_MATRIX)
+  set(LLVM_TEST_PATHS
+    ${CMAKE_CURRENT_BINARY_DIR}/default
+    ${CMAKE_CURRENT_BINARY_DIR}/forward_slash
+    )
+else()
+  set(LLVM_TEST_PATHS
+    ${CMAKE_CURRENT_BINARY_DIR}
+    )
+endif()
+
 add_lit_testsuite(check-llvm "Running the LLVM regression tests"
-  ${CMAKE_CURRENT_BINARY_DIR}
+  ${LLVM_TEST_PATHS}
   ${exclude_from_check_all}
   DEPENDS ${LLVM_TEST_DEPENDS} UnitTests
   )

@@ -15,7 +15,11 @@ from lit.llvm.subst import FindTool
 from lit.llvm.subst import ToolSubst
 
 # name: The name of this test suite.
-config.name = "LLVM"
+suffix = getattr(config, "llvm_windows_prefer_forward_slash", "")
+if suffix in ("1", "ON", "True"):
+    config.name = "LLVM-ForwardSlash"
+else:
+    config.name = "LLVM"
 
 # TODO: Consolidate the logic for turning on the internal shell by default for all LLVM test suites.
 # See https://github.com/llvm/llvm-project/issues/106636 for more details.
@@ -97,13 +101,32 @@ if config.enable_profcheck:
 config.test_source_root = os.path.dirname(__file__)
 
 # test_exec_root: The root path where tests should be run.
-config.test_exec_root = os.path.join(config.llvm_obj_root, "test")
+prefer_forward_slash = getattr(config, "llvm_windows_prefer_forward_slash", "")
+if prefer_forward_slash != "":
+    # In matrix mode, test_exec_root is already set by the site config
+    # loading path, e.g. build_all/test/default or build_all/test/forward_slash.
+    pass
+else:
+    config.test_exec_root = os.path.join(config.llvm_obj_root, "test")
 
 # Tweak the PATH to include the tools dir.
 llvm_config.with_environment("PATH", config.llvm_tools_dir, append_path=True)
 
-# Propagate some variables from the host environment.
-llvm_config.with_system_environment(["HOME", "INCLUDE", "LIB", "TMP", "TEMP"])
+llvm_config.with_system_environment(["HOME", "INCLUDE", "LIB", "TMP", "TEMP", "LLVM_WINDOWS_PREFER_FORWARD_SLASH"])
+
+prefer_forward_slash = getattr(config, "llvm_windows_prefer_forward_slash", "")
+if prefer_forward_slash in ("1", "ON", "True"):
+    config.environment["LLVM_WINDOWS_PREFER_FORWARD_SLASH"] = "1"
+    
+    # Restrict forward-slash testing to a reasonable subset
+    # by excluding directories that don't deal with file paths or formatting
+    forward_slash_subsets = {"DebugInfo", "MC", "Support", "tools", "Unit"}
+    for subdir in os.listdir(config.test_source_root):
+        subdir_path = os.path.join(config.test_source_root, subdir)
+        if os.path.isdir(subdir_path) and subdir not in forward_slash_subsets:
+            config.excludes.append(subdir)
+elif prefer_forward_slash in ("0", "OFF", "False"):
+    config.environment["LLVM_WINDOWS_PREFER_FORWARD_SLASH"] = "0"
 
 
 # Set up OCAMLPATH to include newly built OCaml libraries.

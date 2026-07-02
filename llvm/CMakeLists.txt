@@ -650,6 +650,8 @@ if (MINGW)
   set(WINDOWS_PREFER_FORWARD_SLASH_DEFAULT ON)
 endif()
 option(LLVM_WINDOWS_PREFER_FORWARD_SLASH "Prefer path names with forward slashes on Windows." ${WINDOWS_PREFER_FORWARD_SLASH_DEFAULT})
+option(LLVM_TEST_WINDOWS_PREFER_FORWARD_SLASH_MATRIX "Test both forward and backward slashes on Windows during testing." OFF)
+
 
 option(LLVM_ENABLE_FFI "Use libffi to call external functions from the interpreter" OFF)
 set(FFI_LIBRARY_DIR "" CACHE PATH "Additional directory, where CMake should search for libffi.so")

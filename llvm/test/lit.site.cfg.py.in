@@ -74,6 +74,8 @@ config.have_opencsd = @LLVM_HAVE_OPENCSD@
 import lit.llvm
 lit.llvm.initialize(lit_config, config)
 
+config.llvm_windows_prefer_forward_slash = "@LLVM_WINDOWS_PREFER_FORWARD_SLASH_VAL@"
+
 # Let the main config do the real work.
 lit_config.load_config(
     config, os.path.join(config.llvm_src_root, "test/lit.cfg.py"))
