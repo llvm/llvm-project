@@ -419,6 +419,22 @@ static bool IsMaybeAtomicWrite(const evaluate::Assignment &assign) {
   return HasStorageOverlap(assign.lhs, assign.rhs) == nullptr;
 }
 
+// Determine whether two designators refer to the same atomic variable.
+// The comparison tolerates OpenMP host-association: a shared variable
+// referenced inside a parallel region may be designated through a
+// host-associated symbol in one statement and through its ultimate symbol
+// in another, even though both denote the same storage. Comparing the
+// (ultimate) symbol vectors together with the source form distinguishes
+// different variables and different constant subscripts (e.g. a(1) vs a(2))
+// while treating host-associated and ultimate references as equal.
+static bool IsSameAtomicVariable(const SomeExpr &x, const SomeExpr &y) {
+  if (x == y) {
+    return true;
+  }
+  return evaluate::GetSymbolVector(x) == evaluate::GetSymbolVector(y) &&
+      x.AsFortran() == y.AsFortran();
+}
+
 static void SetExpr(parser::TypedExpr &expr, MaybeExpr value) {
   if (value) {
     expr.Reset(new evaluate::GenericExprWrapper(std::move(value)),
@@ -822,7 +838,8 @@ void OmpStructureChecker::CheckAtomicCaptureAssignment(
     CheckAtomicVariable(
         atom, rsrc, /*checkTypeOnPointer=*/!IsPointerAssignment(capture));
     // This part should have been checked prior to calling this function.
-    assert(*GetConvertInput(capture.rhs) == atom &&
+    assert(GetConvertInput(capture.rhs) &&
+        IsSameAtomicVariable(*GetConvertInput(capture.rhs), atom) &&
         "This cannot be a capture assignment");
     CheckStorageOverlap(atom, {cap}, source);
   }

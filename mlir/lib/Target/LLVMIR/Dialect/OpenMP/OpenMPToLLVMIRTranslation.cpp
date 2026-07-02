@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 #include "mlir/Target/LLVMIR/Dialect/OpenMP/OpenMPToLLVMIRTranslation.h"
 #include "mlir/Analysis/TopologicalSortUtils.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
@@ -5462,6 +5463,139 @@ convertOmpAtomicUpdate(omp::AtomicUpdateOp &opInst,
   return success();
 }
 
+/// Helper to extract the OMPAtomicCompareOp from an integer comparison
+/// predicate. Returns std::nullopt for unsupported predicates.
+static std::optional<llvm::omp::OMPAtomicCompareOp>
+convertICmpPredicateToAtomicCompareOp(LLVM::ICmpPredicate predicate) {
+  switch (predicate) {
+  case LLVM::ICmpPredicate::eq:
+    return llvm::omp::OMPAtomicCompareOp::EQ;
+  case LLVM::ICmpPredicate::slt:
+  case LLVM::ICmpPredicate::ult:
+    return llvm::omp::OMPAtomicCompareOp::MIN;
+  case LLVM::ICmpPredicate::sgt:
+  case LLVM::ICmpPredicate::ugt:
+    return llvm::omp::OMPAtomicCompareOp::MAX;
+  default:
+    return std::nullopt;
+  }
+}
+
+/// Helper to extract the OMPAtomicCompareOp from a floating-point comparison
+/// predicate. Returns std::nullopt for unsupported predicates.
+static std::optional<llvm::omp::OMPAtomicCompareOp>
+convertFCmpPredicateToAtomicCompareOp(LLVM::FCmpPredicate predicate) {
+  switch (predicate) {
+  case LLVM::FCmpPredicate::oeq:
+  case LLVM::FCmpPredicate::ueq:
+    return llvm::omp::OMPAtomicCompareOp::EQ;
+  case LLVM::FCmpPredicate::olt:
+  case LLVM::FCmpPredicate::ult:
+    return llvm::omp::OMPAtomicCompareOp::MIN;
+  case LLVM::FCmpPredicate::ogt:
+  case LLVM::FCmpPredicate::ugt:
+    return llvm::omp::OMPAtomicCompareOp::MAX;
+  default:
+    return std::nullopt;
+  }
+}
+
+/// Holds the extracted comparison pattern information from an atomic compare
+/// region.
+struct AtomicComparePatternInfo {
+  llvm::omp::OMPAtomicCompareOp compareOp = llvm::omp::OMPAtomicCompareOp::EQ;
+  llvm::Value *eVal = nullptr;
+  llvm::Value *dVal = nullptr;
+  bool isXBinopExpr = false;
+  bool isSigned = false;
+};
+
+/// Extract comparison predicate, expected value (e), desired value (d), and
+/// related flags from an atomic compare region block by scanning for
+/// icmp/fcmp/select/min/max operations.
+static LogicalResult extractAtomicComparePattern(
+    Block &block,
+    llvm::function_ref<llvm::Value *(mlir::Value)> materializeValue,
+    omp::AtomicCompareOp atomicCompareOp, AtomicComparePatternInfo &info) {
+  for (Operation &op : block.getOperations()) {
+    // Pre-filter: skip icmps that don't involve the block argument
+    // (e.g., truthiness extractions from logical-to-integer conversion).
+    if (auto icmpOp = dyn_cast<LLVM::ICmpOp>(op);
+        icmpOp && icmpOp.getOperand(0) != block.getArgument(0) &&
+        icmpOp.getOperand(1) != block.getArgument(0))
+      continue;
+
+    LogicalResult result =
+        llvm::TypeSwitch<Operation *, LogicalResult>(&op)
+            .Case<LLVM::ICmpOp>([&](LLVM::ICmpOp icmpOp) -> LogicalResult {
+              auto maybeOp =
+                  convertICmpPredicateToAtomicCompareOp(icmpOp.getPredicate());
+              if (!maybeOp)
+                return atomicCompareOp.emitError(
+                    "unsupported comparison predicate in atomic compare");
+              info.compareOp = *maybeOp;
+              LLVM::ICmpPredicate pred = icmpOp.getPredicate();
+              info.isSigned = (pred == LLVM::ICmpPredicate::slt ||
+                               pred == LLVM::ICmpPredicate::sgt ||
+                               pred == LLVM::ICmpPredicate::sle ||
+                               pred == LLVM::ICmpPredicate::sge);
+              info.isXBinopExpr =
+                  (icmpOp.getOperand(0) == block.getArgument(0));
+              mlir::Value eOperand = info.isXBinopExpr ? icmpOp.getOperand(1)
+                                                       : icmpOp.getOperand(0);
+              info.eVal = materializeValue(eOperand);
+              return success();
+            })
+            .Case<LLVM::FCmpOp>([&](LLVM::FCmpOp fcmpOp) -> LogicalResult {
+              auto maybeOp =
+                  convertFCmpPredicateToAtomicCompareOp(fcmpOp.getPredicate());
+              if (!maybeOp)
+                return atomicCompareOp.emitError(
+                    "unsupported comparison predicate in atomic compare");
+              info.compareOp = *maybeOp;
+              info.isXBinopExpr =
+                  (fcmpOp.getOperand(0) == block.getArgument(0));
+              mlir::Value eOperand = info.isXBinopExpr ? fcmpOp.getOperand(1)
+                                                       : fcmpOp.getOperand(0);
+              info.eVal = materializeValue(eOperand);
+              return success();
+            })
+            .Case<LLVM::SelectOp>([&](LLVM::SelectOp selectOp) {
+              if (!info.dVal)
+                info.dVal = materializeValue(selectOp.getTrueValue());
+              return success();
+            })
+            .Case<mlir::arith::MaxSIOp, mlir::arith::MinSIOp,
+                  mlir::arith::MaxUIOp, mlir::arith::MinUIOp,
+                  mlir::arith::MaximumFOp, mlir::arith::MinimumFOp,
+                  LLVM::SMaxOp, LLVM::SMinOp, LLVM::UMaxOp, LLVM::UMinOp,
+                  LLVM::MaxNumOp, LLVM::MinNumOp>([&](Operation *) {
+              // Canonicalized min/max ops (arith or LLVM intrinsic form).
+              // max(x,e) came from slt/ult/olt -> OMPAtomicCompareOp::MIN
+              // min(x,e) came from sgt/ugt/ogt -> OMPAtomicCompareOp::MAX
+              // (OMPIRBuilder inverts: MIN->atomicrmw max, MAX->atomicrmw min)
+              bool isMax = isa<mlir::arith::MaxSIOp, mlir::arith::MaxUIOp,
+                               mlir::arith::MaximumFOp, LLVM::SMaxOp,
+                               LLVM::UMaxOp, LLVM::MaxNumOp>(op);
+              info.compareOp = isMax ? llvm::omp::OMPAtomicCompareOp::MIN
+                                     : llvm::omp::OMPAtomicCompareOp::MAX;
+              info.isSigned = isa<mlir::arith::MaxSIOp, mlir::arith::MinSIOp,
+                                  LLVM::SMaxOp, LLVM::SMinOp>(op);
+              info.isXBinopExpr = (op.getOperand(0) == block.getArgument(0));
+              mlir::Value eOperand =
+                  info.isXBinopExpr ? op.getOperand(1) : op.getOperand(0);
+              info.eVal = materializeValue(eOperand);
+              info.dVal = info.eVal;
+              return success();
+            })
+            .Default([](Operation *) { return success(); });
+
+    if (failed(result))
+      return result;
+  }
+  return success();
+}
+
 static LogicalResult
 convertOmpAtomicCapture(omp::AtomicCaptureOp atomicCaptureOp,
                         llvm::IRBuilderBase &builder,
@@ -5470,12 +5604,177 @@ convertOmpAtomicCapture(omp::AtomicCaptureOp atomicCaptureOp,
   if (failed(checkImplementationStatus(*atomicCaptureOp)))
     return failure();
 
+  omp::AtomicUpdateOp atomicUpdateOp = atomicCaptureOp.getAtomicUpdateOp();
+  omp::AtomicWriteOp atomicWriteOp = atomicCaptureOp.getAtomicWriteOp();
+  omp::AtomicCompareOp atomicCompareOp = atomicCaptureOp.getAtomicCompareOp();
+
+  // If the capture contains an atomic.compare, delegate to
+  // createAtomicCompare with the capture variable (V) set.
+  if (atomicCompareOp) {
+    omp::AtomicReadOp atomicReadOp = atomicCaptureOp.getAtomicReadOp();
+    assert(atomicReadOp && "expected atomic.read in capture+compare");
+
+    Region &region = atomicCompareOp.getRegion();
+    Block &block = region.front();
+
+    llvm::Type *llvmXElementType =
+        moduleTranslation.convertType(block.getArgument(0).getType());
+    llvm::Value *llvmX = moduleTranslation.lookupValue(atomicCompareOp.getX());
+    llvm::Value *llvmV = moduleTranslation.lookupValue(atomicReadOp.getV());
+
+    bool isSigned = false;
+    llvm::OpenMPIRBuilder::AtomicOpValue llvmAtomicX = {
+        llvmX, llvmXElementType, isSigned, /*IsVolatile=*/false};
+    llvm::OpenMPIRBuilder::AtomicOpValue llvmAtomicV = {
+        llvmV, llvmXElementType, /*isSigned=*/false, /*IsVolatile=*/false};
+    llvm::OpenMPIRBuilder::AtomicOpValue llvmAtomicR = {nullptr, nullptr, false,
+                                                        false};
+
+    llvm::AtomicOrdering atomicOrdering =
+        convertAtomicOrdering(atomicCaptureOp.getMemoryOrder());
+
+    // Pre-translate non-pattern operations inside the compare region.
+    auto isAtomicComparePatternOp = [](Operation &op) {
+      return llvm::isa<LLVM::ICmpOp, LLVM::FCmpOp, LLVM::SelectOp, LLVM::AndOp,
+                       LLVM::OrOp, LLVM::SMaxOp, LLVM::SMinOp, LLVM::UMaxOp,
+                       LLVM::UMinOp, LLVM::MaxNumOp, LLVM::MinNumOp,
+                       mlir::arith::MaxSIOp, mlir::arith::MinSIOp,
+                       mlir::arith::MaxUIOp, mlir::arith::MinUIOp,
+                       mlir::arith::MaximumFOp, mlir::arith::MinimumFOp>(op);
+    };
+    for (Operation &op : block.without_terminator()) {
+      if (isAtomicComparePatternOp(op))
+        continue;
+      bool allOperandsMapped =
+          llvm::all_of(op.getOperands(), [&](mlir::Value v) {
+            return moduleTranslation.lookupValue(v) != nullptr;
+          });
+      if (!allOperandsMapped)
+        continue;
+      if (failed(moduleTranslation.convertOperation(op, builder)))
+        return atomicCompareOp.emitError(
+            "failed to translate operation inside atomic compare region");
+    }
+
+    auto materializeValue = [&](mlir::Value val) -> llvm::Value * {
+      if (llvm::Value *existing = moduleTranslation.lookupValue(val))
+        return existing;
+      if (auto loadOp = val.getDefiningOp<LLVM::LoadOp>()) {
+        if (loadOp->getParentRegion() == &region) {
+          llvm::Value *loadAddr =
+              moduleTranslation.lookupValue(loadOp.getAddr());
+          if (!loadAddr)
+            return nullptr;
+          llvm::Type *loadType =
+              moduleTranslation.convertType(loadOp.getResult().getType());
+          return builder.CreateLoad(loadType, loadAddr);
+        }
+      }
+      return nullptr;
+    };
+
+    // Extract comparison predicate, eVal, and dVal from the region.
+    AtomicComparePatternInfo patternInfo;
+    if (failed(extractAtomicComparePattern(block, materializeValue,
+                                           atomicCompareOp, patternInfo)))
+      return failure();
+
+    llvm::omp::OMPAtomicCompareOp compareOp = patternInfo.compareOp;
+    llvm::Value *eVal = patternInfo.eVal;
+    llvm::Value *dVal = patternInfo.dVal;
+    bool isXBinopExpr = patternInfo.isXBinopExpr;
+    isSigned = patternInfo.isSigned;
+
+    if (!eVal)
+      return atomicCompareOp.emitError(
+          "failed to extract expected value (e) from atomic compare region");
+    if (!dVal) {
+      auto yieldOp = cast<omp::YieldOp>(block.getTerminator());
+      if (yieldOp.getResults().empty())
+        return atomicCompareOp.emitError(
+            "failed to extract desired value (d) from atomic compare region");
+      dVal = materializeValue(yieldOp.getResults()[0]);
+    }
+
+    llvmAtomicX.IsSigned = isSigned;
+
+    llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
+    bool isReadFirst = isa<omp::AtomicReadOp>(atomicCaptureOp.getFirstOp());
+    bool isPostfixCapture = !isReadFirst;
+    bool isFailOnly = atomicCaptureOp.getFailOnly();
+
+    llvm::OpenMPIRBuilder::AtomicOpValue llvmAtomicVForCall = llvmAtomicV;
+    // Postfix: bypass V in OMPIRBuilder, handled manually below.
+    if (isPostfixCapture && !isFailOnly)
+      llvmAtomicVForCall = {nullptr, nullptr, false, false};
+
+    // Prefix: IsPostfixUpdate=true → direct store of old value.
+    // Fail-only: IsPostfixUpdate=false → conditional store on failure.
+    bool isPostfixUpdate = !isFailOnly;
+
+    bool isWeak = atomicCompareOp.getWeak();
+    bool savedHandleFPNegZero = ompBuilder->setHandleFPNegZero(true);
+    llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP =
+        ompBuilder->createAtomicCompare(ompLoc, llvmAtomicX, llvmAtomicVForCall,
+                                        llvmAtomicR, eVal, dVal, atomicOrdering,
+                                        compareOp, isXBinopExpr,
+                                        isPostfixUpdate, isFailOnly, isWeak);
+    ompBuilder->setHandleFPNegZero(savedHandleFPNegZero);
+
+    if (failed(handleError(afterIP, *atomicCaptureOp)))
+      return failure();
+
+    builder.restoreIP(*afterIP);
+
+    // Postfix: v = select(success, D, old) — captures new value of x.
+    if (isPostfixCapture && !isFailOnly) {
+      llvm::BasicBlock *curBB = builder.GetInsertBlock();
+      llvm::Value *oldVal = nullptr;
+      llvm::Value *successVal = nullptr;
+
+      // Integer path (and non-HandleFPNegZero FP path): a single cmpxchg
+      // lives in the current block.
+      for (auto &inst : llvm::reverse(*curBB)) {
+        if (isa<llvm::AtomicCmpXchgInst>(&inst)) {
+          oldVal = builder.CreateExtractValue(&inst, /*Idxs=*/0);
+          successVal = builder.CreateExtractValue(&inst, /*Idxs=*/1);
+          break;
+        }
+      }
+
+      // FP HandleFPNegZero path: the OMPIRBuilder emits a multi-block
+      // structure (NaN / ±0.0 handling) with cmpxchg in predecessor
+      // blocks. Results are merged via PHI nodes in the current (exit)
+      // block: an i1 PHI for success and a bitcast of an integer PHI
+      // for the old FP value.
+      if (!oldVal) {
+        for (auto &inst : *curBB) {
+          auto *phi = dyn_cast<llvm::PHINode>(&inst);
+          if (!phi)
+            break;
+          if (phi->getType()->isIntegerTy(1))
+            successVal = phi;
+        }
+        for (auto &inst : *curBB) {
+          if (auto *bc = dyn_cast<llvm::BitCastInst>(&inst)) {
+            oldVal = bc;
+            break;
+          }
+        }
+      }
+
+      assert(oldVal && "expected cmpxchg or PHI+bitcast for compare capture");
+      assert(successVal && "expected success flag for compare capture");
+      llvm::Value *newVal = builder.CreateSelect(successVal, dVal, oldVal);
+      builder.CreateStore(newVal, llvmAtomicV.Var, llvmAtomicV.IsVolatile);
+    }
+
+    return success();
+  }
+
   mlir::Value mlirExpr;
   bool isXBinopExpr = false, isPostfixUpdate = false;
   llvm::AtomicRMWInst::BinOp binop = llvm::AtomicRMWInst::BinOp::BAD_BINOP;
-
-  omp::AtomicUpdateOp atomicUpdateOp = atomicCaptureOp.getAtomicUpdateOp();
-  omp::AtomicWriteOp atomicWriteOp = atomicCaptureOp.getAtomicWriteOp();
 
   assert((atomicUpdateOp || atomicWriteOp) &&
          "internal op must be an atomic.update or atomic.write op");
@@ -5563,43 +5862,6 @@ convertOmpAtomicCapture(omp::AtomicCaptureOp atomicCaptureOp,
   return success();
 }
 
-/// Helper to extract the OMPAtomicCompareOp from an integer comparison
-/// predicate. Returns std::nullopt for unsupported predicates.
-static std::optional<llvm::omp::OMPAtomicCompareOp>
-convertICmpPredicateToAtomicCompareOp(LLVM::ICmpPredicate predicate) {
-  switch (predicate) {
-  case LLVM::ICmpPredicate::eq:
-    return llvm::omp::OMPAtomicCompareOp::EQ;
-  case LLVM::ICmpPredicate::slt:
-  case LLVM::ICmpPredicate::ult:
-    return llvm::omp::OMPAtomicCompareOp::MIN;
-  case LLVM::ICmpPredicate::sgt:
-  case LLVM::ICmpPredicate::ugt:
-    return llvm::omp::OMPAtomicCompareOp::MAX;
-  default:
-    return std::nullopt;
-  }
-}
-
-/// Helper to extract the OMPAtomicCompareOp from a floating-point comparison
-/// predicate. Returns std::nullopt for unsupported predicates.
-static std::optional<llvm::omp::OMPAtomicCompareOp>
-convertFCmpPredicateToAtomicCompareOp(LLVM::FCmpPredicate predicate) {
-  switch (predicate) {
-  case LLVM::FCmpPredicate::oeq:
-  case LLVM::FCmpPredicate::ueq:
-    return llvm::omp::OMPAtomicCompareOp::EQ;
-  case LLVM::FCmpPredicate::olt:
-  case LLVM::FCmpPredicate::ult:
-    return llvm::omp::OMPAtomicCompareOp::MIN;
-  case LLVM::FCmpPredicate::ogt:
-  case LLVM::FCmpPredicate::ugt:
-    return llvm::omp::OMPAtomicCompareOp::MAX;
-  default:
-    return std::nullopt;
-  }
-}
-
 /// Converts an omp.atomic.compare operation to LLVM IR.
 ///
 ///      if (x == e) x = d
@@ -5649,7 +5911,11 @@ convertOmpAtomicCompare(omp::AtomicCompareOp atomicCompareOp,
 
   auto isAtomicComparePatternOp = [](Operation &op) {
     return llvm::isa<LLVM::ICmpOp, LLVM::FCmpOp, LLVM::SelectOp, LLVM::AndOp,
-                     LLVM::OrOp>(op);
+                     LLVM::OrOp, LLVM::SMaxOp, LLVM::SMinOp, LLVM::UMaxOp,
+                     LLVM::UMinOp, LLVM::MaxNumOp, LLVM::MinNumOp,
+                     mlir::arith::MaxSIOp, mlir::arith::MinSIOp,
+                     mlir::arith::MaxUIOp, mlir::arith::MinUIOp,
+                     mlir::arith::MaximumFOp, mlir::arith::MinimumFOp>(op);
   };
 
   // Pre-translate operations inside the region that compute e and d (e.g.,
@@ -5822,54 +6088,15 @@ convertOmpAtomicCompare(omp::AtomicCompareOp atomicCompareOp,
     }
     return success();
   } else {
-
-    for (Operation &op : block.getOperations()) {
-      if (auto icmpOp = dyn_cast<LLVM::ICmpOp>(op)) {
-        auto maybeOp =
-            convertICmpPredicateToAtomicCompareOp(icmpOp.getPredicate());
-        if (!maybeOp)
-          return atomicCompareOp.emitError(
-              "unsupported comparison predicate in atomic compare");
-        compareOp = *maybeOp;
-
-        LLVM::ICmpPredicate pred = icmpOp.getPredicate();
-        isSigned = (pred == LLVM::ICmpPredicate::slt ||
-                    pred == LLVM::ICmpPredicate::sgt ||
-                    pred == LLVM::ICmpPredicate::sle ||
-                    pred == LLVM::ICmpPredicate::sge);
-
-        // Identify which operand is the block argument (x) and which is e.
-        isXBinopExpr = (icmpOp.getOperand(0) == block.getArgument(0));
-        mlir::Value eOperand =
-            isXBinopExpr ? icmpOp.getOperand(1) : icmpOp.getOperand(0);
-        eVal = materializeValue(eOperand);
-      } else if (auto fcmpOp = dyn_cast<LLVM::FCmpOp>(op)) {
-        auto maybeOp =
-            convertFCmpPredicateToAtomicCompareOp(fcmpOp.getPredicate());
-        if (!maybeOp)
-          return atomicCompareOp.emitError(
-              "unsupported comparison predicate in atomic compare");
-        compareOp = *maybeOp;
-
-        isXBinopExpr = (fcmpOp.getOperand(0) == block.getArgument(0));
-        mlir::Value eOperand =
-            isXBinopExpr ? fcmpOp.getOperand(1) : fcmpOp.getOperand(0);
-        eVal = materializeValue(eOperand);
-      } else if (auto selectOp = dyn_cast<LLVM::SelectOp>(op)) {
-        if (!dVal)
-          dVal = materializeValue(selectOp.getTrueValue());
-      }
-    }
-  }
-
-  // For non-complex patterns, also extract dVal from SelectOp.
-  if (!dVal) {
-    for (Operation &op : block.getOperations()) {
-      if (auto selectOp = dyn_cast<LLVM::SelectOp>(op)) {
-        dVal = materializeValue(selectOp.getTrueValue());
-        break;
-      }
-    }
+    AtomicComparePatternInfo patternInfo;
+    if (failed(extractAtomicComparePattern(block, materializeValue,
+                                           atomicCompareOp, patternInfo)))
+      return failure();
+    compareOp = patternInfo.compareOp;
+    eVal = patternInfo.eVal;
+    dVal = patternInfo.dVal;
+    isXBinopExpr = patternInfo.isXBinopExpr;
+    isSigned = patternInfo.isSigned;
   }
 
   if (!eVal)

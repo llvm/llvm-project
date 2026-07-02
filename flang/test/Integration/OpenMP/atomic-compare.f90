@@ -260,3 +260,164 @@ subroutine atomic_compare_weak(x, e, d)
   if (x == e) x = d
 end 
 
+! Integer equality compare+capture (prefix): v=x; if(x==e) x=d
+! v captures old value of x
+!CHECK-LABEL: define void @atomic_compare_capture_int_eq_(
+!CHECK-SAME: ptr noalias %[[X:.*]], ptr noalias %[[E:.*]], ptr noalias %[[D:.*]], ptr noalias %[[V:.*]])
+!CHECK: %[[EVAL:.*]] = load i32, ptr %[[E]]
+!CHECK: %[[DVAL:.*]] = load i32, ptr %[[D]]
+!CHECK: %[[RES:.*]] = cmpxchg ptr %[[X]], i32 %[[EVAL]], i32 %[[DVAL]] monotonic monotonic
+!CHECK: %[[OLD:.*]] = extractvalue { i32, i1 } %[[RES]], 0
+!CHECK: store i32 %[[OLD]], ptr %[[V]]
+subroutine atomic_compare_capture_int_eq(x, e, d, v)
+  integer :: x, e, d, v
+  !$omp atomic compare capture
+    v = x
+    if (x == e) x = d
+  !$omp end atomic
+end
+
+! Compare+capture with clause order reversed: capture compare (still prefix read)
+!CHECK-LABEL: define void @atomic_capture_compare_int_eq_(
+!CHECK-SAME: ptr noalias %[[X:.*]], ptr noalias %[[E:.*]], ptr noalias %[[D:.*]], ptr noalias %[[V:.*]])
+!CHECK: %[[EVAL:.*]] = load i32, ptr %[[E]]
+!CHECK: %[[DVAL:.*]] = load i32, ptr %[[D]]
+!CHECK: %[[RES:.*]] = cmpxchg ptr %[[X]], i32 %[[EVAL]], i32 %[[DVAL]] monotonic monotonic
+!CHECK: %[[OLD:.*]] = extractvalue { i32, i1 } %[[RES]], 0
+!CHECK: store i32 %[[OLD]], ptr %[[V]]
+subroutine atomic_capture_compare_int_eq(x, e, d, v)
+  integer :: x, e, d, v
+  !$omp atomic capture compare
+    v = x
+    if (x == e) x = d
+  !$omp end atomic
+end
+
+! Postfix compare+capture: if (x == e) x = d; v = x
+! v captures new value (d if swapped, old x if not)
+!CHECK-LABEL: define void @atomic_compare_capture_postfix_(
+!CHECK-SAME: ptr noalias %[[X:.*]], ptr noalias %[[E:.*]], ptr noalias %[[D:.*]], ptr noalias %[[V:.*]])
+!CHECK: %[[EVAL:.*]] = load i32, ptr %[[E]]
+!CHECK: %[[DVAL:.*]] = load i32, ptr %[[D]]
+!CHECK: %[[RES:.*]] = cmpxchg ptr %[[X]], i32 %[[EVAL]], i32 %[[DVAL]] monotonic monotonic
+!CHECK: %[[OLD:.*]] = extractvalue { i32, i1 } %[[RES]], 0
+!CHECK: %[[SUCCESS:.*]] = extractvalue { i32, i1 } %[[RES]], 1
+!CHECK: %[[NEWVAL:.*]] = select i1 %[[SUCCESS]], i32 %[[DVAL]], i32 %[[OLD]]
+!CHECK: store i32 %[[NEWVAL]], ptr %[[V]]
+subroutine atomic_compare_capture_postfix(x, e, d, v)
+  integer :: x, e, d, v
+  !$omp atomic compare capture
+    if (x == e) x = d
+    v = x
+  !$omp end atomic
+end
+
+! Fail-only compare+capture: if (x == e) x = d; else v = x
+! v is only written when the comparison fails
+!CHECK-LABEL: define void @atomic_compare_capture_fail_only_(
+!CHECK-SAME: ptr noalias %[[X:.*]], ptr noalias %[[E:.*]], ptr noalias %[[D:.*]], ptr noalias %[[V:.*]])
+!CHECK: %[[EVAL:.*]] = load i32, ptr %[[E]]
+!CHECK: %[[DVAL:.*]] = load i32, ptr %[[D]]
+!CHECK: %[[RES:.*]] = cmpxchg ptr %[[X]], i32 %[[EVAL]], i32 %[[DVAL]] monotonic monotonic
+!CHECK: %[[OLD:.*]] = extractvalue { i32, i1 } %[[RES]], 0
+!CHECK: %[[SUCCESS:.*]] = extractvalue { i32, i1 } %[[RES]], 1
+!CHECK: br i1 %[[SUCCESS]], label %[[EXIT:.*]], label %[[CONT:.*]]
+!CHECK: {{.*}}:
+!CHECK: store i32 %[[OLD]], ptr %[[V]]
+!CHECK: br label %[[EXIT2:.*]]
+subroutine atomic_compare_capture_fail_only(x, e, d, v)
+  integer :: x, e, d, v
+  !$omp atomic compare capture
+    if (x == e) then
+      x = d
+    else
+      v = x
+    end if
+  !$omp end atomic
+end
+
+! Real equality compare+capture (postfix): if(x==e) x=d; v=x
+! v captures new value of x (d if success, old if fail)
+!CHECK-LABEL: define void @atomic_compare_capture_real_(
+!CHECK-SAME: ptr noalias %[[X:.*]], ptr noalias %[[E:.*]], ptr noalias %[[D:.*]], ptr noalias %[[V:.*]])
+!CHECK: %[[EVAL:.*]] = load float, ptr %[[E]]{{.*}}
+!CHECK: %[[DVAL:.*]] = load float, ptr %[[D]]{{.*}}
+!CHECK: %[[EBITS:.*]] = bitcast float %[[EVAL]] to i32
+!CHECK: %[[DBITS:.*]] = bitcast float %[[DVAL]] to i32
+!CHECK: %[[XLOAD:.*]] = load atomic i32, ptr %[[X]] monotonic{{.*}}
+!CHECK: %[[XFP:.*]] = bitcast i32 %[[XLOAD]] to float
+! Part 1: NaN check - if either x or e is NaN, comparison fails
+!CHECK: %[[E_ISNAN:.*]] = fcmp uno float %[[EVAL]], %[[EVAL]]
+!CHECK: %[[X_ISNAN:.*]] = fcmp uno float %[[XFP]], %[[XFP]]
+!CHECK: %[[EITHER_NAN:.*]] = or i1 %[[E_ISNAN]], %[[X_ISNAN]]
+!CHECK: br i1 %[[EITHER_NAN]], label %[[NAN_BB:.*]], label %[[NOTNAN_BB:.*]]
+!CHECK: [[NAN_BB]]:
+!CHECK: br label %[[EXIT_BB:.*]]
+! Part 2: Both-zero check - handles +0.0 vs -0.0 (same value, different bits)
+!CHECK: [[NOTNAN_BB]]:
+!CHECK: %[[XISZERO:.*]] = fcmp oeq float %[[XFP]], 0.000000e+00
+!CHECK: %[[EISZERO:.*]] = fcmp oeq float %[[EVAL]], 0.000000e+00
+!CHECK: %[[BOTHZERO:.*]] = and i1 %[[XISZERO]], %[[EISZERO]]
+!CHECK: br i1 %[[BOTHZERO]], label %[[ZERO_BB:.*]], label %[[NORMAL_BB:.*]]
+!CHECK: [[ZERO_BB]]:
+!CHECK: %[[ZERORES:.*]] = cmpxchg ptr %[[X]], i32 %[[XLOAD]], i32 %[[DBITS]] monotonic monotonic{{.*}}
+!CHECK: br label %[[EXIT_BB]]
+! Part 3: Normal compare - standard cmpxchg with bitcasted expected value
+!CHECK: [[NORMAL_BB]]:
+!CHECK: %[[NORMRES:.*]] = cmpxchg ptr %[[X]], i32 %[[EBITS]], i32 %[[DBITS]] monotonic monotonic{{.*}}
+!CHECK: br label %[[EXIT_BB]]
+! Exit: select v = (success ? d : old_x)
+!CHECK: [[EXIT_BB]]:
+!CHECK: %[[OLD:.*]] = phi i32 {{.*}}
+!CHECK: %[[OK:.*]] = phi i1 {{.*}}
+!CHECK: %[[OLDFP:.*]] = bitcast i32 %[[OLD]] to float
+!CHECK: %[[VVAL:.*]] = select i1 %[[OK]], float %[[DVAL]], float %[[OLDFP]]
+!CHECK: store float %[[VVAL]], ptr %[[V]]{{.*}}
+subroutine atomic_compare_capture_real(x, e, d, v)
+  real :: x, e, d, v
+  !$omp atomic compare capture
+    if (x == e) x = d
+    v = x
+  !$omp end atomic
+end
+
+! Logical .eqv. compare+capture (postfix): if(x.eqv.e) x=d; v=x
+! Logicals are compared as integers after truthiness normalization
+!CHECK-LABEL: define void @atomic_compare_capture_logical_(
+!CHECK-SAME: ptr noalias %[[X:.*]], ptr noalias %[[E:.*]], ptr noalias %[[D:.*]], ptr noalias %[[V:.*]])
+!CHECK: cmpxchg ptr %[[X]], i32 %{{.*}}, i32 %{{.*}} monotonic monotonic{{.*}}
+subroutine atomic_compare_capture_logical(x, e, d, v)
+  logical :: x, e, d, v
+  !$omp atomic compare capture
+    if (x .eqv. e) x = d
+    v = x
+  !$omp end atomic
+end
+
+! Logical compare+capture inside a parallel region.
+!CHECK-LABEL: define void @atomic_compare_capture_logical_parallel_(
+!CHECK-SAME: ptr noalias %[[X:.*]])
+!CHECK: %[[CGEP:.*]] = getelementptr { ptr }, ptr %structArg, i32 0, i32 0
+!CHECK: store ptr %[[X]], ptr %[[CGEP]]
+!CHECK: call void {{.*}}@__kmpc_fork_call{{.*}}@atomic_compare_capture_logical_parallel_..omp_par
+!CHECK-LABEL: define internal void @atomic_compare_capture_logical_parallel_..omp_par(
+!CHECK-SAME: ptr noalias %{{.*}}, ptr noalias %{{.*}}, ptr %[[STRUCTARG:.*]])
+!CHECK: %[[GEP:.*]] = getelementptr { ptr }, ptr %[[STRUCTARG]], i32 0, i32 0
+!CHECK: %[[SHARED:.*]] = load ptr, ptr %[[GEP]]
+!CHECK: %[[RES:.*]] = cmpxchg ptr %[[SHARED]], i32 %{{.*}}, i32 %{{.*}} monotonic monotonic{{.*}}
+!CHECK: %[[OLD:.*]] = extractvalue { i32, i1 } %[[RES]], 0
+!CHECK: store i32 %[[OLD]], ptr %{{.*}}
+subroutine atomic_compare_capture_logical_parallel(x)
+  logical :: x, expected, desired, old_value
+  !$omp parallel private(old_value, expected, desired)
+    expected = .true.
+    desired  = .false.
+    !$omp atomic compare capture
+      old_value = x
+      if (x .eqv. expected) then
+        x = desired
+      end if
+    !$omp end atomic
+  !$omp end parallel
+end
+

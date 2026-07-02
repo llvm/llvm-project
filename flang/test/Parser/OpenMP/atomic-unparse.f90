@@ -4,6 +4,7 @@ program main
    implicit none
    integer :: i, j = 10
    integer :: k
+   logical :: l1, l2, l3, l4
 !READ
 !$omp atomic read
    i = j
@@ -192,6 +193,45 @@ program main
       i = j
    end if
 
+!COMPARE CAPTURE
+!$omp atomic compare capture
+   k = i
+   if (i .eq. j) then
+      i = k
+   end if
+!$omp end atomic
+!$omp atomic capture compare
+   k = i
+   if (i .eq. j) then
+      i = k
+   end if
+!$omp end atomic
+!$omp atomic capture compare weak
+   k = i
+   if (i < j) then
+      i = k
+   end if
+!$omp end atomic
+!$omp atomic compare capture
+   if (i .eq. j) then
+      i = k
+   end if
+   k = i
+!$omp end atomic
+!$omp atomic compare capture
+   if (i .eq. j) then
+      i = k
+   else
+      k = i
+   end if
+!$omp end atomic
+
+!COMPARE CAPTURE LOGICAL
+!$omp atomic compare capture
+   if (l1 .eqv. l2) l1 = l3
+   l4 = l1
+!$omp end atomic
+
 !ATOMIC
 !$omp atomic
    i = j
@@ -295,6 +335,24 @@ end program main
 !CHECK: !$OMP ATOMIC COMPARE WEAK
 !CHECK: !$OMP ATOMIC WEAK COMPARE
 !CHECK: !$OMP ATOMIC COMPARE SEQ_CST WEAK
+
+!COMPARE CAPTURE
+
+!CHECK: !$OMP ATOMIC COMPARE CAPTURE
+!CHECK: !$OMP END ATOMIC
+!CHECK: !$OMP ATOMIC CAPTURE COMPARE
+!CHECK: !$OMP END ATOMIC
+!CHECK: !$OMP ATOMIC CAPTURE COMPARE WEAK
+!CHECK: !$OMP END ATOMIC
+!CHECK: !$OMP ATOMIC COMPARE CAPTURE
+!CHECK: !$OMP END ATOMIC
+!CHECK: !$OMP ATOMIC COMPARE CAPTURE
+!CHECK: !$OMP END ATOMIC
+
+!COMPARE CAPTURE LOGICAL
+
+!CHECK: !$OMP ATOMIC COMPARE CAPTURE
+!CHECK: !$OMP END ATOMIC
 
 !ATOMIC
 !CHECK: !$OMP ATOMIC

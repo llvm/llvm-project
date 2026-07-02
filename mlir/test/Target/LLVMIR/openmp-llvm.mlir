@@ -2795,6 +2795,141 @@ llvm.func @omp_atomic_compare_float_neg_zero(%xf : !llvm.ptr, %ef : f32, %df : f
 
 // -----
 
+// CHECK-LABEL: @omp_atomic_compare_capture_int_eq
+// CHECK-SAME: (ptr %[[X:.*]], ptr %[[V:.*]], i32 %[[E:.*]], i32 %[[D:.*]])
+llvm.func @omp_atomic_compare_capture_int_eq(%x : !llvm.ptr, %v : !llvm.ptr, %e : i32, %d : i32) {
+  // Integer equality prefix compare+capture → cmpxchg + store old value
+  // CHECK: %[[RES:.*]] = cmpxchg ptr %[[X]], i32 %[[E]], i32 %[[D]] monotonic monotonic
+  // CHECK: %[[OLD:.*]] = extractvalue { i32, i1 } %[[RES]], 0
+  // CHECK: store i32 %[[OLD]], ptr %[[V]]
+  omp.atomic.capture {
+    omp.atomic.read %v = %x : !llvm.ptr, !llvm.ptr, i32
+    omp.atomic.compare %x : !llvm.ptr {
+    ^bb0(%xval : i32):
+      %cmp = llvm.icmp "eq" %xval, %e : i32
+      %sel = llvm.select %cmp, %d, %xval : i1, i32
+      omp.yield(%sel : i32)
+    }
+  }
+  llvm.return
+}
+
+// -----
+
+// CHECK-LABEL: @omp_atomic_compare_capture_weak_int_eq
+// CHECK-SAME: (ptr %[[X:.*]], ptr %[[V:.*]], i32 %[[E:.*]], i32 %[[D:.*]])
+llvm.func @omp_atomic_compare_capture_weak_int_eq(%x : !llvm.ptr, %v : !llvm.ptr, %e : i32, %d : i32) {
+  // Integer equality weak prefix compare+capture → cmpxchg + store old value
+  // CHECK: %[[RES:.*]] = cmpxchg weak ptr %[[X]], i32 %[[E]], i32 %[[D]] monotonic monotonic
+  // CHECK: %[[OLD:.*]] = extractvalue { i32, i1 } %[[RES]], 0
+  // CHECK: store i32 %[[OLD]], ptr %[[V]]
+  omp.atomic.capture {
+    omp.atomic.read %v = %x : !llvm.ptr, !llvm.ptr, i32
+    omp.atomic.compare %x : !llvm.ptr {
+    ^bb0(%xval : i32):
+      %cmp = llvm.icmp "eq" %xval, %e : i32
+      %sel = llvm.select %cmp, %d, %xval : i1, i32
+      omp.yield(%sel : i32)
+    } {weak}
+  }
+  llvm.return
+}
+// -----
+
+// CHECK-LABEL: @omp_atomic_compare_capture_postfix
+// CHECK-SAME: (ptr %[[X:.*]], ptr %[[V:.*]], i32 %[[E:.*]], i32 %[[D:.*]])
+llvm.func @omp_atomic_compare_capture_postfix(%x : !llvm.ptr, %v : !llvm.ptr, %e : i32, %d : i32) {
+  // Postfix compare+capture: v captures new value (d if swapped, old x if not)
+  // CHECK: %[[RES:.*]] = cmpxchg ptr %[[X]], i32 %[[E]], i32 %[[D]] monotonic monotonic
+  // CHECK: %[[OLD:.*]] = extractvalue { i32, i1 } %[[RES]], 0
+  // CHECK: %[[SUCCESS:.*]] = extractvalue { i32, i1 } %[[RES]], 1
+  // CHECK: %[[NEWVAL:.*]] = select i1 %[[SUCCESS]], i32 %[[D]], i32 %[[OLD]]
+  // CHECK: store i32 %[[NEWVAL]], ptr %[[V]]
+  omp.atomic.capture {
+    omp.atomic.compare %x : !llvm.ptr {
+    ^bb0(%xval : i32):
+      %cmp = llvm.icmp "eq" %xval, %e : i32
+      %sel = llvm.select %cmp, %d, %xval : i1, i32
+      omp.yield(%sel : i32)
+    }
+    omp.atomic.read %v = %x : !llvm.ptr, !llvm.ptr, i32
+  }
+  llvm.return
+}
+// -----
+
+// CHECK-LABEL: @omp_atomic_compare_capture_fail_only
+// CHECK-SAME: (ptr %[[X:.*]], ptr %[[V:.*]], i32 %[[E:.*]], i32 %[[D:.*]])
+llvm.func @omp_atomic_compare_capture_fail_only(%x : !llvm.ptr, %v : !llvm.ptr, %e : i32, %d : i32) {
+  // Fail-only compare+capture: v is only written when comparison fails
+  // CHECK: %[[RES:.*]] = cmpxchg ptr %[[X]], i32 %[[E]], i32 %[[D]] monotonic monotonic
+  // CHECK: %[[OLD:.*]] = extractvalue { i32, i1 } %[[RES]], 0
+  // CHECK: %[[SUCCESS:.*]] = extractvalue { i32, i1 } %[[RES]], 1
+  // CHECK: br i1 %[[SUCCESS]], label %[[EXIT:.*]], label %[[CONT:.*]]
+  // CHECK: [[CONT]]:
+  // CHECK: store i32 %[[OLD]], ptr %[[V]]
+  // CHECK: br label %[[EXIT2:.*]]
+  omp.atomic.capture {
+    omp.atomic.compare %x : !llvm.ptr {
+    ^bb0(%xval : i32):
+      %cmp = llvm.icmp "eq" %xval, %e : i32
+      %sel = llvm.select %cmp, %d, %xval : i1, i32
+      omp.yield(%sel : i32)
+    }
+    omp.atomic.read %v = %x : !llvm.ptr, !llvm.ptr, i32
+  } {fail_only}
+  llvm.return
+}
+// -----
+
+// CHECK-LABEL: @omp_atomic_compare_capture_real
+// CHECK-SAME: (ptr %[[X:.*]], ptr %[[V:.*]], float %[[E:.*]], float %[[D:.*]])
+llvm.func @omp_atomic_compare_capture_real(%x : !llvm.ptr, %v : !llvm.ptr, %e : f32, %d : f32) {
+  // Real compare+capture: uses HandleFPNegZero multi-block path
+  // CHECK: %[[EBITS:.*]] = bitcast float %[[E]] to i32
+  // CHECK: %[[DBITS:.*]] = bitcast float %[[D]] to i32
+  // CHECK: %[[XI:.*]] = load atomic i32, ptr %[[X]] monotonic{{.*}}
+  // CHECK: %[[XFP:.*]] = bitcast i32 %[[XI]] to float
+  // Part 1: NaN check
+  // CHECK: %[[E_NAN:.*]] = fcmp uno float %[[E]], %[[E]]
+  // CHECK: %[[X_NAN:.*]] = fcmp uno float %[[XFP]], %[[XFP]]
+  // CHECK: %[[EITHER_NAN:.*]] = or i1 %[[E_NAN]], %[[X_NAN]]
+  // CHECK: br i1 %[[EITHER_NAN]], label %[[NAN:.*]], label %[[NOTNAN:.*]]
+  // CHECK: [[NAN]]:
+  // CHECK: br label %[[EXIT:.*]]
+  // Part 2: Both-zero check
+  // CHECK: [[NOTNAN]]:
+  // CHECK: %[[XISZERO:.*]] = fcmp oeq float %[[XFP]], 0.000000e+00
+  // CHECK: %[[EISZERO:.*]] = fcmp oeq float %[[E]], 0.000000e+00
+  // CHECK: %[[BOTHZERO:.*]] = and i1 %[[XISZERO]], %[[EISZERO]]
+  // CHECK: br i1 %[[BOTHZERO]], label %[[ZERO:.*]], label %[[NORMAL:.*]]
+  // CHECK: [[ZERO]]:
+  // CHECK: cmpxchg ptr %[[X]], i32 %[[XI]], i32 %[[DBITS]] monotonic monotonic{{.*}}
+  // CHECK: br label %[[EXIT]]
+  // Part 3: Normal cmpxchg
+  // CHECK: [[NORMAL]]:
+  // CHECK: cmpxchg ptr %[[X]], i32 %[[EBITS]], i32 %[[DBITS]] monotonic monotonic{{.*}}
+  // CHECK: br label %[[EXIT]]
+  // Exit: select v = (success ? d : old_x)
+  // CHECK: [[EXIT]]:
+  // CHECK: %[[OLD:.*]] = phi i32 {{.*}}
+  // CHECK: %[[OK:.*]] = phi i1 {{.*}}
+  // CHECK: %[[OLDFP:.*]] = bitcast i32 %[[OLD]] to float
+  // CHECK: %[[VVAL:.*]] = select i1 %[[OK]], float %[[D]], float %[[OLDFP]]
+  // CHECK: store float %[[VVAL]], ptr %[[V]]{{.*}}
+  omp.atomic.capture {
+    omp.atomic.compare %x : !llvm.ptr {
+    ^bb0(%xval : f32):
+      %cmp = llvm.fcmp "oeq" %xval, %e : f32
+      %sel = llvm.select %cmp, %d, %xval : i1, f32
+      omp.yield(%sel : f32)
+    }
+    omp.atomic.read %v = %x : !llvm.ptr, !llvm.ptr, f32
+  }
+  llvm.return
+}
+// -----
+
 // CHECK-LABEL: @omp_sections_empty
 llvm.func @omp_sections_empty() -> () {
   omp.sections {
