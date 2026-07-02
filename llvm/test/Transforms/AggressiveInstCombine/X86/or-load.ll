@@ -1377,19 +1377,19 @@ entry:
 
 define i32 @loadCombine_4consecutive_metadata(ptr %p, ptr %pstr) {
 ; LE-LABEL: @loadCombine_4consecutive_metadata(
-; LE-NEXT:    [[L1:%.*]] = load i32, ptr [[P:%.*]], align 1, !alias.scope [[META1:![0-9]+]]
-; LE-NEXT:    store i32 25, ptr [[PSTR:%.*]], align 4, !noalias [[META1]]
+; LE-NEXT:    [[L1:%.*]] = load i32, ptr [[P:%.*]], align 1, !alias.scope [[META0:![0-9]+]]
+; LE-NEXT:    store i32 25, ptr [[PSTR:%.*]], align 4, !noalias [[META0]]
 ; LE-NEXT:    ret i32 [[L1]]
 ;
 ; BE-LABEL: @loadCombine_4consecutive_metadata(
 ; BE-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[P:%.*]], i32 1
 ; BE-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[P]], i32 2
 ; BE-NEXT:    [[P3:%.*]] = getelementptr i8, ptr [[P]], i32 3
-; BE-NEXT:    [[L1:%.*]] = load i8, ptr [[P]], align 1, !alias.scope [[META1:![0-9]+]]
-; BE-NEXT:    [[L2:%.*]] = load i8, ptr [[P1]], align 1, !alias.scope [[META1]]
-; BE-NEXT:    [[L3:%.*]] = load i8, ptr [[P2]], align 1, !alias.scope [[META1]]
-; BE-NEXT:    [[L4:%.*]] = load i8, ptr [[P3]], align 1, !alias.scope [[META1]]
-; BE-NEXT:    store i32 25, ptr [[PSTR:%.*]], align 4, !noalias [[META1]]
+; BE-NEXT:    [[L1:%.*]] = load i8, ptr [[P]], align 1, !alias.scope [[META0:![0-9]+]]
+; BE-NEXT:    [[L2:%.*]] = load i8, ptr [[P1]], align 1, !alias.scope [[META0]]
+; BE-NEXT:    [[L3:%.*]] = load i8, ptr [[P2]], align 1, !alias.scope [[META0]]
+; BE-NEXT:    [[L4:%.*]] = load i8, ptr [[P3]], align 1, !alias.scope [[META0]]
+; BE-NEXT:    store i32 25, ptr [[PSTR:%.*]], align 4, !noalias [[META0]]
 ; BE-NEXT:    [[E1:%.*]] = zext i8 [[L1]] to i32
 ; BE-NEXT:    [[E2:%.*]] = zext i8 [[L2]] to i32
 ; BE-NEXT:    [[E3:%.*]] = zext i8 [[L3]] to i32
@@ -2223,7 +2223,7 @@ define i32 @loadCombine_4consecutive_badinsert4(ptr %p) {
 ; LE-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 1
 ; LE-NEXT:    [[C1:%.*]] = load i8, ptr [[P1]], align 1
 ; LE-NEXT:    [[CMP:%.*]] = icmp eq i8 [[C1]], 0
-; LE-NEXT:    br i1 [[CMP]], label [[END:%.*]], label [[BB2:%.*]], !prof [[PROF4:![0-9]+]]
+; LE-NEXT:    br i1 [[CMP]], label [[END:%.*]], label [[BB2:%.*]]
 ; LE:       bb2:
 ; LE-NEXT:    [[L1:%.*]] = load i32, ptr [[P1]], align 1
 ; LE-NEXT:    br label [[END]]
@@ -2236,7 +2236,7 @@ define i32 @loadCombine_4consecutive_badinsert4(ptr %p) {
 ; BE-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 1
 ; BE-NEXT:    [[C1:%.*]] = load i8, ptr [[P1]], align 1
 ; BE-NEXT:    [[CMP:%.*]] = icmp eq i8 [[C1]], 0
-; BE-NEXT:    br i1 [[CMP]], label [[END:%.*]], label [[BB2:%.*]], !prof [[PROF4:![0-9]+]]
+; BE-NEXT:    br i1 [[CMP]], label [[END:%.*]], label [[BB2:%.*]]
 ; BE:       bb2:
 ; BE-NEXT:    [[L1:%.*]] = load i8, ptr [[P1]], align 1
 ; BE-NEXT:    [[C2:%.*]] = zext i8 [[L1]] to i32
