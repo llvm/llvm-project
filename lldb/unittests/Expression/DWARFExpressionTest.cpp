@@ -579,12 +579,13 @@ DWARF:
   EXPECT_THAT_ERROR(
       Evaluate({DW_OP_const1s, 'X', DW_OP_convert, 0x01}, nullptr, nullptr)
           .takeError(),
-      llvm::Failed());
+      llvm::FailedWithMessage(
+          "DW_OP_convert with a DIE offset requires a DWARF unit"));
 
   // DW_OP_convert with an empty stack.
   EXPECT_THAT_ERROR(
       Evaluate({DW_OP_convert, 0x00}, nullptr, nullptr).takeError(),
-      llvm::Failed());
+      llvm::FailedWithMessage("DW_OP_convert needs an argument"));
 }
 
 TEST(DWARFExpression, DW_OP_stack_value) {
