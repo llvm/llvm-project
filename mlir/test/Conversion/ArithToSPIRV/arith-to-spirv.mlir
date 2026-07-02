@@ -1494,15 +1494,9 @@ func.func @float32_minimumf_scalar(%arg0 : f32, %arg1 : f32) -> f32 {
 }
 
 // CHECK-LABEL: @float32_minnumf_scalar
-// CHECK-SAME: %[[LHS:.+]]: f32, %[[RHS:.+]]: f32
 func.func @float32_minnumf_scalar(%arg0 : f32, %arg1 : f32) -> f32 {
-  // CHECK: %[[MIN:.+]] = spirv.GL.FMin %arg0, %arg1 : f32
-  // CHECK: %[[LHS_NAN:.+]] = spirv.IsNan %[[LHS]] : f32
-  // CHECK: %[[RHS_NAN:.+]] = spirv.IsNan %[[RHS]] : f32
-  // CHECK: %[[SELECT1:.+]] = spirv.Select %[[LHS_NAN]], %[[RHS]], %[[MIN]]
-  // CHECK: %[[SELECT2:.+]] = spirv.Select %[[RHS_NAN]], %[[LHS]], %[[SELECT1]]
+  // CHECK: spirv.GL.NMin %arg0, %arg1 : f32
   %0 = arith.minnumf %arg0, %arg1 : f32
-  // CHECK: return %[[SELECT2]]
   return %0: f32
 }
 
@@ -1520,15 +1514,9 @@ func.func @float32_maximumf_scalar(%arg0 : vector<2xf32>, %arg1 : vector<2xf32>)
 }
 
 // CHECK-LABEL: @float32_maxnumf_scalar
-// CHECK-SAME: %[[LHS:.+]]: vector<2xf32>, %[[RHS:.+]]: vector<2xf32>
 func.func @float32_maxnumf_scalar(%arg0 : vector<2xf32>, %arg1 : vector<2xf32>) -> vector<2xf32> {
-  // CHECK: %[[MAX:.+]] = spirv.GL.FMax %arg0, %arg1 : vector<2xf32>
-  // CHECK: %[[LHS_NAN:.+]] = spirv.IsNan %[[LHS]] : vector<2xf32>
-  // CHECK: %[[RHS_NAN:.+]] = spirv.IsNan %[[RHS]] : vector<2xf32>
-  // CHECK: %[[SELECT1:.+]] = spirv.Select %[[LHS_NAN]], %[[RHS]], %[[MAX]]
-  // CHECK: %[[SELECT2:.+]] = spirv.Select %[[RHS_NAN]], %[[LHS]], %[[SELECT1]]
+  // CHECK: spirv.GL.NMax %arg0, %arg1 : vector<2xf32>
   %0 = arith.maxnumf %arg0, %arg1 : vector<2xf32>
-  // CHECK: return %[[SELECT2]]
   return %0: vector<2xf32>
 }
 
