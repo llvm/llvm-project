@@ -23,6 +23,7 @@
 #include "X86.h"
 
 #include "llvm/IR/Function.h"
+#include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Module.h"
@@ -86,6 +87,18 @@ static const struct {
     {"llvm.x86.avx.", X86::FeatureAVX, "AVX"},
 };
 
+/// \returns true if the inline-asm constraint string \p C names an AVX-512
+/// mask register, i.e. a "{k0}"..."{k7}" token.
+static bool referencesMaskReg(StringRef C) {
+  for (size_t Pos = C.find("{k"); Pos != StringRef::npos;
+       Pos = C.find("{k", Pos + 2)) {
+    if (Pos + 3 < C.size() && C[Pos + 2] >= '0' && C[Pos + 2] <= '7' &&
+        C[Pos + 3] == '}')
+      return true;
+  }
+  return false;
+}
+
 void X86TargetVerify::verifyFunctionChecks(Function &F,
                                            const MCSubtargetInfo &STI) {
   bool HasAMXTILE = STI.hasFeature(X86::FeatureAMXTILE);
@@ -122,6 +135,26 @@ void X86TargetVerify::verifyFunctionChecks(Function &F,
       Check(HasAMXTILE,
             "x86_amx type used, but the subtarget does not support AMX-TILE.",
             &I);
+
+    // Inline asm may name physical registers (in clobbers or register
+    // constraints) that only exist on subtargets with a given feature. zmm and
+    // mask (k) registers require AVX-512; ymm registers require AVX.
+    if (const auto *CB = dyn_cast<CallBase>(&I)) {
+      if (CB->isInlineAsm()) {
+        StringRef Constraints =
+            cast<InlineAsm>(CB->getCalledOperand())->getConstraintString();
+        if (Constraints.contains("zmm") || referencesMaskReg(Constraints))
+          Check(STI.hasFeature(X86::FeatureAVX512),
+                "inline asm references an AVX-512 register (zmm/k), but the "
+                "subtarget does not support AVX-512.",
+                &I);
+        if (Constraints.contains("ymm"))
+          Check(STI.hasFeature(X86::FeatureAVX),
+                "inline asm references an AVX register (ymm), but the "
+                "subtarget does not support AVX.",
+                &I);
+      }
+    }
   }
 }
 
