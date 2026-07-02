@@ -1,0 +1,68 @@
+name: Reviewer Access Request
+description: Request to join the LLVM reviewers team
+title: "Request Reviewer Access For <user>"
+labels:
+  - "infra:reviewer-access-request"
+body:
+  - type: markdown
+    attributes:
+      value: >
+        Thank you for your contributions to LLVM! Please replace `<user>` in
+        the issue title with your GitHub username, and complete the form
+        below. See the
+        [Developer Policy](https://llvm.org/docs/DeveloperPolicy.html#becoming-a-reviewer)
+        for the criteria used to evaluate reviewer access requests. After you
+        file this issue, you will need two current reviewers to vouch for
+        you, at least one of whom does not share your organizational
+        affiliation.
+  - type: checkboxes
+    id: policies
+    attributes:
+      label: Policy Agreement
+      description: >
+        Reviewers are expected to know and follow the community policies.
+        Please confirm each of the following.
+      options:
+        - label: >
+            I have read the [LLVM Community Code of
+            Conduct](https://llvm.org/docs/CodeOfConduct.html) and agree to
+            abide by it.
+          required: true
+        - label: >
+            I have read the [LLVM AI Tool Use
+            Policy](https://llvm.org/docs/AIToolPolicy.html) and agree to
+            abide by it.
+          required: true
+        - label: >
+            I have read the [LLVM Developer
+            Policy](https://llvm.org/docs/DeveloperPolicy.html) and agree to
+            abide by it.
+          required: true
+        - label: >
+            I have read the [LLVM Code Review
+            Policy](https://llvm.org/docs/CodeReview.html) and agree to
+            abide by it.
+          required: true
+  - type: textarea
+    id: feedback-examples
+    attributes:
+      label: Examples of Helpful Feedback
+      description: >
+        Link to 3 or more separate pull requests, issues, or Discourse
+        threads where your comments provided useful feedback demonstrating
+        good technical judgement.
+      placeholder: |
+        - https://github.com/llvm/llvm-project/pull/NNNNN
+        - https://github.com/llvm/llvm-project/issues/NNNNN
+        - https://discourse.llvm.org/t/...
+    validations:
+      required: true
+  - type: textarea
+    id: reason
+    attributes:
+      label: Background
+      description: >
+        Tell us about your involvement with the project and why you are
+        requesting reviewer access.
+    validations:
+      required: true

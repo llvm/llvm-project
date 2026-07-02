@@ -34,8 +34,8 @@
 'infra:commit-access-request':
   - '/Request Commit Access/'
 
-'infra:triager-access-request':
-  - '/Request Triager Access/'
+'infra:reviewer-access-request':
+  - '/Request Reviewer Access/'
 
 'false-positive':
   - '\bfalse[- ]positive\b'

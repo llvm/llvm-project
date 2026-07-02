@@ -87,6 +87,12 @@ Here are some tips to enable a successful code review:
   a recent commit from `main`. If you want to make changes to a release
   branch, land a change in `main` first and then follow the {ref}`backporting
   instructions <backporting>`.
+- Avoid formatting- or whitespace-only changes outside of code you plan to
+  make subsequent changes to. Also, try to separate formatting or whitespace
+  changes from functional changes, either by correcting the format first
+  (ideally) or afterward. Such changes should be highly localized and the
+  commit message should clearly state that the commit is not intended to
+  change functionality, usually by stating it is {ref}`NFC <nfc>`.
 
 LLVM uses code review, which is a generally accepted software engineering best
 practice for maintaining high code quality. See {doc}`CodeReview` for more
@@ -473,10 +479,12 @@ your journey to becoming an LLVM contributor is to apply to join the "LLVM
 committers" team. Committers have "commit-with-review" access. They cannot
 unilaterally land changes or approve other people's pull requests.
 
-To merge changes into `main`, you need to make a pull request and get it
-approved by a member of the LLVM reviewers team (see below). Once a PR is
-approved by a reviewer, a committer can push the merge button to land any PR,
-whether it is their own, or someone else's (see {ref}`merging pull requests
+Commit access grants *commit-after-approval* to all parts of LLVM. To merge
+changes into `main`, you need to make a pull request and get it approved by a
+member of the LLVM reviewers team (see below). For information on how to get
+approval for a patch, please see {doc}`CodeReview`. Once a PR is approved by a
+reviewer, a committer can push the merge button to land any PR, whether it is
+their own, or someone else's (see {ref}`merging pull requests
 <merging_pull_requests>`).
 
 To apply to be a committer, read the following developer policy docs, and file
@@ -492,8 +500,8 @@ the policies and agree to abide by them:
 Once approved, a GitHub invitation will be sent to your GitHub account. In case
 you don't get notification from GitHub, go to [Invitation Link] directly. Once
 you accept the invitation, you'll be granted LLVM github org affiliation and
-LLVM triager team membership. If you fail to follow the policies, you may lose
-commit access.
+LLVM committers team membership. If you fail to follow the policies, you may
+lose commit access.
 
 Prior to obtaining commit access, it is common practice to request that someone
 with commit access commits on your behalf. Note that GitHub will use your
@@ -504,10 +512,15 @@ any committer can merge it for you (see {ref}`merging pull requests
 
 For external tracking purposes, committed changes are automatically reflected
 on a commits mailing list soon after the commit lands (e.g.
-`[llvm-commits@lists.llvm.org]`). Note that these mailing lists are moderated,
+[llvm-commits@lists.llvm.org]). Note that these mailing lists are moderated,
 and it is not unusual for a large commit to require a moderator to approve the
 email, so do not be concerned if a commit does not immediately appear in the
 archives.
+
+You are encouraged to review other peoples' patches as well, but you aren't
+required to do so. No special access is needed to leave review feedback on a
+pull request, and a track record of helpful reviews is the main criterion for
+joining the reviewers team (see below).
 
 [commit-access-request]: https://github.com/llvm/llvm-project/issues/new?template=commit-access-request.yml
 [Invitation Link]: https://github.com/orgs/llvm/invitation
@@ -531,6 +544,14 @@ decision \-\-- we trust reviewers to use good judgement. Valid reasons include:
 - reverting obviously broken patches
 - documentation/comment accuracy changes
 - other minor, non-functional changes
+- landing changes to those portions of LLVM that you have contributed or
+  maintain (i.e., have been assigned responsibility for), with the proviso
+  that such changes must not break the build
+
+The last case is a "trust but verify" policy: changes landed without approval
+are still subject to {ref}`code review <code review>`, just after they land
+rather than before. Multiple violations of these policies or a single
+egregious violation may cause review access to be revoked.
 
 Review access is granted to contributors who have provided helpful feedback
 that demonstrates good technical judgement. The most important resource the
@@ -555,36 +576,8 @@ share an organizational affiliation." We trust existing reviewers to be honest
 about their affiliations, and not rubber stamp the work of team mates as a
 favor to expedite this process.
 
-[CODEOWNERS]: http://github.com/llvm/llvm-project/blob/main/.github/CODEOWNERS
-[review-access-issue]: https://github.com/llvm/llvm-project/issues/new?template=commit-access-request.yml
-
-% TODO: The following policy doc content probably can find a better home elsewhere.
-%
-% Avoid committing formatting- or whitespace-only
-% changes outside of code you plan to make subsequent changes to. Also, try to
-% separate formatting or whitespace changes from functional changes, either by
-% correcting the format first (ideally) or afterward. Such changes should be
-% highly localized and the commit message should clearly state that the commit is
-% not intended to change functionality, usually by stating it is {ref}`NFC
-% <nfc>`.
-%
-% If you have recently joined the reviewer team, these policies apply:
-% 
-% 1. You are granted *commit-after-approval* to all parts of LLVM. For
-%    information on how to get approval for a patch, please see
-%    {doc}`CodeReview`. When approved, you may merge it yourself.
-% 3. Reviewers are allowed to commit patches without approval to those portions
-%    of LLVM that they have contributed or maintain (i.e., have been assigned
-%    responsibility for), with the proviso that such commits must not break the
-%    build. This is a "trust but verify" policy, and commits of this nature are
-%    reviewed after they are committed.
-% 4. Multiple violations of these policies or a single egregious violation may
-%    cause commit access to be revoked.
-% 
-% In any case, your changes are still subject to {ref}`code review <code review>`
-% (either before or after they are committed, depending on the nature of the
-% change). You are encouraged to review other peoples' patches as well, but you
-% aren't required to do so.
+[CODEOWNERS]: https://github.com/llvm/llvm-project/blob/main/.github/CODEOWNERS
+[review-access-issue]: https://github.com/llvm/llvm-project/issues/new?template=reviewer-access-request.yml
 
 (merging_pull_requests)=
 ### Merging Pull Requests
@@ -723,8 +716,8 @@ awareness of. For such changes, the following should be done:
 
 ### Attribution of Changes
 
-When contributors submit a patch to an LLVM project, another committer or
-triager may merge the PR for the author once it has been approved (see
+When contributors submit a patch to an LLVM project, another committer may
+merge the PR for the author once it has been approved (see
 {ref}`merging pull requests <merging_pull_requests>`). GitHub will
 automatically ensure that authorship is preserved,
 and one does not need to take any further action. We do not want the source
