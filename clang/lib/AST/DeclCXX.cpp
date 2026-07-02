@@ -3133,6 +3133,16 @@ bool CXXConstructorDecl::isSpecializationCopyingObject() const {
   return ParamType == ClassTy;
 }
 
+ArrayRef<CXXDefaultArgExpr *>
+CXXConstructorDecl::getCtorClosureDefaultArgs() const {
+  return getASTContext().getCtorClosureDefaultArgs(getCanonicalDecl());
+}
+
+void CXXConstructorDecl::setCtorClosureDefaultArgs(
+    ArrayRef<CXXDefaultArgExpr *> Args) {
+  getASTContext().setCtorClosureDefaultArgs(getCanonicalDecl(), Args);
+}
+
 void CXXDestructorDecl::anchor() {}
 
 CXXDestructorDecl *CXXDestructorDecl::CreateDeserialized(ASTContext &C,
