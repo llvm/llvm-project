@@ -3100,6 +3100,31 @@ bool CheckAndRearrangeArguments(ActualArguments &arguments,
   return !anyMissing;
 }
 
+// Locates the actual argument that binds to the first dummy argument of an
+// intrinsic, honoring keyword syntax.  The enumeration-type inline handlers
+// (HUGE/INT/NEXT/PREVIOUS) must decide whether the enum path applies before
+// the actual arguments have been rearranged into dummy order, so they cannot
+// simply inspect arguments[0].  The first dummy is bound either by an explicit
+// keyword (e.g. INT(KIND=8, A=RED)) or, absent that keyword, by the first
+// positional argument.  Returns nullptr if no such argument is present.
+static const ActualArgument *FindFirstDummyArgument(
+    const ActualArguments &arguments, const char *firstDummyKeyword) {
+  const ActualArgument *firstPositional{nullptr};
+  for (const std::optional<ActualArgument> &arg : arguments) {
+    if (!arg) {
+      continue;
+    }
+    if (arg->keyword()) {
+      if (*arg->keyword() == firstDummyKeyword) {
+        return &*arg;
+      }
+    } else if (!firstPositional) {
+      firstPositional = &*arg;
+    }
+  }
+  return firstPositional;
+}
+
 // The NULL() intrinsic is a special case.
 SpecificCall IntrinsicProcTable::Implementation::HandleNull(
     ActualArguments &arguments, FoldingContext &context) const {
@@ -4081,19 +4106,36 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::Probe(
       }
     }
 
-    // Enumeration type intrinsics: HUGE, NEXT, PREVIOUS, INT
-    if (arguments.size() >= 1 && arguments[0]) {
-      if (auto type{arguments[0]->GetType()}) {
-        if (const auto *derived{GetDerivedTypeSpec(*type)}) {
-          if (derived->IsEnumerationType()) {
-            if (call.name == "huge") {
-              return HandleEnumerationHuge(*derived, arguments, context);
-            } else if (call.name == "next") {
-              return HandleEnumerationNext(*derived, arguments, context);
-            } else if (call.name == "previous") {
-              return HandleEnumerationPrevious(*derived, arguments, context);
-            } else if (call.name == "int") {
-              return HandleEnumerationInt(*derived, arguments, context);
+    // NEXT/PREVIOUS are enumeration-type-only intrinsics.
+    if (call.name == "next" || call.name == "previous") {
+      const semantics::DerivedTypeSpec *derived{nullptr};
+      if (const ActualArgument *arg{FindFirstDummyArgument(arguments, "a")}) {
+        if (auto type{arg->GetType()}) {
+          derived = GetDerivedTypeSpec(*type);
+        }
+      }
+      if (derived && derived->IsEnumerationType()) {
+        return call.name == "next"
+            ? HandleEnumerationNext(*derived, arguments, context)
+            : HandleEnumerationPrevious(*derived, arguments, context);
+      }
+      context.messages().Say(
+          "Argument of %s() must be of enumeration type"_err_en_US,
+          parser::ToUpperCaseLetters(call.name));
+      return std::nullopt;
+    }
+
+    // HUGE/INT are ordinary intrinsics that also accept enumeration types.
+    if (call.name == "huge" || call.name == "int") {
+      const char *firstDummyKeyword{call.name == "huge" ? "x" : "a"};
+      if (const ActualArgument *arg{
+              FindFirstDummyArgument(arguments, firstDummyKeyword)}) {
+        if (auto type{arg->GetType()}) {
+          if (const auto *derived{GetDerivedTypeSpec(*type)}) {
+            if (derived->IsEnumerationType()) {
+              return call.name == "huge"
+                  ? HandleEnumerationHuge(*derived, arguments, context)
+                  : HandleEnumerationInt(*derived, arguments, context);
             }
           }
         }

@@ -1314,7 +1314,7 @@ Expr<T> FoldOperation(FoldingContext &context, FunctionRef<T> &&funcRef) {
                     auto ordIter{scope->find(semantics::SourceName{
                         semantics::DerivedTypeDetails::ordinalComponentName,
                         sizeof(semantics::DerivedTypeDetails::
-                            ordinalComponentName) -
+                                ordinalComponentName) -
                             1})};
                     if (ordIter != scope->end()) {
                       const semantics::Symbol &ordSym{*ordIter->second};
@@ -1325,24 +1325,21 @@ Expr<T> FoldOperation(FoldingContext &context, FunctionRef<T> &&funcRef) {
                       // Extract ordinal from constant value
                       if (auto *constant{
                               UnwrapConstantValue<SomeDerived>(*expr)}) {
+                        const bool isNext{name == "next"};
+                        // Boundary without STAT= is runtime error
+                        // termination; diagnose and leave the reference
+                        // unfolded (matches the scalar behavior).
+                        auto boundaryBail{[&]() -> Expr<T> {
+                          context.messages().Say(isNext
+                                  ? "NEXT() of last enumerator without STAT= causes error termination"_err_en_US
+                                  : "PREVIOUS() of first enumerator without STAT= causes error termination"_err_en_US);
+                          return Expr<T>{std::move(funcRef)};
+                        }};
                         if (auto sc{constant->GetScalarValue()}) {
                           if (auto ordExpr{sc->Find(ordSym)}) {
                             if (auto ordVal{ToInt64(*ordExpr)}) {
-                              bool isNext{name == "next"};
-                              bool atBoundary{
-                                  isNext ? *ordVal >= count : *ordVal <= 1};
-                              if (atBoundary) {
-                                // At boundary without STAT — error
-                                // termination at runtime. Don't fold;
-                                // emit warning.
-                                if (isNext) {
-                                  context.messages().Say(
-                                      "NEXT() of last enumerator without STAT= causes error termination"_err_en_US);
-                                } else {
-                                  context.messages().Say(
-                                      "PREVIOUS() of first enumerator without STAT= causes error termination"_err_en_US);
-                                }
-                                return Expr<T>{std::move(funcRef)};
+                              if (isNext ? *ordVal >= count : *ordVal <= 1) {
+                                return boundaryBail();
                               }
                               int newOrd{isNext
                                       ? static_cast<int>(*ordVal + 1)
@@ -1355,6 +1352,50 @@ Expr<T> FoldOperation(FoldingContext &context, FunctionRef<T> &&funcRef) {
                                   Constant<SomeDerived>{std::move(ctor)}};
                             }
                           }
+                        } else if (constant->Rank() > 0) {
+                          // Array constant: NEXT/PREVIOUS are elemental, so
+                          // fold elementwise into a constant array of
+                          // enumerators.  STAT= is absent here (the
+                          // STAT-present case bails out above), so there is
+                          // no side effect to preserve.
+                          //
+                          // NOTE (enum-lowering / next PR): the runtime
+                          // counterpart of this array case is not yet
+                          // implemented.  genEnumerationNext/Previous in
+                          // flang/lib/Lower/ConvertExprToHLFIR.cpp call
+                          // hlfir::loadTrivialScalar and emit scalar arith,
+                          // so they only accept scalar arguments.  When a
+                          // non-constant array argument reaches lowering,
+                          // those emitters must be wrapped in an
+                          // hlfir.elemental region (one scalar min/max plus a
+                          // per-element boundary test, per element), and STAT
+                          // handling must reduce the per-element boundary
+                          // flags (any-boundary -> STAT/abort).  This
+                          // elementwise fold is the compile-time mirror of
+                          // that loop.  Until the lowering lands, only
+                          // constant array arguments fold here; the sem-3
+                          // handler's temporary "non-constant argument is not
+                          // yet supported" guard still rejects runtime arrays.
+                          std::vector<StructureConstructor> elements;
+                          elements.reserve(constant->values().size());
+                          for (const StructureConstructorValues &scv :
+                              constant->values()) {
+                            auto ordVal{
+                                ToInt64(scv.find(ordSym)->second.value())};
+                            if (isNext ? *ordVal >= count : *ordVal <= 1) {
+                              return boundaryBail();
+                            }
+                            int newOrd{isNext ? static_cast<int>(*ordVal + 1)
+                                              : static_cast<int>(*ordVal - 1)};
+                            StructureConstructor ctor{*derived};
+                            ctor.Add(ordSym,
+                                Expr<SomeType>{
+                                    Expr<SomeInteger>{Expr<CInteger>{newOrd}}});
+                            elements.emplace_back(std::move(ctor));
+                          }
+                          return Expr<SomeDerived>{Constant<SomeDerived>{
+                              *derived, std::move(elements),
+                              ConstantSubscripts{constant->shape()}}};
                         }
                       }
                     }

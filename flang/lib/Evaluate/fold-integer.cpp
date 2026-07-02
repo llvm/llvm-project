@@ -766,9 +766,35 @@ std::optional<Expr<T>> FoldIntrinsicFunctionCommon(
         if (auto type{derivedExpr->GetType()}) {
           if (const auto *derived{GetDerivedTypeSpec(*type)}) {
             if (derived->IsEnumerationType()) {
+              // Scalar: fold to the single ordinal.
               if (auto ordExpr{GetEnumerationOrdinal(*derivedExpr)}) {
                 if (auto ordVal{ToInt64(*ordExpr)}) {
                   return Expr<T>{Constant<T>{Scalar<T>{*ordVal}}};
+                }
+              } else if (const auto *constant{
+                             UnwrapConstantValue<SomeDerived>(*derivedExpr)};
+                  constant && constant->Rank() > 0) {
+                // Array constant: fold elementwise into a constant array of
+                // ordinals.  Reaching here means the whole constructor already
+                // folded to a constant, so every element's __ordinal is a
+                // constant integer.
+                if (const auto *scope{derived->GetScope()}) {
+                  auto ordIter{scope->find(semantics::SourceName{
+                      semantics::DerivedTypeDetails::ordinalComponentName,
+                      sizeof(
+                          semantics::DerivedTypeDetails::ordinalComponentName) -
+                          1})};
+                  if (ordIter != scope->end()) {
+                    const semantics::Symbol &ordSym{*ordIter->second};
+                    std::vector<Scalar<T>> elements;
+                    for (const StructureConstructorValues &scv :
+                        constant->values()) {
+                      elements.emplace_back(
+                          *ToInt64(scv.find(ordSym)->second.value()));
+                    }
+                    return Expr<T>{Constant<T>{std::move(elements),
+                        ConstantSubscripts{constant->shape()}}};
+                  }
                 }
               }
               // Non-constant enumeration argument — leave unfolded

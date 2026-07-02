@@ -155,10 +155,37 @@ subroutine test_previous_boundary_warning()
   pc = previous(red)
 end subroutine
 
+subroutine test_next_previous_array_boundary()
+  use enum_intrinsics_mod
+  type(color) :: nc(2), pc(2)
+  ! NEXT/PREVIOUS are elemental: a constant array with any element at the
+  ! boundary is error termination without STAT=, so the whole reference is
+  ! diagnosed and left unfolded (same as the scalar boundary case).
+  !CHECK: error: NEXT() of last enumerator without STAT= causes error termination
+  nc = next([green, blue])
+  !CHECK: error: PREVIOUS() of first enumerator without STAT= causes error termination
+  pc = previous([red, green])
+end subroutine
+
 subroutine test_huge_real_still_works()
   ! Non-enumeration HUGE still works normally
   real :: r
   integer :: i
   r = huge(r)
   i = huge(i)
+end subroutine
+
+! NOTE: This test will need to be modified after completion of the feature.
+subroutine test_next_previous_keyword_order()
+  use enum_intrinsics_mod
+  type(color) :: nc
+  integer :: istat
+  ! The enum argument passed by keyword AFTER a non-enum keyword (STAT=) must
+  ! still be recognized as the enumeration call.  Reaching the STAT handler
+  ! (rather than the "must be of enumeration type" diagnostic) proves the
+  ! keyword-order dispatch works.
+  !CHECK: error: NEXT() with STAT= is not yet supported
+  nc = next(stat=istat, a=red)
+  !CHECK: error: PREVIOUS() with STAT= is not yet supported
+  nc = previous(stat=istat, a=blue)
 end subroutine
