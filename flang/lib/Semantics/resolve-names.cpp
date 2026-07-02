@@ -5034,17 +5034,24 @@ void SubprogramVisitor::Post(const parser::PrefixSpec::Launch_Bounds &x) {
       ok = false;
     }
   }
-  if (!ok || bounds.size() < 2 || bounds.size() > 3) {
-    Say(currStmtSource().value(),
-        "Operands of LAUNCH_BOUNDS() must be 2 or 3 integer constants"_err_en_US);
+  // The second (minimum blocks per multiprocessor) and third (maximum blocks
+  // per cluster) operands of LAUNCH_BOUNDS() are optional, so 1, 2, or 3
+  // integer constants are accepted.  This handler runs during the direct walk
+  // of the subprogram statement performed by ResolveSpecificationParts(), where
+  // currStmtSource() may not be set, so derive the diagnostic source from the
+  // prefix instead of dereferencing it.
+  parser::CharBlock source{parser::GetSource(x).value_or(
+      currStmtSource().value_or(parser::CharBlock{}))};
+  if (!ok || bounds.empty() || bounds.size() > 3) {
+    Say(source,
+        "Operands of LAUNCH_BOUNDS() must be 1, 2, or 3 integer constants"_err_en_US);
   } else if (auto *subp{currScope().symbol()
                      ? currScope().symbol()->detailsIf<SubprogramDetails>()
                      : nullptr}) {
     if (subp->cudaLaunchBounds().empty()) {
       subp->set_cudaLaunchBounds(std::move(bounds));
     } else {
-      Say(currStmtSource().value(),
-          "LAUNCH_BOUNDS() may only appear once"_err_en_US);
+      Say(source, "LAUNCH_BOUNDS() may only appear once"_err_en_US);
     }
   }
 }
@@ -5059,8 +5066,12 @@ void SubprogramVisitor::Post(const parser::PrefixSpec::Cluster_Dims &x) {
       ok = false;
     }
   }
+  // As in Post(Launch_Bounds), currStmtSource() may be unset on this path, so
+  // take the diagnostic source from the prefix.
+  parser::CharBlock source{parser::GetSource(x).value_or(
+      currStmtSource().value_or(parser::CharBlock{}))};
   if (!ok || dims.size() != 3) {
-    Say(currStmtSource().value(),
+    Say(source,
         "Operands of CLUSTER_DIMS() must be three integer constants"_err_en_US);
   } else if (auto *subp{currScope().symbol()
                      ? currScope().symbol()->detailsIf<SubprogramDetails>()
@@ -5068,8 +5079,7 @@ void SubprogramVisitor::Post(const parser::PrefixSpec::Cluster_Dims &x) {
     if (subp->cudaClusterDims().empty()) {
       subp->set_cudaClusterDims(std::move(dims));
     } else {
-      Say(currStmtSource().value(),
-          "CLUSTER_DIMS() may only appear once"_err_en_US);
+      Say(source, "CLUSTER_DIMS() may only appear once"_err_en_US);
     }
   }
 }
