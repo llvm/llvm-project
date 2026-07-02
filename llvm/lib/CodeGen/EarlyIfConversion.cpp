@@ -23,6 +23,7 @@
 #include "llvm/ADT/SparseSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -42,6 +43,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cstddef>
 
 using namespace llvm;
 
@@ -829,6 +831,9 @@ class EarlyIfConverter {
   MachineBranchProbabilityInfo *MBPI = nullptr;
   SSAIfConv IfConv;
 
+  /// Cache of basic blocks verified to contain no call instructions.
+  SmallPtrSet<const MachineBasicBlock *, 16> NoCallBlocksCache;
+
 public:
   EarlyIfConverter(MachineDominatorTree &DT, MachineLoopInfo &LI,
                    MachineTraceMetrics &MTM, MachineBranchProbabilityInfo *MBPI)
@@ -842,7 +847,11 @@ private:
   void invalidateTraces();
   bool shouldConvertIf();
   bool isConditionDataDependent();
-  bool doOperandsComeFromMemory(Register Reg);
+  bool doOperandsComeFromMemory(Register Reg, const MachineInstr *ConditionDef);
+  bool callInPath(
+      const MachineInstr *From, const MachineInstr *To,
+      const SmallPtrSetImpl<const MachineBasicBlock *> &IntermediateBlocks,
+      unsigned MaxInstructions = 64);
 };
 
 class EarlyIfConverterLegacy : public MachineFunctionPass {
@@ -923,15 +932,62 @@ static bool isConstantPoolLoad(const MachineInstr *MI) {
          });
 }
 
-/// Check if there are any calls in the range (From, To].
-static bool callInRange(const MachineInstr *From, const MachineInstr *To) {
-  constexpr int MaxInstructionsToCheck = 64;
-  int Count = 0;
-  auto InstrRange =
-      make_range(std::next(From->getIterator()), To->getIterator());
-  return any_of(InstrRange, [&](const MachineInstr &MI) {
-    return ++Count > MaxInstructionsToCheck || MI.isCall();
-  });
+/// Check if there are any calls in the path from From to To, potentially
+/// spanning multiple basic blocks. The IntermediateBlocks set contains
+/// blocks that are between From's block and To's block in the control flow.
+///
+/// Checks:
+/// - If same block: (From, To)
+/// - If different blocks:
+///   - (From, end of From's block]
+///   - All instructions in IntermediateBlocks
+///   - [start of To's block, To)
+///
+/// Returns true if a call is found or if the path exceeds MaxInstructions.
+/// Uses NoCallBlocksCache to skip blocks already verified to have no calls.
+bool EarlyIfConverter::callInPath(
+    const MachineInstr *From, const MachineInstr *To,
+    const SmallPtrSetImpl<const MachineBasicBlock *> &IntermediateBlocks,
+    unsigned MaxInstructions /* = 64 */) {
+  if (From == To)
+    return false;
+
+  unsigned Count = 0;
+  const MachineBasicBlock *FromBB = From->getParent();
+  const MachineBasicBlock *ToBB = To->getParent();
+
+  // Helper to check if instruction limit exceeded or call found.
+  auto CheckInstrIsCall = [&](const MachineInstr &MI) {
+    return ++Count > MaxInstructions || MI.isCall();
+  };
+
+  // If From and To are in the same block, just check (From, To).
+  if (FromBB == ToBB)
+    return llvm::any_of(
+        llvm::make_range(std::next(From->getIterator()), To->getIterator()),
+        CheckInstrIsCall);
+
+  // Check (From, end of From's block].
+  if (any_of(
+          llvm::make_range(std::next(From->getIterator()), FromBB->instr_end()),
+          CheckInstrIsCall))
+    return true;
+
+  // Check all intermediate blocks entirely.
+  // Use cache to skip blocks already verified to have no calls.
+  for (const MachineBasicBlock *BB : IntermediateBlocks) {
+    if (BB == FromBB || BB == ToBB)
+      continue;
+    if (NoCallBlocksCache.contains(BB))
+      continue;
+    if (any_of(*BB, CheckInstrIsCall))
+      return true;
+    NoCallBlocksCache.insert(BB);
+  }
+
+  // Check [start of To's block, To).
+  return any_of(llvm::make_range(ToBB->instr_begin(), To->getIterator()),
+                CheckInstrIsCall);
 }
 
 /// Check if a register's value comes from a memory load by walking the
@@ -940,14 +996,18 @@ static bool callInRange(const MachineInstr *From, const MachineInstr *To) {
 /// or come from a constant pool). Only consider loads that are in the
 /// same basic block as the branch to ensure the load is "immediately"
 /// before the branch in program time.
-bool EarlyIfConverter::doOperandsComeFromMemory(Register Reg) {
+bool EarlyIfConverter::doOperandsComeFromMemory(
+    Register Reg, const MachineInstr *ConditionDef) {
   if (!Reg.isVirtual())
     return false;
 
+  LLVM_DEBUG(dbgs() << "  doOperandsComeFromMemory starting from reg "
+                    << printReg(Reg) << "\n");
+
   // Walk the def-use chain.
   SmallPtrSet<const MachineInstr *, 8> VisitedInstrs;
+  SmallPtrSet<const MachineBasicBlock *, 8> VisitedBlocks;
   SmallVector<const MachineInstr *> Worklist;
-  SmallVector<Register, 16> VisitedRegs;
 
   MachineInstr *DefMI = MRI->getVRegDef(Reg);
   // The operand is defined outside of the function - it does not
@@ -956,24 +1016,41 @@ bool EarlyIfConverter::doOperandsComeFromMemory(Register Reg) {
     return false;
 
   Worklist.push_back(DefMI);
-  VisitedRegs.push_back(Reg);
 
   while (!Worklist.empty() && VisitedInstrs.size() < MaxNumSteps) {
     const MachineInstr *MI = Worklist.pop_back_val();
     if (!VisitedInstrs.insert(MI).second)
       continue;
 
-    // Stop walking if we encounter an instruction outside the head block.
-    if (MI->getParent() != IfConv.Head)
-      break;
+    // Stop walking if we encounter an instruction outside the loop.
+    // For blocks in the same loop, we continue to walk the def-use chain
+    // to find loads, regardless of whether they're immediate predecessors.
+    const MachineBasicBlock *Parent = MI->getParent();
+    MachineLoop *IfConvLoop = Loops->getLoopFor(IfConv.Head);
+    MachineLoop *ParentLoop = Loops->getLoopFor(Parent);
+
+    // If the instruction is outside the loop, skip it (loop-invariant).
+    if (IfConvLoop && ParentLoop != IfConvLoop)
+      continue;
+
+    // Track visited blocks for call checking later.
+    VisitedBlocks.insert(Parent);
 
     // Check if this instruction is a load, and there are no calls between
-    // the load and the branch (which would break the "close in time"
+    // the load and the condition (which would break the "close in time"
     // assumption).
     if (MI->mayLoad() && !isConstantPoolLoad(MI) &&
-        !MI->isDereferenceableInvariantLoad() &&
-        !callInRange(MI, &*IfConv.Head->getFirstTerminator()))
+        !MI->isDereferenceableInvariantLoad()) {
+      // If the load doesn't dominate the condition (e.g., comes after it in
+      // the same block via a loop back-edge), it can't affect this iteration.
+      // If not - check if there is a call between the load instruction and
+      // ConditionDef.
+      if (!DomTree->dominates(MI, ConditionDef) ||
+          callInPath(MI, ConditionDef, VisitedBlocks))
+        continue;
+
       return true;
+    }
 
     // Walk through all register use operands and find their definitions.
     for (const MachineOperand &MO : MI->operands()) {
@@ -986,7 +1063,6 @@ bool EarlyIfConverter::doOperandsComeFromMemory(Register Reg) {
       if (MachineInstr *UseDef = MRI->getVRegDef(UseReg)) {
         if (!VisitedInstrs.count(UseDef)) {
           Worklist.push_back(UseDef);
-          VisitedRegs.push_back(UseReg);
         }
       }
     }
@@ -1017,7 +1093,8 @@ bool EarlyIfConverter::isConditionDataDependent() {
   // Check if operands used to compute the branch condition were loaded recently
   // from memory, starting by the ConditionDef itself and walking up the use-def
   // chain.
-  if (doOperandsComeFromMemory(MBP.ConditionDef->getOperand(0).getReg())) {
+  if (doOperandsComeFromMemory(MBP.ConditionDef->getOperand(0).getReg(),
+                               MBP.ConditionDef)) {
     ++NumDataDependant;
     return true;
   }
@@ -1268,8 +1345,10 @@ bool EarlyIfConverter::tryConvertIf(MachineBasicBlock *MBB) {
     Changed = true;
     updateDomTree(DomTree, IfConv, RemoveBlocks);
     updateLoops(Loops, RemoveBlocks);
-    for (MachineBasicBlock *MBB : RemoveBlocks)
+    for (MachineBasicBlock *MBB : RemoveBlocks) {
+      NoCallBlocksCache.erase(MBB);
       MBB->eraseFromParent();
+    }
   }
   return Changed;
 }
