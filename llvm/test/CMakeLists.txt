@@ -323,8 +323,19 @@ else()
   set(exclude_from_check_all "EXCLUDE_FROM_CHECK_ALL")
 endif()
 
+if (LLVM_TEST_WINDOWS_PREFER_FORWARD_SLASH_MATRIX)
+  set(LLVM_TEST_PATHS
+    ${CMAKE_CURRENT_BINARY_DIR}/default
+    ${CMAKE_CURRENT_BINARY_DIR}/forward_slash
+    )
+else()
+  set(LLVM_TEST_PATHS
+    ${CMAKE_CURRENT_BINARY_DIR}
+    )
+endif()
+
 add_lit_testsuite(check-llvm "Running the LLVM regression tests"
-  ${CMAKE_CURRENT_BINARY_DIR}
+  ${LLVM_TEST_PATHS}
   ${exclude_from_check_all}
   DEPENDS ${LLVM_TEST_DEPENDS} UnitTests
   )
