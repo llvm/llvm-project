@@ -3228,6 +3228,7 @@ if needed.
      9     ``INFO_INDIRECT_CALL``         u32 strtab offset; indirect call type-ID
      10    ``INFO_TYPEID``                u32 strtab offset; function type-ID
      11    ``INFO_OCCUPANCY``             u32; occupancy used to compile the function
+     12    ``INFO_WAVE_SIZE``             u32; wavefront size used to compile the function
      ===== ============================== ==========================================
 
   .. table:: AMDGPU Info Function Flags (``INFO_FLAGS``)
@@ -3239,6 +3240,7 @@ if needed.
      0x1   ``FUNC_USES_VCC``           Function uses the VCC register
      0x2   ``FUNC_USES_FLAT_SCRATCH``  Function uses flat scratch addressing
      0x4   ``FUNC_HAS_DYN_STACK``      Function has dynamic stack allocation
+     0x8   ``FUNC_WGP_MODE``           Function uses WGP execution mode
      ===== =========================== ==========================================
 
   Symbol references (``INFO_FUNC``, ``INFO_USE``, ``INFO_CALL``) generate
@@ -21767,6 +21769,7 @@ The following sub-directives may appear inside the block:
      ``.amdgpu_num_agpr`` *value*           Accumulator VGPRs used (u32)
      ``.amdgpu_private_segment_size`` *n*   Private segment size in bytes (u32)
      ``.amdgpu_occupancy`` *value*          Occupancy used to compile the function (u32)
+     ``.amdgpu_wave_size`` *value*          Wavefront size used to compile the function (u32)
      ``.amdgpu_use`` *symbol*               Resource dependency (LDS or barrier)
      ``.amdgpu_call`` *symbol*              Direct call edge to *symbol*
      ``.amdgpu_indirect_call`` *"type-id"*  Indirect call with given type-ID string

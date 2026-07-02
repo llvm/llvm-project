@@ -599,6 +599,7 @@ void Symbol::resolve(Ctx &ctx, const CommonSymbol &other) {
   if (CommonSymbol *oldSym = dyn_cast<CommonSymbol>(this)) {
     if (ctx.arg.warnCommon)
       Warn(ctx) << "multiple common of " << getName();
+    isAMDGPULDS |= other.isAMDGPULDS;
     oldSym->alignment = std::max(oldSym->alignment, other.alignment);
     if (oldSym->size < other.size) {
       oldSym->file = other.file;

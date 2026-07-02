@@ -100,6 +100,52 @@ LLVM_ABI void fillValidArchListR600(SmallVectorImpl<StringRef> &Values);
 
 LLVM_ABI IsaVersion getIsaVersion(StringRef GPU);
 
+/// AMDGPU target properties needed to resolve object-linking resource usage
+/// without constructing MCSubtargetInfo.
+class ObjectLinkingTargetInfo {
+  GPUKind Kind = GK_NONE;
+  bool XnackOnOrAny = false;
+
+  ObjectLinkingTargetInfo(GPUKind Kind, bool XnackOnOrAny)
+      : Kind(Kind), XnackOnOrAny(XnackOnOrAny) {}
+
+public:
+  IsaVersion getVersion() const {
+    return getIsaVersion(getArchNameAMDGCN(Kind));
+  }
+
+  GPUKind getKind() const { return Kind; }
+
+  bool isGFX10Plus() const { return getVersion().Major >= 10; }
+
+  bool hasAccVGPRs() const {
+    IsaVersion Version = getVersion();
+    return Kind == GK_GFX90A || (Version.Major == 9 && Version.Minor >= 4);
+  }
+
+  bool hasNamedBarrier() const {
+    IsaVersion Version = getVersion();
+    return Version.Major >= 13 || Kind == GK_GFX1250 || Kind == GK_GFX1251 ||
+           Kind == GK_GFX12_5_GENERIC;
+  }
+
+  LLVM_ABI static ObjectLinkingTargetInfo get(GPUKind Kind, bool XnackOnOrAny);
+
+  LLVM_ABI static unsigned getNumSGPRBlocks(unsigned NumSGPRs);
+
+  LLVM_ABI unsigned getVGPREncodingGranule(unsigned WaveSize) const;
+
+  LLVM_ABI unsigned getNumExtraSGPRs(bool VCCUsed, bool FlatScrUsed) const;
+
+  LLVM_ABI unsigned getEncodedNumVGPRBlocks(unsigned NumVGPRs,
+                                            unsigned WaveSize) const;
+};
+
+LLVM_ABI bool
+isLDSSizeCompatibleWithOccupancy(const ObjectLinkingTargetInfo &Target,
+                                 unsigned WaveSize, bool IsCuMode,
+                                 uint64_t LDSBytes, unsigned Occupancy);
+
 /// Fills Features map with default values for given target GPU.
 /// \p Features contains overriding target features and this function returns
 /// default target features with entries overridden by \p Features.

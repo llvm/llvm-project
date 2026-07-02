@@ -6905,6 +6905,7 @@ bool AMDGPUAsmParser::ParseDirectiveAMDGPUInfo() {
       FI.UsesFlatScratch =
           !!(Flags & AMDGPU::FuncInfoFlags::FUNC_USES_FLAT_SCRATCH);
       FI.HasDynStack = !!(Flags & AMDGPU::FuncInfoFlags::FUNC_HAS_DYN_STACK);
+      FI.UsesWgpMode = !!(Flags & AMDGPU::FuncInfoFlags::FUNC_WGP_MODE);
       HasScalarAttrs = true;
     } else if (Dir == "num_sgpr") {
       int64_t Val;
@@ -6935,6 +6936,12 @@ bool AMDGPUAsmParser::ParseDirectiveAMDGPUInfo() {
       if (getParser().parseAbsoluteExpression(Val))
         return true;
       FI.Occupancy = static_cast<uint32_t>(Val);
+      HasScalarAttrs = true;
+    } else if (Dir == "wave_size") {
+      int64_t Val;
+      if (getParser().parseAbsoluteExpression(Val))
+        return true;
+      FI.WaveSize = static_cast<uint32_t>(Val);
       HasScalarAttrs = true;
     } else if (Dir == "use") {
       StringRef ResName;

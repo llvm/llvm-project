@@ -932,6 +932,18 @@ enum : unsigned {
   EF_AMDGPU_GENERIC_VERSION_MAX = 0xff,
 };
 
+inline StringRef getAMDGPUArchNameFromELFMach(unsigned Mach) {
+  switch (Mach) {
+#define X(NUM, ENUM, NAME)                                                     \
+  case ENUM:                                                                   \
+    return NAME;
+    AMDGPU_MACH_LIST(X)
+#undef X
+  default:
+    return "";
+  }
+}
+
 // ELF Relocation types for AMDGPU
 enum {
 #include "ELFRelocs/AMDGPU.def"
