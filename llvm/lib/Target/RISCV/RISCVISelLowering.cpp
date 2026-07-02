@@ -2071,9 +2071,17 @@ EVT RISCVTargetLowering::getSetCCResultType(const DataLayout &DL,
 
 TargetLoweringBase::CondMergingParams
 RISCVTargetLowering::getJumpConditionMergingParams(Instruction::BinaryOps Opc,
-                                                   const Value *Lhs,
-                                                   const Value *Rhs) const {
-  return {BrMergingBaseCostThresh, BrMergingLikelyBias, BrMergingUnlikelyBias};
+                                                   const Value *LHS,
+                                                   const Value *RHS) const {
+  // Merging conditions eliminates a branch, so the budget we are willing to
+  // spend eagerly computing the RHS condition should scale with how expensive a
+  // mispredicted branch is. A branch only costs the full penalty when actually
+  // mispredicted, so scale it down by an assumed misprediction rate (~25%).
+  int BaseCost = Subtarget.getSchedModel().MispredictPenalty / 4;
+  if (BrMergingBaseCostThresh.getNumOccurrences() > 1)
+    BaseCost = BrMergingBaseCostThresh;
+
+  return {BaseCost, BrMergingLikelyBias, BrMergingUnlikelyBias};
 }
 
 MVT RISCVTargetLowering::getVPExplicitVectorLengthTy() const {
