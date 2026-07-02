@@ -378,8 +378,8 @@ CheckResult bounds::checkBounds(ProgramStateRef State, SValBuilder &SVB,
         // TODO: Remove this hack once 'SymbolCast's are modeled properly.
 
         if (!WithinLowerBound) {
-          // The state is completely nonsense -- let's just sink it!
-          Res.finalize(CheckResult::Kind::Paradox, PrecedesLowerBound);
+          // The state is corrupted -- let's just sink it!
+          Res.finalize(CheckResult::Kind::CorruptedState, PrecedesLowerBound);
           return Res;
         }
         // Otherwise continue on the 'WithinLowerBound' branch where the

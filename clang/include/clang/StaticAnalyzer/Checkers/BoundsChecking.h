@@ -119,7 +119,7 @@ struct CheckFlags {
 
 class CheckResult {
 public:
-  enum class Kind { Underflow, Overflow, TaintBug, Paradox, Valid };
+  enum class Kind { Underflow, Overflow, TaintBug, CorruptedState, Valid };
 
 private:
   Kind K = Kind::Valid;

@@ -172,10 +172,10 @@ void ArrayBoundChecker::handleAccessExpr(const Expr *E,
   std::string RN = bounds::getRegionName(Space, Reg);
 
   switch (Res.getKind()) {
-  case bounds::CheckResult::Kind::Paradox:
-    // The current state is paradoxical (due to bad modeling of casts we
-    // assumed that an unsigned value is negative), so we should sink the
-    // execution path.
+  case bounds::CheckResult::Kind::CorruptedState:
+    // The current state is corrupted (due to bad modeling of casts we assumed
+    // that an unsigned value is negative), so we should sink the execution
+    // path.
     C.addSink();
     return;
 
