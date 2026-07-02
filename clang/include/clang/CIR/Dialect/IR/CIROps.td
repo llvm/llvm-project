@@ -5708,6 +5708,65 @@ def CIR_VecSplatOp : CIR_Op<"vec.splat", [
 }
 
 //===----------------------------------------------------------------------===//
+// OffloadKind
+//===----------------------------------------------------------------------===//
+
+def CIR_OffloadKind : CIR_I32EnumAttr<"OffloadKind", "offload kind", [
+  I32EnumAttrCase<"Host", 0, "host">,
+  I32EnumAttrCase<"Device", 1, "device">
+]> {
+  let genSpecializedAttr = 0;
+}
+
+def CIR_OffloadKindAttr : CIR_EnumAttr<CIR_OffloadKind, "offload_kind"> {
+  let summary = "Offload kind (host or device)";
+}
+
+//===----------------------------------------------------------------------===//
+// OffloadContainerOp
+//===----------------------------------------------------------------------===//
+
+def CIR_OffloadContainerOp : CIR_Op<"offload.container", [
+    NoRegionArguments, NoTerminator, SingleBlock, SymbolTable]> {
+  let summary = "Container for host and device CIR modules";
+  let description = [{
+    `cir.offload.container` groups one host CIR module with one or more device
+    CIR modules for offload-aware analysis and transformation.
+
+    The body holds nested `builtin.module` operations. The first nested
+    module is the host module and must carry
+    `cir.offload.kind = #cir.offload_kind<host>`. All remaining nested
+    modules are device modules and must carry
+    `cir.offload.kind = #cir.offload_kind<device>`. There must be at least
+    one device module.
+
+    Example:
+
+    ```mlir
+    cir.offload.container {
+      builtin.module @host attributes {cir.offload.kind = #cir.offload_kind<host>} {
+      }
+      builtin.module @device_0 attributes {cir.offload.kind = #cir.offload_kind<device>} {
+      }
+    }
+    ```
+  }];
+
+  let regions = (region SizedRegion<1>:$body);
+
+  let assemblyFormat = "$body attr-dict";
+
+  let hasVerifier = 1;
+  let hasLLVMLowering = false;
+
+  let extraClassDeclaration = [{
+    mlir::ModuleOp getHostModule();
+    llvm::iterator_range<mlir::Block::op_iterator<mlir::ModuleOp>>
+    getDeviceModules();
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // BaseClassAddrOp
 //===----------------------------------------------------------------------===//
 

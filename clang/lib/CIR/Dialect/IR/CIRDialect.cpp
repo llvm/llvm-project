@@ -17,6 +17,7 @@
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 
 #include "mlir/IR/Attributes.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/PatternMatch.h"
@@ -2331,6 +2332,66 @@ LogicalResult cir::VTTAddrPointOp::verify() {
   if (resultType != resTy)
     return emitOpError("result type must be ")
            << resTy << ", but provided result type is " << resultType;
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// OffloadContainerOp
+//===----------------------------------------------------------------------===//
+
+mlir::ModuleOp cir::OffloadContainerOp::getHostModule() {
+  return mlir::cast<mlir::ModuleOp>(getBody().front().front());
+}
+
+llvm::iterator_range<mlir::Block::op_iterator<mlir::ModuleOp>>
+cir::OffloadContainerOp::getDeviceModules() {
+  mlir::Block &body = getBody().front();
+  auto begin = body.op_begin<mlir::ModuleOp>();
+  auto end = body.op_end<mlir::ModuleOp>();
+  if (begin != end)
+    ++begin;
+  return {begin, end};
+}
+
+static LogicalResult checkOffloadKind(mlir::ModuleOp module,
+                                      cir::OffloadKind expected) {
+  auto attr = module->getAttrOfType<cir::OffloadKindAttr>(
+      cir::CIRDialect::getOffloadKindAttrName());
+  if (!attr)
+    return module.emitOpError()
+           << "expects '" << cir::CIRDialect::getOffloadKindAttrName()
+           << "' offload kind attribute";
+  if (attr.getValue() != expected)
+    return module.emitOpError()
+           << "expects '" << cir::CIRDialect::getOffloadKindAttrName()
+           << "' value '" << cir::stringifyOffloadKind(expected) << "'";
+  return success();
+}
+
+LogicalResult cir::OffloadContainerOp::verify() {
+  mlir::Block &body = getBody().front();
+  if (body.empty())
+    return emitOpError() << "expects host module as the first nested op";
+
+  auto host = mlir::dyn_cast<mlir::ModuleOp>(body.front());
+  if (!host)
+    return emitOpError() << "expects host module as the first nested op";
+  if (failed(checkOffloadKind(host, cir::OffloadKind::Host)))
+    return failure();
+
+  unsigned numDevices = 0;
+  auto it = body.begin();
+  for (++it; it != body.end(); ++it) {
+    auto module = mlir::dyn_cast<mlir::ModuleOp>(*it);
+    if (!module)
+      return emitOpError() << "expects only nested builtin.module ops";
+    if (failed(checkOffloadKind(module, cir::OffloadKind::Device)))
+      return failure();
+    ++numDevices;
+  }
+
+  if (numDevices == 0)
+    return emitOpError() << "expects at least one device module";
   return success();
 }
 
