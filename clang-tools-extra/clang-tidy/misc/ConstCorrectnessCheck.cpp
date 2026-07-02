@@ -16,6 +16,7 @@
 #include <cassert>
 
 using namespace clang::ast_matchers;
+using clang::ast_matchers::internal::Matcher;
 
 namespace clang::tidy::misc {
 
@@ -40,6 +41,29 @@ AST_MATCHER(ReferenceType, isSpelledAsLValue) {
 }
 AST_MATCHER(Type, isDependentType) { return Node.isDependentType(); }
 
+AST_MATCHER(TypeLoc, hasContainedAutoType) {
+  return !Node.getContainedAutoTypeLoc().isNull();
+}
+
+// Matches a type whose sugar contains a substituted template parameter, such as
+// a typedef to a template parameter (`using U = T; U &r = ...;`). After
+// instantiation the canonical type is concrete, so the type-based matchers can
+// no longer tell that it derives from a template parameter; unlike 'auto', the
+// substitution is still visible in the type sugar and can be found here.
+AST_MATCHER(Type, hasSubstTemplateTypeParmInSugar) {
+  const ASTContext &Context = Finder->getASTContext();
+  QualType QT(&Node, 0);
+  while (!QT.isNull()) {
+    if (isa<SubstTemplateTypeParmType>(QT.getTypePtr()))
+      return true;
+    const QualType Desugared = QT.getSingleStepDesugaredType(Context);
+    if (Desugared == QT)
+      return false;
+    QT = Desugared;
+  }
+  return false;
+}
+
 AST_MATCHER(FunctionDecl, isTemplate) {
   return Node.getDescribedFunctionTemplate() != nullptr;
 }
@@ -55,6 +79,8 @@ ConstCorrectnessCheck::ConstCorrectnessCheck(StringRef Name,
       AnalyzePointers(Options.get("AnalyzePointers", true)),
       AnalyzeReferences(Options.get("AnalyzeReferences", true)),
       AnalyzeValues(Options.get("AnalyzeValues", true)),
+      AnalyzeAutoVariables(Options.get("AnalyzeAutoVariables", true)),
+      AnalyzeLambdas(Options.get("AnalyzeLambdas", true)),
       AnalyzeParameters(Options.get("AnalyzeParameters", true)),
 
       WarnPointersAsPointers(Options.get("WarnPointersAsPointers", true)),
@@ -75,12 +101,19 @@ ConstCorrectnessCheck::ConstCorrectnessCheck(StringRef Name,
         "The check 'misc-const-correctness' will not "
         "perform any analysis because 'AnalyzeValues', "
         "'AnalyzeReferences' and 'AnalyzePointers' are false.");
+
+  if (AnalyzeLambdas && !AnalyzeAutoVariables)
+    this->configurationDiag("The check 'misc-const-correctness' will not "
+                            "analyze lambdas because 'AnalyzeLambdas' has no "
+                            "effect while 'AnalyzeAutoVariables' is false.");
 }
 
 void ConstCorrectnessCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "AnalyzePointers", AnalyzePointers);
   Options.store(Opts, "AnalyzeReferences", AnalyzeReferences);
   Options.store(Opts, "AnalyzeValues", AnalyzeValues);
+  Options.store(Opts, "AnalyzeAutoVariables", AnalyzeAutoVariables);
+  Options.store(Opts, "AnalyzeLambdas", AnalyzeLambdas);
   Options.store(Opts, "AnalyzeParameters", AnalyzeParameters);
 
   Options.store(Opts, "WarnPointersAsPointers", WarnPointersAsPointers);
@@ -114,7 +147,7 @@ void ConstCorrectnessCheck::registerMatchers(MatchFinder *Finder) {
       hasType(referenceType(pointee(hasCanonicalType(templateTypeParmType())))),
       hasType(referenceType(pointee(substTemplateTypeParmType()))));
 
-  auto AllowedTypeDecl = namedDecl(anyOf(
+  const auto AllowedTypeDecl = namedDecl(anyOf(
       matchers::matchesAnyListedRegexName(AllowedTypes), usingShadowDecl()));
 
   const auto AllowedType = hasType(qualType(
@@ -130,14 +163,34 @@ void ConstCorrectnessCheck::registerMatchers(MatchFinder *Finder) {
 
   const auto CommonExcludeTypes =
       anyOf(ConstType, ConstReference, RValueReference, TemplateType,
-            FunctionPointerRef, hasType(cxxRecordDecl(isLambda())),
-            AutoTemplateType, isImplicit(), AllowedType);
+            FunctionPointerRef, isImplicit(), AllowedType);
 
   // Match local variables which could be 'const' if not modified later.
   // Example: `int i = 10` would match `int i`.
-  const auto LocalValDecl =
-      varDecl(isLocal(), hasInitializer(unless(isInstantiationDependent())),
-              unless(CommonExcludeTypes));
+  const auto LocalValDecl = varDecl(
+      isLocal(), hasInitializer(unless(isInstantiationDependent())),
+      unless(CommonExcludeTypes),
+      // 'TemplateType' above excludes variables whose type is a template
+      // parameter, as a value (`hasType(substTemplateTypeParmType())`) or a
+      // reference (`referenceType(pointee(substTemplateTypeParmType()))`),
+      // because their constness can differ between instantiations. That
+      // exclusion has gaps inside template instantiations that are closed here:
+      //  - a typedef to a template parameter hides the substituted parameter
+      //    behind typedef sugar, so `using U = T; U v;` / `U &r;` slip through;
+      //  - an 'auto &' reference erases the dependent type during deduction.
+      // Pointers stay analyzed (like the existing `T *p` case): the suggestion
+      // there concerns the pointer/pointee spelling, not member constness.
+      unless(allOf(hasType(qualType(anyOf(
+                       hasSubstTemplateTypeParmInSugar(),
+                       referenceType(pointee(anyOf(
+                           autoType(), hasSubstTemplateTypeParmInSugar())))))),
+                   isInstantiated())),
+      AnalyzeLambdas
+          ? Matcher<VarDecl>(anything())
+          : Matcher<VarDecl>(unless(hasType(cxxRecordDecl(isLambda())))),
+      AnalyzeAutoVariables
+          ? Matcher<VarDecl>(anything())
+          : Matcher<VarDecl>(unless(hasTypeLoc(hasContainedAutoType()))));
 
   // Match the function scope for which the analysis of all local variables
   // shall be run.
@@ -154,7 +207,9 @@ void ConstCorrectnessCheck::registerMatchers(MatchFinder *Finder) {
 
   if (AnalyzeParameters) {
     const auto ParamMatcher =
-        parmVarDecl(unless(CommonExcludeTypes), unless(isUnnamed()),
+        parmVarDecl(unless(CommonExcludeTypes), unless(AutoTemplateType),
+                    unless(hasType(cxxRecordDecl(isLambda()))),
+                    unless(isUnnamed()),
                     anyOf(hasType(referenceType()), hasType(pointerType())))
             .bind("value");
 

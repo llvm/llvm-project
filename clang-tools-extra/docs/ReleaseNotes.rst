@@ -564,6 +564,10 @@ Changes in existing checks
   - Fixed false positive where a pointer used with placement new was
     incorrectly diagnosed as allowing the pointee to be made ``const``.
 
+  - Enabled the check for variables declared with ``auto`` (configurable
+    via the `AnalyzeAutoVariables` option) and lambdas (configurable
+    via `AnalyzeLambdas`).
+
   - Fixed false positive where calling a non-const member function on a
     pointer was incorrectly treated as mutating the pointer, when it only
     mutates the pointee.
