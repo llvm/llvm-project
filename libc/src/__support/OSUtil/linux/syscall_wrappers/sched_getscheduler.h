@@ -15,7 +15,7 @@
 #define LLVM_LIBC_SRC___SUPPORT_OSUTIL_SYSCALL_WRAPPERS_SCHED_GETSCHEDULER_H
 
 #include "hdr/types/pid_t.h"
-#include "src/__support/OSUtil/linux/syscall.h" // syscall_impl
+#include "src/__support/OSUtil/linux/syscall.h" // syscall_checked
 #include "src/__support/common.h"
 #include "src/__support/error_or.h"
 #include "src/__support/macros/config.h"
@@ -26,10 +26,7 @@ namespace LIBC_NAMESPACE_DECL {
 namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> sched_getscheduler(pid_t tid) {
-  int ret = syscall_impl<int>(SYS_sched_getscheduler, tid);
-  if (ret < 0)
-    return Error(-ret);
-  return ret;
+  return syscall_checked<int>(SYS_sched_getscheduler, tid);
 }
 
 } // namespace linux_syscalls

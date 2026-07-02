@@ -30,7 +30,7 @@ LLVM_LIBC_FUNCTION(int, pthread_setschedparam,
                     const struct sched_param *param)) {
   LIBC_CRASH_ON_NULLPTR(param);
   auto *thread = reinterpret_cast<Thread *>(&th);
-  return thread->setschedparam(policy, param);
+  return thread->setschedparam({policy, *param});
 }
 
 } // namespace LIBC_NAMESPACE_DECL

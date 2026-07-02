@@ -493,25 +493,25 @@ int Thread::get_name(cpp::StringStream &name) const {
   return 0;
 }
 
-int Thread::setschedparam(int policy, const struct sched_param *param) {
-  auto result = linux_syscalls::sched_setscheduler(attrib->tid, policy, param);
+int Thread::setschedparam(SchedParameters params) {
+  auto result = linux_syscalls::sched_setscheduler(attrib->tid, params.policy,
+                                                   &params.param);
   if (!result.has_value())
     return result.error();
   return 0;
 }
 
-int Thread::getschedparam(int *policy, struct sched_param *param) const {
+ErrorOr<SchedParameters> Thread::getschedparam() const {
   auto pol_result = linux_syscalls::sched_getscheduler(attrib->tid);
   if (!pol_result.has_value())
-    return pol_result.error();
+    return Error(pol_result.error());
 
-  auto param_result = linux_syscalls::sched_getparam(attrib->tid, param);
+  struct sched_param param;
+  auto param_result = linux_syscalls::sched_getparam(attrib->tid, &param);
   if (!param_result.has_value())
-    return param_result.error();
+    return Error(param_result.error());
 
-  if (policy != nullptr)
-    *policy = pol_result.value();
-  return 0;
+  return SchedParameters{pol_result.value(), param};
 }
 
 void thread_exit(ThreadReturnValue retval, ThreadStyle style) {

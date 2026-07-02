@@ -31,7 +31,13 @@ LLVM_LIBC_FUNCTION(int, pthread_getschedparam,
   LIBC_CRASH_ON_NULLPTR(policy);
   LIBC_CRASH_ON_NULLPTR(param);
   auto *thread = reinterpret_cast<Thread *>(&th);
-  return thread->getschedparam(policy, param);
+  auto result = thread->getschedparam();
+  if (!result.has_value())
+    return result.error();
+
+  *policy = result.value().policy;
+  *param = result.value().param;
+  return 0;
 }
 
 } // namespace LIBC_NAMESPACE_DECL

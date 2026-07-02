@@ -23,9 +23,15 @@
 
 #include <stddef.h> // For size_t
 
-struct sched_param;
+#include "hdr/types/struct_sched_param.h"
+#include "src/__support/error_or.h"
 
 namespace LIBC_NAMESPACE_DECL {
+
+struct SchedParameters {
+  int policy;
+  struct sched_param param;
+};
 
 using ThreadRunnerPosix = void *(void *);
 using ThreadRunnerStdc = int(void *);
@@ -235,17 +241,14 @@ struct Thread {
 
   /// Set the scheduling policy and parameters of the thread.
   ///
-  /// \param policy The new scheduling policy.
-  /// \param param The new scheduling parameters.
+  /// \param params The new scheduling policy and parameters.
   /// \return 0 on success, or an error number on failure.
-  int setschedparam(int policy, const struct sched_param *param);
+  int setschedparam(SchedParameters params);
 
   /// Get the scheduling policy and parameters of the thread.
   ///
-  /// \param policy Pointer to store the retrieved policy (can be null).
-  /// \param param Pointer to store the retrieved parameters.
-  /// \return 0 on success, or an error number on failure.
-  int getschedparam(int *policy, struct sched_param *param) const;
+  /// \return SchedParameters on success, or an error number on failure.
+  ErrorOr<SchedParameters> getschedparam() const;
 };
 
 LIBC_INLINE_VAR LIBC_THREAD_LOCAL Thread self;
