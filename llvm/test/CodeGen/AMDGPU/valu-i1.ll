@@ -265,12 +265,12 @@ define amdgpu_kernel void @simple_test_v_loop(ptr addrspace(1) %dst, ptr addrspa
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    buffer_load_dword v2, off, s[4:7], 0
 ; SI-NEXT:    s_add_i32 s8, s8, -1
-; SI-NEXT:    s_cmp_lg_u32 s8, 0
+; SI-NEXT:    s_cmp_eq_u32 s8, 0
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], 0 addr64
 ; SI-NEXT:    v_add_i32_e32 v0, vcc, 4, v0
 ; SI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; SI-NEXT:    s_cbranch_scc1 .LBB4_2
+; SI-NEXT:    s_cbranch_scc0 .LBB4_2
 ; SI-NEXT:  .LBB4_3: ; %exit
 ; SI-NEXT:    s_endpgm
 entry:

@@ -72,6 +72,8 @@
 ; GCN-O0-NEXT:      Convert irreducible control-flow into natural loops
 ; GCN-O0-NEXT:      Natural Loop Information
 ; GCN-O0-NEXT:      Fixup each natural loop to have a single exit block
+; GCN-O0-NEXT:      Cycle Info Analysis
+; GCN-O0-NEXT:      Uniformity Analysis
 ; GCN-O0-NEXT:      Post-Dominator Tree Construction
 ; GCN-O0-NEXT:      Dominance Frontier Construction
 ; GCN-O0-NEXT:      Detect single entry single exit regions
@@ -276,6 +278,8 @@
 ; GCN-O1-NEXT:      Convert irreducible control-flow into natural loops
 ; GCN-O1-NEXT:      Natural Loop Information
 ; GCN-O1-NEXT:      Fixup each natural loop to have a single exit block
+; GCN-O1-NEXT:      Cycle Info Analysis
+; GCN-O1-NEXT:      Uniformity Analysis
 ; GCN-O1-NEXT:      Post-Dominator Tree Construction
 ; GCN-O1-NEXT:      Dominance Frontier Construction
 ; GCN-O1-NEXT:      Detect single entry single exit regions
@@ -587,6 +591,8 @@
 ; GCN-O1-OPTS-NEXT:      Convert irreducible control-flow into natural loops
 ; GCN-O1-OPTS-NEXT:      Natural Loop Information
 ; GCN-O1-OPTS-NEXT:      Fixup each natural loop to have a single exit block
+; GCN-O1-OPTS-NEXT:      Cycle Info Analysis
+; GCN-O1-OPTS-NEXT:      Uniformity Analysis
 ; GCN-O1-OPTS-NEXT:      Post-Dominator Tree Construction
 ; GCN-O1-OPTS-NEXT:      Dominance Frontier Construction
 ; GCN-O1-OPTS-NEXT:      Detect single entry single exit regions
@@ -908,6 +914,8 @@
 ; GCN-O2-NEXT:      Convert irreducible control-flow into natural loops
 ; GCN-O2-NEXT:      Natural Loop Information
 ; GCN-O2-NEXT:      Fixup each natural loop to have a single exit block
+; GCN-O2-NEXT:      Cycle Info Analysis
+; GCN-O2-NEXT:      Uniformity Analysis
 ; GCN-O2-NEXT:      Post-Dominator Tree Construction
 ; GCN-O2-NEXT:      Dominance Frontier Construction
 ; GCN-O2-NEXT:      Detect single entry single exit regions
@@ -1244,6 +1252,8 @@
 ; GCN-O3-NEXT:      Convert irreducible control-flow into natural loops
 ; GCN-O3-NEXT:      Natural Loop Information
 ; GCN-O3-NEXT:      Fixup each natural loop to have a single exit block
+; GCN-O3-NEXT:      Cycle Info Analysis
+; GCN-O3-NEXT:      Uniformity Analysis
 ; GCN-O3-NEXT:      Post-Dominator Tree Construction
 ; GCN-O3-NEXT:      Dominance Frontier Construction
 ; GCN-O3-NEXT:      Detect single entry single exit regions

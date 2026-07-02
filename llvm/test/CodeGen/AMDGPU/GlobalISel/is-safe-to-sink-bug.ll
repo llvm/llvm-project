@@ -24,24 +24,15 @@ define amdgpu_ps void @_amdgpu_ps_main(i1 %arg) {
 ; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_cmp_ge_i32 s1, 0
-; CHECK-NEXT:    s_cbranch_scc0 .LBB0_2
-; CHECK-NEXT:  .LBB0_1: ; %bb12
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 1.0, 0, s0
-; CHECK-NEXT:    v_mov_b32_e32 v1, 0
-; CHECK-NEXT:    v_mov_b32_e32 v2, 0
-; CHECK-NEXT:    v_mov_b32_e32 v3, 0
-; CHECK-NEXT:    v_mov_b32_e32 v4, 0
-; CHECK-NEXT:    s_mov_b64 s[0:1], s[8:9]
-; CHECK-NEXT:    s_mov_b64 s[2:3], s[10:11]
-; CHECK-NEXT:    s_swappc_b64 s[30:31], 0
-; CHECK-NEXT:  .LBB0_2: ; %bb2.preheader
+; CHECK-NEXT:    s_cbranch_scc1 .LBB0_5
+; CHECK-NEXT:  ; %bb.1: ; %bb2.preheader
 ; CHECK-NEXT:    s_mov_b32 s3, 0
 ; CHECK-NEXT:    s_mov_b32 s1, 0
 ; CHECK-NEXT:    s_mov_b32 s2, 0
-; CHECK-NEXT:    s_branch .LBB0_4
+; CHECK-NEXT:    s_branch .LBB0_3
 ; CHECK-NEXT:    .p2align 6
-; CHECK-NEXT:  .LBB0_3: ; %bb6
-; CHECK-NEXT:    ; in Loop: Header=BB0_4 Depth=1
+; CHECK-NEXT:  .LBB0_2: ; %bb6
+; CHECK-NEXT:    ; in Loop: Header=BB0_3 Depth=1
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; CHECK-NEXT:    v_cmp_ne_u32_e64 s0, 0, v0
 ; CHECK-NEXT:    s_or_b32 s4, s3, 1
@@ -53,17 +44,26 @@ define amdgpu_ps void @_amdgpu_ps_main(i1 %arg) {
 ; CHECK-NEXT:    s_or_b32 s2, s2, s3
 ; CHECK-NEXT:    s_mov_b32 s3, s4
 ; CHECK-NEXT:    s_cmp_lg_u32 s5, 0
-; CHECK-NEXT:    s_cbranch_scc0 .LBB0_1
-; CHECK-NEXT:  .LBB0_4: ; %bb2
+; CHECK-NEXT:    s_cbranch_scc0 .LBB0_5
+; CHECK-NEXT:  .LBB0_3: ; %bb2
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s1
 ; CHECK-NEXT:    s_and_saveexec_b32 s0, vcc_lo
-; CHECK-NEXT:    s_cbranch_execz .LBB0_3
-; CHECK-NEXT:  ; %bb.5: ; %bb5
-; CHECK-NEXT:    ; in Loop: Header=BB0_4 Depth=1
+; CHECK-NEXT:    s_cbranch_execz .LBB0_2
+; CHECK-NEXT:  ; %bb.4: ; %bb5
+; CHECK-NEXT:    ; in Loop: Header=BB0_3 Depth=1
 ; CHECK-NEXT:    s_mov_b32 s4, 1
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s4
-; CHECK-NEXT:    s_branch .LBB0_3
+; CHECK-NEXT:    s_branch .LBB0_2
+; CHECK-NEXT:  .LBB0_5: ; %bb12
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 1.0, 0, s0
+; CHECK-NEXT:    v_mov_b32_e32 v1, 0
+; CHECK-NEXT:    v_mov_b32_e32 v2, 0
+; CHECK-NEXT:    v_mov_b32_e32 v3, 0
+; CHECK-NEXT:    v_mov_b32_e32 v4, 0
+; CHECK-NEXT:    s_mov_b64 s[0:1], s[8:9]
+; CHECK-NEXT:    s_mov_b64 s[2:3], s[10:11]
+; CHECK-NEXT:    s_swappc_b64 s[30:31], 0
 bb:
   %i = call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> zeroinitializer, i32 0, i32 0)
   %i1 = icmp slt i32 %i, 0

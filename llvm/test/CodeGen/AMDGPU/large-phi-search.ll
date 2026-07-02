@@ -12,249 +12,135 @@ declare i32 @llvm.amdgcn.update.dpp.i32(i32, i32, i32 immarg, i32 immarg, i32 im
 define amdgpu_kernel void @func(i1 %arg1, float %arg2) {
 ; CHECK-LABEL: func:
 ; CHECK:       ; %bb.0: ; %bb5
-; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
-; CHECK-NEXT:    s_mov_b64 s[6:7], -1
-; CHECK-NEXT:    s_mov_b64 s[4:5], 0
-; CHECK-NEXT:    s_mov_b64 s[8:9], 0
+; CHECK-NEXT:    s_load_dwordx2 s[2:3], s[8:9], 0x0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_bitcmp1_b32 s0, 0
+; CHECK-NEXT:    s_bitcmp1_b32 s2, 0
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; CHECK-NEXT:    s_xor_b64 s[2:3], s[0:1], -1
-; CHECK-NEXT:    s_and_b64 vcc, exec, s[2:3]
-; CHECK-NEXT:    s_cbranch_vccz .LBB0_2
-; CHECK-NEXT:  ; %bb.1: ; %bb9
-; CHECK-NEXT:    s_mov_b64 s[6:7], 0
-; CHECK-NEXT:    s_mov_b64 s[8:9], -1
-; CHECK-NEXT:  .LBB0_2: ; %Flow
-; CHECK-NEXT:    s_and_b64 s[6:7], s[6:7], exec
-; CHECK-NEXT:    s_cselect_b32 s6, 1, 0
-; CHECK-NEXT:    s_cmp_lg_u32 s6, 1
-; CHECK-NEXT:    s_cbranch_scc1 .LBB0_5
-; CHECK-NEXT:  ; %bb.3: ; %bb1
-; CHECK-NEXT:    s_mov_b64 s[4:5], -1
+; CHECK-NEXT:    s_bitcmp0_b32 s2, 0
+; CHECK-NEXT:    s_cbranch_scc1 .LBB0_2
+; CHECK-NEXT:  ; %bb.1: ; %bb1
 ; CHECK-NEXT:    s_and_b64 vcc, exec, s[0:1]
-; CHECK-NEXT:    s_cbranch_vccz .LBB0_5
-; CHECK-NEXT:  ; %bb.4: ; %bb3
-; CHECK-NEXT:    s_mov_b64 s[8:9], -1
-; CHECK-NEXT:    s_mov_b64 s[4:5], 0
-; CHECK-NEXT:  .LBB0_5: ; %Flow3
-; CHECK-NEXT:    s_mov_b64 s[6:7], 0
-; CHECK-NEXT:    s_and_b64 vcc, exec, s[8:9]
-; CHECK-NEXT:    s_cbranch_vccz .LBB0_8
-; CHECK-NEXT:  ; %bb.6: ; %bb10
-; CHECK-NEXT:    s_mov_b64 s[8:9], -1
-; CHECK-NEXT:    s_and_b64 vcc, exec, s[0:1]
-; CHECK-NEXT:    s_cbranch_vccz .LBB0_9
-; CHECK-NEXT:  ; %bb.7: ; %bb4
-; CHECK-NEXT:    s_mov_b64 s[4:5], -1
-; CHECK-NEXT:  .LBB0_8:
-; CHECK-NEXT:    s_mov_b64 s[8:9], 0
-; CHECK-NEXT:  .LBB0_9: ; %Flow5
-; CHECK-NEXT:    s_and_b64 vcc, exec, s[4:5]
-; CHECK-NEXT:    s_cbranch_vccz .LBB0_11
-; CHECK-NEXT:  ; %bb.10: ; %bb11
-; CHECK-NEXT:    s_mov_b64 s[6:7], s[2:3]
-; CHECK-NEXT:    s_mov_b64 s[8:9], s[0:1]
-; CHECK-NEXT:  .LBB0_11: ; %Flow7
-; CHECK-NEXT:    s_and_b64 s[8:9], s[8:9], exec
-; CHECK-NEXT:    s_cselect_b32 s8, 1, 0
-; CHECK-NEXT:    s_mov_b64 s[4:5], 0
-; CHECK-NEXT:    s_cmp_lg_u32 s8, 1
-; CHECK-NEXT:    s_mov_b64 s[8:9], 0
-; CHECK-NEXT:    s_cbranch_scc1 .LBB0_13
-; CHECK-NEXT:  ; %bb.12: ; %bb12
-; CHECK-NEXT:    s_mov_b64 s[8:9], s[2:3]
-; CHECK-NEXT:    s_mov_b64 s[6:7], s[0:1]
-; CHECK-NEXT:  .LBB0_13: ; %Flow8
-; CHECK-NEXT:    s_and_b64 s[6:7], s[6:7], exec
-; CHECK-NEXT:    s_cselect_b32 s6, 1, 0
-; CHECK-NEXT:    s_cmp_lg_u32 s6, 1
-; CHECK-NEXT:    s_cbranch_scc1 .LBB0_15
-; CHECK-NEXT:  ; %bb.14: ; %bb13
-; CHECK-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; CHECK-NEXT:    s_mov_b64 s[8:9], s[0:1]
-; CHECK-NEXT:  .LBB0_15: ; %Flow9
-; CHECK-NEXT:    s_and_b64 s[8:9], s[8:9], exec
-; CHECK-NEXT:    s_cselect_b32 s8, 1, 0
-; CHECK-NEXT:    s_mov_b64 s[6:7], 0
-; CHECK-NEXT:    s_cmp_lg_u32 s8, 1
-; CHECK-NEXT:    s_mov_b64 s[8:9], 0
-; CHECK-NEXT:    s_cbranch_scc1 .LBB0_17
-; CHECK-NEXT:  ; %bb.16: ; %bb14
-; CHECK-NEXT:    s_mov_b64 s[8:9], s[2:3]
-; CHECK-NEXT:    s_mov_b64 s[4:5], s[0:1]
-; CHECK-NEXT:  .LBB0_17: ; %Flow10
-; CHECK-NEXT:    s_and_b64 s[4:5], s[4:5], exec
-; CHECK-NEXT:    s_cselect_b32 s4, 1, 0
-; CHECK-NEXT:    s_cmp_lg_u32 s4, 1
-; CHECK-NEXT:    s_cbranch_scc1 .LBB0_19
-; CHECK-NEXT:  ; %bb.18: ; %bb15
-; CHECK-NEXT:    s_mov_b64 s[6:7], s[2:3]
-; CHECK-NEXT:    s_mov_b64 s[8:9], s[0:1]
-; CHECK-NEXT:  .LBB0_19: ; %Flow11
-; CHECK-NEXT:    s_and_b64 s[8:9], s[8:9], exec
-; CHECK-NEXT:    s_cselect_b32 s8, 1, 0
-; CHECK-NEXT:    s_mov_b64 s[4:5], 0
-; CHECK-NEXT:    s_cmp_lg_u32 s8, 1
-; CHECK-NEXT:    s_mov_b64 s[8:9], 0
-; CHECK-NEXT:    s_cbranch_scc1 .LBB0_21
-; CHECK-NEXT:  ; %bb.20: ; %bb16
-; CHECK-NEXT:    s_mov_b64 s[8:9], s[2:3]
-; CHECK-NEXT:    s_mov_b64 s[6:7], s[0:1]
-; CHECK-NEXT:  .LBB0_21: ; %Flow12
-; CHECK-NEXT:    s_and_b64 s[6:7], s[6:7], exec
-; CHECK-NEXT:    s_cselect_b32 s6, 1, 0
-; CHECK-NEXT:    s_cmp_lg_u32 s6, 1
-; CHECK-NEXT:    s_cbranch_scc1 .LBB0_23
-; CHECK-NEXT:  ; %bb.22: ; %bb17
-; CHECK-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; CHECK-NEXT:    s_mov_b64 s[8:9], s[0:1]
-; CHECK-NEXT:  .LBB0_23: ; %Flow13
-; CHECK-NEXT:    s_and_b64 s[8:9], s[8:9], exec
-; CHECK-NEXT:    s_cselect_b32 s8, 1, 0
-; CHECK-NEXT:    s_mov_b64 s[6:7], 0
-; CHECK-NEXT:    s_cmp_lg_u32 s8, 1
-; CHECK-NEXT:    s_mov_b64 s[8:9], 0
-; CHECK-NEXT:    s_cbranch_scc1 .LBB0_25
-; CHECK-NEXT:  ; %bb.24: ; %bb18
-; CHECK-NEXT:    s_mov_b64 s[8:9], s[2:3]
-; CHECK-NEXT:    s_mov_b64 s[4:5], s[0:1]
-; CHECK-NEXT:  .LBB0_25: ; %Flow14
-; CHECK-NEXT:    s_and_b64 s[4:5], s[4:5], exec
-; CHECK-NEXT:    s_cselect_b32 s4, 1, 0
-; CHECK-NEXT:    s_cmp_lg_u32 s4, 1
-; CHECK-NEXT:    s_cbranch_scc1 .LBB0_27
-; CHECK-NEXT:  ; %bb.26: ; %bb19
-; CHECK-NEXT:    s_mov_b64 s[6:7], s[2:3]
-; CHECK-NEXT:    s_mov_b64 s[8:9], s[0:1]
-; CHECK-NEXT:  .LBB0_27: ; %Flow15
-; CHECK-NEXT:    s_and_b64 s[8:9], s[8:9], exec
-; CHECK-NEXT:    s_cselect_b32 s8, 1, 0
-; CHECK-NEXT:    s_mov_b64 s[4:5], 0
-; CHECK-NEXT:    s_cmp_lg_u32 s8, 1
-; CHECK-NEXT:    s_mov_b64 s[8:9], 0
-; CHECK-NEXT:    s_cbranch_scc1 .LBB0_29
-; CHECK-NEXT:  ; %bb.28: ; %bb20
-; CHECK-NEXT:    s_mov_b64 s[8:9], s[2:3]
-; CHECK-NEXT:    s_mov_b64 s[6:7], s[0:1]
-; CHECK-NEXT:  .LBB0_29: ; %Flow16
-; CHECK-NEXT:    s_and_b64 s[6:7], s[6:7], exec
-; CHECK-NEXT:    s_cselect_b32 s6, 1, 0
-; CHECK-NEXT:    s_cmp_lg_u32 s6, 1
-; CHECK-NEXT:    s_cbranch_scc1 .LBB0_31
-; CHECK-NEXT:  ; %bb.30: ; %bb21
-; CHECK-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; CHECK-NEXT:    s_mov_b64 s[8:9], s[0:1]
-; CHECK-NEXT:  .LBB0_31: ; %Flow17
-; CHECK-NEXT:    s_and_b64 s[8:9], s[8:9], exec
-; CHECK-NEXT:    s_cselect_b32 s8, 1, 0
-; CHECK-NEXT:    s_mov_b64 s[6:7], 0
-; CHECK-NEXT:    s_cmp_lg_u32 s8, 1
-; CHECK-NEXT:    s_mov_b64 s[8:9], 0
-; CHECK-NEXT:    s_cbranch_scc1 .LBB0_33
-; CHECK-NEXT:  ; %bb.32: ; %bb22
-; CHECK-NEXT:    s_mov_b64 s[8:9], s[2:3]
-; CHECK-NEXT:    s_mov_b64 s[4:5], s[0:1]
-; CHECK-NEXT:  .LBB0_33: ; %Flow18
-; CHECK-NEXT:    s_and_b64 s[4:5], s[4:5], exec
-; CHECK-NEXT:    s_cselect_b32 s4, 1, 0
-; CHECK-NEXT:    s_cmp_lg_u32 s4, 1
-; CHECK-NEXT:    s_cbranch_scc1 .LBB0_35
-; CHECK-NEXT:  ; %bb.34: ; %bb23
-; CHECK-NEXT:    s_mov_b64 s[6:7], s[2:3]
-; CHECK-NEXT:    s_mov_b64 s[8:9], s[0:1]
-; CHECK-NEXT:  .LBB0_35: ; %Flow19
-; CHECK-NEXT:    s_and_b64 s[8:9], s[8:9], exec
-; CHECK-NEXT:    s_cselect_b32 s8, 1, 0
-; CHECK-NEXT:    s_mov_b64 s[4:5], 0
-; CHECK-NEXT:    s_cmp_lg_u32 s8, 1
-; CHECK-NEXT:    s_mov_b64 s[8:9], 0
-; CHECK-NEXT:    s_cbranch_scc1 .LBB0_37
-; CHECK-NEXT:  ; %bb.36: ; %bb24
-; CHECK-NEXT:    s_mov_b64 s[8:9], s[2:3]
-; CHECK-NEXT:    s_mov_b64 s[6:7], s[0:1]
-; CHECK-NEXT:  .LBB0_37: ; %Flow20
-; CHECK-NEXT:    s_and_b64 s[6:7], s[6:7], exec
-; CHECK-NEXT:    s_cselect_b32 s6, 1, 0
-; CHECK-NEXT:    s_cmp_lg_u32 s6, 1
-; CHECK-NEXT:    s_cbranch_scc1 .LBB0_39
-; CHECK-NEXT:  ; %bb.38: ; %bb25
-; CHECK-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; CHECK-NEXT:    s_mov_b64 s[8:9], s[0:1]
-; CHECK-NEXT:  .LBB0_39: ; %Flow21
-; CHECK-NEXT:    s_and_b64 s[8:9], s[8:9], exec
-; CHECK-NEXT:    s_cselect_b32 s8, 1, 0
-; CHECK-NEXT:    s_mov_b64 s[6:7], 0
-; CHECK-NEXT:    s_cmp_lg_u32 s8, 1
-; CHECK-NEXT:    s_mov_b64 s[10:11], 0
-; CHECK-NEXT:    s_cbranch_scc1 .LBB0_41
-; CHECK-NEXT:  ; %bb.40: ; %bb26
-; CHECK-NEXT:    s_mov_b64 s[10:11], s[2:3]
-; CHECK-NEXT:    s_mov_b64 s[4:5], s[0:1]
-; CHECK-NEXT:  .LBB0_41: ; %Flow22
-; CHECK-NEXT:    s_and_b64 s[4:5], s[4:5], exec
-; CHECK-NEXT:    s_cselect_b32 s4, 1, 0
-; CHECK-NEXT:    s_cmp_lg_u32 s4, 1
-; CHECK-NEXT:    s_cbranch_scc1 .LBB0_43
-; CHECK-NEXT:  ; %bb.42: ; %bb27
-; CHECK-NEXT:    s_mov_b64 s[6:7], s[2:3]
-; CHECK-NEXT:    s_mov_b64 s[10:11], s[0:1]
-; CHECK-NEXT:  .LBB0_43: ; %Flow23
-; CHECK-NEXT:    s_and_b64 s[4:5], s[10:11], exec
-; CHECK-NEXT:    s_cselect_b32 s4, 1, 0
-; CHECK-NEXT:    s_mov_b64 s[8:9], 0
-; CHECK-NEXT:    s_cmp_lg_u32 s4, 1
-; CHECK-NEXT:    s_mov_b64 s[10:11], 0
-; CHECK-NEXT:    s_cbranch_scc1 .LBB0_45
-; CHECK-NEXT:  ; %bb.44: ; %bb28
-; CHECK-NEXT:    s_mov_b64 s[10:11], s[2:3]
-; CHECK-NEXT:    s_mov_b64 s[6:7], s[0:1]
-; CHECK-NEXT:  .LBB0_45: ; %Flow24
-; CHECK-NEXT:    s_and_b64 s[4:5], s[6:7], exec
-; CHECK-NEXT:    s_cselect_b32 s4, 1, 0
-; CHECK-NEXT:    s_cmp_lg_u32 s4, 1
-; CHECK-NEXT:    s_cbranch_scc1 .LBB0_47
-; CHECK-NEXT:  ; %bb.46: ; %bb29
-; CHECK-NEXT:    s_mov_b64 s[8:9], s[2:3]
-; CHECK-NEXT:    s_mov_b64 s[10:11], s[0:1]
-; CHECK-NEXT:  .LBB0_47: ; %Flow25
-; CHECK-NEXT:    s_and_b64 s[6:7], s[10:11], exec
-; CHECK-NEXT:    s_cselect_b32 s6, 1, 0
-; CHECK-NEXT:    s_mov_b64 s[4:5], 0
-; CHECK-NEXT:    s_cmp_lg_u32 s6, 1
-; CHECK-NEXT:    s_mov_b64 s[6:7], 0
-; CHECK-NEXT:    s_cbranch_scc1 .LBB0_49
-; CHECK-NEXT:  ; %bb.48: ; %bb30
-; CHECK-NEXT:    s_mov_b64 s[6:7], s[2:3]
-; CHECK-NEXT:    s_mov_b64 s[8:9], s[0:1]
-; CHECK-NEXT:  .LBB0_49: ; %Flow26
-; CHECK-NEXT:    s_and_b64 s[8:9], s[8:9], exec
-; CHECK-NEXT:    s_cselect_b32 s8, 1, 0
-; CHECK-NEXT:    s_cmp_lg_u32 s8, 1
-; CHECK-NEXT:    s_cbranch_scc1 .LBB0_51
-; CHECK-NEXT:  ; %bb.50: ; %bb31
-; CHECK-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; CHECK-NEXT:    s_mov_b64 s[6:7], s[0:1]
-; CHECK-NEXT:  .LBB0_51: ; %Flow27
-; CHECK-NEXT:    s_and_b64 s[6:7], s[6:7], exec
-; CHECK-NEXT:    s_cselect_b32 s6, 1, 0
-; CHECK-NEXT:    s_cmp_lg_u32 s6, 1
-; CHECK-NEXT:    s_mov_b64 s[6:7], 0
-; CHECK-NEXT:    s_cbranch_scc1 .LBB0_53
-; CHECK-NEXT:  ; %bb.52: ; %bb32
-; CHECK-NEXT:    s_mov_b64 s[6:7], s[2:3]
-; CHECK-NEXT:    s_mov_b64 s[4:5], s[0:1]
-; CHECK-NEXT:  .LBB0_53: ; %Flow28
-; CHECK-NEXT:    s_and_b64 s[2:3], s[4:5], exec
+; CHECK-NEXT:    s_cbranch_vccz .LBB0_3
+; CHECK-NEXT:  .LBB0_2: ; %bb10
+; CHECK-NEXT:    s_and_b64 s[2:3], s[0:1], exec
 ; CHECK-NEXT:    s_cselect_b32 s2, 1, 0
 ; CHECK-NEXT:    s_cmp_lg_u32 s2, 1
-; CHECK-NEXT:    s_cbranch_scc1 .LBB0_55
-; CHECK-NEXT:  ; %bb.54: ; %bb33
-; CHECK-NEXT:    s_mov_b64 s[6:7], s[0:1]
-; CHECK-NEXT:  .LBB0_55: ; %Flow29
-; CHECK-NEXT:    s_and_b64 s[0:1], s[6:7], exec
+; CHECK-NEXT:    s_cbranch_scc1 .LBB0_4
+; CHECK-NEXT:  .LBB0_3: ; %bb11
+; CHECK-NEXT:    s_and_b64 s[2:3], s[0:1], exec
+; CHECK-NEXT:    s_cselect_b32 s2, 1, 0
+; CHECK-NEXT:    s_cmp_lg_u32 s2, 1
+; CHECK-NEXT:    s_cbranch_scc1 .LBB0_5
+; CHECK-NEXT:  .LBB0_4: ; %bb12
+; CHECK-NEXT:    s_and_b64 s[2:3], s[0:1], exec
+; CHECK-NEXT:    s_cselect_b32 s2, 1, 0
+; CHECK-NEXT:    s_cmp_lg_u32 s2, 1
+; CHECK-NEXT:    s_cbranch_scc1 .LBB0_6
+; CHECK-NEXT:  .LBB0_5: ; %bb13
+; CHECK-NEXT:    s_and_b64 s[2:3], s[0:1], exec
+; CHECK-NEXT:    s_cselect_b32 s2, 1, 0
+; CHECK-NEXT:    s_cmp_lg_u32 s2, 1
+; CHECK-NEXT:    s_cbranch_scc1 .LBB0_7
+; CHECK-NEXT:  .LBB0_6: ; %bb14
+; CHECK-NEXT:    s_and_b64 s[2:3], s[0:1], exec
+; CHECK-NEXT:    s_cselect_b32 s2, 1, 0
+; CHECK-NEXT:    s_cmp_lg_u32 s2, 1
+; CHECK-NEXT:    s_cbranch_scc1 .LBB0_8
+; CHECK-NEXT:  .LBB0_7: ; %bb15
+; CHECK-NEXT:    s_and_b64 s[2:3], s[0:1], exec
+; CHECK-NEXT:    s_cselect_b32 s2, 1, 0
+; CHECK-NEXT:    s_cmp_lg_u32 s2, 1
+; CHECK-NEXT:    s_cbranch_scc1 .LBB0_9
+; CHECK-NEXT:  .LBB0_8: ; %bb16
+; CHECK-NEXT:    s_and_b64 s[2:3], s[0:1], exec
+; CHECK-NEXT:    s_cselect_b32 s2, 1, 0
+; CHECK-NEXT:    s_cmp_lg_u32 s2, 1
+; CHECK-NEXT:    s_cbranch_scc1 .LBB0_10
+; CHECK-NEXT:  .LBB0_9: ; %bb17
+; CHECK-NEXT:    s_and_b64 s[2:3], s[0:1], exec
+; CHECK-NEXT:    s_cselect_b32 s2, 1, 0
+; CHECK-NEXT:    s_cmp_lg_u32 s2, 1
+; CHECK-NEXT:    s_cbranch_scc1 .LBB0_11
+; CHECK-NEXT:  .LBB0_10: ; %bb18
+; CHECK-NEXT:    s_and_b64 s[2:3], s[0:1], exec
+; CHECK-NEXT:    s_cselect_b32 s2, 1, 0
+; CHECK-NEXT:    s_cmp_lg_u32 s2, 1
+; CHECK-NEXT:    s_cbranch_scc1 .LBB0_12
+; CHECK-NEXT:  .LBB0_11: ; %bb19
+; CHECK-NEXT:    s_and_b64 s[2:3], s[0:1], exec
+; CHECK-NEXT:    s_cselect_b32 s2, 1, 0
+; CHECK-NEXT:    s_cmp_lg_u32 s2, 1
+; CHECK-NEXT:    s_cbranch_scc1 .LBB0_13
+; CHECK-NEXT:  .LBB0_12: ; %bb20
+; CHECK-NEXT:    s_and_b64 s[2:3], s[0:1], exec
+; CHECK-NEXT:    s_cselect_b32 s2, 1, 0
+; CHECK-NEXT:    s_cmp_lg_u32 s2, 1
+; CHECK-NEXT:    s_cbranch_scc1 .LBB0_14
+; CHECK-NEXT:  .LBB0_13: ; %bb21
+; CHECK-NEXT:    s_and_b64 s[2:3], s[0:1], exec
+; CHECK-NEXT:    s_cselect_b32 s2, 1, 0
+; CHECK-NEXT:    s_cmp_lg_u32 s2, 1
+; CHECK-NEXT:    s_cbranch_scc1 .LBB0_15
+; CHECK-NEXT:  .LBB0_14: ; %bb22
+; CHECK-NEXT:    s_and_b64 s[2:3], s[0:1], exec
+; CHECK-NEXT:    s_cselect_b32 s2, 1, 0
+; CHECK-NEXT:    s_cmp_lg_u32 s2, 1
+; CHECK-NEXT:    s_cbranch_scc1 .LBB0_16
+; CHECK-NEXT:  .LBB0_15: ; %bb23
+; CHECK-NEXT:    s_and_b64 s[2:3], s[0:1], exec
+; CHECK-NEXT:    s_cselect_b32 s2, 1, 0
+; CHECK-NEXT:    s_cmp_lg_u32 s2, 1
+; CHECK-NEXT:    s_cbranch_scc1 .LBB0_17
+; CHECK-NEXT:  .LBB0_16: ; %bb24
+; CHECK-NEXT:    s_and_b64 s[2:3], s[0:1], exec
+; CHECK-NEXT:    s_cselect_b32 s2, 1, 0
+; CHECK-NEXT:    s_cmp_lg_u32 s2, 1
+; CHECK-NEXT:    s_cbranch_scc1 .LBB0_18
+; CHECK-NEXT:  .LBB0_17: ; %bb25
+; CHECK-NEXT:    s_and_b64 s[2:3], s[0:1], exec
+; CHECK-NEXT:    s_cselect_b32 s2, 1, 0
+; CHECK-NEXT:    s_cmp_lg_u32 s2, 1
+; CHECK-NEXT:    s_cbranch_scc1 .LBB0_19
+; CHECK-NEXT:  .LBB0_18: ; %bb26
+; CHECK-NEXT:    s_and_b64 s[2:3], s[0:1], exec
+; CHECK-NEXT:    s_cselect_b32 s2, 1, 0
+; CHECK-NEXT:    s_cmp_lg_u32 s2, 1
+; CHECK-NEXT:    s_cbranch_scc1 .LBB0_20
+; CHECK-NEXT:  .LBB0_19: ; %bb27
+; CHECK-NEXT:    s_and_b64 s[2:3], s[0:1], exec
+; CHECK-NEXT:    s_cselect_b32 s2, 1, 0
+; CHECK-NEXT:    s_cmp_lg_u32 s2, 1
+; CHECK-NEXT:    s_cbranch_scc1 .LBB0_21
+; CHECK-NEXT:  .LBB0_20: ; %bb28
+; CHECK-NEXT:    s_and_b64 s[2:3], s[0:1], exec
+; CHECK-NEXT:    s_cselect_b32 s2, 1, 0
+; CHECK-NEXT:    s_cmp_lg_u32 s2, 1
+; CHECK-NEXT:    s_cbranch_scc1 .LBB0_22
+; CHECK-NEXT:  .LBB0_21: ; %bb29
+; CHECK-NEXT:    s_and_b64 s[2:3], s[0:1], exec
+; CHECK-NEXT:    s_cselect_b32 s2, 1, 0
+; CHECK-NEXT:    s_cmp_lg_u32 s2, 1
+; CHECK-NEXT:    s_cbranch_scc1 .LBB0_23
+; CHECK-NEXT:  .LBB0_22: ; %bb30
+; CHECK-NEXT:    s_and_b64 s[2:3], s[0:1], exec
+; CHECK-NEXT:    s_cselect_b32 s2, 1, 0
+; CHECK-NEXT:    s_cmp_lg_u32 s2, 1
+; CHECK-NEXT:    s_cbranch_scc1 .LBB0_24
+; CHECK-NEXT:  .LBB0_23: ; %bb31
+; CHECK-NEXT:    s_and_b64 s[2:3], s[0:1], exec
+; CHECK-NEXT:    s_cselect_b32 s2, 1, 0
+; CHECK-NEXT:    s_cmp_lg_u32 s2, 1
+; CHECK-NEXT:    s_cbranch_scc1 .LBB0_25
+; CHECK-NEXT:  .LBB0_24: ; %bb32
+; CHECK-NEXT:    s_and_b64 s[2:3], s[0:1], exec
+; CHECK-NEXT:    s_cselect_b32 s2, 1, 0
+; CHECK-NEXT:    s_cmp_lg_u32 s2, 1
+; CHECK-NEXT:    s_cbranch_scc1 .LBB0_26
+; CHECK-NEXT:  .LBB0_25: ; %bb33
+; CHECK-NEXT:    s_and_b64 s[0:1], s[0:1], exec
 ; CHECK-NEXT:    s_cselect_b32 s0, 1, 0
 ; CHECK-NEXT:    s_cmp_lg_u32 s0, 1
+; CHECK-NEXT:  .LBB0_26: ; %bb35
 ; CHECK-NEXT:    s_endpgm
 bb5:
   br i1 %arg1, label %bb1, label %bb9

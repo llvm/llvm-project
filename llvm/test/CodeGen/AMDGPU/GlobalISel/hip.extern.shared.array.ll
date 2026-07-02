@@ -28,7 +28,7 @@ define amdgpu_kernel void @dynamic_shared_array_1(ptr addrspace(1) %out, i32 %co
 entry:
   %tid.x = tail call i32 @llvm.amdgcn.workitem.id.x()
   %idx.0 = add nsw i32 %tid.x, 64
-  %tmp = icmp eq i32 %cond, 0
+  %tmp = icmp eq i32 %cond, %tid.x
   br i1 %tmp, label %if, label %else
 
 if:                                               ; preds = %entry

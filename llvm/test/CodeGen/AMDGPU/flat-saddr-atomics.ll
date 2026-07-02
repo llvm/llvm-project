@@ -11898,61 +11898,38 @@ define double @flat_atomic_fadd_f64_saddr_rtn(ptr inreg %ptr, double %data) {
 ; GFX1250-SDAG-NEXT:    s_cmp_eq_u32 s1, s3
 ; GFX1250-SDAG-NEXT:    s_cselect_b32 s2, 1, 0
 ; GFX1250-SDAG-NEXT:    s_cmp_lg_u32 s2, 1
-; GFX1250-SDAG-NEXT:    s_cbranch_scc0 .LBB110_3
-; GFX1250-SDAG-NEXT:  ; %bb.1: ; %atomicrmw.check.private
-; GFX1250-SDAG-NEXT:    s_xor_b32 s2, s1, src_flat_scratch_base_hi
-; GFX1250-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
-; GFX1250-SDAG-NEXT:    s_cmp_lt_u32 s2, 0x4000000
-; GFX1250-SDAG-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX1250-SDAG-NEXT:    s_cmp_lg_u32 s2, 1
-; GFX1250-SDAG-NEXT:    s_cbranch_scc0 .LBB110_4
-; GFX1250-SDAG-NEXT:  ; %bb.2: ; %atomicrmw.global
-; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v2, 0
-; GFX1250-SDAG-NEXT:    s_mov_b32 s2, 0
-; GFX1250-SDAG-NEXT:    s_wait_storecnt 0x0
-; GFX1250-SDAG-NEXT:    global_atomic_add_f64 v[2:3], v2, v[0:1], s[0:1] th:TH_ATOMIC_RETURN
-; GFX1250-SDAG-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-SDAG-NEXT:    s_branch .LBB110_5
-; GFX1250-SDAG-NEXT:  .LBB110_3:
-; GFX1250-SDAG-NEXT:    s_mov_b32 s2, -1
-; GFX1250-SDAG-NEXT:    ; implicit-def: $vgpr2_vgpr3
-; GFX1250-SDAG-NEXT:    s_branch .LBB110_8
-; GFX1250-SDAG-NEXT:  .LBB110_4:
-; GFX1250-SDAG-NEXT:    s_mov_b32 s2, -1
-; GFX1250-SDAG-NEXT:    ; implicit-def: $vgpr2_vgpr3
-; GFX1250-SDAG-NEXT:  .LBB110_5: ; %Flow
-; GFX1250-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
-; GFX1250-SDAG-NEXT:    s_and_b32 s2, s2, exec_lo
-; GFX1250-SDAG-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX1250-SDAG-NEXT:    s_cmp_lg_u32 s2, 1
-; GFX1250-SDAG-NEXT:    s_cbranch_scc1 .LBB110_7
-; GFX1250-SDAG-NEXT:  ; %bb.6: ; %atomicrmw.private
-; GFX1250-SDAG-NEXT:    s_sub_co_i32 s2, s0, src_flat_scratch_base_lo
-; GFX1250-SDAG-NEXT:    s_cmp_lg_u64 s[0:1], 0
-; GFX1250-SDAG-NEXT:    s_cselect_b32 s2, s2, -1
-; GFX1250-SDAG-NEXT:    scratch_load_b64 v[2:3], off, s2
-; GFX1250-SDAG-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-SDAG-NEXT:    v_add_f64_e32 v[4:5], v[2:3], v[0:1]
-; GFX1250-SDAG-NEXT:    scratch_store_b64 off, v[4:5], s2
-; GFX1250-SDAG-NEXT:  .LBB110_7: ; %Flow1
-; GFX1250-SDAG-NEXT:    s_wait_xcnt 0x0
-; GFX1250-SDAG-NEXT:    s_mov_b32 s2, 0
-; GFX1250-SDAG-NEXT:  .LBB110_8: ; %Flow2
-; GFX1250-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
-; GFX1250-SDAG-NEXT:    s_and_b32 s2, s2, exec_lo
-; GFX1250-SDAG-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX1250-SDAG-NEXT:    s_cmp_lg_u32 s2, 1
-; GFX1250-SDAG-NEXT:    s_cbranch_scc1 .LBB110_10
-; GFX1250-SDAG-NEXT:  ; %bb.9: ; %atomicrmw.shared
+; GFX1250-SDAG-NEXT:    s_cbranch_scc1 .LBB110_2
+; GFX1250-SDAG-NEXT:  ; %bb.1: ; %atomicrmw.shared
 ; GFX1250-SDAG-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; GFX1250-SDAG-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX1250-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX1250-SDAG-NEXT:    s_wait_storecnt 0x0
-; GFX1250-SDAG-NEXT:    ds_add_rtn_f64 v[2:3], v2, v[0:1]
+; GFX1250-SDAG-NEXT:    ds_add_rtn_f64 v[0:1], v2, v[0:1]
 ; GFX1250-SDAG-NEXT:    s_wait_dscnt 0x0
-; GFX1250-SDAG-NEXT:  .LBB110_10: ; %atomicrmw.end
-; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v0, v2 :: v_dual_mov_b32 v1, v3
+; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
+; GFX1250-SDAG-NEXT:  .LBB110_2: ; %atomicrmw.check.private
+; GFX1250-SDAG-NEXT:    s_xor_b32 s2, s1, src_flat_scratch_base_hi
+; GFX1250-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX1250-SDAG-NEXT:    s_cmp_lt_u32 s2, 0x4000000
+; GFX1250-SDAG-NEXT:    s_cselect_b32 s2, 1, 0
+; GFX1250-SDAG-NEXT:    s_cmp_lg_u32 s2, 1
+; GFX1250-SDAG-NEXT:    s_cbranch_scc1 .LBB110_4
+; GFX1250-SDAG-NEXT:  ; %bb.3: ; %atomicrmw.private
+; GFX1250-SDAG-NEXT:    s_sub_co_i32 s2, s0, src_flat_scratch_base_lo
+; GFX1250-SDAG-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX1250-SDAG-NEXT:    s_cselect_b32 s0, s2, -1
+; GFX1250-SDAG-NEXT:    scratch_load_b64 v[2:3], off, s0
+; GFX1250-SDAG-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-SDAG-NEXT:    v_add_f64_e32 v[4:5], v[2:3], v[0:1]
+; GFX1250-SDAG-NEXT:    v_mov_b64_e32 v[0:1], v[2:3]
+; GFX1250-SDAG-NEXT:    scratch_store_b64 off, v[4:5], s0
+; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
+; GFX1250-SDAG-NEXT:  .LBB110_4: ; %atomicrmw.global
+; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v2, 0
+; GFX1250-SDAG-NEXT:    s_wait_storecnt 0x0
+; GFX1250-SDAG-NEXT:    global_atomic_add_f64 v[0:1], v2, v[0:1], s[0:1] th:TH_ATOMIC_RETURN
+; GFX1250-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX1250-GISEL-LABEL: flat_atomic_fadd_f64_saddr_rtn:
@@ -11962,54 +11939,38 @@ define double @flat_atomic_fadd_f64_saddr_rtn(ptr inreg %ptr, double %data) {
 ; GFX1250-GISEL-NEXT:    s_add_co_u32 s0, s0, 0x50
 ; GFX1250-GISEL-NEXT:    s_mov_b64 s[2:3], src_shared_base
 ; GFX1250-GISEL-NEXT:    s_add_co_ci_u32 s1, s1, 0
-; GFX1250-GISEL-NEXT:    s_mov_b32 s2, 1
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-GISEL-NEXT:    s_cmp_lg_u32 s1, s3
-; GFX1250-GISEL-NEXT:    ; implicit-def: $vgpr2_vgpr3
-; GFX1250-GISEL-NEXT:    s_cbranch_scc0 .LBB110_6
-; GFX1250-GISEL-NEXT:  ; %bb.1: ; %atomicrmw.check.private
-; GFX1250-GISEL-NEXT:    s_xor_b32 s2, s1, src_flat_scratch_base_hi
-; GFX1250-GISEL-NEXT:    ; implicit-def: $vgpr2_vgpr3
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1250-GISEL-NEXT:    s_cmp_ge_u32 s2, 0x4000000
-; GFX1250-GISEL-NEXT:    s_mov_b32 s2, 1
-; GFX1250-GISEL-NEXT:    s_cbranch_scc0 .LBB110_3
-; GFX1250-GISEL-NEXT:  ; %bb.2: ; %atomicrmw.global
-; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v2, 0
-; GFX1250-GISEL-NEXT:    s_mov_b32 s2, 0
-; GFX1250-GISEL-NEXT:    s_wait_storecnt 0x0
-; GFX1250-GISEL-NEXT:    global_atomic_add_f64 v[2:3], v2, v[0:1], s[0:1] th:TH_ATOMIC_RETURN
-; GFX1250-GISEL-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-GISEL-NEXT:  .LBB110_3: ; %Flow
-; GFX1250-GISEL-NEXT:    s_xor_b32 s2, s2, 1
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1250-GISEL-NEXT:    s_cmp_lg_u32 s2, 0
-; GFX1250-GISEL-NEXT:    s_cbranch_scc1 .LBB110_5
-; GFX1250-GISEL-NEXT:  ; %bb.4: ; %atomicrmw.private
-; GFX1250-GISEL-NEXT:    s_sub_co_i32 s2, s0, src_flat_scratch_base_lo
-; GFX1250-GISEL-NEXT:    s_cmp_lg_u64 s[0:1], 0
-; GFX1250-GISEL-NEXT:    s_cselect_b32 s2, s2, -1
-; GFX1250-GISEL-NEXT:    scratch_load_b64 v[2:3], off, s2
-; GFX1250-GISEL-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-GISEL-NEXT:    v_add_f64_e32 v[4:5], v[2:3], v[0:1]
-; GFX1250-GISEL-NEXT:    scratch_store_b64 off, v[4:5], s2
-; GFX1250-GISEL-NEXT:  .LBB110_5: ; %Flow1
-; GFX1250-GISEL-NEXT:    s_wait_xcnt 0x0
-; GFX1250-GISEL-NEXT:    s_mov_b32 s2, 0
-; GFX1250-GISEL-NEXT:  .LBB110_6: ; %Flow2
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX1250-GISEL-NEXT:    s_xor_b32 s2, s2, 1
-; GFX1250-GISEL-NEXT:    s_cmp_lg_u32 s2, 0
-; GFX1250-GISEL-NEXT:    s_cbranch_scc1 .LBB110_8
-; GFX1250-GISEL-NEXT:  ; %bb.7: ; %atomicrmw.shared
+; GFX1250-GISEL-NEXT:    s_cbranch_scc1 .LBB110_2
+; GFX1250-GISEL-NEXT:  ; %bb.1: ; %atomicrmw.shared
 ; GFX1250-GISEL-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; GFX1250-GISEL-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX1250-GISEL-NEXT:    s_wait_storecnt 0x0
-; GFX1250-GISEL-NEXT:    ds_add_rtn_f64 v[2:3], v2, v[0:1]
+; GFX1250-GISEL-NEXT:    ds_add_rtn_f64 v[0:1], v2, v[0:1]
 ; GFX1250-GISEL-NEXT:    s_wait_dscnt 0x0
-; GFX1250-GISEL-NEXT:  .LBB110_8: ; %atomicrmw.end
-; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v0, v2 :: v_dual_mov_b32 v1, v3
+; GFX1250-GISEL-NEXT:    s_set_pc_i64 s[30:31]
+; GFX1250-GISEL-NEXT:  .LBB110_2: ; %atomicrmw.check.private
+; GFX1250-GISEL-NEXT:    s_xor_b32 s2, s1, src_flat_scratch_base_hi
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1250-GISEL-NEXT:    s_cmp_ge_u32 s2, 0x4000000
+; GFX1250-GISEL-NEXT:    s_cbranch_scc1 .LBB110_4
+; GFX1250-GISEL-NEXT:  ; %bb.3: ; %atomicrmw.private
+; GFX1250-GISEL-NEXT:    s_sub_co_i32 s2, s0, src_flat_scratch_base_lo
+; GFX1250-GISEL-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX1250-GISEL-NEXT:    s_cselect_b32 s0, s2, -1
+; GFX1250-GISEL-NEXT:    scratch_load_b64 v[2:3], off, s0
+; GFX1250-GISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-GISEL-NEXT:    v_add_f64_e32 v[4:5], v[2:3], v[0:1]
+; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[0:1], v[2:3]
+; GFX1250-GISEL-NEXT:    scratch_store_b64 off, v[4:5], s0
+; GFX1250-GISEL-NEXT:    s_set_pc_i64 s[30:31]
+; GFX1250-GISEL-NEXT:  .LBB110_4: ; %atomicrmw.global
+; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v2, 0
+; GFX1250-GISEL-NEXT:    s_wait_storecnt 0x0
+; GFX1250-GISEL-NEXT:    global_atomic_add_f64 v[0:1], v2, v[0:1], s[0:1] th:TH_ATOMIC_RETURN
+; GFX1250-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-GISEL-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX950-SDAG-LABEL: flat_atomic_fadd_f64_saddr_rtn:
@@ -12021,55 +11982,34 @@ define double @flat_atomic_fadd_f64_saddr_rtn(ptr inreg %ptr, double %data) {
 ; GFX950-SDAG-NEXT:    s_cmp_eq_u32 s1, s3
 ; GFX950-SDAG-NEXT:    s_cselect_b32 s2, 1, 0
 ; GFX950-SDAG-NEXT:    s_cmp_lg_u32 s2, 1
-; GFX950-SDAG-NEXT:    s_cbranch_scc0 .LBB110_3
-; GFX950-SDAG-NEXT:  ; %bb.1: ; %atomicrmw.check.private
+; GFX950-SDAG-NEXT:    s_cbranch_scc1 .LBB110_2
+; GFX950-SDAG-NEXT:  ; %bb.1: ; %atomicrmw.shared
+; GFX950-SDAG-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX950-SDAG-NEXT:    s_cselect_b32 s0, s0, -1
+; GFX950-SDAG-NEXT:    v_mov_b32_e32 v2, s0
+; GFX950-SDAG-NEXT:    ds_add_rtn_f64 v[0:1], v2, v[0:1]
+; GFX950-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; GFX950-SDAG-NEXT:  .LBB110_2: ; %atomicrmw.check.private
 ; GFX950-SDAG-NEXT:    s_mov_b64 s[2:3], src_private_base
 ; GFX950-SDAG-NEXT:    s_cmp_eq_u32 s1, s3
 ; GFX950-SDAG-NEXT:    s_cselect_b32 s2, 1, 0
 ; GFX950-SDAG-NEXT:    s_cmp_lg_u32 s2, 1
-; GFX950-SDAG-NEXT:    s_cbranch_scc0 .LBB110_4
-; GFX950-SDAG-NEXT:  ; %bb.2: ; %atomicrmw.global
-; GFX950-SDAG-NEXT:    v_mov_b32_e32 v2, 0
-; GFX950-SDAG-NEXT:    global_atomic_add_f64 v[2:3], v2, v[0:1], s[0:1] sc0
-; GFX950-SDAG-NEXT:    s_mov_b64 s[2:3], 0
-; GFX950-SDAG-NEXT:    s_branch .LBB110_5
-; GFX950-SDAG-NEXT:  .LBB110_3:
-; GFX950-SDAG-NEXT:    s_mov_b64 s[2:3], -1
-; GFX950-SDAG-NEXT:    ; implicit-def: $vgpr2_vgpr3
-; GFX950-SDAG-NEXT:    s_branch .LBB110_8
-; GFX950-SDAG-NEXT:  .LBB110_4:
-; GFX950-SDAG-NEXT:    s_mov_b64 s[2:3], -1
-; GFX950-SDAG-NEXT:    ; implicit-def: $vgpr2_vgpr3
-; GFX950-SDAG-NEXT:  .LBB110_5: ; %Flow
-; GFX950-SDAG-NEXT:    s_and_b64 s[2:3], s[2:3], exec
-; GFX950-SDAG-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX950-SDAG-NEXT:    s_cmp_lg_u32 s2, 1
-; GFX950-SDAG-NEXT:    s_cbranch_scc1 .LBB110_7
-; GFX950-SDAG-NEXT:  ; %bb.6: ; %atomicrmw.private
-; GFX950-SDAG-NEXT:    s_cmp_lg_u64 s[0:1], 0
-; GFX950-SDAG-NEXT:    s_cselect_b32 s2, s0, -1
-; GFX950-SDAG-NEXT:    scratch_load_dwordx2 v[2:3], off, s2
-; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; GFX950-SDAG-NEXT:    v_add_f64 v[4:5], v[2:3], v[0:1]
-; GFX950-SDAG-NEXT:    scratch_store_dwordx2 off, v[4:5], s2
-; GFX950-SDAG-NEXT:  .LBB110_7: ; %Flow1
-; GFX950-SDAG-NEXT:    s_mov_b64 s[2:3], 0
-; GFX950-SDAG-NEXT:  .LBB110_8: ; %Flow2
-; GFX950-SDAG-NEXT:    s_and_b64 s[2:3], s[2:3], exec
-; GFX950-SDAG-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX950-SDAG-NEXT:    s_cmp_lg_u32 s2, 1
-; GFX950-SDAG-NEXT:    s_cbranch_scc1 .LBB110_10
-; GFX950-SDAG-NEXT:  ; %bb.9: ; %atomicrmw.shared
+; GFX950-SDAG-NEXT:    s_cbranch_scc1 .LBB110_4
+; GFX950-SDAG-NEXT:  ; %bb.3: ; %atomicrmw.private
 ; GFX950-SDAG-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; GFX950-SDAG-NEXT:    s_cselect_b32 s0, s0, -1
+; GFX950-SDAG-NEXT:    scratch_load_dwordx2 v[2:3], off, s0
 ; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; GFX950-SDAG-NEXT:    v_mov_b32_e32 v2, s0
-; GFX950-SDAG-NEXT:    ds_add_rtn_f64 v[2:3], v2, v[0:1]
-; GFX950-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX950-SDAG-NEXT:  .LBB110_10: ; %atomicrmw.end
+; GFX950-SDAG-NEXT:    v_add_f64 v[4:5], v[2:3], v[0:1]
+; GFX950-SDAG-NEXT:    v_mov_b64_e32 v[0:1], v[2:3]
+; GFX950-SDAG-NEXT:    scratch_store_dwordx2 off, v[4:5], s0
 ; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; GFX950-SDAG-NEXT:    v_mov_b32_e32 v0, v2
-; GFX950-SDAG-NEXT:    v_mov_b32_e32 v1, v3
+; GFX950-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; GFX950-SDAG-NEXT:  .LBB110_4: ; %atomicrmw.global
+; GFX950-SDAG-NEXT:    v_mov_b32_e32 v2, 0
+; GFX950-SDAG-NEXT:    global_atomic_add_f64 v[0:1], v2, v[0:1], s[0:1] sc0
+; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX950-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX950-GISEL-LABEL: flat_atomic_fadd_f64_saddr_rtn:
@@ -12079,47 +12019,32 @@ define double @flat_atomic_fadd_f64_saddr_rtn(ptr inreg %ptr, double %data) {
 ; GFX950-GISEL-NEXT:    s_mov_b64 s[2:3], src_shared_base
 ; GFX950-GISEL-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX950-GISEL-NEXT:    s_cmp_lg_u32 s1, s3
-; GFX950-GISEL-NEXT:    s_mov_b32 s2, 1
-; GFX950-GISEL-NEXT:    ; implicit-def: $vgpr2_vgpr3
-; GFX950-GISEL-NEXT:    s_cbranch_scc0 .LBB110_6
-; GFX950-GISEL-NEXT:  ; %bb.1: ; %atomicrmw.check.private
-; GFX950-GISEL-NEXT:    s_mov_b64 s[2:3], src_private_base
-; GFX950-GISEL-NEXT:    s_cmp_lg_u32 s1, s3
-; GFX950-GISEL-NEXT:    s_mov_b32 s2, 1
-; GFX950-GISEL-NEXT:    ; implicit-def: $vgpr2_vgpr3
-; GFX950-GISEL-NEXT:    s_cbranch_scc0 .LBB110_3
-; GFX950-GISEL-NEXT:  ; %bb.2: ; %atomicrmw.global
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v2, 0
-; GFX950-GISEL-NEXT:    global_atomic_add_f64 v[2:3], v2, v[0:1], s[0:1] sc0
-; GFX950-GISEL-NEXT:    s_mov_b32 s2, 0
-; GFX950-GISEL-NEXT:  .LBB110_3: ; %Flow
-; GFX950-GISEL-NEXT:    s_xor_b32 s2, s2, 1
-; GFX950-GISEL-NEXT:    s_cmp_lg_u32 s2, 0
-; GFX950-GISEL-NEXT:    s_cbranch_scc1 .LBB110_5
-; GFX950-GISEL-NEXT:  ; %bb.4: ; %atomicrmw.private
-; GFX950-GISEL-NEXT:    s_cmp_lg_u64 s[0:1], 0
-; GFX950-GISEL-NEXT:    s_cselect_b32 s2, s0, -1
-; GFX950-GISEL-NEXT:    scratch_load_dwordx2 v[2:3], off, s2
-; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GFX950-GISEL-NEXT:    v_add_f64 v[4:5], v[2:3], v[0:1]
-; GFX950-GISEL-NEXT:    scratch_store_dwordx2 off, v[4:5], s2
-; GFX950-GISEL-NEXT:  .LBB110_5: ; %Flow1
-; GFX950-GISEL-NEXT:    s_mov_b32 s2, 0
-; GFX950-GISEL-NEXT:  .LBB110_6: ; %Flow2
-; GFX950-GISEL-NEXT:    s_xor_b32 s2, s2, 1
-; GFX950-GISEL-NEXT:    s_cmp_lg_u32 s2, 0
-; GFX950-GISEL-NEXT:    s_cbranch_scc1 .LBB110_8
-; GFX950-GISEL-NEXT:  ; %bb.7: ; %atomicrmw.shared
+; GFX950-GISEL-NEXT:    s_cbranch_scc1 .LBB110_2
+; GFX950-GISEL-NEXT:  ; %bb.1: ; %atomicrmw.shared
 ; GFX950-GISEL-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; GFX950-GISEL-NEXT:    s_cselect_b32 s0, s0, -1
-; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v2, s0
-; GFX950-GISEL-NEXT:    ds_add_rtn_f64 v[2:3], v2, v[0:1]
+; GFX950-GISEL-NEXT:    ds_add_rtn_f64 v[0:1], v2, v[0:1]
 ; GFX950-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX950-GISEL-NEXT:  .LBB110_8: ; %atomicrmw.end
+; GFX950-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX950-GISEL-NEXT:  .LBB110_2: ; %atomicrmw.check.private
+; GFX950-GISEL-NEXT:    s_mov_b64 s[2:3], src_private_base
+; GFX950-GISEL-NEXT:    s_cmp_lg_u32 s1, s3
+; GFX950-GISEL-NEXT:    s_cbranch_scc1 .LBB110_4
+; GFX950-GISEL-NEXT:  ; %bb.3: ; %atomicrmw.private
+; GFX950-GISEL-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX950-GISEL-NEXT:    s_cselect_b32 s0, s0, -1
+; GFX950-GISEL-NEXT:    scratch_load_dwordx2 v[2:3], off, s0
 ; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v0, v2
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v1, v3
+; GFX950-GISEL-NEXT:    v_add_f64 v[4:5], v[2:3], v[0:1]
+; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[0:1], v[2:3]
+; GFX950-GISEL-NEXT:    scratch_store_dwordx2 off, v[4:5], s0
+; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX950-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX950-GISEL-NEXT:  .LBB110_4: ; %atomicrmw.global
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v2, 0
+; GFX950-GISEL-NEXT:    global_atomic_add_f64 v[0:1], v2, v[0:1], s[0:1] sc0
+; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX950-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %gep.0 = getelementptr inbounds [512 x double], ptr %ptr, i64 0, i64 10
   %result = atomicrmw fadd ptr %gep.0, double %data syncscope("workgroup") seq_cst, align 8, !amdgpu.no.fine.grained.memory !0
@@ -12137,46 +12062,8 @@ define void @flat_atomic_fadd_f64_saddr_nortn(ptr inreg %ptr, double %data) {
 ; GFX1250-SDAG-NEXT:    s_cmp_eq_u32 s1, s3
 ; GFX1250-SDAG-NEXT:    s_cselect_b32 s2, 1, 0
 ; GFX1250-SDAG-NEXT:    s_cmp_lg_u32 s2, 1
-; GFX1250-SDAG-NEXT:    s_mov_b32 s2, -1
-; GFX1250-SDAG-NEXT:    s_cbranch_scc0 .LBB111_6
-; GFX1250-SDAG-NEXT:  ; %bb.1: ; %atomicrmw.check.private
-; GFX1250-SDAG-NEXT:    s_xor_b32 s2, s1, src_flat_scratch_base_hi
-; GFX1250-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
-; GFX1250-SDAG-NEXT:    s_cmp_lt_u32 s2, 0x4000000
-; GFX1250-SDAG-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX1250-SDAG-NEXT:    s_cmp_lg_u32 s2, 1
-; GFX1250-SDAG-NEXT:    s_mov_b32 s2, -1
-; GFX1250-SDAG-NEXT:    s_cbranch_scc0 .LBB111_3
-; GFX1250-SDAG-NEXT:  ; %bb.2: ; %atomicrmw.global
-; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v2, 0
-; GFX1250-SDAG-NEXT:    s_mov_b32 s2, 0
-; GFX1250-SDAG-NEXT:    s_wait_storecnt 0x0
-; GFX1250-SDAG-NEXT:    global_atomic_add_f64 v2, v[0:1], s[0:1]
-; GFX1250-SDAG-NEXT:    s_wait_storecnt 0x0
-; GFX1250-SDAG-NEXT:  .LBB111_3: ; %Flow
-; GFX1250-SDAG-NEXT:    s_and_b32 s2, s2, exec_lo
-; GFX1250-SDAG-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX1250-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1250-SDAG-NEXT:    s_cmp_lg_u32 s2, 1
-; GFX1250-SDAG-NEXT:    s_cbranch_scc1 .LBB111_5
-; GFX1250-SDAG-NEXT:  ; %bb.4: ; %atomicrmw.private
-; GFX1250-SDAG-NEXT:    s_sub_co_i32 s2, s0, src_flat_scratch_base_lo
-; GFX1250-SDAG-NEXT:    s_cmp_lg_u64 s[0:1], 0
-; GFX1250-SDAG-NEXT:    s_cselect_b32 s2, s2, -1
-; GFX1250-SDAG-NEXT:    scratch_load_b64 v[2:3], off, s2
-; GFX1250-SDAG-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-SDAG-NEXT:    v_add_f64_e32 v[2:3], v[2:3], v[0:1]
-; GFX1250-SDAG-NEXT:    scratch_store_b64 off, v[2:3], s2
-; GFX1250-SDAG-NEXT:  .LBB111_5: ; %Flow1
-; GFX1250-SDAG-NEXT:    s_wait_xcnt 0x0
-; GFX1250-SDAG-NEXT:    s_mov_b32 s2, 0
-; GFX1250-SDAG-NEXT:  .LBB111_6: ; %Flow2
-; GFX1250-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
-; GFX1250-SDAG-NEXT:    s_and_b32 s2, s2, exec_lo
-; GFX1250-SDAG-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX1250-SDAG-NEXT:    s_cmp_lg_u32 s2, 1
-; GFX1250-SDAG-NEXT:    s_cbranch_scc1 .LBB111_8
-; GFX1250-SDAG-NEXT:  ; %bb.7: ; %atomicrmw.shared
+; GFX1250-SDAG-NEXT:    s_cbranch_scc1 .LBB111_2
+; GFX1250-SDAG-NEXT:  ; %bb.1: ; %atomicrmw.shared
 ; GFX1250-SDAG-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; GFX1250-SDAG-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX1250-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -12184,7 +12071,28 @@ define void @flat_atomic_fadd_f64_saddr_nortn(ptr inreg %ptr, double %data) {
 ; GFX1250-SDAG-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-SDAG-NEXT:    ds_add_f64 v2, v[0:1]
 ; GFX1250-SDAG-NEXT:    s_wait_dscnt 0x0
-; GFX1250-SDAG-NEXT:  .LBB111_8: ; %atomicrmw.phi
+; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
+; GFX1250-SDAG-NEXT:  .LBB111_2: ; %atomicrmw.check.private
+; GFX1250-SDAG-NEXT:    s_xor_b32 s2, s1, src_flat_scratch_base_hi
+; GFX1250-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX1250-SDAG-NEXT:    s_cmp_lt_u32 s2, 0x4000000
+; GFX1250-SDAG-NEXT:    s_cselect_b32 s2, 1, 0
+; GFX1250-SDAG-NEXT:    s_cmp_lg_u32 s2, 1
+; GFX1250-SDAG-NEXT:    s_cbranch_scc1 .LBB111_4
+; GFX1250-SDAG-NEXT:  ; %bb.3: ; %atomicrmw.private
+; GFX1250-SDAG-NEXT:    s_sub_co_i32 s2, s0, src_flat_scratch_base_lo
+; GFX1250-SDAG-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX1250-SDAG-NEXT:    s_cselect_b32 s0, s2, -1
+; GFX1250-SDAG-NEXT:    scratch_load_b64 v[2:3], off, s0
+; GFX1250-SDAG-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-SDAG-NEXT:    v_add_f64_e32 v[0:1], v[2:3], v[0:1]
+; GFX1250-SDAG-NEXT:    scratch_store_b64 off, v[0:1], s0
+; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
+; GFX1250-SDAG-NEXT:  .LBB111_4: ; %atomicrmw.global
+; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v2, 0
+; GFX1250-SDAG-NEXT:    s_wait_storecnt 0x0
+; GFX1250-SDAG-NEXT:    global_atomic_add_f64 v2, v[0:1], s[0:1]
+; GFX1250-SDAG-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX1250-GISEL-LABEL: flat_atomic_fadd_f64_saddr_nortn:
@@ -12194,43 +12102,10 @@ define void @flat_atomic_fadd_f64_saddr_nortn(ptr inreg %ptr, double %data) {
 ; GFX1250-GISEL-NEXT:    s_add_co_u32 s0, s0, 0x50
 ; GFX1250-GISEL-NEXT:    s_mov_b64 s[2:3], src_shared_base
 ; GFX1250-GISEL-NEXT:    s_add_co_ci_u32 s1, s1, 0
-; GFX1250-GISEL-NEXT:    s_mov_b32 s2, 1
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-GISEL-NEXT:    s_cmp_lg_u32 s1, s3
-; GFX1250-GISEL-NEXT:    s_cbranch_scc0 .LBB111_6
-; GFX1250-GISEL-NEXT:  ; %bb.1: ; %atomicrmw.check.private
-; GFX1250-GISEL-NEXT:    s_xor_b32 s2, s1, src_flat_scratch_base_hi
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1250-GISEL-NEXT:    s_cmp_ge_u32 s2, 0x4000000
-; GFX1250-GISEL-NEXT:    s_mov_b32 s2, 1
-; GFX1250-GISEL-NEXT:    s_cbranch_scc0 .LBB111_3
-; GFX1250-GISEL-NEXT:  ; %bb.2: ; %atomicrmw.global
-; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v2, 0
-; GFX1250-GISEL-NEXT:    s_mov_b32 s2, 0
-; GFX1250-GISEL-NEXT:    s_wait_storecnt 0x0
-; GFX1250-GISEL-NEXT:    global_atomic_add_f64 v2, v[0:1], s[0:1]
-; GFX1250-GISEL-NEXT:    s_wait_storecnt 0x0
-; GFX1250-GISEL-NEXT:  .LBB111_3: ; %Flow
-; GFX1250-GISEL-NEXT:    s_xor_b32 s2, s2, 1
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1250-GISEL-NEXT:    s_cmp_lg_u32 s2, 0
-; GFX1250-GISEL-NEXT:    s_cbranch_scc1 .LBB111_5
-; GFX1250-GISEL-NEXT:  ; %bb.4: ; %atomicrmw.private
-; GFX1250-GISEL-NEXT:    s_sub_co_i32 s2, s0, src_flat_scratch_base_lo
-; GFX1250-GISEL-NEXT:    s_cmp_lg_u64 s[0:1], 0
-; GFX1250-GISEL-NEXT:    s_cselect_b32 s2, s2, -1
-; GFX1250-GISEL-NEXT:    scratch_load_b64 v[2:3], off, s2
-; GFX1250-GISEL-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-GISEL-NEXT:    v_add_f64_e32 v[2:3], v[2:3], v[0:1]
-; GFX1250-GISEL-NEXT:    scratch_store_b64 off, v[2:3], s2
-; GFX1250-GISEL-NEXT:  .LBB111_5: ; %Flow1
-; GFX1250-GISEL-NEXT:    s_wait_xcnt 0x0
-; GFX1250-GISEL-NEXT:    s_mov_b32 s2, 0
-; GFX1250-GISEL-NEXT:  .LBB111_6: ; %Flow2
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX1250-GISEL-NEXT:    s_xor_b32 s2, s2, 1
-; GFX1250-GISEL-NEXT:    s_cmp_lg_u32 s2, 0
-; GFX1250-GISEL-NEXT:    s_cbranch_scc1 .LBB111_8
-; GFX1250-GISEL-NEXT:  ; %bb.7: ; %atomicrmw.shared
+; GFX1250-GISEL-NEXT:    s_cbranch_scc1 .LBB111_2
+; GFX1250-GISEL-NEXT:  ; %bb.1: ; %atomicrmw.shared
 ; GFX1250-GISEL-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; GFX1250-GISEL-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -12238,7 +12113,26 @@ define void @flat_atomic_fadd_f64_saddr_nortn(ptr inreg %ptr, double %data) {
 ; GFX1250-GISEL-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-GISEL-NEXT:    ds_add_f64 v2, v[0:1]
 ; GFX1250-GISEL-NEXT:    s_wait_dscnt 0x0
-; GFX1250-GISEL-NEXT:  .LBB111_8: ; %atomicrmw.phi
+; GFX1250-GISEL-NEXT:    s_set_pc_i64 s[30:31]
+; GFX1250-GISEL-NEXT:  .LBB111_2: ; %atomicrmw.check.private
+; GFX1250-GISEL-NEXT:    s_xor_b32 s2, s1, src_flat_scratch_base_hi
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1250-GISEL-NEXT:    s_cmp_ge_u32 s2, 0x4000000
+; GFX1250-GISEL-NEXT:    s_cbranch_scc1 .LBB111_4
+; GFX1250-GISEL-NEXT:  ; %bb.3: ; %atomicrmw.private
+; GFX1250-GISEL-NEXT:    s_sub_co_i32 s2, s0, src_flat_scratch_base_lo
+; GFX1250-GISEL-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX1250-GISEL-NEXT:    s_cselect_b32 s0, s2, -1
+; GFX1250-GISEL-NEXT:    scratch_load_b64 v[2:3], off, s0
+; GFX1250-GISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-GISEL-NEXT:    v_add_f64_e32 v[0:1], v[2:3], v[0:1]
+; GFX1250-GISEL-NEXT:    scratch_store_b64 off, v[0:1], s0
+; GFX1250-GISEL-NEXT:    s_set_pc_i64 s[30:31]
+; GFX1250-GISEL-NEXT:  .LBB111_4: ; %atomicrmw.global
+; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v2, 0
+; GFX1250-GISEL-NEXT:    s_wait_storecnt 0x0
+; GFX1250-GISEL-NEXT:    global_atomic_add_f64 v2, v[0:1], s[0:1]
+; GFX1250-GISEL-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-GISEL-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX950-SDAG-LABEL: flat_atomic_fadd_f64_saddr_nortn:
@@ -12250,45 +12144,32 @@ define void @flat_atomic_fadd_f64_saddr_nortn(ptr inreg %ptr, double %data) {
 ; GFX950-SDAG-NEXT:    s_cmp_eq_u32 s1, s3
 ; GFX950-SDAG-NEXT:    s_cselect_b32 s2, 1, 0
 ; GFX950-SDAG-NEXT:    s_cmp_lg_u32 s2, 1
-; GFX950-SDAG-NEXT:    s_mov_b64 s[2:3], -1
-; GFX950-SDAG-NEXT:    s_cbranch_scc0 .LBB111_6
-; GFX950-SDAG-NEXT:  ; %bb.1: ; %atomicrmw.check.private
-; GFX950-SDAG-NEXT:    s_mov_b64 s[2:3], src_private_base
-; GFX950-SDAG-NEXT:    s_cmp_eq_u32 s1, s3
-; GFX950-SDAG-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX950-SDAG-NEXT:    s_cmp_lg_u32 s2, 1
-; GFX950-SDAG-NEXT:    s_mov_b64 s[2:3], -1
-; GFX950-SDAG-NEXT:    s_cbranch_scc0 .LBB111_3
-; GFX950-SDAG-NEXT:  ; %bb.2: ; %atomicrmw.global
-; GFX950-SDAG-NEXT:    v_mov_b32_e32 v2, 0
-; GFX950-SDAG-NEXT:    global_atomic_add_f64 v2, v[0:1], s[0:1]
-; GFX950-SDAG-NEXT:    s_mov_b64 s[2:3], 0
-; GFX950-SDAG-NEXT:  .LBB111_3: ; %Flow
-; GFX950-SDAG-NEXT:    s_and_b64 s[2:3], s[2:3], exec
-; GFX950-SDAG-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX950-SDAG-NEXT:    s_cmp_lg_u32 s2, 1
-; GFX950-SDAG-NEXT:    s_cbranch_scc1 .LBB111_5
-; GFX950-SDAG-NEXT:  ; %bb.4: ; %atomicrmw.private
-; GFX950-SDAG-NEXT:    s_cmp_lg_u64 s[0:1], 0
-; GFX950-SDAG-NEXT:    s_cselect_b32 s2, s0, -1
-; GFX950-SDAG-NEXT:    scratch_load_dwordx2 v[2:3], off, s2
-; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; GFX950-SDAG-NEXT:    v_add_f64 v[2:3], v[2:3], v[0:1]
-; GFX950-SDAG-NEXT:    scratch_store_dwordx2 off, v[2:3], s2
-; GFX950-SDAG-NEXT:  .LBB111_5: ; %Flow1
-; GFX950-SDAG-NEXT:    s_mov_b64 s[2:3], 0
-; GFX950-SDAG-NEXT:  .LBB111_6: ; %Flow2
-; GFX950-SDAG-NEXT:    s_and_b64 s[2:3], s[2:3], exec
-; GFX950-SDAG-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX950-SDAG-NEXT:    s_cmp_lg_u32 s2, 1
-; GFX950-SDAG-NEXT:    s_cbranch_scc1 .LBB111_8
-; GFX950-SDAG-NEXT:  ; %bb.7: ; %atomicrmw.shared
+; GFX950-SDAG-NEXT:    s_cbranch_scc1 .LBB111_2
+; GFX950-SDAG-NEXT:  ; %bb.1: ; %atomicrmw.shared
 ; GFX950-SDAG-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; GFX950-SDAG-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX950-SDAG-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX950-SDAG-NEXT:    ds_add_f64 v2, v[0:1]
 ; GFX950-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX950-SDAG-NEXT:  .LBB111_8: ; %atomicrmw.phi
+; GFX950-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; GFX950-SDAG-NEXT:  .LBB111_2: ; %atomicrmw.check.private
+; GFX950-SDAG-NEXT:    s_mov_b64 s[2:3], src_private_base
+; GFX950-SDAG-NEXT:    s_cmp_eq_u32 s1, s3
+; GFX950-SDAG-NEXT:    s_cselect_b32 s2, 1, 0
+; GFX950-SDAG-NEXT:    s_cmp_lg_u32 s2, 1
+; GFX950-SDAG-NEXT:    s_cbranch_scc1 .LBB111_4
+; GFX950-SDAG-NEXT:  ; %bb.3: ; %atomicrmw.private
+; GFX950-SDAG-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX950-SDAG-NEXT:    s_cselect_b32 s0, s0, -1
+; GFX950-SDAG-NEXT:    scratch_load_dwordx2 v[2:3], off, s0
+; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX950-SDAG-NEXT:    v_add_f64 v[0:1], v[2:3], v[0:1]
+; GFX950-SDAG-NEXT:    scratch_store_dwordx2 off, v[0:1], s0
+; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX950-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; GFX950-SDAG-NEXT:  .LBB111_4: ; %atomicrmw.global
+; GFX950-SDAG-NEXT:    v_mov_b32_e32 v2, 0
+; GFX950-SDAG-NEXT:    global_atomic_add_f64 v2, v[0:1], s[0:1]
 ; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX950-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -12299,41 +12180,30 @@ define void @flat_atomic_fadd_f64_saddr_nortn(ptr inreg %ptr, double %data) {
 ; GFX950-GISEL-NEXT:    s_mov_b64 s[2:3], src_shared_base
 ; GFX950-GISEL-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX950-GISEL-NEXT:    s_cmp_lg_u32 s1, s3
-; GFX950-GISEL-NEXT:    s_mov_b32 s2, 1
-; GFX950-GISEL-NEXT:    s_cbranch_scc0 .LBB111_6
-; GFX950-GISEL-NEXT:  ; %bb.1: ; %atomicrmw.check.private
-; GFX950-GISEL-NEXT:    s_mov_b64 s[2:3], src_private_base
-; GFX950-GISEL-NEXT:    s_cmp_lg_u32 s1, s3
-; GFX950-GISEL-NEXT:    s_mov_b32 s2, 1
-; GFX950-GISEL-NEXT:    s_cbranch_scc0 .LBB111_3
-; GFX950-GISEL-NEXT:  ; %bb.2: ; %atomicrmw.global
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v2, 0
-; GFX950-GISEL-NEXT:    global_atomic_add_f64 v2, v[0:1], s[0:1]
-; GFX950-GISEL-NEXT:    s_mov_b32 s2, 0
-; GFX950-GISEL-NEXT:  .LBB111_3: ; %Flow
-; GFX950-GISEL-NEXT:    s_xor_b32 s2, s2, 1
-; GFX950-GISEL-NEXT:    s_cmp_lg_u32 s2, 0
-; GFX950-GISEL-NEXT:    s_cbranch_scc1 .LBB111_5
-; GFX950-GISEL-NEXT:  ; %bb.4: ; %atomicrmw.private
-; GFX950-GISEL-NEXT:    s_cmp_lg_u64 s[0:1], 0
-; GFX950-GISEL-NEXT:    s_cselect_b32 s2, s0, -1
-; GFX950-GISEL-NEXT:    scratch_load_dwordx2 v[2:3], off, s2
-; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GFX950-GISEL-NEXT:    v_add_f64 v[2:3], v[2:3], v[0:1]
-; GFX950-GISEL-NEXT:    scratch_store_dwordx2 off, v[2:3], s2
-; GFX950-GISEL-NEXT:  .LBB111_5: ; %Flow1
-; GFX950-GISEL-NEXT:    s_mov_b32 s2, 0
-; GFX950-GISEL-NEXT:  .LBB111_6: ; %Flow2
-; GFX950-GISEL-NEXT:    s_xor_b32 s2, s2, 1
-; GFX950-GISEL-NEXT:    s_cmp_lg_u32 s2, 0
-; GFX950-GISEL-NEXT:    s_cbranch_scc1 .LBB111_8
-; GFX950-GISEL-NEXT:  ; %bb.7: ; %atomicrmw.shared
+; GFX950-GISEL-NEXT:    s_cbranch_scc1 .LBB111_2
+; GFX950-GISEL-NEXT:  ; %bb.1: ; %atomicrmw.shared
 ; GFX950-GISEL-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; GFX950-GISEL-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX950-GISEL-NEXT:    ds_add_f64 v2, v[0:1]
 ; GFX950-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX950-GISEL-NEXT:  .LBB111_8: ; %atomicrmw.phi
+; GFX950-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX950-GISEL-NEXT:  .LBB111_2: ; %atomicrmw.check.private
+; GFX950-GISEL-NEXT:    s_mov_b64 s[2:3], src_private_base
+; GFX950-GISEL-NEXT:    s_cmp_lg_u32 s1, s3
+; GFX950-GISEL-NEXT:    s_cbranch_scc1 .LBB111_4
+; GFX950-GISEL-NEXT:  ; %bb.3: ; %atomicrmw.private
+; GFX950-GISEL-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX950-GISEL-NEXT:    s_cselect_b32 s0, s0, -1
+; GFX950-GISEL-NEXT:    scratch_load_dwordx2 v[2:3], off, s0
+; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX950-GISEL-NEXT:    v_add_f64 v[0:1], v[2:3], v[0:1]
+; GFX950-GISEL-NEXT:    scratch_store_dwordx2 off, v[0:1], s0
+; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX950-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX950-GISEL-NEXT:  .LBB111_4: ; %atomicrmw.global
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v2, 0
+; GFX950-GISEL-NEXT:    global_atomic_add_f64 v2, v[0:1], s[0:1]
 ; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX950-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %gep.0 = getelementptr inbounds [512 x double], ptr %ptr, i64 0, i64 10
@@ -12353,24 +12223,8 @@ define double @flat_atomic_fmax_f64_saddr_rtn(ptr inreg %ptr, double %data) {
 ; GFX1250-SDAG-NEXT:    s_cselect_b32 s2, 1, 0
 ; GFX1250-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-SDAG-NEXT:    s_cmp_lg_u32 s2, 1
-; GFX1250-SDAG-NEXT:    s_cbranch_scc0 .LBB112_2
-; GFX1250-SDAG-NEXT:  ; %bb.1: ; %atomicrmw.global
-; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v2, 0
-; GFX1250-SDAG-NEXT:    s_mov_b32 s2, 0
-; GFX1250-SDAG-NEXT:    s_wait_storecnt 0x0
-; GFX1250-SDAG-NEXT:    flat_atomic_max_num_f64 v[2:3], v2, v[0:1], s[0:1] th:TH_ATOMIC_RETURN
-; GFX1250-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-SDAG-NEXT:    s_branch .LBB112_3
-; GFX1250-SDAG-NEXT:  .LBB112_2:
-; GFX1250-SDAG-NEXT:    s_mov_b32 s2, -1
-; GFX1250-SDAG-NEXT:    ; implicit-def: $vgpr2_vgpr3
-; GFX1250-SDAG-NEXT:  .LBB112_3: ; %Flow
-; GFX1250-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
-; GFX1250-SDAG-NEXT:    s_and_b32 s2, s2, exec_lo
-; GFX1250-SDAG-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX1250-SDAG-NEXT:    s_cmp_lg_u32 s2, 1
-; GFX1250-SDAG-NEXT:    s_cbranch_scc1 .LBB112_5
-; GFX1250-SDAG-NEXT:  ; %bb.4: ; %atomicrmw.private
+; GFX1250-SDAG-NEXT:    s_cbranch_scc1 .LBB112_2
+; GFX1250-SDAG-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX1250-SDAG-NEXT:    s_sub_co_i32 s2, s0, src_flat_scratch_base_lo
 ; GFX1250-SDAG-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; GFX1250-SDAG-NEXT:    v_max_num_f64_e32 v[0:1], v[0:1], v[0:1]
@@ -12381,8 +12235,13 @@ define double @flat_atomic_fmax_f64_saddr_rtn(ptr inreg %ptr, double %data) {
 ; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-SDAG-NEXT:    v_max_num_f64_e32 v[0:1], v[4:5], v[0:1]
 ; GFX1250-SDAG-NEXT:    scratch_store_b64 off, v[0:1], s0
-; GFX1250-SDAG-NEXT:  .LBB112_5: ; %atomicrmw.end
-; GFX1250-SDAG-NEXT:    s_wait_xcnt 0x0
+; GFX1250-SDAG-NEXT:    s_branch .LBB112_3
+; GFX1250-SDAG-NEXT:  .LBB112_2: ; %atomicrmw.global
+; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v2, 0
+; GFX1250-SDAG-NEXT:    s_wait_storecnt 0x0
+; GFX1250-SDAG-NEXT:    flat_atomic_max_num_f64 v[2:3], v2, v[0:1], s[0:1] th:TH_ATOMIC_RETURN
+; GFX1250-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-SDAG-NEXT:  .LBB112_3: ; %atomicrmw.end
 ; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v0, v2 :: v_dual_mov_b32 v1, v3
 ; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
 ;
@@ -12392,24 +12251,11 @@ define double @flat_atomic_fmax_f64_saddr_rtn(ptr inreg %ptr, double %data) {
 ; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-GISEL-NEXT:    s_add_co_u32 s2, s0, 0x50
 ; GFX1250-GISEL-NEXT:    s_add_co_ci_u32 s3, s1, 0
-; GFX1250-GISEL-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1250-GISEL-NEXT:    s_xor_b32 s4, s3, src_flat_scratch_base_hi
 ; GFX1250-GISEL-NEXT:    s_cmp_ge_u32 s4, 0x4000000
-; GFX1250-GISEL-NEXT:    s_mov_b32 s4, 1
-; GFX1250-GISEL-NEXT:    s_cbranch_scc0 .LBB112_2
-; GFX1250-GISEL-NEXT:  ; %bb.1: ; %atomicrmw.global
-; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v2, 0
-; GFX1250-GISEL-NEXT:    s_mov_b32 s4, 0
-; GFX1250-GISEL-NEXT:    s_wait_storecnt 0x0
-; GFX1250-GISEL-NEXT:    flat_atomic_max_num_f64 v[2:3], v2, v[0:1], s[0:1] offset:80 th:TH_ATOMIC_RETURN
-; GFX1250-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-GISEL-NEXT:  .LBB112_2: ; %Flow
-; GFX1250-GISEL-NEXT:    s_xor_b32 s0, s4, 1
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1250-GISEL-NEXT:    s_cmp_lg_u32 s0, 0
-; GFX1250-GISEL-NEXT:    s_cbranch_scc1 .LBB112_4
-; GFX1250-GISEL-NEXT:  ; %bb.3: ; %atomicrmw.private
+; GFX1250-GISEL-NEXT:    s_cbranch_scc1 .LBB112_2
+; GFX1250-GISEL-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX1250-GISEL-NEXT:    s_sub_co_i32 s0, s2, src_flat_scratch_base_lo
 ; GFX1250-GISEL-NEXT:    s_cmp_lg_u64 s[2:3], 0
 ; GFX1250-GISEL-NEXT:    v_max_num_f64_e32 v[0:1], v[0:1], v[0:1]
@@ -12420,8 +12266,13 @@ define double @flat_atomic_fmax_f64_saddr_rtn(ptr inreg %ptr, double %data) {
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_max_num_f64_e32 v[0:1], v[4:5], v[0:1]
 ; GFX1250-GISEL-NEXT:    scratch_store_b64 off, v[0:1], s0
-; GFX1250-GISEL-NEXT:  .LBB112_4: ; %atomicrmw.end
-; GFX1250-GISEL-NEXT:    s_wait_xcnt 0x0
+; GFX1250-GISEL-NEXT:    s_branch .LBB112_3
+; GFX1250-GISEL-NEXT:  .LBB112_2: ; %atomicrmw.global
+; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v2, 0
+; GFX1250-GISEL-NEXT:    s_wait_storecnt 0x0
+; GFX1250-GISEL-NEXT:    flat_atomic_max_num_f64 v[2:3], v2, v[0:1], s[0:1] offset:80 th:TH_ATOMIC_RETURN
+; GFX1250-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-GISEL-NEXT:  .LBB112_3: ; %atomicrmw.end
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v0, v2 :: v_dual_mov_b32 v1, v3
 ; GFX1250-GISEL-NEXT:    s_set_pc_i64 s[30:31]
 ;
@@ -12434,22 +12285,8 @@ define double @flat_atomic_fmax_f64_saddr_rtn(ptr inreg %ptr, double %data) {
 ; GFX950-SDAG-NEXT:    s_cmp_eq_u32 s1, s3
 ; GFX950-SDAG-NEXT:    s_cselect_b32 s2, 1, 0
 ; GFX950-SDAG-NEXT:    s_cmp_lg_u32 s2, 1
-; GFX950-SDAG-NEXT:    s_cbranch_scc0 .LBB112_2
-; GFX950-SDAG-NEXT:  ; %bb.1: ; %atomicrmw.global
-; GFX950-SDAG-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
-; GFX950-SDAG-NEXT:    flat_atomic_max_f64 v[2:3], v[2:3], v[0:1] sc0
-; GFX950-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX950-SDAG-NEXT:    s_mov_b64 s[2:3], 0
-; GFX950-SDAG-NEXT:    s_branch .LBB112_3
-; GFX950-SDAG-NEXT:  .LBB112_2:
-; GFX950-SDAG-NEXT:    s_mov_b64 s[2:3], -1
-; GFX950-SDAG-NEXT:    ; implicit-def: $vgpr2_vgpr3
-; GFX950-SDAG-NEXT:  .LBB112_3: ; %Flow
-; GFX950-SDAG-NEXT:    s_and_b64 s[2:3], s[2:3], exec
-; GFX950-SDAG-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX950-SDAG-NEXT:    s_cmp_lg_u32 s2, 1
-; GFX950-SDAG-NEXT:    s_cbranch_scc1 .LBB112_5
-; GFX950-SDAG-NEXT:  ; %bb.4: ; %atomicrmw.private
+; GFX950-SDAG-NEXT:    s_cbranch_scc1 .LBB112_2
+; GFX950-SDAG-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX950-SDAG-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; GFX950-SDAG-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX950-SDAG-NEXT:    scratch_load_dwordx2 v[2:3], off, s0
@@ -12458,7 +12295,12 @@ define double @flat_atomic_fmax_f64_saddr_rtn(ptr inreg %ptr, double %data) {
 ; GFX950-SDAG-NEXT:    v_max_f64 v[4:5], v[2:3], v[2:3]
 ; GFX950-SDAG-NEXT:    v_max_f64 v[0:1], v[4:5], v[0:1]
 ; GFX950-SDAG-NEXT:    scratch_store_dwordx2 off, v[0:1], s0
-; GFX950-SDAG-NEXT:  .LBB112_5: ; %atomicrmw.end
+; GFX950-SDAG-NEXT:    s_branch .LBB112_3
+; GFX950-SDAG-NEXT:  .LBB112_2: ; %atomicrmw.global
+; GFX950-SDAG-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
+; GFX950-SDAG-NEXT:    flat_atomic_max_f64 v[2:3], v[2:3], v[0:1] sc0
+; GFX950-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-SDAG-NEXT:  .LBB112_3: ; %atomicrmw.end
 ; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX950-SDAG-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX950-SDAG-NEXT:    v_mov_b32_e32 v1, v3
@@ -12471,19 +12313,8 @@ define double @flat_atomic_fmax_f64_saddr_rtn(ptr inreg %ptr, double %data) {
 ; GFX950-GISEL-NEXT:    s_mov_b64 s[4:5], src_private_base
 ; GFX950-GISEL-NEXT:    s_addc_u32 s3, s1, 0
 ; GFX950-GISEL-NEXT:    s_cmp_lg_u32 s3, s5
-; GFX950-GISEL-NEXT:    s_mov_b32 s4, 1
-; GFX950-GISEL-NEXT:    ; implicit-def: $vgpr2_vgpr3
-; GFX950-GISEL-NEXT:    s_cbranch_scc0 .LBB112_2
-; GFX950-GISEL-NEXT:  ; %bb.1: ; %atomicrmw.global
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
-; GFX950-GISEL-NEXT:    flat_atomic_max_f64 v[2:3], v[2:3], v[0:1] offset:80 sc0
-; GFX950-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX950-GISEL-NEXT:    s_mov_b32 s4, 0
-; GFX950-GISEL-NEXT:  .LBB112_2: ; %Flow
-; GFX950-GISEL-NEXT:    s_xor_b32 s0, s4, 1
-; GFX950-GISEL-NEXT:    s_cmp_lg_u32 s0, 0
-; GFX950-GISEL-NEXT:    s_cbranch_scc1 .LBB112_4
-; GFX950-GISEL-NEXT:  ; %bb.3: ; %atomicrmw.private
+; GFX950-GISEL-NEXT:    s_cbranch_scc1 .LBB112_2
+; GFX950-GISEL-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX950-GISEL-NEXT:    s_cmp_lg_u64 s[2:3], 0
 ; GFX950-GISEL-NEXT:    s_cselect_b32 s0, s2, -1
 ; GFX950-GISEL-NEXT:    scratch_load_dwordx2 v[2:3], off, s0
@@ -12492,7 +12323,12 @@ define double @flat_atomic_fmax_f64_saddr_rtn(ptr inreg %ptr, double %data) {
 ; GFX950-GISEL-NEXT:    v_max_f64 v[4:5], v[2:3], v[2:3]
 ; GFX950-GISEL-NEXT:    v_max_f64 v[0:1], v[4:5], v[0:1]
 ; GFX950-GISEL-NEXT:    scratch_store_dwordx2 off, v[0:1], s0
-; GFX950-GISEL-NEXT:  .LBB112_4: ; %atomicrmw.end
+; GFX950-GISEL-NEXT:    s_branch .LBB112_3
+; GFX950-GISEL-NEXT:  .LBB112_2: ; %atomicrmw.global
+; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
+; GFX950-GISEL-NEXT:    flat_atomic_max_f64 v[2:3], v[2:3], v[0:1] offset:80 sc0
+; GFX950-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-GISEL-NEXT:  .LBB112_3: ; %atomicrmw.end
 ; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v1, v3
@@ -12514,21 +12350,8 @@ define void @flat_atomic_fmax_f64_saddr_nortn(ptr inreg %ptr, double %data) {
 ; GFX1250-SDAG-NEXT:    s_cselect_b32 s2, 1, 0
 ; GFX1250-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-SDAG-NEXT:    s_cmp_lg_u32 s2, 1
-; GFX1250-SDAG-NEXT:    s_mov_b32 s2, -1
-; GFX1250-SDAG-NEXT:    s_cbranch_scc0 .LBB113_2
-; GFX1250-SDAG-NEXT:  ; %bb.1: ; %atomicrmw.global
-; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v2, 0
-; GFX1250-SDAG-NEXT:    s_mov_b32 s2, 0
-; GFX1250-SDAG-NEXT:    s_wait_storecnt 0x0
-; GFX1250-SDAG-NEXT:    flat_atomic_max_num_f64 v2, v[0:1], s[0:1]
-; GFX1250-SDAG-NEXT:    s_wait_storecnt_dscnt 0x0
-; GFX1250-SDAG-NEXT:  .LBB113_2: ; %Flow
-; GFX1250-SDAG-NEXT:    s_and_b32 s2, s2, exec_lo
-; GFX1250-SDAG-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX1250-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1250-SDAG-NEXT:    s_cmp_lg_u32 s2, 1
-; GFX1250-SDAG-NEXT:    s_cbranch_scc1 .LBB113_4
-; GFX1250-SDAG-NEXT:  ; %bb.3: ; %atomicrmw.private
+; GFX1250-SDAG-NEXT:    s_cbranch_scc1 .LBB113_2
+; GFX1250-SDAG-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX1250-SDAG-NEXT:    s_sub_co_i32 s2, s0, src_flat_scratch_base_lo
 ; GFX1250-SDAG-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; GFX1250-SDAG-NEXT:    v_max_num_f64_e32 v[0:1], v[0:1], v[0:1]
@@ -12539,7 +12362,12 @@ define void @flat_atomic_fmax_f64_saddr_nortn(ptr inreg %ptr, double %data) {
 ; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-SDAG-NEXT:    v_max_num_f64_e32 v[0:1], v[2:3], v[0:1]
 ; GFX1250-SDAG-NEXT:    scratch_store_b64 off, v[0:1], s0
-; GFX1250-SDAG-NEXT:  .LBB113_4: ; %atomicrmw.phi
+; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
+; GFX1250-SDAG-NEXT:  .LBB113_2: ; %atomicrmw.global
+; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v2, 0
+; GFX1250-SDAG-NEXT:    s_wait_storecnt 0x0
+; GFX1250-SDAG-NEXT:    flat_atomic_max_num_f64 v2, v[0:1], s[0:1]
+; GFX1250-SDAG-NEXT:    s_wait_storecnt_dscnt 0x0
 ; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX1250-GISEL-LABEL: flat_atomic_fmax_f64_saddr_nortn:
@@ -12551,21 +12379,8 @@ define void @flat_atomic_fmax_f64_saddr_nortn(ptr inreg %ptr, double %data) {
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1250-GISEL-NEXT:    s_xor_b32 s4, s3, src_flat_scratch_base_hi
 ; GFX1250-GISEL-NEXT:    s_cmp_ge_u32 s4, 0x4000000
-; GFX1250-GISEL-NEXT:    s_mov_b32 s4, 1
-; GFX1250-GISEL-NEXT:    s_cbranch_scc0 .LBB113_2
-; GFX1250-GISEL-NEXT:  ; %bb.1: ; %atomicrmw.global
-; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v2, 0
-; GFX1250-GISEL-NEXT:    s_mov_b32 s4, 0
-; GFX1250-GISEL-NEXT:    s_wait_storecnt 0x0
-; GFX1250-GISEL-NEXT:    flat_atomic_max_num_f64 v2, v[0:1], s[0:1] offset:80
-; GFX1250-GISEL-NEXT:    s_wait_storecnt_dscnt 0x0
-; GFX1250-GISEL-NEXT:  .LBB113_2: ; %Flow
-; GFX1250-GISEL-NEXT:    s_wait_xcnt 0x0
-; GFX1250-GISEL-NEXT:    s_xor_b32 s0, s4, 1
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1250-GISEL-NEXT:    s_cmp_lg_u32 s0, 0
-; GFX1250-GISEL-NEXT:    s_cbranch_scc1 .LBB113_4
-; GFX1250-GISEL-NEXT:  ; %bb.3: ; %atomicrmw.private
+; GFX1250-GISEL-NEXT:    s_cbranch_scc1 .LBB113_2
+; GFX1250-GISEL-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX1250-GISEL-NEXT:    s_sub_co_i32 s0, s2, src_flat_scratch_base_lo
 ; GFX1250-GISEL-NEXT:    s_cmp_lg_u64 s[2:3], 0
 ; GFX1250-GISEL-NEXT:    v_max_num_f64_e32 v[0:1], v[0:1], v[0:1]
@@ -12576,7 +12391,12 @@ define void @flat_atomic_fmax_f64_saddr_nortn(ptr inreg %ptr, double %data) {
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_max_num_f64_e32 v[0:1], v[2:3], v[0:1]
 ; GFX1250-GISEL-NEXT:    scratch_store_b64 off, v[0:1], s0
-; GFX1250-GISEL-NEXT:  .LBB113_4: ; %atomicrmw.phi
+; GFX1250-GISEL-NEXT:    s_set_pc_i64 s[30:31]
+; GFX1250-GISEL-NEXT:  .LBB113_2: ; %atomicrmw.global
+; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v2, 0
+; GFX1250-GISEL-NEXT:    s_wait_storecnt 0x0
+; GFX1250-GISEL-NEXT:    flat_atomic_max_num_f64 v2, v[0:1], s[0:1] offset:80
+; GFX1250-GISEL-NEXT:    s_wait_storecnt_dscnt 0x0
 ; GFX1250-GISEL-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX950-SDAG-LABEL: flat_atomic_fmax_f64_saddr_nortn:
@@ -12588,19 +12408,8 @@ define void @flat_atomic_fmax_f64_saddr_nortn(ptr inreg %ptr, double %data) {
 ; GFX950-SDAG-NEXT:    s_cmp_eq_u32 s1, s3
 ; GFX950-SDAG-NEXT:    s_cselect_b32 s2, 1, 0
 ; GFX950-SDAG-NEXT:    s_cmp_lg_u32 s2, 1
-; GFX950-SDAG-NEXT:    s_mov_b64 s[2:3], -1
-; GFX950-SDAG-NEXT:    s_cbranch_scc0 .LBB113_2
-; GFX950-SDAG-NEXT:  ; %bb.1: ; %atomicrmw.global
-; GFX950-SDAG-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
-; GFX950-SDAG-NEXT:    flat_atomic_max_f64 v[2:3], v[0:1]
-; GFX950-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX950-SDAG-NEXT:    s_mov_b64 s[2:3], 0
-; GFX950-SDAG-NEXT:  .LBB113_2: ; %Flow
-; GFX950-SDAG-NEXT:    s_and_b64 s[2:3], s[2:3], exec
-; GFX950-SDAG-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX950-SDAG-NEXT:    s_cmp_lg_u32 s2, 1
-; GFX950-SDAG-NEXT:    s_cbranch_scc1 .LBB113_4
-; GFX950-SDAG-NEXT:  ; %bb.3: ; %atomicrmw.private
+; GFX950-SDAG-NEXT:    s_cbranch_scc1 .LBB113_2
+; GFX950-SDAG-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX950-SDAG-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; GFX950-SDAG-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX950-SDAG-NEXT:    scratch_load_dwordx2 v[2:3], off, s0
@@ -12609,8 +12418,12 @@ define void @flat_atomic_fmax_f64_saddr_nortn(ptr inreg %ptr, double %data) {
 ; GFX950-SDAG-NEXT:    v_max_f64 v[2:3], v[2:3], v[2:3]
 ; GFX950-SDAG-NEXT:    v_max_f64 v[0:1], v[2:3], v[0:1]
 ; GFX950-SDAG-NEXT:    scratch_store_dwordx2 off, v[0:1], s0
-; GFX950-SDAG-NEXT:  .LBB113_4: ; %atomicrmw.phi
 ; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX950-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; GFX950-SDAG-NEXT:  .LBB113_2: ; %atomicrmw.global
+; GFX950-SDAG-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
+; GFX950-SDAG-NEXT:    flat_atomic_max_f64 v[2:3], v[0:1]
+; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX950-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX950-GISEL-LABEL: flat_atomic_fmax_f64_saddr_nortn:
@@ -12620,18 +12433,8 @@ define void @flat_atomic_fmax_f64_saddr_nortn(ptr inreg %ptr, double %data) {
 ; GFX950-GISEL-NEXT:    s_mov_b64 s[4:5], src_private_base
 ; GFX950-GISEL-NEXT:    s_addc_u32 s3, s1, 0
 ; GFX950-GISEL-NEXT:    s_cmp_lg_u32 s3, s5
-; GFX950-GISEL-NEXT:    s_mov_b32 s4, 1
-; GFX950-GISEL-NEXT:    s_cbranch_scc0 .LBB113_2
-; GFX950-GISEL-NEXT:  ; %bb.1: ; %atomicrmw.global
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
-; GFX950-GISEL-NEXT:    flat_atomic_max_f64 v[2:3], v[0:1] offset:80
-; GFX950-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX950-GISEL-NEXT:    s_mov_b32 s4, 0
-; GFX950-GISEL-NEXT:  .LBB113_2: ; %Flow
-; GFX950-GISEL-NEXT:    s_xor_b32 s0, s4, 1
-; GFX950-GISEL-NEXT:    s_cmp_lg_u32 s0, 0
-; GFX950-GISEL-NEXT:    s_cbranch_scc1 .LBB113_4
-; GFX950-GISEL-NEXT:  ; %bb.3: ; %atomicrmw.private
+; GFX950-GISEL-NEXT:    s_cbranch_scc1 .LBB113_2
+; GFX950-GISEL-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX950-GISEL-NEXT:    s_cmp_lg_u64 s[2:3], 0
 ; GFX950-GISEL-NEXT:    s_cselect_b32 s0, s2, -1
 ; GFX950-GISEL-NEXT:    scratch_load_dwordx2 v[2:3], off, s0
@@ -12640,8 +12443,12 @@ define void @flat_atomic_fmax_f64_saddr_nortn(ptr inreg %ptr, double %data) {
 ; GFX950-GISEL-NEXT:    v_max_f64 v[2:3], v[2:3], v[2:3]
 ; GFX950-GISEL-NEXT:    v_max_f64 v[0:1], v[2:3], v[0:1]
 ; GFX950-GISEL-NEXT:    scratch_store_dwordx2 off, v[0:1], s0
-; GFX950-GISEL-NEXT:  .LBB113_4: ; %atomicrmw.phi
 ; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX950-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX950-GISEL-NEXT:  .LBB113_2: ; %atomicrmw.global
+; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
+; GFX950-GISEL-NEXT:    flat_atomic_max_f64 v[2:3], v[0:1] offset:80
+; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX950-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %gep.0 = getelementptr inbounds [512 x double], ptr %ptr, i64 0, i64 10
   %unused = atomicrmw fmax ptr %gep.0, double %data syncscope("workgroup") seq_cst, align 8, !amdgpu.no.fine.grained.memory !0
@@ -12660,24 +12467,8 @@ define double @flat_atomic_fmin_f64_saddr_rtn(ptr inreg %ptr, double %data) {
 ; GFX1250-SDAG-NEXT:    s_cselect_b32 s2, 1, 0
 ; GFX1250-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-SDAG-NEXT:    s_cmp_lg_u32 s2, 1
-; GFX1250-SDAG-NEXT:    s_cbranch_scc0 .LBB114_2
-; GFX1250-SDAG-NEXT:  ; %bb.1: ; %atomicrmw.global
-; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v2, 0
-; GFX1250-SDAG-NEXT:    s_mov_b32 s2, 0
-; GFX1250-SDAG-NEXT:    s_wait_storecnt 0x0
-; GFX1250-SDAG-NEXT:    flat_atomic_min_num_f64 v[2:3], v2, v[0:1], s[0:1] th:TH_ATOMIC_RETURN
-; GFX1250-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-SDAG-NEXT:    s_branch .LBB114_3
-; GFX1250-SDAG-NEXT:  .LBB114_2:
-; GFX1250-SDAG-NEXT:    s_mov_b32 s2, -1
-; GFX1250-SDAG-NEXT:    ; implicit-def: $vgpr2_vgpr3
-; GFX1250-SDAG-NEXT:  .LBB114_3: ; %Flow
-; GFX1250-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
-; GFX1250-SDAG-NEXT:    s_and_b32 s2, s2, exec_lo
-; GFX1250-SDAG-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX1250-SDAG-NEXT:    s_cmp_lg_u32 s2, 1
-; GFX1250-SDAG-NEXT:    s_cbranch_scc1 .LBB114_5
-; GFX1250-SDAG-NEXT:  ; %bb.4: ; %atomicrmw.private
+; GFX1250-SDAG-NEXT:    s_cbranch_scc1 .LBB114_2
+; GFX1250-SDAG-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX1250-SDAG-NEXT:    s_sub_co_i32 s2, s0, src_flat_scratch_base_lo
 ; GFX1250-SDAG-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; GFX1250-SDAG-NEXT:    v_max_num_f64_e32 v[0:1], v[0:1], v[0:1]
@@ -12688,8 +12479,13 @@ define double @flat_atomic_fmin_f64_saddr_rtn(ptr inreg %ptr, double %data) {
 ; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-SDAG-NEXT:    v_min_num_f64_e32 v[0:1], v[4:5], v[0:1]
 ; GFX1250-SDAG-NEXT:    scratch_store_b64 off, v[0:1], s0
-; GFX1250-SDAG-NEXT:  .LBB114_5: ; %atomicrmw.end
-; GFX1250-SDAG-NEXT:    s_wait_xcnt 0x0
+; GFX1250-SDAG-NEXT:    s_branch .LBB114_3
+; GFX1250-SDAG-NEXT:  .LBB114_2: ; %atomicrmw.global
+; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v2, 0
+; GFX1250-SDAG-NEXT:    s_wait_storecnt 0x0
+; GFX1250-SDAG-NEXT:    flat_atomic_min_num_f64 v[2:3], v2, v[0:1], s[0:1] th:TH_ATOMIC_RETURN
+; GFX1250-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-SDAG-NEXT:  .LBB114_3: ; %atomicrmw.end
 ; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v0, v2 :: v_dual_mov_b32 v1, v3
 ; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
 ;
@@ -12699,24 +12495,11 @@ define double @flat_atomic_fmin_f64_saddr_rtn(ptr inreg %ptr, double %data) {
 ; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-GISEL-NEXT:    s_add_co_u32 s2, s0, 0x50
 ; GFX1250-GISEL-NEXT:    s_add_co_ci_u32 s3, s1, 0
-; GFX1250-GISEL-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1250-GISEL-NEXT:    s_xor_b32 s4, s3, src_flat_scratch_base_hi
 ; GFX1250-GISEL-NEXT:    s_cmp_ge_u32 s4, 0x4000000
-; GFX1250-GISEL-NEXT:    s_mov_b32 s4, 1
-; GFX1250-GISEL-NEXT:    s_cbranch_scc0 .LBB114_2
-; GFX1250-GISEL-NEXT:  ; %bb.1: ; %atomicrmw.global
-; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v2, 0
-; GFX1250-GISEL-NEXT:    s_mov_b32 s4, 0
-; GFX1250-GISEL-NEXT:    s_wait_storecnt 0x0
-; GFX1250-GISEL-NEXT:    flat_atomic_min_num_f64 v[2:3], v2, v[0:1], s[0:1] offset:80 th:TH_ATOMIC_RETURN
-; GFX1250-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-GISEL-NEXT:  .LBB114_2: ; %Flow
-; GFX1250-GISEL-NEXT:    s_xor_b32 s0, s4, 1
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1250-GISEL-NEXT:    s_cmp_lg_u32 s0, 0
-; GFX1250-GISEL-NEXT:    s_cbranch_scc1 .LBB114_4
-; GFX1250-GISEL-NEXT:  ; %bb.3: ; %atomicrmw.private
+; GFX1250-GISEL-NEXT:    s_cbranch_scc1 .LBB114_2
+; GFX1250-GISEL-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX1250-GISEL-NEXT:    s_sub_co_i32 s0, s2, src_flat_scratch_base_lo
 ; GFX1250-GISEL-NEXT:    s_cmp_lg_u64 s[2:3], 0
 ; GFX1250-GISEL-NEXT:    v_max_num_f64_e32 v[0:1], v[0:1], v[0:1]
@@ -12727,8 +12510,13 @@ define double @flat_atomic_fmin_f64_saddr_rtn(ptr inreg %ptr, double %data) {
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_min_num_f64_e32 v[0:1], v[4:5], v[0:1]
 ; GFX1250-GISEL-NEXT:    scratch_store_b64 off, v[0:1], s0
-; GFX1250-GISEL-NEXT:  .LBB114_4: ; %atomicrmw.end
-; GFX1250-GISEL-NEXT:    s_wait_xcnt 0x0
+; GFX1250-GISEL-NEXT:    s_branch .LBB114_3
+; GFX1250-GISEL-NEXT:  .LBB114_2: ; %atomicrmw.global
+; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v2, 0
+; GFX1250-GISEL-NEXT:    s_wait_storecnt 0x0
+; GFX1250-GISEL-NEXT:    flat_atomic_min_num_f64 v[2:3], v2, v[0:1], s[0:1] offset:80 th:TH_ATOMIC_RETURN
+; GFX1250-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-GISEL-NEXT:  .LBB114_3: ; %atomicrmw.end
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v0, v2 :: v_dual_mov_b32 v1, v3
 ; GFX1250-GISEL-NEXT:    s_set_pc_i64 s[30:31]
 ;
@@ -12741,22 +12529,8 @@ define double @flat_atomic_fmin_f64_saddr_rtn(ptr inreg %ptr, double %data) {
 ; GFX950-SDAG-NEXT:    s_cmp_eq_u32 s1, s3
 ; GFX950-SDAG-NEXT:    s_cselect_b32 s2, 1, 0
 ; GFX950-SDAG-NEXT:    s_cmp_lg_u32 s2, 1
-; GFX950-SDAG-NEXT:    s_cbranch_scc0 .LBB114_2
-; GFX950-SDAG-NEXT:  ; %bb.1: ; %atomicrmw.global
-; GFX950-SDAG-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
-; GFX950-SDAG-NEXT:    flat_atomic_min_f64 v[2:3], v[2:3], v[0:1] sc0
-; GFX950-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX950-SDAG-NEXT:    s_mov_b64 s[2:3], 0
-; GFX950-SDAG-NEXT:    s_branch .LBB114_3
-; GFX950-SDAG-NEXT:  .LBB114_2:
-; GFX950-SDAG-NEXT:    s_mov_b64 s[2:3], -1
-; GFX950-SDAG-NEXT:    ; implicit-def: $vgpr2_vgpr3
-; GFX950-SDAG-NEXT:  .LBB114_3: ; %Flow
-; GFX950-SDAG-NEXT:    s_and_b64 s[2:3], s[2:3], exec
-; GFX950-SDAG-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX950-SDAG-NEXT:    s_cmp_lg_u32 s2, 1
-; GFX950-SDAG-NEXT:    s_cbranch_scc1 .LBB114_5
-; GFX950-SDAG-NEXT:  ; %bb.4: ; %atomicrmw.private
+; GFX950-SDAG-NEXT:    s_cbranch_scc1 .LBB114_2
+; GFX950-SDAG-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX950-SDAG-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; GFX950-SDAG-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX950-SDAG-NEXT:    scratch_load_dwordx2 v[2:3], off, s0
@@ -12765,7 +12539,12 @@ define double @flat_atomic_fmin_f64_saddr_rtn(ptr inreg %ptr, double %data) {
 ; GFX950-SDAG-NEXT:    v_max_f64 v[4:5], v[2:3], v[2:3]
 ; GFX950-SDAG-NEXT:    v_min_f64 v[0:1], v[4:5], v[0:1]
 ; GFX950-SDAG-NEXT:    scratch_store_dwordx2 off, v[0:1], s0
-; GFX950-SDAG-NEXT:  .LBB114_5: ; %atomicrmw.end
+; GFX950-SDAG-NEXT:    s_branch .LBB114_3
+; GFX950-SDAG-NEXT:  .LBB114_2: ; %atomicrmw.global
+; GFX950-SDAG-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
+; GFX950-SDAG-NEXT:    flat_atomic_min_f64 v[2:3], v[2:3], v[0:1] sc0
+; GFX950-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-SDAG-NEXT:  .LBB114_3: ; %atomicrmw.end
 ; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX950-SDAG-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX950-SDAG-NEXT:    v_mov_b32_e32 v1, v3
@@ -12778,19 +12557,8 @@ define double @flat_atomic_fmin_f64_saddr_rtn(ptr inreg %ptr, double %data) {
 ; GFX950-GISEL-NEXT:    s_mov_b64 s[4:5], src_private_base
 ; GFX950-GISEL-NEXT:    s_addc_u32 s3, s1, 0
 ; GFX950-GISEL-NEXT:    s_cmp_lg_u32 s3, s5
-; GFX950-GISEL-NEXT:    s_mov_b32 s4, 1
-; GFX950-GISEL-NEXT:    ; implicit-def: $vgpr2_vgpr3
-; GFX950-GISEL-NEXT:    s_cbranch_scc0 .LBB114_2
-; GFX950-GISEL-NEXT:  ; %bb.1: ; %atomicrmw.global
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
-; GFX950-GISEL-NEXT:    flat_atomic_min_f64 v[2:3], v[2:3], v[0:1] offset:80 sc0
-; GFX950-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX950-GISEL-NEXT:    s_mov_b32 s4, 0
-; GFX950-GISEL-NEXT:  .LBB114_2: ; %Flow
-; GFX950-GISEL-NEXT:    s_xor_b32 s0, s4, 1
-; GFX950-GISEL-NEXT:    s_cmp_lg_u32 s0, 0
-; GFX950-GISEL-NEXT:    s_cbranch_scc1 .LBB114_4
-; GFX950-GISEL-NEXT:  ; %bb.3: ; %atomicrmw.private
+; GFX950-GISEL-NEXT:    s_cbranch_scc1 .LBB114_2
+; GFX950-GISEL-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX950-GISEL-NEXT:    s_cmp_lg_u64 s[2:3], 0
 ; GFX950-GISEL-NEXT:    s_cselect_b32 s0, s2, -1
 ; GFX950-GISEL-NEXT:    scratch_load_dwordx2 v[2:3], off, s0
@@ -12799,7 +12567,12 @@ define double @flat_atomic_fmin_f64_saddr_rtn(ptr inreg %ptr, double %data) {
 ; GFX950-GISEL-NEXT:    v_max_f64 v[4:5], v[2:3], v[2:3]
 ; GFX950-GISEL-NEXT:    v_min_f64 v[0:1], v[4:5], v[0:1]
 ; GFX950-GISEL-NEXT:    scratch_store_dwordx2 off, v[0:1], s0
-; GFX950-GISEL-NEXT:  .LBB114_4: ; %atomicrmw.end
+; GFX950-GISEL-NEXT:    s_branch .LBB114_3
+; GFX950-GISEL-NEXT:  .LBB114_2: ; %atomicrmw.global
+; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
+; GFX950-GISEL-NEXT:    flat_atomic_min_f64 v[2:3], v[2:3], v[0:1] offset:80 sc0
+; GFX950-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-GISEL-NEXT:  .LBB114_3: ; %atomicrmw.end
 ; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v1, v3
@@ -12821,21 +12594,8 @@ define void @flat_atomic_fmin_f64_saddr_nortn(ptr inreg %ptr, double %data) {
 ; GFX1250-SDAG-NEXT:    s_cselect_b32 s2, 1, 0
 ; GFX1250-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-SDAG-NEXT:    s_cmp_lg_u32 s2, 1
-; GFX1250-SDAG-NEXT:    s_mov_b32 s2, -1
-; GFX1250-SDAG-NEXT:    s_cbranch_scc0 .LBB115_2
-; GFX1250-SDAG-NEXT:  ; %bb.1: ; %atomicrmw.global
-; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v2, 0
-; GFX1250-SDAG-NEXT:    s_mov_b32 s2, 0
-; GFX1250-SDAG-NEXT:    s_wait_storecnt 0x0
-; GFX1250-SDAG-NEXT:    flat_atomic_min_num_f64 v2, v[0:1], s[0:1]
-; GFX1250-SDAG-NEXT:    s_wait_storecnt_dscnt 0x0
-; GFX1250-SDAG-NEXT:  .LBB115_2: ; %Flow
-; GFX1250-SDAG-NEXT:    s_and_b32 s2, s2, exec_lo
-; GFX1250-SDAG-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX1250-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1250-SDAG-NEXT:    s_cmp_lg_u32 s2, 1
-; GFX1250-SDAG-NEXT:    s_cbranch_scc1 .LBB115_4
-; GFX1250-SDAG-NEXT:  ; %bb.3: ; %atomicrmw.private
+; GFX1250-SDAG-NEXT:    s_cbranch_scc1 .LBB115_2
+; GFX1250-SDAG-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX1250-SDAG-NEXT:    s_sub_co_i32 s2, s0, src_flat_scratch_base_lo
 ; GFX1250-SDAG-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; GFX1250-SDAG-NEXT:    v_max_num_f64_e32 v[0:1], v[0:1], v[0:1]
@@ -12846,7 +12606,12 @@ define void @flat_atomic_fmin_f64_saddr_nortn(ptr inreg %ptr, double %data) {
 ; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-SDAG-NEXT:    v_min_num_f64_e32 v[0:1], v[2:3], v[0:1]
 ; GFX1250-SDAG-NEXT:    scratch_store_b64 off, v[0:1], s0
-; GFX1250-SDAG-NEXT:  .LBB115_4: ; %atomicrmw.phi
+; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
+; GFX1250-SDAG-NEXT:  .LBB115_2: ; %atomicrmw.global
+; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v2, 0
+; GFX1250-SDAG-NEXT:    s_wait_storecnt 0x0
+; GFX1250-SDAG-NEXT:    flat_atomic_min_num_f64 v2, v[0:1], s[0:1]
+; GFX1250-SDAG-NEXT:    s_wait_storecnt_dscnt 0x0
 ; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX1250-GISEL-LABEL: flat_atomic_fmin_f64_saddr_nortn:
@@ -12858,21 +12623,8 @@ define void @flat_atomic_fmin_f64_saddr_nortn(ptr inreg %ptr, double %data) {
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1250-GISEL-NEXT:    s_xor_b32 s4, s3, src_flat_scratch_base_hi
 ; GFX1250-GISEL-NEXT:    s_cmp_ge_u32 s4, 0x4000000
-; GFX1250-GISEL-NEXT:    s_mov_b32 s4, 1
-; GFX1250-GISEL-NEXT:    s_cbranch_scc0 .LBB115_2
-; GFX1250-GISEL-NEXT:  ; %bb.1: ; %atomicrmw.global
-; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v2, 0
-; GFX1250-GISEL-NEXT:    s_mov_b32 s4, 0
-; GFX1250-GISEL-NEXT:    s_wait_storecnt 0x0
-; GFX1250-GISEL-NEXT:    flat_atomic_min_num_f64 v2, v[0:1], s[0:1] offset:80
-; GFX1250-GISEL-NEXT:    s_wait_storecnt_dscnt 0x0
-; GFX1250-GISEL-NEXT:  .LBB115_2: ; %Flow
-; GFX1250-GISEL-NEXT:    s_wait_xcnt 0x0
-; GFX1250-GISEL-NEXT:    s_xor_b32 s0, s4, 1
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1250-GISEL-NEXT:    s_cmp_lg_u32 s0, 0
-; GFX1250-GISEL-NEXT:    s_cbranch_scc1 .LBB115_4
-; GFX1250-GISEL-NEXT:  ; %bb.3: ; %atomicrmw.private
+; GFX1250-GISEL-NEXT:    s_cbranch_scc1 .LBB115_2
+; GFX1250-GISEL-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX1250-GISEL-NEXT:    s_sub_co_i32 s0, s2, src_flat_scratch_base_lo
 ; GFX1250-GISEL-NEXT:    s_cmp_lg_u64 s[2:3], 0
 ; GFX1250-GISEL-NEXT:    v_max_num_f64_e32 v[0:1], v[0:1], v[0:1]
@@ -12883,7 +12635,12 @@ define void @flat_atomic_fmin_f64_saddr_nortn(ptr inreg %ptr, double %data) {
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_min_num_f64_e32 v[0:1], v[2:3], v[0:1]
 ; GFX1250-GISEL-NEXT:    scratch_store_b64 off, v[0:1], s0
-; GFX1250-GISEL-NEXT:  .LBB115_4: ; %atomicrmw.phi
+; GFX1250-GISEL-NEXT:    s_set_pc_i64 s[30:31]
+; GFX1250-GISEL-NEXT:  .LBB115_2: ; %atomicrmw.global
+; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v2, 0
+; GFX1250-GISEL-NEXT:    s_wait_storecnt 0x0
+; GFX1250-GISEL-NEXT:    flat_atomic_min_num_f64 v2, v[0:1], s[0:1] offset:80
+; GFX1250-GISEL-NEXT:    s_wait_storecnt_dscnt 0x0
 ; GFX1250-GISEL-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX950-SDAG-LABEL: flat_atomic_fmin_f64_saddr_nortn:
@@ -12895,19 +12652,8 @@ define void @flat_atomic_fmin_f64_saddr_nortn(ptr inreg %ptr, double %data) {
 ; GFX950-SDAG-NEXT:    s_cmp_eq_u32 s1, s3
 ; GFX950-SDAG-NEXT:    s_cselect_b32 s2, 1, 0
 ; GFX950-SDAG-NEXT:    s_cmp_lg_u32 s2, 1
-; GFX950-SDAG-NEXT:    s_mov_b64 s[2:3], -1
-; GFX950-SDAG-NEXT:    s_cbranch_scc0 .LBB115_2
-; GFX950-SDAG-NEXT:  ; %bb.1: ; %atomicrmw.global
-; GFX950-SDAG-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
-; GFX950-SDAG-NEXT:    flat_atomic_min_f64 v[2:3], v[0:1]
-; GFX950-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX950-SDAG-NEXT:    s_mov_b64 s[2:3], 0
-; GFX950-SDAG-NEXT:  .LBB115_2: ; %Flow
-; GFX950-SDAG-NEXT:    s_and_b64 s[2:3], s[2:3], exec
-; GFX950-SDAG-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX950-SDAG-NEXT:    s_cmp_lg_u32 s2, 1
-; GFX950-SDAG-NEXT:    s_cbranch_scc1 .LBB115_4
-; GFX950-SDAG-NEXT:  ; %bb.3: ; %atomicrmw.private
+; GFX950-SDAG-NEXT:    s_cbranch_scc1 .LBB115_2
+; GFX950-SDAG-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX950-SDAG-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; GFX950-SDAG-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX950-SDAG-NEXT:    scratch_load_dwordx2 v[2:3], off, s0
@@ -12916,8 +12662,12 @@ define void @flat_atomic_fmin_f64_saddr_nortn(ptr inreg %ptr, double %data) {
 ; GFX950-SDAG-NEXT:    v_max_f64 v[2:3], v[2:3], v[2:3]
 ; GFX950-SDAG-NEXT:    v_min_f64 v[0:1], v[2:3], v[0:1]
 ; GFX950-SDAG-NEXT:    scratch_store_dwordx2 off, v[0:1], s0
-; GFX950-SDAG-NEXT:  .LBB115_4: ; %atomicrmw.phi
 ; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX950-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; GFX950-SDAG-NEXT:  .LBB115_2: ; %atomicrmw.global
+; GFX950-SDAG-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
+; GFX950-SDAG-NEXT:    flat_atomic_min_f64 v[2:3], v[0:1]
+; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX950-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX950-GISEL-LABEL: flat_atomic_fmin_f64_saddr_nortn:
@@ -12927,18 +12677,8 @@ define void @flat_atomic_fmin_f64_saddr_nortn(ptr inreg %ptr, double %data) {
 ; GFX950-GISEL-NEXT:    s_mov_b64 s[4:5], src_private_base
 ; GFX950-GISEL-NEXT:    s_addc_u32 s3, s1, 0
 ; GFX950-GISEL-NEXT:    s_cmp_lg_u32 s3, s5
-; GFX950-GISEL-NEXT:    s_mov_b32 s4, 1
-; GFX950-GISEL-NEXT:    s_cbranch_scc0 .LBB115_2
-; GFX950-GISEL-NEXT:  ; %bb.1: ; %atomicrmw.global
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
-; GFX950-GISEL-NEXT:    flat_atomic_min_f64 v[2:3], v[0:1] offset:80
-; GFX950-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX950-GISEL-NEXT:    s_mov_b32 s4, 0
-; GFX950-GISEL-NEXT:  .LBB115_2: ; %Flow
-; GFX950-GISEL-NEXT:    s_xor_b32 s0, s4, 1
-; GFX950-GISEL-NEXT:    s_cmp_lg_u32 s0, 0
-; GFX950-GISEL-NEXT:    s_cbranch_scc1 .LBB115_4
-; GFX950-GISEL-NEXT:  ; %bb.3: ; %atomicrmw.private
+; GFX950-GISEL-NEXT:    s_cbranch_scc1 .LBB115_2
+; GFX950-GISEL-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX950-GISEL-NEXT:    s_cmp_lg_u64 s[2:3], 0
 ; GFX950-GISEL-NEXT:    s_cselect_b32 s0, s2, -1
 ; GFX950-GISEL-NEXT:    scratch_load_dwordx2 v[2:3], off, s0
@@ -12947,8 +12687,12 @@ define void @flat_atomic_fmin_f64_saddr_nortn(ptr inreg %ptr, double %data) {
 ; GFX950-GISEL-NEXT:    v_max_f64 v[2:3], v[2:3], v[2:3]
 ; GFX950-GISEL-NEXT:    v_min_f64 v[0:1], v[2:3], v[0:1]
 ; GFX950-GISEL-NEXT:    scratch_store_dwordx2 off, v[0:1], s0
-; GFX950-GISEL-NEXT:  .LBB115_4: ; %atomicrmw.phi
 ; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX950-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX950-GISEL-NEXT:  .LBB115_2: ; %atomicrmw.global
+; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
+; GFX950-GISEL-NEXT:    flat_atomic_min_f64 v[2:3], v[0:1] offset:80
+; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX950-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %gep.0 = getelementptr inbounds [512 x double], ptr %ptr, i64 0, i64 10
   %unused = atomicrmw fmin ptr %gep.0, double %data syncscope("workgroup") seq_cst, align 8, !amdgpu.no.fine.grained.memory !0

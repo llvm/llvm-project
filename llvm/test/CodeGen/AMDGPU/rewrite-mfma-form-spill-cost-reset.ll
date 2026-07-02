@@ -382,7 +382,7 @@ define amdgpu_kernel void @test_spill_cost_reset(
   ; CHECK-NEXT:   [[COPY131:%[0-9]+]].sub1:vreg_64_align2 = COPY [[V_MOV_B32_e32_]].sub0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1.loop:
-  ; CHECK-NEXT:   successors: %bb.2(0x04000000), %bb.1(0x7c000000)
+  ; CHECK-NEXT:   successors: %bb.1(0x7c000000), %bb.2(0x04000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[V_MOV_B32_e32_12:%[0-9]+]]:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 [[COPY1]], [[COPY2]], [[V_MOV_B32_e32_12]], 0, 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   [[COPY131:%[0-9]+]]:vreg_64_align2 = nofpexcept V_PK_ADD_F32 8, [[COPY131]], 8, [[COPY131]], 0, 0, 0, 0, 0, implicit $mode, implicit $exec

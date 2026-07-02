@@ -59,8 +59,8 @@ define protected amdgpu_kernel void @_RSENC_PRInit______________________________
 ; CHECK-NEXT:  .LBB0_11: ; %for.body564
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    s_sub_i32 s4, s4, 32
-; CHECK-NEXT:    s_cmp_lg_u32 s4, 0
-; CHECK-NEXT:    s_cbranch_scc1 .LBB0_11
+; CHECK-NEXT:    s_cmp_eq_u32 s4, 0
+; CHECK-NEXT:    s_cbranch_scc0 .LBB0_11
 ; CHECK-NEXT:  .LBB0_12: ; %UnifiedUnreachableBlock
 ; CHECK-NEXT:    ; divergent unreachable
 ; CHECK-NEXT:  .LBB0_13: ; %UnifiedReturnBlock

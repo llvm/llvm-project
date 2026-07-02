@@ -398,41 +398,29 @@ define void @tensor_or_async_lds_diamonds(i32 inreg %cond1, i32 inreg %cond2, <4
 ; GFX1250-SDAG-NEXT:    s_mov_b32 s13, s3
 ; GFX1250-SDAG-NEXT:    s_mov_b32 s12, s2
 ; GFX1250-SDAG-NEXT:    s_cmp_eq_u32 s0, 0
-; GFX1250-SDAG-NEXT:    s_mov_b32 s0, -1
-; GFX1250-SDAG-NEXT:    s_cbranch_scc0 .LBB14_2
-; GFX1250-SDAG-NEXT:  ; %bb.1: ; %g1
-; GFX1250-SDAG-NEXT:    global_load_async_to_lds_b32 v2, v[0:1], off
-; GFX1250-SDAG-NEXT:    s_mov_b32 s0, 0
-; GFX1250-SDAG-NEXT:    ; asyncmark
-; GFX1250-SDAG-NEXT:  .LBB14_2: ; %Flow1
-; GFX1250-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
-; GFX1250-SDAG-NEXT:    s_and_b32 s0, s0, exec_lo
-; GFX1250-SDAG-NEXT:    s_cselect_b32 s0, 1, 0
-; GFX1250-SDAG-NEXT:    s_cmp_lg_u32 s0, 1
-; GFX1250-SDAG-NEXT:    s_cbranch_scc1 .LBB14_4
-; GFX1250-SDAG-NEXT:  ; %bb.3: ; %t1
+; GFX1250-SDAG-NEXT:    s_cbranch_scc1 .LBB14_3
+; GFX1250-SDAG-NEXT:  ; %bb.1: ; %t1
 ; GFX1250-SDAG-NEXT:    tensor_load_to_lds s[12:15], s[4:11]
-; GFX1250-SDAG-NEXT:    ; asyncmark
-; GFX1250-SDAG-NEXT:  .LBB14_4: ; %merge1
 ; GFX1250-SDAG-NEXT:    s_cmp_eq_u32 s1, 0
-; GFX1250-SDAG-NEXT:    s_mov_b32 s0, -1
-; GFX1250-SDAG-NEXT:    s_cbranch_scc0 .LBB14_6
-; GFX1250-SDAG-NEXT:  ; %bb.5: ; %g2
-; GFX1250-SDAG-NEXT:    global_load_async_to_lds_b32 v2, v[0:1], off
-; GFX1250-SDAG-NEXT:    s_mov_b32 s0, 0
 ; GFX1250-SDAG-NEXT:    ; asyncmark
-; GFX1250-SDAG-NEXT:  .LBB14_6: ; %Flow
-; GFX1250-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
-; GFX1250-SDAG-NEXT:    s_and_b32 s0, s0, exec_lo
-; GFX1250-SDAG-NEXT:    s_cselect_b32 s0, 1, 0
-; GFX1250-SDAG-NEXT:    s_cmp_lg_u32 s0, 1
-; GFX1250-SDAG-NEXT:    s_cbranch_scc1 .LBB14_8
-; GFX1250-SDAG-NEXT:  ; %bb.7: ; %t2
+; GFX1250-SDAG-NEXT:    s_cbranch_scc1 .LBB14_4
+; GFX1250-SDAG-NEXT:  .LBB14_2: ; %t2
 ; GFX1250-SDAG-NEXT:    tensor_load_to_lds s[12:15], s[4:11]
 ; GFX1250-SDAG-NEXT:    ; asyncmark
-; GFX1250-SDAG-NEXT:  .LBB14_8: ; %merge2
 ; GFX1250-SDAG-NEXT:    ; wait_asyncmark(1)
 ; GFX1250-SDAG-NEXT:    s_wait_asynccnt 0x0
+; GFX1250-SDAG-NEXT:    s_wait_tensorcnt 0x1
+; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
+; GFX1250-SDAG-NEXT:  .LBB14_3: ; %g1
+; GFX1250-SDAG-NEXT:    global_load_async_to_lds_b32 v2, v[0:1], off
+; GFX1250-SDAG-NEXT:    s_cmp_eq_u32 s1, 0
+; GFX1250-SDAG-NEXT:    ; asyncmark
+; GFX1250-SDAG-NEXT:    s_cbranch_scc0 .LBB14_2
+; GFX1250-SDAG-NEXT:  .LBB14_4: ; %g2
+; GFX1250-SDAG-NEXT:    global_load_async_to_lds_b32 v2, v[0:1], off
+; GFX1250-SDAG-NEXT:    ; asyncmark
+; GFX1250-SDAG-NEXT:    ; wait_asyncmark(1)
+; GFX1250-SDAG-NEXT:    s_wait_asynccnt 0x1
 ; GFX1250-SDAG-NEXT:    s_wait_tensorcnt 0x0
 ; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
 ;
@@ -453,39 +441,29 @@ define void @tensor_or_async_lds_diamonds(i32 inreg %cond1, i32 inreg %cond2, <4
 ; GFX1250-GISEL-NEXT:    s_mov_b32 s10, s24
 ; GFX1250-GISEL-NEXT:    s_mov_b32 s11, s25
 ; GFX1250-GISEL-NEXT:    s_cmp_eq_u32 s0, 0
-; GFX1250-GISEL-NEXT:    s_mov_b32 s0, 1
-; GFX1250-GISEL-NEXT:    s_cbranch_scc0 .LBB14_2
-; GFX1250-GISEL-NEXT:  ; %bb.1: ; %g1
-; GFX1250-GISEL-NEXT:    global_load_async_to_lds_b32 v2, v[0:1], off
-; GFX1250-GISEL-NEXT:    s_mov_b32 s0, 0
-; GFX1250-GISEL-NEXT:    ; asyncmark
-; GFX1250-GISEL-NEXT:  .LBB14_2: ; %Flow1
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX1250-GISEL-NEXT:    s_xor_b32 s0, s0, 1
-; GFX1250-GISEL-NEXT:    s_cmp_lg_u32 s0, 0
-; GFX1250-GISEL-NEXT:    s_cbranch_scc1 .LBB14_4
-; GFX1250-GISEL-NEXT:  ; %bb.3: ; %t1
+; GFX1250-GISEL-NEXT:    s_cbranch_scc1 .LBB14_3
+; GFX1250-GISEL-NEXT:  ; %bb.1: ; %t1
 ; GFX1250-GISEL-NEXT:    tensor_load_to_lds s[12:15], s[4:11]
-; GFX1250-GISEL-NEXT:    ; asyncmark
-; GFX1250-GISEL-NEXT:  .LBB14_4: ; %merge1
 ; GFX1250-GISEL-NEXT:    s_cmp_eq_u32 s1, 0
-; GFX1250-GISEL-NEXT:    s_mov_b32 s0, 1
-; GFX1250-GISEL-NEXT:    s_cbranch_scc0 .LBB14_6
-; GFX1250-GISEL-NEXT:  ; %bb.5: ; %g2
-; GFX1250-GISEL-NEXT:    global_load_async_to_lds_b32 v2, v[0:1], off
-; GFX1250-GISEL-NEXT:    s_mov_b32 s0, 0
 ; GFX1250-GISEL-NEXT:    ; asyncmark
-; GFX1250-GISEL-NEXT:  .LBB14_6: ; %Flow
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX1250-GISEL-NEXT:    s_xor_b32 s0, s0, 1
-; GFX1250-GISEL-NEXT:    s_cmp_lg_u32 s0, 0
-; GFX1250-GISEL-NEXT:    s_cbranch_scc1 .LBB14_8
-; GFX1250-GISEL-NEXT:  ; %bb.7: ; %t2
+; GFX1250-GISEL-NEXT:    s_cbranch_scc1 .LBB14_4
+; GFX1250-GISEL-NEXT:  .LBB14_2: ; %t2
 ; GFX1250-GISEL-NEXT:    tensor_load_to_lds s[12:15], s[4:11]
 ; GFX1250-GISEL-NEXT:    ; asyncmark
-; GFX1250-GISEL-NEXT:  .LBB14_8: ; %merge2
 ; GFX1250-GISEL-NEXT:    ; wait_asyncmark(1)
 ; GFX1250-GISEL-NEXT:    s_wait_asynccnt 0x0
+; GFX1250-GISEL-NEXT:    s_wait_tensorcnt 0x1
+; GFX1250-GISEL-NEXT:    s_set_pc_i64 s[30:31]
+; GFX1250-GISEL-NEXT:  .LBB14_3: ; %g1
+; GFX1250-GISEL-NEXT:    global_load_async_to_lds_b32 v2, v[0:1], off
+; GFX1250-GISEL-NEXT:    s_cmp_eq_u32 s1, 0
+; GFX1250-GISEL-NEXT:    ; asyncmark
+; GFX1250-GISEL-NEXT:    s_cbranch_scc0 .LBB14_2
+; GFX1250-GISEL-NEXT:  .LBB14_4: ; %g2
+; GFX1250-GISEL-NEXT:    global_load_async_to_lds_b32 v2, v[0:1], off
+; GFX1250-GISEL-NEXT:    ; asyncmark
+; GFX1250-GISEL-NEXT:    ; wait_asyncmark(1)
+; GFX1250-GISEL-NEXT:    s_wait_asynccnt 0x1
 ; GFX1250-GISEL-NEXT:    s_wait_tensorcnt 0x0
 ; GFX1250-GISEL-NEXT:    s_set_pc_i64 s[30:31]
 entry:

@@ -140,7 +140,7 @@ define void @main(i1 %arg) #0 {
 ; CHECK-NEXT:    v_mul_f32_e32 v1, v1, v3
 ; CHECK-NEXT:    s_mov_b64 vcc, vcc
 ; CHECK-NEXT:    s_cbranch_vccnz .LBB0_2
-; CHECK-NEXT:  .LBB0_3: ; %Flow14
+; CHECK-NEXT:  .LBB0_3: ; %Flow12
 ; CHECK-NEXT:    s_andn2_saveexec_b64 s[6:7], s[6:7]
 ; CHECK-NEXT:    s_cbranch_execz .LBB0_10
 ; CHECK-NEXT:  ; %bb.4: ; %bb32
@@ -196,7 +196,7 @@ define void @main(i1 %arg) #0 {
 ; CHECK-NEXT:    s_waitcnt vmcnt(1)
 ; CHECK-NEXT:    buffer_store_dwordx4 v[0:3], off, s[16:19], 0
 ; CHECK-NEXT:    ; implicit-def: $vgpr0
-; CHECK-NEXT:  .LBB0_6: ; %Flow12
+; CHECK-NEXT:  .LBB0_6: ; %Flow
 ; CHECK-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; CHECK-NEXT:    s_cbranch_execz .LBB0_9
 ; CHECK-NEXT:  ; %bb.7: ; %bb33.preheader
@@ -210,7 +210,7 @@ define void @main(i1 %arg) #0 {
 ; CHECK-NEXT:    v_mov_b32_e32 v2, s21
 ; CHECK-NEXT:    image_sample_lz v3, v[1:2], s[8:15], s[16:19] dmask:0x1
 ; CHECK-NEXT:    image_sample_lz v4, v[1:2], s[36:43], s[16:19] dmask:0x1
-; CHECK-NEXT:    s_and_b64 vcc, exec, 0
+; CHECK-NEXT:    s_and_b64 vcc, exec, -1
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_sub_f32_e32 v1, v4, v3
 ; CHECK-NEXT:    v_mul_f32_e32 v0, v1, v0
@@ -220,8 +220,8 @@ define void @main(i1 %arg) #0 {
 ; CHECK-NEXT:    v_add_f32_e32 v2, v1, v0
 ; CHECK-NEXT:    v_sub_f32_e32 v1, v1, v2
 ; CHECK-NEXT:    s_mov_b64 vcc, vcc
-; CHECK-NEXT:    s_cbranch_vccz .LBB0_8
-; CHECK-NEXT:  .LBB0_9: ; %Flow13
+; CHECK-NEXT:    s_cbranch_vccnz .LBB0_8
+; CHECK-NEXT:  .LBB0_9: ; %Flow11
 ; CHECK-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; CHECK-NEXT:  .LBB0_10: ; %UnifiedReturnBlock
 ; CHECK-NEXT:    s_or_b64 exec, exec, s[6:7]

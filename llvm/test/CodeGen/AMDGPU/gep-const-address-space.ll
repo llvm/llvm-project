@@ -23,52 +23,38 @@ define protected amdgpu_kernel void @IllegalGEPConst(i32 %a, ptr addrspace(1) %b
 ; CHECK-NEXT:    s_cmp_eq_u32 s1, s7
 ; CHECK-NEXT:    s_cselect_b32 s4, 1, 0
 ; CHECK-NEXT:    s_cmp_lg_u32 s4, 1
-; CHECK-NEXT:    s_mov_b64 s[4:5], -1
-; CHECK-NEXT:    s_cbranch_scc0 .LBB0_6
-; CHECK-NEXT:  ; %bb.1: ; %atomicrmw.check.private
-; CHECK-NEXT:    s_mov_b64 s[4:5], src_private_base
-; CHECK-NEXT:    s_cmp_eq_u32 s1, s5
-; CHECK-NEXT:    s_cselect_b32 s4, 1, 0
-; CHECK-NEXT:    s_cmp_lg_u32 s4, 1
-; CHECK-NEXT:    s_mov_b64 s[4:5], -1
-; CHECK-NEXT:    s_cbranch_scc0 .LBB0_3
-; CHECK-NEXT:  ; %bb.2: ; %atomicrmw.global
-; CHECK-NEXT:    v_mov_b32_e32 v0, 0
-; CHECK-NEXT:    v_pk_mov_b32 v[2:3], s[2:3], s[2:3] op_sel:[0,1]
-; CHECK-NEXT:    global_atomic_add_f64 v0, v[2:3], s[0:1]
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    buffer_wbinvl1_vol
-; CHECK-NEXT:    s_mov_b64 s[4:5], 0
-; CHECK-NEXT:  .LBB0_3: ; %Flow
-; CHECK-NEXT:    s_and_b64 s[4:5], s[4:5], exec
-; CHECK-NEXT:    s_cselect_b32 s4, 1, 0
-; CHECK-NEXT:    s_cmp_lg_u32 s4, 1
-; CHECK-NEXT:    s_cbranch_scc1 .LBB0_5
-; CHECK-NEXT:  ; %bb.4: ; %atomicrmw.private
-; CHECK-NEXT:    s_cmp_lg_u64 s[0:1], 0
-; CHECK-NEXT:    s_cselect_b32 s4, s0, -1
-; CHECK-NEXT:    v_mov_b32_e32 v2, s4
-; CHECK-NEXT:    buffer_load_dword v0, v2, s[12:15], 0 offen
-; CHECK-NEXT:    buffer_load_dword v1, v2, s[12:15], 0 offen offset:4
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    v_add_f64 v[0:1], v[0:1], s[2:3]
-; CHECK-NEXT:    buffer_store_dword v0, v2, s[12:15], 0 offen
-; CHECK-NEXT:    buffer_store_dword v1, v2, s[12:15], 0 offen offset:4
-; CHECK-NEXT:  .LBB0_5: ; %Flow5
-; CHECK-NEXT:    s_mov_b64 s[4:5], 0
-; CHECK-NEXT:  .LBB0_6: ; %Flow6
-; CHECK-NEXT:    s_and_b64 s[4:5], s[4:5], exec
-; CHECK-NEXT:    s_cselect_b32 s4, 1, 0
-; CHECK-NEXT:    s_cmp_lg_u32 s4, 1
-; CHECK-NEXT:    s_cbranch_scc1 .LBB0_8
-; CHECK-NEXT:  ; %bb.7: ; %atomicrmw.shared
+; CHECK-NEXT:    s_cbranch_scc1 .LBB0_2
+; CHECK-NEXT:  ; %bb.1: ; %atomicrmw.shared
 ; CHECK-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; CHECK-NEXT:    s_cselect_b32 s0, s0, -1
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s0
 ; CHECK-NEXT:    v_pk_mov_b32 v[2:3], s[2:3], s[2:3] op_sel:[0,1]
 ; CHECK-NEXT:    ds_add_f64 v0, v[2:3]
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:  .LBB0_8: ; %atomicrmw.phi
+; CHECK-NEXT:    s_endpgm
+; CHECK-NEXT:  .LBB0_2: ; %atomicrmw.check.private
+; CHECK-NEXT:    s_mov_b64 s[4:5], src_private_base
+; CHECK-NEXT:    s_cmp_eq_u32 s1, s5
+; CHECK-NEXT:    s_cselect_b32 s4, 1, 0
+; CHECK-NEXT:    s_cmp_lg_u32 s4, 1
+; CHECK-NEXT:    s_cbranch_scc1 .LBB0_4
+; CHECK-NEXT:  ; %bb.3: ; %atomicrmw.private
+; CHECK-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; CHECK-NEXT:    s_cselect_b32 s0, s0, -1
+; CHECK-NEXT:    v_mov_b32_e32 v2, s0
+; CHECK-NEXT:    buffer_load_dword v0, v2, s[12:15], 0 offen
+; CHECK-NEXT:    buffer_load_dword v1, v2, s[12:15], 0 offen offset:4
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    v_add_f64 v[0:1], v[0:1], s[2:3]
+; CHECK-NEXT:    buffer_store_dword v0, v2, s[12:15], 0 offen
+; CHECK-NEXT:    buffer_store_dword v1, v2, s[12:15], 0 offen offset:4
+; CHECK-NEXT:    s_endpgm
+; CHECK-NEXT:  .LBB0_4: ; %atomicrmw.global
+; CHECK-NEXT:    v_mov_b32_e32 v0, 0
+; CHECK-NEXT:    v_pk_mov_b32 v[2:3], s[2:3], s[2:3] op_sel:[0,1]
+; CHECK-NEXT:    global_atomic_add_f64 v0, v[2:3], s[0:1]
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    buffer_wbinvl1_vol
 ; CHECK-NEXT:    s_endpgm
 entry:
   %i = add nsw i32 %a, -1

@@ -8,18 +8,18 @@
 define void @test() {
   ; CHECK-LABEL: name: test
   ; CHECK: bb.0.entry:
-  ; CHECK-NEXT:   successors: %bb.1(0x30000000), %bb.3(0x50000000)
+  ; CHECK-NEXT:   successors: %bb.6(0x50000000), %bb.1(0x30000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @external_constant1, target-flags(amdgpu-gotprel32-hi) @external_constant1, implicit-def dead $scc
   ; CHECK-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM killed [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
   ; CHECK-NEXT:   [[S_LOAD_DWORD_IMM:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM killed [[S_LOAD_DWORDX2_IMM]], 0, 0 :: (dereferenceable invariant load (s32) from @external_constant1, addrspace 4)
   ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sgpr_32 = S_MOV_B32 0
   ; CHECK-NEXT:   nofpexcept S_CMP_LG_F32 killed [[S_LOAD_DWORD_IMM]], killed [[S_MOV_B32_]], implicit-def $scc, implicit $mode
-  ; CHECK-NEXT:   S_CBRANCH_SCC1 %bb.3, implicit $scc
+  ; CHECK-NEXT:   S_CBRANCH_SCC1 %bb.6, implicit $scc
   ; CHECK-NEXT:   S_BRANCH %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1.bb1:
-  ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.4(0x40000000)
+  ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[SI_PC_ADD_REL_OFFSET1:%[0-9]+]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @const.ptr, target-flags(amdgpu-gotprel32-hi) @const.ptr, implicit-def dead $scc
   ; CHECK-NEXT:   [[S_LOAD_DWORDX2_IMM1:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM killed [[SI_PC_ADD_REL_OFFSET1]], 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
@@ -29,32 +29,26 @@ define void @test() {
   ; CHECK-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sgpr_32 = S_MOV_B32 1065353216
   ; CHECK-NEXT:   [[V_CMP_NLT_F32_e64_:%[0-9]+]]:sreg_32 = nofpexcept V_CMP_NLT_F32_e64 0, killed [[FLAT_LOAD_DWORD]], 0, killed [[S_MOV_B32_1]], 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1092616192, implicit $exec
-  ; CHECK-NEXT:   [[SI_IF:%[0-9]+]]:sreg_32 = SI_IF killed [[V_CMP_NLT_F32_e64_]], %bb.4, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  ; CHECK-NEXT:   [[SI_IF:%[0-9]+]]:sreg_32 = SI_IF killed [[V_CMP_NLT_F32_e64_]], %bb.3, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; CHECK-NEXT:   S_BRANCH %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.bb2:
-  ; CHECK-NEXT:   successors: %bb.4(0x80000000)
+  ; CHECK-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-  ; CHECK-NEXT:   S_BRANCH %bb.4
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.3.Flow1:
-  ; CHECK-NEXT:   successors: %bb.7(0x80000000)
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   S_BRANCH %bb.7
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.4.bb3:
-  ; CHECK-NEXT:   successors: %bb.5(0x40000000), %bb.6(0x40000000)
+  ; CHECK-NEXT: bb.3.bb3:
+  ; CHECK-NEXT:   successors: %bb.4(0x40000000), %bb.5(0x40000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[PHI:%[0-9]+]]:vgpr_32 = PHI [[V_MOV_B32_e32_]], %bb.1, [[V_MOV_B32_e32_1]], %bb.2
   ; CHECK-NEXT:   SI_END_CF [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; CHECK-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sgpr_32 = S_MOV_B32 0
   ; CHECK-NEXT:   [[V_CMP_EQ_F32_e64_:%[0-9]+]]:sreg_32 = nofpexcept V_CMP_EQ_F32_e64 0, [[PHI]], 0, killed [[S_MOV_B32_2]], 0, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   [[SI_IF1:%[0-9]+]]:sreg_32 = SI_IF killed [[V_CMP_EQ_F32_e64_]], %bb.6, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
-  ; CHECK-NEXT:   S_BRANCH %bb.5
+  ; CHECK-NEXT:   [[SI_IF1:%[0-9]+]]:sreg_32 = SI_IF killed [[V_CMP_EQ_F32_e64_]], %bb.5, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  ; CHECK-NEXT:   S_BRANCH %bb.4
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.5.bb4:
-  ; CHECK-NEXT:   successors: %bb.6(0x80000000)
+  ; CHECK-NEXT: bb.4.bb4:
+  ; CHECK-NEXT:   successors: %bb.5(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[SI_PC_ADD_REL_OFFSET2:%[0-9]+]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @external_constant2, target-flags(amdgpu-gotprel32-hi) @external_constant2, implicit-def dead $scc
   ; CHECK-NEXT:   [[S_LOAD_DWORDX2_IMM3:%[0-9]+]]:sreg_64_xexec_xnull = S_LOAD_DWORDX2_IMM killed [[SI_PC_ADD_REL_OFFSET2]], 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
@@ -62,13 +56,12 @@ define void @test() {
   ; CHECK-NEXT:   [[V_MOV_B32_e32_3:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1082130432, implicit $exec
   ; CHECK-NEXT:   GLOBAL_STORE_DWORD_SADDR killed [[V_MOV_B32_e32_2]], killed [[V_MOV_B32_e32_3]], killed [[S_LOAD_DWORDX2_IMM3]], 0, 0, implicit $exec :: (store (s32) into @external_constant2, addrspace 1)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.6.Flow:
-  ; CHECK-NEXT:   successors: %bb.3(0x80000000)
+  ; CHECK-NEXT: bb.5.Flow:
+  ; CHECK-NEXT:   successors: %bb.6(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   SI_END_CF [[SI_IF1]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
-  ; CHECK-NEXT:   S_BRANCH %bb.3
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.7.bb5:
+  ; CHECK-NEXT: bb.6.bb5:
   ; CHECK-NEXT:   SI_RETURN
 entry:
   %ld1 = load float, ptr addrspace(4) @external_constant1
