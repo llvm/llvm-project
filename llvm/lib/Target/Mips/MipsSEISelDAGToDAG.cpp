@@ -48,8 +48,7 @@ void MipsSEDAGToDAGISel::addDSPCtrlRegOperands(bool IsDef, MachineInstr &MI,
                                                MachineFunction &MF) {
   MachineInstrBuilder MIB(MF, &MI);
   unsigned Mask = MI.getOperand(1).getImm();
-  RegState Flag =
-      IsDef ? RegState::ImplicitDefine : RegState::Implicit | RegState::Undef;
+  RegState Flag = IsDef ? RegState::ImplicitDefine : RegState::Implicit;
 
   if (Mask & 1)
     MIB.addReg(Mips::DSPPos, Flag);
@@ -147,6 +146,25 @@ void MipsSEDAGToDAGISel::emitMCountABI(MachineInstr &MI, MachineBasicBlock &MBB,
   }
 }
 
+static bool isDSPControlReg(Register Reg) {
+  switch (Reg) {
+  case Mips::DSPPos:
+  case Mips::DSPSCount:
+  case Mips::DSPCarry:
+  case Mips::DSPOutFlag:
+  case Mips::DSPCCond:
+  case Mips::DSPEFI:
+  case Mips::DSPOutFlag16_19:
+  case Mips::DSPOutFlag20:
+  case Mips::DSPOutFlag21:
+  case Mips::DSPOutFlag22:
+  case Mips::DSPOutFlag23:
+    return true;
+  default:
+    return false;
+  }
+}
+
 void MipsSEDAGToDAGISel::processFunctionAfterISel(MachineFunction &MF) {
   MF.getInfo<MipsFunctionInfo>()->initGlobalBaseReg(MF);
 
@@ -195,6 +213,15 @@ void MipsSEDAGToDAGISel::processFunctionAfterISel(MachineFunction &MF) {
       default:
         replaceUsesWithZeroReg(MRI, MI);
       }
+
+      // MIPS DSP intrinsics don't explicitly model their dependencies
+      // in the SelectionDAG, which causes InstrEmitter to mistakenly mark them
+      // as dead. We clear the dead flags here so that LiveVariables will
+      // compute liveness correctly, avoiding MachineDeadInstrElim from deleting
+      // the definitions.
+      for (MachineOperand &MO : MI.operands())
+        if (MO.isReg() && MO.isDef() && isDSPControlReg(MO.getReg()))
+          MO.setIsDead(false);
     }
   }
 }
