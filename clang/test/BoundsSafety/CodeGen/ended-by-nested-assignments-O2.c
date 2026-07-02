@@ -69,14 +69,18 @@ void bar(int *__ended_by(end) start, int * end) {
     *(end = end-1) = 0;
 }
 //.
-// CHECK: [[TBAA1]] = !{[[META2:![0-9]+]], [[META2]], i64 0}
+// CHECK: [[ERRNO_TBAA:![0-9]+]] = !{[[META_ERRNO:![0-9]+]], [[META2:![0-9]+]], i64 0}
+// CHECK: [[META_ERRNO]] = !{!"__libc_errno", [[META2]], i64 0}
 // CHECK: [[META2]] = !{!"int", [[META3:![0-9]+]], i64 0}
 // CHECK: [[META3]] = !{!"omnipotent char", [[META4:![0-9]+]], i64 0}
 // CHECK: [[META4]] = !{!"Simple C/C++ TBAA"}
 // CHECK: [[META5]] = !{!"bounds-safety-generic"}
+// CHECK: [[TBAA1]] = !{[[META2]], [[META2]], i64 0}
 //.
-// WITHOUT: [[TBAA1]] = !{[[META2:![0-9]+]], [[META2]], i64 0}
+// WITHOUT: [[ERRNO_TBAA:![0-9]+]] = !{[[META_ERRNO:![0-9]+]], [[META2:![0-9]+]], i64 0}
+// WITHOUT: [[META_ERRNO]] = !{!"__libc_errno", [[META2]], i64 0}
 // WITHOUT: [[META2]] = !{!"int", [[META3:![0-9]+]], i64 0}
 // WITHOUT: [[META3]] = !{!"omnipotent char", [[META4:![0-9]+]], i64 0}
 // WITHOUT: [[META4]] = !{!"Simple C/C++ TBAA"}
+// WITHOUT: [[TBAA1]] = !{[[META2]], [[META2]], i64 0}
 //.

@@ -16,7 +16,7 @@
 #include <ptrcheck.h>
 
 // UNOPT-LABEL: define dso_local i32 @read(
-// UNOPT-SAME: ptr noundef dead_on_return [[PTR:%.*]], i32 noundef [[IDX:%.*]]) #[[ATTR0:[0-9]+]] {
+// UNOPT-SAME: ptr noundef align 8 dead_on_return [[PTR:%.*]], i32 noundef [[IDX:%.*]]) #[[ATTR0:[0-9]+]] {
 // UNOPT-NEXT:  [[ENTRY:.*:]]
 // UNOPT-NEXT:    [[PTR_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
 // UNOPT-NEXT:    [[IDX_ADDR:%.*]] = alloca i32, align 4
@@ -56,7 +56,7 @@
 // UNOPT-NEXT:    ret i32 [[TMP5]]
 //
 // OPT-LABEL: define dso_local i32 @read(
-// OPT-SAME: ptr nofree noundef readonly captures(none) dead_on_return [[PTR:%.*]], i32 noundef [[IDX:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+// OPT-SAME: ptr nofree noundef readonly align 8 captures(none) dead_on_return [[PTR:%.*]], i32 noundef [[IDX:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // OPT-NEXT:  [[ENTRY:.*:]]
 // OPT-NEXT:    [[AGG_TEMP_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[PTR]], align 8
 // OPT-NEXT:    [[AGG_TEMP_SROA_2_0_PTR_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR]], i64 8
@@ -108,7 +108,8 @@ int read(int* __bidi_indexable ptr, int idx) {
 // UNOPT: [[META3]] = !{!"bounds-safety-check-ptr-ge-lower-bound"}
 //.
 // OPT: [[META0:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
-// OPT: [[INT_TBAA1]] = !{[[META2:![0-9]+]], [[META2]], i64 0}
+// OPT: [[ERRNO_TBAA:![0-9]+]] = !{[[META_ERRNO:![0-9]+]], [[META2:![0-9]+]], i64 0}
+// OPT: [[META_ERRNO]] = !{!"__libc_errno", [[META2]], i64 0}
 // OPT: [[META2]] = !{!"int", [[META3:![0-9]+]], i64 0}
 // OPT: [[META3]] = !{!"omnipotent char", [[META4:![0-9]+]], i64 0}
 // OPT: [[META4]] = !{!"Simple C/C++ TBAA"}
@@ -118,4 +119,5 @@ int read(int* __bidi_indexable ptr, int idx) {
 // OPT: [[META8]] = !{!"bounds-safety-check-ptr-le-upper-bound"}
 // OPT: [[PROF9]] = !{!"branch_weights", i32 1, i32 1048575}
 // OPT: [[META10]] = !{!"bounds-safety-check-ptr-ge-lower-bound"}
+// OPT: [[INT_TBAA1]] = !{[[META2]], [[META2]], i64 0}
 //.

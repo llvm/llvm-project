@@ -9,7 +9,7 @@
 inline void param_with_count(int *__counted_by(len - 2) buf, int len) {}
 
 // CHECK-LABEL: define void @pass_count(
-// CHECK-SAME: ptr noundef dead_on_return [[BUF:%.*]], i32 noundef [[LEN:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK-SAME: ptr noundef align 8 dead_on_return [[BUF:%.*]], i32 noundef [[LEN:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*]]:
 // CHECK-NEXT:    [[BUF_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[LEN_ADDR:%.*]] = alloca i32, align 4

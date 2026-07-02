@@ -60,7 +60,7 @@ int *__bidi_indexable to_bidi_const_count(int * arg) {
 }
 
 // CHECK-LABEL: define dso_local void @back_and_forth_to_bidi(
-// CHECK-SAME: ptr nofree noundef readnone captures(none) dead_on_return [[ARG:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
+// CHECK-SAME: ptr nofree noundef readnone align 8 captures(none) dead_on_return [[ARG:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
 // CHECK-NEXT:  boundscheck.null49:
 // CHECK-NEXT:    ret void
 //

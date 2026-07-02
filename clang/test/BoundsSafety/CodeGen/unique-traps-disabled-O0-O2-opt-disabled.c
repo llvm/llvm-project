@@ -9,7 +9,7 @@
 #include <ptrcheck.h>
 
 // OPT0-LABEL: define i32 @consume(
-// OPT0-SAME: ptr noundef dead_on_return [[PTR:%.*]], i32 noundef [[IDX:%.*]]) #[[ATTR0:[0-9]+]] {
+// OPT0-SAME: ptr noundef align 8 dead_on_return [[PTR:%.*]], i32 noundef [[IDX:%.*]]) #[[ATTR0:[0-9]+]] {
 // OPT0-NEXT:  [[ENTRY:.*:]]
 // OPT0-NEXT:    [[PTR_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
 // OPT0-NEXT:    [[IDX_ADDR:%.*]] = alloca i32, align 4
@@ -49,7 +49,7 @@
 // OPT0-NEXT:    ret i32 [[TMP5]]
 //
 // OPT2-LABEL: define i32 @consume(
-// OPT2-SAME: ptr noundef dead_on_return [[PTR:%.*]], i32 noundef [[IDX:%.*]]) #[[ATTR0:[0-9]+]] {
+// OPT2-SAME: ptr noundef align 8 dead_on_return [[PTR:%.*]], i32 noundef [[IDX:%.*]]) #[[ATTR0:[0-9]+]] {
 // OPT2-NEXT:  [[ENTRY:.*:]]
 // OPT2-NEXT:    [[PTR_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
 // OPT2-NEXT:    [[IDX_ADDR:%.*]] = alloca i32, align 4
@@ -102,7 +102,8 @@ int consume(int* __bidi_indexable ptr, int idx) {
 // OPT0: [[META4]] = !{!"bounds-safety-check-ptr-ge-lower-bound"}
 //.
 // OPT2: [[META1:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
-// OPT2: [[TBAA2]] = !{[[META3:![0-9]+]], [[META3]], i64 0}
+// OPT2: [[ERRNO_TBAA:![0-9]+]] = !{[[META_ERRNO:![0-9]+]], [[META3:![0-9]+]], i64 0}
+// OPT2: [[META_ERRNO]] = !{!"__libc_errno", [[META3]], i64 0}
 // OPT2: [[META3]] = !{!"int", [[META4:![0-9]+]], i64 0}
 // OPT2: [[META4]] = !{!"omnipotent char", [[META5:![0-9]+]], i64 0}
 // OPT2: [[META5]] = !{!"Simple C/C++ TBAA"}
@@ -110,6 +111,7 @@ int consume(int* __bidi_indexable ptr, int idx) {
 // OPT2: [[META7]] = !{!"p2 int", [[META8:![0-9]+]], i64 0}
 // OPT2: [[META8]] = !{!"any p2 pointer", [[META9:![0-9]+]], i64 0}
 // OPT2: [[META9]] = !{!"any pointer", [[META4]], i64 0}
+// OPT2: [[TBAA2]] = !{[[META3]], [[META3]], i64 0}
 // OPT2: [[TBAA_STRUCT10]] = !{i64 0, i64 24, [[META11:![0-9]+]]}
 // OPT2: [[META11]] = !{[[META12:![0-9]+]], [[META12]], i64 0}
 // OPT2: [[META12]] = !{!"p1 int", [[META9]], i64 0}
