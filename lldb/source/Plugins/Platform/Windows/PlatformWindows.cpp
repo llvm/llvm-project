@@ -12,7 +12,11 @@
 #include <optional>
 #if defined(_WIN32)
 #include "lldb/Host/windows/windows.h"
+#include <pathcch.h>
 #include <winsock2.h>
+#else
+#define MAX_PATH 260
+#define PATHCCH_MAX_CCH 0x8000
 #endif
 
 #include "Plugins/Platform/gdb-server/PlatformRemoteGDBServer.h"
@@ -262,15 +266,14 @@ uint32_t PlatformWindows::DoLoadImage(Process *process,
   }
 
   /* Inject wszModulePath into inferior */
-  // FIXME(compnerd) should do something better for the length?
-  // GetModuleFileNameA is likely limited to PATH_MAX rather than the NT path
-  // limit.
-  unsigned injected_length = 261;
+  // Start with a MAX_PATH-sized buffer (enough for the vast majority of module
+  // paths) and grow it on demand if GetModuleFileNameW reports truncation (see
+  // the loop after the helper runs).
+  unsigned injected_length = MAX_PATH;
 
-  lldb::addr_t injected_module_path =
-      process->AllocateMemory(injected_length + 1,
-                              ePermissionsReadable | ePermissionsWritable,
-                              status);
+  lldb::addr_t injected_module_path = process->AllocateMemory(
+      (injected_length + 1) * sizeof(llvm::UTF16),
+      ePermissionsReadable | ePermissionsWritable, status);
   if (injected_module_path == LLDB_INVALID_ADDRESS) {
     error = Status::FromErrorStringWithFormat(
         "LoadLibrary error: unable to allocate memory for module location: %s",
@@ -299,6 +302,20 @@ uint32_t PlatformWindows::DoLoadImage(Process *process,
   llvm::scope_exit result_cleanup([process, injected_result]() {
     process->DeallocateMemory(injected_result);
   });
+
+  std::vector<lldb::addr_t> grown_path_buffers;
+  llvm::scope_exit grown_path_cleanup([&]() {
+    for (lldb::addr_t buffer : grown_path_buffers)
+      process->DeallocateMemory(buffer);
+  });
+
+  process->WritePointerToMemory(injected_result, 0, status);
+  if (status.Fail()) {
+    error = Status::FromErrorStringWithFormat(
+        "LoadLibrary error: could not initialize result: %s",
+        status.AsCString());
+    return LLDB_INVALID_IMAGE_TOKEN;
+  }
 
   process->WritePointerToMemory(injected_result + word_size,
                                 injected_module_path, status);
@@ -404,12 +421,54 @@ uint32_t PlatformWindows::DoLoadImage(Process *process,
     return LLDB_INVALID_IMAGE_TOKEN;
   }
 
-  std::string module_path;
-  process->ReadCStringFromMemory(injected_module_path, module_path, status);
+  lldb::addr_t module_path_addr = injected_module_path;
+  unsigned capacity = injected_length;
+  uint32_t path_length = process->ReadUnsignedIntegerFromMemory(
+      injected_result + 2 * word_size, sizeof(unsigned), 0, status);
+  while (status.Success() && path_length >= capacity &&
+         capacity < PATHCCH_MAX_CCH) {
+    capacity = std::min<unsigned>(capacity * 2, PATHCCH_MAX_CCH);
+    lldb::addr_t buffer = process->AllocateMemory(
+        (capacity + 1) * sizeof(llvm::UTF16),
+        ePermissionsReadable | ePermissionsWritable, status);
+    if (buffer == LLDB_INVALID_ADDRESS || status.Fail())
+      break;
+    grown_path_buffers.push_back(buffer);
+
+    process->WritePointerToMemory(injected_result + word_size, buffer, status);
+    if (status.Fail())
+      break;
+    process->WriteScalarToMemory(injected_result + 2 * word_size,
+                                 Scalar{capacity}, sizeof(unsigned), status);
+    if (status.Fail())
+      break;
+
+    diagnostics.Clear();
+    if (invocation->ExecuteFunction(context, &injected_parameters, options,
+                                    diagnostics, value) != eExpressionCompleted)
+      break;
+    module_path_addr = buffer;
+    path_length = process->ReadUnsignedIntegerFromMemory(
+        injected_result + 2 * word_size, sizeof(unsigned), 0, status);
+  }
+
+  llvm::SmallVector<llvm::UTF16, MAX_PATH> wide_path(path_length);
+  if (path_length)
+    process->ReadMemory(module_path_addr, wide_path.data(),
+                        path_length * sizeof(llvm::UTF16), status);
   if (status.Fail()) {
     error = Status::FromErrorStringWithFormat(
         "LoadLibrary error: could not read module path: %s",
         status.AsCString());
+    return LLDB_INVALID_IMAGE_TOKEN;
+  }
+
+  std::string module_path;
+  if (!llvm::convertUTF16ToUTF8String(
+          llvm::ArrayRef<llvm::UTF16>(wide_path.data(), wide_path.size()),
+          module_path)) {
+    error = Status::FromErrorString(
+        "LoadLibrary error: could not convert module path to UTF-8");
     return LLDB_INVALID_IMAGE_TOKEN;
   }
 
@@ -648,8 +707,8 @@ extern "C" {
 // WINBASEAPI BOOL WINAPI FreeModule(HMODULE);
 /* __declspec(dllimport) */ int __stdcall FreeModule(void *hLibModule);
 
-// WINBASEAPI DWORD WINAPI GetModuleFileNameA(HMODULE hModule, LPSTR lpFilename, DWORD nSize);
-/* __declspec(dllimport) */ uint32_t GetModuleFileNameA(void *, char *, uint32_t);
+// WINBASEAPI DWORD WINAPI GetModuleFileNameW(HMODULE hModule, LPWSTR lpFilename, DWORD nSize);
+/* __declspec(dllimport) */ uint32_t GetModuleFileNameW(void *, wchar_t *, uint32_t);
 
 // WINBASEAPI HMODULE WINAPI LoadLibraryExW(LPCWSTR, HANDLE, DWORD);
 /* __declspec(dllimport) */ void * __stdcall LoadLibraryExW(const wchar_t *, void *, uint32_t);
@@ -663,7 +722,7 @@ extern "C" {
 
 struct __lldb_LoadLibraryResult {
   void *ImageBase;
-  char *ModulePath;
+  wchar_t *ModulePath;
   unsigned Length;
   unsigned ErrorCode;
 };
@@ -673,43 +732,48 @@ _Static_assert(sizeof(struct __lldb_LoadLibraryResult) <= 3 * sizeof(void *),
 
 void * __lldb_LoadLibraryHelper(const wchar_t *name, const wchar_t *paths,
                                 __lldb_LoadLibraryResult *result) {
-  for (const wchar_t *path = paths; path && *path; ) {
-    (void)AddDllDirectory(path);
-    path += wcslen(path) + 1;
-  }
-
-  result->ImageBase = LoadLibraryExW(name, nullptr,
-                                     LOAD_LIBRARY_SEARCH_DEFAULT_DIRS);
-
-  // Fallback: if the AddDllDirectory + LOAD_LIBRARY_SEARCH_DEFAULT_DIRS path
-  // failed to find the library, iterate the search paths ourselves and
-  // load by absolute path using LOAD_WITH_ALTERED_SEARCH_PATH, which makes
-  // Windows use the loaded DLL's own directory to resolve its sibling imports.
+  // When the caller presets ImageBase the module is already loaded and we are
+  // only re-querying its path with a larger buffer. Skip LoadLibrary in that
+  // case so we do not take an extra reference on the module.
   if (result->ImageBase == nullptr) {
-    wchar_t full[4096];
-    for (const wchar_t *path = paths; path && *path; path += wcslen(path) + 1) {
-      size_t plen = wcslen(path);
-      size_t nlen = wcslen(name);
-      // Need room for: path + '\\' + name + '\0'
-      if (plen + 1 + nlen + 1 > 4096)
-        continue;
-      wchar_t *p = full;
-      for (size_t i = 0; i < plen; ++i)
-        *p++ = path[i];
-      *p++ = L'\\';
-      for (size_t i = 0; i <= nlen; ++i) // Copy name including trailing '\0'.
-        *p++ = name[i];
-      result->ImageBase = LoadLibraryExW(full, nullptr,
-                                         LOAD_WITH_ALTERED_SEARCH_PATH);
-      if (result->ImageBase != nullptr)
-        break;
+    for (const wchar_t *path = paths; path && *path; ) {
+      (void)AddDllDirectory(path);
+      path += wcslen(path) + 1;
+    }
+
+    result->ImageBase = LoadLibraryExW(name, nullptr,
+                                       LOAD_LIBRARY_SEARCH_DEFAULT_DIRS);
+
+    // Fallback: if the AddDllDirectory + LOAD_LIBRARY_SEARCH_DEFAULT_DIRS path
+    // failed to find the library, iterate the search paths ourselves and
+    // load by absolute path using LOAD_WITH_ALTERED_SEARCH_PATH, which makes
+    // Windows use the loaded DLL's own directory to resolve its sibling imports.
+    if (result->ImageBase == nullptr) {
+      wchar_t full[4096];
+      for (const wchar_t *path = paths; path && *path; path += wcslen(path) + 1) {
+        size_t plen = wcslen(path);
+        size_t nlen = wcslen(name);
+        // Need room for: path + '\\' + name + '\0'
+        if (plen + 1 + nlen + 1 > 4096)
+          continue;
+        wchar_t *p = full;
+        for (size_t i = 0; i < plen; ++i)
+          *p++ = path[i];
+        *p++ = L'\\';
+        for (size_t i = 0; i <= nlen; ++i) // Copy name including trailing '\0'.
+          *p++ = name[i];
+        result->ImageBase = LoadLibraryExW(full, nullptr,
+                                           LOAD_WITH_ALTERED_SEARCH_PATH);
+        if (result->ImageBase != nullptr)
+          break;
+      }
     }
   }
 
   if (result->ImageBase == nullptr)
     result->ErrorCode = GetLastError();
   else
-    result->Length = GetModuleFileNameA(result->ImageBase, result->ModulePath,
+    result->Length = GetModuleFileNameW(result->ImageBase, result->ModulePath,
                                         result->Length);
 
   return result->ImageBase;
@@ -789,8 +853,8 @@ extern "C" {
 // WINBASEAPI BOOL WINAPI FreeModule(HMODULE);
 /* __declspec(dllimport) */ int __stdcall FreeModule(void *);
 
-// WINBASEAPI DWORD WINAPI GetModuleFileNameA(HMODULE, LPSTR, DWORD);
-/* __declspec(dllimport) */ uint32_t GetModuleFileNameA(void *, char *, uint32_t);
+// WINBASEAPI DWORD WINAPI GetModuleFileNameW(HMODULE, LPWSTR, DWORD);
+/* __declspec(dllimport) */ uint32_t GetModuleFileNameW(void *, wchar_t *, uint32_t);
 
 // WINBASEAPI HMODULE WINAPI LoadLibraryExW(LPCWSTR, HANDLE, DWORD);
 /* __declspec(dllimport) */ void * __stdcall LoadLibraryExW(const wchar_t *, void *, uint32_t);
