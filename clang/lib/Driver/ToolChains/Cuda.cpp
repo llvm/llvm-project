@@ -800,8 +800,21 @@ void NVPTXToolChain::addClangTargetOptions(
 
 void NVPTXToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
                                                ArgStringList &CC1Args) const {
-  if (DriverArgs.hasArg(options::OPT_nostdinc) ||
-      DriverArgs.hasArg(options::OPT_nostdlibinc))
+  if (DriverArgs.hasArg(options::OPT_nostdinc))
+    return;
+
+  // Add clang's builtin headers (`stddef.h`, `float.h`, `stdint.h`, ...).
+  // These are compiler-provided headers, not host libc headers.
+  //
+  // Example: an nvptx compile may still need `float.h`, but it should come
+  // from clang's resource directory, not from the host system's `/usr/include`.
+  if (!DriverArgs.hasArg(options::OPT_nobuiltininc)) {
+    SmallString<128> ResourceDirInclude(getDriver().ResourceDir);
+    llvm::sys::path::append(ResourceDirInclude, "include");
+    addSystemInclude(DriverArgs, CC1Args, ResourceDirInclude);
+  }
+
+  if (DriverArgs.hasArg(options::OPT_nostdlibinc))
     return;
 
   // Add multilib variant include paths in priority order.
