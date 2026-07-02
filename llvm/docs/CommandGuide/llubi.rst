@@ -101,7 +101,7 @@ INTERPRETER OPTIONS
 .. option:: -fuse-fmuladd
 
   Treat '``llvm.fmuladd.*``' as '``llvm.fma.*``'. It is the default behavior.
-  Otherwise, it is expended into a \* b + c.
+  Otherwise, it is expanded into a \* b + c.
 
 .. option:: -disable-verify
 
