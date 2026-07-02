@@ -1572,11 +1572,13 @@ class LinuxCoreTestCase(TestBase):
         # Test that "statistics dump" has core file specific key/value pairs
         debug_stats = self.get_stats()
         modules = debug_stats["modules"]
+
         def find_module_dict(modules, path):
             for d in modules:
                 if d["path"] == path:
                     return d
             return None
+
         module_dict = find_module_dict(
             modules, "/data/users/gclayton/crash-for-core/a.out"
         )
