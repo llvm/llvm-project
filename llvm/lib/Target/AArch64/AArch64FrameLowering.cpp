@@ -1794,27 +1794,34 @@ void computeCalleeSaveRegisterPairs(const AArch64FrameLowering &AFL,
 
     bool NeedsWinCFI = AFL.needsWinCFI(MF);
     int Scale = TRI->getSpillSize(*RPI.RC);
+    // True when the pair's ldp/stp offset fits the signed 7-bit scaled imm.
+    auto PairFitsImmRange = [&]() {
+      int PairOffset =
+          IsWindows ? ByteOffset : ByteOffset + StackFillDir * 2 * Scale;
+      int Scaled = PairOffset / Scale;
+      return Scaled >= -64 && Scaled <= 63;
+    };
     // Add the next reg to the pair if it is in the same register class.
     if (unsigned(i + RegInc) < Count && !HasCSHazardPadding) {
       MCRegister NextReg = CSI[i + RegInc].getReg();
       unsigned SpillCount = NeedsWinCFI ? FirstReg - i : i;
       switch (RPI.Type) {
       case RegPairInfo::GPR:
-        if (AArch64::GPR64RegClass.contains(NextReg) &&
+        if (AArch64::GPR64RegClass.contains(NextReg) && PairFitsImmRange() &&
             !invalidateRegisterPairing(SpillExtendedVolatile, SpillCount,
                                        RPI.Reg1, NextReg, IsWindows,
                                        NeedsWinCFI, NeedsFrameRecord, TRI))
           RPI.Reg2 = NextReg;
         break;
       case RegPairInfo::FPR64:
-        if (AArch64::FPR64RegClass.contains(NextReg) &&
+        if (AArch64::FPR64RegClass.contains(NextReg) && PairFitsImmRange() &&
             !invalidateRegisterPairing(SpillExtendedVolatile, SpillCount,
                                        RPI.Reg1, NextReg, IsWindows,
                                        NeedsWinCFI, NeedsFrameRecord, TRI))
           RPI.Reg2 = NextReg;
         break;
       case RegPairInfo::FPR128:
-        if (AArch64::FPR128RegClass.contains(NextReg))
+        if (AArch64::FPR128RegClass.contains(NextReg) && PairFitsImmRange())
           RPI.Reg2 = NextReg;
         break;
       case RegPairInfo::PPR:
@@ -2647,11 +2654,21 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
     auto SpillSize = TRI->getSpillSize(*RC);
     bool IsZPR = AArch64::ZPRRegClass.contains(Reg);
     bool IsPPR = !IsZPR && AArch64::PPRRegClass.contains(Reg);
+
+    // A register and its super-register can both appear in SavedRegs.
+    // Only the widest register is actually spilled, so skip such sub-registers
+    // here to avoid double-counting the overlap.
+    bool SavedSuper = false;
+    for (MCPhysReg SuperReg : TRI->superregs(MCRegister(Reg)))
+      if (SavedRegs.test(SuperReg)) {
+        SavedSuper = true;
+        break;
+      }
     if (IsZPR)
       ZPRCSStackSize += SpillSize;
     else if (IsPPR)
       PPRCSStackSize += SpillSize;
-    else
+    else if (!SavedSuper)
       CSStackSize += SpillSize;
   }
 
