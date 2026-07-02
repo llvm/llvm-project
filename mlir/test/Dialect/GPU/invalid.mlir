@@ -1061,6 +1061,18 @@ func.func @warp_wrong_num_outputs(%laneid: index) {
 
 // -----
 
+// A body left unterminated by malformed (generic-form) IR must be diagnosed,
+// not crash getTerminator().
+func.func @warp_unterminated_body(%laneid: index) {
+  // expected-error@+1 {{'gpu.warp_execute_on_lane_0' op expected body to be terminated with 'gpu.yield'}}
+  "gpu.warp_execute_on_lane_0"(%laneid) <{warp_size = 32 : i64}> ({
+    %0 = "arith.constant"() <{value = 1 : index}> : () -> index
+  }) : (index) -> ()
+  return
+}
+
+// -----
+
 func.func @warp_wrong_num_inputs(%laneid: index) {
   // expected-error@+1 {{'gpu.warp_execute_on_lane_0' op expected same number op arguments and block arguments.}}
   gpu.warp_execute_on_lane_0(%laneid)[64] {

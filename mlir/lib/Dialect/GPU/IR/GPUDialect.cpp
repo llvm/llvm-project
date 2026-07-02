@@ -2598,7 +2598,11 @@ LogicalResult WarpExecuteOnLane0Op::verify() {
   if (getArgs().size() != getWarpRegion().getNumArguments())
     return emitOpError(
         "expected same number op arguments and block arguments.");
-  auto yield = dyn_cast<gpu::YieldOp>(getBody()->getTerminator());
+  Block *body = getBody();
+  // Malformed parsed IR may leave the body unterminated; guard getTerminator().
+  auto yield = body->mightHaveTerminator()
+                   ? dyn_cast<gpu::YieldOp>(body->getTerminator())
+                   : nullptr;
   if (!yield)
     return emitOpError("expected body to be terminated with 'gpu.yield'");
   if (yield.getNumOperands() != getNumResults())
