@@ -832,6 +832,7 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   initializers used during aggregate initialization. (#GH196469)
 - Fixed a crash in constant evaluation using placement new on an array which was later initialized. (#GH196450)
 - Fixed an issue where Clang incorrectly accepted invalid unqualified uses of local nested class names outside their declaring scope. (#GH184622)
+- Fixed a crash when instantiating a class template whose member variable partial specialization has an invalid primary template. (#GH195988)
 - Fixed a crash when parsing invalid friend declaration with storage-class specifier. (#GH186569)
 - Fixed a missing vtable for `dynamic_cast<FinalClass *>(this)` in a function template. (#GH198511)
 - Fixed an assertion failure during init-list checking of an array whose element type is an incomplete class. (#GH140685)
