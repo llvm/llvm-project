@@ -178,6 +178,11 @@ add_header(
     .dev_t .ino_t .mode_t .nlink_t .uid_t .gid_t .off_t .struct_timespec
     .blksize_t .blkcnt_t
 )
+add_header(
+  struct_passwd
+  HDR struct_passwd.h
+  DEPENDS .gid_t .uid_t
+)
 add_header(struct_tm HDR struct_tm.h)
 add_header(struct_utsname HDR struct_utsname.h)
 add_header(thrd_start_t HDR thrd_start_t.h)

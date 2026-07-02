@@ -1037,6 +1037,18 @@ add_header_macro(
     .llvm-libc-types.nl_catd
   )
 
+add_header_macro(
+  pwd
+  ../libc/include/pwd.yaml
+  pwd.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-types.struct_passwd
+    .llvm-libc-types.uid_t
+    .llvm-libc-types.gid_t
+    .llvm-libc-types.size_t
+)
+
 # UEFI spec references "Uefi.h" so we use that name for compatibility
 add_header_macro(
   uefi

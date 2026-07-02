@@ -35,6 +35,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     # poll.h entrypoints
     libc.src.poll.poll
 
+
     # sched.h entrypoints
     libc.src.sched.sched_get_priority_max
     libc.src.sched.sched_get_priority_min
@@ -1107,6 +1108,11 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.pthread.pthread_self
     libc.src.pthread.pthread_setname_np
     libc.src.pthread.pthread_setspecific
+
+    # pwd.h entrypoints
+    libc.src.pwd.endpwent
+    libc.src.pwd.getpwent
+    libc.src.pwd.setpwent
 
     # sched.h entrypoints
     libc.src.sched.__sched_andcpuset
