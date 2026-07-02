@@ -848,6 +848,7 @@ enum class CCEKind {
                            ///< message.
   StaticAssertMessageData, ///< Call to data() in a static assert
                            ///< message.
+  PackIndex ///< Index of a pack indexing expression or specifier.
 };
 
 /// Enums for the diagnostics of target, target_version and target_clones.
@@ -2972,6 +2973,10 @@ private:
 
   void checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD, CallExpr *TheCall);
 
+  /// Argument-value fortify checks for libc functions that are not builtins,
+  /// dispatched by name (e.g. umask). Diagnostics belong to -Wfortify-source.
+  void checkFortifiedLibcArgument(FunctionDecl *FD, CallExpr *TheCall);
+
   /// Check the arguments to '__builtin_va_start', '__builtin_ms_va_start',
   /// or '__builtin_c23_va_start' for validity. Emit an error and return true
   /// on failure; return false on success.
@@ -3572,7 +3577,7 @@ public:
   /// correctly named definition after the renamed definition.
   llvm::SmallPtrSet<const NamedDecl *, 4> TypoCorrectedFunctionDefinitions;
 
-  /// A cache of the flags available in enumerations with the flag_bits
+  /// A cache of the flags available in enumerations with the flag_enum
   /// attribute.
   mutable llvm::DenseMap<const EnumDecl *, llvm::APInt> FlagBitsCache;
 
@@ -11524,7 +11529,7 @@ public:
                                   ParsedType ObjectType, bool EnteringContext,
                                   TemplateTy &Template,
                                   bool &MemberOfUnknownSpecialization,
-                                  bool Disambiguation = false);
+                                  bool AllowTypoCorrection = true);
 
   /// Try to resolve an undeclared template name as a type template.
   ///
@@ -14255,11 +14260,8 @@ public:
                           LateInstantiatedAttrVec *LateAttrs = nullptr,
                           LocalInstantiationScope *OuterMostScope = nullptr);
 
-  /// In the MS ABI, we need to instantiate default arguments of dllexported
-  /// default constructors along with the constructor definition. This allows IR
-  /// gen to emit a constructor closure which calls the default constructor with
-  /// its default arguments.
-  void InstantiateDefaultCtorDefaultArgs(CXXConstructorDecl *Ctor);
+  bool BuildCtorClosureDefaultArgs(SourceLocation Loc, CXXConstructorDecl *Ctor,
+                                   bool IsCopy = false);
 
   bool InstantiateDefaultArgument(SourceLocation CallLoc, FunctionDecl *FD,
                                   ParmVarDecl *Param);

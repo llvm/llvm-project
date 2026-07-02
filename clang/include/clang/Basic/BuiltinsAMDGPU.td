@@ -378,6 +378,10 @@ def __builtin_amdgcn_perm : AMDGPUBuiltin<"unsigned int(unsigned int, unsigned i
 //===----------------------------------------------------------------------===//
 
 def __builtin_amdgcn_fmed3h : AMDGPUBuiltin<"__fp16(__fp16, __fp16, __fp16)", [Const], "gfx9-insts">;
+def __builtin_amdgcn_s_bitreplicate : AMDGPUBuiltin<"uint64_t(unsigned int)", [Const], "gfx9-insts"> {
+  let Documentation = [DocSBitReplicate];
+  let ArgNames = ["src"];
+}
 
 def __builtin_amdgcn_global_atomic_fadd_f64 : AMDGPUBuiltin<"double(double address_space<1> *, double)", [], "gfx90a-insts">;
 def __builtin_amdgcn_global_atomic_fadd_f32 : AMDGPUBuiltin<"float(float address_space<1> *, float)", [], "atomic-fadd-rtn-insts">;
