@@ -65,8 +65,9 @@ struct F {
   F (F &&f) = default;
 };
 
-// LLVM-DAG: [[STRUCT_G:%.*]] = type <{ i32, [4 x i8] }>
-// CIR-DAG: ![[STRUCT_G:.*]] = !cir.struct<"G" packed padded {!s32i, !cir.array<!u8i x 4>}>
+// LLVMCIR-DAG: [[STRUCT_G:%.*]] = type <{ i32, %struct.F, [3 x i8] }>
+// OGCG-DAG:    [[STRUCT_G:%.*]] = type <{ i32, [4 x i8] }>
+// CIR-DAG: ![[STRUCT_G:.*]] = !cir.struct<"G" packed padded {!s32i, !rec_F, !cir.array<!u8i x 3>}>
 struct G {
   int a;
   F f;
@@ -91,14 +92,16 @@ namespace gh61145 {
     ~Vec();
   };
 
-  // LLVM-DAG: [[STRUCT_S1:%.*]] = type { i8 }
-  // CIR-DAG: ![[STRUCT_S1:.*]] = !cir.struct<"gh61145::S1" padded {!u8i}>
+  // LLVMCIR-DAG: [[STRUCT_S1:%.*]] = type { %"struct.gh61145::Vec" }
+  // OGCG-DAG:    [[STRUCT_S1:%.*]] = type { i8 }
+  // CIR-DAG: ![[STRUCT_S1:.*]] = !cir.struct<"gh61145::S1" {!rec_gh611453A3AVec}>
   struct S1 {
     Vec v;
   };
 
-  // LLVM-DAG: [[STRUCT_S2:%.*]] = type { i8, i8 }
-  // CIR-DAG: ![[STRUCT_S2:.*]] = !cir.struct<"gh61145::S2" padded {!u8i, !s8i}>
+  // LLVMCIR-DAG: [[STRUCT_S2:%.*]] = type { %"struct.gh61145::Vec", i8 }
+  // OGCG-DAG:    [[STRUCT_S2:%.*]] = type { i8, i8 }
+  // CIR-DAG: ![[STRUCT_S2:.*]] = !cir.struct<"gh61145::S2" {!rec_gh611453A3AVec, !s8i}>
   struct S2 {
     Vec v;
     char c;
