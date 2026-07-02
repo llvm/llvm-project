@@ -1,0 +1,221 @@
+# Runs after rockci_multi_arch_amd_compiler_vkallesh_test.yml ("Multi-Arch CI amd-compiler-vkallesh-test") completes, then
+# merges "merge main into amd-compiler-vkallesh-test" sync PRs as a merge commit, once this job has confirmed
+# the mandatory gating checks passed AND the PR has at least one approving review.
+#
+# NOTE on "wait for only the gating tests": GitHub's `workflow_run` trigger only supports the fixed
+# `types:` values (requested / in_progress / completed), so the TRIGGER must stay `completed`.
+# The "only the gating tests" requirement is enforced inside the job instead: rather than requiring
+# the whole upstream workflow to succeed, we only require the configured gating checks (see
+# REQUIRED_GATING_CHECKS below) to have passed (other test failures are ignored for the merge
+# decision).
+#
+# Upstream workflow name must match exactly (see `name:` in that file):
+#   .github/workflows/rockci_multi_arch_amd_compiler_vkallesh_test.yml → "Multi-Arch CI amd-compiler-vkallesh-test"
+#
+# IMPORTANT — why we do a direct merge here (NOT native `gh pr merge --auto`):
+# The branch ruleset `block-merge-commit-on-amd-*-branches` enforces required_linear_history on
+# refs/heads/amd-* (which matches amd-compiler-vkallesh-test), which forbids merge commits. Native auto-merge can
+# therefore never land a merge commit on this branch. GitHub rulesets are ONLY bypassed by actors
+# explicitly on the ruleset's "Bypass list" — admin privilege alone does NOT bypass a ruleset.
+# Because this job already verifies the gating checks and the approving review itself, it performs
+# an immediate merge with `--admin` using the ROCM_CCIAPP App identity.
+#
+# PREREQUISITE (one-time repo config, cannot be done from this file):
+#   The ROCM_CCIAPP GitHub App MUST be added to the Bypass list of the
+#   `block-merge-commit-on-amd-*-branches` ruleset (bypass mode "For pull requests only").
+#   Without this, the merge-commit merge below will be rejected by the ruleset.
+#
+# Requires: Variable ROCM_CCIAPP_APP_ID + Secret ROCM_CCIAPP_PRIVATE_KEY (same as other automerge).
+#
+# CONFIGURABLE GATING CHECKS:
+#   The mandatory gating checks are NOT hard-coded as the source of truth — they are read from the
+#   repository Variable REQUIRED_GATING_CHECKS (Settings → Secrets and variables → Actions →
+#   Variables). Put ONE check-run name per line, e.g.:
+#       gfx90a Test
+#       Linux::release / Build Multi-Arch Stages / math-libs (...) / Stage - Math Libs (gfx94X-dcgpu)
+#   Surrounding double or single quotes around a line are optional and are stripped, so
+#   "gfx90a Test" and gfx90a Test are treated the same. Blank lines are ignored.
+#   This lets the team change the required tests without editing this workflow. The Variable is
+#   mandatory: if it is empty/unset the job fails with an error (no merge is attempted).
+
+name: Auto-merge main-to-amd-compiler-vkallesh-test after Multi-Arch CI
+
+on:
+  workflow_run:
+    workflows: ["Multi-Arch CI amd-compiler-vkallesh-test"]
+    types: [completed]
+
+permissions:
+  contents: write
+  pull-requests: write
+  checks: read
+
+concurrency:
+  group: automerge-after-rockci-test-${{ github.event.workflow_run.head_sha }}
+  cancel-in-progress: true
+
+jobs:
+  merge-after-multi-arch-ci:
+    name: Merge after gating checks pass and PR is approved
+    runs-on: ubuntu-latest
+    # Do NOT gate on workflow_run.conclusion == 'success': we only require the configured gating
+    # checks (enforced in the step below), not the full test matrix.
+    if: >-
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.head_repository.full_name == github.repository &&
+      contains(github.event.workflow_run.display_title, 'merge main into amd-compiler-vkallesh-test')
+    steps:
+      - uses: actions/create-github-app-token@v2
+        id: rocm-cciapp
+        if: ${{ vars.ROCM_CCIAPP_APP_ID != '' }}
+        with:
+          app-id: ${{ vars.ROCM_CCIAPP_APP_ID }}
+          private-key: ${{ secrets.ROCM_CCIAPP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+
+      - name: Resolve PR, verify gating checks and approval, merge (merge commit)
+        env:
+          ROCM_CCIAPP_TOKEN: ${{ steps.rocm-cciapp.outputs.token }}
+          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          REPO: ${{ github.repository }}
+          PULL_REQUESTS_JSON: ${{ toJSON(github.event.workflow_run.pull_requests) }}
+          # Repository Variable holding the mandatory gating checks (one check name per line),
+          # so the team can change the required tests without editing this workflow. It is
+          # required: the job fails below if it is empty/unset.
+          REQUIRED_CHECKS_VAR: ${{ vars.REQUIRED_GATING_CHECKS }}
+        run: |
+          set -euo pipefail
+          if [ -z "${ROCM_CCIAPP_TOKEN:-}" ]; then
+            echo "::error::Set Variable ROCM_CCIAPP_APP_ID and Secret ROCM_CCIAPP_PRIVATE_KEY."
+            exit 1
+          fi
+          export GH_TOKEN="$ROCM_CCIAPP_TOKEN"
+
+          # Prefer workflow_run.pull_requests when GitHub attaches it (same-repo PRs).
+          PR=""
+          if command -v jq >/dev/null 2>&1; then
+            PR=$(echo "${PULL_REQUESTS_JSON}" | jq -r '
+              if . == null or . == [] then empty
+              elif type == "array" then .[0].number | tostring
+              else empty end' 2>/dev/null || true)
+          fi
+          if [ -z "${PR}" ] || [ "${PR}" = "null" ]; then
+            PR="$(gh pr list --repo "${REPO}" --head "${HEAD_BRANCH}" --base amd-compiler-vkallesh-test --state open \
+              --json number -q '.[0].number // empty' 2>/dev/null || true)"
+          fi
+          if [ -z "${PR}" ] || [ "${PR}" = "null" ]; then
+            echo "No open PR found for head branch ${HEAD_BRANCH} → amd-compiler-vkallesh-test; skipping."
+            exit 0
+          fi
+
+          BASE="$(gh pr view "${PR}" --repo "${REPO}" --json baseRefName -q .baseRefName)"
+          if [ "${BASE}" != "amd-compiler-vkallesh-test" ]; then
+            echo "PR #${PR} base is ${BASE}, not amd-compiler-vkallesh-test; skipping."
+            exit 0
+          fi
+
+          DRAFT="$(gh pr view "${PR}" --repo "${REPO}" --json isDraft -q .isDraft)"
+          if [ "${DRAFT}" = "true" ]; then
+            echo "PR #${PR} is draft; skipping."
+            exit 0
+          fi
+
+          echo "PR #${PR} head SHA: ${HEAD_SHA}"
+
+          # Build the mandatory gating-check list from REQUIRED_GATING_CHECKS (see header for details).
+          REQUIRED_CHECKS=()
+          if [ -n "${REQUIRED_CHECKS_VAR:-}" ]; then
+            # One check name per line. For each line: strip a trailing CR (CRLF), trim surrounding
+            # whitespace, then strip ONE layer of matching surrounding quotes (so values entered as
+            # "gfx90a Test" or 'gfx90a Test' match the real check-run name without the quotes).
+            while IFS= read -r line; do
+              line="${line%$'\r'}"
+              line="${line#"${line%%[![:space:]]*}"}"   # ltrim
+              line="${line%"${line##*[![:space:]]}"}"   # rtrim
+              case "${line}" in
+                '"'*'"') line="${line#\"}"; line="${line%\"}" ;;
+                "'"*"'") line="${line#\'}"; line="${line%\'}" ;;
+              esac
+              [ -z "${line}" ] && continue
+              REQUIRED_CHECKS+=("${line}")
+            done <<< "${REQUIRED_CHECKS_VAR}"
+          fi
+          if [ "${#REQUIRED_CHECKS[@]}" -eq 0 ]; then
+            echo "::error::Variable REQUIRED_GATING_CHECKS is not set (or empty). Define it with one check-run name per line (Settings → Secrets and variables → Actions → Variables)."
+            exit 1
+          fi
+
+          echo "Mandatory gating checks (${#REQUIRED_CHECKS[@]}):"
+          for name in "${REQUIRED_CHECKS[@]}"; do echo "  - ${name}"; done
+
+          # The upstream workflow has completed, but a gating check may belong to a sibling
+          # workflow still finishing, so allow a short wait.
+          MAX_ATTEMPTS=30
+          SLEEP_SECONDS=60
+          attempt=0
+          while :; do
+            attempt=$((attempt + 1))
+            CHECKS_JSON="$(gh api --paginate "repos/${REPO}/commits/${HEAD_SHA}/check-runs" \
+              -q '.check_runs[] | {name: .name, status: .status, conclusion: .conclusion}' 2>/dev/null \
+              | jq -s '.' || echo '[]')"
+
+            all_done=true
+            any_failed=false
+            for name in "${REQUIRED_CHECKS[@]}"; do
+              status="$(echo "${CHECKS_JSON}" | jq -r --arg n "$name" \
+                '[.[] | select(.name == $n)] | last | .status // "missing"')"
+              conclusion="$(echo "${CHECKS_JSON}" | jq -r --arg n "$name" \
+                '[.[] | select(.name == $n)] | last | .conclusion // ""')"
+              echo "Gating check '${name}': status=${status}, conclusion=${conclusion}"
+              if [ "${status}" != "completed" ]; then
+                all_done=false
+              elif [ "${conclusion}" != "success" ]; then
+                any_failed=true
+              fi
+            done
+
+            if [ "${any_failed}" = "true" ]; then
+              echo "::error::One or more mandatory gating checks failed for PR #${PR}; not merging."
+              exit 1
+            fi
+            if [ "${all_done}" = "true" ]; then
+              echo "All gating checks completed successfully for PR #${PR}."
+              break
+            fi
+            if [ "${attempt}" -ge "${MAX_ATTEMPTS}" ]; then
+              echo "::error::Timed out waiting for gating checks on PR #${PR}."
+              exit 1
+            fi
+            echo "Waiting for gating checks... attempt ${attempt}/${MAX_ATTEMPTS}; sleeping ${SLEEP_SECONDS}s."
+            sleep "${SLEEP_SECONDS}"
+          done
+
+          # Require at least one approving review (+1). reviewDecision is APPROVED only when the
+          # repo's review requirements are satisfied. Skip (non-fatal) if not yet approved: approval
+          # may simply not be in place when this runs.
+          REVIEW_DECISION="$(gh pr view "${PR}" --repo "${REPO}" --json reviewDecision -q '.reviewDecision // ""')"
+          echo "PR #${PR} reviewDecision: ${REVIEW_DECISION:-<none>}"
+          if [ "${REVIEW_DECISION}" != "APPROVED" ]; then
+            echo "PR #${PR} does not have an approving review (reviewDecision=${REVIEW_DECISION:-<none>}); skipping."
+            exit 0
+          fi
+
+          echo "Merging (merge commit) PR #${PR} (${REPO}): gating checks passed and PR is approved."
+          # Direct merge with --admin (NOT --auto): native auto-merge can never land a merge commit
+          # while the block-merge-commit-on-amd-*-branches ruleset enforces required_linear_history.
+          # NOTE: --admin and --auto are mutually exclusive in gh, and admin privilege alone does not
+          # bypass a ruleset — the ROCM_CCIAPP App must be on the ruleset's Bypass list (see header).
+          if ! gh pr merge "${PR}" --repo "${REPO}" --merge --admin 2> merge_err.log; then
+            echo "::error::Merge failed for PR #${PR}. See diagnostics below."
+            echo "::group::gh pr merge error output"
+            cat merge_err.log || true
+            echo "::endgroup::"
+            echo "::group::PR merge state diagnostics"
+            gh pr view "${PR}" --repo "${REPO}" \
+              --json number,title,mergeable,mergeStateStatus,reviewDecision,isDraft,baseRefName,headRefName,statusCheckRollup \
+              || true
+            echo "::endgroup::"
+            exit 1
+          fi
+          echo "Merge (merge commit) completed successfully for PR #${PR}."
