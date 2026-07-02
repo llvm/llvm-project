@@ -3397,7 +3397,7 @@ def isOSEmscripten : RuntimeLibcallPredicate<[{TT.isOSEmscripten()}]>;
 def WasmSystemLibrary
     : SystemRuntimeLibrary<isWasm,
       (add DefaultRuntimeLibcallImpls, Int128RTLibcalls,
-           CompilerRTOnlyInt64Libcalls, CompilerRTOnlyInt128Libcalls,
+           CompilerRTOnlyInt64Libcalls,
            exp10f, exp10,
            _Unwind_CallPersonality,
            emscripten_return_address,
