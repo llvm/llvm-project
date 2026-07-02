@@ -6,6 +6,20 @@
 // CHECK-SAME: !quant.quantile<ui4:f16, {
 func.func private @quantile_ui4_f16(!quant.quantile<ui4:f16, {-1.0,-0.8667,-0.7333,-0.6,-0.4667,-0.3333,-0.2,-0.0667,0.0667,0.2,0.3333,0.4667,0.6,0.7333,0.8667,1.0}>) -> ()
 
+
+// -----
+// Quantile type: ui4 storage-type with si8 expressed-type, 16 entries (default range 0..15).
+// CHECK-LABEL: func private @quantile_ui4_si8
+// CHECK-SAME: !quant.quantile<ui4:si8, {
+func.func private @quantile_ui4_si8(!quant.quantile<ui4:si8, {-1.0,-0.8667,-0.7333,-0.6,-0.4667,-0.3333,-0.2,-0.0667,0.0667,0.2,0.3333,0.4667,0.6,0.7333,0.8667,1.0}>) -> ()
+
+
+// -----
+// Quantile type: ui4 storage-type with ui8 expressed-type, 16 entries (default range 0..15).
+// CHECK-LABEL: func private @quantile_ui4_ui8
+// CHECK-SAME: !quant.quantile<ui4:ui8, {
+func.func private @quantile_ui4_ui8(!quant.quantile<ui4:ui8, {0.0,0.0667,0.1333,0.2,0.2667,0.3333,0.4,0.4667,0.5333,0.6,0.6667,0.7333,0.8,0.8667,0.9333,1.0}>) -> ()
+
 // -----
 // Quantile type: si8 storage-type with f32 expressed-type, explicit range -2:2 (5 entries).
 // CHECK: func private @quantile_si8_f32(!quant.quantile<si8:f32, {-1.000000e+00,-5.000000e-01,0.000000e+00,5.000000e-01,1.000000e+00}, <-2:2>>)
