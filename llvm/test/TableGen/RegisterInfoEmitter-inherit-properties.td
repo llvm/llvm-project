@@ -68,20 +68,11 @@ def ABRC3 : MyClass<32, [untyped], (add ARC3, BRC3)> {
 
 def TestTarget : Target;
 
-// CHECK:      static unsigned const ARC3_with_sub0_sub1Superclasses[] = {
-// CHECK-NEXT:   Test::ABRC3RegClassID,
-// CHECK-NEXT:   Test::ARC3RegClassID,
-// CHECK-NEXT:   Test::ABRC3_with_sub0_sub1RegClassID,
-// CHECK-NEXT: };
-
-// CHECK:      static unsigned const ARC3_with_sub1_sub2Superclasses[] = {
-// CHECK-NEXT:   Test::ABRC3RegClassID,
-// CHECK-NEXT:   Test::ARC3RegClassID,
-// CHECK-NEXT:   Test::ABRC3_with_sub1_sub2RegClassID,
-// CHECK-NEXT: };
-
-// CHECK: extern const TargetRegisterClass ARC3_with_sub0_sub1RegClass = {
+// CHECK: ARC3_with_sub0_sub1RegClassID
 // CHECK:   0x01, /* TSFlags */
 
-// CHECK: extern const TargetRegisterClass ARC3_with_sub1_sub2RegClass = {
+// CHECK: ARC3_with_sub1_sub2RegClassID
 // CHECK:   0x01, /* TSFlags */
+
+// CHECK: ARC3_with_sub0_sub1 */ Test::ABRC3RegClassID, Test::ARC3RegClassID, Test::ABRC3_with_sub0_sub1RegClassID
+// CHECK: ARC3_with_sub1_sub2 */ Test::ABRC3RegClassID, Test::ARC3RegClassID, Test::ABRC3_with_sub1_sub2RegClassID
