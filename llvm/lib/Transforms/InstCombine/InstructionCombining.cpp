@@ -4451,6 +4451,34 @@ Instruction *InstCombinerImpl::visitCondBrInst(CondBrInst &BI) {
         addToWorklist(cast<Instruction>(U.getUser()));
       }
     }
+
+    // Also propagate through zext/sext of the i1 condition. If the ext is
+    // defined before the branch, its uses in dominated successors can be
+    // replaced with the corresponding constant.
+    // e.g. %ext = zext i1 %cond to i8; br %cond, %true, %false
+    //      in %false: any use of %ext --> 0
+    for (User *CondUser : Cond->users()) {
+      auto *ExtInst = dyn_cast<Instruction>(CondUser);
+      if (!ExtInst || (!isa<ZExtInst>(ExtInst) && !isa<SExtInst>(ExtInst)))
+        continue;
+      bool IsZExt = isa<ZExtInst>(ExtInst);
+      unsigned Width = ExtInst->getType()->getScalarSizeInBits();
+      APInt TrueConst = IsZExt ? APInt(Width, 1) : APInt::getAllOnes(Width);
+      APInt FalseConst = APInt::getZero(Width);
+      for (auto &ExtU : make_early_inc_range(ExtInst->uses())) {
+        BasicBlockEdge Edge0(BI.getParent(), BI.getSuccessor(0));
+        if (DT.dominates(Edge0, ExtU)) {
+          replaceUse(ExtU, ConstantInt::get(ExtInst->getType(), TrueConst));
+          addToWorklist(cast<Instruction>(ExtU.getUser()));
+          continue;
+        }
+        BasicBlockEdge Edge1(BI.getParent(), BI.getSuccessor(1));
+        if (DT.dominates(Edge1, ExtU)) {
+          replaceUse(ExtU, ConstantInt::get(ExtInst->getType(), FalseConst));
+          addToWorklist(cast<Instruction>(ExtU.getUser()));
+        }
+      }
+    }
   }
 
   DC.registerBranch(&BI);
