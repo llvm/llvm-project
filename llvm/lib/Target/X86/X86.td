@@ -608,6 +608,16 @@ def TuningPERMFalseDeps : SubtargetFeature<"false-deps-perm",
                                "VPERMD/Q/PS/PD has a false dependency on dest register",
                                [], InlineIgnore>;
 
+def TuningCOMPRESSFalseDeps : SubtargetFeature<"false-deps-compress",
+                               "HasCOMPRESSFalseDeps", "true",
+                               "V[P]COMPRESSPD/PS/Q/D/W/B with zero-masking has a false dependency on dest register",
+                               [], InlineIgnore>;
+
+def TuningEXPANDFalseDeps : SubtargetFeature<"false-deps-expand",
+                               "HasEXPANDFalseDeps", "true",
+                               "V[P]EXPANDPD/PS/Q/D/W/B with zero-masking has a false dependency on dest register",
+                               [], InlineIgnore>;
+
 def TuningRANGEFalseDeps : SubtargetFeature<"false-deps-range",
                                "HasRANGEFalseDeps", "true",
                                "VRANGEPD/PS/SD/SS has a false dependency on dest register",
@@ -1701,7 +1711,9 @@ def ProcessorFeatures {
   list<SubtargetFeature> ZN3Features =
     !listconcat(ZN2Features, ZN3AdditionalFeatures);
 
-  list<SubtargetFeature> ZN4AdditionalTuning = [TuningFastDPWSSD];
+  list<SubtargetFeature> ZN4AdditionalTuning = [TuningFastDPWSSD,
+                                                TuningCOMPRESSFalseDeps,
+                                                TuningEXPANDFalseDeps];
   list<SubtargetFeature> ZN4Tuning =
     !listconcat(ZN3Tuning, ZN4AdditionalTuning);
   list<SubtargetFeature> ZN4AdditionalFeatures = [FeatureAVX512,
@@ -1733,8 +1745,12 @@ def ProcessorFeatures {
   list<SubtargetFeature> ZN5Features =
     !listconcat(ZN4Features, ZN5AdditionalFeatures);
 
+  list<SubtargetFeature> ZN6RemoveTuning = [TuningSlowIndirectCall,
+                                            TuningCOMPRESSFalseDeps,
+                                            TuningEXPANDFalseDeps,
+                                            ];
   list<SubtargetFeature> ZN6Tuning =
-    !listremove(ZN5Tuning, [TuningSlowIndirectCall]);
+    !listremove(ZN5Tuning, ZN6RemoveTuning);
   list<SubtargetFeature> ZN6AdditionalFeatures = [FeatureFP16,
                                                   FeatureAVXVNNIINT8,
                                                   FeatureAVXNECONVERT,
