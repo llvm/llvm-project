@@ -12,8 +12,10 @@ def MyTarget : Target {
 }
 
 // CHECK-LABEL: case 0:
-// CHECK-NEXT:    if (!Check(S, DecodeRCRegisterClass(MI, Decoder)))
+// CHECK-NEXT:    if (!Check(S, DecodeRCRegisterClass(MI, Decoder))) {
+// CHECK-NEXT:      LLVM_DEBUG(reportOperandDecodeFailure("op0", "bits<0>", "DecodeRCRegisterClass"));
 // CHECK-NEXT:      return MCDisassembler::Fail;
+// CHECK-NEXT:    }
 // CHECK-NEXT:    tmp = fieldFromInstruction(insn, 2, 4);
 // CHECK-NEXT:    MI.addOperand(MCOperand::createImm(tmp));
 // CHECK-NEXT:    tmp = 0x0;
