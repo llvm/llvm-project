@@ -186,6 +186,7 @@ static void scalarizeMaskedLoad(const DataLayout &DL, bool HasBranchDivergence,
         continue;
       Value *Gep = Builder.CreateConstInBoundsGEP1_32(EltTy, Ptr, Idx);
       LoadInst *Load = Builder.CreateAlignedLoad(EltTy, Gep, AdjustedAlignVal);
+      Load->copyMetadata(*CI);
       VResult = Builder.CreateInsertElement(VResult, Load, Idx);
     }
     CI->replaceAllUsesWith(VResult);
@@ -352,7 +353,9 @@ static void scalarizeMaskedStore(const DataLayout &DL, bool HasBranchDivergence,
         continue;
       Value *OneElt = Builder.CreateExtractElement(Src, Idx);
       Value *Gep = Builder.CreateConstInBoundsGEP1_32(EltTy, Ptr, Idx);
-      Builder.CreateAlignedStore(OneElt, Gep, AdjustedAlignVal);
+      StoreInst *Store =
+          Builder.CreateAlignedStore(OneElt, Gep, AdjustedAlignVal);
+      Store->copyMetadata(*CI);
     }
     CI->eraseFromParent();
     return;
@@ -497,6 +500,7 @@ static void scalarizeMaskedGather(const DataLayout &DL,
       Value *Ptr = Builder.CreateExtractElement(Ptrs, Idx, "Ptr" + Twine(Idx));
       LoadInst *Load =
           Builder.CreateAlignedLoad(EltTy, Ptr, AlignVal, "Load" + Twine(Idx));
+      Load->copyMetadata(*CI);
       VResult =
           Builder.CreateInsertElement(VResult, Load, Idx, "Res" + Twine(Idx));
     }
@@ -635,7 +639,8 @@ static void scalarizeMaskedScatter(const DataLayout &DL,
       Value *OneElt =
           Builder.CreateExtractElement(Src, Idx, "Elt" + Twine(Idx));
       Value *Ptr = Builder.CreateExtractElement(Ptrs, Idx, "Ptr" + Twine(Idx));
-      Builder.CreateAlignedStore(OneElt, Ptr, AlignVal);
+      StoreInst *Store = Builder.CreateAlignedStore(OneElt, Ptr, AlignVal);
+      Store->copyMetadata(*CI);
     }
     CI->eraseFromParent();
     return;
