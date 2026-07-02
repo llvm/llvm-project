@@ -937,6 +937,54 @@ func.func @insert_slice_cast_no_fold(%arg0 : tensor<1x?xf32>, %arg1 : tensor<?x?
 
 // -----
 
+// Verify that the constant-argument folder for insert_slice preserves the
+// source's encoding on the inserted cast, rather than silently picking up the
+// destination's encoding (which is `none` here) via the shape template used by
+// ExtractSliceOp::inferCanonicalRankReducedResultType.
+// CHECK-LABEL: func @preserve_source_encoding_on_insert_slice_folding
+//  CHECK-SAME:     %[[SRC:[a-zA-Z0-9_]+]]: tensor<1x?x?x32xf16, "abc">
+//  CHECK-SAME:     %[[DST:[a-zA-Z0-9_]+]]: tensor<1x1280x32x32xf16>
+//   CHECK-NOT:   tensor.cast %{{.*}} : tensor<{{.*}}, "abc"> to tensor<{{[0-9x?]+}}xf16>
+//       CHECK:   %[[C:.+]] = tensor.cast %[[SRC]] : tensor<1x?x?x32xf16, "abc"> to tensor<1x48x16x32xf16, "abc">
+//       CHECK:   tensor.insert_slice %[[C]] into %[[DST]]
+func.func @preserve_source_encoding_on_insert_slice_folding(
+    %src: tensor<1x?x?x32xf16, "abc">,
+    %dst: tensor<1x1280x32x32xf16>) -> tensor<1x1280x32x32xf16> {
+  %c16 = arith.constant 16 : index
+  %sz1 = arith.constant 48 : index
+  %ivC = arith.constant 0 : index
+  %ivH = arith.constant 0 : index
+  %r = tensor.insert_slice %src into %dst[0, %ivC, %ivH, 0] [1, %sz1, %c16, 32] [1, 1, 1, 1]
+      : tensor<1x?x?x32xf16, "abc"> into tensor<1x1280x32x32xf16>
+  return %r : tensor<1x1280x32x32xf16>
+}
+
+// -----
+
+// Same invariant for the parallel_insert_slice variant.
+// CHECK-LABEL: func @preserve_source_encoding_on_parallel_insert_slice_folding
+//  CHECK-SAME:     %[[SRC:[a-zA-Z0-9_]+]]: tensor<1x?x?x32xf16, "abc">
+//  CHECK-SAME:     %[[DST:[a-zA-Z0-9_]+]]: tensor<1x1280x32x32xf16>
+//   CHECK-NOT:   tensor.cast %{{.*}} : tensor<{{.*}}, "abc"> to tensor<{{[0-9x?]+}}xf16>
+//       CHECK:   %[[C:.+]] = tensor.cast %[[SRC]] : tensor<1x?x?x32xf16, "abc"> to tensor<1x48x16x32xf16, "abc">
+//       CHECK:   tensor.parallel_insert_slice %[[C]] into
+func.func @preserve_source_encoding_on_parallel_insert_slice_folding(
+    %src: tensor<1x?x?x32xf16, "abc">,
+    %dst: tensor<1x1280x32x32xf16>,
+    %num_threads: index) -> tensor<1x1280x32x32xf16> {
+  %c16 = arith.constant 16 : index
+  %sz1 = arith.constant 48 : index
+  %r = scf.forall (%tid) in (%num_threads) shared_outs(%o = %dst) -> (tensor<1x1280x32x32xf16>) {
+    scf.forall.in_parallel {
+      tensor.parallel_insert_slice %src into %o[0, 0, 0, 0] [1, %sz1, %c16, 32] [1, 1, 1, 1]
+          : tensor<1x?x?x32xf16, "abc"> into tensor<1x1280x32x32xf16>
+    }
+  }
+  return %r : tensor<1x1280x32x32xf16>
+}
+
+// -----
+
 // CHECK-LABEL: func @insert_tensor_cast_on_insert_slice_src(
 // CHECK-SAME:      %[[arg0:.*]]: tensor<?x5x?xf32>, %[[arg1:.*]]: tensor<?x?x?xf32>
 //      CHECK:    %[[cast:.*]] = tensor.cast %[[arg0]] : tensor<?x5x?xf32> to tensor<64x5x64xf32>
