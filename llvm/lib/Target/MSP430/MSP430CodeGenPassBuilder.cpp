@@ -48,8 +48,7 @@ Error MSP430CodeGenPassBuilder::addInstSelector(PassManagerWrapper &PMW) const {
 }
 
 void MSP430CodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) const {
-  // TODO(boomanaiden154): Add MSP430BranchSelectionPass when it has been
-  // ported.
+  addMachineFunctionPass(MSP430BranchSelectPass(), PMW);
 }
 
 } // namespace
