@@ -19,12 +19,21 @@ ContainerBoundsCheckOverflowCheck::ContainerBoundsCheckOverflowCheck(
     StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       IgnoredContainers(utils::options::parseStringList(
-          Options.get("IgnoredContainers", ""))) {}
+          Options.get("IgnoredContainers", ""))),
+      SizeMethodNames(utils::options::parseStringList(
+          Options.get("SizeMethodNames", "size;length"))),
+      IncludedFreeStandingSizeFuncNames(utils::options::parseStringList(
+          Options.get("IncludedFreeStandingSizeFuncNames", "::std::size"))) {}
 
 void ContainerBoundsCheckOverflowCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "IgnoredContainers",
                 utils::options::serializeStringList(IgnoredContainers));
+  Options.store(Opts, "SizeMethodNames",
+                utils::options::serializeStringList(SizeMethodNames));
+  Options.store(
+      Opts, "IncludedFreeStandingSizeFuncNames",
+      utils::options::serializeStringList(IncludedFreeStandingSizeFuncNames));
 }
 
 void ContainerBoundsCheckOverflowCheck::registerMatchers(MatchFinder *Finder) {
@@ -32,13 +41,17 @@ void ContainerBoundsCheckOverflowCheck::registerMatchers(MatchFinder *Finder) {
   if (!IgnoredContainers.empty())
     RecordMatcher = cxxRecordDecl(unless(hasAnyName(IgnoredContainers)));
   auto SizeMethodCall = cxxMemberCallExpr(
-      callee(cxxMethodDecl(hasName("size"))),
+      callee(cxxMethodDecl(hasAnyName(SizeMethodNames))),
       on(hasType(hasCanonicalType(hasDeclaration(RecordMatcher)))));
-  // The size can either be a direct size() call or a reference to a variable
-  // initialized from one (e.g. auto s = v.size();)
+  auto FreeStandingSizeCall = callExpr(
+      callee(functionDecl(hasAnyName(IncludedFreeStandingSizeFuncNames))));
+  // The size can either be a direct member size method call, a free-standing
+  // size function call, or a reference to a variable initialized from one (e.g.
+  // auto s = v.size();)
   auto SizeExpr = ignoringParenImpCasts(
-      expr(anyOf(SizeMethodCall, declRefExpr(to(varDecl(hasInitializer(
-                                     ignoringParenImpCasts(SizeMethodCall)))))))
+      expr(anyOf(SizeMethodCall, FreeStandingSizeCall,
+                 declRefExpr(to(varDecl(
+                     hasInitializer(ignoringParenImpCasts(SizeMethodCall)))))))
           .bind("size_expr"));
 
   // Operands must be unsigned integers, as overflow in signed integer addition
