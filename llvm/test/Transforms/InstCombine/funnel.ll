@@ -599,6 +599,60 @@ define i32 @test_rotr_and_neg(i32 %x, i32 %shamt) {
   ret i32 %or
 }
 
+; Rotate with zext'd i32 shift amounts in i64 (issue #138334).
+
+define i64 @rotl64_zext(i64 %x, i32 %t) {
+; CHECK-LABEL: @rotl64_zext(
+; CHECK-NEXT:    [[EXT:%.*]] = zext nneg i32 [[T:%.*]] to i64
+; CHECK-NEXT:    [[R:%.*]] = call i64 @llvm.fshl.i64(i64 [[X:%.*]], i64 [[X]], i64 [[EXT]])
+; CHECK-NEXT:    ret i64 [[R]]
+;
+  %ext = zext i32 %t to i64
+  %shl = shl i64 %x, %ext
+  %neg = sub nsw i32 0, %t
+  %m = and i32 %neg, 63
+  %ext2 = zext i32 %m to i64
+  %shr = lshr i64 %x, %ext2
+  %r = or i64 %shr, %shl
+  ret i64 %r
+}
+
+define i64 @rotl64_complement(i64 %x, i32 %t) {
+; CHECK-LABEL: @rotl64_complement(
+; CHECK-NEXT:    [[EXT2:%.*]] = zext i32 [[T:%.*]] to i64
+; CHECK-NEXT:    [[R:%.*]] = call i64 @llvm.fshr.i64(i64 [[X:%.*]], i64 [[X]], i64 [[EXT2]])
+; CHECK-NEXT:    ret i64 [[R]]
+;
+  %sub = sub nsw i32 64, %t
+  %ext = zext nneg i32 %sub to i64
+  %shl = shl i64 %x, %ext
+  %m = and i32 %t, 63
+  %ext2 = zext nneg i32 %m to i64
+  %shr = lshr i64 %x, %ext2
+  %r = or i64 %shr, %shl
+  ret i64 %r
+}
+
+; Do not fold trunc(or(shl,lshr)) when the shl amount is unmasked in a wider
+; type than the truncated result.
+
+define i8 @rotl8_trunc_unmasked_shl(i8 %val, i32 %X) {
+; CHECK-LABEL: @rotl8_trunc_unmasked_shl(
+; CHECK-NOT: fshl
+; CHECK: ret i8
+;
+  %wide_val = zext i8 %val to i64
+  %shl_amt = zext i32 %X to i64
+  %shl = shl i64 %wide_val, %shl_amt
+  %neg = sub i32 0, %X
+  %masked = and i32 %neg, 7
+  %lshr_amt = zext i32 %masked to i64
+  %lshr = lshr i64 %wide_val, %lshr_amt
+  %or = or i64 %lshr, %shl
+  %r = trunc i64 %or to i8
+  ret i8 %r
+}
+
 ; Negative tests
 
 ; Only work for rotation patterns
