@@ -66,7 +66,7 @@ bb:
 ; CHECK: [[DBG4]] = distinct !DISubprogram(name: "widget", linkageName: "widget", scope: [[META1]], file: [[META1]], line: 87, type: [[META5:![0-9]+]], scopeLine: 88, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]], retainedNodes: [[META2]])
 ; CHECK: [[META5]] = distinct !DISubroutineType(types: [[META6:![0-9]+]])
 ; CHECK: [[META6]] = !{null}
-; CHECK: [[DBG7]] = !DILocation(line: 9, column: 7, scope: [[DBG8]], inlinedAt: [[META9:![0-9]+]])
+; CHECK: [[DBG7]] = distinct !DILocation(line: 9, column: 7, scope: [[DBG8]], inlinedAt: [[META9:![0-9]+]])
 ; CHECK: [[DBG8]] = distinct !DISubprogram(name: "baz", linkageName: "baz", scope: [[META1]], file: [[META1]], line: 7, type: [[META5]], scopeLine: 8, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]], retainedNodes: [[META2]])
 ; CHECK: [[META9]] = distinct !DILocation(line: 99, column: 17, scope: [[DBG4]])
 ; CHECK: [[DBG10]] = !DILocation(line: 9, column: 7, scope: [[DBG8]])
