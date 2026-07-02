@@ -8,10 +8,11 @@
 
 ## Introduction
 
-DMA operations transfer data between different kinds of memory directly without
-occupying registers in the invoking wave. They are usually
-{ref}`asynchronous<amdgpu-async-operations>` asynchronous, and require the user
-to explicitly track completion using {ref}`asyncmarks<amdgpu-async-operations>`.
+DMA (or "Direct Memory Access") operations transfer data between different kinds
+of memory directly without occupying registers in the invoking wave. They are
+usually {ref}`asynchronous<amdgpu-async-operations>` asynchronous, and require
+the user to explicitly track completion using
+{ref}`asyncmarks<amdgpu-async-operations>`.
 
 All DMA operations support the same cache modifiers as ordinary load/store
 operations from registers. They cannot be performed atomically.
