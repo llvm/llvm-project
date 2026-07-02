@@ -10,15 +10,15 @@
 #define LLDB_TARGET_MEMORYREGIONINFOCACHE_H
 
 #include "lldb/Target/MemoryRegionInfo.h"
-#include "lldb/Utility/RangeMap.h"
 
+#include <map>
 #include <mutex>
 #include <optional>
 
 namespace lldb_private {
 class MemoryRegionInfoCache {
 public:
-  MemoryRegionInfoCache() : m_region_infos(), m_is_sorted(true), m_mutex() {}
+  MemoryRegionInfoCache() = default;
 
   /// Remove all cached entries.  Should be called whenever
   /// Process resumes execution of the inferior.
@@ -34,10 +34,7 @@ public:
   size_t GetSize();
 
 private:
-  typedef RangeDataVector<lldb::addr_t, size_t, lldb_private::MemoryRegionInfo>
-      InfoMap;
-  InfoMap m_region_infos;
-  bool m_is_sorted;
+  std::map<lldb::addr_t, MemoryRegionInfo> m_region_infos;
   std::mutex m_mutex;
 };
 } // namespace lldb_private

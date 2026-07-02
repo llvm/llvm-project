@@ -155,8 +155,6 @@ cl::opt<bool> EnableSVEGISel(
     cl::desc("Enable / disable SVE scalable vectors in Global ISel"),
     cl::init(false));
 
-// TODO: This option should be removed once we switch to always using PTRADD in
-// the SelectionDAG.
 static cl::opt<int> BrMergingBaseCostThresh(
     "aarch64-br-merging-base-cost", cl::init(2),
     cl::desc(
@@ -195,6 +193,8 @@ static cl::opt<int> BrMergingUnlikelyBias(
         "merge unlikely branches."),
     cl::Hidden);
 
+// TODO: This option should be removed once we switch to always using PTRADD in
+// the SelectionDAG.
 static cl::opt<bool> UseFEATCPACodegen(
     "aarch64-use-featcpa-codegen", cl::Hidden,
     cl::desc("Generate ISD::PTRADD nodes for pointer arithmetic in "
@@ -31601,6 +31601,22 @@ bool AArch64TargetLowering::useLoadStackGuardNode(const Module &M) const {
   if (Subtarget->isTargetAndroid() || Subtarget->isTargetFuchsia())
     return TargetLowering::useLoadStackGuardNode(M);
   return true;
+}
+
+bool AArch64TargetLowering::useStackGuardMixFP() const {
+  // Currently only MSVC CRTs mix the frame pointer into the stack guard value.
+  return Subtarget->getTargetTriple().isOSMSVCRT();
+}
+
+SDValue AArch64TargetLowering::emitStackGuardMixFP(SelectionDAG &DAG,
+                                                   SDValue Val,
+                                                   const SDLoc &DL) const {
+  // Mix the cookie value with FP to create a position-dependent guard.
+  // Both prologue (stores FP - Cookie) and epilogue (compares FP - Cookie)
+  // use the same mixing operation: FP - Val.
+  return DAG.getNode(
+      ISD::SUB, DL, Val.getValueType(),
+      DAG.getCopyFromReg(DAG.getEntryNode(), DL, AArch64::FP, MVT::i64), Val);
 }
 
 unsigned AArch64TargetLowering::combineRepeatedFPDivisors() const {

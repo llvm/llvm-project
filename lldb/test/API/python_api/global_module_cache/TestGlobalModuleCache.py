@@ -12,6 +12,7 @@ import shutil
 import time
 
 
+@skipIfWasm  # modules carry no build ID to cache on
 class GlobalModuleCacheTestCase(TestBase):
     SHARED_BUILD_TESTCASE = False
     # NO_DEBUG_INFO_TESTCASE = True

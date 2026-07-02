@@ -1268,7 +1268,10 @@ int main(int argc, const char *argv[]) {
       /*add_to_history*/ eLazyBoolNo, Result);
 
   if (!opts::Log.empty())
-    Dbg->EnableLog("lldb", {"all"}, opts::Log, 0, 0, eLogHandlerStream, errs());
+    if (llvm::Error e =
+            Dbg->EnableLog("lldb", {"all"}, opts::Log, 0, 0, eLogHandlerStream))
+      WithColor::error() << "failed to enable logs: " << toString(std::move(e))
+                         << '\n';
 
   if (opts::BreakpointSubcommand)
     return opts::breakpoint::evaluateBreakpoints(*Dbg);

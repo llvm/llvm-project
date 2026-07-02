@@ -3402,24 +3402,19 @@ static void setLinkageForGV(llvm::GlobalValue *GV, const NamedDecl *ND) {
     GV->setLinkage(llvm::GlobalValue::ExternalWeakLinkage);
 }
 
-static bool hasExistingGeneralizedTypeMD(llvm::Function *F) {
-  llvm::MDNode *MD = F->getMetadata(llvm::LLVMContext::MD_type);
-  return MD && MD->hasGeneralizedMDString();
-}
-
 void CodeGenModule::createIndirectFunctionTypeMD(const FunctionDecl *FD,
                                                  llvm::Function *F) {
-  // Return if generalized type metadata is already attached.
-  if (hasExistingGeneralizedTypeMD(F))
-    return;
-
   // All functions which are not internal linkage could be indirect targets.
   // Address taken functions with internal linkage could be indirect targets.
   if (!F->hasLocalLinkage() ||
       F->getFunction().hasAddressTaken(nullptr, /*IgnoreCallbackUses=*/true,
                                        /*IgnoreAssumeLikeCalls=*/true,
-                                       /*IgnoreLLVMUsed=*/false))
-    F->addTypeMetadata(0, CreateMetadataIdentifierGeneralized(FD->getType()));
+                                       /*IgnoreLLVMUsed=*/false)) {
+    F->addMetadata(llvm::LLVMContext::MD_callgraph,
+                   *llvm::MDTuple::get(
+                       getLLVMContext(),
+                       {CreateMetadataIdentifierGeneralized(FD->getType())}));
+  }
 }
 
 void CodeGenModule::createFunctionTypeMetadataForIcall(const FunctionDecl *FD,
@@ -3437,12 +3432,10 @@ void CodeGenModule::createFunctionTypeMetadataForIcall(const FunctionDecl *FD,
                                            /*GeneralizePointers=*/false);
   llvm::Metadata *MD = CreateMetadataIdentifierForType(FnType);
   F->addTypeMetadata(0, MD);
-  // Add the generalized identifier if not added already.
-  if (!hasExistingGeneralizedTypeMD(F)) {
-    QualType GenPtrFnType = GeneralizeFunctionType(getContext(), FD->getType(),
-                                                   /*GeneralizePointers=*/true);
-    F->addTypeMetadata(0, CreateMetadataIdentifierGeneralized(GenPtrFnType));
-  }
+
+  QualType GenPtrFnType = GeneralizeFunctionType(getContext(), FD->getType(),
+                                                 /*GeneralizePointers=*/true);
+  F->addTypeMetadata(0, CreateMetadataIdentifierGeneralized(GenPtrFnType));
 
   // Emit a hash-based bit set entry for cross-DSO calls.
   if (CodeGenOpts.SanitizeCfiCrossDso)
@@ -3461,10 +3454,7 @@ void CodeGenModule::createCalleeTypeMetadataForIcall(const QualType &QT,
     return;
 
   llvm::Metadata *TypeIdMD = CreateMetadataIdentifierGeneralized(QT);
-  llvm::MDTuple *TypeTuple = llvm::MDTuple::get(
-      getLLVMContext(), {llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(
-                             llvm::Type::getInt64Ty(getLLVMContext()), 0)),
-                         TypeIdMD});
+  llvm::MDTuple *TypeTuple = llvm::MDTuple::get(getLLVMContext(), {TypeIdMD});
   llvm::MDTuple *MDN = llvm::MDNode::get(getLLVMContext(), {TypeTuple});
   CB->setMetadata(llvm::LLVMContext::MD_callee_type, MDN);
 }

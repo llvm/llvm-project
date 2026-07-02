@@ -21,6 +21,8 @@
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/Timer.h"
 
+#include "llvm/Support/FormatAdapters.h"
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -201,19 +203,16 @@ protected:
     else
       log_file[0] = '\0';
 
-    std::string error;
-    llvm::raw_string_ostream error_stream(error);
-    bool success = GetDebugger().EnableLog(
+    llvm::Error error = GetDebugger().EnableLog(
         channel, args.GetArgumentArrayRef(), log_file, m_options.log_options,
-        m_options.buffer_size.GetCurrentValue(), m_options.handler,
-        error_stream);
+        m_options.buffer_size.GetCurrentValue(), m_options.handler);
 
-    if (success)
-      result.SetStatus(eReturnStatusSuccessFinishNoResult);
-    else {
-      result.GetErrorStream() << error;
+    if (error) {
+      result.GetErrorStream()
+          << llvm::formatv("{}", llvm::fmt_consume(std::move(error)));
       result.SetStatus(eReturnStatusFailed);
-    }
+    } else
+      result.SetStatus(eReturnStatusSuccessFinishNoResult);
   }
 
   CommandOptions m_options;

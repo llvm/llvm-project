@@ -243,6 +243,30 @@ set(GENERIC_TF_SOURCES
   trunctfsf2.c
 )
 
+option(COMPILER_RT_USE_LIBC_MATH
+      "Use LLVM libc math routines for floating-point builtins" OFF)
+
+# Swap the legacy soft-float <name>.c builtin in <list> for the libc-backed
+# <name>.cpp implementation (which delegates to LIBC_NAMESPACE::shared::*).
+macro(use_libc_builtin list_var name)
+  list(REMOVE_ITEM ${list_var} ${name}.c)
+  list(APPEND ${list_var} ${name}.cpp)
+endmacro()
+
+if(COMPILER_RT_USE_LIBC_MATH)
+  include(FindLibcCommonUtils)
+  if(NOT TARGET llvm-libc-common-utilities)
+    message(FATAL_ERROR "LLVM libc is not found at ${libc_path}.")
+  endif()
+
+  get_target_property(_libc_include_dirs llvm-libc-common-utilities
+                      INTERFACE_INCLUDE_DIRECTORIES)
+  include_directories(SYSTEM ${_libc_include_dirs})
+  add_definitions(-DCOMPILER_RT_USE_LIBC_MATH)
+
+  use_libc_builtin(GENERIC_TF_SOURCES addtf3)
+endif()
+
 option(COMPILER_RT_EXCLUDE_ATOMIC_BUILTIN
   "Skip the atomic builtin (these should normally be provided by a shared library)"
   On)

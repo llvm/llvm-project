@@ -64,3 +64,21 @@ add_header_library(
     libc.src.__support.FPUtil.generic.mul
     libc.src.__support.macros.config
 )
+
+add_header_library(
+  divdf3
+  HDRS
+    divdf3.h
+  DEPENDS
+    libc.src.__support.FPUtil.generic.div
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  addsf3
+  HDRS
+    addsf3.h
+  DEPENDS
+    libc.src.__support.FPUtil.generic.add_sub
+    libc.src.__support.macros.config
+)

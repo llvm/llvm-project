@@ -15,11 +15,11 @@ define void @replicate_udiv_with_only_first_lane_used(i32 %x, ptr %dst, i64 %d) 
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    store i16 0, ptr [[DST]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 96
 ; CHECK-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    store i16 0, ptr [[DST]], align 2
 ; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
@@ -174,6 +174,9 @@ define float @uniform_load_replicating_select(ptr %A, ptr %B, i64 %1) {
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP1]], 8
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP1]], [[N_MOD_VF]]
+; CHECK-NEXT:    [[TMP6:%.*]] = load float, ptr [[A]], align 4
+; CHECK-NEXT:    [[TMP10:%.*]] = fcmp ogt float [[TMP6]], 0.000000e+00
+; CHECK-NEXT:    [[TMP32:%.*]] = select i1 [[TMP10]], <4 x float> splat (float 1.000000e+01), <4 x float> splat (float 1.000000e+00)
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -181,8 +184,6 @@ define float @uniform_load_replicating_select(ptr %A, ptr %B, i64 %1) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 5
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[INDEX]], 6
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[INDEX]], 7
-; CHECK-NEXT:    [[TMP6:%.*]] = load float, ptr [[A]], align 4
-; CHECK-NEXT:    [[TMP10:%.*]] = fcmp ogt float [[TMP6]], 0.000000e+00
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP4]]
@@ -203,7 +204,6 @@ define float @uniform_load_replicating_select(ptr %A, ptr %B, i64 %1) {
 ; CHECK-NEXT:    [[TMP34:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP34]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[TMP32:%.*]] = select i1 [[TMP10]], <4 x float> splat (float 1.000000e+01), <4 x float> splat (float 1.000000e+00)
 ; CHECK-NEXT:    [[TMP36:%.*]] = fdiv <4 x float> splat (float 4.000000e+00), [[TMP31]]
 ; CHECK-NEXT:    [[TMP33:%.*]] = call <4 x float> @llvm.pow.v4f32(<4 x float> [[TMP32]], <4 x float> [[TMP36]])
 ; CHECK-NEXT:    [[TMP35:%.*]] = extractelement <4 x float> [[TMP33]], i64 3
