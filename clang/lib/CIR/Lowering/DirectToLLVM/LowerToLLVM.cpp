@@ -3902,6 +3902,23 @@ void ConvertCIRToLLVMPass::runOnOperation() {
   if (failed(applyPartialConversion(ops, target, std::move(patterns))))
     signalPassFailure();
 
+  // The CIR-native pointer data-layout entry (keyed on cir.ptr) drives pointer
+  // widths during CIR codegen and lowering, but cir.ptr has no meaning once the
+  // module is translated to LLVM IR. Drop it so the resulting data layout only
+  // references LLVM types.
+  if (auto dlSpec = mlir::dyn_cast_or_null<mlir::DataLayoutSpecAttr>(
+          module->getAttr(mlir::DLTIDialect::kDataLayoutAttrName))) {
+    llvm::SmallVector<mlir::DataLayoutEntryInterface> kept;
+    for (mlir::DataLayoutEntryInterface entry : dlSpec.getEntries()) {
+      if (entry.isTypeEntry() &&
+          mlir::isa<cir::PointerType>(mlir::cast<mlir::Type>(entry.getKey())))
+        continue;
+      kept.push_back(entry);
+    }
+    module->setAttr(mlir::DLTIDialect::kDataLayoutAttrName,
+                    mlir::DataLayoutSpecAttr::get(module.getContext(), kept));
+  }
+
   // Emit the llvm.global_ctors array.
   buildCtorDtorList(module, cir::CIRDialect::getGlobalCtorsAttrName(),
                     "llvm.global_ctors", [](mlir::Attribute attr) {
