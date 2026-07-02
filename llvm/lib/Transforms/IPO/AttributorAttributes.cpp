@@ -5281,8 +5281,13 @@ struct AAAlignImpl : AAAlign {
     for (const Attribute &Attr : Attrs)
       takeKnownMaximum(Attr.getValueAsInt());
 
-    Value &V = *getAssociatedValue().stripPointerCasts();
-    takeKnownMaximum(V.getPointerAlignment(A.getDataLayout()).value());
+    Value *V = &getAssociatedValue();
+    if (V->getType()->isPointerTy())
+      takeKnownMaximum(V->getPointerAlignment(A.getDataLayout()).value());
+    Value *StrippedV = V->stripPointerCasts();
+    if (StrippedV->getType()->isPointerTy())
+      takeKnownMaximum(
+          StrippedV->getPointerAlignment(A.getDataLayout()).value());
 
     if (Instruction *CtxI = getCtxI())
       followUsesInMBEC(*this, A, getState(), *CtxI);
@@ -5339,7 +5344,9 @@ struct AAAlignImpl : AAAlign {
     ChangeStatus Changed = AAAlign::manifest(A);
 
     Align InheritAlign =
-        getAssociatedValue().getPointerAlignment(A.getDataLayout());
+        getAssociatedValue().getType()->isPointerTy()
+            ? getAssociatedValue().getPointerAlignment(A.getDataLayout())
+            : Align(1);
     if (InheritAlign >= getAssumedAlign())
       return InstrChanged;
     return Changed | InstrChanged;
@@ -5405,8 +5412,11 @@ struct AAAlignFloating : AAAlignImpl {
       if (!AA || (!Stripped && this == AA)) {
         int64_t Offset;
         unsigned Alignment = 1;
+        // Stripping can cross bitcasts into pointer vectors, but the alignment
+        // reasoning below applies only to scalar pointer bases.
         if (const Value *Base =
-                GetPointerBaseWithConstantOffset(&V, Offset, DL)) {
+                GetPointerBaseWithConstantOffset(&V, Offset, DL);
+            Base->getType()->isPointerTy()) {
           // TODO: Use AAAlign for the base too.
           Align PA = Base->getPointerAlignment(DL);
           // BasePointerAddr + Offset = Alignment * Q for some integer Q.
@@ -5416,7 +5426,7 @@ struct AAAlignFloating : AAAlignImpl {
           uint32_t gcd =
               std::gcd(uint32_t(abs((int32_t)Offset)), uint32_t(PA.value()));
           Alignment = llvm::bit_floor(gcd);
-        } else {
+        } else if (V.getType()->isPointerTy()) {
           Alignment = V.getPointerAlignment(DL).value();
         }
         // Use only IR information if we did not strip anything.
@@ -5488,7 +5498,9 @@ struct AAAlignCallSiteArgument final : AAAlignFloating {
         return ChangeStatus::UNCHANGED;
     ChangeStatus Changed = AAAlignImpl::manifest(A);
     Align InheritAlign =
-        getAssociatedValue().getPointerAlignment(A.getDataLayout());
+        getAssociatedValue().getType()->isPointerTy()
+            ? getAssociatedValue().getPointerAlignment(A.getDataLayout())
+            : Align(1);
     if (InheritAlign >= getAssumedAlign())
       Changed = ChangeStatus::UNCHANGED;
     return Changed;
