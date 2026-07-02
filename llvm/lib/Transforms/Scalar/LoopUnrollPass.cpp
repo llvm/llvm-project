@@ -681,11 +681,10 @@ static std::optional<EstimatedUnrollCost> analyzeLoopUnrollCost(
 UnrollCostEstimator::UnrollCostEstimator(
     const Loop *L, const TargetTransformInfo &TTI,
     const SmallPtrSetImpl<const Value *> &EphValues, unsigned BEInsns,
-    bool TripCountIsUniform) {
+    bool PrepareForLTO, bool TripCountIsUniform) {
   CodeMetrics Metrics;
   for (BasicBlock *BB : L->blocks())
-    Metrics.analyzeBasicBlock(BB, TTI, EphValues, /* PrepareForLTO= */ false,
-                              L);
+    Metrics.analyzeBasicBlock(BB, TTI, EphValues, PrepareForLTO, L);
   NumInlineCandidates = Metrics.NumInlineCandidates;
   NotDuplicatable = Metrics.notDuplicatable;
   Convergence = Metrics.Convergence;
@@ -1243,7 +1242,7 @@ tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
                 OptimizationRemarkEmitter &ORE, BlockFrequencyInfo *BFI,
                 ProfileSummaryInfo *PSI, bool PreserveLCSSA, int OptLevel,
                 bool OnlyFullUnroll, bool OnlyWhenForced, bool ForgetAllSCEV,
-                std::optional<unsigned> ProvidedCount,
+                bool PrepareForLTO, std::optional<unsigned> ProvidedCount,
                 std::optional<unsigned> ProvidedThreshold,
                 std::optional<bool> ProvidedAllowPartial,
                 std::optional<bool> ProvidedRuntime,
@@ -1341,7 +1340,8 @@ tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
   // loops when all threads agree on the trip count.
   const SCEV *BTC = SE.getBackedgeTakenCount(L);
   bool TripCountIsUniform = UI && isSCEVUniform(BTC, *UI);
-  UnrollCostEstimator UCE(L, TTI, EphValues, UP.BEInsns, TripCountIsUniform);
+  UnrollCostEstimator UCE(L, TTI, EphValues, UP.BEInsns, PrepareForLTO,
+                          TripCountIsUniform);
   if (!UCE.canUnroll((TM & TM_ForcedByUser) ? &ORE : nullptr, L))
     return LoopUnrollResult::Unmodified;
 
@@ -1616,10 +1616,11 @@ public:
 
     LoopUnrollResult Result = tryToUnrollLoop(
         L, DT, LI, SE, TTI, AC, ORE, nullptr, nullptr, PreserveLCSSA, OptLevel,
-        /*OnlyFullUnroll*/ false, OnlyWhenForced, ForgetAllSCEV, ProvidedCount,
-        ProvidedThreshold, ProvidedAllowPartial, ProvidedRuntime,
-        ProvidedUpperBound, ProvidedAllowPeeling,
-        ProvidedAllowProfileBasedPeeling, ProvidedFullUnrollMaxCount, UI);
+        /*OnlyFullUnroll*/ false, OnlyWhenForced, ForgetAllSCEV,
+        /*PrepareForLTO*/ false, ProvidedCount, ProvidedThreshold,
+        ProvidedAllowPartial, ProvidedRuntime, ProvidedUpperBound,
+        ProvidedAllowPeeling, ProvidedAllowProfileBasedPeeling,
+        ProvidedFullUnrollMaxCount, UI);
 
     if (Result == LoopUnrollResult::FullyUnrolled)
       LPM.markLoopAsDeleted(*L);
@@ -1690,7 +1691,8 @@ PreservedAnalyses LoopFullUnrollPass::run(Loop &L, LoopAnalysisManager &AM,
       tryToUnrollLoop(&L, AR.DT, &AR.LI, AR.SE, AR.TTI, AR.AC, ORE,
                       /*BFI*/ nullptr, /*PSI*/ nullptr,
                       /*PreserveLCSSA*/ true, OptLevel, /*OnlyFullUnroll*/ true,
-                      OnlyWhenForced, ForgetSCEV, /*Count*/ std::nullopt,
+                      OnlyWhenForced, ForgetSCEV, PrepareForLTO,
+                      /*Count*/ std::nullopt,
                       /*Threshold*/ std::nullopt, /*AllowPartial*/ false,
                       /*Runtime*/ false, /*UpperBound*/ false,
                       /*AllowPeeling*/ true,
@@ -1822,7 +1824,7 @@ PreservedAnalyses LoopUnrollPass::run(Function &F,
         &L, DT, &LI, SE, TTI, AC, ORE, BFI, PSI,
         /*PreserveLCSSA*/ true, UnrollOpts.OptLevel, /*OnlyFullUnroll*/ false,
         UnrollOpts.OnlyWhenForced, UnrollOpts.ForgetSCEV,
-        /*Count*/ std::nullopt,
+        UnrollOpts.PrepareForLTO, /*Count*/ std::nullopt,
         /*Threshold*/ std::nullopt, UnrollOpts.AllowPartial,
         UnrollOpts.AllowRuntime, UnrollOpts.AllowUpperBound, LocalAllowPeeling,
         UnrollOpts.AllowProfileBasedPeeling, UnrollOpts.FullUnrollMaxCount, UI,
@@ -1864,6 +1866,8 @@ void LoopUnrollPass::printPipeline(
        << "profile-peeling;";
   if (UnrollOpts.FullUnrollMaxCount != std::nullopt)
     OS << "full-unroll-max=" << UnrollOpts.FullUnrollMaxCount << ';';
+  if (UnrollOpts.PrepareForLTO)
+    OS << "prepare-for-lto;";
   OS << 'O' << UnrollOpts.OptLevel;
   OS << '>';
 }
