@@ -654,8 +654,12 @@ LLVM_ABI Loop *cloneLoop(Loop *L, Loop *PL, ValueToValueMapTy &VM, LoopInfo *LI,
                          LPPassManager *LPM);
 
 /// Add code that checks at runtime if the accessed arrays in \p PointerChecks
-/// overlap. Returns the final comparator value or NULL if no check is needed.
-LLVM_ABI Value *
+/// overlap. Returns a pair of the final comparator value (or NULL if no check
+/// is needed) and a boolean indicating whether all checks are outer-loop
+/// invariant (hoistable). If \p HoistRuntimeChecks is true and \p TheLoop has
+/// a parent, the boolean is set to true when all checks are outer-loop
+/// invariant, i.e. hoistable, or false otherwise.
+LLVM_ABI std::pair<Value *, bool>
 addRuntimeChecks(Instruction *Loc, Loop *TheLoop,
                  const SmallVectorImpl<RuntimePointerCheck> &PointerChecks,
                  SCEVExpander &Expander, bool HoistRuntimeChecks = false);

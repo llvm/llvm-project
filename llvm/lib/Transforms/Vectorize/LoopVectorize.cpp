@@ -1560,6 +1560,10 @@ class GeneratedRTChecks {
   /// If it is nullptr no memory runtime checks have been generated.
   Value *MemRuntimeCheckCond = nullptr;
 
+  /// True if memory checks are outer-loop invariant (hoistable).
+  /// Used to discount the cost of performing runtime checks for inner loops.
+  bool AllChecksHoisted = false;
+
   DominatorTree *DT;
   LoopInfo *LI;
   TargetTransformInfo *TTI;
@@ -1661,7 +1665,7 @@ public:
             },
             IC);
       } else {
-        MemRuntimeCheckCond = addRuntimeChecks(
+        std::tie(MemRuntimeCheckCond, AllChecksHoisted) = addRuntimeChecks(
             MemCheckBlock->getTerminator(), L, RtPtrChecking.getChecks(),
             MemCheckExp, VectorizerParams::HoistRuntimeChecks);
       }
@@ -1746,13 +1750,11 @@ public:
       // the checks will likely be hoisted out and so the effective cost will
       // reduce according to the outer loop trip count.
       if (OuterLoop) {
-        ScalarEvolution *SE = MemCheckExp.getSE();
         // TODO: If profitable, we could refine this further by analysing every
         // individual memory check, since there could be a mixture of loop
         // variant and invariant checks that mean the final condition is
         // variant.
-        const SCEV *Cond = SE->getSCEV(MemRuntimeCheckCond);
-        if (SE->isLoopInvariant(Cond, OuterLoop)) {
+        if (AllChecksHoisted) {
           // It seems reasonable to assume that we can reduce the effective
           // cost of the checks even when we know nothing about the trip
           // count. Assume that the outer loop executes at least twice.
