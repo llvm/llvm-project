@@ -84,7 +84,7 @@ define i64 @mul_umax_fold(i8 %x) {
 ; CHECK-NEXT:    %add = add nsw i32 -12, %mul
 ; CHECK-NEXT:    --> (-12 + (4 * (3 umax (zext i8 %x to i32)))<nuw><nsw>)<nsw> U: [0,1009) S: [0,1009)
 ; CHECK-NEXT:    %ext = zext i32 %add to i64
-; CHECK-NEXT:    --> (zext i32 (-12 + (4 * (3 umax (zext i8 %x to i32)))<nuw><nsw>)<nsw> to i64) U: [0,1009) S: [0,1009)
+; CHECK-NEXT:    --> (-12 + (4 * (3 umax (zext i8 %x to i64)))<nuw><nsw>)<nsw> U: [0,1009) S: [0,1009)
 ; CHECK-NEXT:  Determining loop execution counts for: @mul_umax_fold
 ;
   %zx = zext i8 %x to i32
@@ -107,7 +107,7 @@ define i64 @mul_umax_fold_round_up(i8 %x) {
 ; CHECK-NEXT:    %add = add nsw i32 -10, %mul
 ; CHECK-NEXT:    --> (-10 + (4 * (3 umax (zext i8 %x to i32)))<nuw><nsw>)<nsw> U: [2,1011) S: [2,1011)
 ; CHECK-NEXT:    %ext = zext i32 %add to i64
-; CHECK-NEXT:    --> (2 + (zext i32 (-12 + (4 * (3 umax (zext i8 %x to i32)))<nuw><nsw>)<nsw> to i64))<nuw><nsw> U: [2,1011) S: [2,1011)
+; CHECK-NEXT:    --> (-10 + (4 * (3 umax (zext i8 %x to i64)))<nuw><nsw>)<nsw> U: [2,1011) S: [2,1011)
 ; CHECK-NEXT:  Determining loop execution counts for: @mul_umax_fold_round_up
 ;
   %zx = zext i8 %x to i32
@@ -153,7 +153,7 @@ define i64 @mul_smax_fold(i8 %x) {
 ; CHECK-NEXT:    %add = add nsw i32 -8, %mul
 ; CHECK-NEXT:    --> (-8 + (4 * (3 smax (zext i8 %x to i32)))<nuw><nsw>)<nsw> U: [4,1013) S: [4,1013)
 ; CHECK-NEXT:    %ext = zext i32 %add to i64
-; CHECK-NEXT:    --> (zext i32 (-8 + (4 * (3 smax (zext i8 %x to i32)))<nuw><nsw>)<nsw> to i64) U: [4,1013) S: [4,1013)
+; CHECK-NEXT:    --> (-8 + (4 * (zext i32 (3 smax (zext i8 %x to i32)) to i64))<nuw><nsw>)<nsw> U: [4,1013) S: [4,1013)
 ; CHECK-NEXT:  Determining loop execution counts for: @mul_smax_fold
 ;
   %zx = zext i8 %x to i32
@@ -219,7 +219,7 @@ define i64 @umax_zext_fold(i8 %x) {
 ; CHECK-NEXT:    %add = add nsw i32 -5, %umax
 ; CHECK-NEXT:    --> (-5 + (5 umax (zext i8 %x to i32)))<nsw> U: [0,251) S: [0,251)
 ; CHECK-NEXT:    %ext = zext i32 %add to i64
-; CHECK-NEXT:    --> (zext i32 (-5 + (5 umax (zext i8 %x to i32)))<nsw> to i64) U: [0,251) S: [0,251)
+; CHECK-NEXT:    --> (-5 + (5 umax (zext i8 %x to i64)))<nsw> U: [0,251) S: [0,251)
 ; CHECK-NEXT:  Determining loop execution counts for: @umax_zext_fold
 ;
   %zx = zext i8 %x to i32
