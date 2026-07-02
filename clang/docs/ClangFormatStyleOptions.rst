@@ -7393,6 +7393,35 @@ the configuration (without a prefix: ``Auto``).
 
 
 
+.. _SpacesInBlockComments:
+
+**SpacesInBlockComments** (``SpacesInBlockCommentsStyle``) :versionbadge:`clang-format 23` :ref:`¶ <SpacesInBlockComments>`
+  The SpacesInBlockCommentsStyle to use for single-line ordinary block
+  comments. Documentation comments such as ``/** ... */`` and ``/*! ... */``
+  and parameter comments ending with ``=`` before the closing ``*/`` are
+  left unchanged.
+
+  Possible values:
+
+  * ``SIBCS_Never`` (in configuration: ``Never``)
+    Remove spaces after ``/*`` and before ``*/``.
+
+    .. code-block:: c++
+
+       /*comment*/
+
+  * ``SIBCS_Always`` (in configuration: ``Always``)
+    Add spaces after ``/*`` and before ``*/``.
+
+    .. code-block:: c++
+
+       /* comment */
+
+  * ``SIBCS_Leave`` (in configuration: ``Leave``)
+    Leave existing spaces unchanged.
+
+
+
 .. _SpacesInCStyleCastParentheses:
 
 **SpacesInCStyleCastParentheses** (``Boolean``) :versionbadge:`clang-format 3.7` :ref:`¶ <SpacesInCStyleCastParentheses>`

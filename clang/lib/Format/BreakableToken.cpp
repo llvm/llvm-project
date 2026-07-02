@@ -778,6 +778,50 @@ void BreakableBlockComment::reflow(unsigned LineIndex,
 void BreakableBlockComment::adaptStartOfLine(
     unsigned LineIndex, WhitespaceManager &Whitespaces) const {
   if (LineIndex == 0) {
+    StringRef Text = tokenAt(LineIndex).TokenText;
+    if (Style.SpacesInBlockComments != FormatStyle::SIBCS_Leave &&
+        Lines.size() == 1 && Text.size() >= 4) {
+      const bool IsDocComment =
+          Text.starts_with("/**") || Text.starts_with("/*!");
+      const bool IsParamComment = Text.drop_back(2).trim(Blanks).ends_with("=");
+      if (!IsDocComment && !IsParamComment) {
+        if (StringRef AfterOpening = Text.drop_front(2);
+            !AfterOpening.empty()) {
+          const bool HasSpace = isWhitespace(AfterOpening.front());
+          if (Style.SpacesInBlockComments == FormatStyle::SIBCS_Always &&
+              !HasSpace) {
+            Whitespaces.replaceWhitespaceInToken(
+                tokenAt(LineIndex), /*Offset=*/2, /*ReplaceChars=*/0,
+                /*PreviousPostfix=*/"", /*CurrentPrefix=*/"", InPPDirective,
+                /*Newlines=*/0, /*Spaces=*/1);
+          } else if (Style.SpacesInBlockComments == FormatStyle::SIBCS_Never &&
+                     HasSpace) {
+            Whitespaces.replaceWhitespaceInToken(
+                tokenAt(LineIndex), /*Offset=*/2, /*ReplaceChars=*/1,
+                /*PreviousPostfix=*/"", /*CurrentPrefix=*/"", InPPDirective,
+                /*Newlines=*/0, /*Spaces=*/0);
+          }
+        }
+
+        if (StringRef BeforeClosing = Text.drop_back(2);
+            !BeforeClosing.empty()) {
+          const bool HasSpace = isWhitespace(BeforeClosing.back());
+          if (Style.SpacesInBlockComments == FormatStyle::SIBCS_Always &&
+              !HasSpace) {
+            Whitespaces.replaceWhitespaceInToken(
+                tokenAt(LineIndex), Text.size() - 2, /*ReplaceChars=*/0,
+                /*PreviousPostfix=*/"", /*CurrentPrefix=*/"", InPPDirective,
+                /*Newlines=*/0, /*Spaces=*/1);
+          } else if (Style.SpacesInBlockComments == FormatStyle::SIBCS_Never &&
+                     HasSpace) {
+            Whitespaces.replaceWhitespaceInToken(
+                tokenAt(LineIndex), Text.size() - 3, /*ReplaceChars=*/1,
+                /*PreviousPostfix=*/"", /*CurrentPrefix=*/"", InPPDirective,
+                /*Newlines=*/0, /*Spaces=*/0);
+          }
+        }
+      }
+    }
     if (DelimitersOnNewline) {
       // Since we're breaking at index 1 below, the break position and the
       // break length are the same.

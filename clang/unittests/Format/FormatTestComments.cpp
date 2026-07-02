@@ -370,6 +370,40 @@ TEST_F(FormatTestComments, RemovesTrailingWhitespaceOfComments) {
   verifyFormat("// comment    \\\n", "// comment    \\\n  \t \v   \f   ");
 }
 
+TEST_F(FormatTestComments, SpacesInBlockComments) {
+  FormatStyle Style = getLLVMStyle();
+
+  Style.SpacesInBlockComments = FormatStyle::SIBCS_Always;
+  verifyFormat("/* comment */", "/* comment*/", Style);
+  verifyFormat("/* comment */", "/*comment */", Style);
+  verifyFormat("/* comment */", "/*comment*/", Style);
+
+  Style.SpacesInBlockComments = FormatStyle::SIBCS_Leave;
+  verifyFormat("/*comment*/", Style);
+  verifyFormat("/* comment*/", Style);
+  verifyFormat("/*comment */", Style);
+  verifyFormat("/* comment */", Style);
+
+  Style.SpacesInBlockComments = FormatStyle::SIBCS_Never;
+  verifyFormat("/*comment*/", "/* comment */", Style);
+  verifyFormat("/*comment*/", "/* comment*/", Style);
+  verifyFormat("/*comment*/", "/*comment */", Style);
+}
+
+TEST_F(FormatTestComments, SpacesInBlockCommentsIgnoreParamAndDocComments) {
+  FormatStyle Style = getLLVMStyle();
+
+  Style.SpacesInBlockComments = FormatStyle::SIBCS_Always;
+  verifyFormat("foo(/*Arg=*/value);", Style);
+  verifyFormat("/**doc*/", Style);
+  verifyFormat("/*!doc*/", Style);
+
+  Style.SpacesInBlockComments = FormatStyle::SIBCS_Never;
+  verifyFormat("foo(/*Arg=*/value);", Style);
+  verifyFormat("/** doc */", Style);
+  verifyFormat("/*! doc */", Style);
+}
+
 TEST_F(FormatTestComments, UnderstandsBlockComments) {
   verifyFormat("f(/*noSpaceAfterParameterNamingComment=*/true);");
   verifyFormat("void f() { g(/*aaa=*/x, /*bbb=*/!y, /*c=*/::c); }");

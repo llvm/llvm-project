@@ -1227,6 +1227,14 @@ TEST(ConfigParseTest, ParsesConfiguration) {
   CHECK_PARSE("SpacesInAngles: false", SpacesInAngles, FormatStyle::SIAS_Never);
   CHECK_PARSE("SpacesInAngles: true", SpacesInAngles, FormatStyle::SIAS_Always);
 
+  Style.SpacesInBlockComments = FormatStyle::SIBCS_Always;
+  CHECK_PARSE("SpacesInBlockComments: Never", SpacesInBlockComments,
+              FormatStyle::SIBCS_Never);
+  CHECK_PARSE("SpacesInBlockComments: Always", SpacesInBlockComments,
+              FormatStyle::SIBCS_Always);
+  CHECK_PARSE("SpacesInBlockComments: Leave", SpacesInBlockComments,
+              FormatStyle::SIBCS_Leave);
+
   CHECK_PARSE("RequiresClausePosition: WithPreceding", RequiresClausePosition,
               FormatStyle::RCPS_WithPreceding);
   CHECK_PARSE("RequiresClausePosition: WithFollowing", RequiresClausePosition,
