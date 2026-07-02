@@ -1637,10 +1637,9 @@ bool LoopIdiomRecognize::optimizeCRCLoopUsingClmul(const PolynomialInfo &Info) {
   }
 
   // Align the current CRC with TripCount (multiply or divide by x^(TC-CRCBW)).
-  ClmulMuInput =
-      Info.IsBigEndian
-          ? ShlOrLShr(ClmulMuInput, (int)TC - (int)CRCBW, "crc.align.tc")
-          : ClmulMuInput;
+  ClmulMuInput = Info.IsBigEndian
+                     ? ShlOrLShr(ClmulMuInput, int(TC - CRCBW), "crc.align.tc")
+                     : ClmulMuInput;
 
   // Zero out any bits above (TC-1) for calculation since the original loop
   // doesn't use them in the significant bit checks.
