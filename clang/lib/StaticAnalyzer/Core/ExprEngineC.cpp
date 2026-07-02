@@ -590,6 +590,21 @@ void ExprEngine::VisitDeclStmt(const DeclStmt *DS, ExplodedNode *Pred,
     return;
   }
 
+  // Self-assignment initialization in variable declaration,
+  // i.e., `int x = x;`,
+  // is a C idiom to suppress warnings of unused variables.
+  // This filter will not match variables of C++ record types, but will match
+  // C++ references. Allow references continuing here to make the undefined
+  // value checker report self-assignments of C++ references.
+  if (const Expr *EI = VD->getInit()) {
+    if (const DeclRefExpr *DR = dyn_cast<DeclRefExpr>(EI->IgnoreImpCasts()))
+      if (VD == DR->getDecl())
+        if (!VD->getType()->isReferenceType()) {
+          Dst.insert(Pred);
+          return;
+        }
+  }
+
   // FIXME: all pre/post visits should eventually be handled by ::Visit().
   ExplodedNodeSet dstPreVisit;
   getCheckerManager().runCheckersForPreStmt(dstPreVisit, Pred, DS, *this);
