@@ -608,8 +608,8 @@ def err_analyzer_checker_option_invalid_input : Error<
 def err_analyzer_checker_incompatible_analyzer_option : Error<
   "checker cannot be enabled with analyzer option '%0' == %1">;
 def err_analyzer_not_built_with_z3 : Error<
-  "analyzer constraint manager 'z3' is only available if LLVM was built with "
-  "-DLLVM_ENABLE_Z3_SOLVER=ON">;
+  "analyzer constraint manager 'unsupported-z3' is only available if LLVM was "
+  "built with -DLLVM_ENABLE_Z3_SOLVER=ON">;
 def warn_drv_analyzer_explicitly_enabled_checker_was_renamed : Warning<
   "checker '%0' was renamed to '%1'. Enable the new checker name "
   "or stop explicitly enabling the old checker name">,
