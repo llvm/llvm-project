@@ -330,6 +330,25 @@ mlirIRRewriterCreateFromOp(MlirOperation op);
 MLIR_CAPI_EXPORTED void mlirIRRewriterDestroy(MlirRewriterBase rewriter);
 
 //===----------------------------------------------------------------------===//
+/// Folding API
+//===----------------------------------------------------------------------===//
+
+/// Attempts to fold the given operation using the given rewriter (as an
+/// OpBuilder). On a successful fold the operation is NOT erased; the folded
+/// values are written into the caller-allocated `results` buffer, up to
+/// `maxResults` entries, and the total number of results is returned. An
+/// in-place fold succeeds with no results and returns 0. A negative return
+/// value indicates the operation could not be folded.
+///
+/// This is the C counterpart of OpBuilder::createOrFold split in two steps:
+/// create the operation, then call mlirOperationTryFold; on a non-negative
+/// result use the folded values and erase the operation.
+MLIR_CAPI_EXPORTED intptr_t mlirOperationTryFold(MlirRewriterBase rewriter,
+                                                 MlirOperation op,
+                                                 intptr_t maxResults,
+                                                 MlirValue *results);
+
+//===----------------------------------------------------------------------===//
 /// FrozenRewritePatternSet API
 //===----------------------------------------------------------------------===//
 

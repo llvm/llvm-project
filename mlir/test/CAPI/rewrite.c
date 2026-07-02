@@ -12,6 +12,7 @@
 #include "mlir-c/Rewrite.h"
 #include "mlir-c/BuiltinTypes.h"
 #include "mlir-c/IR.h"
+#include "mlir-c/RegisterEverything.h"
 
 #include <assert.h>
 #include <inttypes.h>
@@ -802,6 +803,55 @@ void testConversionTargetDynamicLegality(MlirContext ctx) {
   fprintf(stderr, "testConversionTargetDynamicLegality: PASSED\n");
 }
 
+void testOperationTryFold(MlirContext ctx) {
+  // CHECK-LABEL: @testOperationTryFold
+  fprintf(stderr, "@testOperationTryFold\n");
+
+  MlirDialectRegistry registry = mlirDialectRegistryCreate();
+  mlirRegisterAllDialects(registry);
+  mlirContextAppendDialectRegistry(ctx, registry);
+  mlirDialectRegistryDestroy(registry);
+  mlirContextGetOrLoadDialect(ctx, mlirStringRefCreateFromCString("arith"));
+  mlirContextGetOrLoadDialect(ctx, mlirStringRefCreateFromCString("func"));
+
+  const char *moduleString = "func.func @f(%arg0: i32) -> i32 {\n"
+                             "  %c2 = arith.constant 2 : i32\n"
+                             "  %c3 = arith.constant 3 : i32\n"
+                             "  %sum = arith.addi %c2, %c3 : i32\n"
+                             "  %dyn = arith.addi %arg0, %arg0 : i32\n"
+                             "  return %sum : i32\n"
+                             "}\n";
+  MlirModule module =
+      mlirModuleCreateParse(ctx, mlirStringRefCreateFromCString(moduleString));
+  MlirBlock body = mlirModuleGetBody(module);
+  MlirOperation funcOp = mlirBlockGetFirstOperation(body);
+  MlirRegion funcRegion = mlirOperationGetRegion(funcOp, 0);
+  MlirBlock funcBody = mlirRegionGetFirstBlock(funcRegion);
+  MlirOperation c2Op = mlirBlockGetFirstOperation(funcBody);
+  MlirOperation c3Op = mlirOperationGetNextInBlock(c2Op);
+  MlirOperation sumOp = mlirOperationGetNextInBlock(c3Op);
+  MlirOperation dynOp = mlirOperationGetNextInBlock(sumOp);
+
+  MlirRewriterBase rewriter = mlirIRRewriterCreate(ctx);
+  mlirRewriterBaseSetInsertionPointAfter(rewriter, dynOp);
+
+  // `addi 2, 3` has constant operands and folds to a single constant value.
+  MlirValue results[1];
+  intptr_t n = mlirOperationTryFold(rewriter, sumOp, 1, results);
+  assert(n == 1);
+  assert(!mlirValueIsNull(results[0]));
+
+  // `addi %arg0, %arg0` is not constant-foldable: tryFold reports failure.
+  intptr_t failed = mlirOperationTryFold(rewriter, dynOp, 1, results);
+  assert(failed < 0);
+
+  mlirIRRewriterDestroy(rewriter);
+  mlirModuleDestroy(module);
+
+  // CHECK: testOperationTryFold: PASSED
+  fprintf(stderr, "testOperationTryFold: PASSED\n");
+}
+
 int main(void) {
   MlirContext ctx = mlirContextCreate();
   mlirContextSetAllowUnregisteredDialects(ctx, true);
@@ -818,6 +868,7 @@ int main(void) {
   testGreedyRewriteDriverConfig(ctx);
   testCloneWithMapping(ctx);
   testConversionTargetDynamicLegality(ctx);
+  testOperationTryFold(ctx);
 
   mlirContextDestroy(ctx);
   return 0;
