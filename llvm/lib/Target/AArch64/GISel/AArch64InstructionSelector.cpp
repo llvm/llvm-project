@@ -6635,25 +6635,15 @@ bool AArch64InstructionSelector::selectIntrinsicWithSideEffects(
     Register PACDisc = I.getOperand(6).getReg();
     int64_t Addend = I.getOperand(7).getImm();
 
-    Register AUTAddrDisc = AUTDisc;
-    uint16_t AUTConstDiscC = 0;
-    std::tie(AUTConstDiscC, AUTAddrDisc) =
-        extractPtrauthBlendDiscriminators(AUTDisc, MRI);
-
-    Register PACAddrDisc = PACDisc;
-    uint16_t PACConstDiscC = 0;
-    std::tie(PACConstDiscC, PACAddrDisc) =
-        extractPtrauthBlendDiscriminators(PACDisc, MRI);
-
     MIB.buildCopy({AArch64::X16}, {ValReg});
 
     MIB.buildInstr(AArch64::AUTRELLOADPAC)
         .addImm(AUTKey)
-        .addImm(AUTConstDiscC)
-        .addUse(AUTAddrDisc)
+        .addImm(0)
+        .addUse(AUTDisc)
         .addImm(PACKey)
-        .addImm(PACConstDiscC)
-        .addUse(PACAddrDisc)
+        .addImm(0)
+        .addUse(PACDisc)
         .addImm(Addend)
         .constrainAllUses(TII, TRI, RBI);
     MIB.buildCopy({DstReg}, Register(AArch64::X16));
@@ -6683,25 +6673,15 @@ bool AArch64InstructionSelector::selectIntrinsic(MachineInstr &I,
     uint64_t PACKey = I.getOperand(5).getImm();
     Register PACDisc = I.getOperand(6).getReg();
 
-    Register AUTAddrDisc = AUTDisc;
-    uint16_t AUTConstDiscC = 0;
-    std::tie(AUTConstDiscC, AUTAddrDisc) =
-        extractPtrauthBlendDiscriminators(AUTDisc, MRI);
-
-    Register PACAddrDisc = PACDisc;
-    uint16_t PACConstDiscC = 0;
-    std::tie(PACConstDiscC, PACAddrDisc) =
-        extractPtrauthBlendDiscriminators(PACDisc, MRI);
-
     MIB.buildCopy({AArch64::X16}, {ValReg});
     MIB.buildInstr(TargetOpcode::IMPLICIT_DEF, {AArch64::X17}, {});
     MIB.buildInstr(AArch64::AUTPAC)
         .addImm(AUTKey)
-        .addImm(AUTConstDiscC)
-        .addUse(AUTAddrDisc)
+        .addImm(0)
+        .addUse(AUTDisc)
         .addImm(PACKey)
-        .addImm(PACConstDiscC)
-        .addUse(PACAddrDisc)
+        .addImm(0)
+        .addUse(PACDisc)
         .constrainAllUses(TII, TRI, RBI);
     MIB.buildCopy({DstReg}, Register(AArch64::X16));
 
@@ -6715,18 +6695,13 @@ bool AArch64InstructionSelector::selectIntrinsic(MachineInstr &I,
     uint64_t AUTKey = I.getOperand(3).getImm();
     Register AUTDisc = I.getOperand(4).getReg();
 
-    Register AUTAddrDisc = AUTDisc;
-    uint16_t AUTConstDiscC = 0;
-    std::tie(AUTConstDiscC, AUTAddrDisc) =
-        extractPtrauthBlendDiscriminators(AUTDisc, MRI);
-
     if (STI.isX16X17Safer()) {
       MIB.buildCopy({AArch64::X16}, {ValReg});
       MIB.buildInstr(TargetOpcode::IMPLICIT_DEF, {AArch64::X17}, {});
       MIB.buildInstr(AArch64::AUTx16x17)
           .addImm(AUTKey)
-          .addImm(AUTConstDiscC)
-          .addUse(AUTAddrDisc)
+          .addImm(0)
+          .addUse(AUTDisc)
           .constrainAllUses(TII, TRI, RBI);
       MIB.buildCopy({DstReg}, Register(AArch64::X16));
     } else {
@@ -6737,8 +6712,8 @@ bool AArch64InstructionSelector::selectIntrinsic(MachineInstr &I,
           .addDef(ScratchReg)
           .addUse(ValReg)
           .addImm(AUTKey)
-          .addImm(AUTConstDiscC)
-          .addUse(AUTAddrDisc)
+          .addImm(0)
+          .addUse(AUTDisc)
           .constrainAllUses(TII, TRI, RBI);
     }
 
