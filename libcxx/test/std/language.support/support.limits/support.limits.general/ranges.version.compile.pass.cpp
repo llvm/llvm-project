@@ -36,6 +36,10 @@
 #    error "__cpp_lib_ranges_as_rvalue should not be defined before c++23"
 #  endif
 
+#  ifdef __cpp_lib_ranges_cartesian_product
+#    error "__cpp_lib_ranges_cartesian_product should not be defined before c++23"
+#  endif
+
 #  ifdef __cpp_lib_ranges_chunk
 #    error "__cpp_lib_ranges_chunk should not be defined before c++23"
 #  endif
@@ -98,6 +102,10 @@
 #    error "__cpp_lib_ranges_as_rvalue should not be defined before c++23"
 #  endif
 
+#  ifdef __cpp_lib_ranges_cartesian_product
+#    error "__cpp_lib_ranges_cartesian_product should not be defined before c++23"
+#  endif
+
 #  ifdef __cpp_lib_ranges_chunk
 #    error "__cpp_lib_ranges_chunk should not be defined before c++23"
 #  endif
@@ -158,6 +166,10 @@
 
 #  ifdef __cpp_lib_ranges_as_rvalue
 #    error "__cpp_lib_ranges_as_rvalue should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_ranges_cartesian_product
+#    error "__cpp_lib_ranges_cartesian_product should not be defined before c++23"
 #  endif
 
 #  ifdef __cpp_lib_ranges_chunk
@@ -223,6 +235,10 @@
 
 #  ifdef __cpp_lib_ranges_as_rvalue
 #    error "__cpp_lib_ranges_as_rvalue should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_ranges_cartesian_product
+#    error "__cpp_lib_ranges_cartesian_product should not be defined before c++23"
 #  endif
 
 #  ifdef __cpp_lib_ranges_chunk
@@ -300,6 +316,13 @@
 #  endif
 #  if __cpp_lib_ranges_as_rvalue != 202207L
 #    error "__cpp_lib_ranges_as_rvalue should have the value 202207L in c++23"
+#  endif
+
+#  ifndef __cpp_lib_ranges_cartesian_product
+#    error "__cpp_lib_ranges_cartesian_product should be defined in c++23"
+#  endif
+#  if __cpp_lib_ranges_cartesian_product != 202207L
+#    error "__cpp_lib_ranges_cartesian_product should have the value 202207L in c++23"
 #  endif
 
 #  if !defined(_LIBCPP_VERSION)
@@ -425,6 +448,13 @@
 #  endif
 #  if __cpp_lib_ranges_as_rvalue != 202207L
 #    error "__cpp_lib_ranges_as_rvalue should have the value 202207L in c++26"
+#  endif
+
+#  ifndef __cpp_lib_ranges_cartesian_product
+#    error "__cpp_lib_ranges_cartesian_product should be defined in c++26"
+#  endif
+#  if __cpp_lib_ranges_cartesian_product != 202207L
+#    error "__cpp_lib_ranges_cartesian_product should have the value 202207L in c++26"
 #  endif
 
 #  if !defined(_LIBCPP_VERSION)

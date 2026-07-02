@@ -1121,6 +1121,11 @@ feature_test_macros = [
             "headers": ["ranges"],
         },
         {
+            "name": "__cpp_lib_ranges_cartesian_product",
+            "values": {"c++23": 202207},
+            "headers": ["ranges"],
+        },
+        {
             "name": "__cpp_lib_ranges_chunk",
             "values": {"c++23": 202202},
             "headers": ["ranges"],

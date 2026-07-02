@@ -1888,6 +1888,7 @@ module std {
       export std.ranges.ref_view
     }
     module as_rvalue_view                 { header "__ranges/as_rvalue_view.h" }
+    module cartesian_product_view         { header "__ranges/cartesian_product_view.h" }
     module chunk_by_view {
       header "__ranges/chunk_by_view.h"
       export std.functional.bind_back

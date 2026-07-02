@@ -357,13 +357,12 @@ export namespace std {
       using std::ranges::views::stride;
     }
 
-#  if 0
+    // [range.cartesian], Cartesian product view
     using std::ranges::cartesian_product_view;
 
     namespace views {
       using std::ranges::views::cartesian_product;
     }
-#  endif
 
     // [range.enumerate]
     using std::ranges::enumerate_view;
