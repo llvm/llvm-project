@@ -1633,8 +1633,16 @@ static auto computeNewlines(const AnnotatedLine &Line,
                             const SmallVectorImpl<AnnotatedLine *> &Lines,
                             const FormatStyle &Style) {
   const auto &RootToken = *Line.First;
-  auto Newlines =
-      std::min(RootToken.NewlinesBefore, Style.MaxEmptyLinesToKeep + 1);
+
+  unsigned MaxNewlines = Style.MaxEmptyLinesToKeep + 1;
+  if (Style.SeparateDefinitionBlocks == FormatStyle::SDS_Always &&
+      RootToken.NewlinesBefore > 1 && PreviousLine &&
+      !RootToken.is(tok::l_brace) && Line.MightBeFunctionDecl &&
+      Line.mightBeFunctionDefinition()) {
+    MaxNewlines = std::max(MaxNewlines, 2u);
+  }
+
+  auto Newlines = std::min(RootToken.NewlinesBefore, MaxNewlines);
   // Remove empty lines before "}" where applicable.
   if (RootToken.is(tok::r_brace) &&
       (!RootToken.Next ||
