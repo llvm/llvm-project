@@ -1565,6 +1565,7 @@ bool LoopIdiomRecognize::optimizeCRCLoopUsingClmul(const PolynomialInfo &Info) {
   // regardless of whether the actual data bit width matches (if auxiliary data
   // is even used at all).
   unsigned TC = Info.TripCount;
+
   // The first clmul uses 2*TC bits, and the second clmul uses CRCBW+TC bits.
   // For simplicity, have both operate on the same bit width.
   unsigned ClmulBW = std::max(2 * TC, CRCBW + TC);
@@ -1585,12 +1586,11 @@ bool LoopIdiomRecognize::optimizeCRCLoopUsingClmul(const PolynomialInfo &Info) {
 
   IRBuilder<> Builder(CurLoop->getLoopPreheader()->getTerminator());
 
-  auto ShiftNetAmt = [&](Value *Op, unsigned LShrAmt, unsigned ShlAmt,
-                         const Twine &Name) {
-    if (LShrAmt > ShlAmt)
-      return Builder.CreateLShr(Op, LShrAmt - ShlAmt, Name);
-    if (ShlAmt > LShrAmt)
-      return Builder.CreateShl(Op, ShlAmt - LShrAmt, Name);
+  auto ShlOrLShr = [&](Value *Op, int ShlAmt, const Twine &Name) {
+    if (ShlAmt > 0)
+      return Builder.CreateShl(Op, ShlAmt, Name);
+    if (ShlAmt < 0)
+      return Builder.CreateLShr(Op, -ShlAmt, Name);
     return Op;
   };
 
@@ -1601,21 +1601,14 @@ bool LoopIdiomRecognize::optimizeCRCLoopUsingClmul(const PolynomialInfo &Info) {
     return Builder.CreateAnd(Op, Mask, Name);
   };
 
-  auto MostSignificantTCBits = [&](Value *Op, unsigned BW, const Twine &Name) {
-    assert(BW >= TC && "Bit width should be at least TripCount");
-    return Info.IsBigEndian ? Builder.CreateLShr(Op, BW - TC, Name + ".lshr")
-                            : LoTCBits(Op, Name + ".mask");
-  };
-
   Value *LHS = Builder.CreateZExt(Info.LHS, ClmulTy, "crc.cast");
 
   // Based on the Intel white paper, in our case, we have
   // R(x) = (LHS*x^TC) xor (LHSAux ? getTCBits(LHSAux)*x^CRCBW : 0)
   // since the CRC loop multiplies LHS by x each iteration, and the x^CRCBW term
   // of getTCBits(LHSAux) is XORed in for the significant bit check.
-  // Rather than compute the full R(x), we can split it in two where the most
-  // significant part is used in step 1 (floor(R(x)/x^CRCBW)) and the least
-  // significant part is used in step 3 (R(x) mod x^CRCBW).
+  // Rather than compute the full R(x), we can split it in two: a quotient for
+  // step 1 (floor(R(x)/x^CRCBW)) and a remainder for step 3 (R(x) mod x^CRCBW).
   //
   // ClmulMuInput is an evolving variable that will eventually become the part
   // used in step 1, which can be simplified to
@@ -1643,10 +1636,11 @@ bool LoopIdiomRecognize::optimizeCRCLoopUsingClmul(const PolynomialInfo &Info) {
     }
   }
 
-  // Align the current CRC with TripCount (multiply by x^(TC-CRCBW)).
-  ClmulMuInput = Info.IsBigEndian
-                     ? ShiftNetAmt(ClmulMuInput, CRCBW, TC, "crc.align.tc")
-                     : ClmulMuInput;
+  // Align the current CRC with TripCount (multiply or divide by x^(TC-CRCBW)).
+  ClmulMuInput =
+      Info.IsBigEndian
+          ? ShlOrLShr(ClmulMuInput, (int)TC - (int)CRCBW, "crc.align.tc")
+          : ClmulMuInput;
 
   // Zero out any bits above (TC-1) for calculation since the original loop
   // doesn't use them in the significant bit checks.
@@ -1658,7 +1652,9 @@ bool LoopIdiomRecognize::optimizeCRCLoopUsingClmul(const PolynomialInfo &Info) {
       Intrinsic::clmul, ClmulMuInput, MuConst, /*FMFSource=*/{}, "clmul.mu");
 
   // Calculate floor(T1(x)/x^TC) for step 2.
-  Value *ClmulGPInput = MostSignificantTCBits(ClmulMu, 2 * TC, "quot");
+  Value *ClmulGPInput = Info.IsBigEndian
+                            ? Builder.CreateLShr(ClmulMu, TC, "quot.lshr")
+                            : LoTCBits(ClmulMu, "quot.mask");
 
   // Step 2: T2(x) = floor(T1(x)/x^TC) * P(x)
   // Input is TC bits and P(x) is CRCBW+1 bits, so result will be CRCBW+TC bits.
