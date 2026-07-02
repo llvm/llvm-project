@@ -176,6 +176,14 @@ private:
 //                                LoadInst Class
 //===----------------------------------------------------------------------===//
 
+/// A structure representing the properties of a load or store instruction.
+struct LoadStoreInstProperties {
+  bool IsVolatile = false;
+  Align Alignment;
+  AtomicOrdering Ordering = AtomicOrdering::NotAtomic;
+  SyncScope::ID SSID = SyncScope::System;
+};
+
 /// An instruction for reading from memory. This uses the SubclassData field in
 /// Value to store whether or not the load is volatile.
 class LoadInst : public UnaryInstruction {
@@ -247,6 +255,19 @@ public:
                  SyncScope::ID SSID = SyncScope::System) {
     setOrdering(Ordering);
     setSyncScopeID(SSID);
+  }
+
+  /// Returns the properties of this load instruction.
+  LoadStoreInstProperties getProperties() const {
+    return {isVolatile(), getAlign(), getOrdering(), getSyncScopeID()};
+  }
+
+  /// Sets the properties of this load instruction.
+  void setProperties(const LoadStoreInstProperties &Props) {
+    setVolatile(Props.IsVolatile);
+    setAlignment(Props.Alignment);
+    setOrdering(Props.Ordering);
+    setSyncScopeID(Props.SSID);
   }
 
   bool isSimple() const { return !isAtomic() && !isVolatile(); }
@@ -371,6 +392,19 @@ public:
                  SyncScope::ID SSID = SyncScope::System) {
     setOrdering(Ordering);
     setSyncScopeID(SSID);
+  }
+
+  /// Returns the properties of this store instruction.
+  LoadStoreInstProperties getProperties() const {
+    return {isVolatile(), getAlign(), getOrdering(), getSyncScopeID()};
+  }
+
+  /// Sets the properties of this store instruction.
+  void setProperties(const LoadStoreInstProperties &Props) {
+    setVolatile(Props.IsVolatile);
+    setAlignment(Props.Alignment);
+    setOrdering(Props.Ordering);
+    setSyncScopeID(Props.SSID);
   }
 
   bool isSimple() const { return !isAtomic() && !isVolatile(); }

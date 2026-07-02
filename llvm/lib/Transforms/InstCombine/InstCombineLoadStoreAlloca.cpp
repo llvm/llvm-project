@@ -605,7 +605,7 @@ LoadInst *InstCombinerImpl::combineLoadToNewType(LoadInst &LI, Type *NewTy,
   LoadInst *NewLoad =
       Builder.CreateAlignedLoad(NewTy, LI.getPointerOperand(), LI.getAlign(),
                                 LI.isVolatile(), LI.getName() + Suffix);
-  NewLoad->setAtomic(LI.getOrdering(), LI.getSyncScopeID());
+  NewLoad->setProperties(LI.getProperties());
   copyMetadataForLoad(*NewLoad, LI);
   return NewLoad;
 }
@@ -624,7 +624,7 @@ static StoreInst *combineStoreToNewValue(InstCombinerImpl &IC, StoreInst &SI,
 
   StoreInst *NewStore =
       IC.Builder.CreateAlignedStore(V, Ptr, SI.getAlign(), SI.isVolatile());
-  NewStore->setAtomic(SI.getOrdering(), SI.getSyncScopeID());
+  NewStore->setProperties(SI.getProperties());
   for (const auto &MDPair : MD) {
     unsigned ID = MDPair.first;
     MDNode *N = MDPair.second;
@@ -1166,10 +1166,8 @@ Instruction *InstCombinerImpl::visitLoadInst(LoadInst &LI) {
         LoadInst *V2 = Builder.CreateLoad(LI.getType(), LoadOp2,
                                           LoadOp2->getName() + ".val");
         assert(LI.isUnordered() && "implied by above");
-        V1->setAlignment(Alignment);
-        V1->setAtomic(LI.getOrdering(), LI.getSyncScopeID());
-        V2->setAlignment(Alignment);
-        V2->setAtomic(LI.getOrdering(), LI.getSyncScopeID());
+        V1->setProperties(LI.getProperties());
+        V2->setProperties(LI.getProperties());
         // It is safe to copy any metadata that does not trigger UB. Copy any
         // poison-generating metadata.
         V1->copyMetadata(LI, Metadata::PoisonGeneratingIDs);
