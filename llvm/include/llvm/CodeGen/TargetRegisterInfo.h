@@ -1285,6 +1285,13 @@ public:
   // Whether this register should be ignored when generating CodeView debug
   // info, because it's a known there is no mapping available.
   virtual bool isIgnoredCVReg(MCRegister LLVMReg) const { return false; }
+
+  // Return all physical registers occupied by Reg.
+  virtual BitVector getUnderlyingRegisters(MCRegister Reg) const {
+    BitVector BackingRegisters(getNumRegs());
+    BackingRegisters.set(Reg.id());
+    return BackingRegisters;
+  }
 };
 
 //===----------------------------------------------------------------------===//

@@ -1168,6 +1168,16 @@ void RISCVRegisterInfo::updateRegAllocHint(Register Reg, Register NewReg,
   }
 }
 
+BitVector RISCVRegisterInfo::getUnderlyingRegisters(MCRegister Reg) const {
+  if (!RISCV::GPRPairRegClass.contains(Reg))
+    return TargetRegisterInfo::getUnderlyingRegisters(Reg);
+
+  BitVector BackingRegisters(getNumRegs());
+  BackingRegisters.set(getSubReg(Reg, RISCV::sub_gpr_even));
+  BackingRegisters.set(getSubReg(Reg, RISCV::sub_gpr_odd));
+  return BackingRegisters;
+}
+
 Register
 RISCVRegisterInfo::findVRegWithEncoding(const TargetRegisterClass &RegClass,
                                         uint16_t Encoding) const {

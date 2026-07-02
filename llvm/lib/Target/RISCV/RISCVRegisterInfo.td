@@ -570,6 +570,7 @@ def GPRF16C : RISCVRegisterClass<[f16], 16, (add (sequence "X%u_H", 10, 15),
                                                  (sequence "X%u_H", 8, 9))> {
   let DecoderMethod = "DecodeSimpleRegisterClass<RISCV::X8_H, 8>";
 }
+def GPRF16X0 : RISCVRegisterClass<[f16], 16, (add X0_H)>;
 def GPRF16NoX0 : RISCVRegisterClass<[f16], 16, (sub GPRF16, X0_H)>;
 
 def GPRF32 : RISCVRegisterClass<[f32], 32, (add (sequence "X%u_W", 10, 17),
@@ -584,6 +585,7 @@ def GPRF32C : RISCVRegisterClass<[f32], 32, (add (sequence "X%u_W", 10, 15),
                                                  (sequence "X%u_W", 8, 9))> {
   let DecoderMethod = "DecodeSimpleRegisterClass<RISCV::X8_W, 8>";
 }
+def GPRF32X0 : RISCVRegisterClass<[f32], 32, (add X0_W)>;
 def GPRF32NoX0 : RISCVRegisterClass<[f32], 32, (sub GPRF32, X0_W)>;
 
 //===----------------------------------------------------------------------===//
@@ -1024,6 +1026,6 @@ def MR0 : RISCVRegisterClass<[i8, v8i1], 8, (add M0)>;
 // Register categories.
 //
 
-def GeneralPurposeRegisters : RegisterCategory<[GPR]>;
+def GeneralPurposeRegisters : RegisterCategory<[GPR, GPRF16, GPRF32]>;
 
-def FixedRegisters : RegisterCategory<[GPRX0]>;
+def FixedRegisters : RegisterCategory<[GPRX0, GPRF16X0, GPRF32X0]>;
