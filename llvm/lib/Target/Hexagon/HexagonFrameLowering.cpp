@@ -2422,7 +2422,7 @@ Register HexagonFrameLowering::findPhysReg(MachineFunction &MF,
     return false;
   };
 
-  for (Register Reg : RC->getRawAllocationOrder(MF)) {
+  for (Register Reg : HRI.getRawAllocationOrder(*RC, MF)) {
     bool Dead = true;
     for (auto R : HexagonBlockRanges::expandToSubRegs({Reg,0}, MRI, HRI)) {
       if (isDead(R.Reg))
