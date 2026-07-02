@@ -1363,9 +1363,9 @@ Status CommandInterpreter::AddUserCommand(llvm::StringRef name,
   if (UserCommandExists(name)) {
     if (!can_replace) {
       result = Status::FromErrorStringWithFormatv(
-          "user command \"{0}\" already exists and force replace was not set "
-          "by --overwrite or 'settings set interpreter.require-overwrite "
-          "false'",
+          "user command \"{0}\" already exists. To allow overwriting, "
+          "pass --overwrite to 'command script add' or run 'settings set "
+          "interpreter.require-overwrite false'",
           name);
       return result;
     }
