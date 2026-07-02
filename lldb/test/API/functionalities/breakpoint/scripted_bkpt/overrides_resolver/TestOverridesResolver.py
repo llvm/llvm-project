@@ -241,7 +241,7 @@ class TestOverridesResolver(TestBase):
         # Add our trivial one with a bad mask:
 
         trivial_help = "Trivial help text"
-        bad_type_mask = lldb.BreakpointResolverValidMask + 1
+        bad_type_mask = lldb.BreakpointResolverAllResolversMask + 1
         trivial_id = self.add_override_python(
             trivial_help,
             "bkpt_resolver.TrivialExample",
