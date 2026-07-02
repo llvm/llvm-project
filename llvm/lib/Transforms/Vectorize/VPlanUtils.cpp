@@ -886,6 +886,29 @@ VPValue *VPSCEVExpander::tryToExpand(const SCEV *S) {
                                 VPIRFlags::getDefaultFlags(Instruction::UDiv),
                                 DL);
   }
+  case scTruncate:
+  case scZeroExtend:
+  case scSignExtend: {
+    auto *Cast = cast<SCEVCastExpr>(S);
+    VPValue *Op = tryToExpand(Cast->getOperand());
+    if (!Op)
+      return nullptr;
+    Instruction::CastOps Opcode;
+    switch (S->getSCEVType()) {
+    case scTruncate:
+      Opcode = Instruction::Trunc;
+      break;
+    case scZeroExtend:
+      Opcode = Instruction::ZExt;
+      break;
+    case scSignExtend:
+      Opcode = Instruction::SExt;
+      break;
+    default:
+      llvm_unreachable("Unhandled cast SCEV");
+    }
+    return Builder.createScalarCast(Opcode, Op, S->getType(), DL);
+  }
   default:
     return nullptr;
   }
