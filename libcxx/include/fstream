@@ -664,6 +664,15 @@ const char* basic_filebuf<_CharT, _Traits>::__make_mdstring(ios_base::openmode _
   case ios_base::in | ios_base::app | ios_base::binary:
     return "a+b" _LIBCPP_FOPEN_CLOEXEC_MODE;
 #    if _LIBCPP_STD_VER >= 23
+// AIX fopen() does not support the 'x' (exclusive/noreplace) mode suffix, so these
+// cases are omitted on AIX and fall through to default (return nullptr), signalling
+// failure to the caller. This is conformant: C23 (7.21.5.3p5), which C++ relies on
+// by proxy, requires that if the implementation cannot atomically check for the
+// existence of the file and create it, it shall fail rather than perform a
+// non-atomic check and creation. Since AIX cannot provide atomic exclusive-open
+// semantics via fopen(), returning nullptr is the correct behaviour.
+// _AIX is defined by clang on AIX; __TOS_AIX__ is defined by both clang and XLC.
+#      if !defined(_AIX) && !defined(__TOS_AIX__)
   case ios_base::out | ios_base::noreplace:
   case ios_base::out | ios_base::trunc | ios_base::noreplace:
     return "wx" _LIBCPP_FOPEN_CLOEXEC_MODE;
@@ -674,6 +683,7 @@ const char* basic_filebuf<_CharT, _Traits>::__make_mdstring(ios_base::openmode _
     return "wbx" _LIBCPP_FOPEN_CLOEXEC_MODE;
   case ios_base::in | ios_base::out | ios_base::trunc | ios_base::binary | ios_base::noreplace:
     return "w+bx" _LIBCPP_FOPEN_CLOEXEC_MODE;
+#      endif // !defined(_AIX) && !defined(__TOS_AIX__)
 #    endif // _LIBCPP_STD_VER >= 23
   default:
     return nullptr;
@@ -764,9 +774,13 @@ basic_filebuf<_CharT, _Traits>* basic_filebuf<_CharT, _Traits>::open(const wchar
   if (__file_)
     return nullptr;
   const wchar_t* __mdstr = __make_mdwstring(__mode);
-  if (!__mdstr)
+  if (!__mdstr) {
+#      if defined(_AIX) || defined(__TOS_AIX__)
+    if (__mode & ios_base::noreplace)
+      fprintf(stderr, "warning: fstream::open() with noreplace is not supported on AIX; returning failure\n");
+#      endif
     return nullptr;
-
+  }
   return __do_open(_wfopen(__s, __mdstr), __mode);
 }
 #    endif
