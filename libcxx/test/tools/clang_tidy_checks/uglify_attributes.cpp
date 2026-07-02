@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang-tidy/ClangTidyCheck.h"
-#include "clang-tidy/ClangTidyModuleRegistry.h"
+#include "clang-tidy/ClangTidyModule.h"
 
 #include "uglify_attributes.hpp"
 #include "utilities.hpp"
