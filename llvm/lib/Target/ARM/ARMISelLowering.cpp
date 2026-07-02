@@ -1452,6 +1452,10 @@ bool ARMTargetLowering::preferSelectsOverBooleanArithmetic(EVT VT) const {
   return !Subtarget->isThumb1Only() && VT.getSizeInBits() <= 32;
 }
 
+bool ARMTargetLowering::preferBitwiseSignum() const {
+  return Subtarget->isThumb1Only();
+}
+
 // FIXME: It might make sense to define the representative register class as the
 // nearest super-register that has a non-null superset. For example, DPR_VFP2 is
 // a super-register of SPR, and DPR is a superset if DPR_VFP2. Consequently,

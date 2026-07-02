@@ -418,3 +418,102 @@ define i64 @scmp_64_64(i64 %x, i64 %y) nounwind {
   %1 = call i64 @llvm.scmp(i64 %x, i64 %y)
   ret i64 %1
 }
+
+define i8 @scmp_8_8_zero(i8 signext %x) nounwind {
+; THUMB1-LABEL: scmp_8_8_zero:
+; THUMB1:       @ %bb.0:
+; THUMB1-NEXT:    asrs r1, r0, #31
+; THUMB1-NEXT:    rsbs r0, r0, #0
+; THUMB1-NEXT:    lsrs r0, r0, #31
+; THUMB1-NEXT:    orrs r0, r1
+; THUMB1-NEXT:    bx lr
+;
+; THUMB2-LABEL: scmp_8_8_zero:
+; THUMB2:       @ %bb.0:
+; THUMB2-NEXT:    subs r0, #0
+; THUMB2-NEXT:    it gt
+; THUMB2-NEXT:    movgt r0, #1
+; THUMB2-NEXT:    it lt
+; THUMB2-NEXT:    movlt.w r0, #-1
+; THUMB2-NEXT:    bx lr
+;
+; V81M-LABEL: scmp_8_8_zero:
+; V81M:       @ %bb.0:
+; V81M-NEXT:    cmp r0, #0
+; V81M-NEXT:    mov.w r2, #0
+; V81M-NEXT:    cset r1, gt
+; V81M-NEXT:    cmp.w r2, r0, lsr #31
+; V81M-NEXT:    it ne
+; V81M-NEXT:    movne.w r1, #-1
+; V81M-NEXT:    mov r0, r1
+; V81M-NEXT:    bx lr
+  %1 = call i8 @llvm.scmp(i8 %x, i8 0)
+  ret i8 %1
+}
+
+define i32 @scmp_32_32_zero(i32 %x) nounwind {
+; THUMB1-LABEL: scmp_32_32_zero:
+; THUMB1:       @ %bb.0:
+; THUMB1-NEXT:    asrs r1, r0, #31
+; THUMB1-NEXT:    rsbs r0, r0, #0
+; THUMB1-NEXT:    lsrs r0, r0, #31
+; THUMB1-NEXT:    orrs r0, r1
+; THUMB1-NEXT:    bx lr
+;
+; THUMB2-LABEL: scmp_32_32_zero:
+; THUMB2:       @ %bb.0:
+; THUMB2-NEXT:    subs r0, #0
+; THUMB2-NEXT:    it gt
+; THUMB2-NEXT:    movgt r0, #1
+; THUMB2-NEXT:    it lt
+; THUMB2-NEXT:    movlt.w r0, #-1
+; THUMB2-NEXT:    bx lr
+;
+; V81M-LABEL: scmp_32_32_zero:
+; V81M:       @ %bb.0:
+; V81M-NEXT:    cmp r0, #0
+; V81M-NEXT:    mov.w r2, #0
+; V81M-NEXT:    cset r1, gt
+; V81M-NEXT:    cmp.w r2, r0, lsr #31
+; V81M-NEXT:    it ne
+; V81M-NEXT:    movne.w r1, #-1
+; V81M-NEXT:    mov r0, r1
+; V81M-NEXT:    bx lr
+  %1 = call i32 @llvm.scmp(i32 %x, i32 0)
+  ret i32 %1
+}
+
+define i64 @scmp_64_64_zero(i64 %x) nounwind {
+; THUMB1-LABEL: scmp_64_64_zero:
+; THUMB1:       @ %bb.0:
+; THUMB1-NEXT:    movs r2, #0
+; THUMB1-NEXT:    rsbs r0, r0, #0
+; THUMB1-NEXT:    sbcs r2, r1
+; THUMB1-NEXT:    lsrs r0, r2, #31
+; THUMB1-NEXT:    asrs r1, r1, #31
+; THUMB1-NEXT:    orrs r0, r1
+; THUMB1-NEXT:    bx lr
+;
+; THUMB2-LABEL: scmp_64_64_zero:
+; THUMB2:       @ %bb.0:
+; THUMB2-NEXT:    rsbs r0, r0, #0
+; THUMB2-NEXT:    mov.w r2, #0
+; THUMB2-NEXT:    sbcs.w r0, r2, r1
+; THUMB2-NEXT:    it lt
+; THUMB2-NEXT:    movlt r2, #1
+; THUMB2-NEXT:    sub.w r0, r2, r1, lsr #31
+; THUMB2-NEXT:    asrs r1, r0, #31
+; THUMB2-NEXT:    bx lr
+;
+; V81M-LABEL: scmp_64_64_zero:
+; V81M:       @ %bb.0:
+; V81M-NEXT:    rsbs r0, r0, #0
+; V81M-NEXT:    mov.w r2, #0
+; V81M-NEXT:    sbcs.w r0, r2, r1
+; V81M-NEXT:    cset r0, lt
+; V81M-NEXT:    sub.w r0, r0, r1, lsr #31
+; V81M-NEXT:    asrs r1, r0, #31
+; V81M-NEXT:    bx lr
+  %1 = call i64 @llvm.scmp(i64 %x, i64 0)
+  ret i64 %1
+}

@@ -12564,10 +12564,24 @@ SDValue TargetLowering::expandCMP(SDNode *Node, SelectionDAG &DAG) const {
   unsigned Opcode = Node->getOpcode();
   SDValue LHS = Node->getOperand(0);
   SDValue RHS = Node->getOperand(1);
+
   EVT VT = LHS.getValueType();
   EVT ResVT = Node->getValueType(0);
-  EVT BoolVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
   SDLoc dl(Node);
+
+  if (Opcode == ISD::SCMP && isNullConstant(RHS) && preferBitwiseSignum()) {
+    LHS = DAG.getFreeze(LHS);
+    unsigned BitWidth = VT.getScalarSizeInBits();
+    SDValue ShiftAmount = DAG.getShiftAmountConstant(BitWidth - 1, VT, dl);
+    SDValue SignShift = DAG.getNode(ISD::SRA, dl, VT, LHS, ShiftAmount);
+    SDValue NegX =
+        DAG.getNode(ISD::SUB, dl, VT, DAG.getConstant(0, dl, VT), LHS);
+    SDValue NegShift = DAG.getNode(ISD::SRL, dl, VT, NegX, ShiftAmount);
+    SDValue Or = DAG.getNode(ISD::OR, dl, VT, SignShift, NegShift);
+    return DAG.getSExtOrTrunc(Or, dl, ResVT);
+  }
+
+  EVT BoolVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
 
   auto LTPredicate = (Opcode == ISD::UCMP ? ISD::SETULT : ISD::SETLT);
   auto GTPredicate = (Opcode == ISD::UCMP ? ISD::SETUGT : ISD::SETGT);

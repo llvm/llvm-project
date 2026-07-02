@@ -141,3 +141,39 @@ define i64 @scmp_64_64(i64 %x, i64 %y) nounwind {
   %1 = call i64 @llvm.scmp(i64 %x, i64 %y)
   ret i64 %1
 }
+
+define i8 @scmp_8_8_zero(i8 signext %x) nounwind {
+; CHECK-LABEL: scmp_8_8_zero:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    subs r0, r0, #0
+; CHECK-NEXT:    movwgt r0, #1
+; CHECK-NEXT:    mvnlt r0, #0
+; CHECK-NEXT:    bx lr
+  %1 = call i8 @llvm.scmp(i8 %x, i8 0)
+  ret i8 %1
+}
+
+define i32 @scmp_32_32_zero(i32 %x) nounwind {
+; CHECK-LABEL: scmp_32_32_zero:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    subs r0, r0, #0
+; CHECK-NEXT:    movwgt r0, #1
+; CHECK-NEXT:    mvnlt r0, #0
+; CHECK-NEXT:    bx lr
+  %1 = call i32 @llvm.scmp(i32 %x, i32 0)
+  ret i32 %1
+}
+
+define i64 @scmp_64_64_zero(i64 %x) nounwind {
+; CHECK-LABEL: scmp_64_64_zero:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    rsbs r0, r0, #0
+; CHECK-NEXT:    mov r2, #0
+; CHECK-NEXT:    rscs r0, r1, #0
+; CHECK-NEXT:    movwlt r2, #1
+; CHECK-NEXT:    sub r0, r2, r1, lsr #31
+; CHECK-NEXT:    asr r1, r0, #31
+; CHECK-NEXT:    bx lr
+  %1 = call i64 @llvm.scmp(i64 %x, i64 0)
+  ret i64 %1
+}

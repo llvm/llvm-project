@@ -125,3 +125,39 @@ define i64 @scmp_64_64(i64 %x, i64 %y) nounwind {
   %1 = call i64 @llvm.scmp(i64 %x, i64 %y)
   ret i64 %1
 }
+
+define i8 @scmp_8_8_zero(i8 signext %x) nounwind {
+; CHECK-LABEL: scmp_8_8_zero:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    srawi 4, 3, 31
+; CHECK-NEXT:    neg 3, 3
+; CHECK-NEXT:    srwi 3, 3, 31
+; CHECK-NEXT:    or 3, 4, 3
+; CHECK-NEXT:    blr
+  %1 = call i8 @llvm.scmp(i8 %x, i8 0)
+  ret i8 %1
+}
+
+define i32 @scmp_32_32_zero(i32 %x) nounwind {
+; CHECK-LABEL: scmp_32_32_zero:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    srawi 4, 3, 31
+; CHECK-NEXT:    neg 3, 3
+; CHECK-NEXT:    srwi 3, 3, 31
+; CHECK-NEXT:    or 3, 4, 3
+; CHECK-NEXT:    blr
+  %1 = call i32 @llvm.scmp(i32 %x, i32 0)
+  ret i32 %1
+}
+
+define i64 @scmp_64_64_zero(i64 %x) nounwind {
+; CHECK-LABEL: scmp_64_64_zero:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    sradi 4, 3, 63
+; CHECK-NEXT:    neg 3, 3
+; CHECK-NEXT:    rldicl 3, 3, 1, 63
+; CHECK-NEXT:    or 3, 4, 3
+; CHECK-NEXT:    blr
+  %1 = call i64 @llvm.scmp(i64 %x, i64 0)
+  ret i64 %1
+}
