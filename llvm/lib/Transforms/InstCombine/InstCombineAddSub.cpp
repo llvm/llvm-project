@@ -3041,6 +3041,66 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
     }
   }
 
+  // Fold:
+  //   sub x, select(icmp eq (x & Mask), P, (x & Mask))
+  //     --> and (sub x, 1), ~Mask
+  //   sub x, select(icmp ult (x & Mask), C, add((x & Mask), P), (x & Mask))
+  //     --> and (sub x, C), ~Mask
+  // where P = Mask+1 is a power of 2 and C <= P.
+  // This rounds x down to the nearest multiple of P, adjusting the alignment
+  // threshold by C.
+  {
+    CmpPredicate Pred;
+    Value *R;
+    const APInt *MaskC, *CmpC;
+    Value *SelTrue;
+    if (match(Op1, m_OneUse(m_Select(m_ICmp(Pred, m_Value(R), m_APInt(CmpC)),
+                                     m_Value(SelTrue), m_Deferred(R)))) &&
+        match(R, m_And(m_Specific(Op0), m_APInt(MaskC)))) {
+      APInt P = *MaskC + 1;
+      APInt C;
+      bool Matched = false;
+      if (P.isPowerOf2()) {
+        if (Pred == ICmpInst::ICMP_EQ && CmpC->isZero()) {
+          // sub x, select(icmp eq (x & Mask), 0, P, x & Mask) --> C=1 case
+          const APInt *SelTrueC;
+          if (match(SelTrue, m_APInt(SelTrueC)) && *SelTrueC == P) {
+            C = APInt(P.getBitWidth(), 1);
+            Matched = true;
+          }
+        } else if (Pred == ICmpInst::ICMP_ULT && CmpC->ule(P)) {
+          // sub x, select(icmp ult (x & Mask), C, add(x & Mask, P), x & Mask)
+          // Note: add may be canonicalized to or-disjoint, so use m_AddLike.
+          const APInt *AddC;
+          if (match(SelTrue, m_AddLike(m_Specific(R), m_APInt(AddC))) &&
+              *AddC == P) {
+            C = *CmpC;
+            Matched = true;
+          }
+        }
+      }
+      if (Matched) {
+        Value *Sub = Builder.CreateSub(Op0, ConstantInt::get(Ty, C));
+        return BinaryOperator::CreateAnd(Sub, ConstantInt::get(Ty, ~(*MaskC)));
+      }
+    }
+  }
+  // Fold: sub x, add_like(x & Mask, P) --> and(sub(x, P), ~Mask)
+  // where P = Mask+1 is a power of 2. This handles the case where the
+  // select was simplified away (icmp ult (x & Mask), P is always true).
+  {
+    Value *R;
+    const APInt *MaskC, *AddC;
+    if (match(Op1, m_OneUse(m_AddLike(m_Value(R), m_APInt(AddC)))) &&
+        match(R, m_And(m_Specific(Op0), m_APInt(MaskC)))) {
+      APInt P = *MaskC + 1;
+      if (P.isPowerOf2() && *AddC == P) {
+        Value *Sub = Builder.CreateSub(Op0, ConstantInt::get(Ty, P));
+        return BinaryOperator::CreateAnd(Sub, ConstantInt::get(Ty, ~(*MaskC)));
+      }
+    }
+  }
+
   return TryToNarrowDeduceFlags();
 }
 
