@@ -21,6 +21,7 @@
 #include "MCTargetDesc/SPIRVBaseInfo.h"
 #include "SPIRVModuleAnalysis.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
@@ -32,6 +33,7 @@
 
 namespace llvm {
 
+class GlobalVariable;
 class SPIRVSubtarget;
 
 /// AsmPrinter handler that emits NonSemantic.Shader.DebugInfo.100 (NSDI)
@@ -74,6 +76,21 @@ class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
   // DISubprogram nodes that are declarations only (!isDefinition()), collected
   // in beginModule() for DebugFunctionDeclaration emission.
   SmallVector<const DISubprogram *> SubprogramDeclarations;
+
+  // DIGlobalVariable nodes for DebugGlobalVariable emission; SmallSetVector
+  // dedupes (see beginModule()).
+  SmallSetVector<const DIGlobalVariable *, 8> GlobalVariables;
+
+  // Maps a DIGlobalVariable to the llvm::GlobalVariable it describes, when the
+  // module has one with matching debug info. Used to fill the Variable operand
+  // of DebugGlobalVariable with the global's SPIR-V result id. Absent
+  // entries fall back to DebugInfoNone.
+  DenseMap<const DIGlobalVariable *, const GlobalVariable *> DIGVToLLVMGV;
+
+  // First non-empty DIExpression per DIGV from the CU global list (finder
+  // order). For Variable operand of DebugExpression type in
+  // DebugGlobalVariable, when supported.
+  DenseMap<const DIGlobalVariable *, const DIExpression *> DIGVToInitExpr;
 
   // DebugFunctionDeclaration result id per emitted declaration DISubprogram
   // (only entries where emission succeeded).
@@ -255,6 +272,42 @@ private:
   emitDebugFunctionDeclaration(const DISubprogram *SP, MCRegister VoidTypeReg,
                                MCRegister I32TypeReg, MCRegister ExtInstSetReg,
                                SPIRV::ModuleAnalysisInfo &MAI);
+
+  /// Emit \c DebugGlobalVariable for the source global variable \p GV.
+  ///
+  /// (\c SPIRVDebug::Operand::GlobalVariable): Name, Type, Source, Line,
+  /// Column, Parent, Linkage Name, Variable, Flags, and an optional Static
+  /// Member Declaration. Line, Column, and Flags are emitted as \c OpConstant
+  /// ids as required for non-semantic debug info.
+  ///
+  /// \c DebugInfoNone is used for two operands when LLVM has no value to
+  /// supply:
+  /// \c Type when \p GV is a declaration with no DI type (e.g. \c extern void;
+  /// valid IR, \c isDefinition: false); \c Variable when no \c
+  /// llvm::GlobalVariable in this module carries \p GV in its \c !dbg metadata.
+  ///
+  /// \returns The result id register on success. Returns \c std::nullopt and
+  /// emits nothing if a non-null \p GV type was not emitted in \c
+  /// DebugTypeRegs,
+  /// \p GV has a static data member declaration that was not emitted in
+  /// \c DebugTypeRegs, or \c resolveGlobalVariableParent returns no id for the
+  /// \c Parent operand.
+  std::optional<MCRegister>
+  emitDebugGlobalVariable(const DIGlobalVariable *GV, MCRegister VoidTypeReg,
+                          MCRegister I32TypeReg, MCRegister ExtInstSetReg,
+                          SPIRV::ModuleAnalysisInfo &MAI);
+
+  /// Resolve the \c Parent operand for \c DebugGlobalVariable.
+  std::optional<MCRegister>
+  resolveGlobalVariableParent(const DIGlobalVariable *GV) const;
+
+  /// Emit \c DebugExpression for \p Expr. Unimplemented: defined as a no-op
+  /// (\returns \c std::nullopt, emits nothing) so \c emitDebugGlobalVariable
+  /// can complete Variable-operand resolution for the opcodes we support today.
+  std::optional<MCRegister> emitDebugExpression(const DIExpression *Expr,
+                                                MCRegister VoidTypeReg,
+                                                MCRegister ExtInstSetReg,
+                                                SPIRV::ModuleAnalysisInfo &MAI);
 
   /// Emit \c DebugTypeVector for the vector composite type \p VT.
   ///
