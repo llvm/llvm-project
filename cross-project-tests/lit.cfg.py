@@ -282,6 +282,11 @@ else:
     dependencies = configure_dexter_substitutions()
     if all(d in config.available_features for d in dependencies):
         config.available_features.add("dexter")
+    else:
+        print(
+            "Skipping Dexter tests due to missing required projects: "
+            + ", ".join(d for d in dependencies if d not in config.available_features)
+        )
 
 tool_dirs = [config.llvm_tools_dir]
 

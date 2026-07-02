@@ -189,8 +189,9 @@ private:
   /// Create offloading entries to register globals in RDC mode.
   void createOffloadingEntries();
   /// For HIP+PGO, emit the per-TU __llvm_profile_sections_<CUID> global.
-  /// On the device side it is the populated 7-pointer section-bounds table.
-  /// On the host side it is a placeholder void* shadow stored in
+  /// On the device side, InstrProfiling emits the populated section-bounds
+  /// table only when the TU has real profile data. On the host side it is a
+  /// placeholder void* shadow stored in
   /// OffloadProfShadow, registered later by makeRegisterGlobalsFn (non-RDC)
   /// or createOffloadingEntries (RDC) so the runtime can locate the
   /// device-side table by name.
@@ -1360,13 +1361,9 @@ void CGNVCUDARuntime::createOffloadingEntries() {
   }
 }
 
-// For HIP host+device compiles with PGO enabled, emit the per-TU global
-// __llvm_profile_sections_<CUID>. Device side: a 7-pointer struct holding
-// section start/stop bounds for the names/counters/data sections plus the
-// raw-version variable. Host side: an opaque void* shadow whose only
-// purpose is to give the host-runtime a registered symbol name to look up
-// via hipGetSymbolAddress; the actual device-side data lives in the
-// matching device-side global.
+// For HIP host+device compiles with PGO enabled, emit the host-side shadow for
+// the per-TU __llvm_profile_sections_<CUID> global. Device-side section table
+// emission is owned by InstrProfiling so it can be gated on real profile data.
 void CGNVCUDARuntime::emitOffloadProfilingSections() {
   if (!CGM.getLangOpts().HIP)
     return;
@@ -1430,11 +1427,13 @@ void CGNVCUDARuntime::emitOffloadProfilingSections() {
     OffloadProfSectionShadows.push_back({Shadow, DeviceName.str()});
   };
 
-  // Keep this order in sync with the runtime: data, counters, then names.
+  // Keep this order in sync with the runtime: data, counters, uniform counters,
+  // then names.
   for (auto &&I : EmittedKernels) {
     std::string KernelName = getDeviceSideName(cast<NamedDecl>(I.D));
     AddSectionShadow("data", Twine("__profd_") + KernelName);
     AddSectionShadow("cnts", Twine("__profc_") + KernelName);
+    AddSectionShadow("ucnts", Twine("__llvm_prf_unifcnt_") + KernelName);
     AddSectionShadow("names",
                      Twine(llvm::getInstrProfNamesVarName()) + "_" + CUIDHash);
   }

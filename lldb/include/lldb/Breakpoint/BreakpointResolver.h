@@ -12,7 +12,6 @@
 #include "lldb/Breakpoint/Breakpoint.h"
 #include "lldb/Core/Address.h"
 #include "lldb/Core/SearchFilter.h"
-#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/lldb-private.h"
@@ -154,12 +153,21 @@ public:
   /// for any other purpose, as the values may change as LLDB evolves.
   unsigned getResolverID() const { return SubclassID; }
 
+  /// This checks whether the resolver's type matches the enum
+  /// lldb::BreakpointResolverType.
+  bool ResolverTyInMask(uint64_t mask);
+
+  static bool TypeMaskIsValid(uint64_t mask);
+
   enum ResolverTy GetResolverTy() {
     if (SubclassID > ResolverTy::LastKnownResolverType)
       return ResolverTy::UnknownResolver;
     return (enum ResolverTy)SubclassID;
   }
 
+  uint64_t MaskForResolverTy();
+
+  static std::string DescribeMask(uint64_t mask);
   const char *GetResolverName() { return ResolverTyToName(GetResolverTy()); }
 
   static const char *ResolverTyToName(enum ResolverTy);

@@ -464,4 +464,24 @@ TEST_F(SpecialCaseListTest, FileIdx) {
     sys::fs::remove(Path);
 }
 
+#ifdef _WIN32
+TEST_F(SpecialCaseListTest, SlashAgnosticPathsOnWindows) {
+  std::unique_ptr<SpecialCaseList> SCL =
+      makeSpecialCaseList("#!special-case-list-v4\n"
+                          "\n"
+                          "src:*foo/bar*\n"
+                          "src:*foo\\\\baz\n"
+                          "fun:hi\\\\bye=category\n");
+  EXPECT_TRUE(SCL->inSection("", "src", "foo/bar"));
+  EXPECT_TRUE(SCL->inSection("", "src", "foo\\bar"));
+  // The baz pattern matches because paths are matched slash-agnostically
+  EXPECT_TRUE(SCL->inSection("", "src", "foo/baz"));
+  EXPECT_TRUE(SCL->inSection("", "src", "foo\\baz"));
+  // Slash-agnostic matching only applies to files
+  EXPECT_TRUE(SCL->inSection("", "fun", "hi\\bye", "category"));
+  EXPECT_FALSE(SCL->inSection("", "fun", "hi/bye", "category"));
+}
+
+#endif
+
 } // namespace

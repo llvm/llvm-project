@@ -488,6 +488,11 @@ let Command = "breakpoint add scripted" in {
 let Command = "breakpoint override add" in {
   def breakpoint_override_add_description : Option<"description", "d">,
     Desc<"Description string for this override resolver">, Arg<"HelpText">;
+  def breakpoint_override_add_mask : Option<"resolver-type-mask", "m">,
+    Desc<"Specifies which breakpoint resolver type the override operates on.  "
+    "The option can be repeated, lldb will 'and' the options together.  "
+    "If no options are specified, the default value is 'file_and_line'">,
+    EnumArg<"BreakpointResolverMask">;
 }
 
 let Command = "breakpoint clear" in {
@@ -717,6 +722,21 @@ let Command = "diagnostics dump" in {
         Desc<"Dump the diagnostics to the given directory.">;
 }
 
+let Command = "diagnostics report" in {
+  def diagnostics_report_directory
+      : Option<"directory", "d">,
+        Group<1>,
+        Arg<"Path">,
+        Desc<"Write the bug report bundle to the given directory.">;
+  def diagnostics_report_no_open
+      : Option<"no-open", "n">,
+        Desc<"Write the bundle but do not open the bug tracker.">;
+  def diagnostics_report_plugin
+      : Option<"plugin", "P">,
+        Arg<"Plugin">,
+        Desc<"File the report with the named bug reporter plugin.">;
+}
+
 let Command = "expression" in {
   def expression_options_all_threads
       : Option<"all-threads", "a">,
@@ -915,6 +935,9 @@ let Command = "log enable" in {
       : Option<"file-function", "F">,
         Group<1>,
         Desc<"Prepend the names of files and function that generate the logs.">;
+  def log_json : Option<"json", "j">,
+                 Group<1>,
+                 Desc<"Emit each log message as its own JSON object.">;
 }
 
 let Command = "log dump" in {

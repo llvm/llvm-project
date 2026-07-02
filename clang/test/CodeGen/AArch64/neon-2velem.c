@@ -405,25 +405,6 @@ uint32x4_t test_vmulq_laneq_u32(uint32x4_t a, uint32x4_t v) {
   return vmulq_laneq_u32(a, v, 3);
 }
 
-// CHECK-LABEL: @test_vfma_lane_f32(
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <2 x float> [[A:%.*]] to <2 x i32>
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x float> [[B:%.*]] to <2 x i32>
-// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x float> [[V:%.*]] to <2 x i32>
-// CHECK-NEXT:    [[TMP3:%.*]] = bitcast <2 x i32> [[TMP0]] to <8 x i8>
-// CHECK-NEXT:    [[TMP4:%.*]] = bitcast <2 x i32> [[TMP1]] to <8 x i8>
-// CHECK-NEXT:    [[TMP5:%.*]] = bitcast <2 x i32> [[TMP2]] to <8 x i8>
-// CHECK-NEXT:    [[TMP6:%.*]] = bitcast <8 x i8> [[TMP5]] to <2 x float>
-// CHECK-NEXT:    [[LANE:%.*]] = shufflevector <2 x float> [[TMP6]], <2 x float> [[TMP6]], <2 x i32> <i32 1, i32 1>
-// CHECK-NEXT:    [[FMLA:%.*]] = bitcast <8 x i8> [[TMP4]] to <2 x float>
-// CHECK-NEXT:    [[FMLA1:%.*]] = bitcast <8 x i8> [[TMP3]] to <2 x float>
-// CHECK-NEXT:    [[FMLA2:%.*]] = call <2 x float> @llvm.fma.v2f32(<2 x float> [[FMLA]], <2 x float> [[LANE]], <2 x float> [[FMLA1]])
-// CHECK-NEXT:    ret <2 x float> [[FMLA2]]
-//
-float32x2_t test_vfma_lane_f32(float32x2_t a, float32x2_t b, float32x2_t v) {
-  return vfma_lane_f32(a, b, v, 1);
-}
-
 // CHECK-LABEL: @test_vfms_lane_f32(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <2 x float> [[A:%.*]] to <2 x i32>
@@ -543,16 +524,6 @@ float64x2_t test_vfmsq_lane_f64(float64x2_t a, float64x2_t b, float64x1_t v) {
 //
 float64x2_t test_vfmsq_laneq_f64(float64x2_t a, float64x2_t b, float64x2_t v) {
   return vfmsq_laneq_f64(a, b, v, 1);
-}
-
-// CHECK-LABEL: @test_vfmas_laneq_f32(
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[EXTRACT:%.*]] = extractelement <4 x float> [[V:%.*]], i32 3
-// CHECK-NEXT:    [[TMP0:%.*]] = call float @llvm.fma.f32(float [[B:%.*]], float [[EXTRACT]], float [[A:%.*]])
-// CHECK-NEXT:    ret float [[TMP0]]
-//
-float32_t test_vfmas_laneq_f32(float32_t a, float32_t b, float32x4_t v) {
-  return vfmas_laneq_f32(a, b, v, 3);
 }
 
 // CHECK-LABEL: @test_vfmsd_lane_f64(

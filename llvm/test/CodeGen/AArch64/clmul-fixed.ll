@@ -46,115 +46,149 @@ define <8 x i16> @clmul_v8i16_neon(<8 x i16> %x, <8 x i16> %y) {
 }
 
 define <4 x i16> @clmul_v4i16_neon(<4 x i16> %x, <4 x i16> %y) {
-; CHECK-LABEL: clmul_v4i16_neon:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    xtn v2.8b, v1.8h
-; CHECK-NEXT:    xtn v3.8b, v0.8h
-; CHECK-NEXT:    shrn v0.8b, v0.8h, #8
-; CHECK-NEXT:    shrn v1.8b, v1.8h, #8
-; CHECK-NEXT:    rbit v4.8b, v2.8b
-; CHECK-NEXT:    rbit v5.8b, v3.8b
-; CHECK-NEXT:    pmul v0.8b, v0.8b, v2.8b
-; CHECK-NEXT:    pmul v1.8b, v3.8b, v1.8b
-; CHECK-NEXT:    pmul v2.8b, v3.8b, v2.8b
-; CHECK-NEXT:    pmul v4.8b, v5.8b, v4.8b
-; CHECK-NEXT:    eor v0.8b, v1.8b, v0.8b
-; CHECK-NEXT:    rbit v4.8b, v4.8b
-; CHECK-NEXT:    ushr v1.8b, v4.8b, #1
-; CHECK-NEXT:    eor v0.8b, v1.8b, v0.8b
-; CHECK-NEXT:    ushll v1.8h, v2.8b, #0
-; CHECK-NEXT:    shll v0.8h, v0.8b, #8
-; CHECK-NEXT:    orr v0.16b, v1.16b, v0.16b
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-NEXT:    ret
+; CHECK-NEON-LABEL: clmul_v4i16_neon:
+; CHECK-NEON:       // %bb.0:
+; CHECK-NEON-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEON-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEON-NEXT:    xtn v2.8b, v1.8h
+; CHECK-NEON-NEXT:    xtn v3.8b, v0.8h
+; CHECK-NEON-NEXT:    shrn v0.8b, v0.8h, #8
+; CHECK-NEON-NEXT:    shrn v1.8b, v1.8h, #8
+; CHECK-NEON-NEXT:    rbit v4.8b, v2.8b
+; CHECK-NEON-NEXT:    rbit v5.8b, v3.8b
+; CHECK-NEON-NEXT:    pmul v0.8b, v0.8b, v2.8b
+; CHECK-NEON-NEXT:    pmul v1.8b, v3.8b, v1.8b
+; CHECK-NEON-NEXT:    pmul v2.8b, v3.8b, v2.8b
+; CHECK-NEON-NEXT:    pmul v4.8b, v5.8b, v4.8b
+; CHECK-NEON-NEXT:    eor v0.8b, v1.8b, v0.8b
+; CHECK-NEON-NEXT:    rbit v4.8b, v4.8b
+; CHECK-NEON-NEXT:    ushr v1.8b, v4.8b, #1
+; CHECK-NEON-NEXT:    eor v0.8b, v1.8b, v0.8b
+; CHECK-NEON-NEXT:    ushll v1.8h, v2.8b, #0
+; CHECK-NEON-NEXT:    shll v0.8h, v0.8b, #8
+; CHECK-NEON-NEXT:    orr v0.16b, v1.16b, v0.16b
+; CHECK-NEON-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEON-NEXT:    ret
+;
+; CHECK-AES-LABEL: clmul_v4i16_neon:
+; CHECK-AES:       // %bb.0:
+; CHECK-AES-NEXT:    ushll v1.4s, v1.4h, #0
+; CHECK-AES-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-AES-NEXT:    ushll2 v2.2d, v1.4s, #0
+; CHECK-AES-NEXT:    ushll2 v3.2d, v0.4s, #0
+; CHECK-AES-NEXT:    ushll v1.2d, v1.2s, #0
+; CHECK-AES-NEXT:    ushll v0.2d, v0.2s, #0
+; CHECK-AES-NEXT:    pmull2 v4.1q, v3.2d, v2.2d
+; CHECK-AES-NEXT:    pmull v2.1q, v3.1d, v2.1d
+; CHECK-AES-NEXT:    pmull2 v3.1q, v0.2d, v1.2d
+; CHECK-AES-NEXT:    pmull v0.1q, v0.1d, v1.1d
+; CHECK-AES-NEXT:    mov v2.d[1], v4.d[0]
+; CHECK-AES-NEXT:    mov v0.d[1], v3.d[0]
+; CHECK-AES-NEXT:    uzp1 v0.4s, v0.4s, v2.4s
+; CHECK-AES-NEXT:    xtn v0.4h, v0.4s
+; CHECK-AES-NEXT:    ret
   %a = call <4 x i16> @llvm.clmul.v4i16(<4 x i16> %x, <4 x i16> %y)
   ret <4 x i16> %a
 }
 
 define <4 x i32> @clmul_v4i32_neon(<4 x i32> %x, <4 x i32> %y) {
-; CHECK-LABEL: clmul_v4i32_neon:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    xtn v2.4h, v1.4s
-; CHECK-NEXT:    xtn v3.4h, v0.4s
-; CHECK-NEXT:    shrn v16.4h, v0.4s, #16
-; CHECK-NEXT:    shrn v17.4h, v1.4s, #16
-; CHECK-NEXT:    xtn v20.8b, v16.8h
-; CHECK-NEXT:    shrn v16.8b, v16.8h, #8
-; CHECK-NEXT:    rev16 v4.8b, v2.8b
-; CHECK-NEXT:    rev16 v5.8b, v3.8b
-; CHECK-NEXT:    xtn v0.8b, v2.8h
-; CHECK-NEXT:    xtn v21.8b, v17.8h
-; CHECK-NEXT:    xtn v1.8b, v3.8h
-; CHECK-NEXT:    shrn v2.8b, v2.8h, #8
-; CHECK-NEXT:    shrn v3.8b, v3.8h, #8
-; CHECK-NEXT:    shrn v17.8b, v17.8h, #8
-; CHECK-NEXT:    rbit v4.8b, v4.8b
-; CHECK-NEXT:    rbit v5.8b, v5.8b
-; CHECK-NEXT:    rbit v22.8b, v0.8b
-; CHECK-NEXT:    rbit v23.8b, v21.8b
-; CHECK-NEXT:    rbit v24.8b, v1.8b
-; CHECK-NEXT:    pmul v16.8b, v16.8b, v0.8b
-; CHECK-NEXT:    pmul v25.8b, v20.8b, v2.8b
-; CHECK-NEXT:    pmul v17.8b, v1.8b, v17.8b
-; CHECK-NEXT:    pmul v2.8b, v1.8b, v2.8b
-; CHECK-NEXT:    xtn v6.8b, v4.8h
-; CHECK-NEXT:    xtn v7.8b, v5.8h
-; CHECK-NEXT:    shrn v5.8b, v5.8h, #8
-; CHECK-NEXT:    shrn v4.8b, v4.8h, #8
-; CHECK-NEXT:    pmul v23.8b, v24.8b, v23.8b
-; CHECK-NEXT:    rbit v18.8b, v6.8b
-; CHECK-NEXT:    rbit v19.8b, v7.8b
-; CHECK-NEXT:    pmul v5.8b, v5.8b, v6.8b
-; CHECK-NEXT:    pmul v4.8b, v7.8b, v4.8b
-; CHECK-NEXT:    pmul v6.8b, v7.8b, v6.8b
-; CHECK-NEXT:    rbit v7.8b, v23.8b
-; CHECK-NEXT:    pmul v18.8b, v19.8b, v18.8b
-; CHECK-NEXT:    rbit v19.8b, v20.8b
-; CHECK-NEXT:    eor v4.8b, v4.8b, v5.8b
-; CHECK-NEXT:    ushll v6.8h, v6.8b, #0
-; CHECK-NEXT:    ushr v7.8b, v7.8b, #1
-; CHECK-NEXT:    rbit v18.8b, v18.8b
-; CHECK-NEXT:    pmul v19.8b, v19.8b, v22.8b
-; CHECK-NEXT:    ushr v5.8b, v18.8b, #1
-; CHECK-NEXT:    rbit v18.8b, v19.8b
-; CHECK-NEXT:    pmul v19.8b, v3.8b, v21.8b
-; CHECK-NEXT:    pmul v3.8b, v3.8b, v0.8b
-; CHECK-NEXT:    eor v4.8b, v5.8b, v4.8b
-; CHECK-NEXT:    eor v5.8b, v25.8b, v16.8b
-; CHECK-NEXT:    eor v16.8b, v17.8b, v19.8b
-; CHECK-NEXT:    pmul v17.8b, v24.8b, v22.8b
-; CHECK-NEXT:    ushr v18.8b, v18.8b, #1
-; CHECK-NEXT:    eor v2.8b, v2.8b, v3.8b
-; CHECK-NEXT:    shll v4.8h, v4.8b, #8
-; CHECK-NEXT:    eor v5.8b, v18.8b, v5.8b
-; CHECK-NEXT:    pmul v18.8b, v20.8b, v0.8b
-; CHECK-NEXT:    eor v7.8b, v7.8b, v16.8b
-; CHECK-NEXT:    pmul v16.8b, v1.8b, v21.8b
-; CHECK-NEXT:    pmul v0.8b, v1.8b, v0.8b
-; CHECK-NEXT:    orr v4.16b, v6.16b, v4.16b
-; CHECK-NEXT:    rbit v6.8b, v17.8b
-; CHECK-NEXT:    shll v5.8h, v5.8b, #8
-; CHECK-NEXT:    shll v7.8h, v7.8b, #8
-; CHECK-NEXT:    ushll v17.8h, v18.8b, #0
-; CHECK-NEXT:    rev16 v4.8b, v4.8b
-; CHECK-NEXT:    ushll v16.8h, v16.8b, #0
-; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-NEXT:    ushr v3.8b, v6.8b, #1
-; CHECK-NEXT:    orr v5.16b, v17.16b, v5.16b
-; CHECK-NEXT:    orr v6.16b, v16.16b, v7.16b
-; CHECK-NEXT:    rbit v4.8b, v4.8b
-; CHECK-NEXT:    eor v1.8b, v3.8b, v2.8b
-; CHECK-NEXT:    eor v2.8b, v6.8b, v5.8b
-; CHECK-NEXT:    shll v1.8h, v1.8b, #8
-; CHECK-NEXT:    ushr v3.4h, v4.4h, #1
-; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    eor v2.8b, v3.8b, v2.8b
-; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-NEXT:    shll v1.4s, v2.4h, #16
-; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    ret
+; CHECK-NEON-LABEL: clmul_v4i32_neon:
+; CHECK-NEON:       // %bb.0:
+; CHECK-NEON-NEXT:    xtn v2.4h, v1.4s
+; CHECK-NEON-NEXT:    xtn v3.4h, v0.4s
+; CHECK-NEON-NEXT:    shrn v16.4h, v0.4s, #16
+; CHECK-NEON-NEXT:    shrn v17.4h, v1.4s, #16
+; CHECK-NEON-NEXT:    xtn v20.8b, v16.8h
+; CHECK-NEON-NEXT:    shrn v16.8b, v16.8h, #8
+; CHECK-NEON-NEXT:    rev16 v4.8b, v2.8b
+; CHECK-NEON-NEXT:    rev16 v5.8b, v3.8b
+; CHECK-NEON-NEXT:    xtn v0.8b, v2.8h
+; CHECK-NEON-NEXT:    xtn v21.8b, v17.8h
+; CHECK-NEON-NEXT:    xtn v1.8b, v3.8h
+; CHECK-NEON-NEXT:    shrn v2.8b, v2.8h, #8
+; CHECK-NEON-NEXT:    shrn v3.8b, v3.8h, #8
+; CHECK-NEON-NEXT:    shrn v17.8b, v17.8h, #8
+; CHECK-NEON-NEXT:    rbit v4.8b, v4.8b
+; CHECK-NEON-NEXT:    rbit v5.8b, v5.8b
+; CHECK-NEON-NEXT:    rbit v22.8b, v0.8b
+; CHECK-NEON-NEXT:    rbit v23.8b, v21.8b
+; CHECK-NEON-NEXT:    rbit v24.8b, v1.8b
+; CHECK-NEON-NEXT:    pmul v16.8b, v16.8b, v0.8b
+; CHECK-NEON-NEXT:    pmul v25.8b, v20.8b, v2.8b
+; CHECK-NEON-NEXT:    pmul v17.8b, v1.8b, v17.8b
+; CHECK-NEON-NEXT:    pmul v2.8b, v1.8b, v2.8b
+; CHECK-NEON-NEXT:    xtn v6.8b, v4.8h
+; CHECK-NEON-NEXT:    xtn v7.8b, v5.8h
+; CHECK-NEON-NEXT:    shrn v5.8b, v5.8h, #8
+; CHECK-NEON-NEXT:    shrn v4.8b, v4.8h, #8
+; CHECK-NEON-NEXT:    pmul v23.8b, v24.8b, v23.8b
+; CHECK-NEON-NEXT:    rbit v18.8b, v6.8b
+; CHECK-NEON-NEXT:    rbit v19.8b, v7.8b
+; CHECK-NEON-NEXT:    pmul v5.8b, v5.8b, v6.8b
+; CHECK-NEON-NEXT:    pmul v4.8b, v7.8b, v4.8b
+; CHECK-NEON-NEXT:    pmul v6.8b, v7.8b, v6.8b
+; CHECK-NEON-NEXT:    rbit v7.8b, v23.8b
+; CHECK-NEON-NEXT:    pmul v18.8b, v19.8b, v18.8b
+; CHECK-NEON-NEXT:    rbit v19.8b, v20.8b
+; CHECK-NEON-NEXT:    eor v4.8b, v4.8b, v5.8b
+; CHECK-NEON-NEXT:    ushll v6.8h, v6.8b, #0
+; CHECK-NEON-NEXT:    ushr v7.8b, v7.8b, #1
+; CHECK-NEON-NEXT:    rbit v18.8b, v18.8b
+; CHECK-NEON-NEXT:    pmul v19.8b, v19.8b, v22.8b
+; CHECK-NEON-NEXT:    ushr v5.8b, v18.8b, #1
+; CHECK-NEON-NEXT:    rbit v18.8b, v19.8b
+; CHECK-NEON-NEXT:    pmul v19.8b, v3.8b, v21.8b
+; CHECK-NEON-NEXT:    pmul v3.8b, v3.8b, v0.8b
+; CHECK-NEON-NEXT:    eor v4.8b, v5.8b, v4.8b
+; CHECK-NEON-NEXT:    eor v5.8b, v25.8b, v16.8b
+; CHECK-NEON-NEXT:    eor v16.8b, v17.8b, v19.8b
+; CHECK-NEON-NEXT:    pmul v17.8b, v24.8b, v22.8b
+; CHECK-NEON-NEXT:    ushr v18.8b, v18.8b, #1
+; CHECK-NEON-NEXT:    eor v2.8b, v2.8b, v3.8b
+; CHECK-NEON-NEXT:    shll v4.8h, v4.8b, #8
+; CHECK-NEON-NEXT:    eor v5.8b, v18.8b, v5.8b
+; CHECK-NEON-NEXT:    pmul v18.8b, v20.8b, v0.8b
+; CHECK-NEON-NEXT:    eor v7.8b, v7.8b, v16.8b
+; CHECK-NEON-NEXT:    pmul v16.8b, v1.8b, v21.8b
+; CHECK-NEON-NEXT:    pmul v0.8b, v1.8b, v0.8b
+; CHECK-NEON-NEXT:    orr v4.16b, v6.16b, v4.16b
+; CHECK-NEON-NEXT:    rbit v6.8b, v17.8b
+; CHECK-NEON-NEXT:    shll v5.8h, v5.8b, #8
+; CHECK-NEON-NEXT:    shll v7.8h, v7.8b, #8
+; CHECK-NEON-NEXT:    ushll v17.8h, v18.8b, #0
+; CHECK-NEON-NEXT:    rev16 v4.8b, v4.8b
+; CHECK-NEON-NEXT:    ushll v16.8h, v16.8b, #0
+; CHECK-NEON-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-NEON-NEXT:    ushr v3.8b, v6.8b, #1
+; CHECK-NEON-NEXT:    orr v5.16b, v17.16b, v5.16b
+; CHECK-NEON-NEXT:    orr v6.16b, v16.16b, v7.16b
+; CHECK-NEON-NEXT:    rbit v4.8b, v4.8b
+; CHECK-NEON-NEXT:    eor v1.8b, v3.8b, v2.8b
+; CHECK-NEON-NEXT:    eor v2.8b, v6.8b, v5.8b
+; CHECK-NEON-NEXT:    shll v1.8h, v1.8b, #8
+; CHECK-NEON-NEXT:    ushr v3.4h, v4.4h, #1
+; CHECK-NEON-NEXT:    orr v0.16b, v0.16b, v1.16b
+; CHECK-NEON-NEXT:    eor v2.8b, v3.8b, v2.8b
+; CHECK-NEON-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-NEON-NEXT:    shll v1.4s, v2.4h, #16
+; CHECK-NEON-NEXT:    orr v0.16b, v0.16b, v1.16b
+; CHECK-NEON-NEXT:    ret
+;
+
+; CHECK-AES-LABEL: clmul_v4i32_neon:
+; CHECK-AES:       // %bb.0:
+; CHECK-AES-NEXT:    ushll2 v2.2d, v1.4s, #0
+; CHECK-AES-NEXT:    ushll2 v3.2d, v0.4s, #0
+; CHECK-AES-NEXT:    ushll v1.2d, v1.2s, #0
+; CHECK-AES-NEXT:    ushll v0.2d, v0.2s, #0
+; CHECK-AES-NEXT:    pmull2 v4.1q, v3.2d, v2.2d
+; CHECK-AES-NEXT:    pmull v2.1q, v3.1d, v2.1d
+; CHECK-AES-NEXT:    pmull2 v3.1q, v0.2d, v1.2d
+; CHECK-AES-NEXT:    pmull v0.1q, v0.1d, v1.1d
+; CHECK-AES-NEXT:    mov v2.d[1], v4.d[0]
+; CHECK-AES-NEXT:    mov v0.d[1], v3.d[0]
+; CHECK-AES-NEXT:    uzp1 v0.4s, v0.4s, v2.4s
+; CHECK-AES-NEXT:    ret
   %a = call <4 x i32> @llvm.clmul.v4i32(<4 x i32> %x, <4 x i32> %y)
   ret <4 x i32> %a
 }
@@ -820,77 +854,94 @@ define <16 x i16> @clmul_v16i16_neon_zext(<16 x i8> %x, <16 x i8> %y) {
 }
 
 define <4 x i32> @clmul_v4i32_neon_zext(<4 x i16> %x, <4 x i16> %y) {
-; CHECK-LABEL: clmul_v4i32_neon_zext:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    rev16 v3.8b, v1.8b
-; CHECK-NEXT:    rev16 v4.8b, v0.8b
-; CHECK-NEXT:    movi v2.2d, #0000000000000000
-; CHECK-NEXT:    xtn v17.8b, v1.8h
-; CHECK-NEXT:    shrn v1.8b, v1.8h, #8
-; CHECK-NEXT:    rbit v3.8b, v3.8b
-; CHECK-NEXT:    rbit v4.8b, v4.8b
-; CHECK-NEXT:    xtn v18.8b, v2.8h
-; CHECK-NEXT:    rbit v19.8b, v17.8b
-; CHECK-NEXT:    shrn v2.8b, v2.8h, #8
-; CHECK-NEXT:    xtn v5.8b, v3.8h
-; CHECK-NEXT:    xtn v6.8b, v4.8h
-; CHECK-NEXT:    shrn v4.8b, v4.8h, #8
-; CHECK-NEXT:    shrn v3.8b, v3.8h, #8
-; CHECK-NEXT:    rbit v20.8b, v18.8b
-; CHECK-NEXT:    rbit v7.8b, v5.8b
-; CHECK-NEXT:    rbit v16.8b, v6.8b
-; CHECK-NEXT:    pmul v4.8b, v4.8b, v5.8b
-; CHECK-NEXT:    pmul v3.8b, v6.8b, v3.8b
-; CHECK-NEXT:    pmul v5.8b, v6.8b, v5.8b
-; CHECK-NEXT:    pmul v6.8b, v2.8b, v17.8b
-; CHECK-NEXT:    pmul v7.8b, v16.8b, v7.8b
-; CHECK-NEXT:    xtn v16.8b, v0.8h
-; CHECK-NEXT:    shrn v0.8b, v0.8h, #8
-; CHECK-NEXT:    eor v3.8b, v3.8b, v4.8b
-; CHECK-NEXT:    pmul v4.8b, v20.8b, v19.8b
-; CHECK-NEXT:    ushll v5.8h, v5.8b, #0
-; CHECK-NEXT:    rbit v7.8b, v7.8b
-; CHECK-NEXT:    rbit v21.8b, v16.8b
-; CHECK-NEXT:    pmul v2.8b, v16.8b, v2.8b
-; CHECK-NEXT:    rbit v4.8b, v4.8b
-; CHECK-NEXT:    ushr v7.8b, v7.8b, #1
-; CHECK-NEXT:    pmul v20.8b, v21.8b, v20.8b
-; CHECK-NEXT:    pmul v19.8b, v21.8b, v19.8b
-; CHECK-NEXT:    ushr v4.8b, v4.8b, #1
-; CHECK-NEXT:    eor v3.8b, v7.8b, v3.8b
-; CHECK-NEXT:    pmul v7.8b, v18.8b, v1.8b
-; CHECK-NEXT:    pmul v18.8b, v0.8b, v18.8b
-; CHECK-NEXT:    rbit v20.8b, v20.8b
-; CHECK-NEXT:    pmul v0.8b, v0.8b, v17.8b
-; CHECK-NEXT:    pmul v1.8b, v16.8b, v1.8b
-; CHECK-NEXT:    shll v3.8h, v3.8b, #8
-; CHECK-NEXT:    eor v6.8b, v7.8b, v6.8b
-; CHECK-NEXT:    eor v2.8b, v2.8b, v18.8b
-; CHECK-NEXT:    ushr v7.8b, v20.8b, #1
-; CHECK-NEXT:    eor v0.8b, v1.8b, v0.8b
-; CHECK-NEXT:    orr v3.16b, v5.16b, v3.16b
-; CHECK-NEXT:    rbit v5.8b, v19.8b
-; CHECK-NEXT:    eor v4.8b, v4.8b, v6.8b
-; CHECK-NEXT:    eor v2.8b, v7.8b, v2.8b
-; CHECK-NEXT:    rev16 v3.8b, v3.8b
-; CHECK-NEXT:    ushr v1.8b, v5.8b, #1
-; CHECK-NEXT:    pmul v5.8b, v16.8b, v17.8b
-; CHECK-NEXT:    shll v4.8h, v4.8b, #8
-; CHECK-NEXT:    shll v2.8h, v2.8b, #8
-; CHECK-NEXT:    rbit v3.8b, v3.8b
-; CHECK-NEXT:    eor v0.8b, v1.8b, v0.8b
-; CHECK-NEXT:    eor v1.8b, v2.8b, v4.8b
-; CHECK-NEXT:    shll v0.8h, v0.8b, #8
-; CHECK-NEXT:    ushr v2.4h, v3.4h, #1
-; CHECK-NEXT:    ushll v3.8h, v5.8b, #0
-; CHECK-NEXT:    eor v1.8b, v2.8b, v1.8b
-; CHECK-NEXT:    orr v0.16b, v3.16b, v0.16b
-; CHECK-NEXT:    shll v1.4s, v1.4h, #16
-; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    ret
+; CHECK-NEON-LABEL: clmul_v4i32_neon_zext:
+; CHECK-NEON:       // %bb.0:
+; CHECK-NEON-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEON-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEON-NEXT:    rev16 v3.8b, v1.8b
+; CHECK-NEON-NEXT:    rev16 v4.8b, v0.8b
+; CHECK-NEON-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-NEON-NEXT:    xtn v17.8b, v1.8h
+; CHECK-NEON-NEXT:    shrn v1.8b, v1.8h, #8
+; CHECK-NEON-NEXT:    rbit v3.8b, v3.8b
+; CHECK-NEON-NEXT:    rbit v4.8b, v4.8b
+; CHECK-NEON-NEXT:    xtn v18.8b, v2.8h
+; CHECK-NEON-NEXT:    rbit v19.8b, v17.8b
+; CHECK-NEON-NEXT:    shrn v2.8b, v2.8h, #8
+; CHECK-NEON-NEXT:    xtn v5.8b, v3.8h
+; CHECK-NEON-NEXT:    xtn v6.8b, v4.8h
+; CHECK-NEON-NEXT:    shrn v4.8b, v4.8h, #8
+; CHECK-NEON-NEXT:    shrn v3.8b, v3.8h, #8
+; CHECK-NEON-NEXT:    rbit v20.8b, v18.8b
+; CHECK-NEON-NEXT:    rbit v7.8b, v5.8b
+; CHECK-NEON-NEXT:    rbit v16.8b, v6.8b
+; CHECK-NEON-NEXT:    pmul v4.8b, v4.8b, v5.8b
+; CHECK-NEON-NEXT:    pmul v3.8b, v6.8b, v3.8b
+; CHECK-NEON-NEXT:    pmul v5.8b, v6.8b, v5.8b
+; CHECK-NEON-NEXT:    pmul v6.8b, v2.8b, v17.8b
+; CHECK-NEON-NEXT:    pmul v7.8b, v16.8b, v7.8b
+; CHECK-NEON-NEXT:    xtn v16.8b, v0.8h
+; CHECK-NEON-NEXT:    shrn v0.8b, v0.8h, #8
+; CHECK-NEON-NEXT:    eor v3.8b, v3.8b, v4.8b
+; CHECK-NEON-NEXT:    pmul v4.8b, v20.8b, v19.8b
+; CHECK-NEON-NEXT:    ushll v5.8h, v5.8b, #0
+; CHECK-NEON-NEXT:    rbit v7.8b, v7.8b
+; CHECK-NEON-NEXT:    rbit v21.8b, v16.8b
+; CHECK-NEON-NEXT:    pmul v2.8b, v16.8b, v2.8b
+; CHECK-NEON-NEXT:    rbit v4.8b, v4.8b
+; CHECK-NEON-NEXT:    ushr v7.8b, v7.8b, #1
+; CHECK-NEON-NEXT:    pmul v20.8b, v21.8b, v20.8b
+; CHECK-NEON-NEXT:    pmul v19.8b, v21.8b, v19.8b
+; CHECK-NEON-NEXT:    ushr v4.8b, v4.8b, #1
+; CHECK-NEON-NEXT:    eor v3.8b, v7.8b, v3.8b
+; CHECK-NEON-NEXT:    pmul v7.8b, v18.8b, v1.8b
+; CHECK-NEON-NEXT:    pmul v18.8b, v0.8b, v18.8b
+; CHECK-NEON-NEXT:    rbit v20.8b, v20.8b
+; CHECK-NEON-NEXT:    pmul v0.8b, v0.8b, v17.8b
+; CHECK-NEON-NEXT:    pmul v1.8b, v16.8b, v1.8b
+; CHECK-NEON-NEXT:    shll v3.8h, v3.8b, #8
+; CHECK-NEON-NEXT:    eor v6.8b, v7.8b, v6.8b
+; CHECK-NEON-NEXT:    eor v2.8b, v2.8b, v18.8b
+; CHECK-NEON-NEXT:    ushr v7.8b, v20.8b, #1
+; CHECK-NEON-NEXT:    eor v0.8b, v1.8b, v0.8b
+; CHECK-NEON-NEXT:    orr v3.16b, v5.16b, v3.16b
+; CHECK-NEON-NEXT:    rbit v5.8b, v19.8b
+; CHECK-NEON-NEXT:    eor v4.8b, v4.8b, v6.8b
+; CHECK-NEON-NEXT:    eor v2.8b, v7.8b, v2.8b
+; CHECK-NEON-NEXT:    rev16 v3.8b, v3.8b
+; CHECK-NEON-NEXT:    ushr v1.8b, v5.8b, #1
+; CHECK-NEON-NEXT:    pmul v5.8b, v16.8b, v17.8b
+; CHECK-NEON-NEXT:    shll v4.8h, v4.8b, #8
+; CHECK-NEON-NEXT:    shll v2.8h, v2.8b, #8
+; CHECK-NEON-NEXT:    rbit v3.8b, v3.8b
+; CHECK-NEON-NEXT:    eor v0.8b, v1.8b, v0.8b
+; CHECK-NEON-NEXT:    eor v1.8b, v2.8b, v4.8b
+; CHECK-NEON-NEXT:    shll v0.8h, v0.8b, #8
+; CHECK-NEON-NEXT:    ushr v2.4h, v3.4h, #1
+; CHECK-NEON-NEXT:    ushll v3.8h, v5.8b, #0
+; CHECK-NEON-NEXT:    eor v1.8b, v2.8b, v1.8b
+; CHECK-NEON-NEXT:    orr v0.16b, v3.16b, v0.16b
+; CHECK-NEON-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-NEON-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-NEON-NEXT:    orr v0.16b, v0.16b, v1.16b
+; CHECK-NEON-NEXT:    ret
+;
+; CHECK-AES-LABEL: clmul_v4i32_neon_zext:
+; CHECK-AES:       // %bb.0:
+; CHECK-AES-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-AES-NEXT:    ushll v1.4s, v1.4h, #0
+; CHECK-AES-NEXT:    ushll2 v2.2d, v1.4s, #0
+; CHECK-AES-NEXT:    ushll2 v3.2d, v0.4s, #0
+; CHECK-AES-NEXT:    ushll v1.2d, v1.2s, #0
+; CHECK-AES-NEXT:    ushll v0.2d, v0.2s, #0
+; CHECK-AES-NEXT:    pmull2 v4.1q, v3.2d, v2.2d
+; CHECK-AES-NEXT:    pmull v2.1q, v3.1d, v2.1d
+; CHECK-AES-NEXT:    pmull2 v3.1q, v0.2d, v1.2d
+; CHECK-AES-NEXT:    pmull v0.1q, v0.1d, v1.1d
+; CHECK-AES-NEXT:    mov v2.d[1], v4.d[0]
+; CHECK-AES-NEXT:    mov v0.d[1], v3.d[0]
+; CHECK-AES-NEXT:    uzp1 v0.4s, v0.4s, v2.4s
+; CHECK-AES-NEXT:    ret
   %zextx = zext <4 x i16> %x to <4 x i32>
   %zexty = zext <4 x i16> %y to <4 x i32>
   %a = call <4 x i32> @llvm.clmul.v4i32(<4 x i32> %zextx, <4 x i32> %zexty)
@@ -898,151 +949,181 @@ define <4 x i32> @clmul_v4i32_neon_zext(<4 x i16> %x, <4 x i16> %y) {
 }
 
 define <8 x i32> @clmul_v8i32_neon_zext(<8 x i16> %x, <8 x i16> %y) {
-; CHECK-LABEL: clmul_v8i32_neon_zext:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    str d12, [sp, #-48]! // 8-byte Folded Spill
-; CHECK-NEXT:    stp d11, d10, [sp, #16] // 16-byte Folded Spill
-; CHECK-NEXT:    stp d9, d8, [sp, #32] // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-NEXT:    .cfi_offset b8, -8
-; CHECK-NEXT:    .cfi_offset b9, -16
-; CHECK-NEXT:    .cfi_offset b10, -24
-; CHECK-NEXT:    .cfi_offset b11, -32
-; CHECK-NEXT:    .cfi_offset b12, -48
-; CHECK-NEXT:    mov d2, v0.d[1]
-; CHECK-NEXT:    mov d3, v1.d[1]
-; CHECK-NEXT:    rev16 v5.8b, v1.8b
-; CHECK-NEXT:    rev16 v6.8b, v0.8b
-; CHECK-NEXT:    movi v4.2d, #0000000000000000
-; CHECK-NEXT:    rev16 v7.8b, v3.8b
-; CHECK-NEXT:    rev16 v17.8b, v2.8b
-; CHECK-NEXT:    rbit v18.8b, v5.8b
-; CHECK-NEXT:    rbit v19.8b, v6.8b
-; CHECK-NEXT:    xtn v5.8b, v1.8h
-; CHECK-NEXT:    xtn v16.8b, v4.8h
-; CHECK-NEXT:    shrn v29.8b, v4.8h, #8
-; CHECK-NEXT:    xtn v6.8b, v0.8h
-; CHECK-NEXT:    shrn v4.8b, v0.8h, #8
-; CHECK-NEXT:    xtn v0.8b, v3.8h
-; CHECK-NEXT:    shrn v3.8b, v3.8h, #8
-; CHECK-NEXT:    rbit v20.8b, v7.8b
-; CHECK-NEXT:    rbit v17.8b, v17.8b
-; CHECK-NEXT:    xtn v21.8b, v18.8h
-; CHECK-NEXT:    xtn v22.8b, v19.8h
-; CHECK-NEXT:    shrn v7.8b, v1.8h, #8
-; CHECK-NEXT:    shrn v1.8b, v19.8h, #8
-; CHECK-NEXT:    shrn v18.8b, v18.8h, #8
-; CHECK-NEXT:    pmul v8.8b, v29.8b, v5.8b
-; CHECK-NEXT:    rbit v23.8b, v5.8b
-; CHECK-NEXT:    rbit v24.8b, v16.8b
-; CHECK-NEXT:    pmul v12.8b, v4.8b, v16.8b
-; CHECK-NEXT:    pmul v4.8b, v4.8b, v5.8b
-; CHECK-NEXT:    xtn v25.8b, v20.8h
-; CHECK-NEXT:    xtn v26.8b, v17.8h
-; CHECK-NEXT:    rbit v27.8b, v21.8b
-; CHECK-NEXT:    rbit v28.8b, v22.8b
-; CHECK-NEXT:    pmul v10.8b, v1.8b, v21.8b
-; CHECK-NEXT:    shrn v17.8b, v17.8h, #8
-; CHECK-NEXT:    pmul v18.8b, v22.8b, v18.8b
-; CHECK-NEXT:    shrn v20.8b, v20.8h, #8
-; CHECK-NEXT:    pmul v9.8b, v16.8b, v7.8b
-; CHECK-NEXT:    xtn v1.8b, v2.8h
-; CHECK-NEXT:    pmul v21.8b, v22.8b, v21.8b
-; CHECK-NEXT:    pmul v19.8b, v24.8b, v23.8b
-; CHECK-NEXT:    rbit v30.8b, v25.8b
-; CHECK-NEXT:    rbit v31.8b, v26.8b
-; CHECK-NEXT:    pmul v17.8b, v17.8b, v25.8b
-; CHECK-NEXT:    pmul v27.8b, v28.8b, v27.8b
-; CHECK-NEXT:    pmul v20.8b, v26.8b, v20.8b
-; CHECK-NEXT:    rbit v28.8b, v6.8b
-; CHECK-NEXT:    eor v18.8b, v18.8b, v10.8b
-; CHECK-NEXT:    eor v8.8b, v9.8b, v8.8b
-; CHECK-NEXT:    rbit v9.8b, v0.8b
-; CHECK-NEXT:    rbit v10.8b, v1.8b
-; CHECK-NEXT:    pmul v22.8b, v26.8b, v25.8b
-; CHECK-NEXT:    shrn v2.8b, v2.8h, #8
-; CHECK-NEXT:    pmul v30.8b, v31.8b, v30.8b
-; CHECK-NEXT:    ushll v21.8h, v21.8b, #0
-; CHECK-NEXT:    rbit v19.8b, v19.8b
-; CHECK-NEXT:    rbit v27.8b, v27.8b
-; CHECK-NEXT:    eor v17.8b, v20.8b, v17.8b
-; CHECK-NEXT:    pmul v11.8b, v28.8b, v24.8b
-; CHECK-NEXT:    pmul v25.8b, v24.8b, v9.8b
-; CHECK-NEXT:    pmul v31.8b, v6.8b, v29.8b
-; CHECK-NEXT:    pmul v7.8b, v6.8b, v7.8b
-; CHECK-NEXT:    pmul v24.8b, v10.8b, v24.8b
-; CHECK-NEXT:    ushll v22.8h, v22.8b, #0
-; CHECK-NEXT:    pmul v5.8b, v6.8b, v5.8b
-; CHECK-NEXT:    rbit v30.8b, v30.8b
-; CHECK-NEXT:    ushr v19.8b, v19.8b, #1
-; CHECK-NEXT:    ushr v27.8b, v27.8b, #1
-; CHECK-NEXT:    rbit v11.8b, v11.8b
-; CHECK-NEXT:    rbit v25.8b, v25.8b
-; CHECK-NEXT:    eor v31.8b, v31.8b, v12.8b
-; CHECK-NEXT:    eor v4.8b, v7.8b, v4.8b
-; CHECK-NEXT:    rbit v24.8b, v24.8b
-; CHECK-NEXT:    eor v19.8b, v19.8b, v8.8b
-; CHECK-NEXT:    ushll v5.8h, v5.8b, #0
-; CHECK-NEXT:    eor v18.8b, v27.8b, v18.8b
-; CHECK-NEXT:    ushr v20.8b, v30.8b, #1
-; CHECK-NEXT:    pmul v27.8b, v16.8b, v3.8b
-; CHECK-NEXT:    pmul v16.8b, v2.8b, v16.8b
-; CHECK-NEXT:    pmul v2.8b, v2.8b, v0.8b
-; CHECK-NEXT:    pmul v3.8b, v1.8b, v3.8b
-; CHECK-NEXT:    ushr v26.8b, v11.8b, #1
-; CHECK-NEXT:    shll v19.8h, v19.8b, #8
-; CHECK-NEXT:    shll v18.8h, v18.8b, #8
-; CHECK-NEXT:    eor v17.8b, v20.8b, v17.8b
-; CHECK-NEXT:    pmul v20.8b, v28.8b, v23.8b
-; CHECK-NEXT:    pmul v28.8b, v1.8b, v29.8b
-; CHECK-NEXT:    pmul v23.8b, v29.8b, v0.8b
-; CHECK-NEXT:    ushr v24.8b, v24.8b, #1
-; CHECK-NEXT:    eor v26.8b, v26.8b, v31.8b
-; CHECK-NEXT:    eor v2.8b, v3.8b, v2.8b
-; CHECK-NEXT:    pmul v0.8b, v1.8b, v0.8b
-; CHECK-NEXT:    shll v17.8h, v17.8b, #8
-; CHECK-NEXT:    orr v18.16b, v21.16b, v18.16b
-; CHECK-NEXT:    pmul v21.8b, v10.8b, v9.8b
-; CHECK-NEXT:    ldp d9, d8, [sp, #32] // 16-byte Folded Reload
-; CHECK-NEXT:    rbit v20.8b, v20.8b
-; CHECK-NEXT:    ldp d11, d10, [sp, #16] // 16-byte Folded Reload
-; CHECK-NEXT:    eor v16.8b, v28.8b, v16.8b
-; CHECK-NEXT:    orr v17.16b, v22.16b, v17.16b
-; CHECK-NEXT:    eor v23.8b, v27.8b, v23.8b
-; CHECK-NEXT:    ushr v22.8b, v25.8b, #1
-; CHECK-NEXT:    rbit v21.8b, v21.8b
-; CHECK-NEXT:    rev16 v18.8b, v18.8b
-; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-NEXT:    ushr v7.8b, v20.8b, #1
-; CHECK-NEXT:    eor v16.8b, v24.8b, v16.8b
-; CHECK-NEXT:    rev16 v17.8b, v17.8b
-; CHECK-NEXT:    eor v20.8b, v22.8b, v23.8b
-; CHECK-NEXT:    shll v22.8h, v26.8b, #8
-; CHECK-NEXT:    ushr v3.8b, v21.8b, #1
-; CHECK-NEXT:    rbit v18.8b, v18.8b
-; CHECK-NEXT:    eor v4.8b, v7.8b, v4.8b
-; CHECK-NEXT:    shll v7.8h, v16.8b, #8
-; CHECK-NEXT:    shll v6.8h, v20.8b, #8
-; CHECK-NEXT:    rbit v16.8b, v17.8b
-; CHECK-NEXT:    eor v1.8b, v3.8b, v2.8b
-; CHECK-NEXT:    eor v2.8b, v22.8b, v19.8b
-; CHECK-NEXT:    shll v4.8h, v4.8b, #8
-; CHECK-NEXT:    ushr v3.4h, v18.4h, #1
-; CHECK-NEXT:    eor v6.8b, v7.8b, v6.8b
-; CHECK-NEXT:    ushr v7.4h, v16.4h, #1
-; CHECK-NEXT:    shll v1.8h, v1.8b, #8
-; CHECK-NEXT:    eor v2.8b, v3.8b, v2.8b
-; CHECK-NEXT:    orr v3.16b, v5.16b, v4.16b
-; CHECK-NEXT:    eor v4.8b, v7.8b, v6.8b
-; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    shll v1.4s, v2.4h, #16
-; CHECK-NEXT:    ushll v2.4s, v3.4h, #0
-; CHECK-NEXT:    shll v3.4s, v4.4h, #16
-; CHECK-NEXT:    ushll v4.4s, v0.4h, #0
-; CHECK-NEXT:    orr v0.16b, v2.16b, v1.16b
-; CHECK-NEXT:    orr v1.16b, v4.16b, v3.16b
-; CHECK-NEXT:    ldr d12, [sp], #48 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-NEON-LABEL: clmul_v8i32_neon_zext:
+; CHECK-NEON:       // %bb.0:
+; CHECK-NEON-NEXT:    str d12, [sp, #-48]! // 8-byte Folded Spill
+; CHECK-NEON-NEXT:    stp d11, d10, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEON-NEXT:    stp d9, d8, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEON-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-NEON-NEXT:    .cfi_offset b8, -8
+; CHECK-NEON-NEXT:    .cfi_offset b9, -16
+; CHECK-NEON-NEXT:    .cfi_offset b10, -24
+; CHECK-NEON-NEXT:    .cfi_offset b11, -32
+; CHECK-NEON-NEXT:    .cfi_offset b12, -48
+; CHECK-NEON-NEXT:    mov d2, v0.d[1]
+; CHECK-NEON-NEXT:    mov d3, v1.d[1]
+; CHECK-NEON-NEXT:    rev16 v5.8b, v1.8b
+; CHECK-NEON-NEXT:    rev16 v6.8b, v0.8b
+; CHECK-NEON-NEXT:    movi v4.2d, #0000000000000000
+; CHECK-NEON-NEXT:    rev16 v7.8b, v3.8b
+; CHECK-NEON-NEXT:    rev16 v17.8b, v2.8b
+; CHECK-NEON-NEXT:    rbit v18.8b, v5.8b
+; CHECK-NEON-NEXT:    rbit v19.8b, v6.8b
+; CHECK-NEON-NEXT:    xtn v5.8b, v1.8h
+; CHECK-NEON-NEXT:    xtn v16.8b, v4.8h
+; CHECK-NEON-NEXT:    shrn v29.8b, v4.8h, #8
+; CHECK-NEON-NEXT:    xtn v6.8b, v0.8h
+; CHECK-NEON-NEXT:    shrn v4.8b, v0.8h, #8
+; CHECK-NEON-NEXT:    xtn v0.8b, v3.8h
+; CHECK-NEON-NEXT:    shrn v3.8b, v3.8h, #8
+; CHECK-NEON-NEXT:    rbit v20.8b, v7.8b
+; CHECK-NEON-NEXT:    rbit v17.8b, v17.8b
+; CHECK-NEON-NEXT:    xtn v21.8b, v18.8h
+; CHECK-NEON-NEXT:    xtn v22.8b, v19.8h
+; CHECK-NEON-NEXT:    shrn v7.8b, v1.8h, #8
+; CHECK-NEON-NEXT:    shrn v1.8b, v19.8h, #8
+; CHECK-NEON-NEXT:    shrn v18.8b, v18.8h, #8
+; CHECK-NEON-NEXT:    pmul v8.8b, v29.8b, v5.8b
+; CHECK-NEON-NEXT:    rbit v23.8b, v5.8b
+; CHECK-NEON-NEXT:    rbit v24.8b, v16.8b
+; CHECK-NEON-NEXT:    pmul v12.8b, v4.8b, v16.8b
+; CHECK-NEON-NEXT:    pmul v4.8b, v4.8b, v5.8b
+; CHECK-NEON-NEXT:    xtn v25.8b, v20.8h
+; CHECK-NEON-NEXT:    xtn v26.8b, v17.8h
+; CHECK-NEON-NEXT:    rbit v27.8b, v21.8b
+; CHECK-NEON-NEXT:    rbit v28.8b, v22.8b
+; CHECK-NEON-NEXT:    pmul v10.8b, v1.8b, v21.8b
+; CHECK-NEON-NEXT:    shrn v17.8b, v17.8h, #8
+; CHECK-NEON-NEXT:    pmul v18.8b, v22.8b, v18.8b
+; CHECK-NEON-NEXT:    shrn v20.8b, v20.8h, #8
+; CHECK-NEON-NEXT:    pmul v9.8b, v16.8b, v7.8b
+; CHECK-NEON-NEXT:    xtn v1.8b, v2.8h
+; CHECK-NEON-NEXT:    pmul v21.8b, v22.8b, v21.8b
+; CHECK-NEON-NEXT:    pmul v19.8b, v24.8b, v23.8b
+; CHECK-NEON-NEXT:    rbit v30.8b, v25.8b
+; CHECK-NEON-NEXT:    rbit v31.8b, v26.8b
+; CHECK-NEON-NEXT:    pmul v17.8b, v17.8b, v25.8b
+; CHECK-NEON-NEXT:    pmul v27.8b, v28.8b, v27.8b
+; CHECK-NEON-NEXT:    pmul v20.8b, v26.8b, v20.8b
+; CHECK-NEON-NEXT:    rbit v28.8b, v6.8b
+; CHECK-NEON-NEXT:    eor v18.8b, v18.8b, v10.8b
+; CHECK-NEON-NEXT:    eor v8.8b, v9.8b, v8.8b
+; CHECK-NEON-NEXT:    rbit v9.8b, v0.8b
+; CHECK-NEON-NEXT:    rbit v10.8b, v1.8b
+; CHECK-NEON-NEXT:    pmul v22.8b, v26.8b, v25.8b
+; CHECK-NEON-NEXT:    shrn v2.8b, v2.8h, #8
+; CHECK-NEON-NEXT:    pmul v30.8b, v31.8b, v30.8b
+; CHECK-NEON-NEXT:    ushll v21.8h, v21.8b, #0
+; CHECK-NEON-NEXT:    rbit v19.8b, v19.8b
+; CHECK-NEON-NEXT:    rbit v27.8b, v27.8b
+; CHECK-NEON-NEXT:    eor v17.8b, v20.8b, v17.8b
+; CHECK-NEON-NEXT:    pmul v11.8b, v28.8b, v24.8b
+; CHECK-NEON-NEXT:    pmul v25.8b, v24.8b, v9.8b
+; CHECK-NEON-NEXT:    pmul v31.8b, v6.8b, v29.8b
+; CHECK-NEON-NEXT:    pmul v7.8b, v6.8b, v7.8b
+; CHECK-NEON-NEXT:    pmul v24.8b, v10.8b, v24.8b
+; CHECK-NEON-NEXT:    ushll v22.8h, v22.8b, #0
+; CHECK-NEON-NEXT:    pmul v5.8b, v6.8b, v5.8b
+; CHECK-NEON-NEXT:    rbit v30.8b, v30.8b
+; CHECK-NEON-NEXT:    ushr v19.8b, v19.8b, #1
+; CHECK-NEON-NEXT:    ushr v27.8b, v27.8b, #1
+; CHECK-NEON-NEXT:    rbit v11.8b, v11.8b
+; CHECK-NEON-NEXT:    rbit v25.8b, v25.8b
+; CHECK-NEON-NEXT:    eor v31.8b, v31.8b, v12.8b
+; CHECK-NEON-NEXT:    eor v4.8b, v7.8b, v4.8b
+; CHECK-NEON-NEXT:    rbit v24.8b, v24.8b
+; CHECK-NEON-NEXT:    eor v19.8b, v19.8b, v8.8b
+; CHECK-NEON-NEXT:    ushll v5.8h, v5.8b, #0
+; CHECK-NEON-NEXT:    eor v18.8b, v27.8b, v18.8b
+; CHECK-NEON-NEXT:    ushr v20.8b, v30.8b, #1
+; CHECK-NEON-NEXT:    pmul v27.8b, v16.8b, v3.8b
+; CHECK-NEON-NEXT:    pmul v16.8b, v2.8b, v16.8b
+; CHECK-NEON-NEXT:    pmul v2.8b, v2.8b, v0.8b
+; CHECK-NEON-NEXT:    pmul v3.8b, v1.8b, v3.8b
+; CHECK-NEON-NEXT:    ushr v26.8b, v11.8b, #1
+; CHECK-NEON-NEXT:    shll v19.8h, v19.8b, #8
+; CHECK-NEON-NEXT:    shll v18.8h, v18.8b, #8
+; CHECK-NEON-NEXT:    eor v17.8b, v20.8b, v17.8b
+; CHECK-NEON-NEXT:    pmul v20.8b, v28.8b, v23.8b
+; CHECK-NEON-NEXT:    pmul v28.8b, v1.8b, v29.8b
+; CHECK-NEON-NEXT:    pmul v23.8b, v29.8b, v0.8b
+; CHECK-NEON-NEXT:    ushr v24.8b, v24.8b, #1
+; CHECK-NEON-NEXT:    eor v26.8b, v26.8b, v31.8b
+; CHECK-NEON-NEXT:    eor v2.8b, v3.8b, v2.8b
+; CHECK-NEON-NEXT:    pmul v0.8b, v1.8b, v0.8b
+; CHECK-NEON-NEXT:    shll v17.8h, v17.8b, #8
+; CHECK-NEON-NEXT:    orr v18.16b, v21.16b, v18.16b
+; CHECK-NEON-NEXT:    pmul v21.8b, v10.8b, v9.8b
+; CHECK-NEON-NEXT:    ldp d9, d8, [sp, #32] // 16-byte Folded Reload
+; CHECK-NEON-NEXT:    rbit v20.8b, v20.8b
+; CHECK-NEON-NEXT:    ldp d11, d10, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEON-NEXT:    eor v16.8b, v28.8b, v16.8b
+; CHECK-NEON-NEXT:    orr v17.16b, v22.16b, v17.16b
+; CHECK-NEON-NEXT:    eor v23.8b, v27.8b, v23.8b
+; CHECK-NEON-NEXT:    ushr v22.8b, v25.8b, #1
+; CHECK-NEON-NEXT:    rbit v21.8b, v21.8b
+; CHECK-NEON-NEXT:    rev16 v18.8b, v18.8b
+; CHECK-NEON-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-NEON-NEXT:    ushr v7.8b, v20.8b, #1
+; CHECK-NEON-NEXT:    eor v16.8b, v24.8b, v16.8b
+; CHECK-NEON-NEXT:    rev16 v17.8b, v17.8b
+; CHECK-NEON-NEXT:    eor v20.8b, v22.8b, v23.8b
+; CHECK-NEON-NEXT:    shll v22.8h, v26.8b, #8
+; CHECK-NEON-NEXT:    ushr v3.8b, v21.8b, #1
+; CHECK-NEON-NEXT:    rbit v18.8b, v18.8b
+; CHECK-NEON-NEXT:    eor v4.8b, v7.8b, v4.8b
+; CHECK-NEON-NEXT:    shll v7.8h, v16.8b, #8
+; CHECK-NEON-NEXT:    shll v6.8h, v20.8b, #8
+; CHECK-NEON-NEXT:    rbit v16.8b, v17.8b
+; CHECK-NEON-NEXT:    eor v1.8b, v3.8b, v2.8b
+; CHECK-NEON-NEXT:    eor v2.8b, v22.8b, v19.8b
+; CHECK-NEON-NEXT:    shll v4.8h, v4.8b, #8
+; CHECK-NEON-NEXT:    ushr v3.4h, v18.4h, #1
+; CHECK-NEON-NEXT:    eor v6.8b, v7.8b, v6.8b
+; CHECK-NEON-NEXT:    ushr v7.4h, v16.4h, #1
+; CHECK-NEON-NEXT:    shll v1.8h, v1.8b, #8
+; CHECK-NEON-NEXT:    eor v2.8b, v3.8b, v2.8b
+; CHECK-NEON-NEXT:    orr v3.16b, v5.16b, v4.16b
+; CHECK-NEON-NEXT:    eor v4.8b, v7.8b, v6.8b
+; CHECK-NEON-NEXT:    orr v0.16b, v0.16b, v1.16b
+; CHECK-NEON-NEXT:    shll v1.4s, v2.4h, #16
+; CHECK-NEON-NEXT:    ushll v2.4s, v3.4h, #0
+; CHECK-NEON-NEXT:    shll v3.4s, v4.4h, #16
+; CHECK-NEON-NEXT:    ushll v4.4s, v0.4h, #0
+; CHECK-NEON-NEXT:    orr v0.16b, v2.16b, v1.16b
+; CHECK-NEON-NEXT:    orr v1.16b, v4.16b, v3.16b
+; CHECK-NEON-NEXT:    ldr d12, [sp], #48 // 8-byte Folded Reload
+; CHECK-NEON-NEXT:    ret
+;
+; CHECK-AES-LABEL: clmul_v8i32_neon_zext:
+; CHECK-AES:       // %bb.0:
+; CHECK-AES-NEXT:    ushll2 v2.4s, v0.8h, #0
+; CHECK-AES-NEXT:    ushll2 v3.4s, v1.8h, #0
+; CHECK-AES-NEXT:    ushll v1.4s, v1.4h, #0
+; CHECK-AES-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-AES-NEXT:    ushll2 v4.2d, v3.4s, #0
+; CHECK-AES-NEXT:    ushll2 v5.2d, v2.4s, #0
+; CHECK-AES-NEXT:    ushll v3.2d, v3.2s, #0
+; CHECK-AES-NEXT:    ushll v2.2d, v2.2s, #0
+; CHECK-AES-NEXT:    ushll2 v6.2d, v1.4s, #0
+; CHECK-AES-NEXT:    ushll2 v7.2d, v0.4s, #0
+; CHECK-AES-NEXT:    ushll v1.2d, v1.2s, #0
+; CHECK-AES-NEXT:    ushll v0.2d, v0.2s, #0
+; CHECK-AES-NEXT:    pmull2 v16.1q, v5.2d, v4.2d
+; CHECK-AES-NEXT:    pmull v4.1q, v5.1d, v4.1d
+; CHECK-AES-NEXT:    pmull2 v5.1q, v2.2d, v3.2d
+; CHECK-AES-NEXT:    pmull v2.1q, v2.1d, v3.1d
+; CHECK-AES-NEXT:    pmull2 v3.1q, v7.2d, v6.2d
+; CHECK-AES-NEXT:    pmull v6.1q, v7.1d, v6.1d
+; CHECK-AES-NEXT:    mov v4.d[1], v16.d[0]
+; CHECK-AES-NEXT:    pmull2 v7.1q, v0.2d, v1.2d
+; CHECK-AES-NEXT:    pmull v0.1q, v0.1d, v1.1d
+; CHECK-AES-NEXT:    mov v2.d[1], v5.d[0]
+; CHECK-AES-NEXT:    mov v6.d[1], v3.d[0]
+; CHECK-AES-NEXT:    mov v0.d[1], v7.d[0]
+; CHECK-AES-NEXT:    uzp1 v1.4s, v2.4s, v4.4s
+; CHECK-AES-NEXT:    uzp1 v0.4s, v0.4s, v6.4s
+; CHECK-AES-NEXT:    ret
   %zextx = zext <8 x i16> %x to <8 x i32>
   %zexty = zext <8 x i16> %y to <8 x i32>
   %a = call <8 x i32> @llvm.clmul.v8i32(<8 x i32> %zextx, <8 x i32> %zexty)
@@ -1807,32 +1888,50 @@ define <8 x i16> @clmulr_v8i16_neon(<8 x i16> %a, <8 x i16> %b) nounwind {
 }
 
 define <4 x i16> @clmulr_v4i16_neon(<4 x i16> %a, <4 x i16> %b) nounwind {
-; CHECK-LABEL: clmulr_v4i16_neon:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    rev16 v1.8b, v1.8b
-; CHECK-NEXT:    rev16 v0.8b, v0.8b
-; CHECK-NEXT:    rbit v1.8b, v1.8b
-; CHECK-NEXT:    rbit v0.8b, v0.8b
-; CHECK-NEXT:    xtn v2.8b, v1.8h
-; CHECK-NEXT:    xtn v3.8b, v0.8h
-; CHECK-NEXT:    shrn v0.8b, v0.8h, #8
-; CHECK-NEXT:    shrn v1.8b, v1.8h, #8
-; CHECK-NEXT:    rbit v4.8b, v2.8b
-; CHECK-NEXT:    rbit v5.8b, v3.8b
-; CHECK-NEXT:    pmul v0.8b, v0.8b, v2.8b
-; CHECK-NEXT:    pmul v1.8b, v3.8b, v1.8b
-; CHECK-NEXT:    pmul v2.8b, v3.8b, v2.8b
-; CHECK-NEXT:    pmul v4.8b, v5.8b, v4.8b
-; CHECK-NEXT:    eor v0.8b, v1.8b, v0.8b
-; CHECK-NEXT:    rbit v4.8b, v4.8b
-; CHECK-NEXT:    ushr v1.8b, v4.8b, #1
-; CHECK-NEXT:    eor v0.8b, v1.8b, v0.8b
-; CHECK-NEXT:    ushll v1.8h, v2.8b, #0
-; CHECK-NEXT:    shll v0.8h, v0.8b, #8
-; CHECK-NEXT:    orr v0.16b, v1.16b, v0.16b
-; CHECK-NEXT:    rev16 v0.8b, v0.8b
-; CHECK-NEXT:    rbit v0.8b, v0.8b
-; CHECK-NEXT:    ret
+; CHECK-NEON-LABEL: clmulr_v4i16_neon:
+; CHECK-NEON:       // %bb.0:
+; CHECK-NEON-NEXT:    rev16 v1.8b, v1.8b
+; CHECK-NEON-NEXT:    rev16 v0.8b, v0.8b
+; CHECK-NEON-NEXT:    rbit v1.8b, v1.8b
+; CHECK-NEON-NEXT:    rbit v0.8b, v0.8b
+; CHECK-NEON-NEXT:    xtn v2.8b, v1.8h
+; CHECK-NEON-NEXT:    xtn v3.8b, v0.8h
+; CHECK-NEON-NEXT:    shrn v0.8b, v0.8h, #8
+; CHECK-NEON-NEXT:    shrn v1.8b, v1.8h, #8
+; CHECK-NEON-NEXT:    rbit v4.8b, v2.8b
+; CHECK-NEON-NEXT:    rbit v5.8b, v3.8b
+; CHECK-NEON-NEXT:    pmul v0.8b, v0.8b, v2.8b
+; CHECK-NEON-NEXT:    pmul v1.8b, v3.8b, v1.8b
+; CHECK-NEON-NEXT:    pmul v2.8b, v3.8b, v2.8b
+; CHECK-NEON-NEXT:    pmul v4.8b, v5.8b, v4.8b
+; CHECK-NEON-NEXT:    eor v0.8b, v1.8b, v0.8b
+; CHECK-NEON-NEXT:    rbit v4.8b, v4.8b
+; CHECK-NEON-NEXT:    ushr v1.8b, v4.8b, #1
+; CHECK-NEON-NEXT:    eor v0.8b, v1.8b, v0.8b
+; CHECK-NEON-NEXT:    ushll v1.8h, v2.8b, #0
+; CHECK-NEON-NEXT:    shll v0.8h, v0.8b, #8
+; CHECK-NEON-NEXT:    orr v0.16b, v1.16b, v0.16b
+; CHECK-NEON-NEXT:    rev16 v0.8b, v0.8b
+; CHECK-NEON-NEXT:    rbit v0.8b, v0.8b
+; CHECK-NEON-NEXT:    ret
+;
+; CHECK-AES-LABEL: clmulr_v4i16_neon:
+; CHECK-AES:       // %bb.0:
+; CHECK-AES-NEXT:    ushll v1.4s, v1.4h, #0
+; CHECK-AES-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-AES-NEXT:    ushll2 v2.2d, v1.4s, #0
+; CHECK-AES-NEXT:    ushll2 v3.2d, v0.4s, #0
+; CHECK-AES-NEXT:    ushll v1.2d, v1.2s, #0
+; CHECK-AES-NEXT:    ushll v0.2d, v0.2s, #0
+; CHECK-AES-NEXT:    pmull2 v4.1q, v3.2d, v2.2d
+; CHECK-AES-NEXT:    pmull v2.1q, v3.1d, v2.1d
+; CHECK-AES-NEXT:    pmull2 v3.1q, v0.2d, v1.2d
+; CHECK-AES-NEXT:    pmull v0.1q, v0.1d, v1.1d
+; CHECK-AES-NEXT:    mov v2.d[1], v4.d[0]
+; CHECK-AES-NEXT:    mov v0.d[1], v3.d[0]
+; CHECK-AES-NEXT:    uzp1 v0.4s, v0.4s, v2.4s
+; CHECK-AES-NEXT:    shrn v0.4h, v0.4s, #15
+; CHECK-AES-NEXT:    ret
   %a.ext = zext <4 x i16> %a to <4 x i32>
   %b.ext = zext <4 x i16> %b to <4 x i32>
   %clmul = call <4 x i32> @llvm.clmul.v4i32(<4 x i32> %a.ext, <4 x i32> %b.ext)
@@ -1842,93 +1941,114 @@ define <4 x i16> @clmulr_v4i16_neon(<4 x i16> %a, <4 x i16> %b) nounwind {
 }
 
 define <4 x i32> @clmulr_v4i32_neon(<4 x i32> %a, <4 x i32> %b) nounwind {
-; CHECK-LABEL: clmulr_v4i32_neon:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    rev32 v1.16b, v1.16b
-; CHECK-NEXT:    rev32 v0.16b, v0.16b
-; CHECK-NEXT:    rbit v1.16b, v1.16b
-; CHECK-NEXT:    rbit v2.16b, v0.16b
-; CHECK-NEXT:    xtn v0.4h, v1.4s
-; CHECK-NEXT:    xtn v3.4h, v2.4s
-; CHECK-NEXT:    shrn v16.4h, v2.4s, #16
-; CHECK-NEXT:    shrn v17.4h, v1.4s, #16
-; CHECK-NEXT:    xtn v20.8b, v16.8h
-; CHECK-NEXT:    shrn v16.8b, v16.8h, #8
-; CHECK-NEXT:    rev16 v4.8b, v0.8b
-; CHECK-NEXT:    rev16 v5.8b, v3.8b
-; CHECK-NEXT:    xtn v1.8b, v0.8h
-; CHECK-NEXT:    xtn v21.8b, v17.8h
-; CHECK-NEXT:    xtn v2.8b, v3.8h
-; CHECK-NEXT:    shrn v0.8b, v0.8h, #8
-; CHECK-NEXT:    shrn v3.8b, v3.8h, #8
-; CHECK-NEXT:    shrn v17.8b, v17.8h, #8
-; CHECK-NEXT:    rbit v4.8b, v4.8b
-; CHECK-NEXT:    rbit v5.8b, v5.8b
-; CHECK-NEXT:    rbit v22.8b, v1.8b
-; CHECK-NEXT:    rbit v23.8b, v21.8b
-; CHECK-NEXT:    rbit v24.8b, v2.8b
-; CHECK-NEXT:    pmul v16.8b, v16.8b, v1.8b
-; CHECK-NEXT:    pmul v25.8b, v20.8b, v0.8b
-; CHECK-NEXT:    pmul v17.8b, v2.8b, v17.8b
-; CHECK-NEXT:    pmul v0.8b, v2.8b, v0.8b
-; CHECK-NEXT:    xtn v6.8b, v4.8h
-; CHECK-NEXT:    xtn v7.8b, v5.8h
-; CHECK-NEXT:    shrn v5.8b, v5.8h, #8
-; CHECK-NEXT:    shrn v4.8b, v4.8h, #8
-; CHECK-NEXT:    pmul v23.8b, v24.8b, v23.8b
-; CHECK-NEXT:    rbit v18.8b, v6.8b
-; CHECK-NEXT:    rbit v19.8b, v7.8b
-; CHECK-NEXT:    pmul v5.8b, v5.8b, v6.8b
-; CHECK-NEXT:    pmul v4.8b, v7.8b, v4.8b
-; CHECK-NEXT:    pmul v6.8b, v7.8b, v6.8b
-; CHECK-NEXT:    rbit v7.8b, v23.8b
-; CHECK-NEXT:    pmul v18.8b, v19.8b, v18.8b
-; CHECK-NEXT:    rbit v19.8b, v20.8b
-; CHECK-NEXT:    eor v4.8b, v4.8b, v5.8b
-; CHECK-NEXT:    ushll v6.8h, v6.8b, #0
-; CHECK-NEXT:    ushr v7.8b, v7.8b, #1
-; CHECK-NEXT:    rbit v18.8b, v18.8b
-; CHECK-NEXT:    pmul v19.8b, v19.8b, v22.8b
-; CHECK-NEXT:    ushr v5.8b, v18.8b, #1
-; CHECK-NEXT:    rbit v18.8b, v19.8b
-; CHECK-NEXT:    pmul v19.8b, v3.8b, v21.8b
-; CHECK-NEXT:    pmul v3.8b, v3.8b, v1.8b
-; CHECK-NEXT:    eor v4.8b, v5.8b, v4.8b
-; CHECK-NEXT:    eor v5.8b, v25.8b, v16.8b
-; CHECK-NEXT:    eor v16.8b, v17.8b, v19.8b
-; CHECK-NEXT:    pmul v17.8b, v24.8b, v22.8b
-; CHECK-NEXT:    ushr v18.8b, v18.8b, #1
-; CHECK-NEXT:    eor v0.8b, v0.8b, v3.8b
-; CHECK-NEXT:    shll v4.8h, v4.8b, #8
-; CHECK-NEXT:    eor v5.8b, v18.8b, v5.8b
-; CHECK-NEXT:    pmul v18.8b, v20.8b, v1.8b
-; CHECK-NEXT:    eor v7.8b, v7.8b, v16.8b
-; CHECK-NEXT:    pmul v16.8b, v2.8b, v21.8b
-; CHECK-NEXT:    pmul v1.8b, v2.8b, v1.8b
-; CHECK-NEXT:    orr v4.16b, v6.16b, v4.16b
-; CHECK-NEXT:    rbit v6.8b, v17.8b
-; CHECK-NEXT:    shll v5.8h, v5.8b, #8
-; CHECK-NEXT:    shll v7.8h, v7.8b, #8
-; CHECK-NEXT:    ushll v17.8h, v18.8b, #0
-; CHECK-NEXT:    rev16 v4.8b, v4.8b
-; CHECK-NEXT:    ushll v16.8h, v16.8b, #0
-; CHECK-NEXT:    ushll v1.8h, v1.8b, #0
-; CHECK-NEXT:    ushr v3.8b, v6.8b, #1
-; CHECK-NEXT:    orr v5.16b, v17.16b, v5.16b
-; CHECK-NEXT:    orr v6.16b, v16.16b, v7.16b
-; CHECK-NEXT:    rbit v4.8b, v4.8b
-; CHECK-NEXT:    eor v0.8b, v3.8b, v0.8b
-; CHECK-NEXT:    eor v2.8b, v6.8b, v5.8b
-; CHECK-NEXT:    shll v0.8h, v0.8b, #8
-; CHECK-NEXT:    ushr v3.4h, v4.4h, #1
-; CHECK-NEXT:    orr v0.16b, v1.16b, v0.16b
-; CHECK-NEXT:    eor v2.8b, v3.8b, v2.8b
-; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-NEXT:    shll v1.4s, v2.4h, #16
-; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    rev32 v0.16b, v0.16b
-; CHECK-NEXT:    rbit v0.16b, v0.16b
-; CHECK-NEXT:    ret
+; CHECK-NEON-LABEL: clmulr_v4i32_neon:
+; CHECK-NEON:       // %bb.0:
+; CHECK-NEON-NEXT:    rev32 v1.16b, v1.16b
+; CHECK-NEON-NEXT:    rev32 v0.16b, v0.16b
+; CHECK-NEON-NEXT:    rbit v1.16b, v1.16b
+; CHECK-NEON-NEXT:    rbit v2.16b, v0.16b
+; CHECK-NEON-NEXT:    xtn v0.4h, v1.4s
+; CHECK-NEON-NEXT:    xtn v3.4h, v2.4s
+; CHECK-NEON-NEXT:    shrn v16.4h, v2.4s, #16
+; CHECK-NEON-NEXT:    shrn v17.4h, v1.4s, #16
+; CHECK-NEON-NEXT:    xtn v20.8b, v16.8h
+; CHECK-NEON-NEXT:    shrn v16.8b, v16.8h, #8
+; CHECK-NEON-NEXT:    rev16 v4.8b, v0.8b
+; CHECK-NEON-NEXT:    rev16 v5.8b, v3.8b
+; CHECK-NEON-NEXT:    xtn v1.8b, v0.8h
+; CHECK-NEON-NEXT:    xtn v21.8b, v17.8h
+; CHECK-NEON-NEXT:    xtn v2.8b, v3.8h
+; CHECK-NEON-NEXT:    shrn v0.8b, v0.8h, #8
+; CHECK-NEON-NEXT:    shrn v3.8b, v3.8h, #8
+; CHECK-NEON-NEXT:    shrn v17.8b, v17.8h, #8
+; CHECK-NEON-NEXT:    rbit v4.8b, v4.8b
+; CHECK-NEON-NEXT:    rbit v5.8b, v5.8b
+; CHECK-NEON-NEXT:    rbit v22.8b, v1.8b
+; CHECK-NEON-NEXT:    rbit v23.8b, v21.8b
+; CHECK-NEON-NEXT:    rbit v24.8b, v2.8b
+; CHECK-NEON-NEXT:    pmul v16.8b, v16.8b, v1.8b
+; CHECK-NEON-NEXT:    pmul v25.8b, v20.8b, v0.8b
+; CHECK-NEON-NEXT:    pmul v17.8b, v2.8b, v17.8b
+; CHECK-NEON-NEXT:    pmul v0.8b, v2.8b, v0.8b
+; CHECK-NEON-NEXT:    xtn v6.8b, v4.8h
+; CHECK-NEON-NEXT:    xtn v7.8b, v5.8h
+; CHECK-NEON-NEXT:    shrn v5.8b, v5.8h, #8
+; CHECK-NEON-NEXT:    shrn v4.8b, v4.8h, #8
+; CHECK-NEON-NEXT:    pmul v23.8b, v24.8b, v23.8b
+; CHECK-NEON-NEXT:    rbit v18.8b, v6.8b
+; CHECK-NEON-NEXT:    rbit v19.8b, v7.8b
+; CHECK-NEON-NEXT:    pmul v5.8b, v5.8b, v6.8b
+; CHECK-NEON-NEXT:    pmul v4.8b, v7.8b, v4.8b
+; CHECK-NEON-NEXT:    pmul v6.8b, v7.8b, v6.8b
+; CHECK-NEON-NEXT:    rbit v7.8b, v23.8b
+; CHECK-NEON-NEXT:    pmul v18.8b, v19.8b, v18.8b
+; CHECK-NEON-NEXT:    rbit v19.8b, v20.8b
+; CHECK-NEON-NEXT:    eor v4.8b, v4.8b, v5.8b
+; CHECK-NEON-NEXT:    ushll v6.8h, v6.8b, #0
+; CHECK-NEON-NEXT:    ushr v7.8b, v7.8b, #1
+; CHECK-NEON-NEXT:    rbit v18.8b, v18.8b
+; CHECK-NEON-NEXT:    pmul v19.8b, v19.8b, v22.8b
+; CHECK-NEON-NEXT:    ushr v5.8b, v18.8b, #1
+; CHECK-NEON-NEXT:    rbit v18.8b, v19.8b
+; CHECK-NEON-NEXT:    pmul v19.8b, v3.8b, v21.8b
+; CHECK-NEON-NEXT:    pmul v3.8b, v3.8b, v1.8b
+; CHECK-NEON-NEXT:    eor v4.8b, v5.8b, v4.8b
+; CHECK-NEON-NEXT:    eor v5.8b, v25.8b, v16.8b
+; CHECK-NEON-NEXT:    eor v16.8b, v17.8b, v19.8b
+; CHECK-NEON-NEXT:    pmul v17.8b, v24.8b, v22.8b
+; CHECK-NEON-NEXT:    ushr v18.8b, v18.8b, #1
+; CHECK-NEON-NEXT:    eor v0.8b, v0.8b, v3.8b
+; CHECK-NEON-NEXT:    shll v4.8h, v4.8b, #8
+; CHECK-NEON-NEXT:    eor v5.8b, v18.8b, v5.8b
+; CHECK-NEON-NEXT:    pmul v18.8b, v20.8b, v1.8b
+; CHECK-NEON-NEXT:    eor v7.8b, v7.8b, v16.8b
+; CHECK-NEON-NEXT:    pmul v16.8b, v2.8b, v21.8b
+; CHECK-NEON-NEXT:    pmul v1.8b, v2.8b, v1.8b
+; CHECK-NEON-NEXT:    orr v4.16b, v6.16b, v4.16b
+; CHECK-NEON-NEXT:    rbit v6.8b, v17.8b
+; CHECK-NEON-NEXT:    shll v5.8h, v5.8b, #8
+; CHECK-NEON-NEXT:    shll v7.8h, v7.8b, #8
+; CHECK-NEON-NEXT:    ushll v17.8h, v18.8b, #0
+; CHECK-NEON-NEXT:    rev16 v4.8b, v4.8b
+; CHECK-NEON-NEXT:    ushll v16.8h, v16.8b, #0
+; CHECK-NEON-NEXT:    ushll v1.8h, v1.8b, #0
+; CHECK-NEON-NEXT:    ushr v3.8b, v6.8b, #1
+; CHECK-NEON-NEXT:    orr v5.16b, v17.16b, v5.16b
+; CHECK-NEON-NEXT:    orr v6.16b, v16.16b, v7.16b
+; CHECK-NEON-NEXT:    rbit v4.8b, v4.8b
+; CHECK-NEON-NEXT:    eor v0.8b, v3.8b, v0.8b
+; CHECK-NEON-NEXT:    eor v2.8b, v6.8b, v5.8b
+; CHECK-NEON-NEXT:    shll v0.8h, v0.8b, #8
+; CHECK-NEON-NEXT:    ushr v3.4h, v4.4h, #1
+; CHECK-NEON-NEXT:    orr v0.16b, v1.16b, v0.16b
+; CHECK-NEON-NEXT:    eor v2.8b, v3.8b, v2.8b
+; CHECK-NEON-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-NEON-NEXT:    shll v1.4s, v2.4h, #16
+; CHECK-NEON-NEXT:    orr v0.16b, v0.16b, v1.16b
+; CHECK-NEON-NEXT:    rev32 v0.16b, v0.16b
+; CHECK-NEON-NEXT:    rbit v0.16b, v0.16b
+; CHECK-NEON-NEXT:    ret
+;
+; CHECK-AES-LABEL: clmulr_v4i32_neon:
+; CHECK-AES:       // %bb.0:
+; CHECK-AES-NEXT:    rev32 v1.16b, v1.16b
+; CHECK-AES-NEXT:    rev32 v0.16b, v0.16b
+; CHECK-AES-NEXT:    rbit v1.16b, v1.16b
+; CHECK-AES-NEXT:    rbit v0.16b, v0.16b
+; CHECK-AES-NEXT:    ushll2 v2.2d, v1.4s, #0
+; CHECK-AES-NEXT:    ushll2 v3.2d, v0.4s, #0
+; CHECK-AES-NEXT:    ushll v1.2d, v1.2s, #0
+; CHECK-AES-NEXT:    ushll v0.2d, v0.2s, #0
+; CHECK-AES-NEXT:    pmull2 v4.1q, v3.2d, v2.2d
+; CHECK-AES-NEXT:    pmull v2.1q, v3.1d, v2.1d
+; CHECK-AES-NEXT:    pmull2 v3.1q, v0.2d, v1.2d
+; CHECK-AES-NEXT:    pmull v0.1q, v0.1d, v1.1d
+; CHECK-AES-NEXT:    mov v2.d[1], v4.d[0]
+; CHECK-AES-NEXT:    mov v0.d[1], v3.d[0]
+; CHECK-AES-NEXT:    uzp1 v0.4s, v0.4s, v2.4s
+; CHECK-AES-NEXT:    rev32 v0.16b, v0.16b
+; CHECK-AES-NEXT:    rbit v0.16b, v0.16b
+; CHECK-AES-NEXT:    ret
   %a.ext = zext <4 x i32> %a to <4 x i64>
   %b.ext = zext <4 x i32> %b to <4 x i64>
   %clmul = call <4 x i64> @llvm.clmul.v4i64(<4 x i64> %a.ext, <4 x i64> %b.ext)
@@ -2365,33 +2485,51 @@ define <8 x i16> @clmulh_v8i16_neon(<8 x i16> %a, <8 x i16> %b) nounwind {
 }
 
 define <4 x i16> @clmulh_v4i16_neon(<4 x i16> %a, <4 x i16> %b) nounwind {
-; CHECK-LABEL: clmulh_v4i16_neon:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    rev16 v1.8b, v1.8b
-; CHECK-NEXT:    rev16 v0.8b, v0.8b
-; CHECK-NEXT:    rbit v1.8b, v1.8b
-; CHECK-NEXT:    rbit v0.8b, v0.8b
-; CHECK-NEXT:    xtn v2.8b, v1.8h
-; CHECK-NEXT:    xtn v3.8b, v0.8h
-; CHECK-NEXT:    shrn v0.8b, v0.8h, #8
-; CHECK-NEXT:    shrn v1.8b, v1.8h, #8
-; CHECK-NEXT:    rbit v4.8b, v2.8b
-; CHECK-NEXT:    rbit v5.8b, v3.8b
-; CHECK-NEXT:    pmul v0.8b, v0.8b, v2.8b
-; CHECK-NEXT:    pmul v1.8b, v3.8b, v1.8b
-; CHECK-NEXT:    pmul v2.8b, v3.8b, v2.8b
-; CHECK-NEXT:    pmul v4.8b, v5.8b, v4.8b
-; CHECK-NEXT:    eor v0.8b, v1.8b, v0.8b
-; CHECK-NEXT:    rbit v4.8b, v4.8b
-; CHECK-NEXT:    ushr v1.8b, v4.8b, #1
-; CHECK-NEXT:    eor v0.8b, v1.8b, v0.8b
-; CHECK-NEXT:    ushll v1.8h, v2.8b, #0
-; CHECK-NEXT:    shll v0.8h, v0.8b, #8
-; CHECK-NEXT:    orr v0.16b, v1.16b, v0.16b
-; CHECK-NEXT:    rev16 v0.8b, v0.8b
-; CHECK-NEXT:    rbit v0.8b, v0.8b
-; CHECK-NEXT:    ushr v0.4h, v0.4h, #1
-; CHECK-NEXT:    ret
+; CHECK-NEON-LABEL: clmulh_v4i16_neon:
+; CHECK-NEON:       // %bb.0:
+; CHECK-NEON-NEXT:    rev16 v1.8b, v1.8b
+; CHECK-NEON-NEXT:    rev16 v0.8b, v0.8b
+; CHECK-NEON-NEXT:    rbit v1.8b, v1.8b
+; CHECK-NEON-NEXT:    rbit v0.8b, v0.8b
+; CHECK-NEON-NEXT:    xtn v2.8b, v1.8h
+; CHECK-NEON-NEXT:    xtn v3.8b, v0.8h
+; CHECK-NEON-NEXT:    shrn v0.8b, v0.8h, #8
+; CHECK-NEON-NEXT:    shrn v1.8b, v1.8h, #8
+; CHECK-NEON-NEXT:    rbit v4.8b, v2.8b
+; CHECK-NEON-NEXT:    rbit v5.8b, v3.8b
+; CHECK-NEON-NEXT:    pmul v0.8b, v0.8b, v2.8b
+; CHECK-NEON-NEXT:    pmul v1.8b, v3.8b, v1.8b
+; CHECK-NEON-NEXT:    pmul v2.8b, v3.8b, v2.8b
+; CHECK-NEON-NEXT:    pmul v4.8b, v5.8b, v4.8b
+; CHECK-NEON-NEXT:    eor v0.8b, v1.8b, v0.8b
+; CHECK-NEON-NEXT:    rbit v4.8b, v4.8b
+; CHECK-NEON-NEXT:    ushr v1.8b, v4.8b, #1
+; CHECK-NEON-NEXT:    eor v0.8b, v1.8b, v0.8b
+; CHECK-NEON-NEXT:    ushll v1.8h, v2.8b, #0
+; CHECK-NEON-NEXT:    shll v0.8h, v0.8b, #8
+; CHECK-NEON-NEXT:    orr v0.16b, v1.16b, v0.16b
+; CHECK-NEON-NEXT:    rev16 v0.8b, v0.8b
+; CHECK-NEON-NEXT:    rbit v0.8b, v0.8b
+; CHECK-NEON-NEXT:    ushr v0.4h, v0.4h, #1
+; CHECK-NEON-NEXT:    ret
+;
+; CHECK-AES-LABEL: clmulh_v4i16_neon:
+; CHECK-AES:       // %bb.0:
+; CHECK-AES-NEXT:    ushll v1.4s, v1.4h, #0
+; CHECK-AES-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-AES-NEXT:    ushll2 v2.2d, v1.4s, #0
+; CHECK-AES-NEXT:    ushll2 v3.2d, v0.4s, #0
+; CHECK-AES-NEXT:    ushll v1.2d, v1.2s, #0
+; CHECK-AES-NEXT:    ushll v0.2d, v0.2s, #0
+; CHECK-AES-NEXT:    pmull2 v4.1q, v3.2d, v2.2d
+; CHECK-AES-NEXT:    pmull v2.1q, v3.1d, v2.1d
+; CHECK-AES-NEXT:    pmull2 v3.1q, v0.2d, v1.2d
+; CHECK-AES-NEXT:    pmull v0.1q, v0.1d, v1.1d
+; CHECK-AES-NEXT:    mov v2.d[1], v4.d[0]
+; CHECK-AES-NEXT:    mov v0.d[1], v3.d[0]
+; CHECK-AES-NEXT:    uzp1 v0.4s, v0.4s, v2.4s
+; CHECK-AES-NEXT:    shrn v0.4h, v0.4s, #16
+; CHECK-AES-NEXT:    ret
   %a.ext = zext <4 x i16> %a to <4 x i32>
   %b.ext = zext <4 x i16> %b to <4 x i32>
   %clmul = call <4 x i32> @llvm.clmul.v4i32(<4 x i32> %a.ext, <4 x i32> %b.ext)
@@ -2401,94 +2539,116 @@ define <4 x i16> @clmulh_v4i16_neon(<4 x i16> %a, <4 x i16> %b) nounwind {
 }
 
 define <4 x i32> @clmulh_v4i32_neon(<4 x i32> %a, <4 x i32> %b) nounwind {
-; CHECK-LABEL: clmulh_v4i32_neon:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    rev32 v1.16b, v1.16b
-; CHECK-NEXT:    rev32 v0.16b, v0.16b
-; CHECK-NEXT:    rbit v1.16b, v1.16b
-; CHECK-NEXT:    rbit v2.16b, v0.16b
-; CHECK-NEXT:    xtn v0.4h, v1.4s
-; CHECK-NEXT:    xtn v3.4h, v2.4s
-; CHECK-NEXT:    shrn v16.4h, v2.4s, #16
-; CHECK-NEXT:    shrn v17.4h, v1.4s, #16
-; CHECK-NEXT:    xtn v20.8b, v16.8h
-; CHECK-NEXT:    shrn v16.8b, v16.8h, #8
-; CHECK-NEXT:    rev16 v4.8b, v0.8b
-; CHECK-NEXT:    rev16 v5.8b, v3.8b
-; CHECK-NEXT:    xtn v1.8b, v0.8h
-; CHECK-NEXT:    xtn v21.8b, v17.8h
-; CHECK-NEXT:    xtn v2.8b, v3.8h
-; CHECK-NEXT:    shrn v0.8b, v0.8h, #8
-; CHECK-NEXT:    shrn v3.8b, v3.8h, #8
-; CHECK-NEXT:    shrn v17.8b, v17.8h, #8
-; CHECK-NEXT:    rbit v4.8b, v4.8b
-; CHECK-NEXT:    rbit v5.8b, v5.8b
-; CHECK-NEXT:    rbit v22.8b, v1.8b
-; CHECK-NEXT:    rbit v23.8b, v21.8b
-; CHECK-NEXT:    rbit v24.8b, v2.8b
-; CHECK-NEXT:    pmul v16.8b, v16.8b, v1.8b
-; CHECK-NEXT:    pmul v25.8b, v20.8b, v0.8b
-; CHECK-NEXT:    pmul v17.8b, v2.8b, v17.8b
-; CHECK-NEXT:    pmul v0.8b, v2.8b, v0.8b
-; CHECK-NEXT:    xtn v6.8b, v4.8h
-; CHECK-NEXT:    xtn v7.8b, v5.8h
-; CHECK-NEXT:    shrn v5.8b, v5.8h, #8
-; CHECK-NEXT:    shrn v4.8b, v4.8h, #8
-; CHECK-NEXT:    pmul v23.8b, v24.8b, v23.8b
-; CHECK-NEXT:    rbit v18.8b, v6.8b
-; CHECK-NEXT:    rbit v19.8b, v7.8b
-; CHECK-NEXT:    pmul v5.8b, v5.8b, v6.8b
-; CHECK-NEXT:    pmul v4.8b, v7.8b, v4.8b
-; CHECK-NEXT:    pmul v6.8b, v7.8b, v6.8b
-; CHECK-NEXT:    rbit v7.8b, v23.8b
-; CHECK-NEXT:    pmul v18.8b, v19.8b, v18.8b
-; CHECK-NEXT:    rbit v19.8b, v20.8b
-; CHECK-NEXT:    eor v4.8b, v4.8b, v5.8b
-; CHECK-NEXT:    ushll v6.8h, v6.8b, #0
-; CHECK-NEXT:    ushr v7.8b, v7.8b, #1
-; CHECK-NEXT:    rbit v18.8b, v18.8b
-; CHECK-NEXT:    pmul v19.8b, v19.8b, v22.8b
-; CHECK-NEXT:    ushr v5.8b, v18.8b, #1
-; CHECK-NEXT:    rbit v18.8b, v19.8b
-; CHECK-NEXT:    pmul v19.8b, v3.8b, v21.8b
-; CHECK-NEXT:    pmul v3.8b, v3.8b, v1.8b
-; CHECK-NEXT:    eor v4.8b, v5.8b, v4.8b
-; CHECK-NEXT:    eor v5.8b, v25.8b, v16.8b
-; CHECK-NEXT:    eor v16.8b, v17.8b, v19.8b
-; CHECK-NEXT:    pmul v17.8b, v24.8b, v22.8b
-; CHECK-NEXT:    ushr v18.8b, v18.8b, #1
-; CHECK-NEXT:    eor v0.8b, v0.8b, v3.8b
-; CHECK-NEXT:    shll v4.8h, v4.8b, #8
-; CHECK-NEXT:    eor v5.8b, v18.8b, v5.8b
-; CHECK-NEXT:    pmul v18.8b, v20.8b, v1.8b
-; CHECK-NEXT:    eor v7.8b, v7.8b, v16.8b
-; CHECK-NEXT:    pmul v16.8b, v2.8b, v21.8b
-; CHECK-NEXT:    pmul v1.8b, v2.8b, v1.8b
-; CHECK-NEXT:    orr v4.16b, v6.16b, v4.16b
-; CHECK-NEXT:    rbit v6.8b, v17.8b
-; CHECK-NEXT:    shll v5.8h, v5.8b, #8
-; CHECK-NEXT:    shll v7.8h, v7.8b, #8
-; CHECK-NEXT:    ushll v17.8h, v18.8b, #0
-; CHECK-NEXT:    rev16 v4.8b, v4.8b
-; CHECK-NEXT:    ushll v16.8h, v16.8b, #0
-; CHECK-NEXT:    ushll v1.8h, v1.8b, #0
-; CHECK-NEXT:    ushr v3.8b, v6.8b, #1
-; CHECK-NEXT:    orr v5.16b, v17.16b, v5.16b
-; CHECK-NEXT:    orr v6.16b, v16.16b, v7.16b
-; CHECK-NEXT:    rbit v4.8b, v4.8b
-; CHECK-NEXT:    eor v0.8b, v3.8b, v0.8b
-; CHECK-NEXT:    eor v2.8b, v6.8b, v5.8b
-; CHECK-NEXT:    shll v0.8h, v0.8b, #8
-; CHECK-NEXT:    ushr v3.4h, v4.4h, #1
-; CHECK-NEXT:    orr v0.16b, v1.16b, v0.16b
-; CHECK-NEXT:    eor v2.8b, v3.8b, v2.8b
-; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-NEXT:    shll v1.4s, v2.4h, #16
-; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    rev32 v0.16b, v0.16b
-; CHECK-NEXT:    rbit v0.16b, v0.16b
-; CHECK-NEXT:    ushr v0.4s, v0.4s, #1
-; CHECK-NEXT:    ret
+; CHECK-NEON-LABEL: clmulh_v4i32_neon:
+; CHECK-NEON:       // %bb.0:
+; CHECK-NEON-NEXT:    rev32 v1.16b, v1.16b
+; CHECK-NEON-NEXT:    rev32 v0.16b, v0.16b
+; CHECK-NEON-NEXT:    rbit v1.16b, v1.16b
+; CHECK-NEON-NEXT:    rbit v2.16b, v0.16b
+; CHECK-NEON-NEXT:    xtn v0.4h, v1.4s
+; CHECK-NEON-NEXT:    xtn v3.4h, v2.4s
+; CHECK-NEON-NEXT:    shrn v16.4h, v2.4s, #16
+; CHECK-NEON-NEXT:    shrn v17.4h, v1.4s, #16
+; CHECK-NEON-NEXT:    xtn v20.8b, v16.8h
+; CHECK-NEON-NEXT:    shrn v16.8b, v16.8h, #8
+; CHECK-NEON-NEXT:    rev16 v4.8b, v0.8b
+; CHECK-NEON-NEXT:    rev16 v5.8b, v3.8b
+; CHECK-NEON-NEXT:    xtn v1.8b, v0.8h
+; CHECK-NEON-NEXT:    xtn v21.8b, v17.8h
+; CHECK-NEON-NEXT:    xtn v2.8b, v3.8h
+; CHECK-NEON-NEXT:    shrn v0.8b, v0.8h, #8
+; CHECK-NEON-NEXT:    shrn v3.8b, v3.8h, #8
+; CHECK-NEON-NEXT:    shrn v17.8b, v17.8h, #8
+; CHECK-NEON-NEXT:    rbit v4.8b, v4.8b
+; CHECK-NEON-NEXT:    rbit v5.8b, v5.8b
+; CHECK-NEON-NEXT:    rbit v22.8b, v1.8b
+; CHECK-NEON-NEXT:    rbit v23.8b, v21.8b
+; CHECK-NEON-NEXT:    rbit v24.8b, v2.8b
+; CHECK-NEON-NEXT:    pmul v16.8b, v16.8b, v1.8b
+; CHECK-NEON-NEXT:    pmul v25.8b, v20.8b, v0.8b
+; CHECK-NEON-NEXT:    pmul v17.8b, v2.8b, v17.8b
+; CHECK-NEON-NEXT:    pmul v0.8b, v2.8b, v0.8b
+; CHECK-NEON-NEXT:    xtn v6.8b, v4.8h
+; CHECK-NEON-NEXT:    xtn v7.8b, v5.8h
+; CHECK-NEON-NEXT:    shrn v5.8b, v5.8h, #8
+; CHECK-NEON-NEXT:    shrn v4.8b, v4.8h, #8
+; CHECK-NEON-NEXT:    pmul v23.8b, v24.8b, v23.8b
+; CHECK-NEON-NEXT:    rbit v18.8b, v6.8b
+; CHECK-NEON-NEXT:    rbit v19.8b, v7.8b
+; CHECK-NEON-NEXT:    pmul v5.8b, v5.8b, v6.8b
+; CHECK-NEON-NEXT:    pmul v4.8b, v7.8b, v4.8b
+; CHECK-NEON-NEXT:    pmul v6.8b, v7.8b, v6.8b
+; CHECK-NEON-NEXT:    rbit v7.8b, v23.8b
+; CHECK-NEON-NEXT:    pmul v18.8b, v19.8b, v18.8b
+; CHECK-NEON-NEXT:    rbit v19.8b, v20.8b
+; CHECK-NEON-NEXT:    eor v4.8b, v4.8b, v5.8b
+; CHECK-NEON-NEXT:    ushll v6.8h, v6.8b, #0
+; CHECK-NEON-NEXT:    ushr v7.8b, v7.8b, #1
+; CHECK-NEON-NEXT:    rbit v18.8b, v18.8b
+; CHECK-NEON-NEXT:    pmul v19.8b, v19.8b, v22.8b
+; CHECK-NEON-NEXT:    ushr v5.8b, v18.8b, #1
+; CHECK-NEON-NEXT:    rbit v18.8b, v19.8b
+; CHECK-NEON-NEXT:    pmul v19.8b, v3.8b, v21.8b
+; CHECK-NEON-NEXT:    pmul v3.8b, v3.8b, v1.8b
+; CHECK-NEON-NEXT:    eor v4.8b, v5.8b, v4.8b
+; CHECK-NEON-NEXT:    eor v5.8b, v25.8b, v16.8b
+; CHECK-NEON-NEXT:    eor v16.8b, v17.8b, v19.8b
+; CHECK-NEON-NEXT:    pmul v17.8b, v24.8b, v22.8b
+; CHECK-NEON-NEXT:    ushr v18.8b, v18.8b, #1
+; CHECK-NEON-NEXT:    eor v0.8b, v0.8b, v3.8b
+; CHECK-NEON-NEXT:    shll v4.8h, v4.8b, #8
+; CHECK-NEON-NEXT:    eor v5.8b, v18.8b, v5.8b
+; CHECK-NEON-NEXT:    pmul v18.8b, v20.8b, v1.8b
+; CHECK-NEON-NEXT:    eor v7.8b, v7.8b, v16.8b
+; CHECK-NEON-NEXT:    pmul v16.8b, v2.8b, v21.8b
+; CHECK-NEON-NEXT:    pmul v1.8b, v2.8b, v1.8b
+; CHECK-NEON-NEXT:    orr v4.16b, v6.16b, v4.16b
+; CHECK-NEON-NEXT:    rbit v6.8b, v17.8b
+; CHECK-NEON-NEXT:    shll v5.8h, v5.8b, #8
+; CHECK-NEON-NEXT:    shll v7.8h, v7.8b, #8
+; CHECK-NEON-NEXT:    ushll v17.8h, v18.8b, #0
+; CHECK-NEON-NEXT:    rev16 v4.8b, v4.8b
+; CHECK-NEON-NEXT:    ushll v16.8h, v16.8b, #0
+; CHECK-NEON-NEXT:    ushll v1.8h, v1.8b, #0
+; CHECK-NEON-NEXT:    ushr v3.8b, v6.8b, #1
+; CHECK-NEON-NEXT:    orr v5.16b, v17.16b, v5.16b
+; CHECK-NEON-NEXT:    orr v6.16b, v16.16b, v7.16b
+; CHECK-NEON-NEXT:    rbit v4.8b, v4.8b
+; CHECK-NEON-NEXT:    eor v0.8b, v3.8b, v0.8b
+; CHECK-NEON-NEXT:    eor v2.8b, v6.8b, v5.8b
+; CHECK-NEON-NEXT:    shll v0.8h, v0.8b, #8
+; CHECK-NEON-NEXT:    ushr v3.4h, v4.4h, #1
+; CHECK-NEON-NEXT:    orr v0.16b, v1.16b, v0.16b
+; CHECK-NEON-NEXT:    eor v2.8b, v3.8b, v2.8b
+; CHECK-NEON-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-NEON-NEXT:    shll v1.4s, v2.4h, #16
+; CHECK-NEON-NEXT:    orr v0.16b, v0.16b, v1.16b
+; CHECK-NEON-NEXT:    rev32 v0.16b, v0.16b
+; CHECK-NEON-NEXT:    rbit v0.16b, v0.16b
+; CHECK-NEON-NEXT:    ushr v0.4s, v0.4s, #1
+; CHECK-NEON-NEXT:    ret
+;
+; CHECK-AES-LABEL: clmulh_v4i32_neon:
+; CHECK-AES:       // %bb.0:
+; CHECK-AES-NEXT:    rev32 v1.16b, v1.16b
+; CHECK-AES-NEXT:    rev32 v0.16b, v0.16b
+; CHECK-AES-NEXT:    rbit v1.16b, v1.16b
+; CHECK-AES-NEXT:    rbit v0.16b, v0.16b
+; CHECK-AES-NEXT:    ushll2 v2.2d, v1.4s, #0
+; CHECK-AES-NEXT:    ushll2 v3.2d, v0.4s, #0
+; CHECK-AES-NEXT:    ushll v1.2d, v1.2s, #0
+; CHECK-AES-NEXT:    ushll v0.2d, v0.2s, #0
+; CHECK-AES-NEXT:    pmull2 v4.1q, v3.2d, v2.2d
+; CHECK-AES-NEXT:    pmull v2.1q, v3.1d, v2.1d
+; CHECK-AES-NEXT:    pmull2 v3.1q, v0.2d, v1.2d
+; CHECK-AES-NEXT:    pmull v0.1q, v0.1d, v1.1d
+; CHECK-AES-NEXT:    mov v2.d[1], v4.d[0]
+; CHECK-AES-NEXT:    mov v0.d[1], v3.d[0]
+; CHECK-AES-NEXT:    uzp1 v0.4s, v0.4s, v2.4s
+; CHECK-AES-NEXT:    rev32 v0.16b, v0.16b
+; CHECK-AES-NEXT:    rbit v0.16b, v0.16b
+; CHECK-AES-NEXT:    ushr v0.4s, v0.4s, #1
+; CHECK-AES-NEXT:    ret
   %a.ext = zext <4 x i32> %a to <4 x i64>
   %b.ext = zext <4 x i32> %b to <4 x i64>
   %clmul = call <4 x i64> @llvm.clmul.v4i64(<4 x i64> %a.ext, <4 x i64> %b.ext)

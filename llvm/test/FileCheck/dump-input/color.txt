@@ -1,0 +1,112 @@
+; Check that, when color is enabled, input dumps are colored as desired.  Other
+; tests check when colors are enabled generally.
+;
+; There are many redundant ANSI escape sequences in FileCheck's color output.
+; In particular, all sequences immediately preceding a <reset> with no text in
+; between are redundant.  These sequences should have no impact on what the
+; FileCheck user sees.
+
+; REQUIRES: ansi-escapes
+
+; RUN: split-file %s %t
+
+; DEFINE: %{opts} =
+; DEFINE: %{run} = \
+; DEFINE:   %ProtectFileCheckOutput \
+; DEFINE:   not FileCheck -color -dump-input=always -dump-input-filter=error \
+; DEFINE:       -dump-input-context=2 %{opts} %t/check.txt < %t/input.txt \
+; DEFINE:       2>&1 | \
+; DEFINE:     %{reveal-ansi-escapes} | \
+; DEFINE:     FileCheck %s -match-full-lines -check-prefixes
+
+; REDEFINE: %{opts} =
+; RUN: %{run} CHECK-Q
+; REDEFINE: %{opts} = -v
+; RUN: %{run} CHECK-V
+; REDEFINE: %{opts} = -vv
+; RUN: %{run} CHECK-VV
+
+; Without -v or -vv:
+; - Line numbers and ellipses are bright black.
+; - Input text is reset to the default.
+; - Errors are red.
+; - Fuzzy matches are magenta.
+;
+;      CHECK-Q: Input was:
+; CHECK-Q-NEXT: <<<<<<
+; CHECK-Q-NEXT: <bold><reset><bold-bright-black> 1: <reset><bold><reset>hello <reset>
+; CHECK-Q-NEXT: <bold-red>dag:2'0                                            {          search range start (exclusive)
+; CHECK-Q-NEXT: <reset><bold-red>dag:2'1                                                error: no match found in search range
+; CHECK-Q-NEXT: <reset><bold-bright-black>       2: <reset><bold><reset>jello <reset>
+; CHECK-Q-NEXT: <bold-magenta>dag:2'2                                   ?               possible intended match
+; CHECK-Q-NEXT: <reset><bold-bright-black>       3: <reset><bold><reset>end <reset>
+; CHECK-Q-NEXT: <bold-red>dag:2'3                                           }           search range end (exclusive)
+; CHECK-Q-NEXT: <reset><bold-bright-black>       4: <reset><bold><reset>foo <reset>
+; CHECK-Q-NEXT: <bold-bright-black>              5: <reset><bold><reset>foo <reset>
+; CHECK-Q-NEXT: <bold-bright-black>              .<reset>
+; CHECK-Q-NEXT: <bold-bright-black>              .<reset>
+; CHECK-Q-NEXT: <bold-bright-black>              .<reset>
+; CHECK-Q-NEXT: >>>>>>
+
+; With -v, all of the above is true but:
+; - Successes are green.
+; - Unmatched input text now has a cyan background.
+;
+;      CHECK-V: Input was:
+; CHECK-V-NEXT: <<<<<<
+; CHECK-V-NEXT: <bold><reset><bold-bright-black>  1: <reset><bold><bg-bold-cyan><reset>hello<bg-bold-cyan> <reset>
+; CHECK-V-NEXT: <bold-green>dag:1                                                      ^~~~~
+; CHECK-V-NEXT: <reset><bold-red>dag:2'0                                                                  {        search range start (exclusive)
+; CHECK-V-NEXT: <reset><bold-red>dag:2'1                                                                           error: no match found in search range
+; CHECK-V-NEXT: <reset><bold-bright-black>        2: <reset><bold><bg-bold-cyan>jello <reset>
+; CHECK-V-NEXT: <bold-magenta>dag:2'2                                           ?                                  possible intended match
+; CHECK-V-NEXT: <reset><bold-bright-black>        3: <reset><bold><bg-bold-cyan><reset>end<bg-bold-cyan> <reset>
+; CHECK-V-NEXT: <bold-green>label:3                                                    ^~~
+; CHECK-V-NEXT: <reset><bold-red>dag:2'3                                                                }          search range end (exclusive)
+; CHECK-V-NEXT: <reset><bold-bright-black>        4: <reset><bold><bg-bold-cyan>foo <reset>
+; CHECK-V-NEXT: <bold-bright-black>               5: <reset><bold><bg-bold-cyan>foo <reset>
+; CHECK-V-NEXT: <bold-bright-black>               .<reset>
+; CHECK-V-NEXT: <bold-bright-black>               .<reset>
+; CHECK-V-NEXT: <bold-bright-black>               .<reset>
+; CHECK-V-NEXT: >>>>>>
+
+; With -vv, all of the above is true but:
+; - Discarded matches are cyan.
+;
+;      CHECK-VV: Input was:
+; CHECK-VV-NEXT: <<<<<<
+; CHECK-VV-NEXT: <bold><reset><bold-bright-black>  1: <reset><bold><bg-bold-cyan><reset>hello<bg-bold-cyan> <reset>
+; CHECK-VV-NEXT: <bold-green>dag:1                                                      ^~~~~
+; CHECK-VV-NEXT: <reset><bold-cyan>dag:2'0                                              !~~~~                       discard: overlaps earlier match
+; CHECK-VV-NEXT: <reset><bold-red>dag:2'1                                                                  {        search range start (exclusive)
+; CHECK-VV-NEXT: <reset><bold-red>dag:2'2                                                                           error: no match found in search range
+; CHECK-VV-NEXT: <reset><bold-bright-black>        2: <reset><bold><bg-bold-cyan>jello <reset>
+; CHECK-VV-NEXT: <bold-magenta>dag:2'3                                           ?                                  possible intended match
+; CHECK-VV-NEXT: <reset><bold-bright-black>        3: <reset><bold><bg-bold-cyan><reset>end<bg-bold-cyan> <reset>
+; CHECK-VV-NEXT: <bold-green>label:3                                                    ^~~
+; CHECK-VV-NEXT: <reset><bold-red>dag:2'4                                                                }          search range end (exclusive)
+; CHECK-VV-NEXT: <reset><bold-bright-black>        4: <reset><bold><bg-bold-cyan>foo <reset>
+; CHECK-VV-NEXT: <bold-bright-black>               5: <reset><bold><bg-bold-cyan>foo <reset>
+; CHECK-VV-NEXT: <bold-bright-black>               .<reset>
+; CHECK-VV-NEXT: <bold-bright-black>               .<reset>
+; CHECK-VV-NEXT: <bold-bright-black>               .<reset>
+; CHECK-VV-NEXT: >>>>>>
+
+;--- check.txt
+CHECK-DAG: hello
+CHECK-DAG: hello
+CHECK-LABEL: end
+
+;--- input.txt
+hello
+jello
+end
+foo
+foo
+foo
+foo
+foo
+foo
+foo
+foo
+foo

@@ -95,7 +95,7 @@ func.func @serial_loop_normalized(%buf: memref<1xi32>) {
   // CHECK: acc.kernel_environment
   // CHECK: acc.par_width {par_dim = #acc.par_dim<sequential>}
   // CHECK: acc.compute_region launch(
-  // CHECK: scf.parallel
+  // CHECK: scf.for
   // CHECK-DAG: arith.muli
   // CHECK-DAG: arith.addi
   // CHECK: acc.par_dims = #acc<par_dims[sequential]>
@@ -137,9 +137,9 @@ acc.routine @routine_with_loop func(@device_routine_with_loop) seq
 // CHECK-LABEL: func.func @device_routine_with_loop
 // CHECK: attributes {acc.specialized_routine = #acc.specialized_routine<@routine_with_loop, <seq>, "host_routine_with_loop">}
 // CHECK-NOT: acc.loop
-// CHECK: scf.parallel
+// CHECK: scf.for
 // CHECK: acc.par_dims = #acc<par_dims[sequential]>
-// CHECK-NOT: scf.for
+// CHECK-NOT: scf.parallel
 func.func @device_routine_with_loop(%buf: memref<8xi32>) attributes {acc.specialized_routine = #acc.specialized_routine<@routine_with_loop, <seq>, "host_routine_with_loop">} {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index

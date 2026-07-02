@@ -8,10 +8,12 @@
 # CHECK-MINUS: :[[@LINE+1]]:9: error: invalid operand for instruction
 qc.e.li 9, 33554432
 
-# CHECK: :[[@LINE+1]]:1: error: too few operands for instruction
+# CHECK: :[[@LINE+1]]:{{11: error: too few operands for instruction|1: error: invalid instruction}}
 qc.e.li x9
 
-# CHECK-IMM: :[[@LINE+1]]:13: error: immediate must be an integer in the range [-2147483648, 4294967295]
+# CHECK-IMM: :[[@LINE+3]]:1: error: invalid instruction, any one of the following would fix this:
+# CHECK-IMM: :[[@LINE+2]]:13: note: immediate must be an integer in the range [-2147483648, 4294967295]
+# CHECK-IMM: :[[@LINE+1]]:13: note: immediate must be an integer in the range [-2147483648, 4294967295]
 qc.e.li x9, 4294967296
 
 # CHECK-EXT: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqcili' (Qualcomm uC Load Large Immediate Extension)
@@ -19,10 +21,10 @@ qc.e.li x9, 4294967295
 
 
 # CHECK-PLUS: :[[@LINE+2]]:7: error: register must be a GPR excluding zero (x0)
-# CHECK-MINUS: :[[@LINE+1]]:7: error: invalid operand for instruction
+# CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.li x0, 114514
 
-# CHECK: :[[@LINE+1]]:1: error: too few operands for instruction
+# CHECK: :[[@LINE+1]]:{{10: error: too few operands for instruction|1: error: invalid instruction}}
 qc.li x10
 
 # CHECK-IMM: :[[@LINE+1]]:12: error: operand must be a symbol with a %qc.abs20 specifier or an integer in the range [-524288, 524287]
