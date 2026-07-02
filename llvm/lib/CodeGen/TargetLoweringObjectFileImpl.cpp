@@ -1712,9 +1712,11 @@ static const GlobalValue *getComdatGVForCOFF(const GlobalValue *GV) {
 
   StringRef ComdatGVName = C->getName();
   const GlobalValue *ComdatGV = GV->getParent()->getNamedValue(ComdatGVName);
-  if (!ComdatGV)
-    report_fatal_error("Associative COMDAT symbol '" + ComdatGVName +
-                       "' does not exist.");
+  if (!ComdatGV) {
+    GV->getContext().diagnose(LoweringDiagnosticInfo(
+        "Associative COMDAT symbol '" + ComdatGVName + "' does not exist"));
+    return nullptr;
+  }
 
   if (ComdatGV->getComdat() != C)
     report_fatal_error("Associative COMDAT symbol '" + ComdatGVName +
@@ -1726,6 +1728,8 @@ static const GlobalValue *getComdatGVForCOFF(const GlobalValue *GV) {
 static int getSelectionForCOFF(const GlobalValue *GV) {
   if (const Comdat *C = GV->getComdat()) {
     const GlobalValue *ComdatKey = getComdatGVForCOFF(GV);
+    if (!ComdatKey)
+      return 0;
     if (const auto *GA = dyn_cast<GlobalAlias>(ComdatKey))
       ComdatKey = GA->getAliaseeObject();
     if (ComdatKey == GV) {
@@ -1766,11 +1770,12 @@ MCSection *TargetLoweringObjectFileCOFF::getExplicitSectionGlobal(
   StringRef COMDATSymName = "";
   if (GO->hasComdat()) {
     Selection = getSelectionForCOFF(GO);
-    const GlobalValue *ComdatGV;
-    if (Selection == COFF::IMAGE_COMDAT_SELECT_ASSOCIATIVE)
+    const GlobalValue *ComdatGV = GO;
+    if (Selection == COFF::IMAGE_COMDAT_SELECT_ASSOCIATIVE) {
       ComdatGV = getComdatGVForCOFF(GO);
-    else
-      ComdatGV = GO;
+      if (!ComdatGV)
+        return getContext().getCOFFSection(Name, Characteristics);
+    }
 
     if (!ComdatGV->hasPrivateLinkage()) {
       MCSymbol *Sym = TM.getSymbol(ComdatGV);
@@ -1814,13 +1819,18 @@ MCSection *TargetLoweringObjectFileCOFF::SelectSectionForGlobal(
 
     Characteristics |= COFF::IMAGE_SCN_LNK_COMDAT;
     int Selection = getSelectionForCOFF(GO);
+    // getSelectionForCOFF returns 0 when the comdat leader is missing (already
+    // diagnosed); bail out now so we don't call getComdatGVForCOFF again.
+    if (GO->hasComdat() && !Selection)
+      return getContext().getCOFFSection(Name, Characteristics);
     if (!Selection)
       Selection = COFF::IMAGE_COMDAT_SELECT_NODUPLICATES;
-    const GlobalValue *ComdatGV;
-    if (GO->hasComdat())
+    const GlobalValue *ComdatGV = GO;
+    if (GO->hasComdat()) {
       ComdatGV = getComdatGVForCOFF(GO);
-    else
-      ComdatGV = GO;
+      if (!ComdatGV)
+        return getContext().getCOFFSection(Name, Characteristics);
+    }
 
     unsigned UniqueID = MCSection::NonUniqueID;
     if (EmitUniquedSection)
