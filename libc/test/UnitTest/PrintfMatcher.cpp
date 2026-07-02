@@ -12,6 +12,7 @@
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/macros/config.h"
 #include "src/stdio/printf_core/core_structs.h"
+#include "src/stdio/printf_core/printf_config.h"
 
 #include "test/UnitTest/StringUtils.h"
 #include "test/UnitTest/Test.h"
@@ -71,6 +72,9 @@ static void display(FormatSection form) {
       CASE_LM(z);
       CASE_LM(t);
       CASE_LM(L);
+#if defined(LIBC_INTERNAL_PRINTF_CONVERT_FLOAT128)
+      CASE_LM(Q);
+#endif // LIBC_INTERNAL_PRINTF_CONVERT_FLOAT128
 #ifndef LIBC_COPT_PRINTF_DISABLE_BITINT
       CASE_LM_BIT_WIDTH(w, form.bit_width);
       CASE_LM_BIT_WIDTH(wf, form.bit_width);
@@ -84,10 +88,7 @@ static void display(FormatSection form) {
                   reinterpret_cast<uintptr_t>(form.conv_val_ptr))
            << "\n";
     else if (form.conv_name != '%')
-      tlog << "\tvalue: "
-           << int_to_hex<fputil::FPBits<long double>::StorageType>(
-                  form.conv_val_raw)
-           << "\n";
+      tlog << "\tvalue: " << int_to_hex(form.conv_val_raw) << "\n";
   }
 }
 } // anonymous namespace

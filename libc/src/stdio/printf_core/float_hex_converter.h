@@ -25,52 +25,72 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace printf_core {
 
+struct FloatHexExpFPBitsProperties {
+  bool is_negative;
+  int exponent;
+  AnyFloatStorageType mantissa;
+  bool is_inf_or_nan;
+  uint32_t fraction_bits;
+};
+
+template <typename T>
+FloatHexExpFPBitsProperties
+get_float_hex_exp_fp_bits_properties(AnyFloatStorageType float_raw) {
+  fputil::FPBits<T> float_bits(
+      static_cast<typename fputil::FPBits<T>::StorageType>(float_raw));
+  return {
+      .is_negative = float_bits.is_neg(),
+      .exponent = float_bits.get_explicit_exponent(),
+      .mantissa = float_bits.get_explicit_mantissa(),
+      .is_inf_or_nan = float_bits.is_inf_or_nan(),
+      .fraction_bits = fputil::FPBits<T>::FRACTION_LEN,
+  };
+}
+
 template <WriteMode write_mode>
 LIBC_INLINE int convert_float_hex_exp(Writer<write_mode> *writer,
                                       const FormatSection &to_conv) {
-#ifdef LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
-  using LDBits = fputil::FPBits<double>;
-  using StorageType = LDBits::StorageType;
+#if defined(LIBC_INTERNAL_PRINTF_CONVERT_FLOAT128)
+  static constexpr uint32_t MAX_POSSIBLE_FRACTION_LEN =
+      fputil::FPBits<float128>::FRACTION_LEN;
+  static constexpr uint32_t MAX_POSSIBLE_EXP_LEN =
+      fputil::FPBits<float128>::EXP_LEN;
+#elif !defined(LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE)
+  static constexpr uint32_t MAX_POSSIBLE_FRACTION_LEN =
+      fputil::FPBits<long double>::FRACTION_LEN;
+  static constexpr uint32_t MAX_POSSIBLE_EXP_LEN =
+      fputil::FPBits<long double>::EXP_LEN;
 #else
-  using LDBits = fputil::FPBits<long double>;
-  using StorageType = LDBits::StorageType;
-#endif // LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
+  static constexpr uint32_t MAX_POSSIBLE_FRACTION_LEN =
+      fputil::FPBits<double>::FRACTION_LEN;
+  static constexpr uint32_t MAX_POSSIBLE_EXP_LEN =
+      fputil::FPBits<double>::EXP_LEN;
+#endif
 
-  bool is_negative;
-  int exponent;
-  StorageType mantissa;
-  bool is_inf_or_nan;
-  uint32_t fraction_bits;
-
+  FloatHexExpFPBitsProperties properties;
+#if defined(LIBC_INTERNAL_PRINTF_CONVERT_FLOAT128)
+  if (to_conv.length_modifier == LengthModifier::Q) {
+    properties =
+        get_float_hex_exp_fp_bits_properties<float128>(to_conv.conv_val_raw);
+  } else
+#endif // LIBC_INTERNAL_PRINTF_CONVERT_FLOAT128
 #ifndef LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
-  if (to_conv.length_modifier == LengthModifier::L) {
-    fraction_bits = LDBits::FRACTION_LEN;
-    LDBits::StorageType float_raw = to_conv.conv_val_raw;
-    LDBits float_bits(float_raw);
-    is_negative = float_bits.is_neg();
-    exponent = float_bits.get_explicit_exponent();
-    mantissa = float_bits.get_explicit_mantissa();
-    is_inf_or_nan = float_bits.is_inf_or_nan();
+      if (to_conv.length_modifier == LengthModifier::L) {
+    properties =
+        get_float_hex_exp_fp_bits_properties<long double>(to_conv.conv_val_raw);
   } else
 #endif // !LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
   {
-    using LBits = fputil::FPBits<double>;
-    fraction_bits = LBits::FRACTION_LEN;
-    LBits::StorageType float_raw =
-        static_cast<LBits::StorageType>(to_conv.conv_val_raw);
-    LBits float_bits(float_raw);
-    is_negative = float_bits.is_neg();
-    exponent = float_bits.get_explicit_exponent();
-    mantissa = float_bits.get_explicit_mantissa();
-    is_inf_or_nan = float_bits.is_inf_or_nan();
+    properties =
+        get_float_hex_exp_fp_bits_properties<double>(to_conv.conv_val_raw);
   }
 
-  if (is_inf_or_nan)
+  if (properties.is_inf_or_nan)
     return convert_inf_nan(writer, to_conv);
 
   char sign_char = 0;
 
-  if (is_negative)
+  if (properties.is_negative)
     sign_char = '-';
   else if ((to_conv.flags & FormatFlags::FORCE_SIGN) == FormatFlags::FORCE_SIGN)
     sign_char = '+'; // FORCE_SIGN has precedence over SPACE_PREFIX
@@ -84,8 +104,9 @@ LIBC_INLINE int convert_float_hex_exp(Writer<write_mode> *writer,
   // digits. This is primarily relevant for x86 80 bit long doubles, which have
   // 63 bit mantissas. In the case where the mantissa is 0, however, the
   // exponent should stay as 0.
-  if (fraction_bits % BITS_IN_HEX_DIGIT != 0 && mantissa > 0) {
-    exponent -= fraction_bits % BITS_IN_HEX_DIGIT;
+  if (properties.fraction_bits % BITS_IN_HEX_DIGIT != 0 &&
+      properties.mantissa > 0) {
+    properties.exponent -= properties.fraction_bits % BITS_IN_HEX_DIGIT;
   }
 
   // This is the max number of digits it can take to represent the mantissa.
@@ -93,10 +114,10 @@ LIBC_INLINE int convert_float_hex_exp(Writer<write_mode> *writer,
   // for the extra implicit bit. We use the larger of the two possible values
   // since the size must be constant.
   constexpr size_t MANT_BUFF_LEN =
-      (LDBits::FRACTION_LEN / BITS_IN_HEX_DIGIT) + 1;
+      (MAX_POSSIBLE_FRACTION_LEN / BITS_IN_HEX_DIGIT) + 1;
   char mant_buffer[MANT_BUFF_LEN];
 
-  size_t mant_len = (fraction_bits / BITS_IN_HEX_DIGIT) + 1;
+  size_t mant_len = (properties.fraction_bits / BITS_IN_HEX_DIGIT) + 1;
 
   // Precision only tracks the number of digits after the hexadecimal point, so
   // we have to add one to account for the digit before the hexadecimal point.
@@ -106,11 +127,12 @@ LIBC_INLINE int convert_float_hex_exp(Writer<write_mode> *writer,
     const size_t shift_amount =
         (mant_len - intended_digits) * BITS_IN_HEX_DIGIT;
 
-    const StorageType truncated_bits =
-        mantissa & ((StorageType(1) << shift_amount) - 1);
-    const StorageType halfway_const = StorageType(1) << (shift_amount - 1);
+    const AnyFloatStorageType truncated_bits =
+        properties.mantissa & ((AnyFloatStorageType(1) << shift_amount) - 1);
+    const AnyFloatStorageType halfway_const = AnyFloatStorageType(1)
+                                              << (shift_amount - 1);
 
-    mantissa >>= shift_amount;
+    properties.mantissa >>= shift_amount;
 
 #ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
     // Round to nearest, if it's exactly halfway then round to even.
@@ -123,17 +145,17 @@ LIBC_INLINE int convert_float_hex_exp(Writer<write_mode> *writer,
     case FE_TONEAREST:
       // Round to nearest, if it's exactly halfway then round to even.
       if (truncated_bits > halfway_const)
-        ++mantissa;
+        ++properties.mantissa;
       else if (truncated_bits == halfway_const)
-        mantissa = mantissa + (mantissa & 1);
+        properties.mantissa = properties.mantissa + (properties.mantissa & 1);
       break;
     case FE_DOWNWARD:
-      if (truncated_bits > 0 && is_negative)
-        ++mantissa;
+      if (truncated_bits > 0 && properties.is_negative)
+        ++properties.mantissa;
       break;
     case FE_UPWARD:
-      if (truncated_bits > 0 && !is_negative)
-        ++mantissa;
+      if (truncated_bits > 0 && !properties.is_negative)
+        ++properties.mantissa;
       break;
     case FE_TOWARDZERO:
       break;
@@ -142,9 +164,10 @@ LIBC_INLINE int convert_float_hex_exp(Writer<write_mode> *writer,
 
     // If the rounding caused an overflow, shift the mantissa and adjust the
     // exponent to match.
-    if (mantissa >= (StorageType(1) << (intended_digits * BITS_IN_HEX_DIGIT))) {
-      mantissa >>= BITS_IN_HEX_DIGIT;
-      exponent += BITS_IN_HEX_DIGIT;
+    if (properties.mantissa >=
+        (AnyFloatStorageType(1) << (intended_digits * BITS_IN_HEX_DIGIT))) {
+      properties.mantissa >>= BITS_IN_HEX_DIGIT;
+      properties.exponent += BITS_IN_HEX_DIGIT;
     }
 
     mant_len = intended_digits;
@@ -152,8 +175,8 @@ LIBC_INLINE int convert_float_hex_exp(Writer<write_mode> *writer,
 
   size_t mant_cur = mant_len;
   size_t first_non_zero = 1;
-  for (; mant_cur > 0; --mant_cur, mantissa >>= 4) {
-    char mant_mod_16 = static_cast<char>(mantissa % 16);
+  for (; mant_cur > 0; --mant_cur, properties.mantissa >>= 4) {
+    char mant_mod_16 = static_cast<char>(properties.mantissa % 16);
     char new_digit = internal::int_to_b36_char(mant_mod_16);
     if (internal::isupper(to_conv.conv_name))
       new_digit = internal::toupper(new_digit);
@@ -173,18 +196,19 @@ LIBC_INLINE int convert_float_hex_exp(Writer<write_mode> *writer,
   // 15 -> 5
   // 11 -> 4
   // 8  -> 3
-  constexpr size_t EXP_LEN = (((LDBits::EXP_LEN * 5) + 15) / 16) + 1;
+  constexpr size_t EXP_LEN = (((MAX_POSSIBLE_EXP_LEN * 5) + 15) / 16) + 1;
   char exp_buffer[EXP_LEN];
 
   bool exp_is_negative = false;
-  if (exponent < 0) {
+  if (properties.exponent < 0) {
     exp_is_negative = true;
-    exponent = -exponent;
+    properties.exponent = -properties.exponent;
   }
 
   size_t exp_cur = EXP_LEN;
-  for (; exponent > 0; --exp_cur, exponent /= 10) {
-    exp_buffer[exp_cur - 1] = internal::int_to_b36_char(exponent % 10);
+  for (; properties.exponent > 0; --exp_cur, properties.exponent /= 10) {
+    exp_buffer[exp_cur - 1] =
+        internal::int_to_b36_char(properties.exponent % 10);
   }
   if (exp_cur == EXP_LEN) { // if nothing else was written, write a 0.
     exp_buffer[EXP_LEN - 1] = '0';
